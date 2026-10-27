@@ -1,0 +1,217 @@
+{
+  "shape_version": 1,
+  "task_id": "end-user-continuation-02",
+  "arm": "A",
+  "round_no": 2,
+  "condition_version": 1,
+  "pilot": true,
+  "round_dir_name": "end-user-continuation-02-A-2-71ef233a",
+  "claude_version": "2.1.302 (Claude Code)",
+  "account": "njh4803",
+  "env_names": [
+    "APPDATA",
+    "CLAUDE_CONFIG_DIR",
+    "COMSPEC",
+    "DISABLE_AUTOUPDATER",
+    "GH_CONFIG_DIR",
+    "HOME",
+    "HOMEDRIVE",
+    "HOMEPATH",
+    "LOCALAPPDATA",
+    "PATH",
+    "PATHEXT",
+    "PROGRAMDATA",
+    "ProgramFiles",
+    "ProgramFiles(x86)",
+    "SYSTEMROOT",
+    "SystemDrive",
+    "TEMP",
+    "TMP",
+    "USERPROFILE",
+    "WINDIR"
+  ],
+  "init_tools": [
+    "Task",
+    "Bash",
+    "CronDelete",
+    "CronList",
+    "Edit",
+    "EnterWorktree",
+    "ExitWorktree",
+    "Glob",
+    "Grep",
+    "Monitor",
+    "NotebookEdit",
+    "PowerShell",
+    "Read",
+    "ReportFindings",
+    "Skill",
+    "TaskStop",
+    "ToolSearch",
+    "Workflow",
+    "Write"
+  ],
+  "sessions": [
+    {
+      "session_id": "501d2abf-63c8-40ab-b646-2a2918e2c640",
+      "calls": [
+        {
+          "kind": "첫",
+          "budget_usd": 114.05,
+          "exit_code": 0,
+          "results": [
+            {
+              "index": 0,
+              "subtype": "success",
+              "terminal_reason": "completed",
+              "num_turns": 244
+            },
+            {
+              "index": 1,
+              "subtype": "success",
+              "terminal_reason": "completed",
+              "num_turns": 18
+            },
+            {
+              "index": 2,
+              "subtype": "success",
+              "terminal_reason": "completed",
+              "num_turns": 47
+            },
+            {
+              "index": 3,
+              "subtype": "success",
+              "terminal_reason": "completed",
+              "num_turns": 19
+            },
+            {
+              "index": 4,
+              "subtype": "success",
+              "terminal_reason": "completed",
+              "num_turns": 8
+            },
+            {
+              "index": 5,
+              "subtype": "success",
+              "terminal_reason": "completed",
+              "num_turns": 7
+            }
+          ],
+          "has_directive": false,
+          "ends_with_question": false,
+          "kill_skipped": false
+        }
+      ],
+      "cost_usd": 34.470460199999984,
+      "cost_substituted": false,
+      "runner_killed": false,
+      "model_usage": [
+        {
+          "model": "claude-opus-5-5",
+          "input_tokens": 17751,
+          "output_tokens": 429417,
+          "cache_read_tokens": 75199497,
+          "cache_write_tokens": 1296694,
+          "thinking_tokens": 238843,
+          "cost_usd": 33.34636639999999
+        },
+        {
+          "model": "claude-sonnet-5-5",
+          "input_tokens": 72,
+          "output_tokens": 33640,
+          "cache_read_tokens": 3642423,
+          "cache_write_tokens": 169323,
+          "thinking_tokens": 23443,
+          "cost_usd": 1.1240938
+        }
+      ],
+      "main_lines": [
+        {
+          "model": "claude-opus-5-5",
+          "effort": "xhigh",
+          "lines": 624
+        }
+      ],
+      "subagent_lines": [
+        {
+          "model": "claude-opus-5-5",
+          "effort": "xhigh",
+          "lines": 111
+        },
+        {
+          "model": "claude-sonnet-5-5",
+          "effort": "high",
+          "lines": 73
+        }
+      ]
+    }
+  ],
+  "handoffs": 0,
+  "interventions": 0,
+  "asked_at_end": false,
+  "end": {
+    "kind": "끝남",
+    "reason": null,
+    "resets_at": null
+  },
+  "outcome": {
+    "commit": "091f1e0a9dc53913baf5d7ae132bcb80fa1b285b",
+    "rule": "지시문 브랜치",
+    "commits_after_base": 1,
+    "setup_failure": null,
+    "gates": [
+      {
+        "command": "uv run ruff check .",
+        "exit_code": 0,
+        "timed_out": false
+      },
+      {
+        "command": "uv run ruff format --check .",
+        "exit_code": 0,
+        "timed_out": false
+      },
+      {
+        "command": "uv run python tools/run_checks.py",
+        "exit_code": 1,
+        "timed_out": false
+      }
+    ],
+    "hidden": null
+  },
+  "spend": {
+    "claude_code_usd": 34.470460199999984,
+    "official_usd": 32.57110239999998,
+    "tokens": {
+      "input": 750,
+      "output": 365477,
+      "cache_read": 78123316,
+      "cache_write": 1463266,
+      "thinking": null
+    },
+    "substitutes": [],
+    "wall_seconds": 5631.77,
+    "denied_calls": 9,
+    "utilization_start": [
+      {
+        "window": "five_hour",
+        "utilization": 0.18
+      },
+      {
+        "window": "seven_day",
+        "utilization": 0.37
+      }
+    ],
+    "utilization_end": [
+      {
+        "window": "five_hour",
+        "utilization": 0.36
+      },
+      {
+        "window": "seven_day",
+        "utilization": 0.41
+      }
+    ],
+    "contamination": [],
+    "model_mismatch": []
+  }
+}

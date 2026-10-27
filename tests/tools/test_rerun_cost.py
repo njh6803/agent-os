@@ -259,7 +259,7 @@ def test_기록에_응답이_없는_모델은_modelUsage_를_5분_배수로_대�
     """Haiku 의 대신 셈은 응답마다의 크기를 몰라 10만 토큰 이하의 단가로 셈한다(명세 주석)."""
     줄 = [_응답("m1", SONNET, input=2, output=10, read=50, w1=30)]
     사용 = (
-        _사용(SONNET, input=2, output=999, read=50, write=30, thinking=0),
+        _사용(SONNET, input=2, output=10, read=50, write=30, thinking=0),
         _사용(HAIKU, input=4, output=231, read=150_000, write=16_332, thinking=88),
     )
     got = cost_of(줄, 사용)
@@ -278,9 +278,51 @@ def test_기록에_응답이_없는_모델은_modelUsage_를_5분_배수로_대�
 
 
 def test_modelUsage_의_1m_꼬리는_기록의_이름과_같은_모델로_본다() -> None:
+    """대신 셈이 아니라 그 모델의 모자란 몫을 채우는 셈으로 간다."""
     got = cost_of([_응답("m1", OPUS, output=1)], (_사용(f"{OPUS}[1m]", output=500),))
     assert got.substitutes == ()
-    assert math.isclose(got.official_usd, _usd(PRICES[OPUS], output=1), rel_tol=1e-12)
+    assert math.isclose(got.official_usd, _usd(PRICES[OPUS], output=500), rel_tol=1e-12)
+
+
+def test_기록의_응답이_modelUsage_보다_모자란_칸은_그_차이를_5분_배수로_채운다() -> None:
+    """판 2 파일럿에서 세션 기록 파일의 응답 합은 `modelUsage`보다 출력이 모자랐고(Opus 는 입력,
+    캐시 읽기, 캐시 쓰기도), 그 차이를 같은 단가와 5분 배수로 채우면 `costUSD`와 맞았다
+    (`.scratch/model-rerun/probes/official_cost/`)."""
+    줄 = [
+        _응답("m1", OPUS, input=1, output=10, read=100, w5=20, w1=50),
+        _응답("s1", SONNET, input=4, output=7, w1=9),
+    ]
+    사용 = (
+        _사용(OPUS, input=3, output=40, read=160, write=75, thinking=11),
+        _사용(SONNET, input=4, output=7, write=9),
+    )
+    got = cost_of(줄, 사용)
+    want = (
+        _usd(PRICES[OPUS], input=1, output=10, read=100, w5=20, w1=50)
+        + _usd(PRICES[SONNET], input=4, output=7, w1=9)
+        + _usd(PRICES[OPUS], input=2, output=30, read=60, w5=5)
+    )
+    assert math.isclose(got.official_usd, want, rel_tol=1e-12)
+    assert got.substitutes == ()
+    # 토큰 합에도 채운 몫이 든다. 생각은 여전히 빈 값이다.
+    assert got.tokens == Tokens(input=7, output=47, cache_read=160, cache_write=84, thinking=None)
+
+
+def test_기록의_응답이_modelUsage_보다_많은_칸은_빼지_않는다() -> None:
+    줄 = [_응답("m1", OPUS, input=5, output=10, read=100, w1=50)]
+    사용 = (_사용(OPUS, input=1, output=40, read=10, write=5),)
+    got = cost_of(줄, 사용)
+    want = _usd(PRICES[OPUS], input=5, output=10, read=100, w1=50) + _usd(PRICES[OPUS], output=30)
+    assert math.isclose(got.official_usd, want, rel_tol=1e-12)
+    assert got.tokens == Tokens(input=5, output=40, cache_read=100, cache_write=50, thinking=None)
+
+
+def test_꼬리만_다른_modelUsage_두_이름은_더한_뒤_기록과_견준다() -> None:
+    줄 = [_응답("m1", OPUS, output=5)]
+    사용 = (_사용(OPUS, output=3), _사용(f"{OPUS}[1m]", output=4))
+    got = cost_of(줄, 사용)
+    assert math.isclose(got.official_usd, _usd(PRICES[OPUS], output=7), rel_tol=1e-12)
+    assert got.tokens.output == 7
 
 
 def test_modelUsage_에서_꼬리만_다른_두_이름은_대신_셈의_한_항목으로_더한다() -> None:

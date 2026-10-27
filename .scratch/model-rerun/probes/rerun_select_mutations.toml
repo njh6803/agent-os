@@ -469,3 +469,87 @@ expect_output = ["UnicodeEncodeError: 'utf-8' codec can't encode character"]
 file = "tools/rerun_select.py"
 old = '''    except (OSError, ValueError) as error:  # ValueError: 꼴 거부(`ShapeError`)와 인코딩 실패'''
 new = '''    except (OSError, ShapeError) as error:'''
+
+# 티켓 11(파일럿과 사전 등록)이 사람과 정한 고침 둘(바깥 검증 낱말에서 `-m llm` 빼기, 옛 브랜치 표와
+# 견줘 PR 앞 비용이 큰 쪽 쓰기)의 갈림이다. `with_earlier`의 시험은 구현 전에 썼지만 첫 실패에서
+# 멈춰 빨강을 본 적이 없었다(일지 2026-10-28-10).
+
+[[mutation]]
+name = "옛 표의 PR 앞 비용이 커도 새 행을 쓴다"
+tests = ["tests/tools/test_rerun_select.py", "-k", "큰_행의_비용과"]
+expect = "red"
+expect_output = ["top_model_effort='sonnet/low') != BranchRow"]
+
+[[mutation.edit]]
+file = "tools/rerun_select.py"
+old = '''        if before is None or pr_cost(before) <= pr_cost(row):'''
+new = '''        if True:'''
+
+[[mutation]]
+name = "옛 행을 쓸 때 PR 번호도 옛 표의 것을 쓴다"
+tests = ["tests/tools/test_rerun_select.py", "-k", "큰_행의_비용과"]
+expect = "red"
+expect_output = ["prs=(101,), cost=30.0, cost_post_pr=5.0, top_model_effort='opus/xhigh') != "]
+
+[[mutation.edit]]
+file = "tools/rerun_select.py"
+old = '''                    row.branch, row.prs, before.cost, before.cost_post_pr, before.top_model_effort'''
+new = '''                    row.branch, before.prs, before.cost, before.cost_post_pr, before.top_model_effort'''
+
+[[mutation]]
+name = "PR 앞 비용이 같으면 옛 행을 쓴다"
+tests = ["tests/tools/test_rerun_select.py", "-k", "크거나_같으면"]
+expect = "red"
+expect_output = ["At index 1 diff: BranchRow(branch='feature/02-t', prs=(102,), cost=7.0"]
+
+[[mutation.edit]]
+file = "tools/rerun_select.py"
+old = '''        if before is None or pr_cost(before) <= pr_cost(row):'''
+new = '''        if before is None or pr_cost(before) < pr_cost(row):'''
+
+[[mutation]]
+name = "옛 표에만 있는 브랜치를 더하지 않는다"
+tests = ["tests/tools/test_rerun_select.py", "-k", "옛_표에만_있는"]
+expect = "red"
+expect_output = ["Right contains one more item: BranchRow(branch='feature/01-t', prs=(101,), cost=20.0"]
+
+[[mutation.edit]]
+file = "tools/rerun_select.py"
+old = '''    out.extend(row for row in earlier if row.branch not in new)'''
+new = '''    out.extend(row for row in () if row.branch not in new)'''
+
+[[mutation]]
+name = "한 표의 같은 브랜치를 오류로 보지 않는다"
+tests = ["tests/tools/test_rerun_select.py", "-k", "같은_브랜치가_둘이면"]
+expect = "red"
+expect_output = ["DID NOT RAISE SelectError"]
+
+[[mutation.edit]]
+file = "tools/rerun_select.py"
+old = '''    if doubled:'''
+new = '''    if False:'''
+
+[[mutation]]
+name = "명령이 옛 표를 읽고도 견주지 않는다"
+tests = ["tests/tools/test_rerun_select.py", "-k", "옛_PR_앞_비용으로_고르고"]
+expect = "red"
+expect_output = ["AssertionError: assert '| $22.60 |' in"]
+
+[[mutation.edit]]
+file = "tools/rerun_select.py"
+old = '''        branches = with_earlier(branches, parse_branches(earlier_text))'''
+new = '''        parse_branches(earlier_text)'''
+
+[[mutation]]
+name = "바깥 검증 낱말에 -m llm 을 되돌린다"
+tests = ["tests/tools/test_rerun_select.py", "-k", "LLM_시험만"]
+expect = "red"
+expect_output = ["At index 0 diff: ('-m llm',) != ()"]
+
+[[mutation.edit]]
+file = "tools/rerun_select.py"
+old = '''EXTERNAL_TERMS = (
+    "playwright",'''
+new = '''EXTERNAL_TERMS = (
+    "-m llm",
+    "playwright",'''

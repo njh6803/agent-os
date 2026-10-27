@@ -32,10 +32,17 @@
 - 끈 호출이나 결과 이벤트 없이 끝난 호출이 든 세션(호출의 `results`가 빈 세션)은 비용 칸에 그 세션의
   공식 단가 셈을 대신 넣고 `cost_substituted`를 세운다(08의 메모). 본 세션 기록 파일이 없으면 그
   세션의 마지막 `modelUsage`만으로 셈한다(대개 0이다).
+- 회차 세션의 기록 파일이 든 프로젝트 폴더에 남은 다른 세션(과제의 시험이 띄운 하위 `claude -p`)의
+  공식 단가 셈은 `other_usd`에 넣고, 예산의 쓴 것과 판정의 두 비용에 더한다(`other_transcripts`,
+  사람이 정했다, 일지 2026-10-28-10).
 - 끝남인 회차에서 게이트 작업 트리를 짓지 못하거나(`GateError`) 로그를 쓰지 못하면(`OSError`) 그
   회차를 측정 아님(준비)으로 적고 멈춘다. 세션이 쓴 결과와 별개로 사람이 볼 일일 수 있다(07의 메모).
-- 기록의 게이트와 준비 명령은 갈아 끼운 명령이 아니라 그 자리의 정해진 이름(`GATE_COMMANDS`,
-  `SETUP_COMMANDS`)으로 적는다. 시험이 갈아 끼운 명령도 기록의 꼴을 지나게 하려는 것이다.
+- 기록의 게이트와 준비 명령은 갈아 끼운 명령이 아니라 그 자리의 정해진 이름(`GATE_COMMANDS`나
+  `OLD_GATE_COMMANDS`, `SETUP_COMMANDS`)으로 적는다. 시험이 갈아 끼운 명령도 기록의 꼴을 지나게
+  하려는 것이다.
+- 게이트 묶음은 과제의 B 에 게이트 러너(`GATE_FILE`)가 있는지로 고른다(`tools/rerun_gates.py`의
+  `has_gate_file`). 없으면 옛 묶음(`old_gates`)을 돈다. 가르지 못하면 게이트 작업 트리를 짓지 못한
+  것과 같이 측정 아님(준비)으로 적고 멈춘다.
 - 끄지 못하고 남긴 호출(`LEFT_RUNNING`)이 든 회차가 끝나면 그 프로세스가 돌 수 있어 멈춘다.
 - 공식 단가에 단가가 없는 모델(`PriceError`)이 나면 그 회차를 적지 못하고 멈춘다. 기록 없는 폴더가
   남고, 다시 띄우면 그 폴더를 측정 아님(중단)으로 적으려고 같은 세션을 다시 셈하다 같은 까닭으로
@@ -44,10 +51,15 @@
 못 보는 것. 강제로 죽은 러너가 `records/`에 남긴 임시 파일(`.….tmp`)은 지우지 않는다. 기록 파일
 이름으로 풀리지 않아 번호 셈과 예산과 판정이 보지 않는다(01의 `write_record` 독스트링). 기록 없는
 회차 폴더의 프로세스는 이름이 띄운 `claude` 실행 파일의 끝 이름과 같은 것만 훑어, 다른 이름으로 띄운
-세션(래퍼, 셸 스크립트)은 보지 못한다. 명령 줄 입구는 `--claude`를 `shutil.which`로 실제 경로로 풀어
-그 끝 이름을 쓴다. 같은 뿌리와 `records/`에 러너 둘을 함께 띄우는 것은 막지 않는다. 뒤에 뜬 러너는
-앞 러너가 준비 중인(세션 id를 아직 적지 않은) 회차를 죽은 회차로 적고, 앞 러너는 그 회차의 기록을
-쓰다 `FileExistsError`로 멈춘다.
+세션(래퍼, 셸 스크립트)은 보지 못한다. 명령 줄 입구는 `--claude`가 파일이면 그 절대 경로를, 아니면
+`shutil.which`로 푼 실제 경로를 써서 그 끝 이름을 쓴다. 같은 뿌리와 `records/`에 러너 둘을 함께
+띄우는 것은 막지 않는다. 뒤에 뜬 러너는 앞 러너가 준비 중인(세션 id를 아직 적지 않은) 회차를 죽은
+회차로 적고, 앞 러너는 그 회차의 기록을 쓰다 `FileExistsError`로 멈춘다. 하위 세션의 비용은 회차
+세션과 같은 프로젝트 폴더(같은 작업 폴더와 설정 폴더)에 남은 기록만 센다. 다른 폴더에서 띄웠거나
+다른 설정 폴더를 쓴 하위 세션, 기록을 남기지 않는 하위 세션은 빠진다. 하위 세션의 `modelUsage`는
+러너가 받지 못해 기록 파일의 응답으로만 셈하므로(`tools/rerun_cost.py`의 채우기를 하지 못한다)
+실제보다 낮을 수 있다. 파일럿 회차 기록의 응답 셈(서브에이전트 기록 포함)은 그 회차 `costUSD`의
+0.72~1.00배였다(`.scratch/model-rerun/probes/official_cost/`).
 """
 
 from __future__ import annotations
@@ -75,10 +87,12 @@ from tools.rerun_files import (
     END_NOT_MEASURED,
     GATE_COMMANDS,
     LIST_MAIN,
+    OLD_GATE_COMMANDS,
     REASON_LIMIT,
     SETUP_COMMANDS,
     End,
     Gate,
+    Json,
     ModelUsage,
     Outcome,
     Record,
@@ -95,7 +109,15 @@ from tools.rerun_files import (
     read_task_list,
     write_record,
 )
-from tools.rerun_gates import GATE_ARGV, PYTEST_ARGV, GateError, Limits, check_result
+from tools.rerun_gates import (
+    GATE_ARGV,
+    OLD_GATE_ARGV,
+    PYTEST_ARGV,
+    GateError,
+    Limits,
+    check_result,
+    has_gate_file,
+)
 from tools.rerun_judge import PREREG_README, PREREG_SHA256, prereg_problem
 from tools.rerun_round import (
     RECORDS,
@@ -111,6 +133,7 @@ from tools.rerun_round import (
     deny_rules,
     main_checkout,
     prepare_round,
+    root_heads,
     session_env,
     unrecorded_round_dirs,
 )
@@ -132,12 +155,19 @@ from tools.rerun_session import (
 )
 
 # 조건 판. 회차 조건(하네스, 단가, 판정 규칙)을 고치면 올린다. 회차 기록에 적는다
-CONDITION_VERSION = 1
+CONDITION_VERSION = 4
 MAX_PARALLEL = 2
 # 갈래마다 원래 PR 앞 비용에 곱하는 비율의 위 끝(설계 7절)
 ARM_RATIOS: dict[str, float] = {"A": 1.0, "B": 0.8, "C": 0.7, "D": 0.9, "E": 0.7}
 REASON_SETUP = "준비"
 REASON_INTERRUPTED = "중단"
+
+# 사전 등록 절과 대 보는 값(`tools/rerun_files.py`의 `prereg_line`).
+PREREG_VALUES: dict[str, Json] = {
+    "CONDITION_VERSION": CONDITION_VERSION,
+    "MAX_PARALLEL": MAX_PARALLEL,
+    "ARM_RATIOS": {**ARM_RATIOS},
+}
 
 EXIT_DONE = 0  # 목록을 다 돌았다
 EXIT_HALTED = 1  # 멈춰 사람에게 넘겼다
@@ -175,12 +205,17 @@ class World:
     read_command_line: CommandLineReader = command_line
     setup: tuple[tuple[str, ...], ...] = SETUP_ARGV
     gates: tuple[tuple[str, ...], ...] = GATE_ARGV
+    old_gates: tuple[tuple[str, ...], ...] = OLD_GATE_ARGV
     pytest: tuple[str, ...] = PYTEST_ARGV
     limits: Limits = Limits()
     home: Path = field(default_factory=Path.home)
 
     def __post_init__(self) -> None:
-        if len(self.setup) != len(SETUP_COMMANDS) or len(self.gates) != len(GATE_COMMANDS):
+        if (
+            len(self.setup) != len(SETUP_COMMANDS)
+            or len(self.gates) != len(GATE_COMMANDS)
+            or len(self.old_gates) != len(OLD_GATE_COMMANDS)
+        ):
             raise ValueError("준비와 게이트 명령의 수는 정해진 명령의 수와 같아야 한다")
 
 
@@ -293,8 +328,28 @@ def _official(config_dir: Path, session_id: str, usage: Sequence[ModelUsage]) ->
     return cost_of([line for p in main for line in transcript_lines(p)], usage)
 
 
+def other_transcripts(config_dir: Path, session_ids: Sequence[str]) -> list[Path]:
+    """회차 세션의 기록 파일이 든 프로젝트 폴더에서 회차 세션이 아닌 세션의 기록 파일(이름 차례).
+    회차마다 클론이 달라 프로젝트 폴더도 다르므로, 거기 남은 다른 세션은 그 회차 안에서 띄운 하위
+    `claude -p`(과제의 시험이 띄운 것)다."""
+    own = set(session_ids)
+    folders = {p.parent for sid in session_ids for p in transcript_files(config_dir, sid)[0]}
+    return sorted(
+        p for d in folders for p in d.glob("*.jsonl") if p.is_file() and p.stem not in own
+    )
+
+
+def _other_usd(config_dir: Path, session_ids: Sequence[str]) -> float:
+    """`other_transcripts`의 공식 단가 셈의 합. 그 세션의 `modelUsage`는 러너가 받지 못해 기록
+    파일의 응답으로만 셈한다."""
+    others = other_transcripts(config_dir, session_ids)
+    return sum(cost_of(transcript_lines(p), ()).official_usd for p in others)
+
+
 def _with_costs(record: Record, config_dir: Path) -> Record:
-    """공식 단가를 셈하고, 결과 이벤트가 없는 호출이 든 세션의 비용 칸에 그 셈을 대신 넣는다."""
+    """공식 단가를 셈하고, 결과 이벤트가 없는 호출이 든 세션의 비용 칸에 그 셈을 대신 넣는다. 같은
+    프로젝트 폴더에 남은 다른 세션의 공식 단가 셈은 `other_usd`에 넣는다(사람이 정했다, 일지
+    2026-10-28-10)."""
     costs: list[Cost] = []
     sessions: list[Session] = []
     for s in record.sessions:
@@ -303,16 +358,22 @@ def _with_costs(record: Record, config_dir: Path) -> Record:
         if any(not c.results for c in s.calls):
             s = replace(s, cost_usd=cost.official_usd, cost_substituted=True)
         sessions.append(s)
-    return replace(record, sessions=tuple(sessions), spend=_spend(record, sessions, costs))
+    other_usd = _other_usd(config_dir, [s.session_id for s in record.sessions])
+    return replace(
+        record, sessions=tuple(sessions), spend=_spend(record, sessions, costs, other_usd)
+    )
 
 
-def _spend(record: Record, sessions: Sequence[Session], costs: Sequence[Cost]) -> Spend:
-    """세션의 비용 칸 합과 공식 단가 셈의 합을 기록의 비용에 넣는다."""
+def _spend(
+    record: Record, sessions: Sequence[Session], costs: Sequence[Cost], other_usd: float
+) -> Spend:
+    """세션의 비용 칸 합, 공식 단가 셈의 합, 다른 세션의 공식 단가 셈을 기록의 비용에 넣는다."""
     total = round_cost(costs)
     return replace(
         record.spend,
         claude_code_usd=sum(s.cost_usd for s in sessions if s.cost_usd is not None),
         official_usd=total.official_usd,
+        other_usd=other_usd,
         tokens=total.tokens,
         substitutes=total.substitutes,
     )
@@ -323,7 +384,9 @@ class _Runner:
         self.settings = settings
         self.world = world
         self.config = Path(settings.config_dir)
-        self.rules = deny_rules(deny_heads(settings.main_checkout, home=world.home))
+        self.rules = deny_rules(
+            deny_heads(settings.main_checkout, home=world.home), roots=root_heads(settings.root)
+        )
         self.main_list = settings.task_list.kind == LIST_MAIN
 
     # --- 주 스레드 ---
@@ -363,7 +426,7 @@ class _Runner:
                 return self._halt(plan.why)
             if not plan.arms:
                 continue
-            spent = sum(r.spend.claude_code_usd for r in records)
+            spent = sum(r.spend.claude_code_usd + r.spend.other_usd for r in records)
             estimate = estimate_usd(task, plan.arms)
             if spent + estimate > s.cap_usd:
                 return self._halt(
@@ -495,7 +558,8 @@ class _Runner:
                     subagent_lines=side,
                 )
             )
-        spend = _spend(record, sessions, costs)
+        other_usd = _other_usd(self.config, [s.session_id for s in sessions])
+        spend = _spend(record, sessions, costs, other_usd)
         return replace(record, sessions=tuple(sessions), init_tools=tools, spend=spend)
 
     def _create(self, task: Task, arm: str) -> RoundDir:
@@ -638,6 +702,10 @@ class _Runner:
         note: str | None = None
         if continued.end.kind == END_DONE and picked.commit is not None:
             try:
+                if has_gate_file(s.source, task.base, env, timeout=w.limits.git):
+                    gates, gate_names = w.gates, GATE_COMMANDS
+                else:
+                    gates, gate_names = w.old_gates, OLD_GATE_COMMANDS
                 checked = check_result(
                     place,
                     source=s.source,
@@ -646,7 +714,7 @@ class _Runner:
                     env=env,
                     out=w.out,
                     setup=w.setup,
-                    gates=w.gates,
+                    gates=gates,
                     pytest=w.pytest,
                     limits=w.limits,
                 )
@@ -658,7 +726,7 @@ class _Runner:
                 outcome = replace(
                     outcome,
                     setup_failure=self._named_setup(checked.setup_failure),
-                    gates=_named_gates(checked.gates),
+                    gates=_named_gates(checked.gates, gate_names),
                     hidden=checked.hidden,
                 )
         findings = screen.findings()
@@ -707,10 +775,13 @@ class _Runner:
         return replace(failure, command=SETUP_COMMANDS[index])
 
 
-def _named_gates(gates: tuple[Gate, ...] | None) -> tuple[Gate, ...] | None:
+def _named_gates(gates: tuple[Gate, ...] | None, names: tuple[str, ...]) -> tuple[Gate, ...] | None:
+    """돈 게이트를 고른 묶음의 정해진 이름 `names`로. 수가 다르면 `ValueError`다."""
     if gates is None:
         return None
-    return tuple(replace(g, command=GATE_COMMANDS[i]) for i, g in enumerate(gates))
+    if len(gates) != len(names):
+        raise ValueError(f"돈 게이트 {len(gates)}개가 묶음의 이름 {len(names)}개와 다르다")
+    return tuple(replace(g, command=name) for g, name in zip(gates, names, strict=True))
 
 
 def _session_ids(place: RoundDir) -> list[str]:
@@ -783,8 +854,11 @@ def main(argv: list[str] | None = None) -> int:
         print(f"끝: 목록에 없는 과제 id: {', '.join(unknown)}", file=sys.stderr)
         return EXIT_USAGE
     # 실제 경로로 푼다. 죽은 회차를 훑을 때 그 끝 이름(윈도의 `claude.exe`)과 프로세스 이름을
-    # 견주므로, `claude`처럼 확장자 없이 준 이름 그대로면 아무 프로세스와도 맞지 않아 지나간다
-    claude = shutil.which(str(args.claude))
+    # 견주므로, `claude`처럼 확장자 없이 준 이름 그대로면 아무 프로세스와도 맞지 않아 지나간다.
+    # 파일 경로로 주면 그 파일이다. 판을 고정한 `versions/<판>` 복사본은 확장자가 없어 윈도의
+    # `shutil.which`가 PATHEXT 밖이라고 받지 않는다. 그 끝 이름(`2.1.302`)이 곧 프로세스 이름이다
+    given = Path(args.claude)
+    claude = str(given.absolute()) if given.is_file() else shutil.which(str(args.claude))
     if claude is None:
         print(f"끝: claude 실행 파일을 찾지 못했다: {args.claude}", file=sys.stderr)
         return EXIT_USAGE

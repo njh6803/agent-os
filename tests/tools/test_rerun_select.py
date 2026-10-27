@@ -190,9 +190,17 @@ def test_바깥_검증_낱말이_티켓_글에_있으면_빠지고_맞은_낱말
 
 
 def test_바깥_검증_낱말은_대소문자를_가리지_않고_부정문에도_걸린다() -> None:
-    (got,) = _검사(_후보(1, text="Playwright 는 쓰지 않고 `-M LLM`도 돌리지 않는다"))
+    (got,) = _검사(_후보(1, text="Playwright 는 쓰지 않고 `claude design`도 보지 않는다"))
 
-    assert got.terms == ("-m llm", "playwright")
+    assert got.terms == ("playwright", "Claude Design")
+
+
+def test_LLM_시험만_돌리는_티켓은_바깥_검증으로_빠지지_않는다() -> None:
+    """파일럿 티켓(11)이 사람과 정했다. 게이트에 `-m llm`이 없다."""
+    text = "검증 명령이 모두 초록이다. `uv run --env-file .env pytest -m llm`"
+    (got,) = _검사(_후보(1, text=text))
+
+    assert (got.terms, got.reasons) == ((), ())
 
 
 def test_파일_이름에_human_verification_이_들면_낱말이_아닌_까닭으로_빠진다() -> None:
@@ -255,7 +263,7 @@ def test_크기_지표의_정규식은_소급_측정의_BACKTICK_PATH_와_같다
 
 
 def test_낱말로만_빠진_후보를_되살리면_남고_표에_되살렸다고_까닭과_함께_적는다() -> None:
-    checked = _검사(_후보(1, text="`-m llm`은 돌리지 않는다"))
+    checked = _검사(_후보(1, text="사진 비교는 CI 에 맡긴다"))
 
     got = sel.revive(checked, {"feat-01": "부정문에 걸렸다"})
 
@@ -263,20 +271,20 @@ def test_낱말로만_빠진_후보를_되살리면_남고_표에_되살렸다�
     rows = sel.build_rows(got, _가르기())
     assert rows[0].kept
     table = sel.render_table(rows, [], [])
-    assert "| 날짜 안 | 남음 | — | -m llm(되살림: 부정문에 걸렸다) |" in table
+    assert "| 날짜 안 | 남음 | — | 사진 비교(되살림: 부정문에 걸렸다) |" in table
 
 
 @pytest.mark.parametrize(
     ("candidate", "rows", "wanted", "message"),
     [
         (
-            _후보(1, text="`-m llm`"),
+            _후보(1, text="`사진 비교`"),
             [_행(1, cost=80.0)],
             "feat-01",
             "feat-01: 다른 조건으로도 빠졌다(PR 앞 비용 $80.00 가 $70 를 넘는다)",
         ),
         (
-            _후보(1, text="`-m llm`", ticket=".scratch/feat/issues/01-human-verification.md"),
+            _후보(1, text="`사진 비교`", ticket=".scratch/feat/issues/01-human-verification.md"),
             [_행(1)],
             "feat-01",
             "feat-01: 다른 조건으로도 빠졌다(파일 이름에 human-verification 가 든다)",
@@ -628,7 +636,6 @@ def test_고른_목록은_과제_목록의_꼴로_쓰고_다시_읽으면_같다
 def test_고르기의_조건과_씨앗은_명세의_값이다() -> None:
     assert (sel.MIN_CANDIDATES, sel.MIN_HIDDEN, sel.COST_LIMIT_USD) == (12, 3, 70.0)
     assert sel.EXTERNAL_TERMS == (
-        "-m llm",
         "playwright",
         "pnpm -C web visual",
         "사진 비교",
@@ -698,6 +705,44 @@ def test_브랜치_표의_행에서_가지와_PR_과_비용과_모델_레벨을_
 def test_브랜치_표의_꼴이_다르면_오류다(row: dict[str, object], message: str) -> None:
     with pytest.raises(sel.SelectError, match=message):
         sel.parse_branches(json.dumps({"branches": [row]}))
+
+
+def test_옛_표와_견주면_PR_앞_비용이_큰_행의_비용과_새_표의_PR_을_쓴다() -> None:
+    """파일럿 티켓(11)이 사람과 정했다. 세션 기록이 지워지면 PR 앞 비용이 줄기만 한다."""
+    old = sel.BranchRow("feature/01-t", (101,), 30.0, 5.0, "opus/xhigh")
+    new = sel.BranchRow("feature/01-t", (101, 120), 0.5, 0.3, "sonnet/low")
+
+    assert sel.with_earlier((new,), (old,)) == (
+        sel.BranchRow("feature/01-t", (101, 120), 30.0, 5.0, "opus/xhigh"),
+    )
+
+
+def test_옛_표보다_새_표의_PR_앞_비용이_크거나_같으면_새_행_그대로다() -> None:
+    old = sel.BranchRow("feature/01-t", (101,), 10.0, 0.0, None)
+    same = sel.BranchRow("feature/02-t", (102,), 7.0, 2.0, None)
+    new = (
+        sel.BranchRow("feature/01-t", (101,), 12.0, 1.0, "opus/xhigh"),
+        sel.BranchRow("feature/02-t", (102,), 9.0, 4.0, "opus/high"),
+    )
+
+    assert sel.with_earlier(new, (old, same)) == new
+
+
+def test_옛_표에만_있는_브랜치는_더하고_새_표에만_있는_브랜치는_그대로_둔다() -> None:
+    """기록이 모두 지워진 브랜치는 새 표에서 행째 빠질 수 있다."""
+    gone = sel.BranchRow("feature/01-t", (101,), 20.0, 0.0, None)
+    fresh = sel.BranchRow("feature/02-t", (102,), 9.0, 0.0, None)
+
+    assert sel.with_earlier((fresh,), (gone,)) == (fresh, gone)
+
+
+@pytest.mark.parametrize("which", ["new", "earlier"])
+def test_한_표에_같은_브랜치가_둘이면_견주지_않고_오류다(which: str) -> None:
+    row = sel.BranchRow("feature/01-t", (101,), 1.0, 0.0, None)
+    one, two = (row,), (row, row)
+
+    with pytest.raises(sel.SelectError, match="feature/01-t 의 행이 2개다"):
+        sel.with_earlier(two if which == "new" else one, two if which == "earlier" else one)
 
 
 # --- 바깥 층: 임시 저장소 ---
@@ -876,6 +921,41 @@ def test_후보_표_머리는_입력_파일을_저장소_기준_경로로_적고
     assert "브랜치 표는 `probes/branches.json`(" in text
     assert "되살릴 목록은 `revive.json`다." in text
     assert tmp_path.name not in text
+
+
+def test_옛_표를_주면_옛_PR_앞_비용으로_고르고_표_머리에_옛_표를_적는다(tmp_path: Path) -> None:
+    repo = _한_후보_저장소(tmp_path / "repo")
+    row = {"branch": "feature/01-t", "prs": [2], "top_model_effort": None}
+    branches = _브랜치_표(tmp_path / "branches.json", [{**row, "cost": 0.2, "cost_post_pr": 0.0}])
+    earlier = _브랜치_표(tmp_path / "옛.json", [{**row, "cost": 22.6, "cost_post_pr": 0.0}])
+    table = tmp_path / "후보.md"
+    argv = ["table", "--branches", str(branches), "--earlier-branches", str(earlier)]
+
+    code = sel.main(
+        [*argv, "--table", str(table), "--repo", str(repo), "--rev", "HEAD"],
+        make_sorter=lambda _r, _o: _가르기(),
+    )
+
+    assert code == 0
+    text = table.read_text(encoding="utf-8")
+    assert "옛 브랜치 표는 `옛.json`(SHA-256 앞 12자리 `" in text
+    assert "| $22.60 |" in text
+    assert "| $0.20 |" not in text
+
+
+def test_옛_표를_주지_않으면_표_머리에_없다고_적는다(tmp_path: Path) -> None:
+    repo = _한_후보_저장소(tmp_path / "repo")
+    branches = _브랜치_표(tmp_path / "branches.json", [])
+    table = tmp_path / "후보.md"
+
+    code = sel.main(
+        ["table", "--branches", str(branches), "--table", str(table)]
+        + ["--repo", str(repo), "--rev", "HEAD"],
+        make_sorter=lambda _r, _o: _가르기(),
+    )
+
+    assert code == 0
+    assert "옛 브랜치 표는 없다, 되살릴 목록은 없다." in table.read_text(encoding="utf-8")
 
 
 def test_되살릴_목록이_틀리면_표를_쓰지_않고_2로_끝난다(

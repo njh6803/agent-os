@@ -48,8 +48,12 @@
 `tools.run_hooks.REPO_LOCATION_VARS`를 벗긴다.
 
 쓰임: `uv run python -m tools.rerun_select {table,pilot,main} --branches <브랜치 표> --table
-<후보 표> [--revive <되살릴 목록>] [--out <과제 목록>] [--pilot <파일럿 목록>]`. 숨은 시험 가르기가
-후보마다 작업 트리 둘에 준비를 돌려 오래 걸린다.
+<후보 표> [--earlier-branches <옛 브랜치 표>] [--revive <되살릴 목록>] [--out <과제 목록>] [--pilot
+<파일럿 목록>]`. 숨은 시험 가르기가 후보마다 작업 트리 둘에 준비를 돌려 오래 걸린다.
+
+옛 브랜치 표를 주면 `with_earlier`가 브랜치마다 PR 앞 비용이 큰 쪽의 행을 쓴다. 2026-10-23 에
+데스크톱 앱에서 세션 113개가 지워지며 기록 파일도 지워져, 다시 모은 표의 PR 앞 비용이 줄었기
+때문이다(파일럿 티켓(11)이 사람과 정했다. 일지 2026-10-28-10).
 
 종료 코드. 0 후보 표(와 목록)를 썼다, 1 후보 표는 썼지만 고를 후보가 모자라 목록을 쓰지 않았다,
 2 입력(브랜치 표, 되살릴 목록, 파일럿 목록)이 틀렸거나, 출력 자리에 쓰지 못했거나(고른 값이 과제
@@ -62,7 +66,7 @@
 못 보는 것.
 - 푼 티켓은 `Status:` 줄의 값으로만 가린다. 티켓 파일 밖에서 끝난 일(티켓 없는 PR)과 꼬리의
   `(<slug> <NN>)`는 보지 않는다.
-- 바깥 검증 낱말은 글자로 찾아 부정문("`-m llm`은 돌리지 않는다")에도 걸린다. 그 거짓 양성은 사람이
+- 바깥 검증 낱말은 글자로 찾아 부정문("사진 비교도 CI에 맡긴다")에도 걸린다. 그 거짓 양성은 사람이
   후보 표를 보고 되살릴 목록으로 되살린다. 낱말 목록 밖의 말로 적은 바깥 검증(예: "브라우저로
   본다")은 걸리지 않는다.
 - 브랜치 표가 낡았는지는 보지 않는다. 표가 낡아 행이 없는 브랜치는 "브랜치 표에 PR #N 의 행이
@@ -103,17 +107,18 @@ from tools.rerun_files import (
     TIER_MEDIUM,
     TIER_PILOT,
     TIER_SMALL,
+    Json,
     ShapeError,
     Task,
     TaskList,
     dumps_task_list,
+    prereg_pattern,
     read_task_list,
 )
 from tools.run_hooks import REPO_LOCATION_VARS
 
 from tools import rerun_hidden
 
-type Json = dict[str, Json] | list[Json] | str | int | float | bool | None
 type Sorter = Callable[[str, str], rerun_hidden.Hidden | rerun_hidden.Failure]
 
 # --- 정의에 드는 상수(명세 "과제 고르기". 파일럿 티켓(11)이 사전 등록 절로 옮긴다) ---
@@ -123,8 +128,8 @@ DATE_FLOOR = datetime(2026, 10, 12, tzinfo=KST)
 MIN_CANDIDATES = 12
 MIN_HIDDEN = 3
 COST_LIMIT_USD = 70.0
+# `-m llm`은 파일럿 티켓(11)이 사람과 정해 뺐다. 게이트에 들지 않아 점수에 닿지 않는다
 EXTERNAL_TERMS = (
-    "-m llm",
     "playwright",
     "pnpm -C web visual",
     "사진 비교",
@@ -151,6 +156,27 @@ SETUP_FILES = ("web/package.json", "tools/run_checks.py")
 TICKET_PATH = re.compile(r"\.scratch/([^/]+)/issues/([0-9]{2})-[^/]*\.md")
 PR_SUFFIX = re.compile(r"\(#([0-9]+)\)$")
 DONE = "done"
+
+# 사전 등록 절과 대 보는 값(`tools/rerun_files.py`의 `prereg_line`).
+PREREG_VALUES: dict[str, Json] = {
+    "DATE_FLOOR": DATE_FLOOR.isoformat(),
+    "MIN_CANDIDATES": MIN_CANDIDATES,
+    "MIN_HIDDEN": MIN_HIDDEN,
+    "COST_LIMIT_USD": COST_LIMIT_USD,
+    "EXTERNAL_TERMS": [*EXTERNAL_TERMS],
+    "EXTERNAL_NAME": EXTERNAL_NAME,
+    "BRANCH_PREFIX": BRANCH_PREFIX,
+    "BACKTICK_PATH": prereg_pattern(BACKTICK_PATH),
+    "SEEDS": [SEED_PILOT, SEED_SMALL, SEED_MEDIUM, SEED_LARGE, ARM_SEED_BASE],
+    "PILOT_PLANS": [[*plan] for plan in PILOT_PLANS],
+    "MAIN_COUNTS": [*MAIN_COUNTS],
+    "CAP_MULTIPLIER": CAP_MULTIPLIER,
+    "CAP_FLOOR_USD": CAP_FLOOR_USD,
+    "SETUP_FILES": [*SETUP_FILES],
+    "TICKET_PATH": prereg_pattern(TICKET_PATH),
+    "PR_SUFFIX": prereg_pattern(PR_SUFFIX),
+    "DONE": DONE,
+}
 
 GIT_TIMEOUT = 120.0
 
@@ -266,6 +292,35 @@ def parse_branches(text: str) -> tuple[BranchRow, ...]:
     if not isinstance(rows, list):
         raise SelectError("브랜치 표에 branches 목록이 없다")
     return tuple(_branch_row(item, i) for i, item in enumerate(rows))
+
+
+def _by_branch(rows: Sequence[BranchRow], what: str) -> dict[str, BranchRow]:
+    counts = Counter(row.branch for row in rows)
+    doubled = sorted(branch for branch, n in counts.items() if n > 1)
+    if doubled:
+        raise SelectError(f"{what}에 " + ", ".join(f"{b} 의 행이 {counts[b]}개다" for b in doubled))
+    return {row.branch: row for row in rows}
+
+
+def with_earlier(rows: Sequence[BranchRow], earlier: Sequence[BranchRow]) -> tuple[BranchRow, ...]:
+    """옛 브랜치 표와 견준 행. 브랜치마다 PR 앞 비용이 큰 쪽의 비용·모델 레벨을 쓰고 PR 번호는
+    새 표의 것을 쓴다. 옛 표에만 있는 브랜치는 뒤에 더한다. 세션 기록이 지워지면 PR 앞 비용이
+    줄기만 해서다(파일럿 티켓(11)이 사람과 정했다)."""
+    new = _by_branch(rows, "브랜치 표")
+    old = _by_branch(earlier, "옛 브랜치 표")
+    out: list[BranchRow] = []
+    for row in rows:
+        before = old.get(row.branch)
+        if before is None or pr_cost(before) <= pr_cost(row):
+            out.append(row)
+        else:
+            out.append(
+                BranchRow(
+                    row.branch, row.prs, before.cost, before.cost_post_pr, before.top_model_effort
+                )
+            )
+    out.extend(row for row in earlier if row.branch not in new)
+    return tuple(out)
 
 
 # --- 싼 조건 ---
@@ -918,13 +973,24 @@ def _shown(path: Path, repo: Path) -> str:
         return path.name
 
 
-def _header(args: argparse.Namespace, sha: str, branches_text: str) -> list[str]:
-    digest = hashlib.sha256(branches_text.encode("utf-8")).hexdigest()[:12]
+def _digest(text: str) -> str:
+    return hashlib.sha256(text.encode("utf-8")).hexdigest()[:12]
+
+
+def _header(
+    args: argparse.Namespace, sha: str, branches_text: str, earlier_text: str | None
+) -> list[str]:
     revive = "없다" if args.revive is None else f"`{_shown(args.revive, args.repo)}`다"
+    earlier = (
+        "없다"
+        if earlier_text is None
+        else f"`{_shown(args.earlier_branches, args.repo)}`(SHA-256 앞 12자리 "
+        f"`{_digest(earlier_text)}`)이고 브랜치마다 PR 앞 비용이 큰 쪽을 쓴다"
+    )
     return [
         f"`tools/rerun_select.py` 가 지었다. main 은 `{sha[:12]}`(`{args.rev}`), 브랜치 표는 "
-        f"`{_shown(args.branches, args.repo)}`(SHA-256 앞 12자리 `{digest}`), "
-        f"되살릴 목록은 {revive}.",
+        f"`{_shown(args.branches, args.repo)}`(SHA-256 앞 12자리 `{_digest(branches_text)}`), "
+        f"옛 브랜치 표는 {earlier}, 되살릴 목록은 {revive}.",
         f"조건은 그 모듈의 상수다. 날짜 바닥 {DATE_FLOOR.isoformat()}(B 의 커밋 시각), 후보 문턱 "
         f"{MIN_CANDIDATES}개, 숨은 시험 {MIN_HIDDEN}개 이상, PR 앞 비용 ${COST_LIMIT_USD:g} 이하, "
         f"원래 브랜치 `{BRANCH_PREFIX}`. 바깥 검증 낱말은 "
@@ -982,10 +1048,14 @@ def _run(args: argparse.Namespace, out: Out, make_sorter: MakeSorter) -> int:
             raise SelectError(f"파일럿 목록 {args.pilot} 를 읽지 못했다: {error}") from error
     branches_text = _read(args.branches, "브랜치 표")
     branches = parse_branches(branches_text)
+    earlier_text = None
+    if args.earlier_branches is not None:
+        earlier_text = _read(args.earlier_branches, "옛 브랜치 표")
+        branches = with_earlier(branches, parse_branches(earlier_text))
     wanted = {} if args.revive is None else parse_revive(_read(args.revive, "되살릴 목록"))
     sha = _rev_sha(args.repo, args.rev)
     rows, listing = select_rows(args.repo, sha, branches, wanted, make_sorter(args.repo, out))
-    table = render_table(rows, _header(args, sha, branches_text), listing.ambiguous)
+    table = render_table(rows, _header(args, sha, branches_text, earlier_text), listing.ambiguous)
     _write(args.table, "후보 표", lambda: table)
     out(f"후보 표를 썼다: {args.table}")
     if args.command == "table":
@@ -1014,6 +1084,11 @@ def _parser() -> argparse.ArgumentParser:
     for name, help_text in commands.items():
         p = sub.add_parser(name, help=help_text)
         p.add_argument("--branches", type=Path, required=True, help="수집 도구가 쓴 브랜치 표")
+        p.add_argument(
+            "--earlier-branches",
+            type=Path,
+            help="옛 브랜치 표. 브랜치마다 PR 앞 비용이 큰 쪽을 쓴다",
+        )
         p.add_argument("--revive", type=Path, help="되살릴 목록(과제 id → 까닭의 JSON)")
         p.add_argument("--table", type=Path, required=True, help="쓸 후보 표(마크다운)")
         p.add_argument("--repo", type=Path, default=Path("."), help="병합 기록을 읽을 저장소")

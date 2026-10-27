@@ -596,3 +596,51 @@ old = '''        except (OSError, ValueError) as error:
             raise GateError(f"{what} 를 띄우지 못했다: {error}") from error
 '''
 new = ''
+
+# 티켓 11(2026-10-26): B 에 게이트 러너가 있는지 가르기(`has_gate_file`)
+
+[[mutation]]
+name = "같은 이름의 폴더도 게이트 러너로 센다"
+tests = ["tests/tools/test_rerun_gates.py", "-k", "게이트_러너가_있는지"]
+expect = "red"
+expect_output = ["assert has_gate_file(source, folder, _환경()) is False"]
+
+[[mutation.edit]]
+file = "tools/rerun_gates.py"
+old = '''    return head.split(" ")[1:2] == ["blob"] and path == rel'''
+new = '''    return path == rel'''
+
+[[mutation]]
+name = "B 가 커밋 해시인지 보지 않는다"
+tests = ["tests/tools/test_rerun_gates.py", "-k", "가르지_못하면"]
+expect = "red"
+expect_output = ["DID NOT RAISE GateError"]
+
+[[mutation.edit]]
+file = "tools/rerun_gates.py"
+old = '''    if not _COMMIT.fullmatch(base):
+        raise GateError(f"B 가 40자 커밋 해시가 아니다: {base!r}")
+'''
+new = ''''''
+
+[[mutation]]
+name = "게이트가 B 설정의 env 를 얹지 않는다"
+tests = ["tests/tools/test_rerun_gates.py", "-k", "B_설정의_env_를_부모_값_위에"]
+expect = "red"
+expect_output = ["exit_code=7, timed_out=False) is None"]
+
+[[mutation.edit]]
+file = "tools/rerun_gates.py"
+old = '''    env = {**env, **settings_env(source, task.base, env, timeout=limits.git)}'''
+new = '''    env = {**env}'''
+
+[[mutation]]
+name = "B 설정의 env 에서 글이 아닌 값도 낸다"
+tests = ["tests/tools/test_rerun_gates.py", "-k", "B_설정의_env_에서_글자_값만"]
+expect = "red"
+expect_output = ["'N': 2"]
+
+[[mutation.edit]]
+file = "tools/rerun_gates.py"
+old = '''    return {k: v for k, v in found.items() if isinstance(v, str)}'''
+new = '''    return dict(found.items())'''

@@ -311,3 +311,42 @@ expect_output = ["assert 3 == (7 + 3)"]
 file = "tools/rerun_cost.py"
 old = '''errors="replace").split("\n")'''
 new = '''errors="replace").splitlines()'''
+
+[[mutation]]
+name = "기록의 응답이 모자란 칸을 modelUsage 로 채우지 않는다"
+tests = ["tests/tools/test_rerun_cost.py", "-k", "모자란_칸은"]
+expect = "red"
+expect_output = ["0.000838 = Cost(official_usd=0.000838"]
+
+[[mutation.edit]]
+file = "tools/rerun_cost.py"
+old = '''    for model, gap in _gaps(seen, model_usage):'''
+new = '''    for model, gap in _gaps(seen, ()):'''
+
+[[mutation]]
+name = "기록의 응답이 많은 칸을 뺀다"
+tests = ["tests/tools/test_rerun_cost.py", "-k", "많은_칸은"]
+expect = "red"
+expect_output = ["0.00098"]
+
+[[mutation.edit]]
+file = "tools/rerun_cost.py"
+old = '''            max(0, t[0] - s[0]),
+            max(0, t[1] - s[1]),
+            max(0, t[2] - s[2]),
+            max(0, t[3] - s[3]),'''
+new = '''            t[0] - s[0],
+            t[1] - s[1],
+            t[2] - s[2],
+            t[3] - s[3],'''
+
+[[mutation]]
+name = "채운 캐시 쓰기를 1시간 배수로 셈한다"
+tests = ["tests/tools/test_rerun_cost.py", "-k", "모자란_칸은"]
+expect = "red"
+expect_output = ["0.001498"]
+
+[[mutation.edit]]
+file = "tools/rerun_cost.py"
+old = '''        usd += _usd(_price(model), *gap, 0)'''
+new = '''        usd += _usd(_price(model), gap[0], gap[1], gap[2], 0, gap[3])'''

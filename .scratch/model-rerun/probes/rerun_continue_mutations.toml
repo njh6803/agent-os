@@ -323,8 +323,8 @@ expect_output = ["+ 셀프 리뷰 앞에서 끊는다. 아래 지시문을 사�
 
 [[mutation.edit]]
 file = "tools/rerun_continue.py"
-old = '''root, task.ticket, handoff_directive(text or "", task.branch)'''
-new = '''root, task.ticket, (text or "")'''
+old = '''arm_model_line(handoff_directive(text or "", task.branch), arm)'''
+new = '''arm_model_line((text or ""), arm)'''
 
 [[mutation]]
 name = "첫 줄의 연 저장소가 작업 폴더와 다른 글이다"
@@ -612,3 +612,14 @@ expect_output = ["AssertionError: 훅의 API 원형에 없는 문장"]
 file = "tools/proc_command_line.py"
 old = '''        kernel.LocalFree.argtypes = [pointer]'''
 new = '''        kernel.LocalFree.argtypes = [handle]'''
+
+[[mutation]]
+name = "인계 지시문의 모델 줄을 갈래 값으로 바꾸지 않는다"
+tests = ["tests/tools/test_rerun_continue.py", "-k", "지시문으로_새_세션을_열고"]
+expect = "red"
+expect_output = ["AssertionError: 인계 지시문의 모델 줄을 그대로 붙였다"]
+
+[[mutation.edit]]
+file = "tools/rerun_continue.py"
+old = '''    handoff = arm_model_line(handoff_directive(text or "", task.branch), arm)'''
+new = '''    handoff = handoff_directive(text or "", task.branch)'''

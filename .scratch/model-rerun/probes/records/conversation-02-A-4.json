@@ -1,0 +1,221 @@
+{
+  "shape_version": 1,
+  "task_id": "conversation-02",
+  "arm": "A",
+  "round_no": 4,
+  "condition_version": 2,
+  "pilot": true,
+  "round_dir_name": "conversation-02-A-4-9ba5ec5e",
+  "claude_version": "2.1.302 (Claude Code)",
+  "account": "njh4803",
+  "env_names": [
+    "ALLUSERSPROFILE",
+    "APPDATA",
+    "CLAUDE_CONFIG_DIR",
+    "COMPUTERNAME",
+    "COMSPEC",
+    "CommonProgramFiles",
+    "CommonProgramFiles(x86)",
+    "CommonProgramW6432",
+    "DISABLE_AUTOUPDATER",
+    "GH_CONFIG_DIR",
+    "HOMEDRIVE",
+    "HOMEPATH",
+    "LOCALAPPDATA",
+    "NUMBER_OF_PROCESSORS",
+    "OS",
+    "PATH",
+    "PATHEXT",
+    "PROCESSOR_ARCHITECTURE",
+    "PROCESSOR_IDENTIFIER",
+    "PROCESSOR_LEVEL",
+    "PROCESSOR_REVISION",
+    "PROGRAMDATA",
+    "PSModulePath",
+    "PUBLIC",
+    "ProgramFiles",
+    "ProgramFiles(x86)",
+    "ProgramW6432",
+    "SYSTEMROOT",
+    "SystemDrive",
+    "TEMP",
+    "TMP",
+    "USERDOMAIN",
+    "USERNAME",
+    "USERPROFILE",
+    "WINDIR"
+  ],
+  "init_tools": [
+    "Task",
+    "Bash",
+    "CronDelete",
+    "CronList",
+    "Edit",
+    "EnterWorktree",
+    "ExitWorktree",
+    "Glob",
+    "Grep",
+    "Monitor",
+    "NotebookEdit",
+    "PowerShell",
+    "Read",
+    "ReportFindings",
+    "Skill",
+    "TaskStop",
+    "ToolSearch",
+    "Workflow",
+    "Write"
+  ],
+  "sessions": [
+    {
+      "session_id": "95fd49c2-59c8-4e29-82a8-8ea6ff436204",
+      "calls": [
+        {
+          "kind": "첫",
+          "budget_usd": 82.72,
+          "exit_code": 0,
+          "results": [
+            {
+              "index": 0,
+              "subtype": "success",
+              "terminal_reason": "completed",
+              "num_turns": 186
+            },
+            {
+              "index": 1,
+              "subtype": "success",
+              "terminal_reason": "completed",
+              "num_turns": 72
+            },
+            {
+              "index": 2,
+              "subtype": "success",
+              "terminal_reason": "completed",
+              "num_turns": 18
+            }
+          ],
+          "has_directive": false,
+          "ends_with_question": false,
+          "kill_skipped": false
+        }
+      ],
+      "cost_usd": 25.816168600000008,
+      "cost_substituted": false,
+      "runner_killed": false,
+      "model_usage": [
+        {
+          "model": "claude-opus-5-5",
+          "input_tokens": 2917,
+          "output_tokens": 352158,
+          "cache_read_tokens": 56195643,
+          "cache_write_tokens": 1105851,
+          "thinking_tokens": 189676,
+          "cost_usd": 25.816168600000008
+        }
+      ],
+      "main_lines": [
+        {
+          "model": "claude-opus-5-5",
+          "effort": "xhigh",
+          "lines": 503
+        }
+      ],
+      "subagent_lines": [
+        {
+          "model": "claude-opus-5-5",
+          "effort": "xhigh",
+          "lines": 179
+        }
+      ]
+    }
+  ],
+  "handoffs": 0,
+  "interventions": 0,
+  "asked_at_end": false,
+  "end": {
+    "kind": "끝남",
+    "reason": null,
+    "resets_at": null
+  },
+  "outcome": {
+    "commit": "d3d6225f4eae0d062b37437d3967a7a3c4778425",
+    "rule": "지시문 브랜치",
+    "commits_after_base": 2,
+    "setup_failure": null,
+    "gates": [
+      {
+        "command": "uv run ruff check .",
+        "exit_code": 0,
+        "timed_out": false
+      },
+      {
+        "command": "uv run ruff format --check .",
+        "exit_code": 0,
+        "timed_out": false
+      },
+      {
+        "command": "uv run pytest -q",
+        "exit_code": 0,
+        "timed_out": false
+      },
+      {
+        "command": "uv run pyright",
+        "exit_code": 0,
+        "timed_out": false
+      },
+      {
+        "command": "uv run lint-imports",
+        "exit_code": 0,
+        "timed_out": false
+      },
+      {
+        "command": "pnpm -C web verify",
+        "exit_code": 0,
+        "timed_out": false
+      }
+    ],
+    "hidden": {
+      "passed": 9,
+      "total": 10,
+      "failed": [
+        "tests/core/test_run.py::test_자기_요약_이벤트의_자리나_개수가_어긋난_재개는_결정을_쓰기_전에_PluginError다[\\uc55e \\uc2e4\\ud589 \\uc5c6\\uc74c]"
+      ]
+    }
+  },
+  "spend": {
+    "claude_code_usd": 25.816168600000008,
+    "official_usd": 23.763552000000022,
+    "tokens": {
+      "input": 580,
+      "output": 253752,
+      "cache_read": 55829400,
+      "cache_write": 1105471,
+      "thinking": null
+    },
+    "substitutes": [],
+    "wall_seconds": 4658.88,
+    "denied_calls": 3,
+    "utilization_start": [
+      {
+        "window": "five_hour",
+        "utilization": 0.0
+      },
+      {
+        "window": "seven_day",
+        "utilization": 0.48
+      }
+    ],
+    "utilization_end": [
+      {
+        "window": "five_hour",
+        "utilization": 0.13
+      },
+      {
+        "window": "seven_day",
+        "utilization": 0.51
+      }
+    ],
+    "contamination": [],
+    "model_mismatch": []
+  }
+}

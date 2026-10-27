@@ -155,6 +155,7 @@ def _회차(
         spend=Spend(
             claude_code_usd=cost,
             official_usd=cost if official is None else official,
+            other_usd=0.0,
             tokens=Tokens(input=1, output=10, cache_read=100, cache_write=5, thinking=4),
             substitutes=(),
             wall_seconds=60.0,
