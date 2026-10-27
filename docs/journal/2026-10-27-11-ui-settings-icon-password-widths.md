@@ -157,3 +157,138 @@ CI가 찍은 사진을 정답으로 쓰는 길을 먼저 대 봤다. CI의 `visu
 ### 티켓과 plan.md
 
 티켓 01의 사진·검증 체크박스를 표시하고 `Status:`를 `done`으로 바꿨다. 검증은 구현 커밋 `de87e5b8`의 pre-commit(모두 Passed)과 손으로 친 ruff 둘에 기대고, 이 커밋의 pre-commit이 다시 본다. `.scratch/plan.md`의 admin-style 행을 `in-progress`로 바꾸고 이 티켓이 더한 것을 괄호로, 진행 문단 끝에 01이 먼저 병합된다는 것과 03이 02를 마저 기다린다는 것을 적었다(선례는 web-widget의 01이 병합된 문장). 형제 02는 아직 PR이 없었다(`gh pr list`를 손으로 봤다). `uv run python tools/sibling_overlap.py`는 "번호 겹침 없음"이었고, 형제 02가 같은 `.scratch/admin-style/probes/README.md`를 고친다고 알렸다.
+
+### 커밋과 PR
+
+커밋 `21547639`의 pre-commit은 검사가 모두 Passed였다(pytest 557.5초, web-verify 602.6초. 출력을 손으로 봤다). 스테이지된 `.py`가 없어 ruff 둘은 Skipped라 손으로 쳤고 `All checks passed!`, `1096 files already formatted`였다. 커밋 직후 `커밋 뒤` 인계 계기가 왔지만 이 세션의 "이어받을 상태"가 `인계: 커밋 뒤`로 시작해 next-session "인계할 때" 1의 같은 경계 조건에 들어 넘기지 않고 이었다. 브랜치를 푸시하고 PR #403(https://github.com/njh6803/agent-os/pull/403)을 열었다. 본문은 이 세션의 스크래치패드 `pr-body.md`로 썼다.
+
+## 인계 (PR 연 뒤)
+
+PR을 연 직후 인계 계기가 왔다(세션 컨텍스트 308,028 토큰, 문턱 200,000, 경계 `PR 연 뒤`). `hook_pr_next_session`의 계기도 함께 왔지만 인계 줄이 이긴다. next-session "인계할 때" 1의 인계하지 않는 때 다섯은 모두 아니었다. 계기를 낸 `gh pr create`는 성공했고, 요청 범위는 병합까지이고, 이 세션의 "이어받을 상태"는 `인계: 커밋 뒤`라 경계가 다르고, 이 세션이 쓴 `인계 못함` 줄이 없고, `get_session`의 `self`에 `parentSessionId`가 없다.
+
+- 지금 상태: PR #403을 열었고 브랜치의 커밋은 모두 푸시했다. 첫 `@coderabbitai review` 코멘트는 남기지 않았다. 앱의 PR 상태(`get_status`)는 열 때 검사 8 가운데 통과 1, 진행 6, 건너뜀 1이었다.
+- 이 티켓을 닫는 세션이라 회고(`retro`)와 일지 `## 다음`을 병합 전에 써서 푸시해야 한다(next-session 순서 1의 3). 둘 다 아직 하지 않았다. 회고 후보가 될 만한 것: Docker 엔진이 이 기능의 세 세션 내내 `Internal Server Error`였다가 사람이 다시 켜자 살아났다. CI가 찍은 사진을 정답으로 쓰는 길은 `updateSnapshots: "none"` 때문에 새 스토리에 쓸 수 없었다. 선택 화면이 훅의 사실 대조에 두 번 막혔다(라벨을 바꾸자 다시 막혔다).
+- 형제 02(`feature/02-admin-organisms-take-props`)는 이 세션이 본 때에 PR이 없었다. 이 PR이 `.scratch/plan.md`에 "01 이 먼저 병합되어"라고 적었으므로, 02가 먼저 병합되면 그 문장과 `.scratch/admin-style/probes/README.md`의 충돌을 고친다.
+- 이 세션의 지금 제목: `feature/01-ui-settings-icon-password-widths`. 넘기기 전에 `feature/01-ui-settings-icon-password-widths (인계함)`으로 바꾼다.
+- 모델은 `tools/model_sweep.py`가 `Opus 5.5 / xhigh`(스윕 안)로 냈다.
+
+지시문:
+
+```
+다음 작업: .scratch/admin-style/issues/01-ui-settings-icon-password-widths.md. 디자인 시스템 패키지에 설정 아이콘, 가린 한 줄 입력, 기준 폭 셋을 더한다
+다음 단계: PR 반영·병합
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /implement .scratch/admin-style/issues/01-ui-settings-icon-password-widths.md
+브랜치: feature/01-ui-settings-icon-password-widths
+모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
+읽을 것: docs/journal/2026-10-27-11-ui-settings-icon-password-widths.md(끝의 "커밋과 PR"과 인계 절은 커밋하지 않고 워크트리에 있다). 나란히 도는 형제는 .scratch/admin-style/issues/02-admin-organisms-take-props.md
+이어받을 상태: 인계: PR 연 뒤. PR #403(https://github.com/njh6803/agent-os/pull/403)을 열었고 브랜치의 커밋은 모두 푸시했다. next-session 순서 1의 2(봇 회차)부터 하고, 첫 @coderabbitai review 코멘트도 아직 남기지 않았다. 이 티켓을 닫는 세션이라 회고(retro)와 일지 "다음"을 병합 전에 써서 푸시한다(회고 후보는 일지의 인계 절). 형제 02가 먼저 병합되면 plan.md의 "01이 먼저 병합되어" 문장과 프로브 README의 충돌을 고친다. 일지는 docs/journal/2026-10-27-11-ui-settings-icon-password-widths.md
+확인할 선행 조건: 없음
+이번 요청 범위: PR과 병합까지
+```
+
+제목을 `feature/01-ui-settings-icon-password-widths (인계함)`으로 바꿨다. 멈출 백그라운드 작업은 없었다(엔진 대기 스크립트, 사진 비교 셋, 커밋, 리뷰 서브에이전트 둘이 모두 끝났다). `git worktree unlock`은 `is not locked`로 끝나 넘어갔다.
+
+open-session을 부른다 2026-10-27T10:26:16Z
+
+## 이어받음 (PR 연 뒤)
+
+위 지시문으로 연 새 세션이다. 제목을 브랜치 이름으로 바꾸고 `git worktree list`에서 그 브랜치의 워크트리를 찾아 `EnterWorktree(path)`로 들어갔다. `implement` 스킬을 디스크의 `SKILL.md`로 읽어 따랐고, 남은 것이 봇 회차부터라 next-session을 디스크의 `SKILL.md`로 읽어 순서 1의 2부터 했다.
+
+> 사용자: ".claude/skills/implement/SKILL.md 를 읽어 그대로 따른다. … 인자: .scratch/admin-style/issues/01-ui-settings-icon-password-widths.md … 이어받을 상태: 인계: PR 연 뒤. PR #403(…)을 열었고 브랜치의 커밋은 모두 푸시했다. next-session 순서 1의 2(봇 회차)부터 하고, 첫 ＠coderabbitai review 코멘트도 아직 남기지 않았다. … 확인할 선행 조건: 없음 / 이번 요청 범위: PR과 병합까지"
+
+PR의 첫 상태는 claude-review 통과("지적 없음"), `web`·`e2e-widget`·`ticket` 통과, `python`·`e2e`·`visual` 대기였다. CodeRabbit은 별이 10개 미만인 저장소라 자동 리뷰를 건너뛰었다고 코멘트했다. 형제 02는 아직 PR이 없었다(`gh pr list --head`가 빈 목록이었다). `@coderabbitai review` 코멘트를 남기고 `tools/wait_ci.py 403`을 백그라운드로 띄웠다.
+
+## 봇 회차 1
+
+`tools/wait_ci.py 403`이 "끝: 모두 통과"로 끝났다(도구가 찍었다. 헤드 `2154763`의 검사 아홉이 모두 SUCCESS). claude-review는 첫 회차이고 "지적 없음"이었다(`gh pr view 403 --json comments`로 손으로 봤다). CodeRabbit은 `@coderabbitai review`로 부른 첫 회차이고 Minor 하나를 냈다(리뷰 요약의 범위는 `4f783dc0`부터 `21547639`까지. `gh api …/pulls/403/reviews`와 `…/comments`로 손으로 봤다).
+
+- CodeRabbit Minor(`.scratch/design-system/probes/molecules_mutations.toml` 24·39·56줄): 이 브랜치가 원문을 옮긴 세 변이가 `expect = "red"`만 보고 고른 단언의 실패 표지(`expect_output`)가 없다. `.claude/rules/probes.md` 첫 항목과 맞고 첫 회차라 고쳤다. 먼저 자리 표지를 넣어 `tools/mutate.py`로 돌렸더니 그 도구는 출력의 끝만 보여 실패 머리가 잘렸다. 그래서 커밋하지 않은 스크래치 스크립트(`see_failures.py`)로 변이를 하나씩 넣어 vitest의 전체 출력을 저장하고 손으로 봤다. 320px 둘은 `AssertionError` 아래 `expected false to be true // Object.is equality`, `Typing`은 `expected last "onChange" call to have been called with [ '주문 조회' ]`였다. 스크립트가 끝난 뒤 `git status --short web/`이 비어 원문이 되돌아간 것을 봤다. 미리보기의 afterEach는 `디자인 토큰에 없는 클래스를 그렸다`로 던져(`src/storybook/preview.tsx`를 읽었다) 320px 둘의 표지는 `expected false to be true`로 했다. `Typing`은 같은 스토리의 라벨 단언도 같은 matcher의 `toBe(true)`라 그 문구를 낼 것으로 어림해 `toHaveBeenLastCalledWith`의 실패 머리를 표지로 했다. `--check`는 "변이 3 모두 원문이 한 번씩 있다", 다시 돌린 실행은 "변이 3 모두 기대대로"였다(도구가 찍었다). 프로브 README의 그 줄에 더했다.
+
+이 회차의 푸시는 회고의 대기열 행을 더해 범위를 넓히므로, 푸시하기 전에 PR 본문의 "왜 이렇게 했나"(회고를 싣는다는 항목), "남긴 위험"(표지를 단 것), "변경된 영역"(`retro-queue.md`)을 고쳐 `gh pr edit 403 --body-file`로 올렸다(next-session 순서 1의 1). 반영은 아직 커밋하지 않았다.
+
+## 인계 (셀프 리뷰 직전)
+
+반영을 커밋하기 전 셀프 리뷰로 Skill 도구의 `code-review`를 부르자 인계 계기가 왔다(세션 컨텍스트 295,584 토큰, 문턱 200,000, 경계 `셀프 리뷰 직전`). next-session "인계할 때" 1의 인계하지 않는 때 다섯은 모두 아니었다. 계기를 낸 호출은 성공했고, 요청 범위는 병합까지이고, 이 세션의 "이어받을 상태"는 `인계: PR 연 뒤`라 경계가 다르고, 이 세션이 쓴 `인계 못함` 줄이 없고, `get_session`의 `self`에 `parentSessionId`가 없다. 그래서 `code-review`의 단계는 밟지 않았다.
+
+- 지금 상태: 봇 회차 1의 반영(변이 표 세 변이의 표지, 프로브 README 줄)과 회고(대기열 새 행 494, 437·491의 회차), 이 일지의 이어받음·봇 회차·회고·"다음" 절이 커밋하지 않고 워크트리에 있다. 셀프 리뷰(고정점 HEAD `21547639`)부터 한다. 회고와 "다음"은 이 세션이 썼다. 새 세션이 셀프 리뷰에서 새 사건을 보면 회고 절에 덧붙이고, retro 5단계대로 이 절이 적은 회차 수와 대기열 행의 회차 수를 대 본 뒤 다시 더하지 않는다.
+- 셀프 리뷰를 반영한 뒤 커밋해 푸시하고 순서 1의 2(`@coderabbitai review` 코멘트, `tools/wait_ci.py 403`)를 한다. 그 푸시는 두 봇 모두에게 둘째 회차라 Critical·Major만 고치고 나머지는 지적마다 보류 이유를 PR 코멘트에 남긴다. PR 본문은 이 범위로 이미 고쳤다.
+- 형제 02는 이 세션이 본 때에 PR이 없었다(`gh pr list --head`). 02가 먼저 병합되면 `.scratch/plan.md`의 "01 이 먼저 병합되어" 문장과 `.scratch/admin-style/probes/README.md`의 충돌을 고친다.
+- 이 세션의 지금 제목: `feature/01-ui-settings-icon-password-widths`. 넘기기 전에 `feature/01-ui-settings-icon-password-widths (인계함)`으로 바꾼다.
+- 모델은 `tools/model_sweep.py`가 `Opus 5.5 / xhigh`로 냈다.
+
+지시문:
+
+```
+다음 작업: .scratch/admin-style/issues/01-ui-settings-icon-password-widths.md. 디자인 시스템 패키지에 설정 아이콘, 가린 한 줄 입력, 기준 폭 셋을 더한다
+다음 단계: PR 반영·병합
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /implement .scratch/admin-style/issues/01-ui-settings-icon-password-widths.md
+브랜치: feature/01-ui-settings-icon-password-widths
+모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
+읽을 것: docs/journal/2026-10-27-11-ui-settings-icon-password-widths.md(끝의 이어받음(PR 연 뒤)·봇 회차 1·인계·회고·다음 절은 커밋하지 않고 워크트리에 있다). 나란히 도는 형제는 .scratch/admin-style/issues/02-admin-organisms-take-props.md
+이어받을 상태: 인계: 셀프 리뷰 직전. 커밋하지 않은 변경이 워크트리에 있고 셀프 리뷰(/code-review, 고정점 HEAD 21547639)부터 한다. 변경은 PR #403 봇 회차 1의 반영(CodeRabbit Minor: .scratch/design-system/probes/molecules_mutations.toml 세 변이에 expect_output 표지, 그 프로브 README 줄. 다시 돌린 셋이 기대대로였다)과 이 티켓의 회고(retro-queue 새 행 494, 437·491의 회차)와 일지 "다음"이다. PR 본문은 이 범위로 이미 고쳤다. 셀프 리뷰를 반영한 뒤 커밋해 푸시하고 next-session 순서 1의 2(@coderabbitai review 코멘트, tools/wait_ci.py 403)를 한다. 그 푸시는 두 봇 모두에게 둘째 회차다. 형제 02가 먼저 병합되면 plan.md의 "01이 먼저 병합되어" 문장과 프로브 README의 충돌을 고친다. 일지는 docs/journal/2026-10-27-11-ui-settings-icon-password-widths.md
+확인할 선행 조건: 없음
+이번 요청 범위: PR과 병합까지
+```
+
+제목을 `feature/01-ui-settings-icon-password-widths (인계함)`으로 바꿨다. 멈출 백그라운드 작업은 없었다(CI 대기, 변이 실행 둘, 스크래치 스크립트가 모두 끝났다). `git worktree unlock`은 `is not locked`로 끝나 넘어갔다.
+
+open-session을 부른다 2026-10-27T10:48:46Z
+
+## 이어받음 (셀프 리뷰 직전)
+
+위 지시문으로 연 새 세션이다. 제목을 브랜치 이름으로 바꾸고 `git worktree list`에서 그 브랜치의 워크트리를 찾아 `EnterWorktree(path)`로 들어갔다. `implement`·`next-session`·`code-review`를 디스크의 `SKILL.md`로 읽어 따랐다. 워크트리의 커밋하지 않은 변경은 지시문이 적은 넷(프로브 README, `molecules_mutations.toml`, `retro-queue.md`, 이 일지)이었다(`git status --short`를 손으로 봤다). 형제 02는 아직 PR이 없었다(`gh pr list --head feature/02-admin-organisms-take-props --state all`이 빈 목록이었다).
+
+## 셀프 리뷰 (봇 회차 1 반영과 회고)
+
+범위: base `21547639`(HEAD와 같다), 커밋하지 않은 파일 넷, 커밋 0, 미추적 0. 명세는 PR #403 CodeRabbit Minor 원문과 티켓을 닫는 회고·"다음"(`retro`, `next-session` 순서 1의 3)이고, 티켓 01과 `spec.md`는 참고로 넘겼다.
+
+### 표준 축 (sonnet·high)
+
+Critical·Major 없음, Minor 2, Nit 3. 밀 주장은 모두 맞다고 냈다(라벨 단언 `TextField.stories.tsx:200`, afterEach 문구 `preview.tsx:83`, `tools/mutate.py`의 `expect_output`이 ANSI를 벗긴 전체 출력에서 부분 문자열로 보고 `_details`가 끝 10줄만 낸다, `updateSnapshots: "none"` `web/packages/ui/visual/playwright.config.ts:34`, 437·491의 회차 근거).
+
+- Minor: 회고 6이 인계를 세 번으로 적었는데 이 일지의 `## 인계` 절은 넷이고 넷째는 295,584 토큰이다. → 고쳤다. `grep`으로 넷(34·98·167·212줄)을 손으로 봤다. 넷째가 회고 뒤에 왔다는 것을 괄호에 적었다.
+- Minor: `molecules_mutations.toml` 주석이 "변이를 손으로 넣어 본 출력"이라 적어, 스크래치 스크립트로 넣었다는 프로브 README·일지와 근거의 종류가 어긋난다. → 고쳤다. 주석을 "커밋하지 않은 스크래치 스크립트로 변이를 넣고 vitest 출력을 손으로 봤다"로 바꿨다.
+- Nit: 회고 1의 "앞 일지 셋의 회고는 하네스가 고칠 자리가 없다며 기각"은 2026-10-26-19와 맞지 않는다. → 고쳤다. 그 일지 회고 2는 "이미 있는 검사가 그 자리에서 본 것이다"로 기각했다(파일을 손으로 읽었다). 17(406줄)과 07(344줄)의 까닭과 갈라 적었다.
+- Nit: 대기열 494와 회고 1의 "셋째 세션이 대 보니"는 실행이 아니라 설정과 Playwright 코드를 읽은 것이다(위 "사진 정답과 Docker" 절). → 고쳤다. 둘 다 "설정과 Playwright 코드를 읽어 보니"로 바꿨다.
+- Nit(판단 항목): 320px 두 변이의 표지 `expected false to be true`는 vitest `toBe(true)`의 일반 문구라, 그 사례에 단언이 더해지면 고른 단언만의 문구가 아니게 된다. → 남겼다. 지금 `-t "폭 320px"`는 파일마다 사례 하나를 고르고 그 안의 `toBe(true)`는 하나뿐이며(표준 축이 줄을 냈다), 미리보기 afterEach의 실패는 다른 문구로 던진다. 그래서 지금은 고른 단언이 실패할 때만 나오는 문구이고, 단언이 더해진 뒤의 일은 지금 고칠 결함이 아니다.
+
+### 명세 축 (상속 모델)
+
+범위 넘침 없음, Minor 2, Nit 3. 밀 주장 가운데 `Typing` 표지를 고른 까닭, 320px 표지, 대기열 494의 사실(아래 Nit 하나 밖), 03의 Blocked by(`01, 02`)는 맞다고 냈다. `--check`(변이 3)와 `tools/queue_open_rows.py`(작업 트리와 `--ref origin/main`)를 직접 돌려 같은 결과를 봤다고 적었다.
+
+- Minor: 회고가 이 티켓에서 난 사건 둘을 열린 행의 회차로 세지 않았다. 이 브랜치가 고친 빨강 기대 변이 셋에 표지가 없었는데 `--staged`가 알리지 않고 CodeRabbit이 잡은 것은 대기열 350의 사건이고, `tools/mutate.py`가 출력의 끝만 보여 실패 머리가 잘린 것(위 "봇 회차 1")은 455의 사건이다. → 고쳤다. 두 행을 열어(`grep -n`으로 `retro-queue.md` 363·457줄을 손으로 봤다) 처방이 같은 사건인 것을 보고 둘 다 4회차로 더했고, 아래 "회고 (셀프 리뷰가 찾은 회차)"에 적었다. 두 행은 이미 3회차라 chore 계기는 바뀌지 않는다. `tools/mutate.py`를 고친 harness 011(PR #388)은 병합됐고 두 행은 그 뒤에도 열려 있다(`gh pr list --head chore/011-mutate-check-and-marker`를 손으로 봤다).
+- Minor: `Typing` 표지가 다른 단언의 실패 출력에 없는지를 관찰하지 않고 어림했다(`.claude/rules/probes.md` 첫 항목의 "다른 단언이 빨개지는 변이의 출력에는 그 문구가 없는지도 본다"). → 고쳤다. 라벨에 `hidden`을 다는 변이를 커밋하지 않은 스크래치 변이 표에 두 번 두고(표지 `expected false to be true` 갈래와 `Typing` 표지 갈래) `PYTHONUTF8=1 uv run python tools/mutate.py <스크래치 표>`로 돌렸다. 출력을 손으로 봤다. 기준선은 `Tests 1 passed | 14 skipped`로 초록, 앞 갈래는 기대대로, 뒤 갈래는 `표지 없음: expected last "onChange" call to have been called with`로 어긋났고 실패 줄은 200줄의 라벨 단언이었다. 끝난 뒤 `git status --short`에 `web/`이 없어 원문이 되돌아간 것을 봤다. 변이 표 주석과 프로브 README에 적었고, 값 단언만 빨갛게 하는 변이는 `onChange` 단언을 먼저 빨갛게 하지 않고 짓지 못해 보지 않았다고 적었다.
+- Nit: "다음"의 "`plan.md`의 admin-style 행은 01이 먼저 병합된다고 적었다"는 자리가 틀렸다. 그 문장은 프론티어 문단(25줄)에 있고, 인계 절 두 곳의 인용은 원문이 띄어 쓴 "01 이"다. → 고쳤다. `grep -n`으로 `plan.md` 25줄을 손으로 봤다. 지시문을 옮긴 코드 블록 둘은 보낸 글 그대로라 두었다.
+- Nit: 회고 1의 2026-10-26-19 기각 까닭. → 표준 축의 같은 Nit로 이미 고쳤다.
+- Nit: 프로브 README의 320px 근거가 afterEach만 들고 axe 판정을 들지 않으며, 코드를 읽은 근거에 판이 없다. → 고쳤다. axe 판정의 실패 문구 `to have no violations`를 설치된 `@storybook/addon-a11y` 10.6.1의 `dist/_browser-chunks/matchers-JIUQ3HVY.js`에서 grep으로 읽고 판과 함께 적었다. `preview.tsx`는 저장소 코드라 판을 적지 않았다.
+
+고친 것: 위 "고쳤다" 전부(변이 표 주석 둘, 프로브 README, 대기열 350·455·494, 이 일지의 회고 1·6·"다음"·인계 절 인용). 남긴 것: 표준 축 Nit 하나(320px 표지의 일반 문구, 까닭은 위). 다시 돌린 명령은 아래 커밋 절에 적는다.
+
+> 사용자: ".claude/skills/implement/SKILL.md 를 읽어 그대로 따른다. … 인자: .scratch/admin-style/issues/01-ui-settings-icon-password-widths.md … 이어받을 상태: 인계: 셀프 리뷰 직전. 커밋하지 않은 변경이 워크트리에 있고 셀프 리뷰(/code-review, 고정점 HEAD 21547639)부터 한다. … 확인할 선행 조건: 없음 / 이번 요청 범위: PR과 병합까지"
+
+## 회고
+
+이 티켓을 연 세 세션과 이 세션의 일지를 읽고 돌았다. 후보 일곱 가운데 승인 셋(새 행 하나, 회차 둘), 일지에만 하나, 기각 셋, 넘김 없음이다. 만료할 행은 작업 트리와 `origin/main` 두 셈 모두 없었다(`tools/queue_open_rows.py`).
+
+1. **승인, 대기열 494(1회차, 더하는 것).** 사건: 첫 세션이 Docker 엔진의 `Internal Server Error`로 사진 정답을 만들지 못하자 "CI가 찍은 사진을 정답으로"를 사람에게 선택지로 냈는데, 셋째 세션이 설정과 Playwright 코드를 읽어 보니 사진 비교 설정이 `updateSnapshots: "none"`이라 새 스토리(`molecules-textfield--password*`)의 정답은 CI가 내지 못했다. 엔진은 세 세션 내내 오류였고 사람이 Docker Desktop을 다시 켜자 살아났다. 같은 엔진 오류를 적은 앞 일지 셋(2026-10-26-17·2026-10-26-19·2026-10-27-07)의 회고는 모두 기각했지만(17과 07은 저장소가 고칠 자리가 없다며, 19는 CI의 `visual` 잡이 같은 비교를 돌려 통과해 이미 있는 검사가 본 것이라며), 이번에는 잘못 낸 선택지와 CI 길을 대 보는 비용이 났다. 층: 지침보다 행동이 일어나는 자리인 `web/tools/visual.ts`의 출력이 높다. 그 도구가 엔진 오류에서 사람에게 다시 켜 달라고 부탁하라는 것과 새 정답은 CI가 만들지 못한다는 것을 알린다. 되돌림: PR 하나. 도구에 더하는 것이라 세 번째 전이면 대기열에 둔다.
+2. **승인, 대기열 437의 2회차(고침).** 사건: `molecules_mutations.toml`의 `Typing` 변이를 이 브랜치의 `type={type}`에 맞추려 표를 커밋하자, pre-commit의 `tools/mutate.py --staged`가 이 브랜치 전에 이미 0번이던 원문 둘(도움말 줄, 알림 본문)까지 막아 함께 옮겼다(위 커밋 절). 437이 처방한 사건(앞 PR이 썩힌 원문을 그 표를 고쳐야 하는 PR이 떠안는다)이라 회차로 센다.
+3. **승인, 대기열 491의 2회차.** 사건: 이 브랜치가 사례 이름을 바꿔(`열여섯 이름이 모두` 등) 끝난 기능의 변이 표 셋의 `-t`가 더는 사례를 고르지 못하게 됐는데, `--check`와 pre-commit의 `--staged`는 알리지 않았고 셀프 리뷰 표준 축이 Nit으로 잡았다(위 셀프 리뷰 절의 남긴 것). 491이 처방한 검사(`-t` 이름 조각이 그 `tests` 파일 원문에 있는지)가 잡을 사건이라 회차로 센다.
+4. **일지에만.** 첫 커밋 시도의 pre-commit pytest에서 `tests/tools/test_rerun_runner.py`의 오염 시험이 `assert 1 == 0`으로 한 번 빨갰고 따로 돌리면 지났다. 306이 받아들여 닫은 끝이 열린 결함 종류(부하 아래의 시간 시험)의 새 사례라 회차를 더하지 않는다.
+5. **기각.** 사람에게 묻는 선택 화면을 훅의 사실 대조가 첫 세션에서 한 번, 셋째 세션에서 두 번 막았다. 이미 있는 훅이 그 자리에서 막았고 설명의 사실을 대 본 뒤 지났다.
+6. **기각.** 한 티켓에 인계가 네 번 들었다(셀프 리뷰 직전 329,337, 커밋 뒤 297,136, PR 연 뒤 308,028, 셀프 리뷰 직전 295,584 토큰. 넷째는 이 회고를 쓴 뒤에 왔고, 다섯째 세션이 셀프 리뷰 표준 축의 지적으로 더했다). ADR 0033의 장치가 설계대로 넘겼고 일지가 이어져 잃은 것이 없다. 컨텍스트를 키운 원인은 이 세션이 가르지 못해 처방을 세울 근거가 없다.
+7. **기각.** CodeRabbit이 별 10개 미만 저장소라 자동 리뷰를 건너뛰었다. next-session 순서 1의 2가 첫 `@coderabbitai review` 코멘트로 이미 부른다.
+
+## 회고 (셀프 리뷰가 찾은 회차)
+
+다섯째 세션의 셀프 리뷰 명세 축이 위 회고가 세지 않은 사건 둘을 짚었다. 둘 다 열린 행이 이미 처방한 사건이라 회차로 센다(retro 4단계). 위 회고는 그대로 두고 여기 덧붙인다.
+
+8. **승인, 대기열 350의 4회차.** 사건: 이 브랜치가 고친 빨강 기대 변이 셋(`molecules_mutations.toml`의 320px 둘과 `Typing`)에 실패의 까닭을 보는 표지(`expect_output`)가 없었는데, pre-commit의 `tools/mutate.py --staged`는 알리지 않았고 PR #403의 CodeRabbit이 Minor로 잡았다(위 "봇 회차 1"). 350이 처방한 검사(바뀐 변이 가운데 표지 없는 빨강 기대를 알린다)가 잡을 사건이다.
+9. **승인, 대기열 455의 4회차.** 사건: 표지를 고르려고 변이를 넣어 돌리자 `tools/mutate.py`가 출력의 끝만 보여 vitest의 실패 머리가 잘렸고, 커밋하지 않은 스크래치 스크립트로 전체 출력을 따로 저장해 봤다(위 "봇 회차 1"). 455가 처방한 고침(`_details`가 실패 머리 줄도 보인다)이 덜어 줄 사건이다.
+
+## 다음
+
+- 이 PR(#403)이 병합되면 티켓 01이 닫힌다. 형제 02(`.scratch/admin-style/issues/02-admin-organisms-take-props.md`)는 나란히 돌고 있고, 03은 01과 02에 막혀 있다. 둘 가운데 뒤에 병합하는 세션의 `next-session`이 03을 연다.
+- `.scratch/plan.md`의 프론티어 문단 끝은 01이 먼저 병합되었다고 적었다. 02가 먼저 병합되면 이 PR이 그 문장을 고친 뒤 병합한다.
+- 주 체크아웃 미갱신: 루트는 main. 이 세션은 워크트리에서 병합하므로 당기기와 병합된 워크트리 지우기는 다음 새 세션의 `tidy-checkouts`가 한다.
