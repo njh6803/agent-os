@@ -35,21 +35,37 @@ https://claude.ai/artifact/8ttLDZQqchfD2ao1XG56GH 에, 그 아티팩트의 주�
   타일의 변수와 복사를 함께 본다(아래 절들).
 - 아티팩트에 올리기(2026-10-16 부터): 절차(웹 편집 확인, 맞출지, 빌드가 필요한지, 보낼 파일과 지울 경로, 기록과 색인
   `lastChange`, 거부됐을 때)는 프로젝트 스킬 `/sync-design-system` 의 올리기(`.claude/skills/sync-design-system/upload.md`)가
-  원천이다. 번들 `/design-sync` 스킬은 사람이 쳐서 빌드 스크립트를 풀고 번들 스킬의 업로드는 하지 않는다(끝의 `DesignSync` 는
-  그만둔 단독 프로젝트에 올린다). 업로드 없이 빌드만 하는 driver 명령은 아직 적지 않았고, 첫 올리기(design-reverse-sync 티켓
-  08)가 그 스킬의 driver 를 읽어 빌드까지만 도는 명령을 여기 적는다. 아래는 그 스킬이 기대는 사실이다.
-  빌드가 `ds-bundle/` 로 그대로 옮기는 저장소 원본 다섯(기초 카드 넷과 `.claude/rules/web-design.md`)이 옮긴 아티팩트의
-  `project/<같은 경로>` 에 바이트까지 같게 있었다(`.scratch/design-artifacts/probes/hash_match.mjs`). 빌드 산출 전체는 아직
-  맞대지 않았다. `ds-bundle/` 은 빌드마다 새로 지어 지난 빌드의 목록이 남지 않으므로, 첫 올리기가 맞춘 빌드 산출의 경로
-  전부(해시가 같아 보내지 않은 것도 넣고 빌드 부산물은 뺀다)를 이 폴더에 목록으로 커밋하고, 그 파일 이름과 다음 올리기가
-  목록을 새로 적어 싣는 길을 여기 적는다. 다음 올리기는 그 목록을 지난 산출 목록(`record plan --previous-output`)으로 준다.
-  빌드 부산물의 목록도 첫 올리기가 적는다. 빌드가 짓지 않는 파일(옮기기가 더한 `migration-map.json`·`assets/notes/`, 화면이
-  만드는 `manifest.json`, 단독 앱이 만든 `_ds_manifest.json`)과 색인이 가리키는 파일(`docs` 의 `readme`·`sections`, 지금은
-  `project/README.md`·`project/guidelines/index.md`·`project/guidelines/web-design.md`)은 지우지 않는다. 한 번에 보내는
-  경로는 255 개까지이고, 크기는 디자인 시스템 형식의 `SKILL.md` 가 한 번에 16 MiB, Artifact 도구 설명이 한 번에 64MB 라고
-  적는다(둘 다 2026-10-16 에 읽었고 재지 않았다. 스킬은 작은 쪽을 따른다). 목록 타일 `thumbnail.html` 과
-  `_ds_needs_recompile` 은 옮긴 아티팩트의 파일 목록(판 `1792113436-f9ea`, `list` 의 `scope: "files"` 를 손으로 봤다)에
-  없다. 올릴지는 첫 올리기가 본다.
+  원천이다. 번들 `/design-sync` 스킬은 사람이 쳐서 빌드 스크립트를 풀고, 아래 driver 로 빌드만 한다. 번들 스킬 본문의
+  업로드(`DesignSync`)는 그만둔 단독 프로젝트에 올리므로 하지 않는다. 아래 넷은 2026-10-27 첫 올리기(design-reverse-sync
+  티켓 08, 번들 스킬 2.1.308)가 정했다.
+  - driver: `/design-sync` 본문 앞의 "Base directory" 줄이 풀린 폴더다. 그 폴더의 스크립트를 번들 스킬의
+    `storybook/SKILL.md` 가 적은 대로 `.ds-sync/` 에 들이고, 위 패키지 빌드와 참조 Storybook 뒤
+    `node .ds-sync/resync.mjs --config .design-sync/config.json --node-modules web/packages/ui/node_modules --entry web/packages/ui/dist/index.js --out ./ds-bundle --remote .design-sync/.cache/remote-sync.json`.
+    driver 는 빌드, 비교, validate, 캡처까지 돌고 업로드하지 않는다. 판정은 `ds-bundle/.resync-verdict.json` 이다.
+    `--remote` 는 아티팩트의 `project/_ds_sync.json` 을 `read` 로 받아 둔 사본이고, driver 는 그 해시로 바뀌지 않은
+    컴포넌트의 채점을 이어 쓴다(아직 재지 않았다. 첫 올리기 때는 아티팩트에 그 파일이 없어 `--remote` 를 빼고 아홉을 모두
+    채점했다). 채점은 `.design-sync/.cache/compare/<Name>.grade.json` 에 스토리 이름 그대로를 열쇠로 매기고, driver 를
+    다시 돌려 아홉 모두 `carried forward` 인지 본다.
+  - 올릴 산출 폴더: 사용 규약 검사와 `build --out ds-bundle/tokens.json` 뒤
+    `node .design-sync/upload-output.mjs <작업 폴더>/out <작업 폴더>/output-paths.json`. `ds-bundle/` 에는 driver 의
+    부산물(점으로 시작하는 판정·메타 항목 여덟, 채점 사진 `_screenshots/`)과 단독 앱의 장치(목록 타일 `thumbnail.html`,
+    다시 짓기 표지 `_ds_needs_recompile`)가 섞여, 그대로 `record plan --local` 에 주면 그것까지 보낸다. 스크립트가 번들
+    스킬의 업로드 허용 목록으로 올릴 것만 옮기고 모르는 맨 위 항목이 있으면 멈춘다(목록과 까닭은 그 머리 주석). 단독 앱의
+    장치 둘은 옮긴 아티팩트에 없어(판 `1792113436-f9ea` 의 파일 목록) 올리지 않는다. 목록 타일의 복사는 사용 규약 검사가
+    보므로 그대로 한다.
+  - 지난 산출 목록: `.design-sync/upload-output.json`. 마지막으로 빌드 산출 전체를 맞춘 올리기가 낸 산출 폴더의 경로
+    (`project/…`) 전부이고, 해시가 같아 보내지 않은 것도 든다. 빌드 산출 전체를 맞추는 올리기만 이것을
+    `record plan --previous-output` 으로 주고, 다 보낸 뒤 돌아간 브랜치에서 그 올리기의 `output-paths.json` 으로 바꿔
+    커밋한다(`upload.md` 6). 그 커밋이 병합되기 전에 다른 올리기가 돌면 옛 목록을 준다. 계획은 지난 목록에 있고 이번
+    산출에 없는 경로만 지우므로, 그사이 빌드에만 있던 경로가 지워지지 않고 남을 뿐이다. 첫 올리기 뒤 이 목록과 그 산출로
+    계획을 지으니 보낼 것과 지울 것이 0 개였고, 목록에 옛 글꼴 하나를 더하니 그 하나가 지울 경로로 나왔다.
+  - 빌드가 짓지 않는 파일(옮기기가 더한 `migration-map.json`·`assets/notes/`, 화면이 만드는 `manifest.json`, 단독 앱이
+    만든 `_ds_manifest.json`, 옛 고정폭 글꼴 28 개)은 지난 산출 목록에 없어 계획이 지우지 않는다. 첫 기록은 그것을 읽어
+    해시해 들었다. 색인이 가리키는 파일(`docs` 의 `readme`·`sections`)은 산출에 든다. 첫 올리기가 빌드 산출 830 개를
+    아티팩트와 맞대니 825 개가 바이트까지 같았고 다른 것은 README(아래 Re-sync risks), `_ds_bundle.js`,
+    `guidelines/web-design.md` 와 새 파일 `tokens.json`·`_ds_sync.json` 이었다. 한 번에 보내는 경로는 255 개까지이고,
+    크기는 디자인 시스템 형식의 `SKILL.md` 가 한 번에 16 MiB, Artifact 도구 설명이 한 번에 64MB 라고 적는다(둘 다
+    2026-10-16 에 읽었고 재지 않았다. 스킬은 작은 쪽을 따른다). 첫 올리기는 한 호출에 6 개, 268KB 였다.
 
 ## 카드에 올리는 스토리
 
@@ -159,7 +175,18 @@ https://claude.ai/artifact/8ttLDZQqchfD2ao1XG56GH 에, 그 아티팩트의 주�
 - 원격 `fonts/` 에 옛 고정폭 글꼴(IBM Plex Mono 10개, JetBrains Mono 18개)이 남아 있다. 새 빌드는 Noto Sans Mono 만
   내고 `fonts/fonts.css` 도 그것만 가리켜 화면에는 영향이 없다. 드라이버의 `upload.deletePaths` 가 `components/` 경로만
   비교해 비어 있었고, 스킬이 재동기화의 삭제 목록을 손으로 짓지 말라고 해 2026-10-14 에 지우지 않았다. 지우려면 사람이
-  승인한 `finalize_plan` 의 `deletes` 에 그 경로를 들어야 한다.
+  승인한 `finalize_plan` 의 `deletes` 에 그 경로를 들어야 한다. 아티팩트로 옮긴 뒤에도 남았고, 2026-10-27 첫 올리기도
+  사람이 고른 대로 두고 기록에 넣었다. 지난 산출 목록에 없어 올리기의 계획이 지울 경로로 내지 않는다.
+- 아티팩트 README 끝에는 단독 앱에서 옮길 때 붙은 "## Migrated from the standalone version" 절(옮긴 날짜, 지도와 보고서의
+  자리, 캔버스·슬라이드의 복사 목록)이 있고 빌드 README 에는 없다. 그 앞까지는 빌드 README 에 빈 줄 하나를 더한 것과
+  같았다. 그래서 빌드 산출 전체를 맞춘 올리기마다 계획이 README 를 보낼 것에 넣고, 보내면 그 절이 지워진다. 2026-10-27 첫
+  올리기는 사람이 고른 대로 산출의 README 를 아티팩트의 바이트로 바꿔 보내지 않았고, 기록은 그 바이트를 든다. 다음
+  올리기의 길은 `upload.md` 5 의 "README 의 옮기기 절"이다. 그 절을 화면의 설정 마치기가 쓰는지는 재지 않았다.
+- 디자인 시스템 페이지의 메뉴는 Overview 와 Files 말고는 흐리고, 눌러 본 Colors·Components 는 "This page opens when setup
+  is finished" 와 "Finish setting up" 단추만 보인다(2026-10-27 첫 올리기 뒤 내장 브라우저에서 손으로 봤다). 파일 목록은
+  올린 파일을 보이지만 카드 HTML 을 그리지 않고 소스로 보인다. 그 단추는 ADR 0025 가 하지 않기로 한 "Finish the
+  migration" 정리와 같은 것으로 보이고(화면의 설명 문구로 어림했다) 누르지 않았다. 페이지에서 테마와 디자인 토큰을 보고
+  고치는 것은 편집을 켜는 design-reverse-sync 티켓 10 이 이것부터 다룬다.
 - Alert 는 `cfg.overrides.Alert.cardMode: "column"` 이다. 2026-10-14 validate 가 보여 주기용 스토리 둘이 격자 칸보다
   넓다고(`[GRID_OVERFLOW] wide`) 알렸다. 표시 키라 채점에 들지 않는다.
 - 디자인 시스템 아티팩트의 `read` 가 "artifact not found" 를 내면 초대를 수락하지 않았거나 Claude Code 가 다른 계정이다
@@ -173,7 +200,8 @@ https://claude.ai/artifact/8ttLDZQqchfD2ao1XG56GH 에, 그 아티팩트의 주�
   `cp` 로 만든 첫 사본이 CRLF 여서 계약이 CRLF 로 찍혔고, 그대로 두면 LF 로 받은 체크아웃의 첫 동기화가 채점을 모두 지운다.
   2026-10-12 PR 직전 리뷰가 짚어 LF 로 맞추고 다시 찍었다. 다시 찍을 때 driver 가 `ds-bundle/` 을 새로 지어 이전 캡처가
   지워지므로, 바이트로 견주려면 driver 전에 `_screenshots/compare/raw/` 를 보관한다.
-- 포크 `overrides/preview-gen-storybook.mjs` 는 2.1.286 의 원본(2.1.295 도 같다)에 감싸는 요소 하나만 더했다. globals 를
+- 포크 `overrides/preview-gen-storybook.mjs` 는 2.1.286 의 원본(2.1.295 도 같다. 2.1.308 도 2026-10-27 에
+  `diff --strip-trailing-cr` 로 포크가 더한 몫만 다른 것을 봤다)에 감싸는 요소 하나만 더했다. globals 를
   정한 스토리는 그 값으로, 정하지 않은 스토리는 기본 테마·라이트로 감싼다(위 "고친 것"의 둘). 스킬이 올라가면 원본과 다시
   맞춘다(`[OVERRIDE]` 줄이 빌드 로그에 뜬다). 감싸는 div 의 기본 테마 `nokcheong` 과 밀도 값 둘은 `themes.ts` 의
   `DEFAULT_THEME`·`DENSITIES` 와 같아야 한다. 라이트 고정은 `themes.ts` 에 짝이 없다(패키지는 모드가 없으면 시스템을
