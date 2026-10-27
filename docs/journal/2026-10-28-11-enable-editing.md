@@ -222,6 +222,14 @@ open-session을 부른다 2026-10-27T20:45:26Z
 - **524의 2회차.** 넷째 세션의 인계 열기에서 `focus`가 두 번 실패했다(그 세션이 "다음 회고가 그 행의 2회차로 센다"고 적었다). 행의 마지막 칸을 2회차로 올렸다. 524는 "어디로" 칸이 고침이라 적어, 회차가 반영할 때를 정하지 않는다(`CLAUDE.md` 교정 루프의 고침 줄). 같은 대상 파일(`tools/open_session.ps1`)의 519(1회차, #408)와 뿌리가 같으면 합쳐 세 사례지만, 519는 `send`가 새 세션 화면을 찾지 못한 것이고 524는 `focus`가 사이드바 줄을 찾지 못한 것이라 행을 합치지 않고 서로 가리키게만 했다.
 - **526(새 행, 1회차, 손상 한 번). 넷째 세션이 `open-session`이 돌아온 뒤에도 이 워크트리의 일지를 고쳤고, 그 고침이 다섯째 세션 커밋의 pre-commit과 겹쳐 닿지 않았다.** 처음에는 BEL만 보고 "한 번이고 원인을 몰라" 일지에만 남겼는데, 셀프 리뷰 명세 축이 넷째 세션 기록에서 그 줄을 쓴 `printf`와 고치려 한 시각을 찾았고, 다섯째 세션이 그 기록을 스크래치 `late_tools.py`로 찍어 대 봤다(아래 "셀프 리뷰 (다섯째 세션)"). `next-session` "인계할 때" 6이 이미 "다른 도구를 부르지 않고 턴을 끝낸다"고 적는데 어겨졌고 고침이 닿지 않는 손상이 났으므로, 처방을 막는 훅 후보로 적었다. 이 PR의 티켓 밖이라 반영하지 않는다. BEL 자체는 만료된 168(도구 호출의 이스케이프가 파일에서 풀린다)과 같은 가족이라고 526 행의 괄호에 적었다.
 
+봇 회차 뒤 더한 판정(여섯째 세션). 위와 같은 까닭으로 이 자리에 둔다. 사건은 아래 "봇 회차 (여섯째 세션)"에 있다.
+
+- **430의 9회차. 이 티켓이 더한 프로브 `saved_tokens_shape.py`의 첫 판이 `tools/probe_kit.py`의 `Rounds`를 쓰지 않아, 고정 커밋이 없는 클론에서 예외로 결과 없이 끝났다.** PR #409의 첫 CodeRabbit 회차가 잡았다. 열린 행 430이 처방한 사건(`.scratch/**/probes/*.py`가 `Rounds`를 가져오지 않는다)이라 회차로 센다. 행의 마지막 칸을 9회차로 올리고 이 일지 이름을 더했다. 430은 이미 chore 계기라 다른 판정은 없다.
+
+셀프 리뷰 뒤 더한 판정(일곱째 세션). 위와 같은 까닭으로 이 자리에 둔다. 사건은 아래 "셀프 리뷰 (일곱째 세션)"에 있다.
+
+- **431의 7회차. 여섯째 세션이 `.scratch` 아래 프로브에 친 `uv run pyright`의 "0 errors"를 통과로 일지에 적었는데, `--outputjson`의 `summary.filesAnalyzed`가 0이었다.** 일곱째 세션의 셀프 리뷰 두 축이 함께 잡았다. 열린 행 431이 처방한 사건(`pyright`에 검사 범위 밖이나 점 디렉터리 아래의 경로를 준다)이라 회차로 센다(`retro` 4단계). 행의 승인 칸에 날짜를 더하고 마지막 칸을 7회차로 올리고 이 일지 이름을 더했다. 431은 이미 chore 계기라 다른 판정은 없다.
+
 ## 다음
 
 - design-reverse-sync 기능은 이 PR로 닫힌다. 11번 들이기(`feature/11-web-edit-teal-accent-600`)는 기능이 닫힌 뒤의 티켓으로 따로 병합된다. 그 세션이 `import.ts`·`import.test.ts`를 고치지 말라는 메시지를 읽었는지는 모른다. 이 PR이 먼저 병합되면 그 세션이 main을 합칠 때 이 브랜치의 `lineWidth`와 시험이 들어간다.
@@ -348,7 +356,7 @@ open-session을 부른다 2026-10-27T21:43:02Z
 
 ### 셀프 리뷰 (다섯째 세션)
 
-`operations.md` 리뷰 파이프라인 1이 문서만 바뀐 변경도 면제하지 않아, 커밋 전에 `/code-review HEAD`를 돌렸다. 범위는 기준 `a2543e18`(HEAD), 커밋하지 않은 파일 둘(이 일지, 대기열), 커밋 0, 미추적 0이고, 병합 커밋의 충돌 풀이(`git show --cc a2543e18 -- .scratch/retro-queue.md`)를 함께 넘겼다. 명세 축에는 지시문의 420 풀이, 표 끝의 두 갈래, 이 세션의 일지, 넷째 세션의 커밋하지 않은 절, 티켓 47 확인을 요구로 적고, 524 교차 참조·524 회차·BEL 판정은 리뷰어 참고로 넘겼다. 띄우기 전에 이 세션이 쓴 "519와 합쳐도 아직 셋째 사례가 아니다"가 틀린 것(1과 2를 합치면 셋이고, 524는 고침 행이라 회차가 반영할 때를 정하지 않는다)을 스스로 보고 고쳤다.
+`operations.md` 리뷰 파이프라인 1이 문서만 바뀐 변경도 면제하지 않아, 커밋 전에 `/code-review HEAD`를 돌렸다. 범위는 기준 `a2543e18`(HEAD), 커밋하지 않은 파일 둘(이 일지, 대기열), 커밋 0, 미추적 0이고, 병합 커밋의 충돌 풀이(`git show --cc a2543e18 -- .scratch/retro-queue.md`)를 함께 넘겼다. 명세 축에는 지시문의 420 풀이, 표 끝의 두 갈래, 이 세션의 일지, 넷째 세션의 커밋하지 않은 절, 티켓 47 확인을 요구로 적고, 524 교차 참조·524 회차·BEL 판정은 리뷰어 참고로 넘겼다. 띄우기 전에 이 세션이 쓴 519와 합쳐도 아직 셋째 사례가 아니라고 적은 문장이 틀린 것(1과 2를 합치면 셋이고, 524는 고침 행이라 회차가 반영할 때를 정하지 않는다)을 스스로 보고 고쳤다.
 
 **표준 축.** Critical·Major 0, Minor 2, Nit 2. 밀 주장은 모두 맞았다. 서브에이전트가 `git show --cc`로 풀이를, `git show 7d27ae45:.scratch/retro-queue.md`로 #408의 420 행을, 임시 `.md`로 줄 구분 문자 검사의 범위를 대 봤다고 보고했다.
 
@@ -368,3 +376,117 @@ open-session을 부른다 2026-10-27T21:43:02Z
 고친 것은 기록(일지, 대기열)뿐이라 손으로 치는 검증 다섯은 다음 커밋의 pre-commit으로 갈음하고, 스테이지된 `.py`가 없어 Skipped가 되는 ruff 둘은 손으로 친다. 결과는 커밋 뒤에 아래에 적는다.
 
 반영으로 새로 쓴 사실 문장(PR 직전 리뷰는 셋째 세션에서 끝났으니 받을 다음 층은 PR 봇이다): 대기열 519의 524 문장, 524의 2회차, 새 행 526 전부, 회고 절 끝의 "병합 전 더한 판정(다섯째 세션)", 420 줄의 8회차 괄호, 이 세션 절의 pre-commit 시간 문장과 BEL 문장.
+
+### 검증 (다섯째 세션)
+
+- 커밋 전에 `uv run ruff check .`는 통과했고 `uv run ruff format --check .`는 1131 파일이 이미 포맷돼 있다고 찍었다. `uv run python tools/sibling_overlap.py`는 번호 겹침이 없었고, 이 브랜치의 새 번호에 대기열 526이 들었으며, 함께 고친 파일은 `021-queue-rows-search` 워크트리의 `.scratch/retro-queue.md`와 `mcp-shutdown-spec` 워크트리의 `.scratch/plan.md`였다(도구가 찍은 줄).
+- 커밋 `a65a026b`(`docs: 합친 뒤 대기열을 맞추고 인계 뒤 편집 사건을 적는다 (design-reverse-sync 10)`, 파일 둘)의 pre-commit은 ruff 둘, canary specs, constitution version이 Skipped였고 나머지가 Passed였다(병렬 검사 629.7초, 그 가운데 pytest 629.1초, web-verify 594.7초. 커밋 명령의 출력). quotes 경고 3건 가운데 둘(넷째 세션이 옮긴 ruff 출력과 `open_session.ps1` 오류 문구)은 명령 출력의 인용이라 두었고, 이 세션 셀프 리뷰 절의 하나는 옛 문장을 줄여 따옴표로 옮긴 것이라 커밋 뒤 인용 없이 고쳤다(커밋하지 않았다).
+- 이 커밋 직후 인계 계기 훅이 경계 `커밋 뒤`로 왔다(컨텍스트 279,184 토큰). 이 세션의 지시문 "이어받을 상태"가 `인계: 커밋 뒤`로 시작해 `next-session` "인계할 때" 1의 같은 경계라 넘기지 않고 이었다.
+
+## PR과 인계 (다섯째 세션)
+
+`git fetch origin main` 뒤 `git log HEAD..origin/main`이 비어 합칠 것이 없었고, PR 템플릿도 셋째 세션 초안 뒤로 바뀌지 않았다(`git diff 4a74cd19 origin/main --stat -- .github/PULL_REQUEST_TEMPLATE.md`가 비었다). `git push -u origin feature/10-enable-editing` 뒤 `/git-pr`로 PR #409를 열었다. 본문은 스크래치패드 `C:\Users\User\AppData\Local\Temp\claude\C--project-agent\1f62274e-e62e-4082-9584-1d820a0c408e\scratchpad\pr-body.md`이고, 셋째 세션 초안에 `bug-perf-review` 결과, 셀프 리뷰 세 번, 대기열 525·526, 420 풀이를 채웠다. 지시문의 요청 범위가 PR과 병합까지라 `/git-pr` 6단계의 확인은 묻지 않았다. `get_status`가 PR이 이 세션에 묶였고 검사 6이 대기 중이라고 했다. 넘기는 세션이라 Auto-fix는 켜지 않았다.
+
+PR을 연 직후 인계 계기 훅이 경계 `PR 연 뒤`로 왔다(컨텍스트 290,124 토큰, 문턱 200,000). 인계하지 않는 다섯은 어느 것도 맞지 않았다. PR 생성은 성공했고, 요청 범위는 병합까지이며, 이 세션의 지시문은 `인계: 커밋 뒤`라 경계가 다르고, `인계 못함` 줄이 없고, `get_session`의 `self`에 `parentSessionId`가 없다. 함께 온 `hook_pr_next_session`의 계기보다 인계 줄이 앞선다.
+
+넘기는 상태는 이렇다.
+
+- 브랜치는 `a65a026b`까지 푸시됐고 PR #409가 열려 있다. 커밋하지 않은 변경은 이 일지뿐이다(위 "셀프 리뷰 (다섯째 세션)"의 인용 고침 하나, "검증 (다섯째 세션)", 이 절). 봇 회차의 첫 반영 커밋에 싣고, 고친 것이 없는 회차면 일지만 실은 커밋으로 병합 전에 푸시한다(`next-session` 1단계 3).
+- 첫 `@coderabbitai review` 코멘트는 아직 남기지 않았다. 새 세션이 남기고 `next-session` 1단계의 2(봇 회차)부터 한다.
+- 병합 직전에 다시 볼 것. `sibling_overlap.py`의 겹침(`021-queue-rows-search` 워크트리가 `.scratch/retro-queue.md`를 고치고 있다)과, 티켓 47대로 `origin/main`의 01~09 `**Status:**`가 모두 `done`인지다(이 세션은 `7d27ae45`에서 봤다). 11번 들이기 세션(`feature/11-web-edit-teal-accent-600`)이 `import.ts`·`import.test.ts`를 고치지 말라는 메시지를 읽었는지는 여전히 모른다.
+- 이 세션이 고친 것과 번복한 것. 합치기에서 420을 8회차로 풀고 519·524가 서로 가리키게 했다. 524의 2회차를 셌다. 넷째 세션 일지 줄의 BEL을 경로로 되돌렸다. BEL을 처음에 "일지에만"으로 판정했다가 셀프 리뷰 명세 축의 지적으로 새 행 526으로 바꿨다. 519와 합쳐도 셋째 사례가 아니라고 이 세션이 쓴 문장은 셀프 리뷰를 띄우기 전에 스스로 고쳤다.
+- 넘긴 뒤 지킬 것. 526의 사건을 되풀이하지 않도록, 이 세션은 `open-session`이 돌아오면 이 워크트리의 파일을 고치지 않고 턴을 끝낸다. 열기 결과는 일지가 아니라 사람에게 하는 보고로만 남긴다.
+
+이 세션의 제목은 `feature/10-enable-editing`이고 열기 전에 `feature/10-enable-editing (인계함)`으로 바꾼다. 돌던 백그라운드 작업은 없다(두 커밋은 끝났다). 모델 줄은 `uv run python tools/model_sweep.py feature/10-enable-editing`이 낸 값이다. 낸 지시문은 이렇다.
+
+```
+다음 작업: .scratch/design-reverse-sync/issues/10-enable-editing.md. 디자인 시스템 아티팩트의 편집을 켜고 웹 편집을 따라가 기능을 닫는 티켓의 봇 회차와 병합을 마친다
+다음 단계: PR 반영·병합
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /implement .scratch/design-reverse-sync/issues/10-enable-editing.md
+브랜치: feature/10-enable-editing
+모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
+읽을 것: docs/journal/2026-10-28-11-enable-editing.md 의 "PR과 인계 (다섯째 세션)" 절
+이어받을 상태: 인계: PR 연 뒤. PR #409 를 열었고 a65a026b 까지 푸시했다. 첫 @coderabbitai review 코멘트는 아직이다. next-session 1단계의 2(봇 회차)부터 하고, 병합은 "워크트리에서 병합할 때"다. 커밋하지 않은 일지 변경(인용 고침 하나와 다섯째 세션의 "검증"·"PR과 인계" 절)은 봇 회차의 첫 반영 커밋에 싣는다. 일지 docs/journal/2026-10-28-11-enable-editing.md
+확인할 선행 조건: 병합 직전에 sibling_overlap.py 로 겹침(021-queue-rows-search 가 retro-queue.md 를 고친다)과, 티켓 47대로 origin/main 의 01~09 Status 가 모두 done 인지 다시 본다. 11번 들이기 세션(feature/11-web-edit-teal-accent-600)이 import.ts·import.test.ts 를 고치지 말라는 메시지를 읽었는지 모른다
+이번 요청 범위: PR과 병합까지
+```
+
+open-session을 부른다 2026-10-27T22:50:53Z
+
+## 봇 회차 (여섯째 세션)
+
+인계 지시문으로 연 여섯째 세션이 `git worktree list`에서 이 브랜치의 워크트리를 찾아 `EnterWorktree(path)`로 들어갔다. 세션 제목은 `feature/10-enable-editing`이다(앱이 지은 "디자인 아티팩트 편집 활성화"에서 바꿨다).
+
+> 사용자: (지시문) "이어받을 상태: 인계: PR 연 뒤. PR #409 를 열었고 a65a026b 까지 푸시했다. 첫 @coderabbitai review 코멘트는 아직이다. next-session 1단계의 2(봇 회차)부터 하고, 병합은 "워크트리에서 병합할 때"다. … 이번 요청 범위: PR과 병합까지"
+
+`gh pr view 409`의 `headRefOid`와 `git rev-parse HEAD`가 모두 `a65a026b`였고, `@coderabbitai review` 코멘트를 남긴 뒤 `gh pr checks 409`를 한 번 읽으니 `python`이 pending이라 `tools/wait_ci.py 409`를 백그라운드로 띄웠다. 그 도구가 `끝: 모두 통과`로 끝났고, CodeRabbit 줄은 pass였다(명령 출력).
+
+첫 회차는 두 봇 모두 이 PR에 낸 첫 리뷰라, Minor·Nit도 지적마다 판단했다.
+
+- **고친다. CodeRabbit Minor: `saved_tokens_shape.py`가 예외로 끝나면 결과 없이 끝난다.** `.claude/rules/probes.md` 첫 항목이 파이썬 탐침의 셈을 `tools/probe_kit.py`의 `Rounds`로 하라고 적는데 이 프로브는 그것을 쓰지 않았다. 회차 하나를 `Rounds.round`로 감싸고 표지를 본 뒤 `mark`를 부르게 고쳤다. 다시 돌린 결과와 측정 아님 두 길을 손으로 본 것은 프로브 README의 "티켓 10이 받은 저장 꼴" 절에 적었다. 이 프로브를 더한 "셀프 리뷰 (이어받은 세션)" 뒤의 리뷰를 적은 이 일지의 절에는 `Rounds`가 나오지 않는다(이 일지를 Grep으로 봤다). 대기열 430의 9회차로 셌다(위 회고 절 끝).
+- **남긴다. claude-review Minor: `import.ts`의 `PRINT_WIDTH = 100`이 `web/.prettierrc.json`의 `printWidth`를 옮긴 두 번째 원천이다.** 리뷰도 적었듯이 `import.test.ts`의 `expect(options.printWidth).toBe(PRINT_WIDTH)`가 두 값이 어긋나면 빨개진다. 런타임에 `resolveConfig`로 읽으면 그 함수가 Promise를 돌려주어, 동기 함수인 `importTokens`(`import.ts` 1042행)와 그 호출자를 모두 async로 바꿔야 한다. 어긋남을 시험이 이미 잡으므로 그 값을 치르지 않는다.
+- **남긴다. claude-review Nit: 일지 이름의 날짜(10-28)가 작성일(2026-10-27)보다 앞선다.** 일지 이름은 `tools/sibling_overlap.py`의 `다음 빈 번호` 줄을 그대로 받는다(`next-session` 1단계의 3). 그 도구는 이 기계의 시간대로 날짜를 낸다(`tools/sibling_overlap.py` 1869행, 이 기계의 `datetime.now().astimezone()`은 `+09:00`이었다). 리뷰가 적은 작성일 2026-10-27은 그 리뷰 코멘트 시각 `2026-10-27T22:49:35Z`의 UTC 날짜와 같고(리뷰가 날짜를 어디서 얻었는지는 보지 않았다), 그 시각은 KST(UTC+9)로 10-28 07:49다(셈).
+
+보류한 둘은 뒤의 작업으로 넘기는 일이 아니라 일지 "다음"에 적지 않는다. PR 코멘트에 보류 이유를 남긴다.
+
+반영으로 이 세션이 고친 것. `saved_tokens_shape.py`를 `Rounds`로 감쌌고(`ruff check`·`ruff format --check`를 그 파일에 쳐 통과했다. 그 파일에 친 `pyright`의 "0 errors"는 판정이 아니었다. 아래 "셀프 리뷰 (일곱째 세션)"), 프로브 README의 그 행과 결과 절, 대기열 430의 마지막 칸(9회차), 위 회고 절 끝의 "봇 회차 뒤 더한 판정(여섯째 세션)", 이 절을 썼다. 커밋 전에 PR 본문의 "왜 이렇게 했나"의 저장 꼴 줄과 "리뷰어 참고"의 대기열 줄을 이 범위로 넓혀 `gh pr edit 409 --body-file`로 고쳤다(`next-session` 1단계의 1).
+
+반영으로 새로 쓴 사실 문장(받을 다음 층은 셀프 리뷰와 둘째 봇 회차다): 프로브의 독스트링에 더한 `Rounds`와 얕은 클론 문장, 프로브 README의 행에 더한 셈 요약·예외·`Rounds`로 옮긴 판 문장과 결과 절의 새 문단, 이 절의 판정 셋(특히 `import.ts` 1042행의 동기 함수, KST 셈), 회고 절 끝의 430 판정, PR 본문의 두 문장.
+
+## 인계 (여섯째 세션, 셀프 리뷰 직전)
+
+반영을 커밋하려고 `/code-review HEAD`를 부르자 인계 계기 훅이 경계 `셀프 리뷰 직전`으로 왔다(컨텍스트 241,038 토큰, 문턱 200,000). 인계하지 않는 다섯은 어느 것도 맞지 않았다. 계기를 낸 Skill 호출은 성공했고, 요청 범위는 병합까지이며, 이 세션의 지시문은 `인계: PR 연 뒤`라 경계가 다르고, `인계 못함` 줄이 없고, `get_session`의 `self`에 `parentSessionId`가 없다. 그래서 불린 `code-review`의 단계는 밟지 않았고 셀프 리뷰는 새 세션이 한다.
+
+넘기는 상태는 이렇다.
+
+- 브랜치와 PR #409의 머리는 `a65a026b` 그대로이고, 위 "봇 회차 (여섯째 세션)"의 반영과 다섯째 세션이 넘긴 일지 변경이 커밋하지 않은 채 워크트리에 있다. 새 세션은 `/code-review HEAD`로 셀프 리뷰를 한 뒤 이것을 한 커밋에 싣고 푸시한다.
+- PR 본문은 이 반영 범위로 이미 고쳤다. claude-review의 보류 둘(`PRINT_WIDTH`, 일지 날짜)의 이유는 PR 코멘트로 아직 남기지 않았다. 이유는 위 절에 있다.
+- 푸시 뒤에는 `next-session` 1단계 2의 대기를 새로 띄운다. 둘째 회차부터는 두 봇 모두 Critical·Major만 고친다(첫 회차는 두 봇 모두 이 세션이 판정했다).
+- 병합 직전에 다시 볼 것은 받은 지시문과 같다. `sibling_overlap.py`의 겹침(`021-queue-rows-search`가 `.scratch/retro-queue.md`를 고친다. 이 세션도 그 파일의 430 행을 고쳤다)과 티켓 47대로 `origin/main`의 01~09 `**Status:**`가 모두 `done`인지다. 이 세션의 `git fetch origin` 뒤 `git log HEAD..origin/main`은 비었다.
+- 이 세션이 번복한 것. 처음 쓴 판정 문장 둘을 근거 확인으로 고쳤다. 하나는 앞의 셀프 리뷰 셋과 PR 직전 리뷰가 이 규칙 위반을 보지 못했다는 문장을 이 일지를 Grep으로 본 결과로 좁힌 것이고, 다른 하나는 이 PC의 날짜(KST)가 10-28이었다는 문장을 리뷰 코멘트 시각의 셈으로 바꾼 것이다.
+- 넘긴 뒤 지킬 것. 대기열 526의 사건을 되풀이하지 않도록, 이 세션은 `open-session`이 돌아오면 이 워크트리의 파일을 고치지 않고 턴을 끝낸다.
+
+이 세션의 제목은 `feature/10-enable-editing`이고 열기 전에 `feature/10-enable-editing (인계함)`으로 바꾼다. 돌던 백그라운드 작업은 없다(`tools/wait_ci.py` 대기는 `끝: 모두 통과`로 끝났다). 모델 줄은 `uv run python tools/model_sweep.py feature/10-enable-editing`이 낸 값이다. 낸 지시문은 이렇다.
+
+```
+다음 작업: .scratch/design-reverse-sync/issues/10-enable-editing.md. 디자인 시스템 아티팩트의 편집을 켜고 웹 편집을 따라가 기능을 닫는 티켓의 첫 봇 회차 반영과 병합을 마친다
+다음 단계: PR 반영·병합
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /implement .scratch/design-reverse-sync/issues/10-enable-editing.md
+브랜치: feature/10-enable-editing
+모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
+읽을 것: docs/journal/2026-10-28-11-enable-editing.md 의 "봇 회차 (여섯째 세션)"과 "인계 (여섯째 세션, 셀프 리뷰 직전)" 절
+이어받을 상태: 인계: 셀프 리뷰 직전. 첫 봇 회차의 반영(saved_tokens_shape.py 를 Rounds 로 감쌌다, 대기열 430 의 9회차)과 다섯째 세션이 넘긴 일지 변경이 커밋하지 않은 채 워크트리에 있고, 셀프 리뷰(/code-review HEAD)부터 한다. 그 뒤 한 커밋으로 푸시하고, claude-review 의 보류 둘(PRINT_WIDTH, 일지 날짜)의 이유를 PR 코멘트로 남기고, 둘째 봇 회차(Critical·Major 만)를 거쳐 "워크트리에서 병합할 때"로 병합한다. PR 본문은 이 반영 범위로 이미 고쳤다. 일지 docs/journal/2026-10-28-11-enable-editing.md
+확인할 선행 조건: 병합 직전에 sibling_overlap.py 로 겹침(021-queue-rows-search 가 retro-queue.md 를 고친다. 이 반영도 그 파일의 430 행을 고쳤다)과, 티켓 47대로 origin/main 의 01~09 Status 가 모두 done 인지 다시 본다. 11번 들이기 세션(feature/11-web-edit-teal-accent-600)이 import.ts·import.test.ts 를 고치지 말라는 메시지를 읽었는지 모른다
+이번 요청 범위: PR과 병합까지
+```
+
+워크트리 잠금은 이미 풀려 있었다(`git worktree unlock`이 `is not locked`로 끝났다).
+
+open-session을 부른다 2026-10-27T23:14:28Z
+
+## 셀프 리뷰 (일곱째 세션)
+
+인계 지시문으로 연 일곱째 세션이 `git worktree list`에서 이 브랜치의 워크트리를 찾아 `EnterWorktree(path)`로 들어갔다. 세션 제목은 `feature/10-enable-editing`이다(앱이 지은 "Design artifact editing enable PR merge"에서 바꿨다). `git fetch origin main` 뒤 `git log HEAD..origin/main`은 비었다.
+
+> 사용자: (지시문) "이어받을 상태: 인계: 셀프 리뷰 직전. 첫 봇 회차의 반영(saved_tokens_shape.py 를 Rounds 로 감쌌다, 대기열 430 의 9회차)과 다섯째 세션이 넘긴 일지 변경이 커밋하지 않은 채 워크트리에 있고, 셀프 리뷰(/code-review HEAD)부터 한다. … 이번 요청 범위: PR과 병합까지"
+
+`/code-review HEAD`의 범위는 기준 `a65a026b`(HEAD), 커밋하지 않은 파일 넷(프로브, 프로브 README, 대기열, 이 일지), 커밋 0, 미추적 0이다. 명세 축에는 CodeRabbit 지적 원문과 `.claude/rules/probes.md` 첫 항목, `next-session` 1단계 2의 봇 회차 절차, `retro` 5단계의 회차 더하기, 앞 세션들의 일지 절을 요구로 적고, claude-review의 보류 둘은 리뷰어 참고로 넘겼다.
+
+**표준 축.** Critical 0, Major 1, Minor 0, Nit 2. 서브에이전트가 프로브를 돌리고, 스크래치 스크립트로 모듈의 상수를 바꿔 두 실패 길을 대 봤다고 보고했다.
+
+- **고친다. Major: 여섯째 세션 "봇 회차" 절의 `pyright`를 그 파일에 쳐 통과했다는 문장이 판정이 아니다.** `.scratch`는 pyright 범위 밖이다. 이 세션이 `uv run pyright --outputjson .scratch/design-reverse-sync/probes/saved_tokens_shape.py`를 쳐 `summary.filesAnalyzed`가 0인 것을 봤다(명령 출력). `docs/constitution/operations.md` 환경 규약 상세대로 사본을 `tests/` 아래에 두고 같은 명령을 치니 `filesAnalyzed` 1, 오류 5였다(명령 출력, 사본은 지웠다). 다섯 모두 첫 판부터 있던 `walk`(64~68행)가 `dict`·`list`로 좁힌 원소의 타입을 모르는 것이고 이번 회차가 바꾼 줄이 아니다. `docs/agents/issue-tracker.md` 프로브와 근거 절이 이 디렉터리는 pyright와 타입 우회 검사가 보지 않는다고 정해 고치지 않았다. 일지 문장은 ruff 둘만 통과로 적고 pyright는 판정이 아니었다고 고쳤다. 대기열 431의 7회차로 셌다(위 회고 절 끝).
+- **고친다. Nit: `sys.path.insert(0, str(Path(__file__).resolve().parents[3]))`가 선례의 꼴과 다르다.** 선례 둘(`.scratch/web-widget/probes/anyio_facts.py`, `.scratch/harness/probes/gh_api_method.py`)이 `ROOT` 상수를 두므로 그 꼴로 바꿨다. 다시 돌린 프로브는 같은 JSON 줄과 "측정 1회차, 측정 아님 0회차"를 찍고 0으로 끝났다(프로브가 찍은 줄).
+- **고친다. Nit: "둘째 세션"이라는 이름을 이 일지가 쓰지 않는다.** 그 프로브를 더한 절의 이름("셀프 리뷰 (이어받은 세션)")으로 바꿨다.
+
+**명세 축.** Critical·Major 0, Minor 1, Nit 3. 범위 넘침은 없다고 했다.
+
+- **고친다. Minor: pyright가 아무 파일도 보지 않았다.** 표준 축의 Major와 같은 지적이라 함께 고쳤다.
+- **고친다. Nit: 여섯째 세션 인계 절의 번복 줄에 원문 없는 따옴표 인용이 둘이다.** 다섯째 세션이 같은 꼴을 고친 대로 따옴표를 떼고 문장으로 풀었다.
+- **고친다. Nit: 프로브 README의 두 표현이 동작과 조금 다르다.** 행의 결과를 "회차가 끝까지 돌았을 때의 JSON 한 줄"로 좁히고(예외로 끝난 회차는 JSON 없이 요약만 찍는다), 결과 절의 바꾼 값을 받은 파일이 아니라 기대하는 sha256 상수(`RECEIVED_SHA256`)로 고쳤다.
+- **고친다. Nit: 리뷰가 본 날짜가 GitHub의 UTC 시각이라는 문장은 해석이다.** 리뷰가 적은 날짜가 그 코멘트 시각의 UTC 날짜와 같다는 것만 적고 출처는 보지 않았다고 밝혔다. 일지 이름 쪽의 근거로 `tools/sibling_overlap.py` 1869행이 이 기계의 시간대로 날짜를 내고, 이 기계의 `datetime.now().astimezone()`이 `+09:00`이었다는 것을 더했다(코드를 읽고 명령을 쳐 봤다).
+
+남긴 것은 없다. 고친 것이 일지·대기열·프로브 README와 `.scratch` 아래 프로브 한 줄이라, 손으로 치는 검증 다섯은 다음 커밋의 pre-commit으로 갈음한다. 스테이지된 `.py`가 프로브 하나라 ruff 둘은 손으로도 친다. 결과는 커밋 뒤에 아래에 적는다.
+
+반영으로 새로 쓴 사실 문장(받을 다음 층은 둘째 봇 회차다): 이 절의 pyright 두 결과(`filesAnalyzed` 0, 사본의 1과 오류 5)와 그 오류가 첫 판부터 있었다는 문장, 프로브 README의 두 고친 표현, "봇 회차 (여섯째 세션)"의 날짜 판정에 더한 `sibling_overlap.py` 1869행과 `+09:00`, 회고 절 끝의 431 7회차 판정.

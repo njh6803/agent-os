@@ -10,8 +10,10 @@
 된다. 02 의 두 파일은 `FIXTURE_COMMIT` 에서 꺼낸다(`.claude/rules/probes.md` 의 스냅샷 항목).
 
 표지는 둘이다. 받은 파일의 sha256 이 티켓이 적은 값이다(재려는 파일을 읽었다). 양성 대조의 다른
-자리가 하나 이상이다(비교가 페이지의 꼴 바꿈을 가른다). 둘 가운데 하나라도 없으면 측정이 아니라 종료
-코드 1 이다. 결과는 JSON 한 줄이고, 실험군의 다른 자리 수는 판정하지 않고 찍는다.
+자리가 하나 이상이다(비교가 페이지의 꼴 바꿈을 가른다). 회차는 하나이고 `tools/probe_kit.py` 의
+`Rounds` 로 센다. 둘 가운데 하나라도 없거나 회차가 예외로 끝나면(고정 커밋이 없는 얕은 클론의
+`git show` 등) 측정이 아니라 종료 코드 1 이다. 결과는 회차가 끝까지 돌았을 때의 JSON 한 줄과 그 뒤의
+셈 요약이고, 실험군의 다른 자리 수는 판정하지 않고 찍는다.
 
 못 보는 것: 꼴만 보고 값은 보지 않는다(값의 차이는 확인 명령의 맞대기가 본다). 다른 형식 판의
 페이지가 저장한 꼴은 이 두 판(02 의 형식 판 `1792632348-7c2b`, 티켓 10 의 실제 아티팩트) 밖이다.
@@ -27,6 +29,11 @@ import subprocess
 import sys
 from collections import defaultdict
 from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[3]
+sys.path.insert(0, str(ROOT))
+
+from tools.probe_kit import Rounds  # noqa: E402
 
 RECEIVED = Path(".scratch/design-reverse-sync/probes/received/tokens-1793126431-7500.json")
 RECEIVED_SHA256 = "f8e91e9841425744d00b29acc53d837923b5bfeff4c90ab061c0d33d44866df1"
@@ -82,25 +89,34 @@ def fixture(name: str) -> str:
 
 
 def main() -> int:
-    received = RECEIVED.read_bytes()
-    sha_ok = hashlib.sha256(received).hexdigest() == RECEIVED_SHA256
-    saved = shape(fixture("page-saved-tokens.json"))
-    experiment = differing(shape(received.decode("utf-8")), saved)
-    control = differing(shape(fixture("uploaded-tokens.json")), saved)
-    measured = sha_ok and len(control) > 0
-    print(
-        json.dumps(
-            {
-                "measured": measured,
-                "received_sha256_ok": sha_ok,
-                "paths_02_saved": len(saved),
-                "experiment_differing": experiment,
-                "control_differing": control,
-            },
-            ensure_ascii=False,
+    rounds = Rounds()
+    with rounds.round("티켓 10 저장본") as current:
+        received = RECEIVED.read_bytes()
+        sha_ok = hashlib.sha256(received).hexdigest() == RECEIVED_SHA256
+        saved = shape(fixture("page-saved-tokens.json"))
+        experiment = differing(shape(received.decode("utf-8")), saved)
+        control = differing(shape(fixture("uploaded-tokens.json")), saved)
+        measured = sha_ok and len(control) > 0
+        print(
+            json.dumps(
+                {
+                    "measured": measured,
+                    "received_sha256_ok": sha_ok,
+                    "paths_02_saved": len(saved),
+                    "experiment_differing": experiment,
+                    "control_differing": control,
+                },
+                ensure_ascii=False,
+            )
         )
-    )
-    return 0 if measured else 1
+        current.mark(
+            measured=measured,
+            result=f"실험군 다른 자리 {len(experiment)}"
+            if measured
+            else f"표지 없음: sha256 {sha_ok}, 대조 다른 자리 {len(control)}",
+        )
+    print(rounds.summary())
+    return rounds.exit_code()
 
 
 if __name__ == "__main__":
