@@ -3,7 +3,7 @@
  * (`sync-record.ts`)을 쓰며, 들이기의 `claim` 을 쓰거나 비운다(`claim.ts`)(design-reverse-sync 명세 "기록", "올리기",
  * "찾았을 때"의 "덮어쓴다", "겹침").
  *
- * 하위 명령은 넷이다. 산출 폴더는 아티팩트의 `project/` 아래에 놓일 내용(빌드의 `ds-bundle/` 등)이다. 확인 보고는
+ * 하위 명령은 다섯이다. 산출 폴더는 아티팩트의 `project/` 아래에 놓일 내용(빌드의 `ds-bundle/` 등)이다. 확인 보고는
  * `check judge` 의 보고 JSON 이고 `check-report.ts` 로 읽는다.
  *
  * - `record plan --local <산출 폴더> (--record <기록> | --artifact-sha256 <sha256 표>) [--check <확인 보고>]
@@ -36,6 +36,10 @@
  *   `claim` 을 쓰거나(`claim.ts` 의 셋) 사람이 지우기로 고른 `claim` 을 비운 기록을 쓴다. 다시 받은 기록의 `claim` 이
  *   확인에 쓴 기록의 것과 다르면 `input` 오류다. 받은 폴더와 확인 보고는 같은 `check judge` 의 것이다. 보고는
  *   `record write` 와 같다.
+ * - `record base --record <기록> --out <기준본>`. 들이기 명령(`import --base`)에 넘길 기준본을 쓴다. `claim` 이
+ *   이어받은 기준본을 들면 그것이고, 아니면 기록의 기준본이다(명세 "겹침"의 "병합됐으면" 주석). `claim` 의 사본은
+ *   기준본이 아니다. 둘 다 없으면 `input` 오류다. 보고는 쓴 파일의 절대 경로(`out`)와 어디서 골랐는지(`from`,
+ *   `claim` 이나 `record`)다. 스킬이 기록의 JSON 에서 칸을 손으로 고르지 않게 07 이 더했다.
  *
  * 못 보는 것: 확인 보고와 계획 보고가 이번 산출과 같은 때의 것인지는 보지 않는다. 스킬이 한 올리기 안에서 이어 준다.
  * `--claim-merged` 가 실제로 병합된 `claim` 인지는 보지 않는다. 결정표가 스킬이 받은 PR 상태로 고른다. 덮어쓰기가
@@ -456,6 +460,24 @@ function claim(values: Values): ReportFields {
   return written("claim", out, next);
 }
 
+/** 들이기 명령에 넘길 기준본. `claim` 이 이어받은 기준본이 있으면 그것, 없으면 기록의 기준본이다. */
+function base(values: Values): ReportFields {
+  onlyOptions("base", values, ["record", "out"]);
+  const path = required("base", "record <기록>", values.record);
+  const out = required("base", "out <기준본>", values.out);
+  const record = recordFrom(path);
+  const inherited = record.claim?.base ?? null;
+  const chosen = inherited ?? record.baseline;
+  if (chosen === null) {
+    throw inputError(path, "기준본을 들지 않는다. 들이기는 첫 올리기 뒤에만 한다");
+  }
+  return {
+    action: "base",
+    out: writeOutput(out, `${JSON.stringify(chosen, null, 2)}\n`),
+    from: inherited === null ? "record" : "claim",
+  };
+}
+
 /** 기록 명령. */
 export function runRecord(args: readonly string[]): ReportFields {
   const { values, positionals } = parseValues(args);
@@ -472,10 +494,12 @@ export function runRecord(args: readonly string[]): ReportFields {
       return write(values);
     case "claim":
       return claim(values);
+    case "base":
+      return base(values);
     default:
       throw new CommandError(
         "usage",
-        "record 는 plan, needs-build, write, claim 가운데 하나를 받는다",
+        "record 는 plan, needs-build, write, claim, base 가운데 하나를 받는다",
       );
   }
 }
