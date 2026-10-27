@@ -298,6 +298,11 @@
             "type": "command",
             "command": "uv run --project \"${CLAUDE_PROJECT_DIR}\" --no-sync python \"${CLAUDE_PROJECT_DIR}/tools/launch_hook.py\" hook_grill_design_check.py",
             "timeout": 20
+          },
+          {
+            "type": "command",
+            "command": "uv run --project \"${CLAUDE_PROJECT_DIR}\" --no-sync python \"${CLAUDE_PROJECT_DIR}/tools/launch_hook.py\" hook_security_review_journal.py",
+            "timeout": 20
           }
         ]
       },
