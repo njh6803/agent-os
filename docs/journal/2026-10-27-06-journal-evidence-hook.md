@@ -107,6 +107,15 @@
 - `bug-perf-review`: 유효 0건, 보류 0건. 밀 주장 다섯 가운데 표지 폴더가 훅마다 따로인 것은 `STATE_DIR` grep으로, `.venv/.gitignore`가 `*`이고 `_cffi_backend` 파일이 `.venv/Lib/site-packages`에 있는 것은 파일로 대 봤다. 대소문자 구별은 코드를 읽었고, Glob의 "No files found"는 재현하지 않았다(문장이 손으로 봤다고 적었다).
 - 고친 것 없음. 남긴 것 없음.
 
+## 봇 첫 회차
+
+PR #401, 헤드 `a2de4c9`. CI는 모두 초록이었다. CodeRabbit은 무료 한도("Review limit reached")에 걸려 리뷰가 없어 회차로 세지 않는다. claude-review의 첫 회차는 Critical·Major 없이 Minor 둘과 Nit 둘이었다.
+
+- 고친 것(Minor): `CLAUDE.md` Glob 줄이 매 세션 실리는데 재현 경위로 길어졌다. 경위와 재지 않은 자리는 티켓 010의 수용 기준 줄에 두고, 줄에는 함정만 남겼다. 새로 쓴 문장: "`.venv` 안의 파일은 루트에서도 `path` `.venv`에서도 찾지 않고, 그 파일이 든 하위 폴더(`.venv/Lib/site-packages`)를 `path`로 주면 찾았다(`claude -p`에서 `.venv`만 손으로 봤다, harness 티켓 010)". 지운 목록을 가리키던 "그 자리들"은 "무시된 폴더(`.venv`, `node_modules`, `.claude/worktrees/`)"로 풀었다.
+- 보류(Minor): 표지가 첫 Write(대개 머리 한 줄)에서 소모돼 결과 줄을 쓰는 뒤의 편집에는 알리지 않는다. 티켓이 세션·에이전트마다 한 번을 요구했고 독스트링의 못 보는 것에 적혔다. 효과를 재는 일은 아래 "다음"이 받는다.
+- 보류(Nit): `claim_first`·`marker_name`·`is_journal`의 세 번째 복제. 훅끼리 import하지 않는 규약(`.claude/rules/tools.md`)에서 온 복제라 이 PR에서 공용 함수를 두지 않는다. 회고 후보다.
+- 보류(Nit): `.claude/rules/tools.md` 시간 항목이 한 줄로 길어 훅마다 같은 줄을 고친다. 이 PR이 만든 구조가 아니다.
+
 ## 다음
 
 - 둘째 커밋 시도도 pre-commit에서 막혔다. pytest는 `test_rerun_runner`의 오염 재시도 시험 하나(세 번째 연속), web-verify는 `WidgetApproval.test.tsx`의 "18,000 / 20,000" 찾기 하나가 떨어졌다. 그때 CPU 부하는 세 번 모두 100%였다(PowerShell `Win32_Processor`로 손으로 봤다). 훅을 건너뛰는 커밋은 사용자 승인 없이 하지 않아, 커밋 방법을 사용자에게 물었다.
@@ -119,3 +128,4 @@
 - `test_rerun_runner`의 오염 재시도 시험이 부하에서 세 번 연달아 떨어진 원인을 diagnosing-bugs로 가르는 일은 이 티켓 밖이다. 회고에서 대기열 행으로 올린다(같은 때 흔들린 `test_probe_kit` 배출, `test_interrupt`의 Ctrl+C 둘, 위젯 승인 화면 시험도 함께 본다).
 
 - 앱 세션에서 이 설정이 Glob에 닿는지와 주 체크아웃 루트의 Glob이 시간 안에 끝나는지는 병합 뒤 주 체크아웃의 새 세션이 한 번 불러 본다.
+- 일지 근거 훅이 첫 Write에서 소모되는 것이 실제로 알림을 놓치는지는 병합 뒤 며칠의 창을 두고 `tools/hook_report.py`로 본다(PR #401 claude-review 첫 회차의 보류 Minor). 놓치면 Edit부터 알리는 안을 대기열에 올린다.
