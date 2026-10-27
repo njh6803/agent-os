@@ -545,6 +545,33 @@ expect = "silent"
 note = "같은 probes 폴더의 프로브 스크립트 — README 가 아니다"
 payload = { tool_name = "Edit", tool_input = { file_path = "C:\\project\\agent\\.scratch\\harness\\probes\\guard_hooks_time.py", old_string = "a", new_string = "b" } }
 
+# --- hook_journal_evidence (PostToolUse Write|Edit) ---
+# session_id 를 빼 표지를 쓰지 않는 길(호출마다 알린다)로 돈다. 한 번만 알리는 것은 tests/tools 가 임시 폴더로 본다.
+[[case]]
+hook = "hook_journal_evidence.py"
+expect = "context"
+note = "일지의 단계 줄을 고쳤다(대기열 445. 일지 2026-10-23-27 의 꼴)"
+contains = [
+    "근거의 종류",
+    "그 명령과 함께",
+    "그 문서를 출처로",
+    "보지 않은 것을 본 것처럼",
+    "docs/agents/issue-tracker.md",
+]
+payload = { tool_name = "Edit", tool_input = { file_path = "C:\\project\\agent\\docs\\journal\\2026-10-23-27-admin-style-screens.md", old_string = "- 5단계", new_string = "- 5단계: 테마 메뉴에 hex가 보인다" } }
+
+[[case]]
+hook = "hook_journal_evidence.py"
+expect = "silent"
+note = "같은 일에서 고친 디자인 표 — 일지 밖이다(대기열 445 의 둘째 사례)"
+payload = { tool_name = "Edit", tool_input = { file_path = "C:\\project\\agent\\.scratch\\admin-style\\design\\README.md", old_string = "| a |", new_string = "| b |" } }
+
+[[case]]
+hook = "hook_journal_evidence.py"
+expect = "silent"
+note = "일지 폴더 옆의 ADR — docs 아래지만 journal 이 아니다"
+payload = { tool_name = "Write", tool_input = { file_path = "C:\\project\\agent\\docs\\adr\\0036-x.md", content = "# x\n" } }
+
 # --- hook_edit_during_commit (PreToolUse Write|Edit|NotebookEdit) ---
 # 러너가 도는 동안 `${COMMITTING_REPO}` 안의 워크트리 `.claude/worktrees/side` 에서 pre-commit 훅에 멈춘 커밋이 돈다.
 # 침묵은 같은 저장소의 주 체크아웃 파일이다. 커밋하는 워크트리가 그 폴더 아래에 있어도 다른 체크아웃이다.
