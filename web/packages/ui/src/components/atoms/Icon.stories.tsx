@@ -55,7 +55,7 @@ export const Sizes: Story = {
 };
 
 export const AllNames: Story = {
-  name: "열여섯 이름이 모두 화면 1.5px 의 선으로 그려진다",
+  name: "열일곱 이름이 모두 화면 1.5px 의 선으로 그려진다",
   render: (args) => (
     <ul className="flex flex-wrap gap-4 text-text">
       {ICON_NAMES.map((name) => (
@@ -67,6 +67,9 @@ export const AllNames: Story = {
     </ul>
   ),
   play: async ({ canvasElement }) => {
+    // 관리 화면 탐색의 설정(admin-style)까지 열일곱이다.
+    await expect(ICON_NAMES).toHaveLength(17);
+    await expect(ICON_NAMES).toContain("settings");
     const svgs = Array.from(canvasElement.querySelectorAll("svg"));
     await expect(svgs).toHaveLength(ICON_NAMES.length);
     for (const svg of svgs) {
@@ -79,7 +82,7 @@ export const AllNames: Story = {
 
 export const AllNamesDark: Story = {
   ...AllNames,
-  name: "다크 모드에서도 열여섯 이름이 화면 1.5px 의 선으로 그려진다",
+  name: "다크 모드에서도 열일곱 이름이 화면 1.5px 의 선으로 그려진다",
   globals: { mode: "dark" },
 };
 
@@ -96,6 +99,10 @@ export const ShowcaseNavItems: Story = {
       <li className="flex items-center gap-2">
         <Icon name="list" size="16" />
         실행
+      </li>
+      <li className="flex items-center gap-2">
+        <Icon name="settings" size="16" />
+        설정
       </li>
     </ul>
   ),

@@ -77,6 +77,27 @@ export const Single: Story = {
   },
 };
 
+// 가린 칸은 textbox 역할이 아니다(ARIA 에 password 역할이 없다). 그래서 라벨로 찾는다. 넣은 글은 args 의 value 로
+// 그려 사진에 가린 모양이 든다.
+export const Password: Story = {
+  name: "한 줄 칸에 type 으로 password 를 주면 넣은 글을 가리는 칸이고 라벨로 찾힌다",
+  args: { label: "관리 토큰", type: "password", value: "admin-token" },
+  play: async ({ canvas, canvasElement }) => {
+    const input = canvas.getByLabelText("관리 토큰");
+    await expect(input).toBe(fieldNamed(canvasElement, "관리 토큰"));
+    await expect({ tag: input.tagName, type: input.getAttribute("type") }).toEqual({
+      tag: "INPUT",
+      type: "password",
+    });
+    await expect(canvas.queryByRole("textbox")).toBeNull();
+    await expect(colorsOf(input)).toEqual({
+      background: semanticColor(input, "bg-raised"),
+      text: semanticColor(input, "text"),
+      border: hoverAwareColor(input, "border-control", "text-muted"),
+    });
+  },
+};
+
 export const Multi: Story = {
   name: "여러 줄 글 입력은 textarea 이고 높이를 줄 수 셋과 안쪽 위아래 8px 이 정하며 세로로만 늘어난다",
   args: { variant: "multi", label: "거부 사유", placeholder: "예: 금액을 먼저 확인해 주세요" },
@@ -390,6 +411,7 @@ export const ShowcaseDecisionAndToken: Story = {
       />
       <TextField
         label="채널 토큰"
+        type="password"
         value=""
         help="이 탭에만 남고 서버의 구성은 바꾸지 않습니다"
         onChange={() => {}}
