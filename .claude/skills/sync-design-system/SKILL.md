@@ -32,7 +32,7 @@ description: "Claude 아티팩트의 디자인 시스템과 `web/packages/ui`를
 끝: `check-<n>/check.json`에 `check judge`의 보고가 있고, 결정표의 보고(`decide`)가 나왔다.
 
 1. **받을 경로.** 확인을 시작할 때 빈 받은 폴더 `check-<n>/web/`을 만들고 `check-<n>/reads.json`에 `{"absent": [], "failed": {}}`를 쓴다. 아직 아무것도 받지 않은 첫 `check paths`에도 `--web`이 읽을 폴더가, 다 읽힌 확인에도 3의 `--reads`가 받을 파일이 있어야 한다(없는 폴더나 파일을 주면 `input` 오류로 멈춘다). 그 뒤 `check paths --web check-<n>/web --reads check-<n>/reads.json`. 보고의 `paths`가 비면 3으로 간다.
-2. **받기.** Artifact 도구 `read`에 아티팩트 `url`과 그 `paths`를 준다. 결과가 알리는 자리의 파일을 `check-<n>/web/<경로>`(`project/…` 그대로)로 복사한다. 읽지 못한 경로는 `reads.json`(`{"absent": [...], "failed": {경로: 문구}}`)에 더한다. 도구가 그 경로가 없다는 까닭을 냈을 때만 `absent`이고, 그 밖과 가를 수 없는 문구는 `failed`에 도구의 문구 그대로 적는다. 잠깐의 도구 오류를 `absent`로 적으면 웹에서 지운 것으로 읽혀, "저장소 파일에 옮긴다"가 저장소 원본을 지우는 PR이 선다. 1로 돌아간다.
+2. **받기.** Artifact 도구 `read`에 아티팩트 `url`과 그 `paths`를 준다. 결과가 알리는 자리의 파일을 `check-<n>/web/<경로>`(`project/…` 그대로)로 복사한다. 읽지 못한 경로는 `reads.json`(`{"absent": [...], "failed": {경로: 문구}}`)에 더한다. 도구가 그 경로가 없다는 까닭(첫 올리기가 본 문구는 `no file is published at that path in the served version`)을 냈을 때만 `absent`이고, 그 밖과 가를 수 없는 문구는 `failed`에 도구의 문구 그대로 적는다. 잠깐의 도구 오류를 `absent`로 적으면 웹에서 지운 것으로 읽혀, "저장소 파일에 옮긴다"가 저장소 원본을 지우는 PR이 선다. 1로 돌아간다.
 3. **판정.** `build --out check-<n>/code-tokens.json`으로 지금 코드의 `tokens.json`을 짓고, `check judge --web check-<n>/web --reads check-<n>/reads.json --branch <지금 브랜치> --code-tokens check-<n>/code-tokens.json --inherit-out check-<n>/inherit.json > check-<n>/check.json`. 지금 브랜치는 `git branch --show-current`이고, 비면(분리 HEAD) `HEAD`를 준다. 보고에 `inherit`이 있을 때만 그 파일을 쓴다. 비었으면 앞 실행의 파일일 수 있다.
 4. **결정.** 보고의 `result`가 `importing`이면 `gh pr list --head <claim.branch> --state all --json number,state,url,mergeCommit > check-<n>/pr.json`을 치고 `decide`에 `--pr check-<n>/pr.json`을 준다. `gh`가 실패하면 `--pr-error`에 그 문구를 준다. `decide --caller <위 표> --check check-<n>/check.json [--pr … | --pr-error …]`의 `kind`가 `ask`면 "찾았을 때", `act`면 아래 "할 일"이다.
 
@@ -84,10 +84,9 @@ description: "Claude 아티팩트의 디자인 시스템과 `web/packages/ui`를
 
 ## 재지 못한 것
 
-첫 올리기(티켓 08)가 처음 돌려 보는 것이다. 다르면 이 절과 그 자리를 고친다.
+처음 돌려 볼 때 다르면 이 절과 그 자리를 고친다. 첫 올리기(티켓 08, 2026-10-27)가 위 "보내기"의 `publish` 모양(새 경로 셋과 바꾼 경로 셋을 한 호출로 보냈다), `read`가 없는 경로에 내는 문구(위 "확인" 2), `/design-sync`를 친 턴의 본문 앞 "Base directory" 줄을 봤다. 남은 것은 아래 넷이다.
 
-- 위 "보내기"의 `publish` 모양(`root`, `file_path`, `files`). 디자인 시스템 형식의 `SKILL.md`와 `.design-sync/NOTES.md`의 호출 모양에서 옮겼다.
-- `read`가 없는 경로에 내는 문구. 가를 수 없으면 `failed`로 적으므로, 틀려도 판단할 수 없음으로 멈출 뿐이다.
-- 사람이 `/design-sync`를 친 턴에 그 번들 스킬의 폴더가 본문 앞에 실리는지(명세 "풀린 폴더를 찾는 법").
-- 색인의 그림·글꼴 항목이 파일 경로를 어떻게 드는지([upload.md](upload.md)의 "덮어쓰기와 색인"). 들이기가 "저장소 파일에 옮긴다"를 고른 색인 편집이, 병합 뒤의 올리기가 색인 목록을 기록의 것으로 되돌린 다음에 어떻게 남는지도 그 자리에서 본다.
-- 한 호출의 한도(255개)에 지울 경로(`files`의 null)도 드는지. [upload.md](upload.md) 6은 드는 쪽으로 센다.
+- 색인의 그림·글꼴 항목이 파일 경로를 어떻게 드는지([upload.md](upload.md)의 "덮어쓰기와 색인"). 첫 올리기 때 색인의 `assetGroups`의 `files`와 `blobs`가 비어 있어 보지 못했다. 들이기가 "저장소 파일에 옮긴다"를 고른 색인 편집이, 병합 뒤의 올리기가 색인 목록을 기록의 것으로 되돌린 다음에 어떻게 남는지도 그 자리에서 본다.
+- 한 호출의 한도(255개)에 지울 경로(`files`의 null)도 드는지. [upload.md](upload.md) 6은 드는 쪽으로 센다. 첫 올리기는 지울 경로가 없었다.
+- 나눠 보낸 호출들이 판 하나로 묶이는지, 호출마다 판이 하나씩 생기는지(명세 "기록"의 "중간 실패"가 어림한 것). 첫 올리기는 한 호출이었다.
+- 판 하나에 드는 파일 수의 한도. 도구 설명은 511개, 형식 설명은 1,024개라 적는다. 첫 올리기는 목록 머리가 875개(`project/` 밖 13개 포함)인 판에 새 경로 셋을 더해 받아들여졌으니 511개는 막지 않았다. 보낸 뒤 목록을 다시 받지 않아 판 16의 수는 878개로 어림했고, 1,024개 쪽은 재지 못했다.

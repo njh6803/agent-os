@@ -2,9 +2,8 @@ import Link from "next/link";
 import { useId, useState } from "react";
 import { describeFailure, RequestFailure } from "../../api/failure";
 import type { PluginKind, PluginRow } from "../../api/plugins";
-import { usePlugins, useSetPluginEnabled } from "../../hooks/queries/plugins";
 import { FailureNotice, type FailureNoticeProps } from "../molecules/FailureNotice";
-import { ReadSection } from "./ReadSection";
+import { ReadSection, type ReadState } from "./ReadSection";
 
 /**
  * 종류의 이름과 차례(적은 차례대로 묶는다). 이름은 용어집의 말이다. `Record` 라서 계약에 종류가 늘거나 줄면 여기가
@@ -24,6 +23,16 @@ const WITHOUT_LOADER: ReadonlySet<PluginKind> = new Set<PluginKind>(["skill", "m
 type SwitchFailure = FailureNoticeProps;
 
 /**
+ * 플러그인 하나를 켜거나 끈다. 목록을 다시 읽은 뒤에 돌아오고, 실패는 `RequestFailure` 로 던진다(다시 읽기는 실패해도
+ * 한다).
+ */
+type SetEnabled = (kind: PluginKind, name: string, enabled: boolean) => Promise<void>;
+
+interface PluginListProps extends ReadState<readonly PluginRow[]> {
+  readonly onSetEnabled: SetEnabled;
+}
+
+/**
  * 플러그인 목록(`GET /plugins`). 종류별로 묶고 행마다 켜짐과 스위치를 보인다. 새로 고침과 실패의 표시는 읽기
  * 골격(`ReadSection`)이다. 다시 읽다 실패하면 옛 행을 지운다. 운영자 파일이 깨졌을 때 무엇이 꺼져 있는지 모르는 채 옛
  * 목록을 믿으면 안 되기 때문이다(스토리 16).
@@ -31,19 +40,13 @@ type SwitchFailure = FailureNoticeProps;
  * 켜고 끄기의 실패는 행이 아니라 목록의 머리에 보인다. 그 사이 플러그인이 사라져 404 이면 다시 읽은 목록에서 그 행이
  * 빠지는데, 실패를 행이 들면 메시지도 함께 사라진다(스토리 19). 다음 켜고 끄기가 시작될 때 걷힌다.
  */
-export function PluginList() {
-  const { data, error, isValidating, mutate } = usePlugins();
+export function PluginList({ onSetEnabled, ...read }: PluginListProps) {
   const [switchFailure, setSwitchFailure] = useState<SwitchFailure | null>(null);
 
   return (
     <ReadSection
       heading="플러그인"
-      data={data}
-      error={error}
-      isValidating={isValidating}
-      onRefresh={() => {
-        void mutate();
-      }}
+      {...read}
       placeholder="플러그인 목록을 불러오는 중이다"
       above={switchFailure === null ? null : <FailureNotice {...switchFailure} />}
     >
@@ -53,6 +56,7 @@ export function PluginList() {
             key={kind}
             label={label}
             rows={rows.filter((row) => row.kind === kind)}
+            onSetEnabled={onSetEnabled}
             onSwitchFailure={setSwitchFailure}
           />
         ))
@@ -64,10 +68,11 @@ export function PluginList() {
 interface KindGroupProps {
   readonly label: string;
   readonly rows: PluginRow[];
+  readonly onSetEnabled: SetEnabled;
   readonly onSwitchFailure: (failure: SwitchFailure | null) => void;
 }
 
-function KindGroup({ label, rows, onSwitchFailure }: KindGroupProps) {
+function KindGroup({ label, rows, onSetEnabled, onSwitchFailure }: KindGroupProps) {
   const headingId = useId();
   return (
     <section aria-labelledby={headingId}>
@@ -77,7 +82,12 @@ function KindGroup({ label, rows, onSwitchFailure }: KindGroupProps) {
       ) : (
         <ul>
           {rows.map((row) => (
-            <Row key={row.name} row={row} onSwitchFailure={onSwitchFailure} />
+            <Row
+              key={row.name}
+              row={row}
+              onSetEnabled={onSetEnabled}
+              onSwitchFailure={onSwitchFailure}
+            />
           ))}
         </ul>
       )}
@@ -87,6 +97,7 @@ function KindGroup({ label, rows, onSwitchFailure }: KindGroupProps) {
 
 interface RowProps {
   readonly row: PluginRow;
+  readonly onSetEnabled: SetEnabled;
   /** 켜고 끄기의 실패를 목록에 알린다. 누르기 시작하면 앞의 실패를 걷는다(null). */
   readonly onSwitchFailure: (failure: SwitchFailure | null) => void;
 }
@@ -97,15 +108,14 @@ interface RowProps {
  * 스위치는 목록이 읽은 켜짐을 그대로 보인다. 누르면 요청을 보내고 목록을 다시 읽을 때까지 막는다. 화면이 값을 먼저
  * 뒤집어 두지 않고(스토리 18), 응답 전의 두 번째 누름이 요청을 더 보내지 않는다(스토리 22).
  */
-function Row({ row, onSwitchFailure }: RowProps) {
-  const setEnabled = useSetPluginEnabled();
+function Row({ row, onSetEnabled, onSwitchFailure }: RowProps) {
   const [pending, setPending] = useState(false);
 
   async function setOpposite(): Promise<void> {
     setPending(true);
     onSwitchFailure(null);
     try {
-      await setEnabled(row.kind, row.name, !row.enabled);
+      await onSetEnabled(row.kind, row.name, !row.enabled);
     } catch (error: unknown) {
       // 요청 함수는 실패를 모두 RequestFailure 로 던진다. 그 밖의 예외는 이 코드의 결함이라 덮지 않고 다시 던진다.
       if (!(error instanceof RequestFailure)) {
