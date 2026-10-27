@@ -624,3 +624,12 @@ Critical·Major 없음. 변이 198 의 출력과 `-k`, 303자 정션에서 접�
 - 봇 첫 회차에서 claude-review 가 `tools/tidy_checkouts.py`(2300줄 남짓)를 판정(`judge_*`)·읽기(`gather*`)·지우기(`remove*`)로 나누는 것을 별도 티켓 후보로 냈다. 이 PR 은 나누지 않았다. 고를지는 다음 하네스 chore 배치가 정한다. 셋째 회차가 낸 `gather` 의 무시된 항목 읽기(`status`·`ls-files` 읽기, 접기, `holding_tracked`)를 함수 하나로 빼는 것도 그 읽기 쪽 정리에 든다.
 - 하네스 chore 후보(`tools/tidy_checkouts.py` 의 `remove` 길, 이 PR 의 리뷰가 낸 Minor 둘). 하나는 추적 파일도 무시된 것도 미추적 파일도 없는 미추적 정션(대상이 빈 폴더뿐)이다. `status` 에 아무것도 찍히지 않아 `지운다` 이고 `git worktree remove` 가 바깥의 빈 폴더를 지운다(머리 `35481b0b` 의 대체 `bug-perf-review`, 위 "봇 회차 (머리 `35481b0b`)"). 근본 고침은 `git worktree remove` 앞에서 `cut_links` 로 링크를 끊거나, 옮기기가 건너뛴 항목이 있으면 멈추는 것이다. 다른 하나는 휴지통 자리 이름이 경로 한 토막의 한도를 넘는 항목을 `remove` 가 옮기지 못해 `judge` 와 매번 엇갈리는 것이다(위 "셀프 리뷰 (기점 `35481b0b`)" 명세 축, 못 보는 것으로 고정했다). 자리 이름을 줄이면 `origin_of` 의 역산이 바뀐다. 둘 다 파일은 잃지 않는다.
 - 주 체크아웃 미갱신: 루트는 main. 이 세션은 워크트리에서 병합하므로 당기기와 병합된 워크트리 지우기는 다음 새 세션의 `tidy-checkouts` 가 한다.
+
+## 병합 뒤 (07 세션이 옮겨 적음)
+
+이 절은 병합(`cc8af0bc`, 2026-10-26T21:31:47Z) 앞뒤에 일어난 일이라 병합된 일지에 들지 못했다. 병합한 세션이 메모리에 넘겼고, 사용자가 다음 세션이 열릴 때 함께 처리하자고 해서 design-reverse-sync 07 세션(PR #400)이 옮겨 적는다. 원문은 PR #392 코멘트 6427791288이다.
+
+- **머리 `194a98de`의 봇 회차.** 이 머리는 기록 커밋(`53168db6`)과 `origin/main`(#397, #398) 합치기다. CodeRabbit 둘째 회차는 `c754007e`부터 `194a98de`까지를 리뷰했고 지적이 없었다(접힌 지적도 없다). 그래서 `48424d62`·`35481b0b`·`922f1262`의 보안·버그 축도 이 회차가 덮었다. claude-review 여섯째 회차는 Critical·Major가 없었고, Minor·Nit 넷(키워드 불리언 셋, `tracked_dirs`와 `tracked_links`의 두 순회와 `normcase`, 독스트링의 재현 이력, `Facts.tracked_links` 필드와 함수의 같은 이름)은 고치지 않고 지적마다 보류 이유를 같은 코멘트에 남겼다.
+- **`web` 잡 취소.** 실행 40402244188의 `web` 잡에서 `playwright install-deps chromium`(apt) 단계가 12분 9초를 써, `pnpm -C web verify`가 도는 도중 잡 시간 제한(15분)에 걸려 취소됐고 `verify`가 빨갰다. 이 PR은 `web/`을 건드리지 않았다. `gh run rerun 40402244188 --failed`로 실패한 잡만 다시 돌려 지났다. 대기열 477의 2회차로 더했다(1회차는 PR #391의 `e2e-widget` 잡).
+- **지시문을 내지 않았다.** 병합한 세션은 열 작업이 모두 다른 세션에 걸려 있어 next-session 지시문을 내지 않았다. 위 "다음"의 미갱신 줄이 그때의 루트다.
+- 원격 브랜치 `chore/017-tidy-collapsed-and-fresh-branches`는 자동 모드 분류기가 삭제를 거부해 남았었다. 2026-10-27 `git ls-remote --heads origin`으로 보니 없었다(누가 지웠는지는 보지 않았다).

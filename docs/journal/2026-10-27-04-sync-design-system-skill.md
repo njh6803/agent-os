@@ -144,3 +144,82 @@ open-session을 부른다 2026-10-27T01:33:45Z
   - 리뷰가 확인하지 못했다고 적은 "한 것"의 "15개가 지난다"는 `pnpm -C web exec vitest run --project node tools/sync-design-system/record-check.test.ts`로 다시 쳐서 `Tests  15 passed (15)`를 봤다.
 - 순서를 어겼다. `.claude/rules/agent-docs.md`는 스킬을 고치기 전에 `writing-for-agents`를 부르라고 하는데, 고친 뒤에 불렀다. 부른 뒤 고친 두 문장을 그 기준으로 다시 봐 `continue` 줄을 줄였다.
 - 카나리아. 두 명세가 묻는 자리(`sync_design_system_skill.toml`은 "보내기" 절, `sync_design_system_story4.toml`은 인자 표) 밖의 본문만 고쳤고, 머리말과 `expect`는 그대로이며 claude 2.1.302가 같다. 그래서 `uv run python tools/canary.py --preflight`로 갈음했고 통과 2였다. 두 명세의 머리 주석에 덧붙였다.
+
+커밋 `6c4adfc8`(파일 넷). pre-commit은 종료 0이다. 병렬 검사 열(lint-imports, check-ticket, zizmor, check-instructions, check-type-escapes, pyright, pyright-linux, run-hooks, pytest 569.9초, web-verify 594.2초)과 마크다운 표, 줄 구분 문자, 변이 표, 카나리아 명세, 커밋 메시지가 Passed다. ruff 둘은 `.py`가 없어 `Skipped`라 커밋 뒤 손으로 쳐서 초록이다. 인용 대조 경고 하나(106행)는 앞 커밋 `c8c2ff88`의 제목을 인용한 것이고, 그 제목은 git 이력에만 있어 저장소 파일과 맞지 않는다.
+
+### PR과 인계 (PR 연 뒤)
+
+`git fetch origin main` 뒤 `HEAD..origin/main`이 비어 rebase 없이 커밋 둘을 푸시하고 PR #400을 열었다. 본문의 체크리스트에 PR 직전 리뷰 둘의 결과와 문턱 밑의 참고를 적었다. 앱의 `get_status`는 이미 `bound: true`였고, 연 직후 검사는 대기 6이었다.
+
+인계 계기 `커밋 뒤`가 세션 컨텍스트 220,159 토큰에서 왔을 때는 넘기지 않았다. 이 세션의 지시문의 "이어받을 상태"가 `인계: 커밋 뒤`로 시작해 같은 경계였기 때문이다. 이어서 인계 계기 `PR 연 뒤`가 250,191 토큰에서 왔다. 인계하지 않는 때 다섯은 아니다. PR은 열렸고, 요청 범위는 PR과 병합까지이며, 지시문의 경계(`커밋 뒤`)와 다르고, 이 세션이 쓴 `인계 못함` 줄이 없고, `get_session`의 `self`에 `parentSessionId`가 없다. 그래서 넘긴다. 열린 PR이 있어 다음 단계는 `PR 반영·병합`이다.
+
+이 세션의 지금 제목은 `feature/07-sync-design-system-skill`이다.
+
+지시문:
+
+```
+다음 작업: .scratch/design-reverse-sync/issues/07-sync-design-system-skill.md. 스킬과 문서 옮기기, 셀프 리뷰, PR 직전 리뷰와 그 반영은 끝났고 PR #400 의 봇 회차부터 병합까지 남았다
+다음 단계: PR 반영·병합
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /implement .scratch/design-reverse-sync/issues/07-sync-design-system-skill.md
+브랜치: feature/07-sync-design-system-skill
+모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
+읽을 것: docs/journal/2026-10-27-04-sync-design-system-skill.md
+이어받을 상태: 인계: PR 연 뒤. 순서 1의 2(봇 회차)부터 한다. 첫 @coderabbitai review 코멘트도 새 세션이 남긴다. PR 직전 리뷰(/security-review, bug-perf-review)는 반영해 커밋·푸시했고 결과는 PR 체크리스트에 있다. 일지에 커밋하지 않은 절(PR과 인계)이 있고, 회고(retro)와 "다음"은 아직이다. PR #396(티켓 03)이 같은 .scratch/design-reverse-sync/probes/README.md 를 고친다(docs/journal/2026-10-27-04-sync-design-system-skill.md)
+확인할 선행 조건: 없음
+이번 요청 범위: PR과 병합까지
+```
+
+제목을 `feature/07-sync-design-system-skill (인계함)`으로 바꿨다. 멈출 백그라운드 작업은 없었다. `git worktree unlock`은 `is not locked`로 끝나 넘어갔다.
+
+open-session을 부른다 2026-10-27T02:02:05Z
+
+## 이어받은 세션: 봇 회차와 병합
+
+> 사용자: 지시문 그대로(위 "PR과 인계 (PR 연 뒤)"의 지시문과 같다)
+
+새 세션이 제목을 `feature/07-sync-design-system-skill`로 바꾸고 `EnterWorktree(path)`로 이 워크트리에 들어왔다. PR #400의 `headRefOid`가 로컬 HEAD `6c4adfc8`과 같아, `@coderabbitai review`를 남기고 `tools/wait_ci.py`를 백그라운드로 띄웠다.
+
+- **claude-review 첫 회차(`6c4adfc8`).** 지적이 없다. Python 코드 변경이 없어 경계 축은 해당이 없고, `record base`가 `claim()`과 같은 꼴을 따른다고 적었다.
+- **CodeRabbit 첫 회차(`6c4adfc8`).** `tools/wait_ci.py`는 "모두 통과"로 끝났고 CodeRabbit은 Minor 둘을 냈다. 첫 회차라 지적마다 판단했다.
+  - 고친다: 티켓 08의 검증 줄이 이 티켓이 바꾸는 파일을 티켓 파일, NOTES의 두 줄, 관찰이 부른 고침으로 좁히는데, `.design-sync/NOTES.md`의 "아티팩트에 올리기" 항목(43~45행)은 첫 올리기가 지난 산출 목록을 그 폴더에 커밋한다고 적는다. 셀프 리뷰 반영이 그 줄에 NOTES 둘을 넣으며 목록 파일을 빠뜨렸다. 범위 문장에 그 파일을 더했다.
+  - 보류(이유를 명세 머리에 적었다): 스토리 4 카나리아의 질문이 "다루는 스킬이 있으면 Skill 도구로 불러라"를 일러, 그 말이 없는 자연 입력에서 스스로 부르는지는 재지 못한다는 지적이다. 질문은 스킬 이름을 들지 않아 명세 280행이 고른 "`kind`가 `skill`인 갈래"로 설명의 길잡이를 잰다. 저장소의 `kind = "skill"` 명세 66개 가운데 슬래시 명령으로 넣는 아홉(`/implement`, `/to-spec`, `/to-tickets`)을 뺀 57개가 이 틀을 쓰고(grep으로 셌다), 본문의 카나리아를 옮기라는 요청 없이는 답이 설명에서 왔는지 가를 수 없다. 갈래를 더하려면 카나리아 도구의 판정 방식을 바꿔야 해 이 티켓 밖이다. 대신 `sync_design_system_story4.toml` 머리에 그 못 보는 것을 적었다. 주석만 바뀌어 카나리아는 다시 돌리지 않았다.
+
+### 다른 세션이 넘긴 것
+
+PR #398(티켓 04)을 병합한 `feature/04-import-command` 세션이 claude-review 둘째 회차에서 보류한 `answeredOf` 일을 사용자 요청으로 이 세션에 넘겼다.
+
+> 사용자(04 세션이 옮긴 원문): 07 일지의 '다음'에 import.ts 나누기와 함께 적게 하고, 스킬이 answered를 사람에게 보이게 되면 그전에 고치게 해줘.
+
+`.claude/skills/sync-design-system/`의 세 파일에 `answered`가 없어(grep 0건) 지금 고칠 일은 없고, 아래 "다음"에 코드 정리 몫과 함께 적었다.
+
+### PR #392 뒤 못 적은 기록
+
+PR #392(harness 017)를 병합한 세션이 저장소에 적지 못하고 메모리로 넘긴 셋을 이 PR에 실었다. 대기열 477에 2회차를 더했고, 일지 2026-10-27-02 끝에 "병합 뒤 (07 세션이 옮겨 적음)" 절(머리 `194a98de`의 봇 회차, `web` 잡 취소, 지시문을 내지 않은 판단)을 더했다. `origin/main`의 477이 아직 1회차여서 다른 세션이 처리하지 않은 것으로 봤다. 원격 브랜치 `chore/017-tidy-collapsed-and-fresh-branches`는 이미 없었다.
+
+## 회고
+
+이 단계를 닫는 세션이 이 일지 전체(세션 넷)를 읽고 돌았다. 후보 열. 승인 2(새 행 둘), 기각 8, 넘김 0. `tools/queue_open_rows.py`의 만료할 행은 이 워크트리와 `--ref origin/main`의 두 출력 모두 없었다.
+
+1. 승인, 회차로 세는 것(새 행 489, 2회차): 스킬 "확인"의 명령 열을 빈 작업 폴더에서 돌리지 않고 옵션과 독스트링에 손으로만 대 봐, 첫 명령이 없는 입력으로 멈추는 것을 리뷰가 두 번 Major로 잡았다. 셀프 리뷰 표준 축이 `reads.json`을, 그 반영이 열을 처음부터 다시 돌리지 않아 PR 직전 `bug-perf-review`가 받은 폴더 `check-<n>/web/`을 잡았다. 구현 때 실리는 `CLAUDE.md` 작업 규약 3("실제 실행 결과로 확인한다")을 어겨 리뷰가 잡은 사건이고, 그 지침을 낸 행이 대기열에 없어 새 행이다. 처방은 층 조건대로 시험(스킬 "확인"의 열을 빈 작업 폴더에서 돌린다)이고, 더하는 것이라 세 번째에 반영한다.
+2. 승인(새 행 488, 1회차): PR 직전 리뷰를 반영한 세션이 `.claude/rules/agent-docs.md`를 어기고 스킬을 고친 뒤에야 `writing-for-agents`를 불렀다(위 "이어받은 세션: PR 직전 리뷰"). 사건이 있고, 층은 그 규칙의 `paths`를 겨눈 Edit·Write 앞의 계기 훅이며, PR 하나로 되돌릴 수 있다. 일지 2026-10-26-12 회고 4의 같은 꼴은 사건 미확인으로 기각되어 세지 않았다. 더하는 것이라 세 번째에 반영한다.
+3. 기각: `docs/agents/issue-tracker.md`를 파이썬 `write_text`로 써서 CRLF가 됐다. `.gitattributes`의 `* text=auto eol=lf`가 커밋에서 LF로 맞춰 저장소에 닿지 않는다(이미 있는 설정이 그 자리에서 막는다). 같은 꼴의 대기열 29·112·264는 닫혔다.
+4. 기각: 스킬 머리 주석의 ADR 0025 이력 제목을 짐작으로 적었다가 grep으로 맞췄다. 커밋 전에 스스로 잡았고, 바뀐 `.md`의 20자 넘는 따옴표 인용은 `tools/check_quotes.py`가 커밋 때 저장소와 대조한다(이미 있는 검사).
+5. 기각: 워크트리 가드가 묶은 grep, 반복문 변수를 쓴 sed, heredoc 묶음을 거부했다. 앱 가드가 그 자리에서 알렸고 `CLAUDE.md` 환경 함정이 그 모양을 적었다.
+6. 기각: 인용 대조 경고(`c8c2ff88`의 아홉, `6c4adfc8`의 하나). 경고만 하는 검사가 제 몫을 했고 하나씩 봤다.
+7. 기각(원인을 가리지 못했다): 티켓 하나가 세션 넷(인계 셋, 223,393·355,946·250,191 토큰)으로 이어졌다. 인계는 ADR 0033대로 돌았다. 커밋 하나의 pre-commit이 열 분 가까이(pytest 569.9초, web-verify 594.2초) 걸렸고, 무엇이 컨텍스트를 가장 많이 썼는지는 이 세션이 앞 세션들의 기록을 보지 않아 가리지 못했다.
+8. 기각: 이 세션이 Git Bash에서 `git show origin/main:.scratch/…`를 쳐 경로 변환으로 실패했다. 훅이 명령 앞에서 그 까닭과 고치는 꼴을 알렸고(대기열 195), 그 꼴로 다시 쳐 지났다.
+9. 기각: 이 세션이 `next-session/SKILL.md`(약 2.4만 자)를 통째로 읽어 큰 결과 훅이 알렸다. 봇 회차, 일지, 병합 길, 워크트리 병합, 결정표가 모두 이 세션에 필요한 절이었다.
+10. 기각: 셀프 리뷰 반영이 티켓 08의 검증 줄에 NOTES 둘을 넣으며 같은 NOTES 항목이 커밋한다고 적은 지난 산출 목록 파일을 빠뜨렸고, CodeRabbit 첫 회차가 잡았다. 문서 사이의 일관성은 리뷰가 잡도록 둔 기준이라 회차로 세지 않고, 검사로 옮길 고정된 꼴도 없다.
+
+대기열 477의 2회차는 위 "PR #392 뒤 못 적은 기록"에서 옮겨 적은 것이고 이 회고의 후보가 아니다.
+
+## 다음
+
+- 이 PR이 병합되면 07이 닫힌다. 08(`.scratch/design-reverse-sync/issues/08-first-upload.md`)은 03(PR #396)과 07에 막혀 있어, 둘 가운데 뒤에 병합하는 세션의 `next-session`이 08을 연다. 07이 08·09에 넘긴 것은 그 티켓의 "07이 넘긴 것"에 있다.
+- design-reverse-sync의 코드 정리 몫(뒤로 넘긴 일, 한 묶음으로 본다).
+  - `web/tools/sync-design-system/import.ts` 나누기(일지 2026-10-26-19 "다음", PR #398 claude-review 첫 회차).
+  - PR #356의 보류 둘: `tokens-json.ts`를 정규 꼴과 차이 목록으로 나누기, `diffType`의 added/removed 되풀이 줄이기(일지 2026-10-27-01 "다음").
+  - `check.ts`의 `claim` 몫(`beyondClaim`, `claimSummary`, 이어받을 기준본 조립) 떼기(일지 2026-10-27-03 "다음"). 07은 `check.ts`를 고치지 않았다.
+  - `import.ts`의 `answeredOf`: "code"를 고른 자리의 `value`를 `slot.entries[0]?.code`로 내서, 여러 벌로 나뉜 색 자리(원색의 라이트·다크, 반투명의 여덟 벌)에서는 보고의 `answered.value`에 첫 벌의 값만 남는다. "web"·"suggested"는 옮긴 줄의 글자(`move.text`)를 내 두 갈래의 꼴도 다르다. 디자인 토큰 CSS는 맞고 틀리는 것은 보고의 그 칸뿐이며, 지금 시험(`import.test.ts`)은 벌이 없는 `--gray-*` 자리만 본다(PR #398 코멘트 6426455559). `/sync-design-system` 스킬은 지금 `answered`를 읽지 않는다. 스킬이 보고의 `answered`를 사람에게 보이게 되면 그 전에 "code"의 값을 벌마다의 값(또는 지금 줄의 글자)으로 맞추고 여러 벌 자리의 시험을 둔다.
+- 주 체크아웃 미갱신: 루트는 main. 이 PR은 워크트리에서 병합하므로 당기기와 병합된 워크트리 지우기는 다음 새 세션의 `tidy-checkouts`가 한다.
