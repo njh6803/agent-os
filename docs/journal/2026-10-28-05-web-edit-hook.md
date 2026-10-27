@@ -267,8 +267,17 @@ open-session을 부른다 2026-10-27T16:25:44Z
 
 - `git merge --no-edit origin/main`이 `.scratch/retro-queue.md`의 455행 하나에서 글자 충돌로 멈췄다. 기준(`0ac9e98d`)의 그 행은 3회차였고(`git show`로 꺼낸 기준판을 손으로 봤다), 이 브랜치는 이 일지로, main은 일지 2026-10-28-04로 한 회차씩 더해 둘 다 4회차라 적었다. 두 일지와 이 브랜치의 승인 날짜(2026-10-28)를 모두 싣고 5회차로 합쳤다. 위 "회고" 2의 4회차는 병합 전의 셈이다. 500번대 행 번호는 500~503이 하나씩이었고(grep을 손으로 봤다), `tools/sibling_overlap.py`는 "번호 겹침 없음"이었다(도구가 찍은 줄).
 - 이 절과 위 인계 절은 병합 커밋에 함께 실었다. 봇 회차의 첫 커밋을 기다리면 고친 것이 없는 회차에 일지만 따로 푸시하게 될 수 있어서다(next-session 순서 1의 2 "뒤로 넘긴 일").
-- 첫 병합 커밋의 pre-commit은 web-verify 하나로 실패했다(출력의 줄. pytest 378.8초 등 나머지는 통과). vitest가 `lucide-react/dist/esm/icons/settings`를 도중에 최적화하고 "Vite unexpectedly reloaded a test"를 찍은 뒤, 스토리 파일 둘(`apps/widget/components/pages/WidgetScreen.stories.tsx`, `packages/ui/src/styles/DesignTokens.stories.tsx`)이 import에 실패하고 `ApprovalCard.stories.tsx`의 iframe이 60초 안에 준비되지 않았다(시험 1223개는 모두 통과, 저장한 출력을 손으로 봤다). 그 아이콘은 main(#403)이 새로 쓴 것이라, 병합 전부터 있던 이 워크트리의 Vite 의존성 캐시에 없었다고 본다(어림. 캐시를 열어 보지 않았다). 만료한 대기열 150과 같은 꼴이라 retro 만료 규칙대로 `150의 2회차`로 504에 이었다. 그 커밋을 다시 쳤다(결과는 아래).
+- 첫 병합 커밋의 pre-commit은 web-verify 하나로 실패했다(출력의 줄. pytest 378.8초 등 나머지는 통과). vitest가 `lucide-react/dist/esm/icons/settings`를 도중에 최적화하고 "Vite unexpectedly reloaded a test"를 찍은 뒤, 스토리 파일 둘(`apps/widget/components/pages/WidgetScreen.stories.tsx`, `packages/ui/src/styles/DesignTokens.stories.tsx`)이 import에 실패하고 `ApprovalCard.stories.tsx`의 iframe이 60초 안에 준비되지 않았다(시험 1223개는 모두 통과, 저장한 출력을 손으로 봤다). 그 아이콘은 main(#403)이 새로 쓴 것이라, 병합 전부터 있던 이 워크트리의 Vite 의존성 캐시에 없었다고 본다(어림. 캐시를 열어 보지 않았다). 만료한 대기열 150과 같은 꼴이라 retro 만료 규칙대로 `150의 2회차`로 504에 이었다. 코드를 고치지 않고 같은 커밋을 다시 쳤고, 그 pre-commit은 모두 통과했다(출력의 줄. web-verify 396.4초, pytest 401.9초. `Skipped`는 ruff 둘(`.py`가 없었다), 카나리아 명세 모양, 헌법 판이다. 인용 대조 경고 없음). 다시 친 출력에는 "unexpectedly reloaded"가 없었다(grep을 손으로 봤다). 병합 커밋은 `6404f380`이다.
 - claude-review 첫 회차(`d7685798`)는 Nit 둘이었고 둘 다 두었다. 보류 이유는 PR 코멘트에 남긴다. 표지 함수 사본은 `.claude/rules/tools.md` 첫 항목이 받아들인 비용이고, 독스트링의 훅 목록은 "이 훅 전에"의 수라 낡지 않는다. CodeRabbit은 아직 요청하지 않아 리뷰가 없었다(코멘트가 별 10개 미만이라 자동 리뷰를 건너뛴다는 안내뿐이었다, `gh api`로 읽었다).
+
+### 봇 회차 1
+
+`6404f380`을 푸시하고 `@coderabbitai review`와 claude-review 첫 회차의 보류 이유를 코멘트로 남겼다. `tools/wait_ci.py 407`이 "끝: 모두 통과"였다(도구가 찍은 줄).
+
+- claude-review 둘째 회차: "지적 없음"(PR 코멘트를 `gh api`로 읽었다).
+- CodeRabbit 첫 회차(`6404f380`, 범위 `842031a4`~`6404f380`): Minor 하나. 스스로 "Unverified finding"이라 적었다. 티켓 09의 `### 판정` 등 절 제목이 H1 바로 아래 H3라 markdownlint MD001에 걸린다는 지적이다. 두었다. 같은 기능의 티켓 01·08·10과 admin-style 01도 H1 아래에 H3 절을 두고(`grep -c "^### "`로 손으로 봤다), 저장소에 markdownlint 게이트가 없어 이 파일만 고치면 형제와 어긋난다. 리뷰 정보가 시간당 포함 리뷰 1회 가운데 0회가 남았다고 적어, 다음 푸시에는 CodeRabbit이 리뷰하지 않을 것으로 본다(어림).
+- 뒤로 넘긴 일은 없다. 이 회차에 고친 것도 없어, 위의 다시 친 커밋 결과와 이 절만 싣는 일지 커밋을 푸시했다. 위 "다시 쳤다"의 결과를 적지 않은 채 병합하면 대기열 504의 근거가 빠지기 때문이다.
+- 그 일지 커밋의 첫 시도는 pytest가 `1 failed, 5790 passed`였다(출력의 줄). 실패는 `tests/adapters/test_filesystem.py::test_다른_스레드가_교체하는_동안의_읽기가_재시도_안에서_성공한다`의 `PermissionError`이고, 따로 치자 `1 passed`였다(손으로 쳤다). 대기열 306이 받아들여 닫은 부하성 시간 시험의 사례라 회차를 더하지 않고 여기만 적고, 같은 커밋을 다시 쳤다.
 
 ## 다음
 
