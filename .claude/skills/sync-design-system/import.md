@@ -46,7 +46,7 @@
 - **그 밖의 묻는 것**(`mapping`, `partial`, `alias`, `added`·`removed`, `typeField`, `familyNote`, `lineWidth` 등). 보고의 까닭을 보이고 "들인다"(세션이 5처럼 고친다), "코드 값을 둔다", "웹에서 다시 고친다"로 묻는다. 더하기와 지우기가 한 계열에 함께 있으면 "이름을 바꾼 것일 수 있다"를 함께 적는다.
 - **디자인 토큰 밖 편집**(확인 보고의 `files` 가운데 `tokens.json` 밖, `index`). 무엇이 바뀌었는지 보이고 "저장소 파일에 옮긴다"와 "버린다"로 묻는다. 옮기는 것은 그 파일을 짓는 저장소 원본을 평소처럼 고치는 일이다. 지침 문서 `project/guidelines/web-design.md`의 원본은 Claude Code의 규칙 파일 `.claude/rules/web-design.md`라 바뀐 곳을 보이고 사람과 문장을 정해 고친다. "버린다"를 고른 편집은 병합 뒤의 올리기가 코드의 판으로 되돌린다.
 
-**`lineWidth`.** 쓰임새 토큰 줄의 설명이 길어 Prettier가 그 선언을 여러 줄로 쪼갤 수 있는 자리다. 묻는 까닭으로 오든 코드와 웹이 다르게 바꾼 자리의 `webReason`으로 오든 사람에게 같은 것을 함께 적는다. 웹 설명을 들이면("들인다"나 충돌의 "웹 값") 세션이 5처럼 설명을 단 뒤 `pnpm -C web exec prettier --write packages/ui/src/styles/theme.css`로 포맷해 커밋한다. Prettier가 그 선언을 여러 줄로 쪼갰으면 그 뒤 그 토큰의 웹 고침은 들이기 명령이 옮기지 못해 `noLine`으로 묻는다. "웹에서 다시 고친다"로 설명을 줄여 그 선언 한 줄 전체(들여쓰기와 주석까지)가 Prettier의 줄 폭(`web/.prettierrc.json`의 `printWidth`, 한글은 두 칸) 안에 들면 명령이 옮긴다.
+**`lineWidth`.** 쓰임새 토큰 줄의 설명이 길어 Prettier가 그 선언을 여러 줄로 쪼갤 수 있는 자리다. 묻는 까닭으로 오든 코드와 웹이 다르게 바꾼 자리의 `webReason`으로 오든 사람에게 같은 것을 함께 적는다. 웹 설명을 들이면("들인다"나 충돌의 "웹 값") 세션이 5처럼 설명을 단 뒤 `pnpm -C web exec prettier --write packages/ui/src/styles/theme.css`로 포맷해 커밋한다. Prettier가 그 선언을 여러 줄로 쪼갰으면 그 뒤 그 토큰의 웹 고침은 들이기 명령이 옮기지 못해 `noLine`으로 묻는다. "웹에서 다시 고친다"로 설명을 줄여 그 선언 한 줄 전체(들여쓰기와 주석까지)가 Prettier의 줄 폭(`web/.prettierrc.json`의 `printWidth`, 한글은 두 칸) 안에 들면 명령이 옮긴다. 코드와 웹이 다르게 바꾼 자리는 줄인 뒤에도 `conflict`로 다시 묻고, 그때는 `webReason`이 null이라 사람이 "웹 값"을 고르면 답 파일에 `web`을 적어 명령이 옮긴다.
 
 **웹에서 다시 고친다.** 사람에게 웹에서 다시 고친 뒤 알려 달라고 하고 턴을 끝낸다. 알리면 확인을 다시 돌리고, 3으로 자기 `claim`의 사본과 해시를 새로 쓴 뒤 4를 1부터 다시 한다.
 
