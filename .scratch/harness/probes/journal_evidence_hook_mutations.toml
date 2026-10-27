@@ -321,8 +321,18 @@ expect = "red"
 expect_output = ['''_알린다[uv run python -c "f = open('docs/journal/2026-10-26-03-x.md', 'ab')"]''']
 [[mutation.edit]]
 file = "tools/hook_journal_evidence.py"
-old = '''    r"""write_text|write_bytes|\.write(?:lines)?\(|open\([^)]*['"](?:[wax][bt+]*|r[bt]*\+[bt]*)['"]"""'''
-new = '''    r"""write_text|write_bytes|\.write(?:lines)?\(|open\([^)]*['"][wax]\+?['"]"""'''
+old = '''    r"""|open\((?:[^\n]*?,\s*(?:mode\s*=\s*)?)?['"](?:[wax][bt+]*|r[bt]*\+[bt]*)['"]"""'''
+new = '''    r"""|open\((?:[^\n]*?,\s*(?:mode\s*=\s*)?)?['"][wax]\+?['"]"""'''
+
+[[mutation]]
+name = "open 의 모드 앞 인자에 괄호가 들면 보지 않는다"
+tests = ["tests/tools/test_hook_journal_evidence.py", "-k", "Bash_가_일지를_쓰면"]
+expect = "red"
+expect_output = ['''_알린다[uv run python -c "from pathlib import Path; f = open(Path('docs/journal/2026-10-26-03-x.md'), 'w')"]''']
+[[mutation.edit]]
+file = "tools/hook_journal_evidence.py"
+old = '''    r"""|open\((?:[^\n]*?,\s*(?:mode\s*=\s*)?)?['"](?:[wax][bt+]*|r[bt]*\+[bt]*)['"]"""'''
+new = '''    r"""|open\((?:[^)\n]*?,\s*(?:mode\s*=\s*)?)?['"](?:[wax][bt+]*|r[bt]*\+[bt]*)['"]"""'''
 
 [[mutation]]
 name = "Bash 의 일지 조각에 is_journal 을 대지 않는다"

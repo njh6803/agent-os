@@ -138,6 +138,9 @@ REL = "docs/journal/2026-10-26-03-x.md"
         f"uv run python -c \"from pathlib import Path; Path('{REL}').write_bytes(b'x')\"",
         f"uv run python -c \"open('{REL}', 'a').writelines(['x'])\"",
         f"echo x | sudo tee -a {REL}",
+        # 모드 앞의 인자에 `)` 가 들어도 본다(PR 직전 bug-perf-review).
+        f"uv run python -c \"from pathlib import Path; f = open(Path('{REL}'), 'w')\"",
+        f"uv run python -c \"import os; f = open(os.path.join('{REL}'), mode='a')\"",
     ],
 )
 def test_Bash_가_일지를_쓰면_알린다(command: str) -> None:

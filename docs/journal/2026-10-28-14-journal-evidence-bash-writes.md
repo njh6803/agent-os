@@ -54,4 +54,38 @@
 - 다시 돌린 것: `uv run pytest -q tests/tools/test_hook_journal_evidence.py` 78 통과(손으로 봤다). 변이 표 서른둘 모두 기대대로(`mutate.py` 가 찍었다, 프로브 README 행). ruff 는 바뀐 두 파일에서 통과(손으로 봤다). 러너에서 실패한 여섯을 `-p no:xdist` 로 따로 돌리니 일곱(매개변수 갈래 포함) 모두 통과해(34초, 손으로 봤다) 붐빈 PC 의 시간 실패로 본다. 나머지 게이트는 커밋의 pre-commit 으로 갈음한다.
 - 카나리아: `tools/sibling_overlap.py` 가 `.claude/rules/tools.md` 를 바꿨다고 알렸다. 있던 `tools_rule_journal_evidence_hook.toml` 은 Write·Edit 문장을 재므로 Bash 문장을 재는 `.scratch/harness/probes/canary/tools_rule_journal_evidence_bash.toml` 을 새로 써 돌렸다. 통과 4(실험군 3, 대조군 1, claude 2.1.302, `tools/canary.py` 가 찍었다).
 - 남긴 것: 표준 Nit 둘(알림 반환 두 번은 갈래마다 판정이 달라 읽기 쉬운 쪽으로 둔다, 페이로드 본문은 명령 꼴이 실제라 둔다). 명세 Nit 의 티켓 문구 차이는 독스트링이 거짓 양성으로 적어 둔다.
+- 커밋 aedcb990: pre-commit 의 게이트가 모두 통과했다(pytest 929초 포함, 그 출력. 헌법 판 검사는 대상 파일이 없어 Skipped). 셀프 리뷰 뒤 손으로 치는 다섯은 이 결과로 갈음한다.
 - PR 직전 리뷰에 밀 주장: "`sudo` 밖의 낱말이 앞에 붙은 `tee`·`sed`(`xargs sed -i`, `sudo -u x tee`, `$(tee …)`)와, `tee`·`sed` 밖의 제자리 편집 명령(`awk -i inplace`, `perl -i`). 첫 낱말만 본다." / "쓰기 낱말을 다른 꼴로 쓴 python(`open(p, mode='w')`, `Path.open('w')`, `shutil.copy`). 위 셋만 본다." / "인용 부호 안이나 첫 낱말이 아닌 자리의 `tee`·`-i`(`grep tee`, `sed -n '/ -i/p'`)도 쓰기로 보지 않는다."
+
+## 인계 (둘째)
+
+- 커밋 뒤에 컨텍스트가 인계 문턱(257,254 토큰)을 넘어 `hook_handoff` 계기가 왔다. 앞 지시문의 경계(셀프 리뷰 직전)와 다르고 곁 세션도 아니라 넘긴다. 남은 것: PR 직전 리뷰(밀 주장은 위 셀프 리뷰 절), 푸시, PR, 봇 회차, 병합, 회고와 "다음".
+- 이 세션의 제목: `chore/019-journal-evidence-bash-writes` → `chore/019-journal-evidence-bash-writes (인계함)`.
+- 지시문:
+
+```
+다음 작업: .scratch/harness/issues/019-journal-evidence-bash-writes.md 의 남은 일(PR 직전 리뷰, 푸시, PR, 병합)
+다음 단계: 구현
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: 대기열 501을 티켓 .scratch/harness/issues/019-journal-evidence-bash-writes.md로 쓰고 한다
+브랜치: chore/019-journal-evidence-bash-writes
+모델: Opus 5.5 / medium. 레벨 스윕의 갈래
+읽을 것: docs/agents/issue-tracker.md
+이어받을 상태: 인계: 커밋 뒤. 셀프 리뷰 반영과 커밋 aedcb990 까지 했고 푸시하지 않았다(PR 없음). 남은 단계는 PR 직전 리뷰(docs/constitution/operations.md 리뷰 파이프라인 2, 밀 주장은 일지의 셀프 리뷰 절), 푸시, PR, 봇 회차, 병합, 회고와 일지 "다음". docs/journal/2026-10-28-14-journal-evidence-bash-writes.md. (무관한 넘김 하나: PR #408 claude-review 셋째 회차의 Minor, tools/rerun_round.py `_round`의 게이트 묶음 고르기가 try 안에 있는 것은 model-rerun 러너를 다시 손볼 때 함께 한다)
+확인할 선행 조건: 없음
+이번 요청 범위: PR과 병합까지
+```
+- open-session을 부른다 2026-10-27T23:12:38Z
+
+## PR 직전 리뷰 (셋째 세션)
+
+> 사용자: 대기열 501을 티켓 .scratch/harness/issues/019-journal-evidence-bash-writes.md로 쓰고 한다
+
+- CodeRabbit CLI: `coderabbit auth status` 가 `Seat: not assigned` 라 돌지 못했다(그 출력). 대체 둘을 나란히 돌렸다. origin/main 을 가져오니 새 커밋이 없어 합칠 것이 없었다(`git log HEAD..origin/main` 이 비었다).
+- `/security-review`(범위 aedcb990): 지적 0. 서브태스크가 명령 글을 셸·subprocess·eval 로 넘기지 않고 정규식으로만 보는 것, 표지 파일 이름이 `session_id\0agent_id` 의 SHA-256 이라 페이로드가 경로에 닿지 않는 것(이 변경 전의 코드), `additionalContext` 가 고정 문구라 명령 글이 되울리지 않는 것을 봤다고 보고했다. 걸러 낼 지적이 없어 거짓 양성 거르기 단계는 돌지 않았다.
+- `bug-perf-review`: 유효 Minor 2, 보류 1. 서브에이전트가 `uv run python -c` 로 `bash_writes_journal` 을 불러 본 결과로 보고했다.
+  - 유효(고쳤다): `_PYTHON_WRITE` 의 `open\([^)]*` 가 모드 앞 인자에 `)` 가 들면(`open(Path(<일지>), 'w')`, `open(os.path.join(…), 'a')`) 모드를 보지 못했다. 모드를 첫 인자이거나 같은 줄 쉼표 뒤(`mode=` 포함)에서 찾게 고치고, 그 두 꼴을 알리는 시험과 변이 하나("모드 앞 인자에 괄호가 들면 보지 않는다")를 더했다. 기존 "`b`·`t`·`+` 꼴" 변이의 옛 문자열도 맞췄다. `uv run pytest -q -p no:xdist tests/tools/test_hook_journal_evidence.py` 80 통과, ruff 둘 통과(손으로 봤다). 변이 표 서른셋 모두 기대대로(`mutate.py` 가 찍었다, 프로브 README 행).
+- 이 수정의 첫 커밋 시도: pre-commit 의 pytest 가 2 실패·5948 통과였다(그 출력). 실패는 이 변경과 닿지 않는 `test_rerun_runner` 의 파일럿 두 회차 시험과 `test_run_hooks` 의 표 조각 사례(새 일지 번호 겹침 갈래)다. 둘을 `-p no:xdist` 로 따로 돌리니 통과해(34초, 손으로 봤다) 붐빈 PC 의 시간 실패로 어림하고 커밋을 다시 돌렸다.
+  - 유효(두었다): 일지 조각이 수천 개인 명령에서 조각마다 앞 글 전체를 다시 훑어 시간이 제곱으로 는다(서브에이전트가 `echo <일지>` 5000번 14.3초, `open(` 3만 번 31초로 쟀다고 보고했다). 훅 시간 제한 20초를 넘기면 막지 않고 지나가며(fail-open, `.claude/rules/tools.md`), 사람이 치는 명령의 규모(조각 수십)에서는 ms 단위라고 보고해 PR 체크리스트에 적고 둔다.
+  - 보류(두었다): `echo a -> <일지>` 를 리다이렉트로, 일지 뒤 다른 인자의 `-i…` 를 `sed -i` 로 읽는 거짓 양성. 인위적인 입력이고 독스트링이 글로 가르는 값으로 이미 적는다.
+  - 오탐: `2>&1`, `| tee /tmp/o`, `&& ls -i` 는 의도대로 지나갔고, 예외로 훅이 죽는 입력과 표지 공유가 깨지는 길은 찾지 못했다고 보고했다.

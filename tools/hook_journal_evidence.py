@@ -35,7 +35,8 @@ Bash 호출마다 약 0.2초가 더 든다(같은 어림).
 하나는 건너뛴다) `tee` 거나 `sed` 이고 `-i`(`-Ei` 처럼 묶은 것, `-i.bak`, `--in-place`)가 조각
 앞이든 뒤든 있다. 인용 부호 안의 글은 지우고 본다. 명령 어디에든 python 호출(`python3.12` 같은 판
 이름과 `py` 실행기 포함)과 쓰기 낱말(`write_text`, `write_bytes`, `.write(`, `.writelines(`, 쓰기
-모드(`w`·`a`·`x` 로 시작하거나 `+` 가 든 `r`, `b`·`t` 를 붙인 꼴 포함)의 `open(`)이 함께
+모드(`w`·`a`·`x` 로 시작하거나 `+` 가 든 `r`, `b`·`t` 를 붙인 꼴 포함)를 첫 인자로 받거나 같은 줄의
+쉼표 뒤(`mode=` 포함)에 둔 `open(`. 경로를 `Path(…)` 로 감싸도 본다)이 함께
 있다(heredoc·`-c` 본문까지 글로 본다). 일지를 읽기만 하는 명령(`cat`, `sed -n`, `grep`, `git add`,
 입력 리다이렉트 `<`)과 일지를 읽어 다른 곳에 쓰는 명령에는 알리지 않는다. 인용 부호 안이나 첫 낱말이
 아닌 자리의 `tee`·`-i`(`grep tee`, `sed -n '/ -i/p'`)도 쓰기로 보지 않는다.
@@ -102,7 +103,8 @@ _QUOTED = re.compile(r"""'[^']*'|"[^"]*\"""")
 # 명령 전체에 python 호출과 쓰기 낱말이 함께 있는가(heredoc·`-c` 의 본문까지 본다).
 _PYTHON = re.compile(r"(?:^|[\s/\\])(?:python(?:3(?:\.\d+)?)?|py)(?:\.exe)?(?:\s|$)")
 _PYTHON_WRITE = re.compile(
-    r"""write_text|write_bytes|\.write(?:lines)?\(|open\([^)]*['"](?:[wax][bt+]*|r[bt]*\+[bt]*)['"]"""
+    r"""write_text|write_bytes|\.write(?:lines)?\("""
+    r"""|open\((?:[^\n]*?,\s*(?:mode\s*=\s*)?)?['"](?:[wax][bt+]*|r[bt]*\+[bt]*)['"]"""
 )
 # 알림의 첫 문장. 알림이 모델에게 닿는지 잴 때 모델이 옮겼는지 볼 문구다.
 LEAD = "일지를 고쳤다"
