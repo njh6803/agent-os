@@ -99,6 +99,14 @@
 - 대기열 370의 앱 세션 확인(명세 Minor): 병합 전에는 주 체크아웃과 앱 세션이 이 설정을 싣지 않아 지금 볼 수 없다. 아래 "다음"이 받고, `CLAUDE.md`에 시간 초과가 나면 좁히라는 안내를 되살렸다.
 - Nit 넷: 표지 폴더와 `is_journal`의 맞대기 시험은 사실이 맞아(두 축이 불러 봤다) 더하지 않았다. `main_` 이름은 선례 시험과 같은 꼴이다. `design/README.md` 단위 시험은 페이로드 표의 침묵 입력이 고정한다.
 
+## PR 직전 리뷰
+
+기점 `5e049681`(origin/main을 합친 커밋 `bb68ea07`까지), 파일 14개. CodeRabbit CLI는 `coderabbit auth status`가 `Seat: not assigned`라 돌지 못해 대체 둘을 나란히 돌렸다.
+
+- `/security-review`: 취약점 0건. 표지 파일 이름은 sha256 16진수라 입력이 경로가 되지 못하고, `file_path`는 문자열 판정에만 쓰며, `O_CREAT|O_EXCL`은 덮어쓰지 않는다. 명령의 커밋 목록에 main의 PR #400 커밋이 섞여 서브태스크의 범위를 이 브랜치의 diff로 좁혔다.
+- `bug-perf-review`: 유효 0건, 보류 0건. 밀 주장 다섯 가운데 표지 폴더가 훅마다 따로인 것은 `STATE_DIR` grep으로, `.venv/.gitignore`가 `*`이고 `_cffi_backend` 파일이 `.venv/Lib/site-packages`에 있는 것은 파일로 대 봤다. 대소문자 구별은 코드를 읽었고, Glob의 "No files found"는 재현하지 않았다(문장이 손으로 봤다고 적었다).
+- 고친 것 없음. 남긴 것 없음.
+
 ## 다음
 
 - 둘째 커밋 시도도 pre-commit에서 막혔다. pytest는 `test_rerun_runner`의 오염 재시도 시험 하나(세 번째 연속), web-verify는 `WidgetApproval.test.tsx`의 "18,000 / 20,000" 찾기 하나가 떨어졌다. 그때 CPU 부하는 세 번 모두 100%였다(PowerShell `Win32_Processor`로 손으로 봤다). 훅을 건너뛰는 커밋은 사용자 승인 없이 하지 않아, 커밋 방법을 사용자에게 물었다.
