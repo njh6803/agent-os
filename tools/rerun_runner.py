@@ -124,6 +124,7 @@ from tools.rerun_round import (
     deny_rules,
     main_checkout,
     prepare_round,
+    root_heads,
     session_env,
     unrecorded_round_dirs,
 )
@@ -145,7 +146,7 @@ from tools.rerun_session import (
 )
 
 # 조건 판. 회차 조건(하네스, 단가, 판정 규칙)을 고치면 올린다. 회차 기록에 적는다
-CONDITION_VERSION = 2
+CONDITION_VERSION = 3
 MAX_PARALLEL = 2
 # 갈래마다 원래 PR 앞 비용에 곱하는 비율의 위 끝(설계 7절)
 ARM_RATIOS: dict[str, float] = {"A": 1.0, "B": 0.8, "C": 0.7, "D": 0.9, "E": 0.7}
@@ -341,7 +342,9 @@ class _Runner:
         self.settings = settings
         self.world = world
         self.config = Path(settings.config_dir)
-        self.rules = deny_rules(deny_heads(settings.main_checkout, home=world.home))
+        self.rules = deny_rules(
+            deny_heads(settings.main_checkout, home=world.home), roots=root_heads(settings.root)
+        )
         self.main_list = settings.task_list.kind == LIST_MAIN
 
     # --- 주 스레드 ---

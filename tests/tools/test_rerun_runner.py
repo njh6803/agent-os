@@ -47,7 +47,7 @@ from tools.rerun_files import (
 )
 from tools.rerun_gates import GateError, Limits
 from tools.rerun_judge import PREREG_END, PREREG_START
-from tools.rerun_round import ROOT, create_round_dir, main_checkout
+from tools.rerun_round import ROOT, create_round_dir, main_checkout, rule_path
 from tools.rerun_runner import (
     ARM_RATIOS,
     CONDITION_VERSION,
@@ -530,6 +530,21 @@ def test_끝남인_회차는_게이트와_숨은_시험을_돌고_기록에_정�
     assert rec.outcome.hidden is not None and rec.outcome.hidden.passed == 1
     assert rec.spend.claude_code_usd == pytest.approx(2.5)
     assert rec.account == "njh6803" and rec.claude_version == "2.1.302 (Claude Code)"
+
+
+def test_회차의_막는_규칙은_뿌리_바로_아래의_편집과_쓰기를_막는다(
+    판짜기: Callable[..., 판], 원본: tuple[Path, str, str]
+) -> None:
+    """파일럿 판 2의 한 회차가 뿌리에 임시 파일을 써 오염으로 버려졌다(일지 2026-10-27-14)."""
+    task = _과제(1, 원본, arms=("A",))
+    board = 판짜기([task], gates=(PASS, PASS, PASS))
+    board.script({_key(task, "A", 1): [_끝남(task, 2.5)]})
+    assert board.run() == 0
+    (rec,) = board.saved()
+    settings = board.root / rec.round_dir_name / "deny-settings.json"
+    deny = json.loads(settings.read_text("utf-8"))["permissions"]["deny"]
+    where = rule_path(Path(os.path.abspath(board.root)))
+    assert f"Write({where}/*.*)" in deny and f"Edit({where}/*.*)" in deny
 
 
 def test_B에_게이트_러너가_없는_과제는_옛_게이트_묶음을_돌고_그_이름으로_적는다(

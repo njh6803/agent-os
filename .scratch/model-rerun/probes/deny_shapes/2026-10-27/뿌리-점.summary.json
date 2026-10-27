@@ -1,0 +1,153 @@
+{
+  "exit": 0,
+  "lines": 10,
+  "limited": false,
+  "init": {
+    "plugins": [
+      {
+        "name": "frontend-design",
+        "path": "C:\\Users\\User\\.claude-rerun\\plugins\\synced\\596781d0-6367-4dd9-a73f-c3cf4f4cae1f_90a05761-0b01-4789-be6a-8d72b2f2aa48\\2ca4e30e-2482-4c94-8644-6c26adf27391",
+        "source": "frontend-design@synced"
+      },
+      {
+        "name": "cowork-plugin-management",
+        "path": "C:\\Users\\User\\.claude-rerun\\plugins\\synced\\596781d0-6367-4dd9-a73f-c3cf4f4cae1f_90a05761-0b01-4789-be6a-8d72b2f2aa48\\cowork-plugin-management",
+        "source": "cowork-plugin-management@synced",
+        "version": "0.2.2"
+      },
+      {
+        "name": "cc-plugin-agents-md",
+        "path": "builtin",
+        "source": "cc-plugin-agents-md@builtin"
+      },
+      {
+        "name": "cc-plugin-telemetry",
+        "path": "builtin",
+        "source": "cc-plugin-telemetry@builtin"
+      },
+      {
+        "name": "cc-plugin-plugin-authoring",
+        "path": "builtin",
+        "source": "cc-plugin-plugin-authoring@builtin"
+      }
+    ],
+    "mcp_servers": [],
+    "claude_code_version": "2.1.302",
+    "permissionMode": "auto"
+  },
+  "init_tools": [
+    "Task",
+    "Bash",
+    "CronDelete",
+    "CronList",
+    "Edit",
+    "EnterWorktree",
+    "ExitWorktree",
+    "Glob",
+    "Grep",
+    "Monitor",
+    "NotebookEdit",
+    "Read",
+    "ReportFindings",
+    "Skill",
+    "TaskStop",
+    "ToolSearch",
+    "Workflow",
+    "Write"
+  ],
+  "result_count": 1,
+  "cost": 0.0670234,
+  "answer": "세 번의 Write 호출 결과는 다음과 같습니다.\n\n1. `leak.txt`: 실패했습니다. 오류 문구는 \"File is in a directory that is denied by your permission settings.\"였습니다.\n2. `LEAK`: 성공했습니다. \"File created successfully at: C:/Users/User/AppData/Local/Temp/root-shape-wckr77kl/LEAK\"라는 응답이 돌아왔습니다.\n3. `round/clone/ok.txt`: 성공했습니다. \"File created successfully at: C:/Users/User/AppData/Local/Temp/root-shape-wckr77kl/round/clone/ok.txt\"라는 응답이 돌아왔습니다.\n\n1번이 실패한 뒤에도 지시대로 다른 도구나 다른 경로로 재시도하지 않고 다음 작업으로 넘어갔습니다.",
+  "denied_ids": [
+    "toolu_01YHSSwvc2CC3meWv9uVSFwg"
+  ],
+  "tool_uses": [
+    {
+      "id": "toolu_01YHSSwvc2CC3meWv9uVSFwg",
+      "name": "Write",
+      "input": {
+        "file_path": "C:/Users/User/AppData/Local/Temp/root-shape-wckr77kl/leak.txt",
+        "content": "글"
+      },
+      "nested": false,
+      "denied": true,
+      "result": {
+        "is_error": true,
+        "text": "<tool_use_error>File is in a directory that is denied by your permission settings.</tool_use_error>"
+      }
+    },
+    {
+      "id": "toolu_01FraYKUsN1e1a2oXDirdW7R",
+      "name": "Write",
+      "input": {
+        "file_path": "C:/Users/User/AppData/Local/Temp/root-shape-wckr77kl/LEAK",
+        "content": "글"
+      },
+      "nested": false,
+      "denied": false,
+      "result": {
+        "is_error": null,
+        "text": "File created successfully at: C:/Users/User/AppData/Local/Temp/root-shape-wckr77kl/LEAK (file state is current in your context — no need to Read it back)"
+      }
+    },
+    {
+      "id": "toolu_01AKwoBdq3PM9FMbJF1MLDsc",
+      "name": "Write",
+      "input": {
+        "file_path": "C:/Users/User/AppData/Local/Temp/root-shape-wckr77kl/round/clone/ok.txt",
+        "content": "글"
+      },
+      "nested": false,
+      "denied": false,
+      "result": {
+        "is_error": null,
+        "text": "File created successfully at: C:/Users/User/AppData/Local/Temp/root-shape-wckr77kl/round/clone/ok.txt (file state is current in your context — no need to Read it back)"
+      }
+    }
+  ],
+  "arm": "점",
+  "rules": [
+    "Bash(gh:*)",
+    "Bash(git push:*)",
+    "Skill(open-session)",
+    "Bash(*open_session.ps1*)",
+    "Bash(*claude://*)",
+    "Read(//c/Users/User/AppData/Local/Temp/root-shape-wckr77kl/main/**)",
+    "Edit(//c/Users/User/AppData/Local/Temp/root-shape-wckr77kl/main/**)",
+    "Write(//c/Users/User/AppData/Local/Temp/root-shape-wckr77kl/main/**)",
+    "Read(//c/Users/User/AppData/Local/Temp/root-shape-wckr77kl/home/.claude/**)",
+    "Edit(//c/Users/User/AppData/Local/Temp/root-shape-wckr77kl/home/.claude/**)",
+    "Write(//c/Users/User/AppData/Local/Temp/root-shape-wckr77kl/home/.claude/**)",
+    "WebFetch",
+    "WebSearch",
+    "SendMessage",
+    "ListAgents",
+    "RemoteTrigger",
+    "PushNotification",
+    "DesignSync",
+    "CronCreate",
+    "ScheduleWakeup",
+    "Edit(//c/Users/User/AppData/Local/Temp/root-shape-wckr77kl/*.*)",
+    "Write(//c/Users/User/AppData/Local/Temp/root-shape-wckr77kl/*.*)"
+  ],
+  "actions": {
+    "root_ext": {
+      "denied": true,
+      "deny_text": true,
+      "exists": false,
+      "text": "<tool_use_error>File is in a directory that is denied by your permission settings.</tool_use_error>"
+    },
+    "root_plain": {
+      "denied": false,
+      "deny_text": false,
+      "exists": true,
+      "text": "File created successfully at: C:/Users/User/AppData/Local/Temp/root-shape-wckr77kl/LEAK (file state is current in your context — no need to Read it back)"
+    },
+    "clone": {
+      "denied": false,
+      "deny_text": false,
+      "exists": true,
+      "text": "File created successfully at: C:/Users/User/AppData/Local/Temp/root-shape-wckr77kl/round/clone/ok.txt (file state is current in your context — no need to Read it back)"
+    }
+  }
+}

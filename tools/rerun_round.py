@@ -54,7 +54,7 @@ tools.md`의 pre-commit 항목). 하위 프로세스마다 시간 제한이 있�
   도구 이름만 쓴 규칙은 `.scratch/model-rerun/probes/deny_shapes/`가 Sonnet 으로 쟀고, Opus 회차에서
   막는지는 파일럿의 오염 검사가 본다. 같은 뿌리 아래 다른 회차 폴더와 전용 설정
   폴더의 세션 기록은 막지 않는다. 함께 도는 갈래나 앞선 갈래의 풀이를 읽는 길이고, 명세의 목록에
-  없다.
+  없다. 뿌리 바로 아래는 점이 든 이름의 편집·쓰기만 막는다(`deny_rules`의 못 보는 것).
 - 준비 명령이 시간을 넘기면 그 명령의 프로세스만 끈다(`subprocess.run`의 시간 제한). 그 명령이 띄운
   자식(node 등)은 남을 수 있고, 그것이 클론의 파일을 쥐면 지우기가 그 회차 폴더를 지우지 못했다고
   보고한다. 찾지 못한 준비 명령은 `SetupEnd.NOT_STARTED`(종료 코드는 빈 값)로 실패다.
@@ -153,6 +153,9 @@ BLOCKED_TOOLS = (
 )
 # 주 체크아웃과 사용자의 `~/.claude`에 거는 도구.
 PATH_TOOLS = ("Read", "Edit", "Write")
+# 뿌리 바로 아래 파일의 편집·쓰기를 막는 꼴(`deny_rules`). 조건 판 3에서 더했다.
+ROOT_TOOLS = ("Edit", "Write")
+ROOT_SHAPE = "*.*"
 
 # --- 세션 환경(설계 5절 환경 변수와 명세의 윈도 기본값·캐시 변수) ---
 
@@ -161,7 +164,7 @@ AUTOUPDATER_VAR = "DISABLE_AUTOUPDATER"
 GH_CONFIG_VAR = "GH_CONFIG_DIR"
 # 허용 목록. 러너가 값을 짓는 둘(설정 폴더, 자동 업데이트 끔)을 빼면 부모 환경에 있는 것만 넘긴다.
 # 앞의 열여섯은 비밀이 아닌 윈도 기본값이다. 처음 목록에 `USERNAME`이 빠져 `getpass.getuser()`가
-# `pwd`를 찾다 실패했고, 파일럿의 세션과 게이트가 그 시험들에서 빨갰다(일지 2026-10-27-08)
+# `pwd`를 찾다 실패했고, 파일럿의 세션과 게이트가 그 시험들에서 빨갰다(일지 2026-10-27-14)
 ALLOWED_ENV = (
     "USERNAME",
     "USERDOMAIN",
@@ -478,7 +481,7 @@ def check_clone(place: RoundDir, base: str, merge: str) -> None:
 # --- 막는 규칙 ---
 
 
-def _rule_path(path: PurePath) -> str:
+def rule_path(path: PurePath) -> str:
     """권한 규칙의 절대 경로 꼴. 윈도의 `C:\\a\\b`는 `//c/a/b`, POSIX의 `/a/b`는 `//a/b`다."""
     posix = path.as_posix()
     drive = path.drive
@@ -502,12 +505,30 @@ def deny_heads(main_checkout: Path, *, home: Path) -> tuple[Path, ...]:
     return tuple(heads)
 
 
-def deny_rules(heads: Sequence[PurePath]) -> list[str]:
-    """클론의 `permissions.deny`. 고정 규칙, 경로마다 읽기·편집·쓰기, 막는 도구의 차례다."""
+def root_heads(root: Path) -> tuple[Path, ...]:
+    """뿌리 쓰기를 막을 경로. 뿌리이고, 링크를 푼 꼴이 다르면 그것도 든다."""
+    return tuple(dict.fromkeys(Path(t) for t in (os.path.abspath(root), os.path.realpath(root))))
+
+
+def deny_rules(heads: Sequence[PurePath], *, roots: Sequence[PurePath] = ()) -> list[str]:
+    """회차의 `permissions.deny`. 고정 규칙, 경로마다 읽기·편집·쓰기, 뿌리마다 바로 아래의 편집·
+    쓰기, 막는 도구의 차례다.
+
+    뿌리 규칙은 `<뿌리>/*.*`다. 권한 규칙은 gitignore 꼴이라 `<뿌리>/*`는 회차 폴더에도 맞아 그 안의
+    클론 쓰기까지 막았다(`.scratch/model-rerun/probes/deny_shapes/root_shape.py`, 2026-10-27).
+    회차 폴더 이름(`round_dir_name`)에는 점이 없어 `*.*`가 맞지 않는다. 파일럿 판 2의 한 회차가
+    `/tmp` 쓰기를 막히자 뿌리에 임시 파일을 써 오염으로 버려졌다(일지 2026-10-27-14 "파일럿 판 2").
+
+    못 보는 것: 확장자 없는 파일(`<뿌리>/LEAK`)과 Bash 의 리다이렉션은 막지 않는다. 앞의 것은 그
+    탐침의 `점` 갈래에서 지나갔다. 둘은 오염 검사가 `다른-회차`로 잡는다(`tests/tools/
+    test_rerun_checks.py`의 경로 표). 뿌리의 읽기도 막지 않는다."""
     rules: list[str] = list(FIXED_DENY_RULES)
     for head in heads:
-        where = _rule_path(head)
+        where = rule_path(head)
         rules.extend(f"{tool}({where}/**)" for tool in PATH_TOOLS)
+    for root in roots:
+        where = rule_path(root)
+        rules.extend(f"{tool}({where}/{ROOT_SHAPE})" for tool in ROOT_TOOLS)
     rules.extend(BLOCKED_TOOLS)
     return list(dict.fromkeys(rules))
 
@@ -519,7 +540,7 @@ def write_deny_rules(place: RoundDir, rules: Sequence[str]) -> None:
     처음 판은 클론의 `.claude/settings.local.json`에 썼다. 클론은 주 체크아웃이라 B의 지침 검사가
     그 파일의 `permissions.deny`를 local 가드로 잡았고("local 은 워크트리에 없어 거기서 연 세션에서
     조용히 빠진다"), 파일럿의 세션은 그 검사를 빼고 커밋했으며 게이트는 빨갰다(일지
-    2026-10-27-08)."""
+    2026-10-27-14)."""
     target = place.deny_settings
     if os.path.lexists(target):
         raise CloneError(f"회차 폴더에 이미 deny-settings.json 이 있다: {target}")

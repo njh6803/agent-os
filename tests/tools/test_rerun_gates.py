@@ -648,7 +648,7 @@ def test_B_설정의_env_에서_글자_값만_읽는다(tmp_path: Path) -> None:
 def test_게이트는_B_설정의_env_를_부모_값_위에_얹어_돈다(tmp_path: Path) -> None:
     """원래 세션의 pre-commit 은 Claude Code 가 B 설정의 `env`(`PYTHONUTF8` 등)를 넣은 Bash 에서
     돌았다. 파일럿 첫 실행의 게이트는 그것 없이 돌아 cp949 출력을 UTF-8 로 풀지 못했다(일지
-    2026-10-27-08). 결과 커밋이 설정을 고쳐도 B 의 값을 쓴다."""
+    2026-10-27-14). 결과 커밋이 설정을 고쳐도 B 의 값을 쓴다."""
     b = {**_B, SETTINGS_FILE: _설정({"RERUN_GATE_PROBE": "B"})}
     result = {"calc.py": _M_CALC, SETTINGS_FILE: _설정({"RERUN_GATE_PROBE": "세션"})}
     place, source, task, commit = _회차(tmp_path, result, b=b)
