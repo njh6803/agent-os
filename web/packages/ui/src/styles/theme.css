@@ -78,8 +78,18 @@
   --font-weight-regular: 400;
   --font-weight-medium: 500;
   --font-weight-semibold: 600;
+  /*
+   * 기준 폭. 화면 중단점 `wide:` 는 관리 화면의 틀과 밀도를 가른다. 컨테이너 기준 폭은 `@<이름>:` 변형과 `max-w-<이름>`
+   * 최대 폭에 쓰인다. `wide` 는 승인 묻기의 자리 폭이다. `split` 은 관리 화면 본문 칸의 넓은 갈래(실행 하나의 결정 자리
+   * 옆 칸, 실행 목록의 표, 설정의 테마 카드 한 줄 넷)를 가르고, 값은 결정 자리 360px·사이 24px·이벤트 칸 최소 400px 의
+   * 합이다(ADR 0026 의 2026-10-26 이력). `form` 은 관리 토큰 화면의 최대 폭이고, `content` 는 플러그인 목록·플러그인
+   * 하나·설정 화면의 본문과 실행 하나 이벤트 칸의 최대 폭이다(admin-style 명세 "패키지에 더하는 것").
+   */
   --breakpoint-wide: 768px;
   --container-wide: 360px;
+  --container-split: 784px;
+  --container-form: 440px;
+  --container-content: 880px;
   --animate-spin: spin 0.8s linear infinite;
   @keyframes spin {
     to {

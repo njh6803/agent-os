@@ -6,25 +6,25 @@
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** in-progress
 
 ### 아이콘
 
-- [ ] **아이콘 이름(`IconName`)에 Lucide의 `settings`가 든다.** 크기 셋(14·16·20)과 선 굵기 규칙은 다른 열여섯과 같다
-- [ ] 아이콘 전부를 그리는 `Icon` 스토리가 `settings`까지 그리고, `Icon.md`의 목록이 열일곱이다
+- [x] **아이콘 이름(`IconName`)에 Lucide의 `settings`가 든다.** 크기 셋(14·16·20)과 선 굵기 규칙은 다른 열여섯과 같다
+- [x] 아이콘 전부를 그리는 `Icon` 스토리가 `settings`까지 그리고, `Icon.md`의 목록이 열일곱이다
 
 ### 가린 한 줄 입력
 
-- [ ] **`TextField`의 한 줄 변형이 `type`으로 `"text"`(기본)와 `"password"`를 받는다.** 받지 않으면 지금처럼 `text`다. 여러 줄 변형은 `type`을 받지 않고, 그것은 타입이 막는다
-- [ ] 가린 입력의 변형 스토리가 있고, play가 그 입력의 `type`이 `password`이며 레이블로 찾아진다고 본다
-- [ ] `TextField.md`가 `type`을 적고, 새 변형 스토리의 id가 `.design-sync/config.json`의 `overrides.TextField.skip`에 든다(Claude Design 카드에는 보여 주기용 스토리만 오른다, `.claude/rules/web-design.md`의 카드 항목)
+- [x] **`TextField`의 한 줄 변형이 `type`으로 `"text"`(기본)와 `"password"`를 받는다.** 받지 않으면 지금처럼 `text`다. 여러 줄 변형은 `type`을 받지 않고, 그것은 타입이 막는다
+- [x] 가린 입력의 변형 스토리가 있고, play가 그 입력의 `type`이 `password`이며 레이블로 찾아진다고 본다
+- [x] `TextField.md`가 `type`을 적고, 새 변형 스토리의 id가 `.design-sync/config.json`의 `overrides.TextField.skip`에 든다(Claude Design 카드에는 보여 주기용 스토리만 오른다, `.claude/rules/web-design.md`의 카드 항목)
 
 ### 기준 폭
 
-- [ ] **디자인 토큰 CSS(`web/packages/ui/src/styles/theme.css`)의 기준 폭에 `split` 784px, `form` 440px, `content` 880px이 든다.** 지금의 `wide`(360px)와 같은 자리다. 그 자리의 이름은 `@<이름>:` 컨테이너 변형과 `max-w-<이름>` 최대 폭 둘에 쓰인다
-- [ ] **판정 스토리 `Responsive`에 `@split:` 표본이 더해져** 784px 경계의 양쪽에서 갈리는지 보고, 패키지 시트의 조건 목록 단언에 784px이 든다. Tailwind는 쓰인 변형만 규칙을 내므로(어림, 명세 주석) 표본 없이는 그 단언이 784px을 보지 못한다. 스토리 이름("기준 폭 둘이 359px 과 360px 사이와 시트의 조건 둘에서 갈린다")처럼 기준 폭을 수로 든 글도 새 표본에 맞게 고친다
-- [ ] 같은 자리에서 `max-w-form`과 `max-w-content`의 계산 최대 폭이 440px과 880px인지 본다
-- [ ] 판정이 값을 실제로 보는지, 세 값 가운데 하나를 바꿔 그 단언이 빨개지는 것을 한 번 손으로 본다(커밋하지 않는다). 관리 화면의 시험은 폭 320과 1280이라 784가 다른 값이어도 초록이므로, 그 값을 지키는 것은 이 판정 하나다
+- [x] **디자인 토큰 CSS(`web/packages/ui/src/styles/theme.css`)의 기준 폭에 `split` 784px, `form` 440px, `content` 880px이 든다.** 지금의 `wide`(360px)와 같은 자리다. 그 자리의 이름은 `@<이름>:` 컨테이너 변형과 `max-w-<이름>` 최대 폭 둘에 쓰인다
+- [x] **판정 스토리 `Responsive`에 `@split:` 표본이 더해져** 784px 경계의 양쪽에서 갈리는지 보고, 패키지 시트의 조건 목록 단언에 784px이 든다. Tailwind는 쓰인 변형만 규칙을 내므로(어림, 명세 주석) 표본 없이는 그 단언이 784px을 보지 못한다. 스토리 이름("기준 폭 둘이 359px 과 360px 사이와 시트의 조건 둘에서 갈린다")처럼 기준 폭을 수로 든 글도 새 표본에 맞게 고친다
+- [x] 같은 자리에서 `max-w-form`과 `max-w-content`의 계산 최대 폭이 440px과 880px인지 본다
+- [x] 판정이 값을 실제로 보는지, 세 값 가운데 하나를 바꿔 그 단언이 빨개지는 것을 한 번 손으로 본다(커밋하지 않는다). 관리 화면의 시험은 폭 320과 1280이라 784가 다른 값이어도 초록이므로, 그 값을 지키는 것은 이 판정 하나다
 
 ### 사진
 

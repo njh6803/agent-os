@@ -1,4 +1,4 @@
-// 디자인 토큰의 판정 스토리. 여덟 벌(테마 넷 × 모드 둘)의 쓰임새 토큰과 명암비, 밀도 두 벌, 기준 폭 둘, 글꼴 다섯 벌,
+// 디자인 토큰의 판정 스토리. 여덟 벌(테마 넷 × 모드 둘)의 쓰임새 토큰과 명암비, 밀도 두 벌, 기준 폭 다섯, 글꼴 다섯 벌,
 // rem 0, `@theme` 토큰이 모두 CSS 변수로 나오는 것, 떠 있는 것의 그림자, shadow root 의 계산값을 실제 chromium 에서
 // 본다. `judgment` 태그를 단 이 스토리들은 사진 비교(`visual/`)가 찍지 않는다.
 // 쓰임새 토큰의 값은 디자인 파일과 맞대지 않는다. 형식(#RRGGBB, 반투명은 #RRGGBBAA), 테마 사이의 차이, 명암비로 본다.
@@ -282,25 +282,51 @@ export const Density: Story = {
   },
 };
 
+// Tailwind 는 쓰인 변형만 규칙을 내므로(어림, admin-style 명세의 Testing Decisions "패키지" 주석) 기준 폭마다 표본을
+// 둔다. 기준 폭마다의 쓰임은 디자인 토큰 CSS(`theme.css`)의 기준 폭 주석이다.
 export const Responsive: Story = {
-  name: "기준 폭 둘이 359px 과 360px 사이와 시트의 조건 둘에서 갈린다",
+  name: "기준 폭이 359px·360px 사이와 783px·784px 사이에서 갈리고 시트의 조건 셋에 들며, 최대 폭 form 과 content 가 440px 과 880px 이다",
   render: () => (
-    <div data-sample="container" className="@container" style={{ width: 320 }}>
-      <div data-sample="row" className="flex flex-col gap-2 @wide:flex-row wide:gap-4">
-        <span>거부</span>
-        <span>승인</span>
+    <div className="flex flex-col gap-2">
+      <div data-sample="container" className="@container" style={{ width: 320 }}>
+        <div data-sample="wide" className="flex flex-col gap-2 @wide:flex-row wide:gap-4">
+          <span>거부</span>
+          <span>승인</span>
+        </div>
+        <div data-sample="split" className="flex flex-col gap-2 @split:flex-row">
+          <span>이벤트</span>
+          <span>결정</span>
+        </div>
+      </div>
+      <div data-sample="form" className="max-w-form">
+        관리 토큰
+      </div>
+      <div data-sample="content" className="max-w-content">
+        플러그인
       </div>
     </div>
   ),
   play: async ({ canvasElement }) => {
     const container = element(canvasElement, "[data-sample=container]");
-    const row = element(canvasElement, "[data-sample=row]");
+    const wide = element(canvasElement, "[data-sample=wide]");
+    const split = element(canvasElement, "[data-sample=split]");
     const directions: string[] = [];
-    for (const width of [359, 360]) {
+    for (const width of [359, 360, 783, 784]) {
       container.style.width = `${String(width)}px`;
-      directions.push(`${String(width)} ${getComputedStyle(row).flexDirection}`);
+      directions.push(
+        `${String(width)} ${getComputedStyle(wide).flexDirection} ${getComputedStyle(split).flexDirection}`,
+      );
     }
-    await expect(directions).toEqual(["359 column", "360 row"]);
+    await expect(directions).toEqual([
+      "359 column column",
+      "360 row column",
+      "783 row column",
+      "784 row row",
+    ]);
+    await expect({
+      form: getComputedStyle(element(canvasElement, "[data-sample=form]")).maxWidth,
+      content: getComputedStyle(element(canvasElement, "[data-sample=content]")).maxWidth,
+    }).toEqual({ form: "440px", content: "880px" });
     const conditions = new Set<string>();
     const visit = (list: CSSRuleList): void => {
       for (const rule of list) {
@@ -318,6 +344,7 @@ export const Responsive: Story = {
     await expect([...conditions].filter((text) => text.includes("px")).sort()).toEqual([
       "(width >= 360px)",
       "(width >= 768px)",
+      "(width >= 784px)",
     ]);
   },
 };

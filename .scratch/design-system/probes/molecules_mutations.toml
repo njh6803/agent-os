@@ -18,10 +18,10 @@ expect = "red"
 [[mutation.edit]]
 file = "web/packages/ui/src/components/molecules/TextField.tsx"
 old = '''
-          className={`flex items-center gap-1 text-small font-regular ${NOTE_COLOR[state]}`}
+        <p id={noteId} className={`flex items-center gap-1 text-small ${NOTE_COLOR[state]}`}>
 '''
 new = '''
-          className={`flex items-center gap-1 whitespace-nowrap text-small font-regular ${NOTE_COLOR[state]}`}
+        <p id={noteId} className={`flex items-center gap-1 whitespace-nowrap text-small ${NOTE_COLOR[state]}`}>
 '''
 
 [[mutation]]
@@ -33,10 +33,10 @@ expect = "red"
 [[mutation.edit]]
 file = "web/packages/ui/src/components/molecules/Alert.tsx"
 old = '''
-            <div className="text-small font-regular text-muted">{children}</div>
+          {children === null ? null : <div className="text-body text-text-muted">{children}</div>}
 '''
 new = '''
-            <div className="whitespace-nowrap text-small font-regular text-muted">{children}</div>
+          {children === null ? null : <div className="whitespace-nowrap text-body text-text-muted">{children}</div>}
 '''
 
 # Typing 은 기본 그림의 스토리에서 글 넣기를 옮겨 오며 구현 뒤에 쓴 스토리다. 한 줄 칸이 값을 넘기지 않는 변이로 본다.
@@ -49,11 +49,11 @@ expect = "red"
 [[mutation.edit]]
 file = "web/packages/ui/src/components/molecules/TextField.tsx"
 old = '''
-        type="text"
+        type={type}
         onChange={(event) => onChange?.(event.currentTarget.value)}
 '''
 new = '''
-        type="text"
+        type={type}
         onChange={() => onChange?.("")}
 '''
 

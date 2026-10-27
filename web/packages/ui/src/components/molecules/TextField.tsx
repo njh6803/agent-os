@@ -1,7 +1,8 @@
 // 글 입력(재탐색 디자인 파일 2.3). 라벨이 칸 위에 늘 보이고, 칸 아래 한 줄이 도움말이나 오류다. 변형 둘(한 줄, 여러
-// 줄). 색과 치수는 재탐색의 상태 표와 해부도다. 한 줄 칸의 높이와 칸의 글자 크기는 밀도를 따르고(촘촘 32px·14px, 보통
-// 40px·15px), 여러 줄 칸의 높이는 줄 수(`rows`)가 정한다. 안쪽 좌우 12px, 여러 줄의 안쪽 위아래 8px, 모서리 8px,
-// 라벨과 칸 사이 8px, 칸과 도움말 사이 4px 이다. 라벨은 작은 글자 500, 도움말과 오류는 작은 글자다.
+// 줄). 한 줄은 `type` 으로 넣은 글을 가릴 수 있고(admin-style 명세), 모양은 가리지 않은 칸과 같다. 색과 치수는
+// 재탐색의 상태 표와 해부도다. 한 줄 칸의 높이와 칸의 글자 크기는 밀도를 따르고(촘촘 32px·14px, 보통 40px·15px),
+// 여러 줄 칸의 높이는 줄 수(`rows`)가 정한다. 안쪽 좌우 12px, 여러 줄의 안쪽 위아래 8px, 모서리 8px, 라벨과 칸 사이
+// 8px, 칸과 도움말 사이 4px 이다. 라벨은 작은 글자 500, 도움말과 오류는 작은 글자다.
 // 클래스는 쓰임새 토큰과 공통 크기의 유틸리티만 쓰고 상태마다 고른다. 쓸 수 없음과 오류에는 올림의 클래스를 두지 않는다.
 // 누름과 불러오는 중은 디자인 파일의 상태 표가 두지 않았다.
 //
@@ -34,12 +35,16 @@ interface FieldOwnProps {
 
 interface SingleOwnProps extends FieldOwnProps {
   variant?: "single";
+  /** 기본 `"text"`. `"password"` 면 넣은 글을 가린다(관리 토큰, 채널 토큰). */
+  type?: "text" | "password";
   /** 여러 줄에만 있다. 막지 않으면 `variant` 를 뺀 한 줄 칸에 넘긴 `rows` 가 `<input>` 에 샌다. */
   rows?: never;
 }
 
 interface MultiOwnProps extends FieldOwnProps {
   variant: "multi";
+  /** 한 줄에만 있다. `<textarea>` 는 가리지 못한다. */
+  type?: never;
   /** 처음 줄 수. 기본 3. */
   rows?: number;
 }
@@ -48,7 +53,7 @@ interface MultiOwnProps extends FieldOwnProps {
 type Decided = "children" | "aria-invalid" | "aria-describedby";
 
 export type TextFieldProps =
-  | (SingleOwnProps & NativeProps<"input", keyof SingleOwnProps | Decided | "type">)
+  | (SingleOwnProps & NativeProps<"input", keyof SingleOwnProps | Decided>)
   | (MultiOwnProps & NativeProps<"textarea", keyof MultiOwnProps | Decided>);
 
 const CONTROL =
@@ -112,12 +117,12 @@ export function TextField({
       />
     );
   } else {
-    const { variant = "single", ...native } = control;
+    const { variant = "single", type = "text", ...native } = control;
     field = (
       <input
         {...native}
         {...wiring}
-        type="text"
+        type={type}
         onChange={(event) => onChange?.(event.currentTarget.value)}
         className={`${CONTROL} ${SIZE_CLASS[variant]} ${STATE_CLASS[state]}`}
       />
