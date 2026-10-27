@@ -16,7 +16,7 @@ LLM 테스트가 대상이면 `PYTHONUTF8=1 uv run --env-file .env python tools/
 모두 알린다. 코드를 고친 뒤 다른 변이 파일의 원문이 옮겨 가지 않았는지 볼 때 쓴다. `--check` 만 변이
 파일 여럿(`.toml` 로 끝나는 인자)을 받고, 그때는 이름·번호·`--since` 를 섞지 않는다. 고르지 않고
 주면 줄마다 그 파일의 경로가 붙고 읽지 못한 파일이 있어도 나머지를 본다. 이름·번호·`--since` 로
-고른 `--check` 는 표지의 메아리(아래 표지 절)도 본다.
+고른 `--check` 와 변이를 돌리는 실행은 표지의 메아리(아래 표지 절)도 본다.
 
 `--staged` 는 커밋에 들 판(색인)에서 원문을 보고, pre-commit 이 커밋마다 띄운다. 이 커밋이 더하거나
 고친 표(`*_mutations.toml`)는 모든 원문을 보고, 그 표에서 어느 부모 판과도 다른 변이는 표지의
@@ -135,8 +135,11 @@ PR 직전 리뷰 전에 약 13분, 일지 2026-10-16-07). 이 문장을 두고�
 옵션이 아닌 것을 러너의 자리 기준으로 이은 경로, `::` 뒤는 뗀다)의 원문에 글자 그대로 있으면
 알린다. 시험 함수 이름은 실패 머리에, 기대 값의 글자는 실패 줄 둘레의 코드 조각에 늘 실려, 그
 시험의 어느 단언이 빨개져도 표지가 맞는다. 표지 스물여덟을 시험 함수 이름으로 골랐고, 기대 배열의
-글자가 코드 조각에 실린 일도 있었다(대기열 417). 이름·번호·`--since` 로 고른 `--check` 와
-`--staged` 의 새 변이만 본다. 옛 변이는 소급하지 않고 그 변이를 고칠 때 본다. 초록을 기대한 변이는
+글자가 코드 조각에 실린 일도 있었다(대기열 417). 원문만 보는 확인은 이름·번호·`--since` 로 고른
+`--check` 와 `--staged` 의 새 변이만 본다. 옛 변이는 소급하지 않고 그 변이를 고칠 때 본다. 변이를
+돌리는 실행(전체와 고른 것)은 돌릴 변이를 모두 1단계에서 보고, 걸리면 기준선 전에 끝낸다. 다시
+돌리는 변이는 지금 재는 것이다. 실행만 메아리를 보지 않아, 표지 열여덟이 시험 함수 이름인 채로 표
+전부가 기대대로를 찍었다(대기열 502). 초록을 기대한 변이는
 실패 머리와 코드 조각을 찍지 않아 보지 않는다. 못 보는 것: 파일 단위로 맞대어, 같은 파일의 다른
 시험에만 있는 글자도 알린다(거짓 양성, 그 시험이 빨개질 때는 실리지 않는다). 폴더 인자는 그 안의
 파일을 보지 않는다(거짓 음성). 원문의 이스케이프(`\\"`)와 출력의 글자가 달라 글자 그대로 맞지 않는
@@ -144,7 +147,8 @@ PR 직전 리뷰 전에 약 13분, 일지 2026-10-16-07). 이 문장을 두고�
 
 하는 일, 차례대로:
 1. 변이 파일의 모양과 러너·판정의 짝을 보고, 변이마다 원문이 파일에 정확히 한 번 있는지, 러너의
-   자리와 되돌릴 파일이 저장소 안에 있는지 본다. 하나라도 틀리면 아무 파일도 쓰지 않고 끝낸다.
+   자리와 되돌릴 파일이 저장소 안에 있는지, 표지가 메아리가 아닌지 본다. 하나라도 틀리면 아무
+   파일도 쓰지 않고 끝낸다.
 2. 러너와 인자의 짝마다 변이 없이 한 번씩 돌린다(기준선). 시간 제한은 그 짝을 쓰는 변이 가운데
    가장 긴 것이다. 초록이 아니면 변이를 넣지 않는다. 기준선이 빨간데 변이가 빨가면 그 빨강은
    아무것도 말하지 않는다. 이름으로 좁힌 선택이 비었는지도 여기서 본다.
@@ -855,8 +859,15 @@ def _echo_problems(root: Path, spec: Spec, read: Reader = _read_disk) -> list[st
     return problems
 
 
+def _picked_problems(root: Path, spec: Spec) -> list[str]:
+    """고른 변이(이름·번호·`--since` 로 고른 것, 돌릴 변이)의 원문 확인과 표지의 메아리."""
+    return _file_problems(root, spec) + _echo_problems(root, spec)
+
+
 def _validate(root: Path, spec: Spec) -> None:
-    problems = _file_problems(root, spec)
+    """변이를 돌리기 전의 1단계. 원문 확인에 더해 표지의 메아리도 본다. 다시 돌리는 변이는 지금
+    재는 것이라 옛 변이도 본다(대기열 502)."""
+    problems = _picked_problems(root, spec)
     if problems:
         raise SpecError("\n".join(problems))
 
@@ -1076,7 +1087,7 @@ def check(spec: Spec, *, root: Path, out: Callable[[str], None], read: Reader = 
 def check_picked(spec: Spec, *, root: Path, out: Callable[[str], None]) -> int:
     """이름·번호·`--since` 로 고른 변이의 원문 확인. `check` 에 더해 표지가 시험 원문에 글자
     그대로 있는지도 본다(옛 변이는 소급하지 않아 고른 변이에만 쓴다)."""
-    return _report_check(spec, _file_problems(root, spec) + _echo_problems(root, spec), out)
+    return _report_check(spec, _picked_problems(root, spec), out)
 
 
 def _report_check(spec: Spec, problems: list[str], out: Callable[[str], None]) -> int:
