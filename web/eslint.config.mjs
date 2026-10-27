@@ -141,8 +141,9 @@ export default defineConfig(
         { type: "page", pattern: "components/pages" },
         // Next 의 app 디렉터리. 라우팅과 레이아웃만 한다(ADR 0021).
         { type: "route", pattern: "app" },
-        // 도메인 폴더. 밖에서는 index.ts barrel 로만 들어온다.
-        { type: "api", pattern: "api/*" },
+        // 도메인 폴더. 밖에서는 index.ts barrel 로만 들어온다. api 는 도메인 이름을 잡아 organisms 에 요청 함수가
+        // 없는 api/failure 만 연다(아래 정책).
+        { type: "api", pattern: "api/*", capture: ["domain"] },
         { type: "query", pattern: "hooks/queries/*" },
         { type: "types", pattern: "types/*" },
         // 클라이언트 상태(Zustand). 토큰 스토어가 여기 있다.
@@ -188,13 +189,15 @@ export default defineConfig(
               // 서버 데이터와 토큰을 읽고 처리기를 만드는 것은 pages 다. 값으로 싣는 import 만 막는다. 같은 줄의
               // `type` 지정자(`import { type X }`)는 verbatimModuleSyntax 에서 모듈을 그대로 실어 값으로 센다.
               // 모듈의 source 는 서브패스를 뗀 패키지 이름과 맞춘다(swr/infinite 도 swr 다. 판정자 테스트가 잰다).
+              // api 도메인 가운데 failure 만 지난다. 요청 함수가 없고 실패 해석만 낸다.
               from: { element: { types: { anyOf: ["organism", "template"] } } },
               disallow: [
                 { to: { element: { types: { anyOf: ["query", "store"] } } } },
+                { to: { element: { type: "api", captured: { domain: "!failure" } } } },
                 { to: { module: { origin: "external", source: `{${API_CLIENT},swr}` } } },
               ].map((selector) => ({ ...selector, dependency: { kind: "value" } })),
               message:
-                "organisms 와 templates 는 hooks/queries, stores, swr, 생성 클라이언트를 부르지 않는다. pages 가 읽어 organisms 에 props 로 넘긴다(ADR 0021 의 2026-10-27 이력)",
+                "organisms 와 templates 는 hooks/queries, stores, swr, 생성 클라이언트, api/failure 밖의 api 를 부르지 않는다. pages 가 읽어 organisms 에 props 로 넘긴다(ADR 0021 의 2026-10-27 이력)",
             },
             {
               from: { file: { categories: "in-app" } },

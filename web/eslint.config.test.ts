@@ -91,9 +91,9 @@ const SOURCES: Readonly<Record<string, string>> = {
     'import { createAdminClient } from "@agent-os/api-client";\n\nexport const 관리 = createAdminClient;\n',
   "apps/admin/components/organisms/Panel.ts":
     'import { 라벨 } from "../atoms/Label";\n\nexport const 판 = 라벨;\n',
-  "apps/admin/components/organisms/DeepApi.ts":
+  // organisms 는 요청 함수가 든 api 도메인과 hooks/queries 를 부르지 않으므로 barrel 의 판정은 부를 수 있는 pages 에서 잰다.
+  "apps/admin/components/pages/DeepApi.ts":
     'import { 실행_목록 } from "../../api/runs/listRuns";\n\nexport const 깊이 = 실행_목록;\n',
-  // organisms 는 hooks/queries 를 부르지 않으므로 barrel 의 판정은 부를 수 있는 pages 에서 잰다.
   "apps/admin/components/pages/DeepQuery.ts":
     'import { 실행_훅 } from "../../hooks/queries/runs/useRuns";\n\nexport const 깊이 = 실행_훅;\n',
   "apps/admin/components/organisms/Query.ts":
@@ -106,6 +106,8 @@ const SOURCES: Readonly<Record<string, string>> = {
     'import type { 알림 } from "../../stores/tokens";\n\nexport type 받은_알림 = 알림;\n',
   "apps/admin/components/templates/Query.ts":
     'import { 실행_훅 } from "../../hooks/queries/runs";\n\nexport const 훅 = 실행_훅;\n',
+  "apps/admin/components/templates/Runs.ts":
+    'import { 실행_목록 } from "../../api/runs";\n\nexport const 실행들 = 실행_목록;\n',
   "apps/admin/components/molecules/Store.ts":
     'import { 토큰 } from "../../stores/tokens";\n\nexport const 받은_토큰 = 토큰;\n',
   "apps/admin/components/pages/Connected.ts":
@@ -114,10 +116,17 @@ const SOURCES: Readonly<Record<string, string>> = {
     'import { 실행_종류 } from "../../types/run/kinds";\n\nexport const 깊이 = 실행_종류;\n',
   "apps/admin/components/organisms/Runs.ts":
     'import { 실행_목록 } from "../../api/runs";\n\nexport const 실행들 = 실행_목록;\n',
+  "apps/admin/components/organisms/RunsType.ts":
+    'import type { 실행_목록 } from "../../api/runs";\n\nexport type 목록 = typeof 실행_목록;\n',
+  "apps/admin/components/organisms/Failure.ts":
+    'import { 풀이 } from "../../api/failure";\n\nexport const 실패 = 풀이;\n',
+  "apps/admin/components/pages/Runs.ts":
+    'import { 실행_목록 } from "../../api/runs";\n\nexport const 실행들 = 실행_목록;\n',
   "apps/admin/components/pages/Home.ts": "export const 홈 = 1;\n",
   "apps/admin/components/pages/Remote.ts":
     'import { 위젯 } from "../../../widget/lib/widget";\n\nexport const 원격 = 위젯;\n',
   "apps/admin/components/templates/Shell.ts": "export const 틀 = 1;\n",
+  "apps/admin/api/failure/index.ts": "export const 풀이 = 1;\n",
   "apps/admin/api/runs/index.ts": 'export { 실행_목록 } from "./listRuns";\n',
   "apps/admin/api/runs/listRuns.ts": "export const 실행_목록 = 1;\n",
   "apps/admin/hooks/queries/runs/index.ts": 'export { 실행_훅 } from "./useRuns";\n',
@@ -268,7 +277,7 @@ const RED: readonly RedCase[] = [
   { name: "앱 사이의 import", path: "apps/admin/components/pages/Remote.ts", rule: BOUNDARIES },
   {
     name: "api 도메인의 barrel 을 거치지 않는 import",
-    path: "apps/admin/components/organisms/DeepApi.ts",
+    path: "apps/admin/components/pages/DeepApi.ts",
     rule: BOUNDARIES,
   },
   {
@@ -344,6 +353,16 @@ const RED: readonly RedCase[] = [
     path: "apps/admin/components/templates/Query.ts",
     rule: BOUNDARIES,
   },
+  {
+    name: "organisms 가 요청 함수가 든 api 도메인을 barrel 로 import",
+    path: "apps/admin/components/organisms/Runs.ts",
+    rule: BOUNDARIES,
+  },
+  {
+    name: "templates 가 요청 함수가 든 api 도메인을 barrel 로 import",
+    path: "apps/admin/components/templates/Runs.ts",
+    rule: BOUNDARIES,
+  },
   // 생성 클라이언트 패키지는 fetch 를 직접 부르지 않는다. openapi-fetch 가 부른다. 그래서 예외가 없다.
   {
     name: "생성 클라이언트 패키지 안의 전역 fetch",
@@ -370,7 +389,7 @@ const RED: readonly RedCase[] = [
 const GREEN: readonly { readonly name: string; readonly path: string }[] = [
   { name: "as const", path: "apps/admin/lib/kinds.ts" },
   { name: "타입 테스트 파일의 설명 붙은 @ts-expect-error", path: "apps/admin/lib/kinds.test-d.ts" },
-  { name: "barrel 을 거친 import", path: "apps/admin/components/organisms/Runs.ts" },
+  { name: "barrel 을 거친 import", path: "apps/admin/components/pages/Runs.ts" },
   { name: "organisms 가 atoms 를 import", path: "apps/admin/components/organisms/Panel.ts" },
   { name: "app/ 이 pages 와 templates 를 import", path: "apps/admin/app/page.ts" },
   {
@@ -380,6 +399,14 @@ const GREEN: readonly { readonly name: string; readonly path: string }[] = [
   {
     name: "pages 가 hooks/queries 와 stores 를 import",
     path: "apps/admin/components/pages/Connected.ts",
+  },
+  {
+    name: "organisms 가 api 도메인의 타입만 import type 으로 받는다",
+    path: "apps/admin/components/organisms/RunsType.ts",
+  },
+  {
+    name: "organisms 가 요청 함수가 없는 api/failure 를 import",
+    path: "apps/admin/components/organisms/Failure.ts",
   },
   {
     name: "디자인 시스템 패키지의 Icon.tsx 가 아이콘 모듈 선언을 경로로 참조",
