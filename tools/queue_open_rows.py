@@ -1,4 +1,4 @@
-"""열린 대기열 행을 회차, 날짜, 대상 파일로 센다.
+"""열린 대기열 행을 회차, 날짜, 대상 파일로 세고, 닫힌 행까지 낱말로 찾는다(찾기는 끝의 절).
 
 `next-session` 결정표의 하네스 chore 배치 조건(`.scratch/retro-queue.md`의 열린 항목 가운데 회차 3
 이상인 것)과 retro 5단계의 만료(승인 칸의 가장 늦은 날짜로부터 14일)를 세는 자리다(ADR 0036). 같은
@@ -56,6 +56,36 @@
 읽는다. 워크트리에서 병합한 뒤에는 `git fetch origin` 뒤 `--ref origin/main`으로 다른 PR이 더한
 행까지 센다. `--rows`는 열린 행마다 회차와 대상·인용을 한 줄씩 더 찍는다. 종료 0은 모두 읽었다, 1은
 칸이 넷이 아닌 행이 있다(그 행을 뺀 수다), 2는 인자가 틀렸거나 대기열을 읽지 못했다.
+
+찾기: `uv run python tools/queue_open_rows.py [--queue <경로> | --ref <커밋>] --search <정규식>
+[--search <정규식> ...]`. retro 5단계의 행 찾기(새 행을 쓰기 전에 같은 일을 다룬 행을 찾는다)가
+쓴다. Grep 도구는 대기열의 긴 행을 `[Omitted long matching line]`으로만 내고, Bash 로 행을
+열면(`grep`·`sed`·`cut`) 한 행 전체가 실려(일지 2026-10-22-16 의 306행은 4,079자다), 세션마다 맞은
+행을 Read 로 다시 열거나 스크래치 스크립트를 지었다(대기열 425).
+- 닫힌 행까지 `| N |`로 시작하는 줄의 원문 전체(번호 칸과 마크다운 표지까지)에 정규식을 맞추고,
+  여럿이면 하나라도 맞은 행이다. 맞은 행마다 번호, 파일의 줄 번호(줄바꿈으로만 센다. Read 의
+  `offset`이다), 열림·닫힘, 회차(위의 회차 판정), 무엇 칸의 머리, 승인 칸을 한 줄로 대기열의
+  차례대로 찍는다. 기본 출력은 내지 않으므로 `--rows`·`--today`와 함께 주면 쓰임 오류다.
+- 낱말은 정규식이다. `[`·`(`·`|`·`\\` 같은 문자는 정규식으로 읽혀, `[Omitted long matching line]`은
+  문자 클래스라 거의 모든 행에 맞는다. 셸에서 따옴표 없이 주면 셸도 그 문자를 읽으므로, 공백과 그
+  문자는 아무 글자에나 맞는 `.`으로 바꿔 준다. 맞은 행 수에는 상한이 없어, `tools/`처럼 넓은 낱말은
+  수백 행을 낸다.
+- 머리는 무엇 칸의 앞의 굵게·취소선 표지를 걷고 처음 닫는 표지(`**`, `~~`)까지이고
+  `HEAD_CHARS`(120)자에서 자른다. 승인 칸은 첫 승인으로 시작해 회차와 닫힘을 뒤에 덧붙여 가는
+  칸이라, 길면 앞 `APPROVAL_HEAD`(80)자(첫 승인)와 끝 `APPROVAL_TAIL`(160)자(가장 늦게 덧붙인 글의
+  꼬리)를 남기고 가운데를 줄인다. 덧붙인 글이 길면 끝에 회차나 `**닫힘`의 시작이 들지 않으므로
+  회차와 열림·닫힘은 칸 전체에서 판정해 따로 찍는다. 자르거나 줄였으면 그 글자 수를 적는다.
+- 종료 0은 맞은 행을 모두 읽었다(맞은 행이 없어도 0이다), 1은 맞은 행 가운데 칸이 넷이 아닌 행이
+  있다(그 행은 칸을 읽지 않고 번호와 줄만 찍고, 머리 줄에 그 수를 따로 센다), 2는 인자나 정규식이
+  틀렸거나 대기열을 읽지 못했다.
+
+찾기의 못 보는 것. 셋 다 시험으로 고정했다.
+- 어디에 맞았는지는 찍지 않는다. 어디로 칸이나 잘린 자리에서만 맞은 행도 찍히지만 그 낱말은 출력에
+  없다. 머리로 가리지 못하면 그 줄을 연다.
+- 수를 찾으면 그 수를 품은 더 긴 수에도 맞는다(`425`가 `1425`에). `(?<!\\d)425(?!\\d)`로 좁힌다.
+  `\\b`는 수와 한글 사이를 경계로 보지 않아 `425의`를 놓친다.
+- `| N |`로 시작하지 않는 줄(붙여 쓴 칸 `|425|`, 들여 쓴 행, 본문)은 기본 출력처럼 행이 아니라 찾지
+  않는다.
 """
 
 from __future__ import annotations
@@ -67,6 +97,7 @@ import sys
 from collections import defaultdict
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta
+from enum import Enum
 from pathlib import Path
 
 QUEUE = Path(".scratch/retro-queue.md")
@@ -76,9 +107,14 @@ EXPIRY_DAYS = 14
 HUMAN = "사람 몫"
 HUMAN_MARK = f"{HUMAN}:"
 SHARED = f"{MIN_ROWS}개 행 이상"
+HEAD_CHARS = 120
+APPROVAL_HEAD = 80
+APPROVAL_TAIL = 160
 USAGE = (
     "쓰임: uv run python tools/queue_open_rows.py [--queue <경로> | --ref <커밋>] [--rows]"
     " [--today YYYY-MM-DD]\n"
+    "      uv run python tools/queue_open_rows.py [--queue <경로> | --ref <커밋>]"
+    " --search <정규식> [--search <정규식> ...]\n"
 )
 GIT_TIMEOUT = 30
 
@@ -104,6 +140,27 @@ class Row:
     citations: tuple[str, ...]
     last: date | None = None
     human: bool = False
+
+
+class HitState(Enum):
+    """맞은 행의 상태. `BROKEN` 이면 칸이 넷이 아니라 나머지 칸을 읽지 않았다."""
+
+    OPEN = "열림"
+    CLOSED = "닫힘"
+    BROKEN = "칸이 넷이 아니다"
+
+
+@dataclass(frozen=True)
+class Hit:
+    """`--search` 에 맞은 행. `line` 은 대기열 파일의 줄 번호(1부터)이고, `head` 와 `approval` 은
+    길이를 묶은 무엇 칸의 머리와 승인 칸이다."""
+
+    number: int
+    line: int
+    state: HitState
+    rounds: int | None = None
+    head: str = ""
+    approval: str = ""
 
 
 def is_path(span: str) -> bool:
@@ -166,6 +223,15 @@ def _last_date(approval: str) -> date | None:
     return max(found, default=None)
 
 
+def _named(line: str) -> dict[str, str] | None:
+    """행의 무엇·어디로·승인 칸. 칸이 넷이 아니면 None 이다."""
+    parts = [part.strip() for part in CELL_SPLIT.split(line.strip())]
+    cells = parts[1:-1] if parts[0] == "" and parts[-1] == "" else parts
+    if len(cells) != 4:
+        return None
+    return dict(zip(CELL_NAMES, cells[1:], strict=True))
+
+
 def read_rows(text: str) -> tuple[list[Row], list[int]]:
     """(열린 행, 칸이 넷이 아닌 행의 번호)."""
     rows: list[Row] = []
@@ -175,12 +241,10 @@ def read_rows(text: str) -> tuple[list[Row], list[int]]:
         if not match:
             continue
         number = int(match.group(1))
-        parts = [part.strip() for part in CELL_SPLIT.split(line.strip())]
-        cells = parts[1:-1] if parts[0] == "" and parts[-1] == "" else parts
-        if len(cells) != 4:
+        named = _named(line)
+        if named is None:
             broken.append(number)
             continue
-        named: dict[str, str] = dict(zip(CELL_NAMES, cells[1:], strict=True))
         if _is_closed(named["무엇"]):
             continue
         rounds, round_cell = _rounds(named)
@@ -189,6 +253,45 @@ def read_rows(text: str) -> tuple[list[Row], list[int]]:
         human = named["어디로"].lstrip("*").startswith(HUMAN_MARK)
         rows.append(Row(number, rounds, round_cell, targets, citations, last, human))
     return rows, broken
+
+
+def _head(what: str) -> str:
+    """무엇 칸의 머리. 앞의 굵게·취소선 표지를 걷고 처음 닫는 표지(`**`, `~~`)까지다."""
+    text = what.lstrip("*~")
+    ends = [end for end in (text.find("**"), text.find("~~")) if end != -1]
+    head = text[: min(ends, default=len(text))].strip()
+    if len(head) <= HEAD_CHARS:
+        return head
+    return f"{head[:HEAD_CHARS]} …({len(head) - HEAD_CHARS}자 줄임)"
+
+
+def _approval(approval: str) -> str:
+    """승인 칸. 첫 승인으로 시작해 회차와 닫힘을 덧붙여 가는 칸이라 길면 앞과 끝을 남기고 가운데를
+    줄인다."""
+    cut = len(approval) - APPROVAL_HEAD - APPROVAL_TAIL
+    if cut <= 0:
+        return approval
+    return f"{approval[:APPROVAL_HEAD]} …(가운데 {cut}자 줄임)… {approval[-APPROVAL_TAIL:]}"
+
+
+def search(text: str, patterns: list[re.Pattern[str]]) -> list[Hit]:
+    """닫힌 행까지, 행 원문에 `patterns` 가운데 하나라도 맞은 행을 대기열의 차례로."""
+    hits: list[Hit] = []
+    # 줄 번호를 Read 의 줄과 맞추려고 줄바꿈으로만 가른다. splitlines 는 U+2028 에서도 가른다
+    for index, line in enumerate(text.split("\n"), start=1):
+        match = ROW.match(line)
+        if not match or not any(pattern.search(line) for pattern in patterns):
+            continue
+        number = int(match.group(1))
+        named = _named(line)
+        if named is None:
+            hits.append(Hit(number, index, HitState.BROKEN))
+            continue
+        rounds, _ = _rounds(named)
+        state = HitState.CLOSED if _is_closed(named["무엇"]) else HitState.OPEN
+        head, approval = _head(named["무엇"]), _approval(named["승인"])
+        hits.append(Hit(number, index, state, rounds=rounds, head=head, approval=approval))
+    return hits
 
 
 def _numbers(rows: list[Row]) -> str:
@@ -282,6 +385,38 @@ def render_rows(rows: list[Row]) -> str:
     return "\n".join(out)
 
 
+def _hit_line(hit: Hit) -> str:
+    if hit.state is HitState.BROKEN:
+        return f"  {hit.number} 줄 {hit.line} 칸이 넷이 아니다(칸을 읽지 않았다. 그 줄을 열어 본다)"
+    rounds = f"{hit.rounds}회차" if hit.rounds is not None else "회차 모름"
+    return (
+        f"  {hit.number} 줄 {hit.line} {hit.state.value} {rounds}"
+        f" 머리: {hit.head} / 승인: {hit.approval}"
+    )
+
+
+def render_hits(hits: list[Hit]) -> str:
+    """`--search` 의 출력. 맞은 행마다 한 줄이다."""
+    if not hits:
+        return "맞은 행 없음"
+    counts = [
+        f"열린 행 {_count(hits, HitState.OPEN)}개",
+        f"닫힌 행 {_count(hits, HitState.CLOSED)}개",
+    ]
+    broken = _count(hits, HitState.BROKEN)
+    if broken:
+        counts.append(f"칸이 넷이 아닌 행 {broken}개")
+    head = (
+        f"맞은 행 {len(hits)}개({', '.join(counts)})."
+        " 같은 일로 보이는 행은 그 줄을 Read 로 연다(offset 에 줄, limit 에 1):"
+    )
+    return "\n".join([head, *(_hit_line(hit) for hit in hits)])
+
+
+def _count(hits: list[Hit], state: HitState) -> int:
+    return sum(hit.state is state for hit in hits)
+
+
 def read_ref(ref: str) -> str:
     """`git show <ref>:<QUEUE>`. git 이 실패하거나 시간을 넘기면 OSError 로 올린다."""
     try:
@@ -306,11 +441,19 @@ def main(argv: list[str]) -> int:
     ref: str | None = None
     today: date | None = None
     each = False
+    patterns: list[re.Pattern[str]] = []
     args = list(argv)
     while args:
         arg = args.pop(0)
         if arg == "--rows":
             each = True
+        elif arg == "--search" and args:
+            source = args.pop(0)
+            try:
+                patterns.append(re.compile(source))
+            except re.error as error:
+                sys.stderr.write(f"정규식이 틀렸다: {source}: {error}\n{USAGE}")
+                return 2
         elif arg == "--today" and args and today is None:
             try:
                 today = date.fromisoformat(args.pop(0))
@@ -325,12 +468,19 @@ def main(argv: list[str]) -> int:
         else:
             sys.stderr.write(USAGE)
             return 2
+    if patterns and (each or today is not None):
+        sys.stderr.write(USAGE)  # 검색은 기본 출력을 내지 않아 그 옵션이 쓰일 자리가 없다
+        return 2
     try:
         text = read_ref(ref) if ref is not None else (path or QUEUE).read_text(encoding="utf-8")
     except (OSError, UnicodeDecodeError) as error:
         # 해독 실패를 놓치면 트레이스백의 종료 1이 "칸이 넷이 아닌 행" 과 섞인다
         sys.stderr.write(f"대기열을 읽지 못했다: {error}\n")
         return 2
+    if patterns:
+        hits = search(text, patterns)
+        print(render_hits(hits))
+        return 1 if any(hit.state is HitState.BROKEN for hit in hits) else 0
     rows, broken = read_rows(text)
     print(render(rows, broken, today))
     if each:

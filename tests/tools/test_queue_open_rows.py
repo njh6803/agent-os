@@ -2,13 +2,29 @@
 
 from __future__ import annotations
 
+import re
 import subprocess
 import sys
 from datetime import date
 from pathlib import Path
 
 import pytest
-from tools.queue_open_rows import QUEUE, Row, by_target, main, paths_in, read_rows, render
+from tools.queue_open_rows import (
+    APPROVAL_HEAD,
+    APPROVAL_TAIL,
+    HEAD_CHARS,
+    QUEUE,
+    Hit,
+    HitState,
+    Row,
+    by_target,
+    main,
+    paths_in,
+    read_rows,
+    render,
+    render_hits,
+    search,
+)
 
 ROOT = Path(__file__).resolve().parents[2]
 TODAY = date(2026, 10, 19)
@@ -436,3 +452,182 @@ def test_ref로_커밋의_대기열을_읽고_모두_읽으면_0으로_끝난다
     missing = _run("--ref", "없는-커밋", cwd=tmp_path)
     assert missing.returncode == 2
     assert "대기열을 읽지 못했다" in missing.stderr
+
+
+def find(text: str, *patterns: str) -> list[Hit]:
+    return search(text, [re.compile(pattern) for pattern in patterns])
+
+
+def test_search는_닫힌_행까지_행_원문에_맞춰_줄_번호와_함께_찾는다() -> None:
+    """대기열 425: retro 5단계의 행 찾기는 닫힌 행도 찾아야 4단계의 회차대로 잇는다."""
+    text = queue(
+        "| 1 | ~~**닫힌 일.** 뒤~~ | `tools/a.py` | 자체 승인 2026-10-01, 2회차 **만료** |",
+        "| 2 | **열린 일** | `tools/b.py` | 자체 승인 2026-10-02, 1회차 |",
+        "| 3 | 맞지 않는 일 | `c.md` | 1회차 |",
+    )
+    hits = find(text, "tools/")
+    assert [(hit.number, hit.line, hit.state, hit.rounds) for hit in hits] == [
+        (1, 3, HitState.CLOSED, 2),
+        (2, 4, HitState.OPEN, 1),
+    ]
+
+
+def test_search를_여러_번_주면_하나라도_맞은_행을_찾는다() -> None:
+    text = queue(
+        "| 1 | 일 | `a.md` | 1회차 |",
+        "| 2 | 일 | `b.md` | 1회차 |",
+        "| 3 | 일 | `c.md` | 1회차 |",
+    )
+    assert [hit.number for hit in find(text, r"a\.md", r"c\.md")] == [1, 3]
+
+
+def test_무엇의_머리는_앞의_표지를_걷고_처음_닫는_표지까지다() -> None:
+    hits = find(
+        queue(
+            "| 1 | **굵은 머리.** 뒤의 설명 | `a.md` | 1회차 |",
+            "| 2 | ~~**닫힌 굵은 머리** 뒤~~ | `a.md` | 1회차 |",
+            "| 3 | ~~취소선만 쓴 일.~~ 덧붙임 **굵은 꼬리** | `a.md` | 1회차 |",
+            "| 4 | 표지 없는 일. 둘째 문장 | `a.md` | 1회차 |",
+        ),
+        r"a\.md",
+    )
+    assert [hit.head for hit in hits] == [
+        "굵은 머리.",
+        "닫힌 굵은 머리",
+        "취소선만 쓴 일.",
+        "표지 없는 일. 둘째 문장",
+    ]
+
+
+def test_머리가_길면_자르고_자른_글자_수를_적는다() -> None:
+    exact = "가" * HEAD_CHARS
+    (hit,) = find(queue(f"| 1 | **{exact}** | `a.md` | 1회차 |"), r"a\.md")
+    assert hit.head == exact
+    (hit,) = find(queue(f"| 1 | **{exact}나다** | `a.md` | 1회차 |"), r"a\.md")
+    assert hit.head == f"{exact} …(2자 줄임)"
+
+
+def test_승인_칸이_길면_가운데를_줄이고_줄인_글자_수를_적는다() -> None:
+    """승인 칸은 첫 승인으로 시작해 회차와 닫힘을 뒤에 덧붙여 가므로 앞(첫 승인)과 끝(가장 늦게
+    덧붙인 글의 꼬리)을 남긴다."""
+    exact = "승" * (APPROVAL_HEAD + APPROVAL_TAIL)
+    (hit,) = find(queue(f"| 1 | 일 | `a.md` | {exact} |"), r"a\.md")
+    assert hit.approval == exact
+    approval = "앞" * APPROVAL_HEAD + "가운데" + "끝" * APPROVAL_TAIL
+    (hit,) = find(queue(f"| 1 | 일 | `a.md` | {approval} |"), r"a\.md")
+    assert hit.approval == "앞" * APPROVAL_HEAD + " …(가운데 3자 줄임)… " + "끝" * APPROVAL_TAIL
+
+
+def test_render_hits는_열린_행과_닫힌_행을_세고_행마다_한_줄을_찍는다() -> None:
+    hits = find(
+        queue(
+            "| 1 | ~~**닫힌 일**~~ | `a.md` | 자체 승인 2026-10-01, 2회차 **만료 2026-10-20** |",
+            "| 2 | **열린 일** | `a.md` | 자체 승인 |",
+        ),
+        r"a\.md",
+    )
+    assert render_hits(hits).splitlines() == [
+        "맞은 행 2개(열린 행 1개, 닫힌 행 1개). 같은 일로 보이는 행은 그 줄을 Read 로 연다"
+        "(offset 에 줄, limit 에 1):",
+        "  1 줄 3 닫힘 2회차 머리: 닫힌 일 / 승인: 자체 승인 2026-10-01, 2회차 **만료 2026-10-20**",
+        "  2 줄 4 열림 회차 모름 머리: 열린 일 / 승인: 자체 승인",
+    ]
+
+
+def test_render_hits는_맞은_행이_없으면_없다고_적는다() -> None:
+    assert render_hits([]) == "맞은 행 없음"
+
+
+def test_맞은_행의_칸이_넷이_아니면_그_행을_알리고_머리_줄에_따로_센다() -> None:
+    hits = find(queue("| 7 | 일 | `a.md` | 승인 | 덤 |", "| 8 | 일 | `a.md` | 1회차 |"), r"a\.md")
+    assert [(hit.number, hit.state) for hit in hits] == [(7, HitState.BROKEN), (8, HitState.OPEN)]
+    out = render_hits(hits)
+    assert "맞은 행 2개(열린 행 1개, 닫힌 행 0개, 칸이 넷이 아닌 행 1개)." in out
+    assert "  7 줄 3 칸이 넷이 아니다" in out
+
+
+def test_줄_번호는_줄바꿈으로만_센다() -> None:
+    """`str.splitlines` 는 U+2028 에서도 갈라, 찍은 줄이 Read 의 줄과 어긋나고 행이 깨진다."""
+    first = "| 1 | 일" + chr(0x2028) + "이어짐 | `a.md` | 1회차 |\n"
+    text = HEAD + first + "| 2 | 일 | `a.md` | 1회차 |\n"
+    hits = find(text, r"a\.md")
+    assert [(hit.number, hit.line, hit.state) for hit in hits] == [
+        (1, 3, HitState.OPEN),
+        (2, 4, HitState.OPEN),
+    ]
+
+
+def test_못_보는_것_어디에_맞았는지는_찍지_않는다() -> None:
+    """어디로 칸이나 잘린 자리에서만 맞은 행도 찍지만, 맞은 낱말은 출력에 없다."""
+    hits = find(queue("| 1 | **머리** | `tools/숨은.py` | 1회차 |"), "숨은")
+    out = render_hits(hits)
+    assert "  1 줄 3 열림 1회차 머리: 머리 / 승인: 1회차" in out
+    assert "숨은" not in out
+    approval = "앞" * APPROVAL_HEAD + "숨은" + "끝" * APPROVAL_TAIL
+    hits = find(queue(f"| 2 | **머리** | `a.md` | {approval} |"), "숨은")
+    out = render_hits(hits)
+    assert "  2 줄 3 열림 회차 모름 머리: 머리 / 승인: " in out
+    assert "숨은" not in out
+
+
+def test_못_보는_것_수를_찾으면_그_수를_품은_더_긴_수에도_맞는다() -> None:
+    """번호는 앞뒤에 숫자가 없게 좁힌다. `\\b` 는 수와 한글 사이를 경계로 보지 않아 `425의` 를
+    놓친다."""
+    text = queue(
+        "| 425 | 일 | `a.md` | 1회차 |",
+        "| 1425 | 일 | `b.md` | 1회차 |",
+        "| 7 | 425의 2회차 | `c.md` | 2회차 |",
+    )
+    assert [hit.number for hit in find(text, "425")] == [425, 1425, 7]
+    assert [hit.number for hit in find(text, r"(?<!\d)425(?!\d)")] == [425, 7]
+    assert [hit.number for hit in find(text, r"\b425\b")] == [425]
+
+
+def test_못_보는_것_행_모양이_아닌_줄은_찾지_않는다() -> None:
+    """`| N |` 로 시작하지 않는 줄(붙여 쓴 칸, 들여 쓴 행, 본문)은 기본 출력처럼 행이 아니다."""
+    text = queue("|425| 붙여 쓴 행 | `a.md` | 1회차 |", "  | 9 | 들여 쓴 행 | `a.md` | 1회차 |")
+    assert find(text + "본문의 425\n", r"425|a\.md") == []
+
+
+def test_main은_search를_주면_맞은_행만_찍고_기본_출력을_내지_않는다(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    path = tmp_path / "queue.md"
+    path.write_text(
+        queue("| 1 | 일 | `a.md` | 3회차 |", "| 2 | 일 | `b.md` | 1회차 | 덤 |"), encoding="utf-8"
+    )
+    assert main(["--queue", str(path), "--search", r"a\.md"]) == 0
+    out = capsys.readouterr().out
+    assert "  1 줄 3 열림 3회차" in out
+    assert "회차 3 이상" not in out
+    assert main(["--queue", str(path), "--search", r"b\.md"]) == 1
+    assert "  2 줄 4 칸이 넷이 아니다" in capsys.readouterr().out
+
+
+def test_main은_search의_인자가_틀리면_쓰임을_내고_2로_끝난다(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    path = tmp_path / "queue.md"
+    path.write_text(queue("| 1 | 일 | `a.md` | 1회차 |"), encoding="utf-8")
+    wrong = (["--search"], ["--search", "a", "--rows"], ["--today", "2026-10-01", "--search", "a"])
+    for extra in wrong:
+        assert main(["--queue", str(path), *extra]) == 2
+        assert "쓰임:" in capsys.readouterr().err
+    assert main(["--queue", str(path), "--search", "("]) == 2
+    assert "정규식이 틀렸다: (" in capsys.readouterr().err
+
+
+def test_search를_실제로_불러_한글을_찍는다(tmp_path: Path) -> None:
+    path = tmp_path / "queue.md"
+    path.write_text(queue("| 9 | **찾을 일** | `a.md` | 자체 승인, 2회차 |"), encoding="utf-8")
+    done = _run("--queue", str(path), "--search", "찾을", cwd=tmp_path)
+    assert done.returncode == 0, done.stderr
+    assert "  9 줄 3 열림 2회차 머리: 찾을 일 / 승인: 자체 승인, 2회차" in done.stdout
+
+
+def test_이_저장소의_대기열에서_닫힌_행까지_찾는다() -> None:
+    """425는 이 옵션을 처방한 행이고 이 옵션을 더한 티켓이 닫았다. 행은 지우지 않으니 늘 있다."""
+    hits = search(
+        (ROOT / QUEUE).read_text(encoding="utf-8"), [re.compile("Omitted long matching line")]
+    )
+    assert [hit.state for hit in hits if hit.number == 425] == [HitState.CLOSED]
