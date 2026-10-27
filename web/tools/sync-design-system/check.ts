@@ -193,7 +193,9 @@ function docPaths(index: IndexRead): string[] {
 /**
  * 기록의 컴포넌트 폴더마다의 README. 컴포넌트 폴더는 `project/components/` 아래 파일이 든 폴더다. 번들 변환기는
  * 컴포넌트를 묶음 폴더 아래에 두어(`components/atoms/Button/`) 첫 칸을 이름으로 읽으면 묶음 폴더의 README 를
- * 낸다(design-reverse-sync 티켓 08 결과). 공용 폴더 `lib` 아래와 `components/` 바로 아래의 파일은 뺀다.
+ * 낸다(design-reverse-sync 티켓 08 결과). 공용 폴더 `lib` 아래와 `components/` 바로 아래의 파일은 뺀다. 컴포넌트
+ * 폴더 안에 하위 폴더가 생기면 그 폴더도 컴포넌트 폴더로 읽어 그 README 를 받을 경로로 내고, 없으면 확인의 받기가
+ * `absent` 로 적는다. 첫 올리기의 산출에는 그런 하위 폴더가 없었다(컴포넌트 경로 36개가 모두 `components/<묶음>/<이름>/<파일>`).
  */
 function componentReadmes(record: SyncRecord): string[] {
   const folders = new Set<string>();

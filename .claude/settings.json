@@ -21,6 +21,9 @@
     "CLAUDE_CODE_GLOB_NO_IGNORE": "false"
   },
   "permissions": {
+    "allow": [
+      "PowerShell(pwsh -NoProfile -File tools/open_session.ps1 -Action send *)"
+    ],
     "deny": [
       "Read(//**/.env)",
       "Edit(//**/.env)",

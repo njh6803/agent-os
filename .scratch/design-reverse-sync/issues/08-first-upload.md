@@ -40,6 +40,7 @@
 
 - [x] 검증 명령이 모두 초록이다. 이 티켓이 저장소에서 바꾸는 것은 이 티켓 파일, 위 `.design-sync/NOTES.md`의 두 줄, 그 줄이 가리키는 `.design-sync/`의 지난 산출 목록 파일(NOTES의 "아티팩트에 올리기" 항목이 첫 올리기가 커밋한다고 적는다), 관찰이 부른 고침뿐이다
 - [x] **기능을 닫지 않는다**
+- [x] 회고 반영: 넘김에 사용자가 고른 대로 `.claude/settings.json`의 `permissions.allow`에 인계 열기(`tools/open_session.ps1 -Action send`)를 더했고, 저장소의 병합 뒤 브랜치 자동 삭제를 켰다(남은 확인과 절차 고침은 대기열 497·498), 일지 2026-10-27-12-first-upload.md
 
 ## 결과
 
