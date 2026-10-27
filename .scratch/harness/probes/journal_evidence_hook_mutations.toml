@@ -1,0 +1,191 @@
+# tools/hook_journal_evidence.py(대기열 445)의 판정과 표지와 알림 문장을 하나씩 깨는 변이.
+#   PYTHONUTF8=1 uv run python tools/mutate.py .scratch/harness/probes/journal_evidence_hook_mutations.toml
+# 끝의 하나는 대조군이다. 알림 문장의 끝 낱말은 어느 시험도 보지 않는다.
+
+[[mutation]]
+name = ".md 를 요구하지 않는다"
+tests = ["tests/tools/test_hook_journal_evidence.py", "-k", "일지가_아닌_파일은"]
+expect = "red"
+expect_output = ['''AssertionError: C:\project\agent\docs\journal\notes.txt''']
+[[mutation.edit]]
+file = "tools/hook_journal_evidence.py"
+old = '''    if path.suffix != ".md" or len(parts) < 3:'''
+new = '''    if len(parts) < 3:'''
+
+[[mutation]]
+name = "docs 를 요구하지 않는다"
+tests = ["tests/tools/test_hook_journal_evidence.py", "-k", "일지가_아닌_파일은"]
+expect = "red"
+expect_output = ['''AssertionError: C:\project\agent\journal\2026-10-26-01-y.md''']
+[[mutation.edit]]
+file = "tools/hook_journal_evidence.py"
+old = '''    return tuple(parts[-3:-1]) == JOURNAL_PARTS'''
+new = '''    return parts[-2] == "journal"'''
+
+[[mutation]]
+name = "대소문자를 가리지 않는다"
+tests = ["tests/tools/test_hook_journal_evidence.py", "-k", "대소문자가_다른"]
+expect = "red"
+expect_output = ['''where True = is_journal(('C:\\project\\agent' + '\\Docs\\Journal''']
+[[mutation.edit]]
+file = "tools/hook_journal_evidence.py"
+old = '''    path = PurePath(file_path.replace("\\", "/"))'''
+new = '''    path = PurePath(file_path.replace("\\", "/").casefold())'''
+
+[[mutation]]
+name = "Edit 를 빼다"
+tests = ["tests/tools/test_hook_journal_evidence.py", "-k", "근거의_종류를"]
+expect = "red"
+expect_output = ['''assert None is not None''']
+[[mutation.edit]]
+file = "tools/hook_journal_evidence.py"
+old = '''TOOLS = ("Write", "Edit")'''
+new = '''TOOLS = ("Write",)'''
+
+[[mutation]]
+name = "tool_input 의 꼴 가드를 뺀다"
+tests = ["tests/tools/test_hook_journal_evidence.py", "-k", "꼴이_어긋난"]
+expect = "red"
+expect_output = ['''AttributeError''']
+[[mutation.edit]]
+file = "tools/hook_journal_evidence.py"
+old = '''    if not isinstance(tool_input, dict):
+        return None
+'''
+new = ''''''
+
+[[mutation]]
+name = "알림에서 코드 읽기를 뺀다"
+tests = ["tests/tools/test_hook_journal_evidence.py", "-k", "근거의_종류를"]
+expect = "red"
+expect_output = ['''AssertionError: 코드를 읽은 것''']
+[[mutation.edit]]
+file = "tools/hook_journal_evidence.py"
+old = '''손으로 본 것인가, 코드를"
+    " 읽은 것인가, 어림인가.'''
+new = '''손으로 본 것인가,"
+    " 어림인가.'''
+
+[[mutation]]
+name = "알림에서 손으로 본 것의 명령을 뺀다"
+tests = ["tests/tools/test_hook_journal_evidence.py", "-k", "근거의_종류를"]
+expect = "red"
+expect_output = ['''assert '손으로 본 것은 그 명령과 함께 적는다' in''']
+[[mutation.edit]]
+file = "tools/hook_journal_evidence.py"
+old = ''' 손으로 본 것은 그 명령과 함께 적는다.'''
+new = ''''''
+
+[[mutation]]
+name = "알림에서 문서 출처를 뺀다"
+tests = ["tests/tools/test_hook_journal_evidence.py", "-k", "근거의_종류를"]
+expect = "red"
+expect_output = ['''assert '문서에서 읽은 것은 그 문서를 출처로 적는다' in''']
+[[mutation.edit]]
+file = "tools/hook_journal_evidence.py"
+old = ''' 문서에서 읽은 것은 그 문서를"
+    " 출처로 적는다.'''
+new = '''"
+    "'''
+
+[[mutation]]
+name = "알림에서 보지 않은 것을 본 것처럼 적지 말라는 문장을 뺀다"
+tests = ["tests/tools/test_hook_journal_evidence.py", "-k", "근거의_종류를"]
+expect = "red"
+expect_output = ['''assert '보지 않은 것을 본 것처럼' in''']
+[[mutation.edit]]
+file = "tools/hook_journal_evidence.py"
+old = '''    " 이 브랜치가 돌리지 않은 것, 렌더하지 않은 화면처럼 보지 않은 것을 본 것처럼 적지 않고, 보지"
+    " 않았다고 적거나 어림이라고 적는다.'''
+new = '''    "'''
+
+[[mutation]]
+name = "알림에서 근거 절 경로를 뺀다"
+tests = ["tests/tools/test_hook_journal_evidence.py", "-k", "근거의_종류를"]
+expect = "red"
+expect_output = ['''assert '`docs/agents/issue-tracker.md` 프로브와 근거 절' in''']
+[[mutation.edit]]
+file = "tools/hook_journal_evidence.py"
+old = '''    " `docs/agents/issue-tracker.md` 프로브와 근거 절이다.'''
+new = '''    " 그 문서의 근거 절이다.'''
+
+[[mutation]]
+name = "알림의 절 이름을 바꾼다"
+tests = ["tests/tools/test_hook_journal_evidence.py", "-k", "절이_그_문서에"]
+expect = "red"
+expect_output = ['''assert '## 프로브 근거' in''']
+[[mutation.edit]]
+file = "tools/hook_journal_evidence.py"
+old = '''    " `docs/agents/issue-tracker.md` 프로브와 근거 절이다.'''
+new = '''    " `docs/agents/issue-tracker.md` 프로브 근거 절이다.'''
+
+[[mutation]]
+name = "표지 이름에서 에이전트를 뺀다"
+tests = ["tests/tools/test_hook_journal_evidence.py", "-k", "표지는_세션과"]
+expect = "red"
+expect_output = ['''assert False''']
+[[mutation.edit]]
+file = "tools/hook_journal_evidence.py"
+old = '''    joined = f"{session_id}\0{agent_id}"'''
+new = '''    joined = session_id'''
+
+[[mutation]]
+name = "표지가 있어도 알린다"
+tests = ["tests/tools/test_hook_journal_evidence.py", "-k", "표지는_세션과"]
+expect = "red"
+expect_output = ['''assert not True''']
+[[mutation.edit]]
+file = "tools/hook_journal_evidence.py"
+old = '''    except FileExistsError:
+        return False'''
+new = '''    except FileExistsError:
+        return True'''
+
+[[mutation]]
+name = "표지 폴더를 만들지 못하면 알리지 않는다"
+tests = ["tests/tools/test_hook_journal_evidence.py", "-k", "표지_폴더를_만들지"]
+expect = "red"
+expect_output = ['''where False = claim_first(''']
+[[mutation.edit]]
+file = "tools/hook_journal_evidence.py"
+old = '''    except OSError:
+        return True
+    try:'''
+new = '''    except OSError:
+        return False
+    try:'''
+
+[[mutation]]
+name = "표지 파일을 만들지 못하면 알리지 않는다"
+tests = ["tests/tools/test_hook_journal_evidence.py", "-k", "표지_파일을_만들지"]
+expect = "red"
+expect_output = ['''where False = claim_first('없는-폴더/표지''']
+[[mutation.edit]]
+file = "tools/hook_journal_evidence.py"
+old = '''    except FileExistsError:
+        return False
+    except OSError:
+        return True'''
+new = '''    except FileExistsError:
+        return False
+    except OSError:
+        return False'''
+
+[[mutation]]
+name = "표지 폴더를 프로브 README 계기와 나눠 쓴다"
+tests = ["tests/tools/test_hook_journal_evidence.py", "-k", "표지_폴더가_프로브"]
+expect = "red"
+expect_output = ['''assert 'agent-os-probe-conclusion' != 'agent-os-probe-conclusion''']
+[[mutation.edit]]
+file = "tools/hook_journal_evidence.py"
+old = '''STATE_DIR = "agent-os-journal-evidence"'''
+new = '''STATE_DIR = "agent-os-probe-conclusion"'''
+
+[[mutation]]
+name = "대조군: 알림 끝 낱말을 바꾼다"
+tests = ["tests/tools/test_hook_journal_evidence.py"]
+expect = "green"
+[[mutation.edit]]
+file = "tools/hook_journal_evidence.py"
+old = '''이 알림은 세션·에이전트마다 한 번이다."'''
+new = '''이 알림은 세션·에이전트마다 한 번뿐이다."'''

@@ -17,7 +17,8 @@
   "skillListingBudgetFraction": 0.006,
   "env": {
     "PYTHONUTF8": "1",
-    "UV_LINK_MODE": "copy"
+    "UV_LINK_MODE": "copy",
+    "CLAUDE_CODE_GLOB_NO_IGNORE": "false"
   },
   "permissions": {
     "deny": [
@@ -104,6 +105,11 @@
           {
             "type": "command",
             "command": "uv run --project \"${CLAUDE_PROJECT_DIR}\" --no-sync python \"${CLAUDE_PROJECT_DIR}/tools/launch_hook.py\" hook_probe_conclusion.py",
+            "timeout": 20
+          },
+          {
+            "type": "command",
+            "command": "uv run --project \"${CLAUDE_PROJECT_DIR}\" --no-sync python \"${CLAUDE_PROJECT_DIR}/tools/launch_hook.py\" hook_journal_evidence.py",
             "timeout": 20
           },
           {
