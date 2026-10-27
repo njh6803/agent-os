@@ -184,18 +184,6 @@ def prereg_pattern(pattern: re.Pattern[str]) -> Json:
     return {"pattern": pattern.pattern, "flags": flags}
 
 
-PREREG_VALUES: dict[str, Json] = {
-    "SHAPE_VERSION": SHAPE_VERSION,
-    "RECORD_SHAPE_VERSION": RECORD_SHAPE_VERSION,
-    "ARMS": [[a.name, a.model, a.effort] for a in ARMS],
-    "END_REASONS": {kind: [*reasons] for kind, reasons in END_REASONS.items()},
-    "RULES": [*RULES],
-    "GATE_COMMANDS": [*GATE_COMMANDS],
-    "OLD_GATE_COMMANDS": [*OLD_GATE_COMMANDS],
-    "SETUP_COMMANDS": [*SETUP_COMMANDS],
-    "MODEL_LABELS": {**MODEL_LABELS},
-}
-
 # --- 글자의 꼴 ---
 
 _TASK_ID = re.compile(r"[a-z0-9]+(?:-[a-z0-9]+)*-[0-9]{2,}")
@@ -215,6 +203,22 @@ _SEGMENT = r"[A-Za-z0-9_][A-Za-z0-9_.-]*"
 _TEST_FILE = re.compile(rf"tests/(?:{_SEGMENT}/)*test_[A-Za-z0-9_.-]*\.py")
 _TESTS_PY = re.compile(rf"tests/(?:{_SEGMENT}/)*{_SEGMENT}\.py")
 _CONFTEST = re.compile(rf"(?:{_SEGMENT}/)*conftest\.py")
+
+# 사전 등록 절과 대 보는 값(`prereg_line`). 시험 파일의 세 꼴은 숨은 시험의 모집단을 정한다.
+PREREG_VALUES: dict[str, Json] = {
+    "SHAPE_VERSION": SHAPE_VERSION,
+    "RECORD_SHAPE_VERSION": RECORD_SHAPE_VERSION,
+    "ARMS": [[a.name, a.model, a.effort] for a in ARMS],
+    "END_REASONS": {kind: [*reasons] for kind, reasons in END_REASONS.items()},
+    "RULES": [*RULES],
+    "GATE_COMMANDS": [*GATE_COMMANDS],
+    "OLD_GATE_COMMANDS": [*OLD_GATE_COMMANDS],
+    "SETUP_COMMANDS": [*SETUP_COMMANDS],
+    "MODEL_LABELS": {**MODEL_LABELS},
+    "TEST_FILE": prereg_pattern(_TEST_FILE),
+    "TESTS_PY": prereg_pattern(_TESTS_PY),
+    "CONFTEST": prereg_pattern(_CONFTEST),
+}
 
 
 class ShapeError(ValueError):

@@ -55,8 +55,8 @@ uv run python .scratch/model-rerun/probes/headless_flags/headless_flags.py --pri
 둘이 다르면 명세를, 글과 코드가 다르면 실제로 도는 코드를 적었다. 괄호의 절 이름은 출처다. 아래 "코드 상수" 줄의 값은
 `tests/tools/test_rerun_prereg.py`가 모듈마다의 `PREREG_VALUES`와 대 보고, "과제 목록"과 "되살릴 목록"의 JSON은 같은 시험이
 `main.json`·`revive.json`과 대 본다. 명령 줄로 받는 값(본 측정 예산 상한 $1,600, 계정 이름 njh4803, `claude` 복사본 경로)은
-코드 상수가 아니라 그 시험이 잡지 못한다. 이 절이 `<모듈>.<이름>`으로 부르는 이름은 그 모듈 `PREREG_VALUES` 표의
-키다. 모듈 속성 이름과 같거나, 앞 밑줄을 뗀 이름이거나(`rerun_checks.GH`는 `_GH`), 여러 상수를 묶은 이름이다
+코드 상수가 아니라 그 시험이 잡지 못한다. 이 절이 `<모듈>.<이름>`으로 상수를 부르는 이름은 그 모듈 `PREREG_VALUES`
+표의 키다(함수를 부를 때는 함수 이름 그대로다). 모듈 속성 이름과 같거나, 앞 밑줄을 뗀 이름이거나(`rerun_checks.GH`는 `_GH`), 여러 상수를 묶은 이름이다
 (`rerun_select.SEEDS`, `rerun_gates.LIMITS`, `rerun_checks.LIMIT_MARKERS`). 정규식은 글과 켠 플래그를 함께 싣는다
 (`rerun_files.prereg_pattern`).
 
@@ -233,6 +233,9 @@ rerun_files.GATE_COMMANDS = ["uv run ruff check .", "uv run ruff format --check 
 rerun_files.OLD_GATE_COMMANDS = ["uv run ruff check .", "uv run ruff format --check .", "uv run pytest -q", "uv run pyright", "uv run lint-imports", "pnpm -C web verify"]
 rerun_files.SETUP_COMMANDS = ["uv sync", "pnpm -C web install --frozen-lockfile", "uv run pre-commit install"]
 rerun_files.MODEL_LABELS = {"claude-opus-5-5": "Opus 5.5", "claude-sonnet-5-5": "Sonnet 5.5"}
+rerun_files.TEST_FILE = {"pattern": "tests/(?:[A-Za-z0-9_][A-Za-z0-9_.-]*/)*test_[A-Za-z0-9_.-]*\\.py", "flags": []}
+rerun_files.TESTS_PY = {"pattern": "tests/(?:[A-Za-z0-9_][A-Za-z0-9_.-]*/)*[A-Za-z0-9_][A-Za-z0-9_.-]*\\.py", "flags": []}
+rerun_files.CONFTEST = {"pattern": "(?:[A-Za-z0-9_][A-Za-z0-9_.-]*/)*conftest\\.py", "flags": []}
 rerun_select.DATE_FLOOR = "2026-10-12T00:00:00+09:00"
 rerun_select.MIN_CANDIDATES = 12
 rerun_select.MIN_HIDDEN = 3
@@ -253,6 +256,7 @@ rerun_select.DONE = "done"
 rerun_hidden.SETUP_COMMANDS = [["uv", "sync"]]
 rerun_hidden.PYTEST_COMMAND = ["uv", "run", "pytest"]
 rerun_hidden.NAME_ERRORS = ["AttributeError", "NameError", "TypeError"]
+rerun_hidden.SEVERITY = {"통과": 0, "건너뜀": 1, "실패": 2, "오류": 3}
 rerun_round.FIXED_DENY_RULES = ["Bash(gh:*)", "Bash(git push:*)", "Skill(open-session)", "Bash(*open_session.ps1*)", "Bash(*claude://*)"]
 rerun_round.BLOCKED_TOOLS = ["WebFetch", "WebSearch", "SendMessage", "ListAgents", "RemoteTrigger", "PushNotification", "DesignSync", "CronCreate", "ScheduleWakeup"]
 rerun_round.PATH_TOOLS = ["Read", "Edit", "Write"]
@@ -305,6 +309,7 @@ rerun_checks.HOME_ALIASES = ["~", "$home", "${home}", "$userprofile", "${userpro
 rerun_checks.CONFIG_ALIASES = ["$CLAUDE_CONFIG_DIR", "${CLAUDE_CONFIG_DIR}", "$env:CLAUDE_CONFIG_DIR", "${env:CLAUDE_CONFIG_DIR}", "%CLAUDE_CONFIG_DIR%"]
 rerun_gates.LIMITS = {"setup": 1800, "gates": 1800.0, "hidden": 600.0, "git": 300}
 rerun_gates.PYTEST_ARGV = ["uv", "run", "pytest"]
+rerun_gates.BAD_CHILDREN = ["error", "failure", "skipped"]
 rerun_cost.PRICES = {"claude-fable-5-1": {"input": 10.0, "output": 50.0, "cache_read": 0.25}, "claude-opus-5-5": {"input": 4.0, "output": 20.0, "cache_read": 0.2}, "claude-sonnet-5-5": {"input": 2.0, "output": 10.0, "cache_read": 0.1}, "claude-haiku-5-5": {"input": 0.1, "output": 0.5, "cache_read": 0.01}}
 rerun_cost.HAIKU_LONG_PRICE = {"input": 0.5, "output": 2.5, "cache_read": 0.05}
 rerun_cost.HAIKU_LONG_PROMPT = 100000

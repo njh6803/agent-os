@@ -77,7 +77,7 @@ from tools.rerun_files import (
 
 PREREG_START, PREREG_END = "<!-- 사전 등록 시작 -->", "<!-- 사전 등록 끝 -->"
 # 사전 등록 절 내용의 SHA-256. 티켓 11이 본 측정의 첫 회차 전에 고정했다(2026-10-28).
-PREREG_SHA256 = "d98c86fde0f121d08dd201506d37a9d0917ec91c3717aa6c1b565ee44fa7fa66"
+PREREG_SHA256 = "4af49e5774efe883f1def6d5b1226cf83c8c97e5a8bed9acb8358d6f0f2f7563"
 
 CHECKOUT = Path(__file__).resolve().parent.parent
 PROBES = CHECKOUT / ".scratch" / "model-rerun" / "probes"

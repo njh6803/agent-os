@@ -158,6 +158,7 @@ PREREG_VALUES: dict[str, Json] = {
         "git": Limits().git,
     },
     "PYTEST_ARGV": [*PYTEST_ARGV],
+    "BAD_CHILDREN": [*sorted(_BAD_CHILDREN)],
 }
 
 

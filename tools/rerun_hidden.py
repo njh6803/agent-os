@@ -113,6 +113,7 @@ PREREG_VALUES: dict[str, Json] = {
     "SETUP_COMMANDS": [[*c] for c in SETUP_COMMANDS],
     "PYTEST_COMMAND": [*PYTEST_COMMAND],
     "NAME_ERRORS": [*_NAME_ERRORS],
+    "SEVERITY": {**_SEVERITY},
 }
 
 
