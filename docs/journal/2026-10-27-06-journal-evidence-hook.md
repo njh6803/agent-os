@@ -38,6 +38,29 @@
 - `셀프 리뷰 직전`에 인계 계기가 왔다(세션 컨텍스트 약 26만 토큰). 이 세션의 제목은 `chore/010-journal-evidence-hook`이었고 `(인계함)`으로 바꾼다. 변경은 모두 워크트리에 커밋하지 않은 채 남겼다. 셀프 리뷰(`/code-review`, 기점 `origin/main`)부터 새 세션이 한다. 전체 검증(`tools/run_checks.py`)은 인계하며 멈춰 결과가 없다. ruff 둘(`ruff check .`, `ruff format --check .`)은 0으로 끝났다.
 - PR 직전 리뷰에 밀 주장: 독스트링의 "표지 폴더도 따로라, 같은 세션에서 한 계기가 뜬 것이 다른 계기를 끄지 않는다", `CLAUDE.md` Glob 줄의 "그 폴더를 `path`로 주면 찾는다".
 - open-session을 부른다 2026-10-26T07:15:21Z
+- 이어받은 세션(제목 `chore/010-journal-evidence-hook`)이 셀프 리뷰와 반영을 마치고, 부하를 기다린 뒤 커밋 `b724493f`를 pre-commit 통과로 들였다. 그 직전 `sibling_overlap.py --move`로 일지를 `2026-10-26-10`에서 `2026-10-27-06`으로 옮겼다(main에 2026-10-27 일지가 먼저 들어왔다).
+- `커밋 뒤`에 인계 계기가 왔다(세션 컨텍스트 약 30만 토큰). 남은 단계: origin/main 합치기, PR 직전 리뷰, PR, 봇 회차, 병합. main이 그사이 `.claude/rules/tools.md`(훅 시간 긴 줄), `.scratch/harness/probes/README.md`, `.scratch/retro-queue.md`를 고쳐 합칠 때 충돌 후보다. main 판의 Write·Edit 훅 목록은 그대로라(`git show origin/main:./.claude/rules/tools.md`로 봤다) 합친 뒤에도 카나리아 순번(여섯째 일지, 일곱째 디자인)이 맞는지 다시 본다.
+- PR 직전 리뷰에 밀 주장(반영으로 새로 쓴 문장): `CLAUDE.md` Glob 줄의 "루트에서 `**/_cffi_backend*.pyd`도 `.venv/**/_cffi_backend*.pyd`도 "No files found"였고, `path`를 그 파일이 든 하위 폴더 `.venv/Lib/site-packages`로 주자 찾았다", "`path`를 `.venv`로 주면 "No files found"였다(그 안에 `*`만 든 `.gitignore`가 있어서라고 어림한다", "루트의 Glob이 시간 초과로 끝나면 `path`를 그 자리들을 품지 않는 하위 폴더(`.claude/skills`, `src`)로 좁힌다", 훅 독스트링의 "대소문자를 구별해, 글자가 같은 경로만 일지로 본다".
+- 인계 지시문:
+
+```
+다음 작업: .scratch/harness/issues/010-journal-evidence-hook.md (대기열 445·370, 커밋 b724493f까지 했고 커밋하지 않은 것은 이 일지의 인계 줄뿐이다)
+다음 단계: 구현
+어디서: 새 세션. 같은 브랜치라 git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: 대기열 445·370을 티켓 .scratch/harness/issues/010-journal-evidence-hook.md로 쓰고 한다
+브랜치: chore/010-journal-evidence-hook
+모델: Opus 5.5 / medium. 레벨 스윕의 갈래
+읽을 것: docs/agents/issue-tracker.md, 일지 docs/journal/2026-10-27-06-journal-evidence-hook.md
+이어받을 상태: 인계: 커밋 뒤. 셀프 리뷰 반영과 검증을 마친 커밋 b724493f가 pre-commit을 지났다. 남은 단계는 이 일지 인계 줄의 커밋, origin/main 합치기(sync_with_base_branch, 충돌 후보와 합친 뒤 볼 카나리아 순번은 일지 인계 절), PR 직전 리뷰(밀 주장은 일지 인계 절), PR, 봇 회차, 병합이다. 회고와 "다음"은 썼고, 이 세션의 회고 후보 하나가 인계 절에 있다. docs/journal/2026-10-27-06-journal-evidence-hook.md
+확인할 선행 조건: 없음
+이번 요청 범위: PR과 병합까지
+```
+
+- 잠금 풀기는 `is not locked`로 이미 풀려 있었다.
+- open-session을 부른다 2026-10-27T02:54:04Z
+- 인계 못함 커밋 뒤. `tools/open_session.ps1 -Action send`를 자동 모드의 권한 분류기가 거부했다(까닭은 알려 주지 않았다). 제목을 `chore/010-journal-evidence-hook`으로 되돌리고 이 세션에서 main 합치기부터 잇는다.
+- origin/main(`5e04968`)을 합쳤다. `sync_with_base_branch`는 커밋하지 않은 일지가 있으면 거절하므로 `git merge --no-commit --no-ff origin/main`으로 직접 합치고 이 일지를 합치기 커밋에 실었다. 충돌 둘을 main 판 위에 이 브랜치의 변경만 다시 얹어 풀었다(스크래치 스크립트가 바꿀 글이 한 번씩만 있는지 단언했다). `.claude/rules/tools.md`는 훅 이름 끼우기, 여섯째 일지 문장, "넷 다" 세 군데이고, 대기열 445는 main이 더한 12회차(일지 2026-10-27-01)를 닫힌 행에 얹었다. 풀린 두 파일을 `git diff --word-diff=plain origin/main`으로 보니 이 브랜치의 변경만 남았다. main의 Write·Edit 훅 목록은 그대로라 카나리아 순번은 맞다. 대기열 370의 닫힘 문구도 `CLAUDE.md`와 같게 본 것만으로 좁혔다.
+- 회고 후보(이 세션): 부하에서 `test_rerun_runner`의 오염 재시도 시험이 세 번 연달아 떨어져 커밋이 두 번 막혔다(아래 "다음"). 단계를 닫는 세션의 retro가 판정한다.
 
 ## 셀프 리뷰
 

@@ -2871,7 +2871,12 @@ def test_도는_동안_그_체크아웃의_git_디렉터리에_pid_와_표를_�
 
     assert main([표], root=root, runner=러너, out=print) == 0
     assert len(본_것) == 2, "기준선과 변이가 도는 동안 표지가 하나씩 있어야 한다"
-    assert all(표지 == {"pid": os.getpid(), "table": str(Path(표).resolve())} for 표지 in 본_것)
+    기대 = {
+        "pid": os.getpid(),
+        "table": str(Path(표).resolve()),
+        "started": mutate.process_started(os.getpid()),
+    }
+    assert 본_것 == [기대, 기대]
     assert list((root / ".git").glob(f"{MARKER_PREFIX}*")) == []
 
 
@@ -2941,6 +2946,15 @@ def test_표지_이름은_편집_훅이_찾는_이름과_같다() -> None:
     assert hook_edit_during_mutate.MARKER_PREFIX == MARKER_PREFIX
 
 
+def test_표지에_적는_시작_시각은_편집_훅이_읽는_시작_시각과_같다() -> None:
+    """훅은 표지의 pid 와 시작 시각이 함께 맞아야 도는 것으로 센다(대기열 449). 두 사본이 다른
+    값을 내면 훅이 조용히 침묵한다."""
+    도구 = mutate.process_started(os.getpid())
+
+    assert 도구 is not None
+    assert 도구 == hook_edit_during_mutate.process_started(os.getpid())
+
+
 def _상대_gitdir_체크아웃(tmp_path: Path) -> Path:
     """`.git` 파일이 상대 경로 `gitdir:` 로 옆 폴더의 git 디렉터리를 가리키는 체크아웃."""
     (tmp_path / "real.git").mkdir()
@@ -2987,3 +3001,164 @@ def test_표지를_두는_자리와_편집_훅이_찾는_자리가_같다(
     훅 = hook_edit_during_mutate.git_dir_of(str(체크아웃))
 
     assert (None if 도구 is None else str(도구.resolve())) == 훅
+
+
+# 대기열 417. 표지가 그 시험 파일의 원문에 글자 그대로 있으면, 실패 출력의 머리(시험 이름)나 실패 줄
+# 둘레의 코드 조각에 늘 실려 고른 단언이 빨개졌다는 표지가 되지 못한다.
+
+_메아리_시험 = """def test_x():
+    assert f() == "기대한 값"
+
+
+def test_y():
+    assert g() == "옆 시험의 값"
+"""
+
+
+def _메아리_표(
+    표지: str, *, expect: str = "red", tests: str = '["tests/test_x.py::test_x", "-q"]'
+) -> str:
+    return _변이_파일(old="x = 1", new="x = 2", expect=expect).replace(
+        'tests = ["tests/test_x.py"]', f"tests = {tests}\nexpect_output = [{표지!r}]"
+    )
+
+
+def _메아리_저장소(root: Path, 표: str) -> tuple[Path, str]:
+    _저장소(root, {"src/m.py": "x = 1\n", "tests/test_x.py": _메아리_시험, "mutations.toml": 표})
+    return root, str(root / "mutations.toml")
+
+
+def _원문_확인(root: Path, argv: list[str]) -> tuple[int, str]:
+    줄: list[str] = []
+    code = main(argv, root=root, runner=_부르면_안_되는_러너, out=줄.append)
+    return code, "\n".join(줄)
+
+
+_메아리 = "시험 원문에 글자 그대로 있다"
+
+
+@pytest.mark.parametrize(
+    "표지",
+    ["test_x", "기대한 값", "옆 시험의 값"],
+    ids=["시험_이름", "기대_값", "못_보는_것_옆_시험"],
+)
+def test_고른_원문_확인은_시험_원문에_글자_그대로_있는_표지를_알린다(
+    tmp_path: Path, 표지: str
+) -> None:
+    """표지 스물여덟을 시험 함수 이름으로 골라 그 시험의 어느 단언이 빨개져도 맞았고, 셋째는 기대
+    배열의 글자가 실패 줄 둘레의 코드 조각에 실렸다(대기열 417). 옆 시험에만 있는 글자도 알린다.
+    그 시험이 빨개질 때는 실리지 않으니 거짓 양성이다(독스트링의 못 보는 것)."""
+    root, 표 = _메아리_저장소(tmp_path, _메아리_표(표지))
+
+    code, 출력 = _원문_확인(root, ["--check", 표, "1"])
+
+    assert code == 2, 출력
+    assert f"하나: expect_output 의 표지 {표지!r} 가 tests/test_x.py 의 {_메아리}" in 출력
+
+
+def test_고른_원문_확인은_시험_원문에_없는_표지를_받는다(tmp_path: Path) -> None:
+    root, 표 = _메아리_저장소(tmp_path, _메아리_표("== 'x = 2'"))
+
+    code, 출력 = _원문_확인(root, ["--check", 표, "1"])
+
+    assert code == 0, 출력
+
+
+def test_고르지_않은_원문_확인은_옛_변이의_표지를_소급하지_않는다(tmp_path: Path) -> None:
+    root, 표 = _메아리_저장소(tmp_path, _메아리_표("test_x"))
+
+    code, 출력 = _원문_확인(root, ["--check", 표])
+
+    assert code == 0, 출력
+
+
+def test_since_로_고른_원문_확인은_바뀐_변이의_표지를_본다(tmp_path: Path) -> None:
+    root, 표 = _메아리_저장소(tmp_path, _메아리_표("== 'x = 2'"))
+    path = Path(표)
+    path.write_text(path.read_text("utf-8").replace("== 'x = 2'", "test_x"), "utf-8")
+
+    code, 출력 = _원문_확인(root, ["--check", 표, "--since", "HEAD"])
+
+    assert code == 2, 출력
+    assert _메아리 in 출력
+
+
+def test_초록을_기대한_변이의_표지는_보지_않는다(tmp_path: Path) -> None:
+    """초록의 출력은 실패 머리와 코드 조각을 찍지 않는다."""
+    root, 표 = _메아리_저장소(tmp_path, _메아리_표("test_x", expect="green"))
+
+    code, 출력 = _원문_확인(root, ["--check", 표, "1"])
+
+    assert code == 0, 출력
+
+
+def test_못_보는_것_시험_인자가_폴더면_그_안의_파일을_보지_않는다(tmp_path: Path) -> None:
+    root, 표 = _메아리_저장소(tmp_path, _메아리_표("test_x", tests='["tests"]'))
+
+    code, 출력 = _원문_확인(root, ["--check", 표, "1"])
+
+    assert code == 0, 출력
+
+
+def test_러너의_자리를_기준으로_시험_파일을_찾는다(tmp_path: Path) -> None:
+    표 = _VITEST_러너 + _메아리_표("기대한 값", tests='["a.test.ts"]').replace(
+        'expect = "red"', 'runner = "vitest"\nexpect = "red"'
+    )
+    _저장소(tmp_path, {"src/m.py": "x = 1\n", "web/a.test.ts": "expect(f()).toBe('기대한 값')\n"})
+    경로 = _변이_파일을_쓴다(tmp_path, 표)
+
+    code, 출력 = _원문_확인(tmp_path, ["--check", 경로, "1"])
+
+    assert code == 2, 출력
+    assert f"web/a.test.ts 의 {_메아리}" in 출력
+
+
+def test_색인_확인은_커밋에_든_새_표의_메아리_표지를_알린다(tmp_path: Path) -> None:
+    root = _저장소(tmp_path, {"src/m.py": "x = 1\n", "tests/test_x.py": _메아리_시험})
+    _스테이지한다(root, _표_경로, _메아리_표("test_x").encode("utf-8"))
+
+    code, 출력 = _색인_확인(root)
+
+    assert code == 2, 출력
+    assert f"{_표_경로}: !! 하나: expect_output 의 표지 'test_x'" in 출력
+
+
+def test_색인_확인은_시험_파일을_커밋에_들_색인에서_읽는다(tmp_path: Path) -> None:
+    """작업 트리의 시험이 표지를 들지 않아도 색인의 시험이 들면 알린다."""
+    root = _저장소(tmp_path, {"src/m.py": "x = 1\n", "tests/test_x.py": _메아리_시험})
+    _스테이지한다(root, _표_경로, _메아리_표("test_x").encode("utf-8"))
+    (root / "tests/test_x.py").write_text("def test_z(): pass\n", encoding="utf-8")
+
+    code, 출력 = _색인_확인(root)
+
+    assert code == 2, 출력
+
+
+def test_색인_확인은_표를_고친_커밋에서도_부모_판과_같은_변이의_표지는_소급하지_않는다(
+    tmp_path: Path,
+) -> None:
+    옛_표 = _메아리_표("test_x")
+    root = _저장소(
+        tmp_path,
+        {"src/m.py": "x = 1\n", "tests/test_x.py": _메아리_시험, _표_경로: 옛_표},
+    )
+    둘 = _메아리_표("== 'x = 2'").replace('"하나"', '"둘"')
+    _스테이지한다(root, _표_경로, (옛_표 + 둘).encode("utf-8"))
+
+    code, 출력 = _색인_확인(root)
+
+    assert code == 0, 출력
+    assert "문제 0" in 출력
+
+
+def test_색인_확인은_고친_변이의_표지를_본다(tmp_path: Path) -> None:
+    root = _저장소(
+        tmp_path,
+        {"src/m.py": "x = 1\n", "tests/test_x.py": _메아리_시험, _표_경로: _메아리_표("== 1")},
+    )
+    _스테이지한다(root, _표_경로, _메아리_표("기대한 값").encode("utf-8"))
+
+    code, 출력 = _색인_확인(root)
+
+    assert code == 2, 출력
+    assert _메아리 in 출력

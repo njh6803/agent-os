@@ -3,8 +3,8 @@
 # 실험군은 규칙의 paths 안(tools/), 대조군은 밖(README.md)을 읽는다. 둘 다 이 체크아웃이다.
 # 카나리아는 그 훅이 무엇만 본다고 적은 구절이다. 시간은 재지 않아 수가 없다.
 # 훅 이름은 카나리아가 아니다. 커밋하지 않은 훅 파일이 세션의 git status 에 실린다(tools_rule_call_timeout_push_hook.toml).
-# 최신 결과: 통과 4(2026-10-19, 이 PC, claude 2.1.302, 두 갈래 모두 커밋 a60e2ddd 위의 커밋하지 않은 작업 트리, 일지
-#   2026-10-20-04).
+# 최신 결과: 통과 4(2026-10-26, 이 PC, claude 2.1.302, 두 갈래 모두 커밋 45e489b1, 시작 시각 구절로 고친 `expect`, 일지
+#   2026-10-26-09).
 # 돌리는 법: uv run python tools/canary.py .scratch/harness/probes/canary/tools_rule_edit_during_mutate.toml <출력 디렉터리>
 kind = "rule"
 question = '''
@@ -13,7 +13,7 @@ Read 도구로 `{target}` 파일 하나만 통째로 읽어라. 다른 파일은
 Write·Edit·NotebookEdit 에 붙는다고 적힌 PostToolUse 훅 가운데 `tools/mutate.py` 의 표지를 찾는 훅이 있으면, 그 훅이
 표지를 찾은 뒤 무엇만 본다고 적혔는지 그 구절을 글자 그대로 옮겨라. 그런 문장이 없으면 "없음"이라고만 답하라.
 '''
-expect = ["표지의 pid가 살았는지만 본다"]
+expect = ["표지의 pid가 살았는지와 그 pid의 시작 시각이 표지의 것과 같은지만 본다"]
 source = ".claude/rules/tools.md"
 
 [[arm]]

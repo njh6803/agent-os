@@ -1,0 +1,583 @@
+# design-reverse-sync 티켓 02 의 변이 표(`web/tools/sync-design-system`). 짓기와 맞대기의 테스트는 구현 전에 모듈이 없어
+# 모두 빨갰을 뿐 단언 하나하나의 빨강은 보지 못했고, CSS 풀기의 캐스케이드 사례와 진입의 옵션 사례는 구현 뒤에 썼다.
+# 변이마다 그 단언이 재는 줄 하나만 바꾸고 그 사례 하나로 좁혀(`-t`) 빨개지는지 본다.
+#   PYTHONUTF8=1 uv run python tools/mutate.py .scratch/design-reverse-sync/probes/sync_script_mutations.toml [번호 ...]
+# 재지 않은 것: 맞대는 몫 밖의 칸(이름, 판, 테마의 표시 이름) 사례는 정규 꼴이 그 칸을 애초에 읽지 않아 깰 줄이 없다.
+
+[runner.node]
+command = ["pnpm", "exec", "vitest", "run", "--project", "node"]
+cwd = "web"
+judge = "vitest"
+
+# --- CSS 풀기(theme-css.ts) ----------------------------------------------------------------------------------
+
+[[mutation]]
+name = "특정성 비교를 뒤집으면 특정성 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/theme-css.test.ts", "-t", "특정성이 높은 선언은"]
+expect = "red"
+expect_output = ["AssertionError: expected { '--primary': '#111111' } to deeply equal { '--primary': '#222222' }"]
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/theme-css.ts"
+old = '''    return bySpecificity > 0;'''
+new = '''    return bySpecificity < 0;'''
+
+[[mutation]]
+name = "차례 비교를 뒤집으면 같은 특정성 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/theme-css.test.ts", "-t", "특정성이 같으면"]
+expect = "red"
+expect_output = ["AssertionError: expected { '--bg': '#111111' } to deeply equal { '--bg': '#222222' }"]
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/theme-css.ts"
+old = '''  return challenger.order > holder.order;'''
+new = '''  return challenger.order < holder.order;'''
+
+[[mutation]]
+name = "레이어 비교를 뒤집으면 레이어 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/theme-css.test.ts", "-t", "레이어 밖 선언은"]
+expect = "red"
+expect_output = ["AssertionError: expected { '--outside': '#222222', …(1) } to deeply equal { '--outside': '#111111', …(1) }"]
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/theme-css.ts"
+old = '''    return challenger.layer > holder.layer;'''
+new = '''    return challenger.layer < holder.layer;'''
+
+[[mutation]]
+name = "레이어를 사용자 정의 속성이 든 규칙에서만 세면 레이어 차례 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/theme-css.test.ts", "-t", "레이어의 차례는 사용자 정의 속성이"]
+expect = "red"
+expect_output = ["AssertionError: expected { '--x': '#222222' } to deeply equal { '--x': '#111111' }"]
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/theme-css.ts"
+old = '''visible.map(layerOf)'''
+new = '''visible
+      .filter((rule) => rule.declarations.some((declaration) => declaration.property.startsWith("--")))
+      .map(layerOf)'''
+
+[[mutation]]
+name = "not 의 인자를 보지 않으면 뿌리 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/theme-css.test.ts", "-t", "뿌리에 맞지 않는 선택자"]
+expect = "red"
+expect_output = ["AssertionError: expected { '--not-dark': '#111111' } to deeply equal {}"]
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/theme-css.ts"
+old = '''        return !simple.arguments.some((argument) => matchesRoot(argument, attributes));'''
+new = '''        return true;'''
+
+[[mutation]]
+name = "host 가 뿌리에 맞으면 뿌리 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/theme-css.test.ts", "-t", "뿌리에 맞지 않는 선택자"]
+expect = "red"
+expect_output = ["to deeply equal { '--not-dark': '#111111' }", "+   \"--host\": \"#222222\","]
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/theme-css.ts"
+old = '''
+      case "host":
+        return false;
+'''
+new = '''
+      case "host":
+        return true;
+'''
+
+[[mutation]]
+name = "결합자가 든 선택자가 뿌리에 맞으면 뿌리 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/theme-css.test.ts", "-t", "뿌리에 맞지 않는 선택자"]
+expect = "red"
+expect_output = ["to deeply equal { '--not-dark': '#111111' }", "+   \"--descendant\": \"#333333\","]
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/theme-css.ts"
+old = '''
+  if (parts === undefined) {
+    return false;
+'''
+new = '''
+  if (parts === undefined) {
+    return true;
+'''
+
+[[mutation]]
+name = "media 안의 규칙을 읽으면 뿌리 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/theme-css.test.ts", "-t", "뿌리에 맞지 않는 선택자"]
+expect = "red"
+expect_output = ["to deeply equal { '--not-dark': '#111111' }", "+   \"--media\": \"#444444\","]
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/theme-css.ts"
+old = '''rule.context.every((head) => head.startsWith("@layer"))'''
+new = '''rule.context.every((head) => !head.startsWith("@theme"))'''
+
+[[mutation]]
+name = "풀 수 없는 선택자를 맞지 않는 것으로 넘기면 입력 오류 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/theme-css.test.ts", "-t", "풀 수 없는 선택자가"]
+expect = "red"
+expect_output = ["AssertionError: expected undefined to be an instance of CommandError"]
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/theme-css.ts"
+old = '''
+      if (tag === null) {
+        throw unsupported(selector);
+'''
+new = '''
+      if (tag === null) {
+        return undefined;
+'''
+
+[[mutation]]
+name = "줄 하나를 차지한 주석을 앞 선언에 붙이면 주석 자리 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/build.test.ts", "-t", "다른 테마 블록"]
+expect = "red"
+expect_output = ["AssertionError: expected [ [ 'radius-s', '앞 줄의 주석' ], …(1) ] to deeply equal [ [ 'radius-s', '' ], …(1) ]"]
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/theme-css.ts"
+old = '''last.endLine === startLine) {'''
+new = '''last.endLine <= startLine) {'''
+
+[[mutation]]
+name = "모드 차례를 뒤집으면 테마 차례 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/build.test.ts", "-t", "테마는 여덟 벌이고"]
+expect = "red"
+expect_output = ["AssertionError: expected [ 'nokcheong-dark', …(7) ] to deeply equal [ 'nokcheong-light', …(7) ]"]
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/theme-css.ts"
+old = '''export const MODES = ["light", "dark"] as const;'''
+new = '''export const MODES = ["dark", "light"] as const;'''
+
+# --- 짓기(build.ts) -------------------------------------------------------------------------------------------
+
+[[mutation]]
+name = "반투명을 벌마다 적으면 반투명 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/build.test.ts", "-t", "반투명 7 개는"]
+expect = "red"
+expect_output = ["AssertionError: expected [ …(7) ] to deeply equal [ …(7) ]", "+       \"guncheong-dark\": "]
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/build.ts"
+old = '''    const shared = candidate.declarations.every((declaration) => declaration === first);'''
+new = '''    const shared = false;'''
+
+[[mutation]]
+name = "색 토큰을 CSS 차례로만 두면 차례 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/build.test.ts", "-t", "색 토큰은 원색, 반투명"]
+expect = "red"
+expect_output = ["AssertionError: expected [ 'overlay-black-4', 'info-300', …(4) ] to deeply equal [ 'gray-0', 'info-950', …(4) ]"]
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/build.ts"
+old = '''    const rank = referencing ? 2 : shared ? 1 : 0;'''
+new = '''    const rank = 0;'''
+
+[[mutation]]
+name = "hex 를 낮추지 않으면 소문자 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/build.test.ts", "-t", "hex 는 소문자로"]
+expect = "red"
+expect_output = ["AssertionError: expected '#F4F8FB' to be '#f4f8fb' // Object.is equality"]
+
+# 짓기와 맞대기가 같이 쓰는 색 리터럴 판정(`colorLiteral`, 티켓 04 가 옮겼다)의 낸 값을 깬다. 대문자 hex 사례(아래 맞대기)는
+# 판정의 입력을 깨는 다른 변이가 겨눈다.
+[[mutation.edit]]
+file = "web/tools/sync-design-system/tokens-json.ts"
+old = '''    return lower;'''
+new = '''    return value.trim();'''
+
+[[mutation]]
+name = "설명을 둘째 벌에서 읽으면 주석 자리 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/build.test.ts", "-t", "다른 테마 블록"]
+expect = "red"
+expect_output = ["AssertionError: expected '다크 대응의 주석' to be '' // Object.is equality"]
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/build.ts"
+old = '''    const first = candidate.declarations[0];'''
+new = '''    const first = candidate.declarations[1];'''
+
+[[mutation]]
+name = "설명을 비우면 줄 끝 주석 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/build.test.ts", "-t", "설명은 그 토큰을 선언한"]
+expect = "red"
+expect_output = ["AssertionError: expected '' to be '흐린 글자의 원색' // Object.is equality"]
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/build.ts"
+old = '''      usage: first?.comment ?? "",'''
+new = '''      usage: "",'''
+
+[[mutation]]
+name = "한도를 이상으로 읽으면 600 개 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/build.test.ts", "-t", "600 개 그대로의"]
+expect = "red"
+expect_output = ["CommandError: 페이지 테마(테마 × 모드) 수가 8 개로 형식의 한도 8 개를 넘는다"]
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/build.ts"
+old = '''  if (count > cap) {'''
+new = '''  if (count >= cap) {'''
+
+[[mutation]]
+name = "색 한도를 빼면 601 개 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/build.test.ts", "-t", "색이 600 개를 넘는"]
+expect = "red"
+expect_output = ["Error: 짓기가 오류 없이 끝났다"]
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/build.ts"
+old = '''  checkLimit("색 토큰", color.length, LIMITS.colors);'''
+new = '''  // 색 한도 없음'''
+
+[[mutation]]
+name = "테마 한도를 빼면 아홉 벌 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/build.test.ts", "-t", "테마가 여덟 벌을 넘는"]
+expect = "red"
+expect_output = ["Error: 짓기가 오류 없이 끝났다"]
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/build.ts"
+old = '''  checkLimit("페이지 테마(테마 × 모드)", found.length, LIMITS.themes);'''
+new = '''  // 테마 한도 없음'''
+
+[[mutation]]
+name = "계열 한도를 빼면 간격 61 개 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/build.test.ts", "-t", "간격이 60 개를 넘는"]
+expect = "red"
+expect_output = ["Error: 짓기가 오류 없이 끝났다"]
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/build.ts"
+old = '''  checkLimit(what, tokens.length, LIMITS.familyTokens);'''
+new = '''  // 계열 한도 없음'''
+
+[[mutation]]
+name = "줄 높이를 다른 이름에서 찾으면 글자 크기 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/build.test.ts", "-t", "글자 크기는 type 묶음"]
+expect = "red"
+expect_output = ["to deeply equal [ { name: 'text-title', …(4) }, …(2) ]", "-     \"lineHeight\": \"32px\","]
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/build.ts"
+old = '''`${declaration.property}--line-height`'''
+new = '''`${declaration.property}--leading`'''
+
+[[mutation]]
+name = "굵기를 수로 바꾸지 않으면 글자 크기 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/build.test.ts", "-t", "글자 크기는 type 묶음"]
+expect = "red"
+expect_output = ["to deeply equal [ { name: 'text-title', …(4) }, …(2) ]", "+     \"fontWeight\": \"600\","]
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/build.ts"
+old = '''  return /^\d+$/.test(value) ? Number(value) : value;'''
+new = '''  return value;'''
+
+[[mutation]]
+name = "기본 CSS 경로가 틀리면 기본 경로 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/main.test.ts", "-t", "CSS 를 주지 않으면"]
+expect = "red"
+expect_output = ["AssertionError: expected 1 to be +0 // Object.is equality"]
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/build.ts"
+old = '''  "packages",'''
+new = '''  "packagez",'''
+
+[[mutation]]
+name = "토큰 수에서 모서리를 빼면 보고 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/main.test.ts", "-t", "짓기는 지은 tokens.json"]
+expect = "red"
+expect_output = ["-     \"tokens\": ", "+     \"tokens\": "]
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/build.ts"
+old = '''    file.radius.tokens.length;'''
+new = '''    0;'''
+
+[[mutation]]
+name = "출력 파일 검사를 빼면 usage 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/main.test.ts", "-t", "출력 파일을 주지 않으면"]
+expect = "red"
+expect_output = ["AssertionError: expected null to match object { command: 'build', ok: false, …(1) }", "\"kind\": \"usage\","]
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/build.ts"
+old = '''  if (out === undefined) {'''
+new = '''  if (out === "") {'''
+
+# --- 진입과 명령의 공용 꼴(main.ts, command.ts) -----------------------------------------------------------------
+
+[[mutation]]
+name = "실패의 종료 코드가 0 이면 한도 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/main.test.ts", "-t", "한도를 넘는 입력은"]
+expect = "red"
+expect_output = ["AssertionError: expected +0 to be 1 // Object.is equality"]
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/main.ts"
+old = '''code: 1 };'''
+new = '''code: 0 };'''
+
+[[mutation]]
+name = "모르는 명령 문구에서 아는 명령을 빼면 모르는 명령 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/main.test.ts", "-t", "모르는 명령은"]
+expect = "red"
+expect_output = ["AssertionError: expected '모르는 명령 \"deploy\"' to contain 'build'"]
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/main.ts"
+old = '''. 아는 명령: ${known}`'''
+new = '''`'''
+
+[[mutation]]
+name = "읽기 실패를 usage 로 내면 입력 파일 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/main.test.ts", "-t", "읽을 수 없는 입력 파일은"]
+expect = "red"
+expect_output = ["-     \"kind\": \"input\",", "+     \"kind\": \"usage\","]
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/command.ts"
+old = '''CommandError("input",'''
+new = '''CommandError("usage",'''
+
+[[mutation]]
+name = "인자 풀기의 오류를 그대로 던지면 모르는 옵션 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/main.test.ts", "-t", "모르는 옵션은"]
+expect = "red"
+expect_output = ["AssertionError: expected null to match object { command: 'build', ok: false, …(1) }", "\"kind\": \"usage\","]
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/command.ts"
+old = '''    throw new CommandError("usage", messageOf(error));'''
+new = '''    throw error;'''
+
+[[mutation]]
+name = "쓰기 실패를 그대로 던지면 출력 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/main.test.ts", "-t", "출력 파일을 쓸 수 없으면"]
+expect = "red"
+expect_output = ["AssertionError: expected null to match object { command: 'build', ok: false, …(1) }", "\"kind\": \"output\","]
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/command.ts"
+old = '''    throw new CommandError("output", `${path} 를 쓸 수 없다: ${messageOf(error)}`);'''
+new = '''    throw error;'''
+
+# --- 맞대기(tokens-json.ts) -----------------------------------------------------------------------------------
+
+[[mutation]]
+name = "색 값을 낮추지 않으면 대문자 hex 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/tokens-json.test.ts", "-t", "대문자 hex 와"]
+expect = "red"
+expect_output = ["AssertionError: expected [ { kind: 'value', …(5) } ] to deeply equal []"]
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/tokens-json.ts"
+old = '''
+  const lower = value.trim().toLowerCase();
+  if (HEX.test(lower) ||'''
+new = '''
+  const lower = value.trim();
+  if (HEX.test(lower) ||'''
+
+[[mutation]]
+name = "값이 없는 벌을 비우면 반투명 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/tokens-json.test.ts", "-t", "반투명의 첫 테마만"]
+expect = "red"
+expect_output = ["AssertionError: expected [ { kind: 'value', …(5) } ] to have a length of 8 but got 1"]
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/tokens-json.ts"
+old = '''found.get(theme) ?? base]'''
+new = '''found.get(theme) ?? ""]'''
+
+[[mutation]]
+name = "자간의 기본값을 비우면 페이지 꼴 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/tokens-json.test.ts", "-t", "페이지가 꼴만 다시 쓴"]
+expect = "red"
+expect_output = ["to deeply equal { diffs: [], sameHash: true }", "+       \"field\": \"letterSpacing\","]
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/tokens-json.ts"
+old = '''        letterSpacing: length(own(raw, "letterSpacing")) ?? "0",'''
+new = '''        letterSpacing: length(own(raw, "letterSpacing")) ?? "",'''
+
+[[mutation]]
+name = "자간을 값 칸으로 세면 글자 스타일 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/tokens-json.test.ts", "-t", "글자 스타일의 크기는"]
+expect = "red"
+expect_output = ["to deeply equal { diffs: [ { …(6) }, { …(6) } ], …(1) }", "+       \"kind\": \"value\","]
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/tokens-json.ts"
+old = '''const STYLE_VALUES = ["fontSize", "lineHeight", "fontWeight"] as const;'''
+new = '''const STYLE_VALUES = ["fontSize", "lineHeight", "fontWeight", "letterSpacing"] as const;'''
+
+[[mutation]]
+name = "계열 설명을 보지 않으면 계열 설명 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/tokens-json.test.ts", "-t", "계열 설명은"]
+expect = "red"
+expect_output = ["AssertionError: expected { diffs: [], sameHash: false } to deeply equal { Object (diffs, sameHash) }"]
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/tokens-json.ts"
+old = '''  if (before.note !== after.note) {'''
+new = '''  if (before.note === "never") {'''
+
+[[mutation]]
+name = "더한 토큰과 지운 토큰을 바꾸면 더하기 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/tokens-json.test.ts", "-t", "토큰을 더하면"]
+expect = "red"
+expect_output = ["AssertionError: expected { Object (diffs, sameHash) } to deeply equal { …(2) }", "+       \"kind\": \"removed\","]
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/tokens-json.ts"
+old = '''
+        kind: left === undefined ? "added" : "removed",
+        family: name,
+        token,
+'''
+new = '''
+        kind: left === undefined ? "removed" : "added",
+        family: name,
+        token,
+'''
+
+[[mutation]]
+name = "맞대는 값이 몫을 보지 않으면 값 하나 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/tokens-json.test.ts", "-t", "원색 한 벌의 값 하나는"]
+expect = "red"
+expect_output = ["AssertionError: expected { …(2) } to deeply equal { …(2) }", "+   \"sameHash\": true,"]
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/tokens-json.ts"
+old = '''    .update(JSON.stringify(comparable(tokens)))'''
+new = '''    .update("")'''
+
+[[mutation]]
+name = "prototype 을 거르지 않으면 테마 id 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/tokens-json.test.ts", "-t", "페이지가 버리는 테마 id"]
+expect = "red"
+expect_output = ["AssertionError: expected [ 'prototype', 'nokcheong-light' ] to deeply equal [ 'nokcheong-light' ]"]
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/tokens-json.ts"
+old = '''      id !== "prototype" &&'''
+new = '''      id !== "never" &&'''
+
+[[mutation]]
+name = "앞 계열이 쓴 이름을 거르지 않으면 같은 이름 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/tokens-json.test.ts", "-t", "같은 이름의 둘째 토큰은"]
+expect = "red"
+expect_output = ["AssertionError: expected [ [ 'x', '4px' ], [ 's', '4px' ] ] to deeply equal [ [ 's', '4px' ] ]"]
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/tokens-json.ts"
+old = '''taken.has(name) || tokens.has(name)'''
+new = '''tokens.has(name)'''
+
+[[mutation]]
+name = "한 계열 안의 둘째 이름을 거르지 않으면 같은 이름 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/tokens-json.test.ts", "-t", "같은 이름의 둘째 토큰은"]
+expect = "red"
+expect_output = ["AssertionError: expected [ [ 's', '8px' ] ] to deeply equal [ [ 's', '4px' ] ]"]
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/tokens-json.ts"
+old = '''taken.has(name) || tokens.has(name)'''
+new = '''taken.has(name)'''
+
+# --- 임시 아티팩트에서 받은 저장본(fixtures/) -------------------------------------------------------------------
+# 바이트 사례(sha256)는 시험 자료만 읽어 깰 코드 줄이 없다.
+
+[[mutation]]
+name = "수 굵기를 문자열로 맞추지 않으면 받은 저장본 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/tokens-json.test.ts", "-t", "사람이 고친 둘만 나온다"]
+expect = "red"
+expect_output = ["to deeply equal [ { kind: 'value', …(5) }, …(1) ]", "+     \"after\": \"500\","]
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/tokens-json.ts"
+old = '''
+  if (typeof value === "number" && Number.isInteger(value) && value >= 1 && value <= 1000) {
+    return String(value);
+  }'''
+new = '''
+  if (typeof value === "number" && Number.isInteger(value) && value >= 1 && value <= 1000) {
+    return undefined;
+  }'''
+
+# 이 사례의 첫 변이는 반투명 값을 여덟 벌로 펴는 줄(`found.get(theme) ?? base`)을 깼는데 초록이었다. 올린 파일의
+# 문자열 값과 저장본의 첫 테마 객체를 같은 함수(perTheme)가 같은 길로 읽어, 그 줄이 두 꼴에 똑같이 걸린다.
+# 그래서 페이지가 저장본에 채운 기본값(자간 "0")을 읽는 줄로 바꿨다.
+[[mutation]]
+name = "자간의 기본값을 비우면 되돌린 저장본 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/tokens-json.test.ts", "-t", "고친 둘을 되돌리면"]
+expect = "red"
+expect_output = ["Expected: \"d24f5042a21999dc70392eac1b2fbbc391d8177d85145142ed6d18ed647ed01a\""]
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/tokens-json.ts"
+old = '''        letterSpacing: length(own(raw, "letterSpacing")) ?? "0",'''
+new = '''        letterSpacing: length(own(raw, "letterSpacing")) ?? "",'''
+
+# --- PR 의 첫 claude-review 회차가 더한 사례(build.ts) ------------------------------------------------------------
+# 번호가 밀리지 않게 끝에 둔다. 짓기 절의 사례다.
+
+[[mutation]]
+name = "테마 이름 하나가 패키지 목록과 다르면 테마 이름 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/build.test.ts", "-t", "테마의 한국어 이름은"]
+expect = "red"
+expect_output = ["+   \"jacho\" => \"자쵸\","]
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/build.ts"
+old = '''  ["jacho", "자초"],'''
+new = '''  ["jacho", "자쵸"],'''
