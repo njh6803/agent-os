@@ -155,8 +155,15 @@ export interface BuildNeed {
 
 const PACKAGE = "web/packages/ui/";
 const BUILD_CONFIG = ".design-sync/";
-/** 빌린 빌드의 설정 폴더 가운데 빌드를 다시 하지 않아도 되는 것. 기초 카드 원본과 사람의 노트다. */
-const NOT_BUILD_CONFIG = [".design-sync/foundations/", ".design-sync/NOTES.md"];
+/**
+ * 빌린 빌드의 설정 폴더 가운데 빌드를 다시 하지 않아도 되는 것. 기초 카드 원본, 사람의 노트, 올리기가 다 보낸 뒤
+ * 커밋하는 지난 산출 목록이다(design-reverse-sync 티켓 08). 올릴 항목을 고르는 `upload-output.mjs` 는 빼지 않는다.
+ */
+const NOT_BUILD_CONFIG = [
+  ".design-sync/foundations/",
+  ".design-sync/NOTES.md",
+  ".design-sync/upload-output.json",
+];
 /** 빌드 없이 보내는 아티팩트 경로. 빌드가 저장소 원본을 그대로 옮기는 다섯(기초 카드 넷과 지침 문서)이다. */
 const COPIED = ["project/foundations/", "project/guidelines/web-design.md"];
 

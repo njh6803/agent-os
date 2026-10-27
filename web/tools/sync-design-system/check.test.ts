@@ -225,6 +225,28 @@ describe("받을 경로", () => {
     expect(nextFetch(first)).toEqual([README_PATH, BADGE, BUTTON, GUIDE, WEB_DESIGN]);
   });
 
+  test("묶음 폴더 아래의 컴포넌트는 묶음 폴더가 아니라 그 컴포넌트 폴더의 README 를 낸다", () => {
+    // 첫 올리기(티켓 08)가 받은 아티팩트의 꼴이다. 번들 변환기가 컴포넌트를 묶음 폴더 아래에 둔다.
+    const grouped = "project/components/atoms/Button/Button.html";
+    const record = lastRecord({ files: new Map([[grouped, entry(grouped, "<p>버튼</p>")]]) });
+    const first: WebFiles = {
+      files: new Map([
+        [INDEX_PATH, bytes(JSON.stringify(index()))],
+        [RECORD_PATH, bytes(serializeRecord(record))],
+        [TOKENS_PATH, bytes(UPLOADED)],
+      ]),
+      absent: new Set(),
+      failed: new Map(),
+    };
+
+    expect(nextFetch(first)).toEqual([
+      README_PATH,
+      "project/components/atoms/Button/README.md",
+      GUIDE,
+      WEB_DESIGN,
+    ]);
+  });
+
   test("색인에 든 문서는 기록에 없어도 낸다", () => {
     const first: WebFiles = {
       files: new Map([

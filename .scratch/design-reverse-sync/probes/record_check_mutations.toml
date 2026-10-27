@@ -412,7 +412,7 @@ expect_output = ['+   "project/components/lib/README.md",']
 
 [[mutation.edit]]
 file = "web/tools/sync-design-system/check.ts"
-old = '''      name !== "lib" &&
+old = '''      first !== "lib" &&
 '''
 new = ''''''
 

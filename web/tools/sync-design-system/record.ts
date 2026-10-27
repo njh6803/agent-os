@@ -3,8 +3,9 @@
  * (`sync-record.ts`)을 쓰며, 들이기의 `claim` 을 쓰거나 비운다(`claim.ts`)(design-reverse-sync 명세 "기록", "올리기",
  * "찾았을 때"의 "덮어쓴다", "겹침").
  *
- * 하위 명령은 다섯이다. 산출 폴더는 아티팩트의 `project/` 아래에 놓일 내용(빌드의 `ds-bundle/` 등)이다. 확인 보고는
- * `check judge` 의 보고 JSON 이고 `check-report.ts` 로 읽는다.
+ * 하위 명령은 다섯이다. 산출 폴더는 아티팩트의 `project/` 아래에 놓일 내용(빌드의 `ds-bundle/` 에서
+ * `.design-sync/upload-output.mjs` 가 올릴 항목만 옮긴 폴더 등)이다. 확인 보고는 `check judge` 의 보고 JSON 이고
+ * `check-report.ts` 로 읽는다.
  *
  * - `record plan --local <산출 폴더> (--record <기록> | --artifact-sha256 <sha256 표>) [--check <확인 보고>]
  *   [--overwrite | --claim-merged [--overwrite]] [--previous-output <지난 산출 목록>]`. 이번 올리기가 보낼 파일(`send`),
