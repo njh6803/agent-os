@@ -194,3 +194,16 @@ open-session을 부른다 2026-10-27T02:36:18Z
 ## PR 직전 리뷰
 
 `coderabbit auth status`가 `Plan: Free`, `Seat: not assigned`라 CLI가 돌지 못한다. 대체 둘(`/security-review`, `bug-perf-review`)을 나란히 돌린다. `/security-review`는 커밋된 diff만 모으므로(`docs/constitution/operations.md` 리뷰 파이프라인 2) 이 절까지의 일지와 02의 고침을 먼저 커밋한다. origin/main은 브랜치를 딴 `5e049681` 그대로라 합칠 것이 없다.
+
+그 커밋이 `d74339bf`다. pre-commit은 pytest(550초), web-verify(627초)를 비롯해 모두 Passed였고, `.py`가 없어 ruff 둘과 카나리아 명세·헌법 판이 Skipped였다. 인용 대조 경고 둘은 이 일지의 명령 출력("1086 files already formatted")과 위에서 뗀 02의 글을 기록으로 옮긴 것이라 그대로 둔다.
+
+### 버그·성능 (bug-perf-review, sonnet)
+
+커밋을 기다리는 동안 띄웠다. 기준 `5e049681`, 범위 열두 파일, 호출 40이다. 셀프 리뷰의 밀 주장 아홉은 모두 근거와 맞았다(그림 파일의 줄, `web/eslint.config.test.ts`의 사례, `DesignTokens.stories.tsx`의 `Responsive` 이름, 그림 열일곱, e2e의 "허가" 자리). Critical·Major는 없고 Minor 넷이다.
+
+1. 보류. 07의 880px 상한이 결정 칸이 선 상태에도 걸리는지 문서가 말하지 않는다. 그림 `mk-run.dc.html` 38줄을 열어 보니 결정 칸이 있을 때 이벤트 칸이 `minmax(0, 1fr)`이고 바깥 감싸개에도 상한이 없다. 880px은 결정 칸이 없는 `mk-run-resumed.dc.html` 39줄에만 있다. 명세의 문장("이벤트 칸은 넓어도 880px을 넘지 않는다")은 상태를 가리지 않으므로 명세를 따르고, 07에 결정 칸이 선 상태도 같다는 것과 그림이 그 상한을 적지 않았다는 것을 한 문장으로 더했다. 폭 1280에서 결정 칸이 서면 이벤트 칸이 880px에 닿지 않아 시험으로는 갈리지 않는다(어림).
+2. 오탐. 04·06의 `bg-selected`·`bg-hover`가 클래스 철자(`bg-bg-selected`)와 다르다. 저장소 규칙(`.claude/rules/web-design.md`)이 산문에서 반투명 셋을 토큰 이름 `bg-hover`·`bg-active`·`bg-selected`로 부르고 클래스는 `hover:bg-bg-hover`처럼 쓰는 관례이고(`Button.tsx` 30·31줄), 철자를 틀리면 스토리 테스트의 클래스 판정이 바로 막는다.
+3. 유효. 03~09의 "웹 편집 확인"이 대상을 화면 파일만 적어, 스킬(`.claude/skills/ui-design/SKILL.md`의 그 절)이 함께 대라는 옮긴 `canvas.json`이 빠졌다. 03의 괄호, 04의 "열일곱 전부", 05~09의 "위 그림 N"에 `canvas.json`을 더하고, 명세 머리 9줄의 괄호도 같이 고쳤다(그 줄은 main의 `007b3608`이 쓴 것이다). 리뷰는 05~09가 04 뒤에 다시 대는 것을 중복이라 했지만, 웹 편집은 티켓 사이에도 일어날 수 있고 명세 329줄 주석이 그림을 읽는 티켓마다 먼저 대라고 정했으므로 그 제안은 따르지 않았다.
+4. 유효. 명세 279줄 주석의 "e2e와 사진은 Asia/Seoul 그대로다"는 지금 Playwright 설정(`web/apps/admin/playwright.config.ts`)에 `timezoneId`가 없어 아직 사실이 아니다. 고정은 06(Playwright 설정)과 03(사진 비교 설정)이 더한다. 그 두 자리를 적는 문장으로 바꿨다.
+
+잔존 grep으로 "화면 파일마다"가 `plan.md` 셋, `docs/agents/issue-tracker.md` 하나, design-reverse-sync 명세 하나에 남은 것을 봤다. 모두 "판 id 대신 sha256으로 가른다"는 방식을 다른 기능의 맥락에서 설명하는 문장이라 이 변경의 대상이 아니어서 그대로 두었다.
