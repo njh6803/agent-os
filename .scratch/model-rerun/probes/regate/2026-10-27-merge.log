@@ -1,0 +1,12 @@
+  알림: 게이트 작업 트리를 다 걷지 못했다: C:\Users\User\regate-merge3\conversation-02-A-3-eb60ceb9\gate(git worktree remove 가 255로 끝났다(출력은 C:\Users\User\regate-merge3\conversation-02-A-3-eb60ceb9\gate-git.log)). 그 자리를 쥔 프로세스가 끝난 뒤 git -C C:\Users\User\regate-merge3\conversation-02-A-3-eb60ceb9\clone worktree remove --force C:\Users\User\regate-merge3\conversation-02-A-3-eb60ceb9\gate 로 걷는다(등록이 없으면 폴더만 지운다)
+conversation-02-A-3 conversation-02-A-3-eb60ceb9
+  돈 커밋: b393cac967e7725c8ddefcd0104013996e0dc8a9 (M)
+  준비 실패: None
+  게이트: [('check .', 0, False), ('--check .', 0, False), ('pytest -q', 0, False), ('run pyright', 0, False), ('run lint-imports', 0, False), ('web verify', 0, False)]
+  숨은 시험: Hidden(passed=10, total=10, failed=())
+  알림: 게이트 작업 트리를 다 걷지 못했다: C:\Users\User\regate-merge3\end-user-continuation-02-A-3-595eac33\gate(git worktree remove 가 255로 끝났다(출력은 C:\Users\User\regate-merge3\end-user-continuation-02-A-3-595eac33\gate-git.log)). 그 자리를 쥔 프로세스가 끝난 뒤 git -C C:\Users\User\regate-merge3\end-user-continuation-02-A-3-595eac33\clone worktree remove --force C:\Users\User\regate-merge3\end-user-continuation-02-A-3-595eac33\gate 로 걷는다(등록이 없으면 폴더만 지운다)
+end-user-continuation-02-A-3 end-user-continuation-02-A-3-595eac33
+  돈 커밋: 77ecd319309af038759963aa87a56ec6c273d292 (M)
+  준비 실패: None
+  게이트: [('check .', 0, False), ('--check .', 0, False), ('python tools/run_checks.py', 0, False)]
+  숨은 시험: Hidden(passed=65, total=65, failed=())

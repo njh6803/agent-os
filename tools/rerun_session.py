@@ -112,6 +112,7 @@ from tools.rerun_files import (
     Tokens,
     Window,
     parse_round_dir_name,
+    prereg_pattern,
 )
 from tools.rerun_round import RoundDir
 from tools.run_hooks import REPO_LOCATION_VARS
@@ -212,10 +213,12 @@ def session_command(
     session_id: str,
     budget_usd: float,
     *,
+    settings: Path,
     opening: Opening = Opening.NEW,
 ) -> list[str]:
     """세션 호출의 명령. 세션은 `opening`의 플래그로 연다. 이어 부를 때도 모델·노력·예산을 다시
-    준다. 모델은 전체 이름이고 `claude`는 명령 줄로 받은 실행 파일(과 그 인자)이다."""
+    준다. 모델은 전체 이름이고 `claude`는 명령 줄로 받은 실행 파일(과 그 인자)이다. `settings`는
+    막는 규칙 파일이고 `--settings`로 넘긴다(`tools/rerun_round.py`의 `write_deny_rules`)."""
     return [
         *claude,
         SESSION_FLAGS[0],
@@ -224,6 +227,8 @@ def session_command(
         "--effort",
         arm.effort,
         *SESSION_FLAGS[1:],
+        "--settings",
+        str(settings),
         opening.value,
         session_id,
         "--max-budget-usd",
@@ -235,6 +240,15 @@ def session_command(
 
 SYNTHETIC = "<synthetic>"
 UNKNOWN_SUBTYPE = "unknown"
+
+# 사전 등록 절과 대 보는 값(`tools/rerun_files.py`의 `prereg_line`).
+PREREG_VALUES: dict[str, Json] = {
+    "START_SKILL": START_SKILL,
+    "START_LINE": _START_LINE,
+    "SESSION_FLAGS": [*SESSION_FLAGS],
+    "TITLE_HEAD": prereg_pattern(_TITLE_HEAD),
+    "SYNTHETIC": SYNTHETIC,
+}
 
 
 @dataclass(frozen=True)
@@ -802,7 +816,9 @@ def launch(
     budget = float(budget_text(budget_usd))
     stream_file = place.stream / f"{calls:02d}-{session_id}.jsonl"
     drove = drive(
-        session_command(claude, arm, session_id, budget, opening=opening),
+        session_command(
+            claude, arm, session_id, budget, settings=place.deny_settings, opening=opening
+        ),
         cwd=str(place.clone),
         env=env,
         message=message,
@@ -962,6 +978,7 @@ def round_record(
         spend=Spend(
             claude_code_usd=sum(s.cost_usd for s in sessions if s.cost_usd is not None),
             official_usd=e.official_usd,
+            other_usd=0.0,  # 러너가 회차를 마친 뒤 셈해 넣는다(러너의 `_with_costs`)
             tokens=e.tokens,
             substitutes=e.substitutes,
             wall_seconds=round(max(now - wall_clock_from, 0.0), 2),

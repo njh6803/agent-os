@@ -25,9 +25,13 @@ from tools.rerun_files import (
     END_DONE,
     END_NOT_MEASURED,
     GATE_COMMANDS,
+    GATE_FILE,
+    GATE_SETS,
     LIST_MAIN,
     LIST_PILOT,
     NOT_MEASURED_REASONS,
+    OLD_GATE_COMMANDS,
+    RECORD_SHAPE_VERSION,
     RULE_BRANCH,
     RULE_NONE,
     SETUP_COMMANDS,
@@ -192,6 +196,7 @@ def _기록(**바꿀: object) -> Record:
         spend=Spend(
             claude_code_usd=8.75,
             official_usd=9.5,
+            other_usd=0.25,
             tokens=Tokens(input=10, output=20, cache_read=30, cache_write=40, thinking=None),
             substitutes=(
                 Substitute(
@@ -329,11 +334,17 @@ def test_회차_기록을_쓰고_다시_읽으면_같다(tmp_path: Path) -> None
 
 
 def test_두_파일_모두_꼴_판을_맨_위에_든다() -> None:
-    for 글 in (dumps_task_list(_목록()), dumps_record(_기록())):
+    """회차 기록은 2026-10-27 에 `other_usd`를 더해 판 2 다. 과제 목록은 판 1 그대로다(커밋한
+    파일럿 목록과 본 측정 목록을 다시 쓰지 않는다)."""
+    for 글, 판 in (
+        (dumps_task_list(_목록()), SHAPE_VERSION),
+        (dumps_record(_기록()), RECORD_SHAPE_VERSION),
+    ):
         값 = _풀기(글)
         assert isinstance(값, dict)
         assert next(iter(값)) == "shape_version"
-        assert 값["shape_version"] == SHAPE_VERSION
+        assert 값["shape_version"] == 판
+    assert (SHAPE_VERSION, RECORD_SHAPE_VERSION) == (1, 2)
 
 
 def test_쓰는_함수는_읽기가_거부할_값을_쓰지_않는다(tmp_path: Path) -> None:
@@ -353,8 +364,52 @@ def test_쓰는_함수는_읽기가_거부할_값을_쓰지_않는다(tmp_path: 
 def test_모르는_판은_거부한다(판: Json) -> None:
     with pytest.raises(ShapeError, match="판"):
         parse_task_list(_바꿔(dumps_task_list(_목록()), ("shape_version",), 판))
+
+
+@pytest.mark.parametrize("판", [0, 3, "2", True, 2.0, "1", 1.0])
+def test_회차_기록은_판_1_2_밖을_거부한다(판: Json) -> None:
     with pytest.raises(ShapeError, match="판"):
         parse_record(_바꿔(dumps_record(_기록()), ("shape_version",), 판))
+
+
+def _판_1_기록(*, other: bool) -> str:
+    """판 2로 쓴 기록을 판 1로 바꾼 글. `other`가 거짓이면 판 1의 꼴대로 `other_usd`를 뺀다."""
+    뿌리 = _풀기(_바꿔(dumps_record(_기록()), ("shape_version",), 1))
+    spend = _내려가(뿌리, ("spend",))
+    assert isinstance(spend, dict)
+    if not other:
+        del spend["other_usd"]
+    return json.dumps(뿌리)
+
+
+def test_회차_기록의_판_1은_other_usd_없이_받고_0으로_읽는다() -> None:
+    """러너의 예산과 판정이 커밋한 파일럿 기록(판 1)까지 읽는다(모듈 독스트링의 꼴)."""
+    got = parse_record(_판_1_기록(other=False))
+    assert got.spend.other_usd == 0.0
+    assert got.spend.official_usd == _기록().spend.official_usd
+
+
+def test_회차_기록의_판_1에_other_usd가_있으면_거부한다() -> None:
+    with pytest.raises(ShapeError, match="other_usd"):
+        parse_record(_판_1_기록(other=True))
+
+
+def test_판_2_기록에서_other_usd가_빠지면_거부한다() -> None:
+    뿌리 = _풀기(dumps_record(_기록()))
+    spend = _내려가(뿌리, ("spend",))
+    assert isinstance(spend, dict)
+    del spend["other_usd"]
+    with pytest.raises(ShapeError, match="other_usd"):
+        parse_record(json.dumps(뿌리))
+
+
+def test_이_저장소의_커밋한_회차_기록을_모두_읽는다() -> None:
+    """러너의 예산 셈과 판정이 `records/`를 모두 읽으므로, 판을 올려도 커밋한 기록이 읽혀야 한다."""
+    records = Path(__file__).resolve().parents[2] / ".scratch/model-rerun/probes/records"
+    paths = sorted(records.glob("*.json"))
+    assert paths, f"{records} 에 기록이 없다"
+    for p in paths:
+        read_record(p)
 
 
 @pytest.mark.parametrize(
@@ -790,11 +845,37 @@ def _게이트_칸(*명령: str) -> Json:
         _게이트_칸(*GATE_COMMANDS[:2]),
         _게이트_칸(*reversed(GATE_COMMANDS)),
         _게이트_칸("true"),
+        # 두 묶음을 섞거나 옛 묶음의 일부만 든 것
+        _게이트_칸(*GATE_COMMANDS, *OLD_GATE_COMMANDS[2:]),
+        _게이트_칸(*OLD_GATE_COMMANDS[:5]),
+        _게이트_칸(*OLD_GATE_COMMANDS[:2], *reversed(OLD_GATE_COMMANDS[2:])),
     ],
 )
-def test_게이트는_정해진_셋이_이_차례로_든다(게이트: Json) -> None:
+def test_게이트는_정해진_묶음_하나가_이_차례로_든다(게이트: Json) -> None:
     with pytest.raises(ShapeError, match="gates"):
         parse_record(_바꿔(dumps_record(_기록()), ("outcome", "gates"), 게이트))
+
+
+def test_옛_게이트_묶음은_그때의_손으로_치는_검증_명령이다() -> None:
+    # B 에 `tools/run_checks.py`가 없던 때(2026-10-07 #160 앞)의 CLAUDE.md "검증 명령" 절
+    assert OLD_GATE_COMMANDS == (
+        "uv run ruff check .",
+        "uv run ruff format --check .",
+        "uv run pytest -q",
+        "uv run pyright",
+        "uv run lint-imports",
+        "pnpm -C web verify",
+    )
+    assert GATE_FILE == "tools/run_checks.py" and GATE_FILE in GATE_COMMANDS[2]
+    assert GATE_SETS == (GATE_COMMANDS, OLD_GATE_COMMANDS)
+
+
+def test_옛_게이트_묶음의_기록을_읽는다() -> None:
+    글 = _바꿔(dumps_record(_기록()), ("outcome", "gates"), _게이트_칸(*OLD_GATE_COMMANDS))
+    gates = parse_record(글).outcome.gates
+    assert gates is not None
+    assert tuple(g.command for g in gates) == OLD_GATE_COMMANDS
+    assert parse_record(dumps_record(parse_record(글))) == parse_record(글)
 
 
 def test_실패한_숨은_시험_노드는_겹치지_않는다() -> None:
@@ -1005,7 +1086,8 @@ def test_판정이_읽는_칸을_모은다(tmp_path: Path) -> None:
     assert 본.end == End(kind=END_DONE, reason=None, resets_at=None)
     assert 본.gates_green is False
     assert 본.hidden_passed is False
-    assert (본.cost_claude_code_usd, 본.cost_official_usd) == (8.75, 9.5)
+    # 판정이 읽는 두 비용에는 다른 세션(하위 `claude -p`)의 공식 단가 셈이 더해진다
+    assert (본.cost_claude_code_usd, 본.cost_official_usd) == (9.0, 9.75)
     assert (본.interventions, 본.asked_at_end) == (1, True)
     assert 본.cost_substituted is True
     assert 본.official_substituted is True

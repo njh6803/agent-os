@@ -1,0 +1,200 @@
+{
+  "shape_version": 1,
+  "task_id": "end-user-continuation-03",
+  "arm": "E",
+  "round_no": 1,
+  "condition_version": 1,
+  "pilot": true,
+  "round_dir_name": "end-user-continuation-03-E-1-55d9eebf",
+  "claude_version": "2.1.302 (Claude Code)",
+  "account": "njh4803",
+  "env_names": [
+    "APPDATA",
+    "CLAUDE_CONFIG_DIR",
+    "COMSPEC",
+    "DISABLE_AUTOUPDATER",
+    "GH_CONFIG_DIR",
+    "HOME",
+    "HOMEDRIVE",
+    "HOMEPATH",
+    "LOCALAPPDATA",
+    "PATH",
+    "PATHEXT",
+    "PROGRAMDATA",
+    "ProgramFiles",
+    "ProgramFiles(x86)",
+    "SYSTEMROOT",
+    "SystemDrive",
+    "TEMP",
+    "TMP",
+    "USERPROFILE",
+    "WINDIR"
+  ],
+  "init_tools": [
+    "Task",
+    "Bash",
+    "CronDelete",
+    "CronList",
+    "Edit",
+    "EnterWorktree",
+    "ExitWorktree",
+    "Glob",
+    "Grep",
+    "Monitor",
+    "NotebookEdit",
+    "PowerShell",
+    "Read",
+    "ReportFindings",
+    "Skill",
+    "TaskStop",
+    "ToolSearch",
+    "Workflow",
+    "Write"
+  ],
+  "sessions": [
+    {
+      "session_id": "3b550451-24e6-433e-8185-f68a2c9c38ce",
+      "calls": [
+        {
+          "kind": "첫",
+          "budget_usd": 72.63,
+          "exit_code": 0,
+          "results": [
+            {
+              "index": 0,
+              "subtype": "success",
+              "terminal_reason": "completed",
+              "num_turns": 69
+            },
+            {
+              "index": 1,
+              "subtype": "success",
+              "terminal_reason": "completed",
+              "num_turns": 22
+            }
+          ],
+          "has_directive": false,
+          "ends_with_question": false,
+          "kill_skipped": false
+        },
+        {
+          "kind": "개입",
+          "budget_usd": 69.82,
+          "exit_code": 0,
+          "results": [
+            {
+              "index": 0,
+              "subtype": "success",
+              "terminal_reason": "completed",
+              "num_turns": 3
+            }
+          ],
+          "has_directive": false,
+          "ends_with_question": false,
+          "kill_skipped": false
+        },
+        {
+          "kind": "개입",
+          "budget_usd": 69.71,
+          "exit_code": 0,
+          "results": [
+            {
+              "index": 0,
+              "subtype": "success",
+              "terminal_reason": "completed",
+              "num_turns": 7
+            }
+          ],
+          "has_directive": false,
+          "ends_with_question": false,
+          "kill_skipped": false
+        }
+      ],
+      "cost_usd": 3.145609200000002,
+      "cost_substituted": false,
+      "runner_killed": false,
+      "model_usage": [
+        {
+          "model": "claude-sonnet-5-5",
+          "input_tokens": 176,
+          "output_tokens": 67838,
+          "cache_read_tokens": 12220052,
+          "cache_write_tokens": 360502,
+          "thinking_tokens": 23320,
+          "cost_usd": 3.145609200000002
+        }
+      ],
+      "main_lines": [
+        {
+          "model": "claude-sonnet-5-5",
+          "effort": "medium",
+          "lines": 168
+        }
+      ],
+      "subagent_lines": [
+        {
+          "model": "claude-sonnet-5-5",
+          "effort": "high",
+          "lines": 10
+        },
+        {
+          "model": "claude-sonnet-5-5",
+          "effort": "medium",
+          "lines": 15
+        }
+      ]
+    }
+  ],
+  "handoffs": 0,
+  "interventions": 2,
+  "asked_at_end": false,
+  "end": {
+    "kind": "상한으로 끊김",
+    "reason": "개입",
+    "resets_at": null
+  },
+  "outcome": {
+    "commit": "9e92ec72934b6a26913deb07b96f81b3e91a0cd8",
+    "rule": "지시문 브랜치",
+    "commits_after_base": 0,
+    "setup_failure": null,
+    "gates": null,
+    "hidden": null
+  },
+  "spend": {
+    "claude_code_usd": 3.145609200000002,
+    "official_usd": 3.0138092000000016,
+    "tokens": {
+      "input": 176,
+      "output": 54658,
+      "cache_read": 12220052,
+      "cache_write": 360502,
+      "thinking": null
+    },
+    "substitutes": [],
+    "wall_seconds": 2597.83,
+    "denied_calls": 5,
+    "utilization_start": [
+      {
+        "window": "five_hour",
+        "utilization": 0.36
+      },
+      {
+        "window": "seven_day",
+        "utilization": 0.41
+      }
+    ],
+    "utilization_end": [
+      {
+        "window": "five_hour",
+        "utilization": 0.01
+      },
+      {
+        "window": "seven_day",
+        "utilization": 0.42
+      }
+    ],
+    "contamination": [],
+    "model_mismatch": []
+  }
+}

@@ -1,5 +1,5 @@
-"""다시 풀기 회차의 게이트와 숨은 시험. 결과 커밋을 클론에서 새 작업 트리로 꺼내 준비한 뒤 게이트
-셋을 돌고, 같은 작업 트리에 M의 숨은 시험 파일과 시험 지원 파일을 덮어 숨은 시험의 노드만 돌린다.
+"""다시 풀기 회차의 게이트와 숨은 시험. 결과 커밋을 클론에서 새 작업 트리로 꺼내 준비한 뒤 게이트를
+돌고, 같은 작업 트리에 M의 숨은 시험 파일과 시험 지원 파일을 덮어 숨은 시험의 노드만 돌린다.
 
 명세는 `.scratch/model-rerun/spec.md`의 "게이트와 숨은 시험"과 "클론과 설정 폴더"의 회차 폴더
 2026-10-22 주석이고, 티켓은 `.scratch/model-rerun/issues/07-gates-and-official-cost.md`다. 회차의
@@ -14,11 +14,12 @@
    들지 않는다(스토리 34).
 3. 그 작업 트리에서 04의 준비(`tools/rerun_round.py`의 `run_setup`)를 돈다. 실패하면 게이트와 숨은
    시험을 돌지 않고, 실패한 명령과 끝난 꼴을 `SetupFailure`로 옮긴다(`setup_failure_of`).
-4. 게이트 셋을 차례로 돈다. 앞 게이트가 실패해도 셋을 다 돈다. 셋이 함께 쓰는 몫(`Limits.gates`)
-   하나를 두고 게이트마다 남은 몫을 시간 제한으로 준다. 넘긴 게이트는 프로세스 트리째 끄고 시간
-   넘김으로 적는다. 몫이 남지 않아 돌지 않은 게이트, 찾지 못했거나 띄우지 못한 게이트, 작업 트리
-   자리가 링크로 바뀌어 띄우지 않은 게이트는 종료 코드도 시간 넘김도 없다. 링크인 자리에서 띄우면
-   결과 커밋이 아니라 그 링크가 가리키는 바깥에서 돈다.
+4. 받은 게이트를 차례로 돈다. 앞 게이트가 실패해도 다 돈다. 게이트는 대개 셋(`GATE_ARGV`)이고,
+   러너는 B 에 게이트 러너가 없는 과제(`has_gate_file`)에 옛 여섯(`OLD_GATE_ARGV`)을 준다. 모두가
+   함께 쓰는 몫(`Limits.gates`) 하나를 두고 게이트마다 남은 몫을 시간 제한으로 준다. 넘긴 게이트는
+   프로세스 트리째 끄고 시간 넘김으로 적는다. 몫이 남지 않아 돌지 않은 게이트, 찾지 못했거나 띄우지
+   못한 게이트, 작업 트리 자리가 링크로 바뀌어 띄우지 않은 게이트는 종료 코드도 시간 넘김도 없다.
+   링크인 자리에서 띄우면 결과 커밋이 아니라 그 링크가 가리키는 바깥에서 돈다.
 5. 게이트가 모두 0으로 끝났을 때만 숨은 시험을 돈다. 판정(`tools/rerun_judge.py`의 `solved`)이
    게이트 초록을 먼저 요구해, 게이트가 초록이 아닌 회차의 숨은 시험은 판정에 쓰이지 않는다. 노드가
    없는 과제면 돌지 않고 0개로 센다. 노드 없이 띄운 pytest는 결과 커밋의 시험 전체를 돈다. 1에서
@@ -50,8 +51,10 @@ UTF-8로 읽히지 않거나 풀리지 않는 것은 실패다. XML은 세션의
 `tools.run_hooks.REPO_LOCATION_VARS`와 `VIRTUAL_ENV`를 벗긴다. git에는 `GIT_TERMINAL_PROMPT=0`을
 더한다. 결과 커밋과 클론의 `.git`은 세션이 쓴 것이라 그 안의 코드(게이트 스크립트, git 훅과 필터,
 `conftest.py`)가 이 환경으로 돈다. 그래서 러너의 전체 환경이 아니라 세션과 같은 허용 목록의 환경
-(`tools/rerun_round.py`의 `session_env`)을 넘기는 것이 부르는 쪽의 몫이다. 하위 프로세스마다 시간
-제한이 있다.
+(`tools/rerun_round.py`의 `session_env`)을 넘기는 것이 부르는 쪽의 몫이다. 그 위에 B 설정의
+`env`(`settings_env`)를 얹는다. 원래 세션의 pre-commit 은 Claude Code 가 그 값을 넣은 Bash 에서
+돌았고, 얹지 않은 파일럿 첫 실행의 게이트는 `PYTHONUTF8` 없이 돌아 빨갰다(일지 2026-10-28-10).
+하위 프로세스마다 시간 제한이 있다.
 
 못 보는 것.
 - 노드 ID로 돌린 pytest는 한 파일을 모으지 못하면 실행 전체를 종료 4로 멈추고 junit에 그 파일의
@@ -78,6 +81,7 @@ UTF-8로 읽히지 않거나 풀리지 않는 것은 실패다. XML은 세션의
 from __future__ import annotations
 
 import enum
+import json
 import os
 import re
 import shutil
@@ -92,8 +96,11 @@ from typing import IO
 
 from tools.rerun_files import (
     GATE_COMMANDS,
+    GATE_FILE,
+    OLD_GATE_COMMANDS,
     Gate,
     Hidden,
+    Json,
     SetupFailure,
     Task,
     hidden_test_files,
@@ -114,6 +121,8 @@ from tools.tidy_checkouts import cut_links
 # 게이트의 인자 목록. 명세 "게이트와 숨은 시험"의 셋이고 글은 `tools/rerun_files.py`의
 # `GATE_COMMANDS`다.
 GATE_ARGV: tuple[tuple[str, ...], ...] = tuple(tuple(c.split(" ")) for c in GATE_COMMANDS)
+# B 에 게이트 러너(`GATE_FILE`)가 없는 과제의 게이트. 글은 `OLD_GATE_COMMANDS`다.
+OLD_GATE_ARGV: tuple[tuple[str, ...], ...] = tuple(tuple(c.split(" ")) for c in OLD_GATE_COMMANDS)
 # 숨은 시험의 pytest. 러너 체크아웃의 `.venv`는 `agent_os`를 러너의 `src/`에 묶어, 그 파이썬으로
 # 돌면 덮은 시험이 러너의 코드로 돈다(`tools/rerun_hidden.py`의 모듈 독스트링).
 PYTEST_ARGV = ("uv", "run", "pytest")
@@ -135,9 +144,22 @@ class Limits:
     """시간 제한(초)."""
 
     setup: float = SETUP_TIMEOUT  # 준비 명령 하나
-    gates: float = 1800.0  # 게이트 셋이 함께 쓰는 몫(명세 "게이트와 숨은 시험")
+    gates: float = 1800.0  # 게이트가 모두 함께 쓰는 몫(명세 "게이트와 숨은 시험")
     hidden: float = 600.0  # 숨은 시험의 pytest(같은 절)
     git: float = GIT_TIMEOUT  # git 하나
+
+
+# 사전 등록 절과 대 보는 값(`tools/rerun_files.py`의 `prereg_line`). 기본 시간 제한이다.
+PREREG_VALUES: dict[str, Json] = {
+    "LIMITS": {
+        "setup": Limits().setup,
+        "gates": Limits().gates,
+        "hidden": Limits().hidden,
+        "git": Limits().git,
+    },
+    "PYTEST_ARGV": [*PYTEST_ARGV],
+    "BAD_CHILDREN": [*sorted(_BAD_CHILDREN)],
+}
 
 
 class GateError(RuntimeError):
@@ -336,13 +358,86 @@ class _Git:
         return Registration.ABSENT
 
 
+def _git_of(env: Mapping[str, str], timeout: float) -> tuple[dict[str, str], _Git]:
+    """넘긴 환경에서 저장소 변수를 벗긴 환경과 그 PATH 의 git. git 이 없으면 `GateError`다."""
+    clean = _clean_env(env)
+    exe = shutil.which("git", path=clean.get("PATH"))
+    if exe is None:
+        raise GateError("넘긴 환경의 PATH 에서 git 을 찾지 못했다")
+    return clean, _Git(exe, {**clean, "GIT_TERMINAL_PROMPT": "0"}, timeout)
+
+
+def _is_blob_at(line: str, rel: str) -> bool:
+    """`git ls-tree`의 한 줄(`<모드> <형> <해시>\\t<경로>`)이 `rel`의 blob 인지. 폴더는 tree 다."""
+    head, _, path = line.partition("\t")
+    return head.split(" ")[1:2] == ["blob"] and path == rel
+
+
+SETTINGS_FILE = ".claude/settings.json"
+
+
+def settings_env(
+    source: Path, base: str, env: Mapping[str, str], *, timeout: float = GIT_TIMEOUT
+) -> dict[str, str]:
+    """원본 저장소 `source`의 커밋 `base`(과제의 B)에 든 `SETTINGS_FILE`의 `env` 가운데 값이 글인
+    것.
+
+    원래 세션의 pre-commit 은 Claude Code 가 이 값을 넣은 Bash 에서 돌았으므로 게이트도 이 값으로
+    돈다. 결과 커밋이 아니라 B 에서 읽어 세션이 설정을 고쳐도 같다. 파일이 없거나 `env`가 객체가
+    아니면 빈 값이다. `base`가 40자 커밋 해시가 아니거나 git 이 실패하거나 JSON 으로 풀리지 않으면
+    `GateError`다.
+    """
+    git, found_file = _blob_in_base(source, base, SETTINGS_FILE, env, timeout)
+    if not found_file:
+        return {}
+    raw = git.read(source, ["cat-file", "blob", f"{base}:{SETTINGS_FILE}"])
+    try:
+        data = _parse_json(raw.decode("utf-8"))
+    except (UnicodeDecodeError, ValueError, RecursionError) as e:
+        raise GateError(f"B 의 {SETTINGS_FILE} 를 풀지 못했다: {e}") from e
+    found = data.get("env") if isinstance(data, dict) else None
+    if not isinstance(found, dict):
+        return {}
+    return {k: v for k, v in found.items() if isinstance(v, str)}
+
+
+def _parse_json(text: str) -> Json:
+    # `json.loads`의 반환형은 Any라 `Json`으로 받아 뒤의 좁히기가 타입 검사를 지나게 한다.
+    return json.loads(text)
+
+
+def has_gate_file(
+    source: Path, base: str, env: Mapping[str, str], *, timeout: float = GIT_TIMEOUT
+) -> bool:
+    """원본 저장소 `source`의 커밋 `base`(과제의 B)에 게이트 러너(`GATE_FILE`) 파일이 있는지.
+
+    러너가 어느 게이트 묶음을 돌지 가른다. 결과 커밋이 아니라 B 로 가르므로, 세션이 그 파일을
+    지우거나 더해도 묶음은 바뀌지 않는다. 같은 이름의 폴더는 파일이 아니다. 같은 이름의 심볼릭
+    링크는 형이 blob 이라 파일로 센다. `base`가 40자 커밋 해시가 아니거나 git 이 실패하면
+    `GateError`다.
+    """
+    return _blob_in_base(source, base, GATE_FILE, env, timeout)[1]
+
+
+def _blob_in_base(
+    source: Path, base: str, rel: str, env: Mapping[str, str], timeout: float
+) -> tuple[_Git, bool]:
+    """넘긴 환경의 git 과, 원본 저장소 `source`의 커밋 `base`에 `rel`의 blob 이 있는지.
+    `base`가 40자 커밋 해시가 아니거나 git 이 실패하면 `GateError`다."""
+    if not _COMMIT.fullmatch(base):
+        raise GateError(f"B 가 40자 커밋 해시가 아니다: {base!r}")
+    _, git = _git_of(env, timeout)
+    out = git.read(source, ["ls-tree", base, "--", rel]).decode("utf-8", "replace")
+    return git, any(_is_blob_at(line, rel) for line in out.splitlines())
+
+
 # --- 한 회차 ---
 
 
 def _gates(
     worktree: Path, gates: Sequence[Sequence[str]], env: Mapping[str, str], log: Path, budget: float
 ) -> tuple[Gate, ...]:
-    """게이트를 차례로 돈다. 셋이 몫 `budget` 하나를 함께 쓰고, 게이트마다 남은 몫을 받는다."""
+    """게이트를 차례로 돈다. 모두가 몫 `budget` 하나를 함께 쓰고, 게이트마다 남은 몫을 받는다."""
     deadline = time.monotonic() + budget
     done: list[Gate] = []
     for argv in gates:
@@ -487,19 +582,19 @@ def check_result(
     pytest: Sequence[str] = PYTEST_ARGV,
     limits: Limits = Limits(),  # noqa: B008  # 얼린 데이터클래스라 공유해도 바뀌지 않는다
 ) -> Checked:
-    """회차 `place`의 결과 커밋 `commit`으로 게이트 셋과 `task`의 숨은 시험을 돈다.
+    """회차 `place`의 결과 커밋 `commit`으로 게이트 `gates`와 `task`의 숨은 시험을 돈다.
 
     `source`는 M을 담은 원본 저장소다. 작업 트리를 걷지 못하는 등 결과와 별개로 사람이 알아야 할
-    일은 `out`으로 알린다. 결과 작업 트리를 짓지 못하면 `GateError`다. 회차 폴더에 로그를 쓰지
+    일은 `out`으로 알린다. 결과 작업 트리를 짓지 못하거나 B 의 설정을 풀지 못하면(`settings_env`)
+    `GateError`다. B 설정의 `env`는 거르지 않고 얹으므로, 거기 `PATH`가 있으면 넘긴 환경의 `PATH`를
+    덮는다(못 보는 것. 2026-10-27 에 `git log --all -S'"PATH"' -- .claude/settings.json`이 빈
+    것을 손으로 봤다). 회차 폴더에 로그를 쓰지
     못하면 `OSError`가 그대로 오른다.
     """
     if not _COMMIT.fullmatch(commit):
         raise GateError(f"결과 커밋이 40자 커밋 해시가 아니다: {commit!r}")
-    clean = _clean_env(env)
-    exe = shutil.which("git", path=clean.get("PATH"))
-    if exe is None:
-        raise GateError("넘긴 환경의 PATH 에서 git 을 찾지 못했다")
-    git = _Git(exe, {**clean, "GIT_TERMINAL_PROMPT": "0"}, limits.git)
+    env = {**env, **settings_env(source, task.base, env, timeout=limits.git)}
+    clean, git = _git_of(env, limits.git)
     files = dict.fromkeys((*hidden_test_files(task), *task.support_files))
     blobs = {rel: git.read(source, ["cat-file", "blob", f"{task.merge}:{rel}"]) for rel in files}
     worktree = place.path / _WORKTREE

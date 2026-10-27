@@ -1,0 +1,15 @@
+  알림: 게이트 작업 트리를 다 걷지 못했다: C:\Users\User\rerun-regate\conversation-02-A-1-4b0256ae\gate(git worktree remove 가 255로 끝났다(출력은 C:\Users\User\rerun-regate\conversation-02-A-1-4b0256ae\gate-git.log)). 그 자리를 쥔 프로세스가 끝난 뒤 git -C C:\Users\User\rerun-regate\conversation-02-A-1-4b0256ae\clone worktree remove --force C:\Users\User\rerun-regate\conversation-02-A-1-4b0256ae\gate 로 걷는다(등록이 없으면 폴더만 지운다)
+conversation-02-A-1 conversation-02-A-1-4b0256ae
+  준비 실패: None
+  게이트: [('check .', 0, False), ('--check .', 0, False), ('pytest -q', 0, False), ('run pyright', 0, False), ('run lint-imports', 0, False), ('web verify', 0, False)]
+  숨은 시험: Hidden(passed=9, total=10, failed=('tests/core/test_run.py::test_자기_요약_이벤트의_자리나_개수가_어긋난_재개는_결정을_쓰기_전에_PluginError다[\\uc55e \\uc2e4\\ud589 \\uc5c6\\uc74c]',))
+  알림: 게이트 작업 트리를 다 걷지 못했다: C:\Users\User\rerun-regate\end-user-continuation-02-A-1-92ce0075\gate(git worktree remove 가 255로 끝났다(출력은 C:\Users\User\rerun-regate\end-user-continuation-02-A-1-92ce0075\gate-git.log)). 그 자리를 쥔 프로세스가 끝난 뒤 git -C C:\Users\User\rerun-regate\end-user-continuation-02-A-1-92ce0075\clone worktree remove --force C:\Users\User\rerun-regate\end-user-continuation-02-A-1-92ce0075\gate 로 걷는다(등록이 없으면 폴더만 지운다)
+end-user-continuation-02-A-1 end-user-continuation-02-A-1-92ce0075
+  준비 실패: None
+  게이트: [('check .', 0, False), ('--check .', 0, False), ('python tools/run_checks.py', 0, False)]
+  숨은 시험: Hidden(passed=63, total=65, failed=('tests/core/test_run.py::test_연결_안에서_에이전트_자리_밖의_런타임_예외는_그_밖이고_결말이_남는다', 'tests/core/test_run.py::test_런타임이_에이전트_자리에서_던진_실패는_정리_코드를_기다리다_기한이_와도_결말이다'))
+  알림: 게이트 작업 트리를 다 걷지 못했다: C:\Users\User\rerun-regate\end-user-continuation-02-A-2-82f64632\gate(git worktree remove 가 255로 끝났다(출력은 C:\Users\User\rerun-regate\end-user-continuation-02-A-2-82f64632\gate-git.log)). 그 자리를 쥔 프로세스가 끝난 뒤 git -C C:\Users\User\rerun-regate\end-user-continuation-02-A-2-82f64632\clone worktree remove --force C:\Users\User\rerun-regate\end-user-continuation-02-A-2-82f64632\gate 로 걷는다(등록이 없으면 폴더만 지운다)
+end-user-continuation-02-A-2 end-user-continuation-02-A-2-82f64632
+  준비 실패: None
+  게이트: [('check .', 0, False), ('--check .', 0, False), ('python tools/run_checks.py', 0, False)]
+  숨은 시험: Hidden(passed=63, total=65, failed=('tests/core/test_run.py::test_연결_안에서_에이전트_자리_밖의_런타임_예외는_그_밖이고_결말이_남는다', 'tests/core/test_run.py::test_런타임이_에이전트_자리에서_던진_실패는_정리_코드를_기다리다_기한이_와도_결말이다'))

@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import math
 import os
 import subprocess
 import sys
@@ -26,8 +27,10 @@ from tools.rerun_files import (
     END_DONE,
     END_NOT_MEASURED,
     GATE_COMMANDS,
+    GATE_FILE,
     LIST_MAIN,
     LIST_PILOT,
+    OLD_GATE_COMMANDS,
     TIER_PILOT,
     TIER_SMALL,
     End,
@@ -39,13 +42,14 @@ from tools.rerun_files import (
     Task,
     TaskList,
     Tokens,
+    judge_view,
     read_record,
     write_record,
     write_task_list,
 )
 from tools.rerun_gates import GateError, Limits
 from tools.rerun_judge import PREREG_END, PREREG_START
-from tools.rerun_round import ROOT, create_round_dir, main_checkout
+from tools.rerun_round import ROOT, create_round_dir, main_checkout, rule_path
 from tools.rerun_runner import (
     ARM_RATIOS,
     CONDITION_VERSION,
@@ -67,6 +71,7 @@ from tools import rerun_cost, rerun_runner
 GIT_TIMEOUT = 60
 TICKET = ".scratch/rerun-x/issues/03-thing.md"
 OPUS = "claude-opus-5-5"
+SONNET = "claude-sonnet-5-5"
 NOW = 1_000_000.0  # 가짜 시계의 처음(유닉스 초)
 
 
@@ -94,21 +99,30 @@ def _커밋(repo: Path, files: dict[str, str], message: str) -> str:
     return _git(repo, "rev-parse", "HEAD")
 
 
-@pytest.fixture(scope="module")
-def 원본(tmp_path_factory: pytest.TempPathFactory) -> tuple[Path, str, str]:
-    repo = tmp_path_factory.mktemp("원본")
+def _원본_짓기(repo: Path, *, gate_file: bool) -> tuple[Path, str, str]:
+    """B 와 M 의 원본. `gate_file`이면 B 에 게이트 러너(`GATE_FILE`)를 둔다."""
     _git(repo, "init", "-q", "-b", "main")
-    base = _커밋(
-        repo,
-        {
-            TICKET: "# 03: 그것을 짓는다\n\n**Status:** ready-for-agent\n",
-            "pytest.ini": "[pytest]\n",
-            "tests/test_old.py": "def test_old():\n    assert True\n",
-        },
-        "B",
-    )
+    files = {
+        TICKET: "# 03: 그것을 짓는다\n\n**Status:** ready-for-agent\n",
+        "pytest.ini": "[pytest]\n",
+        "tests/test_old.py": "def test_old():\n    assert True\n",
+    }
+    if gate_file:
+        files[GATE_FILE] = ""
+    base = _커밋(repo, files, "B")
     merge = _커밋(repo, {"tests/test_new.py": "def test_new():\n    assert True\n"}, "M")
     return repo, base, merge
+
+
+@pytest.fixture(scope="module")
+def 원본(tmp_path_factory: pytest.TempPathFactory) -> tuple[Path, str, str]:
+    return _원본_짓기(tmp_path_factory.mktemp("원본"), gate_file=True)
+
+
+@pytest.fixture(scope="module")
+def 옛_원본(tmp_path_factory: pytest.TempPathFactory) -> tuple[Path, str, str]:
+    """B 에 게이트 러너가 없던 때(2026-10-07 #160 앞)의 과제."""
+    return _원본_짓기(tmp_path_factory.mktemp("옛_원본"), gate_file=False)
 
 
 def _과제(
@@ -254,6 +268,7 @@ class 판:
     readme_text: str = f"머리\n{PREREG_START}\n정의\n{PREREG_END}\n"
     expected: str | None = None  # 빈 값이면 README 절의 해시
     gates: Sequence[Sequence[str]] = (FAIL, PASS, PASS)  # 숨은 시험을 건너뛰어 빠르다
+    old_gates: Sequence[Sequence[str]] = (FAIL, PASS, PASS, PASS, PASS, PASS)
     setup: Sequence[Sequence[str]] = (PASS, PASS, PASS)
     clock: 시계 = field(default_factory=시계)
     lines: list[str] = field(default_factory=list[str])
@@ -305,6 +320,7 @@ class 판:
             read_command_line=self.read_command_line,
             setup=tuple(tuple(c) for c in self.setup),
             gates=tuple(tuple(c) for c in self.gates),
+            old_gates=tuple(tuple(c) for c in self.old_gates),
             pytest=(sys.executable, "-m", "pytest"),
             limits=Limits(setup=120, gates=120, hidden=120, git=120),
             home=self.tmp / "집",
@@ -382,6 +398,7 @@ def _기록(
         spend=Spend(
             claude_code_usd=cost,
             official_usd=cost,
+            other_usd=0.0,
             tokens=ZERO,
             substitutes=(),
             wall_seconds=1.0,
@@ -428,9 +445,9 @@ def test_같은_판에서_끝난_회차는_건너뛰고_측정_아님은_다시_
 ) -> None:
     task = _과제(1, 원본, arms=("A", "B", "C"))
     records = [
-        _기록(task, "A", 1),
-        _기록(task, "B", 1, end=_측정_아님("설정")),
-        _기록(task, "C", 1, end=End(END_CAPPED, "시간", None)),  # 상한도 끝난 회차다
+        _기록(task, "A", 1, version=1),
+        _기록(task, "B", 1, end=_측정_아님("설정"), version=1),
+        _기록(task, "C", 1, end=End(END_CAPPED, "시간", None), version=1),  # 상한도 끝난 회차다
     ]
     assert plan_task(task, records, condition=1, rerun=False) == Plan(("B",))
 
@@ -439,8 +456,10 @@ def test_같은_갈래가_두_번_든_파일럿은_기록_수로_남은_회차�
     원본: tuple[Path, str, str],
 ) -> None:
     task = _과제(1, 원본, arms=("A", "A"), pilot=True)
-    assert plan_task(task, [_기록(task, "A", 1)], condition=1, rerun=False) == Plan(("A",))
-    both = [_기록(task, "A", 1), _기록(task, "A", 2)]
+    assert plan_task(task, [_기록(task, "A", 1, version=1)], condition=1, rerun=False) == Plan(
+        ("A",)
+    )
+    both = [_기록(task, "A", 1, version=1), _기록(task, "A", 2, version=1)]
     assert plan_task(task, both, condition=1, rerun=False) == Plan(())
 
 
@@ -458,14 +477,14 @@ def test_낮은_판에서_다_마친_과제는_id_가_없으면_다시_돌지_�
     원본: tuple[Path, str, str],
 ) -> None:
     task = _과제(1, 원본, arms=("A",))
-    assert plan_task(task, [_기록(task, "A", 1)], condition=2, rerun=False) == Plan(())
+    assert plan_task(task, [_기록(task, "A", 1, version=1)], condition=2, rerun=False) == Plan(())
 
 
 def test_id_를_준_과제는_낮은_판에서_다_마쳤어도_올린_판에서_돈다(
     원본: tuple[Path, str, str],
 ) -> None:
     task = _과제(1, 원본, arms=("A", "B"))
-    old = [_기록(task, "A", 1), _기록(task, "B", 1)]
+    old = [_기록(task, "A", 1, version=1), _기록(task, "B", 1, version=1)]
     assert plan_task(task, old, condition=2, rerun=True) == Plan(("A", "B"))
     # 같은 명령을 다시 치면 올린 판에서 끝난 회차는 건너뛴다
     again = [*old, _기록(task, "A", 2, version=2)]
@@ -474,14 +493,14 @@ def test_id_를_준_과제는_낮은_판에서_다_마쳤어도_올린_판에서
 
 def test_판을_올리지_않고_준_id_는_회차를_늘리지_않는다(원본: tuple[Path, str, str]) -> None:
     task = _과제(1, 원본, arms=("A",))
-    assert plan_task(task, [_기록(task, "A", 1)], condition=1, rerun=True) == Plan(())
+    assert plan_task(task, [_기록(task, "A", 1, version=1)], condition=1, rerun=True) == Plan(())
 
 
 def test_낮은_판에서_다_마치지_못한_과제를_id_없이_판을_올리면_멈추고_id_를_낸다(
     원본: tuple[Path, str, str],
 ) -> None:
     task = _과제(1, 원본, arms=("A", "B"))
-    got = plan_task(task, [_기록(task, "A", 1)], condition=2, rerun=False)
+    got = plan_task(task, [_기록(task, "A", 1, version=1)], condition=2, rerun=False)
     assert isinstance(got, Halt)
     assert task.task_id in got.why
 
@@ -489,7 +508,7 @@ def test_낮은_판에서_다_마치지_못한_과제를_id_없이_판을_올리
 def test_오염의_둘째는_같은_조건_판의_기록에서만_센다(원본: tuple[Path, str, str]) -> None:
     task = _과제(1, 원본, arms=("A", "B"))
     dirty = _측정_아님("오염")
-    twice = [_기록(task, "A", 1, end=dirty), _기록(task, "A", 2, end=dirty)]
+    twice = [_기록(task, "A", 1, end=dirty, version=1), _기록(task, "A", 2, end=dirty, version=1)]
     assert plan_task(task, twice, condition=1, rerun=False) == Plan(())  # 그 판에서 뺐다
     mixed = [_기록(task, "A", 1, end=dirty, version=1), _기록(task, "A", 2, end=dirty, version=2)]
     assert plan_task(task, mixed, condition=2, rerun=True) == Plan(("A", "B"))
@@ -517,6 +536,56 @@ def test_끝남인_회차는_게이트와_숨은_시험을_돌고_기록에_정�
     assert rec.account == "njh6803" and rec.claude_version == "2.1.302 (Claude Code)"
 
 
+def test_회차의_막는_규칙은_뿌리_바로_아래의_편집과_쓰기를_막는다(
+    판짜기: Callable[..., 판], 원본: tuple[Path, str, str]
+) -> None:
+    """파일럿 판 2의 한 회차가 뿌리에 임시 파일을 써 오염으로 버려졌다(일지 2026-10-28-10)."""
+    task = _과제(1, 원본, arms=("A",))
+    board = 판짜기([task], gates=(PASS, PASS, PASS))
+    board.script({_key(task, "A", 1): [_끝남(task, 2.5)]})
+    assert board.run() == 0
+    (rec,) = board.saved()
+    settings = board.root / rec.round_dir_name / "deny-settings.json"
+    deny = json.loads(settings.read_text("utf-8"))["permissions"]["deny"]
+    where = rule_path(Path(os.path.abspath(board.root)))
+    assert f"Write({where}/*.*)" in deny and f"Edit({where}/*.*)" in deny
+
+
+def test_B에_게이트_러너가_없는_과제는_옛_게이트_묶음을_돌고_그_이름으로_적는다(
+    tmp_path: Path, 옛_원본: tuple[Path, str, str]
+) -> None:
+    task = _과제(1, 옛_원본, arms=("A",))
+    board = 판(tmp_path, 옛_원본[0], [task], old_gates=(PASS,) * 6)
+    board.script({_key(task, "A", 1): [_끝남(task, 2.5)]})
+    assert board.run() == 0, board.lines
+    (rec,) = board.saved()
+    assert rec.end.kind == END_DONE
+    assert rec.outcome.gates is not None
+    assert [g.command for g in rec.outcome.gates] == list(OLD_GATE_COMMANDS)
+    assert [g.exit_code for g in rec.outcome.gates] == [0] * 6
+    assert rec.outcome.hidden is not None and rec.outcome.hidden.passed == 1
+
+
+def test_옛_게이트_묶음이_실패하면_숨은_시험을_돌지_않는다(
+    tmp_path: Path, 옛_원본: tuple[Path, str, str]
+) -> None:
+    task = _과제(1, 옛_원본, arms=("A",))
+    # 새 묶음은 모두 통과라, 새 묶음을 돌면 숨은 시험이 돈다
+    board = 판(tmp_path, 옛_원본[0], [task], gates=(PASS, PASS, PASS))
+    board.script({_key(task, "A", 1): [_끝남(task, 2.5)]})
+    assert board.run() == 0
+    (rec,) = board.saved()
+    assert rec.outcome.gates is not None
+    assert [g.exit_code for g in rec.outcome.gates] == [1, 0, 0, 0, 0, 0]
+    assert rec.outcome.hidden is None
+
+
+def test_옛_게이트_명령의_수가_정해진_수와_다르면_거부한다() -> None:
+    with pytest.raises(ValueError, match="게이트"):
+        World(old_gates=(PASS, PASS, PASS))
+    assert len(World().old_gates) == len(OLD_GATE_COMMANDS)
+
+
 def test_끝남이_아닌_회차는_게이트를_돌지_않고_공식_단가는_모든_회차에서_셈한다(
     판짜기: Callable[..., 판], 원본: tuple[Path, str, str]
 ) -> None:
@@ -529,6 +598,31 @@ def test_끝남이_아닌_회차는_게이트를_돌지_않고_공식_단가는_
     assert (rec.end.kind, rec.end.reason) == (END_CAPPED, "예산")
     assert rec.outcome.gates is None and rec.outcome.hidden is None
     assert rec.spend.official_usd > 0
+
+
+def test_같은_프로젝트_폴더에_남은_다른_세션의_공식_단가를_회차_비용에_더한다(
+    판짜기: Callable[..., 판], 원본: tuple[Path, str, str]
+) -> None:
+    """과제의 시험이 띄운 하위 `claude -p` 세션(파일럿 end-user-continuation-02)의 몫이다. 사람이
+    회차 비용에 더하기로 했다(일지 2026-10-28-10 "설계 8절 확인과 사람 결정")."""
+    task = _과제(1, 원본, arms=("A",))
+    board = 판짜기([task])
+    done = fake.call(
+        [fake.init_event(), fake.result_event(1.0, "다 했다")],
+        main=[_응답줄()],
+        others={"child-1": [_응답줄(SONNET, None)], "child-2": [_응답줄(SONNET, None)]},
+        git=[["switch", "-c", task.branch], ["commit", "--allow-empty", "-m", "풀었다"]],
+    )
+    board.script({_key(task, "A", 1): [done]})
+    assert board.run() == 0
+    (rec,) = board.saved()
+    child = (1000 * 2.0 + 2000 * 10.0) / 1e6  # Sonnet 5.5 입력 1000, 출력 2000
+    assert math.isclose(rec.spend.other_usd, 2 * child, rel_tol=1e-12)
+    # 회차의 세션 비용 칸과 공식 단가 셈에는 들지 않고, 판정이 읽는 두 비용에 더해진다
+    assert rec.spend.claude_code_usd == 1.0
+    view = judge_view(rec)
+    assert math.isclose(view.cost_claude_code_usd, 1.0 + 2 * child, rel_tol=1e-12)
+    assert math.isclose(view.cost_official_usd, rec.spend.official_usd + 2 * child, rel_tol=1e-12)
 
 
 def test_동시에_둘까지_돌고_셋째는_자리가_빌_때_연다(
@@ -1018,6 +1112,39 @@ def test_게이트를_돌지_못하면_측정_아님_준비로_적고_멈춘다(
     assert any("게이트를 돌지 못했다" in line for line in board.lines)
 
 
+def test_B의_게이트_묶음을_가르지_못하면_측정_아님_준비로_적고_멈춘다(
+    판짜기: Callable[..., 판], 원본: tuple[Path, str, str], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    task = _과제(1, 원본, arms=("A",))
+    after = _과제(2, 원본, arms=("A",))
+    board = 판짜기([task, after])
+
+    def broken(*_args: object, **_kw: object) -> object:
+        raise GateError("B 를 읽지 못했다")
+
+    monkeypatch.setattr(rerun_runner, "has_gate_file", broken)
+    board.script({_key(task, "A", 1): [_끝남(task)], _key(after, "A", 1): [_끝남(after)]})
+    assert board.run() == 1
+    assert _ends(board.saved()) == [("A", 1, END_NOT_MEASURED, "준비")]
+    assert any("게이트를 돌지 못했다" in line for line in board.lines)
+
+
+def test_결과_커밋이_게이트_러너를_지워도_B로_고른_묶음을_돈다(
+    판짜기: Callable[..., 판], 원본: tuple[Path, str, str]
+) -> None:
+    task = _과제(1, 원본, arms=("A",))
+    board = 판짜기([task])
+    removing = fake.call(
+        [fake.init_event(), fake.result_event(1.0, "다 했다")],
+        git=[["switch", "-c", task.branch], ["rm", "-q", GATE_FILE], ["commit", "-m", "지웠다"]],
+    )
+    board.script({_key(task, "A", 1): [removing]})
+    assert board.run() == 0, board.lines
+    (rec,) = board.saved()
+    assert rec.outcome.gates is not None
+    assert [g.command for g in rec.outcome.gates] == list(GATE_COMMANDS)
+
+
 def test_끄지_못하고_남긴_호출이_든_회차_뒤에_멈춘다(
     판짜기: Callable[..., 판], 원본: tuple[Path, str, str]
 ) -> None:
@@ -1149,6 +1276,31 @@ def test_맨_이름으로_준_claude_는_실제_경로로_풀어_넘긴다(
     (settings,) = seen
     (claude,) = settings.claude
     assert Path(claude).parent == bin_dir and Path(claude).name.lower() == exe.name
+
+
+def test_확장자_없는_판_이름의_경로로_준_claude_도_그_경로로_넘긴다(
+    tmp_path: Path, 원본: tuple[Path, str, str], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # 측정 기간의 판을 고정하려고 `versions/<판>`의 복사본을 준다(티켓 11). 윈도의 `shutil.which`는
+    # PATHEXT 의 확장자가 없는 파일을 실행 파일로 보지 않는다
+    tasks = tmp_path / "tasks.json"
+    write_task_list(tasks, TaskList(kind=LIST_PILOT, tasks=(_과제(1, 원본, pilot=True),)))
+    exe = tmp_path / "판" / "2.1.302"
+    exe.parent.mkdir()
+    exe.write_bytes(b"")
+    exe.chmod(0o755)
+    seen: list[Settings] = []
+
+    def capture(settings: Settings, _world: World) -> int:
+        seen.append(settings)
+        return EXIT_DONE
+
+    monkeypatch.setattr(rerun_runner, "run", capture)
+    argv = _인자(tmp_path, tasks, "--cap", "10")
+    argv[argv.index("--claude") + 1] = str(exe)
+    assert main(argv) == EXIT_DONE
+    (settings,) = seen
+    assert settings.claude == (str(exe),)
 
 
 def test_주_체크아웃_아래의_뿌리는_받지_않는다(

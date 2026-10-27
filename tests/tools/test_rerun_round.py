@@ -22,10 +22,12 @@ from tools.rerun_files import (
     End,
     Outcome,
     Record,
+    ShapeError,
     Spend,
     Tokens,
     read_record,
     record_file_name,
+    round_dir_name,
     write_record,
 )
 from tools.rerun_round import (
@@ -55,6 +57,7 @@ from tools.rerun_round import (
     main_checkout,
     prepare_round,
     remove_round_dirs,
+    root_heads,
     run_setup,
     session_env,
     unrecorded_round_dirs,
@@ -160,6 +163,7 @@ def _기록(dir_name: str, task_id: str = TASK, arm: str = "A", round_no: int = 
         spend=Spend(
             claude_code_usd=0.0,
             official_usd=0.0,
+            other_usd=0.0,
             tokens=zero,
             substitutes=(),
             wall_seconds=0.0,
@@ -557,21 +561,24 @@ def test_막는_규칙에_명세의_목록이_모두_든다() -> None:
     assert len(rules) == len(set(rules))
 
 
-def test_막는_규칙은_settings_local에_쓰고_B의_설정은_그대로_둔다(
+def test_막는_규칙은_회차_폴더의_파일에_쓰고_클론은_그대로_둔다(
     tmp_path: Path, 원본: tuple[Path, str, str]
 ) -> None:
+    """클론의 `settings.local.json`에 두면 B의 지침 검사가 주 체크아웃의 local 가드로 잡아, 세션의
+    pre-commit 과 게이트가 빨갰다(파일럿 첫 실행, 일지 2026-10-28-10)."""
     repo, b, m = 원본
     place = create_round_dir(tmp_path, TASK, "A", 1, token="r1")
     build_clone(repo, b, m, place)
     settings = place.clone / ".claude" / "settings.json"
     before = settings.read_bytes()
-    write_deny_rules(place.clone, ["Bash(gh:*)", "WebFetch"])
-    local = json.loads((place.clone / ".claude" / "settings.local.json").read_text("utf-8"))
-    assert local == {"permissions": {"deny": ["Bash(gh:*)", "WebFetch"]}}
+    write_deny_rules(place, ["Bash(gh:*)", "WebFetch"])
+    written = json.loads(place.deny_settings.read_text("utf-8"))
+    assert written == {"permissions": {"deny": ["Bash(gh:*)", "WebFetch"]}}
+    assert place.deny_settings.parent == place.path
+    assert not os.path.lexists(place.clone / ".claude" / "settings.local.json")
     assert settings.read_bytes() == before
-    # 사용자의 전역 무시 파일 없이도 세션의 `git status`에 보이지 않는다(클론의 info/exclude).
-    # HOME 을 바꾸면 전역 `core.autocrlf`까지 빠져 줄 끝 차이가 바뀐 파일로 보이므로 무시 파일만
-    # 덮는다.
+    # 사용자의 전역 무시 파일 없이도 세션의 `git status`가 비었다. HOME 을 바꾸면 전역
+    # `core.autocrlf`까지 빠져 줄 끝 차이가 바뀐 파일로 보이므로 무시 파일만 덮는다.
     empty = tmp_path / "빈무시"
     empty.write_text("", encoding="utf-8")
     status = subprocess.run(
@@ -596,23 +603,58 @@ def test_막는_규칙의_경로는_주_체크아웃과_사용자_claude의_두_
     assert len(heads) == len(set(heads))
 
 
+def test_뿌리_규칙은_바로_아래의_점이_든_이름만_편집과_쓰기를_막는다() -> None:
+    """`<뿌리>/*`는 회차 폴더에도 맞아 클론 쓰기까지 막았다(`deny_shapes/root_shape.py`)."""
+    rules = deny_rules(
+        (PureWindowsPath("C:/project/agent"),), roots=(PureWindowsPath("C:/Users/u/rounds"),)
+    )
+    root_rules = [r for r in rules if "rounds" in r]
+    assert root_rules == ["Edit(//c/Users/u/rounds/*.*)", "Write(//c/Users/u/rounds/*.*)"]
+    assert rules.index("Write(//c/project/agent/**)") < rules.index(root_rules[0])
+    assert rules[-len(BLOCKED_TOOLS) :] == list(BLOCKED_TOOLS)
+
+
+def test_회차_폴더_이름에는_점이_없어_뿌리_규칙에_맞지_않는다(tmp_path: Path) -> None:
+    """뿌리 규칙 `*.*`가 회차 폴더에 맞으면 그 안의 클론 쓰기가 막힌다."""
+    place = create_round_dir(tmp_path / "rounds", "end-user-continuation-03", "E", 12, token="ab9")
+    assert "." not in place.name
+    # 이름의 조각마다 점을 받지 않는다. 받게 바뀌면 `*.*`가 회차 폴더에 맞을 수 있다
+    for task_id, token in (("a.b-03", "ab9"), ("end-user-continuation-03", "a.b")):
+        with pytest.raises(ShapeError):
+            round_dir_name(task_id, "E", 1, token)
+
+
+def test_뿌리_꼴은_링크를_푼_꼴이_다르면_그것도_든다(tmp_path: Path) -> None:
+    real = tmp_path / "진짜뿌리"
+    real.mkdir()
+    _바깥_링크(tmp_path / "링크뿌리", real)
+    heads = root_heads(tmp_path / "링크뿌리")
+    assert heads[0] == Path(os.path.abspath(tmp_path / "링크뿌리"))
+    assert Path(os.path.realpath(real)) in heads
+    assert len(heads) == len(set(heads))
+
+
 def test_막는_규칙은_같은_뿌리의_다른_회차_폴더를_막지_않는다(tmp_path: Path) -> None:
     """못 보는 것: 함께 도는 갈래의 회차 폴더는 막는 규칙에 들지 않는다(09가 오염으로 볼지
     정한다)."""
     other = create_round_dir(tmp_path / "회차뿌리", TASK, "B", 1, token="y5")
-    rules = deny_rules(deny_heads(tmp_path / "agent", home=tmp_path / "home"))
-    assert [r for r in rules if "회차뿌리" in r or other.name in r] == []
+    rules = deny_rules(
+        deny_heads(tmp_path / "agent", home=tmp_path / "home"),
+        roots=root_heads(tmp_path / "회차뿌리"),
+    )
+    assert [r for r in rules if other.name in r] == []
+    # 뿌리에 걸린 규칙은 바로 아래 점이 든 이름의 편집·쓰기뿐이다(읽기는 막지 않는다)
+    assert {r.split("(", 1)[0] for r in rules if "회차뿌리" in r} == {"Edit", "Write"}
+    assert all(r.endswith("/*.*)") for r in rules if "회차뿌리" in r)
     assert any("agent" in r for r in rules)
 
 
-def test_이미_있는_settings_local은_덮지_않고_멈춘다(tmp_path: Path) -> None:
-    clone = tmp_path / "clone"
-    (clone / ".claude").mkdir(parents=True)
-    (clone / ".git" / "info").mkdir(parents=True)
-    (clone / ".claude" / "settings.local.json").write_text("{}\n", encoding="utf-8")
-    with pytest.raises(CloneError, match=r"settings\.local\.json"):
-        write_deny_rules(clone, ["WebFetch"])
-    assert (clone / ".claude" / "settings.local.json").read_text("utf-8") == "{}\n"
+def test_이미_있는_규칙_파일은_덮지_않고_멈춘다(tmp_path: Path) -> None:
+    place = create_round_dir(tmp_path, TASK, "A", 1, token="r2")
+    place.deny_settings.write_text("{}\n", encoding="utf-8")
+    with pytest.raises(CloneError, match=r"deny-settings\.json"):
+        write_deny_rules(place, ["WebFetch"])
+    assert place.deny_settings.read_text("utf-8") == "{}\n"
 
 
 # --- 준비 ---
@@ -760,8 +802,8 @@ def test_회차_준비는_클론과_막는_규칙과_준비를_차례로_한다(
     assert done.failed is None
     assert done.wall_clock_from - before >= 0.2
     assert (place.clone / "준비됨.txt").exists()
-    local = json.loads((place.clone / ".claude" / "settings.local.json").read_text("utf-8"))
-    assert local["permissions"]["deny"] == ["WebFetch"]
+    written = json.loads(place.deny_settings.read_text("utf-8"))
+    assert written["permissions"]["deny"] == ["WebFetch"]
     assert set(_refs(place.clone).values()) == {b}
 
 
@@ -834,6 +876,22 @@ def test_부모_환경의_가짜_gh_토큰은_넘어가지_않는다(
 
 def test_허용_목록에는_명세의_이름이_든다() -> None:
     assert {
+        "USERNAME",
+        "USERDOMAIN",
+        "COMPUTERNAME",
+        "NUMBER_OF_PROCESSORS",
+        "OS",
+        "PROCESSOR_ARCHITECTURE",
+        "PROCESSOR_IDENTIFIER",
+        "PROCESSOR_LEVEL",
+        "PROCESSOR_REVISION",
+        "ALLUSERSPROFILE",
+        "PUBLIC",
+        "CommonProgramFiles",
+        "CommonProgramFiles(x86)",
+        "CommonProgramW6432",
+        "ProgramW6432",
+        "PSModulePath",
         "PATH",
         "SYSTEMROOT",
         "USERPROFILE",
