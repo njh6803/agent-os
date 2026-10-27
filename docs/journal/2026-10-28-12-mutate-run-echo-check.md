@@ -48,6 +48,29 @@
 - `bug-perf-review`: 유효 0, Nit 둘, 오탐 0. 판정이 빠지는 길은 없다(`measure` 를 부르는 곳은 `_run_table` 하나, 서브에이전트가 코드를 읽고 새 시험 셋을 돌려 통과를 봤다). 밀 주장 둘은 모두 맞다고 냈다. 주장 A 는 서브에이전트가 스크래치 스크립트로 `git ls-files --cached --others --exclude-standard` 의 표 142개를 `read_spec`·`_echo_problems` 로 다시 세어 16개·161건을 봤다(새 표는 0건). 주장 B 는 `tools/mutate.py` 의 `expect == "red"` 이고 내장 러너면 `-x` 를 붙이는 코드를 읽어 맞췄고, 변이를 손으로 넣어 pytest 출력을 본 것은 아니다. `MARKER-B` 고침은 재던 것을 바꾸지 않는다고 코드 읽기로 판정했다.
 - Nit 둘은 고치지 않는다. 하나는 16개 표를 다시 전체로 돌릴 때 표지를 고쳐야 한다는 것이고 셈 절에 이미 적었다. 다른 하나는 "161건"이 표지 수가 아니라 (변이, 시험 파일) 쌍마다 한 줄인 `_echo_problems` 의 줄 수라는 것이다. 셈 절의 "메아리 161건"은 그 줄 수로 읽는다.
 
+## PR
+
+[#410](https://github.com/njh6803/agent-os/pull/410). 첫 헤드 `eabe1cab`.
+
+- CI: `web` 이 `apps/widget/components/pages/WidgetApproval.test.tsx` 의 "사유가 상한의 90% 이상이면 …" 시험 하나로 빨갰다(`Unable to find an element with the text: 18,000 / 20,000`, 1368 가운데 1 실패, `gh run view 40600551744 --log-failed` 를 손으로 봤다). 이 브랜치는 `web/` 을 건드리지 않았고, 같은 기점 `7d27ae45` 의 main 실행 40588159962 는 초록이었고, 이 커밋의 pre-commit `web-verify` 도 Passed 였다. 불안정한 시험으로 어림해 실패한 잡만 다시 돌렸다. 대기열 후보(회고가 판정한다): 그 위젯 시험이 CI 에서 한 번 빨갰다.
+- CodeRabbit: 한도(`Review limit reached`)로 리뷰 없음. 회차로 세지 않는다.
+- claude-review 첫 회차: Critical·Major 없음. Minor 하나(`_picked_problems` 의 이름과 독스트링이 "고른 변이"에 묶였는데 고르지 않은 전체 실행에도 쓰인다)는 독스트링을 넘겨받은 표 기준으로 고쳤다. 이름은 원문 확인과 메아리를 함께 보는 판정이라는 뜻이 독스트링에 있어 두었다. Nit 하나(모듈 독스트링 두 곳이 같은 사실을 적는다)는 지금 어긋나지 않아 두었다.
+
+## 회고
+
+후보 셋. 승인 1(회차로 세는 것), 기각 1, 일지에만 1. 넘김 0.
+
+- 위젯 승인 시험의 CI 빨강(위 PR 절): 열린 486이 처방한 사건이라 회차로 센다(승인). 486 에 더해 5회차다. 처방(재현 루프로 원인을 가른다)은 바꾸지 않는다.
+- 변이 표의 뒤 갈래 표지가 `-x` 때문에 출력에 없던 것(셀프 리뷰 표준 축 Major): 기각. 그 표를 돌리면 `tools/mutate.py` 가 표지가 출력에 없는 변이를 어긋남으로 알린다(도구의 판정, 코드를 읽었다). 이미 있는 검사가 그 자리에서 알리는 것이다.
+- 봇 회차 반영 커밋의 첫 시도에서 pre-commit pytest 가 네 시험으로 빨갰다(`test_probe_kit.py` 의 배출 제한 시간, `test_sibling_overlap.py` 둘, `test_tidy_checkouts.py` 의 `remove` 하나. 1103초, 출력에 `cannot spawn git: Function not implemented`). 넷만 따로 돌리니 모두 통과했다(205초, 손으로 쳤다). 아래 줄과 같은 까닭으로 일지에만 적는다.
+- `tests/tools/test_rerun_runner.py` 의 두 회차 시험이 부하 아래 pre-commit 에서 한 번 빨간 것(검증 절): 306 이 받아들여 닫은 끝이 열린 결함 종류(부하에서 빨간 시간 시험)의 새 사례라 행을 잇지 않고 일지에만 적는다.
+
+대기열 502 는 이 PR 의 티켓 경로로 닫았다. `tools/queue_open_rows.py` 의 만료할 행은 없었다(도구 출력).
+
+## 다음
+
+이 PR 이 든 주제(502)는 남지 않았다. 다음 작업은 `.scratch/plan.md` 의 프론티어에서 고른다. 486 이 5회차가 되었지만 chore 는 기능의 마지막 티켓 뒤에 연다(`next-session` 결정표).
+
 ## 커밋
 
 `bfc43aa1`. 두 번째 시도의 pre-commit 이 모두 Passed(pytest 720.5초, web-verify 696.6초). 헌법 판은 해당 파일이 없어 Skipped. 푸시는 아직 하지 않았다.

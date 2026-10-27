@@ -860,7 +860,8 @@ def _echo_problems(root: Path, spec: Spec, read: Reader = _read_disk) -> list[st
 
 
 def _picked_problems(root: Path, spec: Spec) -> list[str]:
-    """고른 변이(이름·번호·`--since` 로 고른 것, 돌릴 변이)의 원문 확인과 표지의 메아리."""
+    """넘겨받은 표의 원문 확인과 표지의 메아리. 고른 `--check` 에는 고른 변이가, 변이를
+    돌리는 실행에는 돌릴 변이(고르지 않은 전체 실행이면 표의 모두)가 든 표가 온다."""
     return _file_problems(root, spec) + _echo_problems(root, spec)
 
 
