@@ -1,4 +1,4 @@
-# 2026-10-27 (05) admin-style 명세 검토와 티켓
+# 2026-10-27 (09) admin-style 명세 검토와 티켓
 
 next-session 지시문으로 연 새 세션이다. 제목을 브랜치 이름 `docs/admin-style-to-tickets`로 바꾸고, 주 체크아웃이 미갱신이라 `tidy-checkouts`를 먼저 돌았다. 그 뒤 주 체크아웃에서 브랜치를 따지 않고 `EnterWorktree`(이름 `admin-style-to-tickets`)로 워크트리에 들어가 브랜치를 `docs/admin-style-to-tickets`로 바꿨다. `to-tickets` 스킬을 디스크의 `SKILL.md`로 읽어 따랐다.
 
@@ -84,8 +84,8 @@ spec-reviewer가 `007b3608`의 명세를 체크리스트 일곱과 질문 둘로
 시작 프롬프트: /to-tickets .scratch/admin-style/spec.md
 브랜치: docs/admin-style-to-tickets
 모델: Opus 5.5 / xhigh
-읽을 것: docs/journal/2026-10-27-05-admin-style-tickets.md
-이어받을 상태: 인계: 셀프 리뷰 직전. 커밋하지 않은 변경이 워크트리에 있고 셀프 리뷰(/code-review, 기점 origin/main)부터 한다. 명세 검토, 사용자 질문(넷 다 추천), 티켓 쓰기, plan.md 갱신은 끝났다. 명세 축의 원천은 명세와 일지의 "사용자가 고른 것"(고른 설명 넷과 함께 보인 표)이다. 남은 것은 반영, 일지 마무리, 커밋, PR 직전 리뷰, PR, 봇 회차, 병합, 다음 지시문이다. docs/journal/2026-10-27-05-admin-style-tickets.md
+읽을 것: docs/journal/2026-10-27-09-admin-style-tickets.md
+이어받을 상태: 인계: 셀프 리뷰 직전. 커밋하지 않은 변경이 워크트리에 있고 셀프 리뷰(/code-review, 기점 origin/main)부터 한다. 명세 검토, 사용자 질문(넷 다 추천), 티켓 쓰기, plan.md 갱신은 끝났다. 명세 축의 원천은 명세와 일지의 "사용자가 고른 것"(고른 설명 넷과 함께 보인 표)이다. 남은 것은 반영, 일지 마무리, 커밋, PR 직전 리뷰, PR, 봇 회차, 병합, 다음 지시문이다. docs/journal/2026-10-27-09-admin-style-tickets.md
 확인할 선행 조건: 없음
 이번 요청 범위: PR과 병합까지
 ```
@@ -175,8 +175,8 @@ PR 직전 리뷰에 밀 주장으로 넘길 새 문장(원문):
 시작 프롬프트: /to-tickets .scratch/admin-style/spec.md
 브랜치: docs/admin-style-to-tickets
 모델: Opus 5.5 / xhigh
-읽을 것: docs/journal/2026-10-27-05-admin-style-tickets.md
-이어받을 상태: 인계: 커밋 뒤. 셀프 리뷰(/code-review, 기점 5e049681)를 반영해 cc29cfa6까지 커밋했고 pre-commit과 손으로 친 ruff 둘이 초록이다. 아직 푸시하지 않았고 열린 PR이 없다. 남은 것은 커밋하지 않은 일지 변경(인용 고침, 커밋 절, 인계 절)의 커밋, 푸시, PR 직전 리뷰(밀 주장은 일지 "PR 직전 리뷰에 밀 주장으로 넘길 새 문장"), PR, 봇 회차, 병합, 일지 마무리, 다음 지시문이다. docs/journal/2026-10-27-05-admin-style-tickets.md
+읽을 것: docs/journal/2026-10-27-09-admin-style-tickets.md
+이어받을 상태: 인계: 커밋 뒤. 셀프 리뷰(/code-review, 기점 5e049681)를 반영해 cc29cfa6까지 커밋했고 pre-commit과 손으로 친 ruff 둘이 초록이다. 아직 푸시하지 않았고 열린 PR이 없다. 남은 것은 커밋하지 않은 일지 변경(인용 고침, 커밋 절, 인계 절)의 커밋, 푸시, PR 직전 리뷰(밀 주장은 일지 "PR 직전 리뷰에 밀 주장으로 넘길 새 문장"), PR, 봇 회차, 병합, 일지 마무리, 다음 지시문이다. docs/journal/2026-10-27-09-admin-style-tickets.md
 확인할 선행 조건: 없음
 이번 요청 범위: PR과 병합까지
 ```
@@ -206,4 +206,18 @@ open-session을 부른다 2026-10-27T02:36:18Z
 3. 유효. 03~09의 "웹 편집 확인"이 대상을 화면 파일만 적어, 스킬(`.claude/skills/ui-design/SKILL.md`의 그 절)이 함께 대라는 옮긴 `canvas.json`이 빠졌다. 03의 괄호, 04의 "열일곱 전부", 05~09의 "위 그림 N"에 `canvas.json`을 더하고, 명세 머리 9줄의 괄호도 같이 고쳤다(그 줄은 main의 `007b3608`이 쓴 것이다). 리뷰는 05~09가 04 뒤에 다시 대는 것을 중복이라 했지만, 웹 편집은 티켓 사이에도 일어날 수 있고 명세 329줄 주석이 그림을 읽는 티켓마다 먼저 대라고 정했으므로 그 제안은 따르지 않았다.
 4. 유효. 명세 279줄 주석의 "e2e와 사진은 Asia/Seoul 그대로다"는 지금 Playwright 설정(`web/apps/admin/playwright.config.ts`)에 `timezoneId`가 없어 아직 사실이 아니다. 고정은 06(Playwright 설정)과 03(사진 비교 설정)이 더한다. 그 두 자리를 적는 문장으로 바꿨다.
 
-잔존 grep으로 "화면 파일마다"가 `plan.md` 셋, `docs/agents/issue-tracker.md` 하나, design-reverse-sync 명세 하나에 남은 것을 봤다. 모두 "판 id 대신 sha256으로 가른다"는 방식을 다른 기능의 맥락에서 설명하는 문장이라 이 변경의 대상이 아니어서 그대로 두었다.
+잔존 grep으로 "화면 파일마다"가 `plan.md` 셋, `docs/agents/issue-tracker.md` 하나, design-reverse-sync 명세 하나에 남은 것을 봤다. 모두 판 id 대신 sha256으로 가르는 방식을 다른 기능의 맥락에서 설명하는 문장이라 이 변경의 대상이 아니어서 그대로 두었다.
+
+그 반영을 `e6cf824c`로 커밋했다. pre-commit은 web-verify(555초), pytest(682초)를 비롯해 모두 Passed였고, `.py`가 없어 ruff 둘과 카나리아 명세·헌법 판이 Skipped였다(그 커밋의 출력을 손으로 봤다). 인용 대조 경고 둘 가운데 207줄은 고치기 전의 명세 글을 기록으로 옮긴 것이라 두었고, 209줄은 이 세션의 요약에 따옴표를 단 것이라 뗐다. 커밋 뒤 경계에서 인계 계기가 다시 왔지만, 이 세션이 받은 지시문의 이어받을 상태가 `인계: 커밋 뒤`로 시작해 next-session의 "인계하지 않는 때"에 들어 넘기지 않았다.
+
+### 보안 (/security-review)
+
+커밋한 diff(`5e049681..e6cf824c`, 열두 파일, 모두 문서)를 1단계 서브에이전트가 봤다. 다음 구현 세션이 티켓을 그대로 지을 때 지금 코드의 보호가 약해지는지를 코드를 읽어 대 본 것이다. 본 자리는 토큰 저장(sessionStorage, ADR 0019), 401 뒤 토큰 내려놓기, 비제어 토큰 입력칸, React 글자로 그리는 트레이스와 도구 인자, `encodeURIComponent`를 쓰는 링크, 그리기 전 테마 스크립트(같은 출처의 `public/` 파일, 키 넷만 받음), `/settings` 경로, 오류 알림, Storybook·CI 권한이다. 신뢰도 8 이상의 후보가 없어 2단계(후보마다 오탐 거르기)는 돌 것이 없었다. 기준 아래로 버린 것은 하나다(Low, 3/10). React가 제어하는 입력이면 가린 입력의 값이 `outerHTML`에 보일 수 있다는 것인데, 지금 코드와 티켓이 모두 비제어라 해당하지 않는다.
+
+## main 합치기
+
+PR을 열기 전에 `git fetch origin`을 치니 origin/main이 `3666bdc6`까지 세 PR(#400 `/sync-design-system` 스킬, #401 일지 근거 훅, #396 토큰 쓰임 설명) 앞서 있어 `git merge origin/main`으로 합쳤다. 충돌은 없었고 `.scratch/plan.md`는 자동으로 합쳐졌다. 앱의 `sync_with_base_branch`는 이 워크트리가 앱이 만든 것이 아니라며 거부했다.
+
+`sibling_overlap.py`가 형제 일지가 07까지 병합돼 이 일지(05)를 지나친다고 알려, `--move`로 `2026-10-27-09`로 옮겼다. 그 도구가 인용을 고친 파일은 티켓 01·04·08, 명세, `plan.md`, 이 일지다. 줄인 꼴은 `grep`으로 손으로 봤고, 명세 333줄의 "(05)"는 티켓 번호라 두었다. `plan.md`의 admin-style 행과 프론티어 줄은 합친 뒤에도 티켓 단계 그대로다(그 줄을 손으로 봤다).
+
+main에서 바뀐 파일(`git diff --name-only HEAD...origin/main`)을 이 브랜치가 이름으로 든 파일과 대 봤다. `/ui-design`의 "웹 편집 확인" 절은 그대로라 03~09의 시작 전 항목은 맞다(합친 뒤 그 `SKILL.md`의 33~39줄을 읽었다). 올리는 길은 #400이 프로젝트 스킬 `/sync-design-system`의 올리기로 옮겼는데 명세 139줄과 322줄이 옛 `/design-sync`를 올리는 길로 적고 있어, 병합 뒤 그 스킬의 올리기가 올린다고 고쳤다(`.claude/rules/web-design.md`의 머리와 `upload.md` 7줄을 읽었다). 티켓 01이 기대는 `.design-sync/config.json`의 `overrides.TextField`는 그대로다(그 파일 119줄과 `web-design.md` 36줄을 읽었다). 티켓과 명세가 토큰 CSS의 줄 번호를 든 자리는 없어 #396의 주석이 옮긴 줄은 닿지 않는다(Grep으로 봤다). #401이 `docs/agents/issue-tracker.md`에 일지도 근거의 종류를 밝힌다고 더해, 이 절부터 결과 문장 끝에 근거를 괄호로 적는다.

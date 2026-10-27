@@ -2,7 +2,7 @@
 
 **What to build:** 관리 화면이 쓸 다섯이 디자인 시스템 패키지(`@agent-os/ui`)에 더해진다. 아이콘 이름에 Lucide `settings`가 들고, `TextField`의 한 줄 변형이 가린 입력(`type` `"password"`)을 그리며, 디자인 토큰 CSS에 컨테이너 기준 폭 `split`(784px)과 기준 폭 `form`(440px)·`content`(880px)이 선다. 디자인 시스템을 고치는 사람은 패키지 Storybook의 `Icon`·`TextField` 스토리와 판정 스토리 `Responsive`에서 그것을 보고, 사진 비교가 바뀐 모양을 정답으로 든다. 관리 화면은 아직 패키지를 들이지 않으므로(03) 운영자에게 보이는 변화는 없다. 위젯은 패키지의 컴포넌트와 토큰으로 그리므로 위젯의 사진도 다시 본다.
 
-근거는 `.scratch/admin-style/spec.md`의 "패키지에 더하는 것" 전부(2026-10-27 명세 검토 주석의 기준 폭 둘 포함)와 Testing Decisions의 "패키지"와 그 주석이다. `split`은 ADR 0026의 2026-10-26 이력 "관리 화면의 본문은 본문 칸의 컨테이너 기준 폭 하나로 가른다"가 앞선 결정이고, `form`과 `content`는 사용자가 2026-10-27에 골랐다(일지 2026-10-27-05). 판단 기준은 `.claude/rules/web-design.md`다. 이 티켓은 화면 파일(`.scratch/admin-style/design/`)을 따르지 않으므로 웹 편집 확인 없이 돈다.
+근거는 `.scratch/admin-style/spec.md`의 "패키지에 더하는 것" 전부(2026-10-27 명세 검토 주석의 기준 폭 둘 포함)와 Testing Decisions의 "패키지"와 그 주석이다. `split`은 ADR 0026의 2026-10-26 이력 "관리 화면의 본문은 본문 칸의 컨테이너 기준 폭 하나로 가른다"가 앞선 결정이고, `form`과 `content`는 사용자가 2026-10-27에 골랐다(일지 2026-10-27-09). 판단 기준은 `.claude/rules/web-design.md`다. 이 티켓은 화면 파일(`.scratch/admin-style/design/`)을 따르지 않으므로 웹 편집 확인 없이 돈다.
 
 **Blocked by:** None (can start immediately)
 
