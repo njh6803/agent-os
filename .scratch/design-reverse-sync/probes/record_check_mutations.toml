@@ -658,3 +658,29 @@ expect_output = ['none/null/removed, 지난 산출 [\"project/components/Chip/RE
 file = "web/tools/sync-design-system/upload.ts"
 old = '''  const stray = [...revert].filter((path) => !input.output.has(path) && !leftByCode.has(path));'''
 new = '''  const stray = [...revert].filter((path) => !input.output.has(path));'''
+
+# --- 들이기의 기준본(record.ts 의 base, 티켓 07) ------------------------------------------------------------------
+
+[[mutation]]
+name = "claim 이 이어받은 기준본을 쓰지 않으면 이어받은 기록 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/record-check.test.ts", "-t", "들이기의 기준본은"]
+expect = "red"
+expect_output = ['-         "name": "이어받음",']
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/record.ts"
+old = '''  const chosen = inherited ?? record.baseline;'''
+new = '''  const chosen = record.baseline;'''
+
+[[mutation]]
+name = "기준본의 출처를 늘 기록으로 적으면 이어받은 기록 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/record-check.test.ts", "-t", "들이기의 기준본은"]
+expect = "red"
+expect_output = ['-       "from": "claim",']
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/record.ts"
+old = '''    from: inherited === null ? "record" : "claim",'''
+new = '''    from: "record",'''

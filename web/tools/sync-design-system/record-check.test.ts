@@ -8,6 +8,7 @@ import { dirname, join } from "node:path";
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
 import { buildTokensJson } from "./build.ts";
 import { isRecord } from "./io.ts";
+import { serializeRecord, type Claim, type SyncRecord } from "./sync-record.ts";
 
 const WEB = dirname(dirname(import.meta.dirname));
 const MAIN = join(import.meta.dirname, "main.ts");
@@ -391,6 +392,66 @@ describe("기록과 확인 명령", () => {
     });
   });
 
+  test("들이기의 기준본은 claim 이 이어받은 기준본이 있으면 그것이고, 없으면 기록의 기준본이다", () => {
+    const lists = { assetGroups: {}, blobs: {}, docs: null, sections: {} };
+    const claim = (base: SyncRecord["baseline"]): Claim => ({
+      branch: "feature/12-web-edit-gray",
+      ticket: ".scratch/design-reverse-sync/issues/12-web-edit-gray.md",
+      at: "2026-10-27T09:00:00.000Z",
+      tokens: { families: [] },
+      changed: new Map(),
+      added: new Map(),
+      removed: [],
+      index: lists,
+      base,
+    });
+    const recordWith = (
+      name: string,
+      baseline: SyncRecord["baseline"],
+      held: Claim | null,
+    ): string => {
+      const record: SyncRecord = {
+        ...{ v: 1, commit: "abc1234", at: "2026-10-26T12:00:00.000Z", files: new Map() },
+        ...{ baseline, index: lists, pending: null, claim: held },
+      };
+      writeFileSync(join(scratch, name), serializeRecord(record));
+      return name;
+    };
+    const based = (record: string): { readonly outcome: Outcome; readonly base: unknown } => {
+      const outcome = invoke("record", "base", "--record", record, "--out", `${record}-base.json`);
+      const base: unknown =
+        outcome.status === 0
+          ? JSON.parse(readFileSync(join(scratch, `${record}-base.json`), "utf-8"))
+          : null;
+      return { outcome, base };
+    };
+    const recorded = { families: [{ name: "기록" }] };
+    const inherited = { families: [{ name: "이어받음" }] };
+
+    expect(based(recordWith("plain.json", recorded, null))).toMatchObject({
+      outcome: { status: 0, report: { ok: true, action: "base", from: "record" } },
+      base: recorded,
+    });
+    expect(based(recordWith("own.json", recorded, claim(null)))).toMatchObject({
+      outcome: { status: 0, report: { from: "record" } },
+      base: recorded,
+    });
+    expect(based(recordWith("inherited.json", recorded, claim(inherited)))).toMatchObject({
+      outcome: { status: 0, report: { from: "claim" } },
+      base: inherited,
+    });
+    expect(based(recordWith("bare.json", null, claim(null))).outcome).toMatchObject({
+      status: 1,
+      report: {
+        ok: false,
+        error: {
+          kind: "input",
+          message: "bare.json 가 기준본을 들지 않는다. 들이기는 첫 올리기 뒤에만 한다",
+        },
+      },
+    });
+  });
+
   test("들이기가 claim 을 쓰면 다른 세션의 확인은 들이는 중이고, 병합된 claim 의 올리기가 claim 파일을 보내고 비운다", () => {
     bundle("bundle");
     writeFileSync(join(scratch, "index.json"), JSON.stringify(INDEX));
@@ -559,7 +620,7 @@ describe("기록과 확인 명령", () => {
     [
       "모르는 하위 명령",
       ["record", "erase"],
-      "record 는 plan, needs-build, write, claim 가운데 하나를 받는다",
+      "record 는 plan, needs-build, write, claim, base 가운데 하나를 받는다",
     ],
     [
       "하위 명령이 받지 않는 인자",
