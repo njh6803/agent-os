@@ -625,6 +625,20 @@ describe("빌드가 필요한지", () => {
     ).toEqual({ needed: false, because: [] });
   });
 
+  test("올리기가 커밋하는 지난 산출 목록만 바뀌면 빌드가 필요 없다", () => {
+    expect(needsBuild([".design-sync/upload-output.json"], [])).toEqual({
+      needed: false,
+      because: [],
+    });
+  });
+
+  test("올릴 항목을 고르는 산출 스크립트가 바뀌면 산출 전체를 다시 맞추게 빌드가 필요하다", () => {
+    expect(needsBuild([".design-sync/upload-output.mjs"], [])).toEqual({
+      needed: true,
+      because: [{ path: ".design-sync/upload-output.mjs", reason: "buildConfig" }],
+    });
+  });
+
   test("되돌릴 파일 가운데 빌드가 짓는 파일이 있으면 빌드가 필요하다", () => {
     expect(needsBuild([], [BUTTON, "project/tokens.json"])).toEqual({
       needed: true,
