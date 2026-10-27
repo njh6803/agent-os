@@ -77,14 +77,14 @@ open-session을 부른다 2026-10-27T00:47:35Z
 
 표준 축 판정:
 
-- 고친다: (1) 확인을 시작할 때 `reads.json`을 빈 꼴로 쓰고 늘 넘긴다(빈 `{"absent": [], "failed": {}}`를 `check paths --reads`가 받는 것을 쳐 봤다). (2) 작업 폴더 이름으로 시작하는 경로는 절대 경로로 준다고 "명령과 작업 폴더"에 적는다. (3) `import.md` 1의 첫 갈래를 "지금 브랜치가 `feature/NN-web-edit-<slug>` 꼴이고 그 번호의 티켓이 `origin/main`에 없다"로 넓히고 번호와 slug는 그 이름의 것을 쓴다. 지시문의 워크트리 문장은 `next-session` 3단계의 새 브랜치 문장(EnterWorktree 뒤 브랜치를 바꾼다)이다. (5) 2에 티켓이 이미 있으면 그 파일을 잇는다고, 6의 1에 그 틈을 알아보는 문장을 더한다. 틈 자체는 명세 "자기 `claim`"의 2026-10-22 주석이 "드문 틈이라 질문 하나의 값을 받는다"고 받았다. (6) 돌아갈 브랜치를 작업 폴더 파일에 적고 "멈춘 상태"에 올리기 중을 더한다. (7) 계기 훅을 든 셋(설명, 머리 주석, 인자 표)을 빼고 티켓 09에 "07이 넘긴 것"으로 적는다. (8) 뒤의 것: `via`의 사실은 티켓 08 19행이 들고 있어 `upload.md` 3에서 뺀다. (9) 뒤의 괄호: 지울 경로를 세는지는 재지 못했다고 적는다. Nit의 끝 조건과 `<보낼 폴더>`.
-- 남긴다: (4) 다시 묻는 것은 명세 177행("올리기의 확인은 화면 작업에서 '계속한다'를 골랐어도 돈다")과 168행의 의도라 동작은 두고, `continue` 줄에 그 뒤의 올리기가 다시 묻는다는 것만 덧붙인다. 작업 트리가 깨끗하지 않으면 올리기가 멈추는 것은 알리고 멈추는 안전한 쪽이라 둔다. (8) 앞의 것: `.ds-sync/`는 빌린 빌드가 의존성을 까는 무시된 폴더(NOTES 23행, `.gitignore` 49행)이고 그 표지의 원천은 `upload.md`라 NOTES에 옮겨 적지 않는다. (9) 앞의 것: 명세 "중간 실패"(158행)가 도구 설명의 "one publish sends at most 255 files and 64MB"와 형식 설명의 "16 MiB a call"을 인용해 정한 값이라 근거가 있다. 냄새: 그 표는 05·06이 정한 명령 인자(`record.ts`의 `decisionOf`가 플래그를 읽는다)에 맞춘 것이고, 명령이 `act`를 받게 바꾸는 것은 05·06 계약을 고치는 일이라 이 티켓 밖이다.
+- 고친다: (1) 확인을 시작할 때 `reads.json`을 빈 꼴로 쓰고 늘 넘긴다(빈 `{"absent": [], "failed": {}}`를 `check paths --reads`가 받는 것을 쳐 봤다). (2) 작업 폴더 이름으로 시작하는 경로는 절대 경로로 준다고 "명령과 작업 폴더"에 적는다. (3) `import.md` 1의 첫 갈래를 지금 브랜치가 `feature/NN-web-edit-<slug>` 꼴이고 그 이름의 티켓이 `origin/main`에 없을 때로 넓히고 번호와 slug는 그 이름의 것을 쓴다. 지시문의 워크트리 문장은 `next-session` 3단계의 새 브랜치 문장(EnterWorktree 뒤 브랜치를 바꾼다)이다. (5) 2에 티켓이 이미 있으면 그 파일을 잇는다고, 6의 1에 그 틈을 알아보는 문장을 더한다. 틈 자체는 명세 "자기 `claim`"의 2026-10-22 주석이 "드문 틈이라 질문 하나의 값을 받는다"고 받았다. (6) 돌아갈 브랜치를 작업 폴더 파일에 적고 "멈춘 상태"에 올리기 중을 더한다. (7) 계기 훅을 든 셋(설명, 머리 주석, 인자 표)을 빼고 티켓 09에 "07이 넘긴 것"으로 적는다. (8) 뒤의 것: `via`의 사실은 티켓 08 19행이 들고 있어 `upload.md` 3에서 뺀다. (9) 뒤의 괄호: 지울 경로를 세는지는 재지 못했다고 적는다. Nit의 끝 조건과 `<보낼 폴더>`.
+- 남긴다: (4) 다시 묻는 것은 명세 177행("올리기의 확인은 화면 작업에서 "계속한다"를 골랐어도 돈다")과 168행의 의도라 동작은 두고, `continue` 줄에 그 뒤의 올리기가 다시 묻는다는 것만 덧붙인다. 작업 트리가 깨끗하지 않으면 올리기가 멈추는 것은 알리고 멈추는 안전한 쪽이라 둔다. (8) 앞의 것: `.ds-sync/`는 빌린 빌드가 의존성을 까는 무시된 폴더(NOTES 23행, `.gitignore` 49행)이고 그 표지의 원천은 `upload.md`라 NOTES에 옮겨 적지 않는다. (9) 앞의 것: 명세 "중간 실패"(158행)가 도구 설명의 "one publish sends at most 255 files and 64MB"와 형식 설명의 "16 MiB a call"을 인용해 정한 값이라 근거가 있다. 냄새: 그 표는 05·06이 정한 명령 인자(`record.ts`의 `decisionOf`가 플래그를 읽는다)에 맞춘 것이고, 명령이 `act`를 받게 바꾸는 것은 05·06 계약을 고치는 일이라 이 티켓 밖이다.
 
 - **명세 축.** 체크박스 문장은 기점과 같고, NOTES의 새 문장은 명세 문구를 품으며, `ACTS` 열셋과 `CALLERS` 셋이 맞고, PR #399 판정의 전제가 지켜진다고 봤다. Major 다섯: (1) `import.md` 1의 첫 갈래가 티켓 파일을 요구하는데 티켓은 2에서 써, 새 워크트리 갈래가 이름을 바꾼 뒤 1로 돌아와 같은 갈래를 되풀이한다(표준 (3)과 같은 자리). (2) "사람이 친 턴" 3이 6의 보내기 직전 확인부터 이어 5의 계획을 건너뛴다. 인계 뒤에는 `first-check.json`도 없다. (3) 올리기 1이 확인보다 먼저 분리 HEAD로 옮기는데, 2에서 "먼저 들인다"·`wait`·`stop`으로 나가는 길에 돌아가는 단계가 없다. (4) 새 워크트리에 `pnpm -C web install`이 없어 `check paths`부터 `ERR_MODULE_NOT_FOUND`로 끝난다(`node_modules` 없는 사본에서 쳐 봤다). (10) "보낼 것이 없을 때"가 기록이 없을 때와 `rewriteRecord`에도 6을 건너뛰어 기록이 새로 쓰이지 않는다. Minor 여섯: (5) "주 체크아웃의 main" 판정이 브랜치를 보지 않는다, (6) "덮어쓰기와 색인"이 `uploadClaimMerged`를 빼는데 명세 178행은 "버린다"를 고른 편집도 같은 길로 되돌린다고 정했다, (7) `import.md` 6의 1에 06 경고의 뒷부분이 빠졌다, (8) "계속한다" 뒤에도 `/ui-design`이 올리기를 불러 ADR 0025 141행의 "그리기 전의 `/ui-design`이 이것만 부른다"와 결정표 설명 "웹 편집은 다음 확인이 다시 찾는다"와 어긋난다(표준 (4)와 같은 자리), (9) "토큰마다"와 "토큰 밖" 줄임, (11) `kickoff/prompting.md` 43행의 옛 올리는 길, (12) 08의 "07이 넘긴 것"의 NOTES 둘이 08 체크박스에 없고 검증 줄과 부딪친다. Nit: 부탁 문구가 "잇습니다"로 끝난다.
 
 명세 축 판정:
 
-- 고친다: (1) 표준 (3)과 같이 고친다. (2) 2의 확인부터 다시 하고 4가 방금 지은 산출을 쓰게 한다. (3)·표준 (6) 함께, `upload.md` 1에 "돌아가기"를 두어 어디서 끝나든 돌아간다. (4) "명령과 작업 폴더"에 새 워크트리의 설치를 둔다. `import.ts` 55행이 `@agent-os/ui/contrast`를 들이는 것을 봤다. (10) 조건에 "받은 기록이 있고 `rewriteRecord`가 아니며"를 더한다. (5) `git branch --show-current`가 `main`인지 더 본다. (6) `uploadClaimMerged`에서 받은 `claim`의 `index`가 기록의 것과 다르면 되돌린다(`sync-record.ts` 249·274행에 `claim.index`와 기록의 `index`가 있다). 옮긴 색인 편집이 어떻게 남는지는 "재지 못한 것"에 더한다. (7) 두 결과를 적는다. (8)·표준 (4) 함께, "계속한다"를 고른 세션은 그리기 전의 올리기를 부르지 않는다. 표준 축 판정에서 남긴다고 한 것을 이렇게 바꿨다. 명세 177행은 올리기가 돌면 그 확인이 돈다는 말이고 화면 작업이 그 올리기를 불러야 한다는 말이 아니며, 사용자 스토리 20과 결정표의 설명이 곧바로 다시 묻지 않는 쪽이다. 웹 편집이 없으면 그리기 전에 맞추는 것(화면 디자인 절 44행)은 그대로다. (9) "디자인 토큰"으로 쓴다. (11) 스킬의 올리기로 고친다. (12) 08에 체크박스 하나를 더하고 검증 줄에 그 두 줄을 넣는다.
+- 고친다: (1) 표준 (3)과 같이 고친다. (2) 2의 확인부터 다시 하고 4가 방금 지은 산출을 쓰게 한다. (3)·표준 (6) 함께, `upload.md` 1에 "돌아가기"를 두어 어디서 끝나든 돌아간다. (4) "명령과 작업 폴더"에 새 워크트리의 설치를 둔다. `import.ts` 55행이 `@agent-os/ui/contrast`를 들이는 것을 봤다. (10) 조건에 받은 기록이 있고 결정이 `rewriteRecord`가 아니라는 것을 더한다. (5) `git branch --show-current`가 `main`인지 더 본다. (6) `uploadClaimMerged`에서 받은 `claim`의 `index`가 기록의 것과 다르면 되돌린다(`sync-record.ts` 249·274행에 `claim.index`와 기록의 `index`가 있다). 옮긴 색인 편집이 어떻게 남는지는 "재지 못한 것"에 더한다. (7) 두 결과를 적는다. (8)·표준 (4) 함께, "계속한다"를 고른 세션은 그리기 전의 올리기를 부르지 않는다. 표준 축 판정에서 남긴다고 한 것을 이렇게 바꿨다. 명세 177행은 올리기가 돌면 그 확인이 돈다는 말이고 화면 작업이 그 올리기를 불러야 한다는 말이 아니며, 사용자 스토리 20과 결정표의 설명이 곧바로 다시 묻지 않는 쪽이다. 웹 편집이 없으면 그리기 전에 맞추는 것(화면 디자인 절 44행)은 그대로다. (9) "디자인 토큰"으로 쓴다. (11) 스킬의 올리기로 고친다. (12) 08에 체크박스 하나를 더하고 검증 줄에 그 두 줄을 넣는다.
 - 남긴다: Nit의 "잇습니다". 사람에게 하는 부탁이라 높임 꼴이고, 명세 217행은 부탁에 담을 뜻을 정한 것이다.
 
 고친 것(새로 쓴 사실 문장은 PR 직전 리뷰의 밀 주장으로 넘긴다):
@@ -102,3 +102,45 @@ open-session을 부른다 2026-10-27T00:47:35Z
 - 카나리아. `sync-design-system`은 설명(머리말)을 고쳐 사전 확인으로 갈음할 수 없어(`docs/constitution/operations.md` 카나리아 항목의 조건 넷) 두 명세를 다시 돌렸다. `sync_design_system_skill.toml` 통과 4(대조군은 이 스킬을 불러 "Unknown skill: sync-design-system"을 받고 "없음"이었다. 원본의 도구 결과를 봤다), `sync_design_system_story4.toml` 통과 4("없음" 섞인 통과 2, 까닭은 앞 회차와 같다). 본문만 고친 `ui_design_check_before_drawing.toml`은 같은 claude 2.1.302에서 `--preflight` 통과 1로 갈음하고 그 명세의 결과 줄 뒤에 덧붙였다. 규칙 `web-design.md`는 반영에서 고치지 않았다.
 - `uv run ruff check .`와 `uv run ruff format --check .`는 초록이다(이 변경에 `.py`가 없어 pre-commit의 ruff는 `Skipped`라 손으로 쳤다). 반영은 마크다운과 TOML뿐이라 손으로 치는 나머지 다섯은 커밋의 pre-commit으로 갈음한다. 결과는 커밋 뒤에 적는다.
 - 티켓 07의 Status를 `done`으로, "검증 명령이 모두 초록이다"를 채웠다.
+
+커밋 `c8c2ff88`("feat: /sync-design-system 스킬을 세우고 올리기 절차를 옮긴다 (design-reverse-sync 07)", 파일 스물둘). pre-commit은 종료 0이다. 병렬 검사 열(check-ticket, zizmor, lint-imports, check-instructions, check-type-escapes, pyright, pyright-linux, run-hooks, web-verify 469.1초, pytest 495.5초)과 마크다운 표, 줄 구분 문자, 변이 표, 카나리아 명세, 커밋 메시지가 Passed다. ruff 둘은 `.py`가 없어 `Skipped`이고 위에서 손으로 쳐 초록이다. 헌법 판 검사는 대상 파일이 없어 `Skipped`다. 인용 대조는 이 일지에 경고 아홉을 냈고(막지 않는다) 하나씩 봤다. 76행은 리뷰가 인용한, 이 커밋이 지운 문장이다. 80·87행은 고칠 내용을 따옴표로 줄여 적은 것이라 따옴표를 뗐다. 81행은 명세 177행의 큰따옴표를 작은따옴표로 옮겨 적어 원문대로 고쳤다. 96·97행은 새 문장을 옮기며 안쪽 따옴표에 붙인 역슬래시 탓에 대조가 갈라진 것이고 원문은 스킬 파일과 같다. 102행은 저장소에 두지 않은 카나리아 원본의 도구 결과다. 이 고침 셋은 커밋하지 않았다.
+
+### 인계 (커밋 뒤)
+
+이 세션의 지금 제목은 `feature/07-sync-design-system-skill`이다. 인계 계기 `커밋 뒤`가 세션 컨텍스트 355,946 토큰에서 왔다. 인계하지 않는 때 다섯은 아니다. 커밋은 성공했고, 요청 범위는 PR과 병합까지이며, 이 세션의 이어받을 상태는 `인계: 셀프 리뷰 직전`이라 경계가 다르고, 이 세션이 쓴 `인계 못함` 줄이 없고, `get_session`의 `self`에 `parentSessionId`가 없다. 이 브랜치에 열린 PR이 없어(`gh pr view`가 "no pull requests found") 다음 단계는 이 세션의 지시문 그대로 `구현`이다.
+
+지시문:
+
+```
+다음 작업: .scratch/design-reverse-sync/issues/07-sync-design-system-skill.md. 스킬과 문서 옮기기, 카나리아, 셀프 리뷰와 커밋은 끝났고 PR 직전 리뷰부터 PR과 병합까지 남았다
+다음 단계: 구현
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /implement .scratch/design-reverse-sync/issues/07-sync-design-system-skill.md
+브랜치: feature/07-sync-design-system-skill
+모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
+읽을 것: docs/journal/2026-10-27-04-sync-design-system-skill.md
+이어받을 상태: 인계: 커밋 뒤. 셀프 리뷰(`/code-review`)를 반영해 c8c2ff88 로 커밋했고(pre-commit 통과, 손으로 친 ruff 둘 초록), 아직 푸시하지 않았고 PR 은 없다. 남은 단계는 PR 직전 리뷰(docs/constitution/operations.md 리뷰 파이프라인 2), `/git-pr`, 봇 회차, 워크트리 병합, 일지의 회고와 "다음"이다(docs/journal/2026-10-27-04-sync-design-system-skill.md). PR 직전 리뷰의 밀 주장은 그 일지 "이어받은 세션: 셀프 리뷰"의 "고친 것" 줄에 원문으로 있다. 일지에 커밋하지 않은 고침(인용 대조 경고에 맞춘 따옴표 셋과 이 인계 절)이 있다. PR #396(티켓 03)이 같은 .scratch/design-reverse-sync/probes/README.md 를 고친다
+확인할 선행 조건: 없음
+이번 요청 범위: PR과 병합까지
+```
+
+제목을 `feature/07-sync-design-system-skill (인계함)`으로 바꿨다. 멈출 백그라운드 작업은 없었다. `git worktree unlock`은 `is not locked`로 끝나 넘어갔다.
+
+open-session을 부른다 2026-10-27T01:33:45Z
+
+## 이어받은 세션: PR 직전 리뷰
+
+> 사용자: 지시문 그대로(위 "인계 (커밋 뒤)"의 지시문과 같다)
+
+새 세션이 제목을 `feature/07-sync-design-system-skill`로 바꾸고 `EnterWorktree(path)`로 이 워크트리에 들어왔다. `git fetch origin` 뒤 `git log HEAD..origin/main`이 비어 합칠 것이 없었다.
+
+`coderabbit auth status`가 `Plan: Free`, `Seat: not assigned`라 CLI가 돌지 못해, 대체 둘을 나란히 돌렸다(`docs/constitution/operations.md` 리뷰 파이프라인 2).
+
+- **보안(`/security-review`).** 범위는 커밋 `c8c2ff88`과 이 일지의 미커밋 수정이다. 취약점은 없다. 코드 변경인 `record base`는 인자가 `--record`와 `--out` 둘이고, 읽은 기록에서 고른 값을 `JSON.stringify`로 쓰기만 한다. 문턱 밑의 참고가 하나 있다. `SKILL.md` 확인 4가 아티팩트 기록의 `claim.branch`를 `gh pr list --head`에 넘기는데, `storedClaim`은 빈 문자열만 막는다. 마크다운 지침이고 저장소 주인의 비공개 아티팩트에 쓸 수 있어야 하는 갈래이며 확신도가 0.5 미만이라 발견으로 세지 않았다. 같은 우려를 일지 2026-10-22-04(172행)와 2026-10-22-13(205행)이 문턱 밑으로 적었다(둘 다 열어 봤다).
+- **버그·성능(`bug-perf-review`).** 유효 2(Major 1, Minor 1), 오탐 3.
+  - Major: 확인 1이 `reads.json`만 미리 쓰고 받은 폴더 `check-<n>/web/`은 2의 복사가 만들어서, 첫 `check paths --web check-<n>/web`이 `input` 오류(ENOENT, scandir)로 멈춘다. 셀프 리뷰가 고친 `reads.json` 선행 생성은 같은 모양 가운데 파일 쪽만 닫았다. 스크래치패드에서 손으로 봤다. 없는 폴더면 종료 1과 `"kind":"input"`이고, 빈 폴더를 만들면 `"ok":true`와 `paths` 셋(`project/design-system.json`, `project/sync-record.json`, `project/tokens.json`)이다. 고쳤다. 1이 빈 받은 폴더도 만든다. 없는 폴더를 빈 것으로 읽게 스크립트를 고치는 쪽은 오타 난 `--web`을 모두 없는 것으로 판정하게 되어 고르지 않았다(리뷰의 제안과 같다).
+  - Minor: `continue` 줄의 "이 선택지의 설명"이 바로 앞의 올리기 선택지로 읽힌다. 다음 확인이 다시 찾는다는 설명은 화면 작업의 "지금 코드 값으로 계속한다"(`decide.ts` 119행)에만 있고, "확인 없이 계속한다"(302행)의 설명은 다르다. 밀 주장 가운데 어긋난 것은 이 문장 하나였다. 고쳤다. 그 올리기가 웹 편집이면 곧바로 다시 묻고 판단할 수 없음이면 다시 묻거나 멈춘다고 쓰고(`undecidable`의 `upload` 갈래, 같은 파일 308~321행), 설명을 든 라벨을 이름으로 적었다. 처음에는 `undecidable`의 선택지 라벨까지 옮겨 적었다가 `writing-for-agents`의 사본(cache) 기준으로 줄였다.
+  - 오탐: `import.md` 4의 2가 커밋된 CSS 위에서 다시 돌아도 `alreadyImported`가 가른다. `record base`의 선택과 시험은 독스트링과 같다. 포인터로 줄인 문서 넷에 없는 경로나 어긋난 절차가 없다.
+  - 리뷰가 확인하지 못했다고 적은 "한 것"의 "15개가 지난다"는 `pnpm -C web exec vitest run --project node tools/sync-design-system/record-check.test.ts`로 다시 쳐서 `Tests  15 passed (15)`를 봤다.
+- 순서를 어겼다. `.claude/rules/agent-docs.md`는 스킬을 고치기 전에 `writing-for-agents`를 부르라고 하는데, 고친 뒤에 불렀다. 부른 뒤 고친 두 문장을 그 기준으로 다시 봐 `continue` 줄을 줄였다.
+- 카나리아. 두 명세가 묻는 자리(`sync_design_system_skill.toml`은 "보내기" 절, `sync_design_system_story4.toml`은 인자 표) 밖의 본문만 고쳤고, 머리말과 `expect`는 그대로이며 claude 2.1.302가 같다. 그래서 `uv run python tools/canary.py --preflight`로 갈음했고 통과 2였다. 두 명세의 머리 주석에 덧붙였다.

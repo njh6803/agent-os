@@ -3,7 +3,9 @@
 # (`tools/canary.py` 의 `_skill_defined`). 병합 뒤에는 병합 전 main 커밋을 `--control-commit` 으로 준다.
 # 최신 결과: 2026-10-27 이 PC, claude 2.1.302, 커밋 5e049681 위의 작업 트리(셀프 리뷰를 반영해 설명을 고친 판)에서
 # 통과 4(실험군 3회차가 이 스킬을 불러 그 줄을 옮겼고, 대조군 1회차는 이 스킬을 불러 "Unknown skill"을 받고 "없음"이었다).
-# 반영 전 판도 같은 날 통과 4였다(대조군은 스킬을 부르지 않았다). 원본은 저장소에 두지 않았다.
+# 반영 전 판도 같은 날 통과 4였다(대조군은 스킬을 부르지 않았다). 원본은 저장소에 두지 않았다. 2026-10-27 PR 직전 리뷰가
+# 원천의 본문(확인 1, "할 일"의 `continue` 줄)만 고친 뒤 같은 claude 판에서 사전 확인(`--preflight`)으로 갈음했다(일지
+# 2026-10-27-04).
 # 돌리는 법: 워크트리 `.claude/worktrees/<이름>/` 루트에서
 #   uv run python tools/canary.py .scratch/design-reverse-sync/probes/canary/sync_design_system_skill.toml <출력 디렉터리>
 kind = "skill"
