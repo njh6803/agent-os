@@ -560,6 +560,12 @@ PR 앞 비용이 줄어든 행이 있다. ticket-for-every-pr-03 은 $22.60 에�
 - claude-review Minor `ALLOWED_ENV`를 윈도 기본값 튜플로 나누기: 보류. `rerun_round.PREREG_VALUES`의 값이 같아도 구조를 바꾸는 일이라 사전 등록을 고정한 뒤의 손질로 미룬다. 동작은 같다.
 - claude-review Nit `ROOT_SHAPE`의 점 없는 회차 폴더 이름 단언: 보류. 다음 러너 손질 때 함께 본다.
 - 대기열을 고치기 전에 origin/main(#297, 4a74cd19)을 다시 합쳤다(충돌 없음. 이 브랜치가 고친 파일과 겹치지 않았다).
+- 커밋 2576e007 의 pre-commit 은 모두 통과했다(pytest 425.1초, web-verify 537.2초). 판단은 PR 코멘트로 남겼다.
+
+### PR 봇 둘째 회차
+
+- 헤드 2576e007 에서 검사가 모두 통과했다. CodeRabbit 은 `Review rate limited`라 리뷰가 없어 회차로 세지 않는다.
+- claude-review 둘째 회차는 Minor 다섯과 Nit 하나라 고치지 않고 지적마다 보류 이유를 PR 코멘트에 남긴다(`next-session` 1단계의 2 회차 세기). 뒤로 넘기는 것은 아래 "다음"에 적었다.
 
 ## 회고
 
@@ -577,4 +583,6 @@ PR 앞 비용이 줄어든 행이 있다. ticket-for-every-pr-03 은 $22.60 에�
 
 - 기능 model-rerun 의 티켓은 모두 done 이다. 본 측정은 티켓이 아니라 러너를 돌리는 일이고, 명령 줄은 위 "사전 등록 절과 해시"의 본 측정 지시문 재료다. 사전 등록 절을 고치면 `PREREG_SHA256`을 다시 고정한다.
 - 본 측정 첫 회차 전에 시험으로 고정할 것: `tools/rerun_runner.py`의 `other_transcripts`(회차 세션 기록은 빼고 같은 프로젝트 폴더의 다른 세션만 센다). 이 비용이 예산 멈춤(`spent + estimate > cap_usd`)에 든다(PR #408 claude-review). 앞서 다음 러너 손질로 넘긴 `arm_model_line`, `_gaps`의 꼬리, 판정 몫의 셈도 함께 본다(위 "셀프 리뷰 (base 47aa107b)").
+- 본 측정 첫 회차 전에 볼 만한 것: 표에 빠진 상수를 기계가 잡게, `PREREG_VALUES`를 둔 모듈의 대문자 상수가 모두 표에 들거나 까닭과 함께 제외 목록에 드는지 보는 시험(PR #408 claude-review 둘째 회차. 표에 넣을 상수를 사람이 골라 셀프 리뷰와 PR 직전 리뷰가 25개를 뒤늦게 찾았다). 더하면 절을 다시 짓고 해시를 다시 고정할 수 있다.
+- PR #408 claude-review 둘째 회차에서 다음 러너 손질로 넘긴 것: `plan_task`의 `rerun`과 `_check_end`의 `timed_out` 불리언 플래그 인자, 회차 기록의 `gates_green`·`hidden_passed`(`bool | None`)를 열거로, `rerun_files.py`의 나누기(기록 꼴, 사전 등록 헬퍼, 종료 판정), `test_구간은_5와_95_백분위다`의 자리.
 - PR #408 봇 첫 회차에서 보류한 것: `root_shape.py`의 갈래별 기대 결과 판정, `_with_costs`·`_interrupted`의 같은 차례, `ALLOWED_ENV`의 윈도 기본값 튜플, `ROOT_SHAPE`의 점 없는 회차 폴더 단언(위 "PR 봇 첫 회차").
