@@ -10,9 +10,19 @@ import subprocess
 import sys
 import time
 import uuid
+from collections.abc import Callable
 from pathlib import Path
 
-from tools.proc_command_line import argv_from_cmdline, command_line, pids_named
+import pytest
+from tools.proc_command_line import (
+    SETTLE_SECONDS,
+    argv_from_cmdline,
+    command_line,
+    pids_named,
+    settled,
+)
+
+from tools import proc_command_line
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -26,13 +36,8 @@ def test_살아_있는_프로세스의_명령_줄을_낱말로_읽는다() -> No
         stderr=subprocess.DEVNULL,
     )
     try:
-        # 리눅스의 Popen 은 exec 가 close-on-exec 파이프를 닫는 순간 돌아오고, 새 인자 영역은 그
-        # 뒤에 채워진다. 그 틈의 cmdline 은 비어 None 이라 기한까지 거듭 읽는다
-        deadline = time.monotonic() + 60
+        # 띄운 직후 한 번 읽는다. 빈 cmdline 의 틈은 도구가 기다려 메운다(`settled`)
         argv = command_line(process.pid)
-        while argv is None and time.monotonic() < deadline:
-            time.sleep(0.01)
-            argv = command_line(process.pid)
     finally:
         process.kill()
         process.wait(timeout=60)
@@ -40,6 +45,100 @@ def test_살아_있는_프로세스의_명령_줄을_낱말로_읽는다() -> No
     assert argv is not None
     assert marker in argv
     assert argv[-2:] == (marker, "")
+
+
+class _시계:
+    """`settled`에 넣는 시계와 잠. 잠은 시각만 앞으로 민다."""
+
+    def __init__(self) -> None:
+        self.now = 0.0
+        self.slept: list[float] = []
+
+    def clock(self) -> float:
+        return self.now
+
+    def sleep(self, seconds: float) -> None:
+        self.slept.append(seconds)
+        self.now += seconds
+
+
+def _읽기(*values: tuple[str, ...] | None) -> Callable[[int], tuple[str, ...] | None]:
+    left = list(values)
+    return lambda pid: left.pop(0) if len(left) > 1 else left[0]
+
+
+def test_살아_있는데_빈_명령_줄이면_찰_때까지_다시_읽는다() -> None:
+    fake = _시계()
+    argv = settled(
+        _읽기(None, None, ("python", "-c")),
+        lambda pid: True,
+        42,
+        settle=2.0,
+        clock=fake.clock,
+        sleep=fake.sleep,
+    )
+
+    assert argv == ("python", "-c")
+    assert len(fake.slept) == 2
+
+
+def test_살아_있지_않으면_기다리지_않고_빈_값이다() -> None:
+    fake = _시계()
+    argv = settled(
+        _읽기(None), lambda pid: False, 42, settle=2.0, clock=fake.clock, sleep=fake.sleep
+    )
+
+    assert argv is None
+    assert fake.slept == []
+
+
+def test_기한까지_비어_있으면_빈_값이다() -> None:
+    fake = _시계()
+    argv = settled(
+        _읽기(None), lambda pid: True, 42, settle=2.0, clock=fake.clock, sleep=fake.sleep
+    )
+
+    assert argv is None
+    assert 2.0 <= fake.now < 2.1
+
+
+def test_command_line_은_살아_있는데_빈_읽기를_다시_읽는다(monkeypatch: pytest.MonkeyPatch) -> None:
+    """배선: `command_line`이 한 번 읽기를 `settled`로 감싼다. 실제 프로세스 시험은 틈이 나는
+    회차에만 이 배선을 재므로 플랫폼과 무관하게 여기서 고정한다."""
+    monkeypatch.setattr(proc_command_line, "_read_once", _읽기(None, ("python", "-c")))
+
+    def alive(pid: int) -> bool:
+        return True
+
+    def readable() -> bool:
+        return True
+
+    monkeypatch.setattr(proc_command_line, "_alive", alive)
+    monkeypatch.setattr(proc_command_line, "_readable", readable)
+
+    assert command_line(42) == ("python", "-c")
+
+
+def test_command_line_은_읽지_못하는_플랫폼에서_기다리지_않는다(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """32비트 파이썬의 윈도와 리눅스·윈도 밖의 OS 는 읽기가 늘 빈 값이라, 살아 있다고 보여도
+    기한까지 기다리지 않는다. 위 배선 시험과 `_readable`만 다르다."""
+    monkeypatch.setattr(proc_command_line, "_read_once", _읽기(None, ("python", "-c")))
+    alive_calls: list[int] = []
+
+    def alive(pid: int) -> bool:
+        alive_calls.append(pid)
+        return True
+
+    def readable() -> bool:
+        return False
+
+    monkeypatch.setattr(proc_command_line, "_alive", alive)
+    monkeypatch.setattr(proc_command_line, "_readable", readable)
+
+    assert command_line(42) is None
+    assert alive_calls == []
 
 
 def test_끝났지만_거두지_않은_자식은_빈_값이다() -> None:
@@ -56,10 +155,16 @@ def test_끝났지만_거두지_않은_자식은_빈_값이다() -> None:
         while argv is not None and time.monotonic() < deadline:
             time.sleep(0.1)
             argv = command_line(process.pid)
+        # 끝난 자식은 살아 있지 않으므로 기한(SETTLE_SECONDS)까지 기다리지 않는다
+        start = time.monotonic()
+        again = command_line(process.pid)
+        elapsed = time.monotonic() - start
     finally:
         process.wait(timeout=60)
 
     assert argv is None
+    assert again is None
+    assert elapsed < SETTLE_SECONDS / 2
 
 
 def test_실행_파일_이름으로_살아_있는_프로세스의_pid_를_훑는다() -> None:

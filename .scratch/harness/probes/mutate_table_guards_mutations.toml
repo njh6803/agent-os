@@ -106,10 +106,10 @@ expect = "red"
 expect_output = ["[그_시험]"]
 [[mutation.edit]]
 file = "tools/mutate.py"
-old = '''            for arg in mutation.tests
-            if not arg.startswith("-")'''
-new = '''            for arg in mutation.tests
-            if False'''
+old = '''        for arg in mutation.tests
+        if not arg.startswith("-")'''
+new = '''        for arg in mutation.tests
+        if False'''
 
 [[mutation]]
 name = "시험 인자의 :: 뒤를 떼지 않는다"
@@ -118,8 +118,8 @@ expect = "red"
 expect_output = ["[그_시험]"]
 [[mutation.edit]]
 file = "tools/mutate.py"
-old = '''            (cwd / arg.split("::", 1)[0]).as_posix()'''
-new = '''            (cwd / arg).as_posix()'''
+old = '''        (cwd / arg.split("::", 1)[0]).as_posix()'''
+new = '''        (cwd / arg).as_posix()'''
 
 [[mutation]]
 name = "끝나도 표지를 지우지 않는다"
@@ -161,11 +161,11 @@ new = '''    return None'''
 name = "훅이 죽은 pid 의 표지도 센다"
 tests = ["tests/tools/test_hook_edit_during_mutate.py::test_산_pid_의_표지만_센다"]
 expect = "red"
-expect_output = ["test_산_pid_의_표지만_센다"]
+expect_output = ["table='b_mutations.toml')"]
 [[mutation.edit]]
 file = "tools/hook_edit_during_mutate.py"
-old = '''    return sorted(marker for marker in found if is_alive(marker.pid))'''
-new = '''    return sorted(found)'''
+old = '''    alive = [RunningMutation(m.pid, m.table) for m in found if _running(m)]'''
+new = '''    alive = [RunningMutation(m.pid, m.table) for m in found]'''
 
 [[mutation]]
 name = "훅이 git 파일의 상대 경로를 지금 폴더에서 푼다"

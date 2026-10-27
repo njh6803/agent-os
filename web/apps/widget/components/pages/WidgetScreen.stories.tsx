@@ -35,6 +35,8 @@ const meta = {
     onNewConversation: fn(),
     onDecide: fn(),
     requestChars: 20_000,
+    restore: "ready",
+    reconnect: null,
   },
   decorators: [
     (Story, { parameters }) => (
@@ -180,6 +182,93 @@ export const PausedLimitedWide: Story = {
     const canvas = within(canvasElement);
     await expect(canvas.getByRole("button", { name: "승인" })).toBeDisabled();
     await expect(canvas.getByText(/다시 고를 수 있습니다\.$/)).toBeVisible();
+  },
+};
+
+const CUT_EXCHANGE: Exchange = {
+  id: 0,
+  request: "늦으면 환불 받을 수 있어요?",
+  runId: "run_0",
+  calling: ["refunds.policy"],
+  tools: [{ tool: "orders.lookup", ok: true }],
+  approvals: [],
+  outcome: null,
+};
+
+const CUT_TEXT = "연결이 끊겨 다시 잇고 있습니다. 받은 내용은 그대로 있습니다.";
+
+/**
+ * 실행 도중 연결이 끊겨 다시 잇는 화면(화면 디자인 mk-reconnect). 받은 도구 줄은 남고 목록의 진행 표시는 숨으며, 입력창
+ * 위 띠가 진행 표시와 함께 다시 잇는다고 말한다. 붙은 응답이 없어 새 대화는 열려 있다.
+ */
+export const Reconnecting: Story = {
+  args: { exchanges: [CUT_EXCHANGE], sendBlocked: true, reconnect: { kind: "cut" } },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const band = canvas.getAllByRole("status").at(-1);
+    await expect(band).toBeDefined();
+    if (band !== undefined) {
+      await expect(within(band).getByRole("progressbar", { name: CUT_TEXT })).toBeVisible();
+    }
+    await expect(canvas.getByText("orders.lookup")).toBeVisible();
+    await expect(
+      canvas.queryByRole("progressbar", { name: "refunds.policy 부르는 중" }),
+    ).toBeNull();
+    await expect(canvas.getByRole("button", { name: "보내기" })).toBeDisabled();
+    await expect(canvas.getByRole("button", { name: "새 대화" })).toBeEnabled();
+  },
+};
+
+/** 기준 폭을 넘는 폭에서 구독이 상한에 걸려 기다리는 화면. 띠가 다시 이을 때까지의 시간을 보인다. 다크 모드다. */
+export const ReconnectLimitedWideDark: Story = {
+  parameters: { width: 400 },
+  globals: { mode: "dark" },
+  args: {
+    exchanges: [CUT_EXCHANGE],
+    sendBlocked: true,
+    reconnect: {
+      kind: "limited",
+      wait: { purpose: "subscribe", limit: "subscriptions", seconds: 7, until: 0, remaining: 7 },
+    },
+  },
+  play: async ({ canvasElement }) => {
+    const band = within(canvasElement).getAllByRole("status").at(-1);
+    await expect(band).toHaveTextContent("연결이 많아");
+    await expect(band).toHaveTextContent("뒤에 다시 잇습니다. 받은 내용은 그대로 있습니다.");
+    await expect(band?.querySelector("[aria-hidden='true']:not(svg)")).toHaveTextContent("7초");
+  },
+};
+
+/**
+ * 저장한 대화를 되돌리는 동안(web-widget 명세 "저장"의 묶음 견주기). 토큰을 받아 묶음을 견주기 전에는 앞 사람의 대화를
+ * 그리지 않으려고 대화 자리에 진행 표시만 서고, 입력 자리와 새 대화가 막힌다.
+ */
+export const Restoring: Story = {
+  args: { restore: "loading", sendBlocked: true, newConversationDisabled: true },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(
+      canvas.getByRole("progressbar", { name: "이전 대화를 불러오고 있습니다." }),
+    ).toBeVisible();
+    await expect(canvas.getByRole("textbox", { name: "요청" })).toBeDisabled();
+    await expect(canvas.getByRole("button", { name: "새 대화" })).toBeDisabled();
+  },
+};
+
+/**
+ * 기준 폭을 넘는 폭에서 되돌리다 토큰을 받지 못한 화면. 401 과 같은 알림이 버튼 없이 서고 입력 자리가 막힌다. 위쪽 띠의
+ * 새 대화는 열려 있다.
+ */
+export const RestoreUnauthorizedWide: Story = {
+  parameters: { width: 400 },
+  args: { restore: "unauthorized", sendBlocked: true },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const alert = canvas.getByRole("alert");
+    await expect(alert).toHaveTextContent("로그인 정보를 받지 못했습니다.");
+    await expect(within(alert).queryAllByRole("button")).toHaveLength(0);
+    await expect(canvas.getByRole("textbox", { name: "요청" })).toBeDisabled();
+    await expect(canvas.getByRole("button", { name: "새 대화" })).toBeEnabled();
   },
 };
 

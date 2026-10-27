@@ -10,12 +10,14 @@
 //   프로그램은 숨긴 사본의 처음 시간을 읽는다. 그래서 띠가 설 때 한 번, 시간이 다 되어 글이 바뀔 때 한 번 읽힌다.
 // - 승인 묻기가 결정을 기다리는 동안 입력창은 막힌 채 남고, 띠가 승인이나 거부를 먼저 고르라고 한다. 결정이 429 를
 //   받으면 상한의 띠가 앞서고, 그 시간이 다 되면 걷혀 승인 기다림의 띠로 돌아온다.
+// - 연결이 끊겨 다시 잇는 동안은 재접속의 띠가 맨 앞에 선다. 구독이 상한에 걸리면 그 띠가 기다릴 시간을 보인다.
 // - 보내기는 입력이 비었거나(앞뒤 공백만 있는 것도), 글자 수 상한을 넘었거나, 부르는 쪽이 막았을 때(실행이 돌거나
 //   멈춰 있거나, 상한의 기다림이 남았거나, 설정이 잘못됐을 때) 막힌다.
 import { IconButton, TextField } from "@agent-os/ui";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { charNote } from "../../lib/chars";
 import { limitSentence, READY, waitText, type LimitWait } from "../../lib/limit";
+import { CUT_TEXT, type Reconnect } from "../../lib/reconnect";
 import { ComposerBand, type Band } from "../molecules/ComposerBand";
 
 export interface ComposerProps {
@@ -40,23 +42,16 @@ export interface ComposerProps {
   readonly invalid: boolean;
   /** 승인 묻기가 결정을 기다린다. 띠가 승인이나 거부를 먼저 고르라고 한다. */
   readonly awaitingDecision: boolean;
+  /** 끊긴 실행에 다시 잇는 중. 띠가 맨 앞에 선다. */
+  readonly reconnect: Reconnect | null;
 }
 
 const INVALID = "요청을 보낼 수 없습니다. 요청을 고쳐 다시 보내 주세요.";
 
 const APPROVAL: Band = { kind: "notice", icon: "info", text: "승인이나 거부를 먼저 골라 주세요." };
 
-/**
- * 상한의 띠. 남은 시간이 있으면 상한의 문구이고, 다 됐으면 다시 보낼 수 있다는 글이다. 결정의 기다림은 다 되면
- * 걷혀, 승인 기다림의 띠가 다시 선다.
- */
-function limitBand(wait: LimitWait | null): Band | null {
-  if (wait === null) {
-    return null;
-  }
-  if (wait.remaining === 0) {
-    return wait.purpose === "decide" ? null : { kind: "notice", icon: "info", text: READY };
-  }
+/** 남은 시간이 있는 기다림의 띠. 숫자는 매초 줄고, 화면 읽기 프로그램은 숨긴 사본의 처음 시간을 읽는다. */
+function waitBand(wait: LimitWait): Band {
   const { before, after } = limitSentence(wait.limit, wait.purpose);
   return {
     kind: "notice",
@@ -72,6 +67,33 @@ function limitBand(wait: LimitWait | null): Band | null {
   };
 }
 
+/**
+ * 상한의 띠. 남은 시간이 있으면 상한의 문구이고, 다 됐으면 다시 보낼 수 있다는 글이다. 결정의 기다림은 다 되면
+ * 걷혀, 승인 기다림의 띠가 다시 선다.
+ */
+function limitBand(wait: LimitWait | null): Band | null {
+  if (wait === null) {
+    return null;
+  }
+  if (wait.remaining === 0) {
+    return wait.purpose === "decide" ? null : { kind: "notice", icon: "info", text: READY };
+  }
+  return waitBand(wait);
+}
+
+/**
+ * 재접속의 띠. 끊겨 다시 잇는 동안은 진행 표시이고, 구독이 상한에 걸려 기다리는 동안은 기다릴 시간이다. 그 시간이 다
+ * 되면 위젯이 스스로 다시 구독하므로 진행 표시로 돌아온다.
+ */
+function reconnectBand(reconnect: Reconnect | null): Band | null {
+  if (reconnect === null) {
+    return null;
+  }
+  return reconnect.kind === "limited" && reconnect.wait.remaining > 0
+    ? waitBand(reconnect.wait)
+    : { kind: "progress", label: CUT_TEXT };
+}
+
 export function Composer({
   value,
   onChange,
@@ -83,6 +105,7 @@ export function Composer({
   wait,
   invalid,
   awaitingDecision,
+  reconnect,
 }: ComposerProps) {
   const box = useRef<HTMLTextAreaElement>(null);
   useEffect(() => {
@@ -130,7 +153,7 @@ export function Composer({
   return (
     <>
       <ComposerBand
-        reconnect={null}
+        reconnect={reconnectBand(reconnect)}
         limit={limitBand(wait)}
         approval={awaitingDecision ? APPROVAL : null}
       />

@@ -211,10 +211,10 @@ expect = "red"
 [[mutation.edit]]
 file = "web/apps/admin/components/organisms/RunDecision.tsx"
 old = '''
-  const pause = trace.schema_version !== "1" ? pauseOf(trace) : null;
+  return trace.schema_version !== "1" ? pauseOf(trace) : null;
 '''
 new = '''
-  const pause = trace.schema_version === "2" ? pauseOf(trace) : null;
+  return trace.schema_version === "2" ? pauseOf(trace) : null;
 '''
 
 [[mutation]]

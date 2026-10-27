@@ -517,6 +517,29 @@ expect = "silent"
 note = "기능 아래 다른 폴더의 design — .scratch 다음 둘째 토막이 아니다"
 payload = { tool_name = "Write", tool_input = { file_path = "C:\\project\\agent\\.scratch\\harness\\probes\\design\\x.toml", content = "a = 1\n" } }
 
+# --- hook_web_edit_check (PostToolUse Write|Edit) ---
+# session_id 를 빼 표지를 쓰지 않는 길(호출마다 알린다)로 돈다. 한 번만 알리는 것과 들이기 브랜치의 침묵은 tests/tools 가 임시 폴더로 본다.
+# 경로는 임시 저장소(main 브랜치) 아래라 이 저장소의 브랜치에 기대를 걸지 않는다.
+[[case]]
+hook = "hook_web_edit_check.py"
+expect = "context"
+note = "디자인 토큰 CSS 를 고친 첫 쓰기(명세 계기 훅의 알리는 때)"
+contains = ["/sync-design-system 확인", "찾았을 때"]
+payload = { tool_name = "Edit", tool_input = { file_path = "${MAIN_REPO}/web/packages/ui/src/styles/theme.css", old_string = "a", new_string = "b" } }
+
+[[case]]
+hook = "hook_web_edit_check.py"
+expect = "context"
+note = "서브에이전트가 앱 화면을 쓴다 — 확인 대신 끝 보고에 적을 것"
+contains = ["끝 보고 첫머리"]
+payload = { tool_name = "Write", tool_input = { file_path = "${MAIN_REPO}/web/apps/admin/src/App.tsx", content = "export {};\n" }, agent_id = "a1", agent_type = "general-purpose" }
+
+[[case]]
+hook = "hook_web_edit_check.py"
+expect = "silent"
+note = "같은 저장소의 web/tools 스크립트 — 화면 코드가 아니다"
+payload = { tool_name = "Edit", tool_input = { file_path = "${MAIN_REPO}/web/tools/sync-design-system/check.ts", old_string = "a", new_string = "b" } }
+
 # --- hook_probe_conclusion (PostToolUse Write|Edit) ---
 # session_id 를 빼 표지를 쓰지 않는 길(호출마다 알린다)로 돈다. 한 번만 알리는 것은 tests/tools 가 임시 폴더로 본다.
 [[case]]
@@ -544,6 +567,33 @@ hook = "hook_probe_conclusion.py"
 expect = "silent"
 note = "같은 probes 폴더의 프로브 스크립트 — README 가 아니다"
 payload = { tool_name = "Edit", tool_input = { file_path = "C:\\project\\agent\\.scratch\\harness\\probes\\guard_hooks_time.py", old_string = "a", new_string = "b" } }
+
+# --- hook_journal_evidence (PostToolUse Write|Edit) ---
+# session_id 를 빼 표지를 쓰지 않는 길(호출마다 알린다)로 돈다. 한 번만 알리는 것은 tests/tools 가 임시 폴더로 본다.
+[[case]]
+hook = "hook_journal_evidence.py"
+expect = "context"
+note = "일지의 단계 줄을 고쳤다(대기열 445. 일지 2026-10-23-27 의 꼴)"
+contains = [
+    "근거의 종류",
+    "그 명령과 함께",
+    "그 문서를 출처로",
+    "보지 않은 것을 본 것처럼",
+    "docs/agents/issue-tracker.md",
+]
+payload = { tool_name = "Edit", tool_input = { file_path = "C:\\project\\agent\\docs\\journal\\2026-10-23-27-admin-style-screens.md", old_string = "- 5단계", new_string = "- 5단계: 테마 메뉴에 hex가 보인다" } }
+
+[[case]]
+hook = "hook_journal_evidence.py"
+expect = "silent"
+note = "같은 일에서 고친 디자인 표 — 일지 밖이다(대기열 445 의 둘째 사례)"
+payload = { tool_name = "Edit", tool_input = { file_path = "C:\\project\\agent\\.scratch\\admin-style\\design\\README.md", old_string = "| a |", new_string = "| b |" } }
+
+[[case]]
+hook = "hook_journal_evidence.py"
+expect = "silent"
+note = "일지 폴더 옆의 ADR — docs 아래지만 journal 이 아니다"
+payload = { tool_name = "Write", tool_input = { file_path = "C:\\project\\agent\\docs\\adr\\0036-x.md", content = "# x\n" } }
 
 # --- hook_edit_during_commit (PreToolUse Write|Edit|NotebookEdit) ---
 # 러너가 도는 동안 `${COMMITTING_REPO}` 안의 워크트리 `.claude/worktrees/side` 에서 pre-commit 훅에 멈춘 커밋이 돈다.

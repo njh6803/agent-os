@@ -59,6 +59,7 @@ const meta = {
     newConversationBlocked: false,
     reasonLimit: 20_000,
     decisionBlocked: false,
+    reconnecting: false,
     onDecide: fn(),
   },
   decorators: [
@@ -186,6 +187,7 @@ function Growing({ start }: { readonly start: number }) {
         reasonLimit={20_000}
         decisionBlocked={false}
         onDecide={() => {}}
+        reconnecting={false}
       />
     </div>
   );

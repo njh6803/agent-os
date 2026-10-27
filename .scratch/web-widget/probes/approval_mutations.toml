@@ -100,10 +100,11 @@ expect_output = ["to have property \"disabled\" with value true"]
 [[mutation.edit]]
 file = "web/apps/widget/components/pages/ConnectedWidget.tsx"
 old = '''
-        phase === "running" || (waitingApproval(conversation)?.state.sending ?? null) !== null
+        (phase === "running" && reconnect === null) ||
+        (waitingApproval(conversation)?.state.sending ?? null) !== null
 '''
 new = '''
-        phase === "running"
+        (phase === "running" && reconnect === null)
 '''
 
 [[mutation]]
@@ -132,12 +133,12 @@ expect = "red"
 expect_output = ["Unable to find an element with the text: 환불했습니다."]
 
 [[mutation.edit]]
-file = "web/apps/widget/components/pages/useConversation.ts"
+file = "web/apps/widget/lib/rejection.ts"
 old = '''
-      if (status === 404 && !retried) {
+      return retried ? { kind: "expired" } : { kind: "retry" };
 '''
 new = '''
-      if (status === 404 && retried) {
+      return { kind: "expired" };
 '''
 
 [[mutation]]
@@ -148,12 +149,12 @@ expect = "red"
 expect_output = ["Received: \"6\""]
 
 [[mutation.edit]]
-file = "web/apps/widget/components/pages/useConversation.ts"
+file = "web/apps/widget/components/pages/drivers.ts"
 old = '''
-    frames = await subscribeRun(connection.baseUrl, token, runId, pauseId, signal);
+    subscribeRun(session.connection.baseUrl, authorized.token, runId, pauseId, signal),
 '''
 new = '''
-    frames = await subscribeRun(connection.baseUrl, token, runId, pauseId - 1, signal);
+    subscribeRun(session.connection.baseUrl, authorized.token, runId, pauseId - 1, signal),
 '''
 
 [[mutation]]
@@ -164,14 +165,14 @@ expect = "red"
 expect_output = ["expected '요청을 처리하지 못했습니다.잠시 뒤 다시 보내 주세요.' to be '결정을 보내지"]
 
 [[mutation.edit]]
-file = "web/apps/widget/components/pages/useConversation.ts"
+file = "web/apps/widget/components/pages/drivers.ts"
 old = '''
-  if (!read.any) {
-    dispatch({ type: "decision-refused", notice: "conflict" });
+  if (received.count === 0) {
+    session.dispatch({ type: "decision-refused", notice: "conflict" });
 '''
 new = '''
-  if (!read.any) {
-    dispatch({ type: "decision-refused", notice: "error" });
+  if (received.count === 0) {
+    session.dispatch({ type: "decision-refused", notice: "error" });
 '''
 
 [[mutation]]
@@ -182,12 +183,14 @@ expect = "red"
 expect_output = ["Unable to find role=\"alert\""]
 
 [[mutation.edit]]
-file = "web/apps/widget/components/pages/useConversation.ts"
+file = "web/apps/widget/components/pages/drivers.ts"
 old = '''
-    dispatch(read.decided ? { type: "ended" } : { type: "decision-refused", notice: "error" });
+      if (!received.decided) {
+        session.dispatch({ type: "decision-refused", notice: "error" });
 '''
 new = '''
-    dispatch({ type: "ended" });
+      if (!received.decided) {
+        session.dispatch({ type: "ended" });
 '''
 
 [[mutation]]

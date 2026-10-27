@@ -5,7 +5,7 @@
 import { act, cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { expect, test, vi } from "vitest";
 import { gate, items, KEEPALIVE, frame, rejection, stream } from "../../testing/network";
-import { onTokenRequest, post, serveTokens } from "../../testing/site";
+import { onTokenRequest, post, serveTokens, siteToken } from "../../testing/site";
 import {
   ask,
   FINISHED,
@@ -21,7 +21,7 @@ import {
 
 test("보내면 부모 창에 새 id 의 토큰 요청을 대상 출처 * 로 보내고, 받은 토큰을 Authorization 으로 실어 자기 출처의 /end-user/runs 로 시작한다", async () => {
   const posted = vi.spyOn(window, "postMessage");
-  const ids = serveTokens("token-a");
+  const ids = serveTokens(siteToken("token-a"));
   const seen = onStart(FINISHED);
   const user = openWidget();
 
@@ -32,7 +32,7 @@ test("보내면 부모 창에 새 id 의 토큰 요청을 대상 출처 * 로 �
   expect(seen).toEqual([
     {
       url: `${location.origin}/end-user/runs`,
-      authorization: "Bearer token-a",
+      authorization: `Bearer ${siteToken("token-a")}`,
       body: { agent: "order-helper", request: "배송 어디쯤이에요?" },
     },
   ]);
@@ -42,7 +42,7 @@ test("요청마다 토큰을 새로 묻고 그때 받은 토큰을 싣는다", a
   const ids: string[] = [];
   onTokenRequest(({ id }) => {
     ids.push(id);
-    post({ type: "agent-os/token", id, token: `token-${String(ids.length)}` });
+    post({ type: "agent-os/token", id, token: siteToken(`token-${String(ids.length)}`) });
   });
   const started = onStart(FINISHED);
   const continued = onContinue(FINISHED);
@@ -56,8 +56,8 @@ test("요청마다 토큰을 새로 묻고 그때 받은 토큰을 싣는다", a
   });
 
   expect(new Set(ids).size).toBe(2);
-  expect(started[0]?.authorization).toBe("Bearer token-1");
-  expect(continued[0]?.authorization).toBe("Bearer token-2");
+  expect(started[0]?.authorization).toBe(`Bearer ${siteToken("token-1")}`);
+  expect(continued[0]?.authorization).toBe(`Bearer ${siteToken("token-2")}`);
 });
 
 test("부모가 아닌 창, 허용 밖 출처, 다른 id 의 답은 버리고 맞는 답의 토큰으로 보낸다", async () => {
@@ -65,15 +65,15 @@ test("부모가 아닌 창, 허용 밖 출처, 다른 id 의 답은 버리고 �
   const frameElement = document.body.appendChild(document.createElement("iframe"));
   onTokenRequest(({ id }) => {
     post(
-      { type: "agent-os/token", id, token: "from-other-window" },
+      { type: "agent-os/token", id, token: siteToken("from-other-window") },
       { source: frameElement.contentWindow },
     );
     post(
-      { type: "agent-os/token", id, token: "from-other-origin" },
+      { type: "agent-os/token", id, token: siteToken("from-other-origin") },
       { origin: "https://evil.example" },
     );
-    post({ type: "agent-os/token", id: `${id}-x`, token: "for-other-request" });
-    post({ type: "agent-os/token", id, token: "right" });
+    post({ type: "agent-os/token", id: `${id}-x`, token: siteToken("for-other-request") });
+    post({ type: "agent-os/token", id, token: siteToken("right") });
   });
   const seen = onStart(FINISHED);
   const user = openWidget();
@@ -81,7 +81,7 @@ test("부모가 아닌 창, 허용 밖 출처, 다른 id 의 답은 버리고 �
   await ask(user, "요청");
 
   await findOutput("도착 예정입니다.");
-  expect(seen.map((request) => request.authorization)).toEqual(["Bearer right"]);
+  expect(seen.map((request) => request.authorization)).toEqual([`Bearer ${siteToken("right")}`]);
 });
 
 test("허용 출처가 비면 부모의 답을 모두 버린다", async () => {

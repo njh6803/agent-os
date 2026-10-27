@@ -53,8 +53,30 @@
   pr list` 한 번에 최근 1000개를 읽는다. 그보다 오래된 것은 병합되지 않은 것으로 보여 남는다(안전한
   쪽).
 - 판정 2, 깨끗하다. `status --porcelain --untracked-files=all` 의 stdout 과 stderr 가 모두 비어야
-  한다. stderr 의 경고는 git 이 그 아래를 보지 못했다는 뜻이다. `status --ignored` 의 `!!` 항목은
-  다시 만들 수 있는 것(`RECREATABLE_*`, 루트와 같은 `.claude/settings.local.json`)뿐이어야 한다.
+  한다. stderr 의 경고는 git 이 그 아래를 보지 못했다는 뜻이다. `status --ignored=matching` 의 `!!`
+  항목은 다시 만들 수 있는 것(`RECREATABLE_*`, 루트와 같은 `.claude/settings.local.json`)뿐이어야
+  한다. 기본(`traditional`)은 무시된 것만 든 미추적 폴더를 그 폴더로 접어 찍어, 다시 만들 수 있는
+  자리(`web/apps/widget/public/fonts/`)가 그 위 폴더로 보였고 위젯을 띄운 병합된 워크트리 아홉이
+  남았다(대기열 464, 일지 2026-10-26-01). `matching` 은 무시 패턴에 맞은 자리만 찍는다(git 2.32 의
+  임시 저장소에서 두 모드를 손으로 봤고, 시험이 그 접힘을 표지로 고정한다). 그래서 안쪽
+  `.gitignore` 로만 무시되는 폴더(`.grimp_cache/`)와 윈도의 정션은 그 안의 항목이 하나씩 찍히고,
+  판정과 옮기기 전에 그 항목을 가장 바깥의 링크나 다시 만들 수 있는 폴더인 조상으로 접는다
+  (`fold_ignored`). 링크는 제 이름으로 판정되고 옮기기는 링크만 옮긴다. 추적 파일이 든 자리는 옮기지
+  않는다(`ls-files`). 옮기면 추적 파일이 빠져 `git worktree remove` 가 막히고, 그 뒤 휴지통을 비우며
+  함께 옮긴 다시 만들 수 없는 것(`.env`)도 지운다(PR 봇 CodeRabbit. 고치기 전 판을 셀프 리뷰 표준
+  축이 임시 저장소로 밟았다). 그래서 추적 파일이 든 폴더로는 접지 않고 그 안의 항목을 제 이름이나 더
+  안쪽 조상으로 판정한다. 추적 폴더를 갈음한 링크가 있으면 그 안에 무시된 것이 있든 없든
+  남긴다(`tracked_links`). 윈도의 git 은 그 정션을 따라가 안의 파일이 체크아웃한 바이트와 같으면
+  바뀐 것으로 찍지 않고(셀프 리뷰 명세 축이 재현했다), 링크째로 옮기면 추적 파일이 빠지며, 옮길 것이
+  없으면 `git worktree remove` 가 정션을 따라가 링크 바깥의 파일을 지운다(PR 직전 bug-perf-review 의
+  대체 리뷰가 임시 저장소로 재현했다). 바이트가 다르면(`core.autocrlf` 의 줄 끝만 달라도) 바뀐
+  파일로 남는다(그 대체 리뷰와 그 반영의 셀프 리뷰가 임시 저장소로 봤다). 링크인지와 옮길
+  항목이 있는지는 `\\\\?\\` 경로로 묻는다. MAX_PATH 를 넘는 링크가 링크가 아닌 것으로 보여 링크
+  바깥을 지웠고(그 셀프 리뷰가 재현했다), 다시 만들 수 있는 이름의 그런 링크는 없는 것으로 보여
+  옮기기가 건너뛰어 같은 길로 지웠다(그 반영 커밋의 대체 bug-perf-review 가 임시 저장소로
+  재현했다). 워크트리를 읽을 때마다(`gather`) `ls-files` 를 한 번 띄우고 그 추적 폴더마다 링크인지
+  한 번씩 본다. 이 저장소(추적 폴더 375개)의 워크트리 하나에서 앞의 것은 0.02~0.1초, 뒤의 것은
+  0.07~0.34초였다(그 셀프 리뷰 때 손으로 열 번 봤다).
   설정의 같음은 `settings_equivalent` 다. 바이트가 같거나, 워크트리 스킬 사본 훅이 루트에 적는
   `skillOverrides` 의 `.claude/worktrees/` 키와 서식만 다르다(대기열 274).
   `git worktree remove` 는 무시된 파일을 묻지 않고 지운다. `.env` 나 `traces/` 가 있으면 남긴다.
@@ -102,10 +124,19 @@
   보지 않고, 쥔 프로세스는 옮기기 직전에만 다시 본다(판정 4의 2).
 체크아웃되지 않은 로컬 브랜치는 판정 1을 보고, 병합된 PR 이 없어도 끝이 `origin/main` 에서 닿으면
 지운다(잃는 것은 이름뿐이다. `EnterWorktree` 가 만들고 세션이 떠난 `worktree-*` 브랜치 53개가 PR
-없이 남아 있었다, 일지 2026-10-15-06). 병합된 PR 머리의 조상인 끝도 워크트리처럼 지운다. 지울
-것이어도 판정 3의 제목과 브랜치는 본다. 제목이나 브랜치가 그 브랜치인 실행 중 세션이 있으면
-남긴다(`judge_branch`, 대기열 286. 이것을 보지 않던 판이 실행 중인 세션 `chore/mutate-followups` 의
-브랜치를 지울 후보로 냈다, 일지 2026-10-16-15). 제목과 견줄 때도,
+없이 남아 있었다, 일지 2026-10-15-06). 병합된 PR 머리의 조상인 끝도 워크트리처럼 지운다.
+PR 없이 끝이 `origin/main` 에 있어도 그 브랜치의 reflog 마지막 기록이 `FRESH_SECONDS` 안이거나
+앞날이면 막 딴 브랜치라 남긴다(`is_fresh`, 대기열 440). `judge` 는 워크트리 목록을 읽은 뒤에
+브랜치 목록을 읽어, 나란히 연 형제 세션이 그사이에 딴 브랜치(`EnterWorktree` 뒤 워크트리 안의 `git
+switch -c`·`git branch -m`, 등록보다 브랜치를 먼저 만드는 `git worktree add -b`)는 체크아웃된
+브랜치인데 체크아웃되지 않은 것으로 보인다. 첫 세션의 정리가 형제 셋의 브랜치를 지울 후보로
+냈다(일지 2026-10-23-13. 형제가 어느 길로 땄는지는 적혀 있지 않다). 이름 바꾸기도 기록을 남겨 막
+딴 것으로 본다.
+`remove-branch` 의 재판정도 본다. 병합된 PR 로 지우는 두 길은 보지 않아, 주 체크아웃에서 병합하고
+main 으로 옮긴 직후의 정리가 그 브랜치를 바로 지운다. 지울 것이어도 판정 3의 제목과 브랜치는
+본다. 제목이나 브랜치가 그 브랜치인 실행 중 세션이 있으면 남긴다(`judge_branch`, 대기열 286.
+이것을 보지 않던 판이 실행 중인 세션 `chore/mutate-followups` 의 브랜치를 지울 후보로 냈다, 일지
+2026-10-16-15). 제목과 견줄 때도,
 체크아웃됐는지 워크트리 등록과 견줄 때도(`judge` 와 `remove-branch`) 대소문자를 가리지 않는다
 (`same_branch`. 글자 그대로 견준 판은 윈도에서 대소문자가 바뀌어 찍힌 체크아웃된 브랜치를 지울
 후보로 냈고 `remove-branch` 가 지웠다, 대기열 286 셀프 리뷰). 잠금과 쥔 프로세스는 워크트리의
@@ -169,8 +200,9 @@
   폴더이고 원래 이름의 등록이 폴더를 잃은 채 남아 있으면, 되돌릴 자리를 알린다.
 - 읽다 막히면 남긴다.
 - 링크가 있으면 남긴다. 다시 만들 수 있는 폴더(`RECREATABLE_DIRS` 의 이름, `RECREATABLE_PATHS` 의
-  자리)는 링크여도 들어가지 않는다. `RECREATABLE_DIRS` 의 이름은 `.grimp_cache` 말고는 루트의
-  `.gitignore` 가 어느 깊이에서나 무시한다(`.grimp_cache` 가 어떻게 무시되는지는 보지 않았다). 그
+  폴더 자리)는 링크여도 들어가지 않는다. `RECREATABLE_DIRS` 의 이름은 `.grimp_cache` 말고는 루트의
+  `.gitignore` 가 어느 깊이에서나 무시한다(`.grimp_cache` 는 Grimp 가 그 안에 둔, `*` 줄이 든
+  `.gitignore` 로 무시된다. 주 체크아웃의 것을 손으로 봤다). 그
   폴더의 `.gitignore` 는 지우다 만 폴더에서 먼저 지워졌을 수 있어 보지 않는다.
 - 나머지 파일은 내용이 참조(브랜치, 원격, 태그, `refs/stash`)에서 닿는 커밋에 있어야 한다. 파일마다
   git 의 블롭 이름을 셈해 `git rev-list --all --objects` 와 견준다. git 이 텍스트로 보는 내용은 CRLF
@@ -218,13 +250,21 @@
   (`origin_of`. 자리 이름에서 거꾸로 셈한 어림이고 `WORKTREES_DIR` 아래였다고 본다) 둘로 견준다.
   워크트리가 다른 자리에 있었으면 쥔 프로세스를 대지 못하고 찾지 못했다고 적는다. 지우기 자체는
   막히면 남으므로 안전한 쪽이다.
-- 체크아웃되지 않은 브랜치가 `origin/main` 에 든 것은 그 이름이 아직 쓰일 예정이었어도 지운다.
-  잃는 것은 이름이고 커밋은 `origin/main` 에 있다.
+- 체크아웃되지 않은 브랜치가 `origin/main` 에 든 것은 그 이름이 아직 쓰일 예정이었어도 reflog 의
+  마지막 기록이 창(`FRESH_SECONDS`) 밖이면 지운다. 잃는 것은 이름이고 커밋은 `origin/main` 에
+  있다.
+- reflog 가 없는 브랜치(`core.logAllRefUpdates=false` 로 딴 것, 기록이 만료된 것). 막 딴 것인지
+  몰라 판정 1대로 지운다. 잃는 것은 이름이다.
+- 시계가 어긋난 PC 에서 남긴 앞날 시각의 기록. 막 딴 것으로 보아, 시계가 그 시각을 지나 창이 끝날
+  때까지 정리마다 남긴다(남기는 쪽이다).
 - `origin/main` 이 없는 저장소(얕은 클론, 클라우드 세션, 원격 없는 임시 저장소)에서는 어느 커밋도
   `origin/main` 에 닿지 않는 것으로 보여, 분리 HEAD 와 PR 없는 브랜치가 모두 남는다(안전한 쪽).
   이유 줄은 `origin/main 에 없다` 라고만 적는다.
 - 휴지통 자리 이름의 역산(`origin_of`)은 이름에 `~~` 가 든 워크트리와 `~<숫자>` 로 끝나는 상대
   경로에서 어긋나 쥔 프로세스를 옛 자리로 찾지 못한다. 지우기는 그대로 막혀 남으니 안전한 쪽이다.
+- 휴지통 자리 이름(`trash_slot`)이 파일 시스템이 경로 한 토막에 허용하는 길이(이 PC 의 NTFS 에서
+  255자)를 넘는 항목. `judge` 는 지울 후보로 찍지만 `remove` 는 그 항목을 옮기다 막혀 남긴다(종료
+  1). 다음 정리에서도 같은 자리에서 멈추는, 남기는 쪽이다(셀프 리뷰 명세 축이 재현했다).
 - 탐침과 git 사이에 새로 생긴 점유와 파일. 다시 거른 뒤 git 이 지울 때까지의 틈이다.
 - 세션이 쓰던 워크트리인지. 제목과 브랜치, 잠금, 작업 디렉터리로만 가린다(판정 3). 앱이 그 세션의
   CLI 를 띄워 두지 않았으면 작업 디렉터리로도 잡히지 않는다.
@@ -244,7 +284,11 @@
   쥐었으면 판정 3의 쥔 프로세스가 남긴다.
 - `judge` 뒤에 열린 세션의 체크아웃되지 않은 브랜치. `remove-branch` 의 재판정은 세션을 보지
   않고(그 하위 명령은 제목을 받지 않는다), 워크트리의 `remove` 처럼 옮기기 직전에 쥔 프로세스를
-  다시 보는 것도 없어 판정 1이 지울 것으로 낸 브랜치를 지운다.
+  다시 보는 것도 없어 판정 1이 지울 것으로 낸 브랜치를 지운다. reflog 의 마지막 기록이 창 안인
+  브랜치만 막 딴 것으로 남긴다.
+- `judge` 가 워크트리 목록을 읽은 뒤 브랜치 목록을 읽기 전에 형제 세션이 체크아웃한 브랜치 가운데
+  reflog 의 마지막 기록이 창 밖인 것. 체크아웃은 그 브랜치의 reflog 에 기록을 남기지 않아 지울
+  후보로 찍힌다. `remove-branch` 가 워크트리 등록을 다시 읽어 남긴다.
 - 맥과 리눅스의 점유. 재지 않았다. 그 OS 는 열린 파일과 작업 디렉터리가 이름 바꾸기를 막지 않는
   것으로 알고 있어(어림) 탐침이 점유를 보지 못한다고 본다. 리눅스에서 작업 디렉터리로 쥔 것은
   판정 3과 판정 4의 2가 남긴다. 2 뒤에 들어온 것은 위의 탐침과 git 사이의 틈과 같은 결로 보지
@@ -338,6 +382,12 @@ MERGED_LIMIT = 1000
 # gh 와 tasklist 하나를 기다리는 초. 넘기면 부르지 못한 것으로 센다(대기열 342). git 은 두지 않는다
 # (`real_git`).
 CALL_TIMEOUT = 60
+# 막 딴 브랜치로 보는 창(초). reflog 의 마지막 기록이 이 안이면 PR 없이 끝이 `origin/main` 에 있어도
+# 남긴다(대기열 440). `judge` 가 워크트리 목록과 브랜치 목록을 따로 읽는 틈과 `git worktree add -b`
+# 가 브랜치를 먼저 따고 등록을 나중에 만드는 틈은 초 단위로 어림하고(재지 않았다), 브랜치를 먼저
+# 따고 나중에 체크아웃하는 길까지 덮게 넉넉히 고른 값이다. 떠난 세션의 브랜치는 다음
+# 정리가 지운다
+FRESH_SECONDS = 3600
 RECREATABLE_DIRS = frozenset(
     {
         ".venv",
@@ -357,17 +407,19 @@ RECREATABLE_DIRS = frozenset(
 RECREATABLE_FILES = frozenset({"next-env.d.ts"})
 # Git Bash 의 grep·sh 가 죽으며 남기는 덤프(루트 `.gitignore` 의 `*.stackdump`)
 RECREATABLE_SUFFIXES = (".stackdump",)
-# 이름이 흔해 자리째로 본다. 디자인 시스템 패키지의 빌드와 `/design-sync` 의 산출물(ADR 0026. 판정의
-# 원천은 Claude Design 프로젝트에 올린 `_ds_sync.json` 이다), 위젯의 Storybook 정적 빌드와 시작
-# 래퍼가 복사한 글꼴 파일, 소급 측정 프로브의 gh 응답 캐시(결과는 `branches.json` 에 커밋한다). 모두
-# 루트 `.gitignore` 가 앵커를 붙여 무시한다. 플랜 모드의 계획 파일 `.claude/plans/` 는 산출물이
-# 아니라 세션의 계획 원문이라 넣지 않는다(명세 축 리뷰)
+# 이름이 흔해 자리째로 본다. 폴더는 `/` 로 끝나고 파일은 그렇지 않다. 디자인 시스템 패키지의 빌드와
+# `/design-sync` 의 산출물(ADR 0026. 판정의 원천은 Claude Design 프로젝트에 올린 `_ds_sync.json`
+# 이다), 위젯의 Storybook 정적 빌드와 시작 래퍼가 복사한 글꼴 파일과 짓는 페이지 안 번들(대기열
+# 464), 소급 측정 프로브의 gh 응답 캐시(결과는 `branches.json` 에 커밋한다). 모두 루트 `.gitignore`
+# 가 앵커를 붙여 무시한다. 플랜 모드의 계획 파일 `.claude/plans/` 는 산출물이 아니라 세션의 계획
+# 원문이라 넣지 않는다(명세 축 리뷰)
 RECREATABLE_PATHS = frozenset(
     {
         "web/packages/ui/dist/",
         "web/packages/ui/storybook-static/",
         "web/apps/widget/storybook-static/",
         "web/apps/widget/public/fonts/",
+        "web/apps/widget/public/element.js",
         ".ds-sync/",
         "ds-bundle/",
         ".design-sync/sb-reference/",
@@ -398,6 +450,11 @@ _HOLDER_LABELS: dict[HolderKind, str] = {
 _RUNNING_REASON = "제목이나 브랜치가 그 브랜치인 세션이 돈다"
 # 판정 1에서 브랜치 끝이 병합된 PR 머리의 조상이라 지우는 이유
 _BEHIND_REASON = "브랜치 끝이 병합된 PR 의 머리보다 뒤다. 로컬에만 있는 커밋이 없다"
+# 판정 1에서 PR 없이 끝이 `origin/main` 에 있는데 reflog 의 마지막 기록이 창 안이라 남긴 이유
+_FRESH_REASON = (
+    f"막 딴 브랜치다. reflog 의 마지막 기록이 {FRESH_SECONDS // 60}분 안이거나 앞날이다"
+    " (나란히 연 세션이 체크아웃하기 전일 수 있다)"
+)
 # git 의 텍스트 판별에서 비인쇄로 세는 바이트. 32 아래에서 백스페이스·탭·ESC·폼 피드와 CR·LF 를 뺀
 # 것과 DEL 이다(`looks_text`)
 _NONPRINTABLE = bytes(byte for byte in [*range(32), 127] if byte not in (8, 9, 10, 12, 13, 27))
@@ -441,7 +498,7 @@ class Facts:
     탐침의 옆 이름 폴더가 있다는 뜻이고, `contained` 는 HEAD 가 `origin/main` 에서 닿는다는 뜻이다
     (분리 HEAD 에서만 읽는다). `behind` 는 브랜치 끝이 이름이 같은 병합된 PR 의 머리 가운데 하나의
     조상이라는 뜻이고(끝이 머리와 같으면 읽지 않는다), `app_marker` 는 앱의 표지(`APP_MARKER`)가
-    있다는 뜻이다."""
+    있다는 뜻이다. `tracked_links` 는 추적 파일이 든 폴더 가운데 링크인 것이다(같은 이름의 함수)."""
 
     exists: bool
     toplevel: str | None
@@ -454,6 +511,7 @@ class Facts:
     has_git: bool = True
     behind: bool = False
     app_marker: bool = False
+    tracked_links: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -489,9 +547,10 @@ def real_git(args: Sequence[str], cwd: Path) -> subprocess.CompletedProcess[str]
     """`GIT_OPTIONAL_LOCKS=0`: 남의 워크트리에서 친 `status` 가 색인을 고쳐 쓰며 잠그지 않는다.
     시간 제한을 두지 않는다. 지우는 git(`worktree remove`, `branch -D`)도 이 길로 가고, 큰
     `node_modules` 를 지우는 중에 끊으면 지우다 만 폴더가 남는다. 이 도구의 git 은 모두 이 함수
-    하나로 가서 읽기만 하는 git(`status --ignored`, `for-each-ref`, `merge-base`, `rev-parse`,
-    `rev-list`, `worktree list` 등)도 함께 시간 제한이 없다. 그것만 끊으려면 `Ops.git` 을 지우는
-    길과 읽는 길로 가르거나, 이 함수가 하위 명령으로 갈라 읽는 길에만 시간 제한을 준다."""
+    하나로 가서 읽기만 하는 git(`status --ignored=matching`, `ls-files`, `for-each-ref`, `log -g`,
+    `merge-base`, `rev-parse`, `rev-list`, `worktree list` 등)도 함께 시간 제한이 없다. 그것만
+    끊으려면 `Ops.git` 을 지우는 길과 읽는 길로 가르거나, 이 함수가 하위 명령으로 갈라 읽는 길에만
+    시간 제한을 준다."""
     return subprocess.run(  # 시간 제한 없음: 지우는 git 도 이 길로 가 도중에 끊지 않는다(독스트링)
         ["git", "-c", "core.longpaths=true", *args],
         cwd=cwd,
@@ -1070,6 +1129,7 @@ class Ops:
     sleep: Callable[[float], None] = time.sleep
     session_of: Callable[[int], str | None] = process_session
     end: Callable[[int], bool] = end_process
+    now: Callable[[], float] = time.time
 
 
 def holders_from(
@@ -1161,7 +1221,9 @@ def tasklist_has(output: str, pid: int) -> bool:
 
 
 def unrecreatable(ignored: Sequence[str], *, settings_same: bool) -> list[str]:
-    """`status --ignored` 의 `!!` 항목 중 다시 만들 수 없는 것. 디렉터리는 `/` 로 끝난다."""
+    """`fold_ignored` 로 접은 `!!` 항목 중 다시 만들 수 없는 것. 디렉터리는 `/` 로 끝난다.
+    `RECREATABLE_PATHS` 는 폴더와 파일을 끝의 `/` 로 가르므로 같은 이름의 다른 종류는 맞지
+    않는다."""
     kept: list[str] = []
     for entry in ignored:
         name = entry.rstrip("/").rsplit("/", 1)[-1]
@@ -1169,13 +1231,82 @@ def unrecreatable(ignored: Sequence[str], *, settings_same: bool) -> list[str]:
             if name in RECREATABLE_DIRS or entry in RECREATABLE_PATHS:
                 continue
         elif (
-            name in RECREATABLE_FILES
+            entry in RECREATABLE_PATHS
+            or name in RECREATABLE_FILES
             or name.endswith(RECREATABLE_SUFFIXES)
             or (entry == SETTINGS and settings_same)
         ):
             continue
         kept.append(entry)
     return kept
+
+
+def fold_ignored(
+    entries: Sequence[str], is_link: Callable[[str], bool], holds_tracked: Callable[[str], bool]
+) -> tuple[str, ...]:
+    """`status --ignored=matching` 의 `!!` 항목을 가장 바깥의 조상 가운데 링크(심볼릭 링크, 정션)
+    이거나 다시 만들 수 있는 폴더(`_recreatable_dir`) 인 것으로 접는다. 추적 파일이 든 조상은 링크가
+    아니면 건너뛴다. 두 판정은 워크트리 기준의 상대 경로를 받는다. 접은 자리는 처음 나온 차례로 한
+    번만 든다.
+
+    안쪽 `.gitignore` 로만 무시되는 폴더는 `matching` 이 그 안을 하나씩 찍는다. Grimp 는
+    `.grimp_cache/` 안에 `*` 줄이 든 `.gitignore` 를 둔다(셀프 리뷰 명세 축). 하나씩 옮기다 막히면
+    먼저 옮긴 그 `.gitignore` 가 빠져 남은 것이 미추적이 되므로 폴더째 접는다. 윈도의 git 2.32 는
+    정션을 따라가 그 안도 하나씩 찍는다. 그대로 옮기면 링크 바깥의 파일이 옮겨지므로 링크째로
+    접어, 링크는 제 이름으로 판정되고 옮기기는 링크만 옮긴다(둘 다 PR 직전 bug-perf-review 가
+    임시 저장소로 재현했다). 추적 파일이 든 폴더로 접으면 옮기기가 추적 파일까지 옮긴다(PR 봇
+    CodeRabbit). 그 폴더 안의 항목은 제 이름으로 판정되거나 더 안쪽 조상으로 접힌다. 추적 파일이 든
+    링크는 `gather` 가 `tracked_links` 로 따로 모아 남긴다."""
+    folded: dict[str, None] = {}
+    for entry in entries:
+        parts = entry.rstrip("/").split("/")
+        place = entry
+        for depth in range(1, len(parts)):
+            ancestor = "/".join(parts[:depth])
+            if holds_tracked(ancestor) and not is_link(ancestor):
+                continue
+            if _recreatable_dir(parts[depth - 1], ancestor) or is_link(ancestor):
+                place = ancestor + "/"
+                break
+        folded[place] = None
+    return tuple(folded)
+
+
+def tracked_dirs(listing: str) -> frozenset[str]:
+    """`ls-files -z` 의 출력에서 추적 파일이 든 폴더(워크트리 기준의 상대 경로). 견줄 쪽과 함께
+    `os.path.normcase` 로 맞춘다. `normcase` 가 대소문자를 접는 윈도에서는 대소문자만 다른 자리도
+    추적 파일이 든 폴더로 보아 접지 않는 쪽이다. 리눅스와 macOS 의 `normcase` 는 대소문자를 바꾸지
+    않는다."""
+    dirs: set[str] = set()
+    for name in listing.split("\0"):
+        parts = name.split("/")[:-1]
+        for depth in range(1, len(parts) + 1):
+            dirs.add(os.path.normcase("/".join(parts[:depth])))
+    return frozenset(dirs)
+
+
+def tracked_links(listing: str, is_link: Callable[[str], bool]) -> tuple[str, ...]:
+    """`ls-files -z` 의 출력에서 추적 파일이 든 폴더 가운데 링크(심볼릭 링크, 정션)인 것을 끝에 `/`
+    를 붙여 처음 나온 차례로 든다. 폴더마다 한 번만 보고 링크 안의 폴더는 보지 않는다. 윈도의 git
+    은 추적 폴더를 갈음한 정션을 따라가 안의 파일이 체크아웃한 바이트와 같으면 바뀐 것으로 찍지
+    않고, 안에 무시된 것도 미추적 파일도 없으면 `status` 에 아무것도 찍히지 않는다. 그때
+    `git worktree remove` 가 정션을 따라가 링크 바깥의 파일을 지운다(PR 직전 bug-perf-review 의 대체
+    리뷰가 임시 저장소로 재현했다). 그래서 무시된 항목이 아니라 추적 파일이 든 폴더에서 찾는다."""
+    found: dict[str, None] = {}
+    seen: set[str] = set()
+    for name in listing.split("\0"):
+        parts = name.split("/")[:-1]
+        for depth in range(1, len(parts) + 1):
+            folder = "/".join(parts[:depth])
+            if folder in seen:
+                if folder + "/" in found:
+                    break
+                continue
+            seen.add(folder)
+            if is_link(folder):
+                found[folder + "/"] = None
+                break
+    return tuple(found)
 
 
 def same_path(left: str, right: str) -> bool:
@@ -1321,7 +1452,10 @@ def judge(
     if facts.status:
         return verdict("keep", "바뀐 파일이 있다")
     if facts.status_err:
-        return verdict("keep", f"git status 가 경고를 냈다: {facts.status_err.strip()[:120]}")
+        return verdict("keep", f"git 이 경고를 냈다: {facts.status_err.strip()[:120]}")
+    if facts.tracked_links:
+        places = ", ".join(facts.tracked_links[:5])
+        return verdict("keep", f"추적 폴더를 링크가 갈음했다: {places}")
     extra = unrecreatable(facts.ignored, settings_same=facts.settings_same)
     if extra:
         return verdict("keep", f"다시 만들 수 없는 무시된 항목: {', '.join(extra[:5])}")
@@ -1410,25 +1544,38 @@ def judge_branch(
     *,
     contained: bool = False,
     behind: bool = False,
+    fresh: bool = False,
 ) -> Verdict:
     """체크아웃되지 않은 로컬 브랜치의 판정. 판정 1이 지울 것으로 낸 뒤에 판정 3의 제목을 본다.
     `running` 은 실행 중 세션의 제목과 브랜치이고, 대소문자를 가리지 않고 견준다(`same_branch`,
     대기열 286)."""
-    verdict = _judge_branch_merged(branch, tip, merged, contained=contained, behind=behind)
+    verdict = _judge_branch_merged(
+        branch, tip, merged, contained=contained, behind=behind, fresh=fresh
+    )
     if verdict.action == "delete" and any(same_branch(title, branch) for title in running):
         return replace(verdict, action="keep", reason=_RUNNING_REASON)
     return verdict
 
 
 def _judge_branch_merged(
-    branch: str, tip: str, merged: Mapping[str, frozenset[str]], *, contained: bool, behind: bool
+    branch: str,
+    tip: str,
+    merged: Mapping[str, frozenset[str]],
+    *,
+    contained: bool,
+    behind: bool,
+    fresh: bool,
 ) -> Verdict:
     """판정 1. `contained` 는 브랜치 끝이 `origin/main` 에서 닿는다는 뜻이다. 병합된 PR 이 없어도
-    그러면 지운다. 잃는 것은 이름뿐이다. `behind` 는 끝이 병합된 PR 머리의 조상이라는 뜻이다."""
+    그러면 지운다. 잃는 것은 이름뿐이다. 다만 `fresh`(reflog 의 마지막 기록이 `FRESH_SECONDS`
+    안이다)면 막 딴 브랜치라 남긴다(대기열 440). `behind` 는 끝이 병합된 PR 머리의 조상이라는
+    뜻이다. 병합된 PR 로 지우는 길은 `fresh` 를 보지 않는다."""
     if branch in PROTECTED_BRANCHES:
         return Verdict("keep", branch, "지우지 않는 브랜치다", branch, tip)
     heads = merged.get(branch)
     if not heads:
+        if contained and fresh:
+            return Verdict("keep", branch, _FRESH_REASON, branch, tip)
         if contained:
             return Verdict("delete", branch, "커밋이 모두 origin/main 에 있다", branch, tip)
         reason = "병합된 PR 이 없고 origin/main 에 없는 커밋이 있다"
@@ -1578,6 +1725,31 @@ def behind_merged(root: Path, tip: str, heads: Collection[str] | None, git: GitR
     )
 
 
+def touched_at(printed: str) -> int | None:
+    """`git log -g -n 1 --format=%gd --date=unix` 의 출력(`<브랜치>@{<유닉스 초>}`)에서 시각을
+    읽는다. git 은 브랜치 이름에 `@{` 를 허락하지 않아 `@{` 는 선택자의 것뿐이다. 기록이 없거나
+    모양이 어긋나면 None 이다."""
+    _, mark, rest = printed.strip().rpartition("@{")
+    seconds = rest.removesuffix("}")
+    if not mark or seconds == rest or not seconds.isdigit():
+        return None
+    return int(seconds)
+
+
+def branch_touched(root: Path, branch: str, git: GitRunner) -> int | None:
+    """브랜치 reflog 의 마지막 기록 시각(유닉스 초). 따기, 이름 바꾸기(`git branch -m`), 끝 옮기기가
+    모두 기록을 남긴다. 기록이 없거나 읽지 못하면 None 이다."""
+    args = ["log", "-g", "-n", "1", "--format=%gd", "--date=unix", f"refs/heads/{branch}", "--"]
+    found = git(args, root)
+    return touched_at(found.stdout) if found.returncode == 0 else None
+
+
+def is_fresh(touched: int | None, now: float) -> bool:
+    """`touched` 가 `FRESH_SECONDS` 안이거나 앞날(시계가 어긋난 PC)이면 막 딴 브랜치다. 기록이
+    없으면 막 딴 것인지 모른다(못 보는 것)."""
+    return touched is not None and now - touched < FRESH_SECONDS
+
+
 def _has_app_marker(path: Path, git: GitRunner) -> bool:
     """그 워크트리의 git 디렉터리(`.git/worktrees/<이름>/`)에 앱의 표지가 있는지."""
     found = git(["rev-parse", "--absolute-git-dir"], path)
@@ -1603,10 +1775,25 @@ def gather(root: Path, wt: Worktree, git: GitRunner, merged: Mapping[str, frozen
         return _misplaced(exists=True, toplevel=toplevel)
     status = git(["status", "--porcelain", "-z", "--untracked-files=all"], path)
     status_err = status.stderr or ("" if status.returncode == 0 else f"exit {status.returncode}")
-    listed = git(["status", "--porcelain", "-z", "--ignored"], path)
+    # 기본(`traditional`)은 무시된 것만 든 미추적 폴더를 그 폴더로 접어 찍는다(대기열 464)
+    listed = git(["status", "--porcelain", "-z", "--ignored=matching"], path)
     if listed.returncode != 0 and not status_err:
         status_err = listed.stderr or f"exit {listed.returncode}"
-    ignored = tuple(item[3:] for item in listed.stdout.split("\0") if item.startswith("!! "))
+    tracked = git(["ls-files", "-z"], path)
+    if tracked.returncode != 0 and not status_err:
+        status_err = f"ls-files: {tracked.stderr or f'exit {tracked.returncode}'}"
+    found = [item[3:] for item in listed.stdout.split("\0") if item.startswith("!! ")]
+    holding = tracked_dirs(tracked.stdout)
+
+    def is_link(relative: str) -> bool:
+        # MAX_PATH 를 넘는 링크는 `\\?\` 없이 물으면 링크가 아닌 것으로 보인다(셀프 리뷰 명세 축)
+        return _is_link(Path(long_path(path / relative)))
+
+    def holds_tracked(relative: str) -> bool:
+        return os.path.normcase(relative) in holding
+
+    ignored = fold_ignored(found, is_link, holds_tracked)
+    links = tracked_links(tracked.stdout, is_link)
     settings_same = _same_settings(root / SETTINGS, path / SETTINGS)
     behind = (
         wt.branch is not None
@@ -1623,6 +1810,7 @@ def gather(root: Path, wt: Worktree, git: GitRunner, merged: Mapping[str, frozen
         contained=contained,
         behind=behind,
         app_marker=_has_app_marker(path, git),
+        tracked_links=links,
     )
 
 
@@ -1685,9 +1873,10 @@ def gather_stray(root: Path, folder: Path, reachable: Callable[[], frozenset[str
 
 
 def _recreatable_file(root: Path, folder: Path, relative: str) -> bool:
-    """다시 만들 수 있는 파일(`RECREATABLE_FILES` 의 이름, 루트와 같은 설정 파일. 같음은
-    `settings_equivalent`)."""
-    if relative.rsplit("/", 1)[-1] in RECREATABLE_FILES:
+    """다시 만들 수 있는 파일(`RECREATABLE_FILES` 의 이름, `RECREATABLE_PATHS` 의 파일 자리, 루트와
+    같은 설정 파일. 같음은 `settings_equivalent`). `RECREATABLE_PATHS` 의 파일 자리는 워크트리
+    판정(`unrecreatable`)과 같이 본다. 덤프(`RECREATABLE_SUFFIXES`)는 워크트리 판정만 본다."""
+    if relative.rsplit("/", 1)[-1] in RECREATABLE_FILES or relative in RECREATABLE_PATHS:
         return True
     return relative == SETTINGS and _same_settings(root / SETTINGS, folder / SETTINGS)
 
@@ -1795,6 +1984,22 @@ def _reachable(root: Path, git: GitRunner) -> Callable[[], frozenset[str]]:
     return functools.cache(lambda: reachable_objects(root, git))
 
 
+def _fresh(
+    root: Path,
+    branch: str,
+    merged: Mapping[str, frozenset[str]],
+    git: GitRunner,
+    now: float,
+    *,
+    contained: bool,
+) -> bool:
+    """판정 1의 `fresh`. 그 값을 보는 길(병합된 PR 이 없고 끝이 `origin/main` 에 있다)에서만 reflog
+    를 읽는다. `judge` 와 `remove-branch` 가 같이 쓴다."""
+    if merged.get(branch) or not contained:
+        return False
+    return is_fresh(branch_touched(root, branch, git), now)
+
+
 def _contained_branches(root: Path, git: GitRunner) -> frozenset[str]:
     """끝이 `origin/main` 에서 닿는 로컬 브랜치. `origin/main` 이 없으면 빈 집합이다."""
     args = ["for-each-ref", "--merged", "origin/main", "--format=%(refname:short)", "refs/heads"]
@@ -1852,12 +2057,15 @@ def _judge_all(
         ops.git, ["for-each-ref", "refs/heads", "--format=%(refname:short) %(objectname)"], root
     )
     contained = _contained_branches(root, ops.git)
+    now = ops.now()
     for line in refs.splitlines():
         branch, _, tip = line.partition(" ")
         if branch and not any(same_branch(name, branch) for name in checked_out):
+            inside = branch in contained
             behind = behind_merged(root, tip, merged.get(branch), ops.git)
+            fresh = _fresh(root, branch, merged, ops.git, now, contained=inside)
             verdict = judge_branch(
-                branch, tip, merged, running, contained=branch in contained, behind=behind
+                branch, tip, merged, running, contained=inside, behind=behind, fresh=fresh
             )
             print(_render_branch(verdict))
     if trash_dir(root) is None:
@@ -1935,7 +2143,9 @@ def _move_aside(
     moved: list[Path] = []
     for entry in entries:
         source = path / entry.rstrip("/")
-        if not os.path.lexists(source):
+        # MAX_PATH 를 넘는 링크는 `\\?\` 없이 물으면 없는 것으로 보여, 옮기지 않은 링크를
+        # `git worktree remove` 가 따라갔다(모듈 독스트링 판정 2)
+        if not os.path.lexists(long_path(source)):
             continue
         slot = trash_slot(root, path.name, entry)
         try:
@@ -2174,7 +2384,8 @@ def _remove_branch(root: Path, listing: list[Worktree], branch: str, tip: str, o
     merged = ops.merged(root)
     contained = contains(root, tip, ops.git)
     behind = behind_merged(root, tip, merged.get(branch), ops.git)
-    verdict = judge_branch(branch, tip, merged, (), contained=contained, behind=behind)
+    fresh = _fresh(root, branch, merged, ops.git, ops.now(), contained=contained)
+    verdict = judge_branch(branch, tip, merged, (), contained=contained, behind=behind, fresh=fresh)
     if verdict.action != "delete":
         print(f"남겼다 {branch} — 다시 판정했다: {verdict.reason}")
         return 1

@@ -6,6 +6,8 @@
 //   본문에 까닭이나 할 일을")대로 바꿨다.
 // - 실패 항목의 `message` 는 그리지 않는다. 모르는 원인과 원인 없음은 `other` 의 행이다.
 // - 끝내지 못함은 원인을 단정하지 않는다. 계약의 그 항목은 실행이 결말 없이 사라졌다는 것만 말한다.
+// - 다시 잇기를 멈춘 것(구독이 처리하지 못한 거절을 세 번 거듭 받았다)은 처리하지 못한 거절과 같은 문구이고 "새 대화"만
+//   단다(명세 "요청이 거절될 때"의 구독 행).
 import { Alert, Button } from "@agent-os/ui";
 import type { FailureCause, Outcome } from "../../lib/conversation";
 
@@ -92,6 +94,8 @@ const NOT_FOUND: Notice = {
   steps: [],
 };
 
+const ERROR_TITLE = "요청을 처리하지 못했습니다.";
+
 const UNAVAILABLE: Notice = {
   title: "에이전트를 지금 쓸 수 없습니다.",
   sentence: RETRY_LATER,
@@ -100,8 +104,8 @@ const UNAVAILABLE: Notice = {
 
 export interface FailureAlertProps {
   readonly outcome: Outcome;
-  /** "다시 보내기". 그 교환의 요청을 같은 규칙으로 다시 보낸다. */
-  readonly onRetry: () => void;
+  /** "다시 보내기". 그 교환의 요청을 같은 규칙으로 다시 보낸다. 다시 보낼 요청 글이 없으면 null 이고 버튼을 두지 않는다. */
+  readonly onRetry: (() => void) | null;
   readonly retryBlocked: boolean;
   /** "새 대화". 위쪽 띠의 것과 같다. */
   readonly onNewConversation: () => void;
@@ -135,12 +139,15 @@ function shownFor(outcome: Outcome): Shown | null {
     case "error":
       return {
         notice: {
-          title: "요청을 처리하지 못했습니다.",
+          title: ERROR_TITLE,
           sentence: RETRY_LATER,
           steps: outcome.offerNew ? ["retry", "new"] : ["retry"],
         },
         runId: null,
       };
+    // 다시 이으려 한 실행이 서버에 남아 있을 수 있어 "다시 보내기"를 두지 않는다. 새로 고치면 다시 붙는다.
+    case "lost":
+      return { notice: { title: ERROR_TITLE, sentence: RETRY_LATER, steps: ["new"] }, runId: null };
   }
 }
 
@@ -157,11 +164,15 @@ export function FailureAlert({
     return null;
   }
   const { notice, runId } = shown;
-  const actions = notice.steps.map((step) =>
+  const actions = notice.steps.flatMap((step) =>
     step === "retry" ? (
-      <Button key={step} variant="secondary" disabled={retryBlocked} onClick={onRetry}>
-        다시 보내기
-      </Button>
+      onRetry === null ? (
+        []
+      ) : (
+        <Button key={step} variant="secondary" disabled={retryBlocked} onClick={onRetry}>
+          다시 보내기
+        </Button>
+      )
     ) : (
       <Button
         key={step}

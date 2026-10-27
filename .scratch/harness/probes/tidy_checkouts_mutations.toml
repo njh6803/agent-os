@@ -517,9 +517,9 @@ expect_output = [") = _ops({})", "지웠다 브랜치 chore/loose"]
 
 [[mutation.edit]]
 file = "tools/tidy_checkouts.py"
-old = '''    verdict = judge_branch(branch, tip, merged, (), contained=contained, behind=behind)
+old = '''    verdict = judge_branch(branch, tip, merged, (), contained=contained, behind=behind, fresh=fresh)
     if verdict.action != "delete":'''
-new = '''    verdict = judge_branch(branch, tip, merged, (), contained=contained, behind=behind)
+new = '''    verdict = judge_branch(branch, tip, merged, (), contained=contained, behind=behind, fresh=fresh)
     if False:'''
 
 [[mutation]]
@@ -574,8 +574,8 @@ expect_output = ["AssertionError: 브랜치를 지운다 chore/loose"]
 
 [[mutation.edit]]
 file = "tools/tidy_checkouts.py"
-old = '''                branch, tip, merged, running, contained=branch in contained, behind=behind'''
-new = '''                branch, tip, merged, (), contained=branch in contained, behind=behind'''
+old = '''                branch, tip, merged, running, contained=inside, behind=behind, fresh=fresh'''
+new = '''                branch, tip, merged, (), contained=inside, behind=behind, fresh=fresh'''
 
 [[mutation]]
 name = "remove: 옮기기 직전에 다시 거르지 않는다(셀프 리뷰 Major)"
@@ -1972,3 +1972,285 @@ old = '''    target = os.path.realpath(path)
 '''
 new = '''    target = os.path.realpath(path) if "~" not in os.fspath(path) else os.path.abspath(path)
 '''
+
+# 2026-10-26(chore/017-tidy-collapsed-and-fresh-branches): 접힌 무시 폴더, 페이지 안 번들, 막 딴 브랜치
+
+[[mutation]]
+name = "무시된 항목: 접어 찍는 기본 모드로 읽는다(대기열 464)"
+tests = ["tests/tools/test_tidy_checkouts.py", "-k", "풀어_보고_지운다"]
+expect = "red"
+expect_output = ["AssertionError: 남긴다 ", "무시된 항목: web/apps/widget/public/"]
+
+[[mutation.edit]]
+file = "tools/tidy_checkouts.py"
+old = '''    listed = git(["status", "--porcelain", "-z", "--ignored=matching"], path)'''
+new = '''    listed = git(["status", "--porcelain", "-z", "--ignored"], path)'''
+
+[[mutation]]
+name = "다시 만들 수 있는 자리: 워크트리 판정이 파일 자리를 보지 않는다"
+tests = ["tests/tools/test_tidy_checkouts.py", "-k", "다시_만들_수_있는_무시된_것만"]
+expect = "red"
+expect_output = ["Left contains one more item: 'web/apps/widget/public/element.js'"]
+
+[[mutation.edit]]
+file = "tools/tidy_checkouts.py"
+old = '''            entry in RECREATABLE_PATHS
+            or name in RECREATABLE_FILES'''
+new = '''            name in RECREATABLE_FILES'''
+
+[[mutation]]
+name = "다시 만들 수 있는 자리: 등록 없는 폴더 판정이 파일 자리를 보지 않는다"
+tests = ["tests/tools/test_tidy_checkouts.py", "-k", "위젯_페이지_안_번들"]
+expect = "red"
+expect_output = ["등록 없는 폴더에 커밋에 없는 파일이 1개 있다: web/apps/widget/public/element.js"]
+
+[[mutation.edit]]
+file = "tools/tidy_checkouts.py"
+old = '''in RECREATABLE_FILES or relative in RECREATABLE_PATHS:'''
+new = '''in RECREATABLE_FILES:'''
+
+[[mutation]]
+name = "막 딴 브랜치: 판정 1이 창을 보지 않는다(대기열 440)"
+tests = ["tests/tools/test_tidy_checkouts.py", "-k", "막_딴_브랜치는_PR_없이"]
+expect = "red"
+expect_output = ["AssertionError: Verdict(action='delete', path='worktree-x'"]
+
+[[mutation.edit]]
+file = "tools/tidy_checkouts.py"
+old = '''        if contained and fresh:'''
+new = '''        if False:'''
+
+[[mutation]]
+name = "막 딴 브랜치: judge 가 reflog 를 읽지 않는다"
+tests = ["tests/tools/test_tidy_checkouts.py", "-k", "막_딴_브랜치를_남기고"]
+expect = "red"
+expect_output = ["AssertionError: 브랜치를 지운다 worktree-x"]
+
+[[mutation.edit]]
+file = "tools/tidy_checkouts.py"
+old = '''            fresh = _fresh(root, branch, merged, ops.git, now, contained=inside)'''
+new = '''            fresh = False'''
+
+[[mutation]]
+name = "막 딴 브랜치: remove-branch 의 재판정이 reflog 를 읽지 않는다"
+tests = ["tests/tools/test_tidy_checkouts.py", "-k", "막_딴_브랜치를_남기고"]
+expect = "red"
+expect_output = ["where 0 = main(['remove-branch', 'worktree-x'"]
+
+[[mutation.edit]]
+file = "tools/tidy_checkouts.py"
+old = '''    fresh = _fresh(root, branch, merged, ops.git, ops.now(), contained=contained)'''
+new = '''    fresh = False'''
+
+[[mutation]]
+name = "막 딴 브랜치: reflog 의 가장 오래된 기록(딴 때)을 본다"
+tests = ["tests/tools/test_tidy_checkouts.py", "-k", "앞날_기록이면"]
+expect = "red"
+expect_output = ["브랜치를 지운다 chore/renamed"]
+
+[[mutation.edit]]
+file = "tools/tidy_checkouts.py"
+old = '''    args = ["log", "-g", "-n", "1", "--format=%gd", "--date=unix", f"refs/heads/{branch}", "--"]'''
+new = '''    args = ["log", "-g", "--format=%gd", "--date=unix", f"refs/heads/{branch}", "--"]'''
+
+[[mutation]]
+name = "막 딴 브랜치: 앞날 기록을 막 딴 것으로 보지 않는다"
+tests = ["tests/tools/test_tidy_checkouts.py", "-k", "앞날_기록이면"]
+expect = "red"
+expect_output = ["브랜치를 지운다 ahead-clock"]
+
+[[mutation.edit]]
+file = "tools/tidy_checkouts.py"
+old = '''    return touched is not None and now - touched < FRESH_SECONDS'''
+new = '''    return touched is not None and 0 <= now - touched < FRESH_SECONDS'''
+
+# 셀프 리뷰 명세 축: `matching` 이 안쪽 `.gitignore` 로만 무시되는 폴더(`.grimp_cache/`)를 하나씩 찍는다
+
+[[mutation]]
+name = "무시된 항목 접기: 다시 만들 수 있는 폴더로 접지 않는다"
+tests = ["tests/tools/test_tidy_checkouts.py", "-k", "안쪽_gitignore_로만"]
+expect = "red"
+expect_output = ["무시된 항목: .grimp_cache/.gitignore, .grimp_cache/CACHEDIR.TAG"]
+
+[[mutation.edit]]
+file = "tools/tidy_checkouts.py"
+old = '''            if _recreatable_dir(parts[depth - 1], ancestor) or is_link(ancestor):'''
+new = '''            if is_link(ancestor):'''
+
+# PR 직전 bug-perf-review: 윈도의 git 이 정션 안을 하나씩 찍어 옮기기가 링크 바깥을 옮긴다
+
+[[mutation]]
+name = "무시된 항목 접기: 링크로 접지 않는다"
+tests = ["tests/tools/test_tidy_checkouts.py", "-k", "링크째로"]
+expect = "red"
+expect_output = ["AssertionError: 지운다 ", "[그_밖의_링크]"]
+
+[[mutation.edit]]
+file = "tools/tidy_checkouts.py"
+old = '''            if _recreatable_dir(parts[depth - 1], ancestor) or is_link(ancestor):'''
+new = '''            if _recreatable_dir(parts[depth - 1], ancestor):'''
+
+[[mutation]]
+name = "무시된 항목 접기: 가장 안쪽 조상으로 접는다"
+tests = ["tests/tools/test_tidy_checkouts.py", "-k", "가장_바깥의_링크로"]
+expect = "red"
+expect_output = ["At index 3 diff: '.grimp_cache/l/' != '.grimp_cache/'"]
+
+[[mutation.edit]]
+file = "tools/tidy_checkouts.py"
+old = '''        for depth in range(1, len(parts)):
+            ancestor = "/".join(parts[:depth])'''
+new = '''        for depth in reversed(range(1, len(parts))):
+            ancestor = "/".join(parts[:depth])'''
+
+[[mutation]]
+name = "무시된 항목 접기: gather 가 접지 않는다"
+tests = ["tests/tools/test_tidy_checkouts.py", "-k", "링크째로"]
+expect = "red"
+expect_output = ["무시된 항목: .grimp_cache/.gitignore, .grimp_cache/a.json, .grimp_cache/keep/"]
+
+[[mutation.edit]]
+file = "tools/tidy_checkouts.py"
+old = '''    ignored = fold_ignored(found, is_link, holds_tracked)'''
+new = '''    ignored = tuple(found)'''
+
+# PR 봇 CodeRabbit 첫 회차: 추적 파일이 든 폴더로 접으면 옮기기가 추적 파일까지 옮긴다
+
+[[mutation]]
+name = "무시된 항목 접기: 추적 파일이 든 조상으로 접는다"
+tests = ["tests/tools/test_tidy_checkouts.py", "-k", "추적_파일이_든_조상으로는"]
+expect = "red"
+expect_output = ["At index 0 diff: 'coverage/' != 'coverage/.env'"]
+
+[[mutation.edit]]
+file = "tools/tidy_checkouts.py"
+old = '''            if holds_tracked(ancestor) and not is_link(ancestor):'''
+new = '''            if False:'''
+
+[[mutation]]
+name = "무시된 항목 접기: 추적 파일이 든 링크로 접지 않는다"
+tests = ["tests/tools/test_tidy_checkouts.py", "-k", "추적_파일이_든_조상으로는"]
+expect = "red"
+expect_output = ["At index 3 diff: 'lnk/x.json' != 'lnk/'"]
+
+[[mutation.edit]]
+file = "tools/tidy_checkouts.py"
+old = '''            if holds_tracked(ancestor) and not is_link(ancestor):'''
+new = '''            if holds_tracked(ancestor):'''
+
+[[mutation]]
+name = "무시된 항목 접기: gather 가 추적 파일을 보지 않는다"
+tests = ["tests/tools/test_tidy_checkouts.py", "-k", "추적_파일이_든_폴더로"]
+expect = "red"
+expect_output = ["AssertionError: 지운다 ", "[무시된_env]"]
+
+[[mutation.edit]]
+file = "tools/tidy_checkouts.py"
+old = '''        return os.path.normcase(relative) in holding'''
+new = '''        return False'''
+
+[[mutation]]
+name = "추적 파일이 든 폴더: 바로 위 폴더를 빼먹는다"
+tests = ["tests/tools/test_tidy_checkouts.py", "-k", "tracked_dirs"]
+expect = "red"
+expect_output = ["Extra items in the right set:"]
+
+[[mutation.edit]]
+file = "tools/tidy_checkouts.py"
+old = '''        for depth in range(1, len(parts) + 1):
+            dirs.add(os.path.normcase("/".join(parts[:depth])))'''
+new = '''        for depth in range(1, len(parts)):
+            dirs.add(os.path.normcase("/".join(parts[:depth])))'''
+
+[[mutation]]
+name = "추적 파일이 든 폴더: ls-files 를 읽지 못해도 지나간다"
+tests = ["tests/tools/test_tidy_checkouts.py", "-k", "ls_files_를_읽지_못하면"]
+expect = "red"
+expect_output = ["AssertionError: 지운다 "]
+
+[[mutation.edit]]
+file = "tools/tidy_checkouts.py"
+old = '''    if tracked.returncode != 0 and not status_err:
+        status_err = f"ls-files: {tracked.stderr or f'exit {tracked.returncode}'}"'''
+new = '''    if False:
+        status_err = f"ls-files: {tracked.stderr or f'exit {tracked.returncode}'}"'''
+
+# 셀프 리뷰 명세 축과 PR 직전 bug-perf-review 의 대체 리뷰: 추적 폴더를 갈음한 링크는 링크째로 옮기면
+# 추적 파일이 빠지고, 옮길 것이 없으면 git worktree remove 가 링크 바깥을 지운다
+
+[[mutation]]
+name = "추적 폴더를 갈음한 링크: judge 가 보지 않는다"
+tests = ["tests/tools/test_tidy_checkouts.py", "-k", "추적_폴더를_갈음한"]
+expect = "red"
+expect_output = ["AssertionError: 지운다 ", "[무시된_env]"]
+
+[[mutation.edit]]
+file = "tools/tidy_checkouts.py"
+old = '''    if facts.tracked_links:'''
+new = '''    if False:'''
+
+[[mutation]]
+name = "추적 폴더를 갈음한 링크: 무시된 항목을 접은 자리에서만 찾는다"
+tests = ["tests/tools/test_tidy_checkouts.py", "-k", "추적_폴더를_갈음한"]
+expect = "red"
+expect_output = ["AssertionError: 지운다 ", "[무시된_것_없음]"]
+
+[[mutation.edit]]
+file = "tools/tidy_checkouts.py"
+old = '''    links = tracked_links(tracked.stdout, is_link)'''
+new = '''    links = tuple(place for place in ignored if holds_tracked(place.rstrip("/")))'''
+
+[[mutation]]
+name = "추적 폴더를 갈음한 링크: 링크 안의 폴더까지 본다"
+tests = ["tests/tools/test_tidy_checkouts.py", "-k", "tracked_links"]
+expect = "red"
+expect_output = ["Left contains one more item: 'coverage/sub/'"]
+
+[[mutation.edit]]
+file = "tools/tidy_checkouts.py"
+old = '''            if folder in seen:
+                if folder + "/" in found:
+                    break
+                continue'''
+new = '''            if folder in seen:
+                continue'''
+
+# 셀프 리뷰 명세 축(기점 e6c7c7ae): MAX_PATH 를 넘는 링크는 `\\?\` 없이 물으면 링크가 아닌 것으로
+# 보여, 추적 폴더를 갈음한 링크를 놓치고(196) 무시된 것이 든 링크를 접지 못한다(197). 같은 고침을
+# 시험의 두 갈래가 따로 잡는지 보려고 갈래마다 하나씩 둔다
+
+[[mutation]]
+name = "MAX_PATH 를 넘는 링크: 추적 폴더 자리의 링크를 찾지 못한다"
+tests = ["tests/tools/test_tidy_checkouts.py", "-k", "MAX_PATH and 추적_폴더_자리"]
+expect = "red"
+expect_output = ["AssertionError: 지운다 ", "[추적_폴더_자리의_링크]"]
+
+[[mutation.edit]]
+file = "tools/tidy_checkouts.py"
+old = '''        return _is_link(Path(long_path(path / relative)))'''
+new = '''        return _is_link(path / relative)'''
+
+[[mutation]]
+name = "MAX_PATH 를 넘는 링크: 무시된 것이 든 링크를 접지 못한다"
+tests = ["tests/tools/test_tidy_checkouts.py", "-k", "MAX_PATH and 무시된_것이_든"]
+expect = "red"
+expect_output = ["AssertionError: 지운다 ", "[무시된_것이_든_링크]"]
+
+[[mutation.edit]]
+file = "tools/tidy_checkouts.py"
+old = '''        return _is_link(Path(long_path(path / relative)))'''
+new = '''        return _is_link(path / relative)'''
+
+# 머리 35481b0b 의 대체 bug-perf-review: 다시 만들 수 있는 이름의 MAX_PATH 를 넘는 링크는 `\\?\`
+# 없이 물으면 없는 것으로 보여, 옮기기가 건너뛰고 `git worktree remove` 가 링크 바깥을 지운다
+
+[[mutation]]
+name = "MAX_PATH 를 넘는 링크: 옮길 항목이 없는 것으로 본다"
+tests = ["tests/tools/test_tidy_checkouts.py", "-k", "다시_만들_수_있는_이름의_링크도_링크만"]
+expect = "red"
+expect_output = ["AssertionError: assert [] == ['keep.txt', 'pkg/index.js']"]
+
+[[mutation.edit]]
+file = "tools/tidy_checkouts.py"
+old = '''        if not os.path.lexists(long_path(source)):'''
+new = '''        if not os.path.lexists(source):'''

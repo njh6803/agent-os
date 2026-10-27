@@ -1,5 +1,6 @@
 // 위젯 페이지 시험(widget-pages)의 격리. 테스트마다 그린 것을 걷고(페이지가 문서 뿌리에 단 속성도 그때 걷힌다),
-// 엿본 함수와 가짜 시계와 환경 변수를 되돌리고, 핸들러와 사이트의 흉내를 걷고, 주소를 처음으로 돌린다.
+// 엿본 함수와 가짜 시계와 환경 변수를 되돌리고, 핸들러와 사이트의 흉내를 걷고, 주소를 처음으로 돌리고, 위젯이 쓴
+// sessionStorage 를 비운다. 한 테스트 안에서는 저장이 남아, 그린 것을 걷고 다시 그리면 같은 탭의 새로 고침이다.
 //
 // 빌드가 번들에 넣는 두 값(lib/build.ts)은 시험마다 환경 변수로 둔다. 허용 출처는 사이트의 흉내 하나이고 글자 수
 // 상한은 서버의 기본값 20,000 이다.
@@ -33,6 +34,7 @@ afterEach(() => {
   network.resetHandlers();
   removeTokenListeners();
   window.history.replaceState(null, "", "/");
+  sessionStorage.clear();
   expect(unhandled.splice(0), "처리하지 않은 요청이 있다").toEqual([]);
 });
 

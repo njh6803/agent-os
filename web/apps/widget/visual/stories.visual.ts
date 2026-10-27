@@ -8,6 +8,7 @@ import { test as base, expect, type Page } from "@playwright/test";
 import {
   MODES,
   inDefaultTheme,
+  missingBrowserArgs,
   photographedStories,
   storybookTest,
   type Globals,
@@ -46,6 +47,12 @@ for (const story of photographedStories(SITE)) {
     expect(shot, "찍은 모드").not.toEqual([]);
   });
 }
+
+// 화면의 사진은 이 PC 에서 인자를 빼도 정답과 맞아, 설정이 `BROWSER_ARGS` 를 넘기는지는 이 시험이 본다(`@agent-os/ui/visual`
+// 의 주석).
+test("브라우저가 사진 비교의 실행 인자를 모두 받고 떠 있다", async ({ browser }) => {
+  expect(await missingBrowserArgs(browser)).toEqual([]);
+});
 
 // 대화의 진행 표시(값 모름)는 디자인 시스템의 도는 표시다. 움직임 줄이기는 그 패키지의 미디어 특성 테스트가 부품
 // 하나로 재고, 여기서는 위젯이 엮은 자리에서도 그 설정이 닿는지 본다(web-widget 티켓 05 의 접근성).

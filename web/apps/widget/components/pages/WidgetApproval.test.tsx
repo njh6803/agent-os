@@ -3,14 +3,16 @@
 // 글과 역할로 본다. 기대하는 문구는 명세(.scratch/web-widget/spec.md)의 "승인 묻기", "요청이 거절될 때"(경로가 "결정"인
 // 행), "상한", "접근성" 절에서 그대로 옮겼다. 가짜는 HTTP(MSW)와 부모 창(testing/site.ts)뿐이다.
 
-import { act, screen, waitFor, within } from "@testing-library/react";
+import { screen, waitFor, within } from "@testing-library/react";
 import type { UserEvent } from "@testing-library/user-event";
 import { expect, test, vi } from "vitest";
 import { frame, gate, items, limited, rejection, stream, type Step } from "../../testing/network";
-import { onTokenRequest, post, serveTokens } from "../../testing/site";
+import { onTokenRequest, post, serveTokens, siteToken } from "../../testing/site";
 import {
+  advance,
   ask,
   findOutput,
+  inTurn,
   onDecide,
   onStart,
   onSubscribe,
@@ -98,25 +100,6 @@ async function untilPaused(user: UserEvent): Promise<void> {
   await screen.findByRole("group", { name: "승인 묻기" });
 }
 
-async function advance(ms: number): Promise<void> {
-  await act(async () => {
-    await vi.advanceTimersByTimeAsync(ms);
-  });
-}
-
-/** 응답을 차례로 하나씩 낸다. */
-function inTurn(...responses: readonly (() => Response)[]): () => Response {
-  let next = 0;
-  return () => {
-    const respond = responses[next];
-    next += 1;
-    if (respond === undefined) {
-      throw new Error("준비한 응답보다 요청이 많다");
-    }
-    return respond();
-  };
-}
-
 // --- 카드 ---
 
 test("paused 가 오면 진행 표시를 걷고 카드를 세워, 도구 이름을 고정폭 font-medium 으로 보인다", async () => {
@@ -150,7 +133,7 @@ test("인자는 받은 키 차례, 두 칸 들여쓰기, 이스케이프하지 �
 });
 
 test("승인하면 결정의 pause_index 는 paused 프레임의 id 이고, 그 실행에 토큰과 함께 보낸다", async () => {
-  serveTokens("token-a");
+  serveTokens(siteToken("token-a"));
   onStart(pausedStart());
   const decided = onDecide(approvedThenFinished());
   const user = openWidget();
@@ -161,7 +144,7 @@ test("승인하면 결정의 pause_index 는 paused 프레임의 id 이고, 그 
   await findOutput("환불했습니다.");
   expect(decided).toHaveLength(1);
   expect(decided[0]?.url).toContain("/end-user/runs/run_1/approval");
-  expect(decided[0]?.authorization).toBe("Bearer token-a");
+  expect(decided[0]?.authorization).toBe(`Bearer ${siteToken("token-a")}`);
   expect(decided[0]?.body).toEqual({ decision: "approve", pause_index: PAUSE_ID });
 });
 
@@ -434,7 +417,7 @@ test("결정에 쓸 토큰을 받지 못하면 보내지 않고 401 과 같은 �
   let asked = 0;
   onTokenRequest(({ id }) => {
     asked += 1;
-    post({ type: "agent-os/token", id, token: asked === 1 ? "signed-token" : null });
+    post({ type: "agent-os/token", id, token: asked === 1 ? siteToken() : null });
   });
   onStart(pausedStart());
   const decided = onDecide(approvedThenFinished());

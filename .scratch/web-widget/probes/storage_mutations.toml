@@ -1,0 +1,283 @@
+# web-widget 티켓 09 의 변이 표. 저장과 다시 잇기의 화면 동작 테스트(`widget-pages`) 가운데 구현 뒤에 쓰거나 처음부터
+# 초록이던 것이 무엇을 재는지 변이로 본다. 처음부터 빨강을 본 시험(저장의 모양, 다시 잇기의 띠와 간격, 구독의 거절)은
+# 넣지 않았다. 표지는 변이를 손으로 넣어 실패 출력을 본 뒤 골랐다. 6 은 45초 끊기를 타이머 콜백에서 하던 판으로 되돌려,
+# 화면 동작 시험에서 뒤의 테스트의 요청이 망가진 연결로 나가던 것(probes/msw_abort_order.mjs)을 다시 본다. 7 부터는 셀프
+# 리뷰가 더한 시험이다(아래 절의 머리).
+#   PYTHONUTF8=1 uv run python tools/mutate.py .scratch/web-widget/probes/storage_mutations.toml [번호 ...]
+
+[runner.pages]
+command = ["pnpm", "exec", "vitest", "run", "--project", "widget-pages"]
+cwd = "web"
+judge = "vitest"
+
+# --- 새 탭과 묶음 견주기 ---------------------------------------------------------------------------------------------
+
+[[mutation]]
+name = "저장이 없어도 토큰을 물으면 새 탭과 지운 저장의 시험이 빨갛다"
+runner = "pages"
+tests = ["apps/widget/components/pages/WidgetStorage.test.tsx", "-t", "토큰을 묻지 않고"]
+expect = "red"
+# 새 탭은 받은 요청 목록이 빈 것을, 판이 다르거나 모양이 어긋난 저장은 요청 수가 저장 전과 같은 것을 단언한다.
+expect_output = ["expected [ Array(1) ] to deeply equal []", "to have a length of 2 but got 3"]
+
+[[mutation.edit]]
+file = "web/apps/widget/components/pages/useConversation.ts"
+old = '''
+} from "./drivers";
+'''
+new = '''
+} from "./drivers";
+import { requestToken } from "../../lib/token";
+import { allowedOrigins } from "../../lib/build";
+'''
+
+[[mutation.edit]]
+file = "web/apps/widget/components/pages/useConversation.ts"
+old = '''
+      if (loaded.kind === "invalid") {
+        remove(storage, key);
+      }
+      setRestore("ready");
+'''
+new = '''
+      if (loaded.kind === "invalid") {
+        remove(storage, key);
+      }
+      void requestToken(allowedOrigins());
+      setRestore("ready");
+'''
+
+[[mutation]]
+name = "묶음을 sub 로만 견주면 발급자가 다른 토큰의 시험이 빨갛다"
+runner = "pages"
+tests = ["apps/widget/components/pages/WidgetStorage.test.tsx", "-t", "토큰의 발급자가"]
+expect = "red"
+expect_output = ["Unable to find an element with the text: 아래에 요청을 적어 보내 주세요."]
+
+[[mutation.edit]]
+file = "web/apps/widget/lib/storage.ts"
+old = '''
+  return a.iss === b.iss && a.sub === b.sub;
+'''
+new = '''
+  return a.sub === b.sub;
+'''
+
+[[mutation]]
+name = "묶음을 발급자로만 견주면 sub 가 다른 토큰의 시험이 빨갛다"
+runner = "pages"
+tests = ["apps/widget/components/pages/WidgetStorage.test.tsx", "-t", "새로 고친 뒤 받은 토큰의 sub가"]
+expect = "red"
+expect_output = ["Unable to find an element with the text: 아래에 요청을 적어 보내 주세요."]
+
+[[mutation.edit]]
+file = "web/apps/widget/lib/storage.ts"
+old = '''
+  return a.iss === b.iss && a.sub === b.sub;
+'''
+new = '''
+  return a.iss === b.iss;
+'''
+
+# --- 비우기 ---------------------------------------------------------------------------------------------------------
+
+[[mutation]]
+name = "빈 대화도 키에 쓰면 새 대화가 저장을 비우는 시험이 빨갛다"
+runner = "pages"
+tests = ["apps/widget/components/pages/WidgetStorage.test.tsx", "-t", "'새 대화'는 저장도 비워"]
+expect = "red"
+expect_output = ["expected '{\"version\":1,\"bundle\":{\"iss\":\"https:/…' to be null"]
+
+[[mutation.edit]]
+file = "web/apps/widget/lib/storage.ts"
+old = '''
+  if (exchanges.length > 0 || continueFrom !== null || reattach !== null) {
+    for (let dropped = 0; dropped <= exchanges.length; dropped += 1) {
+'''
+new = '''
+  {
+    for (let dropped = 0; dropped <= exchanges.length; dropped += 1) {
+'''
+
+# --- 다시 잇기 ------------------------------------------------------------------------------------------------------
+
+[[mutation]]
+name = "멈춤 뒤에 닫힌 스트림을 끊김으로 읽으면 멈춤 뒤에는 구독하지 않는 시험이 빨갛다"
+runner = "pages"
+tests = ["apps/widget/components/pages/WidgetReconnect.test.tsx", "-t", "승인 묻기 뒤에 닫힌 스트림은"]
+expect = "red"
+# 손으로 넣었을 때 띠가 없는 단언은 지났고 구독 목록이 빈 단언이 빨개졌다. 받은 쪽의 Last-Event-ID 줄을 본다.
+expect_output = ["expected [ { …(4) } ] to deeply equal []", "+     \"lastEventId\": \"1\","]
+
+[[mutation.edit]]
+file = "web/apps/widget/lib/reconnect.ts"
+old = '''
+    case "paused":
+      return "waiting";
+'''
+new = '''
+    case "paused":
+      return "cut";
+'''
+
+[[mutation]]
+name = "45초 끊기를 타이머 콜백에서 하면 뒤의 새로 고침 시험이 빨갛다"
+runner = "pages"
+tests = ["apps/widget/components/pages/WidgetReconnect.test.tsx", "-t", "45초|새로 고친 뒤 도는"]
+expect = "red"
+# 45초 시험은 지나고, 그 뒤에 도는 새로 고침 시험의 구독이 아무것도 받지 못한다. undici 의 단언은 처리하지 않은 에러로 찍힌다.
+expect_output = ["Unable to find role=\"progressbar\" and name \"payments.refund 부르는 중\"", "assert(!this.aborted)"]
+
+[[mutation.edit]]
+file = "web/apps/widget/components/pages/drivers.ts"
+old = '''
+      const silence = deadline(SILENCE_MS);
+      const next = await Promise.race([frames.next(), stopped, silence.passed]).finally(
+        silence.clear,
+      );
+'''
+new = '''
+      const early = setTimeout(() => {
+        cut.abort();
+      }, SILENCE_MS);
+      const next = await Promise.race([frames.next(), stopped]).finally(() => {
+        clearTimeout(early);
+      });
+'''
+
+# --- 셀프 리뷰가 더한 시험 ------------------------------------------------------------------------------------------
+#
+# 리뷰가 짚은 갈래(만료와 멈춤 뒤의 새로 고침, 구독의 422 와 표 밖의 상태, 용량이 뺀 다시 붙을 교환의 요청 글)를 지키는
+# 시험은 처음부터 초록이라 여기 넣었다. 구독의 404 사이에 다른 거절이 끼는 시험은 고치기 전에 빨강을 봐서 넣지 않았다.
+
+[[mutation]]
+name = "결정의 두 번째 404 가 다시 붙을 실행을 비우지 않으면 새로 고친 뒤 구독해 빨갛다"
+runner = "pages"
+tests = ["apps/widget/components/pages/WidgetReconnect.test.tsx", "-t", "결정이 두 번 404 여서"]
+expect = "red"
+# 구독 목록이 빈 단언이 빨개진다. 받은 쪽의 Last-Event-ID 줄(처음부터 받는 구독)을 본다.
+expect_output = ["expected [ { …(4) } ] to deeply equal []", "+     \"lastEventId\": null,"]
+
+[[mutation.edit]]
+file = "web/apps/widget/lib/conversation.ts"
+old = '''
+      return next === state ? state : { ...next, reattach: null };
+'''
+new = '''
+      return next;
+'''
+
+[[mutation]]
+name = "세 번의 500 으로 멈출 때 다시 붙을 실행을 비우면 새로 고친 뒤 다시 붙지 않아 빨갛다"
+runner = "pages"
+tests = ["apps/widget/components/pages/WidgetReconnect.test.tsx", "-t", "500 이 세 번 거듭되어"]
+expect = "red"
+# 새로 고친 뒤 처음 보는 단언(출력)이 빨개진다.
+expect_output = ["Unable to find an element with the text: 도착 예정입니다., which matches selector 'ol p'"]
+
+[[mutation.edit]]
+file = "web/apps/widget/lib/conversation.ts"
+old = '''
+      return settle(state, { kind: "lost" });
+'''
+new = '''
+      return { ...settle(state, { kind: "lost" }), reattach: null };
+'''
+
+[[mutation]]
+name = "구독의 401 로 멈출 때 다시 붙을 실행을 비우면 새로 고친 뒤 다시 붙지 않아 빨갛다"
+runner = "pages"
+tests = ["apps/widget/components/pages/WidgetReconnect.test.tsx", "-t", "401 이어서"]
+expect = "red"
+expect_output = ["Unable to find an element with the text: 도착 예정입니다., which matches selector 'ol p'"]
+
+[[mutation.edit]]
+file = "web/apps/widget/lib/conversation.ts"
+old = '''
+          return settle(state, { kind: "unauthorized" });
+'''
+new = '''
+          return { ...settle(state, { kind: "unauthorized" }), reattach: null };
+'''
+
+[[mutation]]
+name = "구독의 422 를 끊김으로 읽으면 끝없이 다시 이어 멈추지 않아 빨갛다"
+runner = "pages"
+tests = ["apps/widget/components/pages/WidgetReconnect.test.tsx", "-t", "구독이 422이면"]
+expect = "red"
+# 멈춘 뒤의 위험 알림을 찾는 첫 단언이 빨개진다.
+expect_output = ["Unable to find role=\"alert\""]
+
+[[mutation.edit]]
+file = "web/apps/widget/lib/rejection.ts"
+old = '''
+    case 429:
+      return "limited";
+    default:
+      return "error";
+'''
+new = '''
+    case 429:
+      return "limited";
+    case 422:
+      return "cut";
+    default:
+      return "error";
+'''
+
+[[mutation]]
+name = "구독의 표 밖의 상태를 끊김으로 읽으면 끝없이 다시 이어 멈추지 않아 빨갛다"
+runner = "pages"
+tests = ["apps/widget/components/pages/WidgetReconnect.test.tsx", "-t", "구독이 표 밖의 상태"]
+expect = "red"
+expect_output = ["Unable to find role=\"alert\""]
+
+[[mutation.edit]]
+file = "web/apps/widget/lib/rejection.ts"
+old = '''
+    case 429:
+      return "limited";
+    default:
+      return "error";
+'''
+new = '''
+    case 429:
+      return "limited";
+    case 422:
+    case 500:
+      return "error";
+    default:
+      return "cut";
+'''
+
+[[mutation]]
+name = "용량이 뺀 요청 글 자리에 빈 교환을 덧붙이지 않으면 새로 고친 뒤 다시 붙은 실행이 그려지지 않아 빨갛다"
+runner = "pages"
+tests = ["apps/widget/components/pages/WidgetStorage.test.tsx", "-t", "요청 글까지 빼면"]
+expect = "red"
+expect_output = ["Unable to find an element with the text: 도착 예정입니다., which matches selector 'ol p'"]
+
+[[mutation.edit]]
+file = "web/apps/widget/lib/storage.ts"
+old = '''
+  if (saved.reattach !== null && (last?.outcome !== null || last.runId !== saved.reattach)) {
+'''
+new = '''
+  if (saved.reattach === "") {
+'''
+
+[[mutation]]
+name = "빈 요청의 상자도 그리면 용량이 요청 글을 뺀 대화의 시험이 빨갛다"
+runner = "pages"
+tests = ["apps/widget/components/pages/WidgetStorage.test.tsx", "-t", "요청 글까지 빼면"]
+expect = "red"
+expect_output = ["expected <span class=\"sr-only\"></span> to be null"]
+
+[[mutation.edit]]
+file = "web/apps/widget/components/organisms/Conversation.tsx"
+old = '''
+      {exchange.request === "" ? null : (
+'''
+new = '''
+      {exchange.request === "-" ? null : (
+'''
