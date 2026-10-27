@@ -17,7 +17,8 @@
   폴더(`round_key`)마다 줄 수 있으며(`rounds`, 함께 도는 회차의 차례에 기대지 않는다), 없으면 세션
   부름의 차례대로 고른다(`calls`). 같은 세션이나 회차의 둘째 부름은 그 각본의 둘째 것이다. 각본
   하나는 stream-json 줄(`events`. 사전이면 `session_id`가 없을 때 넣고, 글이면 그대로 낸다), 설정
-  폴더 아래의 세션 기록 파일(`main`, `subagents`), 작업 폴더에서 칠 git 명령(`git`, 커밋을 남기는
+  폴더 아래의 세션 기록 파일(`main`, `subagents`, 그리고 세션 안에서 띄운 하위 `claude -p`처럼 같은
+  프로젝트 폴더에 남는 다른 세션의 기록 `others`), 작업 폴더에서 칠 git 명령(`git`, 커밋을 남기는
   각본), 이벤트를 내기 전에 띄워 두는 자식의 초(`child`. 명령 줄에 세션 id를 싣고 pid를
   `fake-children.jsonl`에 적는다), 이벤트를 낸 뒤 표준 출력을 닫는지(`close_stdout`), 멈출
   초(`hang`), 표준 출력을 쥐고 남는 손자의 초(`linger`), 종료 코드(`exit`)다.
@@ -301,6 +302,7 @@ def call(
     *,
     main: Sequence[Json] = (),
     subagents: Mapping[str, Sequence[Json]] | None = None,
+    others: Mapping[str, Sequence[Json]] | None = None,
     git: Sequence[Sequence[str]] = (),
     child: float = 0.0,
     close_stdout: bool = False,
@@ -316,6 +318,7 @@ def call(
         "events": list(events),
         "main": list(main),
         "subagents": {k: list(v) for k, v in (subagents or {}).items()},
+        "others": {k: list(v) for k, v in (others or {}).items()},
         "git": [list(a) for a in git],
         "child": child,
         "close_stdout": close_stdout,
@@ -469,6 +472,8 @@ def _play(entry: dict[str, Json], config_dir: Path, script: dict[str, Json]) -> 
     _append(folder / f"{session_id}.jsonl", _list(plan.get("main")))
     for name, lines in _obj(plan.get("subagents")).items():
         _append(folder / session_id / "subagents" / f"{name}.jsonl", _list(lines))
+    for other_id, lines in _obj(plan.get("others")).items():
+        _append(folder / f"{other_id}.jsonl", _list(lines))
     for args in _list(plan.get("git")):
         command = [str(a) for a in _list(args)]
         subprocess.run(

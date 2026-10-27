@@ -163,6 +163,7 @@ def _기록(dir_name: str, task_id: str = TASK, arm: str = "A", round_no: int = 
         spend=Spend(
             claude_code_usd=0.0,
             official_usd=0.0,
+            other_usd=0.0,
             tokens=zero,
             substitutes=(),
             wall_seconds=0.0,
@@ -564,7 +565,7 @@ def test_막는_규칙은_회차_폴더의_파일에_쓰고_클론은_그대로_
     tmp_path: Path, 원본: tuple[Path, str, str]
 ) -> None:
     """클론의 `settings.local.json`에 두면 B의 지침 검사가 주 체크아웃의 local 가드로 잡아, 세션의
-    pre-commit 과 게이트가 빨갰다(파일럿 첫 실행, 일지 2026-10-27-14)."""
+    pre-commit 과 게이트가 빨갰다(파일럿 첫 실행, 일지 2026-10-28-02)."""
     repo, b, m = 원본
     place = create_round_dir(tmp_path, TASK, "A", 1, token="r1")
     build_clone(repo, b, m, place)

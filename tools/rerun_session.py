@@ -968,6 +968,7 @@ def round_record(
         spend=Spend(
             claude_code_usd=sum(s.cost_usd for s in sessions if s.cost_usd is not None),
             official_usd=e.official_usd,
+            other_usd=0.0,  # 러너가 회차를 마친 뒤 셈해 넣는다(러너의 `_with_costs`)
             tokens=e.tokens,
             substitutes=e.substitutes,
             wall_seconds=round(max(now - wall_clock_from, 0.0), 2),

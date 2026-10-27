@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import math
 import os
 import subprocess
 import sys
@@ -41,6 +42,7 @@ from tools.rerun_files import (
     Task,
     TaskList,
     Tokens,
+    judge_view,
     read_record,
     write_record,
     write_task_list,
@@ -69,6 +71,7 @@ from tools import rerun_cost, rerun_runner
 GIT_TIMEOUT = 60
 TICKET = ".scratch/rerun-x/issues/03-thing.md"
 OPUS = "claude-opus-5-5"
+SONNET = "claude-sonnet-5-5"
 NOW = 1_000_000.0  # 가짜 시계의 처음(유닉스 초)
 
 
@@ -395,6 +398,7 @@ def _기록(
         spend=Spend(
             claude_code_usd=cost,
             official_usd=cost,
+            other_usd=0.0,
             tokens=ZERO,
             substitutes=(),
             wall_seconds=1.0,
@@ -535,7 +539,7 @@ def test_끝남인_회차는_게이트와_숨은_시험을_돌고_기록에_정�
 def test_회차의_막는_규칙은_뿌리_바로_아래의_편집과_쓰기를_막는다(
     판짜기: Callable[..., 판], 원본: tuple[Path, str, str]
 ) -> None:
-    """파일럿 판 2의 한 회차가 뿌리에 임시 파일을 써 오염으로 버려졌다(일지 2026-10-27-14)."""
+    """파일럿 판 2의 한 회차가 뿌리에 임시 파일을 써 오염으로 버려졌다(일지 2026-10-28-02)."""
     task = _과제(1, 원본, arms=("A",))
     board = 판짜기([task], gates=(PASS, PASS, PASS))
     board.script({_key(task, "A", 1): [_끝남(task, 2.5)]})
@@ -594,6 +598,31 @@ def test_끝남이_아닌_회차는_게이트를_돌지_않고_공식_단가는_
     assert (rec.end.kind, rec.end.reason) == (END_CAPPED, "예산")
     assert rec.outcome.gates is None and rec.outcome.hidden is None
     assert rec.spend.official_usd > 0
+
+
+def test_같은_프로젝트_폴더에_남은_다른_세션의_공식_단가를_회차_비용에_더한다(
+    판짜기: Callable[..., 판], 원본: tuple[Path, str, str]
+) -> None:
+    """과제의 시험이 띄운 하위 `claude -p` 세션(파일럿 end-user-continuation-02)의 몫이다. 사람이
+    회차 비용에 더하기로 했다(일지 2026-10-28-02 "설계 8절 확인과 사람 결정")."""
+    task = _과제(1, 원본, arms=("A",))
+    board = 판짜기([task])
+    done = fake.call(
+        [fake.init_event(), fake.result_event(1.0, "다 했다")],
+        main=[_응답줄()],
+        others={"child-1": [_응답줄(SONNET, None)], "child-2": [_응답줄(SONNET, None)]},
+        git=[["switch", "-c", task.branch], ["commit", "--allow-empty", "-m", "풀었다"]],
+    )
+    board.script({_key(task, "A", 1): [done]})
+    assert board.run() == 0
+    (rec,) = board.saved()
+    child = (1000 * 2.0 + 2000 * 10.0) / 1e6  # Sonnet 5.5 입력 1000, 출력 2000
+    assert math.isclose(rec.spend.other_usd, 2 * child, rel_tol=1e-12)
+    # 회차의 세션 비용 칸과 공식 단가 셈에는 들지 않고, 판정이 읽는 두 비용에 더해진다
+    assert rec.spend.claude_code_usd == 1.0
+    view = judge_view(rec)
+    assert math.isclose(view.cost_claude_code_usd, 1.0 + 2 * child, rel_tol=1e-12)
+    assert math.isclose(view.cost_official_usd, rec.spend.official_usd + 2 * child, rel_tol=1e-12)
 
 
 def test_동시에_둘까지_돌고_셋째는_자리가_빌_때_연다(

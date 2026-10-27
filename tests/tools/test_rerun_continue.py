@@ -27,6 +27,7 @@ from tools.rerun_continue import (
     REASON_INTERVENTIONS,
     REASON_SESSIONS,
     REASON_TIME,
+    arm_model_line,
     before_call,
     call_end,
     ends_with_question,
@@ -129,7 +130,8 @@ def _handoff_out(branch: str = BRANCH) -> str:
             "어디서: 새 세션",
             f"시작 프롬프트: /implement {TICKET}",
             f"브랜치: {branch}",
-            "모델: Opus 5.5 / xhigh",
+            # 파일럿 E-2 의 인계 지시문처럼 갈래(A)와 다른 모델 줄이다
+            "모델: Opus 5.5 / medium 레벨 스윕의 갈래",
             "읽을 것: 없음",
             "이어받을 상태: 인계: 셀프 리뷰 앞",
             "확인할 선행 조건: 없음",
@@ -238,6 +240,29 @@ def test_물음표_끝은_공백만_든_줄을_뺀_마지막_줄의_끝_공백�
     *, text: str | None, asked: bool
 ) -> None:
     assert ends_with_question(text) is asked
+
+
+def test_인계_지시문의_모델_줄은_갈래의_값으로_바꾼다() -> None:
+    """사람이 정했다(일지 2026-10-28-02 "설계 8절 확인과 사람 결정"). 갈래 사이에 모델 줄만 다르다는
+    지시문 약속을 인계 뒤에도 지킨다."""
+    text = "다음 작업: x\n브랜치: b\n모델: Opus 5.5 / medium 레벨 스윕의 갈래\n이번 요청 범위: y"
+    assert arm_model_line(text, ARMS[4]) == (
+        "다음 작업: x\n브랜치: b\n모델: Sonnet 5.5 / medium\n이번 요청 범위: y"
+    )
+
+
+def test_모델_줄이_없으면_브랜치_줄_뒤에_넣고_둘이면_하나로_줄인다() -> None:
+    없음 = "다음 작업: x\n브랜치: b\n이번 요청 범위: y"
+    assert (
+        arm_model_line(없음, ARM)
+        == f"다음 작업: x\n브랜치: b\n모델: {ARM.label}\n이번 요청 범위: y"
+    )
+    둘 = "다음 작업: x\n모델: a\n브랜치: b\n모델: c\n이번 요청 범위: y"
+    assert (
+        arm_model_line(둘, ARM) == f"다음 작업: x\n모델: {ARM.label}\n브랜치: b\n이번 요청 범위: y"
+    )
+    # 브랜치 줄도 없으면 첫 줄 뒤에 넣는다
+    assert arm_model_line("다음 작업: x\n끝", ARM) == f"다음 작업: x\n모델: {ARM.label}\n끝"
 
 
 def test_인계_지시문은_다음_작업_줄부터_이번_요청_범위_줄까지다() -> None:
@@ -433,8 +458,15 @@ def test_같은_브랜치_지시문이면_그_지시문으로_새_세션을_열�
     assert _kinds(got) == [CALL_FIRST, CALL_HANDOFF]
     assert got.runs[0].has_directive and not got.runs[1].has_directive
     expected = first_message(
-        str(place.clone), task.ticket, handoff_directive(_handoff_out(), BRANCH)
+        str(place.clone),
+        task.ticket,
+        arm_model_line(handoff_directive(_handoff_out(), BRANCH), ARM),
     )
+    # 결과 글의 모델 줄이 아니라 갈래의 모델 줄로 붙인다
+    stdin = second["stdin"]
+    assert isinstance(stdin, str)
+    assert "레벨 스윕의 갈래" not in stdin, "인계 지시문의 모델 줄을 그대로 붙였다"
+    assert f"\n모델: {ARM.label}\n" in stdin
     assert second["stdin"] == expected
     assert first["stdin"] != second["stdin"]
     assert [p.name for p in sorted(place.stream.iterdir())] == [f"01-{S1}.jsonl", f"02-{S2}.jsonl"]

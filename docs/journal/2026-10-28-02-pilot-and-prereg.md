@@ -1,4 +1,4 @@
-# 2026-10-27 (14) 파일럿과 사전 등록
+# 2026-10-28 (02) 파일럿과 사전 등록
 
 > 사용자: /implement .scratch/model-rerun/issues/11-pilot-and-prereg.md (next-session 지시문 그대로, "이번 요청 범위: PR과 병합까지")
 
@@ -43,8 +43,8 @@ PR 앞 비용이 줄어든 행이 있다. ticket-for-every-pr-03 은 $22.60 에�
 시작 프롬프트: /implement .scratch/model-rerun/issues/11-pilot-and-prereg.md
 브랜치: feature/11-pilot-and-prereg
 모델: Opus 5.5 / medium. 레벨 스윕의 갈래
-읽을 것: docs/journal/2026-10-27-14-pilot-and-prereg.md 전체(커밋하지 않은 "낱말에 걸린 후보의 문맥"과 "인계 (첫째)" 절 포함), 티켓 11의 "사람과 정한다"
-이어받을 상태: 인계: 커밋 뒤. 969a694f 까지 커밋했고 PR 은 없다. "사람과 정한다"의 첫 체크박스(브랜치 표 다시 모으기)는 db3e90db 로 마쳤고, 둘째(후보 표 다시 짓기)는 969a694f 로 지었으나 사람에게 아직 보이지 않았다. 다음은 그 표를 일지의 "낱말에 걸린 후보의 문맥" 절대로 사람에게 장면으로 보이고, 셋째(되살릴 목록)와 넷째(후보가 열둘에 모자라니 길 고르기)를 차례로 묻는 것이다. 새로 찾은 것: 다시 모은 브랜치 표는 사람의 기본 설정 폴더에서 세션 기록 일부가 지워져 옛 표보다 응답이 약 4,200개 적고 PR 앞 비용이 줄어든 브랜치가 29개다(일지 "브랜치 표"). 이것도 사람에게 함께 보인다. 커밋하지 않은 일지 두 절은 다음 커밋에 싣는다. docs/journal/2026-10-27-14-pilot-and-prereg.md
+읽을 것: docs/journal/2026-10-28-02-pilot-and-prereg.md 전체(커밋하지 않은 "낱말에 걸린 후보의 문맥"과 "인계 (첫째)" 절 포함), 티켓 11의 "사람과 정한다"
+이어받을 상태: 인계: 커밋 뒤. 969a694f 까지 커밋했고 PR 은 없다. "사람과 정한다"의 첫 체크박스(브랜치 표 다시 모으기)는 db3e90db 로 마쳤고, 둘째(후보 표 다시 짓기)는 969a694f 로 지었으나 사람에게 아직 보이지 않았다. 다음은 그 표를 일지의 "낱말에 걸린 후보의 문맥" 절대로 사람에게 장면으로 보이고, 셋째(되살릴 목록)와 넷째(후보가 열둘에 모자라니 길 고르기)를 차례로 묻는 것이다. 새로 찾은 것: 다시 모은 브랜치 표는 사람의 기본 설정 폴더에서 세션 기록 일부가 지워져 옛 표보다 응답이 약 4,200개 적고 PR 앞 비용이 줄어든 브랜치가 29개다(일지 "브랜치 표"). 이것도 사람에게 함께 보인다. 커밋하지 않은 일지 두 절은 다음 커밋에 싣는다. docs/journal/2026-10-28-02-pilot-and-prereg.md
 확인할 선행 조건: 없음
 이번 요청 범위: PR과 병합까지
 ```
@@ -140,8 +140,8 @@ PR 앞 비용이 줄어든 행이 있다. ticket-for-every-pr-03 은 $22.60 에�
 시작 프롬프트: feature/11-pilot-and-prereg 다른 계정에서 작업하던거 이어받아서 진행할 수 있어?
 브랜치: feature/11-pilot-and-prereg
 모델: Opus 5.5 / medium. 레벨 스윕의 갈래
-읽을 것: docs/journal/2026-10-27-14-pilot-and-prereg.md의 "셋째 세션" 이후 전체(커밋하지 않은 절 포함), 티켓 11의 "사람과 정한다" 다섯째 체크박스부터
-이어받을 상태: 인계: 셀프 리뷰 직전. 커밋하지 않은 변경(B 에 tools/run_checks.py 가 없는 과제의 옛 게이트 묶음: tools/rerun_files.py·rerun_gates.py·rerun_runner.py 와 그 시험, 변이 여섯, 명세 "게이트와 숨은 시험" 주석, 티켓 넷째 체크박스, 일지)이 워크트리에 있고 셀프 리뷰(/code-review, 기준 HEAD d5ab0c15)부터 한다. ruff 둘은 초록이고 변이 여섯은 표지까지 기대대로였다. run_checks.py 는 인계로 멈춰 결과가 없다. 리뷰를 반영해 커밋한 뒤 다음은 다섯째 체크박스(전용 설정 폴더의 njh6803 로그인과 설정 옮기기)를 사람에게 묻는 것이다. PR 은 없다. docs/journal/2026-10-27-14-pilot-and-prereg.md
+읽을 것: docs/journal/2026-10-28-02-pilot-and-prereg.md의 "셋째 세션" 이후 전체(커밋하지 않은 절 포함), 티켓 11의 "사람과 정한다" 다섯째 체크박스부터
+이어받을 상태: 인계: 셀프 리뷰 직전. 커밋하지 않은 변경(B 에 tools/run_checks.py 가 없는 과제의 옛 게이트 묶음: tools/rerun_files.py·rerun_gates.py·rerun_runner.py 와 그 시험, 변이 여섯, 명세 "게이트와 숨은 시험" 주석, 티켓 넷째 체크박스, 일지)이 워크트리에 있고 셀프 리뷰(/code-review, 기준 HEAD d5ab0c15)부터 한다. ruff 둘은 초록이고 변이 여섯은 표지까지 기대대로였다. run_checks.py 는 인계로 멈춰 결과가 없다. 리뷰를 반영해 커밋한 뒤 다음은 다섯째 체크박스(전용 설정 폴더의 njh6803 로그인과 설정 옮기기)를 사람에게 묻는 것이다. PR 은 없다. docs/journal/2026-10-28-02-pilot-and-prereg.md
 확인할 선행 조건: 없음
 이번 요청 범위: PR과 병합까지
 ```
@@ -167,7 +167,7 @@ PR 앞 비용이 줄어든 행이 있다. ticket-for-every-pr-03 은 $22.60 에�
 
 ### 커밋과 인계 (넷째 세션)
 
-- 리뷰를 반영한 뒤 `uv run ruff check .`, `uv run ruff format --check .`(러너 한 파일을 포맷한 뒤)은 초록이다. `tools/sibling_overlap.py`가 이 일지(옛 2026-10-24-11)가 origin/main 의 최신 일지보다 이름순으로 앞이라고 해 `--move`로 2026-10-27-14 로 옮겼다. 커밋 1dd42c39 의 pre-commit 이 손으로 치는 다섯을 갈음했고 모두 통과했다(`Skipped`는 카나리아 명세 모양과 헌법 판, 둘 다 해당 파일 없음). origin/main 은 이 브랜치의 기점보다 앞서 있고(`git diff --name-only HEAD...origin/main`에 `tools/mutate.py`, `CLAUDE.md`, `docs/constitution/operations.md` 등), 이 브랜치가 이름으로 든 `tools/rerun_*` 와는 겹치지 않는다. PR 전에 main 을 합친다.
+- 리뷰를 반영한 뒤 `uv run ruff check .`, `uv run ruff format --check .`(러너 한 파일을 포맷한 뒤)은 초록이다. `tools/sibling_overlap.py`가 이 일지(옛 2026-10-24-11)가 origin/main 의 최신 일지보다 이름순으로 앞이라고 해 `--move`로 2026-10-28-02 로 옮겼다. 커밋 1dd42c39 의 pre-commit 이 손으로 치는 다섯을 갈음했고 모두 통과했다(`Skipped`는 카나리아 명세 모양과 헌법 판, 둘 다 해당 파일 없음). origin/main 은 이 브랜치의 기점보다 앞서 있고(`git diff --name-only HEAD...origin/main`에 `tools/mutate.py`, `CLAUDE.md`, `docs/constitution/operations.md` 등), 이 브랜치가 이름으로 든 `tools/rerun_*` 와는 겹치지 않는다. PR 전에 main 을 합친다.
 - 이 세션의 지금 제목: `feature/11-pilot-and-prereg`(지시문대로 바꿨다).
 - 인계 경계: `커밋 뒤`. 컨텍스트 약 24.1만 토큰에서 커밋 직후 `hook_handoff`가 들어왔다. 인계하지 않는 다섯 때에 들지 않았다(커밋은 성공했고, 요청 범위는 PR과 병합까지이고, 이 세션의 지시문 "이어받을 상태"는 `인계: 셀프 리뷰 직전`이라 다른 경계이고, `인계 못함` 줄이 없고, 지시문으로 연 세션이다).
 - 이 세션이 번복하거나 고친 것: 셋째 세션이 맞추지 않은 변이 원문(기록 29)과, 이 세션의 편집이 지운 공백(게이트 4)을 `--check`로 찾아 고쳤다(위 "셀프 리뷰 (넷째 세션)").
@@ -180,8 +180,8 @@ PR 앞 비용이 줄어든 행이 있다. ticket-for-every-pr-03 은 $22.60 에�
 시작 프롬프트: feature/11-pilot-and-prereg 다른 계정에서 작업하던거 이어받아서 진행할 수 있어?
 브랜치: feature/11-pilot-and-prereg
 모델: Opus 5.5 / medium. 레벨 스윕의 갈래
-읽을 것: docs/journal/2026-10-27-14-pilot-and-prereg.md의 "넷째 세션" 이후 전체(커밋하지 않은 절 포함), 티켓 11의 "사람과 정한다" 다섯째 체크박스부터
-이어받을 상태: 인계: 커밋 뒤. 1dd42c39 까지 넷째 체크박스(옛 게이트 묶음)와 그 셀프 리뷰 반영을 커밋했다(푸시하지 않았다, PR 없음). 남은 단계는 다섯째 체크박스(전용 설정 폴더의 njh6803 로그인과 설정 옮기기)를 사람에게 묻는 것부터다. PR 직전 리뷰에 밀 주장은 일지 "셀프 리뷰 (넷째 세션)"의 마지막 줄에 있다. 이 일지의 "커밋과 인계 (넷째 세션)" 절은 커밋하지 않았다. docs/journal/2026-10-27-14-pilot-and-prereg.md
+읽을 것: docs/journal/2026-10-28-02-pilot-and-prereg.md의 "넷째 세션" 이후 전체(커밋하지 않은 절 포함), 티켓 11의 "사람과 정한다" 다섯째 체크박스부터
+이어받을 상태: 인계: 커밋 뒤. 1dd42c39 까지 넷째 체크박스(옛 게이트 묶음)와 그 셀프 리뷰 반영을 커밋했다(푸시하지 않았다, PR 없음). 남은 단계는 다섯째 체크박스(전용 설정 폴더의 njh6803 로그인과 설정 옮기기)를 사람에게 묻는 것부터다. PR 직전 리뷰에 밀 주장은 일지 "셀프 리뷰 (넷째 세션)"의 마지막 줄에 있다. 이 일지의 "커밋과 인계 (넷째 세션)" 절은 커밋하지 않았다. docs/journal/2026-10-28-02-pilot-and-prereg.md
 확인할 선행 조건: 없음
 이번 요청 범위: PR과 병합까지
 ```
@@ -261,8 +261,8 @@ PR 앞 비용이 줄어든 행이 있다. ticket-for-every-pr-03 은 $22.60 에�
 시작 프롬프트: feature/11-pilot-and-prereg 다른 계정에서 작업하던거 이어받아서 진행할 수 있어?
 브랜치: feature/11-pilot-and-prereg
 모델: Opus 5.5 / medium. 레벨 스윕의 갈래
-읽을 것: docs/journal/2026-10-27-14-pilot-and-prereg.md의 "다섯째 세션" 이후 전체(커밋하지 않은 절 포함), 티켓 11의 "러너로 파일럿 목록을 돈다" 체크박스부터
-이어받을 상태: 인계: 셀프 리뷰 직전. 커밋하지 않은 변경(설계·명세·프로브 README·티켓 11·tools/rerun_checks.py·그 시험·미추적 probes/deny_shapes/·일지)이 워크트리에 있고 셀프 리뷰(/code-review, base 1dd42c39)부터 한다. 파일럿 고르기 백그라운드는 멈췄으니 다시 띄운다: uv run python -m tools.rerun_select pilot --branches .scratch/model-rerun/probes/branches.json --earlier-branches .scratch/model-rerun/probes/branches-2026-10-23.json --revive .scratch/model-rerun/probes/revive.json --table .scratch/model-rerun/probes/candidates.md --rev 80ff61f1 --out .scratch/model-rerun/probes/pilot.json (약 3시간, 남은 %TEMP%\rerun-hidden-* 폴더는 일지 참고). 러너 인자: --account njh4803 --config-dir C:\Users\User\.claude-rerun --claude C:\Users\User\.claude-rerun-bin\2.1.302 --cap 900. PR 직전 리뷰에 밀 주장은 일지 "셀프 리뷰 (넷째 세션)"의 마지막 줄과 다섯째 세션이 새로 쓴 문장(설계 11절 주석, 명세 167행 주석, 프로브 README "막는 규칙의 새 꼴" 절)이다. docs/journal/2026-10-27-14-pilot-and-prereg.md
+읽을 것: docs/journal/2026-10-28-02-pilot-and-prereg.md의 "다섯째 세션" 이후 전체(커밋하지 않은 절 포함), 티켓 11의 "러너로 파일럿 목록을 돈다" 체크박스부터
+이어받을 상태: 인계: 셀프 리뷰 직전. 커밋하지 않은 변경(설계·명세·프로브 README·티켓 11·tools/rerun_checks.py·그 시험·미추적 probes/deny_shapes/·일지)이 워크트리에 있고 셀프 리뷰(/code-review, base 1dd42c39)부터 한다. 파일럿 고르기 백그라운드는 멈췄으니 다시 띄운다: uv run python -m tools.rerun_select pilot --branches .scratch/model-rerun/probes/branches.json --earlier-branches .scratch/model-rerun/probes/branches-2026-10-23.json --revive .scratch/model-rerun/probes/revive.json --table .scratch/model-rerun/probes/candidates.md --rev 80ff61f1 --out .scratch/model-rerun/probes/pilot.json (약 3시간, 남은 %TEMP%\rerun-hidden-* 폴더는 일지 참고). 러너 인자: --account njh4803 --config-dir C:\Users\User\.claude-rerun --claude C:\Users\User\.claude-rerun-bin\2.1.302 --cap 900. PR 직전 리뷰에 밀 주장은 일지 "셀프 리뷰 (넷째 세션)"의 마지막 줄과 다섯째 세션이 새로 쓴 문장(설계 11절 주석, 명세 167행 주석, 프로브 README "막는 규칙의 새 꼴" 절)이다. docs/journal/2026-10-28-02-pilot-and-prereg.md
 확인할 선행 조건: 없음
 이번 요청 범위: PR과 병합까지
 ```
@@ -300,8 +300,8 @@ PR 앞 비용이 줄어든 행이 있다. ticket-for-every-pr-03 은 $22.60 에�
 시작 프롬프트: feature/11-pilot-and-prereg 다른 계정에서 작업하던거 이어받아서 진행할 수 있어?
 브랜치: feature/11-pilot-and-prereg
 모델: Opus 5.5 / medium. 레벨 스윕의 갈래
-읽을 것: docs/journal/2026-10-27-14-pilot-and-prereg.md의 "여섯째 세션" 이후 전체(커밋하지 않은 절 포함), 티켓 11의 "파일럿 셋을 05의 고르기로 고르고" 체크박스부터
-이어받을 상태: 인계: 커밋 뒤. 2343c349 까지 사람 단계 일곱과 막는 규칙 탐침, 그 셀프 리뷰 반영을 커밋했다(푸시하지 않았다, PR 없음). 이 일지의 "커밋과 인계 (여섯째 세션)" 절은 커밋하지 않았다. 남은 단계는 파일럿 목록 커밋, 러너로 파일럿 돌기(--account njh4803 --config-dir C:\Users\User\.claude-rerun --claude C:\Users\User\.claude-rerun-bin\2.1.302 --cap 900)부터다. 파일럿 고르기는 넘긴 세션에서 멈추지 않고 돌게 두었다(출력 C:\Users\User\AppData\Local\Temp\claude\C--project-agent\41a2b8ca-8a8a-4468-ac4b-3a9c302b853c\scratchpad\pilot_select.log, 끝나면 .scratch/model-rerun/probes/pilot.json). 먼저 PowerShell 로 명령 줄에 rerun_select pilot 이 든 python 프로세스가 있는지와 로그가 자라는지 보고, 없는데 pilot.json 도 없으면 일지 "다섯째 세션"의 명령으로 다시 띄운다. PR 직전 리뷰에 밀 주장은 일지 "셀프 리뷰 (여섯째 세션)"의 마지막 줄이다. docs/journal/2026-10-27-14-pilot-and-prereg.md
+읽을 것: docs/journal/2026-10-28-02-pilot-and-prereg.md의 "여섯째 세션" 이후 전체(커밋하지 않은 절 포함), 티켓 11의 "파일럿 셋을 05의 고르기로 고르고" 체크박스부터
+이어받을 상태: 인계: 커밋 뒤. 2343c349 까지 사람 단계 일곱과 막는 규칙 탐침, 그 셀프 리뷰 반영을 커밋했다(푸시하지 않았다, PR 없음). 이 일지의 "커밋과 인계 (여섯째 세션)" 절은 커밋하지 않았다. 남은 단계는 파일럿 목록 커밋, 러너로 파일럿 돌기(--account njh4803 --config-dir C:\Users\User\.claude-rerun --claude C:\Users\User\.claude-rerun-bin\2.1.302 --cap 900)부터다. 파일럿 고르기는 넘긴 세션에서 멈추지 않고 돌게 두었다(출력 C:\Users\User\AppData\Local\Temp\claude\C--project-agent\41a2b8ca-8a8a-4468-ac4b-3a9c302b853c\scratchpad\pilot_select.log, 끝나면 .scratch/model-rerun/probes/pilot.json). 먼저 PowerShell 로 명령 줄에 rerun_select pilot 이 든 python 프로세스가 있는지와 로그가 자라는지 보고, 없는데 pilot.json 도 없으면 일지 "다섯째 세션"의 명령으로 다시 띄운다. PR 직전 리뷰에 밀 주장은 일지 "셀프 리뷰 (여섯째 세션)"의 마지막 줄이다. docs/journal/2026-10-28-02-pilot-and-prereg.md
 확인할 선행 조건: 넘긴 세션의 백그라운드 명령이 인계 뒤에도 사는지는 재지 않았다
 이번 요청 범위: PR과 병합까지
 ```
@@ -379,7 +379,7 @@ PR 앞 비용이 줄어든 행이 있다. ticket-for-every-pr-03 은 $22.60 에�
   - 일지 2026-10-26 `규칙-2`를 끼고 "규칙-2·규칙-3과 같다"고 적은 README 줄(Nit): 그 줄은 도구 목록의 차만 견주고 측정 판정과 별개라 둔다.
 - PR 직전 리뷰에 밀 주장: "B 설정의 `env`는 거르지 않고 얹으므로, 거기 `PATH`가 있으면 넘긴 환경의 `PATH`를 덮는다", "판 1에서 빨갛던 그 셋의 게이트가 고친 환경에서 초록이 되었으니 그 셋의 게이트 실패는 환경 탓이었다", "판 1에서 계획을 다 마친 과제라 러너에 세 과제 id 를 `--rerun`으로 준다", "설계 5절과 8절 5가 클론의 `settings.local.json`을 드는 자리도 이 파일로 읽는다".
 - 다시 돈 명령: 바뀐 회차 변이 둘(26·27)과 게이트 변이 셋(50~52, 51은 표지를 고쳐 다시) 모두 기대대로, 다시 풀기 시험 넷 252 통과, `ruff check .`·`ruff format --check .` 초록, 바뀐 파일의 pyright 0. 나머지 검증은 커밋의 pre-commit 으로 갈음한다.
-- `sibling_overlap.py`가 이 일지가 main 의 최신 일지(2026-10-27-03)보다 이름순으로 앞이라고 알려 `--move`로 2026-10-26-02 를 2026-10-27-14 로 옮겼다(인용 열넷).
+- `sibling_overlap.py`가 이 일지가 main 의 최신 일지(2026-10-27-03)보다 이름순으로 앞이라고 알려 `--move`로 2026-10-26-02 를 2026-10-28-02 로 옮겼다(인용 열넷).
 - 커밋 175fb884. 그 뒤 컨텍스트 약 25.9만 토큰에서 `hook_handoff`(커밋 뒤)가 들어왔다. 이 세션의 지시문의 "이어받을 상태"가 같은 경계 `인계: 커밋 뒤`이고 이 세션이 쓴 `인계 못함` 줄이 있어 넘기지 않고 잇는다.
 - 다음 단계는 파일럿을 조건 판 2로 다시 도는 것이다. 판 1 만큼(약 $120, 약 7시간) 다시 쓰므로 사람에게 묻는다.
 
@@ -429,8 +429,58 @@ PR 앞 비용이 줄어든 행이 있다. ticket-for-every-pr-03 은 $22.60 에�
   - `rerun_checks.py` 독스트링과 명세 "오염 검사" 절에 뿌리 자체와 뿌리 바로 아래 파일도 `다른-회차`로 센다고 적었다. `deny_rules`의 못 보는 것에 `LEAK`가 탐침의 `점` 갈래에서 지나갔다는 것과 오염 검사 시험 자리를 적었다.
   - README `regate/` 행의 잰 판을 로그마다 적고, 변이 절에 판 3 변이 셋의 결과를 적었다.
 - 남긴 것:
-  - 사용자가 고른 "뿌리 바로 아래 Write·Edit 쓰기를 막는다"를 탐침 결과로 점이 든 이름만 막게 좁힌 것(명세 축 Minor): `<뿌리>/*`는 클론 쓰기까지 막아 쓸 수 없고, 확장자 없는 파일은 오염 검사가 잡는다. 사람에게 보고에서 알린다.
+  - 사용자가 고른 뿌리 바로 아래의 Write·Edit 쓰기 막기를 탐침 결과로 점이 든 이름만 막게 좁힌 것(명세 축 Minor): `<뿌리>/*`는 클론 쓰기까지 막아 쓸 수 없고, 확장자 없는 파일은 오염 검사가 잡는다. 사람에게 보고에서 알린다.
   - Bash 리다이렉션의 못 보는 것에 단위 시험이 없는 것(표준 축 Minor): 도구 규칙이 Bash 를 보지 않는 것은 Claude Code 의 동작이고, 그 길은 오염 검사 시험이 고정한다.
   - `root_shape.py`가 `ROOT_SHAPE`를 가져다 쓰지 않고 `deny_shapes.py`와 꼴이 겹치는 것(표준 축 Minor·판단): 이 탐침은 후보 꼴을 견주는 것이라 운영 상수가 아니라 후보를 적고, 상수는 단위 시험(`뿌리_규칙은_바로_아래의`)이 고정한다. 겹침은 앞 탐침의 함수를 가져다 써 줄였다.
   - "실패는 시험의 결함이 아니라 결과물이 M 과 다른 자리다"를 한 단계 약하게 읽으라는 것(표준 축): 같은 문단에 부하 탓을 가르지 않았다고 적어 두었다.
-- PR 직전 리뷰에 밀 주장: "회차 폴더 이름의 조각(과제 id, 난수)이 점을 받지 않아 `*.*`가 회차 폴더에 맞지 않는다", "뿌리 자체와 뿌리 바로 아래 파일도 `다른-회차`로 센다", "`LEAK`는 탐침의 `점` 갈래에서 지나갔다", "막힌 호출 24 는 모두 B 의 훅·가드나 auto 모드가 막았다".
+- PR 직전 리뷰에 밀 주장(새로 쓴 문장의 요지):
+  - 회차 폴더 이름의 조각(과제 id, 난수)이 점을 받지 않아 `*.*`가 회차 폴더에 맞지 않는다.
+  - 뿌리 자체와 뿌리 바로 아래 파일도 `다른-회차`로 센다.
+  - `LEAK`는 탐침의 `점` 갈래에서 지나갔다.
+  - 막힌 호출 24 는 모두 B 의 훅·가드나 auto 모드가 막았다.
+- 커밋 47aa107b. pre-commit 이 통과했고 인용 대조 경고 넷(이 절의 따옴표로 묶은 요지)은 다음 커밋에서 따옴표를 뗐다.
+
+## 티켓 11 남은 항목 (여덟째 세션 이어서)
+
+> 사용자: 티켓 11의 남은 항목을 이어서 진행해
+
+### 공식 단가 대조
+
+- 판 2 기록의 세션·모델 아홉(Opus 넷, Sonnet 다섯)에서 세션 기록 파일의 응답 셈과 `modelUsage`의 `costUSD`를 댔다(`probes/official_cost/compare.py`, `2026-10-27.log`). 응답 셈은 `costUSD`의 0.72~1.00배였다.
+- 어긋남은 단가가 아니라 기록 파일의 토큰이 모자란 것이었다. 출력은 아홉 가운데 여덟에서 모자랐고 Opus는 입력·캐시 읽기·캐시 쓰기도 모자랐다. 모자란 칸을 같은 단가와 5분 배수로 채우면 아홉 모두 남는 차가 0.0000이었고, 1시간으로 셈하면 Opus에서 0.0011~0.0287달러가 남았다. 1시간 쓰기가 큰 Opus 회차에서도 맞아 배수는 수명이 정한다는 07의 해석이 섰다. 모자란 까닭은 재지 않았다.
+- 결정: 07의 셈이 응답이 있는 모델도 `modelUsage`와 칸마다 견주어 모자란 몫을 채운다(티켓이 "07의 셈을 고친다"로 정한 길). 실행 조건이 아니라 셈이라 조건 판은 올리지 않았고, 커밋한 판 1·2 기록의 `official_usd`는 옛 셈 그대로다. 시험 넷(고친 둘 포함), 변이 셋(28~30, 모두 기대대로 빨강), 명세 "회차 기록"의 2026-10-27 주석, 프로브 README 행을 더했다.
+
+### 설계 8절 확인과 사람 결정
+
+- 설계 8절의 확인을 서브에이전트가 판 2 기록과 원본 스트림으로 대 보고 초안을 냈다(스크래치 `design8_draft.md`, 근거 스크립트 열). 맞다 열, 볼 수 없었다 둘(예산 멈춤, Opus의 막는 규칙. 모델이 그 길에 닿지 않았다), 다르다 둘(init에 `pyright-lsp`가 실리지 않는다, 시작 컨텍스트가 실제의 약 52~64%). 새로 드러난 것: end-user-continuation-02 의 카나리아 시험이 띄운 하위 `claude -p` 세션이 회차 비용에 들지 않는다, eu-02-A-4 의 개입 둘은 모델이 백그라운드 리뷰어를 기다리며 차례를 끝낸 것이다, E-2 인계 지시문의 `모델:` 줄이 갈래와 달랐다.
+- 내가 기본값으로 정한 것(사람에게 알렸다): 백그라운드를 기다리다 끝난 것도 개입으로 센다(모든 갈래에 같은 규칙), 근거 스크립트는 `probes/`에 커밋한다, 예산 멈춤과 Opus 막는 규칙은 따로 재지 않고 본 측정 기록에 맡긴다, 한도 사용률은 `unifiedWindows` 기준으로 적는다, 본 측정의 첫 인계 뒤 멈춤은 설계대로 둔다.
+- 사람에게 물은 넷과 답(고른 라벨과 설명 그대로):
+
+> 사용자: 과제의 시험이 따로 띄운 하위 Claude 세션의 비용을 회차 비용에 더할까요? → 회차 비용에 더한다 (Recommended) — 러너가 전용 설정 폴더의 같은 클론 프로젝트 폴더에 생긴 다른 세션 기록도 찾아 공식 단가로 셈해 회차 비용에 더합니다. 원래 세션의 비용에도 이 시험 비용이 들었을 것이라는 것은 재지 않은 어림입니다. 러너를 고치고 시험을 더합니다.
+
+> 사용자: 전용 설정 폴더에서 빠진 pyright-lsp와 플러그인 스킬을 어떻게 할까요? → 차이로 적고 간다 (Recommended) — 다시 풀기는 플러그인 없이 도는 것을 설계가 뺀 MCP와 같은 한계로 명세에 적습니다. 다섯 갈래가 모두 같은 환경이라 갈래 사이 비교에는 영향이 없고, 원래 세션과 견주는 탐색에만 듭니다. 조건 판은 그대로입니다.
+
+> 사용자: 인계 지시문의 모델 줄이 갈래와 다르면 러너가 고쳐서 붙일까요? → 갈래 값으로 바꿔 붙인다 (Recommended) — 러너가 새 세션에 지시문을 붙일 때 `모델:` 줄을 그 갈래의 모델·노력으로 바꿉니다. 갈래 사이에 모델 줄만 다르다는 지시문 약속을 인계 뒤에도 지킵니다. 실행 조건이 바뀌니 조건 판이 오릅니다.
+
+> 사용자: 서브에이전트가 쓸 수 있는 모델(허용 모임)을 지금 규칙대로 고정할까요? → 지금 규칙대로 고정한다 (Recommended) — 갈래 모델(파일럿에서 모델을 주지 않은 서브에이전트는 이것을 물려받았다), B의 에이전트 정의와 code-review가 정한 모델, 모델이 Agent 호출에서 직접 고른 모델을 허용합니다. 서브에이전트의 노력은 보지 않습니다(코드를 읽었다). 파일럿 기록 열하나의 허용 밖 줄은 모두 0이었고, 사전 등록 절에 그대로 옮깁니다.
+
+### 결정의 반영 (조건 판 4)
+
+- 하위 세션 비용: 러너가 회차 세션의 기록 파일이 든 프로젝트 폴더에서 회차 세션이 아닌 기록(`other_transcripts`)을 찾아 공식 단가로 셈해 회차 기록의 새 칸 `other_usd`에 넣고, 예산의 쓴 것과 판정 보기의 두 비용에 더한다. 그 칸 때문에 회차 기록의 꼴 판만 2로 올렸다(`RECORD_SHAPE_VERSION`). 과제 목록과 같이 쓰던 `SHAPE_VERSION`을 그대로 올리면 지금 도는 본 측정 고르기가 쓸 과제 목록(판 1)을 읽지 못하게 된다. 가짜 `claude`가 같은 프로젝트 폴더에 다른 세션 기록을 남길 수 있게 했다(`fake_claude.call`의 `others`).
+- 인계 모델 줄: `arm_model_line`이 옮긴 지시문의 첫 `모델:` 줄을 갈래 값으로 바꾸고 나머지 모델 줄은 지운다. 없으면 `브랜치:` 줄 뒤에 넣는다.
+- 조건 판: 처음에는 공식 단가 셈의 채우기를 셈의 고침으로 보고 판을 올리지 않는다고 티켓에 적었다. 러너의 `CONDITION_VERSION` 주석이 단가를 고칠 때도 올리라고 해, 두 결정과 함께 4로 올리고 티켓 메모를 고쳤다.
+- 확인: 새 변이 넷(files 50, runner 31·32, continue 53)과 원문이 바뀐 변이 둘(files 2, continue 26)이 기대대로 빨갰고, 변이 표 여섯의 `--check`가 지났다. 다시 풀기 시험 아홉 파일 821개가 통과했다. 바뀐 파일의 pyright, `ruff check`, `ruff format --check`가 지났다.
+- 문서: 명세 "지시문의 틀"·"회차 기록"·"설정 폴더의 설정"·"모델 확인"에 2026-10-27 주석, 프로브 README에 "2026-10-27 결과: 파일럿(설계 8절의 확인)" 절. 근거 스크립트 열은 `probes/pilot_checks/`로 옮긴다. 티켓의 허용 모임·실행 조건·브랜치 표 항목을 닫았다.
+
+### 셀프 리뷰 (base 47aa107b)
+
+- `/code-review`(base 47aa107b)를 부르자 컨텍스트 약 26.6만 토큰에서 `hook_handoff`(셀프 리뷰 직전)가 들어왔다. 이 세션이 쓴 `인계 못함 커밋 뒤` 줄(309행)이 있어 다시 시도하지 않고 셀프 리뷰를 잇는다.
+- 명세 축: Critical 하나(꼴 판 2의 읽기가 커밋한 파일럿 기록 열하나를 `모르는 꼴 판 1`로 거부해 러너의 예산 셈과 판정이 멈춘다. 명세 축보다 먼저 손으로 `read_record`를 불러 재현했다), Major 하나(채운 몫이 `substitutes`에 들지 않는다), Minor 둘(`other_usd`가 응답 셈만이라 낮다·하위 세션의 `subagents/`를 세지 않는다, README 기본값 "다섯"에 넷만), Nit 하나(일지의 조건 판 문장이 엇갈린다).
+- 고친 것: Critical은 읽기가 회차 기록의 꼴 판 1을 `other_usd` 없는 꼴로 받아 0으로 읽게 했다(`_top`이 받는 판의 모임과 읽은 판을 돌려준다). 쓰기는 판 2만이다. 시험 넷(판 1을 0으로 받는다, 판 1에 `other_usd`가 있으면 거부, 판 2에서 빠지면 거부, 이 저장소의 커밋한 기록을 모두 읽는다)과 변이 둘(files 51·52)을 더하고 변이 2의 원문을 맞췄다. 명세 "회차 기록"의 주석과 `tools/rerun_files.py` 독스트링에 적었다. Major는 Haiku만 프롬프트 크기로 단가가 갈려 Opus·Sonnet의 채운 몫은 정확하므로 `tools/rerun_cost.py`의 못 보는 것에 적는 것으로 갈음했다. Minor 앞 반은 `tools/rerun_runner.py`의 못 보는 것에 적었다. README 기본값 줄을 다섯으로 채웠다.
+- 남긴 것: Minor 뒤 반(`subagents/`)은 틀린 지적이다. `_other_usd`가 쓰는 `transcript_lines`가 그 세션의 `subagents/`까지 읽는다. Nit은 일지가 기록이라 앞 문장을 고치지 않고, "결정의 반영" 절의 조건 판 줄이 바로잡는다.
+- 밀 주장(PR 직전 리뷰): "읽기는 회차 기록의 판 1을 `other_usd` 없는 꼴로 받아 0으로 읽는다", "프롬프트 크기로 단가가 갈리는 모델은 Haiku뿐", "하위 세션의 `modelUsage`는 러너가 받지 못해 응답 셈만 한다", "꼴 판 1로 커밋한 파일럿 기록(조건 판 1·2의 열하나)".
+- 표준 축(sonnet·high): Major 넷, Minor 여럿, 냄새는 판단 항목. M1 README "판 1·2 합쳐 18파일"이 17이다(회차 폴더를 `find`로 셌다). M2 README 10·11절과 티켓의 비용 수치가 채우기 전의 옛 셈이다. M3 하위 세션 $2.39에 조건 판 1이 섞였다. M4 `pilot_checks/`와 `official_cost/compare.py`가 `.claude/rules/probes.md` 첫 항목(표지를 세고 측정 아님이 있으면 종료 1)을 따르지 않는데 README가 결과를 측정처럼 적었다. Minor는 변이 51의 표지가 pytest 실패 줄이다, 이번 변이가 README 변이 기록에 없다, "판 2 기록 열하나"(판 1·2다), 52~64%(63%다), "물려받았다"가 general-purpose만 본 것이다, 러너 독스트링 0.72~1.00배의 범위와 근거 경로, README 5-1의 `blocked by a deny rule`이 러너 규칙이 아니라 클론 설정의 `Read(//**/.env)`다, `arm_model_line`·`_gaps` 꼬리·`other_transcripts` 제외 갈래의 시험이 없다.
+- 고친 것(표준 축): M1은 17로. M2는 README 결과 절 머리에 비용 수치가 따로 적지 않으면 옛 셈이라고 적고, 10·11절에 채운 셈(conversation-02 $21.34·$25.82, end-user-continuation-02 $34.87·$40.46, E-3 $2.79)을 나란히 두었다. 변동계수는 옛 셈으로만 냈다고 적었다. M3은 "판 1·2 넷 합 약 $2.39(판 2 둘은 약 $0.87)"로. M4는 둘로 나눴다. `pilot_checks/`는 결과 절 머리와 표의 행에 "측정이 아니라 손으로 본 것"으로 적고 항목마다 근거를 스크립트 이름과 손으로 본 파일로 갈랐다(1의 클론 장부와 `~/.claude/projects/`·주 체크아웃 장부, 5-2의 `setup.log`·`.git/hooks/`, 5-3의 클론 설정·`installed_plugins.json`). `compare.py`는 `probe_kit.Rounds`로 세션·모델마다 회차를 세게 고치고(기록 파일이나 응답이 없으면 측정 아님, 그런 회차가 있거나 측정이 없으면 종료 1) 다시 돌려 `official_cost/2026-10-28.log`(측정 9, 측정 아님 0, 본문은 옛 로그와 같다)로 옛 로그를 갈음했다. Minor는 변이 51의 표지를 `회차 기록.spend: 빠진 키 ['other_usd']`로, README 변이 기록에 조건 판 4의 아홉(files 50~52, cost 28~30, runner 31·32, continue 53)과 원문을 맞춘 둘(files 2, continue 26)을 적고 열하나를 다시 돌려 모두 기대대로였다. 명세와 티켓의 "판 1·2 기록 열하나"와 "(본 것은 general-purpose뿐이다)", 52~63%, 러너 독스트링의 "파일럿 회차 기록의 응답 셈(서브에이전트 기록 포함)은 그 회차 `costUSD`의 0.72~1.00배였다(`.scratch/model-rerun/probes/official_cost/`)", README 5-1의 거부 문구 분리를 고쳤다.
+- 다시 돌린 것: `run_checks.py`의 첫 바퀴에서 pyright가 `_top`의 반환형(`_is_int`는 형을 좁히지 않는다)을 빨갛게 냈다. 같은 파일의 다른 자리처럼 `isinstance(version, int)`를 앞에 두어 고치고 변이 2의 원문을 맞춰 다시 돌렸고 기대대로였다. 테스트의 `_판_1_기록` 인자를 키워드 전용으로 바꿔 ruff FBT001을 풀었다.
+- 남긴 것(표준 축): 갈래 시험 셋(`arm_model_line`의 모델 줄이 없거나 둘인 지시문, `_gaps`의 꼬리 합치기, `other_transcripts`의 제외 갈래)은 Minor이고 이번 범위의 동작을 바꾸지 않아 다음 러너 손질에 넘긴다. 냄새(긴 함수, `_top`의 판 모임 인자)는 판단 항목이라 두었다.
+- 밀 주장 더함(표준 축 반영): "아래 수는 측정이 아니라 손으로 본 것이다", "채운 셈은 Claude Code 셈과 같아 $21.34·$25.82, $34.87·$40.46", "판 1·2 넷 합 약 $2.39(판 2 둘은 약 $0.87)", "`blocked by a deny rule`은 클론 프로젝트 설정의 `Read(//**/.env)`", "파일럿 회차 기록의 응답 셈(서브에이전트 기록 포함)은 그 회차 `costUSD`의 0.72~1.00배", "본 것은 general-purpose뿐이다".
