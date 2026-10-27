@@ -7,7 +7,7 @@ paths:
 
 원칙 III의 금지 목록, 층 경계, 금지 구문, 전역 `fetch`, 아이콘 import는 판정자 `web/eslint.config.mjs`가 판정하고, tsconfig의 strict 계열은 `web/tools/check-tsconfig.ts`가 본다. 여기 다시 적지 않는다. 아래는 그것들이 판정하지 못하는 판단 기준이다(ADR 0020·0021). 관리 화면 앱에만 걸리는 것은 앱의 규칙에 둔다.
 
-- templates는 슬롯만 받는다. 데이터를 가져와 채우는 것은 pages다.
+- templates는 슬롯만 받고 데이터는 props로도 받지 않는다. organisms는 `api/`의 요청 함수를 부르지 않고 처리기를 props로 받는다. 관리 화면의 organisms가 같은 barrel의 응답 타입과 실패 해석을 써서 판정자는 `api/`를 막지 않는다(ADR 0021의 2026-10-27 이력).
 - 서버 데이터를 스토어(Zustand)에 복사하지 않는다. 서버 데이터는 SWR이 들고, 스토어는 클라이언트 상태만 든다.
 - `isLoading`(처음 가져오는 중, 스켈레톤)과 `isValidating`(이미 보인 값을 다시 확인하는 중, 작은 표시)을 가른다. 다시 확인하는 동안 보인 것을 지우지 않는다.
 - TS 테스트의 이름은 행동을 말하는 한국어 문장이다.

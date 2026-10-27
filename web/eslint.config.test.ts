@@ -93,8 +93,23 @@ const SOURCES: Readonly<Record<string, string>> = {
     'import { 라벨 } from "../atoms/Label";\n\nexport const 판 = 라벨;\n',
   "apps/admin/components/organisms/DeepApi.ts":
     'import { 실행_목록 } from "../../api/runs/listRuns";\n\nexport const 깊이 = 실행_목록;\n',
-  "apps/admin/components/organisms/DeepQuery.ts":
+  // organisms 는 hooks/queries 를 부르지 않으므로 barrel 의 판정은 부를 수 있는 pages 에서 잰다.
+  "apps/admin/components/pages/DeepQuery.ts":
     'import { 실행_훅 } from "../../hooks/queries/runs/useRuns";\n\nexport const 깊이 = 실행_훅;\n',
+  "apps/admin/components/organisms/Query.ts":
+    'import { 실행_훅 } from "../../hooks/queries/runs";\n\nexport const 훅 = 실행_훅;\n',
+  "apps/admin/components/organisms/Store.ts":
+    'import { 토큰 } from "../../stores/tokens";\n\nexport const 받은_토큰 = 토큰;\n',
+  "apps/admin/components/organisms/InlineType.ts":
+    'import { type 알림 } from "../../stores/tokens";\n\nexport type 받은_알림 = 알림;\n',
+  "apps/admin/components/organisms/TypeOnly.ts":
+    'import type { 알림 } from "../../stores/tokens";\n\nexport type 받은_알림 = 알림;\n',
+  "apps/admin/components/templates/Query.ts":
+    'import { 실행_훅 } from "../../hooks/queries/runs";\n\nexport const 훅 = 실행_훅;\n',
+  "apps/admin/components/molecules/Store.ts":
+    'import { 토큰 } from "../../stores/tokens";\n\nexport const 받은_토큰 = 토큰;\n',
+  "apps/admin/components/pages/Connected.ts":
+    'import { 실행_훅 } from "../../hooks/queries/runs";\nimport { 토큰 } from "../../stores/tokens";\n\nexport const 연결 = [실행_훅, 토큰];\n',
   "apps/admin/components/organisms/DeepType.ts":
     'import { 실행_종류 } from "../../types/run/kinds";\n\nexport const 깊이 = 실행_종류;\n',
   "apps/admin/components/organisms/Runs.ts":
@@ -107,6 +122,8 @@ const SOURCES: Readonly<Record<string, string>> = {
   "apps/admin/api/runs/listRuns.ts": "export const 실행_목록 = 1;\n",
   "apps/admin/hooks/queries/runs/index.ts": 'export { 실행_훅 } from "./useRuns";\n',
   "apps/admin/hooks/queries/runs/useRuns.ts": "export const 실행_훅 = 1;\n",
+  "apps/admin/stores/tokens.ts":
+    "export const 토큰 = 1;\n\nexport interface 알림 {\n  readonly 글: string;\n}\n",
   "apps/admin/types/run/index.ts": 'export { 실행_종류 } from "./kinds";\n',
   "apps/admin/types/run/kinds.ts": 'export const 실행_종류 = ["완료", "실패"] as const;\n',
   "apps/admin/app/page.ts":
@@ -256,7 +273,7 @@ const RED: readonly RedCase[] = [
   },
   {
     name: "hooks/queries 도메인의 barrel 을 거치지 않는 import",
-    path: "apps/admin/components/organisms/DeepQuery.ts",
+    path: "apps/admin/components/pages/DeepQuery.ts",
     rule: BOUNDARIES,
   },
   {
@@ -295,6 +312,38 @@ const RED: readonly RedCase[] = [
     path: "apps/admin/components/molecules/Api.ts",
     rule: BOUNDARIES,
   },
+  {
+    name: "molecules 가 stores 를 import",
+    path: "apps/admin/components/molecules/Store.ts",
+    rule: BOUNDARIES,
+  },
+  // 서버 데이터와 토큰을 읽는 것은 pages 다(ADR 0021 의 2026-10-27 이력). organisms 와 templates 는 props 로 받는다.
+  {
+    name: "organisms 가 생성 클라이언트 패키지를 import",
+    path: "apps/admin/components/organisms/Api.ts",
+    rule: BOUNDARIES,
+  },
+  {
+    name: "organisms 가 hooks/queries 를 barrel 로 import",
+    path: "apps/admin/components/organisms/Query.ts",
+    rule: BOUNDARIES,
+  },
+  {
+    name: "organisms 가 stores 를 import",
+    path: "apps/admin/components/organisms/Store.ts",
+    rule: BOUNDARIES,
+  },
+  {
+    // verbatimModuleSyntax 에서 이 줄은 지워지지 않고 모듈을 싣는다. 타입 지정자만 든 것은 import type 뿐이다.
+    name: "organisms 가 같은 줄의 type 지정자로 stores 를 import",
+    path: "apps/admin/components/organisms/InlineType.ts",
+    rule: BOUNDARIES,
+  },
+  {
+    name: "templates 가 hooks/queries 를 barrel 로 import",
+    path: "apps/admin/components/templates/Query.ts",
+    rule: BOUNDARIES,
+  },
   // 생성 클라이언트 패키지는 fetch 를 직접 부르지 않는다. openapi-fetch 가 부른다. 그래서 예외가 없다.
   {
     name: "생성 클라이언트 패키지 안의 전역 fetch",
@@ -325,8 +374,12 @@ const GREEN: readonly { readonly name: string; readonly path: string }[] = [
   { name: "organisms 가 atoms 를 import", path: "apps/admin/components/organisms/Panel.ts" },
   { name: "app/ 이 pages 와 templates 를 import", path: "apps/admin/app/page.ts" },
   {
-    name: "organisms 가 생성 클라이언트 패키지를 import",
-    path: "apps/admin/components/organisms/Api.ts",
+    name: "organisms 가 stores 의 타입만 import type 으로 받는다",
+    path: "apps/admin/components/organisms/TypeOnly.ts",
+  },
+  {
+    name: "pages 가 hooks/queries 와 stores 를 import",
+    path: "apps/admin/components/pages/Connected.ts",
   },
   {
     name: "디자인 시스템 패키지의 Icon.tsx 가 아이콘 모듈 선언을 경로로 참조",
@@ -486,6 +539,29 @@ describe("실제 관리 화면 자리", { timeout: PROGRAM_TIMEOUT_MS }, () => {
     const source = 'export const 수: number = JSON.parse("1");\n';
 
     expect(await ruleIdsAt(path, source)).toEqual(["@typescript-eslint/no-unsafe-assignment"]);
+  });
+
+  // 서버 데이터를 읽는 것은 pages 다(ADR 0021 의 2026-10-27 이력). 임시 트리에는 swr 가 설치되지 않아 여기서 잰다.
+  const ORGANISM = join(ADMIN, "components", "organisms", "PluginList.tsx");
+
+  test("organisms 가 swr 를 import 하면 빨갛다", async () => {
+    const source = 'import useSWR from "swr";\n\nexport const 읽기 = useSWR;\n';
+
+    expect(await ruleIdsAt(ORGANISM, source)).toContain(BOUNDARIES);
+  });
+
+  test("organisms 가 swr 의 서브패스를 import 하면 빨갛다", async () => {
+    const source =
+      'import useSWRInfinite from "swr/infinite";\n\nexport const 더_읽기 = useSWRInfinite;\n';
+
+    expect(await ruleIdsAt(ORGANISM, source)).toContain(BOUNDARIES);
+  });
+
+  test("organisms 가 swr 의 타입만 import type 으로 받는 것은 아무것도 보고되지 않는다", async () => {
+    const source =
+      'import type { SWRResponse } from "swr";\n\nexport type 읽은_것 = SWRResponse<number>;\n';
+
+    expect(await ruleIdsAt(ORGANISM, source)).toEqual([]);
   });
 
   test("앱의 요청 함수 자리에서 openapi-fetch 로 클라이언트를 직접 만들면 빨갛다", async () => {

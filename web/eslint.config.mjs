@@ -79,10 +79,10 @@ const API_CLIENT_INTERNALS = {
   message: `생성 클라이언트는 패키지 이름(${API_CLIENT})으로만 import 한다. 층 경계가 그 이름을 본다`,
 };
 
-// 아토믹 층. 아래 층은 위 층을 import 하지 않고, atoms·molecules 는 API 를 부르지 않는다(tech.md 프론트 구성).
+// 아토믹 층. 아래 층은 위 층을 import 하지 않고, atoms·molecules 는 API 와 스토어를 부르지 않는다(tech.md 프론트 구성).
 const LAYER_POLICIES = [
-  ["atom", ["molecule", "organism", "template", "page", "route", "api", "query"]],
-  ["molecule", ["organism", "template", "page", "route", "api", "query"]],
+  ["atom", ["molecule", "organism", "template", "page", "route", "api", "query", "store"]],
+  ["molecule", ["organism", "template", "page", "route", "api", "query", "store"]],
   ["organism", ["template", "page", "route"]],
   ["template", ["page", "route"]],
   ["page", ["route"]],
@@ -145,6 +145,8 @@ export default defineConfig(
         { type: "api", pattern: "api/*" },
         { type: "query", pattern: "hooks/queries/*" },
         { type: "types", pattern: "types/*" },
+        // 클라이언트 상태(Zustand). 토큰 스토어가 여기 있다.
+        { type: "store", pattern: "stores" },
         // 앱 하나(apps/<이름>). 층 폴더 밖의 앱 파일(lib/ 등)도 요소가 되어 아래 app/ 정책이 그것을 막는다.
         // 이 요소가 없으면 그 파일은 알 수 없는 로컬이라 정책 밖이다.
         { type: "workspace-app", pattern: "apps/*" },
@@ -180,7 +182,19 @@ export default defineConfig(
               from: { element: { types: { anyOf: ["atom", "molecule"] } } },
               disallow: { to: { module: { origin: "external", source: API_CLIENT } } },
               message:
-                "atoms 와 molecules 는 순수하다. 생성 클라이언트는 organisms 이상만 부른다(tech.md 프론트 구성)",
+                "atoms 와 molecules 는 순수하다. 생성 클라이언트를 부르지 않는다(tech.md 프론트 구성)",
+            },
+            {
+              // 서버 데이터와 토큰을 읽고 처리기를 만드는 것은 pages 다. 값으로 싣는 import 만 막는다. 같은 줄의
+              // `type` 지정자(`import { type X }`)는 verbatimModuleSyntax 에서 모듈을 그대로 실어 값으로 센다.
+              // 모듈의 source 는 서브패스를 뗀 패키지 이름과 맞춘다(swr/infinite 도 swr 다. 판정자 테스트가 잰다).
+              from: { element: { types: { anyOf: ["organism", "template"] } } },
+              disallow: [
+                { to: { element: { types: { anyOf: ["query", "store"] } } } },
+                { to: { module: { origin: "external", source: `{${API_CLIENT},swr}` } } },
+              ].map((selector) => ({ ...selector, dependency: { kind: "value" } })),
+              message:
+                "organisms 와 templates 는 hooks/queries, stores, swr, 생성 클라이언트를 부르지 않는다. pages 가 읽어 organisms 에 props 로 넘긴다(ADR 0021 의 2026-10-27 이력)",
             },
             {
               from: { file: { categories: "in-app" } },

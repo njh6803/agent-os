@@ -1,9 +1,11 @@
 // 관리 화면의 한 화면이 서는 자리. 관리 토큰이 없으면 넣는 자리이고, 있으면 그 화면의 내용과 화면 사이를 오가는
 // 링크다. 화면마다 이 문을 지난다. 관리 요청은 모두 관리 토큰을 싣기 때문이다(web-admin 스토리 1). 머리에는 선택인
-// 채널 토큰을 넣는 자리와, 두 토큰을 모두 지우는 버튼이 선다(스토리 4, 8).
+// 채널 토큰을 넣는 자리와, 두 토큰을 모두 지우는 버튼이 선다(스토리 4, 8). 토큰 스토어를 읽는 것은 여기이고, 넣는
+// 자리들은 그 값과 처리기를 props 로 받는다.
 
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { useAdminTokenEntry } from "../../hooks/queries/plugins";
 import { useHydrated } from "../../hooks/useHydrated";
 import { useTokens } from "../../stores/tokens";
 import { AdminTokenForm } from "../organisms/AdminTokenForm";
@@ -13,7 +15,10 @@ import { AdminFrame } from "../templates/AdminFrame";
 export function AdminScreen({ children }: { readonly children: ReactNode }) {
   const hydrated = useHydrated();
   const adminToken = useTokens((state) => state.adminToken);
+  const adminTokenNotice = useTokens((state) => state.adminTokenNotice);
+  const enterAdminToken = useAdminTokenEntry();
   const channelToken = useTokens((state) => state.channelToken);
+  const acceptChannelToken = useTokens((state) => state.acceptChannelToken);
   const clearTokens = useTokens((state) => state.clearTokens);
   const clearButton = (
     <button type="button" onClick={clearTokens}>
@@ -28,7 +33,7 @@ export function AdminScreen({ children }: { readonly children: ReactNode }) {
     // 관리 토큰이 거부돼도 채널 토큰은 남는다. 탭을 닫지 않고 지울 길을 둔다(스토리 8).
     return (
       <AdminFrame actions={channelToken === null ? undefined : clearButton}>
-        <AdminTokenForm />
+        <AdminTokenForm notice={adminTokenNotice} onEnter={enterAdminToken} />
       </AdminFrame>
     );
   }
@@ -41,7 +46,7 @@ export function AdminScreen({ children }: { readonly children: ReactNode }) {
       }
       actions={
         <>
-          <ChannelTokenForm />
+          <ChannelTokenForm entered={channelToken !== null} onEnter={acceptChannelToken} />
           {clearButton}
         </>
       }
