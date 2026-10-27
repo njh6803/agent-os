@@ -568,7 +568,7 @@ expect = "silent"
 note = "같은 probes 폴더의 프로브 스크립트 — README 가 아니다"
 payload = { tool_name = "Edit", tool_input = { file_path = "C:\\project\\agent\\.scratch\\harness\\probes\\guard_hooks_time.py", old_string = "a", new_string = "b" } }
 
-# --- hook_journal_evidence (PostToolUse Write|Edit) ---
+# --- hook_journal_evidence (PostToolUse Write|Edit, Bash) ---
 # session_id 를 빼 표지를 쓰지 않는 길(호출마다 알린다)로 돈다. 한 번만 알리는 것은 tests/tools 가 임시 폴더로 본다.
 [[case]]
 hook = "hook_journal_evidence.py"
@@ -594,6 +594,19 @@ hook = "hook_journal_evidence.py"
 expect = "silent"
 note = "일지 폴더 옆의 ADR — docs 아래지만 journal 이 아니다"
 payload = { tool_name = "Write", tool_input = { file_path = "C:\\project\\agent\\docs\\adr\\0036-x.md", content = "# x\n" } }
+
+[[case]]
+hook = "hook_journal_evidence.py"
+expect = "context"
+note = "Bash heredoc 으로 일지에 덧붙였다(대기열 501. harness 018 둘째 세션의 꼴)"
+contains = ["근거의 종류"]
+payload = { tool_name = "Bash", tool_input = { command = "cat >> docs/journal/2026-10-28-01-git-help-exit-code.md <<'EOF'\n- 러너의 git 2.56 에서 0 으로 끝났다\nEOF", description = "일지에 덧붙인다" } }
+
+[[case]]
+hook = "hook_journal_evidence.py"
+expect = "silent"
+note = "일지 끝의 다음 절을 읽기만 한다"
+payload = { tool_name = "Bash", tool_input = { command = "tail -20 docs/journal/2026-10-28-01-git-help-exit-code.md", description = "일지 끝을 읽는다" } }
 
 # --- hook_measure_word (PostToolUse Write|Edit) ---
 # 발동은 대기열 227 의 사건 꼴(ADR 이력에 손으로 돌린 시간 비교를 "재니"로 적었다)이고, 침묵은 이 저장소 ADR 0014 의 실제 줄이다.
