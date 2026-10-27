@@ -1,0 +1,171 @@
+# 티켓 02(organisms 가 props 를 받는다)의 변이 표. 첫째부터 다섯째까지는 지금의 페이지 시험이 옮긴 자리를 지키는지
+# 본다. 이 티켓은 보이는 것을 바꾸지 않는 옮기기라 새 페이지 시험이 없고, 그 시험들은 옮기기 전부터 초록이라 이
+# 자리에서 빨강을 본 적이 없다.
+# 둘째·셋째·넷째는 pages 가 새로 든 연결(결정 자리가 설 때 목록을 읽는 것, 새로 고침, 채널 토큰)을 깨 빨강을 기대한다.
+# 첫째와 다섯째는 옮기기 전의 요청 시점과 마운트 자리를 지키려고 둔 모양을 깨는 변이이고, 지금의 시험이 그 자리를
+# 고정하지 않는다는 것을 초록으로 적는다. 첫째가 빨개지지 않는 것은 실행 하나의 시험이 관리 토큰 확인을 위해
+# `GET /plugins` 에 늘 빈 목록을 답해(`testing/token.ts` 의 `acceptTokens`) 더 읽은 목록이 처리하지 않은 요청이 되지
+# 않고, 목록 요청의 수를 세는 시험도 없기 때문이다(2026-10-27 이 표의 첫 실행에서 `-t` 로 좁힌 시험이 초록이었다).
+# 여섯째는 판정자가 organisms 에 api/failure 만 여는 예외를 지운다. 그 지나보낼 사례는 예외와 함께 써서, 예외가 없을
+# 때 빨개지는지를 이 변이로 본다. 일곱째는 api 도메인을 막는 줄을 지워, 정책과 함께 쓴 위반 사례 둘(organisms,
+# templates)이 그 줄 때문에 빨간지를 본다.
+# 사용: PYTHONUTF8=1 uv run python tools/mutate.py .scratch/admin-style/probes/organisms_props_mutations.toml
+
+[runner.vitest]
+command = ["pnpm", "exec", "vitest", "run"]
+cwd = "web"
+judge = "vitest"
+
+[[mutation]]
+name = "결정 자리가 서지 않아도 목록을 읽는다"
+runner = "vitest"
+tests = ["apps/admin/components/pages/RunPage.test.tsx", "apps/admin/components/pages/RunPage.decision.test.tsx"]
+expect = "green"
+
+[[mutation.edit]]
+file = "web/apps/admin/components/pages/RunPage.tsx"
+old = '''
+  const { data, error } = usePlugins(decisionPlaceStands(trace, channelTokenEntered));
+'''
+new = '''
+  const { data, error } = usePlugins();
+'''
+
+[[mutation]]
+name = "결정 자리가 서도 목록을 읽지 않는다"
+runner = "vitest"
+tests = ["apps/admin/components/pages/RunPage.decision.test.tsx", "-t", "에이전트가 꺼졌으면 결정 버튼이 막히고"]
+expect = "red"
+# 고른 시험에서 꺼짐 미리 알림을 글자로 찾는 단언의 실패 머리다. 찾는 글자까지 들어 다른 단언의 실패와 가른다.
+expect_output = ["Unable to find an element with the text: /꺼진 플러그인이 있어 재개할 수 없다/"]
+
+[[mutation.edit]]
+file = "web/apps/admin/components/pages/RunPage.tsx"
+old = '''
+  const { data, error } = usePlugins(decisionPlaceStands(trace, channelTokenEntered));
+'''
+new = '''
+  const { data, error } = usePlugins(false);
+'''
+
+[[mutation]]
+name = "새로 고침이 다시 읽지 않는다"
+runner = "vitest"
+tests = ["apps/admin/components/pages/HomePage.test.tsx", "-t", "새로 고침 버튼이 목록을 다시 읽는다"]
+expect = "red"
+# 고른 시험에서 다시 읽은 목록의 새 행을 글자로 찾는 단언의 실패 머리다.
+expect_output = ["Unable to find an element with the text: haiku."]
+
+[[mutation.edit]]
+file = "web/apps/admin/components/pages/read.ts"
+old = '''
+      void mutate();
+'''
+new = '''
+      void Promise.resolve(mutate);
+'''
+
+[[mutation]]
+name = "채널 토큰을 넣어도 넣었다고 말하지 않는다"
+runner = "vitest"
+tests = ["apps/admin/components/pages/HomePage.test.tsx", "-t", "채널 토큰을 넣어도 확인 요청을 보내지 않고"]
+expect = "red"
+# 고른 시험에서 넣었다는 글자를 찾는 단언의 실패 머리다.
+expect_output = ["Unable to find an element with the text: 채널 토큰을 넣었다."]
+
+[[mutation.edit]]
+file = "web/apps/admin/components/pages/AdminScreen.tsx"
+old = '''
+          <ChannelTokenForm entered={channelToken !== null} onEnter={acceptChannelToken} />
+'''
+new = '''
+          <ChannelTokenForm entered={false} onEnter={acceptChannelToken} />
+'''
+
+[[mutation]]
+name = "결정의 훅을 트레이스 값의 갈래 밖에 둔다"
+runner = "vitest"
+tests = ["apps/admin/components/pages/RunPage.decision.test.tsx"]
+expect = "green"
+
+[[mutation.edit]]
+file = "web/apps/admin/components/pages/RunPage.tsx"
+old = '''
+  const trace = useTrace(runId);
+  return (
+    <RunDetail
+      runId={runId}
+      {...readOf(trace)}
+      decision={(shown) => <ConnectedRunDecision runId={runId} trace={shown} />}
+    />
+  );
+'''
+new = '''
+  const trace = useTrace(runId);
+  const attempt = useDecision(runId);
+  return (
+    <RunDetail
+      runId={runId}
+      {...readOf(trace)}
+      decision={(shown) => <ConnectedRunDecision attempt={attempt} trace={shown} />}
+    />
+  );
+'''
+
+[[mutation.edit]]
+file = "web/apps/admin/components/pages/RunPage.tsx"
+old = '''
+function ConnectedRunDecision({ runId, trace }: { readonly runId: string; readonly trace: Trace }) {
+  const channelTokenEntered = useTokens((state) => state.channelToken !== null);
+  const { busy, frames, cut, failure, decide } = useDecision(runId);
+'''
+new = '''
+function ConnectedRunDecision({
+  attempt,
+  trace,
+}: {
+  readonly attempt: ReturnType<typeof useDecision>;
+  readonly trace: Trace;
+}) {
+  const channelTokenEntered = useTokens((state) => state.channelToken !== null);
+  const { busy, frames, cut, failure, decide } = attempt;
+'''
+
+[[mutation]]
+name = "판정자가 api/failure 도 막는다"
+runner = "vitest"
+tests = ["eslint.config.test.ts", "-t", "요청 함수가 없는 api/failure"]
+expect = "red"
+# 고른 지나보낼 사례가 받은 보고의 메시지다. 지나보낼 사례가 이 정책의 보고를 받을 때만 실린다.
+expect_output = [
+  '"message": "organisms 와 templates 는 hooks/queries, stores, swr, 생성 클라이언트, api/failure 밖의 api 를 부르지 않는다',
+]
+
+[[mutation.edit]]
+file = "web/eslint.config.mjs"
+old = '''
+                { to: { element: { type: "api", captured: { domain: "!failure" } } } },
+'''
+new = '''
+                { to: { element: { type: "api" } } },
+'''
+
+[[mutation]]
+name = "판정자가 organisms 와 templates 의 api 도메인 import 를 막지 않는다"
+runner = "vitest"
+tests = ["eslint.config.test.ts", "-t", "요청 함수가 든 api 도메인을 barrel"]
+expect = "red"
+# 고른 위반 사례 둘(organisms, templates)이 모두 보고 없이 실패할 때의 실패 머리와, 실패한 시험에만 찍히는 FAIL 줄의
+# 경로(묶음 이름 > 시험 이름)다.
+expect_output = [
+  "AssertionError: expected [] to include 'boundaries/dependencies'",
+  "빨갛게 보는 것 > organisms 가 요청 함수가 든 api 도메인을 barrel 로 import 은",
+  "빨갛게 보는 것 > templates 가 요청 함수가 든 api 도메인을 barrel 로 import 은",
+]
+
+[[mutation.edit]]
+file = "web/eslint.config.mjs"
+old = '''
+                { to: { element: { type: "api", captured: { domain: "!failure" } } } },
+'''
+new = ""

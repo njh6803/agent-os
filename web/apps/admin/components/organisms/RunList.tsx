@@ -1,8 +1,7 @@
 import Link from "next/link";
-import { useId, useState } from "react";
-import type { RunRow, RunStatus } from "../../api/traces";
-import { useRunList } from "../../hooks/queries/traces";
-import { ReadSection } from "./ReadSection";
+import { useId } from "react";
+import type { RunRow, RunStatus, TracePage } from "../../api/traces";
+import { ReadSection, type ReadState } from "./ReadSection";
 
 /**
  * 실행 상태의 이름과 거르기의 차례. 이름은 용어집의 말이다. 결말 없음은 "지금 돌고 있다"가 아니라 끝내지 못하고 사라진
@@ -31,26 +30,26 @@ function isRunStatus(value: string): value is RunStatus {
   return Object.hasOwn(STATUS_NAMES, value);
 }
 
+interface RunListProps extends ReadState<readonly TracePage[]> {
+  /** 고른 거르기. 읽기는 이것으로 거른 쪽들이다. */
+  readonly status: Filter;
+  readonly onStatusChange: (status: Filter) => void;
+  /** 다음 쪽을 더 읽는다. */
+  readonly onMore: () => void;
+}
+
 /**
  * 실행 목록(`GET /traces`). 행은 서버가 준 순서 그대로다(스토리 23). 화면이 다시 정렬하지 않는다. 상태 넷과 전부로
  * 거르고(스토리 24), 다음 쪽이 있으면 더 본다(스토리 25). 새로 고침과 실패의 표시는 읽기 골격(`ReadSection`)이다.
  * 거르기는 실패 중에도 남는다.
  */
-export function RunList() {
-  const [status, setStatus] = useState<Filter>(null);
-  const { data, error, isValidating, mutate, setSize } = useRunList(status);
-
+export function RunList({ status, onStatusChange, onMore, ...read }: RunListProps) {
   return (
     <ReadSection
       heading="실행"
-      data={data}
-      error={error}
-      isValidating={isValidating}
-      onRefresh={() => {
-        void mutate();
-      }}
+      {...read}
       placeholder="실행 목록을 불러오는 중이다"
-      above={<StatusFilter value={status} onChange={setStatus} />}
+      above={<StatusFilter value={status} onChange={onStatusChange} />}
     >
       {(pages) => {
         const rows = pages.flatMap((page) => page.runs);
@@ -67,13 +66,7 @@ export function RunList() {
               </ol>
             )}
             {nextCursor === null ? null : (
-              <button
-                type="button"
-                disabled={isValidating}
-                onClick={() => {
-                  void setSize((size) => size + 1);
-                }}
-              >
+              <button type="button" disabled={read.isValidating} onClick={onMore}>
                 더 보기
               </button>
             )}
