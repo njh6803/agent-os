@@ -221,6 +221,7 @@ PR #392(harness 017)를 병합한 세션이 저장소에 적지 못하고 메모
   - `web/tools/sync-design-system/import.ts` 나누기(일지 2026-10-26-19 "다음", PR #398 claude-review 첫 회차).
   - PR #356의 보류 둘: `tokens-json.ts`를 정규 꼴과 차이 목록으로 나누기, `diffType`의 added/removed 되풀이 줄이기(일지 2026-10-27-01 "다음").
   - `check.ts`의 `claim` 몫(`beyondClaim`, `claimSummary`, 이어받을 기준본 조립) 떼기(일지 2026-10-27-03 "다음"). 07은 `check.ts`를 고치지 않았다.
+  - `record-check.test.ts`의 `들이기의 기준본은 claim 이 …` 시험이 네 갈래(claim 없음, 자기 claim, 이어받은 claim, 기준본 없음 오류)를 한 시험에서 단언한다. 갈래마다 `test`로 나누고, 같은 시험의 이중 스프레드(`...{ v: 1, commit: … }, ...{ baseline, index: lists, … }`)를 `SyncRecord` 리터럴 하나로 쓴다. `record_check_mutations.toml`의 52·53이 `-t "들이기의 기준본은"`으로 그 시험을 고르므로 `tools/mutate.py --check`로 맞춘다(PR #400 claude-review 둘째 회차의 Minor·Nit, 아래 "병합 뒤"에서 옮겨 적었다).
   - `import.ts`의 `answeredOf`: "code"를 고른 자리의 `value`를 `slot.entries[0]?.code`로 내서, 여러 벌로 나뉜 색 자리(원색의 라이트·다크, 반투명의 여덟 벌)에서는 보고의 `answered.value`에 첫 벌의 값만 남는다. "web"·"suggested"는 옮긴 줄의 글자(`move.text`)를 내 두 갈래의 꼴도 다르다. 디자인 토큰 CSS는 맞고 틀리는 것은 보고의 그 칸뿐이며, 지금 시험(`import.test.ts`)은 벌이 없는 `--gray-*` 자리만 본다(PR #398 코멘트 6426455559). `/sync-design-system` 스킬은 지금 `answered`를 읽지 않는다. 스킬이 보고의 `answered`를 사람에게 보이게 되면 그 전에 "code"의 값을 벌마다의 값(또는 지금 줄의 글자)으로 맞추고 여러 벌 자리의 시험을 둔다.
 - 주 체크아웃 미갱신: 루트는 main. 이 PR은 워크트리에서 병합하므로 당기기와 병합된 워크트리 지우기는 다음 새 세션의 `tidy-checkouts`가 한다.
 
@@ -267,3 +268,12 @@ open-session을 부른다 2026-10-27T02:33:40Z
 새 세션이 제목을 `feature/07-sync-design-system-skill`로 바꾸고 `EnterWorktree(path)`로 이 워크트리에 들어왔다. `git fetch origin` 뒤 `HEAD..origin/main`이 비어 합칠 것이 없었다. PR #400의 `headRefOid`는 `6c4adfc8`이고 로컬 HEAD는 그 위의 `ecba5e9f`라, 위 인계 절과 이 절을 한 커밋에 실어 함께 푸시한다. 이 푸시가 두 봇의 둘째 회차다. 그 회차와 병합의 결과는 이 푸시 뒤라 이 일지에 싣지 않고, 보류한 지적은 PR 코멘트와 다음 지시문의 "이어받을 상태"에 적는다(next-session 순서 1의 2 "뒤로 넘긴 일").
 
 이 커밋의 첫 시도는 pre-commit의 pytest에서 막혔다(821.06초, 5701 통과 1 실패). 실패는 이 브랜치가 건드리지 않은 `tests/tools/test_rerun_runner.py::test_오염이_한_번이면_다시_돌고_두_번이면_그_과제를_모든_갈래에서_뺀다`의 `assert board.run() == 0`(`1 == 0`)이고, 따로 돌리니 119.46초에 지났다. 나머지 검사는 지났다. 일지 2026-10-26-09·2026-10-26-12에서 같은 시험이 같은 꼴로 빨갰고, 그 세션들처럼 대기열 306이 받아들여 닫은 종류(전체 스위트의 부하 아래에서만 빨간 시험)로 보고 일지에만 적은 뒤 커밋을 다시 쳤다.
+
+## 병합 뒤 (03 세션이 옮겨 적음)
+
+이 절은 마지막 푸시(`431830dd`, 일지만 실었다) 뒤에 일어난 일이라 병합된 일지에 들지 못했다. 병합한 세션이 지시문을 내지 않아(아래) 메모리에 넘겼고, 그 메모가 가리킨 대로 design-reverse-sync의 다음 PR인 03 세션(PR #396)이 옮겨 적는다. 판정 원문은 PR #400 코멘트 6432892946이다.
+
+- **다시 친 일지 커밋.** 위 절의 첫 시도 뒤 다시 친 커밋 `431830dd`는 모두 Passed였다(pytest 538.3초).
+- **봇 둘째 회차(`431830dd`).** CodeRabbit은 `6c4adfc8..431830dd`를 보고 지적이 없었다. claude-review는 Minor 둘과 Nit 하나를 냈고 셋 다 보류했다. Minor 하나(`record-check.test.ts`의 `들이기의 기준본은 claim 이 …`가 네 갈래를 한 시험에서 단언한다)와 Nit(같은 시험의 이중 스프레드)는 위 "다음"의 코드 정리 몫에 더했다. 다른 Minor(`SKILL.md` "재지 못한 것", `upload.md` 5, `.design-sync/NOTES.md`가 08이 정할 것을 따로 적는다)는 티켓 08의 "07이 넘긴 것"과 체크박스·검증 줄이 이미 세 자리를 든다고 보고 넘길 것이 없었다.
+- **병합.** 2026-10-27T03:19:48Z에 `60b028e3`으로 squash 병합했다. 원격 브랜치 `feature/07-sync-design-system-skill`은 `git push origin --delete`가 자동 모드 분류기에 거부되어 남았고 사람에게 알렸다. 2026-10-27 03 세션이 `git ls-remote --heads origin`으로 보니 아직 `431830dd`에 남아 있었다.
+- **지시문을 내지 않았다.** 08은 03(PR #396)에 막혀 있었고, 위 "다음"대로 뒤에 병합하는 03 세션이 08을 연다. 그때의 주 체크아웃 미갱신: 루트는 main.
