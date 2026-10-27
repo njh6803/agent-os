@@ -223,6 +223,53 @@ open-session을 부른다 2026-10-27T15:59:02Z
 12. **기각.** 이 세션이 `next-session` 스킬 전체를 Read로 열어 큰 결과 알림(약 2.4만 자, 훅이 찍은 수)을 받았다. 이미 있는 훅이 그 자리에서 알렸고, 병합 길과 순서 1을 함께 읽어야 했다.
 13. **기각.** 한 티켓에 인계가 세 번 났다(셀프 리뷰 직전 약 27.2만, 커밋 뒤 약 33.4만, PR 연 뒤 약 30.3만 토큰, 계기 문장의 수). ADR 0033의 문턱이 뜻한 대로 돈 것이고, 무엇이 컨텍스트를 키웠는지는 재지 않아 처방을 들 사건이 아니다.
 
+## 인계 (회고 커밋 뒤)
+
+회고, "다음", 변이 표 전체 결과를 커밋했다(`98df09c4`). 그 커밋의 pre-commit은 모두 통과했다(출력의 줄. pytest 408.0초, web-verify 478.7초 등. `Skipped`는 ruff 둘(`.py`가 없었다), 카나리아 명세 모양, 헌법 판이다. 인용 대조 경고 없음). 커밋 전에 PR 본문의 "변경된 영역"에 대기열과 프로브 README의 변경을 더했고(`gh pr edit`), 일지 번호를 옮긴 뒤 `tools/sibling_overlap.py`가 쓴 본문으로 다시 올렸다(`gh api … --method PATCH`가 PR 주소를 돌려줬다).
+
+그 `커밋 뒤` 경계에서 세션 컨텍스트가 약 23.7만 토큰으로 인계 문턱(20만)을 넘어 `hook_handoff`의 계기가 왔다(계기 문장의 수). 인계하지 않는 때 다섯에 들지 않아 넘긴다. 커밋이 성공했고, 요청 범위가 PR과 병합까지이며, 이 세션을 연 지시문의 이어받을 상태는 다른 경계(`인계: PR 연 뒤`)로 시작하고, `인계 못함` 줄이 없으며, `get_session`의 `self`에 `parentSessionId`가 없다. 계기는 `next-session` 스킬을 Read로 열라고 했고, 이 세션이 앞서 같은 경로를 Read로 연 판(이 세션은 그 파일을 고치지 않았다)을 따랐다.
+
+- 사용자 프롬프트는 이 세션을 연 지시문 하나뿐이다(위 "이어받기 (PR 연 뒤의 새 세션, 2026-10-28)" 절의 인용). 그 밖에 받은 것은 훅과 백그라운드 작업의 알림이다.
+- 결정과 고친 것: 위 "회고" 절과 이 절의 첫 문단.
+- 이 세션의 지금 제목: `feature/09-web-edit-hook`. 넘기기 전에 `feature/09-web-edit-hook (인계함)`으로 바꾼다.
+- 남은 단계(새 세션이 한다):
+  1. origin/main을 합친다. 그쪽도 `.scratch/retro-queue.md`를 고쳐 글자 충돌 후보다(`tools/sibling_overlap.py`가 찍은 줄).
+  2. 푸시하고 `@coderabbitai review` 코멘트를 남겨 봇 회차를 돈다(next-session 순서 1의 2). 이 브랜치의 `98df09c4`는 아직 푸시하지 않았고 코멘트도 남기지 않았다. 이 인계 절은 커밋하지 않았으니 봇 회차의 첫 커밋에 싣는다.
+  3. 봇 회차가 뒤의 작업으로 넘기는 일이 있으면 아래 "다음"에 더한다. 회고는 이 일지의 "회고" 절로 마쳤다.
+  4. 병합은 워크트리에서 병합할 때의 길이다. 저장소에 병합 뒤 브랜치 자동 삭제가 켜져 있어 원격 정리는 대기열 497대로 본다. 병합 뒤 티켓 10을 곧바로 돈다(티켓 09 머리).
+
+지시문:
+
+```
+다음 작업: .scratch/design-reverse-sync/issues/09-web-edit-hook.md. 화면 코드를 처음 고친 세션에 디자인 시스템의 웹 편집을 확인하라고 한 번 알리는 계기 훅을 더한다
+다음 단계: PR 반영·병합
+어디서: 새 세션. 인계라 같은 브랜치를 잇는다. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /implement .scratch/design-reverse-sync/issues/09-web-edit-hook.md
+브랜치: feature/09-web-edit-hook
+모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
+읽을 것: 일지 docs/journal/2026-10-28-05-web-edit-hook.md 의 "회고"와 "인계 (회고 커밋 뒤)" 절
+이어받을 상태: 인계: 커밋 뒤. 회고·"다음"·변이 표 전체 결과를 98df09c4에 커밋했고(pre-commit 모두 통과) 아직 푸시하지 않았다. 일지의 인계 절은 커밋하지 않았다. origin/main을 합치고(대기열이 글자 충돌 후보), 푸시한 뒤 @coderabbitai review 코멘트를 남겨 봇 회차부터 한다. 병합 뒤 원격 정리는 자동 삭제라 대기열 497대로 본다: docs/journal/2026-10-28-05-web-edit-hook.md
+확인할 선행 조건: 없음
+이번 요청 범위: PR과 병합까지
+```
+
+제목을 `feature/09-web-edit-hook (인계함)`으로 바꿨다(앱이 묻지 않고 바꿨다). 멈출 백그라운드 작업은 없었다(커밋은 끝 알림이 왔다). `git worktree unlock`은 `is not locked`로 끝나 이미 풀려 있었다.
+
+open-session을 부른다 2026-10-27T16:25:44Z
+
+## 이어받기 (회고 커밋 뒤의 새 세션, 2026-10-28)
+
+새 세션이 위 "인계 (회고 커밋 뒤)"의 지시문으로 열렸다.
+
+> 사용자: .claude/skills/implement/SKILL.md 를 읽어 그대로 따른다. … 인자: .scratch/design-reverse-sync/issues/09-web-edit-hook.md (지시문은 위 "인계 (회고 커밋 뒤)"의 지시문과 같다)
+
+`set_session_title`로 제목을 `feature/09-web-edit-hook`으로 바꾸고(도구가 바꿨다고 답했다), `git worktree list`에서 그 브랜치의 자리를 찾아 `EnterWorktree(path)`로 들어갔다. 커밋하지 않은 변경은 이 일지 하나였다(`git status --short`를 손으로 봤다). `git fetch origin` 뒤 main이 `842031a4`(admin-style 01, #403) 하나만큼 앞서 있었다(`git log --oneline HEAD..origin/main`을 손으로 봤다).
+
+- `git merge --no-edit origin/main`이 `.scratch/retro-queue.md`의 455행 하나에서 글자 충돌로 멈췄다. 기준(`0ac9e98d`)의 그 행은 3회차였고(`git show`로 꺼낸 기준판을 손으로 봤다), 이 브랜치는 이 일지로, main은 일지 2026-10-28-04로 한 회차씩 더해 둘 다 4회차라 적었다. 두 일지와 이 브랜치의 승인 날짜(2026-10-28)를 모두 싣고 5회차로 합쳤다. 위 "회고" 2의 4회차는 병합 전의 셈이다. 500번대 행 번호는 500~503이 하나씩이었고(grep을 손으로 봤다), `tools/sibling_overlap.py`는 "번호 겹침 없음"이었다(도구가 찍은 줄).
+- 이 절과 위 인계 절은 병합 커밋에 함께 실었다. 봇 회차의 첫 커밋을 기다리면 고친 것이 없는 회차에 일지만 따로 푸시하게 될 수 있어서다(next-session 순서 1의 2 "뒤로 넘긴 일").
+- 첫 병합 커밋의 pre-commit은 web-verify 하나로 실패했다(출력의 줄. pytest 378.8초 등 나머지는 통과). vitest가 `lucide-react/dist/esm/icons/settings`를 도중에 최적화하고 "Vite unexpectedly reloaded a test"를 찍은 뒤, 스토리 파일 둘(`apps/widget/components/pages/WidgetScreen.stories.tsx`, `packages/ui/src/styles/DesignTokens.stories.tsx`)이 import에 실패하고 `ApprovalCard.stories.tsx`의 iframe이 60초 안에 준비되지 않았다(시험 1223개는 모두 통과, 저장한 출력을 손으로 봤다). 그 아이콘은 main(#403)이 새로 쓴 것이라, 병합 전부터 있던 이 워크트리의 Vite 의존성 캐시에 없었다고 본다(어림. 캐시를 열어 보지 않았다). 만료한 대기열 150과 같은 꼴이라 retro 만료 규칙대로 `150의 2회차`로 504에 이었다. 그 커밋을 다시 쳤다(결과는 아래).
+- claude-review 첫 회차(`d7685798`)는 Nit 둘이었고 둘 다 두었다. 보류 이유는 PR 코멘트에 남긴다. 표지 함수 사본은 `.claude/rules/tools.md` 첫 항목이 받아들인 비용이고, 독스트링의 훅 목록은 "이 훅 전에"의 수라 낡지 않는다. CodeRabbit은 아직 요청하지 않아 리뷰가 없었다(코멘트가 별 10개 미만이라 자동 리뷰를 건너뛴다는 안내뿐이었다, `gh api`로 읽었다).
+
 ## 다음
 
 - 다음 티켓은 design-reverse-sync 10(편집 켜기)이고 이 병합 바로 뒤에 돈다. 그때까지 이 훅은 쓸모없는 알림을 낸다(티켓 09 머리).

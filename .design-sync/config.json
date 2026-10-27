@@ -119,6 +119,7 @@
     "TextField": {
       "skip": [
         "molecules-textfield--single",
+        "molecules-textfield--password",
         "molecules-textfield--multi",
         "molecules-textfield--compact",
         "molecules-textfield--regular",
