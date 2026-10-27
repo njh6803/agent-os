@@ -85,6 +85,7 @@ TASK = Task(
     arm_plan=("A",),
 )
 ARM = ARMS[0]
+SETTINGS = Path("C:/회차/deny-settings.json")
 NOTHING = Elsewhere(
     official_usd=0.0,
     tokens=Tokens(input=None, output=None, cache_read=None, cache_write=None, thinking=None),
@@ -224,8 +225,8 @@ def test_첫_메시지는_첫_줄_빈_줄_지시문이다() -> None:
 # --- 띄우기 ---
 
 
-def test_명령은_설계의_것에_세션_id_와_남은_예산을_붙이고_모델은_전체_이름이다() -> None:
-    command = session_command(["claude.exe"], ARMS[3], "s-1", 7.019)
+def test_명령은_설계의_것에_규칙_파일과_세션_id_와_남은_예산을_붙이고_모델은_전체_이름() -> None:
+    command = session_command(["claude.exe"], ARMS[3], "s-1", 7.019, settings=SETTINGS)
 
     assert command == [
         "claude.exe",
@@ -242,6 +243,8 @@ def test_명령은_설계의_것에_세션_id_와_남은_예산을_붙이고_모
         "--output-format",
         "stream-json",
         "--verbose",
+        "--settings",
+        str(SETTINGS),
         "--session-id",
         "s-1",
         "--max-budget-usd",
@@ -250,8 +253,10 @@ def test_명령은_설계의_것에_세션_id_와_남은_예산을_붙이고_모
 
 
 def test_이어_부르는_명령은_세션_id_자리에_resume_을_쓰고_나머지는_같다() -> None:
-    first = session_command(["claude.exe"], ARMS[3], "s-1", 7.019)
-    again = session_command(["claude.exe"], ARMS[3], "s-1", 7.019, opening=Opening.RESUME)
+    first = session_command(["claude.exe"], ARMS[3], "s-1", 7.019, settings=SETTINGS)
+    again = session_command(
+        ["claude.exe"], ARMS[3], "s-1", 7.019, opening=Opening.RESUME, settings=SETTINGS
+    )
 
     assert again == ["--resume" if word == "--session-id" else word for word in first]
     assert "--session-id" not in again
@@ -274,7 +279,7 @@ def test_이어_부르는_명령은_세션_id_자리에_resume_을_쓰고_나머
 def test_예산은_센트_아래만_버리고_다시_넣어도_같다(usd: float, text: str) -> None:
     assert budget_text(usd) == text
     assert budget_text(float(text)) == text
-    assert session_command(["c"], ARM, "s", float(text))[-1] == text
+    assert session_command(["c"], ARM, "s", float(text), settings=SETTINGS)[-1] == text
 
 
 @pytest.mark.parametrize("usd", [float("nan"), float("inf"), float("-inf")])
@@ -301,6 +306,8 @@ def test_가짜가_받은_인자_표준_입력_환경과_작업_폴더(
     assert argv[argv.index("--effort") + 1] == "xhigh"
     assert argv[argv.index("--session-id") + 1] == got.session_id
     assert argv[argv.index("--max-budget-usd") + 1] == "12.34"
+    # 막는 규칙은 클론 밖 회차 폴더의 파일로 넘긴다(클론의 local 설정은 B의 지침 검사가 잡는다)
+    assert argv[argv.index("--settings") + 1] == str(place.deny_settings)
     assert got.budget_usd == 12.34
     stdin = seen["stdin"]
     assert isinstance(stdin, str)
@@ -405,7 +412,7 @@ def test_마감에_닿았을_때_이미_끝난_자식은_끈_호출이_아니다
         return 1e9
 
     got = drive(
-        session_command(fake.claude(), ARM, "s-1", 1.0),
+        session_command(fake.claude(), ARM, "s-1", 1.0, settings=SETTINGS),
         cwd=str(place.clone),
         env=_env(place, config),
         message="메시지",
@@ -426,7 +433,7 @@ def test_줄_판정이_참이면_마감_전에_그_줄에서_끈다(tmp_path: Pa
     fake.write_script(config, calls=[fake.call([fake.init_event()], hang=600)])
 
     got = drive(
-        session_command(fake.claude(), ARM, "s-1", 1.0),
+        session_command(fake.claude(), ARM, "s-1", 1.0, settings=SETTINGS),
         cwd=str(place.clone),
         env=_env(place, config),
         message="메시지",
@@ -452,7 +459,7 @@ def test_기록_파일을_열지_못하면_띄운_자식을_끄고_예외를_올
     try:
         with pytest.raises(FileNotFoundError):
             drive(
-                session_command(fake.claude(), ARM, "s-1", 1.0),
+                session_command(fake.claude(), ARM, "s-1", 1.0, settings=SETTINGS),
                 cwd=str(place.clone),
                 env=_env(place, config),
                 message="메시지",
@@ -485,7 +492,7 @@ def test_러너가_끊기면_띄운_자식을_끄고_KeyboardInterrupt_를_올�
     try:
         with pytest.raises(KeyboardInterrupt):
             drive(
-                session_command(fake.claude(), ARM, "s-1", 1.0),
+                session_command(fake.claude(), ARM, "s-1", 1.0, settings=SETTINGS),
                 cwd=str(place.clone),
                 env=_env(place, config),
                 message="메시지",
@@ -568,7 +575,7 @@ def test_자식의_표준_입출력이_없으면_명령_줄을_본_뒤_끄고_�
     try:
         with pytest.raises(RuntimeError, match="표준 입출력"):
             drive(
-                session_command(fake.claude(), ARM, "s-1", 1.0),
+                session_command(fake.claude(), ARM, "s-1", 1.0, settings=SETTINGS),
                 cwd=str(place.clone),
                 env=_env(place, config),
                 message="메시지",
@@ -606,7 +613,7 @@ def test_출력을_닫고도_거둘_시간_안에_끝나지_않은_호출은_명
     seen: list[tuple[str, ...] | None] = []
 
     got = drive(
-        session_command(fake.claude_direct(), ARM, "s-1", 1.0),
+        session_command(fake.claude_direct(), ARM, "s-1", 1.0, settings=SETTINGS),
         cwd=str(place.clone),
         env=_env(place, config),
         message="메시지",
@@ -634,7 +641,7 @@ def test_출력을_닫고_멈춘_호출의_명령_줄에_세션_id_가_없으면
     monkeypatch.setattr(subprocess, "Popen", _popen_double(started))
     try:
         got = drive(
-            session_command(fake.claude_direct(), ARM, "s-1", 1.0),
+            session_command(fake.claude_direct(), ARM, "s-1", 1.0, settings=SETTINGS),
             cwd=str(place.clone),
             env=_env(place, config),
             message="메시지",
@@ -659,7 +666,7 @@ def test_출력을_닫은_뒤_거두는_기다림도_호출의_마감을_넘지_
     started = time.monotonic()
 
     got = drive(
-        session_command(fake.claude_direct(), ARM, "s-1", 1.0),
+        session_command(fake.claude_direct(), ARM, "s-1", 1.0, settings=SETTINGS),
         cwd=str(place.clone),
         env=_env(place, config),
         message="메시지",

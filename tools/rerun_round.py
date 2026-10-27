@@ -20,8 +20,9 @@
    아래 3은 회차마다 따로 돈다.
 3. `prepare_round`: 원본 저장소에서 B를 bare 저장소의 `main`으로만 밀고(태그와 다른 ref는 밀지
    않는다) 그것을 클론한 뒤, 클론과 bare의 모든 ref가 B이고 M이 닿지도 들지도 않는지 대 본다
-   (`build_clone`, `check_clone`). 클론의 `.claude/settings.local.json`에 막는 규칙을 쓰고
-   (`write_deny_rules`, 규칙은 `deny_rules`), 준비 명령을 클론에서 차례로 돌린다(`run_setup`).
+   (`build_clone`, `check_clone`). 회차 폴더(클론 밖)의 규칙 파일에 막는 규칙을 쓰고
+   (`write_deny_rules`, 규칙은 `deny_rules`. 세션은 그 파일을 `--settings`로 받는다), 준비 명령을
+   클론에서 차례로 돌린다(`run_setup`).
 4. `session_env`: 세션에 넘길 환경을 허용 목록으로 짓는다.
 
 준비의 시간은 회차의 벽시계에 들지 않는다. `run_setup`이 내는 `wall_clock_from`은 마지막 준비
@@ -50,7 +51,8 @@ tools.md`의 pre-commit 항목). 하위 프로세스마다 시간 제한이 있�
   세션에 실리는지는 재지 않았고, 파일럿(11)이 시작 컨텍스트로 본다. 뿌리의 상위를 고친 때(회차를 연
   뒤 `.claude/`를 만든 때)는 다시 보지 않는다.
 - 막는 규칙의 경로 꼴(`Read(//c/…/**)`)은 프로브가 읽기에서 막는 것을 본 꼴이고, 쓰기·편집 규칙과
-  도구 이름만 쓴 규칙은 재지 않았다(파일럿이 본다). 같은 뿌리 아래 다른 회차 폴더와 전용 설정
+  도구 이름만 쓴 규칙은 `.scratch/model-rerun/probes/deny_shapes/`가 Sonnet 으로 쟀고, Opus 회차에서
+  막는지는 파일럿의 오염 검사가 본다. 같은 뿌리 아래 다른 회차 폴더와 전용 설정
   폴더의 세션 기록은 막지 않는다. 함께 도는 갈래나 앞선 갈래의 풀이를 읽는 길이고, 명세의 목록에
   없다.
 - 준비 명령이 시간을 넘기면 그 명령의 프로세스만 끈다(`subprocess.run`의 시간 제한). 그 명령이 띄운
@@ -158,7 +160,25 @@ CONFIG_DIR_VAR = "CLAUDE_CONFIG_DIR"
 AUTOUPDATER_VAR = "DISABLE_AUTOUPDATER"
 GH_CONFIG_VAR = "GH_CONFIG_DIR"
 # 허용 목록. 러너가 값을 짓는 둘(설정 폴더, 자동 업데이트 끔)을 빼면 부모 환경에 있는 것만 넘긴다.
+# 앞의 열여섯은 비밀이 아닌 윈도 기본값이다. 처음 목록에 `USERNAME`이 빠져 `getpass.getuser()`가
+# `pwd`를 찾다 실패했고, 파일럿의 세션과 게이트가 그 시험들에서 빨갰다(일지 2026-10-27-08)
 ALLOWED_ENV = (
+    "USERNAME",
+    "USERDOMAIN",
+    "COMPUTERNAME",
+    "NUMBER_OF_PROCESSORS",
+    "OS",
+    "PROCESSOR_ARCHITECTURE",
+    "PROCESSOR_IDENTIFIER",
+    "PROCESSOR_LEVEL",
+    "PROCESSOR_REVISION",
+    "ALLUSERSPROFILE",
+    "PUBLIC",
+    "CommonProgramFiles",
+    "CommonProgramFiles(x86)",
+    "CommonProgramW6432",
+    "ProgramW6432",
+    "PSModulePath",
     "PATH",
     "PATHEXT",
     "SYSTEMROOT",
@@ -309,6 +329,11 @@ class RoundDir:
     @property
     def setup_log(self) -> Path:
         return self.path / "setup.log"
+
+    @property
+    def deny_settings(self) -> Path:
+        """막는 규칙 파일. 세션이 `--settings`로 받는다."""
+        return self.path / "deny-settings.json"
 
     @property
     def session_ids(self) -> Path:
@@ -487,21 +512,20 @@ def deny_rules(heads: Sequence[PurePath]) -> list[str]:
     return list(dict.fromkeys(rules))
 
 
-def write_deny_rules(clone: Path, rules: Sequence[str]) -> None:
-    """클론의 `.claude/settings.local.json`에 막는 규칙을 쓴다. B의 `.claude/settings.json`은 고치지
-    않는다. 이미 있으면 덮지 않고 `CloneError`다. 그 파일이 세션의 `git status`에 보여 커밋되지
-    않게 클론의 `.git/info/exclude`에 더한다."""
-    local = clone / ".claude" / "settings.local.json"
-    if os.path.lexists(local):
-        raise CloneError(f"클론에 이미 settings.local.json 이 있다: {local}")
-    local.parent.mkdir(exist_ok=True)
+def write_deny_rules(place: RoundDir, rules: Sequence[str]) -> None:
+    """회차 폴더의 규칙 파일(`RoundDir.deny_settings`)에 막는 규칙을 쓴다. 클론에는 아무것도 쓰지
+    않는다. 이미 있으면 덮지 않고 `CloneError`다.
+
+    처음 판은 클론의 `.claude/settings.local.json`에 썼다. 클론은 주 체크아웃이라 B의 지침 검사가
+    그 파일의 `permissions.deny`를 local 가드로 잡았고("local 은 워크트리에 없어 거기서 연 세션에서
+    조용히 빠진다"), 파일럿의 세션은 그 검사를 빼고 커밋했으며 게이트는 빨갰다(일지
+    2026-10-27-08)."""
+    target = place.deny_settings
+    if os.path.lexists(target):
+        raise CloneError(f"회차 폴더에 이미 deny-settings.json 이 있다: {target}")
     text = json.dumps({"permissions": {"deny": list(rules)}}, ensure_ascii=False, indent=2)
-    with open(local, "x", encoding="utf-8", newline="\n") as f:
+    with open(target, "x", encoding="utf-8", newline="\n") as f:
         f.write(text + "\n")
-    exclude = clone / ".git" / "info" / "exclude"
-    exclude.parent.mkdir(parents=True, exist_ok=True)
-    with open(exclude, "a", encoding="utf-8", newline="\n") as f:
-        f.write("\n/.claude/settings.local.json\n")
 
 
 # --- 준비 ---
@@ -608,7 +632,7 @@ def prepare_round(
 ) -> Setup:
     """회차 하나의 bare·클론·막는 규칙·준비. 클론이 B까지가 아니면 `CloneError`다."""
     build_clone(source, base, merge, place)
-    write_deny_rules(place.clone, rules)
+    write_deny_rules(place, rules)
     return run_setup(place.clone, setup, env=env, log=place.setup_log, timeout=timeout)
 
 

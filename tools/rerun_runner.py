@@ -48,10 +48,10 @@
 못 보는 것. 강제로 죽은 러너가 `records/`에 남긴 임시 파일(`.….tmp`)은 지우지 않는다. 기록 파일
 이름으로 풀리지 않아 번호 셈과 예산과 판정이 보지 않는다(01의 `write_record` 독스트링). 기록 없는
 회차 폴더의 프로세스는 이름이 띄운 `claude` 실행 파일의 끝 이름과 같은 것만 훑어, 다른 이름으로 띄운
-세션(래퍼, 셸 스크립트)은 보지 못한다. 명령 줄 입구는 `--claude`를 `shutil.which`로 실제 경로로 풀어
-그 끝 이름을 쓴다. 같은 뿌리와 `records/`에 러너 둘을 함께 띄우는 것은 막지 않는다. 뒤에 뜬 러너는
-앞 러너가 준비 중인(세션 id를 아직 적지 않은) 회차를 죽은 회차로 적고, 앞 러너는 그 회차의 기록을
-쓰다 `FileExistsError`로 멈춘다.
+세션(래퍼, 셸 스크립트)은 보지 못한다. 명령 줄 입구는 `--claude`가 파일이면 그 절대 경로를, 아니면
+`shutil.which`로 푼 실제 경로를 써서 그 끝 이름을 쓴다. 같은 뿌리와 `records/`에 러너 둘을 함께
+띄우는 것은 막지 않는다. 뒤에 뜬 러너는 앞 러너가 준비 중인(세션 id를 아직 적지 않은) 회차를 죽은
+회차로 적고, 앞 러너는 그 회차의 기록을 쓰다 `FileExistsError`로 멈춘다.
 """
 
 from __future__ import annotations
@@ -145,7 +145,7 @@ from tools.rerun_session import (
 )
 
 # 조건 판. 회차 조건(하네스, 단가, 판정 규칙)을 고치면 올린다. 회차 기록에 적는다
-CONDITION_VERSION = 1
+CONDITION_VERSION = 2
 MAX_PARALLEL = 2
 # 갈래마다 원래 PR 앞 비용에 곱하는 비율의 위 끝(설계 7절)
 ARM_RATIOS: dict[str, float] = {"A": 1.0, "B": 0.8, "C": 0.7, "D": 0.9, "E": 0.7}
@@ -808,8 +808,11 @@ def main(argv: list[str] | None = None) -> int:
         print(f"끝: 목록에 없는 과제 id: {', '.join(unknown)}", file=sys.stderr)
         return EXIT_USAGE
     # 실제 경로로 푼다. 죽은 회차를 훑을 때 그 끝 이름(윈도의 `claude.exe`)과 프로세스 이름을
-    # 견주므로, `claude`처럼 확장자 없이 준 이름 그대로면 아무 프로세스와도 맞지 않아 지나간다
-    claude = shutil.which(str(args.claude))
+    # 견주므로, `claude`처럼 확장자 없이 준 이름 그대로면 아무 프로세스와도 맞지 않아 지나간다.
+    # 파일 경로로 주면 그 파일이다. 판을 고정한 `versions/<판>` 복사본은 확장자가 없어 윈도의
+    # `shutil.which`가 PATHEXT 밖이라고 받지 않는다. 그 끝 이름(`2.1.302`)이 곧 프로세스 이름이다
+    given = Path(args.claude)
+    claude = str(given.absolute()) if given.is_file() else shutil.which(str(args.claude))
     if claude is None:
         print(f"끝: claude 실행 파일을 찾지 못했다: {args.claude}", file=sys.stderr)
         return EXIT_USAGE

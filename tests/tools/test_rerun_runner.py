@@ -441,9 +441,9 @@ def test_같은_판에서_끝난_회차는_건너뛰고_측정_아님은_다시_
 ) -> None:
     task = _과제(1, 원본, arms=("A", "B", "C"))
     records = [
-        _기록(task, "A", 1),
-        _기록(task, "B", 1, end=_측정_아님("설정")),
-        _기록(task, "C", 1, end=End(END_CAPPED, "시간", None)),  # 상한도 끝난 회차다
+        _기록(task, "A", 1, version=1),
+        _기록(task, "B", 1, end=_측정_아님("설정"), version=1),
+        _기록(task, "C", 1, end=End(END_CAPPED, "시간", None), version=1),  # 상한도 끝난 회차다
     ]
     assert plan_task(task, records, condition=1, rerun=False) == Plan(("B",))
 
@@ -452,8 +452,10 @@ def test_같은_갈래가_두_번_든_파일럿은_기록_수로_남은_회차�
     원본: tuple[Path, str, str],
 ) -> None:
     task = _과제(1, 원본, arms=("A", "A"), pilot=True)
-    assert plan_task(task, [_기록(task, "A", 1)], condition=1, rerun=False) == Plan(("A",))
-    both = [_기록(task, "A", 1), _기록(task, "A", 2)]
+    assert plan_task(task, [_기록(task, "A", 1, version=1)], condition=1, rerun=False) == Plan(
+        ("A",)
+    )
+    both = [_기록(task, "A", 1, version=1), _기록(task, "A", 2, version=1)]
     assert plan_task(task, both, condition=1, rerun=False) == Plan(())
 
 
@@ -471,14 +473,14 @@ def test_낮은_판에서_다_마친_과제는_id_가_없으면_다시_돌지_�
     원본: tuple[Path, str, str],
 ) -> None:
     task = _과제(1, 원본, arms=("A",))
-    assert plan_task(task, [_기록(task, "A", 1)], condition=2, rerun=False) == Plan(())
+    assert plan_task(task, [_기록(task, "A", 1, version=1)], condition=2, rerun=False) == Plan(())
 
 
 def test_id_를_준_과제는_낮은_판에서_다_마쳤어도_올린_판에서_돈다(
     원본: tuple[Path, str, str],
 ) -> None:
     task = _과제(1, 원본, arms=("A", "B"))
-    old = [_기록(task, "A", 1), _기록(task, "B", 1)]
+    old = [_기록(task, "A", 1, version=1), _기록(task, "B", 1, version=1)]
     assert plan_task(task, old, condition=2, rerun=True) == Plan(("A", "B"))
     # 같은 명령을 다시 치면 올린 판에서 끝난 회차는 건너뛴다
     again = [*old, _기록(task, "A", 2, version=2)]
@@ -487,14 +489,14 @@ def test_id_를_준_과제는_낮은_판에서_다_마쳤어도_올린_판에서
 
 def test_판을_올리지_않고_준_id_는_회차를_늘리지_않는다(원본: tuple[Path, str, str]) -> None:
     task = _과제(1, 원본, arms=("A",))
-    assert plan_task(task, [_기록(task, "A", 1)], condition=1, rerun=True) == Plan(())
+    assert plan_task(task, [_기록(task, "A", 1, version=1)], condition=1, rerun=True) == Plan(())
 
 
 def test_낮은_판에서_다_마치지_못한_과제를_id_없이_판을_올리면_멈추고_id_를_낸다(
     원본: tuple[Path, str, str],
 ) -> None:
     task = _과제(1, 원본, arms=("A", "B"))
-    got = plan_task(task, [_기록(task, "A", 1)], condition=2, rerun=False)
+    got = plan_task(task, [_기록(task, "A", 1, version=1)], condition=2, rerun=False)
     assert isinstance(got, Halt)
     assert task.task_id in got.why
 
@@ -502,7 +504,7 @@ def test_낮은_판에서_다_마치지_못한_과제를_id_없이_판을_올리
 def test_오염의_둘째는_같은_조건_판의_기록에서만_센다(원본: tuple[Path, str, str]) -> None:
     task = _과제(1, 원본, arms=("A", "B"))
     dirty = _측정_아님("오염")
-    twice = [_기록(task, "A", 1, end=dirty), _기록(task, "A", 2, end=dirty)]
+    twice = [_기록(task, "A", 1, end=dirty, version=1), _기록(task, "A", 2, end=dirty, version=1)]
     assert plan_task(task, twice, condition=1, rerun=False) == Plan(())  # 그 판에서 뺐다
     mixed = [_기록(task, "A", 1, end=dirty, version=1), _기록(task, "A", 2, end=dirty, version=2)]
     assert plan_task(task, mixed, condition=2, rerun=True) == Plan(("A", "B"))
@@ -1230,6 +1232,31 @@ def test_맨_이름으로_준_claude_는_실제_경로로_풀어_넘긴다(
     (settings,) = seen
     (claude,) = settings.claude
     assert Path(claude).parent == bin_dir and Path(claude).name.lower() == exe.name
+
+
+def test_확장자_없는_판_이름의_경로로_준_claude_도_그_경로로_넘긴다(
+    tmp_path: Path, 원본: tuple[Path, str, str], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # 측정 기간의 판을 고정하려고 `versions/<판>`의 복사본을 준다(티켓 11). 윈도의 `shutil.which`는
+    # PATHEXT 의 확장자가 없는 파일을 실행 파일로 보지 않는다
+    tasks = tmp_path / "tasks.json"
+    write_task_list(tasks, TaskList(kind=LIST_PILOT, tasks=(_과제(1, 원본, pilot=True),)))
+    exe = tmp_path / "판" / "2.1.302"
+    exe.parent.mkdir()
+    exe.write_bytes(b"")
+    exe.chmod(0o755)
+    seen: list[Settings] = []
+
+    def capture(settings: Settings, _world: World) -> int:
+        seen.append(settings)
+        return EXIT_DONE
+
+    monkeypatch.setattr(rerun_runner, "run", capture)
+    argv = _인자(tmp_path, tasks, "--cap", "10")
+    argv[argv.index("--claude") + 1] = str(exe)
+    assert main(argv) == EXIT_DONE
+    (settings,) = seen
+    assert settings.claude == (str(exe),)
 
 
 def test_주_체크아웃_아래의_뿌리는_받지_않는다(

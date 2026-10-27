@@ -557,21 +557,24 @@ def test_막는_규칙에_명세의_목록이_모두_든다() -> None:
     assert len(rules) == len(set(rules))
 
 
-def test_막는_규칙은_settings_local에_쓰고_B의_설정은_그대로_둔다(
+def test_막는_규칙은_회차_폴더의_파일에_쓰고_클론은_그대로_둔다(
     tmp_path: Path, 원본: tuple[Path, str, str]
 ) -> None:
+    """클론의 `settings.local.json`에 두면 B의 지침 검사가 주 체크아웃의 local 가드로 잡아, 세션의
+    pre-commit 과 게이트가 빨갰다(파일럿 첫 실행, 일지 2026-10-27-08)."""
     repo, b, m = 원본
     place = create_round_dir(tmp_path, TASK, "A", 1, token="r1")
     build_clone(repo, b, m, place)
     settings = place.clone / ".claude" / "settings.json"
     before = settings.read_bytes()
-    write_deny_rules(place.clone, ["Bash(gh:*)", "WebFetch"])
-    local = json.loads((place.clone / ".claude" / "settings.local.json").read_text("utf-8"))
-    assert local == {"permissions": {"deny": ["Bash(gh:*)", "WebFetch"]}}
+    write_deny_rules(place, ["Bash(gh:*)", "WebFetch"])
+    written = json.loads(place.deny_settings.read_text("utf-8"))
+    assert written == {"permissions": {"deny": ["Bash(gh:*)", "WebFetch"]}}
+    assert place.deny_settings.parent == place.path
+    assert not os.path.lexists(place.clone / ".claude" / "settings.local.json")
     assert settings.read_bytes() == before
-    # 사용자의 전역 무시 파일 없이도 세션의 `git status`에 보이지 않는다(클론의 info/exclude).
-    # HOME 을 바꾸면 전역 `core.autocrlf`까지 빠져 줄 끝 차이가 바뀐 파일로 보이므로 무시 파일만
-    # 덮는다.
+    # 사용자의 전역 무시 파일 없이도 세션의 `git status`가 비었다. HOME 을 바꾸면 전역
+    # `core.autocrlf`까지 빠져 줄 끝 차이가 바뀐 파일로 보이므로 무시 파일만 덮는다.
     empty = tmp_path / "빈무시"
     empty.write_text("", encoding="utf-8")
     status = subprocess.run(
@@ -605,14 +608,12 @@ def test_막는_규칙은_같은_뿌리의_다른_회차_폴더를_막지_않는
     assert any("agent" in r for r in rules)
 
 
-def test_이미_있는_settings_local은_덮지_않고_멈춘다(tmp_path: Path) -> None:
-    clone = tmp_path / "clone"
-    (clone / ".claude").mkdir(parents=True)
-    (clone / ".git" / "info").mkdir(parents=True)
-    (clone / ".claude" / "settings.local.json").write_text("{}\n", encoding="utf-8")
-    with pytest.raises(CloneError, match=r"settings\.local\.json"):
-        write_deny_rules(clone, ["WebFetch"])
-    assert (clone / ".claude" / "settings.local.json").read_text("utf-8") == "{}\n"
+def test_이미_있는_규칙_파일은_덮지_않고_멈춘다(tmp_path: Path) -> None:
+    place = create_round_dir(tmp_path, TASK, "A", 1, token="r2")
+    place.deny_settings.write_text("{}\n", encoding="utf-8")
+    with pytest.raises(CloneError, match=r"deny-settings\.json"):
+        write_deny_rules(place, ["WebFetch"])
+    assert place.deny_settings.read_text("utf-8") == "{}\n"
 
 
 # --- 준비 ---
@@ -760,8 +761,8 @@ def test_회차_준비는_클론과_막는_규칙과_준비를_차례로_한다(
     assert done.failed is None
     assert done.wall_clock_from - before >= 0.2
     assert (place.clone / "준비됨.txt").exists()
-    local = json.loads((place.clone / ".claude" / "settings.local.json").read_text("utf-8"))
-    assert local["permissions"]["deny"] == ["WebFetch"]
+    written = json.loads(place.deny_settings.read_text("utf-8"))
+    assert written["permissions"]["deny"] == ["WebFetch"]
     assert set(_refs(place.clone).values()) == {b}
 
 
@@ -834,6 +835,22 @@ def test_부모_환경의_가짜_gh_토큰은_넘어가지_않는다(
 
 def test_허용_목록에는_명세의_이름이_든다() -> None:
     assert {
+        "USERNAME",
+        "USERDOMAIN",
+        "COMPUTERNAME",
+        "NUMBER_OF_PROCESSORS",
+        "OS",
+        "PROCESSOR_ARCHITECTURE",
+        "PROCESSOR_IDENTIFIER",
+        "PROCESSOR_LEVEL",
+        "PROCESSOR_REVISION",
+        "ALLUSERSPROFILE",
+        "PUBLIC",
+        "CommonProgramFiles",
+        "CommonProgramFiles(x86)",
+        "CommonProgramW6432",
+        "ProgramW6432",
+        "PSModulePath",
         "PATH",
         "SYSTEMROOT",
         "USERPROFILE",

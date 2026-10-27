@@ -1,7 +1,7 @@
 # 티켓 04(회차의 자리, `tools/rerun_round.py`)의 시험이 실제로 무는지 변이로 본다(implement 스킬,
 # 대기열 29). 이 티켓의 시험은 구현 전에 import 오류로만 빨갰고 판정 하나하나가 빨강을 본 적은 없어서,
 # 뿌리의 머리 견줌과 상위의 .claude, 회차 폴더의 표지와 덮어쓰기 거부, bare 로 미는 것과 클론 대 보기,
-# 막는 규칙과 settings.local, 준비의 멈춤·시간·환경, 세션 환경의 허용 목록, 지우기의 판정과 차례를
+# 막는 규칙과 그 파일, 준비의 멈춤·시간·환경, 세션 환경의 허용 목록, 지우기의 판정과 차례를
 # 하나씩 되돌려 그 단언이 무는지 본다.
 # 사용: PYTHONUTF8=1 uv run python tools/mutate.py .scratch/model-rerun/probes/rerun_round_mutations.toml
 
@@ -294,25 +294,27 @@ old = '''for text in (os.path.abspath(head), os.path.realpath(head)):'''
 new = '''for text in (os.path.abspath(head),):'''
 
 [[mutation]]
-name = "settings.local 을 클론의 info/exclude 에 넣지 않는다"
-tests = ["tests/tools/test_rerun_round.py", "-k", "settings_local에_쓰고"]
+name = "막는 규칙을 클론의 settings.local 에 쓴다"
+tests = ["tests/tools/test_rerun_round.py", "-k", "회차_폴더의_파일에_쓰고"]
 expect = "red"
-expect_output = ['>       assert status.stdout == ""']
+expect_output = ["FileNotFoundError"]
 
 [[mutation.edit]]
 file = "tools/rerun_round.py"
-old = '''f.write("\n/.claude/settings.local.json\n")'''
-new = '''f.write("")'''
+old = '''    target = place.deny_settings
+'''
+new = '''    target = place.clone / ".claude" / "settings.local.json"
+'''
 
 [[mutation]]
-name = "이미 있는 settings.local 을 견주지 않는다"
-tests = ["tests/tools/test_rerun_round.py", "-k", "이미_있는_settings_local은"]
+name = "이미 있는 규칙 파일을 견주지 않는다"
+tests = ["tests/tools/test_rerun_round.py", "-k", "이미_있는_규칙_파일은"]
 expect = "red"
 expect_output = ["FileExistsError"]
 
 [[mutation.edit]]
 file = "tools/rerun_round.py"
-old = '''if os.path.lexists(local):'''
+old = '''if os.path.lexists(target):'''
 new = '''if False:'''
 
 [[mutation]]

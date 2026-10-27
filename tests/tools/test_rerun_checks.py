@@ -437,7 +437,7 @@ def _builtin(name: str) -> Json:
 
 
 def _synced(name: str) -> Json:
-    """계정 동기화 꼴. 파일럿 앞 손 확인에서 본 init 의 항목이다(일지 2026-10-26-02)."""
+    """계정 동기화 꼴. 파일럿 앞 손 확인에서 본 init 의 항목이다(일지 2026-10-27-08)."""
     return {"name": name, "path": "C:\\cfg\\plugins\\synced\\b\\x", "source": f"{name}@synced"}
 
 

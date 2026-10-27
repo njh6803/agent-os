@@ -7,6 +7,7 @@
 from __future__ import annotations
 
 import inspect
+import json
 import os
 import re
 import subprocess
@@ -32,11 +33,13 @@ from tools.rerun_gates import (
     GATE_ARGV,
     OLD_GATE_ARGV,
     PYTEST_ARGV,
+    SETTINGS_FILE,
     GateError,
     Limits,
     check_result,
     count_hidden,
     has_gate_file,
+    settings_env,
     setup_failure_of,
 )
 from tools.rerun_round import (
@@ -169,12 +172,14 @@ def _과제(base: str, merge: str) -> Task:
     )
 
 
-def _회차(tmp_path: Path, result: dict[str, str]) -> tuple[RoundDir, Path, Task, str]:
+def _회차(
+    tmp_path: Path, result: dict[str, str], *, b: dict[str, str] = _B
+) -> tuple[RoundDir, Path, Task, str]:
     """원본(B, M)과 회차 폴더의 클론을 짓고, 클론에 세션의 결과 커밋 `result`를 더한다."""
     source = tmp_path / "원본"
     source.mkdir()
     _git(source, "init", "-q", "-b", "main")
-    base = _커밋(source, _B, "B")
+    base = _커밋(source, b, "B")
     merge = _커밋(source, _M, "M")
     place = create_round_dir(tmp_path / "뿌리", "model-rerun-07", "A", 1, token="abcd1234")
     build_clone(source, base, merge, place)
@@ -612,6 +617,54 @@ def test_자식_환경에서_저장소를_가리키는_변수와_VIRTUAL_ENV를_
     _걷혔다(place)
 
 
+def _설정(env: dict[str, object]) -> str:
+    return json.dumps({"env": env, "permissions": {"allow": []}}, ensure_ascii=False)
+
+
+def test_B_설정의_env_에서_글자_값만_읽는다(tmp_path: Path) -> None:
+    source = tmp_path / "원본"
+    source.mkdir()
+    _git(source, "init", "-q", "-b", "main")
+    bare = _커밋(source, _B, "설정 없는 B")
+    with_env = _커밋(
+        source, {SETTINGS_FILE: _설정({"PYTHONUTF8": "1", "N": 2, "L": ["x"]})}, "설정"
+    )
+    later = _커밋(source, {SETTINGS_FILE: _설정({"PYTHONUTF8": "0"})}, "뒤의 설정")
+    assert settings_env(source, bare, _환경()) == {}
+    assert settings_env(source, with_env, _환경()) == {"PYTHONUTF8": "1"}
+    assert settings_env(source, later, _환경()) == {"PYTHONUTF8": "0"}
+    no_env = _커밋(source, {SETTINGS_FILE: json.dumps({"model": "x"})}, "env 없는 설정")
+    assert settings_env(source, no_env, _환경()) == {}
+    for shape in ({"env": ["PYTHONUTF8"]}, {"env": None}, ["env"]):
+        odd = _커밋(source, {SETTINGS_FILE: json.dumps(shape)}, "객체가 아닌 env")
+        assert settings_env(source, odd, _환경()) == {}
+    with pytest.raises(GateError, match="40자"):
+        settings_env(source, with_env[:12], _환경())
+    broken = _커밋(source, {SETTINGS_FILE: "{"}, "깨진 설정")
+    with pytest.raises(GateError, match=SETTINGS_FILE):
+        settings_env(source, broken, _환경())
+
+
+def test_게이트는_B_설정의_env_를_부모_값_위에_얹어_돈다(tmp_path: Path) -> None:
+    """원래 세션의 pre-commit 은 Claude Code 가 B 설정의 `env`(`PYTHONUTF8` 등)를 넣은 Bash 에서
+    돌았다. 파일럿 첫 실행의 게이트는 그것 없이 돌아 cp949 출력을 UTF-8 로 풀지 못했다(일지
+    2026-10-27-08). 결과 커밋이 설정을 고쳐도 B 의 값을 쓴다."""
+    b = {**_B, SETTINGS_FILE: _설정({"RERUN_GATE_PROBE": "B"})}
+    result = {"calc.py": _M_CALC, SETTINGS_FILE: _설정({"RERUN_GATE_PROBE": "세션"})}
+    place, source, task, commit = _회차(tmp_path, result, b=b)
+    env = {**_환경(), "RERUN_GATE_PROBE": "부모"}
+    sees_b = _명령(
+        "import os, sys; sys.exit(0 if os.environ.get('RERUN_GATE_PROBE') == 'B' else 7)"
+    )
+
+    got, _ = _돌기(place, source, task, commit, setup=(sees_b,), gates=(sees_b, _OK, _OK), env=env)
+
+    assert got.setup_failure is None
+    assert got.gates is not None
+    assert got.gates[0].exit_code == 0
+    _걷혔다(place)
+
+
 # --- 링크와 걷기 ---
 
 
@@ -844,7 +897,8 @@ def test_git_이_시간을_넘기거나_뜨지_못하면_GateError다(
         raise raised
 
     monkeypatch.setattr(subprocess, "run", 막는_run)
-    with pytest.raises(GateError, match=re.escape(f"git cat-file blob {task.merge}:")) as caught:
+    # 첫 git 은 B 설정의 env 를 읽는 `ls-tree`다(`settings_env`)
+    with pytest.raises(GateError, match=re.escape(f"git ls-tree {task.base} --")) as caught:
         _돌기(place, source, task, commit)
 
     assert said in str(caught.value)

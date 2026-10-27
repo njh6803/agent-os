@@ -51,8 +51,10 @@ UTF-8로 읽히지 않거나 풀리지 않는 것은 실패다. XML은 세션의
 `tools.run_hooks.REPO_LOCATION_VARS`와 `VIRTUAL_ENV`를 벗긴다. git에는 `GIT_TERMINAL_PROMPT=0`을
 더한다. 결과 커밋과 클론의 `.git`은 세션이 쓴 것이라 그 안의 코드(게이트 스크립트, git 훅과 필터,
 `conftest.py`)가 이 환경으로 돈다. 그래서 러너의 전체 환경이 아니라 세션과 같은 허용 목록의 환경
-(`tools/rerun_round.py`의 `session_env`)을 넘기는 것이 부르는 쪽의 몫이다. 하위 프로세스마다 시간
-제한이 있다.
+(`tools/rerun_round.py`의 `session_env`)을 넘기는 것이 부르는 쪽의 몫이다. 그 위에 B 설정의
+`env`(`settings_env`)를 얹는다. 원래 세션의 pre-commit 은 Claude Code 가 그 값을 넣은 Bash 에서
+돌았고, 얹지 않은 파일럿 첫 실행의 게이트는 `PYTHONUTF8` 없이 돌아 빨갰다(일지 2026-10-27-08).
+하위 프로세스마다 시간 제한이 있다.
 
 못 보는 것.
 - 노드 ID로 돌린 pytest는 한 파일을 모으지 못하면 실행 전체를 종료 4로 멈추고 junit에 그 파일의
@@ -79,6 +81,7 @@ UTF-8로 읽히지 않거나 풀리지 않는 것은 실패다. XML은 세션의
 from __future__ import annotations
 
 import enum
+import json
 import os
 import re
 import shutil
@@ -124,6 +127,7 @@ OLD_GATE_ARGV: tuple[tuple[str, ...], ...] = tuple(tuple(c.split(" ")) for c in 
 PYTEST_ARGV = ("uv", "run", "pytest")
 
 _COMMIT = re.compile(r"[0-9a-f]{40}")
+type Json = dict[str, Json] | list[Json] | str | int | float | bool | None
 _DROPPED_ENV = frozenset({*REPO_LOCATION_VARS, "VIRTUAL_ENV"})
 _BAD_CHILDREN = frozenset({"failure", "error", "skipped"})
 
@@ -356,6 +360,39 @@ def _is_blob_at(line: str, rel: str) -> bool:
     return head.split(" ")[1:2] == ["blob"] and path == rel
 
 
+SETTINGS_FILE = ".claude/settings.json"
+
+
+def settings_env(
+    source: Path, base: str, env: Mapping[str, str], *, timeout: float = GIT_TIMEOUT
+) -> dict[str, str]:
+    """원본 저장소 `source`의 커밋 `base`(과제의 B)에 든 `SETTINGS_FILE`의 `env` 가운데 값이 글인
+    것.
+
+    원래 세션의 pre-commit 은 Claude Code 가 이 값을 넣은 Bash 에서 돌았으므로 게이트도 이 값으로
+    돈다. 결과 커밋이 아니라 B 에서 읽어 세션이 설정을 고쳐도 같다. 파일이 없거나 `env`가 객체가
+    아니면 빈 값이다. `base`가 40자 커밋 해시가 아니거나 git 이 실패하거나 JSON 으로 풀리지 않으면
+    `GateError`다.
+    """
+    git, found_file = _blob_in_base(source, base, SETTINGS_FILE, env, timeout)
+    if not found_file:
+        return {}
+    raw = git.read(source, ["cat-file", "blob", f"{base}:{SETTINGS_FILE}"])
+    try:
+        data = _parse_json(raw.decode("utf-8"))
+    except (UnicodeDecodeError, ValueError, RecursionError) as e:
+        raise GateError(f"B 의 {SETTINGS_FILE} 를 풀지 못했다: {e}") from e
+    found = data.get("env") if isinstance(data, dict) else None
+    if not isinstance(found, dict):
+        return {}
+    return {k: v for k, v in found.items() if isinstance(v, str)}
+
+
+def _parse_json(text: str) -> Json:
+    # `json.loads`의 반환형은 Any라 `Json`으로 받아 뒤의 좁히기가 타입 검사를 지나게 한다.
+    return json.loads(text)
+
+
 def has_gate_file(
     source: Path, base: str, env: Mapping[str, str], *, timeout: float = GIT_TIMEOUT
 ) -> bool:
@@ -366,11 +403,19 @@ def has_gate_file(
     링크는 형이 blob 이라 파일로 센다. `base`가 40자 커밋 해시가 아니거나 git 이 실패하면
     `GateError`다.
     """
+    return _blob_in_base(source, base, GATE_FILE, env, timeout)[1]
+
+
+def _blob_in_base(
+    source: Path, base: str, rel: str, env: Mapping[str, str], timeout: float
+) -> tuple[_Git, bool]:
+    """넘긴 환경의 git 과, 원본 저장소 `source`의 커밋 `base`에 `rel`의 blob 이 있는지.
+    `base`가 40자 커밋 해시가 아니거나 git 이 실패하면 `GateError`다."""
     if not _COMMIT.fullmatch(base):
         raise GateError(f"B 가 40자 커밋 해시가 아니다: {base!r}")
     _, git = _git_of(env, timeout)
-    out = git.read(source, ["ls-tree", base, "--", GATE_FILE]).decode("utf-8", "replace")
-    return any(_is_blob_at(line, GATE_FILE) for line in out.splitlines())
+    out = git.read(source, ["ls-tree", base, "--", rel]).decode("utf-8", "replace")
+    return git, any(_is_blob_at(line, rel) for line in out.splitlines())
 
 
 # --- 한 회차 ---
@@ -527,11 +572,15 @@ def check_result(
     """회차 `place`의 결과 커밋 `commit`으로 게이트 `gates`와 `task`의 숨은 시험을 돈다.
 
     `source`는 M을 담은 원본 저장소다. 작업 트리를 걷지 못하는 등 결과와 별개로 사람이 알아야 할
-    일은 `out`으로 알린다. 결과 작업 트리를 짓지 못하면 `GateError`다. 회차 폴더에 로그를 쓰지
+    일은 `out`으로 알린다. 결과 작업 트리를 짓지 못하거나 B 의 설정을 풀지 못하면(`settings_env`)
+    `GateError`다. B 설정의 `env`는 거르지 않고 얹으므로, 거기 `PATH`가 있으면 넘긴 환경의 `PATH`를
+    덮는다(못 보는 것. 2026-10-27 에 `git log --all -S'"PATH"' -- .claude/settings.json`이 빈
+    것을 손으로 봤다). 회차 폴더에 로그를 쓰지
     못하면 `OSError`가 그대로 오른다.
     """
     if not _COMMIT.fullmatch(commit):
         raise GateError(f"결과 커밋이 40자 커밋 해시가 아니다: {commit!r}")
+    env = {**env, **settings_env(source, task.base, env, timeout=limits.git)}
     clean, git = _git_of(env, limits.git)
     files = dict.fromkeys((*hidden_test_files(task), *task.support_files))
     blobs = {rel: git.read(source, ["cat-file", "blob", f"{task.merge}:{rel}"]) for rel in files}
