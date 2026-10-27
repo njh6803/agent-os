@@ -1095,3 +1095,19 @@ expect_output = ["AssertionError: expected { steps: -1, value: '#ffffffcb' } to 
 file = "web/tools/sync-design-system/color.ts"
 old = '''      if (passes(candidate)) {'''
 new = '''      if (candidate !== "") {'''
+
+# --- 티켓 03 이 더한 것(import.ts) ----------------------------------------------------------------------------
+# 티켓 03 이 실제 디자인 토큰 CSS 에 줄 끝의 쓰임 설명을 달자, 들이기 시험은 설명을 벗긴 사본을 입력으로 쓰고 설명이 달린
+# 실제 판은 한 사례만 쓴다. 그 사례가 값만 옮길 때 줄 끝의 주석이 남는지를 재고, 앞의 번호가 밀리지 않게 끝에 둔다.
+
+[[mutation]]
+name = "값만 옮길 때 줄 끝의 주석을 버리면 설명이 달린 실제 판 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/import.test.ts", "-t", "줄 끝의 설명은 그대로"]
+expect = "red"
+expect_output = ['+     "--accent-600: #04605f;",']
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/import.ts"
+old = '''      const tail = usage === undefined ? parts.tail : usage === "" ? "" : ` /* ${usage} */`;'''
+new = '''      const tail = usage === undefined ? "" : usage === "" ? "" : ` /* ${usage} */`;'''

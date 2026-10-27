@@ -167,12 +167,9 @@ expect = "red"
 
 [[mutation.edit]]
 file = "web/packages/ui/src/styles/theme.css"
-old = '''
-    --text-muted: var(--gray-500);
-'''
-new = '''
-    --text-muted: var(--gray-300);
-'''
+# 원문은 줄 끝의 쓰임 설명(design-reverse-sync 티켓 03) 앞까지다. 설명을 고쳐도 변이는 그대로 돈다.
+old = '''    --text-muted: var(--gray-500);'''
+new = '''    --text-muted: var(--gray-300);'''
 
 [[mutation]]
 name = "위젯 기준 폭이 400px 이면 Responsive 가 빨갛다"

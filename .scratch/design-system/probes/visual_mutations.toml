@@ -46,12 +46,9 @@ expect = "red"
 
 [[mutation.edit]]
 file = "web/packages/ui/src/styles/theme.css"
-old = '''
-    --gray-900: #171a1c;
-'''
-new = '''
-    --gray-900: #171a1d;
-'''
+# 원문은 줄 끝의 쓰임 설명(design-reverse-sync 티켓 03) 앞까지다. 설명을 고쳐도 변이는 그대로 돈다.
+old = '''    --gray-900: #171a1c;'''
+new = '''    --gray-900: #171a1d;'''
 
 [[mutation]]
 name = "대조: 색 차이 기준이 기본값이면 파랑 한 단위는 지난다"
@@ -61,12 +58,9 @@ expect = "green"
 
 [[mutation.edit]]
 file = "web/packages/ui/src/styles/theme.css"
-old = '''
-    --gray-900: #171a1c;
-'''
-new = '''
-    --gray-900: #171a1d;
-'''
+# 원문은 줄 끝의 쓰임 설명(design-reverse-sync 티켓 03) 앞까지다. 설명을 고쳐도 변이는 그대로 돈다.
+old = '''    --gray-900: #171a1c;'''
+new = '''    --gray-900: #171a1d;'''
 
 [[mutation.edit]]
 file = "web/packages/ui/visual/playwright.config.ts"

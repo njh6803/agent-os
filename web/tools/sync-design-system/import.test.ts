@@ -1,5 +1,7 @@
 // 들이기 명령의 테스트(design-reverse-sync 명세 Testing Decisions "왕복"·"옮기기와 묻기"·"판정과 제안"). 입력은 실제
-// 디자인 토큰 CSS 와 그것으로 지은 tokens.json 이고, 사례는 그 사본을 고쳐 만든다. 보고와 고친 디자인 토큰 CSS 를 본다.
+// 디자인 토큰 CSS 에서 줄 끝의 쓰임 설명(티켓 03)을 벗긴 사본과 그것으로 지은 tokens.json 이고, 사례는 그 사본을 고쳐
+// 만든다. 설명 글이 바뀌어도 사례의 기대가 그대로이게 벗긴다. 설명이 달린 실제 판은 한 사례가 쓴다. 보고와 고친 디자인 토큰
+// CSS 를 본다.
 
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -12,7 +14,8 @@ import { diffTokens, readTokens } from "./tokens-json.ts";
 
 const WEB = dirname(dirname(import.meta.dirname));
 const CSS_PATH = join(WEB, "packages", "ui", "src", "styles", "theme.css");
-const CSS = readFileSync(CSS_PATH, "utf-8");
+const THEME_CSS = readFileSync(CSS_PATH, "utf-8");
+const CSS = withoutLineComments(THEME_CSS);
 
 const NOK = ["nokcheong-light", "nokcheong-dark"];
 const ALL = [
@@ -28,6 +31,11 @@ const ALL = [
 const LIGHTS = ALL.filter((theme) => theme.endsWith("-light"));
 const DARKS = ALL.filter((theme) => theme.endsWith("-dark"));
 const RENAME = "이름을 바꾼 것일 수 있다";
+
+/** 선언을 끝낸 `;` 뒤의 줄 끝 주석을 벗긴 사본(`build.test.ts` 의 같은 이름과 같다). */
+function withoutLineComments(css: string): string {
+  return css.replace(/;[ \t]*\/\*[^\n]*?\*\/[ \t]*$/gm, ";");
+}
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -680,6 +688,23 @@ describe("셋 맞대기와 옮기기", () => {
         .replace("--accent-600: #056868;\r", "--accent-600: #04605f;\r")
         .replace("--spacing-4: 16px;\r", "--spacing-4: 16px; /* 기본 간격 */\r"),
     );
+  });
+
+  test("설명이 달린 실제 디자인 토큰 CSS 에서 값만 옮기면 그 줄 끝의 설명은 그대로 남는다", () => {
+    const usage =
+      buildTokensFile(THEME_CSS).color.tokens.find((token) => token.name === "accent-600")?.usage ??
+      "";
+    const { css } = run(
+      edited((file) => {
+        setColor(file, "accent-600", both("#04605f"));
+      }, THEME_CSS),
+      { css: THEME_CSS, base: built(THEME_CSS) },
+    );
+
+    expect(usage).not.toBe("");
+    expect(changedLines(THEME_CSS, css)).toEqual([
+      [`--accent-600: #056868; /* ${usage} */`, `--accent-600: #04605f; /* ${usage} */`],
+    ]);
   });
 
   test("고친 디자인 토큰 CSS 가 Prettier 의 포맷 검사를 지난다", async () => {
