@@ -1,4 +1,4 @@
-# 2026-10-27 (10) 관리 화면의 organisms가 데이터와 처리기를 props로 받는다 (admin-style 티켓 02)
+# 2026-10-27 (15) 관리 화면의 organisms가 데이터와 처리기를 props로 받는다 (admin-style 티켓 02)
 
 티켓 `.scratch/admin-style/issues/02-admin-organisms-take-props.md`의 구현 세션이다. 브랜치 `feature/02-admin-organisms-take-props`, 워크트리 `02-admin-organisms-take-props`. 이 세션의 제목은 `feature/02-admin-organisms-take-props`였고, 셀프 리뷰 직전에 인계 계기(컨텍스트 230,025 토큰)가 와서 새 세션에 넘긴다. 아래는 넘기는 시점까지다. 커밋은 아직 없다.
 
@@ -67,8 +67,8 @@
 시작 프롬프트: /implement .scratch/admin-style/issues/02-admin-organisms-take-props.md
 브랜치: feature/02-admin-organisms-take-props
 모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
-읽을 것: docs/journal/2026-10-27-10-admin-organisms-take-props.md
-이어받을 상태: 인계: 셀프 리뷰 직전. 커밋하지 않은 변경이 워크트리에 있고 셀프 리뷰(/code-review, 기준 origin/main, 티켓 02)부터 한다. 일지 docs/journal/2026-10-27-10-admin-organisms-take-props.md. ADR 0021 이력 초안(2026-10-27)은 아직 사용자의 승인을 받지 않았다. 셀프 리뷰를 반영한 뒤 보여 승인받고, 승인 없이 판정자 변경을 커밋하지 않는다(CLAUDE.md 작업 규약 5). 그 밖에 남은 일은 그 일지의 "인계 때 남은 것"이다
+읽을 것: docs/journal/2026-10-27-15-admin-organisms-take-props.md
+이어받을 상태: 인계: 셀프 리뷰 직전. 커밋하지 않은 변경이 워크트리에 있고 셀프 리뷰(/code-review, 기준 origin/main, 티켓 02)부터 한다. 일지 docs/journal/2026-10-27-15-admin-organisms-take-props.md. ADR 0021 이력 초안(2026-10-27)은 아직 사용자의 승인을 받지 않았다. 셀프 리뷰를 반영한 뒤 보여 승인받고, 승인 없이 판정자 변경을 커밋하지 않는다(CLAUDE.md 작업 규약 5). 그 밖에 남은 일은 그 일지의 "인계 때 남은 것"이다
 확인할 선행 조건: 없음
 이번 요청 범위: PR과 병합까지
 ```
@@ -166,8 +166,8 @@ PR 직전 리뷰에 밀 주장으로 넘길 새 사실 문장(원문):
 시작 프롬프트: /implement .scratch/admin-style/issues/02-admin-organisms-take-props.md
 브랜치: feature/02-admin-organisms-take-props
 모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
-읽을 것: docs/journal/2026-10-27-10-admin-organisms-take-props.md
-이어받을 상태: 인계: 커밋 뒤. 구현, 셀프 리뷰와 반영, ADR 0021 이력의 승인, 검증, 커밋까지 마쳤다. 아직 푸시하지 않았고 PR도 없다. 남은 것은 변이 표 전체 실행, PR 직전 리뷰(대체 둘), PR 열기와 봇 회차, 워크트리에서 병합하는 길이고, 그 세부와 커밋하지 않은 일지 절은 일지의 "인계 때 남은 것(둘째)"에 있다. 일지 docs/journal/2026-10-27-10-admin-organisms-take-props.md
+읽을 것: docs/journal/2026-10-27-15-admin-organisms-take-props.md
+이어받을 상태: 인계: 커밋 뒤. 구현, 셀프 리뷰와 반영, ADR 0021 이력의 승인, 검증, 커밋까지 마쳤다. 아직 푸시하지 않았고 PR도 없다. 남은 것은 변이 표 전체 실행, PR 직전 리뷰(대체 둘), PR 열기와 봇 회차, 워크트리에서 병합하는 길이고, 그 세부와 커밋하지 않은 일지 절은 일지의 "인계 때 남은 것(둘째)"에 있다. 일지 docs/journal/2026-10-27-15-admin-organisms-take-props.md
 확인할 선행 조건: 없음
 이번 요청 범위: PR과 병합까지
 ```
@@ -237,8 +237,8 @@ open-session을 부른다 2026-10-27T09:45:27Z
 시작 프롬프트: /implement .scratch/admin-style/issues/02-admin-organisms-take-props.md
 브랜치: feature/02-admin-organisms-take-props
 모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
-읽을 것: docs/journal/2026-10-27-10-admin-organisms-take-props.md
-이어받을 상태: 인계: 셀프 리뷰 직전. 커밋하지 않은 변경이 워크트리에 있고 셀프 리뷰(/code-review, 기준 HEAD 790416df, 티켓 02)부터 한다. PR 직전 bug-perf-review의 Major를 반영해 판정자가 api/failure 밖의 api/ 도메인 값 import도 막게 넓힌 변경이고, 그 ADR 0021 이력 고침은 아직 사용자의 승인을 받지 않았다. 셀프 리뷰를 반영한 뒤 보여 승인받고, 승인 없이 커밋하지 않는다(CLAUDE.md 작업 규약 5). 그 밖에 남은 일은 그 일지의 "인계 때 남은 것(셋째)"이다. 일지 docs/journal/2026-10-27-10-admin-organisms-take-props.md
+읽을 것: docs/journal/2026-10-27-15-admin-organisms-take-props.md
+이어받을 상태: 인계: 셀프 리뷰 직전. 커밋하지 않은 변경이 워크트리에 있고 셀프 리뷰(/code-review, 기준 HEAD 790416df, 티켓 02)부터 한다. PR 직전 bug-perf-review의 Major를 반영해 판정자가 api/failure 밖의 api/ 도메인 값 import도 막게 넓힌 변경이고, 그 ADR 0021 이력 고침은 아직 사용자의 승인을 받지 않았다. 셀프 리뷰를 반영한 뒤 보여 승인받고, 승인 없이 커밋하지 않는다(CLAUDE.md 작업 규약 5). 그 밖에 남은 일은 그 일지의 "인계 때 남은 것(셋째)"이다. 일지 docs/journal/2026-10-27-15-admin-organisms-take-props.md
 확인할 선행 조건: 없음
 이번 요청 범위: PR과 병합까지
 ```
@@ -307,7 +307,7 @@ open-session을 부른다 2026-10-27T10:21:20Z
 
 ### 커밋(둘째)
 
-- 커밋 전 `git branch --show-current`가 `feature/02-admin-organisms-take-props`였고, `uv run python tools/sibling_overlap.py`가 "번호 겹침 없음"이었다(이 브랜치의 새 번호는 일지 2026-10-27-10, 헌법 3.0.57이고 형제의 가장 높은 헌법 판은 3.0.56. 손으로 봤다). 함께 고친 파일 후보로 PR #403과 워크트리 둘이 `.scratch/admin-style/probes/README.md`를 들었고, 이름순으로 앞서는 형제 일지(2026-10-27-11·12)가 먼저 병합되면 이 일지의 번호를 옮긴다고 알렸다.
+- 커밋 전 `git branch --show-current`가 `feature/02-admin-organisms-take-props`였고, `uv run python tools/sibling_overlap.py`가 "번호 겹침 없음"이었다(이 브랜치의 새 번호는 일지 2026-10-27-15, 헌법 3.0.57이고 형제의 가장 높은 헌법 판은 3.0.56. 손으로 봤다). 함께 고친 파일 후보로 PR #403과 워크트리 둘이 `.scratch/admin-style/probes/README.md`를 들었고, 이름순으로 앞서는 형제 일지(2026-10-27-11·12)가 먼저 병합되면 이 일지의 번호를 옮긴다고 알렸다.
 - 첫 커밋 시도는 commit-msg 훅의 사전 확인(제목 77자 > 72자)에 막혀 게이트를 돌기 전에 제목을 줄였다.
 - 커밋 `72133d76`의 pre-commit은 모두 Passed였다(pytest 648.8초, web-verify 640.7초, 변이 표·카나리아 모양·헌법 판 검사 포함. 러너가 찍었다). ruff 둘은 스테이지된 `.py`가 없어 Skipped였고, 이 세션은 `.py`를 고치지 않았다.
 - 인용 대조 경고(막지 않는다) 아홉은 이 일지가 옛 문장을 옮긴 기록이거나(이 브랜치가 고친 명세·변이 표·ADR의 옛 문구, 앞 세션 판정의 인용), main의 헌법 README에 이미 있던 옛 `tech.md` 인용이었다. 고치지 않았다.
@@ -330,8 +330,8 @@ open-session을 부른다 2026-10-27T10:21:20Z
 시작 프롬프트: /implement .scratch/admin-style/issues/02-admin-organisms-take-props.md
 브랜치: feature/02-admin-organisms-take-props
 모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
-읽을 것: docs/journal/2026-10-27-10-admin-organisms-take-props.md
-이어받을 상태: 인계: 커밋 뒤. 셀프 리뷰 반영, ADR 0021 이력 넓힘(api/failure 밖의 api/ 도메인도 막는다)의 사용자 재승인, 커밋 72133d76까지 마쳤다. 아직 푸시하지 않았고 PR도 없다. 남은 것은 커밋 뒤 변이 표 여섯째·일곱째 재실행, PR 직전 리뷰(CodeRabbit 좌석을 보고 안 되면 bug-perf-review와 /security-review), PR 열기와 봇 회차, 회고, 워크트리에서 병합하는 길이고, 그 세부와 커밋하지 않은 일지 절은 일지의 "인계 때 남은 것(넷째)"에 있다. 일지 docs/journal/2026-10-27-10-admin-organisms-take-props.md
+읽을 것: docs/journal/2026-10-27-15-admin-organisms-take-props.md
+이어받을 상태: 인계: 커밋 뒤. 셀프 리뷰 반영, ADR 0021 이력 넓힘(api/failure 밖의 api/ 도메인도 막는다)의 사용자 재승인, 커밋 72133d76까지 마쳤다. 아직 푸시하지 않았고 PR도 없다. 남은 것은 커밋 뒤 변이 표 여섯째·일곱째 재실행, PR 직전 리뷰(CodeRabbit 좌석을 보고 안 되면 bug-perf-review와 /security-review), PR 열기와 봇 회차, 회고, 워크트리에서 병합하는 길이고, 그 세부와 커밋하지 않은 일지 절은 일지의 "인계 때 남은 것(넷째)"에 있다. 일지 docs/journal/2026-10-27-15-admin-organisms-take-props.md
 확인할 선행 조건: 없음
 이번 요청 범위: PR과 병합까지
 ```
@@ -378,8 +378,8 @@ CodeRabbit 좌석이 없어 대체 둘을 나란히 돌렸다. 기준은 origin/
 시작 프롬프트: /implement .scratch/admin-style/issues/02-admin-organisms-take-props.md
 브랜치: feature/02-admin-organisms-take-props
 모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
-읽을 것: docs/journal/2026-10-27-10-admin-organisms-take-props.md
-이어받을 상태: 인계: PR 연 뒤. PR #405를 열었고 순서 1의 2(봇 회차)부터 한다. 첫 @coderabbitai review 코멘트도 새 세션이 남긴다. PR 직전 리뷰(bug-perf-review, /security-review)는 이슈 없음으로 끝났다. 일지의 이 세션 절은 커밋하지 않은 채 작업 트리에 있고, 회고(retro)와 "다음"까지 마친 일지를 병합 길의 headRefOid 대조 전에 푸시한다. 그 세부는 일지의 "인계 때 남은 것(다섯째)"에 있다. 일지 docs/journal/2026-10-27-10-admin-organisms-take-props.md
+읽을 것: docs/journal/2026-10-27-15-admin-organisms-take-props.md
+이어받을 상태: 인계: PR 연 뒤. PR #405를 열었고 순서 1의 2(봇 회차)부터 한다. 첫 @coderabbitai review 코멘트도 새 세션이 남긴다. PR 직전 리뷰(bug-perf-review, /security-review)는 이슈 없음으로 끝났다. 일지의 이 세션 절은 커밋하지 않은 채 작업 트리에 있고, 회고(retro)와 "다음"까지 마친 일지를 병합 길의 headRefOid 대조 전에 푸시한다. 그 세부는 일지의 "인계 때 남은 것(다섯째)"에 있다. 일지 docs/journal/2026-10-27-15-admin-organisms-take-props.md
 확인할 선행 조건: 없음
 이번 요청 범위: PR과 병합까지
 ```
@@ -420,3 +420,47 @@ open-session을 부른다 2026-10-27T12:19:38Z
 - 03을 여는 세션은 일지 2026-10-27-09 "다음"의 화면 Design 아티팩트 웹 편집 확인 줄(사람을 불러 계정을 맞춘다)을 이어받는다.
 - 02가 시험으로 고정하지 않은 두 자리(결정 자리가 서지 않을 때 목록을 읽지 않는 것, 결정의 훅이 트레이스 값의 갈래 안에 서는 것)는 티켓 02의 "이 티켓이 정한 것"에 있다. 07(실행 하나)이나 08(결정 열)이 그 자리를 옮기면 그 줄을 본다.
 - 주 체크아웃 미갱신: 루트는 main. 이 세션은 워크트리에서 병합하므로 당기기와 병합된 워크트리 지우기는 다음 새 세션의 `tidy-checkouts`가 한다.
+
+## 인계 때 남은 것(여섯째)
+
+이 세션(다섯째로 이어받은 세션)은 일지 커밋 `4a59fe59` 뒤 "커밋 뒤" 경계에서 인계 계기(컨텍스트 310,510 토큰)를 받아 새 세션에 넘긴다. 인계하지 않는 때 다섯 가운데 든 것이 없었다(지시문의 경계는 `PR 연 뒤`였고, `get_session`의 `self`에 `parentSessionId`가 없었다). 이 세션의 지금 제목은 `feature/02-admin-organisms-take-props`다. 사용자의 메시지는 지시문 하나뿐이었다. 이 절은 커밋하지 않았다.
+
+- 커밋 `4a59fe59`(위 봇 회차·회고·"다음"과 대기열 499·486)는 세 번째 시도로 들어갔다. 첫 시도는 위젯 승인 시험, 둘째 시도는 `test_rerun_runner.py`의 다른 사례에 막혔다(위 회고 1과 9). 셋째 시도의 pre-commit은 pytest 372.5초, web-verify 398.2초를 포함해 모두 Passed였고 ruff 둘은 `.py`가 없어 Skipped였다(러너가 찍었다).
+- PR 본문은 푸시 전에 고쳐 두었다. "변경된 영역"의 `docs/` 줄에 회고가 더한 대기열 499와 486의 3회차를 적었다(`gh pr edit 405 --body-file`, next-session 순서 1의 1).
+- 남은 것: `4a59fe59`를 푸시하고 순서 1의 2(봇 회차)부터 한다. 푸시 뒤에 `@coderabbitai review`를 남기고 `tools/wait_ci.py 405`로 기다린다. claude-review는 이 푸시가 둘째 회차라 Critical·Major만 고친다. CodeRabbit은 아직 리뷰한 회차가 없다(두 번 모두 한도). 대기의 통과 줄은 CodeRabbit의 리뷰 여부를 찍지 못하므로(대기열 499) PR 코멘트나 `gh api repos/njh6803/agent-os/commits/<헤드>/check-runs`의 CodeRabbit `output.title`로 본다.
+- 이 절과 넘겨받은 세션이 쓸 절은 병합 길의 `headRefOid` 대조 전에 커밋해 푸시한다(순서 1의 3). 회고와 "다음"은 이미 커밋에 있다. 넘겨받은 세션이 봇 회차에서 뒤로 넘긴 일이 생기면 "다음"에도 적는다.
+- 병합은 이 워크트리 사본의 `next-session` "워크트리에서 병합할 때"로 한다. 병합 뒤 주 체크아웃 미갱신 한 줄과 다음 지시문(결정표)을 낸다. 03은 01(PR #403)이 병합되기 전에는 막혀 있다(위 "다음").
+
+## 인계 지시문(여섯째)
+
+```
+다음 작업: .scratch/admin-style/issues/02-admin-organisms-take-props.md. 관리 화면의 organisms가 데이터와 처리기를 props로 받게 옮긴다
+다음 단계: PR 반영·병합
+어디서: 새 세션. 인계 줄이라 같은 브랜치·워크트리를 잇는다. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /implement .scratch/admin-style/issues/02-admin-organisms-take-props.md
+브랜치: feature/02-admin-organisms-take-props
+모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
+읽을 것: docs/journal/2026-10-27-15-admin-organisms-take-props.md
+이어받을 상태: 인계: 커밋 뒤. PR #405의 첫 봇 회차(claude-review 지적 셋 보류, CodeRabbit은 한도로 리뷰 없음), 회고, 일지 "다음"을 마치고 일지 커밋 4a59fe59까지 했다. 4a59fe59는 아직 푸시하지 않았고, PR 본문은 그 범위로 이미 고쳤다. 열린 PR이 있으니 푸시와 순서 1의 2(봇 회차)부터 한다. 일지의 인계 절(여섯째)은 커밋하지 않은 채 작업 트리에 있고 병합 길의 headRefOid 대조 전에 커밋해 푸시한다. 그 세부는 일지의 "인계 때 남은 것(여섯째)"에 있다. 일지 docs/journal/2026-10-27-15-admin-organisms-take-props.md
+확인할 선행 조건: 없음
+이번 요청 범위: PR과 병합까지
+```
+
+이 세션이 띄운 백그라운드 작업(대기, 커밋 셋)은 모두 끝나 있어 멈출 것이 없었다. 제목을 `feature/02-admin-organisms-take-props (인계함)`으로 바꿨고(도구가 성공을 찍었다), 워크트리 잠금 풀기는 `is not locked`로 끝났다(이미 풀려 있었다).
+
+open-session을 부른다 2026-10-27T13:19:54Z
+
+## 이어받은 세션(여섯째)
+
+위 인계 지시문(여섯째)으로 연 새 세션이다. 제목을 `feature/02-admin-organisms-take-props`로 바꾸고 같은 워크트리에 `EnterWorktree(path)`로 들어갔다(둘 다 도구가 성공을 찍었다). 지시문 밖의 사용자 메시지는 없다.
+
+### main 합치기와 일지 번호 옮기기
+
+- `git fetch origin main` 뒤 origin/main이 `35028cba`(PR #404, design-reverse-sync 08)로 움직였고, PR #405의 `mergeStateStatus`가 `BEHIND`였다(손으로 봤다). `uv run python tools/sibling_overlap.py`는 1로 끝나며, 이 일지(그때 이름은 순번 10)가 origin/main의 최신 일지 2026-10-27-12보다 이름순으로 앞이라 다음 빈 번호로 옮기라고 했다(도구가 찍었다).
+- `git merge origin/main`이 `.scratch/retro-queue.md`의 두 곳에서 충돌했다. 하나는 행 486에 양쪽이 각자 3회차를 더한 자리다(main은 일지 2026-10-27-12, 이 브랜치는 이 일지). 둘을 합쳐 4회차로 적었다. 그래서 위 회고 1의 "3회차가 됐다"는 이 합치기로 4회차가 됐고, PR 본문의 그 줄도 푸시 전에 고쳐 `gh pr edit 405 --body-file`로 올렸다(next-session 순서 1의 1). 다른 하나는 main의 새 행 495~498과 이 브랜치의 새 행 499가 같은 자리에 붙은 것이라 번호순으로 둘 다 두었다. 풀기는 스크래치 스크립트로 했고, 푼 뒤 충돌 표지가 0이고 행 머리가 480부터 499까지 번호순임을 grep으로 봤다(494는 합치기 기준에도 없었다. 손으로 봤다).
+- 합치기 커밋의 첫 시도는 pre-commit의 pytest에서 `tests/tools/test_rerun_runner.py::test_같은_갈래가_두_번_든_파일럿의_두_회차가_함께_돌아도_번호가_다르다`가 `assert 1 == 2`로 빨개 막혔다(pytest 620.8초, 러너가 찍었다). 위 회고 9의 첫 사례와 같은 사례이고, 그 사례만 `uv run pytest -q <노드 id>`로 다시 돌리니 58.51초에 "1 passed"였다(손으로 봤다). 다시 친 합치기 커밋 `4a556663`의 pre-commit은 pytest 419.0초, web-verify 452.2초를 포함해 모두 Passed였다(러너가 찍었다). 이 PR의 커밋 시도에서 그 파일의 시간 시험이 부하 아래 빨간 것은 회고 9의 둘에 더해 셋째다. 회고는 이미 닫았고 대기열 306이 닫은 종류라 행을 새로 잇지 않는다.
+- 합치기를 커밋한 뒤에 `uv run python tools/sibling_overlap.py --move`를 쳤다(합치기 전에 친 `--move`가 main의 행에 더한 회차를 이 브랜치의 새 행으로 읽은 일이 대기열 492다). 일지 이름과 머리 줄을 2026-10-27-15로 옮기고 인용 여섯 파일(티켓 02, 프로브 README, 카나리아 명세 둘, 대기열, 이 일지)을 고쳤으며, 열린 PR 본문에는 옮길 인용이 없다고 했다(도구가 찍었다). 그 뒤 그 파일들에서 옛 순번의 일지 이름을 grep하니 남은 것이 없었다(손으로 봤다).
+
+### 이 절 뒤
+
+이 절은 이 세션의 마지막 일지 커밋에 싣고, 그 커밋과 `4a59fe59`·`4a556663`을 한 번에 푸시한다. 그 푸시 뒤의 봇 회차에서 보류한 지적은 일지에 다시 적어 푸시하지 않고 PR 코멘트와 다음 지시문의 "이어받을 상태"에 적는다(next-session 순서 1의 2 "뒤로 넘긴 일"). 고칠 것이 나오면 그 고침과 함께 이 일지에 적어 푸시한다.
