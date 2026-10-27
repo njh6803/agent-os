@@ -196,10 +196,12 @@ tests = ["tools/sync-design-system/build.test.ts", "-t", "hex 는 소문자로"]
 expect = "red"
 expect_output = ["AssertionError: expected '#F4F8FB' to be '#f4f8fb' // Object.is equality"]
 
+# 짓기와 맞대기가 같이 쓰는 색 리터럴 판정(`colorLiteral`, 티켓 04 가 옮겼다)의 낸 값을 깬다. 대문자 hex 사례(아래 맞대기)는
+# 판정의 입력을 깨는 다른 변이가 겨눈다.
 [[mutation.edit]]
-file = "web/tools/sync-design-system/build.ts"
-old = '''        return { literal: value.toLowerCase() };'''
-new = '''        return { literal: value };'''
+file = "web/tools/sync-design-system/tokens-json.ts"
+old = '''    return lower;'''
+new = '''    return value.trim();'''
 
 [[mutation]]
 name = "설명을 둘째 벌에서 읽으면 주석 자리 사례가 빨갛다"

@@ -8,9 +8,12 @@ import { dirname, join } from "node:path";
 import { describe, expect, test } from "vitest";
 import { buildTokensFile } from "./build.ts";
 import {
+  colorLiteral,
   comparisonHash,
+  DIFF_KINDS,
   diffTokens,
   readTokens,
+  valueAt,
   type TokensFile,
   type TokenDiff,
 } from "./tokens-json.ts";
@@ -339,6 +342,79 @@ describe("값으로 맞대기", () => {
     });
 
     expect(compare(after)).toEqual({ diffs: [], sameHash: true });
+  });
+});
+
+describe("차이 자리의 값", () => {
+  // 들이기가 웹의 차이마다 같은 자리를 코드에서 읽어 셋을 맞댄다(명세 "거꾸로 동기화"의 "셋으로 맞댄다").
+  const after = edited((file) => {
+    record(tokenIn(file, "color", "gray-900").value)["nokcheong-light"] = "#000000";
+    tokenIn(file, "color", "accent-600").usage = "강조";
+    list(record(file.color).tokens).push({ name: "new-1", value: "#123456", usage: "" });
+    list(record(file.color).themes).pop();
+    tokenIn(file, "radius", "radius-s").value = "5px";
+    const spacing = record(file.spacing);
+    spacing.note = "간격";
+    spacing.tokens = list(spacing.tokens).filter((token) => record(token).name !== "spacing-8");
+    const title = styleIn(file, "text-title");
+    title.fontSize = "25px";
+    title.letterSpacing = "1px";
+    title.usage = "제목";
+    const type = record(file.type);
+    record(type.families).mono = "monospace";
+    type.fonts = [{ family: "X", file: "x.woff2" }];
+    const groups = list(type.groups);
+    record(groups[0]).note = "묶음";
+    groups.push({ name: "둘째", family: "sans", styles: [] });
+    file.shadow = { note: "", tokens: [{ name: "shadow-1", value: "0 1px 2px #000" }] };
+  });
+  const before = readTokens(BUILT);
+  const read = readTokens(after);
+  const diffs = diffTokens(before, read);
+
+  test("차이마다 그 자리를 두 벌에서 읽은 값은 그 차이의 전과 후다", () => {
+    expect(new Set(diffs.map((diff) => diff.kind))).toEqual(new Set(DIFF_KINDS));
+    expect(diffs.length).toBeGreaterThan(12);
+    expect(diffs.map((diff) => [valueAt(before, diff), valueAt(read, diff)])).toEqual(
+      diffs.map((diff) => [diff.before, diff.after]),
+    );
+  });
+
+  test("다른 벌에 그 자리가 없으면 null 이다", () => {
+    const empty = readTokens({});
+
+    expect(
+      diffs
+        .filter((diff) => diff.kind !== "familyNote" && diff.family !== "type")
+        .filter((diff) => diff.theme === undefined || diff.kind === "value")
+        .map((diff) => valueAt(empty, diff)),
+    ).toEqual(
+      diffs
+        .filter((diff) => diff.kind !== "familyNote" && diff.family !== "type")
+        .filter((diff) => diff.theme === undefined || diff.kind === "value")
+        .map(() => null),
+    );
+  });
+});
+
+describe("색 리터럴", () => {
+  test.each([
+    ["#F4F8FB", "#f4f8fb"],
+    [" oklch(0.5 0.1 200) ", "oklch(0.5 0.1 200)"],
+    ["RGB(255 0 0 / 50%)", "rgb(255 0 0 / 50%)"],
+  ])("페이지가 색으로 읽는 %s 는 소문자 %s 다", (value, literal) => {
+    expect(colorLiteral(value)).toBe(literal);
+  });
+
+  test.each([
+    "rgb(var(--x) 0 0)",
+    "oklch(from #fff l c h)",
+    `oklch(${"0".repeat(61)})`,
+    "{gray-0}",
+    "var(--gray-0)",
+    "red",
+  ])("페이지가 색으로 읽지 않는 %s 는 리터럴이 아니다", (value) => {
+    expect(colorLiteral(value)).toBeUndefined();
   });
 });
 

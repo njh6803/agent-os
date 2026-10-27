@@ -7,7 +7,7 @@ import { describe, expect, test } from "vitest";
 import { THEMES } from "../../packages/ui/src/themes.ts";
 import { buildTokensFile, buildTokensJson, THEME_NAMES } from "./build.ts";
 import { CommandError } from "./command.ts";
-import type { ColorToken, TokensFile } from "./tokens-json.ts";
+import { readTokens, type ColorToken, type TokensFile } from "./tokens-json.ts";
 
 const WEB = dirname(dirname(import.meta.dirname));
 const CSS = readFileSync(join(WEB, "packages", "ui", "src", "styles", "theme.css"), "utf-8");
@@ -221,6 +221,14 @@ describe("짓기", () => {
     const file = buildTokensFile(CSS.replace("--gray-50: #f4f8fb;", "--gray-50: #F4F8FB;"));
 
     expect(perTheme(colorToken(file, "gray-50"))["nokcheong-light"]).toBe("#f4f8fb");
+  });
+
+  test("페이지가 색으로 읽지 않는 색 함수의 속성은 색 토큰으로 내지 않아, 낸 색 토큰을 페이지가 모두 읽는다", () => {
+    const css = insertBefore(CSS, "    --gray-0: #ffffff;", ["    --tinted: rgb(var(--x) 0 0);"]);
+    const file = buildTokensFile(css);
+
+    expect(file.color.tokens.map((token) => token.name)).not.toContain("tinted");
+    expect(readTokens(file).families.get("color")?.tokens.size).toBe(file.color.tokens.length);
   });
 
   test("실제 디자인 토큰 CSS 로 지은 tokens.json 에는 설명이 빈 토큰이 없고 설명은 모두 한 줄이다", () => {
