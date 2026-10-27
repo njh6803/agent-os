@@ -4,7 +4,8 @@
 `session-ids.txt`에 없는 파일을 회차마다 세고 달러 어림과 모델을 찍는다. 단가는
 `tools/rerun_cost.py`의 `PRICES`를 옮겼다(옮길 때 그 파일을 다른 세션이 고치는 중이라 import하지
 않았다). 응답은 `message.id`마다 마지막 usage 하나로 세고, 캐시 쓰기는 응답의 ephemeral_5m/1h로
-나눈다. 단언하지 않는 관찰 스크립트이고 읽기만 한다.
+나눈다. 단언하지 않는 관찰 스크립트이고 읽기만 한다. 프로젝트 폴더가 없는 회차는 추가 세션 0이
+아니라 측정 아님으로 찍고, 그런 회차가 있으면 1로 끝난다.
 
     uv run python .scratch/model-rerun/probes/pilot_checks/extra_sessions_cost.py \
         --rounds C:/Users/User/rerun-rounds --projects C:/Users/User/.claude-rerun/projects
@@ -62,9 +63,15 @@ def cost(path: Path) -> tuple[float, set[str]]:
 
 
 total = 0.0
+missing: list[str] = []
 for rd in sorted(ROOT.iterdir()):
     ids = {x.strip() for x in (rd / "session-ids.txt").read_text().splitlines() if x.strip()}
     proj = CFG / ("C--Users-User-rerun-rounds-" + rd.name + "-clone")
+    if not proj.is_dir():
+        # 폴더가 없으면 glob 이 비어 추가 세션 0 으로 읽히므로 측정 아님으로 센다
+        print(rd.name, "측정 아님: 프로젝트 폴더가 없다", proj)
+        missing.append(rd.name)
+        continue
     extra = [p for p in proj.glob("*.jsonl") if p.stem not in ids]
     usd = 0.0
     models: set[str] = set()
@@ -75,3 +82,6 @@ for rd in sorted(ROOT.iterdir()):
     total += usd
     print(rd.name, "extra sessions", len(extra), f"official ~${usd:.4f}", sorted(models))
 print(f"total ~${total:.4f}")
+if missing:
+    print("측정 아님", len(missing), missing)
+    raise SystemExit(1)

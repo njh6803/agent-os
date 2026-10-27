@@ -557,7 +557,7 @@ def test_B에_게이트_러너가_없는_과제는_옛_게이트_묶음을_돌�
     task = _과제(1, 옛_원본, arms=("A",))
     board = 판(tmp_path, 옛_원본[0], [task], old_gates=(PASS,) * 6)
     board.script({_key(task, "A", 1): [_끝남(task, 2.5)]})
-    assert board.run() == 0
+    assert board.run() == 0, board.lines
     (rec,) = board.saved()
     assert rec.end.kind == END_DONE
     assert rec.outcome.gates is not None
@@ -1139,7 +1139,7 @@ def test_결과_커밋이_게이트_러너를_지워도_B로_고른_묶음을_�
         git=[["switch", "-c", task.branch], ["rm", "-q", GATE_FILE], ["commit", "-m", "지웠다"]],
     )
     board.script({_key(task, "A", 1): [removing]})
-    assert board.run() == 0
+    assert board.run() == 0, board.lines
     (rec,) = board.saved()
     assert rec.outcome.gates is not None
     assert [g.command for g in rec.outcome.gates] == list(GATE_COMMANDS)

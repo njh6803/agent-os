@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import json
 import re
+from pathlib import Path
 
 import pytest
 from tools.model_sweep_judge import percentile_ci
@@ -44,6 +45,7 @@ TABLES: tuple[tuple[str, dict[str, Json]], ...] = (
     ("rerun_judge", rerun_judge.PREREG_VALUES),
 )
 _CONSTANT_LINE = re.compile(r"rerun_[a-z]+\.[A-Z][A-Z0-9_]* = ")
+_TABLE_DEF = re.compile(r"^PREREG_VALUES\b", re.MULTILINE)
 _LISTS = (("과제 목록(`main.json`)", "main.json"), ("되살릴 목록(`revive.json`)", "revive.json"))
 
 
@@ -107,6 +109,17 @@ def test_정규식은_글과_켠_플래그를_싣는다() -> None:
 
 def test_표마다_항목이_있다() -> None:
     assert all(table for _, table in TABLES)
+
+
+def test_표를_둔_모듈은_모두_대조에_든다() -> None:
+    tools = Path(__file__).resolve().parents[2] / "tools"
+    having = sorted(
+        path.stem
+        for path in tools.glob("rerun_*.py")
+        if _TABLE_DEF.search(path.read_text(encoding="utf-8"))
+    )
+    assert having, f"{tools} 에서 PREREG_VALUES 를 둔 모듈을 하나도 찾지 못했다"
+    assert having == sorted(module for module, _ in TABLES)
 
 
 def test_이_저장소의_사전_등록_절이_표의_값을_모두_든다() -> None:
