@@ -42,9 +42,9 @@ https://claude.ai/artifact/8ttLDZQqchfD2ao1XG56GH 에, 그 아티팩트의 주�
     `storybook/SKILL.md` 가 적은 대로 `.ds-sync/` 에 들이고, 위 패키지 빌드와 참조 Storybook 뒤
     `node .ds-sync/resync.mjs --config .design-sync/config.json --node-modules web/packages/ui/node_modules --entry web/packages/ui/dist/index.js --out ./ds-bundle --remote .design-sync/.cache/remote-sync.json`.
     driver 는 빌드, 비교, validate, 캡처까지 돌고 업로드하지 않는다. 판정은 `ds-bundle/.resync-verdict.json` 이다.
-    `--remote` 는 아티팩트의 `project/_ds_sync.json` 을 `read` 로 받아 둔 사본이고, driver 는 그 해시로 바뀌지 않은
-    컴포넌트의 채점을 이어 쓴다(아직 재지 않았다. 첫 올리기 때는 아티팩트에 그 파일이 없어 `--remote` 를 빼고 아홉을 모두
-    채점했다). 채점은 `.design-sync/.cache/compare/<Name>.grade.json` 에 스토리 이름 그대로를 열쇠로 매기고, driver 를
+    `--remote` 는 빌드마다 아티팩트의 `project/_ds_sync.json` 을 `read` 로 새로 받아 그 자리에 덮어쓴 사본이고(아티팩트에
+    그 파일이 없으면 `--remote` 를 빼고, 앞 빌드의 사본은 쓰지 않는다), driver 는 그 해시로 바뀌지 않은 컴포넌트의 채점을
+    이어 쓴다(아직 재지 않았다. 첫 올리기 때는 아티팩트에 그 파일이 없어 `--remote` 를 빼고 아홉을 모두 채점했다). 채점은 `.design-sync/.cache/compare/<Name>.grade.json` 에 스토리 이름 그대로를 열쇠로 매기고, driver 를
     다시 돌려 아홉 모두 `carried forward` 인지 본다.
   - 올릴 산출 폴더: 사용 규약 검사와 `build --out ds-bundle/tokens.json` 뒤
     `node .design-sync/upload-output.mjs <작업 폴더>/out <작업 폴더>/output-paths.json`. `ds-bundle/` 에는 driver 의

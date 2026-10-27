@@ -157,3 +157,37 @@ PR 직전 `bug-perf-review`에 밀 주장으로 넘길, 반영으로 새로 쓴 
 - 실제 `ds-bundle/`로 고친 `upload-output.mjs`를 다시 돌려 830개였고, 커밋할 `.design-sync/upload-output.json`과 `cmp`로 같았다. 목록 폴더가 없는 갈래는 종료 2이고 산출 폴더를 만들지 않았다.
 - 카나리아 둘(`sync_design_system_skill.toml`, `sync_design_system_story4.toml`)을 커밋 `7d9674d1` 위의 작업 트리에서 대조군 `--control-commit 5e049681`로 실제로 돌려 둘 다 통과 4였다(claude 2.1.302). 그 뒤 `SKILL.md`의 "재지 못한 것"만 고쳐 `--preflight`로 갈음했고 통과 2였다. 두 명세의 `# 최신 결과:` 줄을 그렇게 고쳤다.
 - 나머지 검증 명령은 커밋의 pre-commit으로 갈음한다. 결과는 커밋 뒤 적는다.
+
+## 커밋
+
+- 커밋 전에 `sibling_overlap.py`가 origin/main의 `2026-10-27-09-admin-style-tickets.md`와 번호가 겹친다고 내어, `--move`로 이 일지를 2026-10-27-12로 옮겼다(티켓 08·10과 카나리아 명세 둘의 인용도 옮겼다). 다시 친 도구는 겹침 없음이었다. `uv run ruff check .`와 `uv run ruff format --check .`는 초록이었다.
+- 첫 커밋 시도는 pre-commit의 변이 표 검사(`tools/mutate.py --staged`)에 막혔다. `record_check_mutations.toml`의 "공용 폴더 lib 의 README 도 받으면 받을 경로 사례가 빨갛다"가 `componentReadmes`의 옛 변수 이름(`name !== "lib" &&`)을 원문으로 들고 있었다. 새 이름(`first`)으로 고치고 그 변이 하나를 돌려 기준선 초록, 변이 빨강(기대대로)을 봤다. 그 밖의 검사는 그 시도에서도 Passed였다(ruff 둘과 헌법 판은 Skipped).
+- 다시 친 커밋 `8040d4c2`는 pre-commit이 모두 Passed였다(pytest 885.3초, web-verify 735.1초, pyright·pyright-linux, lint-imports, check-type-escapes, check-instructions, run-hooks, zizmor, check-ticket, 표·줄 구분 문자·변이 표·카나리아 명세 모양, commit message). ruff 둘은 스테이지된 `.py`가 없어 Skipped였고 위에서 손으로 쳤다. 헌법 판은 고친 헌법 파일이 없어 Skipped였다. 인용 대조는 경고 셋을 냈다. 둘은 사람에게 물은 질문 화면의 문구(59행, 75행)이고 하나는 고치기 전 NOTES 문구(82행)라 저장소에 없는 것이 맞아 그대로 뒀다.
+- `git fetch origin` 뒤 origin/main(`4f783dc0`, admin-style 티켓 문서)을 합쳐 `f8d5e4cd`가 됐다. 이 브랜치가 고친 파일과 겹치지 않았다.
+
+## PR 직전 리뷰
+
+CodeRabbit CLI는 `coderabbit auth status`가 `Seat: not assigned`라 돌지 못해, 대체 둘을 돌렸다. `bug-perf-review`는 기점 `3666bdc6`부터 `8040d4c2`까지(합치기 전, 파일 15개)를 봤고, 브리프에 셀프 리뷰 절의 밀 주장 열 개와 번들 스킬 2.1.308의 업로드 계약 발췌(279·283·284행)를 실었다. `/security-review`는 합친 뒤 `origin/HEAD...`를 봤다.
+
+- `/security-review`: 확신도 7 이상 발견 없음. `componentReadmes`가 만드는 경로는 기록을 읽을 때 키마다 `isArtifactPath`를 지나야 해서 받는 폴더 밖으로 나가지 않고, `upload-output.mjs`에는 아티팩트에서 온 값이 들어오지 않는다고 봤다.
+- `bug-perf-review`: 유효 7(Major 1, Minor 5, Nit 1), 보류 2, 오탐 0.
+
+판정:
+
+- Major(`needsBuild`가 `.design-sync/upload-output.json`을 빌린 빌드의 설정으로 센다. 6.6이 목록을 커밋할 때마다 다음 올리기가 빌드를 부탁한다): 유효, 고쳤다. `upload.test.ts`에 시험 둘(목록만 바뀌면 필요 없다, 산출 스크립트가 바뀌면 필요하다)을 더해 앞의 것이 빨간 것을 보고, `upload.ts`의 `NOT_BUILD_CONFIG`에 목록을 더했다. 산출 스크립트는 올릴 항목을 고르므로 빌드가 필요한 쪽에 남겼다. 티켓 결과에 한 줄 더했다.
+- Minor(스크립트의 예외도 종료 1이라 "모르는 항목"과 섞인다): 유효, 고쳤다. 잡히지 않은 예외는 종료 3으로 내고, 저장소 뿌리가 아닌 자리에서 불러 `ds-bundle/`이 없는 것도 종료 1에서 2로 옮겼다. `upload.md` 4가 종료 2의 나머지와 종료 3(한 번 다시 치고, 또 3이면 멈춘다)을 적는다.
+- Minor(머리 주석의 결과 방향이 틀리다, 밀 주장 7): 유효, 고쳤다. 지울 경로가 나오는 것은 그 항목이 빠진 산출 폴더에 완전한 지난 목록을 줄 때이고, 빠진 채 지은 목록을 커밋하면 뒤에 지우지 못한다로 두 문장으로 나눴다(`planUpload`의 `deletes`가 지난 목록에 있고 이번 산출에 없는 경로다).
+- Minor(밀 주장 5의 목록 갱신이 같은 HEAD로 다시 드는 가장 흔한 길에서 닿지 않는다): 유효, 한계로 적었다. 그 길은 기록의 커밋이 HEAD라 빌드가 필요 없는 올리기가 되고, 그 산출에는 빌드 산출 목록을 지을 `ds-bundle/`이 없을 수 있다. 끊긴 올리기가 더한 경로가 지난 목록에 들지 않아 뒤에 아티팩트에 남을 뿐이라는 것을 `upload.md` 5 "보낼 것이 없을 때"에 더했다.
+- Minor(종료 1에서 멈춘 뒤의 길이 없다): 유효, 고쳤다. 1의 "돌아가기" 목록에 산출 스크립트로 멈출 때를 넣고, 4에 고침은 돌아간 브랜치에서 PR로 하고 병합 뒤 1부터 다시 하며 그때 빌드를 다시 부탁한다고 적었다.
+- Minor(README 질문의 자리가 없다): 유효, 고쳤다. 스킬에 "보내기 전 승인" 단계가 없는 것을 grep으로 봤다(`승인`은 그 한 줄뿐). 계획을 지은 뒤 6의 1 전에 AskUserQuestion으로 묻고 답을 받기 전에는 보내지 않으며, 결정표가 내는 선택지가 아니라 그 줄대로 짓는다고 적었다.
+- Minor(6.6의 "main이면 `chore/` 브랜치를 딴다"가 주 체크아웃의 main을 옮길 수 있다): 유효, 고쳤다. 새로 든 워크트리였으면 `ExitWorktree` 전에 그 워크트리에서 브랜치를 딴다고 적었다.
+- Nit(나눠 보낼 때 `_ds_sync.json`을 마지막 몫에 먼저 넣지 않으면 마지막 호출이 한도를 넘을 수 있다): 유효, 고쳤다.
+- 보류(driver의 `--remote` 사본을 언제 받는지 없다): 고치는 값이 작아 고쳤다. NOTES의 driver 항목에 빌드마다 새로 받아 덮어쓰고, 아티팩트에 없으면 `--remote`를 빼며, 앞 빌드의 사본은 쓰지 않는다고 적었다.
+- 보류(압축 뒤 1부터 다시 하면 `return-branch.txt`를 빈 값으로 덮는다. 바뀌지 않은 줄이다): 고치는 값이 작아 고쳤다. 이미 분리 HEAD이고 그 파일이 있으면 덮어쓰지 않는다고 `upload.md` 1에 적었다.
+
+다시 돌린 명령과 결과:
+
+- `pnpm -C web exec vitest run tools/sync-design-system`: 14개 파일 431개 시험이 초록이었다.
+- 산출 스크립트의 갈래를 스크래치 탐침(커밋하지 않았다)으로 쟀다. 갈래마다 종료 코드와 그 갈래에서만 나오는 문구를 함께 봤고, 표지가 없는 회차는 0이었다. 산출 자리가 파일이면 종료 3, `ds-bundle/`이 없는 자리면 2, 모르는 항목이면 1, 목록 폴더가 없으면 2(산출 폴더를 만들지 않는다), 가짜 산출은 0(파일 13개), 실제 `ds-bundle/`은 0(830개, 커밋할 목록과 `cmp`로 같다)이었다.
+- 카나리아의 원천은 `SKILL.md`뿐이고 이 반영은 그 파일을 고치지 않아 다시 돌리지 않았다.
+- 나머지 검증 명령은 이 반영의 커밋이 부르는 pre-commit으로 갈음한다.
