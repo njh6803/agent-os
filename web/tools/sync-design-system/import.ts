@@ -14,12 +14,17 @@
  * - 옮기는 값: hex 는 6·8 자리로 펴고(`#rrggbbff` 도 그대로), 색 함수는 sRGB 안이면 hex 로 바꾼다(`color.ts`). 크기는 px 와
  *   `0`, 굵기는 수 하나만 옮긴다. 소수 끝에 0 이 붙은 px(`20.50px`)는 Prettier 가 고쳐 써 포맷 검사에 걸리고 고쳐 쓰면 다시
  *   지은 값이 웹 값과 글자가 달라지므로 옮기지 않는다. 설명은 선언을 끝낸 `;` 뒤의 주석으로 옮기고, 비우면 그 주석을 지운다.
+ *   값이 한 낱말이 아닌 줄에 단 설명이 줄의 글자 폭(Prettier 가 재는 폭, 한글은 두 칸)을 Prettier 의 줄 폭(`PRINT_WIDTH`)
+ *   넘게 만들면 옮기지 않는다. Prettier 가 함수 하나인 값(쓰임새 토큰의 `var()`)은 세 줄로, 쉼표 목록은 두 줄로 쪼개 포맷
+ *   검사에 걸리기 때문이다. 공백으로 이은 값(`0 1px 2px`, 그 안에 함수가 있어도)은 넓어도 쪼개지 않지만 가르지 않고 묻는다.
+ *   hex·px 처럼 한 낱말인 값의 줄은 넓어도 쪼개지 않아 옮긴다(시험 "Prettier 의 폭보다 넓게" 는 원색 줄로 본다).
  * - 묻는 것(`reason`): 둘이 다르게 바뀐 것(`conflict`. 웹 값을 옮기지 못하면 그 까닭을 `webReason` 에 든다), 쓰임새 토큰의
  *   대응(`mapping`, 별칭이 아닌 값으로 바꾼 것 포함),
  *   자리의 일부 벌만 바꾸거나 벌마다 다르게 바꾼 것(`partial`), 원색·반투명을 별칭으로 바꾼 것(`alias`), sRGB 밖
  *   (`outOfGamut`), `lab()`·`lch()`·`color()`(`colorSpace`), 읽지 못하는 색 함수(`unreadableColor`), 불투명한 쓰임새 토큰이
  *   가리키는 원색에 투명도를 준 것(`alpha`), 위에서 옮기는 꼴 밖의 크기와 단위 없는 줄 높이(`unit`), 굵기 범위(`weightRange`), 주석을
- *   끝내는 글자·줄바꿈·앞뒤 공백이 든 설명(`usageText`), 옮길 한 줄 선언이 없는 것(`noLine`, 그림자와 다른 계열 포함), 토큰·글자 묶음·
+ *   끝내는 글자·줄바꿈·앞뒤 공백이 든 설명(`usageText`), Prettier 가 쪼갤 만큼 줄을 넓히는 설명(`lineWidth`), 옮길 한 줄
+ *   선언이 없는 것(`noLine`, 그림자와 다른 계열 포함), 토큰·글자 묶음·
  *   벌·계열의 더하기와 지우기(`added`, `removed`. 한 계열에서 토큰을 더하고 지웠으면 이름을 바꾼 것일 수 있다고 적는다),
  *   글자 스타일의 다른 칸(`typeField`), 계열·글자 묶음의 설명(`familyNote`).
  * - 판정: 옮긴 뒤의 벌마다 짝 표를 잰다. 걸린 짝에 든 옮긴 원색마다, 다른 옮긴 값을 둔 채 그 원색만 바꿔 그 원색이 드는
@@ -44,6 +49,7 @@
  */
 
 import { parseArgs } from "node:util";
+import { util } from "prettier";
 import {
   CONTRAST_PAIRS,
   measureContrast,
@@ -98,6 +104,7 @@ export const ASK_REASONS = [
   "unit",
   "weightRange",
   "usageText",
+  "lineWidth",
   "noLine",
   "added",
   "removed",
@@ -106,6 +113,9 @@ export const ASK_REASONS = [
 ] as const;
 
 export type AskReason = (typeof ASK_REASONS)[number];
+
+/** Prettier 의 줄 폭(`web/.prettierrc.json` 의 `printWidth`). */
+export const PRINT_WIDTH = 100;
 
 const RENAME_NOTE = "이름을 바꾼 것일 수 있다";
 const ALIAS_DEPTH = 32;
@@ -419,6 +429,22 @@ function lineParts(code: Code, declaration: Declaration): LineParts | undefined 
   };
 }
 
+/**
+ * 그 줄 끝에 이 설명을 달면 Prettier 가 선언을 쪼갤 수 있는지. 값이 한 낱말이 아니고 줄의 글자 폭이 Prettier 의 줄 폭을
+ * 넘을 때다. 공백으로 이은 값은 실제로는 쪼개지지 않아도 묻는 쪽으로 넉넉히 센다(모듈 독스트링).
+ */
+function splitByPrettier(parts: LineParts, usage: string): boolean {
+  return (
+    !/^[^\s(),]+$/.test(parts.value) &&
+    util.getStringWidth(`${parts.head}${parts.value};${usageTail(usage)}`) > PRINT_WIDTH
+  );
+}
+
+/** 선언을 끝낸 `;` 뒤에 쓸 설명 주석. 빈 설명이면 주석을 쓰지 않는다. */
+function usageTail(usage: string): string {
+  return usage === "" ? "" : ` /* ${usage} */`;
+}
+
 /** 웹의 차이를 자리로 모은다. 차례는 자리의 첫 차이가 나온 차례다. */
 function slotsOf(code: Code, pending: readonly Pending[]): Slot[] {
   const slots = new Map<string, Slot>();
@@ -534,7 +560,9 @@ function decide(slot: Slot, base: CanonicalTokens, web: CanonicalTokens, code: C
   if (kind === "usage") {
     return value.includes("*/") || /[\n\r\f\u2028\u2029]/.test(value) || value !== value.trim()
       ? { reason: "usageText" }
-      : { text: value, parts };
+      : splitByPrettier(parts, value)
+        ? { reason: "lineWidth" }
+        : { text: value, parts };
   }
   if (family === "color") {
     const values = benchValues(slot, base, web, code);
@@ -786,7 +814,7 @@ function written(code: Code, moves: readonly Move[]): string {
         return line;
       }
       const { parts, value = parts.value, usage } = edit;
-      const tail = usage === undefined ? parts.tail : usage === "" ? "" : ` /* ${usage} */`;
+      const tail = usage === undefined ? parts.tail : usageTail(usage);
       return `${parts.head}${value};${tail}${parts.end}`;
     })
     .join("\n");

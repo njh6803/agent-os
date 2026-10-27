@@ -5,11 +5,11 @@
 
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
-import { check, resolveConfig } from "prettier";
+import { check, format, resolveConfig, util } from "prettier";
 import { describe, expect, test } from "vitest";
 import { buildTokensFile } from "./build.ts";
 import { CommandError } from "./command.ts";
-import { importTokens, type ImportReport } from "./import.ts";
+import { importTokens, PRINT_WIDTH, type ImportReport } from "./import.ts";
 import { diffTokens, readTokens } from "./tokens-json.ts";
 
 const WEB = dirname(dirname(import.meta.dirname));
@@ -135,6 +135,17 @@ function changedLines(before: string, after: string): string[][] {
     const next = right[index] ?? "";
     return line === next ? [] : [[line.trim(), next.trim()]];
   });
+}
+
+/** 설명을 벗긴 사본에서 앞뒤 공백을 뗀 것이 `line` 인 첫 줄(들여쓰기까지). */
+function lineText(line: string): string {
+  return CSS.split("\n")[lineOf(line) - 1] ?? "";
+}
+
+/** `line` 끝의 주석으로 붙이면 그 줄의 글자 폭(Prettier 가 재는 폭, 한글은 두 칸)이 `width` 가 되는 설명. */
+function usageOfWidth(line: string, width: number): string {
+  const rest = width - util.getStringWidth(`${line} /*  */`);
+  return "가".repeat(Math.floor(rest / 2)) + (rest % 2 === 1 ? "a" : "");
 }
 
 /** `text` 의 줄 가운데 앞뒤 공백을 뗀 것이 `line` 인 `nth` 번째(0 부터)의 줄 번호(1 부터). */
@@ -727,6 +738,86 @@ describe("셋 맞대기와 옮기기", () => {
       false,
     );
     expect(await check(css, options)).toBe(true);
+  });
+
+  test("쓰임새 토큰의 줄을 Prettier 의 폭보다 넓게 만드는 설명은 그 토큰만 묻고, 폭에 맞는 설명과 원색 줄의 긴 설명은 옮긴다", async () => {
+    const options = { ...(await resolveConfig(CSS_PATH)), filepath: CSS_PATH };
+    const bg = lineText("--bg: var(--gray-50);");
+    const raised = lineText("--bg-raised: var(--gray-0);");
+    const fits = usageOfWidth(bg, PRINT_WIDTH);
+    const over = usageOfWidth(raised, PRINT_WIDTH + 1);
+    const { css, report } = run(
+      edited((file) => {
+        tokenIn(file, "color", "bg").usage = fits;
+        tokenIn(file, "color", "bg-raised").usage = over;
+        tokenIn(file, "color", "gray-900").usage = "본문 글자의 원색".repeat(10);
+      }),
+    );
+
+    expect(options.printWidth).toBe(PRINT_WIDTH);
+    expect(util.getStringWidth(`${bg} /* ${fits} */`)).toBe(PRINT_WIDTH);
+    expect(ids(report.moved)).toEqual(["color/bg#usage", "color/gray-900#usage"]);
+    expect(report.asked.map(({ id, reason }) => [id, reason])).toEqual([
+      ["color/bg-raised#usage", "lineWidth"],
+    ]);
+    expect(await check(css, options)).toBe(true);
+    expect(await check(css.replace(raised, `${raised} /* ${over} */`), options)).toBe(false);
+  });
+
+  test("설명이 달린 실제 디자인 토큰 CSS 에서 설명을 다른 설명으로 바꾸면 옛 설명을 갈아 쓴다", async () => {
+    const options = { ...(await resolveConfig(CSS_PATH)), filepath: CSS_PATH };
+    const tokens = buildTokensFile(THEME_CSS).color.tokens;
+    const old = (name: string): string => tokens.find((token) => token.name === name)?.usage ?? "";
+    const web = edited((file) => {
+      tokenIn(file, "color", "accent-600").usage = "강조 글자의 원색";
+      tokenIn(file, "color", "bg").usage = "문서의 바탕";
+      tokenIn(file, "color", "bg-raised").usage = "올라온 면의 바탕".repeat(8);
+    }, THEME_CSS);
+    const { css, report } = run(web, { css: THEME_CSS, base: built(THEME_CSS) });
+
+    expect([old("accent-600"), old("bg")]).not.toContain("");
+    expect(report.moved.map(({ id, before, after }) => [id, before, after])).toEqual([
+      ["color/accent-600#usage", old("accent-600"), "강조 글자의 원색"],
+      ["color/bg#usage", old("bg"), "문서의 바탕"],
+    ]);
+    expect(report.asked.map(({ id, reason }) => [id, reason])).toEqual([
+      ["color/bg-raised#usage", "lineWidth"],
+    ]);
+    expect(changedLines(THEME_CSS, css)).toEqual([
+      [
+        `--accent-600: #056868; /* ${old("accent-600")} */`,
+        "--accent-600: #056868; /* 강조 글자의 원색 */",
+      ],
+      [`--bg: var(--gray-50); /* ${old("bg")} */`, "--bg: var(--gray-50); /* 문서의 바탕 */"],
+    ]);
+    expect(
+      diffTokens(readTokens(web), readTokens(buildTokensFile(css))).map(({ kind, token }) => [
+        kind,
+        token,
+      ]),
+    ).toEqual([["usage", "bg-raised"]]);
+    expect(await check(css, options)).toBe(true);
+  });
+
+  test("Prettier 가 세 줄로 쪼갠 쓰임새 토큰의 선언은 설명을 고쳐도 옮기지 않고 옮길 줄이 없다고 묻는다", async () => {
+    const options = { ...(await resolveConfig(CSS_PATH)), filepath: CSS_PATH };
+    const bg = lineText("--bg: var(--gray-50);");
+    const code = await format(
+      CSS.replace(bg, `${bg} /* ${usageOfWidth(bg, PRINT_WIDTH + 1)} */`),
+      options,
+    );
+    const { css, report } = run(
+      edited((file) => {
+        tokenIn(file, "color", "bg").usage = "문서의 바탕";
+      }, code),
+      { css: code, base: built(code) },
+    );
+
+    expect(code).toContain("--bg: var(\n");
+    expect(css).toBe(code);
+    expect(report.asked.map(({ id, reason }) => [id, reason])).toEqual([
+      ["color/bg#usage", "noLine"],
+    ]);
   });
 });
 
