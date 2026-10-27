@@ -223,3 +223,47 @@ PR #392(harness 017)를 병합한 세션이 저장소에 적지 못하고 메모
   - `check.ts`의 `claim` 몫(`beyondClaim`, `claimSummary`, 이어받을 기준본 조립) 떼기(일지 2026-10-27-03 "다음"). 07은 `check.ts`를 고치지 않았다.
   - `import.ts`의 `answeredOf`: "code"를 고른 자리의 `value`를 `slot.entries[0]?.code`로 내서, 여러 벌로 나뉜 색 자리(원색의 라이트·다크, 반투명의 여덟 벌)에서는 보고의 `answered.value`에 첫 벌의 값만 남는다. "web"·"suggested"는 옮긴 줄의 글자(`move.text`)를 내 두 갈래의 꼴도 다르다. 디자인 토큰 CSS는 맞고 틀리는 것은 보고의 그 칸뿐이며, 지금 시험(`import.test.ts`)은 벌이 없는 `--gray-*` 자리만 본다(PR #398 코멘트 6426455559). `/sync-design-system` 스킬은 지금 `answered`를 읽지 않는다. 스킬이 보고의 `answered`를 사람에게 보이게 되면 그 전에 "code"의 값을 벌마다의 값(또는 지금 줄의 글자)으로 맞추고 여러 벌 자리의 시험을 둔다.
 - 주 체크아웃 미갱신: 루트는 main. 이 PR은 워크트리에서 병합하므로 당기기와 병합된 워크트리 지우기는 다음 새 세션의 `tidy-checkouts`가 한다.
+
+## 인계 (커밋 뒤, 봇 첫 회차 뒤)
+
+이 절은 커밋하지 않았다. 새 세션이 푸시 전에 커밋에 싣는다.
+
+커밋 `ecba5e9f`("docs: 봇 첫 회차를 반영하고 회고로 07 단계를 닫는다 (design-reverse-sync 07)", 파일 다섯). pre-commit은 종료 0이다. 병렬 검사 열(lint-imports, check-ticket, zizmor, check-instructions, check-type-escapes, pyright, pyright-linux, run-hooks, web-verify 574.0초, pytest 669.7초)과 마크다운 표, 줄 구분 문자, 변이 표, 카나리아 명세, 커밋 메시지가 Passed다. 인용 대조는 경고가 없었다. ruff 둘은 `.py`가 없어 `Skipped`라 커밋 뒤 손으로 쳐서 초록이다.
+
+커밋 뒤에 한 것:
+
+- CodeRabbit 첫 회차의 판정(고친 것과 보류 이유)을 PR 코멘트 6432291906으로 남겼다. 푸시하기 전이라 헤드는 그대로다.
+- PR 본문에 "봇 회차 뒤에 더한 것" 절을 더했다(CodeRabbit 반영, 회고 행, PR #392 뒤 기록, `answeredOf`). 이 커밋이 범위를 넓혀 푸시 전에 고쳤다.
+- 04 세션에 `answeredOf`를 "다음"에 적었다고 회신했다.
+- PR #392 뒤 기록을 넘긴 메모리(`pending-records-after-pr392.md`)와 그 색인 줄을 지웠다. 기록은 이 커밋에 들었다.
+
+인계 계기 `커밋 뒤`가 세션 컨텍스트 320,597 토큰에서 왔다. 인계하지 않는 때 다섯은 아니다. 커밋은 성공했고, 요청 범위는 PR과 병합까지이며, 이 세션의 지시문의 "이어받을 상태"는 `인계: PR 연 뒤`로 경계가 다르고, 이 세션이 쓴 `인계 못함` 줄이 없고, `get_session`의 `self`에 `parentSessionId`가 없다. 열린 PR이 있어 다음 단계는 `PR 반영·병합`이다.
+
+이 세션의 지금 제목은 `feature/07-sync-design-system-skill`이다.
+
+지시문:
+
+```
+다음 작업: .scratch/design-reverse-sync/issues/07-sync-design-system-skill.md. 스킬과 문서 옮기기, 리뷰, 봇 첫 회차 반영과 회고는 끝났고 푸시와 둘째 봇 회차, 병합이 남았다
+다음 단계: PR 반영·병합
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /implement .scratch/design-reverse-sync/issues/07-sync-design-system-skill.md
+브랜치: feature/07-sync-design-system-skill
+모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
+읽을 것: docs/journal/2026-10-27-04-sync-design-system-skill.md 의 "이어받은 세션: 봇 회차와 병합"과 "인계 (커밋 뒤, 봇 첫 회차 뒤)"
+이어받을 상태: 인계: 커밋 뒤. 봇 첫 회차(claude-review 지적 없음, CodeRabbit Minor 둘 가운데 하나는 고치고 하나는 보류)의 반영과 회고·"다음"을 ecba5e9f로 커밋했고(pre-commit 통과, 손으로 친 ruff 둘 초록) 아직 푸시하지 않았다. 푸시와 순서 1의 2(봇 회차)부터 한다. 일지의 인계 절은 커밋하지 않아 푸시 전에 커밋에 싣는다. 두 봇 모두 이 푸시가 둘째 회차이고, 첫 회차 판정은 PR 코멘트 6432291906에 있으며, PR 본문은 넓힌 범위로 이미 고쳤다(docs/journal/2026-10-27-04-sync-design-system-skill.md)
+확인할 선행 조건: 없음
+이번 요청 범위: PR과 병합까지
+```
+
+제목을 `feature/07-sync-design-system-skill (인계함)`으로 바꿨다. 멈출 백그라운드 작업은 없었다(`tools/wait_ci.py` 대기와 커밋 모두 끝났다). `git worktree unlock`은 `is not locked`로 끝나 넘어갔다.
+
+open-session을 부른다 2026-10-27T02:33:40Z
+
+## 이어받은 세션: 둘째 봇 회차와 병합
+
+> 사용자: 지시문 그대로(위 "인계 (커밋 뒤, 봇 첫 회차 뒤)"의 지시문과 같다)
+
+새 세션이 제목을 `feature/07-sync-design-system-skill`로 바꾸고 `EnterWorktree(path)`로 이 워크트리에 들어왔다. `git fetch origin` 뒤 `HEAD..origin/main`이 비어 합칠 것이 없었다. PR #400의 `headRefOid`는 `6c4adfc8`이고 로컬 HEAD는 그 위의 `ecba5e9f`라, 위 인계 절과 이 절을 한 커밋에 실어 함께 푸시한다. 이 푸시가 두 봇의 둘째 회차다. 그 회차와 병합의 결과는 이 푸시 뒤라 이 일지에 싣지 않고, 보류한 지적은 PR 코멘트와 다음 지시문의 "이어받을 상태"에 적는다(next-session 순서 1의 2 "뒤로 넘긴 일").
+
+이 커밋의 첫 시도는 pre-commit의 pytest에서 막혔다(821.06초, 5701 통과 1 실패). 실패는 이 브랜치가 건드리지 않은 `tests/tools/test_rerun_runner.py::test_오염이_한_번이면_다시_돌고_두_번이면_그_과제를_모든_갈래에서_뺀다`의 `assert board.run() == 0`(`1 == 0`)이고, 따로 돌리니 119.46초에 지났다. 나머지 검사는 지났다. 일지 2026-10-26-09·2026-10-26-12에서 같은 시험이 같은 꼴로 빨갰고, 그 세션들처럼 대기열 306이 받아들여 닫은 종류(전체 스위트의 부하 아래에서만 빨간 시험)로 보고 일지에만 적은 뒤 커밋을 다시 쳤다.
