@@ -1,12 +1,8 @@
 import { useId, useState } from "react";
-import type { Decision } from "../../api/approval";
-import { describeFailure, type RequestFailure } from "../../api/failure";
+import type { Decision, StreamFrame } from "../../api/approval";
+import { describeFailure, isRejection, type RequestFailure } from "../../api/failure";
 import type { PluginRow } from "../../api/plugins";
 import type { Trace } from "../../api/traces";
-import { isRejection } from "../../hooks/queries/admin";
-import { useDecision } from "../../hooks/queries/approval";
-import { usePlugins } from "../../hooks/queries/plugins";
-import { useTokens } from "../../stores/tokens";
 import { FailureNotice, type FailureNoticeProps } from "../molecules/FailureNotice";
 import { asText, EventItem } from "./EventItem";
 
@@ -79,6 +75,44 @@ function disabledFor(agent: string | null, rows: readonly PluginRow[] | undefine
   return found;
 }
 
+/** 결정이 답할 일시정지. 형식 1 트레이스는 재개할 수 없어 없다(아래 `RunDecision` 의 조건). */
+function decidablePause(trace: Trace): Pause | null {
+  return trace.schema_version !== "1" ? pauseOf(trace) : null;
+}
+
+/**
+ * 결정 자리가 서는가. 아래 `RunDecision` 이 적은 조건 넷이다. 실행 하나의 화면은 이것이 참일 때만 꺼짐 미리 알림의
+ * 플러그인 목록을 읽어 넘긴다(`plugins`).
+ */
+export function decisionPlaceStands(trace: Trace, channelTokenEntered: boolean): boolean {
+  return channelTokenEntered && decidablePause(trace) !== null && !isEndUserRun(trace);
+}
+
+/** 꺼짐 미리 알림이 읽는 플러그인 목록(`GET /plugins`). */
+interface PluginsRead {
+  /** 읽은 목록. 아직 없으면 undefined 다. 다시 읽다 실패해도 앞서 읽은 목록이 남아 있을 수 있다. */
+  readonly data: readonly PluginRow[] | undefined;
+  /** 마지막 읽기의 실패. 없으면 undefined 다. */
+  readonly error: unknown;
+}
+
+interface RunDecisionProps {
+  readonly trace: Trace;
+  /** 이 탭에 채널 토큰이 있는가. 결정 자리가 서는 조건의 첫째다. */
+  readonly channelTokenEntered: boolean;
+  /** 결정 하나가 끝날 때까지 참이다(`useDecision` 의 `busy`). 결정 버튼을 막는다. */
+  readonly busy: boolean;
+  /** 받는 대로 쌓은 재개 스트림의 프레임. */
+  readonly frames: readonly StreamFrame[];
+  /** 마지막 재개 스트림이 결말 없이 끊겼다. */
+  readonly cut: boolean;
+  /** 마지막 결정이 받아들여지지 않은 실패. 없으면 null 이다. */
+  readonly failure: RequestFailure | null;
+  readonly onDecide: (decision: Decision) => void;
+  /** 결정 자리가 설 때만 읽는다(`decisionPlaceStands`). 서지 않으면 쓰지 않는다. */
+  readonly plugins: PluginsRead;
+}
+
 /**
  * 결정 자리와 재개 스트림(web-admin 티켓 08). 실행 하나의 이벤트 아래에 선다.
  *
@@ -89,23 +123,31 @@ function disabledFor(agent: string | null, rows: readonly PluginRow[] | undefine
  * 묻지 않는다. 눌러 봐야 서버가 409 로 막는다. 결정 뒤의 알림과 재개 스트림은 결정 자리 밖에 선다. 다시 읽은
  * 트레이스가 일시정지가 아니면 결정 자리는 걷히지만 무엇이 있었는지는 남는다.
  */
-export function RunDecision({ runId, trace }: { readonly runId: string; readonly trace: Trace }) {
-  const channelToken = useTokens((state) => state.channelToken);
-  const { busy, frames, cut, failure, decide } = useDecision(runId);
+export function RunDecision({
+  trace,
+  channelTokenEntered,
+  busy,
+  frames,
+  cut,
+  failure,
+  onDecide,
+  plugins,
+}: RunDecisionProps) {
   const streamId = useId();
-  const pause = trace.schema_version !== "1" ? pauseOf(trace) : null;
-  const notice = noticeOf(failure, channelToken);
+  const pause = decidablePause(trace);
+  const notice = noticeOf(failure, channelTokenEntered);
 
   return (
     <>
-      {channelToken === null || pause === null ? null : isEndUserRun(trace) ? (
+      {!channelTokenEntered || pause === null ? null : isEndUserRun(trace) ? (
         <p>최종 사용자의 실행이라 결정은 그 사람만 낸다</p>
       ) : (
         <DecisionPlace
           pause={pause}
           busy={busy}
           invalid={failure?.status === 422 ? failure : null}
-          onDecide={decide}
+          onDecide={onDecide}
+          plugins={plugins}
         />
       )}
       {notice === null ? null : <FailureNotice {...notice} />}
@@ -144,13 +186,13 @@ export function RunDecision({ runId, trace }: { readonly runId: string; readonly
  */
 function noticeOf(
   failure: RequestFailure | null,
-  channelToken: string | null,
+  channelTokenEntered: boolean,
 ): FailureNoticeProps | null {
   if (failure === null || failure.status === 422) {
     return null;
   }
   if (isRejection(failure)) {
-    return channelToken === null ? { message: "채널 토큰이 거부됐다", requestId: null } : null;
+    return channelTokenEntered ? null : { message: "채널 토큰이 거부됐다", requestId: null };
   }
   return describeFailure(failure);
 }
@@ -162,14 +204,14 @@ interface DecisionPlaceProps {
   /** 결정 본문의 형식 오류(422). 사유 옆에 보인다. */
   readonly invalid: RequestFailure | null;
   readonly onDecide: (decision: Decision) => void;
+  readonly plugins: PluginsRead;
 }
 
 /**
  * 결정 자리. 무엇을 승인하는지(도구와 인자)를 보이고 허가와 거부를 받는다(스토리 38~41). 허가는 버튼 하나다. 결정은
  * 이 일시정지의 자리를 든다. 다시 읽은 트레이스가 새 일시정지에서 멈추면 자리는 그대로 서고 내용만 새 일시정지다.
  */
-function DecisionPlace({ pause, busy, invalid, onDecide }: DecisionPlaceProps) {
-  const plugins = usePlugins();
+function DecisionPlace({ pause, busy, invalid, onDecide, plugins }: DecisionPlaceProps) {
   const headingId = useId();
   // 목록을 다시 읽다 실패하면 SWR 은 옛 목록을 들고 있다. 옛 켜짐을 믿지 않는다(.claude/rules/web-admin.md). 그때는
   // 미리 알 수 없다고 말하고 버튼을 막지 않는다. 누르면 서버의 봉투가 말한다.
