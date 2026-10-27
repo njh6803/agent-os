@@ -10,7 +10,7 @@
 
 **Blocked by:** 03, 07
 
-**Status:** ready-for-agent
+**Status:** in-progress
 
 ### 보내기 전
 
