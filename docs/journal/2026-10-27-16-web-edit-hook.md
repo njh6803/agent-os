@@ -97,6 +97,52 @@ PR 직전 리뷰에 밀 주장(반영으로 새로 쓴 문장):
 - 훅 독스트링 "꼴이 어긋난 입력(JSON 이 아니다, 풀다가 재귀 한도를 넘을 만큼 깊게 중첩됐다, 객체가 아니다, `tool_input` 이 객체가 아니다, `file_path` 가 문자열이 아니다)은 예외 없이 침묵한다. 작업 트리의 `.git`·`HEAD` 를 읽다 난 오류(경로에 NUL 이 든 `gitdir:` 포함)는 읽지 못한 것으로 보아 알린다."
 - 훅 독스트링 "한 응답에 Write·Edit 를 나란히 여럿 보내면 알림은 그 쓰기가 모두 끝난 뒤에 닿는다(모델은 나란히 보낸 호출의 결과를 함께 받는다. 재지 않은 어림이다)."
 - `/sync-design-system` `확인` 줄 "그 보고를 받은 부모 세션은 이 세션에서 아직 확인을 하지 않았고 들이기를 하는 세션이 아닐 때 이것을 부른다"
-- 프로브 README의 변이 표 행("표지는 고른 단언이 실패할 때만 출력에 실리는 값")과 "셀프 리뷰 뒤" 절의 표지 고르기 서술, 카나리아 행의 "티켓 09의 둘은 그 문장이 없는 옛 판의 스킬과 규칙이 있는 주 체크아웃을" 대조군으로 둔다는 서술.
+- 프로브 README의 변이 표 행(표지를 고른 단언이 실패할 때만 출력에 실리는 값으로 고른다는 서술)과 "셀프 리뷰 뒤" 절의 표지 고르기 서술, 카나리아 행의 "티켓 09의 둘은 그 문장이 없는 옛 판의 스킬과 규칙이 있는 주 체크아웃을" 대조군으로 둔다는 서술.
 
 다시 돌린 명령: 위의 시험 파일 하나, ruff 둘(그 두 파일, 0), 변이 표, 카나리아 하나. 손으로 치는 다섯 검증 명령은 커밋의 pre-commit 결과로 갈음한다(결과는 커밋 뒤 이 일지에 적는다).
+
+## 인계 (커밋 뒤)
+
+셀프 리뷰를 반영한 판 전부를 커밋했다(`929d4934`). 그 커밋의 pre-commit은 모두 통과했다(출력의 줄. pytest 495.4초, web-verify 491.2초, run-hooks 123.5초, pyright 55.6초 등. `Skipped`는 헌법 판 검사 하나로, 헌법 파일을 고치지 않았다). 그래서 손으로 치는 다섯 검증 명령은 이 결과로 갈음한다. 인용 대조 경고 셋은 막지 않는 경고였다. 프로브 README 109행은 도구 출력의 인용이고 일지 75행은 고치기 전 스킬 문장의 인용이라 두었으며, 일지 100행은 원문과 글자가 달라 따옴표를 뗐다(이 절과 함께 커밋하지 않았다).
+
+그 경계에서 세션 컨텍스트가 약 33.4만 토큰으로 인계 문턱(20만)을 넘어 `hook_handoff`의 계기가 왔다(계기 문장의 수). 인계하지 않는 때 다섯에 들지 않아 넘긴다. 커밋이 성공했고, 요청 범위가 PR과 병합까지이며, 이 세션을 연 지시문의 이어받을 상태는 다른 경계(`인계: 셀프 리뷰 직전`)로 시작하고, `인계 못함` 줄이 없으며, `get_session`의 `self`에 `parentSessionId`가 없다.
+
+- 사용자 프롬프트는 이 세션을 연 지시문 하나뿐이다(위 "이어받기" 절의 인용). 그 밖에 받은 것은 훅, 서브에이전트, 백그라운드 작업의 알림이다.
+- 결정과 고친 것: 위 "셀프 리뷰" 절.
+- 이 세션의 지금 제목: `feature/09-web-edit-hook`. 넘기기 전에 `feature/09-web-edit-hook (인계함)`으로 바꾼다.
+- 남은 단계(새 세션이 한다):
+  1. 이 일지를 이어 쓰고 커밋한다. 이 절과 100행의 따옴표 고침은 커밋하지 않았다.
+  2. 커밋한 판에서 변이 표 전체를 번호 없이 한 번 돈다(`tools/mutate.py`가 커밋하지 않은 판의 전체 실행이라고 알렸다). 결과를 프로브 README의 "셀프 리뷰 뒤" 절에 더한다.
+  3. PR 직전 리뷰(`docs/constitution/operations.md` 리뷰 파이프라인 2). 밀 주장은 위 "PR 직전 리뷰에 밀 주장" 목록이다.
+  4. PR, 봇 회차, 회고, 일지 "다음", 병합(워크트리에서 병합할 때), 지시문. 병합 뒤 티켓 10을 곧바로 돈다(티켓 09 머리).
+
+지시문:
+
+```
+다음 작업: .scratch/design-reverse-sync/issues/09-web-edit-hook.md. 화면 코드를 처음 고친 세션에 디자인 시스템의 웹 편집을 확인하라고 한 번 알리는 계기 훅을 더한다
+다음 단계: 구현
+어디서: 새 세션. 인계라 같은 브랜치를 잇는다. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /implement .scratch/design-reverse-sync/issues/09-web-edit-hook.md
+브랜치: feature/09-web-edit-hook
+모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
+읽을 것: 일지 docs/journal/2026-10-27-16-web-edit-hook.md 의 "셀프 리뷰"와 "인계 (커밋 뒤)" 절
+이어받을 상태: 인계: 커밋 뒤. 셀프 리뷰를 반영한 판을 커밋했고(929d4934, pre-commit 모두 통과) PR은 아직 없다. 일지의 인계 절은 커밋하지 않았다. 남은 것은 일지 커밋, 커밋한 판에서 변이 표 전체 한 번, PR 직전 리뷰(밀 주장은 일지의 목록), PR·봇 회차·회고·병합이다: docs/journal/2026-10-27-16-web-edit-hook.md
+확인할 선행 조건: 없음
+이번 요청 범위: PR과 병합까지
+```
+
+제목을 `feature/09-web-edit-hook (인계함)`으로 바꿨다. 멈출 백그라운드 작업은 없었다. `git worktree unlock`은 `is not locked`로 끝나 이미 풀려 있었다.
+
+open-session을 부른다 2026-10-27T15:07:36Z
+
+## 이어받기 (커밋 뒤의 새 세션, 2026-10-28)
+
+새 세션이 위 "인계 (커밋 뒤)"의 지시문으로 열렸다.
+
+> 사용자: .claude/skills/implement/SKILL.md 를 읽어 그대로 따른다. … 인자: .scratch/design-reverse-sync/issues/09-web-edit-hook.md (지시문은 위 "인계 (커밋 뒤)"의 지시문과 같다)
+
+`set_session_title`로 제목을 `feature/09-web-edit-hook`으로 바꾸고, `git worktree list`에서 그 브랜치의 자리를 찾아 `EnterWorktree(path)`로 들어갔다. 커밋하지 않은 변경은 이 일지 하나였다(인계 절과 100행의 따옴표 고침. `git status --porcelain`을 손으로 봤다). origin/main은 `fb147fc1`(admin-style 02, #405)로 한 커밋 앞서 있었다(`git fetch origin` 뒤 `git log --oneline HEAD..origin/main`을 손으로 봤다).
+
+- 차례를 바꿨다. 인계 절의 남은 단계는 변이 표 전체 실행을 PR 직전 리뷰보다 앞에 두었지만, `tools/mutate.py` 독스트링의 "언제 전체를 돌리나"는 전체 실행을 셀프 리뷰와 PR 직전 리뷰를 반영해 커밋한 뒤에 한 번 돌라고 한다(리뷰가 시험을 고치면 그 전의 실행은 옛 시험을 잰 것이다). 그래서 일지 커밋, origin/main 합치기, PR 직전 리뷰, 반영 커밋, 변이 표 전체 실행의 차례로 간다.
+- PR 직전 리뷰: `coderabbit auth status`가 `Plan: Free`, `Seat: not assigned`를 찍어(손으로 봤다) CLI 축이 비어, 대체 둘(`/security-review`, `bug-perf-review`)을 나란히 돌린다(`docs/constitution/operations.md` 리뷰 파이프라인 2).
+- `tools/sibling_overlap.py`: 번호 겹침 없음(도구가 찍은 줄). 이 일지(2026-10-27-16)를 이름순으로 앞서는 형제는 워크트리 `01-ui-settings-icon-password-widths`(2026-10-27-17)와 `018-git-help-exit-code`(2026-10-28-01)다. 함께 고친 파일은 인계 전과 같다(PR #296·#297, 워크트리 `bug-perf-review-batch`·`measure-word-hook`의 `.claude/rules/tools.md`, `.claude/settings.json`, `tools/hook_payloads.toml`).
