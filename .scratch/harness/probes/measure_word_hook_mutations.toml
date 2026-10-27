@@ -1,6 +1,6 @@
 # tools/hook_measure_word.py(대기열 227)의 판정을 하나씩 깨는 변이.
 #   PYTHONUTF8=1 uv run python tools/mutate.py .scratch/harness/probes/measure_word_hook_mutations.toml
-# 끝의 하나는 대조군이다. 알림 문장의 끝 낱말은 어느 시험도 보지 않는다.
+# 끝의 하나는 대조군이다. 알림의 무시 조건 앞 낱말은 어느 시험도 보지 않는다.
 
 [[mutation]]
 name = "docs/adr 토막을 잇달아 요구하지 않는다"

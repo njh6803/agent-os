@@ -81,8 +81,9 @@ def test_ADR_에_근거_없는_실측을_더하면_알린다() -> None:
 
 
 def test_프로브_README_에_더한_측정_낱말에는_결론_계기와_함께_알린다() -> None:
-    """독스트링의 "프로브 README 와 `hook_probe_conclusion`" 문단. 같은 편집에 두 훅이 함께 난다.
-    그 훅은 경로만 보므로 그 훅의 입력 꼴에는 경로만 싣는다."""
+    """독스트링의 "프로브 README 와 `hook_probe_conclusion`" 문단. `probes/` 바로 아래 README 의
+    같은 편집에 두 훅의 판정이 함께 참이다. 그 훅은 경로만 보므로 그 훅의 입력 꼴에는 경로만 싣는다.
+    그 훅이 세션·에이전트마다 한 번만 알리는 것은 그 훅의 시험이 본다."""
     assert context_for(_edit(PROBE_README, "| a |", "| a |\n| `x.py` | 한 바퀴 4초를 쟀다 |"))
     conclusion: ProbeConclusionPayload = {
         "tool_name": "Edit",
@@ -209,7 +210,10 @@ def test_못_보는_것_근거가_같은_줄_밖이면_알린다() -> None:
     assert context_for(_edit(ADR, "", wrapped)) is not None
     context = context_for(_edit(PROBE_README, "", row))
     assert context is not None
-    assert "프로브 README" in context  # 알림이 이 경우도 무시하라고 적는다
+    # 알림이 그 프로브가 결과를 다시 낼 때만 무시하라고 적고, 손으로 본 결과는 무시하지 말라고
+    # 적는다.
+    assert "프로브 README" in context
+    assert "손으로 본 결과를 측정 낱말로 적었으면 무시하지 않는다" in context
 
 
 def test_못_보는_것_표지는_글자만_본다() -> None:
@@ -220,6 +224,15 @@ def test_못_보는_것_표지는_글자만_본다() -> None:
 def test_못_보는_것_경로를_정규화하지_않는다() -> None:
     assert not is_evidence_doc("docs/./adr/y.md")
     assert is_evidence_doc("C:/docs/adr/proj/src/a.py")
+    assert is_evidence_doc("C:/project/agent/web/.scratch/retro-queue.md")
+
+
+def test_못_보는_것_probes_하위_폴더의_README_는_지나간다() -> None:
+    nested = ROOT + "\\.scratch\\harness\\probes\\session_cost\\README.md"
+    assert context_for(_edit(nested, "", "한 바퀴 4초를 쟀다\n")) is None
+    # 같은 README 를 hook_probe_conclusion 은 알린다.
+    conclusion: ProbeConclusionPayload = {"tool_name": "Edit", "tool_input": {"file_path": nested}}
+    assert probe_conclusion_context(conclusion) is not None
 
 
 def test_못_보는_것_Bash_로_쓴_파일은_지나간다() -> None:
