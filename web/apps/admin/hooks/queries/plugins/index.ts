@@ -5,7 +5,7 @@
 
 import { useCallback } from "react";
 import useSWR, { type SWRResponse, useSWRConfig } from "swr";
-import { RequestFailure } from "../../../api/failure";
+import { isRejection, RequestFailure } from "../../../api/failure";
 import {
   listPlugins,
   readPlugin,
@@ -15,7 +15,7 @@ import {
   type PluginRow,
 } from "../../../api/plugins";
 import { useTokens } from "../../../stores/tokens";
-import { isRejection, orRejectAdminToken, READ } from "../admin";
+import { orRejectAdminToken, READ } from "../admin";
 
 /**
  * SWR 키. 토큰은 키에 싣지 않는다. 토큰은 요청의 헤더에만 있다. 대신 토큰을 받아들인 횟수를 실어 토큰마다 캐시와
@@ -29,13 +29,17 @@ export const pluginKeys = {
 
 type Verdict = "accepted" | "rejected" | "unjudged";
 
-/** 플러그인 목록. 관리 토큰이 없으면 부르지 않는다. */
-export function usePlugins(): SWRResponse<PluginRow[], unknown> {
+/**
+ * 플러그인 목록. 관리 토큰이 없거나 `active` 가 거짓이면 부르지 않는다. `active` 는 목록을 쓰는 자리가 늘 서 있지 않은
+ * 화면의 것이다. 실행 하나의 화면은 결정 자리가 설 때만 꺼짐 미리 알림에 목록을 읽는다.
+ */
+export function usePlugins(active = true): SWRResponse<PluginRow[], unknown> {
   const adminToken = useTokens((state) => state.adminToken);
   const generation = useTokens((state) => state.adminTokenGeneration);
+  const read = active && adminToken !== null;
   return useSWR(
-    adminToken === null ? null : pluginKeys.list(generation),
-    adminToken === null ? null : () => orRejectAdminToken(adminToken, listPlugins),
+    read ? pluginKeys.list(generation) : null,
+    read ? () => orRejectAdminToken(adminToken, listPlugins) : null,
     READ,
   );
 }

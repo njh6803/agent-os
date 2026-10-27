@@ -14,9 +14,8 @@ import {
   type RunEvent,
   type StreamFrame,
 } from "../../../api/approval";
-import { RequestFailure } from "../../../api/failure";
+import { isRejection, RequestFailure } from "../../../api/failure";
 import { useTokens } from "../../../stores/tokens";
-import { isRejection } from "../admin";
 import { pluginKeys } from "../plugins";
 import { traceKeys } from "../traces";
 

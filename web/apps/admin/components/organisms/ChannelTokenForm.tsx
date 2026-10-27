@@ -1,6 +1,10 @@
-import { useTokens } from "../../stores/tokens";
-
 const FIELD = "channelToken";
+
+interface ChannelTokenFormProps {
+  /** 이 탭에 채널 토큰이 있는가. 있으면 넣었다는 글자만 선다. */
+  readonly entered: boolean;
+  readonly onEnter: (token: string) => void;
+}
 
 /**
  * 채널 토큰을 넣는 자리. 선택이다. 넣지 않아도 관리 화면의 나머지를 모두 쓰고, 넣으면 멈춘 실행에 결정 자리가 설 수
@@ -10,11 +14,8 @@ const FIELD = "channelToken";
  * 토큰은 헤더에만 실린다(스토리 9). 관리 토큰을 넣는 자리처럼 가린 입력이고 값을 React 상태로 들지 않으며, 넣는
  * 즉시 칸을 비운다. 폼은 보내지 않고 가로채므로 토큰이 주소의 질의로 가지 않는다.
  */
-export function ChannelTokenForm() {
-  const channelToken = useTokens((state) => state.channelToken);
-  const accept = useTokens((state) => state.acceptChannelToken);
-
-  if (channelToken !== null) {
+export function ChannelTokenForm({ entered, onEnter }: ChannelTokenFormProps) {
+  if (entered) {
     return <span>채널 토큰을 넣었다</span>;
   }
   return (
@@ -25,7 +26,7 @@ export function ChannelTokenForm() {
         const token = new FormData(form).get(FIELD);
         form.reset();
         if (typeof token === "string" && token.trim() !== "") {
-          accept(token);
+          onEnter(token);
         }
       }}
     >
