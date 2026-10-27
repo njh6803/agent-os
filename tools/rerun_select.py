@@ -53,7 +53,7 @@
 
 옛 브랜치 표를 주면 `with_earlier`가 브랜치마다 PR 앞 비용이 큰 쪽의 행을 쓴다. 2026-10-23 에
 데스크톱 앱에서 세션 113개가 지워지며 기록 파일도 지워져, 다시 모은 표의 PR 앞 비용이 줄었기
-때문이다(파일럿 티켓(11)이 사람과 정했다. 일지 2026-10-28-02).
+때문이다(파일럿 티켓(11)이 사람과 정했다. 일지 2026-10-28-10).
 
 종료 코드. 0 후보 표(와 목록)를 썼다, 1 후보 표는 썼지만 고를 후보가 모자라 목록을 쓰지 않았다,
 2 입력(브랜치 표, 되살릴 목록, 파일럿 목록)이 틀렸거나, 출력 자리에 쓰지 못했거나(고른 값이 과제
@@ -107,17 +107,18 @@ from tools.rerun_files import (
     TIER_MEDIUM,
     TIER_PILOT,
     TIER_SMALL,
+    Json,
     ShapeError,
     Task,
     TaskList,
     dumps_task_list,
+    prereg_pattern,
     read_task_list,
 )
 from tools.run_hooks import REPO_LOCATION_VARS
 
 from tools import rerun_hidden
 
-type Json = dict[str, Json] | list[Json] | str | int | float | bool | None
 type Sorter = Callable[[str, str], rerun_hidden.Hidden | rerun_hidden.Failure]
 
 # --- 정의에 드는 상수(명세 "과제 고르기". 파일럿 티켓(11)이 사전 등록 절로 옮긴다) ---
@@ -155,6 +156,27 @@ SETUP_FILES = ("web/package.json", "tools/run_checks.py")
 TICKET_PATH = re.compile(r"\.scratch/([^/]+)/issues/([0-9]{2})-[^/]*\.md")
 PR_SUFFIX = re.compile(r"\(#([0-9]+)\)$")
 DONE = "done"
+
+# 사전 등록 절과 대 보는 값(`tools/rerun_files.py`의 `prereg_line`).
+PREREG_VALUES: dict[str, Json] = {
+    "DATE_FLOOR": DATE_FLOOR.isoformat(),
+    "MIN_CANDIDATES": MIN_CANDIDATES,
+    "MIN_HIDDEN": MIN_HIDDEN,
+    "COST_LIMIT_USD": COST_LIMIT_USD,
+    "EXTERNAL_TERMS": [*EXTERNAL_TERMS],
+    "EXTERNAL_NAME": EXTERNAL_NAME,
+    "BRANCH_PREFIX": BRANCH_PREFIX,
+    "BACKTICK_PATH": prereg_pattern(BACKTICK_PATH),
+    "SEEDS": [SEED_PILOT, SEED_SMALL, SEED_MEDIUM, SEED_LARGE, ARM_SEED_BASE],
+    "PILOT_PLANS": [[*plan] for plan in PILOT_PLANS],
+    "MAIN_COUNTS": [*MAIN_COUNTS],
+    "CAP_MULTIPLIER": CAP_MULTIPLIER,
+    "CAP_FLOOR_USD": CAP_FLOOR_USD,
+    "SETUP_FILES": [*SETUP_FILES],
+    "TICKET_PATH": prereg_pattern(TICKET_PATH),
+    "PR_SUFFIX": prereg_pattern(PR_SUFFIX),
+    "DONE": DONE,
+}
 
 GIT_TIMEOUT = 120.0
 

@@ -100,6 +100,7 @@ from typing import BinaryIO
 
 from tools.rerun_files import (
     SETUP_COMMANDS,
+    Json,
     ShapeError,
     parse_round_dir_name,
     read_record,
@@ -161,10 +162,11 @@ ROOT_SHAPE = "*.*"
 
 CONFIG_DIR_VAR = "CLAUDE_CONFIG_DIR"
 AUTOUPDATER_VAR = "DISABLE_AUTOUPDATER"
+AUTOUPDATER_OFF = "1"
 GH_CONFIG_VAR = "GH_CONFIG_DIR"
 # 허용 목록. 러너가 값을 짓는 둘(설정 폴더, 자동 업데이트 끔)을 빼면 부모 환경에 있는 것만 넘긴다.
 # 앞의 열여섯은 비밀이 아닌 윈도 기본값이다. 처음 목록에 `USERNAME`이 빠져 `getpass.getuser()`가
-# `pwd`를 찾다 실패했고, 파일럿의 세션과 게이트가 그 시험들에서 빨갰다(일지 2026-10-28-02)
+# `pwd`를 찾다 실패했고, 파일럿의 세션과 게이트가 그 시험들에서 빨갰다(일지 2026-10-28-10)
 ALLOWED_ENV = (
     "USERNAME",
     "USERDOMAIN",
@@ -208,6 +210,19 @@ ALLOWED_ENV = (
 )
 # 러너가 값을 지어 넣는 이름. 셋째는 허용 목록 밖에서 더하는 회차 폴더의 빈 gh 설정 폴더다.
 RUNNER_SET_ENV = (CONFIG_DIR_VAR, AUTOUPDATER_VAR, GH_CONFIG_VAR)
+
+# 사전 등록 절과 대 보는 값(`tools/rerun_files.py`의 `prereg_line`).
+PREREG_VALUES: dict[str, Json] = {
+    "FIXED_DENY_RULES": [*FIXED_DENY_RULES],
+    "BLOCKED_TOOLS": [*BLOCKED_TOOLS],
+    "PATH_TOOLS": [*PATH_TOOLS],
+    "ROOT_TOOLS": [*ROOT_TOOLS],
+    "ROOT_SHAPE": ROOT_SHAPE,
+    "ALLOWED_ENV": [*ALLOWED_ENV],
+    "RUNNER_SET_ENV": [*RUNNER_SET_ENV],
+    "AUTOUPDATER_OFF": AUTOUPDATER_OFF,
+    "SETUP_TIMEOUT": SETUP_TIMEOUT,
+}
 
 
 class PlaceError(ValueError):
@@ -517,7 +532,7 @@ def deny_rules(heads: Sequence[PurePath], *, roots: Sequence[PurePath] = ()) -> 
     뿌리 규칙은 `<뿌리>/*.*`다. 권한 규칙은 gitignore 꼴이라 `<뿌리>/*`는 회차 폴더에도 맞아 그 안의
     클론 쓰기까지 막았다(`.scratch/model-rerun/probes/deny_shapes/root_shape.py`, 2026-10-27).
     회차 폴더 이름(`round_dir_name`)에는 점이 없어 `*.*`가 맞지 않는다. 파일럿 판 2의 한 회차가
-    `/tmp` 쓰기를 막히자 뿌리에 임시 파일을 써 오염으로 버려졌다(일지 2026-10-28-02 "파일럿 판 2").
+    `/tmp` 쓰기를 막히자 뿌리에 임시 파일을 써 오염으로 버려졌다(일지 2026-10-28-10 "파일럿 판 2").
 
     못 보는 것: 확장자 없는 파일(`<뿌리>/LEAK`)과 Bash 의 리다이렉션은 막지 않는다. 앞의 것은 그
     탐침의 `점` 갈래에서 지나갔다. 둘은 오염 검사가 `다른-회차`로 잡는다(`tests/tools/
@@ -540,7 +555,7 @@ def write_deny_rules(place: RoundDir, rules: Sequence[str]) -> None:
     처음 판은 클론의 `.claude/settings.local.json`에 썼다. 클론은 주 체크아웃이라 B의 지침 검사가
     그 파일의 `permissions.deny`를 local 가드로 잡았고("local 은 워크트리에 없어 거기서 연 세션에서
     조용히 빠진다"), 파일럿의 세션은 그 검사를 빼고 커밋했으며 게이트는 빨갰다(일지
-    2026-10-28-02)."""
+    2026-10-28-10)."""
     target = place.deny_settings
     if os.path.lexists(target):
         raise CloneError(f"회차 폴더에 이미 deny-settings.json 이 있다: {target}")
@@ -694,7 +709,7 @@ def session_env(
     if "PATH" in env:
         env["PATH"] = without_venv_dirs(env["PATH"])
     env[CONFIG_DIR_VAR] = config_dir
-    env[AUTOUPDATER_VAR] = "1"
+    env[AUTOUPDATER_VAR] = AUTOUPDATER_OFF
     env[GH_CONFIG_VAR] = str(round_dir.gh_config)
     return env
 

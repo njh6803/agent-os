@@ -56,6 +56,7 @@ from tools.rerun_files import (
     END_NOT_MEASURED,
     Arm,
     End,
+    Json,
     Task,
 )
 from tools.rerun_round import RoundDir
@@ -105,6 +106,21 @@ _MODEL_HEAD = "모델:"
 _BRANCH_HEAD = "브랜치:"
 _QUESTION_MARKS = ("?", "？")
 
+# 사전 등록 절과 대 보는 값(`tools/rerun_files.py`의 `prereg_line`).
+PREREG_VALUES: dict[str, Json] = {
+    "INTERVENTION_MESSAGE": INTERVENTION_MESSAGE,
+    "MAX_INTERVENTIONS": MAX_INTERVENTIONS,
+    "MAX_SESSIONS": MAX_SESSIONS,
+    "MIN_BUDGET_USD": MIN_BUDGET_USD,
+    "WALL_CLOCK_SECONDS": WALL_CLOCK_SECONDS,
+    "BUDGET_SUBTYPE": BUDGET_SUBTYPE,
+    "DIRECTIVE_HEAD": _DIRECTIVE_HEAD,
+    "DIRECTIVE_TAIL": _DIRECTIVE_TAIL,
+    "MODEL_HEAD": _MODEL_HEAD,
+    "BRANCH_HEAD": _BRANCH_HEAD,
+    "QUESTION_MARKS": [*_QUESTION_MARKS],
+}
+
 
 def ends_with_question(text: str | None) -> bool:
     """결과 글에서 공백만 든 줄을 뺀 마지막 줄이 끝 공백을 뗀 뒤 `?`나 `？`로 끝나는가."""
@@ -135,7 +151,7 @@ def arm_model_line(directive_text: str, arm: Arm) -> str:
     """지시문의 `모델:` 줄을 `arm`의 값 하나로 바꾼다. 처음 나온 `모델:` 줄 자리에 두고 나머지는
     지운다. 없으면 첫 `브랜치:` 줄 뒤에, 그것도 없으면 첫 줄 뒤에 넣는다. 갈래 사이에 모델 줄만
     다르다는 지시문 약속(명세 "지시문의 틀")을 인계 뒤에도 지키려는 것이다(사람이 정했다, 일지
-    2026-10-28-02)."""
+    2026-10-28-10)."""
     line = f"{_MODEL_HEAD} {arm.label}"
     lines = directive_text.split("\n")
     models = [i for i, text in enumerate(lines) if text.startswith(_MODEL_HEAD)]

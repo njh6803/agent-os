@@ -160,6 +160,42 @@ SETUP_COMMANDS = (
     "uv run pre-commit install",
 )
 
+
+# --- 사전 등록(명세 "파일럿과 사전 등록"의 주석) ---
+
+
+def prereg_line(module: str, name: str, value: Json) -> str:
+    """사전 등록 절에 적는 코드 상수 한 줄. `<모듈>.<이름> = <JSON 한 줄>`이다.
+
+    정의에 드는 상수를 가진 모듈은 그 값을 모듈의 `PREREG_VALUES`(이름과 JSON 값의 표)에 모으고,
+    시험이 항목마다 이 줄을 지어 사전 등록 절에서 찾는다. 절의 해시는 README 글만 보므로, 해시를
+    고정한 뒤 상수만 바뀌면 그 시험이 빨개진다. 표에 넣지 않은 상수는 시험이 잡지 못한다.
+    """
+    return f"{module}.{name} = {json.dumps(value, ensure_ascii=False)}"
+
+
+# 판정을 바꾸는 정규식 플래그. 글만 실으면 플래그를 지워도 시험이 초록이다.
+_PREREG_FLAGS = (("IGNORECASE", re.IGNORECASE), ("MULTILINE", re.MULTILINE), ("DOTALL", re.DOTALL))
+
+
+def prereg_pattern(pattern: re.Pattern[str]) -> Json:
+    """정규식의 사전 등록 값. 글과 함께 위 플래그 가운데 켠 것의 이름을 싣는다."""
+    flags: list[Json] = [name for name, flag in _PREREG_FLAGS if pattern.flags & flag]
+    return {"pattern": pattern.pattern, "flags": flags}
+
+
+PREREG_VALUES: dict[str, Json] = {
+    "SHAPE_VERSION": SHAPE_VERSION,
+    "RECORD_SHAPE_VERSION": RECORD_SHAPE_VERSION,
+    "ARMS": [[a.name, a.model, a.effort] for a in ARMS],
+    "END_REASONS": {kind: [*reasons] for kind, reasons in END_REASONS.items()},
+    "RULES": [*RULES],
+    "GATE_COMMANDS": [*GATE_COMMANDS],
+    "OLD_GATE_COMMANDS": [*OLD_GATE_COMMANDS],
+    "SETUP_COMMANDS": [*SETUP_COMMANDS],
+    "MODEL_LABELS": {**MODEL_LABELS},
+}
+
 # --- 글자의 꼴 ---
 
 _TASK_ID = re.compile(r"[a-z0-9]+(?:-[a-z0-9]+)*-[0-9]{2,}")

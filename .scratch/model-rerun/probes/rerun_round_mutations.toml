@@ -693,7 +693,7 @@ file = "tools/rerun_round.py"
 old = '''        raise _RemoveError(f"{type(e).__name__}: {e}") from e'''
 new = '''        raise _RemoveError("") from e'''
 
-# 아래 둘은 조건 판 3의 뿌리 규칙을 겨눈다(일지 2026-10-28-02 "파일럿 판 2").
+# 아래 둘은 조건 판 3의 뿌리 규칙을 겨눈다(일지 2026-10-28-10 "파일럿 판 2").
 
 [[mutation]]
 name = "뿌리 규칙을 쓰지 않는다"

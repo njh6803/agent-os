@@ -437,7 +437,7 @@ def _builtin(name: str) -> Json:
 
 
 def _synced(name: str) -> Json:
-    """계정 동기화 꼴. 파일럿 앞 손 확인에서 본 init 의 항목이다(일지 2026-10-28-02)."""
+    """계정 동기화 꼴. 파일럿 앞 손 확인에서 본 init 의 항목이다(일지 2026-10-28-10)."""
     return {"name": name, "path": "C:\\cfg\\plugins\\synced\\b\\x", "source": f"{name}@synced"}
 
 
@@ -826,7 +826,7 @@ UNDER_HOME = watched_from(
         ("D:/rerun/rerun-x-03-a-1-t1/clone/x.py", ()),  # 자기 회차 폴더
         ("D:/rerun/rerun-x-03-b-1-t2/clone/x.py", (OTHER_ROUND,)),
         ("ls D:\\rerun", (OTHER_ROUND,)),
-        # 뿌리 바로 아래 파일. 뿌리 규칙(`*.*`)이 막지 않는 꼴도 여기서 잡는다(일지 2026-10-28-02)
+        # 뿌리 바로 아래 파일. 뿌리 규칙(`*.*`)이 막지 않는 꼴도 여기서 잡는다(일지 2026-10-28-10)
         ("D:/rerun/fix1.py", (OTHER_ROUND,)),
         ("cat > D:/rerun/LEAK <<'EOF'", (OTHER_ROUND,)),
         ("ls D:/rerun/*/stream", (OTHER_ROUND,)),

@@ -355,7 +355,7 @@ file = "tools/rerun_runner.py"
 old = '''                if has_gate_file(s.source, task.base, env, timeout=w.limits.git):'''
 new = '''                if has_gate_file(s.source, picked.commit, env, timeout=w.limits.git):'''
 
-# 조건 판 3의 뿌리 규칙(일지 2026-10-28-02 "파일럿 판 2").
+# 조건 판 3의 뿌리 규칙(일지 2026-10-28-10 "파일럿 판 2").
 
 [[mutation]]
 name = "러너가 뿌리를 막는 규칙에 넘기지 않는다"

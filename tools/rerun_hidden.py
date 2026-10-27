@@ -87,7 +87,7 @@ from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
 
-from tools.rerun_files import is_support_file, is_test_file
+from tools.rerun_files import Json, is_support_file, is_test_file
 from tools.run_hooks import REPO_LOCATION_VARS
 from tools.tidy_checkouts import cut_links
 
@@ -107,6 +107,13 @@ STRING = "문자열"
 _NAME_ERRORS = ("AttributeError", "NameError", "TypeError")
 _ORDINALS = ("첫째", "둘째")
 _NO_RESULT = "결과 없음"
+
+# 사전 등록 절과 대 보는 값(`tools/rerun_files.py`의 `prereg_line`). 조건 2의 이름 실패 종류다.
+PREREG_VALUES: dict[str, Json] = {
+    "SETUP_COMMANDS": [[*c] for c in SETUP_COMMANDS],
+    "PYTEST_COMMAND": [*PYTEST_COMMAND],
+    "NAME_ERRORS": [*_NAME_ERRORS],
+}
 
 
 class CandidateError(Exception):

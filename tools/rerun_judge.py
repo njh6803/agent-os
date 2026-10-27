@@ -2,9 +2,9 @@
 
 본 측정의 과제 목록, `records/`의 회차 기록, 프로브 README의 사전 등록 절을 읽어 갈래마다의 표와
 결론 한 줄(새 칸, 칸을 둠, 결론 없음)을 낸다. 정의는 사전 등록 절이 원천이고 이 파일은 그것을
-옮긴다. 사전 등록 절은 아직 README에 없고 `PREREG_SHA256`은 어떤 절과도 맞지 않는 자리 표시 값이라,
-명령 줄의 판정은 늘 결론 없음이다. 그래서 판정 함수 `judge_files`는 기대 해시를 인자로 받고 명령 줄
-입구만 상수를 넘긴다. `prereg_section`·`prereg_problem`·`PREREG_SHA256`은 다른 모듈이 import하도록
+옮긴다. `PREREG_SHA256`은 티켓 11이 본 측정의 첫 회차 전에 고정한 절의 해시이고, 절의 글이 바뀌면
+명령 줄의 판정은 결론 없음이다. 판정 함수 `judge_files`는 기대 해시를 인자로 받고 명령 줄 입구만
+상수를 넘긴다. `prereg_section`·`prereg_problem`·`PREREG_SHA256`은 다른 모듈이 import하도록
 공개 이름이다. 결론은 ADR 0029 이력 초안의 재료이고, 초안과 승인은 이 기능 밖이다. 꼴은
 `tools/rerun_files.py`의 과제 목록과 판정 몫(`JudgeView`)만 읽고 회차 도구의 모듈은 import하지
 않는다.
@@ -64,6 +64,7 @@ from tools.rerun_files import (
     END_DONE,
     END_NOT_MEASURED,
     LIST_MAIN,
+    Json,
     JudgeView,
     ShapeError,
     Task,
@@ -75,8 +76,8 @@ from tools.rerun_files import (
 )
 
 PREREG_START, PREREG_END = "<!-- 사전 등록 시작 -->", "<!-- 사전 등록 끝 -->"
-# 사전 등록 절 내용의 SHA-256. 절이 아직 없어 어떤 절과도 맞지 않는 자리 표시 값이다.
-PREREG_SHA256 = "사전 등록 전(절의 SHA-256을 아직 넣지 않았다)"
+# 사전 등록 절 내용의 SHA-256. 티켓 11이 본 측정의 첫 회차 전에 고정했다(2026-10-28).
+PREREG_SHA256 = "d98c86fde0f121d08dd201506d37a9d0917ec91c3717aa6c1b565ee44fa7fa66"
 
 CHECKOUT = Path(__file__).resolve().parent.parent
 PROBES = CHECKOUT / ".scratch" / "model-rerun" / "probes"
@@ -99,6 +100,24 @@ ORIGINAL_EFFORT = "xhigh"  # 원래 세션과 A를 견주는 과제의 원래 �
 PASTED_ARMS = ("D", "E")  # 붙여 넣은 글의 주장과 견주는 갈래
 PASTED_CLAIM = "Opus 비용의 55~60%"
 PASTED_ESCALATION = ("D", "C")  # 붙여 넣은 글의 규칙: Sonnet high로 안 되면 Opus medium으로 넘긴다
+
+# 사전 등록 절과 대 보는 값(`tools/rerun_files.py`의 `prereg_line`). 구간의 백분위(5·95)는
+# `percentile_ci` 안의 값이라 시험이 그 함수를 불러 따로 본다.
+PREREG_VALUES: dict[str, Json] = {
+    "BASE_ARM": BASE_ARM,
+    "MIN_TASKS": MIN_TASKS,
+    "SOLVED_SLACK": SOLVED_SLACK,
+    "MORE_INTERVENTIONS_MAX": MORE_INTERVENTIONS_MAX,
+    "RATIO_UPPER_MAX": RATIO_UPPER_MAX,
+    "SEED": SEED,
+    "RESAMPLES": RESAMPLES,
+    "UNCOUNTABLE_SHARE": UNCOUNTABLE_SHARE,
+    "ORIGINAL_EFFORT": ORIGINAL_EFFORT,
+    "PASTED_ARMS": [*PASTED_ARMS],
+    "PASTED_ESCALATION": [*PASTED_ESCALATION],
+    "KEEP_CELL": KEEP_CELL,
+    "PASTED_CLAIM": PASTED_CLAIM,
+}
 
 type Cost = Callable[[JudgeView], float]
 type Solved = Callable[[JudgeView], bool]

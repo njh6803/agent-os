@@ -74,9 +74,7 @@ from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 
-from tools.rerun_files import ModelUsage, Substitute, Tokens
-
-type Json = dict[str, Json] | list[Json] | str | int | float | bool | None
+from tools.rerun_files import Json, ModelUsage, Substitute, Tokens
 
 
 @dataclass(frozen=True)
@@ -102,6 +100,20 @@ HAIKU_LONG_PROMPT = 100_000  # 이 토큰 수를 넘는 프롬프트가 높은 �
 # 캐시 쓰기의 배수(입력 단가에 곱한다). 명세 "회차 기록"의 공식 단가 셈 문단이다.
 WRITE_5M = 1.25
 WRITE_1H = 2.0
+
+
+def _price_value(price: Price) -> Json:
+    return {"input": price.input, "output": price.output, "cache_read": price.cache_read}
+
+
+# 사전 등록 절과 대 보는 값(`tools/rerun_files.py`의 `prereg_line`).
+PREREG_VALUES: dict[str, Json] = {
+    "PRICES": {m: _price_value(p) for m, p in PRICES.items()},
+    "HAIKU_LONG_PRICE": _price_value(HAIKU_LONG_PRICE),
+    "HAIKU_LONG_PROMPT": HAIKU_LONG_PROMPT,
+    "WRITE_5M": WRITE_5M,
+    "WRITE_1H": WRITE_1H,
+}
 
 _DATE_TAIL = re.compile(r"-[0-9]{8}$")
 _WIDE_TAIL = "[1m]"

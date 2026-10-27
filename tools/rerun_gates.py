@@ -53,7 +53,7 @@ UTF-8로 읽히지 않거나 풀리지 않는 것은 실패다. XML은 세션의
 `conftest.py`)가 이 환경으로 돈다. 그래서 러너의 전체 환경이 아니라 세션과 같은 허용 목록의 환경
 (`tools/rerun_round.py`의 `session_env`)을 넘기는 것이 부르는 쪽의 몫이다. 그 위에 B 설정의
 `env`(`settings_env`)를 얹는다. 원래 세션의 pre-commit 은 Claude Code 가 그 값을 넣은 Bash 에서
-돌았고, 얹지 않은 파일럿 첫 실행의 게이트는 `PYTHONUTF8` 없이 돌아 빨갰다(일지 2026-10-28-02).
+돌았고, 얹지 않은 파일럿 첫 실행의 게이트는 `PYTHONUTF8` 없이 돌아 빨갰다(일지 2026-10-28-10).
 하위 프로세스마다 시간 제한이 있다.
 
 못 보는 것.
@@ -100,6 +100,7 @@ from tools.rerun_files import (
     OLD_GATE_COMMANDS,
     Gate,
     Hidden,
+    Json,
     SetupFailure,
     Task,
     hidden_test_files,
@@ -127,7 +128,6 @@ OLD_GATE_ARGV: tuple[tuple[str, ...], ...] = tuple(tuple(c.split(" ")) for c in 
 PYTEST_ARGV = ("uv", "run", "pytest")
 
 _COMMIT = re.compile(r"[0-9a-f]{40}")
-type Json = dict[str, Json] | list[Json] | str | int | float | bool | None
 _DROPPED_ENV = frozenset({*REPO_LOCATION_VARS, "VIRTUAL_ENV"})
 _BAD_CHILDREN = frozenset({"failure", "error", "skipped"})
 
@@ -147,6 +147,18 @@ class Limits:
     gates: float = 1800.0  # 게이트가 모두 함께 쓰는 몫(명세 "게이트와 숨은 시험")
     hidden: float = 600.0  # 숨은 시험의 pytest(같은 절)
     git: float = GIT_TIMEOUT  # git 하나
+
+
+# 사전 등록 절과 대 보는 값(`tools/rerun_files.py`의 `prereg_line`). 기본 시간 제한이다.
+PREREG_VALUES: dict[str, Json] = {
+    "LIMITS": {
+        "setup": Limits().setup,
+        "gates": Limits().gates,
+        "hidden": Limits().hidden,
+        "git": Limits().git,
+    },
+    "PYTEST_ARGV": [*PYTEST_ARGV],
+}
 
 
 class GateError(RuntimeError):

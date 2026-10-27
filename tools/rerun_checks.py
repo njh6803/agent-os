@@ -144,6 +144,7 @@ from tools.rerun_files import (
     Json,
     LineCount,
     Window,
+    prereg_pattern,
 )
 from tools.rerun_round import BLOCKED_TOOLS, CONFIG_DIR_VAR, RoundDir
 from tools.rerun_session import (
@@ -171,7 +172,7 @@ _BUILTIN_SOURCE = "builtin"
 # 전용 설정 폴더가 claude.ai 계정으로부터 받아 와 싣는 플러그인(첫 호출에는 없고 둘째 호출부터
 # 실렸다. 두 호출과 폴더 목록만 본 어림이다). 둘 다 `skills/`뿐이고 훅·MCP·에이전트가 없어 GitHub 에
 # 닿지 않는다. 사람의 기본 설정 폴더로 도는 세션의 스킬 목록에도 있어 원래 세션도 싣고 돈 것으로
-# 본다(어림. 원래 세션의 init 은 보지 않았다). 사람이 허용했다(일지 2026-10-28-02 "계정 동기화
+# 본다(어림. 원래 세션의 init 은 보지 않았다). 사람이 허용했다(일지 2026-10-28-10 "계정 동기화
 # 플러그인"). 같은 폴더의 `skills/synced/` 사용자 스킬은 init 의 `plugins`에 실리지 않아 이 검사
 # 밖이다. 동기화로 새 플러그인이 들면 허용 밖이라 측정 아님(설정)으로 멈춘다.
 SYNCED_PLUGINS = ("frontend-design", "cowork-plugin-management")
@@ -290,6 +291,35 @@ CONFIG_ALIASES = (
 )
 _PROJECTS = "projects"
 _DRIVE = re.compile(r"^([a-z]):/")
+
+# 사전 등록 절과 대 보는 값(`tools/rerun_files.py`의 `prereg_line`). 모임은 정렬해 적는다.
+PREREG_VALUES: dict[str, Json] = {
+    "BUILTIN_PLUGINS": [*BUILTIN_PLUGINS],
+    "SYNCED_PLUGINS": [*SYNCED_PLUGINS],
+    "MODEL_ALIASES": {**MODEL_ALIASES},
+    "CODE_REVIEW_MODEL": CODE_REVIEW_MODEL,
+    "LIMIT_MARKERS": [LIMIT_REJECTED, USAGE_LIMIT],
+    "PATTERN_NAMES": [*PATTERN_NAMES],
+    "ADDRESSES": {name: prereg_pattern(p) for name, p in _ADDRESSES},
+    "GH": prereg_pattern(_GH),
+    "SESSION_OPENERS": {name: prereg_pattern(p) for name, p in _SESSION_OPENERS},
+    "SOCKET_KEY": SOCKET_KEY,
+    "OPEN_SESSION": OPEN_SESSION,
+    "FREE_TEXT_BY_TOOL": {tool: [*sorted(keys)] for tool, keys in _FREE_TEXT_BY_TOOL.items()},
+    "INHERIT": [*_INHERIT],
+    "FRONT_MATTER": prereg_pattern(_FRONT_MATTER),
+    "MODEL_LINE": prereg_pattern(_MODEL_LINE),
+    "BOUNDARY": "".join(sorted(BOUNDARY)),
+    "SHELL_TOOLS": [*SHELL_TOOLS],
+    "WEB_TOOLS": [*WEB_TOOLS],
+    "CONTENT_TOOLS": {tool: [*keys] for tool, keys in CONTENT_TOOLS.items()},
+    "AGENT_TOOLS": [*AGENT_TOOLS],
+    "FREE_TEXT_KEYS": [*sorted(FREE_TEXT_KEYS)],
+    "PATH_KEYS": [*sorted(PATH_KEYS)],
+    "KNOWN_TOOLS": [*sorted(KNOWN_TOOLS)],
+    "HOME_ALIASES": [*HOME_ALIASES],
+    "CONFIG_ALIASES": [*CONFIG_ALIASES],
+}
 
 
 # --- JSON ---

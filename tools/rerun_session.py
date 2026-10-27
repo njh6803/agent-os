@@ -112,6 +112,7 @@ from tools.rerun_files import (
     Tokens,
     Window,
     parse_round_dir_name,
+    prereg_pattern,
 )
 from tools.rerun_round import RoundDir
 from tools.run_hooks import REPO_LOCATION_VARS
@@ -239,6 +240,15 @@ def session_command(
 
 SYNTHETIC = "<synthetic>"
 UNKNOWN_SUBTYPE = "unknown"
+
+# 사전 등록 절과 대 보는 값(`tools/rerun_files.py`의 `prereg_line`).
+PREREG_VALUES: dict[str, Json] = {
+    "START_SKILL": START_SKILL,
+    "START_LINE": _START_LINE,
+    "SESSION_FLAGS": [*SESSION_FLAGS],
+    "TITLE_HEAD": prereg_pattern(_TITLE_HEAD),
+    "SYNTHETIC": SYNTHETIC,
+}
 
 
 @dataclass(frozen=True)

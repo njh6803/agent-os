@@ -34,7 +34,7 @@
   세션의 마지막 `modelUsage`만으로 셈한다(대개 0이다).
 - 회차 세션의 기록 파일이 든 프로젝트 폴더에 남은 다른 세션(과제의 시험이 띄운 하위 `claude -p`)의
   공식 단가 셈은 `other_usd`에 넣고, 예산의 쓴 것과 판정의 두 비용에 더한다(`other_transcripts`,
-  사람이 정했다, 일지 2026-10-28-02).
+  사람이 정했다, 일지 2026-10-28-10).
 - 끝남인 회차에서 게이트 작업 트리를 짓지 못하거나(`GateError`) 로그를 쓰지 못하면(`OSError`) 그
   회차를 측정 아님(준비)으로 적고 멈춘다. 세션이 쓴 결과와 별개로 사람이 볼 일일 수 있다(07의 메모).
 - 기록의 게이트와 준비 명령은 갈아 끼운 명령이 아니라 그 자리의 정해진 이름(`GATE_COMMANDS`나
@@ -92,6 +92,7 @@ from tools.rerun_files import (
     SETUP_COMMANDS,
     End,
     Gate,
+    Json,
     ModelUsage,
     Outcome,
     Record,
@@ -160,6 +161,13 @@ MAX_PARALLEL = 2
 ARM_RATIOS: dict[str, float] = {"A": 1.0, "B": 0.8, "C": 0.7, "D": 0.9, "E": 0.7}
 REASON_SETUP = "준비"
 REASON_INTERRUPTED = "중단"
+
+# 사전 등록 절과 대 보는 값(`tools/rerun_files.py`의 `prereg_line`).
+PREREG_VALUES: dict[str, Json] = {
+    "CONDITION_VERSION": CONDITION_VERSION,
+    "MAX_PARALLEL": MAX_PARALLEL,
+    "ARM_RATIOS": {**ARM_RATIOS},
+}
 
 EXIT_DONE = 0  # 목록을 다 돌았다
 EXIT_HALTED = 1  # 멈춰 사람에게 넘겼다
@@ -341,7 +349,7 @@ def _other_usd(config_dir: Path, session_ids: Sequence[str]) -> float:
 def _with_costs(record: Record, config_dir: Path) -> Record:
     """공식 단가를 셈하고, 결과 이벤트가 없는 호출이 든 세션의 비용 칸에 그 셈을 대신 넣는다. 같은
     프로젝트 폴더에 남은 다른 세션의 공식 단가 셈은 `other_usd`에 넣는다(사람이 정했다, 일지
-    2026-10-28-02)."""
+    2026-10-28-10)."""
     costs: list[Cost] = []
     sessions: list[Session] = []
     for s in record.sessions:

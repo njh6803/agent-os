@@ -1,11 +1,25 @@
 # 다시 풀기 후보 표
 
-`tools/rerun_select.py` 가 지었다. main 은 `80ff61f1d831`(`80ff61f1`), 브랜치 표는 `.scratch/model-rerun/probes/branches.json`(SHA-256 앞 12자리 `847604d8400a`), 옛 브랜치 표는 `.scratch/model-rerun/probes/branches-2026-10-23.json`(SHA-256 앞 12자리 `261a4650719e`)이고 브랜치마다 PR 앞 비용이 큰 쪽을 쓴다, 되살릴 목록은 `.scratch/model-rerun/probes/revive.json`다.
+`tools/rerun_select.py` 가 지었다. main 은 `35028cbab182`(`35028cbab182816e13433dd7d9f0f661e7493aa4`), 브랜치 표는 `.scratch/model-rerun/probes/branches.json`(SHA-256 앞 12자리 `c8760c99194e`), 옛 브랜치 표는 `.scratch/model-rerun/probes/branches-2026-10-23.json`(SHA-256 앞 12자리 `261a4650719e`)이고 브랜치마다 PR 앞 비용이 큰 쪽을 쓴다, 되살릴 목록은 `.scratch/model-rerun/probes/revive.json`다.
 조건은 그 모듈의 상수다. 날짜 바닥 2026-10-12T00:00:00+09:00(B 의 커밋 시각), 후보 문턱 12개, 숨은 시험 3개 이상, PR 앞 비용 $70 이하, 원래 브랜치 `feature/`. 바깥 검증 낱말은 `playwright`, `pnpm -C web visual`, `사진 비교`, `Claude Design`, `사람이 확인`(대소문자를 가리지 않는다)과 파일 이름의 `human-verification`이다.
 행은 M 이 늦은 차례다. 자리의 `거슬러 채움`은 남은 후보가 모자라 B 가 날짜 바닥 앞인 후보를 늦은 것부터 더해 본 행이고, `닿지 않음`은 채운 뒤라 보지 않은 행이다. 빠진 노드는 숨은 시험 가르기(`tools/rerun_hidden.py`)가 뺀 노드를 조건과 까닭으로 묶어 센 것이다.
 
 | 과제 id | PR | B | M | B 시각 | 원래 브랜치 | 자리 | 남음 | 빠진 까닭 | 바깥 검증 낱말 | PR 앞 비용 | 크기 | 숨은 시험 | 빠진 노드 | B 의 `web/package.json` | B 의 `tools/run_checks.py` |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| design-reverse-sync-08 | #404 | 4f783dc0 | 35028cba | 2026-10-27T16:30+09:00 | feature/08-first-upload | 날짜 안 | 빠짐 | 숨은 시험이 0개라 3개보다 적다 | — | $54.13 | 12 | 0 | — | 있음 | 있음 |
+| design-reverse-sync-03 | #396 | e281349e | 3666bdc6 | 2026-10-27T13:03+09:00 | feature/03-token-comments | 날짜 안 | 빠짐 | 바깥 검증 낱말에 걸렸다(pnpm -C web visual, 사진 비교) | pnpm -C web visual, 사진 비교 | $43.05 | 11 | — | — | 있음 | 있음 |
+| design-reverse-sync-07 | #400 | 5e049681 | 60b028e3 | 2026-10-27T08:51+09:00 | feature/07-sync-design-system-skill | 날짜 안 | 빠짐 | 바깥 검증 낱말에 걸렸다(pnpm -C web visual) | pnpm -C web visual | $47.90 | 19 | — | — | 있음 | 있음 |
+| design-reverse-sync-06 | #399 | cc8af0bc | 5e049681 | 2026-10-27T06:31+09:00 | feature/06-claim | 날짜 안 | 빠짐 | 숨은 시험이 0개라 3개보다 적다 | — | $34.34 | 10 | 0 | — | 있음 | 있음 |
+| design-reverse-sync-05 | #397 | 5f084486 | 934c572a | 2026-10-27T05:23+09:00 | feature/05-record-and-check | 날짜 안 | 빠짐 | 숨은 시험이 0개라 3개보다 적다 | — | $61.30 | 13 | 0 | — | 있음 | 있음 |
+| design-reverse-sync-04 | #398 | 0aff6d15 | 5f084486 | 2026-10-27T04:44+09:00 | feature/04-import-command | 날짜 안 | 빠짐 | 숨은 시험이 0개라 3개보다 적다 | — | $62.51 | 3 | 0 | — | 있음 | 있음 |
+| design-reverse-sync-02 | #356 | 3acbd867 | 71433a0d | 2026-10-26T20:47+09:00 | feature/02-build-tokens-json | 날짜 안 | 빠짐 | 바깥 검증 낱말에 걸렸다(사람이 확인) | 사람이 확인 | $53.56 | 11 | — | — | 있음 | 있음 |
+| web-widget-09 | #387 | 8ad99ca6 | 92b61458 | 2026-10-25T05:13+09:00 | feature/09-widget-storage-and-reconnect | 날짜 안 | 빠짐 | PR 앞 비용 $77.21 가 $70 를 넘는다 | — | $77.21 | 5 | — | — | 있음 | 있음 |
+| web-widget-10 | #386 | cb6d9c39 | 8ad99ca6 | 2026-10-25T03:40+09:00 | feature/10-widget-element-embed | 날짜 안 | 빠짐 | PR 앞 비용 $129.30 가 $70 를 넘는다 | — | $129.30 | 6 | — | — | 있음 | 있음 |
+| web-widget-08 | #385 | 1ef75a12 | cb6d9c39 | 2026-10-25T00:40+09:00 | feature/08-widget-approval | 날짜 안 | 빠짐 | 숨은 시험이 0개라 3개보다 적다 | — | $26.86 | 2 | 0 | — | 있음 | 있음 |
+| web-widget-07 | #384 | 7cbeb263 | 1ef75a12 | 2026-10-24T23:48+09:00 | feature/07-widget-failures-and-rejections | 날짜 안 | 빠짐 | 바깥 검증 낱말에 걸렸다(Claude Design) | Claude Design | $53.69 | 5 | — | — | 있음 | 있음 |
+| web-widget-11 | #383 | 148652ef | 7cbeb263 | 2026-10-24T20:16+09:00 | feature/11-widget-real-model-e2e | 날짜 안 | 빠짐 | 바깥 검증 낱말에 걸렸다(playwright) | playwright | $49.44 | 16 | — | — | 있음 | 있음 |
+| web-widget-06 | #382 | 6a7b23f6 | 148652ef | 2026-10-24T16:48+09:00 | feature/06-nginx-and-widget-e2e | 날짜 안 | 빠짐 | 바깥 검증 낱말에 걸렸다(playwright, 사진 비교) | playwright, 사진 비교 | $28.94 | 14 | — | — | 있음 | 있음 |
+| web-widget-05 | #381 | 80ff61f1 | 6a7b23f6 | 2026-10-24T14:27+09:00 | feature/05-widget-conversation | 날짜 안 | 빠짐 | 숨은 시험이 0개라 3개보다 적다 | — | $32.38 | 7 | 0 | — | 있음 | 있음 |
 | model-rerun-10 | #380 | f1ed4be7 | 80ff61f1 | 2026-10-24T13:47+09:00 | feature/10-schedule-and-budget | 날짜 안 | 남음 | — | 사람이 확인(되살림: '사람이 확인'은 러너의 명령 줄 인자 이야기다("사람이 확인 인자를 주면 잇는다"). 사람이 결과를 확인하는 체크박스가 아니다) | $30.05 | 27 | 3 | 조건 2 결과 없음(모음 실패) ×57 | 있음 | 있음 |
 | web-widget-04 | #379 | 7496a830 | f1ed4be7 | 2026-10-24T02:26+09:00 | feature/04-site-file-feeds-widget-build | 날짜 안 | 빠짐 | 숨은 시험이 0개라 3개보다 적다 | — | $61.85 | 5 | 0 | 조건 2 결과 없음(모음 실패) ×91 | 있음 | 있음 |
 | model-rerun-09 | #377 | eec99a51 | 7496a830 | 2026-10-24T01:53+09:00 | feature/09-not-measured-checks | 날짜 안 | 빠짐 | 숨은 시험이 0개라 3개보다 적다 | — | $55.83 | 20 | 0 | 조건 2 결과 없음(모음 실패) ×222; 조건 2 TypeError ×1; 조건 2 통과 ×1 | 있음 | 있음 |
