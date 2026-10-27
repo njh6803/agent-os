@@ -1,4 +1,4 @@
-# 2026-10-27 (11) 패키지의 설정 아이콘, 가린 한 줄 입력, 기준 폭 셋
+# 2026-10-27 (17) 패키지의 설정 아이콘, 가린 한 줄 입력, 기준 폭 셋
 
 next-session 지시문으로 연 새 세션이다. 나란히 여는 둘 가운데 첫째라 제목을 브랜치 이름 `feature/01-ui-settings-icon-password-widths`로 바꾸고 `tidy-checkouts`를 먼저 돌았다. 그 뒤 주 체크아웃에서 브랜치를 따지 않고 `EnterWorktree`(이름 `01-ui-settings-icon-password-widths`)로 워크트리에 들어가 브랜치를 바꿨다. `implement` 스킬을 디스크의 `SKILL.md`로 읽어 따랐다. 형제는 02(`feature/02-admin-organisms-take-props`)다.
 
@@ -46,8 +46,8 @@ next-session 지시문으로 연 새 세션이다. 나란히 여는 둘 가운�
 시작 프롬프트: /implement .scratch/admin-style/issues/01-ui-settings-icon-password-widths.md
 브랜치: feature/01-ui-settings-icon-password-widths
 모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
-읽을 것: docs/journal/2026-10-27-11-ui-settings-icon-password-widths.md(이 세션의 일지, 커밋하지 않고 워크트리에 있다). 나란히 도는 형제는 .scratch/admin-style/issues/02-admin-organisms-take-props.md
-이어받을 상태: 인계: 셀프 리뷰 직전. 커밋하지 않은 변경이 워크트리에 있고 셀프 리뷰(/code-review, base는 origin/main의 merge-base)부터 한다. 구현과 run_checks 열 검사·ruff 두 줄은 이 작업 트리에서 초록이었다. 사진 정답(visual, visual:widget)은 Docker 엔진이 Internal Server Error라 아직 만들지 못했고, 사용자가 Docker Desktop을 다시 켜 주기로 골랐다. 티켓 체크박스는 아직 표시하지 않았다. 일지는 docs/journal/2026-10-27-11-ui-settings-icon-password-widths.md
+읽을 것: docs/journal/2026-10-27-17-ui-settings-icon-password-widths.md(이 세션의 일지, 커밋하지 않고 워크트리에 있다). 나란히 도는 형제는 .scratch/admin-style/issues/02-admin-organisms-take-props.md
+이어받을 상태: 인계: 셀프 리뷰 직전. 커밋하지 않은 변경이 워크트리에 있고 셀프 리뷰(/code-review, base는 origin/main의 merge-base)부터 한다. 구현과 run_checks 열 검사·ruff 두 줄은 이 작업 트리에서 초록이었다. 사진 정답(visual, visual:widget)은 Docker 엔진이 Internal Server Error라 아직 만들지 못했고, 사용자가 Docker Desktop을 다시 켜 주기로 골랐다. 티켓 체크박스는 아직 표시하지 않았다. 일지는 docs/journal/2026-10-27-17-ui-settings-icon-password-widths.md
 확인할 선행 조건: Docker 엔진이 답하는지(docker version). 이 세션의 마지막 확인까지 두 컨텍스트 모두 Internal Server Error였다
 이번 요청 범위: PR과 병합까지
 ```
@@ -111,8 +111,8 @@ PR 직전 리뷰에 밀 주장: 위 고친 것의 새 원문 셋과 프로브 RE
 시작 프롬프트: /implement .scratch/admin-style/issues/01-ui-settings-icon-password-widths.md
 브랜치: feature/01-ui-settings-icon-password-widths
 모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
-읽을 것: docs/journal/2026-10-27-11-ui-settings-icon-password-widths.md(끝의 인계 절은 커밋하지 않고 워크트리에 있다). 나란히 도는 형제는 .scratch/admin-style/issues/02-admin-organisms-take-props.md
-이어받을 상태: 인계: 커밋 뒤. 구현과 셀프 리뷰 반영까지 커밋했고 그 커밋의 pre-commit은 모두 초록이었다. 남은 것은 사진 정답(visual, visual:widget)을 Docker로 다시 만들어 커밋, 티켓의 사진·검증 체크박스와 Status done, PR 직전 리뷰(밀 주장은 일지의 셀프 리뷰 절), PR, 병합이다. Docker 엔진은 이 세션 끝까지 Internal Server Error였고 사용자에게 Docker Desktop을 다시 켜 달라고 부탁했다. 일지는 docs/journal/2026-10-27-11-ui-settings-icon-password-widths.md
+읽을 것: docs/journal/2026-10-27-17-ui-settings-icon-password-widths.md(끝의 인계 절은 커밋하지 않고 워크트리에 있다). 나란히 도는 형제는 .scratch/admin-style/issues/02-admin-organisms-take-props.md
+이어받을 상태: 인계: 커밋 뒤. 구현과 셀프 리뷰 반영까지 커밋했고 그 커밋의 pre-commit은 모두 초록이었다. 남은 것은 사진 정답(visual, visual:widget)을 Docker로 다시 만들어 커밋, 티켓의 사진·검증 체크박스와 Status done, PR 직전 리뷰(밀 주장은 일지의 셀프 리뷰 절), PR, 병합이다. Docker 엔진은 이 세션 끝까지 Internal Server Error였고 사용자에게 Docker Desktop을 다시 켜 달라고 부탁했다. 일지는 docs/journal/2026-10-27-17-ui-settings-icon-password-widths.md
 확인할 선행 조건: Docker 엔진이 답하는지(docker version). 이 세션의 마지막 확인까지 Internal Server Error였다
 이번 요청 범위: PR과 병합까지
 ```
@@ -181,8 +181,8 @@ PR을 연 직후 인계 계기가 왔다(세션 컨텍스트 308,028 토큰, 문
 시작 프롬프트: /implement .scratch/admin-style/issues/01-ui-settings-icon-password-widths.md
 브랜치: feature/01-ui-settings-icon-password-widths
 모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
-읽을 것: docs/journal/2026-10-27-11-ui-settings-icon-password-widths.md(끝의 "커밋과 PR"과 인계 절은 커밋하지 않고 워크트리에 있다). 나란히 도는 형제는 .scratch/admin-style/issues/02-admin-organisms-take-props.md
-이어받을 상태: 인계: PR 연 뒤. PR #403(https://github.com/njh6803/agent-os/pull/403)을 열었고 브랜치의 커밋은 모두 푸시했다. next-session 순서 1의 2(봇 회차)부터 하고, 첫 @coderabbitai review 코멘트도 아직 남기지 않았다. 이 티켓을 닫는 세션이라 회고(retro)와 일지 "다음"을 병합 전에 써서 푸시한다(회고 후보는 일지의 인계 절). 형제 02가 먼저 병합되면 plan.md의 "01이 먼저 병합되어" 문장과 프로브 README의 충돌을 고친다. 일지는 docs/journal/2026-10-27-11-ui-settings-icon-password-widths.md
+읽을 것: docs/journal/2026-10-27-17-ui-settings-icon-password-widths.md(끝의 "커밋과 PR"과 인계 절은 커밋하지 않고 워크트리에 있다). 나란히 도는 형제는 .scratch/admin-style/issues/02-admin-organisms-take-props.md
+이어받을 상태: 인계: PR 연 뒤. PR #403(https://github.com/njh6803/agent-os/pull/403)을 열었고 브랜치의 커밋은 모두 푸시했다. next-session 순서 1의 2(봇 회차)부터 하고, 첫 @coderabbitai review 코멘트도 아직 남기지 않았다. 이 티켓을 닫는 세션이라 회고(retro)와 일지 "다음"을 병합 전에 써서 푸시한다(회고 후보는 일지의 인계 절). 형제 02가 먼저 병합되면 plan.md의 "01이 먼저 병합되어" 문장과 프로브 README의 충돌을 고친다. 일지는 docs/journal/2026-10-27-17-ui-settings-icon-password-widths.md
 확인할 선행 조건: 없음
 이번 요청 범위: PR과 병합까지
 ```
@@ -226,8 +226,8 @@ PR의 첫 상태는 claude-review 통과("지적 없음"), `web`·`e2e-widget`·
 시작 프롬프트: /implement .scratch/admin-style/issues/01-ui-settings-icon-password-widths.md
 브랜치: feature/01-ui-settings-icon-password-widths
 모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
-읽을 것: docs/journal/2026-10-27-11-ui-settings-icon-password-widths.md(끝의 이어받음(PR 연 뒤)·봇 회차 1·인계·회고·다음 절은 커밋하지 않고 워크트리에 있다). 나란히 도는 형제는 .scratch/admin-style/issues/02-admin-organisms-take-props.md
-이어받을 상태: 인계: 셀프 리뷰 직전. 커밋하지 않은 변경이 워크트리에 있고 셀프 리뷰(/code-review, 고정점 HEAD 21547639)부터 한다. 변경은 PR #403 봇 회차 1의 반영(CodeRabbit Minor: .scratch/design-system/probes/molecules_mutations.toml 세 변이에 expect_output 표지, 그 프로브 README 줄. 다시 돌린 셋이 기대대로였다)과 이 티켓의 회고(retro-queue 새 행 494, 437·491의 회차)와 일지 "다음"이다. PR 본문은 이 범위로 이미 고쳤다. 셀프 리뷰를 반영한 뒤 커밋해 푸시하고 next-session 순서 1의 2(@coderabbitai review 코멘트, tools/wait_ci.py 403)를 한다. 그 푸시는 두 봇 모두에게 둘째 회차다. 형제 02가 먼저 병합되면 plan.md의 "01이 먼저 병합되어" 문장과 프로브 README의 충돌을 고친다. 일지는 docs/journal/2026-10-27-11-ui-settings-icon-password-widths.md
+읽을 것: docs/journal/2026-10-27-17-ui-settings-icon-password-widths.md(끝의 이어받음(PR 연 뒤)·봇 회차 1·인계·회고·다음 절은 커밋하지 않고 워크트리에 있다). 나란히 도는 형제는 .scratch/admin-style/issues/02-admin-organisms-take-props.md
+이어받을 상태: 인계: 셀프 리뷰 직전. 커밋하지 않은 변경이 워크트리에 있고 셀프 리뷰(/code-review, 고정점 HEAD 21547639)부터 한다. 변경은 PR #403 봇 회차 1의 반영(CodeRabbit Minor: .scratch/design-system/probes/molecules_mutations.toml 세 변이에 expect_output 표지, 그 프로브 README 줄. 다시 돌린 셋이 기대대로였다)과 이 티켓의 회고(retro-queue 새 행 494, 437·491의 회차)와 일지 "다음"이다. PR 본문은 이 범위로 이미 고쳤다. 셀프 리뷰를 반영한 뒤 커밋해 푸시하고 next-session 순서 1의 2(@coderabbitai review 코멘트, tools/wait_ci.py 403)를 한다. 그 푸시는 두 봇 모두에게 둘째 회차다. 형제 02가 먼저 병합되면 plan.md의 "01이 먼저 병합되어" 문장과 프로브 README의 충돌을 고친다. 일지는 docs/journal/2026-10-27-17-ui-settings-icon-password-widths.md
 확인할 선행 조건: 없음
 이번 요청 범위: PR과 병합까지
 ```
@@ -293,8 +293,8 @@ Critical·Major 없음, Minor 2, Nit 3. 밀 주장은 모두 맞다고 냈다(�
 시작 프롬프트: /implement .scratch/admin-style/issues/01-ui-settings-icon-password-widths.md
 브랜치: feature/01-ui-settings-icon-password-widths
 모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
-읽을 것: docs/journal/2026-10-27-11-ui-settings-icon-password-widths.md(끝의 이어받음(셀프 리뷰 직전)·셀프 리뷰·커밋·인계(커밋 뒤)·회고(셀프 리뷰가 찾은 회차) 절. 커밋 절과 인계 절은 커밋하지 않고 워크트리에 있다). 나란히 도는 형제는 .scratch/admin-style/issues/02-admin-organisms-take-props.md
-이어받을 상태: 인계: 커밋 뒤. 봇 회차 1 반영과 회고, 그 셀프 리뷰의 반영을 한 커밋으로 브랜치 끝에 두었고 아직 푸시하지 않았다. 푸시와 next-session 순서 1의 2(@coderabbitai review 코멘트, tools/wait_ci.py 403)부터 한다. PR 본문은 이 커밋의 범위로 이미 고쳤다. 그 푸시는 두 봇 모두에게 둘째 회차다. 일지의 커밋 절과 인계 절은 커밋하지 않고 워크트리에 있어 다음 커밋에 싣는다. 형제 02가 먼저 병합되면 plan.md 프론티어 문단의 "01 이 먼저 병합되어" 문장과 프로브 README의 충돌을 고친다. 일지는 docs/journal/2026-10-27-11-ui-settings-icon-password-widths.md
+읽을 것: docs/journal/2026-10-27-17-ui-settings-icon-password-widths.md(끝의 이어받음(셀프 리뷰 직전)·셀프 리뷰·커밋·인계(커밋 뒤)·회고(셀프 리뷰가 찾은 회차) 절. 커밋 절과 인계 절은 커밋하지 않고 워크트리에 있다). 나란히 도는 형제는 .scratch/admin-style/issues/02-admin-organisms-take-props.md
+이어받을 상태: 인계: 커밋 뒤. 봇 회차 1 반영과 회고, 그 셀프 리뷰의 반영을 한 커밋으로 브랜치 끝에 두었고 아직 푸시하지 않았다. 푸시와 next-session 순서 1의 2(@coderabbitai review 코멘트, tools/wait_ci.py 403)부터 한다. PR 본문은 이 커밋의 범위로 이미 고쳤다. 그 푸시는 두 봇 모두에게 둘째 회차다. 일지의 커밋 절과 인계 절은 커밋하지 않고 워크트리에 있어 다음 커밋에 싣는다. 형제 02가 먼저 병합되면 plan.md 프론티어 문단의 "01 이 먼저 병합되어" 문장과 프로브 README의 충돌을 고친다. 일지는 docs/journal/2026-10-27-17-ui-settings-icon-password-widths.md
 확인할 선행 조건: 없음
 이번 요청 범위: PR과 병합까지
 ```
@@ -308,6 +308,26 @@ open-session을 부른다 2026-10-27T11:22:10Z
 위 지시문으로 연 새 세션이다. 제목을 브랜치 이름으로 바꾸고 `git worktree list`에서 그 브랜치의 워크트리를 찾아 `EnterWorktree(path)`로 들어갔다. `implement`와 `next-session`을 디스크의 `SKILL.md`로 읽어 따랐다. `git status --short`에는 이 일지 하나만 있었고, 브랜치 끝 `24c7e006`은 원격 헤드 `21547639`보다 하나 앞서 있었다(`git log`와 `git rev-parse origin/…`을 손으로 봤다). 형제 02는 아직 PR이 없었다(`gh pr list --head feature/02-admin-organisms-take-props --state all`이 빈 목록이었다). 일지의 커밋 절·인계 절과 이 절을 한 커밋으로 더해 `24c7e006`과 함께 푸시한다. 따로 푸시하면 claude-review가 한 번 더 돈다(next-session 순서 1의 2 "뒤로 넘긴 일"이 그렇게 적었다).
 
 > 사용자: ".claude/skills/implement/SKILL.md 를 읽어 그대로 따른다. … 인자: .scratch/admin-style/issues/01-ui-settings-icon-password-widths.md … 이어받을 상태: 인계: 커밋 뒤. 봇 회차 1 반영과 회고, 그 셀프 리뷰의 반영을 한 커밋으로 브랜치 끝에 두었고 아직 푸시하지 않았다. 푸시와 next-session 순서 1의 2(＠coderabbitai review 코멘트, tools/wait_ci.py 403)부터 한다. … 확인할 선행 조건: 없음 / 이번 요청 범위: PR과 병합까지"
+
+## 봇 회차 2와 CI 빨강
+
+커밋 `4af934f5`의 pre-commit은 검사가 모두 Passed였다(pytest 371.2초, web-verify 456.3초. 출력을 손으로 봤다). 스테이지된 `.py`가 없어 ruff 둘은 Skipped라 손으로 쳤고 `All checks passed!`, `1096 files already formatted`였다. `24c7e006`과 함께 푸시하고 `＠coderabbitai review` 코멘트를 남겼다. `gh pr checks 403`이 대기라 `tools/wait_ci.py 403`을 백그라운드로 띄웠고, 그 도구가 "끝: 실패 python, verify"로 끝났다(도구가 찍었다).
+
+- **봇 회차 2.** 두 봇 모두 둘째 회차다. claude-review는 "지적 없음"이었다(`gh pr view 403 --json comments`로 손으로 봤다). CodeRabbit은 `4af934f5`를 보고 Trivial 하나를 냈다(`gh api …/pulls/403/reviews`로 손으로 봤다). `.scratch/retro-queue.md` 492~495줄을 들어, 492행이 적은 `tools/sibling_overlap.py`의 병합 중 merge-base 계산이 `--octopus`가 아닌 뜻이면 그 뜻을 드러내는 시험을 더하라는 것이다. 492행은 이 브랜치가 아니라 PR #396이 더한 행이다(`git log -L492,495:.scratch/retro-queue.md`로 손으로 봤다). 둘째 회차라 Critical·Major만 고치므로 보류했고, 그 행을 맡는 티켓으로 넘기는 것이라 아래 "다음"에도 적었다.
+- **CI 빨강.** `python` 잡에서 열 시험이 실패했다(`gh run view 40497038501 --log-failed`의 `FAILED` 줄을 손으로 봤다). `tests/tools/test_hook_push_behind_main.py::test_도움말_판정이_실제_git_과_같다`의 `짧은_옵션`·`위치_인자_뒤`·`묶음의_끝`·`묶음의_머리`·`긴_옵션`·`help_all`과 `tests/tools/test_hook_push_delete_open_pr.py`의 같은 이름 시험 `도움말`·`뒤의_도움말`·`묶음의_도움말`·`help_all`이다. 모두 종료 코드 129를 단언했는데 git이 사용법을 내고 푸시하지 않은 채 0으로 끝났다(`assert (False, 0) == (False, 129)`). 이 실행의 러너 이미지는 `ubuntu-24.04` `20261025.353.1`이고 git 2.56.0이었으며, 같은 날 10:52에 통과한 PR #404의 실행 `40491814684`는 `20261012.334.1`에 git 2.55.0이었다(두 잡 로그의 `Runner Image`와 `git version` 줄을 손으로 봤다). main의 필수 검사는 `verify` 하나다(`gh api …/branches/main/protection`으로 손으로 봤다). 훅의 판정 코드는 129에 기대지 않는다(`tools/hook_push_behind_main.py`의 `asks_help`를 읽었다). 129를 사실로 적은 문장은 그 독스트링과 두 시험의 독스트링·주석에 있다(Grep으로 봤다). 이 PC의 git은 2.32라 재현하지 않았다.
+- **물음.** 이 수리는 이 티켓 밖의 하네스 일이라 세션 카드(`start_session`의 `own_initiative`)로 내려 했으나 `hook_session_card`가 ADR 0037을 들어 막았다. 그래서 사람에게 물었다. 첫 화면과 둘째 화면은 훅이 사실 대조로 막았고, 대 보니 "봇 리뷰를 모두 통과"는 CodeRabbit의 Trivial이 있어 "고칠 지적이 없었지만"으로, "CI 서버가 오늘 올렸다"는 두 실행의 로그로 본 것으로, "어떤 PR도 병합되지 않는다"와 옛 이미지가 아직 배정되는지는 어림으로 고쳤다.
+
+> 사용자: "PR #403은 봇 리뷰에서 고칠 지적이 없었지만, CI가 이 PR과 무관한 이유로 빨갛습니다. … 이 수리를 어디서 할까요?"="새 세션에서 고친다 (Recommended)", 그 설명: "이 세션이 하네스 티켓(다음 빈 번호 018)용 지시문을 써서 새 세션을 엽니다. 그 세션이 시험 두 파일의 단언을 '도움말 문구가 나오고 푸시는 안 됐다'로 바꿔 별도 PR로 병합하면, 이 세션이 main을 합쳐 CI를 다시 돌리고 PR #403을 병합합니다. 규약(티켓 하나에 세션 하나)대로이고, 새 세션 하나와 CI 한 바퀴가 더 듭니다. 그 단언으로 고쳐지는지는 어림이고 새 PR의 CI가 확인합니다(이 PC의 git은 2.32라 재현되지 않습니다)."
+
+그 답대로 harness 티켓 018의 지시문(브랜치 `chore/018-git-help-exit-code`, 모델은 `tools/model_sweep.py`가 낸 `Opus 5.5 / medium`, 레벨 스윕의 갈래)을 지어 `open-session`으로 새 세션을 열었다. 다음 빈 티켓 번호는 `tools/sibling_overlap.py`가 018로 냈고, 그 브랜치를 제목으로 한 실행 중 세션은 없었다(`list_sessions`로 손으로 봤다). `tools/open_session.ps1`이 `sent=20:56:06`과 `restored=Opus 5.5 / xhigh`를 찍었고, 새 세션은 제목 `chore/018-git-help-exit-code`, 폴더 `C:\project\agent`, 모델 `claude-opus-5-5`, 노력 `medium`이었다(`get_session`으로 손으로 봤다). 분할은 됐고(`split=`), 포커스는 90초와 30초 두 번 모두 사이드바 행을 찾지 못해 실패했다. PR #403은 018이 병합된 뒤 이 세션이 main을 합쳐 잇는다.
+
+## main 합치기 (02 먼저 병합)
+
+형제 02 세션이 PR #403의 python·verify 실패와 main 충돌(`mergeStateStatus` DIRTY)을 알리며 반영과 병합을 이어 달라는 메시지를 보냈다. 보낸 쪽이 옮긴 사용자의 말은 아래다. 직접 대 보니 PR #404(13:21Z)와 PR #405(02, 14:16Z)가 main에 병합됐고, PR #403은 `CONFLICTING`·`DIRTY`, PR #406(018)은 열려 있으며 검사가 모두 통과였다(`gh pr list --state all`, `gh pr view 403 --json mergeable,mergeStateStatus`, `gh pr checks 406`을 손으로 봤다).
+
+> 사용자(02 세션이 옮김): "01 세션에 PR #403의 python·verify 실패와 main 충돌(DIRTY)을 알려서 반영과 병합을 이어 가게 해 줘."
+
+018이 병합되기를 기다리는 동안 충돌을 먼저 풀었다. `git merge --no-edit origin/main`이 `.scratch/retro-queue.md`와 `.scratch/admin-style/probes/README.md`에서 충돌했다. 둘 다 같은 자리에 양쪽이 행을 더한 것이라 표지 줄만 지워 양쪽 행을 남겼다. 대기열은 이 브랜치가 494, main이 495~499라 번호가 겹치지 않았다(`grep`과 `sed -n`으로 손으로 봤다). 합치기 커밋 `d7bfa387`의 pre-commit은 실패 없이 끝났다(출력의 `Failed`가 0이었다. 출력을 손으로 봤다). 그 뒤 `tools/sibling_overlap.py`가 이 일지(옛 이름 `2026-10-27-11`)가 main의 최신 일지 `2026-10-27-15`보다 이름순으로 앞이라고 알려, `--move`로 `2026-10-27-17`로 옮기고 인용을 고쳤다(도구가 찍었다). 남은 옛 번호는 02 일지의 당시 기록 한 줄뿐이라 두었다(`git grep`으로 손으로 봤다). main의 `plan.md`는 02를 병합하고도 admin-style 행을 `todo`로 두었고 프론티어 문단도 그대로였다(`git show origin/main:./.scratch/plan.md`로 손으로 봤다). 이 브랜치가 적은 "01 이 먼저 병합되어 … 03은 02 를 마저 기다린다"는 이제 틀려, 02가 먼저 병합되고 01이 이어 병합된다는 문장으로 고쳤다.
 
 ## 회고
 
@@ -330,6 +350,8 @@ open-session을 부른다 2026-10-27T11:22:10Z
 
 ## 다음
 
-- 이 PR(#403)이 병합되면 티켓 01이 닫힌다. 형제 02(`.scratch/admin-style/issues/02-admin-organisms-take-props.md`)는 나란히 돌고 있고, 03은 01과 02에 막혀 있다. 둘 가운데 뒤에 병합하는 세션의 `next-session`이 03을 연다.
-- `.scratch/plan.md`의 프론티어 문단 끝은 01이 먼저 병합되었다고 적었다. 02가 먼저 병합되면 이 PR이 그 문장을 고친 뒤 병합한다.
+- 이 PR(#403)이 병합되면 티켓 01이 닫힌다. 형제 02는 PR #405로 먼저 병합됐으므로, 01과 02에 막혀 있던 03이 풀린다. 뒤에 병합하는 이 PR의 세션이 `next-session`으로 03을 연다.
+- `.scratch/plan.md` 프론티어 문단의 병합 순서 문장은 02가 먼저 병합된 것에 맞춰 고쳤다.
 - 주 체크아웃 미갱신: 루트는 main. 이 세션은 워크트리에서 병합하므로 당기기와 병합된 워크트리 지우기는 다음 새 세션의 `tidy-checkouts`가 한다.
+- PR #403의 CodeRabbit 둘째 회차 Trivial(대기열 492행의 `tools/sibling_overlap.py` 병합 중 merge-base가 `--octopus`가 아닌 뜻이면 그 뜻을 드러내는 시험을 더하라)은 보류했다. 492행을 티켓으로 쓰는 세션이 그 고침에 함께 든다.
+- CI 러너의 git 2.56에서 깨진 푸시 훅 시험은 harness 티켓 018(`chore/018-git-help-exit-code`, PR #406)이 고친다. PR #403은 그 PR이 병합된 뒤 main을 다시 합쳐 CI를 돌리고 병합한다.
