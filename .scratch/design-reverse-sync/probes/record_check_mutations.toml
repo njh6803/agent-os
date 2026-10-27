@@ -65,7 +65,7 @@ name = "tokens.json 을 바이트로 재면 꼴만 다시 쓴 사례가 빨갛�
 runner = "node"
 tests = ["tools/sync-design-system/file-hash.test.ts", "-t", "tokens.json 은 맞대는 몫의 값이라"]
 expect = "red"
-expect_output = ['Received: "191da4dc98d92e537243767fc8c3f0b22a5b9e75b0b83b5e7751590e51f90251"']
+expect_output = ['Received: "1d052e50434999a5ec0d1cb52707507379472f0d83c71d3845563c8ccf4aa2de"']
 
 [[mutation.edit]]
 file = "web/tools/sync-design-system/file-hash.ts"
@@ -173,9 +173,9 @@ new = ''''''
 [[mutation]]
 name = "claim 을 비우면 claim 사례가 빨갛다"
 runner = "node"
-tests = ["tools/sync-design-system/sync-record.test.ts", "-t", "claim 칸은 받은 그대로"]
+tests = ["tools/sync-design-system/sync-record.test.ts", "-t", "덮어쓰기를 포함한 올리기는 claim 을"]
 expect = "red"
-expect_output = ["AssertionError: expected null to deeply equal { …(2) }"]
+expect_output = ["AssertionError: expected null to deeply equal { …(9) }"]
 
 [[mutation.edit]]
 file = "web/tools/sync-design-system/sync-record.ts"
@@ -658,3 +658,29 @@ expect_output = ['none/null/removed, 지난 산출 [\"project/components/Chip/RE
 file = "web/tools/sync-design-system/upload.ts"
 old = '''  const stray = [...revert].filter((path) => !input.output.has(path) && !leftByCode.has(path));'''
 new = '''  const stray = [...revert].filter((path) => !input.output.has(path));'''
+
+# --- 들이기의 기준본(record.ts 의 base, 티켓 07) ------------------------------------------------------------------
+
+[[mutation]]
+name = "claim 이 이어받은 기준본을 쓰지 않으면 이어받은 기록 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/record-check.test.ts", "-t", "들이기의 기준본은"]
+expect = "red"
+expect_output = ['-         "name": "이어받음",']
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/record.ts"
+old = '''  const chosen = inherited ?? record.baseline;'''
+new = '''  const chosen = record.baseline;'''
+
+[[mutation]]
+name = "기준본의 출처를 늘 기록으로 적으면 이어받은 기록 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/record-check.test.ts", "-t", "들이기의 기준본은"]
+expect = "red"
+expect_output = ['-       "from": "claim",']
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/record.ts"
+old = '''    from: inherited === null ? "record" : "claim",'''
+new = '''    from: "record",'''
