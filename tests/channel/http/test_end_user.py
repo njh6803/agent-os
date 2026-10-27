@@ -6,8 +6,9 @@
 주 이음매는 채널 라우터 테스트와 같다 — `create_app()` 에 가짜 포트를 주입하고 httpx `ASGITransport`
 로 밀며, 앱의 수명은 테스트 본문의 `async with` 로 연다(`.claude/rules/tests.md`). 토큰은 테스트가
 `cryptography` 로 만든 키로 직접 서명한다(`tests/signing.py`). 둘째 구동자(같은 앱을 ASGI 로 직접
-부르는 것)는 스트림의 수명에만 쓴다 — 도는 실행에 구독이 붙는 것과, 토큰이 만료돼도 열린 스트림이
-끊기지 않는 것(`.claude/rules/http.md` 의 예외).
+부르는 것)는 스트림의 수명에 쓴다 — 도는 실행에 구독이 붙는 것, 구독이 떠나거나 실행이 타임아웃으로
+등록부를 떠나는 것, 토큰이 만료돼도 열린 스트림이 끊기지 않는 것(`.claude/rules/http.md` 의 예외),
+결말 전에 오는 프레임.
 
 바깥 행동만 본다. 상태 코드와 봉투, 프레임의 `data` 와 `id`, 트레이스에 남은 이벤트, 서버 기록의 한
 줄이다. 등록부의 자료 구조는 보지 않는다. 판정 순서는 core 테스트(`tests/core/test_run.py` 의
@@ -17,7 +18,7 @@
 import asyncio
 import io
 import json
-from collections.abc import AsyncGenerator, AsyncIterator, Callable, Mapping, Sequence
+from collections.abc import AsyncGenerator, AsyncIterator, Callable, Iterator, Mapping, Sequence
 from contextlib import AbstractAsyncContextManager, asynccontextmanager
 from datetime import UTC, datetime, timedelta
 
@@ -26,9 +27,12 @@ import pytest
 from fastapi import FastAPI
 from httpx import ASGITransport, AsyncClient, Response
 from langchain_core.callbacks import AsyncCallbackManagerForLLMRun
+from langchain_core.language_models import LanguageModelInput
 from langchain_core.language_models.fake_chat_models import GenericFakeChatModel
 from langchain_core.messages import AIMessage, BaseMessage
+from langchain_core.messages.tool import ToolCall as LangchainToolCall
 from langchain_core.outputs import ChatResult
+from langchain_core.runnables import Runnable
 from starlette.types import Message, Scope
 from tests.signing import AUDIENCE, SigningKey, bearer, claims, new_key, sign
 
@@ -79,6 +83,7 @@ from agent_os.sdk import (
     RunId,
     RunPaused,
     RunStarted,
+    ToolCall,
     ToolCalled,
     parse_manifest,
 )
@@ -107,17 +112,20 @@ SUBSCRIPTION = f"{END_USER_PREFIX}/runs/{{run_id}}/subscription"
 CONTINUATION = f"{END_USER_PREFIX}/runs/{{run_id}}/continuation"
 
 # 이 사이트가 여는 에이전트. `secret` 은 등록돼 있지만 목록 밖이고, `nope` 은 목록 안이지만 없다.
+# `unloadable` 과 `unwired` 는 운영자의 구성 실수다 — 진입점을 불러올 수 없고, 없는 mcp 를 가리킨다.
 OPEN_AGENTS = frozenset(
     AgentName(name)
     for name in (
         "echo",
         "asking",
+        "looping",
         "gated",
         "working",
         "silent",
         "chatty",
         "forging",
         "unloadable",
+        "unwired",
         "nope",
     )
 )
@@ -235,6 +243,7 @@ class ForgingAgent:
 AGENTS: Mapping[str, BaseAgent] = {
     "echo": EchoAgent(),
     "asking": AskingAgent(),
+    "looping": AskingAgent(),
     "gated": ToolAgent(),
     "working": ToolAgent(),
     "silent": SilentAgent(),
@@ -245,6 +254,7 @@ AGENTS: Mapping[str, BaseAgent] = {
 MANIFESTS = {
     "echo": _manifest("echo"),
     "asking": _manifest("asking"),
+    "looping": _manifest("looping", mcp=["calc-server"]),
     "gated": _manifest("gated", mcp=["calc-server"], approval=["add"]),
     "working": _manifest("working", mcp=["calc-server"]),
     "silent": _manifest("silent"),
@@ -252,8 +262,10 @@ MANIFESTS = {
     "forging": _manifest("forging"),
     "secret": _manifest("secret"),
     "unloadable": _manifest("unloadable"),
+    "unwired": _manifest("unwired", mcp=["no-such-server"]),
 }
 UNLOADABLE_REASON = "진입점을 불러올 수 없다: plugins/agents/unloadable/agent.py"
+UNWIRED_REASON = "지정한 mcp 플러그인이 없다: no-such-server"
 
 
 class FakePlugins:
@@ -432,6 +444,27 @@ def _gated_model(answer: str = "답", *, answers: int = 1) -> GatedModel:
     )
 
 
+class ToolAwareModel(GenericFakeChatModel):
+    """도구를 묶어도 자기 자신이다. core 는 연결이 도구를 주면 `bind_tools` 를 부른다."""
+
+    def bind_tools(
+        self,
+        tools: Sequence[object],
+        *,
+        tool_choice: str | None = None,
+        **kwargs: object,
+    ) -> Runnable[LanguageModelInput, AIMessage]:
+        return self
+
+
+def _adding_model() -> ToolAwareModel:
+    """첫 턴에 add 를 요청하고 둘째 턴에 답한다. `looping` 의 루프 하나가 도구 하나를 부른다."""
+    request = AIMessage(
+        content="", tool_calls=[LangchainToolCall(name="add", args={"a": 2, "b": 3}, id="c1")]
+    )
+    return ToolAwareModel(messages=iter([request, AIMessage(content="답")]))
+
+
 def _app(
     *,
     plugins: PluginSource | None = None,
@@ -555,7 +588,8 @@ def _paused(run_id: str) -> RunPaused:
 
 async def test_시작은_서명한_주체로_실행을_일으키고_프레임마다_data_와_id_두_줄이다() -> None:
     """주체는 `발급자|sub` 이고 시작 이벤트에 그대로 남는다(ADR 0023). 본문에서 받지 않는다.
-    프레임의 `id` 는 그 항목의 근거인 트레이스 인덱스라 빈자리가 있다 — 모델 호출은 항목이 없다."""
+    프레임의 `id` 는 그 항목의 근거인 트레이스 인덱스라 빈자리가 있다 — 도구를 요청하지 않은 모델
+    호출은 항목이 없다."""
     trace = FakeTrace()
     app = _app(trace=trace)
 
@@ -590,8 +624,8 @@ async def test_항목은_프롬프트도_도구_결과도_주체도_싣지_않�
 
 
 async def test_실패한_실행은_고정_문구와_실행_식별자의_실패_항목이고_원문을_싣지_않는다() -> None:
-    """사용자에게 보여 줄 말과 운영자에게 알릴 식별자다. 원문은 트레이스에 있다. 원인은 트레이스의
-    실패 이벤트가 든 것 그대로이고, 원인이 기록되지 않은 실패는 `null` 이다(ADR 0031)."""
+    """사용자에게 보여 줄 말과 운영자에게 알릴 식별자다. 원문은 트레이스에 있다. 원인은 런타임이
+    실패 이벤트에 적은 것 그대로다 — 결말 없이 돌아온 에이전트는 에이전트 코드다(ADR 0031)."""
     trace = FakeTrace()
 
     async with _serving(_app(trace=trace)) as client:
@@ -599,7 +633,7 @@ async def test_실패한_실행은_고정_문구와_실행_식별자의_실패_�
 
     assert _frames(response.text)[-1] == (
         1,
-        {"type": "failed", "message": FAILED_MESSAGE, "run_id": "run-1", "cause": None},
+        {"type": "failed", "message": FAILED_MESSAGE, "run_id": "run-1", "cause": "agent_code"},
     )
     assert "run_finished" not in response.text
     assert "run_finished" in trace.events[-1].model_dump_json()
@@ -615,7 +649,10 @@ async def test_에이전트가_지어낸_실패는_나가지_않고_실패_항�
 
     assert _frames(response.text) == [
         (0, {"type": "started", "run_id": "run-1"}),
-        (1, {"type": "failed", "message": FAILED_MESSAGE, "run_id": "run-1", "cause": None}),
+        (
+            1,
+            {"type": "failed", "message": FAILED_MESSAGE, "run_id": "run-1", "cause": "agent_code"},
+        ),
     ]
     assert [event.type for event in trace.events] == ["run_started", "run_failed"]
 
@@ -772,23 +809,26 @@ async def test_남의_실행에_낸_결정은_없는_실행과_같은_404이고_
 
 
 async def test_손상된_실행과_열_에이전트_밖의_실행도_같은_404이고_서버_기록은_원인을_든다() -> None:
-    """손상된 남의 트레이스가 있다는 것도 숨긴다(ADR 0023 의 2026-10-05 이력). 원인은 서버 기록에
-    원래 상태 코드와 함께 남아 운영자가 되살린다(스토리 52). 목록에서 뺀 에이전트의 멈춘 실행은 계속
-    재개하지 못한다."""
+    """손상된 남의 트레이스가 있다는 것도 숨긴다(ADR 0023 의 2026-10-05·2026-10-16 이력). 원인은
+    서버 기록에 원래 상태 코드와 하위 타입과 함께 남아 운영자가 되살린다(스토리 52). 목록에서 뺀
+    에이전트의 멈춘 실행은 계속 재개하지 못한다."""
     trace = FakeTrace()
     _write(trace, "damaged", _started("damaged", BOB, "gated"), _paused("damaged"))
     trace.damaged.add(RunId("damaged"))
     _write(trace, "hidden", _started("hidden", ALICE, "secret"), _paused("hidden"))
     stderr = io.StringIO()
+    headers = _as() | {"Origin": ORIGIN}
 
     async with _serving(_app(trace=trace, stderr=stderr)) as client:
-        damaged = await client.post(_decide_path("damaged"), json=APPROVE, headers=_as())
-        hidden = await client.post(_decide_path("hidden"), json=APPROVE, headers=_as())
+        damaged = await client.post(_decide_path("damaged"), json=APPROVE, headers=headers)
+        hidden = await client.post(_decide_path("hidden"), json=APPROVE, headers=headers)
 
     for response in (damaged, hidden):
         assert response.status_code == 404
+        assert response.headers["content-type"] == "application/json"
         assert response.json()["message"] == NOT_FOUND_MESSAGE
-    assert "원래 상태 500 PluginError" in stderr.getvalue()
+        assert response.headers["access-control-allow-origin"] == ORIGIN
+    assert "원래 상태 500 TraceDamagedBeforePrincipal" in stderr.getvalue()
     assert "모르는 종류의 이벤트" in stderr.getvalue()
     assert len(trace.events) == 4
 
@@ -796,24 +836,142 @@ async def test_손상된_실행과_열_에이전트_밖의_실행도_같은_404�
 async def test_손상된_남의_실행에_운영자_채널은_500_원문이고_최종_사용자_면은_404_고정이다() -> (
     None
 ):
-    """표가 면을 인자로 받는다(`failure_for`). 운영자 면은 바뀌지 않는다. 서버 기록은 둘 다 원인을
-    든다."""
+    """표가 면을 인자로 받는다(`failure_for`). 운영자 면은 주인을 확인하기 전의 손상도 다른
+    `PluginError` 처럼 500 원문이다 — 결정과 이어 가기 둘 다다. 서버 기록은 셋 다 원인을 들고, 덮은
+    최종 사용자 면의 것만 원래 상태 코드를 앞에 적는다."""
     trace = FakeTrace()
     _write(trace, "damaged", _started("damaged", BOB, "gated"), _paused("damaged"))
     trace.damaged.add(RunId("damaged"))
     stderr = io.StringIO()
 
     async with _serving(_app(trace=trace, stderr=stderr)) as client:
-        operator = await client.post("/runs/damaged/approval", json=APPROVE, headers=CHANNEL)
+        decided = await client.post("/runs/damaged/approval", json=APPROVE, headers=CHANNEL)
+        continued = await client.post(
+            "/runs/damaged/continuation", json=_start("echo"), headers=CHANNEL
+        )
         end_user = await client.post(_decide_path("damaged"), json=APPROVE, headers=_as())
 
-    assert operator.status_code == 500
-    assert "모르는 종류의 이벤트" in operator.json()["message"]
+    for operator in (decided, continued):
+        assert operator.status_code == 500
+        assert "모르는 종류의 이벤트" in operator.json()["message"]
     assert end_user.status_code == 404
     assert end_user.json()["message"] == NOT_FOUND_MESSAGE
     lines = stderr.getvalue().splitlines()
+    assert len(lines) == 3
+    assert all("TraceDamagedBeforePrincipal: 모르는 종류의 이벤트" in line for line in lines)
+    assert ["원래 상태 500" in line for line in lines] == [False, False, True]
+
+
+# 덮기 — 최종 사용자 면이 404 로 덮는 것은 주인을 확인하기 전의 손상뿐이다(ADR 0023 의 2026-10-16
+# 이력). 주체를 확인한 뒤의 고장은 운영자의 구성 실수이거나 자기 기록이 가리킨 것이라 숨길 남이
+# 없다. 그것을 404 로 덮으면 위젯이 저장한 대화를 지우고, 고친 뒤에도 대화는 돌아오지 않는다(ADR
+# 0024).
+
+
+def _broken_answer(response: Response, reason: str, log: str) -> None:
+    """주인을 확인한 뒤의 고장이 최종 사용자 면에 나간 모양. 허용 출처가 읽는 JSON 봉투의 고정 문구
+    500 이고, 원인은 그 응답의 추적 식별자가 든 서버 기록 한 줄에만 있다. 기반 타입이고 덮지
+    않았으니 원래 상태 코드를 적지 않는다."""
+    assert response.status_code == 500, reason
+    assert response.headers["content-type"] == "application/json"
+    assert response.json()["code"] == "internal_error"
+    assert response.json()["message"] == INTERNAL_MESSAGE
+    assert reason not in response.text
+    assert response.headers["access-control-allow-origin"] == ORIGIN
+    [line] = [line for line in log.splitlines() if response.headers["X-Request-Id"] in line]
+    assert "status=500 PluginError: " in line, line
+    assert reason in line, line
+
+
+async def test_결정에서_주인을_확인한_뒤의_고장은_고정_문구의_500이다() -> None:
+    """진입점을 불러올 수 없는 에이전트, 없는 mcp, 기록이 가리키는 에이전트의 부재, 깨진 고리. 넷
+    모두 자기 멈춘 실행이고 주체 판정 뒤라 덮지 않는다. 결정 이벤트를 쓰기 전이라 실행은 일시정지
+    그대로다."""
+    trace = FakeTrace()
+    _write(trace, "unloadable", _started("unloadable", agent="unloadable"), _paused("unloadable"))
+    _write(trace, "unwired", _started("unwired", agent="unwired"), _paused("unwired"))
+    _write(trace, "agentless", _started("agentless", agent="nope"), _paused("agentless"))
+    unlinked = _started("unlinked", agent="gated", previous="gone")
+    _write(trace, "unlinked", unlinked, _paused("unlinked"))
+    before = list(trace.events)
+    reasons = {
+        "unloadable": UNLOADABLE_REASON,
+        "unwired": UNWIRED_REASON,
+        "agentless": "에이전트 플러그인이 없다: nope",
+        "unlinked": "이어 간 앞 실행이 없다: gone",
+    }
+    stderr = io.StringIO()
+
+    async with _serving(_app(trace=trace, stderr=stderr)) as client:
+        responses = {
+            run_id: await client.post(
+                _decide_path(run_id), json=APPROVE, headers=_as() | {"Origin": ORIGIN}
+            )
+            for run_id in reasons
+        }
+
+    for run_id, response in responses.items():
+        _broken_answer(response, reasons[run_id], stderr.getvalue())
+    assert trace.events == before
+
+
+async def test_이어_가기의_구성_오류와_깨진_고리는_고정_문구의_500이다() -> None:
+    """자기 끝난 앞 실행을 이어 가는데 요청한 에이전트의 진입점이나 mcp 가 깨졌거나, 앞 실행이
+    가리키는 고리의 실행이 없다. 주체 판정 뒤라 덮지 않는다(end-user-continuation 명세 "최종 사용자
+    면의 404 덮기"). 실행 식별자를 만들기 전이라 트레이스가 늘지 않는다."""
+    trace = FakeTrace()
+    _finished_own(trace, "mine")
+    _write(trace, "unlinked", _started("unlinked", previous="gone"), _finished("unlinked"))
+    before = list(trace.events)
+    requests = {
+        ("mine", "unloadable"): UNLOADABLE_REASON,
+        ("mine", "unwired"): UNWIRED_REASON,
+        ("unlinked", "echo"): "고리의 실행이 없다: gone",
+    }
+    stderr = io.StringIO()
+
+    async with _serving(_app(trace=trace, stderr=stderr)) as client:
+        responses = {
+            (previous, agent): await client.post(
+                _continue_path(previous),
+                json=_start(agent),
+                headers=_as() | {"Origin": ORIGIN},
+            )
+            for previous, agent in requests
+        }
+
+    for key, response in responses.items():
+        _broken_answer(response, requests[key], stderr.getvalue())
+    assert trace.events == before
+
+
+async def test_자기_실행의_손상도_남의_손상처럼_404이고_기록에는_하위_타입이_남는다() -> None:
+    """손상된 트레이스의 주체를 믿을 수 없어 자기 것인지 모른다. 그래서 자기 실행의 손상도 남의
+    손상과 같은 404 고정 문구다 — 결정과 이어 가기 둘 다다. 허용 출처가 읽는 JSON 봉투이고, 원인은
+    원래 상태 코드와 하위 타입과 함께 기록에 남는다."""
+    trace = FakeTrace()
+    _write(trace, "held", _started("held", agent="gated"), _paused("held"))
+    _finished_own(trace, "mine")
+    trace.damaged.update({RunId("held"), RunId("mine")})
+    before = list(trace.events)
+    stderr = io.StringIO()
+    origin = {"Origin": ORIGIN}
+
+    async with _serving(_app(trace=trace, stderr=stderr)) as client:
+        decided = await client.post(_decide_path("held"), json=APPROVE, headers=_as() | origin)
+        continued = await client.post(
+            _continue_path("mine"), json=_start("echo"), headers=_as() | origin
+        )
+
+    for response in (decided, continued):
+        assert response.status_code == 404
+        assert response.headers["content-type"] == "application/json"
+        assert response.json()["message"] == NOT_FOUND_MESSAGE
+        assert response.headers["access-control-allow-origin"] == ORIGIN
+    lines = stderr.getvalue().splitlines()
     assert len(lines) == 2
-    assert all("모르는 종류의 이벤트" in line for line in lines)
+    assert all("원래 상태 500 TraceDamagedBeforePrincipal: 모르는 종류" in line for line in lines)
+    assert trace.events == before
 
 
 async def test_자기_실행의_상태는_409이고_메시지가_가른다() -> None:
@@ -889,6 +1047,7 @@ async def test_이어_가기는_시작과_같은_항목_스트림이고_첫_항�
     started = trace.of(RunId("run-2"))[0]
     assert isinstance(started, RunStarted)
     assert started.previous_run == "run-1"
+    assert started.shortcuts == {"echo": "run-1"}
     assert started.principal == ALICE
 
 
@@ -910,15 +1069,19 @@ async def test_없거나_남의_것이거나_손상된_남의_앞_실행과_없�
         ("mine", "secret"),
     ]
 
+    headers = _as() | {"Origin": ORIGIN}
+
     async with _serving(_app(trace=trace)) as client:
         responses = [
-            await client.post(_continue_path(previous), json=_start(agent), headers=_as())
+            await client.post(_continue_path(previous), json=_start(agent), headers=headers)
             for previous, agent in requests
         ]
 
     for response in responses:
         assert response.status_code == 404
+        assert response.headers["content-type"] == "application/json"
         assert response.json()["message"] == NOT_FOUND_MESSAGE
+        assert response.headers["access-control-allow-origin"] == ORIGIN
     assert trace.events == before
 
 
@@ -1016,6 +1179,38 @@ async def test_이어_가기도_조립이_넘긴_타임아웃에서_실패_항�
     failed = trace.events[-1]
     assert isinstance(failed, RunFailed)
     assert failed.error == TIMED_OUT
+
+
+def _summary_down() -> Iterator[AIMessage | str]:
+    raise RuntimeError("summary API down")
+    yield AIMessage(content="닿지 않는다")
+
+
+async def test_이어_가기의_요약이_실패하면_실패_항목이_원인_대화_요약을_든다() -> None:
+    """앞 실행의 원문 교환이 core 의 기본 한도를 넘어 런타임이 요약하다 모델이 실패한다. 위젯은
+    원인을 보고 할 일을 정한다(end-user-continuation 명세 "최종 사용자 실패 항목"). 원문은 싣지
+    않는다."""
+    trace = FakeTrace()
+    long_start = _started("mine").model_copy(update={"request": "요" * 20_000})
+    _write(trace, "mine", long_start, _finished("mine"))
+    model = GenericFakeChatModel(messages=_summary_down())
+
+    async with _serving(_app(trace=trace, model=model)) as client:
+        response = await client.post(_continue_path("mine"), json=_start("echo"), headers=_as())
+
+    assert _frames(response.text) == [
+        (0, {"type": "started", "run_id": "run-1"}),
+        (
+            1,
+            {
+                "type": "failed",
+                "message": FAILED_MESSAGE,
+                "run_id": "run-1",
+                "cause": "conversation_summary",
+            },
+        ),
+    ]
+    assert "summary API down" not in response.text
 
 
 async def test_이어_가기_결정_구독의_경로는_서로_가로채지_않는다() -> None:
@@ -1138,6 +1333,49 @@ async def test_요약_이벤트는_항목이_없고_인덱스만_지난다() -> 
     assert "앞 대화의 요약" not in response.text
 
 
+async def test_도구를_요청한_모델_호출은_그_도구_이름을_차례대로_든_calling_항목이다() -> None:
+    """모델이 어느 도구를 요청했는지를 싣는 항목이다(ADR 0023 의 2026-10-23 이력). 모델이 요청한
+    도구의 이름만 요청한 차례대로 싣고, 인자와 도구 호출 식별자는 싣지 않는다. 도구를 요청하지 않은
+    모델 호출은 지금처럼 항목이 없다. 이벤트 하나가 항목 하나라 프레임의 `id` 는 그 이벤트의
+    인덱스다. 모델 호출 이벤트는 손으로 쓴다."""
+    trace = FakeTrace()
+    asked = LlmCalled(
+        run_id=RunId("calls"),
+        ts=T0,
+        model="m",
+        input_tokens=1,
+        output_tokens=1,
+        prompt=PROMPT,
+        tool_calls=(
+            ToolCall(id="call-첫째", name="orders.lookup", args={"order": "주문-원문"}),
+            ToolCall(id="call-둘째", name="add", args={"a": 2, "b": 3}),
+        ),
+    )
+    _write(
+        trace,
+        "calls",
+        _started("calls", agent="working"),
+        asked,
+        ToolCalled(run_id=RunId("calls"), ts=T0, tool="orders.lookup", ok=True),
+        ToolCalled(run_id=RunId("calls"), ts=T0, tool="add", ok=False),
+        _llm("calls"),
+        _finished("calls"),
+    )
+
+    async with _serving(_app(trace=trace)) as client:
+        response = await _subscribe(client, "calls")
+
+    assert _frames(response.text) == [
+        (0, {"type": "started", "run_id": "calls"}),
+        (1, {"type": "calling", "tools": ["orders.lookup", "add"]}),
+        (2, {"type": "progress", "tool": "orders.lookup", "ok": True}),
+        (3, {"type": "progress", "tool": "add", "ok": False}),
+        (5, {"type": "finished", "output": "끝"}),
+    ]
+    for hidden in ("call-첫째", "주문-원문", PROMPT):
+        assert hidden not in response.text
+
+
 @pytest.mark.parametrize(
     ("cause", "expected"),
     [(None, None), ("timeout", "timeout")],
@@ -1146,7 +1384,7 @@ async def test_요약_이벤트는_항목이_없고_인덱스만_지난다() -> 
 async def test_구독이_다시_보내는_실패_항목은_트레이스의_원인을_그대로_옮긴다(
     cause: FailureCause | None, expected: str | None
 ) -> None:
-    """투영은 종류로만 가르고 실패 이벤트의 원인을 옮긴다(ADR 0031). 원인이 기록되지 않은 실패(이
+    """투영은 실패 이벤트의 원인을 그대로 옮긴다(ADR 0031). 원인이 기록되지 않은 실패(이
     기능 전의 트레이스 따위)는 `null` 이고 위젯은 고정 문구로 내려간다. 실패 이벤트는 손으로
     쓴다."""
     trace = FakeTrace()
@@ -1346,6 +1584,31 @@ async def test_도는_실행에_붙은_구독은_그_뒤_항목을_생기는_대
     assert _types(tail.frames()) == [(2, "finished")]
 
 
+async def test_모델이_요청한_도구가_끝나기_전에_부르기_시작함_항목이_도착한다() -> None:
+    """실행 도중의 이벤트는 생기는 대로 온다(ADR 0039). 루프가 `ctx.llm()` 한 번인 에이전트에서도
+    도구를 요청한 모델 호출의 항목(`calling`)이 그 도구가 끝나기 전에 닿는다. 모으던 core 에서는
+    결말 앞에 한꺼번에 나와, 도구가 끝나지 않는 동안 이 항목을 기다리다 기한에 걸린다. 도구를
+    요청하지 않은 둘째 모델 호출은 항목 없이 인덱스만 지난다."""
+    gate = asyncio.Event()
+    app = _app(model=_adding_model(), tools=_gated_tools(gate))
+    starting = _Wire(_start("looping"))
+
+    async with _lifespan(app):
+        start = _call(app, _scope("POST", START, _token()), starting)
+        await _until(lambda: (1, "calling") in _types(starting.frames()))
+        assert not gate.is_set()
+        gate.set()
+        async with asyncio.timeout(5):
+            await start
+
+    assert _types(starting.frames()) == [
+        (0, "started"),
+        (1, "calling"),
+        (2, "progress"),
+        (4, "finished"),
+    ]
+
+
 async def test_구독이_트레이스를_읽는_바로_그때_실행이_움직여도_빠짐도_중복도_없다() -> None:
     """트레이스 읽기와 등록부 보기 사이에 await 가 없다는 것을 잰다. 트레이스를 읽는 바로 그
     자리에서 모델의 문을 연다 — 둘 사이에 await 가 하나라도 끼면 실행이 그 틈에 결말까지 가 등록부를
@@ -1415,7 +1678,7 @@ async def test_타임아웃으로_끝난_실행은_실패_항목으로_닫히고
 
     assert starting.frames() == [
         (0, {"type": "started", "run_id": "run-1"}),
-        (1, {"type": "failed", "message": FAILED_MESSAGE, "run_id": "run-1", "cause": None}),
+        (1, {"type": "failed", "message": FAILED_MESSAGE, "run_id": "run-1", "cause": "timeout"}),
     ]
     failed = trace.events[-1]
     assert isinstance(failed, RunFailed)
@@ -1449,20 +1712,44 @@ async def test_토큰이_만료돼도_열린_스트림은_끊기지_않고_같�
 # 상한 — 너무 길거나 잦은 요청은 422·429 로 거절된다(ADR 0023, end-user-channel 티켓 02). 셈은
 # 채널이 프로세스 메모리에 든다. 동시 실행과 구독은 열린 채 남은 응답이 칸을 쥐고 있어야 하므로
 # 둘째 구동자로 붙잡고(`_held`), 거절될 요청은 `ASGITransport` 로 민다 — 429 는 응답이 곧 끝난다.
-# 거절되지 않으면 끝나지 않을 요청은 기한 안에서 민다.
+# 거절되지 않으면 끝나지 않을 요청은 기한 안에서 민다. 429 봉투의 상한의 종류(`limit`)는 범위와
+# 무관하다 — 동시 실행의 세 범위는 모두 `concurrent_runs`, 시간당의 두 범위는 `hourly_runs` 다(ADR
+# 0023 의 2026-10-23 이력).
 
-CONCURRENT = (429, "too_many_requests", "동시 실행 수의 상한을 넘었다", "5")
-SUBSCRIPTIONS = (429, "too_many_requests", "구독 수의 상한을 넘었다", "5")
+type Refusal = tuple[int, object, object, object, str | None]
+
+CONCURRENT: Refusal = (
+    429,
+    "too_many_requests",
+    "동시 실행 수의 상한을 넘었다",
+    "concurrent_runs",
+    "5",
+)
+SUBSCRIPTIONS: Refusal = (429, "too_many_requests", "구독 수의 상한을 넘었다", "subscriptions", "5")
 
 
-def _hourly(retry_after: int) -> tuple[int, str, str, str]:
-    return (429, "too_many_requests", "시간당 실행 수의 상한을 넘었다", str(retry_after))
+def _hourly(retry_after: int) -> Refusal:
+    return (
+        429,
+        "too_many_requests",
+        "시간당 실행 수의 상한을 넘었다",
+        "hourly_runs",
+        str(retry_after),
+    )
 
 
-def _refusal(response: Response) -> tuple[int, object, object, str | None]:
-    """거절 응답의 상태 코드, 어휘, 문구, `Retry-After`."""
+def _refusal(response: Response) -> Refusal:
+    """거절 응답의 상태 코드, 어휘, 문구, 상한의 종류, `Retry-After`. 봉투는 네 필드에 상한의 종류
+    하나를 더한 것이다."""
     body = response.json()
-    return response.status_code, body["code"], body["message"], response.headers.get("Retry-After")
+    assert set(body) == {"code", "message", "violations", "request_id", "limit"}, body
+    return (
+        response.status_code,
+        body["code"],
+        body["message"],
+        body["limit"],
+        response.headers.get("Retry-After"),
+    )
 
 
 def _starting(token: str) -> Scope:
@@ -1691,7 +1978,7 @@ async def test_주체별_시간당_실행은_미끄러지는_창이고_Retry_Aft
     clock = StepClock()
     app = _app(clock=clock, sites=_site(limits=SiteLimits(hourly_runs_per_principal=2)))
     statuses: list[int] = []
-    refusals: list[tuple[int, object, object, str | None]] = []
+    refusals: list[Refusal] = []
 
     async with _serving(app) as client:
         for seconds in (0, 600, 1799.5, 3599, 3600, 3600):
@@ -1856,8 +2143,10 @@ async def test_타임아웃으로_끝난_실행도_칸을_돌려준다() -> None
 
 
 async def test_앱이_멈추며_취소한_실행도_칸을_돌려준다() -> None:
-    """앱의 수명이 닫히면 남은 실행은 기다리지 않고 취소된다(ADR 0014). 그 취소도 칸을 돌려주는
-    자리를 지난다. 같은 앱의 수명을 다시 열어 잰다 — 셈은 앱이 들고 있다."""
+    """앱의 수명이 닫히면 남은 실행은 스스로 끝나기를 기다려 주지 않고 곧바로 취소된다(ADR 0014).
+    수명은 취소된 실행의 태스크가 끝나기를 기다리고, 그 끝에 MCP 서버의 닫기가 든다(ADR 0034. 이
+    테스트의 가짜 도구 포트에는 서버가 없다). 그 취소도 칸을 돌려주는 자리를 지난다. 같은 앱의
+    수명을 다시 열어 잰다 — 셈은 앱이 들고 있다."""
     model = _gated_model()
     app = _app(model=model, sites=_site(limits=ONE_AT_A_TIME))
 
@@ -1998,12 +2287,13 @@ async def test_허용_출처의_요청은_200과_에러_응답_모두에_CORS_�
 
 
 async def test_이어_가기의_에러도_JSON_봉투이고_허용_출처에_CORS_헤더가_붙는다() -> None:
-    """페이지 안 위젯이 이어 가기의 에러 봉투도 읽어 404 와 409 를 가를 수
+    """페이지 안 위젯이 이어 가기의 에러 봉투도 읽어 404 와 409 와 500 을 가를 수
     있다(end-user-continuation 스토리 11. 무엇을 할지는 web-widget 이 정한다). 401 은 인증이,
-    나머지는 표가 낸다."""
+    나머지는 표가 낸다. 500 은 운영자의 구성 실수라 위젯이 대화를 지우지 않을 몫이다."""
     origin = {"Origin": ORIGIN}
     trace = FakeTrace()
     _write(trace, "held", _started("held", agent="gated"), _paused("held"))
+    _finished_own(trace, "mine")
     hourly_once = _site(limits=SiteLimits(hourly_runs_per_principal=1))
 
     async with _serving(_app(sites=hourly_once)) as limited:
@@ -2022,12 +2312,17 @@ async def test_이어_가기의_에러도_JSON_봉투이고_허용_출처에_COR
         invalid = await client.post(
             _continue_path("..%2Fescape"), json=_start("echo"), headers=_as() | origin
         )
+        broken = await client.post(
+            _continue_path("mine"), json=_start("unloadable"), headers=_as() | origin
+        )
 
-    responses = {401: refused, 404: missing, 409: paused, 422: invalid, 429: busy}
+    responses = {401: refused, 404: missing, 409: paused, 422: invalid, 429: busy, 500: broken}
+    fields = {"code", "message", "violations", "request_id"}
     for status, response in responses.items():
         assert response.status_code == status
         assert response.headers["content-type"] == "application/json", status
-        assert set(response.json()) == {"code", "message", "violations", "request_id"}, status
+        expected = fields | {"limit"} if status == 429 else fields
+        assert set(response.json()) == expected, status
         assert response.headers["access-control-allow-origin"] == ORIGIN, status
 
 
@@ -2042,6 +2337,7 @@ END_USER_OPERATIONS = (
 )
 ITEMS = {
     "StartedItem": "started",
+    "CallingItem": "calling",
     "ProgressItem": "progress",
     "PausedItem": "paused",
     "DecidedItem": "decided",
@@ -2052,9 +2348,11 @@ ITEMS = {
 
 
 def test_경로_넷이_지은_operation_id_와_봉투_에러_문서와_항목_유니온을_든다() -> None:
-    """에러는 스트림이 시작되기 전의 JSON 봉투다. 429 는 `Retry-After` 를 문서에 든다(ADR 0023)."""
+    """에러는 스트림이 시작되기 전의 JSON 봉투다. 429 는 상한의 종류를 더 든 봉투이고
+    `Retry-After` 를 문서에 든다(ADR 0023 과 그 2026-10-23 이력)."""
     paths = _app().openapi()["paths"]
     envelope = {"$ref": "#/components/schemas/ErrorEnvelope"}
+    limited = {"$ref": "#/components/schemas/LimitEnvelope"}
 
     for path, method, operation_id in END_USER_OPERATIONS:
         operation = paths[path][method]
@@ -2063,12 +2361,36 @@ def test_경로_넷이_지은_operation_id_와_봉투_에러_문서와_항목_�
         assert errors == {"401", "404", "409", "422", "429", "500"}, path
         for status in errors:
             content = operation["responses"][status]["content"]
-            assert content == {"application/json": {"schema": envelope}}, (path, status)
+            expected = limited if status == "429" else envelope
+            assert content == {"application/json": {"schema": expected}}, (path, status)
         assert set(operation["responses"]["429"]["headers"]) == {"Retry-After"}, path
         item = operation["responses"]["200"]["content"]["text/event-stream"]["itemSchema"]
         assert item["properties"]["data"]["contentSchema"] == {
             "$ref": "#/components/schemas/EndUserItem"
         }, path
+
+
+def test_429_봉투는_ErrorEnvelope_의_네_필드에_상한의_종류_limit_을_더한다() -> None:
+    """위젯이 상한의 종류마다 제 문구를 고른다(web-widget 명세의 "상한" 절, 스토리 34). 다른 상태
+    코드의 봉투는 네 필드 그대로이고, 누구 몫으로 센 상한인지(주체별, 사이트별, 전역)는 싣지
+    않는다(ADR 0023 의 2026-10-23 이력)."""
+    schemas = _app().openapi()["components"]["schemas"]
+    envelope = schemas["ErrorEnvelope"]
+    limited = schemas["LimitEnvelope"]
+    kind = schemas["LimitKind"]
+
+    assert limited["properties"] == {
+        **envelope["properties"],
+        "limit": {"$ref": "#/components/schemas/LimitKind"},
+    }
+    assert set(limited["required"]) == set(limited["properties"])
+    assert limited["additionalProperties"] is False
+    assert (kind["type"], kind["enum"]) == (
+        "string",
+        ["concurrent_runs", "hourly_runs", "subscriptions"],
+    )
+    for schema in (limited, kind):
+        assert "\n" not in schema["description"]
 
 
 def test_시작과_이어_가기의_422_설명은_요청_글자_수의_단위와_기본값을_적는다() -> None:
@@ -2129,10 +2451,16 @@ def test_실패_원인과_바로가기는_required_이고_null_을_허락하며_
     ]
 
 
-def test_항목_유니온은_판별자_type_의_이름_있는_컴포넌트이고_멤버가_일곱이다() -> None:
-    """생성 타입에서 판별자 술어를 만든다(스토리 28). 멤버 이름은 기존 컴포넌트와 겹치지 않는다."""
+def test_항목_유니온은_판별자_type_의_이름_있는_컴포넌트이고_멤버가_여덟이다() -> None:
+    """생성 타입에서 판별자 술어를 만든다(스토리 28). 멤버 이름은 기존 컴포넌트와 겹치지 않는다.
+    여덟째인 `calling` 의 도구 목록은 늘 하나 이상이고 계약이 그것을 말한다 — 도구를 요청하지 않은
+    모델 호출은 항목이 없다(web-widget 명세 "계약")."""
     schemas = _app().openapi()["components"]["schemas"]
     union = schemas["EndUserItem"]
+    tools = schemas["CallingItem"]["properties"]["tools"]
+
+    assert len(ITEMS) == 8
+    assert (tools["type"], tools["items"], tools["minItems"]) == ("array", {"type": "string"}, 1)
 
     assert union["discriminator"] == {
         "propertyName": "type",

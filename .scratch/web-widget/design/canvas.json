@@ -1,0 +1,54 @@
+{
+  "v": 3,
+  "createdOnFiles": {"v": 1, "at": "2026-10-22T23:36:34Z"},
+  "title": "web-widget 화면 · screens-prompt.md",
+  "launch": {"view": "canvas", "page": "mockups"},
+  "pages": [
+    {"id": "wireframes", "name": "와이어프레임"},
+    {"id": "mockups", "name": "완성 화면"}
+  ],
+  "boards": {
+    "Main.dc.html": {"x": 0, "y": 0, "w": 1600, "h": 760, "title": "1 대화 · 320 · 400", "page": "wireframes"},
+    "wf-conversation-ab.dc.html": {"x": 1680, "y": 0, "w": 1152, "h": 760, "title": "1 대화 · A·B 위쪽 띠의 새 대화", "page": "wireframes"},
+    "wf-approval.dc.html": {"x": 0, "y": 880, "w": 1600, "h": 760, "title": "2 승인 묻기 · 320 · 400", "page": "wireframes"},
+    "wf-approval-ab.dc.html": {"x": 1680, "y": 880, "w": 784, "h": 760, "title": "2 승인 묻기 · A·B 기다리는 동안의 입력창", "page": "wireframes"},
+    "wf-failure.dc.html": {"x": 0, "y": 1760, "w": 3072, "h": 760, "title": "3 실패 · 320 · 400", "page": "wireframes"},
+    "wf-reconnect.dc.html": {"x": 0, "y": 2640, "w": 864, "h": 760, "title": "4 재접속 중 · 320 · 400", "page": "wireframes"},
+    "wf-limit.dc.html": {"x": 944, "y": 2640, "w": 1600, "h": 760, "title": "5 상한에 걸림 · 320 · 400", "page": "wireframes"},
+    "mk-conversation.dc.html": {"x": 0, "y": 0, "w": 1600, "h": 760, "title": "1 대화 · 녹청 라이트", "page": "mockups"},
+    "mk-approval.dc.html": {"x": 0, "y": 880, "w": 1968, "h": 760, "title": "2 승인 묻기", "page": "mockups"},
+    "mk-failure.dc.html": {"x": 0, "y": 1760, "w": 1692, "h": 900, "title": "3 실패 · 알림 하나와 원인 목록", "page": "mockups"},
+    "mk-rejection.dc.html": {"x": 0, "y": 2780, "w": 1600, "h": 760, "title": "3 실패 · 보낼 때의 거절", "page": "mockups"},
+    "mk-reconnect.dc.html": {"x": 0, "y": 3660, "w": 1600, "h": 760, "title": "4 재접속 중", "page": "mockups"},
+    "mk-limit.dc.html": {"x": 0, "y": 4540, "w": 2336, "h": 760, "title": "5 상한에 걸림", "page": "mockups"},
+    "mk-dark.dc.html": {"x": 0, "y": 5420, "w": 864, "h": 760, "title": "다크 · 대화", "page": "mockups"},
+    "mk-themes.dc.html": {"x": 944, "y": 5420, "w": 1520, "h": 760, "title": "테마 넷 · 대화", "page": "mockups"}
+  },
+  "order": [
+    "Main.dc.html",
+    "wf-conversation-ab.dc.html",
+    "wf-approval.dc.html",
+    "wf-approval-ab.dc.html",
+    "wf-failure.dc.html",
+    "wf-reconnect.dc.html",
+    "wf-limit.dc.html",
+    "mk-conversation.dc.html",
+    "mk-approval.dc.html",
+    "mk-failure.dc.html",
+    "mk-rejection.dc.html",
+    "mk-reconnect.dc.html",
+    "mk-limit.dc.html",
+    "mk-dark.dc.html",
+    "mk-themes.dc.html"
+  ],
+  "notes": {
+    "wf-title": {"x": 0, "y": -300, "text": "와이어프레임", "kind": "title1", "maxW": 2832, "page": "wireframes"},
+    "wf-how": {"x": 2912, "y": 0, "w": 380, "maxH": 1100, "page": "wireframes", "fill": "gray", "text": "회색조로 자리, 크기, 차례만 보인다. 위젯 창은 자리 폭 320px과 400px, 높이 560px(탐색용 가정)이고 밀도는 보통이다. 부품은 디자인 시스템(Agent OS)의 버튼, 아이콘 버튼, 글 입력, 알림, 진행 표시, 아이콘이다.\n\n방향은 사람이 고른 '조용한 기록형'이다. 요청만 오른쪽의 옅은 상자, 출력은 상자 없이 전체 폭, 도구는 한 줄씩 쌓이다가 끝나면 '도구 N개를 불렀습니다' 한 줄로 접힌다. 승인은 테두리 카드, 연결과 상한의 알림은 입력창 바로 위의 띠다.\n\nA·B를 그린 갈래는 둘이다: 1 대화의 위쪽 띠(새 대화를 글자 버튼으로 / 줄임표 메뉴 안에), 2 승인 묻기의 기다리는 동안 입력창(막힌 채 남김 / 숨김).\n\n고른 안(2026-10-23): 1 대화는 A(새 대화를 글자 버튼으로 늘 보임). 디자인 시스템에 메뉴 부품이 없다. 2 승인 묻기는 A(입력창을 막힌 채 남기고 위 띠에 안내). 연결·상한 띠와 같은 자리다.\n\n가정: 지금 부르는 도구는 디자인 시스템의 진행 표시(값 모름, 도는 표시와 이름 한 줄)로 보인다. 다시 보내기·새 대화의 아이콘은 디자인 시스템에 없어 글자 버튼으로 두었다. 실패 알림의 버튼은 알림 본문 아래에 두었다(알림의 actions 자리를 캔버스에서 넘길 수 없어 본문 안에 놓았다). 위젯 자리를 여닫는 단추는 사이트의 몫이라 그리지 않았다."},
+    "mk-title": {"x": 0, "y": -300, "text": "완성 화면", "kind": "title1", "maxW": 2400, "page": "mockups"},
+    "mk-how": {"x": 2480, "y": 0, "w": 420, "maxH": 800, "page": "mockups", "fill": "gray", "text": "녹청 테마의 라이트 모드, 밀도 보통이다. 위젯 뿌리에 data-theme, data-mode, data-density를 함께 단다. 고른 와이어프레임 안은 1 대화 A, 2 승인 묻기 A다.\n\n강조색은 포커스, 링크, 주 버튼(승인, 보내기)에만 쓰고, 성공·경고·위험의 색은 알림과 도구 줄의 작은 아이콘에만 썼다. 그림자는 위젯 창 하나다. 길이는 디자인 시스템의 크기 단계와 px만 썼다.\n\n명세가 정할 제안: 409·500 거절 알림의 다시 보내기 버튼, 연결 수 상한 띠의 문구('연결이 끊겨 5초 뒤에 다시 잇습니다'), 기다리는 초를 매초 읽지 않기, 첫 화면의 할 수 있는 일 한 줄(사이트가 정하는 문장으로 가정).\n\n알려 둘 것: 지금 부르는 도구는 진행 표시의 이름표(글자열)에 들어가 도구 이름이 고정폭으로 보이지 않는다. 글자 수 상한 화면의 보내기 버튼 높이 맞춤은 어림이다. 디자인 시스템에 없는 아이콘은 쓰지 않았다."},
+    "mk-a11y": {"x": 2480, "y": 880, "w": 420, "maxH": 1600, "page": "mockups", "fill": "gray", "text": "키보드와 화면 읽기 프로그램(제안, 명세가 정한다)\n\n포커스 차례: 위쪽 띠의 새 대화 → 대화 안의 단추(접힌 요약, 알림의 버튼, 승인 카드의 거부 사유·거부·승인) → 요청 입력 → 보내기. 모든 단추와 입력은 브라우저 기본 요소이고 포커스 링 토큰으로 보인다.\n\n승인 묻기가 나타날 때: 입력창이 막히므로 그 안에 있던 포커스를 승인 카드의 제목으로 옮긴다. 결정한 뒤에는 남은 한 줄('승인했습니다' 또는 '거부했습니다: 사유')로 옮기고, 실행이 끝나 입력창이 열려도 포커스를 다시 옮기지 않는다.\n\n살아 있는 영역: 대화 목록 자체는 읽히지 않는다. 보이는 기록과 따로 둔 숨은 영역(role=status) 하나가 새 도구 줄('orders.lookup 성공'), 끝난 출력, 승인 묻기('승인이 필요합니다: payments.refund')를 차례로 읽는다. 실패 알림은 알림 부품의 role=alert라 바로 읽힌다. 입력창 위 띠는 role=status이고 뜰 때 한 번만 읽힌다. 기다리는 초는 매초 읽지 않고 다시 보낼 수 있게 되면 한 번 더 읽는다. 띠와 대화의 알림이 함께 생기면 알림이 먼저다.\n\n글자 수: 센 글자 수와 넘음 문구는 입력창에 묶여(aria-describedby) 포커스 때 읽힌다.\n\n접힌 요약 단추는 펼침 상태(aria-expanded)를 알린다. 움직임 줄이기 설정에서는 도는 표시가 멈춘다."}
+  },
+  "designSystems": [
+    {"title": "Agent OS 디자인 시스템", "namespace": "agent-os", "artifact": "https://claude.ai/artifact/8ttLDZQqchfD2ao1XG56GH", "version": "1792710522-c178", "copiedAt": "2026-10-22T23:36:34Z"}
+  ]
+}

@@ -1,0 +1,31 @@
+# 티켓 02(런타임이 호출의 이벤트를 기록하는 자리에서 흘린다)의 변이 표. 구현 전부터 초록이던 가드가
+# 빨강을 볼 수 있는지 잰다. 빨강의 판정은 `tools/mutate.py` 의 독스트링이다.
+#
+# 돌리는 법: PYTHONUTF8=1 uv run python tools/mutate.py .scratch/web-widget/probes/relay_mutations.toml [이름 ...]
+# 네트워크를 타지 않는다.
+
+[[mutation]]
+name = "도구 호출을 하나씩 들인다"
+tests = ["tests/core/test_run.py", "-k", "함께_부른_도구_둘은"]
+expect = "red"
+expect_output = ["AssertionError: ['run_started', 'tool_called', 'tool_called', 'run_failed']"]
+
+[[mutation.edit]]
+file = "src/agent_os/core/run.py"
+old = '''
+        self._bell: MemoryObjectSendStream[_Ring] | None = None
+'''
+new = '''
+        self._bell: MemoryObjectSendStream[_Ring] | None = None
+        self._serial = anyio.Lock()
+'''
+
+[[mutation.edit]]
+file = "src/agent_os/core/run.py"
+old = '''
+        result = await _call_safely(self._tools, name, args)
+'''
+new = '''
+        async with self._serial:
+            result = await _call_safely(self._tools, name, args)
+'''

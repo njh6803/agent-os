@@ -1,0 +1,595 @@
+# web-widget 티켓 03 의 변이 표. 위젯 앱의 시험(질의 읽기, 페이지, 빌드 설정, 글꼴 복사, 시작 래퍼, 스토리 테스트, 사진
+# 비교)과 사진 비교 도구의 워크스페이스 링크가 무엇을 재는지 변이로 본다. 테스트를 먼저 쓴 것도 첫 빨강은 모듈이 없어서였을
+# 뿐이라, 단언마다 그 단언이 겨눈 변경에서 빨개지는지 본다.
+#   PYTHONUTF8=1 uv run python tools/mutate.py .scratch/web-widget/probes/widget_app_mutations.toml [번호 ...]
+# stories 러너는 chromium 이 Playwright 의 브라우저 캐시에, visual 러너는 Docker 와 판을 고정한 이미지와 커밋한 위젯의
+# 정답 사진이 있어야 한다. visual 러너는 변이마다 위젯의 정적 빌드를 다시 지어 컨테이너에서 돈다.
+# 루프백 변이는 프로세스를 띄우는 start.spawn.test.ts 를 고르지 않는다. 판정을 지난 next dev 가 실제로 선다.
+
+[runner.node]
+command = ["pnpm", "exec", "vitest", "run", "--project", "node"]
+cwd = "web"
+judge = "vitest"
+
+[runner.pages]
+command = ["pnpm", "exec", "vitest", "run", "--project", "widget-pages"]
+cwd = "web"
+judge = "vitest"
+
+[runner.stories]
+command = ["pnpm", "exec", "vitest", "run", "--project", "widget-storybook"]
+cwd = "web"
+judge = "vitest"
+
+[runner.visual]
+command = ["pnpm", "-C", "web", "visual:widget"]
+judge = "playwright"
+
+# --- 질의 읽기(lib/embed.ts) ---------------------------------------------------------------------------------
+
+[[mutation]]
+name = "에이전트 패턴의 길이를 하나 늘리면 예순네 글자가 지나 패턴 밖 시험이 빨갛다"
+runner = "node"
+tests = ["apps/widget/lib/embed.test.ts", "-t", "패턴 밖인 에이전트"]
+expect = "red"
+expect_output = ["to be null"]
+
+[[mutation.edit]]
+file = "web/apps/widget/lib/embed.ts"
+old = '''
+export const AGENT_PATTERN = /^[a-z][a-z0-9-]{1,62}$/;
+'''
+new = '''
+export const AGENT_PATTERN = /^[a-z][a-z0-9-]{1,63}$/;
+'''
+
+[[mutation]]
+name = "에이전트 패턴이 계약과 달라지면 openapi 대조가 빨갛다"
+runner = "node"
+tests = ["apps/widget/lib/embed.test.ts", "-t", "계약"]
+expect = "red"
+expect_output = ["{1,63}"]
+
+[[mutation.edit]]
+file = "web/apps/widget/lib/embed.ts"
+old = '''
+export const AGENT_PATTERN = /^[a-z][a-z0-9-]{1,62}$/;
+'''
+new = '''
+export const AGENT_PATTERN = /^[a-z][a-z0-9-]{1,63}$/;
+'''
+
+[[mutation]]
+name = "까닭에 받은 값을 JSON 글자로 싣지 않으면 패턴 밖 시험이 빨갛다"
+runner = "node"
+tests = ["apps/widget/lib/embed.test.ts", "-t", "패턴 밖인 에이전트"]
+expect = "red"
+expect_output = ["받은 값: Order. 요청을"]
+
+[[mutation.edit]]
+file = "web/apps/widget/lib/embed.ts"
+old = '''
+      reason: `플러그인 이름(${AGENT_PATTERN.source})이어야 한다. 받은 값: ${JSON.stringify(agentValue)}. 요청을 보내지 않는다`,
+'''
+new = '''
+      reason: `플러그인 이름(${AGENT_PATTERN.source})이어야 한다. 받은 값: ${agentValue}. 요청을 보내지 않는다`,
+'''
+
+[[mutation]]
+name = "보일 글의 빈 값을 준 값으로 읽으면 빈 값 시험이 빨갛다"
+runner = "node"
+tests = ["apps/widget/lib/embed.test.ts", "-t", "보일 글인"]
+expect = "red"
+expect_output = ['"intro": "",']
+
+[[mutation.edit]]
+file = "web/apps/widget/lib/embed.ts"
+old = '''
+    return value?.trim() === "" ? null : value;
+'''
+new = '''
+    return value;
+'''
+
+# PR 직전 bug-perf-review 가 공백만 든 값이 준 값으로 지나는 것을 짚어 더했다(일지 2026-10-23-50 "PR 직전 리뷰").
+[[mutation]]
+name = "공백만 든 보일 글을 준 값으로 읽으면 공백 시험이 빨갛다"
+runner = "node"
+tests = ["apps/widget/lib/embed.test.ts", "-t", "공백만 든"]
+expect = "red"
+expect_output = ['"heading": " ",']
+
+[[mutation.edit]]
+file = "web/apps/widget/lib/embed.ts"
+old = '''
+    return value?.trim() === "" ? null : value;
+'''
+new = '''
+    return value === "" ? null : value;
+'''
+
+[[mutation]]
+name = "빈 테마를 주지 않은 것으로 읽으면 빈 테마·모드 시험이 빨갛다"
+runner = "node"
+tests = ["apps/widget/lib/embed.test.ts", "-t", "빈 테마와 빈 모드는"]
+expect = "red"
+expect_output = ["expected [ 'mode' ] to deeply equal [ 'theme', 'mode' ]"]
+
+[[mutation.edit]]
+file = "web/apps/widget/lib/embed.ts"
+old = '''
+  const themeValue = read("theme");
+'''
+new = '''
+  const themeValue = read("theme") || null;
+'''
+
+[[mutation]]
+name = "빈 모드를 주지 않은 것으로 읽으면 빈 테마·모드 시험이 빨갛다"
+runner = "node"
+tests = ["apps/widget/lib/embed.test.ts", "-t", "빈 테마와 빈 모드는"]
+expect = "red"
+expect_output = ["expected [ 'theme' ] to deeply equal [ 'theme', 'mode' ]"]
+
+[[mutation.edit]]
+file = "web/apps/widget/lib/embed.ts"
+old = '''
+  const modeValue = read("mode");
+'''
+new = '''
+  const modeValue = read("mode") || null;
+'''
+
+[[mutation]]
+name = "빈 에이전트를 주지 않은 것으로 읽으면 빈 에이전트 시험이 빨갛다"
+runner = "node"
+tests = ["apps/widget/lib/embed.test.ts", "-t", "패턴 밖인 에이전트 \"\" 는"]
+expect = "red"
+expect_output = ['Received: "에이전트 이름이 없다. 요청을 보내지 않는다"']
+
+[[mutation.edit]]
+file = "web/apps/widget/lib/embed.ts"
+old = '''
+  const agentValue = read("agent");
+'''
+new = '''
+  const agentValue = read("agent") || null;
+'''
+
+[[mutation]]
+name = "이름이 없을 때 에이전트 이름을 보이지 않으면 기본값 시험이 빨갛다"
+runner = "node"
+tests = ["apps/widget/lib/embed.test.ts", "-t", "이름이 없으면 에이전트"]
+expect = "red"
+expect_output = ['"heading": "",']
+
+[[mutation.edit]]
+file = "web/apps/widget/lib/embed.ts"
+old = '''
+      heading: shown("heading") ?? agent ?? "",
+'''
+new = '''
+      heading: shown("heading") ?? "",
+'''
+
+[[mutation]]
+name = "패턴을 지나지 않은 에이전트 값을 이름의 기본값으로 쓰면 패턴 밖 시험이 빨갛다"
+runner = "node"
+tests = ["apps/widget/lib/embed.test.ts", "-t", "패턴 밖인 에이전트 \"Order\" 는"]
+expect = "red"
+expect_output = ["expected 'Order' to be ''"]
+
+[[mutation.edit]]
+file = "web/apps/widget/lib/embed.ts"
+old = '''
+      heading: shown("heading") ?? agent ?? "",
+'''
+new = '''
+      heading: shown("heading") ?? agentValue ?? "",
+'''
+
+[[mutation]]
+name = "테마 목록을 보지 않으면 목록 밖 테마 시험이 빨갛다"
+runner = "node"
+tests = ["apps/widget/lib/embed.test.ts", "-t", "테마 목록 밖의"]
+expect = "red"
+expect_output = ["expected 'purple' to be 'nokcheong'"]
+
+[[mutation.edit]]
+file = "web/apps/widget/lib/embed.ts"
+old = '''
+  return THEMES.some((theme) => theme.key === value);
+'''
+new = '''
+  return THEMES.length > 0 || value === "";
+'''
+
+[[mutation]]
+name = "모드 목록을 보지 않으면 목록 밖 모드 시험이 빨갛다"
+runner = "node"
+tests = ["apps/widget/lib/embed.test.ts", "-t", "light 나 dark 가 아닌"]
+expect = "red"
+expect_output = ["expected 'system' to be null"]
+
+[[mutation.edit]]
+file = "web/apps/widget/lib/embed.ts"
+old = '''
+  return MODES.some((mode) => mode === value);
+'''
+new = '''
+  return MODES.length > 0 || value === "";
+'''
+
+[[mutation]]
+name = "문제를 질의의 차례와 다르게 내면 차례 시험이 빨갛다"
+runner = "node"
+tests = ["apps/widget/lib/embed.test.ts", "-t", "문제는 질의의 차례대로"]
+expect = "red"
+expect_output = ["expected [ 'mode', 'theme', 'agent' ] to deeply equal [ 'agent', 'theme', 'mode' ]"]
+
+[[mutation.edit]]
+file = "web/apps/widget/lib/embed.ts"
+old = '''
+    },
+    problems,
+'''
+new = '''
+    },
+    problems: [...problems].reverse(),
+'''
+
+# --- 페이지(components/pages/WidgetPage.tsx 와 그 아래) ---------------------------------------------------------
+
+[[mutation]]
+name = "보통 밀도 대신 다른 밀도를 달면 문서 뿌리 시험이 빨갛다"
+runner = "pages"
+tests = ["apps/widget/components/pages/WidgetPage.test.tsx", "-t", "테마와 모드를 주면"]
+expect = "red"
+expect_output = ["compact"]
+
+[[mutation.edit]]
+file = "web/apps/widget/components/pages/WidgetPage.tsx"
+old = '''
+    root.dataset["density"] = "regular";
+'''
+new = '''
+    root.dataset["density"] = "compact";
+'''
+
+[[mutation]]
+name = "페이지를 걷을 때 밀도를 남기면 걷기 시험이 빨갛다"
+runner = "pages"
+tests = ["apps/widget/components/pages/WidgetPage.test.tsx", "-t", "페이지를 걷으면"]
+expect = "red"
+expect_output = ["to deeply equal { theme: undefined", '+   "density": "regular",']
+
+[[mutation.edit]]
+file = "web/apps/widget/components/pages/WidgetPage.tsx"
+old = '''
+      delete root.dataset["mode"];
+      delete root.dataset["density"];
+'''
+new = '''
+      delete root.dataset["mode"];
+'''
+
+[[mutation]]
+name = "잘못 준 질의를 console.error 로 남기지 않으면 목록 밖 시험이 빨갛다"
+runner = "pages"
+tests = ["apps/widget/components/pages/WidgetPage.test.tsx", "-t", "목록 밖의 테마와 모드는"]
+expect = "red"
+expect_output = ["expected [] to deeply equal [ Array(2) ]"]
+
+[[mutation.edit]]
+file = "web/apps/widget/components/pages/ConnectedWidget.tsx"
+old = '''
+      console.error(problem);
+'''
+new = '''
+      console.warn(problem);
+'''
+
+[[mutation]]
+name = "설정이 잘못돼도 입력을 막지 않으면 위험 알림 시험이 빨갛다"
+runner = "pages"
+tests = ["apps/widget/components/pages/WidgetPage.test.tsx", "-t", "위험 알림을"]
+expect = "red"
+expect_output = ['></textarea> to have property "disabled" with value true']
+
+[[mutation.edit]]
+file = "web/apps/widget/components/pages/WidgetScreen.tsx"
+old = '''
+          disabled={misconfigured || paused || restore !== "ready"}
+'''
+new = '''
+          disabled={paused || restore !== "ready"}
+'''
+
+[[mutation]]
+name = "할 수 있는 일이 없어도 그 줄을 그리면 안내만 보이는 시험이 빨갛다"
+runner = "pages"
+tests = ["apps/widget/components/pages/WidgetPage.test.tsx", "-t", "할 수 있는 일을 주지 않으면"]
+expect = "red"
+expect_output = ["to have a length of 1 but got 2"]
+
+[[mutation.edit]]
+file = "web/apps/widget/components/molecules/Welcome.tsx"
+old = '''
+      {intro === null ? null : <p className="text-body">{intro}</p>}
+'''
+new = '''
+      <p className="text-body">{intro}</p>
+'''
+
+[[mutation]]
+name = "이름이 비어도 제목을 그리면 빈 제목 시험이 빨갛다"
+runner = "pages"
+tests = ["apps/widget/components/pages/WidgetPage.test.tsx", "-t", "빈 제목을 두지 않고"]
+expect = "red"
+expect_output = ["></h1> to be null"]
+
+[[mutation.edit]]
+file = "web/apps/widget/components/organisms/TopBar.tsx"
+old = '''
+      {heading === "" ? null : (
+'''
+new = '''
+      {heading === "없는 이름" ? null : (
+'''
+
+# --- 스토리 테스트(widget-storybook) -------------------------------------------------------------------------
+
+# play 가 없는 스토리라 빨강은 미리보기 afterEach 의 클래스 판정 몫이다.
+[[mutation]]
+name = "위젯 CSS 가 위젯 소스를 덮지 않으면 play 없는 스토리도 클래스 판정이 빨갛다"
+runner = "stories"
+tests = ["apps/widget/components/pages/WidgetScreen.stories.tsx", "-t", "Wide"]
+expect = "red"
+expect_output = ["truncate"]
+
+[[mutation.edit]]
+file = "web/apps/widget/styles/widget.css"
+old = '''
+@source "../app";
+@source "../components";
+'''
+new = '''
+@source "../app";
+'''
+
+[[mutation]]
+name = "위젯 CSS 가 위젯 소스를 덮지 않으면 Narrow 의 줄임 단언이 빨갛다"
+runner = "stories"
+tests = ["apps/widget/components/pages/WidgetScreen.stories.tsx", "-t", "Narrow"]
+expect = "red"
+expect_output = ["ellipsis"]
+
+[[mutation.edit]]
+file = "web/apps/widget/styles/widget.css"
+old = '''
+@source "../app";
+@source "../components";
+'''
+new = '''
+@source "../app";
+'''
+
+[[mutation]]
+name = "창이 자리의 높이를 채우지 않으면 Narrow 의 크기 단언이 빨갛다"
+runner = "stories"
+tests = ["apps/widget/components/pages/WidgetScreen.stories.tsx", "-t", "Narrow"]
+expect = "red"
+expect_output = ["to be 560"]
+
+[[mutation.edit]]
+file = "web/apps/widget/components/templates/WidgetFrame.tsx"
+old = '''@container flex h-full flex-col'''
+new = '''@container flex flex-col'''
+
+[[mutation]]
+name = "이름이 비어도 제목을 그리면 잘못된 설정 스토리의 axe 가 빨갛다"
+runner = "stories"
+tests = ["apps/widget/components/pages/WidgetScreen.stories.tsx", "-t", "Misconfigured"]
+expect = "red"
+expect_output = ["empty-heading"]
+
+[[mutation.edit]]
+file = "web/apps/widget/components/organisms/TopBar.tsx"
+old = '''
+      {heading === "" ? null : (
+'''
+new = '''
+      {heading === "없는 이름" ? null : (
+'''
+
+# --- 사진 비교(visual/) ----------------------------------------------------------------------------------------
+
+[[mutation]]
+name = "안내 줄의 색을 바꾸면 사진이 빨갛다"
+runner = "visual"
+tests = ["-g", "without-intro 를"]
+expect = "red"
+expect_output = ["Snapshot: pages-widgetscreen--without-intro-light.png", "of all image pixels) are different"]
+
+[[mutation.edit]]
+file = "web/apps/widget/components/molecules/Welcome.tsx"
+old = '''
+      <p className="text-small text-text-muted">아래에 요청을 적어 보내 주세요.</p>
+'''
+new = '''
+      <p className="text-small text-text">아래에 요청을 적어 보내 주세요.</p>
+'''
+
+[[mutation]]
+name = "스토리가 정한 모드와 다른 차례도 찍으면 정답 없는 사진이 생겨 빨갛다"
+runner = "visual"
+tests = ["-g", "wide-dark 를"]
+expect = "red"
+expect_output = ["pages-widgetscreen--wide-dark-light"]
+
+[[mutation.edit]]
+file = "web/apps/widget/visual/stories.visual.ts"
+old = '''
+      if (!(await renderedAs(page, globals))) {
+'''
+new = '''
+      if (!(await renderedAs(page, globals)) && story.id === "") {
+'''
+
+[[mutation]]
+name = "다른 테마를 정한 스토리는 기본 테마 확인이 빨갛다"
+runner = "visual"
+tests = ["-g", "wide-dark 를"]
+expect = "red"
+expect_output = ['Received: "jacho"']
+
+[[mutation.edit]]
+file = "web/apps/widget/components/pages/WidgetScreen.stories.tsx"
+# 티켓 07 이 다크 모드의 스토리(LimitedHourlyWideDark)를 더해 같은 줄이 둘이라, 스토리의 머리 줄부터 잡는다.
+old = '''
+export const WideDark: Story = {
+  parameters: { width: 400 },
+  globals: { mode: "dark" },
+'''
+new = '''
+export const WideDark: Story = {
+  parameters: { width: 400 },
+  globals: { mode: "dark", theme: "jacho" },
+'''
+
+# --- 빌드 설정, 글꼴, 시작 래퍼, 사진 비교 도구 ---------------------------------------------------------------
+
+[[mutation]]
+name = "frame-ancestors 를 self 로 열면 품지 못한다는 시험이 빨갛다"
+runner = "node"
+tests = ["apps/widget/next.config.test.ts", "-t", "어떤 사이트도"]
+expect = "red"
+expect_output = ["\"Content-Security-Policy\": \"frame-ancestors 'self'\""]
+
+[[mutation.edit]]
+file = "web/apps/widget/next.config.ts"
+old = '''
+const ancestors = input.allowedOrigins.length === 0 ? "'none'" : input.allowedOrigins.join(" ");
+'''
+new = '''
+const ancestors = input.allowedOrigins.length === 0 ? "'self'" : input.allowedOrigins.join(" ");
+'''
+
+[[mutation]]
+name = "글꼴 응답의 출처 허용을 좁히면 글꼴 시험이 빨갛다"
+runner = "node"
+tests = ["apps/widget/next.config.test.ts", "-t", "글꼴 응답은"]
+expect = "red"
+expect_output = ['"Access-Control-Allow-Origin": "null"']
+
+[[mutation.edit]]
+file = "web/apps/widget/next.config.ts"
+old = '''
+        source: "/fonts/:path*",
+        headers: [{ key: "Access-Control-Allow-Origin", value: "*" }],
+'''
+new = '''
+        source: "/fonts/:path*",
+        headers: [{ key: "Access-Control-Allow-Origin", value: "null" }],
+'''
+
+[[mutation]]
+name = "woff 까지 고르면 글꼴 파일 수 시험이 빨갛다"
+runner = "node"
+tests = ["apps/widget/tools/fonts.test.ts", "-t", "다섯 굵기"]
+expect = "red"
+expect_output = ["to have a length of"]
+
+[[mutation.edit]]
+file = "web/apps/widget/tools/fonts.ts"
+old = '''const WOFF2 = /url\(\s*["']?(\.\/files\/[^"')]+\.woff2)["']?\s*\)/g;'''
+new = '''const WOFF2 = /url\(\s*["']?(\.\/files\/[^"')]+\.woff2?)["']?\s*\)/g;'''
+
+[[mutation]]
+name = "0.0.0.0 을 루프백으로 받으면 래퍼 시험이 빨갛다"
+runner = "node"
+tests = ["apps/widget/tools/start.test.ts", "-t", "0.0.0.0 는 루프백이"]
+expect = "red"
+expect_output = ["dev --hostname 0.0.0.0 가 거부되지 않았다"]
+
+[[mutation.edit]]
+file = "web/apps/widget/tools/start.ts"
+old = '''
+const LOOPBACK_HOSTS: readonly string[] = ["127.0.0.1", "::1"];
+'''
+new = '''
+const LOOPBACK_HOSTS: readonly string[] = ["127.0.0.1", "::1", "0.0.0.0"];
+'''
+
+[[mutation]]
+name = "빌드가 포트를 받으면 빌드 시험이 빨갛다"
+runner = "node"
+tests = ["apps/widget/tools/start.test.ts", "-t", "빌드는 글꼴을"]
+expect = "red"
+expect_output = ["build --port 3100 가 거부되지 않았다"]
+
+[[mutation.edit]]
+file = "web/apps/widget/tools/start.ts"
+old = '''
+    if (values.hostname !== undefined || values.port !== undefined) {
+'''
+new = '''
+    if (values.hostname !== undefined) {
+'''
+
+[[mutation]]
+name = "dev 앞에서 글꼴을 준비하지 않으면 기본 호스트 시험이 빨갛다"
+runner = "node"
+tests = ["apps/widget/tools/start.test.ts", "-t", "호스트를 주지 않으면"]
+expect = "red"
+expect_output = ['"prepare": false,']
+
+[[mutation.edit]]
+file = "web/apps/widget/tools/start.ts"
+old = '''
+  return { args: [command, "--hostname", host, ...port], prepare: command === "dev" };
+'''
+new = '''
+  return { args: [command, "--hostname", host, ...port], prepare: false };
+'''
+
+[[mutation]]
+name = "판정을 지난 명령에서 준비를 건너뛰면 따르기 시험이 빨갛다"
+runner = "node"
+tests = ["apps/widget/tools/start.test.ts", "-t", "판정을 지난 명령을 따르기"]
+expect = "red"
+expect_output = [
+  "expected [ 'next dev' ] to deeply equal [ '준비', 'next dev' ]",
+  "expected [ 'next build' ] to deeply equal [ '준비', 'next build' ]",
+]
+
+[[mutation.edit]]
+file = "web/apps/widget/tools/start.ts"
+old = '''
+  if (command.prepare) {
+    await steps.prepare();
+  }
+'''
+new = '''
+  if (command.prepare && command.args.length === 0) {
+    await steps.prepare();
+  }
+'''
+
+# 빨강은 링크 맵을 맞대는 단언보다 먼저, 경로를 고르는 가드가 workspace 가 아닌 next 의 경로(node_modules 아래)를
+# 거부해서 난다. 표지가 그 의존의 이름을 본다.
+[[mutation]]
+name = "workspace 가 아닌 의존도 이으면 위젯 링크 시험이 빨갛다"
+runner = "node"
+tests = ["tools/visual.test.ts", "-t", "위젯이 기대는"]
+expect = "red"
+expect_output = ["이을 수 없는 워크스페이스 패키지다: next →"]
+
+[[mutation.edit]]
+file = "web/tools/visual.ts"
+old = '''
+      if (typeof specifier !== "string" || !specifier.startsWith("workspace:")) {
+'''
+new = '''
+      if (typeof specifier !== "string" || specifier.startsWith("npm:")) {
+'''

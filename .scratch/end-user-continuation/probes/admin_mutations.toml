@@ -1,0 +1,199 @@
+# 티켓 06(관리 화면)의 변이 표. 실행 상세 페이지 테스트 가운데 구현 전부터 초록이던 것(실패 원인의 필드
+# 이름과 값, 옛 실행의 `null`, 빈 지도의 `{}`, 지도가 아닌 값 넷의 글자 그리기)과, 구현 전에는 다른
+# 까닭으로만 빨갰던 가드가 빨강을 볼 수 있는지 본다. 바로가기 칸의 `.`·`..` 사례는 링크가 없어서 빨갰다.
+# 에이전트 이름의 HTML 사례는 지도를 JSON 글자로 그려 이름의 따옴표가 `\"` 로 적히는 바람에 이름이 글자
+# 그대로 보이지 않아서 빨갰다. 그 사례의 `iframe` 단언은 HTML 로만 그리는 변이가 앞의 글자 단언에서 멈춰
+# 빨강을 보지 못하므로, 글자 옆에 HTML 로도 그리는 변이가 따로 겨눈다. 빨강의 판정은 `tools/mutate.py` 의
+# 독스트링이다.
+#
+# 돌리는 법: PYTHONUTF8=1 uv run python tools/mutate.py .scratch/end-user-continuation/probes/admin_mutations.toml
+# 네트워크를 타지 않는다. `pnpm -C web install` 이 된 체크아웃에서 돈다.
+
+[runner.vitest]
+command = ["pnpm", "exec", "vitest", "run"]
+cwd = "web"
+judge = "vitest"
+
+[[mutation]]
+name = "실패 원인의 용어집 말을 바꾼다"
+runner = "vitest"
+tests = ["apps/admin/components/pages/RunPage.test.tsx", "-t", "실패 원인은 용어집의"]
+expect = "red"
+expect_output = ['"원인 cause"']
+
+[[mutation.edit]]
+file = "web/apps/admin/components/organisms/EventItem.tsx"
+old = '''
+  cause: "실패 원인",
+'''
+new = '''
+  cause: "원인",
+'''
+
+[[mutation]]
+name = "실패 원인의 값에 문구를 짓는다"
+runner = "vitest"
+tests = ["apps/admin/components/pages/RunPage.test.tsx", "-t", "실패 원인은 용어집의"]
+expect = "red"
+expect_output = ["expected '시간 초과' to be 'timeout'"]
+
+[[mutation.edit]]
+file = "web/apps/admin/components/organisms/EventItem.tsx"
+old = '''
+  if (RUN_FIELDS.has(name) && typeof value === "string") {
+'''
+new = '''
+  if (name === "cause" && value === "timeout") {
+    return "시간 초과";
+  }
+  if (RUN_FIELDS.has(name) && typeof value === "string") {
+'''
+
+[[mutation]]
+name = "옛 실행의 바로가기 없음을 빈칸으로 그린다"
+runner = "vitest"
+tests = ["apps/admin/components/pages/RunPage.test.tsx", "-t", "바로가기가 없는 옛 실행"]
+expect = "red"
+expect_output = ["expected '' to be 'null'"]
+
+[[mutation.edit]]
+file = "web/apps/admin/components/organisms/EventItem.tsx"
+old = '''
+  if (name === "shortcuts" && isRunMap(value) && Object.keys(value).length > 0) {
+'''
+new = '''
+  if (name === "shortcuts" && value === null) {
+    return null;
+  }
+  if (name === "shortcuts" && isRunMap(value) && Object.keys(value).length > 0) {
+'''
+
+[[mutation]]
+name = "빈 바로가기도 지도 갈래로 그린다"
+runner = "vitest"
+tests = ["apps/admin/components/pages/RunPage.test.tsx", "-t", "빈 바로가기는"]
+expect = "red"
+expect_output = ["expected '' to be '{}'"]
+
+[[mutation.edit]]
+file = "web/apps/admin/components/organisms/EventItem.tsx"
+old = '''
+  if (name === "shortcuts" && isRunMap(value) && Object.keys(value).length > 0) {
+'''
+new = '''
+  if (name === "shortcuts" && isRunMap(value)) {
+'''
+
+[[mutation]]
+name = "바로가기의 값이 문자열인지 보지 않는다"
+runner = "vitest"
+tests = ["apps/admin/components/pages/RunPage.test.tsx", "-t", "지도가 아닌 문자열이 아닌 값을 든 객체"]
+expect = "red"
+expect_output = ['Found multiple elements with the role "link"']
+
+[[mutation.edit]]
+file = "web/apps/admin/components/organisms/EventItem.tsx"
+old = '''
+    !Array.isArray(value) &&
+    Object.values(value).every((runId) => typeof runId === "string")
+'''
+new = '''
+    !Array.isArray(value)
+'''
+
+[[mutation]]
+name = "배열을 바로가기 지도로 본다"
+runner = "vitest"
+tests = ["apps/admin/components/pages/RunPage.test.tsx", "-t", "지도가 아닌 배열"]
+expect = "red"
+expect_output = ["/runs/r-calc"]
+
+[[mutation.edit]]
+file = "web/apps/admin/components/organisms/EventItem.tsx"
+old = '''
+    !Array.isArray(value) &&
+'''
+new = '''
+'''
+
+[[mutation]]
+name = "문자열을 바로가기 지도로 본다"
+runner = "vitest"
+tests = ["apps/admin/components/pages/RunPage.test.tsx", "-t", "지도가 아닌 문자열 이면"]
+expect = "red"
+expect_output = ['Found multiple elements with the role "link"']
+
+[[mutation.edit]]
+file = "web/apps/admin/components/organisms/EventItem.tsx"
+old = '''
+    typeof value === "object" &&
+'''
+new = '''
+'''
+
+[[mutation]]
+name = "바로가기 칸이 실행 상세 주소의 가드를 지나지 않는다"
+runner = "vitest"
+tests = ["apps/admin/components/pages/RunPage.test.tsx", "-t", "바로가기의 실행이"]
+expect = "red"
+expect_output = ['+   ".",', '+   "..",']
+
+[[mutation.edit]]
+file = "web/apps/admin/components/organisms/EventItem.tsx"
+old = '''
+            <RunLink runId={runId} />
+'''
+new = '''
+            <Link href={`/runs/${encodeURIComponent(runId)}`}>{runId}</Link>
+'''
+
+[[mutation]]
+name = "바로가기의 에이전트 이름을 HTML 로 그린다"
+runner = "vitest"
+tests = ["apps/admin/components/pages/RunPage.test.tsx", "-t", "트레이스에 든 HTML"]
+expect = "red"
+expect_output = ["to contain '<iframe src="]
+
+[[mutation.edit]]
+file = "web/apps/admin/components/organisms/EventItem.tsx"
+old = '''
+          <dt>{agent}</dt>
+'''
+new = '''
+          <dt dangerouslySetInnerHTML={{ __html: agent }} />
+'''
+
+[[mutation]]
+name = "바로가기 칸의 null 을 실행 식별자로 본다"
+runner = "vitest"
+tests = ["apps/admin/components/pages/RunPage.test.tsx", "-t", "지도가 아닌 null 을 든 객체"]
+expect = "red"
+expect_output = ["/runs/null"]
+
+[[mutation.edit]]
+file = "web/apps/admin/components/organisms/EventItem.tsx"
+old = '''
+    Object.values(value).every((runId) => typeof runId === "string")
+'''
+new = '''
+    Object.values(value).every((runId) => typeof runId === "string" || runId === null)
+'''
+
+[[mutation]]
+name = "바로가기의 에이전트 이름을 글자 옆에 HTML 로도 그린다"
+runner = "vitest"
+tests = ["apps/admin/components/pages/RunPage.test.tsx", "-t", "트레이스에 든 HTML"]
+expect = "red"
+expect_output = ["></iframe> to be null"]
+
+[[mutation.edit]]
+file = "web/apps/admin/components/organisms/EventItem.tsx"
+old = '''
+          <dt>{agent}</dt>
+'''
+new = '''
+          <dt>
+            {agent}
+            <span dangerouslySetInnerHTML={{ __html: agent }} />
+          </dt>
+'''

@@ -17,7 +17,7 @@ from typing import TextIO
 from fastapi import FastAPI
 
 from agent_os.admin.http import Health, admin_router
-from agent_os.channel.http.end_user import END_USER_PREFIX, END_USER_START_PATH
+from agent_os.channel.http.end_user import END_USER_PREFIX
 from agent_os.channel.http.router import CHANNEL_PREFIX, channel_router
 from agent_os.core.ports import ChatModel, Clock, PluginSource, ToolSource, TraceStore
 from agent_os.http.auth import RequireToken, SharedToken, SiteSigned
@@ -120,7 +120,7 @@ def create_app(
             stderr=stderr,
         )
     )
-    end_user = EndUserPaths(prefix=END_USER_PREFIX, start=END_USER_START_PATH)
+    end_user = EndUserPaths(prefix=END_USER_PREFIX)
     install_error_handlers(app, end_user=end_user)
     app.add_middleware(
         RequireToken,

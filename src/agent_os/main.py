@@ -16,13 +16,14 @@
 
 from __future__ import annotations
 
-import asyncio
 import getpass
 import io
 import os
+import re
 import sys
 import tomllib
 from collections.abc import Sequence
+from ipaddress import IPv6Address
 from pathlib import Path
 from typing import Literal, TextIO
 
@@ -37,6 +38,7 @@ from agent_os.adapters.clock import SystemClock
 from agent_os.adapters.filesystem import FilesystemPlugins
 from agent_os.adapters.jsonl import JsonlTrace
 from agent_os.adapters.mcp import McpTools
+from agent_os.channel.cli.interrupt import run_interruptibly
 from agent_os.channel.cli.main import (
     EXIT_FAILED,
     EXIT_FINISHED,
@@ -59,6 +61,8 @@ ADMIN_TOKEN_ENV = "AGENT_OS_ADMIN_TOKEN"
 CHANNEL_TOKEN_ENV = "AGENT_OS_CHANNEL_TOKEN"
 # 바인딩을 허용하는 주소 전부. 자라면 ADR 0011 의 이력에 쌓는다. 집합이 아니라 열인 이유는
 # 진단에 그대로 실려서, 순서가 실행마다 달라지면 운영자가 읽는 문장이 달라지기 때문이다.
+# 관리 화면과 위젯의 시작 래퍼(`web/apps/admin/tools/loopback.ts`,
+# `web/apps/widget/tools/start.ts`)가 같은 목록을 따로 든다. 바꾸면 셋을 함께 고친다.
 LOOPBACK_HOSTS = ("127.0.0.1", "::1")
 # 서버를 멈출 때 연결이 남은 응답을 기다리는 상한(초). uvicorn 의 기본값은 연결이 전부 끝날
 # 때까지 앱의 수명을 닫지 않아, 멈추라는 명령이 실행 하나가 끝나기를 제한 없이 기다린다(ADR 0014
@@ -117,8 +121,8 @@ def main(argv: list[str] | None = None) -> int:
         sys.stderr.write(f"{error}\n")
         return EXIT_FAILED
     if isinstance(args, ResumeArgs):
-        return asyncio.run(_resume(args, model, Principal(user)))
-    return asyncio.run(_run(args, model, Principal(user)))
+        return run_interruptibly(lambda: _resume(args, model, Principal(user)))
+    return run_interruptibly(lambda: _run(args, model, Principal(user)))
 
 
 def _chat_model(name: str | None) -> ChatModel:
@@ -279,7 +283,13 @@ _OS_USER_DIAGNOSTIC = (
 # 자리는 채널의 한 곳이다. 모르는 키는 손상이다 — 운영자 파일(ADR 0017)과 같은 규칙이고, 오타가
 # 조용히 무시되면 운영자가 적었다고 믿는 것과 서버가 쓰는 것이 갈린다. 값은 엄격한 타입이다 — 수를
 # 글자로, 글자를 목록으로, 불린이나 실수를 정수로 받아 주지 않는다. 그래서 열은 TOML 배열이 읽히는
-# 그대로 `list` 다(엄격한 검증은 `tuple` 필드에 리스트를 받지 않는다).
+# 그대로 `list` 다(엄격한 검증은 `tuple` 필드에 리스트를 받지 않는다). 허용 출처는 브라우저가
+# `Origin` 헤더에 싣는 표기 그대로다(`_origin_rule`). 위젯
+# 빌드(`web/apps/widget/tools/site-file.ts`)도 이 파일을 읽어 합친 허용 출처와 가장 작은
+# `request_chars` 를 쓴다(web-widget 티켓 04). 빌드는 키와 타입과 판, `request_chars` 의 범위, 허용
+# 출처의 표기를 이 모양과 같게 보고, 그 밖의 제약(공개 키의 수, 다른 상한의 범위, 서버만 읽는 값의
+# 뜻)은 보지 않는다. 빌드의 TOML 파서는 TOML 1.1 을 따라 tomllib(1.0)이 거절하는 문법도 받는다. 그런
+# 파일로는 빌드가 지나도 serve 가 뜨지 못한다.
 
 _STRICT = ConfigDict(extra="forbid", frozen=True, strict=True)
 
@@ -388,8 +398,9 @@ def _sites_of(parsed: _SiteFile) -> tuple[Sites, list[str]]:
     발급자는 비지 않았고 사이트끼리 겹치지 않으며 `|` 를 품지 않는다(주체 이름 `발급자|sub` 가 짝
     하나로 정해지는 조건). 한 사이트 안에서 `kid` 는 겹치지 않고 `kid` 없는 키는 많아야 하나다(키를
     고르는 규칙). 열 에이전트는 플러그인 이름의 패턴을 지킨다 — 없는 이름은 구성 오류가 아니다.
-    플러그인 루트는 `serve` 가 뜬 뒤에도 바뀌고(ADR 0003) 요청 때 core 의 부재가 답한다. 허용 출처에
-    `*` 는 받지 않는다 — 토큰이 브라우저의 어느 페이지에서나 쓰이게 두지 않는다.
+    플러그인 루트는 `serve` 가 뜬 뒤에도 바뀌고(ADR 0003) 요청 때 core 의 부재가 답한다. 허용 출처는
+    브라우저가 싣는 표기여야 한다(`_origin_rule`). 진단은 어긴 규칙을 말하되 값을 싣지 않는다 —
+    사용자 정보를 적은 값에는 비밀번호가 들 수 있다.
     """
     problems: list[str] = []
     seen: dict[str, int] = {}
@@ -413,9 +424,10 @@ def _sites_of(parsed: _SiteFile) -> tuple[Sites, list[str]]:
             if not is_plugin_name(name)
         )
         problems.extend(
-            f"{place}.allowed_origins[{at}] 가 '*' 다. 출처를 하나씩 적는다"
+            f"{place}.allowed_origins[{at}]: 브라우저가 Origin 헤더에 싣는 표기가 아니다"
+            f"(규칙 {rule}). {_ORIGIN_RULES[rule]}"
             for at, origin in enumerate(entry.allowed_origins)
-            if origin == "*"
+            if (rule := _origin_rule(origin)) is not None
         )
         sites.append(
             Site(
@@ -470,6 +482,170 @@ def _key_id_problems(place: str, entries: Sequence[_PublicKeyEntry]) -> list[str
     if sum(1 for entry in entries if entry.kid is None) > 1:
         problems.append(f"{place}.public_keys 에 kid 없는 키가 둘 이상이다")
     return problems
+
+
+# 허용 출처의 표기(web-widget 티켓 04, ADR 0024). 값은 브라우저가 `Origin` 헤더에 싣는 직렬화
+# 그대로여야 한다 — 다른 표기는 CORS 와 `frame-ancestors` 에서 조용히 어느 출처와도 맞지 않는다.
+# 규칙의 이름과 차례와 사례는 `tests/fixtures/site_file/` 가 원천이고, 위젯 빌드
+# (`web/apps/widget/tools/site-file.ts`)가 같은 차례로 판정한다. 차례가 다르면 두 규칙을 함께 어긴
+# 값에서 두 언어가 다른 이름을 낸다.
+type _OriginRule = Literal[
+    "wildcard",
+    "null",
+    "shape",
+    "scheme",
+    "case",
+    "path",
+    "userinfo",
+    "port",
+    "default-port",
+    "idn",
+    "ipv6",
+    "host",
+    "ipv4",
+]
+_ORIGIN_RULES: dict[_OriginRule, str] = {
+    "wildcard": "'*' 를 적지 않는다. 출처를 하나씩 적는다",
+    "null": "'null' 은 불투명한 출처라 받지 않는다",
+    "shape": "'스킴://호스트' 꼴로 적는다",
+    "scheme": "스킴은 http 나 https 다",
+    "case": "스킴과 호스트는 소문자로 적는다",
+    "path": "호스트와 포트 뒤에 경로, 끝 슬래시, 질의, 조각을 적지 않는다",
+    "userinfo": "사용자 정보('@' 앞)를 적지 않는다",
+    "port": "포트는 앞에 0 이 없는 65535 이하의 십진수다",
+    "default-port": "기본 포트(http 의 80, https 의 443)는 적지 않는다",
+    "idn": "국제화 도메인은 퓨니코드(xn--)로 적는다",
+    "ipv6": (
+        "IPv6 주소는 대괄호 안에 앞의 0 이 없는 소문자 16진수 그룹으로 적고, 0 이 둘 이상 이어진"
+        " 가장 긴 열 가운데 앞의 것을 :: 로 줄인다. IPv4 를 품은 주소도 점으로 적지 않는다"
+    ),
+    "host": (
+        "호스트는 비지 않고, 브라우저가 거절하거나 바꾸는 글자"
+        "(공백, 제어 문자, %, <, >, ^, |, \\ 등)가 없다"
+    ),
+    "ipv4": "IPv4 주소는 앞에 0 이 없는 0~255 의 십진수 넷을 점으로 잇는다",
+}
+_ORIGIN_SHAPE = re.compile(r"([A-Za-z][A-Za-z0-9+.\-]*)://([^/?#]*)(.*)", re.DOTALL)
+_UPPERCASE = re.compile(r"[A-Z]")
+_PORT = re.compile(r"0|[1-9][0-9]{0,4}")
+_MAX_PORT = 65535
+_DEFAULT_PORTS: dict[str, int] = {"http": 80, "https": 443}
+# WHATWG URL 의 금지된 도메인 글자(forbidden domain code point). ASCII 도메인에 이 글자가 들면
+# 브라우저의 URL 파서가 실패한다. `%` 는 퍼센트 인코딩을 먼저 풀어 그 결과를 보므로, 든 값은
+# 바뀌거나 실패한다.
+_FORBIDDEN_DOMAIN = re.compile(r"[\x00-\x20#%/:<>?@\[\\\]^|\x7f]")
+# 끝 라벨이 이 꼴이면 브라우저는 호스트를 IPv4 로 읽는다(WHATWG URL 의 ends in a number checker).
+_NUMERIC_LABEL = re.compile(r"[0-9]+|0x[0-9a-f]*")
+_IPV4_PART = re.compile(r"0|[1-9][0-9]{0,2}")
+_IPV4_PARTS = 4
+_MAX_IPV4_PART = 255
+
+
+def _origin_rule(origin: str) -> _OriginRule | None:
+    """허용 출처가 어긴 첫 규칙의 이름, 또는 없음(질의). 규칙의 뜻은 `_ORIGIN_RULES`."""
+    if "*" in origin:
+        return "wildcard"
+    if origin == "null":
+        return "null"
+    shape = _ORIGIN_SHAPE.fullmatch(origin)
+    if shape is None:
+        return "shape"
+    scheme, authority, rest = shape.groups()
+    if scheme.lower() not in _DEFAULT_PORTS:
+        return "scheme"
+    if _UPPERCASE.search(scheme + authority):
+        return "case"
+    if rest:
+        return "path"
+    if "@" in authority:
+        return "userinfo"
+    host, after = _split_host(authority)
+    if after and not (after.startswith(":") and _is_port(after[1:])):
+        return "port"
+    if after == f":{_DEFAULT_PORTS[scheme]}":
+        return "default-port"
+    return _host_rule(host)
+
+
+def _split_host(authority: str) -> tuple[str, str]:
+    """권한부를 호스트와 그 뒤(`""` 이거나 `:` 로 시작하는 글)로(질의). 대괄호로 적은 호스트는 `]`
+    에서, 그 밖은 첫 `:` 에서 가른다. 닫는 `]` 가 없으면 모두 호스트다."""
+    if authority.startswith("["):
+        end = authority.find("]")
+        cut = len(authority) if end < 0 else end + 1
+    else:
+        end = authority.find(":")
+        cut = len(authority) if end < 0 else end
+    return authority[:cut], authority[cut:]
+
+
+def _is_port(text: str) -> bool:
+    return _PORT.fullmatch(text) is not None and int(text) <= _MAX_PORT
+
+
+def _host_rule(host: str) -> _OriginRule | None:
+    """호스트가 어긴 규칙의 이름, 또는 없음(질의). 대소문자는 부르는 쪽이 먼저 봤다."""
+    if not host.isascii():
+        return "idn"
+    if host.startswith("["):
+        return None if _is_canonical_ipv6(host) else "ipv6"
+    if not host or _FORBIDDEN_DOMAIN.search(host):
+        return "host"
+    labels = host.split(".")
+    # 끝 라벨은 끝 점 하나를 떼고 본다(ends in a number checker). 그렇게 IPv4 로 읽힌 호스트는
+    # 브라우저가 정규형으로 다시 적고 끝 점도 뗀다(IPv4 parser, `127.0.0.1.` 은 `127.0.0.1` 이
+    # 된다). 그래서 정규형 판정은 끝 점째 본다.
+    names = labels[:-1] if len(labels) > 1 and not labels[-1] else labels
+    if _NUMERIC_LABEL.fullmatch(names[-1]):
+        return None if _is_canonical_ipv4(labels) else "ipv4"
+    return None
+
+
+def _is_canonical_ipv6(host: str) -> bool:
+    """대괄호 안이 브라우저가 적는 꼴과 같은가. 영역 식별자(`%`)는 파이썬이 받아 그대로 두므로
+    따로 막는다."""
+    if not host.endswith("]") or "%" in host:
+        return False
+    inner = host[1:-1]
+    try:
+        address = IPv6Address(inner)
+    except ValueError:
+        return False
+    return _serialized_ipv6(address) == inner
+
+
+def _serialized_ipv6(address: IPv6Address) -> str:
+    """브라우저가 적는 IPv6 주소(WHATWG URL 의 IPv6 serializer)(질의). 16진수 그룹 여덟을 앞의 0
+    없이 소문자로 적고, 0 이 둘 이상 이어진 가장 긴 열 가운데 앞의 것을 `::` 로 줄인다.
+
+    `IPv6Address.compressed` 는 쓰지 않는다. 같은 3.12 에서도 판에 따라 IPv4 매핑 주소
+    (`::ffff:0:0/96`)를 달리 적는다. CPython v3.12.15 의 `IPv6Address.__str__` 은 그 주소를
+    `_ipv4_mapped_ipv6_to_str` 로 `::ffff:1.2.3.4` 처럼 점으로 적고, v3.12.10 에는 그 갈래가 없어
+    `::ffff:102:304` 로 적는다(두 판의 `Lib/ipaddress.py` 를 `gh api` 로 받아 읽었다). 점 표기는
+    RFC 5952 5절이 권하는 꼴이고 브라우저는 그렇게 적지 않는다(두 원문의 웹 요약을 봤다, 픽스처
+    README 의 `ipv6`).
+    """
+    packed = address.packed
+    groups = [int.from_bytes(packed[at : at + 2]) for at in range(0, len(packed), 2)]
+    best_start, best_length, start = -1, 1, -1
+    for index, group in enumerate(groups):
+        if group:
+            start = -1
+            continue
+        if start < 0:
+            start = index
+        if index - start + 1 > best_length:
+            best_start, best_length = start, index - start + 1
+    hexes = [f"{group:x}" for group in groups]
+    if best_start < 0:
+        return ":".join(hexes)
+    return f"{':'.join(hexes[:best_start])}::{':'.join(hexes[best_start + best_length :])}"
+
+
+def _is_canonical_ipv4(parts: Sequence[str]) -> bool:
+    return len(parts) == _IPV4_PARTS and all(
+        _IPV4_PART.fullmatch(part) is not None and int(part) <= _MAX_IPV4_PART for part in parts
+    )
 
 
 def _place(loc: Sequence[str | int]) -> str:

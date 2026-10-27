@@ -158,3 +158,15 @@ PYTHONUTF8=1 uv run python .scratch/harness/probes/model_sweep/sweep.py judge --
 - 사용자 범위 Playwright(적용 2026-10-16 11:41 UTC, 티켓 08): 사용자 범위 MCP 서버 `playwright`를 지워 플러그인판
   하나만 실린다. 적용 뒤 새로 연 세션부터 시작 컨텍스트의 지연 도구 목록에서 그 서버의 도구 이름이 빠진다고 어림한다
   (줄어든 양은 재지 않았다).
+
+### 조건 변경(ADR 0037)
+
+2026-10-22에 더했다(ticket-for-every-pr 티켓 02). PR마다 티켓 하나가 되어, 명세가 있는 하네스 기능의 티켓은 하네스
+기능이라도 `feature/NN-<slug>` 브랜치로 돈다. 위 사전 등록은 작업 종류를 브랜치 접두사로 정의했으므로 스윕 기간 안의 그
+브랜치는 구현으로 잡힌다. 이것을 받아들이고, 사전 등록 절과 `tools/model_sweep.py`는 고치지 않는다. 판정 전에 모집단
+정의를 바꾸면 해시로 고정한 절을 깨고, 이미 구현으로 든 하네스 기능의 브랜치(token-usage 티켓 아홉이 스윕 시작 뒤인
+2026-10-16~17에 `feature/NN-`로 병합됐다. `.scratch/ticket-for-every-pr/spec.md` 레벨 스윕 절)를 어떻게 셀지가 다시
+열린다. 명세 없이 끝나는 하네스 일은 harness 티켓의 `chore/NNN-<slug>` 브랜치라 지금처럼 하네스로 잡힌다. 번호가 겹쳐
+옮긴 브랜치는 지시문의 `브랜치:` 줄과 PR 머리가 달라지지만, 판정은 갈래를 첫 지시문의 `브랜치:` 줄로 정하므로 배정은
+그대로이고, 그 브랜치는 갈래마다 세는 표지(`브랜치 줄과 PR 머리가 다름`)에 든다. 그 표지는 판정을 막는 조건이
+아니다(`tools/model_sweep_judge.py`의 `RENAMED`와 `blocking_reasons`를 읽었다).

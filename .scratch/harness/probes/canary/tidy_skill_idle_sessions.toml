@@ -1,0 +1,27 @@
+# tidy-checkouts 스킬 3에 더한 쉬는 세션의 프로세스 끝내기(`--idle`, `end-holders`)와 앱 표지 판정(ADR 0032 이력
+# 2026-10-20)이 새 세션에 실리는지. 실험군은 이 워크트리, 대조군은 주 체크아웃이다. 주 체크아웃의 옛 판에는 세
+# 카나리아가 모두 없다. 그 PR 이 병합된 뒤에 다시 돌리면 주 체크아웃에도 카나리아가 있으므로, 옛 판의 커밋을
+# `--control-commit` 으로 준다.
+# 최신 결과: 통과 4(2026-10-20, 이 PC, claude 2.1.302, 대조군 주 체크아웃 `77ecd319`, 일지 2026-10-20-31).
+# 돌리는 법: 워크트리 `.claude/worktrees/<이름>/` 루트에서
+#   uv run python tools/canary.py .scratch/harness/probes/canary/tidy_skill_idle_sessions.toml <출력 디렉터리>
+kind = "skill"
+question = '''
+tidy-checkouts 스킬을 Skill 도구로 불러 본문을 읽어라. 3의 하위 단계와 3 끝의 앱 정리 문단에서 세 가지를 글자 그대로 옮겨라.
+하나, 3.1(판정)에서 judge 에 넘길 세션을 고르는 기준 가운데 턴을 돌고 있지 않은 세션을 고르는 문장.
+둘, 3.2(지운다)에서 세션의 프로세스를 끈 뒤 그 세션이 사람에게 어떻게 보이는지 적은 문장.
+셋, 앱 자신의 정리를 다룬 문단에서 날짜와 함께 무엇을 보았는지 적은 문장.
+본문에 그런 문장이 없으면 그 항목에 "없음"이라고만 답하라.
+'''
+expect = ["한 시간 넘게 지난 세션", "절전이나 오프라인일 수 있다는 문구", "분리 HEAD 워크트리 둘에서"]
+source = ".claude/skills/tidy-checkouts/SKILL.md"
+skill = "tidy-checkouts"
+
+[[arm]]
+name = "워크트리"
+role = "experiment"
+
+[[arm]]
+name = "주-체크아웃"
+role = "control"
+checkout = "../../.."

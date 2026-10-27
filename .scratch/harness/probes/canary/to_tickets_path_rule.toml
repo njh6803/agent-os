@@ -1,0 +1,26 @@
+# to-tickets 템플릿 뒤 문단의 경로 규칙을 저장소 관행에 맞춘 문장(대기열 400)이 새 세션에 실리는지. to-tickets 는 모델이
+# 부르지 못하는 스킬이라 질문 머리에 슬래시 명령으로 넣는다.
+# 실험군은 이 명세를 부른 체크아웃, 대조군은 바뀌기 전 판(6bd52b06)이다. 옛 판의 그 문단은 원본 문언(경로를 피한다)이다.
+# 병합 뒤에는 주 체크아웃이 새 사본이라 옛 판의 커밋을 `--control-commit` 으로 준다(README `canary/` 행).
+# 최신 결과: 통과 4(2026-10-22, 이 PC, claude 2.1.302, 대조군 `--control-commit 6bd52b06` 은 "없음", 실험군은 `6bd52b06` 위의
+#   커밋 전 변경, 일지 2026-10-22-11).
+# 돌리는 법: 워크트리 `.claude/worktrees/<이름>/` 루트에서
+#   uv run python tools/canary.py --control-commit 6bd52b06 .scratch/harness/probes/canary/to_tickets_path_rule.toml <출력 디렉터리>
+kind = "skill"
+question = '''
+/to-tickets
+위에 실린 스킬 본문이 시키는 일(맥락 모으기, 저장소 탐색, 티켓 쓰기, 질문)은 하지 않는다. 본문만 보고 답한다.
+본문의 티켓 템플릿 바로 뒤 문단에서, 티켓에 적는 경로 가운데 적어도 되는 것을 말하는 문장을 처음부터 마침표까지 글자 그대로
+옮겨라. 그 문단에 적어도 되는 경로를 말하는 문장이 없으면 "없음"이라고만 답하라.
+'''
+expect = ["명세가 정한 고칠 자리의 경로는 적는다"]
+source = ".claude/skills/to-tickets/SKILL.md"
+
+[[arm]]
+name = "워크트리"
+role = "experiment"
+
+[[arm]]
+name = "옛-판"
+role = "control"
+checkout = "../../../../agent-canary-6bd52b06"

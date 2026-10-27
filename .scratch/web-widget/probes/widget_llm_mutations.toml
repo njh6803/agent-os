@@ -1,0 +1,141 @@
+# web-widget 티켓 11 의 변이 표. 실제 모델 e2e 를 감싸는 시험(tests/test_widget_llm.py)의 기준 다섯과, 프로젝트 llm 을
+# 세우는 조건(web/apps/widget/playwright.config.ts), 토큰 합계와 기본 실행의 제외(tests/conftest.py, pyproject.toml)를
+# 되돌려 빨개지는지 본다(원칙 II). 앞의 셋과 9 는 실제 모델과 위젯 빌드를 지나 변이 하나가 1~3분이고 모델을 부른다(2 는
+# 키를 빼서 부르지 못한다).
+#   PYTHONUTF8=1 uv run --env-file ../../../.env python tools/mutate.py .scratch/web-widget/probes/widget_llm_mutations.toml [번호 ...]
+# 워크트리(.claude/worktrees/<이름>/)에서 친다. 주 체크아웃이면 --env-file .env 다. chromium 이 Playwright 의 브라우저
+# 캐시에 있어야 한다.
+#
+# 표지는 고른 단언이 실패할 때만 나오는 문구다. pytest 는 실패한 시험 함수의 원문을 통째로 찍어, 그 원문에 글자 그대로
+# 있는 문구는 고르지 않는다. 앞의 셋은 `_failures` 가 값을 넣어 지은 글(사전의 repr, 트레이스의 수, 목록의 repr)이다.
+
+[runner.node]
+command = ["pnpm", "exec", "vitest", "run", "--project", "node"]
+cwd = "web"
+judge = "vitest"
+
+# --- 실제 모델 e2e 의 기준 셋(한 바퀴에서 모아 알린다) ---------------------------------------------------------
+
+[[mutation]]
+name = "Playwright 의 llm 시험을 건너뛰면 통과 1 건너뜀 0 기준이 빨갛다"
+tests = ["tests/test_widget_llm.py", "-m", "llm_widget"]
+expect = "red"
+expect_output = ["{'expected': 0, 'skipped': 1"]
+
+[[mutation.edit]]
+file = "web/apps/widget/e2e/calc.llm.ts"
+old = '''test("계산 에이전트가 위젯에서 보낸 요청 하나에'''
+new = '''test.skip("계산 에이전트가 위젯에서 보낸 요청 하나에'''
+
+[[mutation]]
+name = "serve 의 환경에서 키를 빼면 llm_called 기준이 빨갛다"
+tests = ["tests/test_widget_llm.py", "-m", "llm_widget"]
+expect = "red"
+expect_output = ["트레이스 1개에 llm_called 가 없다"]
+
+[[mutation.edit]]
+file = "web/apps/widget/e2e/stack.ts"
+old = '''
+        PYTHONUTF8: "1",
+        AGENT_OS_ADMIN_TOKEN: unusedToken(),
+'''
+new = '''
+        PYTHONUTF8: "1",
+        ANTHROPIC_API_KEY: undefined,
+        AGENT_OS_ADMIN_TOKEN: unusedToken(),
+'''
+
+[[mutation]]
+name = "위젯이 출력의 끝 글자를 빼고 그리면 화면과 트레이스의 출력 기준이 빨갛다"
+tests = ["tests/test_widget_llm.py", "-m", "llm_widget"]
+expect = "red"
+expect_output = ["이 트레이스의 run_finished 출력 ['"]
+
+[[mutation.edit]]
+file = "web/apps/widget/components/organisms/Conversation.tsx"
+old = '''            {outcome.output}'''
+new = '''            {outcome.output.slice(0, -1)}'''
+
+# --- 모델 없이 기본 실행에서 재는 기준 둘 ------------------------------------------------------------------------
+
+[[mutation]]
+name = "pnpm 이 없을 때 실패하지 않으면 빨갛다"
+tests = ["tests/test_widget_llm.py", "-k", "pnpm_을_찾지_못하면"]
+expect = "red"
+expect_output = ["DID NOT RAISE"]
+
+[[mutation.edit]]
+file = "tests/test_widget_llm.py"
+old = '''    if found is None:'''
+new = '''    if found is None and False:'''
+
+[[mutation]]
+name = "제한 시간에 자식만 끝내면 손자가 살아 빨갛다"
+tests = ["tests/test_widget_llm.py", "-k", "제한_시간을_넘기면"]
+expect = "red"
+expect_output = ["where False = _stops_growing("]
+
+[[mutation.edit]]
+file = "tests/test_widget_llm.py"
+old = '''            kill_tree(process)'''
+new = '''            process.kill()'''
+
+# --- 프로젝트 llm 을 세우는 조건 ---------------------------------------------------------------------------------
+
+[[mutation]]
+name = "변수 없이도 llm 을 세우면 설정 시험이 빨갛다"
+runner = "node"
+tests = ["apps/widget/playwright.config.test.ts"]
+expect = "red"
+expect_output = ["expected [ 'chromium', 'llm' ] to deeply equal [ 'chromium' ]"]
+
+[[mutation.edit]]
+file = "web/apps/widget/playwright.config.ts"
+old = '''if (process.env[LLM_ENV] === "1") {'''
+new = '''if (process.env[LLM_ENV] !== "never") {'''
+
+# --- 토큰 합계와 기본 실행의 제외 -------------------------------------------------------------------------------
+
+[[mutation]]
+name = "conftest 가 llm 마커만 세면 llm_widget 의 합계 줄이 없어 빨갛다"
+tests = ["tests/test_conftest.py", "-k", "llm_widget_시험이"]
+expect = "red"
+expect_output = ["nomatch: '*LLM 토큰 합계 46"]
+
+[[mutation.edit]]
+file = "tests/conftest.py"
+old = '''    if all(item.get_closest_marker(marker) is None for marker in _LLM_MARKERS):'''
+new = '''    if item.get_closest_marker("llm") is None:'''
+
+[[mutation]]
+name = "기본 실행이 llm 만 빼면 llm_widget 시험이 돌아 빨갛다"
+tests = ["tests/test_conftest.py", "-k", "기본_실행은"]
+expect = "red"
+expect_output = ["nomatch: '*= 1 passed, 2 deselected in *'"]
+
+[[mutation.edit]]
+file = "pyproject.toml"
+old = '''addopts = "-m \"not llm and not llm_widget\" --import-mode=importlib --strict-markers"'''
+new = '''addopts = "-m \"not llm\" --import-mode=importlib --strict-markers"'''
+
+# --- 실제 모델 e2e 의 종료 코드(PR #383 의 CodeRabbit 첫 회차가 더했다. 앞의 번호를 옮기지 않으려 끝에 둔다) ---------
+
+[[mutation]]
+name = "시험이 통과해도 정리가 던지면 종료 코드 기준이 빨갛다"
+tests = ["tests/test_widget_llm.py", "-m", "llm_widget"]
+expect = "red"
+expect_output = ["Playwright 가 종료 코드 1 로 끝났다"]
+
+[[mutation.edit]]
+file = "web/apps/widget/e2e/stack.ts"
+old = '''
+    rmSync(work, { recursive: true, force: true });
+  };
+  try {
+'''
+new = '''
+    rmSync(work, { recursive: true, force: true });
+    throw new Error("정리 뒤에 던지는 변이");
+  };
+  try {
+'''

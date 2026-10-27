@@ -270,7 +270,8 @@ expect = "red"
 file = "tools/mutate.py"
 old = '''
     if args.checking:
-        return check(selected, root=root, out=out)
+        # 여기 오는 `--check` 는 이름·번호나 `--since` 로 고른 것이다(고르지 않으면 `_check_files`)
+        return check_picked(selected, root=root, out=out)
 '''
 new = '''
 '''
@@ -282,8 +283,8 @@ expect = "red"
 
 [[mutation.edit]]
 file = "tools/mutate.py"
-old = '''return Spec(runner=spec.runner, mutation='''
-new = '''return Spec(mutation='''
+old = '''return Spec(runner=spec.runner, mutation=[m for m in spec.mutation if m.name in chosen])'''
+new = '''return Spec(mutation=[m for m in spec.mutation if m.name in chosen])'''
 
 [[mutation]]
 name = "기준선이 러너마다 한 번이고 인자를 붙이지 않는다"
@@ -315,7 +316,9 @@ file = "tools/mutate.py"
 old = '''
     if flags:
         raise _UsageError(
-            f"모르는 선택: {', '.join(flags)}. 아는 것은 --check 와 --since <커밋> 이다"
+            f"모르는 선택: {', '.join(flags)}. 아는 것은 --check, --staged, --since <커밋> 이다. "
+            "변이 몇만 돌리려면 표 뒤에 그 번호(따옴표 없이 쳐 워크트리 가드를 지난다)나 "
+            "이름을 준다"
         )
 '''
 new = '''

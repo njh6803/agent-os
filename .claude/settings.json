@@ -4,7 +4,8 @@
     "document-skills@anthropic-agent-skills": false,
     "example-skills@anthropic-agent-skills": false,
     "skill-creator@claude-plugins-official": false,
-    "code-review@claude-plugins-official": false
+    "code-review@claude-plugins-official": false,
+    "slack@claude-plugins-official": false
   },
   "skillOverrides": {
     "jira-commit": "off",
@@ -13,9 +14,11 @@
     "jira-start": "off",
     "jira-test": "off"
   },
+  "skillListingBudgetFraction": 0.006,
   "env": {
     "PYTHONUTF8": "1",
-    "UV_LINK_MODE": "copy"
+    "UV_LINK_MODE": "copy",
+    "CLAUDE_CODE_GLOB_NO_IGNORE": "false"
   },
   "permissions": {
     "deny": [
@@ -98,6 +101,26 @@
             "type": "command",
             "command": "uv run --project \"${CLAUDE_PROJECT_DIR}\" --no-sync python \"${CLAUDE_PROJECT_DIR}/tools/launch_hook.py\" hook_scratch_probe_rule.py",
             "timeout": 20
+          },
+          {
+            "type": "command",
+            "command": "uv run --project \"${CLAUDE_PROJECT_DIR}\" --no-sync python \"${CLAUDE_PROJECT_DIR}/tools/launch_hook.py\" hook_probe_conclusion.py",
+            "timeout": 20
+          },
+          {
+            "type": "command",
+            "command": "uv run --project \"${CLAUDE_PROJECT_DIR}\" --no-sync python \"${CLAUDE_PROJECT_DIR}/tools/launch_hook.py\" hook_journal_evidence.py",
+            "timeout": 20
+          },
+          {
+            "type": "command",
+            "command": "uv run --project \"${CLAUDE_PROJECT_DIR}\" --no-sync python \"${CLAUDE_PROJECT_DIR}/tools/launch_hook.py\" hook_ui_design.py",
+            "timeout": 20
+          },
+          {
+            "type": "command",
+            "command": "uv run --project \"${CLAUDE_PROJECT_DIR}\" --no-sync python \"${CLAUDE_PROJECT_DIR}/tools/launch_hook.py\" hook_web_edit_check.py",
+            "timeout": 20
           }
         ]
       },
@@ -106,7 +129,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "uv run --project \"${CLAUDE_PROJECT_DIR}\" --no-sync python \"${CLAUDE_PROJECT_DIR}/tools/launch_hook.py\" hook_edit_during_commit.py",
+            "command": "uv run --project \"${CLAUDE_PROJECT_DIR}\" --no-sync python \"${CLAUDE_PROJECT_DIR}/tools/launch_hook.py\" hook_edit_during_mutate.py",
             "timeout": 20
           }
         ]
@@ -157,6 +180,16 @@
           {
             "type": "command",
             "command": "uv run --project \"${CLAUDE_PROJECT_DIR}\" --no-sync python \"${CLAUDE_PROJECT_DIR}/tools/launch_hook.py\" hook_large_result.py",
+            "timeout": 20
+          }
+        ]
+      },
+      {
+        "matcher": "EnterWorktree",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "uv run --project \"${CLAUDE_PROJECT_DIR}\" --no-sync python \"${CLAUDE_PROJECT_DIR}/tools/launch_hook.py\" hook_worktree_skill_overrides.py",
             "timeout": 20
           }
         ]
@@ -244,6 +277,16 @@
         ]
       },
       {
+        "matcher": "Write|Edit|NotebookEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "uv run --project \"${CLAUDE_PROJECT_DIR}\" --no-sync python \"${CLAUDE_PROJECT_DIR}/tools/launch_hook.py\" hook_edit_during_commit.py",
+            "timeout": 20
+          }
+        ]
+      },
+      {
         "matcher": "Skill",
         "hooks": [
           {
@@ -264,6 +307,16 @@
           {
             "type": "command",
             "command": "uv run --project \"${CLAUDE_PROJECT_DIR}\" --no-sync python \"${CLAUDE_PROJECT_DIR}/tools/launch_hook.py\" hook_choice_facts.py",
+            "timeout": 20
+          }
+        ]
+      },
+      {
+        "matcher": "mcp__ccd_session__start_session",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "uv run --project \"${CLAUDE_PROJECT_DIR}\" --no-sync python \"${CLAUDE_PROJECT_DIR}/tools/launch_hook.py\" hook_session_card.py",
             "timeout": 20
           }
         ]

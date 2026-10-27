@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>플러그인 목록 · 모바일</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/agent-os/styles.css">
+<link rel="stylesheet" href="ds/agent-os/fonts/fonts.css">
+<link rel="stylesheet" href="ds/agent-os/_ds_bundle.css">
+<script src="ds/agent-os/_ds_bundle.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0}
+a{color:var(--accent)}a:hover{color:var(--text)}
+</style>
+</helmet>
+<div data-theme="nokcheong" data-mode="light" style="min-height: 100vh; background: var(--bg); color: var(--text); font-family: var(--sans);">
+<header style="height: var(--spacing-top-bar); box-sizing: border-box; padding: 0 var(--spacing-4); display: flex; align-items: center; gap: var(--spacing-2); background: var(--bg-raised); border-bottom: 1px solid var(--border);">
+<span class="font-semibold text-body" style="margin-right: auto;">Agent OS</span>
+<nav aria-label="관리 화면" class="flex items-center gap-1">
+<a href="#" aria-current="page" class="flex items-center text-body font-medium" style="height: var(--control-h); padding: 0 var(--spacing-2); border-radius: var(--radius-m); background: var(--bg-selected); color: var(--text); text-decoration: none;">플러그인</a>
+<a href="#" class="flex items-center text-body" style="height: var(--control-h); padding: 0 var(--spacing-2); border-radius: var(--radius-m); color: var(--text-muted); text-decoration: none;">실행</a>
+<a href="#" class="flex items-center text-body" style="height: var(--control-h); padding: 0 var(--spacing-2); border-radius: var(--radius-m); color: var(--text-muted); text-decoration: none;">설정</a>
+</nav>
+</header>
+<main style="box-sizing: border-box; padding: var(--spacing-6) var(--spacing-4) var(--spacing-8); display: flex; flex-direction: column; gap: var(--spacing-6);">
+<header class="flex items-start justify-between gap-3">
+<div class="flex flex-col gap-1 min-w-0">
+<div class="flex items-center gap-2"><h1 style="margin: 0; font-size: var(--text-title); line-height: var(--text-title--line-height); font-weight: var(--text-title--font-weight);">플러그인</h1><span class="text-body text-text-muted">5</span></div>
+<p class="text-body text-text-muted" style="margin: 0;">종류마다 등록된 플러그인을 켜고 끈다.</p>
+</div>
+<x-import component-from-global-scope="AgentOsUi.Button" variant="secondary">새로 고침</x-import>
+</header>
+<x-import component-from-global-scope="AgentOsUi.Alert" tone="danger" title="켜고 끄지 못했다: agent/support-bot">서버에 닿지 못했다. 스위치는 다시 읽은 값이다.</x-import>
+
+<section class="flex flex-col gap-2">
+<h2 class="text-body font-semibold" style="margin: 0;">에이전트 <span class="font-regular text-text-muted">2</span></h2>
+<div style="border-top: 1px solid var(--border);">
+<div class="flex items-center gap-3" style="min-height: var(--row-h); border-bottom: 1px solid var(--border);">
+<div class="flex-1 min-w-0"><x-import component-from-global-scope="AgentOsUi.Switch" label="calc" checked="{{yes}}"></x-import></div>
+<a href="#" class="text-table">매니페스트</a>
+</div>
+<div class="flex items-center gap-3" style="min-height: var(--row-h); border-bottom: 1px solid var(--border);">
+<div class="flex-1 min-w-0"><x-import component-from-global-scope="AgentOsUi.Switch" label="support-bot" checked="{{no}}"></x-import></div>
+<a href="#" class="text-table">매니페스트</a>
+</div>
+</div>
+</section>
+
+<section class="flex flex-col gap-2">
+<h2 class="text-body font-semibold" style="margin: 0;">MCP <span class="font-regular text-text-muted">2</span></h2>
+<div style="border-top: 1px solid var(--border);">
+<div class="flex items-center gap-3" style="min-height: var(--row-h); border-bottom: 1px solid var(--border);">
+<div class="flex-1 min-w-0"><x-import component-from-global-scope="AgentOsUi.Switch" label="everything" checked="{{yes}}"></x-import></div>
+<a href="#" class="text-table">매니페스트</a>
+</div>
+<div class="flex flex-col gap-1" style="padding: var(--spacing-2) 0; border-bottom: 1px solid var(--border);">
+<div class="flex items-center gap-3">
+<div class="flex-1 min-w-0"><x-import component-from-global-scope="AgentOsUi.Switch" label="filesystem" checked="{{yes}}"></x-import></div>
+<a href="#" class="text-table">매니페스트</a>
+</div>
+<div class="flex items-start gap-2 text-small text-warning"><x-import component-from-global-scope="AgentOsUi.Icon" name="triangle-alert" size="14"></x-import><span style="min-width: 0; overflow-wrap: anywhere;">읽을 수 없는 매니페스트: [server] 표에 command가 없다</span></div>
+</div>
+</div>
+</section>
+
+<section class="flex flex-col gap-2">
+<h2 class="text-body font-semibold" style="margin: 0;">스킬 <span class="font-regular text-text-muted">1</span></h2>
+<div style="border-top: 1px solid var(--border);">
+<div class="flex flex-col gap-1" style="padding: var(--spacing-2) 0; border-bottom: 1px solid var(--border);">
+<div class="flex items-center gap-3">
+<div class="flex-1 min-w-0"><x-import component-from-global-scope="AgentOsUi.Switch" label="refund-policy" checked="{{no}}"></x-import></div>
+<a href="#" class="text-table">매니페스트</a>
+</div>
+<div class="flex items-start gap-2 text-small text-text-muted"><x-import component-from-global-scope="AgentOsUi.Icon" name="info" size="14"></x-import><span>로더가 생기기 전에는 효과가 없다</span></div>
+</div>
+</div>
+</section>
+
+<section class="flex flex-col gap-2">
+<h2 class="text-body font-semibold" style="margin: 0;">모델 <span class="font-regular text-text-muted">0</span></h2>
+<div class="flex items-center gap-2 text-body text-text-muted" style="min-height: var(--row-h); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);"><x-import component-from-global-scope="AgentOsUi.Icon" name="circle-minus" size="16"></x-import><span>등록된 것이 없다</span></div>
+</section>
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":375,"height":1560}}'>
+class Component extends DCLogic {
+renderVals() {
+return { yes: true, no: false };
+}
+}
+</script>
+</body>
+</html>

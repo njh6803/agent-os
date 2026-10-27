@@ -25,6 +25,7 @@ from pathlib import Path
 import pytest
 from tools.canary import (
     HEADLESS_ENV,
+    RULE_NOTE,
     AgentOutcome,
     Facts,
     GitView,
@@ -42,12 +43,14 @@ from tools.canary import (
     mixed_none,
     prompt_for,
     read_facts,
+    read_spec,
     run_claude,
     source_problems,
     target_problems,
     view_problems,
 )
 from tools.hook_session_usage import HEADLESS_MARKER
+from tools.run_hooks import hook_environment
 
 _규칙_명세 = '''
 kind = "rule"
@@ -247,6 +250,39 @@ def test_질문은_인자가_아니라_stdin으로_가고_대상_자리는_갈�
     assert "`README.md` 하나만" in prompt_for(spec, spec.arm[1])
 
 
+def test_규칙_질문에는_함께_실린_저장소_규칙도_지시라는_문장을_붙인다() -> None:
+    """실험군 한 회차가 Read 결과에 붙어 실린 규칙을 도구 결과라 지시가 아니라며 "없음"이라 했다."""
+    spec = load_spec(_규칙_명세)
+
+    for arm in spec.arm:
+        prompt = prompt_for(spec, arm)
+        assert prompt.startswith(spec.question.replace("{target}", str(arm.target)))
+        assert prompt.count(RULE_NOTE) == 1
+
+
+@pytest.mark.parametrize(
+    "적은_꼴",
+    [RULE_NOTE, f"`{RULE_NOTE}`", f"**{RULE_NOTE}**", RULE_NOTE.replace(" ", "\n  ")],
+)
+def test_명세가_이미_그_문장을_들면_다시_붙이지_않는다(적은_꼴: str) -> None:
+    spec = load_spec(_규칙_명세.replace('"없음".\n"""', f'"없음".\n{적은_꼴}\n"""'))
+
+    prompt = prompt_for(spec, spec.arm[0])
+
+    assert prompt == spec.question.replace("{target}", "tools/hook_env_read.py")
+
+
+def test_스킬과_에이전트_질문에는_그_문장을_붙이지_않는다() -> None:
+    spec = load_spec(_스킬_명세)
+
+    assert prompt_for(spec, spec.arm[0]) == spec.question
+
+
+def test_붙이는_문장에_카나리아가_있으면_명세_오류다() -> None:
+    with pytest.raises(SpecError, match="붙이는 문장이 카나리아를 드러낸다: 저장소의 규칙"):
+        load_spec(_규칙_명세.replace('expect = ["식별자는 영문"]', 'expect = ["저장소의 규칙"]'))
+
+
 # 이벤트에서 사실 뽑기
 
 
@@ -318,6 +354,92 @@ def test_읽지_않는_이벤트의_모양은_보지_않는다() -> None:
 
     assert facts.malformed == ()
     assert facts.answer == "없음"
+
+
+# 2026-10-17 에 주간 한도로 막힌 카나리아 원본(claude 2.1.300)의 모양이다. 원본은 커밋하지 않은
+# 스크래치 파일이고 손으로 읽었다(일지 2026-10-19-34. 막힌 사건은 일지 2026-10-17-07).
+_한도_정보: dict[str, object] = {
+    "status": "rejected",
+    "resetsAt": 1792357200,
+    "rateLimitType": "seven_day",
+    "overageStatus": "rejected",
+    "isUsingOverage": False,
+}
+_막힌_답 = "You've hit your weekly limit · resets Oct 19, 6am (Asia/Seoul)"
+
+
+def _한도_이벤트(**바꿀: object) -> str:
+    return _줄({"type": "rate_limit_event", "rate_limit_info": {**_한도_정보, **바꿀}})
+
+
+def _한도_결과() -> str:
+    return _줄(
+        {
+            "type": "result",
+            "subtype": "success",
+            "is_error": True,
+            "api_error_status": 429,
+            "api_error": "usage_limit_reached",
+            "result": _막힌_답,
+        }
+    )
+
+
+def test_계정_한도에_막힌_회차는_한도의_종류와_풀리는_시각을_뽑는다() -> None:
+    facts = read_facts([_init(("Skill",)), _한도_이벤트(), _한도_결과()])
+
+    assert facts.limit == "계정 한도(seven_day, 2026-10-18 21:00 UTC 에 풀린다)"
+    assert facts.malformed == ()
+
+
+def test_결과만_usage_limit_reached여도_계정_한도로_읽는다() -> None:
+    facts = read_facts([_init(("Skill",)), _한도_결과()])
+
+    assert facts.limit == "계정 한도(usage_limit_reached, 풀리는 시각 모름)"
+
+
+def test_막히지_않은_한도_이벤트는_계정_한도가_아니다() -> None:
+    """한도 이벤트는 막히지 않은 회차에도 찍힌다. 거절(`rejected`)만 센다."""
+    facts = read_facts([_init(), _한도_이벤트(status="allowed"), _결과("식별자는 영문")])
+
+    assert facts.limit is None
+
+
+def test_모양이_바뀐_한도_이벤트는_어긋난_줄로_세지_않고_건너뛴다() -> None:
+    """한도 이벤트는 막히지 않은 회차에도 찍혀, 어긋난 줄로 세면 정상 회차가 실패한다."""
+    lines = [_init(), _줄({"type": "rate_limit_event", "rate_limit_info": "바뀐 모양"})]
+    facts = read_facts([*lines, _결과("식별자는 영문")])
+
+    assert facts.malformed == ()
+    assert facts.limit is None
+
+
+@pytest.mark.parametrize("풀리는_때", [1792357200000, 1e30, "2026-10-18T21:00:00Z", True])
+def test_읽지_못하는_풀리는_시각은_예외가_아니라_그대로_적는다(풀리는_때: object) -> None:
+    """결과의 `api_error` 없이 한도 이벤트만으로도 거절을 놓치지 않는다."""
+    facts = read_facts([_init(("Skill",)), _한도_이벤트(resetsAt=풀리는_때)])
+
+    assert facts.limit == f"계정 한도(seven_day, 풀리는 시각을 읽지 못했다(resetsAt {풀리는_때}))"
+    assert facts.malformed == ()
+
+
+@pytest.mark.parametrize("비운_칸", [{"resetsAt": None}, {}])
+def test_풀리는_시각이_null이거나_없으면_모름으로_적는다(비운_칸: dict[str, object]) -> None:
+    """`resetsAt: null` 은 고치기 전 판에서 모양 검증이 이벤트 전체를 버려 거절까지 잃었다."""
+    정보 = {**{키: 값 for 키, 값 in _한도_정보.items() if 키 != "resetsAt"}, **비운_칸}
+    줄 = _줄({"type": "rate_limit_event", "rate_limit_info": 정보})
+    facts = read_facts([_init(("Skill",)), 줄])
+
+    assert facts.limit == "계정 한도(seven_day, 풀리는 시각 모름)"
+    assert facts.malformed == ()
+
+
+@pytest.mark.parametrize("종류", [None, 7])
+def test_거절_이벤트의_종류_칸이_바뀌어도_거절은_놓치지_않는다(종류: object) -> None:
+    facts = read_facts([_init(("Skill",)), _한도_이벤트(rateLimitType=종류)])
+
+    assert facts.limit == "계정 한도(종류 모름, 2026-10-18 21:00 UTC 에 풀린다)"
+    assert facts.malformed == ()
 
 
 # 판정
@@ -516,6 +638,38 @@ def test_대조군은_스킬을_부르지_않아도_된다_새_스킬은_옛_사
     facts = _스킬_사실(tmp_path, skills=(), skill_dirs=(), answer="없음")
 
     assert judge(spec, spec.arm[1], facts, tmp_path) == []
+
+
+def _옛_스킬(checkout: Path) -> None:
+    folder = checkout / ".claude" / "skills" / "tidy-checkouts"
+    folder.mkdir(parents=True)
+    (folder / "SKILL.md").write_text("# 체크아웃 정리\n", encoding="utf-8")
+
+
+@pytest.mark.parametrize(
+    ("바꿀", "이유"),
+    [
+        ({"skills": ()}, "부르지 않았다"),
+        ({"skill_dirs": ()}, "자리"),
+        ({"skills": (), "skill_dirs": ()}, "부르지 않았다"),
+    ],
+)
+def test_대조군_사본에_그_스킬이_있으면_대조군도_불러_자리_줄을_남겨야_한다(
+    tmp_path: Path, 바꿀: dict[str, object], 이유: str
+) -> None:
+    """옛 사본에 스킬이 있는데 부르지 않고 "없음"이라 답하면 옛 본문을 본 것이 아니다(PR #293)."""
+    _옛_스킬(tmp_path)
+    spec = load_spec(_스킬_명세)
+    facts = _스킬_사실(tmp_path, answer="없음", **바꿀)
+
+    assert any(이유 in reason for reason in judge(spec, spec.arm[1], facts, tmp_path))
+
+
+def test_대조군_사본의_그_스킬을_불러_자리_줄이_있으면_통과다(tmp_path: Path) -> None:
+    _옛_스킬(tmp_path)
+    spec = load_spec(_스킬_명세)
+
+    assert judge(spec, spec.arm[1], _스킬_사실(tmp_path, answer="없음"), tmp_path) == []
 
 
 def test_대조군이_스킬을_불렀으면_그_체크아웃의_사본이어야_한다(tmp_path: Path) -> None:
@@ -1629,6 +1783,98 @@ def test_claude가_0이_아닌_코드로_끝나면_그_회차는_실패다(tmp_p
     assert any("종료 코드 1" in line for line in printed)
 
 
+class _막히는_가짜(_가짜):
+    """정한 체크아웃의 회차를 계정 한도로 막는다. 막힌 claude 는 1 로 끝난다."""
+
+    def __init__(self, 답들: dict[str, list[str]], 막을: set[str]) -> None:
+        super().__init__(답들)
+        self.막을 = 막을
+
+    def __call__(self, args: Sequence[str], cwd: Path, stdin: str) -> RunResult:
+        if cwd.name not in self.막을:
+            return super().__call__(args, cwd, stdin)
+        self.호출.append((list(args), cwd, stdin))
+        lines = [_init(("Skill",)), _한도_이벤트(), _한도_결과()]
+        return RunResult(1, "\n".join(lines) + "\n", "")
+
+
+def _막힌_실행(
+    tmp_path: Path, 막을: set[str], 새_답: str = "EnterWorktree"
+) -> tuple[int, list[str]]:
+    spec_path = tmp_path / "canary.toml"
+    spec_path.write_text(_스킬_명세, encoding="utf-8")
+    새 = _스킬_체크아웃(tmp_path, "새")
+    옛 = _스킬_체크아웃(tmp_path, "옛")
+    가짜 = _막히는_가짜({"새": _스킬_회차(새, 새_답), "옛": _스킬_회차(옛, "없음")}, 막을)
+    printed: list[str] = []
+    code = main(
+        [str(spec_path), str(tmp_path / "out")],
+        cwd=tmp_path,
+        runner=가짜,
+        out=printed.append,
+        commit=_가짜_커밋({"새": ["aaa1111"], "옛": ["bbb2222"]}),
+    )
+    return code, printed
+
+
+def test_계정_한도에_막힌_회차는_실패가_아니라_측정_아님으로_세고_4다(tmp_path: Path) -> None:
+    code, printed = _막힌_실행(tmp_path, {"새"})
+
+    assert code == 4
+    marked = [line for line in printed if line.startswith("[측정 아님]")]
+    assert len(marked) == 3
+    assert not any(line.startswith("[실패]") for line in printed)
+    assert sum("seven_day, 2026-10-18 21:00 UTC 에 풀린다" in line for line in printed) >= 3
+    assert any(line.startswith("통과 1 · 실패 0") for line in printed)
+    assert any(
+        line.startswith("측정 아님 3") and "2026-10-18 21:00 UTC" in line for line in printed
+    )
+
+
+def test_측정된_실패가_있으면_측정_아님이_있어도_1이다(tmp_path: Path) -> None:
+    code, printed = _막힌_실행(tmp_path, {"옛"}, 새_답="없음")
+
+    assert code == 1
+    assert any(line.startswith("[측정 아님]") for line in printed)
+    assert any(line.startswith("통과 0 · 실패 3") for line in printed)
+
+
+class _거절_뒤_답한_가짜(_가짜):
+    """회차마다 원본 머리에 거절 이벤트를 하나 더 끼운다. 답과 종료 코드는 그대로다."""
+
+    def __call__(self, args: Sequence[str], cwd: Path, stdin: str) -> RunResult:
+        result = super().__call__(args, cwd, stdin)
+        return RunResult(result.exit_code, _한도_이벤트() + "\n" + result.stdout, result.stderr)
+
+
+def test_거절_이벤트_뒤에도_답을_냈으면_측정이라_판정한다(tmp_path: Path) -> None:
+    spec_path = tmp_path / "canary.toml"
+    spec_path.write_text(_스킬_명세, encoding="utf-8")
+    새 = _스킬_체크아웃(tmp_path, "새")
+    옛 = _스킬_체크아웃(tmp_path, "옛")
+    가짜 = _거절_뒤_답한_가짜({"새": _스킬_회차(새, "EnterWorktree"), "옛": _스킬_회차(옛, "없음")})
+    printed: list[str] = []
+
+    code = main(
+        [str(spec_path), str(tmp_path / "out")],
+        cwd=tmp_path,
+        runner=가짜,
+        out=printed.append,
+        commit=_가짜_커밋({"새": ["aaa1111"], "옛": ["bbb2222"]}),
+    )
+
+    assert code == 0
+    assert not any("측정 아님" in line for line in printed)
+    assert any(line.startswith("통과 4 · 실패 0") for line in printed)
+
+
+def test_막히지_않은_실행은_측정_아님_줄을_찍지_않는다(tmp_path: Path) -> None:
+    code, printed = _막힌_실행(tmp_path, set())
+
+    assert code == 0
+    assert not any("측정 아님" in line for line in printed)
+
+
 def test_명세_오류면_아무것도_돌리지_않고_2다(tmp_path: Path) -> None:
     spec_path = tmp_path / "canary.toml"
     spec_path.write_text("kind = ", encoding="utf-8")
@@ -2039,6 +2285,110 @@ def test_상태는_돌리기_전에_체크아웃마다_한_번만_읽는다(tmp_
     assert code == 0
     assert len(가짜.호출) == 4
     assert 상태.읽은 == ["새", "옛"]
+
+
+# 모양 확인(대기열 287)
+
+_ROOT = Path(__file__).resolve().parents[2]
+
+
+def _부르면_안_되는_상태(checkout: Path) -> GitView | None:
+    raise AssertionError(f"모양 확인이 체크아웃 {checkout} 를 읽었다")
+
+
+def _모양_확인(tmp_path: Path, *명세들: Path) -> tuple[int, list[str], _가짜]:
+    가짜 = _가짜({})
+    printed: list[str] = []
+    argv = ["--shape", *(str(path) for path in 명세들)]
+    code = main(argv, cwd=tmp_path, runner=가짜, out=printed.append, view=_부르면_안_되는_상태)
+    return code, printed, 가짜
+
+
+def test_모양_확인은_명세마다_TOML_과_명세_검증만_보고_깨진_명세를_잡는다(tmp_path: Path) -> None:
+    """Edit 로 머리 주석 한 줄을 지우며 줄바꿈까지 지워 `kind` 가 주석에 붙은 명세가, 셀프 리뷰 두
+    축이 잡을 때까지 깨진 채였다(대기열 287). 하나가 깨져도 나머지를 마저 본다."""
+    붙은 = tmp_path / "붙은.toml"
+    붙은.write_text("# 머리 주석" + _스킬_명세.lstrip("\n"), encoding="utf-8")
+    맞는 = tmp_path / "맞는.toml"
+    맞는.write_text(_스킬_명세, encoding="utf-8")
+    깨진 = tmp_path / "깨진.toml"
+    깨진.write_text("kind = ", encoding="utf-8")
+
+    code, printed, 가짜 = _모양_확인(tmp_path, 붙은, 맞는, 깨진)
+
+    assert code == 2
+    assert 가짜.호출 == []
+    assert any("[실패]" in line and "붙은.toml" in line for line in printed)
+    assert "  kind\n    Field required" in "\n".join(printed)
+    assert any("[통과]" in line and "맞는.toml" in line for line in printed)
+    assert any("[실패]" in line and "깨진.toml" in line for line in printed)
+    assert printed[-1].startswith("모양 확인 통과 1 · 실패 2")
+
+
+def test_모양_확인은_체크아웃과_원천과_대상을_보지_않는다(tmp_path: Path) -> None:
+    """못 보는 것. 돌리기 전의 확인(`--preflight`)은 갈래의 체크아웃까지 보아, 대조군이 주
+    체크아웃인 명세는 병합 뒤 주 체크아웃이 새 사본이 되면 막힌다. 모양 확인은 그것을 보지 않아
+    체크아웃이 없는 명세도 지나간다."""
+    spec_path = tmp_path / "canary.toml"
+    spec_path.write_text(_스킬_명세, encoding="utf-8")
+
+    code, printed, _ = _모양_확인(tmp_path, spec_path)
+    사전_코드, 사전_출력, _ = _사전_확인(tmp_path, spec_path)
+
+    assert code == 0, printed
+    assert 사전_코드 == 2
+    assert any("새: 체크아웃" in line and "이 없다" in line for line in 사전_출력), 사전_출력
+
+
+@pytest.mark.parametrize(
+    "argv",
+    [["--shape"], ["--shape", "a.toml", "--preflight"], ["--preflight", "--shape", "a.toml"]],
+)
+def test_모양_확인의_인자가_맞지_않으면_사용법을_알리고_2다(
+    tmp_path: Path, argv: list[str]
+) -> None:
+    printed: list[str] = []
+
+    code = main(argv, cwd=tmp_path, runner=_가짜({}), out=printed.append, view=_부르면_안_되는_상태)
+
+    assert code == 2
+    assert any("사용:" in line for line in printed)
+
+
+def test_이_저장소의_카나리아_명세는_모두_모양을_지난다() -> None:
+    """CI 는 pre-commit 을 돌리지 않아, 커밋된 명세 전부의 모양을 이 시험이 본다(대기열 287)."""
+    경로들 = sorted(_ROOT.glob(".scratch/**/probes/canary/*.toml"))
+    문제: list[str] = []
+    for 경로 in 경로들:
+        try:
+            read_spec(경로)
+        except SpecError as error:
+            문제.append(f"{경로.relative_to(_ROOT).as_posix()}: {error}")
+
+    assert 경로들, "카나리아 명세를 하나도 찾지 못했다. glob 이 아무것도 재지 않는다"
+    assert 문제 == []
+
+
+def test_pre_commit_처럼_띄우면_깨진_명세를_UTF_8_로_알린다(tmp_path: Path) -> None:
+    """pre-commit 은 명세 경로를 인자 끝에 붙여 띄운다. 훅 환경에 `PYTHONUTF8` 이 있다고 가정하지
+    않는다. 자식의 `PYTHONIOENCODING` 을 cp949 로 두어, 로캘이 UTF-8 인 곳에서도 다시 열기를 빼면
+    빨갛게 한다."""
+    깨진 = tmp_path / "깨진_명세.toml"
+    깨진.write_text("kind = ", encoding="utf-8")
+
+    done = subprocess.run(
+        [sys.executable, str(_ROOT / "tools" / "canary.py"), "--shape", str(깨진)],
+        cwd=tmp_path,
+        capture_output=True,
+        env={**hook_environment(), "PYTHONIOENCODING": "cp949"},
+        check=False,
+        timeout=60,
+    )
+    stdout = done.stdout.decode("utf-8")
+
+    assert done.returncode == 2, done.stderr.decode("utf-8", "replace")
+    assert "[실패]" in stdout
+    assert "깨진_명세.toml" in stdout
 
 
 # 대조군 커밋

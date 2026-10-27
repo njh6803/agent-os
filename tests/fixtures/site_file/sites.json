@@ -1,0 +1,5 @@
+{
+  "allowed_origins": ["https://shop.example", "https://www.shop.example", "http://localhost:3000"],
+  "request_chars": 4000,
+  "default_request_chars": 20000
+}

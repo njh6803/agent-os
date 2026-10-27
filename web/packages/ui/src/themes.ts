@@ -23,10 +23,13 @@ export type ThemeKey = (typeof THEMES)[number]["key"];
 /** 사이트나 운영자가 고르지 않았을 때의 테마. 속성이 없는 문서와 호스트도 이 값으로 그린다. */
 export const DEFAULT_THEME: ThemeKey = "nokcheong";
 
-/** `data-mode` 의 값. 속성이 없으면 시스템 설정(`prefers-color-scheme`)을 따른다. */
-export const MODES = ["light", "dark"] as const;
-
-export type Mode = (typeof MODES)[number];
+// 모드 목록(`data-mode` 의 값)은 명암비 모듈이 정의한다. 그 모듈은 상대 import 가 없어야 해서 들이는 쪽이 여기다.
+// 사진 비교(`visual/`, `nodenext`)도 이 파일을 들여 확장자를 붙인다. 확장자는 `.ts` 다. `.js` 는 TypeScript 의 두
+// 해석(`bundler`, `nodenext`)과 Vite 가 이웃 `.ts` 로 풀지만, 위젯의 Next(16.3.6 의 Turbopack)는 풀지 못해 빌드가
+// "Module not found" 로 멈췄다(web-widget 티켓 03). 패키지의 tsconfig 가 `rewriteRelativeImportExtensions` 를 켜 두
+// 해석이 `.ts` 를 받고, 내보내는 빌드(`tsconfig.build.json`)는 `.js` 로 바꿔 쓴다. 선언 파일(`dist/themes.d.ts`)에는
+// `.ts` 가 남지만, 그것을 읽는 `bundler`·`node10` 해석이 모두 이웃 `.d.ts` 로 풀었다(손으로 봤다).
+export { MODES, type Mode } from "./styles/contrast.ts";
 
 /**
  * `data-density` 의 값. 촘촘(compact)과 보통(regular)이고 테마·모드와 같은 요소에 단다. 속성이 없으면 화면 폭 768px

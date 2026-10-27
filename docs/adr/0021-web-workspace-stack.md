@@ -201,3 +201,66 @@ design-system을 web-widget보다 앞에 두므로, 처음 들이는 것은 위�
 Options가 위젯에서 다시 보라고 넘긴 둘이다. 같은 인터뷰가 두 앱이 디자인 시스템 하나를 나누기로 해서(ADR 0025), 무엇을
 어떤 패키지로 나눌지는 그 기능의 인터뷰가 정한다. `tech.md` 프론트 구성 행의 "위젯과 공유하는 atoms는
 `web/packages/ui`"는 그 결정을 가리키는 말로 바꾼다.
+
+### 2026-10-27 서버 데이터와 관리·채널 토큰은 pages가 읽고 organisms는 그 값을 props로 받는다
+
+admin-style 티켓 02(`.scratch/admin-style/issues/02-admin-organisms-take-props.md`)가 관리 화면의 organisms를
+옮기며 정했다. 그때까지 관리 화면의 organisms는 SWR 훅(`hooks/queries`)과 토큰 스토어(`stores/tokens`)를 직접
+불렀고, 판정자(`web/eslint.config.mjs`의 층 정책)는 organisms가 `hooks/queries`와 생성 클라이언트를 import하는 것을
+허락했다. `tech.md` 프론트 구성 행도 "API 호출은 organisms 이상만"이라 적었다. admin-style 명세(Testing Decisions
+"모양")는 화면마다 그림의 상태를 Storybook 스토리 하나씩으로 두고, Storybook에 가짜 네트워크(`msw-storybook-addon`)를
+들이지 않기로 했다. 그러려면 organisms가 보일 값과 처리기를 props로 받아야 한다. 위젯의 organisms는 처음부터
+그렇다(`web/apps/widget/components/organisms/`).
+
+**organisms와 templates는 `hooks/queries`, `stores`, `swr`, 생성 클라이언트 패키지(`@agent-os/api-client`),
+`api/failure` 밖의 `api/` 도메인을 값으로 import하지 않는다. 서버 데이터와 토큰을 읽고 처리기를 만드는 것은
+pages이고, organisms는 그 값과 처리기를 props로 받는다. templates는 지금처럼 슬롯만 받는다.** 판정자는 같은 층
+정책이고 사례는 `web/eslint.config.test.ts`에 둔다. 경로와 무관하게 써서 두 앱에 함께 걸린다. 위젯의 organisms와
+templates는 이것들을 import하지 않아 고칠 것이 없다(위젯에는 `hooks/queries`와 `stores`가 없고, 서버에 요청하는
+함수는 `api/runs`에 있으며 pages가 부른다).
+
+- **타입만 가져오는 `import type`은 지난다.** props의 모양이 그 타입이다(관리 토큰 넣는 자리의 알림 종류는 토큰
+  스토어의 타입이다). 같은 줄의 `type` 지정자(`import { type X }`)는 값 import로 센다. `verbatimModuleSyntax`에서
+  그 줄은 지워지지 않고 모듈을 싣는다. 판정자 사례가 두 모양을 하나씩 고정하고, 값만 막는 거름(`dependency`의
+  `kind`)을 빼면 `import type` 사례가 빨개지는 것을 손으로 봤다(eslint-plugin-boundaries 7.2.0).
+- **atoms와 molecules도 `stores`를 import하지 않는다.** 그 층은 이미 `api/`와 `hooks/queries`를 막았는데 스토어가
+  층 정책의 요소가 아니어서 막히지 않았다. 스토어를 요소로 세우며 함께 막는다.
+- **`swr`도 막는다.** `hooks/queries`를 거치지 않고 organism 안에서 `useSWR`로 요청 함수를 부르면 위 금지가 헛돈다.
+  `swr`를 값으로 import하는 파일은 `hooks/queries`와 시험 도구뿐이다. 모듈 이름은 서브패스를 떼고 맞춰
+  `swr/infinite`도 막힌다(판정자 사례가 잰다).
+- **`api/`는 `api/failure`만 지난다.** organisms가 값으로 쓰는 `api/` 도메인은 실패 해석(`describeFailure`,
+  `RequestFailure`, `isRejection`, `UNREACHABLE`)을 내는 `api/failure`뿐이고, 그 도메인에는 요청 함수가 없다.
+  요청 함수가 든 도메인(`api/plugins`, `api/traces`, `api/approval`)에서는 타입만 `import type`으로 가져온다.
+  그래서 요소 `api`가 도메인 이름을 잡고(`capture`) `failure` 밖의 도메인을 값으로 import하는 것을 막는다.
+  요청 함수는 관리 토큰이나 채널 토큰을 인자로 받고, organisms가 쥐는 그 토큰은 관리 토큰과 채널 토큰을 넣는
+  자리의 입력칸에서 막 받은 것뿐이다(지금 props로 그 토큰을 받는 organism은 없다). 그 토큰으로 `api/`의 요청
+  함수를 바로 부르는 길이 이것으로 판정자에게 막힌다. 판정자는 import한 파일이 놓인 자리만 본다. 그래서 요청
+  함수가 막지 않는 자리를 거쳐 organisms에 닿으면 지나보낸다. `api/failure`에 요청 함수를 두는 것,
+  `hooks/queries` 밖의 훅이나 `lib/`의 함수가 요청 함수를 부르거나 다시 내보내는 것이 그 예다. 그 길은
+  `web-workspace.md`의 지침과 리뷰가 본다.
+- 훅이 아니어서 organisms가 쓰던 함수가 `hooks/queries`에 하나 있었다. 401을 거부로 읽는 규칙(`isRejection`)이고,
+  실패를 해석하는 함수라 `api/failure`로 옮긴다.
+- `web-workspace.md`의 "templates는 슬롯만 받는다. 데이터를 가져와 채우는 것은 pages다"는 판정자가 보지 못하는
+  것을 적는 줄로 고친다. templates가 데이터를 props로도 받지 않는다는 것과, organisms가 서버 요청을 props로 받은
+  처리기로만 일으키고 요청 함수는 `api/failure` 밖의 `api/` 도메인에, 그것을 부르는 훅은 `hooks/queries`에
+  둔다는 것이다. `tech.md`의 "API 호출은 organisms 이상만"은 이 결정으로 고친다. 결정 자리의 꺼짐 미리 알림이
+  읽는 플러그인 목록은 이제 pages가 읽어 넘기므로 `web-admin.md`의 그 경로 문장도 고친다.
+
+Considered Options:
+
+- **지침으로만 둔다.** `web-workspace.md`의 templates 줄을 organisms까지 넓힌다. 판정자가 이미 층 경계를 보는
+  자리에 같은 종류의 규칙을 지침으로 두면, 규칙을 강제력이 가장 높은 층에 둔다는 기준(`CLAUDE.md` 교정 루프)에
+  어긋난다. 거부했다. 사용자가 2026-10-27에 이 안 대신 판정자로 막는 쪽을 골랐다(티켓 02).
+- **훅과 스토어만 막고 생성 클라이언트는 둔다.** organisms가 클라이언트를 직접 부르는 길이 훅보다 넓은 우회로로
+  남는다. 거부했다.
+- **`api/`는 막지 않고 지침에 둔다.** 이 이력의 첫 초안이 이 안이었다. 까닭으로 든 두 문장, 곧 요청 함수가 든
+  barrel이 organisms가 쓰는 실패 해석도 낸다는 것과 막으려면 응답 타입과 실패 해석을 옮길 자리를 새로 짓고
+  organisms의 import를 모두 바꿔야 한다는 것이 사실과 달랐다(실패 해석은 `api/failure`에 따로 있고, 응답 타입은
+  `import type`이라 지난다). PR 직전 버그 축 리뷰가 찾았다. `failure` 하나를 여는 정책이 앱 코드를 고치지 않고
+  서므로 거부했다. 사용자는 처음에 이 안이 든 초안을 승인했고, 같은 날 `api/`까지 막는 넓힘을 다시
+  승인했다(티켓 02).
+- **`api/` 전체를 막는다.** organisms가 쓰는 실패 해석을 `api/` 밖의 새 자리로 옮겨야 한다. 도메인 하나를 여는
+  예외로 같은 틈이 닫힌다. 거부했다.
+- **organisms만 막고 templates는 둔다.** templates는 organisms보다 위 층이고 이미 슬롯만 받는다(지침). 위 층이 더
+  느슨할 까닭이 없다. 거부했다.
+- **타입 import도 막는다.** props의 모양을 그 타입으로 적지 못해 같은 유니온을 organisms에 다시 적게 된다. 거부했다.

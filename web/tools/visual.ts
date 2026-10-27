@@ -4,8 +4,14 @@
  * 않는다. 같은 이미지를 잡의 컨테이너로 쓰고 그 안에서 설치하고 짓고 비교한다(.github/workflows/ci.yml 의 visual 잡).
  *
  * - 컨테이너에 Playwright 패키지를 넣는 길: 그 패키지에 깔린 @playwright/test·playwright·playwright-core 를 pnpm
- *   링크를 풀어 임시 폴더로 복사하고 그 패키지의 node_modules 자리에 bind 한다. pnpm 의 링크(윈도우는 junction)는
- *   컨테이너 안에서 풀리지 않는다. 셋은 순수 JS 라(네이티브 파일 0개, 측정 visual_docker) 운영체제를 가리지 않는다.
+ *   링크를 풀어 임시 폴더로 복사해 읽기 전용으로 bind 하고, 컨테이너가 시작하며 그것을 그 패키지의 node_modules 자리에
+ *   둔 tmpfs 로 복사한다. pnpm 의 링크(윈도우는 junction)는 컨테이너 안에서 풀리지 않는다. 셋은 순수 JS 라(네이티브
+ *   파일 0개, 측정 visual_docker) 운영체제를 가리지 않는다.
+ * - 그 패키지가 `workspace:` 로 기대는 워크스페이스 패키지(위젯의 `@agent-os/ui`)는 같은 tmpfs 에 컨테이너 안의
+ *   web/ 자리를 가리키는 심볼릭 링크로 잇는다. 복사하지 않고 링크로 잇는 것은 Playwright 1.63 이 실제 경로가
+ *   node_modules 아래인 파일을 TypeScript 로 바꾸지 않아서다(설치본 esmLoader 의 shouldTransform). 링크는 실제 경로가
+ *   /web/packages/… 로 풀려 바뀐다. 링크는 컨테이너 안에서 만든다. 윈도우 호스트의 폴더에 만든 링크는 컨테이너가 따라가지
+ *   못한다.
  * - web/ 은 읽기 전용으로, 그 패키지의 visual/ 만 쓰기로 bind 한다. 비교의 산출물(test-results/)과 다시 만든 정답
  *   사진이 거기 쓰인다.
  * - 이미지는 태그에 digest 를 붙인다. 같은 태그가 다시 빌드되면 글꼴과 라이브러리가 바뀌어 코드 변경 없이 정답이
@@ -14,14 +20,14 @@
  *   ci.yml 의 이미지와 설치된 Playwright 판이 이것과 맞는지는 visual.test.ts 가 본다.
  *
  * 사용: node tools/visual.ts <Storybook 패키지> [--update] [Playwright 인자 ...]. 패키지는 web/ 기준 경로이고
- * (`packages/ui`) 그 아래에 `build-storybook` 스크립트와 `visual/playwright.config.ts` 가 있어야 한다. --update 는
+ * (`packages/ui`, `apps/widget`) 그 아래에 `build-storybook` 스크립트와 `visual/playwright.config.ts` 가 있어야 한다. --update 는
  * 정답과 다른 사진과 정답이 없는 사진을 컨테이너 안에서 다시 쓴다. 나머지 인자는 `playwright test` 에 그대로 간다
  * (`pnpm -C web visual -g atoms-button` 이 그 스토리들만 본다). Docker 가 없거나 비교가 실패하면 0 이 아닌 코드로
  * 끝난다(건너뛰지 않는다).
  */
 
 import { spawnSync, type SpawnSyncReturns } from "node:child_process";
-import { cpSync, mkdtempSync, realpathSync, rmSync } from "node:fs";
+import { cpSync, mkdtempSync, readFileSync, realpathSync, rmSync } from "node:fs";
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { dirname, join, relative, sep } from "node:path";
@@ -62,10 +68,60 @@ function copyPlaywright(packageDir: string): string {
   return staged;
 }
 
+// 셸 스크립트에 글자 그대로 넣는 값의 모양. 패키지 이름과 컨테이너 안의 경로가 이것을 벗어나면 던진다.
+const PACKAGE_NAME = /^(?:@[a-z0-9-]+\/)?[a-z0-9-]+$/;
+const INSIDE_PATH = /^\/web(?:\/[A-Za-z0-9_-][A-Za-z0-9._-]*)+$/;
+
+/** 그 패키지가 `workspace:` 로 기대는 워크스페이스 패키지와 그 컨테이너 안의 자리(`/web/…`). */
+export function workspaceLinks(packageDir: string): Record<string, string> {
+  const manifest: unknown = JSON.parse(readFileSync(join(packageDir, "package.json"), "utf-8"));
+  const links: Record<string, string> = {};
+  for (const field of ["dependencies", "devDependencies"]) {
+    const dependencies: unknown =
+      typeof manifest === "object" && manifest !== null
+        ? Object.getOwnPropertyDescriptor(manifest, field)?.value
+        : undefined;
+    if (typeof dependencies !== "object" || dependencies === null) {
+      continue;
+    }
+    for (const [name, specifier] of Object.entries(dependencies)) {
+      if (typeof specifier !== "string" || !specifier.startsWith("workspace:")) {
+        continue;
+      }
+      // 워크스페이스 패키지는 exports 에 package.json 을 두지 않아 resolve 대신 pnpm 링크를 푼다.
+      const dir = realpathSync(join(packageDir, "node_modules", ...name.split("/")));
+      const inside = `/web/${relative(WEB, dir).split(sep).join("/")}`;
+      if (!PACKAGE_NAME.test(name) || !INSIDE_PATH.test(inside)) {
+        throw new Error(`컨테이너에 이을 수 없는 워크스페이스 패키지다: ${name} → ${inside}`);
+      }
+      links[name] = inside;
+    }
+  }
+  return links;
+}
+
+/**
+ * 컨테이너가 시작하며 도는 셸 스크립트. 복사한 Playwright 를 tmpfs 의 node_modules 로 옮기고, 워크스페이스 패키지를
+ * 링크로 이은 뒤 `playwright test` 로 바뀐다. Playwright 인자는 스크립트 밖의 위치 인자(`"$@"`)로 넘긴다.
+ */
+function containerScript(links: Record<string, string>): string {
+  const linking = Object.entries(links).flatMap(([name, inside]) => {
+    const scope = name.includes("/") ? [`mkdir -p node_modules/${name.split("/")[0] ?? ""}`] : [];
+    return [...scope, `ln -s ${inside} node_modules/${name}`];
+  });
+  return [
+    "set -e",
+    "cp -R /staged/node_modules/. node_modules/",
+    ...linking,
+    'exec node node_modules/@playwright/test/cli.js test -c visual/playwright.config.ts "$@"',
+  ].join("\n");
+}
+
 /** 컨테이너를 띄우는 `docker` 인자. `target` 은 web/ 기준 패키지 경로, `staged` 는 Playwright 를 복사한 폴더다. */
 function containerArgs(
   target: string,
   staged: string,
+  links: Record<string, string>,
   playwrightArgs: readonly string[],
 ): string[] {
   const inside = `/web/${target.split(/[\\/]/).join("/")}`;
@@ -79,17 +135,18 @@ function containerArgs(
     "--mount",
     `type=bind,source=${WEB},target=/web,readonly`,
     "--mount",
-    `type=bind,source=${join(staged, "node_modules")},target=${inside}/node_modules,readonly`,
+    `type=bind,source=${staged},target=/staged,readonly`,
+    "--mount",
+    `type=tmpfs,target=${inside}/node_modules`,
     "--mount",
     `type=bind,source=${join(WEB, target, "visual")},target=${inside}/visual`,
     "--workdir",
     inside,
     IMAGE,
-    "node",
-    "node_modules/@playwright/test/cli.js",
-    "test",
+    "sh",
     "-c",
-    "visual/playwright.config.ts",
+    containerScript(links),
+    "sh",
     ...playwrightArgs,
   ];
 }
@@ -125,7 +182,7 @@ function main(target: string, playwrightArgs: readonly string[]): number {
   console.log(`사진 비교: ${IMAGE} 에서 ${target} ${playwrightArgs.join(" ")}`);
   const staged = copyPlaywright(packageDir);
   try {
-    const args = containerArgs(target, staged, playwrightArgs);
+    const args = containerArgs(target, staged, workspaceLinks(packageDir), playwrightArgs);
     return exitCode(spawnSync("docker", args, { cwd: packageDir, stdio: "inherit" }), "docker");
   } finally {
     rmSync(staged, { recursive: true, force: true });

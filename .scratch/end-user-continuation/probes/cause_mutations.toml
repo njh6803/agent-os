@@ -1,0 +1,68 @@
+# 티켓 02(실패 원인)의 변이 표. 구현 뒤에 쓴 테스트와, 원인이 없던 옛 구현에 맞서서만 빨강을 본
+# 테스트가 티켓이 겨눈 다른 구현에도 빨강을 보는지 본다 — 타입으로 가르는 구현, 마지막 하나만 기억하는
+# 구현(명세 검토의 두 결정), 요약 실패의 원인을 적지 않는 구현(최종 사용자 경로), 도구 연결의 원인을
+# 다른 값으로 적는 구현(운영자 채널)이다. 빨강의 판정은 `tools/mutate.py` 의 독스트링이다.
+#
+# 돌리는 법: PYTHONUTF8=1 uv run python tools/mutate.py .scratch/end-user-continuation/probes/cause_mutations.toml
+# 네트워크를 타지 않는다. `uv sync` 가 된 체크아웃에서 돈다.
+
+[[mutation]]
+name = "타입으로 가른다"
+tests = ["tests/core/test_run.py", "-k", "스스로_만든_ToolError"]
+expect = "red"
+expect_output = ["At index 1 diff: 'tool_failure' != 'agent_code'"]
+
+[[mutation.edit]]
+file = "src/agent_os/core/run.py"
+old = '''
+            return thrown.cause_of(error) or "agent_code"
+'''
+new = '''
+            if isinstance(error, ToolError):
+                return "tool_failure"
+            return thrown.cause_of(error) or "agent_code"
+'''
+
+[[mutation]]
+name = "마지막 하나만 기억한다"
+tests = ["tests/core/test_run.py", "-k", "앞서_받은_모델의_예외를"]
+expect = "red"
+expect_output = ["assert 'agent_code' == 'model_call'"]
+
+[[mutation.edit]]
+file = "src/agent_os/core/run.py"
+old = '''
+            self._thrown.append((error, cause))
+'''
+new = '''
+            self._thrown[:] = [(error, cause)]
+'''
+
+[[mutation]]
+name = "요약 실패에 원인을 적지 않는다"
+tests = ["tests/channel/http/test_end_user.py", "-k", "이어_가기의_요약이_실패하면"]
+expect = "red"
+expect_output = ["'cause': None}) != (1,"]
+
+[[mutation.edit]]
+file = "src/agent_os/core/run.py"
+old = '''
+            cause="conversation_summary",
+'''
+new = '''
+'''
+
+[[mutation]]
+name = "도구 연결의 원인을 그 밖으로 적는다"
+tests = ["tests/channel/http/test_router.py", "-k", "실행_안의_실패는_200"]
+expect = "red"
+expect_output = ["assert 'other' == 'tool_connection'"]
+
+[[mutation.edit]]
+file = "src/agent_os/core/run.py"
+old = '''
+            return "tool_connection"
+'''
+new = '''
+            return "other"
+'''

@@ -1,0 +1,391 @@
+# chore/hook-census 의 훅 발동 보고 변이(ADR 0036). 형식은 tools/mutate.py 의 독스트링.
+# 사용: PYTHONUTF8=1 uv run python tools/mutate.py .scratch/harness/probes/hook_report_mutations.toml
+# tools/hook_report.py 의 판정(훅 명령, 알림, 계기 첨부의 짝과 그 조각, 막음과 그 머리, 조각, 날짜, 들인 날,
+# 표)과 tools/morning_collect.py 의 가르지 못한 수, 두 호출부(hook_report 의 main, morning_collect 의 gather_hooks)가
+# UserPromptSubmit 의 훅을 넘기는 배선을 하나씩 꺼서 그것을 지키는 시험이 빨강이 되는지 잰다.
+# 체크아웃을 고치므로 도는 동안 그 체크아웃을 읽거나 고치지 않는다.
+
+[[mutation]]
+name = "래퍼 전의 등록 모양을 훅 명령으로 읽지 않는다"
+tests = ["tests/tools/test_hook_report.py", "-k", "래퍼_전의_등록_모양"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_report.py"
+old = '''HOOK_COMMAND = re.compile(r"(?:launch_hook\.py\"?\s+|tools/)(hook_[A-Za-z0-9_]+\.py)")'''
+new = '''HOOK_COMMAND = re.compile(r"launch_hook\.py\"?\s+(hook_[A-Za-z0-9_]+\.py)")'''
+
+[[mutation]]
+name = "tools 밖의 명령도 훅 명령으로 읽는다"
+tests = ["tests/tools/test_hook_report.py", "-k", "tools_밖의"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_report.py"
+old = '''HOOK_COMMAND = re.compile(r"(?:launch_hook\.py\"?\s+|tools/)(hook_[A-Za-z0-9_]+\.py)")'''
+new = '''HOOK_COMMAND = re.compile(r"(hook_[A-Za-z0-9_]+\.py)")'''
+
+[[mutation]]
+name = "훅 오류의 머리를 한글에도 맞는 \\w 로 읽는다"
+tests = ["tests/tools/test_hook_report.py", "-k", "훅_오류로_시작하지_않는"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_report.py"
+old = '''HOOK_ERROR = re.compile(r"^[A-Z][A-Za-z]+(?::[A-Za-z0-9_.-]+)? hook error: (.*)", re.DOTALL)'''
+new = '''HOOK_ERROR = re.compile(r"^\w+(?::[\w.-]+)? hook error: (.*)", re.DOTALL)'''
+
+[[mutation]]
+name = "종료 코드 2의 머리 명령으로 훅을 고르지 않는다"
+tests = ["tests/tools/test_hook_report.py", "-k", "종료_코드_2로"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_report.py"
+old = '''        hook = _hook_of(head.group(1)) if head else None'''
+new = '''        hook = None'''
+
+[[mutation]]
+name = "종료 코드 2의 머리를 벗기지 않고 적는다"
+tests = ["tests/tools/test_hook_report.py", "-k", "종료_코드_2로"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_report.py"
+old = '''        body = reason[head.end() :] if head else reason'''
+new = '''        body = reason'''
+
+[[mutation]]
+name = "래퍼가 훅 파일이 없어 지나간 알림도 센다"
+tests = ["tests/tools/test_hook_report.py", "-k", "래퍼가_훅_파일이_없어"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_report.py"
+old = '''    return bool(text.strip()) and not any(notice in text for notice in WRAPPER_NOTICES)'''
+new = '''    return bool(text.strip())'''
+
+[[mutation]]
+name = "래퍼가 인자가 틀려 지나간 알림도 센다"
+tests = ["tests/tools/test_hook_report.py", "-k", "인자가_틀려_지나간"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_report.py"
+old = ''', "launch_hook: 등록 명령의 훅 이름 인자가")'''
+new = ''',)'''
+
+[[mutation]]
+name = "stdout 이 빈 알림도 센다"
+tests = ["tests/tools/test_hook_report.py", "-k", "stderr만_낸"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_report.py"
+old = '''    return bool(text.strip()) and not any(notice in text for notice in WRAPPER_NOTICES)'''
+new = '''    return not any(notice in text for notice in WRAPPER_NOTICES)'''
+
+[[mutation]]
+name = "같은 uuid 를 거듭 센다"
+tests = ["tests/tools/test_hook_report.py", "-k", "같은_uuid"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_report.py"
+old = '''            seen.add(uuid)'''
+new = '''            pass'''
+
+[[mutation]]
+name = "쓰다 만 마지막 줄을 버리지 않는다"
+tests = ["tests/tools/test_hook_report.py", "-k", "읽지_못한_줄"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_report.py"
+old = '''        parts.pop()
+'''
+new = ''
+
+[[mutation]]
+name = "시간대가 붙은 시각을 UTC 로 옮기지 않는다"
+tests = ["tests/tools/test_hook_report.py", "-k", "UTC_날짜"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_report.py"
+old = '''    return moment.astimezone(UTC).date() if moment.tzinfo is not None else None'''
+new = '''    return moment.date()'''
+
+[[mutation]]
+name = "가장 이른 기록 대신 가장 늦은 기록을 쓴다"
+tests = ["tests/tools/test_hook_report.py", "-k", "가장_이른_기록_날짜는"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_report.py"
+old = '''            earliest = day if earliest is None else min(earliest, day)'''
+new = '''            earliest = day if earliest is None else max(earliest, day)'''
+
+[[mutation]]
+name = "가장 긴 조각이 아니라 맞은 조각이 있는지만 본다"
+tests = ["tests/tools/test_hook_report.py", "-k", "가장_긴_조각"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_report.py"
+old = '''        length = max((len(part) for part in parts if part in text), default=0)'''
+new = '''        length = 1 if any(part in text for part in parts) else 0'''
+
+[[mutation]]
+name = "같은 길이의 조각이 두 훅에 있으면 앞의 훅으로 센다"
+tests = ["tests/tools/test_hook_report.py", "-k", "같은_길이의_조각"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_report.py"
+old = '''    return owners[0] if len(owners) == 1 else AMBIGUOUS'''
+new = '''    return owners[0]'''
+
+[[mutation]]
+name = "독스트링도 조각으로 쓴다"
+tests = ["tests/tools/test_hook_report.py", "-k", "짧은_문자열과_독스트링"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_report.py"
+old = '''        if isinstance(node, ast.Constant) and isinstance(node.value, str) and id(node) not in skip:'''
+new = '''        if isinstance(node, ast.Constant) and isinstance(node.value, str):'''
+
+[[mutation]]
+name = "짧은 문자열도 조각으로 쓴다"
+tests = ["tests/tools/test_hook_report.py", "-k", "짧은_문자열과_독스트링"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_report.py"
+old = '''MIN_FRAGMENT = 10'''
+new = '''MIN_FRAGMENT = 1'''
+
+[[mutation]]
+name = "다시 들인 훅을 처음 들인 날로 센다"
+tests = ["tests/tools/test_hook_report.py", "-k", "다시_들인"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_report.py"
+old = '''            dates.setdefault(wanted[line], current)'''
+new = '''            dates[wanted[line]] = current'''
+
+[[mutation]]
+name = "등록 안 된 훅을 표에 표시하지 않는다"
+tests = ["tests/tools/test_hook_report.py", "-k", "표는_창_안의"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_report.py"
+old = '''        mark = "" if hook in hooks else " (등록 안 됨)"'''
+new = '''        mark = ""'''
+
+[[mutation]]
+name = "창 안에 들인 훅도 뺄 후보로 적는다"
+tests = ["tests/tools/test_hook_report.py", "-k", "뺄_후보로_적는다"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_report.py"
+old = '''    old = [hook for hook in quiet if hook in introduced and introduced[hook] < start]'''
+new = '''    old = [hook for hook in quiet if hook in introduced]'''
+
+[[mutation]]
+name = "가르지 못한 막음을 표의 행으로 센다"
+tests = ["tests/tools/test_hook_report.py", "-k", "모름과_여럿으로"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_report.py"
+old = '''        if firing.hook in (UNKNOWN, AMBIGUOUS):
+            continue
+'''
+new = ''
+
+# --- harness 005(대기열 404): 명령 없는 계기 첨부의 짝과 짝 없는 첨부의 조각 ---
+
+[[mutation]]
+name = "계기 첨부를 짝짓지 않고 모두 센다"
+tests = ["tests/tools/test_hook_report.py", "-k", "같은_세션과_이벤트에서"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_report.py"
+old = '''                given[sent] += 1'''
+new = '''                pass'''
+
+[[mutation]]
+name = "짝 없는 계기 첨부를 세지 않는다"
+tests = ["tests/tools/test_hook_report.py", "-k", "hook_success_없이_남은"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_report.py"
+old = '''            attached += [(key, day) for key in _attached_contexts(record)]'''
+new = '''            pass'''
+
+[[mutation]]
+name = "짝의 열쇠에 이벤트를 보지 않는다"
+tests = ["tests/tools/test_hook_report.py", "-k", "짝은_세션과_이벤트가"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_report.py"
+old = '''    return ContextKey(_str(record.get("sessionId")), _str(attachment.get("hookEvent")), text)'''
+new = '''    return ContextKey(_str(record.get("sessionId")), "", text)'''
+
+[[mutation]]
+name = "짝의 열쇠에 세션을 보지 않는다"
+tests = ["tests/tools/test_hook_report.py", "-k", "짝은_세션과_이벤트가"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_report.py"
+old = '''    return ContextKey(_str(record.get("sessionId")), _str(attachment.get("hookEvent")), text)'''
+new = '''    return ContextKey("", _str(attachment.get("hookEvent")), text)'''
+
+[[mutation]]
+name = "짝을 이벤트 대신 toolUseID 로 짓는다(SessionStart 갈래)"
+tests = ["tests/tools/test_hook_report.py", "-k", "같은_세션과_이벤트에서"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_report.py"
+old = '''    return ContextKey(_str(record.get("sessionId")), _str(attachment.get("hookEvent")), text)'''
+new = '''    return ContextKey(_str(record.get("sessionId")), _str(attachment.get("toolUseID")), text)'''
+
+[[mutation]]
+name = "짝을 이벤트 대신 toolUseID 로 짓는다(PreToolUse 와 PostToolUse 가 같은 ID 를 쓰는 갈래)"
+tests = ["tests/tools/test_hook_report.py", "-k", "짝은_세션과_이벤트가"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_report.py"
+old = '''    return ContextKey(_str(record.get("sessionId")), _str(attachment.get("hookEvent")), text)'''
+new = '''    return ContextKey(_str(record.get("sessionId")), _str(attachment.get("toolUseID")), text)'''
+
+[[mutation]]
+name = "짝이 있는지만 보고 남는 첨부를 세지 않는다"
+tests = ["tests/tools/test_hook_report.py", "-k", "짝보다_많으면"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_report.py"
+old = '''            left[key] -= 1'''
+new = '''            pass'''
+
+[[mutation]]
+name = "짝을 tools 훅의 hook_success 로만 짓는다"
+tests = ["tests/tools/test_hook_report.py", "-k", "tools_밖의_훅이_낸"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_report.py"
+old = '''    text = model_context(_str(attachment.get("stdout")))'''
+new = '''    text = model_context(_str(attachment.get("stdout"))) if _hook_of(_str(attachment.get("command"))) else None'''
+
+[[mutation]]
+name = "짝 없는 첨부의 래퍼 알림도 센다"
+tests = ["tests/tools/test_hook_report.py", "-k", "래퍼_알림은"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_report.py"
+old = '''        elif _is_notice(key.text):'''
+new = '''        elif key.text:'''
+
+[[mutation]]
+name = "짝 없는 계기 글을 조각으로 가르지 않는다"
+tests = ["tests/tools/test_hook_report.py", "-k", "hook_success_없이_남은"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_report.py"
+old = '''    return fragment_owner(key.text, {hook: prints.get(hook, frozenset()) for hook in prompt_hooks})'''
+new = '''    return UNKNOWN'''
+
+[[mutation]]
+name = "짝 없는 계기 글의 머리를 적지 않는다"
+tests = ["tests/tools/test_hook_report.py", "-k", "모름_알림으로_머리와"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_report.py"
+old = '''            firings.append(Firing(owner, NOTICE, day, _head(key.text)))'''
+new = '''            firings.append(Firing(owner, NOTICE, day, ""))'''
+
+[[mutation]]
+name = "UserPromptSubmit 밖의 짝 없는 첨부도 조각으로 가른다"
+tests = ["tests/tools/test_hook_report.py", "-k", "UserPromptSubmit_밖의"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_report.py"
+old = '''    if key.event != PROMPT_EVENT:'''
+new = '''    if False:'''
+
+[[mutation]]
+name = "짝 없는 UserPromptSubmit 첨부를 모든 훅의 조각과 견준다"
+tests = ["tests/tools/test_hook_report.py", "-k", "그_이벤트에_등록된_훅의_조각과만"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_report.py"
+old = '''    return fragment_owner(key.text, {hook: prints.get(hook, frozenset()) for hook in prompt_hooks})'''
+new = '''    return fragment_owner(key.text, prints)'''
+
+[[mutation]]
+name = "등록 훅을 이벤트로 거르지 않는다"
+tests = ["tests/tools/test_hook_report.py", "-k", "이벤트를_주면"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_report.py"
+old = '''        if event is not None and name != event:'''
+new = '''        if False:'''
+
+[[mutation]]
+name = "가르지 못한 알림을 막음과 한 줄에 섞는다"
+tests = ["tests/tools/test_hook_report.py", "-k", "가르지_못한_알림은"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_report.py"
+old = '''        group = [firing for firing in unattributed if firing.kind == kind]'''
+new = '''        group = unattributed'''
+
+[[mutation]]
+name = "아침 보고가 가르지 못한 알림을 막음으로 센다"
+tests = ["tests/tools/test_morning_collect.py", "-k", "가르지_못한_막음과_알림을"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/morning_collect.py"
+old = '''{unattributed[hook_report.BLOCK]}건,"'''
+new = '''{sum(unattributed.values())}건,"'''
+
+[[mutation]]
+name = "훅 보고의 main 이 UserPromptSubmit 의 훅을 scan 에 넘기지 않는다"
+tests = ["tests/tools/test_hook_report.py", "-k", "main을_실제로_불러"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/hook_report.py"
+old = '''    result = scan(transcript_files(projects, repo), prints, prompt_hooks)'''
+new = '''    result = scan(transcript_files(projects, repo), prints, ())'''
+
+[[mutation]]
+name = "아침 보고가 UserPromptSubmit 의 훅을 scan 에 넘기지 않는다"
+tests = ["tests/tools/test_morning_collect.py", "-k", "UserPromptSubmit_훅의_첨부를"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/morning_collect.py"
+old = '''    scan = hook_report.scan(hook_report.transcript_files(projects, repo), prints, prompt_hooks)'''
+new = '''    scan = hook_report.scan(hook_report.transcript_files(projects, repo), prints, ())'''

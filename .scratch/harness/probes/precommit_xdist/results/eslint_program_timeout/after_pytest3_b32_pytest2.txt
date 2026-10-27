@@ -1,0 +1,198 @@
+bringing up nodes...
+bringing up nodes...
+
+........................................................................ [  1%]
+........................................................................ [  3%]
+........................................................................ [  5%]
+........................................................................ [  7%]
+........................................................................ [  9%]
+...............F........................................................ [ 11%]
+........................................................................ [ 13%]
+........................................................................ [ 15%]
+........................................................................ [ 17%]
+........................................................................ [ 19%]
+........................................................................ [ 21%]
+........................................................F............... [ 23%]
+........................................................................ [ 25%]
+........................................................................ [ 27%]
+........................................................................ [ 29%]
+........................................................................ [ 31%]
+........................................................................ [ 33%]
+........................................................................ [ 35%]
+........................................................................ [ 37%]
+........................................................................ [ 39%]
+........................................................................ [ 41%]
+........................................................................ [ 43%]
+........................................................................ [ 45%]
+........................................................................ [ 47%]
+........................................................................ [ 49%]
+........................................................................ [ 51%]
+........................................................................ [ 53%]
+........................................................................ [ 55%]
+........................................................................ [ 57%]
+........................................................................ [ 59%]
+........................................................................ [ 61%]
+........................................................................ [ 63%]
+........................................................................ [ 65%]
+........................................................................ [ 67%]
+........................................................................ [ 69%]
+........................................................................ [ 71%]
+........................................................................ [ 73%]
+........................................................................ [ 75%]
+........................................................................ [ 77%]
+........................................................................ [ 79%]
+........................................................................ [ 81%]
+..................F..................................................... [ 83%]
+........................................................................ [ 85%]
+........................................................................ [ 87%]
+........................................................................ [ 89%]
+........................................................................ [ 91%]
+........................................................................ [ 93%]
+........................................................................ [ 95%]
+........................................................................ [ 97%]
+........................................................................ [ 99%]
+...................                                                      [100%]
+================================== FAILURES ===================================
+________________ test_다른_프로세스가_운영자_파일을_연_채여도_교체가_재시도_안에서_성공한다 _________________
+[gw0] win32 -- Python 3.12.10 C:\project\agent\.claude\worktrees\timing-tests-under-load\.venv\Scripts\python.exe
+
+path = WindowsPath('C:/Users/User/AppData/Local/Temp/pytest-of-User/pytest-10229/popen-gw0/test_다른_프로세스가_운영자_파일을_연_채여도_교체0/disabled.toml')
+text = 'schema_version = "1"\nagent = ["calc"]\nmcp = []\nskill = []\nmodel = []\n'
+
+    def _replace_operator_file(path: Path, text: str) -> None:
+        """같은 디렉터리의 임시 파일에 쓴 뒤 이름을 바꿔 통째로 교체한다. 반쪽 파일이 보이지 않는다.
+    
+        성공이든 실패든 임시 파일을 남기지 않는다. 교체가 `PermissionError` 면 다시 시도하고, 그래도
+        실패하면 옛 파일이 그대로인 채 PluginError 다. 실패의 형태를 하나로 만드는 자리가 여기이고
+        정상 흐름은 `_swap_in` 에 있다.
+        """
+        try:
+>           _swap_in(path, text)
+
+src\agent_os\adapters\filesystem.py:240: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+src\agent_os\adapters\filesystem.py:251: in _swap_in
+    _retrying(lambda: os.replace(temp, path))
+src\agent_os\adapters\filesystem.py:205: in _retrying
+    return attempt()
+           ^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+>   _retrying(lambda: os.replace(temp, path))
+                      ^^^^^^^^^^^^^^^^^^^^^^
+E   PermissionError: [WinError 5] 액세스가 거부되었습니다: 'C:\\Users\\User\\AppData\\Local\\Temp\\pytest-of-User\\pytest-10229\\popen-gw0\\test_다른_프로세스가_운영자_파일을_연_채여도_교체0\\.disabled.toml.p5pf_0de.tmp' -> 'C:\\Users\\User\\AppData\\Local\\Temp\\pytest-of-User\\pytest-10229\\popen-gw0\\test_다른_프로세스가_운영자_파일을_연_채여도_교체0\\disabled.toml'
+
+src\agent_os\adapters\filesystem.py:251: PermissionError
+
+The above exception was the direct cause of the following exception:
+
+root = WindowsPath('C:/Users/User/AppData/Local/Temp/pytest-of-User/pytest-10229/popen-gw0/test_다른_프로세스가_운영자_파일을_연_채여도_교체0')
+
+    def test_다른_프로세스가_운영자_파일을_연_채여도_교체가_재시도_안에서_성공한다(root: Path) -> None:
+        """손편집기나 다른 `serve` 가 잠깐 연 것이다."""
+        _write_agent(root, "calc")
+        path = _operator_file(root, CANONICAL_EMPTY)
+        holder = subprocess.Popen(
+            [sys.executable, "-c", HOLDER, str(path), str(HOLD_SECONDS)],
+            stdout=subprocess.PIPE,
+            text=True,
+        )
+        assert holder.stdout is not None
+        assert holder.stdout.readline().strip() == "opened"
+>       outcome = _plugins(root).write_enabled(PluginKind.AGENT, PluginName("calc"), enabled=False)
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests\adapters\test_filesystem.py:908: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+src\agent_os\adapters\filesystem.py:120: in write_enabled
+    _replace_operator_file(self._root / _DISABLED, _render_operator_file(wanted))
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+path = WindowsPath('C:/Users/User/AppData/Local/Temp/pytest-of-User/pytest-10229/popen-gw0/test_다른_프로세스가_운영자_파일을_연_채여도_교체0/disabled.toml')
+text = 'schema_version = "1"\nagent = ["calc"]\nmcp = []\nskill = []\nmodel = []\n'
+
+    def _replace_operator_file(path: Path, text: str) -> None:
+        """같은 디렉터리의 임시 파일에 쓴 뒤 이름을 바꿔 통째로 교체한다. 반쪽 파일이 보이지 않는다.
+    
+        성공이든 실패든 임시 파일을 남기지 않는다. 교체가 `PermissionError` 면 다시 시도하고, 그래도
+        실패하면 옛 파일이 그대로인 채 PluginError 다. 실패의 형태를 하나로 만드는 자리가 여기이고
+        정상 흐름은 `_swap_in` 에 있다.
+        """
+        try:
+            _swap_in(path, text)
+        except OSError as error:
+>           raise PluginError(f"운영자 파일을 쓸 수 없다: {path}\n{error}") from error
+E           agent_os.core.ports.PluginError: 운영자 파일을 쓸 수 없다: C:\Users\User\AppData\Local\Temp\pytest-of-User\pytest-10229\popen-gw0\test_다른_프로세스가_운영자_파일을_연_채여도_교체0\disabled.toml
+E           [WinError 5] 액세스가 거부되었습니다: 'C:\\Users\\User\\AppData\\Local\\Temp\\pytest-of-User\\pytest-10229\\popen-gw0\\test_다른_프로세스가_운영자_파일을_연_채여도_교체0\\.disabled.toml.p5pf_0de.tmp' -> 'C:\\Users\\User\\AppData\\Local\\Temp\\pytest-of-User\\pytest-10229\\popen-gw0\\test_다른_프로세스가_운영자_파일을_연_채여도_교체0\\disabled.toml'
+
+src\agent_os\adapters\filesystem.py:242: PluginError
+__________________________ test_한_줄에_겹친_목록_표식이_선형이다 ___________________________
+[gw5] win32 -- Python 3.12.10 C:\project\agent\.claude\worktrees\timing-tests-under-load\.venv\Scripts\python.exe
+
+    def test_한_줄에_겹친_목록_표식이_선형이다() -> None:
+        """수평선 판정이 끊긴 자리를 기억한다(cmark 의 thematic_break_kill_pos)."""
+>       assert _seconds("- " * 8000 + "a\n") < LIMIT_SECONDS
+E       AssertionError: assert 1.0332500000004075 < 1.0
+E        +  where 1.0332500000004075 = _seconds((('- ' * 8000) + 'a\n'))
+
+tests\tools\test_check_md_tables.py:249: AssertionError
+_____________________ test_시간_제한을_넘긴_검사는_손자까지_끝내고_실패로_알린다 _____________________
+[gw5] win32 -- Python 3.12.10 C:\project\agent\.claude\worktrees\timing-tests-under-load\.venv\Scripts\python.exe
+
+tmp_path = WindowsPath('C:/Users/User/AppData/Local/Temp/pytest-of-User/pytest-10229/popen-gw5/test_시간_제한을_넘긴_검사는_손자까지_끝내고_실패0')
+
+    def test_시간_제한을_넘긴_검사는_손자까지_끝내고_실패로_알린다(tmp_path: Path) -> None:
+        """pytest 작업 프로세스 여덟이 약 11시간 남아 커밋을 붙잡았다(대기열 333). 검사는 손자를
+        띄우고 120초 잔다. 손자는 검사의 출력 파이프를 물려받은 채 0.1초마다 표지 파일을 키운다.
+    
+        제한(5초)은 부모와 손자가 뜨는 시간보다, 경과의 상한(60초)은 제한과 끝내기를 홀로 잰 시간보다
+        한참 넉넉하게 둔다(tests.md).
+        """
+        beat = tmp_path / "beat"
+        grandchild = (
+            "import pathlib, time\n"
+            "while True:\n"
+            f"    with pathlib.Path({str(beat)!r}).open('a') as f:\n"
+            "        f.write('.')\n"
+            "    time.sleep(0.1)\n"
+        )
+        parent = (
+            "import subprocess, sys, time\n"
+            f"subprocess.Popen([sys.executable, '-c', {grandchild!r}])\n"
+            "time.sleep(120)\n"
+        )
+        check = Check("stuck", (sys.executable, "-c", parent), timeout=5)
+        out = io.BytesIO()
+        start = time.monotonic()
+    
+        code = run((check,), {}, tmp_path, out)
+    
+        elapsed = time.monotonic() - start
+        text = out.getvalue().decode()
+        assert code == 1
+        assert "5초 시간 제한을 넘겼다" in text
+        assert elapsed < 60, f"돌아오기까지 {elapsed:.1f}초"
+>       assert beat.exists(), "손자가 뜨기 전에 끊었다. 손자를 끝냈는지 재지 못한다"
+E       AssertionError: 손자가 뜨기 전에 끊었다. 손자를 끝냈는지 재지 못한다
+E       assert False
+E        +  where False = exists()
+E        +    where exists = WindowsPath('C:/Users/User/AppData/Local/Temp/pytest-of-User/pytest-10229/popen-gw5/test_시간_제한을_넘긴_검사는_손자까지_끝내고_실패0/beat').exists
+
+tests\tools\test_run_checks.py:181: AssertionError
+============================== warnings summary ===============================
+tests/test_conftest.py::test_skip_이_하나라도_있으면_세션이_실패한다
+tests/test_conftest.py::test_skip_이_없으면_그대로_통과한다
+tests/test_conftest.py::test_deselect_는_skip_이_아니다
+tests/test_conftest.py::test_llm_테스트가_tmp_path_에_남긴_트레이스의_토큰_합계를_끝에_찍는다
+tests/test_conftest.py::test_llm_테스트가_돌지_않으면_토큰_합계를_찍지_않는다
+  C:\project\agent\.claude\worktrees\timing-tests-under-load\.venv\Lib\site-packages\pytest_asyncio\plugin.py:299: PytestDeprecationWarning: The configuration option "asyncio_default_fixture_loop_scope" is unset.
+  The event loop scope for asynchronous fixtures will default to the "fixture" caching scope. Future versions of pytest-asyncio will default the loop scope for asynchronous fixtures to "function" scope. Set the default fixture loop scope explicitly in order to avoid unexpected behavior in the future. Valid fixture loop scopes are: "function", "class", "module", "package", "session"
+  
+    warnings.warn(PytestDeprecationWarning(_DEFAULT_FIXTURE_LOOP_SCOPE_UNSET))
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ===========================
+FAILED tests/adapters/test_filesystem.py::test_다른_프로세스가_운영자_파일을_연_채여도_교체가_재시도_안에서_성공한다
+FAILED tests/tools/test_check_md_tables.py::test_한_줄에_겹친_목록_표식이_선형이다
+FAILED tests/tools/test_run_checks.py::test_시간_제한을_넘긴_검사는_손자까지_끝내고_실패로_알린다
+3 failed, 3616 passed, 5 warnings in 4124.60s (1:08:44)

@@ -11,15 +11,18 @@ import json
 import os
 import subprocess
 import sys
-from collections.abc import Container
+from collections.abc import Callable, Container
 from pathlib import Path
 
 import pytest
 from tools.check_instructions import (
+    CALL_TIMEOUT,
+    OPTIONAL_BOOL_ROOTS,
     PATCHED_SKILLS,
     ROOT,
     SENTINEL,
     at_imports,
+    calls_without_timeout,
     claude_md_problems,
     hooks_reading_text_stdin,
     hooks_with_relative_paths,
@@ -27,12 +30,18 @@ from tools.check_instructions import (
     imports_outside_claude_md,
     local_settings_with_guards,
     nested_instruction_files,
+    optional_bool_annotations,
+    optional_bool_lines,
+    optional_bool_sources,
     patched_skills_without_sentinel,
     rules_with_dead_paths,
     rules_without_paths,
     skills_with_sentinel_not_listed,
     text_stdin_lines,
+    tool_sources,
+    untimed_call_lines,
 )
+from tools.check_type_escapes import scanned_roots
 from tools.run_hooks import REPO_LOCATION_VARS
 
 
@@ -875,6 +884,410 @@ def test_텍스트_stdin_훅을_파일과_줄로_보고한다(tmp_path: Path) ->
 
 def test_이_저장소의_훅은_지금_전부_바이트로_읽는다() -> None:
     assert hooks_reading_text_stdin() == []
+
+
+# 외부 명령의 시간 제한. 멈춘 호출은 루프의 시간 제한으로 끊지 못한다(대기열 342,
+# `.claude/rules/tools.md` 의 기다리는 도구 항목).
+
+
+def test_시간_제한_없는_subprocess_호출을_잡는다() -> None:
+    source = (
+        "import subprocess\n"
+        "subprocess.run(['git'])\n"
+        "subprocess.call(['git'])\n"
+        "subprocess.check_call(['git'])\n"
+        "subprocess.check_output(['git'])\n"
+    )
+
+    assert untimed_call_lines(source) == [
+        (2, "subprocess.run"),
+        (3, "subprocess.call"),
+        (4, "subprocess.check_call"),
+        (5, "subprocess.check_output"),
+    ]
+
+
+def test_시간_제한_없는_communicate_와_wait_를_잡는다() -> None:
+    source = "out, err = process.communicate()\nprocess.wait()\n"
+
+    assert untimed_call_lines(source) == [(1, "process.communicate"), (2, "process.wait")]
+
+
+def test_시간_제한을_준_호출은_통과한다() -> None:
+    source = (
+        "import subprocess\n"
+        "subprocess.run(['git'], timeout=60)\n"
+        "process.communicate(b'', 5)\n"
+        "process.communicate(timeout=5)\n"
+        "process.wait(5)\n"
+        "process.wait(timeout=limit)\n"
+    )
+
+    assert untimed_call_lines(source) == []
+
+
+def test_timeout_None_은_시간_제한이_아니다() -> None:
+    source = (
+        "import subprocess\n"
+        "subprocess.run(['git'], timeout=None)\n"
+        "process.communicate(b'', None)\n"
+        "process.wait(None)\n"
+    )
+
+    assert [line for line, _ in untimed_call_lines(source)] == [2, 3, 4]
+
+
+def test_별칭과_from_import_로_부른_것도_잡는다() -> None:
+    source = (
+        "import subprocess as sp\n"
+        "from subprocess import check_output, run as launch\n"
+        "sp.run(['git'])\n"
+        "launch(['git'])\n"
+        "check_output(['git'])\n"
+    )
+
+    assert untimed_call_lines(source) == [(3, "sp.run"), (4, "launch"), (5, "check_output")]
+
+
+def test_subprocess_가_아닌_모듈의_같은_이름은_보지_않는다() -> None:
+    source = "import asyncio\nasyncio.run(main())\nrun(['git'])\n"
+
+    assert untimed_call_lines(source) == []
+
+
+def test_키워드_펼치기는_시간_제한으로_보지_않는다() -> None:
+    """`**` 안에 timeout 이 있는지 모른다. 모르는 것은 없는 것으로 잡는다(잘못 막는 쪽)."""
+    source = "import subprocess\nsubprocess.run(['git'], **options)\n"
+
+    assert untimed_call_lines(source) == [(2, "subprocess.run")]
+
+
+def test_위치_인자_펼치기도_시간_제한으로_보지_않는다() -> None:
+    """`*` 로 펼친 인자가 timeout 자리에 닿는지 모른다(독스트링의 잘못 막는 것)."""
+    source = "process.wait(*limits)\nprocess.communicate(*pair)\n"
+
+    assert untimed_call_lines(source) == [(1, "process.wait"), (2, "process.communicate")]
+
+
+def test_다른_형의_wait_도_잡는다() -> None:
+    """받는 쪽의 형을 모른다. `threading.Event.wait()` 도 끝없이 기다리므로 같게 본다."""
+    source = "import threading\nthreading.Event().wait()\n"
+
+    assert untimed_call_lines(source) == [(2, "threading.Event().wait")]
+
+
+def test_까닭을_적은_표지가_있으면_뺀다() -> None:
+    source = (
+        "import subprocess\n"
+        "process.wait()  # 시간 제한 없음: 끝낸 자식을 거둔다\n"
+        "subprocess.run(  # 시간 제한 없음: 지우는 git 을 도중에 끊지 않는다\n"
+        "    ['git'],\n"
+        ")\n"
+    )
+
+    assert untimed_call_lines(source) == []
+
+
+def test_communicate_는_표지로_빼지_않는다() -> None:
+    """끝낸 뒤의 `communicate()` 도 트리를 떠난 손자가 파이프를 쥐면 돌아오지 않는다(대기열 342의
+    사건). 표지가 아니라 timeout 으로 거둔다."""
+    source = "process.communicate()  # 시간 제한 없음: 끝낸 자식을 거둔다\n"
+
+    assert untimed_call_lines(source) == [(1, "process.communicate")]
+
+
+def test_까닭_없는_표지는_빼지_않는다() -> None:
+    source = "process.wait()  # 시간 제한 없음:\n"
+
+    assert untimed_call_lines(source) == [(1, "process.wait")]
+
+
+def test_주석_머리가_아닌_표지는_빼지_않는다() -> None:
+    source = "process.wait()  # 까닭: 시간 제한 없음: 머리가 아니다\n"
+
+    assert untimed_call_lines(source) == [(1, "process.wait")]
+
+
+def test_문자열_속_표지는_빼지_않는다() -> None:
+    source = "import subprocess\nsubprocess.run(['echo', '# 시간 제한 없음: 글자'])\n"
+
+    assert untimed_call_lines(source) == [(2, "subprocess.run")]
+
+
+def test_못_보는_것_변수에_담아_부른_것과_with_의_Popen() -> None:
+    """독스트링의 못 보는 것. 변수에 담은 함수, `getattr` 으로 꺼낸 것, 다른 이름에 대입한 모듈,
+    `from subprocess import *` 뒤의 이름, `getoutput`·`getstatusoutput`, `with Popen` 이
+    빠져나갈 때의 암묵 wait, `os.system`·`os.popen`, 값이 None 인 변수를 준 timeout 은
+    지나간다."""
+    source = (
+        "import os\n"
+        "import subprocess\n"
+        "from subprocess import *\n"
+        "runner = subprocess.run\n"
+        "runner(['git'])\n"
+        "getattr(subprocess, 'run')(['git'])\n"
+        "sp = subprocess\n"
+        "sp.run(['git'])\n"
+        "run(['git'])\n"
+        "subprocess.getoutput('git status')\n"
+        "subprocess.getstatusoutput('git status')\n"
+        "with subprocess.Popen(['git']) as process:\n"
+        "    pass\n"
+        "os.system('git status')\n"
+        "os.popen('git status')\n"
+        "limit = None\n"
+        "subprocess.run(['git'], timeout=limit)\n"
+    )
+
+    assert untimed_call_lines(source) == []
+
+
+def test_못_보는_것_파이프_읽기와_waitpid_와_partial_과_None_이_되는_식() -> None:
+    """독스트링의 못 보는 것. `Popen` 의 파이프를 직접 읽는 것, `os.waitpid`, `functools.partial`
+    로 감싼 함수, None 이 될 수 있는 식을 준 timeout 은 지나간다."""
+    source = (
+        "import functools\n"
+        "import os\n"
+        "import subprocess\n"
+        "process = subprocess.Popen(['git'], stdout=subprocess.PIPE)\n"
+        "process.stdout.read()\n"
+        "for line in process.stdout:\n"
+        "    pass\n"
+        "os.waitpid(process.pid, 0)\n"
+        "functools.partial(subprocess.run, ['git'])()\n"
+        "subprocess.run(['git'], timeout=None if slow else 5)\n"
+    )
+
+    assert untimed_call_lines(source) == []
+
+
+def test_못_보는_것_표지는_그_줄의_다른_호출도_뺀다() -> None:
+    source = (
+        "import subprocess\nprocess.wait(); subprocess.run(['git'])  # 시간 제한 없음: 거둔다\n"
+    )
+
+    assert untimed_call_lines(source) == []
+
+
+def test_잘못_막는_것_asyncio_의_wait_와_communicate_도_잡는다() -> None:
+    """asyncio 의 둘은 timeout 을 받지 않아 `wait_for` 로 감싸도 잡힌다(독스트링의 잘못 막는 것)."""
+    source = (
+        "import asyncio\n"
+        "async def go(process):\n"
+        "    await asyncio.wait_for(process.wait(), 5)\n"
+        "    await process.communicate()\n"
+    )
+
+    assert untimed_call_lines(source) == [(3, "process.wait"), (4, "process.communicate")]
+
+
+def test_시간_제한_없는_호출을_파일과_줄로_보고한다(tmp_path: Path) -> None:
+    _파일을_둔다(tmp_path, "tools/x.py", "import subprocess\nsubprocess.run(['git'])\n")
+    _파일을_둔다(tmp_path, "tools/y.py", "import subprocess\nsubprocess.run(['git'], timeout=9)\n")
+    _파일을_둔다(tmp_path, "tools/sub/z.py", "process.wait()\n")
+    _파일을_둔다(tmp_path, "tests/tools/test_x.py", "import subprocess\nsubprocess.run(['git'])\n")
+
+    problems = calls_without_timeout(tmp_path)
+
+    assert len(problems) == 2
+    assert problems[0].startswith("tools/sub/z.py:1: process.wait 에 timeout 이 없다")
+    assert problems[1].startswith("tools/x.py:2: subprocess.run 에 timeout 이 없다")
+
+
+def test_이_저장소의_tools_에는_시간_제한_없는_호출이_없다() -> None:
+    # 범위가 비면 위반 0 으로 조용히 초록이다(tests.md)
+    assert len(tool_sources()) >= 50
+    assert calls_without_timeout() == []
+
+
+# 세 값으로 출력을 고르는 `bool | None` 주석(대기열 423). ruff FBT 는 키워드 전용 매개변수를
+# 보지 않아 `output_for(..., first: bool | None)` 이 셀프 리뷰까지 지나갔다.
+
+
+def test_bool_과_None_의_합_주석을_세_모양_모두_잡는다() -> None:
+    source = (
+        "from typing import Optional\n"
+        "def a(x: bool | None) -> int: ...\n"
+        "def b(x: None | bool) -> int: ...\n"
+        "def c(x: Optional[bool]) -> int: ...\n"
+        "def d(x: bool | None | None) -> int: ...\n"
+    )
+
+    assert optional_bool_lines(source) == [
+        (2, "a 의 x"),
+        (3, "b 의 x"),
+        (4, "c 의 x"),
+        (5, "d 의 x"),
+    ]
+
+
+def test_키워드_전용과_가변_인자와_반환도_잡는다() -> None:
+    source = (
+        "def f(a: bool | None, /, b: bool | None, *args: bool | None,\n"
+        "      c: bool | None, **kwargs: bool | None) -> bool | None: ...\n"
+        "class K:\n"
+        "    async def g(self, *, first: bool | None = None) -> None: ...\n"
+    )
+
+    assert optional_bool_lines(source) == [
+        (1, "f 의 a"),
+        (1, "f 의 b"),
+        (1, "f 의 args"),
+        (2, "f 의 c"),
+        (2, "f 의 kwargs"),
+        (2, "f 의 반환"),
+        (4, "g 의 first"),
+    ]
+
+
+def test_typing_속성과_Union_과_문자열_주해도_잡는다() -> None:
+    source = (
+        "import typing\n"
+        "import typing as tp\n"
+        "def a(x: typing.Optional[bool]) -> None: ...\n"
+        "def b(x: tp.Union[bool, None]) -> None: ...\n"
+        "def c(x: 'bool | None') -> 'Optional[bool]': ...\n"
+    )
+
+    assert optional_bool_lines(source) == [
+        (3, "a 의 x"),
+        (4, "b 의 x"),
+        (5, "c 의 x"),
+        (5, "c 의 반환"),
+    ]
+
+
+@pytest.mark.parametrize(
+    "annotation",
+    [
+        "Optional[Optional[bool]]",
+        "Optional[bool | None]",
+        "Union[bool, Optional[bool]]",
+        "Optional['bool']",
+        "bool | 'None'",
+        "' bool | None '",
+    ],
+)
+def test_안쪽_합과_갈래_안의_문자열도_펴서_잡는다(annotation: str) -> None:
+    source = f"def f(x: {annotation}) -> None: ...\n"
+
+    assert optional_bool_lines(source) == [(1, "f 의 x")]
+
+
+def test_잘못_막는_것_typing_이_아닌_Optional_도_잡는다() -> None:
+    """독스트링의 잘못 막는 것. 이름이 어디서 왔는지는 보지 않는다."""
+    source = "def Optional() -> None: ...\ndef f(x: Optional[bool]) -> None: ...\n"
+
+    assert optional_bool_lines(source) == [(2, "f 의 x")]
+
+
+@pytest.mark.parametrize(
+    "parameter",
+    [
+        pytest.param("seen: bool | None = None", id="모듈_변수"),
+        pytest.param("class K:\n    seen: bool | None = None", id="클래스_칸"),
+        pytest.param("Flag = bool | None\ndef a(x: Flag) -> None: ...", id="별칭"),
+        pytest.param("def a(x: list[bool | None]) -> None: ...", id="감싼_주석"),
+        pytest.param(
+            "from typing import Annotated\ndef a(x: Annotated[bool | None, 'm']) -> None: ...",
+            id="Annotated",
+        ),
+        pytest.param("def a(x: builtins.bool | None) -> None: ...", id="builtins_bool"),
+        pytest.param("def a(x: bool | NoneType) -> None: ...", id="NoneType"),
+    ],
+)
+def test_못_보는_것은_지나간다(parameter: str) -> None:
+    """독스트링의 못 보는 것. 함수의 매개변수와 반환의 주석만, 이름 `bool` 과 None 상수로 본다."""
+    assert optional_bool_lines(parameter + "\n") == []
+
+
+@pytest.mark.parametrize(
+    "annotation",
+    [
+        "bool",
+        "int | None",
+        "bool | int",
+        "bool | int | None",
+        "Optional[int]",
+        "Literal[True, None]",
+        "'not a type ('",
+    ],
+)
+def test_세_값이_아닌_주석은_지나간다(annotation: str) -> None:
+    source = f"def f(x: {annotation}) -> {annotation}: ...\n"
+
+    assert optional_bool_lines(source) == []
+
+
+def test_bool_None_주석을_파일과_줄로_보고하고_probes_는_보지_않는다(tmp_path: Path) -> None:
+    _파일을_둔다(tmp_path, "src/agent_os/x.py", "def f(*, x: bool | None) -> None: ...\n")
+    _파일을_둔다(tmp_path, "tests/test_x.py", "def g() -> bool | None: ...\n")
+    _파일을_둔다(tmp_path, "tools/y.py", "def h(x: bool) -> None: ...\n")
+    _파일을_둔다(tmp_path, ".scratch/a/probes/p.py", "def p(x: bool | None) -> None: ...\n")
+
+    problems = optional_bool_annotations(tmp_path)
+
+    assert len(problems) == 2
+    assert problems[0].startswith("src/agent_os/x.py:1: f 의 x 가 bool | None 이다")
+    assert problems[1].startswith("tests/test_x.py:1: g 의 반환이 bool | None 이다")
+
+
+def test_bool_None_검사가_훑는_범위는_pyright_의_include_다() -> None:
+    assert OPTIONAL_BOOL_ROOTS == scanned_roots()
+
+
+def test_이_저장소에는_bool_None_주석이_없다() -> None:
+    # 범위가 비면 위반 0 으로 조용히 초록이다(tests.md)
+    assert len(optional_bool_sources()) >= 200
+    assert optional_bool_annotations() == []
+
+
+def test_CLI_진입점이_bool_None_주석을_출력한다(tmp_path: Path) -> None:
+    _파일을_둔다(tmp_path, "tools/x.py", "def f(*, first: bool | None) -> None: ...\n")
+
+    process = _CLI_로_검사한다(tmp_path)
+
+    assert "tools/x.py:1: f 의 first 가 bool | None 이다" in process.stdout
+    assert process.returncode == 1
+
+
+def test_CLI_진입점이_시간_제한_없는_호출을_출력한다(tmp_path: Path) -> None:
+    _파일을_둔다(tmp_path, "tools/x.py", "import subprocess\nsubprocess.run(['git'])\n")
+
+    process = _CLI_로_검사한다(tmp_path)
+
+    assert "tools/x.py:2: subprocess.run 에 timeout 이 없다" in process.stdout
+    assert process.returncode == 1
+
+
+def _멈춘_git(seen: list[object]) -> Callable[..., subprocess.CompletedProcess[str]]:
+    def stuck(args: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
+        seen.append(kwargs.get("timeout"))
+        raise subprocess.TimeoutExpired(args, 1)
+
+    return stuck
+
+
+def test_주_체크아웃을_찾는_git_이_시간을_넘기면_이_체크아웃의_local_만_본다(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _파일을_둔다(tmp_path, ".claude/settings.local.json", '{"permissions": {"deny": ["Bash"]}}')
+    monkeypatch.setattr(subprocess, "run", _멈춘_git([]))
+
+    problems = local_settings_with_guards(tmp_path)
+
+    assert [problem.split(":")[0] for problem in problems] == [".claude/settings.local.json"]
+
+
+def test_주_체크아웃을_찾는_git_에_시간_제한을_준다(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    seen: list[object] = []
+    monkeypatch.setattr(subprocess, "run", _멈춘_git(seen))
+
+    local_settings_with_guards(tmp_path)
+
+    assert seen == [CALL_TIMEOUT]
 
 
 def test_CLI_진입점이_임시_트리의_빨강을_출력한다(tmp_path: Path) -> None:

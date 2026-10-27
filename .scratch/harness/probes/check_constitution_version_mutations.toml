@@ -1,0 +1,205 @@
+# tools/check_constitution_version.py 의 헌법 판 검사(대기열 31)에서 규칙 하나씩을 뺀다. 새 시험은 없는
+# 모듈의 import(수집 오류)로만 빨개 행동의 빨강을 여기서 본다.
+#   PYTHONUTF8=1 uv run python tools/mutate.py .scratch/harness/probes/check_constitution_version_mutations.toml
+
+[[mutation]]
+name = "origin/main 의 판과만 견준다"
+tests = ["tests/tools/test_check_constitution_version.py"]
+expect = "red"
+expect_output = ["FAILED tests/tools/test_check_constitution_version.py::test_판을_올렸는지는_main_과_merge_base_의_판_둘과_다른지로_본다[merge_base_의_판_그대로다]"]
+[[mutation.edit]]
+file = "tools/check_constitution_version.py"
+old = '''
+        return self.ours not in (self.main, self.base) or self.reserved is not None
+'''
+new = '''
+        return self.ours != self.main or self.reserved is not None
+'''
+
+[[mutation]]
+name = "merge-base 의 판과만 견준다"
+tests = ["tests/tools/test_check_constitution_version.py"]
+expect = "red"
+expect_output = ["FAILED tests/tools/test_check_constitution_version.py::test_판을_올렸는지는_main_과_merge_base_의_판_둘과_다른지로_본다[main_이_같은_판을_먼저_매겼다]"]
+[[mutation.edit]]
+file = "tools/check_constitution_version.py"
+old = '''
+        return self.ours not in (self.main, self.base) or self.reserved is not None
+'''
+new = '''
+        return self.ours != self.base or self.reserved is not None
+'''
+
+[[mutation]]
+name = "비워 둔 판을 올린 것으로 세지 않는다"
+tests = ["tests/tools/test_check_constitution_version.py"]
+expect = "red"
+expect_output = ["FAILED tests/tools/test_check_constitution_version.py::test_판을_올렸는지는_main_과_merge_base_의_판_둘과_다른지로_본다[main_이_이_가지_몫으로_비워_둔_판에_문단을_더했다]"]
+[[mutation.edit]]
+file = "tools/check_constitution_version.py"
+old = '''
+        return self.ours not in (self.main, self.base) or self.reserved is not None
+'''
+new = '''
+        return self.ours not in (self.main, self.base)
+'''
+
+[[mutation]]
+name = "판 줄이 없으면 올린 것으로 본다"
+tests = ["tests/tools/test_check_constitution_version.py"]
+expect = "red"
+expect_output = ["FAILED tests/tools/test_check_constitution_version.py::test_판을_올렸는지는_main_과_merge_base_의_판_둘과_다른지로_본다[판_줄이_없다]"]
+[[mutation.edit]]
+file = "tools/check_constitution_version.py"
+old = '''
+        if self.ours is None:
+            return False
+'''
+new = '''
+        if self.ours is None:
+            return True
+'''
+
+[[mutation]]
+name = "고친 헌법 파일이 없어도 판을 요구한다"
+tests = ["tests/tools/test_check_constitution_version.py"]
+expect = "red"
+expect_output = ["FAILED tests/tools/test_check_constitution_version.py::test_판을_올렸는지는_main_과_merge_base_의_판_둘과_다른지로_본다[고친_헌법_파일이_없다]"]
+[[mutation.edit]]
+file = "tools/check_constitution_version.py"
+old = '''
+        if not self.changed:
+            return True
+'''
+new = '''
+        if False:
+            return True
+'''
+
+[[mutation]]
+name = "main 이 들여온 헌법 파일도 이 가지가 고친 것으로 센다"
+tests = ["tests/tools/test_check_constitution_version.py"]
+expect = "red"
+expect_output = ["FAILED tests/tools/test_check_constitution_version.py::test_main_이_고친_헌법_파일은_이_가지가_고친_것으로_세지_않는다"]
+[[mutation.edit]]
+file = "tools/check_constitution_version.py"
+old = '''
+    changed = sorted(_staged_against(root, base) & _staged_against(root, main_sha))
+'''
+new = '''
+    changed = sorted(_staged_against(root, base))
+'''
+
+[[mutation]]
+name = "판정할 때 비워 둔 판을 찾지 않는다"
+tests = ["tests/tools/test_check_constitution_version.py"]
+expect = "red"
+expect_output = ["FAILED tests/tools/test_check_constitution_version.py::test_main_이_이_가지_몫으로_비워_둔_판에_이력_문단을_더했으면_지나간다"]
+[[mutation.edit]]
+file = "tools/check_constitution_version.py"
+old = '''
+    reserved = reserved_version(current_branch(root), main_text, ours_text)
+'''
+new = '''
+    reserved = None
+'''
+
+[[mutation]]
+name = "색인 대신 작업 트리의 판을 읽는다"
+tests = ["tests/tools/test_check_constitution_version.py"]
+expect = "red"
+expect_output = ["FAILED tests/tools/test_check_constitution_version.py::test_색인을_보고_작업_트리에서만_올린_판은_세지_않는다"]
+[[mutation.edit]]
+file = "tools/check_constitution_version.py"
+old = '''
+    ours_text = _index_text(root, CONSTITUTION)
+'''
+new = '''
+    ours_text = (root / CONSTITUTION).read_text(encoding="utf-8")
+'''
+
+[[mutation]]
+name = "판정하지 못하면 지나간다"
+tests = ["tests/tools/test_check_constitution_version.py"]
+expect = "red"
+expect_output = ["FAILED tests/tools/test_check_constitution_version.py::test_origin_main_이_없으면_판정하지_못했다고_2다"]
+[[mutation.edit]]
+file = "tools/check_constitution_version.py"
+old = '''
+            f" {error}"
+        )
+        return 2
+'''
+new = '''
+            f" {error}"
+        )
+        return 0
+'''
+
+[[mutation]]
+name = "인자 둘을 받는다"
+tests = ["tests/tools/test_check_constitution_version.py"]
+expect = "red"
+expect_output = ["FAILED tests/tools/test_check_constitution_version.py::test_인자가_둘_이상이면_2다"]
+[[mutation.edit]]
+file = "tools/check_constitution_version.py"
+old = '''
+    if len(argv) > 1:
+'''
+new = '''
+    if False:
+'''
+
+[[mutation]]
+name = "판을 올리지 않아도 0으로 끝난다"
+tests = ["tests/tools/test_check_constitution_version.py"]
+expect = "red"
+expect_output = ["FAILED tests/tools/test_check_constitution_version.py::test_헌법_파일을_고치고_판을_올리지_않으면_막는다"]
+[[mutation.edit]]
+file = "tools/check_constitution_version.py"
+old = '''
+    return 0 if judged.passes else 1
+'''
+new = '''
+    return 0
+'''
+
+[[mutation]]
+name = "출력을 UTF-8 로 다시 열지 않는다"
+tests = ["tests/tools/test_check_constitution_version.py"]
+expect = "red"
+expect_output = ["FAILED tests/tools/test_check_constitution_version.py::test_pre_commit_처럼_띄우면_막는_까닭을_UTF_8_로_알린다"]
+[[mutation.edit]]
+file = "tools/check_constitution_version.py"
+old = '''
+        stream.reconfigure(encoding="utf-8")
+'''
+new = '''
+        pass
+'''
+
+[[mutation]]
+name = "저장소 밖을 origin/main 이 없다고 알린다"
+tests = ["tests/tools/test_check_constitution_version.py"]
+expect = "red"
+expect_output = ["FAILED tests/tools/test_check_constitution_version.py::test_git_저장소_밖이면_그렇게_알리고_2다"]
+[[mutation.edit]]
+file = "tools/check_constitution_version.py"
+old = '''
+    try:
+        git(root, "rev-parse", "--git-dir")
+    except SurveyError as error:
+        raise SurveyError(f"{root} 가 git 저장소 안이 아니다 ({error})") from error
+'''
+new = '''
+'''
+
+[[mutation]]
+name = "얕은 클론에 값 없는 --deepen 을 안내한다"
+tests = ["tests/tools/test_check_constitution_version.py"]
+expect = "red"
+expect_output = ["FAILED tests/tools/test_check_constitution_version.py::test_얕은_클론에서_merge_base_가_없으면_2이고_안내한_명령으로_이력을_받으면_판정한다"]
+[[mutation.edit]]
+file = "tools/check_constitution_version.py"
+old = '''`git fetch --unshallow origin` 으로 이력을 모두 받는다'''
+new = '''`git fetch --deepen` 으로 깊게 받는다'''

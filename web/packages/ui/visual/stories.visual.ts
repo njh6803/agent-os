@@ -1,5 +1,5 @@
 // 사진 비교(design-system 명세의 "사진 비교 게이트", ADR 0026). 판정 스토리를 뺀 패키지의 스토리를 기본 테마(녹청)의
-// 라이트·다크 × 밀도 둘(촘촘, 보통)로 찍어 커밋한 정답 사진과 비교한다(판정 스토리는 storybook.ts 가 뺀다). 새 스토리는
+// 라이트·다크 × 밀도 둘(촘촘, 보통)로 찍어 커밋한 정답 사진과 비교한다(판정 스토리는 index.ts 가 뺀다). 새 스토리는
 // 저절로 찍히고, 정답 사진이 없으면 실패한다. 정답 사진의 이름은 `<스토리 id>-<모드>-<밀도>.png`, 실제 입력의 상태는
 // `<스토리 id>-<모드>-<밀도>-<상태>.png` 다. 스토리가 globals 로 모드나 밀도를 정했으면 그 값만 찍는다(일반 루프와
 // 상호작용 루프 모두). 밀도는 globals 로 문서 뿌리에 달아, 창의 폭(480px)이 아니라 그 값으로 그린다.
@@ -9,7 +9,7 @@
 // 명암비가 4.5 이상이다(design-refresh 명세의 "위험 버튼의 누름". 판정의 4.507 은 반올림해 겹친 값이라 실제 픽셀을 본다).
 import { inflateSync } from "node:zlib";
 import type { Locator, Page } from "@playwright/test";
-import { contrastRatio } from "../src/testing/index.ts";
+import { contrastRatio } from "../src/styles/contrast.ts";
 import { DEFAULT_THEME, DENSITIES, type Density } from "../src/themes.ts";
 import {
   MODES,

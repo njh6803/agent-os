@@ -9,10 +9,14 @@
 따옴표도 보지 않는다 — 대기열과 일지의 제안은 아직 어디에도 없는 문장이다(대기열 51). `옛 문구:`·
 `로그의 한 줄:` 처럼 있는 글을 가리키는 표지 뒤는 본다. 따옴표의 짝은 줄이 아니라 문단·목록 항목
 안에서 짓는다 — 줄마다 지으면 줄을 넘는 인용의 닫는 따옴표가 같은 줄의 다음 인용과 짝지어져 사이의
-산문을 인용으로 잡았다(대기열 67).
+산문을 인용으로 잡았다(대기열 67). 글자 그대로 두 자리가 없으면 감긴 줄(줄바꿈, 들여쓰기, 주석 머리
+`#`·`//`)을 공백 하나로 편 사본에서 다시 센다 — 폭 100 으로 감긴 독스트링을 한 줄로 옮긴 인용이
+없다고 경고됐다(대기열 345. `//` 는 대기열 436). 넘겨받은 파일은 대조 전에 모두 말뭉치에 넣는다 —
+추적되지 않은 두 파일이 서로를 인용하면 넘긴 차례에 따라 앞 파일의 인용이 경고됐다(대기열 398).
 pre-commit 이 바뀐 .md 를 넘기고 `verbose: true` 로 출력을 보인다. 기본은 작업 트리가 HEAD 에 더한
 줄만 본다 — 파일 전체를 보면 옛 인용(대기열의 한 줄 후보, 런북의 프롬프트 예시)이 대기열 파일
-하나에서만 서른 건 남짓 울려 경고를 무시하게 된다(2026-09-28 실측). `--all-lines` 로 전체를 본다.
+하나에서만 서른 건 남짓 울려 경고를 무시하게 된다(2026-09-28 실측). 이름을 바꾼 파일은 옛 경로와
+짝을 지은 diff 에서 바뀐 줄만 본다(대기열 377). `--all-lines` 로 전체를 본다.
 인자가 없으면 추적되는 .md 전부가 대상이고, `.claude/skills/` 의 사본은 어느 모드에서든 뺀다 —
 남이 쓴 영문 인용이 원문 없이 많다. 경고가 없어도 본 인용 수를 찍는다 — 무출력 초록은 "다
 맞았다"와 "아무것도 안 봤다"를 가르지 못했다(대기열 55).
@@ -21,19 +25,24 @@ pre-commit 이 바뀐 .md 를 넘기고 `verbose: true` 로 출력을 보인다.
 때), 짝 없는 따옴표(인치 표시 등) 뒤의 같은 묶음 — 짝이 뒤집혀 진짜 인용을 놓치거나 사이의 산문을
 잡는다, 묶음 경계가 CommonMark 와 어긋나는 자리 — 문단 중간에서 `42. `·`| ` 로 시작하는 줄은 새
 묶음을 열고 줄을 넘는 코드 스팬과 HTML 블록은 모르므로, 그 자리를 넘는 인용은 짝이 뒤집힌다,
-기본 모드에서 바뀐 파일의 바뀌지 않은 줄에 있는 인용,
-같은 틀린 인용이 두 곳에 있는 것(둘이 서로를 세어 준다), 원문이 저장소 밖인 인용(경고가 거짓
-양성이다), 마크다운 밖의 인용, 원문이 바뀐 뒤 인용만 옛 문구인 것 중 옛 문구가 다른 기록(일지)에
-남아 있는 것.
+기본 모드에서 바뀐 파일의 바뀌지 않은 줄에 있는 인용, 기본 모드에서 이름을 바꾼 파일이 옛 경로에서
+그대로 옮겨 온 줄의 인용(사용자가 받아들인 값이다, 대기열 377. git 이 이름 바꾸기로 짝짓지 못한
+옮김은 새 파일처럼 전체를 본다), 감긴 줄을 편 사본에서만 맞는 인용 가운데 원문의 줄 머리 `#`·`//` 가
+주석 표지가 아니라 마크다운 제목이나 주석이 아닌 글의 일부였던 것(그 줄과 앞 줄이 이어져 원문으로
+센다), 같은 사본에서 서로 무관한 이웃 줄(한 줄의 끝과 다음 줄의 머리)이 이어져 맞는
+인용(감긴 문장과 가르지 못해 원문으로 센다), 같은 틀린 인용이 두 곳에 있는 것(둘이 서로를 세어
+준다), 원문이 저장소 밖인 인용(경고가 거짓 양성이다), 마크다운 밖의 인용, 원문이 바뀐 뒤 인용만 옛
+문구인 것 중 옛 문구가 다른 기록(일지)에 남아 있는 것.
 """
 
 from __future__ import annotations
 
+import functools
 import io
 import re
 import subprocess
 import sys
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -74,6 +83,8 @@ _PROPOSAL = re.compile(
 )
 _ELLIPSIS = re.compile(r"…|\.\.\.")
 _EXCLUDED_DIRS = frozenset({".git", ".venv", "node_modules", "worktrees", "__pycache__"})
+# git 호출 하나를 기다리는 초. 넘기면 git 이 실패한 갈래로 간다(대기열 342).
+CALL_TIMEOUT = 60
 
 
 @dataclass(frozen=True)
@@ -89,6 +100,17 @@ def normalize(text: str) -> str:
     인용은 원문의 코드 스팬·강조를 지우거나 더한다.
     """
     return text.replace("`", "").replace("*", "")
+
+
+# 감긴 줄의 이음매 — 줄바꿈과 그 앞뒤의 공백·탭, 다음 줄 머리의 주석 표지
+# `#`(파이썬·셸·PowerShell)와 `//`(TS·JS, 대기열 436).
+_WRAP = re.compile(r"[ \t]*\n[ \t]*(?:(?:#+|//+)[ \t]*)?")
+
+
+def unwrap(text: str) -> str:
+    """감긴 줄을 공백 하나로 잇는다. 빈 줄은 이음매가 둘이라 공백 둘이 되어 문단을 넘는 인용은 맞지
+    않는다."""
+    return _WRAP.sub(" ", text)
 
 
 def _blank_code(markdown: str) -> str:
@@ -169,11 +191,18 @@ def quotes_in(markdown: str) -> list[Quote]:
 
 
 def tracked_text_files(root: Path = ROOT) -> list[Path]:
-    """git 이 추적하는 텍스트 파일. 저장소가 아니면(테스트) 트리를 걷는다."""
-    result = subprocess.run(
-        ["git", "-C", str(root), "ls-files", "-z"], capture_output=True, check=False
-    )
-    if result.returncode == 0:
+    """git 이 추적하는 텍스트 파일. 저장소가 아니거나(테스트) git 이 `CALL_TIMEOUT` 초 안에 돌아오지
+    않으면 트리를 걷는다."""
+    try:
+        result = subprocess.run(
+            ["git", "-C", str(root), "ls-files", "-z"],
+            capture_output=True,
+            check=False,
+            timeout=CALL_TIMEOUT,
+        )
+    except subprocess.TimeoutExpired:
+        result = None
+    if result is not None and result.returncode == 0:
         names = result.stdout.decode("utf-8", "replace").split("\0")
         return [
             (root / name).resolve() for name in names if name and Path(name).suffix in TEXT_SUFFIXES
@@ -221,16 +250,79 @@ def added_lines(path: Path, root: Path = ROOT) -> set[int] | None:
     같다. 스테이지된 줄(`diff --cached`)만 보던 때는 부분 스테이지된 파일의 나머지 편집을 손으로
     넘겨도 조용히 건너뛰었다(대기열 55). diff 가 빈 것은 추적하지 않는 새 파일이나 바뀌지 않은
     파일을 넘긴 경우다. 그때 아무것도 보지 않으면 검사가 조용히 빈 것이 되므로 전체를 본다. HEAD 가
-    없어도 전체다.
+    없거나 git 이 `CALL_TIMEOUT` 초 안에 돌아오지 않아도 전체다.
+
+    HEAD 에 없던 파일이면 이름을 바꾼 것인지 보고, 그렇다면 옛 경로와 짝을 지은 diff 에서 바뀐 줄만
+    고른다(`_renamed_from`). 새 경로 하나로만 diff 하면 파일 전체가 더한 줄이라, 일지 번호를 옮긴
+    커밋마다 옛 줄의 인용까지 다시 대조됐다(대기열 377).
     """
-    result = subprocess.run(
-        ["git", "-C", str(root), "diff", "HEAD", "-U0", "--no-color", "--", str(path)],
-        capture_output=True,
-        check=False,
-    )
+    diff = _diff_head(root, [str(path)])
+    if diff is None:
+        return None
+    old = _renamed_from(path, root) if _NEW_FILE.search(diff) else None
+    if old is not None:
+        diff = _diff_head(root, [old, str(path)], ["-M"]) or diff
+    return added_lines_from_diff(diff)
+
+
+# diff 머리에서 HEAD 에 없던 파일을 알리는 줄.
+_NEW_FILE = re.compile(r"^new file mode ", re.M)
+
+
+def _diff_head(root: Path, paths: Sequence[str], options: Sequence[str] = ()) -> str | None:
+    """`git diff HEAD -U0` 에 `options` 를 더한 출력. 실패하거나 비었거나 `CALL_TIMEOUT` 초를 넘기면
+    None.
+
+    옛 경로와 새 경로에 `-M` 을 주면 두 경로를 이름 바꾸기로 짝짓고, 그 diff 의 헝크는 모두 새 경로
+    쪽이다.
+    """
+    try:
+        result = subprocess.run(
+            ["git", "-C", str(root), "diff", "HEAD", "-U0", "--no-color", *options, "--", *paths],
+            capture_output=True,
+            check=False,
+            timeout=CALL_TIMEOUT,
+        )
+    except subprocess.TimeoutExpired:
+        return None
     if result.returncode != 0 or not result.stdout.strip():
         return None
-    return added_lines_from_diff(result.stdout.decode("utf-8", "replace"))
+    return result.stdout.decode("utf-8", "replace")
+
+
+def _renamed_from(path: Path, root: Path) -> str | None:
+    """작업 트리가 HEAD 의 어느 파일을 이 경로로 옮겼는가. 옮긴 것이 아니면 None.
+
+    git 의 이름 바꾸기 판정(내용이 절반 넘게 같다)을 저장소 전체의 이름 목록으로 한 번 묻는다. 옛
+    경로를 모르니 경로를 좁힐 수 없다. 그 판정에 들지 않는 옮김(내용이 절반 넘게 바뀌었다)은 새
+    파일 그대로다. git 이 실패하거나 `CALL_TIMEOUT` 초를 넘기면 None 이라 전체를 본다.
+    """
+    try:
+        result = subprocess.run(
+            ["git", "-C", str(root), "diff", "HEAD", "-M", "--name-status", "-z"],
+            capture_output=True,
+            check=False,
+            timeout=CALL_TIMEOUT,
+        )
+    except subprocess.TimeoutExpired:
+        return None
+    if result.returncode != 0:
+        return None
+    target = _relative(path, root)
+    fields = result.stdout.decode("utf-8", "replace").split("\0")
+    index = 0
+    # 항목은 `상태\0경로` 이고, 이름 바꾸기(R)와 복사(C)만 `상태\0옛 경로\0새 경로` 다.
+    while index + 1 < len(fields):
+        status = fields[index]
+        if not status.startswith(("R", "C")):
+            index += 2
+            continue
+        if index + 2 >= len(fields):
+            return None
+        if status.startswith("R") and fields[index + 2] == target:
+            return fields[index + 1]
+        index += 3
+    return None
 
 
 LineFilter = Callable[[Path], "set[int] | None"]
@@ -254,8 +346,10 @@ def check(files: list[Path], root: Path = ROOT, line_filter: LineFilter | None =
     다시 경고하면 경고를 무시하는 습관만 만든다. 필터가 None 을 주면 그 파일은 전체를 본다.
     """
     corpus = load_corpus(root)
+    unwrapped: Callable[[str], str] = functools.cache(unwrap)
     warnings: list[str] = []
     files_read = files_whole = quotes_checked = 0
+    readable: list[tuple[Path, str, str]] = []
     for path in files:
         relative = _relative(path, root)
         if relative.startswith(SKIPPED_PREFIXES):
@@ -265,8 +359,12 @@ def check(files: list[Path], root: Path = ROOT, line_filter: LineFilter | None =
         except (OSError, UnicodeDecodeError):
             continue
         # 추적되지 않은 새 파일도 자기 자리를 센다. 키는 resolve 한 것 — 상대 경로로 넘어온 추적
-        # 파일이 다른 키로 한 번 더 들어가면 모든 인용이 두 번 세어져 검사가 조용히 빈다.
+        # 파일이 다른 키로 한 번 더 들어가면 모든 인용이 두 번 세어져 검사가 조용히 빈다. 대조 전에
+        # 모두 넣는다 — 대조하는 차례에 넣으면 앞 파일의 인용이 뒤에 넘긴 미추적 파일의 원문을 보지
+        # 못한다(대기열 398).
         corpus.setdefault(path.resolve(), normalize(markdown))
+        readable.append((path, relative, markdown))
+    for path, relative, markdown in readable:
         allowed = line_filter(path) if line_filter is not None else None
         files_read += 1
         if allowed is None:
@@ -275,13 +373,19 @@ def check(files: list[Path], root: Path = ROOT, line_filter: LineFilter | None =
             if allowed is not None and quote.line not in allowed:
                 continue
             quotes_checked += 1
-            warning = _warning(quote, relative, corpus, root)
+            warning = _warning(quote, relative, corpus, unwrapped, root)
             if warning is not None:
                 warnings.append(warning)
     return Report(warnings, files_read, files_whole, quotes_checked)
 
 
-def _warning(quote: Quote, relative: str, corpus: dict[Path, str], root: Path) -> str | None:
+def _warning(
+    quote: Quote,
+    relative: str,
+    corpus: dict[Path, str],
+    unwrapped: Callable[[str], str],
+    root: Path,
+) -> str | None:
     """인용 하나의 경고(파일:줄: 인용 — 이유). 원문을 찾으면 None."""
     shown = quote.text if len(quote.text) <= 60 else quote.text[:57] + "…"
     where = f'{relative}:{quote.line}: "{shown}"'
@@ -289,12 +393,12 @@ def _warning(quote: Quote, relative: str, corpus: dict[Path, str], root: Path) -
         text = adr_text(quote.adr, root)
         if text is not None and _contains(text, quote.text):
             return None
-        if _found_elsewhere(quote.text, corpus):
+        if _found_elsewhere(quote.text, corpus, unwrapped):
             return None  # 그 ADR 것이 아니라 가까이 적혔을 뿐인 인용
         if text is None:
             return f"{where} — ADR {quote.adr} 파일이 없다"
         return f"{where} — ADR {quote.adr} 에 이 문구가 글자 그대로 없다"
-    if _found_elsewhere(quote.text, corpus):
+    if _found_elsewhere(quote.text, corpus, unwrapped):
         return None
     return (
         f"{where} — 저장소의 다른 자리에 글자 그대로 없다. 원문을 다시 열어 그대로 "
@@ -312,9 +416,20 @@ def _contains(text: str, quote: str) -> bool:
     return all(piece in text for piece in _pieces(quote))
 
 
-def _found_elsewhere(quote: str, corpus: dict[Path, str]) -> bool:
-    """인용 자신 말고 한 자리 더 있는가. 조각마다 두 번째 자리를 센다(인용 파일에도 조각은 있다)."""
-    return all(sum(text.count(piece) for text in corpus.values()) >= 2 for piece in _pieces(quote))
+def _found_elsewhere(quote: str, corpus: dict[Path, str], unwrapped: Callable[[str], str]) -> bool:
+    """인용 자신 말고 한 자리 더 있는가. 조각마다 두 번째 자리를 센다(인용 파일에도 조각은 있다).
+
+    글자 그대로 두 자리가 없는 조각은 감긴 줄을 편 사본(`unwrap`)에서 다시 센다. 독스트링과 주석은
+    폭 100 으로 감겨 낱말 사이에 줄바꿈과 들여쓰기가 들어, 그것을 한 줄로 옮긴 인용이 저장소에
+    없다고 경고됐다(대기열 345). 인용은 한 줄이라 그대로 센다. `unwrapped` 는 `check` 가 한 번
+    부르는 동안 같은 글의 편 사본을 한 번만 만드는 `unwrap` 이다.
+    """
+    for piece in _pieces(quote):
+        if sum(text.count(piece) for text in corpus.values()) >= 2:
+            continue
+        if sum(unwrapped(text).count(piece) for text in corpus.values()) < 2:
+            return False
+    return True
 
 
 def _relative(path: Path, root: Path) -> str:

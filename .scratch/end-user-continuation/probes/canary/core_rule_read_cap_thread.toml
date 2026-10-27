@@ -1,0 +1,27 @@
+# `.claude/rules/core.md` 의 대화 요약 항목과 이어 가기 항목에 더한 문장(교환 수 기준, 읽기 상한, 이어 가기 판정의
+# 스레드 호출과 취소 때의 기다림)이 `paths` 에 맞는 파일을 Read 로 열 때 실리는지(end-user-continuation 티켓 04).
+# 실험군은 규칙의 paths 안(src/agent_os/core/), 대조군은 밖(README.md)을 읽는다. 둘 다 이 체크아웃이다.
+# 최신 결과: 통과 4(2026-10-24, 이 PC, claude 2.1.302, 일지 2026-10-24-01). web-widget 티켓 02 가 같은 원천의 다른
+# 항목을 고친 뒤 다시 돌렸다.
+# 돌리는 법: uv run python tools/canary.py .scratch/end-user-continuation/probes/canary/core_rule_read_cap_thread.toml <출력 디렉터리>
+kind = "rule"
+question = '''
+Read 도구로 `{target}` 파일 하나만 통째로 읽어라. 다른 파일은 읽지 않는다.
+그 뒤 이 세션에 실린 지시 가운데, 이어 가기의 거슬러 읽기가 한 번에 읽는 트레이스의 수를 묶는 상한과 원문 교환의
+수로 요약하는 기준을 다루는 항목이 있으면 세 가지를 글자 그대로 옮겨라. (1) 읽기 상한의 상수 이름(백틱 안의 글).
+(2) 교환 수 기준의 상수 이름(백틱 안의 글). (3) 이어 가기의 판정을 스레드로 부를 때 취소가 오면 그 읽기가 끝나기를
+기다리게 하는 anyio 의 인자와 값(백틱 안의 글).
+읽은 파일의 코드에서 추측하지 않는다. 실린 지시에 그런 항목이 없으면 "없음"이라고만 답하라.
+'''
+expect = ["READ_CAP", "EXCHANGE_COUNT_LIMIT", "abandon_on_cancel=False"]
+source = ".claude/rules/core.md"
+
+[[arm]]
+name = "paths-안"
+role = "experiment"
+target = "src/agent_os/core/loop.py"
+
+[[arm]]
+name = "paths-밖"
+role = "control"
+target = "README.md"

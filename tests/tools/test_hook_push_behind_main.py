@@ -124,8 +124,7 @@ def test_태그만_올리는_푸시도_잰다() -> None:
     ],
 )
 def test_도움말을_묻는_푸시는_재지_않는다(command: str) -> None:
-    """대기열 300. 도움말은 푸시하지 않는다(git 이 사용법을 내고 129 로 끝난다. 아래 실제 git
-    시험)."""
+    """대기열 300. 도움말은 푸시하지 않는다(git 이 사용법을 내고 끝난다. 아래 실제 git 시험)."""
     assert not checks_push(command)
 
 
@@ -197,7 +196,7 @@ def push_repository(root: Path) -> Path:
     return repo
 
 
-# git 이 도움말을 낸 표지. 옵션의 `-h`·`--help` 는 parse-options 의 사용법 머리(종료 129), 하위
+# git 이 도움말을 낸 표지. 옵션의 `-h`·`--help` 는 parse-options 의 사용법 머리, 하위
 # 명령 바로 뒤의 `--help` 는 git 이 바꿔 돌린 `git help` 의 추적 줄(GIT_TRACE)이다.
 USAGE, GIT_HELP = "usage: git push", "built-in: git help"
 
@@ -248,14 +247,15 @@ def real_push(repo: Path, args: list[str]) -> Pushed:
 )
 def test_도움말_판정이_실제_git_과_같다(tmp_path: Path, args: list[str], outcome: str) -> None:
     """막는 훅이 git 이 푸시하지 않는 명령을 지나가게 한다고 주장하므로, 꼴마다 git 을 실제로 쳐
-    푸시가 나갔는지와 훅의 판정을 함께 본다(`.claude/rules/tools.md`). 사용법은 129 로 끝나고,
-    하위 명령 바로 뒤의 `--help` 는 `git help` 로 바뀐다. `--` 뒤의 `-h` 는 refspec 이라 git 이 그
-    이름의 ref 를 찾다 실패할 뿐 도움말이 아니다."""
+    푸시가 나갔는지와 훅의 판정을 함께 본다(`.claude/rules/tools.md`). 도움말은 사용법 표지와
+    푸시하지 않은 것으로 가르고, 사용법의 종료 코드는 git 판마다 달라 보지 않는다(harness 티켓
+    018). 하위 명령 바로 뒤의 `--help` 는 `git help` 로 바뀐다. `--` 뒤의 `-h` 는 refspec 이라 git
+    이 그 이름의 ref 를 찾다 실패할 뿐 도움말이 아니다."""
     result = real_push(push_repository(tmp_path), args)
     context = f"{result.returncode} {result.output[-500:]}"
 
     if outcome == "usage":
-        assert (result.pushed, result.returncode) == (False, 129), context
+        assert not result.pushed, context
         assert USAGE in result.output, context
     elif outcome == "git help":
         assert not result.pushed, context
@@ -264,7 +264,6 @@ def test_도움말_판정이_실제_git_과_같다(tmp_path: Path, args: list[st
         assert result.pushed, context
     else:
         assert not result.pushed, context
-        assert result.returncode != 129, context
         assert USAGE not in result.output and GIT_HELP not in result.output, context
     assert checks_push("git push " + " ".join(args)) is (outcome in ("push", "no help"))
 

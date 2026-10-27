@@ -1,0 +1,553 @@
+# 티켓 09(측정 아님 가르기, `tools/rerun_checks.py`)의 시험이 실제로 무는지 변이로 본다(implement 스킬,
+# 대기열 29). 계정(로그인, 계정 이름, 글자 그대로의 설정 폴더), 설정 폴더의 `env`, init(MCP, 플러그인
+# source, 줄 판정), 모델(별칭, inherit, 본 세션의 노력, 서브에이전트의 synthetic, Agent 입력이 고른 모델,
+# 하네스 모델), 셸 명령의 낱말 gh(커밋 메시지 떼기, 명령이 되는 메시지, heredoc 두 길, `--`), 경로(조각
+# 경계, 자기 회차, 자기 세션 기록, 링크를 푼 꼴, Git Bash 꼴, 대신하는 이름, 경로 칸의 상대 경로, 글 칸),
+# 쓰기 내용(`.md`, `tests/`), 거부된 호출, Skill 이름, 기록의 도구 이름, 한도(시각 하나라도 못 읽음,
+# bool), 판정 차례, 사용률의 첫 값, 거부 수를 하나씩 되돌린다. 셀프 리뷰 반영에서 더한 것은 설정 폴더의
+# 잘못을 측정 아님(설정)으로 적기, 세션마다의 Agent 입력 모델, 셸 예약어, 따옴표 없는 구분자의 `$(cat`,
+# 홈 아래의 설정 폴더와 뿌리, 중괄호 경계, 쓰기 대상의 Git Bash 꼴, `Monitor`의 웹소켓 입력이다. 실제
+# 프로세스 시험(허용 밖 init 에서 끄기)은 고르지 않는다. 줄 판정을 지우면 가짜가 init 뒤에 멈추는 600초를
+# 기다린 뒤에야 빨개지고 자는 자식을 600초 남기기 때문이다(그 시험의 `hang=600`, `child=600`). 줄 판정의
+# 변이는 값만 받는 시험이 보고, `drive`가 줄 판정에서 끄는 것은 `rerun_continue_mutations.toml`의 "줄
+# 판정이 참이어도 읽기를 멈추지 않는다"가 30초 마감의 시험으로 본다.
+# 표지는 고른 단언이 실패할 때만 나오는 값의 비교 문구나 단언의 메시지이고, 매개변수 시험은 실패한 사례의
+# id 를 함께 든다. 첫 판은 표지를 없는 문구로 둔 판을 돌려 변이마다 실패 출력을 한 번 본 뒤
+# 골랐다(`.claude/rules/probes.md` 의 표지 항목). 그 판에서 셋(서브에이전트의 synthetic, `--` 뒤의 `-m`,
+# 접두가 붙은 Skill 이름)이 초록이어서 그 길을 밟는 사례를 시험에 더했다(일지 2026-10-24-03).
+# 사용: PYTHONUTF8=1 uv run python tools/mutate.py .scratch/model-rerun/probes/rerun_checks_mutations.toml
+
+[[mutation]]
+name = "로그아웃한 계정도 지난다"
+tests = ["tests/tools/test_rerun_checks.py", "-k", "계정은_로그인과"]
+expect = "red"
+expect_output = ["assert (None is None) is False", '''"loggedIn": "true", "email"''']
+
+[[mutation.edit]]
+file = "tools/rerun_checks.py"
+old = '''    if status.get("loggedIn") is not True:'''
+new = '''    if False:'''
+
+[[mutation]]
+name = "다른 계정도 지난다"
+tests = ["tests/tools/test_rerun_checks.py", "-k", "계정은_로그인과"]
+expect = "red"
+expect_output = ["assert (None is None) is False", '''"email": "other@example.com"''']
+
+[[mutation.edit]]
+file = "tools/rerun_checks.py"
+old = '''    if email.partition("@")[0] != account:'''
+new = '''    if False:'''
+
+[[mutation]]
+name = "글자가 다른 설정 폴더도 지난다"
+tests = ["tests/tools/test_rerun_checks.py", "-k", "계정은_로그인과"]
+expect = "red"
+expect_output = ["assert (None is None) is False", '''"configDirectory": "D:/rerun-config"}-False]''']
+
+[[mutation.edit]]
+file = "tools/rerun_checks.py"
+old = '''    if status.get("configDirectory") != config_dir:'''
+new = '''    if False:'''
+
+[[mutation]]
+name = "설정 폴더의 env 키를 보지 않는다"
+tests = ["tests/tools/test_rerun_checks.py", "-k", "settings_json이_틀리면"]
+expect = "red"
+expect_output = [
+    "AssertionError: None",
+    "FAILED tests/tools/test_rerun_checks.py::test_설정_폴더의_settings_json이_틀리면_회차를_열지_않고_측정_아님_설정으로_적는다[env_키]",
+]
+
+[[mutation.edit]]
+file = "tools/rerun_checks.py"
+old = '''    if "env" in settings:'''
+new = '''    if False:'''
+
+[[mutation]]
+name = "설정 폴더의 잘못을 계정처럼 기록 없이 멈춘다"
+tests = ["tests/tools/test_rerun_checks.py", "-k", "settings_json이_틀리면"]
+expect = "red"
+expect_output = ["AssertionError: Refusal(why='설정 폴더의 settings.json 에 env 키가 있다', end=None)"]
+
+[[mutation.edit]]
+file = "tools/rerun_checks.py"
+old = '''    return None if problem is None else Refusal(problem, _SETTINGS_END)'''
+new = '''    return None if problem is None else Refusal(problem)'''
+
+[[mutation]]
+name = "MCP 서버가 실린 init 도 지난다"
+tests = ["tests/tools/test_rerun_checks.py", "-k", "init은_빈_mcp_servers와"]
+expect = "red"
+expect_output = ["assert False is not False", "'mcp_servers': [{'name': 'github', 'status': 'connected'}]"]
+
+[[mutation.edit]]
+file = "tools/rerun_checks.py"
+old = '''    if not isinstance(servers, list) or servers or not isinstance(plugins, list):'''
+new = '''    if not isinstance(servers, list) or not isinstance(plugins, list):'''
+
+[[mutation]]
+name = "플러그인의 source 를 허용 모임과 견주지 않는다"
+tests = ["tests/tools/test_rerun_checks.py", "-k", "init은_빈_mcp_servers와"]
+expect = "red"
+expect_output = [
+    "assert False is not False",
+    "'plugins': [{'name': 'github', 'source': 'github@claude-plugins-official'}]",
+]
+
+[[mutation.edit]]
+file = "tools/rerun_checks.py"
+old = '''        return source in allowed'''
+new = '''        return True'''
+
+[[mutation]]
+name = "줄 판정이 허용 밖 init 에서도 끄라고 하지 않는다"
+tests = ["tests/tools/test_rerun_checks.py", "-k", "둘째_호출의_init도"]
+expect = "red"
+expect_output = ["where False = watch("]
+
+[[mutation.edit]]
+file = "tools/rerun_checks.py"
+old = '''        return event is not None and _is_init(event) and init_outside(event, self._allowed_plugins)'''
+new = '''        return False'''
+
+[[mutation]]
+name = "모델 별칭을 풀지 않는다"
+tests = ["tests/tools/test_rerun_checks.py", "-k", "별칭과_inherit와"]
+expect = "red"
+expect_output = ["assert None == 'claude-sonnet-5-5'"]
+
+[[mutation.edit]]
+file = "tools/rerun_checks.py"
+old = '''    if name in MODEL_ALIASES:'''
+new = '''    if False:'''
+
+[[mutation]]
+name = "inherit 를 갈래의 모델로 풀지 않는다"
+tests = ["tests/tools/test_rerun_checks.py", "-k", "별칭과_inherit와"]
+expect = "red"
+expect_output = ["where None = resolve_model('', Arm("]
+
+[[mutation.edit]]
+file = "tools/rerun_checks.py"
+old = '''    if name in _INHERIT:'''
+new = '''    if False:'''
+
+[[mutation]]
+name = "본 세션의 노력을 보지 않는다"
+tests = ["tests/tools/test_rerun_checks.py", "-k", "본_세션은_synthetic을"]
+expect = "red"
+expect_output = [
+    "At index 0 diff: LineCount(model='claude-sonnet-5-5', effort='xhigh', lines=1) != LineCount(model='claude-opus-5-5', effort=None, lines=1)",
+]
+
+[[mutation.edit]]
+file = "tools/rerun_checks.py"
+old = '''        c for c in main if c.model != SYNTHETIC and (c.model, c.effort) != (arm.model, arm.effort)'''
+new = '''        c for c in main if c.model != SYNTHETIC and c.model != arm.model'''
+
+[[mutation]]
+name = "서브에이전트의 synthetic 줄도 센다"
+tests = ["tests/tools/test_rerun_checks.py", "-k", "서브에이전트는_허용_모임_밖의"]
+expect = "red"
+expect_output = ["LineCount(model='<synthetic>', effort=None, lines=5)"]
+
+[[mutation.edit]]
+file = "tools/rerun_checks.py"
+old = '''        if c.model != SYNTHETIC and c.model not in ok'''
+new = '''        if c.model not in ok'''
+
+[[mutation]]
+name = "Agent 입력이 고른 모델을 허용하지 않는다"
+tests = ["tests/tools/test_rerun_checks.py", "-k", "Agent_입력으로_고른"]
+expect = "red"
+expect_output = ["assert End(kind='측정 아님', reason='모델', resets_at=None) is None"]
+
+[[mutation.edit]]
+file = "tools/rerun_checks.py"
+old = '''                    chosen.add(model)'''
+new = '''                    pass'''
+
+[[mutation]]
+name = "Agent 입력이 고른 모델을 회차의 모든 세션에 허용한다"
+tests = ["tests/tools/test_rerun_checks.py", "-k", "그_세션의_서브에이전트만"]
+expect = "red"
+expect_output = ["assert None == End(kind='측정 아님', reason='모델', resets_at=None)"]
+
+[[mutation.edit]]
+file = "tools/rerun_checks.py"
+old = '''        allowed = {*self._harness_models, *self._chosen.get(session_id, ())}'''
+new = '''        allowed = {*self._harness_models, *(m for c in self._chosen.values() for m in c)}'''
+
+[[mutation]]
+name = "code-review 의 sonnet 을 하네스 모델에 넣지 않는다"
+tests = ["tests/tools/test_rerun_checks.py", "-k", "하네스_모델은_클론의"]
+expect = "red"
+expect_output = ["Extra items in the right set:", "'claude-sonnet-5-5'"]
+
+[[mutation.edit]]
+file = "tools/rerun_checks.py"
+old = '''    found = {resolve_model(CODE_REVIEW_MODEL, arm)}'''
+new = '''    found = {resolve_model(None, arm)}'''
+
+[[mutation]]
+name = "커밋 메시지를 떼지 않고 gh 를 찾는다"
+tests = ["tests/tools/test_rerun_checks.py", "-k", "메시지_안의_gh는"]
+expect = "red"
+expect_output = ['''where ('낱말-gh',) = command_patterns("git commit -m 'gh 호출을 고친다'")''']
+
+[[mutation.edit]]
+file = "tools/rerun_checks.py"
+old = '''    return _six_patterns(command, words=strip_commit_messages(command))'''
+new = '''    return _six_patterns(command, words=command)'''
+
+[[mutation]]
+name = "명령 앞의 셸 예약어를 지나지 않는다"
+tests = ["tests/tools/test_rerun_checks.py", "-k", "메시지_안의_gh는"]
+expect = "red"
+expect_output = ['''where ('낱말-gh',) = command_patterns("{ git commit -m 'gh'; }")''']
+
+[[mutation.edit]]
+file = "tools/rerun_checks.py"
+old = '''        words[index] in _RESERVED_WORDS or _ASSIGNMENT.match(words[index])'''
+new = '''        _ASSIGNMENT.match(words[index])'''
+
+[[mutation]]
+name = "명령 치환이 든 메시지 값도 뗀다"
+tests = ["tests/tools/test_rerun_checks.py", "-k", "명령이_되는_gh는"]
+expect = "red"
+expect_output = ['''where () = command_patterns('git commit -m "$(gh api user)"')''']
+
+[[mutation.edit]]
+file = "tools/rerun_checks.py"
+old = '''                if flag == "m" and _inert(value):'''
+new = '''                if flag == "m":'''
+
+[[mutation]]
+name = "-- 뒤의 경로도 메시지 옵션으로 읽는다"
+tests = ["tests/tools/test_rerun_checks.py", "-k", "명령이_되는_gh는"]
+expect = "red"
+expect_output = ["where () = command_patterns('git commit -- -m gh')"]
+
+[[mutation.edit]]
+file = "tools/rerun_checks.py"
+old = '''        if word == "--":'''
+new = '''        if False:'''
+
+[[mutation]]
+name = "표준 입력으로 받는 커밋 메시지의 heredoc 본문을 떼지 않는다"
+tests = ["tests/tools/test_rerun_checks.py", "-k", "메시지_안의_gh는"]
+expect = "red"
+expect_output = ['''where ('낱말-gh',) = command_patterns("git commit -F - <<'EOF'\nfix gh\nEOF")''']
+
+[[mutation.edit]]
+file = "tools/rerun_checks.py"
+old = '''            if message and _reads_message_stdin(prefix):'''
+new = '''            if False:'''
+
+[[mutation]]
+name = "메시지 옵션 뒤 $(cat heredoc 본문을 떼지 않는다"
+tests = ["tests/tools/test_rerun_checks.py", "-k", "메시지_안의_gh는"]
+expect = "red"
+expect_output = ['''where ('낱말-gh',) = command_patterns('git commit -m "$(cat <<''']
+
+[[mutation.edit]]
+file = "tools/rerun_checks.py"
+old = '''            place = _message_substitution(prefix) if message and cut is None else None'''
+new = '''            place = None'''
+
+[[mutation]]
+name = "따옴표 없는 구분자의 $(cat heredoc 본문은 치환이 없어도 떼지 않는다"
+tests = ["tests/tools/test_rerun_checks.py", "-k", "메시지_안의_gh는"]
+expect = "red"
+expect_output = ['''where ('낱말-gh',) = command_patterns('git commit -m "$(cat <<EOF\nfix gh\nEOF\n)"')''']
+
+[[mutation.edit]]
+file = "tools/rerun_checks.py"
+old = '''            place = _message_substitution(prefix) if message and cut is None else None'''
+new = '''            place = _message_substitution(prefix) if closed and quoted and cut is None else None'''
+
+[[mutation]]
+name = "경로를 조각 경계 없이 견준다"
+tests = ["tests/tools/test_rerun_checks.py", "-k", "조각_경계로_견준다"]
+expect = "red"
+expect_output = ["assert ('주-체크아웃',) == ()", "[C:/project/agent-rerun/x-want6]"]
+
+[[mutation.edit]]
+file = "tools/rerun_checks.py"
+old = '''            if rest and rest[0] not in BOUNDARY:'''
+new = '''            if False:'''
+
+[[mutation]]
+name = "자기 회차 폴더도 다른 회차로 센다"
+tests = ["tests/tools/test_rerun_checks.py", "-k", "조각_경계로_견준다"]
+expect = "red"
+expect_output = ["assert ('다른-회차',) == ()", "[D:/rerun/rerun-x-03-a-1-t1/clone/x.py-want19]"]
+
+[[mutation.edit]]
+file = "tools/rerun_checks.py"
+old = '''        return _segment(rest) != watched.round_name'''
+new = '''        return True'''
+
+[[mutation]]
+name = "자기 세션 기록 폴더도 설정 폴더로 센다"
+tests = ["tests/tools/test_rerun_checks.py", "-k", "조각_경계로_견준다"]
+expect = "red"
+expect_output = ["assert ('설정-폴더',) == ()", "[D:/cfg/projects/own-slug/memory/MEMORY.md-want25]"]
+
+[[mutation.edit]]
+file = "tools/rerun_checks.py"
+old = '''        return first != _PROJECTS or _segment(rest[1 + len(first) :]) not in own_slugs'''
+new = '''        return True'''
+
+[[mutation]]
+name = "링크를 푼 꼴을 보지 않는다"
+tests = ["tests/tools/test_rerun_checks.py", "-k", "링크를_푼_꼴도"]
+expect = "red"
+expect_output = ["assert () == ('주-체크아웃',)", "FAILED tests/tools/test_rerun_checks.py::test_링크를_푼_꼴도_찾는다"]
+
+[[mutation.edit]]
+file = "tools/rerun_checks.py"
+old = '''    return os.path.abspath(path), _plain(os.path.realpath(path))'''
+new = '''    return os.path.abspath(path), os.path.abspath(path)'''
+
+[[mutation]]
+name = "드라이브 경로의 Git Bash 꼴을 보지 않는다"
+tests = ["tests/tools/test_rerun_checks.py", "-k", "조각_경계로_견준다"]
+expect = "red"
+expect_output = ["assert () == ('주-체크아웃',)", "[/c/project/agent/x-want2]"]
+
+[[mutation.edit]]
+file = "tools/rerun_checks.py"
+old = '''            found.append(f"/{drive.group(1)}{folded[2:]}")'''
+new = '''            pass'''
+
+[[mutation]]
+name = "~/.claude 를 대신하는 이름을 보지 않는다"
+tests = ["tests/tools/test_rerun_checks.py", "-k", "조각_경계로_견준다"]
+expect = "red"
+expect_output = ["assert () == ('사용자-claude',)", "[cat ~/.claude/projects/x.jsonl-want10]"]
+
+[[mutation.edit]]
+file = "tools/rerun_checks.py"
+old = '''                found.extend(f"{alias}{form[len(home) :]}" for alias in HOME_ALIASES)'''
+new = '''                pass'''
+
+[[mutation]]
+name = "홈 아래의 설정 폴더를 홈을 대신하는 이름으로 적은 꼴을 보지 않는다"
+tests = ["tests/tools/test_rerun_checks.py", "-k", "홈_아래의_찾는_경로는"]
+expect = "red"
+expect_output = ["assert () == ('설정-폴더',)", "[ls ~/.claude-rerun/projects-want0]"]
+
+[[mutation.edit]]
+file = "tools/rerun_checks.py"
+old = '''        config=forms((*config, *CONFIG_ALIASES)),'''
+new = '''        config=head_forms((*config, *CONFIG_ALIASES)),'''
+
+[[mutation]]
+name = "홈 아래의 뿌리를 홈을 대신하는 이름으로 적은 꼴을 보지 않는다"
+tests = ["tests/tools/test_rerun_checks.py", "-k", "홈_아래의_찾는_경로는"]
+expect = "red"
+expect_output = ["assert () == ('다른-회차',)", "-want3]"]
+
+[[mutation.edit]]
+file = "tools/rerun_checks.py"
+old = '''        root=forms(root),'''
+new = '''        root=head_forms(root),'''
+
+[[mutation]]
+name = "경로 뒤의 중괄호를 조각 경계로 보지 않는다"
+tests = ["tests/tools/test_rerun_checks.py", "-k", "조각_경계로_견준다"]
+expect = "red"
+expect_output = ["assert () == ('사용자-claude',)", "[cat ~/.claude{,.bak}/settings.json-want16]"]
+
+[[mutation.edit]]
+file = "tools/rerun_checks.py"
+old = '''BOUNDARY = frozenset("/'\"` \t\r\n\f\v;|&<>(),:*?{}")'''
+new = '''BOUNDARY = frozenset("/'\"` \t\r\n\f\v;|&<>(),:*?")'''
+
+[[mutation]]
+name = "경로 칸의 상대 경로를 클론에서 풀지 않는다"
+tests = ["tests/tools/test_rerun_checks.py", "-k", "경로_칸의_상대_경로는"]
+expect = "red"
+expect_output = ["Right contains one more item: Hit(pattern='다른-회차', tool='Read')"]
+
+[[mutation.edit]]
+file = "tools/rerun_checks.py"
+old = '''            found.extend(path_patterns(_resolved(text, clone), watched, own_slugs=own_slugs))'''
+new = '''            pass'''
+
+[[mutation]]
+name = "글 칸에서도 경로를 찾는다"
+tests = ["tests/tools/test_rerun_checks.py", "-k", "경로_값을_보고_글_칸은"]
+expect = "red"
+expect_output = ["Left contains 4 more items, first extra item: Hit(pattern='주-체크아웃', tool='Grep')"]
+
+[[mutation.edit]]
+file = "tools/rerun_checks.py"
+old = '''    skip = FREE_TEXT_KEYS | _FREE_TEXT_BY_TOOL.get(name, frozenset())'''
+new = '''    skip = frozenset[str]()'''
+
+[[mutation]]
+name = "md 에 쓴 내용도 본다"
+tests = ["tests/tools/test_rerun_checks.py", "-k", "쓰기_내용은_md도"]
+expect = "red"
+expect_output = [
+    "Left contains one more item: Hit(pattern='github-주소', tool='Write')",
+    "[Write-docs/journal/x.md-False]",
+]
+
+[[mutation.edit]]
+file = "tools/rerun_checks.py"
+old = '''    if path.endswith(".md"):'''
+new = '''    if False:'''
+
+[[mutation]]
+name = "tests 에 쓴 내용도 본다"
+tests = ["tests/tools/test_rerun_checks.py", "-k", "쓰기_내용은_md도"]
+expect = "red"
+expect_output = [
+    "Left contains one more item: Hit(pattern='github-주소', tool='Write')",
+    "[Write-tests/tools/test_x.py-False]",
+]
+
+[[mutation.edit]]
+file = "tools/rerun_checks.py"
+old = '''    return relative != "tests" and not relative.startswith("tests/")'''
+new = '''    return True'''
+
+[[mutation]]
+name = "쓰기 대상의 Git Bash 꼴을 클론 밖으로 본다"
+tests = ["tests/tools/test_rerun_checks.py", "-k", "쓰기_내용은_md도"]
+expect = "red"
+expect_output = [
+    "Left contains one more item: Hit(pattern='github-주소', tool='Write')",
+    "[Write-{bash_clone}/tests/x.py-False]",
+]
+
+[[mutation.edit]]
+file = "tools/rerun_checks.py"
+old = '''    for base in head_forms((clone,)):'''
+new = '''    for base in (posixpath.normpath(_fold(clone)),):'''
+
+[[mutation]]
+name = "Monitor 의 웹소켓 입력을 보지 않는다"
+tests = ["tests/tools/test_rerun_checks.py", "-k", "Monitor의_웹소켓"]
+expect = "red"
+expect_output = ["Right contains 6 more items, first extra item: Hit(pattern='github-주소', tool='Monitor')"]
+
+[[mutation.edit]]
+file = "tools/rerun_checks.py"
+old = '''    if name == MONITOR and SOCKET_KEY in given:'''
+new = '''    if False:'''
+
+[[mutation]]
+name = "거부된 호출도 오염으로 본다"
+tests = ["tests/tools/test_rerun_checks.py", "-k", "거부"]
+expect = "red"
+expect_output = ["At index 0 diff: Hit(pattern='낱말-gh', tool='Bash') != Hit(pattern='github-주소', tool='Bash')"]
+
+[[mutation.edit]]
+file = "tools/rerun_checks.py"
+old = '''        uses = [u for u in tool_uses(events) if u.use_id is None or u.use_id not in denied]'''
+new = '''        uses = tool_uses(events)'''
+
+[[mutation]]
+name = "거부 수를 세지 않는다"
+tests = ["tests/tools/test_rerun_checks.py", "-k", "거부된_호출은_빼고"]
+expect = "red"
+expect_output = ["where 0 = Findings(denied_calls=0"]
+
+[[mutation.edit]]
+file = "tools/rerun_checks.py"
+old = '''            denied_calls=len(self._denied),'''
+new = '''            denied_calls=0,'''
+
+[[mutation]]
+name = "플러그인 접두가 붙은 Skill 이름을 알아보지 못한다"
+tests = ["tests/tools/test_rerun_checks.py", "-k", "Skill_이름은"]
+expect = "red"
+expect_output = ["[.claude/worktrees/x:open-session-True]"]
+
+[[mutation.edit]]
+file = "tools/rerun_checks.py"
+old = '''    return value.strip().removeprefix("/").rpartition(":")[2].casefold()'''
+new = '''    return value.strip().removeprefix("/").casefold()'''
+
+[[mutation]]
+name = "기록에 모르는 도구 이름도 옮긴다"
+tests = ["tests/tools/test_rerun_checks.py", "-k", "도구_이름은_init_목록이나"]
+expect = "red"
+expect_output = [
+    "At index 0 diff: Hit(pattern='주-체크아웃', tool='mcp__x__read') != Hit(pattern='주-체크아웃', tool='unknown')",
+]
+
+[[mutation.edit]]
+file = "tools/rerun_checks.py"
+old = '''                use.name if use.name in known and _TOOL_FORM.fullmatch(use.name) else UNKNOWN_TOOL'''
+new = '''                use.name'''
+
+[[mutation]]
+name = "풀리는 시각 하나를 못 읽어도 아는 것의 최댓값을 적는다"
+tests = ["tests/tools/test_rerun_checks.py", "-k", "한도_표지는"]
+expect = "red"
+expect_output = ["resets_at: 100 != None", "[events11-want11]"]
+
+[[mutation.edit]]
+file = "tools/rerun_checks.py"
+old = '''        return Limit(max(known) if len(known) == len(resets) else None)'''
+new = '''        return Limit(max(known) if known else None)'''
+
+[[mutation]]
+name = "bool 을 풀리는 시각으로 읽는다"
+tests = ["tests/tools/test_rerun_checks.py", "-k", "한도_표지는"]
+expect = "red"
+expect_output = ["resets_at: 1 != None", "[events5-want5]"]
+
+[[mutation.edit]]
+file = "tools/rerun_checks.py"
+old = '''    if isinstance(value, bool) or not isinstance(value, int | float):'''
+new = '''    if not isinstance(value, int | float):'''
+
+[[mutation]]
+name = "한도를 설정보다 먼저 본다"
+tests = ["tests/tools/test_rerun_checks.py", "-k", "여럿이_걸리면"]
+expect = "red"
+expect_output = ["reason: '한도' != '설정'"]
+
+[[mutation.edit]]
+file = "tools/rerun_checks.py"
+old = '''        if settings:
+            return _SETTINGS_END'''
+new = '''        if limit_of(events) is not None:
+            return End(END_NOT_MEASURED, REASON_LIMIT, None)
+        if settings:
+            return _SETTINGS_END'''
+
+[[mutation]]
+name = "오염을 모델보다 먼저 본다"
+tests = ["tests/tools/test_rerun_checks.py", "-k", "여럿이_걸리면"]
+expect = "red"
+expect_output = ["reason: '오염' != '모델'"]
+
+[[mutation.edit]]
+file = "tools/rerun_checks.py"
+old = '''        if self._mismatch:
+            return End(END_NOT_MEASURED, REASON_MODEL, None)'''
+new = '''        if self._hits:
+            return End(END_NOT_MEASURED, REASON_CONTAMINATION, None)
+        if self._mismatch:
+            return End(END_NOT_MEASURED, REASON_MODEL, None)'''
+
+[[mutation]]
+name = "사용률의 첫 값을 뒤의 값으로 덮는다"
+tests = ["tests/tools/test_rerun_checks.py", "-k", "첫과_끝의_사용률을"]
+expect = "red"
+expect_output = [
+    "At index 0 diff: Window(window='five_hour', utilization=0.3) != Window(window='five_hour', utilization=0.1)",
+]
+
+[[mutation.edit]]
+file = "tools/rerun_checks.py"
+old = '''                self._start.setdefault(window.window, window.utilization)'''
+new = '''                self._start[window.window] = window.utilization'''

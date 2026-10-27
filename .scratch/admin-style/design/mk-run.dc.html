@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>실행 하나 · B</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/agent-os/styles.css">
+<link rel="stylesheet" href="ds/agent-os/fonts/fonts.css">
+<link rel="stylesheet" href="ds/agent-os/_ds_bundle.css">
+<script src="ds/agent-os/_ds_bundle.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0}
+a{color:var(--accent)}a:hover{color:var(--text)}
+</style>
+</helmet>
+<div data-theme="nokcheong" data-mode="light" style="min-height: 100vh; display: flex; background: var(--bg); color: var(--text); font-family: var(--sans);">
+<nav aria-label="관리 화면" style="width: var(--spacing-nav); flex-shrink: 0; box-sizing: border-box; padding: var(--spacing-4) var(--spacing-3); display: flex; flex-direction: column; gap: var(--spacing-1); background: var(--bg-raised); border-right: 1px solid var(--border);">
+<div class="font-semibold text-body" style="height: var(--spacing-nav-item); display: flex; align-items: center; padding: 0 var(--spacing-3); margin-bottom: var(--spacing-3);">Agent OS</div>
+<a href="#" class="flex items-center gap-2 text-body" style="height: var(--spacing-nav-item); padding: 0 var(--spacing-3); border-radius: var(--radius-m); color: var(--text-muted); text-decoration: none;"><x-import component-from-global-scope="AgentOsUi.Icon" name="plug" size="16"></x-import>플러그인</a>
+<a href="#" aria-current="page" class="flex items-center gap-2 text-body font-medium" style="height: var(--spacing-nav-item); padding: 0 var(--spacing-3); border-radius: var(--radius-m); background: var(--bg-selected); color: var(--text); text-decoration: none;"><x-import component-from-global-scope="AgentOsUi.Icon" name="list" size="16"></x-import>실행</a>
+<a href="#" class="flex items-center gap-2 text-body" style="height: var(--spacing-nav-item); padding: 0 var(--spacing-3); border-radius: var(--radius-m); color: var(--text-muted); text-decoration: none;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path vector-effect="non-scaling-stroke" d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"></path><circle vector-effect="non-scaling-stroke" cx="12" cy="12" r="3"></circle></svg>설정</a>
+</nav>
+<main style="flex: 1; min-width: 0; box-sizing: border-box; padding: var(--spacing-8);">
+<div style="display: flex; flex-direction: column; gap: var(--spacing-6);">
+<a href="#" class="text-body" style="align-self: flex-start;">실행 목록</a>
+<header class="flex items-start justify-between gap-4">
+<div class="flex flex-col gap-2 min-w-0">
+<h1 class="font-mono" style="margin: 0; font-size: var(--text-title); line-height: var(--text-title--line-height); font-weight: var(--text-title--font-weight); overflow-wrap: anywhere;">7f3a2c91-4b8e-4d1a-9c2f-0e6b5a8d3f12</h1>
+<div class="flex items-center gap-3 text-body text-text-muted"><x-import component-from-global-scope="AgentOsUi.StatusBadge" status="paused"></x-import><span>에이전트 support-bot</span><span>주체 operator</span></div>
+</div>
+<x-import component-from-global-scope="AgentOsUi.Button" variant="secondary">새로 고침</x-import>
+</header>
+
+<div style="display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: var(--spacing-6); align-items: start;">
+<div class="flex flex-col gap-6 min-w-0">
+<section class="flex flex-col gap-3">
+<h2 class="text-body font-semibold" style="margin: 0;">이벤트 <span class="font-regular text-text-muted">3</span></h2>
+<ol class="flex flex-col gap-3" style="list-style: none; margin: 0; padding: 0;">
+<li>
+<x-import component-from-global-scope="AgentOsUi.Card" padding="3">
+<div class="flex flex-col gap-3">
+<div class="flex items-center justify-between gap-3"><h3 class="font-mono text-mono font-medium" style="margin: 0;">run_started</h3><span class="font-mono text-mono text-text-muted">2026-10-12T14:03:22.418Z</span></div>
+<dl style="display: grid; grid-template-columns: 168px 1fr; gap: var(--spacing-2) var(--spacing-4); margin: 0;">
+<dt class="text-small text-text-muted">시각 <code class="font-mono">ts</code></dt><dd class="font-mono text-mono" style="margin: 0;">2026-10-12T14:03:22.418Z</dd>
+<dt class="text-small text-text-muted">에이전트 <code class="font-mono">agent</code></dt><dd class="text-table" style="margin: 0;">support-bot</dd>
+<dt class="text-small text-text-muted">요청 <code class="font-mono">request</code></dt><dd class="text-table" style="margin: 0; white-space: pre-wrap;">주문 A-1042를 환불해 줘. 상품이 파손돼 도착했다.</dd>
+<dt class="text-small text-text-muted">주체 <code class="font-mono">principal</code></dt><dd class="text-table" style="margin: 0;">operator</dd>
+<dt class="text-small text-text-muted">앞 실행 <code class="font-mono">previous_run</code></dt><dd class="font-mono text-mono" style="margin: 0;">null</dd>
+<dt class="text-small text-text-muted">바로가기 <code class="font-mono">shortcuts</code></dt><dd class="font-mono text-mono" style="margin: 0;">null</dd>
+</dl>
+</div>
+</x-import>
+</li>
+<li>
+<x-import component-from-global-scope="AgentOsUi.Card" padding="3">
+<div class="flex flex-col gap-3">
+<div class="flex items-center justify-between gap-3"><h3 class="font-mono text-mono font-medium" style="margin: 0;">llm_called</h3><span class="font-mono text-mono text-text-muted">2026-10-12T14:03:24.902Z</span></div>
+<dl style="display: grid; grid-template-columns: 168px 1fr; gap: var(--spacing-2) var(--spacing-4); margin: 0;">
+<dt class="text-small text-text-muted">시각 <code class="font-mono">ts</code></dt><dd class="font-mono text-mono" style="margin: 0;">2026-10-12T14:03:24.902Z</dd>
+<dt class="text-small text-text-muted">모델 <code class="font-mono">model</code></dt><dd class="text-table" style="margin: 0;">claude-sonnet-5-5</dd>
+<dt class="text-small text-text-muted">입력 토큰 수 <code class="font-mono">input_tokens</code></dt><dd class="font-mono text-mono" style="margin: 0;">812</dd>
+<dt class="text-small text-text-muted">응답 토큰 수 <code class="font-mono">output_tokens</code></dt><dd class="font-mono text-mono" style="margin: 0;">64</dd>
+<dt class="text-small text-text-muted">프롬프트 <code class="font-mono">prompt</code></dt><dd class="text-table" style="margin: 0; white-space: pre-wrap;">주문 A-1042를 환불해 줘. 상품이 파손돼 도착했다.</dd>
+<dt class="text-small text-text-muted">응답 텍스트 <code class="font-mono">text</code></dt><dd class="font-mono text-mono text-text-muted" style="margin: 0;">""</dd>
+<dt class="text-small text-text-muted">도구 호출 <code class="font-mono">tool_calls</code></dt><dd class="font-mono text-mono" style="margin: 0; white-space: pre-wrap; overflow-wrap: anywhere;">[{"id": "toolu_01", "name": "payments.refund", "args": {"order_id": "A-1042", "amount": 32000, "reason": "damaged"}}]</dd>
+</dl>
+</div>
+</x-import>
+</li>
+<li>
+<x-import component-from-global-scope="AgentOsUi.Card" padding="3">
+<div class="flex flex-col gap-3">
+<div class="flex items-center justify-between gap-3"><h3 class="font-mono text-mono font-medium" style="margin: 0;">run_paused</h3><span class="font-mono text-mono text-text-muted">2026-10-12T14:03:25.117Z</span></div>
+<dl style="display: grid; grid-template-columns: 168px 1fr; gap: var(--spacing-2) var(--spacing-4); margin: 0;">
+<dt class="text-small text-text-muted">시각 <code class="font-mono">ts</code></dt><dd class="font-mono text-mono" style="margin: 0;">2026-10-12T14:03:25.117Z</dd>
+<dt class="text-small text-text-muted">도구 <code class="font-mono">tool</code></dt><dd class="font-mono text-mono font-medium" style="margin: 0;">payments.refund</dd>
+<dt class="text-small text-text-muted">인자 <code class="font-mono">args</code></dt><dd class="font-mono text-mono" style="margin: 0; white-space: pre-wrap; overflow-wrap: anywhere;">{"order_id": "A-1042", "amount": 32000, "reason": "damaged"}</dd>
+</dl>
+</div>
+</x-import>
+</li>
+</ol>
+</section>
+
+<section class="flex flex-col gap-2">
+<h2 class="text-body font-semibold" style="margin: 0;">재개 스트림</h2>
+<p class="flex items-center gap-2 text-body text-text-muted" style="margin: 0; min-height: var(--row-h); padding: 0 var(--spacing-3); border: 1px dashed var(--border-control); border-radius: var(--radius-m);"><x-import component-from-global-scope="AgentOsUi.Icon" name="circle-minus" size="16"></x-import>결정을 내면 재개한 이벤트가 여기에 차례로 붙는다.</p>
+</section>
+</div>
+
+<aside aria-label="결정" style="position: sticky; top: var(--spacing-8);">
+<x-import component-from-global-scope="AgentOsUi.Card" as="section" padding="4">
+<div class="flex flex-col gap-4">
+<div class="flex flex-col gap-1">
+<h2 class="text-body font-semibold" style="margin: 0;">결정</h2>
+<p class="text-body text-text-muted" style="margin: 0;">이 실행은 도구 호출 하나의 승인을 기다리며 일시정지했다. 결정은 이 호출 하나에 대한 답이다.</p>
+</div>
+<div class="flex flex-col gap-2">
+<span class="text-small text-text-muted">도구 <code class="font-mono">tool</code></span>
+<span class="font-mono text-mono font-medium">payments.refund</span>
+</div>
+<div class="flex flex-col gap-2">
+<span class="text-small text-text-muted">인자 <code class="font-mono">args</code></span>
+<pre class="font-mono text-mono" style="margin: 0; padding: var(--spacing-3); background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-m); line-height: var(--table-lh); white-space: pre-wrap; overflow-wrap: anywhere;">{
+  "order_id": "A-1042",
+  "amount": 32000,
+  "reason": "damaged"
+}</pre>
+</div>
+<p class="text-small text-text-muted" style="margin: 0;">결정의 승인자는 이 화면이 고르지 않는다. <code class="font-mono">agent-os serve</code>를 띄운 OS 사용자로 기록된다.</p>
+<x-import component-from-global-scope="AgentOsUi.TextField" variant="multi" rows="3" label="거부 사유" help="거부하려면 적는다. 비어 있으면 거부를 보낼 수 없다."></x-import>
+<div class="flex justify-end gap-2">
+<x-import component-from-global-scope="AgentOsUi.Button" variant="secondary" disabled="{{yes}}">거부</x-import>
+<x-import component-from-global-scope="AgentOsUi.Button" variant="primary">승인</x-import>
+</div>
+</div>
+</x-import>
+</aside>
+</div>
+</div>
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":1500}}'>
+class Component extends DCLogic {
+renderVals() {
+return { yes: true, no: false };
+}
+}
+</script>
+</body>
+</html>

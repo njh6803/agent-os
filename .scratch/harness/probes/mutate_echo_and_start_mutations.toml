@@ -1,0 +1,133 @@
+# tools/mutate.py 의 표지 메아리 확인(대기열 417)과 실행 표지의 시작 시각(대기열 449), 편집 훅
+# tools/hook_edit_during_mutate.py 의 시작 시각 판정을 하나씩 빼는 변이(harness 티켓 011).
+#   PYTHONUTF8=1 uv run python tools/mutate.py .scratch/harness/probes/mutate_echo_and_start_mutations.toml
+# 이 도구 자신을 고치는 변이라 커밋한 뒤 다른 워크트리에서 그 워크트리의 도구로 돌린다(독스트링의 제자리가
+# 아닌 실행). 표지는 이 표가 더한 규칙대로 시험 원문에 없는 받은 값(도구의 출력 줄, 단언의 왼쪽 값)이다.
+# 시작 시각을 읽는 리눅스 갈래(`/proc/<pid>/stat`)는 이 PC(윈도)에서 돌지 않아 변이를 두지 않는다. CI 의
+# 리눅스가 `test_이_프로세스의_시작_시각은_읽힌다` 로 그 갈래를 돈다.
+
+[[mutation]]
+name = "고른 원문 확인이 메아리를 보지 않는다"
+tests = ["tests/tools/test_mutate.py::test_고른_원문_확인은_시험_원문에_글자_그대로_있는_표지를_알린다"]
+expect = "red"
+expect_output = ["원문 확인: 변이 1 모두 원문이 한 번씩 있다"]
+[[mutation.edit]]
+file = "tools/mutate.py"
+old = '''        return check_picked(selected, root=root, out=out)'''
+new = '''        return check(selected, root=root, out=out)'''
+
+[[mutation]]
+name = "초록을 기대한 변이의 표지도 맞댄다"
+tests = ["tests/tools/test_mutate.py::test_초록을_기대한_변이의_표지는_보지_않는다"]
+expect = "red"
+expect_output = ["'test_x' 가 tests/test_x.py 의 시험"]
+[[mutation.edit]]
+file = "tools/mutate.py"
+old = '''_ECHO_EXPECTS = frozenset({"red", "unhandled"})'''
+new = '''_ECHO_EXPECTS = frozenset({"red", "unhandled", "green"})'''
+
+[[mutation]]
+name = "시험 인자를 러너의 자리 없이 푼다"
+tests = ["tests/tools/test_mutate.py::test_러너의_자리를_기준으로_시험_파일을_찾는다"]
+expect = "red"
+expect_output = ["원문 확인: 변이 1 모두 원문이 한 번씩 있다"]
+[[mutation.edit]]
+file = "tools/mutate.py"
+old = '''    cwd = Path(runners[mutation.runner].cwd)
+    return ['''
+new = '''    cwd = Path(".")
+    return ['''
+
+[[mutation]]
+name = "색인 확인이 부모 판과 같은 변이도 맞댄다"
+tests = ["tests/tools/test_mutate.py::test_색인_확인은_표를_고친_커밋에서도_부모_판과_같은_변이의_표지는_소급하지_않는다"]
+expect = "red"
+expect_output = ["'test_x' 가 tests/test_x.py 의 시험"]
+[[mutation.edit]]
+file = "tools/mutate.py"
+old = '''            names &= set(changed_names(load_spec(old.decode("utf-8")), spec))'''
+new = '''            names &= names'''
+
+[[mutation]]
+name = "색인 확인이 시험 파일을 색인에서 꺼내지 않는다"
+tests = ["tests/tools/test_mutate.py::test_색인_확인은_시험_파일을_커밋에_들_색인에서_읽는다"]
+expect = "red"
+expect_output = ["AssertionError: 색인 확인: 커밋에 든 표 1, 고친 파일을 가리키는 다른 표의 변이 0, 문제 0"]
+[[mutation.edit]]
+file = "tools/mutate.py"
+old = '''        if (name := relative(arg)) is not None'''
+new = '''        if (name := relative(arg)) is None'''
+
+[[mutation]]
+name = "색인 확인이 메아리를 보지 않는다"
+tests = ["tests/tools/test_mutate.py::test_색인_확인은_커밋에_든_새_표의_메아리_표지를_알린다"]
+expect = "red"
+expect_output = ["AssertionError: 색인 확인: 커밋에 든 표 1, 고친 파일을 가리키는 다른 표의 변이 0, 문제 0"]
+[[mutation.edit]]
+file = "tools/mutate.py"
+old = '''            found += _echo_problems(root, fresh, index)'''
+new = '''            found += []'''
+
+[[mutation]]
+name = "실행 표지에 시작 시각을 적지 않는다"
+tests = ["tests/tools/test_mutate.py::test_도는_동안_그_체크아웃의_git_디렉터리에_pid_와_표를_든_표지를_두고_끝나면_지운다"]
+expect = "red"
+expect_output = ["mutations.toml'} != {'pid':"]
+[[mutation.edit]]
+file = "tools/mutate.py"
+old = '''            content["started"] = started'''
+new = '''            pass'''
+
+[[mutation]]
+name = "도구가 끝난 프로세스의 시작 시각을 낸다"
+tests = ["tests/tools/test_hook_edit_during_mutate.py::test_끝난_프로세스의_시작_시각은_핸들이_남아도_읽히지_않는다"]
+expect = "red"
+expect_output = ["시작_시각은_핸들이_남아도_읽히지_않는다[도구]"]
+[[mutation.edit]]
+file = "tools/mutate.py"
+old = '''            if code.value != _STILL_ACTIVE:
+                return None'''
+new = '''            if code.value != _STILL_ACTIVE:
+                pass'''
+
+[[mutation]]
+name = "훅이 끝난 프로세스의 시작 시각을 낸다"
+tests = ["tests/tools/test_hook_edit_during_mutate.py::test_끝난_프로세스의_시작_시각은_핸들이_남아도_읽히지_않는다"]
+expect = "red"
+expect_output = ["시작_시각은_핸들이_남아도_읽히지_않는다[훅]"]
+[[mutation.edit]]
+file = "tools/hook_edit_during_mutate.py"
+old = '''            if code.value != _STILL_ACTIVE:
+                return None'''
+new = '''            if code.value != _STILL_ACTIVE:
+                pass'''
+
+[[mutation]]
+name = "훅이 시작 시각을 보지 않는다"
+tests = ["tests/tools/test_hook_edit_during_mutate.py::test_시작_시각까지_맞는_표지만_센다"]
+expect = "red"
+expect_output = ["table='t')] == []"]
+[[mutation.edit]]
+file = "tools/hook_edit_during_mutate.py"
+old = '''    return marker.started is None or process_started(marker.pid) == marker.started'''
+new = '''    return True'''
+
+[[mutation]]
+name = "훅이 시작 시각을 읽지 못하면 산 것으로 본다"
+tests = ["tests/tools/test_hook_edit_during_mutate.py::test_시작_시각을_읽지_못하면_시작_시각을_든_표지는_세지_않는다"]
+expect = "red"
+expect_output = ["table='t')] == []"]
+[[mutation.edit]]
+file = "tools/hook_edit_during_mutate.py"
+old = '''    return marker.started is None or process_started(marker.pid) == marker.started'''
+new = '''    return marker.started is None or process_started(marker.pid) in (marker.started, None)'''
+
+[[mutation]]
+name = "훅이 정수가 아닌 시작 시각을 받는다"
+tests = ["tests/tools/test_hook_edit_during_mutate.py::test_시작_시각이_정수가_아닌_표지는_세지_않는다"]
+expect = "red"
+expect_output = ["table='t')] == []"]
+[[mutation.edit]]
+file = "tools/hook_edit_during_mutate.py"
+old = '''    return _Marker(pid, table, started) if _is_int(started) else None'''
+new = '''    return _Marker(pid, table, None)'''

@@ -6,7 +6,9 @@
  * - 시작 래퍼(`start.ts`)의 바인딩 호스트. `next dev`·`next start` 는 인자 없이 `0.0.0.0` 과 `[::]` 에 선다.
  * - 설정 파일(`next.config.ts`)의 상류. `dev`·`build`·`start` 가 모두 그 파일을 읽어 한 자리에서 막힌다.
  *
- * 규칙은 `serve` 와 같다(`src/agent_os/main.py` 의 `LOOPBACK_HOSTS`). 허용 목록은 둘이고 문자열 그대로 비교한다.
+ * 규칙은 `serve` 와 같다(`src/agent_os/main.py` 의 `LOOPBACK_HOSTS`). 위젯의 시작 래퍼(`web/apps/widget/tools/start.ts`)
+ * 도 같은 목록을 따로 든다. 앱 사이 import 는 층 경계가 막아, 목록을 바꾸면 셋을 함께 고친다(web-widget 티켓 03).
+ * 허용 목록은 둘이고 문자열 그대로 비교한다.
  * `localhost` 는 `::1` 로도 풀릴 수 있어 루프백이라는 보장이 없다. 상류는 URL 파서가 먼저 정규화한 호스트를
  * 비교한다(`127.1` 은 `127.0.0.1` 이 되고, IPv6 는 대괄호를 벗긴다).
  *

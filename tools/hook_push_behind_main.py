@@ -105,7 +105,7 @@ def checks_push(command: str) -> bool:
 def asks_help(words: list[str]) -> bool:
     """push 뒤의 낱말에 도움말(`-h`, 그것이 든 짧은 옵션 묶음, `--help`·`--help-all`)이 있는가.
 
-    git 은 이 옵션을 만나면 사용법을 내고 129 로 끝나 푸시하지 않는다. 하위 명령 바로 뒤의 `--help`
+    git 은 이 옵션을 만나면 사용법을 내고 푸시하지 않은 채 끝난다. 하위 명령 바로 뒤의 `--help`
     는 git 이 `git help push` 로 바꿔 돌린다. 값을 먹는 옵션의 값(`-o -h`, 묶음에서 `o` 뒤의 글자)과
     `--` 뒤는 옵션이 아니다. 여기까지는 tests/tools 의 실제 git 시험이 이 기계의 git 으로 잰다.
     낱말 머리의 `#` 부터는 셸이 버리는 주석이라 그 뒤를 읽지 않는다. 읽으면 `git push origin x #
