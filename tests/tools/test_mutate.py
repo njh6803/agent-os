@@ -180,7 +180,7 @@ _뒤가_다른_시험 = (
     b"def test_b():\n"
     b"    if V != '1':\n"
     b"        Path(__file__).with_name('b-ran').touch()\n"
-    b"        print('MARKER-B')\n"
+    b"        print('MARKER' + '-B')\n"  # 표지가 원문에 글자 그대로 있으면 메아리다(대기열 502)
     b"        time.sleep(60)\n"
     b"    assert V == '1'\n"
 )
@@ -3098,6 +3098,27 @@ def test_못_보는_것_시험_인자가_폴더면_그_안의_파일을_보지_�
     code, 출력 = _원문_확인(root, ["--check", 표, "1"])
 
     assert code == 0, 출력
+
+
+@pytest.mark.parametrize(
+    "고르기", [[], ["1"], ["--since", "HEAD~1"]], ids=["전체", "번호", "since"]
+)
+def test_변이를_돌리는_실행도_메아리에_걸리면_기준선_전에_끝낸다(
+    tmp_path: Path, 고르기: list[str]
+) -> None:
+    """변이를 돌리는 실행은 메아리를 보지 않아, 표지 열여덟이 시험 함수 이름인 채로 표 전부를 돌고
+    기대대로를 찍었다(대기열 502). 전체 실행은 옛 변이까지 본다. 다시 돌리면 지금 재는 것이다."""
+    root, 표 = _메아리_저장소(tmp_path, _메아리_표("== 'x = 2'"))
+    path = Path(표)
+    path.write_text(path.read_text("utf-8").replace("== 'x = 2'", "test_x"), "utf-8")
+    _git(root, "commit", "-qam", "메아리")
+    줄: list[str] = []
+
+    code = main([표, *고르기], root=root, runner=_부르면_안_되는_러너, out=줄.append)
+
+    출력 = "\n".join(줄)
+    assert code == 2, 출력
+    assert f"하나: expect_output 의 표지 'test_x' 가 tests/test_x.py 의 {_메아리}" in 출력
 
 
 def test_러너의_자리를_기준으로_시험_파일을_찾는다(tmp_path: Path) -> None:
