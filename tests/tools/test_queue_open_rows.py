@@ -638,7 +638,9 @@ def test_search를_실제로_불러_한글을_찍는다(tmp_path: Path) -> None:
 
 
 def test_이_저장소의_대기열에서_닫힌_행까지_찾는다() -> None:
-    """425는 이 옵션을 처방한 행이고 이 옵션을 더한 티켓이 닫았다. 행은 지우지 않으니 늘 있다."""
+    """실제 대기열의 모양(굵게·취소선 표지, 긴 칸)을 찾기가 읽는지 보는 스모크다. 닫힌 행 찾기
+    자체는 앞의 임시 파일 시험이 고정한다. 425는 이 옵션을 처방한 행이고 이 옵션을 더한 티켓이
+    닫았다. 행은 지우지 않으니 늘 있다."""
     hits = search(
         (ROOT / QUEUE).read_text(encoding="utf-8"), [re.compile("Omitted long matching line")]
     )

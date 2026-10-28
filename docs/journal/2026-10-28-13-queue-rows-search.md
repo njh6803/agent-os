@@ -282,3 +282,90 @@ PR이 바꾸지 않은 `read_ref`에서 리스트 인자로 `git show`에 가는
 깊은 괄호, 줄인 승인 칸의 회차)을 더하고 원문이 바뀐 하나(틀린 정규식)를 고쳐, `--check`가 쉰여덟 모두 원문이
 한 번씩이라고 냈고 `PYTHONUTF8=1 uv run python tools/mutate.py .scratch/harness/probes/queue_open_rows_mutations.toml 55
 56 57 58`이 넷 모두 기대대로 빨강이었다.
+
+커밋 `8f2e189a`(`chore: --search 가 re.error 밖의 정규식 오류도 2로 끝내게 한다 (harness 021)`). 커밋 전에
+`git branch --show-current`가 `chore/021-queue-rows-search`였고 `uv run python tools/sibling_overlap.py`가 번호 겹침
+없음이었다. pre-commit이 모두 지났고(pytest 435.6초), 인용 대조 경고 하나는 157행이 독스트링의 옛 판 문장을 기록으로
+인용한 것이라 두었다. 이 커밋에서 `hook_handoff`가 경계 `커밋 뒤`의 계기를 냈지만, 이 세션을 연 지시문의 "이어받을
+상태"가 `인계: 커밋 뒤`라 `next-session` "인계할 때" 1의 같은 경계에 들어 넘기지 않았다.
+
+푸시를 `hook_push_behind_main`이 막았다(origin/main보다 1커밋 뒤처짐). main에 #410(`1902f4fa`, harness 020)이 들어
+있었다. `git merge origin/main --no-edit`가 충돌 없이 `ee694d03`을 만들었고(겹친 파일은 프로브 README와 대기열로 자동
+합침), 합친 뒤 `uv run ruff check .`·`uv run ruff format --check .`이 초록, `uv run python tools/run_checks.py`가 종료 0으로
+열 검사 모두 `Passed`(pytest 715.9초, web-verify 760.3초), `sibling_overlap.py`가 번호 겹침 없음이었다. main의 #410은
+`tools/mutate.py`의 표지 메아리 검사라 `expect_output`을 쓰지 않는 이 변이 표에는 닿지 않는다(그 diff를 읽었다).
+푸시한 뒤 `/git-pr`로 PR [#412](https://github.com/njh6803/agent-os/pull/412)를 열었다. 본문 체크리스트에 PR 직전 리뷰
+둘의 결과와 남긴 지적 둘의 값을 적었다. `@coderabbitai review`는 아직 남기지 않았다.
+
+## 인계 (PR 연 뒤)
+
+세션 컨텍스트가 299,150 토큰으로 문턱 200,000을 넘은 채 PR을 연 경계(`PR 연 뒤`)에서 `hook_handoff`의 계기가 왔다.
+`next-session`의 "인계할 때" 1의 다섯에 들지 않았다. PR 생성은 성공했고, 요청 범위는 병합까지이며, 이 세션을 연
+지시문의 "이어받을 상태"는 `인계: 커밋 뒤`로 지금 경계와 다르고, 이 일지에 이 세션이 쓴 `인계 못함` 줄이 없고,
+`get_session`의 `self`에 `parentSessionId`가 없었다. 함께 온 `hook_pr_next_session`의 계기보다 인계 줄이 앞선다. 이
+세션의 지금 제목은 `chore/021-queue-rows-search`이고, 넘기기 전에 `chore/021-queue-rows-search (인계함)`으로 바꾼다.
+
+- 상태: `ee694d03`까지 푸시했고 PR #412가 열려 있다. 워크트리에는 이 일지의 고침(위 "커밋 `8f2e189a`" 문단부터 이
+  절까지)이 커밋하지 않은 채 있다. 앱의 PR 감시(`bind_pr`)는 걸지 않았다. 넘긴 세션이 깨어나지 않게 하려는 것이다.
+- 남은 단계: `@coderabbitai review`와 봇 회차(`next-session` 순서 1의 2), 반영, 리뷰 반영 뒤 변이 표 전체 실행(쉰여덟,
+  `PYTHONUTF8=1 uv run python tools/mutate.py .scratch/harness/probes/queue_open_rows_mutations.toml`), 회고, 워크트리에서
+  병합이다. 이 일지의 커밋하지 않은 고침은 봇 회차의 커밋에 싣는다.
+
+지시문:
+
+```
+다음 작업: 받는 세션이 이어 쓸 .scratch/harness/issues/021-queue-rows-search.md. 대기열 425: tools/queue_open_rows.py 에 낱말로 행을 찾아 번호·닫힘·머리·승인 칸을 한 줄씩 찍는 옵션을 더하고 retro 5단계가 그것을 가리킨다(PR 직전 리뷰 반영과 PR #412 열기까지 마쳤다)
+다음 단계: PR 반영·병합
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: 대기열 425를 티켓 .scratch/harness/issues/021-queue-rows-search.md로 쓰고 한다
+브랜치: chore/021-queue-rows-search
+모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
+읽을 것: docs/agents/issue-tracker.md, docs/constitution/operations.md 리뷰 파이프라인, 일지 docs/journal/2026-10-28-13-queue-rows-search.md
+이어받을 상태: 인계: PR 연 뒤. PR #412를 열었고 origin/main을 합친 ee694d03까지 푸시했다. next-session 순서 1의 2(봇 회차)부터 하고, 첫 @coderabbitai review 코멘트도 새 세션이 남긴다. 워크트리에 이 일지의 고침이 커밋하지 않은 채 있어 봇 회차의 커밋에 싣는다. 남은 단계는 봇 회차와 반영, 리뷰 반영 뒤 변이 표 전체 실행(쉰여덟), 회고, 워크트리에서 병합이다. docs/journal/2026-10-28-13-queue-rows-search.md
+확인할 선행 조건: 없음
+이번 요청 범위: PR과 병합까지
+```
+
+제목을 `chore/021-queue-rows-search (인계함)`으로 바꿨다. 멈출 백그라운드 작업은 없었다(커밋 둘, 변이, 검사 러너, 리뷰
+서브에이전트 둘과 보안 서브태스크가 모두 끝났다). `git worktree unlock C:/project/agent/.claude/worktrees/021-queue-rows-search`는
+`is not locked`로 끝나 넘어갔다.
+
+open-session을 부른다 2026-10-28T00:32:53Z
+
+## 이어 가기 (PR 연 뒤를 인계받은 세션)
+
+위 지시문으로 연 새 세션이 제목을 `chore/021-queue-rows-search`로 바꾸고 `git worktree list`에서 찾은 워크트리
+`021-queue-rows-search`에 `EnterWorktree(path)`로 들어갔다. PR 헤드와 로컬 HEAD는 모두 `ee694d03`이었다.
+
+> 사용자: "대기열 425를 티켓 .scratch/harness/issues/021-queue-rows-search.md로 쓰고 한다"
+
+## 봇 회차 1
+
+`@coderabbitai review`를 남기고 `uv run python tools/wait_ci.py 412`를 백그라운드로 띄웠다. 그 출력의 끝 줄이
+`끝: 모두 통과`였고 CodeRabbit 줄은 `NEUTRAL`이었다. `gh pr view 412 --json comments`로 보니 CodeRabbit의 코멘트
+둘(PR을 연 때의 요약 자리, 요청에 단 답)이 모두 한도 문구("Review limit reached", "Review rate limited")라 리뷰가
+없다. 이 PR의 보안·버그 축은 PR 직전 리뷰 둘(위 절, PR 체크리스트)이 대신한다.
+
+claude-review 첫 회차(헤드 `ee694d03`): Critical·Major 없음, Minor 셋, Nit 둘. 첫 회차라 지적마다 판단했다.
+
+- Minor, `main`이 인자 가르기와 갈래 고르기를 함께 하고 실패 분기마다 `stderr.write(USAGE); return 2`를 되풀이한다:
+  고쳤다. `CODING_STANDARDS.md` 15행이 "실패 분기마다 같은 출력·종료 코드를 되풀이하는 것"을 그 예로 들고, 이 PR이
+  그 되풀이를 셋에서 다섯으로 늘렸다. `tools/mutate.py`의 `_UsageError`·`_Args`·`_parse`를 선례로 따라, `_parse`가
+  틀린 인자에서 `_UsageError`를 던지고 `main`이 한 곳에서 메시지와 쓰임을 낸다. 변이 표에서 원문이 바뀐 셋("ref 를
+  주어도…", "rows 를 주어도…", "찾기를 주어도 기본 출력을 낸다")을 고치고, 새 배관을 지키는 "쓰임 오류의 메시지를
+  버린다"를 더했다.
+- Minor, 세기와 찾기를 한 모듈에 둔 것: 남긴다. 리뷰 자신이 지금은 한 파일이 맞다고 했고, 나누자는 조건(찾기
+  옵션이 는다)이 아직 오지 않았다.
+- Minor, `test_이_저장소의_대기열에서_닫힌_행까지_찾는다`가 저장소의 내용에 기댄다: 이름은 남기고 독스트링을 고쳤다.
+  `test_이_저장소의_…`는 저장소 상태를 재는 시험의 이름 관례이고(`.claude/rules/tests.md`), 독스트링에 실제
+  대기열의 모양을 읽는지 보는 스모크이며 닫힌 행 찾기는 앞의 임시 파일 시험이 고정한다고 적었다.
+- Nit, `_count`의 자리: 고쳤다. `_hit_line`과 `render_hits` 사이로 옮겼다.
+- Nit, retro 5단계 문단을 하위 항목으로 나누기: 남긴다. 지금 문단으로 카나리아 실험군 셋이 새 문장 셋을 모두
+  옮겼고(위 셀프 리뷰 절), 나누면 이 티켓이 바꾸지 않은 5단계의 나머지 문장까지 다시 짜고 카나리아를 다시 돌려야
+  한다.
+
+반영 뒤: `uv run pytest -q -p no:randomly tests/tools/test_queue_open_rows.py`가 57 통과(다른 세션의 `pytest -n 8`과
+겹쳐 237초). `PYTHONUTF8=1 uv run python tools/mutate.py .scratch/harness/probes/queue_open_rows_mutations.toml --check`가
+쉰아홉 모두 원문이 한 번씩이라고 냈고, 원문을 고친 셋과 더한 하나, `_parse`로 옮긴 판정을 지키는 일곱을 번호로 골라
+(`19 21 23 34 51 53 54 55 56 57 58`) 돌리니 `변이 11 모두 기대대로`였다. `uv run ruff check`가 고친 두 파일에서
+초록이었다.

@@ -395,6 +395,10 @@ def _hit_line(hit: Hit) -> str:
     )
 
 
+def _count(hits: list[Hit], state: HitState) -> int:
+    return sum(hit.state is state for hit in hits)
+
+
 def render_hits(hits: list[Hit]) -> str:
     """`--search` 의 출력. 맞은 행마다 한 줄이다."""
     if not hits:
@@ -411,10 +415,6 @@ def render_hits(hits: list[Hit]) -> str:
         " 같은 일로 보이는 행은 그 줄을 Read 로 연다(offset 에 줄, limit 에 1):"
     )
     return "\n".join([head, *(_hit_line(hit) for hit in hits)])
-
-
-def _count(hits: list[Hit], state: HitState) -> int:
-    return sum(hit.state is state for hit in hits)
 
 
 def read_ref(ref: str) -> str:
@@ -436,7 +436,23 @@ def read_ref(ref: str) -> str:
     return done.stdout
 
 
-def main(argv: list[str]) -> int:
+class _UsageError(Exception):
+    """인자를 잘못 줬다. 대기열을 읽기 전에 난다. 메시지(줄바꿈까지)는 쓰임 앞에 그대로 붙는다."""
+
+
+@dataclass(frozen=True)
+class _Args:
+    """가른 인자. `patterns` 가 있으면 찾기이고, 그때 `each` 는 거짓, `today` 는 없다."""
+
+    path: Path | None
+    ref: str | None
+    today: date | None
+    each: bool
+    patterns: list[re.Pattern[str]]
+
+
+def _parse(argv: list[str]) -> _Args:
+    """인자를 가른다. 틀렸으면 `_UsageError`."""
     path: Path | None = None
     ref: str | None = None
     today: date | None = None
@@ -453,38 +469,47 @@ def main(argv: list[str]) -> int:
                 patterns.append(re.compile(source))
             except (re.error, OverflowError, RecursionError) as error:
                 # 큰 반복 수(`a{99999999999}`)와 깊은 괄호는 re.error 가 아닌 것을 던진다
-                sys.stderr.write(f"정규식이 틀렸다: {source}: {error}\n{USAGE}")
-                return 2
+                raise _UsageError(f"정규식이 틀렸다: {source}: {error}\n") from error
         elif arg == "--today" and args and today is None:
             try:
                 today = date.fromisoformat(args.pop(0))
-            except ValueError:
-                sys.stderr.write(USAGE)
-                return 2
+            except ValueError as error:
+                raise _UsageError from error
         elif arg == "--queue" and args and ref is None:
             path = Path(args.pop(0))
         elif arg == "--ref" and args and path is None and not args[0].startswith("-"):
             # `-` 로 시작하면 git 이 옵션으로 읽는다(`--output=<경로>` 는 파일을 쓴다)
             ref = args.pop(0)
         else:
-            sys.stderr.write(USAGE)
-            return 2
+            raise _UsageError
     if patterns and (each or today is not None):
-        sys.stderr.write(USAGE)  # 검색은 기본 출력을 내지 않아 그 옵션이 쓰일 자리가 없다
+        raise _UsageError  # 검색은 기본 출력을 내지 않아 그 옵션이 쓰일 자리가 없다
+    return _Args(path, ref, today, each, patterns)
+
+
+def main(argv: list[str]) -> int:
+    try:
+        args = _parse(argv)
+    except _UsageError as error:
+        sys.stderr.write(f"{error}{USAGE}")
         return 2
     try:
-        text = read_ref(ref) if ref is not None else (path or QUEUE).read_text(encoding="utf-8")
+        text = (
+            read_ref(args.ref)
+            if args.ref is not None
+            else (args.path or QUEUE).read_text(encoding="utf-8")
+        )
     except (OSError, UnicodeDecodeError) as error:
         # 해독 실패를 놓치면 트레이스백의 종료 1이 "칸이 넷이 아닌 행" 과 섞인다
         sys.stderr.write(f"대기열을 읽지 못했다: {error}\n")
         return 2
-    if patterns:
-        hits = search(text, patterns)
+    if args.patterns:
+        hits = search(text, args.patterns)
         print(render_hits(hits))
         return 1 if any(hit.state is HitState.BROKEN for hit in hits) else 0
     rows, broken = read_rows(text)
-    print(render(rows, broken, today))
-    if each:
+    print(render(rows, broken, args.today))
+    if args.each:
         print(render_rows(rows))
     return 1 if broken else 0
 

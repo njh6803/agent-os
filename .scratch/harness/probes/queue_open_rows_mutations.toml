@@ -193,8 +193,8 @@ expect = "red"
 
 [[mutation.edit]]
 file = "tools/queue_open_rows.py"
-old = '''        text = read_ref(ref) if ref is not None else'''
-new = '''        text = read_ref(ref) if False else'''
+old = '''            if args.ref is not None'''
+new = '''            if False'''
 
 [[mutation]]
 name = "git show 가 실패해도 빈 대기열로 센다"
@@ -233,7 +233,7 @@ expect = "red"
 
 [[mutation.edit]]
 file = "tools/queue_open_rows.py"
-old = '''    if each:'''
+old = '''    if args.each:'''
 new = '''    if False:'''
 
 # ADR 0036 의 사람 몫·만료 판정(2026-10-19).
@@ -526,7 +526,7 @@ expect = "red"
 
 [[mutation.edit]]
 file = "tools/queue_open_rows.py"
-old = '''    if patterns:
+old = '''    if args.patterns:
 '''
 new = '''    if False:
 '''
@@ -590,6 +590,16 @@ expect = "red"
 file = "tools/queue_open_rows.py"
 old = '''            except (re.error, OverflowError, RecursionError) as error:'''
 new = '''            except (re.error, OverflowError) as error:'''
+
+[[mutation]]
+name = "쓰임 오류의 메시지를 버린다"
+tests = ["tests/tools/test_queue_open_rows.py", "-k", "search의_인자가_틀리면"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/queue_open_rows.py"
+old = '''        sys.stderr.write(f"{error}{USAGE}")'''
+new = '''        sys.stderr.write(USAGE)'''
 
 [[mutation]]
 name = "회차를 줄인 승인 칸에서 찾는다"
