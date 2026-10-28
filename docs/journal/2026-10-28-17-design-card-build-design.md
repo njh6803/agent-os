@@ -225,3 +225,30 @@ ADR 0025 2026-10-28 이력 끝에 "이 이력은 2026-10-28에 사용자가 승�
 ## 다음
 
 기능 design-card-build는 설계가 끝났고 `.scratch/design-card-build/`가 없는 단계다. 다음은 명세(`/to-spec`, 사람이 부른다)이고, 명세가 정할 것은 ADR 0025 2026-10-28 이력의 "명세가 정할 것"과 "재지 못한 것"이다. 셀프 리뷰가 더한 셋(이어 받는 올리기의 `tokens.json`, `.design-sync/`의 파일마다의 가름, 티켓 순서)도 거기에 들어 있다. 저장소 밖 근거(형식의 `app.js`·`format.md`·`from-code.md`)를 명세가 다시 읽어야 하면, 이 세션이 쓴 앞 세션의 사본 자리는 `C:\Users\User\AppData\Local\Temp\claude\C--project-agent\e8e7c53a-a8c2-41df-88f9-43b5a8d2f17e\scratchpad\artifact-files\`이다(형식 판 `3fee8974-…`이 디자인 시스템, `943c565b-…`이 화면. 임시 폴더라 지워졌을 수 있다).
+
+## 인계 (커밋 뒤)
+
+- 커밋 `bd589828`(pre-commit 통과. 인용 대조가 이 일지에서만 경고 6건을 냈다. 리뷰 보고가 옛 ADR 문장을 인용한 기록 넷과, 판정에서 조항을 줄여 따옴표로 적은 둘이라 막지 않는 경고로 두었다) 직후 `hook_handoff`가 세션 컨텍스트 348,257 토큰, 경계 `커밋 뒤`로 인계를 지시했다. `next-session` "인계할 때" 1의 다섯 가운데 어느 것에도 들지 않는다. 계기를 낸 커밋은 성공했고, 요청 범위는 PR과 병합까지이고, 이 세션의 지시문의 이어받을 상태는 `인계: 셀프 리뷰 직전`이라 경계가 다르고, 이 일지에 `인계 못함` 줄이 없고, `get_session`의 `self`에 `parentSessionId`가 없다.
+- 이 세션의 사용자 프롬프트는 둘이다. 첫 메시지는 위 "인계 (셀프 리뷰 직전)" 절의 인계 지시문을 스킬 파일을 읽으라는 한 줄로 옮긴 것이다(`open-session`이 첫 줄의 스킬 명령을 바꿨다). 다른 하나는 위 "ADR 승인" 절에 옮긴 선택 화면의 답이다.
+- 이 세션의 지금 제목은 `docs/design-card-build`이고, 넘기며 `docs/design-card-build (인계함)`으로 바꾼다. 이 절은 커밋하지 않았다. 새 세션이 다음 커밋에 싣는다.
+- 이 세션이 번복하거나 고친 것: 셀프 리뷰 반영으로 ADR 0025 2026-10-28 이력의 사실 문장을 고쳤고(위 "반영"), 결정 문단의 "남길 원본"을 "남길 원본과 상태"로 바꿨다. 회고의 영어 문장 기각 줄을 한 번에서 두 번으로 바로잡았다. 결정은 바꾸지 않았다.
+- 새 세션이 할 일: PR 직전 리뷰(CodeRabbit CLI가 돌지 못하면 `/security-review`와 `bug-perf-review`. 밀 주장은 위 "반영으로 새로 쓴 사실 문장"), 푸시와 PR(`/git-pr`), 봇 회차, 워크트리에서의 병합, `next-session`(다음 단계는 design-card-build 명세, `/to-spec`)이다. 최종 보고에는 이 일지 머리 문단의 `tidy-checkouts` 결과를 함께 넣는다.
+- 인계 지시문:
+
+  ```text
+  다음 작업: 기능 design-card-build. 디자인 시스템 아티팩트의 컴포넌트 카드와 나머지 파일을 번들 스킬 /design-sync의 빌드를 빌려 짓는 것을 걷어 낼지 정한다
+  다음 단계: 설계 인터뷰
+  어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+  시작 프롬프트: /grill-with-docs .scratch/plan.md 의 design-card-build 행과 ADR 0025 이력 2026-10-21을 근거로, 디자인 시스템 아티팩트의 컴포넌트 카드와 나머지 파일을 번들 스킬 /design-sync의 빌드를 빌려 짓는 것을 걷어 낼지, 걷어 내면 카드를 짓는 변환기를 어디에 둘지, 그 이력의 어림 둘(미리보기가 토큰 CSS를 함께 싣는다, 카드는 거꾸로 동기화 뒤 다시 올리면 바뀐다)을 고칠지를 정한다
+  브랜치: docs/design-card-build
+  모델: Opus 5.5 / xhigh
+  읽을 것: docs/journal/2026-10-28-17-design-card-build-design.md의 "이어받은 세션"부터 끝까지(셀프 리뷰, 반영으로 새로 쓴 사실 문장, ADR 승인, 회고, 다음, 인계 (커밋 뒤))
+  이어받을 상태: 인계: 커밋 뒤. 셀프 리뷰 반영, ADR 0025 2026-10-28 이력의 사용자 승인과 승인 줄, 회고, 일지 "다음"까지 커밋 bd589828에 실었고 푸시하지 않았으며 열린 PR은 없다. 남은 것은 PR 직전 리뷰(CodeRabbit CLI가 돌지 못하면 /security-review와 bug-perf-review, 밀 주장은 일지의 "반영으로 새로 쓴 사실 문장"), 푸시와 PR, 봇 회차, 워크트리에서의 병합, next-session(다음 단계는 design-card-build 명세)이고, 일지의 "인계 (커밋 뒤)" 절은 커밋하지 않아 다음 커밋에 싣는다(docs/journal/2026-10-28-17-design-card-build-design.md). 최종 보고에는 이 일지 머리 문단의 tidy-checkouts 결과를 함께 넣는다
+  확인할 선행 조건: 병합은 이 워크트리 사본의 next-session "워크트리에서 병합할 때"를 Read로 열어 따른다
+  이번 요청 범위: PR과 병합까지
+  ```
+- open-session을 부른다 2026-10-28T05:17:12Z
+
+## 이어받은 세션 (커밋 뒤)
+
+위 "인계 (커밋 뒤)" 지시문으로 연 새 세션이다. 첫 턴 훅대로 제목을 `docs/design-card-build`로 바꾸고, `git worktree list`에서 그 브랜치가 체크아웃된 워크트리 `design-card-build`(`bd589828`)를 찾아 `EnterWorktree(path)`로 들어갔다. `grill-with-docs`는 그 스킬의 설명대로 리뷰 중이라 라운드를 다시 돌지 않고 PR 직전 리뷰부터 이었다. `git fetch` 뒤 `origin/main`은 브랜치를 딴 `5ccb51a0`에서 움직이지 않았다. `coderabbit auth status`가 `Plan: Free`, `Seat: not assigned`라 CLI 축은 돌지 못하고, `docs/constitution/operations.md` 리뷰 파이프라인 2의 대체 둘(`/security-review`, `bug-perf-review`)을 나란히 돌린다.
