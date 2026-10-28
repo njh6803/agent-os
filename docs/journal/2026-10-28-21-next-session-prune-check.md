@@ -177,7 +177,7 @@ open-session을 부른다 2026-10-28T03:47:45Z
 - 스킬 3을 `--exit-code`의 종료 코드 세 갈래(2 없음, 0 있음, 그 밖은 판정 못함)로 다시 썼다. 0이면 PR이 `MERGED`인지
   먼저 보고, 지운 뒤에는 결과와 상관없이 다시 보며, 남음·미확인 줄을 보고·일지·다음 지시문에 남긴다. 근거 없는
   `remote ref does not exist` 문장을 지웠다. 끝 줄도 그 종료 코드로 판정한다.
-- 대기열 497의 닫힘 문구를 새 3에 맞추고, 고치지 않은 자리를 "워크트리 병합 뒤 원격 정리의 절차가 아니다"라는 조항과
+- 대기열 497의 닫힘 문구를 새 3에 맞추고, 고치지 않은 자리를 워크트리 병합 뒤 원격 정리의 절차가 아니라는 조항과
   그 예 셋(이름 바꾸기, 훅과 그 시험·표본, `--delete-branch`)으로 적었다.
 - 카나리아의 질문을 셋으로 늘리고 카나리아를 `--exit-code`, `자동 삭제가 늦거나 돌지 않은 것이라`, `원격 브랜치 미확인`
   으로 바꿨다. 셋이 base `5ccb51a0`의 스킬에는 0번, 고친 스킬에는 1·1·2번 나온다(`grep -c -F`로 손으로 봤다).
@@ -213,3 +213,104 @@ open-session을 부른다 2026-10-28T03:47:45Z
   `uv run pytest -q -p no:randomly <열한 개>`로 다시 치니 11 passed in 368.12s였다. 그때 `Get-Process`로 claude 92개,
   node 183개가 떠 있었고 CPU 사용률이 80%였다. 다른 세션이 여럿 돈 부하로 시간 제한과 프로세스 띄우기가 실패한 것으로
   보고(어림. 실패마다 원인을 가르지는 않았다) 같은 커밋을 다시 시도한다.
+- 다시 친 커밋이 통과했다. checks의 열 검사가 모두 Passed였고(web-verify 758.0초, pytest 1100.0초), 표·줄 구분 문자·변이
+  표·카나리아 모양·인용 대조·커밋 메시지도 Passed, ruff 둘과 헌법 판은 Skipped였다. 인용 대조 경고 5건 가운데 넷은 이
+  일지가 옛 문장(앞 판의 스킬 3, 앞 세션이 고친 ADR 문장)을 기록으로 옮긴 것이고, 하나(고친 것 절의 조항 문구)는 이
+  세션이 따옴표로 감싼 바꿔 쓴 말이라 커밋 뒤에 따옴표를 뗐다(이 수정은 커밋하지 않았다).
+
+## 인계 (커밋 뒤)
+
+세션 컨텍스트가 255,368 토큰으로 문턱 200,000을 넘은 채 커밋(경계 `커밋 뒤`)에서 `hook_handoff`의 계기가 왔다. 첫 커밋
+시도 때도 계기가 왔지만 그 커밋이 pre-commit에 막혀 경계가 아니었다. `next-session`의 "인계할 때" 1의 다섯에 들지
+않았다. 다시 친 커밋은 성공했고, 요청 범위는 병합까지이며, 이 세션의 지시문의 "이어받을 상태"는 `인계: 셀프 리뷰 직전`
+으로 다른 경계이고, 이 일지에 `인계 못함` 줄이 없고, `get_session`의 `self`에 `parentSessionId`가 없었다. 이 세션의 지금
+제목은 `chore/025-next-session-prune-check`이고, 넘기기 전에 `chore/025-next-session-prune-check (인계함)`으로 바꾼다.
+
+- 상태: 셀프 리뷰를 반영한 커밋 하나가 브랜치에 있고 푸시하지 않았다. 이 브랜치의 PR은 없다(`gh pr view <브랜치> --json
+  state`가 `no pull requests found`). 이 절과 위 인용 따옴표 수정은 커밋하지 않았다.
+- PR 직전 리뷰에 밀 주장: 위 "고친 것 (셀프 리뷰 반영)"의 새 문장 다섯. 갈래 밟기는 3의 세 갈래(2, 0과 `MERGED`, 그 밖)와
+  병합 전에 3으로 다시 들어오는 갈래, 지우는 명령이 `remote ref does not exist`로 끝난 뒤 다시 보는 갈래다.
+- 남은 단계: PR 직전 리뷰(CLI가 돌지 못하면 `/security-review`를 origin/main을 합친 뒤, `bug-perf-review`를 나란히), 푸시와
+  PR, 봇 회차, 회고, 워크트리에서 병합이다. 병합의 원격 정리는 이 브랜치가 고친 3대로 한다.
+
+지시문:
+
+```
+다음 작업: 받는 세션이 이어 쓸 .scratch/harness/issues/025-next-session-prune-check.md. 대기열 497: next-session "워크트리에서 병합할 때" 3 이 원격 브랜치를 지우는 명령 대신 git fetch --prune origin 뒤 git ls-remote --exit-code --heads origin <브랜치> 의 종료 코드로 본다(셀프 리뷰 반영과 커밋까지 마쳤다)
+다음 단계: 구현
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: 대기열 497을 티켓 .scratch/harness/issues/025-next-session-prune-check.md로 쓰고 한다
+브랜치: chore/025-next-session-prune-check
+모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
+읽을 것: docs/agents/issue-tracker.md, 일지 docs/journal/2026-10-28-21-next-session-prune-check.md
+이어받을 상태: 인계: 커밋 뒤. 셀프 리뷰를 반영한 커밋(pre-commit 통과)까지 했고 푸시와 PR은 아직이다. 일지의 인계(커밋 뒤) 절과 인용 따옴표 수정은 커밋하지 않은 채 워크트리에 있다. 남은 단계는 PR 직전 리뷰(밀 새 문장은 일지 "고친 것 (셀프 리뷰 반영)"), 푸시와 PR, 봇 회차, 회고, 워크트리에서 병합이다. 첫 커밋 시도는 이 PC의 부하로 web-verify·pytest가 빨갰고 다시 치니 통과했다(일지 "검사 (셀프 리뷰 뒤)"). docs/journal/2026-10-28-21-next-session-prune-check.md
+확인할 선행 조건: 병합은 이 워크트리 사본의 next-session "워크트리에서 병합할 때"를 Read로 열어 따른다(이 브랜치가 그 3을 바꾼다)
+이번 요청 범위: PR과 병합까지
+```
+
+제목을 `chore/025-next-session-prune-check (인계함)`으로 바꿨다. 멈출 백그라운드 작업은 없었다(서브에이전트 둘, 카나리아, 커밋이 모두
+끝났다). `git worktree unlock C:/project/agent/.claude/worktrees/025-next-session-prune-check`는 `is not locked`로 끝나 넘어갔다.
+
+open-session을 부른다 2026-10-28T05:16:27Z
+
+## 이어 가기 (커밋 뒤를 인계받은 세션)
+
+위 지시문으로 연 새 세션이 제목을 `chore/025-next-session-prune-check`로 바꾸고 `git worktree list`에서 찾은 워크트리
+`025-next-session-prune-check`에 `EnterWorktree(path)`로 들어갔다. 사용자는 지시문 끝에 한 줄을 더했다.
+
+> 사용자: "왜 멈춰있어?"
+
+앞 세션이 커밋 경계에서 인계 계기를 받아 넘겼고, 이 세션은 지시문을 받은 첫 턴이었다. 아래는 이 세션이 손으로 친
+명령의 출력이다. `git fetch --prune origin`이 `origin/docs/design-card-build`와
+`origin/feature/11-web-edit-teal-accent-600`을 `[deleted]`로 걷었고, `git log --oneline 5ccb51a0..origin/main`이 두 커밋
+(#413, #414)을 내 origin/main이 `ad8a9c37`로 움직여 있었다. `git merge --no-edit origin/main`으로 합쳤다
+(`.scratch/retro-queue.md`는 자동 병합, commit-msg 훅 Passed).
+
+## PR 직전 리뷰
+
+`coderabbit auth status`가 `Plan: Free`, `Seat: not assigned`라 CLI가 돌지 못해, 대체 둘을 나란히 돌렸다.
+
+- 보안(`/security-review`, origin/main을 합친 뒤): 식별 서브태스크가 기준(확신 80% 이상의 악용 경로)을 넘는 것을
+  찾지 못해 거짓 양성 거르기 단계에 넘길 지적이 없었다. 살펴보고 뺀 것은 넷이다. 지우는 명령이 `MERGED` 확인 뒤로
+  좁아졌고 `gh`가 실패하면 지우지 않는 쪽이다. `ls-remote --heads`의 꼬리 대조가 `old/<브랜치>`를 잡아도 지우는 푸시는
+  `refs/heads/<브랜치>`에만 닿아 다른 브랜치를 지우지 않는다(최악은 거짓 `원격 브랜치 남음` 줄). `<브랜치>`와 `<번호>`는
+  세션이 만든 값이라 주입 길이 없다. 카나리아 명세의 `checkout = "../../.."`은 이미 있는 명세들과 같은 꼴이다. 서브태스크는
+  코드와 독스트링을 읽었고 명령은 치지 않았다.
+- 버그·성능(`bug-perf-review`): Major 이상 없음, 유효 넷(Minor 둘, Nit 둘), 오탐 둘. 서브에이전트는 로컬 경로를 origin으로
+  둔 임시 bare 저장소(git 2.32)와 이 저장소의 원격에 읽기 전용 명령을 쳐서 손으로 봤고, 훅 독스트링과 코드를 읽었다.
+  커밋한 프로브는 없다.
+  - Minor: `ls-remote … <브랜치>`의 패턴이 이름 꼬리로 맞대, 원격에 `feature/x`는 없고 `old/feature/x`만 있으면 종료 0과
+    그 줄을 낸다. 3대로 `MERGED`를 본 뒤 지우는 명령이 `remote ref does not exist`로 끝나고, 다시 봐도 0이라 거짓
+    `원격 브랜치 남음`이 다음 지시문으로 넘어간다. 지우는 푸시는 정확한 이름에만 닿아 다른 브랜치는 남았다. 셀프 리뷰의
+    표준 축도 이 꼬리 대조를 봤지만 닫힌 주장으로 넘겼다(위 "셀프 리뷰"). 판정: 고친다.
+  - Minor: "`fetch`가 실패하면 `origin/<브랜치>`가 남을 뿐이다"가 실패를 무해하다고 적는데, 5는 fetch 없이 `origin/main`에서
+    다음 브랜치를 따 병합 전의 main 위에 설 수 있다. 판정: 고친다.
+  - Nit: `gh pr view`가 상태를 읽지 못하거나 `CLOSED`면 갈 자리가 없고 끝 줄의 어느 조건도 채우지 못한다. 판정: 고친다.
+  - Nit: 지우는 명령이 `remote ref does not exist`로 끝나면(자동 삭제와 엇갈림) `origin/<브랜치>`가 남는다. 판정: 고친다.
+  - 오탐: 종료 2인 호출이 나란히 친 형제 호출을 취소한다는 걱정(형제 둘이 정상으로 돌았다), 다른 살아 있는 자리의 지우는
+    명령(`.claude/` 아래에 3 밖의 그 절차가 없었다).
+
+## 고친 것 (PR 직전 리뷰 반영)
+
+- 스킬 3: 명령을 `git ls-remote --exit-code --heads origin refs/heads/<브랜치>`로 바꾸고 `refs/heads/`까지 적는 까닭을
+  한 문장으로 붙였다. `fetch` 실패 문장을 "`origin/main`도 병합 전에 머무므로 5로 이어 가기 전에 다시 친다"로, 0 갈래를
+  `OPEN`이면 1로, `MERGED`면 지운 뒤 `git fetch --prune origin`과 같은 `ls-remote`로 다시 보고, 상태를 읽지 못했거나
+  `CLOSED`면 지우지 않고 `원격 브랜치 미확인` 한 줄로 바꿨다. "아니면 2가 끝나지 않은 것이라"의 2가 종료 코드 2와
+  섞여 읽혀 "병합(2)이"로 고쳤다. 카나리아의 세 문자열은 그대로 남았다.
+- 대기열 497 닫힘 문구와 티켓 025의 `## Comments`를 새 명령과 갈래에 맞췄다.
+- 손으로 친 것: 이 워크트리에서 `git ls-remote --exit-code --heads origin refs/heads/feature/11-pilot-and-prereg`가 종료 2(출력
+  없음), `… refs/heads/main`이 종료 0과 `ad8a9c37… refs/heads/main` 한 줄이었다.
+- 잔존: `ls-remote`를 Grep 도구로 살아 있는 문서(루트·`.claude`·`docs/constitution`·`docs/agents`의 마크다운, `.scratch`의
+  마크다운·TOML, `tools/`, `tests/`)에서 찾으니, 옛 패턴(`refs/heads/` 없는 `<브랜치>`)은 대기열 497의 처방 칸(승인한
+  원문)과 티켓 025의 What to build·수용 기준 1(티켓을 쓴 때의 문장. Comments가 새 패턴으로 읽게 한다)뿐이었다.
+
+## 검사 (PR 직전 리뷰 뒤)
+
+- 카나리아: `uv run python tools/canary.py .scratch/harness/probes/canary/next_session_remote_branch_check.toml <스크래치>`가
+  통과 4였다. 실험군 셋(워크트리 사본, 커밋하지 않은 고침이 `f4a6074c` 위에 있다)이
+  `git ls-remote --exit-code --heads origin refs/heads/<브랜치>`와 고친 `MERGED` 갈래 문장(다시 볼 때의 `git fetch --prune
+  origin` 포함)과 `원격 브랜치 미확인:` 머리를 옮겼고, 대조군 주 체크아웃 `8e43dd2c`는 옛 명령 둘과 "없음" 둘이었다. 이
+  실행은 claude 판을 찍지 않았다.
+- 손으로 친 것: `uv run ruff check .`(All checks passed), `uv run ruff format --check .`(1142 files already formatted),
+  `uv run python tools/check_md_tables.py <고친 마크다운 넷>`(출력 없이 끝). `.py`를 바꾸지 않아 커밋의 pre-commit에서 ruff
+  둘이 `Skipped`가 되므로 이 결과가 그 몫이다.
