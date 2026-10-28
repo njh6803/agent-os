@@ -30,8 +30,10 @@ const GITIGNORE = join(import.meta.dirname, "..", ".gitignore");
 // 함수 정의의 매개변수면 잡는다. 이름 붙인 옵션 객체(`{ force }: { readonly force: boolean }`)는 파이썬의 키워드 전용
 // 매개변수처럼 지나간다. 보지 않는 자리는 함수 타입과 메서드 시그니처(값을 넘기는 콜백 `(checked: boolean) => void`),
 // 본문 없는 선언과 오버로드, 리터럴 타입 true·false, 유니온 속 유니온의 boolean, 배열과 제네릭 인자의 boolean,
-// 리터럴이 아닌 기본값(`!0`), 호출에 넘긴 true·false(ruff FBT003 의 자리)다. 생성자의 매개변수 속성은 판정자가 아니라
-// tsconfig.base.json 의 `erasableSyntaxOnly` 가 타입 검사에서 막는다.
+// boolean 의 별칭 주석(`type Flag = boolean`. 기본값이 true·false 리터럴이면 그 기본값으로 잡는다), 교차 타입의
+// boolean, 제네릭 제약(`T extends boolean`), 리터럴이 아닌 기본값(`!0`), 호출에 넘긴 true·false(ruff FBT003 의
+// 자리)다. 생성자의 매개변수 속성은 판정자가 아니라 tsconfig.base.json 의 `erasableSyntaxOnly` 가 타입 검사에서
+// 막는다.
 const DEFINED_FUNCTION = ':function:not([kind="set"] > *)';
 const BOOLEAN_ANNOTATIONS = ["TSBooleanKeyword", "TSUnionType > TSBooleanKeyword"];
 const BOOLEAN_PARAMETER = {

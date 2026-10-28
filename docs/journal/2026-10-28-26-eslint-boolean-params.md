@@ -209,3 +209,74 @@ serve 가 60초(`STARTUP_MS`) 동안 아무것도 찍지 않았고, 사이트 �
 `usePlugins({ active: false })`, 21번은 `INHERITED_IMPORT`의 `overwrite: "overwrite"`). `tools/mutate.py`로 그 다섯을 돌려
 모두 기대대로였다(1번 초록, 나머지 빨강. 손으로 봤다). 인용 대조 경고 둘(지운 옛 문구를 따옴표로 든 이 일지의 두 줄)은
 따옴표를 떼었다. 커밋이 막혀 인계 계기의 `커밋 뒤` 경계에 온 것이 아니라 넘기지 않았다(next-session "인계할 때" 1).
+
+## 인계
+
+다시 친 커밋(3476d25d)이 pre-commit 을 지나(`Skipped`는 스테이지된 `.py`가 없는 ruff 둘, 카나리아 명세, 헌법 판) 인계
+계기가 `커밋 뒤` 경계에서 왔다. 세션 컨텍스트가 인계 문턱(20만 토큰)을 넘었다. 인계하지 않는 때 다섯에 들지 않아(커밋이 성공했다, 요청 범위는 PR 과
+병합까지다, 지시문의 이어받을 상태는 `없음`이었다, `인계 못함` 줄이 없다, `get_session`의 `self`에 `parentSessionId`가 없다)
+넘긴다. 이 세션의 지금 제목은 `chore/022-eslint-boolean-params`이고 넘기기 전에 `(인계함)`을 붙인다. 이 절은 커밋하지
+않았다. 새 세션이 이어 쓰고 커밋한다.
+
+남은 단계: origin/main 을 합친다(PR #415 가 `web/apps/admin/components/pages/HomePage.test.tsx`와 `.scratch/retro-queue.md`를
+함께 고쳤고 관리 화면 코드를 새로 들였다). 합친 뒤 `pnpm -C web lint`로 새로 들어온 코드가 새 규칙에 걸리는지 보고, 걸리면
+위 "켜기 전 위반"과 같은 길로 고친다. 그 뒤 PR 직전 리뷰(밀 주장은 위 "반영" 절), PR, 봇 회차와 병합이다. PR 본문에는
+packages/ui 의 스토리 파일을 고쳐 다음 디자인 시스템 올리기가 빌드를 요구한다는 것과, 이 PC 의 Docker 데몬이 응답하지 않아
+사진 비교를 CI 의 `visual` 잡에 맡긴다는 것을 적는다.
+
+인계 지시문:
+
+다음 작업: .scratch/harness/issues/022-eslint-boolean-params.md. 대기열 483: web/eslint.config.mjs 가 타입이 boolean 인 함수 매개변수를 잡고 CODING_STANDARDS.md 의 그 줄이 이 규칙을 가리킨다
+다음 단계: 구현
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: 대기열 483을 티켓 .scratch/harness/issues/022-eslint-boolean-params.md로 쓰고 한다
+브랜치: chore/022-eslint-boolean-params
+모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
+읽을 것: docs/agents/issue-tracker.md
+이어받을 상태: 인계: 커밋 뒤. 구현, 셀프 리뷰 반영, 위젯 e2e 까지 커밋했고 PR 은 없다. 남은 단계는 origin/main 합치기와 그 뒤의 web 린트, PR 직전 리뷰, PR, 봇 회차와 병합이고 할 일과 PR 본문에 적을 것은 일지의 "인계" 절이다. 일지의 "인계" 절은 커밋하지 않았다. 일지 docs/journal/2026-10-28-26-eslint-boolean-params.md
+확인할 선행 조건: 주 체크아웃 미갱신: 루트는 main. 병합은 이 워크트리 사본의 next-session "워크트리에서 병합할 때"를 Read로 열어 따른다
+이번 요청 범위: PR과 병합까지
+
+open-session을 부른다 2026-10-28T09:44:15Z
+
+## 이어받은 세션
+
+> 사용자: "대기열 483을 티켓 .scratch/harness/issues/022-eslint-boolean-params.md로 쓰고 한다"
+
+위 인계 지시문으로 연 새 세션이다. 제목을 `chore/022-eslint-boolean-params`로 바꾸고, 주 체크아웃에서 `tidy-checkouts`를 돈 뒤
+`EnterWorktree(path)`로 이 워크트리에 들어왔다. `tidy-checkouts`는 루트를 `ad8a9c37`에서 `06a8f85b`(origin/main)로 당겼고,
+병합된 워크트리 셋(`bug-perf-review-batch`, `measure-word-hook`, `design-card-build`)과 브랜치 하나
+(`feature/03-admin-adopt-design-system`)를 지웠다. 휴지통에는 esbuild.exe 를 다른 프로세스가 올려 둔 `node_modules` 넷이 남았다(`tools/tidy_checkouts.py`의 출력을 손으로
+봤다).
+
+origin/main(PR #415)을 `git merge`로 합쳤다. `HomePage.test.tsx`와 `.scratch/retro-queue.md`는 자동으로 합쳐졌다. 합친 뒤
+`pnpm -C web lint`와 `pnpm -C web typecheck`가 종료 0 이었고, PR #415 가 들인 관리 화면 파일(`.storybook/`, `EntryFrame.tsx`,
+`AdminTokenForm.tsx`, `visual/`, `e2e/fonts.e2e.ts`)을 `eslint`에 직접 넘겨도 무시 경고 없이 종료 0 이었다. 새 규칙에 걸리는
+새 코드는 없었다. `pnpm -C web exec vitest run apps/admin/components/pages/HomePage.test.tsx eslint.config.test.ts`에서
+2개 파일, 131개 시험이 초록이었다(모두 손으로 봤다).
+
+PR 직전 리뷰: `coderabbit auth status`가 `Seat: not assigned`라 CLI 대신 대체 둘(`/security-review`, `bug-perf-review`
+서브에이전트)을 나란히 돌렸다.
+
+- `/security-review`(origin/main 을 합친 뒤): 식별 서브태스크가 신뢰도 8 이상의 High·Medium 을 하나도 내지 않아 거를 후보가
+  없었다. 보고 0건. 서브태스크는 코드를 읽어 런타임 코드 일곱 파일이 매개변수 모양만 바꿨다고 봤다. `setPluginEnabled`의 PUT
+  본문은 그대로 `{ enabled }`이고, 관리 토큰이 없으면 읽지 않는 `usePlugins`의 조건과 `useSetPluginEnabled`의 이른 반환,
+  `tokens-json.ts`의 길이 검증(`LENGTH` 정규식, 수의 유한성)이 그대로이며, `eslint.config.mjs`는 `ignores`를 바꾸지 않았다.
+- `bug-perf-review`(기준 06a8f85b, 스무 파일): 열두 건 가운데 유효 둘(둘 다 Nit), 오탐 열. Critical·Major·Minor 는 없었다.
+  서브에이전트는 변이 표 여덟을 `tools/mutate.py --check`로, 바뀐 변이 다섯을 `--since origin/main`으로 돌려 기대대로인 것을
+  봤고, `eslint --stdin`으로 스물다섯 모양을 실제 설정에 넣었고, `ruff --select FBT001,FBT002`로 세터를 ruff 가 보지 않는
+  것을 봤다(서브에이전트가 손으로 봤다). 오탐 열은 매개변수 모양을 바꾼 자리(`usePlugins()`의 기본값, `{ enabled }`,
+  `decisionPlaceStands`·`noticeOf`, `FRESH_IMPORT`·`INHERITED_IMPORT`, `radiusLength`, 위젯 e2e `page`, `Mode`)의 동작이 같고
+  새 selector 가 꺼지는 파일이 없다는 것이다(코드를 읽었다).
+  - Nit 1: `.scratch/web-admin/probes/plugin_toggle_mutations.mjs:222`의 변이 원문이 옛 인자 `enabled`를 든다. 지금 훅은
+    `change`를 넘긴다(Grep 으로 `hooks/queries/plugins/index.ts:91`을 손으로 봤다). **둔다.** 이 프로브는 티켓 06(2026-09-30)의
+    옛 스크립트이고 159·166행이 이 PR 전부터 `setEnabled(`를 들어 지금의 `onSetEnabled(`와 맞지 않는다. 222행만 고쳐도 돌지
+    않는다. 대기열 73 이 옛 프로브의 원문은 코드가 바뀌면 썩어도 된다고 정했고, pre-commit 의 `mutate.py --staged`는
+    `*_mutations.toml`만 본다. 고치는 값은 한 줄이다.
+  - Nit 2: 설정 주석의 보지 않는 자리 목록이 별칭 주석(기본값 없는 `Flag`), 교차 타입, 제네릭 제약(`T extends boolean`)을
+    말하지 않는다. `true | false`와 `Readonly<boolean>`은 목록의 리터럴 타입과 제네릭 인자에 든다. **고쳤다.** 설정 주석에 셋을
+    더하고 `unseen-boolean-param.ts` 지나는 사례에 세 모양을 더했다. `pnpm -C web exec vitest run eslint.config.test.ts`에서
+    90개가 초록이었다(손으로 봤다). `CODING_STANDARDS.md`의 줄은 목록을 그 설정의 주석으로 가리켜 고치지 않았다.
+  - 서브에이전트가 덧붙인 것: 설정 주석의 "오버로드"는 시험 사례가 없다. 두었다. 불리언과 다른 타입의 오버로드는
+    `@typescript-eslint/unified-signatures`가 하나로 합치라고 할 수 있어 지나는 사례로 고정하려면 그 규칙까지 가려야 한다는
+    어림이고, 돌려 보지 않았다.

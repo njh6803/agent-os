@@ -178,6 +178,9 @@ const SOURCES: Readonly<Record<string, string>> = {
     "export function 섞임(값: string | (boolean | number)): string {\n  return String(값);\n}\n",
     "export function 목록(값들: readonly boolean[], 약속: Promise<boolean>): number {\n  void 약속;\n  return 값들.length;\n}\n",
     "export function 식(값 = !0): boolean {\n  return 값;\n}\n",
+    "type 플래그 = boolean;\n\nexport function 별칭(값: 플래그): boolean {\n  return 값;\n}\n",
+    'export function 교차(값: boolean & { readonly 표: "켜짐" }): boolean {\n  return 값;\n}\n',
+    "export function 제약<T extends boolean>(값: T): T {\n  return 값;\n}\n",
   ].join("\n"),
   "apps/admin/lib/kinds.ts": 'export const 종류 = ["plugins", "runs"] as const;\n',
   "apps/admin/lib/kinds.test-d.ts":
@@ -465,7 +468,7 @@ const GREEN: readonly { readonly name: string; readonly path: string }[] = [
   },
   { name: "세터의 boolean 매개변수", path: "apps/admin/lib/setter-param.ts" },
   {
-    name: "설정 주석이 보지 않는다고 적은 자리(본문 없는 선언, 메서드 시그니처, 리터럴 타입 true, 유니온 속 유니온, 배열과 제네릭 인자, 리터럴이 아닌 기본값)",
+    name: "설정 주석이 보지 않는다고 적은 자리(본문 없는 선언, 메서드 시그니처, 리터럴 타입 true, 유니온 속 유니온, 배열과 제네릭 인자, 리터럴이 아닌 기본값, 별칭 주석, 교차 타입, 제네릭 제약)",
     path: "apps/admin/lib/unseen-boolean-param.ts",
   },
   { name: "as const", path: "apps/admin/lib/kinds.ts" },
