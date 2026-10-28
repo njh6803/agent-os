@@ -1,4 +1,4 @@
-# 2026-10-28 (19) 위젯 승인 시험의 센 수 사례가 가끔 빨간 원인을 가르고 고친다 (harness 023)
+# 2026-10-28 (27) 위젯 승인 시험의 센 수 사례가 가끔 빨간 원인을 가르고 고친다 (harness 023)
 
 next-session 지시문으로 연 새 세션이다. 나란히 여는 여덟 가운데 다섯째라 `tidy-checkouts`는 돌지 않았고(묶음의 첫 세션이
 돈다), 주 체크아웃에서 브랜치를 따지 않고 워크트리 `023-widget-char-count-flake`에 들어가
@@ -52,8 +52,8 @@ next-session 지시문으로 연 새 세션이다. 나란히 여는 여덟 가�
 시작 프롬프트: 대기열 486을 티켓 .scratch/harness/issues/023-widget-char-count-flake.md로 쓰고 한다
 브랜치: chore/023-widget-char-count-flake
 모델: Opus 5.5 / medium. 레벨 스윕의 갈래
-읽을 것: docs/agents/issue-tracker.md, docs/journal/2026-10-28-19-widget-char-count-flake.md
-이어받을 상태: 인계: 셀프 리뷰 직전. 커밋하지 않은 변경이 워크트리에 있고 셀프 리뷰(/code-review, 기점 origin/main)부터 한다. 그 뒤 커밋하고, PR #413의 병합 커밋 ad8a9c37을 품도록 sync_with_base_branch로 main을 합친 뒤 PR을 연다. docs/journal/2026-10-28-19-widget-char-count-flake.md
+읽을 것: docs/agents/issue-tracker.md, docs/journal/2026-10-28-27-widget-char-count-flake.md
+이어받을 상태: 인계: 셀프 리뷰 직전. 커밋하지 않은 변경이 워크트리에 있고 셀프 리뷰(/code-review, 기점 origin/main)부터 한다. 그 뒤 커밋하고, PR #413의 병합 커밋 ad8a9c37을 품도록 sync_with_base_branch로 main을 합친 뒤 PR을 연다. docs/journal/2026-10-28-27-widget-char-count-flake.md
 확인할 선행 조건: 없음
 이번 요청 범위: PR과 병합까지
 ```
@@ -99,3 +99,9 @@ PR 직전 리뷰에 밀 주장(반영으로 새로 쓴 문장):
 - 고친 프로브로 다시 쟀다(프로브의 요약 줄과 `redShapes`). `node .scratch/harness/probes/widget_char_count/repeat.mjs 300 --source 5ccb51a0`: 빨강 12/300, 12 모두 한 모양(카드 직후 포커스가 입력창, 첫 붙여 넣기 뒤 칸 17,999·포커스는 제목, 두 번째 뒤에도 17,999, 같은 요소). 초록 288은 모두 카드 직후 포커스가 제목. `--source bd52303e`: 300/300 초록, 그 가운데 효과가 늦은 회차 10이 모두 초록.
 - README 행, 티켓 Comments, 대기열 486의 닫힘 문구를 다시 잰 수로 고쳤다. 앞의 "진단"과 "고친 것"의 9/300·작업 트리 300/300은 첫 판의 기록으로 둔다.
 - 티켓의 "검증 명령이 모두 초록이다"를 위 pre-commit 결과로 다시 체크하고 Status를 done으로 돌렸다.
+
+## 합치기와 번호 옮김
+
+- `sync_with_base_branch`는 "앱이 만든 워크트리가 아니다"로 거부해 `git fetch origin main`과 `git merge --no-edit origin/main`으로 직접 합쳤다. 충돌 없음.
+- main에 일지 2026-10-28-23이 들어와 `sibling_overlap.py --move`로 이 일지를 2026-10-28-19에서 2026-10-28-27로 옮겼다.
+- 그 커밋의 pre-commit에서 이 브랜치가 건드리지 않은 `tests/tools/test_rerun_runner.py::test_첫_인계가_나면_새_회차를_열지_않는다`가 한 번 빨갰다(`assert {'rerun-x-01-A-1'} == {…B-1'}`). 그 사례만 `uv run pytest -q` 로 다시 돌리니 통과했다(361초). 형제 세션 여럿이 함께 돌던 때라 부하로 난 간헐 실패로 보고 커밋을 다시 쳤다. 원인은 가르지 않았다.
