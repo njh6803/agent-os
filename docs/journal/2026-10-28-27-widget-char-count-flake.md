@@ -105,3 +105,40 @@ PR 직전 리뷰에 밀 주장(반영으로 새로 쓴 문장):
 - `sync_with_base_branch`는 "앱이 만든 워크트리가 아니다"로 거부해 `git fetch origin main`과 `git merge --no-edit origin/main`으로 직접 합쳤다. 충돌 없음.
 - main에 일지 2026-10-28-23이 들어와 `sibling_overlap.py --move`로 이 일지를 2026-10-28-19에서 2026-10-28-27로 옮겼다.
 - 그 커밋의 pre-commit에서 이 브랜치가 건드리지 않은 `tests/tools/test_rerun_runner.py::test_첫_인계가_나면_새_회차를_열지_않는다`가 한 번 빨갰다(`assert {'rerun-x-01-A-1'} == {…B-1'}`). 그 사례만 `uv run pytest -q` 로 다시 돌리니 통과했다(361초). 형제 세션 여럿이 함께 돌던 때라 부하로 난 간헐 실패로 보고 커밋을 다시 쳤다. 원인은 가르지 않았다.
+
+## 인계 (커밋 뒤)
+
+커밋 `c462ca60`(일지 번호 옮김) 직후 인계 계기(`커밋 뒤`, 세션 컨텍스트 230,241 토큰)가 와서 새 세션에 넘긴다. 이 세션의 제목은 `chore/023-widget-char-count-flake`이고 `chore/023-widget-char-count-flake (인계함)`으로 바꾼다. 커밋 셋(`bd52303e`, `d389b92c`, `c462ca60`)과 main 합침(`6664b740`, origin/main `06a8f85b`까지)이 있고 아무것도 푸시하지 않았다. 열린 PR은 없다. 남은 일은 푸시 전 `sibling_overlap.py` 다시 치기(origin/main이 또 움직였으면 합치고 번호를 본다), 푸시, PR 열기(PR 직전 `bug-perf-review`나 `coderabbit-review`에 위 "PR 직전 리뷰에 밀 주장" 셋을 넘긴다), 봇 회차, 병합, 회고와 "다음"이다.
+
+지시문:
+
+```
+다음 작업: .scratch/harness/issues/023-widget-char-count-flake.md. 대기열 486: 위젯 승인 시험의 센 수 사례가 가끔 빨간 원인을 가르고 고친다(원인 가름·고침·셀프 리뷰·커밋은 끝났다)
+다음 단계: 구현
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: 대기열 486을 티켓 .scratch/harness/issues/023-widget-char-count-flake.md로 쓰고 한다
+브랜치: chore/023-widget-char-count-flake
+모델: Opus 5.5 / medium. 레벨 스윕의 갈래
+읽을 것: docs/agents/issue-tracker.md, docs/journal/2026-10-28-27-widget-char-count-flake.md
+이어받을 상태: 인계: 커밋 뒤. 셀프 리뷰를 반영한 커밋까지 했고 푸시하지 않았으며 열린 PR이 없다. 푸시 직전에 sibling_overlap.py를 다시 치고, PR 직전 리뷰에 일지의 "PR 직전 리뷰에 밀 주장" 셋을 넘긴 뒤 PR을 연다. 이 워크트리는 앱이 만든 것이 아니라 sync_with_base_branch가 거부하니 main은 git merge로 합친다. docs/journal/2026-10-28-27-widget-char-count-flake.md
+확인할 선행 조건: 없음
+이번 요청 범위: PR과 병합까지
+```
+
+open-session을 부른다 2026-10-28T09:58:19Z
+
+## 이어받은 세션 (커밋 뒤)
+
+지시문으로 연 새 세션이 워크트리 `023-widget-char-count-flake`에 `EnterWorktree(path)`로 들어가 이었다.
+
+> 사용자: "대기열 486을 티켓 .scratch/harness/issues/023-widget-char-count-flake.md로 쓰고 한다"
+
+- 푸시 전 `sibling_overlap.py`(그 출력과 `git log -3 origin/main`): origin/main은 `06a8f85b` 그대로라 다시 합치지 않았다. 번호 겹침 없음. 앞서는 형제 일지 2026-10-28-28(PR #417)이 먼저 병합되면 이 일지를 옮긴다.
+- PR 직전 리뷰를 `coderabbit-review`에 맡기며 "PR 직전 리뷰에 밀 주장" 셋을 넘겼다.
+
+## PR 직전 리뷰
+
+- `coderabbit-review`: CLI는 좌석 미할당(`coderabbit auth status`의 `Seat: not assigned`, 에이전트의 보고)이라 돌지 못했고, 에이전트가 diff를 직접 읽었다. Critical·Major 0, Minor 3. 넘긴 주장 셋의 판정은 1·2 맞음(코드 읽기, `WidgetScreen.tsx`의 `focusFor`, `Composer.tsx`의 효과, `ApprovalCard.tsx`의 마운트 효과), 3은 앞절 맞고 이유절 틀림이었다. 효과가 시험의 포커스·클릭보다 먼저 돌면 고치기 전 판도 초록이라 "효과가 늦은 회차는 빨갰다"는 코드상 단정이 못 된다는 지적이다.
+  - 고친 것: 프로브 머리 주석, 티켓 Comments, 프로브 README 행의 같은 구절. 고치기 전 판 300회차에서 효과가 늦은 12회차가 모두 빨갰다는 측정(앞 절의 `redShapes`와 초록 288 모두 제목)은 남기고, 코드상으로는 "빨갈 수 있었던 회차"이며 측정에 기댄 표지라고 좁혔다.
+  - 남긴 것(Minor): `untilPaused`의 단언이 제목 문구 "승인이 필요합니다"에 묶였다. 문구가 바뀌면 시간 초과로 보인다. 같은 파일이 다른 사례에서도 그 문구로 카드를 찾으므로 고치지 않았다.
+- CLI 대체 둘: `bug-perf-review`는 지적 0(코드와 시험을 따라갔고 프로브·문서는 읽지 않았으며 돌리지 않았다는 보고). `/security-review`는 발견 0(테스트 전용 코드, 프로브의 `--source`는 `execFileSync` 인자 배열, `shell: true`의 인자는 상수라는 보고).
