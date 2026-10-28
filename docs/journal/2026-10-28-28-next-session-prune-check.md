@@ -1,4 +1,4 @@
-# 2026-10-28 (21) 병합 뒤 원격 정리가 지우는 대신 원격에 브랜치가 없는지 본다 (harness 025)
+# 2026-10-28 (28) 병합 뒤 원격 정리가 지우는 대신 원격에 브랜치가 없는지 본다 (harness 025)
 
 next-session 지시문으로 연 새 세션이다. 나란히 여는 여덟 가운데 일곱째라 `tidy-checkouts`는 돌지 않았고(묶음의 첫 세션이
 돈다), 주 체크아웃에서 브랜치를 따지 않고 워크트리 `025-next-session-prune-check`에 들어가
@@ -57,7 +57,7 @@ next-session 지시문으로 연 새 세션이다. 나란히 여는 여덟 가�
   "없음"이었다.
 - `uv run python tools/queue_open_rows.py --search 025-next-session-prune-check`가 497을 닫힌 행 하나로 냈다.
 - 번호: `uv run python tools/sibling_overlap.py`가 첫 번에 `git ls-files`의 `Out of memory, malloc failed`로 2로 끝났고,
-  다시 치니 번호 겹침 없음이었다(이 브랜치의 새 번호는 일지 2026-10-28-21, 티켓 025).
+  다시 치니 번호 겹침 없음이었다(이 브랜치의 새 번호는 일지 2026-10-28-28, 티켓 025).
 - 린트 둘(`uv run ruff check .`, `uv run ruff format --check .`)이 초록이었다. `uv run python tools/canary.py --shape <명세>`와
   `uv run python tools/check_md_tables.py .scratch/retro-queue.md`도 통과했다. 이 브랜치는 `.py`를 바꾸지 않아 커밋의
   pre-commit에서 ruff 둘이 `Skipped`가 되므로 손으로 친 이 결과가 그 몫이다. 나머지 검증 명령은 아직 돌리지 않았다.
@@ -99,8 +99,8 @@ next-session 지시문으로 연 새 세션이다. 나란히 여는 여덟 가�
 시작 프롬프트: 대기열 497을 티켓 .scratch/harness/issues/025-next-session-prune-check.md로 쓰고 한다
 브랜치: chore/025-next-session-prune-check
 모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
-읽을 것: docs/agents/issue-tracker.md, 일지 docs/journal/2026-10-28-21-next-session-prune-check.md
-이어받을 상태: 인계: 셀프 리뷰 직전. 커밋하지 않은 변경(미추적 셋 포함)이 워크트리에 있고 셀프 리뷰(/code-review, 기점 origin/main)부터 한다. 린트 둘과 카나리아(통과 4)는 마쳤고 나머지 검증 명령은 돌리지 않았다. 밀 주장과 남은 단계는 일지의 인계 절. docs/journal/2026-10-28-21-next-session-prune-check.md
+읽을 것: docs/agents/issue-tracker.md, 일지 docs/journal/2026-10-28-28-next-session-prune-check.md
+이어받을 상태: 인계: 셀프 리뷰 직전. 커밋하지 않은 변경(미추적 셋 포함)이 워크트리에 있고 셀프 리뷰(/code-review, 기점 origin/main)부터 한다. 린트 둘과 카나리아(통과 4)는 마쳤고 나머지 검증 명령은 돌리지 않았다. 밀 주장과 남은 단계는 일지의 인계 절. docs/journal/2026-10-28-28-next-session-prune-check.md
 확인할 선행 조건: 병합은 이 워크트리 사본의 next-session "워크트리에서 병합할 때"를 Read로 열어 따른다(이 브랜치가 그 3을 바꾼다)
 이번 요청 범위: PR과 병합까지
 ```
@@ -242,8 +242,8 @@ open-session을 부른다 2026-10-28T03:47:45Z
 시작 프롬프트: 대기열 497을 티켓 .scratch/harness/issues/025-next-session-prune-check.md로 쓰고 한다
 브랜치: chore/025-next-session-prune-check
 모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
-읽을 것: docs/agents/issue-tracker.md, 일지 docs/journal/2026-10-28-21-next-session-prune-check.md
-이어받을 상태: 인계: 커밋 뒤. 셀프 리뷰를 반영한 커밋(pre-commit 통과)까지 했고 푸시와 PR은 아직이다. 일지의 인계(커밋 뒤) 절과 인용 따옴표 수정은 커밋하지 않은 채 워크트리에 있다. 남은 단계는 PR 직전 리뷰(밀 새 문장은 일지 "고친 것 (셀프 리뷰 반영)"), 푸시와 PR, 봇 회차, 회고, 워크트리에서 병합이다. 첫 커밋 시도는 이 PC의 부하로 web-verify·pytest가 빨갰고 다시 치니 통과했다(일지 "검사 (셀프 리뷰 뒤)"). docs/journal/2026-10-28-21-next-session-prune-check.md
+읽을 것: docs/agents/issue-tracker.md, 일지 docs/journal/2026-10-28-28-next-session-prune-check.md
+이어받을 상태: 인계: 커밋 뒤. 셀프 리뷰를 반영한 커밋(pre-commit 통과)까지 했고 푸시와 PR은 아직이다. 일지의 인계(커밋 뒤) 절과 인용 따옴표 수정은 커밋하지 않은 채 워크트리에 있다. 남은 단계는 PR 직전 리뷰(밀 새 문장은 일지 "고친 것 (셀프 리뷰 반영)"), 푸시와 PR, 봇 회차, 회고, 워크트리에서 병합이다. 첫 커밋 시도는 이 PC의 부하로 web-verify·pytest가 빨갰고 다시 치니 통과했다(일지 "검사 (셀프 리뷰 뒤)"). docs/journal/2026-10-28-28-next-session-prune-check.md
 확인할 선행 조건: 병합은 이 워크트리 사본의 next-session "워크트리에서 병합할 때"를 Read로 열어 따른다(이 브랜치가 그 3을 바꾼다)
 이번 요청 범위: PR과 병합까지
 ```
@@ -345,8 +345,8 @@ open-session을 부른다 2026-10-28T05:16:27Z
 시작 프롬프트: 대기열 497을 티켓 .scratch/harness/issues/025-next-session-prune-check.md로 쓰고 한다
 브랜치: chore/025-next-session-prune-check
 모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
-읽을 것: docs/agents/issue-tracker.md, 일지 docs/journal/2026-10-28-21-next-session-prune-check.md
-이어받을 상태: 인계: PR 연 뒤. PR #417 을 열었고 커밋 64ee0233 까지 푸시했다. 순서 1의 2(봇 회차)부터 하고, 첫 @coderabbitai review 코멘트도 새 세션이 남긴다. PR 직전 리뷰(/security-review 지적 없음, bug-perf-review 유효 넷)는 반영해 커밋했다. 일지의 인계(PR 연 뒤에 넘김) 절과 인용 따옴표 수정은 커밋하지 않은 채 워크트리에 있다. 남은 단계는 봇 회차와 반영, 회고, 워크트리에서 병합이다. docs/journal/2026-10-28-21-next-session-prune-check.md
+읽을 것: docs/agents/issue-tracker.md, 일지 docs/journal/2026-10-28-28-next-session-prune-check.md
+이어받을 상태: 인계: PR 연 뒤. PR #417 을 열었고 커밋 64ee0233 까지 푸시했다. 순서 1의 2(봇 회차)부터 하고, 첫 @coderabbitai review 코멘트도 새 세션이 남긴다. PR 직전 리뷰(/security-review 지적 없음, bug-perf-review 유효 넷)는 반영해 커밋했다. 일지의 인계(PR 연 뒤에 넘김) 절과 인용 따옴표 수정은 커밋하지 않은 채 워크트리에 있다. 남은 단계는 봇 회차와 반영, 회고, 워크트리에서 병합이다. docs/journal/2026-10-28-28-next-session-prune-check.md
 확인할 선행 조건: 병합은 이 워크트리 사본의 next-session "워크트리에서 병합할 때"를 Read로 열어 따른다(이 브랜치가 그 3을 바꾼다)
 이번 요청 범위: PR과 병합까지
 ```
@@ -400,6 +400,14 @@ CodeRabbit 체크 런이 `neutral`, 제목 `Review rate limited`였고, 요청 �
 
 - 카나리아: 같은 명령을 다시 돌려 통과 4였다(원본은 세션 스크래치패드 `canary-025-round1`). 이 회차의 고침(3의 `fetch` 재시도
   실패 절)은 카나리아의 세 질문 밖이라, 바뀐 3이 새 세션에 실리는지만 다시 본 것이다.
+
+### main 합치기 (봇 회차 2 앞)
+
+회고 커밋 `70cb36c7`의 푸시를 `hook_push_behind_main`이 막았다(origin/main의 #415 `06a8f85b` 한 커밋 뒤). 합치다
+`.scratch/retro-queue.md`의 530·531·532·533 행에서 충돌이 났다. 530은 양쪽이 같은 행에 2회차를 더한 것이라 두 사례를 합쳐
+3회차로 적었고, 531·532는 main 쪽, 533은 이 브랜치 쪽을 썼다. 병합 커밋 `9c3cfd45`의 pre-commit은 모두 통과였다(703초).
+그 뒤 `tools/sibling_overlap.py`가 이 일지 2026-10-28-21이 main의 최신 일지 2026-10-28-23보다 이름순으로 앞이라고 알려
+`--move`로 2026-10-28-28로 옮겼다.
 
 ## 회고
 
