@@ -232,3 +232,34 @@ open-session을 부른다 2026-10-28T06:03:46Z
 ### origin/main 합치기
 
 origin/main은 `5ccb51a0`(harness 021, #412)로 여덟 커밋 앞섰다. `git merge origin/main`이 `.scratch/plan.md` 25행(프론티어 줄)에서 충돌했다. main은 그 줄 끝에 design-reverse-sync가 닫혔다는 문장을, 이 브랜치는 03이 병합됐다는 문장을 더했다(두 쪽의 `--word-diff`를 손으로 봤다). 그래서 main의 줄 끝에 이 브랜치의 문장을 붙였고, 푼 줄이 main과 그 문장 하나만 다른 것을 `--word-diff`로 손으로 봤다. main이 바꾼 파일 가운데 이 브랜치가 바꾼 파일과 겹치는 것은 plan.md 하나였고, `web/packages/ui`나 `web/apps/admin`에 닿는 것이 없어 사진 비교는 다시 치지 않는다(`git diff --name-only HEAD...origin/main`을 손으로 봤다). `tools/sibling_overlap.py`가 이 일지의 번호 09가 origin/main의 최신 일지 16보다 이름순으로 앞선다고 알려, `--move`로 23으로 옮겼다(도구가 찍었다). 형제 워크트리 `11-web-edit-teal-accent-600`(PR #413)은 그 도구의 함께 고친 파일 목록에 들지 않았다(도구가 찍었다).
+
+병합 커밋 `d761540e`는 pre-commit의 열 검사(pytest 493.8초, web-verify 565.4초)와 마크다운 표·줄 구분 문자·변이 표·카나리아 명세·커밋 메시지 검사를 지났다(pre-commit이 찍었다). 인용 대조는 `.scratch/admin-style/probes/README.md` 38행의 줄임표 든 인용 하나를 경고했다(막지 않는다).
+
+### PR 직전 리뷰
+
+`coderabbit auth status`가 `Seat: not assigned`라 CLI 축은 돌지 못했고(도구가 찍었다), 대체 둘을 쓴다. `bug-perf-review`는 병합 커밋이 도는 동안 기준을 `5ccb51a0`(origin/main)으로 고정해 띄웠고, 밀 주장은 위 셀프 리뷰 절의 두 목록(아홉)을 넘겼다. 무거운 명령(pnpm·vitest·playwright)은 치지 말라고 했다. 보고는 파일 63개(정답 사진 16장은 읽지 않음), 호출 42번, 실행 없이 코드와 문서를 읽은 판정이었다(서브에이전트의 보고). 밀 주장 아홉 가운데 일곱은 맞다고 했다. 지적과 판정은 아래다.
+
+1. Minor 유효: `web/tools/visual.ts` 10행의 "(위젯의 `@agent-os/ui`, 관리 화면의 `@agent-os/ui`와 `@agent-os/api-client`)"에서 위젯도 `@agent-os/api-client`를 `workspace:*`로 기댄다(밀 주장 5). **고쳤다.** `web/apps/widget/package.json` 13·14행과 `web/tools/visual.test.ts` 52·53행(위젯의 링크 기대에 `@agent-os/api-client`가 든다)을 `grep`으로 손으로 봤고, "(위젯과 관리 화면 모두 `@agent-os/ui`와 `@agent-os/api-client`)"로 고쳤다.
+2. Minor 유효: `web/apps/admin/.storybook/Preview.stories.tsx`의 "프로젝트와 항목은 뿌리 vitest.config.ts 가 같은 키로 짓는다"에서 `vitest.config.ts`는 항목을 짓지 않는다(밀 주장 6). 항목 자체는 `preview.tsx` 63~67행이 키를 글자로 적어 짓는다. **고쳤다.** `vitest.config.ts` 21·73~81행이 같은 변수로 프로젝트 이름과 `initialGlobals`의 값만 정하는 것을 `grep`으로 손으로 봤고, "스토리 테스트 프로젝트의 이름과 그 프로젝트가 고르는 항목의 키는 뿌리 vitest.config.ts 가 같은 변수로 정하고, 항목 자체는 preview.tsx 가 짓는다"로 고쳤다.
+3. Minor 보류: `AdminScreen`이 하이드레이션 전에 `AdminFrame`(머리의 "관리 화면" 제목)을 그렸다가, 토큰이 없으면 `EntryFrame`으로 통째로 바뀐다. **오탐으로 닫았다.** 명세 160행이 "토큰이 없으면 틀이 잠깐 섰다가 관리 토큰 넣기 화면으로 바뀐다"를 사용자가 2026-10-27에 고른 동작으로 적고, 하이드레이션 전의 틀은 티켓 04의 체크박스다(Grep으로 손으로 봤다). `AdminFrame`이 인자 없이 머리의 제목과 빈 본문을 그리는 것은 코드를 읽었다.
+
+이 두 주석 편집은 병합 커밋이 도는 사이에 했고, 그 커밋에 섞이지 않고 작업 트리에 남았다(`git status --short`와 `git show --stat HEAD`를 손으로 봤다).
+
+`/security-review`는 병합 커밋 `d761540e` 뒤, 아래 웹 편집 확인에서 PR #413의 병합을 기다리는 동안 돌렸다. 그 명령이 모은 커밋 목록은 병합 커밋과 `e092269b` 둘이었다(그 명령의 프롬프트에 찍힌 것을 손으로 봤다). 찾기 하위 작업은 `git diff 5ccb51a0...HEAD`를 보고 확신 8 이상의 HIGH·MEDIUM 취약점이 없다고 보고했다(서브에이전트의 보고). 관리 토큰 넣기가 `TextField`로 바뀐 뒤에도 `type="password"`·`autoComplete="off"`가 칸에 가고 `value`를 넘기지 않으며 전송 로직이 그대로라는 것, 관리 앱과 `packages/ui/src`에 `dangerouslySetInnerHTML`·`innerHTML`·`eval(`·`new Function`이 없다는 것, `ci.yml`의 새 단계에 `${{ }}`로 끼우는 외부 입력이 없다는 것을 근거로 들었다. 지적이 없어 오탐 거르기 하위 작업은 띄우지 않았다. 작업 트리의 주석 편집 둘과 일지는 그 범위 밖이다.
+
+### 디자인 시스템의 웹 편집 확인(이 세션)
+
+위 1의 편집이 이 세션에서 처음 `web/` 아래를 고친 것이라 계기 훅이 `/sync-design-system 확인`을 알렸다. main을 합친 뒤라 스킬은 디스크의 `SKILL.md`를 Read로 열어 따랐다. `check paths`가 낸 경로 셋과 스물셋을 `read`로 받았고(판 `1793158636-bf6f`), 컴포넌트 README 아홉은 도구가 "no file is published at that path in the served version"으로 답해 `absent`로 적었다(도구가 찍었다). `check judge`의 `result`는 `importing`이었다. `claim`은 형제 브랜치 `feature/11-web-edit-teal-accent-600`(티켓 design-reverse-sync 11, 2026-10-27T19:24:40Z, 바꾼 파일 `project/tokens.json`)이고, 그 뒤에 더 고친 몫(`further`)은 비었다(도구가 찍었다). 그 브랜치의 PR #413은 열려 있었고(`gh pr list`가 찍었다), `decide --caller screen`은 `ask`와 선택지 둘("그 들이기의 병합을 기다린다", "지금 코드 값으로 계속한다")을 냈다(도구가 찍었다).
+
+> 질문: "디자인 시스템 아티팩트의 웹 편집(녹청 라이트 accent-600)을 형제 브랜치가 PR #413으로 코드에 들이는 중입니다. 이 PR의 화면 작업을 어떻게 할까요?"
+> 고른 답: "그 들이기의 병합을 기다린다" — "그 PR 이 병합될 때까지 화면 작업을 멈춘다"
+
+고르지 않은 쪽은 "지금 코드 값으로 계속한다"("들이는 값 없이 지금 코드 값으로 화면 작업을 잇는다")였다. 첫 화면은 훅이 사실 대조로 막았고, 들이는 쪽이 실행 중인 세션이 아니라 기록의 `claim`이 가리키는 브랜치라 질문의 "형제 세션"을 "형제 브랜치"로 고쳐 다시 불렀다. 스킬의 "멈춘 상태"의 병합을 기다림대로, 기다리는 들이기의 브랜치는 `feature/11-web-edit-teal-accent-600`(PR #413)이고 그 병합 뒤 main을 합쳐 잇는다. 이 세션의 작업 트리에는 위 PR 직전 리뷰 1·2의 주석 편집 둘이 커밋하지 않은 채 남는다.
+
+PR #413의 병합은 세션 스크래치패드의 대기 스크립트(2분마다 `gh pr view 413 --json state`)를 백그라운드로 띄워 기다렸다. 그 PR을 연 세션은 그때 돌고 있지 않았다(`list_sessions`의 `isRunning`이 거짓). PR #413은 2026-10-28T07:10:58Z에 `ad8a9c37`로 병합됐다(대기 스크립트가 찍었다).
+
+### origin/main 다시 합치기
+
+origin/main은 `ad8a9c37`(#413)과 `8e43dd2c`(design-card-build 설계, #414) 두 커밋 앞섰고, 바뀐 파일 여덟 가운데 `web/`에 닿는 것은 없었다(`git diff --name-only HEAD...origin/main`을 손으로 봤다). 그래서 사진 비교는 다시 치지 않는다. `.scratch/plan.md` 25행이 다시 충돌했다. main은 프론티어 줄 끝에 design-card-build의 설계 인터뷰가 끝났다는 문장을 더했고, 앞과 같이 main의 줄 끝에 이 브랜치의 03 문장을 붙였다. 푼 줄이 main과 그 문장 하나만 다른 것을 `--word-diff`로 손으로 봤다.
+
+첫 병합 커밋의 인용 대조가 경고한 `.scratch/admin-style/probes/README.md` 38행의 "좁은 프로젝트에서 … 가로 스크롤이 없는지 본다"는, 원문(티켓 03 38행)에서 "없는지"와 "본다" 사이에 괄호 설명이 있어 줄임표 뒤도 원문과 글자가 어긋났다(`grep`으로 손으로 봤다). 이 브랜치가 쓴 줄이라 티켓의 문장 그대로 옮겼다.

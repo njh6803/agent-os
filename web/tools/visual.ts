@@ -7,7 +7,7 @@
  *   링크를 풀어 임시 폴더로 복사해 읽기 전용으로 bind 하고, 컨테이너가 시작하며 그것을 그 패키지의 node_modules 자리에
  *   둔 tmpfs 로 복사한다. pnpm 의 링크(윈도우는 junction)는 컨테이너 안에서 풀리지 않는다. 셋은 순수 JS 라(네이티브
  *   파일 0개, 측정 visual_docker) 운영체제를 가리지 않는다.
- * - 그 패키지가 `workspace:` 로 기대는 워크스페이스 패키지(위젯의 `@agent-os/ui`, 관리 화면의 `@agent-os/ui`와 `@agent-os/api-client`)는 같은 tmpfs 에 컨테이너 안의
+ * - 그 패키지가 `workspace:` 로 기대는 워크스페이스 패키지(위젯과 관리 화면 모두 `@agent-os/ui`와 `@agent-os/api-client`)는 같은 tmpfs 에 컨테이너 안의
  *   web/ 자리를 가리키는 심볼릭 링크로 잇는다. 복사하지 않고 링크로 잇는 것은 Playwright 1.63 이 실제 경로가
  *   node_modules 아래인 파일을 TypeScript 로 바꾸지 않아서다(설치본 esmLoader 의 shouldTransform). 링크는 실제 경로가
  *   /web/packages/… 로 풀려 바뀐다. 링크는 컨테이너 안에서 만든다. 윈도우 호스트의 폴더에 만든 링크는 컨테이너가 따라가지

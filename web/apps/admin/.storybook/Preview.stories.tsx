@@ -11,7 +11,8 @@ const KEY = "admin-storybook-preview-probe";
 
 /**
  * 항목마다 서야 하는 창(admin-style 명세 "Storybook과 사진 비교"의 1280×900 과 320×640). 창을 세우는 viewports.ts 의 값과
- * 따로 적어, 그 값이 명세와 달라지면 이 판정이 빨개진다. 프로젝트와 항목은 뿌리 vitest.config.ts 가 같은 키로 짓는다.
+ * 따로 적어, 그 값이 명세와 달라지면 이 판정이 빨개진다. 스토리 테스트 프로젝트의 이름과 그 프로젝트가 고르는 항목의
+ * 키는 뿌리 vitest.config.ts 가 같은 변수로 정하고, 항목 자체는 preview.tsx 가 짓는다.
  */
 const EXPECTED = {
   wide: { width: 1280, height: 900 },
