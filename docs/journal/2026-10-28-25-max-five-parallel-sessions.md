@@ -99,3 +99,15 @@ open-session을 부른다 2026-10-28T09:54:15Z
 - origin/main(`06a8f85b`, PR #415)을 합쳤다. `docs/constitution/README.md` 11행은 main의 줄을 바탕으로 판을 3.0.59로 올리고 3.0.59 노트를 3.0.58 노트 앞에 넣었다. 3.0.58을 비워 두었다던 문장은 그 판이 이제 main의 노트로 채워져 뺐다. `docs/constitution/operations.md`는 글자 충돌 없이 합쳐졌다.
 - `uv run python tools/run_checks.py`는 종료 0이었고 열 검사가 모두 Passed였다(로그를 손으로 봤다). ruff 둘도 초록이었다.
 - `uv run python tools/sibling_overlap.py`의 출력을 손으로 봤다. 번호 겹침 없음. 함께 고친 파일은 PR #417과 워크트리 025의 `.claude/skills/next-session/SKILL.md`이고, 나중에 병합하는 쪽이 글자 충돌을 푼다.
+
+### PR 직전 리뷰
+
+`coderabbit auth status`를 손으로 봤다. `Seat : not assigned`라 CLI 대신 대체 둘을 돌렸다(범위 `origin/main...HEAD`).
+
+- 내장 `/security-review`: 서브에이전트 하나가 확신도 8 이상인 취약점 0건을 냈다. 카나리아 TOML은 `tools/canary.py`의 `run_claude`가 `subprocess.run`에 인자 목록으로 넘겨 셸을 거치지 않는다고 코드를 읽어 판정했다. 후보가 없어 오탐 거르기는 돌리지 않았다.
+- `bug-perf-review` 서브에이전트: Major 1·Minor 4. 모두 고치지 않고 남겼다.
+  - Major(티켓 본문의 "이 세션 포함"과 스킬이 반대다): 티켓 본문은 요청의 원문이고, 이 세션을 빼기로 바꾼 결정과 까닭은 티켓 코멘트와 위 결정에 이미 있다. 스킬이 원천이라 계산은 스킬대로 돈다.
+  - Minor(형제 둘이 거의 같은 때에 세면 여섯이 된다, 막 연 세션이 아직 `isRunning`이 아닐 수 있다): 상한은 어림이다. 잠금 안에서 다시 세는 안은 3단계의 기계 전체 잠금을 넓혀야 해 이 티켓 밖이다.
+  - Minor(열지 못한 지시문이 이 세션의 컨텍스트와 보고에만 남는다): 위 결정의 길대로다. 티켓은 `ready-for-agent`로 남아 다음 `next-session` 2단계가 다시 묶는다. 수용 기준 넷째가 처음 상한에 닿는 세션에서 이 길을 본다.
+  - Minor(세는 법의 구멍 둘): 쉬는 세션과 다른 폴더의 세션을 다루는 법은 스킬에 의도로 적혀 있다.
+  - Minor(열 수가 0일 때의 흐름): 스킬 1단계가 이미 0 이하면 하나도 열지 않는다고 하고, 끝 줄이 열지 않은 지시문을 6의 보고로 넘긴다.
