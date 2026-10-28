@@ -1,4 +1,4 @@
-# 2026-10-28 (20) 다른 날의 결과를 설명하는 측정에 그때의 입력을 다시 넣는 갈래를 더한다 (harness 026)
+# 2026-10-28 (31) 다른 날의 결과를 설명하는 측정에 그때의 입력을 다시 넣는 갈래를 더한다 (harness 026)
 
 next-session 지시문으로 연 새 세션이다. 나란히 여는 여덟 가운데 여덟째라 `tidy-checkouts`는 돌지 않았고(묶음의 첫 세션이
 돈다), 주 체크아웃에서 브랜치를 따지 않고 워크트리 `026-probes-replay-original-input`에 들어가
@@ -83,8 +83,8 @@ ruff 둘은 앞서 손으로 쳐 초록이었다. 인용 대조가 경고 하나
 시작 프롬프트: 대기열 506을 티켓 .scratch/harness/issues/026-probes-replay-original-input.md로 쓰고 한다
 브랜치: chore/026-probes-replay-original-input
 모델: Opus 5.5 / medium. 레벨 스윕의 갈래
-읽을 것: docs/journal/2026-10-28-20-probes-replay-original-input.md, docs/agents/issue-tracker.md
-이어받을 상태: 인계: 커밋 뒤. 커밋 c8615ef6까지 규칙 셋째 항목, 티켓, 대기열 506 닫힘, 카나리아(일곱 모두 통과 4, 셀프 리뷰 반영 뒤 사전 확인으로 갈음), 셀프 리뷰 반영을 했다. 일지의 커밋하지 않은 변경(인용 경고 고침, 인계 절)이 워크트리에 있다. 열린 PR은 없다. 남은 것은 그 커밋, PR 직전 리뷰(밀 주장은 일지 셀프 리뷰 절 끝), 푸시, PR 열기, 봇 회차, 회고와 다음, 병합이다. docs/journal/2026-10-28-20-probes-replay-original-input.md
+읽을 것: docs/journal/2026-10-28-31-probes-replay-original-input.md, docs/agents/issue-tracker.md
+이어받을 상태: 인계: 커밋 뒤. 커밋 c8615ef6까지 규칙 셋째 항목, 티켓, 대기열 506 닫힘, 카나리아(일곱 모두 통과 4, 셀프 리뷰 반영 뒤 사전 확인으로 갈음), 셀프 리뷰 반영을 했다. 일지의 커밋하지 않은 변경(인용 경고 고침, 인계 절)이 워크트리에 있다. 열린 PR은 없다. 남은 것은 그 커밋, PR 직전 리뷰(밀 주장은 일지 셀프 리뷰 절 끝), 푸시, PR 열기, 봇 회차, 회고와 다음, 병합이다. docs/journal/2026-10-28-31-probes-replay-original-input.md
 확인할 선행 조건: 병합은 이 워크트리 사본의 next-session "워크트리에서 병합할 때"를 Read로 열어 따른다. sibling_overlap이 형제 024·025와 대기열의 글자 충돌 후보를 알렸다
 이번 요청 범위: PR과 병합까지
 ```
@@ -135,6 +135,13 @@ Minor 둘과 Nit 하나(코멘트를 `gh api`로 읽었다).
   하나, 13분 14초)도 빨갰다(출력을 손으로 봤다). 사용자가 pytest를 CI에 맡기라고 정했다.
 
 > 사용자: "SKIP으로 pytest가 든 parallel-checks만 빼고 커밋해. 빠진 나머지 검사는 손으로 치고, pytest는 푸시 뒤 CI의 python 잡으로 확인한 다음 병합해"
+
+그 커밋 뒤 빠진 여덟을 손으로 쳤다(출력을 손으로 봤다): pyright 오류 0, lint-imports 계약 다섯 유지, `check_instructions`·
+`check_type_escapes`·`check_ticket` 종료 0, `run_hooks` 169건 어긋남 0, zizmor 지적 0, `pnpm -C web verify` 종료 0. 푸시가
+뒤처짐 훅에 다시 막혀 main(#415·#419)을 충돌 없이 합쳤고, main에 더 늦은 일지(2026-10-28-25)가 들어와
+`tools/sibling_overlap.py --move`로 이 일지를 2026-10-28-20에서 2026-10-28-31로 옮겼다.
+
+> 사용자: "번호 옮김 커밋도 SKIP으로 parallel-checks만 빼고 커밋해. 빠진 검사는 손으로 치고 pytest는 CI python 잡으로 확인한 다음 병합해"
 - 뒤처진 채 푸시하려 했다. 기각. 푸시 훅이 그 자리에서 막았다.
 
 만료: `uv run python tools/queue_open_rows.py`와 `--ref origin/main`의 "만료할 행"이 둘 다 없음이었다.
