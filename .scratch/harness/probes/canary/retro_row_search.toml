@@ -2,7 +2,7 @@
 # 실리는지. 실험군은 이 워크트리, 대조군은 주 체크아웃이다. 이 PR 이 병합되기 전의 주 체크아웃에는 그 문장이 없다.
 # 병합 뒤에 다시 돌리려면 `--control-commit 7d27ae45` 를 준다(그 판에는 `expect` 의 세 문구가 모두 없다).
 # 최신 결과: 통과 4(2026-10-28 셀프 리뷰 반영 뒤 질문 셋으로, 이 PC, claude 2.1.302, 대조군 주 체크아웃 `7d27ae45`,
-# 일지 2026-10-28-13).
+# 일지 2026-10-28-16).
 # 돌리는 법: 워크트리 `.claude/worktrees/<이름>/` 루트에서
 #   uv run python tools/canary.py .scratch/harness/probes/canary/retro_row_search.toml <출력 디렉터리>
 kind = "skill"

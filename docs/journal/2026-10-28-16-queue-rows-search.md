@@ -1,4 +1,4 @@
-# 2026-10-28 (13) 대기열 행을 낱말로 찾아 한 줄씩 찍는 옵션을 더한다 (harness 021)
+# 2026-10-28 (16) 대기열 행을 낱말로 찾아 한 줄씩 찍는 옵션을 더한다 (harness 021)
 
 next-session 지시문으로 연 새 세션이다. 나란히 여는 여덟 가운데 셋째라 `tidy-checkouts`는 돌지 않았고(묶음의 첫 세션이
 돈다), 주 체크아웃에서 브랜치를 따지 않고 워크트리 `021-queue-rows-search`에 들어가 `chore/021-queue-rows-search`로 바꿨다.
@@ -88,8 +88,8 @@ next-session 지시문으로 연 새 세션이다. 나란히 여는 여덟 가�
 시작 프롬프트: 대기열 425를 티켓 .scratch/harness/issues/021-queue-rows-search.md로 쓰고 한다
 브랜치: chore/021-queue-rows-search
 모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
-읽을 것: docs/agents/issue-tracker.md, 일지 docs/journal/2026-10-28-13-queue-rows-search.md
-이어받을 상태: 인계: 셀프 리뷰 직전. 커밋하지 않은 변경(미추적 셋 포함)이 워크트리에 있고 셀프 리뷰(/code-review, 기점 origin/main)부터 한다. 전체 검사 러너는 인계하며 멈춰 결과가 없다. 밀 주장과 남은 단계는 일지의 인계 절. docs/journal/2026-10-28-13-queue-rows-search.md
+읽을 것: docs/agents/issue-tracker.md, 일지 docs/journal/2026-10-28-16-queue-rows-search.md
+이어받을 상태: 인계: 셀프 리뷰 직전. 커밋하지 않은 변경(미추적 셋 포함)이 워크트리에 있고 셀프 리뷰(/code-review, 기점 origin/main)부터 한다. 전체 검사 러너는 인계하며 멈춰 결과가 없다. 밀 주장과 남은 단계는 일지의 인계 절. docs/journal/2026-10-28-16-queue-rows-search.md
 확인할 선행 조건: 주 체크아웃 정리(tidy-checkouts)는 나란히 연 묶음의 첫 세션 몫이라 이 세션은 돌지 않는다
 이번 요청 범위: PR과 병합까지
 ```
@@ -219,8 +219,8 @@ open-session을 부른다 2026-10-27T22:11:58Z
 시작 프롬프트: 대기열 425를 티켓 .scratch/harness/issues/021-queue-rows-search.md로 쓰고 한다
 브랜치: chore/021-queue-rows-search
 모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
-읽을 것: docs/agents/issue-tracker.md, docs/constitution/operations.md 리뷰 파이프라인, 일지 docs/journal/2026-10-28-13-queue-rows-search.md
-이어받을 상태: 인계: 커밋 뒤. 셀프 리뷰 반영과 검증 명령 전부를 마치고 603bd1f9로 커밋했다(푸시하지 않았고 PR은 없다). 워크트리에 이 일지의 고침이 커밋하지 않은 채 있다. 남은 단계는 origin/main 합치기, PR 직전 리뷰(CodeRabbit CLI는 좌석이 없어 /security-review와 bug-perf-review를 나란히, 뒤의 것의 브리프에 일지 셀프 리뷰 절의 밀 주장), 푸시와 /git-pr, @coderabbitai review, 봇 회차와 반영, 리뷰 반영 뒤 변이 표 전체 실행(쉰다섯), 회고, 워크트리에서 병합이다. docs/journal/2026-10-28-13-queue-rows-search.md
+읽을 것: docs/agents/issue-tracker.md, docs/constitution/operations.md 리뷰 파이프라인, 일지 docs/journal/2026-10-28-16-queue-rows-search.md
+이어받을 상태: 인계: 커밋 뒤. 셀프 리뷰 반영과 검증 명령 전부를 마치고 603bd1f9로 커밋했다(푸시하지 않았고 PR은 없다). 워크트리에 이 일지의 고침이 커밋하지 않은 채 있다. 남은 단계는 origin/main 합치기, PR 직전 리뷰(CodeRabbit CLI는 좌석이 없어 /security-review와 bug-perf-review를 나란히, 뒤의 것의 브리프에 일지 셀프 리뷰 절의 밀 주장), 푸시와 /git-pr, @coderabbitai review, 봇 회차와 반영, 리뷰 반영 뒤 변이 표 전체 실행(쉰다섯), 회고, 워크트리에서 병합이다. docs/journal/2026-10-28-16-queue-rows-search.md
 확인할 선행 조건: 없음
 이번 요청 범위: PR과 병합까지
 ```
@@ -320,8 +320,8 @@ PR이 바꾸지 않은 `read_ref`에서 리스트 인자로 `git show`에 가는
 시작 프롬프트: 대기열 425를 티켓 .scratch/harness/issues/021-queue-rows-search.md로 쓰고 한다
 브랜치: chore/021-queue-rows-search
 모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
-읽을 것: docs/agents/issue-tracker.md, docs/constitution/operations.md 리뷰 파이프라인, 일지 docs/journal/2026-10-28-13-queue-rows-search.md
-이어받을 상태: 인계: PR 연 뒤. PR #412를 열었고 origin/main을 합친 ee694d03까지 푸시했다. next-session 순서 1의 2(봇 회차)부터 하고, 첫 @coderabbitai review 코멘트도 새 세션이 남긴다. 워크트리에 이 일지의 고침이 커밋하지 않은 채 있어 봇 회차의 커밋에 싣는다. 남은 단계는 봇 회차와 반영, 리뷰 반영 뒤 변이 표 전체 실행(쉰여덟), 회고, 워크트리에서 병합이다. docs/journal/2026-10-28-13-queue-rows-search.md
+읽을 것: docs/agents/issue-tracker.md, docs/constitution/operations.md 리뷰 파이프라인, 일지 docs/journal/2026-10-28-16-queue-rows-search.md
+이어받을 상태: 인계: PR 연 뒤. PR #412를 열었고 origin/main을 합친 ee694d03까지 푸시했다. next-session 순서 1의 2(봇 회차)부터 하고, 첫 @coderabbitai review 코멘트도 새 세션이 남긴다. 워크트리에 이 일지의 고침이 커밋하지 않은 채 있어 봇 회차의 커밋에 싣는다. 남은 단계는 봇 회차와 반영, 리뷰 반영 뒤 변이 표 전체 실행(쉰여덟), 회고, 워크트리에서 병합이다. docs/journal/2026-10-28-16-queue-rows-search.md
 확인할 선행 조건: 없음
 이번 요청 범위: PR과 병합까지
 ```
@@ -349,7 +349,7 @@ open-session을 부른다 2026-10-28T00:32:53Z
 claude-review 첫 회차(헤드 `ee694d03`): Critical·Major 없음, Minor 셋, Nit 둘. 첫 회차라 지적마다 판단했다.
 
 - Minor, `main`이 인자 가르기와 갈래 고르기를 함께 하고 실패 분기마다 `stderr.write(USAGE); return 2`를 되풀이한다:
-  고쳤다. `CODING_STANDARDS.md` 15행이 "실패 분기마다 같은 출력·종료 코드를 되풀이하는 것"을 그 예로 들고, 이 PR이
+  고쳤다. `CODING_STANDARDS.md` 15행이 "실패 분기마다 같은 출력·종료 코드·`continue`를 되풀이하는 것"을 그 예로 들고, 이 PR이
   그 되풀이를 셋에서 다섯으로 늘렸다. `tools/mutate.py`의 `_UsageError`·`_Args`·`_parse`를 선례로 따라, `_parse`가
   틀린 인자에서 `_UsageError`를 던지고 `main`이 한 곳에서 메시지와 쓰임을 낸다. 변이 표에서 원문이 바뀐 셋("ref 를
   주어도…", "rows 를 주어도…", "찾기를 주어도 기본 출력을 낸다")을 고치고, 새 배관을 지키는 "쓰임 오류의 메시지를
@@ -369,3 +369,61 @@ claude-review 첫 회차(헤드 `ee694d03`): Critical·Major 없음, Minor 셋, 
 쉰아홉 모두 원문이 한 번씩이라고 냈고, 원문을 고친 셋과 더한 하나, `_parse`로 옮긴 판정을 지키는 일곱을 번호로 골라
 (`19 21 23 34 51 53 54 55 56 57 58`) 돌리니 `변이 11 모두 기대대로`였다. `uv run ruff check`가 고친 두 파일에서
 초록이었다.
+
+커밋 `95af9e2c`(`chore: queue_open_rows 의 인자 가르기를 _parse 로 뺀다 (harness 021)`). 커밋 전에
+`git branch --show-current`가 `chore/021-queue-rows-search`였고 `uv run python tools/sibling_overlap.py`가 번호 겹침
+없음이었다. pre-commit이 모두 지났고(pytest 441.1초, web-verify 447.9초), 인용 대조 경고 하나는 이 절이
+`CODING_STANDARDS.md` 15행을 줄여 인용한 것이라 글자 그대로 고쳤다(커밋하지 않음). 푸시하지 않았다.
+
+## 인계 (커밋 뒤, 봇 회차 1 반영)
+
+세션 컨텍스트가 236,499 토큰으로 문턱 200,000을 넘은 채 커밋(경계 `커밋 뒤`)에서 `hook_handoff`의 계기가 왔다.
+`next-session`의 "인계할 때" 1의 다섯에 들지 않았다. 커밋은 성공했고, 요청 범위는 병합까지이며, 이 세션을 연
+지시문의 "이어받을 상태"는 `인계: PR 연 뒤`로 지금 경계와 다르고, 이 일지에 이 세션이 쓴 `인계 못함` 줄이 없고,
+`get_session`의 `self`에 `parentSessionId`가 없었다. 이 세션의 지금 제목은 `chore/021-queue-rows-search`이고,
+넘기기 전에 `chore/021-queue-rows-search (인계함)`으로 바꾼다.
+
+- 상태: `95af9e2c`까지 커밋했고 푸시하지 않았다. PR #412의 헤드는 아직 `ee694d03`이다. 워크트리에는 이 일지의
+  고침(위 인용 고침과 이 절)이 커밋하지 않은 채 있다. 봇 회차 1의 보류 이유(위 "봇 회차 1" 절의 남긴 것 셋)는 아직
+  PR 코멘트로 남기지 않았다.
+- 남은 단계: 푸시, 봇 회차 1의 고친 것과 남긴 것을 PR 코멘트 하나로 남기기, `@coderabbitai review`와 대기(봇 회차
+  2. claude-review는 둘째 회차라 Critical·Major만 고친다. CodeRabbit은 이 PR에 낸 리뷰가 아직 없어, 한도가 풀려
+  리뷰가 오면 그것이 CodeRabbit의 첫 회차다), 리뷰 반영 뒤 변이 표 전체 실행(쉰아홉, `PYTHONUTF8=1 uv run python
+  tools/mutate.py .scratch/harness/probes/queue_open_rows_mutations.toml`), 회고, 워크트리에서 병합이다. 이 일지의
+  커밋하지 않은 고침은 다음 커밋에 싣는다.
+
+지시문:
+
+```
+다음 작업: 받는 세션이 이어 쓸 .scratch/harness/issues/021-queue-rows-search.md. 대기열 425: tools/queue_open_rows.py 에 낱말로 행을 찾아 번호·닫힘·머리·승인 칸을 한 줄씩 찍는 옵션을 더하고 retro 5단계가 그것을 가리킨다(PR #412의 봇 회차 1 반영을 커밋까지 마쳤다)
+다음 단계: PR 반영·병합
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: 대기열 425를 티켓 .scratch/harness/issues/021-queue-rows-search.md로 쓰고 한다
+브랜치: chore/021-queue-rows-search
+모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
+읽을 것: docs/agents/issue-tracker.md, docs/constitution/operations.md 리뷰 파이프라인, 일지 docs/journal/2026-10-28-16-queue-rows-search.md
+이어받을 상태: 인계: 커밋 뒤. claude-review 첫 회차를 반영해 95af9e2c로 커밋했고 푸시하지 않았다(PR #412 헤드는 ee694d03). 푸시와 순서 1의 2(봇 회차)부터 한다. 봇 회차 1의 고친 것과 남긴 것 셋의 이유는 일지 "봇 회차 1" 절에 있고 아직 PR 코멘트로 남기지 않았다. CodeRabbit은 두 번 모두 한도로 리뷰가 없었다. 워크트리에 이 일지의 고침이 커밋하지 않은 채 있어 다음 커밋에 싣는다. 남은 단계는 봇 회차 2와 반영, 리뷰 반영 뒤 변이 표 전체 실행(쉰아홉), 회고, 워크트리에서 병합이다. docs/journal/2026-10-28-16-queue-rows-search.md
+확인할 선행 조건: 없음
+이번 요청 범위: PR과 병합까지
+```
+
+제목을 `chore/021-queue-rows-search (인계함)`으로 바꿨다. 멈출 백그라운드 작업은 없었다(CI 대기, 시험, 변이, 커밋이
+모두 끝났다). `git worktree unlock C:/project/agent/.claude/worktrees/021-queue-rows-search`는 `is not locked`로 끝나
+넘어갔다.
+
+open-session을 부른다 2026-10-28T00:59:18Z
+
+## 이어 가기 (커밋 뒤, 봇 회차 1 반영을 인계받은 세션)
+
+위 지시문으로 연 새 세션이 제목을 `chore/021-queue-rows-search`로 바꾸고 `git worktree list`에서 찾은 워크트리
+`021-queue-rows-search`에 `EnterWorktree(path)`로 들어갔다. PR 헤드는 `ee694d03`, 로컬 HEAD는 `95af9e2c`였다.
+
+> 사용자: "대기열 425를 티켓 .scratch/harness/issues/021-queue-rows-search.md로 쓰고 한다"
+
+`gh pr view 412`의 `mergeStateStatus`가 `BEHIND`였다. main에 #411(`c00efe7c`, harness 019)이 들어 있었다.
+`git merge origin/main --no-edit`가 충돌 없이 `a24c24c6`을 만들었다(겹친 파일은 프로브 README와 대기열로 자동 합침).
+#411이 바꾼 `docs/agents/issue-tracker.md`는 일지 근거 계기가 Bash 명령의 쓰기에도 든다는 문장이라 이 브랜치의
+규약에는 닿지 않는다(바뀐 낱말을 읽었다). 합친 뒤 `uv run python tools/sibling_overlap.py`가 종료 1로, 이 브랜치의 일지
+`2026-10-28-13`이 origin/main의 최신 일지 `2026-10-28-14`보다 이름순으로 앞이라고 냈다. `--move`로 `2026-10-28-16`으로
+옮겼고, 도구가 카나리아 명세, 대기열, 이 일지의 인용을 고쳤다. 남은 옛 번호를 Grep 도구로 `28-13`을 찾으니 이 브랜치의
+파일에는 없었다. PR 본문의 일지 경로도 옮긴다.
