@@ -39,6 +39,8 @@
 
 메모(03 셀프 리뷰에서): 관리 화면 Storybook의 `next/link` 별칭(`.storybook/main.ts`의 `viteFinal`과 대역 `next-link.tsx`)은 03에서 설정만 섰고, 03의 스토리는 `Link`를 쓰지 않아 그 별칭을 지나는 스토리가 없다. 이 티켓의 링크·탐색 스토리가 별칭을 처음 지난다. 별칭이 없으면 스토리 테스트가 `ReferenceError: process is not defined`로 불러오다 실패했다(`.scratch/admin-style/probes/storybook_next_link.mjs`).
 
+메모(03 PR의 claude-review에서): 관리 화면 미리보기(`.storybook/preview.tsx`의 `a11y`)가 패키지 미리보기(`web/packages/ui/src/storybook/preview.tsx`)의 `a11y` 값 `test: "error"`를 다시 적는다. 본체의 `parameters`가 Storybook의 `Parameters`(값이 `any`)라 읽어 펼치지 않았기 때문이다. 본체가 `test`를 바꾸면 이 사본이 조용히 어긋난다. 패키지가 `a11y` 값을 타입 있는 상수로 내보내고 두 미리보기가 그것을 쓰면 사본이 없어진다. 패키지를 고치므로 사진 비교 셋을 다시 쳐야 해, 이 티켓에서 할지는 이 티켓의 세션이 정한다.
+
 ### 설정 화면과 토큰
 
 - [ ] **새 경로 `/settings`가 설정 화면이다.** 다른 화면처럼 관리 토큰을 넣은 뒤에 열리고, 관리 토큰이 없으면 관리 토큰 넣기 화면이 선다. 서버의 경로와 계약(`openapi.json`)은 바뀌지 않는다
