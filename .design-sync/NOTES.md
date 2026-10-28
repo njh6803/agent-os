@@ -182,11 +182,13 @@ https://claude.ai/artifact/8ttLDZQqchfD2ao1XG56GH 에, 그 아티팩트의 주�
   같았다. 그래서 빌드 산출 전체를 맞춘 올리기마다 계획이 README 를 보낼 것에 넣고, 보내면 그 절이 지워진다. 2026-10-27 첫
   올리기는 사람이 고른 대로 산출의 README 를 아티팩트의 바이트로 바꿔 보내지 않았고, 기록은 그 바이트를 든다. 다음
   올리기의 길은 `upload.md` 5 의 "README 의 옮기기 절"이다. 그 절을 화면의 설정 마치기가 쓰는지는 재지 않았다.
-- 디자인 시스템 페이지의 메뉴는 Overview 와 Files 말고는 흐리고, 눌러 본 Colors·Components 는 "This page opens when setup
-  is finished" 와 "Finish setting up" 단추만 보인다(2026-10-27 첫 올리기 뒤 내장 브라우저에서 손으로 봤다). 파일 목록은
-  올린 파일을 보이지만 카드 HTML 을 그리지 않고 소스로 보인다. 그 단추는 ADR 0025 가 하지 않기로 한 "Finish the
-  migration" 정리와 같은 것으로 보이고(화면의 설명 문구로 어림했다) 누르지 않았다. 페이지에서 테마와 디자인 토큰을 보고
-  고치는 것은 편집을 켜는 design-reverse-sync 티켓 10 이 이것부터 다룬다.
+- 디자인 시스템 페이지의 메뉴는 2026-10-27 첫 올리기 뒤 Overview 와 Files 말고는 흐렸고, 눌러 본 Colors·Components 는
+  "This page opens when setup is finished" 와 "Finish setting up" 단추만 보였다(내장 브라우저에서 손으로 봤다). 2026-10-28
+  design-reverse-sync 티켓 10 이 색인의 `editing` 키를 지우자 열려, 사람이 페이지에서 녹청 라이트의 값과 설명을 고쳐
+  저장했다(사람이 알렸다). 그 단추는 ADR 0025 가 하지 않기로 한 "Finish the migration" 정리와 같은 것으로 보이고(화면의
+  설명 문구로 어림했다) 누르지 않았다. Components 절은 "No components yet." 만 보인다. 형식이 `components/` 아래 두 단계인
+  파일만 카드로 세는데 빌드의 카드는 무리 폴더가 한 단계 더 있어서다(페이지 코드를 읽었다, 티켓 10 의 결과 11). 파일 목록은
+  올린 파일을 보이지만 카드 HTML 을 그리지 않고 소스로 보인다.
 - Alert 는 `cfg.overrides.Alert.cardMode: "column"` 이다. 2026-10-14 validate 가 보여 주기용 스토리 둘이 격자 칸보다
   넓다고(`[GRID_OVERFLOW] wide`) 알렸다. 표시 키라 채점에 들지 않는다.
 - 디자인 시스템 아티팩트의 `read` 가 "artifact not found" 를 내면 초대를 수락하지 않았거나 Claude Code 가 다른 계정이다
