@@ -426,6 +426,8 @@ def test_다시_만들_수_있는_무시된_것만_지나간다() -> None:
         "web/apps/widget/public/fonts/",
         # 위젯 시작 래퍼가 짓는 페이지 안 번들(티켓 web-widget 10, 대기열 464)
         "web/apps/widget/public/element.js",
+        # 관리 화면의 Storybook 정적 빌드(admin-style 티켓 03)
+        "web/apps/admin/storybook-static/",
         ".claude/settings.local.json",
         # 2026-10-15 에 병합된 워크트리 다섯을 남긴 것들. 모두 루트 `.gitignore` 가 산출물·캐시라고
         # 적은 자리다
