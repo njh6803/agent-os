@@ -92,3 +92,10 @@ PR 직전 리뷰에 밀 주장(반영으로 새로 쓴 문장):
 - "그 사례에는 승인 카드가 서지 않고, 교환이 없어 `WidgetScreen`의 `focusFor`가 null이라 입력창(`Composer`)의 효과도 포커스를 옮기지 않는다."
 - "`user.type(reasonBox(), …)`을 치는 사례도 효과가 칸을 누른 뒤에 돌면 입력이 제목에 갈 수 있다(코드 읽기, 재지 않았다)."
 - 프로브 머리 주석의 "`lateEffect` … 고친 판에서는 이것이 고친 길을 지났다는 표지다. 고치기 전 판에서 효과가 늦은 회차는 빨갰기 때문이다."
+
+## 커밋과 다시 잰 결과
+
+- 커밋 `bd52303e`. pre-commit 결과(그 커밋의 출력): check-ticket, lint-imports, zizmor, check-instructions, check-type-escapes, pyright-linux, pyright, run-hooks, web-verify, pytest, 커밋 메시지가 Passed. ruff check·ruff format은 스테이지된 `.py`가 없어 건너뛰었다(이 브랜치는 `.py`를 바꾸지 않았다). 위젯 e2e·`-m llm_widget`·사진 비교는 치지 않았다. 바꾼 것이 단위 시험 파일의 도우미 하나라 위젯 코드·api-client·서버 경로에 닿지 않는다.
+- 고친 프로브로 다시 쟀다(프로브의 요약 줄과 `redShapes`). `node .scratch/harness/probes/widget_char_count/repeat.mjs 300 --source 5ccb51a0`: 빨강 12/300, 12 모두 한 모양(카드 직후 포커스가 입력창, 첫 붙여 넣기 뒤 칸 17,999·포커스는 제목, 두 번째 뒤에도 17,999, 같은 요소). 초록 288은 모두 카드 직후 포커스가 제목. `--source bd52303e`: 300/300 초록, 그 가운데 효과가 늦은 회차 10이 모두 초록.
+- README 행, 티켓 Comments, 대기열 486의 닫힘 문구를 다시 잰 수로 고쳤다. 앞의 "진단"과 "고친 것"의 9/300·작업 트리 300/300은 첫 판의 기록으로 둔다.
+- 티켓의 "검증 명령이 모두 초록이다"를 위 pre-commit 결과로 다시 체크하고 Status를 done으로 돌렸다.
