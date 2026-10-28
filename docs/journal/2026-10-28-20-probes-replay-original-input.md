@@ -109,3 +109,37 @@ PR 직전 리뷰(`operations.md` 리뷰 파이프라인 2). CodeRabbit CLI는 �
   치는 자리의 차이는 "입력 밖의 무엇"에 든다.
 - 보류(Minor): 새 카나리아의 둘째 `expect`는 실행이 아니라 사전 확인으로 갈음했다. 두었다. `operations.md` 카나리아 항목의
   갈음 조건(같은 PR·같은 판에서 통과한 뒤 원천 본문과 `expect`만 고침)에 맞는다.
+
+커밋 `a720e0ac`의 pre-commit은 모두 통과했다(출력을 손으로 봤다). origin/main이 `5ccb51a0` 그대로라 합칠 것 없이 내장
+`/security-review`를 돌렸다. 지적 0이다. 바뀐 것이 마크다운과 TOML 명세뿐이고, 그 서브태스크가 `tools/canary.py`를 읽어 명세를
+`tomllib`로 읽고 하위 프로세스에 인자를 목록으로 넘긴다고 보고했다(그 보고를 옮긴 것이다).
+
+푸시는 `origin/main`보다 2커밋 뒤처졌다는 훅에 막혔다(#413·#414). `git merge origin/main`이 `.scratch/retro-queue.md`를 충돌
+없이 합쳤고, `tools/sibling_overlap.py`가 번호 겹침 없음이라 했다(출력을 손으로 봤다). PR #416을 열었다.
+
+봇 첫 회차(PR #416, main을 합친 머리 `dde8ae8c`. `tools/wait_ci.py`가 모두 통과라 했다): CodeRabbit은 고칠 지적 없음, claude-review는
+Minor 둘과 Nit 하나(코멘트를 `gh api`로 읽었다).
+- Minor: 새 카나리아 머리 줄이 바꾸기 전 `expect`의 실행 결과와 지금 판의 사전 확인 갈음을 한 줄에 섞었다. 고쳤다: 두 사실을
+  나눠 적었다.
+- Minor: `probes.md` 506 사례가 일지를 읽지 않으면 뜻이 잡히지 않는다. 보류. 같은 항목의 179 사례도 같은 깊이로 적었고, 이
+  항목의 사례는 무엇을 어겼고 어떻게 드러났는지를 함께 적는 꼴이다.
+- Nit: 카나리아 명세 여섯에 같은 갈음 문구가 복제됐다. 보류. 봇도 지금 구조에서는 어쩔 수 없다고 했다.
+
+## 회고
+
+후보 둘, 승인 0, 기각 둘, 넘김 0.
+- 부하가 겹친 pre-commit에서 시간에 기대는 시험 10개와 오류 1개가 빨갰다(위 이어받은 세션 절). 기각. 대기열 306이 이 종류를
+  받아들여 닫았다(ADR 0036). retro 5단계대로 새 사례는 회차를 더하지 않고 이 일지에만 적는다. 앞 세션의 러너에서도 같은 둘이
+  빨갰다(한 것 절). 봇 회차의 반영 커밋에서도 같은 둘이 다시 빨갰고(pytest 18분 52초, 출력을 손으로 봤다), 같은 커밋을
+  다시 쳤다. 셋째(`test_interrupt` 하나, 13분 45초)와 넷째(`test_rerun_runner` 하나, 26분 47초), 다섯째(`test_interrupt`
+  하나, 13분 14초)도 빨갰다(출력을 손으로 봤다). 사용자가 pytest를 CI에 맡기라고 정했다.
+
+> 사용자: "SKIP으로 pytest가 든 parallel-checks만 빼고 커밋해. 빠진 나머지 검사는 손으로 치고, pytest는 푸시 뒤 CI의 python 잡으로 확인한 다음 병합해"
+- 뒤처진 채 푸시하려 했다. 기각. 푸시 훅이 그 자리에서 막았다.
+
+만료: `uv run python tools/queue_open_rows.py`와 `--ref origin/main`의 "만료할 행"이 둘 다 없음이었다.
+
+## 다음
+
+harness 026은 이 PR로 닫힌다. 다음은 next-session 결정표의 harness 티켓 PR 줄대로 `plan.md`의 프론티어에서 고른다. 같은 묶음의
+형제(021~027 가운데 열린 것)는 각자 도는 중이라 다음 작업에 넣지 않는다.
