@@ -427,3 +427,91 @@ open-session을 부른다 2026-10-28T00:59:18Z
 `2026-10-28-13`이 origin/main의 최신 일지 `2026-10-28-14`보다 이름순으로 앞이라고 냈다. `--move`로 `2026-10-28-16`으로
 옮겼고, 도구가 카나리아 명세, 대기열, 이 일지의 인용을 고쳤다. 남은 옛 번호를 Grep 도구로 `28-13`을 찾으니 이 브랜치의
 파일에는 없었다. PR 본문의 일지 경로도 옮긴다.
+
+옮긴 것을 커밋 `21bbb27c`(`chore: 일지 번호를 main 의 최신 뒤로 옮긴다 (harness 021)`)로 실었다. 커밋 전에
+`git branch --show-current`가 `chore/021-queue-rows-search`였다. pre-commit이 러너의 열 검사를 모두 `Passed`로 냈고(pytest
+382.5초, web-verify 490.6초), ruff 둘은 `.py`가 없어 `Skipped`라 손으로 쳐 초록이었다. 푸시를 `hook_push_behind_main`이
+다시 막았다. 커밋하는 사이 main에 #409(`e037be66`, design-reverse-sync 10, 일지 `2026-10-28-15`)가 들었다.
+`git merge origin/main --no-edit`가 충돌 없이 `9a7de568`을 만들었고(겹친 파일은 대기열 하나), 이 일지 16은 15 뒤라 번호는
+그대로였다(`sibling_overlap.py`가 번호 겹침 없음, 함께 고친 파일 없음). #409는 `web/tools/sync-design-system/`과
+`tools/hook_web_edit_check.py`를 고쳐 이 브랜치의 파일과 겹치지 않는다(`git diff --name-only`로 봤다). 그래서 이
+합치기 뒤에는 전체 러너를 다시 돌리지 않고, 겹친 대기열에 닿는 것만 손으로 쳤다. `uv run pytest -q -p no:randomly
+tests/tools/test_queue_open_rows.py`가 57 통과, `uv run python tools/check_md_tables.py .scratch/retro-queue.md`가 출력 없이
+끝났다. 나머지는 이 푸시의 CI가 본다. PR 본문은 일지 경로, 변이 수(쉰아홉), 합친 main과 검증한 커밋을 고쳐
+`gh api … --method PATCH`로 올렸다.
+
+`9a7de568`을 푸시하고 PR 헤드가 같아진 것을 본 뒤, 봇 회차 1의 고친 것 셋과 남긴 것 둘의 이유를 PR 코멘트 하나로
+남겼다. 이어 리뷰 요청을 따옴표 없이 `gh pr comment 412 --body @coderabbitai.review`로 쳐 점이 든 글을 남겼다.
+CodeRabbit의 명령 꼴이 아니라, 본문 파일(`--body-file`)로 `@coderabbitai review`를 다시 남겼다. 잘못 남긴 코멘트는 두었다.
+`uv run python tools/wait_ci.py 412`를 백그라운드로 띄웠다.
+
+CI가 도는 동안 변이 표 전체를 돌렸다. `PYTHONUTF8=1 uv run python tools/mutate.py
+.scratch/harness/probes/queue_open_rows_mutations.toml`의 끝 줄이 `변이 59 모두 기대대로`였고 종료 0이었다(헤드
+`9a7de568`의 작업 트리). 봇 회차 2에서 코드를 고치면 고친 몫을 다시 돌린다.
+
+## 봇 회차 2
+
+헤드 `9a7de568`. `wait_ci.py 412`의 끝 줄이 `끝: 모두 통과`였다(그 출력).
+
+claude-review 둘째 회차(코멘트 2026-10-28T01:15:38Z. `95af9e2c`에서 뺀 `_parse`를 짚어 그 뒤의 판을 본 것이다): Critical·Major
+없음, Minor 하나, Nit 하나. 둘째 회차라 고치지 않고 보류 이유를 PR 코멘트로 남긴다.
+
+- Minor, 저장소 대기열 스모크(`test_이_저장소의_대기열에서_닫힌_행까지_찾는다`)가 425행의 본문에 기댄다: 보류. 1회차에서
+  같은 시험을 짚어 이름 관례와 독스트링으로 답했다. 425행을 다듬어 이 시험이 빨개지면 그 편집을 싣는 커밋의 pre-commit이
+  바로 알려, 조용히 지나가는 길은 없다.
+- Nit, `_UsageError` 메시지 끝의 `\n` 규약이 독스트링에만 있다: 보류. 리뷰가 지금은 한 곳뿐이라 작업자 재량이라고 적었다.
+
+CodeRabbit(리뷰 2026-10-28T01:25:17Z, 커밋 `9a7de568`): 이 PR에 처음 낸 리뷰라 그 봇의 첫 회차다. Minor 둘을 지적마다
+판단했다. 리뷰 본문에 접힌 Nit이나 diff 밖 지적은 없었다(본문의 `<summary>` 제목을 grep으로 봤다).
+
+- Minor, 변이 "찾기를 주어도 기본 출력을 낸다"가 겨냥한 출력 단언에 닿지 않는다: 고쳤다. 그 시험의 대기열에 칸이 다섯인
+  2번 행이 있어, 찾기 갈래를 끈 판은 기본 출력 길에서 1로 끝나 첫 `== 0` 단언에서 빨개졌다(변이를 손으로 넣어 실패 줄을
+  봤다). 시험을 둘로 나눴다. 칸이 온전한 행만 든 대기열로 기본 출력을 내지 않는 것을 보고, 칸이 다섯인 행이 맞으면 1로
+  끝나는 것은 새 시험 `test_main은_search에_칸이_넷이_아닌_행이_맞으면_1로_끝난다`가 본다. 변이 "칸이 넷이 아닌 맞은 행이
+  있어도 찾기가 0으로 끝난다"는 새 시험을 가리킨다. 표지는 처음에 기본 출력의 줄 `날짜를 찾지 못한 행: 2`로 골랐다가
+  바꿨다. 옛 시험의 임시 사본에 같은 변이를 넣어 돌리니, 종료 코드 단언이 빨개진 판에서도 pytest가 읽지 않은 출력을
+  `Captured stdout call` 절에 찍었다(손으로 봤다. 그 판의 대기열은 2번 행이 깨져 그 줄 자체는 없었다). 그 절은 줄을
+  실제로 바꾸고, 출력 단언의 실패 줄은 출력을 repr로 찍어 줄바꿈이 `\n` 두 글자다. 그래서 표지를
+  `in '열린 행 2개\n회차 3 이상`으로 바꿨다. `--check`가 쉰아홉 모두 원문이 한 번씩이라고 냈고, `PYTHONUTF8=1 uv run
+  python tools/mutate.py .scratch/harness/probes/queue_open_rows_mutations.toml 51 52`가 `변이 2 모두 기대대로`였다.
+- Minor, `_head`·`_approval`에서 자르기 전에 줄 구분 문자를 이스케이프하라: 남긴다. 커밋하지 않은 스크래치 스크립트로
+  손으로 보니, CR과 CRLF는 `read_text`가 `\n`으로 바꿔 행이 갈리고(맞은 행 0), U+2028·U+2029·U+0085·VT는 찾기 출력에
+  그대로 남았다. 지적의 "`\r`와 U+2028만 출력 시점에 이스케이프하면"은 코드와 다르다. 이 파일에는 이스케이프하는 자리가
+  없다(Grep 도구로 봤다). 그런 글자가 대기열에 드는 길은 이미 막혀 있다. `tools/check_line_separators.py`(pre-commit,
+  `types: [text]`)가 추적 텍스트 파일의 날것 U+2028·U+2029·U+0085와 홀로 선 CR을 막고, Write·Edit에서는
+  `hook_line_separators`가 알린다(`.pre-commit-config.yaml`과 그 독스트링을 읽었다). 지금 대기열(322,183자)에는
+  CR·VT·FF·FS·GS·RS·NEL·LS·PS가 하나도 없었다(같은 스크래치 스크립트로 셌다). 고치는 값은 표시 변환과 시험, 변이,
+  줄인 길이의 기준 다시 보기다.
+
+반영 뒤 `uv run pytest -q -p no:randomly tests/tools/test_queue_open_rows.py`가 58 통과였다.
+
+## 회고
+
+후보 일곱, 승인 2, 기각 5, 넘김 0. 이 일지의 앞 세션 넷과 이 세션을 함께 봤다. `tools/queue_open_rows.py`의 만료할 행은
+작업 트리와 `--ref origin/main` 모두 없음이었다.
+
+1. 승인(회차로 세는 것): 빨강을 기대한 새 변이 "찾기를 주어도 기본 출력을 낸다"에 표지(`expect_output`)가 없어 겨냥하지
+   않은 단언에서 빨개졌고, 셀프 리뷰와 PR 직전 리뷰를 지나 CodeRabbit이 잡았다. 구현 때 실리는 `.claude/rules/probes.md`
+   첫 항목을 어긴 것이다. 같은 처방(`tools/mutate.py --check`가 표지 없는 새 빨강 변이를 알린다)을 든 열린 350에 회차를
+   더해 350은 5회차다(`--search expect_output --search Captured`로 찾았다).
+2. 승인(더하는 것, 첫 회차라 대기열): 리뷰 요청을 따옴표 없이 `--body @coderabbitai.review`로 남겨 CodeRabbit의 명령 꼴이
+   아니었고, 다시 남긴 `--body-file` 길은 `hook_pr_head_sync`가 보지 못한다(그 독스트링의 못 보는 것). 층은 그 훅이다.
+   `--search coderabbitai.review --search body-file`과 `--search hook_pr_head_sync`에 같은 일의 행이 없어 새 행 527,
+   1회차다.
+3. 기각: 이 티켓의 검사에서 따로 돌리면 지나는 시험이 부하로 빨갰다(셀프 리뷰 때 러너의 4 failed, 일지 커밋 때
+   pre-commit의 3 failed와 `WinError 1455`). 306이 받아들여 닫은 종류의 새 사례라 회차를 더하지 않고 여기에만 적는다.
+4. 기각: 표지를 처음에 `Captured stdout call` 절에도 실리는 줄로 골랐다. `probes.md` 첫 항목의 "다른 단언이 빨개지는
+   변이의 출력에는 그 문구가 없는지도 본다"를 따라 커밋 전에 잡았다.
+5. 기각: main에 #411·#409가 들어와 일지 번호를 옮기고 두 번 합쳤다. `sibling_overlap.py`와 `hook_push_behind_main`이 그
+   자리에서 알리고 막았다.
+6. 기각: 셀프 리뷰와 PR 직전 리뷰가 독스트링의 틀린 사실 셋과 retro 문장의 빠진 말(낱말이 정규식이다)을 잡았다. 그
+   주장들은 "밀 주장"으로 리뷰에 넘긴 것이라 리뷰가 제 몫을 했다.
+7. 기각: 인계받은 이 세션이 일지 전체(약 2만 5천 자)를 Read로 실었다. `hook_large_result`가 그 자리에서 알렸다.
+
+## 다음
+
+PR njh6803/agent-os#412를 워크트리에서 병합한다. 주 체크아웃은 당기지 않는다. 뒤로 넘긴 봇 지적은 없다.
+
+결정표는 harness 티켓의 PR 줄이라 `plan.md`의 프론티어로 간다. admin-style은 `in-progress`이고, design-card-build는 막던
+design-reverse-sync가 #409로 `done`이 되어 프론티어이며 `.scratch/design-card-build/`가 없다(`ls`로 봤다). 그 둘을 맡은
+세션이 있는지는 병합 뒤 `next-session` 2단계가 본다.

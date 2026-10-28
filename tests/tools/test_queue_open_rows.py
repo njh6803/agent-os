@@ -600,14 +600,25 @@ def test_못_보는_것_행_모양이_아닌_줄은_찾지_않는다() -> None:
 def test_main은_search를_주면_맞은_행만_찍고_기본_출력을_내지_않는다(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
+    """칸이 온전한 행만 둔다. 칸이 넷이 아닌 행이 있으면 기본 출력도 1로 끝나, 기본 출력을 낸 판이
+    출력 단언에 닿기 전에 종료 코드 단언에서 빨개진다."""
     path = tmp_path / "queue.md"
     path.write_text(
-        queue("| 1 | 일 | `a.md` | 3회차 |", "| 2 | 일 | `b.md` | 1회차 | 덤 |"), encoding="utf-8"
+        queue("| 1 | 일 | `a.md` | 3회차 |", "| 2 | 일 | `b.md` | 1회차 |"), encoding="utf-8"
     )
     assert main(["--queue", str(path), "--search", r"a\.md"]) == 0
     out = capsys.readouterr().out
     assert "  1 줄 3 열림 3회차" in out
     assert "회차 3 이상" not in out
+
+
+def test_main은_search에_칸이_넷이_아닌_행이_맞으면_1로_끝난다(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    path = tmp_path / "queue.md"
+    path.write_text(
+        queue("| 1 | 일 | `a.md` | 3회차 |", "| 2 | 일 | `b.md` | 1회차 | 덤 |"), encoding="utf-8"
+    )
     assert main(["--queue", str(path), "--search", r"b\.md"]) == 1
     assert "  2 줄 4 칸이 넷이 아니다" in capsys.readouterr().out
 
