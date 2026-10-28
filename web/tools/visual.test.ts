@@ -55,6 +55,13 @@ describe("컨테이너 안의 워크스페이스 패키지", () => {
     });
   });
 
+  test("관리 화면이 기대는 워크스페이스 패키지(생성 클라이언트, 디자인 시스템)를 컨테이너 안의 web/ 자리로 잇는다", () => {
+    expect(workspaceLinks(join(WEB, "apps", "admin"))).toEqual({
+      "@agent-os/api-client": "/web/packages/api-client",
+      "@agent-os/ui": "/web/packages/ui",
+    });
+  });
+
   test("워크스페이스 패키지에 기대지 않는 디자인 시스템 패키지는 이을 것이 없다", () => {
     expect(workspaceLinks(join(WEB, "packages", "ui"))).toEqual({});
   });

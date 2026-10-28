@@ -1,0 +1,15 @@
+/*
+ * 관리 화면의 CSS. 관리 화면의 페이지가 모두 지나는 pages 층의 공통 컴포넌트(components/pages/AdminScreen.tsx)는 전역으로, 관리 화면의
+ * Storybook 은 미리보기에서 싣고 `?inline` 으로 받아 shadow 틀에도 넘긴다. `app/` 의 파일은 판정자가 pages·templates 와
+ * next·react 만 들이게 막아 여기서 싣지 않는다(admin-style 명세 "디자인 시스템 들이기").
+ * 디자인 토큰 CSS 를 들이고 앱의 소스를 덮는다. 디자인 토큰 CSS 는 `source(none)` 이고 패키지의 소스만 덮으므로, 앱의
+ * 소스에만 있는 클래스는 아래 `@source` 가 없으면 CSS 를 만들지 않는다. 그 실수는 관리 화면의 스토리 시험이 잡는다(미리보기의
+ * afterEach 의 클래스 판정).
+ *
+ * 글꼴 CSS 는 여기 들이지 않는다. 자기 문서에 선언하는 쪽(AdminScreen, Storybook 의 미리보기)이 따로 싣는다. 플래그 없는
+ * `next build` 가 그 모양에서 글꼴의 `@font-face` 를 모두 내고 woff2 를 모두 풀었다(.scratch/admin-style/probes/next_fonts.mjs).
+ * shadow 틀에 넘기는 `?inline` 글자에도 글꼴이 섞이지 않는다.
+ */
+@import "@agent-os/ui/theme.css";
+@source "../app";
+@source "../components";

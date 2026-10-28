@@ -62,6 +62,9 @@ importers:
       '@agent-os/api-client':
         specifier: workspace:*
         version: link:../../packages/api-client
+      '@agent-os/ui':
+        specifier: workspace:*
+        version: link:../../packages/ui
       next:
         specifier: 16.3.6
         version: 16.3.6(@babel/core@7.29.7(supports-color@10.2.2))(@playwright/test@1.63.0)(@types/node@24.19.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
@@ -81,6 +84,12 @@ importers:
       '@playwright/test':
         specifier: ^1.63.0
         version: 1.63.0
+      '@tailwindcss/postcss':
+        specifier: ^4.3.3
+        version: 4.3.3
+      '@tailwindcss/vite':
+        specifier: ^4.3.3
+        version: 4.3.3(vite@8.3.1(@types/node@24.19.0)(esbuild@0.28.2)(jiti@2.7.0))
       '@testing-library/dom':
         specifier: ^10.4.2
         version: 10.4.2
@@ -102,9 +111,15 @@ importers:
       msw:
         specifier: ^3.0.0
         version: 3.0.0(@types/node@24.19.0)(supports-color@10.2.2)(typescript@5.9.3)(vite@8.3.1(@types/node@24.19.0)(esbuild@0.28.2)(jiti@2.7.0))
+      tailwindcss:
+        specifier: ^4.3.3
+        version: 4.3.3
       typescript:
         specifier: ~5.9.3
         version: 5.9.3
+      vite:
+        specifier: ^8.3.1
+        version: 8.3.1(@types/node@24.19.0)(esbuild@0.28.2)(jiti@2.7.0)
 
   apps/widget:
     dependencies:
