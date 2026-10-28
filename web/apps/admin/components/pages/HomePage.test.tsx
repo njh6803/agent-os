@@ -594,7 +594,7 @@ describe("켜고 끄기", () => {
   }
 
   /** ROWS 에서 이름 하나의 켜짐만 바꾼 목록. */
-  function rowsWith(name: string, enabled: boolean): Response {
+  function rowsWith(name: string, { enabled }: { readonly enabled: boolean }): Response {
     return HttpResponse.json(
       ROWS.map((plugin) => (plugin.name === name ? { ...plugin, enabled } : plugin)),
     );
@@ -606,7 +606,9 @@ describe("켜고 끄기", () => {
 
   test("스위치를 누르면 관리 토큰을 실은 PUT 이 끄기를 보내고 204 뒤에 다시 읽은 목록이 꺼짐을 보인다", async () => {
     // 0은 토큰 확인, 1은 목록, 2는 쓰기 직후의 다시 읽기다.
-    const authorizations = servePlugins((call) => (call < 2 ? rows() : rowsWith("calc", false)));
+    const authorizations = servePlugins((call) =>
+      call < 2 ? rows() : rowsWith("calc", { enabled: false }),
+    );
     const puts = serveSwitch(applied);
     const user = await showList();
     expect(switchOf("에이전트", "calc").checked).toBe(true);
@@ -628,7 +630,7 @@ describe("켜고 끄기", () => {
   });
 
   test("꺼진 행의 스위치를 누르면 켜기를 보낸다", async () => {
-    servePlugins((call) => (call < 2 ? rows() : rowsWith("summarize", true)));
+    servePlugins((call) => (call < 2 ? rows() : rowsWith("summarize", { enabled: true })));
     const puts = serveSwitch(applied);
     const user = await showList();
     expect(switchOf("스킬", "summarize").checked).toBe(false);
@@ -665,7 +667,7 @@ describe("켜고 끄기", () => {
     });
     expect(switchOf("에이전트", "calc").disabled).toBe(true);
     await user.click(switchOf("에이전트", "calc"));
-    reread.resolve(rowsWith("calc", false));
+    reread.resolve(rowsWith("calc", { enabled: false }));
     expect(await within(row("에이전트", "calc")).findByText("꺼짐")).toBeTruthy();
     await vi.waitFor(() => {
       expect(switchOf("에이전트", "calc").disabled).toBe(false);
@@ -677,7 +679,9 @@ describe("켜고 끄기", () => {
   test("켜고 끄기가 실패하면 메시지와 추적 식별자를 보이고 스위치는 다시 읽은 값이다", async () => {
     const message = "운영자 파일이 깨졌다: C:/root/plugins/disabled.toml";
     // 그 사이 다른 곳에서 꺼졌다. 스위치가 누르기 전의 값이 아니라 다시 읽은 값을 따르는지 여기서 가린다.
-    const authorizations = servePlugins((call) => (call < 2 ? rows() : rowsWith("calc", false)));
+    const authorizations = servePlugins((call) =>
+      call < 2 ? rows() : rowsWith("calc", { enabled: false }),
+    );
     serveSwitch(() =>
       HttpResponse.json(envelope("internal_error", message, "req-77aa"), { status: 500 }),
     );
@@ -717,7 +721,7 @@ describe("켜고 끄기", () => {
   });
 
   test("다음 켜고 끄기를 시작하면 앞의 실패가 걷힌다", async () => {
-    servePlugins((call) => (call < 3 ? rows() : rowsWith("summarize", true)));
+    servePlugins((call) => (call < 3 ? rows() : rowsWith("summarize", { enabled: true })));
     serveSwitch((call) =>
       call === 0
         ? HttpResponse.json(envelope("internal_error", "운영자 파일이 깨졌다"), { status: 500 })
@@ -734,7 +738,7 @@ describe("켜고 끄기", () => {
   });
 
   test("표지 행도 끌 수 있다", async () => {
-    servePlugins((call) => (call < 2 ? rows() : rowsWith("broken", false)));
+    servePlugins((call) => (call < 2 ? rows() : rowsWith("broken", { enabled: false })));
     const puts = serveSwitch(applied);
     const user = await showList();
 
@@ -780,7 +784,7 @@ describe("켜고 끄기", () => {
     // 화면을 옮겨 다녀도 SWR 의 캐시는 하나다. 세 번의 그리기에 캐시 하나를 넘긴다.
     const cache = new Map();
     // 0은 토큰 확인, 1은 목록, 2는 쓰기 직후의 다시 읽기다.
-    servePlugins((call) => (call < 2 ? rows() : rowsWith("calc", false)));
+    servePlugins((call) => (call < 2 ? rows() : rowsWith("calc", { enabled: false })));
     serveSwitch(applied);
     const reads: string[] = [];
     network.use(

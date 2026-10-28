@@ -70,12 +70,12 @@ const ACCENT_PRIMARY: readonly ThemeKey[] = ["guncheong", "jacho"];
 function primaryBranchFailures(
   at: string,
   key: ThemeKey,
-  dark: boolean,
+  mode: Mode,
   value: (name: string) => string,
 ): string[] {
   const accent = ACCENT_PRIMARY.includes(key);
   const expected: [string, string][] = [["primary", accent ? "accent" : "text"]];
-  if (dark) {
+  if (mode === "dark") {
     expected.push(["on-primary", accent ? "on-accent" : "bg"]);
   }
   return expected
@@ -120,7 +120,7 @@ export const Matrix: Story = {
         for (const name of THEME_FREE) {
           themeFree.get(name)?.add(style.getPropertyValue(name).trim());
         }
-        branches.push(...primaryBranchFailures(`${key}/${mode}`, key, mode === "dark", value));
+        branches.push(...primaryBranchFailures(`${key}/${mode}`, key, mode, value));
         if (malformed.length === 0) {
           failures.push(...contrastFailures(key, mode, value));
         }
@@ -129,8 +129,11 @@ export const Matrix: Story = {
       delete target.dataset["mode"];
       const style = getComputedStyle(target);
       branches.push(
-        ...primaryBranchFailures(`${key}/system`, key, style.colorScheme === "dark", (name) =>
-          style.getPropertyValue(`--${name}`).trim(),
+        ...primaryBranchFailures(
+          `${key}/system`,
+          key,
+          style.colorScheme === "dark" ? "dark" : "light",
+          (name) => style.getPropertyValue(`--${name}`).trim(),
         ),
       );
     }

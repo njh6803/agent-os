@@ -143,6 +143,42 @@ const SOURCES: Readonly<Record<string, string>> = {
     'import { createAdminClient } from "@agent-os/api-client";\n\nexport const 틀 = createAdminClient;\n',
   "apps/admin/app/server/page.ts":
     'import { readFileSync } from "node:fs";\n\nexport const 읽기 = readFileSync;\n',
+  "apps/admin/lib/boolean-param.ts":
+    'export function 고른다(이름: string, 덮어쓴다: boolean): string {\n  return 덮어쓴다 ? 이름 : "";\n}\n',
+  "apps/admin/lib/optional-boolean-param.ts":
+    "export function 고른다(덮어쓴다?: boolean): boolean {\n  return 덮어쓴다 === true;\n}\n",
+  "apps/admin/lib/union-boolean-param.ts":
+    "export function 고른다(덮어쓴다: boolean | undefined): boolean {\n  return 덮어쓴다 === true;\n}\n",
+  "apps/admin/lib/default-boolean-param.ts":
+    "export function 고른다(덮어쓴다 = false): boolean {\n  return 덮어쓴다;\n}\n",
+  "apps/admin/lib/annotated-default-boolean-param.ts":
+    "const 기본값 = true;\n\nexport function 고른다(덮어쓴다: boolean = 기본값): boolean {\n  return 덮어쓴다;\n}\n",
+  "apps/admin/lib/literal-default-boolean-param.ts":
+    "export function 고른다(덮어쓴다: boolean = false): boolean {\n  return 덮어쓴다;\n}\n",
+  "apps/admin/lib/true-default-boolean-param.ts":
+    "export function 고른다(덮어쓴다 = true): boolean {\n  return !덮어쓴다;\n}\n",
+  "apps/admin/lib/alias-default-boolean-param.ts":
+    "type 켜짐 = boolean;\n\nexport function 고른다(덮어쓴다: 켜짐 = false): boolean {\n  return 덮어쓴다;\n}\n",
+  "apps/admin/lib/arrow-boolean-param.ts":
+    "export const 고른다 = (덮어쓴다: boolean): boolean => !덮어쓴다;\n",
+  "apps/admin/lib/method-boolean-param.ts":
+    "export const 판정 = {\n  고른다(덮어쓴다: boolean): boolean {\n    return !덮어쓴다;\n  },\n};\n",
+  "apps/admin/lib/options-param.ts":
+    "export function 고른다({ 덮어쓴다 }: { readonly 덮어쓴다: boolean }): boolean {\n  return 덮어쓴다;\n}\n",
+  "apps/admin/lib/value-callback.ts":
+    "export type 바뀜 = (켜짐: boolean) => void;\n\nexport const 뒤집힘 = [true].map((켜짐) => !켜짐);\n",
+  "apps/admin/lib/other-default-param.ts":
+    'export function 고른다(이름 = "true", 수 = 1): string {\n  return 이름 + String(수);\n}\n',
+  "apps/admin/lib/setter-param.ts":
+    "export class 상자 {\n  #켜짐 = false;\n\n  get 켜짐(): boolean {\n    return this.#켜짐;\n  }\n\n  set 켜짐(값: boolean) {\n    this.#켜짐 = 값;\n  }\n}\n",
+  "apps/admin/lib/unseen-boolean-param.ts": [
+    "export declare function 선언(덮어쓴다: boolean): boolean;\n",
+    "export interface 받는쪽 {\n  고른다(덮어쓴다: boolean): void;\n}\n",
+    "export function 참만(값: true): boolean {\n  return 값;\n}\n",
+    "export function 섞임(값: string | (boolean | number)): string {\n  return String(값);\n}\n",
+    "export function 목록(값들: readonly boolean[], 약속: Promise<boolean>): number {\n  void 약속;\n  return 값들.length;\n}\n",
+    "export function 식(값 = !0): boolean {\n  return 값;\n}\n",
+  ].join("\n"),
   "apps/admin/lib/kinds.ts": 'export const 종류 = ["plugins", "runs"] as const;\n',
   "apps/admin/lib/kinds.test-d.ts":
     "// @ts-expect-error: 숫자는 문자열 자리에 들어가지 않는다\nexport const 틀린_값: string = 1;\n",
@@ -386,7 +422,52 @@ const RED: readonly RedCase[] = [
   },
 ];
 
+// 불리언 매개변수는 다른 금지 구문과 규칙 ID 를 나눠 쓰므로 메시지의 표지까지 보고, 매개변수 하나가 한 번만 보고되는지도 본다.
+const BOOLEAN_PARAMETER = "불리언 매개변수";
+
+const BOOLEAN_PARAMETER_RED: readonly { readonly name: string; readonly path: string }[] = [
+  { name: "주석이 boolean 인 매개변수", path: "apps/admin/lib/boolean-param.ts" },
+  { name: "선택 매개변수 ?: boolean", path: "apps/admin/lib/optional-boolean-param.ts" },
+  { name: "boolean 을 든 유니온 매개변수", path: "apps/admin/lib/union-boolean-param.ts" },
+  { name: "주석 없이 기본값이 false 인 매개변수", path: "apps/admin/lib/default-boolean-param.ts" },
+  {
+    name: "주석이 boolean 이고 기본값이 상수인 매개변수",
+    path: "apps/admin/lib/annotated-default-boolean-param.ts",
+  },
+  {
+    name: "주석이 boolean 이고 기본값이 false 인 매개변수",
+    path: "apps/admin/lib/literal-default-boolean-param.ts",
+  },
+  {
+    name: "주석 없이 기본값이 true 인 매개변수",
+    path: "apps/admin/lib/true-default-boolean-param.ts",
+  },
+  {
+    name: "주석이 boolean 의 별칭이고 기본값이 false 인 매개변수",
+    path: "apps/admin/lib/alias-default-boolean-param.ts",
+  },
+  { name: "화살표 함수의 boolean 매개변수", path: "apps/admin/lib/arrow-boolean-param.ts" },
+  { name: "메서드의 boolean 매개변수", path: "apps/admin/lib/method-boolean-param.ts" },
+];
+
 const GREEN: readonly { readonly name: string; readonly path: string }[] = [
+  {
+    name: "이름 붙인 옵션 객체로 받은 boolean",
+    path: "apps/admin/lib/options-param.ts",
+  },
+  {
+    name: "함수 타입의 boolean 매개변수와 추론된 콜백 매개변수",
+    path: "apps/admin/lib/value-callback.ts",
+  },
+  {
+    name: "불리언이 아닌 기본값(문자열 true, 수)",
+    path: "apps/admin/lib/other-default-param.ts",
+  },
+  { name: "세터의 boolean 매개변수", path: "apps/admin/lib/setter-param.ts" },
+  {
+    name: "설정 주석이 보지 않는다고 적은 자리(본문 없는 선언, 메서드 시그니처, 리터럴 타입 true, 유니온 속 유니온, 배열과 제네릭 인자, 리터럴이 아닌 기본값)",
+    path: "apps/admin/lib/unseen-boolean-param.ts",
+  },
   { name: "as const", path: "apps/admin/lib/kinds.ts" },
   { name: "타입 테스트 파일의 설명 붙은 @ts-expect-error", path: "apps/admin/lib/kinds.test-d.ts" },
   { name: "barrel 을 거친 import", path: "apps/admin/components/pages/Runs.ts" },
@@ -463,18 +544,33 @@ async function ruleIdsAt(path: string, source: string): Promise<(string | null)[
   return (result?.messages ?? []).map((message) => message.ruleId);
 }
 
-function reported(path: string): readonly (string | null)[] {
+function linted(path: string): readonly Linter.LintMessage[] {
   const found = messages.get(path);
   if (found === undefined) {
     throw new Error(`${path} 가 린트되지 않았다. 판정 범위 밖이다`);
   }
-  return found.map((message) => message.ruleId);
+  return found;
+}
+
+function reported(path: string): readonly (string | null)[] {
+  return linted(path).map((message) => message.ruleId);
 }
 
 describe("판정자가 빨갛게 보는 것", () => {
   for (const { name, path, rule } of RED) {
     test(`${name} 은 ${rule} 로 빨갛다`, () => {
       expect(reported(path)).toContain(rule);
+    });
+  }
+});
+
+describe("판정자가 불리언 매개변수로 빨갛게 보는 것", () => {
+  for (const { name, path } of BOOLEAN_PARAMETER_RED) {
+    test(`${name} 은 ${RESTRICTED_SYNTAX} 의 불리언 매개변수로 한 번 빨갛다`, () => {
+      const found = linted(path)
+        .filter((message) => message.ruleId === RESTRICTED_SYNTAX)
+        .map((message) => message.message);
+      expect(found).toEqual([expect.stringContaining(BOOLEAN_PARAMETER)]);
     });
   }
 });
