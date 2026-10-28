@@ -16,7 +16,7 @@ harness 티켓 028. 아침 보고 예약 작업(작업 보고)으로 시작한 �
 - **세는 법.** `list_sessions`에서 이 세션을 뺀 `isRunning` 세션을 센다. 여는 세션은 열고 턴을 끝내므로 세지 않는다. 폴더와 종류는 가리지 않는다. 예약 작업의 세션(`【매일 09:30】 아침 보고 · 비용` 등)도 그 목록에 들었다(2026-10-28 이 세션의 `list_sessions`를 손으로 봤다. 쉰 개 모두 `cwd`가 `C:\project\agent`라 다른 폴더의 세션이 드는지는 보지 못했다). `isRunning`은 지금 턴을 도는 세션이라 CI를 기다리며 턴을 끝낸 세션은 세지 않는다.
 - **아침 보고와 세는 법의 차이.** 다섯을 정한 근거인 아침 보고의 동시 세션(`tools/morning_collect.py` 모듈 독스트링)은 메인 세션의 호출 사이가 `SPAN_GAP_MIN`(5)분 이하면 그 사이를 돈 분으로 보고, 다른 프로젝트와 헤드리스 세션(카나리아의 `claude -p` 등)도 센다. `isRunning`은 쉬는 세션과 헤드리스 세션을 세지 않아 같은 때에 더 적게 센다. 그래서 `isRunning` 다섯은 근거 표의 다섯보다 느슨한 상한이다. 처음에는 "같은 쪽으로 센다"고 적었다가 셀프 리뷰 두 축이 짚어 고쳤다.
 - **예외 하나.** 지시문의 브랜치가 이 세션의 브랜치와 같으면(인계, 마치지 못한 채 끊기) 거르지 않는다. 이 세션이 그 일을 하며 이미 도는 세션 하나였다. 처음에는 인계만 예외로 두고 "사람이 열 수를 말하면 따른다"를 더했는데, 표준 축이 끊기 지시문도 같은 까닭인데 버려진다고 짚었고, 사람의 말을 따르는 것은 적지 않아도 기본이라 뒤의 것은 뺐다.
-- **열지 못한 지시문.** `open-session`을 부른 세션이 든다. 보고에 전문을 남기고, 사람이 자리가 났으니 열라고 하면 그 지시문들로 그 스킬을 1부터 다시 돈다. 처음에는 "어디에도 남기지 않고 다음 `next-session` 2단계가 다시 묶는다"로 지었다. 셀프 리뷰 두 축이 그 길의 구멍을 짚었다. 그 항목은 같은 기능의 형제가 병합할 때만 돌고, harness chore PR 뒤의 결정표 줄은 chore를 잇지 않으며, 여유가 0이면 그 기능에 병합할 세션이 없어 영영 열리지 않는다. 또 CI를 기다리는 형제의 티켓은 main에서 아직 `ready-for-agent`라 다시 묶일 수 있다. 사람이 다시 열라고 하는 길은 사람이 기억해야 하는 값을 치르지만 버려지는 지시문이 없다.
+- **열지 못한 지시문.** `open-session`을 부른 세션이 든다. 보고에 전문을 남기고, 사람이 자리가 났으니 열라고 하면 그 지시문들로 그 스킬을 1부터 다시 돈다. 처음에는 열지 못한 지시문을 어디에도 남기지 않고 다음 `next-session` 2단계가 다시 묶게 지었다. 셀프 리뷰 두 축이 그 길의 구멍을 짚었다. 그 항목은 같은 기능의 형제가 병합할 때만 돌고, harness chore PR 뒤의 결정표 줄은 chore를 잇지 않으며, 여유가 0이면 그 기능에 병합할 세션이 없어 영영 열리지 않는다. 또 CI를 기다리는 형제의 티켓은 main에서 아직 `ready-for-agent`라 다시 묶일 수 있다. 사람이 다시 열라고 하는 길은 사람이 기억해야 하는 값을 치르지만 버려지는 지시문이 없다.
 
 ## 결과
 
@@ -56,7 +56,7 @@ open-session을 부른다 2026-10-28T08:56:28Z
 - 두 축 Major: 열지 못한 지시문을 다음 `next-session`이 다시 묶는다는 길이 갈래마다 끊긴다. 부른 세션이 드는 길로 바꿨다(위 결정). 표준 축 Major 셋째(PR을 연 형제를 다시 묶는다)도 그 길이 없어져 닫혔다.
 - 표준 축 Major: 끊기 지시문이 상한에 버려진다. 예외를 "이 세션의 브랜치와 같은 지시문"으로 넓혔다.
 - 명세 축 Major·표준 축 Minor: 아침 보고와 "같은 쪽으로 센다"가 거짓이다. 차이를 위 결정에 적고 스킬에서 그 문장과 근거 수치를 뺐다.
-- 명세 축 Major·표준 축 Minor: 수용 기준 다섯째의 카나리아는 본문이 실리는지만 잰다. `claude -p --model sonnet --tools Skill`에 가정 장면 하나(이 세션을 뺀 `isRunning` 넷, 지시문 셋)를 물어 "여는 지시문: chore/101-b", "열지 않는 지시문: chore/102-c, chore/103-d"와 보고에 전문을 남기고 사람이 열라고 하면 다시 돈다는 답을 손으로 봤다(한 번, 2026-10-28, claude 2.1.302). 질문은 스크래치에 두었고 커밋하지 않았다.
+- 명세 축 Major·표준 축 Minor: 수용 기준 다섯째의 카나리아는 본문이 실리는지만 잰다. `claude -p --model sonnet --tools Skill`에 가정 장면 하나(이 세션을 뺀 `isRunning` 넷, 지시문 셋)를 물어, 여는 지시문으로 `chore/101-b`, 열지 않는 지시문으로 `chore/102-c`와 `chore/103-d`를 들고 보고에 전문을 남기고 사람이 열라고 하면 다시 돈다는 답을 손으로 봤다(한 번, 2026-10-28, claude 2.1.302). 질문은 스크래치에 두었고 커밋하지 않았다.
 - 명세 축 Minor: `next-session` 4단계의 "그 스킬이 하나씩 차례로 연다"에 상한을 넣었다.
 - 표준 축 Minor: `list_sessions`가 실패하면 열지 않는다, limit 50으로 충분한 까닭(도는 세션은 최근 활동 순의 앞)을 적었다. 사람이 열 수를 말한 예외는 뺐다. 상한을 1단계 안의 따로 된 문단으로 떼었다.
 - 두 축 Nit: `open_session_parallel_cap.toml` 머리의 "세 카나리아"를 "두 카나리아"로 고쳤다.
@@ -68,4 +68,34 @@ open-session을 부른다 2026-10-28T08:56:28Z
 - 표준 축 확인: `hook_session_card`가 통과시키는 `start_session`과 사람이 손으로 여는 세션은 상한 밖이다. 이 티켓은 `open-session`이 여는 길만 묶는다.
 - `KICKOFF.md:308`의 옛 표현은 다른 프로젝트에 복사해 쓰는 런북이라 이 저장소의 살아 있는 문서로 세지 않았다.
 
+커밋 `17a741c6`의 pre-commit은 종료 0이었다(로그는 스크래치 `commit.log`를 손으로 봤다). 인용 검사(check-quotes)가 경고 셋을 냈다. 위 결정과 티켓 코멘트에 따옴표로 적은 옛 문장 둘은 이 커밋이 지운 문장이라 저장소에 글자 그대로 없고, 손으로 본 `claude -p` 답의 인용 하나는 저장소 밖이다. 따옴표를 떼는 것은 다음 세션에 넘긴다.
+
+### 인계 2
+
+커밋 뒤 경계에서 인계 계기가 왔다(세션 컨텍스트 227,449 토큰). 이 세션의 지금 제목은 `chore/028-max-five-parallel-sessions`이고 `chore/028-max-five-parallel-sessions (인계함)`으로 바꾼다. 남은 것은 인용 경고 셋의 따옴표 떼기, origin/main(`06a8f85b`, PR #415) 합치기와 `docs/constitution/README.md` 11행 충돌 풀기(판은 3.0.59를 지키고 3.0.58 노트를 살린다), `tools/run_checks.py`와 린트, `/code-review`는 다시 돌리지 않는다, PR과 병합이다. 이 세션은 `EnterWorktree(path)`로 들어왔고, `git worktree unlock`은 `is not locked`로 끝났다.
+
+지시문:
+
+다음 작업: .scratch/harness/issues/028-max-five-parallel-sessions.md. 나란히 도는 세션을 최대 다섯으로 묶는다
+다음 단계: 구현
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: 티켓 028을 이 세션에서 바로 구현해 줘. 워크트리 028-max-five-parallel-sessions에서 해.
+브랜치: chore/028-max-five-parallel-sessions
+모델: Opus 5.5 / medium. 레벨 스윕의 갈래
+읽을 것: docs/journal/2026-10-28-25-max-five-parallel-sessions.md
+이어받을 상태: 인계: 커밋 뒤. 셀프 리뷰를 반영한 커밋 17a741c6까지 했다(pre-commit 종료 0). 커밋하지 않은 일지 수정이 워크트리에 있다. 남은 것: 인용 경고 셋의 따옴표 떼기(일지 2곳, 티켓 코멘트 1곳), origin/main 합치기와 docs/constitution/README.md 11행 충돌 풀기, tools/run_checks.py와 ruff 둘, 커밋, PR과 병합. /code-review는 다시 돌리지 않는다. docs/journal/2026-10-28-25-max-five-parallel-sessions.md
+확인할 선행 조건: origin/main이 06a8f85b(PR #415, 헌법 3.0.58)로 움직였다. 형제 PR #417과 워크트리 025가 next-session을 고친다. 커밋 전에 tools/sibling_overlap.py의 함께 고친 파일과 판을 본다
+이번 요청 범위: PR과 병합까지
+
+open-session을 부른다 2026-10-28T09:54:15Z
+
 다시 돌린 것: open-session 카나리아는 질문과 기대 문구를 바꿔 다시 돌려 통과 4, 실패 0(원본은 스크래치 `canary-open2`). next-session 카나리아는 같은 항목의 문구만 바뀌어 `--preflight`로 갈음했다(통과). 검증 명령은 커밋의 pre-commit과 `tools/run_checks.py`로 본다(아래).
+
+## 셋째 세션
+
+인계 2의 지시문으로 연 세션(제목 `chore/028-max-five-parallel-sessions`)이 `EnterWorktree(path)`로 들어와 이었다. 시작 프롬프트는 위 지시문의 것과 같다.
+
+- 인용 경고 셋의 따옴표를 뗐다. 위 결정의 옛 문장 하나, 셀프 리뷰 절의 `claude -p` 답 하나, 티켓 코멘트의 옛 문장 하나다. `uv run python tools/check_quotes.py <일지> <티켓>`을 다시 쳐 경고 없음을 손으로 봤다.
+- origin/main(`06a8f85b`, PR #415)을 합쳤다. `docs/constitution/README.md` 11행은 main의 줄을 바탕으로 판을 3.0.59로 올리고 3.0.59 노트를 3.0.58 노트 앞에 넣었다. 3.0.58을 비워 두었다던 문장은 그 판이 이제 main의 노트로 채워져 뺐다. `docs/constitution/operations.md`는 글자 충돌 없이 합쳐졌다.
+- `uv run python tools/run_checks.py`는 종료 0이었고 열 검사가 모두 Passed였다(로그를 손으로 봤다). ruff 둘도 초록이었다.
+- `uv run python tools/sibling_overlap.py`의 출력을 손으로 봤다. 번호 겹침 없음. 함께 고친 파일은 PR #417과 워크트리 025의 `.claude/skills/next-session/SKILL.md`이고, 나중에 병합하는 쪽이 글자 충돌을 푼다.
