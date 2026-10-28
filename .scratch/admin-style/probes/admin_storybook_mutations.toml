@@ -1,0 +1,110 @@
+# 티켓 03(관리 화면의 Storybook 과 관리 토큰 넣기 화면)의 변이 표 여섯. 페이지 시험은 빨강을 먼저 봤지만, 미리보기가
+# 더한 판정 셋(스토리마다 localStorage 비우기, 프로젝트가 고르는 창 폭, 가로 스크롤)과 틀·넣는 자리의 스토리 단언 둘
+# (최대 폭 `form`, 넓은 폭의 오른쪽 끝)은 구현과 함께 써서 빨강을 본 적이 없었다. 셋째는 판정을 지우는 변이가 아니라
+# 좁은 폭에서 가로로 밀리는 요소를 심는 변이다. 지우는 변이는 밀리는 스토리가 없어 초록이라 아무것도 재지 않는다.
+# 여섯째는 셀프 리뷰가 창 폭의 판정이 창을 세우는 상수와 스스로 맞대 무엇도 재지 않는다고 짚어, 기대를 명세의 폭으로
+# 따로 적은 뒤 더했다. 창을 세우는 상수를 바꿔 판정 스토리가 그 폭을 잡는지 본다.
+# 빨강의 판정은 `tools/mutate.py` 의 독스트링이다. 표지는 변이를 손으로 넣어 실패 출력을 한 번 본 뒤 고른 실패 머리의
+# 문구이고(일지 2026-10-28-09), 넷째의 406 은 최대 폭 440px 에서 카드의 안쪽 여백과 테두리를 뺀 칸의 폭이다.
+#
+# 돌리는 법: PYTHONUTF8=1 uv run python tools/mutate.py .scratch/admin-style/probes/admin_storybook_mutations.toml
+# 네트워크를 타지 않는다. `uv sync` 와 `pnpm -C web install` 이 되고 Playwright 의 chromium 이 깔린 체크아웃에서 돈다.
+
+[runner.narrow]
+command = ["pnpm", "exec", "vitest", "run", "--project", "admin-storybook-narrow"]
+cwd = "web"
+judge = "vitest"
+
+[runner.wide]
+command = ["pnpm", "exec", "vitest", "run", "--project", "admin-storybook-wide"]
+cwd = "web"
+judge = "vitest"
+
+[[mutation]]
+name = "미리보기가 스토리마다 localStorage 를 비우지 않으면 앞 스토리의 값이 남는다"
+runner = "narrow"
+expect = "red"
+expect_output = ["expected 'written' to be null"]
+
+[[mutation.edit]]
+file = "web/apps/admin/.storybook/preview.tsx"
+old = '''
+  beforeEach: appended(base.beforeEach, clearLocalStorage),
+'''
+new = '''
+  beforeEach: base.beforeEach,
+'''
+
+[[mutation]]
+name = "프로젝트가 viewport 항목을 고르지 않으면 판정 스토리가 빨갛다"
+runner = "narrow"
+expect = "red"
+expect_output = ["viewport 항목을 고르지 않았다: expected null not to be null"]
+
+[[mutation.edit]]
+file = "web/vitest.config.ts"
+old = '''
+            initialGlobals: { viewport: { value: viewport, isRotated: false } },
+'''
+new = '''
+'''
+
+[[mutation]]
+name = "좁은 폭에서 가로로 밀리는 요소를 심으면 미리보기의 afterEach 가 빨갛다"
+runner = "narrow"
+expect = "red"
+expect_output = ["문서가 창 폭 320px 을 넘어 가로로 밀린다(400px)"]
+
+[[mutation.edit]]
+file = "web/apps/admin/components/templates/EntryFrame.tsx"
+old = '''
+    <div className="flex justify-center px-4 py-8">
+'''
+new = '''
+    <div className="flex justify-center px-4 py-8" style={{ minWidth: 400 }}>
+'''
+
+[[mutation]]
+name = "넣기 버튼이 넓은 폭에서 오른쪽 끝에 서지 않고 칸의 폭으로 늘면 빨갛다"
+runner = "wide"
+expect = "red"
+expect_output = ["expected 406 to be less than 406"]
+
+[[mutation.edit]]
+file = "web/apps/admin/components/organisms/AdminTokenForm.tsx"
+old = '''
+          <div className="flex flex-col wide:items-end">
+'''
+new = '''
+          <div className="flex flex-col">
+'''
+
+[[mutation]]
+name = "한 칸이 최대 폭 form 이 아니면 빨갛다"
+runner = "narrow"
+expect = "red"
+expect_output = ["expected 'none' to be '440px'"]
+
+[[mutation.edit]]
+file = "web/apps/admin/components/templates/EntryFrame.tsx"
+old = '''
+      <main className="flex w-full max-w-form flex-col gap-6">
+'''
+new = '''
+      <main className="flex w-full flex-col gap-6">
+'''
+
+[[mutation]]
+name = "창을 세우는 상수가 명세의 폭과 달라지면 판정 스토리가 빨갛다"
+runner = "narrow"
+expect = "red"
+expect_output = ["expected { width: 375, height: 640 } to deeply equal { width: 320, height: 640 }"]
+
+[[mutation.edit]]
+file = "web/apps/admin/.storybook/viewports.ts"
+old = '''
+  narrow: { width: 320, height: 640 },
+'''
+new = '''
+  narrow: { width: 375, height: 640 },
+'''

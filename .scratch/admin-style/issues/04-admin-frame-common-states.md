@@ -37,6 +37,8 @@
 - [ ] **빈 줄.** 무엇이 없는지 한 줄과 아이콘 하나다. 설명 문장과 버튼은 두지 않는다. 아이콘은 꾸밈이라 화면 읽기 프로그램에서 숨긴다
 - [ ] 패키지의 컴포넌트에 `className`을 넘기지 않는다
 
+메모(03 셀프 리뷰에서): 관리 화면 Storybook의 `next/link` 별칭(`.storybook/main.ts`의 `viteFinal`과 대역 `next-link.tsx`)은 03에서 설정만 섰고, 03의 스토리는 `Link`를 쓰지 않아 그 별칭을 지나는 스토리가 없다. 이 티켓의 링크·탐색 스토리가 별칭을 처음 지난다. 별칭이 없으면 스토리 테스트가 `ReferenceError: process is not defined`로 불러오다 실패했다(`.scratch/admin-style/probes/storybook_next_link.mjs`).
+
 ### 설정 화면과 토큰
 
 - [ ] **새 경로 `/settings`가 설정 화면이다.** 다른 화면처럼 관리 토큰을 넣은 뒤에 열리고, 관리 토큰이 없으면 관리 토큰 넣기 화면이 선다. 서버의 경로와 계약(`openapi.json`)은 바뀌지 않는다

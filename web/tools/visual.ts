@@ -7,7 +7,7 @@
  *   링크를 풀어 임시 폴더로 복사해 읽기 전용으로 bind 하고, 컨테이너가 시작하며 그것을 그 패키지의 node_modules 자리에
  *   둔 tmpfs 로 복사한다. pnpm 의 링크(윈도우는 junction)는 컨테이너 안에서 풀리지 않는다. 셋은 순수 JS 라(네이티브
  *   파일 0개, 측정 visual_docker) 운영체제를 가리지 않는다.
- * - 그 패키지가 `workspace:` 로 기대는 워크스페이스 패키지(위젯의 `@agent-os/ui`)는 같은 tmpfs 에 컨테이너 안의
+ * - 그 패키지가 `workspace:` 로 기대는 워크스페이스 패키지(위젯의 `@agent-os/ui`, 관리 화면의 `@agent-os/ui`와 `@agent-os/api-client`)는 같은 tmpfs 에 컨테이너 안의
  *   web/ 자리를 가리키는 심볼릭 링크로 잇는다. 복사하지 않고 링크로 잇는 것은 Playwright 1.63 이 실제 경로가
  *   node_modules 아래인 파일을 TypeScript 로 바꾸지 않아서다(설치본 esmLoader 의 shouldTransform). 링크는 실제 경로가
  *   /web/packages/… 로 풀려 바뀐다. 링크는 컨테이너 안에서 만든다. 윈도우 호스트의 폴더에 만든 링크는 컨테이너가 따라가지
@@ -20,7 +20,7 @@
  *   ci.yml 의 이미지와 설치된 Playwright 판이 이것과 맞는지는 visual.test.ts 가 본다.
  *
  * 사용: node tools/visual.ts <Storybook 패키지> [--update] [Playwright 인자 ...]. 패키지는 web/ 기준 경로이고
- * (`packages/ui`, `apps/widget`) 그 아래에 `build-storybook` 스크립트와 `visual/playwright.config.ts` 가 있어야 한다. --update 는
+ * (`packages/ui`, `apps/widget`, `apps/admin`) 그 아래에 `build-storybook` 스크립트와 `visual/playwright.config.ts` 가 있어야 한다. --update 는
  * 정답과 다른 사진과 정답이 없는 사진을 컨테이너 안에서 다시 쓴다. 나머지 인자는 `playwright test` 에 그대로 간다
  * (`pnpm -C web visual -g atoms-button` 이 그 스토리들만 본다). Docker 가 없거나 비교가 실패하면 0 이 아닌 코드로
  * 끝난다(건너뛰지 않는다).
