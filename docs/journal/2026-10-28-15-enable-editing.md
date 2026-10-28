@@ -1,4 +1,4 @@
-# 2026-10-28 (11) 디자인 시스템 아티팩트의 편집 켜기와 사람의 확인 (design-reverse-sync 10)
+# 2026-10-28 (15) 디자인 시스템 아티팩트의 편집 켜기와 사람의 확인 (design-reverse-sync 10)
 
 ## 시작
 
@@ -154,8 +154,8 @@ Major 2, Minor 5, Nit 4를 냈다. 두 축이 함께 낸 것(충돌 길의 `line
 시작 프롬프트: /implement .scratch/design-reverse-sync/issues/10-enable-editing.md
 브랜치: feature/10-enable-editing
 모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
-읽을 것: docs/journal/2026-10-28-11-enable-editing.md 의 "인계 (커밋 뒤)" 절
-이어받을 상태: 인계: 커밋 뒤. 셀프 리뷰를 반영한 커밋 9ffab8e3 까지 했고 푸시와 PR 은 아직이다. 남은 단계는 origin/main 합치기, PR 직전 리뷰(CodeRabbit 좌석이 없어 /security-review 와 bug-perf-review, 밀 주장은 일지의 "반영으로 새로 쓴 사실 문장"), /git-pr, 봇 회차, 병합 전 회고와 일지 "## 다음", 병합("워크트리에서 병합할 때")이다. 일지의 "인계 (커밋 뒤)" 절은 커밋하지 않았다. 일지 docs/journal/2026-10-28-11-enable-editing.md
+읽을 것: docs/journal/2026-10-28-15-enable-editing.md 의 "인계 (커밋 뒤)" 절
+이어받을 상태: 인계: 커밋 뒤. 셀프 리뷰를 반영한 커밋 9ffab8e3 까지 했고 푸시와 PR 은 아직이다. 남은 단계는 origin/main 합치기, PR 직전 리뷰(CodeRabbit 좌석이 없어 /security-review 와 bug-perf-review, 밀 주장은 일지의 "반영으로 새로 쓴 사실 문장"), /git-pr, 봇 회차, 병합 전 회고와 일지 "## 다음", 병합("워크트리에서 병합할 때")이다. 일지의 "인계 (커밋 뒤)" 절은 커밋하지 않았다. 일지 docs/journal/2026-10-28-15-enable-editing.md
 확인할 선행 조건: 11번 들이기 세션(feature/11-web-edit-teal-accent-600)이 import.ts·import.test.ts 를 고치지 말라는 메시지를 읽었는지 모른다(2026-10-27T19:30Z 부터 사람의 답을 기다린다). 병합 직전에 sibling_overlap.py 로 그 브랜치와 admin-style 03 브랜치와 겹치는지, 티켓 47대로 origin/main 의 01~09 Status 가 모두 done 인지 다시 본다
 이번 요청 범위: PR과 병합까지
 ```
@@ -259,8 +259,8 @@ open-session을 부른다 2026-10-27T20:45:26Z
 시작 프롬프트: /implement .scratch/design-reverse-sync/issues/10-enable-editing.md
 브랜치: feature/10-enable-editing
 모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
-읽을 것: docs/journal/2026-10-28-11-enable-editing.md 의 "인계 (셋째 세션, 셀프 리뷰 직전)" 절
-이어받을 상태: 인계: 셀프 리뷰 직전. 커밋하지 않은 변경 셋(import.md 의 lineWidth 충돌 갈래 한 문장, 일지의 셋째 세션 절들, retro-queue.md 의 214·381·420 회차와 새 행 520~524)을 셀프 리뷰(/code-review HEAD)부터 한다. PR 직전 리뷰와 회고·"## 다음"은 끝났다. 남은 것은 셀프 리뷰 반영과 커밋, 푸시, /git-pr(본문 초안은 일지 인계 절의 스크래치 경로), 봇 회차, 병합("워크트리에서 병합할 때")이다. 일지 docs/journal/2026-10-28-11-enable-editing.md
+읽을 것: docs/journal/2026-10-28-15-enable-editing.md 의 "인계 (셋째 세션, 셀프 리뷰 직전)" 절
+이어받을 상태: 인계: 셀프 리뷰 직전. 커밋하지 않은 변경 셋(import.md 의 lineWidth 충돌 갈래 한 문장, 일지의 셋째 세션 절들, retro-queue.md 의 214·381·420 회차와 새 행 520~524)을 셀프 리뷰(/code-review HEAD)부터 한다. PR 직전 리뷰와 회고·"## 다음"은 끝났다. 남은 것은 셀프 리뷰 반영과 커밋, 푸시, /git-pr(본문 초안은 일지 인계 절의 스크래치 경로), 봇 회차, 병합("워크트리에서 병합할 때")이다. 일지 docs/journal/2026-10-28-15-enable-editing.md
 확인할 선행 조건: 11번 들이기 세션(feature/11-web-edit-teal-accent-600)이 import.ts·import.test.ts 를 고치지 말라는 메시지를 읽었는지 모른다. 병합 직전에 sibling_overlap.py 로 겹침과, 티켓 47대로 origin/main 의 01~09 Status 가 모두 done 인지 다시 본다
 이번 요청 범위: PR과 병합까지
 ```
@@ -328,8 +328,8 @@ Major는 없고 Minor 4, Nit 1을 냈다. 범위 밖 변경은 없었다. 서브
 시작 프롬프트: /implement .scratch/design-reverse-sync/issues/10-enable-editing.md
 브랜치: feature/10-enable-editing
 모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
-읽을 것: docs/journal/2026-10-28-11-enable-editing.md 의 "인계 (넷째 세션, 커밋 뒤)" 절
-이어받을 상태: 인계: 커밋 뒤. 셀프 리뷰를 반영한 커밋 60d21e7b 까지 했고 푸시와 PR 은 아직이다. 일지의 270행 인용 고침과 넷째 세션의 "검증"·"인계" 절은 커밋하지 않았다(다음 커밋에 싣는다). 남은 것은 푸시, /git-pr(본문 초안은 일지 인계 절의 스크래치 경로, BUGPERF 자리 채우기), 봇 회차, 병합("워크트리에서 병합할 때")이다. 일지 docs/journal/2026-10-28-11-enable-editing.md
+읽을 것: docs/journal/2026-10-28-15-enable-editing.md 의 "인계 (넷째 세션, 커밋 뒤)" 절
+이어받을 상태: 인계: 커밋 뒤. 셀프 리뷰를 반영한 커밋 60d21e7b 까지 했고 푸시와 PR 은 아직이다. 일지의 270행 인용 고침과 넷째 세션의 "검증"·"인계" 절은 커밋하지 않았다(다음 커밋에 싣는다). 남은 것은 푸시, /git-pr(본문 초안은 일지 인계 절의 스크래치 경로, BUGPERF 자리 채우기), 봇 회차, 병합("워크트리에서 병합할 때")이다. 일지 docs/journal/2026-10-28-15-enable-editing.md
 확인할 선행 조건: 병합 직전에 sibling_overlap.py 로 겹침과, 티켓 47대로 origin/main 의 01~09 Status 가 모두 done 인지 다시 본다. PR #408 이 먼저 병합되면 retro-queue.md 의 420 행을 8회차로 푼다. 11번 들이기 세션(feature/11-web-edit-teal-accent-600)이 import.ts·import.test.ts 를 고치지 말라는 메시지를 읽었는지 모른다
 이번 요청 범위: PR과 병합까지
 ```
@@ -406,8 +406,8 @@ PR을 연 직후 인계 계기 훅이 경계 `PR 연 뒤`로 왔다(컨텍스트
 시작 프롬프트: /implement .scratch/design-reverse-sync/issues/10-enable-editing.md
 브랜치: feature/10-enable-editing
 모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
-읽을 것: docs/journal/2026-10-28-11-enable-editing.md 의 "PR과 인계 (다섯째 세션)" 절
-이어받을 상태: 인계: PR 연 뒤. PR #409 를 열었고 a65a026b 까지 푸시했다. 첫 @coderabbitai review 코멘트는 아직이다. next-session 1단계의 2(봇 회차)부터 하고, 병합은 "워크트리에서 병합할 때"다. 커밋하지 않은 일지 변경(인용 고침 하나와 다섯째 세션의 "검증"·"PR과 인계" 절)은 봇 회차의 첫 반영 커밋에 싣는다. 일지 docs/journal/2026-10-28-11-enable-editing.md
+읽을 것: docs/journal/2026-10-28-15-enable-editing.md 의 "PR과 인계 (다섯째 세션)" 절
+이어받을 상태: 인계: PR 연 뒤. PR #409 를 열었고 a65a026b 까지 푸시했다. 첫 @coderabbitai review 코멘트는 아직이다. next-session 1단계의 2(봇 회차)부터 하고, 병합은 "워크트리에서 병합할 때"다. 커밋하지 않은 일지 변경(인용 고침 하나와 다섯째 세션의 "검증"·"PR과 인계" 절)은 봇 회차의 첫 반영 커밋에 싣는다. 일지 docs/journal/2026-10-28-15-enable-editing.md
 확인할 선행 조건: 병합 직전에 sibling_overlap.py 로 겹침(021-queue-rows-search 가 retro-queue.md 를 고친다)과, 티켓 47대로 origin/main 의 01~09 Status 가 모두 done 인지 다시 본다. 11번 들이기 세션(feature/11-web-edit-teal-accent-600)이 import.ts·import.test.ts 를 고치지 말라는 메시지를 읽었는지 모른다
 이번 요청 범위: PR과 병합까지
 ```
@@ -456,8 +456,8 @@ open-session을 부른다 2026-10-27T22:50:53Z
 시작 프롬프트: /implement .scratch/design-reverse-sync/issues/10-enable-editing.md
 브랜치: feature/10-enable-editing
 모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
-읽을 것: docs/journal/2026-10-28-11-enable-editing.md 의 "봇 회차 (여섯째 세션)"과 "인계 (여섯째 세션, 셀프 리뷰 직전)" 절
-이어받을 상태: 인계: 셀프 리뷰 직전. 첫 봇 회차의 반영(saved_tokens_shape.py 를 Rounds 로 감쌌다, 대기열 430 의 9회차)과 다섯째 세션이 넘긴 일지 변경이 커밋하지 않은 채 워크트리에 있고, 셀프 리뷰(/code-review HEAD)부터 한다. 그 뒤 한 커밋으로 푸시하고, claude-review 의 보류 둘(PRINT_WIDTH, 일지 날짜)의 이유를 PR 코멘트로 남기고, 둘째 봇 회차(Critical·Major 만)를 거쳐 "워크트리에서 병합할 때"로 병합한다. PR 본문은 이 반영 범위로 이미 고쳤다. 일지 docs/journal/2026-10-28-11-enable-editing.md
+읽을 것: docs/journal/2026-10-28-15-enable-editing.md 의 "봇 회차 (여섯째 세션)"과 "인계 (여섯째 세션, 셀프 리뷰 직전)" 절
+이어받을 상태: 인계: 셀프 리뷰 직전. 첫 봇 회차의 반영(saved_tokens_shape.py 를 Rounds 로 감쌌다, 대기열 430 의 9회차)과 다섯째 세션이 넘긴 일지 변경이 커밋하지 않은 채 워크트리에 있고, 셀프 리뷰(/code-review HEAD)부터 한다. 그 뒤 한 커밋으로 푸시하고, claude-review 의 보류 둘(PRINT_WIDTH, 일지 날짜)의 이유를 PR 코멘트로 남기고, 둘째 봇 회차(Critical·Major 만)를 거쳐 "워크트리에서 병합할 때"로 병합한다. PR 본문은 이 반영 범위로 이미 고쳤다. 일지 docs/journal/2026-10-28-15-enable-editing.md
 확인할 선행 조건: 병합 직전에 sibling_overlap.py 로 겹침(021-queue-rows-search 가 retro-queue.md 를 고친다. 이 반영도 그 파일의 430 행을 고쳤다)과, 티켓 47대로 origin/main 의 01~09 Status 가 모두 done 인지 다시 본다. 11번 들이기 세션(feature/11-web-edit-teal-accent-600)이 import.ts·import.test.ts 를 고치지 말라는 메시지를 읽었는지 모른다
 이번 요청 범위: PR과 병합까지
 ```
@@ -490,3 +490,83 @@ open-session을 부른다 2026-10-27T23:14:28Z
 남긴 것은 없다. 고친 것이 일지·대기열·프로브 README와 `.scratch` 아래 프로브 한 줄이라, 손으로 치는 검증 다섯은 다음 커밋의 pre-commit으로 갈음한다. 스테이지된 `.py`가 프로브 하나라 ruff 둘은 손으로도 친다. 결과는 커밋 뒤에 아래에 적는다.
 
 반영으로 새로 쓴 사실 문장(받을 다음 층은 둘째 봇 회차다): 이 절의 pyright 두 결과(`filesAnalyzed` 0, 사본의 1과 오류 5)와 그 오류가 첫 판부터 있었다는 문장, 프로브 README의 두 고친 표현, "봇 회차 (여섯째 세션)"의 날짜 판정에 더한 `sibling_overlap.py` 1869행과 `+09:00`, 회고 절 끝의 431 7회차 판정.
+
+### 검증과 커밋 (일곱째 세션)
+
+- 커밋 전에 `uv run ruff check .`는 통과했고 `uv run ruff format --check .`는 1131 파일이 이미 포맷돼 있다고 찍었다. `uv run python tools/sibling_overlap.py`는 번호 겹침이 없었고, 함께 고친 파일은 `020-mutate-run-echo-check`·`021-queue-rows-search` 워크트리의 `.scratch/retro-queue.md`와 `mcp-shutdown-spec` 워크트리의 `.scratch/plan.md`였다(도구가 찍은 줄).
+- 이 반영이 대기열 431의 회차를 더해 PR 범위가 넓어져, 커밋 전에 PR 본문 "리뷰어 참고"의 대기열 줄에 431의 7회차를 더해 `gh pr edit 409 --body-file`로 고쳤다(`next-session` 1단계의 1).
+- 커밋 `4b5a60c9`(`fix: 저장 꼴 프로브의 회차를 Rounds로 세고 봇 회차를 적는다 (design-reverse-sync 10)`, 파일 넷)의 pre-commit은 canary specs와 constitution version이 Skipped였고 나머지가 Passed였다(병렬 검사 945.8초, 그 가운데 pytest 944.6초, web-verify 744.5초. 커밋 명령의 출력). quotes 경고 1건은 위 절의 앱이 지은 옛 세션 제목으로, `set_session_title` 결과의 글자를 옮긴 것이라 두었다. 커밋 제목이 처음에 73자라 commit-msg 훅의 사전 검사에 막혀 줄였다.
+
+## 인계 (일곱째 세션, 커밋 뒤)
+
+커밋 `4b5a60c9` 직후 인계 계기 훅이 경계 `커밋 뒤`로 왔다(컨텍스트 208,845 토큰, 문턱 200,000). 인계하지 않는 다섯은 어느 것도 맞지 않았다. 계기를 낸 커밋은 성공했고(종료 0), 요청 범위는 병합까지이며, 이 세션의 지시문은 `인계: 셀프 리뷰 직전`이라 경계가 다르고, `인계 못함` 줄이 없고, `get_session`의 `self`에 `parentSessionId`가 없다.
+
+넘기는 상태는 이렇다.
+
+- 브랜치의 머리는 `4b5a60c9`이고 아직 푸시하지 않았다. PR #409의 머리는 `a65a026b` 그대로다. 커밋하지 않은 변경은 이 일지뿐이다("검증과 커밋 (일곱째 세션)"과 이 절). 새 세션은 다음 반영 커밋에 싣고, 고친 것이 없는 회차면 일지만 실은 커밋으로 병합 전에 푸시한다(`next-session` 1단계 3).
+- 새 세션은 `git push`부터 하고 `next-session` 1단계 2의 대기를 띄운다. 이 푸시로 도는 리뷰는 두 봇 모두 둘째 회차라 Critical·Major만 고친다.
+- PR 본문은 431의 7회차까지 넓혀 고쳤다. claude-review의 보류 둘(`PRINT_WIDTH`, 일지 날짜)의 이유를 남길 PR 코멘트는 아직 남기지 않았다. 이유는 위 "봇 회차 (여섯째 세션)"의 둘째·셋째 항목이고, 셋째 항목의 날짜 문장은 이 세션의 셀프 리뷰가 고친 판을 따른다.
+- 병합 직전에 다시 볼 것은 받은 지시문과 같다. `sibling_overlap.py`의 겹침(`020-mutate-run-echo-check`·`021-queue-rows-search`가 `.scratch/retro-queue.md`를 고친다. 이 브랜치는 그 파일의 214·381·420·430·431·519 행을 고치고 520~526 행을 더했다)과 티켓 47대로 `origin/main`의 01~09 `**Status:**`가 모두 `done`인지다. 이 세션의 `git fetch origin main` 뒤 `git log HEAD..origin/main`은 비었다.
+- 이 세션이 번복한 것. 여섯째 세션이 적은 pyright 통과 문장을 고쳤다(위 "셀프 리뷰 (일곱째 세션)"). 이 세션이 처음 쓴 것을 번복한 것은 없다.
+- 넘긴 뒤 지킬 것. 대기열 526의 사건을 되풀이하지 않도록, 이 세션은 `open-session`이 돌아오면 이 워크트리의 파일을 고치지 않고 턴을 끝낸다.
+
+이 세션의 제목은 `feature/10-enable-editing`이고 열기 전에 `feature/10-enable-editing (인계함)`으로 바꾼다. 돌던 백그라운드 작업은 없다(커밋과 서브에이전트 둘은 끝났다). 모델 줄은 `uv run python tools/model_sweep.py feature/10-enable-editing`이 낸 값이다. 낸 지시문은 이렇다.
+
+```
+다음 작업: .scratch/design-reverse-sync/issues/10-enable-editing.md. 디자인 시스템 아티팩트의 편집을 켜고 웹 편집을 따라가 기능을 닫는 티켓의 둘째 봇 회차와 병합을 마친다
+다음 단계: PR 반영·병합
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /implement .scratch/design-reverse-sync/issues/10-enable-editing.md
+브랜치: feature/10-enable-editing
+모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
+읽을 것: docs/journal/2026-10-28-15-enable-editing.md 의 "봇 회차 (여섯째 세션)", "셀프 리뷰 (일곱째 세션)", "인계 (일곱째 세션, 커밋 뒤)" 절
+이어받을 상태: 인계: 커밋 뒤. 첫 봇 회차의 반영과 그 셀프 리뷰 반영을 4b5a60c9 로 커밋했고 아직 푸시하지 않았다. git push 부터 하고 next-session 1단계 2의 대기를 띄운다. 이 푸시의 리뷰는 두 봇 모두 둘째 회차라 Critical·Major 만 고친다. claude-review 의 보류 둘(PRINT_WIDTH, 일지 날짜)의 이유를 PR 코멘트로 아직 남기지 않았다. 커밋하지 않은 일지 변경(일곱째 세션의 "검증과 커밋"·"인계" 절)은 다음 반영 커밋에 싣는다. 병합은 "워크트리에서 병합할 때"다. PR 본문은 431 의 7회차까지 고쳤다. 일지 docs/journal/2026-10-28-15-enable-editing.md
+확인할 선행 조건: 병합 직전에 sibling_overlap.py 로 겹침(020-mutate-run-echo-check·021-queue-rows-search 가 retro-queue.md 를 고친다. 이 브랜치는 그 파일의 430·431 행을 고쳤다)과, 티켓 47대로 origin/main 의 01~09 Status 가 모두 done 인지 다시 본다. 11번 들이기 세션(feature/11-web-edit-teal-accent-600)이 import.ts·import.test.ts 를 고치지 말라는 메시지를 읽었는지 모른다
+이번 요청 범위: PR과 병합까지
+```
+
+워크트리 잠금은 이미 풀려 있었다(`git worktree unlock`이 `is not locked`로 끝났다).
+
+open-session을 부른다 2026-10-28T00:02:13Z
+
+## 둘째 봇 회차 (여덟째 세션)
+
+인계 지시문으로 연 여덟째 세션이 `git worktree list`에서 이 브랜치의 워크트리를 찾아 `EnterWorktree(path)`로 들어갔다. 세션 제목은 `feature/10-enable-editing`이다(앱이 지은 "Design artifact editing enable merge"에서 바꿨다).
+
+> 사용자: (지시문) "이어받을 상태: 인계: 커밋 뒤. 첫 봇 회차의 반영과 그 셀프 리뷰 반영을 4b5a60c9 로 커밋했고 아직 푸시하지 않았다. git push 부터 하고 next-session 1단계 2의 대기를 띄운다. … 이번 요청 범위: PR과 병합까지"
+
+`git push origin feature/10-enable-editing`로 `a65a026b..4b5a60c9`를 올리고 `@coderabbitai review` 코멘트를 남겼다. `gh pr checks 409`를 한 번 읽으니 `ticket`이 pass, CodeRabbit이 skipping, 나머지가 pending이라(명령 출력) `tools/wait_ci.py 409`를 백그라운드로 띄웠다. claude-review의 보류 둘(`PRINT_WIDTH`, 일지 날짜)의 이유는 위 "봇 회차 (여섯째 세션)"의 둘째·셋째 항목대로 PR 코멘트로 남겼다. 코멘트에 적은 사실은 다시 봤다(`import.ts` 118행 `PRINT_WIDTH = 100`, 1042행 동기 `importTokens`, `import.test.ts` 757행의 단언, `web/.prettierrc.json`의 `printWidth` 100. Grep과 `cat`의 출력).
+
+병합 전 조건은 이 회차를 기다리는 동안 봤다. `git fetch origin main` 뒤 `git log HEAD..origin/main`은 비었고, `origin/main`의 01~09 티켓 `**Status:**`는 모두 `done`이었다(`git grep`의 출력). `uv run python tools/sibling_overlap.py`는 번호 겹침이 없었고, 함께 고친 파일은 PR #410과 `020-mutate-run-echo-check`·`021-queue-rows-search` 워크트리의 `.scratch/retro-queue.md`, `mcp-shutdown-spec` 워크트리의 `.scratch/plan.md`였다(도구가 찍은 줄). 같은 출력은 이 일지(그때 번호 11)를 이름순으로 앞서는 형제로 PR #410·#411과 019·020·021 워크트리의 일지(12~14)를 찍었는데(그쪽이 먼저 병합되면 옮긴다), 이 문단은 처음에 그 줄을 옮기지 않았다(아래 "셀프 리뷰 (여덟째 세션)"). 11번 들이기 워크트리(`feature/11-web-edit-teal-accent-600`)는 `git worktree list`에서 `a1bdf8d`에 있었고 그 도구의 함께 고친 파일에 `import.ts`·`import.test.ts`가 없었다. 그 세션이 메시지를 읽었는지는 여전히 보지 않았다.
+
+`tools/wait_ci.py`가 헤드 `4b5a60c`에서 `끝: 모두 통과`로 끝났다(명령 출력). 두 봇 모두 이 PR에서 둘째 회차라 Critical·Major만 고친다.
+
+- **CodeRabbit.** 요약 코멘트의 범위 줄이 `between a65a026b… and 4b5a60c9…`였고 "No actionable comments were generated in the recent review."였다(`gh api`로 그 코멘트를 읽었다). 이 헤드에 새 리뷰는 없었다(`pulls/409/reviews`에는 `a65a026b`의 리뷰 하나뿐이었다).
+- **claude-review.** Critical·Major 0, Nit 2. `usageOfWidth`가 이미 `width`보다 넓은 줄에서 `"가".repeat(음수)`의 `RangeError`로 시험을 깬다는 것(코드를 읽어 그 길을 봤다. `import.test.ts` 146~149행)과, `PRINT_WIDTH`의 원천이 둘이라는 첫 회차 지적의 되풀이다. 둘 다 둘째 회차의 Nit이라 고치지 않고 이유를 PR 코멘트로 남겼다. 첫째는 오류가 나도 시험이 빨갛게 멈춰 초록으로 지나가지 않는다는 것이고(코드를 읽었다. 그 함수를 부르는 747·748·806행이 모두 시험 본문 안이다), 둘째는 첫 회차와 같다. 뒤의 작업으로 넘기는 일이 아니라 "다음"에 적지 않는다.
+
+고친 것이 없는 회차라 이 일지(일곱째 세션의 "검증과 커밋"·"인계" 절과 이 절)만 실은 커밋을 병합 전에 푸시한다(`next-session` 1단계 2의 "뒤로 넘긴 일"과 3). 그 푸시로 도는 리뷰는 셋째 회차로 세고, 거기서 보류한 일은 일지에 다시 적지 않고 PR 코멘트와 다음 지시문에 적는다.
+
+### 셀프 리뷰 (여덟째 세션)
+
+일지만 실을 커밋 전에 `/code-review HEAD`를 돌렸다. 범위는 기준 `4b5a60c9`(HEAD), 커밋하지 않은 파일 하나(이 일지), 커밋 0, 미추적 0이다. 명세 축에는 `next-session` 1단계와 "워크트리에서 병합할 때", `code-review` 6단계 끝, 받은 지시문, 티켓 10의 47행을 요구로 적고, 이 세션이 한 일은 리뷰어 참고로 넘겼다. 두 축이 도는 사이 2026-10-28T00:15:06Z에 PR #410(`1902f4fa`)이 main에 병합됐다(`gh pr view 410`의 `mergedAt`).
+
+**표준 축.** Critical·Major 0, Minor 1, Nit 3. 서브에이전트가 줄 번호와 값, `RangeError`(node로 대 봤다), 01~09 상태, CodeRabbit 인용, 커밋 `4b5a60c9`의 파일 넷, PR 본문의 431 7회차를 맞다고 보고했다.
+
+- **고친다. Minor: 일지 이름이 main의 최신 일지보다 이름순으로 앞선다.** #410의 일지(12)가 main에 들어와, 다시 친 `sibling_overlap.py`가 옛 번호 11을 15로 옮기라고 했다. 아래 "main 합치기와 일지 번호 옮기기"로 고쳤다. 명세 축의 Major와 같은 지적이다.
+- **고친다. Nit: 둘째 회차 Nit의 보류 이유("시험이 빨갛게 멈춘다")에 근거의 종류가 없다.** 코드를 읽었다는 것과 그 함수를 부르는 747·748·806행이 시험 본문 안이라는 것을 붙였다.
+- **남긴다. Nit: "인계 (일곱째 세션, 커밋 뒤)" 절이 지시문 전문과 이어받을 상태의 요지를 되풀이한다.** `next-session` "인계할 때" 5가 압축 뒤에 일지의 지시문을 읽어(지시문이 일지에 없으면 다시 낸다) 그 절에 지시문을 남기는 것이 절차다. 앞 인계 절들도 같다.
+- **남긴다. Nit: `> 사용자: (지시문)` 인용이 조작 지시를 빼라는 기준의 경계에 있다.** 지시문의 이어받을 상태와 요청 범위가 이 세션의 방향을 정한 사용자 메시지라, 앞 세션들의 절과 같은 꼴로 둔다.
+
+**명세 축.** Critical 0, Major 1, Minor 1, Nit 1. 범위 넘침은 없다고 했다. 회차 세기(두 봇 모두 둘째 회차), Nit 보류가 뒤로 넘기는 일이 아니라는 판정, 절차 인용은 맞다고 보고했다.
+
+- **고친다. Major: 병합 전 조건을 봤다고 적었지만 #410의 병합으로 낡았고, 일지만 푸시한다는 계획도 그대로는 서지 않는다.** 서브에이전트가 `git log HEAD..origin/main`이 `1902f4fa`를 내고, PR의 `mergeStateStatus`가 `BEHIND`이며 main의 필수 검사가 `strict: true`이고, `sibling_overlap.py`가 1로 끝나며 옮길 번호를 낸다고 보고했다. 이 세션도 `gh pr view 409`에서 `BEHIND`를 봤다. 아래 절대로 합치고 옮겼으며, 도구가 함께 찍은 이름순으로 앞서는 형제 목록을 위 절에 보탰다. 위 절의 `git log HEAD..origin/main`이 비었다는 문장은 그 시점의 기록이라 두었다.
+- **고친다. Minor: "인계 (일곱째 세션, 커밋 뒤)"의 "이 브랜치는 그 파일의 430·431 행을 고쳤다"가 일부만 맞다.** `git diff origin/main...HEAD -- .scratch/retro-queue.md`의 행 번호를 뽑으니 이 브랜치는 214·381·420·430·431·519 행을 고치고 520~526 행을 더했다(명령 출력). 그 항목을 그렇게 고쳤다. 같은 절의 지시문 코드 블록은 보낸 글의 기록이라 고치지 않았다.
+- **남긴다. Nit: `check_quotes.py`가 위 절의 앱이 지은 옛 세션 제목 인용에 경고를 낸다.** `set_session_title` 결과의 글자를 옮긴 것이라 일곱째 세션과 같이 둔다.
+
+반영으로 새로 쓴 사실 문장(받을 다음 층은 셋째 봇 회차다): 대기열 행 목록(214·381·420·430·431·519, 520~526), 747·748·806행, #410의 병합 시각과 `BEHIND`, 아래 절의 합치기와 옮기기 결과, 위 절에 보탠 이름순으로 앞서는 형제 목록.
+
+### main 합치기와 일지 번호 옮기기 (여덟째 세션)
+
+`git fetch origin main` 뒤 `git log HEAD..origin/main`이 `1902f4fa` 하나였다. main이 바꾼 파일 가운데 이 브랜치가 다룬 규약은 `.claude/rules/probes.md`였고, 그 차이는 첫 항목에 "변이를 돌리는 실행은 기준선 전에 끝낸다(대기열 502)"를 더한 것뿐이라 이 브랜치의 프로브가 새로 따를 것은 없었다(`git diff HEAD...origin/main`을 읽었다). `git merge --no-edit origin/main`이 `.scratch/retro-queue.md`를 자동으로 합쳐 `c18e15f2`를 만들었다(명령 출력). main이 그 파일에서 바꾼 행은 486·502뿐이라 이 브랜치의 행과 겹치지 않았다(`git diff 4b5a60c9 c18e15f2`를 읽었다).
+
+`uv run python tools/sibling_overlap.py --move`가 일지를 11에서 15로 옮기고 티켓 10, `.scratch/plan.md`, 대기열, 이 일지의 인용을 고쳤으며, PR #409 본문에는 옮길 인용이 없다고 했다(도구가 찍은 줄). 다시 대조한 결과는 번호 겹침이 없고 다음 빈 번호가 일지 16이었다. 도구가 옮기지 않는 줄인 꼴은 저장소의 `.md`를 옛 번호로 Grep해 이 일지를 가리키는 것이 없음을 봤다. 그래서 위 "둘째 봇 회차"의 "이 일지만 실은 커밋"에는 번호 옮기기의 인용 고침 셋이 함께 실리고, 합치기 커밋과 함께 푸시된다.
