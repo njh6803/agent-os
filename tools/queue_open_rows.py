@@ -60,16 +60,16 @@
 찾기: `uv run python tools/queue_open_rows.py [--queue <경로> | --ref <커밋>] --search <정규식>
 [--search <정규식> ...]`. retro 5단계의 행 찾기(새 행을 쓰기 전에 같은 일을 다룬 행을 찾는다)가
 쓴다. Grep 도구는 대기열의 긴 행을 `[Omitted long matching line]`으로만 내고, Bash 로 행을
-열면(`grep`·`sed`·`cut`) 한 행 전체가 실려(일지 2026-10-22-16 의 306행은 4,079자다), 세션마다 맞은
-행을 Read 로 다시 열거나 스크래치 스크립트를 지었다(대기열 425).
+열면(`grep`·`sed`·`cut`) 한 행 전체가 실려(일지 2026-10-22-16 에서 306행이 실렸고 그 행은
+4,079자다), 세션마다 맞은 행을 Read 로 다시 열거나 스크래치 스크립트를 지었다(대기열 425).
 - 닫힌 행까지 `| N |`로 시작하는 줄의 원문 전체(번호 칸과 마크다운 표지까지)에 정규식을 맞추고,
   여럿이면 하나라도 맞은 행이다. 맞은 행마다 번호, 파일의 줄 번호(줄바꿈으로만 센다. Read 의
   `offset`이다), 열림·닫힘, 회차(위의 회차 판정), 무엇 칸의 머리, 승인 칸을 한 줄로 대기열의
   차례대로 찍는다. 기본 출력은 내지 않으므로 `--rows`·`--today`와 함께 주면 쓰임 오류다.
 - 낱말은 정규식이다. `[`·`(`·`|`·`\\` 같은 문자는 정규식으로 읽혀, `[Omitted long matching line]`은
-  문자 클래스라 거의 모든 행에 맞는다. 셸에서 따옴표 없이 주면 셸도 그 문자를 읽으므로, 공백과 그
-  문자는 아무 글자에나 맞는 `.`으로 바꿔 준다. 맞은 행 수에는 상한이 없어, `tools/`처럼 넓은 낱말은
-  수백 행을 낸다.
+  문자 클래스이고 그 안에 공백이 들어 모든 행에 맞는다. 셸에서 따옴표 없이 주면 셸도 그 문자를
+  읽으므로, 공백과 그 문자는 아무 글자에나 맞는 `.`으로 바꿔 준다. 맞은 행 수에는 상한이 없어,
+  `tools/`처럼 넓은 낱말은 수백 행을 낸다.
 - 머리는 무엇 칸의 앞의 굵게·취소선 표지를 걷고 처음 닫는 표지(`**`, `~~`)까지이고
   `HEAD_CHARS`(120)자에서 자른다. 승인 칸은 첫 승인으로 시작해 회차와 닫힘을 뒤에 덧붙여 가는
   칸이라, 길면 앞 `APPROVAL_HEAD`(80)자(첫 승인)와 끝 `APPROVAL_TAIL`(160)자(가장 늦게 덧붙인 글의
@@ -451,7 +451,8 @@ def main(argv: list[str]) -> int:
             source = args.pop(0)
             try:
                 patterns.append(re.compile(source))
-            except re.error as error:
+            except (re.error, OverflowError, RecursionError) as error:
+                # 큰 반복 수(`a{99999999999}`)와 깊은 괄호는 re.error 가 아닌 것을 던진다
                 sys.stderr.write(f"정규식이 틀렸다: {source}: {error}\n{USAGE}")
                 return 2
         elif arg == "--today" and args and today is None:

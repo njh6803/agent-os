@@ -154,7 +154,7 @@ open-session을 부른다 2026-10-27T22:11:58Z
   끝(가장 늦게 덧붙인 글의 꼬리)을 남기고, 회차와 열림·닫힘은 칸 전체에서 판정해 따로 찍는다"로 고쳤다.
 - Minor, 독스트링과 티켓의 "Bash 의 `grep`은 행 전체(306행 약 5천 자)": 틀렸다. 같은 스크래치로 보니 306행은
   `c47bedce`와 지금 모두 4,079자였고, 일지 2026-10-22-16 151행은 "`grep`·`sed`·`cut`… 그 가운데 하나"라고 적었다.
-  "Bash 로 행을 열면(`grep`·`sed`·`cut`) 한 행 전체가 실려(306행은 4,079자)"로 고쳤다.
+  "Bash 로 행을 열면(`grep`·`sed`·`cut`) 한 행 전체가 실려(일지 2026-10-22-16 의 306행은 4,079자다)"로 고쳤다.
 - Nit 넷: KICKOFF.md 312행이 `queue_open_rows.py`를 부르는 retro 사본의 쓰임에 행 찾기를 빠뜨린 것은 고쳤다. 머리 줄의
   합이 칸이 넷이 아닌 행에서 맞지 않는 것은 고쳤다(그 수를 따로 센다). 못 보는 것 1의 "잘린 자리"는 승인 칸 가운데에만
   낱말이 든 사례를 그 시험에 더해 고정했다. 425 닫힘 칸의 문장부호(`불필요 **닫힘`)는 남겼다. 대기열을 세니
@@ -190,3 +190,95 @@ open-session을 부른다 2026-10-27T22:11:58Z
 0으로 열 검사 모두 `Passed`였다(pytest 898.5초, web-verify 954.9초). 티켓의 수용 기준을 모두 체크하고 `Status:`를
 `done`으로 바꿨다. PR 직전 리뷰는 `coderabbit auth status`가 `Plan: Free`, `Seat: not assigned`라 CLI가 돌지 못해
 대체 둘(`/security-review`, `bug-perf-review`)로 한다.
+
+커밋 `603bd1f9`(`chore: 대기열 행을 낱말로 찾아 한 줄씩 찍는 --search 를 더한다 (harness 021)`). 커밋 전에
+`git branch --show-current`가 `chore/021-queue-rows-search`였고 `uv run python tools/sibling_overlap.py`가 번호 겹침
+없음이었다. pre-commit이 모두 지났고(pytest 562.0초), 인용 대조가 경고 넷을 냈다. 셋은 이 일지가 고치기 전의 옛 문장을
+기록으로 인용한 것이라 두었고, 하나(157행)는 독스트링의 새 문장을 줄여 옮긴 것이라 글자 그대로 고쳤다(커밋하지 않음).
+
+## 인계 (커밋 뒤)
+
+세션 컨텍스트가 295,711 토큰으로 문턱 200,000을 넘은 채 커밋(경계 `커밋 뒤`)에서 `hook_handoff`의 계기가 왔다.
+`next-session`의 "인계할 때" 1의 다섯에 들지 않았다. 커밋은 성공했고, 요청 범위는 병합까지이며, 이 세션을 연
+지시문의 "이어받을 상태"는 `인계: 셀프 리뷰 직전`으로 지금 경계와 다르고, 이 일지에 이 세션이 쓴 `인계 못함` 줄이
+없고, `get_session`의 `self`에 `parentSessionId`가 없었다. 이 세션의 지금 제목은 `chore/021-queue-rows-search`이고,
+넘기기 전에 `chore/021-queue-rows-search (인계함)`으로 바꾼다.
+
+- 상태: `603bd1f9`까지 커밋했고 푸시하지 않았으며 PR은 없다. 워크트리에는 이 일지의 고침(157행 인용, 이 절)이 커밋하지
+  않은 채 있다.
+- 남은 단계: origin/main을 합치고 PR 직전 리뷰를 나란히 돌린다(`/security-review`와 `bug-perf-review`, 뒤의 것의
+  브리프에 위 셀프 리뷰 절의 "PR 직전 리뷰에 밀 주장"을 나열한다). 그 뒤 푸시와 `/git-pr`, `@coderabbitai review`,
+  봇 회차와 반영, 리뷰 반영 뒤 변이 표 전체 실행(쉰다섯), 회고, 워크트리에서 병합이다.
+
+지시문:
+
+```
+다음 작업: 받는 세션이 이어 쓸 .scratch/harness/issues/021-queue-rows-search.md. 대기열 425: tools/queue_open_rows.py 에 낱말로 행을 찾아 번호·닫힘·머리·승인 칸을 한 줄씩 찍는 옵션을 더하고 retro 5단계가 그것을 가리킨다(셀프 리뷰 반영과 커밋까지 마쳤다)
+다음 단계: 구현
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: 대기열 425를 티켓 .scratch/harness/issues/021-queue-rows-search.md로 쓰고 한다
+브랜치: chore/021-queue-rows-search
+모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
+읽을 것: docs/agents/issue-tracker.md, docs/constitution/operations.md 리뷰 파이프라인, 일지 docs/journal/2026-10-28-13-queue-rows-search.md
+이어받을 상태: 인계: 커밋 뒤. 셀프 리뷰 반영과 검증 명령 전부를 마치고 603bd1f9로 커밋했다(푸시하지 않았고 PR은 없다). 워크트리에 이 일지의 고침이 커밋하지 않은 채 있다. 남은 단계는 origin/main 합치기, PR 직전 리뷰(CodeRabbit CLI는 좌석이 없어 /security-review와 bug-perf-review를 나란히, 뒤의 것의 브리프에 일지 셀프 리뷰 절의 밀 주장), 푸시와 /git-pr, @coderabbitai review, 봇 회차와 반영, 리뷰 반영 뒤 변이 표 전체 실행(쉰다섯), 회고, 워크트리에서 병합이다. docs/journal/2026-10-28-13-queue-rows-search.md
+확인할 선행 조건: 없음
+이번 요청 범위: PR과 병합까지
+```
+
+제목을 `chore/021-queue-rows-search (인계함)`으로 바꿨다. 멈출 백그라운드 작업은 없었다(검사 러너, 카나리아, 변이,
+커밋, 리뷰 서브에이전트 둘이 모두 끝났다). `git worktree unlock C:/project/agent/.claude/worktrees/021-queue-rows-search`는
+`is not locked`로 끝나 넘어갔다.
+
+open-session을 부른다 2026-10-27T23:25:04Z
+
+## 이어 가기 (커밋 뒤를 인계받은 세션)
+
+위 지시문으로 연 새 세션이 제목을 `chore/021-queue-rows-search`로 바꾸고 `git worktree list`에서 찾은 워크트리
+`021-queue-rows-search`에 `EnterWorktree(path)`로 들어갔다. `git fetch origin main` 뒤에도 origin/main은 `7d27ae45`이고
+`git merge-base HEAD origin/main`도 `7d27ae45`라 합칠 것이 없었다.
+
+> 사용자: "대기열 425를 티켓 .scratch/harness/issues/021-queue-rows-search.md로 쓰고 한다"
+
+이 일지의 고침만 실은 커밋은 pre-commit의 pytest가 `3 failed, 5905 passed`(1236.68초)라 들지 않았다. 실패한
+셋(`test_rerun_runner`의 첫 인계 뒤 멈춤, `test_sibling_overlap`의 카나리아 명세, `test_rerun_round`의 B만 민다)은
+이 브랜치가 건드리지 않은 파일이고, 출력에 `WinError 1455`(페이징 파일이 너무 작다)와 임시 저장소의 `git push`
+실패가 있었다. 리뷰 서브에이전트 둘이 같은 때 돌았다. 셋만 `uv run pytest -q -p no:randomly <셋>`으로 따로 치니
+`3 passed in 383.40s`였다. 일지는 스테이지한 채 아래 반영과 함께 다시 커밋한다.
+
+## PR 직전 리뷰
+
+CodeRabbit CLI는 좌석이 없어(위 셀프 리뷰 절의 `coderabbit auth status`) 대체 둘을 나란히 돌렸다.
+
+보안(`/security-review`, 기준 `origin/HEAD` = origin/main `7d27ae45`): 식별 서브태스크가 후보 없음을 냈고, 거를 후보가
+없어 오탐 거르기는 돌지 않았다. 추적한 흐름은 `--search`가 `re.compile`과 `pattern.search`에만 닿는 것, `--ref`가 이
+PR이 바꾸지 않은 `read_ref`에서 리스트 인자로 `git show`에 가는 것, 변이 표와 카나리아 명세를 `tomllib`로 읽는
+것이다(서브태스크가 코드를 읽은 것이다).
+
+버그·성능(`bug-perf-review`, 기준 `7d27ae45`, 파일 열, `[호출 40]`): Critical·Major 없음, 유효 Minor 다섯, 보류 Minor
+하나, 오탐 넷. 함수 호출과 수는 그 서브에이전트가 실제 대기열(498행)에 대 본 것이다.
+
+- 유효, 출력 상한 없음: SKILL이 첫 낱말로 고르라는 대상 파일의 전체 경로도 자주 인용되는 파일이면 수십 행을 낸다
+  (`--search .claude/rules/tools.md`가 62행 19,133자, `docs/constitution/operations.md`가 35행 10,589자). 남긴다.
+  상한을 두면 같은 일의 행을 숨겨 이 찾기의 몫(빠짐없이 가리기)과 어긋나고, `tools/`처럼 넓은 낱말을 좁히라는
+  문장은 이미 있다. 고치는 값은 SKILL 문장과 카나리아 다시 돌리기다.
+- 유효, 독스트링 "(일지 2026-10-22-16 의 306행은 4,079자다)": 그 일지에는 4,079가 없고 "약 5천 자"다. 고쳤다.
+  "(일지 2026-10-22-16 에서 306행이 실렸고 그 행은 4,079자다)"로 일지의 몫과 수를 나눴다.
+- 유효, 독스트링 "거의 모든 행에 맞는다": 498행 모두 맞는다(클래스에 공백이 든다). 고쳤다. "문자 클래스이고 그 안에
+  공백이 들어 모든 행에 맞는다".
+- 유효, `re.error`만 잡는다: `main(["--search", "a{99999999999}"])`가 `OverflowError`를 던져 트레이스백의 종료 1이
+  되고, 그 1이 "칸이 넷이 아닌 행"과 섞인다. 고쳤다. 깊은 괄호(`"(" * 5000 + ")" * 5000`)의 `RecursionError`도 함께
+  잡는다(`uv run python -c`로 두 예외를 손으로 봤다). 시험에 두 사례를 더했다.
+- 유효, `--search <번호>의`가 짧은 번호면 더 긴 번호의 끝에도 맞는다(번호 4는 28행 대 엄격한 쪽 2행). 남긴다.
+  소음만 늘고 놓치는 행은 없으며(엄격한 쪽이 부분집합이라고 리뷰가 셌다), 좁히는 정규식(`(?<!\d)`)은 SKILL의 남길
+  문자로 쓸 수 없다. 독스트링의 못 보는 것 2가 이미 더 긴 수에 맞는다고 적는다. 고치는 값은 SKILL 문장과 카나리아
+  다시 돌리기다.
+- 보류, "회차와 열림·닫힘은 칸 전체에서 판정해 따로 찍는다"를 고정한 시험이 없다: 고쳤다. 회차가 줄인 가운데에만
+  든 승인 칸에서 `rounds`가 7이고 줄인 승인 칸에 `7회차`가 없다는 시험을 더했다. 열림·닫힘은 무엇 칸에서 판정해
+  승인 칸을 줄이는 것과 무관하고, 머리에서 판정하는 길은 앞 표지를 걷어 기존 닫힌 행 시험이 잡는다(코드를 읽은
+  것이다).
+- 오탐 넷(빈 대기열, 여러 `--search`의 중복, 241자 승인 칸의 표시, cp949 콘솔과 U+2028)은 리뷰가 확인만 했다.
+
+반영 뒤: `uv run pytest -q -p no:randomly tests/tools/test_queue_open_rows.py`가 57 통과. 변이 표에 셋(큰 반복 수,
+깊은 괄호, 줄인 승인 칸의 회차)을 더하고 원문이 바뀐 하나(틀린 정규식)를 고쳐, `--check`가 쉰여덟 모두 원문이
+한 번씩이라고 냈고 `PYTHONUTF8=1 uv run python tools/mutate.py .scratch/harness/probes/queue_open_rows_mutations.toml 55
+56 57 58`이 넷 모두 기대대로 빨강이었다.

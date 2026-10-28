@@ -568,5 +568,35 @@ expect = "red"
 
 [[mutation.edit]]
 file = "tools/queue_open_rows.py"
-old = '''            except re.error as error:'''
+old = '''            except (re.error, OverflowError, RecursionError) as error:'''
 new = '''            except ValueError as error:'''
+
+[[mutation]]
+name = "큰 반복 수의 정규식 오류를 잡지 않는다"
+tests = ["tests/tools/test_queue_open_rows.py", "-k", "search의_인자가_틀리면"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/queue_open_rows.py"
+old = '''            except (re.error, OverflowError, RecursionError) as error:'''
+new = '''            except (re.error, RecursionError) as error:'''
+
+[[mutation]]
+name = "깊은 괄호의 정규식 오류를 잡지 않는다"
+tests = ["tests/tools/test_queue_open_rows.py", "-k", "search의_인자가_틀리면"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/queue_open_rows.py"
+old = '''            except (re.error, OverflowError, RecursionError) as error:'''
+new = '''            except (re.error, OverflowError) as error:'''
+
+[[mutation]]
+name = "회차를 줄인 승인 칸에서 찾는다"
+tests = ["tests/tools/test_queue_open_rows.py", "-k", "줄이기_전의_승인_칸에서"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/queue_open_rows.py"
+old = '''        rounds, _ = _rounds(named)'''
+new = '''        rounds, _ = _rounds({**named, "승인": _approval(named["승인"])})'''

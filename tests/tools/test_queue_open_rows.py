@@ -518,6 +518,14 @@ def test_승인_칸이_길면_가운데를_줄이고_줄인_글자_수를_적는
     assert hit.approval == "앞" * APPROVAL_HEAD + " …(가운데 3자 줄임)… " + "끝" * APPROVAL_TAIL
 
 
+def test_회차는_줄이기_전의_승인_칸에서_찾는다() -> None:
+    """덧붙인 글이 길면 회차가 줄인 가운데에 들 수 있다."""
+    approval = "앞" * APPROVAL_HEAD + " 7회차 " + "끝" * APPROVAL_TAIL
+    (hit,) = find(queue(f"| 1 | 일 | `a.md` | {approval} |"), r"a\.md")
+    assert hit.rounds == 7
+    assert "7회차" not in hit.approval
+
+
 def test_render_hits는_열린_행과_닫힌_행을_세고_행마다_한_줄을_찍는다() -> None:
     hits = find(
         queue(
@@ -615,6 +623,10 @@ def test_main은_search의_인자가_틀리면_쓰임을_내고_2로_끝난다(
         assert "쓰임:" in capsys.readouterr().err
     assert main(["--queue", str(path), "--search", "("]) == 2
     assert "정규식이 틀렸다: (" in capsys.readouterr().err
+    # re.error 가 아닌 것을 던지는 정규식도 트레이스백의 종료 1("칸이 넷이 아닌 행")이 아니라 2다
+    for source in ("a{99999999999}", "(" * 5000 + ")" * 5000):
+        assert main(["--queue", str(path), "--search", source]) == 2
+        assert "정규식이 틀렸다:" in capsys.readouterr().err
 
 
 def test_search를_실제로_불러_한글을_찍는다(tmp_path: Path) -> None:
