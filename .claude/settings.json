@@ -198,6 +198,16 @@
             "timeout": 20
           }
         ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "uv run --project \"${CLAUDE_PROJECT_DIR}\" --no-sync python \"${CLAUDE_PROJECT_DIR}/tools/launch_hook.py\" hook_journal_evidence.py",
+            "timeout": 20
+          }
+        ]
       }
     ],
     "PreToolUse": [
