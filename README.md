@@ -13,7 +13,7 @@ uv run pytest -q
 pnpm -C web verify
 ```
 
-`pre-commit install`은 주 체크아웃에서 한 번만 친다. git 훅은 워크트리와 공유된다. `uv sync`와 `pnpm -C web install --frozen-lockfile`은 워크트리마다 친다. claude.ai 클라우드 세션에서는 SessionStart 훅(`tools/hook_session_web_deps.py`)이 클론마다 `uv run pre-commit install`(빈 `.venv`를 맞추는 `uv sync`가 따라온다)과 pnpm 설치를 대신한다. chromium은 `pnpm -C web verify`의 스토리 테스트가 쓰고, 체크아웃마다가 아니라 기계마다 처음과 Playwright 판이 바뀔 때 한 번 친다(Playwright의 브라우저 캐시, Windows는 `%LOCALAPPDATA%\ms-playwright`). 사진 비교(`web/packages/ui`를 건드렸을 때 `pnpm -C web visual`과 `pnpm -C web visual:widget`, `web/apps/widget`을 건드렸을 때 뒤의 것)는 Docker가 있어야 하고, 처음 치면 판을 고정한 Playwright 이미지(받는 양 약 956MB)를 받는다. `uv run pytest -q`는 PATH의 PowerShell 7(`pwsh`)로 `tools/open_session.ps1`의 함수를 부르므로 기계마다 pwsh가 있어야 하고, 없으면 그 시험이 실패한다(ADR 0030). 같은 pytest가 `.env` 읽기 훅을 실제 rg와 맞대므로 PATH에 `rg`나 Claude Code(`claude`)가 있어야 한다(ADR 0038).
+`pre-commit install`은 주 체크아웃에서 한 번만 친다. git 훅은 워크트리와 공유된다. `uv sync`와 `pnpm -C web install --frozen-lockfile`은 워크트리마다 친다. claude.ai 클라우드 세션에서는 SessionStart 훅(`tools/hook_session_web_deps.py`)이 클론마다 `uv run pre-commit install`(빈 `.venv`를 맞추는 `uv sync`가 따라온다)과 pnpm 설치를 대신한다. chromium은 `pnpm -C web verify`의 스토리 테스트가 쓰고, 체크아웃마다가 아니라 기계마다 처음과 Playwright 판이 바뀔 때 한 번 친다(Playwright의 브라우저 캐시, Windows는 `%LOCALAPPDATA%\ms-playwright`). 사진 비교(`web/packages/ui`를 건드렸을 때 `pnpm -C web visual`, `pnpm -C web visual:widget`, `pnpm -C web visual:admin`, `web/apps/widget`이나 `web/apps/admin`을 건드렸을 때 그 앱의 것)는 Docker가 있어야 하고, 처음 치면 판을 고정한 Playwright 이미지(받는 양 약 956MB)를 받는다. `uv run pytest -q`는 PATH의 PowerShell 7(`pwsh`)로 `tools/open_session.ps1`의 함수를 부르므로 기계마다 pwsh가 있어야 하고, 없으면 그 시험이 실패한다(ADR 0030). 같은 pytest가 `.env` 읽기 훅을 실제 rg와 맞대므로 PATH에 `rg`나 Claude Code(`claude`)가 있어야 한다(ADR 0038).
 
 ## 구조
 
@@ -53,8 +53,10 @@ web/               pnpm 워크스페이스(Node 24, TypeScript 5.9). 파이썬�
                    사진 snapshots/, 앱도 나눠 쓰는 정적 빌드 열기 index.ts). 스토리 테스트는 뿌리 vitest.config.ts 의
                    storybook 프로젝트가 실제 chromium 에서 돈다(ADR 0026)
   apps/admin/      관리 화면(Next). app/(라우팅과 레이아웃), components/(아토믹 층, pages/가 화면), api/·hooks/queries/
-                   (요청 함수와 SWR 훅), stores/(토큰), next.config.ts(/api 중계), tools/start.ts(루프백에만 띄우는
-                   시작 래퍼), testing/(페이지 테스트의 가짜 네트워크와 격리), e2e/(실제 serve 를 지나는 Playwright)
+                   (요청 함수와 SWR 훅), stores/(토큰), styles/(관리 화면 CSS), next.config.ts(/api 중계),
+                   tools/start.ts(루프백에만 띄우는 시작 래퍼), testing/(페이지 테스트의 가짜 네트워크와 격리),
+                   .storybook/·visual/(관리 화면의 Storybook 과 사진 비교. 스토리 테스트는 창 폭 둘의
+                   admin-storybook-wide·admin-storybook-narrow 프로젝트), e2e/(실제 serve 를 지나는 Playwright)
   apps/widget/     위젯(Next, basePath /widget). 사이트가 iframe 으로 여는 페이지와 사이트 페이지 안에 서는 커스텀
                    요소의 번들(/widget/element.js). app/(라우팅과 레이아웃), components/(아토믹 층, pages/가 화면),
                    lib/(사이트가 준 질의를 읽는 embed, 두 방식이 나눠 쓰는 connection), element/(페이지 안 방식의
