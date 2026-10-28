@@ -222,6 +222,15 @@ ADR 0025 2026-10-28 이력 끝에 "이 이력은 2026-10-28에 사용자가 승�
 - **기각.** 도구 호출 사이에 영어 문장을 두 번(ADR 승인 직후의 Bash 앞, 회고 절을 쓰는 Edit 앞) 쓴 것은 `hook_midturn_korean`이 두 번 다 그 자리에서 알렸다. 그 훅을 들인 94는 닫혔고 열린 행은 없다(`queue_open_rows.py --search hook_midturn_korean`). 알린 뒤에 한 번 더 어긴 것은 이 일지에만 적는다.
 - **기각.** 리뷰 서브에이전트 둘이 문서만 바뀐 변경에 18분과 25분, 약 20만 토큰씩 썼고 명세 축이 vitest를 돌리려 워크트리에 `pnpm install`을 돌렸다. 손실이나 실수가 없고(`web/node_modules`는 무시되는 폴더다), 줄이는 길은 리뷰의 범위를 좁히는 것이라 사건 없이 떠올린 것이다.
 
+## 회고 (PR 연 뒤)
+
+PR을 연 뒤 이어받은 세션이 위 "이어받은 세션 (커밋 뒤)"의 PR 직전 리뷰 절과 "인계 (PR 연 뒤)" 절을 읽고 돌았다. 앞의 `## 회고`가 다룬 설계 인터뷰 몫은 다시 세지 않았다. 후보 넷, 승인 하나(새 행), 기각 둘, 일지에만 남김 하나, 넘김 없음. 만료할 행은 작업 트리와 `origin/main`(fetch 뒤) 두 출력 모두 없었다.
+
+- **승인(새 행).** 사건: `tests/channel/cli/test_interrupt.py::test_도구_호출_도중에_한_번_누르면_서버를_닫고_중단으로_끝난다`의 `assert 끝.pressed[0] < 끝.cancelled`가 pre-commit 두 번과 시험 파일만 돌린 한 번, 모두 세 번 빨갰고 두 값이 정확히 같았다. 문서만 바꾼 PR의 커밋이 두 번 막혔고 사용자가 `SKIP=pytest`로 한 번 넘겼다. 이 PC의 `time.time()`은 해상도 0.015625초인 `GetSystemTimeAsFileTime()`이고 누른 시각과 취소 시각이 한 눈금에 들면 같다는 것은 위 PR 연 뒤 절의 진단이 손으로 친 값을 옮긴 것이다(이 회고에서 다시 재지 않았다. 혼자 돌 때 초록인 까닭은 그 진단이 재지 않은 어림이라고 적었다). 대기열 306의 종류("전체 스위트의 부하 아래에서 지나는 시간 시험")와 달리 이 시험은 부하 없이 시험 파일만 돌려도 빨갰고 까닭이 시계 해상도라고 보아서, 306의 "새 사례는 일지에만" 규칙을 적용하지 않고 새 행(1회차)으로 둔다. `uv run python tools/queue_open_rows.py --search test_interrupt`는 닫힌 403 하나만 냈는데, 403은 같은 시험 파일이 리눅스 CI의 pyright에서 빨갰던 일이라 다른 일이고, `--search 시계.해상도 --search GetSystemTime`은 맞은 행이 없었다(둘 다 이 세션이 손으로 쳤다). 층: 시험이 판정하는 값이라 시험을 고치는 처방이 가장 높은 층이다. 되돌림: PR 하나. 고침이므로 사건 하나로 반영하는 종류다. 이 PR은 문서만 바꾸고 시험을 고치는 일이 티켓 밖이라 지금 반영하지 않고 대기열 531로 둔다(`tools/sibling_overlap.py`의 `다음 빈 번호`가 529·530을 형제가 쓴 것으로 보았다). 처방에는 `<`를 `<=`로 바꾸는 길을 넣지 않았다. 판정을 느슨하게 하는 길이라 넘김이고, 처방은 시계 값이 아니라 자식 프로세스가 파일에 쓰는 순서로 누른 뒤 취소를 가르는 쪽이다.
+- **일지에만(행 없음).** `tests/adapters/test_filesystem.py::test_다른_프로세스가_운영자_파일을_연_채여도_교체가_재시도_안에서_성공한다`의 `PermissionError: [WinError 5]` 실패는 한 번이었고 대기열 309의 닫힘 문구가 이미 다룬 종류(다른 프로세스가 교체하는 동안의 읽기가 상한을 다 쓰는 `PluginError`)다. 306이 정한 대로 닫힌 종류의 새 사례는 회차를 더하지 않는다.
+- **기각.** 첫 `@coderabbitai review` 코멘트 이전에 CodeRabbit이 자동 리뷰를 건너뛰고(`skip review` 요약) 검사 줄이 `SKIPPED`로 보인 것은 `next-session` 1단계의 2(대기)가 그 코멘트를 이 세션의 몫으로 정해 둔 절차 그대로다.
+- **기각.** 사용자의 답이 약속한 제안 카드(`start_session`, `own_initiative`)를 훅이 막은 것은 ADR 0037의 "세션 카드" 규칙이 그 자리에서 막은 것이다. 흔들리는 시험의 고침은 위 승인 행이 대신 맡는다.
+
 ## 다음
 
 기능 design-card-build는 설계가 끝났고 `.scratch/design-card-build/`가 없는 단계다. 다음은 명세(`/to-spec`, 사람이 부른다)이고, 명세가 정할 것은 ADR 0025 2026-10-28 이력의 "명세가 정할 것"과 "재지 못한 것"이다. 셀프 리뷰가 더한 셋(이어 받는 올리기의 `tokens.json`, `.design-sync/`의 파일마다의 가름, 티켓 순서)도 거기에 들어 있다. 저장소 밖 근거(형식의 `app.js`·`format.md`·`from-code.md`)를 명세가 다시 읽어야 하면, 이 세션이 쓴 앞 세션의 사본 자리는 `C:\Users\User\AppData\Local\Temp\claude\C--project-agent\e8e7c53a-a8c2-41df-88f9-43b5a8d2f17e\scratchpad\artifact-files\`이다(형식 판 `3fee8974-…`이 디자인 시스템, `943c565b-…`이 화면. 임시 폴더라 지워졌을 수 있다).
@@ -274,6 +283,39 @@ ADR 0025 2026-10-28 이력 끝에 "이 이력은 2026-10-28에 사용자가 승�
   - 찾은 것: 이 PC의 파이썬 3.12.10에서 `time.get_clock_info('time')`은 `GetSystemTimeAsFileTime()`, 해상도 0.015625초다(손으로 쳤다). 시험의 자식 프로세스에서 누르는 스레드가 `pressed-0`을 적은 뒤 SIGINT를 올리고, 주 루프가 그 취소를 받아 `cancelled`를 적는다(시험 머리의 자식 코드를 읽었다). 그래서 누른 시각은 취소 시각보다 클 수 없고, 둘이 한 눈금 안에 들면 같다. 265행의 엄격한 `<`가 그 같음을 실패로 센다. 혼자 돌 때 초록인 까닭(두 쓰기 사이가 한 눈금을 넘는다)은 재지 않은 어림이다. 리눅스 CI의 벽시계는 해상도가 훨씬 높아 거기서는 드러나지 않을 것으로 본다(어림).
   - 이 PR은 문서만 바꿔 그 경로에 닿지 않는다. 시험을 고치는 일은 이 PR의 티켓 밖이라 진단은 여기서 멈추고 고치지 않았다. 파일 시험의 실패는 한 번뿐이라 이 진단에 넣지 않았다.
 
-  어떻게 커밋할지 물었다. 첫 화면은 훅이 한 번 막았고, `tools/run_checks.py`가 `SKIP`을 검사 id로 읽고 pytest의 id가 `pytest`인 것, `.github/workflows/ci.yml`의 `verify`가 `python` 잡(ubuntu에서 `uv run pytest -q`)을 `needs`로 기다리는 것을 읽어 대 봤다. "전체로 돌리면 세 번"을 "시험 파일로 한 번과 pre-commit으로 두 번"으로, 걸린 시간을 "8~11분"으로 고쳐 다시 올렸다.
+  어떻게 커밋할지 물었다. 첫 화면은 훅이 한 번 막았고, `tools/run_checks.py`가 `SKIP`을 검사 id로 읽고 pytest의 id가 `pytest`인 것, `.github/workflows/ci.yml`의 `verify`가 `python` 잡(ubuntu에서 `uv run pytest -q`)을 `needs`로 기다리는 것을 읽어 대 봤다. 빨강 셋을 전체로 돌린 것이라고 적었던 설명을 시험 파일로 한 번과 pre-commit으로 두 번이라고 바로잡고, 걸린 시간을 8~11분으로 고쳐 다시 올렸다.
 
   > 사용자: "로컬 pytest만 빼고 커밋 (Recommended)" — 설명: 커밋할 때 SKIP=pytest를 붙여 pre-commit의 다른 검사(pyright, web verify, 경계, 문서 검사 등)는 그대로 돌리고 pytest만 뺍니다(tools/run_checks.py가 SKIP을 검사 id로 읽습니다). 이 PR은 문서만 바꿔 pytest가 지나는 코드에 닿지 않고, PR을 열면 CI의 python 잡이 리눅스에서 pytest 전체를 돌리며 필수 검사 verify가 그 잡을 기다립니다. 빠진 로컬 pytest는 PR 체크리스트에 그렇게 적습니다. 빨개지는 시험(test_interrupt의 시각 비교)은 따로 고칠 세션을 제안 카드로 냅니다.
+
+  그 답대로 `SKIP=pytest`로 커밋했다(`0017d259`). 나머지 검사는 모두 통과했고 pytest는 `Skipped`였다(커밋 출력을 손으로 봤다). 푸시하고 PR [njh6803/agent-os#414](https://github.com/njh6803/agent-os/pull/414)를 열었다. PR 체크리스트의 pytest 줄에 뺀 까닭과 CI의 `python` 잡을 적었다.
+
+  답의 설명이 약속한 제안 카드(`start_session`, `own_initiative`)는 훅이 막았다(ADR 0037의 "세션 카드"). 흔들리는 시험의 고침은 단계를 닫는 세션의 회고 후보로 넘긴다(아래 인계 지시문의 이어받을 상태).
+
+## 인계 (PR 연 뒤)
+
+- PR을 연 직후 `hook_handoff`가 세션 컨텍스트 252,006 토큰, 경계 `PR 연 뒤`로 인계를 지시했다. 함께 온 `hook_pr_next_session`의 계기보다 인계 줄이 앞선다. `next-session` "인계할 때" 1의 다섯 가운데 어느 것에도 들지 않는다. PR은 열렸고, 요청 범위는 PR과 병합까지이고, 이 세션의 지시문의 이어받을 상태는 `인계: 커밋 뒤`라 경계가 다르고, 이 일지에 `인계 못함` 줄이 없고, `get_session`의 `self`에 `parentSessionId`가 없다. 앞의 두 `커밋 뒤` 계기는 같은 경계라 넘기지 않았다(위 PR 직전 리뷰 절).
+- 이 세션의 사용자 프롬프트는 둘이다. 첫 메시지는 위 "인계 (커밋 뒤)" 절의 인계 지시문을 스킬 파일을 읽으라는 한 줄로 옮긴 것이다. 다른 하나는 위 PR 직전 리뷰 절에 옮긴 선택 화면의 답(로컬 pytest만 빼고 커밋)이다.
+- 이 세션의 지금 제목은 `docs/design-card-build`이고, 넘기며 `docs/design-card-build (인계함)`으로 바꾼다. 이 절은 커밋하지 않았다. 새 세션이 다음 커밋에 싣는다.
+- 이 세션이 번복하거나 고친 것: `bug-perf-review`의 Minor 둘로 ADR 0025 2026-10-28 이력의 두 자리(`.gitignore` 주석, `NOTES.md`에서 옮길 것)의 범위를 좁혔고 결정은 바꾸지 않았다. 일지에서 인용 대조가 경고한 따옴표 셋을 뗐다. 약속한 제안 카드는 훅에 막혀 내지 못했다.
+- 새 세션이 할 일: 첫 `@coderabbitai review` 코멘트와 봇 회차, 이 절을 실은 커밋, 회고(흔들리는 시험, 막힌 제안 카드), 워크트리에서의 병합, `next-session`(다음 단계는 design-card-build 명세, `/to-spec`)이다. 최종 보고에는 이 일지 머리 문단의 `tidy-checkouts` 결과를 함께 넣는다.
+- 인계 지시문:
+
+  ```text
+  다음 작업: 기능 design-card-build. 디자인 시스템 아티팩트의 컴포넌트 카드와 나머지 파일을 번들 스킬 /design-sync의 빌드를 빌려 짓는 것을 걷어 낼지 정한다
+  다음 단계: PR 반영·병합
+  어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+  시작 프롬프트: /grill-with-docs .scratch/plan.md 의 design-card-build 행과 ADR 0025 이력 2026-10-21을 근거로, 디자인 시스템 아티팩트의 컴포넌트 카드와 나머지 파일을 번들 스킬 /design-sync의 빌드를 빌려 짓는 것을 걷어 낼지, 걷어 내면 카드를 짓는 변환기를 어디에 둘지, 그 이력의 어림 둘(미리보기가 토큰 CSS를 함께 싣는다, 카드는 거꾸로 동기화 뒤 다시 올리면 바뀐다)을 고칠지를 정한다
+  브랜치: docs/design-card-build
+  모델: Sonnet 5.5 / high
+  읽을 것: docs/journal/2026-10-28-17-design-card-build-design.md의 "이어받은 세션 (커밋 뒤)"부터 끝까지(PR 직전 리뷰, 커밋을 막은 시험의 진단과 사용자의 답, 인계 (PR 연 뒤))
+  이어받을 상태: 인계: PR 연 뒤. 순서 1의 2(봇 회차)부터 한다. 첫 @coderabbitai review 코멘트도 새 세션이 남긴다(docs/journal/2026-10-28-17-design-card-build-design.md). PR #414는 0017d259까지 푸시했고, 일지의 "인계 (PR 연 뒤)" 절과 그 앞 두 문단은 커밋하지 않아 다음 커밋에 싣는다. 이 PC에서는 tests/channel/cli/test_interrupt.py의 시각 비교가 pre-commit의 pytest를 막을 수 있다. 사용자가 고른 SKIP=pytest는 0017d259 커밋 하나에 대한 답이었으므로, 다시 그 시험만으로 막히면 사람에게 묻는다. 그 시험의 고침은 제안 카드가 훅에 막혀 회고 후보로 넘긴다. 최종 보고에는 이 일지 머리 문단의 tidy-checkouts 결과를 함께 넣는다
+  확인할 선행 조건: 병합은 이 워크트리 사본의 next-session "워크트리에서 병합할 때"를 Read로 열어 따른다
+  이번 요청 범위: PR과 병합까지
+  ```
+
+- 잠금 풀기는 `is not locked`였다(`EnterWorktree(path)`로 들어온 자리라 잠기지 않은 것으로 본다).
+- open-session을 부른다 2026-10-28T06:23:25Z
+
+## 이어받은 세션 (PR 연 뒤)
+
+위 "인계 (PR 연 뒤)" 지시문으로 연 새 세션이다. 첫 턴 훅대로 제목을 `docs/design-card-build`로 바꾸고 `git worktree list`에서 그 브랜치의 워크트리 `design-card-build`(`0017d259`)를 찾아 `EnterWorktree(path)`로 들어갔다. 이 세션의 사용자 프롬프트는 위 지시문을 스킬 파일을 읽으라는 한 줄로 옮긴 첫 메시지 하나다. 지시문의 "시작 프롬프트"는 설계 인터뷰(`grill-with-docs`)를 가리키지만 그 인터뷰는 앞 세션이 끝냈고 "이어받을 상태"가 봇 회차부터 하라고 해서, 라운드를 다시 돌지 않고 `next-session` 순서 1의 2부터 이었다. PR #414의 푸시 전 상태는 `python`·`visual` 검사가 진행 중, `claude-review`·`web`·`e2e`·`e2e-widget`·`ticket` 성공, CodeRabbit은 자동 리뷰를 건너뛴 상태였다(`gh pr view 414 --json statusCheckRollup`로 손으로 봤다). 위 회고(PR 연 뒤)와 대기열 531을 더하고 PR 본문의 "남긴 위험"에 한 줄을 더한 뒤 일지와 함께 푸시한다.
