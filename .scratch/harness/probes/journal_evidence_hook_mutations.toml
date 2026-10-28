@@ -181,6 +181,171 @@ file = "tools/hook_journal_evidence.py"
 old = '''STATE_DIR = "agent-os-journal-evidence"'''
 new = '''STATE_DIR = "agent-os-probe-conclusion"'''
 
+# --- Bash 판정(harness 티켓 019, 대기열 501) ---
+
+[[mutation]]
+name = "Bash 를 받지 않는다"
+tests = ["tests/tools/test_hook_journal_evidence.py", "-k", "Bash_가_일지를_쓰면 or 표지를_같이"]
+expect = "red"
+expect_output = ['''_알린다[cat >> docs/journal/2026-10-26-03-x.md <<'EOF'\n- 러너의 git 2.56\nEOF]''']
+[[mutation.edit]]
+file = "tools/hook_journal_evidence.py"
+old = '''    if tool not in TOOLS and tool != BASH:'''
+new = '''    if tool not in TOOLS:'''
+
+[[mutation]]
+name = "출력 리다이렉트를 쓰기로 보지 않는다"
+tests = ["tests/tools/test_hook_journal_evidence.py", "-k", "Bash_가_일지를_쓰면"]
+expect = "red"
+expect_output = ['''_알린다[cat >> docs/journal/2026-10-26-03-x.md <<'EOF'\n- 러너의 git 2.56\nEOF]''']
+[[mutation.edit]]
+file = "tools/hook_journal_evidence.py"
+old = '''        if _REDIRECT_BEFORE.search(before) or python_writes:'''
+new = '''        if python_writes:'''
+
+[[mutation]]
+name = "리다이렉트 뒤 인용 부호를 건너뛰지 않는다"
+tests = ["tests/tools/test_hook_journal_evidence.py", "-k", "Bash_가_일지를_쓰면"]
+expect = "red"
+expect_output = ['''_알린다[cat >> 'C:\project\agent\docs\journal\2026-10-26-03-x.md' <<'EOF'\nx\nEOF]''']
+[[mutation.edit]]
+file = "tools/hook_journal_evidence.py"
+old = '''_REDIRECT_BEFORE = re.compile(r"""(?:[0-9&]?>>?[|&]?)\s*['"]?$""")'''
+new = '''_REDIRECT_BEFORE = re.compile(r"""(?:[0-9&]?>>?[|&]?)\s*$""")'''
+
+[[mutation]]
+name = "tee 를 쓰기로 보지 않는다"
+tests = ["tests/tools/test_hook_journal_evidence.py", "-k", "Bash_가_일지를_쓰면"]
+expect = "red"
+expect_output = ['''_알린다[echo x | tee -a docs/journal/2026-10-26-03-x.md]''']
+[[mutation.edit]]
+file = "tools/hook_journal_evidence.py"
+old = '''        if _TEE.search(segment) or _SED_IN_PLACE.search(segment):'''
+new = '''        if _SED_IN_PLACE.search(segment):'''
+
+[[mutation]]
+name = "sed -i 를 쓰기로 보지 않는다"
+tests = ["tests/tools/test_hook_journal_evidence.py", "-k", "Bash_가_일지를_쓰면"]
+expect = "red"
+expect_output = ['''_알린다[sed -i 's/a/b/' docs/journal/2026-10-26-03-x.md]''']
+[[mutation.edit]]
+file = "tools/hook_journal_evidence.py"
+old = '''        if _TEE.search(segment) or _SED_IN_PLACE.search(segment):'''
+new = '''        if _TEE.search(segment):'''
+
+[[mutation]]
+name = "python 의 쓰기를 보지 않는다"
+tests = ["tests/tools/test_hook_journal_evidence.py", "-k", "Bash_가_일지를_쓰면"]
+expect = "red"
+expect_output = ['''_알린다[uv run python - <<'EOF'\nfrom pathlib import Path\nPath('docs/journal/2026-10-26-03-x.md').write_text('x')\nEOF]''']
+[[mutation.edit]]
+file = "tools/hook_journal_evidence.py"
+old = '''    python_writes = bool(_PYTHON.search(command) and _PYTHON_WRITE.search(command))'''
+new = '''    python_writes = False'''
+
+[[mutation]]
+name = "python 이면 쓰기 낱말 없이도 쓴다고 본다"
+tests = ["tests/tools/test_hook_journal_evidence.py", "-k", "읽기만_하거나 or 인자로_경로를"]
+expect = "red"
+expect_output = ['''_지나간다[uv run python tools/sibling_overlap.py > /tmp/so.log 2>&1; ls docs/journal/2026-10-26-03-x.md]''']
+[[mutation.edit]]
+file = "tools/hook_journal_evidence.py"
+old = '''    python_writes = bool(_PYTHON.search(command) and _PYTHON_WRITE.search(command))'''
+new = '''    python_writes = bool(_PYTHON.search(command))'''
+
+[[mutation]]
+name = "tee·sed 를 경로가 든 단순 명령이 아니라 명령 글 전체에서 찾는다"
+tests = ["tests/tools/test_hook_journal_evidence.py", "-k", "읽기만_하거나"]
+expect = "red"
+expect_output = ['''_지나간다[sed -i 's/a/b/' /tmp/a.md && cat docs/journal/2026-10-26-03-x.md]''']
+[[mutation.edit]]
+file = "tools/hook_journal_evidence.py"
+old = '''        segment = command[start.start() + 1 if start else 0 : end.start() if end else None]'''
+new = '''        segment = command'''
+
+[[mutation]]
+name = "단순 명령을 경로 앞에서 끊는다"
+tests = ["tests/tools/test_hook_journal_evidence.py", "-k", "Bash_가_일지를_쓰면"]
+expect = "red"
+expect_output = ['''_알린다[sed docs/journal/2026-10-26-03-x.md -i 's/a/b/']''']
+[[mutation.edit]]
+file = "tools/hook_journal_evidence.py"
+old = '''        segment = command[start.start() + 1 if start else 0 : end.start() if end else None]'''
+new = '''        segment = command[start.start() + 1 if start else 0 : match.start()]'''
+
+[[mutation]]
+name = "인용 부호 안의 글을 지우지 않는다"
+tests = ["tests/tools/test_hook_journal_evidence.py", "-k", "읽기만_하거나"]
+expect = "red"
+expect_output = ['''_지나간다[sed -n '/ -i/p' docs/journal/2026-10-26-03-x.md]''']
+[[mutation.edit]]
+file = "tools/hook_journal_evidence.py"
+old = '''        segment = _QUOTED.sub(" ", segment)
+'''
+new = ''''''
+
+[[mutation]]
+name = "tee 를 첫 낱말에 묶지 않는다"
+tests = ["tests/tools/test_hook_journal_evidence.py", "-k", "읽기만_하거나"]
+expect = "red"
+expect_output = ['''_지나간다[grep tee docs/journal/2026-10-26-03-x.md]''']
+[[mutation.edit]]
+file = "tools/hook_journal_evidence.py"
+old = '''_TEE = re.compile(r"^\s*(?:sudo\s+)?tee(?:\s|$)")'''
+new = '''_TEE = re.compile(r"(?:^|\s)tee(?:\s|$)")'''
+
+[[mutation]]
+name = "리다이렉트 >& 를 보지 않는다"
+tests = ["tests/tools/test_hook_journal_evidence.py", "-k", "Bash_가_일지를_쓰면"]
+expect = "red"
+expect_output = ['''_알린다[echo x >& docs/journal/2026-10-26-03-x.md]''']
+[[mutation.edit]]
+file = "tools/hook_journal_evidence.py"
+old = '''_REDIRECT_BEFORE = re.compile(r"""(?:[0-9&]?>>?[|&]?)\s*['"]?$""")'''
+new = '''_REDIRECT_BEFORE = re.compile(r"""(?:[0-9&]?>>?\|?)\s*['"]?$""")'''
+
+[[mutation]]
+name = "python 의 판 이름을 보지 않는다"
+tests = ["tests/tools/test_hook_journal_evidence.py", "-k", "Bash_가_일지를_쓰면"]
+expect = "red"
+expect_output = ['''_알린다[python3.12 -c "open('docs/journal/2026-10-26-03-x.md', 'w')"]''']
+[[mutation.edit]]
+file = "tools/hook_journal_evidence.py"
+old = '''_PYTHON = re.compile(r"(?:^|[\s/\\])(?:python(?:3(?:\.\d+)?)?|py)(?:\.exe)?(?:\s|$)")'''
+new = '''_PYTHON = re.compile(r"(?:^|[\s/\\])(?:python3?|py)(?:\.exe)?(?:\s|$)")'''
+
+[[mutation]]
+name = "open 의 쓰기 모드에 b·t·+ 를 붙인 꼴을 보지 않는다"
+tests = ["tests/tools/test_hook_journal_evidence.py", "-k", "Bash_가_일지를_쓰면"]
+expect = "red"
+expect_output = ['''_알린다[uv run python -c "f = open('docs/journal/2026-10-26-03-x.md', 'ab')"]''']
+[[mutation.edit]]
+file = "tools/hook_journal_evidence.py"
+old = '''    r"""|open\((?:[^\n]*?,\s*(?:mode\s*=\s*)?)?['"](?:[wax][bt+]*|r[bt]*\+[bt]*)['"]"""'''
+new = '''    r"""|open\((?:[^\n]*?,\s*(?:mode\s*=\s*)?)?['"][wax]\+?['"]"""'''
+
+[[mutation]]
+name = "open 의 모드 앞 인자에 괄호가 들면 보지 않는다"
+tests = ["tests/tools/test_hook_journal_evidence.py", "-k", "Bash_가_일지를_쓰면"]
+expect = "red"
+expect_output = ['''_알린다[uv run python -c "from pathlib import Path; f = open(Path('docs/journal/2026-10-26-03-x.md'), 'w')"]''']
+[[mutation.edit]]
+file = "tools/hook_journal_evidence.py"
+old = '''    r"""|open\((?:[^\n]*?,\s*(?:mode\s*=\s*)?)?['"](?:[wax][bt+]*|r[bt]*\+[bt]*)['"]"""'''
+new = '''    r"""|open\((?:[^)\n]*?,\s*(?:mode\s*=\s*)?)?['"](?:[wax][bt+]*|r[bt]*\+[bt]*)['"]"""'''
+
+[[mutation]]
+name = "Bash 의 일지 조각에 is_journal 을 대지 않는다"
+tests = ["tests/tools/test_hook_journal_evidence.py", "-k", "읽기만_하거나"]
+expect = "red"
+expect_output = ['''_지나간다[echo x >> mydocs/journal/2026-10-26-03-x.md]''']
+[[mutation.edit]]
+file = "tools/hook_journal_evidence.py"
+old = '''        if not is_journal(match.group()):
+            continue
+'''
+new = ''''''
+
 [[mutation]]
 name = "대조군: 알림 끝 낱말을 바꾼다"
 tests = ["tests/tools/test_hook_journal_evidence.py"]

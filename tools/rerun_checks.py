@@ -25,9 +25,10 @@
 적중, 모델 불일치)은 `Screen.findings`가 낸다.
 
 설정. init 이벤트의 `mcp_servers`가 빈 목록이고 `plugins`의 항목마다 `source`가 허용 모임 안이어야
-한다. 허용 모임은 내장 셋(`<이름>@builtin`)과 클론의 `.claude/settings.json`의 `enabledPlugins`에서
-값이 참인 키다. 명세는 첫 호출의 init 을 보라고 했지만 모든 호출의 모든 init 을 본다. 세션이 클론의
-설정을 고쳐 다음 호출에 플러그인을 싣는 길까지 막으려는 것이다.
+한다. 허용 모임은 내장 셋(`<이름>@builtin`), 계정 동기화 둘(`<이름>@synced`, `SYNCED_PLUGINS`),
+클론의 `.claude/settings.json`의 `enabledPlugins`에서 값이 참인 키다. 명세는 첫 호출의 init 을
+보라고 했지만 모든 호출의 모든 init 을 본다. 세션이 클론의 설정을 고쳐 다음 호출에 플러그인을 싣는
+길까지 막으려는 것이다.
 
 모델. 본 세션의 기록 파일은 `<synthetic>`을 뺀 줄이 모두 갈래의 (모델, 노력)이어야 하고,
 서브에이전트 기록은 모델만 허용 모임(갈래의 모델, 하네스 모델, 그 세션의 Agent 입력이 고른 모델)과
@@ -51,18 +52,19 @@
   클론의 `tests/` 밖일 때만 주소 셋을 찾는다.
 - 경로. 모든 도구 입력의 글 값(글 칸 `FREE_TEXT_KEYS`와 Grep 의 `pattern`은 뺀다)에서 주 체크아웃,
   사용자의 `~/.claude`, 같은 뿌리 아래의 다른 회차 폴더, 전용 설정 폴더를 찾는다. 뒤의 둘은 04
-  메모의 결정이다. 막는 규칙이 막지 않아 다른 갈래의 풀이와 세션 기록을 읽는 길이다. 자기 회차
-  폴더와 자기 세션 기록 폴더(`<설정 폴더>/projects/<자기 세션 기록 파일의 폴더 이름>`, 자동 메모리와
-  큰 도구 결과가 그 안이다)는 뺀다. 경로마다 링크를 풀지 않은 꼴과 푼 꼴을 둘 다 본다(04 메모의
-  결정, 막는 규칙의 `deny_heads`와 같다). 글은 `\\`를 `/`로, 겹친 `/`를 하나로 바꾸고 대소문자를
-  접어 견주고, 드라이브 경로는 Git Bash 의 `/c/` 꼴도 본다. 걸리는 것은 찾는 경로 뒤가 글의 끝이거나
-  `BOUNDARY`의 글자일 때뿐이다. 명세의 넷(경로 구분자, 따옴표, 공백, 끝)에 셸의 제어 글자, glob
-  글자(`*?`), 중괄호(`{}`. 중괄호 확장과 `${X:-…}`)를 더했다. 대괄호는 더하지 않았다. 대괄호
-  glob 은 한 글자에 맞아 `~/.claude[a]`는 이웃 이름(`~/.claudea`)이다. 이웃
-  이름(`~/.claude-rerun`, `~/.claude.json`)은 이름 글자로 이어져 걸리지 않는 것이 같다. 홈 아래의
-  찾는 경로(`~/.claude`, 홈 아래에 둔 설정 폴더와 뿌리)는 `~`, `$HOME`, `%USERPROFILE%` 같은 홈을
-  대신하는 이름(`HOME_ALIASES`)으로 적은 꼴도, 설정 폴더는 `CLAUDE_CONFIG_DIR`의
-  꼴(`CONFIG_ALIASES`)도 본다. 경로 칸(`PATH_KEYS`)의 값은 클론에서 푼 꼴(`..` 정리)도 본다.
+  메모의 결정이다. 뿌리 자체와 뿌리 바로 아래 파일도 자기 회차 폴더가 아니라 다른 회차로 센다. 막는
+  규칙이 막지 않아 다른 갈래의 풀이와 세션 기록을 읽는 길이다. 자기 회차 폴더와 자기 세션 기록
+  폴더(`<설정 폴더>/projects/<자기 세션 기록 파일의 폴더 이름>`, 자동 메모리와 큰 도구 결과가 그
+  안이다)는 뺀다. 경로마다 링크를 풀지 않은 꼴과 푼 꼴을 둘 다 본다(04 메모의 결정, 막는 규칙의
+  `deny_heads`와 같다). 글은 `\\`를 `/`로, 겹친 `/`를 하나로 바꾸고 대소문자를 접어 견주고, 드라이브
+  경로는 Git Bash 의 `/c/` 꼴도 본다. 걸리는 것은 찾는 경로 뒤가 글의 끝이거나 `BOUNDARY`의 글자일
+  때뿐이다. 명세의 넷(경로 구분자, 따옴표, 공백, 끝)에 셸의 제어 글자, glob 글자(`*?`), 중괄호(`{}`.
+  중괄호 확장과 `${X:-…}`)를 더했다. 대괄호는 더하지 않았다. 대괄호 glob 은 한 글자에 맞아
+  `~/.claude[a]`는 이웃 이름(`~/.claudea`)이다. 이웃 이름(`~/.claude-rerun`, `~/.claude.json`)은
+  이름 글자로 이어져 걸리지 않는 것이 같다. 홈 아래의 찾는 경로(`~/.claude`, 홈 아래에 둔 설정
+  폴더와 뿌리)는 `~`, `$HOME`, `%USERPROFILE%` 같은 홈을 대신하는 이름(`HOME_ALIASES`)으로 적은
+  꼴도, 설정 폴더는 `CLAUDE_CONFIG_DIR`의 꼴(`CONFIG_ALIASES`)도 본다. 경로 칸(`PATH_KEYS`)의 값은
+  클론에서 푼 꼴(`..` 정리)도 본다.
 - 막은 바깥 도구(`tools/rerun_round.py`의 `BLOCKED_TOOLS`)의 이름과 Skill 입력의 `open-session`(앞의
   `/`와 `:` 앞을 뗀다)을 찾는다.
 기록에는 걸린 꼴의 이름과 도구 이름만 남기고 입력은 옮기지 않는다. 도구 이름도 그 회차의 init 도구
@@ -106,8 +108,9 @@ git 의 전역 옵션(`-C`, `-c`, `--git-dir` 등)을 지난다.
   건다(거짓 양성).
 - init 의 플러그인 항목에 `source`가 없으면 이름을 허용 키의 `@` 앞과 견주어, 다른 마켓의 같은 이름
   플러그인을 지나보낸다. 마켓 플러그인이 init 에 실리는 꼴은 재지 않았다(파일럿이 본다).
-- 서브에이전트가 거부된 호출이 본 세션 결과의 `permission_denials`에 실리는지는 재지 않았다. 실리지
-  않으면 그 호출이 오염으로 걸린다(거짓 양성 쪽).
+- 서브에이전트가 거부된 호출은 본 세션 결과의 `permission_denials`에 실렸다. 백그라운드로 뜬
+  서브에이전트 하나만 쟀고(`.scratch/model-rerun/probes/README.md`의 "막는 규칙의 새 꼴"), 앞쪽으로
+  뜬 서브에이전트는 재지 않았다. 실리지 않는 길이 있으면 그 호출이 오염으로 걸린다(거짓 양성 쪽).
 - 내장 에이전트(Explore 등)를 Agent 입력의 `model` 없이 불렀을 때 무엇으로 도는지는 재지 않았다.
   그 모델이 갈래·하네스·Agent 입력의 모델이 아니면 그 줄이 허용 밖이라 측정 아님(모델)으로
   건다(거짓 양성 쪽). 허용 모임은 파일럿(11)이 사람과 정한다.
@@ -141,6 +144,7 @@ from tools.rerun_files import (
     Json,
     LineCount,
     Window,
+    prereg_pattern,
 )
 from tools.rerun_round import BLOCKED_TOOLS, CONFIG_DIR_VAR, RoundDir
 from tools.rerun_session import (
@@ -165,6 +169,14 @@ _SETTINGS_END = End(END_NOT_MEASURED, REASON_SETTINGS, None)
 # 프로브가 init 에서 본 내장 플러그인 셋(`.scratch/model-rerun/probes/README.md`).
 BUILTIN_PLUGINS = ("cc-plugin-agents-md", "cc-plugin-telemetry", "cc-plugin-plugin-authoring")
 _BUILTIN_SOURCE = "builtin"
+# 전용 설정 폴더가 claude.ai 계정으로부터 받아 와 싣는 플러그인(첫 호출에는 없고 둘째 호출부터
+# 실렸다. 두 호출과 폴더 목록만 본 어림이다). 둘 다 `skills/`뿐이고 훅·MCP·에이전트가 없어 GitHub 에
+# 닿지 않는다. 사람의 기본 설정 폴더로 도는 세션의 스킬 목록에도 있어 원래 세션도 싣고 돈 것으로
+# 본다(어림. 원래 세션의 init 은 보지 않았다). 사람이 허용했다(일지 2026-10-28-10 "계정 동기화
+# 플러그인"). 같은 폴더의 `skills/synced/` 사용자 스킬은 init 의 `plugins`에 실리지 않아 이 검사
+# 밖이다. 동기화로 새 플러그인이 들면 허용 밖이라 측정 아님(설정)으로 멈춘다.
+SYNCED_PLUGINS = ("frontend-design", "cowork-plugin-management")
+_SYNCED_SOURCE = "synced"
 
 # --- 모델 ---
 
@@ -279,6 +291,35 @@ CONFIG_ALIASES = (
 )
 _PROJECTS = "projects"
 _DRIVE = re.compile(r"^([a-z]):/")
+
+# 사전 등록 절과 대 보는 값(`tools/rerun_files.py`의 `prereg_line`). 모임은 정렬해 적는다.
+PREREG_VALUES: dict[str, Json] = {
+    "BUILTIN_PLUGINS": [*BUILTIN_PLUGINS],
+    "SYNCED_PLUGINS": [*SYNCED_PLUGINS],
+    "MODEL_ALIASES": {**MODEL_ALIASES},
+    "CODE_REVIEW_MODEL": CODE_REVIEW_MODEL,
+    "LIMIT_MARKERS": [LIMIT_REJECTED, USAGE_LIMIT],
+    "PATTERN_NAMES": [*PATTERN_NAMES],
+    "ADDRESSES": {name: prereg_pattern(p) for name, p in _ADDRESSES},
+    "GH": prereg_pattern(_GH),
+    "SESSION_OPENERS": {name: prereg_pattern(p) for name, p in _SESSION_OPENERS},
+    "SOCKET_KEY": SOCKET_KEY,
+    "OPEN_SESSION": OPEN_SESSION,
+    "FREE_TEXT_BY_TOOL": {tool: [*sorted(keys)] for tool, keys in _FREE_TEXT_BY_TOOL.items()},
+    "INHERIT": [*_INHERIT],
+    "FRONT_MATTER": prereg_pattern(_FRONT_MATTER),
+    "MODEL_LINE": prereg_pattern(_MODEL_LINE),
+    "BOUNDARY": "".join(sorted(BOUNDARY)),
+    "SHELL_TOOLS": [*SHELL_TOOLS],
+    "WEB_TOOLS": [*WEB_TOOLS],
+    "CONTENT_TOOLS": {tool: [*keys] for tool, keys in CONTENT_TOOLS.items()},
+    "AGENT_TOOLS": [*AGENT_TOOLS],
+    "FREE_TEXT_KEYS": [*sorted(FREE_TEXT_KEYS)],
+    "PATH_KEYS": [*sorted(PATH_KEYS)],
+    "KNOWN_TOOLS": [*sorted(KNOWN_TOOLS)],
+    "HOME_ALIASES": [*HOME_ALIASES],
+    "CONFIG_ALIASES": [*CONFIG_ALIASES],
+}
 
 
 # --- JSON ---
@@ -415,10 +456,12 @@ def enabled_plugins(text: str | None) -> tuple[str, ...]:
 
 
 def allowed_plugins(clone: Path) -> frozenset[str]:
-    """허용 모임. 내장 셋과 클론의 `.claude/settings.json`(B의 것)이 켠 플러그인의 키다."""
+    """허용 모임. 내장 셋, 계정 동기화 둘, 클론의 `.claude/settings.json`(B의 것)이 켠 플러그인의
+    키다."""
     builtin = (f"{p}@{_BUILTIN_SOURCE}" for p in BUILTIN_PLUGINS)
+    synced = (f"{p}@{_SYNCED_SOURCE}" for p in SYNCED_PLUGINS)
     enabled = enabled_plugins(_read_or_none(clone / ".claude" / "settings.json"))
-    return frozenset({*builtin, *enabled})
+    return frozenset({*builtin, *synced, *enabled})
 
 
 def _plugin_allowed(entry: Json, allowed: frozenset[str]) -> bool:

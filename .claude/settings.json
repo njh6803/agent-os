@@ -116,6 +116,16 @@
             "type": "command",
             "command": "uv run --project \"${CLAUDE_PROJECT_DIR}\" --no-sync python \"${CLAUDE_PROJECT_DIR}/tools/launch_hook.py\" hook_ui_design.py",
             "timeout": 20
+          },
+          {
+            "type": "command",
+            "command": "uv run --project \"${CLAUDE_PROJECT_DIR}\" --no-sync python \"${CLAUDE_PROJECT_DIR}/tools/launch_hook.py\" hook_web_edit_check.py",
+            "timeout": 20
+          },
+          {
+            "type": "command",
+            "command": "uv run --project \"${CLAUDE_PROJECT_DIR}\" --no-sync python \"${CLAUDE_PROJECT_DIR}/tools/launch_hook.py\" hook_measure_word.py",
+            "timeout": 20
           }
         ]
       },
@@ -185,6 +195,16 @@
           {
             "type": "command",
             "command": "uv run --project \"${CLAUDE_PROJECT_DIR}\" --no-sync python \"${CLAUDE_PROJECT_DIR}/tools/launch_hook.py\" hook_worktree_skill_overrides.py",
+            "timeout": 20
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "uv run --project \"${CLAUDE_PROJECT_DIR}\" --no-sync python \"${CLAUDE_PROJECT_DIR}/tools/launch_hook.py\" hook_journal_evidence.py",
             "timeout": 20
           }
         ]
@@ -287,6 +307,11 @@
           {
             "type": "command",
             "command": "uv run --project \"${CLAUDE_PROJECT_DIR}\" --no-sync python \"${CLAUDE_PROJECT_DIR}/tools/launch_hook.py\" hook_grill_design_check.py",
+            "timeout": 20
+          },
+          {
+            "type": "command",
+            "command": "uv run --project \"${CLAUDE_PROJECT_DIR}\" --no-sync python \"${CLAUDE_PROJECT_DIR}/tools/launch_hook.py\" hook_security_review_journal.py",
             "timeout": 20
           }
         ]

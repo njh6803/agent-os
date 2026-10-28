@@ -1,7 +1,8 @@
-"""PostToolUse 훅(Write|Edit). 일지(`docs/journal/<이름>.md`)를 쓰거나 고치면, 결과를 적은 문장마다
-근거의 종류(탐침이 단언하거나 찍은 것, 손으로 본 것과 그 명령, 코드를 읽은 것, 어림)를 밝히고
-문서에서 읽은 것은 그 문서를 출처로 적으라는 계기를 세션·에이전트마다 한 번 컨텍스트에 넣는다.
-근거의 갈래는 `docs/agents/issue-tracker.md` 프로브와 근거 절이 원천이라 알림은 그 절을 가리킨다.
+"""PostToolUse 훅(Write|Edit, Bash). 일지(`docs/journal/<이름>.md`)를 쓰거나 고치면, 결과를 적은
+문장마다 근거의 종류(탐침이 단언하거나 찍은 것, 손으로 본 것과 그 명령, 코드를 읽은 것, 어림)를
+밝히고 문서에서 읽은 것은 그 문서를 출처로 적으라는 계기를 세션·에이전트마다 한 번 컨텍스트에
+넣는다. 근거의 갈래는 `docs/agents/issue-tracker.md` 프로브와 근거 절이 원천이라 알림은 그 절을
+가리킨다.
 
 왜. 프로브 README 의 계기(`tools/hook_probe_conclusion.py`, 대기열 421)가 선 뒤에도 일지가 보지 않은
 것을 본 것처럼 적었다(대기열 445, 421 부터 세어 9~11회차). 일지 2026-10-23-27 의 단계 줄이 Design
@@ -16,12 +17,31 @@ README 밖이라 그 계기가 닿지 않았다. 일지는 단계마다 결과�
 없다). 그리고 `tools/hook_report.py` 는 훅 파일마다 발동을 세므로, 따로 두어야 이 계기가 창 안에서
 알렸는지를 그 보고의 뺄 후보로 따로 가를 수 있다. 표지 폴더도 따로라, 같은 세션에서 한 계기가 뜬
 것이 다른 계기를 끄지 않는다. 값은 Write·Edit 마다 래퍼를 거친 파이썬 한 번(약 0.2초,
-`.claude/rules/tools.md` 의 시간 항목의 어림이고 이 훅은 재지 않았다)이다. 등록은 새 매처 묶음을
-만들지 않고 첫 `Write|Edit` 묶음에 더한다.
+`.claude/rules/tools.md` 의 시간 항목의 어림이고 이 훅은 재지 않았다)이다. Write·Edit 의 등록은
+새 매처 묶음을 만들지 않고 첫 `Write|Edit` 묶음에 더한다.
+
+왜 Bash 도 보는가. harness 018 둘째 세션이 일지를 Bash heredoc(`cat >>`)으로 덧붙여 이 계기가 닿지
+않은 채, 잡 로그를 보지 않은 git 판을 본 것처럼 적었다(대기열 501, 421 부터 세어 13회차). 그
+사건이 이 독스트링의 못 보는 것 첫 항목이었다. Bash 의 등록은 PostToolUse 의 따로 둔 `Bash` 묶음
+이다. Bash·PowerShell 을 함께 받는 묶음에 두면 PowerShell 호출마다 파이썬이 한 번 더 뜬다. 그래서
+Bash 호출마다 약 0.2초가 더 든다(같은 어림).
 
 판정. 도구가 Write·Edit 이고 `tool_input.file_path` 가 문자열이며, 경로의 마지막 세 토막이
 `docs`·`journal`·`<이름>.md` 이면 알린다. `tools/hook_journal_retro.py` 의 `is_journal` 과 같은
-뜻이다 (훅은 서로 import 하지 않는다, `.claude/rules/tools.md`).
+뜻이다 (훅은 서로 import 하지 않는다, `.claude/rules/tools.md`). 도구가 Bash 면 `tool_input.command`
+글에서 일지 경로 조각을 찾고(`bash_writes_journal`), 그 조각이 쓰이는 꼴이면 알린다. 쓰이는 꼴은
+셋이다. 조각 바로 앞이 출력 리다이렉트(`>`·`>>`·`1>>`·`&>`·`>|`·`>&`, 인용 부호 하나를 건너뛴다)다.
+조각이 든 단순 명령(제어 연산자 `|`·`;`·`&` 와 줄바꿈 사이, 조각의 앞뒤 모두)의 첫 낱말이(`sudo`
+하나는 건너뛴다) `tee` 거나 `sed` 이고 `-i`(`-Ei` 처럼 묶은 것, `-i.bak`, `--in-place`)가 조각
+앞이든 뒤든 있다. 인용 부호 안의 글은 지우고 본다. 명령 어디에든 python 호출(`python3.12` 같은 판
+이름과 `py` 실행기 포함)과 쓰기 낱말(`write_text`, `write_bytes`, `.write(`, `.writelines(`, 쓰기
+모드(`w`·`a`·`x` 로 시작하거나 `+` 가 든 `r`, `b`·`t` 를 붙인 꼴 포함)를 첫 인자로 받거나 같은 줄의
+쉼표 뒤(`mode=` 포함)에 둔 `open(`. 경로를 `Path(…)` 로 감싸도 본다)이 함께
+있다(heredoc·`-c` 본문까지 글로 본다). 일지를 읽기만 하는 명령(`cat`, `sed -n`, `grep`, `git add`,
+입력 리다이렉트 `<`)과 일지를 읽어 다른 곳에 쓰는 명령에는 알리지 않는다. 인용 부호 안이나 첫 낱말이
+아닌 자리의 `tee`·`-i`(`grep tee`, `sed -n '/ -i/p'`)도 쓰기로 보지 않는다.
+계기라 막지 않으므로 셸 파서를 따르지 않고 글로 가른다. 그 값은 아래 못 보는 것의 거짓 양성과
+거짓 음성이다.
 
 한 번. 표지는 `tools/launch_hook.py` 의 모양이다. 임시 폴더(`tempfile.gettempdir()`) 아래
 `STATE_DIR` 에 세션 ID 와 `agent_id`(서브에이전트는 컨텍스트가 따로다)의 해시로 빈 파일을 `O_EXCL`
@@ -29,7 +49,16 @@ README 밖이라 그 계기가 닿지 않았다. 일지는 단계마다 결과�
 낫다(래퍼와 같다).
 
 못 보는 것:
-- Bash heredoc·`>>`·`sed -i` 로 고친 일지. 이 훅은 편집 도구에만 붙는다.
+- 셸 변수에 든 일지 경로(`f=docs/journal/x.md; cat >> "$f"`). 경로를 명령 글에서만 찾는다.
+- `cp`·`mv` 로 만든 일지와, 인자로 받은 경로에 쓰는 스크립트(`python tools/x.py docs/journal/x.md`).
+  python 은 명령 글에 쓰기 낱말이 있어야 쓴다고 본다.
+- `sudo` 밖의 낱말이 앞에 붙은 `tee`·`sed`(`xargs sed -i`, `sudo -u x tee`, `$(tee …)`)와,
+  `tee`·`sed` 밖의 제자리 편집 명령(`awk -i inplace`, `perl -i`). 첫 낱말만 본다.
+- 쓰기 낱말 밖의 길로 쓰는 python(`shutil.copy`, `os.replace`, `print(..., file=f)`). 위 낱말만
+  본다.
+- PowerShell(`Add-Content`, `Set-Content`, `Out-File`)로 고친 일지. 등록 매처에 PowerShell 이 없다.
+- 쓰는 꼴을 글로만 든 명령(거짓 양성). 커밋 메시지 heredoc 의 본문이 "`cat >> docs/journal/x.md`"
+  를 인용해도 알린다. python 쓰기 낱말이 명령의 다른 파일을 쓰고 일지는 읽기만 하는 명령도 알린다.
 - 일지 밖에 적은 결과 문장. 대기열 445 의 둘째 사례(`design/README.md`)처럼 디자인 표·명세·ADR 에
   적은 결과에는 알리지 않는다. 프로브 README 는 `hook_probe_conclusion` 이 맡는다.
 - 대소문자가 다른 경로(`Docs\\Journal`, `.MD`). `is_journal` 과 같이 대소문자를 구별해, 글자가 같은
@@ -48,14 +77,35 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import re
 import sys
 import tempfile
 from pathlib import Path, PurePath
 from typing import TypedDict
 
 TOOLS = ("Write", "Edit")
+BASH = "Bash"
 STATE_DIR = "agent-os-journal-evidence"
 JOURNAL_PARTS = ("docs", "journal")
+# 명령 글에서 일지 경로로 읽을 조각. 인용 부호·괄호·제어 연산자에서 끊는다.
+_JOURNAL_IN_COMMAND = re.compile(
+    r"""[^\s'"`<>|;&()]*docs[\\/]+journal[\\/]+[^\s'"`<>|;&()\\/]+\.md(?![\w.])"""
+)
+# 경로 바로 앞이 출력 리다이렉트(`>`, `>>`, `1>>`, `&>`, `>|`, `>&`)인가. 인용 부호 하나는 건너뛴다.
+_REDIRECT_BEFORE = re.compile(r"""(?:[0-9&]?>>?[|&]?)\s*['"]?$""")
+# 경로가 든 단순 명령(제어 연산자와 줄바꿈 사이)의 첫 낱말이 쓰는 명령인가. 인용 부호 안의 글은
+# 지우고 본다(`grep tee`, `sed -n '/ -i/p'` 는 쓰지 않는다).
+_TEE = re.compile(r"^\s*(?:sudo\s+)?tee(?:\s|$)")
+_SED_IN_PLACE = re.compile(r"^\s*(?:sudo\s+)?sed\s(?:.*\s)?(?:-[A-Za-z]*i|--in-place)")
+_SEGMENT_START = re.compile(r"[|;&\n][^|;&\n]*$")
+_SEGMENT_END = re.compile(r"[|;&\n]")
+_QUOTED = re.compile(r"""'[^']*'|"[^"]*\"""")
+# 명령 전체에 python 호출과 쓰기 낱말이 함께 있는가(heredoc·`-c` 의 본문까지 본다).
+_PYTHON = re.compile(r"(?:^|[\s/\\])(?:python(?:3(?:\.\d+)?)?|py)(?:\.exe)?(?:\s|$)")
+_PYTHON_WRITE = re.compile(
+    r"""write_text|write_bytes|\.write(?:lines)?\("""
+    r"""|open\((?:[^\n]*?,\s*(?:mode\s*=\s*)?)?['"](?:[wax][bt+]*|r[bt]*\+[bt]*)['"]"""
+)
 # 알림의 첫 문장. 알림이 모델에게 닿는지 잴 때 모델이 옮겼는지 볼 문구다.
 LEAD = "일지를 고쳤다"
 _BODY = (
@@ -72,6 +122,7 @@ _BODY = (
 
 class ToolInput(TypedDict, total=False):
     file_path: object
+    command: object
 
 
 class HookPayload(TypedDict, total=False):
@@ -93,13 +144,38 @@ def is_journal(file_path: str) -> bool:
     return tuple(parts[-3:-1]) == JOURNAL_PARTS
 
 
+def bash_writes_journal(command: str) -> bool:
+    """Bash 명령 글이 일지 경로에 쓰는 꼴인가. 경로 앞의 출력 리다이렉트, 경로가 든 단순 명령의
+    `tee`·`sed -i`, 명령 어디에든 쓰기 낱말이 있는 python 호출을 쓰기로 본다."""
+    python_writes = bool(_PYTHON.search(command) and _PYTHON_WRITE.search(command))
+    for match in _JOURNAL_IN_COMMAND.finditer(command):
+        if not is_journal(match.group()):
+            continue
+        before = command[: match.start()]
+        if _REDIRECT_BEFORE.search(before) or python_writes:
+            return True
+        start = _SEGMENT_START.search(before)
+        end = _SEGMENT_END.search(command, match.end())
+        segment = command[start.start() + 1 if start else 0 : end.start() if end else None]
+        segment = _QUOTED.sub(" ", segment)
+        if _TEE.search(segment) or _SED_IN_PLACE.search(segment):
+            return True
+    return False
+
+
 def context_for(payload: HookPayload) -> str | None:
     """일지를 쓰거나 고쳤으면 컨텍스트 문장, 아니면 None."""
-    if payload.get("tool_name") not in TOOLS:
+    tool = payload.get("tool_name")
+    if tool not in TOOLS and tool != BASH:
         return None
     tool_input = payload.get("tool_input")
     if not isinstance(tool_input, dict):
         return None
+    if tool == BASH:
+        command = tool_input.get("command")
+        if not isinstance(command, str) or not bash_writes_journal(command):
+            return None
+        return _BODY.format(lead=LEAD)
     path = tool_input.get("file_path")
     if not isinstance(path, str) or not is_journal(path):
         return None

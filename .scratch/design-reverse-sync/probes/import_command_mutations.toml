@@ -361,8 +361,8 @@ expect_output = ['+     "--text-title: 24px;/* 제목 글자 */",']
 
 [[mutation.edit]]
 file = "web/tools/sync-design-system/import.ts"
-old = '''      const tail = usage === undefined ? parts.tail : usage === "" ? "" : ` /* ${usage} */`;'''
-new = '''      const tail = usage === undefined ? parts.tail : usage === "" ? "" : `/* ${usage} */`;'''
+old = '''  return usage === "" ? "" : ` /* ${usage} */`;'''
+new = '''  return usage === "" ? "" : `/* ${usage} */`;'''
 
 [[mutation]]
 name = "설명의 전을 값으로 내면 설명 고침 사례가 빨갛다"
@@ -385,8 +385,8 @@ expect_output = ['+     "--radius-m: 8px; /*  */",']
 
 [[mutation.edit]]
 file = "web/tools/sync-design-system/import.ts"
-old = '''      const tail = usage === undefined ? parts.tail : usage === "" ? "" : ` /* ${usage} */`;'''
-new = '''      const tail = usage === undefined ? parts.tail : ` /* ${usage} */`;'''
+old = '''  return usage === "" ? "" : ` /* ${usage} */`;'''
+new = '''  return ` /* ${usage} */`;'''
 
 [[mutation]]
 name = "설명의 주석 끝 글자를 보지 않으면 설명 글 사례가 빨갛다"
@@ -1109,5 +1109,83 @@ expect_output = ['+     "--accent-600: #04605f;",']
 
 [[mutation.edit]]
 file = "web/tools/sync-design-system/import.ts"
-old = '''      const tail = usage === undefined ? parts.tail : usage === "" ? "" : ` /* ${usage} */`;'''
-new = '''      const tail = usage === undefined ? "" : usage === "" ? "" : ` /* ${usage} */`;'''
+old = '''      const tail = usage === undefined ? parts.tail : usageTail(usage);'''
+new = '''      const tail = usage === undefined ? "" : usageTail(usage);'''
+
+# --- 티켓 10 이 더한 것(import.ts) ----------------------------------------------------------------------------
+# 티켓 03 이 넘긴 둘이다. 쓰임새 토큰의 `var()` 줄에 단 설명이 Prettier 의 줄 폭을 넘기면 옮기지 않고 묻는 판정(`lineWidth`)의
+# 경계와, 설명이 달린 실제 판에서 설명을 다른 설명으로 바꾸는 사례다. 뒤의 둘은 빈 설명이 아닌 설명으로 바꿀 때만 어긋나,
+# 옛 주석이 없는 줄에 설명을 다는 사례와 설명을 비우는 사례로는 잡히지 않는다. 끝의 하나는 사람이 `lineWidth` 에 "들인다" 를
+# 골라 Prettier 가 세 줄로 쪼갠 선언이 그 뒤 `noLine` 으로 묻히는 길이다(스킬 `import.md` 가 사람에게 알리는 문장의 근거).
+
+[[mutation]]
+name = "폭이 줄 폭과 같은 줄도 쪼갠다고 보면 Prettier 폭 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/import.test.ts", "-t", "Prettier 의 폭보다 넓게"]
+expect = "red"
+expect_output = ["AssertionError: expected [ 'color/gray-900#usage' ] to deeply equal [ 'color/bg#usage', …(1) ]"]
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/import.ts"
+old = '''    util.getStringWidth(`${parts.head}${parts.value};${usageTail(usage)}`) > PRINT_WIDTH'''
+new = '''    util.getStringWidth(`${parts.head}${parts.value};${usageTail(usage)}`) >= PRINT_WIDTH'''
+
+[[mutation]]
+name = "한 낱말인 값의 줄도 쪼갠다고 보면 Prettier 폭 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/import.test.ts", "-t", "Prettier 의 폭보다 넓게"]
+expect = "red"
+expect_output = ["AssertionError: expected [ 'color/bg#usage' ] to deeply equal [ 'color/bg#usage', …(1) ]"]
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/import.ts"
+old = '''    !/^[^\s(),]+$/.test(parts.value) &&'''
+new = '''    parts.value !== "" &&'''
+
+[[mutation]]
+name = "새 설명 없이 줄 폭을 재면 Prettier 폭 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/import.test.ts", "-t", "Prettier 의 폭보다 넓게"]
+expect = "red"
+expect_output = ['+   "color/bg-raised#usage",']
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/import.ts"
+old = '''      : splitByPrettier(parts, value)'''
+new = '''      : splitByPrettier(parts, "")'''
+
+[[mutation]]
+name = "설명이 있는 줄을 다른 설명으로 바꿀 때 옛 주석을 남기면 설명 바꾸기 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/import.test.ts", "-t", "설명을 다른 설명으로 바꾸면"]
+expect = "red"
+expect_output = ["AssertionError: expected [] to deeply equal [ [ …(2) ], [ …(2) ] ]"]
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/import.ts"
+old = '''      const tail = usage === undefined ? parts.tail : usageTail(usage);'''
+new = '''      const tail = usage === undefined || (parts.tail !== "" && usage !== "") ? parts.tail : usageTail(usage);'''
+
+[[mutation]]
+name = "다른 설명으로 바꿀 때 옮긴 설명의 전을 비우면 설명 바꾸기 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/import.test.ts", "-t", "설명을 다른 설명으로 바꾸면"]
+expect = "red"
+expect_output = ['-     "라이트의 accent, focus-ring, 군청·자초 라이트의 primary",', '+     "",']
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/import.ts"
+old = '''    before: usage ? parts.comment : parts.value,'''
+new = '''    before: usage ? (text === "" ? parts.comment : "") : parts.value,'''
+
+[[mutation]]
+name = "옮길 줄이 없는 자리를 다른 까닭으로 물으면 Prettier 가 쪼갠 선언 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/import.test.ts", "-t", "세 줄로 쪼갠"]
+expect = "red"
+expect_output = ["AssertionError: expected [ [ 'color/bg#usage', 'usageText' ] ] to deeply equal [ [ 'color/bg#usage', 'noLine' ] ]"]
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/import.ts"
+old = '''    return { reason: "noLine" };'''
+new = '''    return { reason: "usageText" };'''

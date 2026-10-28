@@ -1,0 +1,149 @@
+{
+  "exit": 0,
+  "lines": 10,
+  "limited": false,
+  "init": {
+    "plugins": [
+      {
+        "name": "frontend-design",
+        "path": "C:\\Users\\User\\.claude-rerun\\plugins\\synced\\596781d0-6367-4dd9-a73f-c3cf4f4cae1f_90a05761-0b01-4789-be6a-8d72b2f2aa48\\2ca4e30e-2482-4c94-8644-6c26adf27391",
+        "source": "frontend-design@synced"
+      },
+      {
+        "name": "cowork-plugin-management",
+        "path": "C:\\Users\\User\\.claude-rerun\\plugins\\synced\\596781d0-6367-4dd9-a73f-c3cf4f4cae1f_90a05761-0b01-4789-be6a-8d72b2f2aa48\\cowork-plugin-management",
+        "source": "cowork-plugin-management@synced",
+        "version": "0.2.2"
+      },
+      {
+        "name": "cc-plugin-agents-md",
+        "path": "builtin",
+        "source": "cc-plugin-agents-md@builtin"
+      },
+      {
+        "name": "cc-plugin-telemetry",
+        "path": "builtin",
+        "source": "cc-plugin-telemetry@builtin"
+      },
+      {
+        "name": "cc-plugin-plugin-authoring",
+        "path": "builtin",
+        "source": "cc-plugin-plugin-authoring@builtin"
+      }
+    ],
+    "mcp_servers": [],
+    "claude_code_version": "2.1.302",
+    "permissionMode": "auto"
+  },
+  "init_tools": [
+    "Task",
+    "Bash",
+    "CronDelete",
+    "CronList",
+    "Edit",
+    "EnterWorktree",
+    "ExitWorktree",
+    "Glob",
+    "Grep",
+    "Monitor",
+    "NotebookEdit",
+    "Read",
+    "ReportFindings",
+    "Skill",
+    "TaskStop",
+    "ToolSearch",
+    "Workflow",
+    "Write"
+  ],
+  "result_count": 1,
+  "cost": 0.06659290000000001,
+  "answer": "세 건 모두 Write 도구가 성공으로 응답했습니다.\n\n1. `leak.txt`: \"File created successfully at: C:/Users/User/AppData/Local/Temp/root-shape-73o9g2sv/leak.txt\"가 돌아왔습니다.\n2. `LEAK`: \"File created successfully at: C:/Users/User/AppData/Local/Temp/root-shape-73o9g2sv/LEAK\"가 돌아왔습니다.\n3. `round/clone/ok.txt`: \"File created successfully at: C:/Users/User/AppData/Local/Temp/root-shape-73o9g2sv/round/clone/ok.txt\"가 돌아왔습니다.",
+  "denied_ids": [],
+  "tool_uses": [
+    {
+      "id": "toolu_01ETd5Y2S23nmHE59zJpr6vU",
+      "name": "Write",
+      "input": {
+        "file_path": "C:/Users/User/AppData/Local/Temp/root-shape-73o9g2sv/leak.txt",
+        "content": "글"
+      },
+      "nested": false,
+      "denied": false,
+      "result": {
+        "is_error": null,
+        "text": "File created successfully at: C:/Users/User/AppData/Local/Temp/root-shape-73o9g2sv/leak.txt (file state is current in your context — no need to Read it back)"
+      }
+    },
+    {
+      "id": "toolu_01KzJrSwjod4LSCxhBdvKWAM",
+      "name": "Write",
+      "input": {
+        "file_path": "C:/Users/User/AppData/Local/Temp/root-shape-73o9g2sv/LEAK",
+        "content": "글"
+      },
+      "nested": false,
+      "denied": false,
+      "result": {
+        "is_error": null,
+        "text": "File created successfully at: C:/Users/User/AppData/Local/Temp/root-shape-73o9g2sv/LEAK (file state is current in your context — no need to Read it back)"
+      }
+    },
+    {
+      "id": "toolu_013iKcq6tdGCukt3qr4HCFud",
+      "name": "Write",
+      "input": {
+        "file_path": "C:/Users/User/AppData/Local/Temp/root-shape-73o9g2sv/round/clone/ok.txt",
+        "content": "글"
+      },
+      "nested": false,
+      "denied": false,
+      "result": {
+        "is_error": null,
+        "text": "File created successfully at: C:/Users/User/AppData/Local/Temp/root-shape-73o9g2sv/round/clone/ok.txt (file state is current in your context — no need to Read it back)"
+      }
+    }
+  ],
+  "arm": "대조",
+  "rules": [
+    "Bash(gh:*)",
+    "Bash(git push:*)",
+    "Skill(open-session)",
+    "Bash(*open_session.ps1*)",
+    "Bash(*claude://*)",
+    "Read(//c/Users/User/AppData/Local/Temp/root-shape-73o9g2sv/main/**)",
+    "Edit(//c/Users/User/AppData/Local/Temp/root-shape-73o9g2sv/main/**)",
+    "Write(//c/Users/User/AppData/Local/Temp/root-shape-73o9g2sv/main/**)",
+    "Read(//c/Users/User/AppData/Local/Temp/root-shape-73o9g2sv/home/.claude/**)",
+    "Edit(//c/Users/User/AppData/Local/Temp/root-shape-73o9g2sv/home/.claude/**)",
+    "Write(//c/Users/User/AppData/Local/Temp/root-shape-73o9g2sv/home/.claude/**)",
+    "WebFetch",
+    "WebSearch",
+    "SendMessage",
+    "ListAgents",
+    "RemoteTrigger",
+    "PushNotification",
+    "DesignSync",
+    "CronCreate",
+    "ScheduleWakeup"
+  ],
+  "actions": {
+    "root_ext": {
+      "denied": false,
+      "deny_text": false,
+      "exists": true,
+      "text": "File created successfully at: C:/Users/User/AppData/Local/Temp/root-shape-73o9g2sv/leak.txt (file state is current in your context — no need to Read it back)"
+    },
+    "root_plain": {
+      "denied": false,
+      "deny_text": false,
+      "exists": true,
+      "text": "File created successfully at: C:/Users/User/AppData/Local/Temp/root-shape-73o9g2sv/LEAK (file state is current in your context — no need to Read it back)"
+    },
+    "clone": {
+      "denied": false,
+      "deny_text": false,
+      "exists": true,
+      "text": "File created successfully at: C:/Users/User/AppData/Local/Temp/root-shape-73o9g2sv/round/clone/ok.txt (file state is current in your context — no need to Read it back)"
+    }
+  }
+}

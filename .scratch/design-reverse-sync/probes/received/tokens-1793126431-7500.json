@@ -1,0 +1,1480 @@
+{
+  "version": 1,
+  "color": {
+    "themes": [
+      {
+        "id": "nokcheong-light",
+        "name": "녹청 라이트"
+      },
+      {
+        "id": "nokcheong-dark",
+        "name": "녹청 다크"
+      },
+      {
+        "id": "guncheong-light",
+        "name": "군청 라이트"
+      },
+      {
+        "id": "guncheong-dark",
+        "name": "군청 다크"
+      },
+      {
+        "id": "jacho-light",
+        "name": "자초 라이트"
+      },
+      {
+        "id": "jacho-dark",
+        "name": "자초 다크"
+      },
+      {
+        "id": "jjokbit-light",
+        "name": "쪽빛 라이트"
+      },
+      {
+        "id": "jjokbit-dark",
+        "name": "쪽빛 다크"
+      }
+    ],
+    "tokens": [
+      {
+        "name": "gray-0",
+        "value": {
+          "nokcheong-light": "#ffffff",
+          "nokcheong-dark": "#ffffff",
+          "guncheong-light": "#ffffff",
+          "guncheong-dark": "#ffffff",
+          "jacho-light": "#ffffff",
+          "jacho-dark": "#ffffff",
+          "jjokbit-light": "#ffffff",
+          "jjokbit-dark": "#ffffff"
+        },
+        "usage": "라이트의 bg-raised, on-accent, on-primary"
+      },
+      {
+        "name": "gray-50",
+        "value": {
+          "nokcheong-light": "#f4f8fb",
+          "nokcheong-dark": "#f4f8fb",
+          "guncheong-light": "#f7f7f7",
+          "guncheong-dark": "#f7f7f7",
+          "jacho-light": "#f7f7f7",
+          "jacho-dark": "#f7f7f7",
+          "jjokbit-light": "#faf7f3",
+          "jjokbit-dark": "#faf7f3"
+        },
+        "usage": "라이트의 bg"
+      },
+      {
+        "name": "gray-100",
+        "value": {
+          "nokcheong-light": "#ecf1f3",
+          "nokcheong-dark": "#ecf1f3",
+          "guncheong-light": "#f0f0f0",
+          "guncheong-dark": "#f0f0f0",
+          "jacho-light": "#f0f0f0",
+          "jacho-dark": "#f0f0f0",
+          "jjokbit-light": "#f2f0ec",
+          "jjokbit-dark": "#f2f0ec"
+        },
+        "usage": "다크의 text, 라이트의 bg-disabled, 녹청·쪽빛 다크의 primary"
+      },
+      {
+        "name": "gray-200",
+        "value": {
+          "nokcheong-light": "#e1e5e8",
+          "nokcheong-dark": "#e1e5e8",
+          "guncheong-light": "#e4e4e4",
+          "guncheong-dark": "#e4e4e4",
+          "jacho-light": "#e4e4e4",
+          "jacho-dark": "#e4e4e4",
+          "jjokbit-light": "#e7e4e0",
+          "jjokbit-dark": "#e7e4e0"
+        },
+        "usage": "라이트의 border, 녹청·쪽빛 다크의 primary-hover"
+      },
+      {
+        "name": "gray-300",
+        "value": {
+          "nokcheong-light": "#9b9fa1",
+          "nokcheong-dark": "#9b9fa1",
+          "guncheong-light": "#9e9e9e",
+          "guncheong-dark": "#9e9e9e",
+          "jacho-light": "#9e9e9e",
+          "jacho-dark": "#9e9e9e",
+          "jjokbit-light": "#a19e9a",
+          "jjokbit-dark": "#a19e9a"
+        },
+        "usage": "다크의 text-muted, 녹청·쪽빛 다크의 primary-active"
+      },
+      {
+        "name": "gray-400",
+        "value": {
+          "nokcheong-light": "#898d8f",
+          "nokcheong-dark": "#898d8f",
+          "guncheong-light": "#8c8c8c",
+          "guncheong-dark": "#8c8c8c",
+          "jacho-light": "#8c8c8c",
+          "jacho-dark": "#8c8c8c",
+          "jjokbit-light": "#8e8c88",
+          "jjokbit-dark": "#8e8c88"
+        },
+        "usage": "모든 벌의 border-control, 라이트의 text-disabled"
+      },
+      {
+        "name": "gray-500",
+        "value": {
+          "nokcheong-light": "#606466",
+          "nokcheong-dark": "#606466",
+          "guncheong-light": "#636363",
+          "guncheong-dark": "#636363",
+          "jacho-light": "#636363",
+          "jacho-dark": "#636363",
+          "jjokbit-light": "#65635f",
+          "jjokbit-dark": "#65635f"
+        },
+        "usage": "라이트의 text-muted"
+      },
+      {
+        "name": "gray-600",
+        "value": {
+          "nokcheong-light": "#4f5355",
+          "nokcheong-dark": "#4f5355",
+          "guncheong-light": "#525252",
+          "guncheong-dark": "#525252",
+          "jacho-light": "#525252",
+          "jacho-dark": "#525252",
+          "jjokbit-light": "#54524f",
+          "jjokbit-dark": "#54524f"
+        },
+        "usage": "다크의 text-disabled"
+      },
+      {
+        "name": "gray-700",
+        "value": {
+          "nokcheong-light": "#3d4042",
+          "nokcheong-dark": "#3d4042",
+          "guncheong-light": "#404040",
+          "guncheong-dark": "#404040",
+          "jacho-light": "#404040",
+          "jacho-dark": "#404040",
+          "jjokbit-light": "#423f3c",
+          "jjokbit-dark": "#423f3c"
+        },
+        "usage": "녹청·쪽빛 라이트의 primary-active"
+      },
+      {
+        "name": "gray-800",
+        "value": {
+          "nokcheong-light": "#2b2e30",
+          "nokcheong-dark": "#2b2e30",
+          "guncheong-light": "#2e2e2e",
+          "guncheong-dark": "#2e2e2e",
+          "jacho-light": "#2e2e2e",
+          "jacho-dark": "#2e2e2e",
+          "jjokbit-light": "#302d2b",
+          "jjokbit-dark": "#302d2b"
+        },
+        "usage": "다크의 border, bg-disabled, 녹청·쪽빛 라이트의 primary-hover"
+      },
+      {
+        "name": "gray-850",
+        "value": {
+          "nokcheong-light": "#202325",
+          "nokcheong-dark": "#202325",
+          "guncheong-light": "#232323",
+          "guncheong-dark": "#232323",
+          "jacho-light": "#232323",
+          "jacho-dark": "#232323",
+          "jjokbit-light": "#252220",
+          "jjokbit-dark": "#252220"
+        },
+        "usage": "가리키는 쓰임새 토큰이 없다"
+      },
+      {
+        "name": "gray-900",
+        "value": {
+          "nokcheong-light": "#171a1c",
+          "nokcheong-dark": "#171a1c",
+          "guncheong-light": "#191919",
+          "guncheong-dark": "#191919",
+          "jacho-light": "#191919",
+          "jacho-dark": "#191919",
+          "jjokbit-light": "#1b1916",
+          "jjokbit-dark": "#1b1916"
+        },
+        "usage": "라이트의 text, 다크의 bg-raised, 녹청·쪽빛 라이트의 primary"
+      },
+      {
+        "name": "gray-950",
+        "value": {
+          "nokcheong-light": "#0f1214",
+          "nokcheong-dark": "#0f1214",
+          "guncheong-light": "#121212",
+          "guncheong-dark": "#121212",
+          "jacho-light": "#121212",
+          "jacho-dark": "#121212",
+          "jjokbit-light": "#13110f",
+          "jjokbit-dark": "#13110f"
+        },
+        "usage": "다크의 bg, 녹청·쪽빛 다크의 on-primary"
+      },
+      {
+        "name": "accent-50",
+        "value": {
+          "nokcheong-light": "#eefaf9",
+          "nokcheong-dark": "#eefaf9",
+          "guncheong-light": "#f4f7fe",
+          "guncheong-dark": "#f4f7fe",
+          "jacho-light": "#fcf3ff",
+          "jacho-dark": "#fcf3ff",
+          "jjokbit-light": "#f1f7ff",
+          "jjokbit-dark": "#f1f7ff"
+        },
+        "usage": "가리키는 쓰임새 토큰이 없다"
+      },
+      {
+        "name": "accent-100",
+        "value": {
+          "nokcheong-light": "#daf3f2",
+          "nokcheong-dark": "#daf3f2",
+          "guncheong-light": "#e5edff",
+          "guncheong-dark": "#e5edff",
+          "jacho-light": "#f8e5fe",
+          "jacho-dark": "#f8e5fe",
+          "jjokbit-light": "#e0efff",
+          "jjokbit-dark": "#e0efff"
+        },
+        "usage": "가리키는 쓰임새 토큰이 없다"
+      },
+      {
+        "name": "accent-200",
+        "value": {
+          "nokcheong-light": "#b8e5e4",
+          "nokcheong-dark": "#b8e5e4",
+          "guncheong-light": "#ccdafe",
+          "guncheong-dark": "#ccdafe",
+          "jacho-light": "#f2cafe",
+          "jacho-dark": "#f2cafe",
+          "jjokbit-light": "#c2defe",
+          "jjokbit-dark": "#c2defe"
+        },
+        "usage": "군청·자초 다크의 primary-active"
+      },
+      {
+        "name": "accent-300",
+        "value": {
+          "nokcheong-light": "#89cccb",
+          "nokcheong-dark": "#89cccb",
+          "guncheong-light": "#a2bcff",
+          "guncheong-dark": "#a2bcff",
+          "jacho-light": "#e2a1f6",
+          "jacho-dark": "#e2a1f6",
+          "jjokbit-light": "#8dc2fe",
+          "jjokbit-dark": "#8dc2fe"
+        },
+        "usage": "군청·자초 다크의 primary-hover"
+      },
+      {
+        "name": "accent-400",
+        "value": {
+          "nokcheong-light": "#5caeae",
+          "nokcheong-dark": "#5caeae",
+          "guncheong-light": "#7598ff",
+          "guncheong-dark": "#7598ff",
+          "jacho-light": "#c77bdf",
+          "jacho-dark": "#c77bdf",
+          "jjokbit-light": "#62a2e9",
+          "jjokbit-dark": "#62a2e9"
+        },
+        "usage": "다크의 accent, focus-ring, 군청·자초 다크의 primary"
+      },
+      {
+        "name": "accent-500",
+        "value": {
+          "nokcheong-light": "#2d8a8a",
+          "nokcheong-dark": "#2d8a8a",
+          "guncheong-light": "#496cef",
+          "guncheong-dark": "#496cef",
+          "jacho-light": "#a353ba",
+          "jacho-dark": "#a353ba",
+          "jjokbit-light": "#397dc4",
+          "jjokbit-dark": "#397dc4"
+        },
+        "usage": "가리키는 쓰임새 토큰이 없다"
+      },
+      {
+        "name": "accent-600",
+        "value": {
+          "nokcheong-light": "#ff0000",
+          "nokcheong-dark": "#056868",
+          "guncheong-light": "#2d49c9",
+          "guncheong-dark": "#2d49c9",
+          "jacho-light": "#803197",
+          "jacho-dark": "#803197",
+          "jjokbit-light": "#125ca1",
+          "jjokbit-dark": "#125ca1"
+        },
+        "usage": "라이트의 accent, focus-ring, 군청·자초 라이트의 primary 2"
+      },
+      {
+        "name": "accent-700",
+        "value": {
+          "nokcheong-light": "#005353",
+          "nokcheong-dark": "#005353",
+          "guncheong-light": "#1f34ac",
+          "guncheong-dark": "#1f34ac",
+          "jacho-light": "#6a1d7e",
+          "jacho-dark": "#6a1d7e",
+          "jjokbit-light": "#004885",
+          "jjokbit-dark": "#004885"
+        },
+        "usage": "군청·자초 라이트의 primary-hover"
+      },
+      {
+        "name": "accent-800",
+        "value": {
+          "nokcheong-light": "#004141",
+          "nokcheong-dark": "#004141",
+          "guncheong-light": "#16258e",
+          "guncheong-dark": "#16258e",
+          "jacho-light": "#551167",
+          "jacho-dark": "#551167",
+          "jjokbit-light": "#00386b",
+          "jjokbit-dark": "#00386b"
+        },
+        "usage": "군청·자초 라이트의 primary-active"
+      },
+      {
+        "name": "accent-900",
+        "value": {
+          "nokcheong-light": "#002b2b",
+          "nokcheong-dark": "#002b2b",
+          "guncheong-light": "#0b1366",
+          "guncheong-dark": "#0b1366",
+          "jacho-light": "#3a0448",
+          "jacho-dark": "#3a0448",
+          "jjokbit-light": "#002448",
+          "jjokbit-dark": "#002448"
+        },
+        "usage": "가리키는 쓰임새 토큰이 없다"
+      },
+      {
+        "name": "accent-950",
+        "value": {
+          "nokcheong-light": "#001b1b",
+          "nokcheong-dark": "#001b1b",
+          "guncheong-light": "#05064b",
+          "guncheong-dark": "#05064b",
+          "jacho-light": "#270032",
+          "jacho-dark": "#270032",
+          "jjokbit-light": "#001632",
+          "jjokbit-dark": "#001632"
+        },
+        "usage": "다크의 on-accent, 군청·자초 다크의 on-primary"
+      },
+      {
+        "name": "danger-50",
+        "value": {
+          "nokcheong-light": "#fef4f3",
+          "nokcheong-dark": "#fef4f3",
+          "guncheong-light": "#fef4f3",
+          "guncheong-dark": "#fef4f3",
+          "jacho-light": "#fef4f3",
+          "jacho-dark": "#fef4f3",
+          "jjokbit-light": "#fef4f3",
+          "jjokbit-dark": "#fef4f3"
+        },
+        "usage": "가리키는 쓰임새 토큰이 없다"
+      },
+      {
+        "name": "danger-100",
+        "value": {
+          "nokcheong-light": "#ffe6e3",
+          "nokcheong-dark": "#ffe6e3",
+          "guncheong-light": "#ffe6e3",
+          "guncheong-dark": "#ffe6e3",
+          "jacho-light": "#ffe6e3",
+          "jacho-dark": "#ffe6e3",
+          "jjokbit-light": "#ffe6e3",
+          "jjokbit-dark": "#ffe6e3"
+        },
+        "usage": "가리키는 쓰임새 토큰이 없다"
+      },
+      {
+        "name": "danger-200",
+        "value": {
+          "nokcheong-light": "#fecdc7",
+          "nokcheong-dark": "#fecdc7",
+          "guncheong-light": "#fecdc7",
+          "guncheong-dark": "#fecdc7",
+          "jacho-light": "#fecdc7",
+          "jacho-dark": "#fecdc7",
+          "jjokbit-light": "#fecdc7",
+          "jjokbit-dark": "#fecdc7"
+        },
+        "usage": "가리키는 쓰임새 토큰이 없다"
+      },
+      {
+        "name": "danger-300",
+        "value": {
+          "nokcheong-light": "#ffa196",
+          "nokcheong-dark": "#ffa196",
+          "guncheong-light": "#ffa196",
+          "guncheong-dark": "#ffa196",
+          "jacho-light": "#ffa196",
+          "jacho-dark": "#ffa196",
+          "jjokbit-light": "#ffa196",
+          "jjokbit-dark": "#ffa196"
+        },
+        "usage": "가리키는 쓰임새 토큰이 없다"
+      },
+      {
+        "name": "danger-400",
+        "value": {
+          "nokcheong-light": "#fa695e",
+          "nokcheong-dark": "#fa695e",
+          "guncheong-light": "#fa695e",
+          "guncheong-dark": "#fa695e",
+          "jacho-light": "#fa695e",
+          "jacho-dark": "#fa695e",
+          "jjokbit-light": "#fa695e",
+          "jjokbit-dark": "#fa695e"
+        },
+        "usage": "다크의 danger"
+      },
+      {
+        "name": "danger-500",
+        "value": {
+          "nokcheong-light": "#d33b36",
+          "nokcheong-dark": "#d33b36",
+          "guncheong-light": "#d33b36",
+          "guncheong-dark": "#d33b36",
+          "jacho-light": "#d33b36",
+          "jacho-dark": "#d33b36",
+          "jjokbit-light": "#d33b36",
+          "jjokbit-dark": "#d33b36"
+        },
+        "usage": "가리키는 쓰임새 토큰이 없다"
+      },
+      {
+        "name": "danger-600",
+        "value": {
+          "nokcheong-light": "#ac0311",
+          "nokcheong-dark": "#ac0311",
+          "guncheong-light": "#ac0311",
+          "guncheong-dark": "#ac0311",
+          "jacho-light": "#ac0311",
+          "jacho-dark": "#ac0311",
+          "jjokbit-light": "#ac0311",
+          "jjokbit-dark": "#ac0311"
+        },
+        "usage": "라이트의 danger"
+      },
+      {
+        "name": "danger-700",
+        "value": {
+          "nokcheong-light": "#8b010b",
+          "nokcheong-dark": "#8b010b",
+          "guncheong-light": "#8b010b",
+          "guncheong-dark": "#8b010b",
+          "jacho-light": "#8b010b",
+          "jacho-dark": "#8b010b",
+          "jjokbit-light": "#8b010b",
+          "jjokbit-dark": "#8b010b"
+        },
+        "usage": "가리키는 쓰임새 토큰이 없다"
+      },
+      {
+        "name": "danger-800",
+        "value": {
+          "nokcheong-light": "#6f0006",
+          "nokcheong-dark": "#6f0006",
+          "guncheong-light": "#6f0006",
+          "guncheong-dark": "#6f0006",
+          "jacho-light": "#6f0006",
+          "jacho-dark": "#6f0006",
+          "jjokbit-light": "#6f0006",
+          "jjokbit-dark": "#6f0006"
+        },
+        "usage": "가리키는 쓰임새 토큰이 없다"
+      },
+      {
+        "name": "danger-900",
+        "value": {
+          "nokcheong-light": "#4b0003",
+          "nokcheong-dark": "#4b0003",
+          "guncheong-light": "#4b0003",
+          "guncheong-dark": "#4b0003",
+          "jacho-light": "#4b0003",
+          "jacho-dark": "#4b0003",
+          "jjokbit-light": "#4b0003",
+          "jjokbit-dark": "#4b0003"
+        },
+        "usage": "가리키는 쓰임새 토큰이 없다"
+      },
+      {
+        "name": "danger-950",
+        "value": {
+          "nokcheong-light": "#330001",
+          "nokcheong-dark": "#330001",
+          "guncheong-light": "#330001",
+          "guncheong-dark": "#330001",
+          "jacho-light": "#330001",
+          "jacho-dark": "#330001",
+          "jjokbit-light": "#330001",
+          "jjokbit-dark": "#330001"
+        },
+        "usage": "가리키는 쓰임새 토큰이 없다"
+      },
+      {
+        "name": "warning-50",
+        "value": {
+          "nokcheong-light": "#fff5ea",
+          "nokcheong-dark": "#fff5ea",
+          "guncheong-light": "#fff5ea",
+          "guncheong-dark": "#fff5ea",
+          "jacho-light": "#fff5ea",
+          "jacho-dark": "#fff5ea",
+          "jjokbit-light": "#fff5ea",
+          "jjokbit-dark": "#fff5ea"
+        },
+        "usage": "가리키는 쓰임새 토큰이 없다"
+      },
+      {
+        "name": "warning-100",
+        "value": {
+          "nokcheong-light": "#fee9d1",
+          "nokcheong-dark": "#fee9d1",
+          "guncheong-light": "#fee9d1",
+          "guncheong-dark": "#fee9d1",
+          "jacho-light": "#fee9d1",
+          "jacho-dark": "#fee9d1",
+          "jjokbit-light": "#fee9d1",
+          "jjokbit-dark": "#fee9d1"
+        },
+        "usage": "가리키는 쓰임새 토큰이 없다"
+      },
+      {
+        "name": "warning-200",
+        "value": {
+          "nokcheong-light": "#fad3a8",
+          "nokcheong-dark": "#fad3a8",
+          "guncheong-light": "#fad3a8",
+          "guncheong-dark": "#fad3a8",
+          "jacho-light": "#fad3a8",
+          "jacho-dark": "#fad3a8",
+          "jjokbit-light": "#fad3a8",
+          "jjokbit-dark": "#fad3a8"
+        },
+        "usage": "가리키는 쓰임새 토큰이 없다"
+      },
+      {
+        "name": "warning-300",
+        "value": {
+          "nokcheong-light": "#e9b271",
+          "nokcheong-dark": "#e9b271",
+          "guncheong-light": "#e9b271",
+          "guncheong-dark": "#e9b271",
+          "jacho-light": "#e9b271",
+          "jacho-dark": "#e9b271",
+          "jjokbit-light": "#e9b271",
+          "jjokbit-dark": "#e9b271"
+        },
+        "usage": "가리키는 쓰임새 토큰이 없다"
+      },
+      {
+        "name": "warning-400",
+        "value": {
+          "nokcheong-light": "#cf903e",
+          "nokcheong-dark": "#cf903e",
+          "guncheong-light": "#cf903e",
+          "guncheong-dark": "#cf903e",
+          "jacho-light": "#cf903e",
+          "jacho-dark": "#cf903e",
+          "jjokbit-light": "#cf903e",
+          "jjokbit-dark": "#cf903e"
+        },
+        "usage": "다크의 warning"
+      },
+      {
+        "name": "warning-500",
+        "value": {
+          "nokcheong-light": "#a96b00",
+          "nokcheong-dark": "#a96b00",
+          "guncheong-light": "#a96b00",
+          "guncheong-dark": "#a96b00",
+          "jacho-light": "#a96b00",
+          "jacho-dark": "#a96b00",
+          "jjokbit-light": "#a96b00",
+          "jjokbit-dark": "#a96b00"
+        },
+        "usage": "가리키는 쓰임새 토큰이 없다"
+      },
+      {
+        "name": "warning-600",
+        "value": {
+          "nokcheong-light": "#7f4f00",
+          "nokcheong-dark": "#7f4f00",
+          "guncheong-light": "#7f4f00",
+          "guncheong-dark": "#7f4f00",
+          "jacho-light": "#7f4f00",
+          "jacho-dark": "#7f4f00",
+          "jjokbit-light": "#7f4f00",
+          "jjokbit-dark": "#7f4f00"
+        },
+        "usage": "라이트의 warning"
+      },
+      {
+        "name": "warning-700",
+        "value": {
+          "nokcheong-light": "#653e00",
+          "nokcheong-dark": "#653e00",
+          "guncheong-light": "#653e00",
+          "guncheong-dark": "#653e00",
+          "jacho-light": "#653e00",
+          "jacho-dark": "#653e00",
+          "jjokbit-light": "#653e00",
+          "jjokbit-dark": "#653e00"
+        },
+        "usage": "가리키는 쓰임새 토큰이 없다"
+      },
+      {
+        "name": "warning-800",
+        "value": {
+          "nokcheong-light": "#503000",
+          "nokcheong-dark": "#503000",
+          "guncheong-light": "#503000",
+          "guncheong-dark": "#503000",
+          "jacho-light": "#503000",
+          "jacho-dark": "#503000",
+          "jjokbit-light": "#503000",
+          "jjokbit-dark": "#503000"
+        },
+        "usage": "가리키는 쓰임새 토큰이 없다"
+      },
+      {
+        "name": "warning-900",
+        "value": {
+          "nokcheong-light": "#351e00",
+          "nokcheong-dark": "#351e00",
+          "guncheong-light": "#351e00",
+          "guncheong-dark": "#351e00",
+          "jacho-light": "#351e00",
+          "jacho-dark": "#351e00",
+          "jjokbit-light": "#351e00",
+          "jjokbit-dark": "#351e00"
+        },
+        "usage": "가리키는 쓰임새 토큰이 없다"
+      },
+      {
+        "name": "warning-950",
+        "value": {
+          "nokcheong-light": "#231200",
+          "nokcheong-dark": "#231200",
+          "guncheong-light": "#231200",
+          "guncheong-dark": "#231200",
+          "jacho-light": "#231200",
+          "jacho-dark": "#231200",
+          "jjokbit-light": "#231200",
+          "jjokbit-dark": "#231200"
+        },
+        "usage": "가리키는 쓰임새 토큰이 없다"
+      },
+      {
+        "name": "success-50",
+        "value": {
+          "nokcheong-light": "#edfbef",
+          "nokcheong-dark": "#edfbef",
+          "guncheong-light": "#edfbef",
+          "guncheong-dark": "#edfbef",
+          "jacho-light": "#edfbef",
+          "jacho-dark": "#edfbef",
+          "jjokbit-light": "#edfbef",
+          "jjokbit-dark": "#edfbef"
+        },
+        "usage": "가리키는 쓰임새 토큰이 없다"
+      },
+      {
+        "name": "success-100",
+        "value": {
+          "nokcheong-light": "#daf5de",
+          "nokcheong-dark": "#daf5de",
+          "guncheong-light": "#daf5de",
+          "guncheong-dark": "#daf5de",
+          "jacho-light": "#daf5de",
+          "jacho-dark": "#daf5de",
+          "jjokbit-light": "#daf5de",
+          "jjokbit-dark": "#daf5de"
+        },
+        "usage": "가리키는 쓰임새 토큰이 없다"
+      },
+      {
+        "name": "success-200",
+        "value": {
+          "nokcheong-light": "#b7eac0",
+          "nokcheong-dark": "#b7eac0",
+          "guncheong-light": "#b7eac0",
+          "guncheong-dark": "#b7eac0",
+          "jacho-light": "#b7eac0",
+          "jacho-dark": "#b7eac0",
+          "jjokbit-light": "#b7eac0",
+          "jjokbit-dark": "#b7eac0"
+        },
+        "usage": "가리키는 쓰임새 토큰이 없다"
+      },
+      {
+        "name": "success-300",
+        "value": {
+          "nokcheong-light": "#87d297",
+          "nokcheong-dark": "#87d297",
+          "guncheong-light": "#87d297",
+          "guncheong-dark": "#87d297",
+          "jacho-light": "#87d297",
+          "jacho-dark": "#87d297",
+          "jjokbit-light": "#87d297",
+          "jjokbit-dark": "#87d297"
+        },
+        "usage": "가리키는 쓰임새 토큰이 없다"
+      },
+      {
+        "name": "success-400",
+        "value": {
+          "nokcheong-light": "#5ab571",
+          "nokcheong-dark": "#5ab571",
+          "guncheong-light": "#5ab571",
+          "guncheong-dark": "#5ab571",
+          "jacho-light": "#5ab571",
+          "jacho-dark": "#5ab571",
+          "jjokbit-light": "#5ab571",
+          "jjokbit-dark": "#5ab571"
+        },
+        "usage": "다크의 success"
+      },
+      {
+        "name": "success-500",
+        "value": {
+          "nokcheong-light": "#2a904b",
+          "nokcheong-dark": "#2a904b",
+          "guncheong-light": "#2a904b",
+          "guncheong-dark": "#2a904b",
+          "jacho-light": "#2a904b",
+          "jacho-dark": "#2a904b",
+          "jjokbit-light": "#2a904b",
+          "jjokbit-dark": "#2a904b"
+        },
+        "usage": "가리키는 쓰임새 토큰이 없다"
+      },
+      {
+        "name": "success-600",
+        "value": {
+          "nokcheong-light": "#006e30",
+          "nokcheong-dark": "#006e30",
+          "guncheong-light": "#006e30",
+          "guncheong-dark": "#006e30",
+          "jacho-light": "#006e30",
+          "jacho-dark": "#006e30",
+          "jjokbit-light": "#006e30",
+          "jjokbit-dark": "#006e30"
+        },
+        "usage": "라이트의 success"
+      },
+      {
+        "name": "success-700",
+        "value": {
+          "nokcheong-light": "#005724",
+          "nokcheong-dark": "#005724",
+          "guncheong-light": "#005724",
+          "guncheong-dark": "#005724",
+          "jacho-light": "#005724",
+          "jacho-dark": "#005724",
+          "jjokbit-light": "#005724",
+          "jjokbit-dark": "#005724"
+        },
+        "usage": "가리키는 쓰임새 토큰이 없다"
+      },
+      {
+        "name": "success-800",
+        "value": {
+          "nokcheong-light": "#01451b",
+          "nokcheong-dark": "#01451b",
+          "guncheong-light": "#01451b",
+          "guncheong-dark": "#01451b",
+          "jacho-light": "#01451b",
+          "jacho-dark": "#01451b",
+          "jjokbit-light": "#01451b",
+          "jjokbit-dark": "#01451b"
+        },
+        "usage": "가리키는 쓰임새 토큰이 없다"
+      },
+      {
+        "name": "success-900",
+        "value": {
+          "nokcheong-light": "#002d0f",
+          "nokcheong-dark": "#002d0f",
+          "guncheong-light": "#002d0f",
+          "guncheong-dark": "#002d0f",
+          "jacho-light": "#002d0f",
+          "jacho-dark": "#002d0f",
+          "jjokbit-light": "#002d0f",
+          "jjokbit-dark": "#002d0f"
+        },
+        "usage": "가리키는 쓰임새 토큰이 없다"
+      },
+      {
+        "name": "success-950",
+        "value": {
+          "nokcheong-light": "#001d07",
+          "nokcheong-dark": "#001d07",
+          "guncheong-light": "#001d07",
+          "guncheong-dark": "#001d07",
+          "jacho-light": "#001d07",
+          "jacho-dark": "#001d07",
+          "jjokbit-light": "#001d07",
+          "jjokbit-dark": "#001d07"
+        },
+        "usage": "가리키는 쓰임새 토큰이 없다"
+      },
+      {
+        "name": "info-50",
+        "value": {
+          "nokcheong-light": "#f2f7fe",
+          "nokcheong-dark": "#f2f7fe",
+          "guncheong-light": "#ecf9fe",
+          "guncheong-dark": "#ecf9fe",
+          "jacho-light": "#f2f7fe",
+          "jacho-dark": "#f2f7fe",
+          "jjokbit-light": "#ecf9fe",
+          "jjokbit-dark": "#ecf9fe"
+        },
+        "usage": "가리키는 쓰임새 토큰이 없다"
+      },
+      {
+        "name": "info-100",
+        "value": {
+          "nokcheong-light": "#e2eefe",
+          "nokcheong-dark": "#e2eefe",
+          "guncheong-light": "#d8f2fb",
+          "guncheong-dark": "#d8f2fb",
+          "jacho-light": "#e0efff",
+          "jacho-dark": "#e0efff",
+          "jjokbit-light": "#d8f2fb",
+          "jjokbit-dark": "#d8f2fb"
+        },
+        "usage": "가리키는 쓰임새 토큰이 없다"
+      },
+      {
+        "name": "info-200",
+        "value": {
+          "nokcheong-light": "#c3ddff",
+          "nokcheong-dark": "#c3ddff",
+          "guncheong-light": "#b3e4f4",
+          "guncheong-dark": "#b3e4f4",
+          "jacho-light": "#c0defe",
+          "jacho-dark": "#c0defe",
+          "jjokbit-light": "#b3e4f4",
+          "jjokbit-dark": "#b3e4f4"
+        },
+        "usage": "가리키는 쓰임새 토큰이 없다"
+      },
+      {
+        "name": "info-300",
+        "value": {
+          "nokcheong-light": "#91c1ff",
+          "nokcheong-dark": "#91c1ff",
+          "guncheong-light": "#81cae1",
+          "guncheong-dark": "#81cae1",
+          "jacho-light": "#89c3fe",
+          "jacho-dark": "#89c3fe",
+          "jjokbit-light": "#81cae1",
+          "jjokbit-dark": "#81cae1"
+        },
+        "usage": "가리키는 쓰임새 토큰이 없다"
+      },
+      {
+        "name": "info-400",
+        "value": {
+          "nokcheong-light": "#5da0f5",
+          "nokcheong-dark": "#5da0f5",
+          "guncheong-light": "#51acc7",
+          "guncheong-dark": "#51acc7",
+          "jacho-light": "#51a3f3",
+          "jacho-dark": "#51a3f3",
+          "jjokbit-light": "#51acc7",
+          "jjokbit-dark": "#51acc7"
+        },
+        "usage": "다크의 info"
+      },
+      {
+        "name": "info-500",
+        "value": {
+          "nokcheong-light": "#337bd0",
+          "nokcheong-dark": "#337bd0",
+          "guncheong-light": "#1988a3",
+          "guncheong-dark": "#1988a3",
+          "jacho-light": "#1f7dcf",
+          "jacho-dark": "#1f7dcf",
+          "jjokbit-light": "#1988a3",
+          "jjokbit-dark": "#1988a3"
+        },
+        "usage": "가리키는 쓰임새 토큰이 없다"
+      },
+      {
+        "name": "info-600",
+        "value": {
+          "nokcheong-light": "#0859ac",
+          "nokcheong-dark": "#0859ac",
+          "guncheong-light": "#00657c",
+          "guncheong-dark": "#00657c",
+          "jacho-light": "#025da1",
+          "jacho-dark": "#025da1",
+          "jjokbit-light": "#00657c",
+          "jjokbit-dark": "#00657c"
+        },
+        "usage": "라이트의 info"
+      },
+      {
+        "name": "info-700",
+        "value": {
+          "nokcheong-light": "#00468c",
+          "nokcheong-dark": "#00468c",
+          "guncheong-light": "#005063",
+          "guncheong-dark": "#005063",
+          "jacho-light": "#014981",
+          "jacho-dark": "#014981",
+          "jjokbit-light": "#005063",
+          "jjokbit-dark": "#005063"
+        },
+        "usage": "가리키는 쓰임새 토큰이 없다"
+      },
+      {
+        "name": "info-800",
+        "value": {
+          "nokcheong-light": "#003670",
+          "nokcheong-dark": "#003670",
+          "guncheong-light": "#023f4e",
+          "guncheong-dark": "#023f4e",
+          "jacho-light": "#003968",
+          "jacho-dark": "#003968",
+          "jjokbit-light": "#023f4e",
+          "jjokbit-dark": "#023f4e"
+        },
+        "usage": "가리키는 쓰임새 토큰이 없다"
+      },
+      {
+        "name": "info-900",
+        "value": {
+          "nokcheong-light": "#00234d",
+          "nokcheong-dark": "#00234d",
+          "guncheong-light": "#002934",
+          "guncheong-dark": "#002934",
+          "jacho-light": "#002546",
+          "jacho-dark": "#002546",
+          "jjokbit-light": "#002934",
+          "jjokbit-dark": "#002934"
+        },
+        "usage": "가리키는 쓰임새 토큰이 없다"
+      },
+      {
+        "name": "info-950",
+        "value": {
+          "nokcheong-light": "#001535",
+          "nokcheong-dark": "#001535",
+          "guncheong-light": "#001a22",
+          "guncheong-dark": "#001a22",
+          "jacho-light": "#001730",
+          "jacho-dark": "#001730",
+          "jjokbit-light": "#001a22",
+          "jjokbit-dark": "#001a22"
+        },
+        "usage": "가리키는 쓰임새 토큰이 없다"
+      },
+      {
+        "name": "overlay-black-4",
+        "value": {
+          "nokcheong-light": "#0000000a"
+        },
+        "usage": "라이트의 bg-hover. 올림에 겹치는 바탕"
+      },
+      {
+        "name": "overlay-black-7",
+        "value": {
+          "nokcheong-light": "#00000012"
+        },
+        "usage": "라이트의 bg-selected. 위험 버튼의 누름과 위젯 대화에서 보낸 요청의 말풍선"
+      },
+      {
+        "name": "overlay-black-12",
+        "value": {
+          "nokcheong-light": "#0000001f"
+        },
+        "usage": "라이트의 bg-active(누름에 겹치는 바탕)와 shadow-color(떠 있는 것의 그림자)"
+      },
+      {
+        "name": "overlay-black-40",
+        "value": {
+          "nokcheong-light": "#00000066"
+        },
+        "usage": "다크의 shadow-color. 떠 있는 것의 그림자"
+      },
+      {
+        "name": "overlay-white-6",
+        "value": {
+          "nokcheong-light": "#ffffff0f"
+        },
+        "usage": "다크의 bg-hover. 올림에 겹치는 바탕"
+      },
+      {
+        "name": "overlay-white-10",
+        "value": {
+          "nokcheong-light": "#ffffff1a"
+        },
+        "usage": "다크의 bg-selected. 위험 버튼의 누름과 위젯 대화에서 보낸 요청의 말풍선"
+      },
+      {
+        "name": "overlay-white-16",
+        "value": {
+          "nokcheong-light": "#ffffff29"
+        },
+        "usage": "다크의 bg-active. 누름에 겹치는 바탕"
+      },
+      {
+        "name": "bg",
+        "value": {
+          "nokcheong-light": "{gray-50}",
+          "nokcheong-dark": "{gray-950}",
+          "guncheong-light": "{gray-50}",
+          "guncheong-dark": "{gray-950}",
+          "jacho-light": "{gray-50}",
+          "jacho-dark": "{gray-950}",
+          "jjokbit-light": "{gray-50}",
+          "jjokbit-dark": "{gray-950}"
+        },
+        "usage": "문서와 위젯 호스트(html, :host)의 바탕, 승인 묻기의 인자 칸"
+      },
+      {
+        "name": "bg-raised",
+        "value": {
+          "nokcheong-light": "{gray-0}",
+          "nokcheong-dark": "{gray-900}",
+          "guncheong-light": "{gray-0}",
+          "guncheong-dark": "{gray-900}",
+          "jacho-light": "{gray-0}",
+          "jacho-dark": "{gray-900}",
+          "jjokbit-light": "{gray-0}",
+          "jjokbit-dark": "{gray-900}"
+        },
+        "usage": "올라온 면. 카드, 알림, 위젯 창, 입력 칸, 꺼진 스위치의 손잡이"
+      },
+      {
+        "name": "text",
+        "value": {
+          "nokcheong-light": "{gray-900}",
+          "nokcheong-dark": "{gray-100}",
+          "guncheong-light": "{gray-900}",
+          "guncheong-dark": "{gray-100}",
+          "jacho-light": "{gray-900}",
+          "jacho-dark": "{gray-100}",
+          "jjokbit-light": "{gray-900}",
+          "jjokbit-dark": "{gray-100}"
+        },
+        "usage": "기본 글자. 카드, 알림, 위젯 창, 보조 버튼, 입력 칸과 라벨"
+      },
+      {
+        "name": "text-muted",
+        "value": {
+          "nokcheong-light": "{gray-500}",
+          "nokcheong-dark": "{gray-300}",
+          "guncheong-light": "{gray-500}",
+          "guncheong-dark": "{gray-300}",
+          "jacho-light": "{gray-500}",
+          "jacho-dark": "{gray-300}",
+          "jjokbit-light": "{gray-500}",
+          "jjokbit-dark": "{gray-300}"
+        },
+        "usage": "흐린 글자. 알림 본문, 도움말, 자리 글자, 상태 글, 진행 표시"
+      },
+      {
+        "name": "border",
+        "value": {
+          "nokcheong-light": "{gray-200}",
+          "nokcheong-dark": "{gray-800}",
+          "guncheong-light": "{gray-200}",
+          "guncheong-dark": "{gray-800}",
+          "jacho-light": "{gray-200}",
+          "jacho-dark": "{gray-800}",
+          "jjokbit-light": "{gray-200}",
+          "jjokbit-dark": "{gray-800}"
+        },
+        "usage": "테두리와 구분선. 카드, 알림, 배지, 보조·위험 버튼, 위젯 창"
+      },
+      {
+        "name": "accent",
+        "value": {
+          "nokcheong-light": "{accent-600}",
+          "nokcheong-dark": "{accent-400}",
+          "guncheong-light": "{accent-600}",
+          "guncheong-dark": "{accent-400}",
+          "jacho-light": "{accent-600}",
+          "jacho-dark": "{accent-400}",
+          "jjokbit-light": "{accent-600}",
+          "jjokbit-dark": "{accent-400}"
+        },
+        "usage": "강조색. 켠 스위치의 트랙"
+      },
+      {
+        "name": "on-accent",
+        "value": {
+          "nokcheong-light": "{gray-0}",
+          "nokcheong-dark": "{accent-950}",
+          "guncheong-light": "{gray-0}",
+          "guncheong-dark": "{accent-950}",
+          "jacho-light": "{gray-0}",
+          "jacho-dark": "{accent-950}",
+          "jjokbit-light": "{gray-0}",
+          "jjokbit-dark": "{accent-950}"
+        },
+        "usage": "accent 위의 것. 켠 스위치의 손잡이"
+      },
+      {
+        "name": "danger",
+        "value": {
+          "nokcheong-light": "{danger-600}",
+          "nokcheong-dark": "{danger-400}",
+          "guncheong-light": "{danger-600}",
+          "guncheong-dark": "{danger-400}",
+          "jacho-light": "{danger-600}",
+          "jacho-dark": "{danger-400}",
+          "jjokbit-light": "{danger-600}",
+          "jjokbit-dark": "{danger-400}"
+        },
+        "usage": "실패와 위험. 위험 버튼, 실패 배지와 알림, 입력 칸의 오류"
+      },
+      {
+        "name": "warning",
+        "value": {
+          "nokcheong-light": "{warning-600}",
+          "nokcheong-dark": "{warning-400}",
+          "guncheong-light": "{warning-600}",
+          "guncheong-dark": "{warning-400}",
+          "jacho-light": "{warning-600}",
+          "jacho-dark": "{warning-400}",
+          "jjokbit-light": "{warning-600}",
+          "jjokbit-dark": "{warning-400}"
+        },
+        "usage": "경고. 일시정지 배지, 경고 알림의 아이콘"
+      },
+      {
+        "name": "success",
+        "value": {
+          "nokcheong-light": "{success-600}",
+          "nokcheong-dark": "{success-400}",
+          "guncheong-light": "{success-600}",
+          "guncheong-dark": "{success-400}",
+          "jacho-light": "{success-600}",
+          "jacho-dark": "{success-400}",
+          "jjokbit-light": "{success-600}",
+          "jjokbit-dark": "{success-400}"
+        },
+        "usage": "성공. 끝남 배지, 위젯의 성공한 도구 아이콘"
+      },
+      {
+        "name": "info",
+        "value": {
+          "nokcheong-light": "{info-600}",
+          "nokcheong-dark": "{info-400}",
+          "guncheong-light": "{info-600}",
+          "guncheong-dark": "{info-400}",
+          "jacho-light": "{info-600}",
+          "jacho-dark": "{info-400}",
+          "jjokbit-light": "{info-600}",
+          "jjokbit-dark": "{info-400}"
+        },
+        "usage": "정보. 정보 알림의 아이콘"
+      },
+      {
+        "name": "focus-ring",
+        "value": {
+          "nokcheong-light": "{accent-600}",
+          "nokcheong-dark": "{accent-400}",
+          "guncheong-light": "{accent-600}",
+          "guncheong-dark": "{accent-400}",
+          "jacho-light": "{accent-600}",
+          "jacho-dark": "{accent-400}",
+          "jjokbit-light": "{accent-600}",
+          "jjokbit-dark": "{accent-400}"
+        },
+        "usage": "키보드 포커스 링(focus-visible). 조작 요소와 입력 칸"
+      },
+      {
+        "name": "border-control",
+        "value": {
+          "nokcheong-light": "{gray-400}",
+          "nokcheong-dark": "{gray-400}",
+          "guncheong-light": "{gray-400}",
+          "guncheong-dark": "{gray-400}",
+          "jacho-light": "{gray-400}",
+          "jacho-dark": "{gray-400}",
+          "jjokbit-light": "{gray-400}",
+          "jjokbit-dark": "{gray-400}"
+        },
+        "usage": "조작 요소의 테두리. 입력 칸, 꺼진 스위치의 트랙"
+      },
+      {
+        "name": "primary",
+        "value": {
+          "nokcheong-light": "{gray-900}",
+          "nokcheong-dark": "{gray-100}",
+          "guncheong-light": "{accent-600}",
+          "guncheong-dark": "{accent-400}",
+          "jacho-light": "{accent-600}",
+          "jacho-dark": "{accent-400}",
+          "jjokbit-light": "{gray-900}",
+          "jjokbit-dark": "{gray-100}"
+        },
+        "usage": "주 버튼과 주 아이콘 버튼의 바탕"
+      },
+      {
+        "name": "on-primary",
+        "value": {
+          "nokcheong-light": "{gray-0}",
+          "nokcheong-dark": "{gray-950}",
+          "guncheong-light": "{gray-0}",
+          "guncheong-dark": "{accent-950}",
+          "jacho-light": "{gray-0}",
+          "jacho-dark": "{accent-950}",
+          "jjokbit-light": "{gray-0}",
+          "jjokbit-dark": "{gray-950}"
+        },
+        "usage": "주 버튼과 주 아이콘 버튼의 글자와 아이콘"
+      },
+      {
+        "name": "primary-hover",
+        "value": {
+          "nokcheong-light": "{gray-800}",
+          "nokcheong-dark": "{gray-200}",
+          "guncheong-light": "{accent-700}",
+          "guncheong-dark": "{accent-300}",
+          "jacho-light": "{accent-700}",
+          "jacho-dark": "{accent-300}",
+          "jjokbit-light": "{gray-800}",
+          "jjokbit-dark": "{gray-200}"
+        },
+        "usage": "주 버튼과 주 아이콘 버튼을 올렸을 때의 바탕"
+      },
+      {
+        "name": "primary-active",
+        "value": {
+          "nokcheong-light": "{gray-700}",
+          "nokcheong-dark": "{gray-300}",
+          "guncheong-light": "{accent-800}",
+          "guncheong-dark": "{accent-200}",
+          "jacho-light": "{accent-800}",
+          "jacho-dark": "{accent-200}",
+          "jjokbit-light": "{gray-700}",
+          "jjokbit-dark": "{gray-300}"
+        },
+        "usage": "주 버튼과 주 아이콘 버튼을 눌렀을 때의 바탕"
+      },
+      {
+        "name": "bg-hover",
+        "value": {
+          "nokcheong-light": "{overlay-black-4}",
+          "nokcheong-dark": "{overlay-white-6}",
+          "guncheong-light": "{overlay-black-4}",
+          "guncheong-dark": "{overlay-white-6}",
+          "jacho-light": "{overlay-black-4}",
+          "jacho-dark": "{overlay-white-6}",
+          "jjokbit-light": "{overlay-black-4}",
+          "jjokbit-dark": "{overlay-white-6}"
+        },
+        "usage": "보조·위험 버튼과 보조·투명 아이콘 버튼의 올림"
+      },
+      {
+        "name": "bg-active",
+        "value": {
+          "nokcheong-light": "{overlay-black-12}",
+          "nokcheong-dark": "{overlay-white-16}",
+          "guncheong-light": "{overlay-black-12}",
+          "guncheong-dark": "{overlay-white-16}",
+          "jacho-light": "{overlay-black-12}",
+          "jacho-dark": "{overlay-white-16}",
+          "jjokbit-light": "{overlay-black-12}",
+          "jjokbit-dark": "{overlay-white-16}"
+        },
+        "usage": "보조·투명 버튼의 누름, 스위치 올림, 진행 막대의 트랙"
+      },
+      {
+        "name": "bg-selected",
+        "value": {
+          "nokcheong-light": "{overlay-black-7}",
+          "nokcheong-dark": "{overlay-white-10}",
+          "guncheong-light": "{overlay-black-7}",
+          "guncheong-dark": "{overlay-white-10}",
+          "jacho-light": "{overlay-black-7}",
+          "jacho-dark": "{overlay-white-10}",
+          "jjokbit-light": "{overlay-black-7}",
+          "jjokbit-dark": "{overlay-white-10}"
+        },
+        "usage": "위험 버튼의 누름, 위젯에서 보낸 요청의 말풍선"
+      },
+      {
+        "name": "text-disabled",
+        "value": {
+          "nokcheong-light": "{gray-400}",
+          "nokcheong-dark": "{gray-600}",
+          "guncheong-light": "{gray-400}",
+          "guncheong-dark": "{gray-600}",
+          "jacho-light": "{gray-400}",
+          "jacho-dark": "{gray-600}",
+          "jjokbit-light": "{gray-400}",
+          "jjokbit-dark": "{gray-600}"
+        },
+        "usage": "쓸 수 없는 것의 글자와 아이콘. 버튼, 입력 칸, 스위치"
+      },
+      {
+        "name": "bg-disabled",
+        "value": {
+          "nokcheong-light": "{gray-100}",
+          "nokcheong-dark": "{gray-800}",
+          "guncheong-light": "{gray-100}",
+          "guncheong-dark": "{gray-800}",
+          "jacho-light": "{gray-100}",
+          "jacho-dark": "{gray-800}",
+          "jjokbit-light": "{gray-100}",
+          "jjokbit-dark": "{gray-800}"
+        },
+        "usage": "쓸 수 없는 것의 바탕. 버튼, 입력 칸, 스위치의 트랙"
+      },
+      {
+        "name": "shadow-color",
+        "value": {
+          "nokcheong-light": "{overlay-black-12}",
+          "nokcheong-dark": "{overlay-black-40}",
+          "guncheong-light": "{overlay-black-12}",
+          "guncheong-dark": "{overlay-black-40}",
+          "jacho-light": "{overlay-black-12}",
+          "jacho-dark": "{overlay-black-40}",
+          "jjokbit-light": "{overlay-black-12}",
+          "jjokbit-dark": "{overlay-black-40}"
+        },
+        "usage": "떠 있는 위젯 창의 그림자 색(shadow-float)"
+      }
+    ]
+  },
+  "type": {
+    "fonts": [],
+    "families": {
+      "sans": "\"Noto Sans KR\", system-ui, sans-serif"
+    },
+    "groups": [
+      {
+        "name": "글자",
+        "family": "sans",
+        "note": "",
+        "styles": [
+          {
+            "name": "text-title",
+            "fontSize": "24px",
+            "lineHeight": "32px",
+            "fontWeight": "600",
+            "letterSpacing": "0",
+            "fontStyle": "normal",
+            "opticalSize": null,
+            "family": "",
+            "sample": "",
+            "usage": "제목 글자. 컴포넌트와 앱은 아직 쓰지 않고, 디자인 에이전트가 화면과 카드의 제목에 변수로 쓴다"
+          },
+          {
+            "name": "text-small",
+            "fontSize": "12px",
+            "lineHeight": "16px",
+            "fontWeight": "400",
+            "letterSpacing": "0",
+            "fontStyle": "normal",
+            "opticalSize": null,
+            "family": "",
+            "sample": "",
+            "usage": "작은 글자. 입력 칸의 라벨과 도움말, 스위치의 상태 글, 진행 표시의 이름, 위젯의 도구 줄·도구 펼치기 단추·첫 안내·상태 띠, 승인 묻기의 도구·인자 라벨, 실패 알림의 실행 식별자 줄"
+          },
+          {
+            "name": "text-badge",
+            "fontSize": "12px",
+            "lineHeight": "16px",
+            "fontWeight": "500",
+            "letterSpacing": "0",
+            "fontStyle": "normal",
+            "opticalSize": null,
+            "family": "",
+            "sample": "",
+            "usage": "상태 배지의 글자"
+          }
+        ]
+      }
+    ]
+  },
+  "spacing": {
+    "note": "",
+    "tokens": [
+      {
+        "name": "spacing-0",
+        "value": "0px",
+        "usage": "flex 안에서 줄어들게 하는 min-w-0·min-h-0, 덮어 그리는 면의 inset-0"
+      },
+      {
+        "name": "spacing-1",
+        "value": "4px",
+        "usage": "상태 배지의 아이콘과 글자, 알림의 제목과 본문, 입력 칸과 도움말 사이"
+      },
+      {
+        "name": "spacing-2",
+        "value": "8px",
+        "usage": "버튼의 아이콘과 글자, 카드 안의 줄, 라벨과 입력 칸, 스위치의 글과 트랙 사이, 여러 줄 입력 칸의 안쪽 위아래"
+      },
+      {
+        "name": "spacing-3",
+        "value": "12px",
+        "usage": "버튼과 입력 칸의 안쪽 좌우, 알림의 안쪽 위아래와 아이콘과 글 사이, 작은 카드(padding 3)의 안쪽"
+      },
+      {
+        "name": "spacing-4",
+        "value": "16px",
+        "usage": "카드(기본)와 위젯 승인 묻기의 안쪽, 알림의 안쪽 좌우, 위젯 대화의 안쪽과 말 사이"
+      },
+      {
+        "name": "spacing-6",
+        "value": "24px",
+        "usage": "위젯 첫 안내의 안쪽, 펼친 도구 목록의 들여쓰기, 도구 펼치기 단추의 최소 높이"
+      },
+      {
+        "name": "spacing-8",
+        "value": "32px",
+        "usage": "컴포넌트와 앱은 아직 쓰지 않고, 디자인 에이전트가 배치의 넓은 여백에 변수로 쓴다"
+      }
+    ]
+  },
+  "radius": {
+    "note": "",
+    "tokens": [
+      {
+        "name": "radius-s",
+        "value": "4px",
+        "usage": "상태 배지, 위젯 승인 묻기의 인자 칸, 위젯에서 포커스 링을 두르는 글과 도구 펼치기 단추"
+      },
+      {
+        "name": "radius-m",
+        "value": "8px",
+        "usage": "버튼, 아이콘 버튼, 입력 칸, 위젯의 승인 묻기"
+      },
+      {
+        "name": "radius-l",
+        "value": "12px",
+        "usage": "카드, 알림, 위젯 창, 위젯 대화에서 보낸 요청의 말풍선"
+      },
+      {
+        "name": "radius-full",
+        "value": "999px",
+        "usage": "둥근 끝. 스위치의 트랙과 손잡이, 진행 막대와 그 트랙"
+      }
+    ]
+  }
+}

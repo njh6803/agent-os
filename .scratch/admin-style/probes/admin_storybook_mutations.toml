@@ -5,7 +5,7 @@
 # 여섯째는 셀프 리뷰가 창 폭의 판정이 창을 세우는 상수와 스스로 맞대 무엇도 재지 않는다고 짚어, 기대를 명세의 폭으로
 # 따로 적은 뒤 더했다. 창을 세우는 상수를 바꿔 판정 스토리가 그 폭을 잡는지 본다.
 # 빨강의 판정은 `tools/mutate.py` 의 독스트링이다. 표지는 변이를 손으로 넣어 실패 출력을 한 번 본 뒤 고른 실패 머리의
-# 문구이고(일지 2026-10-28-09), 넷째의 406 은 최대 폭 440px 에서 카드의 안쪽 여백과 테두리를 뺀 칸의 폭이다.
+# 문구이고(일지 2026-10-28-23), 넷째의 406 은 최대 폭 440px 에서 카드의 안쪽 여백과 테두리를 뺀 칸의 폭이다.
 #
 # 돌리는 법: PYTHONUTF8=1 uv run python tools/mutate.py .scratch/admin-style/probes/admin_storybook_mutations.toml
 # 네트워크를 타지 않는다. `uv sync` 와 `pnpm -C web install` 이 되고 Playwright 의 chromium 이 깔린 체크아웃에서 돈다.

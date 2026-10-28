@@ -20,10 +20,16 @@
     몫을 5분으로 본다(장부의 `_cache_writes`와 같다).
   - Haiku 5.5는 응답마다 프롬프트(입력, 캐시 읽기, 캐시 쓰기의 합)가 `HAIKU_LONG_PROMPT`를 넘으면
     그 응답의 모든 토큰을 `HAIKU_LONG_PRICE`로 셈한다.
+  - 기록 줄에 응답이 있는 모델은 `modelUsage`의 그 모델(꼬리만 다른 이름은 더한다)과 칸마다(입력,
+    출력, 캐시 읽기, 캐시 쓰기) 견주어, 응답 셈이 모자란 몫을 같은 단가로 더한다. 캐시 쓰기 몫은 5분
+    배수, Haiku는 10만 토큰 이하의 단가다. 응답 셈이 많은 칸은 빼지 않는다. 조건 판 2의 파일럿에서
+    세션 기록 파일은 출력 토큰이 모자랐고(Opus는 입력, 캐시 읽기, 캐시 쓰기도), 이렇게 채우면
+    모델마다 `costUSD`와 맞았다(`.scratch/model-rerun/probes/official_cost/`).
   - 기록 줄에 응답이 없는 모델이 `modelUsage`에 있으면 그 모델의 토큰을 캐시 쓰기 5분 배수로 셈해
     더하고(어림), 그 모델(아래 꼬리를 뗀 이름)과 토큰을 `substitutes`에 따로 든다. 꼬리만 다른
     이름(`X`와 `X[1m]`)은 한 항목으로 더한다.
-  - 토큰 합은 응답 셈에서만 낸다. 대신 셈한 모델의 토큰은 `substitutes`에만 들고 합에는 없다.
+  - 토큰 합은 응답 셈과 채운 몫에서 낸다. 대신 셈한 모델의 토큰은 `substitutes`에만 들고 합에는
+    없다.
   - 모델 이름은 끝의 `[1m]`과 날짜(`-YYYYMMDD`)를 떼고 단가를 찾고, 응답과 `modelUsage`의 같은
     모델을 가른다. 단가가 없는 모델도 `PriceError`다.
   - `round_cost`는 세션마다의 셈을 더한다. 회차의 합은 세션마다의 합이고, 대신 셈한 같은 모델은 한
@@ -46,14 +52,17 @@
   `thinkingTokens`가 있다). 그래서 응답 셈의 생각 합은 늘 빈 값이고, 대신 셈한 모델만 `modelUsage`의
   `thinkingTokens`를 옮긴다. 생각 토큰은 출력 토큰으로 셈한다는 공식 단가를 따라 비용에는 출력 칸만
   쓴다.
-- 기록 파일의 응답이 그 세션의 모든 요청을 담는지. 담지 못한 요청(기록에서 빠진 줄, 풀지 못한
-  줄)은 셈에 들지 않는다. 한 모델의 응답이 하나라도 있으면 그 모델의 `modelUsage`로 채우지 않는다.
-- 그 프로브 원본에 이 셈을 대면 결과 이벤트의 `total_cost_usd`와 맞지 않았다(셀프 리뷰의 두
-  서브에이전트가 손으로 대 0.03766과 0.03946을 봤다). 그 원본은 stream-json이라 assistant 줄의 출력
-  토큰이 끝까지 쌓이기 전의 값이어서라는 까닭은 어림이고 재지 않았다. 세션 기록 파일의 셈이
-  `costUSD`와 맞는지는 파일럿(11)이 Opus 5.5에서 본다(명세 "회차 기록").
+- 기록 파일이 모자란 까닭. 출력이 모자란 것이 assistant 줄의 출력 토큰이 끝까지 쌓이기 전의
+  값이어서인지, Opus의 다른 칸이 모자란 것이 기록 파일에 남지 않는 요청이 있어서인지는 재지 않았다.
+  채운 몫의 캐시 쓰기가 5분인지 1시간인지도 모른다. 파일럿에서 Opus의 채운 캐시 쓰기를 1시간으로
+  셈하면 `costUSD`보다 0.0011~0.0287달러 많았고 5분으로 셈하면 맞았다.
+- `modelUsage`가 없는 세션(러너가 끈 호출만 있는 세션)은 채우지 못해 응답 셈만 남고, 그만큼 낮다.
+- 그 프로브 원본(stream-json)에 이 셈을 대면 결과 이벤트의 `total_cost_usd`와 맞지 않았다(셀프
+  리뷰의 두 서브에이전트가 손으로 대 0.03766과 0.03946을 봤다). 그때는 `modelUsage`를 넘기지 않았다.
 - Haiku의 대신 셈은 응답마다의 프롬프트 크기를 몰라 10만 토큰 이하의 단가로 셈한다. 긴 세션이면
-  실제보다 싸다(명세 2026-10-22 주석).
+  실제보다 싸다(명세 2026-10-22 주석). 응답이 있는 Haiku의 채운 몫도 같은 까닭으로 10만 토큰 이하의
+  단가이고, 채운 몫은 `substitutes`에 들지 않아 판정 출력의 대신 셈 수에도 들지 않는다. 프롬프트
+  크기로 단가가 갈리는 모델은 Haiku뿐이라 Opus·Sonnet의 채운 몫은 단가가 갈리지 않는다.
 - 웹 검색 요금과 그 밖의 서버 도구 요금은 셈하지 않는다.
 """
 
@@ -65,9 +74,7 @@ from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 
-from tools.rerun_files import ModelUsage, Substitute, Tokens
-
-type Json = dict[str, Json] | list[Json] | str | int | float | bool | None
+from tools.rerun_files import Json, ModelUsage, Substitute, Tokens
 
 
 @dataclass(frozen=True)
@@ -94,6 +101,20 @@ HAIKU_LONG_PROMPT = 100_000  # 이 토큰 수를 넘는 프롬프트가 높은 �
 WRITE_5M = 1.25
 WRITE_1H = 2.0
 
+
+def _price_value(price: Price) -> Json:
+    return {"input": price.input, "output": price.output, "cache_read": price.cache_read}
+
+
+# 사전 등록 절과 대 보는 값(`tools/rerun_files.py`의 `prereg_line`).
+PREREG_VALUES: dict[str, Json] = {
+    "PRICES": {m: _price_value(p) for m, p in PRICES.items()},
+    "HAIKU_LONG_PRICE": _price_value(HAIKU_LONG_PRICE),
+    "HAIKU_LONG_PROMPT": HAIKU_LONG_PROMPT,
+    "WRITE_5M": WRITE_5M,
+    "WRITE_1H": WRITE_1H,
+}
+
 _DATE_TAIL = re.compile(r"-[0-9]{8}$")
 _WIDE_TAIL = "[1m]"
 _SYNTHETIC = "<synthetic>"
@@ -108,7 +129,7 @@ class Cost:
     """세션 하나나 회차의 공식 단가 셈."""
 
     official_usd: float
-    tokens: Tokens  # 응답 셈의 합. 생각은 늘 빈 값이다(모듈 독스트링 못 보는 것)
+    tokens: Tokens  # 응답 셈과 채운 몫의 합. 생각은 늘 빈 값이다(모듈 독스트링 못 보는 것)
     substitutes: tuple[Substitute, ...]  # `modelUsage`로 대신 셈한 모델과 그 토큰
 
 
@@ -213,7 +234,7 @@ def cost_of(lines: Iterable[str], model_usage: Sequence[ModelUsage]) -> Cost:
     """세션 하나의 기록 줄과 그 세션의 마지막 `modelUsage`의 공식 단가 셈."""
     usd = 0.0
     input = output = read = write = 0
-    seen: set[str] = set()
+    seen: dict[str, list[int]] = {}  # 모델마다 응답 셈의 입력, 출력, 캐시 읽기, 캐시 쓰기
     for r in _responses(lines):
         model = _canonical(r.model)
         price = _price(model)
@@ -225,7 +246,17 @@ def cost_of(lines: Iterable[str], model_usage: Sequence[ModelUsage]) -> Cost:
             price = HAIKU_LONG_PRICE
         usd += _usd(price, i, o, c, w5, w1)
         input, output, read, write = input + i, output + o, read + c, write + w5 + w1
-        seen.add(model)
+        got = seen.setdefault(model, [0, 0, 0, 0])
+        got[0], got[1], got[2], got[3] = got[0] + i, got[1] + o, got[2] + c, got[3] + w5 + w1
+    # 응답이 있는 모델은 `modelUsage`(꼬리만 다른 이름은 더한다)보다 모자란 칸을 채운다
+    for model, gap in _gaps(seen, model_usage):
+        usd += _usd(_price(model), *gap, 0)
+        input, output, read, write = (
+            input + gap[0],
+            output + gap[1],
+            read + gap[2],
+            write + gap[3],
+        )
     # 기록에 응답이 없는 모델만 `modelUsage`로 대신 셈하고, 응답 셈과 같은 누산기에 차례로 더한다.
     # 대신 셈의 합을 따로 구해 더하면 부동소수점 더하기의 차례가 바뀌어 값이 달라질 수 있다
     absent = [u for u in model_usage if _canonical(u.model) not in seen]
@@ -234,6 +265,35 @@ def cost_of(lines: Iterable[str], model_usage: Sequence[ModelUsage]) -> Cost:
     tokens = Tokens(input=input, output=output, cache_read=read, cache_write=write, thinking=None)
     substitutes = _merge_substitutes(_substitute(u) for u in absent)
     return Cost(official_usd=usd, tokens=tokens, substitutes=substitutes)
+
+
+def _gaps(
+    seen: dict[str, list[int]], model_usage: Sequence[ModelUsage]
+) -> list[tuple[str, tuple[int, int, int, int]]]:
+    """응답이 있는 모델마다 `modelUsage`가 응답 셈보다 많은 몫(입력, 출력, 캐시 읽기, 캐시 쓰기).
+    응답 셈이 많은 칸은 0이다. 모델은 `modelUsage`에 처음 나온 차례다."""
+    totals: dict[str, list[int]] = {}
+    for u in model_usage:
+        model = _canonical(u.model)
+        if model not in seen:
+            continue
+        t = totals.setdefault(model, [0, 0, 0, 0])
+        t[0] += u.input_tokens
+        t[1] += u.output_tokens
+        t[2] += u.cache_read_tokens
+        t[3] += u.cache_write_tokens
+    gaps: list[tuple[str, tuple[int, int, int, int]]] = []
+    for model, t in totals.items():
+        s = seen[model]
+        gap = (
+            max(0, t[0] - s[0]),
+            max(0, t[1] - s[1]),
+            max(0, t[2] - s[2]),
+            max(0, t[3] - s[3]),
+        )
+        if any(gap):
+            gaps.append((model, gap))
+    return gaps
 
 
 def _substitute_usd(u: ModelUsage) -> float:

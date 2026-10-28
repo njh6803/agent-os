@@ -39,6 +39,7 @@ from tools.rerun_checks import (
     REASON_MODEL,
     REASON_SETTINGS,
     REPOSITORY,
+    SYNCED_PLUGINS,
     UNKNOWN_TOOL,
     USER_CLAUDE,
     Limit,
@@ -435,7 +436,18 @@ def _builtin(name: str) -> Json:
     return {"name": name, "path": "builtin", "source": f"{name}@builtin"}
 
 
-ALLOWED = frozenset({*(f"{p}@builtin" for p in BUILTIN_PLUGINS), PYRIGHT})
+def _synced(name: str) -> Json:
+    """계정 동기화 꼴. 파일럿 앞 손 확인에서 본 init 의 항목이다(일지 2026-10-28-10)."""
+    return {"name": name, "path": "C:\\cfg\\plugins\\synced\\b\\x", "source": f"{name}@synced"}
+
+
+ALLOWED = frozenset(
+    {
+        *(f"{p}@builtin" for p in BUILTIN_PLUGINS),
+        *(f"{p}@synced" for p in SYNCED_PLUGINS),
+        PYRIGHT,
+    }
+)
 
 
 @pytest.mark.parametrize(
@@ -448,6 +460,9 @@ ALLOWED = frozenset({*(f"{p}@builtin" for p in BUILTIN_PLUGINS), PYRIGHT})
         ([{"name": "github", "source": "github@claude-plugins-official"}], [], False),
         ([{"name": "pyright-lsp", "source": "pyright-lsp@다른-마켓"}], [], False),
         ([_builtin("cc-plugin-다른-것")], [], False),
+        ([_synced("frontend-design"), _synced("cowork-plugin-management")], [], True),
+        ([_synced("google-workspace")], [], False),  # 동기화로 새로 든 플러그인은 걸린다
+        ([{"name": "frontend-design", "source": "frontend-design@다른-마켓"}], [], False),
         (["cc-plugin-telemetry"], [], True),  # 글만 든 항목은 이름으로 견준다
         ([3], [], False),
     ],
@@ -481,7 +496,7 @@ def test_source가_없는_플러그인은_이름을_허용_키의_골뱅이_앞�
     assert not init_outside(event, ALLOWED)
 
 
-def test_허용_모임은_내장_셋과_클론의_settings_json이_켠_플러그인이다(tmp_path: Path) -> None:
+def test_허용_모임은_내장_셋_동기화_둘_클론이_켠_플러그인이다(tmp_path: Path) -> None:
     room = _room(tmp_path, settings={"enabledPlugins": {PYRIGHT: True, "x@y": False, "z@w": 1}})
     assert allowed_plugins(room.place.clone) == ALLOWED
     assert enabled_plugins(None) == () and enabled_plugins("{") == ()
@@ -811,6 +826,9 @@ UNDER_HOME = watched_from(
         ("D:/rerun/rerun-x-03-a-1-t1/clone/x.py", ()),  # 자기 회차 폴더
         ("D:/rerun/rerun-x-03-b-1-t2/clone/x.py", (OTHER_ROUND,)),
         ("ls D:\\rerun", (OTHER_ROUND,)),
+        # 뿌리 바로 아래 파일. 뿌리 규칙(`*.*`)이 막지 않는 꼴도 여기서 잡는다(일지 2026-10-28-10)
+        ("D:/rerun/fix1.py", (OTHER_ROUND,)),
+        ("cat > D:/rerun/LEAK <<'EOF'", (OTHER_ROUND,)),
         ("ls D:/rerun/*/stream", (OTHER_ROUND,)),
         ("D:/rerun/rerun-x-03-a-1-t1-x/y", (OTHER_ROUND,)),
         ("D:/rerun-old/x", ()),

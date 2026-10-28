@@ -1,0 +1,279 @@
+# tools/hook_web_edit_check.py(design-reverse-sync 티켓 09)의 판정과 표지를 하나씩 깨는 변이.
+#   PYTHONUTF8=1 uv run python tools/mutate.py .scratch/design-reverse-sync/probes/web_edit_hook_mutations.toml
+# 변이마다 `-k` 로 시험 하나로 좁힌다. 표지는 그 시험의 고른 단언이 실패할 때만 출력에 실리는 값(pytest 가 펼친
+# 단언의 실제 값)이고, 시험 함수 이름처럼 그 시험의 어느 단언이 빨개져도 실리는 문구는 고르지 않는다
+# (`.claude/rules/probes.md` 의 표지 항목). 끝의 하나는 대조군이다. 알림 문장의 끝 낱말은 어느 시험도 보지 않는다.
+
+# --- 경로 ---
+
+[[mutation]]
+name = "Edit 을 빼고 Write 만 본다"
+tests = ["tests/tools/test_hook_web_edit_check.py", "-k", "앱_아래_Edit_도_알린다"]
+expect = "red"
+expect_output = ["있을 수 있다' in ''"]
+[[mutation.edit]]
+file = "tools/hook_web_edit_check.py"
+old = '''TOOLS = ("Write", "Edit")'''
+new = '''TOOLS = ("Write",)'''
+
+[[mutation]]
+name = "packages 아래면 ui 가 아니어도 화면 코드로 본다"
+tests = ["tests/tools/test_hook_web_edit_check.py", "-k", "web_tools_와_다른_web_아래는_침묵한다"]
+expect = "red"
+expect_output = ['''True = is_screen_code(('C:\\project\\agent' + '\\web\\packages\\api-client''']
+[[mutation.edit]]
+file = "tools/hook_web_edit_check.py"
+old = '''        if parts[index + 1] == "apps" or parts[index + 1 : index + 3] == ["packages", "ui"]:'''
+new = '''        if parts[index + 1] in ("apps", "packages"):'''
+
+[[mutation]]
+name = "apps 뒤에 앱 토막을 요구하지 않는다"
+tests = ["tests/tools/test_hook_web_edit_check.py", "-k", "web_tools_와_다른_web_아래는_침묵한다"]
+expect = "red"
+expect_output = ['''True = is_screen_code(('C:\\project\\agent' + '\\web\\apps\\README.md''']
+[[mutation.edit]]
+file = "tools/hook_web_edit_check.py"
+old = '''    for index in range(len(parts) - 3):'''
+new = '''    for index in range(len(parts) - 2):'''
+
+[[mutation]]
+name = "대소문자를 가린다"
+tests = ["tests/tools/test_hook_web_edit_check.py", "-k", "대소문자가_다른_폴더_이름도"]
+expect = "red"
+expect_output = ['''False = is_screen_code(('C:\\project\\agent' + '\\Web\\Packages\\UI''']
+[[mutation.edit]]
+file = "tools/hook_web_edit_check.py"
+old = '''    parts = [part.casefold() for part in normalized.split("/") if part]'''
+new = '''    parts = [part for part in normalized.split("/") if part]'''
+
+[[mutation]]
+name = "가르기 전에 . 과 .. 토막을 접지 않는다"
+tests = ["tests/tools/test_hook_web_edit_check.py", "-k", "점과_점점_토막을"]
+expect = "red"
+expect_output = ['''True = is_screen_code(('C:\\project\\agent' + '\\web\\packages\\ui\\..\\api-client''']
+[[mutation.edit]]
+file = "tools/hook_web_edit_check.py"
+old = '''    normalized = posixpath.normpath(_SEPARATORS.sub("/", path))'''
+new = '''    normalized = _SEPARATORS.sub("/", path)'''
+
+[[mutation]]
+name = "꼴이 어긋난 바이트의 디코딩 오류를 잡지 않는다"
+tests = ["tests/tools/test_hook_web_edit_check.py", "-k", "UTF8_아님"]
+expect = "red"
+expect_output = ["UnicodeDecodeError: 'utf-8' codec can't decode byte 0xc3"]
+[[mutation.edit]]
+file = "tools/hook_web_edit_check.py"
+old = '''    except (ValueError, RecursionError):
+        return None
+    if not isinstance(payload, dict):'''
+new = '''    except (json.JSONDecodeError, RecursionError):
+        return None
+    if not isinstance(payload, dict):'''
+
+# --- 표지 ---
+
+[[mutation]]
+name = "표지가 있어도 알린다"
+tests = ["tests/tools/test_hook_web_edit_check.py", "-k", "같은_세션의_둘째_쓰기는"]
+expect = "red"
+expect_output = ['''"additionalContext": "\\ub514\\uc790\\uc778''']
+[[mutation.edit]]
+file = "tools/hook_web_edit_check.py"
+old = '''        if not claim_first(marker_name(session, agent_id), state_dir):
+            return None'''
+new = '''        claim_first(marker_name(session, agent_id), state_dir)'''
+
+[[mutation]]
+name = "표지 이름에서 에이전트를 뺀다"
+tests = ["tests/tools/test_hook_web_edit_check.py", "-k", "표지는_세션과_에이전트마다_한_번이다"]
+expect = "red"
+expect_output = ["AssertionError: assert False", "marker_name('s1', 'agent-a')"]
+[[mutation.edit]]
+file = "tools/hook_web_edit_check.py"
+old = '''    joined = f"{session_id}\0{agent_id}"'''
+new = '''    joined = session_id'''
+
+[[mutation]]
+name = "경로를 보기 전에 표지를 남긴다"
+tests = ["tests/tools/test_hook_web_edit_check.py", "-k", "경로가_맞지_않은_쓰기는"]
+expect = "red"
+expect_output = ["있을 수 있다' in ''"]
+[[mutation.edit]]
+file = "tools/hook_web_edit_check.py"
+old = '''    path = screen_file(payload)
+    if path is None:
+        return None
+    session = payload.get("session_id")
+    agent = payload.get("agent_id")
+    agent_id = agent if isinstance(agent, str) else ""
+    if isinstance(session, str) and session and state_dir is not None:
+        if not claim_first(marker_name(session, agent_id), state_dir):
+            return None
+'''
+new = '''    session = payload.get("session_id")
+    agent = payload.get("agent_id")
+    agent_id = agent if isinstance(agent, str) else ""
+    if isinstance(session, str) and session and state_dir is not None:
+        if not claim_first(marker_name(session, agent_id), state_dir):
+            return None
+    path = screen_file(payload)
+    if path is None:
+        return None
+'''
+
+[[mutation]]
+name = "브랜치를 표지보다 먼저 보아 침묵은 표지에 남지 않는다"
+tests = ["tests/tools/test_hook_web_edit_check.py", "-k", "침묵한_뒤의_둘째_쓰기는_다시_판정하지"]
+expect = "red"
+expect_output = ['''"additionalContext": "\\ub514\\uc790\\uc778''', '''where b'{"tool_name": "Edit"''']
+[[mutation.edit]]
+file = "tools/hook_web_edit_check.py"
+old = '''    if isinstance(session, str) and session and state_dir is not None:
+        if not claim_first(marker_name(session, agent_id), state_dir):
+            return None
+    checkout = checkout_of(os.path.dirname(_absolute(path, payload.get("cwd"))))
+    if checkout is not None:
+        branch = branch_of(checkout)
+        if branch is not None and is_import_session(checkout, branch):
+            return None
+'''
+new = '''    checkout = checkout_of(os.path.dirname(_absolute(path, payload.get("cwd"))))
+    if checkout is not None:
+        branch = branch_of(checkout)
+        if branch is not None and is_import_session(checkout, branch):
+            return None
+    if isinstance(session, str) and session and state_dir is not None:
+        if not claim_first(marker_name(session, agent_id), state_dir):
+            return None
+'''
+
+[[mutation]]
+name = "폴더 자리의 파일을 이미 알린 것으로 읽는다"
+tests = ["tests/tools/test_hook_web_edit_check.py", "-k", "표지_폴더를_만들지_못하면"]
+expect = "red"
+expect_output = ["AssertionError: assert False", "/file'))"]
+[[mutation.edit]]
+file = "tools/hook_web_edit_check.py"
+old = '''    try:
+        os.makedirs(directory, exist_ok=True)
+    except OSError:
+        return True'''
+new = '''    try:
+        os.makedirs(directory, exist_ok=True)
+    except FileExistsError:
+        return False
+    except OSError:
+        return True'''
+
+# --- 브랜치 ---
+
+[[mutation]]
+name = "티켓 파일이 있는지 보지 않는다"
+tests = ["tests/tools/test_hook_web_edit_check.py", "-k", "티켓_파일이_없는_feature_브랜치는"]
+expect = "red"
+expect_output = ["있을 수 있다' in ''"]
+[[mutation.edit]]
+file = "tools/hook_web_edit_check.py"
+old = '''        return (checkout / TICKETS / f"{matched.group(1)}.md").is_file()'''
+new = '''        return True'''
+
+[[mutation]]
+name = "브랜치의 앞머리만 티켓 꼴과 맞춘다"
+tests = ["tests/tools/test_hook_web_edit_check.py", "-k", "티켓_꼴이_아닌_브랜치는"]
+expect = "red"
+expect_output = ["True = is_import_session(", "[feature/09-x/y]"]
+[[mutation.edit]]
+file = "tools/hook_web_edit_check.py"
+old = '''    matched = _TICKET_BRANCH.fullmatch(branch)'''
+new = '''    matched = _TICKET_BRANCH.match(branch)'''
+
+[[mutation]]
+name = "워크트리의 .git 파일을 따라가지 않는다"
+tests = ["tests/tools/test_hook_web_edit_check.py", "-k", "워크트리의_git_파일을_따라"]
+expect = "red"
+expect_output = ["assert None == 'feature/11-web-edit-x'"]
+[[mutation.edit]]
+file = "tools/hook_web_edit_check.py"
+old = '''    return checkout / target if target else None'''
+new = '''    return None'''
+
+[[mutation]]
+name = "상대 gitdir 을 작업 트리에서 풀지 않는다"
+tests = ["tests/tools/test_hook_web_edit_check.py", "-k", "git_파일의_상대_경로는"]
+expect = "red"
+expect_output = ["assert None == 'feature/11-x'"]
+[[mutation.edit]]
+file = "tools/hook_web_edit_check.py"
+old = '''    return checkout / target if target else None'''
+new = '''    return Path(target) if target else None'''
+
+[[mutation]]
+name = "상대 경로를 페이로드의 cwd 에서 풀지 않는다"
+tests = ["tests/tools/test_hook_web_edit_check.py", "-k", "상대_경로는_페이로드의_cwd"]
+expect = "red"
+expect_output = ['''"additionalContext": "\\ub514\\uc790\\uc778''']
+[[mutation.edit]]
+file = "tools/hook_web_edit_check.py"
+old = '''    base = cwd if isinstance(cwd, str) and cwd else os.getcwd()'''
+new = '''    base = os.getcwd()'''
+
+# --- 알림 ---
+
+[[mutation]]
+name = "서브에이전트에도 메인 문장을 낸다"
+tests = ["tests/tools/test_hook_web_edit_check.py", "-k", "서브에이전트에는_끝_보고에"]
+expect = "red"
+expect_output = ["> = '디자인 시스템 아티팩트에 웹 편집이 있을 수 있다. 이 세션이"]
+[[mutation.edit]]
+file = "tools/hook_web_edit_check.py"
+old = '''    context = SUBAGENT_CONTEXT if agent_id else MAIN_CONTEXT'''
+new = '''    context = MAIN_CONTEXT'''
+
+[[mutation]]
+name = "빈 agent_id 를 서브에이전트로 본다"
+tests = ["tests/tools/test_hook_web_edit_check.py", "-k", "빈_agent_id_는"]
+expect = "red"
+expect_output = ["있을 수 있다' in '서브에이전트가"]
+[[mutation.edit]]
+file = "tools/hook_web_edit_check.py"
+old = '''    context = SUBAGENT_CONTEXT if agent_id else MAIN_CONTEXT'''
+new = '''    context = SUBAGENT_CONTEXT if isinstance(agent, str) else MAIN_CONTEXT'''
+
+# --- 셀프 리뷰가 더한 것 ---
+
+[[mutation]]
+name = "깊게 중첩된 JSON 의 RecursionError 를 잡지 않는다"
+tests = ["tests/tools/test_hook_web_edit_check.py", "-k", "깊은_중첩"]
+expect = "red"
+expect_output = ["RecursionError: maximum recursion depth exceeded while decoding a JSON array"]
+[[mutation.edit]]
+file = "tools/hook_web_edit_check.py"
+old = '''    except (ValueError, RecursionError):
+        return None
+    if not isinstance(payload, dict):'''
+new = '''    except ValueError:
+        return None
+    if not isinstance(payload, dict):'''
+
+[[mutation]]
+name = "gitdir 의 NUL 이 낸 ValueError 를 잡지 않는다"
+tests = ["tests/tools/test_hook_web_edit_check.py", "-k", "gitdir_에_NUL"]
+expect = "red"
+expect_output = ["ValueError: embedded null character"]
+[[mutation.edit]]
+file = "tools/hook_web_edit_check.py"
+old = '''    except (OSError, ValueError):
+        return None
+    return lines[0].strip() if lines else ""'''
+new = '''    except OSError:
+        return None
+    return lines[0].strip() if lines else ""'''
+
+[[mutation]]
+name = "대조군: 알림 문장의 끝 낱말을 바꾼다"
+tests = ["tests/tools/test_hook_web_edit_check.py"]
+expect = "green"
+[[mutation.edit]]
+file = "tools/hook_web_edit_check.py"
+old = '''    " 이 알림은 세션·에이전트마다 한 번이다."'''
+new = '''    " 이 알림은 세션·에이전트마다 한 차례다."'''

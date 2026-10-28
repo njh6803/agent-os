@@ -1,0 +1,27 @@
+# retro 5단계의 행 찾기가 `tools/queue_open_rows.py --search` 를 치라고 적은 문장(대기열 425, harness 021)이 새 세션에
+# 실리는지. 실험군은 이 워크트리, 대조군은 주 체크아웃이다. 이 PR 이 병합되기 전의 주 체크아웃에는 그 문장이 없다.
+# 병합 뒤에 다시 돌리려면 `--control-commit 7d27ae45` 를 준다(그 판에는 `expect` 의 세 문구가 모두 없다).
+# 최신 결과: 통과 4(2026-10-28 셀프 리뷰 반영 뒤 질문 셋으로, 이 PC, claude 2.1.302, 대조군 주 체크아웃 `7d27ae45`,
+# 일지 2026-10-28-16).
+# 돌리는 법: 워크트리 `.claude/worktrees/<이름>/` 루트에서
+#   uv run python tools/canary.py .scratch/harness/probes/canary/retro_row_search.toml <출력 디렉터리>
+kind = "skill"
+question = '''
+retro 스킬을 Skill 도구로 불러 본문을 읽어라. 스킬이 시키는 일(일지 읽기, 회고, 파일 쓰기)은 하지 않고 본문만 읽는다.
+1) 본문의 5단계에서 대기열에 새 행을 쓰기 전에 같은 일을 다룬 행을 찾을 때 치라고 적은 명령을 글자 그대로 옮겨라.
+2) 같은 문단에서 낱말에 남길 문자와 다른 문자로 바꿀 문자를 적은 문장을 글자 그대로 옮겨라.
+3) 같은 문단에서 닫힌 행이 맞았을 때 한 번 더 찾으라고 적은 옵션과 그 인자를 글자 그대로 옮겨라.
+본문에 그런 명령이나 문장이 없으면 그 번호에 "없음"이라고만 답하라.
+'''
+expect = ["queue_open_rows.py --search", "아무 글자에나 맞는 `.`으로 바꾼다", "--search <번호>의"]
+source = ".claude/skills/retro/SKILL.md"
+skill = "retro"
+
+[[arm]]
+name = "워크트리"
+role = "experiment"
+
+[[arm]]
+name = "주-체크아웃"
+role = "control"
+checkout = "../../.."

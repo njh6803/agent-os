@@ -31,7 +31,8 @@ Claude Code가 죽은 것이 개입으로 셈해진다. 끄지 않고 남긴 호
   아니다.
 - 인계 지시문은 결과 글의 덩이(`다음 작업:` 줄부터 그 뒤 첫 `이번 요청 범위:` 줄까지) 가운데 그
   브랜치의 지시문인 마지막 덩이를 줄마다 다듬어 옮긴다(`handoff_directive`). 그런 덩이가 없으면 글
-  전체다. 덩이 안의 다른 글(설명 문장)은 거르지 않는다.
+  전체다. 덩이 안의 다른 글(설명 문장)은 거르지 않는다. 옮긴 지시문의 `모델:` 줄은 갈래의 값 한
+  줄로 바꾼다(`arm_model_line`). 모델 줄 밖에 적힌 모델 이름(설명 문장)은 바꾸지 않는다.
 - 마감에 닿아 끈 호출은 대개 결과 이벤트가 없어 그 호출의 비용을 모른다. 그 몫은 예산의 쓴 것에
   들지 않지만, 시간의 끄기는 회차를 끝내므로 뒤의 호출이 없다. 그 몫을 공식 단가로 대신 넣는 것은
   10이다. 결과 이벤트를 내고 출력을 닫은 뒤 거두는 기다림 중에 마감이 온 호출은 비용이 있어 쓴 것에
@@ -55,6 +56,7 @@ from tools.rerun_files import (
     END_NOT_MEASURED,
     Arm,
     End,
+    Json,
     Task,
 )
 from tools.rerun_round import RoundDir
@@ -100,7 +102,24 @@ _OPENINGS = {
 }
 _DIRECTIVE_HEAD = "다음 작업:"
 _DIRECTIVE_TAIL = "이번 요청 범위:"
+_MODEL_HEAD = "모델:"
+_BRANCH_HEAD = "브랜치:"
 _QUESTION_MARKS = ("?", "？")
+
+# 사전 등록 절과 대 보는 값(`tools/rerun_files.py`의 `prereg_line`).
+PREREG_VALUES: dict[str, Json] = {
+    "INTERVENTION_MESSAGE": INTERVENTION_MESSAGE,
+    "MAX_INTERVENTIONS": MAX_INTERVENTIONS,
+    "MAX_SESSIONS": MAX_SESSIONS,
+    "MIN_BUDGET_USD": MIN_BUDGET_USD,
+    "WALL_CLOCK_SECONDS": WALL_CLOCK_SECONDS,
+    "BUDGET_SUBTYPE": BUDGET_SUBTYPE,
+    "DIRECTIVE_HEAD": _DIRECTIVE_HEAD,
+    "DIRECTIVE_TAIL": _DIRECTIVE_TAIL,
+    "MODEL_HEAD": _MODEL_HEAD,
+    "BRANCH_HEAD": _BRANCH_HEAD,
+    "QUESTION_MARKS": [*_QUESTION_MARKS],
+}
 
 
 def ends_with_question(text: str | None) -> bool:
@@ -126,6 +145,22 @@ def handoff_directive(text: str, branch: str) -> str:
         if directive_branch(block) == branch:
             return block
     return "\n".join(lines).strip()
+
+
+def arm_model_line(directive_text: str, arm: Arm) -> str:
+    """지시문의 `모델:` 줄을 `arm`의 값 하나로 바꾼다. 처음 나온 `모델:` 줄 자리에 두고 나머지는
+    지운다. 없으면 첫 `브랜치:` 줄 뒤에, 그것도 없으면 첫 줄 뒤에 넣는다. 갈래 사이에 모델 줄만
+    다르다는 지시문 약속(명세 "지시문의 틀")을 인계 뒤에도 지키려는 것이다(사람이 정했다, 일지
+    2026-10-28-10)."""
+    line = f"{_MODEL_HEAD} {arm.label}"
+    lines = directive_text.split("\n")
+    models = [i for i, text in enumerate(lines) if text.startswith(_MODEL_HEAD)]
+    if models:
+        kept = [text for i, text in enumerate(lines) if i not in models[1:]]
+        kept[models[0]] = line
+        return "\n".join(kept)
+    after = next((i for i, text in enumerate(lines) if text.startswith(_BRANCH_HEAD)), 0)
+    return "\n".join([*lines[: after + 1], line, *lines[after + 1 :]])
 
 
 def next_kind(text: str | None, branch: str, picked: Picked) -> str | None:
@@ -221,16 +256,16 @@ def _opening(
     *,
     root: str,
     task: Task,
+    arm: Arm,
     session_id: str,
     make_session_id: Callable[[], str],
 ) -> tuple[str, str]:
     """다음 호출의 세션 id 와 메시지. 개입은 같은 세션에 한 줄을 넣고, 인계는 새 세션을 결과 글의
-    지시문으로 연다(인계는 결과 글에 지시문이 있을 때만 난다)."""
+    지시문(모델 줄은 갈래의 값)으로 연다(인계는 결과 글에 지시문이 있을 때만 난다)."""
     if following == CALL_INTERVENTION:
         return session_id, INTERVENTION_MESSAGE
-    return make_session_id(), first_message(
-        root, task.ticket, handoff_directive(text or "", task.branch)
-    )
+    handoff = arm_model_line(handoff_directive(text or "", task.branch), arm)
+    return make_session_id(), first_message(root, task.ticket, handoff)
 
 
 def run_sessions(
@@ -311,6 +346,7 @@ def run_sessions(
             text,
             root=root,
             task=task,
+            arm=arm,
             session_id=session_id,
             make_session_id=make_session_id,
         )

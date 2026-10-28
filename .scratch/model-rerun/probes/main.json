@@ -1,0 +1,241 @@
+{
+  "shape_version": 1,
+  "kind": "본 측정",
+  "tasks": [
+    {
+      "task_id": "mcp-shutdown-02",
+      "ticket": ".scratch/mcp-shutdown/issues/02-boundary-exceptions.md",
+      "base": "303e8fb5751b2c7ca36c0de4fea40e958a996529",
+      "merge": "f1e6516b8075bade8f1b9b779218845be8635a10",
+      "branch": "feature/02-boundary-exceptions",
+      "tier": "작은",
+      "size": 7,
+      "order": 0,
+      "pilot": false,
+      "pr_cost_usd": 19.9878,
+      "round_cap_usd": 59.9634,
+      "hidden_tests": [
+        "tests/adapters/test_mcp.py::test_서버_기동_실패는_서버_이름과_명령을_든_연결_오류다",
+        "tests/adapters/test_mcp.py::test_둘째_서버가_열리지_않아도_연결_오류_하나다",
+        "tests/adapters/test_mcp.py::test_뜨자마자_끝나는_서버는_서버_이름을_든_연결_오류_하나다",
+        "tests/adapters/test_mcp.py::test_연결_안에서_던진_예외_그룹은_그_그룹_그대로_나온다",
+        "tests/adapters/test_mcp.py::test_연결_안의_yield_에_멈춘_제너레이터는_예외_없이_닫힌다",
+        "tests/adapters/test_mcp.py::test_끝나지_않는_도구_목록은_쪽_수의_상한에서_서버를_든_연결_오류다",
+        "tests/adapters/test_mcp.py::test_연결_안에서_난_예외는_감싸이지_않고_나오며_서버가_내려간다"
+      ],
+      "support_files": [],
+      "original_model_effort": "claude-opus-5-5/medium",
+      "arm_plan": [
+        "C",
+        "A",
+        "E",
+        "D",
+        "B"
+      ]
+    },
+    {
+      "task_id": "web-widget-01",
+      "ticket": ".scratch/web-widget/issues/01-contract-calling-item-and-limit-kind.md",
+      "base": "07c890c58ff7d9a1f24c4959104650f74f8b6083",
+      "merge": "96d3e1df21e35ec50a2b9310eaac0d64103ab469",
+      "branch": "feature/01-contract-calling-item-and-limit-kind",
+      "tier": "중간",
+      "size": 11,
+      "order": 1,
+      "pilot": false,
+      "pr_cost_usd": 65.4854,
+      "round_cap_usd": 196.4562,
+      "hidden_tests": [
+        "tests/channel/http/test_end_user.py::test_도구를_요청한_모델_호출은_그_도구_이름을_차례대로_든_calling_항목이다",
+        "tests/channel/http/test_end_user.py::test_주체별_시간당_실행은_미끄러지는_창이고_Retry_After_는_남은_초다",
+        "tests/channel/http/test_end_user.py::test_이어_가기의_에러도_JSON_봉투이고_허용_출처에_CORS_헤더가_붙는다"
+      ],
+      "support_files": [],
+      "original_model_effort": "claude-opus-5-5/xhigh",
+      "arm_plan": [
+        "A",
+        "D",
+        "C",
+        "B",
+        "E"
+      ]
+    },
+    {
+      "task_id": "model-rerun-10",
+      "ticket": ".scratch/model-rerun/issues/10-schedule-and-budget.md",
+      "base": "f1ed4be75da341b4c1dfafa0f5196f1642876ca2",
+      "merge": "80ff61f1d83176ff8c2a590e71a0958d8cdf148c",
+      "branch": "feature/10-schedule-and-budget",
+      "tier": "큰",
+      "size": 27,
+      "order": 2,
+      "pilot": false,
+      "pr_cost_usd": 30.0483,
+      "round_cap_usd": 90.1449,
+      "hidden_tests": [
+        "tests/tools/test_rerun_session.py::test_예산은_유한한_값만_받는다[nan]",
+        "tests/tools/test_rerun_session.py::test_예산은_유한한_값만_받는다[inf]",
+        "tests/tools/test_rerun_session.py::test_예산은_유한한_값만_받는다[-inf]"
+      ],
+      "support_files": [
+        "tests/tools/fake_claude.py"
+      ],
+      "original_model_effort": "claude-opus-5-5/medium",
+      "arm_plan": [
+        "E",
+        "D",
+        "A",
+        "C",
+        "B"
+      ]
+    },
+    {
+      "task_id": "end-user-continuation-05",
+      "ticket": ".scratch/end-user-continuation/issues/05-only-pre-owner-damage-is-404.md",
+      "base": "0a6e0b0d75291f4616fe4595353be5c73de8b97f",
+      "merge": "ed11175312d00c7269060c17adf3e0ff437fd8e8",
+      "branch": "feature/05-only-pre-owner-damage-is-404",
+      "tier": "작은",
+      "size": 8,
+      "order": 3,
+      "pilot": false,
+      "pr_cost_usd": 67.3266,
+      "round_cap_usd": 201.9798,
+      "hidden_tests": [
+        "tests/channel/http/test_end_user.py::test_손상된_남의_실행에_운영자_채널은_500_원문이고_최종_사용자_면은_404_고정이다",
+        "tests/channel/http/test_end_user.py::test_결정에서_주인을_확인한_뒤의_고장은_고정_문구의_500이다",
+        "tests/channel/http/test_end_user.py::test_이어_가기의_구성_오류와_깨진_고리는_고정_문구의_500이다",
+        "tests/channel/http/test_end_user.py::test_자기_실행의_손상도_남의_손상처럼_404이고_기록에는_하위_타입이_남는다",
+        "tests/channel/http/test_end_user.py::test_이어_가기의_에러도_JSON_봉투이고_허용_출처에_CORS_헤더가_붙는다"
+      ],
+      "support_files": [],
+      "original_model_effort": "claude-opus-5-5/xhigh",
+      "arm_plan": [
+        "E",
+        "A",
+        "C",
+        "B",
+        "D"
+      ]
+    },
+    {
+      "task_id": "web-widget-02",
+      "ticket": ".scratch/web-widget/issues/02-runtime-relays-call-events-live.md",
+      "base": "51a0417e6106afaaeca5ba7bf77f663d4a33f28b",
+      "merge": "eec99a5170e58572d5e6b6d79df788c2fa6f7b6a",
+      "branch": "feature/02-runtime-relays-call-events-live",
+      "tier": "중간",
+      "size": 16,
+      "order": 4,
+      "pilot": false,
+      "pr_cost_usd": 27.298,
+      "round_cap_usd": 81.894,
+      "hidden_tests": [
+        "tests/channel/http/test_end_user.py::test_모델이_요청한_도구가_끝나기_전에_부르기_시작함_항목이_도착한다",
+        "tests/channel/http/test_router.py::test_모델이_요청한_도구가_끝나기_전에_그_모델_호출의_프레임이_도착한다",
+        "tests/core/test_run.py::test_모델이_요청한_도구가_불릴_때_소비자는_이미_그_모델_호출의_이벤트를_받았다",
+        "tests/core/test_run.py::test_모델_호출의_이벤트를_쓰지_못하면_그_모델이_요청한_도구는_불리지_않는다"
+      ],
+      "support_files": [],
+      "original_model_effort": "claude-opus-5-5/medium",
+      "arm_plan": [
+        "D",
+        "E",
+        "C",
+        "B",
+        "A"
+      ]
+    },
+    {
+      "task_id": "ticket-for-every-pr-03",
+      "ticket": ".scratch/ticket-for-every-pr/issues/03-commit-check-blocks-ticketless.md",
+      "base": "96fbe2419f08938b293976438552f36f8d9339d2",
+      "merge": "e62eb0524abe70a59392824300ead161bdba7447",
+      "branch": "feature/03-commit-check-blocks-ticketless",
+      "tier": "큰",
+      "size": 20,
+      "order": 5,
+      "pilot": false,
+      "pr_cost_usd": 22.5991,
+      "round_cap_usd": 67.7973,
+      "hidden_tests": [
+        "tests/tools/test_check_ticket.py::test_바로_치면_지금_색인으로_판정한다",
+        "tests/tools/test_check_ticket.py::test_저장소가_아닌_폴더에서는_git_실패로_2를_낸다",
+        "tests/tools/test_check_ticket.py::test_바로_치면_전환의_한_줄이_보인다"
+      ],
+      "support_files": [],
+      "original_model_effort": "claude-opus-5-5/medium",
+      "arm_plan": [
+        "B",
+        "A",
+        "D",
+        "C",
+        "E"
+      ]
+    },
+    {
+      "task_id": "end-user-channel-04",
+      "ticket": ".scratch/end-user-channel/issues/04-cors-on-prefix.md",
+      "base": "8a4274fed2676a250a702c57ace49a517b686876",
+      "merge": "5a3710824aad6aee5d239a7d11ef26b7e275812a",
+      "branch": "feature/04-cors-on-prefix",
+      "tier": "작은",
+      "size": 4,
+      "order": 6,
+      "pilot": false,
+      "pr_cost_usd": 20.4797,
+      "round_cap_usd": 61.4391,
+      "hidden_tests": [
+        "tests/channel/http/test_end_user.py::test_허용_출처의_요청은_200과_에러_응답_모두에_CORS_헤더_셋을_받는다",
+        "tests/test_server.py::test_최종_사용자_면의_예기치_않은_500도_봉투이고_CORS_헤더와_추적_식별자를_든다",
+        "tests/test_server.py::test_CORS_분기는_인증과_같은_경로로_면을_가른다"
+      ],
+      "support_files": [],
+      "original_model_effort": "claude-opus-5-5/xhigh",
+      "arm_plan": [
+        "E",
+        "B",
+        "C",
+        "A",
+        "D"
+      ]
+    },
+    {
+      "task_id": "conversation-01",
+      "ticket": ".scratch/conversation/issues/01-contract-continue-run-and-own-exchanges.md",
+      "base": "300b5f03fd01afc30acebff9acab263fdcb1a82f",
+      "merge": "4112d2b854fcd881aff5548950acbb1b0ae2c9a5",
+      "branch": "feature/01-contract-continue-run-and-own-exchanges",
+      "tier": "중간",
+      "size": 10,
+      "order": 7,
+      "pilot": false,
+      "pr_cost_usd": 49.4847,
+      "round_cap_usd": 148.4541,
+      "hidden_tests": [
+        "tests/channel/http/test_router.py::test_스트림_항목이_이름_있는_Event_이고_TraceEvent_와_같은_멤버를_가리킨다",
+        "tests/channel/http/test_router.py::test_409_는_채널_라우트에만_있다",
+        "tests/channel/http/test_router.py::test_없는_앞_실행과_없는_에이전트는_404_봉투이고_메시지가_가른다",
+        "tests/channel/http/test_router.py::test_다른_주체와_끝나지_않음과_꺼짐은_409_봉투이고_트레이스가_생기지_않는다[\\ub2e4\\ub978 \\uc8fc\\uccb4]",
+        "tests/channel/http/test_router.py::test_다른_주체와_끝나지_않음과_꺼짐은_409_봉투이고_트레이스가_생기지_않는다[\\ub05d\\ub098\\uc9c0 \\uc54a\\uc74c]",
+        "tests/channel/http/test_router.py::test_다른_주체와_끝나지_않음과_꺼짐은_409_봉투이고_트레이스가_생기지_않는다[\\uaebc\\uc9d0]",
+        "tests/channel/http/test_router.py::test_고리가_깨지면_500_봉투이고_message_가_그_PluginError_의_문구다",
+        "tests/channel/http/test_router.py::test_패턴을_어기는_앞_실행은_422이고_트레이스_포트가_불리지_않는다",
+        "tests/channel/http/test_router.py::test_이어_가기_본문에_추가_필드를_실으면_무시하지_않고_422다[principal]",
+        "tests/channel/http/test_router.py::test_이어_가기_본문에_추가_필드를_실으면_무시하지_않고_422다[model]",
+        "tests/channel/http/test_router.py::test_이어_가기_본문에_추가_필드를_실으면_무시하지_않고_422다[previous_run]",
+        "tests/channel/http/test_router.py::test_이어_가기_경로와_결정_경로는_서로_가로채지_않는다",
+        "tests/channel/http/test_router.py::test_공유_409_설명은_세_채널_라우트에서_같고_상태와_주체를_함께_말한다"
+      ],
+      "support_files": [],
+      "original_model_effort": "claude-fable-5-1/high",
+      "arm_plan": [
+        "A",
+        "C",
+        "E",
+        "D",
+        "B"
+      ]
+    }
+  ]
+}

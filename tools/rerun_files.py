@@ -9,7 +9,9 @@ import한다. 판정이 이 모듈만 import해도 회차 도구의 바깥 몫�
 
 꼴.
 - 두 파일 모두 JSON이고 맨 위는 객체다. 첫 키는 꼴 판 `shape_version`(정수)이다. 판을 올리면 옛 판의
-  파일은 읽기가 거부한다.
+  파일은 읽기가 거부한다. 예외는 회차 기록의 판 1 하나다. 판 2가 더한 `other_usd`가 없는 꼴로 받고
+  그 값을 0으로 읽는다. 러너의 예산과 판정이 커밋한 파일럿 기록(판 1)까지 읽기 때문이다. 그래서 판 1
+  기록에 들지 않은 하위 세션의 비용은 0으로 남는다. 쓰기는 판 2만 쓴다.
 - 읽기는 모르는 판, 빠진 키, 형이 다른 값, 모르는 키를 `ShapeError`로 거부한다. 값이 비는 칸도 키는
   들고 값이 `null`이다. 빈 값과 0을 가른다(게이트가 돌지 않은 것과 종료 0은 다르다).
 - 쓰기는 지은 값을 글로 바꾼 뒤 이 모듈의 읽기로 다시 풀어 보고, 거부되면 쓰지 않는다. 그래서 쓰는
@@ -19,7 +21,9 @@ import한다. 판정이 이 모듈만 import해도 회차 도구의 바깥 몫�
   `claude-`로 시작하는 이름과 `<synthetic>`, 창·subtype·끝난 까닭·노력은 영소문자 식별자, 도구
   이름은 영문 식별자, 계정 이름은 이메일의 `@` 앞 꼴(첫 글자는 영소문자나 숫자이고 그 뒤는
   영소문자·숫자·`._-`다. 대문자와 `+`는 받지 않는다), 오염 꼴의 이름은 러너 상수의 꼴이다. 게이트와
-  준비의 명령은 명세가 정한 세 명령의 상수(`GATE_COMMANDS`, `SETUP_COMMANDS`)와 같아야 한다. 회차
+  준비의 명령은 명세가 정한 명령의 상수와 같아야 한다. 게이트는 두 묶음(`GATE_SETS`) 가운데 하나를
+  그 차례로 들고, 준비는 세 명령(`SETUP_COMMANDS`) 가운데 하나다. 어느 게이트 묶음이 그 과제의
+  것인지 (B 에 `GATE_FILE`이 있는지)는 기록만으로 알 수 없어 보지 않는다. 회차
   폴더는 뿌리를 뺀 이름만 담고, 그 이름은 그 기록의 과제 id·갈래·회차 번호로 지은 회차 폴더
   이름이다. 뿌리는 사람이 명령 줄로 준 경로라 커밋하는 기록에 남기지 않는다. 실패한 숨은 시험의
   노드 ID는 겹치지 않고, 숨은 시험 ID와 같은 꼴(아래 허용 목록, 제어 문자(줄바꿈 포함) 없음)이다.
@@ -50,7 +54,12 @@ from pathlib import Path
 
 type Json = dict[str, Json] | list[Json] | str | int | float | bool | None
 
-SHAPE_VERSION = 1
+SHAPE_VERSION = 1  # 과제 목록의 꼴 판
+# 회차 기록의 꼴 판. 2026-10-27 에 비용의 `other_usd`를 더해 2 다(파일럿 티켓 11). 과제 목록은
+# 그대로라 판을 나눴다.
+RECORD_SHAPE_VERSION = 2
+# 읽기가 받는 회차 기록의 옛 판. `other_usd`가 없고 0으로 읽는다(모듈 독스트링의 꼴).
+_RECORD_SHAPE_V1 = 1
 
 # --- 갈래(설계 4절) ---
 
@@ -123,18 +132,57 @@ RULE_ONLY = "하나뿐인 브랜치"
 RULE_NONE = "없음"
 RULES = (RULE_BRANCH, RULE_ONLY, RULE_NONE)
 
-# 결과 작업 트리에서 도는 게이트 셋, 이 차례다(명세 "게이트와 숨은 시험").
+# 결과 작업 트리에서 도는 게이트 셋, 이 차례다(명세 "게이트와 숨은 시험"). B 에 `GATE_FILE`이 있는
+# 과제의 묶음이다.
+GATE_FILE = "tools/run_checks.py"
 GATE_COMMANDS = (
     "uv run ruff check .",
     "uv run ruff format --check .",
-    "uv run python tools/run_checks.py",
+    f"uv run python {GATE_FILE}",
 )
+# B 에 `GATE_FILE`이 없는 과제(2026-10-07 #160 앞)의 게이트, 이 차례다. 셋째 게이트 대신 그때의
+# CLAUDE.md "검증 명령" 절의 손으로 치는 명령을 친다(명세 "게이트와 숨은 시험"의 2026-10-26 주석).
+OLD_GATE_COMMANDS = (
+    "uv run ruff check .",
+    "uv run ruff format --check .",
+    "uv run pytest -q",
+    "uv run pyright",
+    "uv run lint-imports",
+    "pnpm -C web verify",
+)
+# 회차 기록의 게이트 칸이 받는 묶음. 기록은 그 가운데 하나를 그 차례로 든다.
+GATE_SETS = (GATE_COMMANDS, OLD_GATE_COMMANDS)
+_GATE_NAMES = tuple(dict.fromkeys(c for s in GATE_SETS for c in s))
 # 준비 명령 셋(명세 "준비"). 결과 작업 트리의 준비도 같다.
 SETUP_COMMANDS = (
     "uv sync",
     "pnpm -C web install --frozen-lockfile",
     "uv run pre-commit install",
 )
+
+
+# --- 사전 등록(명세 "파일럿과 사전 등록"의 주석) ---
+
+
+def prereg_line(module: str, name: str, value: Json) -> str:
+    """사전 등록 절에 적는 코드 상수 한 줄. `<모듈>.<이름> = <JSON 한 줄>`이다.
+
+    정의에 드는 상수를 가진 모듈은 그 값을 모듈의 `PREREG_VALUES`(이름과 JSON 값의 표)에 모으고,
+    시험이 항목마다 이 줄을 지어 사전 등록 절에서 찾는다. 절의 해시는 README 글만 보므로, 해시를
+    고정한 뒤 상수만 바뀌면 그 시험이 빨개진다. 표에 넣지 않은 상수는 시험이 잡지 못한다.
+    """
+    return f"{module}.{name} = {json.dumps(value, ensure_ascii=False)}"
+
+
+# 판정을 바꾸는 정규식 플래그. 글만 실으면 플래그를 지워도 시험이 초록이다.
+_PREREG_FLAGS = (("IGNORECASE", re.IGNORECASE), ("MULTILINE", re.MULTILINE), ("DOTALL", re.DOTALL))
+
+
+def prereg_pattern(pattern: re.Pattern[str]) -> Json:
+    """정규식의 사전 등록 값. 글과 함께 위 플래그 가운데 켠 것의 이름을 싣는다."""
+    flags: list[Json] = [name for name, flag in _PREREG_FLAGS if pattern.flags & flag]
+    return {"pattern": pattern.pattern, "flags": flags}
+
 
 # --- 글자의 꼴 ---
 
@@ -155,6 +203,22 @@ _SEGMENT = r"[A-Za-z0-9_][A-Za-z0-9_.-]*"
 _TEST_FILE = re.compile(rf"tests/(?:{_SEGMENT}/)*test_[A-Za-z0-9_.-]*\.py")
 _TESTS_PY = re.compile(rf"tests/(?:{_SEGMENT}/)*{_SEGMENT}\.py")
 _CONFTEST = re.compile(rf"(?:{_SEGMENT}/)*conftest\.py")
+
+# 사전 등록 절과 대 보는 값(`prereg_line`). 시험 파일의 세 꼴은 숨은 시험의 모집단을 정한다.
+PREREG_VALUES: dict[str, Json] = {
+    "SHAPE_VERSION": SHAPE_VERSION,
+    "RECORD_SHAPE_VERSION": RECORD_SHAPE_VERSION,
+    "ARMS": [[a.name, a.model, a.effort] for a in ARMS],
+    "END_REASONS": {kind: [*reasons] for kind, reasons in END_REASONS.items()},
+    "RULES": [*RULES],
+    "GATE_COMMANDS": [*GATE_COMMANDS],
+    "OLD_GATE_COMMANDS": [*OLD_GATE_COMMANDS],
+    "SETUP_COMMANDS": [*SETUP_COMMANDS],
+    "MODEL_LABELS": {**MODEL_LABELS},
+    "TEST_FILE": prereg_pattern(_TEST_FILE),
+    "TESTS_PY": prereg_pattern(_TESTS_PY),
+    "CONFTEST": prereg_pattern(_CONFTEST),
+}
 
 
 class ShapeError(ValueError):
@@ -307,7 +371,7 @@ def dumps_task_list(task_list: TaskList) -> str:
 
 
 def parse_task_list(text: str) -> TaskList:
-    o = _top(text, "과제 목록", ("kind", "tasks"))
+    o, _ = _top(text, "과제 목록", ("kind", "tasks"), (SHAPE_VERSION,))
     kind = o.choice("kind", LIST_KINDS)
     tasks = tuple(_task(item) for item in o.objs("tasks", _TASK_KEYS))
     for t in tasks:
@@ -468,6 +532,9 @@ class Hit:
 class Spend:
     claude_code_usd: float  # 세션마다 비용의 합
     official_usd: float  # 공식 단가의 셈
+    # 러너가 띄우지 않은 세션(과제의 시험이 띄운 하위 `claude -p`)의 공식 단가 셈. 판정이 읽는 두
+    # 비용에 더한다(`judge_view`)
+    other_usd: float
     tokens: Tokens
     substitutes: tuple[Substitute, ...]
     wall_seconds: float
@@ -548,6 +615,7 @@ _HIT_KEYS = ("pattern", "tool")
 _SPEND_KEYS = (
     "claude_code_usd",
     "official_usd",
+    "other_usd",
     "tokens",
     "substitutes",
     "wall_seconds",
@@ -674,6 +742,7 @@ def _spend_json(s: Spend) -> dict[str, Json]:
     return {
         "claude_code_usd": s.claude_code_usd,
         "official_usd": s.official_usd,
+        "other_usd": s.other_usd,
         "tokens": _tokens_json(s.tokens),
         "substitutes": [
             {"model": x.model, "tokens": _tokens_json(x.tokens)} for x in s.substitutes
@@ -689,7 +758,7 @@ def _spend_json(s: Spend) -> dict[str, Json]:
 
 def _record_json(r: Record) -> dict[str, Json]:
     return {
-        "shape_version": SHAPE_VERSION,
+        "shape_version": RECORD_SHAPE_VERSION,
         "task_id": r.task_id,
         "arm": r.arm,
         "round_no": r.round_no,
@@ -817,7 +886,7 @@ def _outcome(o: _Obj) -> Outcome:
     if not o.is_null("gates"):
         gates = tuple(
             Gate(
-                command=g.choice("command", GATE_COMMANDS),
+                command=g.choice("command", _GATE_NAMES),
                 exit_code=g.opt_integer("exit_code"),
                 timed_out=g.flag("timed_out"),
             )
@@ -825,8 +894,10 @@ def _outcome(o: _Obj) -> Outcome:
         )
         for i, g in enumerate(gates):
             _check_end(f"{o.where}.gates[{i}]", g.exit_code, timed_out=g.timed_out)
-        if tuple(g.command for g in gates) != GATE_COMMANDS:
-            raise ShapeError(f"{o.where}.gates: 게이트는 {GATE_COMMANDS} 셋이 이 차례로 든다")
+        if tuple(g.command for g in gates) not in GATE_SETS:
+            raise ShapeError(
+                f"{o.where}.gates: 게이트는 {GATE_COMMANDS}나 {OLD_GATE_COMMANDS}가 이 차례로 든다"
+            )
     hidden_obj = o.opt_obj("hidden", _HIDDEN_KEYS)
     hidden = None
     if hidden_obj is not None:
@@ -858,10 +929,11 @@ def _outcome(o: _Obj) -> Outcome:
     )
 
 
-def _spend(o: _Obj) -> Spend:
+def _spend(o: _Obj, shape_version: int) -> Spend:
     return Spend(
         claude_code_usd=o.money("claude_code_usd"),
         official_usd=o.money("official_usd"),
+        other_usd=0.0 if shape_version == _RECORD_SHAPE_V1 else o.money("other_usd"),
         tokens=_tokens(o.obj("tokens", _TOKENS_KEYS)),
         substitutes=tuple(
             Substitute(
@@ -889,7 +961,12 @@ def dumps_record(record: Record) -> str:
 
 
 def parse_record(text: str) -> Record:
-    o = _top(text, "회차 기록", _RECORD_KEYS)
+    o, version = _top(text, "회차 기록", _RECORD_KEYS, (_RECORD_SHAPE_V1, RECORD_SHAPE_VERSION))
+    spend_keys = (
+        tuple(k for k in _SPEND_KEYS if k != "other_usd")
+        if version == _RECORD_SHAPE_V1
+        else _SPEND_KEYS
+    )
     end = _end(o.obj("end", _END_KEYS))
     outcome = _outcome(o.obj("outcome", _OUTCOME_KEYS))
     if end.kind != END_DONE and (
@@ -926,7 +1003,7 @@ def parse_record(text: str) -> Record:
         asked_at_end=o.flag("asked_at_end"),
         end=end,
         outcome=outcome,
-        spend=_spend(o.obj("spend", _SPEND_KEYS)),
+        spend=_spend(o.obj("spend", spend_keys), version),
     )
 
 
@@ -974,7 +1051,7 @@ class JudgeView:
     condition_version: int
     claude_version: str | None
     end: End
-    gates_green: bool | None  # 게이트 셋이 모두 종료 0. 돌지 않았으면 빈 값
+    gates_green: bool | None  # 게이트가 모두 종료 0. 돌지 않았으면 빈 값
     hidden_passed: bool | None  # 숨은 시험이 모두 통과. 돌지 않았으면 빈 값
     cost_claude_code_usd: float
     cost_official_usd: float
@@ -1009,8 +1086,8 @@ def judge_view(record: Record) -> JudgeView:
         end=record.end,
         gates_green=gates_green,
         hidden_passed=hidden_passed,
-        cost_claude_code_usd=s.claude_code_usd,
-        cost_official_usd=s.official_usd,
+        cost_claude_code_usd=s.claude_code_usd + s.other_usd,
+        cost_official_usd=s.official_usd + s.other_usd,
         interventions=record.interventions,
         asked_at_end=record.asked_at_end,
         tokens=s.tokens,
@@ -1122,7 +1199,10 @@ def _read_text(path: Path, what: str) -> str:
         raise ShapeError(f"{what}: UTF-8이 아니다({e})") from e
 
 
-def _top(text: str, what: str, keys: tuple[str, ...]) -> _Obj:
+def _top(
+    text: str, what: str, keys: tuple[str, ...], versions: tuple[int, ...]
+) -> tuple[_Obj, int]:
+    """맨 위 객체와 그 꼴 판. 판은 `versions` 가운데 하나여야 한다."""
     try:
         value: Json = json.loads(text)
     except (ValueError, RecursionError) as e:  # 자릿수 한도를 넘는 정수는 맨 ValueError다
@@ -1130,9 +1210,9 @@ def _top(text: str, what: str, keys: tuple[str, ...]) -> _Obj:
     if not isinstance(value, dict):
         raise ShapeError(f"{what}: 맨 위가 객체가 아니다")
     version = value.get("shape_version")
-    if not _is_int(version) or version != SHAPE_VERSION:
-        raise ShapeError(f"{what}: 모르는 꼴 판 {version!r}(이 모듈은 {SHAPE_VERSION})")
-    return _Obj(value, what, ("shape_version", *keys))
+    if not isinstance(version, int) or not _is_int(version) or version not in versions:
+        raise ShapeError(f"{what}: 모르는 꼴 판 {version!r}(이 모듈은 {versions[-1]})")
+    return _Obj(value, what, ("shape_version", *keys)), version
 
 
 def _no_duplicates(what: str, values: list[str] | list[int]) -> None:
