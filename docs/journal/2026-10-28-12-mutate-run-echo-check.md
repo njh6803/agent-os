@@ -1,0 +1,97 @@
+# 2026-10-28 (12) 변이를 돌리는 실행도 표지의 메아리를 보다 (harness 020)
+
+## 시작
+
+세션을 연 지시문의 시작 프롬프트와 범위다. 세션 제목은 `chore/020-mutate-run-echo-check` 이다.
+
+> 사용자: 대기열 502를 티켓 .scratch/harness/issues/020-mutate-run-echo-check.md로 쓰고 한다 (브랜치 chore/020-mutate-run-echo-check, 모델 Opus 5.5 / medium 레벨 스윕의 갈래, 나란히 여는 8 중 2, 이번 요청 범위: PR과 병합까지. 같은 파일을 대상으로 둔 350·455·517 은 이번에 열지 않는다)
+
+`EnterWorktree` 로 `020-mutate-run-echo-check` 워크트리를 만들고 브랜치 이름을 바꿨다. 이 세션은 묶음의 첫 세션이 아니라 `tidy-checkouts` 를 돌지 않았다. 티켓을 쓴 직후 다시 친 `tools/sibling_overlap.py` 에서 겹침이 없었다(이 브랜치의 새 번호: 티켓 020).
+
+## 한 것
+
+- `tools/mutate.py` 의 `_validate`(변이를 돌리는 `measure` 의 1단계)가 원문 확인에 더해 `_echo_problems` 를 본다. 걸리면 `SpecError` 로 기준선 전에 끝나고 `main` 이 "변이 파일 오류(아무 파일도 쓰지 않았다)"와 함께 2로 끝낸다. 전체 실행은 표의 변이 모두를, 고른 실행은 고른 변이만 본다(`_run_table` 이 `select` 한 표를 `measure` 에 넘긴다, 코드 읽기).
+- 모듈 독스트링(사용법 끝 문장, 표지 메아리 절, 하는 일 1단계)과 `.claude/rules/probes.md` 첫 항목의 메아리 문장을 맞췄다.
+- 시험: `test_변이를_돌리는_실행도_메아리에_걸리면_기준선_전에_끝낸다` 세 갈래(전체, 번호, `--since`). 고치기 전 판에서 셋 다 러너 대역의 `AssertionError: 변이 파일 오류인데 테스트를 돌렸다` 로 빨갰다(`uv run pytest -q tests/tools/test_mutate.py -k 기준선_전에_끝낸다` 를 손으로 쳤다).
+- 기존 시험 `test_못_보는_것_첫_실패에서_멈춘_변이는_뒤의_시험만_찍는_표지를_놓쳐_어긋난다` 가 새 판정에 걸렸다. 그 표지 `MARKER-B` 가 시험 파일의 `print('MARKER-B')` 에 글자 그대로 있었다. 시험이 재는 것(`-x` 가 뒤 시험을 돌리지 않아 표지가 없다)은 그대로 두고 `print('MARKER' + '-B')` 로 원문에서 뗐다.
+- 변이 표 `.scratch/harness/probes/mutate_run_echo_mutations.toml`(변이 하나).
+
+## 셈
+
+변이 표 가운데 이번 고침으로 전체 실행이 1단계에서 멈출 표: 작업 트리의 142(커밋된 141과 이 티켓의 새 표) 가운데 16, 메아리 161건(세션 스크래치 스크립트가 표마다 `read_spec` 과 `_echo_problems` 를 불러 센 것을 손으로 봤다. 커밋하지 않았다). 가장 많은 표는 `.scratch/token-usage/probes/token_report_mutations.toml`(63)과 `.scratch/token-usage/probes/session_usage_hook_mutations.toml`(26)이다. 그 표는 다시 돌릴 때 표지를 고르거나 메아리가 없는 변이를 번호로 골라 돌린다. 판정은 파일 단위라 같은 파일의 다른 시험에만 있는 글자도 센다(독스트링의 못 보는 것). 그래서 이 수에는 거짓 양성이 섞일 수 있다.
+
+## 검증
+
+- `uv run pytest -q -n 4 tests/tools/test_mutate.py`: 셀프 리뷰 반영 전에 235 passed(손으로 쳤다). 그 전 실행에서 `MARKER-B` 시험 하나가 새 판정에 걸려 빨갰고, 위 한 것의 넷째 줄처럼 고쳤다.
+- 변이 표(셀프 리뷰 반영 뒤 커밋 전 작업 트리): `PYTHONUTF8=1 uv run python tools/mutate.py .scratch/harness/probes/mutate_run_echo_mutations.toml` 이 "변이 1 모두 기대대로"를 찍었다(도구 출력, 실패 이름 `…기준선_전에_끝낸다[전체]`). 끝난 뒤 `git diff --stat` 에 변이가 남지 않았다.
+- `uv run pyright tools/mutate.py tests/tools/test_mutate.py`: 0 errors(반영 전).
+- 카나리아: `tools/sibling_overlap.py` 가 `.claude/rules/probes.md` 를 바꿨다고 알린 여섯을 `tools/canary.py` 로 돌렸다(claude 2.1.302, 실험군은 `7d27ae45` 위의 커밋하지 않은 판, 셀프 리뷰 반영 뒤). `probes_rule`, `probes_rule_kill_and_snapshot`(`--control-commit 528bd257`), `probes_rule_marker_other_reading`, `probes_rule_stream_delete_marker`, `probes_rule_uncommitted_edit` 은 통과 4. `probes_rule_conclusion_hook`(`--control-commit 77ecd319`)은 두 번 돌려 통과 3·실패 1, 통과 2·실패 2였다. 실패 셋은 모두 실험군 회차가 Sonnet 5.5 의 안전 장치 거절(`API Error: … safeguards flagged`)로 답을 내지 못한 것이고, 답한 실험군 회차 셋과 대조군 둘은 모두 통과였다(러너 출력). 거절은 측정이 아니라 더 돌리지 않았다. 이번에 바꾼 것은 첫 항목이고 이 명세가 묻는 것은 셋째 항목이다. 여섯의 `# 최신 결과:` 줄을 고쳤다.
+- 나머지 손으로 치는 다섯은 커밋의 pre-commit 으로 갈음한다.
+- 첫 커밋 시도의 pre-commit: pytest 만 빨갰다(1111.7초, web-verify 1092.7초. 다른 세션이 함께 돌던 때다). 실패는 이 변경과 무관한 `tests/tools/test_rerun_runner.py::test_같은_갈래가_두_번_든_파일럿의_두_회차가_함께_돌아도_번호가_다르다` 의 `assert 1 == 2`(두 회차가 함께 돈 최대 번호가 1)였고, 그 시험만 홀로 다시 돌리니 통과했다(4.84초, 손으로 쳤다). 부하에서 두 회차가 겹치지 않은 것으로 어림한다. 대기열 후보로 넘긴다.
+
+## 셀프 리뷰
+
+기점 `7d27ae45`, 바뀐 파일 셋, 커밋 0, 미추적 셋(티켓, 변이 표, 이 일지).
+
+- 표준 축: Major 하나. 변이 표의 표지 `기준선_전에_끝낸다[번호]`·`[since]` 는 빨강 기대 pytest 변이에 붙는 `-x` 때문에 출력에 없다(서브에이전트가 같은 모양의 시험을 `pytest -q -x` 로 손으로 돌려 `[전체]` 만 찍힌 것을 봤다. 도구 독스트링의 `-x` 못 보는 것과 맞다). 고쳤다: 표지를 `[전체]` 와 `AssertionError: 변이 파일 오류인데` 로 줄이고 그 까닭을 표 머리 주석에 적었다. Minor: 프로브 README 행이 없다(변이를 돌린 뒤 더한다). 사실 오류: "커밋된 표 142개"는 141개에 이 새 표를 더한 수다. 고쳤다. Nit 둘: `_file_problems + _echo_problems` 의 중복은 `_picked_problems` 로 모았고, 새 시험이 `_원문_확인` 헬퍼로 실행을 부르던 이름 어긋남은 `main` 을 바로 부르게 고쳤다.
+- 명세 축: Critical·Major 없음. 같은 수(142·"변이 161개")를 Minor 로 냈고 "메아리 161건"으로 고쳤다. 고른 실행은 `select` 한 표만 `measure` 에 가고, `_validate` 를 부르는 곳은 `measure` 하나라 메아리 판정이 빠지는 길이 없다(서브에이전트가 코드와 grep 으로 봤다). 옛 표현의 잔존 0. 16개 표의 README 재현 명령이 이제 1단계에서 2로 끝난다는 것은 티켓과 이 일지의 셈 절에 적었고, 각 README 행은 고치지 않았다(그 표를 다시 돌릴 때 표지를 고른다).
+
+대기열 후보(회고가 판정한다): `tests/tools/test_rerun_runner.py::test_같은_갈래가_두_번_든_파일럿의_두_회차가_함께_돌아도_번호가_다르다` 가 부하 아래 pre-commit 에서 한 번 빨갰고 홀로는 통과했다(위 검증 절).
+
+고친 것 줄의 새 사실 문장(PR 직전 리뷰에 밀 주장으로 넘긴다): "이 브랜치의 작업 트리에 있는 표 142개(커밋된 141개와 이 티켓의 새 표) 가운데 16개가 메아리 161건을 가져", "빨강을 기대한 pytest 변이에는 `-x` 가 붙어 첫 갈래(`[전체]`)에서 멈추므로, 뒤 갈래(`[번호]`, `[since]`)의 이름은 표지로 두지 않는다".
+
+## PR 직전 리뷰
+
+이 세션(인계받은 세션)이 했다. `coderabbit auth status` 가 `Seat: not assigned` 라 CLI 대신 대체 둘을 나란히 돌렸다. origin/main 이 기점 `7d27ae45` 그대로라 합칠 것이 없었다.
+
+- `/security-review`: 식별 서브태스크가 지적 0을 냈다(새 셸 실행·eval·쓰기 없음, `_echo_problems` 의 읽기는 `_inside` 로 저장소 안에 묶이고 오류 문구에 파일 내용을 싣지 않는다). 지적이 없어 거짓 양성 거르기 서브태스크는 돌지 않았다.
+- `bug-perf-review`: 유효 0, Nit 둘, 오탐 0. 판정이 빠지는 길은 없다(`measure` 를 부르는 곳은 `_run_table` 하나, 서브에이전트가 코드를 읽고 새 시험 셋을 돌려 통과를 봤다). 밀 주장 둘은 모두 맞다고 냈다. 주장 A 는 서브에이전트가 스크래치 스크립트로 `git ls-files --cached --others --exclude-standard` 의 표 142개를 `read_spec`·`_echo_problems` 로 다시 세어 16개·161건을 봤다(새 표는 0건). 주장 B 는 `tools/mutate.py` 의 `expect == "red"` 이고 내장 러너면 `-x` 를 붙이는 코드를 읽어 맞췄고, 변이를 손으로 넣어 pytest 출력을 본 것은 아니다. `MARKER-B` 고침은 재던 것을 바꾸지 않는다고 코드 읽기로 판정했다.
+- Nit 둘은 고치지 않는다. 하나는 16개 표를 다시 전체로 돌릴 때 표지를 고쳐야 한다는 것이고 셈 절에 이미 적었다. 다른 하나는 "161건"이 표지 수가 아니라 (변이, 시험 파일) 쌍마다 한 줄인 `_echo_problems` 의 줄 수라는 것이다. 셈 절의 "메아리 161건"은 그 줄 수로 읽는다.
+
+## PR
+
+[#410](https://github.com/njh6803/agent-os/pull/410). 첫 헤드 `eabe1cab`.
+
+- CI: `web` 이 `apps/widget/components/pages/WidgetApproval.test.tsx` 의 "사유가 상한의 90% 이상이면 …" 시험 하나로 빨갰다(`Unable to find an element with the text: 18,000 / 20,000`, 1368 가운데 1 실패, `gh run view 40600551744 --log-failed` 를 손으로 봤다). 이 브랜치는 `web/` 을 건드리지 않았고, 같은 기점 `7d27ae45` 의 main 실행 40588159962 는 초록이었고, 이 커밋의 pre-commit `web-verify` 도 Passed 였다. 불안정한 시험으로 어림해 실패한 잡만 다시 돌렸다. 대기열 후보(회고가 판정한다): 그 위젯 시험이 CI 에서 한 번 빨갰다.
+- CodeRabbit: 한도(`Review limit reached`)로 리뷰 없음. 회차로 세지 않는다.
+- claude-review 첫 회차: Critical·Major 없음. Minor 하나(`_picked_problems` 의 이름과 독스트링이 "고른 변이"에 묶였는데 고르지 않은 전체 실행에도 쓰인다)는 독스트링을 넘겨받은 표 기준으로 고쳤다. 이름은 원문 확인과 메아리를 함께 보는 판정이라는 뜻이 독스트링에 있어 두었다. Nit 하나(모듈 독스트링 두 곳이 같은 사실을 적는다)는 지금 어긋나지 않아 두었다.
+
+## 회고
+
+후보 셋. 승인 1(회차로 세는 것), 기각 1, 일지에만 1. 넘김 0.
+
+- 위젯 승인 시험의 CI 빨강(위 PR 절): 열린 486이 처방한 사건이라 회차로 센다(승인). 486 에 더해 5회차다. 처방(재현 루프로 원인을 가른다)은 바꾸지 않는다.
+- 변이 표의 뒤 갈래 표지가 `-x` 때문에 출력에 없던 것(셀프 리뷰 표준 축 Major): 기각. 그 표를 돌리면 `tools/mutate.py` 가 표지가 출력에 없는 변이를 어긋남으로 알린다(도구의 판정, 코드를 읽었다). 이미 있는 검사가 그 자리에서 알리는 것이다.
+- 봇 회차 반영 커밋의 첫 시도에서 pre-commit pytest 가 네 시험으로 빨갰다(`test_probe_kit.py` 의 배출 제한 시간, `test_sibling_overlap.py` 둘, `test_tidy_checkouts.py` 의 `remove` 하나. 1103초, 출력에 `cannot spawn git: Function not implemented`). 넷만 따로 돌리니 모두 통과했다(205초, 손으로 쳤다). 아래 줄과 같은 까닭으로 일지에만 적는다.
+- `tests/tools/test_rerun_runner.py` 의 두 회차 시험이 부하 아래 pre-commit 에서 한 번 빨간 것(검증 절): 306 이 받아들여 닫은 끝이 열린 결함 종류(부하에서 빨간 시간 시험)의 새 사례라 행을 잇지 않고 일지에만 적는다.
+
+대기열 502 는 이 PR 의 티켓 경로로 닫았다. `tools/queue_open_rows.py` 의 만료할 행은 없었다(도구 출력).
+
+## 다음
+
+이 PR 이 든 주제(502)는 남지 않았다. 다음 작업은 `.scratch/plan.md` 의 프론티어에서 고른다. 486 이 5회차가 되었지만 chore 는 기능의 마지막 티켓 뒤에 연다(`next-session` 결정표).
+
+## 커밋
+
+`bfc43aa1`. 두 번째 시도의 pre-commit 이 모두 Passed(pytest 720.5초, web-verify 696.6초). 헌법 판은 해당 파일이 없어 Skipped. 푸시는 아직 하지 않았다.
+
+## 인계
+
+커밋 뒤 인계 계기(컨텍스트 276,125 토큰, 경계 `커밋 뒤`)가 와서 같은 브랜치·워크트리의 새 세션에 넘긴다. 이 세션의 제목은 `chore/020-mutate-run-echo-check (인계함)` 으로 바꾼다(바꾸기 전 제목은 `chore/020-mutate-run-echo-check`). 이 일지의 이 절은 커밋하지 않았다. 새 세션이 이어 쓰고 커밋한다.
+
+지시문:
+
+```
+다음 작업: .scratch/harness/issues/020-mutate-run-echo-check.md. 변이를 돌리는 실행도 표지의 메아리를 보고 걸리면 기준선 전에 끝낸다(대기열 502)
+다음 단계: 구현
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: 대기열 502를 티켓 .scratch/harness/issues/020-mutate-run-echo-check.md로 쓰고 한다
+브랜치: chore/020-mutate-run-echo-check
+모델: Opus 5.5 / medium. 레벨 스윕의 갈래
+읽을 것: docs/journal/2026-10-28-12-mutate-run-echo-check.md
+이어받을 상태: 인계: 커밋 뒤. 구현·셀프 리뷰 반영·변이 표·카나리아 여섯까지 커밋 bfc43aa1 에 들었고 푸시와 PR 은 아직 없다. 남은 단계는 푸시, PR 직전 리뷰(일지 셀프 리뷰 절의 밀 주장 둘을 브리프에 싣는다), PR, 봇 회차, 병합이다. 일지의 커밋·인계 절은 커밋하지 않은 채 워크트리에 있다. 카나리아 probes_rule_conclusion_hook 은 실험군 셋이 안전 장치 거절로 답을 내지 못해 다시 돌리지 않았다(일지 검증 절). docs/journal/2026-10-28-12-mutate-run-echo-check.md
+확인할 선행 조건: 없음
+이번 요청 범위: PR과 병합까지
+```
+
+open-session을 부른다 2026-10-27T22:49:02Z

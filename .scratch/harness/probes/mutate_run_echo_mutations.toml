@@ -1,0 +1,21 @@
+# tools/mutate.py 의 변이를 돌리는 실행이 1단계에서 표지의 메아리를 보는 판정(대기열 502)을 빼는
+# 변이(harness 티켓 020).
+#   PYTHONUTF8=1 uv run python tools/mutate.py .scratch/harness/probes/mutate_run_echo_mutations.toml
+# 이 도구 자신을 고치는 변이라 커밋한 뒤 다른 워크트리에서 그 워크트리의 도구로 돌린다. 표지는 시험
+# 원문에 글자 그대로 없는 출력 문구다. 매개변수 id 가 붙은 실패 이름과, 러너 대역이 던진 예외의 머리
+# (`raise AssertionError("…` 가 아니라 pytest 가 찍는 `AssertionError: …`)다. 빨강을 기대한 pytest 변이에는
+# `-x` 가 붙어 첫 갈래(`[전체]`)에서 멈추므로, 뒤 갈래(`[번호]`, `[since]`)의 이름은 표지로 두지 않는다.
+
+[[mutation]]
+name = "변이를 돌리는 실행이 메아리를 보지 않는다"
+tests = ["tests/tools/test_mutate.py", "-q", "-k", "기준선_전에_끝낸다"]
+expect = "red"
+expect_output = ["기준선_전에_끝낸다[전체]", "AssertionError: 변이 파일 오류인데"]
+[[mutation.edit]]
+file = "tools/mutate.py"
+old = '''    problems = _picked_problems(root, spec)
+    if problems:
+        raise SpecError("\n".join(problems))'''
+new = '''    problems = _file_problems(root, spec)
+    if problems:
+        raise SpecError("\n".join(problems))'''
