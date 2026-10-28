@@ -252,3 +252,28 @@ ADR 0025 2026-10-28 이력 끝에 "이 이력은 2026-10-28에 사용자가 승�
 ## 이어받은 세션 (커밋 뒤)
 
 위 "인계 (커밋 뒤)" 지시문으로 연 새 세션이다. 첫 턴 훅대로 제목을 `docs/design-card-build`로 바꾸고, `git worktree list`에서 그 브랜치가 체크아웃된 워크트리 `design-card-build`(`bd589828`)를 찾아 `EnterWorktree(path)`로 들어갔다. `grill-with-docs`는 그 스킬의 설명대로 리뷰 중이라 라운드를 다시 돌지 않고 PR 직전 리뷰부터 이었다. `git fetch` 뒤 `origin/main`은 브랜치를 딴 `5ccb51a0`에서 움직이지 않았다. `coderabbit auth status`가 `Plan: Free`, `Seat: not assigned`라 CLI 축은 돌지 못하고, `docs/constitution/operations.md` 리뷰 파이프라인 2의 대체 둘(`/security-review`, `bug-perf-review`)을 나란히 돌린다.
+
+### PR 직전 리뷰
+
+이 절의 일지 커밋(`a920a7fe`) 뒤에 둘을 띄웠다. 범위는 `5ccb51a0..HEAD`의 문서 여섯이다.
+
+- **`/security-review`.** 그 스킬의 1단계 서브태스크(sonnet)가 지적 0건을 보고해, 2단계(지적마다 오탐을 거르는 서브태스크)는 띄울 것이 없었다. 보고가 더한 줄의 비밀 꼴(`sk-`, `ghp_`, `AKIA`, `BEGIN … PRIVATE KEY`, `Bearer`, 긴 base64·hex 등), 이메일, URL, 위험 명령 꼴을 찾아 비밀 꼴·이메일·URL이 0건이었다고 적었다. "token"은 디자인 토큰이었고, "다음" 절의 임시 폴더 경로는 세션 폴더 이름이라 비밀이 아니라고 적었다. 이 판정은 보고를 읽은 것이고, 같은 grep을 본 세션이 다시 돌리지는 않았다.
+- **`bug-perf-review`.** 보고: 유효 Minor 2, 오탐 0, 호출 39. 밀 주장 아홉 가운데 일곱은 근거와 맞았고, 둘(세 번의 빌드는 일지 셋을 열었지만 내용은 읽지 않았다, `app.js`의 별칭 표를 `layout`이 가르는 자리는 따라가지 못했다)은 일부만 대 봤다. 저장소 밖 사본(앞 세션 scratchpad의 `artifact-files\3fee8974-…`)은 남아 있었다. 대조하지 못한 것은 `from-code.md`의 일곱 단계와 6MB, `url(./fonts/…)` 770건, 43,032바이트, 7,591줄, 그리고 예산으로 `GENERATED_CARD`·`MODE_NAMES` 행 번호·`web-design.md` 36행이다(뒤의 몇은 셀프 리뷰가 맞았다고 적었다).
+  1. (Minor) ADR 이력 "함께 고치는 것"의 옛 문구(뿌리 `.gitignore`의 두 주석과 그 아래 무시 줄)를 글자 그대로 따르면 첫 주석 아래 `/web/packages/ui/storybook-static/`까지 지운다. **고쳤다.** `.gitignore` 33~53행을 `sed -n`으로 열어 봤고 보고대로다. 첫 주석은 `/design-sync`를 드는 괄호만 고치고 그 아래 줄은 남기며, 둘째 주석과 그 아래 줄은 새 빌드의 출력 자리가 정해진 뒤 명세가 가른다고 적었다. 패키지 빌드 줄(`dist/`)을 남길지는 이 PR이 정하지 않는다.
+  2. (Minor) `.design-sync/` 정리 항목이 옛 문구에서 절이라고 부른 `NOTES.md`의 "아티팩트에 올리기"는 절이 아니라 "돌리는 법" 아래의 글머리 항목이고, 그 안에 남길 하위 항목(지난 산출 목록, 빌드가 짓지 않는 파일)과 빌린 빌드와 함께 사라질 하위 항목(driver, 올릴 산출 폴더)이 섞였다. **고쳤다.** `.design-sync/NOTES.md` 30~68행과 `upload.md`의 `NOTES` 언급(40·49·57·58행, `grep -n`)을 봤다. 옮길 것을 하위 항목 둘로 좁히고, `upload.md`가 `NOTES.md`를 가리키는 자리(그 항목과 58행의 Re-sync risks)를 옮긴 자리로 함께 고친다고 적었다.
+
+  두 고침은 사용자가 승인한 ADR 이력의 "함께 고치는 것"과 `.design-sync/` 정리 항목의 범위를 좁힌 것이고, 결정(남길 원본과 상태는 옮기고 빌린 빌드만 쓰는 것은 지운다)은 바꾸지 않았다. `.scratch/plan.md` 행은 "지난 산출 목록 등"이라 고칠 글자가 없다(`grep -o`로 봤다).
+
+  이 고침의 첫 커밋 시도는 pre-commit의 pytest가 1 failed, 5970 passed(584초)로 막았다. 실패는 `tests/channel/cli/test_interrupt.py::test_도구_호출_도중에_한_번_누르면_서버를_닫고_중단으로_끝난다`의 `assert 끝.pressed[0] < 끝.cancelled`이고, 두 값이 `1793166139.3591034`로 같았다(커밋 출력을 손으로 봤다). 누른 시각은 테스트 프로세스가, 취소 시각은 자식 프로세스가 `time.time()`으로 파일에 적는다(그 시험 85·102행을 읽었다). 이 PR은 문서만 바꿔 그 경로에 닿지 않는다. 두 프로세스의 시계 읽기가 같은 눈금에 떨어진 것으로 보지만 Windows 시계 해상도와의 관계는 재지 않은 어림이다. 같은 시험을 다룬 열린 대기열 행은 없었다(`queue_open_rows.py --search test_interrupt`). 같은 커밋을 다시 친다.
+
+  그 첫 시도를 띄운 직후 `hook_handoff`가 세션 컨텍스트 203,149 토큰, 경계 `커밋 뒤`로 인계를 지시했다. 이 세션의 지시문의 이어받을 상태가 `인계: 커밋 뒤`로 시작해 `next-session` "인계할 때" 1의 같은 경계에 들고, 그 커밋도 실패했으므로 넘기지 않고 잇는다.
+
+  둘째 시도도 pytest가 2 failed, 5969 passed(668초)로 막았다. 같은 `test_interrupt` 시험이 다시 두 값이 같아(`1793166834.9314744`) 실패했고, 하나는 `tests/adapters/test_filesystem.py::test_다른_프로세스가_운영자_파일을_연_채여도_교체가_재시도_안에서_성공한다`(`PermissionError: [WinError 5]` 뒤 `PluginError: 운영자 파일을 쓸 수 없다`)였다(커밋 출력을 손으로 봤다). 같은 시험이 두 번 연속 실패해 `CLAUDE.md` 작업 규약 6대로 `diagnosing-bugs`를 불렀다.
+
+  - 고리: 시험 파일만 따로(`uv run pytest -q -p no:cacheprovider -p no:xdist tests/channel/cli/test_interrupt.py`) 한 번 돌리니 같은 자리가 빨갰다(1 failed, 5 passed, 79초). 그 시험 하나만 다섯 번 돌리니(scratchpad의 `loop.sh`) 빨강 0이었다. 실패한 세 번은 모두 두 값이 정확히 같았다.
+  - 찾은 것: 이 PC의 파이썬 3.12.10에서 `time.get_clock_info('time')`은 `GetSystemTimeAsFileTime()`, 해상도 0.015625초다(손으로 쳤다). 시험의 자식 프로세스에서 누르는 스레드가 `pressed-0`을 적은 뒤 SIGINT를 올리고, 주 루프가 그 취소를 받아 `cancelled`를 적는다(시험 머리의 자식 코드를 읽었다). 그래서 누른 시각은 취소 시각보다 클 수 없고, 둘이 한 눈금 안에 들면 같다. 265행의 엄격한 `<`가 그 같음을 실패로 센다. 혼자 돌 때 초록인 까닭(두 쓰기 사이가 한 눈금을 넘는다)은 재지 않은 어림이다. 리눅스 CI의 벽시계는 해상도가 훨씬 높아 거기서는 드러나지 않을 것으로 본다(어림).
+  - 이 PR은 문서만 바꿔 그 경로에 닿지 않는다. 시험을 고치는 일은 이 PR의 티켓 밖이라 진단은 여기서 멈추고 고치지 않았다. 파일 시험의 실패는 한 번뿐이라 이 진단에 넣지 않았다.
+
+  어떻게 커밋할지 물었다. 첫 화면은 훅이 한 번 막았고, `tools/run_checks.py`가 `SKIP`을 검사 id로 읽고 pytest의 id가 `pytest`인 것, `.github/workflows/ci.yml`의 `verify`가 `python` 잡(ubuntu에서 `uv run pytest -q`)을 `needs`로 기다리는 것을 읽어 대 봤다. "전체로 돌리면 세 번"을 "시험 파일로 한 번과 pre-commit으로 두 번"으로, 걸린 시간을 "8~11분"으로 고쳐 다시 올렸다.
+
+  > 사용자: "로컬 pytest만 빼고 커밋 (Recommended)" — 설명: 커밋할 때 SKIP=pytest를 붙여 pre-commit의 다른 검사(pyright, web verify, 경계, 문서 검사 등)는 그대로 돌리고 pytest만 뺍니다(tools/run_checks.py가 SKIP을 검사 id로 읽습니다). 이 PR은 문서만 바꿔 pytest가 지나는 코드에 닿지 않고, PR을 열면 CI의 python 잡이 리눅스에서 pytest 전체를 돌리며 필수 검사 verify가 그 잡을 기다립니다. 빠진 로컬 pytest는 PR 체크리스트에 그렇게 적습니다. 빨개지는 시험(test_interrupt의 시각 비교)은 따로 고칠 세션을 제안 카드로 냅니다.
