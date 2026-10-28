@@ -15,6 +15,7 @@ from pathlib import Path
 
 import pytest
 from tools.hook_journal_evidence import (
+    BASH,
     LEAD,
     TOOLS,
     HookPayload,
@@ -97,11 +98,149 @@ def test_꼴이_어긋난_입력은_예외_없이_지나간다(tool_input: objec
     assert context_for(payload) is None
 
 
-def test_못_보는_것_Bash_로_고친_일지는_지나간다() -> None:
-    # Bash 의 실제 입력은 명령 칸뿐이고 등록 매처에도 Bash 가 없다. HookPayload 에 없는 칸을
-    # 실으려고 main 처럼 JSON 에서 풀어 넘긴다.
-    bash = {"tool_name": "Bash", "tool_input": {"command": f"cat >> '{JOURNAL}' <<'EOF'\nx\nEOF"}}
-    assert context_for(json.loads(json.dumps(bash))) is None
+def _bash(command: str, tool: str = "Bash") -> HookPayload:
+    return {"tool_name": tool, "tool_input": {"command": command}}
+
+
+REL = "docs/journal/2026-10-26-03-x.md"
+
+
+@pytest.mark.parametrize(
+    "command",
+    [
+        # 대기열 501 의 꼴: heredoc 으로 덧붙였다.
+        f"cat >> {REL} <<'EOF'\n- 러너의 git 2.56\nEOF",
+        f"cat >> '{JOURNAL}' <<'EOF'\nx\nEOF",
+        f'echo x > "{REL}"',
+        f"printf 'x\\n' 1>>{REL}",
+        f"echo x | tee -a {REL}",
+        f"echo x | tee {REL} >/dev/null",
+        f"sed -i 's/a/b/' {REL}",
+        f"sed -E -i.bak 's/a/b/' {REL}",
+        f"sed --in-place 's/a/b/' {REL}",
+        f"uv run python - <<'EOF'\nfrom pathlib import Path\nPath('{REL}').write_text('x')\nEOF",
+        f"uv run python -c \"open('{REL}', 'a').write('x')\"",
+        f"cd /c/project/agent && cat >> {REL} <<'EOF'\nx\nEOF",
+        f"echo x 2>{REL}",
+        f"echo x &> {REL}",
+        f"echo x >| {REL}",
+        f"echo x >& {REL}",
+        f"echo x >> ./{REL}",
+        f"sed -Ei 's/a/b/' {REL}",
+        f"sed {REL} -i 's/a/b/'",
+        f"sed -i s/a/b/ /tmp/other.md {REL}",
+        f"echo x | tee '{REL}'",
+        f"python3.12 -c \"open('{REL}', 'w')\"",
+        f"py -c \"open('{REL}', 'a')\"",
+        f"uv run python -c \"f = open('{REL}', 'ab')\"",
+        f"uv run python -c \"f = open('{REL}', 'r+')\"",
+        f"uv run python -c \"open('{REL}', mode='w')\"",
+        f"uv run python -c \"from pathlib import Path; Path('{REL}').write_bytes(b'x')\"",
+        f"uv run python -c \"open('{REL}', 'a').writelines(['x'])\"",
+        f"echo x | sudo tee -a {REL}",
+        # 모드 앞의 인자에 `)` 가 들어도 본다(PR 직전 bug-perf-review).
+        f"uv run python -c \"from pathlib import Path; f = open(Path('{REL}'), 'w')\"",
+        f"uv run python -c \"import os; f = open(os.path.join('{REL}'), mode='a')\"",
+    ],
+)
+def test_Bash_가_일지를_쓰면_알린다(command: str) -> None:
+    context = context_for(_bash(command))
+    assert context is not None
+    assert context.startswith(LEAD)
+
+
+@pytest.mark.parametrize(
+    "command",
+    [
+        f"cat {REL}",
+        f"sed -n 1,5p {REL}",
+        # 인용 부호 안이나 첫 낱말이 아닌 자리의 `-i`·`tee` 는 쓰기가 아니다.
+        f"sed -n '/ -i/p' {REL}",
+        f'sed -n "s/a -i/b/p" {REL}',
+        f"grep tee {REL}",
+        f"grep -n 다음 {REL}",
+        f"git add {REL}",
+        f"wc -l < {REL}",
+        f"cat {REL} > /tmp/copy.md",
+        f"cat {REL} | tee /tmp/copy.md",
+        f"echo x | tee /tmp/a.md; cat {REL}",
+        f"sed -i 's/a/b/' /tmp/a.md && cat {REL}",
+        f"uv run python tools/sibling_overlap.py > /tmp/so.log 2>&1; ls {REL}",
+        f"uv run python - <<'EOF'\nprint(open('{REL}').read())\nEOF",
+        f"uv run python -c \"print(open('{REL}', 'rb').read())\"",
+        "echo x >> docs/adr/0036-x.md",
+        "echo x >> docs/journal/notes.txt",
+        "echo x >> mydocs/journal/2026-10-26-03-x.md",
+        "",
+    ],
+)
+def test_Bash_가_일지를_읽기만_하거나_일지_밖을_쓰면_지나간다(command: str) -> None:
+    assert context_for(_bash(command)) is None
+
+
+def test_못_보는_것_변수에_든_일지_경로는_지나간다() -> None:
+    # 경로를 명령 글에서만 찾는다. 셸이 펼칠 값은 모른다.
+    assert context_for(_bash(f"f={REL}; cat >> \"$f\" <<'EOF'\nx\nEOF")) is None
+
+
+def test_못_보는_것_cp_mv_로_만든_일지는_지나간다() -> None:
+    assert context_for(_bash(f"cp /tmp/draft.md {REL}")) is None
+    assert context_for(_bash(f"mv /tmp/draft.md {REL}")) is None
+
+
+def test_못_보는_것_인자로_경로를_받아_쓰는_스크립트는_지나간다() -> None:
+    # python 은 명령 글에 쓰기 낱말이 있어야 쓴다고 본다. 스크립트 파일 안의 쓰기는 읽지 않는다.
+    assert context_for(_bash(f"uv run python tools/append.py {REL}")) is None
+
+
+def test_못_보는_것_앞에_낱말이_붙은_tee_sed_와_다른_제자리_편집은_지나간다() -> None:
+    # 단순 명령의 첫 낱말만 본다(`sudo` 하나는 건너뛴다).
+    for command in (
+        f"echo x | sudo -u x tee {REL}",
+        f"echo a | xargs sed -i 's/a/b/' {REL}",
+        f"awk -i inplace '{{print}}' {REL}",
+        f"perl -i -pe 's/a/b/' {REL}",
+    ):
+        assert context_for(_bash(command)) is None, command
+
+
+def test_못_보는_것_쓰기_낱말_밖의_길로_쓰는_python_은_지나간다() -> None:
+    for command in (
+        f"uv run python -c \"import shutil; shutil.copy('/tmp/a.md', '{REL}')\"",
+        f"uv run python -c \"import os; os.replace('/tmp/a.md', '{REL}')\"",
+    ):
+        assert context_for(_bash(command)) is None, command
+
+
+def test_못_보는_것_python_이_다른_파일을_쓰고_일지는_읽기만_해도_알린다() -> None:
+    # 거짓 양성. 쓰기 낱말이 명령 어디에 있든 python 이 일지를 쓴다고 본다.
+    command = (
+        f"uv run python - <<'EOF'\ntext = open('{REL}').read()\n"
+        "open('/tmp/copy.md', 'w').write(text)\nEOF"
+    )
+    assert context_for(_bash(command)) is not None
+
+
+def test_못_보는_것_PowerShell_로_고친_일지는_지나간다() -> None:
+    # 등록 매처에도 PowerShell 이 없다.
+    assert context_for(_bash(f"Add-Content {REL} 'x'", tool="PowerShell")) is None
+
+
+def test_못_보는_것_쓰는_꼴을_글로만_든_명령에도_알린다() -> None:
+    # 거짓 양성. 커밋 메시지의 heredoc 본문이 쓰는 꼴을 인용해도 명령 글에서만 가르므로 알린다.
+    command = f"git commit -F - <<'EOF'\nfix: `cat >> {REL}` 꼴을 본다\nEOF"
+    assert context_for(_bash(command)) is not None
+
+
+def test_Bash_와_Write_가_표지를_같이_쓴다(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    monkeypatch.setattr(tempfile, "gettempdir", lambda: str(tmp_path))
+    bash = _bash(f"cat >> {REL} <<'EOF'\nx\nEOF")
+    bash["session_id"] = "session-1"
+    assert LEAD in _run_main(monkeypatch, capsys, bash)
+    assert _run_main(monkeypatch, capsys, _session_edit(JOURNAL)) == ""
+    assert _run_main(monkeypatch, capsys, bash) == ""
 
 
 def test_못_보는_것_대소문자가_다른_경로는_지나간다() -> None:
@@ -231,4 +370,7 @@ def test_표지_폴더가_프로브_README_계기와_다르다() -> None:
 
 
 def test_등록의_매처가_훅이_아는_도구와_같다() -> None:
-    assert registered_matchers("hook_journal_evidence.py", "PostToolUse") == ["|".join(TOOLS)]
+    assert registered_matchers("hook_journal_evidence.py", "PostToolUse") == [
+        "|".join(TOOLS),
+        BASH,
+    ]
