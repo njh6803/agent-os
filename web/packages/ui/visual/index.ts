@@ -104,8 +104,8 @@ export interface Globals {
   readonly shadow: "off" | "on";
 }
 
-/** 기본 테마의 그 모드와 밀도로 문서에 그리는 globals. */
-export function inDefaultTheme(mode: Mode, density: Density): Globals {
+/** 기본 테마의 그 모드와 밀도로 문서에 그리는 globals. 관리 화면은 밀도를 달지 않아 `"auto"` 를 넘긴다. */
+export function inDefaultTheme(mode: Mode, density: Density | "auto"): Globals {
   return { theme: DEFAULT_THEME, mode, density, shadow: "off" };
 }
 

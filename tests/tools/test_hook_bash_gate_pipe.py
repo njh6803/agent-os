@@ -85,6 +85,8 @@ def test_사진_비교_명령도_게이트다() -> None:
     assert is_gate("pnpm -C web visual:update")
     assert is_gate("pnpm -C web visual:widget")
     assert is_gate("pnpm -C web visual:widget:update")
+    assert is_gate("pnpm -C web visual:admin")
+    assert is_gate("pnpm -C web visual:admin:update")
     assert not is_gate("pnpm -C web visualize")
     assert len(warnings_for("pnpm -C web visual 2>&1 | tail -30")) == 1
     assert warnings_for('pnpm -C web visual > S/visual3.log 2>&1; echo "exit3=$?"') == []
