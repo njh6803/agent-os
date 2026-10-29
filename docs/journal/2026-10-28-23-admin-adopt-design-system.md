@@ -304,8 +304,17 @@ PR #415를 열었다. `.scratch/plan.md`의 프론티어 줄에서 03 문장에 
 
 일지에만 남기는 것: 관리 화면 e2e의 `decision.e2e.ts` 첫 실패와 pytest의 `test_rerun_runner.py` 단독 빨강은 부하에서 흔들리는 시간 시험이고, 받아들여 닫은 306의 종류라 잇지 않는다. 만료할 행은 없었다(`queue_open_rows.py`가 "(없음)"을 찍었다).
 
+## 인계(올리기 도중)
+
+주간 한도 90% 도달로 인계한다. 한도 전환을 맡은 다른 세션이 하던 일을 안전한 자리까지만 마치고 멈추라고 알려 왔다.
+
+- 올리기는 `origin/main`(`06a8f85b`)의 분리 HEAD에서 시작했다. 확인(`check-2`)의 결정은 `uploadClaimMerged`이고(#413의 `claim`, 병합 커밋 `ad8a9c37`이 HEAD의 조상), 기준 커밋은 `3666bdc6`, 빌드가 필요한지는 `needed: true`였다. 까닭은 빌린 빌드의 설정(`.design-sync/config.json`, `upload-output.mjs`)과 패키지(Icon, TextField, 디자인 토큰 CSS, 사진 정답)가 그 뒤에 바뀐 것이다.
+- 사람이 `/design-sync`를 쳤다(번들 스킬 2.1.308). 빌린 빌드는 설치, 패키지 빌드, 참조 Storybook, `.ds-sync/`에 스크립트와 의존성(Playwright 1.63.0) 들이기, 기준점 `project/_ds_sync.json`(판 `1793158636-bf6f`) 받기까지 했다. driver는 validate를 지나(미리보기 9/9가 깨끗하게 그려졌다) 비교 캡처를 하던 중에 멈췄다. 그때까지 Icon의 "쓰임: 탐색 항목 앞의 아이콘"이 다시 채점을 기다렸다. 채점 파일과 `.ds-sync/ds-bundle-commit`은 쓰지 않았다.
+- 아티팩트에는 아무것도 보내지 않았고, `claim`도 그대로다.
+- 돌아갈 브랜치 `feature/03-admin-adopt-design-system`은 로컬에서 이미 지워져 있었다(병합 뒤 정리). 그 내용은 main에 있어 워크트리는 분리 HEAD에 남았다.
+
 ## 다음
 
-- 병합 뒤 이 세션이 `/sync-design-system 올리기`를 한다. 이 PR이 고친 `.claude/rules/web-design.md`와 디자인 토큰 CSS의 주석 둘(`--spacing-8`, `--text-title`)이 디자인 시스템 아티팩트로 오른다. 녹청 라이트 `accent-600`의 웹 편집은 #413이 코드에 들였다.
+- 다른 계정의 새 세션이 `/sync-design-system 올리기`를 1부터 다시 한다. 이 PR이 고친 `.claude/rules/web-design.md`와 디자인 토큰 CSS의 주석 둘(`--spacing-8`, `--text-title`)이 디자인 시스템 아티팩트로 오른다. 녹청 라이트 `accent-600`의 웹 편집은 #413이 코드에 들였다. 새 계정이 아티팩트의 주인이나 편집자가 아니면 읽기가 "artifact not found"를 낸다(`.design-sync/NOTES.md` Re-sync risks). 빌드가 필요하므로 사람이 `/design-sync`를 다시 쳐야 하고, Icon과 TextField는 다시 채점한다.
 - PR #415의 claude-review 첫 회차가 낸 Minor(관리 화면 미리보기의 `a11y` 사본)는 뒤로 넘겨 티켓 04의 "앱 부품" 메모에 적었다(위 "봇 회차" 절).
 - 좁은 폭에서 한국어 낱말 안에서 줄이 갈린다(위 "검증" 절의 정답 사진). 화면 전체의 글자에 걸린 디자인 시스템의 결정(`word-break`)이라 사람이 정할 일이고, 아직 어느 기능에도 적지 않았다.
