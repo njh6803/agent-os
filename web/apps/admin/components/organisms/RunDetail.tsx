@@ -21,14 +21,19 @@ export function RunDetail({ runId, decision, ...read }: RunDetailProps) {
   const eventsId = useId();
 
   return (
-    <ReadSection heading={runId} {...read} placeholder="트레이스를 불러오는 중이다">
+    <ReadSection
+      title={runId}
+      {...read}
+      loadingLabel="트레이스를 불러오는 중"
+      failureTitle="실행을 읽지 못했다"
+    >
       {(trace) => (
         <>
           {trace.schema_version === "1" ? (
             <p>형식 1 트레이스라 읽을 수 있지만 재개할 수 없다</p>
           ) : null}
           <section aria-labelledby={eventsId}>
-            <h3 id={eventsId}>이벤트</h3>
+            <h2 id={eventsId}>이벤트</h2>
             <ol>
               {trace.events.map((event, index) => (
                 // 이벤트는 트레이스에 쓴 차례로만 갈린다. 같은 트레이스 안에서 그 차례는 바뀌지 않는다.

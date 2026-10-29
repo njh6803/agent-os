@@ -4,7 +4,7 @@
 
 import { expect, type Page, test } from "@playwright/test";
 import { stack } from "./env";
-import { enterAdminToken, group, row } from "./screen";
+import { enterAdminToken, group, openSection, row } from "./screen";
 import { HOSTILE_CONTENT, READ_RUNS, UNKNOWN_LINE } from "./traces";
 
 function runRow(page: Page, runId: string) {
@@ -30,7 +30,7 @@ test("실행 목록을 상태로 거르고 실행 하나를 열어 모르는 종
   await enterAdminToken(page, adminToken);
   await expect(row(page, "에이전트", "echo")).toContainText("켜짐");
 
-  await page.getByRole("navigation").getByRole("link", { name: "실행 목록", exact: true }).click();
+  await openSection(page, "실행");
 
   await expect(page).toHaveURL(`${adminUrl}/runs`);
   await expect(runRow(page, READ_RUNS.finished)).toContainText("끝남");

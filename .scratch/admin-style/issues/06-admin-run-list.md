@@ -42,6 +42,8 @@
 - [ ] 관리 화면 e2e의 Playwright 설정(`web/apps/admin/playwright.config.ts`)에 `timezoneId` Asia/Seoul과 `locale` ko-KR을 더하고, `runs.e2e.ts`의 문구와 조회가 새 화면에 맞는다. `runs.e2e.ts`가 머리 설명에 "Asia/Seoul"이 드는 것을 한 번 본다. 페이지 시험만으로는 시간대를 America/New_York으로 박은 구현이 초록이기 때문이다(명세 주석)
 - [ ] `pnpm -C web visual:admin:update`로 새 스토리의 정답을 만들고, 바뀐 사진을 사람이 보고 PR 본문에 적는다
 
+메모(04에서): 04가 지은 공통 부품의 이름이다. 화면 머리는 `molecules/ScreenHeader`, 읽기 골격은 `organisms/ReadSection`(머리 아래 자리 `above`, 처음 불러오는 중의 `loadingLabel`, 실패 제목 `failureTitle`), 실패 알림은 `molecules/FailureAlert`(제목, 메시지, 추적 식별자), 글자 링크는 `atoms/TextLink`, 코드 칸은 `atoms/CodeBlock`과 JSON을 두 칸 들여 쓰는 `formatJson`, 빈 줄은 `molecules/EmptyLine`(아이콘 16·20)이다. 04는 부품을 짓고 스토리만 그렸고 화면에는 넣지 않았다. jsdom에서 같은 것이 둘 보이는 물음을 04는 탐색을 두 벌로 그리지 않고 `nav` 하나의 배치만 `wide:`로 바꿔 풀었다(04의 "이 티켓이 정한 것"). 표와 카드는 DOM의 모양이 달라 같은 길로 풀리지 않을 수 있다. 0.3초 지연은 `atoms/AfterDelay`이고, 그 가짜 시계 시험의 선례는 `HomePage.test.tsx`의 "처음 불러오는 표시는 0.3초가 지나야 선다"다.
+
 ### 검증
 
 - [ ] 검증 명령이 모두 초록이고, `pnpm -C web visual:admin`과 관리 화면 e2e도 초록이다. 모델 경로를 건드리지 않아 `-m llm`·`-m llm_widget`은 칠 일이 없다

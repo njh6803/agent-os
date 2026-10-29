@@ -1,0 +1,419 @@
+# 티켓 04(관리 화면의 틀과 공통 상태, 설정 화면)의 변이 표. 설정 화면과 탐색의 페이지 시험은 빨강을 먼저 봤지만, 공통
+# 상태의 단언(0.3초 지연, 다시 확인하는 중, 실패 알림의 제목과 추적 식별자)과 스토리의 단언(포커스 링, 틀의 치수, 컨테이너,
+# 지금 항목의 칠, 링크의 포인터 목표)은 구현과 함께 써서 빨강을 본 적이 없었다. 지연은 양쪽(0초, 1초)으로 깬다. 한쪽만
+# 깨면 "0.3초 전에는 없다"와 "0.3초 뒤에 선다" 가운데 하나만 잰다. 열일곱째부터는 셀프 리뷰와 PR 봇의 지적 뒤 더했다(그 자리의 주석).
+# 빨강의 판정은 `tools/mutate.py` 의 독스트링이다. 표지는 변이를 넣어 vitest 의 전체 출력을 한 번 본 뒤 고른 실패
+# 머리의 메시지다(받은 값까지 든 것). 스토리 러너는 프로젝트의 스토리를 모두 돌려, 메시지가 다른 스토리에서도 날 수
+# 있는 꼴(`expected false to be true`, 포커스 링의 기대 값)이면 실패한 스토리의 머리(`<파일> > <스토리>`)를 함께 든다.
+#
+# 돌리는 법: PYTHONUTF8=1 uv run python tools/mutate.py .scratch/admin-style/probes/frame_common_states_mutations.toml
+# 네트워크를 타지 않는다. `uv sync` 와 `pnpm -C web install` 이 되고 Playwright 의 chromium 이 깔린 체크아웃에서 돈다.
+
+[runner.pages]
+command = ["pnpm", "exec", "vitest", "run", "--project", "pages"]
+cwd = "web"
+judge = "vitest"
+
+[runner.narrow]
+command = ["pnpm", "exec", "vitest", "run", "--project", "admin-storybook-narrow"]
+cwd = "web"
+judge = "vitest"
+
+[runner.wide]
+command = ["pnpm", "exec", "vitest", "run", "--project", "admin-storybook-wide"]
+cwd = "web"
+judge = "vitest"
+
+[[mutation]]
+name = "처음 불러오는 표시가 기다리지 않고 서면 0.3초 시험이 빨갛다"
+runner = "pages"
+tests = ["apps/admin/components/pages/HomePage.test.tsx", "-t", "0.3초가 지나야"]
+expect = "red"
+expect_output = ['expected <div role="progressbar"']
+
+[[mutation.edit]]
+file = "web/apps/admin/components/atoms/AfterDelay.tsx"
+old = '''
+const LOADING_DELAY_MS = 300;
+'''
+new = '''
+const LOADING_DELAY_MS = 0;
+'''
+
+[[mutation]]
+name = "처음 불러오는 표시가 1초를 기다리면 0.3초 시험이 빨갛다"
+runner = "pages"
+tests = ["apps/admin/components/pages/HomePage.test.tsx", "-t", "0.3초가 지나야"]
+expect = "red"
+expect_output = ['Unable to find an accessible element with the role "progressbar" and name "플러그인 목록을 불러오는 중"']
+
+[[mutation.edit]]
+file = "web/apps/admin/components/atoms/AfterDelay.tsx"
+old = '''
+const LOADING_DELAY_MS = 300;
+'''
+new = '''
+const LOADING_DELAY_MS = 1000;
+'''
+
+[[mutation]]
+name = "다시 확인하는 동안 머리 아래 진행 표시가 없으면 빨갛다"
+runner = "pages"
+tests = ["apps/admin/components/pages/RunsPage.test.tsx", "-t", "자리표시가 보이고"]
+expect = "red"
+expect_output = ['Unable to find role="progressbar" and name "다시 확인하는 중"']
+
+[[mutation.edit]]
+file = "web/apps/admin/components/organisms/ReadSection.tsx"
+old = '''
+      {refreshing ? <Progress label={REFRESHING_LABEL} /> : null}
+'''
+new = '''
+'''
+
+[[mutation]]
+name = "다시 확인하는 동안 새로 고침이 불러오는 중이 아니면 빨갛다"
+runner = "pages"
+tests = ["apps/admin/components/pages/HomePage.test.tsx", "-t", "자리표시가 보이고"]
+expect = "red"
+expect_output = ["expected null to be 'true'"]
+
+[[mutation.edit]]
+file = "web/apps/admin/components/organisms/ReadSection.tsx"
+old = '''
+          <Button variant="secondary" loading={refreshing} onClick={onRefresh}>
+'''
+new = '''
+          <Button variant="secondary" loading={false} onClick={onRefresh}>
+'''
+
+[[mutation]]
+name = "실패 알림의 제목이 실패한 일이 아니면 빨갛다"
+runner = "pages"
+tests = ["apps/admin/components/pages/HomePage.test.tsx", "-t", "운영자 파일이 깨지면"]
+expect = "red"
+expect_output = ["expected '플러그인 목록을 불러오는 중운영자 파일이 깨졌다"]
+
+[[mutation.edit]]
+file = "web/apps/admin/components/organisms/ReadSection.tsx"
+old = '''
+        <FailureAlert title={failureTitle} {...describeFailure(error)} />
+'''
+new = '''
+        <FailureAlert title={loadingLabel} {...describeFailure(error)} />
+'''
+
+[[mutation]]
+name = "추적 식별자에 이름표가 없으면 빨갛다"
+runner = "pages"
+tests = ["apps/admin/components/pages/HomePage.test.tsx", "-t", "운영자 파일이 깨지면"]
+expect = "red"
+expect_output = ["to contain '추적 식별자: req-9f3c'"]
+
+[[mutation.edit]]
+file = "web/apps/admin/components/molecules/FailureAlert.tsx"
+old = '''
+            추적 식별자: <code className="font-mono text-mono wrap-anywhere">{requestId}</code>
+'''
+new = '''
+            <code className="font-mono text-mono wrap-anywhere">{requestId}</code>
+'''
+
+[[mutation]]
+name = "지금 화면의 탐색 항목에 aria-current 가 없으면 빨갛다"
+runner = "pages"
+tests = ["apps/admin/components/pages/SettingsPage.test.tsx"]
+expect = "red"
+# 이름 없이 `current` 로만 찾는 실패는 따옴표 뒤에서 줄이 끝난다. 이름으로 찾는 실패는 ` and name "…"` 이 붙는다.
+expect_output = ["Unable to find role=\"link\"\n"]
+
+[[mutation.edit]]
+file = "web/apps/admin/components/molecules/NavItem.tsx"
+old = '''
+      aria-current={current ? "page" : undefined}
+'''
+new = '''
+'''
+
+[[mutation]]
+name = "탐색 항목의 포커스 링이 없으면 틀 스토리가 빨갛다"
+runner = "wide"
+expect = "red"
+expect_output = ["AdminFrame.stories.tsx > Channel Token Entered", "to deeply equal { style: 'solid', width: '2px'"]
+
+[[mutation.edit]]
+file = "web/apps/admin/components/molecules/NavItem.tsx"
+old = '''
+      className={`flex h-control items-center gap-2 rounded-m px-2 text-body focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring wide:h-nav-item wide:px-3 ${STATE[current ? "current" : "other"]}`}
+'''
+new = '''
+      className={`flex h-control items-center gap-2 rounded-m px-2 text-body wide:h-nav-item wide:px-3 ${STATE[current ? "current" : "other"]}`}
+'''
+
+[[mutation]]
+name = "지금 항목이 다른 칠이면 틀 스토리가 빨갛다"
+runner = "narrow"
+expect = "red"
+expect_output = ["AdminFrame.stories.tsx > Channel Token Entered", "to be 'rgba(0, 0, 0, 0.07)'"]
+
+[[mutation.edit]]
+file = "web/apps/admin/components/molecules/NavItem.tsx"
+old = '''
+  current: "bg-bg-selected font-medium text-text",
+'''
+new = '''
+  current: "bg-bg-active font-medium text-text",
+'''
+
+[[mutation]]
+name = "좁은 폭에서도 탐색 아이콘이 보이면 틀 스토리가 빨갛다"
+runner = "narrow"
+expect = "red"
+expect_output = ["AdminFrame.stories.tsx > Channel Token Entered", "Received element is visible:"]
+
+[[mutation.edit]]
+file = "web/apps/admin/components/molecules/NavItem.tsx"
+old = '''
+      <span className="hidden wide:flex">
+'''
+new = '''
+      <span className="flex">
+'''
+
+[[mutation]]
+name = "넓은 폭의 옆 탐색이 폭 nav 가 아니면 틀 스토리가 빨갛다"
+runner = "wide"
+expect = "red"
+expect_output = ["AdminFrame.stories.tsx > Channel Token Entered", "to be '256px'"]
+
+[[mutation.edit]]
+file = "web/apps/admin/components/templates/AdminFrame.tsx"
+old = '''wide:h-auto wide:w-nav wide:flex-col'''
+new = '''wide:h-auto wide:flex-col'''
+
+[[mutation]]
+name = "좁은 폭의 위 막대가 높이 top-bar 가 아니면 틀 스토리가 빨갛다"
+runner = "narrow"
+expect = "red"
+expect_output = ["AdminFrame.stories.tsx > Channel Token Entered", "to be '52px'"]
+
+[[mutation.edit]]
+file = "web/apps/admin/components/templates/AdminFrame.tsx"
+old = '''className="flex h-top-bar shrink-0'''
+new = '''className="flex shrink-0'''
+
+[[mutation]]
+name = "본문 칸이 컨테이너가 아니면 틀 스토리가 빨갛다"
+runner = "wide"
+expect = "red"
+expect_output = ["AdminFrame.stories.tsx > Channel Token Entered", "expected 'normal' to be 'inline-size'"]
+
+[[mutation.edit]]
+file = "web/apps/admin/components/templates/AdminFrame.tsx"
+old = '''<main className="@container min-w-0'''
+new = '''<main className="min-w-0'''
+
+[[mutation]]
+name = "미리보기가 컨테이너를 두르지 않으면 읽기 골격 스토리가 빨갛다"
+runner = "wide"
+expect = "red"
+expect_output = ["ReadSection.stories.tsx > Refreshing", "expected false to be true"]
+
+[[mutation.edit]]
+file = "web/apps/admin/.storybook/preview.tsx"
+old = '''
+  decorators: appended(base.decorators, withContainer),
+'''
+new = '''
+  decorators: base.decorators,
+'''
+
+[[mutation]]
+name = "글자 링크의 포커스 링이 없으면 링크 스토리가 빨갛다"
+runner = "wide"
+expect = "red"
+expect_output = ["TextLink.stories.tsx > Default", "to deeply equal { style: 'solid', width: '2px'"]
+
+[[mutation.edit]]
+file = "web/apps/admin/components/atoms/TextLink.tsx"
+old = '''hover:text-text focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring"'''
+new = '''hover:text-text"'''
+
+[[mutation]]
+name = "글자 링크에 최소 높이가 없으면 링크 스토리가 빨갛다"
+runner = "wide"
+expect = "red"
+expect_output = ["TextLink.stories.tsx > Default", "to be greater than or equal to 24"]
+
+[[mutation.edit]]
+file = "web/apps/admin/components/atoms/TextLink.tsx"
+old = '''className="inline-flex min-h-6 items-center'''
+new = '''className="inline-flex items-center'''
+
+# 아래 다섯은 셀프 리뷰 명세 축이 짚어 더했다. 읽기 넷 가운데 셋의 실패 제목과 둘의 처음 불러오는 이름을 페이지 시험이
+# 보지 않아, organisms 의 글자를 바꿔도 초록이었다. 더한 단언은 지금의 구현 위에 써서 빨강을 본 적이 없다.
+
+[[mutation]]
+name = "플러그인 하나의 실패 제목이 바뀌면 500 봉투 시험이 빨갛다"
+runner = "pages"
+tests = ["apps/admin/components/pages/PluginPage.test.tsx", "-t", "매니페스트를 읽을 수 없는"]
+expect = "red"
+expect_output = ["to contain '플러그인을 읽지 못했다'"]
+
+[[mutation.edit]]
+file = "web/apps/admin/components/organisms/PluginDetail.tsx"
+old = '''failureTitle="플러그인을 읽지 못했다"'''
+new = '''failureTitle="플러그인을 못 읽었다"'''
+
+[[mutation]]
+name = "실행 목록의 실패 제목이 바뀌면 다시 읽다 실패하는 시험이 빨갛다"
+runner = "pages"
+tests = ["apps/admin/components/pages/RunsPage.test.tsx", "-t", "이미 보인 목록도 다시 읽다 실패하면"]
+expect = "red"
+expect_output = ["to contain '실행 목록을 읽지 못했다'"]
+
+[[mutation.edit]]
+file = "web/apps/admin/components/organisms/RunList.tsx"
+old = '''failureTitle="실행 목록을 읽지 못했다"'''
+new = '''failureTitle="실행 목록을 못 읽었다"'''
+
+[[mutation]]
+name = "실행 하나의 실패 제목이 바뀌면 500 봉투 시험이 빨갛다"
+runner = "pages"
+tests = ["apps/admin/components/pages/RunPage.test.tsx", "-t", "읽을 수 없는 트레이스를 열면"]
+expect = "red"
+expect_output = ["to contain '실행을 읽지 못했다'"]
+
+[[mutation.edit]]
+file = "web/apps/admin/components/organisms/RunDetail.tsx"
+old = '''failureTitle="실행을 읽지 못했다"'''
+new = '''failureTitle="실행을 못 읽었다"'''
+
+[[mutation]]
+name = "플러그인 하나의 처음 불러오는 이름이 바뀌면 불러오는 중 시험이 빨갛다"
+runner = "pages"
+tests = ["apps/admin/components/pages/PluginPage.test.tsx", "-t", "플러그인을 불러오는 중이 선다"]
+expect = "red"
+expect_output = ['Unable to find role="progressbar" and name "플러그인을 불러오는 중"']
+
+[[mutation.edit]]
+file = "web/apps/admin/components/organisms/PluginDetail.tsx"
+old = '''loadingLabel="플러그인을 불러오는 중"'''
+new = '''loadingLabel="불러오는 중"'''
+
+[[mutation]]
+name = "실행 하나의 처음 불러오는 이름이 바뀌면 불러오는 중 시험이 빨갛다"
+runner = "pages"
+tests = ["apps/admin/components/pages/RunPage.test.tsx", "-t", "트레이스를 불러오는 중이 선다"]
+expect = "red"
+expect_output = ['Unable to find role="progressbar" and name "트레이스를 불러오는 중"']
+
+[[mutation.edit]]
+file = "web/apps/admin/components/organisms/RunDetail.tsx"
+old = '''loadingLabel="트레이스를 불러오는 중"'''
+new = '''loadingLabel="불러오는 중"'''
+
+# 아래 둘도 셀프 리뷰 명세 축이 짚어 더했다. 하이드레이션 전에 틀만 그리는 분기를 지키는 시험이 없었다.
+
+[[mutation]]
+name = "하이드레이션 전의 가드가 없으면 첫 그림 시험이 빨갛다"
+runner = "pages"
+tests = ["apps/admin/components/pages/SettingsPage.test.tsx", "-t", "하이드레이션 전의 첫 그림은"]
+expect = "red"
+expect_output = ['Unable to find an accessible element with the role "navigation" and name "관리 화면"']
+
+[[mutation.edit]]
+file = "web/apps/admin/components/pages/AdminScreen.tsx"
+old = '''
+  if (!hydrated) {
+    // 이 탭에 관리 토큰이 있는지 아직 모르는 동안은 틀만 서고 본문은 비운다(admin-style 명세 2026-10-27 주석).
+    return <AdminFrame nav={nav} />;
+  }
+'''
+new = '''
+'''
+
+[[mutation]]
+name = "하이드레이션 전에 본문도 그리면 첫 그림 시험이 빨갛다"
+runner = "pages"
+tests = ["apps/admin/components/pages/SettingsPage.test.tsx", "-t", "하이드레이션 전의 첫 그림은"]
+expect = "red"
+expect_output = ["to be ''"]
+
+[[mutation.edit]]
+file = "web/apps/admin/components/pages/AdminScreen.tsx"
+old = '''
+    return <AdminFrame nav={nav} />;
+'''
+new = '''
+    return <AdminFrame nav={nav}>{children}</AdminFrame>;
+'''
+
+# 아래 넷은 PR 봇(CodeRabbit) 첫 회차의 지적을 반영하며 더했다. 화면에서 숨긴 상태 영역이 늘 서 있고 두 진행 표시의
+# 이름만 바뀌는지를 페이지 시험 둘이 본다. 그 단언은 고치기 전 구현(영역이 진행 표시와 함께 들어왔다)에서 빨강을 봤다.
+
+[[mutation]]
+name = "상태 영역이 글과 함께 들어오면 0.3초 시험이 빨갛다"
+runner = "pages"
+tests = ["apps/admin/components/pages/HomePage.test.tsx", "-t", "0.3초가 지나야"]
+expect = "red"
+expect_output = ['Unable to find an accessible element with the role "status"']
+
+[[mutation.edit]]
+file = "web/apps/admin/components/organisms/ReadSection.tsx"
+old = '''
+      <div role="status" className="sr-only">
+        {refreshing ? REFRESHING_LABEL : null}
+        {shown ? null : <AfterDelay>{loadingLabel}</AfterDelay>}
+      </div>
+'''
+new = '''
+      {refreshing ? <div role="status" className="sr-only">{REFRESHING_LABEL}</div> : null}
+      {shown ? null : <AfterDelay><div role="status" className="sr-only">{loadingLabel}</div></AfterDelay>}
+'''
+
+[[mutation]]
+name = "상태 영역에 다시 확인하는 중이 없으면 빨갛다"
+runner = "pages"
+tests = ["apps/admin/components/pages/HomePage.test.tsx", "-t", "자리표시가 보이고"]
+expect = "red"
+expect_output = ["expected '' to be '다시 확인하는 중'"]
+
+[[mutation.edit]]
+file = "web/apps/admin/components/organisms/ReadSection.tsx"
+old = '''
+        {refreshing ? REFRESHING_LABEL : null}
+'''
+new = '''
+'''
+
+[[mutation]]
+name = "상태 영역에 처음 불러오는 이름이 없으면 0.3초 시험이 빨갛다"
+runner = "pages"
+tests = ["apps/admin/components/pages/HomePage.test.tsx", "-t", "0.3초가 지나야"]
+expect = "red"
+expect_output = ["expected '' to be '플러그인 목록을 불러오는 중'"]
+
+[[mutation.edit]]
+file = "web/apps/admin/components/organisms/ReadSection.tsx"
+old = '''
+        {shown ? null : <AfterDelay>{loadingLabel}</AfterDelay>}
+'''
+new = '''
+'''
+
+[[mutation]]
+name = "상태 영역의 처음 불러오는 이름이 기다리지 않으면 0.3초 시험이 빨갛다"
+runner = "pages"
+tests = ["apps/admin/components/pages/HomePage.test.tsx", "-t", "0.3초가 지나야"]
+expect = "red"
+expect_output = ["expected '플러그인 목록을 불러오는 중' to be ''"]
+
+[[mutation.edit]]
+file = "web/apps/admin/components/organisms/ReadSection.tsx"
+old = '''
+        {shown ? null : <AfterDelay>{loadingLabel}</AfterDelay>}
+'''
+new = '''
+        {shown ? null : loadingLabel}
+'''

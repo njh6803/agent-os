@@ -17,12 +17,17 @@ export function PluginDetail({ name, ...read }: PluginDetailProps) {
   const manifestId = useId();
 
   return (
-    <ReadSection heading={name} {...read} placeholder="플러그인을 불러오는 중이다">
+    <ReadSection
+      title={name}
+      {...read}
+      loadingLabel="플러그인을 불러오는 중"
+      failureTitle="플러그인을 읽지 못했다"
+    >
       {(plugin) => (
         <>
           <p>{plugin.enabled ? "켜짐" : "꺼짐"}</p>
           <section aria-labelledby={manifestId}>
-            <h3 id={manifestId}>매니페스트</h3>
+            <h2 id={manifestId}>매니페스트</h2>
             <pre>{JSON.stringify(plugin.manifest, null, 2)}</pre>
           </section>
         </>

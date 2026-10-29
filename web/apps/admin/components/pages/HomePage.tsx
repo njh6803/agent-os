@@ -9,7 +9,7 @@ import { readOf } from "./read";
 
 export function HomePage() {
   return (
-    <AdminScreen>
+    <AdminScreen current="plugins">
       <ConnectedPluginList />
     </AdminScreen>
   );
