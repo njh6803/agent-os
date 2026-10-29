@@ -2,23 +2,30 @@
 # 세션에 실리는지. 실험군은 이 워크트리, 대조군은 주 체크아웃이다. 이 PR 이 병합되기 전의 주 체크아웃에는 두 카나리아가
 # 모두 없다(그 판은 pending 이면 "끝나면 알려 달라"는 한 줄을 남겼다). 병합 뒤에 다시 돌리려면 `# 최신 결과:` 줄의 대조군 커밋을
 # `--control-commit` 으로 준다(README `canary/` 행).
-# 최신 결과: 통과 4(2026-10-16, 이 PC, claude 2.1.300, 1단계의 2를 불릿 넷으로 나눈 미커밋 본문, 대조군
+# 옮기기 전 결과: 통과 4(2026-10-16, 이 PC, claude 2.1.300, 1단계의 2를 불릿 넷으로 나눈 미커밋 본문, 대조군
 #   `--control-commit d280aa6`, 일지 2026-10-16-20).
 #   그 앞: 통과 4(2026-10-13, 이 PC, claude 2.1.296, 실험군 `2ba0509`, 대조군 주 체크아웃 `d280aa6`, 일지
 #   2026-10-13-38). 대조군은 1에 "없음"과 옛 문장("끝나면 알려 달라"), 2에 "없음"을 답했다.
+# 2026-10-29 harness 027 이 본문을 `merge.md` 로 옮겨 하위 파일 갈래(`skill_body = "files"`)로 바꿨다.
+#   대조군은 옮기기 전 커밋 `37759ef2` 을 `--control-commit` 으로 준다.
+# 최신 결과: 통과 4, "없음" 섞임 0(2026-10-29, 이 PC, claude 2.1.312, 실험군은 이 워크트리의 커밋하지 않은 본문(러너가 찍은 커밋은 `37759ef2`), 대조군 `--control-commit 37759ef2`, 일지 2026-10-29-02).
 # 돌리는 법: 워크트리 `.claude/worktrees/<이름>/` 루트에서
-#   uv run python tools/canary.py .scratch/harness/probes/canary/next_session_ci_wait.toml <출력 디렉터리>
+#   uv run python tools/canary.py --control-commit 37759ef2 .scratch/harness/probes/canary/next_session_ci_wait.toml <출력 디렉터리>
 kind = "skill"
 question = '''
-next-session 스킬을 Skill 도구로 불러 본문을 읽고 둘을 답하라. 스킬이 시키는 일은 하지 않고 본문만 읽는다.
-1. 순서의 1단계 아래 "봇 회차" 항목에서, PR 상태를 한 번 읽었는데 pending일 때 띄우는 명령을 백틱 안의 글자 그대로
-   옮겨라. 그런 명령이 없으면 "없음"이라고만 답하라.
-2. 같은 항목에서, 그 명령이 끝날 때 찍는 통과 줄이 CodeRabbit에 대해 함께 적는 두 상태의 설명 문구를 백틱 안의 글자
-   그대로 옮겨라. 그런 문구가 없으면 "없음"이라고만 답하라.
+next-session 스킬을 Skill 도구로 불러 본문을 읽어라. 스킬이 시키는 일은 하지 않는다.
+본문이 상황마다 Read로 열라고 가리키는 하위 파일 가운데 PR을 연 세션이 병합까지 마칠 때 여는 파일 하나를
+Read로 열고, 아래를 그 파일에서만 찾는다. 스킬 본문(SKILL.md)에 든 글은 옮기지 않는다.
+본문이 그런 하위 파일을 가리키지 않거나 그 파일에 없으면 그 물음에 "없음"이라고만 답하라.
+1. 봇 회차 항목의 대기에서, PR 상태를 한 번 읽었는데 pending일 때 띄우는 명령을 백틱 안의
+글자 그대로 옮겨라.
+2. 같은 자리에서, 그 명령이 끝날 때 찍는 통과 줄이 CodeRabbit에 대해 함께 적는 두 상태의
+설명 문구를 백틱 안의 글자 그대로 옮겨라.
 '''
 expect = ["uv run python tools/wait_ci.py <번호>", "Review rate limited"]
-source = ".claude/skills/next-session/SKILL.md"
+source = ".claude/skills/next-session/merge.md"
 skill = "next-session"
+skill_body = "files"
 
 [[arm]]
 name = "워크트리"

@@ -48,7 +48,11 @@ ASK = (
 
 
 def _lowered_copy(out: Path) -> Path:
-    """문턱을 낮춘 두 훅과 스킬 파일의 사본. 훅의 `SKILL_PATH` 는 사본 옆의 스킬을 가리킨다."""
+    """문턱을 낮춘 두 훅과 next-session 스킬 폴더의 사본.
+
+    훅의 `HANDOFF_PATH` 는 사본 옆의 `handoff.md` 를 가리킨다. 그 파일이 가리키는 `directive.md` 도
+    같은 폴더라 폴더째 옮긴다.
+    """
     copy = out / "copy"
     (copy / "tools").mkdir(parents=True, exist_ok=True)
     for name in ("hook_handoff.py", "hook_handoff_notice.py"):
@@ -56,8 +60,7 @@ def _lowered_copy(out: Path) -> Path:
         assert "THRESHOLD = 200_000" in text, name
         lowered = text.replace("THRESHOLD = 200_000", f"THRESHOLD = {LOWERED}")
         (copy / "tools" / name).write_text(lowered, encoding="utf-8")
-    (copy / SKILL).parent.mkdir(parents=True, exist_ok=True)
-    shutil.copy(ROOT / SKILL, copy / SKILL)
+    shutil.copytree(ROOT / SKILL.parent, copy / SKILL.parent, dirs_exist_ok=True)
     (out / "dump.py").write_text(DUMP, encoding="utf-8")
     return copy
 

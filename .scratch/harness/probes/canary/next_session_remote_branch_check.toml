@@ -1,0 +1,35 @@
+# next-session "워크트리에서 병합할 때" 3(원격 정리)을 원격 브랜치가 없는지 보는 것으로 바꾼 것(대기열 497)이 새 세션에 실리는지.
+# 실험군은 이 워크트리, 대조군은 주 체크아웃이다. 주 체크아웃의 옛 판 3은 브랜치를 지우는 명령이라 네 카나리아가 모두 없다.
+# 옮기기 전 결과: 통과 4(2026-10-28, 이 PC, claude 2.1.302, 실험군 워크트리 `ab94d8da`, 대조군 주 체크아웃 `06a8f85b`,
+# 일지 2026-10-29-01). 판정에 `--heads origin refs/heads/`를 더한 뒤의 결과다(PR #417 CodeRabbit 첫 회차). 이 글자는
+# 패턴을 좁히기 전 판 `f4a6074c`의 스킬에 없어, 그 판을 옮긴 답은 통과하지 못한다. 그 전에는 판정 셋으로 PR 직전 리뷰를
+# 반영한 판(`64ee0233`)과 셀프 리뷰를 반영한 판(`5ccb51a0` 위, claude 2.1.302)이, 판정 둘로 셀프 리뷰 전의 판이 통과 4였다.
+# 2026-10-29 harness 027 이 본문을 `merge.md` 로 옮겨 하위 파일 갈래(`skill_body = "files"`)로 바꿨다.
+#   대조군은 옮기기 전 커밋 `37759ef2` 을 `--control-commit` 으로 준다.
+# 최신 결과: 통과 4, "없음" 섞임 0(2026-10-29, 이 PC, claude 2.1.312, 실험군은 이 워크트리의 커밋하지 않은 본문(러너가 찍은 커밋은 `37759ef2`), 대조군 `--control-commit 37759ef2`, 일지 2026-10-29-02).
+# 돌리는 법: 워크트리 `.claude/worktrees/<이름>/` 루트에서
+#   uv run python tools/canary.py --control-commit 37759ef2 .scratch/harness/probes/canary/next_session_remote_branch_check.toml <출력 디렉터리>
+kind = "skill"
+question = '''
+next-session 스킬을 Skill 도구로 불러 본문을 읽어라. 스킬이 시키는 일은 하지 않는다.
+본문이 상황마다 Read로 열라고 가리키는 하위 파일 가운데 PR을 연 세션이 병합까지 마칠 때 여는 파일 하나를
+Read로 열고, 아래를 그 파일에서만 찾는다. 스킬 본문(SKILL.md)에 든 글은 옮기지 않는다.
+본문이 그런 하위 파일을 가리키지 않거나 그 파일에 없으면 그 물음에 "없음"이라고만 답하라.
+그 파일의 "워크트리에서 병합할 때" 절의 3(원격 정리)에서 세 가지를 각각 글자 그대로 옮겨라.
+1. 그 단계가 처음 치라는 명령 둘.
+2. 원격에 그 브랜치가 아직 있고 PR이 병합됐을 때 무엇이 일어난 것인지와 할 일을 적은 문장.
+3. 원격에 브랜치가 있는지 판정하지 못했을 때 쓰는 한 줄의 머리.
+'''
+expect = ["--exit-code", "--heads origin refs/heads/", "자동 삭제가 늦거나 돌지 않은 것이라", "원격 브랜치 미확인"]
+source = ".claude/skills/next-session/merge.md"
+skill = "next-session"
+skill_body = "files"
+
+[[arm]]
+name = "워크트리"
+role = "experiment"
+
+[[arm]]
+name = "주-체크아웃"
+role = "control"
+checkout = "../../.."

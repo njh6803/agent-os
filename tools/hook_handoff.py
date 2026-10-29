@@ -5,7 +5,7 @@
 (ADR 0033, 명세 `.scratch/token-usage/spec.md` "인계 훅"). 경계는 셋이고 사용자가 골랐다. 셀프 리뷰
 직전(Skill 의 `code-review`), 커밋 뒤(명령 위치의 `git commit`), PR 연 뒤(셸의 `gh pr create`,
 `pulls` 에 POST 하는 `gh api`, MCP 의 PR 만들기)다. 문장은 경계를 글자 그대로
-`셀프 리뷰 직전`·`커밋 뒤`·`PR 연 뒤` 로 부른다 — `next-session` 의 인계 줄이 지시문의
+`셀프 리뷰 직전`·`커밋 뒤`·`PR 연 뒤` 로 부른다 — `next-session` 의 `handoff.md` 가 지시문의
 `이어받을 상태: 인계: <경계>` 를 이 글자로 견준다.
 
 판정의 차례. 도구 이름과 명령 문자열, 스킬 이름으로 경계인지 먼저 가르고, 경계일 때만 트랜스크립트
@@ -16,11 +16,13 @@
 `subtype: compact_boundary`)이 있으면 압축 전의 큰 값이라 침묵한다. 성공했는지는 가르지 않고
 문장에 "성공했으면"을 단다(`hook_pr_next_session` 의 선례).
 
-문장은 `next-session` 의 스킬 파일을 Read 로 열어 결정표의 인계 줄을 따르라고 한다. Skill 도구로
-부르라고 하지 않는다. 실행 중이던 세션의 Skill 도구는 주 체크아웃을 당긴 뒤에도 옛 사본을 실을 수
-있고(`CLAUDE.md` 환경 함정) 옛 사본에는 인계 줄이 없다. 가리키는 파일은 `skill_for` 가 고른다.
-세션이 일하는 체크아웃(페이로드의 `cwd` 에서 위로 올라가 처음 만나는 사본)의 사본에 인계
-절(`SECTION`)이 있으면 그것이고, 없으면 이 훅 파일과 같은 체크아웃의 사본(`SKILL_PATH`)이다. 훅은
+문장은 `next-session` 의 인계 절차 파일을 Read 로 열어 따르라고 한다. Skill 도구로 부르라고 하지
+않는다. 실행 중이던 세션의 Skill 도구는 주 체크아웃을 당긴 뒤에도 옛 사본을 실을 수 있고(`CLAUDE.md`
+환경 함정) 옛 사본에는 인계 절차가 없다. 가리키는 파일은 `skill_for` 가 고른다. 세션이 일하는
+체크아웃(페이로드의 `cwd` 에서 위로 올라가 처음 만나는 사본)에 `handoff.md` 가 있으면 그것이다. 없고
+그 `SKILL.md` 에 인계 절(`SECTION`)이 있으면 그 `SKILL.md` 다. 절차를 `handoff.md` 로 나누기
+전(harness 027)에 딴 워크트리이고, 그 판은 결정표의 인계 줄을 따른다. 둘 다 아니면 이 훅 파일과 같은
+체크아웃의 `handoff.md`(`HANDOFF_PATH`)다. 훅은
 `CLAUDE_PROJECT_DIR`(워크트리 세션에서도 주 체크아웃)의 파일로 돌아 뒤의 것은 훅과 같은 판이지만,
 작업 폴더 밖이다. 기본 권한 모드에서 추가 작업 폴더 없이(`--setting-sources local`) 워크트리를
 작업 폴더로 띄운 `claude -p` 세션은 주 체크아웃의 그 파일 Read 를 거부당했고(승인 질문의 비대화형
@@ -64,9 +66,9 @@ tests/tools/test_hook_handoff.py 의 `test_두_훅의_문턱과_셈과_표지_�
   `repos/<주인>/<이름>/pulls` 를 글자로 보지 못해 놓친다(거짓 음성).
 - `transcript_path` 가 더 쓰이지 않는 사본을 가리킬 때의 낡은 값(`hook_midturn_korean` 독스트링).
 - 데스크톱 세션 안에서 띄운 `claude -p` 세션. 대화형과 가르지 못한다.
-- 인계 절이 없는 옛 워크트리(이 훅을 들인 커밋 전에 딴 브랜치)의 세션. 주 체크아웃의 사본을 가리켜,
-  그 경로가 작업 폴더 밖이면 Read 가 승인을 물을 수 있다(위의 C).
-- `cwd` 가 다른 저장소일 때. 그 저장소의 사본에 인계 절이 있으면 그것을 가리킨다.
+- `handoff.md` 도 인계 절도 없는 옛 워크트리(이 훅을 들인 커밋 전에 딴 브랜치)의 세션. 훅과 같은
+  체크아웃의 `handoff.md` 를 가리켜, 그 경로가 작업 폴더 밖이면 Read 가 승인을 물을 수 있다(위의 C).
+- `cwd` 가 다른 저장소일 때. 그 저장소의 사본에 `handoff.md` 나 인계 절이 있으면 그것을 가리킨다.
 """
 
 from __future__ import annotations
@@ -89,8 +91,11 @@ THRESHOLD = 200_000
 TAIL_BYTES = 2 * 1024 * 1024
 STATE_DIR = "agent-os-handoff"
 SKILL_RELATIVE = Path(".claude") / "skills" / "next-session" / "SKILL.md"
-SKILL_PATH = Path(__file__).resolve().parent.parent / SKILL_RELATIVE
-# 인계 줄이 든 판의 next-session 에만 있는 절의 머리. tests/tools 가 이 저장소의 사본에 있는지 본다.
+HANDOFF_RELATIVE = SKILL_RELATIVE.with_name("handoff.md")
+HANDOFF_PATH = Path(__file__).resolve().parent.parent / HANDOFF_RELATIVE
+# 인계 절차가 든 판의 next-session `SKILL.md` 에만 있는 절의 머리. 나눈 판은 그 머리 아래에
+# `handoff.md` 를 가리켜, 이 머리를 찾는 옛 훅도 새 판에서 길을 잃지 않는다. tests/tools 가 이
+# 저장소의 사본에 있는지 본다.
 SECTION = "## 인계할 때"
 
 SHELL_TOOLS = frozenset({"Bash", "PowerShell"})
@@ -354,35 +359,44 @@ def marker_name(session_id: str) -> str:
 
 
 def skill_for(cwd: str | None) -> Path:
-    """문장이 가리킬 next-session 스킬 파일. `cwd` 에서 위로 올라가 처음 만나는 사본에 인계 절이
-    있으면 그것, 아니면 훅과 같은 체크아웃의 사본이다. 처음 만난 사본에 절이 없으면 더 올라가지
-    않는다 — 워크트리는 주 체크아웃 아래에 있어, 올라가면 승인을 묻는 주 체크아웃의 사본에
-    닿는다."""
+    """문장이 가리킬 인계 절차 파일. `cwd` 에서 위로 올라가 next-session `SKILL.md` 가 처음 나오는
+    폴더에 `handoff.md` 가 있으면 그것, 없고 그 `SKILL.md` 에 인계 절이 있으면 그 `SKILL.md`, 둘 다
+    아니면 훅과 같은 체크아웃의 `handoff.md` 다. 사본은 `SKILL.md` 로 알아보므로 `handoff.md` 만
+    있는 폴더는 지나친다. 처음 만난 사본에서 더 올라가지 않는다 — 워크트리는 주 체크아웃 아래에
+    있어, 올라가면 승인을 묻는 주 체크아웃의 사본에 닿는다."""
     start = Path(cwd) if cwd else None
     # 상대 경로(`C:` 처럼 드라이브만 남은 것도)는 훅의 작업 폴더에 기대므로 고르지 않는다.
     if start is None or not start.is_absolute():
-        return SKILL_PATH
+        return HANDOFF_PATH
     for folder in (start, *start.parents):
-        candidate = folder / SKILL_RELATIVE
-        if not candidate.is_file():
+        skill = folder / SKILL_RELATIVE
+        if not skill.is_file():
             continue
+        handoff = folder / HANDOFF_RELATIVE
+        if handoff.is_file():
+            return handoff
         try:
-            has_section = SECTION in candidate.read_text(encoding="utf-8")
+            has_section = SECTION in skill.read_text(encoding="utf-8")
         except (OSError, UnicodeDecodeError):
-            return SKILL_PATH
-        return candidate if has_section else SKILL_PATH
-    return SKILL_PATH
+            return HANDOFF_PATH
+        return skill if has_section else HANDOFF_PATH
+    return HANDOFF_PATH
 
 
-def context_for(boundary: Boundary, size: int, skill: Path = SKILL_PATH) -> str:
-    """모델에게 넣을 인계 문장. `skill` 은 Read 로 열 스킬 파일이다(`skill_for`)."""
+def context_for(boundary: Boundary, size: int, skill: Path = HANDOFF_PATH) -> str:
+    """모델에게 넣을 인계 문장. `skill` 은 Read 로 열 인계 절차 파일이다(`skill_for`)."""
     done = "방금 불린" if boundary == "셀프 리뷰 직전" else "방금 친 명령이 성공했으면"
+    follow = (
+        "그 파일의 결정표에서 인계 줄을 따른다"
+        if skill.name == SKILL_RELATIVE.name
+        else "그 파일의 순서를 따른다"
+    )
     lead = (
         f"세션 컨텍스트가 {size:,} 토큰으로 인계 문턱 {THRESHOLD:,} 을 넘은 채 단계 경계 "
         f"`{boundary}` 에 왔다({done} 그 경계다). 인계의 계기다. 사용자에게 묻지 말고 "
         f"`{skill.as_posix()}` 를 Read 도구로 연다. Skill 도구로 부르지 않는다(실행 중이던 "
-        "세션의 Skill 도구는 인계 줄이 없는 옛 사본을 실을 수 있다). 그 파일의 결정표에서 "
-        "인계 줄을 따른다. 그 줄의 인계하지 않는 때에 들면 넘기지 않고 잇는다."
+        f"세션의 Skill 도구는 인계 절차가 없는 옛 사본을 실을 수 있다). {follow}. 그 파일의 "
+        "인계하지 않는 때에 들면 넘기지 않고 잇는다."
     )
     if boundary == "셀프 리뷰 직전":
         return lead + (
@@ -391,7 +405,7 @@ def context_for(boundary: Boundary, size: int, skill: Path = SKILL_PATH) -> str:
     if boundary == "PR 연 뒤":
         return lead + (
             " 봇 회차와 병합도 새 세션이 한다. 함께 온 hook_pr_next_session 의 계기(Skill 도구로 "
-            "next-session 을 돌려 1단계가 병합까지 먼저 마친다)보다 이것이 앞선다."
+            "next-session 을 돌려 병합까지 먼저 마친다)보다 이것이 앞선다."
         )
     return lead
 
