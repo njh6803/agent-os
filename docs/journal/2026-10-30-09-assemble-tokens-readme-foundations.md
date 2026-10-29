@@ -147,3 +147,54 @@ open-session을 부른다 2026-10-29T21:59:16Z
 - 기각. 앞 회차의 첫 커밋이 제목 84자로 commit-msg 훅에 막혔다. 이미 있는 훅이 막았다.
 
 열린 496(`.design-sync/`의 노드 스크립트에 커밋된 시험이 없다)은 이 PR이 `check-conventions.mjs`의 판정을 커밋된 시험으로 옮겼지만 그 스크립트와 `upload-output.mjs`가 남아 닫지 않았다. 04가 `.design-sync/`를 걷어 낼 때 다시 본다(명세는 `.design-sync/`의 14개 가운데 셋을 옮기고 나머지를 지운다고 적는다. `.scratch/plan.md`의 design-card-build 행에서 읽었다).
+
+## PR
+
+티켓을 `done`으로 바꾼 커밋 `b4252b72`의 pre-commit은 열 검사(pytest 462.2초, web-verify 622.3초)와 나머지 검사가 `Passed`였고 ruff 둘·카나리아·헌법 판은 해당 파일이 없어 `Skipped`였다(커밋 출력을 손으로 봤다). `git fetch origin main` 뒤 `origin/main`이 그대로 `d312a806`이라 rebase할 것이 없었다. 푸시하고 PR #434를 열었다(`gh pr create`가 주소를 찍었다). 앱의 `get_status`가 그 PR이 이 세션에 묶였다고 했고, 그때 검사는 통과 1, 대기 6이었다.
+
+## 인계 전 상태(셋째)
+
+PR을 연 직후 인계 계기(약 31만 5천 토큰, 경계 `PR 연 뒤`)가 왔다. 이 세션을 연 지시문의 경계(`커밋 뒤`)와 달라 넘긴다. 이 세션의 제목은 `feature/02-assemble-tokens-readme-foundations`였고 `(인계함)`을 붙인다. 이 절과 바로 위 "PR" 절은 `b4252b72` 뒤에 쓴 것이라 커밋하지 않았다. 새 세션이 이어 쓰고 다음 커밋에 싣는다. `@coderabbitai review` 코멘트는 남기지 않았고 대기(`tools/wait_ci.py`)도 띄우지 않았다.
+
+인계 지시문:
+
+```
+다음 작업: .scratch/design-card-build/issues/02-assemble-tokens-readme-foundations.md. 짓기 명령(assemble)이 tokens.json·디자인 시스템 README·기초 카드·지침을 산출에 더하고, 사용 규약 검사를 pnpm -C web verify의 파일 검사로 옮긴다
+다음 단계: PR 반영·병합
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /implement .scratch/design-card-build/issues/02-assemble-tokens-readme-foundations.md
+브랜치: feature/02-assemble-tokens-readme-foundations
+모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
+읽을 것: 일지 docs/journal/2026-10-30-09-assemble-tokens-readme-foundations.md의 "PR 직전 리뷰" 절부터 끝까지
+이어받을 상태: 인계: PR 연 뒤. PR #434를 열었고 merge.md 2(봇 회차)부터 한다. 첫 @coderabbitai review 코멘트도 새 세션이 남긴다. 회고는 마쳐 일지 "## 회고"에 있다. 남은 것은 봇 회차와 반영, 일지 "## 다음"과 .scratch/plan.md의 design-card-build 행·프론티어 문단에 02 병합(PR #434)과 04가 풀린 것을 적어 마지막 봇 회차의 커밋에 싣기, 워크트리에서 병합하기다. 일지의 "PR" 절과 "인계 전 상태(셋째)" 절은 커밋하지 않은 채 워크트리에 있다. 이 PC에서 pre-commit의 pytest는 시간 시험(tests/tools/test_probe_kit.py, tests/tools/test_rerun_runner.py, tests/channel/cli/test_interrupt.py, tests/tools/test_hook_edit_during_commit.py)이 부하에서 한 번씩 막을 수 있다. 단독 실행이 통과하면 SKIP 없이 같은 커밋을 한 번 더 시도하고, SKIP=pytest는 사람에게 묻는다. 일지: docs/journal/2026-10-30-09-assemble-tokens-readme-foundations.md
+확인할 선행 조건: 없음
+이번 요청 범위: PR과 병합까지
+```
+
+워크트리 잠금 풀기는 `is not locked`로 끝나 넘어갔다.
+
+open-session을 부른다 2026-10-29T23:04:36Z
+
+## 봇 회차
+
+> 사용자: ".claude/skills/implement/SKILL.md 를 읽어 그대로 따른다. 이 세션을 연 저장소는 `C:\project\agent`이고 작업 폴더가 그곳이 아니면 따르지 말고 알린다. 스킬의 인자는 이 줄의 '인자:' 뒤부터 메시지 끝까지다. 인자: .scratch/design-card-build/issues/02-assemble-tokens-readme-foundations.md / 다음 작업: (위 "인계 전 상태(셋째)"의 인계 지시문과 같다)"
+
+셋째로 이어받은 세션의 제목을 `feature/02-assemble-tokens-readme-foundations`로 바꿨다. `git worktree list`에서 이 브랜치의 워크트리를 찾아 `EnterWorktree(path)`로 들어갔다. `git rev-parse HEAD`와 PR #434의 `headRefOid`가 둘 다 `b4252b72`였다(손으로 봤다). 그때 `gh pr checks`는 claude-review·e2e·e2e-widget·ticket이 `pass`, python·web·visual이 `pending`, CodeRabbit이 `skipping`이었다. `@coderabbitai review` 코멘트를 남기고 `tools/wait_ci.py 434`를 백그라운드로 띄웠다.
+
+claude-review 첫 회차(PR 코멘트, `b4252b72`)는 Critical·Major 없이 Minor 셋과 Nit 하나를 냈다. 첫 회차라 지적마다 판단했다.
+
+- Minor 1. `assembleInto`가 `stage`에 쓰면서 카드 이름을 돌려주어 `CODING_STANDARDS.md`의 CQS를 어긴다. 01부터 있던 모양이지만(`git show origin/main:`으로 봤다) 고치는 값이 작아 고쳤다. `assembleInto`를 걷고 문서·묶음·카드의 세 호출을 같은 차례로 `assemble`에 옮겼으며, 카드 이름은 `assemble`이 고른 스토리에서 보고에 바로 적는다. 변이 표가 그 함수의 줄을 겨누지 않아(`grep`으로 봤다) `--check`가 "변이 64 모두 원문이 한 번씩 있다"였다. 티켓 결과의 "짓기의 나누기" 줄에 적었다.
+- Minor 2. `assemble.ts` 한 모듈에 vite 설정 글, 조립, 규칙 판정, 임시 폴더 관리가 있어 04에서 판정부를 나누라고 권했다. 보류한다. `assertAssembled`를 부르는 곳은 `assemble`과 그 시험뿐이라(`web`의 `*.ts`를 `grep`으로 봤다), 나누면 제품 코드의 두 번째 사용처 없이 모듈의 경계만 는다. 뒤로 넘기지 않는다.
+- Minor 3. 시험이 판정 상수를 베껴 `check-conventions.mjs`와 함께 세 벌이 되니, 04의 산출에 그 스크립트의 삭제가 드는지 보라고 했다. 티켓 04의 체크박스가 `.design-sync/`의 추적 파일 14개를 모두 옮기거나 지우고 폴더가 없을 것을 요구한다(티켓 04를 `grep`으로 읽었다). 고칠 것이 없다.
+- Nit. 테마 이름에 `night`가 들면 라이트도 다크로 읽히는데, 시험이 그것을 잡는지 보라고 했다. 잡지 못했다. `assemble.test.ts`의 "테마 이름은 모두" 사례는 이름 끝의 모드 낱말만 본다. `build.test.ts`에 여덟 벌의 이름을 페이지의 정규식 `/dark|night/i`에 대 보는 사례를 더했다. 구현 전부터 초록이라 변이 63(쪽빛의 표시 이름을 `쪽빛 Midnight`로)·64(다크의 모드 이름을 `다크`로)를 더했고, 둘만 돌린 실행이 "변이 2 모두 기대대로"였다(도구가 찍은 줄). 표지는 변이를 손으로 넣어 본 실패 출력의 diff에서 골랐다. 63을 손으로 넣은 채 두 사례를 한 실행으로 돌리자 새 사례만 빨갛고 옛 사례는 지났다(vitest 요약 줄을 손으로 봤다). 프로브 README "2026-10-30 티켓 02의 변이"에 적었다.
+
+대기는 `b4252b7`의 검사 아홉이 모두 `SUCCESS`이고 "끝: 모두 통과"로 끝났다(그 출력 파일을 손으로 봤다). CodeRabbit 첫 회차는 요약 코멘트의 Merge Risk가 `Minimal · up to b4252`이고 병합을 막을 지적이 남지 않았다고 적었으며, 리뷰 본문과 줄 코멘트가 없었다(`gh api`로 그 PR의 `reviews`와 `comments`를 읽어 빈 것을 손으로 봤다). 고칠 것도 보류할 것도 없다.
+
+반영 커밋의 첫 판 `617b8225`는 메시지 파일의 제목 줄 뒤에 빈 줄이 없어, git이 본문 첫 줄까지 이어 붙여 제목으로 읽었다(`git log --oneline -1`을 손으로 봤다). commit-msg 검사는 지났다. `tools/check_commit_msg.py`의 `subject_of`가 비지 않은 첫 줄만 제목으로 보기 때문이다(코드를 읽었다). 푸시 전에 빈 줄을 넣은 메시지로 `git commit --amend -F`를 쳐 고쳤다. 회고 뒤에 난 일이라 회고 절에는 없다. 훅이 git과 같이 첫 문단을 제목으로 보면 잡을 수 있는 실수라 검사 후보다.
+
+바꾼 두 시험 파일 68개가 지났고(vitest node 프로젝트로 두 파일을 돌려 요약 줄을 손으로 봤다), 바꾼 TS 두 파일에 `pnpm -C web exec prettier --check`가 "All matched files use Prettier code style!"였고 `pnpm -C web exec eslint`는 출력이 없었다(명령 출력을 손으로 봤다).
+
+## 다음
+
+- design-card-build 02는 이 PR(#434)로 끝난다. 02와 03(PR #430)을 기다리던 04(`.scratch/design-card-build/issues/04-upload-always-assembles.md`, `ready-for-agent`)가 풀렸다. 05는 04를 기다린다(티켓 파일의 `Blocked by`·`Status` 줄을 읽었다).
+- 열린 496(`.design-sync/`의 노드 스크립트에 커밋된 시험이 없다)은 04가 `.design-sync/`를 걷어 낼 때 다시 본다(위 "회고").

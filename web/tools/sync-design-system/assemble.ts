@@ -507,16 +507,6 @@ function writeDocuments(stage: string): void {
   write(stage, "guidelines/index.md", GUIDELINES_INDEX);
 }
 
-/** 산출을 `stage` 에 짓고 카드 이름을 돌려준다. 중간 파일은 `work` 에 쓴다. */
-function assembleInto(stage: string, work: string): string[] {
-  // 저장소 원본을 읽는 문서가 먼저다. 원본이 없으면 vite·Tailwind 빌드를 띄우기 전에 `input` 으로 끝난다.
-  writeDocuments(stage);
-  const stories = showcaseStories();
-  writeBundles(stage, work, stories);
-  writeCards(stage, work, stories);
-  return stories.map((story) => story.name);
-}
-
 interface Problem {
   readonly kind: Extract<ErrorKind, "input" | "limit">;
   readonly message: string;
@@ -673,7 +663,11 @@ export function assemble(args: readonly string[]): ReportFields {
   const work = workFolder();
   try {
     const stage = join(work, "stage");
-    const cards = assembleInto(stage, work);
+    // 저장소 원본을 읽는 문서가 먼저다. 원본이 없으면 vite·Tailwind 빌드를 띄우기 전에 `input` 으로 끝난다.
+    writeDocuments(stage);
+    const stories = showcaseStories();
+    writeBundles(stage, work, stories);
+    writeCards(stage, work, stories);
     assertAssembled(stage);
     const files = walk(stage);
     const list = files.map((file) => `project/${file.path}`);
@@ -683,7 +677,7 @@ export function assemble(args: readonly string[]): ReportFields {
       out: target,
       paths: listFile,
       files: files.length,
-      cards,
+      cards: stories.map((story) => story.name),
       bytes: files.reduce((sum, file) => sum + file.size, 0),
     };
   } finally {

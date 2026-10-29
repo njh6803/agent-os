@@ -138,6 +138,14 @@ describe("짓기", () => {
     ]);
   });
 
+  test("여덟 벌 가운데 다크 벌의 이름만 페이지가 모드를 가르는 낱말(dark, night)에 맞는다", () => {
+    const { themes } = buildTokensFile(CSS).color;
+
+    expect(themes.map((theme) => [theme.id, /dark|night/i.test(theme.name)])).toEqual(
+      THEME_IDS.map((id) => [id, id.endsWith("-dark")]),
+    );
+  });
+
   test("테마의 한국어 이름은 패키지의 테마 목록과 키와 이름이 같다", () => {
     expect(THEME_NAMES).toEqual(new Map(THEMES.map((theme) => [theme.key, theme.name])));
   });

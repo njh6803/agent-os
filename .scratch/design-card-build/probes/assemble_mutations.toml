@@ -815,3 +815,31 @@ old = '''export const ShowcaseApprovalPair: Story = {
 new = '''export const ShowcaseApprovalPair: Story = {
   ...DisabledDark,
 '''
+
+# --- PR 봇 회차가 더한 둘 --------------------------------------------------------------------------------------
+# 이름 끝의 모드 낱말만 보는 "테마 이름은 모두" 사례는 라이트 테마의 표시 이름에 night 가 들어도 지난다. 페이지가 모드를
+# 가르는 정규식을 여덟 벌에 대 보는 build 시험의 사례가 그 자리를 잰다.
+
+[[mutation]]
+name = "라이트 테마의 표시 이름에 night 가 들면 모드 낱말 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/build.test.ts", "-t", "다크 벌의 이름만"]
+expect = "red"
+expect_output = ["+     true,"]
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/build.ts"
+old = '''  ["jjokbit", "쪽빛"],'''
+new = '''  ["jjokbit", "쪽빛 Midnight"],'''
+
+[[mutation]]
+name = "다크 테마 이름에 영어 모드 낱말이 없으면 모드 낱말 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/build.test.ts", "-t", "다크 벌의 이름만"]
+expect = "red"
+expect_output = ["+     false,"]
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/build.ts"
+old = '''  dark: "다크 (Dark)",'''
+new = '''  dark: "다크",'''
