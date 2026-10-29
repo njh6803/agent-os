@@ -78,3 +78,14 @@ PR 직전 리뷰에 밀 주장으로 넘길 새 문장(원문):
 이번 요청 범위: PR과 병합까지
 
 워크트리 잠금을 풀었다. open-session을 부른다 2026-10-29T15:26:32Z
+
+## PR 직전 리뷰 (인계받은 세션)
+
+인계받은 세션이 일지 커밋을 만들었다. 그 pre-commit의 pytest가 시간 제한 시험 다섯(`test_interrupt.py` 셋, `test_probe_kit.py`, `test_rerun_runner.py`)에서 빨갰다. 그 회차의 web-verify가 1027초, pytest가 1144초였다(러너가 찍었다). 기계 부하로 본다(어림). `uv run pytest -q -p no:randomly` 에 세 파일만 주니 84 passed였다(손으로 봤다). 일지 한 파일만 바뀐 커밋이라 `SKIP=parallel-checks`로 커밋했고, origin/main(`c04e4fe6`, #427·#428)에 rebase한 뒤 `tools/run_checks.py`를 다시 돌려 그 몫을 갈음한다. rebase는 겹치는 파일 없이 끝났다. rebase 뒤의 러너는 pytest만 빨갰다(1149초, 러너가 찍었다). 빨간 여섯은 다시 시간 제한 시험이었고(`test_filesystem.py` 둘, `test_mcp.py` 하나, `test_probe_kit.py` 하나, `test_interrupt.py` 둘), 이 브랜치는 파이썬을 건드리지 않는다. 네 파일만 `uv run pytest -q -p no:randomly`로 따로 돌리니 93 passed였다(손으로 봤다). 나머지 검사는 모두 Passed(러너가 찍었다)이고 ruff 두 줄도 초록이었다(손으로 봤다).
+
+CodeRabbit CLI는 `Seat: not assigned`(`coderabbit auth status`)라 대체 둘을 나란히 돌렸다.
+- 보안(`/security-review`): 지적 없음. 새 동적 링크는 `PluginList.tsx:216`의 `/plugins/${row.kind}/${encodeURIComponent(row.name)}` 하나이고 바뀐 organism에 `dangerouslySetInnerHTML`이 없다(Grep으로 봤다).
+- 버그·성능(`bug-perf-review`, 코드를 읽어 따라갔고 시험은 돌리지 않았다): 유효 Minor 하나, 보류 Nit 하나, 오탐 없음. 셀프 리뷰가 새로 쓴 문장 넷은 모두 코드·그림과 맞았고 1번의 주어가 모호하다는 Nit이 붙었다.
+  - Minor(유효): 두 행을 겹쳐 눌러 둘 다 실패하면 실패 칸 하나(`PluginList.tsx:57`)를 뒤의 실패가 덮어 앞의 실패가 사라진다. 명세가 알림 하나를 정했고 스위치가 다시 읽은 값이라, 행동은 두고 티켓의 "이 티켓이 정한 것"에 "마지막 실패 하나만 보인다"를 적었다.
+  - Nit(보류): 누르는 동안 스위치가 `disabled`라 키보드 포커스가 빠질 수 있다. 패키지 `Switch`의 몫이고 실제 브라우저에서 보지 않았다. PR 체크리스트에 적는다.
+  - 문장 1의 Nit: 티켓의 "이 티켓의 켜고 끄기 줄"을 "이 티켓 '플러그인 목록' 절의 켜고 끄기 체크박스 문장"으로 고쳤다.
