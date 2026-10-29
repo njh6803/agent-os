@@ -2,18 +2,25 @@
 # code-review 6단계 끝의 같은 규칙과 시점이 어긋나지 않게 PR 직전 bug-perf-review의 지적으로 고쳤다(일지 2026-10-13-61).
 # 실험군은 이 명세를 부른 체크아웃, 대조군은 바뀌기 전 판(2d593dd)이다. 옛 판에는 카나리아가 없다.
 # 병합 뒤에는 주 체크아웃이 새 사본이라 옛 판의 커밋을 `--control-commit` 으로 준다(README `canary/` 행).
-# 최신 결과: 통과 4(2026-10-13, 이 PC, claude 2.1.296, 대조군 `2d593dd`, 실험군은 `c55b1bd` 위의 커밋 전 변경, 일지 2026-10-13-61).
+# 옮기기 전 결과: 통과 4(2026-10-13, 이 PC, claude 2.1.296, 대조군 `2d593dd`, 실험군은 `c55b1bd` 위의 커밋 전 변경, 일지 2026-10-13-61).
+# 2026-10-29 harness 027 이 본문을 `merge.md` 로 옮겨 하위 파일 갈래(`skill_body = "files"`)로 바꿨다.
+#   대조군은 옮기기 전 커밋 `37759ef2` 을 `--control-commit` 으로 준다.
+# 최신 결과: 통과 4, "없음" 섞임 0(2026-10-29, 이 PC, claude 2.1.312, 실험군은 이 워크트리의 커밋하지 않은 본문(러너가 찍은 커밋은 `37759ef2`), 대조군 `--control-commit 37759ef2`, 일지 2026-10-29-02).
 # 돌리는 법: 워크트리 `.claude/worktrees/<이름>/` 루트에서
-#   uv run python tools/canary.py --control-commit 2d593dd .scratch/harness/probes/canary/next_session_journal_review_turn.toml <출력 디렉터리>
+#   uv run python tools/canary.py --control-commit 37759ef2 .scratch/harness/probes/canary/next_session_journal_review_turn.toml <출력 디렉터리>
 kind = "skill"
 question = '''
-next-session 스킬을 Skill 도구로 불러 본문을 읽어라. 스킬이 시키는 일은 하지 않고 본문만 읽는다.
-1단계의 하위 항목 가운데 일지를 다루는 항목에서, 리뷰의 보고와 반영을 언제 일지에 옮기는지 적은 문장을 찾아
-처음부터 마침표까지 글자 그대로 옮겨라. 본문에 그런 문장이 없으면 "없음"이라고만 답하라.
+next-session 스킬을 Skill 도구로 불러 본문을 읽어라. 스킬이 시키는 일은 하지 않는다.
+본문이 상황마다 Read로 열라고 가리키는 하위 파일 가운데 PR을 연 세션이 병합까지 마칠 때 여는 파일 하나를
+Read로 열고, 아래를 그 파일에서만 찾는다. 스킬 본문(SKILL.md)에 든 글은 옮기지 않는다.
+본문이 그런 하위 파일을 가리키지 않거나 그 파일에 없으면 그 물음에 "없음"이라고만 답하라.
+일지 항목에서, 리뷰의 보고와 반영을 언제 일지에 옮기는지 적은 문장을 찾아 처음부터
+마침표까지 글자 그대로 옮겨라.
 '''
 expect = ["마무리를 기다리지 않고 받은 턴에 옮긴다"]
-source = ".claude/skills/next-session/SKILL.md"
+source = ".claude/skills/next-session/merge.md"
 skill = "next-session"
+skill_body = "files"
 
 [[arm]]
 name = "워크트리"

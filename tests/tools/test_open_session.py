@@ -780,8 +780,8 @@ def test_이_저장소의_결정표_모델_칸은_스크립트가_읽는다() ->
 
 
 def test_레벨_스윕의_갈래_값은_스크립트가_읽는다() -> None:
-    # next-session 3단계가 결정표 칸 대신 tools/model_sweep.py 의 값을 모델 줄에 옮긴다(ADR 0029
-    # 이력).
+    # next-session 의 directive.md 가 결정표 칸 대신 tools/model_sweep.py 의 값을 모델 줄에
+    # 옮긴다(ADR 0029 이력).
     arms = list(model_sweep.ARMS)
 
     completed = _call(
