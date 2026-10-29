@@ -64,7 +64,30 @@
 - 첫 커밋 시도가 pre-commit의 `check-mutations`에 막혔다. 07의 `run_page_mutations.toml` 여덟 변이와 conversation의 `continuation_mutations.toml` 한 변이가 겨눈 `RunDecision.tsx`의 원문을 이 브랜치가 옮기거나 고쳤다. 원문을 새 코드(`columnOf`, `RunColumns.tsx`)로 옮기고, 표지가 바뀐 둘(최종 사용자 변이는 이제 결정 자리 단언 `expected <section …(2)>…(1)</section> to be null`이 먼저 빨갛고, 좁은 폭 차례 변이는 결정 칸이 카드가 되어 기대 수가 2066에서 2302로 바뀌었다)은 변이를 손으로 넣어 실패 출력을 본 뒤 고쳤다. `tools/mutate.py`로 그 표 12개와 continuation의 그 변이 하나가 모두 기대대로 빨강이었다(출력을 손으로 봤다).
 - `coderabbit auth status`가 좌석 없음(`Seat: not assigned`)이라 PR 직전 리뷰는 대체 둘(`/security-review`, `bug-perf-review`)로 한다.
 
-## 인계 지시문
+- 다시 친 커밋이 pre-commit을 지나 `952f21e2`가 됐다(Passed 17, Skipped 3: ruff 둘과 헌법 판은 대상 파일이 없었다. 출력을 손으로 봤다). 손으로 치는 다섯은 이 결과로 갈음한다.
+
+### 인계(둘째 세션)
+
+- 커밋 뒤에 컨텍스트 문턱을 넘어 인계했다. 아직 하지 않은 것: PR 직전 리뷰(좌석이 없어 대체 둘), 푸시, PR, 병합.
+- PR 직전 `bug-perf-review`에 밀 주장은 위 "고친 것"에서 새로 쓴 문장(`web-admin.md`, `README.md`, 티켓 "이 티켓이 정한 것"의 두 줄)과 `FailureAlert`의 주석 한 줄이다.
+- 바꾸기 전 제목: `feature/08-admin-decision-column`
+
+## 인계 지시문(둘째 세션이 냄)
+
+```
+다음 작업: .scratch/admin-style/issues/08-admin-decision-column.md. 실행 하나 화면의 결정 칸 안이 카드와 버튼 쌍으로 서고, 채널 토큰이 없으면 안내 줄과 "설정 열기"가 선다
+다음 단계: 구현
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /implement .scratch/admin-style/issues/08-admin-decision-column.md
+브랜치: feature/08-admin-decision-column
+모델: Opus 5.5 / medium. 레벨 스윕의 갈래
+읽을 것: docs/journal/2026-10-30-02-admin-decision-column.md
+이어받을 상태: 인계: 커밋 뒤. 셀프 리뷰를 반영하고 티켓을 done으로 한 커밋 952f21e2까지 했고 아직 푸시하지 않았다. 남은 단계는 PR 직전 리뷰(coderabbit 좌석이 없어 대체 둘: origin/main을 합친 뒤 내장 /security-review, 그리고 bug-perf-review 서브에이전트. 밀 주장은 일지의 "인계(둘째 세션)" 줄), 푸시, PR, 병합이다. PR 본문에 적을 것: 바뀐 사진 12장과 새 사진 24장 가운데 에이전트가 Read로 본 7장(일지)과 나머지는 사람이 볼 몫, decision e2e 첫 시험이 사진 비교와 함께 돌 때 한 번 실패하고 혼자 돌려 통과한 것, PR #429(05)가 FailureAlert.tsx와 plugin-toggle.e2e.ts를, 09 워크트리가 README.md를 함께 고쳐 나중에 병합하는 쪽에 글자 충돌 후보가 있다는 것, 카나리아 web_admin_plugins_read 통과 4. 일지: docs/journal/2026-10-30-02-admin-decision-column.md
+확인할 선행 조건: 없음
+이번 요청 범위: PR과 병합까지
+```
+
+## 인계 지시문(첫 세션이 냄)
 
 ```
 다음 작업: .scratch/admin-style/issues/08-admin-decision-column.md. 실행 하나 화면의 결정 칸 안이 카드와 버튼 쌍으로 서고, 채널 토큰이 없으면 안내 줄과 "설정 열기"가 선다
@@ -80,3 +103,11 @@
 ```
 
 open-session을 부른다 2026-10-29T16:16:00Z
+
+open-session을 부른다 2026-10-29T17:20:09Z
+
+## 셋째 세션(같은 제목, 인계받아 PR 직전 리뷰부터)
+
+- 워크트리에 `EnterWorktree(path)`로 들어갔다. origin/main(PR #429, 05)을 합치자 `FailureAlert.tsx`가 충돌했다. 05가 `note`, 이 브랜치가 `children`을 더한 것이라 둘 다 남기고 Prettier로 서식을 맞췄다. `plugin-toggle.e2e.ts`는 git이 저절로 합쳤다(`git merge` 출력을 손으로 봤다). 합친 `FailureAlert.tsx`는 `prettier --check`로 손으로 봤다.
+- PR 직전 리뷰의 한 갈래인 `bug-perf-review` 서브에이전트는 기준 origin/main으로 코드·문서를 읽어 대조했고(시험은 돌리지 않았다) 지적 0건이었다. 인계 줄의 네 주장(`columnOf`의 차례, `README.md`의 문장, 티켓의 `container-type`·"허가" 문장, `FailureAlert`의 `div`와 병합 결과의 `note`·`children` 쓰임새)이 모두 코드와 맞는다고 보고했다(그 보고를 읽었다).
+- 병합 커밋의 첫 시도는 pre-commit의 pytest에서 `tests/tools/test_rerun_runner.py`의 `test_같은_갈래가_두_번_든_파일럿의_두_회차가_함께_돌아도_번호가_다르다` 하나가 `assert 1 == 2`로 실패해 막혔다(1 failed, 6005 passed, 590초. 출력을 손으로 봤다). 이 브랜치가 건드리지 않은 파일이고, `uv run pytest -q tests/tools/test_rerun_runner.py`를 혼자 돌리자 63개 모두 통과했다(출력을 손으로 봤다). 두 회차가 함께 도는지를 시간(`hang=1.0`)으로 보는 시험이라 부하에서 회차가 겹치지 않은 것으로 어림한다. 커밋을 다시 쳤다.

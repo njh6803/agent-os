@@ -8,16 +8,25 @@ import type { FailureNoticeProps } from "./FailureNotice";
 
 interface FailureAlertProps extends FailureNoticeProps {
   readonly title: string;
+  /** 메시지 다음 줄에 더하는 글(실패 알림 표의 "본문에 더하는 것"). 켜고 끄기의 "스위치는 다시 읽은 값이다." 같은 것. */
+  readonly note?: string;
   /** 추적 식별자 아래에 더할 것. */
   readonly children?: ReactNode;
 }
 
-export function FailureAlert({ title, message, requestId, children = null }: FailureAlertProps) {
+export function FailureAlert({
+  title,
+  message,
+  requestId,
+  note,
+  children = null,
+}: FailureAlertProps) {
   return (
     <Alert tone="danger" title={title}>
       {/* `children` 이 목록(`ul`)일 수 있어 묶음은 구문 콘텐츠만 받는 `span` 이 아니라 `div` 다. */}
       <div className="flex flex-col gap-1">
         <span className="whitespace-pre-wrap">{message}</span>
+        {note === undefined ? null : <span>{note}</span>}
         {requestId === null ? null : (
           <span>
             추적 식별자: <code className="font-mono text-mono wrap-anywhere">{requestId}</code>
