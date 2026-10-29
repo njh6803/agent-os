@@ -123,3 +123,16 @@ CodeRabbit CLI는 `coderabbit auth status`가 `Seat: not assigned`라 돌지 못
 
 - `/security-review`: 합친 뒤에 돌렸고, 서브태스크에 범위를 `95f92b41`의 변경으로 좁혀 넘겼다. 지적이 없었다. 트레이스 값은 모두 React 글자 자식으로 들어가고 `dangerouslySetInnerHTML`이 없으며, 실행 링크는 `/runs/`와 `encodeURIComponent`로 짓고, 채널 토큰은 있는지만 읽는다고 보고했다(서브태스크가 코드를 읽은 것). 거짓 양성을 거르는 단계는 지적이 없어 돌 것이 없었다.
 - `bug-perf-review`: `git diff origin/main...HEAD`의 코드 네 파일에 지적이 없었다(유효 0, 보류 0). 결정 칸이 서면 `panel`이 null이 아니라는 것, 좁은 폭의 `order` 차례, 디자인 토큰 셋이 `theme.css`에 있다는 것, 재개 조각이 들어와도 이벤트 목록 요소가 다시 그려지지 않는다는 것을 따라가 봤다고 보고했다(서브에이전트가 코드를 읽은 것).
+
+## PR #428 봇 첫 회차
+
+PR을 열고 `@coderabbitai review`를 남긴 뒤 `tools/wait_ci.py 428`이 헤드 `0d5e7ec`에서 검사 아홉이 모두 SUCCESS라고 찍었다(도구가 찍었다).
+
+- CodeRabbit: "No actionable comments were generated in the recent review."(PR 코멘트를 `gh pr view --json comments`로 손으로 봤다).
+- claude-review: Critical·Major 없이 Minor 둘과 Nit 하나였다. (1) `decisionPlaceStands`와 `panel` 삼항이 같은 세 조건을 두 번 적는다. (2) 상태를 쓰지 않는 배치 `RunColumns`가 `RunDecision.tsx`에 함께 있어 파일이 바뀌는 이유가 둘이다. (3) 좁은 폭의 문서 차례와 화면 차례가 다르니 `order` 대신 DOM 차례를 08에서 다시 볼 만하다.
+
+셋 모두 고치지 않고 08로 넘겼다. 08이 결정 칸의 갈래와 `panel` 삼항을 다시 짜므로(08 티켓의 07 메모), 지금 함수로 빼거나 파일을 나누면 08이 곧 다시 고친다. 08 티켓의 07 메모에 셋을 받을 일로 더했고, 같은 까닭을 PR 코멘트에 남긴다.
+
+## 다음
+
+- 08(결정 칸)이 07의 PR #428 claude-review 지적 셋을 받는다: 결정 칸의 갈래를 한 번 계산해 `panel`과 재개 스트림이 함께 쓰기, `RunColumns`를 자체 파일로 빼기, 좁은 폭에서 DOM 차례를 화면 차례와 맞출 수 있는지 보기(08 티켓 메모).
