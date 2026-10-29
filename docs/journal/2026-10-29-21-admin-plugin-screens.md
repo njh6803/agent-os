@@ -89,3 +89,32 @@ CodeRabbit CLI는 `Seat: not assigned`(`coderabbit auth status`)라 대체 둘�
   - Minor(유효): 두 행을 겹쳐 눌러 둘 다 실패하면 실패 칸 하나(`PluginList.tsx:57`)를 뒤의 실패가 덮어 앞의 실패가 사라진다. 명세가 알림 하나를 정했고 스위치가 다시 읽은 값이라, 행동은 두고 티켓의 "이 티켓이 정한 것"에 "마지막 실패 하나만 보인다"를 적었다.
   - Nit(보류): 누르는 동안 스위치가 `disabled`라 키보드 포커스가 빠질 수 있다. 패키지 `Switch`의 몫이고 실제 브라우저에서 보지 않았다. PR 체크리스트에 적는다.
   - 문장 1의 Nit: 티켓의 "이 티켓의 켜고 끄기 줄"을 "이 티켓 '플러그인 목록' 절의 켜고 끄기 체크박스 문장"으로 고쳤다.
+
+## PR #429 봇 첫 회차
+
+PR을 열고 `@coderabbitai review`를 남긴 뒤 `tools/wait_ci.py 429`가 헤드 `85cd8e3`에서 검사 아홉이 모두 SUCCESS라고 찍었다(도구가 찍었다). 지적은 `gh api .../pulls/429/comments`와 `gh pr view --json comments`로 손으로 읽었다.
+
+- CodeRabbit: Minor 둘. `PluginDetail.stories.tsx`와 `PluginList.stories.tsx`에 `showcase` 태그와 `쓰임: …` 이름의 스토리, 모드를 다크로 정한 스토리를 더하라고 했다. 고치지 않았다. `.claude/rules/web-design.md`의 보여 주기용 스토리는 컴포넌트를 실제 자리에 놓아 Claude Design 카드에 올리는 것이라(그 절과 카드 절) 패키지 컴포넌트를 두고 쓴 문장으로 읽었다. 앱의 organism 스토리는 이미 실제 화면이다. 다만 그 절은 앱 스토리에도 걸리는지 적지 않았고, 위젯 앱에는 `showcase`·다크 스토리가 있다(Grep으로 봤다). 관리 화면 앱의 스토리 가운데 `showcase`나 `mode: "dark"`를 단 것은 하나도 없다(Grep으로 봤다. 병합된 04·07도 같다). 다크는 관리 화면의 사진 비교가 모든 스토리를 라이트·다크 둘로 찍어(이 PR의 `*-dark.png` 열 장) 덮는다. 관리 화면만 바꾸면 관례가 갈리므로 이 PR에서는 두고, 규칙의 범위를 밝히는 일을 대기열 542로 넘겼다.
+- claude-review: Critical·Major 없이 Minor 둘과 Nit 하나.
+  - Minor: `PluginDetail`이 형제 organism `PluginList`에서 `KIND_NAMES`를 가져온다. 셀프 리뷰가 남긴 것과 같은 지적이다. 쓰는 곳이 둘이고 문서화된 규칙이 없어 옮기지 않았다. 아래 "다음"에 적는다.
+  - Minor: `FailureNoticeProps`를 옛 `FailureNotice`에서 가져온다. 08 티켓의 04 메모가 이미 "`FailureNoticeProps`를 옮긴다"를 들고 있어(그 줄을 Read로 봤다) 더 적을 것이 없다.
+  - Nit: 스토리가 `PluginListView`에 처리기를 넘기는지. `onSetEnabled: fn()`, `onSwitchFailure: fn()`을 넘긴다(Grep으로 봤다).
+
+넷 모두 코드를 바꾸지 않고, 같은 까닭을 PR 코멘트에 남긴다.
+
+## 회고
+
+후보 넷. 승인 하나(대기열), 기각 둘, 일지에만 하나. 넘긴 것은 없다.
+
+- 승인: CodeRabbit이 `web-design.md` "컴포넌트 공통" 절의 보여 주기용·다크 스토리 문장을 앱 organism 스토리에 요구했다(사건: PR #429 CodeRabbit Minor 둘). 규칙의 범위를 밝히는 문장은 더하는 것이라 첫 회차로 대기열 542(1회차)에 둔다. 층은 지침이다. 규칙의 `paths`가 패키지와 앱을 함께 들어 경로로 가를 수 없다.
+- 일지에만: 부하 아래 시간 시험이 문서만 바꾼 커밋의 pre-commit을 막았다(이 세션에서 두 번, 앞 세션의 첫 pre-commit까지 세 번). 닫힌 306이 받아들여 닫은 종류라 회차를 더하지 않는다(retro 5단계). `test_interrupt.py`의 실패는 30초 기다림 초과(244줄)라, 열린 531의 단언(`pressed[0] < cancelled`)과 다른 사례다. 그 회차의 pytest가 1149초, web-verify가 1152초였다(러너가 찍었다).
+- 기각: 워크트리 가드가 `&&`로 이은 heredoc 덧붙이기와 변수를 쓴 `sed` 고리를 거부했다. 앱 가드가 그 자리에서 막았고 `CLAUDE.md` 환경 함정이 이미 적는다.
+- 기각: 주 체크아웃 밖 스크래치로 `cd`하려던 명령을 훅이 막았다. 이미 있는 훅이 막았다.
+
+만료: `tools/queue_open_rows.py`를 작업 트리와 `--ref origin/main`으로 돌려 두 출력에 모두 든 261·266·277을 `만료 2026-10-30`으로 닫았다(도구가 찍었다).
+
+## 다음
+
+- 08(결정 칸)이 마지막 `FailureNotice` 사용처를 옮기면 `FailureNoticeProps`를 옮기고 옛 부품을 지운다(08 티켓의 04 메모, PR #429 claude-review의 Minor).
+- 플러그인 종류 이름 표 `KIND_NAMES`는 `PluginList`에 있고 `PluginDetail`이 가져온다. 셋째로 쓰는 곳이 생기면 `api/plugins` 옆으로 옮길지 본다(PR #429 claude-review의 Minor).
+- 패키지 `Switch`는 누르는 동안 `disabled`라 키보드 포커스가 빠질 수 있다(PR 직전 `bug-perf-review`의 Nit, 실제 브라우저에서 보지 않았다). 패키지를 고칠 때 불러오는 중 상태(`aria-busy`)를 볼 후보다.
