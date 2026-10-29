@@ -1,8 +1,10 @@
-import { useId, useState } from "react";
+import { Alert, Card } from "@agent-os/ui";
+import { type ReactNode, useId, useState } from "react";
 import type { Decision, StreamFrame } from "../../api/approval";
 import { describeFailure, isRejection, type RequestFailure } from "../../api/failure";
 import type { PluginRow } from "../../api/plugins";
 import type { Trace } from "../../api/traces";
+import { EmptyLine } from "../molecules/EmptyLine";
 import { FailureNotice, type FailureNoticeProps } from "../molecules/FailureNotice";
 import { asText, EventItem } from "./EventItem";
 
@@ -101,6 +103,8 @@ interface PluginsRead {
 
 interface RunDecisionProps {
   readonly trace: Trace;
+  /** 실행 하나의 이벤트 칸(`RunDetail`). 결정 칸과 재개 스트림이 이것 둘레에 선다. */
+  readonly events: ReactNode;
   /** 이 탭에 채널 토큰이 있는가. 결정 자리가 서는 조건의 첫째다. */
   readonly channelTokenEntered: boolean;
   /** 결정 하나가 끝날 때까지 참이다(`useDecision` 의 `busy`). 결정 버튼을 막는다. */
@@ -117,17 +121,22 @@ interface RunDecisionProps {
 }
 
 /**
- * 결정 자리와 재개 스트림(web-admin 티켓 08). 실행 하나의 이벤트 아래에 선다.
+ * 실행 하나의 본문. 이벤트 칸 둘레에 결정 칸, 재개 스트림, 결정 뒤의 알림을 놓는다(web-admin 티켓 08, admin-style 티켓
+ * 07).
  *
  * 결정 자리가 보이는 조건은 넷이다. 채널 토큰이 있고, 실행이 일시정지이고, 형식 1 트레이스가 아니고, 최종 사용자의
  * 실행이 아니다. 형식 1 만 재개할 수 없으므로 "형식 1 이 아니다"로 가른다 — 형식이 늘 때마다 결정 자리가 조용히
  * 사라지지 않게(conversation 명세, 스토리 56). 재개할 수 없다는 이유는 실행 하나의 한 줄이 이미 말한다(스토리 52).
  * 최종 사용자의 실행은 그 실행의 주체만 결정하므로(ADR 0023) 앞의 셋이 맞으면 자리 대신 그 이유 한 줄이 선다. 서버에
- * 묻지 않는다. 눌러 봐야 서버가 409 로 막는다. 결정 뒤의 알림과 재개 스트림은 결정 자리 밖에 선다. 다시 읽은
- * 트레이스가 일시정지가 아니면 결정 자리는 걷히지만 무엇이 있었는지는 남는다.
+ * 묻지 않는다. 눌러 봐야 서버가 409 로 막는다. 결정 자리나 그 한 줄이 결정 칸이고, 둘 다 없으면 결정 칸이 서지 않는다.
+ * 다시 읽은 트레이스가 일시정지가 아니면 결정 칸이 걷히고 이벤트 칸이 넓어지지만 무엇이 있었는지는 남는다.
+ *
+ * 재개 스트림은 결정 자리가 섰거나 받은 조각이 있으면 선다. 결정 뒤의 실패와 끊긴 재개 스트림의 알림은 머리 바로 아래,
+ * 이벤트 칸 위다.
  */
 export function RunDecision({
   trace,
+  events,
   channelTokenEntered,
   busy,
   frames,
@@ -136,49 +145,109 @@ export function RunDecision({
   onDecide,
   plugins,
 }: RunDecisionProps) {
-  const streamId = useId();
   const pause = decidablePause(trace);
   const notice = noticeOf(failure, { channelTokenEntered });
+  const placeStands = decisionPlaceStands(trace, { channelTokenEntered });
 
   return (
     <>
-      {!channelTokenEntered || pause === null ? null : isEndUserRun(trace) ? (
-        <p>최종 사용자의 실행이라 결정은 그 사람만 낸다</p>
-      ) : (
-        <DecisionPlace
-          pause={pause}
-          busy={busy}
-          invalid={failure?.status === 422 ? failure : null}
-          onDecide={onDecide}
-          plugins={plugins}
-        />
-      )}
       {notice === null ? null : <FailureNotice {...notice} />}
-      {frames.length > 0 ? (
-        <section aria-labelledby={streamId}>
-          <h2 id={streamId}>재개 스트림</h2>
-          <ol>
-            {frames.map((frame, index) =>
-              // 프레임은 받은 차례로만 갈린다. 한 번의 결정 안에서 그 차례는 바뀌지 않는다.
-              frame.kind === "event" ? (
-                <EventItem key={index} event={frame.event} />
-              ) : (
-                <li key={index}>
-                  <h3>읽지 못한 프레임</h3>
-                  <p style={{ whiteSpace: "pre-wrap" }}>{frame.raw}</p>
-                </li>
-              ),
-            )}
-          </ol>
-        </section>
-      ) : null}
       {cut ? (
-        <div role="status">
-          <p>재개 스트림이 끊겼다. 실행은 서버에서 계속된다</p>
-          <p>창을 닫거나 떠나도 실행은 끝까지 간다. 돌아오면 트레이스로 이어 본다</p>
-        </div>
+        <Alert tone="info" title="재개 스트림이 끊겼다. 실행은 서버에서 계속된다">
+          창을 닫거나 떠나도 실행은 끝까지 간다. 돌아오면 트레이스로 이어 본다.
+        </Alert>
       ) : null}
+      <RunColumns
+        events={events}
+        panel={
+          !channelTokenEntered || pause === null ? null : isEndUserRun(trace) ? (
+            <p>최종 사용자의 실행이라 결정은 그 사람만 낸다</p>
+          ) : (
+            <DecisionPlace
+              pause={pause}
+              busy={busy}
+              invalid={failure?.status === 422 ? failure : null}
+              onDecide={onDecide}
+              plugins={plugins}
+            />
+          )
+        }
+        stream={placeStands || frames.length > 0 ? <ResumeStream frames={frames} /> : null}
+      />
     </>
+  );
+}
+
+interface RunColumnsProps {
+  readonly events: ReactNode;
+  /** 결정 칸의 내용. 없으면 결정 칸이 서지 않는다. */
+  readonly panel: ReactNode;
+  readonly stream: ReactNode;
+}
+
+/**
+ * 이벤트 칸, 결정 칸, 재개 스트림의 배치(admin-style 명세 "실행 하나와 결정 자리"). 본문 칸(틀의 `@container`)이 `split`
+ * 이상이면 왼쪽 칸에 이벤트와 재개 스트림이 서고 결정 칸이 오른쪽 옆 칸(`wide`, 360px)으로 붙어 스크롤해도 머문다
+ * (`sticky`). 그 미만이면 한 열이고 결정 칸이 이벤트 칸 아래, 재개 스트림 위다. 왼쪽 칸은 결정 칸이 있든 없든 최대 폭
+ * `content` 를 넘지 않는다.
+ *
+ * 그림 mk-run 의 열 정의(`minmax(0, 1fr) 360px`)는 임의값이라 쓰지 않는다. 대신 한 열일 때 왼쪽 칸을 `contents` 로 풀어
+ * 세 칸을 한 flex 열의 형제로 두고 `order` 로 결정 칸을 이벤트 칸과 재개 스트림 사이에 놓는다. 그래서 좁은 폭에서는
+ * 보이는 차례(이벤트, 결정, 재개 스트림)와 문서의 차례(이벤트, 재개 스트림, 결정)가 다르다. 화면 읽기 프로그램은 늘
+ * 문서의 차례로 읽는다. 재개 스트림에 포커스를 받는 것은 받은 이벤트의 실행 링크뿐이라, 탭 차례가 보이는 차례와
+ * 어긋나는 것은 그 링크가 있을 때뿐이다.
+ */
+function RunColumns({ events, panel, stream }: RunColumnsProps) {
+  return (
+    <div className="flex flex-col gap-6 @split:flex-row @split:items-start">
+      <div className="contents @split:flex @split:max-w-content @split:min-w-0 @split:flex-1 @split:flex-col @split:gap-6">
+        {events}
+        {stream === null ? null : <div className="order-2 @split:order-none">{stream}</div>}
+      </div>
+      {panel === null ? null : (
+        <div className="order-1 @split:sticky @split:top-8 @split:order-none @split:w-wide @split:shrink-0">
+          {panel}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/**
+ * 재개 스트림. 받은 이벤트는 이벤트 칸과 같은 카드이고, 읽지 못한 조각은 "읽지 못한 프레임"과 원문 카드다. 조각이
+ * 없으면 빈 줄이다. 스트림이 끝나면 트레이스를 다시 읽고 이 절은 걷힌다. 기록의 원천은 다시 읽은 트레이스다.
+ */
+function ResumeStream({ frames }: { readonly frames: readonly StreamFrame[] }) {
+  const streamId = useId();
+  return (
+    <section aria-labelledby={streamId} className="flex flex-col gap-3">
+      <h2 id={streamId} className="text-body font-semibold">
+        재개 스트림
+      </h2>
+      {frames.length === 0 ? (
+        <EmptyLine icon="circle-minus" iconSize="16">
+          결정을 내면 재개한 이벤트가 여기에 차례로 붙는다.
+        </EmptyLine>
+      ) : (
+        <ol className="flex flex-col gap-3">
+          {frames.map((frame, index) =>
+            // 프레임은 받은 차례로만 갈린다. 한 번의 결정 안에서 그 차례는 바뀌지 않는다.
+            frame.kind === "event" ? (
+              <EventItem key={index} event={frame.event} />
+            ) : (
+              <li key={index}>
+                <Card padding="3">
+                  <h3 className="font-mono text-mono font-medium">읽지 못한 프레임</h3>
+                  <p className="font-mono text-mono whitespace-pre-wrap wrap-anywhere">
+                    {frame.raw}
+                  </p>
+                </Card>
+              </li>
+            ),
+          )}
+        </ol>
+      )}
+    </section>
   );
 }
 
