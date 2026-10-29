@@ -109,10 +109,12 @@ PYTHONUTF8=1 uv run python tools/mutate.py .scratch/design-card-build/probes/ass
 
 ## 2026-10-29 글꼴 대조(`font_route.mjs`)
 
-첫 실행(`font-route-1`, `HEAD` `f6df25c8`, 짓기 명령과 디자인 시스템 패키지 아래 커밋하지 않은 변경 4. 티켓 01의 `assemble.ts`·`assemble.test.ts`·`main.ts`·시험 자료가 커밋 전이었다): 회차 4, 측정 4, 측정 아님 0. 종료 0. 수는 프로브가 요약에 찍은 것이다.
+둘째 실행(`font_route_d89970e7`, 2026-10-30, `HEAD` `d89970e7`, 짓기 명령과 디자인 시스템 패키지 아래 커밋하지 않은 변경 0): 회차 4, 측정 4, 측정 아님 0, `splits`는 `file`·`route` 모두 `true`. 종료 0. 수는 프로브가 요약에 찍은 것이다. 셀프 리뷰가 표지에 문서의 자리를 더하고 길마다의 갈림(`splits`)을 찍게 고친 판으로 잰 것이다. 네 회차 모두 문서가 카드 자리에서 열렸다(`at`이 `file` 길은 산출 폴더의 `components/Button/__font_route.html`, `route` 길은 `/components/Button/preview.html`).
 
 - `file`·`positive`와 `route`·`positive`: 문서의 Noto Sans KR FontFace 372개 가운데 실림 5, 문서 전체의 글꼴 오류 0.
 - `file`·`negative`와 `route`·`negative`: 실림 0, 글꼴 오류 5.
+
+첫 실행(`font-route-1`, `HEAD` `f6df25c8`, 커밋하지 않은 변경 4. 티켓 01의 `assemble.ts`·`assemble.test.ts`·`main.ts`·시험 자료가 커밋 전이었다)은 표지에 문서의 자리가 없고 갈림을 찍지 않던 판이었다. 회차 4, 측정 4, 종료 0이었고 네 회차의 실림과 글꼴 오류는 둘째 실행과 같았다.
 
 해석: 두 길 모두 묶음 CSS 안의 상대 주소가 카드 파일의 자리(`components/<이름>/`)에서 풀린다. 양성 갈래가 이 문서에서 같은 글꼴 파일이 실릴 수 있다는 대조이고, 음성 갈래는 주소의 앞머리만 바꿔 실림을 0으로 만들었다. 실제 페이지의 판 4·5(위 "실제 페이지" 절)와 같은 갈림이다. 짓기 시험은 `route` 길을 골랐다. `file://` 길은 진단 문서를 산출 폴더 안에 써야 하고, `route` 길은 산출을 고치지 않으며 페이지처럼 `http` 출처에서 싣는다. 티켓을 시작할 때 커밋하지 않은 스크래치 스크립트로 같은 네 갈래를 먼저 봤고 수가 같았다(손으로 봤다). 그 스크립트를 이 프로브로 옮기며 짓기 명령을 스스로 돌게 했다.
 

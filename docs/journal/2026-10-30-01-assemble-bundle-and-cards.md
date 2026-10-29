@@ -122,3 +122,156 @@ open-session을 부른다 2026-10-29T15:22:55Z
 ## 커밋
 
 첫 커밋 시도는 commit-msg 훅의 판정을 앞당기는 훅이 제목 81자를 막아 제목을 줄였다. 다음 시도는 pre-commit의 `pytest`가 `tests/tools/test_rerun_runner.py::test_같은_갈래가_두_번_든_파일럿의_두_회차가_함께_돌아도_번호가_다르다` 하나로 실패해 막혔다(1 failed, 6005 passed, 714.16초). 지시문이 부하에서 막을 수 있다고 적은 시간 시험이다. 그 시험만 단독으로 돌리자 통과해(216.44초) SKIP 없이 같은 커밋을 다시 친다. 같은 실행의 인용 대조 경고 넷은 이 일지의 인용이었다. 원문을 줄여 옮긴 하나는 원문 그대로 고쳤고, 반영으로 사라진 옛 문장 둘과 도구 출력 하나는 따옴표를 떼거나 코드 스팬으로 바꿨다.
+
+다시 친 커밋은 pre-commit의 검사를 모두 지나 `d89970e7`로 들어갔다(`pytest` 619.0초, `web-verify` 694.4초, 인용 대조 경고 없음). 푸시는 하지 않았다.
+
+## 인계 전 상태(커밋 뒤)
+
+이 세션의 제목은 `feature/01-assemble-bundle-and-cards`다. 컨텍스트가 인계 문턱을 넘은 채 `커밋 뒤`에 와서 `커밋 뒤`로 넘긴다(세션 컨텍스트 316,354 토큰, `hook_handoff`). 인계하지 않는 다섯에 들지 않았다(곁 세션이 아니다: `get_session`의 `self`에 `parentSessionId`가 없다. 열린 PR은 없다: `gh pr view feature/01-assemble-bundle-and-cards --json state`가 PR이 없다고 끝났다). 셀프 리뷰는 위 "셀프 리뷰"절대로 반영해 커밋까지 했다. 워크트리에 커밋하지 않은 변경은 없다.
+
+남은 일(새 세션):
+
+1. 커밋한 판에서 변이 표 전체를 다시 돌린다(`PYTHONUTF8=1 uv run python tools/mutate.py .scratch/design-card-build/probes/assemble_mutations.toml`, 변이 28, 하나에 짓기 한 번이라 수십 분이다). 반영으로 새로 들거나 표지·겨누는 줄이 바뀐 변이(옛 이름 묶음 JS, 장면 판정, 경로 목록, README 없음, 판정 넷의 `expected null to deeply equal`, 섞인 경우의 `+   "kind": "limit",`, 목록 파일 자리의 `+     "kind": "output",`)는 한 번도 돌지 않았다. 표지가 맞지 않으면 변이를 손으로 넣어 실패 출력을 본 뒤 고친다. 목록 파일 자리 변이는 짓기가 시험 안에서 돌아 이 PC의 부하에서 `testTimeout` 60초를 넘길 수 있다. 넘기면 표지를 바꾸지 말고 그 까닭을 적는다.
+2. 커밋한 판에서 `node .scratch/design-card-build/probes/font_route.mjs <새 절대 경로>`를 다시 돌려, 프로브 README "2026-10-29 글꼴 대조" 절의 `HEAD`·커밋하지 않은 변경 수·수와 새 `splits`를 고친다. 같은 README의 "짓기 명령의 변이" 절에 1의 결과(28, 기대대로인 수)를 적고 "재지 않은 것"에서 옛 이름 묶음 JS를 빼고 명령이 판정을 부르는 줄을 더한다(변이 표 머리 주석과 같게). 티켓 결과의 "변이" 줄도 28로 고친다.
+3. 티켓을 `done`으로 바꿔 커밋하고, 푸시하고, PR을 연다(`/git-pr`). PR 직전 리뷰(`docs/constitution/operations.md` 리뷰 파이프라인 2)의 브리프에 위 "PR 직전 리뷰에 밀 주장"을 나열한다. CI의 `pnpm -C web verify`에서 새 node 시험이 chromium을 띄우는지 보고 티켓 마무리의 마지막 체크박스를 채운 뒤 병합한다.
+
+함께 볼 것: 나란히 도는 03 워크트리도 `.scratch/design-card-build/probes/README.md`를 고친다(병합하는 쪽에서 글자 충돌 후보). 08 워크트리(`feature/08-admin-decision-column`)의 일지 `2026-10-30-02`가 먼저 병합되면 이 브랜치의 일지 번호를 옮겨야 한다(`tools/sibling_overlap.py`가 알렸다).
+
+## 인계
+
+`커밋 뒤`의 인계 계기를 받아 `next-session` `handoff.md`대로 넘긴다. 지시문:
+
+```
+다음 작업: .scratch/design-card-build/issues/01-assemble-bundle-and-cards.md. 올리기 도구의 assemble 명령이 컴포넌트 묶음·카드·글꼴·옛 이름을 짓고, pnpm -C web verify가 chromium으로 카드가 그려지는지 보게 한다
+다음 단계: 구현
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /implement .scratch/design-card-build/issues/01-assemble-bundle-and-cards.md
+브랜치: feature/01-assemble-bundle-and-cards
+모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
+읽을 것: 일지 docs/journal/2026-10-30-01-assemble-bundle-and-cards.md의 "인계 전 상태(커밋 뒤)"
+이어받을 상태: 인계: 커밋 뒤. 셀프 리뷰를 반영해 커밋했고 푸시와 PR은 아직이다. 남은 단계는 커밋한 판에서 변이 표 전체와 font_route.mjs를 다시 돌려 프로브 README와 티켓 결과를 고치기, 티켓 done, PR, PR 직전 리뷰, CI 확인, 병합이다. 일지 docs/journal/2026-10-30-01-assemble-bundle-and-cards.md. 임시 디자인 시스템 아티팩트 64VW1b5F8tRcCeTZBwZA29는 사용자가 남겨 두기로 했다. 지우지 않고 다시 묻지 않는다. 이 PC에서 pre-commit의 pytest는 다른 시간 시험(tests/tools/test_probe_kit.py, tests/tools/test_rerun_runner.py, tests/channel/cli/test_interrupt.py, tests/tools/test_hook_edit_during_commit.py)이 부하에서 한 번씩 막을 수 있다. 단독 실행이 통과하면 SKIP 없이 같은 커밋을 한 번 더 시도하고, SKIP=pytest는 사람에게 묻는다
+확인할 선행 조건: 없음
+이번 요청 범위: PR과 병합까지
+```
+
+제목은 `feature/01-assemble-bundle-and-cards (인계함)`으로 바꿨고(앱이 바꿨다고 알렸다), 띄운 백그라운드 작업은 모두 끝나 멈출 것이 없었으며, 워크트리 잠금 풀기는 `is not locked`로 끝나 넘어갔다.
+
+open-session을 부른다 2026-10-29T17:01:34Z
+
+## 이어받은 세션(커밋 뒤)
+
+위 지시문으로 연 새 세션이다. 제목을 `feature/01-assemble-bundle-and-cards`로 바꾸고 `git worktree list`에서 찾은 이 워크트리에 `EnterWorktree(path)`로 들어왔다. 워크트리에는 커밋하지 않은 이 일지(커밋 뒤 절과 인계 절)만 있었다.
+
+> 사용자: ".claude/skills/implement/SKILL.md 를 읽어 그대로 따른다. … 인자: .scratch/design-card-build/issues/01-assemble-bundle-and-cards.md / 다음 작업: … / 이어받을 상태: 인계: 커밋 뒤. 셀프 리뷰를 반영해 커밋했고 푸시와 PR은 아직이다. 남은 단계는 커밋한 판에서 변이 표 전체와 font_route.mjs를 다시 돌려 프로브 README와 티켓 결과를 고치기, 티켓 done, PR, PR 직전 리뷰, CI 확인, 병합이다. … / 이번 요청 범위: PR과 병합까지"
+
+**글꼴 대조.** 커밋한 판 `d89970e7`에서 `font_route.mjs`를 다시 돌렸다. 회차 4, 측정 4, 커밋하지 않은 변경 0, `splits`는 두 길 모두 `true`, 종료 0이었고 실림과 글꼴 오류는 첫 실행과 같았다(프로브가 찍은 요약). 프로브 README "2026-10-29 글꼴 대조" 절에 둘째 실행으로 적었다.
+
+**변이를 멈추고 차례를 바꿨다.** 인계의 남은 일 1대로 변이 표 전체를 띄웠다가 기준선 넷째에서 멈췄다(`TaskStop`, 소스에 변이가 들기 전이다. 멈춘 뒤 `git status`에 이 일지와 프로브 README만 있었다). `tools/mutate.py` 독스트링이 전체 실행을 "셀프 리뷰와 PR 직전 리뷰(보안·버그·성능)를 반영해 커밋한 뒤에 한 번" 돌라고 적고, 리뷰 전에 띄워 다시 돈 일이 대기열 265·359에 있다. 인계 지시문의 차례(변이 다음에 PR 직전 리뷰)가 그 문장과 어긋났다. 그래서 origin/main(`3b78de25`, admin-style 05)을 합친 뒤 PR 직전 리뷰를 먼저 돌리고, 반영해 커밋한 판에서 변이 전체를 한 번 돈다.
+
+**PR 직전 리뷰.** `coderabbit auth status`가 `Seat: not assigned`라 대체 둘을 나란히 돌렸다. 버그·성능은 `bug-perf-review` 서브에이전트(위 "PR 직전 리뷰에 밀 주장"을 브리프에 나열했다), 보안은 내장 `/security-review`다.
+
+- 보안(`/security-review`, origin/main을 합친 뒤): 찾기 서브태스크가 발견 없음을 보고해 거르기 단계에 넘길 것이 없었다. 따라간 흐름은 `--out`·`--paths`(CLI 플래그라 신뢰하는 값, 명령이 지우는 것은 자기 `mkdtempSync` 폴더뿐), 하위 프로세스(`process.execPath`로 셸 없이, 인자는 상수와 임시 폴더 안 경로), 지어 쓰는 vite 설정(끼워 넣는 값은 모두 `JSON.stringify`), 스토리 파일 이름(저장소 소스), 카드 HTML 인라인(장면 본문의 `</script`·`<!--`를 판정이 막는다)이다. `font_route.mjs`의 `decodeURIComponent` 경로는 꼴로는 폴더를 벗어날 수 있으나 요청을 내는 쪽이 프로브가 연 페이지 하나뿐이라 보고하지 않았다(서브태스크의 코드 읽기).
+- 버그·성능(`bug-perf-review`, 기준 `3b78de25`, 범위 11, 호출 40): Minor 셋, 유효 셋, 오탐 0. 밀 주장 여덟은 아래 둘째·셋째 지적 말고는 맞다고 봤다. 리뷰어가 손으로 돌린 것은 `--paths`에 폴더(`output`, `--out` 없음), 공백과 한글이 든 경로(794개, 산출에 저장소 경로 0), 빈 `--out`에 복사, 없는 `TEMP`, 없는 브라우저 경로(`Failed Suite`로 빨갛고 임시 폴더가 남지 않았다)다.
+  1. 임시 폴더를 `try` 밖에서 만들어 만들지 못하면 JSON 보고 없이 예외로 끝나고, `finally`의 `rmSync`가 던지면 성공한 결과를 덮는다. → 고쳤다. 시험 "임시 폴더를 만들지 못하면 아무것도 쓰지 않고 output 오류로 끝난다"를 먼저 써서 `-t 만들지`로 좁혀 돌리자, `mkdtemp`의 ENOENT가 `assemble.ts:582`에서 `run()`을 지나 던져져 빨갰다(1 failed | 29 skipped). `workFolder()`가 그것을 `output` 오류로 바꾸고, `finally`는 `maxRetries: 3`으로 지우되 실패를 삼킨다. 고친 판에서 이 시험 파일이 30 통과(Duration 50.05초)였다. 임시 폴더 안에 쓰다 실패하는 길(디스크가 찼다 등)과 지우지 못해 남기는 길은 고치지 않거나 시험하지 않고 독스트링의 못 보는 것에 적었다. 앞의 것까지 `output`으로 바꾸려면 프로그래밍 오류와 가르는 판정이 드는데, 리뷰어의 제안도 앞의 둘이었다.
+  2. 독스트링과 티켓 결과의 "args를 합치는 길은 시험이 지나지 않는다"는 글자 그대로는 틀린다. 합치는 줄은 장면 열하나 모두에서 돈다. → 고쳤다. "합친 값이 그리기에 닿는지와 `render` 없는 갈래"로 바꿨다. showcase 스토리 열하나가 모두 `tags: ["showcase"]` 다음 줄에 `render: () =>`를 둔 것을 Grep으로 손으로 봤다.
+  3. `assertAssembled` 독스트링의 "명령과 시험이 이 함수 하나로 판정한다"는 시험의 파일 검사가 금지 문자열을 따로 보는 것과 갈린다. → 고쳤다. "규칙 판정 사례가 이 함수로 판정하고, 파일 검사는 따로 본다"로 바꿨다.
+
+  같이 `command.ts`의 `output` 설명에 짓기 명령의 쓰임(산출 폴더가 비지 않음, 옮기기, 임시 폴더)을 더했다. 고친 세 파일의 eslint(출력 없음)와 Prettier(`All matched files use Prettier code style!`), 변이 표의 `--check`(`원문 확인: 변이 28 모두 원문이 한 번씩 있다`)를 다시 봤다.
+
+반영으로 새로 쓴 사실 문장(원문, 셀프 리뷰가 겨냥할 것):
+
+- `assemble.ts` 독스트링: "임시 폴더를 만들지 못해도 아무것도 쓰지 않고 `output` 오류다." / 못 보는 것: "장면이 meta 와 스토리의 `args` 를 합친 값이 그리기에 닿는지와 `render` 없이 meta 의 `component` 로 그리는 갈래는, 지금 showcase 스토리가 모두 `args` 를 받지 않는 `render` 를 가져 시험이 보지 않는다." / "임시 폴더 안에 쓰다 실패하면(디스크가 찼다 등) `CommandError` 가 아닌 예외로 끝나 JSON 보고가 없다." / "임시 폴더를 지우지 못하면(다른 프로세스가 쥔 파일 등) 결과를 덮지 않고 그 폴더를 남긴다. 이 길은 시험이 지나지 않는다."
+- `assertAssembled` 독스트링: "명령과 시험의 규칙 판정 사례가 이 함수로 판정한다. 시험의 파일 검사는 금지 문자열을 따로 본다."
+- `finally`의 주석: "임시 폴더를 지우지 못해도(다른 프로세스가 쥔 파일 등) 명령의 결과를 덮지 않는다. 그 폴더는 시스템 임시 폴더에 남는다."
+- `command.ts`: "짓기 명령에서는 산출 폴더가 비어 있지 않거나, 산출을 옮기거나 임시 폴더를 만들 수 없는 것도 든다."
+- 시험의 주석: "`tmpdir()` 은 부를 때마다 이 변수들을 읽는다(윈도는 TEMP·TMP, 그 밖은 TMPDIR)."
+- 티켓 결과의 "시험이 지나지 않는 길" 줄과 새 "임시 폴더를 만들지 못하면" 줄, 프로브 README "2026-10-29 글꼴 대조" 절의 둘째 실행 문단.
+
+## 인계 전 상태(셀프 리뷰 직전)
+
+이 세션의 제목은 `feature/01-assemble-bundle-and-cards`다. PR 직전 리뷰의 반영을 셀프 리뷰하려고 `/code-review`(기준 `HEAD` `49e3f72e`, origin/main을 합친 커밋)를 부른 자리에서 인계 계기(`hook_handoff`, 세션 컨텍스트 283,785 토큰)가 와 `셀프 리뷰 직전`으로 넘긴다. 인계하지 않는 다섯에 들지 않았다(이 세션의 지시문은 `인계: 커밋 뒤`로 시작해 경계가 다르다. 곁 세션이 아니다: `get_session`의 `self`에 `parentSessionId`가 없다). `/code-review`의 단계는 밟지 않았다.
+
+워크트리의 커밋하지 않은 변경은 여섯이다. `assemble.ts`·`command.ts`·`assemble.test.ts`(PR 직전 리뷰 반영), 티켓(결과 두 줄, 상태는 아직 `in-progress`), 프로브 README(글꼴 대조 절의 둘째 실행), 이 일지다. 커밋 `49e3f72e`는 origin/main(`3b78de25`)을 합친 병합 커밋이고 푸시하지 않았다.
+
+남은 일(새 세션):
+
+1. `/code-review`. 기준은 `49e3f72e`, 범위는 위 커밋하지 않은 변경 전부, 명세는 티켓 01이다. 위 "반영으로 새로 쓴 사실 문장"이 밀 주장이다. PR 직전 리뷰(보안·버그·성능)는 이 세션이 돌고 반영했으므로 반영이 작으면 다시 돌리지 않는다.
+2. 반영해 커밋한다(pre-commit이 검증 명령 다섯을 갈음한다).
+3. 커밋한 판에서 변이 표 전체를 돈다(`PYTHONUTF8=1 uv run python tools/mutate.py .scratch/design-card-build/probes/assemble_mutations.toml`, 변이 28. 기준선과 변이마다 짓기 한 번이라 수십 분이다. 도는 동안 이 체크아웃의 파일을 고치지 않는다). 위 "변이를 멈추고 차례를 바꿨다"대로 이 실행이 리뷰를 모두 반영한 뒤의 한 번이다. 앞 인계가 적은 대로, 반영으로 새로 들거나 표지·겨누는 줄이 바뀐 변이 여럿은 한 번도 돌지 않았다. 표지가 맞지 않으면 변이를 손으로 넣어 실패 출력을 본 뒤 고친다.
+4. 프로브 README "2026-10-29 짓기 명령의 변이" 절에 3의 결과(28, 기대대로인 수, 돌린 커밋)를 적고, "재지 않은 것"에서 옛 이름 묶음 JS를 빼고 명령이 판정을 부르는 줄을 더한다(변이 표 머리 주석과 같게). 티켓 결과의 "변이" 줄을 28로 고친다.
+5. 티켓을 `done`으로 바꿔 커밋하고, 푸시하고, PR을 연다(`/git-pr`). PR 체크리스트의 PR 직전 리뷰 줄에는 위 "PR 직전 리뷰"의 두 결과(보안 지적 없음, 버그 Minor 셋 모두 고침)를 적는다. CI의 `pnpm -C web verify`에서 새 node 시험이 chromium을 띄우는지 보고 티켓 마무리의 마지막 체크박스를 채운 뒤 병합한다.
+
+함께 볼 것: 나란히 도는 03 워크트리도 프로브 README를 고친다(병합하는 쪽에서 글자 충돌 후보). 08 워크트리의 일지 `2026-10-30-02`가 먼저 병합되면 이 일지 번호를 옮겨야 할 수 있다(앞 인계의 `tools/sibling_overlap.py` 알림).
+
+## 인계(셀프 리뷰 직전)
+
+`셀프 리뷰 직전`의 인계 계기를 받아 `next-session` `handoff.md`대로 넘긴다. 모델 줄은 `uv run python tools/model_sweep.py feature/01-assemble-bundle-and-cards`가 `Opus 5.5 / xhigh`를 찍었다. 지시문:
+
+```
+다음 작업: .scratch/design-card-build/issues/01-assemble-bundle-and-cards.md. 올리기 도구의 assemble 명령이 컴포넌트 묶음·카드·글꼴·옛 이름을 짓고, pnpm -C web verify가 chromium으로 카드가 그려지는지 보게 한다
+다음 단계: 구현
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /implement .scratch/design-card-build/issues/01-assemble-bundle-and-cards.md
+브랜치: feature/01-assemble-bundle-and-cards
+모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
+읽을 것: 일지 docs/journal/2026-10-30-01-assemble-bundle-and-cards.md의 "이어받은 세션(커밋 뒤)"부터 끝까지
+이어받을 상태: 인계: 셀프 리뷰 직전. 커밋하지 않은 변경이 워크트리에 있고 셀프 리뷰(/code-review)부터 한다. 기준은 origin/main을 합친 커밋 49e3f72e(푸시 안 함)이고 범위는 PR 직전 리뷰(보안 지적 없음, 버그·성능 Minor 셋)를 반영한 커밋하지 않은 변경이다. 그 뒤 커밋, 변이 표 전체 실행(리뷰를 모두 반영한 뒤의 한 번이라 앞 세션이 띄웠다 멈췄다), 프로브 README와 티켓 결과 고치기, 티켓 done, PR, CI 확인, 병합이다. PR 직전 리뷰는 다시 돌리지 않는다. 일지 docs/journal/2026-10-30-01-assemble-bundle-and-cards.md. 임시 디자인 시스템 아티팩트 64VW1b5F8tRcCeTZBwZA29는 사용자가 남겨 두기로 했다. 지우지 않고 다시 묻지 않는다. 이 PC에서 pre-commit의 pytest는 다른 시간 시험(tests/tools/test_probe_kit.py, tests/tools/test_rerun_runner.py, tests/channel/cli/test_interrupt.py, tests/tools/test_hook_edit_during_commit.py)이 부하에서 한 번씩 막을 수 있다. 단독 실행이 통과하면 SKIP 없이 같은 커밋을 한 번 더 시도하고, SKIP=pytest는 사람에게 묻는다
+확인할 선행 조건: 없음
+이번 요청 범위: PR과 병합까지
+```
+
+
+제목은 `feature/01-assemble-bundle-and-cards (인계함)`으로 바꿨고(앱이 바꿨다고 알렸다), 띄운 백그라운드 작업(변이 실행, 리뷰 서브에이전트 셋)은 모두 멈췄거나 끝나 멈출 것이 없었으며, 워크트리 잠금 풀기는 `is not locked`로 끝나 넘어갔다.
+
+open-session을 부른다 2026-10-29T17:31:50Z
+
+## 이어받은 세션(셀프 리뷰 직전)
+
+위 지시문으로 연 새 세션이다. 제목을 `feature/01-assemble-bundle-and-cards`로 바꾸고 `git worktree list`에서 찾은 이 워크트리에 `EnterWorktree(path)`로 들어왔다. `git status`는 인계가 적은 여섯 파일이었고 HEAD는 `49e3f72e`였다.
+
+> 사용자: ".claude/skills/implement/SKILL.md 를 읽어 그대로 따른다. … 인자: .scratch/design-card-build/issues/01-assemble-bundle-and-cards.md / 다음 작업: … / 이어받을 상태: 인계: 셀프 리뷰 직전. 커밋하지 않은 변경이 워크트리에 있고 셀프 리뷰(/code-review)부터 한다. … PR 직전 리뷰는 다시 돌리지 않는다. … / 이번 요청 범위: PR과 병합까지"
+
+## 셀프 리뷰(PR 직전 리뷰 반영분)
+
+`/code-review`를 기준 `49e3f72e`(HEAD)로 불렀다. 범위는 커밋하지 않은 변경 여섯 파일(`git diff --stat 49e3f72e`), 커밋 0, 미추적 0이다. 명세는 티켓 01과 `spec.md`다. 두 축의 브리프에 위 "반영으로 새로 쓴 사실 문장"을 밀 주장으로 나열했다.
+
+**표준 축**(sonnet·high): 하드 위반 0, Minor 둘, Nit 넷.
+
+1. Minor. 새 시험 "임시 폴더를 만들지 못하면…"이 `kind: "output"`만 본다. `output`은 `refuseBusy`와 `writeOutput`에서도 나서 `CODING_STANDARDS.md`의 "실패를 기대하는 테스트는 실패의 까닭까지 단언한다"에 어긋난다. → 고친다(문구 `임시 폴더를 만들 수 없다`를 함께 단언).
+2. Minor. `command.ts`의 `output` 나열이 닫히지 않는다. `assemble.ts:539`의 "산출 경로가 폴더가 아니다"가 빠졌다(`CommandError("output"`을 Grep해 다섯 자리를 내가 다시 봤다). → 고친다. 반례만 덧붙이지 않고 "산출 폴더 자리에 쓸 수 없는 것"을 일반 조항으로 적고 넷을 그 예로 둔다. 같은 나열을 가진 `assemble.ts` 머리 독스트링도 같이 본다.
+3. Nit. 시험 주석의 환경 변수 서술이 다 적지 않았다. 리뷰어가 Node 24.19.0의 `os.tmpdir()`을 불러 윈도는 TEMP→TMP→`SystemRoot\temp`, POSIX는 TMPDIR→TMP→TEMP→`/tmp`라고 보고했다(리뷰어가 손으로 봤다). → 고친다. 사실 문장이라 싸게 맞춘다.
+4. Nit. `finally` 안에 중첩 `try/catch`가 있다(`CODING_STANDARDS.md` "에러 처리와 정상 흐름을 분리한다"가 `finally` 안에 쌓인 로직을 리뷰 몫으로 든다). → 고친다. 지우기를 작은 함수로 뺀다.
+5. Nit. `maxRetries: 3`이 주석에 없다. → 남긴다. 옵션 이름이 하는 일을 드러내고, 다시 시도하는 오류의 갈래를 적으려면 Node 문서를 근거로 열어야 해 Nit에 비해 크다.
+6. Nit. 머리 독스트링의 짧게 꺾인 줄 → 고친다. 프로브 README 절 제목(2026-10-29) 안에 2026-10-30 실행이 든 것 → 남긴다. 절 제목은 그 프로브를 들인 날이고 실행 날짜는 문단에 적었다.
+
+diff 밖의 낡은 곳으로 낸 티켓의 "변이 25"와 README 변이 절은 인계의 남은 일 4(변이 전체 실행 뒤)에서 고친다.
+
+주장 검증에서 리뷰어가 맞다고 본 것: 임시 폴더를 만들지 못해도 아무것도 쓰지 않는다(새 시험을 `-t`로 단독 실행해 1 passed), 임시 폴더 안의 쓰기 실패는 보고가 없다(맨 `writeFileSync`와 `main.ts`를 읽었다), showcase 스토리 11개가 모두 `render: () =>`(9개 파일), `tmpdir()`이 부를 때마다 변수를 읽는다(손으로 봤다), `assertAssembled` 독스트링, 프로브 README 둘째 실행의 수(리뷰어가 `font_route.mjs`를 다시 돌려 수와 `splits`가 같았다. `HEAD`는 지금 판이라 문단의 `d89970e7`은 그때 값으로 읽었다), 티켓의 "30 통과"(1 실행, 29 skip). "먼저 써서 빨강을 봤다"는 순서는 확인할 길이 없어 진술로 남는다고 했다.
+
+**명세 축**(본 세션 모델): Critical·Major 0, Minor 하나, Nit 여섯.
+
+1. Minor. 새 판정 "임시 폴더를 만들지 못하면"에 변이가 없다(티켓 "위 판정마다 그 판정만 빨개지는 변이를 … 두고 돌린다"). → 고쳤다. 변이 23(오류를 `output`으로 바꾸는 줄을 `throw error`로 되돌린다)을 더했다. 표지는 고친 판의 오류 문구에도 `ENOENT: … mkdtemp`가 실리므로, 던져진 예외에서만 나는 `Error: ` 머리까지 넣은 `Error: ENOENT: no such file or directory, mkdtemp`로 골랐다(다른 단언이 깨질 때의 받은 값에는 `임시 폴더를 만들 수 없다: ENOENT`로 실려 `Error: ` 머리가 없다. 코드를 읽었다). `PYTHONUTF8=1 uv run python tools/mutate.py .scratch/design-card-build/probes/assemble_mutations.toml 23`이 기준선 초록(1 passed | 29 skipped), 변이 빨강(1 failed | 29 skipped), `변이 1 모두 기대대로`를 찍었다(탐침이 찍었다). 표 전체의 `--check`는 `변이 29 모두 원문이 한 번씩 있다`였다.
+2. Nit. 임시 폴더를 지우지 못하면 남겼다는 신호가 없다(명세 "끝나면 그 임시 폴더만 지운다"). → 남긴다. 명세의 그 문장은 지우는 대상을 자기 임시 폴더로 좁히는 문장이고 남김을 알리라는 요구가 없다. 독스트링의 못 보는 것에 "남겼다고 알리지 않는다"를 더했다. 같이, 리뷰어가 `rmSync`를 손으로 대 보니 다른 프로세스가 작업 폴더로 쓰는 폴더는 EPERM으로 남고 node가 연 파일은 지워졌다고 보고해, 독스트링과 주석의 예 "다른 프로세스가 쥔 파일"을 "다른 프로세스가 그 안을 작업 폴더로 쓰는 등"으로 바꿨다.
+3. Nit. `command.ts` 나열에서 "폴더가 아니다"가 빠졌다. → 표준 축 2와 같이 고쳤다.
+4. Nit. 시험 주석의 "그 밖은 TMPDIR"이 다 적지 않았다(리눅스 node v24.20에서 TMPDIR→TMP→TEMP, 리뷰어가 손으로 봤다). → 표준 축 3과 같이 고쳤다.
+5. Nit. "임시 폴더 안에 쓰다 실패하면 `CommandError`가 아닌 예외"가 넓다. vite·Tailwind가 쓰다 실패하면 `runTool`이 `input`이다. → 고쳤다. 명령이 직접 쓰는 것(vite 설정, 장면 엔트리, 산출 파일)으로 좁히고 도구 쪽은 `input`이라고 적었다(`writeFileSync`·`mkdirSync` 자리와 `runTool`을 Grep과 Read로 봤다).
+6. Nit. `assertAssembled`의 "시험의 규칙 판정 사례가 이 함수로 판정한다"가 넓다. 같은 describe의 `run()` 사례 셋은 이 함수에 닿지 않는다. → 고쳤다. "시험에서 지은 산출이나 그 사본을 판정하는 사례(`failureOf`)"로 좁혔다.
+7. Nit. 티켓 새 줄의 "빨강을 본 뒤"에 명령과 근거의 종류가 없다(`docs/agents/issue-tracker.md` 프로브와 근거 절). → 고쳤다. 앞 세션의 `-t 만들지` 실행을 이 일지를 출처로 적고, 변이 23의 결과와 고친 판의 통과를 더했다.
+
+주장 검증에서 리뷰어가 맞다고 본 것: 임시 폴더를 만들지 못해도 아무것도 쓰지 않는다(TEMP·TMP를 없는 폴더로 두고 CLI를 쳐 `output`, 종료 1, `--out`·`--paths` 없음. `git archive 49e3f72e`로 꺼낸 기준 판은 같은 입력에서 stdout 0바이트와 ENOENT였다), "30 통과"의 수, showcase 열하나의 `render: () => (`, `tmpdir()`을 부를 때마다 읽음, 프로브 README 둘째 실행의 수(다시 돌려 같았다), 인용의 글자.
+
+**고친 것(코드).** 표준 축 1을 고치며 같은 표준이 걸리는 이웃 `run()` 사례 둘(`usage`, 비지 않은 산출 폴더)도 오류 문구를 단언하게 했다. 같은 폴더의 `check.test.ts`가 쓰는 꼴대로 `toMatchObject`에 문구 전체를 적었다. 처음에는 `expect.stringContaining`을 객체 속성에 넣었다가 eslint `no-unsafe-assignment`가 세 자리를 막아(반환형이 `any`) 바꿨다. 임시 폴더 사례는 문구 끝에 `mkdtemp`의 무작위 경로가 붙어 `JSON.stringify(report)`에 `"message":"임시 폴더를 만들 수 없다: `가 드는지를 본다. `finally` 안의 `try/catch`는 `removeWorkFolder`로 뺐다.
+
+**남긴 것.** 표준 축 5(`maxRetries` 설명), 표준 축 6의 절 제목 날짜, 명세 축 2(남김을 알리지 않음). 까닭은 위 판정 줄에 적었다.
+
+**다시 돌린 것.** `pnpm -C web exec eslint …assemble.ts …assemble.test.ts …command.ts`(출력 없음)와 `prettier --check` 같은 셋(`All matched files use Prettier code style!`), `pnpm -C web exec vitest run --project node tools/sync-design-system/assemble.test.ts`(30 passed, Duration 42.51초). 모두 손으로 봤다. 검증 명령 다섯은 커밋의 pre-commit으로 갈음한다.
+
+반영으로 새로 쓴 사실 문장(원문). 인계 지시문이 PR 직전 리뷰를 다시 돌리지 말라고 해 다음 층에 넘길 리뷰가 없고, PR 봇이 겨냥할 자리로 남긴다.
+
+- `assemble.ts` 머리: "산출 폴더는 없거나 빈 폴더여야 하고, 그렇지 않으면(파일이다, 비어 있지 않다) 아무것도 쓰지 않고 `output` 오류다."
+- `assemble.ts` 못 보는 것: "명령이 임시 폴더에 직접 쓰다(vite 설정, 장면 엔트리, 산출 파일) 실패하면(디스크가 찼다 등) `CommandError` 가 아닌 예외로 끝나 JSON 보고가 없다. vite 와 Tailwind 가 쓰다 실패하면 그 도구가 0 으로 끝나지 않아 `input` 오류다." / "임시 폴더를 지우지 못하면(다른 프로세스가 그 안을 작업 폴더로 쓰는 등) 결과를 덮지 않고 그 폴더를 남기며, 남겼다고 알리지 않는다."
+- `assertAssembled`: "명령과, 시험에서 지은 산출이나 그 사본을 판정하는 사례(`failureOf`)가 이 함수로 판정한다."
+- `removeWorkFolder`: "지우지 못해도(다른 프로세스가 그 안을 작업 폴더로 쓰는 등) 명령의 결과를 덮지 않는다."
+- `command.ts`: "짓기 명령에서는 산출 폴더 자리에 쓸 수 없는 것(그 자리가 파일이다, 비어 있지 않은 폴더다, 산출을 옮길 수 없다)과 임시 폴더를 만들 수 없는 것도 든다."
+- 시험 주석: "`tmpdir()` 은 부를 때마다 환경 변수를 읽고, 윈도는 TEMP·TMP 를, 그 밖은 TMPDIR·TMP·TEMP 를 차례로 본다."
+- 변이 23의 이름과 표지, 티켓의 "임시 폴더를 만들지 못하면" 줄.

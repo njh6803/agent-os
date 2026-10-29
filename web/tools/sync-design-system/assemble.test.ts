@@ -16,7 +16,7 @@ import {
 import { tmpdir } from "node:os";
 import { dirname, join, relative, sep } from "node:path";
 import { chromium, type Browser } from "playwright";
-import { afterAll, beforeAll, describe, expect, test } from "vitest";
+import { afterAll, beforeAll, describe, expect, test, vi } from "vitest";
 import {
   ASSEMBLE_TEMP_PREFIX,
   assertAssembled,
@@ -371,7 +371,7 @@ describe("짓기 명령의 규칙 판정", () => {
     expect(outcome.report).toMatchObject({
       command: "assemble",
       ok: false,
-      error: { kind: "usage" },
+      error: { kind: "usage", message: "--paths 를 산출 폴더 밖에 둔다" },
     });
     expect(existsSync(inside)).toBe(false);
   });
@@ -388,10 +388,37 @@ describe("짓기 명령의 규칙 판정", () => {
     expect(outcome.report).toMatchObject({
       command: "assemble",
       ok: false,
-      error: { kind: "output" },
+      error: { kind: "output", message: `${busy} 가 비어 있지 않다. 아무것도 쓰지 않는다` },
     });
     expect(walk(busy)).toEqual(["keep.txt"]);
     expect(() => statSync(busyPaths)).toThrow();
+  });
+
+  test("임시 폴더를 만들지 못하면 아무것도 쓰지 않고 output 오류로 끝난다", () => {
+    const missing = join(scratch, "no-temp");
+    const target = join(scratch, "no-temp-out");
+    const targetPaths = join(scratch, "no-temp-paths.json");
+    // `tmpdir()` 은 부를 때마다 환경 변수를 읽고, 윈도는 TEMP·TMP 를, 그 밖은 TMPDIR·TMP·TEMP 를 차례로 본다. 셋을 모두
+    // 없는 폴더로 두면 어느 쪽에서든 그 폴더를 고른다.
+    for (const name of ["TEMP", "TMP", "TMPDIR"]) {
+      vi.stubEnv(name, missing);
+    }
+    try {
+      const outcome = run(["assemble", "--out", target, "--paths", targetPaths]);
+
+      expect(outcome.code).toBe(1);
+      expect(outcome.report).toMatchObject({
+        command: "assemble",
+        ok: false,
+        error: { kind: "output" },
+      });
+      // 문구 끝에 `mkdtemp` 가 고른 무작위 경로가 붙어 앞부분만 본다.
+      expect(JSON.stringify(outcome.report)).toContain('"message":"임시 폴더를 만들 수 없다: ');
+    } finally {
+      vi.unstubAllEnvs();
+    }
+    expect(existsSync(target)).toBe(false);
+    expect(existsSync(targetPaths)).toBe(false);
   });
 });
 

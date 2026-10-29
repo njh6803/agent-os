@@ -30,9 +30,9 @@
  * 때만 `--out` 에 옮긴다. 빌드가 실패하면 `input`, 규칙을 어기면 크기만 넘었을 때 `limit`, 그 밖은 `input` 오류다. 산출에는
  * 시각과 임시 폴더 경로, `--out` 경로를 넣지 않아 같은 소스에서 다시 지으면 같은 바이트다(명세 스토리 12).
  *
- * 명령: `assemble --out <산출 폴더> --paths <목록 파일>`. 산출 폴더는 없거나 비어 있어야 하고, 비지 않았으면 아무것도
- * 쓰지 않고 `output` 오류다. 목록 파일이 산출 폴더 안이면 `usage` 오류다. 명령은 자기가 만든 임시 폴더 말고는 어떤 폴더도
- * 지우지 않는다. 목록 파일에는 산출 폴더의 모든 파일을 `project/<경로>` 로 적어 경로 차례(`byPath`)로 놓은 JSON 배열을
+ * 명령: `assemble --out <산출 폴더> --paths <목록 파일>`. 산출 폴더는 없거나 빈 폴더여야 하고, 그렇지 않으면(파일이다,
+ * 비어 있지 않다) 아무것도 쓰지 않고 `output` 오류다. 목록 파일이 산출 폴더 안이면 `usage` 오류다. 임시 폴더를 만들지
+ * 못해도 아무것도 쓰지 않고 `output` 오류다. 명령은 자기가 만든 임시 폴더 말고는 어떤 폴더도 지우지 않는다. 목록 파일에는 산출 폴더의 모든 파일을 `project/<경로>` 로 적어 경로 차례(`byPath`)로 놓은 JSON 배열을
  * 두 칸 들여쓰고 끝에 줄바꿈을 붙여 쓴다. 목록 파일은 산출을 옮기기 전에 써서, 쓰지 못하면 산출 폴더에 아무것도 없다.
  * 보고는 산출 폴더(`out`)와 목록 파일(`paths`)의 절대 경로, 파일 수(`files`), 카드 이름(`cards`), 바이트(`bytes`)다.
  *
@@ -41,11 +41,15 @@
  *   카드가 빠지고, meta 의 `tags` 에만 든 파일은 장면 없는 카드가 된다. 장면은 실제 스토리 객체의 `tags` 로 다시 고른다.
  * - 패키지 엔트리가 내보내지 않는 이름(지금 `ICON_NAMES` 등)은 장면에서 비고, 그것을 쓰는 showcase 스토리는 그릴 때에야
  *   오류가 난다.
- * - 장면이 meta 와 스토리의 `args` 를 합치는 길과 `render` 없이 meta 의 `component` 로 그리는 길은, 지금 showcase 스토리가
- *   모두 `render` 를 가져 시험이 지나지 않는다.
+ * - 장면이 meta 와 스토리의 `args` 를 합친 값이 그리기에 닿는지와 `render` 없이 meta 의 `component` 로 그리는 갈래는,
+ *   지금 showcase 스토리가 모두 `args` 를 받지 않는 `render` 를 가져 시험이 보지 않는다.
  * - 판정은 묶음 JS 와 카드만 금지 문자열을 본다. `_ds_bundle.js` 는 같은 바이트로 지어 따로 보지 않는다.
  * - 산출을 옮기다 끊기면 산출 폴더에 옮긴 데까지 남고, 목록 파일은 이미 쓰여 있다. 없던 산출 폴더는 이름을 바꿔 한 번에
  *   옮기지만, 이름을 바꾸지 못하면(다른 드라이브 등) 비어 있던 폴더처럼 복사로 옮긴다.
+ * - 명령이 임시 폴더에 직접 쓰다(vite 설정, 장면 엔트리, 산출 파일) 실패하면(디스크가 찼다 등) `CommandError` 가 아닌
+ *   예외로 끝나 JSON 보고가 없다. vite 와 Tailwind 가 쓰다 실패하면 그 도구가 0 으로 끝나지 않아 `input` 오류다.
+ * - 임시 폴더를 지우지 못하면(다른 프로세스가 그 안을 작업 폴더로 쓰는 등) 결과를 덮지 않고 그 폴더를 남기며, 남겼다고
+ *   알리지 않는다. 이 길은 시험이 지나지 않는다.
  */
 
 import { spawnSync } from "node:child_process";
@@ -516,7 +520,8 @@ function problemsOf(folder: string): Problem[] {
  * `require(`·`import` 문·`react.transitional.element` 가 없고, 묶음 JS·묶음 CSS·카드·카드 README 가 한도(`SIZE_LIMITS`)
  * 아래이며, 카드마다 같은 폴더에 README 가 있어야 한다. 앞의 둘은 형식이 금한다(페이지가 묶음과 카드를 문서에
  * 인라인한다). 뒤의 셋이 있으면 페이지에서 돌지 않는다. 오류의 종류는 크기만 넘었으면 `limit`, 그 밖은 `input` 이고,
- * 문구는 문제마다의 문구를 `; ` 로 이은 것이다. 명령과 시험이 이 함수 하나로 판정한다.
+ * 문구는 문제마다의 문구를 `; ` 로 이은 것이다. 명령과, 시험에서 지은 산출이나 그 사본을 판정하는 사례(`failureOf`)가
+ * 이 함수로 판정한다. 시험의 파일 검사는 금지 문자열을 따로 본다.
  */
 export function assertAssembled(folder: string): void {
   const problems = problemsOf(folder);
@@ -558,6 +563,27 @@ function place(stage: string, target: string): void {
   }
 }
 
+/** 명령의 임시 폴더를 만든다. 만들지 못하면 `output` 오류다. */
+function workFolder(): string {
+  try {
+    return mkdtempSync(join(tmpdir(), ASSEMBLE_TEMP_PREFIX));
+  } catch (error) {
+    throw new CommandError("output", `임시 폴더를 만들 수 없다: ${messageOf(error)}`);
+  }
+}
+
+/**
+ * 명령의 임시 폴더를 지운다. 지우지 못해도(다른 프로세스가 그 안을 작업 폴더로 쓰는 등) 명령의 결과를 덮지 않는다. 그
+ * 폴더는 시스템 임시 폴더에 남는다.
+ */
+function removeWorkFolder(work: string): void {
+  try {
+    rmSync(work, { recursive: true, force: true, maxRetries: 3 });
+  } catch {
+    // 위 독스트링대로 실패를 삼킨다.
+  }
+}
+
 /** 짓기 명령. */
 export function assemble(args: readonly string[]): ReportFields {
   const { out, paths } = parsedArgs(
@@ -579,7 +605,7 @@ export function assemble(args: readonly string[]): ReportFields {
   }
   refuseBusy(target);
 
-  const work = mkdtempSync(join(tmpdir(), ASSEMBLE_TEMP_PREFIX));
+  const work = workFolder();
   try {
     const stage = join(work, "stage");
     const cards = assembleInto(stage, work);
@@ -596,6 +622,6 @@ export function assemble(args: readonly string[]): ReportFields {
       bytes: files.reduce((sum, file) => sum + file.size, 0),
     };
   } finally {
-    rmSync(work, { recursive: true, force: true });
+    removeWorkFolder(work);
   }
 }

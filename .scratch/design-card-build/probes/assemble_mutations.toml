@@ -296,6 +296,18 @@ file = "web/tools/sync-design-system/assemble.ts"
 old = '''  if (readdirSync(target).length > 0) {'''
 new = '''  if (readdirSync(target).length > 1) {'''
 
+[[mutation]]
+name = "임시 폴더를 만들지 못한 오류를 output 으로 바꾸지 않으면 그 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/assemble.test.ts", "-t", "임시 폴더를 만들지 못하면"]
+expect = "red"
+expect_output = ["Error: ENOENT: no such file or directory, mkdtemp"]
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/assemble.ts"
+old = '''    throw new CommandError("output", `임시 폴더를 만들 수 없다: ${messageOf(error)}`);'''
+new = '''    throw error;'''
+
 # --- chromium 그리기 -------------------------------------------------------------------------------------------
 
 [[mutation]]
