@@ -183,19 +183,49 @@ function readmeExports(md: string): string[] {
   return [...names];
 }
 
-/** README 가 `` `data-theme`(…) ``·`` `data-density`(…) `` 의 값으로 든 키. */
+/**
+ * README 가 `` `data-theme`(…) ``·`` `data-density`(…) `` 의 값으로 든 키. 괄호 안의 백틱 낱말을 모두 키로 본다. 옛 검사처럼
+ * 글자(`^[a-z]+$`)로 거르면 이름이 바뀐 키(`ocean-2`)가 선택자를 보지 않은 채 말없이 빠진다.
+ */
 function readmeKeys(md: string, attribute: string): string[] {
-  const keys = section(md, new RegExp(`\`${attribute}\`\\(([^)]*)\\)`), `${attribute} 의 값`);
-  return ticks(keys).filter((token) => /^[a-z]+$/.test(token));
+  return ticks(section(md, new RegExp(`\`${attribute}\`\\(([^)]*)\\)`), `${attribute} 의 값`));
+}
+
+interface StoryBlock {
+  readonly name: string;
+  readonly body: string;
 }
 
 /** 스토리 파일 글을 맨 앞 줄의 `const`·`export const` 마다 끊은 덩이와 그 이름. */
-function storyBlocks(text: string): { readonly name: string; readonly body: string }[] {
+function storyBlocks(text: string): StoryBlock[] {
   const starts = [...text.matchAll(/^(?:export )?const (\w+)/gm)];
   return starts.map((match, index) => ({
     name: match[1] ?? "",
     body: text.slice(match.index, starts[index + 1]?.index ?? text.length),
   }));
+}
+
+/**
+ * 덩이와, 그 덩이가 펼쳐 넣는(`...이름`) 같은 파일의 덩이를 거듭 따라간 것. 펼친 덩이의 필드도 물려받는다. `...이름.args`
+ * 처럼 필드 하나만 펼쳐도 그 덩이 전체를 따라가 더 엄격하게 본다.
+ */
+function withSpreads(start: StoryBlock, blocks: readonly StoryBlock[]): StoryBlock[] {
+  const byName = new Map(blocks.map((block) => [block.name, block]));
+  const seen = new Set<StoryBlock>();
+  const queue = [start];
+  for (let block = queue.pop(); block !== undefined; block = queue.pop()) {
+    if (seen.has(block)) {
+      continue;
+    }
+    seen.add(block);
+    for (const match of block.body.matchAll(/\.\.\.(\w+)/g)) {
+      const spread = byName.get(match[1] ?? "");
+      if (spread !== undefined) {
+        queue.push(spread);
+      }
+    }
+  }
+  return [...seen];
 }
 
 let scratch = "";
@@ -467,15 +497,23 @@ describe("사용 규약: README 와 기초 카드가 드는 이름이 묶음에 
   });
 
   test("README 가 data-theme·data-density 의 값으로 든 키마다 묶음 CSS 에 그 선택자가 있다", () => {
-    const keys = ["data-theme", "data-density"].flatMap((attribute) =>
-      readmeKeys(md(), attribute).map((key) => ({ attribute, key })),
-    );
+    const attributes = ["data-theme", "data-density"].map((attribute) => ({
+      attribute,
+      keys: readmeKeys(md(), attribute),
+    }));
 
-    expect(keys.length).toBeGreaterThan(0);
+    // 속성마다 센다. 합쳐 세면 한 속성의 키가 모두 빠져도 다른 속성의 키로 지난다.
     expect({
-      noSelector: keys
-        .filter(({ attribute, key }) => !hasSelector(css(), attribute, key))
-        .map(({ attribute, key }) => `${attribute}=${key}`),
+      withoutKeys: attributes
+        .filter(({ keys }) => keys.length === 0)
+        .map(({ attribute }) => attribute),
+    }).toEqual({ withoutKeys: [] });
+    expect({
+      noSelector: attributes.flatMap(({ attribute, keys }) =>
+        keys
+          .filter((key) => !hasSelector(css(), attribute, key))
+          .map((key) => `${attribute}=${key}`),
+      ),
     }).toEqual({ noSelector: [] });
   });
 
@@ -490,7 +528,7 @@ describe("사용 규약: README 와 기초 카드가 드는 이름이 묶음에 
       ]),
     );
     const selectors = cards.flatMap(({ file, text }) =>
-      [...text.matchAll(/(data-theme|data-density)="([a-z]+)"/g)].map((match) => ({
+      [...text.matchAll(/(data-theme|data-density)="([^"]+)"/g)].map((match) => ({
         file,
         attribute: match[1] ?? "",
         key: match[2] ?? "",
@@ -518,7 +556,8 @@ describe("산출 밖: 층 폴더의 스토리 파일", () => {
   });
 
   test("showcase 스토리와 그 파일의 meta 에 globals 가 없다", () => {
-    // 카드의 테마와 모드는 페이지가 정해, 스토리가 고른 globals 는 카드에 닿지 않는다. meta 의 것은 모든 스토리가 물려받는다.
+    // 카드의 테마와 모드는 페이지가 정해, 스토리가 고른 globals 는 카드에 닿지 않는다. meta 의 것은 모든 스토리가 물려받고,
+    // 펼쳐 넣은(`...이름`) 스토리의 것은 펼친 스토리가 물려받는다. 펼친 것은 `<스토리> <펼친 덩이>` 로 든다.
     const showcase = new RegExp(SHOWCASE_TAGS.source);
     const files = layerStoryFiles().map((file) => {
       const text = readFileSync(file.path, "utf-8");
@@ -532,8 +571,15 @@ describe("산출 밖: 층 폴더의 스토리 파일", () => {
       globalsInShowcase: files.flatMap((file) =>
         file.blocks
           .filter((block) => block === file.meta || showcase.test(block.body))
-          .filter((block) => /\bglobals\s*:/.test(block.body))
-          .map((block) => `${file.name} ${block.name}`),
+          .flatMap((block) =>
+            withSpreads(block, file.blocks)
+              .filter((source) => /\bglobals\s*:/.test(source.body))
+              .map((source) =>
+                source === block
+                  ? `${file.name} ${block.name}`
+                  : `${file.name} ${block.name} ${source.name}`,
+              ),
+          ),
       ),
     }).toEqual({ metaNotFound: [], globalsInShowcase: [] });
   });

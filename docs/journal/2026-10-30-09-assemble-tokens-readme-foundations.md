@@ -90,3 +90,41 @@ PR 직전 리뷰에 밀 주장(이 반영으로 새로 쓴 사실 문장):
 - 티켓 결과: "14파일 … 457개", "이 오류 갈래는 원본 경로가 고정이라 시험이 지나지 않는다"
 
 반영 뒤 다시 돌린 명령: `uv run ruff check .`("All checks passed!"), `uv run ruff format --check .`("1179 files already formatted"), `uv run python tools/run_checks.py`(열 검사 모두 `Passed`, pytest 505.7초, web-verify 512.6초). 출력을 손으로 봤다. 바꾼 TS 파일 둘은 그 전에 `prettier --check`가 시험 파일의 서식을 알려 `--write`로 고쳤고, `eslint`가 출력 없이 끝났으며, 변이 표의 `--check`가 "변이 58 모두 원문이 한 번씩 있다"였다.
+
+## 커밋
+
+셀프 리뷰를 반영한 변경을 `e7d71a72`로 커밋했다. 첫 시도는 커밋 메시지 훅이 제목 84자(> 72자)로 pre-commit 전에 막아 제목을 줄였다. 둘째 시도의 pre-commit은 `checks`(러너의 열 검사, pytest 445.2초, web-verify 465.5초)와 마크다운 표·줄 구분 문자·변이 표·인용·커밋 메시지 검사가 `Passed`였고, ruff 둘·카나리아·헌법 판은 해당 파일이 없어 `Skipped`였다(커밋 출력을 손으로 봤다. ruff 둘은 위에서 손으로 쳤다).
+
+## 인계 전 상태(둘째)
+
+커밋 뒤에 인계 계기(컨텍스트 약 28만 토큰, 문턱 20만, 경계 `커밋 뒤`)가 왔다. 받은 상태가 `인계: 셀프 리뷰 직전`이라 경계가 달라 넘긴다. 이 세션의 제목은 `feature/02-assemble-tokens-readme-foundations`였고 `(인계함)`을 붙인다. 이 절 위의 편집(이어받은 세션, 셀프 리뷰 끝의 다시 돌린 명령, 커밋, 이 절)은 `e7d71a72` 뒤에 쓴 것이라 커밋하지 않았다. 새 세션이 이어 쓰고 다음 커밋에 싣는다.
+
+인계 지시문:
+
+```
+다음 작업: .scratch/design-card-build/issues/02-assemble-tokens-readme-foundations.md. 짓기 명령(assemble)이 tokens.json·디자인 시스템 README·기초 카드·지침을 산출에 더하고, 사용 규약 검사를 pnpm -C web verify의 파일 검사로 옮긴다
+다음 단계: 구현
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /implement .scratch/design-card-build/issues/02-assemble-tokens-readme-foundations.md
+브랜치: feature/02-assemble-tokens-readme-foundations
+모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
+읽을 것: 일지 docs/journal/2026-10-30-09-assemble-tokens-readme-foundations.md의 "셀프 리뷰" 절부터 끝까지
+이어받을 상태: 인계: 커밋 뒤. 셀프 리뷰(두 축)를 반영해 커밋했고 푸시와 PR은 아직이다. 일지의 커밋 뒤 편집은 커밋하지 않은 채 워크트리에 있다. 남은 단계는 PR 직전 리뷰(docs/constitution/operations.md 리뷰 파이프라인 2. 밀 주장은 일지 "셀프 리뷰" 절 끝의 목록), 리뷰를 반영한 커밋 위에서 변이 표 전체(58) 한 번, 티켓을 done으로 바꾼 커밋, PR 열기, 병합이다. 이 PC에서 pre-commit의 pytest는 시간 시험(tests/tools/test_probe_kit.py, tests/tools/test_rerun_runner.py, tests/channel/cli/test_interrupt.py, tests/tools/test_hook_edit_during_commit.py)이 부하에서 한 번씩 막을 수 있다. 단독 실행이 통과하면 SKIP 없이 같은 커밋을 한 번 더 시도하고, SKIP=pytest는 사람에게 묻는다. 일지: docs/journal/2026-10-30-09-assemble-tokens-readme-foundations.md
+확인할 선행 조건: 없음
+이번 요청 범위: PR과 병합까지
+```
+
+워크트리 잠금 풀기는 `is not locked`로 끝나 넘어갔다.
+
+open-session을 부른다 2026-10-29T21:59:16Z
+
+## PR 직전 리뷰
+
+이어받은 세션이 `git worktree list`에서 이 브랜치의 워크트리를 찾아 `EnterWorktree(path)`로 들어갔다. `git fetch origin main` 뒤 `origin/main`과 merge-base가 둘 다 `d312a806`이라 합칠 것이 없었다(손으로 봤다). `coderabbit auth status`가 `Plan: Free`, `Seat: not assigned`라 CLI 축이 돌지 못해 대체 둘(보안은 내장 `/security-review`, 버그·성능은 `bug-perf-review`)을 나란히 돌렸다.
+
+- 보안(`/security-review`, 범위 `origin/HEAD...` = `d312a806...e7d71a72`): 첫 서브태스크가 "No vulnerabilities found"를 냈다(그 보고를 읽었다). 그 서브태스크가 코드를 읽고 든 근거는 원본 경로 셋이 고정이라 입력이 닿지 않는다는 것, `foundations/` 산출 경로가 고정 폴더를 `readdirSync`로 훑은 상대 경로라 `..`가 들 수 없다는 것, 새로 띄우는 프로세스가 없다는 것이다. 걸러 낼 지적이 없어 거짓 양성 거르기 단계는 돌지 않았다.
+- 버그·성능(`bug-perf-review`, 범위 `d312a806...e7d71a72`): Critical·Major 없음, Minor 둘(둘 다 유효), 오탐 열하나, 보류 없음(그 보고를 읽었다). 서브에이전트는 이 시험 파일 43개와 이 폴더 15파일 500개가 지났다고 했고, 원본이 없을 때의 오류 넷이 모두 `input`인 것을 저장소 밖 임시 트리에서 `assemble()`을 불러 봤다고 했다(그 보고에 적힌 것이다. 이 세션은 다시 돌리지 않았다).
+  - Minor 1. `readmeKeys`가 키를 `/^[a-z]+$/`로 걸러 이름이 바뀐 키(`ocean-2`)가 말없이 빠지고, 개수 단언이 두 속성을 합쳐 세어 한 속성의 키가 모두 빠져도 지난다. 시험 코드(`readmeKeys`, 합친 `keys.length`)를 읽어 맞았다. 고쳤다. 글자 거르기를 걷어 괄호 안의 백틱 낱말을 모두 키로 보고(지금 README의 괄호에는 키만 있다, `.design-sync/conventions.md` 8·11행을 읽었다), 속성마다 키가 하나 이상인지 본다. 같은 거르기가 있던 기초 카드 값(`data-density="([a-z]+)"`)도 따옴표 안을 모두 보게 넓혔다(카드가 쓰는 값 여섯이 모두 소문자 글자인 것을 `grep -rhoE`로 손으로 봤다).
+  - Minor 2. `globals` 판정이 showcase 스토리 덩이의 글만 보아, `...DarkStory`로 펼쳐 넣은 스토리의 `globals`를 놓친다. 층 폴더의 스토리 파일에 `...Disabled`·`...AllNames` 꼴의 펼침이 다섯 곳 있고, showcase가 아닌 스토리 아홉 파일이 `globals`를 쓴다(`grep -rn`으로 손으로 봤다). 그래서 서브에이전트의 첫 제안(파일 어디든 `globals:`가 있으면 빨갛게)은 거짓 양성이라 따르지 않고, 펼친 덩이를 거듭 따라가는 `withSpreads`를 더했다.
+  - 변이 59~62를 더했다. `--check`가 "변이 62 모두 원문이 한 번씩 있다", 59~62만 돌린 실행이 "변이 4 모두 기대대로"였다(도구가 찍은 줄). 이 시험 파일 43개가 지났다(`pnpm -C web exec vitest run --project node tools/sync-design-system/assemble.test.ts`의 요약 줄을 손으로 봤다). `prettier --write`가 시험 파일의 서식을 고쳤고 `eslint`가 0으로 끝났다.
+  - 오탐으로 둔 것 가운데 하나는 기초 카드의 `expect(files).toEqual(walk(FOUNDATIONS_SOURCE))`가 같은 폴더끼리의 맞대기라 약하다는 것인데, 폴더 이름 상수와 `htmls: 1`, 표지, 바이트 비교가 함께 막는다는 서브에이전트의 판정을 따랐다.
