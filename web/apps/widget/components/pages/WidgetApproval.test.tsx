@@ -94,10 +94,16 @@ function spoken(element: Element): string {
   return copy.textContent;
 }
 
-/** 카드가 설 때까지 요청을 보낸다. */
+/**
+ * 카드가 서고 포커스가 그 제목으로 갈 때까지 기다린다. 카드는 DOM 에 든 뒤의 효과에서 포커스를 옮겨, 카드만 기다리면
+ * 시험이 사유 칸에 준 포커스를 그 효과가 뒤늦게 가져가 붙여 넣기가 제목에 갈 수 있다(harness 티켓 023).
+ */
 async function untilPaused(user: UserEvent): Promise<void> {
   await ask(user, "우산 값 환불해 주세요");
   await screen.findByRole("group", { name: "승인 묻기" });
+  await waitFor(() => {
+    expect(document.activeElement?.textContent).toBe("승인이 필요합니다");
+  });
 }
 
 // --- 카드 ---
