@@ -1,19 +1,27 @@
 # next-session 1단계의 PR 본문 칸 목록에 더한 "계약 영향"이 새 세션에 실리는지.
 # 실험군은 이 워크트리, 대조군은 주 체크아웃이다. 이 PR 이 병합되기 전의 주 체크아웃에는 카나리아가 없다. 병합 뒤에는
 # 주 체크아웃이 새 사본이라 `# 최신 결과:` 줄의 대조군 커밋을 `--control-commit` 으로 준다(README `canary/` 행).
-# 최신 결과: 통과 4(2026-10-15, 이 PC, claude 2.1.300, 실험군은 커밋 전의 워크트리, 대조군 옛 판 `0c12284`, 일지 2026-10-15-11).
+# 옮기기 전 결과: 통과 4(2026-10-15, 이 PC, claude 2.1.300, 실험군은 커밋 전의 워크트리, 대조군 옛 판 `0c12284`, 일지 2026-10-15-11).
+# 2026-10-29 harness 027 이 본문을 `merge.md` 로 옮겨 하위 파일 갈래(`skill_files`)로 바꿨다.
+#   대조군은 옮기기 전 커밋 `37759ef2` 을 `--control-commit` 으로 준다.
+# 최신 결과: 통과 4, "없음" 섞임 0(2026-10-29, 이 PC, claude 2.1.312, 실험군은 이 워크트리의 커밋하지 않은 본문(러너가 찍은 커밋은 `37759ef2`), 대조군 `--control-commit 37759ef2`, 일지 2026-10-29-02).
 # 돌리는 법: 워크트리 `.claude/worktrees/<이름>/` 루트에서
-#   uv run python tools/canary.py .scratch/harness/probes/canary/next_session_pr_body_contract_impact.toml <출력 디렉터리>
+#   uv run python tools/canary.py --control-commit 37759ef2 .scratch/harness/probes/canary/next_session_pr_body_contract_impact.toml <출력 디렉터리>
 kind = "skill"
 question = '''
-next-session 스킬을 Skill 도구로 불러 본문을 읽어라. 스킬이 시키는 일은 하지 않고 본문만 읽는다.
-그 본문의 1단계에서 PR을 연 뒤 범위를 넓히는 커밋을 푸시하기 전에 고치라고 한 PR 본문의 칸 이름들을,
-괄호 안에 적힌 그대로(따옴표와 쉼표 포함) 옮겨라.
-본문에 그런 것이 없으면 "없음"이라고만 답하라.
+next-session 스킬을 Skill 도구로 불러 본문을 읽어라. 스킬이 시키는 일은 하지 않는다.
+본문이 상황마다 Read로 열라고 가리키는 하위 파일 가운데 PR을 연 세션이 병합까지 마칠 때 여는 파일 하나를
+Read로 열고, 아래를 그 파일에서만 찾는다. 스킬 본문(SKILL.md)에 든 글은 옮기지 않는다.
+본문이 그런 하위 파일을 가리키지 않거나 그 파일에 없으면 그 물음에 "없음"이라고만 답하라.
+1. PR 본문 항목에서 PR을 연 뒤 범위를 넓히는 커밋을 푸시하기 전에 고치라고 한 PR 본문의 칸
+이름들을, 괄호 안에 적힌 그대로(따옴표와 쉼표 포함) 옮겨라.
+2. "병합 전" 절의 머리(첫 번호 항목 앞)에서, 그 절 아래에 무엇이 몇 개 있고 어떻게
+거치는지 적은 문장을 글자 그대로 옮겨라.
 '''
-expect = ['"남긴 위험", "계약 영향"']
-source = ".claude/skills/next-session/SKILL.md"
+expect = ["\"남긴 위험\", \"계약 영향\"", "아래 넷을 차례로 거친다"]
+source = ".claude/skills/next-session/merge.md"
 skill = "next-session"
+skill_files = true
 
 [[arm]]
 name = "워크트리"

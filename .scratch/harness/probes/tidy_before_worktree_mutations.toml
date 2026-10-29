@@ -1,6 +1,6 @@
 # chore/tidy-before-worktree 의 첫 턴 계기와 next-session 문구 계약 변이. 형식은 tools/mutate.py 의 독스트링.
 # 사용: PYTHONUTF8=1 uv run python tools/mutate.py .scratch/harness/probes/tidy_before_worktree_mutations.toml
-# tools/hook_prompt_directive.py 가 주 체크아웃 미갱신 지시문에 넣는 tidy-checkouts 계기와, next-session 3단계가
+# tools/hook_prompt_directive.py 가 주 체크아웃 미갱신 지시문에 넣는 tidy-checkouts 계기와, next-session `directive.md` 가
 # 적으라는 문구의 규칙을 하나씩 꺼서 그것을 지키는 테스트가 빨강이 되는지 잰다. 첫 판의 테스트는 훅을 고치기 전에
 # 빨강을 봤다(일지 2026-10-06-15 검사).
 
@@ -82,7 +82,7 @@ tests = ["tests/tools/test_hook_prompt_directive.py", "-k", "적으라는_미갱
 expect = "red"
 
 [[mutation.edit]]
-file = ".claude/skills/next-session/SKILL.md"
+file = ".claude/skills/next-session/directive.md"
 old = '''`주 체크아웃 미갱신: 루트는 <브랜치>. tidy-checkouts는'''
 new = '''`주 체크아웃이 낡았다: 루트는 <브랜치>. tidy-checkouts는'''
 
@@ -92,7 +92,7 @@ tests = ["tests/tools/test_hook_prompt_directive.py", "-k", "적으라는_미갱
 expect = "red"
 
 [[mutation.edit]]
-file = ".claude/skills/next-session/SKILL.md"
+file = ".claude/skills/next-session/directive.md"
 old = '''Skill 도구로 tidy-checkouts를 먼저 돌고'''
 new = '''워크트리에 들어간 뒤 tidy-checkouts를 생각하고'''
 
@@ -102,6 +102,6 @@ tests = ["tests/tools/test_hook_prompt_directive.py", "-k", "적으라는_미갱
 expect = "red"
 
 [[mutation.edit]]
-file = ".claude/skills/next-session/SKILL.md"
+file = ".claude/skills/next-session/directive.md"
 old = '''보고만 하고 답을 기다리지 않는다) 그 뒤`'''
 new = '''보고한다) 그 뒤`'''

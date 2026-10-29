@@ -1,6 +1,9 @@
 # tidy-checkouts에 더한 주 체크아웃의 워크트리 병합 길(대기열 165)이 새 세션에 실리는지.
 # 실험군은 이 워크트리, 대조군은 주 체크아웃이다. 주 체크아웃의 옛 판에는 두 카나리아가 모두 없다.
-# 최신 결과: 통과 4(2026-10-12, 이 PC, claude 2.1.296, 일지 2026-10-12-35).
+# 최신 결과: 통과 4, "없음" 섞임 0(2026-10-29, 이 PC, claude 2.1.312, 대조군 `--control-commit c1903e06ed^`(`6b439aaf`),
+#   실험군은 `37759ef2` 위의 커밋 전 변경, 일지 2026-10-29-02). harness 027 이 본문에서 next-session 의 자리를 가리키는
+#   인용을 새 파일(`merge.md`·`directive.md`)로 고친 판이다.
+#   그 전: 통과 4(2026-10-12, 이 PC, claude 2.1.296, 일지 2026-10-12-35).
 # 돌리는 법: 워크트리 `.claude/worktrees/<이름>/` 루트에서
 #   uv run python tools/canary.py .scratch/harness/probes/canary/tidy_skill_rate_limit_merge.toml <출력 디렉터리>
 kind = "skill"

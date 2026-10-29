@@ -71,13 +71,13 @@ def test_계기_문장은_next_session_을_가리키고_동사가_다르다() ->
 
 def test_인계_계기가_함께_왔으면_Skill_도구_대신_인계_계기를_따르라고_한다() -> None:
     """PR 을 연 직후 hook_handoff 의 계기가 함께 오면 그쪽이 이긴다. 이 문장의 "Skill 도구로
-    next-session 을 지금 돌린다"를 따라 옛 사본이 실리면 인계 줄이 없어 1단계의 병합이 앞당겨진다
+    next-session 을 지금 돌린다"를 따라 옛 사본이 실리면 인계 절차가 없어 병합이 앞당겨진다
     (명세 `.scratch/token-usage/spec.md` "`hook_pr_next_session`과 함께 올 때")."""
     create = context_for("create")
 
     assert "인계 계기(hook_handoff)가 함께 왔으면" in create
     assert "Skill 도구로 부르지 말고" in create
-    assert "인계 줄" in create
+    assert "인계 절차 파일을 Read 로 열어" in create
     assert create.index("반영과 병합을 먼저 마친다") < create.index("인계 계기")
 
 

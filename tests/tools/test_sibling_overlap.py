@@ -448,10 +448,13 @@ def test_브랜치의_PR은_원격_끝과_같은_PR이고_원격에_없으면_HE
 
 
 def test_카나리아로_불러_보는_하네스_파일은_스킬_본문과_규칙과_서브에이전트다() -> None:
-    """`CLAUDE.md`, 스킬 폴더의 `SKILL.md` 밖 파일, 훅 설정은 보지 않는다(못 보는 것)."""
+    """스킬 본문은 스킬 폴더 바로 아래의 마크다운 전부다. 카나리아의 `skill_files` 가 `SKILL.md` 밖
+    파일을 원천으로 받는다(harness 027). 그보다 아래 폴더의 파일, `CLAUDE.md`, 훅 설정은 보지 않는다
+    (못 보는 것)."""
     changed = [
         ".claude/skills/a/SKILL.md",
         ".claude/skills/a/notes.md",
+        ".claude/skills/a/refs/deep.md",
         ".claude/skills/SKILL.md",
         ".claude/rules/tools.md",
         ".claude/agents/r.md",
@@ -464,6 +467,7 @@ def test_카나리아로_불러_보는_하네스_파일은_스킬_본문과_규�
         ".claude/agents/r.md",
         ".claude/rules/tools.md",
         ".claude/skills/a/SKILL.md",
+        ".claude/skills/a/notes.md",
     ]
 
 
@@ -1810,7 +1814,7 @@ def test_이_브랜치에_새_번호가_없어도_형제를_넘은_다음_빈_�
     # 대기열 199: 판을 올리기 전에도 찍는다. 형제가 판을 올리지 않았으면 main 의 판이다
     assert "형제가 쓴 가장 높은 헌법 판: 1.0.0(origin/main)." in out
 
-    # 받은 번호로 쓰면(next-session 1단계가 안내하는 길) 겹치지도 앞서지도 않는다
+    # 받은 번호로 쓰면(next-session merge.md 3 이 안내하는 길) 겹치지도 앞서지도 않는다
     ours_files = {
         "docs/journal/2026-10-07-04-ours.md": "이쪽\n",
         ".scratch/retro-queue.md": queue + "| 4 | 이쪽 |\n",

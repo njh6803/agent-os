@@ -2,20 +2,29 @@
 # 단계(대기열 326)가 새 세션에 실리는지.
 # 실험군은 이 워크트리, 대조군은 옛 판이다. 대조군은 `--control-commit 80b3cce` 로 꺼낸다(그 판에는 `expect`의 세 문구가
 # 모두 없다). 병합 뒤에도 같은 커밋을 준다.
-# 최신 결과: 통과 4 · 실패 0 · "없음" 섞인 통과 0(2026-10-19, 이 PC, 실험군 3/3 · 대조군 1/1. 일지 2026-10-18-02).
+# 옮기기 전 결과: 통과 4 · 실패 0 · "없음" 섞인 통과 0(2026-10-19, 이 PC, 실험군 3/3 · 대조군 1/1. 일지 2026-10-18-02).
+# 2026-10-29 harness 027 이 본문을 `handoff.md` 로 옮겨 하위 파일 갈래(`skill_files`)로 바꿨다.
+#   대조군은 옮기기 전 커밋 `37759ef2` 을 `--control-commit` 으로 준다.
+# 최신 결과: 통과 4, "없음" 섞임 0(2026-10-29, 이 PC, claude 2.1.312, 실험군은 이 워크트리의 커밋하지 않은 본문(러너가 찍은 커밋은 `37759ef2`), 대조군 `--control-commit 37759ef2`, 일지 2026-10-29-02).
 # 돌리는 법: 워크트리 `.claude/worktrees/<이름>/` 루트에서
-#   uv run python tools/canary.py --control-commit 80b3cce .scratch/harness/probes/canary/next_session_handoff_batch.toml <출력 디렉터리>
+#   uv run python tools/canary.py --control-commit 37759ef2 .scratch/harness/probes/canary/next_session_handoff_batch.toml <출력 디렉터리>
 kind = "skill"
 question = '''
-next-session 스킬을 Skill 도구로 불러 본문을 읽어라. 스킬이 시키는 일(지시문 내기, 세션 열기)은 하지 않고 본문만 읽는다.
-1) "인계할 때" 절의 1(인계하지 않는 때)에서, 다른 세션이 연 세션을 알아보는 값을 적은 괄호를 글자 그대로 옮겨라.
-2) "인계할 때" 절의 3(지시문)에서 일지 파일의 경로를 어디에 적으라고 하는지 적은 문장을 글자 그대로 옮겨라.
-3) "인계할 때" 절의 4(넘기기 전에)에서 백그라운드 작업 멈추기와 열기 사이에 오는 항목의 이름(굵은 글씨)을 옮겨라.
-본문에 그런 문장이나 항목이 없으면 그 번호에 "없음"이라고만 답하라.
+next-session 스킬을 Skill 도구로 불러 본문을 읽어라. 스킬이 시키는 일은 하지 않는다.
+본문이 상황마다 Read로 열라고 가리키는 하위 파일 가운데 단계 경계에서 인계 계기를 받은 세션이 여는 파일 하나를
+Read로 열고, 아래를 그 파일에서만 찾는다. 스킬 본문(SKILL.md)에 든 글은 옮기지 않는다.
+본문이 그런 하위 파일을 가리키지 않거나 그 파일에 없으면 그 물음에 "없음"이라고만 답하라.
+1) 순서 1(인계하지 않는 때)에서, 다른 세션이 연 세션을 알아보는 값을 적은 괄호를 글자
+그대로 옮겨라.
+2) 순서 3(지시문)에서 일지 파일의 경로를 어디에 적으라고 하는지 적은 문장을 글자 그대로
+옮겨라.
+3) 순서 4(넘기기 전에)에서 백그라운드 작업 멈추기와 열기 사이에 오는 항목의 이름(굵은
+글씨)을 옮겨라.
 '''
 expect = ["parentSessionId", "그 경계 문장 끝에 일지 파일의 경로를 적는다", "잠금 풀기"]
-source = ".claude/skills/next-session/SKILL.md"
+source = ".claude/skills/next-session/handoff.md"
 skill = "next-session"
+skill_files = true
 
 [[arm]]
 name = "워크트리"

@@ -230,7 +230,7 @@ def options(**overrides: float) -> Options:
 def waited(script: Script, opts: Options | None = None) -> tuple[int, str]:
     """기다린 결과를 낸다. 어느 길로 끝나든 마지막 줄이 `끝:` 인지 함께 본다.
 
-    깨어난 세션은 그 줄을 결과와 다음 할 일로 읽는다(next-session 1단계).
+    깨어난 세션은 그 줄을 결과와 다음 할 일로 읽는다(next-session merge.md 2).
     """
     fetch: Callable[[str], Json] = script.fetch
     code, lines = wait(

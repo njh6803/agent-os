@@ -45,6 +45,7 @@ from tools.canary import (
     read_facts,
     read_spec,
     run_claude,
+    skill_file_problems,
     source_problems,
     target_problems,
     view_problems,
@@ -687,6 +688,169 @@ def test_skill을_주지_않은_스킬_명세는_자리_줄이_없어도_통과�
     facts = _스킬_사실(tmp_path, skills=(), skill_dirs=())
 
     assert judge(spec, spec.arm[0], facts, tmp_path) == []
+
+
+# 하위 파일 갈래(skill_files). 스킬 본문이 상황마다 하위 파일을 Read 로 열게 나뉜 길이다
+# (harness 027)
+
+_하위_파일_명세 = """
+kind = "skill"
+question = "next-session 스킬을 불러 병합 절차의 하위 파일에서 대기 명령을 옮겨라. 없으면 없음."
+expect = ["wait_ci.py"]
+source = ".claude/skills/next-session/merge.md"
+skill = "next-session"
+skill_files = true
+
+[[arm]]
+name = "새"
+role = "experiment"
+checkout = "새"
+
+[[arm]]
+name = "옛"
+role = "control"
+checkout = "옛"
+"""
+
+
+def _하위_폴더(checkout: Path) -> Path:
+    return checkout / ".claude" / "skills" / "next-session"
+
+
+def _하위_사실(checkout: Path, **바꿀: object) -> Facts:
+    folder = _하위_폴더(checkout)
+    facts = _사실(
+        tools=("Skill", "Read"),
+        reads=(str(folder / "merge.md"),),
+        skills=("next-session",),
+        skill_dirs=(str(folder),),
+        answer="uv run python tools/wait_ci.py <번호>",
+    )
+    return replace(facts, **바꿀)
+
+
+def _하위_판정(facts: Facts, checkout: Path, 갈래: int = 0) -> list[str]:
+    spec = load_spec(_하위_파일_명세)
+    return judge(spec, spec.arm[갈래], facts, checkout)
+
+
+def test_하위_파일_명세는_Skill과_Read로_돈다() -> None:
+    args = command(load_spec(_하위_파일_명세))
+
+    assert args[args.index("--tools") + 1] == "Skill,Read"
+
+
+@pytest.mark.parametrize(
+    ("바꿀", "바꾼_것"),
+    [
+        ('kind = "skill"', 'kind = "agent"'),
+        ('skill = "next-session"\n', ""),
+        ("next-session/merge.md", "next-session/SKILL.md"),
+        ("next-session/merge.md", "open-session/merge.md"),
+        ("next-session/merge.md", "next-session/sub/merge.md"),
+        (".claude/skills/next-session/merge.md", "docs/merge.md"),
+    ],
+)
+def test_하위_파일_칸은_스킬_명세에서_그_스킬_폴더_바로_아래의_SKILL_md_밖_원천에만_쓴다(
+    바꿀: str, 바꾼_것: str
+) -> None:
+    with pytest.raises(SpecError, match="skill_files"):
+        load_spec(_하위_파일_명세.replace(바꿀, 바꾼_것))
+
+
+def test_하위_파일_원천은_역슬래시와_점_머리를_써도_같은_자리로_읽는다() -> None:
+    text = _하위_파일_명세.replace(
+        '".claude/skills/next-session/merge.md"', "'./.claude\\skills\\next-session\\merge.md'"
+    )
+
+    assert load_spec(text).skill_files
+
+
+def test_하위_파일_실험군이_원천을_읽어_카나리아를_답하면_통과다(tmp_path: Path) -> None:
+    assert _하위_판정(_하위_사실(tmp_path), tmp_path) == []
+
+
+def test_하위_파일의_Read가_상대_경로여도_체크아웃_기준으로_견준다(tmp_path: Path) -> None:
+    facts = _하위_사실(tmp_path, reads=(".claude/skills/next-session/merge.md",))
+
+    assert _하위_판정(facts, tmp_path) == []
+
+
+@pytest.mark.parametrize(
+    "밖",
+    ["README.md", ".claude/skills/next-session-old/merge.md", ".claude/skills/open-session/x.md"],
+)
+def test_하위_파일_갈래가_그_스킬_폴더_밖을_읽으면_실패다(tmp_path: Path, 밖: str) -> None:
+    """이름이 같은 접두로 시작하는 다른 스킬 폴더도 밖이다. 접두사만 견주면 변이가 살아남는다."""
+    facts = _하위_사실(tmp_path, reads=(str(_하위_폴더(tmp_path) / "merge.md"), str(tmp_path / 밖)))
+
+    assert any("스킬 폴더 밖" in reason for reason in _하위_판정(facts, tmp_path))
+
+
+def test_하위_파일_실험군이_원천을_읽지_않았으면_실패다(tmp_path: Path) -> None:
+    facts = _하위_사실(tmp_path, reads=(str(_하위_폴더(tmp_path) / "handoff.md"),))
+
+    assert any("읽지 않았다" in reason for reason in _하위_판정(facts, tmp_path))
+
+
+def test_하위_파일_갈래의_init에_Read가_없으면_실패다(tmp_path: Path) -> None:
+    facts = _하위_사실(tmp_path, tools=("Skill",))
+
+    assert any("도구" in reason for reason in _하위_판정(facts, tmp_path))
+
+
+def test_하위_파일_대조군은_원천을_읽지_않고_없음이라_답해도_통과다(tmp_path: Path) -> None:
+    """옛 사본에는 하위 파일이 없다. 사본에 스킬이 있으니 부르기와 자리 줄은 여전히 본다."""
+    folder = _하위_폴더(tmp_path)
+    folder.mkdir(parents=True)
+    (folder / "SKILL.md").write_text("# 다음 세션 지시문\n", encoding="utf-8")
+    facts = _하위_사실(tmp_path, reads=(), answer="없음")
+
+    assert _하위_판정(facts, tmp_path, 갈래=1) == []
+    assert _하위_판정(replace(facts, skills=()), tmp_path, 갈래=1) != []
+
+
+def _하위_체크아웃(root: Path, 이름: str, 본문: str, 원천: str | None = None) -> Path:
+    checkout = root / 이름
+    folder = _하위_폴더(checkout)
+    folder.mkdir(parents=True)
+    (folder / "SKILL.md").write_text(본문, encoding="utf-8")
+    if 원천 is not None:
+        (folder / "merge.md").write_text(원천, encoding="utf-8")
+    return checkout
+
+
+def test_하위_파일_실험군의_SKILL_md에_카나리아가_있으면_알리고_대조군의_것은_보지_않는다(
+    tmp_path: Path,
+) -> None:
+    """옮기기 전 사본의 SKILL.md 에는 옮긴 글이 남아 있다. 그것을 막으면 대조군을 둘 수 없다."""
+    spec = load_spec(_하위_파일_명세)
+    옮긴_본문 = "대기는 `tools/wait_ci.py` 로 한다.\n"
+    places = {
+        "새": _하위_체크아웃(tmp_path, "새", "`merge.md` 를 Read 로 연다.\n", 옮긴_본문),
+        "옛": _하위_체크아웃(tmp_path, "옛", 옮긴_본문),
+    }
+
+    assert skill_file_problems(spec, places) == []
+    shutil.rmtree(tmp_path / "새")
+    places["새"] = _하위_체크아웃(tmp_path, "새", 옮긴_본문, 옮긴_본문)
+    problems = skill_file_problems(spec, places)
+    assert len(problems) == 1
+    assert problems[0].startswith("새: ") and "wait_ci.py" in problems[0]
+
+
+def test_하위_파일_실험군의_SKILL_md를_읽지_못하면_알린다(tmp_path: Path) -> None:
+    spec = load_spec(_하위_파일_명세)
+    (tmp_path / "새").mkdir()
+    places = {"새": tmp_path / "새", "옛": _하위_체크아웃(tmp_path, "옛", "옛\n")}
+
+    assert any("읽지 못했다" in problem for problem in skill_file_problems(spec, places))
+
+
+def test_하위_파일_칸이_없는_명세는_SKILL_md를_보지_않는다(tmp_path: Path) -> None:
+    spec = load_spec(_스킬_명세)
+
+    assert skill_file_problems(spec, {"새": tmp_path, "옛": tmp_path}) == []
 
 
 def test_카나리아_대조는_백틱과_강조와_줄바꿈을_무시한다(tmp_path: Path) -> None:
@@ -1956,6 +2120,24 @@ def test_원천이_어긋나면_돌리지_않고_2다(tmp_path: Path) -> None:
     assert code == 2
     assert 가짜.호출 == []
     assert any("원천" in line for line in printed)
+
+
+def test_하위_파일_실험군의_SKILL_md에_카나리아가_있으면_돌리지_않고_2다(tmp_path: Path) -> None:
+    spec_path = tmp_path / "canary.toml"
+    spec_path.write_text(_하위_파일_명세, encoding="utf-8")
+    옮긴_본문 = "대기는 `tools/wait_ci.py` 로 한다.\n"
+    _하위_체크아웃(tmp_path, "새", 옮긴_본문, 옮긴_본문)
+    _하위_체크아웃(tmp_path, "옛", "옛\n")
+    가짜 = _가짜({})
+    printed: list[str] = []
+
+    code = main(
+        [str(spec_path), str(tmp_path / "out")], cwd=tmp_path, runner=가짜, out=printed.append
+    )
+
+    assert code == 2
+    assert 가짜.호출 == []
+    assert any("SKILL.md 에 카나리아" in line for line in printed)
 
 
 def test_출력_디렉터리를_만들지_못하면_3이다(tmp_path: Path) -> None:
