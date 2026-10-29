@@ -1,4 +1,4 @@
-# 2026-10-29 (18) 실행 목록의 표와 카드, 이 브라우저의 시간대(admin-style 06)
+# 2026-10-30 (04) 실행 목록의 표와 카드, 이 브라우저의 시간대(admin-style 06)
 
 티켓 `.scratch/admin-style/issues/06-admin-run-list.md`를 구현했다. 나란히 여는 넷(05·06·07·09) 가운데 둘째 세션이고, 브랜치는 `feature/06-admin-run-list`, 워크트리는 `.claude/worktrees/06-admin-run-list`다.
 
@@ -51,8 +51,8 @@
 시작 프롬프트: /implement .scratch/admin-style/issues/06-admin-run-list.md
 브랜치: feature/06-admin-run-list
 모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
-읽을 것: docs/journal/2026-10-29-18-admin-run-list.md
-이어받을 상태: 인계: 셀프 리뷰 직전. 커밋하지 않은 변경이 워크트리에 있고 셀프 리뷰(/code-review, 고정점 origin/main의 merge-base, 미추적 파일 포함)부터 한다. 구현과 시험, 변이 표(.scratch/admin-style/probes/run_list_mutations.toml), 프로브 README 행, 티켓의 체크박스(사진과 검증 둘만 남았다)와 "이 티켓이 정한 것"까지 했다. 변이 표는 리뷰 전 판으로 전체를 돌렸으니 셀프 리뷰와 PR 직전 리뷰를 반영해 커밋한 뒤 전체를 한 번 다시 돈다. 사진 정답(visual:admin:update, 새 스토리 셋 12장)은 아직 만들지 않았다. Docker 엔진이 이 세션 내내 Internal Server Error였고, 사용자가 Docker Desktop을 다시 켜 주기로 골라 23:39에 다시 답하기 시작했다. 리뷰 반영 뒤 사진을 만들고 바뀐 사진을 눈으로 본 뒤 PR 본문에 적는다. 형제 겹침(05의 ReadSection.tsx, 07의 runs.e2e.ts)은 일지의 구현 절. 일지는 docs/journal/2026-10-29-18-admin-run-list.md
+읽을 것: docs/journal/2026-10-30-04-admin-run-list.md
+이어받을 상태: 인계: 셀프 리뷰 직전. 커밋하지 않은 변경이 워크트리에 있고 셀프 리뷰(/code-review, 고정점 origin/main의 merge-base, 미추적 파일 포함)부터 한다. 구현과 시험, 변이 표(.scratch/admin-style/probes/run_list_mutations.toml), 프로브 README 행, 티켓의 체크박스(사진과 검증 둘만 남았다)와 "이 티켓이 정한 것"까지 했다. 변이 표는 리뷰 전 판으로 전체를 돌렸으니 셀프 리뷰와 PR 직전 리뷰를 반영해 커밋한 뒤 전체를 한 번 다시 돈다. 사진 정답(visual:admin:update, 새 스토리 셋 12장)은 아직 만들지 않았다. Docker 엔진이 이 세션 내내 Internal Server Error였고, 사용자가 Docker Desktop을 다시 켜 주기로 골라 23:39에 다시 답하기 시작했다. 리뷰 반영 뒤 사진을 만들고 바뀐 사진을 눈으로 본 뒤 PR 본문에 적는다. 형제 겹침(05의 ReadSection.tsx, 07의 runs.e2e.ts)은 일지의 구현 절. 일지는 docs/journal/2026-10-30-04-admin-run-list.md
 확인할 선행 조건: Docker 엔진이 답하는지(timeout 20 docker version). 이 세션의 마지막 확인인 23:39에는 답했다
 이번 요청 범위: PR과 병합까지
 
@@ -111,4 +111,76 @@ open-session을 부른다 2026-10-29T14:40:35Z
 
 막은 것은 둘이다(pre-commit의 출력).
 - `check-mutations`(`tools/mutate.py --staged`): 04의 `frame_common_states_mutations.toml` 열다섯째("글자 링크의 포커스 링이 없으면 링크 스토리가 빨갛다")와 열여섯째("글자 링크에 최소 높이가 없으면 링크 스토리가 빨갛다")의 원문이 `TextLink.tsx`에 0번 있었다. 이 브랜치가 그 클래스 글자를 템플릿 리터럴로 바꿨기 때문이다. 앞 세션은 `TextLink.tsx`를 고치고 그 파일을 겨누는 다른 표를 `--check`로 보지 않았다. 원문을 새 줄에 맞추고 `--check`가 27 모두 한 번씩이었고, `tools/mutate.py … 15 16`이 둘 다 기대대로 빨갰다(도구가 찍었다). 열여섯째는 실행 목록 스토리 `List`도 함께 빨갛게 했다.
-- pytest: `test_rerun_runner.py`의 둘이 다시 빨갰다(6004 통과, 1114.88초). 위 전체 검증에서 따로 돌려 통과한 시험이다. 페이지 시험 28개, 실행 목록·글자 링크 스토리의 두 폭 8개가 통과했고, 고친 네 파일의 ESLint·Prettier와 관리 화면 앱의 `tsc --noEmit`이 초록이었다(모두 명령의 출력). 손으로 치는 다섯은 커밋의 pre-commit으로 갈음한다.
+- pytest: `test_rerun_runner.py`의 둘이 다시 빨갰다(6004 통과, 1114.88초). 위 전체 검증에서 따로 돌려 통과한 시험이다.
+
+## 커밋
+
+변이 표를 고친 뒤 페이지 시험 28개, 실행 목록·글자 링크 스토리의 두 폭 8개가 통과했고, 고친 네 파일의 ESLint·Prettier와 관리 화면 앱의 `tsc --noEmit`이 초록이었다(모두 명령의 출력). 그 변이 표를 고쳐 다시 친 커밋 `3f683d12`의 pre-commit이 모두 통과했다. pytest 463.7초, web-verify 621.0초였다(pre-commit의 출력). 손으로 치는 다섯은 이 결과로 갈음한다.
+
+## 인계(커밋 뒤)
+
+커밋 직후 다시 인계 계기(`hook_handoff`, 344,506 토큰, 경계 `커밋 뒤`)가 왔다. 이번에는 커밋이 성공했고 `handoff.md` 1의 다섯에 들지 않아 넘긴다. 이 세션의 지금 제목은 `feature/06-admin-run-list`다.
+
+PR 직전 `bug-perf-review`에 밀 주장(코드 리뷰 스킬 6단계 1): 위 "셀프 리뷰" 절 고친 것의 새 문장 여섯과, 사진 정답 절에서 고친 `RunList.tsx` `RunCards` 독스트링의 "표는 카드 폭으로 늘리지 않고 내용 폭이다. 늘리면 남는 폭이 칸의 내용 폭에 비례해 나뉘어 라벨 칸의 폭이 카드마다 달라진다. 라벨은 줄을 바꾸지 않아, 값이 카드보다 길면 값이 줄을 바꾼다." 마지막 문장의 경우(값이 카드보다 긴 카드)는 그려 보지 않았다.
+
+인계 지시문:
+
+다음 작업: .scratch/admin-style/issues/06-admin-run-list.md. 실행 목록이 데스크톱에서는 표, 휴대폰에서는 카드로 서고, 시각을 이 브라우저의 시간대로 적는다
+다음 단계: 구현
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /implement .scratch/admin-style/issues/06-admin-run-list.md
+브랜치: feature/06-admin-run-list
+모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
+읽을 것: docs/journal/2026-10-30-04-admin-run-list.md
+이어받을 상태: 인계: 커밋 뒤. 셀프 리뷰 반영, 사진 정답 12장(눈으로 본 뒤 좁은 카드의 라벨 칸을 고쳐 list-320 둘을 다시 만들었다), 04 변이 표 15·16의 원문 고침까지 커밋했고 아직 푸시하지 않았다. PR은 없다. 남은 것: origin/main(07 #428) 합치기(07이 runs.e2e.ts의 다른 줄과 EventItem의 RunLink를 TextLink로 바꿨다), 합친 뒤 관리 화면 e2e와 pnpm -C web visual:admin, PR 직전 리뷰(CLI가 안 되면 /security-review와 bug-perf-review를 나란히. bug-perf-review에 밀 주장은 일지의 "인계(커밋 뒤)" 절), 반영 커밋 뒤 run_list_mutations.toml 전체 다시 돌기, 티켓 Status done과 검증 체크박스, PR 본문에 새 사진 12장. 이 PC는 부하가 크면 pre-commit의 pytest가 시간 민감 시험(test_rerun_runner, test_interrupt)으로 빨갰고 따로 돌리면 통과했다(일지의 "리뷰 반영 뒤 전체 검증"). 일지는 docs/journal/2026-10-30-04-admin-run-list.md
+확인할 선행 조건: Docker 엔진이 답하는지(timeout 20 docker version). 이 세션에서는 내내 답했다
+이번 요청 범위: PR과 병합까지
+
+넘기기 전에: 제목을 `feature/06-admin-run-list (인계함)`으로 바꿨다(도구 결과). 멈출 백그라운드 작업은 없었다(띄운 것이 모두 끝났다). `git worktree unlock C:/project/agent/.claude/worktrees/06-admin-run-list`는 `is not locked`로 끝나 넘어갔다.
+
+open-session을 부른다 2026-10-29T16:34:33Z
+
+## 이어받은 세션(커밋 뒤)
+
+> 사용자: ".claude/skills/implement/SKILL.md 를 읽어 그대로 따른다. … 인자: .scratch/admin-style/issues/06-admin-run-list.md / 다음 작업: … / 다음 단계: 구현 / 어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다 / … / 이어받을 상태: 인계: 커밋 뒤. … / 확인할 선행 조건: Docker 엔진이 답하는지(timeout 20 docker version). 이 세션에서는 내내 답했다 / 이번 요청 범위: PR과 병합까지"
+
+제목을 `feature/06-admin-run-list`로 바꾸고(도구 결과) `EnterWorktree(path)`로 이 워크트리에 들어왔다. `timeout 20 docker version`이 엔진 29.9.2로 답했다(명령의 출력). 앞 세션이 커밋하지 않고 둔 일지 변경은 끝 줄에 "커밋" 절의 문장 하나가 잘못 붙어 있어 그 절로 옮겼다.
+
+origin/main(`c04e4fe6`, 07 #428)을 합쳤다. 충돌은 없었고 겹친 파일은 `runs.e2e.ts` 하나다. 07은 돌아가는 링크의 이름을 "실행 목록으로"에서 "실행 목록"(`exact`)으로 바꿨고 이 브랜치의 고친 줄과 닿지 않았다(병합 커밋의 diff). 07의 `EventItem.tsx`는 실행 식별자를 이 브랜치가 `font`를 더한 `TextLink`로 감싸며 `font`를 주지 않아 기본(`body`)이다(코드를 읽었다). admin-style 변이 표 여섯을 `tools/mutate.py --check`로 보니 모두 원문이 한 번씩이었다(도구가 찍었다).
+
+합친 뒤 관리 화면 e2e(`pnpm -C web/apps/admin exec playwright test`)는 8개 가운데 7개가 통과했다. `decision.e2e.ts`의 "멈춘 실행을 허가하면 … 도구가 실제로 불렸다"가 39줄에서 이벤트 영역에 `run_finished`가 5초 안에 들지 않아 빨갰고, 끝에 시험 밖의 오류로 임시 폴더(`agent-os-e2e-…`)를 지우는 `rmSync`가 `EPERM`으로 끝났다(명령의 출력). 그때 PR 직전 리뷰 서브에이전트 둘이 함께 돌았다. 그 줄은 실행 하나 화면이 재개 스트림이 끝난 뒤 트레이스를 다시 읽는 자리라 이 브랜치가 고친 실행 목록과 `row` 도우미(48줄)에 닿기 전이다(코드를 읽었다). 그 파일만 다시 돌리니 3개 모두 통과했다(`pnpm -C web/apps/admin exec playwright test e2e/decision.e2e.ts`, 56.7초, 명령의 출력). 부하로 늦어진 빨강으로 본다(어림).
+
+## PR 직전 리뷰
+
+CodeRabbit CLI는 `coderabbit auth status`가 `Seat: not assigned`라 돌지 못해(명령의 출력) 대체 둘을 나란히 돌렸다.
+
+- `/security-review`: 합친 뒤라 그 명령이 모은 커밋은 이 브랜치의 커밋과 병합 커밋뿐이었다(그 명령의 프롬프트에 실린 목록). 취약점을 찾는 서브태스크가 지적 없음을 냈다(서브에이전트 보고). 실행 식별자는 `RunLink`가 `encodeURIComponent`로 `/runs/` 아래 한 토막에 가두고 옛 코드와 같은 꼴이며, 에이전트·주체·이유·시각은 React의 글자 자식으로만 그려지고, `TextLink`의 `font`는 상수 표로만 클래스가 된다는 것이 그 근거였다. 거짓 양성을 거를 지적이 없어 둘째 단계는 돌지 않았다.
+- `bug-perf-review`(기준 `c04e4fe6`, 26파일, 호출 41): 유효 Minor 둘, 오탐 다섯을 냈고 밀 주장 일곱은 모두 근거와 맞는다고 했다(서브에이전트 보고). 첫째 주장(e2e 도우미 문장)은 맞되 누가 어느 파일을 고치는지의 설명이 부정확하다고 했다. 05 티켓 31줄은 `plugin-toggle.e2e.ts`만, 08 티켓 41줄은 둘 다 고친다. 일곱째 주장(값이 카드보다 긴 카드)은 원시 CSS 복제로 그려 라벨 칸이 64px로 같고 값이 카드 안에서 줄을 바꾸는 것을 봤다고 했다.
+
+관리 화면 사진 비교(`pnpm -C web visual:admin`)는 합친 뒤 48개가 모두 통과했다(명령의 출력).
+
+고친 것:
+- 둘째 지적(유효, Minor): 시간대가 America/New_York인 기계에서는 첫째 변이(고정을 걷는다)가 초록이고 고정이 듣지 않는 것도 페이지 시험이 못 잡는다. `web/vitest.config.ts` 주석에 "시간대가 이 값인 기계에서는 고정이 듣지 않아도 같은 이름이 나와 앞의 둘도 잡지 못한다."를, 변이 표 머리의 돌리는 법에 "시간대가 America/New_York 인 기계에서는 고정을 걷어도 머리 설명이 같은 이름이라 첫째가 초록이므로 그 기계에서는 첫째를 고르지 않는다."를 더했다.
+- 첫째 밀 주장의 설명: 티켓의 e2e 도우미 문장을 "`plugin-toggle.e2e.ts`는 05("매니페스트" 링크)와 08("허가"를 "승인"으로)이, `decision.e2e.ts`는 08이 다른 까닭으로 고치고 07이 그 파일의 돌아가는 링크 이름을 이미 고쳤으므로, 이 티켓이 손대지 않아 그 겹침도 피한다."로 고쳤다. 근거는 05 티켓 31줄, 08 티켓 41줄(둘 다 읽었다)과 병합 커밋의 `decision.e2e.ts` diff다.
+
+남긴 것과 까닭:
+- 첫째 지적(유효, Minor, 고치지 않음): 표의 실행 식별자 링크가 `wrap-anywhere`라 본문 칸이 표의 내용 폭보다 좁으면 표가 식별자 열을 줄여 UUID를 쪼갠다. Storybook 정적 빌드의 `organisms-runlist--list`를 내장 브라우저로 열어 본문 칸(`@container`)의 폭을 바꿔 가며 쟀다(`javascript_tool`, 손으로 봤다). 지금 코드는 784에서 링크가 54px(세 줄), 820~992에서 36px(두 줄)이고 표는 넘치지 않았다. 리뷰가 제안한 대로 식별자 칸에 `white-space: nowrap`을 주면 식별자는 24px(한 줄)이지만 784·820에서 표가 825px로 칸을 넘치고, 850~900에서는 에이전트·주체 칸이 42~91px로 줄어 행이 55~145px로 높아졌다. 960·992에서만 행이 36~37px였다. 1280 창의 본문 칸은 탐색 256px과 여백 64px을 빼 약 960px이다(`AdminFrame.tsx` 32줄과 `theme.css`의 `--spacing-nav`를 읽고 셈했다. 스크롤 막대 폭은 재지 않았다). 그래서 어느 칸이 먼저 줄을 바꿀지는 폭의 구간마다 답이 다르고, 명세는 이것을 정하지 않았으며, 알맞은 이름 있는 기준 폭(약 960)도 디자인 토큰에 없다. 고치는 값이 작지 않아 PR 체크리스트에 판정과 값을 적고 일지 "다음"으로 넘긴다.
+- 오탐 다섯(행마다 `formatTime` 네 번의 비용, 하이드레이션 전 시간대 이름, `row()`의 `.or()`, 0.3초 가짜 시계, README의 번호)은 리뷰가 스스로 오탐으로 갈랐고 다시 보지 않았다.
+
+티켓의 `Status:`를 `done`으로, 검증 체크박스를 채웠다. e2e는 첫 실행의 한 빨강을 그 파일만 다시 돌려 통과한 것으로, 사진 비교는 위 48개 통과로 채웠다. 손으로 치는 다섯은 다음 커밋의 pre-commit으로 갈음한다.
+
+## 회고
+
+일지의 "다음"을 쓰자 훅이 계기를 넣어 돌렸다. 원천은 이 일지와 이 세션이다. 후보 일곱, 승인 넷(새 행 둘, 회차 더하기 둘), 기각 셋, 넘김 없음. 새 검사가 문턱을 지나 `uv run python tools/hook_report.py`를 돌렸고 "뺄 후보"는 없었다(명령의 출력). 만료는 이 작업 트리에서 261·266·277이 나왔지만 `git fetch origin` 뒤 `--ref origin/main`에서는 없어(05가 닫았다) 두 출력에 모두 든 행이 없어 닫지 않았다(명령의 출력).
+
+1. **승인, 대기열 543(1회차, 65의 4회차).** 관리 화면 e2e 준비의 뒷정리 `rmSync`가 `EPERM`으로 끝나 실행이 1이었다. 65(판정자 시험의 `afterAll`, 만료)와 379(판정자 임시 트리, 3회차로 닫힘)를 잇는 끝이 열린 결함 종류라 사례를 고치지 않고 종류 전체를 없애는 고침(재귀 `rmSync`에 `maxRetries`를 요구하는 ESLint 규칙)을 처방했다. 사건은 이 세션, 층은 린터, PR 하나로 되돌릴 수 있다. 08이 `stack.ts`의 주석을 고치므로 이 PR에서는 반영하지 않았다.
+2. **승인, 대기열 544(1회차).** 관리 화면의 스토리와 사진이 창 두 폭뿐이라 본문 칸 784~1248px의 넓은 갈래 배치가 검사 밖이고, 표의 실행 식별자 쪼개짐을 PR 직전 리뷰에서야 잡았다. 리뷰가 잡도록 둔 기준을 어긴 것이 아니라 검사로 옮길 수 있는 빈자리라 승인의 세 조건으로 갈랐다. 더하는 것의 첫 회차라 대기열에 둔다.
+3. **승인(회차로 세는 것), 대기열 214에 더해 5회차.** `bug-perf-review`가 보고에 `[호출 41]`을 적어 예산 40을 넘겼고, 중간 표지가 실제보다 적었다고 스스로 적었다(서브에이전트 보고). 열린 214가 처방한 사건이다.
+4. **승인(회차로 세는 것), 대기열 459에 더해 3회차.** 앞 세션의 `tools/run_checks.py`에서 `test_hook_edit_during_commit.py`의 그 시험이 다른 세션의 `git.exe`를 단언에 넣어 빨갰다(위 "전체 검증" 절). 앞 세션은 일지에 셋째 회차라 적고 대기열에는 더하지 않았다.
+5. **기각(일지에만).** 부하 아래에서만 빨갛고 따로 돌리면 지나는 시간 시험: 앞 세션 pre-commit의 `test_interrupt.py`·`test_rerun_runner.py`·`test_probe_kit.py`와 이 세션 e2e의 `decision.e2e.ts` 39줄이다. 306이 받아들여 닫은 종류라 회차를 더하지 않는다. e2e를 그 종류로 묶은 것은 원인을 가르지 않은 어림이다.
+6. **기각.** 앞 세션이 커밋하지 않고 둔 일지의 문장 하나가 "open-session을 부른다" 줄 뒤에 붙어 있었다. 손상이 없고, 문장이 어디에 붙어야 하는지를 정한 꼴이 없어 검사로 잡을 길이 없다.
+7. **기각.** 앞 세션이 `TextLink.tsx`를 고치고 04 변이 표를 `--check`로 보지 않았다. pre-commit의 `check-mutations`가 그 자리에서 막았다(위 "첫 커밋 시도" 절).
+
+## 다음
+
+- 실행 목록 표의 실행 식별자가 넓은 갈래에서 두 줄로 쪼개진다(PR 직전 `bug-perf-review` 첫째 지적, 위 "남긴 것"). 잰 범위(본문 칸 784~992px)에서 지금 코드는 늘 식별자가 줄을 바꾸고, 1280 창의 본문 칸(약 960px)도 그 안이다. 어느 칸(식별자, 에이전트·주체, 시각)이 먼저 줄을 바꿀지를 명세 "실행 목록"에 정하고, 구간마다 갈래가 다르면 기준 폭 토큰(`theme.css`)을 더하는 일이다. 받을 티켓이 없다. admin-style의 남은 05·08·09는 실행 목록을 들지 않는다(세 티켓 파일에 `RunList`도 "실행 목록"도 없다, grep으로 봤다).

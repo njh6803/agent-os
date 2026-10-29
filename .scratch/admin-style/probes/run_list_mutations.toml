@@ -15,6 +15,8 @@
 # 네트워크를 타지 않는다. `uv sync` 와 `pnpm -C web install` 이 되고 Playwright 의 chromium 이 깔린 체크아웃에서 돈다. e2e 러너는
 # 관리 화면 e2e 의 준비(e2e/stack.ts)가 앱을 빌드하고 serve 를 띄워 한 번에 1분 남짓 걸린다. 첫째의 표지는 고정을 걷은
 # 시험이 이 PC 의 시간대(Asia/Seoul)를 든다는 것이라, 시간대가 다른 기계에서는 표지를 그 기계의 IANA 이름으로 바꿔 돌린다.
+# 시간대가 America/New_York 인 기계에서는 고정을 걷어도 머리 설명이 같은 이름이라 첫째가 초록이므로 그 기계에서는 첫째를
+# 고르지 않는다.
 
 [runner.pages]
 command = ["pnpm", "exec", "vitest", "run", "--project", "pages"]
