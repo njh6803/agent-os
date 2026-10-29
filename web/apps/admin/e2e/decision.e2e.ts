@@ -44,7 +44,7 @@ test("멈춘 실행을 허가하면 재개 스트림이 조각으로 붙고 실�
   await expect(place).toHaveCount(0);
 
   // 실행이 끝남으로 바뀐다. 상태의 이름은 목록의 요약이 말한다.
-  await page.getByRole("link", { name: "실행 목록으로" }).click();
+  await page.getByRole("link", { name: "실행 목록", exact: true }).click();
   await expect(row(page, "실행", paused.runId)).toContainText("끝남");
   expect(crashes).toEqual([]);
 });
@@ -72,7 +72,7 @@ test("재개 스트림 도중에 떠나면 화면은 연결을 끊고 실행은 
   await expect(page.getByRole("region", { name: "재개 스트림" })).toContainText("approval_granted");
 
   // 픽스처가 끝나기(2초) 전에 실행 목록으로 떠난다.
-  await page.getByRole("link", { name: "실행 목록으로" }).click();
+  await page.getByRole("link", { name: "실행 목록", exact: true }).click();
 
   await expect.poll(() => cut).toEqual(["net::ERR_ABORTED"]);
   const summary = row(page, "실행", paused.runId);

@@ -28,6 +28,8 @@ const ADMIN = "adm-4Kd8-decision-page-token";
 const CHANNEL = "chn-2Pw6-decision-page-token";
 const RUN = "r-gated";
 const TS = "2026-09-30T10:00:00+00:00";
+/** 이벤트 칸의 이름. 제목이 "이벤트 <개수>"다. */
+const EVENTS = /^이벤트 \d+$/;
 
 const STARTED: RunEvent = {
   type: "run_started",
@@ -187,7 +189,7 @@ async function openRun(): Promise<UserEvent> {
   const user = userEvent.setup();
   renderPage(<RunPage runId={RUN} />);
   await enterAdminToken(user, ADMIN);
-  await screen.findByRole("region", { name: "이벤트" });
+  await screen.findByRole("region", { name: EVENTS });
   return user;
 }
 
@@ -204,7 +206,7 @@ function place(): HTMLElement {
 }
 
 function events(): HTMLElement {
-  return screen.getByRole("region", { name: "이벤트" });
+  return screen.getByRole("region", { name: EVENTS });
 }
 
 function button(name: string): HTMLButtonElement {
@@ -225,11 +227,11 @@ function reason(): HTMLElement {
   return screen.getByRole("textbox", { name: "거부 사유" });
 }
 
-/** 그 자리의 이벤트 제목(종류) 전부. 쓴 순서대로다. */
-function kinds(region: HTMLElement): (string | null)[] {
+/** 그 자리의 이벤트 종류 전부. 쓴 순서대로다. 카드 머리("<종류> <시각>")의 첫 낱말이다. */
+function kinds(region: HTMLElement): (string | undefined)[] {
   return within(region)
     .getAllByRole("heading", { level: 3 })
-    .map((heading) => heading.textContent);
+    .map((heading) => heading.textContent.split(" ")[0]);
 }
 
 /** 브라우저 저장소 하나의 값 전부. */
@@ -322,6 +324,8 @@ describe("결정 자리", () => {
     expect(screen.queryByRole("region", { name: "결정" })).toBeNull();
     expect(screen.queryByRole("button", { name: "허가" })).toBeNull();
     expect(screen.getAllByText(/최종 사용자의 실행이라 결정은 그 사람만 낸다/)).toHaveLength(1);
+    // 그 한 줄만 선 결정 칸에는 재개 스트림이 서지 않는다(admin-style 티켓 07 "재개 스트림이 서는 조건").
+    expect(screen.queryByRole("region", { name: "재개 스트림" })?.textContent ?? null).toBeNull();
   });
 
   test("최종 사용자의 실행에서도 주체는 구분자 `|` 를 든 글자 그대로 이벤트에 보인다", async () => {
@@ -524,6 +528,9 @@ describe("재개 스트림", () => {
     expect(resumed.textContent).toContain(unknownKind);
     expect(document.querySelector("b")).toBeNull();
     expect(within(resumed).getAllByRole("listitem")).toHaveLength(4);
+    expect(
+      within(resumed).getAllByRole("heading", { level: 3, name: "읽지 못한 프레임" }),
+    ).toHaveLength(2);
     hold.resolve(undefined);
   });
 
@@ -552,7 +559,52 @@ describe("재개 스트림", () => {
 
     await new Promise((resolve) => setTimeout(resolve, 200));
     expect(traceAuthorizations).toHaveLength(readBefore);
+    // 돌아온 화면의 재개 스트림은 결정 자리가 섰으니 서지만, 떠난 결정의 조각은 붙지 않아 빈 줄이다.
+    const resumed = screen.getByRole("region", { name: "재개 스트림" });
+    expect(within(resumed).queryAllByRole("listitem")).toHaveLength(0);
+    expect(resumed.textContent).toContain("결정을 내면 재개한 이벤트가 여기에 차례로 붙는다.");
+  });
+
+  test("결정 자리가 서면 조각이 오기 전에도 재개 스트림이 빈 줄로 선다", async () => {
+    serveTrace(() => PAUSED);
+    servePlugins(ROWS);
+
+    await openDecision();
+
+    const resumed = screen.getByRole("region", { name: "재개 스트림" });
+    expect(resumed.textContent).toContain("결정을 내면 재개한 이벤트가 여기에 차례로 붙는다.");
+    expect(within(resumed).queryAllByRole("listitem")).toHaveLength(0);
+  });
+
+  test("채널 토큰이 없어 결정 자리가 서지 않으면 재개 스트림도 서지 않는다", async () => {
+    serveTrace(() => PAUSED);
+    servePlugins(ROWS);
+
+    await openRun();
+
     expect(screen.queryByRole("region", { name: "재개 스트림" })).toBeNull();
+  });
+
+  test("끊긴 재개 스트림의 정보 알림은 이벤트 칸 위에 제목과 본문으로 선다", async () => {
+    const partial = trace([...PAUSED.events, GRANTED, RESUMED]);
+    serveTrace((call) => (call === 0 ? PAUSED : partial));
+    servePlugins(ROWS);
+    serveDecision(() => stream([GRANTED, RESUMED]));
+    const user = await openDecision();
+
+    await user.click(button("허가"));
+
+    const title = await screen.findByText("재개 스트림이 끊겼다. 실행은 서버에서 계속된다");
+    const alert = title.closest('[role="status"]');
+    if (!(alert instanceof HTMLElement)) {
+      throw new Error("끊긴 알림이 상태 영역이 아니다");
+    }
+    expect(
+      within(alert).getByText(
+        "창을 닫거나 떠나도 실행은 끝까지 간다. 돌아오면 트레이스로 이어 본다.",
+      ),
+    ).toBeTruthy();
+    expect(alert.compareDocumentPosition(events()) & Node.DOCUMENT_POSITION_FOLLOWING).not.toBe(0);
   });
 });
 
@@ -669,7 +721,7 @@ describe("채널 토큰의 거부", () => {
     await user.click(button("허가"));
 
     expect((await screen.findByRole("alert")).textContent).toContain("채널 토큰이 거부됐다");
-    expect(screen.getByRole("region", { name: "이벤트" })).toBeTruthy();
+    expect(screen.getByRole("region", { name: EVENTS })).toBeTruthy();
     expect(screen.queryByRole("button", { name: "허가" })).toBeNull();
     const stored = storedValues(sessionStorage).join("\n");
     expect(stored).toContain(ADMIN);
