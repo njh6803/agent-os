@@ -178,6 +178,36 @@ describe("관리 토큰", () => {
     expect(screen.queryByRole("region", { name: "에이전트" })).toBeNull();
   });
 
+  test("넣는 자리는 틀 없이 제품 이름과 화면 머리, 설명, 가린 입력과 그 도움말로 선다", async () => {
+    renderPage(<HomePage />);
+
+    const field = await screen.findByLabelText<HTMLInputElement>("관리 토큰");
+    expect(screen.getByRole("heading", { level: 1 }).textContent).toBe("관리 토큰 넣기");
+    // 제품 이름은 제목 요소가 아닌 글자다. 틀(탐색)과 옛 틀의 제목 "관리 화면"은 없다.
+    expect(screen.getByText("Agent OS").closest("h1, h2, h3, h4, h5, h6")).toBeNull();
+    expect(screen.queryByRole("navigation")).toBeNull();
+    expect(screen.queryByRole("heading", { name: "관리 화면" })).toBeNull();
+    expect(
+      screen.getByText(
+        (_, element) =>
+          element?.tagName === "P" &&
+          element.textContent ===
+            "agent-os serve 를 띄울 때 AGENT_OS_ADMIN_TOKEN 에 준 값이다. 이 탭에만 남고 탭을 닫으면 사라진다.",
+      ),
+    ).toBeTruthy();
+    expect(field.getAttribute("type")).toBe("password");
+    expect(field.getAttribute("autocomplete")).toBe("off");
+    expect(document.getElementById(field.getAttribute("aria-describedby") ?? "")?.textContent).toBe(
+      "넣으면 플러그인 목록을 한 번 읽어 맞는 토큰인지 본다.",
+    );
+    expect(screen.getByRole("button", { name: "넣기" }).getAttribute("type")).toBe("submit");
+    // 지울 채널 토큰이 없으면 아래 줄도 없다. 문서 뿌리에 모드와 밀도를 달지 않는다.
+    expect(screen.queryByText("이 탭에 채널 토큰이 남아 있다.")).toBeNull();
+    expect(screen.queryByRole("button", { name: "토큰 지우기" })).toBeNull();
+    expect(document.documentElement.hasAttribute("data-mode")).toBe(false);
+    expect(document.documentElement.hasAttribute("data-density")).toBe(false);
+  });
+
   test("넣은 관리 토큰이 확인 요청의 Authorization 에 실리고 받아들여지면 플러그인 목록이 보인다", async () => {
     const authorizations = servePlugins(rows);
     renderPage(<HomePage />);
@@ -196,7 +226,9 @@ describe("관리 토큰", () => {
 
     await enterAdminToken(userEvent.setup(), REJECTED);
 
-    expect((await screen.findByRole("alert")).textContent).toContain("관리 토큰이 거부됐다");
+    const notice = await screen.findByRole("alert");
+    expect(notice.textContent).toContain("관리 토큰이 거부됐다");
+    expect(notice.textContent).toContain("서버를 띄울 때 준 값과 같은지 보고 다시 넣는다.");
     expect(authorizations).toEqual([`Bearer ${REJECTED}`]);
     // 넣는 자리로 남되 거부된 토큰은 칸에도 남지 않는다.
     expect(screen.getByLabelText<HTMLInputElement>("관리 토큰").value).toBe("");
@@ -384,6 +416,7 @@ describe("채널 토큰", () => {
     await screen.findByText("채널 토큰을 넣었다");
     await user.click(screen.getByRole("button", { name: "새로 고침" }));
     expect((await screen.findByRole("alert")).textContent).toContain("관리 토큰이 거부됐다");
+    expect(screen.getByText("이 탭에 채널 토큰이 남아 있다.")).toBeTruthy();
 
     await user.click(screen.getByRole("button", { name: "토큰 지우기" }));
 
@@ -391,7 +424,8 @@ describe("채널 토큰", () => {
       .map(([, value]) => value)
       .join("\n");
     expect(stored).not.toContain(CHANNEL);
-    // 지울 토큰이 없으면 버튼도 없다.
+    // 지울 토큰이 없으면 그 줄도 버튼도 없다.
+    expect(screen.queryByText("이 탭에 채널 토큰이 남아 있다.")).toBeNull();
     expect(screen.queryByRole("button", { name: "토큰 지우기" })).toBeNull();
     expect(screen.getByLabelText("관리 토큰")).toBeTruthy();
   });
@@ -560,7 +594,9 @@ describe("플러그인 목록", () => {
 
     await enterAdminToken(userEvent.setup(), TOKEN);
 
-    expect((await screen.findByRole("alert")).textContent).toContain("서버에 닿지 못했다");
+    const notice = await screen.findByRole("alert");
+    expect(notice.textContent).toContain("서버에 닿지 못했다");
+    expect(notice.textContent).toContain("agent-os serve가 떠 있는지 보고 다시 넣는다.");
     expect(screen.getByLabelText("관리 토큰")).toBeTruthy();
     expect(entries(sessionStorage).filter(([, value]) => value.includes(TOKEN))).toEqual([]);
   });
@@ -594,7 +630,7 @@ describe("켜고 끄기", () => {
   }
 
   /** ROWS 에서 이름 하나의 켜짐만 바꾼 목록. */
-  function rowsWith(name: string, enabled: boolean): Response {
+  function rowsWith(name: string, { enabled }: { readonly enabled: boolean }): Response {
     return HttpResponse.json(
       ROWS.map((plugin) => (plugin.name === name ? { ...plugin, enabled } : plugin)),
     );
@@ -606,7 +642,9 @@ describe("켜고 끄기", () => {
 
   test("스위치를 누르면 관리 토큰을 실은 PUT 이 끄기를 보내고 204 뒤에 다시 읽은 목록이 꺼짐을 보인다", async () => {
     // 0은 토큰 확인, 1은 목록, 2는 쓰기 직후의 다시 읽기다.
-    const authorizations = servePlugins((call) => (call < 2 ? rows() : rowsWith("calc", false)));
+    const authorizations = servePlugins((call) =>
+      call < 2 ? rows() : rowsWith("calc", { enabled: false }),
+    );
     const puts = serveSwitch(applied);
     const user = await showList();
     expect(switchOf("에이전트", "calc").checked).toBe(true);
@@ -628,7 +666,7 @@ describe("켜고 끄기", () => {
   });
 
   test("꺼진 행의 스위치를 누르면 켜기를 보낸다", async () => {
-    servePlugins((call) => (call < 2 ? rows() : rowsWith("summarize", true)));
+    servePlugins((call) => (call < 2 ? rows() : rowsWith("summarize", { enabled: true })));
     const puts = serveSwitch(applied);
     const user = await showList();
     expect(switchOf("스킬", "summarize").checked).toBe(false);
@@ -665,7 +703,7 @@ describe("켜고 끄기", () => {
     });
     expect(switchOf("에이전트", "calc").disabled).toBe(true);
     await user.click(switchOf("에이전트", "calc"));
-    reread.resolve(rowsWith("calc", false));
+    reread.resolve(rowsWith("calc", { enabled: false }));
     expect(await within(row("에이전트", "calc")).findByText("꺼짐")).toBeTruthy();
     await vi.waitFor(() => {
       expect(switchOf("에이전트", "calc").disabled).toBe(false);
@@ -677,7 +715,9 @@ describe("켜고 끄기", () => {
   test("켜고 끄기가 실패하면 메시지와 추적 식별자를 보이고 스위치는 다시 읽은 값이다", async () => {
     const message = "운영자 파일이 깨졌다: C:/root/plugins/disabled.toml";
     // 그 사이 다른 곳에서 꺼졌다. 스위치가 누르기 전의 값이 아니라 다시 읽은 값을 따르는지 여기서 가린다.
-    const authorizations = servePlugins((call) => (call < 2 ? rows() : rowsWith("calc", false)));
+    const authorizations = servePlugins((call) =>
+      call < 2 ? rows() : rowsWith("calc", { enabled: false }),
+    );
     serveSwitch(() =>
       HttpResponse.json(envelope("internal_error", message, "req-77aa"), { status: 500 }),
     );
@@ -717,7 +757,7 @@ describe("켜고 끄기", () => {
   });
 
   test("다음 켜고 끄기를 시작하면 앞의 실패가 걷힌다", async () => {
-    servePlugins((call) => (call < 3 ? rows() : rowsWith("summarize", true)));
+    servePlugins((call) => (call < 3 ? rows() : rowsWith("summarize", { enabled: true })));
     serveSwitch((call) =>
       call === 0
         ? HttpResponse.json(envelope("internal_error", "운영자 파일이 깨졌다"), { status: 500 })
@@ -734,7 +774,7 @@ describe("켜고 끄기", () => {
   });
 
   test("표지 행도 끌 수 있다", async () => {
-    servePlugins((call) => (call < 2 ? rows() : rowsWith("broken", false)));
+    servePlugins((call) => (call < 2 ? rows() : rowsWith("broken", { enabled: false })));
     const puts = serveSwitch(applied);
     const user = await showList();
 
@@ -780,7 +820,7 @@ describe("켜고 끄기", () => {
     // 화면을 옮겨 다녀도 SWR 의 캐시는 하나다. 세 번의 그리기에 캐시 하나를 넘긴다.
     const cache = new Map();
     // 0은 토큰 확인, 1은 목록, 2는 쓰기 직후의 다시 읽기다.
-    servePlugins((call) => (call < 2 ? rows() : rowsWith("calc", false)));
+    servePlugins((call) => (call < 2 ? rows() : rowsWith("calc", { enabled: false })));
     serveSwitch(applied);
     const reads: string[] = [];
     network.use(

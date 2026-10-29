@@ -1,0 +1,185 @@
+# 2026-10-29 (07) 위젯 승인 시험의 센 수 사례가 가끔 빨간 원인을 가르고 고친다 (harness 023)
+
+next-session 지시문으로 연 새 세션이다. 나란히 여는 여덟 가운데 다섯째라 `tidy-checkouts`는 돌지 않았고(묶음의 첫 세션이
+돈다), 주 체크아웃에서 브랜치를 따지 않고 워크트리 `023-widget-char-count-flake`에 들어가
+`chore/023-widget-char-count-flake`로 바꿨다. 첫 재현 실행 도중 세션이 한 번 끊겼고, 사용자가 다시 시도하라고 해 이었다.
+
+> 사용자: "대기열 486을 티켓 .scratch/harness/issues/023-widget-char-count-flake.md로 쓰고 한다"
+
+> 사용자: "다시 시도해 주세요"
+
+## 세 줄 계획
+
+(1) 재현 루프 프로브로 빨간 회차의 포커스 자리와 사유 칸의 값을 찍어 원인을 가른다. (2) 원인을 시험 쪽에서 없애고 같은
+루프로 다시 잰다. (3) 계약(`sdk/`, `openapi.json`, 헌법)과 위젯 코드에는 닿지 않는다.
+
+## 진단
+
+- 코드를 읽고 세운 해석은 셋이었다. 포커스를 빼앗김(`ApprovalCard`의 첫 그리기 효과가 포커스를 제목으로 옮긴다), 이모지
+  짝이 깨짐(붙여 넣기가 UTF-16 두 단위 사이에 든다), 카드가 다시 서며 칸의 상태를 잃음.
+- 프로브 `.scratch/harness/probes/widget_char_count/repeat.mjs`는 그 사례를 따라 하는 사례를 시험 파일 사본 끝에 붙여
+  Vitest `repeats`로 되풀이하고 회차마다 한 줄을 찍는다. 첫 판은 `console.log`로 찍었는데 그 실행의 출력에 실리지 않아
+  (5회차 모두 측정 아님으로 1로 끝났다) 임시 파일에 덧붙이게 바꿨다.
+- 고치기 전 커밋(`--source 5ccb51a0`) 300회차 가운데 빨강 9회차가 모두 포커스 갈래였다(프로브의 출력). 9회차 모두 카드를
+  기다린 직후의 포커스가 요청 입력창에 남아 있었고, 초록 291회차는 모두 이미 제목에 있었다. 짝 갈래와 다시 서기 갈래는
+  0이었다. 대기열 행이 적은 로컬 20번 중 2번보다 드물었다.
+
+## 고친 것
+
+- `web/apps/widget/components/pages/WidgetApproval.test.tsx`의 `untilPaused`: 카드에 이어 포커스가 제목에 간 것까지
+  기다린다. 고친 뒤 같은 프로브 300회차가 모두 초록이었다(프로브의 출력). 같은 도우미를 지나는 빈 사유 사례들도 같은
+  틈이 닫힌다(코드를 읽었다).
+- `WidgetConversation.test.tsx`의 같은 꼴 사례는 승인 카드가 없고 입력창의 효과가 옮기는 포커스가 그 입력창이라 고치지
+  않았다(코드를 읽었다. 재지 않았다).
+- 화면 코드를 고쳤다는 훅의 알림으로 `/sync-design-system 확인`을 돌렸다. 결정표는 `continue`였고, 들이는 중이던
+  `feature/11-web-edit-teal-accent-600`의 PR #413이 병합돼 있어 PR 전에 main을 합친다.
+- `.scratch/retro-queue.md`: 486을 이 티켓으로 닫았다.
+
+## 인계
+
+`/code-review`를 부른 직후 인계 계기(`셀프 리뷰 직전`, 세션 컨텍스트 245,231 토큰)가 와서 새 세션에 넘긴다. 이 세션의
+제목은 `chore/023-widget-char-count-flake`이고 `chore/023-widget-char-count-flake (인계함)`으로 바꾼다. 남은 일은 셀프
+리뷰, 커밋(pre-commit), main 합치기(PR #413의 병합 커밋 `ad8a9c37`을 아직 품지 않았다. `sync_with_base_branch`는 커밋하지
+않은 변경이 있으면 거부하므로 커밋 뒤에 친다), PR, 봇 회차, 병합, 회고와 "다음"이다. 아무것도 커밋하지 않았다.
+워크트리 잠금은 이미 풀려 있었다(`git worktree unlock`이 `is not locked`).
+
+지시문:
+
+```
+다음 작업: .scratch/harness/issues/023-widget-char-count-flake.md. 대기열 486: 위젯 승인 시험의 센 수 사례가 가끔 빨간 원인을 가르고 고친다(원인 가름과 고침은 끝났다)
+다음 단계: 구현
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: 대기열 486을 티켓 .scratch/harness/issues/023-widget-char-count-flake.md로 쓰고 한다
+브랜치: chore/023-widget-char-count-flake
+모델: Opus 5.5 / medium. 레벨 스윕의 갈래
+읽을 것: docs/agents/issue-tracker.md, docs/journal/2026-10-29-07-widget-char-count-flake.md
+이어받을 상태: 인계: 셀프 리뷰 직전. 커밋하지 않은 변경이 워크트리에 있고 셀프 리뷰(/code-review, 기점 origin/main)부터 한다. 그 뒤 커밋하고, PR #413의 병합 커밋 ad8a9c37을 품도록 sync_with_base_branch로 main을 합친 뒤 PR을 연다. docs/journal/2026-10-29-07-widget-char-count-flake.md
+확인할 선행 조건: 없음
+이번 요청 범위: PR과 병합까지
+```
+
+open-session을 부른다 2026-10-28T08:10:59Z
+
+## 이어받은 세션
+
+지시문으로 연 새 세션이 워크트리 `023-widget-char-count-flake`에 `EnterWorktree(path)`로 들어가 이었다.
+
+> 사용자: "대기열 486을 티켓 .scratch/harness/issues/023-widget-char-count-flake.md로 쓰고 한다"
+
+## 셀프 리뷰
+
+`/code-review`, 기점 `5ccb51a0`(origin/main과의 merge-base), 미커밋 변경 파일 셋, 미추적 셋, 커밋 0. 표준 축은 sonnet·high.
+
+고친 것:
+- 표준·명세 둘 다: `untilPaused` 위에 옛 독스트링이 겹쳐 남았다. 지웠다.
+- 표준: 닫은 대기열 486 행에 취소선이 없었다. 501 행의 꼴대로 둘째 칸을 `~~`로 감쌌다.
+- 표준·명세 둘 다: README와 티켓이 "9회차 모두 … 첫 붙여 넣기 17,999개는 들어갔다"고 적었는데 프로브는 빨간 회차를 다섯만 찍었다. 프로브가 빨간 회차를 모양별로 모두 세게(`redShapes`) 고치고 다시 잰다.
+- 표준: 고친 뒤 "300회차 모두 초록"에 고친 길의 표지가 없었고 기점이 작업 트리였다. 사본의 `untilPaused` 안 카드를 찾은 직후에 포커스 자리(`afterCard`)를 적어, 효과가 늦은 회차(`lateEffect`) 가운데 초록인 수를 표지로 센다. 커밋한 뒤 그 커밋을 `--source`로 주어 다시 잰다.
+- 명세: README의 "붙여 넣기 앞뒤의 … 칸의 값"이 실제와 달랐다(칸의 값은 붙여 넣기 뒤에만 찍는다). 찍는 자리대로 고치고, 짝 갈래는 코드 포인트 수로 가르며 선택 범위는 기록만 한다고 적었다.
+- 명세: 티켓의 대화 시험 이유("`Composer`의 효과가 옮기는 포커스는 시험이 누른 그 입력창이다")가 틀렸다. 그 사례는 교환이 없어 `focusFor`가 null이고 효과가 포커스를 옮기지 않는다(`WidgetScreen.tsx`의 `focusFor`, `Composer.tsx`의 효과를 읽었다).
+- 표준: 티켓의 `user.type` 사례 "빼앗길 틈이 좁다"는 근거 없는 낙관이었다. 효과가 누른 뒤에 돌면 입력이 제목에 갈 수 있다고 고쳤다(코드 읽기).
+- 표준·명세 둘 다: 수용 기준 "검증 명령이 모두 초록이다"가 돌리기 전에 `[x]`였다. 해제하고 Status를 `in-progress`로 되돌렸다. 검증을 돌린 뒤 다시 체크한다.
+- 표준(Minor): 프로브가 `--source` 뒤에 값이 없으면 `git show undefined:…`로 죽었다. 2로 끝나게 했다.
+
+남긴 것:
+- 표준(Minor): "승인 묻기가 서면 포커스가 …" 사례의 `waitFor`가 `untilPaused`의 기다림과 겹친다. 그 사례는 포커스 이동 자체를 보는 시험이라 단언을 남겼다.
+- 명세(b): `untilPaused`를 지나는 모든 사례에 포커스 조건이 더해져, 포커스 효과가 깨지면 상관없는 사례도 시간 초과로 빨개진다. 그 효과가 깨진 것은 접근성 사례가 따로 잡고, 고침이 그 도우미의 틈을 닫는 것이라 받아들였다.
+- 표준(Minor): 프로브가 도중에 끊기면 `ProbeCharCount.test.tsx`가 남는다. README가 두 실행을 나란히 돌리지 말라고 적고 있고, 남으면 지우면 된다. 고치지 않았다.
+- 표준: 일지 끝의 `open-session을 부른다 …` 줄은 계기 줄이라 남겼다.
+- 화면 코드를 처음 고쳤다는 훅 알림(시험 파일의 독스트링 한 줄 삭제)에 `/sync-design-system 확인`을 다시 부르지 않았다. 같은 브랜치에서 앞 세션이 오늘 돌려 `continue`였고 이번 편집은 화면 모양과 무관한 시험 파일이다.
+
+PR 직전 리뷰에 밀 주장(반영으로 새로 쓴 문장):
+- "그 사례에는 승인 카드가 서지 않고, 교환이 없어 `WidgetScreen`의 `focusFor`가 null이라 입력창(`Composer`)의 효과도 포커스를 옮기지 않는다."
+- "`user.type(reasonBox(), …)`을 치는 사례도 효과가 칸을 누른 뒤에 돌면 입력이 제목에 갈 수 있다(코드 읽기, 재지 않았다)."
+- 프로브 머리 주석의 "`lateEffect` … 고친 판에서는 이것이 고친 길을 지났다는 표지다. 고치기 전 판에서 효과가 늦은 회차는 빨갰기 때문이다."
+
+## 커밋과 다시 잰 결과
+
+- 커밋 `bd52303e`. pre-commit 결과(그 커밋의 출력): check-ticket, lint-imports, zizmor, check-instructions, check-type-escapes, pyright-linux, pyright, run-hooks, web-verify, pytest, 커밋 메시지가 Passed. ruff check·ruff format은 스테이지된 `.py`가 없어 건너뛰었다(이 브랜치는 `.py`를 바꾸지 않았다). 위젯 e2e·`-m llm_widget`·사진 비교는 치지 않았다. 바꾼 것이 단위 시험 파일의 도우미 하나라 위젯 코드·api-client·서버 경로에 닿지 않는다.
+- 고친 프로브로 다시 쟀다(프로브의 요약 줄과 `redShapes`). `node .scratch/harness/probes/widget_char_count/repeat.mjs 300 --source 5ccb51a0`: 빨강 12/300, 12 모두 한 모양(카드 직후 포커스가 입력창, 첫 붙여 넣기 뒤 칸 17,999·포커스는 제목, 두 번째 뒤에도 17,999, 같은 요소). 초록 288은 모두 카드 직후 포커스가 제목. `--source bd52303e`: 300/300 초록, 그 가운데 효과가 늦은 회차 10이 모두 초록.
+- README 행, 티켓 Comments, 대기열 486의 닫힘 문구를 다시 잰 수로 고쳤다. 앞의 "진단"과 "고친 것"의 9/300·작업 트리 300/300은 첫 판의 기록으로 둔다.
+- 티켓의 "검증 명령이 모두 초록이다"를 위 pre-commit 결과로 다시 체크하고 Status를 done으로 돌렸다.
+
+## 합치기와 번호 옮김
+
+- `sync_with_base_branch`는 "앱이 만든 워크트리가 아니다"로 거부해 `git fetch origin main`과 `git merge --no-edit origin/main`으로 직접 합쳤다. 충돌 없음.
+- main에 일지 2026-10-28-23이 들어와 `sibling_overlap.py --move`로 이 일지를 2026-10-28-19에서 2026-10-29-07로 옮겼다.
+- 그 커밋의 pre-commit에서 이 브랜치가 건드리지 않은 `tests/tools/test_rerun_runner.py::test_첫_인계가_나면_새_회차를_열지_않는다`가 한 번 빨갰다(`assert {'rerun-x-01-A-1'} == {…B-1'}`). 그 사례만 `uv run pytest -q` 로 다시 돌리니 통과했다(361초). 형제 세션 여럿이 함께 돌던 때라 부하로 난 간헐 실패로 보고 커밋을 다시 쳤다. 원인은 가르지 않았다.
+
+## 인계 (커밋 뒤)
+
+커밋 `c462ca60`(일지 번호 옮김) 직후 인계 계기(`커밋 뒤`, 세션 컨텍스트 230,241 토큰)가 와서 새 세션에 넘긴다. 이 세션의 제목은 `chore/023-widget-char-count-flake`이고 `chore/023-widget-char-count-flake (인계함)`으로 바꾼다. 커밋 셋(`bd52303e`, `d389b92c`, `c462ca60`)과 main 합침(`6664b740`, origin/main `06a8f85b`까지)이 있고 아무것도 푸시하지 않았다. 열린 PR은 없다. 남은 일은 푸시 전 `sibling_overlap.py` 다시 치기(origin/main이 또 움직였으면 합치고 번호를 본다), 푸시, PR 열기(PR 직전 `bug-perf-review`나 `coderabbit-review`에 위 "PR 직전 리뷰에 밀 주장" 셋을 넘긴다), 봇 회차, 병합, 회고와 "다음"이다.
+
+지시문:
+
+```
+다음 작업: .scratch/harness/issues/023-widget-char-count-flake.md. 대기열 486: 위젯 승인 시험의 센 수 사례가 가끔 빨간 원인을 가르고 고친다(원인 가름·고침·셀프 리뷰·커밋은 끝났다)
+다음 단계: 구현
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: 대기열 486을 티켓 .scratch/harness/issues/023-widget-char-count-flake.md로 쓰고 한다
+브랜치: chore/023-widget-char-count-flake
+모델: Opus 5.5 / medium. 레벨 스윕의 갈래
+읽을 것: docs/agents/issue-tracker.md, docs/journal/2026-10-29-07-widget-char-count-flake.md
+이어받을 상태: 인계: 커밋 뒤. 셀프 리뷰를 반영한 커밋까지 했고 푸시하지 않았으며 열린 PR이 없다. 푸시 직전에 sibling_overlap.py를 다시 치고, PR 직전 리뷰에 일지의 "PR 직전 리뷰에 밀 주장" 셋을 넘긴 뒤 PR을 연다. 이 워크트리는 앱이 만든 것이 아니라 sync_with_base_branch가 거부하니 main은 git merge로 합친다. docs/journal/2026-10-29-07-widget-char-count-flake.md
+확인할 선행 조건: 없음
+이번 요청 범위: PR과 병합까지
+```
+
+open-session을 부른다 2026-10-28T09:58:19Z
+
+## 이어받은 세션 (커밋 뒤)
+
+지시문으로 연 새 세션이 워크트리 `023-widget-char-count-flake`에 `EnterWorktree(path)`로 들어가 이었다.
+
+> 사용자: "대기열 486을 티켓 .scratch/harness/issues/023-widget-char-count-flake.md로 쓰고 한다"
+
+- 푸시 전 `sibling_overlap.py`(그 출력과 `git log -3 origin/main`): origin/main은 `06a8f85b` 그대로라 다시 합치지 않았다. 번호 겹침 없음. 앞서는 형제 일지 `2026-10-28-28`(PR #417. 병합 때 2026-10-29-01로 옮겨졌다)이 먼저 병합되면 이 일지를 옮긴다.
+- PR 직전 리뷰를 `coderabbit-review`에 맡기며 "PR 직전 리뷰에 밀 주장" 셋을 넘겼다.
+
+## PR 직전 리뷰
+
+- `coderabbit-review`: CLI는 좌석 미할당(`coderabbit auth status`의 `Seat: not assigned`, 에이전트의 보고)이라 돌지 못했고, 에이전트가 diff를 직접 읽었다. Critical·Major 0, Minor 3. 넘긴 주장 셋의 판정은 1·2 맞음(코드 읽기, `WidgetScreen.tsx`의 `focusFor`, `Composer.tsx`의 효과, `ApprovalCard.tsx`의 마운트 효과), 3은 앞절 맞고 이유절 틀림이었다. 효과가 시험의 포커스·클릭보다 먼저 돌면 고치기 전 판도 초록이라 "효과가 늦은 회차는 빨갰다"는 코드상 단정이 못 된다는 지적이다.
+  - 고친 것: 프로브 머리 주석, 티켓 Comments, 프로브 README 행의 같은 구절. 고치기 전 판 300회차에서 효과가 늦은 12회차가 모두 빨갰다는 측정(앞 절의 `redShapes`와 초록 288 모두 제목)은 남기고, 코드상으로는 "빨갈 수 있었던 회차"이며 측정에 기댄 표지라고 좁혔다.
+  - 남긴 것(Minor): `untilPaused`의 단언이 제목 문구 "승인이 필요합니다"에 묶였다. 문구가 바뀌면 시간 초과로 보인다. 같은 파일이 다른 사례에서도 그 문구로 카드를 찾으므로 고치지 않았다.
+- CLI 대체 둘: `bug-perf-review`는 지적 0(코드와 시험을 따라갔고 프로브·문서는 읽지 않았으며 돌리지 않았다는 보고). `/security-review`는 발견 0(테스트 전용 코드, 프로브의 `--source`는 `execFileSync` 인자 배열, `shell: true`의 인자는 상수라는 보고).
+
+## PR
+
+- PR #418을 열었다. `wait_ci.py 418`의 끝 줄이 `끝: 모두 통과`였다(헤드 `893fb5a`, 그 출력).
+- CodeRabbit은 무료 한도(`Review rate limited`, PR 코멘트)라 리뷰가 없어 회차로 세지 않았다.
+- claude-review 첫 회차: Minor 하나(`untilPaused`의 제목 문구 리터럴). 같은 파일의 다른 사례도 그 문구로 카드를 찾아 도우미 하나만 바꾸면 표기만 갈리므로 남겼고, 보류 이유를 PR 코멘트로 적었다.
+
+## 회고
+
+후보 다섯. 승인 1(회차로 셈), 기각 3, 일지에만 1. 넘긴 것은 없다.
+
+- 승인(회차로 셈): 프로브 머리 주석이 고친 길의 표지 `lateEffect`를 "고치기 전 판에서는 빨갰다"고 단정했다. 구현 때 실리는 `.claude/rules/probes.md` 첫 항목(고친 길 꼴)을 어겨 PR 직전 리뷰가 잡은 사건이다. 그 지침을 낸 367은 닫혔고 이은 열린 행이 없어(`queue_open_rows.py --search 367의`의 출력) 새 행 535에 `367의 4회차`로 이었다. 처방은 층 조건대로 지침보다 높은 계기 훅이다(`tools/hook_probe_conclusion.py`가 프로브 파일 편집에서도 고친 길 꼴을 짚는다). 회차 4라 chore 계기다.
+- 기각: CodeRabbit CLI 좌석 미할당. 리뷰 파이프라인의 대체 둘(`/security-review`, `bug-perf-review`)이 그 자리에서 돌았다(136이 닫으며 둔 길).
+- 기각: 프로브 첫 판의 `console.log`가 Vitest 출력에 실리지 않은 일(앞 세션). 프로브의 측정 아님 셈이 5회차 모두를 측정 아님으로 세고 1로 끝나 그 자리에서 드러났다.
+- 기각: `sync_with_base_branch`가 앱이 만들지 않은 워크트리를 거부했다. 도구가 그 자리에서 거부를 알렸고 `git merge`로 바로 이었다. 비용이 작고 지시문의 "이어받을 상태"가 이미 적었다.
+- 일지에만: 앞 세션의 pre-commit에서 이 브랜치가 건드리지 않은 `tests/tools/test_rerun_runner.py::test_첫_인계가_나면_새_회차를_열지_않는다`가 한 번 빨갰고 단독으로는 통과했다. 부하 아래 간헐 실패의 종류는 306이 받아들여 닫았으므로(retro 5단계의 행의 종류) 잇지 않는다.
+- 만료할 행: 없음(`queue_open_rows.py --ref origin/main`의 출력).
+
+## 다음
+
+- 티켓 023은 done이고 PR #418의 병합이 남았다. 이 PR이 남기는 일은 claude-review의 Minor(`untilPaused`의 제목 문구 리터럴) 하나이고, 파일 전체의 카드 찾기를 함께 옮길 때 다룬다. 대기열에는 올리지 않았다(PR 코멘트에 보류 이유).
+- 대기열 535는 5회차라(main을 합치며 4회차에서 고쳤다. 아래 "이어받은 세션 (주간 한도 인계)") 다음 chore 차례에 고를 수 있다.
+
+## 인계 (주간 한도 90% 도달)
+
+회고 커밋 `50c420e3`을 푸시한 뒤, 다른 세션(제목 "주간한도 95% 초과 시 세션 전환")이 계정 주간 한도 90% 도달로 새 작업·푸시·병합을 멈추고 인계 보고를 내 달라는 메시지를 보냈다. 사용자의 직접 지시는 아니지만 멈추는 쪽이라 따랐다. `wait_ci.py 418` 대기를 TaskStop으로 멈췄다. 이 절은 커밋하지 않았다.
+
+- 멈춘 때의 `gh pr checks 418`(손으로 한 번 읽었다): ticket·e2e·claude-review pass, python·web·visual·e2e-widget pending, CodeRabbit skipping. claude-review 둘째 회차의 코멘트는 읽지 않았다.
+- 남은 일: 검사가 모두 끝나면 claude-review 둘째 회차의 Critical·Major만 확인하고(Minor·Nit은 보류 이유를 PR 코멘트로), 이 절을 커밋·푸시할지 정한 뒤 "워크트리에서 병합할 때" 1~4로 병합한다. 이 절만 푸시하면 claude-review가 한 번 더 돈다.
+
+## 이어받은 세션 (주간 한도 인계)
+
+지시문으로 연 새 세션이 워크트리 `023-widget-char-count-flake`에 `EnterWorktree(path)`로 들어가 이었다.
+
+> 사용자: "대기열 486을 티켓 .scratch/harness/issues/023-widget-char-count-flake.md로 쓰고 한다"
+
+- `gh pr checks 418`(손으로 한 번 읽었다): 헤드 `50c420e3`에서 CodeRabbit(skipping)을 뺀 검사가 모두 pass였다.
+- claude-review 둘째 회차(`gh pr view 418 --comments`로 코멘트를 읽었다): Minor 하나(`untilPaused`의 제목 문구 결합, 첫 회차와 같은 지점). 둘째 회차라 고치지 않고 보류 이유를 PR 코멘트로 남겼다. Critical·Major는 없다.
+- 커밋하지 않았던 인계 절과 이 절을 함께 푸시한다. 그 푸시로 도는 claude-review는 셋째 회차로 세고, 거기서 보류하는 일은 일지에 다시 적지 않고 PR 코멘트에 둔다.
+- 일지 커밋의 첫 pre-commit에서 이 브랜치가 건드리지 않은 시험 넷(`tests/channel/cli/test_interrupt.py` 둘, `tests/tools/test_rerun_runner.py` 둘)이 빨갰다(그 출력, 18분). 두 파일만 `uv run pytest -q`로 다시 돌리니 67 통과였다(400초, 그 출력). 부하 아래 간헐 실패로 보고 커밋을 다시 쳐 통과했다. 원인은 가르지 않았다. 앞의 것은 열린 531의 종류일 수 있으나 빨간 사례 이름이 531의 것과 달라 회차로 세지 않았다.
+- 푸시 전 `sibling_overlap.py`(그 출력): origin/main이 `84542f5`로 움직여 `git merge --no-edit origin/main`으로 합쳤다. `.scratch/retro-queue.md`와 `.scratch/harness/probes/README.md`에서 양쪽이 표 끝에 다른 행을 더한 글자 충돌이 나 양쪽을 다 남겼다. main의 538도 `367의 4회차`라 적어, 먼저 병합된 538을 4회차로 두고 535를 5회차로 고쳤다. 처방의 대상 파일은 서로 다르다(535는 `tools/hook_probe_conclusion.py`, 538은 `tools/canary.py`).

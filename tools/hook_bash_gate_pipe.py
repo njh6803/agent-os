@@ -9,7 +9,8 @@ tail 의 초록에 가려진다. 지침으로 적은 뒤에도 어겨졌으니 �
 게이트 명령은 pytest·pyright·ruff·lint-imports 와 `tools/check_*.py`·`tools/mutate.py`·훅 러너
 `tools/run_hooks.py`, 그리고 web 의 `pnpm -C web verify`(다섯째 검증 명령), 사진 비교
 `pnpm -C web visual`(정답을 다시 쓰는 `visual:update` 도 비교의 종료 코드를 낸다. design-system
-티켓 02. 위젯의 `visual:widget` 과 그 `:update` 도 같은 이름으로 맞는다, web-widget 티켓 03)과
+티켓 02. 위젯의 `visual:widget` 과 관리 화면의 `visual:admin`, 그 `:update` 도 같은 이름으로 맞는다,
+web-widget 티켓 03, admin-style 티켓 03)과
 Playwright 실행(`playwright test`, e2e)이다. 훅 러너는 CLAUDE.md 가 게이트로 센다.
 목록에 없던 때 판정마다 `echo "… $?"` 를 붙인 명령에서 러너 뒤의 `$?` 를 앞선 게이트의 것으로 보고
 두 번 거짓 경고했다(일지 2026-10-02-03, 대기열 95). 검사 러너 `tools/run_checks.py` 도 같은 까닭으로

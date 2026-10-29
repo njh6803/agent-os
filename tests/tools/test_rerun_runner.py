@@ -62,6 +62,7 @@ from tools.rerun_runner import (
     World,
     estimate_usd,
     main,
+    other_transcripts,
     plan_task,
     run,
 )
@@ -623,6 +624,45 @@ def test_같은_프로젝트_폴더에_남은_다른_세션의_공식_단가를_
     view = judge_view(rec)
     assert math.isclose(view.cost_claude_code_usd, 1.0 + 2 * child, rel_tol=1e-12)
     assert math.isclose(view.cost_official_usd, rec.spend.official_usd + 2 * child, rel_tol=1e-12)
+
+
+def test_다른_세션은_회차_세션의_프로젝트_폴더_바로_아래_기록만_센다(tmp_path: Path) -> None:
+    """인계로 세션이 둘이어도 둘 다 빼고, 다른 프로젝트 폴더·`.jsonl`이 아닌 파일·하위 폴더(회차
+    세션의 `subagents/`)는 세지 않는다. 이 몫이 예산 멈춤의 쓴 것에 든다(티켓 12)."""
+    projects = tmp_path / "projects"
+    mine, stranger = projects / "C--rounds-t-A-1", projects / "C--elsewhere"
+    for d in (mine / "S1" / "subagents", mine / "nested", stranger):
+        d.mkdir(parents=True)
+    for p in (
+        mine / "S1.jsonl",
+        mine / "S2.jsonl",
+        mine / "child.jsonl",
+        mine / "notes.txt",
+        mine / "S1" / "subagents" / "agent-1.jsonl",
+        mine / "nested" / "deep.jsonl",
+        stranger / "other.jsonl",
+    ):
+        p.write_text("", encoding="utf-8")
+    got = other_transcripts(tmp_path, ["S1", "S2"])
+    assert got == [mine / "child.jsonl"], sorted(p.stem for p in got)
+    # 회차 세션의 기록 파일이 없으면 볼 폴더가 없다
+    none = other_transcripts(tmp_path, ["S9"])
+    assert none == [], sorted(p.stem for p in none)
+
+
+def test_다른_세션의_비용도_예산_멈춤의_쓴_것에_든다(
+    판짜기: Callable[..., 판], 원본: tuple[Path, str, str]
+) -> None:
+    task = _과제(1, 원본, arms=("A", "B"), pr_cost=10.0)
+    # 상한은 다른 세션을 빼도 멈추는 값이라, 멈춘 줄의 쓴 것으로 그 몫이 들었는지 가른다
+    board = 판짜기([task], cap=8.5)
+    board.records.mkdir()
+    rec = _기록(task, "A", 1, cost=1.0)
+    write_record(board.records, replace(rec, spend=replace(rec.spend, other_usd=4.0)))
+    board.script({_key(task, "B", 1): [_끝남(task)]})
+    assert board.run() == 1
+    (line,) = [x for x in board.lines if "상한" in x]
+    assert "쓴 것 $5.00" in line, line
 
 
 def test_동시에_둘까지_돌고_셋째는_자리가_빌_때_연다(

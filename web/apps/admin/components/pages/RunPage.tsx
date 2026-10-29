@@ -53,7 +53,9 @@ function ConnectedRunDetail({ runId }: { readonly runId: string }) {
 function ConnectedRunDecision({ runId, trace }: { readonly runId: string; readonly trace: Trace }) {
   const channelTokenEntered = useTokens((state) => state.channelToken !== null);
   const { busy, frames, cut, failure, decide } = useDecision(runId);
-  const { data, error } = usePlugins(decisionPlaceStands(trace, channelTokenEntered));
+  const { data, error } = usePlugins({
+    active: decisionPlaceStands(trace, { channelTokenEntered }),
+  });
   return (
     <RunDecision
       trace={trace}

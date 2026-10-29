@@ -125,15 +125,17 @@ main 의 이력에 같은 글의 문단이 없으면 더한 것이다. 비워 �
 끝내면 다음 빈 번호를 받은 형제끼리 서로를 앞질러 옮기기를 되풀이한다.
 
 바꾼 하네스 파일의 카나리아도 본다(대기열 235). 이 브랜치가 merge-base 뒤에 고친 스킬 본문
-(`.claude/skills/*/SKILL.md`), 규칙(`.claude/rules/*.md`), 서브에이전트(`.claude/agents/*.md`)
+(`.claude/skills/*/*.md`. `SKILL.md` 가 Read 로 열게 하는 하위 파일도 카나리아의 하위 파일 갈래가
+원천으로 받는다, harness 027), 규칙(`.claude/rules/*.md`), 서브에이전트(`.claude/agents/*.md`)
 가운데 지금 있는 것마다, 그 경로를 `source` 로 든 카나리아
 명세(`.scratch/**/probes/canary/*.toml`)를 이 브랜치가 하나도 고치지 않았으면 알린다. 바꾼 하네스는
 새 `claude -p` 세션에서 불러 보고 그 명세의 `# 최신 결과:` 줄을
-고친다(`docs/constitution/operations.md` 환경 규약 상세). `next-session` 1단계를 바꾸고 카나리아를
-돌리지 않은 채 셀프 리뷰 두 축과 PR 직전 리뷰를 지났고, 회고에서 그 절을 다시 읽다 찾았다(일지
-2026-10-13-38). 헌법 판처럼 커밋 전에 고칠 누락이라 이것도 1로 끝난다. 다만 계정 한도로 카나리아를
-돌리지 못하면 결과 줄을 고칠 수 없다. 그 갈래는 같은 절의 계정 한도 항목대로 사전 확인만 돌리고 이
-알림이 남은 채 커밋한다고 출력이 함께 말한다(셀프 리뷰 명세 축, 일지 2026-10-15-15).
+고친다(`docs/constitution/operations.md` 환경 규약 상세). `next-session` 의 병합 절차(지금
+`merge.md`)를 바꾸고 카나리아를 돌리지 않은 채 셀프 리뷰 두 축과 PR 직전 리뷰를 지났고, 회고에서 그
+절을 다시 읽다 찾았다(일지 2026-10-13-38). 헌법 판처럼 커밋 전에 고칠 누락이라 이것도 1로 끝난다.
+다만 계정 한도로 카나리아를 돌리지 못하면 결과 줄을 고칠 수 없다. 그 갈래는 같은 절의 계정 한도
+항목대로 사전 확인만 돌리고 이 알림이 남은 채 커밋한다고 출력이 함께 말한다(셀프 리뷰 명세 축, 일지
+2026-10-15-15).
 
 이 브랜치가 더한 줄의 일지 인용도 본다(대기열 254). 이 브랜치가 고친 파일에서 merge-base 와 main 의
 판에 글자 그대로 있는 줄을 뺀 줄의 `일지 YYYY-MM-DD-NN`(목록 꼴 `일지 A·B` 는 번호 하나하나)이
@@ -364,7 +366,7 @@ HISTORY_HEAD = re.compile(r"(?<![\d.])(\d+\.\d+\.\d+)[은는] ")
 
 CANARY_SPECS = ".scratch/**/probes/canary/*.toml"
 # 새 `claude -p` 세션에서 불러 보는 하네스 파일(`docs/constitution/operations.md` 환경 규약 상세)
-HARNESS = re.compile(r"^\.claude/(?:skills/[^/]+/SKILL|rules/[^/]+|agents/[^/]+)\.md$")
+HARNESS = re.compile(r"^\.claude/(?:skills/[^/]+|rules|agents)/[^/]+\.md$")
 
 # `--move` 가 옮기는 인용의 꼴. 갈래 하나로 묶어 한 번에 바꾼다(차례대로 옮기는 사슬이 두 번 가지
 # 않게). 같은 자리에서는 앞 갈래가 이긴다(일지 순번이 ADR 파일 이름 꼴보다 먼저다). 맨 앞 갈래는
@@ -752,7 +754,8 @@ def unbumped(changed: frozenset[str], ours: Numbers) -> list[str]:
 
 
 def harness_files(paths: Iterable[str]) -> list[str]:
-    """`paths` 가운데 카나리아로 불러 보는 하네스 파일(스킬 본문, 규칙, 서브에이전트)."""
+    """`paths` 가운데 카나리아로 불러 보는 하네스 파일(스킬 폴더 바로 아래의 본문, 규칙,
+    서브에이전트)."""
     return sorted(path for path in paths if HARNESS.match(path))
 
 

@@ -1,9 +1,9 @@
 # 티켓 10(러너 명령, `tools/rerun_runner.py`)의 시험이 실제로 무는지 변이로 본다(implement 스킬, 대기열
-# 29). 다시 띄우기의 판정(측정 아님, 판, 판을 올림, id, 오염의 둘째), 어림과 예산, 과제의 차례, 동시에
+# 29). 변이마다 시험이 고정한 갈래 하나를 되돌리고, 무엇을 되돌리는지는 변이의 이름이 적는다. 예를 들면 다시 띄우기의 판정(측정 아님, 판, 판을 올림, id, 오염의 둘째), 어림과 예산, 과제의 차례, 동시에
 # 둘, 회차 번호(뿌리 아래 폴더), 한도의 기다림(돌던 동안, 다시 뜬 때), 오염의 다시 돌기, 측정 아님의
 # 멈춤, 인계의 확인(돌던 동안, 다시 뜬 때), 사전 등록 해시, 끈 세션의 비용 대신 넣기, 기록의 게이트
 # 이름, 죽은 회차(프로세스, 비용 대신 넣기), 판을 내린 러너의 id 갈래, 게이트를 돌지 못한 회차와 끄지
-# 못한 호출 뒤의 멈춤을 하나씩 되돌린다.
+# 못한 호출 뒤의 멈춤, 같은 프로젝트 폴더의 다른 세션과 그 비용이 예산 멈춤에 드는 것(티켓 12)이다.
 # 표지는 표지를 없는 문구로 둔 판을 돌려 변이마다 실패 출력을 한 번 본 뒤 골랐다(`.claude/rules/probes.md`
 # 의 표지 항목).
 # 사용: PYTHONUTF8=1 uv run python tools/mutate.py .scratch/model-rerun/probes/rerun_runner_mutations.toml
@@ -390,3 +390,73 @@ expect_output = ["isclose>(0.0, (2 * 0.022)"]
 file = "tools/rerun_runner.py"
 old = '''    other_usd = _other_usd(config_dir, [s.session_id for s in record.sessions])'''
 new = '''    other_usd = 0.0'''
+
+# 티켓 12: 본 측정 첫 회차 전에 다른 세션의 갈래와 예산 멈춤의 몫을 고정한다.
+
+[[mutation]]
+name = "다른 세션을 프로젝트 폴더 아래까지 훑는다"
+tests = ["tests/tools/test_rerun_runner.py", "-k", "프로젝트_폴더_바로_아래_기록만"]
+expect = "red"
+expect_output = ["['agent-1', 'child', 'deep']"]
+
+[[mutation.edit]]
+file = "tools/rerun_runner.py"
+old = '''        p for d in folders for p in d.glob("*.jsonl") if p.is_file() and p.stem not in own'''
+new = '''        p for d in folders for p in d.rglob("*.jsonl") if p.is_file() and p.stem not in own'''
+
+[[mutation]]
+name = "인계한 세션은 다른 세션에서 빼지 않는다"
+tests = ["tests/tools/test_rerun_runner.py", "-k", "프로젝트_폴더_바로_아래_기록만"]
+expect = "red"
+expect_output = ["['S2', 'child']"]
+
+[[mutation.edit]]
+file = "tools/rerun_runner.py"
+old = '''    own = set(session_ids)'''
+new = '''    own = set(session_ids[:1])'''
+
+[[mutation]]
+name = "다른 프로젝트 폴더의 기록도 다른 세션으로 센다"
+tests = ["tests/tools/test_rerun_runner.py", "-k", "프로젝트_폴더_바로_아래_기록만"]
+expect = "red"
+expect_output = ["['child', 'other']"]
+
+[[mutation.edit]]
+file = "tools/rerun_runner.py"
+old = '''    folders = {p.parent for sid in session_ids for p in transcript_files(config_dir, sid)[0]}'''
+new = '''    folders = {p for p in (config_dir / "projects").iterdir() if p.is_dir()}'''
+
+[[mutation]]
+name = "예산 멈춤의 쓴 것에 다른 세션의 비용을 넣지 않는다"
+tests = ["tests/tools/test_rerun_runner.py", "-k", "예산_멈춤의_쓴_것에"]
+expect = "red"
+expect_output = ["쓴 것 $1.00"]
+
+[[mutation.edit]]
+file = "tools/rerun_runner.py"
+old = '''            spent = sum(r.spend.claude_code_usd + r.spend.other_usd for r in records)'''
+new = '''            spent = sum(r.spend.claude_code_usd for r in records)'''
+
+[[mutation]]
+name = "다른 세션에 .jsonl 이 아닌 파일도 센다"
+tests = ["tests/tools/test_rerun_runner.py", "-k", "프로젝트_폴더_바로_아래_기록만"]
+expect = "red"
+expect_output = ["['child', 'notes']"]
+
+[[mutation.edit]]
+file = "tools/rerun_runner.py"
+old = '''        p for d in folders for p in d.glob("*.jsonl") if p.is_file() and p.stem not in own'''
+new = '''        p for d in folders for p in d.glob("*") if p.is_file() and p.stem not in own'''
+
+[[mutation]]
+name = "회차 세션의 기록 파일이 없으면 모든 프로젝트 폴더를 훑는다"
+tests = ["tests/tools/test_rerun_runner.py", "-k", "프로젝트_폴더_바로_아래_기록만"]
+expect = "red"
+expect_output = ["['S1', 'S2', 'child', 'other']"]
+
+[[mutation.edit]]
+file = "tools/rerun_runner.py"
+old = '''    folders = {p.parent for sid in session_ids for p in transcript_files(config_dir, sid)[0]}'''
+new = '''    folders = {p.parent for sid in session_ids for p in transcript_files(config_dir, sid)[0]} or {
+        p for p in (config_dir / "projects").iterdir() if p.is_dir()
+    }'''

@@ -1,8 +1,8 @@
 """레벨 스윕의 갈래를 브랜치 이름으로 고른다(ADR 0029 이력 2026-10-13).
 
 `uv run python tools/model_sweep.py <브랜치>`는 그 브랜치가 스윕하는 종류이고 기간 안이면 지시문의
-"모델" 줄에 옮길 값을, 아니면 `스윕 밖`을 한 줄 찍는다. `next-session` 3단계가 결정표 칸이
-`Opus 5.5 / xhigh`인 지시문을 쓸 때 부른다. 배정의 정의는 스윕 프로브의 사전
+"모델" 줄에 옮길 값을, 아니면 `스윕 밖`을 한 줄 찍는다. `next-session` 의 `directive.md` 가 결정표
+칸이 `Opus 5.5 / xhigh`인 지시문을 쓸 때 부른다. 배정의 정의는 스윕 프로브의 사전
 등록(`.scratch/harness/probes/model_sweep/README.md`)이 원천이고, 이 파일은 그것을 옮긴다.
 
 - 종류: `feature/`는 구현, `chore/`와 `claude/`는 하네스다(소급 측정 사전 등록의 브랜치 종류).
