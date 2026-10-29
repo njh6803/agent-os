@@ -27,6 +27,13 @@ import { SHADOW_MODES, ShadowFrame, type ShadowMode } from "./ShadowFrame";
 
 export const PLANTED_TAG = "planted";
 
+/**
+ * axe(addon-a11y)의 위반을 스토리 테스트의 실패로 삼는 주해. 앱의 미리보기가 규칙을 더 켤 때 이것을 펼쳐 쓴다. 본체가
+ * 내는 `parameters` 는 Storybook 의 `Parameters`(값이 any)라 앱이 읽어 펼치지 못해, 같은 값을 다시 적으면 본체가 바뀔 때
+ * 조용히 어긋났다(admin-style 티켓 04).
+ */
+export const A11Y_PARAMETERS = { test: "error" } as const;
+
 const MODE_ITEMS = [
   { value: "system", title: "시스템" },
   { value: "light", title: "라이트" },
@@ -117,7 +124,7 @@ export function storyPreview(shadowCss: string): Preview {
   };
 
   return {
-    parameters: { a11y: { test: "error" } },
+    parameters: { a11y: A11Y_PARAMETERS },
     initialGlobals: { theme: DEFAULT_THEME, mode: "system", density: "auto", shadow: "off" },
     globalTypes: {
       theme: {

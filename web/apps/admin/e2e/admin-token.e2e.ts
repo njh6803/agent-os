@@ -3,7 +3,7 @@
 
 import { expect, type Page, test } from "@playwright/test";
 import { stack } from "./env";
-import { enterAdminToken, row } from "./screen";
+import { clearTokens, enterAdminToken, row } from "./screen";
 
 const TOKEN_FIELD_SEEN = "e2e: 관리 토큰 칸이 문서에 붙었다";
 
@@ -32,7 +32,7 @@ test("관리 토큰을 넣으면 종류별로 묶인 플러그인 목록이 보�
   page.on("pageerror", (error) => crashes.push(error.message));
   // 문서가 읽히는 동안 관리 토큰 넣는 칸이 한 번이라도 붙으면 콘솔에 남긴다. 페이지를 읽을 때마다 새로 건다. 칸은
   // 운영자가 보는 이름(라벨)으로 찾는다. 라벨은 칸을 감싸지 않고 `for` 로 잇는다(디자인 시스템의 TextField, admin-style
-  // 티켓 03). 채널 토큰의 칸도 가린 입력이고, 관리 토큰이 있으면 머리에 선다(티켓 08).
+  // 티켓 03). 채널 토큰의 칸도 가린 입력이고, 관리 토큰이 있으면 설정 화면에 선다(admin-style 티켓 04).
   await page.addInitScript((marker) => {
     let seen = false;
     const adminTokenField = (): boolean =>
@@ -82,7 +82,7 @@ test("관리 토큰을 넣으면 종류별로 묶인 플러그인 목록이 보�
   expect(crashes).toEqual([]);
   expect(printed.filter((line) => line.startsWith("error") && !line.includes("401"))).toEqual([]);
 
-  await page.getByRole("button", { name: "토큰 지우기" }).click();
+  await clearTokens(page);
   await expect(page.getByLabel("관리 토큰", { exact: true })).toBeVisible();
   const cleared = await storedValues(page);
   expect(cleared.session.filter((value) => value.includes(adminToken))).toEqual([]);

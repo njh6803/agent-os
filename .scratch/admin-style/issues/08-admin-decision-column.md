@@ -42,6 +42,8 @@
 - [ ] 옛 표현 "허가"를 `web/apps/admin`에서 grep해 화면과 시험에 남은 것이 0인지 본다
 - [ ] `pnpm -C web visual:admin:update`로 새 스토리의 정답을 만들고, 바뀐 사진을 사람이 보고 PR 본문에 적는다
 
+메모(04에서): 04가 지은 공통 부품의 이름이다. 화면 머리는 `molecules/ScreenHeader`, 읽기 골격은 `organisms/ReadSection`(머리 아래 자리 `above`, 처음 불러오는 중의 `loadingLabel`, 실패 제목 `failureTitle`), 실패 알림은 `molecules/FailureAlert`(제목, 메시지, 추적 식별자), 글자 링크는 `atoms/TextLink`, 코드 칸은 `atoms/CodeBlock`과 JSON을 두 칸 들여 쓰는 `formatJson`, 빈 줄은 `molecules/EmptyLine`(아이콘 16·20)이다. 04는 부품을 짓고 스토리만 그렸고 화면에는 넣지 않았다. 결정의 실패는 `organisms/RunDecision`의 두 자리(결정을 보내지 못한 알림, 422의 거부 사유 위반)이고 아직 옛 `molecules/FailureNotice`다. `FailureAlert`로 옮긴 뒤 쓰는 곳이 남지 않으면 옛 것을 지우고, 그 전에 `FailureAlert`가 `./FailureNotice`에서 가져오는 `FailureNoticeProps`를 옮긴다(05의 메모). `CodeBlock`은 그림 mk-plugin·mk-plugin-m의 코드 칸대로 바탕 `bg-raised`, 안쪽 좁은 폭 3·넓은 폭 4다. 그림 mk-decision의 `<pre>`는 바탕 `--bg`, 안쪽 3이라(그림의 `style`을 grep으로 봤다) 결정 카드에 넣을 때 그 갈래가 이 티켓의 몫이다. 실행 화면에는 채널 토큰을 넣는 자리가 없고, `RunPage.decision.test.tsx`는 그 자리가 없다고 단언한다. 안내 줄과 "설정 열기"는 이 티켓이 더한다. `RunDecision`의 "재개 스트림이 끊겼다" 상태 영역(`role="status"`)은 끊길 때 글과 함께 새로 들어온다. 04는 PR #423의 리뷰 봇이 짚어 `ReadSection`의 상태 영역을 늘 서고 글만 바뀌는 꼴로 고쳤다. 영역째 들어오면 알리지 않는 화면 읽기 프로그램이 있다는 어림이다(그 독스트링). 결정 칸을 다시 그릴 때 같은 꼴로 둘지 정한다.
+
 ### 검증
 
 - [ ] 검증 명령이 모두 초록이고, `pnpm -C web visual:admin`과 관리 화면 e2e도 초록이다. 모델 경로를 건드리지 않아 `-m llm`·`-m llm_widget`은 칠 일이 없다

@@ -111,8 +111,8 @@ test("오래된 화면에서 옛 일시정지를 허가하면 409 메시지와 �
   ).toBeVisible();
   await expect(place).toContainText('"a": 4');
   const events = page.getByRole("region", { name: "이벤트" });
-  await expect(events.getByRole("heading", { level: 4, name: "run_paused" })).toHaveCount(2);
-  await expect(events.getByRole("heading", { level: 4, name: "tool_called" })).toHaveCount(1);
+  await expect(events.getByRole("heading", { level: 3, name: "run_paused" })).toHaveCount(2);
+  await expect(events.getByRole("heading", { level: 3, name: "tool_called" })).toHaveCount(1);
   expect(crashes).toEqual([]);
   // 브라우저는 실패한 응답을 콘솔 에러(Failed to load resource)로 찍는다. 409 는 이 흐름이 받는 것이다.
   expect(printed.filter((line) => line.startsWith("error") && !line.includes("409"))).toEqual([]);

@@ -45,6 +45,8 @@
 - [ ] **테마 카드의 스토리는 둘로 가른다.** 카드의 표본이 그 카드 테마의 쓰임새 토큰 값인지 계산값으로 재는 판정 스토리(`judgment`, 사진에서 빠진다)와, 네 카드를 보이는 스토리(사진에 든다)다. 뒤의 것은 문서 뿌리가 기본 테마이고 카드 안의 표본만 다른 테마로 칠해진다. 넓은 프로젝트에서 한 줄에 넷, 좁은 프로젝트에서 두 줄에 둘씩인지 위치로 본다
 - [ ] `pnpm -C web visual:admin:update`로 새 스토리의 정답을 만들고, 바뀐 사진을 사람이 보고 PR 본문에 적는다. 사진 비교가 globals 밖의 `data-theme`(카드 안의 표본)을 막지 않는지는 재지 않았으니, 막으면 멈추고 그 까닭을 사람에게 알린다
 
+메모(04에서): 설정 화면은 04가 세웠다. 본문은 `organisms/Settings`(화면 머리, 채널 토큰, 토큰 지우기, 최대 폭 `content`)이고, 토큰 스토어를 읽어 넘기는 것은 `pages/SettingsPage`다. 틀의 스토리(`templates/AdminFrame.stories.tsx`)가 `Settings`를 그리므로 테마 카드를 더하면 그 스토리의 사진도 바뀐다. 구역의 머리(`h2`와 흐린 설명 한 줄)는 `organisms/ChannelTokenForm`과 `organisms/ClearTokens`가 같은 모양을 저마다 적는다. 테마가 셋째 구역이 되면 그 머리를 molecules 하나로 묶을지 이 티켓이 정한다(04 셀프 리뷰의 판단 지적).
+
 ### 검증
 
 - [ ] 검증 명령이 모두 초록이고, `pnpm -C web visual:admin`과 관리 화면 e2e도 초록이다. 모델 경로를 건드리지 않아 `-m llm`·`-m llm_widget`은 칠 일이 없다
