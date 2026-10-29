@@ -1,13 +1,18 @@
-// 실행 하나의 본문(admin-style 티켓 07, 화면 디자인 mk-run, mk-run-resumed, mk-run-m). 읽기 골격(RunDetail)과 그
-// 본문(RunDecision)을 함께 그린다. 틀 없이 그리고, 미리보기의 데코레이터가 본문 칸과 같은 컨테이너를 두른다. 표본 값(실행
-// 식별자, 에이전트, 주체 operator, 시각)은 그림의 것이다.
+// 실행 하나의 본문(admin-style 티켓 07·08, 화면 디자인 mk-run, mk-run-resumed, mk-run-m, mk-decision). 읽기 골격
+// (RunDetail)과 그 본문(RunDecision)을 함께 그린다. 틀 없이 그리고, 미리보기의 데코레이터가 본문 칸과 같은 컨테이너를
+// 두른다. 표본 값(실행 식별자, 에이전트, 주체 operator, 시각, 도구와 인자)은 그림의 것이다.
 //
 // 결정 칸의 위치는 play 가 본다. 넓은 폭(admin-storybook-wide)에서는 이벤트 칸의 오른쪽이고, 좁은 폭(admin-storybook-narrow)
-// 에서는 이벤트 칸 아래, 재개 스트림 위다. 옆 칸이 스크롤해도 머무는 것(`sticky`)은 사진만 본다. 결정 칸 안의 모양은
-// 티켓 08 이 다시 그린다. 결정과 재개 스트림의 행동은 페이지 시험(pages/RunPage.decision.test)이 본다.
+// 에서는 이벤트 칸 아래, 재개 스트림 위다. 옆 칸이 스크롤해도 머무는 것(`sticky`)은 사진만 본다. 결정 칸의 버튼도
+// 위치로 본다. 넓은 폭의 옆 칸(360px)에서는 "거부" 다음 "승인"이 오른쪽에 나란히, 좁은 폭의 칸(288px)에서는 둘이 위아래로
+// 칸을 꽉 채운다. 결정 칸의 변형은 그림 mk-decision 의 다섯 가운데 형식 1 을 뺀 넷(형식 1 은 아래 FormatOne)과 그림에
+// 없는 셋(꺼진 플러그인을 미리 알 수 없음, 결정을 보내지 못한 알림, 422)이다. 결정과 재개 스트림의 행동은 페이지
+// 시험(pages/RunPage.decision.test)이 본다.
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, fn, within } from "storybook/test";
 import type { StreamFrame } from "../../api/approval";
+import { failureOf, type RequestFailure } from "../../api/failure";
+import type { PluginRow } from "../../api/plugins";
 import type { Trace } from "../../api/traces";
 import { RunDecision } from "./RunDecision";
 import { RunDetail } from "./RunDetail";
@@ -83,17 +88,53 @@ function received(event: Event): StreamFrame {
   return { kind: "event", event };
 }
 
+/** 실행 에이전트의 행. 매니페스트가 MCP 하나를 쓴다. */
+const AGENT_ROW: PluginRow = {
+  kind: "agent",
+  name: "support-bot",
+  enabled: true,
+  manifest: {
+    schema_version: "1",
+    kind: "agent",
+    name: "support-bot",
+    version: "0.1.0",
+    entrypoint: "agent:SupportBot",
+    mcp: ["filesystem"],
+    requires_approval: ["payments.refund"],
+    conversation_limit: null,
+    server: null,
+  },
+};
+const MCP_ROW: PluginRow = {
+  kind: "mcp",
+  name: "filesystem",
+  enabled: true,
+  manifest: {
+    schema_version: "1",
+    kind: "mcp",
+    name: "filesystem",
+    version: "0.1.0",
+    entrypoint: null,
+    mcp: [],
+    requires_approval: [],
+    conversation_limit: null,
+    server: { command: "python", args: ["filesystem.py"], secret_args: {} },
+  },
+};
+
 interface RunScreenProps {
   readonly trace: Trace;
   readonly channelTokenEntered: boolean;
   readonly busy: boolean;
   readonly frames: readonly StreamFrame[];
   readonly cut: boolean;
+  readonly failure: RequestFailure | null;
+  readonly plugins: { readonly data: readonly PluginRow[] | undefined; readonly error: unknown };
   readonly onRefresh: () => void;
   readonly onDecide: () => void;
 }
 
-/** 실행 하나의 본문. 트레이스를 읽었고 플러그인 목록은 모두 켜져 있다(꺼짐 미리 알림 없음). */
+/** 실행 하나의 본문. 트레이스를 읽었다. 기본은 플러그인 목록이 모두 켜져 있다(꺼짐 미리 알림 없음). */
 function RunScreen({ trace: shown, onRefresh, ...decision }: RunScreenProps) {
   return (
     <RunDetail
@@ -102,15 +143,7 @@ function RunScreen({ trace: shown, onRefresh, ...decision }: RunScreenProps) {
       error={undefined}
       isValidating={false}
       onRefresh={onRefresh}
-      body={(read, events) => (
-        <RunDecision
-          trace={read}
-          events={events}
-          failure={null}
-          plugins={{ data: [], error: undefined }}
-          {...decision}
-        />
-      )}
+      body={(read, events) => <RunDecision trace={read} events={events} {...decision} />}
     />
   );
 }
@@ -124,6 +157,8 @@ const meta = {
     busy: false,
     frames: [],
     cut: false,
+    failure: null,
+    plugins: { data: [AGENT_ROW, MCP_ROW], error: undefined },
     onRefresh: fn(),
     onDecide: fn(),
   },
@@ -205,6 +240,182 @@ export const DecisionPanel: Story = {
       ),
     ).toBeVisible();
     await eventsWithinContent(canvasElement);
+    await buttonsByWidth(canvasElement);
+  },
+};
+
+/**
+ * 결정 자리의 버튼 둘. "거부" 다음 "승인"이다. 넓은 폭의 옆 칸(360px)에서는 한 줄에 나란히 오른쪽 끝으로 모이고, 좁은
+ * 폭의 칸(288px)에서는 둘이 위아래로 서서 칸(카드의 안쪽)을 꽉 채운다.
+ */
+async function buttonsByWidth(canvasElement: HTMLElement): Promise<void> {
+  const place = region(canvasElement, "결정");
+  const buttons = within(place).getAllByRole("button");
+  await expect(buttons.map((found) => found.textContent)).toEqual(["거부", "승인"]);
+  const [deny, approve] = buttons.map((found) => found.getBoundingClientRect());
+  if (deny === undefined || approve === undefined) {
+    throw new Error("결정 버튼이 둘이 아니다");
+  }
+  const form = place.querySelector("form");
+  if (form === null) {
+    throw new Error("결정 폼이 없다");
+  }
+  const row = form.getBoundingClientRect();
+  // 버튼 줄은 뷰포트가 아니라 결정 칸의 폭으로 갈린다. 두 폭에서는 본문 칸으로 갈려도 같은 그림이라 선언을 본다.
+  await expect(getComputedStyle(panelOf(canvasElement)).containerType).toBe("inline-size");
+  if (isWide()) {
+    await expect(approve.top).toBe(deny.top);
+    await expect(approve.left).toBeGreaterThan(deny.right);
+    await expect(approve.right).toBe(row.right);
+    await expect(deny.left).toBeGreaterThan(row.left);
+  } else {
+    await expect(approve.top).toBeGreaterThan(deny.bottom);
+    for (const box of [deny, approve]) {
+      await expect(box.left).toBe(row.left);
+      await expect(box.right).toBe(row.right);
+    }
+  }
+}
+
+/** 결정 칸. 결정 자리가 없을 때는 그 글을 품은 칸이다. */
+function columnHolding(canvasElement: HTMLElement, text: string): HTMLElement {
+  const found = within(canvasElement).getByText(text).closest(".\\@container");
+  if (!(found instanceof HTMLElement)) {
+    throw new Error(`결정 칸이 없다: ${text}`);
+  }
+  return found;
+}
+
+/** 꺼진 플러그인으로 막힌 결정 자리. 경고가 머리 설명 아래에 서고 사유 칸과 버튼 둘이 막힌다. */
+export const DisabledPlugins: Story = {
+  args: {
+    plugins: {
+      data: [
+        { ...AGENT_ROW, enabled: false },
+        { ...MCP_ROW, enabled: false },
+      ],
+      error: undefined,
+    },
+  },
+  play: async ({ canvasElement }) => {
+    const place = within(region(canvasElement, "결정"));
+    const warning = place
+      .getByText("꺼진 플러그인이 있어 재개할 수 없다: 에이전트 support-bot, MCP filesystem")
+      .closest('[role="status"]');
+    if (!(warning instanceof HTMLElement)) {
+      throw new Error("꺼짐 경고가 상태 영역이 아니다");
+    }
+    await expect(within(warning).getByText(/다시 켜면 결정을 낼 수 있다/)).toBeVisible();
+    await expect(within(warning).getByRole("link", { name: "플러그인 목록" })).toBeVisible();
+    await expect(place.getByRole("textbox", { name: "거부 사유" })).toBeDisabled();
+    await expect(place.getByRole("button", { name: "거부" })).toBeDisabled();
+    await expect(place.getByRole("button", { name: "승인" })).toBeDisabled();
+  },
+};
+
+/** 플러그인 목록을 읽지 못해 꺼진 플러그인을 미리 알 수 없다. 정보 알림이 서고 결정은 막지 않는다. */
+export const PluginsUnknown: Story = {
+  args: { plugins: { data: undefined, error: new Error("플러그인 목록을 읽지 못했다") } },
+  play: async ({ canvasElement }) => {
+    const place = within(region(canvasElement, "결정"));
+    await expect(
+      place.getByText("플러그인 목록을 읽지 못해 꺼진 플러그인을 미리 알 수 없다"),
+    ).toBeVisible();
+    await expect(place.getByRole("button", { name: "승인" })).toBeEnabled();
+  },
+};
+
+/** 최종 사용자의 실행. 결정 자리 대신 한 줄만 서고, 채널 토큰이 없어도 같다. 재개 스트림은 서지 않는다. */
+export const EndUserRun: Story = {
+  args: {
+    trace: trace([{ ...STARTED, principal: "https://shop.example|user-42" }, CALLED, PAUSED]),
+    channelTokenEntered: false,
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const line = "최종 사용자의 실행이라 결정은 그 사람만 낸다";
+    await expect(canvas.getByText(line)).toBeVisible();
+    await expect(canvas.queryByRole("region", { name: "결정" })).toBeNull();
+    await expect(canvas.queryByRole("region", { name: "재개 스트림" })).toBeNull();
+    await columnBesideOrBelowEvents(canvasElement, columnHolding(canvasElement, line));
+  },
+};
+
+/** 운영자의 실행인데 채널 토큰이 없다. 결정 자리 대신 설정에서 넣으라는 한 줄과 "설정 열기"가 선다. */
+export const NoChannelToken: Story = {
+  args: { channelTokenEntered: false },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const line = "결정을 내리려면 설정에서 채널 토큰을 넣는다";
+    await expect(canvas.getByText(line)).toBeVisible();
+    await expect(canvas.getByRole("link", { name: "설정 열기" })).toBeVisible();
+    await expect(canvas.queryByRole("region", { name: "결정" })).toBeNull();
+    await columnBesideOrBelowEvents(canvasElement, columnHolding(canvasElement, line));
+  },
+};
+
+/** 결정 칸이 넓은 폭에서는 이벤트 칸의 오른쪽 옆 칸이고, 좁은 폭에서는 이벤트 칸 아래다. */
+async function columnBesideOrBelowEvents(
+  canvasElement: HTMLElement,
+  column: HTMLElement,
+): Promise<void> {
+  const events = region(canvasElement, /^이벤트 \d+$/).getBoundingClientRect();
+  const box = column.getBoundingClientRect();
+  if (isWide()) {
+    await expect(box.left).toBeGreaterThanOrEqual(events.right);
+    await expect(box.width).toBe(360);
+  } else {
+    await expect(box.top).toBeGreaterThanOrEqual(events.bottom);
+  }
+}
+
+/**
+ * 결정을 보내지 못했다(409). 알림이 머리 바로 아래, 이벤트 칸 위에 서고 결정 자리 밖이다. 화면은 트레이스를 다시
+ * 읽어 지금의 일시정지를 보인다.
+ */
+export const DecisionFailed: Story = {
+  args: {
+    failure: failureOf(409, {
+      code: "conflict",
+      message: "결정이 가리킨 자리 2 는 지금의 일시정지(자리 6)가 아니다",
+      request_id: "req-7c41e2",
+      violations: [],
+    }),
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const alert = canvas.getByRole("alert");
+    await expect(within(alert).getByText("결정을 보내지 못했다")).toBeVisible();
+    await expect(within(alert).getByText("req-7c41e2")).toBeVisible();
+    await expect(alert.getBoundingClientRect().bottom).toBeLessThanOrEqual(
+      region(canvasElement, /^이벤트 \d+$/).getBoundingClientRect().top,
+    );
+    await expect(region(canvasElement, "결정").contains(alert)).toBe(false);
+  },
+};
+
+/**
+ * 결정 본문의 형식 오류(422). 사유 칸 바로 아래의 알림이 메시지, 추적 식별자, 위반을 모두 담고, 사유에 걸린 위반은
+ * 사유 칸이 오류로 그린다. 이 스토리는 넣은 사유를 그리지 않아 사유 칸이 비어 있다.
+ */
+export const DecisionInvalid: Story = {
+  args: {
+    failure: failureOf(422, {
+      code: "invalid_request",
+      message: "요청의 형식이 올바르지 않다",
+      request_id: "req-4220",
+      violations: [{ field: "body.deny.reason", message: "사유는 비어 있을 수 없다" }],
+    }),
+  },
+  play: async ({ canvasElement }) => {
+    const place = within(region(canvasElement, "결정"));
+    const alert = place.getByRole("alert");
+    await expect(within(alert).getByText("결정을 보내지 못했다")).toBeVisible();
+    await expect(within(alert).getByText("body.deny.reason")).toBeVisible();
+    await expect(
+      place.getByRole("textbox", { name: "거부 사유", description: "사유는 비어 있을 수 없다" }),
+    ).toHaveAttribute("aria-invalid", "true");
+    await expect(within(canvasElement).queryAllByRole("alert")).toHaveLength(1);
   },
 };
 

@@ -55,7 +55,7 @@ test("스위치로 에이전트를 끄면 운영자 파일에 적히고 목록�
     "꺼진 플러그인이 있어 재개할 수 없다: 에이전트 gated",
   );
   await expect(
-    decisionPlace(page).getByRole("button", { name: "허가", exact: true }),
+    decisionPlace(page).getByRole("button", { name: "승인", exact: true }),
   ).toBeDisabled();
   await openSection(page, "플러그인");
 
@@ -76,7 +76,7 @@ test("스위치로 에이전트를 끄면 운영자 파일에 적히고 목록�
 
   await openPausedRun(page, paused.runId);
   await expect(
-    decisionPlace(page).getByRole("button", { name: "허가", exact: true }),
+    decisionPlace(page).getByRole("button", { name: "승인", exact: true }),
   ).toBeEnabled();
   await expect(decisionPlace(page)).not.toContainText("꺼진 플러그인");
   expect(crashes).toEqual([]);
