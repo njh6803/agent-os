@@ -58,3 +58,23 @@ PR 직전 리뷰에 밀 주장으로 넘길 새 문장(원문):
 
 - 첫 pre-commit은 pytest의 `tests/channel/cli/test_interrupt.py:280`(`둘째가 닫는 도중에 오지 않았다`)에서 막혔다. 이 변경이 닿지 않는 CLI 중단 시험이고, `uv run pytest -q tests/channel/cli/test_interrupt.py` 단독으로는 6 passed(손으로 봤다). web-verify와 함께 돈 부하 아래의 타이밍 실패로 본다(어림).
 - 둘째 pre-commit은 run-hooks의 `hook_journal_retro.py` 사례 "다음 빈 순번으로 새 일지를 만든 Write"에서 막혔다. 날짜가 2026-10-30으로 넘어간 직후였고, `uv run python tools/run_hooks.py` 단독으로는 0으로 끝났다(손으로 봤다). 자정 경계에서 사례의 날짜 계산이 어긋난 것으로 본다(어림, 사례 코드는 읽지 않았다).
+- 셋째 pre-commit이 지나 커밋 `f1917059`가 섰다.
+
+## 인계 (커밋 뒤)
+
+세션 컨텍스트가 인계 문턱을 넘어 `커밋 뒤` 경계에서 넘긴다. 이 세션의 지금 제목은 `feature/05-admin-plugin-screens`이고 넘기며 `(인계함)`을 붙인다. 번복하거나 고친 것은 위 셀프 리뷰 절과 변이 표 절이다.
+
+지시문:
+
+다음 작업: .scratch/admin-style/issues/05-admin-plugin-screens.md. 플러그인 목록에서 이름을 눌러 켜고 끄고 매니페스트는 줄 끝 링크로 본다
+다음 단계: 구현
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /implement .scratch/admin-style/issues/05-admin-plugin-screens.md
+브랜치: feature/05-admin-plugin-screens
+모델: Opus 5.5 / medium. 레벨 스윕의 갈래
+읽을 것: docs/journal/2026-10-29-21-admin-plugin-screens.md 의 셀프 리뷰·커밋·인계 절
+이어받을 상태: 인계: 커밋 뒤. 커밋 f1917059까지 구현, 셀프 리뷰와 반영, 검증(run_checks, ruff, 관리 화면 e2e 8 passed, visual:admin 40 passed)을 마쳤다. 남은 단계는 푸시, PR 직전 리뷰(operations.md 리뷰 파이프라인 2. 일지의 "PR 직전 리뷰에 밀 주장으로 넘길 새 문장"을 브리프에 나열한다), /git-pr, 그 뒤 merge.md 2(봇 회차)부터 병합까지다. .scratch/plan.md의 admin-style 상태 줄은 아직 고치지 않았다. PR #423의 Nit(ReadSection의 AfterDelay 둘)은 남긴다. 일지: docs/journal/2026-10-29-21-admin-plugin-screens.md
+확인할 선행 조건: 병합은 이 워크트리 사본의 next-session merge.md(없으면 SKILL.md)의 "워크트리에서 병합할 때"를 Read로 열어 따른다
+이번 요청 범위: PR과 병합까지
+
+워크트리 잠금을 풀었다. open-session을 부른다 2026-10-29T15:26:32Z
