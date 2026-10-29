@@ -1,0 +1,342 @@
+# design-card-build 티켓 03 의 변이 표(`web/tools/sync-design-system`의 `upload.ts`·`record.ts`). 첫 정식 올리기,
+# 목록만 옛것일 때, 나누기, 보낼 색인의 시험은 구현 전에 함수와 칸이 없어 빨갰을 뿐 단언 하나하나의 빨강은 보지
+# 못했다. 옛 별칭 48개를 지우는 사례는 구현 전부터 초록이었다(명세가 계획을 고치지 않아도 지운다고 한 그대로). 변이마다
+# 그 판정의 줄 하나만 바꾸고 그 사례 하나로 좁혀(`-t`) 빨개지는지 본다.
+#   PYTHONUTF8=1 uv run python tools/mutate.py .scratch/design-card-build/probes/upload_plan_mutations.toml [번호 ...]
+# 재지 않은 것: 마지막 몫이 빌지 않게 하나를 남기는 한도(`take(rest.length - 1)`)와, 첫 몫이 아니면 빈 몫을 내지 않고
+# 멈추는 조건(`!first`). 앞의 것을 끄면 남은 것이 중간 몫에는 들고 마지막 몫의 예약(경로 둘, 기록·색인 한도)에는 들지
+# 않는 폭에서만 빈 마지막 몫이 더 난다. 뒤의 것은 끄는 변이가 동치라 표에 두지 않는다. 첫 몫이 아니면 `take`의 예약이
+# 0이라, `taken`이 0일 때 `!fits(1, head.bytes, 0, 0)`이 이미 참이다(PR 직전 버그 축이 코드를 읽어 닫았다. 돌려 보지는
+# 않았다). 멈출 때의 오류 종류와 물러설 길 둘은 아래 변이가 본다.
+
+[runner.node]
+command = ["pnpm", "exec", "vitest", "run", "--project", "node"]
+cwd = "web"
+judge = "vitest"
+
+# --- 첫 정식 올리기 ----------------------------------------------------------------------------------------------
+
+[[mutation]]
+name = "첫 정식 올리기를 가르지 않으면 tokens.json 을 보내는 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/upload.test.ts", "-t", "첫 정식 올리기라 지문이 같아도"]
+expect = "red"
+expect_output = ["AssertionError: expected false to be true"]
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/upload.ts"
+old = '''  const firstCanonical = hasCanonicalCard(output.keys()) && !hasCanonicalCard(received);'''
+new = '''  const firstCanonical = false;'''
+
+[[mutation]]
+name = "받은 기록의 정식 카드를 보지 않으면 기록에 정식 카드가 있는 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/upload.test.ts", "-t", "기록에 정식 카드가 있으면 첫 정식 올리기가 아니라"]
+expect = "red"
+expect_output = ["AssertionError: expected true to be false"]
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/upload.ts"
+old = '''  const firstCanonical = hasCanonicalCard(output.keys()) && !hasCanonicalCard(received);'''
+new = '''  const firstCanonical = hasCanonicalCard(output.keys());'''
+
+[[mutation]]
+name = "이번 산출의 정식 카드를 보지 않으면 빌린 빌드의 지금 절차 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/upload.test.ts", "-t", "정식 카드가 없는 산출은 첫 정식 올리기가 아니고"]
+expect = "red"
+expect_output = ["AssertionError: expected true to be false"]
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/upload.ts"
+old = '''  const firstCanonical = hasCanonicalCard(output.keys()) && !hasCanonicalCard(received);'''
+new = '''  const firstCanonical = !hasCanonicalCard(received);'''
+
+[[mutation]]
+name = "기록이 없을 때 받은 sha256 목록을 보지 않으면 그 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/upload.test.ts", "-t", "기록이 없으면 받은 sha256 목록에 정식 카드가"]
+expect = "red"
+expect_output = ["AssertionError: expected true to be false"]
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/upload.ts"
+old = '''  const received = record === null ? (artifactSha256?.keys() ?? []) : record.files.keys();'''
+new = '''  const received = record === null ? [] : record.files.keys();'''
+
+[[mutation]]
+name = "첫 정식 올리기의 tokens.json 을 지문대로 다루면 그 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/upload.test.ts", "-t", "첫 정식 올리기라 지문이 같아도"]
+expect = "red"
+expect_output = ["to include 'project/tokens.json'"]
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/upload.ts"
+old = '''    if (firstCanonical && path === TOKENS_PATH) {'''
+new = '''    if (firstCanonical && path === "") {'''
+
+[[mutation]]
+name = "첫 정식 올리기의 판정이 앞 시도의 보낸 갈래보다 뒤면 이어 받는 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/upload.test.ts", "-t", "이어 받는 올리기도 tokens.json 을 다시 보낸다"]
+expect = "red"
+expect_output = ["to include 'project/tokens.json'"]
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/upload.ts"
+old = '''    if (firstCanonical && path === TOKENS_PATH) {'''
+new = '''    if (firstCanonical && path === TOKENS_PATH && kind !== "sent") {'''
+
+# --- 목록만 옛것일 때 -------------------------------------------------------------------------------------------
+
+[[mutation]]
+name = "지난 목록을 기록과 맞대지 않으면 목록만 옛것인 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/upload.test.ts", "-t", "다 보낸 뒤 지난 목록만 옛것이면"]
+expect = "red"
+expect_output = ['+   "project/_ds_sync.json",']
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/upload.ts"
+old = '''    (path) => record === null || record.files.has(path),'''
+new = '''    (path) => path !== "",'''
+
+[[mutation]]
+name = "지난 목록을 기록과 맞대지 않으면 지금 절차의 기록에 없는 지난 경로 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/upload.test.ts", "-t", "기록에 없는 지난 경로만 내지 않는다"]
+expect = "red"
+expect_output = ['+   "project/guidelines/old.md",']
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/upload.ts"
+old = '''    (path) => record === null || record.files.has(path),'''
+new = '''    (path) => path !== "",'''
+
+[[mutation]]
+name = "기록이 없을 때도 기록과 맞대면 기록이 없는 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/upload.test.ts", "-t", "기록이 없으면 지난 목록대로 지운다"]
+expect = "red"
+expect_output = ["AssertionError: expected [] to deeply equal"]
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/upload.ts"
+old = '''    (path) => record === null || record.files.has(path),'''
+new = '''    (path) => record !== null && record.files.has(path),'''
+
+[[mutation]]
+name = "지난 목록을 지울 경로에 넣지 않으면 옛 별칭 48개 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/upload.test.ts", "-t", "옛 별칭 48개를 모두 지운다"]
+expect = "red"
+expect_output = ["AssertionError: expected [] to deeply equal"]
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/upload.ts"
+old = '''    (path) => record === null || record.files.has(path),'''
+new = '''    (path) => path === "",'''
+
+# --- 나누기 ------------------------------------------------------------------------------------------------------
+
+[[mutation]]
+name = "기록·색인의 경로를 세지 않으면 글꼴 770개 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/upload.test.ts", "-t", "빈 시스템에 글꼴 770개를"]
+expect = "red"
+expect_output = ["to be less than or equal to 255"]
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/upload.ts"
+old = '''    count + extraPaths <= CALL_PATHS && bytes + reserve <= CALL_BYTES;'''
+new = '''    count <= CALL_PATHS && bytes + reserve <= CALL_BYTES;'''
+
+[[mutation]]
+name = "기록·색인의 바이트를 남기지 않으면 16MiB 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/upload.test.ts", "-t", "바이트가 16MiB 를 넘으면"]
+expect = "red"
+expect_output = ["to be less than or equal to 16777216"]
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/upload.ts"
+old = '''    count + extraPaths <= CALL_PATHS && bytes + reserve <= CALL_BYTES;'''
+new = '''    count + extraPaths <= CALL_PATHS && bytes <= CALL_BYTES;'''
+
+[[mutation]]
+name = "지울 경로를 몫에 넣지 않으면 지울 경로 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/upload.test.ts", "-t", "지울 경로도 몫에 세어"]
+expect = "red"
+expect_output = ["AssertionError: expected 1 to be greater than 1"]
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/upload.ts"
+old = '''    ...deletes,'''
+new = '''    ...[],'''
+
+[[mutation]]
+name = "_ds_sync.json 을 뒤로 보내지 않으면 마지막 몫 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/upload.test.ts", "-t", "_ds_sync.json 은 마지막 몫에"]
+expect = "red"
+expect_output = ["to include 'project/_ds_sync.json'"]
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/upload.ts"
+old = '''    ...send.filter((item) => item.path !== DS_SYNC_PATH),'''
+new = '''    ...send,'''
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/upload.ts"
+old = '''    ...send.filter((item) => item.path === DS_SYNC_PATH),'''
+new = '''    ...[],'''
+
+[[mutation]]
+name = "한 호출에 들지 않는 파일의 오류 종류가 다르면 그 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/upload.test.ts", "-t", "한 파일이 한 호출에 들지 않으면 멈춘다"]
+expect = "red"
+expect_output = ['-   "kind": "limit",']
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/upload.ts"
+old = '''          "limit",'''
+new = '''          "input",'''
+
+[[mutation]]
+name = "남은 하나를 중간 몫으로 보내지 않으면 남은 큰 파일 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/upload.test.ts", "-t", "남은 큰 파일이 기록·색인과 함께 들지 않으면"]
+expect = "red"
+expect_output = ["CommandError: project/b.bin 가 한 호출"]
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/upload.ts"
+old = '''    const taken = take(rest.length - 1) || take(1);'''
+new = '''    const taken = take(rest.length - 1);'''
+
+[[mutation]]
+name = "첫 몫이 기록만 싣지 못하면 첫 파일이 큰 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/upload.test.ts", "-t", "첫 몫은 기록만 싣는다"]
+expect = "red"
+expect_output = ["CommandError: project/huge.bin 가 한 호출"]
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/upload.ts"
+old = '''      if (head === undefined || !first || !fits(1, head.bytes, 0, 0)) {'''
+new = '''      if (head === undefined || first || !fits(1, head.bytes, 0, 0)) {'''
+
+[[mutation]]
+name = "첫 몫이 pending 기록의 경로를 남기지 않으면 글꼴 770개 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/upload.test.ts", "-t", "빈 시스템에 글꼴 770개를"]
+expect = "red"
+expect_output = ["to be less than or equal to 255"]
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/upload.ts"
+old = '''        if (!fits(taken + 1, bytes + item.bytes, first ? 1 : 0, first ? RECORD_LIMIT : 0)) {'''
+new = '''        if (!fits(taken + 1, bytes + item.bytes, 0, first ? RECORD_LIMIT : 0)) {'''
+
+[[mutation]]
+name = "첫 몫이 pending 기록의 바이트를 남기지 않으면 16MiB 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/upload.test.ts", "-t", "바이트가 16MiB 를 넘으면"]
+expect = "red"
+expect_output = ["to be less than or equal to 16777216"]
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/upload.ts"
+old = '''        if (!fits(taken + 1, bytes + item.bytes, first ? 1 : 0, first ? RECORD_LIMIT : 0)) {'''
+new = '''        if (!fits(taken + 1, bytes + item.bytes, first ? 1 : 0, 0)) {'''
+
+# --- 보낼 색인 ---------------------------------------------------------------------------------------------------
+
+[[mutation]]
+name = "묶음이 있어도 libraries 를 적지 않으면 정식 배치의 명령 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/record-check.test.ts", "-t", "보낼 색인에 libraries 와 upgraded 를 짓는다"]
+expect = "red"
+expect_output = ['"version": "18.3.1",']
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/record.ts"
+old = '''  const bundled = bundle ? withLibraries(received) : received;'''
+new = '''  const bundled = received;'''
+
+[[mutation]]
+name = "global 을 붙이지 않으면 묶음 색인 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/upload.test.ts", "-t", "React 18.3.1 과 global 을 적고"]
+expect = "red"
+expect_output = ['-       "global": "React",']
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/upload.ts"
+old = '''  { name: "react", version: "18.3.1", global: "React" },'''
+new = '''  { name: "react", version: "18.3.1" },'''
+
+[[mutation]]
+name = "이미 있는 upgraded 를 덮으면 그 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/upload.test.ts", "-t", "이미 있는 upgraded 는 그대로 둔다"]
+expect = "red"
+expect_output = ['-   "at": "2026-10-01T00:00:00.000Z",']
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/upload.ts"
+old = '''  if (index.upgraded === undefined) {'''
+new = '''  if (index.upgraded !== null) {'''
+
+[[mutation]]
+name = "첫 정식 올리기가 아니어도 upgraded 를 더하면 빌린 빌드의 명령 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/record-check.test.ts", "-t", "빌린 빌드의 산출이면 보낼 색인이 받은 색인과 같다"]
+expect = "red"
+expect_output = ['"upgraded": true,']
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/record.ts"
+old = '''  const sent = firstCanonical ? withUpgraded(bundled, at) : bundled;'''
+new = '''  const sent = withUpgraded(bundled, at);'''
+
+# --- record index 명령 ------------------------------------------------------------------------------------------
+
+[[mutation]]
+name = "명령이 산출의 묶음을 찾지 못하면 정식 배치의 명령 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/record-check.test.ts", "-t", "보낼 색인에 libraries 와 upgraded 를 짓는다"]
+expect = "red"
+expect_output = ['+   "libraries": false,']
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/record.ts"
+old = '''  const bundle = readFolder(local, "project/").has(BUNDLE_PATH);'''
+new = '''  const bundle = readFolder(local, "project/").has("project/bundle.js");'''
+
+[[mutation]]
+name = "명령이 계획의 첫 정식 올리기를 읽지 않으면 정식 배치의 명령 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/record-check.test.ts", "-t", "보낼 색인에 libraries 와 upgraded 를 짓는다"]
+expect = "red"
+expect_output = ['+   "upgraded": false,']
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/record.ts"
+old = '''  return raw.firstCanonical;'''
+new = '''  return false;'''
+
+[[mutation]]
+name = "보낼 색인의 한도를 보지 않으면 한도 사례가 빨갛다"
+runner = "node"
+tests = ["tools/sync-design-system/record-check.test.ts", "-t", "보낼 색인이 한도를 넘으면 쓰지 않는다"]
+expect = "red"
+expect_output = ['-   "status": 1,']
+
+[[mutation.edit]]
+file = "web/tools/sync-design-system/record.ts"
+old = '''  if (bytes > INDEX_LIMIT) {'''
+new = '''  if (bytes > INDEX_LIMIT * 2) {'''

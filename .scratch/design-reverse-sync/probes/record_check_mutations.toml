@@ -65,7 +65,7 @@ name = "tokens.json 을 바이트로 재면 꼴만 다시 쓴 사례가 빨갛�
 runner = "node"
 tests = ["tools/sync-design-system/file-hash.test.ts", "-t", "tokens.json 은 맞대는 몫의 값이라"]
 expect = "red"
-expect_output = ['Received: "1d052e50434999a5ec0d1cb52707507379472f0d83c71d3845563c8ccf4aa2de"']
+expect_output = ["❯ tools/sync-design-system/file-hash.test.ts:109:59"]
 
 [[mutation.edit]]
 file = "web/tools/sync-design-system/file-hash.ts"
@@ -193,8 +193,8 @@ expect_output = ['-   "project/components/Badge/README.md",']
 
 [[mutation.edit]]
 file = "web/tools/sync-design-system/upload.ts"
-old = '''    if (revert.has(path) || kind === "edited" || kind === "claimed" || kind === "deleted") {'''
-new = '''    if (kind === "edited" || kind === "claimed" || kind === "deleted") {'''
+old = '''    } else if (revert.has(path) || kind === "edited" || kind === "claimed" || kind === "deleted") {'''
+new = '''    } else if (kind === "edited" || kind === "claimed" || kind === "deleted") {'''
 
 [[mutation]]
 name = "보낸 목표를 로컬과 맞대지 않으면 그 사례가 빨갛다"
@@ -217,7 +217,7 @@ expect_output = ["AssertionError: expected [] to deeply equal [ 'project/compone
 
 [[mutation.edit]]
 file = "web/tools/sync-design-system/upload.ts"
-old = '''  const deletes = [...(input.previousOutput ?? []), ...input.webAdded, ...pendingDelete].filter('''
+old = '''  const deletes = [...previous, ...input.webAdded, ...pendingDelete].filter('''
 new = '''  const deletes = [...input.webAdded, ...pendingDelete].filter('''
 
 [[mutation]]
@@ -630,8 +630,8 @@ expect_output = ['-   "project/assets/notes/plan.md",']
 
 [[mutation.edit]]
 file = "web/tools/sync-design-system/upload.ts"
-old = '''    delete: sortedPaths([...deletes, ...droppedTargets]),'''
-new = '''    delete: sortedPaths(deletes),'''
+old = '''  const deletePaths = sortedPaths([...deletes, ...droppedTargets]);'''
+new = '''  const deletePaths = sortedPaths(deletes);'''
 
 # --- 봇 회차 반영 ------------------------------------------------------------------------------------------------
 
@@ -640,7 +640,7 @@ name = "빌드 산출 전체에 없는 보낸 목표를 이어 적으면 칸이 
 runner = "node"
 tests = ["tools/sync-design-system/upload.test.ts", "-t", "어느 조합에서도 한 경로는 많아야 한 칸에"]
 expect = "red"
-expect_output = ['+   "기록 없음, 산출 없음, 목표 로컬, file/sent/null, 지난 산출 [\"project/components/Chip/README.md\"]: landed, delete",']
+expect_output = ['+   "기록 로컬, 산출 없음, 목표 로컬, file/sent/null, 지난 산출 [\"project/components/Chip/README.md\"]: landed, delete",']
 
 [[mutation.edit]]
 file = "web/tools/sync-design-system/upload.ts"

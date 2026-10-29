@@ -16,12 +16,27 @@
  * 덮어쓰기의 되돌릴 파일(웹이 고친 것)과 웹이 지운 파일은 이번 산출에 있으면 보낸다. 이번 산출에 없으면 코드가 뺀
  * 경로로 알려진 것(지난 산출 목록이나 `pending` 의 지울 경로에 든 것)만 받아, 고친 것은 지우고 지운 것은 기록에서만
  * 뺀다. 그 밖은 몇 파일만 보내는 산출이 빠뜨린 것인지 가를 수 없어 `input` 오류다.
+ *
+ * 짓기 명령의 정식 배치로 옮기는 올리기(design-card-build 명세 "올리기"의 "첫 정식 올리기와 `tokens.json`", "목록만
+ * 옛것일 때", "나누기")도 여기서 가른다. 이번 산출에 정식 자리의 카드(`project/components/<이름>/preview.html`)가
+ * 있고 받은 기록의 `files`(기록이 없으면 받은 sha256 목록)에 하나도 없으면 첫 정식 올리기다. 그때 `tokens.json` 은
+ * 테마의 표시 이름만 바뀌어 지문이 같아도 보낸다. 기록의 `files` 는 마지막 호출이 받아들여질 때만 새 배치로
+ * 바뀌므로, 끊긴 뒤 이어 받는 올리기도 같은 판정으로 다시 보내고 다 보낸 뒤의 올리기는 보내지 않는다. 빌린 빌드의
+ * 산출에는 정식 카드가 없어 이 판정이 서지 않는다.
+ *
+ * 지난 산출 목록에서 온 지울 경로는 받은 기록의 `files` 에 든 것만 낸다. 다 보낸 뒤 목록을 커밋하기 전에 끊기면 그
+ * 목록에는 마지막 호출이 이미 지워 기록에서 뺀 경로가 남는다. 기록이 없으면 목록대로 낸다.
  */
 
 import { CommandError } from "./command.ts";
 import { fileHash, isRecorded, RECORD_PATH, TOKENS_PATH } from "./file-hash.ts";
 import { sha256, sortedPaths } from "./io.ts";
-import type { PendingState, RecordChanges, SyncRecord } from "./sync-record.ts";
+import {
+  RECORD_LIMIT,
+  type PendingState,
+  type RecordChanges,
+  type SyncRecord,
+} from "./sync-record.ts";
 
 export interface UploadInput {
   readonly record: SyncRecord | null;
@@ -40,9 +55,112 @@ export interface UploadInput {
   readonly pendingState: PendingState | null;
 }
 
+/** 한 호출이 보낼 파일과 지울 경로. */
+export interface UploadCall {
+  readonly send: readonly string[];
+  readonly delete: readonly string[];
+}
+
 export interface UploadPlan extends RecordChanges {
   /** 이번 산출에 있지만 기록에 들지 않아 이 계획이 다루지 않는 경로(기록, 색인, 페이지가 다시 짓는 파일). */
   readonly ignored: readonly string[];
+  /** 첫 정식 올리기인가. 마지막 호출의 색인에 `upgraded` 를 더할지가 이것이다(`withUpgraded`). */
+  readonly firstCanonical: boolean;
+  /** 보낼 파일과 지울 경로를 호출마다 나눈 몫(`splitCalls`). */
+  readonly calls: readonly UploadCall[];
+}
+
+/** 한 호출의 한도. 경로 255개와 16MiB 가운데 작은 쪽이다(Artifact 도구 설명과 형식 설명). */
+export const CALL_PATHS = 255;
+export const CALL_BYTES = 16 * 1024 * 1024;
+/** 보낼 색인의 바이트 한도. 몫을 나눌 때 마지막 호출에 이만큼을 남기고, `record index` 가 넘으면 멈춘다. */
+export const INDEX_LIMIT = 512_000;
+
+const CANONICAL_CARD = /^project\/components\/[^/]+\/preview\.html$/;
+/** 빌린 빌드의 채점 기준점. 나누면 마지막 호출에 싣는다(`.claude/skills/sync-design-system/upload.md` 의 6 의 4). */
+const DS_SYNC_PATH = "project/_ds_sync.json";
+export const BUNDLE_PATH = "project/components/bundle.js";
+
+function hasCanonicalCard(paths: Iterable<string>): boolean {
+  return [...paths].some((path) => CANONICAL_CARD.test(path));
+}
+
+interface CallItem {
+  readonly path: string;
+  readonly bytes: number;
+  readonly kind: "send" | "delete";
+}
+
+function callOf(items: readonly CallItem[]): UploadCall {
+  const paths = (kind: CallItem["kind"]): string[] =>
+    sortedPaths(items.filter((item) => item.kind === kind).map((item) => item.path));
+  return { send: paths("send"), delete: paths("delete") };
+}
+
+/**
+ * 보낼 파일과 지울 경로를 호출 몫으로 나눈다(design-card-build 명세 "나누기", 절차 `upload.md` 의 6 의 4). 한 호출에
+ * 들면 몫 하나가 기록과 색인을 함께 싣는다. 나누면 첫 호출이 `pending` 이 든 기록을, 마지막 호출이 기록과 색인을
+ * 싣는다. 그 파일들도 경로로 세고, 바이트는 기록의 한도(`RECORD_LIMIT`)와 색인의 한도(`INDEX_LIMIT`)만큼 남긴다. 지울
+ * 경로가 한도에 드는지는 재지 못해 경로 하나로 센다. 지울 경로와 `_ds_sync.json` 은 뒤 몫으로 보낸다. 마지막 몫이 빌지
+ * 않게 항목 하나를 남기되, 그 하나가 기록·색인과 함께 들지 않으면 따로 보내고 마지막 몫은 기록과 색인만 싣는다. 첫
+ * 항목이 `pending` 이 든 기록과 함께 들지 않으면 첫 몫은 기록만 싣는다. 그래서 `limit` 오류는 기록도 색인도 싣지 않는
+ * 호출에조차 들지 않는 파일에만 난다.
+ *
+ * 못 보는 것: 기록과 색인의 실제 크기는 보지 않고 한도만큼 남긴다.
+ */
+function splitCalls(send: readonly CallItem[], deletes: readonly CallItem[]): UploadCall[] {
+  const items = [
+    ...send.filter((item) => item.path !== DS_SYNC_PATH),
+    ...deletes,
+    ...send.filter((item) => item.path === DS_SYNC_PATH),
+  ];
+  const fits = (count: number, bytes: number, extraPaths: number, reserve: number): boolean =>
+    count + extraPaths <= CALL_PATHS && bytes + reserve <= CALL_BYTES;
+  const total = (part: readonly CallItem[]): number =>
+    part.reduce((sum, item) => sum + item.bytes, 0);
+  const lastFits = (part: readonly CallItem[]): boolean =>
+    fits(part.length, total(part), 2, RECORD_LIMIT + INDEX_LIMIT);
+
+  if (lastFits(items)) {
+    return [callOf(items)];
+  }
+  const calls: UploadCall[] = [];
+  let rest = items;
+  for (;;) {
+    if (calls.length > 0 && lastFits(rest)) {
+      calls.push(callOf(rest));
+      return calls;
+    }
+    const first = calls.length === 0;
+    const take = (limit: number): number => {
+      let taken = 0;
+      let bytes = 0;
+      for (const item of rest.slice(0, limit)) {
+        if (!fits(taken + 1, bytes + item.bytes, first ? 1 : 0, first ? RECORD_LIMIT : 0)) {
+          break;
+        }
+        bytes += item.bytes;
+        taken += 1;
+      }
+      return taken;
+    };
+    // 마지막 몫이 빌지 않게 하나는 남긴다. 남은 하나가 마지막 몫에 들지 않으면 이 몫에 싣고, 마지막 몫은 기록과 색인만 싣는다
+    const taken = take(rest.length - 1) || take(1);
+    if (taken === 0) {
+      const head = rest[0];
+      // `!first` 는 뒤 조건과 동치다(첫 몫이 아니면 예약이 0 이라 `taken` 이 0 이면 `fits(1, head.bytes, 0, 0)` 도 거짓이다).
+      // 변이 표(`.scratch/design-card-build/probes/upload_plan_mutations.toml`)가 이 줄의 원문을 겨누므로 남긴다
+      if (head === undefined || !first || !fits(1, head.bytes, 0, 0)) {
+        throw new CommandError(
+          "limit",
+          `${head?.path ?? ""} 가 한 호출(${String(CALL_PATHS)} 개, ${String(CALL_BYTES)} 바이트)에 들지 않는다`,
+        );
+      }
+      // 첫 파일이 pending 이 든 기록과 함께 들지 않으면 첫 몫은 기록만 싣는다
+    }
+    calls.push(callOf(rest.slice(0, taken)));
+    rest = rest.slice(taken);
+  }
 }
 
 function checkedState(record: SyncRecord | null, given: PendingState | null): PendingState {
@@ -90,6 +208,8 @@ export function planUpload(input: UploadInput): UploadPlan {
   }
   const pendingDelete = record?.pending?.delete ?? [];
   const revert = checkedReverts(input);
+  const received = record === null ? (artifactSha256?.keys() ?? []) : record.files.keys();
+  const firstCanonical = hasCanonicalCard(output.keys()) && !hasCanonicalCard(received);
 
   const unchangedOnWeb = (path: string, data: Uint8Array): boolean => {
     if (record === null) {
@@ -110,7 +230,10 @@ export function planUpload(input: UploadInput): UploadPlan {
       continue;
     }
     const kind = state.get(path);
-    if (revert.has(path) || kind === "edited" || kind === "claimed" || kind === "deleted") {
+    // 첫 정식 올리기의 tokens.json 은 앞 시도가 목표대로 보냈어도(`sent`) 다시 보낸다. 웹에 옛 이름이 남았을 수 있다
+    if (firstCanonical && path === TOKENS_PATH) {
+      send.push(path);
+    } else if (revert.has(path) || kind === "edited" || kind === "claimed" || kind === "deleted") {
       send.push(path);
     } else if (kind === "sent") {
       const target = record?.pending?.files.get(path);
@@ -131,18 +254,61 @@ export function planUpload(input: UploadInput): UploadPlan {
     ...pendingDelete.filter((path) => state.get(path) === "deleted"),
     ...input.webRemoved,
   ].filter((path) => !output.has(path));
-  const deletes = [...(input.previousOutput ?? []), ...input.webAdded, ...pendingDelete].filter(
+  // 지난 목록에서 온 경로는 기록에 있을 때만 지운다. 기록에 없으면 앞 올리기가 이미 지운 것이다
+  const previous = (input.previousOutput ?? []).filter(
+    (path) => record === null || record.files.has(path),
+  );
+  const deletes = [...previous, ...input.webAdded, ...pendingDelete].filter(
     (path) => isRecorded(path) && !output.has(path) && !gone.includes(path),
   );
 
+  const sendPaths = sortedPaths(send);
+  const deletePaths = sortedPaths([...deletes, ...droppedTargets]);
   return {
-    send: sortedPaths(send),
+    send: sendPaths,
     landed: sortedPaths(landed),
     unchanged: sortedPaths(unchanged),
-    delete: sortedPaths([...deletes, ...droppedTargets]),
+    delete: deletePaths,
     gone: sortedPaths(gone),
     ignored: sortedPaths(ignored),
+    firstCanonical,
+    calls: splitCalls(
+      sendPaths.map((path) => ({
+        path,
+        bytes: output.get(path)?.byteLength ?? 0,
+        kind: "send" as const,
+      })),
+      deletePaths.map((path) => ({ path, bytes: 0, kind: "delete" as const })),
+    ),
   };
+}
+
+/** 묶음이 있는 산출이 보낼 색인의 `libraries`. 페이지가 jsDelivr 에서 싣는다(형식 설명의 `libraries`). */
+const LIBRARIES = [
+  { name: "react", version: "18.3.1", global: "React" },
+  { name: "react-dom", version: "18.3.1", global: "ReactDOM" },
+] as const;
+
+/**
+ * 컴포넌트 묶음을 싣는 올리기의 색인을 짓는다(design-card-build 명세 "색인의 `libraries`"). `libraries` 를
+ * React·ReactDOM 18.3.1 로 바꾸고 `source` 와 다른 칸은 그대로 둔다. `lastChange` 는 절차가 적는다.
+ */
+export function withLibraries(index: Readonly<Record<string, unknown>>): Record<string, unknown> {
+  return { ...index, libraries: LIBRARIES.map((library) => ({ ...library })) };
+}
+
+/**
+ * 첫 정식 올리기의 색인을 짓는다(design-card-build 명세 "`upgraded`"). `upgraded` 가 없을 때만 `{at}` 으로 더한다.
+ * 페이지의 "No move is perfect" 배너를 거두는 표시다. 다른 칸은 그대로 둔다.
+ */
+export function withUpgraded(
+  index: Readonly<Record<string, unknown>>,
+  at: string,
+): Record<string, unknown> {
+  if (index.upgraded === undefined) {
+    return { ...index, upgraded: { at } };
+  }
+  return { ...index };
 }
 
 /** 빌드가 필요한 까닭. 패키지 아래, 빌린 빌드의 설정, 빌드가 짓는 되돌릴 파일이다. */
