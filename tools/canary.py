@@ -46,6 +46,9 @@
     source = ".claude/rules/tools.md"  # 바뀐 규칙·스킬·서브에이전트 파일. 체크아웃 기준
     # skill = "tidy-checkouts"       skill 이면 선택. 실험군과, 사본에 이 스킬이 있는 대조군의
     #                                회차마다 이 스킬을 Skill 로 불러야 한다
+    # skill_body = "files"           skill 이고 skill 을 주었을 때만(기본 "skill_md"). 원천이
+    #                                그 스킬 폴더의 하위 파일(SKILL.md 밖)이고 --tools Skill,Read
+    #                                로 돈다
     # agent = "spec-reviewer"        agent 면 반드시. 정의의 name
     # agent_tools = ["Read", "Grep", "Glob", "Bash"]   agent 면 반드시. 정의의 tools 줄
 
@@ -78,7 +81,11 @@ agent 명세의 질문은 본 세션에게 그 서브에이전트를 Agent 로 �
   skills/` 바로 아래다. 워크트리는 주 체크아웃 안에 있어 접두사가 아니라 자리 전체로 견준다.
   `skill` 을 주었으면 실험군과, 사본에 그 스킬(`.claude/skills/<skill>/SKILL.md`)이 있는 대조군은
   그 스킬을 Skill 로 불렀고 그 이름의 자리 줄이 있다. 줄이 없으면 자리 판정이 비므로 실패다. 새
-  스킬이라 옛 사본에 없는 대조군은 부르지 않아도 된다(`_skill_defined`).
+  스킬이라 옛 사본에 없는 대조군은 부르지 않아도 된다(`_skill_defined`). 하위 파일 갈래면 Read 는
+  모두 `<체크아웃>/.claude/skills/<skill>/` 안이고, 실험군은 원천을 Read 로 한 번 이상 읽었다
+  (`_skill_file_reasons`). 스킬 본문이 상황마다 하위 파일을 Read 로 열게 나뉘면 그 파일의 글은
+  Skill 만으로는 실리지 않는다(harness 027). 대조군은 옛 사본에 원천이 없을 수 있어 읽지 않아도
+  된다.
 - agent: 본 세션은 그 에이전트를 부르는 Agent 밖의 도구를 쓰지 않았다. 본 세션과 다른
   서브에이전트(Explore 등)도 정의의 도구를 가지므로, 정의를 직접 읽거나 다른 서브에이전트에게 읽혀
   옮긴 답을 이것이 막는다. 서브에이전트(`parent_tool_use_id` 가 붙은 assistant 이벤트, 앞쪽 실행이면
@@ -106,7 +113,9 @@ agent 명세의 질문은 본 세션에게 그 서브에이전트를 Agent 로 �
 카나리아 대조는 백틱과 `*` 를 걷고 공백을 하나로 모은 뒤의 부분 문자열이다. 돌리기 전에 아래를 보고
 어긋나면 돌리지 않는다. 질문과 rule 갈래의 대상 파일에 카나리아가 없다. 갈래의 체크아웃이 있다.
 실험군 사본의 원천(`source`)에 카나리아가 모두 있고, 실험군과 체크아웃이 다른 대조군 사본에는 하나도
-없다(대기열 133). 원천에 없는 것을 물으면 맞는 답 "없음"을 실패로 잘못 읽는다. agent 명세면 실험군
+없다(대기열 133). 원천에 없는 것을 물으면 맞는 답 "없음"을 실패로 잘못 읽는다. 하위 파일 명세면
+실험군 사본의 그 스킬 `SKILL.md` 에 카나리아가 없다(`skill_file_problems`). 있으면 원천을 읽지
+않고도 답할 수 있다. agent 명세면 실험군
 사본의 정의가 `name` 과 `tools` 줄로 명세와 맞는다(`agent_problems`). 갈래 세션에 함께 실리는
 상위 폴더의 `CLAUDE.md` 에 카나리아가 없다(`ancestor_problems`, 대기열 171). 갈래 세션의 컨텍스트에
 실리는 git 상태(`git status --porcelain` 의 경로, 지금 브랜치, 최근 커밋 다섯의 제목)에 카나리아가
@@ -132,6 +141,10 @@ agent 명세의 질문은 본 세션에게 그 서브에이전트를 Agent 로 �
   `operations.md` 항목에 기댄다.
 - skill 의 답이 스킬 본문이 아니라 목록의 설명에서 왔는지는 `skill` 로 호출을 요구할 때만 가른다.
   설명에도 있는 낱말을 카나리아로 고르면 가르지 못한다.
+- 하위 파일 명세의 대조군이 옮기기 전 커밋이면 그 사본에는 원천 파일이 없어, 대조군 원천에
+  카나리아가 없다는 확인은 비어서 지나간다. 그 사본의 `SKILL.md` 에는 옮긴 글이 그대로 있을 수 있고,
+  `skill_file_problems` 는 대조군 사본을 보지 않는다. 그때 대조군이 카나리아를 답하지 않는 것은
+  질문이 묻는 자리(그 하위 파일)를 따랐기 때문이지 글이 없어서가 아니다(harness 027).
 - 질문이 카나리아를 바꿔 말해 드러냈는지. 글자 그대로 든 것만 명세 오류로 잡고, 나머지는 대조군이
   잡는다(대조군 답에 카나리아가 있으면 실패).
 - Read 의 결과가 오류였는지. 돌리기 전에 대상 파일이 있는지만 본다.
@@ -195,13 +208,23 @@ from contextlib import contextmanager, suppress
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from enum import Enum
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import Literal, TypedDict
 
-from pydantic import BaseModel, ConfigDict, Field, TypeAdapter, ValidationError, model_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    TypeAdapter,
+    ValidationError,
+    field_validator,
+    model_validator,
+)
 
 type Kind = Literal["rule", "skill", "agent"]
 type Role = Literal["experiment", "control"]
+# skill 명세의 본문이 든 자리. "files" 면 원천이 그 스킬 폴더의 SKILL.md 밖 하위 파일이다
+type SkillBody = Literal["skill_md", "files"]
 
 _TOOLS: dict[Kind, str] = {"rule": "Read", "skill": "Skill", "agent": "Agent"}
 _DEFAULT_RUNS: dict[Role, int] = {"experiment": 3, "control": 1}
@@ -255,9 +278,18 @@ class Spec(_Model):
     expect: list[str] = Field(min_length=1)
     source: str = Field(min_length=1)
     skill: str | None = None
+    skill_body: SkillBody = "skill_md"
     agent: str | None = None
     agent_tools: list[str] | None = None
     arm: list[Arm] = Field(min_length=1)
+
+    @field_validator("source")
+    @classmethod
+    def _slashed(cls, source: str) -> str:
+        """역슬래시를 슬래시로 바꾼다. 검증, 원천 읽기, Read 판정이 모두 이 값을 쓴다. 리눅스에서는
+        역슬래시가 경로 구분자가 아니라, 검증 때만 바꾸면 원천 읽기가 그 파일을 찾지 못한다(PR #421
+        의 CodeRabbit 이 짚었다. 리눅스에서 돌려 보지는 않았다)."""
+        return source.replace("\\", "/")
 
     @model_validator(mode="after")
     def _consistent(self) -> Spec:
@@ -289,10 +321,22 @@ class Spec(_Model):
                 problems.append(f"{self.kind} 갈래는 target 을 쓰지 않는다: {', '.join(extra)}")
         if self.kind != "skill" and self.skill is not None:
             problems.append("skill 은 kind 가 skill 일 때만 쓴다")
+        problems += self._skill_file_field_problems()
         problems += self._agent_field_problems()
         if problems:
             raise ValueError("; ".join(problems))
         return self
+
+    def _skill_file_field_problems(self) -> list[str]:
+        if self.skill_body == "skill_md":
+            return []
+        if self.kind != "skill" or self.skill is None:
+            return ['skill_body = "files" 는 kind 가 skill 이고 skill 을 줄 때만 쓴다']
+        folder = PurePosixPath(".claude", "skills", self.skill)
+        source = PurePosixPath(self.source)
+        if source.parent != folder or source.name == "SKILL.md":
+            return [f'skill_body = "files" 의 source 는 {folder}/ 바로 아래의 SKILL.md 밖 파일이다']
+        return []
 
     def _agent_field_problems(self) -> list[str]:
         if self.kind != "agent":
@@ -472,8 +516,11 @@ def tools_for(spec: Spec) -> tuple[str, ...]:
     세션에서는 서브에이전트가 도구 0개로 거부됐고, 정의의 도구 넷을 더하자 돌았다(claude 2.1.292
     에서 손으로 본 두 구성, 일지 2026-10-12-02). 정의의 도구가 본 세션 도구의 부분집합인 구성(정의에
     `TaskStop` 이 없고 본 세션에 있다)에서도 서브에이전트가 돌았다(claude 2.1.296,
-    `.scratch/harness/probes/subagent_task_stop.py` 의 대조군).
+    `.scratch/harness/probes/subagent_task_stop.py` 의 대조군). 하위 파일 갈래면 스킬 본문이
+    가리키는 하위 파일을 열도록 Read 를 더한다.
     """
+    if spec.skill_body == "files":
+        return (_TOOLS[spec.kind], "Read")
     return (_TOOLS[spec.kind], *(spec.agent_tools or []))
 
 
@@ -768,6 +815,33 @@ def _skill_defined(skill: str, arm: Arm, checkout: Path) -> bool:
     )
 
 
+def _skill_file_reasons(
+    spec: Spec, skill: str, arm: Arm, facts: Facts, checkout: Path
+) -> list[str]:
+    """하위 파일 갈래(`skill_body = "files"`)의 Read 판정. 답이 그 스킬 폴더 밖 파일에서 오는 길을
+    막는다. `skill` 은 그 명세의 스킬 이름이다.
+
+    실험군은 원천을 읽어야 한다. 대조군은 옛 사본에 원천이 없을 수 있어 읽지 않아도 된다.
+    """
+    folder = _place_key(checkout / ".claude" / "skills" / skill)
+    reasons: list[str] = []
+    outside = [
+        path
+        for path in facts.reads
+        if not _place_key(Path(path) if Path(path).is_absolute() else checkout / path).startswith(
+            folder + os.sep
+        )
+    ]
+    if outside:
+        reasons.append(f"스킬 폴더 밖을 읽었다: {', '.join(outside)}")
+    source = checkout / spec.source
+    if arm.role == "experiment" and not any(
+        _same_place(path, source, checkout) for path in facts.reads
+    ):
+        reasons.append(f"실험군이 원천 {spec.source} 를 Read 로 읽지 않았다")
+    return reasons
+
+
 def judge(spec: Spec, arm: Arm, facts: Facts, checkout: Path) -> list[str]:
     """통과면 빈 목록, 아니면 실패의 이유들."""
     reasons: list[str] = []
@@ -805,6 +879,8 @@ def judge(spec: Spec, arm: Arm, facts: Facts, checkout: Path) -> list[str]:
                 reasons.append(f"스킬 {spec.skill} 을 부르지 않았다")
             if not any(Path(folder).name == spec.skill for folder in facts.skill_dirs):
                 reasons.append(f"스킬 {spec.skill} 이 실린 자리 줄이 없다. 자리 판정이 빈다")
+        if spec.skill_body == "files" and spec.skill is not None:
+            reasons += _skill_file_reasons(spec, spec.skill, arm, facts, checkout)
     if spec.kind == "agent":
         reasons += _agent_reasons(spec, arm, facts, checkout)
     if facts.answer is None:
@@ -894,6 +970,36 @@ def source_problems(spec: Spec, places: dict[str, Path]) -> list[str]:
                     "으로 준다(커밋은 명세 머리 주석이 적고, 없으면 그 명세를 들인 커밋의 "
                     "부모다. 프로브 README `canary/` 행)"
                 )
+    return problems
+
+
+def skill_file_problems(spec: Spec, places: dict[str, Path]) -> list[str]:
+    """하위 파일 명세(`skill_body = "files"`)에서 실험군 사본의 그 스킬 `SKILL.md` 에 카나리아가
+    있으면 그 문제들.
+
+    답은 Skill 로 실린 `SKILL.md` 가 아니라 Read 로 연 원천에서 와야 한다. 대조군 사본은 보지
+    않는다. 옮기기 전 사본의 `SKILL.md` 에는 옮긴 글이 있어도 되고, 답에 그 글이 나오면 대조군
+    판정이 잡는다.
+    """
+    if spec.skill_body != "files" or spec.skill is None:
+        return []
+    problems: list[str] = []
+    for arm in spec.arm:
+        checkout = places[arm.name]
+        if arm.role != "experiment" or not checkout.is_dir():
+            continue  # 체크아웃이 없으면 `_preflight` 가 따로 알린다
+        path = checkout / ".claude" / "skills" / spec.skill / "SKILL.md"
+        try:
+            text = _flat(path.read_text(encoding="utf-8"))
+        except (OSError, UnicodeDecodeError) as error:
+            problems.append(f"{arm.name}: 스킬 본문 {path} 을 읽지 못했다: {error}")
+            continue
+        found = [canary for canary in spec.expect if _flat(canary) in text]
+        if found:
+            problems.append(
+                f"{arm.name}: 스킬 본문 SKILL.md 에 카나리아가 있다. 원천을 읽지 않고도 답할 수 "
+                f"있다: {', '.join(found)}"
+            )
     return problems
 
 
@@ -1230,6 +1336,7 @@ def _preflight(spec: Spec, places: dict[str, Path], view: ViewReader) -> list[st
         problem for arm in spec.arm for problem in target_problems(spec, arm, places[arm.name])
     ]
     problems += source_problems(spec, places)
+    problems += skill_file_problems(spec, places)
     problems += agent_problems(spec, places)
     problems += ancestor_problems(spec, places)
     return problems + view_problems(spec, places, view)

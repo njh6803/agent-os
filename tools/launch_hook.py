@@ -40,7 +40,7 @@ Write·Edit 마다 알려 같은 문단이 약 마흔 번 컨텍스트에 쌓였
   읽는다(공식 hooks 문서, 재지 않았다). 주 체크아웃이 이 파일을 들인 커밋보다 뒤에 있으면 그렇다.
   이 파일을 들이는 PR 이 병합된 뒤 주 체크아웃을 당기기 전, 주 체크아웃이 그보다 앞서 딴 브랜치에
   있을 때, 이 파일의 이름을 바꾼 뒤다. 그래서 이 파일을 들인 PR 은 병합 직후 주 체크아웃을 당긴다
-  (주 체크아웃 세션의 tidy-checkouts, next-session "워크트리에서 병합할 때").
+  (주 체크아웃 세션의 tidy-checkouts, next-session merge.md 의 "워크트리에서 병합할 때").
 - 훅 파일은 있지만 그 판이 등록과 맞지 않는 것(주 체크아웃의 옛 훅이 새 등록의 이벤트로 도는 것).
 - 알림이 데스크톱 앱에서 어떻게 보이는지. `systemMessage` 는 `claude -p` 의 stream-json 에서
   `informational` 이벤트로 오는 것만 봤다. 공식 hooks 문서는 Setup 이 JSON 출력(`systemMessage`

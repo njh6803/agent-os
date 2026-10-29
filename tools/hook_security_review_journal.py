@@ -2,13 +2,14 @@
 옮기라는 계기를 컨텍스트에 넣는다(대기열 250).
 
 PR 직전 리뷰의 보고는 받은 턴에 일지로 옮긴다(`code-review` 6단계 끝, 대기열 244). 그 문장은 셀프
-리뷰 때 실리는 스킬과 PR 뒤에 실리는 `next-session` 1단계 4에 있어, 컨텍스트 압축 뒤 PR 직전 리뷰를
-받는 턴에는 맥락에 없을 수 있다. 서브에이전트 보고(`bug-perf-review`, `coderabbit-review`)는 정의가
-보고 끝에 그 한 줄을 글자 그대로 적게 해서 덮는다. 내장 `/security-review`는 고칠 수 없는 명령이고,
-본 세션이 그 명령의 지시를 따라 보고를 스스로 쓴다. 그래서 그 명령을 부르는 이 순간에 문장을 넣는다.
-본 세션은 CodeRabbit 좌석을 `coderabbit auth status` 한 줄로 보고(PR 템플릿의 PR 직전 리뷰 줄)
-좌석이 없으면 `coderabbit-review`를 거치지 않고 대체 둘로 가므로, `coderabbit-review` 정의에 둔
-문장은 흔한 길에서 읽히지 않는다(셀프 리뷰 명세 축, 일지 2026-10-28-08).
+리뷰 때 실리는 스킬과 PR 뒤에 여는 `next-session` 의 `merge.md` 3(일지)에 있어, 컨텍스트 압축 뒤 PR
+직전 리뷰를 받는 턴에는 맥락에 없을 수 있다. 서브에이전트 보고(`bug-perf-review`,
+`coderabbit-review`)는 정의가 보고 끝에 그 한 줄을 글자 그대로 적게 해서 덮는다. 내장
+`/security-review`는 고칠 수 없는 명령이고, 본 세션이 그 명령의 지시를 따라 보고를 스스로 쓴다.
+그래서 그 명령을 부르는 이 순간에 문장을 넣는다. 본 세션은 CodeRabbit 좌석을
+`coderabbit auth status` 한 줄로 보고(PR 템플릿의 PR 직전 리뷰 줄) 좌석이 없으면
+`coderabbit-review`를 거치지 않고 대체 둘로 가므로, `coderabbit-review` 정의에 둔 문장은 흔한 길에서
+읽히지 않는다(셀프 리뷰 명세 축, 일지 2026-10-28-08).
 
 가르는 것은 입력의 `tool_input.skill` 하나다. 앞의 `/`를 벗긴 이름이 `security-review`와 같을 때만
 알린다. 이 PC의 트랜스크립트에서 그 호출의 입력은 `{"skill": "security-review"}`가 136번,

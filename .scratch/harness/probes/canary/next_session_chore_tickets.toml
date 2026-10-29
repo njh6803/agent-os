@@ -4,6 +4,9 @@
 # (`caaa062b`)에는 카나리아가 없다. 병합 뒤에는 `caaa062b` 를 `--control-commit` 으로 준다(README `canary/` 행).
 # 최신 결과: 통과 4(2026-10-22, 이 PC, claude 2.1.302, 대조군 주 체크아웃 `caaa062b`, 일지 2026-10-22-09).
 # 그 뒤 셀프 리뷰와 PR 직전 리뷰가 원천 본문을 고쳐 두 번 모두 사전 확인으로 갈음했다(2026-10-22, 일지 2026-10-22-09).
+# 2026-10-29 harness 027 이 3단계의 티켓 번호 받기를 `directive.md` 1 로 옮겨 그 물음(옛 3)과 기대를 뺐다. 그 기대는
+#   `directive.md` 를 원천으로 둔 `next_session_model_sweep.toml` 의 기대에 든다. 남은 둘은
+#   SKILL.md 결정표에 그대로 있어 사전 확인만 했다(대조군인 옮기기 전 커밋도 둘을 들어 대조가 서지 않는다).
 # 돌리는 법: 워크트리 `.claude/worktrees/<이름>/` 루트에서
 #   uv run python tools/canary.py .scratch/harness/probes/canary/next_session_chore_tickets.toml <출력 디렉터리>
 kind = "skill"
@@ -11,13 +14,11 @@ question = '''
 next-session 스킬을 Skill 도구로 불러 본문을 읽어라. 스킬이 시키는 일(일지 읽기, 지시문 쓰기, 세션 열기)은 하지 않고 본문만 읽는다.
 1) 결정표의 "하네스 chore 배치" 줄에서, 고른 대기열 행을 몇 개의 지시문으로 내는지 적은 문장을 글자 그대로 옮겨라.
 2) 같은 줄에서 대상 파일이 서로 겹치는 행을 어떻게 다루는지 적은 문장을 글자 그대로 옮겨라.
-3) 3단계 첫머리에서 하네스 chore 배치의 티켓 번호를 받는 법을 적은 문장과 그 바로 뒤 두 문장을 글자 그대로 옮겨라.
 판단이나 설명은 덧붙이지 않는다. 본문에 그런 문장이 없으면 그 번호에 "없음"이라고만 답하라.
 '''
 expect = [
   "고른 행을 티켓 단위로 나눠 티켓마다 지시문 하나를 낸다",
   "다음 chore 차례에 다시 고른다",
-  "티켓 파일은 이 세션이 쓰지 않는다",
 ]
 source = ".claude/skills/next-session/SKILL.md"
 skill = "next-session"
