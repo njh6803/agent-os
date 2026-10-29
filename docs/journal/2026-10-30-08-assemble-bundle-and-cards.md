@@ -1,4 +1,4 @@
-# 2026-10-30 (01) design-card-build 01 짓기 명령의 묶음·카드·글꼴
+# 2026-10-30 (08) design-card-build 01 짓기 명령의 묶음·카드·글꼴
 
 next-session 지시문으로 연 새 세션이다(나란히 여는 2 중 1, 다른 하나는 03 올리기 계획). 2026-10-29에 시작해 자정을 넘겼다. 주 체크아웃이 미갱신이라 `tidy-checkouts`를 먼저 돌고, 주 체크아웃에서 브랜치를 따지 않고 `EnterWorktree`(이름 `01-assemble-bundle-and-cards`)로 들어가 브랜치를 `feature/01-assemble-bundle-and-cards`로 바꿨다(기준 `f6df25c8`). 대화가 길어 한 번 압축됐다.
 
@@ -37,7 +37,7 @@ next-session 지시문으로 연 새 세션이다(나란히 여는 2 중 1, 다�
 - 그리기 시험의 기준 주소는 요청 가로채기(`route`) 길이다(위 "글꼴 대조").
 - 그리기 시험과 글꼴 주소 시험을 칸마다의 단언에서 한 객체 맞대기로 바꿨다. 변이의 표지가 그 단언만의 문구가 되게 하려는 것이다(위 "변이").
 - 그리기 변이의 좁히기는 `-t "(?<!Icon)Button 카드는"`이다. vitest의 `-t`가 묶음 이름까지 든 전체 이름과 맞춰, `Button 카드는`은 IconButton도 고르고 `^Button`과 `그리기 Button`은 아무것도 고르지 않았다(손으로 봤다).
-- 일지를 `2026-10-29-22`로 만들었다가 날짜가 바뀌어 훅이 알린 대로 `2026-10-30-01`로 옮겼다.
+- 일지를 `2026-10-29-22`로 만들었다가 날짜가 바뀌어 훅이 알린 대로 `2026-10-30-08`로 옮겼다.
 
 남은 일(새 세션):
 
@@ -57,8 +57,8 @@ next-session 지시문으로 연 새 세션이다(나란히 여는 2 중 1, 다�
 시작 프롬프트: /implement .scratch/design-card-build/issues/01-assemble-bundle-and-cards.md
 브랜치: feature/01-assemble-bundle-and-cards
 모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
-읽을 것: 일지 docs/journal/2026-10-30-01-assemble-bundle-and-cards.md의 "인계 전 상태"
-이어받을 상태: 인계: 셀프 리뷰 직전. 커밋하지 않은 변경이 워크트리에 있고 셀프 리뷰(/code-review)부터 한다. 일지 docs/journal/2026-10-30-01-assemble-bundle-and-cards.md. 임시 디자인 시스템 아티팩트 64VW1b5F8tRcCeTZBwZA29는 사용자가 남겨 두기로 했다. 지우지 않고 다시 묻지 않는다. 이 PC에서 pre-commit의 pytest는 다른 시간 시험(tests/tools/test_probe_kit.py, tests/tools/test_rerun_runner.py, tests/channel/cli/test_interrupt.py, tests/tools/test_hook_edit_during_commit.py)이 부하에서 한 번씩 막을 수 있다. 단독 실행이 통과하면 SKIP 없이 같은 커밋을 한 번 더 시도하고, SKIP=pytest는 사람에게 묻는다
+읽을 것: 일지 docs/journal/2026-10-30-08-assemble-bundle-and-cards.md의 "인계 전 상태"
+이어받을 상태: 인계: 셀프 리뷰 직전. 커밋하지 않은 변경이 워크트리에 있고 셀프 리뷰(/code-review)부터 한다. 일지 docs/journal/2026-10-30-08-assemble-bundle-and-cards.md. 임시 디자인 시스템 아티팩트 64VW1b5F8tRcCeTZBwZA29는 사용자가 남겨 두기로 했다. 지우지 않고 다시 묻지 않는다. 이 PC에서 pre-commit의 pytest는 다른 시간 시험(tests/tools/test_probe_kit.py, tests/tools/test_rerun_runner.py, tests/channel/cli/test_interrupt.py, tests/tools/test_hook_edit_during_commit.py)이 부하에서 한 번씩 막을 수 있다. 단독 실행이 통과하면 SKIP 없이 같은 커밋을 한 번 더 시도하고, SKIP=pytest는 사람에게 묻는다
 확인할 선행 조건: 없음
 이번 요청 범위: PR과 병합까지
 ```
@@ -148,8 +148,8 @@ open-session을 부른다 2026-10-29T15:22:55Z
 시작 프롬프트: /implement .scratch/design-card-build/issues/01-assemble-bundle-and-cards.md
 브랜치: feature/01-assemble-bundle-and-cards
 모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
-읽을 것: 일지 docs/journal/2026-10-30-01-assemble-bundle-and-cards.md의 "인계 전 상태(커밋 뒤)"
-이어받을 상태: 인계: 커밋 뒤. 셀프 리뷰를 반영해 커밋했고 푸시와 PR은 아직이다. 남은 단계는 커밋한 판에서 변이 표 전체와 font_route.mjs를 다시 돌려 프로브 README와 티켓 결과를 고치기, 티켓 done, PR, PR 직전 리뷰, CI 확인, 병합이다. 일지 docs/journal/2026-10-30-01-assemble-bundle-and-cards.md. 임시 디자인 시스템 아티팩트 64VW1b5F8tRcCeTZBwZA29는 사용자가 남겨 두기로 했다. 지우지 않고 다시 묻지 않는다. 이 PC에서 pre-commit의 pytest는 다른 시간 시험(tests/tools/test_probe_kit.py, tests/tools/test_rerun_runner.py, tests/channel/cli/test_interrupt.py, tests/tools/test_hook_edit_during_commit.py)이 부하에서 한 번씩 막을 수 있다. 단독 실행이 통과하면 SKIP 없이 같은 커밋을 한 번 더 시도하고, SKIP=pytest는 사람에게 묻는다
+읽을 것: 일지 docs/journal/2026-10-30-08-assemble-bundle-and-cards.md의 "인계 전 상태(커밋 뒤)"
+이어받을 상태: 인계: 커밋 뒤. 셀프 리뷰를 반영해 커밋했고 푸시와 PR은 아직이다. 남은 단계는 커밋한 판에서 변이 표 전체와 font_route.mjs를 다시 돌려 프로브 README와 티켓 결과를 고치기, 티켓 done, PR, PR 직전 리뷰, CI 확인, 병합이다. 일지 docs/journal/2026-10-30-08-assemble-bundle-and-cards.md. 임시 디자인 시스템 아티팩트 64VW1b5F8tRcCeTZBwZA29는 사용자가 남겨 두기로 했다. 지우지 않고 다시 묻지 않는다. 이 PC에서 pre-commit의 pytest는 다른 시간 시험(tests/tools/test_probe_kit.py, tests/tools/test_rerun_runner.py, tests/channel/cli/test_interrupt.py, tests/tools/test_hook_edit_during_commit.py)이 부하에서 한 번씩 막을 수 있다. 단독 실행이 통과하면 SKIP 없이 같은 커밋을 한 번 더 시도하고, SKIP=pytest는 사람에게 묻는다
 확인할 선행 조건: 없음
 이번 요청 범위: PR과 병합까지
 ```
@@ -214,8 +214,8 @@ open-session을 부른다 2026-10-29T17:01:34Z
 시작 프롬프트: /implement .scratch/design-card-build/issues/01-assemble-bundle-and-cards.md
 브랜치: feature/01-assemble-bundle-and-cards
 모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
-읽을 것: 일지 docs/journal/2026-10-30-01-assemble-bundle-and-cards.md의 "이어받은 세션(커밋 뒤)"부터 끝까지
-이어받을 상태: 인계: 셀프 리뷰 직전. 커밋하지 않은 변경이 워크트리에 있고 셀프 리뷰(/code-review)부터 한다. 기준은 origin/main을 합친 커밋 49e3f72e(푸시 안 함)이고 범위는 PR 직전 리뷰(보안 지적 없음, 버그·성능 Minor 셋)를 반영한 커밋하지 않은 변경이다. 그 뒤 커밋, 변이 표 전체 실행(리뷰를 모두 반영한 뒤의 한 번이라 앞 세션이 띄웠다 멈췄다), 프로브 README와 티켓 결과 고치기, 티켓 done, PR, CI 확인, 병합이다. PR 직전 리뷰는 다시 돌리지 않는다. 일지 docs/journal/2026-10-30-01-assemble-bundle-and-cards.md. 임시 디자인 시스템 아티팩트 64VW1b5F8tRcCeTZBwZA29는 사용자가 남겨 두기로 했다. 지우지 않고 다시 묻지 않는다. 이 PC에서 pre-commit의 pytest는 다른 시간 시험(tests/tools/test_probe_kit.py, tests/tools/test_rerun_runner.py, tests/channel/cli/test_interrupt.py, tests/tools/test_hook_edit_during_commit.py)이 부하에서 한 번씩 막을 수 있다. 단독 실행이 통과하면 SKIP 없이 같은 커밋을 한 번 더 시도하고, SKIP=pytest는 사람에게 묻는다
+읽을 것: 일지 docs/journal/2026-10-30-08-assemble-bundle-and-cards.md의 "이어받은 세션(커밋 뒤)"부터 끝까지
+이어받을 상태: 인계: 셀프 리뷰 직전. 커밋하지 않은 변경이 워크트리에 있고 셀프 리뷰(/code-review)부터 한다. 기준은 origin/main을 합친 커밋 49e3f72e(푸시 안 함)이고 범위는 PR 직전 리뷰(보안 지적 없음, 버그·성능 Minor 셋)를 반영한 커밋하지 않은 변경이다. 그 뒤 커밋, 변이 표 전체 실행(리뷰를 모두 반영한 뒤의 한 번이라 앞 세션이 띄웠다 멈췄다), 프로브 README와 티켓 결과 고치기, 티켓 done, PR, CI 확인, 병합이다. PR 직전 리뷰는 다시 돌리지 않는다. 일지 docs/journal/2026-10-30-08-assemble-bundle-and-cards.md. 임시 디자인 시스템 아티팩트 64VW1b5F8tRcCeTZBwZA29는 사용자가 남겨 두기로 했다. 지우지 않고 다시 묻지 않는다. 이 PC에서 pre-commit의 pytest는 다른 시간 시험(tests/tools/test_probe_kit.py, tests/tools/test_rerun_runner.py, tests/channel/cli/test_interrupt.py, tests/tools/test_hook_edit_during_commit.py)이 부하에서 한 번씩 막을 수 있다. 단독 실행이 통과하면 SKIP 없이 같은 커밋을 한 번 더 시도하고, SKIP=pytest는 사람에게 묻는다
 확인할 선행 조건: 없음
 이번 요청 범위: PR과 병합까지
 ```
@@ -275,3 +275,56 @@ diff 밖의 낡은 곳으로 낸 티켓의 "변이 25"와 README 변이 절은 �
 - `command.ts`: "짓기 명령에서는 산출 폴더 자리에 쓸 수 없는 것(그 자리가 파일이다, 비어 있지 않은 폴더다, 산출을 옮길 수 없다)과 임시 폴더를 만들 수 없는 것도 든다."
 - 시험 주석: "`tmpdir()` 은 부를 때마다 환경 변수를 읽고, 윈도는 TEMP·TMP 를, 그 밖은 TMPDIR·TMP·TEMP 를 차례로 본다."
 - 변이 23의 이름과 표지, 티켓의 "임시 폴더를 만들지 못하면" 줄.
+
+## 커밋(셀프 리뷰 반영)
+
+반영한 일곱 파일을 `3892f94a`로 커밋했다(`git commit -F`). 첫 시도는 pre-commit의 pytest가 `3 failed, 6003 passed`로 막았다. 실패는 `tests/channel/cli/test_interrupt.py`의 두 사례(`Ctrl+C 를 누른 자식이 30초 안에 끝나지 않았다`)와 `tests/tools/test_rerun_runner.py`의 `test_같은_갈래가_두_번_든_파일럿의_두_회차가_함께_돌아도_번호가_다르다`로, 인계가 적은 부하 때의 시간 시험이다. 나머지 검사는 모두 `Passed`였다. 두 파일만 `uv run pytest -q tests/channel/cli/test_interrupt.py tests/tools/test_rerun_runner.py`로 돌리자 `69 passed in 603.49s`였고, SKIP 없이 같은 커밋을 다시 시도해 pre-commit의 검사가 모두 `Passed`였다(pytest 967.0초, web-verify 605.3초). ruff 둘은 스테이지된 `.py`가 없어 `Skipped`였고, 이 커밋은 `.py`도 ruff 설정도 바꾸지 않았다. 모두 커밋 로그를 손으로 봤다.
+
+## 인계 전 상태(셀프 리뷰 반영 커밋 뒤)
+
+이 세션의 제목은 `feature/01-assemble-bundle-and-cards`다. 커밋 뒤 인계 계기(`hook_handoff`, 세션 컨텍스트 248,568 토큰)가 와 `커밋 뒤`로 넘긴다. 인계하지 않는 다섯에 들지 않았다. 계기를 낸 커밋이 성공했고, 요청 범위가 병합까지이며, 이어받은 경계(`셀프 리뷰 직전`)와 다르고, `인계 못함` 줄이 없으며, `get_session`의 `self`에 `parentSessionId`가 없다.
+
+푸시하지 않았고 PR도 없다(`gh pr view feature/01-assemble-bundle-and-cards --json state`가 `no pull requests found`). 워크트리의 커밋하지 않은 변경은 이 일지의 커밋 절·인계 절뿐이다.
+
+남은 일(새 세션):
+
+1. 커밋한 판에서 변이 표 전체를 돈다(`PYTHONUTF8=1 uv run python tools/mutate.py .scratch/design-card-build/probes/assemble_mutations.toml`, 변이 29). 셀프 리뷰까지 모두 반영한 뒤의 한 번이다. 도는 동안 이 체크아웃의 파일을 고치지 않는다. 23은 이 세션이 단독으로 돌려 기대대로였다. 표지가 맞지 않는 변이가 나오면 손으로 넣어 실패 출력을 본 뒤 고친다.
+2. 프로브 README "2026-10-29 짓기 명령의 변이" 절에 1의 결과(29, 기대대로인 수, 돌린 커밋)를 적고, "재지 않은 것"에서 옛 이름 묶음 JS를 빼고(변이 11이 잰다) 명령이 판정을 부르는 줄을 더한다(변이 표 머리 주석과 같게). 티켓 결과의 "변이" 줄을 29로 고친다.
+3. 티켓을 `done`으로 바꿔 커밋하고, 푸시하고, PR을 연다(`/git-pr`). PR 체크리스트의 PR 직전 리뷰 줄에는 일지 "이어받은 세션(커밋 뒤)"의 "PR 직전 리뷰" 결과(보안 지적 없음, 버그 Minor 셋 모두 고침)를 적는다. 셀프 리뷰 반영으로 새로 쓴 사실 문장(위 "셀프 리뷰(PR 직전 리뷰 반영분)" 끝의 목록)은 PR 직전 리뷰를 다시 돌리지 않아 PR 봇이 겨냥할 자리로 남는다. CI의 `pnpm -C web verify`에서 새 node 시험이 chromium을 띄우는지 보고 티켓 마무리의 마지막 체크박스를 채운 뒤 병합한다.
+
+함께 볼 것: 나란히 도는 03 워크트리와 PR #430도 프로브 README를 고친다(병합하는 쪽에서 글자 충돌 후보). 08 워크트리의 일지 `2026-10-30-02`, PR #430·#431의 `2026-10-30-03`·`-04`가 먼저 병합되어도 이 일지(`-01`)와 번호가 겹치지 않는다(`tools/sibling_overlap.py`가 `번호 겹침 없음`).
+
+## 인계(셀프 리뷰 반영 커밋 뒤)
+
+`커밋 뒤`의 인계 계기를 받아 `next-session` `handoff.md`대로 넘긴다. 모델 줄은 `uv run python tools/model_sweep.py feature/01-assemble-bundle-and-cards`가 `Opus 5.5 / xhigh`를 찍었다. 지시문:
+
+```
+다음 작업: .scratch/design-card-build/issues/01-assemble-bundle-and-cards.md. 올리기 도구의 assemble 명령이 컴포넌트 묶음·카드·글꼴·옛 이름을 짓고, pnpm -C web verify가 chromium으로 카드가 그려지는지 보게 한다
+다음 단계: 구현
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /implement .scratch/design-card-build/issues/01-assemble-bundle-and-cards.md
+브랜치: feature/01-assemble-bundle-and-cards
+모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
+읽을 것: 일지 docs/journal/2026-10-30-08-assemble-bundle-and-cards.md의 "이어받은 세션(셀프 리뷰 직전)"부터 끝까지
+이어받을 상태: 인계: 커밋 뒤. 셀프 리뷰 두 축을 반영해 커밋했고 푸시와 PR은 아직이다. 남은 단계는 커밋한 판에서 변이 표 전체 실행(변이 29, 리뷰를 모두 반영한 뒤의 한 번이다), 프로브 README의 변이 절과 티켓 결과의 "변이" 줄 고치기, 티켓 done, 푸시, PR(/git-pr), CI 확인(티켓 마무리의 마지막 체크박스), 병합이다. PR 직전 리뷰는 앞 세션이 돌고 반영했고 다시 돌리지 않는다. 임시 디자인 시스템 아티팩트 64VW1b5F8tRcCeTZBwZA29는 사용자가 남겨 두기로 했다. 지우지 않고 다시 묻지 않는다. 이 PC에서 pre-commit의 pytest는 시간 시험(tests/tools/test_probe_kit.py, tests/tools/test_rerun_runner.py, tests/channel/cli/test_interrupt.py, tests/tools/test_hook_edit_during_commit.py)이 부하에서 한 번씩 막을 수 있다. 단독 실행이 통과하면 SKIP 없이 같은 커밋을 한 번 더 시도하고, SKIP=pytest는 사람에게 묻는다. 일지 docs/journal/2026-10-30-08-assemble-bundle-and-cards.md
+확인할 선행 조건: 없음
+이번 요청 범위: PR과 병합까지
+```
+
+제목은 `feature/01-assemble-bundle-and-cards (인계함)`으로 바꿨고(앱이 바꿨다고 알렸다), 띄운 백그라운드 작업(리뷰 서브에이전트 둘, 커밋 시도 둘, 단독 시험)은 모두 끝나 멈출 것이 없었으며, 워크트리 잠금 풀기는 `is not locked`로 끝나 넘어갔다.
+
+open-session을 부른다 2026-10-29T18:37:58Z
+
+## 이어받은 세션(셀프 리뷰 반영 커밋 뒤)
+
+위 지시문으로 연 새 세션이다. 제목을 `feature/01-assemble-bundle-and-cards`로 바꾸고 `git worktree list`에서 찾은 이 워크트리에 `EnterWorktree(path)`로 들어왔다. HEAD는 `3892f94a`였고 커밋하지 않은 변경은 이 일지(커밋 절과 인계 절)뿐이었다.
+
+> 사용자: ".claude/skills/implement/SKILL.md 를 읽어 그대로 따른다. … 인자: .scratch/design-card-build/issues/01-assemble-bundle-and-cards.md / 다음 작업: … / 이어받을 상태: 인계: 커밋 뒤. 셀프 리뷰 두 축을 반영해 커밋했고 푸시와 PR은 아직이다. 남은 단계는 커밋한 판에서 변이 표 전체 실행(변이 29, 리뷰를 모두 반영한 뒤의 한 번이다), 프로브 README의 변이 절과 티켓 결과의 "변이" 줄 고치기, 티켓 done, 푸시, PR(/git-pr), CI 확인(티켓 마무리의 마지막 체크박스), 병합이다. … / 이번 요청 범위: PR과 병합까지"
+
+**origin/main.** `git fetch` 뒤 origin/main에 `8899c41b`(design-card-build 03, #430) 하나가 새로 들었다. 바꾼 파일 열하나 가운데 짓기 명령(`assemble.ts`·`command.ts`)과 그 시험은 없고, 시험이 가져오는 `main.ts`도 없다(`git diff --stat HEAD...origin/main`). 그래서 변이를 합치기 전의 커밋한 판에서 먼저 돌렸다. 프로브 README는 그 PR도 고쳐 명령 블록에서 글자 충돌이 날 자리다(같은 diff로 봤다).
+
+**변이 전체.** 커밋한 판 `3892f94a`에서 `PYTHONUTF8=1 uv run python tools/mutate.py .scratch/design-card-build/probes/assemble_mutations.toml`이 "변이 29 모두 기대대로"를 찍고 0으로 끝났다(도구가 찍은 줄). 기준선 21이 모두 초록이었고 로그 머리에 커밋하지 않은 변경을 알리는 줄이 없었다(로그를 `grep`으로 세고 머리를 손으로 봤다). 도는 동안 이 체크아웃의 파일을 고치지 않았다.
+
+**README와 티켓.** 프로브 README "2026-10-29 짓기 명령의 변이" 절에 둘째 전체 실행 문단을 더하고, "재지 않은 것"에서 옛 이름 묶음 JS(변이 11이 잰다)를 빼고 명령이 판정을 부르는 줄을 지우는 변이를 더했다(변이 표 머리 주석과 같게). 티켓 결과의 "변이" 줄을 29와 이 실행으로 고치고 `Status:`를 `done`으로 바꿨다. 마무리의 마지막 체크박스(CI의 chromium)는 PR의 CI를 본 뒤 채운다.
+
+**일지 번호.** 커밋 전의 `uv run python tools/sibling_overlap.py`가 1로 끝났다. origin/main이 `e96ab3be`(admin-style 08, #432)로 움직여 최신 일지가 `2026-10-30-05`이고, 이 일지(`-01`)가 이름순으로 그보다 앞선다고 알렸다. `--move`로 `2026-10-30-08`로 옮겼고, 도구가 인용을 고친 파일로 티켓과 이 일지를 찍었다. 옛 번호의 잔존은 `git grep -n '2026-10-30-01'`과 작업 트리의 `grep -rn`으로 0이었다(손으로 봤다). #432가 바꾼 파일에도 짓기 명령과 그 시험은 없다(`git diff --stat 8899c41b e96ab3be`).

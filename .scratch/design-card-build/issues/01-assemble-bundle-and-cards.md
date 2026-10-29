@@ -8,7 +8,7 @@
 
 **Blocked by:** None (can start immediately)
 
-**Status:** in-progress
+**Status:** done
 
 ### 시작 전
 
@@ -78,5 +78,5 @@
 - **장면의 이름.** `<section data-scene="…">`의 값은 스토리의 내보낸 이름(`ShowcaseApprovalPair` 따위)이고, 스토리 객체의 `name`이 아니다. 명세가 근거로 든 프로브 `card_build.mjs`가 내보낸 이름을 썼다(그 파일 237행). 그 값은 시험이 `[data-scene]`의 수를 셀 때만 쓰인다(`web/`을 `data-scene`으로 grep했다).
 - **시험이 지나지 않는 길.** 장면이 meta와 스토리의 `args`를 합친 값이 그리기에 닿는지와, `render` 없이 meta의 `component`로 그리는 갈래는 지금 showcase 스토리 열하나가 모두 `args`를 받지 않는 `render: () =>`를 가져 어떤 시험도 보지 않는다(합치는 줄 자체는 열하나 모두에서 돈다. 스토리 소스를 Grep해 `tags: ["showcase"]` 다음 줄을 손으로 봤다). 명령이 임시 폴더를 지우지 못해 남기는 갈래도 시험이 지나지 않는다. 명령 독스트링의 못 보는 것에 적었다.
 - **실패하면 `--out`이 빈다.** 목록 파일을 산출을 옮기기 전에 쓴다. `--paths`에 이미 있는 폴더를 주자 `"kind":"output"`, 종료 1로 끝났고 `--out` 자리에 폴더가 생기지 않았다(`node web/tools/sync-design-system/main.ts assemble --out <폴더>/out --paths <폴더>/list-is-dir`과 `ls -A <폴더>`로 손으로 봤다). 셀프 리뷰 전의 판은 같은 입력에서 `--out`에 794개를 남겼다(명세 축 리뷰어가 돌려 봤다).
-- **임시 폴더를 만들지 못하면.** PR 직전 버그 축이 잡았다. 명령이 임시 폴더를 `try` 밖에서 만들어, 만들지 못하면 JSON 보고 없이 예외로 끝났다. 시험(임시 폴더 환경 변수 셋을 없는 폴더로 둔다)을 먼저 써서 이 시험 파일을 `-t 만들지`로 좁혀 돌리자 `mkdtemp`의 ENOENT가 `run()`을 지나 던져져 빨갰다(1 failed | 29 skipped. 앞 세션이 손으로 봤다, 일지 2026-10-30-01 "이어받은 세션(커밋 뒤)"). 그 뒤 그것을 `output` 오류로 바꾸고 임시 폴더를 지우지 못해도 결과를 덮지 않게 고쳤다. 같은 빨강을 변이 표의 23(오류를 `output`으로 바꾸는 줄을 `throw error`로 되돌린다)이 다시 잰다. `PYTHONUTF8=1 uv run python tools/mutate.py .scratch/design-card-build/probes/assemble_mutations.toml 23`이 기준선 초록, 변이 빨강, 표지 `Error: ENOENT: no such file or directory, mkdtemp`까지 기대대로라고 찍었다. 셀프 리뷰가 이 시험과 이웃 `run()` 사례 둘에 오류 문구 단언을 더하게 한 판에서 이 시험 파일이 30 통과였다(`pnpm -C web exec vitest run --project node tools/sync-design-system/assemble.test.ts`, 손으로 봤다).
-- **변이.** `probes/assemble_mutations.toml`의 변이 25. 결과와 표지를 고친 까닭은 프로브 README "2026-10-29 짓기 명령의 변이"다.
+- **임시 폴더를 만들지 못하면.** PR 직전 버그 축이 잡았다. 명령이 임시 폴더를 `try` 밖에서 만들어, 만들지 못하면 JSON 보고 없이 예외로 끝났다. 시험(임시 폴더 환경 변수 셋을 없는 폴더로 둔다)을 먼저 써서 이 시험 파일을 `-t 만들지`로 좁혀 돌리자 `mkdtemp`의 ENOENT가 `run()`을 지나 던져져 빨갰다(1 failed | 29 skipped. 앞 세션이 손으로 봤다, 일지 2026-10-30-08 "이어받은 세션(커밋 뒤)"). 그 뒤 그것을 `output` 오류로 바꾸고 임시 폴더를 지우지 못해도 결과를 덮지 않게 고쳤다. 같은 빨강을 변이 표의 23(오류를 `output`으로 바꾸는 줄을 `throw error`로 되돌린다)이 다시 잰다. `PYTHONUTF8=1 uv run python tools/mutate.py .scratch/design-card-build/probes/assemble_mutations.toml 23`이 기준선 초록, 변이 빨강, 표지 `Error: ENOENT: no such file or directory, mkdtemp`까지 기대대로라고 찍었다. 셀프 리뷰가 이 시험과 이웃 `run()` 사례 둘에 오류 문구 단언을 더하게 한 판에서 이 시험 파일이 30 통과였다(`pnpm -C web exec vitest run --project node tools/sync-design-system/assemble.test.ts`, 손으로 봤다).
+- **변이.** `probes/assemble_mutations.toml`의 변이 29. 셀프 리뷰와 PR 직전 리뷰를 반영해 커밋한 판(`3892f94a`)에서 `PYTHONUTF8=1 uv run python tools/mutate.py .scratch/design-card-build/probes/assemble_mutations.toml`이 "변이 29 모두 기대대로"를 찍었다(기준선 21 모두 초록). 결과와 표지를 고친 까닭은 프로브 README "2026-10-29 짓기 명령의 변이"다.
