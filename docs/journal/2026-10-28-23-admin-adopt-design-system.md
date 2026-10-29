@@ -412,9 +412,17 @@ open-session을 부른다 2026-10-29T08:59:31Z
 
 지시문의 이어받을 상태대로 셀프 리뷰는 다시 돌리지 않았다. 워크트리 `.claude/worktrees/03-admin-adopt-design-system`에 들어가 위 인계 절을 커밋하고 푸시한 뒤 PR을 연다.
 
+PR #424를 열었다. 인계 절을 실은 커밋 `e997d7d1`의 pre-commit은 모두 Passed였다(ruff 둘은 `.py`가 없어 Skipped). `tools/wait_ci.py 424`가 "끝: 모두 통과"로 끝났다. CodeRabbit은 무료 한도("Review limit reached")로 리뷰하지 않아 회차로 세지 않는다.
+
+봇 회차(claude-review 첫 회차, PR 코멘트):
+- [Minor] "다음" 첫 항목의 "3의 '빌드가 필요한지'"가 어느 파일의 3인지 밝히지 않았다. `upload.md` 33행의 "빌드가 필요한지" 줄을 grep으로 보고 `.claude/skills/sync-design-system/upload.md` 3으로 고쳤다. 셀프 리뷰 절이 옮긴 옛 문장은 인용이라 그대로 둔다.
+- [Nit] 티켓 029가 대기열 529로 이어지는 한 줄이 "다음"에만 있다. 보류했다. 리뷰도 티켓이 529를 가리킬 필요는 없다고 했고, 529의 반영은 "다음"의 둘째 항목이 다음 작업으로 넘긴다.
+
+이 반영을 실은 첫 커밋의 pre-commit에서 `tests/tools/test_rerun_runner.py::test_첫_인계가_나면_새_회차를_열지_않는다`가 빨갰다(1 failed, 5996 passed). 부른 회차가 `rerun-x-01-A-1` 하나뿐이고 `rerun-x-01-B-1`이 없었다. 시험은 B가 A의 인계보다 먼저 떠 있기를 기대하므로 띄우는 순서에 기대는 타이밍 문제로 본다(시험 코드를 읽은 어림이고, 재현하지 않았다). 이 브랜치는 문서만 바꿔 그 시험과 `tools/`를 건드리지 않았다. 대기열에 같은 시험이 없어(`.scratch/retro-queue.md`를 grep) 회차로 세지 않고, 같은 커밋을 한 번 다시 쳤다.
+
 ## 다음
 
-- 올리기는 끝났다(위 "올리기(이어받은 세션, 2026-10-29)"). `11-web-edit-teal-accent-600` 세션은 사람이 받아 둔 지시문대로 이 올리기가 끝났는지 묻고 1부터 확인한다. `claim`은 비었지만 "보낼 것이 없을 때"로 끝나는 것은 그사이 웹 편집이 없고 빌드가 필요하지 않을 때뿐이다. 올린 HEAD `84542f52` 뒤로 main에 든 #420(`f39ae86d`)이 `web/packages/ui`의 `DesignTokens.stories.tsx`를 바꿔, 3의 "빌드가 필요한지"가 `needed: true`를 낼 수 있다.
+- 올리기는 끝났다(위 "올리기(이어받은 세션, 2026-10-29)"). `11-web-edit-teal-accent-600` 세션은 사람이 받아 둔 지시문대로 이 올리기가 끝났는지 묻고 1부터 확인한다. `claim`은 비었지만 "보낼 것이 없을 때"로 끝나는 것은 그사이 웹 편집이 없고 빌드가 필요하지 않을 때뿐이다. 올린 HEAD `84542f52` 뒤로 main에 든 #420(`f39ae86d`)이 `web/packages/ui`의 `DesignTokens.stories.tsx`를 바꿔, `.claude/skills/sync-design-system/upload.md` 3의 "빌드가 필요한지"가 `needed: true`를 낼 수 있다.
 - 둘째 보내기의 거부("You haven't viewed the latest version")는 대기열 529의 3회차다(위 "올리기" 절의 보내기 줄). 529는 자체 승인이 나 있어, 반영(`.claude/skills/sync-design-system/SKILL.md`의 "보내기"와 `import.md` 3)을 chore 브랜치로 딴다.
 - PR #415의 claude-review 첫 회차가 낸 Minor(관리 화면 미리보기의 `a11y` 사본)는 뒤로 넘겨 티켓 04의 "앱 부품" 메모에 적었다(위 "봇 회차" 절).
 - 좁은 폭에서 한국어 낱말 안에서 줄이 갈린다(위 "검증" 절의 정답 사진). 화면 전체의 글자에 걸린 디자인 시스템의 결정(`word-break`)이라 사람이 정할 일이고, 아직 어느 기능에도 적지 않았다.
