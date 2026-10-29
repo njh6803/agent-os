@@ -4,7 +4,7 @@
 # 일지 2026-10-29-01). 판정에 `--heads origin refs/heads/`를 더한 뒤의 결과다(PR #417 CodeRabbit 첫 회차). 이 글자는
 # 패턴을 좁히기 전 판 `f4a6074c`의 스킬에 없어, 그 판을 옮긴 답은 통과하지 못한다. 그 전에는 판정 셋으로 PR 직전 리뷰를
 # 반영한 판(`64ee0233`)과 셀프 리뷰를 반영한 판(`5ccb51a0` 위, claude 2.1.302)이, 판정 둘로 셀프 리뷰 전의 판이 통과 4였다.
-# 2026-10-29 harness 027 이 본문을 `merge.md` 로 옮겨 하위 파일 갈래(`skill_files`)로 바꿨다.
+# 2026-10-29 harness 027 이 본문을 `merge.md` 로 옮겨 하위 파일 갈래(`skill_body = "files"`)로 바꿨다.
 #   대조군은 옮기기 전 커밋 `37759ef2` 을 `--control-commit` 으로 준다.
 # 최신 결과: 통과 4, "없음" 섞임 0(2026-10-29, 이 PC, claude 2.1.312, 실험군은 이 워크트리의 커밋하지 않은 본문(러너가 찍은 커밋은 `37759ef2`), 대조군 `--control-commit 37759ef2`, 일지 2026-10-29-02).
 # 돌리는 법: 워크트리 `.claude/worktrees/<이름>/` 루트에서
@@ -23,7 +23,7 @@ Read로 열고, 아래를 그 파일에서만 찾는다. 스킬 본문(SKILL.md)
 expect = ["--exit-code", "--heads origin refs/heads/", "자동 삭제가 늦거나 돌지 않은 것이라", "원격 브랜치 미확인"]
 source = ".claude/skills/next-session/merge.md"
 skill = "next-session"
-skill_files = true
+skill_body = "files"
 
 [[arm]]
 name = "워크트리"

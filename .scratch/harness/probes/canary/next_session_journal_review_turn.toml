@@ -3,7 +3,7 @@
 # 실험군은 이 명세를 부른 체크아웃, 대조군은 바뀌기 전 판(2d593dd)이다. 옛 판에는 카나리아가 없다.
 # 병합 뒤에는 주 체크아웃이 새 사본이라 옛 판의 커밋을 `--control-commit` 으로 준다(README `canary/` 행).
 # 옮기기 전 결과: 통과 4(2026-10-13, 이 PC, claude 2.1.296, 대조군 `2d593dd`, 실험군은 `c55b1bd` 위의 커밋 전 변경, 일지 2026-10-13-61).
-# 2026-10-29 harness 027 이 본문을 `merge.md` 로 옮겨 하위 파일 갈래(`skill_files`)로 바꿨다.
+# 2026-10-29 harness 027 이 본문을 `merge.md` 로 옮겨 하위 파일 갈래(`skill_body = "files"`)로 바꿨다.
 #   대조군은 옮기기 전 커밋 `37759ef2` 을 `--control-commit` 으로 준다.
 # 최신 결과: 통과 4, "없음" 섞임 0(2026-10-29, 이 PC, claude 2.1.312, 실험군은 이 워크트리의 커밋하지 않은 본문(러너가 찍은 커밋은 `37759ef2`), 대조군 `--control-commit 37759ef2`, 일지 2026-10-29-02).
 # 돌리는 법: 워크트리 `.claude/worktrees/<이름>/` 루트에서
@@ -20,7 +20,7 @@ Read로 열고, 아래를 그 파일에서만 찾는다. 스킬 본문(SKILL.md)
 expect = ["마무리를 기다리지 않고 받은 턴에 옮긴다"]
 source = ".claude/skills/next-session/merge.md"
 skill = "next-session"
-skill_files = true
+skill_body = "files"
 
 [[arm]]
 name = "워크트리"

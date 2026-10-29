@@ -129,6 +129,7 @@ new = '''        os.close(os.open(path, os.O_CREAT | os.O_EXCL | os.O_WRONLY))
 name = "스킬: 작업 폴더의 사본을 고르지 않는다"
 tests = ["tests/tools/test_hook_handoff.py"]
 expect = "red"
+expect_output = ["next-session/handoff.md') == ", "worktrees/05-x/.claude/skills/next-session/handoff.md')"]
 [[mutation.edit]]
 file = "tools/hook_handoff.py"
 old = '''            return handoff
@@ -140,6 +141,7 @@ new = '''            return HANDOFF_PATH
 name = "스킬: 작업 폴더의 나누기 전 사본(인계 절)을 고르지 않는다"
 tests = ["tests/tools/test_hook_handoff.py"]
 expect = "red"
+expect_output = ["next-session/handoff.md') == ", "worktrees/old/.claude/skills/next-session/SKILL.md')"]
 [[mutation.edit]]
 file = "tools/hook_handoff.py"
 old = '''        return skill if has_section else HANDOFF_PATH'''
@@ -149,6 +151,7 @@ new = '''        return HANDOFF_PATH'''
 name = "PR 계기: 인계 계기를 따르라는 문장을 뺀다"
 tests = ["tests/tools/test_hook_pr_next_session.py"]
 expect = "red"
+expect_output = ["다만 인계 절차 파일을 Read 로 열어 따른다"]
 [[mutation.edit]]
 file = "tools/hook_pr_next_session.py"
 old = '''"다만 인계 계기(hook_handoff)가 함께 왔으면 Skill 도구로 부르지 말고 그 계기의 문장대로 "'''

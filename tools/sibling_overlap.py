@@ -117,7 +117,7 @@ main 의 이력에 같은 글의 문단이 없으면 더한 것이다. 비워 �
 끝내면 다음 빈 번호를 받은 형제끼리 서로를 앞질러 옮기기를 되풀이한다.
 
 바꾼 하네스 파일의 카나리아도 본다(대기열 235). 이 브랜치가 merge-base 뒤에 고친 스킬 본문
-(`.claude/skills/*/*.md`. `SKILL.md` 가 Read 로 열게 하는 하위 파일도 카나리아의 `skill_files` 가
+(`.claude/skills/*/*.md`. `SKILL.md` 가 Read 로 열게 하는 하위 파일도 카나리아의 하위 파일 갈래가
 원천으로 받는다, harness 027), 규칙(`.claude/rules/*.md`), 서브에이전트(`.claude/agents/*.md`)
 가운데 지금 있는 것마다, 그 경로를 `source` 로 든 카나리아
 명세(`.scratch/**/probes/canary/*.toml`)를 이 브랜치가 하나도 고치지 않았으면 알린다. 바꾼 하네스는

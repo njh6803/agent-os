@@ -196,3 +196,41 @@ open-session을 부른다 2026-10-29T03:55:50Z
   - 반영 커밋 `064d10ce` 직후 인계 계기(`커밋 뒤`, 계기 문장의 세션 컨텍스트 227,593 토큰)가 왔다. 이 세션의 지시문 "이어받을 상태"가 `인계: 커밋 뒤.` 로 시작해 `handoff.md` 1의 셋째(넘겨받은 경계에 다시 왔다)에 들어 넘기지 않고 이었다.
   - PR 을 열기 전에 헌법 판 기록의 `Last Amended` 가 3.0.60 인데도 2026-10-28 인 것을 보고(파일을 읽었다) 2026-10-29 로 고쳤다.
   - 오탐으로 둔 것: 장부 사전 거름이 `json.dumps` 의 기본 구분자에 기댄다(쓰는 쪽이 기본 구분자다), 상대 경로 Read(Read 는 절대 경로를 받는다), `HARNESS` 가 다른 스킬의 하위 파일에도 카나리아 알림을 낸다(독스트링에 적은 의도), 기록 폴더 훑기의 `is_file` 수(프로브라 문제 삼지 않는다).
+
+## 인계(PR 연 뒤)
+
+`df4cdd8b` 까지 푸시하고 PR #421 을 열었다(`gh pr create` 가 URL 을 찍었다). 그 명령 직후 인계 계기(`PR 연 뒤`, 계기 문장의 세션 컨텍스트 270,476 토큰)가 왔다. 넘겨받은 경계(`커밋 뒤`)와 다르고, 요청 범위는 병합까지이며, `get_session` 의 `self` 에 `parentSessionId` 가 없어 `handoff.md` 1의 다섯에 들지 않는다. 그래서 넘긴다. 사용자는 이 티켓의 인계는 이어 가라고 했다(일지 "시작"). 이때 주간 사용량은 95% 였다(`get_usage`). 아직 `@coderabbitai review` 코멘트를 남기지 않았고 대기도 띄우지 않았다. 이 인계 절은 커밋하지 않았다. 이 세션의 지금 제목은 `chore/027-next-session-split` 이다. 주 체크아웃은 `main` 이고 `origin/main` 과 같은 `f8410d01` 이다(`git worktree list --porcelain`). 모델은 `tools/model_sweep.py` 가 `Opus 5.5 / xhigh` 를 냈다. 낸 지시문:
+
+```
+다음 작업: .scratch/harness/issues/027-next-session-split.md. next-session 스킬을 네 파일로 나눈 PR #421의 봇 회차와 병합을 잇는다
+다음 단계: PR 반영·병합
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: 티켓 .scratch/harness/issues/027-next-session-split.md 를 한다
+브랜치: chore/027-next-session-split
+모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
+읽을 것: docs/journal/2026-10-29-02-next-session-split.md
+이어받을 상태: 인계: PR 연 뒤. merge.md 2(봇 회차)부터 한다. 첫 @coderabbitai review 코멘트도 새 세션이 남긴다. PR 직전 리뷰의 반영과 헌법 판 날짜 고침까지 df4cdd8b 로 푸시하고 PR을 열었다. 일지의 이 인계 절은 커밋하지 않았으니 첫 반영 커밋에 싣는다. 이 브랜치가 next-session을 고쳤으니 merge.md는 워크트리 사본을 Read로 열어 따르고, 병합한 뒤에는 다음 작업의 지시문만 내고 새 세션은 열지 않는다(사용자 말, 일지 "시작"). 주간 사용량이 98%에 닿으면 새 계정으로 이어 갈 수 있게 일지의 남은 일을 고치고 멈춘다(사용자 말, 일지 "사용량"). docs/journal/2026-10-29-02-next-session-split.md
+확인할 선행 조건: 없음
+이번 요청 범위: PR과 병합까지
+```
+
+제목을 `chore/027-next-session-split (인계함)` 으로 바꿨고, 멈출 백그라운드 작업은 없었고, 워크트리 잠금은 이미 풀려 있었다(`is not locked`).
+
+open-session을 부른다 2026-10-29T04:35:52Z
+
+## 이어받음(PR 연 뒤)
+
+> 사용자: 티켓 .scratch/harness/issues/027-next-session-split.md 를 한다 (위 지시문의 시작 프롬프트. 이어받을 상태 `인계: PR 연 뒤`, 이번 요청 범위 PR과 병합까지)
+
+새 세션이 제목을 `chore/027-next-session-split` 으로 바꾸고 `EnterWorktree(path)` 로 이 워크트리에 들어왔다. 이때 주간 사용량은 96%였다(`get_usage`). 워크트리 사본의 `merge.md` 를 Read 로 열어 2(봇 회차)부터 했다. PR 을 이 세션에 묶고 `@coderabbitai review` 코멘트를 남긴 뒤 상태를 한 번 읽으니 pending 이라 `tools/wait_ci.py 421` 을 백그라운드로 띄웠고, `끝: 모두 통과` 로 끝났다(그 도구가 찍었다).
+
+## 봇 첫 회차
+
+claude-review(`df4cdd8b`)는 Minor 1·Nit 1, CodeRabbit(같은 커밋)은 Minor 3 을 냈다. 둘 다 이 PR 에 낸 첫 리뷰라 지적마다 판단했고 다섯 모두 고쳤다.
+
+- (claude-review Minor) `Spec.skill_files: bool` 이 판정 갈래를 고르는 데이터클래스의 불리언 칸이라 `CODING_STANDARDS.md` 의 "갈래를 고르는 데이터클래스의 불리언 칸은 열거로 둔다"에 걸렸다. 같은 파일의 `Kind`·`Role` 처럼 `type SkillBody = Literal["skill_md", "files"]` 를 두고 칸을 `skill_body`(기본 `"skill_md"`)로 바꿨다. 명세 열여섯의 칸 줄과 머리 주석, 시험, 독스트링, 헌법 README·`operations.md`, 대기열 520 행, 티켓 Comments, PR 본문의 이름을 함께 고쳤다(그 뒤 저장소를 `skill_files` 로 grep 하니 이 일지의 앞 절들만 남았다. 그 절들은 그때의 기록이라 두었다). 판정은 바뀌지 않아 카나리아는 다시 돌리지 않았고, 명세 열여섯의 `--shape` 가 모두 통과였다(러너가 찍었다). 기본값과 정하지 않은 값(`true`, `"SKILL.md"`, `"file"`)을 막는 시험을 더했다.
+- (claude-review Nit) `_skill_file_reasons` 가 `str(spec.skill)` 로 폴더를 지어 `None` 이면 `"None"` 폴더와 견줄 수 있었다. 스킬 이름을 `str` 인자로 받게 하고 부르는 자리에서 `spec.skill is not None` 으로 좁혔다.
+- (CodeRabbit Minor ×2) 이 PR 이 고치거나 더한 변이 다섯(`sibling_overlap_mutations.toml` 의 68·69, `handoff_hook_mutations.toml` 의 13·14·15)에 `expect_output` 이 없어 다른 단언의 빨강도 기대와 맞았다(`.claude/rules/probes.md` 첫 항목). 변이를 하나씩 손으로 넣고 고른 시험의 실패 출력을 본 뒤(스크래치 스크립트, 파일은 바이트로 되돌렸다) 받은 값이 든 문구를 골랐다. 깊은 파일 변이는 `Left contains one more item: '.claude/skills/a/refs/deep.md'`, `SKILL.md` 만 보는 변이는 `Right contains one more item: '.claude/skills/a/notes.md'`, 작업 폴더 사본 변이 둘은 받은 값 꼬리 `next-session/handoff.md') == ` 와 각 기대 값, PR 계기 변이는 변이가 이어 붙인 `다만 인계 절차 파일을 Read 로 열어 따른다` 다. 다섯 모두 표지까지 기대대로였고 `--check` 에 메아리 알림이 없었다(`tools/mutate.py` 가 찍었다). 같은 표의 옛 변이는 `tools/mutate.py` 독스트링대로 소급하지 않았다.
+- (CodeRabbit Minor) `source` 의 역슬래시를 명세 검증 때만 슬래시로 바꿔, 이 PR 이 받아 준 역슬래시 원천이 원천 읽기와 Read 판정에는 그대로 갔다. `source` 의 `field_validator` 로 읽을 때 한 번 바꾸게 하고, 그 시험이 바뀐 값을 단언하게 고쳐 빨강(남은 역슬래시)을 본 뒤 고쳤다. 리눅스에서 그 길을 돌려 보지는 않았다. 역슬래시 원천을 쓰는 명세는 지금 없다(Grep).
+
+다시 돌린 명령: `tests/tools/test_canary.py` 279 통과, `tests/tools/test_sibling_overlap.py` 와 함께 돌린 앞 판 397 통과, 바꾼 파이썬 파일의 ruff 둘과 pyright 0 오류. 나머지는 이 반영 커밋의 pre-commit 으로 갈음한다.

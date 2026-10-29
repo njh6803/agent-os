@@ -676,6 +676,7 @@ new = '''    harness = harness_files(changed)'''
 name = "스킬 폴더 아래 깊은 파일도 하네스로 본다"
 tests = ["tests/tools/test_sibling_overlap.py", "-k", "카나리아 or 도움말 or 인자가 or 옮기 or 옮길_번호대로 or 줄인 or 2로"]
 expect = "red"
+expect_output = ["Left contains one more item: '.claude/skills/a/refs/deep.md'"]
 [[mutation.edit]]
 file = "tools/sibling_overlap.py"
 old = '''HARNESS = re.compile(r"^\.claude/(?:skills/[^/]+|rules|agents)/[^/]+\.md$")'''
@@ -685,6 +686,7 @@ new = '''HARNESS = re.compile(r"^\.claude/(?:skills/.+|rules|agents)/[^/]+\.md$"
 name = "스킬 폴더의 SKILL.md 만 하네스로 본다"
 tests = ["tests/tools/test_sibling_overlap.py", "-k", "카나리아 or 도움말 or 인자가 or 옮기 or 옮길_번호대로 or 줄인 or 2로"]
 expect = "red"
+expect_output = ["Right contains one more item: '.claude/skills/a/notes.md'"]
 [[mutation.edit]]
 file = "tools/sibling_overlap.py"
 old = '''HARNESS = re.compile(r"^\.claude/(?:skills/[^/]+|rules|agents)/[^/]+\.md$")'''

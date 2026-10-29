@@ -690,7 +690,7 @@ def test_skill을_주지_않은_스킬_명세는_자리_줄이_없어도_통과�
     assert judge(spec, spec.arm[0], facts, tmp_path) == []
 
 
-# 하위 파일 갈래(skill_files). 스킬 본문이 상황마다 하위 파일을 Read 로 열게 나뉜 길이다
+# 하위 파일 갈래(skill_body = "files"). 스킬 본문이 상황마다 하위 파일을 Read 로 열게 나뉜 길이다
 # (harness 027)
 
 _하위_파일_명세 = """
@@ -699,7 +699,7 @@ question = "next-session 스킬을 불러 병합 절차의 하위 파일에서 �
 expect = ["wait_ci.py"]
 source = ".claude/skills/next-session/merge.md"
 skill = "next-session"
-skill_files = true
+skill_body = "files"
 
 [[arm]]
 name = "새"
@@ -754,7 +754,7 @@ def test_하위_파일_명세는_Skill과_Read로_돈다() -> None:
 def test_하위_파일_칸은_스킬_명세에서_그_스킬_폴더_바로_아래의_SKILL_md_밖_원천에만_쓴다(
     바꿀: str, 바꾼_것: str
 ) -> None:
-    with pytest.raises(SpecError, match="skill_files"):
+    with pytest.raises(SpecError, match="skill_body"):
         load_spec(_하위_파일_명세.replace(바꿀, 바꾼_것))
 
 
@@ -763,7 +763,22 @@ def test_하위_파일_원천은_역슬래시와_점_머리를_써도_같은_자
         '".claude/skills/next-session/merge.md"', "'./.claude\\skills\\next-session\\merge.md'"
     )
 
-    assert load_spec(text).skill_files
+    spec = load_spec(text)
+
+    assert spec.skill_body == "files"
+    assert spec.source == "./.claude/skills/next-session/merge.md"
+
+
+def test_하위_파일_칸을_주지_않으면_SKILL_md_갈래다() -> None:
+    text = _하위_파일_명세.replace('skill_body = "files"\n', "")
+
+    assert load_spec(text).skill_body == "skill_md"
+
+
+@pytest.mark.parametrize("값", ["true", '"SKILL.md"', '"file"'])
+def test_하위_파일_칸은_정한_두_값만_받는다(값: str) -> None:
+    with pytest.raises(SpecError, match="skill_body"):
+        load_spec(_하위_파일_명세.replace('skill_body = "files"', f"skill_body = {값}"))
 
 
 def test_하위_파일_실험군이_원천을_읽어_카나리아를_답하면_통과다(tmp_path: Path) -> None:
