@@ -1,4 +1,4 @@
-# 2026-10-28 (26) ESLint 가 불리언 매개변수를 잡는다 (harness 022)
+# 2026-10-29 (04) ESLint 가 불리언 매개변수를 잡는다 (harness 022)
 
 next-session 지시문으로 연 새 세션이다. 나란히 여는 여덟 가운데 넷째라 `tidy-checkouts`는 돌지 않았고(묶음의 첫 세션이
 돈다), 주 체크아웃에서 브랜치를 따지 않고 워크트리 `022-eslint-boolean-params`에 들어가 `chore/022-eslint-boolean-params`로
@@ -233,7 +233,7 @@ packages/ui 의 스토리 파일을 고쳐 다음 디자인 시스템 올리기�
 브랜치: chore/022-eslint-boolean-params
 모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
 읽을 것: docs/agents/issue-tracker.md
-이어받을 상태: 인계: 커밋 뒤. 구현, 셀프 리뷰 반영, 위젯 e2e 까지 커밋했고 PR 은 없다. 남은 단계는 origin/main 합치기와 그 뒤의 web 린트, PR 직전 리뷰, PR, 봇 회차와 병합이고 할 일과 PR 본문에 적을 것은 일지의 "인계" 절이다. 일지의 "인계" 절은 커밋하지 않았다. 일지 docs/journal/2026-10-28-26-eslint-boolean-params.md
+이어받을 상태: 인계: 커밋 뒤. 구현, 셀프 리뷰 반영, 위젯 e2e 까지 커밋했고 PR 은 없다. 남은 단계는 origin/main 합치기와 그 뒤의 web 린트, PR 직전 리뷰, PR, 봇 회차와 병합이고 할 일과 PR 본문에 적을 것은 일지의 "인계" 절이다. 일지의 "인계" 절은 커밋하지 않았다. 일지 docs/journal/2026-10-29-04-eslint-boolean-params.md
 확인할 선행 조건: 주 체크아웃 미갱신: 루트는 main. 병합은 이 워크트리 사본의 next-session "워크트리에서 병합할 때"를 Read로 열어 따른다
 이번 요청 범위: PR과 병합까지
 
@@ -280,3 +280,137 @@ PR 직전 리뷰: `coderabbit auth status`가 `Seat: not assigned`라 CLI 대신
   - 서브에이전트가 덧붙인 것: 설정 주석의 "오버로드"는 시험 사례가 없다. 두었다. 불리언과 다른 타입의 오버로드는
     `@typescript-eslint/unified-signatures`가 하나로 합치라고 할 수 있어 지나는 사례로 고정하려면 그 규칙까지 가려야 한다는
     어림이고, 돌려 보지 않았다.
+
+Nit 2 를 고친 커밋(8bb8b0bb)의 pre-commit 이 모두 지났다(`Skipped`는 스테이지된 `.py`가 없는 ruff 둘, 카나리아 명세, 헌법 판.
+pytest 1220초, web-verify 680초. 커밋 로그를 손으로 봤다). origin/main 을 합친 트리에서 손으로 치는 다섯이 이 pre-commit 으로
+갈음된다. 푸시하고 PR #420 을 열었다.
+
+## 인계 (PR 연 뒤)
+
+PR #420 을 연 직후 인계 계기가 `PR 연 뒤` 경계에서 왔다. 세션 컨텍스트가 인계 문턱(20만 토큰)을 넘었다. 이 세션의 지시문의
+이어받을 상태는 `인계: 커밋 뒤`라 같은 경계가 아니고, 커밋 뒤 경계에서는 그 까닭으로 넘기지 않았다. 나머지 넷(명령 성공, 요청
+범위는 PR 과 병합까지, `인계 못함` 줄 없음, `get_session`의 `self`에 `parentSessionId` 없음)에도 들지 않아 넘긴다. 이 세션의
+지금 제목은 `chore/022-eslint-boolean-params`이고 넘기기 전에 `(인계함)`을 붙인다. 이 절은 커밋하지 않았다. 새 세션이 이어
+쓰고 커밋한다.
+
+남은 단계: 첫 `@coderabbitai review` 코멘트, 봇 회차(next-session 순서 1의 2), 일지 마무리, 워크트리의 병합 길. PR 은 앱이
+이 세션에 묶었고(`get_status`의 `bound: true`) 넘긴 뒤의 알림은 이 세션을 깨운다. 형제 일지 27(`023-widget-char-count-flake`)과
+28(PR #417, `025-next-session-prune-check`)이 먼저 병합되면 이 일지가 이름순으로 앞서므로 `tools/sibling_overlap.py`의 출력대로
+옮긴다.
+
+인계 지시문:
+
+다음 작업: .scratch/harness/issues/022-eslint-boolean-params.md. 대기열 483: web/eslint.config.mjs 가 타입이 boolean 인 함수 매개변수를 잡고 CODING_STANDARDS.md 의 그 줄이 이 규칙을 가리킨다
+다음 단계: PR 반영·병합
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: 대기열 483을 티켓 .scratch/harness/issues/022-eslint-boolean-params.md로 쓰고 한다
+브랜치: chore/022-eslint-boolean-params
+모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
+읽을 것: docs/agents/issue-tracker.md
+이어받을 상태: 인계: PR 연 뒤. PR #420 을 열었고 첫 `@coderabbitai review` 코멘트와 봇 회차(next-session 순서 1의 2)부터 한다. PR 직전 리뷰(대체 둘)의 결과와 남긴 것은 PR 본문 체크리스트와 일지에 있다. 일지의 "인계 (PR 연 뒤)" 절은 커밋하지 않았다. 일지 docs/journal/2026-10-29-04-eslint-boolean-params.md
+확인할 선행 조건: 없음
+이번 요청 범위: PR과 병합까지
+
+잠금 풀기는 `is not locked`로 넘어갔다.
+
+open-session을 부른다 2026-10-28T10:56:40Z
+
+## 이어받은 세션 (2)
+
+> 사용자: "대기열 483을 티켓 .scratch/harness/issues/022-eslint-boolean-params.md로 쓰고 한다"
+
+위 "인계 (PR 연 뒤)" 지시문으로 연 새 세션이다. 제목을 `chore/022-eslint-boolean-params`로 바꾸고 `EnterWorktree(path)`로 이
+워크트리에 들어왔다(잠금 거부 없이 들어왔다). `gh pr view 420`의 `headRefOid`와 `git rev-parse HEAD`가 둘 다 `8bb8b0bb`라
+푸시할 커밋은 없었다. 앱의 `get_status`는 이 세션에 묶인 PR 이 없다고 했고, 묶지 않았다(next-session "인계할 때" 6).
+
+- 11:03:30Z 에 `@coderabbitai review` 코멘트를 남겼다. CodeRabbit 은 "Review triggered" 답글을 달았으나 리뷰 본문은 아직 없고
+  (`gh pr view 420 --json comments,reviews`로 손으로 봤다. `reviews`는 빈 배열이었다),
+  그 직후 `gh pr checks 420`의 CodeRabbit 줄은 `skipping`이었다. 나머지 여덟(verify, claude-review, e2e, e2e-widget, python,
+  ticket, visual, web)은 `8bb8b0bb`에서 모두 pass 였다(손으로 봤다).
+- claude-review 의 첫 회차(10:54:54Z, `8bb8b0bb`. 같은 명령으로 코멘트 본문을 손으로 봤다): Critical·Major·Minor 없음, Nit 하나. `tokens-json.ts`의
+  `readFamily(…, (raw) => radiusLength(raw))`는 `radiusLength`를 그대로 넘겨도 같다는 지적이다. 셀프 리뷰 표준 축 Nit 에서
+  "옆 줄과 같은 꼴이라 둔다"고 한 자리와 같다. 첫 회차라 지적마다 판단해야 하는데 아직 판단하지 않았고 PR 코멘트도 남기지 않았다.
+- `uv run python tools/wait_ci.py 420`을 백그라운드로 띄웠다가 아래 요청으로 TaskStop 했다.
+
+다른 세션(`주간한도 95% 초과 시 세션 전환`)이 계정 인계를 위해 마무리를 요청했다.
+
+> 다른 세션: "주간 한도가 90%에 도달해 다른 계정으로 작업을 넘깁니다. … 새로 푸시하거나 병합하지 않습니다. PR 420은 열어 둔 채로 둡니다."
+
+그래서 대기를 멈추고, 푸시·병합·새 세션 열기를 하지 않고 이 절과 아래 지시문을 남긴 뒤 멈춘다. 계기 인계(`hook_handoff`)가
+아니라 결정표의 "작업을 마치지 못한 채 끊는다" 줄이라 "이어받을 상태"를 `인계:`로 시작하지 않았다. 이 절은 커밋하지 않았다.
+
+남은 단계: `uv run python tools/wait_ci.py 420`을 다시 띄워 CodeRabbit 의 첫 리뷰를 기다리고(리뷰가 오지 않으면 요약 코멘트의
+`Reviewing files … between` 범위를 본다), claude-review 첫 회차의 Nit 과 CodeRabbit 의 지적을 판단해 반영하고 보류한 것은 PR
+코멘트에 이유를 남긴다. 일지(이 파일의 인계 절 셋 포함)를 마무리해 마지막 봇 회차의 커밋에 실어 푸시한다. 병합 전에
+`uv run python tools/sibling_overlap.py`로 일지 번호를 보고(형제 일지 27·28 이 먼저 병합되면 옮긴다), `headRefOid` 대조 뒤
+next-session "워크트리에서 병합할 때"의 길로 병합한다.
+
+인계 지시문:
+
+다음 작업: .scratch/harness/issues/022-eslint-boolean-params.md. 대기열 483: web/eslint.config.mjs 가 타입이 boolean 인 함수 매개변수를 잡고 CODING_STANDARDS.md 의 그 줄이 이 규칙을 가리킨다
+다음 단계: PR 반영·병합
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: 대기열 483을 티켓 .scratch/harness/issues/022-eslint-boolean-params.md로 쓰고 한다
+브랜치: chore/022-eslint-boolean-params
+모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
+읽을 것: docs/agents/issue-tracker.md
+이어받을 상태: 주간 한도 90% 도달로 끊었다(계기 인계가 아니다). PR #420 은 열려 있고 마지막 HEAD 는 8bb8b0bb 로 로컬과 같다. `@coderabbitai review` 코멘트는 남겼고 CodeRabbit 의 첫 리뷰는 아직 없다. claude-review 첫 회차의 Nit 하나(tokens-json.ts 의 화살표 래퍼)는 아직 판단하지 않았다. 봇 회차의 대기부터 한다. 커밋하지 않은 변경은 일지의 인계 절 셋뿐이다. 일지 docs/journal/2026-10-29-04-eslint-boolean-params.md
+확인할 선행 조건: CodeRabbit 이 11:03:30Z 의 리뷰 요청에 실제로 리뷰를 냈는지 확인하지 못했다(검사 줄은 skipping, 답글은 Review triggered)
+이번 요청 범위: PR과 병합까지
+
+## 이어받은 세션 (3)
+
+> 사용자: "대기열 483을 티켓 .scratch/harness/issues/022-eslint-boolean-params.md로 쓰고 한다"
+
+위 "이어받은 세션 (2)"의 지시문으로 연 새 세션이다(2026-10-29). 제목을 `chore/022-eslint-boolean-params`로 바꾸고
+`EnterWorktree(path)`로 이 워크트리에 들어왔다. 커밋하지 않은 변경은 이 일지 하나였다(`git status --short`를 손으로 봤다).
+
+- 선행 조건: CodeRabbit 은 리뷰를 냈다. 요약 코멘트가 "No actionable comments were generated in the recent review"와
+  "Reviewing files that changed from the base of the PR and between 06a8f85b… and 8bb8b0bb…"(파일 20개)를 들었다. `reviews`가
+  빈 배열이었던 것은 지적이 없어 리뷰를 남기지 않은 것이다(`gh pr view 420 --json comments`로 요약 코멘트를 손으로 봤다).
+  CodeRabbit 첫 회차는 고칠 지적이 없다.
+- main 합치기: PR 이 `BEHIND`였다. origin/main 이 네 커밋(#419, #416, #417, #421) 앞섰고 바뀐 파일은 모두 하네스와 문서이며
+  `web/`에는 닿지 않았다(`git diff --name-only HEAD...origin/main`을 손으로 봤다). `git merge origin/main`이
+  `.scratch/retro-queue.md`를 충돌 없이 합쳤다(출력을 손으로 봤다). #421(harness 027)이 next-session 을 넷으로 나눠, Skill 도구의 옛 사본 대신
+  디스크의 `SKILL.md`와 `merge.md`를 Read 로 열어 따랐다.
+- 일지 번호: main 에 2026-10-29-02 가 들어와 이 일지(2026-10-28-26)가 이름순으로 앞섰다. `tools/sibling_overlap.py --move`로
+  2026-10-29-04 로 옮겼다. 그 명령은 Bash 의 기본 제한 120초를 넘겨 백그라운드로 넘어갔고 종료 0 으로 끝났다. 도구가 쓴 PR
+  본문을 지금 본문과 `diff`로 견주어 일지 경로 밖의 차이가 없는 것을 보고 `gh api`로 올렸다(손으로 봤다).
+- claude-review 첫 회차의 Nit(`tokens-json.ts`의 화살표 래퍼): **고쳤다.** `readFamily`는 `read(own(item, "value"))`로 인자
+  하나만 넘기고, `length`와 `radiusLength`는 둘 다 `(value: unknown) => string | undefined`라 그대로 넘겨도 같다(코드를 읽었다). 셀프 리뷰
+  표준 축 Nit 에서 "옆 줄과 같은 꼴이라 둔다"고 한 옆 줄(spacing 의 `(raw) => length(raw)`)도 이 PR 이 `length`의 둘째
+  매개변수를 지워 같은 자국이 되었으므로 함께 고쳤다. 같은 함수가 `plainValue`를 그대로 넘기는 자리와 꼴이 같다. 변이 표와
+  프로브는 그 두 줄을 원문으로 들지 않는다(`.scratch`의 `*.toml`·`*.mjs`·`*.py`를 Grep 도구로 찾아 손으로 봤다). Prettier 가
+  두 호출을 한 줄씩으로 접었다(`git diff`를 손으로 봤다).
+  `pnpm -C web exec eslint tools/sync-design-system/tokens-json.ts`가 종료 0 이었고,
+  `pnpm -C web exec vitest run tools/sync-design-system`에서 14개 파일, 434개 시험이 초록이었다(손으로 봤다). 위 "반영" 절의
+  남긴 것 가운데 화살표 래퍼는 이것으로 남지 않는다.
+
+## 회고
+
+후보 여섯, 승인 0, 기각 여섯, 넘김 0. 이 티켓의 앞 세션들은 회고를 돌지 않아 일지 전체를 원천으로 봤다.
+
+- CodeRabbit 이 리뷰를 냈는지 앞 세션이 확인하지 못하고 선행 조건으로 넘겼다. 기각. `merge.md` 2 의 대기가 이미 그 길(끝났는데
+  코멘트가 없으면 요약 코멘트의 `Reviewing files … between` 범위를 본다)을 적는다. 앞 세션은 대기 도중 계정 인계로 끊겨 그
+  단계에 닿지 않았고, 이 세션은 그 길로 바로 확인했다.
+- 위젯 e2e 가 다른 세션의 부하 아래에서 serve 60초(`STARTUP_MS`)와 첫 도구 줄 5초를 넘겨 빨갰고, 그 시험만 다시 돌리면
+  초록이었다(위 "반영" 절). 기각. retro 스킬이 끝이 열린 결함 종류의 예로 드는 대기열 306(부하에서만 빨간 시간 시험)이
+  받아들여 닫은 종류의 새 사례라 일지에만 적는다. 306 의 첫 사례는 pre-commit 의 pytest 이고 이 사례는 손으로 친 e2e 라
+  자리는 다르다.
+- 첫 커밋이 다른 기능의 변이 표가 이 변경이 바꾼 원문을 글자 그대로 들어 `tools/mutate.py --staged`에 막혔다. 기각. 있는
+  검사가 그 자리에서 막았다.
+- 일지 번호를 네 번 옮겼다(19 → 22 → 26 → 2026-10-29-04). 기각. 형제가 먼저 번호를 쓰거나 병합될 때마다
+  `tools/sibling_overlap.py`가 알렸고 `--move`가 옮겼다.
+- `tools/sibling_overlap.py --move`가 Bash 의 기본 제한 120초를 넘겼다. 기각. 결과를 잃지 않고 백그라운드 알림으로 이어졌고,
+  같은 세션에서 `--move` 없이 친 실행은 제한 안에 끝났다. 실수가 아니라 고칠 층이 서지 않는다.
+- 셀프 리뷰가 "둔다"고 판단한 화살표 래퍼를 claude-review 가 다시 짚어 고쳤다. 기각. 셀프 리뷰가 그 자리를 보고 판단을 적었고,
+  바뀐 것은 판단이지 놓친 지적이 아니다.
+
+만료: `uv run python tools/queue_open_rows.py`와 `--ref origin/main`(`git fetch origin` 뒤)의 "만료할 행"이 둘 다 없음이었다
+(출력을 손으로 봤다). 306 의 행 원문은 `.scratch/retro-queue.md`의 320줄을 grep 으로 손으로 봤다.
+
+## 다음
+
+harness 022 는 이 PR 로 닫힌다. 다음은 next-session 결정표의 harness 티켓 PR 줄대로 `plan.md`의 프론티어에서 고른다. 같은 묶음의
+형제 가운데 열린 것은 각자 도는 중이라 다음 작업에 넣지 않는다. `web/packages/ui/src/styles/DesignTokens.stories.tsx`를
+고쳤으므로 다음 디자인 시스템 올리기(`/sync-design-system 올리기`)가 빌드를 요구한다(PR 본문).

@@ -470,14 +470,8 @@ export function readTokens(input: unknown): CanonicalTokens {
   const families = new Map<string, CanonicalFamily>([["color", { note: "", tokens: colorTokens }]]);
   const taken = (): ReadonlySet<string> =>
     new Set([...families.values()].flatMap((family) => [...family.tokens.keys()]));
-  families.set(
-    "spacing",
-    readFamily(own(root, "spacing"), taken(), (raw) => length(raw)),
-  );
-  families.set(
-    "radius",
-    readFamily(own(root, "radius"), taken(), (raw) => radiusLength(raw)),
-  );
+  families.set("spacing", readFamily(own(root, "spacing"), taken(), length));
+  families.set("radius", readFamily(own(root, "radius"), taken(), radiusLength));
   const shadow = readFamily(own(root, "shadow"), taken(), (raw) =>
     perTheme(raw, themes, plainValue),
   );
