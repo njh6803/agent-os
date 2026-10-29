@@ -11,7 +11,7 @@
 |---|---|
 | `sweep.py` | `population`은 소급 측정의 `branches.json`만 읽어 종류마다 지시문으로 열린 브랜치의 수, 무리마다의 σ(로그 비용)와 n_k, 주마다의 처리량과 비용 중앙값을 찍는다. `prereg`는 아래 사전 등록 절의 SHA-256이 `PREREG_SHA256`과 같은지 본다. `judge`는 스윕 기간만 모은 `branches.json`을 읽고 두 사전 등록의 해시를 대 본 뒤, 판정 도구(아래)로 종류마다 판정해 표를 찍는다. 앞뒤와 못 보는 것은 독스트링 |
 
-갈래를 고르는 것은 이 프로브가 아니라 하네스 도구 `tools/model_sweep.py`다(`next-session` 3단계가 부른다).
+갈래를 고르는 것은 이 프로브가 아니라 하네스 도구 `tools/model_sweep.py`다(`next-session` `directive.md` 2가 부른다).
 판정의 순수 함수(입력의 조건, 표지 모집단, 배정대로 가른 갈래, 표지 셋, 판정하지 않는 조건, 주된 판정과 되풀이 둘)는
 `tools/model_sweep_judge.py`에 있고 `tests/tools/test_model_sweep_judge.py`가 고정한다. 순서와 못 보는 것은 그
 독스트링이고, 스윕 시작 시각(`SWEEP_START`)도 거기 있다. 판정은 배정(`arm`)과 스윕하는 종류(`SWEPT`, 사전 등록

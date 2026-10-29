@@ -58,7 +58,7 @@ description: "Claude 아티팩트의 디자인 시스템과 `web/packages/ui`를
 | `wait` | 그 브랜치를 사람에게 알리고 지금 일을 멈춘다. 화면 작업이면 아래 "멈춘 상태"의 병합을 기다림이다 |
 | `stop` | `notes`를 보이고 멈춘다 |
 
-**먼저 들인다.** 지금 세션은 브랜치를 바꾸지 않는다. 들이기를 새 세션에 넘긴다. 번호는 `git fetch origin` 뒤 `git ls-tree --name-only origin/main .scratch/design-reverse-sync/issues/`에서 가장 큰 번호의 다음이고, slug는 바뀐 것을 짧게 이른다(`teal-gray-50`). 지시문은 `next-session`의 지시문 형식으로 짓는다. 다음 작업은 `.scratch/design-reverse-sync/issues/<NN>-web-edit-<slug>.md`(받는 세션이 쓴다)와 찾은 것의 한 줄, 다음 단계는 구현, 시작 프롬프트는 `/sync-design-system`, 브랜치는 `feature/<NN>-web-edit-<slug>`, 이번 요청 범위는 PR과 병합, 그 뒤 올리기까지다. 어디서의 워크트리 문장은 `next-session` 3단계가 정한다. Skill 도구로 `open-session`을 불러 그 세션을 연다. 새 세션은 자기 새 브랜치에서 확인부터 다시 한다. 지금 세션은 그 병합을 기다린다.
+**먼저 들인다.** 지금 세션은 브랜치를 바꾸지 않는다. 들이기를 새 세션에 넘긴다. 번호는 `git fetch origin` 뒤 `git ls-tree --name-only origin/main .scratch/design-reverse-sync/issues/`에서 가장 큰 번호의 다음이고, slug는 바뀐 것을 짧게 이른다(`teal-gray-50`). 지시문은 `next-session`의 `directive.md` 형식으로 짓는다. 다음 작업은 `.scratch/design-reverse-sync/issues/<NN>-web-edit-<slug>.md`(받는 세션이 쓴다)와 찾은 것의 한 줄, 다음 단계는 구현, 시작 프롬프트는 `/sync-design-system`, 브랜치는 `feature/<NN>-web-edit-<slug>`, 이번 요청 범위는 PR과 병합, 그 뒤 올리기까지다. 어디서의 워크트리 문장은 `next-session` `directive.md` 5가 정한다. Skill 도구로 `open-session`을 불러 그 세션을 연다. 새 세션은 자기 새 브랜치에서 확인부터 다시 한다. 지금 세션은 그 병합을 기다린다.
 
 **claim 지우기.** 기록을 다시 받아(`read`의 `paths`에 `project/sync-record.json`) `record claim --record <다시 받은 기록> --expect check-<n>/web/project/sync-record.json --out send-<n>/project/sync-record.json --clear`로 지운 기록을 짓고, 아래 "보내기"로 그 파일 하나를 보낸다.
 

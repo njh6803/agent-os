@@ -20,9 +20,10 @@ from typing import TypedDict
 import pytest
 from tests.tools import gh_api_cases
 from tools.hook_handoff import (
+    HANDOFF_PATH,
+    HANDOFF_RELATIVE,
     MCP_CREATE_TOOLS,
     SECTION,
-    SKILL_PATH,
     SKILL_RELATIVE,
     THRESHOLD,
     HookPayload,
@@ -272,7 +273,7 @@ def test_문턱_위의_경계는_크기와_문턱과_경계와_스킬_경로를_
     assert "250,000" in context
     assert "200,000" in context
     assert "`커밋 뒤`" in context
-    assert SKILL_PATH.as_posix() in context
+    assert HANDOFF_PATH.as_posix() in context
     assert "Read" in context
 
 
@@ -433,62 +434,98 @@ def test_문장은_Skill_도구로_부르지_말고_Read_로_열라고_한다() 
         context = context_for(boundary, 210_000)
         assert "Read 도구로 연다" in context, boundary
         assert "Skill 도구로 부르지 않는다" in context, boundary
-        assert "인계 줄" in context, boundary
+        assert "그 파일의 순서를 따른다" in context, boundary
+        assert "인계하지 않는 때" in context, boundary
 
 
-def test_훅과_같은_체크아웃의_next_session_에_인계_절이_있다() -> None:
-    assert SKILL_PATH == ROOT / ".claude" / "skills" / "next-session" / "SKILL.md"
-    assert SECTION in SKILL_PATH.read_text(encoding="utf-8").splitlines()
+def test_옛_판의_SKILL_md_를_가리키면_결정표의_인계_줄을_따르라고_한다(tmp_path: Path) -> None:
+    """나누기 전 판은 인계 절차를 SKILL.md 의 결정표 인계 줄과 인계 절에 두었다."""
+    old = tmp_path / SKILL_RELATIVE
+
+    context = context_for("커밋 뒤", 210_000, old)
+
+    assert "결정표에서 인계 줄을 따른다" in context
+    assert "그 파일의 순서를 따른다" not in context
 
 
-def _사본을_둔다(checkout: Path, *, section: bool) -> Path:
+def test_훅과_같은_체크아웃의_next_session_은_인계_절에서_handoff_md_를_가리킨다() -> None:
+    """옛 훅은 SKILL.md 에서 인계 절을 찾는다. 그 절이 새 판의 handoff.md 로 이어져야 한다."""
+    assert HANDOFF_PATH == ROOT / ".claude" / "skills" / "next-session" / "handoff.md"
+    assert HANDOFF_PATH.is_file()
+    lines = (ROOT / SKILL_RELATIVE).read_text(encoding="utf-8").splitlines()
+    assert SECTION in lines
+    assert "handoff.md" in "\n".join(lines[lines.index(SECTION) :])
+
+
+def _사본을_둔다(checkout: Path, *, section: bool, handoff: bool = False) -> Path:
+    """next-session 사본. `handoff` 면 나눈 판이라 `handoff.md` 를 돌려주고, 아니면 `SKILL.md`
+    다."""
     skill = checkout / SKILL_RELATIVE
     skill.parent.mkdir(parents=True)
     body = f"# next-session\n\n{SECTION}\n" if section else "# next-session\n"
     skill.write_text(body, encoding="utf-8")
-    return skill
+    if not handoff:
+        return skill
+    split = checkout / HANDOFF_RELATIVE
+    split.write_text("# 인계한다\n", encoding="utf-8")
+    return split
 
 
-def test_작업_폴더의_사본에_인계_절이_있으면_그_사본을_가리킨다(tmp_path: Path) -> None:
+def test_작업_폴더의_사본에_handoff_md_가_있으면_그것을_가리킨다(tmp_path: Path) -> None:
     """기본 권한 모드의 워크트리 세션이 주 체크아웃의 사본을 Read 하면 승인을 물었다
     (`.scratch/token-usage/probes/handoff_reach.py` 의 C). 작업 폴더 안의 사본은 묻지 않는다."""
     worktree = tmp_path / "main" / ".claude" / "worktrees" / "05-x"
-    _사본을_둔다(tmp_path / "main", section=True)
-    own = _사본을_둔다(worktree, section=True)
+    _사본을_둔다(tmp_path / "main", section=True, handoff=True)
+    own = _사본을_둔다(worktree, section=True, handoff=True)
     (worktree / "tools").mkdir()
 
     assert skill_for(str(worktree)) == own
     assert skill_for(str(worktree / "tools")) == own
-    assert f"`{own.as_posix()}`" in context_for("커밋 뒤", 210_000, skill_for(str(worktree)))
+    context = context_for("커밋 뒤", 210_000, skill_for(str(worktree)))
+    assert f"`{own.as_posix()}`" in context
+    assert "그 파일의 순서를 따른다" in context
 
 
-def test_작업_폴더의_사본에_인계_절이_없으면_훅의_사본을_가리키고_더_올라가지_않는다(
+def test_나누기_전의_옛_워크트리면_그_SKILL_md_의_인계_절을_가리킨다(tmp_path: Path) -> None:
+    """주 체크아웃이 나눈 판이어도 옛 워크트리 안의 사본을 고른다. 작업 폴더 밖 Read 로 가지
+    않는다."""
+    worktree = tmp_path / "main" / ".claude" / "worktrees" / "old"
+    _사본을_둔다(tmp_path / "main", section=True, handoff=True)
+    own = _사본을_둔다(worktree, section=True)
+
+    assert skill_for(str(worktree)) == own
+    assert "결정표에서 인계 줄을 따른다" in context_for("커밋 뒤", 210_000, own)
+
+
+def test_작업_폴더의_사본에_인계_절차가_없으면_훅의_사본을_가리키고_더_올라가지_않는다(
     tmp_path: Path,
 ) -> None:
     """옛 워크트리는 주 체크아웃 아래에 있다. 올라가 주 체크아웃의 사본을 고르지 않는다."""
-    worktree = tmp_path / "main" / ".claude" / "worktrees" / "old"
-    _사본을_둔다(tmp_path / "main", section=True)
+    worktree = tmp_path / "main" / ".claude" / "worktrees" / "older"
+    _사본을_둔다(tmp_path / "main", section=True, handoff=True)
     _사본을_둔다(worktree, section=False)
 
-    assert skill_for(str(worktree)) == SKILL_PATH
+    assert skill_for(str(worktree)) == HANDOFF_PATH
 
 
 def test_cwd_가_없거나_사본이_없으면_훅의_사본을_가리킨다(tmp_path: Path) -> None:
-    assert skill_for(None) == SKILL_PATH
-    assert skill_for(str(tmp_path / "nowhere")) == SKILL_PATH
+    assert skill_for(None) == HANDOFF_PATH
+    assert skill_for(str(tmp_path / "nowhere")) == HANDOFF_PATH
 
 
 def test_상대_경로의_cwd_는_고르지_않는다() -> None:
     """드라이브만 남은 `C:` 와 상대 경로는 훅의 작업 폴더에 기댄다."""
     for cwd in ("C:", ".", "tools"):
-        assert skill_for(cwd) == SKILL_PATH, cwd
+        assert skill_for(cwd) == HANDOFF_PATH, cwd
 
 
-def test_다른_저장소의_사본에_인계_절이_있으면_그것을_가리킨다(tmp_path: Path) -> None:
-    """못 보는 것: `cwd` 가 다른 저장소여도 그 사본에 인계 절이 있으면 고른다."""
-    other = _사본을_둔다(tmp_path / "other-repo", section=True)
+def test_다른_저장소의_사본에_인계_절차가_있으면_그것을_가리킨다(tmp_path: Path) -> None:
+    """못 보는 것: `cwd` 가 다른 저장소여도 그 사본에 handoff.md 나 인계 절이 있으면 고른다."""
+    split = _사본을_둔다(tmp_path / "other-repo", section=True, handoff=True)
+    old = _사본을_둔다(tmp_path / "old-repo", section=True)
 
-    assert skill_for(str(tmp_path / "other-repo")) == other
+    assert skill_for(str(tmp_path / "other-repo")) == split
+    assert skill_for(str(tmp_path / "old-repo")) == old
 
 
 # --- Stop 알림과 표지(main 을 자식으로 돌린다) ---
