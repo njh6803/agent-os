@@ -206,8 +206,8 @@ function colorValue(value: unknown): string | undefined {
   return ALIAS.test(alias) ? alias : undefined;
 }
 
-/** 길이. 수는 px 로 읽는다. 모서리의 `full` 은 9999px 이다. */
-function length(value: unknown, radius = false): string | undefined {
+/** 길이. 수는 px 로 읽는다. */
+function length(value: unknown): string | undefined {
   if (typeof value === "number" && Number.isFinite(value)) {
     if (Math.abs(value) >= 1e4) {
       return undefined;
@@ -218,10 +218,15 @@ function length(value: unknown, radius = false): string | undefined {
     return undefined;
   }
   const lower = value.trim().toLowerCase();
-  if (radius && lower === "full") {
+  return LENGTH.test(lower) ? lower : undefined;
+}
+
+/** 모서리 길이. `full` 은 9999px 이고 나머지는 길이다. */
+function radiusLength(value: unknown): string | undefined {
+  if (typeof value === "string" && value.trim().toLowerCase() === "full") {
     return "9999px";
   }
-  return LENGTH.test(lower) ? lower : undefined;
+  return length(value);
 }
 
 function lineHeight(value: unknown): string | undefined {
@@ -465,14 +470,8 @@ export function readTokens(input: unknown): CanonicalTokens {
   const families = new Map<string, CanonicalFamily>([["color", { note: "", tokens: colorTokens }]]);
   const taken = (): ReadonlySet<string> =>
     new Set([...families.values()].flatMap((family) => [...family.tokens.keys()]));
-  families.set(
-    "spacing",
-    readFamily(own(root, "spacing"), taken(), (raw) => length(raw)),
-  );
-  families.set(
-    "radius",
-    readFamily(own(root, "radius"), taken(), (raw) => length(raw, true)),
-  );
+  families.set("spacing", readFamily(own(root, "spacing"), taken(), length));
+  families.set("radius", readFamily(own(root, "radius"), taken(), radiusLength));
   const shadow = readFamily(own(root, "shadow"), taken(), (raw) =>
     perTheme(raw, themes, plainValue),
   );
