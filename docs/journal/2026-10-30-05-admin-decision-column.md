@@ -114,5 +114,21 @@ open-session을 부른다 2026-10-29T17:20:09Z
 - 다시 친 병합 커밋이 pre-commit을 지나 `4f545676`이 됐다(pytest 443초, web-verify 473초를 포함해 Passed, ruff 둘·카나리아 모양·헌법 판은 대상 파일이 없어 Skipped. 출력을 손으로 봤다).
 - PR 직전 리뷰의 다른 갈래인 내장 `/security-review`는 `git diff origin/main`을 대상으로 서브에이전트가 찾았고 후보 0건이라 거짓 양성 거르기 단계는 돌지 않았다(그 보고를 읽었다). 서버 값이 모두 React 글자 자식으로 그려지고, 새 링크 둘의 목적지가 고정(`/settings`, `/`)이며, 채널 토큰은 들었는지의 불리언만 읽는다고 보고했다.
 - 위 두 줄을 실은 일지 커밋의 첫 시도도 pre-commit의 pytest에서 같은 시험 하나만 실패했다(1 failed, 6005 passed, 970초. web-verify도 655초로 기계가 무거웠다. 출력을 손으로 봤다). 이 커밋은 일지 한 파일만 바꾸고 코드·시험은 모든 검사가 통과한 `4f545676`과 같아, `SKIP=parallel-checks`로 병렬 검사만 빼고 커밋했다. 마크다운 검사들은 그대로 돌았다.
-- 회고 후보: `tests/tools/test_rerun_runner.py`의 `test_같은_갈래가_두_번_든_파일럿의_두_회차가_함께_돌아도_번호가_다르다`가 부하 아래에서 이 세션에만 두 번 빨갰고 따로 돌리면 지났다. 함께 도는 부름의 수(`running`)를 `hang=1.0` 동안 겹친 것으로 세는 단언이다. 대기열 306·332의 종류이고 사례별 수선(ADR 0035)의 새 사례다.
+- 회고 후보: `tests/tools/test_rerun_runner.py`의 `test_같은_갈래가_두_번_든_파일럿의_두_회차가_함께_돌아도_번호가_다르다`가 부하 아래에서 이 세션에만 두 번 빨갰고 따로 돌리면 지났다. 함께 도는 부름의 수(`running`)를 `hang=1.0` 동안 겹친 것으로 세는 단언이다. 대기열 306·332의 종류다(판정은 아래 회고).
 - 푸시하려 하자 그사이 main에 PR #430(design-card-build 03, `web/tools/sync-design-system/`과 그 문서)이 들어와 훅이 막았다. 이 브랜치와 겹치는 파일이 없어 충돌 없이 합쳤고, `tools/sibling_overlap.py`가 main의 최신 일지 2026-10-30-03보다 이름순으로 앞선다고 해서 `--move`로 이 일지를 2026-10-30-02에서 2026-10-30-05로 옮겼다(티켓과 카나리아 명세의 인용 포함. 그 출력을 손으로 봤고, 옛 번호를 Grep해 잔존 0을 봤다). 합치고 옮긴 상태의 작업 트리에서 `uv run python tools/run_checks.py`가 열 줄 모두 Passed였다(pytest 631초, web-verify 623초. 출력을 손으로 봤다). 그래서 이 커밋은 `SKIP=parallel-checks`로 병렬 검사만 뺐다.
+- PR #432를 열었다. CI 아홉이 모두 통과했고(`tools/wait_ci.py` 출력을 손으로 봤다), claude-review는 지적 없음, CodeRabbit은 무료 한도에 걸려 리뷰하지 않았다(`Review rate limited`. PR 코멘트를 읽었다).
+
+## 회고
+
+후보 넷: 승인 1(회차로 세는 것), 기각 2, 일지에만 1. 넘긴 것 없음.
+
+- `tools/run_checks.py --help`가 인자를 읽지 않아 검사 열 줄 전체(약 10분)를 돌렸다. 열린 행 348(`tools/run_hooks.py`가 `--help`에도 페이로드 전체를 돌렸다)과 같은 실수의 다른 도구라 회차로 세는 것으로 승인했다. 348에 둘째 회차와 대상 `tools/run_checks.py`를 더했다(2회차). 이번에는 마침 합친 상태를 전체 검사해야 했던 때라 그 결과를 썼다.
+- `tests/tools/test_rerun_runner.py`의 `test_같은_갈래가_두_번_든_파일럿의_두_회차가_함께_돌아도_번호가_다르다`가 부하 아래에서 두 번 빨갰다. 306은 이 종류를 받아들여 닫은 행이라(retro 5단계의 끝이 열린 결함 종류) 잇지 않고 일지에만 남긴다.
+- CodeRabbit의 한도: 기각. `tools/wait_ci.py`와 `merge.md`가 이미 한도를 가른다.
+- 일지 번호가 main의 최신 일지보다 앞선 것: 기각. `tools/sibling_overlap.py`가 그 자리에서 알리고 `--move`로 옮겼다.
+- 만료: `uv run python tools/queue_open_rows.py`와 `--ref origin/main` 둘 다 만료할 행이 없었다(출력을 손으로 봤다).
+
+## 다음
+
+- admin-style의 남은 `ready-for-agent` 티켓 06(PR #431)과 09(워크트리 `09-admin-settings-theme`)는 다른 세션이 맡아 돌고 있어 이 세션은 새 세션을 열지 않는다. 그 둘 가운데 나중에 병합하는 세션이 admin-style의 마지막 티켓을 닫고 결정표의 다음 줄을 고른다.
+- 09는 `README.md`를 이 브랜치와 함께 고쳐, 이 PR 뒤에 병합하는 09 쪽에 글자 충돌 후보가 있다.
