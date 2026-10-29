@@ -366,7 +366,7 @@ next-session "워크트리에서 병합할 때"의 길로 병합한다.
 `EnterWorktree(path)`로 이 워크트리에 들어왔다. 커밋하지 않은 변경은 이 일지 하나였다(`git status --short`를 손으로 봤다).
 
 - 선행 조건: CodeRabbit 은 리뷰를 냈다. 요약 코멘트가 "No actionable comments were generated in the recent review"와
-  "Reviewing files that changed from the base of the PR and between 06a8f85b… and 8bb8b0bb…"(파일 20개)를 들었다. `reviews`가
+  PR 의 기준과 `06a8f85b`~`8bb8b0bb` 사이에서 바뀐 파일을 리뷰했다는 범위 줄(`Reviewing files … between`, 파일 20개)을 들었다. `reviews`가
   빈 배열이었던 것은 지적이 없어 리뷰를 남기지 않은 것이다(`gh pr view 420 --json comments`로 요약 코멘트를 손으로 봤다).
   CodeRabbit 첫 회차는 고칠 지적이 없다.
 - main 합치기: PR 이 `BEHIND`였다. origin/main 이 네 커밋(#419, #416, #417, #421) 앞섰고 바뀐 파일은 모두 하네스와 문서이며
@@ -414,3 +414,46 @@ next-session "워크트리에서 병합할 때"의 길로 병합한다.
 harness 022 는 이 PR 로 닫힌다. 다음은 next-session 결정표의 harness 티켓 PR 줄대로 `plan.md`의 프론티어에서 고른다. 같은 묶음의
 형제 가운데 열린 것은 각자 도는 중이라 다음 작업에 넣지 않는다. `web/packages/ui/src/styles/DesignTokens.stories.tsx`를
 고쳤으므로 다음 디자인 시스템 올리기(`/sync-design-system 올리기`)가 빌드를 요구한다(PR 본문).
+
+## 인계 (커밋 뒤, 봇 첫 회차 반영)
+
+봇 첫 회차 반영과 위 회고·다음을 실은 커밋(747ac693)이 pre-commit 을 지났다(`Skipped`는 스테이지된 `.py`가 없는 ruff 둘,
+카나리아 명세, 헌법 판. pytest 472초, web-verify 521초. 커밋 출력을 손으로 봤다). 인용 대조 경고 하나(커밋 해시를 줄여 옮긴
+따옴표 인용)는 커밋 뒤 이 일지에서 따옴표를 떼어 고쳤고 커밋하지 않았다. 그 뒤 인계 계기가 `커밋 뒤` 경계에서 왔다. 세션
+컨텍스트가 223,442 토큰으로 인계 문턱(20만 토큰)을 넘었다. 인계하지 않는 때 다섯에 들지 않아(커밋이 성공했다, 요청 범위는
+PR 과 병합까지다, 지시문의 이어받을 상태는 `인계:`로 시작하지 않았다, `인계 못함` 줄이 없다, `get_session`의 `self`에
+`parentSessionId`가 없다) 넘긴다. 이 세션의 지금 제목은 `chore/022-eslint-boolean-params`이고 넘기기 전에 `(인계함)`을 붙인다.
+이 절은 커밋하지 않았다.
+
+남은 단계: 이 절을 이어 쓰고 커밋해 747ac693 과 함께 한 번에 푸시한다(따로 푸시하면 claude-review 가 한 번 더 돈다). 그 뒤
+`@coderabbitai review` 코멘트, `merge.md` 2 의 대기와 둘째 회차(봇마다 둘째 회차다. Critical·Major 만 고치고 나머지는 PR 코멘트에
+보류 이유), `headRefOid` 대조 뒤 "워크트리에서 병합할 때"의 길이다. 형제 `design-card-build-spec`의 일지 2026-10-29-05 가
+먼저 병합되면 `tools/sibling_overlap.py`의 출력대로 이 일지를 옮긴다.
+
+인계 지시문:
+
+다음 작업: .scratch/harness/issues/022-eslint-boolean-params.md. 대기열 483: web/eslint.config.mjs 가 타입이 boolean 인 함수 매개변수를 잡고 CODING_STANDARDS.md 의 그 줄이 이 규칙을 가리킨다
+다음 단계: PR 반영·병합
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: 대기열 483을 티켓 .scratch/harness/issues/022-eslint-boolean-params.md로 쓰고 한다
+브랜치: chore/022-eslint-boolean-params
+모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
+읽을 것: docs/agents/issue-tracker.md
+이어받을 상태: 인계: 커밋 뒤. main 합치기와 봇 첫 회차 반영(CodeRabbit 지적 없음, claude-review Nit 하나를 고침), 일지의 회고와 "다음"까지 747ac693 으로 커밋했고 아직 푸시하지 않았다. 일지의 "인계 (커밋 뒤, 봇 첫 회차 반영)" 절은 커밋하지 않았다. 그 절을 이어 써 커밋한 뒤 함께 한 번에 푸시하고 봇 둘째 회차와 병합으로 간다. 남은 단계는 그 절의 "남은 단계". 일지 docs/journal/2026-10-29-04-eslint-boolean-params.md
+확인할 선행 조건: 없음
+이번 요청 범위: PR과 병합까지
+
+잠금 풀기는 `is not locked`로 넘어갔다.
+
+open-session을 부른다 2026-10-29T07:17:58Z
+
+## 이어받은 세션 (4)
+
+> 사용자: "대기열 483을 티켓 .scratch/harness/issues/022-eslint-boolean-params.md로 쓰고 한다"
+
+위 "인계 (커밋 뒤, 봇 첫 회차 반영)" 지시문으로 연 새 세션이다(2026-10-29). 제목을 `chore/022-eslint-boolean-params`로
+바꾸고 `EnterWorktree(path)`로 이 워크트리에 들어왔다(잠금 거부 없이 들어왔다). 커밋하지 않은 변경은 이 일지 하나였고,
+`git fetch origin` 뒤 origin/main 은 84542f52 그대로라 합칠 커밋이 없었다. `uv run python tools/sibling_overlap.py`는 번호
+겹침 없음이었고, 이 일지를 이름순으로 앞서는 형제는 아직 열린 `design-card-build-spec`의 2026-10-29-05 하나였다(모두 출력을
+손으로 봤다). 이 절을 더해 747ac693 과 함께 한 번에 푸시하고 봇 둘째 회차로 간다. 둘째 회차는 Critical·Major 만 고치고
+나머지는 PR 코멘트에 보류 이유를 남긴다.
