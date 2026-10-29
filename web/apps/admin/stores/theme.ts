@@ -60,7 +60,9 @@ export function chooseTheme(theme: ThemeKey): void {
   try {
     localStorage.setItem(THEME_STORAGE_KEY, theme);
   } catch {
-    // 저장소를 막은 브라우저. 이 문서에서만 그 테마로 그린다.
+    // 저장소를 막은 브라우저. 이 문서에서만 그 테마로 그린다. 쓰기만 실패하고 옛 저장 값이 읽히면(저장소가 가득 찼다)
+    // 다음 화면이 마운트될 때 restoreStoredTheme 이 그 옛 값으로 되돌린다. 이 앱이 이 출처의 localStorage 에 적는 것은
+    // 이 키 하나라 그 상태는 드물다고 본다(어림).
   }
 }
 

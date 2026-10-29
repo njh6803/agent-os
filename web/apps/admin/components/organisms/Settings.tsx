@@ -3,7 +3,7 @@
 // 스토어의 값은 pages 가 읽어 넘긴다.
 //
 // 채널 토큰과 토큰 지우기의 머리(`h2` 와 흐린 설명 한 줄)는 두 구역이 저마다 적는다. 테마는 `fieldset` 의 `legend` 가
-// 머리이고 흐린 설명 줄이 없어 그 모양이 아니다. 같은 모양이 둘뿐이라 묶지 않는다(admin-style 티켓 09).
+// 머리이고 머리 바로 아래에 흐린 설명 줄이 없어 그 모양이 아니다. 같은 모양이 둘뿐이라 묶지 않는다(admin-style 티켓 09).
 import type { ThemeKey } from "@agent-os/ui";
 import { ScreenHeader } from "../molecules/ScreenHeader";
 import { ChannelTokenForm } from "./ChannelTokenForm";

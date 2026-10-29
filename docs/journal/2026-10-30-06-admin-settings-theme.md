@@ -1,4 +1,4 @@
-# 2026-10-29 (19) 설정 화면에서 고른 테마가 바로 바뀌고 새로 고쳐도 첫 그림부터 그 테마다 (admin-style 09)
+# 2026-10-30 (06) 설정 화면에서 고른 테마가 바로 바뀌고 새로 고쳐도 첫 그림부터 그 테마다 (admin-style 09)
 
 next-session 지시문으로 연 새 세션이다(나란히 여는 4 중 4). 지시문대로 `tidy-checkouts`는 돌지 않았고(묶음의 첫 세션이 돈다), 주 체크아웃에서 브랜치를 따지 않고 `EnterWorktree`(이름 `09-admin-settings-theme`)로 워크트리에 들어갔다. `implement` 스킬을 디스크의 `SKILL.md`로 읽어 따랐다.
 
@@ -60,8 +60,8 @@ Docker 프로세스를 `Stop-Process`로 끄고 Docker Desktop을 다시 띄우�
 시작 프롬프트: /implement .scratch/admin-style/issues/09-admin-settings-theme.md
 브랜치: feature/09-admin-settings-theme
 모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
-읽을 것: docs/journal/2026-10-29-19-admin-settings-theme.md
-이어받을 상태: 인계: 셀프 리뷰 직전. 커밋하지 않은 변경이 워크트리에 있고 셀프 리뷰(/code-review origin/main)부터 한다(일지 docs/journal/2026-10-29-19-admin-settings-theme.md). 셀프 리뷰 전에, 관리 화면 e2e의 e2e/decision.e2e.ts:39(허가한 뒤 이벤트 구역에 run_finished가 서지 않는다)가 전체 실행과 다시 돌린 실행에서 두 번 연속 빨갰고 아직 진단하지 않았다. diagnosing-bugs로 이 브랜치의 변경 탓인지부터 가른다. PR 본문에는 바뀐 사진 열둘과 다크 사진의 카드 표본이 라이트로 찍히는 까닭(일지 "사진 비교와 Docker")을 적는다. Docker 엔진은 다시 켜도 십수 분 뒤에 다시 죽었다. 사람이 Docker를 끄고 다시 켜도 된다고 고른 답은 이 세션의 사진 정답 만들기에 한 것이다(일지에 원문)
+읽을 것: docs/journal/2026-10-30-06-admin-settings-theme.md
+이어받을 상태: 인계: 셀프 리뷰 직전. 커밋하지 않은 변경이 워크트리에 있고 셀프 리뷰(/code-review origin/main)부터 한다(일지 docs/journal/2026-10-30-06-admin-settings-theme.md). 셀프 리뷰 전에, 관리 화면 e2e의 e2e/decision.e2e.ts:39(허가한 뒤 이벤트 구역에 run_finished가 서지 않는다)가 전체 실행과 다시 돌린 실행에서 두 번 연속 빨갰고 아직 진단하지 않았다. diagnosing-bugs로 이 브랜치의 변경 탓인지부터 가른다. PR 본문에는 바뀐 사진 열둘과 다크 사진의 카드 표본이 라이트로 찍히는 까닭(일지 "사진 비교와 Docker")을 적는다. Docker 엔진은 다시 켜도 십수 분 뒤에 다시 죽었다. 사람이 Docker를 끄고 다시 켜도 된다고 고른 답은 이 세션의 사진 정답 만들기에 한 것이다(일지에 원문)
 확인할 선행 조건: 이 PC에서 기준 커밋 3ee0be4f로 decision.e2e.ts를 돌려 보지 않아, 그 실패가 이 브랜치 전부터 있었는지 모른다(main의 CI는 3ee0be4f에서 초록이었다)
 이번 요청 범위: PR과 병합까지
 ```
@@ -141,8 +141,8 @@ open-session을 부른다 2026-10-29T13:57:45Z
 시작 프롬프트: /implement .scratch/admin-style/issues/09-admin-settings-theme.md
 브랜치: feature/09-admin-settings-theme
 모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
-읽을 것: docs/journal/2026-10-29-19-admin-settings-theme.md
-이어받을 상태: 인계: 커밋 뒤. 셀프 리뷰를 반영해 커밋했고 pre-commit이 모두 통과했다. 그 뒤 일지만 고쳤고(인용 따옴표 하나와 이 인계 절) 아직 커밋하지 않았다. 남은 단계는 origin/main 합치기, PR 직전 리뷰(/security-review와 bug-perf-review 서브에이전트. bug-perf-review의 브리프에는 일지 "반영으로 새로 쓴 사실 문장"을 밀 주장으로 넘긴다), /git-pr, 봇 회차, 병합, 회고와 일지 "다음"이다. PR 본문에는 바뀐 사진 열둘과 다크 사진의 카드 표본이 라이트로 찍히는 까닭(일지 "사진 비교와 Docker"), decision.e2e.ts:39가 이 PC의 부하에서 흔들리고 이 브랜치와 무관하다는 진단(일지 "decision.e2e.ts:39 진단")을 적는다(일지 docs/journal/2026-10-29-19-admin-settings-theme.md)
+읽을 것: docs/journal/2026-10-30-06-admin-settings-theme.md
+이어받을 상태: 인계: 커밋 뒤. 셀프 리뷰를 반영해 커밋했고 pre-commit이 모두 통과했다. 그 뒤 일지만 고쳤고(인용 따옴표 하나와 이 인계 절) 아직 커밋하지 않았다. 남은 단계는 origin/main 합치기, PR 직전 리뷰(/security-review와 bug-perf-review 서브에이전트. bug-perf-review의 브리프에는 일지 "반영으로 새로 쓴 사실 문장"을 밀 주장으로 넘긴다), /git-pr, 봇 회차, 병합, 회고와 일지 "다음"이다. PR 본문에는 바뀐 사진 열둘과 다크 사진의 카드 표본이 라이트로 찍히는 까닭(일지 "사진 비교와 Docker"), decision.e2e.ts:39가 이 PC의 부하에서 흔들리고 이 브랜치와 무관하다는 진단(일지 "decision.e2e.ts:39 진단")을 적는다(일지 docs/journal/2026-10-30-06-admin-settings-theme.md)
 확인할 선행 조건: 없음
 이번 요청 범위: PR과 병합까지
 ```
@@ -156,4 +156,43 @@ open-session을 부른다 2026-10-29T14:57:23Z
 인계 지시문으로 연 새 세션이다. 제목을 브랜치 이름으로 바꾸고 `git worktree list`에서 이 브랜치의 워크트리를 찾아 `EnterWorktree(path)`로 들어갔다. `implement` 스킬을 디스크의 `SKILL.md`로 읽어 따랐다.
 
 > 사용자: "`.claude/skills/implement/SKILL.md` 를 읽어 그대로 따른다. … 인자: .scratch/admin-style/issues/09-admin-settings-theme.md … 이어받을 상태: 인계: 커밋 뒤. 셀프 리뷰를 반영해 커밋했고 pre-commit이 모두 통과했다. 그 뒤 일지만 고쳤고(인용 따옴표 하나와 이 인계 절) 아직 커밋하지 않았다. 남은 단계는 origin/main 합치기, PR 직전 리뷰(/security-review와 bug-perf-review 서브에이전트. bug-perf-review의 브리프에는 일지 "반영으로 새로 쓴 사실 문장"을 밀 주장으로 넘긴다), /git-pr, 봇 회차, 병합, 회고와 일지 "다음"이다. … 확인할 선행 조건: 없음 … 이번 요청 범위: PR과 병합까지"
+
+일지 변경을 `4bfa92aa`로 커밋했다. pre-commit의 `parallel-checks` 열이 모두 Passed였다(pytest 593.7초, web-verify 670.6초, pre-commit이 찍었다). 인용 대조 경고 한 건(127줄의 ruff 출력 인용)은 도구 출력을 옮긴 것이라 그대로 둔다.
+
+### origin/main 합치기
+
+`git merge --no-edit origin/main`이 충돌 없이 `c0717ad8`을 만들었다(git이 찍었다). 들어온 것은 #428(admin-style 07, 실행 하나 화면)과 #427(design-card-build 티켓)이다. 두 브랜치가 함께 고친 파일은 없었다(`git diff --name-only`의 두 방향을 견줬다). #428의 `RunPage`가 이 브랜치가 고친 `AdminScreen`을 지나므로(grep했다) 합친 뒤 `pnpm -C web exec vitest run apps/admin/components/pages`를 쳤고 7파일 173개가 통과했다(러너가 찍었다). 대기열과 `plan.md`의 차이에서 이 브랜치가 따라야 할 새 규약은 보지 못했다(차이의 머리를 읽었다. 전부는 읽지 않았다).
+
+### PR 직전 리뷰
+
+`coderabbit auth status`가 `Seat: not assigned`라(도구가 찍었다) 대체 둘을 돌렸다.
+
+- 보안(`/security-review`, 합친 뒤). 1단계 서브태스크가 후보 0건을 냈다. 그 보고는 localStorage·`storage` 이벤트·문서 뿌리 속성에서 들어오는 세 길이 모두 허용 목록(`themeKeyOf`, `theme.js`의 목록 `includes`)을 지나 `data-theme` 값 하나로만 쓰이고, 토큰은 여전히 sessionStorage에만 있으며, `eslint.config.mjs`의 변경은 주석 한 줄이라고 적었다. `theme.js`의 허용 목록은 이 세션이 파일을 읽어 확인했다. 후보가 없어 2단계의 거짓 양성 거르기는 돌지 않았다. 결과는 취약점 없음이다.
+- 버그·성능(`bug-perf-review`, 기준 `c04e4fe6`, 범위 36파일, 호출 38). Minor 셋이 유효, 오탐 일곱이었다. 밀 주장 아홉 가운데 일곱은 근거와 맞았고, 어긋난 둘이 아래 둘째·셋째다. 지적마다 근거를 본 판정이다.
+  - Minor 1, 주석을 고치고 동작은 남긴다. 저장소가 읽기는 되고 쓰기만 실패하면(가득 참) `chooseTheme`이 속성을 먼저 바꾼 뒤 저장에 실패하고, 다음 화면에서 새로 선 `AdminScreen`의 `restoreStoredTheme`이 옛 저장 값으로 되돌린다. 관리 화면의 다섯 페이지가 저마다 `AdminScreen`을 세워(grep했다) 화면을 옮길 때 다시 마운트된다는 것은 맞다. 명세에는 쓰기 실패의 동작이 없다(명세를 grep했다). 이 앱이 그 출처의 localStorage에 적는 것은 테마 키 하나라(리뷰가 grep으로 봤다) 그 상태는 드물다고 본다(어림). 동작을 고치면 모듈 변수와 다른 탭 이벤트의 차례, 새 시험과 변이가 따라와 값이 커서, `catch` 주석이 "이 문서에서만"이라고 넓게 적은 것을 그 갈래까지 적게 고치고 PR 체크리스트에 남긴다.
+  - Minor 2, 고친다. 변이 표에서 `expect_output`에 `<파일>:<줄>:`이 든 표지는 115·130·148·301·317·350·381·457줄로 여덟이다(`grep -n expect_output`으로 셌다). 셀프 리뷰의 "일곱"은 스물넷째를 더하기 전에 센 것이다. 프로브 README 행을 "미리보기를 본 스물셋 가운데 … 일곱", "줄 위치를 든 표지는 표 전체에서 여덟"으로 고쳤다. 위 "변이 표" 절의 일곱은 미리보기를 본 스물셋을 말해 그대로 둔다.
+  - Minor 3, 고친다. `organisms/Settings.tsx` 머리 주석의 "흐린 설명 줄이 없어"는 `ThemePicker`가 카드 아래에 흐린 안내 줄을 두는 것(`ThemePicker.tsx:33`을 읽었다)과 글자로 어긋나, "머리 바로 아래에 흐린 설명 줄이 없어"로 고쳤다.
+
+고친 뒤 `tools/mutate.py --check`가 "변이 24 모두 원문이 한 번씩 있다"였고, 고친 두 파일의 `prettier --check`가 통과했다(도구가 찍었다). 이 세션이 화면 코드를 처음 고치자 계기 훅이 알려 `/sync-design-system 확인`을 불렀고, `check judge`의 `result`가 `clean`, `decide`가 `continue`였다(도구가 찍었다).
+
+반영의 첫 커밋 시도에서 세션 컨텍스트가 인계 문턱을 넘은 채 `커밋 뒤`에 왔다는 계기가 왔지만, 이 세션의 지시문 "이어받을 상태"가 `인계: 커밋 뒤`로 시작해 `handoff.md` 1의 셋째(같은 경계)에 들어 넘기지 않았다. 그 시도는 pre-commit의 pytest에서 다섯이 빨개 막혔다(`5 failed, 6001 passed in 961.22s`, pre-commit이 찍었다). `tests/channel/cli/test_interrupt.py`의 셋은 "Ctrl+C 를 누른 자식이 30초 안에 끝나지 않았다", `tests/tools/test_rerun_runner.py`의 둘은 동시에 둘이 돌기를 기대한 자리에서 `assert 1 == 2`였다. 이 브랜치와 합친 main은 파이썬 코드를 바꾸지 않았고(두 방향의 `git diff --name-only`에 `.py`가 없다), 같은 파이썬 코드의 `4bfa92aa` 커밋에서는 pytest가 593.7초에 통과했다. 그 두 파일만 `uv run pytest -q -p no:cacheprovider`로 따로 돌리니 69개가 모두 통과했다(러너가 찍었다). 시간에 기대는 시험이 부하로 늦어진 것으로 본다. 그때의 부하는 재지 않았다(어림).
+
+다시 친 커밋도 막혔다(`7 failed, 5999 passed in 1196.25s`, pre-commit이 찍었다). `test_interrupt.py`의 둘(도구 호출 도중, 닫기 시작한 뒤)이 같은 "30초 안에 끝나지 않았다"로 두 번 연속 빨갰고, 새로 `tests/adapters/test_mcp.py`의 셋(`deadline exceeded`), `tests/tools/test_probe_kit.py`의 하나, `tests/tools/test_rerun_gates.py`의 하나가 빨갰다. 작업 규약 6대로 `diagnosing-bugs`로 갈랐다.
+
+- 가설. ① 나란히 도는 다른 세션의 무거운 실행이 CPU를 나눠 가진다. ② 앞선 실패가 남긴 고아 프로세스가 회차마다 쌓인다. ③ 합친 main이 무거운 시험을 더했다. ④ pre-commit이 함께 띄우는 검사의 자기 부하다.
+- 관찰. 커밋이 끝난 뒤 CPU가 2초 간격 세 번에 82·91·100%였고, 명령줄로 가른 python·node 프로세스가 `01-assemble-bundle-and-cards` 12, `03-upload-plan-first-canonical` 11, `05-admin-plugin-screens` 6, `06-admin-run-list` 3, `12-main-run` 1이었으며 이 워크트리의 것은 없었다(PowerShell `Get-CimInstance`·`Get-Counter`가 찍었다). 명령줄에 `pytest-of-User`가 든 python 넷은 모두 `05-admin-plugin-screens`의 `.venv`로 도는 지금의 pytest(`pytest-17206`)였고 부모가 살아 있었다(같은 도구가 찍었다).
+- 판정. ②는 반박된다(이 세션이 남긴 프로세스가 없다). ③은 두 실패 회차가 모두 6006개이고 합친 것에 `.py`가 없어 약하다. ④는 같은 검사 열의 `4bfa92aa`가 593.7초에 통과해 약하다. ①에 맞는 관찰이 나왔지만, 부하를 걸었다 뺐다 하며 빨강과 초록을 번갈아 낸 양성 대조는 하지 않았다. 다른 세션의 실행을 더 느리게 하기 때문이다. 그래서 ①은 어림이다. 같은 꼴의 선례는 대기열 306(열림)과 332이고, `test_interrupt.py`는 531의 다른 갈래(시각 해상도)도 있다. 이번 일곱은 306의 새 사례로 회고에 넘긴다. 시험을 고치는 일은 이 티켓의 범위 밖이다.
+- 처리. `SKIP=pytest`는 사람이 고를 일이라 쓰지 않는다. 다른 워크트리의 pytest·vitest·Playwright가 사라지고 CPU가 내려가기를 기다린 뒤 다시 친다.
+
+기다림은 90분 시한으로 끝났다. 50초 간격으로 89번 쟀고, CPU가 60% 아래로 내려간 것은 58·55·53·42%의 네 번뿐이며 두 번 연속은 없었다(대기 스크립트가 찍었다). 대기 조건에도 결함이 있었다. 명령줄에 `playwright`가 든 프로세스 76개가 665분 전부터 떠 있어(워크트리 경로가 명령줄에 없다, `Get-CimInstance`가 찍었다) "무거운 실행 0"은 처음부터 채워질 수 없었다. CPU 조건만 따져도 채워지지 않았다. 시한 직후에 `08-admin-decision-column`과 주 체크아웃이 1분 전에 띄운 `run_checks`·pytest가 돌고 있었고 CPU는 99%였다(같은 도구가 찍었다).
+
+사람에게 셋(pytest만 빼고 커밋, 그대로 한 번 더 커밋, 더 기다린다)을 물었다. 고른 답은 이것이다.
+
+> 사용자: "pytest만 빼고 커밋 (Recommended)". 그 설명: "SKIP=pytest로 커밋합니다. 검사 러너(tools/run_checks.py)는 그 id의 pytest 하나만 빼고 나머지 검사를 그대로 돌립니다. pytest는 PR의 CI가 리눅스에서 돌립니다."
+
+`tools/run_checks.py`가 `SKIP`을 쉼표로 갈라 같은 id의 검사만 뺀다는 것은 그 파일을 읽어 확인했다(138줄). CLAUDE.md는 `SKIP`으로 뺀 검사를 손으로 치라고 적지만, 이 PC의 부하에서는 전체 pytest가 두 회차 연속 같은 시간 시험에서 흔들렸으므로, 전체 실행은 사람이 고른 대로 PR의 CI로 갈음한다.
+
+그 대신 두 회차에서 빨갰던 시험 파일 다섯(`test_interrupt.py`, `test_rerun_runner.py`, `test_mcp.py`, `test_probe_kit.py`, `test_rerun_gates.py`)만 `uv run pytest -q -p no:cacheprovider`로 따로 돌렸다. 결과는 `1 failed, 151 passed in 790.45s`였다(러너가 찍었다). 빨간 하나는 `tests/tools/test_rerun_runner.py`의 `test_동시에_둘까지_돌고_셋째는_자리가_빌_때_연다`이고, 첫 회차와 같은 `assert 1 == 2`다. 그 시험은 1.5초씩 매달리는 가짜 실행 넷을 띄운 뒤 동시에 둘이 돈 순간이 있었는지를 본다(시험 본문 668~677줄을 읽었다). 그래서 부하로 둘째가 늦게 떠 첫째와 겹치지 못하면 1이 된다고 읽었다. 부하를 걸었다 빼며 재지는 않아 어림이다. 첫 회차 뒤 같은 두 파일을 따로 돌렸을 때는 69개가 모두 통과했으므로, 이 시험은 부하에 따라 결과가 갈린다고 본다. 다섯 파일에 13분이 든 것도 그때의 부하를 보여 준다.
+
+커밋 직전의 `tools/sibling_overlap.py`가 1로 끝났다. origin/main이 `8899c41`로 움직여 최신 일지가 2026-10-30-03이 됐고, 이 브랜치의 일지 2026-10-29-19가 이름순으로 그보다 앞서 다음 세션이 지나친다는 것이었다(도구가 찍었다). `--move`로 이 일지를 2026-10-30-06으로 옮겼고, 도구가 티켓 09와 프로브 README와 이 일지의 인용을 고쳤다. 옛 번호는 `git grep`으로 다시 찾아 이 기능에 닿는 잔존이 0이었다(남은 한 줄은 2026-10-07-21의 "일지 19"로, 다른 일지를 말한다).
 
