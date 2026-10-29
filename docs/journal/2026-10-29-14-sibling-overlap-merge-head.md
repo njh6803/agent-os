@@ -22,6 +22,8 @@
 - 셀프 리뷰(`/code-review`, base 5ccb51a). 명세 축이 프로브로 찾은 것: main 이 아닌 머리를 합치면 다음 빈 번호가 이미 쓴 번호를 낸다(Major), 두 줄 순서가 바뀌면 겹침을 놓친다(Minor), 티켓의 `unshared` 문장이 main 머리일 때만 맞다(Minor). 표준 축: 문서가 옛 판과 어긋남(리뷰가 옛 판을 읽음, 이미 고쳤다), "기존 시험 둘이 빨개졌다"의 꼴과 근거의 종류가 없음(인자 차례가 다른 꼴을 재어 초록), `k in committed` 갈래와 octopus 가 시험으로 고정되지 않음, smell 로 `queue_lines` 중복. 모두 고쳤다. `read_numbers` 가 `queue_lines` 를 쓰게 했고, `k in committed` 를 지운 변이에서 새 시험이 빨개진 것을 손으로 봤다. 나머지 smell(같은 `str` 인자 셋, 이름의 겹침)은 판단 항목이라 두었다.
 - 합치기 관련 시험 13개(`-k 합치`)가 초록, 린트·포맷 초록. pre-commit 의 나머지 검사(pyright, lint-imports, check-instructions, check-type-escapes, run-hooks, web-verify 등)는 통과했다.
 
+- PR 직전 리뷰(origin/main 을 합친 뒤, CodeRabbit CLI 대신 대체 둘). 내장 `/security-review` 는 지적 0건이었다. 하위 작업이 코드를 읽고 낸 근거는 git 호출이 모두 `shell=True` 없는 인자 목록이고, `MERGE_HEAD` 의 값은 읽기 전용 `git ls-tree`·`git show` 에만 들며, `--move` 의 쓰는 길은 바뀌지 않았다는 것이다. `bug-perf-review` 도 지적 0건(유효 0, 오탐 0)이었다. 그 서브에이전트가 `merge_heads`·`drop_merged_rows` 의 경계를 코드로 따라갔고, `tests/tools/test_sibling_overlap.py` 125 passed 를 돌려 봤다고 보고했다.
+
 ## 막힌 것
 
 커밋을 pre-commit 으로 세 번 시도했고 세 번 모두 pytest 의 이 변경과 무관한 시간 의존 시험에서 막혔다. 이 PC 에 여러 세션이 함께 돌아 pytest 한 바퀴가 13~21분이었다. 아래 결과는 모두 `git commit -F` 의 pre-commit 출력과 `uv run pytest` 로그에서 손으로 봤다. 실패 원인을 부하로 본 것은 홀로 돌리면 통과한 것에 기댄 어림이다.
