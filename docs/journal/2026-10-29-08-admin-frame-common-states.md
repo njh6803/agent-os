@@ -141,3 +141,44 @@ PR 직전 리뷰에 밀 주장(반영으로 새로 쓴 사실 문장):
 
 - 첫 커밋 시도는 pre-commit의 pytest만 빨개 막혔다(2 failed, 5,995 passed, 14분 52초). 나머지 아홉(web-verify 881초 포함)은 지났고, ruff 둘은 스테이지된 `.py`가 없어 `Skipped`였다(러너가 찍었다). 빨간 것은 `tests/channel/cli/test_interrupt.py::test_서버를_닫기_시작한_뒤에_한_번_누르면_닫기를_마치고_중단으로_끝난다`("30초 안에 끝나지 않았다")와 `tests/tools/test_rerun_runner.py::test_오염이_한_번이면_다시_돌고_두_번이면_그_과제를_모든_갈래에서_뺀다`(`assert 1 == 0`)다. 이 브랜치가 건드리지 않은 시간 시험이고, 둘만 따로 돌리자 모두 지났다(134초, 러너가 찍었다). 대기열 306이 받아들여 닫은 종류의 새 사례라 회차를 더하지 않고 같은 커밋을 다시 쳤다.
 - 둘째 시도도 pytest만 빨개 막혔다(1 failed, 5,996 passed, 10분 12초. 나머지는 모두 지났다, 러너가 찍었다). 이번에는 `tests/tools/test_rerun_runner.py::test_본_측정에서_첫_인계_뒤_멈추고_확인_인자를_주면_잇는다`가 가짜 회차 둘을 `('A', 1, '측정 아님', '호출')`·`('B', 1, '측정 아님', '호출')`로 끝내 `END_DONE`을 찾지 못했다. 그것만 따로 돌리자 지났다(9.6초, 러너가 찍었다). 같은 종류로 보고 셋째로 다시 쳤다.
+- 셋째 시도에서 커밋 `c7714859`가 섰다. pre-commit은 pytest(449.7초)와 web-verify(472.2초)를 포함해 모두 지났고 ruff 둘은 `Skipped`였다(러너가 찍었다).
+
+## 인계(커밋 뒤)
+
+커밋 뒤 경계에서 세션 컨텍스트가 약 26.3만 토큰으로 인계 문턱을 넘어 `hook_handoff`가 왔다. 첫 두 커밋 시도에서도 계기가 왔지만 커밋이 pre-commit에 막혀 경계가 아니었다. 셋째 시도가 지나 인계하지 않는 때 다섯에 들지 않았다(커밋이 섰고, 요청 범위는 PR과 병합까지이며, 이 세션의 지시문의 "이어받을 상태"는 `인계: 셀프 리뷰 직전`이라 경계가 다르고, `인계 못함` 줄이 없고, `get_session`의 `self`에 `parentSessionId`가 없었다). 이 세션의 지금 제목은 `feature/04-admin-frame-common-states`이고, 이 브랜치에 열린 PR은 없다.
+
+이 세션이 번복하거나 고친 것: 0.3초 시험의 첫 단언을 시계를 밀지 않고 바로 보게 바꾸려다, 그러면 지연 0의 변이를 놓친다는 것을 알고 0.1초를 민 뒤 보는 쪽으로 다시 고쳤다. `HomePage.test.tsx` 단언을 남기는 이유를 "persist가 상태 전체를 쓴다"로 먼저 적었다가 `stores/tokens.ts`를 읽고 `partialize`의 두 토큰으로 고쳤다. Docker 질문과 `SettingsPage.test.tsx`의 서식, 커밋 두 번의 막힘은 위 절들에 적었다.
+
+origin/main이 PR #420(harness 022, ESLint 판정자가 TypeScript의 불리언 매개변수를 잡는다)만큼 앞섰다(`git log HEAD..origin/main`, git이 찍었다). 그 PR은 이 브랜치도 고친 `PluginList.tsx`·`RunDecision.tsx`·`RunPage.tsx`·`HomePage.test.tsx`·`organisms_props_mutations.toml`을 고쳐 합칠 때 글자 충돌 후보다. 새 규칙(`web/eslint.config.mjs`의 `BOOLEAN_PARAMETER`)은 함수 정의의 매개변수 가운데 `boolean` 주석과 `true`·`false` 리터럴 기본값을 잡는다. 이 브랜치의 새 코드에서 `boolean`이 든 자리는 props의 필드와 반환 타입뿐이고, 걸리는 매개변수(`SetEnabled`, `decisionPlaceStands`, `noticeOf`, `rowsWith`)는 #420이 이미 옵션 객체로 고친 자리다(Grep으로 손으로 봤다. 합친 뒤 eslint로는 아직 재지 않았다).
+
+```
+다음 작업: .scratch/admin-style/issues/04-admin-frame-common-states.md. 관리 화면의 틀과 공통 상태
+다음 단계: 구현
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /implement .scratch/admin-style/issues/04-admin-frame-common-states.md
+브랜치: feature/04-admin-frame-common-states
+모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
+읽을 것: docs/journal/2026-10-29-08-admin-frame-common-states.md의 "셀프 리뷰" 절(PR 직전 리뷰에 밀 주장)부터 "인계(커밋 뒤)" 절까지
+이어받을 상태: 인계: 커밋 뒤. 커밋 c7714859까지 셀프 리뷰 반영, 사진(새 정답 40장을 눈으로 보고 visual·visual:widget·visual:admin 모두 통과), web verify와 run_checks, 티켓 Status done을 마쳤다. 커밋하지 않은 변경은 일지의 마지막 커밋 줄과 "인계(커밋 뒤)" 절뿐이다. 남은 단계는 origin/main 합치기(PR #420과 파일 다섯이 충돌 후보다. #420의 옵션 객체를 살리며 이 브랜치의 변경을 얹고, 합친 뒤 변이 표 셋을 --check로 본다), PR 직전 리뷰(밀 주장은 일지 셀프 리뷰 절), /git-pr(사진은 일지 "사진 비교와 Docker" 절대로 PR 본문에 적는다), plan.md 프론티어 줄 끝에 04가 병합되어 05·06·07·09가 풀렸다는 문장(PR 번호와 일지 2026-10-29-08, 08은 07을 기다린다), 봇 회차, 회고, 워크트리 길 병합이다. docs/journal/2026-10-29-08-admin-frame-common-states.md
+확인할 선행 조건: 없음
+이번 요청 범위: PR과 병합까지
+```
+
+제목을 `feature/04-admin-frame-common-states (인계함)`으로 바꿨다. 남은 백그라운드 작업은 없었다(사진 비교, web verify, 커밋이 그 전에 끝났다). `git worktree unlock`은 `is not locked`로 끝났다(git이 찍었다).
+
+open-session을 부른다 2026-10-29T08:40:42Z
+
+## 이어받기(커밋 뒤)
+
+> 사용자: "다음 작업: .scratch/admin-style/issues/04-admin-frame-common-states.md. 관리 화면의 틀과 공통 상태 / 다음 단계: 구현 … 이어받을 상태: 인계: 커밋 뒤. 커밋 c7714859까지 셀프 리뷰 반영, 사진(새 정답 40장을 눈으로 보고 visual·visual:widget·visual:admin 모두 통과), web verify와 run_checks, 티켓 Status done을 마쳤다 … 남은 단계는 origin/main 합치기(PR #420과 파일 다섯이 충돌 후보다 …), PR 직전 리뷰(밀 주장은 일지 셀프 리뷰 절), /git-pr …, plan.md 프론티어 줄 끝에 04가 병합되어 05·06·07·09가 풀렸다는 문장 …, 봇 회차, 회고, 워크트리 길 병합이다 … 확인할 선행 조건: 없음 / 이번 요청 범위: PR과 병합까지"
+
+새 세션이 제목을 브랜치 이름으로 바꾸고 `EnterWorktree`(path)로 이 워크트리에 들어왔다. 작업 트리의 커밋하지 않은 변경은 지시문대로 이 일지 하나였다(`git status --short`, git이 찍었다).
+
+- **합치기.** origin/main이 #420(harness 022)과 #418(harness 023)만큼 앞섰다(`git log HEAD..origin/main`, git이 찍었다). `git merge origin/main`은 충돌 후보 다섯(`PluginList.tsx`, `RunDecision.tsx`, `RunPage.tsx`, `HomePage.test.tsx`, `organisms_props_mutations.toml`)을 글자 충돌 없이 자동으로 합쳤다(병합 커밋 `4b968762`, git이 찍었다). 합친 뒤 다섯 파일의 main 쪽 변경(`SetEnabled`의 `{ enabled }`, `decisionPlaceStands`·`noticeOf`의 `{ channelTokenEntered }`, `usePlugins({ active })`, `rowsWith`의 `{ enabled }`)이 그대로 살았고, 옛 호출 모양은 `web/apps/admin`에 남지 않았다(`git diff HEAD~1 HEAD`와 Grep으로 봤다).
+- **합친 뒤 검사.** `pnpm -C web lint`(새 `BOOLEAN_PARAMETER` 규칙 포함)와 `pnpm -C web typecheck`가 0으로 끝났다(러너가 찍었다). 변이 표 셋을 `tools/mutate.py --check`로 보니 새 표 23, 티켓 02 표 7, 티켓 03 표 6 모두 "원문이 한 번씩 있다"였다(도구가 찍었다).
+- **PR 직전 리뷰.** `coderabbit auth status`가 `Plan: Free`, `Seat: not assigned`라(도구가 찍었다) CLI 대신 대체 둘을 나란히 돌렸다. 버그·성능은 `bug-perf-review` 서브에이전트에 셀프 리뷰 절의 밀 주장 아홉을 넘겼고, 보안은 합친 뒤의 `/security-review`다. 그 명령의 커밋 목록은 병합 커밋과 `c7714859` 둘이었다(그 명령이 채운 `COMMITS:` 칸을 손으로 봤다. main의 커밋이 섞이지 않았다).
+- **보안(`/security-review`).** 찾기 서브태스크가 "No vulnerabilities found"를 냈다(서브에이전트가 보고했다). 본 곳은 설정 화면을 지나는 토큰의 길(`type="password"`의 제어하지 않는 입력, `FormData`로 한 번 읽고 `form.reset()`, 화면에는 넣었다는 줄만), XSS(배포 코드에 `dangerouslySetInnerHTML`·`innerHTML`·`eval`이 없고 서버 메시지와 추적 식별자는 React의 글자 자식), 링크(`NavItem`·`AdminNav`의 `href`는 고정 값), 로그와 비밀(새 `console.*`·하드코딩한 토큰 없음), 미리보기와 패키지 내보내기다. 지적이 없어 거짓 양성 거르기 단계는 돌지 않았다.
+- **버그·성능(`bug-perf-review`).** 기준 `56ccacc9`, 범위 97파일(사진 40 포함), 호출 41이었다(서브에이전트가 보고했다). 밀 주장 아홉 가운데 여덟(2~9)은 근거와 맞았다. `FailureNotice` 자리 여섯, `useHydrated`의 `useSyncExternalStore(…, () => true, () => false)`, 그림 셋의 `padding: var(--spacing-3); background: var(--bg)`, `useTokens`를 부르는 pages 셋, 0.1초 단언(`HomePage`·`SettingsPage` 시험 55개를 돌렸다), README, zustand persist의 `setItem`과 `partialize`를 그 자리에서 대 봤다고 했다. 주장 1(`aria-labelledby`를 단 구역에서 `queryAllByLabelText`가 둘을 찾는다)은 이름 없는 구역 쪽만 확인했다(`SettingsPage.test.tsx:83`의 `getByLabelText`가 지난다). 이름 있는 구역 쪽은 그 리뷰가 시험을 쓰지 못해 부르지 못했고, 앞 세션이 임시 페이지 시험으로 손으로 본 것(위 셀프 리뷰 절)이 근거로 남는다. 따라가지 못한 것은 스토리 다섯, 변이 표 둘과 프로브 README, 티켓 06·09 등, 페이지 시험 넷의 본문, `admin-token.e2e.ts`, 사진이라고 했다.
+  - 지적 1(Minor, 유효로 판정): `PluginPage`·`RunPage`의 주소를 풀지 못한 갈래(`decoded === null`)는 `ReadSection`을 지나지 않아, 틀의 `<h1>관리 화면</h1>`을 지운 뒤 화면에 `h1`이 없다. 코드를 읽어 맞다고 봤다(`PluginPage.tsx:25-31`, `RunPage.tsx:26-29`). 리뷰는 05·07 메모로 넘기자고 했지만, 지운 것이 이 티켓이고 고치는 값이 작아 PR 전에 고쳤다(`docs/constitution/operations.md` 리뷰 파이프라인 2). 시험 셋(풀지 못한 플러그인 주소, 종류가 아닌 플러그인 주소, 풀지 못한 실행 주소에서 `h1`의 이름)을 먼저 더해 셋 모두 `Unable to find role="heading"`으로 빨간 것을 본 뒤(러너가 찍었다), 페이지마다 지역 부품 `AddressFailure`가 `ScreenHeader`와 옛 실패 알림을 `aria-labelledby` 구역으로 함께 그리게 했다. 제목은 정상 갈래와 같은 주소 조각이고 풀지 못했으면 받은 글자 그대로다. 세 페이지 시험 파일의 76개가 지났고 Prettier와 ESLint도 지났다(러너가 찍었다). 변이 표 셋은 `--check`로 원문이 그대로였다(도구가 찍었다). 티켓 04의 "이 티켓이 정한 것"에 한 항목을 더하고 `FailureNotice` 자리 문장을 "갈래로 여섯, JSX의 자리로는 다섯"으로 고쳤으며(`grep "<FailureNotice"`로 다섯을 셌다), 05·07 메모에 머리를 남기라는 문장을 더했다.
+  - 오탐 넷: `SettingsPage.test.tsx`의 `request:start` 리스너가 `finally`에 없는 것, `formatJson(undefined)`, 하위 화면에서 상위 탐색 항목에 붙는 `aria-current`(티켓과 `test.each`가 정했다), 하이드레이션 전 한순간의 틀(2026-10-27에 사용자가 골랐다).
+- **디자인 시스템의 웹 편집 확인.** 위 반영으로 화면 코드를 처음 고치자 계기 훅이 알려 `/sync-design-system 확인`을 돌렸다. `check judge`의 `result`는 `clean`이었고(앞 세션들이 본 `importing`의 `claim`은 없었다), `decide --caller screen`은 `act` `continue`에 `notes`가 비었다(도구가 찍었다). `check judge`를 처음 칠 때 없는 인자를 붙여 `usage` 오류로 끝났고, 그 인자를 빼고 다시 쳤다(도구가 찍었다).

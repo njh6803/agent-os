@@ -254,6 +254,22 @@ describe("플러그인 하나", () => {
     );
   });
 
+  test("주소를 풀 수 없어도 화면의 제목은 받은 이름 조각 그대로다", async () => {
+    acceptTokens();
+
+    await openPlugin("agent", "%E0%A4%A");
+
+    expect(await screen.findByRole("heading", { level: 1, name: "%E0%A4%A" })).toBeTruthy();
+  });
+
+  test("주소의 종류가 플러그인의 종류가 아니어도 화면의 제목은 푼 이름이다", async () => {
+    acceptTokens();
+
+    await openPlugin("agents", "Old%20Calc");
+
+    expect(await screen.findByRole("heading", { level: 1, name: "Old Calc" })).toBeTruthy();
+  });
+
   test("플러그인 목록으로 돌아가는 링크가 있다", async () => {
     acceptTokens();
     servePlugin("/plugins/agent/calc", () => HttpResponse.json(CALC));

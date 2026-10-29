@@ -694,6 +694,12 @@ describe("실행 하나", () => {
     expect((await screen.findByRole("alert")).textContent).toContain("주소를 풀 수 없다: %E0%A4%A");
   });
 
+  test("주소를 풀 수 없어도 화면의 제목은 받은 조각 그대로다", async () => {
+    await openRun("%E0%A4%A");
+
+    expect(await screen.findByRole("heading", { level: 1, name: "%E0%A4%A" })).toBeTruthy();
+  });
+
   test("실행 목록으로 돌아가는 링크가 있다", async () => {
     serveTrace(`/traces/${RUN}`, () => HttpResponse.json(TRACE));
 

@@ -3,12 +3,14 @@
 // 실행 하나를 연 화면(web-admin 티켓 07). 주소의 조각(실행 식별자)을 라우트가 그대로 넘긴다.
 
 import Link from "next/link";
+import { useId } from "react";
 import type { Trace } from "../../api/traces";
 import { useDecision } from "../../hooks/queries/approval";
 import { usePlugins } from "../../hooks/queries/plugins";
 import { useTrace } from "../../hooks/queries/traces";
 import { useTokens } from "../../stores/tokens";
 import { FailureNotice } from "../molecules/FailureNotice";
+import { ScreenHeader } from "../molecules/ScreenHeader";
 import { decisionPlaceStands, RunDecision } from "../organisms/RunDecision";
 import { RunDetail } from "../organisms/RunDetail";
 import { AdminScreen } from "./AdminScreen";
@@ -25,12 +27,21 @@ export function RunPage({ runId }: RunPageProps) {
   return (
     <AdminScreen current="runs">
       <Link href="/runs">실행 목록으로</Link>
-      {decoded === null ? (
-        <FailureNotice message={`주소를 풀 수 없다: ${runId}`} requestId={null} />
-      ) : (
-        <ConnectedRunDetail runId={decoded} />
-      )}
+      {decoded === null ? <AddressFailure runId={runId} /> : <ConnectedRunDetail runId={decoded} />}
     </AdminScreen>
+  );
+}
+
+/**
+ * 주소를 풀지 못한 화면. 읽기 골격(`ReadSection`)을 지나지 않아도 화면 머리의 제목은 받은 조각 그대로다.
+ */
+function AddressFailure({ runId }: { readonly runId: string }) {
+  const titleId = useId();
+  return (
+    <section aria-labelledby={titleId} className="flex flex-col gap-6">
+      <ScreenHeader titleId={titleId} title={runId} />
+      <FailureNotice message={`주소를 풀 수 없다: ${runId}`} requestId={null} />
+    </section>
   );
 }
 
