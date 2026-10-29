@@ -143,6 +143,41 @@ PR을 열려고 푸시하자 `hook_push_behind_main`이 이 브랜치가 `origin
 5. **부하 아래의 시간 시험이 두 번 커밋을 막았다**(`tests/tools/test_probe_kit.py`, `tests/tools/test_rerun_runner.py`. 단독으로는 둘 다 통과했다). 기각: 닫힌 306(부하에서만 빨간 시간 시험)은 받아들여 닫은 결함 종류라, 새 사례는 회차를 더하지 않고 일지에만 적는다(retro 5단계의 행의 종류). 지시문대로 SKIP 없이 다시 쳤다.
 6. **프로브 README의 글꼴 수 "woff2 385개·woff 385개"가 틀린 수였다**(위 "PR 직전 리뷰"의 넷째). 기각: 이 PR이 쓰지 않은 지난 결과의 기록이고, 이 PR의 티켓 문장은 맞았다. 원본 CSS로 센 수를 이 일지에 남긴다.
 
+## 커밋과 PR
+
+합치기 커밋 `ff85d61b`의 pre-commit은 SKIP 없이 다시 친 회차에서 모두 통과했다(pytest Passed. 출력을 손으로 봤다). ruff 둘은 스테이지된 `.py`가 없어 Skipped라 합친 뒤 손으로 쳤다(`All checks passed!`, `1171 files already formatted`). 푸시한 뒤 PR #427(https://github.com/njh6803/agent-os/pull/427)을 열었다. 본문은 PR 템플릿을 채웠고, 체크리스트의 검증 명령 줄은 커밋마다의 pre-commit 결과로 갈음했다.
+
+## 인계 (PR 연 뒤)
+
+PR을 연 뒤에 인계 계기(`hook_handoff`, 세션 컨텍스트 365,179 토큰, 경계 `PR 연 뒤`)가 `hook_pr_next_session`의 계기와 함께 왔다. 이 세션을 연 지시문의 이어받을 상태는 `인계: 커밋 뒤`라 이번 경계와 다르다. 요청 범위("티켓까지")는 병합까지이고, 이 세션은 곁 세션이 아니다(`get_session`의 `self`에 `parentSessionId`가 없다). 그래서 `handoff.md`대로 넘긴다. 이 세션의 지금 제목은 `docs/design-card-build-tickets`이다. `@coderabbitai review` 코멘트와 `tools/wait_ci.py` 대기는 아직 없다. `gh pr view`는 `OPEN`, `tools/model_sweep.py`는 `스윕 밖`이었다.
+
+넘기는 지시문:
+
+```
+다음 작업: 기능 design-card-build. 컴포넌트 카드와 묶음을 저장소가 형식의 정식 자리에 짓기로 한 결정(ADR 0025 2026-10-28 이력)의 명세 검토와 티켓 쪼개기. 명세 PR #422는 병합됐다(f3b4af0d)
+다음 단계: PR 반영·병합
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: 명세 검토(spec-reviewer 서브에이전트)를 먼저 돌고, 그 뒤 /to-tickets .scratch/design-card-build/spec.md
+브랜치: docs/design-card-build-tickets
+모델: Sonnet 5.5 / high
+읽을 것: docs/journal/2026-10-29-16-design-card-build-tickets.md의 "커밋과 PR", "인계 (PR 연 뒤)", "다음"
+이어받을 상태: 인계: PR 연 뒤. PR #427을 열었고 merge.md 2(봇 회차)부터 한다. 첫 @coderabbitai review 코멘트도 새 세션이 남기고, tools/wait_ci.py 대기도 아직 띄우지 않았다(일지 docs/journal/2026-10-29-16-design-card-build-tickets.md). 같은 일지의 커밋하지 않은 변경(커밋과 PR 절, 인계 절)이 워크트리에 있어 다음 커밋에 싣는다. 회고와 "다음"은 ff85d61b에 실었으니 봇 회차에서 새로 난 사건만 회고에 더한다. 병합 뒤에는 막힌 것이 없는 01과 03을 나란히 여는 지시문 둘을 낸다. 임시 디자인 시스템 아티팩트 64VW1b5F8tRcCeTZBwZA29는 사용자가 남겨 두기로 했다. 지우지 않고 다시 묻지 않는다. 이 PC에서 pre-commit의 pytest는 다른 시간 시험(tests/tools/test_probe_kit.py, tests/tools/test_rerun_runner.py, tests/channel/cli/test_interrupt.py)이 부하에서 한 번씩 막을 수 있다. 단독 실행이 통과하면 SKIP 없이 같은 커밋을 한 번 더 시도하고, SKIP=pytest는 사람에게 묻는다. 대기열 531·536·540은 이 기능의 마지막 티켓이 아니라 반영하지 않았다
+확인할 선행 조건: 없음
+이번 요청 범위: 티켓까지
+```
+
+제목을 `docs/design-card-build-tickets (인계함)`으로 바꿨고, 멈출 백그라운드 작업은 없었다. `git worktree unlock`은 `is not locked`로 끝나 넘어갔다.
+
+open-session을 부른다 2026-10-29T12:58:26Z
+
+## 봇 회차 (인계받은 세션)
+
+인계받은 세션이 `@coderabbitai review` 코멘트를 남기고 `tools/wait_ci.py 427`을 백그라운드로 돌렸다. 헤드 `ff85d61b`에서 검사 아홉이 모두 통과했다(`tools/wait_ci.py 427`의 출력 마지막 줄 `끝: 모두 통과`를 읽었다). claude-review는 "지적 없음"이었고(`gh pr view 427 --json comments`로 PR 코멘트를 읽었다), CodeRabbit의 첫 회차는 Major 하나였다(같은 명령과 `gh api repos/njh6803/agent-os/pulls/427/comments`로 읽었다).
+
+- **CodeRabbit 첫 회차, Major 1건(05, 21행).** "이미 끝났으면" 갈래가 기록의 `files`에 옛 별칭이 없는지만 보고 절차를 끝까지 돌아서, 기록에는 없는데 웹 Files에 남은 옛 파일을 놓칠 수 있다는 지적이다. 05 티켓 21행이 스스로 03의 "목록만 옛것일 때"를 들어 "기록에 없는 옛 별칭을 지울 경로로 내지 않는다"고 적고 있으므로(05를 Read로 읽었다. 03은 이 세션에서 열어 보지 않았다) 기록에만 기대면 놓칠 수 있다고 판단했다. 05의 그 줄을 고쳐 Artifact 도구 `list`의 `scope: "files"`로 실제 목록에도 옛 별칭 48개가 없는지 보게 하고, 남았으면 티켓을 끝내지 않고 사람에게 알리게 했다.
+- **회차 세기.** claude-review는 첫 회차(지적 없음), CodeRabbit도 첫 회차였다. 이 푸시로 도는 다음 리뷰가 각 봇의 둘째 회차라 Critical·Major만 고치고 나머지는 보류 이유를 PR 코멘트에 남긴다.
+- **회고.** 새 규칙·검사 후보는 만들지 않았다. 티켓이 한 갈래의 확인을 기록 하나에만 기댄 사건이라 열린 493(이 일지 회고 1번이 적은 요지인 "한 동작을 옮기면서 남아야 할 것을 적지 않은 티켓". 대기열 행은 이 세션에서 열어 보지 않았다)과 가깝다고 어림하지만, 이 PR의 처방은 그 한 줄을 고치는 것으로 끝나 회차를 더하지 않고 여기에만 적는다.
+
 ## 다음
 
 - 이 PR이 병합되면 design-card-build는 티켓 단계가 닫히고 프론티어는 01(짓기 명령의 묶음·카드·글꼴·옛 이름)과 03(올리기 계획의 첫 정식 올리기·몫·색인)이다. 둘 다 `Blocked by`가 없어 나란히 돈다. 02는 01을, 04는 02와 03을, 05는 04를 기다린다(`.scratch/design-card-build/issues/`의 Blocked by, `.scratch/plan.md`의 design-card-build 행).
