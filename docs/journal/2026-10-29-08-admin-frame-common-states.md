@@ -179,6 +179,69 @@ open-session을 부른다 2026-10-29T08:40:42Z
 - **PR 직전 리뷰.** `coderabbit auth status`가 `Plan: Free`, `Seat: not assigned`라(도구가 찍었다) CLI 대신 대체 둘을 나란히 돌렸다. 버그·성능은 `bug-perf-review` 서브에이전트에 셀프 리뷰 절의 밀 주장 아홉을 넘겼고, 보안은 합친 뒤의 `/security-review`다. 그 명령의 커밋 목록은 병합 커밋과 `c7714859` 둘이었다(그 명령이 채운 `COMMITS:` 칸을 손으로 봤다. main의 커밋이 섞이지 않았다).
 - **보안(`/security-review`).** 찾기 서브태스크가 "No vulnerabilities found"를 냈다(서브에이전트가 보고했다). 본 곳은 설정 화면을 지나는 토큰의 길(`type="password"`의 제어하지 않는 입력, `FormData`로 한 번 읽고 `form.reset()`, 화면에는 넣었다는 줄만), XSS(배포 코드에 `dangerouslySetInnerHTML`·`innerHTML`·`eval`이 없고 서버 메시지와 추적 식별자는 React의 글자 자식), 링크(`NavItem`·`AdminNav`의 `href`는 고정 값), 로그와 비밀(새 `console.*`·하드코딩한 토큰 없음), 미리보기와 패키지 내보내기다. 지적이 없어 거짓 양성 거르기 단계는 돌지 않았다.
 - **버그·성능(`bug-perf-review`).** 기준 `56ccacc9`, 범위 97파일(사진 40 포함), 호출 41이었다(서브에이전트가 보고했다). 밀 주장 아홉 가운데 여덟(2~9)은 근거와 맞았다. `FailureNotice` 자리 여섯, `useHydrated`의 `useSyncExternalStore(…, () => true, () => false)`, 그림 셋의 `padding: var(--spacing-3); background: var(--bg)`, `useTokens`를 부르는 pages 셋, 0.1초 단언(`HomePage`·`SettingsPage` 시험 55개를 돌렸다), README, zustand persist의 `setItem`과 `partialize`를 그 자리에서 대 봤다고 했다. 주장 1(`aria-labelledby`를 단 구역에서 `queryAllByLabelText`가 둘을 찾는다)은 이름 없는 구역 쪽만 확인했다(`SettingsPage.test.tsx:83`의 `getByLabelText`가 지난다). 이름 있는 구역 쪽은 그 리뷰가 시험을 쓰지 못해 부르지 못했고, 앞 세션이 임시 페이지 시험으로 손으로 본 것(위 셀프 리뷰 절)이 근거로 남는다. 따라가지 못한 것은 스토리 다섯, 변이 표 둘과 프로브 README, 티켓 06·09 등, 페이지 시험 넷의 본문, `admin-token.e2e.ts`, 사진이라고 했다.
-  - 지적 1(Minor, 유효로 판정): `PluginPage`·`RunPage`의 주소를 풀지 못한 갈래(`decoded === null`)는 `ReadSection`을 지나지 않아, 틀의 `<h1>관리 화면</h1>`을 지운 뒤 화면에 `h1`이 없다. 코드를 읽어 맞다고 봤다(`PluginPage.tsx:25-31`, `RunPage.tsx:26-29`). 리뷰는 05·07 메모로 넘기자고 했지만, 지운 것이 이 티켓이고 고치는 값이 작아 PR 전에 고쳤다(`docs/constitution/operations.md` 리뷰 파이프라인 2). 시험 셋(풀지 못한 플러그인 주소, 종류가 아닌 플러그인 주소, 풀지 못한 실행 주소에서 `h1`의 이름)을 먼저 더해 셋 모두 `Unable to find role="heading"`으로 빨간 것을 본 뒤(러너가 찍었다), 페이지마다 지역 부품 `AddressFailure`가 `ScreenHeader`와 옛 실패 알림을 `aria-labelledby` 구역으로 함께 그리게 했다. 제목은 정상 갈래와 같은 주소 조각이고 풀지 못했으면 받은 글자 그대로다. 세 페이지 시험 파일의 76개가 지났고 Prettier와 ESLint도 지났다(러너가 찍었다). 변이 표 셋은 `--check`로 원문이 그대로였다(도구가 찍었다). 티켓 04의 "이 티켓이 정한 것"에 한 항목을 더하고 `FailureNotice` 자리 문장을 "갈래로 여섯, JSX의 자리로는 다섯"으로 고쳤으며(`grep "<FailureNotice"`로 다섯을 셌다), 05·07 메모에 머리를 남기라는 문장을 더했다.
+  - 지적 1(Minor, 유효로 판정): `PluginPage`·`RunPage`의 주소를 풀지 못한 갈래(`decoded === null`)는 `ReadSection`을 지나지 않아, 틀의 `<h1>관리 화면</h1>`을 지운 뒤 화면에 `h1`이 없다. 코드를 읽어 맞다고 봤다(`PluginPage.tsx:25-31`, `RunPage.tsx:26-29`). 리뷰는 05·07 메모로 넘기자고 했지만, 지운 것이 이 티켓이고 고치는 값이 작아 PR 전에 고쳤다(`docs/constitution/operations.md` 리뷰 파이프라인 2). 시험 셋(풀지 못한 플러그인 주소, 종류가 아닌 플러그인 주소, 풀지 못한 실행 주소에서 `h1`의 이름)을 먼저 더해 셋 모두 `Unable to find role="heading"`으로 빨간 것을 본 뒤(러너가 찍었다), 페이지마다 지역 부품 `AddressFailure`가 `ScreenHeader`와 옛 실패 알림을 `aria-labelledby` 구역으로 함께 그리게 했다. 제목은 정상 갈래와 같은 주소 조각이고 풀지 못했으면 받은 글자 그대로다. 세 페이지 시험 파일의 76개가 지났고 Prettier와 ESLint도 지났다(러너가 찍었다). 변이 표 셋은 `--check`로 원문이 그대로였다(도구가 찍었다). 티켓 04의 "이 티켓이 정한 것"에 한 항목을 더하고 `FailureNotice` 자리 문장을 갈래로는 여섯이고 JSX의 자리로는 다섯이라는 문장으로 고쳤으며(`grep "<FailureNotice"`로 다섯을 셌다), 05·07 메모에 머리를 남기라는 문장을 더했다.
   - 오탐 넷: `SettingsPage.test.tsx`의 `request:start` 리스너가 `finally`에 없는 것, `formatJson(undefined)`, 하위 화면에서 상위 탐색 항목에 붙는 `aria-current`(티켓과 `test.each`가 정했다), 하이드레이션 전 한순간의 틀(2026-10-27에 사용자가 골랐다).
 - **디자인 시스템의 웹 편집 확인.** 위 반영으로 화면 코드를 처음 고치자 계기 훅이 알려 `/sync-design-system 확인`을 돌렸다. `check judge`의 `result`는 `clean`이었고(앞 세션들이 본 `importing`의 `claim`은 없었다), `decide --caller screen`은 `act` `continue`에 `notes`가 비었다(도구가 찍었다). `check judge`를 처음 칠 때 없는 인자를 붙여 `usage` 오류로 끝났고, 그 인자를 빼고 다시 쳤다(도구가 찍었다).
+- **커밋.** 반영과 이 일지를 실은 커밋 `01b3da5d`가 한 번에 섰다. pre-commit은 pytest(591.4초)와 web-verify(604.9초)를 포함해 모두 지났다(러너가 찍었다). 스테이지된 `.py`가 없어 ruff 둘은 손으로 쳐 "All checks passed!"와 "1158 files already formatted"였다(도구가 찍었다). 인용 대조가 이 일지의 따옴표 인용 하나(티켓 문장을 줄여 옮긴 것)를 원문에 없다고 경고해 따옴표를 뗐다. 커밋 뒤 경계에서 세션 컨텍스트가 약 25.4만 토큰으로 `hook_handoff`가 왔지만, 이 세션을 연 지시문의 "이어받을 상태"가 `인계: 커밋 뒤`로 시작해 `handoff.md` 1의 셋째(같은 경계)라 넘기지 않았다.
+
+## 인계(PR 연 뒤)
+
+origin/main이 더 앞서지 않은 것을 보고(`git log HEAD..origin/main`이 비었다, git이 찍었다) 브랜치를 푸시하고 `gh pr create`로 PR #423을 열었다. 본문은 템플릿대로 채웠고 사진은 위 "사진 비교와 Docker" 절대로, PR 직전 리뷰는 대체 둘의 결과대로 적었다. 앱의 PR 감시는 이 세션에 묶였고(`get_status`의 `bound: true`) 연 직후 검사는 통과 1, 대기 6, 건너뜀 1이었다(도구가 찍었다).
+
+PR을 연 경계에서 세션 컨텍스트가 약 27.7만 토큰으로 `hook_handoff`가 왔다. 인계하지 않는 때 다섯에 들지 않았다(PR이 열렸고, 요청 범위는 병합까지이며, 지시문의 "이어받을 상태"는 `인계: 커밋 뒤`라 경계가 다르고, `인계 못함` 줄이 없고, `get_session`의 `self`에 `parentSessionId`가 없었다). 이 세션의 지금 제목은 `feature/04-admin-frame-common-states`다.
+
+`plan.md` 프론티어 줄 끝에 04가 병합되어 05·06·07·09가 풀리고 08은 07을 기다린다는 문장을 PR 번호와 함께 더했다. 커밋하지 않은 변경은 그 줄과 이 절(그리고 위의 따옴표 고침)뿐이다.
+
+이 세션이 번복하거나 고친 것: 버그·성능 리뷰의 Minor는 리뷰가 05·07 메모로 넘기자고 했지만, 지운 것이 이 티켓이라 PR 전에 고치는 쪽으로 판정했다. `check judge`의 잘못 붙인 인자(위 절).
+
+```
+다음 작업: .scratch/admin-style/issues/04-admin-frame-common-states.md. 관리 화면의 틀과 공통 상태
+다음 단계: PR 반영·병합
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /implement .scratch/admin-style/issues/04-admin-frame-common-states.md
+브랜치: feature/04-admin-frame-common-states
+모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
+읽을 것: docs/journal/2026-10-29-08-admin-frame-common-states.md의 "이어받기(커밋 뒤)" 절부터 "인계(PR 연 뒤)" 절까지
+이어받을 상태: 인계: PR 연 뒤. PR #423을 열었고 커밋 01b3da5d까지 푸시했다. merge.md 2(봇 회차)부터 한다. 첫 @coderabbitai review 코멘트도 새 세션이 남긴다. 커밋하지 않은 변경은 plan.md 프론티어 줄 끝의 04 문장과 일지의 "인계(PR 연 뒤)" 절(과 따옴표 고침)뿐이고, 봇 회차의 반영 커밋에 싣는다(고칠 것이 없으면 그것만 실은 커밋. 회차 세기는 merge.md 2). 그 뒤 남은 단계는 회고(retro)와 일지 "다음", 워크트리 길 병합이다. docs/journal/2026-10-29-08-admin-frame-common-states.md
+확인할 선행 조건: 없음
+이번 요청 범위: PR과 병합까지
+```
+
+제목을 `feature/04-admin-frame-common-states (인계함)`으로 바꾼다. 남은 백그라운드 작업은 없다(리뷰 서브에이전트 둘과 커밋이 그 전에 끝났다). 제목은 바뀌었고, `git worktree unlock`은 `is not locked`로 끝났다(git이 찍었다).
+
+open-session을 부른다 2026-10-29T09:16:56Z
+
+## 이어받기(PR 연 뒤)
+
+> 사용자: "다음 작업: .scratch/admin-style/issues/04-admin-frame-common-states.md. 관리 화면의 틀과 공통 상태 / 다음 단계: PR 반영·병합 … 이어받을 상태: 인계: PR 연 뒤. PR #423을 열었고 커밋 01b3da5d까지 푸시했다. merge.md 2(봇 회차)부터 한다 … 그 뒤 남은 단계는 회고(retro)와 일지 "다음", 워크트리 길 병합이다 … 확인할 선행 조건: 없음 / 이번 요청 범위: PR과 병합까지"
+
+새 세션이 제목을 브랜치 이름으로 바꾸고 `EnterWorktree`(path)로 이 워크트리에 들어왔다. 커밋하지 않은 변경은 지시문대로 `plan.md`와 이 일지였고(`git status --short`), origin/main은 더 앞서지 않았다(`git log HEAD..origin/main`이 비었다, git이 찍었다).
+
+- **봇 회차 1의 대기.** 이어받을 때 claude-review는 `01b3da5d`에 첫 리뷰를 내고 통과였고, CodeRabbit은 저장소의 별이 10개 미만이라 자동 리뷰를 건너뛰었다(`gh pr checks`의 `skipping`과 CodeRabbit의 PR 코멘트가 찍었다). `@coderabbitai review` 코멘트를 남기고 `tools/wait_ci.py 423`을 백그라운드로 띄웠다.
+- **claude-review 첫 회차.** 경계는 지적이 없었고 유지보수성에서 Minor 둘과 Nit 하나가 나왔다(PR 코멘트가 찍었다).
+  - Minor 1(보류): `PluginPage`·`RunPage`의 지역 부품 `AddressFailure`가 같은 뼈대의 두 사본이다. 리뷰가 "후속 허용"이라 했고, 두 화면의 실패 알림을 `FailureAlert`로 옮기는 05·07이 그 사본을 어차피 고치므로 합칠 자리도 그때 정하는 편이 싸다고 판정했다. 05·07 메모에 먼저 옮기는 쪽이 둘을 한 부품으로 합칠지 정한다는 문장을 더했다.
+  - Minor 2(고칠 것 없음): 옛 `FailureNotice`와 `FailureAlert`가 함께 있다. 지우는 시점은 05 메모의 끝 문장(05·07·08 가운데 마지막에 병합하는 티켓이 지운다)이 이미 정했다.
+  - Nit(고칠 것 없음): 0.3초 시험의 가짜 시계에 실제 시간이 섞인다. PR 본문의 "남긴 위험"이 이미 적었다.
+- **대기의 끝.** `tools/wait_ci.py`가 헤드 `01b3da5`의 검사 아홉을 보고 `끝: 모두 통과`로 끝났다(도구가 찍었다). 통과 줄에 CodeRabbit이 리뷰했는지가 없어 따로 보니, CodeRabbit의 체크 런이 `neutral`에 제목 `Review rate limited`였고(`gh api …/check-runs`가 찍었다) `@coderabbitai review`에는 "Review rate limited" 답글이 달렸다(PR 코멘트가 찍었다). 그 헤드의 커밋 상태(StatusContext)는 비어 있었다(`gh api …/status`가 찍었다). 한도에 걸린 푸시는 CodeRabbit의 회차로 세지 않는다(`next-session` `merge.md` 2). 그 PR의 보안·버그 축은 PR 직전에 돈 대체 둘의 결과를 PR 본문에 적은 것이 대신한다(`docs/constitution/operations.md` 리뷰 파이프라인의 CodeRabbit 한도 항목).
+
+## 회고
+
+후보 열 가운데 승인 셋, 기각 여섯, 넘김은 없고, 하나는 일지에만 남긴다. 만료할 행은 이 체크아웃과 `origin/main` 모두에서 없었다(`tools/queue_open_rows.py`가 찍었다). 새 훅·검사가 문턱(세 번째나 손상)을 지난 것이 없어 `tools/hook_report.py`는 돌리지 않았다.
+
+1. **승인(회차, 대기열 499 → 3회차).** `tools/wait_ci.py`가 CodeRabbit을 커밋 상태의 설명으로만 읽어, 체크 런으로 온 한도 결과를 통과 줄에 적지 못했다(위 "대기의 끝"). 같은 처방의 열린 행이 있어 회차를 더했다. 도구의 고침이라 사건 하나로 반영할 수 있지만, 기능 PR의 범위 밖이라 이 세션에서 반영하지 않는다. 회차 3이라 `next-session` 결정표의 chore 계기다.
+2. **승인(회차, 대기열 494 → 3회차).** Docker 엔진이 `Internal Server Error`로 답해 사진 비교가 두 번 막혔다(위 "사진 비교 전의 Docker"와 "사진 비교와 Docker"). 둘째는 Storybook 정적 빌드를 마친 뒤 `docker run`에서야 125로 끝나 그 빌드 시간을 잃었다. 행의 처방(엔진 오류를 그 자리에서 알리기)과 같은 사건이다. 다만 이번에는 사람이 고른 대로 세션이 Docker 프로세스를 끄고 Docker Desktop을 다시 켰고 막히지 않았다(위 절의 대기 스크립트가 찍었다). 처방의 "에이전트의 재시작은 분류기가 막는다"와 어긋나 행에 그 사실을 함께 적었다. 더하는 것의 세 번째라 반영할 차례이지만, 기능 PR의 범위 밖이라 chore 계기로 둔다.
+3. **승인(새 행, 대기열 541, 1회차).** 주소를 풀지 못한 갈래에서 `h1`이 사라진 것을 셀프 리뷰 두 축이 놓치고 PR 직전 `bug-perf-review`가 잡았다(위 "이어받기(커밋 뒤)"의 지적 1). 그 갈래를 그리는 페이지 시험은 이미 있었다(`git show origin/main:./web/apps/admin/components/pages/PluginPage.test.tsx`에서 "플러그인의 종류가 아니다"와 "주소를 풀 수 없다"를, `RunPage.test.tsx`에서 "주소를 풀 수 없다"를 grep으로 봤다). 그래서 `pages` 시험 프로젝트가 시험마다 `h1`이 하나인지 보면 잡았을 것이다(어림). 리뷰가 잡은 사건이라 회차 셈에서 빼고 검사로 옮기는 갈래로 갈랐다(층: 시험 하네스, 되돌림: PR 하나). 더하는 것의 첫 번째라 행으로 둔다.
+4. **일지에만(대기열 306이 받아들여 닫은 종류).** 커밋 시도 둘이 pre-commit의 시간 시험(`test_interrupt.py`, `test_rerun_runner.py`)에서 막혔고, `run_checks`의 `test_probe_kit.py`도 같은 꼴로 빨갰다(위 "반영 뒤 검증"과 "커밋"). 이 브랜치가 건드리지 않은 시험이고 따로 돌리면 지났다. 부하에서 빨개지는 시간 시험이라 행을 잇지 않는다.
+5. **기각.** 셀프 리뷰 반영 뒤 `SettingsPage.test.tsx`의 서식이 Prettier에 걸려 `run_checks`의 web-verify가 뒷단계를 돌지 않았다. 이미 있는 게이트가 커밋 전에 잡았다.
+6. **기각.** 변이 표 셋을 `tools/mutate.py`에 한 번에 넘겼다가 "변이는 표 하나씩 돌린다"로 거부됐다. 도구가 그 자리에서 알렸다.
+7. **기각.** Docker 질문의 선택 화면을 사실 대조 훅(`hook_choice_facts`)이 세 번 막았다. 훅이 그 자리에서 막았다.
+8. **기각.** `/sync-design-system 확인`의 `check judge`에 없는 인자를 붙여 `usage` 오류로 끝났다. 도구가 그 자리에서 알렸다.
+9. **기각.** claude-review가 짚은 `AddressFailure` 두 사본은 리뷰가 제 몫을 한 것이고, 검사로 옮길 판정도 표준에 더할 새 기준도 아니다(같은 뼈대를 합칠지는 화면마다의 판단이다).
+10. **기각.** CodeRabbit의 한도는 `docs/constitution/operations.md`가 이미 적은 값이고, 이 세션은 그 문서대로 대체 리뷰의 기록으로 갈음했다.
+
+## 다음
+
+- 04가 병합되면 05(플러그인 화면), 06(실행 목록), 07(실행 하나 화면), 09(설정 화면의 테마)가 풀리고 08(결정 칸)은 07을 기다린다(`.scratch/plan.md` 프론티어 줄 끝).
+- PR #423의 claude-review 첫 회차가 낸 Minor(`PluginPage`·`RunPage`의 `AddressFailure` 두 사본)는 뒤로 넘겨, 05·07 가운데 먼저 옮기는 티켓이 한 부품으로 합칠지 정한다(05·07의 "메모(04에서)").
+- 대기열 494(Docker 엔진 오류를 그 자리에서 알리기)와 499(`tools/wait_ci.py`가 CodeRabbit 체크 런을 읽기)가 이 회고로 회차 3이 되어 chore 계기다.
+- 좁은 폭에서 한국어 낱말 안에서 줄이 갈린다(일지 2026-10-28-23의 "다음"에서 넘어왔다). 화면 전체의 글자에 걸린 디자인 시스템의 결정(`word-break`)이라 사람이 정할 일이고, 아직 어느 기능에도 적지 않았다.
