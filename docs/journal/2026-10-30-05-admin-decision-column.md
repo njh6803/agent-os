@@ -1,4 +1,4 @@
-# 2026-10-30 (02) 결정 칸 안의 카드와 버튼 쌍 (admin-style 08)
+# 2026-10-30 (05) 결정 칸 안의 카드와 버튼 쌍 (admin-style 08)
 
 ## 사용자 프롬프트
 
@@ -81,8 +81,8 @@
 시작 프롬프트: /implement .scratch/admin-style/issues/08-admin-decision-column.md
 브랜치: feature/08-admin-decision-column
 모델: Opus 5.5 / medium. 레벨 스윕의 갈래
-읽을 것: docs/journal/2026-10-30-02-admin-decision-column.md
-이어받을 상태: 인계: 커밋 뒤. 셀프 리뷰를 반영하고 티켓을 done으로 한 커밋 952f21e2까지 했고 아직 푸시하지 않았다. 남은 단계는 PR 직전 리뷰(coderabbit 좌석이 없어 대체 둘: origin/main을 합친 뒤 내장 /security-review, 그리고 bug-perf-review 서브에이전트. 밀 주장은 일지의 "인계(둘째 세션)" 줄), 푸시, PR, 병합이다. PR 본문에 적을 것: 바뀐 사진 12장과 새 사진 24장 가운데 에이전트가 Read로 본 7장(일지)과 나머지는 사람이 볼 몫, decision e2e 첫 시험이 사진 비교와 함께 돌 때 한 번 실패하고 혼자 돌려 통과한 것, PR #429(05)가 FailureAlert.tsx와 plugin-toggle.e2e.ts를, 09 워크트리가 README.md를 함께 고쳐 나중에 병합하는 쪽에 글자 충돌 후보가 있다는 것, 카나리아 web_admin_plugins_read 통과 4. 일지: docs/journal/2026-10-30-02-admin-decision-column.md
+읽을 것: docs/journal/2026-10-30-05-admin-decision-column.md
+이어받을 상태: 인계: 커밋 뒤. 셀프 리뷰를 반영하고 티켓을 done으로 한 커밋 952f21e2까지 했고 아직 푸시하지 않았다. 남은 단계는 PR 직전 리뷰(coderabbit 좌석이 없어 대체 둘: origin/main을 합친 뒤 내장 /security-review, 그리고 bug-perf-review 서브에이전트. 밀 주장은 일지의 "인계(둘째 세션)" 줄), 푸시, PR, 병합이다. PR 본문에 적을 것: 바뀐 사진 12장과 새 사진 24장 가운데 에이전트가 Read로 본 7장(일지)과 나머지는 사람이 볼 몫, decision e2e 첫 시험이 사진 비교와 함께 돌 때 한 번 실패하고 혼자 돌려 통과한 것, PR #429(05)가 FailureAlert.tsx와 plugin-toggle.e2e.ts를, 09 워크트리가 README.md를 함께 고쳐 나중에 병합하는 쪽에 글자 충돌 후보가 있다는 것, 카나리아 web_admin_plugins_read 통과 4. 일지: docs/journal/2026-10-30-05-admin-decision-column.md
 확인할 선행 조건: 없음
 이번 요청 범위: PR과 병합까지
 ```
@@ -96,8 +96,8 @@
 시작 프롬프트: /implement .scratch/admin-style/issues/08-admin-decision-column.md
 브랜치: feature/08-admin-decision-column
 모델: Opus 5.5 / medium. 레벨 스윕의 갈래
-읽을 것: docs/journal/2026-10-30-02-admin-decision-column.md
-이어받을 상태: 인계: 셀프 리뷰 직전. 구현과 사진 갱신을 마친 변경이 커밋하지 않은 채 워크트리에 있고, 셀프 리뷰(/code-review, 기준 origin/main)부터 한다. 그 뒤 티켓을 done으로, 일지를 마무리하고 커밋, PR, 병합. run_checks는 Prettier 서식(두 파일)만 빨갰고 고친 뒤 다시 돌지 않았다. PR 본문에 적을 것: 바뀐 사진 12장과 새 사진 24장을 사람이 본 기록, decision e2e 첫 시험이 사진 비교와 함께 돌 때 한 번 실패하고 혼자 돌려 통과한 것, 05(feature/05-admin-plugin-screens)가 FailureAlert.tsx와 plugin-toggle.e2e.ts를 함께 고쳐 나중에 병합하는 쪽에 글자 충돌 후보가 있다는 것. 일지: docs/journal/2026-10-30-02-admin-decision-column.md
+읽을 것: docs/journal/2026-10-30-05-admin-decision-column.md
+이어받을 상태: 인계: 셀프 리뷰 직전. 구현과 사진 갱신을 마친 변경이 커밋하지 않은 채 워크트리에 있고, 셀프 리뷰(/code-review, 기준 origin/main)부터 한다. 그 뒤 티켓을 done으로, 일지를 마무리하고 커밋, PR, 병합. run_checks는 Prettier 서식(두 파일)만 빨갰고 고친 뒤 다시 돌지 않았다. PR 본문에 적을 것: 바뀐 사진 12장과 새 사진 24장을 사람이 본 기록, decision e2e 첫 시험이 사진 비교와 함께 돌 때 한 번 실패하고 혼자 돌려 통과한 것, 05(feature/05-admin-plugin-screens)가 FailureAlert.tsx와 plugin-toggle.e2e.ts를 함께 고쳐 나중에 병합하는 쪽에 글자 충돌 후보가 있다는 것. 일지: docs/journal/2026-10-30-05-admin-decision-column.md
 확인할 선행 조건: 없음
 이번 요청 범위: PR과 병합까지
 ```
@@ -115,3 +115,4 @@ open-session을 부른다 2026-10-29T17:20:09Z
 - PR 직전 리뷰의 다른 갈래인 내장 `/security-review`는 `git diff origin/main`을 대상으로 서브에이전트가 찾았고 후보 0건이라 거짓 양성 거르기 단계는 돌지 않았다(그 보고를 읽었다). 서버 값이 모두 React 글자 자식으로 그려지고, 새 링크 둘의 목적지가 고정(`/settings`, `/`)이며, 채널 토큰은 들었는지의 불리언만 읽는다고 보고했다.
 - 위 두 줄을 실은 일지 커밋의 첫 시도도 pre-commit의 pytest에서 같은 시험 하나만 실패했다(1 failed, 6005 passed, 970초. web-verify도 655초로 기계가 무거웠다. 출력을 손으로 봤다). 이 커밋은 일지 한 파일만 바꾸고 코드·시험은 모든 검사가 통과한 `4f545676`과 같아, `SKIP=parallel-checks`로 병렬 검사만 빼고 커밋했다. 마크다운 검사들은 그대로 돌았다.
 - 회고 후보: `tests/tools/test_rerun_runner.py`의 `test_같은_갈래가_두_번_든_파일럿의_두_회차가_함께_돌아도_번호가_다르다`가 부하 아래에서 이 세션에만 두 번 빨갰고 따로 돌리면 지났다. 함께 도는 부름의 수(`running`)를 `hang=1.0` 동안 겹친 것으로 세는 단언이다. 대기열 306·332의 종류이고 사례별 수선(ADR 0035)의 새 사례다.
+- 푸시하려 하자 그사이 main에 PR #430(design-card-build 03, `web/tools/sync-design-system/`과 그 문서)이 들어와 훅이 막았다. 이 브랜치와 겹치는 파일이 없어 충돌 없이 합쳤고, `tools/sibling_overlap.py`가 main의 최신 일지 2026-10-30-03보다 이름순으로 앞선다고 해서 `--move`로 이 일지를 2026-10-30-02에서 2026-10-30-05로 옮겼다(티켓과 카나리아 명세의 인용 포함. 그 출력을 손으로 봤고, 옛 번호를 Grep해 잔존 0을 봤다). 합치고 옮긴 상태의 작업 트리에서 `uv run python tools/run_checks.py`가 열 줄 모두 Passed였다(pytest 631초, web-verify 623초. 출력을 손으로 봤다). 그래서 이 커밋은 `SKIP=parallel-checks`로 병렬 검사만 뺐다.

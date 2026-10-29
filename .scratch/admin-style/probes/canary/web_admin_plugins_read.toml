@@ -3,7 +3,7 @@
 # paths 안(web/apps/admin/), 대조군은 밖(README.md)을 읽는다. 둘 다 이 체크아웃이다. 실험군의 파일은 고친 문장을 담지
 # 않은 것을 골랐다.
 # 최신 결과: 2026-10-30 이 PC, claude 2.1.312, 커밋 c04e4fe6 위의 작업 트리(같은 항목의 넷째 줄을 고친 admin-style 08)에서
-# 통과 4(실험군 3회차가 그 문장을 옮겼고, 대조군 1회차는 "없음"이었다). 원본은 저장소에 두지 않았다. 일지 2026-10-30-02.
+# 통과 4(실험군 3회차가 그 문장을 옮겼고, 대조군 1회차는 "없음"이었다). 원본은 저장소에 두지 않았다. 일지 2026-10-30-05.
 # 돌리는 법: uv run python tools/canary.py .scratch/admin-style/probes/canary/web_admin_plugins_read.toml <출력 디렉터리>
 kind = "rule"
 question = '''
