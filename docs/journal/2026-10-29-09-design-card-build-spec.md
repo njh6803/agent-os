@@ -335,4 +335,69 @@ CodeRabbit CLI는 `coderabbit auth status`가 `Seat: not assigned`라 돌지 못
 
 ### 반영 커밋
 
-리뷰 반영을 커밋하기 전에 origin/main이 다시 `56ccacc`(PR #418, 위젯 승인 시험의 포커스 기다림)로 옮겼다. `tools/sibling_overlap.py`가 이 일지(2026-10-29-09)가 main의 최신 일지 2026-10-29-07보다 이름순으로 앞선다고 1로 끝나, `--move`로 2026-10-29-09로 옮겼다. #418이 바꾼 파일 가운데 이 브랜치와 겹치는 것은 `.scratch/retro-queue.md`이고, `git merge-tree f39ae86d HEAD origin/main`의 출력에 충돌 표지가 없었다. main 보호 규칙이 브랜치가 최신이어야 병합하게 해(`gh api …/branches/main/protection/required_status_checks`의 `strict`가 `true`), #418을 합치는 병합 커밋에 리뷰 반영과 이 일지를 함께 실었다. pre-commit 한 바퀴가 10분 넘게 걸려 커밋을 둘로 나누지 않았고, PR은 squash로 병합되므로 이 커밋의 모양은 main에 남지 않는다.
+리뷰 반영을 커밋하기 전에 origin/main이 다시 `56ccacc`(PR #418, 위젯 승인 시험의 포커스 기다림)로 옮겼다. `tools/sibling_overlap.py`가 이 일지(옮기기 전 번호 05)가 main의 최신 일지 2026-10-29-07보다 이름순으로 앞선다고 1로 끝나, `--move`로 지금 이름(09)으로 옮겼다. #418이 바꾼 파일 가운데 이 브랜치와 겹치는 것은 `.scratch/retro-queue.md`다. `git merge-tree f39ae86d HEAD origin/main`의 출력에서 충돌 표지를 줄 머리(`^<<<<<<<`)로만 찾아 0건으로 읽었는데, 그 출력은 diff 꼴이라 표지 앞에 `+`가 붙어 놓친 것이었고 실제 합치기는 그 파일에서 충돌했다(아래). main 보호 규칙이 브랜치가 최신이어야 병합하게 해(`gh api …/branches/main/protection/required_status_checks`의 `strict`가 `true`), #418을 합치는 병합 커밋에 리뷰 반영과 이 일지를 함께 실었다. pre-commit 한 바퀴가 10분 넘게 걸려 커밋을 둘로 나누지 않았고, PR은 squash로 병합되므로 이 커밋의 모양은 main에 남지 않는다.
+
+`--move`가 대기열에서 고친 것(531·536·540행의 일지 인용 6줄)을 패치 파일로 빼 두고 대기열만 되돌린 뒤 `git merge --no-commit origin/main`을 쳤고, 대기열에서 충돌이 났다. 두 쪽이 같은 자리에 행을 하나씩 더한 것이었다(main의 535, 이 브랜치의 536). 둘 다 남겨 535 다음 536으로 놓고, 패치를 `git apply --3way`로 얹어 다시 난 충돌은 인용을 고친 536행 쪽으로 풀었다. 푼 뒤 `git diff -U0 origin/main -- .scratch/retro-queue.md`에서 main과 다른 행은 531(이 브랜치의 회차)·536·540뿐이었고 옛 일지 번호의 인용은 남지 않았다(grep으로 봤다).
+
+반영 커밋 `03c38b22`: pre-commit이 pytest까지 모두 통과했다(`pytest` 790.6초, `web-verify` 462.2초). 인용 대조는 막지 않는 경고 3건을 냈고, 셋 다 이 일지가 판정 기록으로 인용한 고치기 전의 옛 문장이라 원문이 남지 않은 것이 맞다. 푸시 직전에 origin/main이 그대로인 것을 보고(`git log HEAD..origin/main`이 비었다) 푸시했고, PR #422를 열었다. 열 때 앱의 PR 상태는 `MERGEABLE`, 검사 7개 가운데 6개가 대기 중이었다.
+
+## 인계 (PR 연 뒤)
+
+PR을 연 직후 `PR 연 뒤`에서 인계 계기(`hook_handoff`)가 왔다. 세션 컨텍스트는 341,795 토큰이었다(계기 문장). 이 세션을 연 지시문의 "이어받을 상태"는 `인계: 커밋 뒤`라 같은 경계가 아니고, `get_session`의 `self`에 `parentSessionId`가 없어 곁 세션도 아니다. 이 세션의 제목은 `docs/design-card-build-spec`이었다. 이 절은 커밋하지 않았다. 봇 회차(`@coderabbitai review` 코멘트 포함)는 돌리지 않았다. 이 세션이 띄운 백그라운드 작업은 남아 있지 않다. `tools/model_sweep.py docs/design-card-build-spec`은 `스윕 밖`이었다.
+
+인계 지시문:
+
+```
+다음 작업: 기능 design-card-build. 컴포넌트 카드와 묶음을 저장소가 형식의 정식 자리에 짓기로 한 결정(ADR 0025 2026-10-28 이력)의 명세를 쓴다
+다음 단계: PR 반영·병합
+어디서: 새 세션. 같은 브랜치를 잇는 인계라 git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /to-spec
+브랜치: docs/design-card-build-spec
+모델: Sonnet 5.5 / high
+읽을 것: docs/journal/2026-10-29-09-design-card-build-spec.md(이 브랜치의 일지. 끝의 "셋째 인계받은 세션"과 "인계 (PR 연 뒤)")
+이어받을 상태: 인계: PR 연 뒤. merge.md 2(봇 회차)부터 한다. 첫 @coderabbitai review 코멘트도 새 세션이 남긴다. PR 직전 리뷰(/security-review 취약점 없음, bug-perf-review 유효 2·보류 1)는 반영 커밋에서 모두 고쳤고 PR 체크리스트에 적었다. 일지의 "인계 (PR 연 뒤)" 절은 커밋하지 않았다. 사용자가 이 PR의 남은 커밋은 tests/channel/cli/test_interrupt.py의 시험만으로 막히면 SKIP=pytest로 커밋하라고 골랐다. 단계를 닫는 세션의 회고가 그 파일의 실패 셋(시각 비교 하나, 30초 넘김 둘)을 대기열 531과 닫힌 306 가운데 어디에 셀지 정하고, 일지 "다음"에 명세 검토와 티켓을 적는다. 임시 디자인 시스템 아티팩트는 사용자가 남겨 두기로 했다(다시 묻지 않는다) — docs/journal/2026-10-29-09-design-card-build-spec.md
+확인할 선행 조건: 없음
+이번 요청 범위: PR과 병합까지
+```
+
+제목을 `docs/design-card-build-spec (인계함)`으로 바꿨다. 워크트리 잠금은 이미 풀려 있었다(`is not locked`).
+
+open-session을 부른다 2026-10-29T09:01:05Z
+
+## 넷째 인계받은 세션 (2026-10-29)
+
+위 "인계 (PR 연 뒤)"의 지시문으로 연 세션이다. 사용자 프롬프트는 그 지시문을 to-spec 스킬을 따르라는 머리 줄과 함께 글자 그대로 보낸 것이다. 지시문의 시작 프롬프트가 `/to-spec`이지만 남은 단계는 PR 반영·병합이라, to-spec 스킬은 읽기만 하고 따르지 않았다(`next-session` 결정표의 "같은 시작 프롬프트"가 정한 꼴이다). 제목을 `docs/design-card-build-spec`으로 바꾸고 `EnterWorktree(path)`로 이 워크트리에 들어왔다. `git log HEAD..origin/main`은 끝까지 비어 있었다(origin/main은 `56ccacc9`).
+
+`merge.md` 2(봇 회차)를 밟았다. PR #422의 헤드는 `03c38b22`로 이 워크트리의 `HEAD`와 같았다. 첫 `gh pr checks`에서 CodeRabbit이 `skipping`, `python`이 대기였다. `@coderabbitai review` 코멘트를 남기고 `tools/wait_ci.py 422`를 백그라운드로 띄웠다. 끝 줄이 `모두 통과`였고 CodeRabbit이 `pass`(9분 32초)로 리뷰를 마쳤다.
+
+### CodeRabbit 첫 회차
+
+리뷰 하나(Actionable 4, Nit 1)와 인라인 코멘트 넷이었다. 첫 회차의 Minor·Nit이라 지적마다 판단했고 다섯을 모두 보류했다. 이유를 PR 코멘트(`issuecomment-6492800665`)에 남겼다. 뒤로 넘기는 일은 없어 "다음"에 따로 적지 않았다.
+
+1. Nit. 명세 107-108행: 장면과 글꼴도 vite 실행 파일을 바로 띄워 재라. 명세가 이미 어림(shim을 읽었다)으로 잰 범위를 밝혔고 프로브 README도 "재지 않은 것"에 적는다. 장면과 글꼴은 묶음과 설정 글만 달라 결정을 바꾸지 않는다.
+2. Minor. `vite_cli_tool.mts` 93행: `bundle:bin` 표지에 기준 파일의 존재를 넣어라. 이 일지의 셀프 리뷰 표준 축 8(보류)과 같은 지적이다. 기록한 실행은 기준 파일이 있었다.
+3. Minor. `vite_cli.mjs` 130행: `runPnpm`의 `shell: true`. 명세가 거부한 길의 프로브이고 공백 경로는 채택한 길(`vite_cli_tool.mts`)이 쟀다.
+4. Minor. `vite_cli.mjs` 159행·208행: 양성 대조의 표지에 "다르다"를 넣어라, 둘째 인자를 필수로 선언하라. 기록한 실행의 대조는 `sameAsAlert: false`였고 둘째 인자를 줬다.
+5. 알림(`Unverified finding`). 명세 235행 MD038: 테마 이름 접미사의 앞 공백은 글자 그대로라 코드 스팬 안에 둔다. 이 저장소의 게이트에 markdownlint는 없다.
+
+고친 것: 첫 코멘트의 2번 까닭에 "기준 산출이 있던 세션의 작업 폴더가 없다"고 썼는데 확인하지 않은 말이었다. `find`로 보니 `card-run-5`가 이전 세션의 스크래치패드(`C:\Users\User\AppData\Local\Temp\claude\C--project-agent\39814d54-33e9-43df-98f6-ab4d5034f5ea\scratchpad\card-run-5`)에 남아 있었다. 코멘트를 고쳐 까닭을 바꿨다: 기록은 `8e43dd2c`에서 잰 것이고 지금 HEAD는 `theme.css` 주석이 바뀐 뒤라, 다시 재면 다른 입력의 새 측정이 되고 기록한 결과를 바꾸지 않는 강화에 그 값은 들지 않는다. 보류 판정 자체는 그대로다.
+
+## 회고 (PR 봇 회차)
+
+후보 둘. 승인 0, 기각 2, 넘김 0. 만료할 행은 이 체크아웃과 `origin/main`(`56ccacc9`) 모두 없었다.
+
+1. 기각. 인계 지시문의 시작 프롬프트가 남은 단계(PR 반영·병합)와 달리 `/to-spec`이어서 이 세션이 to-spec 스킬을 읽었다. `next-session` 결정표의 "작업을 마치지 못한 채 끊는다" 줄이 "같은 시작 프롬프트"로 정한 꼴이고, 읽은 비용은 파일 하나다. 사건이 지침의 설계대로 난 것이라 처방할 실수가 없다.
+2. 기각. 코멘트에 확인하지 않은 말("작업 폴더가 없다")을 썼다가 같은 세션에서 `find`로 보고 고쳤다. 쓰는 사이 스스로 잡았고 PR 코멘트는 고쳐진 채 남았다. 되풀이된 사건도, 남은 손상도 없다.
+
+pytest 실패 셋의 셈(일지 "다음"의 숙제): `tests/channel/cli/test_interrupt.py`에서 이 브랜치가 본 실패는 셋이다. 시각 비교 하나(커밋 `a4cb3ff5`, `assert 1793185987.840861 < 1793185987.840861`)는 대기열 531이 이미 4회차로 세고 있어 더하지 않았다. 30초 넘김 둘(병합 커밋 `eeb02f95`의 `test_도구_호출_도중에_한_번_누르면_서버를_닫고_중단으로_끝난다`, 병합 커밋 `aa73d2c9`의 `test_서버를_닫기_시작한_뒤에_한_번_누르면_닫기를_마치고_중단으로_끝난다`)는 부하에서 시간 시험이 늦어지는 종류로 본다(어림. 그때 함께 돈 세션 수는 세지 않았고, 이 세션은 그 시험을 돌리지 않았다). 닫힌 306이 ADR 0036대로 그 종류를 받아들여 닫았고 새 사례를 일지에만 적으라고 적는다(대기열 306 줄의 닫힘 문장을 `queue_open_rows.py`와 `grep`으로 읽었다). 그래서 이 일지에만 적고 대기열에는 더하지 않는다. 같은 파일을 따로 돌리면 6개가 모두 통과했다는 것은 셋째 인계받은 세션이 일지에 적은 값이다(132.61초. 이 세션이 다시 돌려 본 것이 아니다).
+
+## 다음
+
+PR #422를 병합한 뒤 이 일지의 "다음"이다. 결정표의 "`spec.md`는 있고 `issues/`가 없다" 줄이 맞는다.
+
+- 다음 작업: 기능 design-card-build의 명세 검토와 티켓. 명세는 `.scratch/design-card-build/spec.md`(병합 뒤 main에 있다).
+- 순서: `spec-reviewer` 서브에이전트로 명세 검토를 먼저 돌고, 그 뒤 `/to-tickets .scratch/design-card-build/spec.md`.
+- 모델은 `Opus 5.5 / xhigh`, 새 세션.
+- 임시 디자인 시스템 아티팩트 `64VW1b5F8tRcCeTZBwZA29`는 사용자가 남겨 두기로 했다. 지우지 않는다. 명세 검토나 티켓에서 실제 페이지를 다시 확인할 때 쓴다.
+- 대기열 531(4회차)과 536(3회차, `code-review` 브리프에 보고를 받은 턴에 일지로 옮기라는 줄), 540은 이 PR에서 반영하지 않았다. 이 기능의 마지막 티켓이 아니므로 chore 계기가 아니다.
+- 이 PC에서 pre-commit의 pytest가 `tests/channel/cli/test_interrupt.py` 하나로 막힐 수 있다. 사용자가 이 PR에서는 그 시험만으로 막히면 `SKIP=pytest`를 골랐다. 다음 PR은 그 선택이 이어지지 않으니 다시 사람에게 묻는다.
