@@ -25,7 +25,9 @@ expect = "green"
 [[mutation.edit]]
 file = "web/apps/admin/components/pages/RunPage.tsx"
 old = '''
-  const { data, error } = usePlugins(decisionPlaceStands(trace, channelTokenEntered));
+  const { data, error } = usePlugins({
+    active: decisionPlaceStands(trace, { channelTokenEntered }),
+  });
 '''
 new = '''
   const { data, error } = usePlugins();
@@ -42,10 +44,12 @@ expect_output = ["Unable to find an element with the text: /꺼진 플러그인�
 [[mutation.edit]]
 file = "web/apps/admin/components/pages/RunPage.tsx"
 old = '''
-  const { data, error } = usePlugins(decisionPlaceStands(trace, channelTokenEntered));
+  const { data, error } = usePlugins({
+    active: decisionPlaceStands(trace, { channelTokenEntered }),
+  });
 '''
 new = '''
-  const { data, error } = usePlugins(false);
+  const { data, error } = usePlugins({ active: false });
 '''
 
 [[mutation]]

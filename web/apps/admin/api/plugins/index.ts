@@ -61,7 +61,7 @@ export async function setPluginEnabled(
   adminToken: string,
   kind: PluginKind,
   name: string,
-  enabled: boolean,
+  { enabled }: { readonly enabled: boolean },
 ): Promise<void> {
   const { error, response } = await createAdminClient(adminToken)
     .PUT("/plugins/{kind}/{name}/enabled", {

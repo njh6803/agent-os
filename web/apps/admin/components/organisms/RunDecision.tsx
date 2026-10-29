@@ -84,7 +84,10 @@ function decidablePause(trace: Trace): Pause | null {
  * 결정 자리가 서는가. 아래 `RunDecision` 이 적은 조건 넷이다. 실행 하나의 화면은 이것이 참일 때만 꺼짐 미리 알림의
  * 플러그인 목록을 읽어 넘긴다(`plugins`).
  */
-export function decisionPlaceStands(trace: Trace, channelTokenEntered: boolean): boolean {
+export function decisionPlaceStands(
+  trace: Trace,
+  { channelTokenEntered }: { readonly channelTokenEntered: boolean },
+): boolean {
   return channelTokenEntered && decidablePause(trace) !== null && !isEndUserRun(trace);
 }
 
@@ -135,7 +138,7 @@ export function RunDecision({
 }: RunDecisionProps) {
   const streamId = useId();
   const pause = decidablePause(trace);
-  const notice = noticeOf(failure, channelTokenEntered);
+  const notice = noticeOf(failure, { channelTokenEntered });
 
   return (
     <>
@@ -186,7 +189,7 @@ export function RunDecision({
  */
 function noticeOf(
   failure: RequestFailure | null,
-  channelTokenEntered: boolean,
+  { channelTokenEntered }: { readonly channelTokenEntered: boolean },
 ): FailureNoticeProps | null {
   if (failure === null || failure.status === 422) {
     return null;

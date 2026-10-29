@@ -26,7 +26,11 @@ type SwitchFailure = FailureNoticeProps;
  * 플러그인 하나를 켜거나 끈다. 목록을 다시 읽은 뒤에 돌아오고, 실패는 `RequestFailure` 로 던진다(다시 읽기는 실패해도
  * 한다).
  */
-type SetEnabled = (kind: PluginKind, name: string, enabled: boolean) => Promise<void>;
+type SetEnabled = (
+  kind: PluginKind,
+  name: string,
+  change: { readonly enabled: boolean },
+) => Promise<void>;
 
 interface PluginListProps extends ReadState<readonly PluginRow[]> {
   readonly onSetEnabled: SetEnabled;
@@ -116,7 +120,7 @@ function Row({ row, onSetEnabled, onSwitchFailure }: RowProps) {
     setPending(true);
     onSwitchFailure(null);
     try {
-      await onSetEnabled(row.kind, row.name, !row.enabled);
+      await onSetEnabled(row.kind, row.name, { enabled: !row.enabled });
     } catch (error: unknown) {
       // 요청 함수는 실패를 모두 RequestFailure 로 던진다. 그 밖의 예외는 이 코드의 결함이라 덮지 않고 다시 던진다.
       if (!(error instanceof RequestFailure)) {

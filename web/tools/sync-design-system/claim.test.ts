@@ -86,7 +86,13 @@ const SUMMARY: ClaimSummary = {
   removed: [],
 };
 
-function importing(own: boolean, further: Partial<WebEdits> = {}): CheckReading {
+function importing({
+  own,
+  further = {},
+}: {
+  readonly own: boolean;
+  readonly further?: Partial<WebEdits>;
+}): CheckReading {
   return {
     result: "importing",
     pending: null,
@@ -170,7 +176,7 @@ describe("기록의 claim", () => {
       change: {
         kind: "write",
         head: head("feature/12-b"),
-        reading: importing(false, { revert: [CARD], webRemoved: [GUIDE] }),
+        reading: importing({ own: false, further: { revert: [CARD], webRemoved: [GUIDE] } }),
         web: web({ [CARD]: "# 카드\n" }),
         inherit: base,
       },
@@ -200,7 +206,7 @@ describe("기록의 claim", () => {
       change: {
         kind: "write",
         head: head("feature/13-a"),
-        reading: importing(true),
+        reading: importing({ own: true }),
         web: web({ [BUTTON]: "# 버튼\n\n다시 고침.\n" }),
         inherit: null,
       },
@@ -222,7 +228,7 @@ describe("기록의 claim", () => {
       change: {
         kind: "write",
         head: head("feature/11-a"),
-        reading: importing(true),
+        reading: importing({ own: true }),
         web: files,
         inherit: null,
       },
@@ -253,7 +259,7 @@ describe("기록의 claim", () => {
         change: {
           kind: "write",
           head: head("feature/12-b"),
-          reading: importing(false),
+          reading: importing({ own: false }),
           web: web(),
           inherit: null,
         },

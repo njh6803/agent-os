@@ -101,18 +101,37 @@ function act(what: Act, notes: readonly string[] = []): Decision {
 
 const STOP_CHOICE: Choice = { label: STOP, effect: "지금 일을 하지 않고 멈춘다", act: "stop" };
 
-/** "찾았을 때"의 선택지. `inherit` 이면 "먼저 들인다"가 병합된 `claim` 을 이어받는 들이기다. */
-function foundChoices(caller: "screen" | "upload", inherit: boolean): Choice[] {
-  const importFirst: Choice = inherit
-    ? {
-        label: IMPORT_FIRST,
-        effect: "병합된 claim 을 이어받는 들이기를 열어 더 고친 몫을 코드에 들인다",
-        act: "inheritImport",
-      }
-    : { label: IMPORT_FIRST, effect: "들이기를 열어 웹 편집을 코드에 들인다", act: "import" };
+/** "찾았을 때"의 "먼저 들인다" 선택지와 덮어쓰기가 할 일. 들이기의 길마다 하나다. */
+interface ImportWay {
+  readonly importFirst: Choice;
+  readonly overwrite: Act;
+}
+
+/** 웹 편집을 새로 들인다. */
+const FRESH_IMPORT: ImportWay = {
+  importFirst: {
+    label: IMPORT_FIRST,
+    effect: "들이기를 열어 웹 편집을 코드에 들인다",
+    act: "import",
+  },
+  overwrite: "overwrite",
+};
+
+/** 병합된 `claim` 을 이어받아 그 뒤에 더 고친 몫을 들인다. */
+const INHERITED_IMPORT: ImportWay = {
+  importFirst: {
+    label: IMPORT_FIRST,
+    effect: "병합된 claim 을 이어받는 들이기를 열어 더 고친 몫을 코드에 들인다",
+    act: "inheritImport",
+  },
+  overwrite: "overwriteClaimMerged",
+};
+
+/** "찾았을 때"의 선택지. "먼저 들인다"와 덮어쓰기는 들이기의 길(`way`)을 따른다. */
+function foundChoices(caller: "screen" | "upload", way: ImportWay): Choice[] {
   if (caller === "screen") {
     return [
-      importFirst,
+      way.importFirst,
       {
         label: KEEP_CODE,
         effect:
@@ -122,12 +141,8 @@ function foundChoices(caller: "screen" | "upload", inherit: boolean): Choice[] {
     ];
   }
   return [
-    importFirst,
-    {
-      label: OVERWRITE,
-      effect: "웹 편집을 코드의 판으로 되돌려 올린다",
-      act: inherit ? "overwriteClaimMerged" : "overwrite",
-    },
+    way.importFirst,
+    { label: OVERWRITE, effect: "웹 편집을 코드의 판으로 되돌려 올린다", act: way.overwrite },
   ];
 }
 
@@ -226,14 +241,16 @@ function merged(caller: Caller, reading: Importing, notes: readonly string[]): D
   switch (caller) {
     case "screen": {
       const base = [...notes, "지금 브랜치가 그 병합 커밋을 품지 않았으면 main 을 합친 뒤 잇는다"];
-      return further ? ask(foundChoices("screen", true), base) : act("continue", base);
+      return further ? ask(foundChoices("screen", INHERITED_IMPORT), base) : act("continue", base);
     }
     case "upload": {
       const base = [
         ...notes,
         "그 병합 커밋이 지금 HEAD 의 조상이 아니면 origin/main 을 다시 받아 처음부터 한다",
       ];
-      return further ? ask(foundChoices("upload", true), base) : act("uploadClaimMerged", base);
+      return further
+        ? ask(foundChoices("upload", INHERITED_IMPORT), base)
+        : act("uploadClaimMerged", base);
     }
     case "import":
       if (!further) {
@@ -347,7 +364,7 @@ export function decide(input: DecideInput): Decision {
     case "beforeRecord":
       return nothingFound(caller);
     case "edited":
-      return caller === "import" ? act("import") : ask(foundChoices(caller, false));
+      return caller === "import" ? act("import") : ask(foundChoices(caller, FRESH_IMPORT));
     case "importing":
       return importing(caller, reading, pr);
     case "undecidable":
