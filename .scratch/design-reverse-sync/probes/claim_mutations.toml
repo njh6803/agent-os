@@ -212,8 +212,8 @@ expect_output = ['''AssertionError: expected [] to deeply equal [ 'project/compo
 
 [[mutation.edit]]
 file = "web/tools/sync-design-system/upload.ts"
-old = '''    if (revert.has(path) || kind === "edited" || kind === "claimed" || kind === "deleted") {'''
-new = '''    if (revert.has(path) || kind === "edited" || kind === "deleted") {'''
+old = '''    } else if (revert.has(path) || kind === "edited" || kind === "claimed" || kind === "deleted") {'''
+new = '''    } else if (revert.has(path) || kind === "edited" || kind === "deleted") {'''
 
 [[mutation]]
 name = "병합된 claim 의 계획이 claim 을 비우지 않으면 흐름 사례가 빨갛다"

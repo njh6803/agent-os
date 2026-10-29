@@ -3,7 +3,7 @@
  * (`sync-record.ts`)을 쓰며, 들이기의 `claim` 을 쓰거나 비운다(`claim.ts`)(design-reverse-sync 명세 "기록", "올리기",
  * "찾았을 때"의 "덮어쓴다", "겹침").
  *
- * 하위 명령은 다섯이다. 산출 폴더는 아티팩트의 `project/` 아래에 놓일 내용(빌드의 `ds-bundle/` 에서
+ * 하위 명령은 여섯이다. 산출 폴더는 아티팩트의 `project/` 아래에 놓일 내용(빌드의 `ds-bundle/` 에서
  * `.design-sync/upload-output.mjs` 가 올릴 항목만 옮긴 폴더 등)이다. 확인 보고는 `check judge` 의 보고 JSON 이고
  * `check-report.ts` 로 읽는다.
  *
@@ -11,7 +11,9 @@
  *   [--overwrite | --claim-merged [--overwrite]] [--previous-output <지난 산출 목록>]`. 이번 올리기가 보낼 파일(`send`),
  *   목표대로 이미 보낸 파일(`landed`), 그대로인 파일(`unchanged`), 지울 경로(`delete`), 이미 지워진 경로(`gone`),
  *   다루지 않는 경로(`ignored`)와, 확인 보고에서 고른 되돌릴 파일(`revert`, 웹이 고친 것), 웹에서 지운 경로
- *   (`webRemoved`), 웹에서 더한 경로(`webAdded`), 마지막 기록이 `claim` 을 비우는지(`clearClaim`)를 낸다. 기록은
+ *   (`webRemoved`), 웹에서 더한 경로(`webAdded`), 마지막 기록이 `claim` 을 비우는지(`clearClaim`), 첫 정식
+ *   올리기인지(`firstCanonical`), 보낼 파일과 지울 경로를 호출마다 나눈 몫(`calls`, `{send, delete}` 의 배열. 나뉘면
+ *   첫 몫에 `pending` 이 든 기록을, 마지막 몫에 기록과 색인을 더 싣는다)을 낸다(`upload.ts`). 기록은
  *   아티팩트에서 받은 기록 파일이고, 없거나 읽히지 않으면(편집이 꺼진 동안) 대신 아티팩트의 파일마다의 sha256 을 JSON
  *   객체 `{경로: sha256}` 로 준다. 앞 기록에 `pending` 이 있으면 확인 보고가 있어야 한다(`upload.ts`). 지난 산출 목록은
  *   빌드 산출 전체를 맞춘 올리기만 주는 JSON 경로 배열이다. 확인 결과마다 계획을 내는 때는 아래와 같다.
@@ -32,6 +34,12 @@
  *   마지막 호출(한 호출로 끝나는 올리기 포함)은 올린 main 커밋과 시각으로 `pending` 없는 기록을 쓴다. 계획의
  *   `clearClaim` 이면 마지막 기록이 `claim` 을 비운다. 보고는 쓴 파일의 절대 경로(`out`), 기록의 파일 수(`files`),
  *   바이트 수(`bytes`), `pending` 이 들었는지(`pending`), `claim` 이 들었는지(`claim`)다.
+ * - `record index --local <산출 폴더> --plan <계획 보고> --index <색인> --at <시각> --out <보낼 색인>`. 마지막 호출이
+ *   보낼 색인을 쓴다(design-card-build 명세 "색인의 `libraries`", "`upgraded`"). 색인은 `lastChange` 를 적은 받은
+ *   색인이다. 산출에 `components/bundle.js` 가 있으면 `libraries` 를 React·ReactDOM 18.3.1 로, 계획의
+ *   `firstCanonical` 이면 `upgraded` 가 없을 때만 `{"at": <시각>}` 으로 더하고 다른 칸은 그대로 둔다. 보고는 쓴 파일의
+ *   절대 경로(`out`), 바이트 수(`bytes`), `libraries` 를 적었는지(`libraries`), `upgraded` 를 더했는지(`upgraded`)다.
+ *   색인이 `INDEX_LIMIT` 를 넘으면 쓰지 않고 `limit` 오류다. 계획이 마지막 몫에 그만큼을 남겼다.
  * - `record claim --record <다시 받은 기록> --expect <확인에 쓴 기록> --out <기록> (--clear | --check <확인 보고>
  *   --web <받은 폴더> --branch <브랜치> --ticket <티켓 경로> --at <시각> [--inherit <이어받을 기준본>])`. 들이기가
  *   `claim` 을 쓰거나(`claim.ts` 의 셋) 사람이 지우기로 고른 `claim` 을 비운 기록을 쓴다. 다시 받은 기록의 `claim` 이
@@ -72,7 +80,7 @@ import {
   type RecordChanges,
   type SyncRecord,
 } from "./sync-record.ts";
-import { needsBuild, planUpload } from "./upload.ts";
+import { BUNDLE_PATH, INDEX_LIMIT, indexToSend, needsBuild, planUpload } from "./upload.ts";
 
 /** 아티팩트에서 받은 기록. 꼴 판 1 로 읽히지 않으면 `input` 오류다. */
 function recordFrom(path: string): SyncRecord {
@@ -280,6 +288,7 @@ function plan(values: Values): ReportFields {
   return {
     action: "plan",
     ...result,
+    calls: result.calls.map((call) => ({ send: call.send, delete: call.delete })),
     revert: sortedPaths(decision.revert),
     webRemoved: sortedPaths(decision.webRemoved),
     webAdded: sortedPaths(decision.webAdded),
@@ -410,6 +419,49 @@ function write(values: Values): ReportFields {
   return written("write", out, next);
 }
 
+/** `record plan` 의 보고에서 첫 정식 올리기인지를 읽는다. */
+function readFirstCanonical(path: string): boolean {
+  const raw = readJson(path);
+  if (!isRecord(raw) || raw.command !== "record" || raw.ok !== true || raw.action !== "plan") {
+    throw inputError(path, "record plan 의 성공 보고가 아니다");
+  }
+  if (typeof raw.firstCanonical !== "boolean") {
+    throw inputError(path, "firstCanonical 로 참거짓을 들지 않는다");
+  }
+  return raw.firstCanonical;
+}
+
+function sentIndex(values: Values): ReportFields {
+  onlyOptions("index", values, ["local", "plan", "index", "at", "out"]);
+  const local = required("index", "local <산출 폴더>", values.local);
+  const planPath = required("index", "plan <계획 보고>", values.plan);
+  const indexPath = required("index", "index <색인>", values.index);
+  const at = checkedAt(required("index", "at <시각>", values.at));
+  const out = required("index", "out <보낼 색인>", values.out);
+  const received = readJson(indexPath);
+  if (!isRecord(received)) {
+    throw inputError(indexPath, "JSON 객체가 아니다");
+  }
+  const bundle = readFolder(local, "project/").has(BUNDLE_PATH);
+  const firstCanonical = readFirstCanonical(planPath);
+  const sent = indexToSend(received, { bundle, firstCanonical, at });
+  const text = `${JSON.stringify(sent, null, 2)}\n`;
+  const bytes = new TextEncoder().encode(text).byteLength;
+  if (bytes > INDEX_LIMIT) {
+    throw new CommandError(
+      "limit",
+      `보낼 색인이 ${String(bytes)} 바이트로 한도 ${String(INDEX_LIMIT)} 바이트를 넘어 쓰지 않는다`,
+    );
+  }
+  return {
+    action: "index",
+    out: writeOutput(out, text),
+    bytes,
+    libraries: bundle,
+    upgraded: received.upgraded === undefined && sent.upgraded !== undefined,
+  };
+}
+
 function claimChange(values: Values): ClaimChange {
   if (values.clear === true) {
     const extra = (["check", "web", "branch", "ticket", "at", "inherit"] as const).filter(
@@ -493,6 +545,8 @@ export function runRecord(args: readonly string[]): ReportFields {
       return buildNeed(values);
     case "write":
       return write(values);
+    case "index":
+      return sentIndex(values);
     case "claim":
       return claim(values);
     case "base":
@@ -500,7 +554,7 @@ export function runRecord(args: readonly string[]): ReportFields {
     default:
       throw new CommandError(
         "usage",
-        "record 는 plan, needs-build, write, claim, base 가운데 하나를 받는다",
+        "record 는 plan, needs-build, write, index, claim, base 가운데 하나를 받는다",
       );
   }
 }
