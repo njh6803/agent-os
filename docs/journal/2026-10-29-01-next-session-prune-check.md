@@ -1,4 +1,4 @@
-# 2026-10-28 (28) 병합 뒤 원격 정리가 지우는 대신 원격에 브랜치가 없는지 본다 (harness 025)
+# 2026-10-29 (01) 병합 뒤 원격 정리가 지우는 대신 원격에 브랜치가 없는지 본다 (harness 025)
 
 next-session 지시문으로 연 새 세션이다. 나란히 여는 여덟 가운데 일곱째라 `tidy-checkouts`는 돌지 않았고(묶음의 첫 세션이
 돈다), 주 체크아웃에서 브랜치를 따지 않고 워크트리 `025-next-session-prune-check`에 들어가
@@ -57,7 +57,7 @@ next-session 지시문으로 연 새 세션이다. 나란히 여는 여덟 가�
   "없음"이었다.
 - `uv run python tools/queue_open_rows.py --search 025-next-session-prune-check`가 497을 닫힌 행 하나로 냈다.
 - 번호: `uv run python tools/sibling_overlap.py`가 첫 번에 `git ls-files`의 `Out of memory, malloc failed`로 2로 끝났고,
-  다시 치니 번호 겹침 없음이었다(이 브랜치의 새 번호는 일지 2026-10-28-28, 티켓 025).
+  다시 치니 번호 겹침 없음이었다(이 브랜치의 새 번호는 일지 2026-10-29-01, 티켓 025).
 - 린트 둘(`uv run ruff check .`, `uv run ruff format --check .`)이 초록이었다. `uv run python tools/canary.py --shape <명세>`와
   `uv run python tools/check_md_tables.py .scratch/retro-queue.md`도 통과했다. 이 브랜치는 `.py`를 바꾸지 않아 커밋의
   pre-commit에서 ruff 둘이 `Skipped`가 되므로 손으로 친 이 결과가 그 몫이다. 나머지 검증 명령은 아직 돌리지 않았다.
@@ -99,8 +99,8 @@ next-session 지시문으로 연 새 세션이다. 나란히 여는 여덟 가�
 시작 프롬프트: 대기열 497을 티켓 .scratch/harness/issues/025-next-session-prune-check.md로 쓰고 한다
 브랜치: chore/025-next-session-prune-check
 모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
-읽을 것: docs/agents/issue-tracker.md, 일지 docs/journal/2026-10-28-28-next-session-prune-check.md
-이어받을 상태: 인계: 셀프 리뷰 직전. 커밋하지 않은 변경(미추적 셋 포함)이 워크트리에 있고 셀프 리뷰(/code-review, 기점 origin/main)부터 한다. 린트 둘과 카나리아(통과 4)는 마쳤고 나머지 검증 명령은 돌리지 않았다. 밀 주장과 남은 단계는 일지의 인계 절. docs/journal/2026-10-28-28-next-session-prune-check.md
+읽을 것: docs/agents/issue-tracker.md, 일지 docs/journal/2026-10-29-01-next-session-prune-check.md
+이어받을 상태: 인계: 셀프 리뷰 직전. 커밋하지 않은 변경(미추적 셋 포함)이 워크트리에 있고 셀프 리뷰(/code-review, 기점 origin/main)부터 한다. 린트 둘과 카나리아(통과 4)는 마쳤고 나머지 검증 명령은 돌리지 않았다. 밀 주장과 남은 단계는 일지의 인계 절. docs/journal/2026-10-29-01-next-session-prune-check.md
 확인할 선행 조건: 병합은 이 워크트리 사본의 next-session "워크트리에서 병합할 때"를 Read로 열어 따른다(이 브랜치가 그 3을 바꾼다)
 이번 요청 범위: PR과 병합까지
 ```
@@ -242,8 +242,8 @@ open-session을 부른다 2026-10-28T03:47:45Z
 시작 프롬프트: 대기열 497을 티켓 .scratch/harness/issues/025-next-session-prune-check.md로 쓰고 한다
 브랜치: chore/025-next-session-prune-check
 모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
-읽을 것: docs/agents/issue-tracker.md, 일지 docs/journal/2026-10-28-28-next-session-prune-check.md
-이어받을 상태: 인계: 커밋 뒤. 셀프 리뷰를 반영한 커밋(pre-commit 통과)까지 했고 푸시와 PR은 아직이다. 일지의 인계(커밋 뒤) 절과 인용 따옴표 수정은 커밋하지 않은 채 워크트리에 있다. 남은 단계는 PR 직전 리뷰(밀 새 문장은 일지 "고친 것 (셀프 리뷰 반영)"), 푸시와 PR, 봇 회차, 회고, 워크트리에서 병합이다. 첫 커밋 시도는 이 PC의 부하로 web-verify·pytest가 빨갰고 다시 치니 통과했다(일지 "검사 (셀프 리뷰 뒤)"). docs/journal/2026-10-28-28-next-session-prune-check.md
+읽을 것: docs/agents/issue-tracker.md, 일지 docs/journal/2026-10-29-01-next-session-prune-check.md
+이어받을 상태: 인계: 커밋 뒤. 셀프 리뷰를 반영한 커밋(pre-commit 통과)까지 했고 푸시와 PR은 아직이다. 일지의 인계(커밋 뒤) 절과 인용 따옴표 수정은 커밋하지 않은 채 워크트리에 있다. 남은 단계는 PR 직전 리뷰(밀 새 문장은 일지 "고친 것 (셀프 리뷰 반영)"), 푸시와 PR, 봇 회차, 회고, 워크트리에서 병합이다. 첫 커밋 시도는 이 PC의 부하로 web-verify·pytest가 빨갰고 다시 치니 통과했다(일지 "검사 (셀프 리뷰 뒤)"). docs/journal/2026-10-29-01-next-session-prune-check.md
 확인할 선행 조건: 병합은 이 워크트리 사본의 next-session "워크트리에서 병합할 때"를 Read로 열어 따른다(이 브랜치가 그 3을 바꾼다)
 이번 요청 범위: PR과 병합까지
 ```
@@ -345,8 +345,8 @@ open-session을 부른다 2026-10-28T05:16:27Z
 시작 프롬프트: 대기열 497을 티켓 .scratch/harness/issues/025-next-session-prune-check.md로 쓰고 한다
 브랜치: chore/025-next-session-prune-check
 모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
-읽을 것: docs/agents/issue-tracker.md, 일지 docs/journal/2026-10-28-28-next-session-prune-check.md
-이어받을 상태: 인계: PR 연 뒤. PR #417 을 열었고 커밋 64ee0233 까지 푸시했다. 순서 1의 2(봇 회차)부터 하고, 첫 @coderabbitai review 코멘트도 새 세션이 남긴다. PR 직전 리뷰(/security-review 지적 없음, bug-perf-review 유효 넷)는 반영해 커밋했다. 일지의 인계(PR 연 뒤에 넘김) 절과 인용 따옴표 수정은 커밋하지 않은 채 워크트리에 있다. 남은 단계는 봇 회차와 반영, 회고, 워크트리에서 병합이다. docs/journal/2026-10-28-28-next-session-prune-check.md
+읽을 것: docs/agents/issue-tracker.md, 일지 docs/journal/2026-10-29-01-next-session-prune-check.md
+이어받을 상태: 인계: PR 연 뒤. PR #417 을 열었고 커밋 64ee0233 까지 푸시했다. 순서 1의 2(봇 회차)부터 하고, 첫 @coderabbitai review 코멘트도 새 세션이 남긴다. PR 직전 리뷰(/security-review 지적 없음, bug-perf-review 유효 넷)는 반영해 커밋했다. 일지의 인계(PR 연 뒤에 넘김) 절과 인용 따옴표 수정은 커밋하지 않은 채 워크트리에 있다. 남은 단계는 봇 회차와 반영, 회고, 워크트리에서 병합이다. docs/journal/2026-10-29-01-next-session-prune-check.md
 확인할 선행 조건: 병합은 이 워크트리 사본의 next-session "워크트리에서 병합할 때"를 Read로 열어 따른다(이 브랜치가 그 3을 바꾼다)
 이번 요청 범위: PR과 병합까지
 ```
@@ -405,9 +405,9 @@ CodeRabbit 체크 런이 `neutral`, 제목 `Review rate limited`였고, 요청 �
 
 회고 커밋 `70cb36c7`의 푸시를 `hook_push_behind_main`이 막았다(origin/main의 #415 `06a8f85b` 한 커밋 뒤). 합치다
 `.scratch/retro-queue.md`의 530·531·532·533 행에서 충돌이 났다. 530은 양쪽이 같은 행에 2회차를 더한 것이라 두 사례를 합쳐
-3회차로 적었고, 531·532는 main 쪽, 533은 이 브랜치 쪽을 썼다. 병합 커밋 `9c3cfd45`의 pre-commit은 모두 통과였다(703초).
+3회차로 적었고, 531·532는 main 쪽, 533은 이 브랜치 쪽을 썼다(그 533은 뒤의 main 합치기에서 537로 옮겼다). 병합 커밋 `9c3cfd45`의 pre-commit은 모두 통과였다(703초).
 그 뒤 `tools/sibling_overlap.py`가 이 일지 `2026-10-28-21`이 main의 최신 일지 2026-10-28-23보다 이름순으로 앞이라고 알려
-`--move`로 2026-10-28-28로 옮겼다.
+`--move`로 `2026-10-28-28`로 옮겼다(뒤의 main 합치기에서 다시 2026-10-29-01로 옮겼다).
 
 ## 봇 회차 2
 
@@ -450,10 +450,10 @@ Nit 둘, 명세 축은 Critical·Major 없이 Minor 둘과 Nit 셋을 냈다. �
   판정 셋의 판 둘과 판정 둘의 판 하나로 갈라 적었다(명세 축).
 - 대기열 527·530의 넷째 칸: 회차를 더할 때 사건 서술까지 더했다. retro 5단계("기존 행에 회차를 더할 때는 회차 수와 일지 파일명만
   더한다")대로 회차 수와 일지 파일명만 남겼다(명세 축). 530의 2회차 서술은 main의 admin-style 03이 쓴 것이라 두었다.
-- 대기열 534: 표준 축이 `tools/canary.py`의 `--control-commit`을 들었다. 코드(`source_problems`의 대조군 갈래, 887~896행)를
+- 대기열 538: 표준 축이 `tools/canary.py`의 `--control-commit`을 들었다. 코드(`source_problems`의 대조군 갈래, 887~896행)를
   읽으니 대조군 사본에 판정 문자열이 하나라도 있으면 원천 확인이 막는다. 그래서 일부 판정만 새 글인 명세는 지금 도구로
   PR 도중의 판과 가르지 못한다는 까닭을 처방 칸에 더했다. 표준 축이 가까운 사건으로 든 열린 310(결정마다 카나리아 하나)은 이번
-  사건을 이미 처방한 행이라 회차를 더하고 534와 서로 가리키게 했다. 명세 축이 든 열린 430은 `.py` 프로브가 `probe_kit`을
+  사건을 이미 처방한 행이라 회차를 더하고 538와 서로 가리키게 했다. 명세 축이 든 열린 430은 `.py` 프로브가 `probe_kit`을
   쓰게 하는 훅이라 TOML 카나리아인 이번 사건을 잡지 못해, 같은 일로 보지 않았다.
 - 일지 회고 절의 셈: 첫 회고 머리의 수가 459를 더하기 전의 것이라, 봇 회차 2 뒤의 셈 문장에 459를 함께 적었다(표준 축).
 - 일지 "다음" 절: claude-review 첫 회차의 보류 둘은 이미 PR 코멘트(`issuecomment-6464631870`)에 남긴 일이라 지우고, 둘째
@@ -462,11 +462,41 @@ Nit 둘, 명세 축은 Critical·Major 없이 Minor 둘과 Nit 셋을 냈다. �
 
 다시 돌린 명령: 손으로 치는 다섯은 이 커밋의 pre-commit으로 갈음한다. 결과는 커밋 뒤에 적는다.
 
+### 검사와 푸시 (봇 회차 2 반영 뒤)
+
+커밋 `a1c453e4`의 pre-commit이 모두 통과였다(`parallel-checks` 744초. pytest 743초, web-verify 708초, 카나리아 명세 모양
+통과, 인용 대조 경고 없음. ruff 둘은 `.py`가 없어 `Skipped`). 푸시했고(`ab94d8da..a1c453e4`), 보류 이유를 PR 코멘트
+`issuecomment-6467106299`로, CodeRabbit 지적 스레드에 고친 커밋을 알리는 답글을 `discussion_r4399690473`으로 남겼다.
+`tools/wait_ci.py 417`을 띄웠다.
+
+### 인계 (주간 한도 90% 도달)
+
+CI를 기다리는 동안 다른 세션("주간한도 95% 초과 시 세션 전환")이 메시지를 보냈다. 사용자의 말이 아니라 다른 세션의 요청이고,
+요지는 주간 한도가 90%에 닿아 다른 계정으로 넘기니 새 작업·세션을 시작하지 말고, 백그라운드 대기를 멈추고, 새로 푸시·PR·병합을
+하지 말고 PR 417을 그대로 둔 채 인계 지시문을 최종 보고로 내라는 것이었다. 병합을 미루는 보수적인 요청이라 따랐다.
+`tools/wait_ci.py 417`을 멈췄고, 병합(워크트리에서 병합할 때 1~5)은 하지 않았다.
+
+- PR #417 머리는 `a1c453e4`이고 푸시했다. 그 커밋의 CI와 claude-review 셋째 회차, CodeRabbit 스레드의 답은 보지 못했다.
+- 잘못 올린 리뷰 요청 코멘트 `issuecomment-6465973231`(`@coderabbitai-review`)는 고치지 못한 채 남았다.
+- 커밋하지 않은 변경: 이 일지의 이 절과 바로 위 "검사와 푸시" 절.
+
+### 이어 가기 (027 세션이 전한 병합 요청)
+
+2026-10-29에 027 세션(`chore/027-next-session-split`)이 PR #417이 main과 충돌해 멈춰 있다며, 사용자가 그 세션에 한 말을
+옮겨 왔다. 이 세션에 사용자가 직접 한 말은 아니고, 처음 받은 요청 범위("PR과 병합까지") 안의 일이라 이었다.
+
+> 사용자(027 세션에게): 025 세션을 깨워 충돌을 풀고 먼저 병합하게 한 뒤 027을 이어서 해.
+
+origin/main `094a9a17`을 합쳤다. `next-session` SKILL.md는 #419(harness 028)의 문장과 함께 자동으로 합쳐졌고,
+`.scratch/retro-queue.md`에서만 충돌이 났다. main의 534(harness 028)를 두고 이 브랜치의 행을 뒤로 보냈다. 그 뒤
+`tools/sibling_overlap.py`가 열린 PR #418도 535를 쓴다고 알려 `--move`로 옮겼다(일지 → 2026-10-29-01, 대기열 533 → 537,
+534 → 538). 조사가 붙은 인용은 손으로 고쳤다. #418의 535도 `367의 4회차`라, 둘 가운데 나중에 병합하는 쪽이 5회차로 고친다.
+
 ## 회고
 
 이 일지 전체(세 세션)와 이 세션을 읽었다. 후보 열둘, 승인 셋(새 행 하나, 회차 더하기 둘), 기각 아홉, 넘김 없음.
 
-- 승인(새 행 533, 1회차): 인계 열기가 "활성 보내기 버튼이 2개다"로 모델을 고른 뒤 멈춰, 지시문이 든 새 세션 화면과 바뀐
+- 승인(새 행 537, 1회차): 인계 열기가 "활성 보내기 버튼이 2개다"로 모델을 고른 뒤 멈춰, 지시문이 든 새 세션 화면과 바뀐
   기본값이 남았는데 `open-session`과 `next-session` "인계할 때" 4가 그 화면을 어떻게 할지 적지 않았다. 사건(이 세션의 PR 연 뒤
   인계), 층(스킬의 갈래 문장. 다른 패널의 글은 스크립트가 고칠 수 없다), 되돌림을 지났다. 스킬에 문장을 더하는 것이라 세
   번째에 반영한다. 같은 대상 파일의 519·524와 묶을 수 있다고 적었다.
@@ -502,12 +532,12 @@ Nit 둘, 명세 축은 Critical·Major 없이 Minor 둘과 Nit 셋을 냈다. �
   훨씬 느렸다. 그때 함께 돈 세션 수와 메모리는 보지 않았다). 같은 커밋을 다시 시도한다.
 
 위 머리의 수는 459를 더하기 전의 것이다. 회고 커밋 시도 뒤에 459를, 봇 회차 2 뒤에 아래 둘을 더했다. 그래서 모두 후보
-열다섯, 승인 여섯(새 행 둘, 회차 더하기 넷), 기각 아홉, 넘김 없음이다. 534의 사건은 그 처방을 이미 든 310에도 회차를 더했다.
+열다섯, 승인 여섯(새 행 둘, 회차 더하기 넷), 기각 아홉, 넘김 없음이다. 538의 사건은 그 처방을 이미 든 310에도 회차를 더했다.
 
 - 승인(527에 회차, 2회차): 리뷰 요청을 `gh pr comment 417 --body @coderabbitai-review`로 남겨 명령 꼴이 아니었다. 527이 같은
   사건(따옴표를 피한 `--body` 값이 명령 꼴이 아님)을 처방한 열린 행이라 회차로 센다. 고치려던 `gh api` PATCH는 분류기가
   거부했다.
-- 승인(새 행 534, `367의 4회차`): 카나리아의 `expect`가 PR 도중 고친 명령을 판정하지 못했다. `.claude/rules/probes.md` 첫
+- 승인(새 행 538, `367의 4회차`): 카나리아의 `expect`가 PR 도중 고친 명령을 판정하지 못했다. `.claude/rules/probes.md` 첫
   항목을 어겨 CodeRabbit이 잡은 사건이라 회차로 센다. 그 항목을 낸 367이 닫혔고(`--search 367의`로 이은 행 없음) 회차가
   셋이라 새 행은 4회차다. 층은 검사(`tools/canary.py`가 앞 판에도 `expect`가 모두 있으면 알린다)로 골랐다. 문턱을 지난 새
   검사라 `tools/hook_report.py`를 먼저 돌렸고 뺄 후보는 없었다. 이 PR의 범위(`next-session` 스킬)를 `tools/`로 넓히지 않고
@@ -522,5 +552,5 @@ Nit 둘, 명세 축은 Critical·Major 없이 Minor 둘과 Nit 셋을 냈다. �
 - claude-review 둘째 회차에서 고치지 않은 둘(2단계 끝의 `--delete-branch` 구절, 티켓 수용 기준의 문구)은 PR 코멘트에 보류
   이유를 남긴다. 첫 회차의 둘은 PR 코멘트 `issuecomment-6464631870`에 남겼다. 0 갈래의 거부가 다시 나면 그 사건을 대기열
   497을 이은 행으로 센다.
-- 대기열 533(인계 열기가 남긴 새 세션 화면), 534(카나리아 판정이 앞 판과 가르는지), 499·530·527·310의 회차. 530과 534는
+- 대기열 537(인계 열기가 남긴 새 세션 화면), 538(카나리아 판정이 앞 판과 가르는지), 499·530·527·310의 회차. 530과 538는
   회차 3 이상이라 chore 계기다.
