@@ -308,6 +308,41 @@ open-session을 부른다 2026-10-29T10:39:09Z
 - **반영 뒤 검증.** 관리 화면 스토리 시험 34개(`admin-storybook-wide`·`admin-storybook-narrow`)가 초록이었다(vitest가 찍었다). 클래스 판정과 axe가 `sr-only`를 받았다. `docker version`은 여전히 `request returned Internal Server Error for API route and version …`로 1에 끝나(Docker가 찍었다) 로컬 사진 비교를 돌리지 못했다. 숨긴 영역이 화면을 밀지 않는지는 CI `visual` 잡이 판정한다. 손으로 치는 다섯은 이 커밋의 pre-commit으로 갈음한다.
 - **일지 번호 옮기기(다시).** 커밋 전 `tools/sibling_overlap.py`가 origin/main에 생긴 `2026-10-29-13`(#422)보다 이 일지가 이름순으로 앞선다며 1로 끝났고(도구가 찍었다), `--move`로 `2026-10-29-15`로 옮겼다(도구가 찍었다). 이 브랜치의 더한 줄에 `29-12`와 "일지 12"가 남지 않은 것을 `git diff --cached --merge-base origin/main`의 grep으로 봤다(출력이 비었다). 도구가 쓴 PR 본문은 푸시 전에 지금 본문과 견주어 올린다.
 - **main 합치기(미룸).** origin/main이 `f3b4af0d`(#422)만큼 앞섰고 PR이 `mergeStateStatus` `DIRTY`였다(`gh pr view`가 찍었다). 겹치는 파일은 `.scratch/plan.md`(프론티어 줄 끝에 양쪽이 문장을 더했다)와 `.scratch/retro-queue.md`(이 브랜치의 행 541과 main의 행 540이 같은 자리에 들었다)였다(`git merge-tree`의 미리보기가 찍었다). 리뷰어 둘이 작업 트리를 보는 동안 합치지 않았고, 반영 커밋 뒤에 합쳐 한 번에 푸시한다.
+- **커밋.** 반영을 실은 `8777c406`이 pre-commit을 모두 지났다(pytest 629.0초, web-verify 611.1초, 러너가 찍었다). ruff 둘은 스테이지된 `.py`가 없어 `Skipped`였다(바꾼 `.py`가 없다). 인용 대조가 이 일지의 인용 넷을 저장소의 다른 자리에 없다고 경고했다(경고만이다, 러너가 찍었다). 둘은 WAI-ARIA 본문의 인용이고, 둘은 이 커밋이 지운 옛 독스트링 문장이라 그대로 둔다.
+
+## 인계(커밋 뒤)
+
+커밋하지 않은 변경은 이 절뿐이다. 커밋 뒤 경계에서 세션 컨텍스트가 약 28만 토큰으로 `hook_handoff`가 왔다(훅이 찍었다). 인계하지 않는 때 다섯에 들지 않았다(커밋이 섰고, 요청 범위는 병합까지이며, 지시문의 "이어받을 상태"는 `인계: 셀프 리뷰 직전`이라 경계가 다르고, `인계 못함` 줄이 없고, `get_session`의 `self`에 `parentSessionId`가 없었다). 이 세션의 지금 제목은 `feature/04-admin-frame-common-states`다.
+
+이 세션이 번복하거나 고친 것: 앞 세션이 받지 않은 CodeRabbit의 제안(진행 표시와 따로 늘 남는 상태 영역)을 셀프 리뷰 두 축의 반례로 받는 쪽으로 뒤집었다(위 "판정"). 일지 번호를 `2026-10-29-12`에서 `2026-10-29-15`로 다시 옮겼다. 위 "남긴 것" 줄에서 `RunDecision.tsx`에 대한 이 브랜치의 변경을 "부품 교체"라고 적었다가 `git diff`로 대 보고 제목 수준 셋으로 고쳤다.
+
+```
+다음 작업: .scratch/admin-style/issues/04-admin-frame-common-states.md. 관리 화면의 틀과 공통 상태
+다음 단계: PR 반영·병합
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /implement .scratch/admin-style/issues/04-admin-frame-common-states.md
+브랜치: feature/04-admin-frame-common-states
+모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
+읽을 것: docs/journal/2026-10-29-15-admin-frame-common-states.md의 "이어받기(셀프 리뷰 직전)" 절부터 끝까지
+이어받을 상태: 인계: 커밋 뒤. 커밋 8777c406(PR #423 CodeRabbit 첫 회차의 Minor를 제안대로 받아 ReadSection에 늘 서는 sr-only 상태 영역을 두었고, 셀프 리뷰 두 축의 반영, 변이 넷, 티켓 08 메모, 일지 번호 15)까지 했고 아직 푸시하지 않았다. 커밋하지 않은 변경은 일지의 "인계(커밋 뒤)" 절뿐이라 다음 커밋에 싣는다. 남은 단계: (1) origin/main(f3b4af0d, #422)을 합친다. 충돌은 .scratch/plan.md의 프론티어 줄(main의 줄 끝에 이 브랜치의 04 문장을 붙인다)과 .scratch/retro-queue.md(main의 행 540과 이 브랜치의 행 541을 차례로 둘 다 둔다) 둘이다(git merge-tree 미리보기). 합친 뒤 sibling_overlap.py를 다시 친다. (2) sibling_overlap.py --move가 일지 경로를 15로 고쳐 쓴 PR 본문 C:/Users/User/AppData/Local/Temp/sibling-overlap-9s6hjhn6/pr-423-body.md를 지금 본문과 견주어 올린다(파일이 없으면 본문의 일지 경로만 손으로 고친다). (3) CodeRabbit 인라인 코멘트(id 4411189188)에 제안대로 늘 서는 sr-only 영역으로 고쳤다고 답하고, claude-review 셋째 회차(헤드 0080013)의 Minor 둘·Nit 하나의 보류 이유 PR 코멘트를 남긴 뒤 푸시하고 merge.md 2의 대기를 띄운다. 그 푸시의 claude-review는 넷째 회차, CodeRabbit은 둘째 회차라 둘 다 Critical·Major만 고친다. Docker 엔진이 여전히 Internal Server Error라 로컬 사진 비교를 돌리지 못했으니 CI visual 잡의 초록을 병합 전에 본다. 그 뒤 남은 단계는 워크트리 길 병합과 next-session이다. 일지에 더하는 절은 "회고" 앞에 넣는다. docs/journal/2026-10-29-15-admin-frame-common-states.md
+확인할 선행 조건: 없음
+이번 요청 범위: PR과 병합까지
+```
+
+제목을 `feature/04-admin-frame-common-states (인계함)`으로 바꿨다. 남은 백그라운드 작업은 없었다(리뷰어 둘, 변이, 커밋이 그 전에 끝났다). `git worktree unlock`은 `is not locked`로 끝났다(git이 찍었다).
+
+open-session을 부른다 2026-10-29T11:22:01Z
+
+## 이어받기(커밋 뒤)
+
+> 사용자: "다음 작업: .scratch/admin-style/issues/04-admin-frame-common-states.md. 관리 화면의 틀과 공통 상태 / 다음 단계: PR 반영·병합 … 이어받을 상태: 인계: 커밋 뒤. 커밋 8777c406 … 까지 했고 아직 푸시하지 않았다 … 남은 단계: (1) origin/main(f3b4af0d, #422)을 합친다 … (2) sibling_overlap.py --move가 일지 경로를 15로 고쳐 쓴 PR 본문 … 을 지금 본문과 견주어 올린다 … (3) CodeRabbit 인라인 코멘트(id 4411189188)에 제안대로 늘 서는 sr-only 영역으로 고쳤다고 답하고, claude-review 셋째 회차(헤드 0080013)의 Minor 둘·Nit 하나의 보류 이유 PR 코멘트를 남긴 뒤 푸시하고 merge.md 2의 대기를 띄운다 … 이번 요청 범위: PR과 병합까지"
+
+새 세션이 제목을 브랜치 이름으로 바꾸고 `EnterWorktree`(path)로 이 워크트리에 들어왔다. 헤드는 `8777c406`이었고 커밋하지 않은 변경은 지시문대로 이 일지뿐이었다(`git status --short`가 찍었다). origin/main은 `f3b4af0d`(#422) 하나만큼 앞서 있었다(`git log HEAD..origin/main`이 찍었다).
+
+- **main 합치기.** `git merge origin/main`이 지시문의 미리보기대로 `.scratch/plan.md`와 `.scratch/retro-queue.md`에서 충돌했다(git이 찍었다). 밑(`c9d1cd80`)의 프론티어 줄과 견주니 이 브랜치는 줄 끝에 04 문장을 더했고, main은 줄 가운데의 design-card-build 문장("다음은 그 명세이고" → 명세가 나왔다는 문장과 "다음은 명세 검토와 티켓이고")을 고쳤다(스크래치 스크립트의 `difflib`가 찍었다). main의 줄 끝에 04 문장을 붙였고, 대기열은 main의 행 540 뒤에 이 브랜치의 행 541을 두었다. 푼 뒤 `tools/sibling_overlap.py`는 번호 겹침 없음이었다(도구가 찍었다).
+- **합치기 커밋.** 첫 시도는 pre-commit의 pytest에서 `tests/channel/cli/test_interrupt.py`의 시험 둘이 "Ctrl+C 를 누른 자식이 30초 안에 끝나지 않았다"로 빨개 막혔다(2 failed, 5997 passed, 724.58초, pytest가 찍었다). 이 브랜치가 건드리지 않은 시험이고, 그 파일만 따로 치니 6개가 28.85초에 통과했다(pytest가 찍었다). 위 회고 4와 같은 부하의 시간 시험이라 고치지 않고 다시 커밋했고, `c2605945`가 pre-commit을 모두 지났다(pytest 553.9초, web-verify 525.8초, 러너가 찍었다).
+- **PR 본문.** `sibling_overlap.py --move`가 쓴 본문(`pr-423-body.md`)이 남아 있었고, 지금 본문과 `diff`로 견주니 차이는 일지 경로 한 줄뿐이었다(diff가 찍었다). 그 본문에 이번 반영을 더해 올렸다(merge.md 1, 이미 바꾼 파일 안의 새 결정). "왜 이렇게 했나"에 늘 서는 `sr-only` 상태 영역의 까닭, "남긴 위험"에 `RunDecision`의 조건부 상태 영역(08 메모)과 로컬 사진 비교를 돌리지 못한 것, 체크리스트에 반영 전 셀프 리뷰, "확인 방법"에 변이 27과 다시 돌린 여덟을 적었다.
+- **봇 코멘트.** CodeRabbit 인라인 코멘트에 늘 서는 `sr-only` 영역으로 고친 것과 그 까닭을 답했다(discussion_r4411786178). claude-review 셋째 회차의 보류 이유를 PR 코멘트로 남겼다(issuecomment-6495511643). Minor 1(쓰는 곳이 없는 앱 부품 셋)은 05·06·07·08의 "메모(04에서)"가 화면에서 쓸 부품으로 그 셋을 적었고(그 네 티켓을 grep으로 봤다), Minor 2와 Nit은 앞 회차들의 보류 이유와 같은 자리다. 뒤로 넘긴 새 일은 없다.
 
 ## 회고
 
