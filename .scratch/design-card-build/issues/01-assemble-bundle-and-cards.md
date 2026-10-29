@@ -65,7 +65,7 @@
 
 - [x] 한 번 짓기의 시간(명세의 어림은 15초 안팎)과 시험이 `vitest run`에 더한 시간을 이 티켓의 결과에 적는다. 잰 명령과 함께 적고, 재지 않았으면 어림이라고 적는다
 - [x] 명령 코드가 `web/`의 eslint와 strict 타입 검사를 지난다. 프로브 README는 eslint를 재지 않았다고 적는다
-- [ ] 검증 명령이 모두 초록이다. 모델 경로, 위젯, 관리 화면을 건드리지 않아 `-m llm`·`-m llm_widget`·e2e·사진 비교는 칠 일이 없다. CI의 `pnpm -C web verify`에서 새 node 시험이 chromium을 띄우는지 PR의 CI로 본다
+- [x] 검증 명령이 모두 초록이다. 모델 경로, 위젯, 관리 화면을 건드리지 않아 `-m llm`·`-m llm_widget`·e2e·사진 비교는 칠 일이 없다. CI의 `pnpm -C web verify`에서 새 node 시험이 chromium을 띄우는지 PR의 CI로 본다
 
 ## 결과
 
@@ -80,3 +80,4 @@
 - **실패하면 `--out`이 빈다.** 목록 파일을 산출을 옮기기 전에 쓴다. `--paths`에 이미 있는 폴더를 주자 `"kind":"output"`, 종료 1로 끝났고 `--out` 자리에 폴더가 생기지 않았다(`node web/tools/sync-design-system/main.ts assemble --out <폴더>/out --paths <폴더>/list-is-dir`과 `ls -A <폴더>`로 손으로 봤다). 셀프 리뷰 전의 판은 같은 입력에서 `--out`에 794개를 남겼다(명세 축 리뷰어가 돌려 봤다).
 - **임시 폴더를 만들지 못하면.** PR 직전 버그 축이 잡았다. 명령이 임시 폴더를 `try` 밖에서 만들어, 만들지 못하면 JSON 보고 없이 예외로 끝났다. 시험(임시 폴더 환경 변수 셋을 없는 폴더로 둔다)을 먼저 써서 이 시험 파일을 `-t 만들지`로 좁혀 돌리자 `mkdtemp`의 ENOENT가 `run()`을 지나 던져져 빨갰다(1 failed | 29 skipped. 앞 세션이 손으로 봤다, 일지 2026-10-30-08 "이어받은 세션(커밋 뒤)"). 그 뒤 그것을 `output` 오류로 바꾸고 임시 폴더를 지우지 못해도 결과를 덮지 않게 고쳤다. 같은 빨강을 변이 표의 23(오류를 `output`으로 바꾸는 줄을 `throw error`로 되돌린다)이 다시 잰다. `PYTHONUTF8=1 uv run python tools/mutate.py .scratch/design-card-build/probes/assemble_mutations.toml 23`이 기준선 초록, 변이 빨강, 표지 `Error: ENOENT: no such file or directory, mkdtemp`까지 기대대로라고 찍었다. 셀프 리뷰가 이 시험과 이웃 `run()` 사례 둘에 오류 문구 단언을 더하게 한 판에서 이 시험 파일이 30 통과였다(`pnpm -C web exec vitest run --project node tools/sync-design-system/assemble.test.ts`, 손으로 봤다).
 - **변이.** `probes/assemble_mutations.toml`의 변이 29. 셀프 리뷰와 PR 직전 리뷰를 반영해 커밋한 판(`3892f94a`)에서 `PYTHONUTF8=1 uv run python tools/mutate.py .scratch/design-card-build/probes/assemble_mutations.toml`이 "변이 29 모두 기대대로"를 찍었다(기준선 21 모두 초록). 결과와 표지를 고친 까닭은 프로브 README "2026-10-29 짓기 명령의 변이"다.
+- **CI의 chromium.** PR #433 헤드 `2e9d684e`의 CI `web` 잡(실행 40941959402, 잡 123687358751)에서 `pnpm -C web verify`의 `vitest run`이 `node  tools/sync-design-system/assemble.test.ts (30 tests) 7684ms`를 찍었고, 그 아래 `chromium 그리기 (10)`의 열(카드 아홉과 토큰 덮기)이 모두 `✓`였다. 같은 실행의 요약은 `Test Files  92 passed (92)`, `Tests  1552 passed (1552)`이고 건너뛴 시험이 없었다. 잡 로그를 `gh api --allow-escape-sequences repos/njh6803/agent-os/actions/jobs/123687358751/logs`로 받아 `grep`으로 봤다. 그 판에서 다른 검사(`python`, `e2e`, `e2e-widget`, `visual`, `ticket`, `verify`)도 모두 통과였다(`tools/wait_ci.py 433`이 찍은 줄).
