@@ -7,6 +7,7 @@ import { failureOf, unreachable } from "../failure";
 export type TracePage = components["schemas"]["TracePage"];
 export type RunRow = components["schemas"]["RunRow"];
 export type RunSummary = components["schemas"]["RunSummary"];
+export type UnreadableTrace = components["schemas"]["UnreadableTrace"];
 export type RunStatus = components["schemas"]["RunStatus"];
 export type Trace = components["schemas"]["Trace"];
 export type TraceEvent = components["schemas"]["TraceEvent"];
