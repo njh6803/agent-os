@@ -20,20 +20,17 @@ import { signToken, type SiteKey } from "./token";
 
 export const INTRUDER_TOKEN = "intruder-token";
 
-function page(
-  widgetOrigin: string,
-  agent: string,
-  intruders: boolean,
-  otherOrigin: string,
-  sub: string | null,
-): string {
+/** 끼어드는 iframe 둘. 같은 허용 출처의 형제와 허용 밖 출처(`otherOrigin`)다. */
+function intruderFrames(otherOrigin: string): string {
+  return `<iframe class="intruder" title="형제" src="/intruder"></iframe>
+<iframe class="intruder" title="남" src="${otherOrigin}/intruder"></iframe>`;
+}
+
+/** iframe 위젯을 품은 페이지. `nested` 는 위젯 iframe 뒤에 둘 끼어드는 iframe 의 마크업이고 없으면 빈 글이다. */
+function page(widgetOrigin: string, agent: string, sub: string | null, nested: string): string {
   const widget = `${widgetOrigin}/widget?agent=${encodeURIComponent(agent)}`;
   const tokenPath = sub === null ? "/token" : `/token?sub=${encodeURIComponent(sub)}`;
   // 위젯 iframe 이 첫 프레임이어야 끼어드는 iframe 이 `parent.frames[0]` 으로 찾는다.
-  const nested = intruders
-    ? `<iframe class="intruder" title="형제" src="/intruder"></iframe>
-<iframe class="intruder" title="남" src="${otherOrigin}/intruder"></iframe>`
-    : "";
   return `<!doctype html>
 <html lang="ko">
 <head><meta charset="utf-8"><title>사이트</title></head>
@@ -127,11 +124,9 @@ export async function startSite(port: number, origins: SiteOrigins, key: SiteKey
     }
     if (url.pathname === "/") {
       const agent = url.searchParams.get("agent") ?? "tools";
-      const intruders = url.searchParams.get("intruders") === "1";
+      const nested = url.searchParams.get("intruders") === "1" ? intruderFrames(origins.other) : "";
       outgoing.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
-      outgoing.end(
-        page(origins.widget, agent, intruders, origins.other, url.searchParams.get("sub")),
-      );
+      outgoing.end(page(origins.widget, agent, url.searchParams.get("sub"), nested));
       return;
     }
     const answer = elementAnswer(url, origins);

@@ -23,9 +23,38 @@ const TYPESCRIPT = ["**/*.{ts,tsx,mts,cts}"];
 // 저장소 뿌리의 .gitignore. git 의 해석 그대로(자기 디렉터리 기준) 읽는다.
 const GITIGNORE = join(import.meta.dirname, "..", ".gitignore");
 
+// 불리언 플래그 매개변수(CODING_STANDARDS.md). 잡는 자리는 파이썬의 ruff FBT001·FBT002 에 맞춘다. 함수 정의(선언,
+// 함수 식, 화살표 함수, 메서드. 세터는 ruff 처럼 뺀다)의 매개변수 가운데 주석이 boolean 이거나 boolean 을 바로 든
+// 유니온인 것과, 주석과 무관하게 기본값이 true·false 리터럴인 것을 잡는다. 주석과 리터럴 기본값이 함께 있으면 기본값
+// 쪽에서 한 번만 보고한다. 판정자는 플래그와 값을 가르지 못해, 값을 싣는 불리언(서버에 보낼 켜짐, 콜백의 구현)도
+// 함수 정의의 매개변수면 잡는다. 이름 붙인 옵션 객체(`{ force }: { readonly force: boolean }`)는 파이썬의 키워드 전용
+// 매개변수처럼 지나간다. 보지 않는 자리는 함수 타입과 메서드 시그니처(값을 넘기는 콜백 `(checked: boolean) => void`),
+// 본문 없는 선언과 오버로드, 리터럴 타입 true·false, 유니온 속 유니온의 boolean, 배열과 제네릭 인자의 boolean,
+// boolean 의 별칭 주석(`type Flag = boolean`. 기본값이 true·false 리터럴이면 그 기본값으로 잡는다), 교차 타입의
+// boolean, 제네릭 제약(`T extends boolean`), 리터럴이 아닌 기본값(`!0`), 호출에 넘긴 true·false(ruff FBT003 의
+// 자리)다. 생성자의 매개변수 속성은 판정자가 아니라 tsconfig.base.json 의 `erasableSyntaxOnly` 가 타입 검사에서
+// 막는다.
+const DEFINED_FUNCTION = ':function:not([kind="set"] > *)';
+const BOOLEAN_ANNOTATIONS = ["TSBooleanKeyword", "TSUnionType > TSBooleanKeyword"];
+const BOOLEAN_PARAMETER = {
+  selector: [
+    ...BOOLEAN_ANNOTATIONS.map(
+      (type) => `${DEFINED_FUNCTION} > .params > TSTypeAnnotation > ${type}`,
+    ),
+    ...BOOLEAN_ANNOTATIONS.map(
+      (type) =>
+        `${DEFINED_FUNCTION} > AssignmentPattern.params:not([right.value=type(boolean)]) > Identifier.left > TSTypeAnnotation > ${type}`,
+    ),
+    `${DEFINED_FUNCTION} > AssignmentPattern.params > Literal.right[value=type(boolean)]`,
+  ].join(", "),
+  message:
+    "불리언 매개변수를 두지 않는다. 갈래를 고르는 플래그면 함수를 둘로 쪼개고, 값이면 이름 붙인 옵션 객체로 받는다(CODING_STANDARDS.md)",
+};
+
 // no-restricted-syntax 는 파일마다 한 번만 설정된다. 뒤 블록이 이 규칙을 다시 적으면 앞 목록을 통째로
 // 덮으므로, 금지 구문은 이 상수 하나에 두고 서버 파일 블록도 이것을 펼쳐 쓴다.
 const RESTRICTED_SYNTAX = [
+  BOOLEAN_PARAMETER,
   {
     selector: "TSEnumDeclaration",
     message: "TS enum 을 쓰지 않는다. `as const` 배열과 그 유니온을 쓴다(ADR 0021)",

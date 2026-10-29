@@ -26,7 +26,10 @@ function prState(pr: Pr): PrState {
   }
 }
 
-function importing(owner: Owner, further: boolean): Extract<CheckReading, { result: "importing" }> {
+function importing(
+  owner: Owner,
+  { further }: { readonly further: boolean },
+): Extract<CheckReading, { result: "importing" }> {
   return {
     result: "importing",
     pending: null,
@@ -145,7 +148,7 @@ describe("들이는 중의 결정표", () => {
   test.each(cells())("$key 에서 $caller 가 낼 것", (cell) => {
     const decision = decide({
       caller: cell.caller,
-      reading: importing(cell.owner, cell.further),
+      reading: importing(cell.owner, { further: cell.further }),
       pr: prState(cell.pr),
     });
 
@@ -155,7 +158,7 @@ describe("들이는 중의 결정표", () => {
   test("남의 열린 PR 에서 덮어쓰는 선택지는 병합 뒤 다시 올라간다고 설명하고 claim 을 비우지 않는다", () => {
     const decision = decide({
       caller: "upload",
-      reading: importing("other", false),
+      reading: importing("other", { further: false }),
       pr: prState("open"),
     });
 
@@ -170,7 +173,7 @@ describe("들이는 중의 결정표", () => {
   test("남의 열린 PR 의 들이기는 브랜치와 PR 을 보이고 멈추며, 더 고친 몫이 있으면 병합 뒤에 다시 부르라고 적는다", () => {
     const decision = decide({
       caller: "import",
-      reading: importing("other", true),
+      reading: importing("other", { further: true }),
       pr: prState("open"),
     });
 
@@ -186,7 +189,7 @@ describe("들이는 중의 결정표", () => {
   test("병합된 claim 에 더 고친 몫이 있으면 먼저 들인다가 이어받는 들이기이고, 덮어쓰기는 claim 을 비운다", () => {
     const decision = decide({
       caller: "upload",
-      reading: importing("other", true),
+      reading: importing("other", { further: true }),
       pr: prState("merged"),
     });
 
@@ -197,7 +200,7 @@ describe("들이는 중의 결정표", () => {
   });
 
   test("병합된 남의 claim 에 더 고친 몫이 있는데 이어받을 기준본이 없으면 들이기는 멈추고 다시 돌리라고 적는다", () => {
-    const reading: CheckReading = { ...importing("other", true), inherit: null };
+    const reading: CheckReading = { ...importing("other", { further: true }), inherit: null };
     const decision = decide({ caller: "import", reading, pr: prState("merged") });
 
     expect(decision).toMatchObject({ kind: "act", act: "stop" });
@@ -209,7 +212,7 @@ describe("들이는 중의 결정표", () => {
   test("병합된 자기 브랜치의 들이기는 이어받지 않고 새 티켓 브랜치에서 다시 하라고 적는다", () => {
     const decision = decide({
       caller: "import",
-      reading: importing("own", true),
+      reading: importing("own", { further: true }),
       pr: prState("merged"),
     });
 
@@ -221,7 +224,7 @@ describe("들이는 중의 결정표", () => {
   test("gh 가 실패하면 까닭을 보이고 멈춘다", () => {
     const decision = decide({
       caller: "screen",
-      reading: importing("other", false),
+      reading: importing("other", { further: false }),
       pr: prState("failed"),
     });
 
@@ -230,7 +233,11 @@ describe("들이는 중의 결정표", () => {
 
   test("병합된 claim 은 병합 커밋을 보이고, 더 고친 몫이 있어 물어도 병합 커밋을 품었는지 보라고 적는다", () => {
     const pr: PrState = { kind: "merged", number: 7, url: null, mergeCommit: "abc1234" };
-    const decision = decide({ caller: "upload", reading: importing("other", true), pr });
+    const decision = decide({
+      caller: "upload",
+      reading: importing("other", { further: true }),
+      pr,
+    });
 
     expect(decision).toMatchObject({ kind: "ask" });
     expect(decision.notes).toContain("PR #7 가 병합됐다(병합 커밋 abc1234)");
@@ -241,7 +248,7 @@ describe("들이는 중의 결정표", () => {
 
   test("들이는 중인데 PR 상태가 없으면 usage 오류다", () => {
     const error = caught(() =>
-      decide({ caller: "upload", reading: importing("own", false), pr: null }),
+      decide({ caller: "upload", reading: importing("own", { further: false }), pr: null }),
     );
 
     expect(error).toBeInstanceOf(CommandError);
