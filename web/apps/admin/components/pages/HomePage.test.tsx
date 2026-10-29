@@ -943,14 +943,21 @@ describe("새로 고침과 상태", () => {
     expect(
       await screen.findByRole("progressbar", { name: "플러그인 목록을 불러오는 중" }),
     ).toBeTruthy();
+    // 상태 영역은 상태가 바뀌는 동안 같은 노드로 남고 글만 바뀐다. 영역째 새로 들어오면 알리지 않는 프로그램이 있다.
+    const live = within(screen.getByRole("region", { name: "플러그인" })).getByRole("status");
+    expect(live.textContent).toBe("플러그인 목록을 불러오는 중");
     expect(screen.queryByRole("region", { name: "에이전트" })).toBeNull();
     first.resolve(rows());
     await screen.findByRole("region", { name: "에이전트" });
     expect(screen.queryByRole("progressbar")).toBeNull();
+    expect(live.isConnected).toBe(true);
+    expect(live.textContent).toBe("");
 
     await user.click(screen.getByRole("button", { name: "새로 고침" }));
 
     expect(await screen.findByRole("progressbar", { name: "다시 확인하는 중" })).toBeTruthy();
+    expect(live.isConnected).toBe(true);
+    expect(live.textContent).toBe("다시 확인하는 중");
     expect(screen.getByRole("button", { name: "새로 고침" }).getAttribute("aria-busy")).toBe(
       "true",
     );
@@ -959,6 +966,7 @@ describe("새로 고침과 상태", () => {
     await vi.waitFor(() => {
       expect(screen.queryByRole("progressbar")).toBeNull();
     });
+    expect(live.textContent).toBe("");
     expect(screen.getByRole("button", { name: "새로 고침" }).getAttribute("aria-busy")).toBeNull();
     expect(within(row("에이전트", "calc")).getByText("켜짐")).toBeTruthy();
   });
@@ -970,14 +978,18 @@ describe("새로 고침과 상태", () => {
     renderPage(<HomePage />);
     await enterAdminToken(userEvent.setup({ advanceTimers: vi.advanceTimersByTime }), TOKEN);
     await screen.findByRole("heading", { level: 1, name: "플러그인" });
+    const live = within(screen.getByRole("region", { name: "플러그인" })).getByRole("status");
 
     // 빨리 끝나는 읽기에서 표시가 번쩍이지 않게 0.3초 전에는 아무것도 서지 않는다(admin-style 명세 "공통 상태").
     // shouldAdvanceTime 이라 실제로 흐른 시간도 가짜 시계에 더해진다. 앞의 단언은 0.1초만 밀어, 지연이 없으면
     // 빨개지고 머리가 선 뒤 흐른 실제 시간이 0.2초를 넘지 않는 한 초록이다. 뒤의 단언은 모두 0.3초를 민 뒤다.
+    // 상태 영역은 글보다 먼저 비어서 서 있어야 글이 들어올 때 알린다.
     await act(() => vi.advanceTimersByTimeAsync(100));
     expect(screen.queryByRole("progressbar")).toBeNull();
+    expect(live.textContent).toBe("");
     await act(() => vi.advanceTimersByTimeAsync(200));
     expect(screen.getByRole("progressbar", { name: "플러그인 목록을 불러오는 중" })).toBeTruthy();
+    expect(live.textContent).toBe("플러그인 목록을 불러오는 중");
     first.resolve(rows());
     expect(await screen.findByRole("region", { name: "에이전트" })).toBeTruthy();
   });

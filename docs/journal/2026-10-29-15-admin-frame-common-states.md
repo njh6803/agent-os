@@ -1,4 +1,4 @@
-# 2026-10-29 (12) 관리 화면의 틀과 공통 상태, 설정 화면
+# 2026-10-29 (15) 관리 화면의 틀과 공통 상태, 설정 화면
 
 next-session 지시문으로 연 새 세션이다. 지시문대로 `tidy-checkouts`를 먼저 돌았고, 주 체크아웃에서 브랜치를 따지 않고 `EnterWorktree`(이름 `04-admin-frame-common-states`)로 워크트리에 들어가 브랜치를 바꿨다. `implement` 스킬을 디스크의 `SKILL.md`로 읽어 따랐다.
 
@@ -60,8 +60,8 @@ next-session 지시문으로 연 새 세션이다. 지시문대로 `tidy-checkou
 시작 프롬프트: /implement .scratch/admin-style/issues/04-admin-frame-common-states.md
 브랜치: feature/04-admin-frame-common-states
 모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
-읽을 것: docs/journal/2026-10-29-12-admin-frame-common-states.md의 "구현" 절부터 "인계(셀프 리뷰 직전)" 절까지
-이어받을 상태: 인계: 셀프 리뷰 직전. 커밋하지 않은 변경이 워크트리에 있고 셀프 리뷰(/code-review, 고정점 merge-base origin/main)부터 한다. 구현, 페이지 시험과 스토리 시험, 변이 표 셋(새 표 16, 티켓 02 표 7, 티켓 03 표 6 모두 기대대로), 프로브 README, 티켓 체크박스와 05~09 메모, 린트 둘, 관리 화면 e2e(셀프 리뷰 전 8 통과)는 마쳤다. 남은 것은 셀프 리뷰 반영(e2e 도우미나 중계에 닿으면 e2e를 다시 친다), 사진(visual:admin:update로 정답을 다시 만들고 바뀐 사진을 눈으로 본 뒤 PR 본문에 적는다. 패키지를 고쳐 visual과 visual:widget도 친다), web verify와 run_checks, 티켓 Status done, plan.md의 admin-style 행, 커밋, PR, 봇 회차, 회고, 워크트리 길 병합이다. 열린 PR #420(022-eslint-boolean-params)이 PluginList.tsx·RunDecision.tsx·HomePage.test.tsx·RunPage.tsx를 함께 고쳐 합칠 때 충돌 후보다. docs/journal/2026-10-29-12-admin-frame-common-states.md
+읽을 것: docs/journal/2026-10-29-15-admin-frame-common-states.md의 "구현" 절부터 "인계(셀프 리뷰 직전)" 절까지
+이어받을 상태: 인계: 셀프 리뷰 직전. 커밋하지 않은 변경이 워크트리에 있고 셀프 리뷰(/code-review, 고정점 merge-base origin/main)부터 한다. 구현, 페이지 시험과 스토리 시험, 변이 표 셋(새 표 16, 티켓 02 표 7, 티켓 03 표 6 모두 기대대로), 프로브 README, 티켓 체크박스와 05~09 메모, 린트 둘, 관리 화면 e2e(셀프 리뷰 전 8 통과)는 마쳤다. 남은 것은 셀프 리뷰 반영(e2e 도우미나 중계에 닿으면 e2e를 다시 친다), 사진(visual:admin:update로 정답을 다시 만들고 바뀐 사진을 눈으로 본 뒤 PR 본문에 적는다. 패키지를 고쳐 visual과 visual:widget도 친다), web verify와 run_checks, 티켓 Status done, plan.md의 admin-style 행, 커밋, PR, 봇 회차, 회고, 워크트리 길 병합이다. 열린 PR #420(022-eslint-boolean-params)이 PluginList.tsx·RunDecision.tsx·HomePage.test.tsx·RunPage.tsx를 함께 고쳐 합칠 때 충돌 후보다. docs/journal/2026-10-29-15-admin-frame-common-states.md
 확인할 선행 조건: Docker 엔진이 답하는지(timeout 20 docker version). 이 세션에서 Internal Server Error였고 사람이 Docker Desktop을 직접 다시 시작하기로 골랐지만, 다시 시작했다는 말은 인계 전까지 오지 않았다. 답하지 않으면 사람에게 다시 묻는다(다시 시작하면 다른 세션이 쓰던 컨테이너가 끊긴다)
 이번 요청 범위: PR과 병합까지
 ```
@@ -113,7 +113,7 @@ PR 직전 리뷰에 밀 주장(반영으로 새로 쓴 사실 문장):
 - `HomePage.test.tsx` 주석: "앞의 단언은 0.1초만 밀어, 지연이 없으면 빨개지고 머리가 선 뒤 흐른 실제 시간이 0.2초를 넘지 않는 한 초록이다".
 - README: "관리 토큰을 넣은 뒤 탐색의 "설정"(`/settings`)에서 넣는다".
 
-일지 번호는 `tools/sibling_overlap.py`가 main에 더 늦은 날짜의 일지가 있다며 옮기라고 해, 리뷰가 끝난 뒤 `--move`로 `2026-10-28-30`에서 `2026-10-29-12`로 옮겼다(도구가 찍었다. 처음 낸 빈 번호 06·07은 그새 형제가 가져갔다).
+일지 번호는 `tools/sibling_overlap.py`가 main에 더 늦은 날짜의 일지가 있다며 옮기라고 해, 리뷰가 끝난 뒤 `--move`로 `2026-10-28-30`에서 `2026-10-29-15`로 옮겼다(도구가 찍었다. 처음 낸 빈 번호 06·07은 그새 형제가 가져갔다).
 
 ## 사진 비교와 Docker
 
@@ -158,8 +158,8 @@ origin/main이 PR #420(harness 022, ESLint 판정자가 TypeScript의 불리언 
 시작 프롬프트: /implement .scratch/admin-style/issues/04-admin-frame-common-states.md
 브랜치: feature/04-admin-frame-common-states
 모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
-읽을 것: docs/journal/2026-10-29-12-admin-frame-common-states.md의 "셀프 리뷰" 절(PR 직전 리뷰에 밀 주장)부터 "인계(커밋 뒤)" 절까지
-이어받을 상태: 인계: 커밋 뒤. 커밋 c7714859까지 셀프 리뷰 반영, 사진(새 정답 40장을 눈으로 보고 visual·visual:widget·visual:admin 모두 통과), web verify와 run_checks, 티켓 Status done을 마쳤다. 커밋하지 않은 변경은 일지의 마지막 커밋 줄과 "인계(커밋 뒤)" 절뿐이다. 남은 단계는 origin/main 합치기(PR #420과 파일 다섯이 충돌 후보다. #420의 옵션 객체를 살리며 이 브랜치의 변경을 얹고, 합친 뒤 변이 표 셋을 --check로 본다), PR 직전 리뷰(밀 주장은 일지 셀프 리뷰 절), /git-pr(사진은 일지 "사진 비교와 Docker" 절대로 PR 본문에 적는다), plan.md 프론티어 줄 끝에 04가 병합되어 05·06·07·09가 풀렸다는 문장(PR 번호와 일지 2026-10-29-12, 08은 07을 기다린다), 봇 회차, 회고, 워크트리 길 병합이다. docs/journal/2026-10-29-12-admin-frame-common-states.md
+읽을 것: docs/journal/2026-10-29-15-admin-frame-common-states.md의 "셀프 리뷰" 절(PR 직전 리뷰에 밀 주장)부터 "인계(커밋 뒤)" 절까지
+이어받을 상태: 인계: 커밋 뒤. 커밋 c7714859까지 셀프 리뷰 반영, 사진(새 정답 40장을 눈으로 보고 visual·visual:widget·visual:admin 모두 통과), web verify와 run_checks, 티켓 Status done을 마쳤다. 커밋하지 않은 변경은 일지의 마지막 커밋 줄과 "인계(커밋 뒤)" 절뿐이다. 남은 단계는 origin/main 합치기(PR #420과 파일 다섯이 충돌 후보다. #420의 옵션 객체를 살리며 이 브랜치의 변경을 얹고, 합친 뒤 변이 표 셋을 --check로 본다), PR 직전 리뷰(밀 주장은 일지 셀프 리뷰 절), /git-pr(사진은 일지 "사진 비교와 Docker" 절대로 PR 본문에 적는다), plan.md 프론티어 줄 끝에 04가 병합되어 05·06·07·09가 풀렸다는 문장(PR 번호와 일지 2026-10-29-15, 08은 07을 기다린다), 봇 회차, 회고, 워크트리 길 병합이다. docs/journal/2026-10-29-15-admin-frame-common-states.md
 확인할 선행 조건: 없음
 이번 요청 범위: PR과 병합까지
 ```
@@ -201,8 +201,8 @@ PR을 연 경계에서 세션 컨텍스트가 약 27.7만 토큰으로 `hook_han
 시작 프롬프트: /implement .scratch/admin-style/issues/04-admin-frame-common-states.md
 브랜치: feature/04-admin-frame-common-states
 모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
-읽을 것: docs/journal/2026-10-29-12-admin-frame-common-states.md의 "이어받기(커밋 뒤)" 절부터 "인계(PR 연 뒤)" 절까지
-이어받을 상태: 인계: PR 연 뒤. PR #423을 열었고 커밋 01b3da5d까지 푸시했다. merge.md 2(봇 회차)부터 한다. 첫 @coderabbitai review 코멘트도 새 세션이 남긴다. 커밋하지 않은 변경은 plan.md 프론티어 줄 끝의 04 문장과 일지의 "인계(PR 연 뒤)" 절(과 따옴표 고침)뿐이고, 봇 회차의 반영 커밋에 싣는다(고칠 것이 없으면 그것만 실은 커밋. 회차 세기는 merge.md 2). 그 뒤 남은 단계는 회고(retro)와 일지 "다음", 워크트리 길 병합이다. docs/journal/2026-10-29-12-admin-frame-common-states.md
+읽을 것: docs/journal/2026-10-29-15-admin-frame-common-states.md의 "이어받기(커밋 뒤)" 절부터 "인계(PR 연 뒤)" 절까지
+이어받을 상태: 인계: PR 연 뒤. PR #423을 열었고 커밋 01b3da5d까지 푸시했다. merge.md 2(봇 회차)부터 한다. 첫 @coderabbitai review 코멘트도 새 세션이 남긴다. 커밋하지 않은 변경은 plan.md 프론티어 줄 끝의 04 문장과 일지의 "인계(PR 연 뒤)" 절(과 따옴표 고침)뿐이고, 봇 회차의 반영 커밋에 싣는다(고칠 것이 없으면 그것만 실은 커밋. 회차 세기는 merge.md 2). 그 뒤 남은 단계는 회고(retro)와 일지 "다음", 워크트리 길 병합이다. docs/journal/2026-10-29-15-admin-frame-common-states.md
 확인할 선행 조건: 없음
 이번 요청 범위: PR과 병합까지
 ```
@@ -239,8 +239,8 @@ open-session을 부른다 2026-10-29T09:16:56Z
 시작 프롬프트: /implement .scratch/admin-style/issues/04-admin-frame-common-states.md
 브랜치: feature/04-admin-frame-common-states
 모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
-읽을 것: docs/journal/2026-10-29-12-admin-frame-common-states.md의 "이어받기(PR 연 뒤)" 절부터 끝까지
-이어받을 상태: 인계: 커밋 뒤. 커밋 363675e0까지 봇 회차 1(claude-review 첫 회차의 Minor 하나를 05·07 메모로 넘겼고, CodeRabbit은 한도에 걸려 리뷰가 없었다), plan.md 프론티어 줄의 04 문장, 회고(대기열 494·499를 3회차로, 새 행 541)와 일지 "다음"을 마쳤고 아직 푸시하지 않았다. 푸시와 merge.md 2(봇 회차)부터 한다. 이 푸시로 도는 claude-review는 둘째 회차라 Critical·Major만 고치고, CodeRabbit은 아직 리뷰를 낸 적이 없어 다음 리뷰가 첫 회차다. 커밋하지 않은 변경은 일지의 "인계(봇 회차 1 커밋 뒤)" 절뿐이고, 푸시 전에 그 절(과 새 세션의 이어받기 절)을 실은 커밋을 더해 함께 푸시한다. 일지에 더하는 절은 "회고" 앞에 넣는다. 그 뒤 남은 단계는 워크트리 길 병합과 next-session이다. docs/journal/2026-10-29-12-admin-frame-common-states.md
+읽을 것: docs/journal/2026-10-29-15-admin-frame-common-states.md의 "이어받기(PR 연 뒤)" 절부터 끝까지
+이어받을 상태: 인계: 커밋 뒤. 커밋 363675e0까지 봇 회차 1(claude-review 첫 회차의 Minor 하나를 05·07 메모로 넘겼고, CodeRabbit은 한도에 걸려 리뷰가 없었다), plan.md 프론티어 줄의 04 문장, 회고(대기열 494·499를 3회차로, 새 행 541)와 일지 "다음"을 마쳤고 아직 푸시하지 않았다. 푸시와 merge.md 2(봇 회차)부터 한다. 이 푸시로 도는 claude-review는 둘째 회차라 Critical·Major만 고치고, CodeRabbit은 아직 리뷰를 낸 적이 없어 다음 리뷰가 첫 회차다. 커밋하지 않은 변경은 일지의 "인계(봇 회차 1 커밋 뒤)" 절뿐이고, 푸시 전에 그 절(과 새 세션의 이어받기 절)을 실은 커밋을 더해 함께 푸시한다. 일지에 더하는 절은 "회고" 앞에 넣는다. 그 뒤 남은 단계는 워크트리 길 병합과 next-session이다. docs/journal/2026-10-29-15-admin-frame-common-states.md
 확인할 선행 조건: 없음
 이번 요청 범위: PR과 병합까지
 ```
@@ -256,7 +256,58 @@ open-session을 부른다 2026-10-29T09:49:17Z
 새 세션이 제목을 브랜치 이름으로 바꾸고 `EnterWorktree`(path)로 이 워크트리에 들어왔다. 헤드는 `363675e0`이었고 커밋하지 않은 변경은 지시문대로 이 일지의 "인계(봇 회차 1 커밋 뒤)" 절뿐이었다(`git status --porcelain`이 찍었다).
 
 - **main 합치기.** origin/main이 `06845c68`(#425, model-rerun의 시험·명세·일지) 하나만큼 앞서 PR이 `mergeStateStatus` `BEHIND`였다(`gh pr view`가 찍었다). 그 커밋이 바꾼 파일 일곱(`git diff --name-only HEAD...origin/main`이 찍었다)은 모두 `.scratch/model-rerun/`, `tests/tools/test_rerun_runner.py`, 그 일지라 이 브랜치가 이름으로 든 파일과 겹치지 않았다(손으로 대조했다). 둘째 회차의 claude-review가 한 번만 돌도록 푸시 전에 `git merge origin/main`으로 합쳤고 충돌은 없었다(git이 찍었다).
-- **일지 번호 옮기기.** 커밋 전 `tools/sibling_overlap.py`가 이 일지 `2026-10-29-08`이 origin/main의 최신 일지 `2026-10-29-10`보다 이름순으로 앞선다며 `2026-10-29-12`로 옮기라고 1로 끝났다(도구가 찍었다). `--move`로 파일 이름과 `.scratch/admin-style/probes/README.md`, `.scratch/plan.md`, `.scratch/retro-queue.md`, 이 일지 안의 인용을 옮겼고(도구가 찍었다), 이 브랜치의 변경에 옛 번호가 남지 않은 것을 `git diff --merge-base origin/main`의 더한 줄 grep으로 봤다(출력이 비었다). PR 본문의 일지 경로도 도구가 쓴 본문으로 갈았다. 올리기 전에 지금 본문과 `diff`로 견주니 차이는 그 경로 한 줄뿐이었다(손으로 봤다).
+- **일지 번호 옮기기.** 커밋 전 `tools/sibling_overlap.py`가 이 일지 `2026-10-29-08`이 origin/main의 최신 일지 `2026-10-29-10`보다 이름순으로 앞선다며 `2026-10-29-15`로 옮기라고 1로 끝났다(도구가 찍었다). `--move`로 파일 이름과 `.scratch/admin-style/probes/README.md`, `.scratch/plan.md`, `.scratch/retro-queue.md`, 이 일지 안의 인용을 옮겼고(도구가 찍었다), 이 브랜치의 변경에 옛 번호가 남지 않은 것을 `git diff --merge-base origin/main`의 더한 줄 grep으로 봤다(출력이 비었다). PR 본문의 일지 경로도 도구가 쓴 본문으로 갈았다. 올리기 전에 지금 본문과 `diff`로 견주니 차이는 그 경로 한 줄뿐이었다(손으로 봤다).
+- **커밋과 푸시.** 두 절과 번호 옮김을 실은 `c7fc63b8`이 pre-commit을 모두 지났고(pytest 359.0초, web-verify 412.9초, 러너가 찍었다) 푸시했다. `@coderabbitai review`를 남기고 `tools/wait_ci.py 423`을 백그라운드로 띄웠다.
+- **봇 회차 2(헤드 `c7fc63b`).** 대기가 `끝: 모두 통과`로 끝났다(도구가 찍었다). CodeRabbit은 체크 런 `neutral`에 제목 `Review rate limited`였고(`gh api …/check-runs`가 찍었다) 회차로 세지 않았다. claude-review 둘째 회차는 Critical·Major가 없고 Minor 둘(`AddressFailure` 두 사본, `FailureAlert`가 `./FailureNotice`의 `FailureNoticeProps`를 가져옴)과 Nit 둘(`AfterDelay` 시험의 `shouldAdvanceTime`, `NavItem`의 `current: boolean`)이었다(PR 코멘트가 찍었다). 둘째 회차라 고치지 않고 지적마다 보류 이유를 PR 코멘트로 남겼다(issuecomment-6493928399). Minor 둘은 05·07·08의 "메모(04에서)"가 이미 적은 것이라 뒤로 넘길 새 일이 없었다(그 셋의 메모 줄을 Read로 열어 봤다).
+- **두 번째 main 합치기.** 병합 확인에서 PR이 다시 `BEHIND`였다(`gh pr view`가 찍었다). origin/main이 `c9d1cd80`(#424, harness 029)만큼 앞섰고, 그 커밋이 이 브랜치도 고친 `.scratch/retro-queue.md`를 건드렸다(`git diff --name-only HEAD...origin/main`이 찍었다). `git merge origin/main`은 그 파일을 자동으로 합치고 충돌 없이 끝났고(git이 찍었다), `tools/sibling_overlap.py`는 번호 겹침 없음이었다(도구가 찍었다). 합친 `00800138`을 푸시하고 `@coderabbitai review`와 대기를 다시 띄웠다.
+- **봇 회차 3(헤드 `0080013`).** 대기가 `끝: 모두 통과`로 끝났다(도구가 찍었다).
+  - CodeRabbit은 이번에 체크 런 `success`, `Review completed`였고(`gh api …/check-runs`가 찍었다) 이 PR에 처음 낸 리뷰라 첫 회차다. 리뷰 본문은 한 시간에 한 번의 몫을 다 썼다고 적었다(PR 리뷰 본문이 찍었다). 인라인 지적은 Minor 하나다. `ReadSection.tsx` 73줄(75줄도)에서 처음 불러오는 중과 다시 확인하는 중의 문구가 `role="status"` 영역에 없어 화면 읽기 프로그램이 상태 변경을 알리지 않는다는 것이다(PR 인라인 코멘트가 찍었다). main 판의 `ReadSection`은 두 문구를 `<span role="status">`·`<p role="status">`로 그렸고(`git show origin/main:…ReadSection.tsx`를 grep으로 봤다), 이 PR이 바꾼 `Progress`는 `role="progressbar"`뿐이다(`web/packages/ui/src/components/atoms/Progress.tsx`를 읽었다). 이 티켓이 만든 퇴행이라 고치는 쪽으로 판정했다.
+  - claude-review 셋째 회차는 Critical·Major가 없고, Minor 둘과 Nit 하나였다(PR 코멘트가 찍었다). Minor 1은 쓰는 곳이 없는 앱 부품 셋(`TextLink`, `CodeBlock`, `EmptyLine`)이고 `PluginPage.tsx:27`이 `TextLink` 대신 `next/link`를 쓴다는 것, Minor 2는 둘째 회차와 같은 `FailureNoticeProps` 의존(이 PR에서 `FailureAlert` 안에 직접 선언하라는 제안과 `PluginPage`의 `AddressFailure`가 옛 `FailureNotice`를 그린다는 것), Nit은 `ReadSection`과 `AddressFailure`가 화면 머리를 두 갈래로 조립한다는 것이다. 셋째 회차라 고치지 않는다. 보류 이유의 PR 코멘트는 아직 남기지 않았다. Minor 1은 티켓 04가 부품을 짓고 스토리만 그리며 화면에 넣는 일을 05~08에 둔 것(이 일지 "구현"의 앱 부품 줄과 05·07·08 메모), Minor 2는 둘째 회차의 보류 이유와 같고, Nit은 첫 회차부터의 `AddressFailure` 지적과 같은 자리다.
+- **디자인 시스템의 웹 편집 확인(이 세션).** 화면 코드를 처음 고치자 계기 훅이 알려 `/sync-design-system 확인`을 불렀다. `check judge`의 `result`는 `clean`, `decide --caller screen`은 `act` `continue`였다(도구가 찍었다). 읽지 못한 아홉은 모두 도구가 `no file is published at that path in the served version`이라 `absent`로 적었다.
+- **CodeRabbit 첫 회차의 반영(커밋하지 않았다).** `HomePage.test.tsx`의 "처음 불러오는 중에는 자리표시가 보이고 …" 시험이 두 진행 표시마다 `closest('[role="status"]')`가 null이 아닌지 보게 먼저 고쳤다. 고치기 전 코드에서 첫 단언(945줄)이 빨갰고, 처음 불러오는 중만 감싼 뒤 둘째 단언(954줄)이 빨갰다(vitest가 찍었다). 그 뒤 `ReadSection`이 두 진행 표시를 조건부의 `<div role="status">`로 감싸고, 독스트링에 그 까닭과 늘 남는 빈 영역을 두지 않는 까닭(빈 칸도 구역의 `gap-6` 사이를 하나 얻어 값이 보이는 화면이 밀린다)을 적었다. 그 뒤의 빈 칸 판단은 Tailwind의 flex `gap` 동작에서 나온 어림이고 그리지 않았다. 늘 남는 영역을 쓰지 않아 영역이 진행 표시와 함께 들어오므로, 화면 읽기 프로그램이 그 삽입을 알리는지는 프로그램마다 다를 수 있다(어림, 듣지 않았다). main 판과 같은 수준이다. 페이지 시험 156개(`--project pages apps/admin/components/pages/`)와 관리 화면 스토리 시험 34개(`admin-storybook-wide`·`admin-storybook-narrow`)가 초록이었다(vitest가 찍었다). 변이 표 `frame_common_states_mutations.toml`의 셋째 변이("다시 확인하는 동안 머리 아래 진행 표시가 없으면 빨갛다")가 옛 줄을 원문으로 들어 `--check`가 원문 0번으로 2를 냈고(도구가 찍었다), 원문을 새 꼴로 고친 뒤 `--check`가 23 모두 한 번씩이었고 그 변이를 돌리니 기대대로 빨갰다(도구가 찍었다).
+- **사진 비교를 돌리지 못했다.** `docker version`이 `request returned Internal Server Error for API route and version …`로 1에 끝났다(Docker가 찍었다). 대기열 494와 같은 엔진 오류다. 감싼 것이 블록 `div` 하나라 모양이 바뀌지 않는다고 어림하고 로컬 `pnpm -C web visual:admin`은 돌리지 않았다. 판정은 푸시 뒤 CI의 `visual` 잡이다. Docker Desktop을 다시 켜는 것은 사람에게 묻지 않았다.
+
+## 인계(셀프 리뷰 직전)
+
+커밋하지 않은 변경은 `web/apps/admin/components/organisms/ReadSection.tsx`, `web/apps/admin/components/pages/HomePage.test.tsx`, `.scratch/admin-style/probes/frame_common_states_mutations.toml`과 이 일지다. 반영 커밋 전의 `/code-review`를 부르자 세션 컨텍스트가 약 25.1만 토큰으로 `hook_handoff`가 왔다(훅이 찍었다). 인계하지 않는 때 다섯에 들지 않았다(계기를 낸 명령이 실패하지 않았고, 요청 범위는 병합까지이며, 지시문의 "이어받을 상태"는 `인계: 커밋 뒤`라 경계가 다르고, `인계 못함` 줄이 없고, `get_session`의 `self`에 `parentSessionId`가 없었다). 이 세션의 지금 제목은 `feature/04-admin-frame-common-states`다.
+
+이 세션이 번복하거나 고친 것: 일지 번호를 `2026-10-29-08`에서 `2026-10-29-15`로 옮겼다(위 "일지 번호 옮기기"). CodeRabbit이 제안한 "늘 남는 `role="status"` 영역"은 받지 않고 진행 표시와 함께 들어오는 영역으로 고쳤다(위 "CodeRabbit 첫 회차의 반영"의 까닭).
+
+```
+다음 작업: .scratch/admin-style/issues/04-admin-frame-common-states.md. 관리 화면의 틀과 공통 상태
+다음 단계: PR 반영·병합
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /implement .scratch/admin-style/issues/04-admin-frame-common-states.md
+브랜치: feature/04-admin-frame-common-states
+모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
+읽을 것: docs/journal/2026-10-29-15-admin-frame-common-states.md의 "이어받기(봇 회차 1 커밋 뒤)" 절부터 끝까지
+이어받을 상태: 인계: 셀프 리뷰 직전. 커밋하지 않은 변경이 워크트리에 있고 셀프 리뷰(/code-review, 고정점 HEAD)부터 한다. 변경은 PR #423 CodeRabbit 첫 회차의 Minor(ReadSection의 두 진행 표시가 role="status" 영역에 없다)의 반영이다. 커밋 전에 origin/main이 또 앞섰는지 보고 앞섰으면 합친다(이 세션에서 두 번 BEHIND였다). 커밋 뒤 CodeRabbit 인라인 코멘트에 고친 것과 늘 남는 영역을 받지 않은 까닭을 답하고, claude-review 셋째 회차(헤드 0080013)의 Minor 둘·Nit 하나의 보류 이유 PR 코멘트를 남긴 뒤 푸시하고 merge.md 2의 대기를 띄운다. 그 푸시의 claude-review는 넷째 회차, CodeRabbit은 둘째 회차라 둘 다 Critical·Major만 고친다. Docker 엔진이 Internal Server Error라 로컬 사진 비교를 돌리지 못했으니 CI visual 잡의 초록을 병합 전에 본다. 그 뒤 남은 단계는 워크트리 길 병합과 next-session이다. docs/journal/2026-10-29-15-admin-frame-common-states.md
+확인할 선행 조건: 없음
+이번 요청 범위: PR과 병합까지
+```
+
+제목을 `feature/04-admin-frame-common-states (인계함)`으로 바꿨다. 남은 백그라운드 작업은 없었다(커밋 둘과 대기 둘이 그 전에 끝났다). `git worktree unlock`은 `is not locked`로 끝났다(git이 찍었다).
+
+open-session을 부른다 2026-10-29T10:39:09Z
+
+## 이어받기(셀프 리뷰 직전)
+
+> 사용자: "다음 작업: .scratch/admin-style/issues/04-admin-frame-common-states.md. 관리 화면의 틀과 공통 상태 / 다음 단계: PR 반영·병합 … 이어받을 상태: 인계: 셀프 리뷰 직전. 커밋하지 않은 변경이 워크트리에 있고 셀프 리뷰(/code-review, 고정점 HEAD)부터 한다 … 커밋 전에 origin/main이 또 앞섰는지 보고 앞섰으면 합친다 … 커밋 뒤 CodeRabbit 인라인 코멘트에 고친 것과 늘 남는 영역을 받지 않은 까닭을 답하고, claude-review 셋째 회차(헤드 0080013)의 Minor 둘·Nit 하나의 보류 이유 PR 코멘트를 남긴 뒤 푸시하고 merge.md 2의 대기를 띄운다 … 이번 요청 범위: PR과 병합까지"
+
+새 세션이 제목을 브랜치 이름으로 바꾸고 `EnterWorktree`(path)로 이 워크트리에 들어왔다. 헤드는 `0080013`이었고 커밋하지 않은 변경은 지시문대로 넷이었다(`git status --short`가 찍었다).
+
+- **셀프 리뷰(고정점 HEAD, base `0080013818ffa686eced71db6e3491e3146f3cd4`, 파일 넷, 커밋 0, 미추적 0).** 두 브리프에 WAI-ARIA 1.2(https://www.w3.org/TR/wai-aria-1.2/)의 `status`·`progressbar` 정의를 실었다. 본문을 `curl`로 받아 태그를 걷고 글자 그대로 찾았다. `status`는 "Elements with the role status have an implicit aria-live value of polite and an implicit aria-atomic value of true."이고, `progressbar`의 특성 표 "Implicit Value for Role"은 `aria-valuemin`·`aria-valuemax`의 기본값뿐이라 `aria-live` 기본값이 없다(스크래치 스크립트가 찍었다).
+  - 표준 축(sonnet·high)은 하드 위반이 없고 Minor 넷, Nit 둘이었다(서브에이전트 보고가 찍었다). Minor 1은 독스트링의 "늘 남는 빈 영역을 두지 않는 것은 빈 칸도 구역의 사이(`gap-6`)를 하나 얻어 … 밀리기 때문이다"가 닫힌 이유 주장인데 반례가 있다는 것이다. `web/apps/widget/components/pages/WidgetScreen.tsx` 152줄이 `sr-only`인 `role="status"`를 늘 둔다(그 줄은 grep으로 봤다. 절대 위치라 flex의 사이를 얻지 않는다는 것은 CSS 정의에서 나온 어림이고 그리지 않았다). Minor 2는 "두 진행 표시는 상태 영역 안에 서서 화면 읽기 프로그램이 알린다"가 단정이라 일지의 어림보다 세다는 것이다. Minor 3은 시험 주석이 독스트링과 같은 문장이고 `closest`가 먼 조상의 영역에도 지난다는 것이다. Minor 4는 변이 표에 감싼 `div`만 지우는 변이가 없어 새 단언 둘이 변이로 빨강을 본 적이 없다는 것이다(일지의 "빨갰다"는 손으로 되돌려 본 것이다). Nit은 독스트링 문단이 무겁다는 것과 `<div role="status"><Progress …/></div>`가 두 번 되풀이된다는 것이다. 일지의 945·954줄, origin/main 판의 `<span role="status">`(55줄)·`<p role="status">`(60줄), 변이 23은 맞다고 했고, 시험 156개·34개는 그 세션의 vitest가 설정 오류로 끝나 대 보지 못했다고 했다.
+  - 표준 축의 반례를 대 보니 위젯에 선례가 하나 더 있었다. `web/apps/widget/components/molecules/ComposerBand.tsx` 7줄의 머리 주석이 상태 영역의 틀은 "처음부터 서 있어야 글이 바뀔 때 읽힌다"는 까닭으로 늘 선다고 적었다(grep이 찍었다). 관리 화면의 `RunDecision.tsx` 176줄은 조건부로 들어오는 `<div role="status">`다(같은 grep).
+  - 명세 축(본 세션의 모델)은 (a)·(b)가 없고 (c)에 Minor 셋이었다(서브에이전트 보고가 찍었다). 1은 `AfterDelay`가 감싸는 요소 없이 자식만 그려 상태 영역이 0.3초 뒤 내용과 함께 통째로 들어오니 봇이 짚은 결함이 닫힌 것이 아니라 main 수준으로 돌아갔다는 것이다. 2·3은 표준 축의 Minor 2·1과 같은 자리다. 3의 근거로 서브에이전트가 스크래치 탐침(Playwright chromium, `gap` 24px인 flex 열)으로 흐름 안의 빈 `div role=status`는 뒤 요소를 64px에서 88px로 밀고 `sr-only` 꼴은 비었을 때도 글이 들었을 때도 64px 그대로였다고 했다(서브에이전트가 쟀고, 탐침은 이 저장소에 커밋하지 않았다). 같은 탐침의 접근성 트리에서 `status` 노드에만 `live="polite"`·`atomic=true`가 있었다고 했다. 페이지 시험 156개를 다시 쳐 통과했다고 했다.
+- **판정.** 두 축이 같은 결론이라 CodeRabbit의 제안(진행 표시와 따로 늘 남는 영역)을 받는 쪽으로 판정을 뒤집었다. 위젯의 두 선례(`ComposerBand`, `WidgetScreen`)가 늘 서는 영역이고, 관리 화면의 `ReadSection`은 흐름 안의 빈 영역이 사이를 얻으므로 `WidgetScreen`처럼 `sr-only`로 둔다.
+  - **고친 것.** `ReadSection`이 머리 아래에 늘 서는 `<div role="status" className="sr-only">`를 두고, 그 안의 글이 다시 확인하는 동안 "다시 확인하는 중", 처음 불러오는 동안 0.3초 뒤(`AfterDelay`) `loadingLabel`, 그 밖에는 빈 글이다. 보이는 진행 표시 둘은 감싸지 않은 옛 꼴로 되돌렸고 "다시 확인하는 중"은 상수 `REFRESHING_LABEL` 하나로 둘이 나눠 쓴다(표준 축 Minor 1·2, Nit 둘, 명세 축 1~3). 독스트링은 진행 표시의 행동과 상태 영역을 두 문단으로 갈랐다. 페이지 시험 둘은 영역을 화면의 구역(`region` "플러그인") 안에서 찾아, 실시간 시험은 상태가 바뀌는 동안 같은 노드로 남는지(`isConnected`)와 글을, 가짜 시계 시험은 0.1초에 비어 서 있고 0.3초에 이름이 드는지를 본다(표준 축 Minor 3). 고치기 전 구현에서 두 시험이 빨갰다. 실시간 시험은 `expected false to be true`(값이 보인 뒤의 `isConnected`), 가짜 시계 시험은 `Unable to find an accessible element with the role "status"`였다(vitest가 찍었다). 고친 뒤 페이지 시험 156개가 초록이었다(vitest가 찍었다). 변이 표는 셋째 변이의 원문을 새 꼴로 고치고 상태 영역을 겨누는 변이 넷(스물넷째~스물일곱째)을 더했다(표준 축 Minor 4).
+  - **새로 쓴 사실 문장(다음 층이 겨눌 것).** `ReadSection.tsx` 독스트링의 "progressbar 는 라이브 영역이 아니라서(WAI-ARIA 1.2)", "영역째 새로 들어오면 알리지 않는 화면 읽기 프로그램이 있어서다(위젯의 `ComposerBand` 와 같은 판단이고, 화면 읽기 프로그램으로 듣지 않았다)", "`sr-only` 는 절대 위치라 구역의 사이를 얻지 않는다". 앞의 것은 위 WAI-ARIA 본문, 가운데 것은 어림(듣지 않았다), 뒤의 것은 CSS 정의와 서브에이전트의 스크래치 탐침이다. 뒤의 것은 CI `visual` 잡이 읽기 골격 스토리의 사진(늘 서는 영역이 모든 상태에 든다)으로 판정한다. 시험 주석 "영역째 새로 들어오면 알리지 않는 프로그램이 있다"도 가운데 것과 같은 어림이다.
+  - **남긴 것.** 관리 화면 `RunDecision.tsx`의 조건부 상태 영역("재개 스트림이 끊겼다")은 이 지적의 자리가 아니고 이 티켓이 만든 것도 아니라 손대지 않았다. main 판 176줄에 있고(`git show origin/main:…RunDecision.tsx`를 grep으로 봤다), 이 브랜치가 그 파일에서 바꾼 것은 제목 수준 셋(`h3`→`h2` 둘, `h4`→`h3` 하나)이다(`git diff origin/main...HEAD`가 찍었다). 결정 칸을 다시 그리는 티켓 08의 "메모(04에서)"에 같은 꼴로 둘지 정하라고 넘겼다. 08은 07을, 07은 04를 기다린다(두 티켓의 `Blocked by` 줄).
+- **변이.** 고친 두 시험을 겨누는 첫째·둘째·넷째, 원문을 고친 셋째, 더한 스물넷째~스물일곱째의 여덟을 골라 돌렸고 `변이 8 모두 기대대로`였다(도구가 찍었다). 다섯째·여섯째는 고치지 않은 시험("운영자 파일이 깨지면")을 겨눠 다시 돌리지 않았다. 더한 넷의 표지는 변이를 손으로 넣어 출력을 미리 보지 않고 Chai의 `expected … to be …`와 Testing Library의 `Unable to find …` 꼴을 따라 골랐고, 도구가 출력에서 찾았다.
+- **반영 뒤 검증.** 관리 화면 스토리 시험 34개(`admin-storybook-wide`·`admin-storybook-narrow`)가 초록이었다(vitest가 찍었다). 클래스 판정과 axe가 `sr-only`를 받았다. `docker version`은 여전히 `request returned Internal Server Error for API route and version …`로 1에 끝나(Docker가 찍었다) 로컬 사진 비교를 돌리지 못했다. 숨긴 영역이 화면을 밀지 않는지는 CI `visual` 잡이 판정한다. 손으로 치는 다섯은 이 커밋의 pre-commit으로 갈음한다.
+- **일지 번호 옮기기(다시).** 커밋 전 `tools/sibling_overlap.py`가 origin/main에 생긴 `2026-10-29-13`(#422)보다 이 일지가 이름순으로 앞선다며 1로 끝났고(도구가 찍었다), `--move`로 `2026-10-29-15`로 옮겼다(도구가 찍었다). 이 브랜치의 더한 줄에 `29-12`와 "일지 12"가 남지 않은 것을 `git diff --cached --merge-base origin/main`의 grep으로 봤다(출력이 비었다). 도구가 쓴 PR 본문은 푸시 전에 지금 본문과 견주어 올린다.
+- **main 합치기(미룸).** origin/main이 `f3b4af0d`(#422)만큼 앞섰고 PR이 `mergeStateStatus` `DIRTY`였다(`gh pr view`가 찍었다). 겹치는 파일은 `.scratch/plan.md`(프론티어 줄 끝에 양쪽이 문장을 더했다)와 `.scratch/retro-queue.md`(이 브랜치의 행 541과 main의 행 540이 같은 자리에 들었다)였다(`git merge-tree`의 미리보기가 찍었다). 리뷰어 둘이 작업 트리를 보는 동안 합치지 않았고, 반영 커밋 뒤에 합쳐 한 번에 푸시한다.
 
 ## 회고
 
