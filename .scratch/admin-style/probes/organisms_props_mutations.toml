@@ -101,7 +101,7 @@ old = '''
     <RunDetail
       runId={runId}
       {...readOf(trace)}
-      decision={(shown) => <ConnectedRunDecision runId={runId} trace={shown} />}
+      body={(shown, events) => <ConnectedRunDecision runId={runId} trace={shown} events={events} />}
     />
   );
 '''
@@ -112,7 +112,7 @@ new = '''
     <RunDetail
       runId={runId}
       {...readOf(trace)}
-      decision={(shown) => <ConnectedRunDecision attempt={attempt} trace={shown} />}
+      body={(shown, events) => <ConnectedRunDecision attempt={attempt} trace={shown} events={events} />}
     />
   );
 '''
@@ -120,7 +120,15 @@ new = '''
 [[mutation.edit]]
 file = "web/apps/admin/components/pages/RunPage.tsx"
 old = '''
-function ConnectedRunDecision({ runId, trace }: { readonly runId: string; readonly trace: Trace }) {
+function ConnectedRunDecision({
+  runId,
+  trace,
+  events,
+}: {
+  readonly runId: string;
+  readonly trace: Trace;
+  readonly events: ReactNode;
+}) {
   const channelTokenEntered = useTokens((state) => state.channelToken !== null);
   const { busy, frames, cut, failure, decide } = useDecision(runId);
 '''
@@ -128,9 +136,11 @@ new = '''
 function ConnectedRunDecision({
   attempt,
   trace,
+  events,
 }: {
   readonly attempt: ReturnType<typeof useDecision>;
   readonly trace: Trace;
+  readonly events: ReactNode;
 }) {
   const channelTokenEntered = useTokens((state) => state.channelToken !== null);
   const { busy, frames, cut, failure, decide } = attempt;

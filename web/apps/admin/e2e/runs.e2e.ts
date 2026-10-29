@@ -49,11 +49,11 @@ test("실행 목록을 상태로 거르고 실행 하나를 열어 모르는 종
 
   const unknown = await openRun(page, adminUrl, READ_RUNS.unknown);
   await expect(unknown).toContainText(UNKNOWN_LINE);
-  await page.getByRole("link", { name: "실행 목록으로" }).click();
+  await page.getByRole("link", { name: "실행 목록", exact: true }).click();
 
   await openRun(page, adminUrl, READ_RUNS.formatOne);
   await expect(page.getByRole("main")).toContainText("읽을 수 있지만 재개할 수 없다");
-  await page.getByRole("link", { name: "실행 목록으로" }).click();
+  await page.getByRole("link", { name: "실행 목록", exact: true }).click();
 
   const finished = await openRun(page, adminUrl, READ_RUNS.finished);
   await expect(finished).toContainText(HOSTILE_CONTENT);
