@@ -64,7 +64,7 @@ export interface UploadCall {
 export interface UploadPlan extends RecordChanges {
   /** 이번 산출에 있지만 기록에 들지 않아 이 계획이 다루지 않는 경로(기록, 색인, 페이지가 다시 짓는 파일). */
   readonly ignored: readonly string[];
-  /** 첫 정식 올리기인가. 마지막 호출의 색인에 `upgraded` 를 더할지가 이것이다(`indexToSend`). */
+  /** 첫 정식 올리기인가. 마지막 호출의 색인에 `upgraded` 를 더할지가 이것이다(`withUpgraded`). */
   readonly firstCanonical: boolean;
   /** 보낼 파일과 지울 경로를 호출마다 나눈 몫(`splitCalls`). */
   readonly calls: readonly UploadCall[];
@@ -148,6 +148,8 @@ function splitCalls(send: readonly CallItem[], deletes: readonly CallItem[]): Up
     const taken = take(rest.length - 1) || take(1);
     if (taken === 0) {
       const head = rest[0];
+      // `!first` 는 뒤 조건과 동치다(첫 몫이 아니면 예약이 0 이라 `taken` 이 0 이면 `fits(1, head.bytes, 0, 0)` 도 거짓이다).
+      // 변이 표(`.scratch/design-card-build/probes/upload_plan_mutations.toml`)가 이 줄의 원문을 겨누므로 남긴다
       if (head === undefined || !first || !fits(1, head.bytes, 0, 0)) {
         throw new CommandError(
           "limit",
@@ -288,23 +290,25 @@ const LIBRARIES = [
 ] as const;
 
 /**
- * 받은 색인에서 이번 올리기가 보낼 색인을 짓는다(design-card-build 명세 "색인의 `libraries`", "`upgraded`"). 이번
- * 산출에 컴포넌트 묶음이 있으면(`bundle`) `libraries` 를 React·ReactDOM 18.3.1 로 바꾸고, 첫 정식 올리기면
- * `upgraded` 가 없을 때만 `{at}` 으로 더한다. 페이지의 "No move is perfect" 배너를 거두는 표시다. `source` 와 다른 칸은
- * 그대로 둔다. `lastChange` 는 절차가 적는다.
+ * 컴포넌트 묶음을 싣는 올리기의 색인을 짓는다(design-card-build 명세 "색인의 `libraries`"). `libraries` 를
+ * React·ReactDOM 18.3.1 로 바꾸고 `source` 와 다른 칸은 그대로 둔다. `lastChange` 는 절차가 적는다.
  */
-export function indexToSend(
+export function withLibraries(index: Readonly<Record<string, unknown>>): Record<string, unknown> {
+  return { ...index, libraries: LIBRARIES.map((library) => ({ ...library })) };
+}
+
+/**
+ * 첫 정식 올리기의 색인을 짓는다(design-card-build 명세 "`upgraded`"). `upgraded` 가 없을 때만 `{at}` 으로 더한다.
+ * 페이지의 "No move is perfect" 배너를 거두는 표시다. 다른 칸은 그대로 둔다.
+ */
+export function withUpgraded(
   index: Readonly<Record<string, unknown>>,
-  options: { readonly bundle: boolean; readonly firstCanonical: boolean; readonly at: string },
+  at: string,
 ): Record<string, unknown> {
-  const sent: Record<string, unknown> = { ...index };
-  if (options.bundle) {
-    sent.libraries = LIBRARIES.map((library) => ({ ...library }));
+  if (index.upgraded === undefined) {
+    return { ...index, upgraded: { at } };
   }
-  if (options.firstCanonical && index.upgraded === undefined) {
-    sent.upgraded = { at: options.at };
-  }
-  return sent;
+  return { ...index };
 }
 
 /** 빌드가 필요한 까닭. 패키지 아래, 빌린 빌드의 설정, 빌드가 짓는 되돌릴 파일이다. */

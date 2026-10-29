@@ -104,3 +104,51 @@ open-session을 부른다 2026-10-29T16:35:26Z
 고친 것: 변이 표 머리의 그 문장을 "끄는 변이가 동치라 표에 두지 않는다"와 그 까닭으로 바꿨다. 코드의 중복 조건은 남겼다. 지우면 그 줄을 겨누는 변이("첫 몫이 기록만 싣지 못하면")의 원문을 다시 지어야 하고, 동작은 같다. `tools/mutate.py … --check`가 변이 26 모두 원문이 한 번씩 있다고 찍었다(손으로 봤다).
 
 main이 그사이 `3b78de25`(#429)로 앞서 다시 합쳤고, `tools/sibling_overlap.py`가 main의 최신 일지 2026-10-29-21보다 이 일지가 이름순으로 앞이라고 알려 `--move`로 이 일지를 2026-10-29-20에서 2026-10-30-03으로 옮겼다.
+
+`6555866b`(변이 표 문장)와 `d5ff3808`(일지 번호)의 pre-commit은 SKIP 없이 pytest까지 모두 통과했다(커밋 출력의 검사 줄을 손으로 봤다).
+
+## 인계 (PR 연 뒤)
+
+`d5ff3808`까지 푸시하고 PR #430을 열었다. 세션 컨텍스트가 문턱을 넘은 채 `PR 연 뒤`에 와서 넘긴다. `@coderabbitai review` 코멘트는 아직 남기지 않았다(새 세션이 남긴다). 이 세션의 지금 제목은 `feature/03-upload-plan-first-canonical`이다.
+
+인계 지시문:
+
+```
+다음 작업: .scratch/design-card-build/issues/03-upload-plan-first-canonical.md. 올리기 계획이 첫 정식 올리기를 가르고, 보낼 파일을 호출 몫으로 나누며, 색인의 libraries와 upgraded를 짓는다
+다음 단계: PR 반영·병합
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /implement .scratch/design-card-build/issues/03-upload-plan-first-canonical.md
+브랜치: feature/03-upload-plan-first-canonical
+모델: Opus 5.5 / medium. 레벨 스윕의 갈래
+읽을 것: 일지 docs/journal/2026-10-30-03-design-card-build-upload-plan.md 의 "PR 직전 리뷰", "인계 (PR 연 뒤)"
+이어받을 상태: 인계: PR 연 뒤. PR #430을 열었고 d5ff3808까지 푸시했다. next-session merge.md 2(봇 회차)부터 하고, 첫 @coderabbitai review 코멘트도 새 세션이 남긴다. PR 직전 리뷰(보안·버그 축 대체 둘)는 마쳤고 결과는 PR 체크리스트와 일지에 있다. d910cecb는 SKIP=pytest 커밋이었지만 뒤 커밋 둘의 pre-commit은 pytest까지 통과했다. 그래도 CI의 pytest를 본다. 임시 디자인 시스템 아티팩트 64VW1b5F8tRcCeTZBwZA29는 사용자가 남겨 두기로 했다. 지우지 않고 다시 묻지 않는다. 일지 docs/journal/2026-10-30-03-design-card-build-upload-plan.md
+확인할 선행 조건: 없음
+이번 요청 범위: PR과 병합까지
+```
+
+open-session을 부른다 2026-10-29T17:11:50Z
+
+## PR #430 봇 첫 회차 (네 번째 세션, 2026-10-30)
+
+> 사용자: ".claude/skills/implement/SKILL.md 를 읽어 그대로 따른다. … 다음 단계: PR 반영·병합 … 이어받을 상태: 인계: PR 연 뒤. … next-session merge.md 2(봇 회차)부터 하고, 첫 @coderabbitai review 코멘트도 새 세션이 남긴다. … 이번 요청 범위: PR과 병합까지"
+
+`@coderabbitai review`를 남겼고 `tools/wait_ci.py 430`이 헤드 `d5ff380`에서 "모두 통과"로 끝났다(pytest를 든 `python` 잡도 SUCCESS). CodeRabbit은 무료 한도에 걸려 리뷰가 없어 회차로 세지 않는다. claude-review의 첫 리뷰가 Critical·Major 없이 Minor 둘, Nit 둘을 냈고 지적마다 판단했다.
+
+- 받음(Minor, `indexToSend`의 불리언 둘): 셀프 리뷰는 "서로 독립인 두 변환이라 두 일을 하는 신호가 아니다"로 남겼지만(위 "남긴 것과 이유"), 독립인 두 변환을 한 함수가 옵션 불리언으로 고르는 것이 `CODING_STANDARDS.md` 불리언 플래그 항목이 쪼개라는 꼴 그대로라 그 판단을 번복했다. `withLibraries(index)`와 `withUpgraded(index, at)`로 쪼개고 `record.ts`의 `sentIndex`가 묶음과 첫 정식 올리기로 조합한다. 묶음이 없을 때와 첫 정식 올리기가 아닐 때의 판정은 `record index` 명령 사례 둘이 본다(시험을 읽었다). 두 시험 파일 76개가 초록이었다(`pnpm -C web exec vitest run --project node tools/sync-design-system/upload.test.ts tools/sync-design-system/record-check.test.ts`, 손으로 봤다). 그 줄을 겨누던 변이 넷(20~23)의 원문을 새 자리로 옮겨 다시 돌렸고 "변이 7 모두 기대대로"(20~26), `--check`는 "변이 26 모두 원문이 한 번씩 있다"였다(도구가 찍은 줄).
+- 받음(Nit, 동치인 `!first`): 왜 남겼는지를 `splitCalls`의 그 줄 위 주석 두 줄로 달았다.
+- 보류(Minor, `splitCalls`의 클로저와 루프 섞임): 변이 표의 나누기 변이 아홉(11~19)이 그 본문의 줄을 원문으로 겨눠(변이 표의 이름 목록을 읽었다), 함수를 옮기면 원문을 모두 다시 짓고 다시 돌려야 한다. 동작은 같고 시험이 경계를 행동으로 고정한다. 뒤로 넘기지 않는다.
+- 보류(Nit, `planUpload`의 길이): 리뷰도 이번 PR이 더한 줄은 적다고 했다. 이 티켓의 체크박스가 요구하지 않는 정리라 넘기지 않는다.
+
+## 회고
+
+이 세션(PR 반영·병합)의 후보 넷, 승인 0, 기각 넷, 넘김 0. 회차를 더한 대기열 행은 없다.
+
+- 기각: 셀프 리뷰가 `indexToSend`의 옵션 불리언 둘을 `CODING_STANDARDS.md` 불리언 플래그 항목에 들지 않는다고 남겼고 claude-review가 잡았다. 리뷰가 잡도록 둔 기준을 리뷰가 잡은 사건이라 회차 셈에서 빠진다. 그 항목이 이미 "옵션 객체로 옮겨 지나간 플래그"를 들고 있어 새 판단 기준이 아니고, 갈래를 고르는 불리언과 값을 싣는 불리언을 가르지 못해 린터로 옮길 수도 없다(그 항목의 문장).
+- 기각: 시험 고치는 명령에 `cd web/tools/sync-design-system`을 넣었다가 `hook_bash_cd_outside`가 막았다. 이미 있는 훅이 그 자리에서 막았다.
+- 기각: 도구 호출 사이의 짧은 문장을 세 번 영어로 썼고 `hook_midturn_korean`이 알렸다. 이미 있는 훅이 그 자리에서 알렸다.
+- 기각: 변이 도구를 파이프로 이어 돌렸고 훅이 경고했다. 출력의 끝 줄 "변이 7 모두 기대대로"로 판정했고, 이미 있는 훅이 그 자리에서 알렸다.
+
+## 다음
+
+- design-card-build 04(`.scratch/design-card-build/issues/04-upload-always-assembles.md`)는 02와 03을 기다린다. 03은 이 PR로 끝나고 02는 아직 `ready-for-agent`다(티켓 파일의 Status 줄을 읽었다). 01·02가 끝나면 04, 그 뒤 05다.
+- PR #430 claude-review의 보류 둘(`splitCalls`의 수준 섞임, `planUpload`의 길이)은 뒤로 넘기지 않았다. 04가 `upload.ts`를 고치며 그 본문을 옮기게 되면 그때 함께 가를 후보다.

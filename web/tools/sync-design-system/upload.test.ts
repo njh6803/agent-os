@@ -11,11 +11,12 @@ import {
   CALL_BYTES,
   CALL_PATHS,
   INDEX_LIMIT,
-  indexToSend,
   needsBuild,
   planUpload,
   type UploadCall,
   type UploadInput,
+  withLibraries,
+  withUpgraded,
 } from "./upload.ts";
 
 function bytes(text: string): Uint8Array {
@@ -978,48 +979,28 @@ describe("보낼 색인", () => {
     lastChange: { by: "Claude", via: "agent-os main@abc1234" },
   };
 
-  test("묶음이 있는 첫 정식 올리기는 React 18.3.1 과 upgraded 를 적고 source 와 다른 칸을 남긴다", () => {
-    expect(
-      indexToSend(RECEIVED, { bundle: true, firstCanonical: true, at: "2026-10-29T12:00:00.000Z" }),
-    ).toEqual({
+  test("묶음을 싣는 색인은 React 18.3.1 과 global 을 적고 source 와 다른 칸을 남긴다", () => {
+    expect(withLibraries(RECEIVED)).toEqual({
       ...RECEIVED,
       libraries: [
         { name: "react", version: "18.3.1", global: "React" },
         { name: "react-dom", version: "18.3.1", global: "ReactDOM" },
       ],
+    });
+  });
+
+  test("첫 정식 올리기의 색인은 upgraded 를 더하고 다른 칸을 남긴다", () => {
+    expect(withUpgraded(RECEIVED, "2026-10-29T12:00:00.000Z")).toEqual({
+      ...RECEIVED,
       upgraded: { at: "2026-10-29T12:00:00.000Z" },
     });
   });
 
   test("이미 있는 upgraded 는 그대로 둔다", () => {
     const upgraded = { at: "2026-10-01T00:00:00.000Z" };
-    const sent = indexToSend(
-      { ...RECEIVED, upgraded },
-      { bundle: true, firstCanonical: true, at: "2026-10-29T12:00:00.000Z" },
-    );
+    const sent = withUpgraded({ ...RECEIVED, upgraded }, "2026-10-29T12:00:00.000Z");
 
     expect(sent.upgraded).toEqual(upgraded);
-  });
-
-  test("첫 정식 올리기가 아니면 upgraded 를 더하지 않는다", () => {
-    const sent = indexToSend(RECEIVED, {
-      bundle: true,
-      firstCanonical: false,
-      at: "2026-10-29T12:00:00.000Z",
-    });
-
-    expect(sent).not.toHaveProperty("upgraded");
-    expect(sent.libraries).toHaveLength(2);
-  });
-
-  test("묶음이 없는 빌린 빌드의 산출이면 색인을 바꾸지 않는다", () => {
-    expect(
-      indexToSend(RECEIVED, {
-        bundle: false,
-        firstCanonical: false,
-        at: "2026-10-29T12:00:00.000Z",
-      }),
-    ).toEqual(RECEIVED);
   });
 });
 

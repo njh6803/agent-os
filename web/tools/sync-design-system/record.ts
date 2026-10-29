@@ -80,7 +80,14 @@ import {
   type RecordChanges,
   type SyncRecord,
 } from "./sync-record.ts";
-import { BUNDLE_PATH, INDEX_LIMIT, indexToSend, needsBuild, planUpload } from "./upload.ts";
+import {
+  BUNDLE_PATH,
+  INDEX_LIMIT,
+  needsBuild,
+  planUpload,
+  withLibraries,
+  withUpgraded,
+} from "./upload.ts";
 
 /** 아티팩트에서 받은 기록. 꼴 판 1 로 읽히지 않으면 `input` 오류다. */
 function recordFrom(path: string): SyncRecord {
@@ -444,7 +451,8 @@ function sentIndex(values: Values): ReportFields {
   }
   const bundle = readFolder(local, "project/").has(BUNDLE_PATH);
   const firstCanonical = readFirstCanonical(planPath);
-  const sent = indexToSend(received, { bundle, firstCanonical, at });
+  const bundled = bundle ? withLibraries(received) : received;
+  const sent = firstCanonical ? withUpgraded(bundled, at) : bundled;
   const text = `${JSON.stringify(sent, null, 2)}\n`;
   const bytes = new TextEncoder().encode(text).byteLength;
   if (bytes > INDEX_LIMIT) {

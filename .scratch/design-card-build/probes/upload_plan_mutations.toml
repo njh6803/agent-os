@@ -256,21 +256,21 @@ new = '''        if (!fits(taken + 1, bytes + item.bytes, first ? 1 : 0, 0)) {''
 # --- 보낼 색인 ---------------------------------------------------------------------------------------------------
 
 [[mutation]]
-name = "묶음이 있어도 libraries 를 적지 않으면 첫 정식 색인 사례가 빨갛다"
+name = "묶음이 있어도 libraries 를 적지 않으면 정식 배치의 명령 사례가 빨갛다"
 runner = "node"
-tests = ["tools/sync-design-system/upload.test.ts", "-t", "React 18.3.1 과 upgraded 를 적고"]
+tests = ["tools/sync-design-system/record-check.test.ts", "-t", "보낼 색인에 libraries 와 upgraded 를 짓는다"]
 expect = "red"
 expect_output = ['"version": "18.3.1",']
 
 [[mutation.edit]]
-file = "web/tools/sync-design-system/upload.ts"
-old = '''  if (options.bundle) {'''
-new = '''  if (!options.bundle) {'''
+file = "web/tools/sync-design-system/record.ts"
+old = '''  const bundled = bundle ? withLibraries(received) : received;'''
+new = '''  const bundled = received;'''
 
 [[mutation]]
-name = "global 을 붙이지 않으면 첫 정식 색인 사례가 빨갛다"
+name = "global 을 붙이지 않으면 묶음 색인 사례가 빨갛다"
 runner = "node"
-tests = ["tools/sync-design-system/upload.test.ts", "-t", "React 18.3.1 과 upgraded 를 적고"]
+tests = ["tools/sync-design-system/upload.test.ts", "-t", "React 18.3.1 과 global 을 적고"]
 expect = "red"
 expect_output = ['-       "global": "React",']
 
@@ -288,20 +288,20 @@ expect_output = ['-   "at": "2026-10-01T00:00:00.000Z",']
 
 [[mutation.edit]]
 file = "web/tools/sync-design-system/upload.ts"
-old = '''  if (options.firstCanonical && index.upgraded === undefined) {'''
-new = '''  if (options.firstCanonical) {'''
+old = '''  if (index.upgraded === undefined) {'''
+new = '''  if (index.upgraded !== null) {'''
 
 [[mutation]]
-name = "첫 정식 올리기가 아니어도 upgraded 를 더하면 그 사례가 빨갛다"
+name = "첫 정식 올리기가 아니어도 upgraded 를 더하면 빌린 빌드의 명령 사례가 빨갛다"
 runner = "node"
-tests = ["tools/sync-design-system/upload.test.ts", "-t", "첫 정식 올리기가 아니면 upgraded 를 더하지 않는다"]
+tests = ["tools/sync-design-system/record-check.test.ts", "-t", "빌린 빌드의 산출이면 보낼 색인이 받은 색인과 같다"]
 expect = "red"
-expect_output = ["to not have property \"upgraded\""]
+expect_output = ['"upgraded": true,']
 
 [[mutation.edit]]
-file = "web/tools/sync-design-system/upload.ts"
-old = '''  if (options.firstCanonical && index.upgraded === undefined) {'''
-new = '''  if (index.upgraded === undefined) {'''
+file = "web/tools/sync-design-system/record.ts"
+old = '''  const sent = firstCanonical ? withUpgraded(bundled, at) : bundled;'''
+new = '''  const sent = withUpgraded(bundled, at);'''
 
 # --- record index 명령 ------------------------------------------------------------------------------------------
 
