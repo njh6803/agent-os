@@ -350,3 +350,20 @@ expect_output = ["0.001498"]
 file = "tools/rerun_cost.py"
 old = '''        usd += _usd(_price(model), *gap, 0)'''
 new = '''        usd += _usd(_price(model), gap[0], gap[1], gap[2], 0, gap[3])'''
+
+# 티켓 12: 판정 몫의 셈이 읽는 `_gaps`의 이름 꼬리를 고정한다(PR #408 안의 시험을 겨눈다).
+
+[[mutation]]
+name = "모자란 칸을 셀 때 modelUsage 의 이름 꼬리를 떼지 않는다"
+tests = ["tests/tools/test_rerun_cost.py", "-k", "꼬리만_다른_modelUsage_두_이름은"]
+expect = "red"
+expect_output = ["isclose>(0.0001, 0.00014,"]
+
+[[mutation.edit]]
+file = "tools/rerun_cost.py"
+old = '''        model = _canonical(u.model)
+        if model not in seen:
+            continue'''
+new = '''        model = u.model
+        if model not in seen:
+            continue'''
