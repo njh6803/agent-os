@@ -2,7 +2,15 @@
 // 편집과 덮어쓰기, 여러 호출로 나뉜 올리기를 차례로 본다(design-reverse-sync 명세 "이음매", "기록", "확인", "올리기").
 
 import { spawnSync } from "node:child_process";
-import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  cpSync,
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
@@ -620,7 +628,7 @@ describe("기록과 확인 명령", () => {
     [
       "모르는 하위 명령",
       ["record", "erase"],
-      "record 는 plan, needs-build, write, claim, base 가운데 하나를 받는다",
+      "record 는 plan, needs-build, write, index, claim, base 가운데 하나를 받는다",
     ],
     [
       "하위 명령이 받지 않는 인자",
@@ -669,5 +677,97 @@ describe("기록과 확인 명령", () => {
       status: 1,
       report: { ok: false, error: { kind: "usage", message } },
     });
+  });
+
+  test("정식 배치의 첫 올리기는 계획이 첫 정식 올리기와 몫을 내고, 보낼 색인에 libraries 와 upgraded 를 짓는다", () => {
+    bundle("canonical", {
+      "components/bundle.js": "window.AgentOsUi={};",
+      "components/Button/preview.html": '<!-- @dsCard group="atoms" -->',
+    });
+    writeFileSync(join(scratch, "sha.json"), "{}");
+    const received = { ...INDEX, libraries: [], source: { app: "claude-design", v: 1 } };
+    writeFileSync(join(scratch, "received-index.json"), JSON.stringify(received));
+
+    const plan = invoke("record", "plan", "--local", "canonical", "--artifact-sha256", "sha.json");
+    expect(plan.report).toMatchObject({ ok: true, firstCanonical: true });
+    expect(plan.report.calls).toEqual([{ send: plan.report.send, delete: [] }]);
+
+    const index = invoke(
+      "record",
+      "index",
+      "--local",
+      "canonical",
+      "--plan",
+      saved("plan.json", plan),
+      "--index",
+      "received-index.json",
+      "--at",
+      "2026-10-29T12:00:00.000Z",
+      "--out",
+      "send-index.json",
+    );
+    expect(index.report).toMatchObject({ ok: true, libraries: true, upgraded: true });
+    expect(JSON.parse(readFileSync(join(scratch, "send-index.json"), "utf-8"))).toEqual({
+      ...received,
+      libraries: [
+        { name: "react", version: "18.3.1", global: "React" },
+        { name: "react-dom", version: "18.3.1", global: "ReactDOM" },
+      ],
+      upgraded: { at: "2026-10-29T12:00:00.000Z" },
+    });
+  });
+
+  test("빌린 빌드의 산출이면 보낼 색인이 받은 색인과 같다", () => {
+    bundle("bundle");
+    writeFileSync(join(scratch, "sha.json"), "{}");
+    writeFileSync(join(scratch, "received-index.json"), JSON.stringify(INDEX));
+
+    const plan = invoke("record", "plan", "--local", "bundle", "--artifact-sha256", "sha.json");
+    expect(plan.report).toMatchObject({ ok: true, firstCanonical: false });
+    const index = invoke(
+      "record",
+      "index",
+      "--local",
+      "bundle",
+      "--plan",
+      saved("plan.json", plan),
+      "--index",
+      "received-index.json",
+      "--at",
+      "2026-10-29T12:00:00.000Z",
+      "--out",
+      "send-index.json",
+    );
+
+    expect(index.report).toMatchObject({ ok: true, libraries: false, upgraded: false });
+    expect(JSON.parse(readFileSync(join(scratch, "send-index.json"), "utf-8"))).toEqual(INDEX);
+  });
+
+  test("보낼 색인이 한도를 넘으면 쓰지 않는다", () => {
+    bundle("bundle");
+    writeFileSync(join(scratch, "sha.json"), "{}");
+    writeFileSync(
+      join(scratch, "received-index.json"),
+      JSON.stringify({ ...INDEX, title: "가".repeat(200_000) }),
+    );
+    const plan = invoke("record", "plan", "--local", "bundle", "--artifact-sha256", "sha.json");
+
+    const index = invoke(
+      "record",
+      "index",
+      "--local",
+      "bundle",
+      "--plan",
+      saved("plan.json", plan),
+      "--index",
+      "received-index.json",
+      "--at",
+      "2026-10-29T12:00:00.000Z",
+      "--out",
+      "send-index.json",
+    );
+
+    expect(index).toMatchObject({ status: 1, report: { ok: false, error: { kind: "limit" } } });
+    expect(existsSync(join(scratch, "send-index.json"))).toBe(false);
   });
 });

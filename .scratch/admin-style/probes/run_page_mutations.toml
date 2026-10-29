@@ -114,10 +114,10 @@ expect = "red"
 [[mutation.edit]]
 file = "web/apps/admin/components/organisms/RunDecision.tsx"
 old = '''
-        stream={placeStands || frames.length > 0 ? <ResumeStream frames={frames} /> : null}
+          column?.kind === "place" || frames.length > 0 ? <ResumeStream frames={frames} /> : null
 '''
 new = '''
-        stream={frames.length > 0 ? <ResumeStream frames={frames} /> : null}
+          frames.length > 0 ? <ResumeStream frames={frames} /> : null
 '''
 
 [[mutation]]
@@ -130,15 +130,15 @@ expect = "red"
 [[mutation.edit]]
 file = "web/apps/admin/components/organisms/RunDecision.tsx"
 old = '''
-        stream={placeStands || frames.length > 0 ? <ResumeStream frames={frames} /> : null}
+          column?.kind === "place" || frames.length > 0 ? <ResumeStream frames={frames} /> : null
 '''
 new = '''
-        stream={<ResumeStream frames={frames} />}
+          <ResumeStream frames={frames} />
 '''
 
 [[mutation]]
-name = "최종 사용자의 실행에도 결정 자리가 선다고 보면 재개 스트림이 서서 최종 사용자 시험이 빨갛다"
-expect_output = ["expected '재개 스트림결정을 내면 재개한 이벤트가 여기에 차례로 붙는다.' to be null"]
+name = "최종 사용자의 실행에도 결정 자리가 서면 최종 사용자 시험이 빨갛다"
+expect_output = ["expected <section …(2)>…(1)</section> to be null"]
 runner = "pages"
 tests = ["apps/admin/components/pages/RunPage.decision.test.tsx", "-t", "최종 사용자의 멈춘 실행에는"]
 expect = "red"
@@ -146,10 +146,11 @@ expect = "red"
 [[mutation.edit]]
 file = "web/apps/admin/components/organisms/RunDecision.tsx"
 old = '''
-  return channelTokenEntered && decidablePause(trace) !== null && !isEndUserRun(trace);
+  if (isEndUserRun(trace)) {
+    return { kind: "endUser" };
+  }
 '''
 new = '''
-  return channelTokenEntered && decidablePause(trace) !== null;
 '''
 
 [[mutation]]
@@ -176,17 +177,19 @@ new = '''
 [[mutation.edit]]
 file = "web/apps/admin/components/organisms/RunDecision.tsx"
 old = '''
-        stream={placeStands || frames.length > 0 ? <ResumeStream frames={frames} /> : null}
+        }
       />
+    </>
 '''
 new = '''
-        stream={placeStands || frames.length > 0 ? <ResumeStream frames={frames} /> : null}
+        }
       />
       {cut ? (
         <Alert tone="info" title="재개 스트림이 끊겼다. 실행은 서버에서 계속된다">
           창을 닫거나 떠나도 실행은 끝까지 간다. 돌아오면 트레이스로 이어 본다.
         </Alert>
       ) : null}
+    </>
 '''
 
 [[mutation]]
@@ -197,7 +200,7 @@ tests = ["apps/admin/components/organisms/RunDetail.stories.tsx"]
 expect = "red"
 
 [[mutation.edit]]
-file = "web/apps/admin/components/organisms/RunDecision.tsx"
+file = "web/apps/admin/components/organisms/RunColumns.tsx"
 old = '''
     <div className="flex flex-col gap-6 @split:flex-row @split:items-start">
 '''
@@ -207,17 +210,17 @@ new = '''
 
 [[mutation]]
 name = "좁은 폭에서 결정 칸의 차례를 두지 않으면 좁은 폭의 결정 칸 스토리가 빨갛다"
-expect_output = ["expected 1548 to be greater than or equal to 2066"]
+expect_output = ["expected 1548 to be greater than or equal to 2302"]
 runner = "narrow"
 tests = ["apps/admin/components/organisms/RunDetail.stories.tsx"]
 expect = "red"
 
 [[mutation.edit]]
-file = "web/apps/admin/components/organisms/RunDecision.tsx"
+file = "web/apps/admin/components/organisms/RunColumns.tsx"
 old = '''
-        <div className="order-1 @split:sticky'''
+        <div className="@container order-1 @split:sticky'''
 new = '''
-        <div className="order-3 @split:sticky'''
+        <div className="@container order-3 @split:sticky'''
 
 [[mutation]]
 name = "왼쪽 칸에 최대 폭이 없으면 넓은 폭의 이벤트만 스토리가 빨갛다"
@@ -227,7 +230,7 @@ tests = ["apps/admin/components/organisms/RunDetail.stories.tsx"]
 expect = "red"
 
 [[mutation.edit]]
-file = "web/apps/admin/components/organisms/RunDecision.tsx"
+file = "web/apps/admin/components/organisms/RunColumns.tsx"
 old = '''
       <div className="contents @split:flex @split:max-w-content @split:min-w-0'''
 new = '''
@@ -257,15 +260,17 @@ new = '''
 [[mutation.edit]]
 file = "web/apps/admin/components/organisms/RunDecision.tsx"
 old = '''
-        stream={placeStands || frames.length > 0 ? <ResumeStream frames={frames} /> : null}
+        }
       />
+    </>
 '''
 new = '''
-        stream={placeStands || frames.length > 0 ? <ResumeStream frames={frames} /> : null}
+        }
       />
       {cut ? (
         <Alert tone="info" title="재개 스트림이 끊겼다. 실행은 서버에서 계속된다">
           창을 닫거나 떠나도 실행은 끝까지 간다. 돌아오면 트레이스로 이어 본다.
         </Alert>
       ) : null}
+    </>
 '''
