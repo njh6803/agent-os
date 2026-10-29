@@ -1,4 +1,4 @@
-# 2026-10-29 (03) 합치는 중의 sibling_overlap 대기열 행 뺌 (harness 024)
+# 2026-10-29 (14) 합치는 중의 sibling_overlap 대기열 행 뺌 (harness 024)
 
 브랜치 `chore/024-sibling-overlap-merge-head`, 워크트리 `.claude/worktrees/024-sibling-overlap-merge-head`. 이 세션의 지금 제목은 `chore/024-sibling-overlap-merge-head`.
 
@@ -34,6 +34,10 @@
 
 4. `test_interrupt.py::test_도구_호출_도중에_한_번_누르면_서버를_닫고_중단으로_끝난다`("Ctrl+C 를 누른 자식이 30초 안에 끝나지 않았다"), `test_rerun_runner.py::test_오염이_한_번이면_다시_돌고_두_번이면_그_과제를_모든_갈래에서_뺀다`(2 failed, pytest 17분 45초). 두 파일을 홀로 돌리면 67 passed 였고, 그것만 6분 6초가 걸렸다(`uv run pytest -q` 로 손으로 봤다).
 5. `test_rerun_runner.py::test_동시에_둘까지_돌고_셋째는_자리가_빌_때_연다`(1 failed, pytest 10분 34초).
+
+6. 사용자의 "지금 한 번 더" 로 친 일곱째 시도는 통과해 커밋됐다(`git commit -F` 의 종료 코드 0 을 손으로 봤다).
+
+그 뒤 origin/main 을 `git merge` 로 합쳤고 충돌은 없었다(`tools/sibling_overlap.py`, 그 시험, `.scratch/retro-queue.md` 를 git 이 자동으로 합쳤다). 합친 뒤 `uv run pytest -q tests/tools/test_sibling_overlap.py` 125 passed, 두 파일의 pyright·ruff 초록을 손으로 봤다. 일지 번호는 main 이 앞서 가 `--move` 로 2026-10-29-14 로 옮겼다.
 
 훅은 건너뛰지 않았다(사용자 지시). 시간 의존 시험의 고침은 별도 일이고, 스스로 내는 세션 카드는 훅이 막아(ADR 0037 "세션 카드") 여기 적는다.
 
