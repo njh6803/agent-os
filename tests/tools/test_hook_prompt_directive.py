@@ -17,7 +17,9 @@ from tools.hook_prompt_directive import (
     is_first_turn,
 )
 
-NEXT_SESSION = Path(__file__).parents[2] / ".claude" / "skills" / "next-session" / "SKILL.md"
+# next-session 의 지시문 형식과 칸마다의 규칙이 든 파일. 그 스킬이 상황마다 나뉜 뒤(harness 027)의
+# 자리다.
+NEXT_SESSION = Path(__file__).parents[2] / ".claude" / "skills" / "next-session" / "directive.md"
 ISSUE_TRACKER = Path(__file__).parents[2] / "docs" / "agents" / "issue-tracker.md"
 
 # 티켓 05 세션이 실제로 받은 첫 메시지(2026-09-23). 앱이 딥링크의 첫 `/` 를 U+FF0F 로 바꿔 넣었고
@@ -48,7 +50,7 @@ def test_next_session_스킬의_지시문_형식을_채우면_알아본다() -> 
     거기서 라벨이 바뀌면 훅은 예외 없이 침묵하므로 여기서 잡는다.
     """
     text = NEXT_SESSION.read_text(encoding="utf-8")
-    block = text.split("## 지시문 형식", 1)[1].split("```", 2)[1]
+    block = text.split("## 형식", 1)[1].split("```", 2)[1]
     filled: list[str] = []
     for line in block.strip().splitlines():
         label, _, placeholder = line.partition(":")
@@ -258,7 +260,7 @@ def test_사람이_스킬_경로로_시작해_쓴_지시문은_막지_않는다(
 
 def test_어디서_줄이_워크트리를_말하면_계기가_그것을_먼저_따르라고_한다() -> None:
     """받는 쪽은 지시문 자체다. implement 밖의 시작 프롬프트(설계·명세·티켓·chore)도 지나는 자리라
-    첫 턴 계기가 짚는다(next-session 3단계, 2026-10-06 수정 검증)."""
+    첫 턴 계기가 짚는다(next-session `directive.md`, 2026-10-06 수정 검증)."""
     worktree = DIRECTIVE.replace(
         "어디서: 새 세션",
         "어디서: 새 세션. 나란히 여는 2 중 1. 주 체크아웃에서 브랜치를 따지 않고 "
@@ -283,12 +285,12 @@ WORKTREE_SENTENCE = (
 WORKTREE_WHERE = "어디서: 새 세션. " + WORKTREE_SENTENCE
 STALE_ROOT = (
     "확인할 선행 조건: 주 체크아웃 미갱신: 루트는 main. 병합은 이 워크트리 사본의 next-session "
-    '"워크트리에서 병합할 때"를 Read로 열어 따른다'
+    'merge.md(없으면 SKILL.md)의 "워크트리에서 병합할 때"를 Read로 열어 따른다'
 )
 
 
 def _stale(where: str = WORKTREE_WHERE, condition: str = STALE_ROOT) -> str:
-    """워크트리에서 병합한 세션이 낸 지시문(next-session "워크트리에서 병합할 때" 4).
+    """워크트리에서 병합한 세션이 낸 지시문(next-session `merge.md` "워크트리에서 병합할 때" 4).
 
     "어디서" 줄의 tidy-checkouts 머리는 기본으로 넣지 않는다. 쓰는 쪽이 머리를 빠뜨려도 훅은 짚는다.
     """
@@ -371,13 +373,13 @@ def test_미갱신인데_워크트리_문장이_없어도_tidy_checkouts를_먼�
 def test_next_session_스킬이_적으라는_미갱신_문구를_훅이_알아본다() -> None:
     """훅은 글자로 판정한다. 지시문을 쓰는 쪽의 문구가 갈리면 계기가 조용히 빠진다.
 
-    next-session 3단계가 적으라는 것을 그대로 꺼내 지시문을 짓고 훅에 준다. 첫 지시문의 "어디서"
-    머리, "확인할 선행 조건"의 두 줄(묶음의 나머지와 그 밖), 형식 블록의 라벨이다. 머리는 순서와
-    기다리지 않기를 스스로 말하고 워크트리 문장보다 앞에 와야 한다 — 이 계기를 들인 뒤 주 체크아웃이
-    처음 당겨지기 전의 옛 훅과 옛 implement 는 워크트리 문장을 먼저 따르라고만 한다.
+    next-session `directive.md` 가 적으라는 것을 그대로 꺼내 지시문을 짓고 훅에 준다. 첫 지시문의
+    "어디서" 머리, "확인할 선행 조건"의 두 줄(묶음의 나머지와 그 밖), 형식 블록의 라벨이다. 머리는
+    순서와 기다리지 않기를 스스로 말하고 워크트리 문장보다 앞에 와야 한다 — 이 계기를 들인 뒤 주
+    체크아웃이 처음 당겨지기 전의 옛 훅과 옛 implement 는 워크트리 문장을 먼저 따르라고만 한다.
     """
     text = NEXT_SESSION.read_text(encoding="utf-8")
-    form = text.split("## 지시문 형식", 1)[1].split("```", 2)[1]
+    form = text.split("## 형식", 1)[1].split("```", 2)[1]
     assert any(line.startswith("확인할 선행 조건:") for line in form.splitlines())
     assert "`새 세션. 나란히 여는 <N> 중 <k>.`" in text
     assert "`주 체크아웃 미갱신: 루트는 <브랜치>`" in text
@@ -521,7 +523,7 @@ def test_next_session_지시문_형식의_라벨을_훅이_안다() -> None:
     """첫 줄이 라벨 줄인지는 형식의 라벨로 가른다. 형식에 라벨이 늘면 그 줄로 시작한 붙여 넣기를
     놓친다."""
     text = NEXT_SESSION.read_text(encoding="utf-8")
-    form = text.split("## 지시문 형식", 1)[1].split("```", 2)[1]
+    form = text.split("## 형식", 1)[1].split("```", 2)[1]
     labels = [line.split(":", 1)[0] + ":" for line in form.strip().splitlines()]
 
     assert labels
