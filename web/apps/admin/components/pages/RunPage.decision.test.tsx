@@ -228,7 +228,7 @@ function reason(): HTMLElement {
 /** 그 자리의 이벤트 제목(종류) 전부. 쓴 순서대로다. */
 function kinds(region: HTMLElement): (string | null)[] {
   return within(region)
-    .getAllByRole("heading", { level: 4 })
+    .getAllByRole("heading", { level: 3 })
     .map((heading) => heading.textContent);
 }
 
@@ -247,7 +247,7 @@ afterEach(() => {
 });
 
 describe("결정 자리", () => {
-  test("채널 토큰이 없으면 멈춘 실행에도 결정 자리가 없고 채널 토큰을 넣는 자리가 있다", async () => {
+  test("채널 토큰이 없으면 멈춘 실행에도 결정 자리가 없고 실행 화면에 채널 토큰을 넣는 자리도 없다", async () => {
     serveTrace(() => PAUSED);
     servePlugins(ROWS);
 
@@ -255,7 +255,7 @@ describe("결정 자리", () => {
 
     expect(screen.queryByRole("region", { name: "결정" })).toBeNull();
     expect(screen.queryByRole("button", { name: "허가" })).toBeNull();
-    expect(screen.getByLabelText("채널 토큰")).toBeTruthy();
+    expect(screen.queryByLabelText("채널 토큰")).toBeNull();
   });
 
   test("채널 토큰을 넣으면 멈춘 실행에 결정 자리가 서고 무엇을 승인하는지 도구와 인자가 보인다", async () => {
@@ -286,7 +286,6 @@ describe("결정 자리", () => {
 
     await enterChannelToken(user, CHANNEL);
 
-    expect(await screen.findByText("채널 토큰을 넣었다")).toBeTruthy();
     expect(screen.queryByRole("region", { name: "결정" })).toBeNull();
   });
 
@@ -297,7 +296,6 @@ describe("결정 자리", () => {
 
     await enterChannelToken(user, CHANNEL);
 
-    expect(await screen.findByText("채널 토큰을 넣었다")).toBeTruthy();
     expect(screen.queryByRole("region", { name: "결정" })).toBeNull();
     expect(screen.getAllByText(/재개할 수 없다/)).toHaveLength(1);
   });
@@ -321,7 +319,6 @@ describe("결정 자리", () => {
 
     await enterChannelToken(user, CHANNEL);
 
-    expect(await screen.findByText("채널 토큰을 넣었다")).toBeTruthy();
     expect(screen.queryByRole("region", { name: "결정" })).toBeNull();
     expect(screen.queryByRole("button", { name: "허가" })).toBeNull();
     expect(screen.getAllByText(/최종 사용자의 실행이라 결정은 그 사람만 낸다/)).toHaveLength(1);
@@ -674,7 +671,6 @@ describe("채널 토큰의 거부", () => {
     expect((await screen.findByRole("alert")).textContent).toContain("채널 토큰이 거부됐다");
     expect(screen.getByRole("region", { name: "이벤트" })).toBeTruthy();
     expect(screen.queryByRole("button", { name: "허가" })).toBeNull();
-    expect(screen.getByLabelText("채널 토큰")).toBeTruthy();
     const stored = storedValues(sessionStorage).join("\n");
     expect(stored).toContain(ADMIN);
     expect(stored).not.toContain(CHANNEL);

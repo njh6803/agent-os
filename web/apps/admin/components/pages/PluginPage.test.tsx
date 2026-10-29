@@ -9,7 +9,7 @@ import { http, HttpResponse } from "msw";
 import { describe, expect, test } from "vitest";
 import { api, envelope, network, type Plugin } from "../../testing/network";
 import { renderPage } from "../../testing/render";
-import { acceptTokens, enterAdminToken } from "../../testing/token";
+import { acceptTokens, clearTokens, enterAdminToken } from "../../testing/token";
 import { PluginPage } from "./PluginPage";
 
 const TOKEN = "adm-4Kp9-plugin-page-token";
@@ -83,7 +83,7 @@ describe("플러그인 하나", () => {
 
     const manifest = await screen.findByRole("region", { name: "매니페스트" });
     expect(manifest.textContent).toContain(CALC_MANIFEST);
-    expect(screen.getByRole("heading", { level: 2, name: "calc" })).toBeTruthy();
+    expect(screen.getByRole("heading", { level: 1, name: "calc" })).toBeTruthy();
     expect(screen.getByText("켜짐")).toBeTruthy();
     expect(authorizations).toEqual([`Bearer ${TOKEN}`]);
   });
@@ -99,9 +99,10 @@ describe("플러그인 하나", () => {
     await openPlugin("agent", "broken");
 
     const alert = await screen.findByRole("alert");
+    expect(alert.textContent).toContain("플러그인을 읽지 못했다");
     expect(alert.textContent).toContain("C:/root/plugins/agents/broken/plugin.toml");
     expect(alert.textContent).toContain("Expected '=' after a key");
-    expect(alert.textContent).toContain("req-5b21");
+    expect(alert.textContent).toContain("추적 식별자: req-5b21");
     expect(screen.queryByRole("region", { name: "매니페스트" })).toBeNull();
   });
 
@@ -126,7 +127,7 @@ describe("플러그인 하나", () => {
 
     expect((await screen.findByRole("alert")).textContent).toContain("관리 토큰이 거부됐다");
     expect(screen.getByLabelText("관리 토큰")).toBeTruthy();
-    expect(screen.queryByRole("heading", { level: 2, name: "calc" })).toBeNull();
+    expect(screen.queryByRole("heading", { level: 1, name: "calc" })).toBeNull();
   });
 
   test("새로 고침 버튼이 그 플러그인을 다시 읽는다", async () => {
@@ -143,6 +144,19 @@ describe("플러그인 하나", () => {
     expect(authorizations).toHaveLength(2);
   });
 
+  test("처음 불러오는 동안에는 머리 아래에 플러그인을 불러오는 중이 선다", async () => {
+    const first = Promise.withResolvers<Response>();
+    acceptTokens();
+    servePlugin("/plugins/agent/calc", () => first.promise);
+
+    await openPlugin("agent", "calc");
+
+    expect(await screen.findByRole("progressbar", { name: "플러그인을 불러오는 중" })).toBeTruthy();
+    first.resolve(HttpResponse.json(CALC));
+    expect(await screen.findByRole("region", { name: "매니페스트" })).toBeTruthy();
+    expect(screen.queryByRole("progressbar")).toBeNull();
+  });
+
   test("다시 확인하는 동안에는 이미 보인 매니페스트가 남는다", async () => {
     const again = Promise.withResolvers<Response>();
     acceptTokens();
@@ -154,7 +168,7 @@ describe("플러그인 하나", () => {
 
     await user.click(screen.getByRole("button", { name: "새로 고침" }));
 
-    expect((await screen.findByRole("status")).textContent).toContain("다시 확인하는 중");
+    expect(await screen.findByRole("progressbar", { name: "다시 확인하는 중" })).toBeTruthy();
     expect(screen.getByRole("region", { name: "매니페스트" }).textContent).toContain(CALC_MANIFEST);
     again.resolve(HttpResponse.json(CALC));
   });
@@ -186,7 +200,7 @@ describe("플러그인 하나", () => {
     renderPage(<PluginPage kind="agent" name="calc" />);
     // 옛 토큰의 요청(0)은 응답을 기다린다.
     await enterAdminToken(user, old);
-    await user.click(await screen.findByRole("button", { name: "토큰 지우기" }));
+    await clearTokens(user);
     await enterAdminToken(user, TOKEN);
 
     // 새 토큰은 옛 요청을 나눠 받지 않고 제 요청을 보낸다.
@@ -225,7 +239,7 @@ describe("플러그인 하나", () => {
     // 두 번 인코딩한 요청(Old%2520Calc)은 처리하지 않은 요청이라 setup.ts 가 테스트를 빨갛게 한다.
     await openPlugin("agent", "Old%20Calc");
 
-    expect(await screen.findByRole("heading", { level: 2, name: "Old Calc" })).toBeTruthy();
+    expect(await screen.findByRole("heading", { level: 1, name: "Old Calc" })).toBeTruthy();
     expect((await screen.findByRole("alert")).textContent).toContain("요청의 형식이 올바르지 않다");
     expect(authorizations).toHaveLength(1);
   });

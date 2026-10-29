@@ -69,7 +69,7 @@ const RUN_FIELDS: ReadonlySet<EventField> = new Set(["previous_run", "last_cover
 export function EventItem({ event }: { readonly event: TraceEvent }) {
   return (
     <li>
-      <h4>{event.type === "unknown" ? "모르는 종류" : event.type}</h4>
+      <h3>{event.type === "unknown" ? "모르는 종류" : event.type}</h3>
       <dl>
         {Object.entries<unknown>(event)
           .filter(([name]) => name !== "type" && name !== "run_id")

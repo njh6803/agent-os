@@ -21,7 +21,7 @@ export function PluginPage({ kind, name }: PluginPageProps) {
   const decodedKind = decodeSegment(kind);
   const decodedName = decodeSegment(name);
   return (
-    <AdminScreen>
+    <AdminScreen current="plugins">
       <Link href="/">플러그인 목록으로</Link>
       {decodedKind === null || decodedName === null ? (
         <FailureNotice message={`주소를 풀 수 없다: ${kind}/${name}`} requestId={null} />

@@ -46,9 +46,10 @@ interface RunListProps extends ReadState<readonly TracePage[]> {
 export function RunList({ status, onStatusChange, onMore, ...read }: RunListProps) {
   return (
     <ReadSection
-      heading="실행"
+      title="실행"
       {...read}
-      placeholder="실행 목록을 불러오는 중이다"
+      loadingLabel="실행 목록을 불러오는 중"
+      failureTitle="실행 목록을 읽지 못했다"
       above={<StatusFilter value={status} onChange={onStatusChange} />}
     >
       {(pages) => {

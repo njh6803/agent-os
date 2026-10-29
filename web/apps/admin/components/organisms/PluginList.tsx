@@ -45,9 +45,10 @@ export function PluginList({ onSetEnabled, ...read }: PluginListProps) {
 
   return (
     <ReadSection
-      heading="플러그인"
+      title="플러그인"
       {...read}
-      placeholder="플러그인 목록을 불러오는 중이다"
+      loadingLabel="플러그인 목록을 불러오는 중"
+      failureTitle="플러그인 목록을 읽지 못했다"
       above={switchFailure === null ? null : <FailureNotice {...switchFailure} />}
     >
       {(rows) =>
@@ -76,7 +77,7 @@ function KindGroup({ label, rows, onSetEnabled, onSwitchFailure }: KindGroupProp
   const headingId = useId();
   return (
     <section aria-labelledby={headingId}>
-      <h3 id={headingId}>{label}</h3>
+      <h2 id={headingId}>{label}</h2>
       {rows.length === 0 ? (
         <p>등록된 것이 없다</p>
       ) : (

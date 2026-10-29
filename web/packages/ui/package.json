@@ -9,6 +9,7 @@
     "./testing": "./src/testing/index.ts",
     "./contrast": "./src/styles/contrast.ts",
     "./storybook": "./src/storybook/preview.tsx",
+    "./storybook/expect": "./src/storybook/expect.ts",
     "./visual": "./visual/index.ts"
   },
   "publishConfig": {

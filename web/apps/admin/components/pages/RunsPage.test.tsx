@@ -15,7 +15,7 @@ import {
   type TracePage,
 } from "../../testing/network";
 import { renderPage } from "../../testing/render";
-import { acceptTokens, enterAdminToken } from "../../testing/token";
+import { acceptTokens, clearTokens, enterAdminToken } from "../../testing/token";
 import { RunsPage } from "./RunsPage";
 
 const TOKEN = "adm-2Wc8-runs-page-token";
@@ -296,16 +296,6 @@ describe("실행 목록", () => {
 
     expect(await screen.findByText("실행이 없다")).toBeTruthy();
   });
-
-  test("머리에 플러그인 목록과 실행 목록으로 가는 링크가 있다", async () => {
-    serveRuns(() => page([FINISHED]));
-
-    await showRuns();
-
-    const nav = screen.getByRole("navigation");
-    expect(within(nav).getByRole("link", { name: "플러그인 목록" }).getAttribute("href")).toBe("/");
-    expect(within(nav).getByRole("link", { name: "실행 목록" }).getAttribute("href")).toBe("/runs");
-  });
 });
 
 describe("실행 목록의 새로 고침과 에러", () => {
@@ -403,18 +393,20 @@ describe("실행 목록의 새로 고침과 에러", () => {
     const user = userEvent.setup();
     await enterAdminToken(user, TOKEN);
 
-    expect((await screen.findByRole("status")).textContent).toContain("불러오는 중");
+    expect(
+      await screen.findByRole("progressbar", { name: "실행 목록을 불러오는 중" }),
+    ).toBeTruthy();
     first.resolve(page([FINISHED]));
     await within(await screen.findByRole("region", { name: "실행" })).findAllByRole("listitem");
-    expect(screen.queryByRole("status")).toBeNull();
+    expect(screen.queryByRole("progressbar")).toBeNull();
 
     await user.click(screen.getByRole("button", { name: "새로 고침" }));
 
-    expect((await screen.findByRole("status")).textContent).toContain("다시 확인하는 중");
+    expect(await screen.findByRole("progressbar", { name: "다시 확인하는 중" })).toBeTruthy();
     expect(shownRunIds()).toEqual(["r-finished"]);
     again.resolve(page([FINISHED]));
     await vi.waitFor(() => {
-      expect(screen.queryByRole("status")).toBeNull();
+      expect(screen.queryByRole("progressbar")).toBeNull();
     });
   });
 
@@ -434,8 +426,9 @@ describe("실행 목록의 새로 고침과 에러", () => {
     await user.click(screen.getByRole("button", { name: "새로 고침" }));
 
     const alert = await screen.findByRole("alert");
+    expect(alert.textContent).toContain("실행 목록을 읽지 못했다");
     expect(alert.textContent).toContain("트레이스 디렉터리를 읽지 못했다");
-    expect(alert.textContent).toContain("req-7e1d");
+    expect(alert.textContent).toContain("추적 식별자: req-7e1d");
     expect(within(runList()).queryAllByRole("listitem")).toEqual([]);
     // 거르기는 실패 중에도 남아 다른 상태로 옮겨 갈 수 있다.
     expect(screen.getByRole("radio", { name: "일시정지" })).toBeTruthy();
@@ -530,7 +523,7 @@ describe("실행 목록의 새로 고침과 에러", () => {
     const user = userEvent.setup();
     // 옛 토큰의 요청(0)은 응답을 기다린다.
     await enterAdminToken(user, old);
-    await user.click(await screen.findByRole("button", { name: "토큰 지우기" }));
+    await clearTokens(user);
     await enterAdminToken(user, TOKEN);
 
     // 새 토큰은 옛 요청을 나눠 받지 않고 제 요청을 보낸다.

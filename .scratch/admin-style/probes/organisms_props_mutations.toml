@@ -68,18 +68,19 @@ new = '''
 [[mutation]]
 name = "채널 토큰을 넣어도 넣었다고 말하지 않는다"
 runner = "vitest"
-tests = ["apps/admin/components/pages/HomePage.test.tsx", "-t", "채널 토큰을 넣어도 확인 요청을 보내지 않고"]
+tests = ["apps/admin/components/pages/SettingsPage.test.tsx", "-t", "가린 입력으로 넣고"]
 expect = "red"
-# 고른 시험에서 넣었다는 글자를 찾는 단언의 실패 머리다.
+# 고른 시험에서 넣었다는 글자를 찾는 단언의 실패 머리다. 채널 토큰을 넣는 자리가 머리(`AdminScreen`)에서 설정 화면으로
+# 옮겨(admin-style 티켓 04) 그 연결도 `SettingsPage` 에 있다.
 expect_output = ["Unable to find an element with the text: 채널 토큰을 넣었다."]
 
 [[mutation.edit]]
-file = "web/apps/admin/components/pages/AdminScreen.tsx"
+file = "web/apps/admin/components/pages/SettingsPage.tsx"
 old = '''
-          <ChannelTokenForm entered={channelToken !== null} onEnter={acceptChannelToken} />
+      channelTokenEntered={channelToken !== null}
 '''
 new = '''
-          <ChannelTokenForm entered={false} onEnter={acceptChannelToken} />
+      channelTokenEntered={false}
 '''
 
 [[mutation]]

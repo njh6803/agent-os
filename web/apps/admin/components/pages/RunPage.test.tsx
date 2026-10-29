@@ -9,7 +9,7 @@ import { http, HttpResponse } from "msw";
 import { describe, expect, test } from "vitest";
 import { api, envelope, network, type Trace } from "../../testing/network";
 import { renderPage } from "../../testing/render";
-import { acceptTokens, enterAdminToken } from "../../testing/token";
+import { acceptTokens, clearTokens, enterAdminToken } from "../../testing/token";
 import { RunPage } from "./RunPage";
 
 const TOKEN = "adm-9Jm3-run-page-token";
@@ -203,7 +203,7 @@ describe("실행 하나", () => {
     await openRun(RUN);
 
     expect(await screen.findByRole("region", { name: "이벤트" })).toBeTruthy();
-    expect(screen.getByRole("heading", { level: 2, name: RUN })).toBeTruthy();
+    expect(screen.getByRole("heading", { level: 1, name: RUN })).toBeTruthy();
     expect(authorizations).toEqual([`Bearer ${TOKEN}`]);
   });
 
@@ -215,7 +215,7 @@ describe("실행 하나", () => {
     await screen.findByRole("region", { name: "이벤트" });
     expect(
       within(events())
-        .getAllByRole("heading", { level: 4 })
+        .getAllByRole("heading", { level: 3 })
         .map((heading) => heading.textContent),
     ).toEqual([
       "run_started",
@@ -563,6 +563,18 @@ describe("실행 하나", () => {
     expect(Reflect.has(window, "__agentOsXss")).toBe(false);
   });
 
+  test("처음 불러오는 동안에는 머리 아래에 트레이스를 불러오는 중이 선다", async () => {
+    const first = Promise.withResolvers<Response>();
+    serveTrace(`/traces/${RUN}`, () => first.promise);
+
+    await openRun(RUN);
+
+    expect(await screen.findByRole("progressbar", { name: "트레이스를 불러오는 중" })).toBeTruthy();
+    first.resolve(HttpResponse.json(TRACE));
+    expect(await screen.findByRole("region", { name: "이벤트" })).toBeTruthy();
+    expect(screen.queryByRole("progressbar")).toBeNull();
+  });
+
   test("없는 실행을 열면 404 봉투의 메시지와 추적 식별자가 보인다", async () => {
     serveTrace("/traces/r-ghost", () =>
       HttpResponse.json(envelope("not_found", "r-ghost 실행의 트레이스가 없다", "req-40a1"), {
@@ -586,8 +598,9 @@ describe("실행 하나", () => {
     await openRun("r-broken");
 
     const alert = await screen.findByRole("alert");
+    expect(alert.textContent).toContain("실행을 읽지 못했다");
     expect(alert.textContent).toContain(message);
-    expect(alert.textContent).toContain("req-5c02");
+    expect(alert.textContent).toContain("추적 식별자: req-5c02");
     expect(screen.queryByRole("region", { name: "이벤트" })).toBeNull();
   });
 
@@ -613,7 +626,7 @@ describe("실행 하나", () => {
     renderPage(<RunPage runId={RUN} />);
     // 옛 토큰의 요청(0)은 응답을 기다린다.
     await enterAdminToken(user, old);
-    await user.click(await screen.findByRole("button", { name: "토큰 지우기" }));
+    await clearTokens(user);
     await enterAdminToken(user, TOKEN);
 
     // 새 토큰은 옛 요청을 나눠 받지 않고 제 요청을 보낸다.
@@ -670,7 +683,7 @@ describe("실행 하나", () => {
     // 두 번 인코딩한 요청(run%2520one)은 처리하지 않은 요청이라 setup.ts 가 테스트를 빨갛게 한다.
     await openRun("run%20one");
 
-    expect(await screen.findByRole("heading", { level: 2, name: "run one" })).toBeTruthy();
+    expect(await screen.findByRole("heading", { level: 1, name: "run one" })).toBeTruthy();
     expect((await screen.findByRole("alert")).textContent).toContain("요청의 형식이 올바르지 않다");
     expect(authorizations).toHaveLength(1);
   });

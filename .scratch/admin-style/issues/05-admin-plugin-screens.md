@@ -31,6 +31,8 @@
 - [ ] `plugin-toggle.e2e.ts`가 플러그인 하나를 "매니페스트" 링크로 연다. 그 파일의 "허가"는 08이 고친다. 이 티켓과 08이 나란히 돌면 그 파일이 부딪칠 수 있으니 늦게 병합하는 쪽이 main을 합치고 둘 다 남긴다
 - [ ] `pnpm -C web visual:admin:update`로 새 스토리의 정답을 만들고, 바뀐 사진을 사람이 보고 PR 본문에 적는다
 
+메모(04에서): 04가 지은 공통 부품의 이름이다. 화면 머리는 `molecules/ScreenHeader`, 읽기 골격은 `organisms/ReadSection`(머리 아래 자리 `above`, 처음 불러오는 중의 `loadingLabel`, 실패 제목 `failureTitle`), 실패 알림은 `molecules/FailureAlert`(제목, 메시지, 추적 식별자), 글자 링크는 `atoms/TextLink`, 코드 칸은 `atoms/CodeBlock`과 JSON을 두 칸 들여 쓰는 `formatJson`, 빈 줄은 `molecules/EmptyLine`(아이콘 16·20)이다. 04는 부품을 짓고 스토리만 그렸고 화면에는 넣지 않았다. 켜고 끄기의 실패(`organisms/PluginList`의 `above`)와 `PluginPage`의 두 자리(주소를 풀지 못한 실패, 플러그인의 종류가 아닌 주소)는 아직 옛 `molecules/FailureNotice`다. 이 티켓이 `FailureAlert`로 옮긴 뒤 쓰는 곳이 남지 않으면 옛 것을 지운다. 지우기 전에 `FailureNoticeProps`를 옮긴다. `FailureAlert`가 그 타입을 `./FailureNotice`에서 가져오고, `PluginList`의 `SwitchFailure`와 `RunDecision`도 그 타입을 쓴다. 옛 것을 쓰는 곳은 07(`RunPage`)과 08(`RunDecision`)에도 있어, 셋 가운데 마지막에 병합하는 티켓이 지운다.
+
 ### 검증
 
 - [ ] 검증 명령이 모두 초록이고, `pnpm -C web visual:admin`과 관리 화면 e2e도 초록이다. 모델 경로를 건드리지 않아 `-m llm`·`-m llm_widget`은 칠 일이 없다

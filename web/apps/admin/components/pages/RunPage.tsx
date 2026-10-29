@@ -23,7 +23,7 @@ interface RunPageProps {
 export function RunPage({ runId }: RunPageProps) {
   const decoded = decodeSegment(runId);
   return (
-    <AdminScreen>
+    <AdminScreen current="runs">
       <Link href="/runs">실행 목록으로</Link>
       {decoded === null ? (
         <FailureNotice message={`주소를 풀 수 없다: ${runId}`} requestId={null} />

@@ -9,7 +9,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { startPausedRun } from "./channel";
 import { stack } from "./env";
-import { decisionPlace, enterAdminToken, enterChannelToken, row } from "./screen";
+import { decisionPlace, enterAdminToken, enterChannelToken, openSection, row } from "./screen";
 
 /** 운영자 파일이 꺼 둔 에이전트의 이름들. 파일은 종류마다 한 줄이다(준비가 쓴 것도, serve 가 쓰는 정규형도). */
 function disabledAgents(pluginsRoot: string): string[] {
@@ -21,9 +21,9 @@ function disabledAgents(pluginsRoot: string): string[] {
   return Array.from(items.matchAll(/"([^"]*)"/g), (match) => match[1] ?? "");
 }
 
-/** 머리의 링크로 멈춘 실행 하나를 연다. 주소를 새로 읽지 않아 SWR 의 캐시(플러그인 목록)가 이어진다. */
+/** 탐색의 링크로 멈춘 실행 하나를 연다. 주소를 새로 읽지 않아 SWR 의 캐시(플러그인 목록)가 이어진다. */
 async function openPausedRun(page: Page, runId: string): Promise<void> {
-  await page.getByRole("navigation").getByRole("link", { name: "실행 목록", exact: true }).click();
+  await openSection(page, "실행");
   await row(page, "실행", runId).getByRole("link", { name: runId }).click();
   await expect(page.getByRole("region", { name: "이벤트" })).toContainText("run_paused");
 }
@@ -57,10 +57,7 @@ test("스위치로 에이전트를 끄면 운영자 파일에 적히고 목록�
   await expect(
     decisionPlace(page).getByRole("button", { name: "허가", exact: true }),
   ).toBeDisabled();
-  await page
-    .getByRole("navigation")
-    .getByRole("link", { name: "플러그인 목록", exact: true })
-    .click();
+  await openSection(page, "플러그인");
 
   // 열어 보면 서버가 읽은 꺼짐과 매니페스트가 보인다. 목록의 링크와 플러그인 하나의 라우트를 실제 Next 로 지난다.
   await gated.getByRole("link", { name: "gated" }).click();
@@ -98,7 +95,7 @@ test("이름이 패턴 밖인 표지를 열면 주소의 조각이 풀린 이름
   await odd.getByRole("link", { name: "Old Calc" }).click();
 
   await expect(page).toHaveURL(`${adminUrl}/plugins/agent/Old%20Calc`);
-  await expect(page.getByRole("heading", { level: 2, name: "Old Calc" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: "Old Calc" })).toBeVisible();
   // Next 가 페이지에 두는 경로 알림도 alert 라 글자로 거른다.
   await expect(
     page.getByRole("alert").filter({ hasText: "요청의 형식이 올바르지 않다" }),

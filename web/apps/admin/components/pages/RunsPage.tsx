@@ -11,7 +11,7 @@ import { readOf } from "./read";
 
 export function RunsPage() {
   return (
-    <AdminScreen>
+    <AdminScreen current="runs">
       <ConnectedRunList />
     </AdminScreen>
   );

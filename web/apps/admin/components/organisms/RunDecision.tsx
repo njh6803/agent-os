@@ -153,7 +153,7 @@ export function RunDecision({
       {notice === null ? null : <FailureNotice {...notice} />}
       {frames.length > 0 ? (
         <section aria-labelledby={streamId}>
-          <h3 id={streamId}>재개 스트림</h3>
+          <h2 id={streamId}>재개 스트림</h2>
           <ol>
             {frames.map((frame, index) =>
               // 프레임은 받은 차례로만 갈린다. 한 번의 결정 안에서 그 차례는 바뀌지 않는다.
@@ -161,7 +161,7 @@ export function RunDecision({
                 <EventItem key={index} event={frame.event} />
               ) : (
                 <li key={index}>
-                  <h4>읽지 못한 프레임</h4>
+                  <h3>읽지 못한 프레임</h3>
                   <p style={{ whiteSpace: "pre-wrap" }}>{frame.raw}</p>
                 </li>
               ),
@@ -221,7 +221,7 @@ function DecisionPlace({ pause, busy, invalid, onDecide, plugins }: DecisionPlac
 
   return (
     <section aria-labelledby={headingId}>
-      <h3 id={headingId}>결정</h3>
+      <h2 id={headingId}>결정</h2>
       <p>
         이 실행은 도구 호출 하나의 승인을 기다리며 일시정지했다. 결정은 이 호출 하나에 대한 답이다.
       </p>
