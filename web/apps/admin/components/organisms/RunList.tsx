@@ -7,7 +7,7 @@ import {
   type StatusBadgeStatus,
 } from "@agent-os/ui";
 import { type ReactNode, useId } from "react";
-import type { RunRow, RunStatus, RunSummary, TracePage } from "../../api/traces";
+import type { RunRow, RunStatus, RunSummary, TracePage, UnreadableTrace } from "../../api/traces";
 import { TextLink } from "../atoms/TextLink";
 import { EmptyLine } from "../molecules/EmptyLine";
 import { ReadSection, type ReadState } from "./ReadSection";
@@ -170,9 +170,7 @@ function RunLink({ runId }: { readonly runId: string }) {
   );
 }
 
-/** 읽을 수 없는 트레이스의 표지(계약의 `UnreadableTrace`). 실행 식별자와 이유를 든다. */
-type UnreadableTrace = Exclude<RunRow, RunSummary>;
-
+/** 행이 읽을 수 없는 트레이스의 표지인지 가린다. 계약의 두 모양 가운데 `reason` 은 표지에만 있다. */
 function isUnreadable(row: RunRow): row is UnreadableTrace {
   return "reason" in row;
 }
