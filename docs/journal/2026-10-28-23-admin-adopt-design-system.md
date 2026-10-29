@@ -374,6 +374,15 @@ open-session을 부른다 2026-10-29T07:47:07Z
 
 main 병합(`fa180ea4`). `origin/main`(`f39ae86d`, #420)을 합치자 `.scratch/retro-queue.md` 529~531행이 글자 충돌했다. 529는 이 브랜치의 3회차를, 530·531은 main이 올린 회차를 따랐다. 병합 커밋의 pre-commit은 지났고, 인용 경고 하나는 main이 가져온 534행의 것이다.
 
+## PR 직전 리뷰(티켓 029)
+
+CodeRabbit CLI는 `coderabbit auth status`가 `Seat: not assigned`라 돌지 못해 대체 둘을 돌렸다(`docs/constitution/operations.md` 리뷰 파이프라인 2).
+
+- `/security-review`(커밋 `bc0b4afe`, origin/main을 합친 뒤): 지적 없음. diff가 마크다운 셋(티켓, 대기열, 일지)뿐이라 그 명령의 제외 규칙(문서 파일)에 모두 든다. 서브태스크는 띄우지 않고 diff에 키·토큰·비밀번호가 없는 것만 손으로 봤다.
+- `bug-perf-review`(기준 `f39ae86d`): 지적 0건. 셀프 리뷰에서 새로 쓴 문장 다섯(529 3회차, `needed: true` 조건, 반영 자리, `upload.md` 6, 병합 문단)을 밀 주장으로 넘겼고 모두 근거와 맞았다고 했다. `needed: true`는 서브에이전트도 `web/tools/sync-design-system/upload.ts`의 `needsBuild`(`web/packages/ui/` 아래 경로를 `package` 사유로 센다)를 코드로 읽었을 뿐 부르지 않아, 일지의 "어림" 표기를 그대로 둔다.
+
+이 절을 실은 첫 커밋의 pre-commit에서 `tests/channel/cli/test_interrupt.py::test_닫는_도중에_한_번_더_누르면_닫기를_기다리지_않고_끝난다`가 "둘째가 닫는 도중에 오지 않았다"로 빨갰다(1 failed, 5996 passed). 이 브랜치는 문서만 바꿔 그 시험과 CLI를 건드리지 않았다. 같은 파일의 다른 시험을 다루는 대기열 531과 시험 이름이 달라 그 회차로 세지 않고, 같은 커밋을 한 번 다시 쳤다.
+
 ## 다음
 
 - 올리기는 끝났다(위 "올리기(이어받은 세션, 2026-10-29)"). `11-web-edit-teal-accent-600` 세션은 사람이 받아 둔 지시문대로 이 올리기가 끝났는지 묻고 1부터 확인한다. `claim`은 비었지만 "보낼 것이 없을 때"로 끝나는 것은 그사이 웹 편집이 없고 빌드가 필요하지 않을 때뿐이다. 올린 HEAD `84542f52` 뒤로 main에 든 #420(`f39ae86d`)이 `web/packages/ui`의 `DesignTokens.stories.tsx`를 바꿔, 3의 "빌드가 필요한지"가 `needed: true`를 낼 수 있다.
