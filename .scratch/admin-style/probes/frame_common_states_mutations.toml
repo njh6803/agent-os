@@ -236,8 +236,8 @@ expect_output = ["TextLink.stories.tsx > Default", "to deeply equal { style: 'so
 
 [[mutation.edit]]
 file = "web/apps/admin/components/atoms/TextLink.tsx"
-old = '''hover:text-text focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring"'''
-new = '''hover:text-text"'''
+old = '''hover:text-text focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring`}'''
+new = '''hover:text-text`}'''
 
 [[mutation]]
 name = "글자 링크에 최소 높이가 없으면 링크 스토리가 빨갛다"
@@ -247,8 +247,8 @@ expect_output = ["TextLink.stories.tsx > Default", "to be greater than or equal 
 
 [[mutation.edit]]
 file = "web/apps/admin/components/atoms/TextLink.tsx"
-old = '''className="inline-flex min-h-6 items-center'''
-new = '''className="inline-flex items-center'''
+old = '''className={`inline-flex min-h-6 items-center'''
+new = '''className={`inline-flex items-center'''
 
 # 아래 다섯은 셀프 리뷰 명세 축이 짚어 더했다. 읽기 넷 가운데 셋의 실패 제목과 둘의 처음 불러오는 이름을 페이지 시험이
 # 보지 않아, organisms 의 글자를 바꿔도 초록이었다. 더한 단언은 지금의 구현 위에 써서 빨강을 본 적이 없다.

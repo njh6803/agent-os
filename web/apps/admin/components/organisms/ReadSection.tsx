@@ -34,6 +34,11 @@ interface ReadSectionProps<T> extends ReadState<T> {
   readonly failureTitle: string;
   /** 머리와 값의 갈래 사이에 늘 서는 자리. 실패 중에도 남는다. 거르기나 켜고 끄기의 실패가 선다. */
   readonly above?: ReactNode;
+  /**
+   * 처음 불러오는 동안 값의 자리에 서는 뼈대. 주면 본문 칸이 `split` 이상일 때 머리 아래 진행 표시 대신 이것이 서고,
+   * 그 미만에서는 진행 표시가 선다. 화면 읽기 프로그램에서 숨기는 것은 뼈대 쪽의 일이다. 실행 목록의 표가 쓴다.
+   */
+  readonly skeleton?: ReactNode;
   readonly children: (data: T) => ReactNode;
 }
 
@@ -42,7 +47,9 @@ interface ReadSectionProps<T> extends ReadState<T> {
  * "새로 고침"), 머리 아래의 진행 표시, 그리고 실패·값의 갈래다. 플러그인 목록, 플러그인 하나, 실행 목록, 실행 하나가
  * 이 골격을 지난다. 읽은 값과 상태는 props 로 받는다(`ReadState`).
  *
- * 처음 불러오는 중은 머리 아래 진행 표시 하나이고 0.3초를 넘길 때만 선다(`AfterDelay`). 이미 보인 것을 다시 확인하는
+ * 처음 불러오는 중은 머리 아래 진행 표시 하나이고 0.3초를 넘길 때만 선다(`AfterDelay`). 뼈대(`skeleton`)를 준 화면은
+ * 본문 칸이 `split` 이상일 때 진행 표시 대신 값의 자리에 뼈대가 서고, 뼈대도 0.3초를 넘길 때만 선다(명세 "화면 머리와
+ * 공통 상태"의 처음 불러오는 중). 두 갈래는 함께 그리고 컨테이너 질의로 하나를 숨긴다. 이미 보인 것을 다시 확인하는
  * 중은 "새로 고침"이 불러오는 중이 되고 머리 아래 진행 표시 "다시 확인하는 중"이 서며, 보인 것을 지우지 않는다(web-admin
  * 스토리 36). 다시 읽다 실패하면 이미 보인 것을 지우고 실패만 보인다. 운영자가 옛 값을 믿지 않게 한다(`.claude/rules/web-admin.md`).
  * 실패는 위험 알림이고 제목이 실패한 일, 본문이 봉투의 메시지와 추적 식별자다(web-admin 스토리 37).
@@ -62,6 +69,7 @@ export function ReadSection<T>({
   loadingLabel,
   failureTitle,
   above,
+  skeleton,
   children,
 }: ReadSectionProps<T>) {
   const titleId = useId();
@@ -88,14 +96,24 @@ export function ReadSection<T>({
       {refreshing ? <Progress label={REFRESHING_LABEL} /> : null}
       {shown ? null : (
         <AfterDelay>
-          <Progress label={loadingLabel} />
+          {skeleton === undefined ? (
+            <Progress label={loadingLabel} />
+          ) : (
+            <div className="@split:hidden">
+              <Progress label={loadingLabel} />
+            </div>
+          )}
         </AfterDelay>
       )}
       {above}
       {error !== undefined ? (
         <FailureAlert title={failureTitle} {...describeFailure(error)} />
-      ) : data === undefined ? null : (
+      ) : data !== undefined ? (
         children(data)
+      ) : skeleton === undefined ? null : (
+        <AfterDelay>
+          <div className="hidden @split:block">{skeleton}</div>
+        </AfterDelay>
       )}
     </section>
   );

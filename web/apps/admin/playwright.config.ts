@@ -18,6 +18,7 @@ export default defineConfig({
   forbidOnly: true,
   retries: 0,
   reporter: "list",
-  use: { trace: "retain-on-failure" },
+  // 실행 목록이 시각을 이 브라우저의 시간대로 적어 시간대와 언어를 고정한다(admin-style 명세 "e2e"). 사진 비교와 같다.
+  use: { trace: "retain-on-failure", timezoneId: "Asia/Seoul", locale: "ko-KR" },
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
 });
