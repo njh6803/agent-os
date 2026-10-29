@@ -1,4 +1,4 @@
-# 2026-10-29 (08) 관리 화면의 틀과 공통 상태, 설정 화면
+# 2026-10-29 (12) 관리 화면의 틀과 공통 상태, 설정 화면
 
 next-session 지시문으로 연 새 세션이다. 지시문대로 `tidy-checkouts`를 먼저 돌았고, 주 체크아웃에서 브랜치를 따지 않고 `EnterWorktree`(이름 `04-admin-frame-common-states`)로 워크트리에 들어가 브랜치를 바꿨다. `implement` 스킬을 디스크의 `SKILL.md`로 읽어 따랐다.
 
@@ -60,8 +60,8 @@ next-session 지시문으로 연 새 세션이다. 지시문대로 `tidy-checkou
 시작 프롬프트: /implement .scratch/admin-style/issues/04-admin-frame-common-states.md
 브랜치: feature/04-admin-frame-common-states
 모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
-읽을 것: docs/journal/2026-10-29-08-admin-frame-common-states.md의 "구현" 절부터 "인계(셀프 리뷰 직전)" 절까지
-이어받을 상태: 인계: 셀프 리뷰 직전. 커밋하지 않은 변경이 워크트리에 있고 셀프 리뷰(/code-review, 고정점 merge-base origin/main)부터 한다. 구현, 페이지 시험과 스토리 시험, 변이 표 셋(새 표 16, 티켓 02 표 7, 티켓 03 표 6 모두 기대대로), 프로브 README, 티켓 체크박스와 05~09 메모, 린트 둘, 관리 화면 e2e(셀프 리뷰 전 8 통과)는 마쳤다. 남은 것은 셀프 리뷰 반영(e2e 도우미나 중계에 닿으면 e2e를 다시 친다), 사진(visual:admin:update로 정답을 다시 만들고 바뀐 사진을 눈으로 본 뒤 PR 본문에 적는다. 패키지를 고쳐 visual과 visual:widget도 친다), web verify와 run_checks, 티켓 Status done, plan.md의 admin-style 행, 커밋, PR, 봇 회차, 회고, 워크트리 길 병합이다. 열린 PR #420(022-eslint-boolean-params)이 PluginList.tsx·RunDecision.tsx·HomePage.test.tsx·RunPage.tsx를 함께 고쳐 합칠 때 충돌 후보다. docs/journal/2026-10-29-08-admin-frame-common-states.md
+읽을 것: docs/journal/2026-10-29-12-admin-frame-common-states.md의 "구현" 절부터 "인계(셀프 리뷰 직전)" 절까지
+이어받을 상태: 인계: 셀프 리뷰 직전. 커밋하지 않은 변경이 워크트리에 있고 셀프 리뷰(/code-review, 고정점 merge-base origin/main)부터 한다. 구현, 페이지 시험과 스토리 시험, 변이 표 셋(새 표 16, 티켓 02 표 7, 티켓 03 표 6 모두 기대대로), 프로브 README, 티켓 체크박스와 05~09 메모, 린트 둘, 관리 화면 e2e(셀프 리뷰 전 8 통과)는 마쳤다. 남은 것은 셀프 리뷰 반영(e2e 도우미나 중계에 닿으면 e2e를 다시 친다), 사진(visual:admin:update로 정답을 다시 만들고 바뀐 사진을 눈으로 본 뒤 PR 본문에 적는다. 패키지를 고쳐 visual과 visual:widget도 친다), web verify와 run_checks, 티켓 Status done, plan.md의 admin-style 행, 커밋, PR, 봇 회차, 회고, 워크트리 길 병합이다. 열린 PR #420(022-eslint-boolean-params)이 PluginList.tsx·RunDecision.tsx·HomePage.test.tsx·RunPage.tsx를 함께 고쳐 합칠 때 충돌 후보다. docs/journal/2026-10-29-12-admin-frame-common-states.md
 확인할 선행 조건: Docker 엔진이 답하는지(timeout 20 docker version). 이 세션에서 Internal Server Error였고 사람이 Docker Desktop을 직접 다시 시작하기로 골랐지만, 다시 시작했다는 말은 인계 전까지 오지 않았다. 답하지 않으면 사람에게 다시 묻는다(다시 시작하면 다른 세션이 쓰던 컨테이너가 끊긴다)
 이번 요청 범위: PR과 병합까지
 ```
@@ -113,7 +113,7 @@ PR 직전 리뷰에 밀 주장(반영으로 새로 쓴 사실 문장):
 - `HomePage.test.tsx` 주석: "앞의 단언은 0.1초만 밀어, 지연이 없으면 빨개지고 머리가 선 뒤 흐른 실제 시간이 0.2초를 넘지 않는 한 초록이다".
 - README: "관리 토큰을 넣은 뒤 탐색의 "설정"(`/settings`)에서 넣는다".
 
-일지 번호는 `tools/sibling_overlap.py`가 main에 더 늦은 날짜의 일지가 있다며 옮기라고 해, 리뷰가 끝난 뒤 `--move`로 `2026-10-28-30`에서 `2026-10-29-08`로 옮겼다(도구가 찍었다. 처음 낸 빈 번호 06·07은 그새 형제가 가져갔다).
+일지 번호는 `tools/sibling_overlap.py`가 main에 더 늦은 날짜의 일지가 있다며 옮기라고 해, 리뷰가 끝난 뒤 `--move`로 `2026-10-28-30`에서 `2026-10-29-12`로 옮겼다(도구가 찍었다. 처음 낸 빈 번호 06·07은 그새 형제가 가져갔다).
 
 ## 사진 비교와 Docker
 
@@ -158,8 +158,8 @@ origin/main이 PR #420(harness 022, ESLint 판정자가 TypeScript의 불리언 
 시작 프롬프트: /implement .scratch/admin-style/issues/04-admin-frame-common-states.md
 브랜치: feature/04-admin-frame-common-states
 모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
-읽을 것: docs/journal/2026-10-29-08-admin-frame-common-states.md의 "셀프 리뷰" 절(PR 직전 리뷰에 밀 주장)부터 "인계(커밋 뒤)" 절까지
-이어받을 상태: 인계: 커밋 뒤. 커밋 c7714859까지 셀프 리뷰 반영, 사진(새 정답 40장을 눈으로 보고 visual·visual:widget·visual:admin 모두 통과), web verify와 run_checks, 티켓 Status done을 마쳤다. 커밋하지 않은 변경은 일지의 마지막 커밋 줄과 "인계(커밋 뒤)" 절뿐이다. 남은 단계는 origin/main 합치기(PR #420과 파일 다섯이 충돌 후보다. #420의 옵션 객체를 살리며 이 브랜치의 변경을 얹고, 합친 뒤 변이 표 셋을 --check로 본다), PR 직전 리뷰(밀 주장은 일지 셀프 리뷰 절), /git-pr(사진은 일지 "사진 비교와 Docker" 절대로 PR 본문에 적는다), plan.md 프론티어 줄 끝에 04가 병합되어 05·06·07·09가 풀렸다는 문장(PR 번호와 일지 2026-10-29-08, 08은 07을 기다린다), 봇 회차, 회고, 워크트리 길 병합이다. docs/journal/2026-10-29-08-admin-frame-common-states.md
+읽을 것: docs/journal/2026-10-29-12-admin-frame-common-states.md의 "셀프 리뷰" 절(PR 직전 리뷰에 밀 주장)부터 "인계(커밋 뒤)" 절까지
+이어받을 상태: 인계: 커밋 뒤. 커밋 c7714859까지 셀프 리뷰 반영, 사진(새 정답 40장을 눈으로 보고 visual·visual:widget·visual:admin 모두 통과), web verify와 run_checks, 티켓 Status done을 마쳤다. 커밋하지 않은 변경은 일지의 마지막 커밋 줄과 "인계(커밋 뒤)" 절뿐이다. 남은 단계는 origin/main 합치기(PR #420과 파일 다섯이 충돌 후보다. #420의 옵션 객체를 살리며 이 브랜치의 변경을 얹고, 합친 뒤 변이 표 셋을 --check로 본다), PR 직전 리뷰(밀 주장은 일지 셀프 리뷰 절), /git-pr(사진은 일지 "사진 비교와 Docker" 절대로 PR 본문에 적는다), plan.md 프론티어 줄 끝에 04가 병합되어 05·06·07·09가 풀렸다는 문장(PR 번호와 일지 2026-10-29-12, 08은 07을 기다린다), 봇 회차, 회고, 워크트리 길 병합이다. docs/journal/2026-10-29-12-admin-frame-common-states.md
 확인할 선행 조건: 없음
 이번 요청 범위: PR과 병합까지
 ```
@@ -201,8 +201,8 @@ PR을 연 경계에서 세션 컨텍스트가 약 27.7만 토큰으로 `hook_han
 시작 프롬프트: /implement .scratch/admin-style/issues/04-admin-frame-common-states.md
 브랜치: feature/04-admin-frame-common-states
 모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
-읽을 것: docs/journal/2026-10-29-08-admin-frame-common-states.md의 "이어받기(커밋 뒤)" 절부터 "인계(PR 연 뒤)" 절까지
-이어받을 상태: 인계: PR 연 뒤. PR #423을 열었고 커밋 01b3da5d까지 푸시했다. merge.md 2(봇 회차)부터 한다. 첫 @coderabbitai review 코멘트도 새 세션이 남긴다. 커밋하지 않은 변경은 plan.md 프론티어 줄 끝의 04 문장과 일지의 "인계(PR 연 뒤)" 절(과 따옴표 고침)뿐이고, 봇 회차의 반영 커밋에 싣는다(고칠 것이 없으면 그것만 실은 커밋. 회차 세기는 merge.md 2). 그 뒤 남은 단계는 회고(retro)와 일지 "다음", 워크트리 길 병합이다. docs/journal/2026-10-29-08-admin-frame-common-states.md
+읽을 것: docs/journal/2026-10-29-12-admin-frame-common-states.md의 "이어받기(커밋 뒤)" 절부터 "인계(PR 연 뒤)" 절까지
+이어받을 상태: 인계: PR 연 뒤. PR #423을 열었고 커밋 01b3da5d까지 푸시했다. merge.md 2(봇 회차)부터 한다. 첫 @coderabbitai review 코멘트도 새 세션이 남긴다. 커밋하지 않은 변경은 plan.md 프론티어 줄 끝의 04 문장과 일지의 "인계(PR 연 뒤)" 절(과 따옴표 고침)뿐이고, 봇 회차의 반영 커밋에 싣는다(고칠 것이 없으면 그것만 실은 커밋. 회차 세기는 merge.md 2). 그 뒤 남은 단계는 회고(retro)와 일지 "다음", 워크트리 길 병합이다. docs/journal/2026-10-29-12-admin-frame-common-states.md
 확인할 선행 조건: 없음
 이번 요청 범위: PR과 병합까지
 ```
@@ -223,6 +223,40 @@ open-session을 부른다 2026-10-29T09:16:56Z
   - Minor 2(고칠 것 없음): 옛 `FailureNotice`와 `FailureAlert`가 함께 있다. 지우는 시점은 05 메모의 끝 문장(05·07·08 가운데 마지막에 병합하는 티켓이 지운다)이 이미 정했다.
   - Nit(고칠 것 없음): 0.3초 시험의 가짜 시계에 실제 시간이 섞인다. PR 본문의 "남긴 위험"이 이미 적었다.
 - **대기의 끝.** `tools/wait_ci.py`가 헤드 `01b3da5`의 검사 아홉을 보고 `끝: 모두 통과`로 끝났다(도구가 찍었다). 통과 줄에 CodeRabbit이 리뷰했는지가 없어 따로 보니, CodeRabbit의 체크 런이 `neutral`에 제목 `Review rate limited`였고(`gh api …/check-runs`가 찍었다) `@coderabbitai review`에는 "Review rate limited" 답글이 달렸다(PR 코멘트가 찍었다). 그 헤드의 커밋 상태(StatusContext)는 비어 있었다(`gh api …/status`가 찍었다). 한도에 걸린 푸시는 CodeRabbit의 회차로 세지 않는다(`next-session` `merge.md` 2). 그 PR의 보안·버그 축은 PR 직전에 돈 대체 둘의 결과를 PR 본문에 적은 것이 대신한다(`docs/constitution/operations.md` 리뷰 파이프라인의 CodeRabbit 한도 항목).
+
+## 인계(봇 회차 1 커밋 뒤)
+
+봇 회차 1의 반영과 회고·"다음"을 실은 커밋 `363675e0`이 섰다. pre-commit은 pytest(781.3초)와 web-verify(520.1초)를 포함해 모두 지났다(러너가 찍었다). 인용 대조가 위 "이어받기(커밋 뒤)"의 ruff 출력 인용 하나를 저장소의 다른 자리에 없다고 경고했다(경고만이다, 러너가 찍었다). 도구의 출력을 옮긴 것이라 그대로 둔다. 이 커밋은 아직 푸시하지 않았다.
+
+커밋 뒤 경계에서 세션 컨텍스트가 약 27.6만 토큰으로 `hook_handoff`가 왔다. 인계하지 않는 때 다섯에 들지 않았다(커밋이 섰고, 요청 범위는 병합까지이며, 지시문의 "이어받을 상태"는 `인계: PR 연 뒤`라 경계가 다르고, `인계 못함` 줄이 없고, `get_session`의 `self`에 `parentSessionId`가 없었다). 이 세션의 지금 제목은 `feature/04-admin-frame-common-states`다.
+
+이 세션이 번복하거나 고친 것: 커밋 메시지 제목이 77자라 commit-msg 훅의 72자에 걸린다고 `hook_bash_commit_msg`가 커밋 전에 막아(훅이 찍었다) 제목을 줄였다. 회고와 "다음"이 일지 끝에 오도록 이 절을 "회고" 앞에 넣었다.
+
+```
+다음 작업: .scratch/admin-style/issues/04-admin-frame-common-states.md. 관리 화면의 틀과 공통 상태
+다음 단계: PR 반영·병합
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /implement .scratch/admin-style/issues/04-admin-frame-common-states.md
+브랜치: feature/04-admin-frame-common-states
+모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
+읽을 것: docs/journal/2026-10-29-12-admin-frame-common-states.md의 "이어받기(PR 연 뒤)" 절부터 끝까지
+이어받을 상태: 인계: 커밋 뒤. 커밋 363675e0까지 봇 회차 1(claude-review 첫 회차의 Minor 하나를 05·07 메모로 넘겼고, CodeRabbit은 한도에 걸려 리뷰가 없었다), plan.md 프론티어 줄의 04 문장, 회고(대기열 494·499를 3회차로, 새 행 541)와 일지 "다음"을 마쳤고 아직 푸시하지 않았다. 푸시와 merge.md 2(봇 회차)부터 한다. 이 푸시로 도는 claude-review는 둘째 회차라 Critical·Major만 고치고, CodeRabbit은 아직 리뷰를 낸 적이 없어 다음 리뷰가 첫 회차다. 커밋하지 않은 변경은 일지의 "인계(봇 회차 1 커밋 뒤)" 절뿐이고, 푸시 전에 그 절(과 새 세션의 이어받기 절)을 실은 커밋을 더해 함께 푸시한다. 일지에 더하는 절은 "회고" 앞에 넣는다. 그 뒤 남은 단계는 워크트리 길 병합과 next-session이다. docs/journal/2026-10-29-12-admin-frame-common-states.md
+확인할 선행 조건: 없음
+이번 요청 범위: PR과 병합까지
+```
+
+제목을 `feature/04-admin-frame-common-states (인계함)`으로 바꿨다. 남은 백그라운드 작업은 없었다(대기와 커밋이 그 전에 끝났다). `git worktree unlock`은 `is not locked`로 끝났다(git이 찍었다).
+
+open-session을 부른다 2026-10-29T09:49:17Z
+
+## 이어받기(봇 회차 1 커밋 뒤)
+
+> 사용자: "다음 작업: .scratch/admin-style/issues/04-admin-frame-common-states.md. 관리 화면의 틀과 공통 상태 / 다음 단계: PR 반영·병합 … 이어받을 상태: 인계: 커밋 뒤. 커밋 363675e0까지 봇 회차 1 … 마쳤고 아직 푸시하지 않았다. 푸시와 merge.md 2(봇 회차)부터 한다 … 푸시 전에 그 절(과 새 세션의 이어받기 절)을 실은 커밋을 더해 함께 푸시한다. 일지에 더하는 절은 "회고" 앞에 넣는다. 그 뒤 남은 단계는 워크트리 길 병합과 next-session이다 … 이번 요청 범위: PR과 병합까지"
+
+새 세션이 제목을 브랜치 이름으로 바꾸고 `EnterWorktree`(path)로 이 워크트리에 들어왔다. 헤드는 `363675e0`이었고 커밋하지 않은 변경은 지시문대로 이 일지의 "인계(봇 회차 1 커밋 뒤)" 절뿐이었다(`git status --porcelain`이 찍었다).
+
+- **main 합치기.** origin/main이 `06845c68`(#425, model-rerun의 시험·명세·일지) 하나만큼 앞서 PR이 `mergeStateStatus` `BEHIND`였다(`gh pr view`가 찍었다). 그 커밋이 바꾼 파일 일곱(`git diff --name-only HEAD...origin/main`이 찍었다)은 모두 `.scratch/model-rerun/`, `tests/tools/test_rerun_runner.py`, 그 일지라 이 브랜치가 이름으로 든 파일과 겹치지 않았다(손으로 대조했다). 둘째 회차의 claude-review가 한 번만 돌도록 푸시 전에 `git merge origin/main`으로 합쳤고 충돌은 없었다(git이 찍었다).
+- **일지 번호 옮기기.** 커밋 전 `tools/sibling_overlap.py`가 이 일지 `2026-10-29-08`이 origin/main의 최신 일지 `2026-10-29-10`보다 이름순으로 앞선다며 `2026-10-29-12`로 옮기라고 1로 끝났다(도구가 찍었다). `--move`로 파일 이름과 `.scratch/admin-style/probes/README.md`, `.scratch/plan.md`, `.scratch/retro-queue.md`, 이 일지 안의 인용을 옮겼고(도구가 찍었다), 이 브랜치의 변경에 옛 번호가 남지 않은 것을 `git diff --merge-base origin/main`의 더한 줄 grep으로 봤다(출력이 비었다). PR 본문의 일지 경로도 도구가 쓴 본문으로 갈았다. 올리기 전에 지금 본문과 `diff`로 견주니 차이는 그 경로 한 줄뿐이었다(손으로 봤다).
 
 ## 회고
 
