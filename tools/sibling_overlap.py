@@ -25,11 +25,19 @@
 이미 가진 번호는 main 줄에만 한 번 나온다. 이 브랜치의 새 번호에서는 main에 같은 번호·같은
 파일(행)로 이미 든 것도 뺀다. 쌓아 올린 아래 PR이 squash로 병합된 뒤 main을 들이지 않은
 브랜치에서 그 번호는 공유한 이력인데, 새 일지로 세면 이름순 판정이 거짓 1을 내고 main에 있는
-일지를 옮기라고 한다. 헌법 판은 내용을 가를 수 없어 빼지 않는다. 이 브랜치는 작업 트리(커밋하지
-않은 변경과 미추적 파일)를 읽는다. merge-base에서 앞의 네 자리 가운데 하나라도 비면 경로가 어긋난
-것으로 보고 2로 끝난다(조용히 겹침 없음이 되지 않게). harness 티켓 자리는 비어도 2로 끝나지 않는다.
-#335 전에 딴 브랜치의 merge-base 에는 harness 폴더가 없어, 그 자리를 넣으면 그 브랜치들이 대조를
-잃는다. 그 값은 못 보는 것의 경로가 어긋난 harness 티켓 폴더 항목이다.
+일지를 옮기라고 한다. 헌법 판은 내용을 가를 수 없어 빼지 않는다. 합치기를 커밋하기 전(`MERGE_HEAD`
+가 있다)에는 합칠 머리(main 이 아니어도, octopus 면 모두)의 번호를 이 브랜치 밖의 번호로 세고,
+그와 같은 파일·같은 행을 이 브랜치의 새 번호에서 빼며, 합칠 머리가 merge-base 에 없이 더한 대기열
+행도 뺀다. 그 행에 합치며 글(회차)을 더하면 main 과 글이 달라 이 브랜치의 새 행으로 읽고 옮기라고
+했다(대기열 492). 이 브랜치의 커밋(`HEAD`)에도 있던 번호는 두고, 작업 트리에 두 줄 이상인 번호는
+합칠 머리에 글자 그대로 없는 줄을 둔다. 양쪽이 더한 진짜 겹침이라서다.
+merge-base 를 `git merge-base origin/main HEAD MERGE_HEAD`(`tools/check_ticket.py` 의 꼴)로 구하면
+합칠 머리가 main 일 때 main 자체가 되어, 그 겹침과 main 이 함께 고친 파일까지 사라져 그러지 않는다
+(그 꼴로 바꾼 판에서 이 도구의 시험 둘이 빨개진 것을 손으로 봤다, harness 티켓 024). 이 브랜치는
+작업 트리(커밋하지 않은 변경과 미추적 파일)를 읽는다. merge-base에서 앞의 네 자리 가운데 하나라도
+비면 경로가 어긋난 것으로 보고 2로 끝난다(조용히 겹침 없음이 되지 않게). harness 티켓 자리는 비어도
+2로 끝나지 않는다. #335 전에 딴 브랜치의 merge-base 에는 harness 폴더가 없어, 그 자리를 넣으면 그
+브랜치들이 대조를 잃는다. 그 값은 못 보는 것의 경로가 어긋난 harness 티켓 폴더 항목이다.
 
 열린 PR은 GitHub REST(`gh api repos/<owner>/<repo>/pulls?state=open`)로 읽는다. `origin`이
 github.com이 아니거나 `gh`가 없거나 실패하면 `refs/pull/N/merge`가 있는 PR을 열린 것으로 본다.
@@ -237,6 +245,8 @@ PR 을 닫으라는 할 일을 낸다. 다른 이름의 브랜치는 이름이 �
   지나간다. 거꾸로 일부러 없는 번호를 쓴 시험 데이터(문자열)도 인용으로 읽어 알린다. 그래서 이
   도구의 시험은 임시 저장소에 없고 이 저장소에 있는 번호를 쓴다.
 - 푸시했지만 PR을 열지 않은 브랜치, 다른 기계·다른 클라우드 세션의 커밋하지 않은 변경.
+- 합치기를 커밋하기 전에, 합칠 머리가 더한 행을 지우고 같은 번호로 이 브랜치의 다른 행을 한 줄만
+  둔 것. 행의 글로는 회차를 더한 것과 가르지 못해 합칠 머리의 행으로 보고 뺀다(대기열 492).
 - main을 이미 들여 작업 트리 안에서 같은 번호가 둘이 된 것. 둘 다 merge-base에 있거나 merge-base에
   든 번호와 같아 "새로"가 아니다. 일지는 `tests/test_journal_names.py`, ADR은
   `tools/check_adr_pointers.py`, harness 티켓은 `tests/test_harness_ticket_names.py`가 본다. 티켓은
@@ -503,7 +513,7 @@ def read_numbers(
 ) -> Numbers:
     journals = {m.group(1): name for name in journal_names if (m := JOURNAL_NAME.match(name))}
     adrs = {m.group(1): name for name in adr_names if (m := ADR_NAME.match(name))}
-    rows = {int(m.group(1)): line for line in queue.splitlines() if (m := QUEUE_ROW.match(line))}
+    rows = dict(queue_lines(queue))  # 같은 번호는 뒤 줄로 덮는다
     version = VERSION.search(constitution)
     tickets = {m.group(1): name for name in ticket_names if (m := TICKET_NAME.match(name))}
     return Numbers(journals, adrs, rows, version.group(1) if version else None, tickets)
@@ -1280,6 +1290,47 @@ def numbers_of(snapshot: Snapshot) -> Numbers:
     )
 
 
+def queue_lines(queue: str) -> list[tuple[int, str]]:
+    """대기열 글의 (행 번호, 행)을 줄 차례대로. `read_numbers` 와 달리 같은 번호의 줄을 모두
+    둔다."""
+    return [(int(m.group(1)), line) for line in queue.splitlines() if (m := QUEUE_ROW.match(line))]
+
+
+def merge_heads(root: Path) -> list[str]:
+    """합치기를 커밋하기 전이면 `MERGE_HEAD` 파일의 커밋들(octopus 면 여럿). 아니면 빈 목록."""
+    result = _git_result(root, ("rev-parse", "--git-path", "MERGE_HEAD"), LOCAL_TIMEOUT)
+    if result.returncode != 0:
+        raise SurveyError(f"git rev-parse --git-path: {result.stderr.strip()}")
+    path = Path(result.stdout.strip())
+    marker = path if path.is_absolute() else root / path
+    return marker.read_text(encoding="utf-8").split() if marker.is_file() else []
+
+
+def drop_merged_rows(
+    rows: dict[int, str], disk: str, head: str, merged: Sequence[str], base: Numbers
+) -> dict[int, str]:
+    """합치는 중에 이 브랜치의 새 행(`rows`) 가운데 합칠 머리가 더한 행을 뺀다(대기열 492).
+
+    `disk`·`head`·`merged` 는 작업 트리·`HEAD`·합칠 머리들의 대기열 글이다. 합칠 머리가 `base` 에
+    없이 더한 번호가 작업 트리에 한 줄이고 `HEAD` 에 없으면, 합치며 글(회차)을 더한 그쪽 행이라
+    뺀다. 작업 트리에 두 줄 이상이면 합칠 머리에 글자 그대로 없는 줄을 이 브랜치의 행으로 둔다.
+    `read_numbers` 는 같은 번호를 뒤 줄로 덮어, 그쪽 행이 뒤에 오면 이 브랜치의 행을 잃기 때문이다.
+    """
+    brought: dict[int, set[str]] = {}
+    for text in merged:
+        for number, line in queue_lines(text):
+            if number not in base.rows:
+                brought.setdefault(number, set()).add(line)
+    committed = {number for number, _ in queue_lines(head)}
+    lines = queue_lines(disk)
+    counts = {number: sum(1 for n, _ in lines if n == number) for number in brought}
+    kept = {k: v for k, v in rows.items() if k not in brought or k in committed}
+    for number, line in lines:
+        if counts.get(number, 0) > 1 and line not in brought[number]:
+            kept[number] = line
+    return kept
+
+
 def canary_sources(root: Path) -> dict[str, str | None]:
     """디스크의 카나리아 명세(저장소 기준 경로) → 그 `source`. 읽지 못했거나 글자가 아니면 None."""
     found: dict[str, str | None] = {}
@@ -1519,6 +1570,21 @@ def survey(root: Path, remote: Remote) -> Survey:
         add(f"워크트리 {path}", head, numbers, changed, pull=pull)
     disk = numbers_of(Disk(root))
     ours = unshared(fresh(disk, base_numbers), main_numbers)
+    if heads := merge_heads(root):
+        # 합치기를 커밋하기 전이다. 합칠 머리가 main 이 아니어도 그 번호는 이 브랜치 밖의 것이다
+        merged = [Tree(root, head) for head in heads]
+        for tree in merged:
+            numbers = numbers_of(tree)
+            taken.append(numbers)
+            ours = unshared(ours, numbers)
+        rows = drop_merged_rows(
+            ours.rows,
+            Disk(root).text(QUEUE),
+            Tree(root, "HEAD").text(QUEUE),
+            [tree.text(QUEUE) for tree in merged],
+            base_numbers,
+        )
+        ours = replace(ours, rows=rows)
     changed = _own_changes(root, base, main_sha)
     reserved: str | None = None
     if CONSTITUTION not in changed:

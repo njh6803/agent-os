@@ -2379,6 +2379,165 @@ def test_합치는_도중_main에서_들어온_줄의_일지_인용은_이_브�
     assert "어디에도 없는 일지" not in out
 
 
+def test_합치는_도중_main이_더한_행에_글을_더해도_이_브랜치의_새_행이_아니다(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """대기열 492: 합치기를 커밋하기 전에 merge-base 를 `HEAD` 와 main 으로만 구해 옛 main 에
+    머물렀고, main 이 더한 행에 회차만 더한 것을 이 브랜치의 새 행으로 읽어 다음 번호로 옮겼다."""
+    _, work, pusher = _원격과_클론(tmp_path, SEED)
+    _커밋한다(work, {"docs/notes.md": "이쪽\n"}, "이 브랜치")
+    queue = QUEUE_HEAD + "| 1 | 씨앗 |\n| 2 | main 의 행 | 자체 승인, 1회차 |\n"
+    _커밋한다(pusher, {".scratch/retro-queue.md": queue}, "main")
+    _git(pusher, "push", "-q", "origin", "main")
+    _git(work, "fetch", "-q", "origin")
+    _git(work, "merge", "-q", "--no-ff", "--no-commit", "origin/main")
+    assert _git(work, "rev-parse", "-q", "--verify", "MERGE_HEAD")
+    _쓴다(work, {".scratch/retro-queue.md": queue.replace("1회차", "2회차")})
+
+    code = main([str(work)])
+
+    out = capsys.readouterr().out
+    assert code == 0, out
+    assert "이 브랜치의 새 번호 없음" in out
+    assert "옮길 번호" not in out
+
+
+def test_합치는_도중_main이_더한_행과_같은_번호로_새_행을_더하면_겹침이다(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """대기열 492 의 뺌은 작업 트리에 그 번호가 한 줄일 때만이다. 합치는 중에 커밋하지 않은 새 행을
+    main 의 행과 같은 번호로 더하면 두 줄이라 진짜 겹침으로 알린다."""
+    _, work, pusher = _원격과_클론(tmp_path, SEED)
+    _커밋한다(work, {"docs/notes.md": "이쪽\n"}, "이 브랜치")
+    queue = QUEUE_HEAD + "| 1 | 씨앗 |\n| 2 | main 의 행 |\n"
+    _커밋한다(pusher, {".scratch/retro-queue.md": queue}, "main")
+    _git(pusher, "push", "-q", "origin", "main")
+    _git(work, "fetch", "-q", "origin")
+    _git(work, "merge", "-q", "--no-ff", "--no-commit", "origin/main")
+    _쓴다(work, {".scratch/retro-queue.md": queue + "| 2 | 이쪽 |\n"})
+
+    code = main([str(work)])
+
+    out = capsys.readouterr().out
+    assert code == 1, out
+    assert "이 브랜치의 새 번호: 대기열 2" in out
+    assert "옮길 번호: 대기열 2 → 3\n" in out
+
+
+def test_합치는_도중_두_줄이면_main의_행이_뒤에_와도_겹침이다(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """셀프 리뷰 명세 축: 행 사전은 같은 번호를 뒤 줄로 덮어, main 의 행이 뒤에 오면 이 브랜치의
+    행을 잃고 0으로 끝났다. 합칠 머리에 글자 그대로 없는 줄을 이 브랜치의 행으로 둔다."""
+    _, work, pusher = _원격과_클론(tmp_path, SEED)
+    _커밋한다(work, {"docs/notes.md": "이쪽\n"}, "이 브랜치")
+    queue = QUEUE_HEAD + "| 1 | 씨앗 |\n"
+    _커밋한다(pusher, {".scratch/retro-queue.md": queue + "| 2 | main 의 행 |\n"}, "main")
+    _git(pusher, "push", "-q", "origin", "main")
+    _git(work, "fetch", "-q", "origin")
+    _git(work, "merge", "-q", "--no-ff", "--no-commit", "origin/main")
+    _쓴다(work, {".scratch/retro-queue.md": queue + "| 2 | 이쪽 |\n| 2 | main 의 행 |\n"})
+
+    code = main([str(work)])
+
+    out = capsys.readouterr().out
+    assert code == 1, out
+    assert "이 브랜치의 새 번호: 대기열 2" in out
+    assert "옮길 번호: 대기열 2 → 3\n" in out
+
+
+def test_main이_아닌_브랜치를_합치는_도중에는_그_번호를_이_브랜치_밖의_것으로_센다(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """셀프 리뷰 명세 축: 합칠 머리가 main 이 아니면 그 일지를 이 브랜치의 새 일지로 읽었고, 그
+    대기열 행은 뺐는데 다음 빈 번호가 그 행의 번호를 냈다."""
+    _, work, _ = _원격과_클론(tmp_path, SEED)
+    _커밋한다(work, {"docs/notes.md": "이쪽\n"}, "이 브랜치")
+    _git(work, "checkout", "-q", "-b", "side", "origin/main")
+    queue = QUEUE_HEAD + "| 1 | 씨앗 |\n| 2 | 옆의 행, 1회차 |\n"
+    files = {".scratch/retro-queue.md": queue, "docs/journal/2026-10-07-05-side.md": "# x\n"}
+    _커밋한다(work, files, "side")
+    _git(work, "checkout", "-q", "-")
+    _git(work, "merge", "-q", "--no-ff", "--no-commit", "side")
+    _쓴다(work, {".scratch/retro-queue.md": queue.replace("1회차", "2회차")})
+
+    code = main([str(work)], today=date(2026, 10, 7))
+
+    out = capsys.readouterr().out
+    assert code == 0, out
+    assert "이 브랜치의 새 번호 없음" in out
+    assert "다음 빈 번호(형제 포함): 일지 2026-10-07-06, 대기열 3," in out
+
+
+def test_합치는_도중_이_브랜치가_커밋한_행을_한_줄로_풀어도_겹침이다(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """셀프 리뷰 표준 축: `HEAD` 에도 있던 번호를 두는 갈래를 지워도 초록이었다. 양쪽이 같은 번호로
+    행을 커밋하고 충돌을 이 브랜치의 행 한 줄로 풀면, 그 번호는 이 브랜치의 것이라 겹침이다."""
+    queue = SEED[QUEUE]
+    _, work, pusher = _원격과_클론(tmp_path, SEED)
+    _커밋한다(work, {QUEUE: queue + "| 2 | 이쪽 |\n"}, "이 브랜치")
+    _커밋한다(pusher, {QUEUE: queue + "| 2 | main |\n"}, "main")
+    _git(pusher, "push", "-q", "origin", "main")
+    _git(work, "fetch", "-q", "origin")
+    with pytest.raises(subprocess.CalledProcessError):
+        _git(work, "merge", "-q", "origin/main")  # 대기열 끝이 충돌한다
+    _쓴다(work, {QUEUE: queue + "| 2 | 이쪽 |\n"})
+    _git(work, "add", QUEUE)
+
+    code = main([str(work)])
+
+    out = capsys.readouterr().out
+    assert code == 1, out
+    assert "이 브랜치의 새 번호: 대기열 2" in out
+    assert "옮길 번호: 대기열 2 → 3\n" in out
+
+
+def test_여러_머리를_합치는_도중에는_머리마다_그_번호를_이_브랜치_밖의_것으로_센다(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """셀프 리뷰 표준 축: octopus 합치기(`MERGE_HEAD` 가 여러 줄)를 만드는 시험이 없었다."""
+    _, work, _ = _원격과_클론(tmp_path, SEED)
+    _커밋한다(work, {"docs/notes.md": "이쪽\n"}, "이 브랜치")
+    queue = QUEUE_HEAD + "| 1 | 씨앗 |\n| 2 | 옆의 행, 1회차 |\n"
+    _git(work, "checkout", "-q", "-b", "side1", "origin/main")
+    _커밋한다(work, {QUEUE: queue}, "side1")
+    _git(work, "checkout", "-q", "-b", "side2", "origin/main")
+    _커밋한다(work, {"docs/journal/2026-10-07-05-side.md": "# x\n"}, "side2")
+    _git(work, "checkout", "-q", "topic")
+    _git(work, "merge", "-q", "--no-ff", "--no-commit", "side1", "side2")
+    merge_head = (work / ".git" / "MERGE_HEAD").read_text(encoding="utf-8")
+    assert len(merge_head.split()) == 2, merge_head
+    _쓴다(work, {QUEUE: queue.replace("1회차", "2회차")})
+
+    code = main([str(work)], today=date(2026, 10, 7))
+
+    out = capsys.readouterr().out
+    assert code == 0, out
+    assert "이 브랜치의 새 번호 없음" in out
+    assert "다음 빈 번호(형제 포함): 일지 2026-10-07-06, 대기열 3," in out
+
+
+def test_합치는_도중_main이_더한_행을_같은_번호의_다른_행으로_바꾸면_보지_못한다(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """못 보는 것: 한 줄이면 행의 글로는 회차를 더한 것과 가르지 못해 main 의 행으로 보고 뺀다."""
+    _, work, pusher = _원격과_클론(tmp_path, SEED)
+    _커밋한다(work, {"docs/notes.md": "이쪽\n"}, "이 브랜치")
+    queue = QUEUE_HEAD + "| 1 | 씨앗 |\n"
+    _커밋한다(pusher, {".scratch/retro-queue.md": queue + "| 2 | main 의 행 |\n"}, "main")
+    _git(pusher, "push", "-q", "origin", "main")
+    _git(work, "fetch", "-q", "origin")
+    _git(work, "merge", "-q", "--no-ff", "--no-commit", "origin/main")
+    _쓴다(work, {".scratch/retro-queue.md": queue + "| 2 | 이쪽 |\n"})
+
+    code = main([str(work)])
+
+    out = capsys.readouterr().out
+    assert code == 0, out
+    assert "이 브랜치의 새 번호 없음" in out
+
+
 def test_main이_이_브랜치_몫으로_비워_둔_헌법_판에_이력을_더했으면_판을_올린_것이다(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
