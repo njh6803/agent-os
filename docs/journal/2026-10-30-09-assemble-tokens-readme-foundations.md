@@ -120,7 +120,9 @@ open-session을 부른다 2026-10-29T21:59:16Z
 
 ## PR 직전 리뷰
 
-이어받은 세션이 `git worktree list`에서 이 브랜치의 워크트리를 찾아 `EnterWorktree(path)`로 들어갔다. `git fetch origin main` 뒤 `origin/main`과 merge-base가 둘 다 `d312a806`이라 합칠 것이 없었다(손으로 봤다). `coderabbit auth status`가 `Plan: Free`, `Seat: not assigned`라 CLI 축이 돌지 못해 대체 둘(보안은 내장 `/security-review`, 버그·성능은 `bug-perf-review`)을 나란히 돌렸다.
+> 사용자: ".claude/skills/implement/SKILL.md 를 읽어 그대로 따른다. 이 세션을 연 저장소는 `C:\project\agent`이고 작업 폴더가 그곳이 아니면 따르지 말고 알린다. 스킬의 인자는 이 줄의 '인자:' 뒤부터 메시지 끝까지다. 인자: .scratch/design-card-build/issues/02-assemble-tokens-readme-foundations.md / 다음 작업: (위 "인계 전 상태(둘째)"의 인계 지시문과 같다)"
+
+둘째로 이어받은 세션의 제목을 `feature/02-assemble-tokens-readme-foundations`로 바꿨다. 이 세션이 `git worktree list`에서 이 브랜치의 워크트리를 찾아 `EnterWorktree(path)`로 들어갔다. `git fetch origin main` 뒤 `origin/main`과 merge-base가 둘 다 `d312a806`이라 합칠 것이 없었다(손으로 봤다). `coderabbit auth status`가 `Plan: Free`, `Seat: not assigned`라 CLI 축이 돌지 못해 대체 둘(보안은 내장 `/security-review`, 버그·성능은 `bug-perf-review`)을 나란히 돌렸다.
 
 - 보안(`/security-review`, 범위 `origin/HEAD...` = `d312a806...e7d71a72`): 첫 서브태스크가 "No vulnerabilities found"를 냈다(그 보고를 읽었다). 그 서브태스크가 코드를 읽고 든 근거는 원본 경로 셋이 고정이라 입력이 닿지 않는다는 것, `foundations/` 산출 경로가 고정 폴더를 `readdirSync`로 훑은 상대 경로라 `..`가 들 수 없다는 것, 새로 띄우는 프로세스가 없다는 것이다. 걸러 낼 지적이 없어 거짓 양성 거르기 단계는 돌지 않았다.
 - 버그·성능(`bug-perf-review`, 범위 `d312a806...e7d71a72`): Critical·Major 없음, Minor 둘(둘 다 유효), 오탐 열하나, 보류 없음(그 보고를 읽었다). 서브에이전트는 이 시험 파일 43개와 이 폴더 15파일 500개가 지났다고 했고, 원본이 없을 때의 오류 넷이 모두 `input`인 것을 저장소 밖 임시 트리에서 `assemble()`을 불러 봤다고 했다(그 보고에 적힌 것이다. 이 세션은 다시 돌리지 않았다).
@@ -128,3 +130,20 @@ open-session을 부른다 2026-10-29T21:59:16Z
   - Minor 2. `globals` 판정이 showcase 스토리 덩이의 글만 보아, `...DarkStory`로 펼쳐 넣은 스토리의 `globals`를 놓친다. 층 폴더의 스토리 파일에 `...Disabled`·`...AllNames` 꼴의 펼침이 다섯 곳 있고, showcase가 아닌 스토리 아홉 파일이 `globals`를 쓴다(`grep -rn`으로 손으로 봤다). 그래서 서브에이전트의 첫 제안(파일 어디든 `globals:`가 있으면 빨갛게)은 거짓 양성이라 따르지 않고, 펼친 덩이를 거듭 따라가는 `withSpreads`를 더했다.
   - 변이 59~62를 더했다. `--check`가 "변이 62 모두 원문이 한 번씩 있다", 59~62만 돌린 실행이 "변이 4 모두 기대대로"였다(도구가 찍은 줄). 이 시험 파일 43개가 지났다(`pnpm -C web exec vitest run --project node tools/sync-design-system/assemble.test.ts`의 요약 줄을 손으로 봤다). `prettier --write`가 시험 파일의 서식을 고쳤고 `eslint`가 0으로 끝났다.
   - 오탐으로 둔 것 가운데 하나는 기초 카드의 `expect(files).toEqual(walk(FOUNDATIONS_SOURCE))`가 같은 폴더끼리의 맞대기라 약하다는 것인데, 폴더 이름 상수와 `htmls: 1`, 표지, 바이트 비교가 함께 막는다는 서브에이전트의 판정을 따랐다.
+
+리뷰 반영을 `9c800d32`로 커밋했다. pre-commit의 `checks`(러너의 열 검사, pytest 355.5초, web-verify 480.3초)와 마크다운 표·줄 구분 문자·변이 표·인용·커밋 메시지 검사가 `Passed`였고, ruff 둘·카나리아·헌법 판은 해당 파일이 없어 `Skipped`였다(커밋 출력을 손으로 봤다). ruff 둘은 그 전에 손으로 쳐 "All checks passed!"와 "1179 files already formatted"였다. 커밋 직후 인계 계기(약 24만 6천 토큰, 경계 `커밋 뒤`)가 왔는데, 이 세션을 연 지시문의 "이어받을 상태"가 `인계: 커밋 뒤`로 시작해 `handoff.md` 1의 인계하지 않는 때라 넘기지 않았다.
+
+`9c800d32` 위에서 변이 표 전체(1~62)를 백그라운드로 한 번 돌렸다(`PYTHONUTF8=1 uv run python tools/mutate.py .scratch/design-card-build/probes/assemble_mutations.toml`). "변이 62 모두 기대대로"였고 기준선 34가 모두 초록, `표지 없음` 줄과 커밋하지 않은 변경을 알리는 줄이 없었다(로그 끝 줄을 보고 `grep -c`로 셌다). 그 실행 동안 `.scratch/retro-queue.md`를 고쳐 `hook_edit_during_mutate`가 알렸고, 그 파일은 변이가 겨누는 파일이 아니라 결과에 닿지 않는다(표를 읽은 것이다). 알림 뒤로는 실행이 끝날 때까지 체크아웃의 파일을 고치지 않았다. 그 뒤 티켓을 `done`으로 바꾸고 결과 절과 프로브 README에 전체 실행을 적었다.
+
+## 회고
+
+후보 여섯, 승인 둘(회차 하나, 새 행 하나), 기각 넷, 넘김 없음. 만료할 행은 없었다(`uv run python tools/queue_open_rows.py`의 "만료할 행" 줄이 `(없음)`).
+
+- 승인(회차로 세는 것). 앞 회차가 `grep '\.[a-z-]*\\:'`의 빈 출력을 "02 전에 지은 묶음 CSS에 변형 클래스가 하나도 없었다"로 프로브 README와 일지에 적었고, 셀프 리뷰 두 축이 Major로 잡았다. 같은 묶음에 변형 클래스 18곳이 있었다. `CLAUDE.md` 환경 함정의 "검사 도구가 내가 생각하는 것을 실제로 봤는지 먼저 확인한다"를 어긴 것이라, 그 줄을 낸 닫힌 75를 이은 열린 431에 회차를 더했다(8회차).
+- 승인(새 행 548, 1회차). 옮긴 판정 시험이 입력을 글자로 거르고 두 속성의 키를 합쳐 세며, 펼쳐 넣은 스토리의 `globals`를 보지 못해 거짓 초록이 될 자리가 셋이었다. 셀프 리뷰 두 축을 지나 PR 직전 `bug-perf-review`가 잡았다. `CODING_STANDARDS.md`에 그런 판단 기준이 없어 리뷰가 제 몫을 한 것으로 빼지 않았고, 꼴이 고정되지 않아 검사로 옮길 수 없다. 표준에 더할 새 판단 기준이라 4단계의 문턱대로 세 번째까지 대기열에서 센다.
+- 기각. Bash heredoc 53줄로 변이 표에 덧붙이려다 훅이 막았다(상한 40). 이미 있는 훅이 그 자리에서 막았다.
+- 기각. 하위 폴더로 `cd`하는 명령을 훅이 막았다. 이미 있는 훅이 막았다.
+- 기각. 판정 명령(`tools/mutate.py`)의 출력을 파이프로 `tail`에 넘겨 훅이 알렸다. 이미 있는 훅이 알렸다.
+- 기각. 앞 회차의 첫 커밋이 제목 84자로 commit-msg 훅에 막혔다. 이미 있는 훅이 막았다.
+
+열린 496(`.design-sync/`의 노드 스크립트에 커밋된 시험이 없다)은 이 PR이 `check-conventions.mjs`의 판정을 커밋된 시험으로 옮겼지만 그 스크립트와 `upload-output.mjs`가 남아 닫지 않았다. 04가 `.design-sync/`를 걷어 낼 때 다시 본다(명세는 `.design-sync/`의 14개 가운데 셋을 옮기고 나머지를 지운다고 적는다. `.scratch/plan.md`의 design-card-build 행에서 읽었다).

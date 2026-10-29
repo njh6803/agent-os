@@ -8,7 +8,7 @@ README 원본과 기초 카드 원본은 지금 자리(`.design-sync/conventions
 
 **Blocked by:** 01
 
-**Status:** in-progress
+**Status:** done
 
 ### 산출
 
@@ -57,6 +57,6 @@ README 원본과 기초 카드 원본은 지금 자리(`.design-sync/conventions
 | (없음) | `tokens.json` 바이트, 테마 이름, README·지침 바이트의 사례 넷 | 새 판정 |
 
 - **뺀 것.** 타입(`<이름>.d.ts`)은 짓지 않아 묶음 머리의 목록으로 갈음했다(명세 Out of Scope). 빼는 목록(`config.json`의 skip)과 그 일치 판정은 04가 그 목록을 지우므로 뺐다. 목록 타일(`thumbnail.html`)도 04가 지운다. `ds-bundle/`에 같은 내용으로 복사됐는지는 산출 폴더가 곧 올릴 것이라 볼 자리가 없고, 기초 카드·README·지침은 원본과 바이트를 맞대는 사례가 그 몫을 맡는다.
-- **검증.** 셀프 리뷰를 반영한 작업 트리에서 `uv run ruff check .`와 `uv run ruff format --check .`가 지났고, `uv run python tools/run_checks.py`의 열 검사(`check-ticket`, `zizmor`, `lint-imports`, `check-instructions`, `check-type-escapes`, `pyright-linux`, `pyright`, `run-hooks`, `pytest`, `web-verify`)가 모두 `Passed`였다(러너 출력을 손으로 봤다).
+- **검증.** 셀프 리뷰를 반영한 작업 트리에서 `uv run ruff check .`와 `uv run ruff format --check .`가 지났고, `uv run python tools/run_checks.py`의 열 검사(`check-ticket`, `zizmor`, `lint-imports`, `check-instructions`, `check-type-escapes`, `pyright-linux`, `pyright`, `run-hooks`, `pytest`, `web-verify`)가 모두 `Passed`였다(러너 출력을 손으로 봤다). PR 직전 리뷰를 반영한 커밋 `9c800d32`도 pre-commit의 같은 열 검사가 모두 `Passed`였고, ruff 둘은 `.py`가 없어 `Skipped`라 손으로 쳐 지났다(커밋 출력과 명령 출력을 손으로 봤다).
 - **판정의 원천.** 문장을 찾는 정규식과 이름 가드(`hasClass`의 뒤 글자, 변수의 앞 글자)는 `check-conventions.mjs`의 것을 옮겼다. 키와 기초 카드 값의 글자 거르기(`[a-z]+`)는 옮긴 뒤 PR 직전 버그·성능 리뷰가 짚어 걷었다. 이름이 바뀐 키(`ocean-2`)가 선택자를 보지 않은 채 빠지기 때문이다. 그 스크립트는 04가 지울 때까지 그대로 둔다.
-- **변이.** `probes/assemble_mutations.toml`에 30~55의 스물여섯을 더했다. `PYTHONUTF8=1 uv run python tools/mutate.py .scratch/design-card-build/probes/assemble_mutations.toml 30 … 55`가 "변이 26 모두 기대대로"를 찍었다(기준선 13 모두 초록, `표지 없음` 줄 없음). 셀프 리뷰가 56~58의 셋(넷 밖의 기초 카드 폴더, 변수 판정의 앞 글자 가드, 기초 카드 폴더의 파일 목록)을 더했고, 그 셋만 돌린 실행이 "변이 3 모두 기대대로"를 찍었다. PR 직전 버그·성능 리뷰를 반영하며 59~62의 넷(README 밀도 괄호의 키 없음, 글자 밖의 문자가 든 README 키와 기초 카드 값, 펼쳐 넣은 스토리의 `globals`)을 더했고, 그 넷만 돌린 실행이 "변이 4 모두 기대대로"를 찍었다. 결과와 재지 않은 것은 프로브 README "2026-10-30 티켓 02의 변이"다. 시험은 구현 전에 열하나가 빨갰고(산출 파일이 없었다), 산출 밖 사례 둘은 구현 전부터 초록이라 변이로 빨강을 봤다(구현 전의 빨강과 초록은 앞 회차가 일지에 적은 것이고, 어떻게 봤는지는 적히지 않았다).
+- **변이.** `probes/assemble_mutations.toml`에 30~55의 스물여섯을 더했다. `PYTHONUTF8=1 uv run python tools/mutate.py .scratch/design-card-build/probes/assemble_mutations.toml 30 … 55`가 "변이 26 모두 기대대로"를 찍었다(기준선 13 모두 초록, `표지 없음` 줄 없음). 셀프 리뷰가 56~58의 셋(넷 밖의 기초 카드 폴더, 변수 판정의 앞 글자 가드, 기초 카드 폴더의 파일 목록)을 더했고, 그 셋만 돌린 실행이 "변이 3 모두 기대대로"를 찍었다. PR 직전 버그·성능 리뷰를 반영하며 59~62의 넷(README 밀도 괄호의 키 없음, 글자 밖의 문자가 든 README 키와 기초 카드 값, 펼쳐 넣은 스토리의 `globals`)을 더했고, 그 넷만 돌린 실행이 "변이 4 모두 기대대로"를 찍었다. 리뷰를 모두 반영한 커밋 `9c800d32` 위에서 표 전체(1~62)를 한 번 돌린 실행이 "변이 62 모두 기대대로"를 찍었다(기준선 34 모두 초록, `표지 없음` 줄과 커밋하지 않은 변경을 알리는 줄 없음, 로그를 `grep`으로 셌다). 결과와 재지 않은 것은 프로브 README "2026-10-30 티켓 02의 변이"다. 시험은 구현 전에 열하나가 빨갰고(산출 파일이 없었다), 산출 밖 사례 둘은 구현 전부터 초록이라 변이로 빨강을 봤다(구현 전의 빨강과 초록은 앞 회차가 일지에 적은 것이고, 어떻게 봤는지는 적히지 않았다).
