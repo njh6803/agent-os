@@ -194,11 +194,11 @@ jobs:
       - run: pnpm -C web/apps/widget exec playwright test
 
   # 사진 비교(ADR 0026). 판을 고정한 Playwright 이미지를 잡의 컨테이너로 쓰고, 그 안에서 설치하고 Storybook 정적 빌드를
-  # 지은 뒤 커밋한 정답 사진(web/packages/ui/visual/snapshots/)과 비교한다. 위젯도 같은 컨테이너에서 자기 정적 빌드를 짓고
-  # 자기 정답 사진(web/apps/widget/visual/snapshots/)과 비교한다(web-widget 티켓 03). 이미지는 로컬 명령의 것과 같다
-  # (web/tools/visual.ts 의 IMAGE, visual.test.ts 가 본다). --ipc=host 는 정답을 만든 로컬 컨테이너와 같은 조건이다.
-  # 네트워크는 설치에만 쓰고, 테스트는 정적 빌드 밖으로 나간 요청이 하나라도 있으면 실패한다. 실패하면 실제 사진·정답·차이
-  # 그림을 패키지와 위젯마다 아티팩트로 남긴다.
+  # 지은 뒤 커밋한 정답 사진(web/packages/ui/visual/snapshots/)과 비교한다. 위젯과 관리 화면도 같은 컨테이너에서 자기 정적
+  # 빌드를 짓고 자기 정답 사진(web/apps/widget/visual/snapshots/, web/apps/admin/visual/snapshots/)과 비교한다(web-widget
+  # 티켓 03, admin-style 티켓 03). 이미지는 로컬 명령의 것과 같다(web/tools/visual.ts 의 IMAGE, visual.test.ts 가 본다).
+  # --ipc=host 는 정답을 만든 로컬 컨테이너와 같은 조건이다. 네트워크는 설치에만 쓰고, 테스트는 정적 빌드 밖으로 나간
+  # 요청이 하나라도 있으면 실패한다. 실패하면 실제 사진·정답·차이 그림을 패키지와 앱마다 아티팩트로 남긴다.
   visual:
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -218,11 +218,15 @@ jobs:
         run: pnpm -C web install --frozen-lockfile
       - run: pnpm -C web/packages/ui run build-storybook
       - run: pnpm -C web/packages/ui exec playwright test -c visual/playwright.config.ts
-      # 위젯은 설치가 됐으면 패키지의 비교가 실패해도 돈다. 패키지를 바꿔 위젯 사진도 바뀐 것을 한 번에 본다.
+      # 위젯과 관리 화면은 설치가 됐으면 앞의 비교가 실패해도 돈다. 패키지를 바꿔 앱의 사진도 바뀐 것을 한 번에 본다.
       - if: ${{ !cancelled() && steps.install.outcome == 'success' }}
         run: pnpm -C web/apps/widget run build-storybook
       - if: ${{ !cancelled() && steps.install.outcome == 'success' }}
         run: pnpm -C web/apps/widget exec playwright test -c visual/playwright.config.ts
+      - if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: pnpm -C web/apps/admin run build-storybook
+      - if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: pnpm -C web/apps/admin exec playwright test -c visual/playwright.config.ts
       - if: failure()
         uses: actions/upload-artifact@v4
         with:
@@ -234,6 +238,12 @@ jobs:
         with:
           name: visual-widget-test-results
           path: web/apps/widget/visual/test-results/
+          retention-days: 14
+      - if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: visual-admin-test-results
+          path: web/apps/admin/visual/test-results/
           retention-days: 14
 
   # 커밋 검사(tools/check_ticket.py, ADR 0037)를 PR 마다 한다. 훅을 깔지 않은 클론이나 훅을 건너뛴 커밋도 여기서
