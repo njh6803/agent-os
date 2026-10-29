@@ -9,6 +9,7 @@ node .scratch/design-card-build/probes/card_build.mjs <작업 폴더의 절대 �
 node .scratch/design-card-build/probes/vite_cli.mjs <작업 폴더의 절대 경로> <card_build.mjs의 작업 폴더>
 pnpm -C web exec tsc -p ../.scratch/design-card-build/probes/tsconfig.json
 node .scratch/design-card-build/probes/vite_cli_tool.mts <작업 폴더의 절대 경로> <card_build.mjs의 작업 폴더>/bundle.js
+PYTHONUTF8=1 uv run python tools/mutate.py .scratch/design-card-build/probes/upload_plan_mutations.toml [번호 ...]
 ```
 
 | 파일 | 재는 것 | 근거로 드는 자리 | 다시 돌 때 | 잰 판 |
@@ -18,6 +19,18 @@ node .scratch/design-card-build/probes/vite_cli_tool.mts <작업 폴더의 절�
 | `vite_cli_tool.mts`, `tsconfig.json` | `vite_cli.mjs`의 길을 올리기 도구가 쓸 모양 그대로 지나는지(소비 지점). TypeScript 파일이 vite를 import하지 않고 설정을 글로 지어, 셸 없이 `process.execPath`로 패키지의 `node_modules/vite/bin/vite.js`를 패키지 자리에서 띄운다. `tsconfig.json`은 `web/tsconfig.json`(strict)을 이어받아 이 파일만 든다. 공백이 든 작업 폴더를 주면 셸 없이 넘긴 인자가 갈리지 않는지도 본다. 회차와 표지는 파일 머리 주석이 적는다 | 명세 Implementation Decisions의 짓기 항목 | `pnpm -C web install`, 같은 커밋에서 돈 `card_build.mjs`의 `bundle.js` | TypeScript 5.9.3(`web`의 `tsc`), `@types/node` 24.19.0, Node 24.19.0, vite 8.3.1. 아래 결과는 `8e43dd2c`에서 잰 것이다 |
 | `received/page-tokens.css` | 디자인 시스템 아티팩트 판 `1793146503-9e85`의 `tokens.css`를 받은 그대로 둔 사본(27,857바이트, sha256 `0680bd4c2a13ba8d2af7c151993980295b2d83ace00b4799d82e2d7712e06354`). 페이지가 저장할 때 `tokens.json`에서 다시 짓는 파일이다 | `card_build.mjs`의 카드 문서가 페이지의 토큰 CSS 자리에 싣는다 | 바꾸지 않는다. 다시 받으면 판과 해시를 이 줄에 고친다 | 판 `1793146503-9e85` |
 | `page_diag_card.html` | 실제 Design System 페이지가 카드 문서에 무엇을 싣는지. `components/Diag/preview.html`로 올리면 카드 안에서 React 판, `data-theme`·`data-mode`, `color-scheme`과 바탕, 글꼴의 실림과 오류, 글꼴 요청 주소, 문서의 기준 주소, 스타일시트 `<link>`·`<style>`·스크립트 주소를 글로 찍는다. 둘째 줄이 `DIAG v2 done`인 회차만 측정이다(`DIAG 기다리는 중`이면 아직 돌지 않았다). v2는 셋째 줄에 `--gray-50`과 `--bg`의 계산값을 찍는다. 판 4~7은 그 줄이 없는 v1(`DIAG v1 done`)이었다 | 명세 Implementation Decisions의 글꼴·다크 테마·배너·React 항목 | 임시 Design System 아티팩트에 `card_build.mjs`의 `stage/` 배치와 함께 올리고 앱 안 브라우저로 Components 절을 연다. 카드 iframe은 다른 출처라 도구가 안을 읽지 못해 화면을 찍어 읽는다(손으로 봤다). 아래 "실제 페이지" 절의 차례대로 판을 올린다 | 형식 판 release `1793156745-17fb`, 페이지가 실은 React·ReactDOM 18.3.1(jsDelivr UMD). 묶음과 카드는 `card-run-5`(`8e43dd2c`)의 `stage/` |
+| `upload_plan_mutations.toml` | 티켓 03의 변이 표 스물여섯. 올리기 계획(`web/tools/sync-design-system/upload.ts`)의 첫 정식 올리기(이번 산출의 정식 카드, 받은 기록의 정식 카드, 기록이 없을 때의 sha256 목록, `tokens.json`을 보내는 갈래, 그 갈래가 앞 시도의 보낸 갈래보다 앞서는 것), 목록만 옛것일 때(기록과 맞대기, 지금 절차의 기록에 없는 지난 경로, 기록이 없으면 목록대로, 옛 별칭 48개), 나누기(기록·색인의 경로, 기록·색인의 바이트, 지울 경로, `_ds_sync.json`의 자리, 들지 않는 파일의 오류 종류, 남은 하나를 중간 몫으로 보내는 길, 첫 몫이 기록만 싣는 길, 첫 몫이 남기는 기록의 경로와 바이트), 보낼 색인(`libraries`, `global`, 이미 있는 `upgraded`, 첫 정식 올리기가 아닐 때)과 `record index` 명령(묶음 찾기, 계획의 `firstCanonical` 읽기, 색인 한도)을 겨눈다. 시험은 구현 전에 함수와 칸이 없어 빨갰을 뿐이고 옛 별칭 사례는 구현 전부터 초록이라, 변이마다 판정의 줄 하나를 바꾸고 `-t`로 사례 하나를 좁혀 빨개지는지 본다. 표지는 고른 단언이 실패할 때만 나오는 실패 머리나 차이 줄이고, 처음 고른 넷이 출력에 없어 변이를 손으로 넣어 받은 실패 출력에서 다시 골랐다(아래 결과) | 티켓 03의 "올리기 시험"과 "변이"(원칙 II) | `upload.ts`·`record.ts`를 고치면 `--check`로 원문을 보고 번호로 다시 돈다. 원문이 없거나 기대와 다르거나 표지가 없으면 1로 끝난다 | `f6df25c8` 위의 작업 트리, Node 24.19.0, vitest 5.0.2 |
+
+## 2026-10-29 결과: `upload_plan_mutations.toml` (티켓 03)
+
+- 첫 실행은 "변이 22 중 어긋남 4"였다. 넷 다 빨강이었고 표지만 없었다. 14(`_ds_sync.json`의 자리)는 첫 판의 변이가 그 파일을 앞뒤에 두 번 넣어 다른 단언(`not.toContain`)이 빨개졌다. 앞 걸러내기와 뒤 붙이기를 함께 끄는 편집 둘로 바꿨다. 19는 실패 머리가 `to not have property "upgraded"`였고, 20·21은 `toMatchObject`의 차이 줄이 받은 쪽 `+   "libraries": false,`·`+   "upgraded": false,`였다. 변이를 손으로 넣어(커밋하지 않은 스크래치 스크립트로 원문을 바꾸고 `pnpm -C web exec vitest run --project node <시험 파일> -t <사례>`) 받은 출력에서 골랐다.
+- 고친 표 전부를 다시 돌려 "변이 22 모두 기대대로"였다(도구가 찍은 줄). 기준선은 모두 초록이었다. 이 절의 번호는 아래 절에서 넷을 더하기 전의 것이다.
+
+## 2026-10-30 결과: 셀프 리뷰 뒤 `upload_plan_mutations.toml` (티켓 03)
+
+- 셀프 리뷰 두 축이 나누기가 남은 큰 파일 하나를 마지막 몫에 넣지 못하면 중간 호출에 들 수 있어도 `limit` 오류로 멈춘다고 짚었다. 남은 하나를 중간 몫으로 보내는 길과 첫 몫이 기록만 싣는 길을 더하고, 두 길을 겨누는 변이와 명세 축이 짚은 첫 몫의 예약(경로 하나, `RECORD_LIMIT`)을 따로 끄는 변이 둘을 15번 뒤에 더했다. 두 길의 시험은 고치기 전에 그 `limit` 오류로 빨갰다(`pnpm -C web exec vitest run --project node tools/sync-design-system/upload.test.ts -t <사례>`, 손으로 봤다). 오류 종류 변이(15)는 들여쓰기가 바뀐 원문으로 옮겼다.
+- 표 전부를 돌려 "변이 26 모두 기대대로"였다(도구가 찍은 줄, 기준은 `f6df25c8` 위의 작업 트리).
+- 재지 않은 것: 마지막 몫을 비우지 않게 하나를 남기는 조건과 한 파일이 한 호출에 들지 않을 때 멈추는 조건(표 머리 주석).
 
 ## 받은 사본과 카드의 토큰 CSS가 다른 자리
 
