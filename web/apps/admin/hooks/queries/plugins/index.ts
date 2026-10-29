@@ -33,7 +33,10 @@ type Verdict = "accepted" | "rejected" | "unjudged";
  * 플러그인 목록. 관리 토큰이 없거나 `active` 가 거짓이면 부르지 않는다. `active` 는 목록을 쓰는 자리가 늘 서 있지 않은
  * 화면의 것이다. 실행 하나의 화면은 결정 자리가 설 때만 꺼짐 미리 알림에 목록을 읽는다.
  */
-export function usePlugins(active = true): SWRResponse<PluginRow[], unknown> {
+export function usePlugins({ active = true }: { readonly active?: boolean } = {}): SWRResponse<
+  PluginRow[],
+  unknown
+> {
   const adminToken = useTokens((state) => state.adminToken);
   const generation = useTokens((state) => state.adminTokenGeneration);
   const read = active && adminToken !== null;
@@ -72,20 +75,20 @@ export function usePlugin(kind: PluginKind, name: string): SWRResponse<Plugin, u
 export function useSetPluginEnabled(): (
   kind: PluginKind,
   name: string,
-  enabled: boolean,
+  change: { readonly enabled: boolean },
 ) => Promise<void> {
   const adminToken = useTokens((state) => state.adminToken);
   const generation = useTokens((state) => state.adminTokenGeneration);
   const { mutate } = useSWRConfig();
   return useCallback(
-    async (kind: PluginKind, name: string, enabled: boolean) => {
+    async (kind: PluginKind, name: string, change: { readonly enabled: boolean }) => {
       if (adminToken === null) {
         // 스위치는 관리 토큰이 있을 때만 서는 목록에 있다.
         return;
       }
       try {
         await orRejectAdminToken(adminToken, (token) =>
-          setPluginEnabled(token, kind, name, enabled),
+          setPluginEnabled(token, kind, name, change),
         );
       } finally {
         // mutate 는 다시 읽기의 실패를 던지지 않고 그 키의 error 로 둔다. 그래서 이 finally 가 try 의 실패를 덮지
