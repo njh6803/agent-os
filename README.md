@@ -53,7 +53,8 @@ web/               pnpm 워크스페이스(Node 24, TypeScript 5.9). 파이썬�
                    사진 snapshots/, 앱도 나눠 쓰는 정적 빌드 열기 index.ts). 스토리 테스트는 뿌리 vitest.config.ts 의
                    storybook 프로젝트가 실제 chromium 에서 돈다(ADR 0026)
   apps/admin/      관리 화면(Next). app/(라우팅과 레이아웃), components/(아토믹 층, pages/가 화면), api/·hooks/queries/
-                   (요청 함수와 SWR 훅), stores/(토큰), styles/(관리 화면 CSS), next.config.ts(/api 중계),
+                   (요청 함수와 SWR 훅), stores/(토큰과 테마), public/(첫 그림 전에 테마를 다는 스크립트),
+                   styles/(관리 화면 CSS), next.config.ts(/api 중계),
                    tools/start.ts(루프백에만 띄우는 시작 래퍼), testing/(페이지 테스트의 가짜 네트워크와 격리),
                    .storybook/·visual/(관리 화면의 Storybook 과 사진 비교. 스토리 테스트는 창 폭 둘의
                    admin-storybook-wide·admin-storybook-narrow 프로젝트), e2e/(실제 serve 를 지나는 Playwright)

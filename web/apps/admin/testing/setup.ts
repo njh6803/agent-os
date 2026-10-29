@@ -23,6 +23,8 @@ afterEach(() => {
   useTokens.setState(useTokens.getInitialState(), true);
   sessionStorage.clear();
   localStorage.clear();
+  // 테마가 그려지는 자리. 앞 시험이 단 속성이 남으면 "마운트 때 다시 단다"가 다는 일 없이 초록일 수 있다(admin-style 티켓 09).
+  document.documentElement.removeAttribute("data-theme");
   expect(unhandled.splice(0), "처리하지 않은 요청이 있다").toEqual([]);
 });
 
