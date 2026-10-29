@@ -83,9 +83,31 @@ describe("플러그인 하나", () => {
 
     const manifest = await screen.findByRole("region", { name: "매니페스트" });
     expect(manifest.textContent).toContain(CALC_MANIFEST);
+    // 켜짐은 제목 옆에 서고 제목의 이름에 들지 않는다.
     expect(screen.getByRole("heading", { level: 1, name: "calc" })).toBeTruthy();
     expect(screen.getByText("켜짐")).toBeTruthy();
+    expect(screen.getByText("에이전트. 켜고 끄기는 플러그인 목록에서 한다.")).toBeTruthy();
+    expect(screen.getByRole("heading", { level: 2, name: "매니페스트" })).toBeTruthy();
+    expect(screen.queryByRole("switch")).toBeNull();
     expect(authorizations).toEqual([`Bearer ${TOKEN}`]);
+  });
+
+  test("꺼진 플러그인은 제목 옆에 꺼짐이 선다", async () => {
+    acceptTokens();
+    servePlugin("/plugins/mcp/everything", () =>
+      HttpResponse.json({
+        ...CALC,
+        kind: "mcp",
+        name: "everything",
+        enabled: false,
+      }),
+    );
+
+    await openPlugin("mcp", "everything");
+
+    expect(await screen.findByText("꺼짐")).toBeTruthy();
+    expect(screen.queryByText("켜짐")).toBeNull();
+    expect(screen.getByText("MCP. 켜고 끄기는 플러그인 목록에서 한다.")).toBeTruthy();
   });
 
   test("매니페스트를 읽을 수 없는 플러그인을 열면 500 봉투의 경로와 이유와 추적 식별자가 보인다", async () => {
@@ -187,6 +209,8 @@ describe("플러그인 하나", () => {
 
     expect((await screen.findByRole("alert")).textContent).toContain("운영자 파일이 깨졌다");
     expect(screen.queryByRole("region", { name: "매니페스트" })).toBeNull();
+    // 옛 켜짐도 믿지 않는다.
+    expect(screen.queryByText("켜짐")).toBeNull();
   });
 
   test("지운 토큰의 늦은 401 은 그 사이 넣은 새 토큰의 플러그인 하나에 섞이지 않고 새 토큰을 내려놓지 않는다", async () => {
@@ -222,9 +246,18 @@ describe("플러그인 하나", () => {
     // 처리하지 않은 요청은 setup.ts 가 테스트를 빨갛게 한다.
     await openPlugin("agents", "calc");
 
-    expect((await screen.findByRole("alert")).textContent).toContain(
-      "플러그인의 종류가 아니다: agents",
-    );
+    const alert = await screen.findByRole("alert");
+    expect(alert.textContent).toContain("플러그인을 읽지 못했다");
+    expect(alert.textContent).toContain("플러그인의 종류가 아니다: agents");
+  });
+
+  test("주소로 플러그인을 고르지 못해도 플러그인 목록으로 돌아가는 링크가 있다", async () => {
+    acceptTokens();
+
+    await openPlugin("agents", "calc");
+
+    await screen.findByRole("alert");
+    expect(screen.getByRole("link", { name: "플러그인 목록" }).getAttribute("href")).toBe("/");
   });
 
   test("주소의 조각이 인코딩된 채로 와도 풀어서 보이고 요청은 한 번만 인코딩한다", async () => {
@@ -276,7 +309,7 @@ describe("플러그인 하나", () => {
 
     await openPlugin("agent", "calc");
 
-    const back = await screen.findByRole("link", { name: "플러그인 목록으로" });
+    const back = await screen.findByRole("link", { name: "플러그인 목록" });
     expect(back.getAttribute("href")).toBe("/");
     await screen.findByRole("region", { name: "매니페스트" });
   });

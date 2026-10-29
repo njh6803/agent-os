@@ -24,6 +24,8 @@ export interface ReadState<T> {
 interface ReadSectionProps<T> extends ReadState<T> {
   /** 화면의 제목(`h1`). 화면의 구역도 이 이름을 얻는다. */
   readonly title: ReactNode;
+  /** 제목 옆에 서되 제목의 이름에 들지 않는 것. */
+  readonly titleBeside?: ReactNode;
   /** 제목 아래 흐린 설명 한 줄. */
   readonly description?: ReactNode;
   /** 처음 불러오는 동안 머리 아래 진행 표시의 이름("…을 불러오는 중"). */
@@ -51,6 +53,7 @@ interface ReadSectionProps<T> extends ReadState<T> {
  */
 export function ReadSection<T>({
   title,
+  titleBeside,
   description,
   data,
   error,
@@ -70,6 +73,7 @@ export function ReadSection<T>({
       <ScreenHeader
         titleId={titleId}
         title={title}
+        beside={titleBeside}
         description={description}
         action={
           <Button variant="secondary" loading={refreshing} onClick={onRefresh}>
