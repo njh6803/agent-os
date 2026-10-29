@@ -132,7 +132,24 @@ open-session을 부른다 2026-10-29T02:48:09Z
 ## 남은 일
 
 1~8. 끝났다(위 절들, 티켓 Comments, 아래 회고와 다음).
-9. ruff 둘, 브랜치 확인, `sibling_overlap`, 티켓 done, 커밋(pre-commit 결과를 일지에), PR, 봇 회차, `merge.md` 의 워크트리 길로 병합. 병합 뒤에는 다음 작업의 지시문만 내고 새 세션은 열지 않는다(위 사용자 말).
+9. ruff 둘, 브랜치 확인, `sibling_overlap`, 티켓 done, 커밋은 끝났다(아래 인계 절). 남은 것은 푸시, PR, 봇 회차, `merge.md` 의 워크트리 길로 병합이다. 병합 뒤에는 다음 작업의 지시문만 내고 새 세션은 열지 않는다(위 사용자 말).
+
+## 인계(커밋 뒤)
+
+ruff 둘은 통과, 브랜치는 `chore/027-next-session-split`, `sibling_overlap` 은 겹침 없음이었다. 커밋 `952147f6` 의 pre-commit 은 두 번째 시도에서 모두 Passed 였고 Skipped 는 없었다(러너가 찍었다. 첫 시도의 두 빨강은 위 회고 절). 그래서 손으로 치는 다섯은 이 결과로 갈음한다. 커밋 직후 인계 계기가 왔다(`커밋 뒤`, 계기 문장의 세션 컨텍스트 254,703 토큰). 요청 범위가 병합까지이고 넘겨받은 경계(셀프 리뷰 직전)와 다르며, `get_session` 의 `self` 에 `parentSessionId` 가 없어 `handoff.md` 1의 다섯에 들지 않는다. 그래서 넘긴다. 이때 주간 사용량은 95%였다. 이 세션의 지금 제목은 `chore/027-next-session-split` 이다. 주 체크아웃은 `main` 이고 `origin/main` 과 같은 `f8410d01` 이다. 모델은 `tools/model_sweep.py` 가 `Opus 5.5 / xhigh` 를 냈다. 낸 지시문:
+
+```
+다음 작업: .scratch/harness/issues/027-next-session-split.md. next-session 스킬을 네 파일로 나눈 커밋을 푸시하고 PR·봇 회차·병합까지 잇는다
+다음 단계: 구현
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: 티켓 .scratch/harness/issues/027-next-session-split.md 를 한다
+브랜치: chore/027-next-session-split
+모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
+읽을 것: docs/journal/2026-10-29-02-next-session-split.md
+이어받을 상태: 인계: 커밋 뒤. 셀프 리뷰 반영, 카나리아 여덟, 회고와 일지 "다음"까지 마치고 952147f6 으로 커밋했다(pre-commit 모두 Passed). 일지의 이 인계 절은 커밋하지 않았다. 남은 단계는 이 일지를 커밋하고 푸시, PR(/git-pr), merge.md 2(봇 회차), merge.md의 "워크트리에서 병합할 때"로 병합이다. 이 브랜치가 next-session을 고쳤으니 merge.md는 워크트리 사본을 Read로 열어 따르고, 병합한 뒤에는 다음 작업의 지시문만 내고 새 세션은 열지 않는다(사용자 말, 일지 "시작"). 주간 사용량이 98%에 닿으면 새 계정으로 이어 갈 수 있게 일지의 남은 일을 고치고 멈춘다(사용자 말, 일지 "사용량"). docs/journal/2026-10-29-02-next-session-split.md
+확인할 선행 조건: 없음
+이번 요청 범위: PR과 병합까지
+```
 
 ## 회고
 
@@ -157,3 +174,13 @@ open-session을 부른다 2026-10-29T02:48:09Z
 - 대기열 539: 범위 밖 카나리아 넷의 기대를 지금 원천 글로 고치고 다시 돌린다.
 - 대기열 531 이 3회차가 되어 chore 계기다(`test_interrupt` 의 시각 비교가 문서·하네스 커밋을 막는다).
 - 그 밖의 다음 작업은 병합 뒤 next-session 이 정한다. 이 세션은 지시문만 내고 새 세션을 열지 않는다(위 사용자 말).
+
+제목을 `chore/027-next-session-split (인계함)` 으로 바꿨고, 멈출 백그라운드 작업은 없었고, 워크트리 잠금은 이미 풀려 있었다(`is not locked`).
+
+open-session을 부른다 2026-10-29T03:55:50Z
+
+## 이어받음(커밋 뒤)
+
+> 사용자: 티켓 .scratch/harness/issues/027-next-session-split.md 를 한다 (위 지시문의 시작 프롬프트. 이어받을 상태 `인계: 커밋 뒤`, 이번 요청 범위 PR과 병합까지)
+
+새 세션이 제목을 `chore/027-next-session-split` 으로 바꾸고 `EnterWorktree(path)` 로 이 워크트리에 들어왔다. `git fetch origin` 뒤에도 `origin/main` 은 `f8410d01` 그대로였다(`git log --oneline -3 origin/main` 으로 손으로 봤다). 이때 주간 사용량은 95%였다(`get_usage` 가 찍었다). 이 인계 절과 함께 일지를 커밋해 푸시하고, PR 을 연 뒤 워크트리 사본의 `merge.md` 를 Read 로 열어 봇 회차와 병합을 잇는다.
