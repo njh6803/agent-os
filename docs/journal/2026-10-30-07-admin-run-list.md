@@ -1,4 +1,4 @@
-# 2026-10-30 (04) 실행 목록의 표와 카드, 이 브라우저의 시간대(admin-style 06)
+# 2026-10-30 (07) 실행 목록의 표와 카드, 이 브라우저의 시간대(admin-style 06)
 
 티켓 `.scratch/admin-style/issues/06-admin-run-list.md`를 구현했다. 나란히 여는 넷(05·06·07·09) 가운데 둘째 세션이고, 브랜치는 `feature/06-admin-run-list`, 워크트리는 `.claude/worktrees/06-admin-run-list`다.
 
@@ -51,8 +51,8 @@
 시작 프롬프트: /implement .scratch/admin-style/issues/06-admin-run-list.md
 브랜치: feature/06-admin-run-list
 모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
-읽을 것: docs/journal/2026-10-30-04-admin-run-list.md
-이어받을 상태: 인계: 셀프 리뷰 직전. 커밋하지 않은 변경이 워크트리에 있고 셀프 리뷰(/code-review, 고정점 origin/main의 merge-base, 미추적 파일 포함)부터 한다. 구현과 시험, 변이 표(.scratch/admin-style/probes/run_list_mutations.toml), 프로브 README 행, 티켓의 체크박스(사진과 검증 둘만 남았다)와 "이 티켓이 정한 것"까지 했다. 변이 표는 리뷰 전 판으로 전체를 돌렸으니 셀프 리뷰와 PR 직전 리뷰를 반영해 커밋한 뒤 전체를 한 번 다시 돈다. 사진 정답(visual:admin:update, 새 스토리 셋 12장)은 아직 만들지 않았다. Docker 엔진이 이 세션 내내 Internal Server Error였고, 사용자가 Docker Desktop을 다시 켜 주기로 골라 23:39에 다시 답하기 시작했다. 리뷰 반영 뒤 사진을 만들고 바뀐 사진을 눈으로 본 뒤 PR 본문에 적는다. 형제 겹침(05의 ReadSection.tsx, 07의 runs.e2e.ts)은 일지의 구현 절. 일지는 docs/journal/2026-10-30-04-admin-run-list.md
+읽을 것: docs/journal/2026-10-30-07-admin-run-list.md
+이어받을 상태: 인계: 셀프 리뷰 직전. 커밋하지 않은 변경이 워크트리에 있고 셀프 리뷰(/code-review, 고정점 origin/main의 merge-base, 미추적 파일 포함)부터 한다. 구현과 시험, 변이 표(.scratch/admin-style/probes/run_list_mutations.toml), 프로브 README 행, 티켓의 체크박스(사진과 검증 둘만 남았다)와 "이 티켓이 정한 것"까지 했다. 변이 표는 리뷰 전 판으로 전체를 돌렸으니 셀프 리뷰와 PR 직전 리뷰를 반영해 커밋한 뒤 전체를 한 번 다시 돈다. 사진 정답(visual:admin:update, 새 스토리 셋 12장)은 아직 만들지 않았다. Docker 엔진이 이 세션 내내 Internal Server Error였고, 사용자가 Docker Desktop을 다시 켜 주기로 골라 23:39에 다시 답하기 시작했다. 리뷰 반영 뒤 사진을 만들고 바뀐 사진을 눈으로 본 뒤 PR 본문에 적는다. 형제 겹침(05의 ReadSection.tsx, 07의 runs.e2e.ts)은 일지의 구현 절. 일지는 docs/journal/2026-10-30-07-admin-run-list.md
 확인할 선행 조건: Docker 엔진이 답하는지(timeout 20 docker version). 이 세션의 마지막 확인인 23:39에는 답했다
 이번 요청 범위: PR과 병합까지
 
@@ -131,8 +131,8 @@ PR 직전 `bug-perf-review`에 밀 주장(코드 리뷰 스킬 6단계 1): 위 "
 시작 프롬프트: /implement .scratch/admin-style/issues/06-admin-run-list.md
 브랜치: feature/06-admin-run-list
 모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
-읽을 것: docs/journal/2026-10-30-04-admin-run-list.md
-이어받을 상태: 인계: 커밋 뒤. 셀프 리뷰 반영, 사진 정답 12장(눈으로 본 뒤 좁은 카드의 라벨 칸을 고쳐 list-320 둘을 다시 만들었다), 04 변이 표 15·16의 원문 고침까지 커밋했고 아직 푸시하지 않았다. PR은 없다. 남은 것: origin/main(07 #428) 합치기(07이 runs.e2e.ts의 다른 줄과 EventItem의 RunLink를 TextLink로 바꿨다), 합친 뒤 관리 화면 e2e와 pnpm -C web visual:admin, PR 직전 리뷰(CLI가 안 되면 /security-review와 bug-perf-review를 나란히. bug-perf-review에 밀 주장은 일지의 "인계(커밋 뒤)" 절), 반영 커밋 뒤 run_list_mutations.toml 전체 다시 돌기, 티켓 Status done과 검증 체크박스, PR 본문에 새 사진 12장. 이 PC는 부하가 크면 pre-commit의 pytest가 시간 민감 시험(test_rerun_runner, test_interrupt)으로 빨갰고 따로 돌리면 통과했다(일지의 "리뷰 반영 뒤 전체 검증"). 일지는 docs/journal/2026-10-30-04-admin-run-list.md
+읽을 것: docs/journal/2026-10-30-07-admin-run-list.md
+이어받을 상태: 인계: 커밋 뒤. 셀프 리뷰 반영, 사진 정답 12장(눈으로 본 뒤 좁은 카드의 라벨 칸을 고쳐 list-320 둘을 다시 만들었다), 04 변이 표 15·16의 원문 고침까지 커밋했고 아직 푸시하지 않았다. PR은 없다. 남은 것: origin/main(07 #428) 합치기(07이 runs.e2e.ts의 다른 줄과 EventItem의 RunLink를 TextLink로 바꿨다), 합친 뒤 관리 화면 e2e와 pnpm -C web visual:admin, PR 직전 리뷰(CLI가 안 되면 /security-review와 bug-perf-review를 나란히. bug-perf-review에 밀 주장은 일지의 "인계(커밋 뒤)" 절), 반영 커밋 뒤 run_list_mutations.toml 전체 다시 돌기, 티켓 Status done과 검증 체크박스, PR 본문에 새 사진 12장. 이 PC는 부하가 크면 pre-commit의 pytest가 시간 민감 시험(test_rerun_runner, test_interrupt)으로 빨갰고 따로 돌리면 통과했다(일지의 "리뷰 반영 뒤 전체 검증"). 일지는 docs/journal/2026-10-30-07-admin-run-list.md
 확인할 선행 조건: Docker 엔진이 답하는지(timeout 20 docker version). 이 세션에서는 내내 답했다
 이번 요청 범위: PR과 병합까지
 
@@ -197,8 +197,8 @@ PR을 열자 인계 계기(`hook_handoff`, 362,053 토큰, 경계 `PR 연 뒤`)�
 시작 프롬프트: /implement .scratch/admin-style/issues/06-admin-run-list.md
 브랜치: feature/06-admin-run-list
 모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
-읽을 것: docs/journal/2026-10-30-04-admin-run-list.md
-이어받을 상태: 인계: PR 연 뒤. PR #431을 열었고 merge.md 2(봇 회차)부터 한다. 첫 @coderabbitai review 코멘트와 wait_ci 대기도 새 세션이 띄운다. PR 본문은 run_list_mutations.toml 전체 실행의 결과를 일지와 PR 코멘트에 적는다고 약속했는데, 리뷰 반영 커밋 뒤의 전체 실행은 기준선 e2e/runs.e2e.ts가 stack.ts 64줄 rmSync의 EPERM(시험 밖 오류, 이 세션에서 둘째)으로 "오류"라 변이를 하나도 넣지 못하고 1로 끝났다. 작업 트리는 깨끗했다. 그 전체 실행을 다시 돌려 결과를 적는다(봇 회차가 시험을 고치면 그 반영 커밋 뒤에). 일지의 마무리 기록(변이 결과, 봇 회차)은 마지막 회차의 커밋에 싣는다. 일지는 docs/journal/2026-10-30-04-admin-run-list.md
+읽을 것: docs/journal/2026-10-30-07-admin-run-list.md
+이어받을 상태: 인계: PR 연 뒤. PR #431을 열었고 merge.md 2(봇 회차)부터 한다. 첫 @coderabbitai review 코멘트와 wait_ci 대기도 새 세션이 띄운다. PR 본문은 run_list_mutations.toml 전체 실행의 결과를 일지와 PR 코멘트에 적는다고 약속했는데, 리뷰 반영 커밋 뒤의 전체 실행은 기준선 e2e/runs.e2e.ts가 stack.ts 64줄 rmSync의 EPERM(시험 밖 오류, 이 세션에서 둘째)으로 "오류"라 변이를 하나도 넣지 못하고 1로 끝났다. 작업 트리는 깨끗했다. 그 전체 실행을 다시 돌려 결과를 적는다(봇 회차가 시험을 고치면 그 반영 커밋 뒤에). 일지의 마무리 기록(변이 결과, 봇 회차)은 마지막 회차의 커밋에 싣는다. 일지는 docs/journal/2026-10-30-07-admin-run-list.md
 확인할 선행 조건: Docker 엔진이 답하는지(timeout 20 docker version). 봇 회차가 관리 화면을 고치면 사진 비교에 쓴다. 이 세션에서는 내내 답했다
 이번 요청 범위: PR과 병합까지
 
@@ -242,8 +242,8 @@ PR 코멘트는 아직 남기지 않았다. 남길 것은 봇 첫 회차의 판�
 시작 프롬프트: /implement .scratch/admin-style/issues/06-admin-run-list.md
 브랜치: feature/06-admin-run-list
 모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
-읽을 것: docs/journal/2026-10-30-04-admin-run-list.md
-이어받을 상태: 인계: 셀프 리뷰 직전. 커밋하지 않은 변경이 워크트리에 있고 셀프 리뷰(/code-review, 고정점 HEAD. 범위는 PR #431 봇 첫 회차의 반영인 api/traces/index.ts·RunList.tsx의 UnreadableTrace 타입과 일지)부터 한다. 봇 첫 회차는 끝났다(CodeRabbit 지적 없음, claude-review는 Minor 하나를 고치고 Minor 하나와 Nit 하나를 남겼다. 판정과 까닭은 일지의 "PR #431 봇 첫 회차"). run_list_mutations.toml 전체 실행은 그 반영이 든 작업 트리에서 18 모두 기대대로였다(일지의 "변이 전체 실행"). 셀프 리뷰가 RunList.tsx나 시험을 고치면 변이 표를 --check로 다시 본다. 남은 것: 셀프 리뷰 반영, 일지 마무리를 실은 커밋 하나, 푸시, PR 코멘트 하나(봇 첫 회차 판정과 변이 결과. PR 본문이 약속했다), merge.md 2의 둘째 회차 대기(CodeRabbit 요약이 시간당 한 번의 몫을 다 썼다고 적어 한도에 걸릴 수 있다), 병합. 일지는 docs/journal/2026-10-30-04-admin-run-list.md
+읽을 것: docs/journal/2026-10-30-07-admin-run-list.md
+이어받을 상태: 인계: 셀프 리뷰 직전. 커밋하지 않은 변경이 워크트리에 있고 셀프 리뷰(/code-review, 고정점 HEAD. 범위는 PR #431 봇 첫 회차의 반영인 api/traces/index.ts·RunList.tsx의 UnreadableTrace 타입과 일지)부터 한다. 봇 첫 회차는 끝났다(CodeRabbit 지적 없음, claude-review는 Minor 하나를 고치고 Minor 하나와 Nit 하나를 남겼다. 판정과 까닭은 일지의 "PR #431 봇 첫 회차"). run_list_mutations.toml 전체 실행은 그 반영이 든 작업 트리에서 18 모두 기대대로였다(일지의 "변이 전체 실행"). 셀프 리뷰가 RunList.tsx나 시험을 고치면 변이 표를 --check로 다시 본다. 남은 것: 셀프 리뷰 반영, 일지 마무리를 실은 커밋 하나, 푸시, PR 코멘트 하나(봇 첫 회차 판정과 변이 결과. PR 본문이 약속했다), merge.md 2의 둘째 회차 대기(CodeRabbit 요약이 시간당 한 번의 몫을 다 썼다고 적어 한도에 걸릴 수 있다), 병합. 일지는 docs/journal/2026-10-30-07-admin-run-list.md
 확인할 선행 조건: 없음
 이번 요청 범위: PR과 병합까지
 
@@ -289,8 +289,8 @@ open-session을 부른다 2026-10-29T17:51:24Z
 시작 프롬프트: /implement .scratch/admin-style/issues/06-admin-run-list.md
 브랜치: feature/06-admin-run-list
 모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
-읽을 것: docs/journal/2026-10-30-04-admin-run-list.md
-이어받을 상태: 인계: 커밋 뒤. PR #431 봇 첫 회차의 반영(계약의 UnreadableTrace 타입)과 그 셀프 리뷰 반영(isUnreadable 독스트링, 일지)을 커밋 798cf3e9로 했고 pre-commit이 모두 통과했다. 아직 푸시하지 않았다. 푸시와 merge.md 2(봇 회차)부터 한다. 푸시 뒤 @coderabbitai review 코멘트와 wait_ci 대기를 띄우고, PR 코멘트 하나(봇 첫 회차의 판정과 run_list_mutations.toml 전체 실행 결과 18 모두 기대대로. PR 본문의 "확인 방법"이 일지와 PR 코멘트에 적는다고 약속했다)를 남긴다. 이 푸시로 도는 리뷰는 봇마다 둘째 회차라 Critical·Major만 고치고 나머지는 PR 코멘트에 보류 이유를 남긴 뒤 병합한다. CodeRabbit의 첫 회차는 PR을 연 때의 자동 리뷰였고 그 요약이 시간당 한 번의 몫을 다 썼다고 적어, 둘째 회차는 한도에 걸릴 수 있다. 이 인계 절은 커밋하지 않았다. 푸시 전에 일지 커밋으로 실어 798cf3e9와 한 번에 푸시하면 봇이 한 번만 돈다(merge.md 2의 뒤로 넘긴 일). 일지는 docs/journal/2026-10-30-04-admin-run-list.md
+읽을 것: docs/journal/2026-10-30-07-admin-run-list.md
+이어받을 상태: 인계: 커밋 뒤. PR #431 봇 첫 회차의 반영(계약의 UnreadableTrace 타입)과 그 셀프 리뷰 반영(isUnreadable 독스트링, 일지)을 커밋 798cf3e9로 했고 pre-commit이 모두 통과했다. 아직 푸시하지 않았다. 푸시와 merge.md 2(봇 회차)부터 한다. 푸시 뒤 @coderabbitai review 코멘트와 wait_ci 대기를 띄우고, PR 코멘트 하나(봇 첫 회차의 판정과 run_list_mutations.toml 전체 실행 결과 18 모두 기대대로. PR 본문의 "확인 방법"이 일지와 PR 코멘트에 적는다고 약속했다)를 남긴다. 이 푸시로 도는 리뷰는 봇마다 둘째 회차라 Critical·Major만 고치고 나머지는 PR 코멘트에 보류 이유를 남긴 뒤 병합한다. CodeRabbit의 첫 회차는 PR을 연 때의 자동 리뷰였고 그 요약이 시간당 한 번의 몫을 다 썼다고 적어, 둘째 회차는 한도에 걸릴 수 있다. 이 인계 절은 커밋하지 않았다. 푸시 전에 일지 커밋으로 실어 798cf3e9와 한 번에 푸시하면 봇이 한 번만 돈다(merge.md 2의 뒤로 넘긴 일). 일지는 docs/journal/2026-10-30-07-admin-run-list.md
 확인할 선행 조건: 없음
 이번 요청 범위: PR과 병합까지
 
@@ -307,6 +307,14 @@ open-session을 부른다 2026-10-29T18:20:15Z
 PR #431의 `mergeStateStatus`가 `BEHIND`였고, main의 보호 규칙은 브랜치가 최신이기를 요구한다(`required_status_checks`의 `strict`가 `true`, `gh api`). origin/main은 위 "이어받은 세션(봇 첫 회차 반영의 셀프 리뷰 직전)"과 같이 `8899c41b`(#430) 하나만 앞서 있었고, 그 파일 열하나는 이 브랜치가 고친 파일과 겹치지 않았다(`git diff --name-only`의 두 방향). 앱의 `sync_with_base_branch`는 "This session doesn't run in a worktree the app made for it"으로 거부해(도구 결과) `git merge --no-edit origin/main`으로 합쳤다. 충돌은 없었다(병합 커밋 `7dbe44f9`). 그 도구의 설명이 커밋하지 않은 변경이 있으면 거부한다고 적어, 합치기 전에 이 일지의 변경을 세션 스크래치패드에 복사해 두고(`cmp`로 같음을 봤다) 걷었다가 합친 뒤 되돌렸다. 이 일지 커밋의 pre-commit이 합친 트리 전체를 본다(`parallel-checks`가 `always_run`이다, `.pre-commit-config.yaml`을 읽었다). 798cf3e9, 병합 커밋, 이 일지 커밋을 한 번에 푸시해 봇의 둘째 회차가 한 번만 돌게 한다.
 
 첫 커밋 시도의 pre-commit은 pytest 하나만 빨갰다. 6004개가 지나고 시간 시험 둘이 실패했다. `test_interrupt.py`의 `test_도구_호출_도중에_한_번_누르면_서버를_닫고_중단으로_끝난다`("Ctrl+C 를 누른 자식이 30초 안에 끝나지 않았다")와 `test_rerun_runner.py`의 `test_오염이_한_번이면_다시_돌고_두_번이면_그_과제를_모든_갈래에서_뺀다`(`run()`이 1)다. web-verify(661.9초)와 나머지 검사는 통과했다(pre-commit의 출력). 두 시험만 따로 돌리자 "2 passed in 74.95s"였다(명령의 출력). 합친 #430은 `.py`를 고치지 않았다(위 파일 목록). 위 "회고"의 5와 같은 종류(부하 아래에서만 빨간 시간 시험)라 회차를 더하지 않고 커밋을 다시 시도했다.
+
+다시 친 커밋 `9557c39a`의 pre-commit이 모두 통과했다. pytest 521.0초, web-verify 548.9초였고 ruff 둘은 `.py`가 없어 Skipped였다(pre-commit의 출력). 그래서 `uv run ruff check .`와 `uv run ruff format --check .`를 손으로 쳤고 둘 다 초록이었다(명령의 출력).
+
+## 둘째 합침(#432)
+
+푸시를 `hook_push_behind_main`이 "1커밋 뒤처졌다"로 막았다(훅의 거부 이유). 커밋을 기다리는 동안 origin/main이 `e96ab3be`(admin-style 08, #432)로 나아갔다. 그 커밋이 이 브랜치와 함께 고친 파일은 `.scratch/retro-queue.md` 하나였다(`git diff --name-only`의 두 방향을 견줬다). `git merge --no-edit origin/main`이 그 파일을 자동으로 합쳤고 충돌은 없었다(명령의 출력). 대기열에서 바뀐 것은 348 행 하나라 이 브랜치의 543·544와 닿지 않는다(병합 커밋의 diff). 같이 들어온 `.claude/rules/web-admin.md`의 바뀐 줄은 결정 자리(`RunDecision`)의 `columnOf` 조건이라 실행 목록과 무관하다(diff를 읽었다). `e2e/stack.ts`의 바뀐 것은 주석의 낱말 하나(허가 → 승인)다(같은 diff).
+
+합친 뒤의 `tools/sibling_overlap.py`가 1로 끝났다. 이 브랜치의 일지 2026-10-30-04가 main의 최신 일지 2026-10-30-05(#432)보다 이름순으로 앞이라는 것이다. `--move`로 2026-10-30-07로 옮겼고, 도구가 이 일지, `.scratch/admin-style/probes/README.md`, `.scratch/retro-queue.md`의 인용을 고쳤다(도구의 출력). 옛 번호 `10-30-04`를 저장소에서 Grep으로 찾자 남은 것이 없었다. PR 본문의 일지 경로도 도구가 옮긴 판과 지금 본문을 `diff`로 견준 뒤(차이는 그 한 줄과 끝 줄바꿈이었다) `gh api … --method PATCH`로 올렸다.
 
 ## 다음
 
