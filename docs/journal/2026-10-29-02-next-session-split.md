@@ -184,3 +184,13 @@ open-session을 부른다 2026-10-29T03:55:50Z
 > 사용자: 티켓 .scratch/harness/issues/027-next-session-split.md 를 한다 (위 지시문의 시작 프롬프트. 이어받을 상태 `인계: 커밋 뒤`, 이번 요청 범위 PR과 병합까지)
 
 새 세션이 제목을 `chore/027-next-session-split` 으로 바꾸고 `EnterWorktree(path)` 로 이 워크트리에 들어왔다. `git fetch origin` 뒤에도 `origin/main` 은 `f8410d01` 그대로였다(`git log --oneline -3 origin/main` 으로 손으로 봤다). 이때 주간 사용량은 95%였다(`get_usage` 가 찍었다). 이 인계 절과 함께 일지를 커밋해 푸시하고, PR 을 연 뒤 워크트리 사본의 `merge.md` 를 Read 로 열어 봇 회차와 병합을 잇는다.
+
+## PR 직전 리뷰
+
+`coderabbit auth status` 가 `Seat: not assigned` 를 찍어(손으로 봤다) CLI 대신 대체 둘을 나란히 돌렸다. 둘 다 일지 커밋 `9ce00d1c` 를 푸시한 뒤, origin/main 을 합친 브랜치에서 돌았다.
+
+- 보안(`/security-review`): 식별 서브태스크 하나가 `tools/` 의 바뀐 코드와 프로브 `next_session_reads.py` 를 읽고 지적 0건을 냈다(서브에이전트 보고). 그래서 거짓 양성 거르기 서브태스크는 띄우지 않았다. 보고의 요지: subprocess 는 모두 목록 인자이고 `shell=True` 가 없다. `skill_files` 는 `--tools` 값만 `Skill,Read` 로 바꾸고 권한을 넓히는 플래그는 없다. `skill_for` 는 훅 입력의 `cwd` 위로 `is_file`·`read_text` 만 하고 막는 훅(`hook_push_delete_open_pr`)의 판정은 바뀌지 않았다. 프로브는 `json.loads` 만 쓰고 키나 토큰을 찍지 않는다.
+- 버그·성능(`bug-perf-review`): Critical·Major 0, 유효 2(Minor 1, Nit 1), 오탐 4(서브에이전트 보고). 둘 다 고쳤다.
+  - (Minor, 고침) `next_session_reads.py` 의 `ledger_reads` 가 장부 Read 의 `at` 이 빈 글이면 `datetime.fromisoformat("")` 의 `ValueError` 로 프로브 전체가 죽었다. `tools/token_report.py` 의 `_iso_of` 가 시각을 못 읽으면 빈 글을 쓰고 "그 행은 어느 날에도 들지 않는다"고 독스트링에 적는다(코드를 읽었다). 서브에이전트는 그 행을 넣어 그 예외를 재현했다고 보고했다. 그런 Read 는 빼고 세어 출력과 결과 JSON(`untimed`)에 싣고, 하나라도 있으면 종료 코드를 1로 둔다(시각이 없으면 날의 합에 넣을 수 없어 측정 아님과 같다). 빈 글·깨진 시각·바른 시각 세 행을 넣은 스크래치 스크립트에서 바른 하나만 들고 2를 셌다(손으로 봤다). 실제 장부에 빈 `at` 이 있는지는 재지 않았다.
+  - (Nit, 고침) `.scratch/token-usage/probes/handoff_reach.py` 의 `_lowered_copy` 가 사본에 `SKILL.md` 만 두고 독스트링이 이 브랜치가 없앤 `SKILL_PATH` 를 가리켰다. 그래서 A·B 갈래의 훅 문장이 사본에 없는 `handoff.md` 를 가리켰다. 스킬 폴더째 복사하고 독스트링을 `HANDOFF_PATH` 로 고쳤다. 고친 함수로 만든 사본에서 복사한 훅의 `HANDOFF_PATH` 가 있는 파일이고 문턱이 1000 인 것을 스크래치 스크립트로 봤다(손으로 봤다). 프로브 자체(`claude -p` 네 갈래)는 돌리지 않았다.
+  - 오탐으로 둔 것: 장부 사전 거름이 `json.dumps` 의 기본 구분자에 기댄다(쓰는 쪽이 기본 구분자다), 상대 경로 Read(Read 는 절대 경로를 받는다), `HARNESS` 가 다른 스킬의 하위 파일에도 카나리아 알림을 낸다(독스트링에 적은 의도), 기록 폴더 훑기의 `is_file` 수(프로브라 문제 삼지 않는다).

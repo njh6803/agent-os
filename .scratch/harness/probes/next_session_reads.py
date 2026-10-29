@@ -24,7 +24,8 @@
 
 표지와 회차. Read 하나가 회차다. 세션 기록에서 그 Read 의 tool_use 를 찾은 회차만 길을 잰
 측정이다(`tools/probe_kit.py` 의 `Rounds`). 기록 없음이 하나라도 있으면 종료 코드가 1 이다. 날마다의
-합과 세션당 글자 수는 장부만으로 서므로 기록 없음도 든다.
+합과 세션당 글자 수는 장부만으로 서므로 기록 없음도 든다. 장부의 `at` 이 빈 글이라 날을 정하지
+못한 Read 는 어느 합에도 넣지 않고 수만 찍으며, 하나라도 있으면 종료 코드가 1 이다.
 
 절. 길마다 Read 결과 글에 든 `## ` 머리를 센다. 범위를 준 Read 가 절 가운데서 시작하면 그 절의
 머리가 없어 세지 않는다. 그래서 이 수는 그 절을 읽은 Read 수의 아래 한계다.
@@ -147,8 +148,13 @@ def _str(value: object) -> str:
     return value if isinstance(value, str) else ""
 
 
-def ledger_reads(ledger: Path, first: date, last: date, tz: timezone) -> list[Read]:
-    """장부의 세션 행에서 next-session 폴더의 Read. 같은 세션 행이 여럿이면 뒤의 것이다."""
+def ledger_reads(ledger: Path, first: date, last: date, tz: timezone) -> tuple[list[Read], int]:
+    """장부의 세션 행에서 next-session 폴더의 Read 와, 시각을 읽지 못해 뺀 Read 의 수.
+
+    같은 세션 행이 여럿이면 뒤의 것이다. 장부는 기록의 시각을 읽지 못하면 `at` 을 빈 글로 적고
+    그 행은 어느 날에도 들지 않는다(`tools/token_report.py` 의 `_iso_of`). 그래서 기간을 가를 수
+    없어 빼고 세기만 한다.
+    """
     rows: dict[str, dict[str, object]] = {}
     for path in sorted(ledger.glob("[0-9][0-9][0-9][0-9]-[0-9][0-9].jsonl")):
         for line in path.read_text(encoding="utf-8").splitlines():
@@ -158,12 +164,17 @@ def ledger_reads(ledger: Path, first: date, last: date, tz: timezone) -> list[Re
             if row.get("kind") == "session":
                 rows[_str(row.get("session"))] = row
     reads: list[Read] = []
+    untimed = 0
     for session, row in rows.items():
         for item in _list(row.get("reads")):
             r = _obj(item)
             if FOLDER not in _str(r.get("path")).replace("\\", "/").lower():
                 continue
-            at = datetime.fromisoformat(_str(r.get("at")).replace("Z", "+00:00"))
+            try:
+                at = datetime.fromisoformat(_str(r.get("at")).replace("Z", "+00:00"))
+            except ValueError:
+                untimed += 1
+                continue
             if not first <= at.astimezone(tz).date() <= last:
                 continue
             chars = r.get("chars")
@@ -176,7 +187,7 @@ def ledger_reads(ledger: Path, first: date, last: date, tz: timezone) -> list[Re
                     row.get("handoff") is True,
                 )
             )
-    return reads
+    return reads, untimed
 
 
 def transcripts(projects: Path, sessions: set[str]) -> dict[str, Path]:
@@ -319,7 +330,7 @@ def main() -> int:
     args = parser.parse_args()
     tz = tz_of(args.tz)
     ledger: Path = args.ledger or main_checkout() / ".scratch" / "token-report" / "ledger"
-    reads = ledger_reads(ledger, args.first, args.last, tz)
+    reads, untimed = ledger_reads(ledger, args.first, args.last, tz)
     sessions = {r.session for r in reads}
     files = transcripts(args.projects, sessions)
     by_session: dict[str, dict[str, Read]] = defaultdict(dict)
@@ -377,6 +388,7 @@ def main() -> int:
     print("\n" + "\n".join(rounds.summary().splitlines()[:2]))
     missing = {r.session for r in reads if r.id not in seen}
     print(f"측정 아님의 세션 {len(missing)}: 세션 기록이나 그 Read 의 tool_use 를 찾지 못했다")
+    print(f"시각 없는 Read {untimed}: 장부의 at 을 읽지 못해 합에서 뺐다(기간 밖의 것도 든다)")
     result = {
         "first": args.first.isoformat(),
         "last": args.last.isoformat(),
@@ -398,10 +410,11 @@ def main() -> int:
         },
         "measured": len(rounds.measured),
         "unmeasured": len(rounds.unmeasured),
+        "untimed": untimed,
         "at": datetime.now(UTC).isoformat(timespec="seconds"),
     }
     print(json.dumps(result, ensure_ascii=False))
-    return rounds.exit_code()
+    return rounds.exit_code() or (1 if untimed else 0)
 
 
 if __name__ == "__main__":
