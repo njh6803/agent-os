@@ -234,3 +234,30 @@ claude-review(`df4cdd8b`)는 Minor 1·Nit 1, CodeRabbit(같은 커밋)은 Minor 
 - (CodeRabbit Minor) `source` 의 역슬래시를 명세 검증 때만 슬래시로 바꿔, 이 PR 이 받아 준 역슬래시 원천이 원천 읽기와 Read 판정에는 그대로 갔다. `source` 의 `field_validator` 로 읽을 때 한 번 바꾸게 하고, 그 시험이 바뀐 값을 단언하게 고쳐 빨강(남은 역슬래시)을 본 뒤 고쳤다. 리눅스에서 그 길을 돌려 보지는 않았다. 역슬래시 원천을 쓰는 명세는 지금 없다(Grep).
 
 다시 돌린 명령: `tests/tools/test_canary.py` 279 통과, `tests/tools/test_sibling_overlap.py` 와 함께 돌린 앞 판 397 통과, 바꾼 파이썬 파일의 ruff 둘과 pyright 0 오류. 나머지는 이 반영 커밋의 pre-commit 으로 갈음한다.
+
+## 인계(커밋 뒤, 봇 첫 회차 반영)
+
+반영 커밋 `be9f0d80` 의 pre-commit 은 모두 Passed 였고 Skipped 는 없었다(러너가 찍었다). 그래서 손으로 치는 다섯은 이 결과로 갈음한다. 그 커밋 직후 인계 계기(`커밋 뒤`, 계기 문장의 세션 컨텍스트 263,113 토큰)가 왔다. 계기 문장은 주 체크아웃의 옛 훅 모양(`SKILL.md` 의 결정표 인계 줄)이었고, 워크트리 사본의 `handoff.md` 를 Read 로 열어 따랐다. 요청 범위는 병합까지이고, 넘겨받은 경계(`PR 연 뒤`)와 다르며, `get_session` 의 `self` 에 `parentSessionId` 가 없어 `handoff.md` 1의 다섯에 들지 않는다. 그래서 넘긴다. 커밋은 아직 푸시하지 않았다. 이때 주간 사용량은 96% 였다(`get_usage`). 이 세션의 지금 제목은 `chore/027-next-session-split` 이다. 주 체크아웃은 `main` 이고 `origin/main` 과 같은 `f8410d01` 이다(`git worktree list --porcelain`). 모델은 `tools/model_sweep.py` 가 `Opus 5.5 / xhigh` 를 냈다. 낸 지시문:
+
+```
+다음 작업: .scratch/harness/issues/027-next-session-split.md. next-session 스킬을 네 파일로 나눈 PR #421의 봇 첫 회차 반영을 푸시하고 다음 봇 회차와 병합을 잇는다
+다음 단계: PR 반영·병합
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: 티켓 .scratch/harness/issues/027-next-session-split.md 를 한다
+브랜치: chore/027-next-session-split
+모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
+읽을 것: docs/journal/2026-10-29-02-next-session-split.md
+이어받을 상태: 인계: 커밋 뒤. 봇 첫 회차(claude-review Minor 1·Nit 1, CodeRabbit Minor 3)를 모두 고쳐 be9f0d80 으로 커밋했고(pre-commit 모두 Passed) 아직 푸시하지 않았다. 일지의 이 인계 절은 커밋하지 않았으니 이어받음 절과 함께 커밋해 be9f0d80 과 한 번에 푸시하고, merge.md 2(봇 회차)부터 한다. 다음 리뷰는 두 봇 모두 둘째 회차라 Critical·Major만 고치고 나머지는 지적마다 보류 이유를 PR 코멘트에 남긴다. 이 브랜치가 next-session을 고쳤으니 merge.md는 워크트리 사본을 Read로 열어 따르고, 병합한 뒤에는 다음 작업의 지시문만 내고 새 세션은 열지 않는다(사용자 말, 일지 "시작"). 주간 사용량이 98%에 닿으면 새 계정으로 이어 갈 수 있게 일지의 남은 일을 고치고 멈춘다(사용자 말, 일지 "사용량"). docs/journal/2026-10-29-02-next-session-split.md
+확인할 선행 조건: 없음
+이번 요청 범위: PR과 병합까지
+```
+
+제목을 `chore/027-next-session-split (인계함)` 으로 바꿨고, 이 세션이 띄운 대기와 커밋은 이미 끝나 멈출 백그라운드 작업이 없었고, 워크트리 잠금은 이미 풀려 있었다(`is not locked`).
+
+open-session을 부른다 2026-10-29T05:09:41Z
+
+## 이어받음(커밋 뒤, 봇 첫 회차 반영)
+
+> 사용자: 티켓 .scratch/harness/issues/027-next-session-split.md 를 한다 (위 지시문의 시작 프롬프트. 이어받을 상태 `인계: 커밋 뒤`, 이번 요청 범위 PR과 병합까지)
+
+새 세션이 제목을 `chore/027-next-session-split` 으로 바꾸고 `EnterWorktree(path)` 로 이 워크트리에 들어왔다. `git fetch origin` 뒤에도 `origin/main` 은 `f8410d01` 그대로였다(`git log --oneline -3 origin/main` 으로 손으로 봤다). 이때 주간 사용량은 96%였다(`get_usage`). 이 인계 절과 이어받음 절을 `be9f0d80` 과 함께 푸시하고, 워크트리 사본의 `merge.md` 2(봇 회차)부터 한다. 다음 리뷰는 두 봇 모두 둘째 회차다.
