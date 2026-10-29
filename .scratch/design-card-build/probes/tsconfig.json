@@ -1,0 +1,7 @@
+{
+  "extends": "../../../web/tsconfig.json",
+  "compilerOptions": {
+    "typeRoots": ["../../../web/node_modules/@types"]
+  },
+  "include": ["vite_cli_tool.mts"]
+}
