@@ -14,6 +14,31 @@
 
 이어받은 세션(2026-10-29)은 next-session 지시문으로 열렸다. 지시문의 시작 프롬프트는 위의 첫 줄과 같고, 범위는 PR과 병합까지.
 
+> 사용자: 지금 한 번 더
+
+(커밋이 시간 의존 시험으로 막힌 뒤, 다시 시도할지 묻자 고른 답.)
+
+## 인계 (PR 연 뒤)
+
+PR [njh6803/agent-os#426](https://github.com/njh6803/agent-os/pull/426) 을 연 직후 세션 컨텍스트가 인계 문턱을 넘었다(`hook_handoff` 계기, 경계 `PR 연 뒤`). `@coderabbitai review` 요청 코멘트는 남기지 않았다. 봇 회차와 병합은 새 세션이 한다. 커밋하지 않은 이 절은 새 세션이 이어 쓰고 커밋한다.
+
+지시문:
+
+```
+다음 작업: .scratch/harness/issues/024-sibling-overlap-merge-head.md. 대기열 492: tools/sibling_overlap.py 가 합치는 중(MERGE_HEAD 가 있다)이면 합칠 머리가 더한 대기열 행을 이 브랜치의 새 행에서 뺀다
+다음 단계: PR 반영·병합
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: 대기열 492를 티켓 .scratch/harness/issues/024-sibling-overlap-merge-head.md로 쓰고 한다
+브랜치: chore/024-sibling-overlap-merge-head
+모델: Opus 5.5 / medium. 레벨 스윕의 갈래
+읽을 것: docs/journal/2026-10-29-14-sibling-overlap-merge-head.md
+이어받을 상태: 인계: PR 연 뒤. PR #426 을 열었고 merge.md 2(봇 회차)부터 한다. 첫 @coderabbitai review 코멘트도 새 세션이 남긴다. 일지의 "인계 (PR 연 뒤)" 절은 커밋하지 않은 변경이다. PR 직전 리뷰(대체 둘)는 지적 0건으로 끝났다. docs/journal/2026-10-29-14-sibling-overlap-merge-head.md
+확인할 선행 조건: 없음
+이번 요청 범위: PR과 병합까지
+```
+
+이어받은 세션(2026-10-29, 셋째)은 위 지시문으로 열렸다. 이 절을 커밋해 푸시한 뒤 `@coderabbitai review` 를 남기고 봇 회차를 돈다.
+
 ## 한 것
 
 - 티켓 `.scratch/harness/issues/024-sibling-overlap-merge-head.md` 를 쓰고(번호는 `tools/sibling_overlap.py` 의 다음 빈 번호), 대기열 492 를 닫음 표시로 고쳤다.
@@ -46,3 +71,5 @@
 ## 인계
 
 주간 한도 90% 도달로 인계(다른 세션의 마무리 요청). 새 세션·푸시·PR·병합을 하지 않고 멈춘다. 컨텍스트 인계 계기(`커밋 뒤`)도 왔지만 커밋이 성공하지 않아 경계가 아니었다.
+
+open-session을 부른다 2026-10-29T11:23:47Z
