@@ -164,3 +164,20 @@ open-session을 부른다 2026-10-28T09:58:19Z
 
 - 티켓 023은 done이고 PR #418의 병합이 남았다. 이 PR이 남기는 일은 claude-review의 Minor(`untilPaused`의 제목 문구 리터럴) 하나이고, 파일 전체의 카드 찾기를 함께 옮길 때 다룬다. 대기열에는 올리지 않았다(PR 코멘트에 보류 이유).
 - 대기열 535는 4회차라 다음 chore 차례에 고를 수 있다.
+
+## 인계 (주간 한도 90% 도달)
+
+회고 커밋 `50c420e3`을 푸시한 뒤, 다른 세션(제목 "주간한도 95% 초과 시 세션 전환")이 계정 주간 한도 90% 도달로 새 작업·푸시·병합을 멈추고 인계 보고를 내 달라는 메시지를 보냈다. 사용자의 직접 지시는 아니지만 멈추는 쪽이라 따랐다. `wait_ci.py 418` 대기를 TaskStop으로 멈췄다. 이 절은 커밋하지 않았다.
+
+- 멈춘 때의 `gh pr checks 418`(손으로 한 번 읽었다): ticket·e2e·claude-review pass, python·web·visual·e2e-widget pending, CodeRabbit skipping. claude-review 둘째 회차의 코멘트는 읽지 않았다.
+- 남은 일: 검사가 모두 끝나면 claude-review 둘째 회차의 Critical·Major만 확인하고(Minor·Nit은 보류 이유를 PR 코멘트로), 이 절을 커밋·푸시할지 정한 뒤 "워크트리에서 병합할 때" 1~4로 병합한다. 이 절만 푸시하면 claude-review가 한 번 더 돈다.
+
+## 이어받은 세션 (주간 한도 인계)
+
+지시문으로 연 새 세션이 워크트리 `023-widget-char-count-flake`에 `EnterWorktree(path)`로 들어가 이었다.
+
+> 사용자: "대기열 486을 티켓 .scratch/harness/issues/023-widget-char-count-flake.md로 쓰고 한다"
+
+- `gh pr checks 418`(손으로 한 번 읽었다): 헤드 `50c420e3`에서 CodeRabbit(skipping)을 뺀 검사가 모두 pass였다.
+- claude-review 둘째 회차(`gh pr view 418 --comments`로 코멘트를 읽었다): Minor 하나(`untilPaused`의 제목 문구 결합, 첫 회차와 같은 지점). 둘째 회차라 고치지 않고 보류 이유를 PR 코멘트로 남겼다. Critical·Major는 없다.
+- 커밋하지 않았던 인계 절과 이 절을 함께 푸시한다. 그 푸시로 도는 claude-review는 셋째 회차로 세고, 거기서 보류하는 일은 일지에 다시 적지 않고 PR 코멘트에 둔다.
