@@ -33,6 +33,13 @@ test("실행 목록을 상태로 거르고 실행 하나를 열어 모르는 종
   await openSection(page, "실행");
 
   await expect(page).toHaveURL(`${adminUrl}/runs`);
+  // 시각은 이 브라우저의 시간대로 적는다. 설정이 시간대를 Asia/Seoul 로 고정한다(playwright.config.ts). 페이지 시험은
+  // America/New_York 이라, 시간대를 그 이름으로 박은 구현은 여기서 빨개진다.
+  await expect(group(page, "실행")).toContainText(
+    "시각은 이 브라우저의 시간대(Asia/Seoul)로 적었다.",
+  );
+  // 데스크톱 폭이라 표다.
+  await expect(group(page, "실행").getByRole("table")).toBeVisible();
   await expect(runRow(page, READ_RUNS.finished)).toContainText("끝남");
   await expect(runRow(page, READ_RUNS.failed)).toContainText("실패");
   await expect(runRow(page, READ_RUNS.formatOne)).toContainText("끝남");

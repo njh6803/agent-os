@@ -6,8 +6,13 @@ export function group(page: Page, heading: string): Locator {
   return page.getByRole("region", { name: heading });
 }
 
+/**
+ * 구역 안에서 그 글자가 든 줄. 플러그인 목록의 줄은 목록의 항목이고, 실행 목록의 줄은 넓은 본문 칸에서 표의 행, 좁은
+ * 칸에서 카드(목록의 항목)다(admin-style 티켓 06). 숨은 갈래는 역할 조회에서 빠져 보이는 갈래의 줄만 걸린다.
+ */
 export function row(page: Page, heading: string, name: string): Locator {
-  return group(page, heading).getByRole("listitem").filter({ hasText: name });
+  const place = group(page, heading);
+  return place.getByRole("listitem").or(place.getByRole("row")).filter({ hasText: name });
 }
 
 export async function enterAdminToken(page: Page, token: string): Promise<void> {
