@@ -381,7 +381,36 @@ CodeRabbit CLI는 `coderabbit auth status`가 `Seat: not assigned`라 돌지 못
 - `/security-review`(커밋 `bc0b4afe`, origin/main을 합친 뒤): 지적 없음. diff가 마크다운 셋(티켓, 대기열, 일지)뿐이라 그 명령의 제외 규칙(문서 파일)에 모두 든다. 서브태스크는 띄우지 않고 diff에 키·토큰·비밀번호가 없는 것만 손으로 봤다.
 - `bug-perf-review`(기준 `f39ae86d`): 지적 0건. 셀프 리뷰에서 새로 쓴 문장 다섯(529 3회차, `needed: true` 조건, 반영 자리, `upload.md` 6, 병합 문단)을 밀 주장으로 넘겼고 모두 근거와 맞았다고 했다. `needed: true`는 서브에이전트도 `web/tools/sync-design-system/upload.ts`의 `needsBuild`(`web/packages/ui/` 아래 경로를 `package` 사유로 센다)를 코드로 읽었을 뿐 부르지 않아, 일지의 "어림" 표기를 그대로 둔다.
 
-이 절을 실은 첫 커밋의 pre-commit에서 `tests/channel/cli/test_interrupt.py::test_닫는_도중에_한_번_더_누르면_닫기를_기다리지_않고_끝난다`가 "둘째가 닫는 도중에 오지 않았다"로 빨갰다(1 failed, 5996 passed). 이 브랜치는 문서만 바꿔 그 시험과 CLI를 건드리지 않았다. 같은 파일의 다른 시험을 다루는 대기열 531과 시험 이름이 달라 그 회차로 세지 않고, 같은 커밋을 한 번 다시 쳤다.
+이 절을 실은 첫 커밋의 pre-commit에서 `tests/channel/cli/test_interrupt.py::test_닫는_도중에_한_번_더_누르면_닫기를_기다리지_않고_끝난다`가 "둘째가 닫는 도중에 오지 않았다"로 빨갰다(1 failed, 5996 passed). 이 브랜치는 문서만 바꿔 그 시험과 CLI를 건드리지 않았다. 같은 파일의 다른 시험을 다루는 대기열 531과 시험 이름이 달라 그 회차로 세지 않고, 같은 커밋을 한 번 다시 쳤다. 다시 친 커밋의 pre-commit은 지났다.
+
+## 인계(커밋 뒤, 2026-10-29)
+
+세션 컨텍스트가 인계 문턱을 넘은 채 커밋 뒤 경계에 와서 넘긴다. 이 세션의 제목은 `chore/029-design-system-upload-admin-03`이다. 셀프 리뷰 반영, main 병합, PR 직전 리뷰 둘(지적 없음)까지 커밋했고 푸시하지 않았다. PR은 아직 없다. 커밋하지 않은 변경은 이 인계 절뿐이다.
+
+지시문:
+
+```
+다음 작업: .scratch/harness/issues/029-design-system-upload-admin-03.md. admin-style 03 뒤의 디자인 시스템 올리기는 끝났다. 커밋을 푸시하고 PR을 열어 병합한다
+다음 단계: 디자인 시스템 올리기(/sync-design-system 올리기)를 1단계부터 다시 한다
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다. 다음 단계 줄은 앞 지시문 그대로이고 올리기는 이미 끝났다(이어받을 상태)
+시작 프롬프트: docs/journal/2026-10-28-23-admin-adopt-design-system.md 의 "인계(셀프 리뷰 직전, 2026-10-29)"를 읽고 셀프 리뷰부터 잇는다
+브랜치: chore/029-design-system-upload-admin-03
+모델: Opus 5.5 / medium. 레벨 스윕의 갈래
+읽을 것: 일지 docs/journal/2026-10-28-23-admin-adopt-design-system.md 의 "셀프 리뷰(티켓 029, 2026-10-29)", "PR 직전 리뷰(티켓 029)", "인계(커밋 뒤, 2026-10-29)"
+이어받을 상태: 인계: 커밋 뒤. 셀프 리뷰(/code-review) 반영, origin/main 병합, PR 직전 리뷰 둘(/security-review, bug-perf-review. CodeRabbit CLI는 좌석 없음)까지 커밋했고 지적은 없었다. 시작 프롬프트는 앞 지시문 그대로이고 셀프 리뷰는 끝났다. 남은 단계: 이 인계 절을 커밋하고 푸시한 뒤 /git-pr로 PR을 열고(체크리스트의 PR 직전 리뷰 줄에 대체 둘과 결과를 적는다) merge.md 2(봇 회차)부터 병합까지 한다. 사람이 받아 둔 11-web-edit-teal-accent-600 지시문은 이 PR 병합 뒤에 연다. 일지 docs/journal/2026-10-28-23-admin-adopt-design-system.md
+확인할 선행 조건: 주 체크아웃은 이 세션이 당기지 않았다
+이번 요청 범위: PR과 병합까지
+```
+
+제목을 `chore/029-design-system-upload-admin-03 (인계함)`으로 바꿨다. 워크트리 잠금은 이미 풀려 있었다(`is not locked`). 띄운 백그라운드 작업은 없었다.
+
+open-session을 부른다 2026-10-29T08:59:31Z
+
+## PR과 병합(이어받은 세션, 2026-10-29)
+
+> 사용자: docs/journal/2026-10-28-23-admin-adopt-design-system.md 의 "인계(셀프 리뷰 직전, 2026-10-29)"를 읽고 셀프 리뷰부터 잇는다
+
+지시문의 이어받을 상태대로 셀프 리뷰는 다시 돌리지 않았다. 워크트리 `.claude/worktrees/03-admin-adopt-design-system`에 들어가 위 인계 절을 커밋하고 푸시한 뒤 PR을 연다.
 
 ## 다음
 
