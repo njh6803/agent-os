@@ -5,8 +5,9 @@
 #   PYTHONUTF8=1 uv run python tools/mutate.py .scratch/design-card-build/probes/upload_plan_mutations.toml [번호 ...]
 # 재지 않은 것: 마지막 몫이 빌지 않게 하나를 남기는 한도(`take(rest.length - 1)`)와, 첫 몫이 아니면 빈 몫을 내지 않고
 # 멈추는 조건(`!first`). 앞의 것을 끄면 남은 것이 중간 몫에는 들고 마지막 몫의 예약(경로 둘, 기록·색인 한도)에는 들지
-# 않는 폭에서만 빈 마지막 몫이 더 나고, 뒤의 것을 끄면 빈 몫을 끝없이 쌓는다(어떻게 끝나는지는 돌려 보지 않았다).
-# 멈출 때의 오류 종류와 물러설 길 둘은 아래 변이가 본다.
+# 않는 폭에서만 빈 마지막 몫이 더 난다. 뒤의 것은 끄는 변이가 동치라 표에 두지 않는다. 첫 몫이 아니면 `take`의 예약이
+# 0이라, `taken`이 0일 때 `!fits(1, head.bytes, 0, 0)`이 이미 참이다(PR 직전 버그 축이 코드를 읽어 닫았다. 돌려 보지는
+# 않았다). 멈출 때의 오류 종류와 물러설 길 둘은 아래 변이가 본다.
 
 [runner.node]
 command = ["pnpm", "exec", "vitest", "run", "--project", "node"]

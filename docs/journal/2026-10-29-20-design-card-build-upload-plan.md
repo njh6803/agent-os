@@ -70,3 +70,35 @@ next-session 지시문으로 연 새 세션이다(나란히 여는 2 중 2). 제
 ```
 
 open-session을 부른다 2026-10-29T14:34:21Z
+
+## 인계 (커밋 뒤)
+
+이어받은 세션(제목 `feature/03-upload-plan-first-canonical`)이 셀프 리뷰와 반영을 마치고 `d910cecb`를 커밋했다. pre-commit은 사용자가 고른 대로 `SKIP=pytest`로 돌았고 나머지 검사는 통과했다(위 "커밋 전 검증"). 세션 컨텍스트가 문턱을 넘은 채 `커밋 뒤`에 와서 넘긴다. 푸시와 PR은 아직이다. 새 세션은 PR 직전 리뷰(`docs/constitution/operations.md` 리뷰 파이프라인 2)부터 하고, 그 브리프에 위 "셀프 리뷰"의 "고친 문장" 셋을 밀 주장으로 넣는다. pytest를 뺀 커밋이라 PR의 CI pytest 결과를 반드시 본다.
+
+인계 지시문:
+
+```
+다음 작업: .scratch/design-card-build/issues/03-upload-plan-first-canonical.md. 올리기 계획이 첫 정식 올리기를 가르고, 보낼 파일을 호출 몫으로 나누며, 색인의 libraries와 upgraded를 짓는다
+다음 단계: 구현
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /implement .scratch/design-card-build/issues/03-upload-plan-first-canonical.md
+브랜치: feature/03-upload-plan-first-canonical
+모델: Opus 5.5 / medium. 레벨 스윕의 갈래
+읽을 것: 일지 docs/journal/2026-10-29-20-design-card-build-upload-plan.md 의 "셀프 리뷰", "커밋 전 검증", "인계 (커밋 뒤)"
+이어받을 상태: 인계: 커밋 뒤. d910cecb까지 셀프 리뷰 반영, 티켓 done, 검증을 마치고 커밋했다(pre-commit은 사용자가 고른 SKIP=pytest. 실패는 시간 민감 시험 넷이고 단독으로 모두 통과). 남은 단계는 PR 직전 리뷰(밀 주장은 일지 "셀프 리뷰"의 고친 문장 셋), 푸시, PR(/git-pr), 반영과 병합(merge.md)이다. pytest를 뺀 커밋이라 CI의 pytest를 꼭 본다. 임시 디자인 시스템 아티팩트 64VW1b5F8tRcCeTZBwZA29는 사용자가 남겨 두기로 했다. 지우지 않고 다시 묻지 않는다. 일지 docs/journal/2026-10-29-20-design-card-build-upload-plan.md
+확인할 선행 조건: 없음
+이번 요청 범위: PR과 병합까지
+```
+
+open-session을 부른다 2026-10-29T16:35:26Z
+
+## PR 직전 리뷰 (세 번째 세션, 2026-10-30)
+
+> 사용자: ".claude/skills/implement/SKILL.md 를 읽어 그대로 따른다. … 이어받을 상태: 인계: 커밋 뒤. … 이번 요청 범위: PR과 병합까지"
+
+`coderabbit auth status`가 `Seat: not assigned`라 대체 둘을 돌렸다. `/security-review`를 위해 origin/main(`c04e4fe6`)을 먼저 합쳤다(겹치는 파일 없음, 병합 커밋 `1ef6d301`).
+
+- `/security-review`: 확신도 8 이상의 HIGH·MEDIUM 없음. 입력은 CLI 플래그와 서버의 색인·기록이고, 서버나 기록에서 온 경로로 파일을 열거나 쓰거나 지우는 코드가 없다. `{...index}` 복사는 `Object.prototype`을 바꾸지 않는다. `libraries`는 고정 상수다.
+- `bug-perf-review`: 밀 주장 셋 가운데 1·2(`splitCalls` 독스트링과 티켓 결과 절의 "`limit` 오류는 … 호출에조차 들지 않는 파일에만 난다")는 반례가 없었다. 서브에이전트가 `planUpload`를 직접 불러 0개, 1개, 정확히 16MiB(`[[0,0],[1,0],[0,0]]`), 16MiB+1(`limit`), 253·254·255·600개, 16MiB 둘 등의 몫을 봤다. 무한 반복은 없고 파일 20000개에 102ms였다(여기까지 서브에이전트의 보고이고, 이 세션은 다시 돌리지 않았다). 지적 1건(Minor, 유효): 변이 표 머리의 "뒤의 것(`!first`)을 끄면 빈 몫을 끝없이 쌓는다"가 틀렸다. 첫 몫이 아니면 `take`의 예약이 0이라 `taken`이 0일 때 `!fits(1, head.bytes, 0, 0)`이 이미 참이고, 그 변이는 동치다(이 세션이 `upload.ts` 134~151줄을 읽어 확인했다. 변이는 돌려 보지 않았다).
+
+고친 것: 변이 표 머리의 그 문장을 "끄는 변이가 동치라 표에 두지 않는다"와 그 까닭으로 바꿨다. 코드의 중복 조건은 남겼다. 지우면 그 줄을 겨누는 변이("첫 몫이 기록만 싣지 못하면")의 원문을 다시 지어야 하고, 동작은 같다. `tools/mutate.py … --check`가 "변이 26 모두 원문이 한 번씩 있다"였다.
