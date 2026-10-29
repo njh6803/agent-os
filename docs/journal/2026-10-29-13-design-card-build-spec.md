@@ -1,4 +1,4 @@
-# 2026-10-29 (09) 컴포넌트 카드와 묶음을 저장소가 짓는 기능의 명세
+# 2026-10-29 (13) 컴포넌트 카드와 묶음을 저장소가 짓는 기능의 명세
 
 next-session 지시문으로 연 세션이다(다음 작업: 기능 design-card-build, 다음 단계: 명세, 브랜치 `docs/design-card-build-spec`, 이번 요청 범위: PR과 병합까지). 사용자 프롬프트 원문은 아래다.
 
@@ -91,8 +91,8 @@ ADR 0025 2026-10-28 이력은 짓기를 올리기 도구의 명령으로 두라�
 시작 프롬프트: /to-spec
 브랜치: docs/design-card-build-spec
 모델: Opus 5.5 / xhigh
-읽을 것: docs/journal/2026-10-29-09-design-card-build-spec.md(이 브랜치의 일지. 측정, 사용자가 고른 것의 원문, 고친 것, 인계가 있다)
-이어받을 상태: 인계: 셀프 리뷰 직전. 커밋하지 않은 변경이 워크트리에 있고 셀프 리뷰(/code-review)부터 한다(일지 docs/journal/2026-10-29-09-design-card-build-spec.md). to-spec의 명세 쓰기는 끝났다(.scratch/design-card-build/spec.md). 셀프 리뷰의 범위는 미추적 .scratch/design-card-build/ 전체와 그 일지를 든다. 원천 명세는 그 spec.md이고 따라야 할 결정은 ADR 0025의 2026-10-28 이력이며, 사용자가 고른 세 답의 설명은 일지의 "사용자가 고른 것"에 원문으로 있다. 반영 뒤 명세 서두의 수를 다시 세고, retro, 커밋, PR 직전 리뷰, PR, 봇 회차, 병합, next-session(다음은 명세 검토와 티켓)을 잇는다. 임시 디자인 시스템 아티팩트 https://claude.ai/artifact/64VW1b5F8tRcCeTZBwZA29 를 지울지 사람에게 아직 묻지 않았다(지우기는 되돌릴 수 없어 사람이 확인한다). 이 PC에서는 tests/channel/cli/test_interrupt.py의 시각 비교가 문서만 바꾼 커밋의 pre-commit pytest를 막을 수 있다(고침은 대기열 531이 맡는다). 다시 그 시험만으로 막히면 SKIP=pytest를 쓰기 전에 사람에게 묻는다
+읽을 것: docs/journal/2026-10-29-13-design-card-build-spec.md(이 브랜치의 일지. 측정, 사용자가 고른 것의 원문, 고친 것, 인계가 있다)
+이어받을 상태: 인계: 셀프 리뷰 직전. 커밋하지 않은 변경이 워크트리에 있고 셀프 리뷰(/code-review)부터 한다(일지 docs/journal/2026-10-29-13-design-card-build-spec.md). to-spec의 명세 쓰기는 끝났다(.scratch/design-card-build/spec.md). 셀프 리뷰의 범위는 미추적 .scratch/design-card-build/ 전체와 그 일지를 든다. 원천 명세는 그 spec.md이고 따라야 할 결정은 ADR 0025의 2026-10-28 이력이며, 사용자가 고른 세 답의 설명은 일지의 "사용자가 고른 것"에 원문으로 있다. 반영 뒤 명세 서두의 수를 다시 세고, retro, 커밋, PR 직전 리뷰, PR, 봇 회차, 병합, next-session(다음은 명세 검토와 티켓)을 잇는다. 임시 디자인 시스템 아티팩트 https://claude.ai/artifact/64VW1b5F8tRcCeTZBwZA29 를 지울지 사람에게 아직 묻지 않았다(지우기는 되돌릴 수 없어 사람이 확인한다). 이 PC에서는 tests/channel/cli/test_interrupt.py의 시각 비교가 문서만 바꾼 커밋의 pre-commit pytest를 막을 수 있다(고침은 대기열 531이 맡는다). 다시 그 시험만으로 막히면 SKIP=pytest를 쓰기 전에 사람에게 묻는다
 확인할 선행 조건: 없음
 이번 요청 범위: PR과 병합까지
 ```
@@ -212,7 +212,7 @@ open-session을 부른다 2026-10-28T09:58:05Z
 시작 프롬프트: /to-spec
 브랜치: docs/design-card-build-spec
 모델: Opus 5.5 / xhigh
-읽을 것: docs/journal/2026-10-29-09-design-card-build-spec.md(이 브랜치의 일지. "셀프 리뷰"의 "반영으로 새로 쓴 사실 문장"과 끝의 "인계 (주간 한도)")
+읽을 것: docs/journal/2026-10-29-13-design-card-build-spec.md(이 브랜치의 일지. "셀프 리뷰"의 "반영으로 새로 쓴 사실 문장"과 끝의 "인계 (주간 한도)")
 이어받을 상태: 인계: 커밋 직전(주간 한도 90% 도달로 인계). 셀프 리뷰 반영, 명세 서두의 수 다시 세기, retro(일지 "회고", 대기열 536 새 행과 506·531 회차)는 끝났고 변경은 모두 스테이지돼 있다. git commit -F의 pre-commit이 tests/channel/cli/test_interrupt.py의 시각 비교 하나로만 막혔다(1 failed, 5970 passed, 나머지 검사 통과, 대기열 531). SKIP=pytest로 커밋할지 먼저 사람에게 묻는다. 커밋 메시지 초안은 일지 "인계 (주간 한도)"에 경로와 제목이 있다. 커밋 전에 git branch --show-current와 uv run python tools/sibling_overlap.py를 다시 친다. 인용 대조의 막지 않는 경고 가운데 명세 208행(제안하는 주석 문장)과 프로브 README 78행("Remove editing and source in the LAST call")을 원문과 대 보거나 따옴표를 뗀다. 그 뒤 origin/main 합치기, PR 직전 리뷰(/security-review와 bug-perf-review. 일지의 "반영으로 새로 쓴 사실 문장" 열두 항목을 밀 주장으로 넘긴다), PR, 봇 회차, 병합, next-session(다음은 명세 검토와 티켓)을 잇는다. 임시 디자인 시스템 아티팩트 https://claude.ai/artifact/64VW1b5F8tRcCeTZBwZA29 를 지울지 사람에게 아직 묻지 않았다(지우기는 되돌릴 수 없어 사람이 확인한다)
 확인할 선행 조건: 없음
 이번 요청 범위: PR과 병합까지
@@ -223,7 +223,7 @@ open-session을 부른다 2026-10-28T09:58:05Z
 위 "인계 (주간 한도)"의 지시문으로 연 세션이다. 사용자 프롬프트는 그 지시문을 글자 그대로 보낸 것이다. 제목을 `docs/design-card-build-spec`으로 바꾸고 `EnterWorktree(path)`로 이 워크트리에 들어왔다. origin/main은 `06a8f85b`에서 `84542f5`로 옮겨 있었다.
 
 - 인용 대조의 막지 않는 경고 둘은 따옴표를 뗐다. 명세 208행은 제안하는 주석 문장이라 원문이 없고, 프로브 README 78행은 저장소 밖 형식 지시문의 문구라 이 세션에서 원문과 대 보지 않았다. 둘 다 뜻은 그대로 두고 풀어 적었다.
-- `tools/sibling_overlap.py`가 이 일지(2026-10-28-24)가 origin/main의 최신 일지 2026-10-29-02보다 이름순으로 앞선다고 1로 끝났다. `--move`로 2026-10-29-09로 옮겼다(첫 실행은 다음 빈 번호를 04로, `--move` 실행은 05를 골랐다. 그사이 다른 형제가 04를 쓴 것으로 본다. 어림). `git diff --name-only HEAD...origin/main`의 목록을 손으로 훑어 이 브랜치가 드는 파일 둘을 골라 `git diff`로 봤다. `.claude/rules/probes.md`(다른 날의 결과를 설명하는 측정은 그때의 입력을 다시 넣는 갈래를 먼저 둔다)와 `.claude/skills/sync-design-system/SKILL.md`(`next-session`을 넷으로 나눈 참조 고침)다. 이 브랜치의 프로브는 다른 날의 결과를 설명하지 않고, 명세 폴더에 그 스킬의 바뀐 문장(`지시문 형식`, `next-session` 3단계)이 없다(Grep으로 봤다).
+- `tools/sibling_overlap.py`가 이 일지(2026-10-28-24)가 origin/main의 최신 일지 2026-10-29-02보다 이름순으로 앞선다고 1로 끝났다. `--move`로 2026-10-29-13로 옮겼다(첫 실행은 다음 빈 번호를 04로, `--move` 실행은 05를 골랐다. 그사이 다른 형제가 04를 쓴 것으로 본다. 어림). `git diff --name-only HEAD...origin/main`의 목록을 손으로 훑어 이 브랜치가 드는 파일 둘을 골라 `git diff`로 봤다. `.claude/rules/probes.md`(다른 날의 결과를 설명하는 측정은 그때의 입력을 다시 넣는 갈래를 먼저 둔다)와 `.claude/skills/sync-design-system/SKILL.md`(`next-session`을 넷으로 나눈 참조 고침)다. 이 브랜치의 프로브는 다른 날의 결과를 설명하지 않고, 명세 폴더에 그 스킬의 바뀐 문장(`지시문 형식`, `next-session` 3단계)이 없다(Grep으로 봤다).
 
 커밋과 임시 아티팩트를 물었다.
 
@@ -258,8 +258,8 @@ origin/main(`84542f5`)을 직접 합쳤다(이 워크트리는 앱이 만든 것
 시작 프롬프트: /to-spec
 브랜치: docs/design-card-build-spec
 모델: Opus 5.5 / xhigh
-읽을 것: docs/journal/2026-10-29-09-design-card-build-spec.md(이 브랜치의 일지. "셀프 리뷰"의 "반영으로 새로 쓴 사실 문장"과 끝의 "둘째 인계받은 세션"·"둘째 인계")
-이어받을 상태: 인계: 커밋 뒤. 명세 커밋과 origin/main 병합 커밋까지 했고 둘 다 푸시하지 않았다(열린 PR 없음). 두 커밋 모두 pre-commit의 pytest만 SKIP=pytest로 건너뛰었다(사용자가 대기열 531의 시험 하나로만 막히면 그렇게 하라고 골랐다. 병합 커밋에서는 같은 시험이 30초 넘김으로 빨갰고 회고가 531·306 가운데 어디에 셀지 정한다). 일지의 둘째 인계받은 세션 절부터 끝까지는 커밋하지 않았다. 남은 단계: PR 직전 리뷰(/security-review와 bug-perf-review. 일지 "반영으로 새로 쓴 사실 문장" 열두 항목을 밀 주장으로 넘긴다), 반영과 일지 커밋, 푸시, PR, 봇 회차, 병합, next-session(다음은 명세 검토와 티켓). 임시 디자인 시스템 아티팩트는 사용자가 남겨 두기로 했다(다시 묻지 않는다) — docs/journal/2026-10-29-09-design-card-build-spec.md
+읽을 것: docs/journal/2026-10-29-13-design-card-build-spec.md(이 브랜치의 일지. "셀프 리뷰"의 "반영으로 새로 쓴 사실 문장"과 끝의 "둘째 인계받은 세션"·"둘째 인계")
+이어받을 상태: 인계: 커밋 뒤. 명세 커밋과 origin/main 병합 커밋까지 했고 둘 다 푸시하지 않았다(열린 PR 없음). 두 커밋 모두 pre-commit의 pytest만 SKIP=pytest로 건너뛰었다(사용자가 대기열 531의 시험 하나로만 막히면 그렇게 하라고 골랐다. 병합 커밋에서는 같은 시험이 30초 넘김으로 빨갰고 회고가 531·306 가운데 어디에 셀지 정한다). 일지의 둘째 인계받은 세션 절부터 끝까지는 커밋하지 않았다. 남은 단계: PR 직전 리뷰(/security-review와 bug-perf-review. 일지 "반영으로 새로 쓴 사실 문장" 열두 항목을 밀 주장으로 넘긴다), 반영과 일지 커밋, 푸시, PR, 봇 회차, 병합, next-session(다음은 명세 검토와 티켓). 임시 디자인 시스템 아티팩트는 사용자가 남겨 두기로 했다(다시 묻지 않는다) — docs/journal/2026-10-29-13-design-card-build-spec.md
 확인할 선행 조건: 없음
 이번 요청 범위: PR과 병합까지
 ```
@@ -354,8 +354,8 @@ PR을 연 직후 `PR 연 뒤`에서 인계 계기(`hook_handoff`)가 왔다. 세
 시작 프롬프트: /to-spec
 브랜치: docs/design-card-build-spec
 모델: Sonnet 5.5 / high
-읽을 것: docs/journal/2026-10-29-09-design-card-build-spec.md(이 브랜치의 일지. 끝의 "셋째 인계받은 세션"과 "인계 (PR 연 뒤)")
-이어받을 상태: 인계: PR 연 뒤. merge.md 2(봇 회차)부터 한다. 첫 @coderabbitai review 코멘트도 새 세션이 남긴다. PR 직전 리뷰(/security-review 취약점 없음, bug-perf-review 유효 2·보류 1)는 반영 커밋에서 모두 고쳤고 PR 체크리스트에 적었다. 일지의 "인계 (PR 연 뒤)" 절은 커밋하지 않았다. 사용자가 이 PR의 남은 커밋은 tests/channel/cli/test_interrupt.py의 시험만으로 막히면 SKIP=pytest로 커밋하라고 골랐다. 단계를 닫는 세션의 회고가 그 파일의 실패 셋(시각 비교 하나, 30초 넘김 둘)을 대기열 531과 닫힌 306 가운데 어디에 셀지 정하고, 일지 "다음"에 명세 검토와 티켓을 적는다. 임시 디자인 시스템 아티팩트는 사용자가 남겨 두기로 했다(다시 묻지 않는다) — docs/journal/2026-10-29-09-design-card-build-spec.md
+읽을 것: docs/journal/2026-10-29-13-design-card-build-spec.md(이 브랜치의 일지. 끝의 "셋째 인계받은 세션"과 "인계 (PR 연 뒤)")
+이어받을 상태: 인계: PR 연 뒤. merge.md 2(봇 회차)부터 한다. 첫 @coderabbitai review 코멘트도 새 세션이 남긴다. PR 직전 리뷰(/security-review 취약점 없음, bug-perf-review 유효 2·보류 1)는 반영 커밋에서 모두 고쳤고 PR 체크리스트에 적었다. 일지의 "인계 (PR 연 뒤)" 절은 커밋하지 않았다. 사용자가 이 PR의 남은 커밋은 tests/channel/cli/test_interrupt.py의 시험만으로 막히면 SKIP=pytest로 커밋하라고 골랐다. 단계를 닫는 세션의 회고가 그 파일의 실패 셋(시각 비교 하나, 30초 넘김 둘)을 대기열 531과 닫힌 306 가운데 어디에 셀지 정하고, 일지 "다음"에 명세 검토와 티켓을 적는다. 임시 디자인 시스템 아티팩트는 사용자가 남겨 두기로 했다(다시 묻지 않는다) — docs/journal/2026-10-29-13-design-card-build-spec.md
 확인할 선행 조건: 없음
 이번 요청 범위: PR과 병합까지
 ```
@@ -417,8 +417,8 @@ PR #422를 병합한 뒤 이 일지의 "다음"이다. 결정표의 "`spec.md`�
 시작 프롬프트: /to-spec
 브랜치: docs/design-card-build-spec
 모델: Sonnet 5.5 / high
-읽을 것: docs/journal/2026-10-29-09-design-card-build-spec.md(이 브랜치의 일지. 끝의 "넷째 인계받은 세션", "회고 (PR 봇 회차)", "다음", "인계 (커밋 뒤, 봇 회차 뒤)")
-이어받을 상태: 인계: 커밋 뒤. 일지의 회고와 "다음"까지 커밋했고(88e634e4) 아직 푸시하지 않았다. 푸시하고 merge.md 2(봇 회차)의 둘째 회차부터 한다. CodeRabbit 첫 회차 지적 다섯은 모두 보류했고 이유는 PR 코멘트(issuecomment-6492800665)에 있다. 둘째 회차는 Critical·Major만 고치고 나머지는 보류 이유를 코멘트에 남긴다. 푸시 직전 git log HEAD..origin/main이 비었는지 보고, 아니면 합친다. 일지의 "인계 (커밋 뒤, 봇 회차 뒤)" 절은 커밋하지 않았다. 사용자는 이 PR의 남은 커밋이 tests/channel/cli/test_interrupt.py의 시험만으로 막히면 SKIP=pytest로 커밋하라고 골랐다. 임시 디자인 시스템 아티팩트는 사용자가 남겨 두기로 했다(다시 묻지 않는다) — docs/journal/2026-10-29-09-design-card-build-spec.md
+읽을 것: docs/journal/2026-10-29-13-design-card-build-spec.md(이 브랜치의 일지. 끝의 "넷째 인계받은 세션", "회고 (PR 봇 회차)", "다음", "인계 (커밋 뒤, 봇 회차 뒤)")
+이어받을 상태: 인계: 커밋 뒤. 일지의 회고와 "다음"까지 커밋했고(88e634e4) 아직 푸시하지 않았다. 푸시하고 merge.md 2(봇 회차)의 둘째 회차부터 한다. CodeRabbit 첫 회차 지적 다섯은 모두 보류했고 이유는 PR 코멘트(issuecomment-6492800665)에 있다. 둘째 회차는 Critical·Major만 고치고 나머지는 보류 이유를 코멘트에 남긴다. 푸시 직전 git log HEAD..origin/main이 비었는지 보고, 아니면 합친다. 일지의 "인계 (커밋 뒤, 봇 회차 뒤)" 절은 커밋하지 않았다. 사용자는 이 PR의 남은 커밋이 tests/channel/cli/test_interrupt.py의 시험만으로 막히면 SKIP=pytest로 커밋하라고 골랐다. 임시 디자인 시스템 아티팩트는 사용자가 남겨 두기로 했다(다시 묻지 않는다) — docs/journal/2026-10-29-13-design-card-build-spec.md
 확인할 선행 조건: 없음
 이번 요청 범위: PR과 병합까지
 ```
@@ -430,3 +430,5 @@ open-session을 부른다 2026-10-29T09:34:19Z
 ## 다섯째 인계받은 세션 (2026-10-29)
 
 위 "인계 (커밋 뒤, 봇 회차 뒤)"의 지시문으로 연 세션이다. 제목을 `docs/design-card-build-spec`으로 바꾸고 `EnterWorktree(path)`로 이 워크트리에 들어왔다. 시작 프롬프트가 `/to-spec`이지만 남은 단계는 PR 반영·병합이라 to-spec 스킬은 읽기만 하고 따르지 않았다. 푸시 직전 `git fetch origin` 뒤 `git log HEAD..origin/main`이 비어 있었고 PR #422는 `CLEAN`·`MERGEABLE`이었다(헤드는 `03c38b22`). 위 인계 절은 앞 세션이 커밋하지 않고 남긴 것이라 이 절과 함께 한 커밋으로 푸시한다. 푸시가 둘째 봇 회차를 부르므로 이 절 뒤의 일은 PR 코멘트와 병합 보고에 남긴다.
+
+푸시 뒤 둘째 봇 회차: CodeRabbit이 `@coderabbitai review`에 `Review rate limited`로 답해 이 푸시의 리뷰가 없었고 첫 회차만 센다(`gh api`로 PR 코멘트의 답글 본문을 읽었다). `claude-review`는 지적 없음이었다. 그 사이 #424가 병합돼 `mergeStateStatus`가 `BEHIND`(main 보호 규칙의 `strict`)가 되어 `origin/main`(`c9d1cd8`)을 합쳤고, `tools/sibling_overlap.py`가 이 일지(09)가 main의 최신 일지(10)보다 이름순으로 앞이라 1로 끝나 `--move`로 `2026-10-29-13`으로 옮겼다. 인용을 고친 파일은 명세, 프로브 README, `plan.md`, 대기열, 이 일지이고 PR 본문의 경로도 같이 고쳤다. 앞 절들이 적은 옛 번호 `2026-10-29-09`는 그 시점의 기록이라 두었다. 형제 `12-main-run`(11), PR #423(12)은 이 일지보다 번호가 앞이다.
