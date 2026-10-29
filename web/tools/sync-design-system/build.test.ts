@@ -132,10 +132,18 @@ describe("짓기", () => {
 
     expect(themes.map((theme) => theme.id)).toEqual(THEME_IDS);
     expect(themes.slice(0, 3).map((theme) => theme.name)).toEqual([
-      "녹청 라이트",
-      "녹청 다크",
-      "군청 라이트",
+      "녹청 라이트 (Light)",
+      "녹청 다크 (Dark)",
+      "군청 라이트 (Light)",
     ]);
+  });
+
+  test("여덟 벌 가운데 다크 벌의 이름만 페이지가 모드를 가르는 낱말(dark, night)에 맞는다", () => {
+    const { themes } = buildTokensFile(CSS).color;
+
+    expect(themes.map((theme) => [theme.id, /dark|night/i.test(theme.name)])).toEqual(
+      THEME_IDS.map((id) => [id, id.endsWith("-dark")]),
+    );
   });
 
   test("테마의 한국어 이름은 패키지의 테마 목록과 키와 이름이 같다", () => {

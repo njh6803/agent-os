@@ -51,7 +51,14 @@ export const THEME_NAMES: ReadonlyMap<string, string> = new Map([
   ["jjokbit", "쪽빛"],
 ]);
 
-const MODE_NAMES: Readonly<Record<Mode, string>> = { light: "라이트", dark: "다크" };
+/**
+ * 테마 이름의 모드 낱말. 페이지는 카드의 모드를 테마 이름이 `/dark|night/i` 에 맞는지로 가르므로 영어 낱말을 덧붙인다
+ * (ADR 0025 의 2026-10-28 이력 "다크 테마", design-card-build 명세 "tokens.json"). 지문은 표시 이름을 보지 않는다.
+ */
+const MODE_NAMES: Readonly<Record<Mode, string>> = {
+  light: "라이트 (Light)",
+  dark: "다크 (Dark)",
+};
 
 const REFERENCE = /^var\(\s*--([A-Za-z0-9][A-Za-z0-9_.-]*)\s*\)$/;
 const TEXT_SIZE = /^--(text-[A-Za-z0-9_.]+(?:-[A-Za-z0-9_.]+)*)$/;
