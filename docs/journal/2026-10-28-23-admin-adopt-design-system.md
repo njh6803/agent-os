@@ -313,8 +313,66 @@ PR #415를 열었다. `.scratch/plan.md`의 프론티어 줄에서 03 문장에 
 - 아티팩트에는 아무것도 보내지 않았고, `claim`도 그대로다.
 - 돌아갈 브랜치 `feature/03-admin-adopt-design-system`은 로컬에서 이미 지워져 있었다(병합 뒤 정리). 그 내용은 main에 있어 워크트리는 분리 HEAD에 남았다.
 
+## 올리기(이어받은 세션, 2026-10-29)
+
+> 사용자: 다음 단계: 디자인 시스템 올리기(/sync-design-system 올리기)를 1단계부터 다시 한다 … 이번 요청 범위: 올리기를 마치고, upload-output.json 이 바뀌면 그 chore 브랜치에 일지와 함께 커밋해 PR 과 병합까지
+
+- 브랜치. 지시문은 `chore/<이름>`을 따라고 했지만 `.design-sync/upload-output.json`은 커밋 검사의 면제 모양이 아니라 티켓 없는 `chore/` 브랜치의 커밋을 막는다(`tools/check_ticket.py` 판정 7). 그래서 하네스 티켓 029를 열고 `chore/029-design-system-upload-admin-03`을 땄다. 인계 일지와 티켓을 실은 첫 커밋의 pre-commit에서 `tests/tools/test_rerun_runner.py::test_동시에_둘까지_돌고_셋째는_자리가_빌_때_연다`가 `assert 1 == 2`로 빨갰고(1 failed, 5970 passed), 문서만 바꾼 같은 커밋을 다시 치자 지났다. 위 "회고"의 끝 문단이 적은 부하에 흔들리는 시간 시험이다.
+- 자리. `origin/main`이 그사이 `84542f52`(#421)로 움직여 그 분리 HEAD에서 1부터 했다. 새 계정으로 읽기가 "artifact not found" 없이 됐고, 아티팩트를 통째로 읽은 결과의 머리가 이 계정을 "writer"로 적었다.
+- 확인과 결정. 아티팩트 판 `1793246441-5a4d`에 새 웹 편집은 없었다. #413의 `claim`만 남아 결정은 `uploadClaimMerged`이고(병합 커밋 `ad8a9c37`이 HEAD의 조상), 기준 커밋 `3666bdc6`부터의 차이로 빌드가 필요했다(`needed: true`. 까닭은 인계와 같다). 사람에게 `/design-sync`를 부탁했다.
+- 빌린 빌드(번들 스킬 2.1.309). `.ds-sync/`에 2.1.309의 스크립트를 다시 복사하고(의존성은 앞 세션이 깐 것), 설치·패키지 빌드·참조 Storybook 뒤 아티팩트의 `project/_ds_sync.json`을 `--remote`로 받아 driver를 돌렸다. 일곱은 이어 쓰고 Icon("쓰임: 탐색 항목 앞의 아이콘")과 TextField("쓰임: 거부 사유와 채널 토큰")가 채점을 기다렸다. 시트와 Icon의 원본 사진 쌍을 열어 보니 내용·색·구성이 같고 틀(미리보기의 흰 칸과 24px 여백)만 달라 둘 다 `match`로 매겼다. 다시 돈 driver에서 둘 다 `carried forward`였다. 사용 규약 검사가 지났다(클래스 50, 변수 54, 내보내기 6, 컴포넌트 9, 뺀 스토리 78, 카드 5개의 변수 133).
+- 계획. 산출 830개 가운데 보낼 것 16개, 지울 것 0개, `clearClaim` true. `claim`의 색인이 기록의 색인과 같아 되돌린 색인 목록은 없다. 보낼 README는 웹의 것과 디자인 토큰 개수 두 줄(166→169, other 125→128)만 다르고, 웹에는 옮기기 절이 남아 있어 사람에게 물었다.
+
+> 질문: 아티팩트의 README 끝에는 2026-10-16 옮기기 때 붙은 "Migrated from the standalone version" 절(옛 단독 프로젝트의 파일이 지금 어디 있는지 안내하는 글)이 있습니다. 새로 지은 README는 디자인 토큰 개수 두 줄(166→169개, other 125→128개)만 다르고 그 절이 없습니다. 이 README를 어떻게 보낼까요?
+>
+> 사용자: "새 README를 보내고 절을 지운다" — 디자인 시스템 창의 README가 토큰 169개로 바르게 바뀌고, 끝의 옮기기 안내 절은 사라집니다. 옮긴 지도(project/migration-map.json)와 옮기기 보고서 파일은 그대로 남습니다.
+
+- 보내기. 첫 `publish`는 `.d.ts` 넷에 종류가 없어 도구가 입력 오류로 아무것도 보내지 않았다(목록이 그 파일을 `text/plain`으로 들어 같은 종류를 적었다). 둘째는 "You haven't viewed the latest version"으로 거부됐다. 확인을 다시 하니 판이 그대로 `1793246441-5a4d`였고, 아티팩트를 경로 없이 통째로 한 번 읽은 뒤 같은 묶음 18개(파일 16개, 기록, 색인)를 한 호출로 보내 판 32(`1793259788-d3cd`)로 받아들여졌다. 경로만 준 읽기로는 도구가 판을 본 것으로 세지 않은 것으로 어림한다. 같은 거부는 일지 2026-10-28-15(티켓 10의 색인 보내기)와 2026-10-28-18(11의 `claim` 보내기)에도 있고, 대기열 529가 그 둘로 2회차를 세어 두었다. 이번이 3회차다.
+- 보낸 뒤 확인이 `clean`(편집 켜짐, 기록 ok, `pending` 없음)이고 `claim`이 비었다. 산출 목록(`output-paths.json`)은 `.design-sync/upload-output.json`과 바이트까지 같아 바꾸지 않았다.
+- 색인 `lastChange`의 `by`는 앞 값의 꼴을 따라 "지형 (새 계정의 Claude Code)"로 적었다. 이 계정이 주인인지 편집자인지는 읽기의 머리("writer")로만 알아, 주인 계정이라고 적지 않았다.
+
+## 인계(셀프 리뷰 직전, 2026-10-29)
+
+세션 컨텍스트가 인계 문턱을 넘은 채 셀프 리뷰 직전 경계에 와서 넘긴다. 이 세션의 제목은 `chore/029-design-system-upload-admin-03`이다. 셀프 리뷰는 돌리지 않았고, 일지와 티켓 029(done)의 변경은 커밋하지 않았다. 사람은 이 세션 도중에 `11-web-edit-teal-accent-600` 세션이 이 일 뒤에 받을 지시문을 보내 두었다(그 세션은 이 올리기가 끝났는지 먼저 묻는다).
+
+지시문:
+
+```
+다음 작업: .scratch/harness/issues/029-design-system-upload-admin-03.md. admin-style 03 뒤의 디자인 시스템 올리기는 끝났다. 일지와 티켓 변경을 셀프 리뷰해 커밋·PR·병합한다
+다음 단계: 디자인 시스템 올리기(/sync-design-system 올리기)를 1단계부터 다시 한다
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다. 다음 단계 줄은 앞 지시문 그대로이고 올리기는 이미 끝났다(이어받을 상태)
+시작 프롬프트: docs/journal/2026-10-28-23-admin-adopt-design-system.md 의 "인계(셀프 리뷰 직전, 2026-10-29)"를 읽고 셀프 리뷰부터 잇는다
+브랜치: chore/029-design-system-upload-admin-03
+모델: Opus 5.5 / medium. 레벨 스윕의 갈래
+읽을 것: 일지 docs/journal/2026-10-28-23-admin-adopt-design-system.md 의 "올리기(이어받은 세션, 2026-10-29)"와 "다음"
+이어받을 상태: 인계: 셀프 리뷰 직전. 커밋하지 않은 변경(일지, 티켓 029를 done으로)이 워크트리에 있고 셀프 리뷰(/code-review, 고정점 origin/main, 티켓 029)부터 한다. 올리기는 끝났다(판 32, 보낸 뒤 확인 clean, claim 비움, upload-output.json 은 바뀌지 않아 PR 에 들지 않는다). 브랜치는 옛 main(06a8f85) 위다. 사람이 받아 둔 11-web-edit-teal-accent-600 지시문은 이 PR 병합 뒤에 연다. 일지 docs/journal/2026-10-28-23-admin-adopt-design-system.md
+확인할 선행 조건: 주 체크아웃은 이 세션이 당기지 않았다
+이번 요청 범위: PR과 병합까지
+```
+
+제목을 `chore/029-design-system-upload-admin-03 (인계함)`으로 바꿨다. 워크트리 잠금은 이미 풀려 있었다(`is not locked`). 띄운 백그라운드 작업은 없었다.
+
+open-session을 부른다 2026-10-29T07:47:07Z
+
+## 셀프 리뷰(티켓 029, 2026-10-29)
+
+> 사용자: docs/journal/2026-10-28-23-admin-adopt-design-system.md 의 "인계(셀프 리뷰 직전, 2026-10-29)"를 읽고 셀프 리뷰부터 잇는다
+
+`/code-review`. 기준 `06a8f85b`, 파일 둘(일지, 티켓 029), 커밋 하나(`ee4dfd51`), 미추적 없음. 표준 축은 Hard 둘·Major 둘·판단 하나, 명세 축은 빠진 것 둘·틀린 것 둘을 냈다.
+
+고친 것:
+- 티켓 029에 `**대기열:** 없음` 줄이 없었다(표준 축, `docs/agents/issue-tracker.md` 규약). 더했다.
+- 둘째 보내기의 거부를 "한 번의 사건"으로, 본문은 "(첫 올리기는 이 거부를 적지 않았다)"로 적었다(두 축). 같은 거부가 일지 2026-10-28-15의 32행과 2026-10-28-18의 14행에 있고 대기열 529가 2회차로 세어 둔 것을 grep으로 봤다. 본문과 "다음"을 529의 3회차로 고치고, 529의 승인 칸을 3회차로 올렸다. 고친 문장: "같은 거부는 일지 2026-10-28-15(티켓 10의 색인 보내기)와 2026-10-28-18(11의 `claim` 보내기)에도 있고, 대기열 529가 그 둘로 2회차를 세어 두었다. 이번이 3회차다."
+- "다음" 첫 줄이 다음 세션의 확인이 "보낼 것이 없을 때"로 끝난다고 단정했다(두 축). `git diff --name-only 84542f52 origin/main`에서 #420이 `web/packages/ui/src/styles/DesignTokens.stories.tsx`를 바꾼 것을 보고 조건을 단 문장으로 고쳤다. 고친 문장: "올린 HEAD `84542f52` 뒤로 main에 든 #420(`f39ae86d`)이 `web/packages/ui`의 `DesignTokens.stories.tsx`를 바꿔, 3의 "빌드가 필요한지"가 `needed: true`를 낼 수 있다." `needed`의 값은 재지 않았다(어림).
+
+남긴 것:
+- 수용 기준 "검증 명령이 모두 초록이다"의 [x]에 근거가 없다(두 축). 이 커밋의 pre-commit으로 갈음하고 결과는 커밋 뒤 아래에 적는다. 빨가면 커밋이 들지 않는다.
+- 색인 `lastChange`의 `via`·`note`와 6의 1·2를 첫 `publish` 전에 했는지가 일지에 없다(명세 축). 올리기 세션의 컨텍스트가 없어 이 세션은 확인할 수 없고, 아티팩트의 결과는 보낸 뒤 확인이 `clean`이라 적었다. 기록의 빈칸으로만 남긴다.
+- 인계 절이 지시문을 코드 블록으로 되풀이한다(표준 축, 판단). 다른 일지의 선례대로라 그대로 둔다.
+
 ## 다음
 
-- 다른 계정의 새 세션이 `/sync-design-system 올리기`를 1부터 다시 한다. 이 PR이 고친 `.claude/rules/web-design.md`와 디자인 토큰 CSS의 주석 둘(`--spacing-8`, `--text-title`)이 디자인 시스템 아티팩트로 오른다. 녹청 라이트 `accent-600`의 웹 편집은 #413이 코드에 들였다. 새 계정이 아티팩트의 주인이나 편집자가 아니면 읽기가 "artifact not found"를 낸다(`.design-sync/NOTES.md` Re-sync risks). 빌드가 필요하므로 사람이 `/design-sync`를 다시 쳐야 하고, Icon과 TextField는 다시 채점한다.
+- 올리기는 끝났다(위 "올리기(이어받은 세션, 2026-10-29)"). `11-web-edit-teal-accent-600` 세션은 사람이 받아 둔 지시문대로 이 올리기가 끝났는지 묻고 1부터 확인한다. `claim`은 비었지만 "보낼 것이 없을 때"로 끝나는 것은 그사이 웹 편집이 없고 빌드가 필요하지 않을 때뿐이다. 올린 HEAD `84542f52` 뒤로 main에 든 #420(`f39ae86d`)이 `web/packages/ui`의 `DesignTokens.stories.tsx`를 바꿔, 3의 "빌드가 필요한지"가 `needed: true`를 낼 수 있다.
+- 둘째 보내기의 거부("You haven't viewed the latest version")는 대기열 529의 3회차다(위 "올리기" 절의 보내기 줄). 529는 자체 승인이 나 있어, 반영(`.claude/skills/sync-design-system/SKILL.md`의 "보내기"와 `import.md` 3)을 chore 브랜치로 딴다.
 - PR #415의 claude-review 첫 회차가 낸 Minor(관리 화면 미리보기의 `a11y` 사본)는 뒤로 넘겨 티켓 04의 "앱 부품" 메모에 적었다(위 "봇 회차" 절).
 - 좁은 폭에서 한국어 낱말 안에서 줄이 갈린다(위 "검증" 절의 정답 사진). 화면 전체의 글자에 걸린 디자인 시스템의 결정(`word-break`)이라 사람이 정할 일이고, 아직 어느 기능에도 적지 않았다.
