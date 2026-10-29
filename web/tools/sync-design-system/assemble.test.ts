@@ -1,6 +1,11 @@
 // 짓기 명령(assemble)의 테스트(design-card-build 명세 Testing Decisions "이음매", "자리", "파일 검사"와 그 2026-10-29
 // 주석). 명령을 임시 폴더로 한 번 돌리고, 같은 산출 폴더를 파일 검사와 규칙 판정과 chromium 그리기가 함께 읽는다. 짓기는
 // 패키지의 vite·Tailwind CLI 를 열두 번 남짓 띄워 한 번에 십몇 초가 든다.
+//
+// 사용 규약의 판정은 `.design-sync/check-conventions.mjs` 의 머리 주석이 든 판정을 산출 폴더에서 다시 본 것이다. 그
+// 스크립트가 보던 옛 이름의 묶음 대신 정식 자리의 묶음(`components/bundle.css`·`components/bundle.js`)을 본다. README 의
+// 문장 모양에 기대므로 README 를 고쳐 모양이 바뀌면 여기도 고친다. 내보내기는 묶음 JS 를 글로 풀지 않고 chromium 에서
+// 실은 뒤의 전역 `AgentOsUi` 로 본다(압축한 IIFE 라 내보내기 블록의 꼴이 짓는 도구를 따라 바뀐다).
 
 import {
   cpSync,
@@ -24,39 +29,56 @@ import {
   UI_PACKAGE,
   viteBuild,
 } from "./assemble.ts";
+import { buildTokensJson, DEFAULT_CSS } from "./build.ts";
 import { CommandError, type ErrorKind } from "./command.ts";
 import { byPath, isRecord } from "./io.ts";
 import { run } from "./main.ts";
 
 const WEB = dirname(dirname(import.meta.dirname));
+const REPO = dirname(WEB);
 const COMPONENTS = join(WEB, "packages", "ui", "src", "components");
+/** 산출에 바이트 그대로 놓이는 저장소 원본. */
+const README_SOURCE = join(REPO, ".design-sync", "conventions.md");
+const FOUNDATIONS_SOURCE = join(REPO, ".design-sync", "foundations");
+const WEB_DESIGN_SOURCE = join(REPO, ".claude", "rules", "web-design.md");
+/** 기초 카드 넷의 폴더. 폴더가 빠지거나 이름이 바뀌면 그 카드가 말없이 빠진 채 올라간다. */
+const FOUNDATIONS = ["colors", "density", "spacing", "type"];
+const DS_CARD = /^<!--\s*@dsCard\s+group="[^"]*"[^>]*-->$/;
 /** 스토리 파일 글에서 태그 `showcase` 가 든 `tags` 배열. 명령과 따로 세어 그리기 시험이 장면 수와 맞댄다. */
 const SHOWCASE_TAGS = /\btags:\s*\[[^\]]*["']showcase["'][^\]]*\]/g;
 // 파일 검사의 금지 문자열은 명령의 판정과 따로 짓되 그보다 느슨하지 않게 둔다(대소문자는 모두 가리지 않는다).
 const FORBIDDEN = ["</script", "<!--", "require(", "react.transitional.element"];
 const IMPORT_STATEMENT = /(?:^|[;\n}])\s*import\s*[\w$*{"']/;
 
-interface ExpectedCard {
+interface StoryFile {
   readonly name: string;
   readonly layer: string;
+  readonly path: string;
   /** 소스 글에서 센 showcase 스토리의 수. */
   readonly scenes: number;
 }
 
-/** 층 폴더의 스토리 파일 가운데 showcase 스토리를 가진 것. 층의 차례, 같은 층 안에서는 이름 차례다. */
-function expectedCards(): ExpectedCard[] {
+/** 층 폴더의 스토리 파일. 층의 차례, 같은 층 안에서는 이름 차례다. */
+function layerStoryFiles(): StoryFile[] {
   return LAYERS.flatMap((layer) =>
     readdirSync(join(COMPONENTS, layer))
       .filter((file) => file.endsWith(".stories.tsx"))
-      .map((file) => ({
-        name: file.slice(0, -".stories.tsx".length),
-        layer,
-        scenes: (readFileSync(join(COMPONENTS, layer, file), "utf-8").match(SHOWCASE_TAGS) ?? [])
-          .length,
-      }))
-      .filter((card) => card.scenes > 0)
+      .map((file) => {
+        const path = join(COMPONENTS, layer, file);
+        return {
+          name: file.slice(0, -".stories.tsx".length),
+          layer,
+          path,
+          scenes: (readFileSync(path, "utf-8").match(SHOWCASE_TAGS) ?? []).length,
+        };
+      })
       .sort((left, right) => byPath(left.name, right.name)),
   );
+}
+
+/** 층 폴더의 스토리 파일 가운데 showcase 스토리를 가진 것. 층의 차례, 같은 층 안에서는 이름 차례다. */
+function expectedCards(): StoryFile[] {
+  return layerStoryFiles().filter((card) => card.scenes > 0);
 }
 
 /** 폴더 안의 파일 경로(`/` 로 이은 상대 경로). 경로 차례다. */
@@ -83,6 +105,97 @@ function forbiddenIn(text: string): string[] {
 /** CSS 의 `url(…)` 주소. */
 function urlsOf(css: string): string[] {
   return [...css.matchAll(/url\(\s*(["']?)([^"')]*)\1\s*\)/g)].map((match) => match[2] ?? "");
+}
+
+/** 글의 백틱 묶음 안 글. */
+function ticks(text: string): string[] {
+  return [...text.matchAll(/`([^`]+)`/g)].map((match) => match[1] ?? "");
+}
+
+function escapeRegExp(text: string): string {
+  return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+/** README 에서 `pattern` 의 첫 묶음. 없으면 던져 그 사례가 빨갛다(문장 모양이 바뀌었다). */
+function section(md: string, pattern: RegExp, what: string): string {
+  const found = pattern.exec(md)?.[1];
+  if (found === undefined) {
+    throw new Error(`README 에서 ${what} 를 찾지 못했다`);
+  }
+  return found;
+}
+
+/**
+ * CSS 에 클래스 선택자가 있는지. 선택자의 클래스 글자(`hover\:bg-bg-hover`, `w-3\/10`)가 있고 바로 뒤가 이름 글자가
+ * 아니어야 한다. `.flex` 가 `.flex-col` 안에서, `.border` 가 `.border-border` 안에서 맞지 않게 한다.
+ */
+function hasClass(css: string, name: string): boolean {
+  const selector = `.${name.replace(/[:/.[\]%]/g, (char) => `\\${char}`)}`;
+  return new RegExp(`${escapeRegExp(selector)}(?![\\w\\\\-])`).test(css);
+}
+
+/** CSS 에 `--이름:` 선언이 있는지. 앞이 다른 이름 글자가 아니어야 한다(`--text-body--line-height:` 안의 `--line-height:`). */
+function declares(css: string, name: string): boolean {
+  return new RegExp(`(?<![a-z0-9-])${escapeRegExp(name)}\\s*:`).test(css);
+}
+
+function hasSelector(css: string, attribute: string, key: string): boolean {
+  return css.includes(`[${attribute}="${key}"]`) || css.includes(`[${attribute}=${key}]`);
+}
+
+/**
+ * README 가 든 `--이름` 변수. "테마의 재료" 문장(원색 토큰)의 것은 쓰지 말라는 예시라 빼고, `<이름>` 이 든 자리 표시는
+ * 통째로 걷고(남기면 `--text-<이름>--line-height` 에서 `--line-height` 가 뽑힌다), 여백 줄의 `-2` 꼴은 `--spacing-2` 로 푼다.
+ */
+function readmeVariables(md: string): string[] {
+  const variables = new Set<string>();
+  for (const raw of md.split("\n")) {
+    if (raw.includes("테마의 재료")) {
+      continue;
+    }
+    const line = raw.replace(/--[a-z0-9-]*<[^>]*>[a-z0-9-]*/g, "");
+    for (const [name] of line.matchAll(/--[a-z][a-z0-9-]*(?:--[a-z0-9-]+)?/g)) {
+      if (!name.endsWith("-")) {
+        variables.add(name);
+      }
+    }
+    if (line.includes("--spacing-")) {
+      for (const token of ticks(line).filter((token) => /^-\d+$/.test(token))) {
+        variables.add(`--spacing${token}`);
+      }
+    }
+  }
+  return [...variables];
+}
+
+/** README 의 `AgentOsUi.<이름>` 과 예시의 `const { … } = window.AgentOsUi` 가 든 이름. */
+function readmeExports(md: string): string[] {
+  const names = new Set(
+    [...md.matchAll(/AgentOsUi\.([A-Z_][A-Za-z0-9_]*)/g)].map((match) => match[1] ?? ""),
+  );
+  for (const match of md.matchAll(/const \{([^}]+)\} = window\.AgentOsUi/g)) {
+    for (const name of (match[1] ?? "").split(",").map((part) => part.trim())) {
+      if (name !== "") {
+        names.add(name);
+      }
+    }
+  }
+  return [...names];
+}
+
+/** README 가 `` `data-theme`(…) ``·`` `data-density`(…) `` 의 값으로 든 키. */
+function readmeKeys(md: string, attribute: string): string[] {
+  const keys = section(md, new RegExp(`\`${attribute}\`\\(([^)]*)\\)`), `${attribute} 의 값`);
+  return ticks(keys).filter((token) => /^[a-z]+$/.test(token));
+}
+
+/** 스토리 파일 글을 맨 앞 줄의 `const`·`export const` 마다 끊은 덩이와 그 이름. */
+function storyBlocks(text: string): { readonly name: string; readonly body: string }[] {
+  const starts = [...text.matchAll(/^(?:export )?const (\w+)/gm)];
+  return starts.map((match, index) => ({
+    name: match[1] ?? "",
+    body: text.slice(match.index, starts[index + 1]?.index ?? text.length),
+  }));
 }
 
 let scratch = "";
@@ -220,6 +333,77 @@ describe("짓기 명령의 산출", () => {
     expect(imports).toEqual(["./fonts/fonts.css", "./_ds_bundle.css"]);
   });
 
+  test("tokens.json 은 build 가 패키지의 디자인 토큰 CSS 에서 짓는 것과 같은 바이트다", () => {
+    expect(read("tokens.json")).toBe(buildTokensJson(readFileSync(DEFAULT_CSS, "utf-8")));
+  });
+
+  test("tokens.json 의 테마 이름은 모두 (Light) 나 (Dark) 로 끝나고 그 낱말이 테마 id 의 모드와 같다", () => {
+    const parsed: unknown = JSON.parse(read("tokens.json"));
+    const color = isRecord(parsed) ? parsed["color"] : undefined;
+    const themes = isRecord(color) && Array.isArray(color["themes"]) ? color["themes"] : [];
+    const named = themes.map((theme) => ({
+      id: isRecord(theme) ? String(theme["id"]) : "",
+      name: isRecord(theme) ? String(theme["name"]) : "",
+    }));
+
+    expect(named.length).toBeGreaterThan(0);
+    // 모드 낱말이 이름 끝에 없거나 id 의 모드와 다른 테마.
+    const word = (id: string): string =>
+      id.endsWith("-dark")
+        ? " (Dark)"
+        : id.endsWith("-light")
+          ? " (Light)"
+          : " (id 에 모드가 없다)";
+    expect(named.filter((theme) => !theme.name.endsWith(word(theme.id)))).toEqual([]);
+  });
+
+  test("README.md 는 README 원본의 바이트 그대로다", () => {
+    expect(readFileSync(join(out, "README.md")).equals(readFileSync(README_SOURCE))).toBe(true);
+  });
+
+  test("기초 카드 넷이 폴더마다 HTML 하나로 있고 첫 줄이 @dsCard 표지이며 원본과 같은 바이트다", () => {
+    const files = walk(join(out, "foundations"));
+    // 넷은 모두 있어야 하고, 넷 밖의 폴더도 HTML 하나와 표지를 지킨다(옛 검사가 모든 폴더를 봤다).
+    const folders = [
+      ...new Set([
+        ...FOUNDATIONS,
+        ...files.filter((file) => file.includes("/")).map((file) => file.split("/", 1)[0] ?? ""),
+      ]),
+    ].sort();
+    const seen = folders.map((folder) => {
+      const htmls = files.filter((file) => file.startsWith(`${folder}/`) && file.endsWith(".html"));
+      return {
+        folder,
+        htmls: htmls.length,
+        marked: htmls.every((file) =>
+          DS_CARD.test(read(`foundations/${file}`).split("\n", 1)[0] ?? ""),
+        ),
+        same: htmls.every((file) => {
+          const source = join(FOUNDATIONS_SOURCE, file);
+          return (
+            existsSync(source) &&
+            readFileSync(join(out, "foundations", file)).equals(readFileSync(source))
+          );
+        }),
+      };
+    });
+
+    expect(seen).toEqual(folders.map((folder) => ({ folder, htmls: 1, marked: true, same: true })));
+    expect(files).toEqual(walk(FOUNDATIONS_SOURCE));
+  });
+
+  test("guidelines 의 web-design.md 는 규칙 파일의 바이트이고 index.md 는 그 파일 하나를 가리키는 목록이다", () => {
+    expect(walk(join(out, "guidelines"))).toEqual(["index.md", "web-design.md"]);
+    expect(
+      readFileSync(join(out, "guidelines", "web-design.md")).equals(
+        readFileSync(WEB_DESIGN_SOURCE),
+      ),
+    ).toBe(true);
+    // 아티팩트 판 1793259788-d3cd 의 그 파일과 같은 바이트다. 2026-10-30 Artifact 도구의 read 가 그 판의 46 바이트와
+    // sha256 a9bd8e3a… 를 냈고, 지은 파일과 cmp 로 맞댔다(손으로 봤다).
+    expect(read("guidelines/index.md")).toBe("# Guidelines\n\n- [web-design](./web-design.md)\n");
+  });
+
   test("경로 목록은 산출 폴더를 훑은 것을 project/ 아래 경로 차례로 두 칸 들여쓴 JSON 이다", () => {
     const text = readFileSync(pathsFile, "utf-8");
     const expected = walk(out).map((file) => `project/${file}`);
@@ -238,6 +422,120 @@ describe("짓기 명령의 산출", () => {
       .filter((file) => needles.some((needle) => read(file).toLowerCase().includes(needle)));
 
     expect(leaked).toEqual([]);
+  });
+});
+
+describe("사용 규약: README 와 기초 카드가 드는 이름이 묶음에 있다", () => {
+  const md = (): string => read("README.md");
+  const css = (): string => read("components/bundle.css");
+
+  test("README 가 이미 있다고 든 유틸리티 클래스가 묶음 CSS 에 모두 있다", () => {
+    const names = section(
+      md(),
+      /이미 있는 유틸리티 클래스: `([^`]+)`/s,
+      "'이미 있는 유틸리티 클래스' 묶음",
+    )
+      .split(/\s+/)
+      .filter((name) => name !== "");
+
+    expect(names.length).toBeGreaterThan(0);
+    expect({ missingClasses: names.filter((name) => !hasClass(css(), name)) }).toEqual({
+      missingClasses: [],
+    });
+  });
+
+  test("README 가 CSS 가 없다고 든 흔한 Tailwind 이름은 묶음 CSS 에 없다", () => {
+    const names = ticks(
+      section(md(), /흔한\s+Tailwind 이름 가운데([\s\S]*?)CSS 가 없어/, "'CSS 가 없다'는 문장"),
+    );
+    // 끝이 `:` 인 것은 변형이고 `.<변형>\:` 꼴로 찾는다.
+    const present = names.filter((name) =>
+      name.endsWith(":") ? css().includes(`.${name.slice(0, -1)}\\:`) : hasClass(css(), name),
+    );
+
+    expect(names.length).toBeGreaterThan(0);
+    expect({ presentButSaidAbsent: present }).toEqual({ presentButSaidAbsent: [] });
+  });
+
+  test("README 가 든 CSS 변수는 묶음 CSS 에 선언이 있다", () => {
+    const names = readmeVariables(md());
+
+    expect(names.length).toBeGreaterThan(0);
+    expect({ undeclared: names.filter((name) => !declares(css(), name)) }).toEqual({
+      undeclared: [],
+    });
+  });
+
+  test("README 가 data-theme·data-density 의 값으로 든 키마다 묶음 CSS 에 그 선택자가 있다", () => {
+    const keys = ["data-theme", "data-density"].flatMap((attribute) =>
+      readmeKeys(md(), attribute).map((key) => ({ attribute, key })),
+    );
+
+    expect(keys.length).toBeGreaterThan(0);
+    expect({
+      noSelector: keys
+        .filter(({ attribute, key }) => !hasSelector(css(), attribute, key))
+        .map(({ attribute, key }) => `${attribute}=${key}`),
+    }).toEqual({ noSelector: [] });
+  });
+
+  test("기초 카드가 읽는 변수는 묶음 CSS 에 선언이 있고 카드가 쓰는 data-theme·data-density 값은 선택자가 있다", () => {
+    const cards = walk(join(out, "foundations"))
+      .filter((file) => file.endsWith(".html"))
+      .map((file) => ({ file, text: read(`foundations/${file}`) }));
+    const variables = new Set(
+      cards.flatMap(({ text }) => [
+        ...[...text.matchAll(/var\(\s*(--[a-z][a-z0-9-]*)/g)].map((match) => match[1] ?? ""),
+        ...[...text.matchAll(/data-value="(--[a-z][a-z0-9-]*)"/g)].map((match) => match[1] ?? ""),
+      ]),
+    );
+    const selectors = cards.flatMap(({ file, text }) =>
+      [...text.matchAll(/(data-theme|data-density)="([a-z]+)"/g)].map((match) => ({
+        file,
+        attribute: match[1] ?? "",
+        key: match[2] ?? "",
+      })),
+    );
+
+    expect(variables.size).toBeGreaterThan(0);
+    expect({
+      cardUndeclared: [...variables].filter((name) => !declares(css(), name)),
+      cardNoSelector: selectors
+        .filter(({ attribute, key }) => !hasSelector(css(), attribute, key))
+        .map(({ file, attribute, key }) => `${file} ${attribute}=${key}`),
+    }).toEqual({ cardUndeclared: [], cardNoSelector: [] });
+  });
+});
+
+describe("산출 밖: 층 폴더의 스토리 파일", () => {
+  test("층 폴더의 스토리 파일마다 showcase 스토리가 하나 이상 있다", () => {
+    // 없으면 그 컴포넌트의 카드가 말없이 빠진다.
+    expect({
+      withoutShowcase: layerStoryFiles()
+        .filter((file) => file.scenes === 0)
+        .map((file) => file.name),
+    }).toEqual({ withoutShowcase: [] });
+  });
+
+  test("showcase 스토리와 그 파일의 meta 에 globals 가 없다", () => {
+    // 카드의 테마와 모드는 페이지가 정해, 스토리가 고른 globals 는 카드에 닿지 않는다. meta 의 것은 모든 스토리가 물려받는다.
+    const showcase = new RegExp(SHOWCASE_TAGS.source);
+    const files = layerStoryFiles().map((file) => {
+      const text = readFileSync(file.path, "utf-8");
+      const blocks = storyBlocks(text);
+      const meta = /^export default (\w+);?$/m.exec(text)?.[1];
+      return { name: file.name, blocks, meta: blocks.find((block) => block.name === meta) };
+    });
+
+    expect({
+      metaNotFound: files.filter((file) => file.meta === undefined).map((file) => file.name),
+      globalsInShowcase: files.flatMap((file) =>
+        file.blocks
+          .filter((block) => block === file.meta || showcase.test(block.body))
+          .filter((block) => /\bglobals\s*:/.test(block.body))
+          .map((block) => `${file.name} ${block.name}`),
+      ),
+    }).toEqual({ metaNotFound: [], globalsInShowcase: [] });
   });
 });
 
@@ -602,5 +900,38 @@ ${read(`components/${name}/preview.html`)}</body></html>`;
 
     expect(plain.red).toBe(0);
     expect(edited.red).toBeGreaterThan(0);
+  });
+
+  test("사용 규약: README 가 든 AgentOsUi 의 이름은 묶음이 전역으로 내보내고, 컴포넌트 이름이면 묶음 머리의 목록에도 있다", async () => {
+    if (browser === undefined) {
+      throw new Error("브라우저가 뜨지 않았다");
+    }
+    const page = await browser.newPage();
+    let keys: unknown;
+    try {
+      await page.setContent(
+        `<!doctype html><html><head><meta charset="utf-8"></head><body><script>${react}</script><script>${read("components/bundle.js")}</script></body></html>`,
+      );
+      keys = await page.evaluate("Object.keys(window.AgentOsUi ?? {})");
+    } finally {
+      await page.close();
+    }
+    const exported = new Set(Array.isArray(keys) ? keys.map(String) : []);
+    const [head = ""] = read("components/bundle.js").split("\n", 1);
+    const parsed: unknown = JSON.parse(/^\/\* @ds-bundle: (.*) \*\/$/.exec(head)?.[1] ?? "null");
+    const listed = new Set(
+      (isRecord(parsed) && Array.isArray(parsed["components"]) ? parsed["components"] : []).map(
+        (component) => (isRecord(component) ? String(component["name"]) : ""),
+      ),
+    );
+    const names = readmeExports(read("README.md"));
+    // 대문자 뒤에 소문자가 오는 이름(`Card`)이 컴포넌트이고, `THEMES`·`DEFAULT_THEME` 은 아니다.
+    const isComponent = (name: string): boolean => /^[A-Z][a-z]/.test(name);
+
+    expect(names.length).toBeGreaterThan(0);
+    expect({
+      notExported: names.filter((name) => !exported.has(name)),
+      notListed: names.filter((name) => isComponent(name) && !listed.has(name)),
+    }).toEqual({ notExported: [], notListed: [] });
   });
 });

@@ -1,7 +1,8 @@
 /**
  * 짓기 명령(assemble). 디자인 시스템 패키지의 소스에서 Design System 형식의 컴포넌트 묶음과 컴포넌트 카드, 글꼴, 목업이
- * 싣는 옛 이름의 파일을 산출 폴더 하나에 짓는다(design-card-build 명세 "짓기 명령", ADR 0025 의 2026-10-28 이력).
- * 산출 폴더는 아티팩트의 `project/` 아래에 놓일 내용이다. 이미 있는 `build` 는 `tokens.json` 하나를 짓는 명령이다.
+ * 싣는 옛 이름의 파일, `tokens.json`, 디자인 시스템 README, 기초 카드, 지침을 산출 폴더 하나에 짓는다(design-card-build
+ * 명세 "짓기 명령", "tokens.json", "디자인 시스템 README와 나머지 파일", ADR 0025 의 2026-10-28 이력). 산출 폴더는
+ * 아티팩트의 `project/` 아래에 놓일 내용이다.
  *
  * - `components/bundle.js`: 패키지 엔트리(`src/index.ts`)를 IIFE 하나로 묶은 것이고 전역 이름은 `AgentOsUi` 다. 1행은
  *   `@ds-bundle` 머리(format 4)이고 컴포넌트 목록은 카드가 있는 컴포넌트를 층의 차례(`LAYERS`), 같은 층 안에서는 이름
@@ -20,6 +21,12 @@
  *   인라인 한도는 vite 기본값이다. 글꼴 주소는 놓일 자리에 맞춰 세 벌로 쓴다(`FONT_PREFIXES`). data URL 은 그대로 둔다.
  * - 옛 이름: `_ds_bundle.js` 는 `components/bundle.js` 와 같은 바이트, `_ds_bundle.css` 는 같은 Tailwind 빌드에 주소가
  *   `./fonts/` 인 `@font-face` 를 붙인 것, `styles.css` 는 `fonts/fonts.css` 와 `_ds_bundle.css` 를 차례로 들인다.
+ * - `tokens.json`: 이미 있는 `build` 가 패키지의 디자인 토큰 CSS 에서 짓는 것과 같은 바이트다.
+ * - `README.md`: README 원본(`.design-sync/conventions.md`)의 바이트 그대로다. 빌린 빌드의 변환기가 그 뒤에 붙이던
+ *   영어 절(옛 자리 안내와 컴포넌트 목록)은 짓지 않는다.
+ * - `foundations/`: 기초 카드 원본 폴더(`.design-sync/foundations/`)의 파일을 바이트 그대로 둔다.
+ * - `guidelines/web-design.md` 는 규칙 파일 `.claude/rules/web-design.md` 의 바이트이고, `guidelines/index.md` 는 그 파일
+ *   하나를 가리키는 목록이다.
  *
  * vite 와 Tailwind 는 import 하지 않는다(새 의존이 들지 않는다). 패키지에 깔린 두 CLI 를 패키지 폴더를 작업 폴더로 삼아
  * 셸 없이 node 로 바로 띄운다. vite 설정은 import 없는 글로 지어 명령의 임시 폴더에 쓰고, 플러그인 셋(JSX 대체 모듈,
@@ -27,7 +34,9 @@
  * 산출 파일로 가른다. 성공한 빌드도 stderr 에 rolldown 의 `"use client"` 경고를 싣는다.
  *
  * 명령은 임시 폴더에 지은 뒤 그 폴더를 규칙(`assertAssembled`: 금지 문자열, 크기 한도, 카드 README)으로 판정하고, 지날
- * 때만 `--out` 에 옮긴다. 빌드가 실패하면 `input`, 규칙을 어기면 크기만 넘었을 때 `limit`, 그 밖은 `input` 오류다. 산출에는
+ * 때만 `--out` 에 옮긴다. 빌드가 실패하거나 저장소 원본(README 원본, 기초 카드 원본, 규칙 파일)을 읽지 못하거나 기초
+ * 카드 원본 폴더가 비었으면 `input` 이고, `tokens.json` 은 `build` 와 같은 오류(풀 수 없으면 `input`, 한도를 넘으면
+ * `limit`)로 끝난다. 규칙을 어기면 크기만 넘었을 때 `limit`, 그 밖은 `input` 오류다. 산출에는
  * 시각과 임시 폴더 경로, `--out` 경로를 넣지 않아 같은 소스에서 다시 지으면 같은 바이트다(명세 스토리 12).
  *
  * 명령: `assemble --out <산출 폴더> --paths <목록 파일>`. 산출 폴더는 없거나 빈 폴더여야 하고, 그렇지 않으면(파일이다,
@@ -70,18 +79,32 @@ import {
 import { tmpdir } from "node:os";
 import { basename, dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { parseArgs } from "node:util";
+import { buildTokensJson, DEFAULT_CSS } from "./build.ts";
 import {
   CommandError,
   messageOf,
   parsedArgs,
+  readInput,
   writeOutput,
   type ErrorKind,
   type ReportFields,
 } from "./command.ts";
 import { byPath, isRecord, parseJson } from "./io.ts";
 
+const WEB = dirname(dirname(import.meta.dirname));
+
 /** 디자인 시스템 패키지의 폴더. */
-export const UI_PACKAGE = join(dirname(dirname(import.meta.dirname)), "packages", "ui");
+export const UI_PACKAGE = join(WEB, "packages", "ui");
+
+/** 산출에 바이트 그대로 두는 저장소 원본. README 원본과 기초 카드 원본은 `.design-sync/` 의 것이다. */
+const SOURCES = {
+  readme: join(dirname(WEB), ".design-sync", "conventions.md"),
+  foundations: join(dirname(WEB), ".design-sync", "foundations"),
+  webDesign: join(dirname(WEB), ".claude", "rules", "web-design.md"),
+} as const;
+
+/** `guidelines/index.md`. 지침 파일 하나를 가리키는 목록이고, 아티팩트 판 `1793259788-d3cd` 의 그 파일과 같은 바이트다. */
+const GUIDELINES_INDEX = "# Guidelines\n\n- [web-design](./web-design.md)\n";
 
 /** 카드를 짓는 컴포넌트 층 폴더. 묶음 머리의 컴포넌트 목록이 이 차례다. */
 export const LAYERS = ["atoms", "molecules"] as const;
@@ -400,8 +423,17 @@ function write(stage: string, path: string, data: string | Uint8Array): void {
   writeFileSync(file, data);
 }
 
-/** 산출을 `stage` 에 짓고 카드 이름을 돌려준다. 중간 파일은 `work` 에 쓴다. */
-function assembleInto(stage: string, work: string): string[] {
+/** 저장소 원본 파일의 바이트. 없으면 `input` 오류다. */
+function sourceBytes(path: string): Buffer {
+  try {
+    return readFileSync(path);
+  } catch (error) {
+    throw new CommandError("input", `${path} 를 읽을 수 없다: ${messageOf(error)}`);
+  }
+}
+
+/** 묶음 JS·CSS, 글꼴, 옛 이름을 `stage` 에 짓는다. 머리의 컴포넌트 목록은 카드가 있는 컴포넌트다. */
+function writeBundles(stage: string, work: string, stories: readonly Story[]): void {
   const tailwind = tailwindCss(work);
   const fonts = buildFonts(work);
   const bundle = buildIife(work, "bundle", {
@@ -409,9 +441,6 @@ function assembleInto(stage: string, work: string): string[] {
     name: "AgentOsUi",
     kind: "bundle",
   });
-  const stories = showcaseStories();
-  const entries = join(work, "entries");
-  mkdirSync(entries);
 
   const head = JSON.stringify({
     format: 4,
@@ -436,7 +465,12 @@ function assembleInto(stage: string, work: string): string[] {
     write(stage, `fonts/${name}`, readFileSync(file));
   }
   write(stage, "styles.css", `@import "./fonts/fonts.css";\n@import "./_ds_bundle.css";\n`);
+}
 
+/** showcase 스토리를 가진 스토리 파일마다 카드와 그 README 를 `stage` 에 짓는다. 장면 엔트리는 `work` 에 쓴다. */
+function writeCards(stage: string, work: string, stories: readonly Story[]): void {
+  const entries = join(work, "entries");
+  mkdirSync(entries);
   for (const story of stories) {
     const entry = join(entries, `scene-${story.name}.mjs`);
     writeFileSync(entry, sceneEntry(story.file));
@@ -451,6 +485,35 @@ function assembleInto(stage: string, work: string): string[] {
       write(stage, `components/${story.name}/README.md`, readFileSync(readme));
     }
   }
+}
+
+/** `tokens.json`, 디자인 시스템 README, 기초 카드, 지침을 `stage` 에 둔다. 토큰 밖은 저장소 원본의 바이트 그대로다. */
+function writeDocuments(stage: string): void {
+  write(stage, "tokens.json", buildTokensJson(readInput(DEFAULT_CSS)));
+  write(stage, "README.md", sourceBytes(SOURCES.readme));
+  let foundations: { readonly path: string }[];
+  try {
+    foundations = walk(SOURCES.foundations);
+  } catch (error) {
+    throw new CommandError("input", `${SOURCES.foundations} 를 읽을 수 없다: ${messageOf(error)}`);
+  }
+  if (foundations.length === 0) {
+    throw new CommandError("input", `${SOURCES.foundations} 에 기초 카드가 없다`);
+  }
+  for (const file of foundations) {
+    write(stage, `foundations/${file.path}`, sourceBytes(join(SOURCES.foundations, file.path)));
+  }
+  write(stage, "guidelines/web-design.md", sourceBytes(SOURCES.webDesign));
+  write(stage, "guidelines/index.md", GUIDELINES_INDEX);
+}
+
+/** 산출을 `stage` 에 짓고 카드 이름을 돌려준다. 중간 파일은 `work` 에 쓴다. */
+function assembleInto(stage: string, work: string): string[] {
+  // 저장소 원본을 읽는 문서가 먼저다. 원본이 없으면 vite·Tailwind 빌드를 띄우기 전에 `input` 으로 끝난다.
+  writeDocuments(stage);
+  const stories = showcaseStories();
+  writeBundles(stage, work, stories);
+  writeCards(stage, work, stories);
   return stories.map((story) => story.name);
 }
 

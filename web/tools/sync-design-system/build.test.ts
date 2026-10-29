@@ -132,9 +132,9 @@ describe("짓기", () => {
 
     expect(themes.map((theme) => theme.id)).toEqual(THEME_IDS);
     expect(themes.slice(0, 3).map((theme) => theme.name)).toEqual([
-      "녹청 라이트",
-      "녹청 다크",
-      "군청 라이트",
+      "녹청 라이트 (Light)",
+      "녹청 다크 (Dark)",
+      "군청 라이트 (Light)",
     ]);
   });
 
