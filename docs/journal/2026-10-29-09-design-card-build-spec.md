@@ -401,3 +401,32 @@ PR #422를 병합한 뒤 이 일지의 "다음"이다. 결정표의 "`spec.md`�
 - 임시 디자인 시스템 아티팩트 `64VW1b5F8tRcCeTZBwZA29`는 사용자가 남겨 두기로 했다. 지우지 않는다. 명세 검토나 티켓에서 실제 페이지를 다시 확인할 때 쓴다.
 - 대기열 531(4회차)과 536(3회차, `code-review` 브리프에 보고를 받은 턴에 일지로 옮기라는 줄), 540은 이 PR에서 반영하지 않았다. 이 기능의 마지막 티켓이 아니므로 chore 계기가 아니다.
 - 이 PC에서 pre-commit의 pytest가 `tests/channel/cli/test_interrupt.py` 하나로 막힐 수 있다. 사용자가 이 PR에서는 그 시험만으로 막히면 `SKIP=pytest`를 골랐다. 다음 PR은 그 선택이 이어지지 않으니 다시 사람에게 묻는다.
+
+## 인계 (커밋 뒤, 봇 회차 뒤)
+
+위 회고와 "다음"까지 적은 일지를 커밋 `88e634e4`로 커밋했다. 이번에는 pre-commit이 pytest까지 모두 통과했다(`SKIP` 없이 종료 0. 단계별 시간은 보지 않았다). 그 직후 `커밋 뒤`에서 인계 계기(`hook_handoff`)가 왔다. 세션 컨텍스트는 216,436 토큰이었다(계기 문장). 이 세션을 연 지시문의 "이어받을 상태"는 `인계: PR 연 뒤`라 같은 경계가 아니고, 이번 요청 범위는 PR과 병합까지라 이 경계에서 끝나지 않는다. 그래서 `handoff.md` 1의 다섯에 들지 않아 넘긴다. 이 세션의 제목은 `docs/design-card-build-spec`이었다.
+
+넘기는 자리: 커밋 `88e634e4`는 푸시하지 않았다(PR의 헤드는 `03c38b22`). 이 절은 커밋하지 않았다. 일지의 "회고 (PR 봇 회차)"와 "다음"은 이미 커밋됐으므로 남은 일은 푸시, 둘째 봇 회차(Critical·Major만), 병합, `next-session`(다음은 명세 검토와 티켓)이다. 푸시가 새 `claude-review` 회차를 돌리고 CodeRabbit은 `@coderabbitai review` 코멘트로 부른다. 일지의 커밋만 푸시하는 푸시이므로 둘째 회차에서 Minor·Nit은 보류 이유를 PR 코멘트에 남긴다(`merge.md` 2의 회차 세기). 이 세션이 띄운 백그라운드 작업은 남아 있지 않다. `tools/model_sweep.py docs/design-card-build-spec`은 `스윕 밖`이었다.
+
+인계 지시문:
+
+```
+다음 작업: 기능 design-card-build. 컴포넌트 카드와 묶음을 저장소가 형식의 정식 자리에 짓기로 한 결정(ADR 0025 2026-10-28 이력)의 명세를 쓴다
+다음 단계: PR 반영·병합
+어디서: 새 세션. 같은 브랜치를 잇는 인계라 git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /to-spec
+브랜치: docs/design-card-build-spec
+모델: Sonnet 5.5 / high
+읽을 것: docs/journal/2026-10-29-09-design-card-build-spec.md(이 브랜치의 일지. 끝의 "넷째 인계받은 세션", "회고 (PR 봇 회차)", "다음", "인계 (커밋 뒤, 봇 회차 뒤)")
+이어받을 상태: 인계: 커밋 뒤. 일지의 회고와 "다음"까지 커밋했고(88e634e4) 아직 푸시하지 않았다. 푸시하고 merge.md 2(봇 회차)의 둘째 회차부터 한다. CodeRabbit 첫 회차 지적 다섯은 모두 보류했고 이유는 PR 코멘트(issuecomment-6492800665)에 있다. 둘째 회차는 Critical·Major만 고치고 나머지는 보류 이유를 코멘트에 남긴다. 푸시 직전 git log HEAD..origin/main이 비었는지 보고, 아니면 합친다. 일지의 "인계 (커밋 뒤, 봇 회차 뒤)" 절은 커밋하지 않았다. 사용자는 이 PR의 남은 커밋이 tests/channel/cli/test_interrupt.py의 시험만으로 막히면 SKIP=pytest로 커밋하라고 골랐다. 임시 디자인 시스템 아티팩트는 사용자가 남겨 두기로 했다(다시 묻지 않는다) — docs/journal/2026-10-29-09-design-card-build-spec.md
+확인할 선행 조건: 없음
+이번 요청 범위: PR과 병합까지
+```
+
+제목을 `docs/design-card-build-spec (인계함)`으로 바꿨다. 워크트리 잠금은 이미 풀려 있었다(`is not locked`).
+
+open-session을 부른다 2026-10-29T09:34:19Z
+
+## 다섯째 인계받은 세션 (2026-10-29)
+
+위 "인계 (커밋 뒤, 봇 회차 뒤)"의 지시문으로 연 세션이다. 제목을 `docs/design-card-build-spec`으로 바꾸고 `EnterWorktree(path)`로 이 워크트리에 들어왔다. 시작 프롬프트가 `/to-spec`이지만 남은 단계는 PR 반영·병합이라 to-spec 스킬은 읽기만 하고 따르지 않았다. 푸시 직전 `git fetch origin` 뒤 `git log HEAD..origin/main`이 비어 있었고 PR #422는 `CLEAN`·`MERGEABLE`이었다(헤드는 `03c38b22`). 위 인계 절은 앞 세션이 커밋하지 않고 남긴 것이라 이 절과 함께 한 커밋으로 푸시한다. 푸시가 둘째 봇 회차를 부르므로 이 절 뒤의 일은 PR 코멘트와 병합 보고에 남긴다.
