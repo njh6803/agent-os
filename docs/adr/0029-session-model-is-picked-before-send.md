@@ -348,7 +348,7 @@ PR이 더한 시험 가운데 풀이의 이름에 기대지 않는 것(숨은 �
 그 시험, `next-session`이 그 도구를 부르는 자리와 스윕 갈래 표지, 결정표와 `docs/model-selection.md`의 스윕 문장)이다. 같은
 결정표를 고치는 브랜치 `chore/030-fable-design-spec-cells`가 병합된 뒤 별도 chore 티켓의 세션이 한다. 그 병합 전까지 칸은
 `Opus 5.5 / xhigh`로 남고, 스윕을 멈췄으므로 그 사이의 지시문은 `tools/model_sweep.py`가 내는 갈래를 따르지 않고 칸의 값을 쓴다.
-그 규칙은 `next-session` `directive.md` 2에 두 문장으로 넣었고, 스윕을 걷는 chore가 지운다. 인계 세션을 스윕의 갈래로 연다는
+그 규칙(모든 브랜치를 `스윕 밖`으로 본다)은 `next-session` `directive.md` 2에 다섯 문장으로 넣었고, 스윕을 걷는 chore가 지운다. 인계 세션을 스윕의 갈래로 연다는
 ADR 0033의 문장 셋에 포인터를 달았다. 스윕 프로브 README의 결과 절에 멈춘 날과 까닭을 적었다.
 
 결과:
