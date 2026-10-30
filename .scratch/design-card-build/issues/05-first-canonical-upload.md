@@ -28,7 +28,8 @@
 
 앱 안 브라우저로 디자인 시스템 아티팩트를 열어 손으로 본다. 본 것은 이 티켓의 결과에 화면에 무엇이 보였는지로 적는다.
 
-- [x] Components 절에 카드 아홉이 있고, 카드마다 장면이 그려지며 칸 아래가 잘리지 않았다. 카드의 한글이 Noto Sans KR이다
+- [x] Components 절에 카드 아홉이 있고, 카드마다 장면이 그려지며 칸 아래가 잘리지 않았다
+- [ ] (페이지에서 확인하지 못함, 결과 8) 카드의 한글이 Noto Sans KR이다. 같은 카드를 짓기 시험(`web/tools/sync-design-system/assemble.test.ts`의 카드 시험)이 chromium에 띄워 실린 Noto Sans KR 글꼴을 센다
 - [x] 테마 메뉴에서 다크 테마를 고르면 카드가 다크(어두운 바탕, 어두운 폼 조작)로 그려지고, 테마 이름이 '(Light)'·'(Dark)'로 갈린다
 - [x] "No move is perfect" 배너와 "Finish setting up" 단추가 보이지 않는다
 - [x] Files 보기에 옛 카드 파일, `_preview/`, `_vendor/`, `_ds_sync.json`이 없다
@@ -52,7 +53,7 @@
 7. **보낸 뒤.** 다시 돈 확인이 `clean`이었다. Artifact 도구 `list`의 `scope: "files"`로 본 Files 목록은 880개에서 852개가 됐고, 옛 별칭 48개는 하나도 남지 않았다.
 8. **페이지에서 본 것.** 앱 안 브라우저로 2026-10-30에 봤다.
    - Components 절에 Button, Card, Icon, IconButton, Progress, StatusBadge, Alert, Switch, TextField의 아홉 카드가 있고 모두 장면이 그려졌다. 처음 열면 몇 카드(Button, IconButton, Alert, Switch, TextField)가 몇 초 동안 빈 칸이었다가 그려졌다. TextField 카드는 아래쪽 오류 문구 "거부 사유를 적어야 거부할 수 있습니다"와 두 번째 칸(채널 토큰)까지 칸 안에 보여 잘리지 않았다.
-   - 카드의 한글이 Noto Sans KR로 그려졌는지는 확인하지 못했다. 스크린샷에서 고딕 계열로 그려진 것은 눈으로 봤다. 카드는 교차 출처 iframe 안에 있어, 앱 안 브라우저의 JavaScript가 계산된 글꼴 이름에 닿지 못했다(카드 iframe의 주소를 따로 열어도 아티팩트 껍데기 페이지로 넘어갔다). 코드로 본 것은 이렇다. 보낸 컴포넌트 묶음 CSS(`components/bundle.css`)가 `font-family:Noto Sans KR`을 선언하고(`grep -o`로 봤다), 글꼴 파일과 `fonts.css`가 Files 목록에 있다. 그래서 이 줄의 체크박스는 Noto Sans KR 부분만 확인하지 못한 채로 닫는다.
+   - 카드의 한글이 Noto Sans KR로 그려졌는지는 확인하지 못했다. 스크린샷에서 고딕 계열로 그려진 것은 눈으로 봤다. 카드는 교차 출처 iframe 안에 있어, 앱 안 브라우저의 JavaScript가 계산된 글꼴 이름에 닿지 못했다(카드 iframe의 주소를 따로 열어도 아티팩트 껍데기 페이지로 넘어갔다). 코드로 본 것은 이렇다. 보낸 컴포넌트 묶음 CSS(`components/bundle.css`)가 `font-family:Noto Sans KR`을 선언하고(`grep -o`로 봤다), 글꼴 파일과 `fonts.css`가 Files 목록에 있다. 그래서 페이지 확인의 첫 체크박스에서 Noto Sans KR 부분을 떼어 [ ]로 남겼다(PR #437의 봇 리뷰를 반영했다).
    - 테마 메뉴는 여덟 테마(녹청·군청·자조·쪽빛의 라이트와 다크)를 '(Light)'·'(Dark)'로 갈라 보였다. '녹청 다크 (Dark)'에서 카드가 어두운 바탕과 어두운 입력칸으로, '녹청 라이트 (Light)'로 바꾸면 밝은 바탕으로 그려졌다. 본 뒤 다크로 되돌렸다.
    - 페이지 맨 위에 "No move is perfect" 배너와 "Finish setting up" 단추가 없었다. 위 막대에는 공유 단추만 있었다.
    - 깨진 카드는 없어 고칠 티켓은 쓰지 않았다.

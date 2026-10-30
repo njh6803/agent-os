@@ -97,6 +97,14 @@ open-session을 부른다 2026-10-30T04:34:49Z
 
 위 지시문으로 연 새 세션이 `EnterWorktree(path)`로 이 워크트리에 들어와 이었다. origin/main은 `fc54912a` 그대로라 합칠 것이 없었다. 브랜치를 푸시하고 PR #437을 열었다. 그 번호로 `.scratch/plan.md`의 design-card-build 행을 done으로 바꾸고 05의 병합 문장을 더했으며, 프론티어 문단에 기능이 닫힌 것을 적었다. 그 뒤 PR #436(admin-style 09)이 먼저 병합되어 PR이 plan.md와 대기열에서 충돌했다. origin/main을 합쳐 프론티어 문단은 main 쪽 문단 끝에 이 브랜치의 닫힘 문장을 붙여 풀었고, admin-style도 닫혀 프론티어에 남은 기능이 없다고 적었다. 대기열은 main의 550 뒤에 551을 두었다. plan.md의 기능 행에서 design-card-build를 기다리는 행은 없었다(상태 칸을 Grep으로 봤다). 티켓의 plan.md 체크박스를 닫았다.
 
+## 봇 회차
+
+`1d173ec1`(main을 합친 커밋)에서 `tools/wait_ci.py`가 모두 통과를 냈다(출력의 끝 줄을 손으로 봤다).
+
+- claude-review: `72f6eb6d`에서 Minor 하나(plan.md가 diff에 없다)는 뒤의 `9b454f7c`가 plan.md를 고쳐 풀렸다. `9b454f7c`에서 Minor 하나(Noto Sans KR을 확인하지 못했는데 체크박스가 [x]다)와 Nit 하나(`open-session을 부른다` 줄이 머리 없이 놓였다)를 냈고, `1d173ec1`에서는 지적이 없었다.
+- CodeRabbit: 첫 리뷰는 `1d173ec1`이었고(앞의 요청 하나는 한도에 걸렸다) Minor 하나를 냈다. claude-review의 Minor와 같은 지적이고, Status도 done에서 되돌리라고 했다.
+- 반영: 첫 회차라 고칠지를 판단해 고쳤다. 페이지 확인의 첫 체크박스에서 Noto Sans KR 부분을 떼어 [ ]로 남기고, 짓기 시험의 카드 시험이 chromium에서 실린 Noto Sans KR 글꼴을 센다는 것을 붙였다(`assemble.test.ts`를 Grep으로 읽었다). Status는 done으로 두었다. 티켓의 나머지 일은 끝났고 글꼴은 그 시험이 본다. Nit의 `open-session` 줄은 인계 절차(`handoff.md` 5)가 읽는 자리라 그대로 두었다. 이 지적은 회고 1(대기열 551)과 같은 세션의 같은 실수가 남은 것이라 회차를 따로 더하지 않았다.
+
 ## 회고
 
 후보 다섯, 승인 1(회차로 세는 것), 기각 4, 넘김 0.
