@@ -4,7 +4,9 @@
 
 ## 준비, 테마, 밀도
 
-- 프로바이더가 없다. `styles.css` 하나와 `_ds_bundle.js` 를 싣고 `window.AgentOsUi` 에서 컴포넌트를 꺼낸다.
+- 프로바이더가 없다. 목업에는 파일 넷(`styles.css`, `fonts/fonts.css`, `_ds_bundle.css`, `_ds_bundle.js`)을 경로 그대로
+  두고, 문서에는 `styles.css` 하나와 `_ds_bundle.js` 를 싣는다. `styles.css` 가 `fonts/fonts.css` 와 `_ds_bundle.css` 를
+  차례로 가져온다. 컴포넌트는 `window.AgentOsUi` 에서 꺼낸다.
 - 테마는 `<html>` 의 `data-theme`(`nokcheong` 기본, `guncheong`, `jacho`, `jjokbit`)이고 색만 바꾼다. 글꼴, 크기,
   모서리는 모든 테마가 같다. 모드는 같은 요소의 `data-mode`(`light`, `dark`)이고, 없으면 시스템 설정을 따른다. 목록은
   `AgentOsUi.THEMES`(`key`, `name`)와 `AgentOsUi.DEFAULT_THEME`.
@@ -19,7 +21,7 @@
 ## 스타일 관용
 
 - 컴포넌트는 `className` 과 `style` 을 받지 않는다. 모양은 props(`variant`, `size`, `tone`, `padding`, `status`)로만
-  고른다. 높이는 밀도가 정해 버튼에는 `size` 가 없다. props 는 `components/<group>/<Name>/<Name>.d.ts`.
+  고른다. 높이는 밀도가 정해 버튼에는 `size` 가 없다.
 - 내 배치(감싸는 `div`, 줄과 칸)는 둘 가운데 하나로 짓는다.
   - 번들 CSS 에 이미 있는 유틸리티 클래스: `flex flex-col flex-wrap flex-1 items-center items-start justify-between
     justify-center gap-1 gap-2 gap-3 gap-4 p-3 p-4 px-3 px-4 py-2 py-3 w-full min-w-0 shrink-0 overflow-hidden bg-bg
@@ -49,8 +51,8 @@
 
 ## 어디를 읽나
 
-- `components/<group>/<Name>/<Name>.prompt.md`: 언제 쓰는지, 해도 되는 것과 하지 않는 것, props.
-- 컴포넌트 카드의 "쓰임" 미리보기: 그 컴포넌트를 실제 자리(승인 묻기, 실행 목록, 플러그인 줄 등)에 놓은 모습이다.
+- `components/<이름>/README.md`(쓰임): 언제 쓰는지, 해도 되는 것과 하지 않는 것.
+- Components 절의 컴포넌트 카드: 그 컴포넌트를 실제 자리(승인 묻기, 실행 목록, 플러그인 줄 등)에 놓은 모습이다.
 - 기초 카드(Colors, Type, Spacing, Density): 색, 글자 단계, 간격과 모서리, 밀도 두 벌.
 - `guidelines/web-design.md`: 상태를 색만으로 보이지 않기, 승인 묻기의 버튼 차례("거부" 보조가 먼저, "승인" 주가
   나중), 도구 이름과 인자는 고정폭 글자 그대로 같은 여러 컴포넌트에 걸친 기준.

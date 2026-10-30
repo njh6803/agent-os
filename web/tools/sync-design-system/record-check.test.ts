@@ -75,7 +75,7 @@ const INDEX = {
   sections: {},
 };
 
-/** 빌드 산출. 아티팩트의 `project/` 아래에 놓인다. */
+/** 올릴 산출. 아티팩트의 `project/` 아래에 놓인다. */
 function bundle(folder: string, overrides: Readonly<Record<string, string>> = {}): string {
   put(folder, {
     "tokens.json": buildTokensJson(CSS),
@@ -334,35 +334,6 @@ describe("기록과 확인 명령", () => {
 
     webFolder("done", "next", "on", "last.json");
     expect(judged("done").report).toMatchObject({ result: "clean", pending: null });
-  });
-
-  test("빌드가 필요한지는 바뀐 경로의 줄 목록으로 가른다", () => {
-    writeFileSync(
-      join(scratch, "changed.txt"),
-      ".claude/rules/web-design.md\r\nweb/packages/ui/src/Button.tsx\n\n",
-    );
-
-    expect(invoke("record", "needs-build", "--changed", "changed.txt").report).toMatchObject({
-      ok: true,
-      needed: true,
-      because: [{ path: "web/packages/ui/src/Button.tsx", reason: "package" }],
-    });
-  });
-
-  test("따옴표로 싼 경로 줄은 받지 않는다", () => {
-    const quoted = '"web/packages/ui/src/\\353\\262\\204\\355\\212\\274.tsx"';
-    writeFileSync(join(scratch, "changed.txt"), `${quoted}\n`);
-
-    expect(invoke("record", "needs-build", "--changed", "changed.txt")).toMatchObject({
-      status: 1,
-      report: {
-        ok: false,
-        error: {
-          kind: "input",
-          message: `changed.txt 가 따옴표로 싼 줄 ${quoted} 을 든다. git -c core.quotePath=false diff --name-only 로 짓는다`,
-        },
-      },
-    });
   });
 
   test("웹 편집 있음 보고에 바뀐 파일의 배열이 없으면 덮어쓰기를 계획하지 않는다", () => {
@@ -628,12 +599,17 @@ describe("기록과 확인 명령", () => {
     [
       "모르는 하위 명령",
       ["record", "erase"],
-      "record 는 plan, needs-build, write, index, claim, base 가운데 하나를 받는다",
+      "record 는 plan, write, index, claim, base 가운데 하나를 받는다",
+    ],
+    [
+      "걷어 낸 빌드 판정",
+      ["record", "needs-build"],
+      "record 는 plan, write, index, claim, base 가운데 하나를 받는다",
     ],
     [
       "하위 명령이 받지 않는 인자",
-      ["record", "needs-build", "--changed", "x", "--out", "y"],
-      "record needs-build 는 --out 를 받지 않는다",
+      ["record", "base", "--record", "x", "--out", "y", "--at", "z"],
+      "record base 는 --at 를 받지 않는다",
     ],
     [
       "첫 호출과 커밋을 함께 준 기록",
@@ -717,7 +693,7 @@ describe("기록과 확인 명령", () => {
     });
   });
 
-  test("빌린 빌드의 산출이면 보낼 색인이 받은 색인과 같다", () => {
+  test("정식 카드가 없는 산출이면 보낼 색인이 받은 색인과 같다", () => {
     bundle("bundle");
     writeFileSync(join(scratch, "sha.json"), "{}");
     writeFileSync(join(scratch, "received-index.json"), JSON.stringify(INDEX));

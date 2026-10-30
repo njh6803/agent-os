@@ -2382,10 +2382,10 @@ def test_색인_확인은_원문이_든_파일을_지우거나_옮긴_커밋도_
 
 
 def test_색인_확인은_어느_판도_추적하지_않는_파일을_작업_트리에서_읽는다(tmp_path: Path) -> None:
-    """변이 표가 추적하지 않는 생성물을
-    가리키면(`.scratch/design-refresh/probes/checker_mutations.toml` 의 `ds-bundle/`), 옛 `--check`
-    처럼 그 파일이 있는 체크아웃에서 작업 트리를 읽는다. 색인만 읽으면 그 표를 고친 커밋이 생성물이
-    있는 체크아웃에서도 막혔다."""
+    """변이 표가 추적하지 않는 생성물을 가리키면(design-card-build 티켓 04 가 지운
+    `.scratch/design-refresh/probes/checker_mutations.toml` 이 `ds-bundle/` 을 가리켰다), 옛
+    `--check` 처럼 그 파일이 있는 체크아웃에서 작업 트리를 읽는다. 색인만 읽으면 그 표를 고친 커밋이
+    생성물이 있는 체크아웃에서도 막혔다."""
     root = _저장소(tmp_path, {".gitignore": "gen/\n", "src/m.py": "x = 1\n"})
     _파일을_둔다(root, "gen/m.py", b"x = 1\n")
     _스테이지한다(

@@ -1,5 +1,6 @@
-// Storybook 설정. 스토리 한 벌이 미리보기, 스토리 테스트(뿌리 vitest.config.ts 의 storybook 프로젝트), `/design-sync`
-// 의 원천이다(ADR 0026). Tailwind 는 viteFinal 로 단다. 패키지 폴더에 vite.config.ts 를 두면 Storybook 은 읽지만, 뿌리의
+// Storybook 설정. 스토리 한 벌이 미리보기, 스토리 테스트(뿌리 vitest.config.ts 의 storybook 프로젝트), 디자인 시스템
+// 아티팩트의 컴포넌트 카드(짓기 명령 web/tools/sync-design-system/assemble.ts 가 showcase 스토리로 짓는다)의 원천이다
+// (ADR 0026, ADR 0025 의 2026-10-28 이력). Tailwind 는 viteFinal 로 단다. 패키지 폴더에 vite.config.ts 를 두면 Storybook 은 읽지만, 뿌리의
 // vitest.config.ts 가 도는 스토리 테스트(@storybook/addon-vitest)는 그 파일을 읽지 않는다.
 import tailwindcss from "@tailwindcss/vite";
 import type { StorybookConfig } from "@storybook/react-vite";

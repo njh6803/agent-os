@@ -2,10 +2,12 @@
 // 주석). 명령을 임시 폴더로 한 번 돌리고, 같은 산출 폴더를 파일 검사와 규칙 판정과 chromium 그리기가 함께 읽는다. 짓기는
 // 패키지의 vite·Tailwind CLI 를 열두 번 남짓 띄워 한 번에 십몇 초가 든다.
 //
-// 사용 규약의 판정은 `.design-sync/check-conventions.mjs` 의 머리 주석이 든 판정을 산출 폴더에서 다시 본 것이다. 그
-// 스크립트가 보던 옛 이름의 묶음 대신 정식 자리의 묶음(`components/bundle.css`·`components/bundle.js`)을 본다. README 의
-// 문장 모양에 기대므로 README 를 고쳐 모양이 바뀌면 여기도 고친다. 내보내기는 묶음 JS 를 글로 풀지 않고 chromium 에서
-// 실은 뒤의 전역 `AgentOsUi` 로 본다(압축한 IIFE 라 내보내기 블록의 꼴이 짓는 도구를 따라 바뀐다).
+// 사용 규약은 README 원본(`artifact-source/README.md`)이고 디자인 에이전트가 읽는다. 컴포넌트가 `className`·`style` 을
+// 받지 않아, 에이전트의 배치는 묶음 CSS 에 있는 클래스와 `var(--…)` 로만 짓는다는 것이 요지다. 클래스 목록은 소스가
+// 클래스를 더하거나 빼면 바뀌므로, 다시 올릴 때 README 를 고쳐 쓰지 않고 README 가 든 이름을 여기서 정식 자리의
+// 묶음(`components/bundle.css`·`components/bundle.js`)과 다시 맞댄다. 판정이 README 의 문장 모양에 기대므로 README 를
+// 고쳐 모양이 바뀌면 여기도 고친다. 내보내기는 묶음 JS 를 글로 풀지 않고 chromium 에서 실은 뒤의 전역 `AgentOsUi` 로
+// 본다(압축한 IIFE 라 내보내기 블록의 꼴이 짓는 도구를 따라 바뀐다).
 
 import {
   cpSync,
@@ -38,8 +40,8 @@ const WEB = dirname(dirname(import.meta.dirname));
 const REPO = dirname(WEB);
 const COMPONENTS = join(WEB, "packages", "ui", "src", "components");
 /** 산출에 바이트 그대로 놓이는 저장소 원본. */
-const README_SOURCE = join(REPO, ".design-sync", "conventions.md");
-const FOUNDATIONS_SOURCE = join(REPO, ".design-sync", "foundations");
+const README_SOURCE = join(import.meta.dirname, "artifact-source", "README.md");
+const FOUNDATIONS_SOURCE = join(import.meta.dirname, "artifact-source", "foundations");
 const WEB_DESIGN_SOURCE = join(REPO, ".claude", "rules", "web-design.md");
 /** 기초 카드 넷의 폴더. 폴더가 빠지거나 이름이 바뀌면 그 카드가 말없이 빠진 채 올라간다. */
 const FOUNDATIONS = ["colors", "density", "spacing", "type"];

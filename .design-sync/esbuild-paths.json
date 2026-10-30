@@ -1,8 +1,0 @@
-{
-  "compilerOptions": {
-    "baseUrl": "../web/packages/ui",
-    "paths": {
-      "lucide-react/dist/esm/icons/*": ["node_modules/lucide-react/dist/esm/icons/*"]
-    }
-  }
-}
