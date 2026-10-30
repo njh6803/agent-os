@@ -6,7 +6,7 @@
 
 **Blocked by:** 04
 
-**Status:** in-progress
+**Status:** done
 
 ### 시작 전
 
@@ -39,7 +39,7 @@
 
 - [x] 지난 산출 목록을 이번 올리기의 `--paths` 목록으로 바꿔 이 티켓의 브랜치에 커밋한다(`upload.md`의 "보낸 뒤"). 먼저 올린 다른 세션이 같은 목록을 이미 main에 넣었으면 커밋할 것이 없고, 그렇다고 결과에 적는다
 - [ ] 이 기능의 마지막 티켓이라, 병합할 때 `.scratch/plan.md`의 design-card-build 상태를 done으로 바꾼다
-- [ ] 검증 명령이 모두 초록이다. 모델 경로, 위젯, 관리 화면을 건드리지 않아 `-m llm`·`-m llm_widget`·e2e·사진 비교는 칠 일이 없다
+- [x] 검증 명령이 모두 초록이다. 모델 경로, 위젯, 관리 화면을 건드리지 않아 `-m llm`·`-m llm_widget`·e2e·사진 비교는 칠 일이 없다
 
 ### 결과
 
@@ -57,3 +57,4 @@
    - 페이지 맨 위에 "No move is perfect" 배너와 "Finish setting up" 단추가 없었다. 위 막대에는 공유 단추만 있었다.
    - 깨진 카드는 없어 고칠 티켓은 쓰지 않았다.
 9. **목록.** 지난 산출 목록(`web/tools/sync-design-system/previous-output.json`)을 이번 산출의 `--paths` 목록으로 바꿨다. 옛 별칭 48줄이 빠지고 정식 카드의 README·preview 18줄과 컴포넌트 묶음 둘이 더해졌다.
+10. **검증.** 커밋 `682f8e52`와 `3b594c63`의 pre-commit이 pyright·lint-imports·pytest·`web-verify`를 포함한 검사를 모두 Passed로 냈다(출력을 손으로 봤다, 일지 2026-10-30-12의 "커밋" 절). `.py`가 없어 `Skipped`였던 ruff 둘은 손으로 쳐 `All checks passed!`, `1181 files already formatted`였다. 모델 경로, 위젯, 관리 화면을 건드리지 않아 `-m llm`·`-m llm_widget`·e2e·사진 비교는 치지 않았다.
