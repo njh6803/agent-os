@@ -17,10 +17,11 @@
 명세와 설계가 정하지 않아 여기서 정한 것:
 - 쓰는 회차에 판을 모르는(빈 값) 회차가 있으면 같은지 알 수 없어 과제를 빼고 그 갈래를 적는다.
 - 과제 목록에 있는데 본 측정의 회차가 하나도 없는 과제도 뺀 과제로 적는다.
-- 사전 등록 절은 README 전체에서 시작 표지와 끝 표지가 하나씩이고 시작이 앞일 때만 받는다. 선례
-  `tools/model_sweep.py`처럼 첫 시작 표지와 그 뒤의 첫 끝 표지 사이를 읽으면, 절보다 앞의 글이 시작
-  표지를 적었을 때 절이 아닌 글을 절로 읽는다. 하나씩일 때만 받으면 표지를 적은 글이 절의 앞에 있든
-  뒤에 있든 결론 없음으로 멈춰 드러난다. 그래서 표지는 절의 두 자리에만 쓴다.
+- 사전 등록 절은 README 전체에서 시작 표지와 끝 표지가 하나씩이고 시작이 앞일 때만 받는다. 선례였던
+  레벨 스윕 도구(`tools/model_sweep.py`, harness 031이 지웠다)처럼 첫 시작 표지와 그 뒤의 첫 끝 표지
+  사이를 읽으면, 절보다 앞의 글이 시작 표지를 적었을 때 절이 아닌 글을 절로 읽는다. 하나씩일 때만
+  받으면 표지를 적은 글이 절의 앞에 있든 뒤에 있든 결론 없음으로 멈춰 드러난다. 그래서 표지는 절의
+  두 자리에만 쓴다.
 - 부트스트랩 표본에서 C_A가 0인 것도 S_k·S_A가 0인 것처럼 세지 않는다. 나눌 수 없다.
 - 후보 가운데 U_k가 같으면 갈래 차례(A~E)의 앞을 고른다.
 - 되풀이는 고른 갈래만 본 판정과 견준다. 결론 없음 조건은 본 판정의 것만 보고, 결론 없음이면
@@ -57,7 +58,6 @@ from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 
-from tools.model_sweep_judge import percentile_ci
 from tools.rerun_files import (
     ARMS,
     END_CAPPED,
@@ -125,8 +125,9 @@ type Solved = Callable[[JudgeView], bool]
 
 def prereg_section(text: str) -> str | None:
     """README에서 두 표지 사이의 글. 시작 표지와 끝 표지가 하나씩이고 시작이 앞일 때만 절이고, 그
-    밖은 빈 값이다. 선례 `tools/model_sweep.py`의 같은 이름 함수는 첫 시작 표지와 그 뒤의 첫 끝 표지
-    사이를 읽어, 절보다 앞의 글이 시작 표지를 적으면 절이 아닌 글을 읽는다."""
+    밖은 빈 값이다. 선례였던 `tools/model_sweep.py`(harness 031이 지웠다)의 같은 이름 함수는 첫 시작
+    표지와 그 뒤의 첫 끝 표지 사이를 읽어, 절보다 앞의 글이 시작 표지를 적으면 절이 아닌 글을
+    읽는다."""
     if text.count(PREREG_START) != 1 or text.count(PREREG_END) != 1:
         return None
     _, _, rest = text.partition(PREREG_START)
@@ -224,6 +225,12 @@ def _views(selection: Selection, arm: str) -> list[JudgeView]:
 
 def _unit(cost: float, n_solved: int) -> float | None:
     return cost / n_solved if n_solved else None
+
+
+def percentile_ci(values: Sequence[float]) -> tuple[float, float]:
+    """정렬한 값의 5번째와 95번째 백분위(가까운 순위)."""
+    s = sorted(values)
+    return s[int(0.05 * (len(s) - 1))], s[int(0.95 * (len(s) - 1))]
 
 
 def ratio_interval(

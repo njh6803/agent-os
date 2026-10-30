@@ -1,10 +1,10 @@
 """소급 측정 `collect.py --since`의 창. 무엇을 창과 관계없이 보고 무엇을 창 안에서만 세는지를
 정한다.
 
-레벨 스윕의 판정(`tools/model_sweep_judge.py`)은 `collect.py --since <스윕 시작>`이 쓴
-`branches.json`을 읽는다. 그 창은 판정이 2026-12-15 뒤에 한 번 돌아 그 전에 회귀를 잡을 자리가
-없었다. 그래서 PR #224가 판정 함수를 옮긴 뒤 이 창도 프로브에서 옮겨
-`tests/tools/test_session_cost_window.py`로 고정했다(PR #220 claude-review 셋째 회차 답글, 일지
+레벨 스윕의 판정 도구(`tools/model_sweep_judge.py`. 스윕을 멈춰 harness 031이 지웠다)는
+`collect.py --since <스윕 시작>`이 쓴 `branches.json`을 읽었다. 그 창은 판정이 2026-12-15 뒤에 한 번
+돌 것이라 그 전에 회귀를 잡을 자리가 없었다. 그래서 PR #224가 판정 함수를 옮긴 뒤 이 창도 프로브에서
+옮겨 `tests/tools/test_session_cost_window.py`로 고정했다(PR #220 claude-review 셋째 회차 답글, 일지
 2026-10-13-42 "다음"). 이 파일은 턴의 머리(`TurnHead`)와 시각만 받는 순수 함수다.
 
 이 파일이 정하는 것:

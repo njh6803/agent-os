@@ -2,6 +2,8 @@
 # 새 세션에 실리는지. 실험군은 이 워크트리, 대조군은 주 체크아웃이다. 주 체크아웃의 옛 판은 그 항목에 Fable 갈래가 없어 카나리아가 없다.
 # 최신 결과: 통과 4(2026-10-31, 이 PC, claude 2.1.312, 대조군 커밋 c18619bb, 일지 2026-10-31-01).
 #   그 뒤 PR 봇 지적으로 `expect`에 모델 값을 이어 붙여 사전 확인으로 갈음했다(2026-10-31, 일지 2026-10-31-01).
+# 2026-10-31 harness 031 이 이 `expect` 의 글을 `directive.md` 2 의 잇는 지시문으로 고쳐 써 지금 원천에는 없다. 그 뒤의
+#   확인은 `next_session_handoff_model.toml` 과 `next_session_continue_ladder.toml` 이 한다. 이 명세는 기록으로 둔다.
 # 돌리는 법: 워크트리 `.claude/worktrees/<이름>/` 루트에서
 #   uv run python tools/canary.py .scratch/harness/probes/canary/next_session_handoff_fable.toml <출력 디렉터리>
 kind = "skill"

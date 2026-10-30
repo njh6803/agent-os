@@ -1,0 +1,31 @@
+# next-session 결정표의 끊는 줄과 "같은 주제가 남았다" 줄의 "모델" 칸(ADR 0029 이력 2026-10-31, harness 031)이 새 세션에
+# 실리는지. 끊는 줄은 `directive.md` 2의 잇는 지시문을 가리키고 막혀서 끊을 때만 사다리로 올리며, 같은 주제 줄은 새 세션이면
+# 새 티켓이라 구현·하네스 칸의 값으로 연다.
+# 실험군은 이 워크트리, 대조군은 스윕 도구를 지우기 전 커밋 `f01ce1e9`이다.
+# 최신 결과: 통과 4, "없음" 섞임 0(2026-10-31, 이 PC, claude 2.1.312, 실험군은 이 워크트리의 커밋하지 않은 본문(러너가 찍은
+#   커밋은 `f01ce1e9`), 대조군 `--control-commit f01ce1e9`, 일지 2026-10-31-03). 대조군은 1번에 "없음", 2번에 옛 값
+#   `새 세션으로 열면 Opus 5.5 / xhigh`를 옮겼다. 그 뒤 셀프 리뷰가 끊는 줄의 규칙 이름(이어 가기 → 잇는 지시문)만 고쳐
+#   사전 확인(`--preflight --control-commit f01ce1e9`, 통과)으로 갈음했다(같은 날, 같은 일지).
+# 돌리는 법: 워크트리 `.claude/worktrees/<이름>/` 루트에서
+#   uv run python tools/canary.py --control-commit f01ce1e9 .scratch/harness/probes/canary/next_session_ladder_rows.toml <출력 디렉터리>
+kind = "skill"
+question = '''
+next-session 스킬을 Skill 도구로 불러 본문을 읽어라. 스킬이 시키는 일은 하지 않는다.
+아래를 그 본문의 결정표에서만 찾는다. 없으면 그 물음에 "없음"이라고만 답하라.
+1. 작업을 마치지 못한 채 끊는 줄의 "모델" 칸에서, 막혀서 끊을 때 어떻게 한다고 적혀 있으면 그 문장을 그대로
+옮겨라.
+2. 하네스·문서만 고친 PR 뒤 같은 주제가 남은 줄의 "모델" 칸에서, 새 세션으로 열 때의 값을 적은 구절을 그대로
+옮겨라.
+'''
+expect = ["막혀서 끊으면 사다리로 한 단계 올린다", "새 세션으로 열면 새 티켓이라 `Sonnet 5.5 / high`"]
+source = ".claude/skills/next-session/SKILL.md"
+skill = "next-session"
+
+[[arm]]
+name = "워크트리"
+role = "experiment"
+
+[[arm]]
+name = "주-체크아웃"
+role = "control"
+checkout = "../../.."

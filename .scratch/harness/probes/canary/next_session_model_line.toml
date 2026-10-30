@@ -4,6 +4,8 @@
 # 2026-10-29 harness 027 이 지시문 형식을 `directive.md` 로 옮겨 "모델" 줄 물음과 그 기대를 뺐다. 그 기대는
 #   `directive.md` 를 원천으로 둔 `next_session_label_ticket_notice.toml` 의 기대에 든다. 남은 결정표 물음은
 #   SKILL.md 에 그대로 있어 사전 확인만 했다(대조군인 옮기기 전 커밋도 그 칸을 들어 대조가 서지 않는다).
+# 2026-10-31 harness 031 이 이 `expect` 의 글을 `directive.md` 2 의 잇는 지시문으로 고쳐 써 지금 원천에는 없다. 그 뒤의
+#   확인은 `next_session_continue_ladder.toml` 과 `next_session_ladder_rows.toml` 이 한다. 이 명세는 기록으로 둔다.
 # 돌리는 법: 워크트리 `.claude/worktrees/<이름>/` 루트에서
 #   uv run python tools/canary.py .scratch/harness/probes/canary/next_session_model_line.toml <출력 디렉터리>
 kind = "skill"

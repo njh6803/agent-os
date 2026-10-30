@@ -18,7 +18,7 @@
 | `judge.py` | 모델 판정 실험. `plan`은 호출 수와 금액 어림만 찍고, `run --yes`가 API를 부른다. `score`가 순위와 보정을 낸다 |
 | `costs.py` | 단가표와 응답 하나의 API 환산 비용. 위의 셋과 `cache_read_fit.py`가 같이 쓴다 |
 | `cache_read_fit.py` | 단가표의 모델마다 캐시 읽기 배수 후보(입력의 0.025·0.05·0.1배) 가운데 어느 것이 `cost-state`의 금액과 맞는지 센다. 단가표를 공식 가격표와 Claude Code의 셈 둘에 대 보는 데 쓴다(`docs/model-selection.md`의 다시 재는 절차) |
-| `branches.json` | `collect.py`의 출력. 수와 이름(브랜치, PR 제목, 티켓 경로), 첫 사람 트리거 시각(`first_human_at`), 그 트리거가 지시문이면 `모델:`·`브랜치:` 줄 값(`directive_features`의 `model_line`·`branch_line`)만 있고 프롬프트와 티켓 본문은 없다. 이 세 칸은 레벨 스윕의 판정(`../model_sweep/`)이 쓴다. 커밋한 것은 2026-10-13의 실행이라 세 칸이 없다 |
+| `branches.json` | `collect.py`의 출력. 수와 이름(브랜치, PR 제목, 티켓 경로), 첫 사람 트리거 시각(`first_human_at`), 그 트리거가 지시문이면 `모델:`·`브랜치:` 줄 값(`directive_features`의 `model_line`·`branch_line`)만 있고 프롬프트와 티켓 본문은 없다. 이 세 칸은 레벨 스윕의 판정(`../model_sweep/`)에 쓰려고 더했고, 그 스윕은 2026-10-31에 멈췄다. 커밋한 것은 2026-10-13의 실행이라 세 칸이 없다 |
 | `judge_results.jsonl` | `judge.py run`의 응답. 다시 돌 때 API를 치지 않고 `score`를 낸다 |
 
 돌리는 법(워크트리 루트에서, 트랜스크립트는 `~/.claude/projects/`):

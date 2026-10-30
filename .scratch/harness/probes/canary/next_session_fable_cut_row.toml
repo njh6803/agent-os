@@ -1,6 +1,8 @@
 # next-session 결정표의 끊는 줄이 설계·명세 세션이면 `Fable 5.1 / xhigh`를 따르게 한 것(ADR 0029 이력 2026-10-31)이 새 세션에 실리는지.
 # 실험군은 이 워크트리, 대조군은 주 체크아웃이다. 주 체크아웃의 옛 판은 끊는 줄에 Fable 갈래가 없어 카나리아가 없다.
 # 최신 결과: 통과 4(2026-10-31, 이 PC, claude 2.1.312, 대조군 커밋 c18619bb, 일지 2026-10-31-01).
+# 2026-10-31 harness 031 이 이 `expect` 의 글을 `directive.md` 2 의 잇는 지시문으로 고쳐 써 지금 원천에는 없다. 그 뒤의
+#   확인은 `next_session_continue_ladder.toml` 과 `next_session_ladder_rows.toml` 이 한다. 이 명세는 기록으로 둔다.
 # 돌리는 법: 워크트리 `.claude/worktrees/<이름>/` 루트에서
 #   uv run python tools/canary.py .scratch/harness/probes/canary/next_session_fable_cut_row.toml <출력 디렉터리>
 kind = "skill"

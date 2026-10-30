@@ -19,6 +19,10 @@
 멈춘 것으로 보고 "결론 없음"을 적는다. 그 테스트가 무엇을 잡는지는 `../model_sweep_judge_mutations.toml`의 변이로
 본다.
 
+이 문단의 도구와 시험, 변이 표는 스윕을 멈춘 뒤 harness 031이 지웠다(아래 결과의 "2026-10-31 사람이 스윕을 멈췄다").
+`sweep.py`는 그 도구를 import하므로, 지금은 도구를 지우기 전 커밋 `f01ce1e9`를 체크아웃한 워크트리에서만 돈다. 이 README의
+도구 경로는 그 커밋의 것이다.
+
 돌리는 법(워크트리 루트에서):
 
 ```bash
@@ -26,7 +30,7 @@ PYTHONUTF8=1 uv run python .scratch/harness/probes/model_sweep/sweep.py populati
 PYTHONUTF8=1 uv run python .scratch/harness/probes/model_sweep/sweep.py prereg
 ```
 
-판정은 2026-12-15 0시(UTC) 뒤에 한 번 친다. 그 전에는 `judge`가 갈래를 견주지 않고 1로 끝난다. 스윕 기간의 자료는
+판정은 2026-12-15 0시(UTC) 뒤에 한 번 칠 계획이었고, 스윕을 멈춰 치지 않는다. 그 날짜 전에 치면 `judge`는 갈래를 견주지 않고 1로 끝난다. 스윕 기간의 자료는
 스윕을 연 PR #217의 병합 시각부터 모은다(`tools/model_sweep_judge.py`의 `SWEEP_START`). `--today`는 합성 입력으로 판정 경로를 돌려 볼
 때만 쓴다.
 
@@ -178,7 +182,7 @@ PYTHONUTF8=1 uv run python .scratch/harness/probes/model_sweep/sweep.py judge --
 2026-10-31-02). 위
 사전 등록의 판정하지 않는 조건 "사람이 끝 전에 스윕을 멈췄다"에 걸려 구현과 하네스 모두 판정하지 않고, `sweep.py judge`도
 치지 않는다. 사전 등록 절은 고치지 않는다. `tools/model_sweep.py`와 그 시험을 걷는 일은 ADR 0029 이력 2026-10-31의 chore
-티켓이 한다.
+티켓이 한다. 그 티켓 harness 031이 배정과 판정 도구 둘, 그 시험, 변이 표를 지웠다.
 
 멈춘 뒤 인계한 세션이 판정 도구의 순수 함수를 스크래치 스크립트에서 불러 기록을 훑었다(탐색, 판정 아님). 수집은
 `uv run python .scratch/harness/probes/session_cost/collect.py --since 2026-10-13T04:11:21Z`(트랜스크립트 2026-10-30T17:48까지,
