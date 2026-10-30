@@ -222,3 +222,34 @@ open-session을 부른다 2026-10-30T17:35:24Z
 ## chore/030 병합 뒤 합치기
 
 푸시 직전 훅이 origin/main보다 1커밋 뒤라고 막았다. 그 커밋이 chore/030(PR #438, 76c23a12)이었다. 합치자 ADR 0029 끝에서 같은 날의 두 이력이 충돌해, 표지만 걷고 둘을 차례로 남겼다(이 브랜치 이력 뒤에 "설계 인터뷰와 명세 칸은 측정 없이 사용자의 결정으로 Fable 5.1 / xhigh로 바꾼다"). `docs/model-selection.md`는 자동으로 합쳐졌다. chore/030이 `handoff.md` 인계 줄에 Fable 갈래를 더해, `directive.md` 2의 괄호를 "인계 줄은 `handoff.md` 인계 줄 "모델" 항목의 "스윕 밖이면" 뒤의 값"으로 고쳤다. `tools/check_adr_pointers.py` 종료 0, 카나리아 `next_session_sweep_stopped.toml` 사전 확인 통과 1(도구가 찍었다). Fable 이력의 "끊는 줄과 같은 주제 줄은 그 브랜치가 스윕 브랜치면 스윕의 갈래가 이긴다"는 지난 이력이라 포인터를 달지 않는다(`.claude/rules/adr.md`).
+
+## PR 봇 첫 회차 (이어받은 세션, 헤드 5a141438)
+
+`@coderabbitai review` 코멘트를 남기고 `tools/wait_ci.py 439`를 돌려 검사가 모두 초록인 것을 봤다(`wait_ci.py`가 "끝: 모두 통과"를 찍었다). claude-review와 CodeRabbit 모두 이 PR의 첫 리뷰라서 첫 회차이고, Minor도 지적마다 판단했다.
+
+- 고친 것(CodeRabbit Major): 카나리아 `next_session_sweep_stopped.toml`의 표지 "지금은 칸의 값을 그대로 옮기고"는 고치기 전 판(`d80fb591`)의 `directive.md`에도 있었다(`git show d80fb591:.claude/skills/next-session/directive.md`로 전문을 읽었고 손으로 봤다). 고친 문장에만 있는 "모든 브랜치를 `스윕 밖`으로 본다"로 바꿨다. 처음 고른 "모든 브랜치를"은 사전 확인이 막았다. 세션에 실리는 git 상태의 커밋 제목이 그 글자를 담아 답이 그 블록에서 올 수 있어서다. 사전 확인 통과 1 뒤 다시 쟀고 통과 4, "없음" 섞임 0이다(claude 2.1.312, 실험군 `5a141438`, 대조군 `--control-commit c18619bb`, 도구가 찍었다).
+- 고친 것(CodeRabbit Minor): ADR 0029의 2026-10-31 이력 포인터를 "칸은 측정으로 바꾼다."와 "(스윕)." 문장 뒤로 옮기고, 바뀌지 않는 "모델이 새로 나오면 … 이력에 쌓는다." 뒤에서 뺐다. `tools/check_adr_pointers.py` 종료 0.
+- 고치지 않은 것(claude-review Major): `directive.md` 2가 낸다는 값은 칸의 지금 값 `Opus 5.5 / xhigh`이고 결정한 값은 `Sonnet 5.5 / high`라는 지적이다. 이력 승인 화면의 (3)에서 사용자가 "칸을 바꾸는 chore가 병합될 때까지 칸은 Opus 5.5 / xhigh로 두고"가 든 (3)을 승인했고, 인계에서도 그 chore 세션의 모델 줄을 지금 칸 값으로 하라고 정했다. 결정의 적용은 그 chore의 몫이다.
+- 보류한 것과 이유: (a) CodeRabbit Major, `sweep.py judge`가 조기 중단 표지를 보고 막게 하라는 것은 `tools/model_sweep.py`를 걷는 chore가 도구째 지운다. (b) claude-review Minor, 새 문장이 "바로 뒤 '다만'으로 시작하는 문장"을 가리키는 자기 참조 모양은 임시 다섯 문장이고 같은 chore가 둘 다 지운다. (c) claude-review Minor, 결정이 세 곳에 갈라졌고 chore 티켓 번호가 없다는 것은 번호를 병합 뒤 `tools/sibling_overlap.py`로 받으므로 다음 지시문이 그 티켓을 연다. 이 셋은 다음 지시문의 "이어받을 상태"에 옮긴다.
+
+## 인계 (PR 연 뒤)
+
+- PR #439를 열었다(5a141438까지 푸시). 세션 컨텍스트가 312,928 토큰으로 문턱을 넘은 채 `PR 연 뒤`에 와 인계한다. 이 세션은 `인계: 커밋 뒤`로 열려 같은 경계가 아니고, `get_session`의 `self`에 `parentSessionId`가 없어 곁 세션도 아니다. 이 세션의 지금 제목은 `feature/13-main-run-judge`다.
+- 남은 차례: `merge.md` 2(봇 회차)부터. 첫 `@coderabbitai review` 코멘트도 새 세션이 남긴다. 병합 뒤 다음 지시문에 구현·하네스 칸 변경과 스윕 걷기 chore 티켓(ADR 0029 이력 2026-10-31의 "함께 고치는 것")을 넣는다. chore/030은 이미 병합됐다(76c23a12). 그 chore 세션은 칸의 지금 값 `Opus 5.5 / xhigh`로 연다(사용자가 고른 "도구 무시, 지금 칸 값").
+
+인계 지시문:
+
+```
+다음 작업: .scratch/model-rerun/issues/13-main-run-judge.md. PR #439(본 측정 판정, 스윕 멈춤, 구현·하네스 칸 결정의 기록)를 반영·병합하고, 칸 변경과 스윕 걷기 chore 지시문을 낸다
+다음 단계: PR 반영·병합
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /implement .scratch/model-rerun/issues/13-main-run-judge.md
+브랜치: feature/13-main-run-judge
+모델: Sonnet 5.5 / high
+읽을 것: docs/journal/2026-10-31-02-main-run-judge.md 의 "더한 이력의 승인", "반영분의 PR 직전 리뷰 (d80fb591)", "chore/030 병합 뒤 합치기", "인계 (PR 연 뒤)"
+이어받을 상태: 인계: PR 연 뒤. PR #439를 열었고 5a141438까지 푸시했다. merge.md 2(봇 회차)부터 한다. 첫 @coderabbitai review 코멘트도 아직 남기지 않았다. 병합 뒤 다음 지시문에는 ADR 0029 이력 2026-10-31의 "함께 고치는 것"(결정표 구현·하네스 줄 칸을 Sonnet 5.5 / high로, 막혔다고 인계하면 Opus 5.5 medium→high→xhigh 사다리, tools/model_sweep.py와 그 시험·next-session의 스윕 부르기와 표지·directive.md 2에 넣은 임시 다섯 문장과 카나리아 next_session_sweep_stopped.toml 걷기)을 맡을 chore 티켓을 넣고, 그 세션의 모델 줄은 지금 칸 값 Opus 5.5 / xhigh로 한다(사용자 결정). chore/030은 이미 병합됐다. 일지 docs/journal/2026-10-31-02-main-run-judge.md
+확인할 선행 조건: 없음
+이번 요청 범위: PR과 병합까지
+```
+
+open-session을 부른다 2026-10-30T18:38:33Z
