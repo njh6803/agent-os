@@ -1,0 +1,211 @@
+{
+  "shape_version": 2,
+  "task_id": "model-rerun-10",
+  "arm": "D",
+  "round_no": 1,
+  "condition_version": 4,
+  "pilot": false,
+  "round_dir_name": "model-rerun-10-D-1-8ba21bbc",
+  "claude_version": "2.1.302 (Claude Code)",
+  "account": "njh6803",
+  "env_names": [
+    "ALLUSERSPROFILE",
+    "APPDATA",
+    "CLAUDE_CONFIG_DIR",
+    "COMPUTERNAME",
+    "COMSPEC",
+    "CommonProgramFiles",
+    "CommonProgramFiles(x86)",
+    "CommonProgramW6432",
+    "DISABLE_AUTOUPDATER",
+    "GH_CONFIG_DIR",
+    "HOME",
+    "HOMEDRIVE",
+    "HOMEPATH",
+    "LOCALAPPDATA",
+    "NUMBER_OF_PROCESSORS",
+    "OS",
+    "PATH",
+    "PATHEXT",
+    "PROCESSOR_ARCHITECTURE",
+    "PROCESSOR_IDENTIFIER",
+    "PROCESSOR_LEVEL",
+    "PROCESSOR_REVISION",
+    "PROGRAMDATA",
+    "PSModulePath",
+    "PUBLIC",
+    "ProgramFiles",
+    "ProgramFiles(x86)",
+    "ProgramW6432",
+    "SYSTEMROOT",
+    "SystemDrive",
+    "TEMP",
+    "TMP",
+    "USERDOMAIN",
+    "USERNAME",
+    "USERPROFILE",
+    "WINDIR"
+  ],
+  "init_tools": [
+    "Task",
+    "Bash",
+    "CronDelete",
+    "CronList",
+    "Edit",
+    "EnterWorktree",
+    "ExitWorktree",
+    "Glob",
+    "Grep",
+    "Monitor",
+    "NotebookEdit",
+    "PowerShell",
+    "Read",
+    "ReportFindings",
+    "Skill",
+    "TaskStop",
+    "ToolSearch",
+    "Workflow",
+    "Write"
+  ],
+  "sessions": [
+    {
+      "session_id": "240b99cf-4c52-4636-ad1d-79d03299f61b",
+      "calls": [
+        {
+          "kind": "첫",
+          "budget_usd": 90.14,
+          "exit_code": 0,
+          "results": [
+            {
+              "index": 0,
+              "subtype": "success",
+              "terminal_reason": "completed",
+              "num_turns": 133
+            },
+            {
+              "index": 1,
+              "subtype": "success",
+              "terminal_reason": "completed",
+              "num_turns": 22
+            },
+            {
+              "index": 2,
+              "subtype": "success",
+              "terminal_reason": "completed",
+              "num_turns": 19
+            },
+            {
+              "index": 3,
+              "subtype": "success",
+              "terminal_reason": "completed",
+              "num_turns": 1
+            },
+            {
+              "index": 4,
+              "subtype": "success",
+              "terminal_reason": null,
+              "num_turns": 0
+            }
+          ],
+          "has_directive": false,
+          "ends_with_question": false,
+          "kill_skipped": false
+        }
+      ],
+      "cost_usd": 8.915240800000008,
+      "cost_substituted": false,
+      "runner_killed": false,
+      "model_usage": [
+        {
+          "model": "claude-sonnet-5-5",
+          "input_tokens": 2666,
+          "output_tokens": 256066,
+          "cache_read_tokens": 28662148,
+          "cache_write_tokens": 1088500,
+          "thinking_tokens": 129572,
+          "cost_usd": 8.915240800000008
+        }
+      ],
+      "main_lines": [
+        {
+          "model": "claude-sonnet-5-5",
+          "effort": "high",
+          "lines": 294
+        }
+      ],
+      "subagent_lines": [
+        {
+          "model": "claude-sonnet-5-5",
+          "effort": "high",
+          "lines": 98
+        }
+      ]
+    }
+  ],
+  "handoffs": 0,
+  "interventions": 0,
+  "asked_at_end": false,
+  "end": {
+    "kind": "측정 아님",
+    "reason": "오염",
+    "resets_at": null
+  },
+  "outcome": {
+    "commit": "f1ed4be75da341b4c1dfafa0f5196f1642876ca2",
+    "rule": "지시문 브랜치",
+    "commits_after_base": 0,
+    "setup_failure": null,
+    "gates": null,
+    "hidden": null
+  },
+  "spend": {
+    "claude_code_usd": 8.915240800000008,
+    "official_usd": 8.915240800000005,
+    "other_usd": 0,
+    "tokens": {
+      "input": 2666,
+      "output": 256066,
+      "cache_read": 28662148,
+      "cache_write": 1088500,
+      "thinking": null
+    },
+    "substitutes": [],
+    "wall_seconds": 3848.09,
+    "denied_calls": 7,
+    "utilization_start": [
+      {
+        "window": "five_hour",
+        "utilization": 0.01
+      },
+      {
+        "window": "seven_day",
+        "utilization": 0.25
+      }
+    ],
+    "utilization_end": [
+      {
+        "window": "five_hour",
+        "utilization": 0.11
+      },
+      {
+        "window": "seven_day",
+        "utilization": 0.26
+      }
+    ],
+    "contamination": [
+      {
+        "pattern": "다른-회차",
+        "tool": "Write"
+      },
+      {
+        "pattern": "다른-회차",
+        "tool": "Bash"
+      },
+      {
+        "pattern": "다른-회차",
+        "tool": "Read"
+      }
+    ],
+    "model_mismatch": []
+  }
+}

@@ -1,0 +1,223 @@
+{
+  "shape_version": 2,
+  "task_id": "end-user-channel-04",
+  "arm": "B",
+  "round_no": 1,
+  "condition_version": 4,
+  "pilot": false,
+  "round_dir_name": "end-user-channel-04-B-1-706a294f",
+  "claude_version": "2.1.302 (Claude Code)",
+  "account": "njh6803",
+  "env_names": [
+    "ALLUSERSPROFILE",
+    "APPDATA",
+    "CLAUDE_CONFIG_DIR",
+    "COMPUTERNAME",
+    "COMSPEC",
+    "CommonProgramFiles",
+    "CommonProgramFiles(x86)",
+    "CommonProgramW6432",
+    "DISABLE_AUTOUPDATER",
+    "GH_CONFIG_DIR",
+    "HOME",
+    "HOMEDRIVE",
+    "HOMEPATH",
+    "LOCALAPPDATA",
+    "NUMBER_OF_PROCESSORS",
+    "OS",
+    "PATH",
+    "PATHEXT",
+    "PROCESSOR_ARCHITECTURE",
+    "PROCESSOR_IDENTIFIER",
+    "PROCESSOR_LEVEL",
+    "PROCESSOR_REVISION",
+    "PROGRAMDATA",
+    "PSModulePath",
+    "PUBLIC",
+    "ProgramFiles",
+    "ProgramFiles(x86)",
+    "ProgramW6432",
+    "SYSTEMROOT",
+    "SystemDrive",
+    "TEMP",
+    "TMP",
+    "USERDOMAIN",
+    "USERNAME",
+    "USERPROFILE",
+    "WINDIR"
+  ],
+  "init_tools": [
+    "Task",
+    "Bash",
+    "CronDelete",
+    "CronList",
+    "Edit",
+    "EnterWorktree",
+    "ExitWorktree",
+    "Glob",
+    "Grep",
+    "Monitor",
+    "NotebookEdit",
+    "PowerShell",
+    "Read",
+    "ReportFindings",
+    "Skill",
+    "TaskStop",
+    "ToolSearch",
+    "Workflow",
+    "Write"
+  ],
+  "sessions": [
+    {
+      "session_id": "b25da2fa-ba6c-47d6-8263-3e42b26f3135",
+      "calls": [
+        {
+          "kind": "첫",
+          "budget_usd": 61.43,
+          "exit_code": 0,
+          "results": [
+            {
+              "index": 0,
+              "subtype": "success",
+              "terminal_reason": "completed",
+              "num_turns": 71
+            },
+            {
+              "index": 1,
+              "subtype": "success",
+              "terminal_reason": "completed",
+              "num_turns": 2
+            },
+            {
+              "index": 2,
+              "subtype": "success",
+              "terminal_reason": "completed",
+              "num_turns": 66
+            }
+          ],
+          "has_directive": false,
+          "ends_with_question": false,
+          "kill_skipped": false
+        }
+      ],
+      "cost_usd": 11.555744600000004,
+      "cost_substituted": false,
+      "runner_killed": false,
+      "model_usage": [
+        {
+          "model": "claude-opus-5-5",
+          "input_tokens": 306,
+          "output_tokens": 120306,
+          "cache_read_tokens": 28159508,
+          "cache_write_tokens": 528812,
+          "thinking_tokens": 42689,
+          "cost_usd": 11.555744600000004
+        }
+      ],
+      "main_lines": [
+        {
+          "model": "claude-opus-5-5",
+          "effort": "high",
+          "lines": 240
+        }
+      ],
+      "subagent_lines": [
+        {
+          "model": "claude-opus-5-5",
+          "effort": "high",
+          "lines": 74
+        }
+      ]
+    }
+  ],
+  "handoffs": 0,
+  "interventions": 0,
+  "asked_at_end": false,
+  "end": {
+    "kind": "끝남",
+    "reason": null,
+    "resets_at": null
+  },
+  "outcome": {
+    "commit": "fcc8bc053eb49a1183fd7d435fdf1a471604e271",
+    "rule": "지시문 브랜치",
+    "commits_after_base": 1,
+    "setup_failure": null,
+    "gates": [
+      {
+        "command": "uv run ruff check .",
+        "exit_code": 0,
+        "timed_out": false
+      },
+      {
+        "command": "uv run ruff format --check .",
+        "exit_code": 0,
+        "timed_out": false
+      },
+      {
+        "command": "uv run pytest -q",
+        "exit_code": 0,
+        "timed_out": false
+      },
+      {
+        "command": "uv run pyright",
+        "exit_code": 0,
+        "timed_out": false
+      },
+      {
+        "command": "uv run lint-imports",
+        "exit_code": 0,
+        "timed_out": false
+      },
+      {
+        "command": "pnpm -C web verify",
+        "exit_code": 0,
+        "timed_out": false
+      }
+    ],
+    "hidden": {
+      "passed": 2,
+      "total": 3,
+      "failed": [
+        "tests/test_server.py::test_CORS_분기는_인증과_같은_경로로_면을_가른다"
+      ]
+    }
+  },
+  "spend": {
+    "claude_code_usd": 11.555744600000004,
+    "official_usd": 11.555744599999995,
+    "other_usd": 0.48913999999999996,
+    "tokens": {
+      "input": 306,
+      "output": 120306,
+      "cache_read": 28159508,
+      "cache_write": 528812,
+      "thinking": null
+    },
+    "substitutes": [],
+    "wall_seconds": 2178.88,
+    "denied_calls": 1,
+    "utilization_start": [
+      {
+        "window": "five_hour",
+        "utilization": 0.34
+      },
+      {
+        "window": "seven_day",
+        "utilization": 0.46
+      }
+    ],
+    "utilization_end": [
+      {
+        "window": "five_hour",
+        "utilization": 0.41
+      },
+      {
+        "window": "seven_day",
+        "utilization": 0.46
+      }
+    ],
+    "contamination": [],
+    "model_mismatch": []
+  }
+}

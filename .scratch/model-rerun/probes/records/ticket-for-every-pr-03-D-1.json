@@ -1,0 +1,258 @@
+{
+  "shape_version": 2,
+  "task_id": "ticket-for-every-pr-03",
+  "arm": "D",
+  "round_no": 1,
+  "condition_version": 4,
+  "pilot": false,
+  "round_dir_name": "ticket-for-every-pr-03-D-1-bbd0e29d",
+  "claude_version": "2.1.302 (Claude Code)",
+  "account": "njh6803",
+  "env_names": [
+    "ALLUSERSPROFILE",
+    "APPDATA",
+    "CLAUDE_CONFIG_DIR",
+    "COMPUTERNAME",
+    "COMSPEC",
+    "CommonProgramFiles",
+    "CommonProgramFiles(x86)",
+    "CommonProgramW6432",
+    "DISABLE_AUTOUPDATER",
+    "GH_CONFIG_DIR",
+    "HOME",
+    "HOMEDRIVE",
+    "HOMEPATH",
+    "LOCALAPPDATA",
+    "NUMBER_OF_PROCESSORS",
+    "OS",
+    "PATH",
+    "PATHEXT",
+    "PROCESSOR_ARCHITECTURE",
+    "PROCESSOR_IDENTIFIER",
+    "PROCESSOR_LEVEL",
+    "PROCESSOR_REVISION",
+    "PROGRAMDATA",
+    "PSModulePath",
+    "PUBLIC",
+    "ProgramFiles",
+    "ProgramFiles(x86)",
+    "ProgramW6432",
+    "SYSTEMROOT",
+    "SystemDrive",
+    "TEMP",
+    "TMP",
+    "USERDOMAIN",
+    "USERNAME",
+    "USERPROFILE",
+    "WINDIR"
+  ],
+  "init_tools": [
+    "Task",
+    "Bash",
+    "CronDelete",
+    "CronList",
+    "Edit",
+    "EnterWorktree",
+    "ExitWorktree",
+    "Glob",
+    "Grep",
+    "Monitor",
+    "NotebookEdit",
+    "PowerShell",
+    "Read",
+    "ReportFindings",
+    "Skill",
+    "TaskStop",
+    "ToolSearch",
+    "Workflow",
+    "Write"
+  ],
+  "sessions": [
+    {
+      "session_id": "3b03e55e-0e14-4592-8495-c7abc8f8db46",
+      "calls": [
+        {
+          "kind": "첫",
+          "budget_usd": 67.79,
+          "exit_code": 0,
+          "results": [
+            {
+              "index": 0,
+              "subtype": "success",
+              "terminal_reason": "completed",
+              "num_turns": 89
+            }
+          ],
+          "has_directive": true,
+          "ends_with_question": false,
+          "kill_skipped": false
+        }
+      ],
+      "cost_usd": 3.368089000000001,
+      "cost_substituted": false,
+      "runner_killed": false,
+      "model_usage": [
+        {
+          "model": "claude-sonnet-5-5",
+          "input_tokens": 106,
+          "output_tokens": 80961,
+          "cache_read_tokens": 12045950,
+          "cache_write_tokens": 338418,
+          "thinking_tokens": 33058,
+          "cost_usd": 3.368089000000001
+        }
+      ],
+      "main_lines": [
+        {
+          "model": "claude-sonnet-5-5",
+          "effort": "high",
+          "lines": 143
+        }
+      ],
+      "subagent_lines": []
+    },
+    {
+      "session_id": "376f8c39-dee3-43cb-823a-6df256c4a0b9",
+      "calls": [
+        {
+          "kind": "인계",
+          "budget_usd": 64.42,
+          "exit_code": 0,
+          "results": [
+            {
+              "index": 0,
+              "subtype": "success",
+              "terminal_reason": "completed",
+              "num_turns": 12
+            },
+            {
+              "index": 1,
+              "subtype": "success",
+              "terminal_reason": "completed",
+              "num_turns": 20
+            },
+            {
+              "index": 2,
+              "subtype": "success",
+              "terminal_reason": "completed",
+              "num_turns": 39
+            },
+            {
+              "index": 3,
+              "subtype": "success",
+              "terminal_reason": "completed",
+              "num_turns": 4
+            }
+          ],
+          "has_directive": false,
+          "ends_with_question": false,
+          "kill_skipped": false
+        }
+      ],
+      "cost_usd": 3.1975588000000013,
+      "cost_substituted": false,
+      "runner_killed": false,
+      "model_usage": [
+        {
+          "model": "claude-sonnet-5-5",
+          "input_tokens": 184,
+          "output_tokens": 81146,
+          "cache_read_tokens": 10498698,
+          "cache_write_tokens": 452487,
+          "thinking_tokens": 43800,
+          "cost_usd": 3.1975588000000013
+        }
+      ],
+      "main_lines": [
+        {
+          "model": "claude-sonnet-5-5",
+          "effort": "high",
+          "lines": 111
+        }
+      ],
+      "subagent_lines": [
+        {
+          "model": "claude-sonnet-5-5",
+          "effort": "high",
+          "lines": 90
+        }
+      ]
+    }
+  ],
+  "handoffs": 1,
+  "interventions": 0,
+  "asked_at_end": false,
+  "end": {
+    "kind": "끝남",
+    "reason": null,
+    "resets_at": null
+  },
+  "outcome": {
+    "commit": "d1f6f295f0e215808812cd4e682d4c3922830d09",
+    "rule": "지시문 브랜치",
+    "commits_after_base": 2,
+    "setup_failure": null,
+    "gates": [
+      {
+        "command": "uv run ruff check .",
+        "exit_code": 0,
+        "timed_out": false
+      },
+      {
+        "command": "uv run ruff format --check .",
+        "exit_code": 0,
+        "timed_out": false
+      },
+      {
+        "command": "uv run python tools/run_checks.py",
+        "exit_code": 0,
+        "timed_out": false
+      }
+    ],
+    "hidden": {
+      "passed": 1,
+      "total": 3,
+      "failed": [
+        "tests/tools/test_check_ticket.py::test_저장소가_아닌_폴더에서는_git_실패로_2를_낸다",
+        "tests/tools/test_check_ticket.py::test_바로_치면_전환의_한_줄이_보인다"
+      ]
+    }
+  },
+  "spend": {
+    "claude_code_usd": 6.5656478000000025,
+    "official_usd": 6.565647800000001,
+    "other_usd": 0,
+    "tokens": {
+      "input": 290,
+      "output": 162107,
+      "cache_read": 22544648,
+      "cache_write": 790905,
+      "thinking": null
+    },
+    "substitutes": [],
+    "wall_seconds": 3127.09,
+    "denied_calls": 3,
+    "utilization_start": [
+      {
+        "window": "five_hour",
+        "utilization": 0.24
+      },
+      {
+        "window": "seven_day",
+        "utilization": 0.44
+      }
+    ],
+    "utilization_end": [
+      {
+        "window": "five_hour",
+        "utilization": 0.31
+      },
+      {
+        "window": "seven_day",
+        "utilization": 0.45
+      }
+    ],
+    "contamination": [],
+    "model_mismatch": []
+  }
+}

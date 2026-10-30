@@ -1,0 +1,266 @@
+{
+  "shape_version": 2,
+  "task_id": "web-widget-02",
+  "arm": "E",
+  "round_no": 1,
+  "condition_version": 4,
+  "pilot": false,
+  "round_dir_name": "web-widget-02-E-1-3aaa730a",
+  "claude_version": "2.1.302 (Claude Code)",
+  "account": "njh6803",
+  "env_names": [
+    "ALLUSERSPROFILE",
+    "APPDATA",
+    "CLAUDE_CONFIG_DIR",
+    "COMPUTERNAME",
+    "COMSPEC",
+    "CommonProgramFiles",
+    "CommonProgramFiles(x86)",
+    "CommonProgramW6432",
+    "DISABLE_AUTOUPDATER",
+    "GH_CONFIG_DIR",
+    "HOME",
+    "HOMEDRIVE",
+    "HOMEPATH",
+    "LOCALAPPDATA",
+    "NUMBER_OF_PROCESSORS",
+    "OS",
+    "PATH",
+    "PATHEXT",
+    "PROCESSOR_ARCHITECTURE",
+    "PROCESSOR_IDENTIFIER",
+    "PROCESSOR_LEVEL",
+    "PROCESSOR_REVISION",
+    "PROGRAMDATA",
+    "PSModulePath",
+    "PUBLIC",
+    "ProgramFiles",
+    "ProgramFiles(x86)",
+    "ProgramW6432",
+    "SYSTEMROOT",
+    "SystemDrive",
+    "TEMP",
+    "TMP",
+    "USERDOMAIN",
+    "USERNAME",
+    "USERPROFILE",
+    "WINDIR"
+  ],
+  "init_tools": [
+    "Task",
+    "Bash",
+    "CronDelete",
+    "CronList",
+    "Edit",
+    "EnterWorktree",
+    "ExitWorktree",
+    "Glob",
+    "Grep",
+    "Monitor",
+    "NotebookEdit",
+    "PowerShell",
+    "Read",
+    "ReportFindings",
+    "Skill",
+    "TaskStop",
+    "ToolSearch",
+    "Workflow",
+    "Write"
+  ],
+  "sessions": [
+    {
+      "session_id": "3b78eed7-09d5-4acb-ade0-1be535f5a62e",
+      "calls": [
+        {
+          "kind": "첫",
+          "budget_usd": 81.89,
+          "exit_code": 0,
+          "results": [
+            {
+              "index": 0,
+              "subtype": "success",
+              "terminal_reason": "completed",
+              "num_turns": 112
+            }
+          ],
+          "has_directive": true,
+          "ends_with_question": false,
+          "kill_skipped": false
+        }
+      ],
+      "cost_usd": 3.199813200000001,
+      "cost_substituted": false,
+      "runner_killed": false,
+      "model_usage": [
+        {
+          "model": "claude-sonnet-5-5",
+          "input_tokens": 124,
+          "output_tokens": 67402,
+          "cache_read_tokens": 13250772,
+          "cache_write_tokens": 300117,
+          "thinking_tokens": 23831,
+          "cost_usd": 3.199813200000001
+        }
+      ],
+      "main_lines": [
+        {
+          "model": "claude-sonnet-5-5",
+          "effort": "medium",
+          "lines": 161
+        }
+      ],
+      "subagent_lines": []
+    },
+    {
+      "session_id": "e8a0088c-0d12-45c2-92b5-7893553b581e",
+      "calls": [
+        {
+          "kind": "인계",
+          "budget_usd": 78.69,
+          "exit_code": 0,
+          "results": [
+            {
+              "index": 0,
+              "subtype": "success",
+              "terminal_reason": "completed",
+              "num_turns": 15
+            },
+            {
+              "index": 1,
+              "subtype": "success",
+              "terminal_reason": "completed",
+              "num_turns": 2
+            },
+            {
+              "index": 2,
+              "subtype": "success",
+              "terminal_reason": "completed",
+              "num_turns": 10
+            },
+            {
+              "index": 3,
+              "subtype": "success",
+              "terminal_reason": "completed",
+              "num_turns": 9
+            },
+            {
+              "index": 4,
+              "subtype": "success",
+              "terminal_reason": "completed",
+              "num_turns": 2
+            }
+          ],
+          "has_directive": false,
+          "ends_with_question": false,
+          "kill_skipped": false
+        }
+      ],
+      "cost_usd": 1.500587,
+      "cost_substituted": false,
+      "runner_killed": false,
+      "model_usage": [
+        {
+          "model": "claude-sonnet-5-5",
+          "input_tokens": 88,
+          "output_tokens": 30770,
+          "cache_read_tokens": 3412820,
+          "cache_write_tokens": 278045,
+          "thinking_tokens": 12893,
+          "cost_usd": 1.500587
+        }
+      ],
+      "main_lines": [
+        {
+          "model": "claude-sonnet-5-5",
+          "effort": "medium",
+          "lines": 56
+        }
+      ],
+      "subagent_lines": [
+        {
+          "model": "claude-sonnet-5-5",
+          "effort": "high",
+          "lines": 24
+        },
+        {
+          "model": "claude-sonnet-5-5",
+          "effort": "medium",
+          "lines": 13
+        }
+      ]
+    }
+  ],
+  "handoffs": 1,
+  "interventions": 0,
+  "asked_at_end": false,
+  "end": {
+    "kind": "끝남",
+    "reason": null,
+    "resets_at": null
+  },
+  "outcome": {
+    "commit": "8991ea72b08eb5fa6666bdd25eaccd8d1c8cba7e",
+    "rule": "지시문 브랜치",
+    "commits_after_base": 1,
+    "setup_failure": null,
+    "gates": [
+      {
+        "command": "uv run ruff check .",
+        "exit_code": 0,
+        "timed_out": false
+      },
+      {
+        "command": "uv run ruff format --check .",
+        "exit_code": 0,
+        "timed_out": false
+      },
+      {
+        "command": "uv run python tools/run_checks.py",
+        "exit_code": 0,
+        "timed_out": false
+      }
+    ],
+    "hidden": {
+      "passed": 4,
+      "total": 4,
+      "failed": []
+    }
+  },
+  "spend": {
+    "claude_code_usd": 4.700400200000001,
+    "official_usd": 4.700400200000001,
+    "other_usd": 0,
+    "tokens": {
+      "input": 212,
+      "output": 98172,
+      "cache_read": 16663592,
+      "cache_write": 578162,
+      "thinking": null
+    },
+    "substitutes": [],
+    "wall_seconds": 2571.8,
+    "denied_calls": 4,
+    "utilization_start": [
+      {
+        "window": "five_hour",
+        "utilization": 0.37
+      },
+      {
+        "window": "seven_day",
+        "utilization": 0.39
+      }
+    ],
+    "utilization_end": [
+      {
+        "window": "five_hour",
+        "utilization": 0.42
+      },
+      {
+        "window": "seven_day",
+        "utilization": 0.39
+      }
+    ],
+    "contamination": [],
+    "model_mismatch": []
+  }
+}
