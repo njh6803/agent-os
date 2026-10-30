@@ -3,6 +3,7 @@
 // (admin-storybook-narrow)에서는 위 막대로 선다. 채널 토큰을 넣은 상태와 넣기 전, 하이드레이션 전의 틀만 선 모양을 둔다.
 // 탐색 항목의 포커스 링은 play 가 키보드로 포커스를 옮겨 계산값으로 본다. 화면을 옮기는 행동과 토큰을 넣고 지우는 행동은
 // 페이지 시험(pages/SettingsPage.test)이 본다.
+import { DEFAULT_THEME } from "@agent-os/ui";
 import { expectedFocusRing, focusRingOf, semanticColor } from "@agent-os/ui/storybook/expect";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { ComponentProps } from "react";
@@ -41,6 +42,8 @@ const meta = {
   parameters: { layout: "fullscreen" },
   args: {
     hydrated: true,
+    theme: DEFAULT_THEME,
+    onChooseTheme: fn(),
     channelTokenEntered: true,
     onEnterChannelToken: fn(),
     onClearTokens: fn(),

@@ -5,12 +5,16 @@
 //
 // 관리 화면의 페이지(app/ 의 page.tsx)가 모두 지나므로 글꼴 CSS 와 앱의 전역 CSS(디자인 토큰 CSS 를 들인 것)를 여기서 싣는다(admin-style 명세
 // "디자인 시스템 들이기"). 문서 뿌리에 모드와 밀도를 달지 않아, 모드는 시스템을 따르고 밀도는 폭을 따른다.
+//
+// 같은 까닭으로 테마도 여기서 지킨다(admin-style 티켓 09). 마운트될 때 하이드레이션이 지운 테마를 저장 값으로 되살리고,
+// 마운트된 동안 다른 탭이 바꾼 테마를 따른다. 관리 토큰을 넣기 전의 화면도 그렇다.
 
 import "@agent-os/ui/fonts.css";
 import "../../styles/admin.css";
 import type { ReactNode } from "react";
 import { useAdminTokenEntry } from "../../hooks/queries/plugins";
 import { useHydrated } from "../../hooks/useHydrated";
+import { useStoredTheme } from "../../stores/theme";
 import { useTokens } from "../../stores/tokens";
 import { AdminNav, type Section } from "../organisms/AdminNav";
 import { AdminTokenForm } from "../organisms/AdminTokenForm";
@@ -24,6 +28,7 @@ interface AdminScreenProps {
 }
 
 export function AdminScreen({ current, children }: AdminScreenProps) {
+  useStoredTheme();
   const hydrated = useHydrated();
   const adminToken = useTokens((state) => state.adminToken);
   const adminTokenNotice = useTokens((state) => state.adminTokenNotice);

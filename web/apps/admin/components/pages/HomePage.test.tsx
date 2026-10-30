@@ -17,6 +17,8 @@ import { PluginPage } from "./PluginPage";
 const TOKEN = "adm-7Qx2-page-token";
 const REJECTED = "admin-token-the-server-refuses";
 const CHANNEL = "chn-5Ht9-page-token";
+/** 운영자가 고른 테마를 남기는 localStorage 키(admin-style 명세 "저장"). */
+const THEME_KEY = "agent-os-admin-theme";
 
 const CALC: Plugin = {
   kind: "agent",
@@ -244,7 +246,9 @@ describe("관리 토큰", () => {
     expect(entries(sessionStorage).filter(([, value]) => value.includes(REJECTED))).toEqual([]);
   });
 
-  test("받아들여진 관리 토큰과 넣은 채널 토큰은 sessionStorage 에만 남고 그 밖의 상태는 저장되지 않는다", async () => {
+  test("받아들여진 관리 토큰과 넣은 채널 토큰은 sessionStorage 에만 남고 localStorage 에는 테마 밖의 것이 남지 않는다", async () => {
+    // 이 브라우저의 localStorage 에는 운영자가 고른 테마가 남을 수 있다(admin-style 티켓 09). 토큰은 거기 없다.
+    localStorage.setItem(THEME_KEY, "jjokbit");
     servePlugins(rows);
     renderPage(<HomePage />);
     const user = userEvent.setup();
@@ -252,7 +256,11 @@ describe("관리 토큰", () => {
     await enterAdminToken(user, TOKEN);
     await enterChannelToken(user, CHANNEL);
 
-    expect(entries(localStorage)).toEqual([]);
+    const local = entries(localStorage);
+    expect(local.filter(([, value]) => value.includes(TOKEN) || value.includes(CHANNEL))).toEqual(
+      [],
+    );
+    expect(local.map(([key]) => key).filter((key) => key !== THEME_KEY)).toEqual([]);
     const stored = entries(sessionStorage);
     expect(stored).toHaveLength(1);
     const [[, value] = ["", ""]] = stored;
