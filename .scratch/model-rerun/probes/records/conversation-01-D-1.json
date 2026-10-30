@@ -1,0 +1,211 @@
+{
+  "shape_version": 2,
+  "task_id": "conversation-01",
+  "arm": "D",
+  "round_no": 1,
+  "condition_version": 4,
+  "pilot": false,
+  "round_dir_name": "conversation-01-D-1-0d2903c6",
+  "claude_version": "2.1.302 (Claude Code)",
+  "account": "njh6803",
+  "env_names": [
+    "ALLUSERSPROFILE",
+    "APPDATA",
+    "CLAUDE_CONFIG_DIR",
+    "COMPUTERNAME",
+    "COMSPEC",
+    "CommonProgramFiles",
+    "CommonProgramFiles(x86)",
+    "CommonProgramW6432",
+    "DISABLE_AUTOUPDATER",
+    "GH_CONFIG_DIR",
+    "HOME",
+    "HOMEDRIVE",
+    "HOMEPATH",
+    "LOCALAPPDATA",
+    "NUMBER_OF_PROCESSORS",
+    "OS",
+    "PATH",
+    "PATHEXT",
+    "PROCESSOR_ARCHITECTURE",
+    "PROCESSOR_IDENTIFIER",
+    "PROCESSOR_LEVEL",
+    "PROCESSOR_REVISION",
+    "PROGRAMDATA",
+    "PSModulePath",
+    "PUBLIC",
+    "ProgramFiles",
+    "ProgramFiles(x86)",
+    "ProgramW6432",
+    "SYSTEMROOT",
+    "SystemDrive",
+    "TEMP",
+    "TMP",
+    "USERDOMAIN",
+    "USERNAME",
+    "USERPROFILE",
+    "WINDIR"
+  ],
+  "init_tools": [
+    "Task",
+    "Bash",
+    "CronDelete",
+    "CronList",
+    "Edit",
+    "EnterWorktree",
+    "ExitWorktree",
+    "Glob",
+    "Grep",
+    "Monitor",
+    "NotebookEdit",
+    "PowerShell",
+    "Read",
+    "ReportFindings",
+    "Skill",
+    "TaskStop",
+    "ToolSearch",
+    "Workflow",
+    "Write"
+  ],
+  "sessions": [
+    {
+      "session_id": "35cca58d-f129-4969-b8c2-3bc0af75b0b4",
+      "calls": [
+        {
+          "kind": "첫",
+          "budget_usd": 148.45,
+          "exit_code": 0,
+          "results": [
+            {
+              "index": 0,
+              "subtype": "success",
+              "terminal_reason": "completed",
+              "num_turns": 292
+            }
+          ],
+          "has_directive": false,
+          "ends_with_question": false,
+          "kill_skipped": false
+        }
+      ],
+      "cost_usd": 8.668369400000001,
+      "cost_substituted": false,
+      "runner_killed": false,
+      "model_usage": [
+        {
+          "model": "claude-sonnet-5-5",
+          "input_tokens": 3448,
+          "output_tokens": 211929,
+          "cache_read_tokens": 36408914,
+          "cache_write_tokens": 810550,
+          "thinking_tokens": 68286,
+          "cost_usd": 8.668369400000001
+        }
+      ],
+      "main_lines": [
+        {
+          "model": "claude-sonnet-5-5",
+          "effort": "high",
+          "lines": 438
+        }
+      ],
+      "subagent_lines": [
+        {
+          "model": "claude-sonnet-5-5",
+          "effort": "high",
+          "lines": 66
+        }
+      ]
+    }
+  ],
+  "handoffs": 0,
+  "interventions": 0,
+  "asked_at_end": false,
+  "end": {
+    "kind": "끝남",
+    "reason": null,
+    "resets_at": null
+  },
+  "outcome": {
+    "commit": "8fa0ca0a587026114e1c10ce255d802d3a8de073",
+    "rule": "지시문 브랜치",
+    "commits_after_base": 1,
+    "setup_failure": null,
+    "gates": [
+      {
+        "command": "uv run ruff check .",
+        "exit_code": 0,
+        "timed_out": false
+      },
+      {
+        "command": "uv run ruff format --check .",
+        "exit_code": 0,
+        "timed_out": false
+      },
+      {
+        "command": "uv run pytest -q",
+        "exit_code": 0,
+        "timed_out": false
+      },
+      {
+        "command": "uv run pyright",
+        "exit_code": 0,
+        "timed_out": false
+      },
+      {
+        "command": "uv run lint-imports",
+        "exit_code": 0,
+        "timed_out": false
+      },
+      {
+        "command": "pnpm -C web verify",
+        "exit_code": 0,
+        "timed_out": false
+      }
+    ],
+    "hidden": {
+      "passed": 12,
+      "total": 13,
+      "failed": [
+        "tests/channel/http/test_router.py::test_고리가_깨지면_500_봉투이고_message_가_그_PluginError_의_문구다"
+      ]
+    }
+  },
+  "spend": {
+    "claude_code_usd": 8.668369400000001,
+    "official_usd": 8.668369400000001,
+    "other_usd": 0,
+    "tokens": {
+      "input": 3448,
+      "output": 211929,
+      "cache_read": 36408914,
+      "cache_write": 810550,
+      "thinking": null
+    },
+    "substitutes": [],
+    "wall_seconds": 3660.8,
+    "denied_calls": 7,
+    "utilization_start": [
+      {
+        "window": "five_hour",
+        "utilization": 0.34
+      },
+      {
+        "window": "seven_day",
+        "utilization": 0.5
+      }
+    ],
+    "utilization_end": [
+      {
+        "window": "five_hour",
+        "utilization": 0.46
+      },
+      {
+        "window": "seven_day",
+        "utilization": 0.51
+      }
+    ],
+    "contamination": [],
+    "model_mismatch": []
+  }
+}
