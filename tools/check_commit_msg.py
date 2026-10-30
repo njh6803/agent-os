@@ -65,10 +65,9 @@ def problems_for(subject: str) -> list[str]:
 
 
 def problems_in(text: str) -> list[str]:
-    lines = first_paragraph(text)
-    subject = " ".join(lines)
+    subject = subject_of(text)
     problems = problems_for(subject)
-    if len(lines) > 1 and not subject.startswith(PASS_PREFIXES):
+    if len(first_paragraph(text)) > 1 and not subject.startswith(PASS_PREFIXES):
         problems.insert(0, "제목 줄 뒤에 빈 줄이 없어 git 이 다음 줄까지 이어 제목으로 읽는다")
     return problems
 

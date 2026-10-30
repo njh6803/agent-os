@@ -181,17 +181,79 @@ open-session을 부른다 2026-10-30T02:04:48Z
 보고: 기준 `fcf808fa`, 범위 59파일(일지 포함 60), 마지막 `[호출 40]`. Critical·Major 0, Minor 넷(유효 2, 보류 2, 오탐 0). 함수를 부르는 두 길이 모두 워크트리 가드에 거부됐다고 냈다. 따라가지 못한 파일은 `.claude/rules/web-design.md`, `README.md`, `docs/constitution/*`, `kickoff/prompting.md`, 변이 표, 시험 파일 넷의 diff, `artifact-source/*`, `.design-sync/*` 삭제분, 대기열, 일지다.
 
 1. (Minor, 유효) `upload.md` 73행 "티켓만 쓰는 PR은 면제다"는 위 티켓이 harness 티켓이면 거짓이다. `tools/check_ticket.py`가 `.scratch/harness/`를 면제로 보지 않고 CI가 가리키는 티켓의 `done`을 본다. 고칠 일을 적은 티켓은 done이 아니다. 제안: "위 티켓"을 기능 디렉터리의 티켓으로 못 박는다.
-2. (Minor, 유효) `upload.md` 79행 못 보는 것: `claim`·색인 `docs`·기록의 마크다운·컴포넌트 README는 편집이 꺼지지 않았을 때만 받는다(`check.ts` `fetchList`의 `editingOff` 조건). "README와 `guidelines/`의 둘뿐"은 옛 올리기가 다시 올리는 파일로 범위를 밝혀야 맞다.
-3. (Minor, 보류) `upload.ts` 머리 독스트링의 "옛 고정폭 글꼴 28 개는 목록에 없어 계획이 지우지 않는다"가 `previous-output.json`에 `project/fonts/noto-sans-mono-*` 26개가 있는 것과 맞지 않아 보인다.
+2. (Minor, 유효) `upload.md` 79행 못 보는 것: `claim`·색인 `docs`·기록의 마크다운·컴포넌트 README는 편집이 꺼지지 않았을 때만 받는다(`check.ts` `fetchList`의 `editingOff` 조건). "기록에 든 마크다운(README와 `guidelines/`의 둘)뿐이다"는 옛 올리기가 다시 올리는 파일로 범위를 밝혀야 맞다.
+3. (Minor, 보류) `upload.ts` 머리 독스트링이 옛 고정폭 글꼴 28개는 목록에 없어 계획이 지우지 않는다고 적은 것이 `previous-output.json`에 `project/fonts/noto-sans-mono-*` 26개가 있는 것과 맞지 않아 보인다.
 4. (Minor, 보류) `tools/check_commit_msg.py`의 `splitlines()`·`strip()`이 U+2028·`\x0c`·`\x85`·NBSP·U+3000을 git과 다르게 다룰 수 있다(코드 읽기로만 봤다).
 
 밀 주장 1·2(앞 둘)·4(`assemble.ts`)·6·7(ASCII 경계)은 통과로 냈다. 5에는 "처음 올린"이 `upload.md`·`SKILL.md`의 "첫 올리기(2026-10-27)"와 날짜가 달라 헷갈릴 수 있다는 말을 붙였다.
 
 ### 반영 (PR 직전)
 
-- 1(유효) **판정: 고친다.** `tools/check_ticket.py` 독스트링의 판정 4·6과 CI 절, 면제 모양 목록을 읽어 시나리오가 맞는 것을 봤다. `docs/agents/issue-tracker.md` 13행이 기능 밖 제품 고침을 그 동작을 만든 기능 디렉터리의 다음 두 자리 티켓으로 정하므로, `upload.md` 6의 "깨진 카드나 남은 옛 별칭" 줄이 그 티켓을 쓰게 하고, 목록이 같고 새로 든 워크트리인 갈래의 괄호를 "기능 디렉터리의 티켓은 커밋 검사의 면제 모양이라 그 PR이 지난다"로 고쳤다. harness 티켓이 막힌다는 문장은 처음 썼다가 `writing-for-agents`의 부정형 기준으로 걷었다(근거는 `check_ticket.py`에 있다).
-- 2(유효) **판정: 고친다.** `check.ts` 223행의 `editingOff` 조건을 읽어 맞는 것을 봤다. 못 보는 것의 첫 문장을 "처음 받는 셋과 `pending`, 편집이 꺼지지 않았으면 `claim`·`docs`·마크다운·컴포넌트 README도"로 가르고, 둘째 문장을 "편집이 켜져 있을 때 … 다시 올린 파일 가운데"로 좁혔다.
+- 1(유효) **판정: 고친다.** `tools/check_ticket.py` 독스트링의 판정 4·6과 CI 절, 면제 모양 목록을 읽어 시나리오가 맞는 것을 봤다. `docs/agents/issue-tracker.md` 13행이 기능 밖 제품 고침을 그 동작을 만든 기능 디렉터리의 다음 두 자리 티켓으로 정하므로, `upload.md` 6의 "깨진 카드나 남은 옛 별칭" 줄이 그 티켓을 쓰게 하고, 목록이 같고 새로 든 워크트리인 갈래의 괄호를 "기능 디렉터리의 티켓은 커밋 검사의 면제 모양이라(`tools/check_ticket.py`) 그 PR이 지난다"로 고쳤다. harness 티켓이 막힌다는 문장은 처음 썼다가 `writing-for-agents`의 부정형 기준으로 걷었다(근거는 `check_ticket.py`에 있다).
+- 2(유효) **판정: 고친다.** `check.ts` 223행의 `editingOff` 조건을 읽어 맞는 것을 봤다. 못 보는 것의 첫 문장을 처음 받는 셋과 `pending`, 그리고 편집이 꺼지지 않았을 때만 받는 `claim`·`docs`·마크다운·컴포넌트 README로 가르고, 둘째 문장을 편집이 켜져 있을 때 다시 올린 파일로 좁혔다.
 - 3(보류) **판정: 오탐이지만 독스트링을 고친다.** `git show fcf808fa:.design-sync/NOTES.md`의 175행이 28을 IBM Plex Mono 10개와 JetBrains Mono 18개로 적고, `grep -c -i "plex\|jetbrains"`가 `previous-output.json`에서 0이었다(손으로 쳤다). 목록의 `noto-sans-mono-*` 26개는 지금 글꼴이다. 옮기며 이름이 빠져 리뷰가 헷갈렸으므로 `upload.ts` 머리 독스트링에 두 이름과 "목록에 든 `noto-sans-mono-*` 는 지금 글꼴이다"를 더했다.
 - 4(보류) **판정: 유효, 고친다.** 시험을 먼저 더해 실제 git의 `%s`와 견주니 여섯 사례(U+2028, U+0085, 홀로 든 CR, NBSP 줄, U+3000 줄, U+000C 줄)가 옛 판에서 모두 빨갰다(`uv run pytest -q tests/tools/test_check_commit_msg.py`가 "6 failed, 13 passed"). git은 LF에서만 줄을 가르고 ASCII 공백 넷만 공백으로 본다(U+000C 줄도 빈 줄이 아니었다). `first_paragraph`가 `split("\n")`과 `GIT_SPACE`(공백, 탭, LF, CR)를 쓰고, `main`이 줄바꿈을 바꾸지 않고(`newline=""`) 읽게 고쳤다. 시험 도우미는 git 출력을 바이트로 받아 풀게 고쳤다(글로 받으면 CR을 줄바꿈으로 바꾼다). CLI가 홀로 든 CR로 줄을 가르지 않는 시험을 더했다. 고친 뒤 그 파일과 `tests/tools/test_hook_bash_commit_msg.py`가 "68 passed"였다. 스크래치 변이 표(`commit_msg_mutations.toml`, 커밋하지 않았다)의 넷(줄바꿈을 바꿔 읽기, `splitlines()`, `strip()`, `GIT_SPACE`에서 CR 빼기)이 "변이 4 모두 기대대로"였다.
 - 밀 주장 5의 날짜(2026-10-12와 2026-10-27): **판정: 남긴다.** 주석은 "Claude Design 에 처음 올린"이라 단독 Claude Design을 가리키고, `upload.md`·`SKILL.md`의 2026-10-27은 디자인 시스템 아티팩트의 첫 올리기라 대상이 다르다.
 - 다시 본 것: 바꾼 문장은 카나리아 기대가 아니다(`sync_design_system_upload_assembles.toml`·`sync_design_system_words.toml`의 `expect`를 읽었고, 세 카나리아 폴더를 `면제다\|확인이 받는 것은\|규약대로 티켓으로`로 grep해 0이었다). 그래서 카나리아는 다시 돌리지 않았다. `tools/mutate.py --check`로 `upload.ts`·`assemble.ts`·`record.ts`를 겨누는 표 셋이 "모두 원문이 한 번씩 있다"였다. ruff check·format과 `tools/check_line_separators.py`가 지났다. Edit 도구가 시험의 이스케이프 셋을 날것 문자로 저장해 줄 구분 문자 훅이 알렸고, `chr()`로 바꿨다.
+
+## 커밋과 PR
+
+커밋 직후 `커밋 뒤` 인계 계기(약 29만 토큰)가 왔으나, 이 세션의 지시문이 `인계: 커밋 뒤`로 시작해 `handoff.md` 1의 셋째(같은 경계)에 들어 넘기지 않고 이었다. 커밋 전에 `git branch --show-current`가 이 브랜치였고 `tools/sibling_overlap.py`가 "번호 겹침 없음"이었다. 커밋 `86c9b48c`(5파일)의 pre-commit이 모두 `Passed`였다(pytest 333.0초, web-verify 451.1초, 묶음 451.36초. 카나리아 명세와 헌법 판은 고친 파일이 없어 `Skipped`). 인용 대조는 이 일지의 "반영 (PR 직전)" 넷(184·185·192·193행)에 막지 않는 경고를 냈다. 리뷰의 말이나 내 요약을 따옴표로 든 것이라 원문과 글자가 다르다. 커밋 출력을 손으로 봤다.
+
+`git fetch origin` 뒤 `git log --oneline HEAD..origin/main`이 비어 합칠 것이 없었다. 브랜치를 푸시하고 `gh pr create`로 PR [njh6803/agent-os#435](https://github.com/njh6803/agent-os/pull/435)를 열었다. 본문은 템플릿을 채웠고 PR 직전 리뷰의 결과를 체크리스트에 적었다. `get_status`가 이 세션에 그 PR이 묶였다고 냈다(검사 1 통과, 6 대기).
+
+## 인계 전 상태(셋째)
+
+PR을 연 직후 `PR 연 뒤` 인계 계기(약 32만 토큰)가 왔다. `handoff.md` 1의 다섯에 들지 않는다. PR이 열렸고, 요청 범위(PR과 병합까지)가 여기서 끝나지 않으며, 이 세션의 지시문은 `인계: 커밋 뒤`로 경계가 다르고, 이 일지에 이 세션이 쓴 `인계 못함` 줄이 없으며, `get_session`의 `self`에 `parentSessionId`가 없다. 그래서 넘긴다. 이 세션의 지금 제목은 `feature/04-upload-always-assembles`이고 넘기며 `feature/04-upload-always-assembles (인계함)`으로 바꾼다. 이 절과 위 "커밋과 PR" 절은 커밋하지 않았다. `@coderabbitai review` 코멘트는 남기지 않았다(`handoff.md` 3, 새 세션이 남긴다). `tools/model_sweep.py feature/04-upload-always-assembles`가 `Opus 5.5 / xhigh`를 냈다.
+
+지시문:
+
+```
+다음 작업: .scratch/design-card-build/issues/04-upload-always-assembles.md. 올리기가 늘 짓기 명령(assemble)으로 산출을 맞춰 보내고, .design-sync/와 /design-sync를 드는 글을 걷어 낸다
+다음 단계: PR 반영·병합
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /implement .scratch/design-card-build/issues/04-upload-always-assembles.md
+브랜치: feature/04-upload-always-assembles
+모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
+읽을 것: docs/journal/2026-10-30-10-upload-always-assembles.md의 "PR 직전 리뷰" 절부터 끝까지
+이어받을 상태: 인계: PR 연 뒤. merge.md 2(봇 회차)부터 한다. 첫 @coderabbitai review 코멘트도 새 세션이 남긴다. PR #435는 PR 직전 리뷰를 반영한 커밋까지 푸시했고, 리뷰 결과는 일지 "PR 직전 리뷰"·"반영 (PR 직전)"과 PR 체크리스트에 있다. 늦어도 마지막 봇 회차의 커밋에 셋을 싣는다. (1) 이 브랜치가 시험을 지운 변이 표 둘(.scratch/design-card-build/probes/upload_plan_mutations.toml, .scratch/design-reverse-sync/probes/record_check_mutations.toml)을 리뷰를 반영한 커밋 위에서 전체로 한 번 돌리고(tools/mutate.py 독스트링의 "언제 전체를 돌리나") 결과를 티켓 결과 8과 그 프로브 README에 적는다. (2) 일지 "반영 (PR 직전)"의 인용 대조 경고 넷(원문과 글자가 다른 따옴표 인용)을 원문으로 고치거나 따옴표를 뗀다. (3) .scratch/plan.md의 design-card-build 행·프론티어 문단(04 병합과 PR 번호, 05가 풀림)과 일지 "## 다음". 이 PC에서 pre-commit의 pytest 시간 시험이 부하에서 막히면 단독 실행이 통과할 때 SKIP 없이 같은 커밋을 한 번 더 시도하고, SKIP=pytest는 사람에게 묻는다. 일지 파일은 docs/journal/2026-10-30-10-upload-always-assembles.md
+확인할 선행 조건: 없음
+이번 요청 범위: PR과 병합까지
+```
+
+제목을 `feature/04-upload-always-assembles (인계함)`으로 바꿨다. 멈출 백그라운드 작업은 없었다(리뷰 서브에이전트 둘과 커밋은 끝났다). 워크트리 잠금 풀기는 `is not locked`로 끝나 넘어갔다.
+
+open-session을 부른다 2026-10-30T02:33:00Z
+
+## 이어받기(셋째)
+
+인계 지시문으로 연 새 세션이다. 세션 제목을 `feature/04-upload-always-assembles`로 바꾸고, `git worktree list`에서 그 브랜치가 `.claude/worktrees/04-upload-always-assembles`(머리 `86c9b48c`)에 체크아웃된 것을 보고 `EnterWorktree(path)`로 들어갔다. 작업 트리에는 이 일지만 고친 채 남아 있었다.
+
+> 사용자: ".claude/skills/implement/SKILL.md 를 읽어 그대로 따른다. … 인자: .scratch/design-card-build/issues/04-upload-always-assembles.md / 다음 작업: … / 다음 단계: PR 반영·병합 / 어디서: 새 세션. … / 이어받을 상태: 인계: PR 연 뒤. merge.md 2(봇 회차)부터 한다. … / 이번 요청 범위: PR과 병합까지"
+
+## 봇 회차
+
+PR #435의 머리 `86c9b48c`에 `@coderabbitai review` 코멘트를 남겼다. 그 전에 CodeRabbit은 저장소의 별이 10개 미만이라 자동 리뷰를 건너뛰었다는 요약만 남겼고, claude-review는 첫 리뷰를 남겼다(PR 코멘트를 `gh pr view 435 --json comments`로 읽었다). 상태를 한 번 읽으니 python·web·visual이 pending이라 `tools/wait_ci.py 435`를 백그라운드로 띄웠다.
+
+### claude-review 1회차
+
+Minor 하나, Nit 하나다. 경계 축은 지적이 없었다.
+
+1. (Minor) `tools/check_commit_msg.py`의 `problems_in`이 `subject_of`를 쓰지 않고 `first_paragraph`의 줄을 따로 이어, 시험이 실제 git의 `%s`와 견주는 `subject_of`와 검사가 보는 제목이 갈라질 수 있다. **판정: 고친다.** `problems_in`이 `subject_of`로 제목을 받게 했다. 고친 뒤 `uv run pytest -q tests/tools/test_check_commit_msg.py tests/tools/test_hook_bash_commit_msg.py`가 "68 passed"였다.
+2. (Nit) `upload.ts` 머리 독스트링이 한 덩어리로 길어 함수별 주석으로 나눌 만하다. **판정: 남긴다.** 그 독스트링은 계획이 지난 산출 목록·`pending`·첫 정식 올리기·지울 경로를 어떻게 다루는지 모은 모듈의 계약이고, 티켓이 `.design-sync/NOTES.md`의 내용을 일부러 그 자리로 옮겼다(위 "구현").
+3. 확인하지 못한 것으로 남긴 옛 이름 잔존은 PR 머리에서 `git grep -n -e "needs-build" -e "\.design-sync" -e "needsBuild" -- .claude/skills/sync-design-system/ .claude/rules/web-design.md web/tools/`로 손으로 봤다. 맞은 줄은 걷어 낸 하위 명령이 거부되는지 보는 `record-check.test.ts` 606행 하나라 의도한 것이다.
+
+### CodeRabbit 1회차
+
+`tools/wait_ci.py 435`가 "끝: 모두 통과"로 끝났다(머리 `86c9b48`, CodeRabbit·claude-review·e2e·e2e-widget·python·ticket·verify·visual·web 모두 SUCCESS). CodeRabbit은 요약 코멘트를 그 머리 기준으로 다시 쓰고("Merge Risk: Minimal · up to 86c9b") 인라인 코멘트와 리뷰를 남기지 않았다(`gh api`로 PR의 reviews와 pulls comments를 읽으니 비었다). 지적 0이다.
+
+### 인계가 넘긴 셋
+
+- 변이 표 둘의 전체 실행: `git worktree add --detach .claude/worktrees/mut-04 86c9b48c`로 리뷰를 반영한 커밋을 꺼내 `uv sync`와 `pnpm -C web install --frozen-lockfile --offline` 뒤 두 표를 차례로 돌렸다(스크래치 스크립트 `run_mut.sh`, 커밋하지 않았다). `upload_plan_mutations.toml`이 "변이 25 모두 기대대로"(기준선 20 모두 초록, 약 4분), `record_check_mutations.toml`이 "변이 49 모두 기대대로"(기준선 46 모두 초록, 약 9분)였다(도구가 찍은 줄, 기준선 수는 로그를 `grep -c '^기준선'`으로 셌다). 결과를 티켓 결과 8과 두 프로브 README의 2026-10-30 절에 적었다. 임시 워크트리는 `git -c core.longpaths=true worktree remove`로 `--force` 없이 지웠다.
+- 인용 대조 경고 넷: "반영 (PR 직전)"과 "bug-perf-review"의 넷(리뷰의 말이나 내 요약을 따옴표로 든 것)을 원문으로 고치거나 따옴표를 뗐다. `uv run python tools/check_quotes.py --all-lines`로 이 일지를 대 보니 그 넷은 사라지고 경고 6건이 남았다. 남은 여섯은 "셀프 리뷰"에서 리뷰가 고치기 전의 글을 옮긴 인용이라 첫 커밋 때 판정한 그대로다(위 "커밋").
+- `.scratch/plan.md`: design-card-build 행과 프론티어 문단에 04 병합(PR #435)과 05가 풀린 것을 더했다.
+
+## 다음
+
+- design-card-build 04는 이 PR(#435)로 끝난다. 04를 기다리던 05(`.scratch/design-card-build/issues/05-first-canonical-upload.md`, `ready-for-agent`)가 풀렸다. 05는 04가 병합된 main에서 `/sync-design-system 올리기`로 첫 정식 올리기를 하는 이 기능의 마지막 티켓이다(티켓 파일의 "What to build"·`Blocked by`·`Status` 줄을 읽었다).
+- 봇 회차에서 뒤의 작업으로 넘긴 일은 없다. claude-review 1회차의 Nit(`upload.ts` 머리 독스트링 나누기)은 넘기지 않고 남겼다(위 "봇 회차").
