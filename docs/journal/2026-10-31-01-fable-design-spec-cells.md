@@ -66,6 +66,13 @@ base `c18619bb`, 바뀐 파일 3, 커밋 0, 미추적 2(티켓, 카나리아 명
 
 `tools/sibling_overlap.py`가 1로 끝나 `handoff.md`를 원천으로 든 카나리아를 돌리지 않았다고 알렸다. 모델 항목만 묻는 `next_session_handoff_fable.toml`을 새로 썼다. 첫 카나리아(`설계 인터뷰나 명세면 \`Fable 5.1 / xhigh\``)는 `SKILL.md`에도 있어 러너가 종료 2로 막았고, `handoff.md`에만 있는 조각으로 바꿔 통과 4(claude 2.1.312)였다. 같은 출력이 함께 고친 파일 후보로 워크트리 `12-main-run`의 ADR 0029와 `docs/model-selection.md`를 들었다. 늦게 병합되는 쪽이 푼다.
 
+## PR 직전 리뷰
+
+- `coderabbit-review`: CLI 0.7.5가 `Seat: not assigned`라 돌지 않았다. 서브에이전트가 밀 주장 셋을 파일 대조와 `tools/model_sweep.py` 실행으로 대 봐 모두 맞았다(지적 0).
+- `/security-review`: 바뀐 것이 마크다운과 카나리아 TOML뿐이라 결과 없음.
+- `bug-perf-review`: Minor 셋, 모두 고쳤다. (1) ADR 결과의 "세 자리 모두 다음 단계를 지시문에서 읽으므로 …"는 인계 줄에만 맞았다. 고친 문장: "지시문 없이 연 설계·명세 세션은 끊는 줄과 같은 주제 줄에 읽을 '다음 단계' 칸이 없어 `Opus 5.5 / xhigh`로 열리고, 인계 줄만 남은 일을 '설계 인터뷰'나 '명세'로 적으면 Fable로 넘어간다." (2) 같은 주제 줄이 새 `chore/` 브랜치를 Fable로 열어 스윕을 건너뛸 수 있었다. "다만 새 브랜치가 스윕 브랜치(`chore/`)면 `uv run python tools/model_sweep.py <브랜치>`를 쳐 그 갈래가 이긴다"를 더했다. (3) 끊는 줄의 괄호가 근거 없이 조건처럼 읽혔다. "다만 끊는 브랜치가 스윕 브랜치면 `directive.md` 2의 갈래가 이긴다"로 고쳤다. ADR 결과 절에도 "끊는 줄과 같은 주제 줄은 그 브랜치가 스윕 브랜치(`feature/`, `chore/`, `claude/`)면 스윕의 갈래가 이긴다"를 적었다. 이력 2026-10-13의 스윕 배정을 따르는 것이라 승인받은 결정을 바꾸지 않는다고 봤다.
+- 다시 돌린 것: 고친 끊는 줄을 보는 `next_session_fable_cut_row.toml`과 인계 명세는 같은 PR에서 통과한 뒤 문구만 고쳐 `--preflight`로 갈음했고 통과였다. `next_session_fable_design_spec.toml`은 커밋 제목에 카나리아(`Fable 5.1 / xhigh`)가 실려 사전 확인이 막혔다. 그 명세가 보는 명세 줄은 통과 뒤 고치지 않았으므로 갈음할 것이 없다. 나머지는 커밋의 pre-commit.
+
 ## 인계 계기
 
 셀프 리뷰 직전에 인계 계기(20만 토큰)가 왔다. 이 세션은 곁 세션(`parentSessionId`가 있고 `detached`가 거짓)이라 `handoff.md` 1의 다섯째 갈래로 넘기지 않고 이어 갔다.
