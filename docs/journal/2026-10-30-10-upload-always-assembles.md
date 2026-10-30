@@ -253,6 +253,39 @@ Minor 하나, Nit 하나다. 경계 축은 지적이 없었다.
 - 인용 대조 경고 넷: "반영 (PR 직전)"과 "bug-perf-review"의 넷(리뷰의 말이나 내 요약을 따옴표로 든 것)을 원문으로 고치거나 따옴표를 뗐다. `uv run python tools/check_quotes.py --all-lines`로 이 일지를 대 보니 그 넷은 사라지고 경고 6건이 남았다. 남은 여섯은 "셀프 리뷰"에서 리뷰가 고치기 전의 글을 옮긴 인용이라 첫 커밋 때 판정한 그대로다(위 "커밋").
 - `.scratch/plan.md`: design-card-build 행과 프론티어 문단에 04 병합(PR #435)과 05가 풀린 것을 더했다.
 
+## 커밋(봇 1회차)
+
+커밋 전에 `git branch --show-current`가 이 브랜치였고 `tools/sibling_overlap.py`가 "번호 겹침 없음"이었다(origin/main은 `fcf808f` 그대로). 커밋 `023ff089`(6파일)의 pre-commit이 모두 `Passed`였다(pytest 355.8초, web-verify 444.0초. 카나리아 명세와 헌법 판은 고친 파일이 없어 `Skipped`). 인용 대조는 이 일지의 "CodeRabbit 1회차"가 든 요약 코멘트 문구 하나에 막지 않는 경고를 냈다. 원문이 저장소 밖(PR 코멘트)이라 거짓 양성이다. 커밋 출력을 손으로 봤다. 푸시하지 않았다. claude-review 1회차의 처리(Minor 고침, Nit 보류와 그 이유, 잔존 확인)와 CodeRabbit 1회차 지적 0을 PR 코멘트로 남겼다.
+
+## 인계 전 상태(넷째)
+
+커밋 직후 `커밋 뒤` 인계 계기(약 25만 토큰)가 왔다. `handoff.md` 1의 다섯에 들지 않는다. 커밋이 성공했고, 요청 범위(PR과 병합까지)가 커밋에서 끝나지 않으며, 이 세션의 지시문은 `인계: PR 연 뒤`로 경계가 다르고, 이 일지에 이 세션이 쓴 `인계 못함` 줄이 없으며, `get_session`의 `self`에 `parentSessionId`가 없다. 그래서 넘긴다. 이 세션의 지금 제목은 `feature/04-upload-always-assembles`이고 넘기며 `feature/04-upload-always-assembles (인계함)`으로 바꾼다. 이 절과 위 "커밋(봇 1회차)" 절은 커밋하지 않았다. `tools/model_sweep.py feature/04-upload-always-assembles`가 `Opus 5.5 / xhigh`를 냈다.
+
+지시문:
+
+```
+다음 작업: .scratch/design-card-build/issues/04-upload-always-assembles.md. 올리기가 늘 짓기 명령(assemble)으로 산출을 맞춰 보내고, .design-sync/와 /design-sync를 드는 글을 걷어 낸다
+다음 단계: PR 반영·병합
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /implement .scratch/design-card-build/issues/04-upload-always-assembles.md
+브랜치: feature/04-upload-always-assembles
+모델: Opus 5.5 / xhigh. 레벨 스윕의 갈래
+읽을 것: docs/journal/2026-10-30-10-upload-always-assembles.md의 "봇 회차" 절부터 끝까지
+이어받을 상태: 인계: 커밋 뒤. 봇 1회차의 반영(claude-review Minor 고침·Nit 보류, CodeRabbit 지적 0), 변이 표 둘의 전체 실행 결과(티켓 결과 8과 두 프로브 README), 인용 대조 경고 넷, .scratch/plan.md와 일지 "## 다음"을 실은 커밋 023ff089를 만들었고 푸시하지 않았다. PR #435가 열려 있어 푸시와 merge.md 2(봇 회차)부터 한다. 이 저장소에서 CodeRabbit은 자동 리뷰를 건너뛰므로 푸시 뒤 @coderabbitai review 코멘트를 남긴다. 이 푸시로 도는 리뷰는 두 봇 모두 2회차다. 1회차 처리는 PR 코멘트로 이미 남겼다. 일지의 "커밋(봇 1회차)"와 "인계 전 상태(넷째)" 절은 커밋하지 않은 채 워크트리에 있어 다음 커밋에 싣는다("## 다음"이 일지 끝에 남게 그 앞에 넣었다). 이 PC에서 pre-commit의 pytest 시간 시험이 부하에서 막히면 단독 실행이 통과할 때 SKIP 없이 같은 커밋을 한 번 더 시도하고, SKIP=pytest는 사람에게 묻는다. 일지 파일은 docs/journal/2026-10-30-10-upload-always-assembles.md
+확인할 선행 조건: 없음
+이번 요청 범위: PR과 병합까지
+```
+
+제목을 `feature/04-upload-always-assembles (인계함)`으로 바꿨다. 멈출 백그라운드 작업은 없었다(CI 대기, 변이 실행, 커밋이 모두 끝났다). 워크트리 잠금 풀기는 `is not locked`로 끝나 넘어갔다.
+
+open-session을 부른다 2026-10-30T03:05:45Z
+
+## 이어받기(넷째)
+
+인계 지시문으로 연 새 세션이다. 세션 제목을 `feature/04-upload-always-assembles`로 바꾸고, `git worktree list`에서 그 브랜치가 `.claude/worktrees/04-upload-always-assembles`(머리 `023ff089`)에 체크아웃된 것을 보고 `EnterWorktree(path)`로 들어갔다. 작업 트리에는 이 일지만 고친 채 남아 있었다. `git fetch origin` 뒤 `git log --oneline HEAD..origin/main`이 비었고 `git log --oneline origin/feature/04-upload-always-assembles -1`이 `86c9b48c`였다(출력을 손으로 봤다). 일지만 따로 푸시하면 claude-review가 한 번 더 돌므로(merge.md 2의 "뒤로 넘긴 일") 위 두 절과 이 절을 커밋해 `023ff089`와 함께 푸시한다.
+
+> 사용자: ".claude/skills/implement/SKILL.md 를 읽어 그대로 따른다. … 인자: .scratch/design-card-build/issues/04-upload-always-assembles.md / 다음 작업: … / 다음 단계: PR 반영·병합 / 어디서: 새 세션. … / 이어받을 상태: 인계: 커밋 뒤. … PR #435가 열려 있어 푸시와 merge.md 2(봇 회차)부터 한다. … / 이번 요청 범위: PR과 병합까지"
+
 ## 다음
 
 - design-card-build 04는 이 PR(#435)로 끝난다. 04를 기다리던 05(`.scratch/design-card-build/issues/05-first-canonical-upload.md`, `ready-for-agent`)가 풀렸다. 05는 04가 병합된 main에서 `/sync-design-system 올리기`로 첫 정식 올리기를 하는 이 기능의 마지막 티켓이다(티켓 파일의 "What to build"·`Blocked by`·`Status` 줄을 읽었다).
