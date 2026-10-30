@@ -2,7 +2,16 @@
 
 - 제목은 `<타입>: <제목>` 또는 `<타입>(<범위>): <제목>`. 타입은 git-commit 스킬의 표와 같다.
 - 제목은 72자 이하, 끝에 마침표 없음.
+- 제목은 git 처럼 첫 문단(앞의 빈 줄을 건너뛰고 다음 빈 줄까지)이다. git 은 그 줄들을 공백 하나로
+  이어 제목으로 기록하므로(`git log --format=%s`), 줄이 여럿이면 제목 줄 뒤에 빈 줄이 없다고 잡는다.
+  둘째 줄이 짧으면 이은 제목도 형식과 길이를 지나기 때문이다. 메시지 파일에서 그 빈 줄이 빠진 커밋이
+  첫 줄만 보던 이 검사를 지났다(일지 2026-10-30-09 "봇 회차").
 - Merge, Revert, fixup!, squash! 로 시작하는 메시지는 통과시킨다.
+
+못 보는 것: `#` 로 시작하는 줄은 늘 건너뛴다. 편집기를 여는 커밋에서는 git 도 그 줄을 지우지만,
+`-F` 로 넘긴 메시지에서는 남겨 제목으로도 읽는다. 그래서 `#` 줄이 제목 문단에 든 `-F` 메시지는
+git 과 다르게 읽어 지나간다(시험이 실제 git 의 `%s` 와 견주어 고정한다). 견준 것은 기본 정리 모드의
+`-F` 커밋이고, `--cleanup` 으로 정리 모드를 바꾼 커밋은 재지 않았다.
 
 pre-commit의 commit-msg 스테이지가 돌린다. 산문 규칙(`docs/constitution/operations.md`)은
 "왜와 남긴 위험을 본문에"이고 그것은 리뷰가 본다. 여기는 형식만.
@@ -20,11 +29,20 @@ PASS_PREFIXES = ("Merge ", "Revert ", "fixup! ", "squash! ")
 MAX_SUBJECT = 72
 
 
-def subject_of(text: str) -> str:
+def first_paragraph(text: str) -> list[str]:
+    lines: list[str] = []
     for line in text.splitlines():
-        if line.strip() and not line.startswith("#"):
-            return line.rstrip()
-    return ""
+        if line.startswith("#"):
+            continue
+        if line.strip():
+            lines.append(line.rstrip())
+        elif lines:
+            break
+    return lines
+
+
+def subject_of(text: str) -> str:
+    return " ".join(first_paragraph(text))
 
 
 def problems_for(subject: str) -> list[str]:
@@ -42,9 +60,17 @@ def problems_for(subject: str) -> list[str]:
     return problems
 
 
-def main(path: str) -> int:
-    subject = subject_of(Path(path).read_text(encoding="utf-8"))
+def problems_in(text: str) -> list[str]:
+    lines = first_paragraph(text)
+    subject = " ".join(lines)
     problems = problems_for(subject)
+    if len(lines) > 1 and not subject.startswith(PASS_PREFIXES):
+        problems.insert(0, "제목 줄 뒤에 빈 줄이 없어 git 이 다음 줄까지 이어 제목으로 읽는다")
+    return problems
+
+
+def main(path: str) -> int:
+    problems = problems_in(Path(path).read_text(encoding="utf-8"))
     for problem in problems:
         print(problem)
     return 1 if problems else 0

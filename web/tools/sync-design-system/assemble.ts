@@ -22,9 +22,10 @@
  * - 옛 이름: `_ds_bundle.js` 는 `components/bundle.js` 와 같은 바이트, `_ds_bundle.css` 는 같은 Tailwind 빌드에 주소가
  *   `./fonts/` 인 `@font-face` 를 붙인 것, `styles.css` 는 `fonts/fonts.css` 와 `_ds_bundle.css` 를 차례로 들인다.
  * - `tokens.json`: 이미 있는 `build` 가 패키지의 디자인 토큰 CSS 에서 짓는 것과 같은 바이트다.
- * - `README.md`: README 원본(`.design-sync/conventions.md`)의 바이트 그대로다. 빌린 빌드의 변환기가 그 뒤에 붙이던
- *   영어 절(옛 자리 안내와 컴포넌트 목록)은 짓지 않는다.
- * - `foundations/`: 기초 카드 원본 폴더(`.design-sync/foundations/`)의 파일을 바이트 그대로 둔다.
+ * - `README.md`: README 원본(`artifact-source/README.md`)의 바이트 그대로다. 페이지가 저장할 때 붙이는 생성 몫
+ *   (Consuming, Index)이 컴포넌트 목록을 대신한다.
+ * - `foundations/`: 기초 카드 원본 폴더(`artifact-source/foundations/`)의 파일을 바이트 그대로 둔다. 카드의 규칙은 그
+ *   곁의 `artifact-source/foundations.md` 다.
  * - `guidelines/web-design.md` 는 규칙 파일 `.claude/rules/web-design.md` 의 바이트이고, `guidelines/index.md` 는 그 파일
  *   하나를 가리키는 목록이다.
  *
@@ -48,8 +49,9 @@
  * 보고는 산출 폴더(`out`)와 목록 파일(`paths`)의 절대 경로, 파일 수(`files`), 카드 이름(`cards`), 바이트(`bytes`)다.
  *
  * 못 보는 것:
- * - showcase 스토리를 가진 파일은 소스 글에서 `tags: [... "showcase" ...]` 를 찾아 가른다. 태그를 변수로 든 스토리는
- *   카드가 빠지고, meta 의 `tags` 에만 든 파일은 장면 없는 카드가 된다. 장면은 실제 스토리 객체의 `tags` 로 다시 고른다.
+ * - showcase 스토리를 가진 파일은 소스 글에서 `tags: [... "showcase" ...]` 를 찾아 가른다. 태그를 모두 변수로 든 파일은
+ *   카드가 빠지고, meta 의 `tags` 에만 든 파일은 장면 없는 카드가 된다. 장면은 실제 스토리 객체의 `tags` 로 다시 고르므로,
+ *   글자 그대로 쓴 스토리가 있는 파일에서는 태그를 변수로 든 스토리도 장면에 든다.
  * - 패키지 엔트리가 내보내지 않는 이름(지금 `ICON_NAMES` 등)은 장면에서 비고, 그것을 쓰는 showcase 스토리는 그릴 때에야
  *   오류가 난다.
  * - 장면이 meta 와 스토리의 `args` 를 합친 값이 그리기에 닿는지와 `render` 없이 meta 의 `component` 로 그리는 갈래는,
@@ -96,10 +98,10 @@ const WEB = dirname(dirname(import.meta.dirname));
 /** 디자인 시스템 패키지의 폴더. */
 export const UI_PACKAGE = join(WEB, "packages", "ui");
 
-/** 산출에 바이트 그대로 두는 저장소 원본. README 원본과 기초 카드 원본은 `.design-sync/` 의 것이다. */
+/** 산출에 바이트 그대로 두는 저장소 원본. README 원본과 기초 카드 원본은 이 폴더의 `artifact-source/` 에 있다. */
 const SOURCES = {
-  readme: join(dirname(WEB), ".design-sync", "conventions.md"),
-  foundations: join(dirname(WEB), ".design-sync", "foundations"),
+  readme: join(import.meta.dirname, "artifact-source", "README.md"),
+  foundations: join(import.meta.dirname, "artifact-source", "foundations"),
   webDesign: join(dirname(WEB), ".claude", "rules", "web-design.md"),
 } as const;
 

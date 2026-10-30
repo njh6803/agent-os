@@ -1,35 +1,42 @@
 /**
- * 이번 올리기가 보낼 파일·지울 경로와 빌드가 필요한지(design-reverse-sync 명세 "올리기"의 빌드가 필요한 올리기·필요
- * 없는 올리기·첫 올리기와 그 2026-10-22 주석, "찾았을 때"의 "덮어쓴다"). 기록 명령이 이 함수로 계획을 내고, 그
- * 계획이 다음 기록(`sync-record.ts` 의 `nextRecord`)의 입력이 된다.
+ * 이번 올리기가 보낼 파일·지울 경로(design-reverse-sync 명세 "올리기"의 첫 올리기와 그 2026-10-22 주석, "찾았을 때"의
+ * "덮어쓴다", design-card-build 명세 "올리기"). 기록 명령이 이 함수로 계획을 내고, 그 계획이 다음 기록
+ * (`sync-record.ts` 의 `nextRecord`)의 입력이 된다.
  *
  * 보낼 파일은 맞대는 값(`file-hash.ts`)이 기록과 다른 이번 산출의 파일과, 사람이 "덮어쓴다"를 고른 확인이 찾은
  * 되돌릴 파일이다. 기록이 없으면(첫 올리기, 편집이 꺼진 동안 기록을 잃은 때) 아티팩트에서 받은 sha256 과 원 바이트로
- * 맞댄다. 지울 경로는 지난 산출에 있었고 이번 산출에 없는 경로와 웹에서 더한 경로다. 지난 산출의 목록은 빌드 산출
- * 전체를 맞춘 올리기만 넘긴다. 몇 파일만 보내는 올리기의 산출에는 빌드 산출이 없어, 그 목록과 맞대면 다 지운다.
+ * 맞댄다. 지울 경로는 지난 산출에 있었고 이번 산출에 없는 경로와 웹에서 더한 경로다.
+ *
+ * 지난 산출 목록(이 폴더의 `previous-output.json`)은 마지막으로 다 보낸 올리기의 산출 경로(`project/…`) 전부이고,
+ * 바뀌지 않아 보내지 않은 것도 든다. 올리기는 늘 짓기 명령의 산출 전체로 계획하며 이 목록을 주고, 다 보낸 뒤 그
+ * 올리기에서 짓기 명령의 `--paths` 가 쓴 목록으로 바꿔 커밋한다(절차 `.claude/skills/sync-design-system/upload.md`).
+ * 그 커밋이 병합되기 전에 다른 올리기가 돌면 옛 목록을 주어, 그사이 산출에만 있던 경로가 지워지지 않고 남을 뿐이다.
+ * 짓기 명령이 짓지 않는 파일(옮기기가 더한 `migration-map.json`·`assets/notes/`, 화면이 만드는 `manifest.json`, 단독
+ * 앱이 만든 `_ds_manifest.json`, 옛 고정폭 글꼴 28 개)은 목록에 없어 계획이 지우지 않는다. 목록을 주지 않은 계획
+ * (`previousOutput` 이 null)은 산출이 전체가 아닐 수 있다고 보아 지난 산출에만 있던 경로를 지우지 않는다.
  *
  * 앞 기록에 `pending` 이 있으면(멈춘 올리기를 다시 하는 올리기) 확인이 그 경로마다 낸 분류를 받는다. 목표대로 이미
  * 보낸 파일은 로컬이 목표와 같으면 다시 보내지 않고(`landed`), 이미 지워진 경로는 기록에서만 뺀다(`gone`). 이번
- * 산출에 없는 보낸 목표는 몇 파일만 보내는 올리기면 코드에 남았을 수 있어 목표대로 이어 적고, 빌드 산출 전체를 맞춘
- * 올리기면 코드가 뺀 것이라 지운다.
+ * 산출에 없는 보낸 목표는 목록을 주지 않은 계획이면 코드에 남았을 수 있어 목표대로 이어 적고, 목록을 준 계획이면
+ * 코드가 뺀 것이라 지운다.
  *
  * 덮어쓰기의 되돌릴 파일(웹이 고친 것)과 웹이 지운 파일은 이번 산출에 있으면 보낸다. 이번 산출에 없으면 코드가 뺀
  * 경로로 알려진 것(지난 산출 목록이나 `pending` 의 지울 경로에 든 것)만 받아, 고친 것은 지우고 지운 것은 기록에서만
- * 뺀다. 그 밖은 몇 파일만 보내는 산출이 빠뜨린 것인지 가를 수 없어 `input` 오류다.
+ * 뺀다. 그 밖은 산출이 빠뜨린 것인지 가를 수 없어 `input` 오류다.
  *
  * 짓기 명령의 정식 배치로 옮기는 올리기(design-card-build 명세 "올리기"의 "첫 정식 올리기와 `tokens.json`", "목록만
  * 옛것일 때", "나누기")도 여기서 가른다. 이번 산출에 정식 자리의 카드(`project/components/<이름>/preview.html`)가
  * 있고 받은 기록의 `files`(기록이 없으면 받은 sha256 목록)에 하나도 없으면 첫 정식 올리기다. 그때 `tokens.json` 은
  * 테마의 표시 이름만 바뀌어 지문이 같아도 보낸다. 기록의 `files` 는 마지막 호출이 받아들여질 때만 새 배치로
- * 바뀌므로, 끊긴 뒤 이어 받는 올리기도 같은 판정으로 다시 보내고 다 보낸 뒤의 올리기는 보내지 않는다. 빌린 빌드의
- * 산출에는 정식 카드가 없어 이 판정이 서지 않는다.
+ * 바뀌므로, 끊긴 뒤 이어 받는 올리기도 같은 판정으로 다시 보내고 다 보낸 뒤의 올리기는 보내지 않는다. 정식 카드가
+ * 없는 산출(짓기 명령 전의 배치)에서는 이 판정이 서지 않는다.
  *
  * 지난 산출 목록에서 온 지울 경로는 받은 기록의 `files` 에 든 것만 낸다. 다 보낸 뒤 목록을 커밋하기 전에 끊기면 그
  * 목록에는 마지막 호출이 이미 지워 기록에서 뺀 경로가 남는다. 기록이 없으면 목록대로 낸다.
  */
 
 import { CommandError } from "./command.ts";
-import { fileHash, isRecorded, RECORD_PATH, TOKENS_PATH } from "./file-hash.ts";
+import { fileHash, isRecorded, TOKENS_PATH } from "./file-hash.ts";
 import { sha256, sortedPaths } from "./io.ts";
 import {
   RECORD_LIMIT,
@@ -44,7 +51,7 @@ export interface UploadInput {
   readonly artifactSha256: ReadonlyMap<string, string> | null;
   /** 이번 산출의 로컬 파일. 아티팩트 경로로 찾는다. */
   readonly output: ReadonlyMap<string, Uint8Array>;
-  /** 지난 산출의 경로 목록. 빌드 산출 전체를 맞춘 올리기만 넘기고, 몇 파일만 보내는 올리기는 null 이다. */
+  /** 지난 산출의 경로 목록. 절차는 늘 넘기고, null 이면 산출이 전체가 아닐 수 있는 계획으로 본다. */
   readonly previousOutput: readonly string[] | null;
   /** 코드의 판으로 되돌릴 파일(웹이 고친 것). */
   readonly revert: readonly string[];
@@ -77,8 +84,6 @@ export const CALL_BYTES = 16 * 1024 * 1024;
 export const INDEX_LIMIT = 512_000;
 
 const CANONICAL_CARD = /^project\/components\/[^/]+\/preview\.html$/;
-/** 빌린 빌드의 채점 기준점. 나누면 마지막 호출에 싣는다(`.claude/skills/sync-design-system/upload.md` 의 6 의 4). */
-const DS_SYNC_PATH = "project/_ds_sync.json";
 export const BUNDLE_PATH = "project/components/bundle.js";
 
 function hasCanonicalCard(paths: Iterable<string>): boolean {
@@ -101,7 +106,7 @@ function callOf(items: readonly CallItem[]): UploadCall {
  * 보낼 파일과 지울 경로를 호출 몫으로 나눈다(design-card-build 명세 "나누기", 절차 `upload.md` 의 6 의 4). 한 호출에
  * 들면 몫 하나가 기록과 색인을 함께 싣는다. 나누면 첫 호출이 `pending` 이 든 기록을, 마지막 호출이 기록과 색인을
  * 싣는다. 그 파일들도 경로로 세고, 바이트는 기록의 한도(`RECORD_LIMIT`)와 색인의 한도(`INDEX_LIMIT`)만큼 남긴다. 지울
- * 경로가 한도에 드는지는 재지 못해 경로 하나로 센다. 지울 경로와 `_ds_sync.json` 은 뒤 몫으로 보낸다. 마지막 몫이 빌지
+ * 경로가 한도에 드는지는 재지 못해 경로 하나로 센다. 지울 경로는 뒤 몫으로 보낸다. 마지막 몫이 빌지
  * 않게 항목 하나를 남기되, 그 하나가 기록·색인과 함께 들지 않으면 따로 보내고 마지막 몫은 기록과 색인만 싣는다. 첫
  * 항목이 `pending` 이 든 기록과 함께 들지 않으면 첫 몫은 기록만 싣는다. 그래서 `limit` 오류는 기록도 색인도 싣지 않는
  * 호출에조차 들지 않는 파일에만 난다.
@@ -109,11 +114,7 @@ function callOf(items: readonly CallItem[]): UploadCall {
  * 못 보는 것: 기록과 색인의 실제 크기는 보지 않고 한도만큼 남긴다.
  */
 function splitCalls(send: readonly CallItem[], deletes: readonly CallItem[]): UploadCall[] {
-  const items = [
-    ...send.filter((item) => item.path !== DS_SYNC_PATH),
-    ...deletes,
-    ...send.filter((item) => item.path === DS_SYNC_PATH),
-  ];
+  const items = [...send, ...deletes];
   const fits = (count: number, bytes: number, extraPaths: number, reserve: number): boolean =>
     count + extraPaths <= CALL_PATHS && bytes + reserve <= CALL_BYTES;
   const total = (part: readonly CallItem[]): number =>
@@ -244,7 +245,7 @@ export function planUpload(input: UploadInput): UploadPlan {
   }
   for (const path of record?.pending?.files.keys() ?? []) {
     if (!output.has(path) && state.get(path) === "sent") {
-      // 빌드 산출 전체를 맞춘 산출에 없으면 코드가 뺀 것이라 지운다. 이어 적으면 마지막 기록이 지운 경로를 되살린다
+      // 지난 산출 목록을 준 산출에 없으면 코드가 뺀 것이라 지운다. 이어 적으면 마지막 기록이 지운 경로를 되살린다
       (input.previousOutput === null ? landed : droppedTargets).push(path);
     }
   }
@@ -309,54 +310,4 @@ export function withUpgraded(
     return { ...index, upgraded: { at } };
   }
   return { ...index };
-}
-
-/** 빌드가 필요한 까닭. 패키지 아래, 빌린 빌드의 설정, 빌드가 짓는 되돌릴 파일이다. */
-export type BuildReason = "package" | "buildConfig" | "revert";
-
-export interface BuildNeed {
-  readonly needed: boolean;
-  readonly because: readonly { readonly path: string; readonly reason: BuildReason }[];
-}
-
-const PACKAGE = "web/packages/ui/";
-const BUILD_CONFIG = ".design-sync/";
-/**
- * 빌린 빌드의 설정 폴더 가운데 빌드를 다시 하지 않아도 되는 것. 기초 카드 원본, 사람의 노트, 올리기가 다 보낸 뒤
- * 커밋하는 지난 산출 목록이다(design-reverse-sync 티켓 08). 올릴 항목을 고르는 `upload-output.mjs` 는 빼지 않는다.
- */
-const NOT_BUILD_CONFIG = [
-  ".design-sync/foundations/",
-  ".design-sync/NOTES.md",
-  ".design-sync/upload-output.json",
-];
-/** 빌드 없이 보내는 아티팩트 경로. 빌드가 저장소 원본을 그대로 옮기는 다섯(기초 카드 넷과 지침 문서)이다. */
-const COPIED = ["project/foundations/", "project/guidelines/web-design.md"];
-
-function startsWithAny(path: string, prefixes: readonly string[]): boolean {
-  return prefixes.some(
-    (prefix) => path === prefix || (prefix.endsWith("/") && path.startsWith(prefix)),
-  );
-}
-
-/**
- * 빌드가 필요한지. `changed` 는 기록의 커밋 뒤에 바뀐 저장소 경로(`git -c core.quotePath=false diff --name-only`),
- * `revert` 는 코드의 판으로 되돌리거나 되살릴 아티팩트 경로(웹이 고치거나 지운 것)다. `tokens.json`, 기록, 그대로
- * 옮기는 다섯만 바뀌거나 되돌리면 빌드가 필요 없다.
- */
-export function needsBuild(changed: readonly string[], revert: readonly string[]): BuildNeed {
-  const because: { path: string; reason: BuildReason }[] = [];
-  for (const path of changed) {
-    if (path.startsWith(PACKAGE)) {
-      because.push({ path, reason: "package" });
-    } else if (path.startsWith(BUILD_CONFIG) && !startsWithAny(path, NOT_BUILD_CONFIG)) {
-      because.push({ path, reason: "buildConfig" });
-    }
-  }
-  for (const path of revert) {
-    if (path !== TOKENS_PATH && path !== RECORD_PATH && !startsWithAny(path, COPIED)) {
-      because.push({ path, reason: "revert" });
-    }
-  }
-  return { needed: because.length > 0, because };
 }

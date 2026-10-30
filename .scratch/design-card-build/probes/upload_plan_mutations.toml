@@ -41,7 +41,7 @@ old = '''  const firstCanonical = hasCanonicalCard(output.keys()) && !hasCanonic
 new = '''  const firstCanonical = hasCanonicalCard(output.keys());'''
 
 [[mutation]]
-name = "이번 산출의 정식 카드를 보지 않으면 빌린 빌드의 지금 절차 사례가 빨갛다"
+name = "이번 산출의 정식 카드를 보지 않으면 옛 배치의 지금 절차 사례가 빨갛다"
 runner = "node"
 tests = ["tools/sync-design-system/upload.test.ts", "-t", "정식 카드가 없는 산출은 첫 정식 올리기가 아니고"]
 expect = "red"
@@ -173,25 +173,8 @@ expect_output = ["AssertionError: expected 1 to be greater than 1"]
 
 [[mutation.edit]]
 file = "web/tools/sync-design-system/upload.ts"
-old = '''    ...deletes,'''
-new = '''    ...[],'''
-
-[[mutation]]
-name = "_ds_sync.json 을 뒤로 보내지 않으면 마지막 몫 사례가 빨갛다"
-runner = "node"
-tests = ["tools/sync-design-system/upload.test.ts", "-t", "_ds_sync.json 은 마지막 몫에"]
-expect = "red"
-expect_output = ["to include 'project/_ds_sync.json'"]
-
-[[mutation.edit]]
-file = "web/tools/sync-design-system/upload.ts"
-old = '''    ...send.filter((item) => item.path !== DS_SYNC_PATH),'''
-new = '''    ...send,'''
-
-[[mutation.edit]]
-file = "web/tools/sync-design-system/upload.ts"
-old = '''    ...send.filter((item) => item.path === DS_SYNC_PATH),'''
-new = '''    ...[],'''
+old = '''  const items = [...send, ...deletes];'''
+new = '''  const items = [...send];'''
 
 [[mutation]]
 name = "한 호출에 들지 않는 파일의 오류 종류가 다르면 그 사례가 빨갛다"
@@ -292,9 +275,9 @@ old = '''  if (index.upgraded === undefined) {'''
 new = '''  if (index.upgraded !== null) {'''
 
 [[mutation]]
-name = "첫 정식 올리기가 아니어도 upgraded 를 더하면 빌린 빌드의 명령 사례가 빨갛다"
+name = "첫 정식 올리기가 아니어도 upgraded 를 더하면 정식 카드가 없는 산출의 명령 사례가 빨갛다"
 runner = "node"
-tests = ["tools/sync-design-system/record-check.test.ts", "-t", "빌린 빌드의 산출이면 보낼 색인이 받은 색인과 같다"]
+tests = ["tools/sync-design-system/record-check.test.ts", "-t", "정식 카드가 없는 산출이면 보낼 색인이 받은 색인과 같다"]
 expect = "red"
 expect_output = ['"upgraded": true,']
 

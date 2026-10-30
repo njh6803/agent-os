@@ -414,7 +414,7 @@ old = '''  dark: "다크 (Dark)",'''
 new = '''  dark: "다크 (Light)",'''
 
 [[mutation]]
-name = "README 에 빌린 빌드의 영어 절을 붙이면 README 바이트 사례가 빨갛다"
+name = "README 원본 뒤에 영어 절을 붙이면 README 바이트 사례가 빨갛다"
 runner = "node"
 tests = ["tools/sync-design-system/assemble.test.ts", "-t", "README.md 는 README 원본"]
 expect = "red"
@@ -445,7 +445,7 @@ expect = "red"
 expect_output = ['+     "marked": false,']
 
 [[mutation.edit]]
-file = ".design-sync/foundations/type/index.html"
+file = "web/tools/sync-design-system/artifact-source/foundations/type/index.html"
 old = '''<!-- @dsCard group="Type" -->'''
 new = '''<!-- dsCard group="Type" -->'''
 
@@ -495,7 +495,7 @@ expect = "red"
 expect_output = ['+     "zz-mutant",']
 
 [[mutation.edit]]
-file = ".design-sync/conventions.md"
+file = "web/tools/sync-design-system/artifact-source/README.md"
 old = '''    justify-center gap-1 gap-2 gap-3 gap-4 p-3 p-4 px-3 px-4 py-2 py-3 w-full min-w-0 shrink-0 overflow-hidden bg-bg
 '''
 new = '''    justify-center gap-1 gap-2 gap-3 gap-4 p-3 p-4 px-3 px-4 py-2 py-3 w-full min-w-0 shrink-0 overflow-hidden bg-bg zz-mutant
@@ -509,7 +509,7 @@ expect = "red"
 expect_output = ['+     "flex-co",']
 
 [[mutation.edit]]
-file = ".design-sync/conventions.md"
+file = "web/tools/sync-design-system/artifact-source/README.md"
 old = '''    justify-center gap-1 gap-2 gap-3 gap-4 p-3 p-4 px-3 px-4 py-2 py-3 w-full min-w-0 shrink-0 overflow-hidden bg-bg
 '''
 new = '''    justify-center gap-1 gap-2 gap-3 gap-4 p-3 p-4 px-3 px-4 py-2 py-3 w-full min-w-0 shrink-0 overflow-hidden bg-bg flex-co
@@ -523,7 +523,7 @@ expect = "red"
 expect_output = ['+     "gap-2",']
 
 [[mutation.edit]]
-file = ".design-sync/conventions.md"
+file = "web/tools/sync-design-system/artifact-source/README.md"
 old = '''  Tailwind 이름 가운데 `text-base`, `p-5`, `gap-8`, `rounded-md`, `truncate`, `dark:` 는 CSS 가 없어 아무것도 그리지
 '''
 new = '''  Tailwind 이름 가운데 `text-base`, `p-5`, `gap-2`, `gap-8`, `rounded-md`, `truncate`, `dark:` 는 CSS 가 없어 아무것도 그리지
@@ -549,7 +549,7 @@ expect = "red"
 expect_output = ['+     "--radius-zz",']
 
 [[mutation.edit]]
-file = ".design-sync/conventions.md"
+file = "web/tools/sync-design-system/artifact-source/README.md"
 old = '''    - 모서리: `--radius-s --radius-m --radius-l --radius-full`'''
 new = '''    - 모서리: `--radius-s --radius-m --radius-l --radius-full --radius-zz`'''
 
@@ -561,7 +561,7 @@ expect = "red"
 expect_output = ['+     "--spacing-9",']
 
 [[mutation.edit]]
-file = ".design-sync/conventions.md"
+file = "web/tools/sync-design-system/artifact-source/README.md"
 old = '''`-6`(24) `-8`(32)'''
 new = '''`-6`(24) `-9`(32)'''
 
@@ -573,7 +573,7 @@ expect = "red"
 expect_output = ['+     "data-theme=zzteal",']
 
 [[mutation.edit]]
-file = ".design-sync/conventions.md"
+file = "web/tools/sync-design-system/artifact-source/README.md"
 old = '''(`nokcheong` 기본, `guncheong`, `jacho`, `jjokbit`)'''
 new = '''(`nokcheong` 기본, `guncheong`, `jacho`, `jjokbit`, `zzteal`)'''
 
@@ -585,7 +585,7 @@ expect = "red"
 expect_output = ['+     "data-density=zzdense",']
 
 [[mutation.edit]]
-file = ".design-sync/conventions.md"
+file = "web/tools/sync-design-system/artifact-source/README.md"
 old = '''(`compact` 촘촘, `regular` 보통)'''
 new = '''(`compact` 촘촘, `regular` 보통, `zzdense`)'''
 
@@ -597,7 +597,7 @@ expect = "red"
 expect_output = ['+     "--spacing-zz",']
 
 [[mutation.edit]]
-file = ".design-sync/foundations/spacing/index.html"
+file = "web/tools/sync-design-system/artifact-source/foundations/spacing/index.html"
 old = '''style="width: var(--spacing-1)"'''
 new = '''style="width: var(--spacing-zz)"'''
 
@@ -609,7 +609,7 @@ expect = "red"
 expect_output = ['+     "--spacing-yy",']
 
 [[mutation.edit]]
-file = ".design-sync/foundations/spacing/index.html"
+file = "web/tools/sync-design-system/artifact-source/foundations/spacing/index.html"
 old = '''data-value="--spacing-1"'''
 new = '''data-value="--spacing-yy"'''
 
@@ -621,7 +621,7 @@ expect = "red"
 expect_output = ['+     "density/index.html data-density=zzdense",']
 
 [[mutation.edit]]
-file = ".design-sync/foundations/density/index.html"
+file = "web/tools/sync-design-system/artifact-source/foundations/density/index.html"
 old = '''<section class="col" data-density="compact">'''
 new = '''<section class="col" data-density="zzdense">'''
 
@@ -633,7 +633,7 @@ expect = "red"
 expect_output = ['+     "Zzmutant",']
 
 [[mutation.edit]]
-file = ".design-sync/conventions.md"
+file = "web/tools/sync-design-system/artifact-source/README.md"
 old = '''const { Card, Switch, StatusBadge, Button } = window.AgentOsUi;'''
 new = '''const { Card, Switch, StatusBadge, Button, Zzmutant } = window.AgentOsUi;'''
 
@@ -645,7 +645,7 @@ expect = "red"
 expect_output = ['+     "ZZ_MISSING",']
 
 [[mutation.edit]]
-file = ".design-sync/conventions.md"
+file = "web/tools/sync-design-system/artifact-source/README.md"
 old = '''`AgentOsUi.DEFAULT_THEME`'''
 new = '''`AgentOsUi.ZZ_MISSING`'''
 
@@ -746,7 +746,7 @@ expect = "red"
 expect_output = ['"--line-height",']
 
 [[mutation.edit]]
-file = ".design-sync/conventions.md"
+file = "web/tools/sync-design-system/artifact-source/README.md"
 old = '''    - 모서리: `--radius-s --radius-m --radius-l --radius-full`'''
 new = '''    - 모서리: `--radius-s --radius-m --radius-l --radius-full --line-height`'''
 
@@ -773,7 +773,7 @@ expect = "red"
 expect_output = ['+     "data-density",']
 
 [[mutation.edit]]
-file = ".design-sync/conventions.md"
+file = "web/tools/sync-design-system/artifact-source/README.md"
 old = '''(`compact` 촘촘, `regular` 보통)'''
 new = '''(compact 촘촘, regular 보통)'''
 
@@ -785,7 +785,7 @@ expect = "red"
 expect_output = ['+     "data-density=regular-2",']
 
 [[mutation.edit]]
-file = ".design-sync/conventions.md"
+file = "web/tools/sync-design-system/artifact-source/README.md"
 old = '''(`compact` 촘촘, `regular` 보통)'''
 new = '''(`compact` 촘촘, `regular-2` 보통)'''
 
@@ -797,7 +797,7 @@ expect = "red"
 expect_output = ['+     "density/index.html data-density=compact-2",']
 
 [[mutation.edit]]
-file = ".design-sync/foundations/density/index.html"
+file = "web/tools/sync-design-system/artifact-source/foundations/density/index.html"
 old = '''<section class="col" data-density="compact">'''
 new = '''<section class="col" data-density="compact-2">'''
 
