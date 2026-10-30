@@ -95,19 +95,20 @@ open-session을 부른다 2026-10-30T04:34:49Z
 
 ## PR (이어받은 세션)
 
-위 지시문으로 연 새 세션이 `EnterWorktree(path)`로 이 워크트리에 들어와 이었다. origin/main은 `fc54912a` 그대로라 합칠 것이 없었다. 브랜치를 푸시하고 PR #437을 열었다. 그 번호로 `.scratch/plan.md`의 design-card-build 행을 done으로 바꾸고 05의 병합 문장을 더했으며, 프론티어 문단에 기능이 닫힌 것과 프론티어가 admin-style 하나라는 것을 적었다. plan.md의 기능 행에서 design-card-build를 기다리는 행은 없었다(상태 칸을 Grep으로 봤다). 티켓의 plan.md 체크박스를 닫았다.
+위 지시문으로 연 새 세션이 `EnterWorktree(path)`로 이 워크트리에 들어와 이었다. origin/main은 `fc54912a` 그대로라 합칠 것이 없었다. 브랜치를 푸시하고 PR #437을 열었다. 그 번호로 `.scratch/plan.md`의 design-card-build 행을 done으로 바꾸고 05의 병합 문장을 더했으며, 프론티어 문단에 기능이 닫힌 것을 적었다. 그 뒤 PR #436(admin-style 09)이 먼저 병합되어 PR이 plan.md와 대기열에서 충돌했다. origin/main을 합쳐 프론티어 문단은 main 쪽 문단 끝에 이 브랜치의 닫힘 문장을 붙여 풀었고, admin-style도 닫혀 프론티어에 남은 기능이 없다고 적었다. 대기열은 main의 550 뒤에 551을 두었다. plan.md의 기능 행에서 design-card-build를 기다리는 행은 없었다(상태 칸을 Grep으로 봤다). 티켓의 plan.md 체크박스를 닫았다.
 
 ## 회고
 
-후보 넷, 승인 1(회차로 세는 것), 기각 3, 넘김 0.
+후보 다섯, 승인 1(회차로 세는 것), 기각 4, 넘김 0.
 
 1. **승인(1회차, 대기열 551).** 결과 절을 쓰며 아직 하지 않은 일과 조건이 서지 않은 갈래의 체크박스를 [x]로 닫았고, 셀프 리뷰의 두 축이 잡았다. 체크박스를 언제 닫는지 적은 지침이 없어(`docs/agents/issue-tracker.md`와 `CODING_STANDARDS.md`를 Grep으로 봤다) 리뷰가 잡도록 둔 기준을 어긴 사건이 아니다. 일을 했는지는 검사가 글자로 가를 수 없어 표준에 더할 새 판단 기준이고, 더하는 것이라 세 번째까지 센다. 대기열에서 `체크박스`, `일 전에` 등으로 찾아 같은 일을 다룬 행이 없어 새 행이다.
 2. **기각.** 첫 publish가 판이 올라 거부됐다. `upload.md`의 절차(확인을 처음부터 다시 돈다)가 그 자리에서 받아 냈다.
 3. **기각.** 카드 iframe이 교차 출처라 계산된 글꼴을 읽지 못했다. 짓기 시험(design-card-build 01)이 카드마다 chromium에서 한글 글꼴을 이미 본다.
 4. **기각.** 이 세션의 `awk` 한 줄을 워크트리 가드가 거부했다. 앱 가드가 그 자리에서 막았고 `CLAUDE.md` 환경 함정에 이미 있다. Grep 도구로 대신했다.
+5. **기각.** 충돌을 푼 스크래치 스크립트의 `write_text`가 두 파일의 줄 끝을 CRLF로 바꿨다. `git diff`가 "CRLF will be replaced by LF"를 알렸고(커밋하면 git이 LF로 되돌린다는 경고다), `file`로 본 뒤 `sed`로 LF로 되돌렸다. 저장소의 줄 끝 정규화가 이미 받는다.
 
 만료할 행은 없었다(작업 폴더와 `--ref origin/main`의 두 출력 모두).
 
 ## 다음
 
-design-card-build가 닫혔다(티켓 01~05). 기능의 마지막 티켓이었고 대기열에 회차 3 이상인 열린 행이 27개라(`tools/queue_open_rows.py`), next-session 결정표의 하네스 chore 배치 줄이 다음이다. 고를 행과 티켓은 병합 뒤 그 스킬이 정한다. 기능 쪽 프론티어는 admin-style 하나다.
+design-card-build가 닫혔다(티켓 01~05). 기능의 마지막 티켓이었고 대기열에 회차 3 이상인 열린 행이 27개라(`tools/queue_open_rows.py`), next-session 결정표의 하네스 chore 배치 줄이 다음이다. 고를 행과 티켓은 병합 뒤 그 스킬이 정한다. admin-style도 PR #436으로 닫혀 프론티어에 남은 기능이 없다.

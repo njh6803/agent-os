@@ -1,0 +1,466 @@
+# 티켓 09(설정 화면의 테마)의 변이 표. 페이지 시험과 그리기 전 스크립트의 단위 시험은 구현 전에 빨강을 봤지만, 그때의
+# 빨강은 카드나 스크립트 파일이 없어서였다. 그래서 단언 하나하나(저장 키와 목록, 예외 삼키기, 기본 테마도 적기, 다른 탭의
+# 키 거르기, 마운트 때 되살리기와 그 목록 거르기, 셋업의 속성 걷기)는 빨강을 본 적이 없다. 스토리 단언(표본의 테마와 모드,
+# inert, 고른 카드의 테두리, 넓은 폭의 한 줄 넷, 표본이 그 테마의 쓰임새 토큰을 받는 것)과 e2e 의 첫 그림 판정은 구현 뒤에
+# 썼다.
+# 빨강의 판정은 `tools/mutate.py` 의 독스트링이다. 표지는 변이를 넣어 전체 출력을 한 번 본 뒤 고른 실패 머리의 메시지다
+# (받은 값까지 든 것). 같은 메시지를 그 시험의 다른 단언도 낼 수 있으면 실패 줄의 위치(`<파일>:<줄>:`)를 함께 든다. 그
+# 위치는 시험 파일의 줄이 옮겨 가면 함께 고친다(다시 돌리면 `표지 없음` 으로 드러난다). 스토리 러너는 그 스토리 파일만 돌린다.
+#
+# 돌리는 법: PYTHONUTF8=1 uv run python tools/mutate.py .scratch/admin-style/probes/settings_theme_mutations.toml
+# 네트워크를 타지 않는다. `uv sync` 와 `pnpm -C web install` 이 되고 Playwright 의 chromium 이 깔린 체크아웃에서 돈다.
+
+[runner.node]
+command = ["pnpm", "exec", "vitest", "run", "--project", "node"]
+cwd = "web"
+judge = "vitest"
+
+[runner.pages]
+command = ["pnpm", "exec", "vitest", "run", "--project", "pages"]
+cwd = "web"
+judge = "vitest"
+
+[runner.narrow]
+command = ["pnpm", "exec", "vitest", "run", "--project", "admin-storybook-narrow"]
+cwd = "web"
+judge = "vitest"
+
+[runner.wide]
+command = ["pnpm", "exec", "vitest", "run", "--project", "admin-storybook-wide"]
+cwd = "web"
+judge = "vitest"
+
+[runner.e2e]
+command = ["pnpm", "exec", "playwright", "test"]
+cwd = "web/apps/admin"
+judge = "playwright"
+
+[[mutation]]
+name = "그리기 전 스크립트가 다른 키를 읽으면 테마 키 시험이 빨갛다"
+runner = "node"
+tests = ["apps/admin/stores/theme.prepaint.test.ts"]
+expect = "red"
+expect_output = ["expected {} to deeply equal { theme: 'guncheong' }"]
+
+[[mutation.edit]]
+file = "web/apps/admin/public/theme.js"
+old = '''
+  const theme = localStorage.getItem("agent-os-admin-theme");
+'''
+new = '''
+  const theme = localStorage.getItem("agent-os-theme");
+'''
+
+[[mutation]]
+name = "그리기 전 스크립트의 목록에서 쪽빛이 빠지면 빨갛다"
+runner = "node"
+tests = ["apps/admin/stores/theme.prepaint.test.ts"]
+expect = "red"
+expect_output = ["expected {} to deeply equal { theme: 'jjokbit' }"]
+
+[[mutation.edit]]
+file = "web/apps/admin/public/theme.js"
+old = '''["guncheong", "nokcheong", "jacho", "jjokbit"]'''
+new = '''["guncheong", "nokcheong", "jacho"]'''
+
+[[mutation]]
+name = "그리기 전 스크립트가 목록을 보지 않으면 목록 밖 시험이 빨갛다"
+runner = "node"
+tests = ["apps/admin/stores/theme.prepaint.test.ts"]
+expect = "red"
+expect_output = ["expected { theme: 'purple' } to deeply equal {}"]
+
+[[mutation.edit]]
+file = "web/apps/admin/public/theme.js"
+old = '''
+  if (theme !== null && ["guncheong", "nokcheong", "jacho", "jjokbit"].includes(theme)) {
+'''
+new = '''
+  if (theme !== null) {
+'''
+
+[[mutation]]
+name = "그리기 전 스크립트가 예외를 삼키지 않으면 던지는 저장소 시험이 빨갛다"
+runner = "node"
+tests = ["apps/admin/stores/theme.prepaint.test.ts"]
+expect = "red"
+# 접근자가 던지는 맥락에서 node `vm` 은 접근자의 예외 대신 ReferenceError 를 낸다(도구가 찍었다).
+expect_output = ["Error: 저장소를 막았다", "ReferenceError: localStorage is not defined"]
+
+[[mutation.edit]]
+file = "web/apps/admin/public/theme.js"
+old = '''
+try {
+  const theme = localStorage.getItem("agent-os-admin-theme");
+  if (theme !== null && ["guncheong", "nokcheong", "jacho", "jjokbit"].includes(theme)) {
+    document.documentElement.dataset.theme = theme;
+  }
+} catch {
+  // 기본 테마로 그린다.
+}
+'''
+new = '''
+const theme = localStorage.getItem("agent-os-admin-theme");
+if (theme !== null && ["guncheong", "nokcheong", "jacho", "jjokbit"].includes(theme)) {
+  document.documentElement.dataset.theme = theme;
+}
+'''
+
+[[mutation]]
+name = "고른 테마를 저장하지 않으면 카드 시험이 빨갛다"
+runner = "pages"
+tests = ["apps/admin/components/pages/SettingsPage.theme.test.tsx", "-t", "카드를 누르면"]
+expect = "red"
+# 같은 메시지를 바로 앞의 속성 단언도 낼 수 있어 저장 값 단언의 줄 위치를 함께 둔다.
+expect_output = ["expected null to be 'jjokbit'", "SettingsPage.theme.test.tsx:87:"]
+
+[[mutation.edit]]
+file = "web/apps/admin/stores/theme.ts"
+old = '''
+    localStorage.setItem(THEME_STORAGE_KEY, theme);
+'''
+new = '''
+'''
+
+[[mutation]]
+name = "기본 테마를 고르면 저장하지 않는 구현이면 카드 시험이 빨갛다"
+runner = "pages"
+tests = ["apps/admin/components/pages/SettingsPage.theme.test.tsx", "-t", "카드를 누르면"]
+expect = "red"
+expect_output = ["expected 'jjokbit' to be 'nokcheong'", "SettingsPage.theme.test.tsx:95:"]
+
+[[mutation.edit]]
+file = "web/apps/admin/stores/theme.ts"
+old = '''
+    localStorage.setItem(THEME_STORAGE_KEY, theme);
+'''
+new = '''
+    if (theme !== DEFAULT_THEME) {
+      localStorage.setItem(THEME_STORAGE_KEY, theme);
+    }
+'''
+
+[[mutation]]
+name = "지금 테마를 늘 기본으로 읽으면 고른 카드 시험이 빨갛다"
+runner = "pages"
+tests = ["apps/admin/components/pages/SettingsPage.theme.test.tsx", "-t", "카드를 누르면"]
+expect = "red"
+expect_output = ["expected <input …(6)></input> to be <input …(5)></input>", "SettingsPage.theme.test.tsx:88:"]
+
+[[mutation.edit]]
+file = "web/apps/admin/stores/theme.ts"
+old = '''
+    () => rootTheme() ?? DEFAULT_THEME,
+'''
+new = '''
+    () => DEFAULT_THEME,
+'''
+
+[[mutation]]
+name = "라디오의 이름을 테마 이름으로 잇지 않으면 카드 이름 시험이 빨갛다"
+runner = "pages"
+tests = ["apps/admin/components/pages/SettingsPage.theme.test.tsx", "-t", "테마마다 라디오"]
+expect = "red"
+expect_output = ['Unable to find an accessible element with the role "radio" and name "군청"']
+
+[[mutation.edit]]
+file = "web/apps/admin/components/molecules/ThemeCard.tsx"
+old = '''
+          aria-labelledby={nameId}
+'''
+new = '''
+'''
+
+[[mutation]]
+name = "다른 탭의 이벤트에서 키를 거르지 않으면 다른 키 시험이 빨갛다"
+runner = "pages"
+tests = ["apps/admin/components/pages/SettingsPage.theme.test.tsx", "-t", "테마 키가 아닌 키"]
+expect = "red"
+expect_output = ["expected 'guncheong' to be 'jjokbit'"]
+
+[[mutation.edit]]
+file = "web/apps/admin/stores/theme.ts"
+old = '''
+  if (event.key !== null && event.key !== THEME_STORAGE_KEY) {
+    return;
+  }
+'''
+new = '''
+'''
+
+[[mutation]]
+name = "키가 없는 이벤트를 무시하면 저장소를 비운 시험이 빨갛다"
+runner = "pages"
+tests = ["apps/admin/components/pages/SettingsPage.theme.test.tsx", "-t", "저장소 전체가 비워지면"]
+expect = "red"
+expect_output = ["expected 'jjokbit' to be null"]
+
+[[mutation.edit]]
+file = "web/apps/admin/stores/theme.ts"
+old = '''
+  if (event.key !== null && event.key !== THEME_STORAGE_KEY) {
+'''
+new = '''
+  if (event.key !== THEME_STORAGE_KEY) {
+'''
+
+[[mutation]]
+name = "다른 탭이 보낸 목록 밖의 값을 걸러 두면 목록 밖 시험이 빨갛다"
+runner = "pages"
+tests = ["apps/admin/components/pages/SettingsPage.theme.test.tsx", "-t", "목록에 없는 값이 오면"]
+expect = "red"
+expect_output = ["expected 'jjokbit' to be null"]
+
+[[mutation.edit]]
+file = "web/apps/admin/stores/theme.ts"
+old = '''
+  apply(event.key === null ? null : themeKeyOf(event.newValue));
+'''
+new = '''
+  const next = event.key === null ? null : themeKeyOf(event.newValue);
+  if (next !== null || event.newValue === null) {
+    apply(next);
+  }
+'''
+
+[[mutation]]
+name = "다른 탭을 설정 화면에서만 따르면 설정이 아닌 화면 시험이 빨갛다"
+runner = "pages"
+tests = ["apps/admin/components/pages/SettingsPage.theme.test.tsx", "-t", "설정이 아닌 화면"]
+expect = "red"
+expect_output = ["expected null to be 'jacho'"]
+
+[[mutation.edit]]
+file = "web/apps/admin/components/pages/AdminScreen.tsx"
+old = '''
+  useStoredTheme();
+  const hydrated = useHydrated();
+'''
+new = '''
+  const hydrated = useHydrated();
+'''
+
+[[mutation.edit]]
+file = "web/apps/admin/components/pages/SettingsPage.tsx"
+old = '''
+import { chooseTheme, useTheme } from "../../stores/theme";
+'''
+new = '''
+import { chooseTheme, useStoredTheme, useTheme } from "../../stores/theme";
+'''
+
+[[mutation.edit]]
+file = "web/apps/admin/components/pages/SettingsPage.tsx"
+old = '''
+function ConnectedSettings() {
+  const theme = useTheme();
+'''
+new = '''
+function ConnectedSettings() {
+  useStoredTheme();
+  const theme = useTheme();
+'''
+
+[[mutation]]
+name = "마운트 때 저장 값으로 되살리지 않으면 마운트 시험이 빨갛다"
+runner = "pages"
+tests = ["apps/admin/components/pages/SettingsPage.theme.test.tsx", "-t", "html 과 다르면 다시 단다"]
+expect = "red"
+expect_output = ["expected null to be 'jjokbit'"]
+
+[[mutation.edit]]
+file = "web/apps/admin/stores/theme.ts"
+old = '''
+    restoreStoredTheme();
+'''
+new = '''
+'''
+
+[[mutation]]
+name = "마운트 때 목록 밖의 저장 값도 달면 목록 밖 마운트 시험이 빨갛다"
+runner = "pages"
+tests = ["apps/admin/components/pages/SettingsPage.theme.test.tsx", "-t", "저장 값이 목록에 없으면"]
+expect = "red"
+expect_output = ["expected 'purple' to be null"]
+
+[[mutation.edit]]
+file = "web/apps/admin/stores/theme.ts"
+old = '''
+    stored = themeKeyOf(localStorage.getItem(THEME_STORAGE_KEY));
+'''
+new = '''
+    stored = localStorage.getItem(THEME_STORAGE_KEY) as ThemeKey | null;
+'''
+
+[[mutation]]
+name = "셋업이 문서 뿌리의 테마를 걷지 않으면 마운트 시험의 사전 단언이 빨갛다"
+runner = "pages"
+tests = ["apps/admin/components/pages/SettingsPage.theme.test.tsx"]
+expect = "red"
+# 앞 묶음의 마지막 시험이 단 자초가 남는다. 다음 시험도 같은 메시지로 빨개져 사전 단언의 줄 위치를 함께 둔다.
+expect_output = ["expected 'jacho' to be null", "SettingsPage.theme.test.tsx:161:"]
+
+[[mutation.edit]]
+file = "web/apps/admin/testing/setup.ts"
+old = '''
+  document.documentElement.removeAttribute("data-theme");
+'''
+new = '''
+'''
+
+[[mutation]]
+name = "표본에 모드를 달면 카드 스토리가 빨갛다"
+runner = "wide"
+tests = ["apps/admin/components/organisms/ThemePicker.stories.tsx"]
+expect = "red"
+# 판정 스토리도 다크 값을 받아 빨개진다. 고른 단언은 카드 스토리의 모드 단언이라 그 줄 위치를 함께 둔다.
+expect_output = ["expected true to be false", "ThemePicker.stories.tsx:87:"]
+
+[[mutation.edit]]
+file = "web/apps/admin/components/molecules/ThemeCard.tsx"
+old = '''
+        data-theme={theme}
+'''
+new = '''
+        data-theme={theme}
+        data-mode="dark"
+'''
+
+[[mutation]]
+name = "표본의 테마를 기본으로 고정하면 카드 스토리가 빨갛다"
+runner = "wide"
+tests = ["apps/admin/components/organisms/ThemePicker.stories.tsx"]
+expect = "red"
+expect_output = ["expected [ 'nokcheong', 'nokcheong', …(2) ] to deeply equal [ 'guncheong', 'nokcheong', …(2) ]"]
+
+[[mutation.edit]]
+file = "web/apps/admin/components/molecules/ThemeCard.tsx"
+old = '''
+        data-theme={theme}
+'''
+new = '''
+        data-theme="nokcheong"
+'''
+
+[[mutation]]
+name = "표본이 inert 가 아니면 카드 스토리가 빨갛다"
+runner = "wide"
+tests = ["apps/admin/components/organisms/ThemePicker.stories.tsx"]
+expect = "red"
+expect_output = ["expected false to be true", "ThemePicker.stories.tsx:88:"]
+
+[[mutation.edit]]
+file = "web/apps/admin/components/molecules/ThemeCard.tsx"
+old = '''
+        inert
+'''
+new = '''
+'''
+
+[[mutation]]
+name = "고른 카드가 한 줄 테두리면 좁은 폭 카드 스토리가 빨갛다"
+runner = "narrow"
+tests = ["apps/admin/components/organisms/ThemePicker.stories.tsx"]
+expect = "red"
+expect_output = ["expected [ '1px', 'rgb(5, 104, 104)' ] to deeply equal [ '2px', 'rgb(5, 104, 104)' ]"]
+
+[[mutation.edit]]
+file = "web/apps/admin/components/molecules/ThemeCard.tsx"
+old = '''
+  chosen: "border-2 border-accent bg-bg-selected",
+'''
+new = '''
+  chosen: "border border-accent bg-bg-selected",
+'''
+
+[[mutation]]
+name = "넓은 폭에서도 두 줄이면 넓은 폭 카드 스토리가 빨갛다"
+runner = "wide"
+tests = ["apps/admin/components/organisms/ThemePicker.stories.tsx"]
+expect = "red"
+expect_output = ["expected 2 to be 1", "ThemePicker.stories.tsx:95:"]
+
+[[mutation.edit]]
+file = "web/apps/admin/components/organisms/ThemePicker.tsx"
+old = '''
+      <div className="grid grid-cols-2 gap-3 @split:grid-cols-4">
+'''
+new = '''
+      <div className="grid grid-cols-2 gap-3">
+'''
+
+[[mutation]]
+name = "표본이 바탕과 글자를 칠하지 않으면 판정 스토리가 빨갛다"
+runner = "wide"
+tests = ["apps/admin/components/organisms/ThemePicker.stories.tsx"]
+expect = "red"
+expect_output = ["expected [ 'rgba(0, 0, 0, 0)', …(1) ] to deeply equal [ 'rgb(247, 247, 247)', …(1) ]"]
+
+[[mutation.edit]]
+file = "web/apps/admin/components/molecules/ThemeCard.tsx"
+old = '''
+        className="flex flex-col items-start gap-2 rounded-m border border-border bg-bg p-2 text-text @split:p-3"
+'''
+new = '''
+        className="flex flex-col items-start gap-2 rounded-m border border-border p-2 @split:p-3"
+'''
+
+[[mutation]]
+name = "테마만 단 요소가 쓰임새 토큰을 다시 풀지 않으면 판정 스토리가 빨갛다"
+runner = "wide"
+tests = ["apps/admin/components/organisms/ThemePicker.stories.tsx"]
+expect = "red"
+# 표본이 문서 뿌리(쪽빛)의 풀린 값을 물려받는다. 받은 바탕은 쪽빛 라이트의 값이다.
+expect_output = ["expected [ [ 'bg', '#faf7f3' ], …(22) ] to deeply equal [ [ 'bg', '#f7f7f7' ], …(22) ]"]
+
+[[mutation.edit]]
+file = "web/packages/ui/src/styles/theme.css"
+old = '''
+  :host,
+  [data-theme],
+  [data-mode] {
+    color-scheme: light;
+'''
+new = '''
+  :host,
+  [data-mode] {
+    color-scheme: light;
+'''
+
+[[mutation]]
+name = "그리기 전 스크립트를 싣지 않으면 e2e 의 첫 그림 판정이 빨갛다"
+runner = "e2e"
+tests = ["e2e/admin-token.e2e.ts", "-g", "첫 그림부터"]
+expect = "red"
+# 하이드레이션 뒤의 되살리기가 속성을 달아 끝의 단언은 초록이고, 첫 그림 앞의 프레임만 속성이 없다.
+expect_output = ["Error: 첫 그림의 테마", "Received: null"]
+
+[[mutation.edit]]
+file = "web/apps/admin/app/layout.tsx"
+old = '''
+      <head>
+        <script src="/theme.js" />
+      </head>
+'''
+new = '''
+      <head />
+'''
+
+[[mutation]]
+name = "넓은 창에서 데코레이터의 컨테이너가 split 보다 좁으면 넓은 폭 카드 스토리가 빨갛다"
+runner = "wide"
+tests = ["apps/admin/components/organisms/ThemePicker.stories.tsx"]
+expect = "red"
+# 셀프 리뷰 명세 축이 짚어 더했다. 카드 스토리는 갈래를 창 폭으로 고른다. 잰 컨테이너 폭으로 고르면 이 변이에서 두 줄
+# 갈래를 단언해 지나간다(명세 축이 코드를 읽고 짚었다. 그 판정으로는 재지 않았다). 명세 "갈래의 단언"이 이 단언에 맡긴
+# 본문 칸과 데코레이터의 어긋남이다.
+expect_output = ["expected 2 to be 1", "ThemePicker.stories.tsx:95:"]
+
+[[mutation.edit]]
+file = "web/apps/admin/.storybook/preview.tsx"
+old = '''
+  <div className="@container">
+'''
+new = '''
+  <div className="@container" style={{ width: 600 }}>
+'''
