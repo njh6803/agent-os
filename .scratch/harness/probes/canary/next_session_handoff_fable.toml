@@ -1,6 +1,7 @@
 # next-session `handoff.md` 인계 줄의 모델 항목에 설계·명세면 `Fable 5.1 / xhigh`를 따르는 갈래를 더한 것(ADR 0029 이력 2026-10-31)이
 # 새 세션에 실리는지. 실험군은 이 워크트리, 대조군은 주 체크아웃이다. 주 체크아웃의 옛 판은 그 항목에 Fable 갈래가 없어 카나리아가 없다.
 # 최신 결과: 통과 4(2026-10-31, 이 PC, claude 2.1.312, 대조군 커밋 c18619bb, 일지 2026-10-31-01).
+#   그 뒤 PR 봇 지적으로 `expect`에 모델 값을 이어 붙여 사전 확인으로 갈음했다(2026-10-31, 일지 2026-10-31-01).
 # 돌리는 법: 워크트리 `.claude/worktrees/<이름>/` 루트에서
 #   uv run python tools/canary.py .scratch/harness/probes/canary/next_session_handoff_fable.toml <출력 디렉터리>
 kind = "skill"
@@ -11,7 +12,7 @@ Read로 열고, 아래를 그 파일에서만 찾는다. 스킬 본문(SKILL.md)
 본문이 그런 하위 파일을 가리키지 않거나 그 파일에 없으면 "없음"이라고만 답하라.
 그 파일의 "인계 줄" 절에서 "모델" 항목의 글을 그대로 옮겨라.
 '''
-expect = ["\"다음 단계\"의 값이 설계 인터뷰나 명세면"]
+expect = ["\"다음 단계\"의 값이 설계 인터뷰나 명세면 `Fable 5.1 / xhigh`"]
 source = ".claude/skills/next-session/handoff.md"
 skill = "next-session"
 skill_body = "files"
