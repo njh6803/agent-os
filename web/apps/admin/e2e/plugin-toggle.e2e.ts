@@ -55,18 +55,19 @@ test("스위치로 에이전트를 끄면 운영자 파일에 적히고 목록�
     "꺼진 플러그인이 있어 재개할 수 없다: 에이전트 gated",
   );
   await expect(
-    decisionPlace(page).getByRole("button", { name: "허가", exact: true }),
+    decisionPlace(page).getByRole("button", { name: "승인", exact: true }),
   ).toBeDisabled();
   await openSection(page, "플러그인");
 
-  // 열어 보면 서버가 읽은 꺼짐과 매니페스트가 보인다. 목록의 링크와 플러그인 하나의 라우트를 실제 Next 로 지난다.
-  await gated.getByRole("link", { name: "gated" }).click();
+  // 열어 보면 서버가 읽은 꺼짐과 매니페스트가 보인다. 목록의 "매니페스트" 링크와 플러그인 하나의 라우트를 실제 Next
+  // 로 지난다.
+  await gated.getByRole("link", { name: "매니페스트" }).click();
   await expect(page).toHaveURL(`${adminUrl}/plugins/agent/gated`);
   await expect(page.getByRole("region", { name: "매니페스트" })).toContainText(
     '"entrypoint": "agent:Agent"',
   );
   await expect(page.getByRole("main")).toContainText("꺼짐");
-  await page.getByRole("link", { name: "플러그인 목록으로" }).click();
+  await page.getByRole("link", { name: "플러그인 목록", exact: true }).click();
 
   await gated.getByRole("switch").click();
 
@@ -76,7 +77,7 @@ test("스위치로 에이전트를 끄면 운영자 파일에 적히고 목록�
 
   await openPausedRun(page, paused.runId);
   await expect(
-    decisionPlace(page).getByRole("button", { name: "허가", exact: true }),
+    decisionPlace(page).getByRole("button", { name: "승인", exact: true }),
   ).toBeEnabled();
   await expect(decisionPlace(page)).not.toContainText("꺼진 플러그인");
   expect(crashes).toEqual([]);
@@ -92,7 +93,7 @@ test("이름이 패턴 밖인 표지를 열면 주소의 조각이 풀린 이름
   const odd = row(page, "에이전트", "Old Calc");
   await expect(odd).toContainText("디렉터리 이름이 플러그인 이름의 패턴을 어긴다");
 
-  await odd.getByRole("link", { name: "Old Calc" }).click();
+  await odd.getByRole("link", { name: "매니페스트" }).click();
 
   await expect(page).toHaveURL(`${adminUrl}/plugins/agent/Old%20Calc`);
   await expect(page.getByRole("heading", { level: 1, name: "Old Calc" })).toBeVisible();

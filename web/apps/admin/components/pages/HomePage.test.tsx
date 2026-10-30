@@ -96,7 +96,16 @@ const ROWS: PluginRow[] = [
 ];
 
 const NO_EFFECT = "로더가 생기기 전에는 효과가 없다";
-const KIND_HEADINGS = ["에이전트", "MCP", "스킬", "모델"];
+/** ROWS 의 종류 머리. 종류 이름 옆에 그 종류의 개수가 붙는다. */
+const KIND_HEADINGS = ["에이전트 2", "MCP 1", "스킬 1", "모델 1"];
+
+/** 에이전트 묶음의 이름. 머리의 개수는 시험마다 목록이 달라 가리지 않는다. 목록이 섰는지 볼 때 쓴다. */
+const AGENTS = kindName("에이전트");
+
+/** 종류 묶음의 이름(종류 이름과 개수)에 맞는 패턴. */
+function kindName(kind: string): RegExp {
+  return new RegExp(`^${kind} \\d+$`);
+}
 
 /**
  * `GET /plugins` 에 답한다. `reply` 는 몇 번째 요청인지(0부터) 받는다. 돌려주는 목록에 요청마다의 `Authorization`
@@ -122,7 +131,7 @@ function refused(): Response {
 }
 
 function group(heading: string): HTMLElement {
-  return screen.getByRole("region", { name: heading });
+  return screen.getByRole("region", { name: kindName(heading) });
 }
 
 function row(heading: string, name: string): HTMLElement {
@@ -140,7 +149,7 @@ async function showList(): Promise<UserEvent> {
   const user = userEvent.setup();
   renderPage(<HomePage />);
   await enterAdminToken(user, TOKEN);
-  await screen.findByRole("region", { name: "에이전트" });
+  await screen.findByRole("region", { name: AGENTS });
   return user;
 }
 
@@ -177,7 +186,7 @@ describe("관리 토큰", () => {
     renderPage(<HomePage />);
 
     expect(await screen.findByLabelText("관리 토큰")).toBeTruthy();
-    expect(screen.queryByRole("region", { name: "에이전트" })).toBeNull();
+    expect(screen.queryByRole("region", { name: AGENTS })).toBeNull();
   });
 
   test("넣는 자리는 틀 없이 제품 이름과 화면 머리, 설명, 가린 입력과 그 도움말로 선다", async () => {
@@ -216,7 +225,7 @@ describe("관리 토큰", () => {
 
     await enterAdminToken(userEvent.setup(), TOKEN);
 
-    expect(await screen.findByRole("region", { name: "에이전트" })).toBeTruthy();
+    expect(await screen.findByRole("region", { name: AGENTS })).toBeTruthy();
     expect(screen.queryByLabelText("관리 토큰")).toBeNull();
     expect(authorizations.length).toBeGreaterThan(0);
     expect(new Set(authorizations)).toEqual(new Set([`Bearer ${TOKEN}`]));
@@ -264,7 +273,7 @@ describe("관리 토큰", () => {
     const authorizations = servePlugins(rows);
     const first = renderPage(<HomePage />);
     await enterAdminToken(userEvent.setup(), TOKEN);
-    await screen.findByRole("region", { name: "에이전트" });
+    await screen.findByRole("region", { name: AGENTS });
     first.unmount();
 
     // 새로 고침. 모듈을 다시 읽으면 스토어가 새로 서고 그 탭의 sessionStorage 에서 토큰을 되살린다.
@@ -273,7 +282,7 @@ describe("관리 토큰", () => {
     const before = authorizations.length;
     renderPage(<reloaded.HomePage />);
 
-    expect(await screen.findByRole("region", { name: "에이전트" })).toBeTruthy();
+    expect(await screen.findByRole("region", { name: AGENTS })).toBeTruthy();
     expect(screen.queryByLabelText("관리 토큰")).toBeNull();
     expect(authorizations.slice(before)).toEqual([`Bearer ${TOKEN}`]);
   });
@@ -283,13 +292,13 @@ describe("관리 토큰", () => {
     renderPage(<HomePage />);
     const user = userEvent.setup();
     await enterAdminToken(user, TOKEN);
-    await screen.findByRole("region", { name: "에이전트" });
+    await screen.findByRole("region", { name: AGENTS });
 
     await user.click(screen.getByRole("button", { name: "새로 고침" }));
 
     expect((await screen.findByRole("alert")).textContent).toContain("관리 토큰이 거부됐다");
     expect(screen.getByLabelText("관리 토큰")).toBeTruthy();
-    expect(screen.queryByRole("region", { name: "에이전트" })).toBeNull();
+    expect(screen.queryByRole("region", { name: AGENTS })).toBeNull();
     expect(entries(sessionStorage).filter(([, value]) => value.includes(TOKEN))).toEqual([]);
   });
 
@@ -304,7 +313,7 @@ describe("관리 토큰", () => {
     await enterAdminToken(user, TOKEN);
 
     // 새 토큰의 목록은 옛 요청을 나눠 받지 않고 제 요청을 보낸다.
-    expect(await screen.findByRole("region", { name: "에이전트" })).toBeTruthy();
+    expect(await screen.findByRole("region", { name: AGENTS })).toBeTruthy();
     expect(authorizations.filter((sent) => sent === `Bearer ${TOKEN}`)).toHaveLength(2);
     late.resolve(refused());
     // 늦은 응답이 처리될 틈을 준다. 옛 요청의 401 이 새 토큰을 내려놓으면 넣는 자리로 돌아간다.
@@ -320,12 +329,12 @@ describe("관리 토큰", () => {
     renderPage(<HomePage />);
     const user = userEvent.setup();
     await enterAdminToken(user, TOKEN);
-    await screen.findByRole("region", { name: "에이전트" });
+    await screen.findByRole("region", { name: AGENTS });
 
     await clearTokens(user);
 
     expect(await screen.findByLabelText("관리 토큰")).toBeTruthy();
-    expect(screen.queryByRole("region", { name: "에이전트" })).toBeNull();
+    expect(screen.queryByRole("region", { name: AGENTS })).toBeNull();
     expect(entries(sessionStorage).filter(([, value]) => value.includes(TOKEN))).toEqual([]);
   });
 
@@ -345,7 +354,7 @@ describe("관리 토큰", () => {
     await screen.findByRole("alert");
     const whileRejected = document.documentElement.outerHTML;
     await enterAdminToken(user, TOKEN);
-    await screen.findByRole("region", { name: "에이전트" });
+    await screen.findByRole("region", { name: AGENTS });
 
     for (const token of [REJECTED, TOKEN]) {
       expect(location.href).not.toContain(token);
@@ -447,7 +456,7 @@ describe("채널 토큰", () => {
     expect(stored()).not.toContain(CHANNEL);
     // 관리 토큰을 다시 넣어도 지운 채널 토큰은 돌아오지 않는다.
     await enterAdminToken(user, TOKEN);
-    await screen.findByRole("region", { name: "에이전트" });
+    await screen.findByRole("region", { name: AGENTS });
     expect(stored()).toContain(TOKEN);
     expect(stored()).not.toContain(CHANNEL);
   });
@@ -476,6 +485,8 @@ describe("플러그인 목록", () => {
 
     await showList();
 
+    expect(screen.getByRole("heading", { level: 1 }).textContent).toBe("플러그인 5");
+    expect(screen.getByText("종류마다 등록된 플러그인을 켜고 끈다.")).toBeTruthy();
     const headings = screen.getAllByRole("heading", { level: 2 }).map((h) => h.textContent);
     expect(headings).toEqual(KIND_HEADINGS);
     expect(within(group("에이전트")).getAllByRole("listitem")).toHaveLength(2);
@@ -497,7 +508,33 @@ describe("플러그인 목록", () => {
     );
   });
 
-  test("행마다 그 플러그인을 여는 링크가 있고 표지 행도 그렇다", async () => {
+  test("등록된 것이 없는 종류는 개수 0 과 등록된 것이 없다 한 줄이다", async () => {
+    servePlugins(() => HttpResponse.json(ROWS.filter((plugin) => plugin.kind !== "model")));
+
+    await showList();
+
+    expect(screen.getByRole("heading", { level: 1 }).textContent).toBe("플러그인 4");
+    expect(group("모델").textContent).toBe("모델 0등록된 것이 없다");
+    expect(within(group("모델")).queryByRole("switch")).toBeNull();
+  });
+
+  test("이미 보인 목록도 다시 읽다 실패하면 머리에서 개수가 걷힌다", async () => {
+    // 실패 뒤에도 읽기 훅은 옛 목록을 들고 있다. 옛 행을 지우듯 옛 개수도 믿지 않는다.
+    servePlugins((call) =>
+      call < 2
+        ? rows()
+        : HttpResponse.json(envelope("internal_error", "운영자 파일이 깨졌다"), { status: 500 }),
+    );
+    const user = await showList();
+    expect(screen.getByRole("heading", { level: 1 }).textContent).toBe("플러그인 5");
+
+    await user.click(screen.getByRole("button", { name: "새로 고침" }));
+
+    await screen.findByRole("alert");
+    expect(screen.getByRole("heading", { level: 1 }).textContent).toBe("플러그인");
+  });
+
+  test("행마다 그 플러그인을 여는 매니페스트 링크가 있고 표지 행도 그렇다", async () => {
     // 디렉터리 이름이 패턴을 어긴 표지는 이름에 주소에 쓸 수 없는 글자가 들 수 있다.
     const odd: PluginRow = {
       kind: "agent",
@@ -510,13 +547,15 @@ describe("플러그인 목록", () => {
     await showList();
 
     const href = (heading: string, name: string): string | null =>
-      within(row(heading, name)).getByRole("link", { name }).getAttribute("href");
+      within(row(heading, name)).getByRole("link", { name: "매니페스트" }).getAttribute("href");
     expect(href("에이전트", "calc")).toBe("/plugins/agent/calc");
     expect(href("에이전트", "broken")).toBe("/plugins/agent/broken");
     expect(href("에이전트", "Old Calc")).toBe("/plugins/agent/Old%20Calc");
     expect(href("MCP", "everything")).toBe("/plugins/mcp/everything");
     expect(href("스킬", "summarize")).toBe("/plugins/skill/summarize");
     expect(href("모델", "sonnet")).toBe("/plugins/model/sonnet");
+    // 이름은 스위치의 이름이라 링크가 아니다.
+    expect(within(row("에이전트", "calc")).queryByRole("link", { name: "calc" })).toBeNull();
   });
 
   test("스킬과 모델 행에만 로더가 생기기 전에는 효과가 없다가 보인다", async () => {
@@ -543,7 +582,7 @@ describe("플러그인 목록", () => {
     expect(alert.textContent).toContain("플러그인 목록을 읽지 못했다");
     expect(alert.textContent).toContain(message);
     expect(alert.textContent).toContain("추적 식별자: req-9f3c");
-    expect(screen.queryByRole("region", { name: "에이전트" })).toBeNull();
+    expect(screen.queryByRole("region", { name: AGENTS })).toBeNull();
     // 500 봉투는 인증을 지난 뒤의 실패라 토큰은 받아들여졌다. 넣는 자리가 아니라 목록 자리가 실패를 말한다.
     expect(screen.queryByLabelText("관리 토큰")).toBeNull();
     expect(screen.getByRole("button", { name: "새로 고침" })).toBeTruthy();
@@ -562,7 +601,7 @@ describe("플러그인 목록", () => {
     await user.click(screen.getByRole("button", { name: "새로 고침" }));
 
     expect((await screen.findByRole("alert")).textContent).toContain("운영자 파일이 깨졌다");
-    expect(screen.queryByRole("region", { name: "에이전트" })).toBeNull();
+    expect(screen.queryByRole("region", { name: AGENTS })).toBeNull();
   });
 
   test("네트워크 실패도 중계가 상류에 닿지 못한 것도 서버에 닿지 못했다로 보인다", async () => {
@@ -587,7 +626,7 @@ describe("플러그인 목록", () => {
       expect(screen.queryByRole("progressbar")).toBeNull();
     });
     expect(screen.getByRole("alert").textContent).toContain("서버에 닿지 못했다");
-    expect(screen.queryByRole("region", { name: "에이전트" })).toBeNull();
+    expect(screen.queryByRole("region", { name: AGENTS })).toBeNull();
   });
 
   test("관리 토큰을 확인하다 서버에 닿지 못하면 그렇게 말하고 토큰을 저장하지 않는다", async () => {
@@ -667,6 +706,20 @@ describe("켜고 끄기", () => {
     expect(authorizations).toEqual(Array(3).fill(`Bearer ${TOKEN}`));
   });
 
+  test("스위치의 이름은 플러그인 이름이고 그 이름을 눌러도 켜고 끄는 요청이 간다", async () => {
+    servePlugins((call) => (call < 2 ? rows() : rowsWith("calc", { enabled: false })));
+    const puts = serveSwitch(applied);
+    const user = await showList();
+    expect(within(row("에이전트", "calc")).getByRole("switch", { name: "calc" })).toBeTruthy();
+
+    await user.click(within(row("에이전트", "calc")).getByText("calc"));
+
+    expect(await within(row("에이전트", "calc")).findByText("꺼짐")).toBeTruthy();
+    expect(puts.map(({ path, body }) => [path, body])).toEqual([
+      ["/api/plugins/agent/calc/enabled", { enabled: false }],
+    ]);
+  });
+
   test("꺼진 행의 스위치를 누르면 켜기를 보낸다", async () => {
     servePlugins((call) => (call < 2 ? rows() : rowsWith("summarize", { enabled: true })));
     const puts = serveSwitch(applied);
@@ -728,9 +781,10 @@ describe("켜고 끄기", () => {
     await user.click(switchOf("에이전트", "calc"));
 
     const alert = await screen.findByRole("alert");
-    expect(alert.textContent).toContain("agent/calc");
+    expect(within(alert).getByText("켜고 끄지 못했다: agent/calc")).toBeTruthy();
     expect(alert.textContent).toContain(message);
-    expect(alert.textContent).toContain("req-77aa");
+    expect(alert.textContent).toContain("추적 식별자: req-77aa");
+    expect(alert.textContent).toContain("스위치는 다시 읽은 값이다.");
     await vi.waitFor(() => {
       expect(switchOf("에이전트", "calc").checked).toBe(false);
     });
@@ -837,7 +891,7 @@ describe("켜고 끄기", () => {
     expect(await within(screen.getByRole("main")).findByText("켜짐")).toBeTruthy();
     opened.unmount();
     const list = renderPage(<HomePage />, cache);
-    await screen.findByRole("region", { name: "에이전트" });
+    await screen.findByRole("region", { name: AGENTS });
     await user.click(within(row("에이전트", "calc")).getByRole("switch"));
     expect(await within(row("에이전트", "calc")).findByText("꺼짐")).toBeTruthy();
     list.unmount();
@@ -864,7 +918,7 @@ describe("새로 고침과 상태", () => {
     );
     renderPage(<HomePage />);
     await enterAdminToken(userEvent.setup({ advanceTimers: vi.advanceTimersByTime }), TOKEN);
-    await screen.findByRole("region", { name: "에이전트" });
+    await screen.findByRole("region", { name: AGENTS });
     const before = authorizations.length;
 
     // SWR 은 마운트한 뒤 한동안(focusThrottleInterval) 포커스를 흘려보낸다. 그 너머로 민다.
@@ -880,7 +934,7 @@ describe("새로 고침과 상태", () => {
     const authorizations = servePlugins(rows);
     renderPage(<HomePage />);
     await enterAdminToken(userEvent.setup({ advanceTimers: vi.advanceTimersByTime }), TOKEN);
-    await screen.findByRole("region", { name: "에이전트" });
+    await screen.findByRole("region", { name: AGENTS });
     const before = authorizations.length;
 
     await vi.advanceTimersByTimeAsync(60 * 60 * 1000);
@@ -893,7 +947,7 @@ describe("새로 고침과 상태", () => {
     const authorizations = servePlugins(rows);
     renderPage(<HomePage />);
     await enterAdminToken(userEvent.setup({ advanceTimers: vi.advanceTimersByTime }), TOKEN);
-    await screen.findByRole("region", { name: "에이전트" });
+    await screen.findByRole("region", { name: AGENTS });
     const before = authorizations.length;
 
     await vi.advanceTimersByTimeAsync(10_000);
@@ -931,7 +985,7 @@ describe("새로 고침과 상태", () => {
     renderPage(<HomePage />);
     const user = userEvent.setup();
     await enterAdminToken(user, TOKEN);
-    await screen.findByRole("region", { name: "에이전트" });
+    await screen.findByRole("region", { name: AGENTS });
     const before = authorizations.length;
 
     await user.click(screen.getByRole("button", { name: "새로 고침" }));
@@ -954,9 +1008,9 @@ describe("새로 고침과 상태", () => {
     // 상태 영역은 상태가 바뀌는 동안 같은 노드로 남고 글만 바뀐다. 영역째 새로 들어오면 알리지 않는 프로그램이 있다.
     const live = within(screen.getByRole("region", { name: "플러그인" })).getByRole("status");
     expect(live.textContent).toBe("플러그인 목록을 불러오는 중");
-    expect(screen.queryByRole("region", { name: "에이전트" })).toBeNull();
+    expect(screen.queryByRole("region", { name: AGENTS })).toBeNull();
     first.resolve(rows());
-    await screen.findByRole("region", { name: "에이전트" });
+    await screen.findByRole("region", { name: AGENTS });
     expect(screen.queryByRole("progressbar")).toBeNull();
     expect(live.isConnected).toBe(true);
     expect(live.textContent).toBe("");
@@ -999,6 +1053,6 @@ describe("새로 고침과 상태", () => {
     expect(screen.getByRole("progressbar", { name: "플러그인 목록을 불러오는 중" })).toBeTruthy();
     expect(live.textContent).toBe("플러그인 목록을 불러오는 중");
     first.resolve(rows());
-    expect(await screen.findByRole("region", { name: "에이전트" })).toBeTruthy();
+    expect(await screen.findByRole("region", { name: AGENTS })).toBeTruthy();
   });
 });

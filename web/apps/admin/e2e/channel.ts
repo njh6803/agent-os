@@ -32,7 +32,7 @@ export async function startPausedRun(request: APIRequestContext, agent: string):
 }
 
 /**
- * 채널 토큰으로 그 일시정지를 허가한다. 재개가 다음 승인 대상에서 다시 멈춰야 한다. 재개 스트림의 프레임은 트레이스에
+ * 채널 토큰으로 그 일시정지를 승인한다. 재개가 다음 승인 대상에서 다시 멈춰야 한다. 재개 스트림의 프레임은 트레이스에
  * 새로 붙은 줄과 같아서(스토리 61) 새 일시정지의 자리는 결정의 다음 자리부터 센다.
  */
 export async function approve(request: APIRequestContext, paused: Paused): Promise<Paused> {

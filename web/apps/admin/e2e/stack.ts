@@ -211,7 +211,7 @@ function writeFixturePlugins(root: string, python: string): void {
     "await asyncio.sleep(2)",
     "yield RunFinished(run_id=ctx.run_id, ts=ctx.now(), output=total)",
   ]);
-  // 한 턴에 승인 대상이 둘이다. 오래된 화면 흐름이 첫 일시정지를 다른 곳에서 허가하면 둘째에서 다시 멈춘다.
+  // 한 턴에 승인 대상이 둘이다. 오래된 화면 흐름이 첫 일시정지를 다른 곳에서 승인하면 둘째에서 다시 멈춘다.
   gated("twice", [
     'first = await ctx.tool("add", a=2, b=3)',
     'second = await ctx.tool("add", a=4, b=5)',

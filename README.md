@@ -44,7 +44,9 @@ web/               pnpm 워크스페이스(Node 24, TypeScript 5.9). 파이썬�
   tsconfig.base.json 기준 tsconfig. 다른 tsconfig는 이것을 extends 한다
   tools/           web의 검사. check-tsconfig(strict 계열을 끈 tsconfig를 잡는다), generate-api-client(생성 클라이언트의
                    타입을 openapi.json에서 만들고 --check 로 최신성을 본다), visual(사진 비교를 판을 고정한 Playwright
-                   이미지의 Docker 컨테이너에서 돌린다)
+                   이미지의 Docker 컨테이너에서 돌린다), sync-design-system(디자인 시스템 아티팩트의 확인·들이기·
+                   올리기 명령과 올릴 산출을 짓는 assemble. artifact-source/ 는 아티팩트에 바이트 그대로 오르는 README
+                   원본과 기초 카드 원본, previous-output.json 은 지난 산출 목록. 절차는 `/sync-design-system` 스킬)
   packages/api-client/  생성 클라이언트. src/generated(생성물, 커밋하고 손으로 고치지 않는다), 관리·채널·위젯 클라이언트 셋,
                    운영자·최종 사용자 스트림을 프레임으로 읽는 것(ADR 0021·0024)
   packages/ui/     디자인 시스템(@agent-os/ui). src/styles/(디자인 토큰 CSS theme.css, 글꼴 CSS fonts.css, shadow 보정,
@@ -73,7 +75,6 @@ docs/
   constitution/    헌법 (principles, tech, operations)
   adr/  agents/  journal/
 .scratch/          로컬 이슈 트래커. plan.md와 기능별 spec·티켓
-.design-sync/      /design-sync가 web/packages/ui를 빌드하는 설정과 NOTES(올리기와 들이기는 `/sync-design-system` 스킬), 디자인 에이전트의 사용 규약과 그 검사기, 변환기 포크
 .claude/
   agents/          프로젝트 서브에이전트. coderabbit-review(트리아지만), bug-perf-review(CLI가 못 돌 때 버그·성능), spec-reviewer(명세 검토). 모두 수정 없음
   rules/           디렉터리별 규칙. 해당 파일을 Read 도구로 열 때만 로드
@@ -99,7 +100,7 @@ pnpm -C web/apps/admin start       # http://127.0.0.1:3000
 ```
 
 - **관리 토큰을 넣는다.** 처음 열면 관리 토큰을 넣는 자리다. `serve`에 준 `AGENT_OS_ADMIN_TOKEN`의 값을 넣는다. 토큰은 그 탭의 sessionStorage에만 남아 새로 고쳐도 다시 넣지 않고, 탭을 닫거나 "토큰 지우기"를 누르면 사라진다. 거부되면 "관리 토큰이 거부됐다"를 보이고 저장하지 않는다(ADR 0019).
-- **채널 토큰은 선택이다.** 관리 토큰을 넣은 뒤 탐색의 "설정"(`/settings`)에서 넣는다. `serve`에 준 `AGENT_OS_CHANNEL_TOKEN`의 값을 넣으면 멈춘 실행에 결정 자리(허가와, 사유를 적는 거부)가 선다. 넣지 않아도 나머지는 모두 쓴다. 채널 토큰은 넣을 때 확인하지 않는다. 틀렸으면 첫 결정이 "채널 토큰이 거부됐다"를 보이고 채널 토큰만 지운다. 설정 화면의 "토큰 지우기"는 두 토큰을 모두 지운다. 결정의 승인자는 화면이 고르지 않고 `serve`를 띄운 OS 사용자로 기록된다(ADR 0015).
+- **채널 토큰은 선택이다.** 관리 토큰을 넣은 뒤 탐색의 "설정"(`/settings`)에서 넣는다. `serve`에 준 `AGENT_OS_CHANNEL_TOKEN`의 값을 넣으면 멈춘 실행에 결정 자리(사유를 적는 "거부"와 "승인")가 선다. 넣지 않으면 그 자리에 설정에서 채널 토큰을 넣으라는 한 줄과 "설정 열기"가 서고, 나머지는 모두 쓴다. 채널 토큰은 넣을 때 확인하지 않는다. 틀렸으면 첫 결정이 "채널 토큰이 거부됐다"를 보이고 채널 토큰만 지운다. 설정 화면의 "토큰 지우기"는 두 토큰을 모두 지운다. 결정의 승인자는 화면이 고르지 않고 `serve`를 띄운 OS 사용자로 기록된다(ADR 0015).
 - **`serve`와 상류를 맞춘다.** 관리 화면이 넘기는 곳(상류)은 `AGENT_OS_UPSTREAM`이고, 기본은 `serve`의 기본 주소 `http://127.0.0.1:8000`이다. `serve`를 다른 포트로 띄우면 같은 주소를 `AGENT_OS_UPSTREAM`에 두고 빌드한다.
 - **상류 포트를 바꾸면 다시 빌드한다.** 상류는 빌드 산출물에 박힌다. `start` 때 준 값은 판정만 하고 넘기는 곳을 바꾸지 않는다. `dev`(`pnpm -C web/apps/admin dev`)는 설정에서 바로 읽는다.
 - **루프백에만 선다.** 관리 화면은 `127.0.0.1`(기본)이나 `::1`에만 서고, 받는 인자는 `--hostname`과 `--port` 둘이다. 상류는 `127.0.0.1`만 받는다. Next가 IPv6 주소로 넘기지 못한다(ADR 0011의 2026-09-30 이력). 원격에서 보려면 SSH 포트 포워딩을 쓴다: `ssh -L 3000:127.0.0.1:3000 <서버>`.

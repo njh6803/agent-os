@@ -19,6 +19,13 @@ const WIDGET_STORYBOOK = join(import.meta.dirname, "apps", "widget", ".storybook
 // (.scratch/admin-style/probes/storybook_viewport.mjs).
 const ADMIN_STORYBOOK = join(import.meta.dirname, "apps", "admin", ".storybook");
 const ADMIN_VIEWPORTS = ["wide", "narrow"] as const satisfies readonly ViewportKey[];
+// 관리 화면의 페이지 테스트가 도는 시간대. 실행 목록이 시각을 이 브라우저의 시간대로 적는다(admin-style 명세 "실행
+// 목록"). 이 PC 의 시간대(Asia/Seoul)와 다른 것을 골라, 고정이 듣지 않거나 구현이 이 PC 의 시간대를 박았으면 빨개진다.
+// 이 값을 박은 구현은 잡지 못해, Asia/Seoul 로 고정한 관리 화면 e2e(apps/admin/e2e/runs.e2e.ts)가 잡는다. 시간대가
+// 이 값인 기계에서는 고정이 듣지 않아도 같은 이름이 나와 앞의 둘도 잡지 못한다.
+// `env` 는 시험 파일이 도는 프로세스(기본 풀 forks 의 자식)의 `process.env` 에 들어가고 `Date` 와 `Intl` 이 그것을
+// 따른다. `worker_threads` 안에서는 따르지 않았다(명세 검토가 손으로 봤다).
+const PAGES_TIME_ZONE = "America/New_York";
 
 function chromium() {
   return {
@@ -48,6 +55,7 @@ export default defineConfig({
           name: "pages",
           include: [PAGES],
           environment: "jsdom",
+          env: { TZ: PAGES_TIME_ZONE },
           setupFiles: ["apps/admin/testing/setup.ts"],
         },
       },

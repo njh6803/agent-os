@@ -408,10 +408,10 @@ RECREATABLE_FILES = frozenset({"next-env.d.ts"})
 # Git Bash 의 grep·sh 가 죽으며 남기는 덤프(루트 `.gitignore` 의 `*.stackdump`)
 RECREATABLE_SUFFIXES = (".stackdump",)
 # 이름이 흔해 자리째로 본다. 폴더는 `/` 로 끝나고 파일은 그렇지 않다. 디자인 시스템 패키지의 빌드와
-# `/design-sync` 의 산출물(ADR 0026. 판정의 원천은 Claude Design 프로젝트에 올린 `_ds_sync.json`
-# 이다), 위젯의 Storybook 정적 빌드와 시작 래퍼가 복사한 글꼴 파일과 짓는 페이지 안 번들(대기열
-# 464), 관리 화면의 Storybook 정적 빌드(admin-style 티켓 03), 소급 측정 프로브의 gh 응답
-# 캐시(결과는 `branches.json` 에 커밋한다). 모두 루트 `.gitignore`
+# 옛 `/design-sync`(번들 스킬의 빌드)가 산출물을 쓰던 자리(올리기는 더 쓰지 않지만 루트 `.gitignore`
+# 가 남긴다, ADR 0025 의 2026-10-28 이력), 위젯의 Storybook 정적 빌드와 시작 래퍼가 복사한 글꼴
+# 파일과 짓는 페이지 안 번들(대기열 464), 관리 화면의 Storybook 정적 빌드(admin-style 티켓 03), 소급
+# 측정 프로브의 gh 응답 캐시(결과는 `branches.json` 에 커밋한다). 모두 루트 `.gitignore`
 # 가 앵커를 붙여 무시한다. 플랜 모드의 계획 파일 `.claude/plans/` 는 산출물이 아니라 세션의 계획
 # 원문이라 넣지 않는다(명세 축 리뷰)
 RECREATABLE_PATHS = frozenset(

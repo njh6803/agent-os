@@ -366,7 +366,7 @@ export interface NextRecordInput {
   readonly previous: SyncRecord | null;
   /** 이번 산출의 로컬 파일. 아티팩트 경로로 찾는다. */
   readonly output: ReadonlyMap<string, Uint8Array>;
-  /** 첫 올리기가 아티팩트에서 읽은 파일(빌드 산출에 없는 것). 마지막 기록에 그대로 해시해 넣는다. */
+  /** 첫 올리기가 아티팩트에서 읽은 파일(산출에 없는 것). 마지막 기록에 그대로 해시해 넣는다. */
   readonly artifact: ReadonlyMap<string, Uint8Array>;
   readonly changes: RecordChanges;
   /** 이번 올리기가 보내는 색인의 그림과 문서 목록. */

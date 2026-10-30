@@ -9,6 +9,10 @@ node .scratch/design-card-build/probes/card_build.mjs <작업 폴더의 절대 �
 node .scratch/design-card-build/probes/vite_cli.mjs <작업 폴더의 절대 경로> <card_build.mjs의 작업 폴더>
 pnpm -C web exec tsc -p ../.scratch/design-card-build/probes/tsconfig.json
 node .scratch/design-card-build/probes/vite_cli_tool.mts <작업 폴더의 절대 경로> <card_build.mjs의 작업 폴더>/bundle.js
+node .scratch/design-card-build/probes/font_route.mjs <작업 폴더의 절대 경로>
+PYTHONUTF8=1 uv run python tools/mutate.py .scratch/design-card-build/probes/assemble_mutations.toml [번호 ...]
+PYTHONUTF8=1 uv run python tools/mutate.py .scratch/design-card-build/probes/upload_plan_mutations.toml [번호 ...]
+uv run python tools/canary.py --control-commit fcf808fa .scratch/design-card-build/probes/canary/<명세>.toml <출력 디렉터리>
 ```
 
 | 파일 | 재는 것 | 근거로 드는 자리 | 다시 돌 때 | 잰 판 |
@@ -17,7 +21,23 @@ node .scratch/design-card-build/probes/vite_cli_tool.mts <작업 폴더의 절�
 | `vite_cli.mjs` | 올리기 도구(`web/tools/sync-design-system/`)는 vite를 import할 수 없다(vite는 디자인 시스템 패키지의 개발 의존뿐이고 `web/node_modules/vite`가 없다). 그래서 도구가 vite 설정을 import 없는 글로 지어 파일에 쓰고, 패키지 자리에서 vite CLI(`pnpm -C web/packages/ui exec vite build --config <파일>`)와 Tailwind CLI(`pnpm exec tailwindcss`)를 부르는 길이 `card_build.mjs`가 JS API로 지은 것과 같은 묶음·장면·빌드 CSS·글꼴을 내는지. 장면은 Button 하나만 짓고, 견주기의 양성 대조로 Alert 카드와 견준다. 회차와 표지는 파일 머리 주석이 적는다 | 명세 Implementation Decisions의 짓기 항목(새 의존 없이 짓는 길) | `pnpm -C web install`, 같은 커밋에서 돈 `card_build.mjs`의 작업 폴더 | vite 8.3.1, @tailwindcss/cli 4.3.3, Node 24.19.0, pnpm이 `web/packages/ui`에서 띄운 CLI. 저장소 쪽은 작업 트리를 읽고, 아래 결과는 `8e43dd2c`에서 잰 것이다(요약의 `head`). 견준 산출은 같은 커밋의 `card-run-5` |
 | `vite_cli_tool.mts`, `tsconfig.json` | `vite_cli.mjs`의 길을 올리기 도구가 쓸 모양 그대로 지나는지(소비 지점). TypeScript 파일이 vite를 import하지 않고 설정을 글로 지어, 셸 없이 `process.execPath`로 패키지의 `node_modules/vite/bin/vite.js`를 패키지 자리에서 띄운다. `tsconfig.json`은 `web/tsconfig.json`(strict)을 이어받아 이 파일만 든다. 공백이 든 작업 폴더를 주면 셸 없이 넘긴 인자가 갈리지 않는지도 본다. 회차와 표지는 파일 머리 주석이 적는다 | 명세 Implementation Decisions의 짓기 항목 | `pnpm -C web install`, 같은 커밋에서 돈 `card_build.mjs`의 `bundle.js` | TypeScript 5.9.3(`web`의 `tsc`), `@types/node` 24.19.0, Node 24.19.0, vite 8.3.1. 아래 결과는 `8e43dd2c`에서 잰 것이다 |
 | `received/page-tokens.css` | 디자인 시스템 아티팩트 판 `1793146503-9e85`의 `tokens.css`를 받은 그대로 둔 사본(27,857바이트, sha256 `0680bd4c2a13ba8d2af7c151993980295b2d83ace00b4799d82e2d7712e06354`). 페이지가 저장할 때 `tokens.json`에서 다시 짓는 파일이다 | `card_build.mjs`의 카드 문서가 페이지의 토큰 CSS 자리에 싣는다 | 바꾸지 않는다. 다시 받으면 판과 해시를 이 줄에 고친다 | 판 `1793146503-9e85` |
+| `font_route.mjs` | 짓기 시험이 카드를 싣는 길(문서의 기준 주소가 산출 폴더의 `components/<이름>/preview.html`)에서 묶음 CSS의 글꼴 주소가 `../../fonts/`면 Noto Sans KR이 실리고 `../fonts/`로 바꾸면 글꼴 오류가 나는지. `file://` 문서와 요청 가로채기(`route`)로 산출 폴더를 내준 `http` 문서의 두 길에서 본다. 짓기 명령(`assemble`)을 스스로 한 번 돌린다. 회차와 표지는 파일 머리 주석이 적는다 | 티켓 01의 "글꼴 대조를 먼저 본다"와 짓기 시험(`web/tools/sync-design-system/assemble.test.ts`)이 고른 `route` 길 | `pnpm -C web install`, chromium(Playwright가 받은 것). 짓기 명령이나 시험의 싣는 길을 바꿨을 때 | Playwright 1.63.0, chromium 153.0.8010.12, Node 24.19.0. 아래 결과의 `HEAD`와 커밋하지 않은 변경 수는 그 절이 적는다 |
+| `assemble_mutations.toml` | 짓기 명령의 시험(`web/tools/sync-design-system/assemble.test.ts`)이 단언마다 빨개지는지. 변이마다 짓기나 판정의 줄 하나(둘인 것은 명령 안의 같은 판정이 짓기를 막지 않게 함께 끈다)를 바꾸고 그 사례로 좁힌다(`-t`). 티켓 02의 사용 규약·산출 밖 변이는 판정이 맞대는 두 쪽(원본이 드는 이름, 지은 묶음) 가운데 한 쪽을 바꾼다. 대개 시험이 읽는 저장소 원본(`web/tools/sync-design-system/artifact-source/`의 README 원본과 `foundations/`, 디자인 시스템 패키지의 컴포넌트와 스토리. 티켓 04 전에는 `.design-sync/` 아래였다)이고, 묶음 머리의 목록을 겨누는 51은 그 목록을 짓는 `assemble.ts`다. 표지는 고른 단언이 실패할 때만 나오는 실패 머리나 diff의 `+` 줄이다 | 티켓 01·02의 "변이" | 짓기 명령(`assemble.ts`)이나 그 시험을 고쳤을 때. 변이 하나에 짓기 한 번이 든다 | vitest 5.0.2(`web`의 node 프로젝트). 아래 결과의 판은 그 절이 적는다 |
 | `page_diag_card.html` | 실제 Design System 페이지가 카드 문서에 무엇을 싣는지. `components/Diag/preview.html`로 올리면 카드 안에서 React 판, `data-theme`·`data-mode`, `color-scheme`과 바탕, 글꼴의 실림과 오류, 글꼴 요청 주소, 문서의 기준 주소, 스타일시트 `<link>`·`<style>`·스크립트 주소를 글로 찍는다. 둘째 줄이 `DIAG v2 done`인 회차만 측정이다(`DIAG 기다리는 중`이면 아직 돌지 않았다). v2는 셋째 줄에 `--gray-50`과 `--bg`의 계산값을 찍는다. 판 4~7은 그 줄이 없는 v1(`DIAG v1 done`)이었다 | 명세 Implementation Decisions의 글꼴·다크 테마·배너·React 항목 | 임시 Design System 아티팩트에 `card_build.mjs`의 `stage/` 배치와 함께 올리고 앱 안 브라우저로 Components 절을 연다. 카드 iframe은 다른 출처라 도구가 안을 읽지 못해 화면을 찍어 읽는다(손으로 봤다). 아래 "실제 페이지" 절의 차례대로 판을 올린다 | 형식 판 release `1793156745-17fb`, 페이지가 실은 React·ReactDOM 18.3.1(jsDelivr UMD). 묶음과 카드는 `card-run-5`(`8e43dd2c`)의 `stage/` |
+| `upload_plan_mutations.toml` | 티켓 03이 지은 변이 표다. 지금 스물다섯이고, 티켓 04가 `_ds_sync.json`의 자리 변이(옛 14)를 그 규칙과 함께 걷어 뒤 번호가 하나씩 당겨졌다. 올리기 계획(`web/tools/sync-design-system/upload.ts`)의 첫 정식 올리기(이번 산출의 정식 카드, 받은 기록의 정식 카드, 기록이 없을 때의 sha256 목록, `tokens.json`을 보내는 갈래, 그 갈래가 앞 시도의 보낸 갈래보다 앞서는 것), 목록만 옛것일 때(기록과 맞대기, 지금 절차의 기록에 없는 지난 경로, 기록이 없으면 목록대로, 옛 별칭 48개), 나누기(기록·색인의 경로, 기록·색인의 바이트, 지울 경로, 들지 않는 파일의 오류 종류, 남은 하나를 중간 몫으로 보내는 길, 첫 몫이 기록만 싣는 길, 첫 몫이 남기는 기록의 경로와 바이트), 보낼 색인(`libraries`, `global`, 이미 있는 `upgraded`, 첫 정식 올리기가 아닐 때)과 `record index` 명령(묶음 찾기, 계획의 `firstCanonical` 읽기, 색인 한도)을 겨눈다. 시험은 구현 전에 함수와 칸이 없어 빨갰을 뿐이고 옛 별칭 사례는 구현 전부터 초록이라, 변이마다 판정의 줄 하나를 바꾸고 `-t`로 사례 하나를 좁혀 빨개지는지 본다. 표지는 고른 단언이 실패할 때만 나오는 실패 머리나 차이 줄이고, 처음 고른 넷이 출력에 없어 변이를 손으로 넣어 받은 실패 출력에서 다시 골랐다(아래 결과) | 티켓 03의 "올리기 시험"과 "변이"(원칙 II) | `upload.ts`·`record.ts`를 고치면 `--check`로 원문을 보고 번호로 다시 돈다. 원문이 없거나 기대와 다르거나 표지가 없으면 1로 끝난다 | `f6df25c8` 위의 작업 트리, Node 24.19.0, vitest 5.0.2. 티켓 04의 실행은 아래 그 절이 적는다 |
+| `canary/sync_design_system_upload_assembles.toml` | 티켓 04가 다시 쓴 `/sync-design-system`의 올리기 절차(`.claude/skills/sync-design-system/upload.md`)의 두 문장(산출 폴더를 짓는 짓기 명령, 보낸 뒤 카드를 여는 조건)이 그 스킬을 부른 새 `claude -p` 세션에 하위 파일로 실리는지. `tools/canary.py`로 돈다 | 티켓 04의 수용 기준(고친 스킬의 확인) | `claude` | 머리 주석의 `# 최신 결과:` 줄 |
+| `canary/sync_design_system_words.toml` | 티켓 04가 고친 `/sync-design-system` 본문(`SKILL.md`)의 두 문장(짓기의 낱말, 명령마다의 인자가 원천인 모듈 목록)이 그 스킬을 부른 새 `claude -p` 세션에 실리는지. `tools/canary.py`로 돈다 | 티켓 04의 수용 기준(고친 스킬의 확인) | `claude` | 머리 주석의 `# 최신 결과:` 줄 |
+
+## 2026-10-29 결과: `upload_plan_mutations.toml` (티켓 03)
+
+- 첫 실행은 "변이 22 중 어긋남 4"였다. 넷 다 빨강이었고 표지만 없었다. 14(`_ds_sync.json`의 자리)는 첫 판의 변이가 그 파일을 앞뒤에 두 번 넣어 다른 단언(`not.toContain`)이 빨개졌다. 앞 걸러내기와 뒤 붙이기를 함께 끄는 편집 둘로 바꿨다. 19는 실패 머리가 `to not have property "upgraded"`였고, 20·21은 `toMatchObject`의 차이 줄이 받은 쪽 `+   "libraries": false,`·`+   "upgraded": false,`였다. 변이를 손으로 넣어(커밋하지 않은 스크래치 스크립트로 원문을 바꾸고 `pnpm -C web exec vitest run --project node <시험 파일> -t <사례>`) 받은 출력에서 골랐다.
+- 고친 표 전부를 다시 돌려 "변이 22 모두 기대대로"였다(도구가 찍은 줄). 기준선은 모두 초록이었다. 이 절의 번호는 아래 절에서 넷을 더하기 전의 것이다.
+
+## 2026-10-30 결과: 셀프 리뷰 뒤 `upload_plan_mutations.toml` (티켓 03)
+
+- 셀프 리뷰 두 축이 나누기가 남은 큰 파일 하나를 마지막 몫에 넣지 못하면 중간 호출에 들 수 있어도 `limit` 오류로 멈춘다고 짚었다. 남은 하나를 중간 몫으로 보내는 길과 첫 몫이 기록만 싣는 길을 더하고, 두 길을 겨누는 변이와 명세 축이 짚은 첫 몫의 예약(경로 하나, `RECORD_LIMIT`)을 따로 끄는 변이 둘을 15번 뒤에 더했다. 두 길의 시험은 고치기 전에 그 `limit` 오류로 빨갰다(`pnpm -C web exec vitest run --project node tools/sync-design-system/upload.test.ts -t <사례>`, 손으로 봤다). 오류 종류 변이(15)는 들여쓰기가 바뀐 원문으로 옮겼다.
+- 표 전부를 돌려 "변이 26 모두 기대대로"였다(도구가 찍은 줄, 기준은 `f6df25c8` 위의 작업 트리).
+- 재지 않은 것: 마지막 몫을 비우지 않게 하나를 남기는 조건과 한 파일이 한 호출에 들지 않을 때 멈추는 조건(표 머리 주석).
 
 ## 받은 사본과 카드의 토큰 CSS가 다른 자리
 
@@ -101,4 +121,53 @@ node .scratch/design-card-build/probes/vite_cli_tool.mts <작업 폴더의 절�
 - 실행(`vite cli tool 1`, 공백이 든 작업 폴더): 회차 2, 측정 2, 종료 0. `bundle:bin`은 vite가 0으로 끝났고(647ms) 묶음 17,112바이트가 `card-run-5/bundle.js`와 같다. `control:compare`는 같은 산출 끝에 공백 하나를 붙인 글과 견주면 같지 않다고 나왔다. 셸을 거치지 않아 공백이 든 경로가 그대로 넘어갔다. stderr에는 `lucide-react`의 `"use client"` 지시문이 보존되지 않을 수 있다는 rolldown 경고가 실렸고 종료 코드는 0이다. 그래서 짓는 명령은 stderr가 비지 않은 것을 실패로 보면 안 된다.
 - 같은 묶음이 pnpm을 거친 `vite_cli.mjs`에서는 3,046ms, 실행 파일을 바로 띄운 여기서는 647ms였다. 차이의 대부분은 pnpm을 띄우는 값으로 본다(한 번씩 잰 값이라 어림).
 
-재지 않은 것(이 절): 장면 아홉을 모두 짓는 시간(실행 파일을 바로 띄우면 빌드 하나가 1초 안팎이라 묶음·CSS·글꼴·장면 아홉을 더해 한 번 짓기에 15초 안팎으로 어림한다), 실행 파일을 바로 띄우는 길로 장면·빌드 CSS·글꼴을 짓는 것(위 `vite_cli.mjs`가 pnpm을 거쳐 같은 CLI로 지었다), 도구의 소스가 eslint(`pnpm -C web verify`의 typescript-eslint)를 지나는지.
+재지 않은 것(이 절): 장면 아홉을 모두 짓는 시간(실행 파일을 바로 띄우면 빌드 하나가 1초 안팎이라 묶음·CSS·글꼴·장면 아홉을 더해 한 번 짓기에 15초 안팎으로 어림한다), 실행 파일을 바로 띄우는 길로 장면·빌드 CSS·글꼴을 짓는 것(위 `vite_cli.mjs`가 pnpm을 거쳐 같은 CLI로 지었다), 도구의 소스가 eslint(`pnpm -C web verify`의 typescript-eslint)를 지나는지. 이 프로브 파일은 그 뒤에도 eslint로 재지 않았다. 같은 모양으로 지은 티켓 01의 짓기 명령(`web/tools/sync-design-system/assemble.ts`)은 `web/`의 eslint와 strict 타입 검사를 지났다(그 티켓의 결과).
+
+## 2026-10-29 글꼴 대조(`font_route.mjs`)
+
+둘째 실행(`font_route_d89970e7`, 2026-10-30, `HEAD` `d89970e7`, 짓기 명령과 디자인 시스템 패키지 아래 커밋하지 않은 변경 0): 회차 4, 측정 4, 측정 아님 0, `splits`는 `file`·`route` 모두 `true`. 종료 0. 수는 프로브가 요약에 찍은 것이다. 셀프 리뷰가 표지에 문서의 자리를 더하고 길마다의 갈림(`splits`)을 찍게 고친 판으로 잰 것이다. 네 회차 모두 문서가 카드 자리에서 열렸다(`at`이 `file` 길은 산출 폴더의 `components/Button/__font_route.html`, `route` 길은 `/components/Button/preview.html`).
+
+- `file`·`positive`와 `route`·`positive`: 문서의 Noto Sans KR FontFace 372개 가운데 실림 5, 문서 전체의 글꼴 오류 0.
+- `file`·`negative`와 `route`·`negative`: 실림 0, 글꼴 오류 5.
+
+첫 실행(`font-route-1`, `HEAD` `f6df25c8`, 커밋하지 않은 변경 4. 티켓 01의 `assemble.ts`·`assemble.test.ts`·`main.ts`·시험 자료가 커밋 전이었다)은 표지에 문서의 자리가 없고 갈림을 찍지 않던 판이었다. 회차 4, 측정 4, 종료 0이었고 네 회차의 실림과 글꼴 오류는 둘째 실행과 같았다.
+
+해석: 두 길 모두 묶음 CSS 안의 상대 주소가 카드 파일의 자리(`components/<이름>/`)에서 풀린다. 양성 갈래가 이 문서에서 같은 글꼴 파일이 실릴 수 있다는 대조이고, 음성 갈래는 주소의 앞머리만 바꿔 실림을 0으로 만들었다. 실제 페이지의 판 4·5(위 "실제 페이지" 절)와 같은 갈림이다. 짓기 시험은 `route` 길을 골랐다. `file://` 길은 진단 문서를 산출 폴더 안에 써야 하고, `route` 길은 산출을 고치지 않으며 페이지처럼 `http` 출처에서 싣는다. 티켓을 시작할 때 커밋하지 않은 스크래치 스크립트로 같은 네 갈래를 먼저 봤고 수가 같았다(손으로 봤다). 그 스크립트를 이 프로브로 옮기며 짓기 명령을 스스로 돌게 했다.
+
+## 2026-10-29 짓기 명령의 변이(`assemble_mutations.toml`)
+
+첫 전체 실행은 변이 24 가운데 어긋남 4였다. 넷 다 빨강은 기대대로였고 표지가 없었다. 변이를 손으로 넣어 실패 출력을 본 뒤(손으로 봤다) 표지와 시험을 고쳤다.
+
+- 비지 않은 산출 폴더: vitest가 실패 머리에 0을 `+0`으로 찍는다(`expected +0 to be 1`).
+- 그리기의 장면 수·그려진 장면 수·글꼴 오류: 칸마다 단언이 따로라 장면 수와 그려진 장면 수가 같은 꼴의 문구(`expected … to be 2`)를 냈고, `-t` `Button 카드는`이 IconButton 사례까지 골랐다. 그리기 시험의 칸 넷(오류, 장면 수, 그려진 장면 수, 글꼴 오류)을 한 객체로 맞대게 바꾸고, 표지를 diff의 `+` 줄(`+   "filled": 0,` 따위)로, 좁히기를 `(?<!Icon)Button 카드는`으로 바꿨다.
+
+같이, 다른 단언의 실패에도 실리는 표지 셋을 고쳤다. 보고의 `"bytes":`는 diff의 문맥 줄에도 실려 `+` 줄로 바꿨다. 묶음의 금지 문자열 표지는 장면 쪽 실패 문구(`Button: expected [ … ]`)에도 들어 있어 실패 머리 `AssertionError: expected …`로 바꿨다. 글꼴 주소 시험은 두 단언(앞머리, 가리키는 파일이 있음)이 같은 문구(`<주소>: expected false to be true`)를 내어, 파일마다 앞머리가 틀린 주소와 파일이 없는 주소를 나눠 한 번에 맞대게 바꾸고 표지를 `+     "misplaced": [`로 했다. 가리키는 파일이 있음 칸을 재는 변이(woff 파일을 내지 않는다)를 더해 변이는 25다. 표지를 바꾼 것과 새것 열(1, 6, 9, 10, 19~24)을 다시 돌려 모두 기대대로였다. 시험을 고쳤으므로 전체는 셀프 리뷰를 반영해 커밋한 뒤 다시 돈다.
+
+둘째 전체 실행(2026-10-30, `HEAD` `3892f94a`, 셀프 리뷰와 PR 직전 리뷰를 모두 반영해 커밋한 판)은 "변이 29 모두 기대대로"였다(도구가 찍은 줄). 좁힌 사례마다의 기준선 21이 모두 초록이었고, 시작 줄에 표·짓기 명령·시험의 커밋하지 않은 변경을 알리는 줄이 없었다(실행 로그의 `기준선` 줄을 `grep`으로 세고 로그 머리를 손으로 봤다). 첫 실행 뒤 더한 넷(지금 표의 번호)은 셀프 리뷰가 짚은 옛 이름 묶음 JS가 정식 자리와 같은 것(11), 크기와 다른 규칙을 함께 어긴 섞인 경우(20), 목록 파일이 산출 폴더 안인 자리(21)와, PR 직전 버그 축이 짚은 임시 폴더를 만들지 못하는 자리(23)다. 이 넷과 셀프 리뷰가 겨누는 줄이나 표지를 바꾼 변이가 이 실행에서 처음 함께 돌았다(23은 앞서 단독으로 돌아 기대대로였다).
+
+재지 않은 것: "지은 산출은 판정을 지난다"(대조, 표의 머리 주석), 명령이 판정을 부르는 줄(`assertAssembled(stage)`)을 지우는 변이(지은 산출이 판정을 지나 어느 사례도 빨개지지 않는다. 판정의 갈래는 규칙 판정 사례가 같은 함수를 불러 잰다. 표의 머리 주석), 카드 셋째 줄 뒤의 모양 단언(장면 스크립트 하나, 끝 줄바꿈), 크기 사례의 묶음 CSS·카드·README 한도(크기 변이는 묶음 JS 하나만 키운다. 판정 쪽은 넷을 함께 끄는 변이가 잰다), 글꼴 주소 시험 끝의 파일 이름 차례 맞대기 둘, 경로 목록 사례의 `project/` 머리와 차례 단언(앞의 글 맞대기가 같은 것을 먼저 본다).
+
+## 2026-10-30 티켓 02의 변이(`assemble_mutations.toml` 30~64)
+
+티켓 02가 더한 사례 열셋을 겨누는 변이 서른셋이다. 산출 파일 넷(`tokens.json`의 바이트와 테마 이름, README, 기초 카드, 지침)을 겨누는 여덟(30~37)은 짓기 명령의 쓰기 줄이나 모드 이름 표, 기초 카드 원본을 바꾼다. 사용 규약을 겨누는 열넷(38~51)과 산출 밖 스토리 파일을 겨누는 넷(52~55)은 대개 README 원본, 기초 카드 원본, 패키지의 컴포넌트·스토리를 바꾸고, 51만 묶음 머리의 목록을 짓는 `assemble.ts`를 바꾼다. 셀프 리뷰가 더한 셋(56~58)은 넷 밖의 기초 카드 폴더에 표지 없는 HTML을 쓰는 것(56), README가 다른 변수의 꼬리로만 선언된 `--line-height`를 드는 것(57. 변수 판정의 앞 글자 가드가 없으면 `--text-title--line-height:` 안에서 맞아 초록이 될 자리다. 그 가드를 끈 대조는 돌리지 않았다), 기초 카드 폴더에 원본에 없는 `.txt`를 쓰는 것(58)이다. PR 직전 버그·성능 리뷰가 짚은 두 자리(README 키의 글자 거르기와 합쳐 센 개수, showcase 스토리가 펼쳐 넣은 스토리의 `globals`)를 고치며 더한 넷(59~62)은 README의 밀도 괄호에서 백틱을 걷는 것(59. 속성마다 세지 않으면 테마 키로 지날 자리다), README의 밀도 키를 `regular-2`로 바꾸는 것(60), 기초 카드의 밀도 값을 `compact-2`로 바꾸는 것(61. 60과 61은 옛 글자 거르기 `[a-z]+`라면 그 키가 빠져 초록이 될 자리다), Button의 showcase 스토리에 `globals`가 든 `DisabledDark`를 펼쳐 넣는 것(62)이다. 고치기 전 판으로 돌린 대조는 없고, 고치기 전이면 초록이었다는 것은 시험 코드를 읽은 것이다. 없다고 든 변형(41)은 README 원본이 아니라 컴포넌트 `Card.tsx`에 `dark:bg-bg`를 넣어, README가 없다고 든 `dark:`의 클래스(`.dark\:`)가 묶음에 생기게 했다. 이 브랜치의 작업 트리로 지은 `components/bundle.css`에는 변형 클래스가 `active`·`focus-visible`·`hover`·`motion-reduce`·`placeholder`·`wide`의 18곳에 있고 `.dark\:`는 없다(셀프 리뷰 때 `grep -o -E '\.[a-z-]+[\\]:'`로 세어 손으로 봤다). 표지는 사례마다 맞대는 객체의 diff에서 받은 쪽 `+` 줄(`+     "zz-mutant",` 따위)이나 실패 머리(`expected false to be true`, `Object.is equality`)다.
+
+첫 실행(`HEAD` `d312a806` 위의 작업 트리. 표·짓기 명령·시험·`build.ts`가 커밋 전이었다)은 "변이 26 모두 기대대로"였다(도구가 찍은 줄). 좁힌 사례마다의 기준선 13이 모두 초록이었고, 실행 로그에 `표지 없음` 줄이 없었다(`grep`으로 셌다). 52(Progress 스토리의 `showcase` 표지를 지운다)만 시험 수가 43이 아니라 42였다(도구가 찍은 요약 줄). 시험 파일이 chromium의 카드 사례를 스토리 소스의 showcase 스토리에서 지어(`expectedCards`), Progress의 카드 사례가 생기지 않았다고 본다(시험 코드를 읽은 것이다). 그래서 카드가 빠져도 카드 사례는 빨개지지 않고, 그 빠짐은 이 변이가 겨눈 showcase 사례만 잡는다.
+
+56~58만 돌린 실행(셀프 리뷰 때, `HEAD` `d312a806` 위의 작업 트리)은 "변이 3 모두 기대대로"였고 좁힌 사례의 기준선 둘이 초록이었다(도구가 찍은 줄). 표지는 고른 단언의 맞대는 객체에만 그 값이 실린다고 시험 코드를 읽어 골랐고, 셋 모두 도구가 그 표지를 출력에서 찾았다. 그 뒤 표지를 일부러 틀리게 둔 임시 표(커밋하지 않고 지웠다)로 셋을 다시 돌려, 도구가 낸 출력의 끝에서 실패한 단언의 자리를 손으로 봤다. 56은 기초 카드 사례의 폴더별 맞대기(`expect(seen)`), 58은 그 뒤의 파일 목록 맞대기(`expect(files)`), 57은 변수 사례의 `undeclared` 맞대기에서 멈췄다. 출력의 끝에는 diff 줄이 실리지 않아, 표지 문구 자체는 앞 실행에서 도구가 찾은 것만 근거다.
+
+59~62만 돌린 실행(PR 직전 리뷰를 반영할 때, `HEAD` `e7d71a72` 위의 작업 트리)은 "변이 4 모두 기대대로"였고 좁힌 사례의 기준선 셋이 초록이었다(도구가 찍은 줄). 그 전에 `--check`가 "변이 62 모두 원문이 한 번씩 있다"였다. 표지는 59가 `withoutKeys`의 `+     "data-density",`, 60·61이 `noSelector`·`cardNoSelector`의 `=regular-2`·`=compact-2` 줄, 62가 펼친 덩이의 이름까지 든 `+     "Button ShowcaseApprovalPair DisabledDark",`이다. 59의 사례에서 다른 단언(`noSelector`)은 값이 `<속성>=<키>` 꼴이라 그 표지를 내지 못하고, 62의 표지는 펼친 덩이를 따라가는 길에서만 생긴다(시험 코드를 읽은 것이다. 변이를 손으로 넣어 실패 출력을 따로 보지는 않았다).
+
+전체 실행(2026-10-30, `HEAD` `9c800d32`, 셀프 리뷰와 PR 직전 리뷰를 모두 반영해 커밋한 판)은 "변이 62 모두 기대대로"였다(도구가 찍은 줄). 좁힌 사례마다의 기준선 34가 모두 초록이었고, 실행 로그에 `표지 없음` 줄과 커밋하지 않은 변경을 알리는 줄이 없었다(로그를 `grep`으로 셌다).
+
+PR 봇 회차(PR #434 claude-review의 Nit)를 받아 더한 둘(63·64)은 `build.test.ts`의 새 사례("다크 벌의 이름만")를 겨눈다. 그 사례는 페이지가 카드의 모드를 가르는 정규식 `/dark|night/i`를 여덟 벌의 이름에 대 보고, 31이 겨누는 "테마 이름은 모두" 사례는 이름 끝의 모드 낱말만 본다. 63은 쪽빛의 표시 이름을 `쪽빛 Midnight`로, 64는 다크의 모드 이름을 `다크`로 바꾼다. 63·64만 돌린 실행(`HEAD` `b4252b72` 위의 작업 트리)은 "변이 2 모두 기대대로"였고 좁힌 사례의 기준선 하나가 초록이었다(도구가 찍은 줄). 그 전에 `--check`가 "변이 64 모두 원문이 한 번씩 있다"였다. 표지(`+     true,`·`+     false,`)는 변이를 손으로 넣어 실패 출력의 diff에서 받은 쪽 줄을 보고 골랐고, 그 사례의 단언은 하나다(시험 코드를 읽은 것이다). 63을 손으로 넣은 채 두 사례를 한 실행으로 돌리자 새 사례만 빨갛고 "테마 이름은 모두" 사례는 지났다(vitest 요약 줄 `1 failed | 1 passed`를 손으로 봤다). 라이트 이름에 night가 든 자리를 옛 사례가 놓친다는 것은 그 실행이 근거다.
+
+재지 않은 것: 저장소 원본을 읽지 못하거나 기초 카드 원본 폴더가 빌 때의 `input` 오류(원본 경로가 `SOURCES`로 고정이라 시험이 지나지 않는다), 판정이 README 문장을 찾지 못하면 던지는 갈래(`section`. 문장 모양을 바꾸는 변이를 두지 않았다), 변수 판정이 빼는 두 자리("테마의 재료" 줄과 `<이름>` 자리 표시. 빼기를 끄는 변이는 판정이 원본을 잘못 막는지를 재는 대조인데 두지 않았다), 라이트 테마 이름의 모드 낱말(31은 다크 쪽만 바꾼다. 라이트 이름에 night가 드는 자리는 63이 build 사례로 잰다), 지침 폴더에 다른 파일이 더 생기는 갈래.
+
+## 2026-10-30 결과: 티켓 04가 원본을 옮기고 빌드 판정을 걷은 뒤
+
+티켓 04는 README 원본과 기초 카드 원본을 `.design-sync/`에서 `web/tools/sync-design-system/artifact-source/`로 옮기고(README 원본의 글 셋 말고는 바이트 그대로), 올리기 계획에서 `_ds_sync.json`을 마지막 몫에 싣는 규칙을 걷었다. 그래서 두 변이 표를 이렇게 고쳤다. 실행은 모두 `HEAD` `fcf808fa` 위의 작업 트리(표·원본·시험이 커밋 전)이고, 수와 문구는 도구가 찍은 줄이다.
+
+- `assemble_mutations.toml`: 원본을 겨누는 열일곱(34, 38~40, 42~50, 57, 59~61)의 `file`을 새 자리로 바꿨고 원문과 표지는 그대로다. `--check`는 "변이 64 모두 원문이 한 번씩 있다"였다. 열일곱만 돌린 실행은 "변이 17 모두 기대대로"였고, 좁힌 사례마다의 기준선 일곱이 모두 초록이었다.
+- `upload_plan_mutations.toml`: 옛 14(`_ds_sync.json`의 자리)를 뺐다. 그 규칙이 코드에서 사라져 겨눌 줄이 없다. 그래서 옛 15~26이 14~25로 당겨졌고, 이 파일의 앞 두 절이 든 번호는 그 전의 것이다. 원문이 바뀐 13(몫에 넣는 목록에서 지울 경로를 뺀다. 원문이 `[...send, ...deletes]`로 줄었다)과, 사례 이름이나 좁히기가 바뀐 3·22를 돌린 실행은 "변이 3 모두 기대대로"였고 기준선 셋이 모두 초록이었다. 그 전에 `--check`는 "변이 25 모두 원문이 한 번씩 있다"였다.
+- 빌드 판정(`needsBuild`, `record needs-build`)을 겨누던 변이는 design-reverse-sync의 `record_check_mutations.toml`에 있었고 그 표에서 뺐다(그 폴더의 README 2026-10-30 절).
+- `upload_plan_mutations.toml`의 전체 실행(2026-10-30, `HEAD` `86c9b48c`, 셀프 리뷰와 PR 직전 리뷰를 모두 반영해 커밋한 판): 티켓 04가 이 표가 겨누는 `upload.test.ts`와 `record-check.test.ts`에서 시험을 지워 전체를 돌렸다. 그 커밋을 꺼낸 임시 워크트리에서 Node 24.19.0, vitest 5.0.2로 돌렸다. "변이 25 모두 기대대로"였고(도구가 찍은 줄), 좁힌 사례마다의 기준선 20이 모두 초록이었다. 도구는 0으로 끝났고(되돌리지 못하면 3이다), 임시 워크트리는 `git worktree remove`가 `--force` 없이 지웠다(git은 고친 추적 파일이 있는 워크트리를 `--force` 없이 지우지 않는다, `git worktree` 문서).

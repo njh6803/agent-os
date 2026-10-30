@@ -1,0 +1,790 @@
+/* Agent OS 디자인 시스템 — generated from tokens.json */
+:root, [data-theme="nokcheong-light"] {
+  --gray-0: #ffffff; /* 라이트의 bg-raised, on-accent, on-primary */
+  --gray-50: #f4f8fb; /* 라이트의 bg */
+  --gray-100: #ecf1f3; /* 다크의 text, 라이트의 bg-disabled, 녹청·쪽빛 다크의 primary */
+  --gray-200: #e1e5e8; /* 라이트의 border, 녹청·쪽빛 다크의 primary-hover */
+  --gray-300: #9b9fa1; /* 다크의 text-muted, 녹청·쪽빛 다크의 primary-active */
+  --gray-400: #898d8f; /* 모든 벌의 border-control, 라이트의 text-disabled */
+  --gray-500: #606466; /* 라이트의 text-muted */
+  --gray-600: #4f5355; /* 다크의 text-disabled */
+  --gray-700: #3d4042; /* 녹청·쪽빛 라이트의 primary-active */
+  --gray-800: #2b2e30; /* 다크의 border, bg-disabled, 녹청·쪽빛 라이트의 primary-hover */
+  --gray-850: #202325; /* 가리키는 쓰임새 토큰이 없다 */
+  --gray-900: #171a1c; /* 라이트의 text, 다크의 bg-raised, 녹청·쪽빛 라이트의 primary */
+  --gray-950: #0f1214; /* 다크의 bg, 녹청·쪽빛 다크의 on-primary */
+  --accent-50: #eefaf9; /* 가리키는 쓰임새 토큰이 없다 */
+  --accent-100: #daf3f2; /* 가리키는 쓰임새 토큰이 없다 */
+  --accent-200: #b8e5e4; /* 군청·자초 다크의 primary-active */
+  --accent-300: #89cccb; /* 군청·자초 다크의 primary-hover */
+  --accent-400: #5caeae; /* 다크의 accent, focus-ring, 군청·자초 다크의 primary */
+  --accent-500: #2d8a8a; /* 가리키는 쓰임새 토큰이 없다 */
+  --accent-600: #ff0000; /* 라이트의 accent, focus-ring, 군청·자초 라이트의 primary 2 */
+  --accent-700: #005353; /* 군청·자초 라이트의 primary-hover */
+  --accent-800: #004141; /* 군청·자초 라이트의 primary-active */
+  --accent-900: #002b2b; /* 가리키는 쓰임새 토큰이 없다 */
+  --accent-950: #001b1b; /* 다크의 on-accent, 군청·자초 다크의 on-primary */
+  --danger-50: #fef4f3; /* 가리키는 쓰임새 토큰이 없다 */
+  --danger-100: #ffe6e3; /* 가리키는 쓰임새 토큰이 없다 */
+  --danger-200: #fecdc7; /* 가리키는 쓰임새 토큰이 없다 */
+  --danger-300: #ffa196; /* 가리키는 쓰임새 토큰이 없다 */
+  --danger-400: #fa695e; /* 다크의 danger */
+  --danger-500: #d33b36; /* 가리키는 쓰임새 토큰이 없다 */
+  --danger-600: #ac0311; /* 라이트의 danger */
+  --danger-700: #8b010b; /* 가리키는 쓰임새 토큰이 없다 */
+  --danger-800: #6f0006; /* 가리키는 쓰임새 토큰이 없다 */
+  --danger-900: #4b0003; /* 가리키는 쓰임새 토큰이 없다 */
+  --danger-950: #330001; /* 가리키는 쓰임새 토큰이 없다 */
+  --warning-50: #fff5ea; /* 가리키는 쓰임새 토큰이 없다 */
+  --warning-100: #fee9d1; /* 가리키는 쓰임새 토큰이 없다 */
+  --warning-200: #fad3a8; /* 가리키는 쓰임새 토큰이 없다 */
+  --warning-300: #e9b271; /* 가리키는 쓰임새 토큰이 없다 */
+  --warning-400: #cf903e; /* 다크의 warning */
+  --warning-500: #a96b00; /* 가리키는 쓰임새 토큰이 없다 */
+  --warning-600: #7f4f00; /* 라이트의 warning */
+  --warning-700: #653e00; /* 가리키는 쓰임새 토큰이 없다 */
+  --warning-800: #503000; /* 가리키는 쓰임새 토큰이 없다 */
+  --warning-900: #351e00; /* 가리키는 쓰임새 토큰이 없다 */
+  --warning-950: #231200; /* 가리키는 쓰임새 토큰이 없다 */
+  --success-50: #edfbef; /* 가리키는 쓰임새 토큰이 없다 */
+  --success-100: #daf5de; /* 가리키는 쓰임새 토큰이 없다 */
+  --success-200: #b7eac0; /* 가리키는 쓰임새 토큰이 없다 */
+  --success-300: #87d297; /* 가리키는 쓰임새 토큰이 없다 */
+  --success-400: #5ab571; /* 다크의 success */
+  --success-500: #2a904b; /* 가리키는 쓰임새 토큰이 없다 */
+  --success-600: #006e30; /* 라이트의 success */
+  --success-700: #005724; /* 가리키는 쓰임새 토큰이 없다 */
+  --success-800: #01451b; /* 가리키는 쓰임새 토큰이 없다 */
+  --success-900: #002d0f; /* 가리키는 쓰임새 토큰이 없다 */
+  --success-950: #001d07; /* 가리키는 쓰임새 토큰이 없다 */
+  --info-50: #f2f7fe; /* 가리키는 쓰임새 토큰이 없다 */
+  --info-100: #e2eefe; /* 가리키는 쓰임새 토큰이 없다 */
+  --info-200: #c3ddff; /* 가리키는 쓰임새 토큰이 없다 */
+  --info-300: #91c1ff; /* 가리키는 쓰임새 토큰이 없다 */
+  --info-400: #5da0f5; /* 다크의 info */
+  --info-500: #337bd0; /* 가리키는 쓰임새 토큰이 없다 */
+  --info-600: #0859ac; /* 라이트의 info */
+  --info-700: #00468c; /* 가리키는 쓰임새 토큰이 없다 */
+  --info-800: #003670; /* 가리키는 쓰임새 토큰이 없다 */
+  --info-900: #00234d; /* 가리키는 쓰임새 토큰이 없다 */
+  --info-950: #001535; /* 가리키는 쓰임새 토큰이 없다 */
+  --overlay-black-4: #0000000a; /* 라이트의 bg-hover. 올림에 겹치는 바탕 */
+  --overlay-black-7: #00000012; /* 라이트의 bg-selected. 위험 버튼의 누름과 위젯 대화에서 보낸 요청의 말풍선 */
+  --overlay-black-12: #0000001f; /* 라이트의 bg-active(누름에 겹치는 바탕)와 shadow-color(떠 있는 것의 그림자) */
+  --overlay-black-40: #00000066; /* 다크의 shadow-color. 떠 있는 것의 그림자 */
+  --overlay-white-6: #ffffff0f; /* 다크의 bg-hover. 올림에 겹치는 바탕 */
+  --overlay-white-10: #ffffff1a; /* 다크의 bg-selected. 위험 버튼의 누름과 위젯 대화에서 보낸 요청의 말풍선 */
+  --overlay-white-16: #ffffff29; /* 다크의 bg-active. 누름에 겹치는 바탕 */
+  --bg: var(--gray-50); /* 문서와 위젯 호스트(html, :host)의 바탕, 승인 묻기의 인자 칸 */
+  --bg-raised: var(--gray-0); /* 올라온 면. 카드, 알림, 위젯 창, 입력 칸, 꺼진 스위치의 손잡이 */
+  --text: var(--gray-900); /* 기본 글자. 카드, 알림, 위젯 창, 보조 버튼, 입력 칸과 라벨 */
+  --text-muted: var(--gray-500); /* 흐린 글자. 알림 본문, 도움말, 자리 글자, 상태 글, 진행 표시 */
+  --border: var(--gray-200); /* 테두리와 구분선. 카드, 알림, 배지, 보조·위험 버튼, 위젯 창 */
+  --accent: var(--accent-600); /* 강조색. 켠 스위치의 트랙 */
+  --on-accent: var(--gray-0); /* accent 위의 것. 켠 스위치의 손잡이 */
+  --danger: var(--danger-600); /* 실패와 위험. 위험 버튼, 실패 배지와 알림, 입력 칸의 오류 */
+  --warning: var(--warning-600); /* 경고. 일시정지 배지, 경고 알림의 아이콘 */
+  --success: var(--success-600); /* 성공. 끝남 배지, 위젯의 성공한 도구 아이콘 */
+  --info: var(--info-600); /* 정보. 정보 알림의 아이콘 */
+  --focus-ring: var(--accent-600); /* 키보드 포커스 링(focus-visible). 조작 요소와 입력 칸 */
+  --border-control: var(--gray-400); /* 조작 요소의 테두리. 입력 칸, 꺼진 스위치의 트랙 */
+  --primary: var(--gray-900); /* 주 버튼과 주 아이콘 버튼의 바탕 */
+  --on-primary: var(--gray-0); /* 주 버튼과 주 아이콘 버튼의 글자와 아이콘 */
+  --primary-hover: var(--gray-800); /* 주 버튼과 주 아이콘 버튼을 올렸을 때의 바탕 */
+  --primary-active: var(--gray-700); /* 주 버튼과 주 아이콘 버튼을 눌렀을 때의 바탕 */
+  --bg-hover: var(--overlay-black-4); /* 보조·위험 버튼과 보조·투명 아이콘 버튼의 올림 */
+  --bg-active: var(--overlay-black-12); /* 보조·투명 버튼의 누름, 스위치 올림, 진행 막대의 트랙 */
+  --bg-selected: var(--overlay-black-7); /* 위험 버튼의 누름, 위젯에서 보낸 요청의 말풍선 */
+  --text-disabled: var(--gray-400); /* 쓸 수 없는 것의 글자와 아이콘. 버튼, 입력 칸, 스위치 */
+  --bg-disabled: var(--gray-100); /* 쓸 수 없는 것의 바탕. 버튼, 입력 칸, 스위치의 트랙 */
+  --shadow-color: var(--overlay-black-12); /* 떠 있는 위젯 창의 그림자 색(shadow-float) */
+}
+[data-theme="nokcheong-dark"] {
+  --gray-0: #ffffff;
+  --gray-50: #f4f8fb;
+  --gray-100: #ecf1f3;
+  --gray-200: #e1e5e8;
+  --gray-300: #9b9fa1;
+  --gray-400: #898d8f;
+  --gray-500: #606466;
+  --gray-600: #4f5355;
+  --gray-700: #3d4042;
+  --gray-800: #2b2e30;
+  --gray-850: #202325;
+  --gray-900: #171a1c;
+  --gray-950: #0f1214;
+  --accent-50: #eefaf9;
+  --accent-100: #daf3f2;
+  --accent-200: #b8e5e4;
+  --accent-300: #89cccb;
+  --accent-400: #5caeae;
+  --accent-500: #2d8a8a;
+  --accent-600: #056868;
+  --accent-700: #005353;
+  --accent-800: #004141;
+  --accent-900: #002b2b;
+  --accent-950: #001b1b;
+  --danger-50: #fef4f3;
+  --danger-100: #ffe6e3;
+  --danger-200: #fecdc7;
+  --danger-300: #ffa196;
+  --danger-400: #fa695e;
+  --danger-500: #d33b36;
+  --danger-600: #ac0311;
+  --danger-700: #8b010b;
+  --danger-800: #6f0006;
+  --danger-900: #4b0003;
+  --danger-950: #330001;
+  --warning-50: #fff5ea;
+  --warning-100: #fee9d1;
+  --warning-200: #fad3a8;
+  --warning-300: #e9b271;
+  --warning-400: #cf903e;
+  --warning-500: #a96b00;
+  --warning-600: #7f4f00;
+  --warning-700: #653e00;
+  --warning-800: #503000;
+  --warning-900: #351e00;
+  --warning-950: #231200;
+  --success-50: #edfbef;
+  --success-100: #daf5de;
+  --success-200: #b7eac0;
+  --success-300: #87d297;
+  --success-400: #5ab571;
+  --success-500: #2a904b;
+  --success-600: #006e30;
+  --success-700: #005724;
+  --success-800: #01451b;
+  --success-900: #002d0f;
+  --success-950: #001d07;
+  --info-50: #f2f7fe;
+  --info-100: #e2eefe;
+  --info-200: #c3ddff;
+  --info-300: #91c1ff;
+  --info-400: #5da0f5;
+  --info-500: #337bd0;
+  --info-600: #0859ac;
+  --info-700: #00468c;
+  --info-800: #003670;
+  --info-900: #00234d;
+  --info-950: #001535;
+  --bg: var(--gray-950);
+  --bg-raised: var(--gray-900);
+  --text: var(--gray-100);
+  --text-muted: var(--gray-300);
+  --border: var(--gray-800);
+  --accent: var(--accent-400);
+  --on-accent: var(--accent-950);
+  --danger: var(--danger-400);
+  --warning: var(--warning-400);
+  --success: var(--success-400);
+  --info: var(--info-400);
+  --focus-ring: var(--accent-400);
+  --border-control: var(--gray-400);
+  --primary: var(--gray-100);
+  --on-primary: var(--gray-950);
+  --primary-hover: var(--gray-200);
+  --primary-active: var(--gray-300);
+  --bg-hover: var(--overlay-white-6);
+  --bg-active: var(--overlay-white-16);
+  --bg-selected: var(--overlay-white-10);
+  --text-disabled: var(--gray-600);
+  --bg-disabled: var(--gray-800);
+  --shadow-color: var(--overlay-black-40);
+}
+[data-theme="guncheong-light"] {
+  --gray-0: #ffffff;
+  --gray-50: #f7f7f7;
+  --gray-100: #f0f0f0;
+  --gray-200: #e4e4e4;
+  --gray-300: #9e9e9e;
+  --gray-400: #8c8c8c;
+  --gray-500: #636363;
+  --gray-600: #525252;
+  --gray-700: #404040;
+  --gray-800: #2e2e2e;
+  --gray-850: #232323;
+  --gray-900: #191919;
+  --gray-950: #121212;
+  --accent-50: #f4f7fe;
+  --accent-100: #e5edff;
+  --accent-200: #ccdafe;
+  --accent-300: #a2bcff;
+  --accent-400: #7598ff;
+  --accent-500: #496cef;
+  --accent-600: #2d49c9;
+  --accent-700: #1f34ac;
+  --accent-800: #16258e;
+  --accent-900: #0b1366;
+  --accent-950: #05064b;
+  --danger-50: #fef4f3;
+  --danger-100: #ffe6e3;
+  --danger-200: #fecdc7;
+  --danger-300: #ffa196;
+  --danger-400: #fa695e;
+  --danger-500: #d33b36;
+  --danger-600: #ac0311;
+  --danger-700: #8b010b;
+  --danger-800: #6f0006;
+  --danger-900: #4b0003;
+  --danger-950: #330001;
+  --warning-50: #fff5ea;
+  --warning-100: #fee9d1;
+  --warning-200: #fad3a8;
+  --warning-300: #e9b271;
+  --warning-400: #cf903e;
+  --warning-500: #a96b00;
+  --warning-600: #7f4f00;
+  --warning-700: #653e00;
+  --warning-800: #503000;
+  --warning-900: #351e00;
+  --warning-950: #231200;
+  --success-50: #edfbef;
+  --success-100: #daf5de;
+  --success-200: #b7eac0;
+  --success-300: #87d297;
+  --success-400: #5ab571;
+  --success-500: #2a904b;
+  --success-600: #006e30;
+  --success-700: #005724;
+  --success-800: #01451b;
+  --success-900: #002d0f;
+  --success-950: #001d07;
+  --info-50: #ecf9fe;
+  --info-100: #d8f2fb;
+  --info-200: #b3e4f4;
+  --info-300: #81cae1;
+  --info-400: #51acc7;
+  --info-500: #1988a3;
+  --info-600: #00657c;
+  --info-700: #005063;
+  --info-800: #023f4e;
+  --info-900: #002934;
+  --info-950: #001a22;
+  --bg: var(--gray-50);
+  --bg-raised: var(--gray-0);
+  --text: var(--gray-900);
+  --text-muted: var(--gray-500);
+  --border: var(--gray-200);
+  --accent: var(--accent-600);
+  --on-accent: var(--gray-0);
+  --danger: var(--danger-600);
+  --warning: var(--warning-600);
+  --success: var(--success-600);
+  --info: var(--info-600);
+  --focus-ring: var(--accent-600);
+  --border-control: var(--gray-400);
+  --primary: var(--accent-600);
+  --on-primary: var(--gray-0);
+  --primary-hover: var(--accent-700);
+  --primary-active: var(--accent-800);
+  --bg-hover: var(--overlay-black-4);
+  --bg-active: var(--overlay-black-12);
+  --bg-selected: var(--overlay-black-7);
+  --text-disabled: var(--gray-400);
+  --bg-disabled: var(--gray-100);
+  --shadow-color: var(--overlay-black-12);
+}
+[data-theme="guncheong-dark"] {
+  --gray-0: #ffffff;
+  --gray-50: #f7f7f7;
+  --gray-100: #f0f0f0;
+  --gray-200: #e4e4e4;
+  --gray-300: #9e9e9e;
+  --gray-400: #8c8c8c;
+  --gray-500: #636363;
+  --gray-600: #525252;
+  --gray-700: #404040;
+  --gray-800: #2e2e2e;
+  --gray-850: #232323;
+  --gray-900: #191919;
+  --gray-950: #121212;
+  --accent-50: #f4f7fe;
+  --accent-100: #e5edff;
+  --accent-200: #ccdafe;
+  --accent-300: #a2bcff;
+  --accent-400: #7598ff;
+  --accent-500: #496cef;
+  --accent-600: #2d49c9;
+  --accent-700: #1f34ac;
+  --accent-800: #16258e;
+  --accent-900: #0b1366;
+  --accent-950: #05064b;
+  --danger-50: #fef4f3;
+  --danger-100: #ffe6e3;
+  --danger-200: #fecdc7;
+  --danger-300: #ffa196;
+  --danger-400: #fa695e;
+  --danger-500: #d33b36;
+  --danger-600: #ac0311;
+  --danger-700: #8b010b;
+  --danger-800: #6f0006;
+  --danger-900: #4b0003;
+  --danger-950: #330001;
+  --warning-50: #fff5ea;
+  --warning-100: #fee9d1;
+  --warning-200: #fad3a8;
+  --warning-300: #e9b271;
+  --warning-400: #cf903e;
+  --warning-500: #a96b00;
+  --warning-600: #7f4f00;
+  --warning-700: #653e00;
+  --warning-800: #503000;
+  --warning-900: #351e00;
+  --warning-950: #231200;
+  --success-50: #edfbef;
+  --success-100: #daf5de;
+  --success-200: #b7eac0;
+  --success-300: #87d297;
+  --success-400: #5ab571;
+  --success-500: #2a904b;
+  --success-600: #006e30;
+  --success-700: #005724;
+  --success-800: #01451b;
+  --success-900: #002d0f;
+  --success-950: #001d07;
+  --info-50: #ecf9fe;
+  --info-100: #d8f2fb;
+  --info-200: #b3e4f4;
+  --info-300: #81cae1;
+  --info-400: #51acc7;
+  --info-500: #1988a3;
+  --info-600: #00657c;
+  --info-700: #005063;
+  --info-800: #023f4e;
+  --info-900: #002934;
+  --info-950: #001a22;
+  --bg: var(--gray-950);
+  --bg-raised: var(--gray-900);
+  --text: var(--gray-100);
+  --text-muted: var(--gray-300);
+  --border: var(--gray-800);
+  --accent: var(--accent-400);
+  --on-accent: var(--accent-950);
+  --danger: var(--danger-400);
+  --warning: var(--warning-400);
+  --success: var(--success-400);
+  --info: var(--info-400);
+  --focus-ring: var(--accent-400);
+  --border-control: var(--gray-400);
+  --primary: var(--accent-400);
+  --on-primary: var(--accent-950);
+  --primary-hover: var(--accent-300);
+  --primary-active: var(--accent-200);
+  --bg-hover: var(--overlay-white-6);
+  --bg-active: var(--overlay-white-16);
+  --bg-selected: var(--overlay-white-10);
+  --text-disabled: var(--gray-600);
+  --bg-disabled: var(--gray-800);
+  --shadow-color: var(--overlay-black-40);
+}
+[data-theme="jacho-light"] {
+  --gray-0: #ffffff;
+  --gray-50: #f7f7f7;
+  --gray-100: #f0f0f0;
+  --gray-200: #e4e4e4;
+  --gray-300: #9e9e9e;
+  --gray-400: #8c8c8c;
+  --gray-500: #636363;
+  --gray-600: #525252;
+  --gray-700: #404040;
+  --gray-800: #2e2e2e;
+  --gray-850: #232323;
+  --gray-900: #191919;
+  --gray-950: #121212;
+  --accent-50: #fcf3ff;
+  --accent-100: #f8e5fe;
+  --accent-200: #f2cafe;
+  --accent-300: #e2a1f6;
+  --accent-400: #c77bdf;
+  --accent-500: #a353ba;
+  --accent-600: #803197;
+  --accent-700: #6a1d7e;
+  --accent-800: #551167;
+  --accent-900: #3a0448;
+  --accent-950: #270032;
+  --danger-50: #fef4f3;
+  --danger-100: #ffe6e3;
+  --danger-200: #fecdc7;
+  --danger-300: #ffa196;
+  --danger-400: #fa695e;
+  --danger-500: #d33b36;
+  --danger-600: #ac0311;
+  --danger-700: #8b010b;
+  --danger-800: #6f0006;
+  --danger-900: #4b0003;
+  --danger-950: #330001;
+  --warning-50: #fff5ea;
+  --warning-100: #fee9d1;
+  --warning-200: #fad3a8;
+  --warning-300: #e9b271;
+  --warning-400: #cf903e;
+  --warning-500: #a96b00;
+  --warning-600: #7f4f00;
+  --warning-700: #653e00;
+  --warning-800: #503000;
+  --warning-900: #351e00;
+  --warning-950: #231200;
+  --success-50: #edfbef;
+  --success-100: #daf5de;
+  --success-200: #b7eac0;
+  --success-300: #87d297;
+  --success-400: #5ab571;
+  --success-500: #2a904b;
+  --success-600: #006e30;
+  --success-700: #005724;
+  --success-800: #01451b;
+  --success-900: #002d0f;
+  --success-950: #001d07;
+  --info-50: #f2f7fe;
+  --info-100: #e0efff;
+  --info-200: #c0defe;
+  --info-300: #89c3fe;
+  --info-400: #51a3f3;
+  --info-500: #1f7dcf;
+  --info-600: #025da1;
+  --info-700: #014981;
+  --info-800: #003968;
+  --info-900: #002546;
+  --info-950: #001730;
+  --bg: var(--gray-50);
+  --bg-raised: var(--gray-0);
+  --text: var(--gray-900);
+  --text-muted: var(--gray-500);
+  --border: var(--gray-200);
+  --accent: var(--accent-600);
+  --on-accent: var(--gray-0);
+  --danger: var(--danger-600);
+  --warning: var(--warning-600);
+  --success: var(--success-600);
+  --info: var(--info-600);
+  --focus-ring: var(--accent-600);
+  --border-control: var(--gray-400);
+  --primary: var(--accent-600);
+  --on-primary: var(--gray-0);
+  --primary-hover: var(--accent-700);
+  --primary-active: var(--accent-800);
+  --bg-hover: var(--overlay-black-4);
+  --bg-active: var(--overlay-black-12);
+  --bg-selected: var(--overlay-black-7);
+  --text-disabled: var(--gray-400);
+  --bg-disabled: var(--gray-100);
+  --shadow-color: var(--overlay-black-12);
+}
+[data-theme="jacho-dark"] {
+  --gray-0: #ffffff;
+  --gray-50: #f7f7f7;
+  --gray-100: #f0f0f0;
+  --gray-200: #e4e4e4;
+  --gray-300: #9e9e9e;
+  --gray-400: #8c8c8c;
+  --gray-500: #636363;
+  --gray-600: #525252;
+  --gray-700: #404040;
+  --gray-800: #2e2e2e;
+  --gray-850: #232323;
+  --gray-900: #191919;
+  --gray-950: #121212;
+  --accent-50: #fcf3ff;
+  --accent-100: #f8e5fe;
+  --accent-200: #f2cafe;
+  --accent-300: #e2a1f6;
+  --accent-400: #c77bdf;
+  --accent-500: #a353ba;
+  --accent-600: #803197;
+  --accent-700: #6a1d7e;
+  --accent-800: #551167;
+  --accent-900: #3a0448;
+  --accent-950: #270032;
+  --danger-50: #fef4f3;
+  --danger-100: #ffe6e3;
+  --danger-200: #fecdc7;
+  --danger-300: #ffa196;
+  --danger-400: #fa695e;
+  --danger-500: #d33b36;
+  --danger-600: #ac0311;
+  --danger-700: #8b010b;
+  --danger-800: #6f0006;
+  --danger-900: #4b0003;
+  --danger-950: #330001;
+  --warning-50: #fff5ea;
+  --warning-100: #fee9d1;
+  --warning-200: #fad3a8;
+  --warning-300: #e9b271;
+  --warning-400: #cf903e;
+  --warning-500: #a96b00;
+  --warning-600: #7f4f00;
+  --warning-700: #653e00;
+  --warning-800: #503000;
+  --warning-900: #351e00;
+  --warning-950: #231200;
+  --success-50: #edfbef;
+  --success-100: #daf5de;
+  --success-200: #b7eac0;
+  --success-300: #87d297;
+  --success-400: #5ab571;
+  --success-500: #2a904b;
+  --success-600: #006e30;
+  --success-700: #005724;
+  --success-800: #01451b;
+  --success-900: #002d0f;
+  --success-950: #001d07;
+  --info-50: #f2f7fe;
+  --info-100: #e0efff;
+  --info-200: #c0defe;
+  --info-300: #89c3fe;
+  --info-400: #51a3f3;
+  --info-500: #1f7dcf;
+  --info-600: #025da1;
+  --info-700: #014981;
+  --info-800: #003968;
+  --info-900: #002546;
+  --info-950: #001730;
+  --bg: var(--gray-950);
+  --bg-raised: var(--gray-900);
+  --text: var(--gray-100);
+  --text-muted: var(--gray-300);
+  --border: var(--gray-800);
+  --accent: var(--accent-400);
+  --on-accent: var(--accent-950);
+  --danger: var(--danger-400);
+  --warning: var(--warning-400);
+  --success: var(--success-400);
+  --info: var(--info-400);
+  --focus-ring: var(--accent-400);
+  --border-control: var(--gray-400);
+  --primary: var(--accent-400);
+  --on-primary: var(--accent-950);
+  --primary-hover: var(--accent-300);
+  --primary-active: var(--accent-200);
+  --bg-hover: var(--overlay-white-6);
+  --bg-active: var(--overlay-white-16);
+  --bg-selected: var(--overlay-white-10);
+  --text-disabled: var(--gray-600);
+  --bg-disabled: var(--gray-800);
+  --shadow-color: var(--overlay-black-40);
+}
+[data-theme="jjokbit-light"] {
+  --gray-0: #ffffff;
+  --gray-50: #faf7f3;
+  --gray-100: #f2f0ec;
+  --gray-200: #e7e4e0;
+  --gray-300: #a19e9a;
+  --gray-400: #8e8c88;
+  --gray-500: #65635f;
+  --gray-600: #54524f;
+  --gray-700: #423f3c;
+  --gray-800: #302d2b;
+  --gray-850: #252220;
+  --gray-900: #1b1916;
+  --gray-950: #13110f;
+  --accent-50: #f1f7ff;
+  --accent-100: #e0efff;
+  --accent-200: #c2defe;
+  --accent-300: #8dc2fe;
+  --accent-400: #62a2e9;
+  --accent-500: #397dc4;
+  --accent-600: #125ca1;
+  --accent-700: #004885;
+  --accent-800: #00386b;
+  --accent-900: #002448;
+  --accent-950: #001632;
+  --danger-50: #fef4f3;
+  --danger-100: #ffe6e3;
+  --danger-200: #fecdc7;
+  --danger-300: #ffa196;
+  --danger-400: #fa695e;
+  --danger-500: #d33b36;
+  --danger-600: #ac0311;
+  --danger-700: #8b010b;
+  --danger-800: #6f0006;
+  --danger-900: #4b0003;
+  --danger-950: #330001;
+  --warning-50: #fff5ea;
+  --warning-100: #fee9d1;
+  --warning-200: #fad3a8;
+  --warning-300: #e9b271;
+  --warning-400: #cf903e;
+  --warning-500: #a96b00;
+  --warning-600: #7f4f00;
+  --warning-700: #653e00;
+  --warning-800: #503000;
+  --warning-900: #351e00;
+  --warning-950: #231200;
+  --success-50: #edfbef;
+  --success-100: #daf5de;
+  --success-200: #b7eac0;
+  --success-300: #87d297;
+  --success-400: #5ab571;
+  --success-500: #2a904b;
+  --success-600: #006e30;
+  --success-700: #005724;
+  --success-800: #01451b;
+  --success-900: #002d0f;
+  --success-950: #001d07;
+  --info-50: #ecf9fe;
+  --info-100: #d8f2fb;
+  --info-200: #b3e4f4;
+  --info-300: #81cae1;
+  --info-400: #51acc7;
+  --info-500: #1988a3;
+  --info-600: #00657c;
+  --info-700: #005063;
+  --info-800: #023f4e;
+  --info-900: #002934;
+  --info-950: #001a22;
+  --bg: var(--gray-50);
+  --bg-raised: var(--gray-0);
+  --text: var(--gray-900);
+  --text-muted: var(--gray-500);
+  --border: var(--gray-200);
+  --accent: var(--accent-600);
+  --on-accent: var(--gray-0);
+  --danger: var(--danger-600);
+  --warning: var(--warning-600);
+  --success: var(--success-600);
+  --info: var(--info-600);
+  --focus-ring: var(--accent-600);
+  --border-control: var(--gray-400);
+  --primary: var(--gray-900);
+  --on-primary: var(--gray-0);
+  --primary-hover: var(--gray-800);
+  --primary-active: var(--gray-700);
+  --bg-hover: var(--overlay-black-4);
+  --bg-active: var(--overlay-black-12);
+  --bg-selected: var(--overlay-black-7);
+  --text-disabled: var(--gray-400);
+  --bg-disabled: var(--gray-100);
+  --shadow-color: var(--overlay-black-12);
+}
+[data-theme="jjokbit-dark"] {
+  --gray-0: #ffffff;
+  --gray-50: #faf7f3;
+  --gray-100: #f2f0ec;
+  --gray-200: #e7e4e0;
+  --gray-300: #a19e9a;
+  --gray-400: #8e8c88;
+  --gray-500: #65635f;
+  --gray-600: #54524f;
+  --gray-700: #423f3c;
+  --gray-800: #302d2b;
+  --gray-850: #252220;
+  --gray-900: #1b1916;
+  --gray-950: #13110f;
+  --accent-50: #f1f7ff;
+  --accent-100: #e0efff;
+  --accent-200: #c2defe;
+  --accent-300: #8dc2fe;
+  --accent-400: #62a2e9;
+  --accent-500: #397dc4;
+  --accent-600: #125ca1;
+  --accent-700: #004885;
+  --accent-800: #00386b;
+  --accent-900: #002448;
+  --accent-950: #001632;
+  --danger-50: #fef4f3;
+  --danger-100: #ffe6e3;
+  --danger-200: #fecdc7;
+  --danger-300: #ffa196;
+  --danger-400: #fa695e;
+  --danger-500: #d33b36;
+  --danger-600: #ac0311;
+  --danger-700: #8b010b;
+  --danger-800: #6f0006;
+  --danger-900: #4b0003;
+  --danger-950: #330001;
+  --warning-50: #fff5ea;
+  --warning-100: #fee9d1;
+  --warning-200: #fad3a8;
+  --warning-300: #e9b271;
+  --warning-400: #cf903e;
+  --warning-500: #a96b00;
+  --warning-600: #7f4f00;
+  --warning-700: #653e00;
+  --warning-800: #503000;
+  --warning-900: #351e00;
+  --warning-950: #231200;
+  --success-50: #edfbef;
+  --success-100: #daf5de;
+  --success-200: #b7eac0;
+  --success-300: #87d297;
+  --success-400: #5ab571;
+  --success-500: #2a904b;
+  --success-600: #006e30;
+  --success-700: #005724;
+  --success-800: #01451b;
+  --success-900: #002d0f;
+  --success-950: #001d07;
+  --info-50: #ecf9fe;
+  --info-100: #d8f2fb;
+  --info-200: #b3e4f4;
+  --info-300: #81cae1;
+  --info-400: #51acc7;
+  --info-500: #1988a3;
+  --info-600: #00657c;
+  --info-700: #005063;
+  --info-800: #023f4e;
+  --info-900: #002934;
+  --info-950: #001a22;
+  --bg: var(--gray-950);
+  --bg-raised: var(--gray-900);
+  --text: var(--gray-100);
+  --text-muted: var(--gray-300);
+  --border: var(--gray-800);
+  --accent: var(--accent-400);
+  --on-accent: var(--accent-950);
+  --danger: var(--danger-400);
+  --warning: var(--warning-400);
+  --success: var(--success-400);
+  --info: var(--info-400);
+  --focus-ring: var(--accent-400);
+  --border-control: var(--gray-400);
+  --primary: var(--gray-100);
+  --on-primary: var(--gray-950);
+  --primary-hover: var(--gray-200);
+  --primary-active: var(--gray-300);
+  --bg-hover: var(--overlay-white-6);
+  --bg-active: var(--overlay-white-16);
+  --bg-selected: var(--overlay-white-10);
+  --text-disabled: var(--gray-600);
+  --bg-disabled: var(--gray-800);
+  --shadow-color: var(--overlay-black-40);
+}
+:root {
+  --spacing-0: 0px; /* flex 안에서 줄어들게 하는 min-w-0·min-h-0, 덮어 그리는 면의 inset-0 */
+  --spacing-1: 4px; /* 상태 배지의 아이콘과 글자, 알림의 제목과 본문, 입력 칸과 도움말 사이 */
+  --spacing-2: 8px; /* 버튼의 아이콘과 글자, 카드 안의 줄, 라벨과 입력 칸, 스위치의 글과 트랙 사이, 여러 줄 입력 칸의 안쪽 위아래 */
+  --spacing-3: 12px; /* 버튼과 입력 칸의 안쪽 좌우, 알림의 안쪽 위아래와 아이콘과 글 사이, 작은 카드(padding 3)의 안쪽 */
+  --spacing-4: 16px; /* 카드(기본)와 위젯 승인 묻기의 안쪽, 알림의 안쪽 좌우, 위젯 대화의 안쪽과 말 사이 */
+  --spacing-6: 24px; /* 위젯 첫 안내의 안쪽, 펼친 도구 목록의 들여쓰기, 도구 펼치기 단추의 최소 높이 */
+  --spacing-8: 32px; /* 컴포넌트와 앱은 아직 쓰지 않고, 디자인 에이전트가 배치의 넓은 여백에 변수로 쓴다 */
+  --radius-s: 4px; /* 상태 배지, 위젯 승인 묻기의 인자 칸, 위젯에서 포커스 링을 두르는 글과 도구 펼치기 단추 */
+  --radius-m: 8px; /* 버튼, 아이콘 버튼, 입력 칸, 위젯의 승인 묻기 */
+  --radius-l: 12px; /* 카드, 알림, 위젯 창, 위젯 대화에서 보낸 요청의 말풍선 */
+  --radius-full: 999px; /* 둥근 끝. 스위치의 트랙과 손잡이, 진행 막대와 그 트랙 */
+  --font-sans: "Noto Sans KR", system-ui, sans-serif;
+  --text-text-title: 600 24px/32px var(--font-sans); /* 제목 글자. 컴포넌트와 앱은 아직 쓰지 않고, 디자인 에이전트가 화면과 카드의 제목에 변수로 쓴다 */
+  --text-text-small: 400 12px/16px var(--font-sans); /* 작은 글자. 입력 칸의 라벨과 도움말, 스위치의 상태 글, 진행 표시의 이름, 위젯의 도구 줄·도구 펼치기 단추·첫 안내·상태 띠, 승인 묻기의 도구·인자 라벨, 실패 알림의 실행 식별자 줄 */
+  --text-text-badge: 500 12px/16px var(--font-sans); /* 상태 배지의 글자 */
+}
+.text-title {
+  font-family: var(--font-sans);
+  font-size: 24px;
+  line-height: 32px;
+  font-weight: 600;
+  letter-spacing: 0;
+}
+.text-small {
+  font-family: var(--font-sans);
+  font-size: 12px;
+  line-height: 16px;
+  font-weight: 400;
+  letter-spacing: 0;
+}
+.text-badge {
+  font-family: var(--font-sans);
+  font-size: 12px;
+  line-height: 16px;
+  font-weight: 500;
+  letter-spacing: 0;
+}
