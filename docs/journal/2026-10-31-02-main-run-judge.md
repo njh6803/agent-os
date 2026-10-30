@@ -126,3 +126,34 @@ chore/030 워크트리의 `.claude/skills/next-session/` 아래 `SKILL.md`·`han
 셋째 선택 화면(고친 이력의 확정). 질문은 고친 이력의 제목과 결정 문단의 요지(측정은 결론 없음, 구현 칸은 사용자 판단으로 Sonnet 5.5 / high, 막혔다고 인계하면 Opus 5.5 medium → high → xhigh, 티켓이 바뀌면 Sonnet으로, 컨텍스트 인계는 같은 모델, 칸 변경은 chore/030 병합 뒤 별도 chore 세션, 그때까지 Opus 5.5 / xhigh, 본문 두 자리의 포인터)를 담았고, 사용자는 "확정하고 PR까지 (Recommended)"를 골랐다. 설명: "승인 줄을 더하고 티켓 13을 done으로 바꾼 뒤 커밋하고, PR 직전 리뷰를 거쳐 PR을 열고 병합합니다. 칸 변경을 맡을 chore 세션은 다음 지시문으로 남깁니다."
 
 이력 제목은 "다시 풀기 1차는 결론 없음이고 사용자가 구현 칸을 Sonnet 5.5 / high로 내려 막히면 한 단계씩 올린다"로 바뀌었고, 본문 "결정 때 둔 칸의 값"의 "내릴지는 소급 측정과 스윕 뒤에 정한다"와 "바꾸는 절차" 끝에 포인터를 달았다(`tools/check_adr_pointers.py` 종료 0). `docs/model-selection.md` 4절 결과 문단도 사용자 결정과 "그때까지 칸은 `Opus 5.5 / xhigh`"로 고쳤다.
+
+## 커밋과 도중의 물음
+
+- 커밋 413d363b. pre-commit 종료 0(ruff 둘은 `.py`가 없어 Skipped, 검사 묶음 통과). 그 전에 `tools/sibling_overlap.py`가 이 일지(옛 2026-10-29-11)가 origin/main 최신 일지보다 이름순으로 앞이라 알려 `--move`로 2026-10-31-02로 옮겼다.
+- 커밋 도중 사용자 물음:
+
+> 사용자: 레벨 스윕에서 구현만 뺀거면 나머지는 뭐가 있어?
+
+  답: `tools/model_sweep.py`의 `SWEPT`는 구현(`feature/`)과 하네스(`chore/`, `claude/`) 둘이라 하네스만 남는다(코드를 읽었다). 기간 끝은 `END` 2026-12-08이다.
+
+## 인계 (커밋 뒤)
+
+- 세션 컨텍스트가 246,379 토큰으로 문턱을 넘은 채 `커밋 뒤`에 와 인계한다. 이 세션의 지금 제목은 `feature/13-main-run-judge`다.
+- 남은 차례: PR 직전 리뷰(밀 주장은 위 "셀프 리뷰"의 줄), PR, 반영과 병합, 다음 지시문. 다음 지시문에는 구현 칸 변경 chore 티켓(ADR 0029 이력 2026-10-31의 "함께 고치는 것"과 올리기 사다리)을 넣되 `chore/030-fable-design-spec-cells` 병합 뒤에 연다.
+
+인계 지시문:
+
+```
+다음 작업: .scratch/model-rerun/issues/13-main-run-judge.md. 커밋한 본 측정 판정 기록을 PR 직전 리뷰 뒤 PR·병합하고, 구현 칸 변경 chore 지시문을 낸다
+다음 단계: 구현
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /implement .scratch/model-rerun/issues/13-main-run-judge.md
+브랜치: feature/13-main-run-judge
+모델: Opus 5.5 / medium. 레벨 스윕의 갈래
+읽을 것: docs/journal/2026-10-31-02-main-run-judge.md 의 "셀프 리뷰 (base 06845c68)", "ADR 이력 승인 화면과 사용자 결정", "인계 (커밋 뒤)"
+이어받을 상태: 인계: 커밋 뒤. 413d363b에 셀프 리뷰 반영, ADR 0029 이력 2026-10-31(사용자 승인 줄 포함), 티켓 13 done을 커밋했고 푸시와 PR은 아직이다. 남은 단계는 PR 직전 리뷰(docs/constitution/operations.md 리뷰 파이프라인 2, 밀 주장은 일지 셀프 리뷰 절의 "PR 직전 리뷰에 밀 주장" 줄), PR, 반영과 병합, 다음 지시문이다. 다음 지시문에는 사용자가 정한 구현 칸 변경(결정표 구현 칸을 Sonnet 5.5 / high로, 막혔다고 인계하면 Opus 5.5 medium→high→xhigh, 레벨 스윕에서 구현 빼기. ADR 0029 이력 2026-10-31의 "함께 고치는 것")을 맡을 chore 티켓을 넣되 chore/030-fable-design-spec-cells 가 병합된 뒤에 연다. chore/030 도 같은 ADR 끝과 docs/model-selection.md를 고쳐 나중에 병합하는 쪽이 겹침을 푼다. 일지 docs/journal/2026-10-31-02-main-run-judge.md
+확인할 선행 조건: 없음
+이번 요청 범위: PR과 병합까지
+```
+
+open-session을 부른다 2026-10-30T17:35:24Z
