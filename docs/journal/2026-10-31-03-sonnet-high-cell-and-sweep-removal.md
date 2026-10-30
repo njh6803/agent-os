@@ -180,3 +180,48 @@ open-session을 부른다 2026-10-30T20:35:28Z
 `tools/open_session.ps1 -Action send`를 자동 모드 분류기가 거부했다(설명 없음). 스크립트가 돌지 않아 `fired=`가 없고 세션은
 생기지 않았다. `handoff.md` 4 열기의 막힘 갈래대로 제목을 `chore/031-sonnet-high-cell-and-sweep-removal`로 되돌리고, 이
 세션에서 다음 단계(일지 커밋, PR 직전 리뷰, PR, 봇 회차, 병합)를 잇는다. 멈춘 대기는 없었다.
+
+## PR 직전 리뷰
+
+위 일지를 커밋 `0e716068`로 남겼다(pre-commit의 검사 모두 `Passed`, ruff 둘은 `.py`가 없어 `Skipped`이고 `af7a72ea`에서 통과).
+`coderabbit auth status`가 `Seat: not assigned`라 CLI는 돌지 못해 대체 둘을 돌렸다. `origin/main`은 기점 `f01ce1e9`에서 움직이지
+않아 합칠 것이 없었다.
+
+- `/security-review`: 취약점 없음. 바뀐 파이썬에 새 하위 프로세스·역직렬화·경로·비밀 처리가 없고(`merged_prs`의 날짜는 셸 없는
+  리스트 인자의 `gh` 호출로 간다), 나머지는 문서와 시험 입력이다. 걸러 낼 지적이 없어 거짓 양성 거르기는 돌지 않았다.
+- `bug-perf-review`(기준 `f01ce1e9`, 35파일, 호출 40): 유효 2, 보류 1, 오탐 3. 확인으로 시험 269개 통과, 바뀐 카나리아 여덟의
+  `--shape` 통과, 옮긴 `percentile_ci`가 옛 본문과 글자 그대로 같고 경계 입력 값이 같다, ADR 0037 포인터가 이력 제목과 같다.
+
+판정:
+
+- 고친다(Minor, 유효). 사다리가 잇는 값만 기준으로 올려, `Opus 5.5 / high`까지 오른 구현 세션이 PR을 연 뒤 리뷰 반영에서 막히면
+  다음 단계가 PR 반영·병합이라 `Sonnet 5.5 / high`에서 한 단계 위인 `Opus 5.5 / medium`이 막힌 세션보다 낮게 받는다. ADR 0029 이력
+  2026-10-31의 굵은 결정 "그 세션이 막혔다고 인계하면 다음 세션의 모델을 사다리 … 에서 한 단계 올리고"와 어긋난다. `directive.md` 2
+  사다리의 기준을 잇는 값과 이 세션의 값 가운데 사다리에서 높은 쪽으로 고치고 "끝:"도 맞췄다. ADR은 고치지 않는다.
+- 고친다(Minor, 유효). 구현을 이을 때 지시문 "모델" 줄이 없거나 `없음`이면 `get_session`의 `model`(`claude-opus-5-5`)을 옮기는데
+  형식은 모델 메뉴의 이름이다. `Opus 5.5`로 바꿔 적고 `open-session` 4의 바꾸는 법을 거꾸로 한다고 더했다. 보류였던 "`self`가
+  `model`과 `effort`를 내는가"는 이 세션에서 `get_session` `self`를 불러 `claude-opus-5-5`·`xhigh`를 봤다.
+- 오탐(보류였다). `session_cost` README의 세 칸(`first_human_at`, `model_line`, `branch_line`)을 `analyze.py`가 읽을 수 있다는
+  지적은 `analyze.py:371-372`의 `DIRECTIVE_KEYS`에 그 칸이 없다. 저장소 `*.py` grep에서 그 이름이 걸린 `tools/token_report.py`·
+  `tools/rerun_continue.py`는 다른 함수(`_branch_lines`, `arm_model_line`)였다.
+- 오탐 셋은 리뷰가 스스로 닫았다(`merged_prs` 창, `percentile_ci` 값, `.scratch/morning-report-split/design.md`의 설계 기록).
+- 리뷰가 따라가지 못한 것: `morning_collect.collect()`를 끝까지 돌리지 않았고, pyright와 `f01ce1e9`에서의 `sweep.py`는 보지 않았다.
+  pyright는 두 커밋의 pre-commit이 돌렸다.
+
+카나리아 `next_session_continue_ladder.toml`에 물음 9~10과 기대 글 둘(올리는 기준, `model` 꼴)을 더했다. `--preflight` 통과 1 뒤
+`--control-commit f01ce1e9`(claude 2.1.312)로 돌려 통과 4·실패 0·"없음" 섞임 3이다. 섞임 셋은 모두 1번 답이고, 둘은 옮긴 원문 구절의
+`없음`, 하나는 "없음."이라고 쓴 뒤 같은 구절을 옮겼다. 대조군은 열 물음 모두 "없음"이었다(러너 출력의 답을 손으로 봤다). 실험군
+3회차가 2번("모델" 줄 끝에 적는 말)에 `2의 잇는 지시문`을 답했다. 26행은 줄 끝에 `2의 잇는 지시문`을, 27행은 줄 끝에 `막혀 한 단계
+올렸다`를 적게 해 둘이 놓이는 자리가 모호했다. 27행을 "`2의 잇는 지시문` 뒤에 `막혀 한 단계 올렸다`를 더한다"로 고치고, 문구만
+고친 것이라 `--preflight`(통과 1)로 갈음했다. 다른 카나리아 명세의 기대 글에는 바뀐 문구가 없다(grep).
+
+이 반영의 첫 커밋은 pre-commit의 pytest에서 `test_사다리로_올린_값은_스크립트가_읽는다` 하나가 빨개 만들어지지 않았다(1 failed, 5916
+passed). 그 시험은 사다리 항목 줄에서 백틱으로 감싼 `<모델> / <레벨>` 값을 뽑아 넷인지 보는데, 사다리에 없는 값의 예로 넣은
+`` `Fable 5.1 / xhigh` ``가 다섯째로 잡혔다. 시험이 아니라 문장이 그 계약을 깬 것이라 예를 "설계 인터뷰·명세의 Fable 칸"으로 고쳤고,
+`uv run pytest -q tests/tools/test_open_session.py`가 111 passed, 카나리아 `--preflight`가 통과 1이다.
+
+PR 직전 리뷰에 밀 문장에 더할 것(이 반영으로 새로 쓴 사실 문장): `directive.md` 2 사다리의 "올리는 기준은 그 값과 이 세션의 값
+(구현을 이을 때 읽는 그 자리) 가운데 사다리에서 높은 쪽", "PR을 연 뒤 리뷰 반영에서 막힌 `Opus 5.5 / high` 구현 세션은 잇는 값이
+`Sonnet 5.5 / high`여도 `Opus 5.5 / xhigh`로 넘긴다", 잇는 지시문 괄호의 "`model`의 `claude-opus-5-5`는 모델 메뉴의 이름 `Opus 5.5`로
+바꿔 적는다", "끝:"의 "2의 올리는 기준 … 의 한 단계 위이고, 기준이 꼭대기였으면 꼭대기다", 사다리의 "\"모델\" 줄 끝의 `2의 잇는 지시문` 뒤에
+`막혀 한 단계 올렸다`를 더한다". PR 봇이 다음 층이다.
