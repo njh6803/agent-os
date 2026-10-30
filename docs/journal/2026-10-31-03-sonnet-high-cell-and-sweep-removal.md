@@ -149,3 +149,34 @@ PR 직전 리뷰에 밀 문장(반영으로 새로 쓴 사실 문장, 셀프 리
 - `.scratch/harness/probes/session_cost/README.md`: "이 세 칸은 레벨 스윕의 판정(`../model_sweep/`)에 쓰려고 더했고". 세 칸을 읽는
   코드가 `sweep.py`뿐인 것은 `tools/`·`tests/tools/`·프로브 파이썬을 grep해 봤다(`analyze.py`의 `DIRECTIVE_KEYS`에는 없다).
 - ADR 0037 결과 절 66행의 포인터.
+
+## 인계 (커밋 뒤)
+
+반영을 커밋 `af7a72ea`로 남겼다. pre-commit의 검사는 모두 `Passed`이고 헌법 판 검사만 헌법 파일을 고치지 않아 `Skipped`였다(커밋
+출력). 손으로 치는 다섯(pytest, ruff 둘, pyright, lint-imports)은 이 pre-commit 결과로 갈음한다. 티켓 031은 done이고 수용 기준을
+모두 채웠다. 커밋을 띄우자 인계 계기가 왔다(세션 컨텍스트 343,883 토큰, 경계 `커밋 뒤`). 받은 범위가 PR과 병합까지라 넘긴다.
+이 세션의 지금 제목은 `chore/031-sonnet-high-cell-and-sweep-removal`이다. 이 절은 커밋하지 않았다.
+
+```
+다음 작업: .scratch/harness/issues/031-sonnet-high-cell-and-sweep-removal.md. 결정표 구현·하네스 줄의 모델 칸을 Sonnet 5.5 / high로 바꾸고 레벨 스윕 도구와 임시 문장을 걷는다
+다음 단계: 구현
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: ADR 0029 이력 2026-10-31의 "함께 고치는 것"을 티켓 .scratch/harness/issues/031-sonnet-high-cell-and-sweep-removal.md로 쓰고 한다
+브랜치: chore/031-sonnet-high-cell-and-sweep-removal
+모델: Opus 5.5 / xhigh. 2의 잇는 지시문(구현이라 이 세션의 지시문 모델 줄을 잇는다. 칸을 바꾸는 이 chore가 병합될 때까지 칸을 Opus 5.5 / xhigh로 두는 것은 사용자 결정)
+읽을 것: docs/journal/2026-10-31-03-sonnet-high-cell-and-sweep-removal.md
+이어받을 상태: 인계: 커밋 뒤. 셀프 리뷰 반영을 커밋 af7a72ea로 남겼고(pre-commit 통과) 티켓 031은 done이다. 남은 단계는 일지의 "인계 (커밋 뒤)" 절(커밋하지 않음)을 다음 커밋에 싣기, PR 직전 리뷰(docs/constitution/operations.md 리뷰 파이프라인 2. CodeRabbit CLI가 돌지 못하면 origin/main을 합친 뒤 /security-review와 bug-perf-review를 나란히, 브리프에 일지의 "PR 직전 리뷰에 밀 문장"을 나열), PR 열기, merge.md 2의 봇 회차, 병합이다. 14일 뒤 docs/model-selection.md 4절 8을 정해진 날에 돌게 하는 예약 작업은 지속 설정이라 사람에게 물을 것으로 남겼다(일지의 셀프 리뷰 판정). docs/journal/2026-10-31-03-sonnet-high-cell-and-sweep-removal.md
+확인할 선행 조건: 이 chore가 next-session을 고쳐 주 체크아웃의 사본은 옛것이다. 병합과 다음 지시문은 이 워크트리 사본의 next-session merge.md의 "워크트리에서 병합할 때", directive.md, SKILL.md 결정표를 Read로 열어 따른다
+이번 요청 범위: PR과 병합까지
+```
+
+제목을 `chore/031-sonnet-high-cell-and-sweep-removal (인계함)`으로 바꿨다. 멈출 백그라운드 작업은 없었고, 워크트리 잠금은 이미
+풀려 있었다(`git worktree unlock`이 `is not locked`).
+
+open-session을 부른다 2026-10-30T20:35:28Z
+
+인계 못함 커밋 뒤
+
+`tools/open_session.ps1 -Action send`를 자동 모드 분류기가 거부했다(설명 없음). 스크립트가 돌지 않아 `fired=`가 없고 세션은
+생기지 않았다. `handoff.md` 4 열기의 막힘 갈래대로 제목을 `chore/031-sonnet-high-cell-and-sweep-removal`로 되돌리고, 이
+세션에서 다음 단계(일지 커밋, PR 직전 리뷰, PR, 봇 회차, 병합)를 잇는다. 멈춘 대기는 없었다.
