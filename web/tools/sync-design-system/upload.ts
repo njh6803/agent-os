@@ -12,8 +12,9 @@
  * 올리기에서 짓기 명령의 `--paths` 가 쓴 목록으로 바꿔 커밋한다(절차 `.claude/skills/sync-design-system/upload.md`).
  * 그 커밋이 병합되기 전에 다른 올리기가 돌면 옛 목록을 주어, 그사이 산출에만 있던 경로가 지워지지 않고 남을 뿐이다.
  * 짓기 명령이 짓지 않는 파일(옮기기가 더한 `migration-map.json`·`assets/notes/`, 화면이 만드는 `manifest.json`, 단독
- * 앱이 만든 `_ds_manifest.json`, 옛 고정폭 글꼴 28 개)은 목록에 없어 계획이 지우지 않는다. 목록을 주지 않은 계획
- * (`previousOutput` 이 null)은 산출이 전체가 아닐 수 있다고 보아 지난 산출에만 있던 경로를 지우지 않는다.
+ * 앱이 만든 `_ds_manifest.json`, 옛 고정폭 글꼴인 IBM Plex Mono 10 개와 JetBrains Mono 18 개)은 목록에 없어 계획이
+ * 지우지 않는다. 목록에 든 `noto-sans-mono-*` 는 지금 글꼴이다. 목록을 주지 않은 계획(`previousOutput` 이 null)은
+ * 산출이 전체가 아닐 수 있다고 보아 지난 산출에만 있던 경로를 지우지 않는다.
  *
  * 앞 기록에 `pending` 이 있으면(멈춘 올리기를 다시 하는 올리기) 확인이 그 경로마다 낸 분류를 받는다. 목표대로 이미
  * 보낸 파일은 로컬이 목표와 같으면 다시 보내지 않고(`landed`), 이미 지워진 경로는 기록에서만 뺀다(`gone`). 이번

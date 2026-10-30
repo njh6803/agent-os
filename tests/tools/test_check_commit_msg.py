@@ -32,10 +32,9 @@ def _git이_기록한_제목(tmp_path: Path, text: str) -> str:
         ["git", "-C", str(repo), "log", "-1", "--format=%s"],
         check=True,
         capture_output=True,
-        text=True,
-        encoding="utf-8",
     )
-    return logged.stdout.rstrip("\n")
+    # 바이트로 받는다. 글로 받으면 제목에 든 `\r` 을 줄바꿈으로 바꾼다.
+    return logged.stdout.decode("utf-8").rstrip("\n")
 
 
 def test_컨벤셔널_제목은_통과한다() -> None:
@@ -86,6 +85,12 @@ def test_제목_줄_뒤에_빈_줄이_없으면_잡는다() -> None:
         "\n\nfeat: 제목\n\n본문\n",
         "feat: 제목   \n본문  \n",
         "feat: 제목\n   \n본문\n",
+        "feat: a" + chr(0x2028) + "b\n\n본문\n",
+        "feat: a\x85b\n\n본문\n",
+        "feat: a\rb\n\n본문\n",
+        "feat: 제목\n" + chr(0xA0) + "\n본문\n",
+        "feat: 제목\n" + chr(0x3000) + "\n본문\n",
+        "feat: 제목\n\x0c\n본문\n",
     ],
 )
 def test_제목은_git_이_기록한_제목과_같다(tmp_path: Path, text: str) -> None:
@@ -124,3 +129,23 @@ def test_CLI_진입점이_나쁜_메시지에_1을_돌려준다(tmp_path: Path) 
     no_gap = run(joined)
     assert no_gap.returncode == 1
     assert "빈 줄" in no_gap.stdout
+
+
+def test_CLI_진입점은_제목에_홀로_든_CR_로_줄을_가르지_않는다(tmp_path: Path) -> None:
+    """git 은 홀로 든 `\\r` 을 줄 끝으로 보지 않는다. 줄바꿈을 바꿔 읽으면 둘째 줄이 생긴다."""
+    text = "feat: a\rb\r\n\r\n본문\r\n"
+    message = tmp_path / "MSG"
+    message.write_bytes(text.encode("utf-8"))
+
+    result = subprocess.run(
+        [sys.executable, str(ROOT / "tools" / "check_commit_msg.py"), str(message)],
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        cwd=ROOT,
+        env={**os.environ, "PYTHONUTF8": "1"},
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stdout
+    assert _git이_기록한_제목(tmp_path, text) == "feat: a\rb"
