@@ -804,6 +804,29 @@ def test_PR_목록의_두_호출은_같은_한도를_준다(
     assert limits == [str(PR_LIMIT), str(PR_LIMIT)]
 
 
+def test_기간_없는_병합_PR_목록은_창보다_오래전에_병합한_PR도_받는다(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # 티켓 창(28일)으로만 받으면 그보다 오래전에 병합한 PR의 워크트리가 남은 수에서 빠진다
+    # (PR #440 봇)
+    seen: list[list[str]] = []
+    old = (
+        '[{"number": 1, "title": "t", "headRefName": "chore/old",'
+        ' "createdAt": "2026-08-01T00:00:00Z", "mergedAt": "2026-08-02T00:00:00Z"}]'
+    )
+
+    def 오래된_PR(args: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
+        seen.append(args)
+        return subprocess.CompletedProcess(args, 0, old, "")
+
+    monkeypatch.setattr(subprocess, "run", 오래된_PR)
+    got = merged_prs(None, tmp_path)
+    merged_prs(date(2026, 10, 19), tmp_path)
+    assert [p.branch for p in got or []] == ["chore/old"]
+    assert "--search" not in seen[0]
+    assert seen[1][seen[1].index("--search") + 1] == "merged:>=2026-10-18"
+
+
 def test_표_부제의_기간은_하루와_여러_날을_날_수로_가른다() -> None:
     assert day_period(date(2026, 10, 19)) == "10-19 하루"
     assert span_period(date(2026, 10, 13), date(2026, 10, 19)) == "10-13 ~ 10-19(7일)"

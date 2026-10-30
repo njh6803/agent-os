@@ -95,8 +95,12 @@ def _gh_pr(j: Json) -> GhPr | None:
     return GhPr(number, json_str(o.get("title")), json_str(o.get("headRefName")), created, merged)
 
 
-def merged_prs(since: date, root: Path) -> list[GhPr] | None:
-    """`since`(UTC 날짜라 하루 앞부터 받는다) 뒤에 병합된 PR."""
+def merged_prs(since: date | None, root: Path) -> list[GhPr] | None:
+    """`since`(UTC 날짜라 하루 앞부터 받는다) 뒤에 병합된 PR. `since`가 None이면 기간 없이
+    `PR_LIMIT`개까지 받는다."""
+    window = (
+        [] if since is None else ["--search", f"merged:>={(since - timedelta(days=1)).isoformat()}"]
+    )
     j = _gh_json(
         [
             "pr",
@@ -105,8 +109,7 @@ def merged_prs(since: date, root: Path) -> list[GhPr] | None:
             "merged",
             "--limit",
             str(PR_LIMIT),
-            "--search",
-            f"merged:>={(since - timedelta(days=1)).isoformat()}",
+            *window,
             "--json",
             "number,title,headRefName,createdAt,mergedAt",
         ],

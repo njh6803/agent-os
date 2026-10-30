@@ -225,3 +225,27 @@ PR 직전 리뷰에 밀 문장에 더할 것(이 반영으로 새로 쓴 사실 
 `Sonnet 5.5 / high`여도 `Opus 5.5 / xhigh`로 넘긴다", 잇는 지시문 괄호의 "`model`의 `claude-opus-5-5`는 모델 메뉴의 이름 `Opus 5.5`로
 바꿔 적는다", "끝:"의 "2의 올리는 기준 … 의 한 단계 위이고, 기준이 꼭대기였으면 꼭대기다", 사다리의 "\"모델\" 줄 끝의 `2의 잇는 지시문` 뒤에
 `막혀 한 단계 올렸다`를 더한다". PR 봇이 다음 층이다.
+
+## PR과 봇 1회차
+
+PR #440(https://github.com/njh6803/agent-os/pull/440)을 헤드 `4931531b`로 열었다. CI 아홉(python, web, verify, e2e, e2e-widget,
+visual, ticket, CodeRabbit, claude-review)이 모두 통과했다(`tools/wait_ci.py` 끝 `모두 통과`). claude-review는 지적이 없었다.
+CodeRabbit 1회차는 Minor 하나를 냈다.
+
+- 고친다(Minor, 유효). `tools/morning_collect.py:2329`의 "병합 PR 조회 기간과 남은 워크트리 판정을 분리하세요". 이 브랜치가 병합 PR
+  조회의 아래 경계를 `min(보고일 - TICKET_DAYS, SWEEP_START_AT)`에서 `보고일 - TICKET_DAYS`로 바꿨고, `_gather_worktrees`가 같은
+  목록으로 병합 여부를 가르므로 28일보다 오래전에 병합한 PR의 워크트리가 남은 수에서 빠진다. 옛 경계도 2026-10-13 전에 병합한
+  PR은 못 봤고, 좁아지는 것은 보고일이 2026-11-10 뒤일 때부터다. PR 직전 `bug-perf-review`는 같은 자리를 오탐으로 닫았다(위 절의
+  "`merged_prs` 창"). 워크트리 판정만 기간 없는 병합 PR(`merged_prs(None, root)`, `PR_LIMIT`개까지)로 하고, 그 조회만 실패하면 창 안의
+  병합 PR로 가른다. 티켓·날·주의 소비자는 그대로 창 목록을 받는다. 시험 `test_기간_없는_병합_PR_목록은_창보다_오래전에_병합한_PR도_받는다`를
+  더했고(고치기 전에는 `None - timedelta`로 끝난다), 모듈 독스트링의 못 보는 것에 `PR_LIMIT`과 그 조회의 실패를 적었다.
+
+확인: `uv run python -m tools.morning_collect --day 2026-10-30`을 스크래치 폴더로 세 번 돌렸다. 첫 회는 기간 없는 조회가 실패해(까닭은
+못 봤다) 워크트리 표의 PR 칸이 `PR (수집 안 됨)`, 남은 워크트리가 0이었다. 둘째 회는 남은 워크트리 6이고, 스크래치 스크립트로
+`gh pr list --state merged`와 `git worktree list`를 대 본 병합된 브랜치 여섯(03, 05, 06, 08, 13-main-run-judge, 030)과 같다(손으로
+봤다). 첫 회 뒤 창 목록으로 되돌아가는 길을 더했고, 셋째 회도 6이다. 같은 스크립트로 한 번씩 잰 시간은 기간 없는 조회 2.6~2.7초,
+창 조회 3.2초다(손으로 봤다). `uv run pytest -q tests/tools/test_morning_collect.py`는 66 passed다.
+
+따로 본 것: `--day 2026-10-31`(아직 진행 중인 오늘)로 돌리자 `_summary_piece`의 `statistics.median(before)`(1151행)가
+`StatisticsError: no median for empty data`로 끝났다. 이 PR이 건드리지 않은 줄이고, 그 기간에 자동 압축의 컨텍스트 기록(`before`)이
+없으면 난다(트레이스백과 코드를 읽었다). 바로 아래 줄의 `headless`도 같은 꼴이다. 이 PR의 범위 밖이라 따로 넘긴다.

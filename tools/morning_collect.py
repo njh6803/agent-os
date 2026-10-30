@@ -83,6 +83,10 @@
   센다.
 - 진행 중인 세션은 워크트리 폴더의 기록 시각으로 가르고, 앱이 아는 세션 상태(돌고 있음, 사람 답
   기다림)는 모른다. 주 체크아웃에서 도는 세션은 세지 않는다.
+- PR이 병합됐는데 남은 워크트리는 기간 없이 받은 병합 PR(`PR_LIMIT`개까지)로 가르므로, 병합 PR이
+  그보다 많아져 gh가 돌려주지 않은 PR의 워크트리는 남은 수에서 빠진다(2026-10-31에 병합 PR은
+  439개였다). 그 조회만 실패하면 창(`TICKET_DAYS`일) 안의 병합 PR로 가르므로, 그보다 오래전에
+  병합한 PR의 워크트리도 빠진다.
 - 열린 PR, 대기열, 워크트리, 프로세스는 모으는 순간의 값이라, 지난 날의 보고를 다시 만들면 오늘
   값이 든다.
 - 클라우드 세션에서 `gh pr list`는 GraphQL이 막혀 실패했고, `gh pr view`는 요청한 필드에 따라
@@ -2372,7 +2376,12 @@ def collect(
         metrics = without_merged(metrics)
         parallel = Part(merged_unknown(parallel.section, parallel.section.lines), parallel.got)
         experiment = Part(merged_unknown(experiment.section), Collected())
-    active, leftover = _gather_worktrees(root, projects, entries, merged_all, opened, now)
+    # 티켓·날·주의 창(`TICKET_DAYS`일)보다 오래전에 병합한 PR의 워크트리도 남은 수에 들게, 워크트리
+    # 판정은 기간 없는 병합 PR로 한다. 그 조회만 실패하면 창 안의 병합 PR로 가른다
+    every = merged_prs(None, root)
+    active, leftover = _gather_worktrees(
+        root, projects, entries, merged_all if every is None else every, opened, now
+    )
     journal_path, journal = latest_journal(root)
     hooks = gather_hooks(root, projects, day)
     runs = ci_runs(root) if isinstance(hooks, HookScan) else None  # 훅 표가 없는 절은 CI 줄도 없다
