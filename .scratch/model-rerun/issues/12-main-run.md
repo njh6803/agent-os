@@ -2,7 +2,7 @@
 
 **What to build:** 티켓 11(`.scratch/model-rerun/issues/11-pilot-and-prereg.md`)이 고정한 사전 등록대로 본 측정(과제 8개, 다섯 갈래, 상한 $1,600)을 돌고 판정한다. 본 측정 첫 회차 전에, 예산 멈춤과 판정이 읽는 비용에 드는 러너의 갈래를 시험으로 고정해 병합한다. 그 PR 이 병합된 main 의 체크아웃에서 러너를 띄우고, 끝나면 `rerun_judge`로 판정해 일지와 `docs/model-selection.md`에 적는다. 칸을 바꿀 판정이면 ADR 0029 이력 초안을 써서 사람의 승인을 받는다.
 
-근거는 일지 `docs/journal/2026-10-28-10-pilot-and-prereg.md`의 "사전 등록 절과 해시"(본 측정 지시문 재료)와 "다음", 티켓 11, `docs/model-selection.md` 4절 "준비 중인 다시 풀기"다. 기능 model-rerun 의 티켓 11 이 병합된 뒤 그 일을 잇는 티켓이라 같은 디렉터리의 다음 번호다(`docs/agents/issue-tracker.md`).
+근거는 일지 `docs/journal/2026-10-28-10-pilot-and-prereg.md`의 "사전 등록 절과 해시"(본 측정 지시문 재료)와 "다음", 티켓 11, `docs/model-selection.md` 4절 "다시 풀기"다. 기능 model-rerun 의 티켓 11 이 병합된 뒤 그 일을 잇는 티켓이라 같은 디렉터리의 다음 번호다(`docs/agents/issue-tracker.md`).
 
 **Blocked by:** 없음(11 은 done)
 
