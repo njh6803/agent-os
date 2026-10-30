@@ -23,8 +23,6 @@ from typing import IO, Literal
 import pytest
 from tools.hook_prompt_directive import block_reason_for
 
-from tools import model_sweep
-
 SCRIPT = Path(__file__).parents[2] / "tools" / "open_session.ps1"
 
 # 사례를 나르는 pwsh 서버. 스크립트의 AST 를 한 번 파싱하고, 요청마다 새 runspace 에서 이름으로 고른
@@ -736,6 +734,7 @@ def test_읽을_수_없는_모델_줄이면_까닭과_함께_쏘기_전에_멈�
 
 
 _NEXT_SESSION = Path(__file__).parents[2] / ".claude" / "skills" / "next-session" / "SKILL.md"
+_DIRECTIVE = _NEXT_SESSION.with_name("directive.md")
 
 _MODEL_LINES = """
 foreach ($prompt in $given.prompts) {
@@ -779,20 +778,32 @@ def test_이_저장소의_결정표_모델_칸은_스크립트가_읽는다() ->
     assert [line.rsplit("|", 1)[0].replace("|", " / ") for line in read] == cells
 
 
-def test_레벨_스윕의_갈래_값은_스크립트가_읽는다() -> None:
-    # next-session 의 directive.md 가 결정표 칸 대신 tools/model_sweep.py 의 값을 모델 줄에
-    # 옮긴다(ADR 0029 이력).
-    arms = list(model_sweep.ARMS)
+def _ladder_values() -> list[str]:
+    """next-session `directive.md` 2의 사다리 문장에서 백틱으로 감싼 값(`<모델> / <레벨>`)을
+    뽑는다."""
+    line = next(
+        (ln for ln in _DIRECTIVE.read_text(encoding="utf-8").splitlines() if "**사다리.**" in ln),
+        "",
+    )
+    assert line, f"{_DIRECTIVE} 에서 사다리 항목을 찾지 못했다. 항목 이름이 바뀌었나"
+    return list(dict.fromkeys(re.findall(r"`([^`]+ / [a-z]+)`", line)))
+
+
+def test_사다리로_올린_값은_스크립트가_읽는다() -> None:
+    # 막혀 넘기는 세션은 결정표 칸 대신 directive.md 2의 사다리에서 한 단계 올린 값을 모델 줄에
+    # 옮기고 줄 끝에 그 까닭을 적는다(ADR 0029 이력 2026-10-31).
+    ladder = _ladder_values()
+    assert len(ladder) == 4, f"사다리의 값이 넷이 아니다: {ladder}"
 
     completed = _call(
         "Get-EffortSteps,Read-ModelLine",
         _MODEL_LINES,
-        {"prompts": [f"모델: {arm}. 레벨 스윕의 갈래" for arm in arms]},
+        {"prompts": [f"모델: {value}. 막혀 한 단계 올렸다" for value in ladder]},
     )
 
     assert completed.returncode == 0, completed.stderr
     read = completed.stdout.strip().splitlines()
-    assert [line.rsplit("|", 1)[0].replace("|", " / ") for line in read] == arms
+    assert [line.rsplit("|", 1)[0].replace("|", " / ") for line in read] == ladder
 
 
 # 입력창의 `모델:` 버튼 하나가 모델과 노력을 함께 보인다(앱 2.37337.1.0, 한국어). 이름은 `최대`

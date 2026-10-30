@@ -24,12 +24,10 @@ from tools.hook_report import (
     Firing,
     main_checkout_folder,
 )
-from tools.model_sweep_judge import END_AT, JUDGE_AT, SWEEP_START_AT
 from tools.morning_collect import (
     Collected,
     HookRow,
     HookScan,
-    OffBranch,
     Sources,
     TicketRow,
     Timing,
@@ -39,7 +37,6 @@ from tools.morning_collect import (
     ago_text,
     branch_rows,
     bucket_of,
-    combo_costs,
     command_rows,
     concurrency_buckets,
     cost_by_concurrency,
@@ -63,7 +60,6 @@ from tools.morning_collect import (
     merged_got,
     merged_unknown,
     money_unit,
-    off_cells,
     over_cap,
     queue_part,
     queue_whats,
@@ -75,12 +71,10 @@ from tools.morning_collect import (
     size_groups,
     span_period,
     start_rows,
-    sweep_kind,
     ticket_cells,
     ticket_start,
     timing,
     tool_timings,
-    top_combo,
     without_merged,
     work_of,
     worktree_pr,
@@ -448,31 +442,6 @@ def test_티켓마다_수락_조건과_비용과_인계를_수락_조건_차례�
     ]
 
 
-def test_배정과_다르게_돈_브랜치를_모두_최근_순으로_배정대로_돈_몫과_함께_적는다() -> None:
-    # 첫 판은 최근 셋만 줄에 적어 나머지가 빠졌고, 옛 판이 재던 두 몫도 없었다
-    off = [
-        OffBranch(247, "하네스", "Opus 5.5 / xhigh", "sonnet-5-5 / high", 0.2, 0.7),
-        OffBranch(256, "하네스", "Opus 5.5 / medium", "Opus 5.5 / xhigh", 0.0, 1.0),
-    ]
-    assert off_cells(off) == [
-        ("#256", "{{name:256}}", "하네스", "Opus 5.5 / medium", "0%", "Opus 5.5 / xhigh", "100%"),
-        ("#247", "{{name:247}}", "하네스", "Opus 5.5 / xhigh", "20%", "sonnet-5-5 / high", "70%"),
-    ]
-
-
-def test_본_세션_비용을_모델과_노력의_조합마다_더한다() -> None:
-    mains = [
-        호출("2026-10-19T01:00:00Z", effort="medium"),
-        호출("2026-10-19T01:01:00Z", effort="medium"),
-        호출("2026-10-19T01:02:00Z", model="claude-sonnet-5-5", effort=None),
-    ]
-    costs = combo_costs(mains)
-    assert sorted(costs) == ["claude-opus-5-5/medium", "claude-sonnet-5-5/-"]
-    one = mains[0].cost()
-    assert one is not None
-    assert costs["claude-opus-5-5/medium"] == one * 2
-
-
 def 작업(n: int, kind: str, cost: float, after: float = 0.5) -> Work:
     return Work(n, kind, cost, active_h=1.0, lead_h=2.0, sessions=n, handoffs=0, after=after)
 
@@ -598,32 +567,8 @@ def test_읽은_파일의_보이는_경로는_대소문자를_살린다() -> Non
     assert shown_path("C:/다른/곳.md", "엉뚱한/열쇠.md") == "엉뚱한/열쇠.md"
 
 
-def test_브랜치가_돈_모델과_노력은_메인_세션_비용이_가장_큰_것이다() -> None:
-    # 판정 도구가 읽는 `top_model_effort`처럼 호출 수가 아니라 비용으로 고르고, 노력이 없으면 `-`다
-    mains = [
-        호출("2026-10-19T01:00:00Z", effort="medium"),
-        호출("2026-10-19T01:01:00Z", effort="medium"),
-        호출("2026-10-19T01:02:00Z", effort="xhigh", output=3_000),
-    ]
-    assert top_combo(mains) == "claude-opus-5-5/xhigh"
-    assert top_combo([호출("2026-10-19T01:00:00Z", effort=None)]) == "claude-opus-5-5/-"
-    assert top_combo([]) is None
-
-
 def PR(branch: str, created: datetime, merged: datetime) -> GhPr:
     return GhPr(1, "제목", branch, created, merged)
-
-
-def test_스윕의_모집단은_기간_안에_병합된_스윕_종류의_PR이고_앞서_연_PR도_남긴다() -> None:
-    # 판정 도구의 `split_arms`는 스윕 시작 전에 연 PR에 표지만 달고 모집단에 남긴다
-    start, judge, end = SWEEP_START_AT, JUDGE_AT, END_AT
-    day = timedelta(days=1)
-    assert sweep_kind(PR("feature/01-a", start - day, start + day)) == "구현"
-    assert sweep_kind(PR("chore/a", start + day, start + 2 * day)) == "하네스"
-    assert sweep_kind(PR("chore/a", start - 2 * day, start - day)) is None
-    assert sweep_kind(PR("chore/a", start, judge)) is None
-    assert sweep_kind(PR("fix/a", start, start + day)) is None
-    assert sweep_kind(PR("chore/a", end, end + day)) is None
 
 
 def test_워크트리의_PR은_열림_병합_없음이고_PR을_읽지_못했으면_모름이다() -> None:
@@ -857,6 +802,29 @@ def test_PR_목록의_두_호출은_같은_한도를_준다(
     merged_prs(date(2026, 10, 19), tmp_path)
     limits = [a[a.index("--limit") + 1] if "--limit" in a else None for a in seen]
     assert limits == [str(PR_LIMIT), str(PR_LIMIT)]
+
+
+def test_기간_없는_병합_PR_목록은_창보다_오래전에_병합한_PR도_받는다(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # 티켓 창(28일)으로만 받으면 그보다 오래전에 병합한 PR의 워크트리가 남은 수에서 빠진다
+    # (PR #440 봇)
+    seen: list[list[str]] = []
+    old = (
+        '[{"number": 1, "title": "t", "headRefName": "chore/old",'
+        ' "createdAt": "2026-08-01T00:00:00Z", "mergedAt": "2026-08-02T00:00:00Z"}]'
+    )
+
+    def 오래된_PR(args: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
+        seen.append(args)
+        return subprocess.CompletedProcess(args, 0, old, "")
+
+    monkeypatch.setattr(subprocess, "run", 오래된_PR)
+    got = merged_prs(None, tmp_path)
+    merged_prs(date(2026, 10, 19), tmp_path)
+    assert [p.branch for p in got or []] == ["chore/old"]
+    assert "--search" not in seen[0]
+    assert seen[1][seen[1].index("--search") + 1] == "merged:>=2026-10-18"
 
 
 def test_표_부제의_기간은_하루와_여러_날을_날_수로_가른다() -> None:

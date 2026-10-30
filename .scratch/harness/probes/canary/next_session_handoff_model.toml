@@ -1,0 +1,32 @@
+# next-session `handoff.md` 인계 줄의 "모델" 항목(ADR 0029 이력 2026-10-31, harness 031)이 새 세션에 실리는지. 그 항목은
+# `directive.md` 2의 잇는 지시문을 가리키고 막혔을 때만 사다리로 올린다. 옛 항목(스윕 갈래, 열린 PR 유무, Fable 갈래)을
+# 기대하던 `next_session_handoff_fable.toml`의 그 자리를 잇는다. 물음은 그 명세의 것을 그대로 썼다.
+# 실험군은 이 워크트리, 대조군은 스윕 도구를 지우기 전 커밋 `f01ce1e9`이다.
+# 최신 결과: 통과 4, "없음" 섞임 0(2026-10-31, 이 PC, claude 2.1.312, 실험군은 이 워크트리의 커밋하지 않은 본문(러너가 찍은
+#   커밋은 `f01ce1e9`), 대조군 `--control-commit f01ce1e9`, 일지 2026-10-31-03).
+# 돌리는 법: 워크트리 `.claude/worktrees/<이름>/` 루트에서
+#   uv run python tools/canary.py --control-commit f01ce1e9 .scratch/harness/probes/canary/next_session_handoff_model.toml <출력 디렉터리>
+kind = "skill"
+question = '''
+next-session 스킬을 Skill 도구로 불러 본문을 읽어라. 스킬이 시키는 일은 하지 않는다.
+본문이 상황마다 Read로 열라고 가리키는 하위 파일 가운데 단계 경계에서 인계 계기를 받은 세션이 여는 파일 하나를
+Read로 열고, 아래를 그 파일에서만 찾는다. 스킬 본문(SKILL.md)에 든 글은 옮기지 않는다.
+본문이 그런 하위 파일을 가리키지 않거나 그 파일에 없으면 "없음"이라고만 답하라.
+그 파일의 "인계 줄" 절에서 "모델" 항목의 글을 그대로 옮겨라.
+'''
+expect = [
+  "위 \"다음 단계\"의 값으로 `directive.md` 2의 잇는 지시문",
+  "이 세션이 막혔을 때만 사다리로 올린다",
+]
+source = ".claude/skills/next-session/handoff.md"
+skill = "next-session"
+skill_body = "files"
+
+[[arm]]
+name = "워크트리"
+role = "experiment"
+
+[[arm]]
+name = "주-체크아웃"
+role = "control"
+checkout = "../../.."

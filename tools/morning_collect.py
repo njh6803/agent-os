@@ -11,8 +11,8 @@
 `morning_report.latest_checks`)다. 이 도구가 부르는 gh·git·tasklist는
 `morning_sources`에 있고, 다른 도구를 불러 쓰는 읽기는 그 도구의 명령을 그대로 쓴다(훅의 들인 날과
 주 체크아웃을 찾는 git은 `hook_report`의 것이라 시간 제한과 실패 갈래도 그 도구의 것이다).
-비용·장부·명령 이름은 `token_report`, 훅의 발동은 `hook_report`, 대기열 행은 `queue_open_rows`, 레벨
-스윕의 기간·갈래·표본 수는 `model_sweep`·`model_sweep_judge`를 그대로 불러 쓴다.
+비용·장부·명령 이름은 `token_report`, 훅의 발동은 `hook_report`, 대기열 행은 `queue_open_rows`를
+그대로 불러 쓴다.
 
 짜임. 읽기와 짓기를 가른다. 파일과 명령을 읽는 것은 `main`(앞 날의 메모), `collect`, 그리고 그
 둘이 부르는 읽기 함수다. 읽기 함수의 예는 `morning_sources`, `token_report`·`hook_report`의 읽기,
@@ -57,10 +57,6 @@
   됨`이다.
   표에는 `유지`가 아닌 훅만 적고 `유지`인 훅은 수를 줄로 적는다. `아직 이르다`가 표에 있는 날은 그
   까닭을 한 줄로 푼다(`hook_legend`).
-- 레벨 스윕: 갈래마다 병합 수와, 본 세션 비용이 가장 큰 모델·레벨이 배정과 같은 브랜치의 몫. 세는
-  PR은 `sweep_kind`, 고르는 모델·레벨은 `top_combo`가 정하고 문턱은 판정 도구의 `TOP_SHARE_MIN`이다.
-  배정과 다르게 돈 브랜치는 배정대로 든 비용 몫과 최대 조합의 몫(`combo_costs`)과 함께 모두 표로
-  적는다(`off_cells`).
 - 티켓 분할: 인계 훅(`HANDOFF_HOOK`)이 들어온 날부터(`TICKET_DAYS`일을 넘지 않게) 병합된 티켓 PR을
   수락 조건 수로 셋으로 나눈 비용·활동·인계의 중앙값과, 티켓마다의 수락 조건·글자 수·비용·활동·
   세션·인계(`ticket_cells`). ADR 0033은 세션 컨텍스트가 20만을 넘은 뒤의 단계 경계에서 인계하므로,
@@ -81,14 +77,16 @@
   JSON에 남기지 않는다(원칙 V, `.claude/rules/tools.md`의 허용 목록 항목).
 - 리뷰 왕복은 커밋 수라, 한 번의 반영을 커밋 여럿으로 나누면 크게 센다. main을 합친 커밋은 머리줄이
   `Merge `로 시작하는 것으로 가르므로, 다른 머리줄로 합치면 센다.
-- 스윕은 지시문의 `모델:` 줄 표지(`레벨 스윕`)를 보지 않아 판정의 모집단보다 넓을 수 있고, 첫 사람
-  트리거 대신 PR을 연 시각으로 끝을 가려 끝 무렵에는 좁을 수 있다(`sweep_kind`).
 - 인계 훅이 들어온 날은 HEAD에서 그 파일을 더한 커밋의 날짜(`%cs`,
   `hook_report.introduced_dates`)이고, 이 저장소는 squash 병합이라 main에서는 병합한 날이다. 티켓
   파일 이름이 브랜치와 다르면 티켓 없음으로 세고, 수락 조건을 체크 상자로 적지 않은 티켓은 0개로
   센다.
 - 진행 중인 세션은 워크트리 폴더의 기록 시각으로 가르고, 앱이 아는 세션 상태(돌고 있음, 사람 답
   기다림)는 모른다. 주 체크아웃에서 도는 세션은 세지 않는다.
+- PR이 병합됐는데 남은 워크트리는 기간 없이 받은 병합 PR(`PR_LIMIT`개까지)로 가르므로, 병합 PR이
+  그보다 많아져 gh가 돌려주지 않은 PR의 워크트리는 남은 수에서 빠진다(2026-10-31에 병합 PR은
+  439개였다). 그 조회만 실패하면 창(`TICKET_DAYS`일) 안의 병합 PR로 가르므로, 그보다 오래전에
+  병합한 PR의 워크트리도 빠진다.
 - 열린 PR, 대기열, 워크트리, 프로세스는 모으는 순간의 값이라, 지난 날의 보고를 다시 만들면 오늘
   값이 든다.
 - 클라우드 세션에서 `gh pr list`는 GraphQL이 막혀 실패했고, `gh pr view`는 요청한 필드에 따라
@@ -159,7 +157,7 @@ from tools.morning_sources import (
 )
 from tools.token_report import Call, Json
 
-from tools import hook_report, model_sweep, model_sweep_judge, queue_open_rows, token_report
+from tools import hook_report, queue_open_rows, token_report
 
 SPAN_GAP_MIN = 5
 WAIT_CAP_S = 630
@@ -604,68 +602,6 @@ def ticket_cells(rows: Sequence[TicketRow]) -> list[tuple[str, ...]]:
         )
         for r in found
     ]
-
-
-@dataclass(frozen=True)
-class OffBranch:
-    """배정과 다르게 돈 브랜치. `assigned_share`는 본 세션 비용 가운데 배정된 모델·노력으로 든 몫,
-    `top_share`는 비용이 가장 큰 조합(`top`)의 몫이다. 옛 `model_ticket_stats`는 같은 두 몫을 호출
-    수로 쟀고, 이 도구는 판정 도구처럼 비용으로 잰다."""
-
-    number: int
-    kind: str
-    arm: str
-    top: str
-    assigned_share: float
-    top_share: float
-
-
-def off_cells(off: Sequence[OffBranch]) -> list[tuple[str, ...]]:
-    """배정과 다르게 돈 브랜치를 최근 PR부터 모두 적는다."""
-    return [
-        (
-            f"#{o.number}",
-            f"{{{{name:{o.number}}}}}",
-            o.kind,
-            o.arm,
-            f"{o.assigned_share:.0%}",
-            o.top,
-            f"{o.top_share:.0%}",
-        )
-        for o in sorted(off, key=lambda o: -o.number)
-    ]
-
-
-def combo_costs(mains: Iterable[Call]) -> dict[str, float]:
-    """메인 세션 호출의 비용을 `모델/노력`(노력이 없으면 `-`)마다 더한다."""
-    cost: dict[str, float] = defaultdict(float)
-    for c in mains:
-        cost[f"{c.model}/{c.effort or '-'}"] += c.cost() or 0.0
-    return dict(cost)
-
-
-def top_combo(mains: Sequence[Call]) -> str | None:
-    """메인 세션 비용이 가장 큰 `모델/노력`(`combo_costs`의 열쇠). `model_sweep_judge.ARM_RECORD`의
-    값과 견준다. 판정 도구가 읽는 프로브(`.scratch/harness/probes/session_cost/collect.py`)의
-    `top_model_effort`와 모양은 같지만, 비용은 토큰 장부에서 오고(그 프로브는 제 집계다) 동률이면
-    이름 차례로 고른다(그 프로브는 먼저 센 쪽이다). 그래서 판정과 갈릴 수 있다."""
-    cost = combo_costs(mains)
-    if not cost:
-        return None
-    return min(cost, key=lambda k: (-cost[k], k))
-
-
-def sweep_kind(p: GhPr) -> str | None:
-    """레벨 스윕이 세는 PR이면 그 종류(`구현`·`하네스`), 아니면 None. 판정 도구(`split_arms`,
-    `merged_in_time`)를 따라 판정일 전에 병합된 PR이고, 스윕 시작 전에 연 PR도 센다(판정 도구는
-    그 PR에 탐색 표지만 단다). 판정 도구는 표지가 든 지시문으로 거르고 병합의 아래 경계를 두지
-    않는데, 이 도구는 표지를 보지 않아 스윕 시작을 병합의 아래 경계로 둔다. 첫 사람 트리거가 스윕
-    끝 전이어야 하는 조건은 PR을 연 시각으로 대신한다."""
-    judge = model_sweep_judge
-    kind = model_sweep.kind(p.branch)
-    if kind is None or p.merged is None or not judge.SWEEP_START_AT <= p.merged < judge.JUDGE_AT:
-        return None
-    return kind if p.created < judge.END_AT else None
 
 
 def worktree_pr(
@@ -2003,125 +1939,11 @@ def _yesterday_section(
     return Part(section, got)
 
 
-def _sweep_piece(
-    merged: Sequence[GhPr], by_branch: Mapping[str, Sequence[Call]], day: date
-) -> tuple[Piece, int]:
-    """레벨 스윕의 표(갈래마다 병합 수와 배정대로 돈 몫, 배정과 다르게 돈 브랜치)와 기간 줄, 그리고
-    배정과 다르게 돈 브랜치 수."""
-    got = Collected()
-    judge = model_sweep_judge
-    arm_of = {v: k for k, v in judge.ARM_RECORD.items()}
-    counts: Counter[tuple[str, str]] = Counter()
-    matched: Counter[tuple[str, str]] = Counter()
-    measured: Counter[tuple[str, str]] = Counter()
-    early = 0
-    off: list[OffBranch] = []
-    for p in merged:
-        kind = sweep_kind(p)
-        if kind is None:
-            continue
-        if p.created < judge.SWEEP_START_AT:
-            early += 1
-        arm = model_sweep.arm(p.branch)
-        counts[(kind, arm)] += 1
-        mains = [c for c in by_branch.get(p.branch, []) if c.agent is None]
-        combo = top_combo(mains)
-        if combo is None:
-            continue
-        measured[(kind, arm)] += 1
-        if combo == judge.ARM_RECORD[arm]:
-            matched[(kind, arm)] += 1
-        else:
-            costs = combo_costs(mains)
-            total = sum(costs.values())
-            off.append(
-                OffBranch(
-                    p.number,
-                    kind,
-                    arm,
-                    arm_of.get(combo, combo.removeprefix("claude-").replace("/", " / ")),
-                    costs.get(judge.ARM_RECORD[arm], 0.0) / total if total else 0.0,
-                    costs[combo] / total if total else 0.0,
-                )
-            )
-    sweep_rows: list[tuple[str, ...]] = []
-    for kind in ("구현", "하네스"):
-        for arm in model_sweep.ARMS:
-            n = measured[(kind, arm)]
-            share = matched[(kind, arm)] / n if n else None
-            met = "-" if share is None else "충족" if share >= judge.TOP_SHARE_MIN else "미달"
-            sweep_rows.append(
-                (
-                    kind,
-                    arm,
-                    f"{counts[(kind, arm)]} / {judge.N_K[kind]}",
-                    f"{share:.0%} ({matched[(kind, arm)]}/{n})" if share is not None else "-",
-                    met,
-                )
-            )
-            got.value(
-                f"sweep:{kind}:{arm}:merged", f"스윕 {kind} {arm} 병합", counts[(kind, arm)], "개"
-            )
-            got.value(f"sweep:{kind}:{arm}:share", f"스윕 {kind} {arm} 배정대로 돈 몫", share, "")
-    end = judge.END_AT.date()
-    left = max((end - day).days - 1, 0)
-    lines = [
-        f"- 기간 {judge.SWEEP_START_AT.date()} ~ {end - timedelta(days=1)}(남은 날 {left}일)이고,"
-        f" 판정은 {judge.JUDGE_AT.date()} 뒤 한 번이라 그 전에는 두 갈래의 비용을 견주지 않는다."
-        f" 병합 수에는 스윕 시작 전에 연 PR {early}개가 들었고(판정 도구는 탐색 표지만 단다),"
-        " 지시문의 `모델:` 줄 표지를 보지 않아 판정의 모집단과 다를 수 있다.",
-    ]
-    got.refs.update(o.number for o in off)
-    period = span_period(judge.SWEEP_START_AT.date(), day)
-    tables = [
-        Table(
-            "experiment.sweep",
-            "experiment",
-            "모델 실험이 계획대로 도나?",
-            period,
-            "개·몫",
-            (
-                "종류",
-                "갈래",
-                "병합 / 목표(개)",
-                "정해진 모델로 돈 작업의 비율",
-                f"판정에 쓸 수 있나({judge.TOP_SHARE_MIN:.0%} 이상)",
-            ),
-            "llrrl",
-            tuple(sweep_rows),
-        ),
-    ]
-    if off:
-        head = (
-            "PR",
-            "작업 이름",
-            "종류",
-            "정해진 모델",
-            "정해진 모델의 비용 몫",
-            "가장 많이 쓴 모델(세션 비용)",
-            "가장 많이 쓴 모델의 비용 몫",
-        )
-        tables.append(
-            Table(
-                "experiment.off",
-                "experiment",
-                "정해진 모델과 다르게 돈 작업은?",
-                period,
-                "몫",
-                head,
-                "llllrlr",
-                tuple(off_cells(off)),
-            )
-        )
-    return Piece(tuple(tables), tuple(lines), got), len(off)
-
-
 def _ticket_piece(
-    rows: Sequence[TicketRow], handoff_from: date | None, first: date, off: int, day: date
+    rows: Sequence[TicketRow], handoff_from: date | None, first: date, day: date
 ) -> Piece:
     """티켓 분할의 표(수락 조건 수로 나눈 무리마다 비용·활동·인계, 티켓마다의 행)와, 창과 인계가 난
-    티켓 수 줄과 티켓 파일을 찾지 못한 PR 줄. `first`는 티켓 창의 첫날(`ticket_start`)이고, `off`는
-    배정과 다르게 돈 브랜치 수(`_sweep_piece`)라 그 줄에 함께 적는다."""
+    티켓 수 줄과 티켓 파일을 찾지 못한 PR 줄. `first`는 티켓 창의 첫날(`ticket_start`)이다."""
     got = Collected()
     size_rows: list[tuple[str, ...]] = []
     for name, g in size_groups(rows):
@@ -2154,7 +1976,7 @@ def _ticket_piece(
     got.refs.update(r.number for r in found)
     lines = [
         f"- 티켓은 {since}부터 병합된 {len(found)}개이고, 인계가 난 티켓(한 세션에 들지 않은"
-        f" 티켓)은 {len(handed)}개다. 배정과 다르게 돈 브랜치는 {off}개다.",
+        f" 티켓)은 {len(handed)}개다.",
     ]
     if found:
         got.value("tickets:handoff_share", "인계가 난 티켓 몫", len(handed) / len(found) * 100, "%")
@@ -2211,20 +2033,11 @@ def _ticket_piece(
     return Piece(tuple(tables), tuple(lines), got)
 
 
-def _model_section(sweep: Piece, tickets: Piece, src: Sources) -> Part:
-    """실험 보고로 가는 절. 레벨 스윕 조각과 티켓 분할 조각을 한 절로 잇는다."""
-    got = Collected()
-    got.add(sweep.got)
-    got.add(tickets.got)
-    source = (
-        f"{src.ledger}, `gh pr list`, `origin/main:.scratch/*/issues/*.md`,"
-        " `tools/model_sweep_judge.py`의 기간·표본 수·문턱(배정된 모델·레벨이 본 세션 비용 최대인"
-        " 브랜치의 몫)"
-    )
-    tables = (*sweep.tables, *tickets.tables)
-    lines = (*sweep.lines, *tickets.lines)
-    section = Section(7, "모델 선택과 티켓 분할", "experiment", tables, lines, source)
-    return Part(section, got)
+def _ticket_section(tickets: Piece, src: Sources) -> Part:
+    """실험 보고로 가는 절. 티켓 분할 조각 하나로 짓는다."""
+    source = f"{src.ledger}, `gh pr list`, `origin/main:.scratch/*/issues/*.md`"
+    section = Section(7, "티켓 분할", "experiment", tickets.tables, tickets.lines, source)
+    return Part(section, tickets.got)
 
 
 def merged_unknown(s: Section, kept: Sequence[str] = ()) -> Section:
@@ -2517,9 +2330,7 @@ def collect(
     daybook = token_report.daybook_of(book, tz, series[0], repo)
     periods = [token_report.period_of([d], daybook) for d in series]
 
-    merged_all = merged_prs(
-        min(day - timedelta(days=TICKET_DAYS), model_sweep_judge.SWEEP_START_AT.date()), root
-    )
+    merged_all = merged_prs(day - timedelta(days=TICKET_DAYS), root)
     merged = merged_all or []
     merged_times = [p.merged for p in merged if p.merged is not None]
     rows = day_rows(calls, merged_times, series, tz, ledger.human)
@@ -2559,14 +2370,18 @@ def collect(
     opened = open_prs(root)
     handoff_from = _handoff_from(root)
     first = ticket_start(day, handoff_from)
-    sweep, off = _sweep_piece(merged, by_branch, day)
     tickets = gather_tickets(root, merged, by_branch, handoff, first, day, tz)
-    model = _model_section(sweep, _ticket_piece(tickets, handoff_from, first, off, day), src)
+    experiment = _ticket_section(_ticket_piece(tickets, handoff_from, first, day), src)
     if merged_all is None:
         metrics = without_merged(metrics)
         parallel = Part(merged_unknown(parallel.section, parallel.section.lines), parallel.got)
-        model = Part(merged_unknown(model.section), Collected())
-    active, leftover = _gather_worktrees(root, projects, entries, merged_all, opened, now)
+        experiment = Part(merged_unknown(experiment.section), Collected())
+    # 티켓·날·주의 창(`TICKET_DAYS`일)보다 오래전에 병합한 PR의 워크트리도 남은 수에 들게, 워크트리
+    # 판정은 기간 없는 병합 PR로 한다. 그 조회만 실패하면 창 안의 병합 PR로 가른다
+    every = merged_prs(None, root)
+    active, leftover = _gather_worktrees(
+        root, projects, entries, merged_all if every is None else every, opened, now
+    )
     journal_path, journal = latest_journal(root)
     hooks = gather_hooks(root, projects, day)
     runs = ci_runs(root) if isinstance(hooks, HookScan) else None  # 훅 표가 없는 절은 CI 줄도 없다
@@ -2589,7 +2404,7 @@ def collect(
         _yesterday_section(
             day, merged_all, opened, active, leftover, now, tz, journal_path, snapshot
         ),
-        model,
+        experiment,
     ]
     got = merged_got([_metric_got(metrics), *(p.got for p in parts)])
     work_refs, subjects = gather_works(got.works, merged_all, opened, root)
