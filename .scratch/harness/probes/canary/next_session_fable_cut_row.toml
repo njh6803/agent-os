@@ -1,0 +1,23 @@
+# next-session 결정표의 끊는 줄이 설계·명세 세션이면 `Fable 5.1 / xhigh`를 따르게 한 것(ADR 0029 이력 2026-10-31)이 새 세션에 실리는지.
+# 실험군은 이 워크트리, 대조군은 주 체크아웃이다. 주 체크아웃의 옛 판은 끊는 줄에 Fable 갈래가 없어 카나리아가 없다.
+# 최신 결과: 통과 4(2026-10-31, 이 PC, claude 2.1.312, 대조군 커밋 c18619bb, 일지 2026-10-31-01).
+# 돌리는 법: 워크트리 `.claude/worktrees/<이름>/` 루트에서
+#   uv run python tools/canary.py .scratch/harness/probes/canary/next_session_fable_cut_row.toml <출력 디렉터리>
+kind = "skill"
+question = '''
+next-session 스킬을 Skill 도구로 불러 본문을 읽어라. 스킬이 시키는 일은 하지 않고 본문만 읽는다.
+그 본문의 다음 작업 결정표에서 "작업을 마치지 못한 채 끊는다" 행의 맨 끝 칸을 글자 그대로 옮겨라.
+본문에 그런 것이 없으면 "없음"이라고만 답하라.
+'''
+expect = ["설계 인터뷰나 명세면 `Fable 5.1 / xhigh`"]
+source = ".claude/skills/next-session/SKILL.md"
+skill = "next-session"
+
+[[arm]]
+name = "워크트리"
+role = "experiment"
+
+[[arm]]
+name = "주-체크아웃"
+role = "control"
+checkout = "../../.."
