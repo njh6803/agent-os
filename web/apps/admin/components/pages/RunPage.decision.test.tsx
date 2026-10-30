@@ -1,6 +1,7 @@
-// 결정. 운영자가 채널 토큰을 넣으면 멈춘 실행에 결정 자리가 서고, 허가나 거부를 보내면 재개된 실행의 이벤트가 받는
-// 대로 붙는다(web-admin 티켓 08). 결정의 자리는 화면이 트레이스 상세에서 읽은 인덱스다(ADR 0019 이력). 최종 사용자의
-// 실행에는 자리 대신 그 이유 한 줄이 선다(end-user-channel 티켓 05).
+// 결정. 운영자가 채널 토큰을 넣으면 멈춘 실행에 결정 자리가 서고, 승인이나 거부를 보내면 재개된 실행의 이벤트가 받는
+// 대로 붙는다(web-admin 티켓 08). 결정의 자리는 화면이 트레이스 상세에서 읽은 인덱스다(ADR 0019 이력). 결정 칸에는
+// 셋 가운데 하나가 선다(admin-style 티켓 08). 최종 사용자의 실행이면 채널 토큰과 상관없이 결정은 그 사람만 낸다는 한
+// 줄(end-user-channel 티켓 05), 채널 토큰이 없으면 설정에서 넣으라는 한 줄과 "설정 열기", 그 밖에는 결정 자리다.
 //
 // 주 이음매다. 페이지를 jsdom 에 그리고 HTTP 만 MSW 가 받는다. 재개 스트림은 `ReadableStream` 으로 프레임을 시간
 // 간격을 두고 낸다(testing/stream.ts). 결정 요청에는 채널 토큰만, 관리 요청에는 관리 토큰만 실리는 것을 핸들러가
@@ -28,6 +29,8 @@ const ADMIN = "adm-4Kd8-decision-page-token";
 const CHANNEL = "chn-2Pw6-decision-page-token";
 const RUN = "r-gated";
 const TS = "2026-09-30T10:00:00+00:00";
+/** 이벤트 칸의 이름. 제목이 "이벤트 <개수>"다. */
+const EVENTS = /^이벤트 \d+$/;
 
 const STARTED: RunEvent = {
   type: "run_started",
@@ -187,7 +190,7 @@ async function openRun(): Promise<UserEvent> {
   const user = userEvent.setup();
   renderPage(<RunPage runId={RUN} />);
   await enterAdminToken(user, ADMIN);
-  await screen.findByRole("region", { name: "이벤트" });
+  await screen.findByRole("region", { name: EVENTS });
   return user;
 }
 
@@ -204,7 +207,7 @@ function place(): HTMLElement {
 }
 
 function events(): HTMLElement {
-  return screen.getByRole("region", { name: "이벤트" });
+  return screen.getByRole("region", { name: EVENTS });
 }
 
 function button(name: string): HTMLButtonElement {
@@ -225,11 +228,30 @@ function reason(): HTMLElement {
   return screen.getByRole("textbox", { name: "거부 사유" });
 }
 
-/** 그 자리의 이벤트 제목(종류) 전부. 쓴 순서대로다. */
-function kinds(region: HTMLElement): (string | null)[] {
+/** 채널 토큰이 없을 때의 안내 줄. */
+const NO_CHANNEL_TOKEN = "결정을 내리려면 설정에서 채널 토큰을 넣는다";
+/** 최종 사용자의 실행의 한 줄. */
+const END_USER_LINE = "최종 사용자의 실행이라 결정은 그 사람만 낸다";
+
+/** `a` 가 문서에서 `b` 보다 앞에 서는가. */
+function precedes(a: Node, b: Node): boolean {
+  return (a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0;
+}
+
+/** 제목 글자로 알림 하나를 찾는다. 패키지 `Alert` 는 제목을 첫 문단으로 둔다. */
+async function alertTitled(title: string): Promise<HTMLElement> {
+  const alert = (await screen.findByText(title)).closest('[role="alert"], [role="status"]');
+  if (!(alert instanceof HTMLElement)) {
+    throw new Error(`알림이 아니다: ${title}`);
+  }
+  return alert;
+}
+
+/** 그 자리의 이벤트 종류 전부. 쓴 순서대로다. 카드 머리("<종류> <시각>")의 첫 낱말이다. */
+function kinds(region: HTMLElement): (string | undefined)[] {
   return within(region)
-    .getAllByRole("heading", { level: 4 })
-    .map((heading) => heading.textContent);
+    .getAllByRole("heading", { level: 3 })
+    .map((heading) => heading.textContent.split(" ")[0]);
 }
 
 /** 브라우저 저장소 하나의 값 전부. */
@@ -247,18 +269,23 @@ afterEach(() => {
 });
 
 describe("결정 자리", () => {
-  test("채널 토큰이 없으면 멈춘 실행에도 결정 자리가 없고 채널 토큰을 넣는 자리가 있다", async () => {
+  test("채널 토큰이 없으면 멈춘 실행에 결정 자리 대신 설정에서 넣으라는 한 줄과 설정 열기가 서고 실행 화면에 채널 토큰을 넣는 자리는 없다", async () => {
     serveTrace(() => PAUSED);
     servePlugins(ROWS);
 
     await openRun();
 
     expect(screen.queryByRole("region", { name: "결정" })).toBeNull();
-    expect(screen.queryByRole("button", { name: "허가" })).toBeNull();
-    expect(screen.getByLabelText("채널 토큰")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "승인" })).toBeNull();
+    expect(screen.getAllByText(NO_CHANNEL_TOKEN)).toHaveLength(1);
+    expect(screen.getByRole("link", { name: "설정 열기" }).getAttribute("href")).toBe("/settings");
+    expect(screen.queryByLabelText("채널 토큰")).toBeNull();
+    // 안내 줄의 아이콘은 꾸밈이라 화면 읽기 프로그램에서 숨는다.
+    const line = screen.getByText(NO_CHANNEL_TOKEN).closest("p");
+    expect(line?.querySelector("svg")?.getAttribute("aria-hidden")).toBe("true");
   });
 
-  test("채널 토큰을 넣으면 멈춘 실행에 결정 자리가 서고 무엇을 승인하는지 도구와 인자가 보인다", async () => {
+  test("채널 토큰을 넣으면 안내 줄이 걷히고 멈춘 실행에 결정 자리가 서며 무엇을 승인하는지 도구와 인자가 보인다", async () => {
     serveTrace(() => PAUSED);
     servePlugins(ROWS);
 
@@ -267,7 +294,30 @@ describe("결정 자리", () => {
     const shown = place().textContent;
     expect(shown).toContain("add");
     expect(shown).toContain(JSON.stringify(FIRST_ARGS, null, 2));
-    expect(button("허가").disabled).toBe(false);
+    expect(button("승인").disabled).toBe(false);
+    expect(screen.queryByText(NO_CHANNEL_TOKEN)).toBeNull();
+    expect(screen.queryByRole("link", { name: "설정 열기" })).toBeNull();
+  });
+
+  test("결정 자리의 버튼은 거부 다음 승인이고 허가는 없으며 사유 칸이 버튼 위에 선다", async () => {
+    serveTrace(() => PAUSED);
+    servePlugins(ROWS);
+
+    await openDecision();
+
+    expect(
+      within(place())
+        .getAllByRole("button")
+        .map((found) => found.textContent),
+    ).toEqual(["거부", "승인"]);
+    expect(screen.queryByText("허가")).toBeNull();
+    expect(precedes(reason(), button("거부"))).toBe(true);
+    expect(
+      screen.getByRole("textbox", {
+        name: "거부 사유",
+        description: "거부하려면 적는다. 비어 있으면 거부를 보낼 수 없다.",
+      }),
+    ).toBeTruthy();
   });
 
   test("결정 자리는 승인자가 serve 를 띄운 OS 사용자로 기록된다고 말한다", async () => {
@@ -286,7 +336,6 @@ describe("결정 자리", () => {
 
     await enterChannelToken(user, CHANNEL);
 
-    expect(await screen.findByText("채널 토큰을 넣었다")).toBeTruthy();
     expect(screen.queryByRole("region", { name: "결정" })).toBeNull();
   });
 
@@ -297,9 +346,19 @@ describe("결정 자리", () => {
 
     await enterChannelToken(user, CHANNEL);
 
-    expect(await screen.findByText("채널 토큰을 넣었다")).toBeTruthy();
     expect(screen.queryByRole("region", { name: "결정" })).toBeNull();
     expect(screen.getAllByText(/재개할 수 없다/)).toHaveLength(1);
+    expect(screen.queryByText(NO_CHANNEL_TOKEN)).toBeNull();
+  });
+
+  test("형식 1 트레이스는 채널 토큰이 없어도 결정 칸이 서지 않는다", async () => {
+    serveTrace(() => ({ ...PAUSED, schema_version: "1" }));
+    servePlugins(ROWS);
+
+    await openRun();
+
+    expect(screen.queryByText(NO_CHANNEL_TOKEN)).toBeNull();
+    expect(screen.queryByRole("link", { name: "설정 열기" })).toBeNull();
   });
 
   test("형식 3 트레이스의 멈춘 실행에도 결정 자리가 선다", async () => {
@@ -321,10 +380,25 @@ describe("결정 자리", () => {
 
     await enterChannelToken(user, CHANNEL);
 
-    expect(await screen.findByText("채널 토큰을 넣었다")).toBeTruthy();
     expect(screen.queryByRole("region", { name: "결정" })).toBeNull();
-    expect(screen.queryByRole("button", { name: "허가" })).toBeNull();
-    expect(screen.getAllByText(/최종 사용자의 실행이라 결정은 그 사람만 낸다/)).toHaveLength(1);
+    expect(screen.queryByRole("button", { name: "승인" })).toBeNull();
+    expect(screen.getAllByText(END_USER_LINE)).toHaveLength(1);
+    // 그 한 줄만 선 결정 칸에는 재개 스트림이 서지 않는다(admin-style 티켓 07 "재개 스트림이 서는 조건").
+    expect(screen.queryByRole("region", { name: "재개 스트림" })?.textContent ?? null).toBeNull();
+  });
+
+  test("최종 사용자의 멈춘 실행은 채널 토큰이 없어도 결정은 그 사람만 낸다는 한 줄이고 채널 토큰 안내는 없다", async () => {
+    serveTrace(() => END_USER_PAUSED);
+    servePlugins(ROWS);
+
+    await openRun();
+
+    expect(screen.getAllByText(END_USER_LINE)).toHaveLength(1);
+    expect(screen.queryByText(NO_CHANNEL_TOKEN)).toBeNull();
+    expect(screen.queryByRole("link", { name: "설정 열기" })).toBeNull();
+    expect(screen.queryByRole("region", { name: "재개 스트림" })).toBeNull();
+    const line = screen.getByText(END_USER_LINE).closest("p");
+    expect(line?.querySelector("svg")?.getAttribute("aria-hidden")).toBe("true");
   });
 
   test("최종 사용자의 실행에서도 주체는 구분자 `|` 를 든 글자 그대로 이벤트에 보인다", async () => {
@@ -338,14 +412,14 @@ describe("결정 자리", () => {
   });
 });
 
-describe("허가와 거부", () => {
-  test("허가는 채널 토큰만 싣고 판별자와 트레이스 상세에서 읽은 자리를 보낸다", async () => {
+describe("승인과 거부", () => {
+  test("승인은 채널 토큰만 싣고 판별자와 트레이스 상세에서 읽은 자리를 보낸다", async () => {
     const traceAuthorizations = serveTrace((call) => (call === 0 ? PAUSED : DONE));
     const pluginAuthorizations = servePlugins(ROWS);
     const sent = serveDecision(() => stream(FINISHED_TAIL));
     const user = await openDecision();
 
-    await user.click(button("허가"));
+    await user.click(button("승인"));
 
     await waitFor(() => {
       expect(sent).toHaveLength(1);
@@ -389,14 +463,17 @@ describe("허가와 거부", () => {
     expect(sent[0]?.body).toEqual({ decision: "deny", pause_index: 2, reason: "인자가 틀렸다" });
   });
 
-  test("거부가 422 를 받으면 violations 를 사유 옆에 보인다", async () => {
+  test("거부가 422 를 받으면 결정 자리 안의 알림에 메시지와 추적 식별자와 위반을 모두 보이고 사유 칸이 사유의 위반을 받는다", async () => {
     serveTrace(() => PAUSED);
     servePlugins(ROWS);
     serveDecision(() =>
       HttpResponse.json(
         {
           ...envelope("invalid_request", "요청의 형식이 올바르지 않다", "req-4220"),
-          violations: [{ field: "body.deny.reason", message: "사유는 비어 있을 수 없다" }],
+          violations: [
+            { field: "body.deny.reason", message: "사유는 비어 있을 수 없다" },
+            { field: "body.pause_index", message: "음수일 수 없다" },
+          ],
         },
         { status: 422 },
       ),
@@ -406,13 +483,52 @@ describe("허가와 거부", () => {
     await user.type(reason(), "사유");
     await user.click(button("거부"));
 
+    const field = await screen.findByRole("textbox", {
+      name: "거부 사유",
+      description: "사유는 비어 있을 수 없다",
+    });
+    expect(field.getAttribute("aria-invalid")).toBe("true");
+    const alert = await alertTitled("결정을 보내지 못했다");
+    expect(alert.getAttribute("role")).toBe("alert");
+    expect(place().contains(alert)).toBe(true);
+    // 알림은 사유 칸 바로 아래, 버튼 위다.
+    expect(precedes(field, alert)).toBe(true);
+    expect(precedes(alert, button("거부"))).toBe(true);
+    const shown = alert.textContent;
+    expect(shown).toContain("요청의 형식이 올바르지 않다");
+    expect(shown).toContain("req-4220");
+    expect(within(alert).getByText("body.deny.reason").tagName).toBe("CODE");
+    expect(shown).toContain("사유는 비어 있을 수 없다");
+    expect(within(alert).getByText("body.pause_index").tagName).toBe("CODE");
+    expect(shown).toContain("음수일 수 없다");
+  });
+
+  test("422 의 위반이 사유에 걸리지 않으면 사유 칸은 오류 상태가 아니고 위반은 알림에 선다", async () => {
+    serveTrace(() => PAUSED);
+    servePlugins(ROWS);
+    serveDecision(() =>
+      HttpResponse.json(
+        {
+          ...envelope("invalid_request", "요청의 형식이 올바르지 않다", "req-4221"),
+          violations: [{ field: "body.pause_index", message: "음수일 수 없다" }],
+        },
+        { status: 422 },
+      ),
+    );
+    const user = await openDecision();
+
+    await user.type(reason(), "사유");
+    await user.click(button("거부"));
+
+    const alert = await alertTitled("결정을 보내지 못했다");
+    expect(alert.textContent).toContain("음수일 수 없다");
+    expect(reason().getAttribute("aria-invalid")).toBeNull();
     expect(
-      await screen.findByRole("textbox", {
+      screen.getByRole("textbox", {
         name: "거부 사유",
-        description: /body\.deny\.reason.*사유는 비어 있을 수 없다/,
+        description: "거부하려면 적는다. 비어 있으면 거부를 보낼 수 없다.",
       }),
     ).toBeTruthy();
-    expect(place().textContent).toContain("req-4220");
   });
 });
 
@@ -426,7 +542,7 @@ describe("재개 스트림", () => {
     );
     const user = await openDecision();
 
-    await user.click(button("허가"));
+    await user.click(button("승인"));
 
     const resumed = await screen.findByRole("region", { name: "재개 스트림" });
     await within(resumed).findByText("run_resumed");
@@ -435,7 +551,7 @@ describe("재개 스트림", () => {
       0,
     );
     expect(traceAuthorizations).toHaveLength(1);
-    expect(button("허가").disabled).toBe(true);
+    expect(button("승인").disabled).toBe(true);
     expect(button("거부").disabled).toBe(true);
     hold.resolve(undefined);
   });
@@ -446,7 +562,7 @@ describe("재개 스트림", () => {
     serveDecision(() => stream(FINISHED_TAIL));
     const user = await openDecision();
 
-    await user.click(button("허가"));
+    await user.click(button("승인"));
 
     await within(events()).findByText("run_finished");
     expect(traceAuthorizations).toHaveLength(2);
@@ -465,7 +581,7 @@ describe("재개 스트림", () => {
     const sent = serveDecision(() => stream([GRANTED, RESUMED, KEEPALIVE]));
     const user = await openDecision();
 
-    await user.click(button("허가"));
+    await user.click(button("승인"));
 
     expect(await screen.findByText(/재개 스트림이 끊겼다. 실행은 서버에서 계속된다/)).toBeTruthy();
     expect(screen.getByText(/창을 닫거나 떠나도 실행은 끝까지 간다/)).toBeTruthy();
@@ -488,19 +604,19 @@ describe("재개 스트림", () => {
         : stream([GRANTED, RESUMED, tool(SECOND_ARGS, "9"), FINISHED]),
     );
     const user = await openDecision();
-    // 앞 일시정지에 거부 사유를 적다가 허가한다. 새 일시정지는 새로 판단할 호출이라 그 사유를 들지 않는다.
+    // 앞 일시정지에 거부 사유를 적다가 승인한다. 새 일시정지는 새로 판단할 호출이라 그 사유를 들지 않는다.
     await user.type(reason(), "앞 일시정지의 사유");
 
-    await user.click(button("허가"));
+    await user.click(button("승인"));
 
     await showsArgs(SECOND_ARGS);
     await waitFor(() => {
-      expect(button("허가").disabled).toBe(false);
+      expect(button("승인").disabled).toBe(false);
     });
     // 다시 멈춘 것은 결말이다. 끊긴 것이 아니다.
     expect(screen.queryByText(/끊겼다/)).toBeNull();
     expect(screen.getByRole<HTMLTextAreaElement>("textbox", { name: "거부 사유" }).value).toBe("");
-    await user.click(button("허가"));
+    await user.click(button("승인"));
     await within(events()).findByText("run_finished");
     expect(sent.map(({ body }) => body)).toEqual([
       { decision: "approve", pause_index: 2 },
@@ -519,7 +635,7 @@ describe("재개 스트림", () => {
     );
     const user = await openDecision();
 
-    await user.click(button("허가"));
+    await user.click(button("승인"));
 
     const resumed = await screen.findByRole("region", { name: "재개 스트림" });
     await within(resumed).findByText("run_resumed");
@@ -527,6 +643,9 @@ describe("재개 스트림", () => {
     expect(resumed.textContent).toContain(unknownKind);
     expect(document.querySelector("b")).toBeNull();
     expect(within(resumed).getAllByRole("listitem")).toHaveLength(4);
+    expect(
+      within(resumed).getAllByRole("heading", { level: 3, name: "읽지 못한 프레임" }),
+    ).toHaveLength(2);
     hold.resolve(undefined);
   });
 
@@ -543,7 +662,7 @@ describe("재개 스트림", () => {
     const left = renderPage(<RunPage runId={RUN} />, cache);
     await enterAdminToken(user, ADMIN);
     await enterChannelToken(user, CHANNEL);
-    await user.click(await screen.findByRole("button", { name: "허가" }));
+    await user.click(await screen.findByRole("button", { name: "승인" }));
     await screen.findByText("approval_granted");
     left.unmount();
 
@@ -555,7 +674,52 @@ describe("재개 스트림", () => {
 
     await new Promise((resolve) => setTimeout(resolve, 200));
     expect(traceAuthorizations).toHaveLength(readBefore);
+    // 돌아온 화면의 재개 스트림은 결정 자리가 섰으니 서지만, 떠난 결정의 조각은 붙지 않아 빈 줄이다.
+    const resumed = screen.getByRole("region", { name: "재개 스트림" });
+    expect(within(resumed).queryAllByRole("listitem")).toHaveLength(0);
+    expect(resumed.textContent).toContain("결정을 내면 재개한 이벤트가 여기에 차례로 붙는다.");
+  });
+
+  test("결정 자리가 서면 조각이 오기 전에도 재개 스트림이 빈 줄로 선다", async () => {
+    serveTrace(() => PAUSED);
+    servePlugins(ROWS);
+
+    await openDecision();
+
+    const resumed = screen.getByRole("region", { name: "재개 스트림" });
+    expect(resumed.textContent).toContain("결정을 내면 재개한 이벤트가 여기에 차례로 붙는다.");
+    expect(within(resumed).queryAllByRole("listitem")).toHaveLength(0);
+  });
+
+  test("채널 토큰이 없어 결정 자리가 서지 않으면 재개 스트림도 서지 않는다", async () => {
+    serveTrace(() => PAUSED);
+    servePlugins(ROWS);
+
+    await openRun();
+
     expect(screen.queryByRole("region", { name: "재개 스트림" })).toBeNull();
+  });
+
+  test("끊긴 재개 스트림의 정보 알림은 이벤트 칸 위에 제목과 본문으로 선다", async () => {
+    const partial = trace([...PAUSED.events, GRANTED, RESUMED]);
+    serveTrace((call) => (call === 0 ? PAUSED : partial));
+    servePlugins(ROWS);
+    serveDecision(() => stream([GRANTED, RESUMED]));
+    const user = await openDecision();
+
+    await user.click(button("승인"));
+
+    const title = await screen.findByText("재개 스트림이 끊겼다. 실행은 서버에서 계속된다");
+    const alert = title.closest('[role="status"]');
+    if (!(alert instanceof HTMLElement)) {
+      throw new Error("끊긴 알림이 상태 영역이 아니다");
+    }
+    expect(
+      within(alert).getByText(
+        "창을 닫거나 떠나도 실행은 끝까지 간다. 돌아오면 트레이스로 이어 본다.",
+      ),
+    ).toBeTruthy();
+    expect(alert.compareDocumentPosition(events()) & Node.DOCUMENT_POSITION_FOLLOWING).not.toBe(0);
   });
 });
 
@@ -570,16 +734,37 @@ describe("409 와 꺼짐", () => {
     const user = await openDecision();
     const readBefore = pluginAuthorizations.length;
 
-    await user.click(button("허가"));
+    await user.click(button("승인"));
 
-    const alert = await screen.findByRole("alert");
+    const alert = await alertTitled("결정을 보내지 못했다");
     expect(alert.textContent).toContain(message);
-    expect(alert.textContent).toContain("req-4090");
+    expect(within(alert).getByText("req-4090").tagName).toBe("CODE");
+    // 화면 머리 아래, 이벤트 칸 위이고 결정 자리 밖이다.
+    expect(precedes(alert, events())).toBe(true);
     await showsArgs(SECOND_ARGS);
+    expect(place().contains(alert)).toBe(false);
     expect(traceAuthorizations).toHaveLength(2);
     expect(pluginAuthorizations.length).toBeGreaterThan(readBefore);
     // 새 일시정지가 보이는 동안에도 메시지가 남는다.
     expect(screen.getByRole("alert").textContent).toContain(message);
+  });
+
+  test("409 뒤 다시 읽은 실행이 일시정지가 아니어서 결정 칸이 걷혀도 알림은 남는다", async () => {
+    const message = "실행이 이미 끝났다";
+    serveTrace((call) => (call === 0 ? PAUSED : DONE));
+    servePlugins(ROWS);
+    serveDecision(() =>
+      HttpResponse.json(envelope("conflict", message, "req-4091"), { status: 409 }),
+    );
+    const user = await openDecision();
+
+    await user.click(button("승인"));
+
+    await within(events()).findByText("run_finished");
+    expect(screen.queryByRole("region", { name: "결정" })).toBeNull();
+    const alert = await alertTitled("결정을 보내지 못했다");
+    expect(alert.textContent).toContain(message);
+    expect(precedes(alert, events())).toBe(true);
   });
 
   test("에이전트가 꺼졌으면 결정 버튼이 막히고 꺼진 에이전트가 보인다", async () => {
@@ -587,10 +772,20 @@ describe("409 와 꺼짐", () => {
     servePlugins([{ ...CALC, enabled: false }, FIXTURE]);
     const user = await openDecision();
 
-    expect(await within(place()).findByText(/꺼진 플러그인이 있어 재개할 수 없다/)).toBeTruthy();
-    expect(place().textContent).toContain("에이전트 calc");
+    const warning = (
+      await within(place()).findByText("꺼진 플러그인이 있어 재개할 수 없다: 에이전트 calc")
+    ).closest('[role="status"]');
+    if (!(warning instanceof HTMLElement)) {
+      throw new Error("꺼짐 경고가 상태 영역이 아니다");
+    }
+    expect(warning.textContent).toContain("다시 켜면 결정을 낼 수 있다.");
+    expect(within(warning).getByRole("link", { name: "플러그인 목록" }).getAttribute("href")).toBe(
+      "/",
+    );
+    // 사유 칸과 버튼 둘이 막힌다.
+    expect(reason()).toHaveProperty("disabled", true);
     await user.type(reason(), "사유");
-    expect(button("허가").disabled).toBe(true);
+    expect(button("승인").disabled).toBe(true);
     expect(button("거부").disabled).toBe(true);
   });
 
@@ -602,7 +797,7 @@ describe("409 와 꺼짐", () => {
     expect(await within(place()).findByText(/꺼진 플러그인이 있어 재개할 수 없다/)).toBeTruthy();
     expect(place().textContent).toContain("MCP fixture");
     expect(place().textContent).not.toContain("에이전트 calc");
-    expect(button("허가").disabled).toBe(true);
+    expect(button("승인").disabled).toBe(true);
   });
 
   test("플러그인 목록을 다시 읽다 실패하면 옛 꺼짐을 믿지 않고 미리 알 수 없다고 말하며 결정 버튼을 막지 않는다", async () => {
@@ -629,20 +824,22 @@ describe("409 와 꺼짐", () => {
         /꺼진 플러그인이 있어 재개할 수 없다/,
       ),
     ).toBeTruthy();
-    expect(button("허가").disabled).toBe(true);
+    expect(button("승인").disabled).toBe(true);
 
     // SWR 은 마운트한 뒤 한동안(focusThrottleInterval) 포커스를 흘려보낸다. 그 너머로 민다.
     await vi.advanceTimersByTimeAsync(10_000);
     fireEvent.focus(window);
 
     await waitFor(() => {
-      expect(button("허가").disabled).toBe(false);
+      expect(button("승인").disabled).toBe(false);
     });
     expect(listed).toBe(3);
     expect(place().textContent).not.toContain("꺼진 플러그인이 있어");
-    expect(place().textContent).toContain(
-      "플러그인 목록을 읽지 못해 꺼진 플러그인을 미리 알 수 없다",
-    );
+    const notice = within(place())
+      .getByText("플러그인 목록을 읽지 못해 꺼진 플러그인을 미리 알 수 없다")
+      .closest('[role="status"]');
+    expect(notice).not.toBeNull();
+    expect(reason()).toHaveProperty("disabled", false);
   });
 
   test("에이전트 행이 표지면 미리 알 수 없어 결정 버튼을 막지 않는다", async () => {
@@ -656,7 +853,7 @@ describe("409 와 꺼짐", () => {
     // 목록을 읽은 뒤에도 막지 않는다.
     await new Promise((resolve) => setTimeout(resolve, 100));
     expect(place().textContent).not.toContain("꺼진 플러그인");
-    expect(button("허가").disabled).toBe(false);
+    expect(button("승인").disabled).toBe(false);
   });
 });
 
@@ -669,12 +866,17 @@ describe("채널 토큰의 거부", () => {
     );
     const user = await openDecision();
 
-    await user.click(button("허가"));
+    await user.click(button("승인"));
 
-    expect((await screen.findByRole("alert")).textContent).toContain("채널 토큰이 거부됐다");
-    expect(screen.getByRole("region", { name: "이벤트" })).toBeTruthy();
-    expect(screen.queryByRole("button", { name: "허가" })).toBeNull();
-    expect(screen.getByLabelText("채널 토큰")).toBeTruthy();
+    const alert = await alertTitled("채널 토큰이 거부됐다");
+    expect(alert.textContent).toContain("설정에서 다시 넣는다.");
+    expect(precedes(alert, events())).toBe(true);
+    // 알림에는 링크가 없고, 설정으로 가는 링크는 결정 칸이 바뀐 채널 토큰 안내 줄의 하나다.
+    expect(within(alert).queryByRole("link")).toBeNull();
+    expect(screen.getAllByText(NO_CHANNEL_TOKEN)).toHaveLength(1);
+    expect(screen.getAllByRole("link", { name: "설정 열기" })).toHaveLength(1);
+    expect(screen.getByRole("region", { name: EVENTS })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "승인" })).toBeNull();
     const stored = storedValues(sessionStorage).join("\n");
     expect(stored).toContain(ADMIN);
     expect(stored).not.toContain(CHANNEL);

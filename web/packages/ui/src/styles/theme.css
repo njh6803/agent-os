@@ -9,7 +9,7 @@
  * - @theme 에는 값이 글자 그대로인 것(길이, 글자, 모서리, 굵기, 기준 폭, 움직임)을 둔다. `--*: initial` 로 Tailwind 의
  *   기본값을 비우므로 `text-base`·`rounded` 같은 익숙한 클래스는 아무 CSS 도 만들지 않는다. 그 실수는 스토리 테스트가
  *   잡는다(미리보기의 afterEach). `static` 이라 이 블록의 토큰은 소스가 쓰지 않아도 모두 CSS 변수로 낸다. 쓰인 것만
- *   내자 /design-sync 가 Claude Design 에 올린 CSS 에 `--text-title` 같은 변수가 없었다(판정 스토리 ThemeTokensEmitted).
+ *   내자 2026-10-12 Claude Design 에 처음 올린 CSS 에 `--text-title` 같은 변수가 없었다(판정 스토리 ThemeTokensEmitted).
  * - @theme inline 에는 테마, 모드, 밀도마다 바뀌거나 감싼 요소가 다시 정할 수 있는 CSS 변수를 읽는 것(쓰임새 22개의
  *   색, 글꼴, 밀도를 따르는 글자 셋과 높이 둘, 떠 있는 것의 그림자)을 둔다. 쓰임새의 이름은 디자인 파일 그대로라
  *   `bg-bg-raised`, `text-text-muted` 처럼 머리가 겹치는 클래스가 생긴다. 그림자 색(`--shadow-color`, 디자인 파일의

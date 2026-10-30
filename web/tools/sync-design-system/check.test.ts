@@ -226,7 +226,7 @@ describe("받을 경로", () => {
   });
 
   test("묶음 폴더 아래의 컴포넌트는 묶음 폴더가 아니라 그 컴포넌트 폴더의 README 를 낸다", () => {
-    // 첫 올리기(티켓 08)가 받은 아티팩트의 꼴이다. 번들 변환기가 컴포넌트를 묶음 폴더 아래에 둔다.
+    // 첫 올리기(티켓 08)가 받은 아티팩트의 꼴이다. 짓기 명령 전의 옛 배치는 컴포넌트를 묶음 폴더 아래에 둔다.
     const grouped = "project/components/atoms/Button/Button.html";
     const record = lastRecord({ files: new Map([[grouped, entry(grouped, "<p>버튼</p>")]]) });
     const first: WebFiles = {

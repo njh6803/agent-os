@@ -9,12 +9,14 @@ import { http, HttpResponse } from "msw";
 import { describe, expect, test } from "vitest";
 import { api, envelope, network, type Trace } from "../../testing/network";
 import { renderPage } from "../../testing/render";
-import { acceptTokens, enterAdminToken } from "../../testing/token";
+import { acceptTokens, clearTokens, enterAdminToken } from "../../testing/token";
 import { RunPage } from "./RunPage";
 
 const TOKEN = "adm-9Jm3-run-page-token";
 const RUN = "r-calc";
 const TS = "2026-09-30T09:00:00+00:00";
+/** 이벤트 칸의 이름. 제목이 "이벤트 <개수>"다. */
+const EVENTS = /^이벤트 \d+$/;
 
 const TOOL_CALLS = [{ id: "call-1", name: "add", args: { a: 1, b: 2 } }];
 const UNKNOWN_RAW = '{"type":"future_kind","run_id":"r-calc","ts":"2026-09-30T09:00:04+00:00"}';
@@ -179,7 +181,7 @@ async function openRun(runId: string): Promise<UserEvent> {
 }
 
 function events(): HTMLElement {
-  return screen.getByRole("region", { name: "이벤트" });
+  return screen.getByRole("region", { name: EVENTS });
 }
 
 /** 이벤트 항목 전부. 쓴 순서대로다. */
@@ -202,29 +204,66 @@ describe("실행 하나", () => {
 
     await openRun(RUN);
 
-    expect(await screen.findByRole("region", { name: "이벤트" })).toBeTruthy();
-    expect(screen.getByRole("heading", { level: 2, name: RUN })).toBeTruthy();
+    expect(await screen.findByRole("region", { name: EVENTS })).toBeTruthy();
+    expect(screen.getByRole("heading", { level: 1, name: RUN })).toBeTruthy();
     expect(authorizations).toEqual([`Bearer ${TOKEN}`]);
   });
 
-  test("이벤트가 쓴 순서대로 전부 보인다", async () => {
+  test("이벤트가 쓴 순서대로 전부 카드로 서고 카드 머리는 종류와 트레이스의 시각 글자 그대로다", async () => {
     serveTrace(`/traces/${RUN}`, () => HttpResponse.json(TRACE));
 
     await openRun(RUN);
 
-    await screen.findByRole("region", { name: "이벤트" });
+    await screen.findByRole("region", { name: EVENTS });
     expect(
       within(events())
-        .getAllByRole("heading", { level: 4 })
+        .getAllByRole("heading", { level: 3 })
         .map((heading) => heading.textContent),
     ).toEqual([
-      "run_started",
-      "llm_called",
-      "tool_called",
-      "tool_called",
+      `run_started ${TS}`,
+      `llm_called ${TS}`,
+      `tool_called ${TS}`,
+      `tool_called ${TS}`,
       "모르는 종류",
-      "run_finished",
+      `run_finished ${TS}`,
     ]);
+  });
+
+  test("이벤트 칸의 제목은 이벤트의 개수를 든다", async () => {
+    serveTrace(`/traces/${RUN}`, () => HttpResponse.json(TRACE));
+
+    await openRun(RUN);
+
+    expect(
+      await screen.findByRole("heading", {
+        level: 2,
+        name: `이벤트 ${String(TRACE.events.length)}`,
+      }),
+    ).toBeTruthy();
+  });
+
+  test("머리의 제목 아래에 시작 이벤트에서 읽은 에이전트와 주체가 선다", async () => {
+    serveTrace(`/traces/${RUN}`, () => HttpResponse.json(TRACE));
+
+    await openRun(RUN);
+
+    await screen.findByRole("region", { name: EVENTS });
+    const header = screen.getByRole("heading", { level: 1, name: RUN }).closest("header");
+    expect(header?.textContent).toContain("에이전트 calc");
+    expect(header?.textContent).toContain("주체 operator");
+  });
+
+  test("시작 이벤트가 없는 트레이스는 머리에 에이전트와 주체의 줄이 없다", async () => {
+    serveTrace(`/traces/${RUN}`, () =>
+      HttpResponse.json({ ...TRACE, events: TRACE.events.slice(1) }),
+    );
+
+    await openRun(RUN);
+
+    await screen.findByRole("region", { name: EVENTS });
+    const header = screen.getByRole("heading", { level: 1, name: RUN }).closest("header");
+    expect(header?.textContent).not.toContain("에이전트");
+    expect(header?.textContent).not.toContain("주체");
   });
 
   test("종류별 필드가 들어온 모양 그대로 글자로 보인다", async () => {
@@ -232,7 +271,7 @@ describe("실행 하나", () => {
 
     await openRun(RUN);
 
-    await screen.findByRole("region", { name: "이벤트" });
+    await screen.findByRole("region", { name: EVENTS });
     const started = eventItem(0).textContent;
     expect(started).toContain("request");
     expect(started).toContain("1 더하기 2");
@@ -251,7 +290,7 @@ describe("실행 하나", () => {
 
     await openRun(RUN);
 
-    await screen.findByRole("region", { name: "이벤트" });
+    await screen.findByRole("region", { name: EVENTS });
     const names = (index: number): (string | null)[] =>
       within(eventItem(index))
         .getAllByRole("term")
@@ -273,7 +312,7 @@ describe("실행 하나", () => {
 
     await openRun(CONTINUED);
 
-    await screen.findByRole("region", { name: "이벤트" });
+    await screen.findByRole("region", { name: EVENTS });
     const previous = within(eventItem(0)).getByRole("link", { name: PREVIOUS });
     expect(previous.getAttribute("href")).toBe(`/runs/${encodeURIComponent(PREVIOUS)}`);
     expect(previous.getAttribute("href")).toBe("/runs/r%20calc%2F%EB%91%98");
@@ -288,7 +327,7 @@ describe("실행 하나", () => {
 
     await openRun(RUN);
 
-    await screen.findByRole("region", { name: "이벤트" });
+    await screen.findByRole("region", { name: EVENTS });
     expect(within(events()).queryByRole("link")).toBeNull();
     expect(eventItem(0).textContent).toContain("null");
   });
@@ -300,7 +339,7 @@ describe("실행 하나", () => {
 
       await openRun(RUN);
 
-      await screen.findByRole("region", { name: "이벤트" });
+      await screen.findByRole("region", { name: EVENTS });
       expect(within(events()).queryByRole("link")).toBeNull();
       expect(eventItem(0).textContent).toContain(`previous_run${dot}`);
     },
@@ -311,7 +350,7 @@ describe("실행 하나", () => {
 
     await openRun(FAILED);
 
-    await screen.findByRole("region", { name: "이벤트" });
+    await screen.findByRole("region", { name: EVENTS });
     expect(
       within(eventItem(1))
         .getAllByRole("term")
@@ -330,7 +369,7 @@ describe("실행 하나", () => {
 
     await openRun(RUN);
 
-    await screen.findByRole("region", { name: "이벤트" });
+    await screen.findByRole("region", { name: EVENTS });
     const shortcuts = fieldValue(eventItem(0), "shortcuts");
     const rows = within(shortcuts)
       .getAllByRole("term")
@@ -359,7 +398,7 @@ describe("실행 하나", () => {
 
     await openRun(RUN);
 
-    await screen.findByRole("region", { name: "이벤트" });
+    await screen.findByRole("region", { name: EVENTS });
     expect(fieldValue(eventItem(0), "shortcuts").textContent).toBe("null");
     expect(within(events()).queryByRole("link")).toBeNull();
   });
@@ -369,7 +408,7 @@ describe("실행 하나", () => {
 
     await openRun(RUN);
 
-    await screen.findByRole("region", { name: "이벤트" });
+    await screen.findByRole("region", { name: EVENTS });
     expect(fieldValue(eventItem(0), "shortcuts").textContent).toBe("{}");
     expect(within(events()).queryByRole("link")).toBeNull();
   });
@@ -383,7 +422,7 @@ describe("실행 하나", () => {
 
       await openRun(RUN);
 
-      await screen.findByRole("region", { name: "이벤트" });
+      await screen.findByRole("region", { name: EVENTS });
       const shortcuts = fieldValue(eventItem(0), "shortcuts");
       expect(
         within(shortcuts)
@@ -414,7 +453,7 @@ describe("실행 하나", () => {
 
       await openRun(RUN);
 
-      await screen.findByRole("region", { name: "이벤트" });
+      await screen.findByRole("region", { name: EVENTS });
       expect(within(events()).queryByRole("link")).toBeNull();
       expect(fieldValue(eventItem(0), "shortcuts").textContent).toBe(shown);
     },
@@ -425,7 +464,7 @@ describe("실행 하나", () => {
 
     await openRun(CONTINUED);
 
-    await screen.findByRole("region", { name: "이벤트" });
+    await screen.findByRole("region", { name: EVENTS });
     expect(
       within(eventItem(1))
         .getAllByRole("term")
@@ -449,7 +488,7 @@ describe("실행 하나", () => {
 
     await openRun(RUN);
 
-    await screen.findByRole("region", { name: "이벤트" });
+    await screen.findByRole("region", { name: EVENTS });
     expect(eventItem(1).textContent).toContain(JSON.stringify(TOOL_CALLS, null, 2));
     expect(eventItem(2).textContent).toContain(JSON.stringify({ a: 1, b: 2 }, null, 2));
   });
@@ -459,7 +498,7 @@ describe("실행 하나", () => {
 
     await openRun(RUN);
 
-    await screen.findByRole("region", { name: "이벤트" });
+    await screen.findByRole("region", { name: EVENTS });
     expect(eventItem(3).textContent).toContain('"password": "***"');
   });
 
@@ -468,7 +507,7 @@ describe("실행 하나", () => {
 
     await openRun(RUN);
 
-    await screen.findByRole("region", { name: "이벤트" });
+    await screen.findByRole("region", { name: EVENTS });
     expect(eventItem(4).textContent).toContain(UNKNOWN_RAW);
   });
 
@@ -477,8 +516,8 @@ describe("실행 하나", () => {
 
     await openRun(RUN);
 
-    await screen.findByRole("region", { name: "이벤트" });
-    expect(screen.getByText(/읽을 수 있지만 재개할 수 없다/)).toBeTruthy();
+    await screen.findByRole("region", { name: EVENTS });
+    expect(screen.getByText("형식 1 트레이스라 읽을 수 있지만 재개할 수 없다")).toBeTruthy();
   });
 
   test.each(["2", "3"] as const)(
@@ -488,7 +527,7 @@ describe("실행 하나", () => {
 
       await openRun(RUN);
 
-      await screen.findByRole("region", { name: "이벤트" });
+      await screen.findByRole("region", { name: EVENTS });
       expect(screen.queryByText(/재개할 수 없다/)).toBeNull();
     },
   );
@@ -544,7 +583,7 @@ describe("실행 하나", () => {
 
     await openRun(RUN);
 
-    await screen.findByRole("region", { name: "이벤트" });
+    await screen.findByRole("region", { name: EVENTS });
     const shown = events().textContent;
     for (const text of [image, script, link, bold, previous, agent, shortcut]) {
       expect(shown).toContain(text);
@@ -561,6 +600,18 @@ describe("실행 하나", () => {
       "/runs/javascript%3Awindow.__agentOsXss%20%3D%201%23..%2F..",
     );
     expect(Reflect.has(window, "__agentOsXss")).toBe(false);
+  });
+
+  test("처음 불러오는 동안에는 머리 아래에 트레이스를 불러오는 중이 선다", async () => {
+    const first = Promise.withResolvers<Response>();
+    serveTrace(`/traces/${RUN}`, () => first.promise);
+
+    await openRun(RUN);
+
+    expect(await screen.findByRole("progressbar", { name: "트레이스를 불러오는 중" })).toBeTruthy();
+    first.resolve(HttpResponse.json(TRACE));
+    expect(await screen.findByRole("region", { name: EVENTS })).toBeTruthy();
+    expect(screen.queryByRole("progressbar")).toBeNull();
   });
 
   test("없는 실행을 열면 404 봉투의 메시지와 추적 식별자가 보인다", async () => {
@@ -586,9 +637,10 @@ describe("실행 하나", () => {
     await openRun("r-broken");
 
     const alert = await screen.findByRole("alert");
+    expect(alert.textContent).toContain("실행을 읽지 못했다");
     expect(alert.textContent).toContain(message);
-    expect(alert.textContent).toContain("req-5c02");
-    expect(screen.queryByRole("region", { name: "이벤트" })).toBeNull();
+    expect(alert.textContent).toContain("추적 식별자: req-5c02");
+    expect(screen.queryByRole("region", { name: EVENTS })).toBeNull();
   });
 
   test("트레이스를 읽다 401 을 받으면 관리 토큰을 지우고 입력 화면으로 돌아가 거부됐다고 말한다", async () => {
@@ -613,11 +665,11 @@ describe("실행 하나", () => {
     renderPage(<RunPage runId={RUN} />);
     // 옛 토큰의 요청(0)은 응답을 기다린다.
     await enterAdminToken(user, old);
-    await user.click(await screen.findByRole("button", { name: "토큰 지우기" }));
+    await clearTokens(user);
     await enterAdminToken(user, TOKEN);
 
     // 새 토큰은 옛 요청을 나눠 받지 않고 제 요청을 보낸다.
-    expect(await screen.findByRole("region", { name: "이벤트" })).toBeTruthy();
+    expect(await screen.findByRole("region", { name: EVENTS })).toBeTruthy();
     expect(authorizations).toEqual([`Bearer ${old}`, `Bearer ${TOKEN}`]);
     late.resolve(
       HttpResponse.json(envelope("unauthorized", "토큰이 없거나 틀리다"), { status: 401 }),
@@ -634,7 +686,7 @@ describe("실행 하나", () => {
       HttpResponse.json(call === 0 ? { ...TRACE, events: TRACE.events.slice(0, 1) } : TRACE),
     );
     const user = await openRun(RUN);
-    await screen.findByRole("region", { name: "이벤트" });
+    await screen.findByRole("region", { name: EVENTS });
     expect(eventItems()).toHaveLength(1);
 
     await user.click(screen.getByRole("button", { name: "새로 고침" }));
@@ -651,12 +703,12 @@ describe("실행 하나", () => {
         : HttpResponse.json(envelope("internal_error", "트레이스를 읽을 수 없다"), { status: 500 }),
     );
     const user = await openRun(RUN);
-    await screen.findByRole("region", { name: "이벤트" });
+    await screen.findByRole("region", { name: EVENTS });
 
     await user.click(screen.getByRole("button", { name: "새로 고침" }));
 
     expect((await screen.findByRole("alert")).textContent).toContain("트레이스를 읽을 수 없다");
-    expect(screen.queryByRole("region", { name: "이벤트" })).toBeNull();
+    expect(screen.queryByRole("region", { name: EVENTS })).toBeNull();
   });
 
   test("주소의 조각이 인코딩된 채로 와도 풀어서 보이고 요청은 한 번만 인코딩한다", async () => {
@@ -670,7 +722,7 @@ describe("실행 하나", () => {
     // 두 번 인코딩한 요청(run%2520one)은 처리하지 않은 요청이라 setup.ts 가 테스트를 빨갛게 한다.
     await openRun("run%20one");
 
-    expect(await screen.findByRole("heading", { level: 2, name: "run one" })).toBeTruthy();
+    expect(await screen.findByRole("heading", { level: 1, name: "run one" })).toBeTruthy();
     expect((await screen.findByRole("alert")).textContent).toContain("요청의 형식이 올바르지 않다");
     expect(authorizations).toHaveLength(1);
   });
@@ -681,13 +733,19 @@ describe("실행 하나", () => {
     expect((await screen.findByRole("alert")).textContent).toContain("주소를 풀 수 없다: %E0%A4%A");
   });
 
+  test("주소를 풀 수 없어도 화면의 제목은 받은 조각 그대로다", async () => {
+    await openRun("%E0%A4%A");
+
+    expect(await screen.findByRole("heading", { level: 1, name: "%E0%A4%A" })).toBeTruthy();
+  });
+
   test("실행 목록으로 돌아가는 링크가 있다", async () => {
     serveTrace(`/traces/${RUN}`, () => HttpResponse.json(TRACE));
 
     await openRun(RUN);
 
-    const back = await screen.findByRole("link", { name: "실행 목록으로" });
+    const back = await screen.findByRole("link", { name: "실행 목록" });
     expect(back.getAttribute("href")).toBe("/runs");
-    await screen.findByRole("region", { name: "이벤트" });
+    await screen.findByRole("region", { name: EVENTS });
   });
 });

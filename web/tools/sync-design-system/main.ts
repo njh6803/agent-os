@@ -11,6 +11,7 @@
  * 사용: node tools/sync-design-system/main.ts <명령> [인자 ...]. 명령의 인자는 그 모듈의 독스트링에 있다.
  */
 
+import { assemble } from "./assemble.ts";
 import { build } from "./build.ts";
 import { runCheck } from "./check-command.ts";
 import { CommandError, type Command, type ErrorKind } from "./command.ts";
@@ -21,6 +22,7 @@ import type { JsonValue } from "./tokens-json.ts";
 
 /** 명령 표. 명령을 더하는 티켓은 모듈 하나와 이 표의 한 줄을 더한다. */
 const COMMANDS: ReadonlyMap<string, Command> = new Map([
+  ["assemble", assemble],
   ["build", build],
   ["check", runCheck],
   ["decide", runDecide],

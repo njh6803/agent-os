@@ -9,7 +9,7 @@ import { approve, startPausedRun } from "./channel";
 import { stack } from "./env";
 import { decisionPlace, enterAdminToken, enterChannelToken, row } from "./screen";
 
-test("멈춘 실행을 허가하면 재개 스트림이 조각으로 붙고 실행이 끝나며 도구가 실제로 불렸다", async ({
+test("멈춘 실행을 승인하면 재개 스트림이 조각으로 붙고 실행이 끝나며 도구가 실제로 불렸다", async ({
   page,
   request,
 }) => {
@@ -26,7 +26,7 @@ test("멈춘 실행을 허가하면 재개 스트림이 조각으로 붙고 실�
   const place = decisionPlace(page);
   await expect(place).toContainText("add");
   await expect(place).toContainText('"a": 2');
-  await place.getByRole("button", { name: "허가", exact: true }).click();
+  await place.getByRole("button", { name: "승인", exact: true }).click();
 
   // 재개 스트림이 조각으로 온다. 첫 이벤트가 결말보다 먼저 화면에 있다. 픽스처는 도구를 부른 뒤 2초 뒤에 끝난다.
   // 중계의 압축이 켜지면(`compress: false` 가 빠지면) 스트림이 끝에 몰려 와 여기서 빨개진다(web-admin 티켓 04).
@@ -44,7 +44,7 @@ test("멈춘 실행을 허가하면 재개 스트림이 조각으로 붙고 실�
   await expect(place).toHaveCount(0);
 
   // 실행이 끝남으로 바뀐다. 상태의 이름은 목록의 요약이 말한다.
-  await page.getByRole("link", { name: "실행 목록으로" }).click();
+  await page.getByRole("link", { name: "실행 목록", exact: true }).click();
   await expect(row(page, "실행", paused.runId)).toContainText("끝남");
   expect(crashes).toEqual([]);
 });
@@ -68,11 +68,11 @@ test("재개 스트림 도중에 떠나면 화면은 연결을 끊고 실행은 
   await page.goto(`${adminUrl}/runs/${paused.runId}`);
   await enterAdminToken(page, adminToken);
   await enterChannelToken(page, channelToken);
-  await decisionPlace(page).getByRole("button", { name: "허가", exact: true }).click();
+  await decisionPlace(page).getByRole("button", { name: "승인", exact: true }).click();
   await expect(page.getByRole("region", { name: "재개 스트림" })).toContainText("approval_granted");
 
   // 픽스처가 끝나기(2초) 전에 실행 목록으로 떠난다.
-  await page.getByRole("link", { name: "실행 목록으로" }).click();
+  await page.getByRole("link", { name: "실행 목록", exact: true }).click();
 
   await expect.poll(() => cut).toEqual(["net::ERR_ABORTED"]);
   const summary = row(page, "실행", paused.runId);
@@ -83,7 +83,7 @@ test("재개 스트림 도중에 떠나면 화면은 연결을 끊고 실행은 
   expect(crashes).toEqual([]);
 });
 
-test("오래된 화면에서 옛 일시정지를 허가하면 409 메시지와 새 일시정지가 보이고 둘째 도구는 불리지 않았다", async ({
+test("오래된 화면에서 옛 일시정지를 승인하면 409 메시지와 새 일시정지가 보이고 둘째 도구는 불리지 않았다", async ({
   page,
   request,
 }) => {
@@ -99,9 +99,9 @@ test("오래된 화면에서 옛 일시정지를 허가하면 409 메시지와 �
   const place = decisionPlace(page);
   await expect(place).toContainText('"a": 2');
 
-  // 다른 곳(흐름의 요청)이 화면이 보는 일시정지를 먼저 허가한다. 실행은 둘째 승인 대상에서 다시 멈춘다.
+  // 다른 곳(흐름의 요청)이 화면이 보는 일시정지를 먼저 승인한다. 실행은 둘째 승인 대상에서 다시 멈춘다.
   const second = await approve(request, first);
-  await place.getByRole("button", { name: "허가", exact: true }).click();
+  await place.getByRole("button", { name: "승인", exact: true }).click();
 
   // Next 가 페이지에 두는 경로 알림도 alert 라 글자로 거른다.
   await expect(
@@ -111,8 +111,8 @@ test("오래된 화면에서 옛 일시정지를 허가하면 409 메시지와 �
   ).toBeVisible();
   await expect(place).toContainText('"a": 4');
   const events = page.getByRole("region", { name: "이벤트" });
-  await expect(events.getByRole("heading", { level: 4, name: "run_paused" })).toHaveCount(2);
-  await expect(events.getByRole("heading", { level: 4, name: "tool_called" })).toHaveCount(1);
+  await expect(events.getByRole("heading", { level: 3, name: "run_paused" })).toHaveCount(2);
+  await expect(events.getByRole("heading", { level: 3, name: "tool_called" })).toHaveCount(1);
   expect(crashes).toEqual([]);
   // 브라우저는 실패한 응답을 콘솔 에러(Failed to load resource)로 찍는다. 409 는 이 흐름이 받는 것이다.
   expect(printed.filter((line) => line.startsWith("error") && !line.includes("409"))).toEqual([]);

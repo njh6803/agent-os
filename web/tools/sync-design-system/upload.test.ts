@@ -1,13 +1,21 @@
-// 이번 올리기가 보낼 파일·지울 경로와 빌드가 필요한지의 테스트(design-reverse-sync 명세 "올리기"의 빌드가 필요한
-// 올리기·필요 없는 올리기·첫 올리기와 그 2026-10-22 주석, "찾았을 때"의 "덮어쓴다", Testing Decisions "기록"의
-// 2026-10-22 주석의 빌드 판정).
+// 이번 올리기가 보낼 파일·지울 경로의 테스트(design-reverse-sync 명세 "올리기"의 첫 올리기와 그 2026-10-22 주석,
+// "찾았을 때"의 "덮어쓴다").
 
 import { describe, expect, test } from "vitest";
 import { CommandError } from "./command.ts";
 import { fileHash } from "./file-hash.ts";
-import { sha256 } from "./io.ts";
-import type { FileEntry, PendingClass, SyncRecord } from "./sync-record.ts";
-import { needsBuild, planUpload, type UploadInput } from "./upload.ts";
+import { sha256, sortedPaths } from "./io.ts";
+import { RECORD_LIMIT, type FileEntry, type PendingClass, type SyncRecord } from "./sync-record.ts";
+import {
+  CALL_BYTES,
+  CALL_PATHS,
+  INDEX_LIMIT,
+  planUpload,
+  type UploadCall,
+  type UploadInput,
+  withLibraries,
+  withUpgraded,
+} from "./upload.ts";
 
 function bytes(text: string): Uint8Array {
   return new TextEncoder().encode(text);
@@ -361,7 +369,7 @@ describe("멈춘 올리기를 다시 하는 올리기", () => {
     expect(plan.send).toEqual([]);
   });
 
-  test("빌드 산출 전체를 맞춘 산출에 없는 보낸 목표는 이어 적지 않고 지운다", () => {
+  test("지난 산출 목록을 준 산출에 없는 보낸 목표는 이어 적지 않고 지운다", () => {
     const plan = planUpload(
       input({
         record: record({ pending }),
@@ -462,7 +470,7 @@ describe("한 경로가 드는 칸", () => {
   const LOCAL = "로컬\n";
   const OTHER = "다른 판\n";
   const SLOTS = ["send", "landed", "unchanged", "delete", "gone", "ignored"] as const;
-  /** 지난 산출 목록. 몇 파일만 보내는 올리기, 빌드 산출 전체를 맞춘 두 올리기(그 경로가 없다·있다)다. */
+  /** 지난 산출 목록. 목록을 주지 않은 계획, 목록을 준 두 계획(그 경로가 없다·있다)이다. */
   const PREVIOUS: readonly (readonly string[] | null)[] = [null, [], [CHIP]];
 
   type Change = "removed" | "changed" | "added" | null;
@@ -586,77 +594,397 @@ describe("한 경로가 드는 칸", () => {
   });
 });
 
-describe("빌드가 필요한지", () => {
-  test("패키지 아래가 바뀌면 빌드가 필요하다", () => {
-    expect(needsBuild(["web/packages/ui/src/Button.tsx"], [])).toEqual({
-      needed: true,
-      because: [{ path: "web/packages/ui/src/Button.tsx", reason: "package" }],
-    });
+// design-card-build 명세 "올리기"의 "옛 별칭 지우기", "첫 정식 올리기와 `tokens.json`", "목록만 옛것일 때", "나누기",
+// "색인의 `libraries`", "`upgraded`"와 Testing Decisions "올리기 시험"의 사례(티켓 03).
+
+const TOKENS = "project/tokens.json";
+const LAYERS = [
+  ["atoms", ["Button", "Card", "Icon", "IconButton", "Progress", "StatusBadge"]],
+  ["molecules", ["Alert", "Switch", "TextField"]],
+] as const;
+const NAMES = LAYERS.flatMap(([, names]) => names);
+
+/**
+ * 옛 배치에만 있는 옛 별칭 48개. 카드 36, `_preview/` 9, `_vendor/` 2, `_ds_sync.json` 이다. 옛 배치는 짓기 명령 전에
+ * 올라간 배치이고, 카드가 `components/<무리>/<이름>/` 아래에 있다.
+ */
+const OLD_ALIASES = [
+  ...LAYERS.flatMap(([layer, names]) =>
+    names.flatMap((name) =>
+      ["d.ts", "html", "jsx", "prompt.md"].map(
+        (suffix) => `project/components/${layer}/${name}/${name}.${suffix}`,
+      ),
+    ),
+  ),
+  ...NAMES.map((name) => `project/_preview/${name}.js`),
+  "project/_vendor/react-dom.js",
+  "project/_vendor/react.js",
+  "project/_ds_sync.json",
+];
+
+/** 두 배치가 함께 짓는 파일. 이름만 바뀐 `tokens.json` 도 지문이 같아 같은 바이트로 둔다. */
+const SHARED: Readonly<Record<string, string>> = {
+  "project/README.md": "# Agent OS\n",
+  [TOKENS]: '{"name":"Agent OS"}',
+  "project/_ds_bundle.js": "window.AgentOsUi={};",
+  "project/_ds_bundle.css": ":root{}",
+  "project/styles.css": '@import "./fonts/fonts.css";',
+  "project/fonts/a.woff2": "글꼴",
+};
+
+/** 옛 배치. */
+function oldLayout(): Record<string, string> {
+  return { ...SHARED, ...Object.fromEntries(OLD_ALIASES.map((path) => [path, `옛 ${path}`])) };
+}
+
+/** 짓기 명령의 정식 배치. 카드는 `components/<이름>/preview.html` 이다. */
+function canonical(): Record<string, string> {
+  return {
+    ...SHARED,
+    "project/components/bundle.js": "window.AgentOsUi={};",
+    "project/components/bundle.css": ":root{}",
+    ...Object.fromEntries(
+      NAMES.flatMap((name) => [
+        [`project/components/${name}/preview.html`, `<!-- @dsCard group="atoms" -->${name}`],
+        [`project/components/${name}/README.md`, `# ${name}\n`],
+      ]),
+    ),
+  };
+}
+
+/** 그 파일들을 모두 보낸 기록. */
+function recordOf(files: Readonly<Record<string, string>>): SyncRecord {
+  return record({
+    files: new Map(Object.entries(files).map(([path, text]) => [path, entry(path, text)])),
+  });
+}
+
+function sha256Of(files: Readonly<Record<string, string>>): Map<string, string> {
+  return new Map(Object.entries(files).map(([path, text]) => [path, sha256(bytes(text))]));
+}
+
+describe("옛 배치에서 정식 배치로 옮기는 올리기", () => {
+  test("지난 목록과 기록에 든 옛 별칭 48개를 모두 지운다", () => {
+    const plan = planUpload(
+      input({
+        record: recordOf(oldLayout()),
+        output: output(canonical()),
+        previousOutput: Object.keys(oldLayout()),
+      }),
+    );
+
+    expect(OLD_ALIASES).toHaveLength(48);
+    expect(plan.delete).toEqual(sortedPaths(OLD_ALIASES));
   });
 
-  test("빌린 빌드의 설정과 포크 파일이 바뀌면 빌드가 필요하다", () => {
-    expect(
-      needsBuild(
-        [".design-sync/config.json", ".design-sync/overrides/preview-gen-storybook.mjs"],
-        [],
+  test("기록에 정식 카드가 없고 이번 산출에 있으면 첫 정식 올리기라 지문이 같아도 tokens.json 을 보낸다", () => {
+    const plan = planUpload(
+      input({
+        record: recordOf(oldLayout()),
+        output: output(canonical()),
+        previousOutput: Object.keys(oldLayout()),
+      }),
+    );
+
+    expect(plan.firstCanonical).toBe(true);
+    expect(plan.send).toContain(TOKENS);
+    expect(plan.unchanged).not.toContain(TOKENS);
+  });
+
+  test("앞 시도가 tokens.json 을 목표대로 보낸 이어 받는 올리기도 tokens.json 을 다시 보낸다", () => {
+    const card = "project/components/Button/preview.html";
+    const target = canonical();
+    const pending = {
+      files: new Map([
+        [TOKENS, entry(TOKENS, target[TOKENS] ?? "")],
+        [card, entry(card, target[card] ?? "")],
+      ]),
+      delete: OLD_ALIASES,
+      index: INDEX,
+    };
+    const plan = planUpload(
+      input({
+        record: { ...recordOf(oldLayout()), pending },
+        output: output(target),
+        previousOutput: Object.keys(oldLayout()),
+        pendingState: new Map<string, PendingClass>([
+          [TOKENS, "sent"],
+          [card, "sent"],
+          ...OLD_ALIASES.map((path): [string, PendingClass] => [path, "remaining"]),
+        ]),
+      }),
+    );
+
+    expect(plan.firstCanonical).toBe(true);
+    expect(plan.send).toContain(TOKENS);
+    expect(plan.landed).toEqual([card]);
+  });
+
+  test("기록에 정식 카드가 있으면 첫 정식 올리기가 아니라 tokens.json 을 지문대로 다룬다", () => {
+    const plan = planUpload(input({ record: recordOf(canonical()), output: output(canonical()) }));
+
+    expect(plan.firstCanonical).toBe(false);
+    expect(plan.unchanged).toContain(TOKENS);
+    expect(plan.send).toEqual([]);
+  });
+
+  test("기록이 없으면 받은 sha256 목록에 정식 카드가 있는지로 가른다", () => {
+    const fromBorrowed = planUpload(
+      input({ record: null, artifactSha256: sha256Of(oldLayout()), output: output(canonical()) }),
+    );
+    const fromCanonical = planUpload(
+      input({ record: null, artifactSha256: sha256Of(canonical()), output: output(canonical()) }),
+    );
+
+    expect(fromBorrowed.firstCanonical).toBe(true);
+    expect(fromBorrowed.send).toContain(TOKENS);
+    expect(fromCanonical.firstCanonical).toBe(false);
+    expect(fromCanonical.unchanged).toContain(TOKENS);
+  });
+
+  test("다 보낸 뒤 지난 목록만 옛것이면 tokens.json 도 옛 경로도 다시 다루지 않는다", () => {
+    const plan = planUpload(
+      input({
+        record: recordOf(canonical()),
+        output: output(canonical()),
+        previousOutput: Object.keys(oldLayout()),
+      }),
+    );
+
+    expect(plan.firstCanonical).toBe(false);
+    expect(plan.send).toEqual([]);
+    expect(plan.delete).toEqual([]);
+  });
+
+  test("기록이 없으면 지난 목록대로 지운다", () => {
+    const plan = planUpload(
+      input({
+        record: null,
+        artifactSha256: sha256Of(oldLayout()),
+        output: output(canonical()),
+        previousOutput: Object.keys(oldLayout()),
+      }),
+    );
+
+    expect(plan.delete).toEqual(sortedPaths(OLD_ALIASES));
+  });
+});
+
+describe("정식 카드가 없는 산출", () => {
+  test("정식 카드가 없는 산출은 첫 정식 올리기가 아니고 tokens.json 을 지문대로 다룬다", () => {
+    const plan = planUpload(
+      input({
+        record: recordOf(oldLayout()),
+        output: output(oldLayout()),
+        previousOutput: Object.keys(oldLayout()),
+      }),
+    );
+
+    expect(plan.firstCanonical).toBe(false);
+    expect(plan.unchanged).toContain(TOKENS);
+    expect(plan.send).toEqual([]);
+    expect(plan.delete).toEqual([]);
+  });
+
+  test("기록에 든 지난 경로는 지우고, 기록에 없는 지난 경로만 내지 않는다", () => {
+    const dropped = OLD_ALIASES.filter((path) => path.includes("/Switch/"));
+    const now = Object.entries(oldLayout()).filter(([path]) => !dropped.includes(path));
+    const plan = planUpload(
+      input({
+        record: recordOf(oldLayout()),
+        output: output(Object.fromEntries(now)),
+        previousOutput: [...Object.keys(oldLayout()), "project/guidelines/old.md"],
+      }),
+    );
+
+    expect(plan.delete).toEqual(sortedPaths(dropped));
+  });
+});
+
+describe("호출 몫", () => {
+  /** 몫마다 센 경로 수. 나뉘면 첫 호출이 `pending` 이 든 기록을, 마지막 호출이 기록과 색인을 더 싣는다. */
+  function pathCounts(calls: readonly UploadCall[]): number[] {
+    return calls.map(
+      (call, at) =>
+        call.send.length +
+        call.delete.length +
+        (calls.length === 1 ? 2 : at === 0 ? 1 : at === calls.length - 1 ? 2 : 0),
+    );
+  }
+
+  test("한 호출에 들면 몫이 하나이고 보낼 파일과 지울 경로를 모두 든다", () => {
+    const plan = planUpload(
+      input({
+        record: recordOf(oldLayout()),
+        output: output(canonical()),
+        previousOutput: Object.keys(oldLayout()),
+      }),
+    );
+
+    expect(plan.calls).toEqual([{ send: plan.send, delete: plan.delete }]);
+  });
+
+  test("빈 시스템에 글꼴 770개를 처음 올리면 몫마다 기록·색인을 세어 255개를 넘지 않게 넷으로 나눈다", () => {
+    const files = canonical();
+    for (let index = 0; index < 770; index += 1) {
+      files[`project/fonts/noto-${String(index).padStart(3, "0")}.woff2`] = "글꼴";
+    }
+    const plan = planUpload(
+      input({ record: null, artifactSha256: new Map(), output: output(files) }),
+    );
+
+    expect(plan.send.length).toBeGreaterThan(770);
+    expect(plan.calls).toHaveLength(4);
+    expect(Math.max(...pathCounts(plan.calls))).toBeLessThanOrEqual(CALL_PATHS);
+    expect(sortedPaths(plan.calls.flatMap((call) => call.send))).toEqual(plan.send);
+  });
+
+  test("지울 경로도 몫에 세어 255개를 넘지 않는다", () => {
+    const previous = Array.from(
+      { length: 300 },
+      (_, index) => `project/old/${String(index).padStart(3, "0")}.md`,
+    );
+    const plan = planUpload(
+      input({
+        record: recordOf(Object.fromEntries(previous.map((path) => [path, "옛것"]))),
+        output: output(canonical()),
+        previousOutput: previous,
+      }),
+    );
+
+    expect(plan.delete).toHaveLength(300);
+    expect(plan.calls.length).toBeGreaterThan(1);
+    expect(Math.max(...pathCounts(plan.calls))).toBeLessThanOrEqual(CALL_PATHS);
+    expect(sortedPaths(plan.calls.flatMap((call) => call.delete))).toEqual(plan.delete);
+  });
+
+  test("바이트가 16MiB 를 넘으면 기록·색인의 몫을 남기고 나눈다", () => {
+    // 둘은 16MiB 에 들지만 기록의 몫을 더하면 넘는 크기다
+    const size = CALL_BYTES / 2 - 100_000;
+    const plan = planUpload(
+      input({
+        record: null,
+        artifactSha256: new Map(),
+        output: new Map(
+          ["project/a.bin", "project/b.bin", "project/c.bin"].map((path) => [
+            path,
+            new Uint8Array(size),
+          ]),
+        ),
+      }),
+    );
+    const sizes = plan.calls.map(
+      (call, at) =>
+        call.send.length * size +
+        (at === 0 ? RECORD_LIMIT : 0) +
+        (at === plan.calls.length - 1 ? RECORD_LIMIT + INDEX_LIMIT : 0),
+    );
+
+    expect(plan.calls.length).toBeGreaterThan(1);
+    expect(Math.max(...sizes)).toBeLessThanOrEqual(CALL_BYTES);
+  });
+
+  /** 몫마다 보낼 파일의 바이트와, 그 호출이 싣는 기록·색인의 한도를 더한 값. */
+  function callBytes(calls: readonly UploadCall[], sizes: ReadonlyMap<string, number>): number[] {
+    return calls.map(
+      (call, at) =>
+        call.send.reduce((sum, path) => sum + (sizes.get(path) ?? 0), 0) +
+        (calls.length === 1
+          ? RECORD_LIMIT + INDEX_LIMIT
+          : at === 0
+            ? RECORD_LIMIT
+            : at === calls.length - 1
+              ? RECORD_LIMIT + INDEX_LIMIT
+              : 0),
+    );
+  }
+
+  test("남은 큰 파일이 기록·색인과 함께 들지 않으면 그 파일만 보내고 마지막 몫은 기록과 색인만 싣는다", () => {
+    const sizes = new Map([
+      ["project/a.bin", 1_000],
+      ["project/b.bin", CALL_BYTES - RECORD_LIMIT],
+    ]);
+    const plan = planUpload(
+      input({
+        record: null,
+        artifactSha256: new Map(),
+        output: new Map([...sizes].map(([path, size]) => [path, new Uint8Array(size)])),
+      }),
+    );
+
+    expect(plan.calls).toEqual([
+      { send: ["project/a.bin"], delete: [] },
+      { send: ["project/b.bin"], delete: [] },
+      { send: [], delete: [] },
+    ]);
+    expect(Math.max(...callBytes(plan.calls, sizes))).toBeLessThanOrEqual(CALL_BYTES);
+  });
+
+  test("첫 파일이 pending 기록과 함께 들지 않으면 첫 몫은 기록만 싣는다", () => {
+    const sizes = new Map([["project/huge.bin", CALL_BYTES - 100]]);
+    const plan = planUpload(
+      input({
+        record: null,
+        artifactSha256: new Map(),
+        output: new Map([...sizes].map(([path, size]) => [path, new Uint8Array(size)])),
+      }),
+    );
+
+    expect(plan.calls).toEqual([
+      { send: [], delete: [] },
+      { send: ["project/huge.bin"], delete: [] },
+      { send: [], delete: [] },
+    ]);
+    expect(Math.max(...callBytes(plan.calls, sizes))).toBeLessThanOrEqual(CALL_BYTES);
+  });
+
+  test("한 파일이 한 호출에 들지 않으면 멈춘다", () => {
+    const thrown = caught(() =>
+      planUpload(
+        input({
+          record: null,
+          artifactSha256: new Map(),
+          output: new Map([["project/huge.bin", new Uint8Array(CALL_BYTES + 1)]]),
+        }),
       ),
-    ).toEqual({
-      needed: true,
-      because: [
-        { path: ".design-sync/config.json", reason: "buildConfig" },
-        { path: ".design-sync/overrides/preview-gen-storybook.mjs", reason: "buildConfig" },
+    );
+
+    expect(thrown).toBeInstanceOf(CommandError);
+    expect(thrown).toMatchObject({ kind: "limit" });
+  });
+});
+
+describe("보낼 색인", () => {
+  const RECEIVED = {
+    v: 3,
+    layout: "files",
+    title: "Agent OS",
+    libraries: [],
+    source: { app: "claude-design", v: 1 },
+    lastChange: { by: "Claude", via: "agent-os main@abc1234" },
+  };
+
+  test("묶음을 싣는 색인은 React 18.3.1 과 global 을 적고 source 와 다른 칸을 남긴다", () => {
+    expect(withLibraries(RECEIVED)).toEqual({
+      ...RECEIVED,
+      libraries: [
+        { name: "react", version: "18.3.1", global: "React" },
+        { name: "react-dom", version: "18.3.1", global: "ReactDOM" },
       ],
     });
   });
 
-  test("그대로 옮기는 원본과 패키지 밖만 바뀌면 빌드가 필요 없다", () => {
-    expect(
-      needsBuild(
-        [
-          ".design-sync/foundations/colors/index.html",
-          ".design-sync/NOTES.md",
-          ".claude/rules/web-design.md",
-          "web/tools/sync-design-system/build.ts",
-          "web/packages/ui-extra/index.ts",
-          "web/apps/admin/src/app/page.tsx",
-        ],
-        [],
-      ),
-    ).toEqual({ needed: false, because: [] });
-  });
-
-  test("올리기가 커밋하는 지난 산출 목록만 바뀌면 빌드가 필요 없다", () => {
-    expect(needsBuild([".design-sync/upload-output.json"], [])).toEqual({
-      needed: false,
-      because: [],
+  test("첫 정식 올리기의 색인은 upgraded 를 더하고 다른 칸을 남긴다", () => {
+    expect(withUpgraded(RECEIVED, "2026-10-29T12:00:00.000Z")).toEqual({
+      ...RECEIVED,
+      upgraded: { at: "2026-10-29T12:00:00.000Z" },
     });
   });
 
-  test("올릴 항목을 고르는 산출 스크립트가 바뀌면 산출 전체를 다시 맞추게 빌드가 필요하다", () => {
-    expect(needsBuild([".design-sync/upload-output.mjs"], [])).toEqual({
-      needed: true,
-      because: [{ path: ".design-sync/upload-output.mjs", reason: "buildConfig" }],
-    });
-  });
+  test("이미 있는 upgraded 는 그대로 둔다", () => {
+    const upgraded = { at: "2026-10-01T00:00:00.000Z" };
+    const sent = withUpgraded({ ...RECEIVED, upgraded }, "2026-10-29T12:00:00.000Z");
 
-  test("되돌릴 파일 가운데 빌드가 짓는 파일이 있으면 빌드가 필요하다", () => {
-    expect(needsBuild([], [BUTTON, "project/tokens.json"])).toEqual({
-      needed: true,
-      because: [{ path: BUTTON, reason: "revert" }],
-    });
-  });
-
-  test("되돌릴 파일이 tokens.json 과 그대로 옮기는 다섯뿐이면 빌드가 필요 없다", () => {
-    expect(
-      needsBuild(
-        [],
-        [
-          "project/tokens.json",
-          "project/foundations/colors/index.html",
-          "project/foundations/type/index.html",
-          "project/guidelines/web-design.md",
-        ],
-      ),
-    ).toEqual({ needed: false, because: [] });
+    expect(sent.upgraded).toEqual(upgraded);
   });
 });

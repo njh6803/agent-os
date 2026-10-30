@@ -4,7 +4,7 @@
 
 import { expect, type Page, test } from "@playwright/test";
 import { stack } from "./env";
-import { enterAdminToken, group, row } from "./screen";
+import { enterAdminToken, group, openSection, row } from "./screen";
 import { HOSTILE_CONTENT, READ_RUNS, UNKNOWN_LINE } from "./traces";
 
 function runRow(page: Page, runId: string) {
@@ -30,9 +30,16 @@ test("실행 목록을 상태로 거르고 실행 하나를 열어 모르는 종
   await enterAdminToken(page, adminToken);
   await expect(row(page, "에이전트", "echo")).toContainText("켜짐");
 
-  await page.getByRole("navigation").getByRole("link", { name: "실행 목록", exact: true }).click();
+  await openSection(page, "실행");
 
   await expect(page).toHaveURL(`${adminUrl}/runs`);
+  // 시각은 이 브라우저의 시간대로 적는다. 설정이 시간대를 Asia/Seoul 로 고정한다(playwright.config.ts). 페이지 시험은
+  // America/New_York 이라, 시간대를 그 이름으로 박은 구현은 여기서 빨개진다.
+  await expect(group(page, "실행")).toContainText(
+    "시각은 이 브라우저의 시간대(Asia/Seoul)로 적었다.",
+  );
+  // 데스크톱 폭이라 표다.
+  await expect(group(page, "실행").getByRole("table")).toBeVisible();
   await expect(runRow(page, READ_RUNS.finished)).toContainText("끝남");
   await expect(runRow(page, READ_RUNS.failed)).toContainText("실패");
   await expect(runRow(page, READ_RUNS.formatOne)).toContainText("끝남");
@@ -49,11 +56,11 @@ test("실행 목록을 상태로 거르고 실행 하나를 열어 모르는 종
 
   const unknown = await openRun(page, adminUrl, READ_RUNS.unknown);
   await expect(unknown).toContainText(UNKNOWN_LINE);
-  await page.getByRole("link", { name: "실행 목록으로" }).click();
+  await page.getByRole("link", { name: "실행 목록", exact: true }).click();
 
   await openRun(page, adminUrl, READ_RUNS.formatOne);
   await expect(page.getByRole("main")).toContainText("읽을 수 있지만 재개할 수 없다");
-  await page.getByRole("link", { name: "실행 목록으로" }).click();
+  await page.getByRole("link", { name: "실행 목록", exact: true }).click();
 
   const finished = await openRun(page, adminUrl, READ_RUNS.finished);
   await expect(finished).toContainText(HOSTILE_CONTENT);

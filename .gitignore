@@ -34,7 +34,8 @@ coverage/
 test-results/
 playwright-report/
 blob-report/
-# 디자인 시스템 패키지의 빌드(/design-sync 만 쓴다)와 Storybook 정적 빌드(사진 비교의 입력). 앵커를 붙여야 판정 범위에서
+# 디자인 시스템 패키지의 빌드(패키지의 build 스크립트를 손으로 칠 때만 쓴다. 저장소의 검사와 CI 는 부르지 않고, 짓기 명령은
+# 임시 폴더에 짓는다)와 Storybook 정적 빌드(사진 비교의 입력). 앵커를 붙여야 판정 범위에서
 # 빠진다. 패키지 안의 .gitignore 나 앵커 없는 dist/ 는 판정자나 판정 범위 테스트에 걸렸다(ADR 0026, storybook/build.mjs).
 /web/packages/ui/dist/
 /web/packages/ui/storybook-static/
@@ -45,9 +46,8 @@ blob-report/
 /web/apps/widget/public/element.js
 # 관리 화면의 Storybook 정적 빌드(관리 화면 사진 비교의 입력).
 /web/apps/admin/storybook-static/
-# /design-sync 의 산출물과 검증 상태. .design-sync/ 에서는 아래 셋만 무시하고 나머지(설정, NOTES, 사용 규약, 포크와 그
-# 보조 파일)는 스킬의 규약대로 커밋한다(ADR 0026). 판정을 이어 쓰는 근거는 Claude Design 프로젝트에 올린 _ds_sync.json
-# 이다. .design-sync/node_modules 는 위의 node_modules/ 줄이 덮는다.
+# 옛 /design-sync(번들 스킬의 빌드)가 산출물과 검증 상태를 쓰던 자리 다섯. 올리기는 더 쓰지 않지만(ADR 0025 의
+# 2026-10-28 이력), 버릇대로 쳐도 이 다섯 자리의 산출은 커밋되지 않게 남긴다.
 /.ds-sync/
 /ds-bundle/
 /.design-sync/sb-reference/

@@ -9,7 +9,7 @@ import { http, HttpResponse } from "msw";
 import { describe, expect, test } from "vitest";
 import { api, envelope, network, type Plugin } from "../../testing/network";
 import { renderPage } from "../../testing/render";
-import { acceptTokens, enterAdminToken } from "../../testing/token";
+import { acceptTokens, clearTokens, enterAdminToken } from "../../testing/token";
 import { PluginPage } from "./PluginPage";
 
 const TOKEN = "adm-4Kp9-plugin-page-token";
@@ -83,9 +83,31 @@ describe("플러그인 하나", () => {
 
     const manifest = await screen.findByRole("region", { name: "매니페스트" });
     expect(manifest.textContent).toContain(CALC_MANIFEST);
-    expect(screen.getByRole("heading", { level: 2, name: "calc" })).toBeTruthy();
+    // 켜짐은 제목 옆에 서고 제목의 이름에 들지 않는다.
+    expect(screen.getByRole("heading", { level: 1, name: "calc" })).toBeTruthy();
     expect(screen.getByText("켜짐")).toBeTruthy();
+    expect(screen.getByText("에이전트. 켜고 끄기는 플러그인 목록에서 한다.")).toBeTruthy();
+    expect(screen.getByRole("heading", { level: 2, name: "매니페스트" })).toBeTruthy();
+    expect(screen.queryByRole("switch")).toBeNull();
     expect(authorizations).toEqual([`Bearer ${TOKEN}`]);
+  });
+
+  test("꺼진 플러그인은 제목 옆에 꺼짐이 선다", async () => {
+    acceptTokens();
+    servePlugin("/plugins/mcp/everything", () =>
+      HttpResponse.json({
+        ...CALC,
+        kind: "mcp",
+        name: "everything",
+        enabled: false,
+      }),
+    );
+
+    await openPlugin("mcp", "everything");
+
+    expect(await screen.findByText("꺼짐")).toBeTruthy();
+    expect(screen.queryByText("켜짐")).toBeNull();
+    expect(screen.getByText("MCP. 켜고 끄기는 플러그인 목록에서 한다.")).toBeTruthy();
   });
 
   test("매니페스트를 읽을 수 없는 플러그인을 열면 500 봉투의 경로와 이유와 추적 식별자가 보인다", async () => {
@@ -99,9 +121,10 @@ describe("플러그인 하나", () => {
     await openPlugin("agent", "broken");
 
     const alert = await screen.findByRole("alert");
+    expect(alert.textContent).toContain("플러그인을 읽지 못했다");
     expect(alert.textContent).toContain("C:/root/plugins/agents/broken/plugin.toml");
     expect(alert.textContent).toContain("Expected '=' after a key");
-    expect(alert.textContent).toContain("req-5b21");
+    expect(alert.textContent).toContain("추적 식별자: req-5b21");
     expect(screen.queryByRole("region", { name: "매니페스트" })).toBeNull();
   });
 
@@ -126,7 +149,7 @@ describe("플러그인 하나", () => {
 
     expect((await screen.findByRole("alert")).textContent).toContain("관리 토큰이 거부됐다");
     expect(screen.getByLabelText("관리 토큰")).toBeTruthy();
-    expect(screen.queryByRole("heading", { level: 2, name: "calc" })).toBeNull();
+    expect(screen.queryByRole("heading", { level: 1, name: "calc" })).toBeNull();
   });
 
   test("새로 고침 버튼이 그 플러그인을 다시 읽는다", async () => {
@@ -143,6 +166,19 @@ describe("플러그인 하나", () => {
     expect(authorizations).toHaveLength(2);
   });
 
+  test("처음 불러오는 동안에는 머리 아래에 플러그인을 불러오는 중이 선다", async () => {
+    const first = Promise.withResolvers<Response>();
+    acceptTokens();
+    servePlugin("/plugins/agent/calc", () => first.promise);
+
+    await openPlugin("agent", "calc");
+
+    expect(await screen.findByRole("progressbar", { name: "플러그인을 불러오는 중" })).toBeTruthy();
+    first.resolve(HttpResponse.json(CALC));
+    expect(await screen.findByRole("region", { name: "매니페스트" })).toBeTruthy();
+    expect(screen.queryByRole("progressbar")).toBeNull();
+  });
+
   test("다시 확인하는 동안에는 이미 보인 매니페스트가 남는다", async () => {
     const again = Promise.withResolvers<Response>();
     acceptTokens();
@@ -154,7 +190,7 @@ describe("플러그인 하나", () => {
 
     await user.click(screen.getByRole("button", { name: "새로 고침" }));
 
-    expect((await screen.findByRole("status")).textContent).toContain("다시 확인하는 중");
+    expect(await screen.findByRole("progressbar", { name: "다시 확인하는 중" })).toBeTruthy();
     expect(screen.getByRole("region", { name: "매니페스트" }).textContent).toContain(CALC_MANIFEST);
     again.resolve(HttpResponse.json(CALC));
   });
@@ -173,6 +209,8 @@ describe("플러그인 하나", () => {
 
     expect((await screen.findByRole("alert")).textContent).toContain("운영자 파일이 깨졌다");
     expect(screen.queryByRole("region", { name: "매니페스트" })).toBeNull();
+    // 옛 켜짐도 믿지 않는다.
+    expect(screen.queryByText("켜짐")).toBeNull();
   });
 
   test("지운 토큰의 늦은 401 은 그 사이 넣은 새 토큰의 플러그인 하나에 섞이지 않고 새 토큰을 내려놓지 않는다", async () => {
@@ -186,7 +224,7 @@ describe("플러그인 하나", () => {
     renderPage(<PluginPage kind="agent" name="calc" />);
     // 옛 토큰의 요청(0)은 응답을 기다린다.
     await enterAdminToken(user, old);
-    await user.click(await screen.findByRole("button", { name: "토큰 지우기" }));
+    await clearTokens(user);
     await enterAdminToken(user, TOKEN);
 
     // 새 토큰은 옛 요청을 나눠 받지 않고 제 요청을 보낸다.
@@ -208,9 +246,18 @@ describe("플러그인 하나", () => {
     // 처리하지 않은 요청은 setup.ts 가 테스트를 빨갛게 한다.
     await openPlugin("agents", "calc");
 
-    expect((await screen.findByRole("alert")).textContent).toContain(
-      "플러그인의 종류가 아니다: agents",
-    );
+    const alert = await screen.findByRole("alert");
+    expect(alert.textContent).toContain("플러그인을 읽지 못했다");
+    expect(alert.textContent).toContain("플러그인의 종류가 아니다: agents");
+  });
+
+  test("주소로 플러그인을 고르지 못해도 플러그인 목록으로 돌아가는 링크가 있다", async () => {
+    acceptTokens();
+
+    await openPlugin("agents", "calc");
+
+    await screen.findByRole("alert");
+    expect(screen.getByRole("link", { name: "플러그인 목록" }).getAttribute("href")).toBe("/");
   });
 
   test("주소의 조각이 인코딩된 채로 와도 풀어서 보이고 요청은 한 번만 인코딩한다", async () => {
@@ -225,7 +272,7 @@ describe("플러그인 하나", () => {
     // 두 번 인코딩한 요청(Old%2520Calc)은 처리하지 않은 요청이라 setup.ts 가 테스트를 빨갛게 한다.
     await openPlugin("agent", "Old%20Calc");
 
-    expect(await screen.findByRole("heading", { level: 2, name: "Old Calc" })).toBeTruthy();
+    expect(await screen.findByRole("heading", { level: 1, name: "Old Calc" })).toBeTruthy();
     expect((await screen.findByRole("alert")).textContent).toContain("요청의 형식이 올바르지 않다");
     expect(authorizations).toHaveLength(1);
   });
@@ -240,13 +287,29 @@ describe("플러그인 하나", () => {
     );
   });
 
+  test("주소를 풀 수 없어도 화면의 제목은 받은 이름 조각 그대로다", async () => {
+    acceptTokens();
+
+    await openPlugin("agent", "%E0%A4%A");
+
+    expect(await screen.findByRole("heading", { level: 1, name: "%E0%A4%A" })).toBeTruthy();
+  });
+
+  test("주소의 종류가 플러그인의 종류가 아니어도 화면의 제목은 푼 이름이다", async () => {
+    acceptTokens();
+
+    await openPlugin("agents", "Old%20Calc");
+
+    expect(await screen.findByRole("heading", { level: 1, name: "Old Calc" })).toBeTruthy();
+  });
+
   test("플러그인 목록으로 돌아가는 링크가 있다", async () => {
     acceptTokens();
     servePlugin("/plugins/agent/calc", () => HttpResponse.json(CALC));
 
     await openPlugin("agent", "calc");
 
-    const back = await screen.findByRole("link", { name: "플러그인 목록으로" });
+    const back = await screen.findByRole("link", { name: "플러그인 목록" });
     expect(back.getAttribute("href")).toBe("/");
     await screen.findByRole("region", { name: "매니페스트" });
   });

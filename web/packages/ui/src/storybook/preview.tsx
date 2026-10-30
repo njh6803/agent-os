@@ -11,8 +11,9 @@
 //   사진 비교(`visual/`)가 찍지 않는다. 사진은 기본 테마만 찍는다(ADR 0026 의 2026-10-06 이력).
 //   `planted` 는 일부러 규칙 없는 클래스나 기준 미달 짝을 그리는 음성 사례이고 afterEach 의 판정에서 빠진다(axe 는 그
 //   스토리가 끈다). `showcase` 는 컴포넌트를 실제 자리에 놓아 보이는 보여 주기용 스토리이고 여기서는 다르게 다루지 않는다
-//   (판정과 사진을 그대로 지난다). Claude Design 의 카드에는 그것만 오른다(`.design-sync/NOTES.md`). 스토리 파일의 `tags`
-//   에는 글자 그대로 적는다. Storybook 의 색인이 정적으로 읽어 상수를 받지 않는다.
+//   (판정과 사진을 그대로 지난다). 디자인 시스템 아티팩트의 카드에는 그것만 오른다(짓기 명령
+//   `web/tools/sync-design-system/assemble.ts` 가 소스 글에서 이 태그를 찾는다). 스토리 파일의 `tags` 에는 글자 그대로
+//   적는다. Storybook 의 색인과 짓기 명령이 정적으로 읽어 상수를 받지 않는다.
 import type { Decorator, Preview } from "@storybook/react-vite";
 import { arbitraryClasses, classesWithoutRules, sheetsDefining } from "../testing";
 import {
@@ -26,6 +27,13 @@ import {
 import { SHADOW_MODES, ShadowFrame, type ShadowMode } from "./ShadowFrame";
 
 export const PLANTED_TAG = "planted";
+
+/**
+ * axe(addon-a11y)의 위반을 스토리 테스트의 실패로 삼는 주해. 앱의 미리보기가 규칙을 더 켤 때 이것을 펼쳐 쓴다. 본체가
+ * 내는 `parameters` 는 Storybook 의 `Parameters`(값이 any)라 앱이 읽어 펼치지 못해, 같은 값을 다시 적으면 본체가 바뀔 때
+ * 조용히 어긋났다(admin-style 티켓 04).
+ */
+export const A11Y_PARAMETERS = { test: "error" } as const;
 
 const MODE_ITEMS = [
   { value: "system", title: "시스템" },
@@ -117,7 +125,7 @@ export function storyPreview(shadowCss: string): Preview {
   };
 
   return {
-    parameters: { a11y: { test: "error" } },
+    parameters: { a11y: A11Y_PARAMETERS },
     initialGlobals: { theme: DEFAULT_THEME, mode: "system", density: "auto", shadow: "off" },
     globalTypes: {
       theme: {

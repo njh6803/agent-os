@@ -1,6 +1,7 @@
-import Link from "next/link";
+import { Card } from "@agent-os/ui";
 import { Fragment } from "react";
 import type { TraceEvent } from "../../api/traces";
+import { TextLink } from "../atoms/TextLink";
 
 // 이벤트 하나를 글자로 그린다. 트레이스 상세의 이벤트와 재개 스트림으로 받은 이벤트가 이것 하나를 지난다. 이벤트
 // 타입이 `api/` 에 있어 molecules 가 아니라 여기 둔다(atoms·molecules 는 API 의 자리를 import 하지 않는다).
@@ -63,30 +64,66 @@ function isEventField(name: string): name is EventField {
 const RUN_FIELDS: ReadonlySet<EventField> = new Set(["previous_run", "last_covered_run"]);
 
 /**
- * 이벤트 하나. 제목은 종류(`type`)이고 필드를 서버가 준 차례대로, 용어집의 말과 계약의 이름을 함께 보인다(스토리 31).
- * 모르는 종류는 원문 문자열(`raw`) 하나다(스토리 29). 실행 식별자는 화면의 제목이라 되풀이하지 않는다.
+ * 이벤트 하나. 카드(`Card`, 안쪽 3)이고 머리는 종류(`type`)와 시각의 `h3` 이다(admin-style 티켓 07). 시각은 트레이스의
+ * 글자 그대로다. 필드를 서버가 준 차례대로, 용어집의 말과 계약의 이름을 함께 보인다(스토리 31). 모르는 종류는 원문
+ * 문자열(`raw`) 하나이고 시각이 없다(스토리 29). 실행 식별자는 화면의 제목이라 되풀이하지 않는다.
+ *
+ * 필드는 넓은 폭에서도 이름 아래 값이다. 그림 mk-run 의 두 칸(이름 168px)은 디자인 시스템의 크기 단계에 없는 폭이다.
  */
 export function EventItem({ event }: { readonly event: TraceEvent }) {
   return (
     <li>
-      <h4>{event.type === "unknown" ? "모르는 종류" : event.type}</h4>
-      <dl>
-        {Object.entries<unknown>(event)
-          .filter(([name]) => name !== "type" && name !== "run_id")
-          .map(([name, value]) => (
-            <Fragment key={name}>
-              <dt>
-                {isEventField(name) ? `${FIELD_NAMES[name]} ` : null}
-                <code>{name}</code>
-              </dt>
-              <dd style={{ whiteSpace: "pre-wrap" }}>
-                <FieldValue name={name} value={value} />
-              </dd>
-            </Fragment>
-          ))}
-      </dl>
+      <Card padding="3">
+        <EventHeading event={event} />
+        <dl className="flex flex-col gap-1">
+          {Object.entries<unknown>(event)
+            .filter(([name]) => name !== "type" && name !== "run_id")
+            .map(([name, value]) => (
+              <Fragment key={name}>
+                <dt className="text-small text-text-muted">
+                  {isEventField(name) ? `${FIELD_NAMES[name]} ` : null}
+                  <code className="font-mono">{name}</code>
+                </dt>
+                <dd
+                  className={`mb-2 whitespace-pre-wrap wrap-anywhere last:mb-0 ${valueClass(name, value)}`}
+                >
+                  <FieldValue name={name} value={value} />
+                </dd>
+              </Fragment>
+            ))}
+        </dl>
+      </Card>
     </li>
   );
+}
+
+/**
+ * 카드 머리. 종류와 시각 사이의 빈칸은 글자다. 두 조각이 flex 의 항목이라 보이지 않지만, 제목의 이름("run_started
+ * 2026-…")을 낱말 둘로 가른다.
+ */
+function EventHeading({ event }: { readonly event: TraceEvent }) {
+  return (
+    <h3 className="flex flex-wrap items-baseline justify-between gap-x-3 font-mono text-mono font-medium wrap-anywhere">
+      {event.type === "unknown" ? (
+        "모르는 종류"
+      ) : (
+        <>
+          <span>{event.type}</span> <span className="font-regular text-text-muted">{event.ts}</span>
+        </>
+      )}
+    </h3>
+  );
+}
+
+/**
+ * 값 칸의 글자. 도구 이름은 고정폭 `font-medium` 이다(`.claude/rules/web-design.md`). 시각과 글자가 아닌 JSON 값(수,
+ * 참거짓, 객체, 배열)은 고정폭이고, 나머지 글자는 표의 글자다.
+ */
+function valueClass(name: string, value: unknown): string {
+  if (name === "tool") {
+    return "font-mono text-mono font-medium";
+  }
+  return name === "ts" || typeof value !== "string" ? "font-mono text-mono" : "text-table";
 }
 
 /**
@@ -143,7 +180,7 @@ function isRunMap(value: unknown): value is Readonly<Record<string, string>> {
 /** 다른 실행의 식별자 하나. 그 실행의 상세로 가는 링크이고, 주소가 없으면(`runHref`) 글자다. */
 function RunLink({ runId }: { readonly runId: string }) {
   const href = runHref(runId);
-  return href === null ? runId : <Link href={href}>{runId}</Link>;
+  return href === null ? runId : <TextLink href={href}>{runId}</TextLink>;
 }
 
 /**

@@ -175,7 +175,7 @@ export default defineConfig(
         { type: "api", pattern: "api/*", capture: ["domain"] },
         { type: "query", pattern: "hooks/queries/*" },
         { type: "types", pattern: "types/*" },
-        // 클라이언트 상태(Zustand). 토큰 스토어가 여기 있다.
+        // 클라이언트 상태. 토큰 스토어(Zustand)와 문서 뿌리를 원천으로 읽는 테마가 여기 있다.
         { type: "store", pattern: "stores" },
         // 앱 하나(apps/<이름>). 층 폴더 밖의 앱 파일(lib/ 등)도 요소가 되어 아래 app/ 정책이 그것을 막는다.
         // 이 요소가 없으면 그 파일은 알 수 없는 로컬이라 정책 밖이다.

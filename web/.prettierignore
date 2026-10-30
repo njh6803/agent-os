@@ -3,3 +3,10 @@ pnpm-lock.yaml
 # 디자인 시스템 페이지가 저장한 바이트 그대로의 시험 자료. 모양은 페이지가 정한다(사람 몫 뒤의 빈 줄 둘을
 # Prettier 가 하나로 줄인다). 같은 폴더의 tokens.json 둘은 Prettier 를 지나 빼지 않는다
 tools/sync-design-system/fixtures/page-saved-README.md
+# 짓기 명령이 바이트 그대로 디자인 시스템 아티팩트에 올리는 README 원본과 기초 카드 원본 넷. Prettier 가 다시 쓰면
+# 올라가는 바이트가 바뀐다. 같은 폴더의 foundations.md 는 올라가지 않아 빼지 않는다
+tools/sync-design-system/artifact-source/README.md
+tools/sync-design-system/artifact-source/foundations/
+# 디자인 시스템 페이지가 tokens.json 으로 지어 카드 문서에 싣는 토큰 CSS 의 바이트 그대로의 사본. 짓기 명령의 그리기
+# 시험이 페이지처럼 싣는다. 모양은 페이지가 정한다(Prettier 는 `:root, [data-theme=…]` 의 선택자를 줄마다 가른다)
+tools/sync-design-system/fixtures/page-tokens.css

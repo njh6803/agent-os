@@ -1,0 +1,32 @@
+# `/sync-design-system` 본문의 낱말 줄과 작업 폴더 문단(design-card-build 티켓 04 가 옛 빌드의 낱말과 자리를 걷어 냈다)이 새
+# 세션에 실리는지(CLAUDE.md 작업 규약 3). 실험군은 이 워크트리, 대조군은 이 티켓 전의 main 커밋 `fcf808fa` 다. 그 판의 낱말
+# 줄은 번들 스킬의 업로드와 그 빌드를 빌리는 일을 드는 옛 문장이라, 대조군은 1 에 옛 문장이나 "없음" 을 답해야 한다.
+# 최신 결과: 통과 4, "없음" 섞임 0(2026-10-30, 이 PC, claude 2.1.312, 대조군 `--control-commit fcf808fa`, 실험군은 `fcf808fa`
+#   위의 커밋 전 변경, 일지 2026-10-30-10). 실험군 세 회차 모두 스킬을 불러 두 문장을 옮겼고, 대조군은 1 에 옛 낱말 문장을 들어
+#   그런 말이 없다고, 2 에 `assemble.ts` 가 없는 괄호를 답했다. 원본은 저장소에 두지 않았다.
+# 결과를 본 뒤 바꾼 것: 첫 실행(2026-10-30, 통과 3 · 실패 1)의 실험군 2회차가 스킬을 불러 같은 문장을 옮기며 끝의 "다"를
+#   "라고 부른다"로 바꿔 적었다. 대조군은 옛 문장을 들어 "없음"이라 실림은 그 앞까지로 갈려, 1 의 기대에서 끝의 "다"만 뺐다.
+# 돌리는 법: 워크트리 `.claude/worktrees/<이름>/` 루트에서
+#   uv run python tools/canary.py --control-commit fcf808fa .scratch/design-card-build/probes/canary/sync_design_system_words.toml <출력 디렉터리>
+kind = "skill"
+question = '''
+sync-design-system 스킬을 Skill 도구로 불러 본문을 읽어라. 스킬이 시키는 일(아티팩트 읽기, 스크립트 실행, 질문)은 하지 않고 본문만 읽는다.
+1. 본문 머리의 낱말을 정하는 문장에서, 올릴 산출 전체를 짓는 일을 무엇이라 부르는지 말하는 부분을 글자 그대로 옮겨라.
+2. 명령을 부르는 법을 다루는 절에서, 명령마다의 인자가 원천이라고 드는 모듈 이름의 괄호를 글자 그대로 옮겨라.
+판단이나 설명은 덧붙이지 않는다. 그런 스킬이나 문장이 없으면 그 물음에 "없음"이라고만 답하라.
+'''
+expect = [
+  "올릴 산출 전체를 짓는 일은 \"짓기\"(짓기 명령 `assemble`)",
+  "`build.ts`, `assemble.ts`",
+]
+source = ".claude/skills/sync-design-system/SKILL.md"
+skill = "sync-design-system"
+
+[[arm]]
+name = "워크트리"
+role = "experiment"
+
+[[arm]]
+name = "티켓-전-main"
+role = "control"
+checkout = "../../.."

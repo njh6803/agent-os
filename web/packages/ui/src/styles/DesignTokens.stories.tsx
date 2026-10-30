@@ -425,8 +425,8 @@ function themeTokenNames(source: string): string[] {
   return names;
 }
 
-// Tailwind v4 는 쓰인 토큰만 CSS 변수로 낸다. 그래서 /design-sync 가 Claude Design 에 올린 CSS 에 소스가 쓰지 않은
-// 토큰(제목 글자, 넓은 여백 등)이 없었다(2026-10-12 첫 /design-sync). `@theme static` 이 모두 낸다. 아래 셋은 블록을
+// Tailwind v4 는 쓰인 토큰만 CSS 변수로 낸다. 그래서 2026-10-12 Claude Design 에 처음 올린 CSS 에 소스가 쓰지 않은
+// 토큰(제목 글자, 넓은 여백 등)이 없었다. `@theme static` 이 모두 낸다. 아래 셋은 블록을
 // 바로 읽었는지 보는 표본이다. 이 파일이 글자로 적어 Tailwind 가 쓰인 것으로 보므로 판정은 나머지 이름이 가른다.
 export const ThemeTokensEmitted: Story = {
   name: "@theme 의 디자인 토큰은 쓰이지 않아도 모두 문서 뿌리에서 풀린다",
