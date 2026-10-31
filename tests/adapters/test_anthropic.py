@@ -1,10 +1,9 @@
-"""모델 이름 결정(플래그, 환경변수, 기본값 순이고 폴백은 없다)과 모델 소스 어댑터."""
+"""모델 이름 결정(플래그, 환경변수 순이고 기본값도 폴백도 없다)과 모델 소스 어댑터."""
 
 import pytest
 from langchain_anthropic import ChatAnthropic
 
 from agent_os.adapters.anthropic import (
-    DEFAULT_MODEL,
     MAX_TOKENS,
     MODEL_ENV,
     AnthropicModels,
@@ -14,8 +13,13 @@ from agent_os.core.ports import ModelSource, PluginError
 from agent_os.sdk import PluginManifest, parse_manifest
 
 
-def test_환경변수가_없으면_기본_모델이다() -> None:
-    assert resolve_model_name({}) == DEFAULT_MODEL
+def test_플래그도_환경변수도_없으면_이름을_넘기는_두_길을_든_구성_오류다() -> None:
+    """코드의 기본 모델은 없다. 운영자가 고르지 않은 것을 몰래 채우지 않는다."""
+    with pytest.raises(ValueError) as error:
+        resolve_model_name({})
+
+    assert "--model" in str(error.value)
+    assert MODEL_ENV in str(error.value)
 
 
 def test_환경변수가_있으면_그_모델이다() -> None:
@@ -26,8 +30,8 @@ def test_플래그가_환경변수보다_앞선다() -> None:
     assert resolve_model_name({MODEL_ENV: "from-env"}, flag="from-flag") == "from-flag"
 
 
-def test_빈_지정은_기본값으로_넘어가지_않고_거부한다() -> None:
-    """빈 문자열은 '지정 안 함'이 아니라 잘못된 지정이다. 몰래 기본값으로 넘어가지 않는다."""
+def test_빈_지정은_없는_것으로_넘어가지_않고_거부한다() -> None:
+    """빈 문자열은 '지정 안 함'이 아니라 잘못된 지정이다. 다음 순서로 넘어가지 않는다."""
     with pytest.raises(ValueError, match="모델 이름"):
         resolve_model_name({MODEL_ENV: ""})
     with pytest.raises(ValueError, match="모델 이름"):

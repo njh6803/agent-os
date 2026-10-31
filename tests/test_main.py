@@ -40,7 +40,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from tests.signing import AUDIENCE, bearer, claims, new_key, sign
 
 from agent_os import main as main_module
-from agent_os.adapters.anthropic import DEFAULT_MODEL, MODEL_ENV
+from agent_os.adapters.anthropic import MODEL_ENV
 from agent_os.adapters.jsonl import JsonlTrace
 from agent_os.channel.cli.main import DEFAULT_HOST, EXIT_PAUSED
 from agent_os.channel.http.limits import DEFAULT_REQUEST_CHARS, check_request_chars
@@ -385,6 +385,122 @@ def test_이름의_패턴을_어긴_모델_지정은_실행_전에_진단을_적
     assert _trace_files(workspace / "t") == []
 
 
+# 기본 모델은 운영자가 반드시 고르고, 시작 자리가 이름·패턴·매니페스트를 확인한다(ADR 0040). 이
+# 아래는 `_main` 이 `--model` 을 대신 넘기지 않도록 `main()` 을 바로 부른다.
+
+UNREADABLE_MODEL_MANIFEST = (
+    MODEL_MANIFEST.replace('name = "claude-opus-5"', 'name = "leaky"')
+    + 'api_key = "sk-ant-XYZZY-비밀"\n'
+)
+
+
+@pytest.fixture
+def no_model_env(monkeypatch: pytest.MonkeyPatch) -> None:
+    """개발자 셸의 `AGENT_OS_MODEL` 이 이름을 대신 주지 않게 한다."""
+    monkeypatch.delenv(MODEL_ENV, raising=False)
+
+
+def _write_unreadable_model(root: Path) -> Path:
+    """모델 파일에 모르는 칸(키 값 모양의 글자)을 적어 읽히지 않게 만든다. 진단이 부르는
+    경로(플러그인 루트 기준)를 돌려준다."""
+    path = Path("plugins") / "models" / "leaky" / "plugin.toml"
+    (root / path).parent.mkdir(parents=True)
+    (root / path).write_text(UNREADABLE_MODEL_MANIFEST, encoding="utf-8")
+    return path
+
+
+@pytest.mark.usefixtures("no_model_env")
+@pytest.mark.parametrize(
+    "argv",
+    [
+        ["run", "echo", "hi", "--traces", "t"],
+        ["resume", "없는-실행", "--pause-index", "0", "--approve", "--traces", "t"],
+    ],
+    ids=["run", "resume"],
+)
+def test_이름을_넘기지_않으면_넘기는_두_길을_들고_종료_코드_1이며_트레이스를_남기지_않는다(
+    workspace: Path, capsys: pytest.CaptureFixture[str], argv: list[str]
+) -> None:
+    code = main(argv)
+
+    out, err = capsys.readouterr()
+    assert code == 1
+    assert out == ""
+    assert "--model" in err
+    assert MODEL_ENV in err
+    assert _trace_files(workspace / "t") == []
+
+
+@pytest.mark.parametrize(
+    "argv",
+    [
+        ["run", "echo", "hi", "--traces", "t", "--model", "ghost"],
+        [
+            "resume",
+            "없는-실행",
+            "--pause-index",
+            "0",
+            "--approve",
+            "--traces",
+            "t",
+            "--model",
+            "ghost",
+        ],
+    ],
+    ids=["run", "resume"],
+)
+def test_매니페스트가_없는_기본_모델은_그_이름을_든_진단과_종료_코드_1이다(
+    workspace: Path, capsys: pytest.CaptureFixture[str], argv: list[str]
+) -> None:
+    """첫 요청이 실패할 때까지 오타가 숨지 않는다. 재개도 실행을 이어 가므로 같은 확인을 한다."""
+    code = main(argv)
+
+    out, err = capsys.readouterr()
+    assert code == 1
+    assert out == ""
+    assert "기본 모델 플러그인이 없다: ghost" in err
+    assert _trace_files(workspace / "t") == []
+
+
+@pytest.mark.parametrize("command", ["run", "resume"])
+def test_읽히지_않는_기본_모델은_경로와_거부_표지를_적고_잘못_적은_값은_싣지_않는다(
+    workspace: Path, capsys: pytest.CaptureFixture[str], command: str
+) -> None:
+    path = _write_unreadable_model(workspace)
+    argv = (
+        ["run", "echo", "hi"]
+        if command == "run"
+        else ["resume", "없는-실행", "--pause-index", "0", "--approve"]
+    )
+
+    code = main([*argv, "--traces", "t", "--model", "leaky"])
+
+    out, err = capsys.readouterr()
+    assert code == 1
+    assert out == ""
+    assert str(path) in err
+    assert "extra_forbidden" in err
+    assert "XYZZY" not in err
+    assert _trace_files(workspace / "t") == []
+
+
+def test_꺼진_기본_모델은_시작_확인을_막지_않고_그_실행이_꺼진_모델로_거부된다(
+    workspace: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """꺼짐은 운영 중에 바뀌는 상태라 시작의 조건이 아니다. 거부하는 것은 실행 준비다."""
+    (workspace / OPERATOR_FILE).write_text(
+        f'schema_version = "1"\nmodel = ["{MODEL_PLUGIN}"]\n', encoding="utf-8"
+    )
+
+    code = _main(["run", "echo", "hi", "--traces", "t"])
+
+    out, err = capsys.readouterr()
+    assert code == 1
+    assert out == ""
+    assert f"꺼진 플러그인이다: model {MODEL_PLUGIN}" in err
+    assert "기본 모델 플러그인이 없다" not in err
+
+
 def _cli(argv: list[str], *, cwd: Path) -> subprocess.CompletedProcess[str]:
     """실제 CLI 프로세스 하나를 띄우고 끝날 때까지 기다린다. 돌아오면 그 프로세스는 죽어 있다."""
     return _python(["-m", "agent_os.main", *argv], cwd=cwd)
@@ -502,8 +618,9 @@ def test_승인_대상에서_멈추면_실행_식별자와_승인_요청이_표�
     assert "add" in out
     assert '"a": 2' in out
     assert '"b": 3' in out
-    assert f"agent-os resume {trace_file.stem} --pause-index 1 --traces t --approve" in out
-    assert f"agent-os resume {trace_file.stem} --pause-index 1 --traces t --deny --reason" in out
+    command = f"agent-os resume {trace_file.stem} --pause-index 1 --model {MODEL_PLUGIN} --traces t"
+    assert f"{command} --approve" in out
+    assert f"{command} --deny --reason" in out
     assert err == ""
     events = [e for e in _read(trace_file).events if not isinstance(e, UnknownEvent)]
     assert [e.type for e in events] == ["run_started", "run_paused"]
@@ -653,6 +770,30 @@ def test_안내된_재개_명령을_그대로_실행하면_재개된다(
 
     assert paused == EXIT_PAUSED
     assert "$out dir" in argv
+    assert code == 0
+    assert capsys.readouterr().out == "5\n"
+
+
+def test_안내_줄은_그_실행의_기본_모델_이름을_싣고_환경변수_없이_그대로_쳐도_재개된다(
+    workspace: Path, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """코드의 기본값이 사라졌으니 안내한 명령이 이름을 스스로 들어야 작동한다. 이름을 환경변수로
+    골랐어도 안내 줄은 `--model` 로 싣는다. 싣지 않으면 환경변수가 없는 셸에서 그대로 친 재개가
+    이름 없음으로 끝난다."""
+    _write_mcp_plugin(workspace, "fixture")
+    _write_plugin(workspace, "gated", GATED_SRC, GATED_MANIFEST)
+    monkeypatch.setenv(MODEL_ENV, MODEL_PLUGIN)
+    paused = main(["run", "gated", "hi", "--traces", "t"])
+    out = capsys.readouterr().out
+    approve = _guidance(out)
+    deny = _guidance(out, "거부")
+    monkeypatch.delenv(MODEL_ENV)
+
+    code = main(approve)
+
+    assert paused == EXIT_PAUSED
+    for argv in (approve, deny):
+        assert argv[argv.index("--model") + 1] == MODEL_PLUGIN
     assert code == 0
     assert capsys.readouterr().out == "5\n"
 
@@ -1149,9 +1290,10 @@ async def test_serve_는_모델을_시작_때_만들지_않고_실행마다_푼_
     uvicorn_calls: list[dict[str, object]],
     model_names: list[str],
 ) -> None:
-    """이름은 CLI 와 같은 규칙(플래그, 환경변수, 기본값 순)으로 시작 때 정한다. 두 채널이 같은
-    모델로 돈다고 믿을 수 있게 하기 위해서다(스토리 40). 요청마다 고르지 않는다(스토리 23). 시작
-    때는 이름만 정하고 모델을 만들지 않는다. 만드는 것은 실행을 준비할 때다."""
+    """이름은 CLI 와 같은 규칙(플래그, 환경변수 순)으로 시작 때 정한다. 두 채널이 같은 모델로 돈다고
+    믿을 수 있게 하기 위해서다(스토리 40). `--model` 이 환경변수를 이긴다(스토리 7). 요청마다 고르지
+    않는다(스토리 23). 시작 때는 이름만 정하고 모델을 만들지 않는다. 만드는 것은 실행을 준비할
+    때다."""
     _write_plugin(workspace, "asking", ASKING_SRC)
     _write_model_plugin(workspace, "from-flag")
     _write_model_plugin(workspace, "from-env")
@@ -1159,10 +1301,8 @@ async def test_serve_는_모델을_시작_때_만들지_않고_실행마다_푼_
 
     _main(["serve", "--model", "from-flag"])
     main(["serve"])
-    monkeypatch.delenv(MODEL_ENV)
-    main(["serve"])
 
-    assert len(uvicorn_calls) == 3
+    assert len(uvicorn_calls) == 2
     assert model_names == []
     channel = {"Authorization": f"Bearer {CHANNEL_TOKEN}"}
     for call in uvicorn_calls:
@@ -1176,7 +1316,87 @@ async def test_serve_는_모델을_시작_때_만들지_않고_실행마다_푼_
                 "/runs", json={"agent": "asking", "request": "hi"}, headers=channel
             )
         assert response.status_code == 200
-    assert model_names == ["from-flag", "from-env", DEFAULT_MODEL]
+    assert model_names == ["from-flag", "from-env"]
+
+
+@pytest.mark.usefixtures("no_model_env")
+def test_이름을_넘기지_않은_serve_는_다른_구성_오류와_한꺼번에_넘기는_두_길을_들고_서지_않는다(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    uvicorn_calls: list[dict[str, object]],
+) -> None:
+    """코드의 기본 모델이 없다. 이름이 없는 것은 토큰·호스트 문제와 같은 목록의 한 항목이다."""
+    monkeypatch.delenv(ADMIN_TOKEN_ENV, raising=False)
+    monkeypatch.delenv(CHANNEL_TOKEN_ENV, raising=False)
+
+    code = main(["serve", "--host", "0.0.0.0"])
+
+    out, err = capsys.readouterr()
+    assert code == 1
+    assert out == ""
+    assert "--model" in err
+    assert MODEL_ENV in err
+    assert ADMIN_TOKEN_ENV in err
+    assert CHANNEL_TOKEN_ENV in err
+    assert "0.0.0.0" in err
+    assert uvicorn_calls == []
+
+
+def test_매니페스트가_없는_기본_모델은_다른_구성_오류와_한꺼번에_그_이름을_들고_나온다(
+    monkeypatch: pytest.MonkeyPatch,
+    workspace: Path,
+    capsys: pytest.CaptureFixture[str],
+    uvicorn_calls: list[dict[str, object]],
+) -> None:
+    """오타가 첫 요청이 실패할 때까지 숨지 않는다(스토리 5)."""
+    monkeypatch.delenv(ADMIN_TOKEN_ENV, raising=False)
+    monkeypatch.delenv(CHANNEL_TOKEN_ENV, raising=False)
+
+    code = main(["serve", "--host", "0.0.0.0", "--model", "ghost"])
+
+    out, err = capsys.readouterr()
+    assert code == 1
+    assert out == ""
+    assert "기본 모델 플러그인이 없다: ghost" in err
+    assert ADMIN_TOKEN_ENV in err
+    assert CHANNEL_TOKEN_ENV in err
+    assert uvicorn_calls == []
+
+
+@pytest.mark.usefixtures("tokens")
+def test_읽히지_않는_기본_모델은_serve_의_시작_진단에도_잘못_적은_값을_싣지_않는다(
+    workspace: Path,
+    capsys: pytest.CaptureFixture[str],
+    uvicorn_calls: list[dict[str, object]],
+) -> None:
+    """모델 파일에 잘못 적은 키 값(`api_key = "sk-…"`)이 시작 진단으로 표준 에러에 나가지 않는다.
+    02 가 어댑터의 거부 문구에서 입력값을 뺐고, 이 출구는 05 가 연다."""
+    path = _write_unreadable_model(workspace)
+
+    code = main(["serve", "--model", "leaky"])
+
+    out, err = capsys.readouterr()
+    assert code == 1
+    assert out == ""
+    assert str(path) in err
+    assert "extra_forbidden" in err
+    assert "XYZZY" not in err
+    assert uvicorn_calls == []
+
+
+@pytest.mark.usefixtures("tokens")
+def test_꺼진_기본_모델은_serve_의_시작을_막지_않는다(
+    workspace: Path, uvicorn_calls: list[dict[str, object]]
+) -> None:
+    """꺼짐은 운영 중에 바뀌는 상태라 시작의 조건이 아니다(스토리 8). 그것을 쓰는 실행이 409 다."""
+    (workspace / OPERATOR_FILE).write_text(
+        f'schema_version = "1"\nmodel = ["{MODEL_PLUGIN}"]\n', encoding="utf-8"
+    )
+
+    code = _main(["serve"])
+
+    assert code == 0
+    assert len(uvicorn_calls) == 1
 
 
 def test_빈_모델_지정도_다른_구성_오류와_한꺼번에_나온다(

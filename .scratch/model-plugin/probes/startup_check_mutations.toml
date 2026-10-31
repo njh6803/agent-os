@@ -1,0 +1,22 @@
+# 티켓 05(기본 모델은 반드시 고르고 시작 때 확인한다)의 변이 표 1개. 구현 전부터 초록이던 시험(꺼진 기본
+# 모델은 serve 의 시작을 막지 않는다)이 빨강을 볼 수 있는지 잰다. 돌리는 법:
+# uv run python tools/mutate.py .scratch/model-plugin/probes/startup_check_mutations.toml
+
+[[mutation]]
+name = "시작 확인이 꺼진 기본 모델을 없는 모델처럼 막는다"
+tests = ["tests/test_main.py", "-k", "꺼진_기본_모델은_serve"]
+expect = "red"
+expect_output = ["assert 1 == 0"]
+
+[[mutation.edit]]
+file = "src/agent_os/main.py"
+old = '''
+    if manifest is None:
+        path = plugins_root / "models" / name / "plugin.toml"
+'''
+new = '''
+    if manifest is None or any(
+        key.name == name for key in FilesystemPlugins(plugins_root).read_disabled()
+    ):
+        path = plugins_root / "models" / name / "plugin.toml"
+'''

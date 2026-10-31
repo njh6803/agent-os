@@ -18,17 +18,24 @@ from langchain_core.language_models import BaseChatModel
 from agent_os.core.ports import PluginError
 from agent_os.sdk import ModelProvider, PluginManifest
 
-DEFAULT_MODEL = "claude-opus-5"
 MODEL_ENV = "AGENT_OS_MODEL"
 MAX_TOKENS = 16000
 
 
 def resolve_model_name(env: Mapping[str, str], flag: str | None = None) -> str:
-    """플래그, 환경변수, 기본값 순. 폴백은 없다. 빈 값은 '지정 안 함'이 아니라 잘못된 지정이다."""
+    """기본 모델의 이름. 플래그, 환경변수 순이고 코드의 기본값도 폴백도 없다.
+
+    둘 다 없으면 구성 오류(`ValueError`)다. 운영자가 고르지 않은 모델로 몰래 도는 서버를 만들지
+    않기 위해서다(ADR 0040). 빈 값은 '지정 안 함'이 아니라 잘못된 지정이다.
+    """
     if flag is not None:
         return _non_empty(flag)
     if MODEL_ENV not in env:
-        return DEFAULT_MODEL
+        raise ValueError(
+            "기본 모델의 이름이 없다. 코드에 기본값은 없고 운영자가 고른다.\n"
+            f"  --model 이나 환경변수 {MODEL_ENV} 로 plugins/models/<이름>/plugin.toml 의 이름을"
+            " 넘긴다."
+        )
     return _non_empty(env[MODEL_ENV])
 
 
