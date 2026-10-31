@@ -170,3 +170,42 @@ open-session을 부른다 2026-10-31T11:56:52Z
 서두의 수를 다시 셌다. 절 제목의 "명세가 정했다" 11, "거부한 안:" 13(서두 설명 줄 제외), 넘겨받은 것 12, 사용자가 고른 것 1, 이력 1로 서두와 같다(`grep -c`와 `grep -o | wc -l`로 셌다).
 
 다시 돌린 검사: `check_md_tables.py`·`check_line_separators.py`·`check_adr_pointers.py` 0, `check_quotes.py` 경고 0. 손으로 치는 다섯은 이 커밋의 pre-commit으로 갈음한다.
+
+커밋 `1555fd81`(3개 파일. plan.md, 명세, 이 일지의 "인계 (커밋 뒤)"와 "PR 직전 리뷰")이 pre-commit을 지나 섰다. `checks`(러너의 CHECKS 전부. pytest 366초, web-verify 463초), 마크다운 표, 줄 구분 문자, 변이 표, 인용 대조, 커밋 메시지가 Passed이고, ruff 둘은 `.py`가 스테이지되지 않아 Skipped, canary specs와 헌법 판은 대상 파일이 없어 Skipped다(출력 파일을 grep으로 봤다). Skipped인 ruff 둘은 손으로 쳐서 초록을 봤다(`uv run ruff check .`, `uv run ruff format --check .`). 첫 커밋 메시지의 제목이 79자라 훅(`hook_bash_commit_msg`)이 pre-commit 전에 막아 줄였다. 커밋이 서자 인계 계기(`hook_handoff`. 세션 컨텍스트 254,794 토큰, 경계 `커밋 뒤`)가 와서 `handoff.md`를 Read로 열었다. 인계하지 않는 때의 셋째에 든다. 이 세션의 지시문의 "이어받을 상태"가 `인계: 커밋 뒤`로 시작하고 지금 경계도 `커밋 뒤`라, 넘기지 않고 푸시와 PR부터 잇는다.
+
+## 인계 (PR 연 뒤)
+
+PR #443(https://github.com/njh6803/agent-os/pull/443)을 열었다. 푸시한 것은 커밋 둘이고 PR 본문은 저장소 템플릿을 채웠다(면제 PR, 티켓 없음. PR 직전 리뷰의 결과와 봤지만 뺀 것 하나를 체크리스트와 "남긴 위험"에 적었다). 앱의 `get_status`가 PR을 묶었다고 보였고 검사는 대기 중이었다. `/git-pr` 6단계의 사용자 확인은 앞 세션이 받은 승인("PR과 병합까지 묻지 않고 진행")으로 갈음했다. PR이 서자 인계 계기(`hook_handoff`. 세션 컨텍스트 282,935 토큰, 경계 `PR 연 뒤`)가 와서 `handoff.md`를 Read로 열었다. 인계하지 않는 때 다섯에 들지 않는다. PR 만들기는 성공했고, 요청 범위는 병합까지라 이 경계에서 끝나지 않고, 이 세션의 지시문의 "이어받을 상태"는 `인계: 커밋 뒤`라 같은 경계가 아니고, 이 일지에 `인계 못함` 줄이 없고, `get_session self`에 `parentSessionId`가 없다. 그래서 넘긴다. `@coderabbitai review` 코멘트는 남기지 않았다(`PR 연 뒤` 인계는 새 세션이 남긴다). 이 세션이 띄운 백그라운드 작업은 없다(서브에이전트 둘과 커밋은 끝났다).
+
+이 세션의 사용자 프롬프트는 위 "인계 (커밋 뒤)"의 지시문을 `open-session`이 `.claude/skills/to-spec/SKILL.md 를 읽어 그대로 따른다. … 인자:` 한 줄로 옮긴 것 하나다. 이 세션이 번복하거나 고친 것은 위 "PR 직전 리뷰"의 고친 것 둘과, 위 "이어받음 (셀프 리뷰 직전)과 셀프 리뷰" 첫 문단의 일지 번호를 코드 스팬에 넣은 것이다. 이 세션의 제목은 `docs/model-plugin-spec`이고, 아래 지시문을 낸 뒤 `docs/model-plugin-spec (인계함)`으로 바꾼다. 이 절과 위 "PR 직전 리뷰" 끝의 커밋 결과 문단은 커밋하지 않았으므로 새 세션이 다음 커밋에 싣는다.
+
+지시문:
+
+```
+다음 작업: 기능 model-plugin. 모델 플러그인을 런타임이 읽게 하는 설계(ADR 0040)의 명세 마무리(PR #443의 봇 회차 반영과 병합, next-session)
+다음 단계: PR 반영·병합
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /to-spec
+브랜치: docs/model-plugin-spec
+모델: Sonnet 5.5 / high. 2의 잇는 지시문
+읽을 것: docs/journal/2026-10-31-07-model-plugin-spec.md의 "PR 직전 리뷰" 절부터 끝까지("인계 (PR 연 뒤)"), .claude/skills/next-session/merge.md
+이어받을 상태: 인계: PR 연 뒤 docs/journal/2026-10-31-07-model-plugin-spec.md. PR #443(면제 PR, 티켓 없음)을 열었고 커밋 둘이 푸시됐다. @coderabbitai review 코멘트는 아직 남기지 않았다. 일지의 "PR 직전 리뷰" 끝 문단(커밋 결과와 인계하지 않음)과 "인계 (PR 연 뒤)" 절은 커밋하지 않았으니 다음 커밋(봇 회차나 "다음"을 실은 커밋)에 싣는다. 남은 것: merge.md 2(봇 회차. 첫 @coderabbitai review 코멘트와 wait_ci), 3(일지 "다음" 절), 4(워크트리에서 병합할 때), 그 뒤 next-session(다음 단계는 티켓 /to-tickets, 사람이 부른다. 보안 축이 봤지만 기준 미달로 뺀 매니페스트 PluginError 문구의 input_value는 to-tickets가 받도록 "다음"에 적는다). 회고는 설계 세션이 돌았다(일지 2026-10-31-06 "회고"). 명세는 끝났으니 다시 쓰지 않는다.
+확인할 선행 조건: 없음
+이번 요청 범위: PR과 병합까지
+```
+
+open-session을 부른다 2026-10-31T12:23:58Z
+
+## 이어받음 (PR 연 뒤)
+
+위 "인계 (PR 연 뒤)"의 지시문으로 연 새 세션이다. 첫 턴 훅대로 제목을 `docs/model-plugin-spec`으로 바꾸고 워크트리 `model-plugin-spec`(`1555fd81`)에 `EnterWorktree(path)`로 들어갔다. 시작 프롬프트가 `/to-spec`이지만 명세는 끝났으므로 다시 쓰지 않고 `merge.md`의 남은 단계만 했다. 이 세션의 사용자 프롬프트는 그 지시문을 `open-session`이 옮긴 한 줄 하나이고, 번복하거나 고친 것은 없다.
+
+`@coderabbitai review`를 PR #443에 남겼다. 응답 코멘트는 이 저장소가 별 10개 미만이라 자동 리뷰를 받지 않는다는 안내뿐이었고(`Trigger review` 체크박스가 있는 `skip review` 코멘트), 리뷰는 나오지 않았다. 좌석이 없다는 위 "PR 직전 리뷰"의 확인과 같다. claude-review는 통과했고 코멘트나 인라인 지적은 남기지 않았다(`gh pr view --json comments,reviews`와 `gh api .../pulls/443/comments`가 모두 비었다). 그래서 이 PR에 반영할 봇 지적은 없고, 보류한 지적도 없다.
+
+## 다음
+
+기능 model-plugin은 명세가 끝났고 `.scratch/model-plugin/issues/`가 없는 단계다. `next-session` 결정표의 "`spec.md`는 있고 `issues/`가 없다" 줄이라 다음은 티켓이다. `plan.md`가 적은 대로 명세 검토(`spec-reviewer` 서브에이전트)를 먼저 돌리고, 그 뒤 `/to-tickets .scratch/model-plugin/spec.md`(사람이 부른다)로 쪼갠다. 새 세션은 Opus 5.5 / xhigh로 연다.
+
+to-tickets가 받을 일이 하나 있다. PR 직전 보안 리뷰가 봤지만 기준 미달로 뺀 것이다. 어댑터의 매니페스트 `PluginError` 문구(`adapters/filesystem.py`의 `_parse`)가 pydantic `ValidationError` 전문(`input_value` 포함)을 담아, 운영자가 모델 파일에 `api_key` 칸을 잘못 적으면 `extra_forbidden` 거부 문구가 그 값을 `GET /plugins` 응답과 `serve` 시작 때의 stderr에 되울릴 수 있다. 이 PR 전부터 모든 종류의 매니페스트에 있던 동작이다. 트레이스 쪽은 `jsonl.py`의 `_describe`가 같은 까닭으로 `input_value`를 뺀다(`.claude/rules/adapters.md`). 매니페스트의 `PluginError` 문구도 같은 모양으로 할지는 구현 티켓이 정한다.
+
+- 워크트리에서 병합하므로 주 체크아웃은 당기지 않는다. 새 세션을 열면 `directive.md`대로 "확인할 선행 조건"에 `주 체크아웃 미갱신`을 적고, 그 세션이 워크트리에 들어가기 전에 `tidy-checkouts`로 당긴다.
