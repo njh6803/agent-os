@@ -94,7 +94,7 @@ openapi.json       관리 API와 HTTP 채널(운영자와 최종 사용자)의 �
 
 ```bash
 # 공유 토큰 둘(AGENT_OS_ADMIN_TOKEN, AGENT_OS_CHANNEL_TOKEN)이 환경에 있어야 선다.
-# --model 은 기본 모델의 이름이다. 환경변수 AGENT_OS_MODEL 로도 넘긴다.
+# --model 은 기본 모델의 이름이다. 지금은 그 이름이 제공사에 가는 모델 id 이기도 하다. 환경변수 AGENT_OS_MODEL 로도 넘긴다.
 # --site-file 은 선택이다(최종 사용자 경로, ADR 0023)
 uv run agent-os serve --model claude-opus-5
 pnpm -C web/apps/admin build

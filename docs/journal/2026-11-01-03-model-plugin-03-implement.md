@@ -40,8 +40,15 @@ open-session을 부른다 2026-10-31T18:47:48Z
 
 범위: base `55414f1c`(origin/main과 같다), 수정 파일 7, 미추적 3, 커밋 0.
 
-- 표준 축이 낸 것: README `serve` 줄의 "plugins/models/<이름>의 이름" 문장이 이 커밋에서 거짓이다(`main.py`가 이름을 `anthropic_chat_model`에 바로 넘기고 파일은 04가 읽는다. 코드를 열어 확인했다). 주석 열이 어긋났다. `_write_model_plugin` 독스트링이 "그대로 둔다"로 코드(덮어쓴다)와 달랐다. `_main`이 `--model=값` 꼴을 놓친다. 시험 독스트링이 코드 상수와 맞댄다고 읽힌다.
+- 표준 축이 낸 것: README `serve` 줄이 `--model`을 기본 모델 플러그인 파일의 이름으로 설명한 문장이 이 커밋에서 거짓이다(`main.py`가 이름을 `anthropic_chat_model`에 바로 넘기고 파일은 04가 읽는다. 코드를 열어 확인했다). 주석 열이 어긋났다. `_write_model_plugin` 독스트링이 "그대로 둔다"로 코드(덮어쓴다)와 달랐다. `_main`이 `--model=값` 꼴을 놓친다. 시험 독스트링이 코드 상수와 맞댄다고 읽힌다.
 - 명세 축이 낸 것: `test_거부하면_…`의 손으로 지은 `resume` 인자가 `--model` 없이 `main(`으로 갔다(안내 줄이 아니라 시험이 지은 인자라 허용 범위 밖). 나머지 요구는 충족이다.
 - 고친 것: README 문장을 "기본 모델의 이름"까지로 줄이고 주석을 명령 위로 올렸다. 독스트링 정정. `_main`이 `--model=` 꼴도 인식한다. 시험 독스트링에 코드 상수와 맞대지 않는 이유(05가 상수를 걷는다)를 적었다. 위 손으로 지은 `resume` 호출을 `_main`으로 바꿨다.
 - 남긴 것: 모델 매니페스트 리터럴 중복(저장소 파일, `MODEL_MANIFEST`, 두 e2e 스택)과 두 TS `DEFAULT_MODEL` 중복은 앱 경계를 넘는 판단 항목이라 두었다. 저장소 파일과 스택 픽스처의 동일성을 자동으로 재는 검사는 없다. 03이 요구하지 않았고 04가 모델 파일을 읽기 시작하면 `-m llm_widget`이 어긋남을 잡는다. `plugins/models/.gitkeep`은 Nit으로 둔다.
 - 다시 돌린 것: ruff와 `tests/test_main.py`·`tests/test_default_model_plugin.py` 단일 실행 초록. 나머지 손으로 치는 다섯은 커밋의 pre-commit으로 갈음한다(결과는 커밋 뒤 적는다).
+
+## PR 직전 리뷰
+
+- CodeRabbit CLI는 `coderabbit auth status`가 `Seat: not assigned`(손으로 쳤다)라 못 돈다. 대체 둘을 돌렸다.
+- `/security-review`: 지적 없음(정적 매니페스트와 상수 인자, 시험, 문서뿐이라 새 공격 표면이 없다).
+- `bug-perf-review`: Critical·Major 없음. 유효 Minor 하나: 모델 매니페스트의 사본(저장소 파일, 두 e2e 스택, `MODEL_MANIFEST`)이 같은지 맞대는 검사가 없다. 지금은 일곱 줄이 같다고 서브에이전트가 확인했다. 보류했다. 고치려면 두 언어를 가로지르는 저장소 상태 시험이나 위젯 픽스처의 덮어쓰기 규칙을 바꿔야 하고, 티켓이 같은 값을 손으로 맞추는 쪽을 정했다. 04가 모델 파일을 읽기 시작하면 `-m llm_widget`이 어긋남을 가를 수 있다. 어긋남은 05에서 저장소 파일을 바꿀 때 생기므로 05의 티켓 메모로 넘긴다.
+- 반영한 것: README `serve` 주석에 "지금은 그 이름이 제공사에 가는 모델 id이기도 하다"를 더했다(`resolve_model_name` → `anthropic_chat_model`이 05 전까지 이름을 그대로 쓴다).
