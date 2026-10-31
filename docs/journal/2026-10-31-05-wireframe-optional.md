@@ -76,6 +76,31 @@ CodeRabbit CLI는 `coderabbit auth status`가 `Seat: not assigned`라(손으로 
 
 open-session을 부른다 2026-10-31T05:44:29Z
 
+## 인계 (PR 연 뒤)
+
+PR 441을 열고(커밋 `267ad7f4`와 일지 커밋까지 푸시했다) 컨텍스트가 인계 문턱을 넘어 `PR 연 뒤` 경계에서 새 세션으로 넘긴다. 이 세션의 제목은 `chore/033-wireframe-optional-and-option-count`였다. 첫 `@coderabbitai review` 코멘트는 새 세션이 남긴다. 낸 지시문은 아래와 같다. 이 절을 쓰는 시점에 이 일지의 "PR 직전 리뷰" 절까지는 푸시되어 있고, 이 인계 절과 아래 "다음"의 보류 셋은 커밋하지 않았다. 새 세션이 마지막 봇 회차의 커밋에 싣는다.
+
+```
+다음 작업: .scratch/harness/issues/033-wireframe-optional-and-option-count.md. PR 441(와이어프레임을 조건부로, 안의 수를 셋 기본 둘~넷으로)의 봇 회차를 반영하고 병합한다
+다음 단계: PR 반영·병합
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: 일지 docs/journal/2026-10-31-05-wireframe-optional.md의 "인계 (PR 연 뒤)"를 이어 PR 441의 봇 회차 반영과 병합까지 한다
+브랜치: chore/033-wireframe-optional-and-option-count
+모델: Sonnet 5.5 / high. 2의 잇는 지시문
+읽을 것: docs/journal/2026-10-31-05-wireframe-optional.md의 "PR 직전 리뷰"와 "다음" 절
+이어받을 상태: 인계: PR 연 뒤. PR 441을 열었고 푸시는 일지 커밋까지 했다. 남은 단계는 첫 @coderabbitai review 코멘트, 봇 회차(merge.md 2), 병합이다. 일지의 "인계 (PR 연 뒤)" 절과 "다음"의 보류 셋은 아직 커밋하지 않은 작업 트리 변경이라 마지막 봇 회차의 커밋에 싣는다. docs/journal/2026-10-31-05-wireframe-optional.md
+확인할 선행 조건: 없음
+이번 요청 범위: PR과 병합까지
+```
+
+open-session을 부른다 2026-10-31T06:22:00Z
+
+## 봇 회차
+
+PR 441 헤드 `8e5a736f`에서 `tools/wait_ci.py 441`이 "모두 통과"로 끝났다(출력을 읽었다). CodeRabbit은 "No actionable comments"였다(PR 코멘트를 읽었다). claude-review 첫 회차는 Minor 셋과 Nit 하나였다(PR 코멘트를 읽었다). 티켓의 깨진 문장 하나만 고치고(Minor, 티켓을 Read로 열어 확인했다) 나머지 셋은 위 "다음"으로 넘겼다. 이 일지 커밋과 인계 절이 이 회차의 푸시에 실린다.
+
 ## 다음
 
-- 이 PR을 병합한다. 다음 화면 디자인(`/ui-design <기능>`)의 시작 프롬프트부터 새 규칙(안을 고를 화면은 셋을 기본으로 둘~넷, 와이어프레임은 조건부)이 적용된다.
+- PR 441의 봇 회차와 병합을 마친다. 다음 화면 디자인(`/ui-design <기능>`)의 시작 프롬프트부터 새 규칙(안을 고를 화면은 셋을 기본으로 둘~넷, 와이어프레임은 조건부)이 적용된다.
+- 뒤로 넘긴 일(PR 441 claude-review 첫 회차의 보류 셋): 회색 상자 규칙이 `ui-design` 5단계와 `issue-tracker.md` 두 곳에 있어 한쪽만 고치면 어긋난다(스킬은 그 절을 가리키고 아티팩트에 붙인 경우의 예외만 남기는 쪽으로). 5단계 문단이 길어 차례 판정을 따로 빼는 것(PR 본문이 Sprawl로 남긴 항목). `issue-tracker.md`의 시작 프롬프트 줄이 길어 하위 항목으로 나누는 것. 셋 모두 스킬 본문을 고치므로 카나리아를 다시 돌려야 해 이 PR 범위 밖이고, 다음 화면 디자인 때 함께 본다. 티켓 "What to build"의 깨진 문장은 이 회차에 고쳤다.
+- 뒤로 넘긴 일(PR 직전 리뷰의 보류 셋): 끊긴 세션에서 메모와 아트보드가 일부만 있을 때의 이어 그리기, 와이어프레임 차례가 없을 때의 `pages` 가르기는 다음 화면 디자인에서 실제 Design 형식으로 그려 볼 때 닫는다. 와이어프레임 차례를 두는 기준의 수치는 사용자가 그 규칙으로 처음 그려 본 뒤 정한다.
