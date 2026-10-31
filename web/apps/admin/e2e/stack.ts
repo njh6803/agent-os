@@ -42,6 +42,8 @@ const STARTUP_MS = 60_000;
 const QUIET = { NEXT_TELEMETRY_DISABLED: "1" };
 // serve 가 읽는 토큰 변수. Next 로 가는 환경에서는 벗긴다.
 const SERVE_TOKENS = ["AGENT_OS_ADMIN_TOKEN", "AGENT_OS_CHANNEL_TOKEN"];
+// 기본 모델 플러그인의 이름. 임시 루트에 같은 이름의 모델 매니페스트를 쓰고 `--model` 로 명시해 넘긴다.
+const DEFAULT_MODEL = "claude-opus-5";
 
 interface Launched {
   readonly name: string;
@@ -85,6 +87,8 @@ export default async function globalSetup(): Promise<() => Promise<void>> {
         plugins,
         "--traces",
         traces,
+        "--model",
+        DEFAULT_MODEL,
       ],
       work,
       {
@@ -229,6 +233,15 @@ function writeFixturePlugins(root: string, python: string): void {
     ),
   );
   write("skills/summarize/plugin.toml", manifest("skill", "summarize"));
+  // 기본 모델 플러그인. `serve` 가 `--model` 로 이 이름을 명시해 받는다. 저장소의 `plugins/models/claude-opus-5` 와 같다.
+  write(
+    `models/${DEFAULT_MODEL}/plugin.toml`,
+    manifest(
+      "model",
+      DEFAULT_MODEL,
+      `provider = "anthropic"\nmodel_id = "${DEFAULT_MODEL}"\nmax_tokens = 16000\n`,
+    ),
+  );
   write(
     "models/sonnet/plugin.toml",
     manifest("model", "sonnet", 'provider = "anthropic"\nmodel_id = "claude-sonnet-5-5"\n'),

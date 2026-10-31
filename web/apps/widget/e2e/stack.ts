@@ -39,7 +39,7 @@ import {
   TRACES_ENV,
   WIDGET_ORIGIN_ENV,
 } from "./env";
-import { AGENTS, copyRepoPlugins, LLM_AGENT, writeFixturePlugins } from "./plugins";
+import { AGENTS, copyRepoPlugins, DEFAULT_MODEL, LLM_AGENT, writeFixturePlugins } from "./plugins";
 import { startRelay } from "./relay";
 import { startSite } from "./site";
 import { AUDIENCE, ISSUER, KEY_ID, siteKey } from "./token";
@@ -120,6 +120,8 @@ export default async function globalSetup(): Promise<() => Promise<void>> {
         traces,
         "--site-file",
         siteFile,
+        "--model",
+        DEFAULT_MODEL,
       ],
       // serve 가 띄운 MCP 서버는 작업 폴더를 물려받고 serve 를 끈 뒤에도 잠시 남는다. work 를 작업 폴더로 두면
       // teardown 이 그 폴더를 지우지 못한다.

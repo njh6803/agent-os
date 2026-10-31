@@ -179,7 +179,36 @@ class Agent:
 """
 
 
+# 저장소의 기본 모델 플러그인과 같은 이름. 격리된 루트도 이 이름의 모델 매니페스트를 두고
+# 호출이 `--model` 로 명시해 넘긴다. 개발자 셸의 `AGENT_OS_MODEL` 에 기대지 않기 위해서다.
+MODEL_PLUGIN = "claude-opus-5"
+MODEL_MANIFEST = (
+    'schema_version = "1"\nkind = "model"\nname = "claude-opus-5"\nversion = "0.1.0"\n'
+    'provider = "anthropic"\nmodel_id = "claude-opus-5"\nmax_tokens = 16000\n'
+)
+
+
+def _write_model_plugin(root: Path) -> None:
+    """루트에 기본 모델 매니페스트를 둔다. 이미 있으면 같은 내용으로 덮어쓴다."""
+    directory = root / "plugins" / "models" / MODEL_PLUGIN
+    directory.mkdir(parents=True, exist_ok=True)
+    (directory / "plugin.toml").write_text(MODEL_MANIFEST, encoding="utf-8")
+
+
+def _main(argv: list[str]) -> int:
+    """`main()` 을 부르되 모델 플러그인의 이름을 `--model` 로 명시해 넘긴다.
+
+    인자에 이미 `--model` 이 있으면 그대로 둔다. 안내 줄을 먹이는 호출과 이름을 푸는 규칙을 재는
+    호출은 이것을 쓰지 않고 `main()` 을 바로 부른다.
+    """
+    named = any(arg == "--model" or arg.startswith("--model=") for arg in argv)
+    if argv[0] in {"run", "resume", "serve"} and not named:
+        argv = [argv[0], "--model", MODEL_PLUGIN, *argv[1:]]
+    return main(argv)
+
+
 def _write_plugin(root: Path, name: str, source: str, manifest: str | None = None) -> None:
+    _write_model_plugin(root)
     directory = root / "plugins" / "agents" / name
     directory.mkdir(parents=True)
     (directory / "plugin.toml").write_text(
@@ -216,7 +245,7 @@ def _read(trace_file: Path) -> Trace:
 def test_표준_출력에는_출력_문자열만_나오고_성공하면_표준_에러는_비어_있다(
     workspace: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    code = main(["run", "echo", "hi", "--traces", "t"])
+    code = _main(["run", "echo", "hi", "--traces", "t"])
 
     out, err = capsys.readouterr()
     assert code == 0
@@ -227,7 +256,7 @@ def test_표준_출력에는_출력_문자열만_나오고_성공하면_표준_�
 def test_진행_표시를_켜면_이벤트가_한_줄에_하나씩_트레이스와_같은_직렬화로_표준_에러에_나온다(
     workspace: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    main(["run", "echo", "hi", "--traces", "t", "--verbose"])
+    _main(["run", "echo", "hi", "--traces", "t", "--verbose"])
 
     out, err = capsys.readouterr()
     lines = err.splitlines()
@@ -240,7 +269,7 @@ def test_진행_표시를_켜면_이벤트가_한_줄에_하나씩_트레이스�
 def test_실패는_진행_표시를_끈_채로도_원인이_표준_에러에_남고_종료_코드가_1이다(
     workspace: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    code = main(["run", "boom", "hi", "--traces", "t"])
+    code = _main(["run", "boom", "hi", "--traces", "t"])
 
     out, err = capsys.readouterr()
     assert code == 1
@@ -254,7 +283,7 @@ def test_실패는_진행_표시를_끈_채로도_원인이_표준_에러에_남
 
 
 def test_주체가_OS_사용자_이름으로_채워진다(workspace: Path) -> None:
-    main(["run", "echo", "hi", "--traces", "t"])
+    _main(["run", "echo", "hi", "--traces", "t"])
 
     (trace_file,) = _trace_files(workspace / "t")
     started = _read(trace_file).events[0]
@@ -263,7 +292,7 @@ def test_주체가_OS_사용자_이름으로_채워진다(workspace: Path) -> No
 
 
 def test_지정한_트레이스_디렉터리에_실행_식별자_이름의_파일이_생긴다(workspace: Path) -> None:
-    main(["run", "echo", "hi", "--traces", "t"])
+    _main(["run", "echo", "hi", "--traces", "t"])
 
     (trace_file,) = _trace_files(workspace / "t")
     assert trace_file.suffix == ".jsonl"
@@ -273,7 +302,7 @@ def test_지정한_트레이스_디렉터리에_실행_식별자_이름의_파�
 def test_트레이스_디렉터리를_지정하지_않으면_작업_디렉터리의_traces_아래에_쌓인다(
     workspace: Path,
 ) -> None:
-    main(["run", "echo", "hi"])
+    _main(["run", "echo", "hi"])
 
     assert len(_trace_files(workspace / "traces")) == 1
 
@@ -310,10 +339,11 @@ def test_실행_전_오류는_무엇이_잘못됐는지_적고_종료_코드_1�
     clue: str,
 ) -> None:
     monkeypatch.chdir(tmp_path)
+    _write_model_plugin(tmp_path)
     if source is not None:
         _write_plugin(tmp_path, name, source, manifest)
 
-    code = main(["run", name, "hi", "--traces", "t"])
+    code = _main(["run", name, "hi", "--traces", "t"])
 
     out, err = capsys.readouterr()
     assert code == 1
@@ -325,7 +355,7 @@ def test_실행_전_오류는_무엇이_잘못됐는지_적고_종료_코드_1�
 def test_빈_모델_지정은_실행_전에_진단을_적고_종료_코드_1이다(
     workspace: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    code = main(["run", "echo", "hi", "--traces", "t", "--model", ""])
+    code = _main(["run", "echo", "hi", "--traces", "t", "--model", ""])
 
     out, err = capsys.readouterr()
     assert code == 1
@@ -385,7 +415,10 @@ def test_calc_에이전트가_실제_모델로_답하고_트레이스에_모델_
     """바깥 이음매. 실제 CLI 프로세스와 실제 Anthropic 호출. 트레이스는 tmp_path 에 남긴다."""
     assert "ANTHROPIC_API_KEY" in os.environ, "ANTHROPIC_API_KEY 가 없다. .env 를 확인한다"
 
-    result = _cli(["run", "calc", "2 더하기 2는?", "--traces", str(tmp_path)], cwd=REPO_ROOT)
+    result = _cli(
+        ["run", "calc", "2 더하기 2는?", "--traces", str(tmp_path), "--model", MODEL_PLUGIN],
+        cwd=REPO_ROOT,
+    )
 
     assert result.returncode == 0, result.stderr
     assert "4" in result.stdout
@@ -409,7 +442,7 @@ def test_승인_대상에서_멈추면_실행_식별자와_승인_요청이_표�
     _write_mcp_plugin(workspace, "fixture")
     _write_plugin(workspace, "gated", GATED_SRC, GATED_MANIFEST)
 
-    code = main(["run", "gated", "hi", "--traces", "t"])
+    code = _main(["run", "gated", "hi", "--traces", "t"])
 
     out, err = capsys.readouterr()
     (trace_file,) = _trace_files(workspace / "t")
@@ -434,11 +467,11 @@ def test_승인하고_재개하면_멈췄던_도구가_실제로_불리고_실�
     """멈출 때와 재개할 때가 다른 호출이다. 프로세스 경계를 증명하는 것은 티켓 06 이다."""
     _write_mcp_plugin(workspace, "fixture")
     _write_plugin(workspace, "gated", GATED_SRC, GATED_MANIFEST)
-    paused = main(["run", "gated", "hi", "--traces", "t"])
+    paused = _main(["run", "gated", "hi", "--traces", "t"])
     (trace_file,) = _trace_files(workspace / "t")
     capsys.readouterr()
 
-    code = main(["resume", trace_file.stem, "--pause-index", "1", "--approve", "--traces", "t"])
+    code = _main(["resume", trace_file.stem, "--pause-index", "1", "--approve", "--traces", "t"])
 
     out, err = capsys.readouterr()
     assert paused == EXIT_PAUSED
@@ -460,10 +493,10 @@ def test_승인자가_OS_사용자_이름으로_채워진다(workspace: Path) ->
     """승인자는 필수다. 나중에 누가 허락했는지 물을 때 답이 있어야 한다."""
     _write_mcp_plugin(workspace, "fixture")
     _write_plugin(workspace, "gated", GATED_SRC, GATED_MANIFEST)
-    main(["run", "gated", "hi", "--traces", "t"])
+    _main(["run", "gated", "hi", "--traces", "t"])
     (trace_file,) = _trace_files(workspace / "t")
 
-    main(["resume", trace_file.stem, "--pause-index", "1", "--approve", "--traces", "t"])
+    _main(["resume", trace_file.stem, "--pause-index", "1", "--approve", "--traces", "t"])
 
     granted = [e for e in _read(trace_file).events if isinstance(e, ApprovalGranted)]
     assert [e.approver for e in granted] == [getpass.getuser()]
@@ -472,7 +505,7 @@ def test_승인자가_OS_사용자_이름으로_채워진다(workspace: Path) ->
 def test_재개할_수_없는_실행은_진단을_적고_종료_코드_1이며_트레이스를_남기지_않는다(
     workspace: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    code = main(["resume", "없는-실행", "--pause-index", "0", "--approve", "--traces", "t"])
+    code = _main(["resume", "없는-실행", "--pause-index", "0", "--approve", "--traces", "t"])
 
     out, err = capsys.readouterr()
     assert code == 1
@@ -499,7 +532,7 @@ def test_운영자_파일로_끈_에이전트를_부르면_꺼진_것을_적고_
     """`serve` 를 띄우지 않고 쓰는 날도 끈 것은 꺼져 있다(스토리 35)."""
     _disable(workspace, "echo")
 
-    code = main(["run", "echo", "hi", "--traces", "t"])
+    code = _main(["run", "echo", "hi", "--traces", "t"])
 
     out, err = capsys.readouterr()
     assert code == 1
@@ -515,13 +548,13 @@ def test_멈춘_실행의_에이전트를_손으로_끄면_재개가_진단으�
     (스토리 36)."""
     _write_mcp_plugin(workspace, "fixture")
     _write_plugin(workspace, "gated", GATED_SRC, GATED_MANIFEST)
-    main(["run", "gated", "hi", "--traces", "t"])
+    _main(["run", "gated", "hi", "--traces", "t"])
     (trace_file,) = _trace_files(workspace / "t")
     before = trace_file.read_bytes()
     _disable(workspace, "gated")
     capsys.readouterr()
 
-    code = main(["resume", trace_file.stem, "--pause-index", "1", "--approve", "--traces", "t"])
+    code = _main(["resume", trace_file.stem, "--pause-index", "1", "--approve", "--traces", "t"])
 
     out, err = capsys.readouterr()
     assert code == 1
@@ -537,7 +570,7 @@ def test_운영자_파일이_깨졌으면_진단이_그_파일의_경로를_적�
     "아무것도 꺼지지 않았다"로 읽으면 잘린 파일이 끈 것을 전부 켠다(스토리 23)."""
     (workspace / OPERATOR_FILE).write_text("", encoding="utf-8")
 
-    code = main(["run", "echo", "hi", "--traces", "t"])
+    code = _main(["run", "echo", "hi", "--traces", "t"])
 
     out, err = capsys.readouterr()
     assert code == 1
@@ -563,7 +596,7 @@ def test_안내된_재개_명령을_그대로_실행하면_재개된다(
     """
     _write_mcp_plugin(workspace, "fixture")
     _write_plugin(workspace, "gated", GATED_SRC, GATED_MANIFEST)
-    paused = main(["run", "gated", "hi", "--traces", "$out dir"])
+    paused = _main(["run", "gated", "hi", "--traces", "$out dir"])
     argv = _guidance(capsys.readouterr().out)
 
     code = main(argv)
@@ -580,7 +613,7 @@ def test_기본_트레이스_디렉터리면_안내_명령에_경로가_붙지_�
     _write_mcp_plugin(workspace, "fixture")
     _write_plugin(workspace, "gated", GATED_SRC, GATED_MANIFEST)
 
-    main(["run", "gated", "hi"])
+    _main(["run", "gated", "hi"])
 
     argv = _guidance(capsys.readouterr().out)
     assert "--traces" not in argv
@@ -592,7 +625,7 @@ def test_거부하면_도구가_불리지_않고_에이전트가_사유를_담�
     """거부는 에러가 아니라 답이다. 실행은 성공으로 끝나고 거부가 승인자와 사유와 함께 남는다."""
     _write_mcp_plugin(workspace, "fixture")
     _write_plugin(workspace, "excusing", EXCUSING_SRC, EXCUSING_MANIFEST)
-    paused = main(["run", "excusing", "hi", "--traces", "t"])
+    paused = _main(["run", "excusing", "hi", "--traces", "t"])
     (trace_file,) = _trace_files(workspace / "t")
     capsys.readouterr()
 
@@ -600,7 +633,7 @@ def test_거부하면_도구가_불리지_않고_에이전트가_사유를_담�
         *("resume", trace_file.stem, "--pause-index", "1"),
         *("--deny", "--reason", "지금은 안 된다", "--traces", "t"),
     ]
-    code = main(argv)
+    code = _main(argv)
 
     out, err = capsys.readouterr()
     assert paused == EXIT_PAUSED
@@ -631,7 +664,7 @@ def test_멈추면_거부_명령도_함께_안내된다(
     _write_mcp_plugin(workspace, "fixture")
     _write_plugin(workspace, "gated", GATED_SRC, GATED_MANIFEST)
 
-    main(["run", "gated", "hi", "--traces", "t"])
+    _main(["run", "gated", "hi", "--traces", "t"])
 
     argv = _guidance(capsys.readouterr().out, "거부")
     assert argv[:4] == ["resume", _trace_files(workspace / "t")[0].stem, "--pause-index", "1"]
@@ -645,7 +678,7 @@ def test_안내된_거부_명령은_사유를_이어_적어야_성립하고_그�
     """자리표시자를 두면 그대로 친 것이 진짜 사유로 남는다. 사유 없는 거부는 안내로도 못 만든다."""
     _write_mcp_plugin(workspace, "fixture")
     _write_plugin(workspace, "excusing", EXCUSING_SRC, EXCUSING_MANIFEST)
-    paused = main(["run", "excusing", "hi", "--traces", "$out dir"])
+    paused = _main(["run", "excusing", "hi", "--traces", "$out dir"])
     argv = _guidance(capsys.readouterr().out, "거부")
 
     with pytest.raises(SystemExit) as verbatim:
@@ -666,7 +699,7 @@ def test_안내된_거부_명령은_사유를_이어_적어야_성립하고_그�
 def test_없는_실행_식별자는_거부로도_진단을_적고_트레이스를_남기지_않는다(
     workspace: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    code = main(
+    code = _main(
         ["resume", "없는-실행", "--pause-index", "0", "--deny", "--reason", "x", "--traces", "t"]
     )
 
@@ -691,7 +724,7 @@ def test_재개가_다시_멈추면_새_안내_줄의_자리가_새_일시정지
     """재개 스트림에는 재생된 사실이 없다. 재개 스트림의 수만 세면 둘째 일시정지를 자리 3 으로
     안내하고, 그 줄은 거절된다. 받은 자리에 재개 스트림의 수를 더해야 5 다."""
     _paused_twice(workspace)
-    main(["run", "twice", "hi", "--traces", "t"])
+    _main(["run", "twice", "hi", "--traces", "t"])
     first = _guidance(capsys.readouterr().out)
 
     paused = main(first)
@@ -715,7 +748,7 @@ def test_옛_안내_줄을_그대로_치면_진단과_종료_코드_1이고_트�
     """첫 일시정지의 안내 줄은 이미 쓰였다. 그 줄을 다시 치면 승인자가 본 적 없는 둘째 호출을
     승인하게 된다. 진단이 두 자리를 들어 무엇이 지나갔는지 말한다."""
     _paused_twice(workspace)
-    main(["run", "twice", "hi", "--traces", "t"])
+    _main(["run", "twice", "hi", "--traces", "t"])
     old = _guidance(capsys.readouterr().out)
     main(old)
     capsys.readouterr()
@@ -752,13 +785,13 @@ def test_자리를_빼거나_0_이상의_정수가_아니면_인자_오류이고
     읽는다. 뒤의 것은 멈춘 자리(1)라 그대로 재개까지 간다."""
     _write_mcp_plugin(workspace, "fixture")
     _write_plugin(workspace, "gated", GATED_SRC, GATED_MANIFEST)
-    main(["run", "gated", "hi", "--traces", "t"])
+    _main(["run", "gated", "hi", "--traces", "t"])
     (trace_file,) = _trace_files(workspace / "t")
     before = trace_file.read_bytes()
     capsys.readouterr()
 
     with pytest.raises(SystemExit) as refused:
-        main(["resume", trace_file.stem, *pause_index, "--approve", "--traces", "t"])
+        _main(["resume", trace_file.stem, *pause_index, "--approve", "--traces", "t"])
 
     assert refused.value.code == 2
     assert "--pause-index" in capsys.readouterr().err
@@ -779,7 +812,7 @@ def test_최종_사용자의_멈춘_실행에_CLI_로_결정하면_진단과_종
     (trace_file,) = _trace_files(directory)
     before = trace_file.read_bytes()
 
-    code = main(["resume", "eu-1", "--pause-index", "1", "--approve", "--traces", "t"])
+    code = _main(["resume", "eu-1", "--pause-index", "1", "--approve", "--traces", "t"])
 
     out, err = capsys.readouterr()
     assert code == 1
@@ -806,7 +839,10 @@ def test_멈춘_실행은_그_프로세스가_끝난_뒤_다른_프로세스가_
     _write_mcp_plugin(tmp_path, "fixture")
     _write_plugin(tmp_path, "gatedcalc", GATEDCALC_SRC, GATEDCALC_MANIFEST)
 
-    paused = _cli(["run", "gatedcalc", "2 더하기 3은?", "--traces", "t"], cwd=tmp_path)
+    paused = _cli(
+        ["run", "gatedcalc", "2 더하기 3은?", "--traces", "t", "--model", MODEL_PLUGIN],
+        cwd=tmp_path,
+    )
     # 여기서 먼저 단언한다. 멈추지 못한 첫 프로세스에서 안내 줄을 찾으면 그 진단이 표준 에러가
     # 아니라 `_guidance` 의 StopIteration 이 되어, 가장 흔한 실패 모드의 원인을 못 보게 된다.
     assert paused.returncode == EXIT_PAUSED, paused.stderr
@@ -872,7 +908,7 @@ def test_토큰_환경변수가_없으면_서버가_뜨지_않고_진단과_종�
     기능이 구성에 따라 조용히 사라진다."""
     monkeypatch.delenv(env)
 
-    code = main(["serve"])
+    code = _main(["serve"])
 
     out, err = capsys.readouterr()
     assert code == 1
@@ -898,7 +934,7 @@ def test_비어_있는_토큰은_없는_것과_같이_거부한다(
     """
     monkeypatch.setenv(env, token)
 
-    code = main(["serve"])
+    code = _main(["serve"])
 
     _, err = capsys.readouterr()
     assert code == 1
@@ -916,7 +952,7 @@ def test_두_토큰이_같으면_서버가_뜨지_않고_진단이_그_값을_�
     monkeypatch.setenv(ADMIN_TOKEN_ENV, "같은-XYZZY-값")
     monkeypatch.setenv(CHANNEL_TOKEN_ENV, "같은-XYZZY-값")
 
-    code = main(["serve"])
+    code = _main(["serve"])
 
     out, err = capsys.readouterr()
     assert code == 1
@@ -932,7 +968,7 @@ def test_루프백이_아닌_호스트는_서버가_뜨지_않고_진단이_SSH_
     uvicorn_calls: list[dict[str, object]],
 ) -> None:
     """막는 데서 끝나면 운영자는 원격에서 볼 길을 잃는다. 대안이 진단 안에 있어야 한다(ADR 0011)."""
-    code = main(["serve", "--host", "0.0.0.0"])
+    code = _main(["serve", "--host", "0.0.0.0"])
 
     out, err = capsys.readouterr()
     assert code == 1
@@ -948,7 +984,7 @@ def test_허용되는_루프백_주소_둘이_진단에_그대로_적혀_있다(
     uvicorn_calls: list[dict[str, object]],
 ) -> None:
     """무엇이 허용되는지 적지 않으면 `--host localhost` 를 친 운영자가 빠져나올 길이 없다."""
-    main(["serve", "--host", "localhost"])
+    _main(["serve", "--host", "localhost"])
 
     _, err = capsys.readouterr()
     # 기댓값을 리터럴로 적는다. LOOPBACK_HOSTS 로 도는 단언은 그 열이 비는 날 조용히 통과한다.
@@ -965,7 +1001,7 @@ def test_구성_오류_셋은_한꺼번에_나온다(
     monkeypatch.delenv(ADMIN_TOKEN_ENV, raising=False)
     monkeypatch.delenv(CHANNEL_TOKEN_ENV, raising=False)
 
-    code = main(["serve", "--host", "0.0.0.0"])
+    code = _main(["serve", "--host", "0.0.0.0"])
 
     _, err = capsys.readouterr()
     assert code == 1
@@ -984,7 +1020,7 @@ def test_진단에_토큰_값이_실리지_않는다(
     monkeypatch.setenv(ADMIN_TOKEN_ENV, "비밀-XYZZY-42")
     monkeypatch.setenv(CHANNEL_TOKEN_ENV, "비밀-PLUGH-7")
 
-    main(["serve", "--host", "0.0.0.0"])
+    _main(["serve", "--host", "0.0.0.0"])
 
     out, err = capsys.readouterr()
     assert "XYZZY" not in out + err
@@ -1008,7 +1044,7 @@ def test_토큰과_루프백이_갖춰지면_판정을_지나_그_주소와_포�
     띄우는 시험들이 잰다(`uvicorn_calls` 의 독스트링). 갖춰진 구성이 판정을 통과하는지는 면제 대상이
     아니고, 기본값이 자기 정책에 막히지 않는다는 것도 여기서 닫힌다.
     """
-    code = main([*argv, "--port", "9999"])
+    code = _main([*argv, "--port", "9999"])
 
     assert code == 0
     assert [(call["host"], call["port"]) for call in uvicorn_calls] == [(expected_host, 9999)]
@@ -1021,7 +1057,7 @@ async def test_통과하면_세운_앱이_두_토큰을_제자리에_받는다(
     """환경변수 둘이 `create_app` 의 두 자리로 엇갈리지 않고 들어간다. 엇갈리면 운영자가 위젯에 준
     토큰이 트레이스를 읽는다. 무엇을 넘겼는지를 인자로 재지 않고 세운 앱의 답으로 잰다 — 404 는
     미들웨어를 지나 라우팅까지 갔다는 뜻이다."""
-    main(["serve"])
+    _main(["serve"])
     (call,) = uvicorn_calls
     app = call["app"]
     assert isinstance(app, FastAPI)
@@ -1060,7 +1096,7 @@ def test_serve_는_모델을_시작_때_한_번_플래그_환경변수_기본값
     않는다(스토리 23)."""
     monkeypatch.setenv(MODEL_ENV, "from-env")
 
-    main(["serve", "--model", "from-flag"])
+    _main(["serve", "--model", "from-flag"])
     main(["serve"])
     monkeypatch.delenv(MODEL_ENV)
     main(["serve"])
@@ -1078,7 +1114,7 @@ def test_빈_모델_지정도_다른_구성_오류와_한꺼번에_나온다(
     monkeypatch.delenv(ADMIN_TOKEN_ENV, raising=False)
     monkeypatch.delenv(CHANNEL_TOKEN_ENV, raising=False)
 
-    code = main(["serve", "--host", "0.0.0.0", "--model", ""])
+    code = _main(["serve", "--host", "0.0.0.0", "--model", ""])
 
     _, err = capsys.readouterr()
     assert code == 1
@@ -1097,7 +1133,7 @@ def test_API_키는_시작_때_보지_않는다(
     API 까지 함께 막힌다."""
     monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
 
-    code = main(["serve"])
+    code = _main(["serve"])
 
     assert code == 0
     assert len(uvicorn_calls) == 1
@@ -1110,7 +1146,7 @@ def test_serve_가_연결이_남은_실행을_제한_없이_기다리지_않게_
     """uvicorn 의 기본값은 연결이 전부 끝날 때까지 앱의 수명을 닫지 않는다. 멈추라는 명령이 실행
     하나가 끝나기를 제한 없이 기다리는 모양이다(ADR 0014 의 2026-09-24 이력). 그 순서는 앱의 수명을
     직접 닫는 테스트로 잴 수 없어 넘긴 값을 판정한다."""
-    main(["serve"])
+    _main(["serve"])
 
     (call,) = uvicorn_calls
     grace = call["timeout_graceful_shutdown"]
@@ -1146,7 +1182,7 @@ async def test_serve_가_세운_앱으로_실행하면_주체가_OS_사용자이
     """신원의 출처를 정하는 것은 조립이다(ADR 0015). 채널이 스스로 OS 사용자를 읽지 않는다. 실행
     하나가 도구 포트와 시계와 트레이스 포트를 모두 지나므로 `serve` 가 그것들을 만들어 넘겼다는
     것도 함께 잰다. 무엇을 넘겼는지를 인자로 재지 않고 세운 앱의 답으로 잰다."""
-    main(["serve", "--traces", "t"])
+    _main(["serve", "--traces", "t"])
     (call,) = uvicorn_calls
     app = call["app"]
     assert isinstance(app, FastAPI)
@@ -1175,7 +1211,7 @@ async def test_serve_가_세운_앱에서_관리로_끈_에이전트는_409이�
     증명할 수 없어 실제 어댑터로 한 번만 잰다(plugin-toggle 명세의 "주 이음매 위의 실제 어댑터").
     손편집이 서버를 다시 세우지 않고 다음 요청부터 효력이 난다(스토리 11·12). 고친 파일은 종류 키가
     빠진 손 모양이고 그것도 손상이 아니다(스토리 24)."""
-    main(["serve", "--traces", "t"])
+    _main(["serve", "--traces", "t"])
     (call,) = uvicorn_calls
     app = call["app"]
     assert isinstance(app, FastAPI)
@@ -1275,7 +1311,7 @@ async def test_사이트_파일이_없으면_최종_사용자_경로가_서되_�
 ) -> None:
     """위젯을 쓰지 않는 배치가 빈 파일을 만들지 않아도 된다(스토리 41). 경로가 구성에 따라 조용히
     사라지지 않고 그대로 선다 — 401 이다(ADR 0023)."""
-    main(["serve"])
+    _main(["serve"])
     (call,) = uvicorn_calls
     app = call["app"]
     assert isinstance(app, FastAPI)
@@ -1295,7 +1331,7 @@ async def test_사이트_파일을_주면_서명한_최종_사용자의_실행�
     """`serve` 가 읽은 사이트 목록이 `create_app` 에 닿는다는 것을 세운 앱의 답으로 잰다. 주체는
     `발급자|sub` 이고 OS 사용자가 아니다(ADR 0023)."""
     (workspace / "sites.toml").write_text(_site_file(_site()), encoding="utf-8")
-    main(["serve", "--site-file", "sites.toml", "--traces", "t"])
+    _main(["serve", "--site-file", "sites.toml", "--traces", "t"])
     (call,) = uvicorn_calls
     app = call["app"]
     assert isinstance(app, FastAPI)
@@ -1324,7 +1360,7 @@ def test_열_에이전트에_없는_이름은_구성_오류가_아니다(
     """플러그인 루트는 `serve` 가 뜬 뒤에도 바뀐다(ADR 0003). 요청 때 core 의 부재가 답한다."""
     Path("sites.toml").write_text(_site_file(_site(agents='["not-yet"]')), encoding="utf-8")
 
-    code = main(["serve", "--site-file", "sites.toml"])
+    code = _main(["serve", "--site-file", "sites.toml"])
 
     assert code == 0
     assert len(uvicorn_calls) == 1
@@ -1415,7 +1451,7 @@ def test_사이트_파일의_구성_오류는_서버가_서기_전에_진단과_
     if content is not None:
         Path("sites.toml").write_text(content, encoding="utf-8")
 
-    code = main(["serve", "--site-file", "sites.toml"])
+    code = _main(["serve", "--site-file", "sites.toml"])
 
     out, err = capsys.readouterr()
     assert code == 1
@@ -1438,7 +1474,7 @@ def test_사이트_파일의_진단도_토큰_진단과_한꺼번에_나온다(
     monkeypatch.delenv(ADMIN_TOKEN_ENV, raising=False)
     monkeypatch.delenv(CHANNEL_TOKEN_ENV, raising=False)
 
-    code = main(["serve", "--site-file", "no-such.toml"])
+    code = _main(["serve", "--site-file", "no-such.toml"])
 
     _, err = capsys.readouterr()
     assert code == 1
@@ -1455,7 +1491,7 @@ async def test_사이트_파일의_상한_표가_세운_앱의_최종_사용자_
     넘으면 422, 시간당 실행을 넘으면 429 다. 적지 않은 값은 채널의 기본값이다."""
     limits = "\n[sites.limits]\nrequest_chars = 5\nhourly_runs_per_principal = 1\n"
     (workspace / "sites.toml").write_text(_site_file(_site(extra=limits)), encoding="utf-8")
-    main(["serve", "--site-file", "sites.toml", "--traces", "t"])
+    _main(["serve", "--site-file", "sites.toml", "--traces", "t"])
     (call,) = uvicorn_calls
     app = call["app"]
     assert isinstance(app, FastAPI)
@@ -1517,7 +1553,7 @@ def test_사이트_파일의_상한_표_여섯은_엇갈리지_않고_사이트_
     )
     Path("sites.toml").write_text(_site_file(_site(extra=limits)), encoding="utf-8")
 
-    code = main(["serve", "--site-file", "sites.toml"])
+    code = _main(["serve", "--site-file", "sites.toml"])
 
     assert code == 0
     assert built == [
@@ -1596,7 +1632,7 @@ def test_브라우저가_싣는_표기의_허용_출처는_사이트_파일을_�
         _site_file(_site(origins=_toml_strings(origin))), encoding="utf-8"
     )
 
-    code = main(["serve", "--site-file", "sites.toml"])
+    code = _main(["serve", "--site-file", "sites.toml"])
 
     assert code == 0
     assert len(uvicorn_calls) == 1
@@ -1619,7 +1655,7 @@ def test_브라우저가_싣지_않는_표기의_허용_출처는_serve_를_세�
     origins = _toml_strings("https://ok.example", origin)
     Path("sites.toml").write_text(_site_file(_site(origins=origins)), encoding="utf-8")
 
-    code = main(["serve", "--site-file", "sites.toml"])
+    code = _main(["serve", "--site-file", "sites.toml"])
 
     _, err = capsys.readouterr()
     assert code == 1
@@ -1660,7 +1696,7 @@ def test_IPv4_를_점으로_적는_파이썬_판에서도_브라우저가_싣는
         _site_file(_site(origins=_toml_strings(origin))), encoding="utf-8"
     )
 
-    code = main(["serve", "--site-file", "sites.toml"])
+    code = _main(["serve", "--site-file", "sites.toml"])
 
     assert code == 0
     assert len(uvicorn_calls) == 1
@@ -1681,7 +1717,7 @@ def test_IPv4_를_점으로_적는_파이썬_판에서도_브라우저가_싣지
         _site_file(_site(origins=_toml_strings(origin))), encoding="utf-8"
     )
 
-    code = main(["serve", "--site-file", "sites.toml"])
+    code = _main(["serve", "--site-file", "sites.toml"])
 
     _, err = capsys.readouterr()
     assert code == 1
@@ -1710,7 +1746,7 @@ def test_두_언어가_함께_읽는_사이트_파일에서_합친_허용_출처
 
     monkeypatch.setattr(main_module, "create_app", recording)
 
-    code = main(["serve", "--site-file", str(SITE_FILE_FIXTURES / "sites.toml")])
+    code = _main(["serve", "--site-file", str(SITE_FILE_FIXTURES / "sites.toml")])
 
     assert code == 0
     assert len(uvicorn_calls) == 1
@@ -1795,7 +1831,7 @@ async def test_serve_의_실행_타임아웃이_세운_앱의_실행에_닿고_�
     그 시간을 기다리지 않으려고 core 의 상수를 줄인다."""
     monkeypatch.setattr("agent_os.core.run.DEFAULT_RUN_TIMEOUT_SECONDS", 0.05)
     _write_plugin(workspace, "asking", ASKING_SRC)
-    main(["serve", "--traces", "t", *argv])
+    _main(["serve", "--traces", "t", *argv])
     (call,) = uvicorn_calls
     app = call["app"]
     assert isinstance(app, FastAPI)
@@ -1822,7 +1858,7 @@ def test_0_이하의_실행_타임아웃은_서버가_서기_전에_진단과_�
 ) -> None:
     """그 값이면 모델이나 도구를 기다리는 실행은 모두 그 자리에서 실패한다. 다른 구성 오류와 같이
     시작 자리에서 끝난다."""
-    code = main(["serve", "--run-timeout", value])
+    code = _main(["serve", "--run-timeout", value])
 
     out, err = capsys.readouterr()
     assert code == 1
@@ -1835,7 +1871,7 @@ def test_0_이하의_실행_타임아웃은_서버가_서기_전에_진단과_�
 def test_정수가_아닌_실행_타임아웃은_인자_오류다(value: str) -> None:
     """초 단위의 정수만 받는다. 포트처럼 정수가 아닌 값은 argparse 가 막는다(종료 코드 2)."""
     with pytest.raises(SystemExit) as refused:
-        main(["serve", "--run-timeout", value])
+        _main(["serve", "--run-timeout", value])
 
     assert refused.value.code == 2
 
@@ -1879,7 +1915,7 @@ async def test_serve_의_전역_동시_실행_상한이_세운_앱의_최종_사
     sites = _site_file(_site(agents='["asking", "echo"]'))
     (workspace / "sites.toml").write_text(sites, encoding="utf-8")
     argv = ["--site-file", "sites.toml", "--traces", "t", "--end-user-concurrent-runs", "1"]
-    main(["serve", *argv])
+    _main(["serve", *argv])
     (call,) = uvicorn_calls
     app = call["app"]
     assert isinstance(app, FastAPI)
@@ -1915,7 +1951,7 @@ def test_0_이하의_전역_동시_실행_상한은_서버가_서기_전에_진�
 ) -> None:
     """그 값이면 최종 사용자 경로의 모든 시작·결정·이어 가기가 429 다. 다른 구성 오류와 같이 시작
     자리에서 끝난다."""
-    code = main(["serve", "--end-user-concurrent-runs", value])
+    code = _main(["serve", "--end-user-concurrent-runs", value])
 
     out, err = capsys.readouterr()
     assert code == 1
@@ -1928,7 +1964,7 @@ def test_0_이하의_전역_동시_실행_상한은_서버가_서기_전에_진�
 def test_정수가_아닌_전역_동시_실행_상한은_인자_오류다(value: str) -> None:
     """실행 타임아웃과 같은 모양이다 — 정수가 아니면 argparse 가 막는다(종료 코드 2)."""
     with pytest.raises(SystemExit) as refused:
-        main(["serve", "--end-user-concurrent-runs", value])
+        _main(["serve", "--end-user-concurrent-runs", value])
 
     assert refused.value.code == 2
 
@@ -1953,7 +1989,7 @@ def test_OS_사용자_이름에_구분자가_들면_serve_가_서지_않는다(
     uvicorn_calls: list[dict[str, object]],
 ) -> None:
     """그 이름이 최종 사용자의 것과 섞이면 주체 비교가 거짓이 된다(스토리 57)."""
-    code = main(["serve"])
+    code = _main(["serve"])
 
     _, err = capsys.readouterr()
     assert code == 1
@@ -1973,7 +2009,7 @@ def test_OS_사용자_이름에_구분자가_들면_serve_가_서지_않는다(
 def test_OS_사용자_이름에_구분자가_들면_run_과_resume_이_시작_자리에서_끝난다(
     workspace: Path, piped_user: str, argv: list[str], capsys: pytest.CaptureFixture[str]
 ) -> None:
-    code = main(argv)
+    code = _main(argv)
 
     out, err = capsys.readouterr()
     assert code == 1
@@ -2023,7 +2059,8 @@ def _serving(
     """
     log = root / "serve.log"
     env = _env() | {ADMIN_TOKEN_ENV: admin_token, CHANNEL_TOKEN_ENV: channel_token}
-    argv = [sys.executable, "-m", "agent_os.main", "serve", "--port", "0", "--traces", "t", *extra]
+    argv = [sys.executable, "-m", "agent_os.main", "serve", "--port", "0", "--traces", "t"]
+    argv += ["--model", MODEL_PLUGIN, *extra]
     with log.open("w", encoding="utf-8") as sink:
         process = subprocess.Popen(argv, cwd=root, stdout=sink, stderr=sink, env=env)
         try:
@@ -2242,9 +2279,9 @@ def test_플러그인_루트를_지정하면_작업_디렉터리의_plugins_가_
     monkeypatch.chdir(tmp_path)
     _write_plugin(tmp_path / "custom", "echo", ECHO_SRC)
 
-    found = main(["run", "echo", "hi", "--traces", "t", "--plugins-root", "custom/plugins"])
+    found = _main(["run", "echo", "hi", "--traces", "t", "--plugins-root", "custom/plugins"])
     out, _ = capsys.readouterr()
-    missed = main(["run", "echo", "hi", "--traces", "t"])
+    missed = _main(["run", "echo", "hi", "--traces", "t"])
 
     assert found == 0
     assert out == "echo:hi\n"
@@ -2260,7 +2297,7 @@ def test_플러그인_루트를_지정했으면_안내된_재개_명령이_그�
     _write_mcp_plugin(root, "fixture")
     _write_plugin(root, "gated", GATED_SRC, GATED_MANIFEST)
 
-    paused = main(["run", "gated", "hi", "--traces", "t", "--plugins-root", "custom/plugins"])
+    paused = _main(["run", "gated", "hi", "--traces", "t", "--plugins-root", "custom/plugins"])
     argv = _guidance(capsys.readouterr().out)
     code = main(argv)
 
@@ -2315,11 +2352,11 @@ def test_이어_가기_옵션으로_두_번_돌리면_둘째_트레이스가_첫
 ) -> None:
     """끝난 실행에 이어 가기 안내를 찍지 않는다. 찍으면 표준 에러가 비지 않거나 표준 출력이 출력
     아닌 것을 싣는다(명세 "CLI")."""
-    first_code = main(["run", "echo", "hi", "--traces", "t"])
+    first_code = _main(["run", "echo", "hi", "--traces", "t"])
     first = _run_id_of(workspace / "t")
     capsys.readouterr()
 
-    code = main(["run", "echo", "again", "--traces", "t", "--continuation", first])
+    code = _main(["run", "echo", "again", "--traces", "t", "--continuation", first])
 
     out, err = capsys.readouterr()
     assert first_code == 0
@@ -2375,7 +2412,7 @@ def test_거절된_이어_가기는_진단과_종료_코드_1이고_트레이스
     previous = prepare(workspace / "t")
     before = [f.read_bytes() for f in _trace_files(workspace / "t")]
 
-    code = main(["run", "echo", "again", "--traces", "t", "--continuation", previous])
+    code = _main(["run", "echo", "again", "--traces", "t", "--continuation", previous])
 
     out, err = capsys.readouterr()
     assert code == 1
@@ -2391,11 +2428,11 @@ def test_이어_간_실행이_멈추면_지금의_안내_줄로_재개되고_재
     프레임이라는 02 의 고정에 기댄다 — 여기서는 요약이 없어 일시정지가 자리 1 이다."""
     _write_mcp_plugin(workspace, "fixture")
     _write_plugin(workspace, "gated", GATED_SRC, GATED_MANIFEST)
-    main(["run", "echo", "hi", "--traces", "t"])
+    _main(["run", "echo", "hi", "--traces", "t"])
     first = _run_id_of(workspace / "t")
     capsys.readouterr()
 
-    paused = main(["run", "gated", "hi", "--traces", "t", "--continuation", first])
+    paused = _main(["run", "gated", "hi", "--traces", "t", "--continuation", first])
     argv = _guidance(capsys.readouterr().out)
     code = main(argv)
 
@@ -2422,7 +2459,10 @@ def _cli_run(request: str, *, cwd: Path, traces: Path, previous: RunId | None = 
     하나다."""
     before = {f.stem for f in _trace_files(traces)}
     continuation = [] if previous is None else ["--continuation", previous]
-    result = _cli(["run", "calc", request, "--traces", str(traces), *continuation], cwd=cwd)
+    result = _cli(
+        ["run", "calc", request, "--traces", str(traces), "--model", MODEL_PLUGIN, *continuation],
+        cwd=cwd,
+    )
     assert result.returncode == 0, result.stderr
     (run_id,) = {f.stem for f in _trace_files(traces)} - before
     finished = _trace_events(traces / f"{run_id}.jsonl")[-1]
@@ -2436,8 +2476,8 @@ def _trace_events(trace_file: Path) -> list[Event]:
 
 
 def _copy_repo_plugins(root: Path) -> None:
-    """저장소의 calc 와 그것이 쓰는 mcp(`everything`)를 임시 루트에 복사한다."""
-    for kind, name in (("agents", "calc"), ("mcp", "everything")):
+    """저장소의 calc 와 그것이 쓰는 mcp(`everything`), 기본 모델을 임시 루트에 복사한다."""
+    for kind, name in (("agents", "calc"), ("mcp", "everything"), ("models", MODEL_PLUGIN)):
         shutil.copytree(
             REPO_ROOT / "plugins" / kind / name,
             root / "plugins" / kind / name,

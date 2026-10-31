@@ -1,0 +1,7 @@
+schema_version = "1"
+kind = "model"
+name = "claude-opus-5"
+version = "0.1.0"
+provider = "anthropic"
+model_id = "claude-opus-5"
+max_tokens = 16000
