@@ -9,5 +9,5 @@
 ## 수용 기준
 
 - [x] `docs/constitution/operations.md` 환경 규약 상세의 `PYTHONUTF8` 줄 바로 아래에 `-I`가 `PYTHON*` 환경 변수를 모두 무시하므로 `-X utf8`을 함께 준다는 줄이 있다
-- [x] 회고 반영: 그 줄을 더하고 대기열 484를 이 티켓으로 닫았다, 일지 2026-10-31-04-model-plugin-design.md
+- [x] 회고 반영: 그 줄을 더하고 대기열 484를 이 티켓으로 닫았다, 일지 2026-10-31-06-model-plugin-design.md
 - [x] 검증 명령이 모두 초록이다
