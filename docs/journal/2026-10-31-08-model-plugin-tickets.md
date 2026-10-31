@@ -283,3 +283,75 @@ CodeRabbit 좌석은 없다(`coderabbit auth status`가 `Plan: Free`, `Seat: not
 - 남긴다: 주장 9의 Nit. 같은 주석의 다음 문장이 02가 닫는 출구 다섯(목록·상세·실행 500·`serve`·CLI)을 들고, 티켓 02가 "04부터 모든 실행이 모델 파일을 읽는다"고 적어 구현 순서는 맞다.
 
 명세 주석을 단 뒤 서두의 표시 글자를 다시 셌다(`grep -o`로 `거부한 안:` 14, `명세가 정했다` 12, `넘겨받았다` 6, `사용자가 골랐다` 1. main과 같다).
+
+서브에이전트가 확인하지 못한 주장 7의 뒤 절(서버 기록 한 줄이 오류 문구 그대로다)은 `http/errors.py`의 모듈 독스트링이 "서버 기록은 덮기 전의 것을 남긴다"고 적는 것을 grep으로 봤다(코드를 읽었다. 돌리지 않았다).
+
+## 커밋 (PR 직전 리뷰 반영)
+
+`4ebcbade` "docs: PR 직전 리뷰를 반영해 03의 격리 루트와 05의 재개 안내 줄을 고친다". pre-commit의 `tools/run_checks.py` 묶음이 모두 Passed였다(check-ticket, zizmor, lint-imports, check-instructions, check-type-escapes, pyright, pyright-linux, run-hooks, pytest 350.9s, web-verify 444.1s). 마크다운 표, 줄 구분 문자, 변이 표, 인용 대조, 커밋 메시지도 Passed였다. ruff 둘은 `.py`가 없어 Skipped라 커밋하는 동안 손으로 쳤다(`uv run ruff check .`는 `All checks passed!`, `uv run ruff format --check .`는 `1202 files already formatted`). 카나리아 명세와 헌법 판은 대상 파일이 없어 Skipped다. 커밋 전 `tools/sibling_overlap.py`는 번호 겹침 없음이었다.
+
+커밋을 띄운 뒤 인계 계기(`hook_handoff`. 세션 컨텍스트 247,537 토큰, 경계 `커밋 뒤`)가 와서 `handoff.md`를 Read로 열었다. 이 세션의 지시문의 "이어받을 상태"가 `인계: 커밋 뒤`로 시작해 인계하지 않는 때 셋째에 들어 넘기지 않고 잇는다.
+
+## 인계 (PR 연 뒤)
+
+`4ebcbade`를 푸시하고 PR #444(https://github.com/njh6803/agent-os/pull/444)를 열었다. 본문은 저장소 템플릿을 채웠다(면제 PR, 티켓 없음. PR 직전 리뷰의 결과와 05의 안내 줄을 to-tickets가 고른 것을 체크리스트와 "남긴 위험"에 적었다). `/git-pr`을 부르지 않고 `gh pr create --body-file`로 열었고, 사용자에게 묻지 않은 것은 메모리의 "병합은 승인 없이 진행"을 따랐다. 앱의 `get_status`가 PR #444를 묶었다고 보였고 검사 일곱이 대기 중이었다.
+
+PR이 서자 인계 계기(`hook_handoff`. 세션 컨텍스트 264,941 토큰, 경계 `PR 연 뒤`)가 와서 `handoff.md`를 Read로 열었다. 인계하지 않는 때 다섯에 들지 않는다. PR 만들기는 성공했고, 요청 범위 "티켓까지"는 병합까지 이어지며, 이 세션의 지시문의 "이어받을 상태"는 `인계: 커밋 뒤`라 경계가 다르고, 이 일지에 `인계 못함` 줄이 없으며, `get_session`의 `self`에 `parentSessionId`가 없다. 그래서 넘긴다. 함께 온 `hook_pr_next_session` 계기는 인계 줄이 이겨 따르지 않았다. `@coderabbitai review` 코멘트는 남기지 않았다(`PR 연 뒤` 인계는 새 세션이 남긴다). 백그라운드 작업은 없다(커밋과 서브에이전트 셋이 끝났다).
+
+이 세션의 사용자 프롬프트는 위 "이어받은 세션 (푸시부터)"의 지시문 하나다. 이 세션이 고친 것은 위 "PR 직전 리뷰"의 "판정"이다(03의 격리 루트 열거와 grep 처방, 05의 재개 안내 줄 불릿, 03의 안내 줄 문장, 명세 "시작 때의 확인" 주석). 이 세션의 제목은 `docs/model-plugin-tickets`이고 지시문을 낸 뒤 `docs/model-plugin-tickets (인계함)`으로 바꾼다.
+
+새 세션이 할 일은 `merge.md` 2(봇 회차)부터다. 첫 `@coderabbitai review` 코멘트와 `wait_ci`, 반영, 3(일지. 이 PR이 티켓 단계를 닫으므로 `retro`와 "다음" 절까지 마친 일지를 마지막 봇 회차의 커밋에 싣는다. "다음"은 막힌 것이 없는 티켓 01과 02를 나란히), 4(워크트리에서 병합할 때), 그 뒤 `next-session`이다. 이 절과 위 "커밋 (PR 직전 리뷰 반영)" 절은 커밋하지 않았으니 다음 커밋에 싣는다.
+
+지시문:
+
+```
+다음 작업: 기능 model-plugin. 모델 플러그인을 런타임이 읽게 하는 설계(ADR 0040)의 명세를 검토하고 티켓으로 쪼갠다(PR #444를 열었고 봇 회차부터)
+다음 단계: PR 반영·병합
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /to-tickets .scratch/model-plugin/spec.md
+브랜치: docs/model-plugin-tickets
+모델: Sonnet 5.5 / high. 2의 잇는 지시문
+읽을 것: docs/journal/2026-10-31-08-model-plugin-tickets.md의 "이어받은 세션 (푸시부터)" 절부터 끝까지
+이어받을 상태: 인계: PR 연 뒤 docs/journal/2026-10-31-08-model-plugin-tickets.md. PR #444(면제 PR, 티켓 없음)를 열었고 커밋 둘(30e54b56, 4ebcbade)이 푸시됐다. @coderabbitai review 코멘트는 아직 남기지 않았다. 일지의 "커밋 (PR 직전 리뷰 반영)" 절과 "인계 (PR 연 뒤)" 절은 커밋하지 않았으니 다음 커밋(봇 회차 반영이나 "다음"을 실은 커밋)에 싣는다. 남은 것: merge.md 2(봇 회차. 첫 @coderabbitai review 코멘트와 wait_ci), 3(일지. 이 PR이 티켓 단계를 닫으므로 retro와 "다음" 절까지 마친 일지를 마지막 봇 회차의 커밋에 싣는다. "다음"은 막힌 것이 없는 티켓 01·02를 나란히), 4(워크트리에서 병합할 때), 그 뒤 next-session(다음은 티켓 01·02를 나란히). to-tickets와 셀프 리뷰, PR 직전 리뷰는 다시 돌지 않는다.
+확인할 선행 조건: 없음
+이번 요청 범위: 티켓까지
+```
+
+제목을 `docs/model-plugin-tickets (인계함)`으로 바꿨다. 워크트리 잠금 풀기는 `is not locked`로 끝나 넘어갔다.
+
+open-session을 부른다 2026-10-31T15:13:04Z
+
+## 이어받은 세션 (봇 회차부터)
+
+> 사용자: .claude/skills/to-tickets/SKILL.md 를 읽어 그대로 따른다. … 인자: .scratch/model-plugin/spec.md / 다음 작업: 기능 model-plugin. 모델 플러그인을 런타임이 읽게 하는 설계(ADR 0040)의 명세를 검토하고 티켓으로 쪼갠다(PR #444를 열었고 봇 회차부터) / 다음 단계: PR 반영·병합 / 브랜치: docs/model-plugin-tickets / 모델: Sonnet 5.5 / high. 2의 잇는 지시문 / 이번 요청 범위: 티켓까지
+
+첫 턴 훅대로 세션 제목을 `docs/model-plugin-tickets`로 바꾸고 `EnterWorktree(path)`로 이 워크트리에 들어왔다. `git rev-parse HEAD`와 PR의 `headRefOid`가 `4ebcbade`로 같았다. to-tickets와 셀프 리뷰, PR 직전 리뷰는 다시 돌지 않았다.
+
+## 봇 회차
+
+`@coderabbitai review`를 PR #444에 남기고 `gh pr checks`를 한 번 읽으니 `python`·`web`·`visual`이 pending이라 `tools/wait_ci.py 444`를 백그라운드로 띄웠다. 30분 뒤 종료 코드 3(`끝: 시간 초과 30분. 남은 것 CodeRabbit(나타나지 않음)`)으로 끝났다. 나머지 검사 여덟(claude-review, e2e, e2e-widget, python, ticket, verify, visual, web)은 모두 SUCCESS였다.
+
+CodeRabbit은 이 PR에서 아무 흔적도 남기지 않았다. 이슈 코멘트(`gh api repos/njh6803/agent-os/issues/444/comments`)에는 claude[bot]의 코멘트 하나와 내가 남긴 `@coderabbitai review`뿐이고, 인라인 리뷰와 리뷰 본문은 없으며(`gh api repos/njh6803/agent-os/pulls/444/comments`와 `…/pulls/444/reviews`가 모두 길이 0), 헤드의 check-runs(`gh api …/commits/4ebcbade…/check-runs`)에도 CodeRabbit 항목이 없다. 모두 이 세션이 명령을 쳐서 손으로 본 것이다. 앞선 PR #443의 일지(일지 2026-10-31-07 "이어받음 (PR 연 뒤)"에서 읽었다)는 같은 저장소에서 첫 요청에 "리뷰를 받지 않는다"는 안내만 달렸다가 한 번 더 요청해 인라인 리뷰를 받았다고 적는데, 이번에는 두 번째 요청을 하지 않았다. 왜 나타나지 않았는지는 재지 않았다. 별 10개 미만 안내가 이번에는 달리지 않은 것이 그 일지와 다르다.
+
+claude-review는 이 PR에 낸 첫 리뷰(15:12Z 코멘트)에서 "지적 없음"이었다. 그래서 봇 회차에서 고칠 지적이 없다. CodeRabbit이 첫 회차를 내지 않았으므로 다음 푸시에서도 CodeRabbit의 회차는 첫 회차로 센다. 이 푸시(일지만 실은 커밋)로 도는 claude-review는 둘째 회차라 Critical·Major만 고친다.
+
+뒤로 넘긴 봇 지적은 없다.
+
+## 회고
+
+후보 둘, 승인 1(대기열 555에 새 행), 기각 1, 넘김 0. 대기열 만료 2(192·340).
+
+- **승인 (대기열 555, 1회차).** 티켓이 "모두"로 가리키는 대상을 grep으로 센 열거 하나로 닫아 그 grep에 걸리지 않는 모양을 놓쳤다. 사건은 이 일지의 "셀프 리뷰" Major(03이 `workspace` 픽스처만 들고 `tests/test_main.py`의 다른 루트 시험 넷을 빠뜨렸다)와 "PR 직전 리뷰" Minor(고친 열거가 `main(`·`_serving`·`_copy_repo_plugins`에 걸리지 않는 서브프로세스 시험 793행을 또 빠뜨렸다)다. 층은 판단 기준이다. 검사로 옮길 수 있는 모양이 아니라(어느 부류가 "모두"인지는 티켓마다 다르다) `CODING_STANDARDS.md`로 간다. 두 번 다 리뷰가 제 몫을 했으므로 4단계의 회차 셈에서는 빼고, "더하는 것"의 문턱(세 번째)을 지나기 전이라 반영하지 않고 회차를 세는 행으로 둔다. 되돌림은 PR 하나다. 행 찾기는 `uv run python tools/queue_open_rows.py --search to-tickets --search 열거 --search grep.*셌`로 했고, 출력에 머리가 보인 to-tickets 행(399·400·429·493)과 견주었다. 같은 to-tickets에서 난 열린 493은 티켓이 한 동작을 빼면서 남는 자리를 적지 않은 것이라 다른 처방이다. 대상 파일 목록에 같이 든 `CODING_STANDARDS.md`의 다른 열린 행 가운데 402·405·500·548·551은 머리 260자를 파이썬 한 줄로 찍어 읽었고(손으로 봤다) 모두 다른 일이다(부동소수 견줌, SIGINT 처리기, 도구 판에 기댄 시험, 판정 시험의 거르기, 체크박스 닫기). 552는 열지 않았다(대기열 머리의 요약으로는 조회 범위를 좁힌 일이다).
+- **기각.** CodeRabbit이 나타나지 않아 `tools/wait_ci.py`가 30분을 기다린 일. 이미 있는 도구가 그 자리에서 `끝: 시간 초과 30분 … (나타나지 않음)`으로 알렸고, 이 세션은 그 줄대로 PR 코멘트·리뷰·check-runs를 직접 읽어 갈랐다. 더 일찍 포기하게 하는 것은 리뷰를 기다리는 시간을 줄이는 쪽이라 가드레일을 느슨하게 하는 넘김에 들고, 사건이 하나(손상 없음)라 올리지 않는다. 같은 파일의 열린 행 372·374·441·499는 모두 CodeRabbit이 흔적을 남긴 뒤의 판정이라 이 일과 다르다. 이 일이 되풀이되면 `tools/wait_ci.py`에 CodeRabbit의 부재를 부르는 끝 줄을 세는 행으로 올린다.
+- **만료.** 192(`tools/run_checks.py`가 실패하면 곧바로 멈출지, 승인 2026-10-12·2026-10-17 메모)와 340(프로브 결과의 내용 해시 대조, 승인 2026-10-17)을 취소선과 `만료 2026-11-01`로 닫았다. 승인 칸의 가장 늦은 날짜가 14일을 넘었고 사람 몫도 회차 3 이상도 아니며, 이 워크트리와 `origin/main` 두 출력(`uv run python tools/queue_open_rows.py`와 `--ref origin/main`)에 모두 들었다.
+
+## 다음
+
+기능 model-plugin은 티켓 여섯이 `.scratch/model-plugin/issues/`에 있고 PR #444가 병합되면 `todo`로 시작한다. `next-session` 결정표로는 막힌 것이 없는 티켓 01과 02가 나란히 시작할 수 있다. 사용자가 고른 순서는 01·02를 함께 시작하고 03 → 04 → 05·06으로 가는 것이며 티켓마다 새 세션과 PR 하나씩이다.
+
+- 01 `01-contract-model-manifest-fields`: sdk 매니페스트의 모델 칸, `openapi.json`, 생성 타입, 리터럴, 사진 정답, `sonnet` 픽스처 둘.
+- 02 `02-manifest-errors-omit-input`: 매니페스트 거부 문구가 입력값을 되울리지 않는다. 01과 둘 다 `tests/adapters/test_filesystem.py`를 고치므로 뒤에 병합되는 쪽이 앞의 것을 합친다.
+- 03은 01에, 04는 01·02·03에, 05와 06은 04에 막힌다. 05와 06은 `README.md`를 함께 고치지만 줄이 달라(05는 `serve` 줄, 06은 `disabled.toml` 줄) 나란히 돈다.
+- 06은 ADR 0019 이력 한 줄을 사용자에게 승인받는다(사용자가 고른 답, "분할" 절).
+- 워크트리에서 병합하므로 주 체크아웃은 당기지 않는다. 새 세션을 열면 `directive.md`대로 "확인할 선행 조건"에 `주 체크아웃 미갱신`을 적고, 그 세션이 워크트리에 들어가기 전에 `tidy-checkouts`로 당긴다.
+- CodeRabbit이 이 PR에서 흔적을 남기지 않았다(위 "봇 회차"). 다음 PR에서 되풀이되는지 본다.
