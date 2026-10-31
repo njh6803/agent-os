@@ -3,7 +3,9 @@
 # 실험군은 규칙의 paths 안(src/agent_os/adapters/), 대조군은 밖(README.md)을 읽는다. 둘 다 이 체크아웃이다.
 # 질문은 선례 `.scratch/end-user-continuation/probes/canary/adapters_rule_new_optional_fields.toml` 의 둘째 판처럼
 # Read 결과에 붙어 실린 규칙도 지시라고 밝힌다. 기대 낱말은 규칙의 그 항목에만 있다(`clock.py` 에는 없다).
-# 최신 결과: 통과 4(2026-10-21, 이 PC의 워크트리 `03-posix-launcher`, claude 2.1.302, 일지 2026-10-21-14. 이 항목이 든
+# 최신 결과: 통과 4(2026-11-01, 이 PC의 워크트리 `02-manifest-errors-omit-input`, claude 2.1.302 이후 판,
+# 매니페스트 문구 항목을 JSONL 항목에 한 구절 더한 커밋하지 않은 작업 트리, HEAD bf6c1f26. 앞 회차는
+# 통과 4(2026-10-21, 이 PC의 워크트리 `03-posix-launcher`, claude 2.1.302, 일지 2026-10-21-14. 이 항목이 든
 # origin/main `f1e6516b`를 티켓 03의 브랜치에 들이고 런처 항목에 한 구절을 더한, 병합을 커밋하기 전의 작업 트리, 커밋
 # 4cbbd20e 위). 앞 회차는 통과 4(이 PC, claude 2.1.302, 일지 2026-10-21-10. 셀프 리뷰를 반영한 커밋하지 않은 작업
 # 트리, HEAD 5040230c).

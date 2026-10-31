@@ -266,7 +266,31 @@ def _parse(path: Path) -> PluginManifest:
         return parse_manifest(path.read_text(encoding="utf-8"))
     except (OSError, ValidationError, ValueError) as error:
         # ValidationError 와 UnicodeDecodeError 가 둘 다 ValueError 다.
-        raise PluginError(f"매니페스트를 읽을 수 없다: {path}\n{error}") from error
+        raise PluginError(f"매니페스트를 읽을 수 없다: {path}\n{_describe(error)}") from error
+
+
+def _describe(error: Exception) -> str:
+    """읽을 수 없는 이유(질의). 운영자가 칸에 잘못 적은 값을 되울리지 않는다.
+
+    pydantic 의 검증 문구는 받은 값을 `input_value` 로 싣는다. 모델 파일에 `api_key = "sk-ant-…"`
+    를 적은 운영자의 비밀이 이 문구를 내는 모든 출구로 나가므로(헌법 원칙 V) 입력·문맥·URL 없이
+    종류와 위치와 문구만 남긴다. 위치는 칸 이름이라 값이 아니라 키에 비밀을 적은 경우까지는
+    막지 않는다(운영자가 어느 칸이 틀렸는지 알아야 하기 때문이다). 그 밖의 예외(OSError,
+    UnicodeDecodeError, TOMLDecodeError)는 값이 아니라 경로, 바이트 위치, 줄·칸 위치를 담아
+    그대로다. 표를 두 번 선언한 TOML 문법 오류만 표 이름(키)을 싣는다. 트레이스 쪽의 `jsonl.py`
+    `_describe` 와 같은 모양이다. 어댑터 모듈끼리 import 하는 선례가 없어 따로 두었다.
+    """
+    if not isinstance(error, ValidationError):
+        return str(error)
+    details = error.errors(include_url=False, include_context=False, include_input=False)
+    return "; ".join(
+        f"{detail['type']}{_location(detail['loc'])}: {detail['msg']}" for detail in details
+    )
+
+
+def _location(loc: tuple[int | str, ...]) -> str:
+    """검증 오류의 위치(질의). 문서 전체가 틀렸으면 위치가 없다."""
+    return f" ({'.'.join(str(part) for part in loc)})" if loc else ""
 
 
 def _import(directory: Path, name: PluginName, module_path: str) -> object:

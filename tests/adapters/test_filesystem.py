@@ -308,6 +308,47 @@ def test_같은_깨진_파일을_단건으로_읽으면_PluginError다(root: Pat
             plugins.read_manifest(PluginKind.AGENT, PluginName(name))
 
 
+PLANTED_SECRET = "sk-ant-api03-PLANTED-SECRET-VALUE"
+
+
+def _write_planted(root: Path, kind: PluginKind) -> Path:
+    """운영자가 칸을 잘못 적어 키처럼 생긴 값을 심은 매니페스트 하나. 어느 종류든 모르는 칸을
+    거부하므로 같은 거부가 선다. 심은 줄은 표 앞에 와야 해서 `_manifest` 의 `extra` 맨 앞에 둔다.
+    """
+    directory = root / _KIND_DIRECTORY[kind] / "planted"
+    directory.mkdir(parents=True)
+    path = directory / "plugin.toml"
+    extra = f'api_key = "{PLANTED_SECRET}"\n' + _KIND_EXTRA[kind]
+    path.write_text(_manifest(kind.value, "planted", extra), encoding="utf-8")
+    return path
+
+
+@pytest.mark.parametrize("kind", [PluginKind.AGENT, PluginKind.MCP, PluginKind.MODEL])
+def test_칸에_잘못_적은_값은_매니페스트를_읽지_못한_문구에_다시_나오지_않는다(
+    root: Path, kind: PluginKind
+) -> None:
+    """모델 파일에 `api_key = "sk-ant-…"` 를 적은 운영자의 비밀이 목록 표지와 단건 오류로 새지
+    않는다. 문구에는 파일 경로와 칸 이름과 오류 종류만 남아 운영자는 여전히 무엇이 틀렸는지 안다.
+
+    HTTP 면은 이 문구를 그대로 낸다(운영자 면의 500 봉투와 서버 기록 한 줄은 오류 문구 그대로이고
+    최종 사용자 면은 고정 문구다). 그래서 따로 시험하지 않고 어댑터 한 곳에서 닫는다.
+    """
+    manifest_path = _write_planted(root, kind)
+    assert PLANTED_SECRET in manifest_path.read_text(encoding="utf-8")
+    plugins: PluginSource = FilesystemPlugins(root)
+
+    with pytest.raises(PluginError) as raised:
+        plugins.read_manifest(kind, PluginName("planted"))
+    row = plugins.list_manifests(kind)[0]
+
+    assert isinstance(row, UnreadableManifest)
+    for message in (str(raised.value), row.reason):
+        assert PLANTED_SECRET not in message
+        assert str(manifest_path) in message
+        assert "api_key" in message
+        assert "extra_forbidden" in message
+
+
 def test_플러그인_이름_패턴을_어기는_디렉터리도_표지로_남는다(root: Path) -> None:
     """조용히 빼면 등록했다고 믿는 것과 실제가 어긋난다. 대소문자 오해가 가장 흔한 모양이다.
 
