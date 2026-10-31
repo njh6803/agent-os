@@ -98,7 +98,8 @@ class PluginManifest(BaseModel):
     model_id: str | None = Field(default=None, min_length=1)
     # strict 인 이유는 `conversation_limit` 과 같다(`true` 를 1 로, `"16"` 을 16 으로 받는다)
     max_tokens: int | None = Field(default=None, strict=True, ge=1)
-    # strict 여도 TOML 의 정수 `0`·`1` 은 실수 `0.0`·`1.0` 으로 받힌다. 불린과 문자열은 거부된다.
+    # strict 여도 TOML 의 정수 `0`·`1` 은 실수 `0.0`·`1.0` 으로 받아들여진다. 불린과 문자열은
+    # 거부된다.
     temperature: float | None = Field(default=None, strict=True, ge=0, le=1)
     # mcp만
     server: McpServer | None = None

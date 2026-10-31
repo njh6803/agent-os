@@ -57,6 +57,13 @@
 - 카나리아: `uv run python tools/canary.py .scratch/end-user-continuation/probes/canary/sdk_rule_failure_cause.toml <출력>`과 `…/sdk_rule_shortcut_patterns.toml`을 이 워크트리에서 돌렸다(claude 2.1.312, 대조군은 둘 다 이 체크아웃의 커밋 `bf6c1f26`의 `README.md`). 둘 다 러너의 판정이 통과 4·실패 0·"없음" 섞임 0이다(러너 출력을 읽었다). 두 명세의 `# 최신 결과:` 줄을 갱신했다.
 - 시험(반영 뒤 손으로 침): `tests/sdk/test_manifest.py`·`tests/adapters/test_filesystem.py`·`tests/channel/http/test_router.py` 238 passed, `tests/test_server.py -k "모델 or 표지 or openapi or 계약"` 22 passed. `ruff check`·`ruff format --check` 초록. 전체 러너는 pre-commit이 갈음한다.
 
+## PR 직전 리뷰(이어받은 세션)
+
+- `coderabbit auth status`: 로그인은 되어 있으나 `Seat: not assigned`(Plan: Free)라 `coderabbit-review` 서브에이전트가 CLI를 돌리지 못하고 findings 0건으로 돌아왔다. 운영 규약대로 대체 둘을 돌렸다.
+- 내장 `/security-review`(커밋 뒤, origin/main은 `bf6c1f26` 그대로): 소스 변경이 `sdk/manifest.py`와 `sdk/__init__.py`뿐이고 파일·프로세스·네트워크 호출이 없어 서브태스크 없이 직접 읽었다. 신뢰도 8 이상의 취약점 없음. 에이전트 `model`은 `PLUGIN_NAME_PATTERN`으로 읽는 단계에서 거부되어 04가 이 값으로 모델을 찾을 때 경로 이탈이 없다. `model_id`의 소비처가 이 PR에 없어 04가 제공사 호출에 넘길 때 다시 본다.
+- `bug-perf-review` 서브에이전트: 지적 0건. 경계 입력(`temperature` `nan`·`inf`는 거부, 에이전트 `model`의 `""`·`"sonnet\n"`은 거부)을 `parse_manifest`로 손으로 대 봤고 `tests/sdk/test_manifest.py` 76개가 통과했다. 공백만 있는 `model_id`와 상한 없는 `max_tokens`는 티켓이 정한 경계라 오탐으로 두었다(04가 본다).
+- 고친 것: `manifest.py`의 `temperature` 주석 오타("받힌다" → "받아들여진다"). 동작과 무관하고 독스트링이 아니라 `openapi.json`은 그대로다.
+
 ## 인계(`커밋 뒤`)
 
 컨텍스트가 인계 문턱을 두 번째로 넘은 `커밋 뒤`에 넘긴다. 이 세션의 제목은 `feature/01-contract-model-manifest-fields (인계함)`이다(바꾸기 전 제목은 `feature/01-contract-model-manifest-fields`). 이 세션의 사용자 프롬프트는 위 원문 그대로이고 결정 질문은 없었다. 이 세션이 번복한 것은 없고, 셀프 리뷰 지적은 위 절에 있다.
