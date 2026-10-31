@@ -88,4 +88,45 @@ CodeRabbit CLI는 좌석이 없어(`docs/constitution/operations.md` 리뷰 파�
 - 밀 주장 대조: (1) ADR 0010 159줄·0022 97줄은 둘 다 `## 이력` 뒤라 포인터를 달지 않는 것이 맞다(오탐). (2) 04의 #448 병합이 `git log`에서 맞다. (3) 13개 시험의 빨강·초록 분류는 논리상 맞다고 보았고 구현 전 소스로 다시 돌려 세지는 않았다(이 세션은 위 "셀프 리뷰"에서 `git apply -R`로 세었다).
 - 고친 것 없음. 남긴 것: 위 Nit 하나.
 
-첫 커밋 시도는 위 ADR 포인터 검사 하나(1 failed, 6022 passed)로 실패했고 커밋은 만들어지지 않았다. 포인터를 거둔 뒤 다시 커밋한다.
+첫 커밋 시도는 위 ADR 포인터 검사 하나(1 failed, 6022 passed)로 실패했고 커밋은 만들어지지 않았다. 포인터를 거둔 뒤 다시 커밋했고 통과했다(`2c172b01` 구현, `54e8bcd7` 일지).
+
+## 인계(커밋 뒤)
+
+이어받은 세션이 셀프 리뷰·반영·커밋 둘·PR 직전 리뷰까지 마친 뒤 컨텍스트가 인계 문턱을 넘은 채 `커밋 뒤` 경계에 왔다. 이 세션의 사용자 프롬프트는 지시문 한 덩이(`/implement` 인자와 "이번 요청 범위: PR과 병합까지")뿐이고 결정을 묻는 질문은 없었다. 번복한 결정: ADR 0010 포인터를 달았다가 pre-commit의 ADR 포인터 검사가 빨개져 거두었다(위 "셀프 리뷰"). 세션 제목은 인계 전 `feature/05-default-model-required-and-checked`였고 `feature/05-default-model-required-and-checked (인계함)`으로 바꾼다.
+
+남은 것: 푸시, `/git-pr`로 PR 열기(PR 직전 리뷰 결과는 위 "PR 직전 리뷰"를 체크리스트에 옮긴다), `@coderabbitai review` 요청, 봇 회차 반영, 병합(`merge.md` "워크트리에서 병합할 때"), 회고.
+
+인계 지시문(새 세션이 이 일지를 이어 쓴다):
+
+```
+다음 작업: .scratch/model-plugin/issues/05-default-model-required-and-checked.md. 코드의 기본 모델 이름을 걷고, 서버(serve)와 CLI가 시작할 때 기본 모델의 이름·패턴·매니페스트를 확인한다
+다음 단계: 구현
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /implement .scratch/model-plugin/issues/05-default-model-required-and-checked.md
+브랜치: feature/05-default-model-required-and-checked
+모델: Sonnet 5.5 / high. 2의 잇는 지시문
+읽을 것: docs/journal/2026-11-01-05-model-plugin-05-implement.md (셀프 리뷰·커밋·PR 직전 리뷰는 끝났고 "인계(커밋 뒤)" 절이 남은 단계를 말한다)
+이어받을 상태: 인계: 커밋 뒤. 커밋 둘(2c172b01, 54e8bcd7)이 로컬 브랜치에 있고 아직 푸시하지 않았다. PR이 없으니 푸시하고 /git-pr로 PR을 연 뒤 merge.md 2(봇 회차)부터 한다. 구현·셀프 리뷰·PR 직전 리뷰(bug-perf-review, security-review)는 끝났다. 일지: docs/journal/2026-11-01-05-model-plugin-05-implement.md
+확인할 선행 조건: 04의 규칙 편집에 대한 카나리아 실제 `claude -p` 회차는 돌지 않았다(preflight만). 이 티켓과 무관하고 tools/sibling_overlap.py가 그 알림을 계속 낸다. 병합은 이 워크트리 사본의 next-session merge.md(없으면 SKILL.md)의 "워크트리에서 병합할 때"를 Read로 열어 따른다
+이번 요청 범위: PR과 병합까지
+```
+
+open-session을 부른다 2026-10-31T23:03:48Z
+
+## PR과 봇 회차(인계받은 세션)
+
+PR [#449](https://github.com/njh6803/agent-os/pull/449)를 열고 `@coderabbitai review`를 남겼다. 헤드 `54e8bcd7`에서 CodeRabbit·claude-review·e2e·e2e-widget·python·ticket·verify·visual·web이 모두 통과했다(`tools/wait_ci.py`의 출력 `끝: 모두 통과`를 본 것). CodeRabbit은 지적이 없었다(요약 코멘트의 `No actionable comments`를 `gh pr view --json comments`로 읽었다). claude-review는 Critical·Major 없이 Minor 1건(두 곳의 `기본 모델 플러그인이 없다` 문구를 서로 맞춰 보는 단언)과 Nit 2건(`_default_model`을 두 번 푸는 것, `_serve`의 순서 의존)을 냈다. 첫 회차라 지적마다 판단했고 셋 모두 보류하며 이유를 PR 코멘트에 남겼다(문구는 두 자리를 시험이 각각 단언한다, `_default_model`은 환경변수와 플래그만 읽는 함수라 두 번 풀어도 결과가 같다(`main.py:131`의 코드를 읽은 것), 순서 의존은 claude-review 코멘트가 독스트링에 이미 있다고 적었다). 뒤로 넘기는 일은 없다.
+
+## 회고
+
+후보 1개, 기각 1개, 승인 0개, 넘김 0개.
+
+- 후보: 셀프 리뷰의 두 축이 ADR 0010 159줄·0022 97줄에 `(바뀜: ADR 0040)` 포인터가 없다고 Minor로 냈다. 두 줄은 `## 이력` 절의 지난 항목 안이라 기록이고, 포인터를 달아 커밋하자 pre-commit의 `test_이_저장소의_ADR_포인터는_전부_이력_제목과_맞는다`가 빨개져 편집을 거두었다. 판정: 기각. 이미 있는 검사(저장소 상태 테스트)가 그 자리에서 막았고(대기열 118이 닫은 검사, 위 "셀프 리뷰"가 적은 pre-commit 출력), 손상이 없다. 리뷰 지적이 오탐이었던 것은 리뷰가 제 몫을 한 뒤 사람 확인으로 가른 것이다. 같은 오탐이 다시 나오면 `code-review` 브리프에 이력 절 규칙(`.claude/rules/adr.md`)을 가리키는 한 줄을 더할 후보이지만 이번은 첫 사건이다.
+- 대기열 행 찾기: `ADR.포인터`·`이력.절`로 찾아 열린 행 0개, 닫힌 행 2개(118·119)가 맞았고 모두 다른 일이다.
+- 만료: `tools/queue_open_rows.py`의 "만료할 행"이 없다.
+
+## 다음
+
+- 병합 뒤 다음 작업은 `model-plugin`의 `06-admin-model-toggle-and-decision-preview`다(티켓 머리의 `Blocked by`가 04뿐이다. 읽은 것이다. 04는 #448로 병합되었다). 06은 ADR 0019 이력 초안에 사용자 승인이 필요하다(티켓에 있다).
+- 05가 남긴 일은 없다. 티켓 메모의 사본 넷 동기화는 05가 `max_tokens`·`temperature`를 바꾸지 않아 해당이 없다.
+- 병합한 뒤 `주 체크아웃 미갱신` 한 줄과 원격 브랜치 정리는 `merge.md` 워크트리 절 3·4대로 보고에 남긴다.
