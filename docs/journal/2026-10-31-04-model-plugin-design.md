@@ -399,7 +399,7 @@ open-session을 부른다 2026-10-31T05:54:35Z
 
 ## 이어받음 (커밋 뒤)
 
-위 지시문으로 연 새 세션이다. 첫 턴 훅대로 제목을 `docs/model-plugin`으로 바꾸고, `git worktree list`에서 그 브랜치가 체크아웃된 워크트리 `next-feature-grill`(`209b2f6a`)을 찾아 `EnterWorktree(path)`로 들어갔다. `grill-with-docs`가 가리키는 `grilling`·`domain-modeling`은 Skill 도구로 한 번씩 불렀고, 인터뷰는 끝났으므로 라운드를 올리지 않고 커밋 뒤의 남은 단계부터 이었다. `git fetch origin` 뒤에도 origin/main은 `8f0e5f81`로 이 브랜치의 밑과 같다. `uv run python tools/sibling_overlap.py`는 번호 겹침 없음이었다(다음 빈 번호는 일지 2026-10-31-06, 대기열 555, 티켓 034. 이 브랜치의 일지 2026-10-31-04를 이름순으로 앞서는 형제는 `wireframe-optional` 워크트리의 2026-10-31-05이고, 함께 고친 파일은 `mcp-shutdown-spec` 워크트리의 `.scratch/plan.md`다). `coderabbit auth status`는 여전히 `Plan: Free`, `Seat: not assigned`라 CLI 축은 돌지 못한다(PR 템플릿대로 PR마다 다시 봤다).
+위 지시문으로 연 새 세션이다. 첫 턴 훅대로 제목을 `docs/model-plugin`으로 바꾸고, `git worktree list`에서 그 브랜치가 체크아웃된 워크트리 `next-feature-grill`(`209b2f6a`)을 찾아 `EnterWorktree(path)`로 들어갔다. `grill-with-docs`가 가리키는 `grilling`·`domain-modeling`은 Skill 도구로 한 번씩 불렀고, 인터뷰는 끝났으므로 라운드를 올리지 않고 커밋 뒤의 남은 단계부터 이었다. `git fetch origin` 뒤에도 origin/main은 `8f0e5f81`로 이 브랜치의 밑과 같다. `uv run python tools/sibling_overlap.py`는 번호 겹침 없음이었다(다음 빈 번호는 일지 `2026-10-31-06`, 대기열 555, 티켓 034. 이 브랜치의 일지 2026-10-31-04를 이름순으로 앞서는 형제는 `wireframe-optional` 워크트리의 2026-10-31-05이고, 함께 고친 파일은 `mcp-shutdown-spec` 워크트리의 `.scratch/plan.md`다). `coderabbit auth status`는 여전히 `Plan: Free`, `Seat: not assigned`라 CLI 축은 돌지 못한다(PR 템플릿대로 PR마다 다시 봤다).
 
 ## PR 직전 보안 리뷰
 
@@ -415,3 +415,39 @@ open-session을 부른다 2026-10-31T05:54:35Z
 4. 인증·인가, 주입, 역직렬화. 새 HTTP 경로와 인증 변경이 없고, 매니페스트는 `tomllib`과 pydantic으로 읽으며 `eval`·`pickle`·YAML은 설계에 없다. 커밋하지 않은 일지 수정에도 비밀 값이 없다.
 
 고친 것: 없음. 남긴 것: 없음. 2의 심층 방어 거리(기본 모델 이름을 `read_manifest`에 넘기기 전에 `is_plugin_name`으로 거를지)는 ADR 0040이 기본 모델 이름이 core에 드는 입구를 명세에 미뤘으므로 위 "다음"의 명세가 정할 것에 더했다.
+
+## 인계 (PR 연 뒤)
+
+커밋 `277fe0e9`(이 일지만, 47줄 더함·1줄 지움)가 pre-commit을 지나 섰다. `checks`(러너의 CHECKS 전부. pytest 426초, web-verify 565초), 마크다운 표, 줄 구분 문자, 변이 표, 인용 대조(인용 2건, 경고 없음), 커밋 메시지가 Passed이고, `ruff` 둘(이 세션이 손으로 쳐 `All checks passed!`, `1188 files already formatted`)과 canary specs, 헌법 판 검사는 대상 파일이 없어 Skipped다. 커밋이 서자 `커밋 뒤` 인계 계기(컨텍스트 225,256 토큰)가 왔으나, 이 세션의 지시문의 "이어받을 상태"가 `인계: 커밋 뒤`로 시작해 인계하지 않는 때 3이라 넘기지 않고 이었다. 브랜치를 푸시하고 `/git-pr`대로 PR #442(머리 `277fe0e9`, base main)를 열었다. 사용자가 앞 세션에서 PR·봇 반영·병합까지 묻지 않고 진행한다고 승인했으므로(위 "ADR 0040 승인"의 설명) 그 스킬의 생성 전 확인은 묻지 않았다. PR을 열자 `PR 연 뒤` 인계 계기(컨텍스트 253,049 토큰)가 왔고 `handoff.md`를 Read로 열어 따랐다. 인계하지 않는 때 다섯에 들지 않는다. PR은 열렸고, 요청 범위는 PR과 병합까지라 이 경계에서 끝나지 않고, 이 세션의 지시문의 "이어받을 상태"는 `인계: 커밋 뒤`라 같은 경계가 아니고, 이 일지에 `인계 못함` 줄이 없고, `get_session self`에 `parentSessionId`가 없다. 그래서 넘긴다. `@coderabbitai review` 코멘트는 남기지 않았고 `wait_ci` 대기도 띄우지 않았다(새 세션이 `merge.md` 2부터 한다). 앱은 PR #442를 이 세션에 묶었다(`get_session self`의 `prNumber`가 442).
+
+이 세션의 사용자 프롬프트는 하나다. 위 "인계 (커밋 뒤)" 절의 지시문을 `open-session`이 `.claude/skills/grill-with-docs/SKILL.md 를 읽어 그대로 따른다. … 인자:` 한 줄로 옮긴 것이다. 이 세션이 번복하거나 고친 것은 없다. 더한 것은 위 "이어받음 (커밋 뒤)"·"PR 직전 보안 리뷰" 절과 "다음"의 두 줄(기본 모델 이름의 `is_plugin_name` 판정, 주 체크아웃 미갱신)이다. 이 세션의 제목은 `docs/model-plugin`이고, 아래 지시문을 낸 뒤 `docs/model-plugin (인계함)`으로 바꾼다.
+
+새 세션이 할 일은 `merge.md` 2(봇 회차)부터다. `@coderabbitai review` 코멘트, `wait_ci`, 봇 회차의 반영, 워크트리에서의 병합("워크트리에서 병합할 때"), 그 뒤 `next-session`(다음 단계는 명세 `/to-spec`, 사람이 부른다)이다. 이 절은 커밋하지 않았으므로 새 세션이 봇 회차의 커밋에 싣는다.
+
+지시문:
+
+```
+다음 작업: 기능 model-plugin. 모델 플러그인을 런타임이 읽게 하는 설계 PR #442의 봇 회차와 병합, 그 뒤 next-session
+다음 단계: PR 반영·병합
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /grill-with-docs
+브랜치: docs/model-plugin
+모델: Sonnet 5.5 / high. 2의 잇는 지시문
+읽을 것: docs/journal/2026-10-31-04-model-plugin-design.md의 "이어받음 (커밋 뒤)" 절부터 끝까지("다음" 절은 그 앞에 있고 이미 갱신됐다), .claude/skills/next-session/merge.md
+이어받을 상태: 인계: PR 연 뒤 docs/journal/2026-10-31-04-model-plugin-design.md. PR #442(머리 277fe0e9, 커밋 둘, origin/main 8f0e5f81 위, 면제 PR에 harness 032 동봉)를 열었고 @coderabbitai review 코멘트와 wait_ci는 아직이다. merge.md 2(봇 회차)부터 한다: 코멘트를 남기고 wait_ci를 백그라운드로 띄운다. 인터뷰는 끝났으니 라운드를 올리지 않는다. 병합은 워크트리에서 한다(merge.md "워크트리에서 병합할 때". 주 체크아웃 미갱신 줄은 일지 "다음"에 이미 있다). 일지의 "인계 (PR 연 뒤)" 절은 커밋하지 않았으니 봇 회차의 커밋에 싣는다(고친 것이 없는 회차면 merge.md 2의 뒤로 넘긴 일과 3의 일지 규칙대로). 병합 뒤 next-session의 다음 단계는 명세 /to-spec(사람이 부른다. 결정표 "설계는 끝났고 spec.md가 없다" 줄, Fable 5.1 / xhigh. 명세 브랜치 선례는 docs/<slug>-spec). 회고는 앞 세션이 돌았다(일지 "회고").
+확인할 선행 조건: 없음
+이번 요청 범위: PR과 병합까지
+```
+
+open-session을 부른다 2026-10-31T06:18:44Z
+
+## 이어받음 (PR 연 뒤)과 봇 회차
+
+위 지시문으로 연 새 세션이다. 첫 턴 훅대로 제목을 `docs/model-plugin`으로 바꾸고 워크트리 `next-feature-grill`(`277fe0e9`)에 `EnterWorktree(path)`로 들어갔다. `grill-with-docs`가 가리키는 `grilling`·`domain-modeling`은 인터뷰가 끝났고 이번 범위가 PR과 병합까지라 부르지 않았다. 지시문대로 `merge.md` 2부터 이었다.
+
+`@coderabbitai review` 코멘트를 남기고 `gh pr checks`를 한 번 읽으니 `python`·`visual`이 pending이라 `wait_ci`를 백그라운드로 띄웠고, 출력 마지막 줄이 `끝: 모두 통과`였다(머리 `277fe0e9`. 출력 파일을 손으로 읽었다).
+
+- **CodeRabbit.** 무료 오픈소스 한도에 걸려 리뷰가 없다(`gh pr view 442 --json comments`로 읽은 CodeRabbit 코멘트의 `Review limit reached`와 `Review rate limited`, 다음 리뷰는 코멘트가 말한 약 56분 뒤. 검사는 `wait_ci` 출력에서 `NEUTRAL`). 한도에 걸린 푸시는 회차로 세지 않는다(`merge.md` 2).
+- **claude-review 첫 회차.** 같은 명령으로 읽은 코멘트 본문에 Critical·Major 없음. Minor 둘(ADR 0010 이력의 "시작 때 한 번 푼다"에 포인터 없음, ADR 0001 이력의 "ChatModel 포트" 문장)과 Nit 하나(Consequences 첫 불릿에 칸 목록과 검증 기록이 섞임)를 고치지 않았다. 앞의 둘은 지난 이력 항목이라 기록이고(`.claude/rules/adr.md`의 "달지 않는 것"), ADR 0010 포인터는 앞 세션이 달았다가 `test_check_adr_pointers.py`가 막아 걷은 것이다(위 "회고" 3). 뒤로 넘기는 일은 아니라 "다음"에 더한 것이 없다. 보류 이유는 PR 코멘트에 지적마다 남겼다.
+
+고친 것이 없는 회차라 이 절과 위 "인계 (PR 연 뒤)" 절만 일지 커밋으로 푸시한다. 그 푸시로 도는 claude-review는 둘째 회차라 Critical·Major만 고치고, 보류한 일은 PR 코멘트에 적는다.
