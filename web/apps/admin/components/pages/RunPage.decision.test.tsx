@@ -110,6 +110,11 @@ const CALC: Plugin = {
     mcp: ["fixture"],
     requires_approval: ["add"],
     conversation_limit: null,
+    model: null,
+    provider: null,
+    model_id: null,
+    max_tokens: null,
+    temperature: null,
     server: null,
   },
 };
@@ -126,6 +131,11 @@ const FIXTURE: Plugin = {
     mcp: [],
     requires_approval: [],
     conversation_limit: null,
+    model: null,
+    provider: null,
+    model_id: null,
+    max_tokens: null,
+    temperature: null,
     server: { command: "python", args: ["fixture.py"], secret_args: {} },
   },
 };

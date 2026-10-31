@@ -660,6 +660,14 @@
         "title": "McpServer",
         "type": "object"
       },
+      "ModelProvider": {
+        "description": "모델 플러그인의 제공사.",
+        "enum": [
+          "anthropic"
+        ],
+        "title": "ModelProvider",
+        "type": "string"
+      },
       "PausedItem": {
         "additionalProperties": false,
         "description": "승인을 기다리며 멈췄다. 멈춘 도구와 그 인자를 든다. 이 항목의 id 가 결정의 pause_index 다.",
@@ -761,6 +769,18 @@
           "kind": {
             "$ref": "#/components/schemas/PluginKind"
           },
+          "max_tokens": {
+            "anyOf": [
+              {
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Tokens"
+          },
           "mcp": {
             "default": [],
             "items": {
@@ -769,10 +789,44 @@
             "title": "Mcp",
             "type": "array"
           },
+          "model": {
+            "anyOf": [
+              {
+                "pattern": "^[a-z][a-z0-9-]{1,62}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model"
+          },
+          "model_id": {
+            "anyOf": [
+              {
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model Id"
+          },
           "name": {
             "pattern": "^[a-z][a-z0-9-]{1,62}$",
             "title": "Name",
             "type": "string"
+          },
+          "provider": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ModelProvider"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "requires_approval": {
             "default": [],
@@ -797,6 +851,19 @@
               }
             ]
           },
+          "temperature": {
+            "anyOf": [
+              {
+                "maximum": 1.0,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Temperature"
+          },
           "version": {
             "title": "Version",
             "type": "string"
@@ -811,6 +878,11 @@
           "mcp",
           "requires_approval",
           "conversation_limit",
+          "model",
+          "provider",
+          "model_id",
+          "max_tokens",
+          "temperature",
           "server"
         ],
         "title": "PluginManifest",

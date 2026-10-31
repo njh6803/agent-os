@@ -35,6 +35,7 @@ from agent_os.sdk.ids import (
 from agent_os.sdk.json import Json
 from agent_os.sdk.manifest import (
     McpServer,
+    ModelProvider,
     PluginKind,
     PluginManifest,
     approval_conflicts,
@@ -59,6 +60,7 @@ __all__ = [
     "Json",
     "LlmCalled",
     "McpServer",
+    "ModelProvider",
     "PluginKind",
     "PluginManifest",
     "PluginName",

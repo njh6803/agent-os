@@ -18,6 +18,11 @@ const CALC: Plugin = {
     mcp: ["everything"],
     requires_approval: [],
     conversation_limit: null,
+    model: null,
+    provider: null,
+    model_id: null,
+    max_tokens: null,
+    temperature: null,
     server: null,
   },
 };
@@ -35,6 +40,11 @@ const EVERYTHING: Plugin = {
     mcp: [],
     requires_approval: [],
     conversation_limit: null,
+    model: null,
+    provider: null,
+    model_id: null,
+    max_tokens: null,
+    temperature: null,
     server: {
       command: "npx",
       args: ["-y", "@modelcontextprotocol/server-everything"],

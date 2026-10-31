@@ -1863,6 +1863,7 @@ EXISTING_COMPONENTS = frozenset(
         "Json",
         "LlmCalled",
         "McpServer",
+        "ModelProvider",
         "Plugin",
         "PluginKind",
         "PluginManifest",

@@ -540,6 +540,12 @@ export interface components {
       };
     };
     /**
+     * ModelProvider
+     * @description 모델 플러그인의 제공사.
+     * @enum {string}
+     */
+    ModelProvider: "anthropic";
+    /**
      * PausedItem
      * @description 승인을 기다리며 멈췄다. 멈춘 도구와 그 인자를 든다. 이 항목의 id 가 결정의 pause_index 다.
      */
@@ -584,13 +590,20 @@ export interface components {
       /** Entrypoint */
       entrypoint: string | null;
       kind: components["schemas"]["PluginKind"];
+      /** Max Tokens */
+      max_tokens: number | null;
       /**
        * Mcp
        * @default []
        */
       mcp: string[];
+      /** Model */
+      model: string | null;
+      /** Model Id */
+      model_id: string | null;
       /** Name */
       name: string;
+      provider: components["schemas"]["ModelProvider"] | null;
       /**
        * Requires Approval
        * @default []
@@ -602,6 +615,8 @@ export interface components {
        */
       schema_version: "1";
       server: components["schemas"]["McpServer"] | null;
+      /** Temperature */
+      temperature: number | null;
       /** Version */
       version: string;
     };

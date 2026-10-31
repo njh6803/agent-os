@@ -16,7 +16,7 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 from agent_os.sdk.ids import PLUGIN_NAME_PATTERN, PluginName
 
 
-# skill과 model은 첫 슬라이스에서 디렉터리와 값만 예약한다. 이 타입은 관리 API 계약에도 박히므로
+# skill은 첫 슬라이스에서 디렉터리와 값만 예약한다. 이 타입은 관리 API 계약에도 박히므로
 # 진행 상태는 독스트링이 아니라 여기 둔다. 독스트링이 곧 openapi.json 의 설명이다.
 class PluginKind(StrEnum):
     """플러그인의 종류. 값은 넷이다."""
@@ -25,6 +25,14 @@ class PluginKind(StrEnum):
     MCP = "mcp"
     SKILL = "skill"
     MODEL = "model"
+
+
+# 닫힌 열거인 이유는 모르는 제공사를 읽는 단계에서 거부하고, 값을 하나 더하는 것이 가산 변경이
+# 되게 하기 위해서다. 이름 있는 정의로 openapi.json 에 서야 생성 클라이언트가 재사용한다(ADR 0008).
+class ModelProvider(StrEnum):
+    """모델 플러그인의 제공사."""
+
+    ANTHROPIC = "anthropic"
 
 
 _ENTRYPOINT = r"^[A-Za-z_][\w.]*:[A-Za-z_]\w*$"
@@ -78,6 +86,20 @@ class PluginManifest(BaseModel):
     # strict 인 이유는 lax 검증이 TOML 의 true 를 1 로, "300" 을 300 으로, 2.0 을 2 로 받기
     # 때문이다. 0 을 받으면 모든 이어 가기가 요약되고 원문이 남지 않는다.
     conversation_limit: int | None = Field(default=None, strict=True, ge=1)
+    # 에이전트만. 쓸 모델 플러그인의 이름. 없음이 기본이고 없음은 기본 모델을 쓰겠다는 뜻이다
+    # (ADR 0040). 패턴은 여기서 걸어 읽는 단계가 거부한다. 그 이름의 모델 플러그인이 실재하는지는
+    # 매니페스트만으로 알 수 없어 sdk가 보지 않는다.
+    model: PluginName | None = Field(default=None, pattern=PLUGIN_NAME_PATTERN)
+    # 모델만. 제공사와 모델 id 는 필수이고 아래 둘은 선택이다. 선택 둘에 숫자 기본값을 두지 않는
+    # 이유는 `conversation_limit` 과 같다 — 두면 그 숫자가 직렬화 스키마와 관리 API 의 응답에
+    # 박힌다. 없을 때의 값은 sdk가 정하지 않는다. 필수 둘이 기본값 없음(None)인 것은 직렬화 스키마를
+    # 다른 종류와 같은 모양으로 두기 위해서이고, 종류가 모델이면 아래 검증자가 둘이 있음을 보장한다.
+    provider: ModelProvider | None = None
+    model_id: str | None = Field(default=None, min_length=1)
+    # strict 인 이유는 `conversation_limit` 과 같다(`true` 를 1 로, `"16"` 을 16 으로 받는다)
+    max_tokens: int | None = Field(default=None, strict=True, ge=1)
+    # strict 여도 TOML 의 정수 `0`·`1` 은 실수 `0.0`·`1.0` 으로 받힌다. 불린과 문자열은 거부된다.
+    temperature: float | None = Field(default=None, strict=True, ge=0, le=1)
     # mcp만
     server: McpServer | None = None
 
@@ -94,6 +116,17 @@ class PluginManifest(BaseModel):
             raise ValueError(f"{self.kind} 플러그인은 requires_approval 목록을 갖지 않는다")
         if self.kind is not PluginKind.AGENT and "conversation_limit" in self.model_fields_set:
             raise ValueError(f"{self.kind} 플러그인은 conversation_limit 을 갖지 않는다")
+        if self.kind is PluginKind.MODEL:
+            if self.provider is None:
+                raise ValueError("model 플러그인은 provider가 필요하다")
+            if self.model_id is None:
+                raise ValueError("model 플러그인은 model_id가 필요하다")
+        else:
+            for field in ("provider", "model_id", "max_tokens", "temperature"):
+                if field in self.model_fields_set:
+                    raise ValueError(f"{self.kind} 플러그인은 {field} 을 갖지 않는다")
+        if self.kind is not PluginKind.AGENT and "model" in self.model_fields_set:
+            raise ValueError(f"{self.kind} 플러그인은 model 을 갖지 않는다")
         if self.kind is PluginKind.MCP:
             if self.server is None:
                 raise ValueError("mcp 플러그인은 [server] 표가 필요하다 (command, args)")
