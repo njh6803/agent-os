@@ -55,7 +55,7 @@ CodeRabbit CLI는 좌석이 배정되지 않아(`coderabbit auth status`: Seat n
 ## 다음
 
 - 이 일지의 PR을 병합한 뒤 `model-plugin`의 다음 티켓은 `03-default-model-plugin-and-explicit-flag`다. 01(`01-contract-model-manifest-fields`)이 막고 있어 01이 병합된 뒤에 연다. 01은 형제 워크트리 `01-contract-model-manifest-fields`가 하고 있고, 02와 01이 같은 `tests/adapters/test_filesystem.py`를 고치므로 뒤에 병합되는 쪽이 앞의 것을 합친다. 04는 01·02·03이 모두 병합된 뒤다.
-- 티켓 후보(범위 밖으로 넘긴 일): 운영자 파일 `disabled.toml`의 `_parse_operator_file`(`src/agent_os/adapters/filesystem.py`)이 `{error}`를 그대로 실어 검증 오류면 `input_value`를 되울린다. `api_key = "sk-ant-…"`나 `agent = ["sk-ant-…"]`를 적은 `disabled.toml`로 `read_disabled()`를 부르면 나온다(셀프 리뷰의 서브에이전트가 재현했다고 보고했다). 관리 면의 켜고 끄기 길이 이 문구를 내므로 02와 같은 `_describe`를 쓰는 작은 티켓 하나다. 04가 모든 실행에서 모델 파일을 읽기 전에 필요하지는 않지만 06(관리 화면의 모델 켜고 끄기) 전에는 닫는다.
+- 티켓 후보(범위 밖으로 넘긴 일): 운영자 파일 `disabled.toml`의 `_parse_operator_file`(`src/agent_os/adapters/filesystem.py`)이 `{error}`를 그대로 실어 검증 오류면 `input_value`를 되울린다. `api_key = "sk-ant-…"`나 `agent = ["sk-ant-…"]`를 적은 `disabled.toml`로 `read_disabled()`를 부르면 나온다(셀프 리뷰의 서브에이전트가 재현했다고 보고했다). 관리 면의 켜고 끄기 길이 이 문구를 내므로 02와 같은 `_describe`를 쓰는 작은 티켓 하나다. 이 티켓은 `_describe`의 공유 위치도 정한다. 지금 `jsonl.py`와 `filesystem.py`가 같은 모양을 따로 들고 있고(PR 445의 claude-review가 Minor로 짚었다), 운영자 파일이 셋째 자리라 어댑터 둘이 같은 함수를 쓰게 되는 때가 공유 모듈로 뺄 때다. 어댑터끼리 import 하지 않는 경계(`pyproject.toml`의 계약)를 지켜 어디에 둘지(`http`처럼 어댑터가 쓰는 공용 층을 새로 두는지 포함)는 그 티켓이 정한다. 04가 모든 실행에서 모델 파일을 읽기 전에 필요하지는 않지만 06(관리 화면의 모델 켜고 끄기) 전에는 닫는다.
 - PR 병합 뒤 `주 체크아웃 미갱신` 한 줄과 원격 브랜치 정리는 `merge.md` 워크트리 절 3·4대로 보고에 남긴다.
 
 ## 인계 메모 (이 절은 단계를 닫는 "다음"이 아니다)
