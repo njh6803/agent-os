@@ -260,9 +260,11 @@ def _add_shared(parser: argparse.ArgumentParser) -> None:
 
 
 def _add_model(parser: argparse.ArgumentParser) -> None:
-    """명령 셋이 같이 받는 것. 푸는 규칙은 `main.py` 가 쓰는 `resolve_model_name` 하나다."""
+    """명령 셋이 같이 받는 것. 푸는 규칙은 `main.py` 가 쓰는 `resolve_model_name` 하나다. 코드의
+    기본값은 없어서 이름을 넘기는 길은 이것과 환경변수 둘뿐이다."""
     parser.add_argument(
-        "--model", help="기본 모델 플러그인의 이름. 없으면 AGENT_OS_MODEL, 그다음 기본값"
+        "--model",
+        help="기본 모델 플러그인의 이름. 없으면 AGENT_OS_MODEL. 둘 다 없으면 시작하지 않는다",
     )
 
 
@@ -387,6 +389,7 @@ async def run_command(
         stdout=stdout,
         stderr=stderr,
         progress=progress,
+        default_model=default_model,
         traces=traces,
         plugins_root=plugins_root,
     )
@@ -436,6 +439,7 @@ async def resume_command(
         stdout=stdout,
         stderr=stderr,
         progress=progress,
+        default_model=default_model,
         traces=traces,
         plugins_root=plugins_root,
     )
@@ -448,6 +452,7 @@ async def _report(
     stdout: TextIO,
     stderr: TextIO,
     progress: TextIO | None,
+    default_model: PluginName,
     traces: Path,
     plugins_root: Path,
 ) -> int:
@@ -458,6 +463,7 @@ async def _report(
             stdout=stdout,
             stderr=stderr,
             progress=progress,
+            default_model=default_model,
             traces=traces,
             plugins_root=plugins_root,
         )
@@ -473,6 +479,7 @@ async def _show(
     stdout: TextIO,
     stderr: TextIO,
     progress: TextIO | None,
+    default_model: PluginName,
     traces: Path,
     plugins_root: Path,
 ) -> int:
@@ -492,7 +499,7 @@ async def _show(
             stdout.write(event.output + "\n")
             exit_code = EXIT_FINISHED
         elif isinstance(event, RunPaused):
-            stdout.write(_approval_request(event, index, traces, plugins_root))
+            stdout.write(_approval_request(event, index, default_model, traces, plugins_root))
             exit_code = EXIT_PAUSED
         elif isinstance(event, RunFailed):
             stderr.write(f"실행 실패: {event.error}\n")
@@ -508,7 +515,9 @@ async def _numbered(events: AsyncIterator[Event], start: int) -> AsyncIterator[t
         index += 1
 
 
-def _approval_request(event: RunPaused, index: int, traces: Path, plugins_root: Path) -> str:
+def _approval_request(
+    event: RunPaused, index: int, default_model: PluginName, traces: Path, plugins_root: Path
+) -> str:
     """승인자가 보는 것. 무엇을 승인하는지 모르고 승인하지 않게 도구와 인자를 그대로 보인다.
 
     안내하는 명령은 그대로 복사해 쓸 수 있어야 한다. 거부 줄은 `--reason` 에서 끝나 사유를 이어
@@ -518,7 +527,7 @@ def _approval_request(event: RunPaused, index: int, traces: Path, plugins_root: 
     """
     args = json.dumps(event.args, ensure_ascii=False)
     command = f"agent-os resume {event.run_id} --pause-index {index}"
-    options = _inherited_options(traces, plugins_root)
+    options = _inherited_options(default_model, traces, plugins_root)
     return (
         f"일시정지: {event.run_id}\n"
         f"도구: {event.tool}\n"
@@ -528,8 +537,12 @@ def _approval_request(event: RunPaused, index: int, traces: Path, plugins_root: 
     )
 
 
-def _inherited_options(traces: Path, plugins_root: Path) -> str:
-    """재개가 같은 디렉터리를 읽도록 기본값에서 벗어난 것만 붙인다. 기본이면 군더더기다.
+def _inherited_options(default_model: PluginName, traces: Path, plugins_root: Path) -> str:
+    """재개가 같은 모델과 디렉터리를 쓰도록 물려준다. 디렉터리는 기본값에서 벗어난 것만 붙인다.
+
+    기본 모델의 이름은 코드의 기본값이 없어 언제나 운영자가 고른 값이므로 언제나 싣는다. 환경변수로
+    골랐어도 같다. 싣지 않으면 환경변수가 없는 셸에서 안내한 명령을 그대로 친 재개가 이름 없음으로
+    끝난다.
 
     디렉터리를 옮겨 실행했으면 재개도 거기서 읽어야 한다. 트레이스만 물려주고 플러그인 루트를
     빠뜨리면 안내한 명령이 에이전트를 못 찾아 그대로 실패한다 — 안내가 작동하지 않으면 안내가
@@ -539,14 +552,14 @@ def _inherited_options(traces: Path, plugins_root: Path) -> str:
         (traces, DEFAULT_TRACES, "--traces"),
         (plugins_root, DEFAULT_PLUGINS_ROOT, "--plugins-root"),
     )
-    return "".join(
+    return f" --model {_as_argument(default_model)}" + "".join(
         f" {flag} {_as_argument(chosen)}"
         for chosen, default, flag in directories
         if chosen != default
     )
 
 
-def _as_argument(path: Path) -> str:
+def _as_argument(path: Path | str) -> str:
     """셸이 한 인자로 읽도록 인용한다. 공백뿐 아니라 `$` 와 따옴표도 그대로 전달돼야 한다.
 
     직접 큰따옴표를 씌우면 그 안에서 셸이 `$` 와 백틱을 여전히 해석해, 안내한 명령이 다른

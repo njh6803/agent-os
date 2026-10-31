@@ -10,10 +10,11 @@ ADR 0022 는 한도를 토큰이 아니라 글자 수로 잰다. 토큰을 세�
 마침표 하나뿐인 메시지의 토큰 수를 빼 메시지 틀의 몫을 덜어 낸다. 마침표의 몫까지
 빼므로 표본 4,000자에서 토큰 하나 남짓 적게 센다.
 
-    PYTHONUTF8=1 uv run --env-file .env python .scratch/conversation/probes/token_ratio.py
+    PYTHONUTF8=1 uv run --env-file .env python \
+        .scratch/conversation/probes/token_ratio.py claude-opus-5
 
-`ANTHROPIC_API_KEY` 가 있어야 한다. 모델 이름은 인자로 줄 수 있고 기본은 런타임의 기본
-모델(`adapters/anthropic.py` 의 `DEFAULT_MODEL`)이다.
+`ANTHROPIC_API_KEY` 가 있어야 한다. 모델 이름은 인자로 준다. 런타임에 코드의 기본 모델이 없어졌고
+(ADR 0040) 이 프로브는 모델 플러그인이 아니라 API 의 모델 id 를 직접 받는다.
 """
 
 from __future__ import annotations
@@ -21,8 +22,6 @@ from __future__ import annotations
 import sys
 
 from anthropic import Anthropic
-
-from agent_os.adapters.anthropic import DEFAULT_MODEL
 
 KO = (
     "요청: 내일 서울 날씨 어때?\n"
@@ -64,7 +63,9 @@ def _tokens(client: Anthropic, model: str, text: str) -> int:
 
 
 def main() -> None:
-    model = sys.argv[1] if len(sys.argv) > 1 else DEFAULT_MODEL
+    if len(sys.argv) < 2:
+        sys.exit("모델 id 를 인자로 준다. 예: claude-opus-5")
+    model = sys.argv[1]
     client = Anthropic()
     frame = _tokens(client, model, ".")
     print(f"모델 {model}, 틀의 몫 {frame} 토큰(마침표 하나의 메시지)")

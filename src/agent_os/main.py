@@ -50,9 +50,17 @@ from agent_os.channel.cli.main import (
     run_command,
 )
 from agent_os.channel.http.limits import DEFAULT_CONCURRENT_RUNS
+from agent_os.core.ports import PluginError
 from agent_os.core.run import DEFAULT_RUN_TIMEOUT_SECONDS
 from agent_os.http.sites import PRINCIPAL_SEPARATOR, Site, SiteKey, SiteLimits, Sites
-from agent_os.sdk import PLUGIN_NAME_PATTERN, AgentName, PluginName, Principal, is_plugin_name
+from agent_os.sdk import (
+    PLUGIN_NAME_PATTERN,
+    AgentName,
+    PluginKind,
+    PluginName,
+    Principal,
+    is_plugin_name,
+)
 from agent_os.server import create_app
 
 # 토큰은 환경변수로만 들어온다(ADR 0011, ADR 0015). 명령줄 인자는 프로세스 목록과 셸 이력에 남는다.
@@ -105,32 +113,28 @@ _NOT_POSITIVE_CONCURRENT_RUNS_DIAGNOSTIC = (
 def main(argv: list[str] | None = None) -> int:
     _use_utf8(sys.stdout, sys.stderr)
     args = parse_args(argv)
-    # serve 를 먼저 가르는 이유는 serve 가 빈 모델 지정을 다른 구성 오류와 한 목록에 모아 내기
-    # 때문이다. 모델을 여기서 풀면 serve 의 진단이 모델 하나에서 먼저 끊긴다.
+    # serve 를 먼저 가르는 이유는 serve 가 기본 모델의 문제를 다른 구성 오류와 한 목록에 모아 내기
+    # 때문이다. 모델을 여기서 확인하면 serve 의 진단이 모델 하나에서 먼저 끊긴다.
     if isinstance(args, ServeArgs):
         return _serve(args)
     user = getpass.getuser()
-    problem = _os_user_problem(user)
+    problem = _os_user_problem(user) or _model_problem(args.model, args.plugins_root)
     if problem is not None:
         sys.stderr.write(f"{problem}\n")
         return EXIT_FAILED
-    try:
-        default_model = _default_model(args.model)
-    except ValueError as error:
-        sys.stderr.write(f"{error}\n")
-        return EXIT_FAILED
+    default_model = _default_model(args.model)
     if isinstance(args, ResumeArgs):
         return run_interruptibly(lambda: _resume(args, default_model, Principal(user)))
     return run_interruptibly(lambda: _run(args, default_model, Principal(user)))
 
 
 def _default_model(flag: str | None) -> PluginName:
-    """기본 모델의 이름은 플래그, 환경변수, 기본값 순. 빈 지정과 이름의 패턴을 어긴 지정은 실행 전에
-    거부한다.
+    """기본 모델의 이름은 플래그, 환경변수 순이고 코드의 기본값은 없다. 둘 다 없거나 비었거나
+    이름의 패턴을 어긴 지정은 `ValueError` 다. 실행 전에 거부한다.
 
     경계 입력이라 `is_plugin_name` 으로 걸러서 감싼다(`sdk/ids.py`). 패턴 위반이 실행 준비의
     `PluginError` 까지 숨어들면 오타가 첫 실행에서야 드러나고 구성 오류를 준비 단계의 오류가
-    대신한다. 문구는 값과 패턴을 든다.
+    대신한다. 문구는 값과 패턴을 든다. 그 이름의 매니페스트가 있는지는 `_model_problem` 이 본다.
     """
     name = resolve_model_name(os.environ, flag)
     if not is_plugin_name(name):
@@ -147,10 +151,11 @@ def _serve(args: ServeArgs) -> int:
     실행 식별자가 생기기 전이라 트레이스가 없는 `PluginError` 계열과 같은 성격이다. 진단을 모아
     한 번에 내는 이유는 하나씩 내면 운영자가 고치고 다시 치고 또 막히기 때문이다.
 
-    여기서 한 번 푸는 것은 기본 모델의 이름이고 모델이 아니다. 모델은 실행마다 core 가 모델
-    소스로 그 이름(이나 에이전트가 고른 이름)의 매니페스트에서 만든다(ADR 0040). 요청마다 고르지
-    않는다(ADR 0014). API 키는 보지 않는다 — CLI 처럼 실행 안의 `run_failed` 로 드러난다. 채널
-    실행의 주체는 이 프로세스의 OS 사용자다(ADR 0015).
+    여기서 한 번 푸는 것은 기본 모델의 이름이고 모델이 아니다. 이름이 없거나 패턴을 어기거나 그
+    이름의 모델 매니페스트가 없거나 읽히지 않으면 구성 오류 목록의 한 항목이다(`_model_problem`).
+    모델은 실행마다 core 가 모델 소스로 그 이름(이나 에이전트가 고른 이름)의 매니페스트에서
+    만든다(ADR 0040). 요청마다 고르지 않는다(ADR 0014). API 키는 보지 않는다 — CLI 처럼 실행
+    안의 `run_failed` 로 드러난다. 채널 실행의 주체는 이 프로세스의 OS 사용자다(ADR 0015).
     신원의 출처를 정하는 것이 조립이라 채널이 스스로 읽지 않고 여기서 넘긴다.
 
     마지막 줄에 닿기 전에 검사가 끝나 있어야 한다. 순서가 뒤집히면 토큰 없는 서버가 잠시라도
@@ -243,7 +248,7 @@ def _configuration_problems(
                 value=args.end_user_concurrent_runs, default=DEFAULT_CONCURRENT_RUNS
             )
         )
-    model = _model_problem(args.model)
+    model = _model_problem(args.model, args.plugins_root)
     if model is not None:
         problems.append(model)
     if not isinstance(sites, Sites):
@@ -254,16 +259,28 @@ def _configuration_problems(
     return problems
 
 
-def _model_problem(flag: str | None) -> str | None:
-    """기본 모델의 지정이 비었거나 이름의 패턴을 어기면 그 진단(질의). 시작 자리의 구성 오류다.
+def _model_problem(flag: str | None, plugins_root: Path) -> str | None:
+    """기본 모델을 쓸 수 없으면 그 진단(질의). `serve` 와 CLI `run`·`resume` 이 시작 자리에서 같이
+    쓴다.
 
-    푸는 규칙은 CLI 와 같은 `_default_model` 하나다. 여기서는 풀리는지만 보고 이름은 검사가 끝난
-    뒤 한 번 다시 푼다. 그 이름의 모델 매니페스트가 있는지는 시작 때 보지 않는다(ADR 0040).
+    네 갈래다. 이름이 없거나 비었다, 이름의 패턴을 어긴다(둘은 CLI 와 같은 `_default_model` 이
+    푼다), 그 이름의 모델 매니페스트가 없다, 있지만 읽히지 않는다(어댑터의 `PluginError` 문구
+    그대로이고 잘못 적은 값은 싣지 않는다). 읽은 매니페스트는 이 확인에만 쓰고 버린다. 실행은 실행
+    준비마다 다시 읽는다(ADR 0040). 꺼짐은 보지 않는다 — 운영 중에 바뀌는 상태라 시작의 조건이
+    아니고, 그것을 쓰는 실행이 거부된다(HTTP 는 409, CLI 는 실행 준비의 진단). 이름은 확인이 끝난 뒤
+    한 번 다시 푼다.
     """
     try:
-        _default_model(flag)
-    except ValueError as error:
+        name = _default_model(flag)
+        manifest = FilesystemPlugins(plugins_root).read_manifest(PluginKind.MODEL, name)
+    except (ValueError, PluginError) as error:
         return str(error)
+    if manifest is None:
+        path = plugins_root / "models" / name / "plugin.toml"
+        return (
+            f"기본 모델 플러그인이 없다: {name}\n"
+            f"  {path} 을 두거나 --model·AGENT_OS_MODEL 의 이름을 고친다."
+        )
     return None
 
 
