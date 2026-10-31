@@ -220,3 +220,66 @@ Major 1, Minor 3, Nit 3. 요청 밖 변경 없음. 맞다고 대 본 것(서브�
 남긴 것: 위 "판정"의 셋(사진 어림 Nit, `check_quotes.py` 범위 Nit, Duplicated Code 판단).
 
 PR 직전 리뷰에 밀 주장: 위 `>` 줄 전부. 특히 03의 "진입점 import 실패" 사례가 바뀐다는 어림과 `-m llm` 루트의 `model_id` 문장, 04의 170곳, 05·06의 README 줄 가름이다.
+
+## 커밋
+
+`30e54b56` "docs: 모델 플러그인 명세를 검토하고 티켓 여섯으로 쪼갠다". pre-commit의 `tools/run_checks.py` 묶음이 모두 Passed였다(check-ticket, lint-imports, zizmor, check-instructions, check-type-escapes, pyright, pyright-linux, run-hooks, pytest 395.7s, web-verify 443.8s. 묶음 444.05s). 마크다운 표, 줄 구분 문자, 변이 표(`mutate.py --staged`), 인용 대조(경고 없음), 커밋 메시지도 Passed였다. ruff 둘은 `.py`가 없어 Skipped라 커밋 전에 손으로 쳤다(`uv run ruff check .`는 `All checks passed!`, `uv run ruff format --check .`는 `1202 files already formatted`). 카나리아 명세와 헌법 판은 대상 파일이 없어 Skipped다. `-m llm`·e2e·사진 비교는 이 변경(문서만)이 닿지 않아 치지 않았다. 커밋 전 `tools/sibling_overlap.py`는 번호 겹침 없음이었고, `.scratch/plan.md`를 `mcp-shutdown-spec` 워크트리도 고쳐 나중에 병합하는 쪽의 글자 충돌 후보로 나왔다.
+
+## 인계 (커밋 뒤)
+
+커밋 뒤에 인계 계기(`hook_handoff`. 세션 컨텍스트 292,121 토큰, 경계 `커밋 뒤`)가 와서 `handoff.md`를 Read로 열었다. 인계하지 않는 때 다섯에 들지 않는다. 커밋은 성공했고, 요청 범위 "티켓까지"는 PR과 병합까지 이어지며, 이 세션의 지시문의 "이어받을 상태"는 `인계: 셀프 리뷰 직전`이라 경계가 다르고, 이 일지에 `인계 못함` 줄이 없으며, `get_session`의 `self`에 `parentSessionId`가 없다. 그래서 넘긴다. 열린 PR은 없다(`gh pr view docs/model-plugin-tickets`가 `no pull requests found`).
+
+이 세션의 사용자 프롬프트는 위 "이어받은 세션"의 지시문 하나다. 이 세션이 번복하거나 고친 것은 위 "반영"과 그 "판정"이다. 이 세션의 제목은 `docs/model-plugin-tickets`이고 지시문을 낸 뒤 `docs/model-plugin-tickets (인계함)`으로 바꾼다. 백그라운드 작업은 없다(커밋은 끝났고 서브에이전트 둘도 끝났다).
+
+새 세션이 할 일은 푸시부터다. 그 뒤 PR 직전 리뷰(`docs/constitution/operations.md` 리뷰 파이프라인 2. 밀 주장은 위 "반영"의 `>` 줄), PR(면제 PR, 티켓 없음), 봇 회차, `merge.md`의 "워크트리에서 병합할 때", `next-session`(다음은 막힌 것이 없는 티켓 01과 02를 나란히), 회고 순서다. 남긴 셀프 리뷰 지적 셋은 위 "판정"에 있다.
+
+지시문:
+
+```
+다음 작업: 기능 model-plugin. 모델 플러그인을 런타임이 읽게 하는 설계(ADR 0040)의 명세를 검토하고 티켓으로 쪼갠다(티켓 여섯을 커밋했고 푸시부터)
+다음 단계: 티켓
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /to-tickets .scratch/model-plugin/spec.md
+브랜치: docs/model-plugin-tickets
+모델: Opus 5.5 / xhigh. 2의 잇는 지시문
+읽을 것: docs/journal/2026-10-31-08-model-plugin-tickets.md의 "이어받은 세션 (셀프 리뷰부터)" 절부터 끝까지
+이어받을 상태: 인계: 커밋 뒤 docs/journal/2026-10-31-08-model-plugin-tickets.md. 셀프 리뷰와 반영을 마치고 커밋했다(pre-commit 통과, 결과는 일지 "커밋"). 푸시하지 않았고 PR이 없다. to-tickets와 셀프 리뷰는 다시 돌지 않는다. 남은 단계는 푸시, PR 직전 리뷰(밀 주장은 일지 "반영"의 > 줄), PR(면제 PR, 티켓 없음), 봇 회차, merge.md "워크트리에서 병합할 때", next-session(다음은 티켓 01·02를 나란히), retro다. 일지의 이 인계 절은 커밋하지 않았다.
+확인할 선행 조건: 없음
+이번 요청 범위: 티켓까지
+```
+
+open-session을 부른다 2026-10-31T14:50:54Z
+
+## 이어받은 세션 (푸시부터)
+
+> 사용자: .claude/skills/to-tickets/SKILL.md 를 읽어 그대로 따른다. 이 세션을 연 저장소는 `C:\project\agent`이고 작업 폴더가
+> 그곳이 아니면 따르지 말고 알린다. 스킬의 인자는 이 줄의 '인자:' 뒤부터 메시지 끝까지다. 인자: .scratch/model-plugin/spec.md
+> / 다음 작업: 기능 model-plugin. 모델 플러그인을 런타임이 읽게 하는 설계(ADR 0040)의 명세를 검토하고 티켓으로 쪼갠다(티켓
+> 여섯을 커밋했고 푸시부터) / 다음 단계: 티켓 / 어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아
+> 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다 / 시작 프롬프트: /to-tickets
+> .scratch/model-plugin/spec.md / 브랜치: docs/model-plugin-tickets / 모델: Opus 5.5 / xhigh. 2의 잇는 지시문 / 읽을 것:
+> docs/journal/2026-10-31-08-model-plugin-tickets.md의 "이어받은 세션 (셀프 리뷰부터)" 절부터 끝까지 / 이어받을 상태: 인계: 커밋
+> 뒤 (위 "인계 (커밋 뒤)" 절의 지시문과 같다) / 확인할 선행 조건: 없음 / 이번 요청 범위: 티켓까지
+
+첫 턴 훅대로 세션 제목을 `docs/model-plugin-tickets`로 바꾸고 `EnterWorktree(path)`로 이 워크트리에 들어왔다. to-tickets와 셀프 리뷰는 다시 돌지 않았다. `git fetch origin main` 뒤 `origin/main`은 그대로 `d4221552`라 합칠 것이 없었다(`git rev-parse origin/main`, 손으로 봤다). `30e54b56`을 `git push -u origin docs/model-plugin-tickets`로 푸시했다.
+
+## PR 직전 리뷰
+
+CodeRabbit 좌석은 없다(`coderabbit auth status`가 `Plan: Free`, `Seat: not assigned`. 손으로 봤다). 그래서 리뷰 파이프라인 2의 대체 둘(`/security-review`, `bug-perf-review` 서브에이전트)을 나란히 돌렸다. 돌리기 전에 친 `uv run python tools/sibling_overlap.py`는 번호 겹침 없음(종료 코드 0, 손으로 봤다)이고, 글자 충돌 후보는 커밋 때와 같은 `mcp-shutdown-spec` 워크트리의 `.scratch/plan.md` 하나다. 버그·성능 축에는 위 "반영"의 `>` 줄을 열 주장으로 나눠 근거와 대 보게 했다.
+
+**보안 축(`/security-review`).** 식별 서브태스크가 티켓 여섯 전문과 명세·`plan.md`의 바뀐 줄을 읽고, 티켓을 다음 PR에 취약점을 심을 설계 지시로 읽어 지금 코드와 대 봤다. HIGH·MEDIUM 0건이라 거짓 양성을 거르는 서브태스크는 띄울 것이 없었다. 판정의 근거는 서브태스크의 코드 읽기다. 02는 지금 있는 노출(`adapters/filesystem.py`의 매니페스트 `_parse`가 `ValidationError` 전문을 문구에 싣는다)을 닫는 지시이고, 노출을 늘리는 04·05가 02에 막혀 있어 순서도 맞다. 봤지만 뺀 것(확신 1~2/10): 02가 검증 오류가 아닌 실패(TOML 문법, `UnicodeDecodeError`, `OSError`)의 문구를 그대로 두는 것, 운영자 면 409·500이 이름과 `PluginError` 원문을 싣는 것(토큰 뒤이고 최종 사용자 면은 `http/errors.py`의 `failure_for`가 고정 문구로 덮는다), 05의 시작 진단(02 뒤에 오고 값을 심은 시험을 요구한다), 에이전트 `model`과 CLI 이름으로 짓는 경로(`PLUGIN_NAME_PATTERN`이 `..`·`/`를 막는다), 매니페스트가 요청을 정하는 것(`provider`는 닫힌 열거이고 `base_url` 같은 칸이 없다), 관리 화면이 모델 이름을 그리는 것(React 텍스트, 막는 것은 서버 409), diff의 비밀처럼 생긴 문자열(grep 0건). 이 PR이 낸 것이 아닌 참고 하나: 운영자 파일 `_parse_operator_file`도 `{error}` 전문을 싣고 02의 범위 밖이나, `disabled.toml`에는 플러그인 이름만 들어 영향이 낮다. 이 세션이 `filesystem.py`의 두 자리를 열어 문구에 `{error}`를 싣는 것을 다시 봤다. 고칠 것은 없다.
+
+**버그·성능 축(`bug-perf-review` 서브에이전트).** 기준 `d4221552`, 범위 9파일, 마지막 호출 41(예산 40을 한 번 넘겼다). 유효 1, 보류 2, 오탐 0으로 보고했다. 밀 주장 열의 판정은 맞다 여덟(2·3·4·5·8·10, 6은 대체로, 9는 시제), 틀림 하나(1), 확인 못함 하나(7의 뒤 절. 서버 기록 한 줄이 문구 그대로인지 열지 못했다)다. 근거는 서브에이전트의 코드 읽기와 grep이고, 4·5의 수는 그 서브에이전트가 다시 셌다.
+
+- [Minor, 유효] 03의 격리 루트 열거가 `tests/test_main.py` 793행의 `-m llm` 시험(`test_멈춘_실행은_그_프로세스가_끝난_뒤_다른_프로세스가_재개해_끝까지_간다`)을 빠뜨렸다. `tmp_path`에 루트를 짓고 서브프로세스 `_cli`로 돌아 `main(` grep에도 `_serving`·`_copy_repo_plugins`에도 걸리지 않는다. 04부터 `-m llm`에서야 빨개진다.
+- [Major 후보, 보류] 05가 코드의 기본값을 걷으면 멈춘 `run`이 찍는 재개 안내 줄에 `--model`이 없어, `--model`로 돌린 실행의 줄을 그대로 친 재개가 `AGENT_OS_MODEL` 없이는 이름 없음으로 끝난다. 05가 이 길을 다루지 않는다.
+- [Minor 후보, 성능, 보류] 실행마다 새 `ChatAnthropic`이 서면 httpx 클라이언트를 인스턴스 사이에 공유하지 않을 경우 실행마다 TLS 핸드셰이크를 새로 한다. 프로브는 만들기만 쟀다.
+- [Nit, 주장 9] 모델 파일의 문구가 표준 에러로 처음 나가는 때는 05의 시작 확인이 아니라 04의 CLI 실행 준비다. 명세 "시작 때의 확인" 주석의 문장만 05를 말한다.
+
+**판정.** 코드로 다시 본 것: `tests/test_main.py` 788~820행(793행 시험이 `_write_mcp_plugin`·`_write_plugin`으로 `tmp_path`에 루트를 짓고 `_cli`로 돌며 `_cli(_guidance(paused.stdout))`로 재개한다), `_cli`·`_python`·`_cli_run`·`_copy_repo_plugins`의 몸통, `_guidance`를 부르는 자리 열(567, 585, 636, 649, 695, 698, 719, 813, 2264, 2399행. grep), `channel/cli/main.py`의 `_approval_request`와 `_inherited_options`(안내 줄은 기본값에서 벗어난 `--traces`·`--plugins-root`만 물려주고 `--model`은 싣지 않는다. 독스트링이 "안내가 작동하지 않으면 안내가 아니다"라고 적는다), `.venv`의 langchain-anthropic `_client_utils.py`(`_get_default_httpx_client`·`_get_default_async_httpx_client`에 `@lru_cache`가 붙어 `base_url`·`timeout`·프록시가 같으면 같은 httpx 클라이언트를 돌려준다)와 `chat_models.py`의 `_client`·`_async_client`(`cached_property`가 그 함수를 부른다).
+
+- 고친다: Minor(03의 열거에 793행 시험을 더하고 grep 처방을 `_cli`·`_cli_run`·`_serving`까지 넓혔다). 보류로 온 재개 안내 줄은 유효로 올려 Major로 보고 고친다. 구현 세션이 시험을 환경변수로 덮으면 운영자의 안내 줄이 깨진 채 남기 때문이다. 05의 "기본값을 걷는다"에 안내 줄이 그 실행의 기본 모델 이름을 `--model`로 싣는다는 불릿을 더하고, 03에 안내 줄을 먹이는 재개에는 `--model`을 덧붙이지 않는다는 문장을, 명세 "시작 때의 확인"의 CLI 불릿에 2026-11-01 주석을 더했다. 싣는 쪽을 고른 근거는 안내 줄을 짓는 함수의 독스트링이 이미 정한 원칙이고, 계약(`sdk/`, `openapi.json`, 헌법)이 아니어서 to-tickets가 고른다(README `serve` 줄을 고른 것과 같다).
+- 오탐: 성능. 위 `@lru_cache`로 인스턴스가 달라도 httpx 클라이언트와 연결 풀을 공유한다(코드를 읽었다. 돌리지 않았다).
+- 남긴다: 주장 9의 Nit. 같은 주석의 다음 문장이 02가 닫는 출구 다섯(목록·상세·실행 500·`serve`·CLI)을 들고, 티켓 02가 "04부터 모든 실행이 모델 파일을 읽는다"고 적어 구현 순서는 맞다.
+
+명세 주석을 단 뒤 서두의 표시 글자를 다시 셌다(`grep -o`로 `거부한 안:` 14, `명세가 정했다` 12, `넘겨받았다` 6, `사용자가 골랐다` 1. main과 같다).
