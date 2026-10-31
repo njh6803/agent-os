@@ -16,6 +16,11 @@ function manifest(kind: PluginRow["kind"], name: string): Plugin["manifest"] {
     mcp: [],
     requires_approval: [],
     conversation_limit: null,
+    model: null,
+    provider: null,
+    model_id: null,
+    max_tokens: null,
+    temperature: null,
     server: null,
   };
 }

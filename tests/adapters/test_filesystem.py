@@ -33,6 +33,7 @@ from agent_os.sdk import (
     BaseAgent,
     Conversation,
     Event,
+    ModelProvider,
     PluginKind,
     PluginManifest,
     PluginName,
@@ -308,6 +309,46 @@ def test_같은_깨진_파일을_단건으로_읽으면_PluginError다(root: Pat
             plugins.read_manifest(PluginKind.AGENT, PluginName(name))
 
 
+def _write_model(root: Path, name: str, extra: str) -> None:
+    directory = root / "models" / name
+    directory.mkdir(parents=True)
+    (directory / "plugin.toml").write_text(_manifest("model", name, extra), encoding="utf-8")
+
+
+def test_모델_매니페스트는_제공사와_파라미터를_싣고_읽힌다(root: Path) -> None:
+    _write_model(
+        root, "opus", 'provider = "anthropic"\nmodel_id = "claude-opus-5"\nmax_tokens = 16000\n'
+    )
+    plugins: PluginSource = FilesystemPlugins(root)
+
+    manifest = plugins.read_manifest(PluginKind.MODEL, PluginName("opus"))
+
+    assert manifest is not None
+    assert manifest.provider is ModelProvider.ANTHROPIC
+    assert manifest.model_id == "claude-opus-5"
+    assert manifest.max_tokens == 16000
+    assert manifest.temperature is None
+
+
+def test_공통_넷만_적은_옛_모델_파일은_목록에서_그_행만_표지이고_단건으로는_PluginError다(
+    root: Path,
+) -> None:
+    """등록했다고 믿는 것과 실제가 어긋나지 않게 조용히 무시하지 않는다(스토리 9). 같은 종류의
+    읽히는 모델은 그대로 오고 목록 전체가 실패하지 않는다."""
+    _write_model(root, "good", 'provider = "anthropic"\nmodel_id = "claude-opus-5"\n')
+    _write_model(root, "old", "")
+    plugins: PluginSource = FilesystemPlugins(root)
+
+    rows = plugins.list_manifests(PluginKind.MODEL)
+
+    assert _names(rows) == ["good", "old"]
+    assert isinstance(rows[0], PluginManifest)
+    assert isinstance(rows[1], UnreadableManifest)
+    assert "provider" in rows[1].reason
+    with pytest.raises(PluginError, match="provider"):
+        plugins.read_manifest(PluginKind.MODEL, PluginName("old"))
+
+
 PLANTED_SECRET = "sk-ant-api03-PLANTED-SECRET-VALUE"
 
 
@@ -390,7 +431,7 @@ _KIND_EXTRA = {
     PluginKind.AGENT: 'entrypoint = "agent:Agent"\n',
     PluginKind.MCP: '[server]\ncommand = "npx"\n',
     PluginKind.SKILL: "",
-    PluginKind.MODEL: "",
+    PluginKind.MODEL: 'provider = "anthropic"\nmodel_id = "claude-opus-5"\n',
 }
 
 

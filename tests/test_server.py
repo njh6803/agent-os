@@ -157,12 +157,36 @@ schema_version = "1"
 kind = "model"
 name = "sonnet"
 version = "0.1.0"
+provider = "anthropic"
+model_id = "claude-sonnet-5-5"
+max_tokens = 4096
+temperature = 0.5
+"""
+)
+PICKY = parse_manifest(
+    """
+schema_version = "1"
+kind = "agent"
+name = "picky"
+version = "0.1.0"
+entrypoint = "agent:Picky"
+model = "sonnet"
 """
 )
 BROKEN = UnreadableManifest(
     kind=PluginKind.AGENT,
     name="broken",
     reason="매니페스트를 읽을 수 없다: plugins/agents/broken/plugin.toml",
+)
+# 공통 넷만 적은 옛 모델 파일이 sdk 에서 거부될 때의 모양이다. 어댑터가 거부 까닭을 reason 에
+# 싣는다.
+OLD_MODEL = UnreadableManifest(
+    kind=PluginKind.MODEL,
+    name="old",
+    reason=(
+        "매니페스트를 읽을 수 없다: plugins/models/old/plugin.toml: "
+        "model 플러그인은 provider가 필요하다"
+    ),
 )
 
 
@@ -1506,6 +1530,45 @@ async def test_목록의_행이_매니페스트를_통째로_담아_승인_대�
     assert calc["manifest"]["requires_approval"] == ["add"]
 
 
+async def test_모델_행은_제공사_모델_id_파라미터를_매니페스트에_싣는다(
+    client: AsyncClient,
+) -> None:
+    """모델 상세는 이 매니페스트 JSON 그대로 그린다(스토리 12). 다른 종류의 행은 같은 다섯 칸이
+    `null` 로 실린다 — 늘 실리는 칸이 required 인 계약이다(ADR 0010 의 2026-09-23 이력)."""
+    rows = (await client.get("/plugins", headers=BEARER)).json()
+
+    sonnet = next(row for row in rows if row["name"] == "sonnet")["manifest"]
+    assert sonnet["provider"] == "anthropic"
+    assert sonnet["model_id"] == "claude-sonnet-5-5"
+    assert sonnet["max_tokens"] == 4096
+    assert sonnet["temperature"] == 0.5
+    assert sonnet["model"] is None
+    calc = next(row for row in rows if row["name"] == "calc")["manifest"]
+    assert [calc[field] for field in ("provider", "model_id", "max_tokens", "temperature")] == [
+        None,
+        None,
+        None,
+        None,
+    ]
+
+
+async def test_에이전트_행의_매니페스트는_고른_모델을_싣고_안_고른_에이전트는_없음이다(
+    stderr: io.StringIO,
+) -> None:
+    plugins = FakePlugins(rows=(CALC, PICKY, SONNET))
+    transport = ASGITransport(app=_admin_app(plugins=plugins, trace=FakeTrace(), stderr=stderr))
+
+    async with AsyncClient(transport=transport, base_url="http://admin.test") as client:
+        rows = (await client.get("/plugins", headers=BEARER)).json()
+        single = await client.get("/plugins/agent/picky", headers=BEARER)
+
+    picky = next(row for row in rows if row["name"] == "picky")["manifest"]
+    calc = next(row for row in rows if row["name"] == "calc")["manifest"]
+    assert picky["model"] == "sonnet"
+    assert calc["model"] is None
+    assert single.json()["manifest"]["model"] == "sonnet"
+
+
 async def test_mcp_매니페스트의_command_와_args_도_가리지_않고_내보낸다(
     client: AsyncClient,
 ) -> None:
@@ -1663,6 +1726,30 @@ async def test_읽을_수_없는_매니페스트는_목록에서는_표지이고
     assert single.status_code == 500
     assert single.json()["code"] == "internal_error"
     assert "plugins/agents/broken/plugin.toml" in single.json()["message"]
+
+
+async def test_공통_넷만_적은_모델_파일은_목록에서_그_행만_표지이고_단건으로는_500이다(
+    stderr: io.StringIO,
+) -> None:
+    """모델 종류도 에이전트와 같은 비대칭이다. 목록 전체가 500 이 되지 않고, 새 칸을 단 정상 모델
+    행은 그대로 읽힌다."""
+    plugins = FakePlugins(rows=(CALC, OLD_MODEL, SONNET))
+    transport = ASGITransport(app=_admin_app(plugins=plugins, trace=FakeTrace(), stderr=stderr))
+
+    async with AsyncClient(transport=transport, base_url="http://admin.test") as client:
+        listing = await client.get("/plugins", headers=BEARER)
+        single = await client.get("/plugins/model/old", headers=BEARER)
+
+    rows = listing.json()
+    assert listing.status_code == 200
+    old = next(row for row in rows if row["name"] == "old")
+    assert "provider가 필요하다" in old["reason"]
+    assert "manifest" not in old
+    sonnet = next(row for row in rows if row["name"] == "sonnet")
+    assert sonnet["manifest"]["provider"] == "anthropic"
+    assert single.status_code == 500
+    assert single.json()["code"] == "internal_error"
+    assert "plugins/models/old/plugin.toml" in single.json()["message"]
 
 
 async def test_없는_종류는_422이고_포트가_불리지_않는다(

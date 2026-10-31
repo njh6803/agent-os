@@ -229,7 +229,10 @@ function writeFixturePlugins(root: string, python: string): void {
     ),
   );
   write("skills/summarize/plugin.toml", manifest("skill", "summarize"));
-  write("models/sonnet/plugin.toml", manifest("model", "sonnet"));
+  write(
+    "models/sonnet/plugin.toml",
+    manifest("model", "sonnet", 'provider = "anthropic"\nmodel_id = "claude-sonnet-5-5"\n'),
+  );
   write(
     "disabled.toml",
     'schema_version = "1"\nagent = []\nmcp = []\nskill = ["summarize"]\nmodel = []\n',

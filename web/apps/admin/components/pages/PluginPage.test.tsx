@@ -27,6 +27,11 @@ const CALC: Plugin = {
     mcp: ["everything"],
     requires_approval: ["add"],
     conversation_limit: null,
+    model: null,
+    provider: null,
+    model_id: null,
+    max_tokens: null,
+    temperature: null,
     server: null,
   },
 };
@@ -45,6 +50,11 @@ const CALC_MANIFEST = `{
     "add"
   ],
   "conversation_limit": null,
+  "model": null,
+  "provider": null,
+  "model_id": null,
+  "max_tokens": null,
+  "temperature": null,
   "server": null
 }`;
 

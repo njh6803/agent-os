@@ -102,6 +102,11 @@ const AGENT_ROW: PluginRow = {
     mcp: ["filesystem"],
     requires_approval: ["payments.refund"],
     conversation_limit: null,
+    model: null,
+    provider: null,
+    model_id: null,
+    max_tokens: null,
+    temperature: null,
     server: null,
   },
 };
@@ -118,6 +123,11 @@ const MCP_ROW: PluginRow = {
     mcp: [],
     requires_approval: [],
     conversation_limit: null,
+    model: null,
+    provider: null,
+    model_id: null,
+    max_tokens: null,
+    temperature: null,
     server: { command: "python", args: ["filesystem.py"], secret_args: {} },
   },
 };
