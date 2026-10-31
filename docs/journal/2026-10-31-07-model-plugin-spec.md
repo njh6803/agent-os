@@ -200,12 +200,23 @@ open-session을 부른다 2026-10-31T12:23:58Z
 
 위 "인계 (PR 연 뒤)"의 지시문으로 연 새 세션이다. 첫 턴 훅대로 제목을 `docs/model-plugin-spec`으로 바꾸고 워크트리 `model-plugin-spec`(`1555fd81`)에 `EnterWorktree(path)`로 들어갔다. 시작 프롬프트가 `/to-spec`이지만 명세는 끝났으므로 다시 쓰지 않고 `merge.md`의 남은 단계만 했다. 이 세션의 사용자 프롬프트는 그 지시문을 `open-session`이 옮긴 한 줄 하나이고, 번복하거나 고친 것은 없다.
 
-`@coderabbitai review`를 PR #443에 남겼다. 응답 코멘트는 이 저장소가 별 10개 미만이라 자동 리뷰를 받지 않는다는 안내뿐이었고(`Trigger review` 체크박스가 있는 `skip review` 코멘트), 리뷰는 나오지 않았다. 좌석이 없다는 위 "PR 직전 리뷰"의 확인과 같다. claude-review는 통과했고 코멘트나 인라인 지적은 남기지 않았다(`gh pr view --json comments,reviews`와 `gh api .../pulls/443/comments`가 모두 비었다). 그래서 이 PR에 반영할 봇 지적은 없고, 보류한 지적도 없다.
+`@coderabbitai review`를 PR #443에 남겼다. 첫 코멘트에는 이 저장소가 별 10개 미만이라 자동 리뷰를 받지 않는다는 안내(`skip review` 코멘트)만 달렸고, 이 시점에 읽은 코멘트 목록은 그 안내뿐이었다. 그래서 일지 "다음"을 먼저 써 `6c6c1e80`을 푸시하고 `@coderabbitai review`를 한 번 더 남겼다. 두 번째 요청 뒤 12:30Z에 CodeRabbit의 인라인 리뷰 둘이, 12:23Z와 12:35Z에 claude-review의 코멘트 둘이 달려 있었다(`wait_ci`가 끝난 뒤 `gh api repos/njh6803/agent-os/pulls/443/comments`와 `gh pr view 443 --json comments`로 읽었다. 앞의 코멘트 목록이 비어 보인 것은 그때 아직 읽지 못한 것이다).
+
+**회차.** CodeRabbit은 이 PR에 낸 첫 리뷰라 첫 회차다. claude-review는 12:23Z 코멘트가 첫 회차이고 12:35Z 코멘트(`6c6c1e80`)가 둘째 회차라 Critical·Major만 고친다.
+
+**고친 것.**
+1. [Major, CodeRabbit] 명세와 ADR 0040·0008이 "공통 넷만 적은 모델 파일이면 `GET /plugins`도 500"이라고 적었다. 코드를 읽어 보니 틀렸다. `adapters/filesystem.py`의 `list_manifests`가 `_row`에서 `PluginError`를 `UnreadableManifest`로 바꾸고 `admin/http.py`의 `_plugin_row`가 `PluginPlaceholder` 행으로 돌려준다. 500은 단건 조회에서만 난다(`.claude/rules/admin.md`가 목록의 전체 500을 운영자 파일 `disabled.toml`이 깨졌을 때로 한정한 것과 맞고, 일지 `2026-10-31-06`의 설계 세션이 ADR 0017의 그 문구를 매니페스트 쪽에도 걸친 것이 출처다). 그래서 ADR 0040 Consequences, ADR 0008 이력, 명세의 서두 (5)·사용자 이야기 9·`schema_version` 문장·Testing Decisions를 "상세는 500, 목록은 그 파일의 행만 표지 행"으로 고쳤다. 결정(옛 파일은 조용히 무시되지 않고 소리 나게 거부된다)은 그대로이고 소리가 나는 자리를 사실에 맞췄다. ADR 문구를 승인 뒤에 고친 것이라 사용자에게 보고에서 짚는다. 같은 까닭으로 claude-review 둘째 회차 Minor 중 "옛 파일 하나가 관리 목록 전체를 막는다"는 지적은 해소됐다(목록은 막히지 않는다).
+2. [Minor, CodeRabbit] `.scratch/model-plugin/probes/manifest_fields.py`가 기대한 표지가 아닌 다른 표지의 거부와, 경고가 나지 않은 양성 대조를 측정으로 셌다(`probes.md` 첫 항목). 거부 회차는 `measured=matches(marker, expected)`로, 양성 대조는 `... and bool(texts)`로 고쳤다. 다시 돌려 종료 코드 0, 측정 29회차·측정 아님 0으로 README의 수와 같았다(`PYTHONUTF8=1 uv run python .scratch/model-plugin/probes/manifest_fields.py`, 손으로 봤다).
+3. [Minor, claude-review 두 회차가 같은 곳] 명세 Implementation Decisions 서두가 "구현 파일의 경로와 코드 조각은 적지 않는다"고 하면서 같은 절이 구현 경로를 들었다. "새로 짓지 않는다. 규칙 문서·ADR·테스트 선례의 경로와 ADR 0040이 이미 든 구현 경로는 옮겨 적는다"로 맞췄다.
+
+**보류한 것.** (a) [Minor, claude-review] `ModelSource`가 모델 종류로 좁히지 않은 `PluginManifest`를 받아 모델 아닌 종류의 거름이 포트 경계에서 한 번 더 일어난다. 명세가 거부한 안 둘에 비추어 고른 것이고 검사를 core 한 곳에 둘지 어댑터에 둘지는 구현 티켓의 결정이라 "다음"에 넘겼다. (b) [Minor, claude-review] `plan.md`의 model-plugin 행이 명세의 내용을 다시 적는다. 행은 여러 기능이 같은 모양으로 쓰고 이 PR은 그 행의 길이를 줄이지 않는다. 둘째 회차라 고치지 않는다. (c) [Nit, claude-review] "넘겨받은 것 열둘" 단일 줄. 둘째 회차라 고치지 않는다.
 
 ## 다음
 
 기능 model-plugin은 명세가 끝났고 `.scratch/model-plugin/issues/`가 없는 단계다. `next-session` 결정표의 "`spec.md`는 있고 `issues/`가 없다" 줄이라 다음은 티켓이다. `plan.md`가 적은 대로 명세 검토(`spec-reviewer` 서브에이전트)를 먼저 돌리고, 그 뒤 `/to-tickets .scratch/model-plugin/spec.md`(사람이 부른다)로 쪼갠다. 새 세션은 Opus 5.5 / xhigh로 연다.
 
-to-tickets가 받을 일이 하나 있다. PR 직전 보안 리뷰가 봤지만 기준 미달로 뺀 것이다. 어댑터의 매니페스트 `PluginError` 문구(`adapters/filesystem.py`의 `_parse`)가 pydantic `ValidationError` 전문(`input_value` 포함)을 담아, 운영자가 모델 파일에 `api_key` 칸을 잘못 적으면 `extra_forbidden` 거부 문구가 그 값을 `GET /plugins` 응답과 `serve` 시작 때의 stderr에 되울릴 수 있다. 이 PR 전부터 모든 종류의 매니페스트에 있던 동작이다. 트레이스 쪽은 `jsonl.py`의 `_describe`가 같은 까닭으로 `input_value`를 뺀다(`.claude/rules/adapters.md`). 매니페스트의 `PluginError` 문구도 같은 모양으로 할지는 구현 티켓이 정한다.
+to-tickets가 받을 일이 하나 있다. PR 직전 보안 리뷰가 봤지만 기준 미달로 뺀 것이다. 어댑터의 매니페스트 `PluginError` 문구(`adapters/filesystem.py`의 `_parse`)가 pydantic `ValidationError` 전문(`input_value` 포함)을 담아, 운영자가 모델 파일에 `api_key` 칸을 잘못 적으면 `extra_forbidden` 거부 문구가 그 값을 `GET /plugins` 응답과 `serve` 시작 때의 stderr에 되울릴 수 있다. 이 PR 전부터 모든 종류의 매니페스트에 있던 동작이다. 트레이스 쪽은 `jsonl.py`의 `_describe`가 같은 까닭으로 `input_value`를 뺀다(`.claude/rules/adapters.md`). 매니페스트의 `PluginError` 문구도 같은 모양으로 할지는 구현 티켓이 정한다. 목록은 그 문구를 표지 행의 `reason`으로 그대로 내므로(`UnreadableManifest(reason=str(error))`) 되울리는 자리에 목록 응답도 든다.
+
+두 번째 일도 to-tickets가 받는다. 위 "이어받음"의 보류 (a)다. `ModelSource`가 모델 아닌 종류를 거르는 자리를 core의 준비 단계 한 곳에 둘지 어댑터에 둘지를 구현 티켓이 정해 두어야 시험이 중복되지 않는다.
 
 - 워크트리에서 병합하므로 주 체크아웃은 당기지 않는다. 새 세션을 열면 `directive.md`대로 "확인할 선행 조건"에 `주 체크아웃 미갱신`을 적고, 그 세션이 워크트리에 들어가기 전에 `tidy-checkouts`로 당긴다.

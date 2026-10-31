@@ -187,7 +187,7 @@ def main() -> int:
     with rounds.round("field_names_model_namespace_control") as current:
         prototype, texts = define_and_catch(("model_",))
         current.mark(
-            measured="model_id" in prototype.model_fields,
+            measured="model_id" in prototype.model_fields and bool(texts),
             result="경고 있음" if texts else "경고 없음",
         )
         results.append(f"양성 대조 model_: {texts or '경고 없음'}")
@@ -215,7 +215,7 @@ def main() -> int:
                     current.mark(measured=False, result=f"오류 {len(error.errors())}개: {marker}")
                 else:
                     current.mark(
-                        measured=True,
+                        measured=matches(marker, expected),
                         result="거부(기대한 표지)"
                         if matches(marker, expected)
                         else f"거부(다른 표지: {marker})",

@@ -4,7 +4,7 @@ Status: ready-for-agent
 
 설계는 ADR 0040과 설계 일지 2026-10-31-06이다. 이 명세는 그 설계가 명세에 넘긴 것을 정하고, 설계가 이미 정한 것은 다시 결정하지 않고 티켓이 읽을 자리에 옮긴다. 용어는 `CONTEXT.md`의 모델(이름을 가진 LLM 설정)과 기본 모델(운영자가 서버나 CLI를 시작할 때 이름으로 고른 모델)이다.
 
-**넘겨받은 것은 열둘이다.** (1) 모델은 `plugins/models/<이름>/plugin.toml`의 플러그인이고 에이전트는 매니페스트의 선택 칸 `model`로 고르며 없으면 기본 모델이다. (2) 기본 모델은 `--model` > `AGENT_OS_MODEL` 순으로 받는 모델 플러그인의 이름이고 코드의 기본값은 없어지며, 둘 다 없거나 비었거나 그 이름의 모델 매니페스트가 없거나 읽히지 않으면 구성 오류다(`serve`는 시작 때 한 목록으로, CLI `run`·`resume`은 지금 빈 이름을 거부하는 자리에서). (3) 런타임은 실행을 준비할 때마다 `PluginSource.read_manifest(MODEL, 이름)`으로 그 매니페스트를 읽고, 없거나 읽히지 않으면 없는 mcp와 같은 `PluginError`(운영자 면 500, 최종 사용자 면 고정 문구 500), 꺼졌으면 `Disabled`(409)다. 꺼짐의 순서는 에이전트 → mcp → 모델이고 재개도 같은 준비를 지나며 대화 요약은 그 실행의 모델이다. (4) core의 모델 포트가 "모델 하나"에서 "모델 설정으로 모델을 만드는 것"으로 바뀌고 포트는 다섯 그대로이며, `adapters/anthropic.py`가 `anthropic`의 구현이고 `main.py`가 조립하며 모델 객체는 실행마다 만든다. (5) 모델 매니페스트의 칸은 공통 넷에 `provider`(닫힌 목록, `anthropic`), `model_id`, 선택 `max_tokens`(1 이상의 엄격한 정수, 없으면 어댑터의 16000), 선택 `temperature`(0 이상 1 이하의 엄격한 실수, 없으면 제공사 기본값)이고, 다른 종류에 적힌 이 칸들과 에이전트가 아닌 종류의 `model`은 거부하며, `schema_version`은 "1" 그대로이고 공통 넷만 적은 옛 모델 파일은 읽는 단계에서 거부되어 `GET /plugins`도 500이다. (6) API 키는 모델 파일에 담지 않고 제공사의 환경변수이며 시작 때 보지 않는다. (7) 저장소가 `plugins/models/claude-opus-5/plugin.toml`을 두고 `calc`는 `model` 없이 기본 모델을 쓰며, 격리된 플러그인 루트로 `serve`를 띄우는 시험과 CI, 두 e2e 스택은 그 루트에 기본 모델이 가리키는 모델 매니페스트를 두고 그 이름을 넘기고, `-m llm` 시험은 그 플러그인으로 실제 모델을 부른다. (8) 계약이 바뀐다. `openapi.json`의 `PluginManifest`에 새 칸이 들고 생성 타입과 스토리·테스트의 매니페스트 리터럴이 바뀌며 관리 API의 경로는 늘지 않고, 관리 화면은 `PluginList.tsx`의 로더 없는 종류 집합에서 model을 빼 안내 줄을 걷고 상세는 매니페스트 JSON 그대로이며 화면 디자인 단계는 없고 첫 티켓이 계약 티켓이다. (9) 트레이스는 바뀌지 않는다. (10) 꺼진 모델의 최종 사용자 면은 종류와 이름 없는 고정 문구의 409다(ADR 0017의 2026-10-03 이력). (11) 이번 범위 밖은 ADR 0040의 "이번 범위 밖" 불릿이다. (12) 구현 티켓이 고칠 곳은 ADR 0040의 "구현 티켓이 고칠 곳" 불릿이다.
+**넘겨받은 것은 열둘이다.** (1) 모델은 `plugins/models/<이름>/plugin.toml`의 플러그인이고 에이전트는 매니페스트의 선택 칸 `model`로 고르며 없으면 기본 모델이다. (2) 기본 모델은 `--model` > `AGENT_OS_MODEL` 순으로 받는 모델 플러그인의 이름이고 코드의 기본값은 없어지며, 둘 다 없거나 비었거나 그 이름의 모델 매니페스트가 없거나 읽히지 않으면 구성 오류다(`serve`는 시작 때 한 목록으로, CLI `run`·`resume`은 지금 빈 이름을 거부하는 자리에서). (3) 런타임은 실행을 준비할 때마다 `PluginSource.read_manifest(MODEL, 이름)`으로 그 매니페스트를 읽고, 없거나 읽히지 않으면 없는 mcp와 같은 `PluginError`(운영자 면 500, 최종 사용자 면 고정 문구 500), 꺼졌으면 `Disabled`(409)다. 꺼짐의 순서는 에이전트 → mcp → 모델이고 재개도 같은 준비를 지나며 대화 요약은 그 실행의 모델이다. (4) core의 모델 포트가 "모델 하나"에서 "모델 설정으로 모델을 만드는 것"으로 바뀌고 포트는 다섯 그대로이며, `adapters/anthropic.py`가 `anthropic`의 구현이고 `main.py`가 조립하며 모델 객체는 실행마다 만든다. (5) 모델 매니페스트의 칸은 공통 넷에 `provider`(닫힌 목록, `anthropic`), `model_id`, 선택 `max_tokens`(1 이상의 엄격한 정수, 없으면 어댑터의 16000), 선택 `temperature`(0 이상 1 이하의 엄격한 실수, 없으면 제공사 기본값)이고, 다른 종류에 적힌 이 칸들과 에이전트가 아닌 종류의 `model`은 거부하며, `schema_version`은 "1" 그대로이고 공통 넷만 적은 옛 모델 파일은 읽는 단계에서 거부되어 상세는 500이고 `GET /plugins`는 그 파일의 행만 표지 행으로 낸다. (6) API 키는 모델 파일에 담지 않고 제공사의 환경변수이며 시작 때 보지 않는다. (7) 저장소가 `plugins/models/claude-opus-5/plugin.toml`을 두고 `calc`는 `model` 없이 기본 모델을 쓰며, 격리된 플러그인 루트로 `serve`를 띄우는 시험과 CI, 두 e2e 스택은 그 루트에 기본 모델이 가리키는 모델 매니페스트를 두고 그 이름을 넘기고, `-m llm` 시험은 그 플러그인으로 실제 모델을 부른다. (8) 계약이 바뀐다. `openapi.json`의 `PluginManifest`에 새 칸이 들고 생성 타입과 스토리·테스트의 매니페스트 리터럴이 바뀌며 관리 API의 경로는 늘지 않고, 관리 화면은 `PluginList.tsx`의 로더 없는 종류 집합에서 model을 빼 안내 줄을 걷고 상세는 매니페스트 JSON 그대로이며 화면 디자인 단계는 없고 첫 티켓이 계약 티켓이다. (9) 트레이스는 바뀌지 않는다. (10) 꺼진 모델의 최종 사용자 면은 종류와 이름 없는 고정 문구의 409다(ADR 0017의 2026-10-03 이력). (11) 이번 범위 밖은 ADR 0040의 "이번 범위 밖" 불릿이다. (12) 구현 티켓이 고칠 곳은 ADR 0040의 "구현 티켓이 고칠 곳" 불릿이다.
 
 **하나는 사용자가 이 명세를 쓰며 골랐다.** 시험을 붙이는 자리(Testing Decisions의 "이음매").
 
@@ -34,7 +34,7 @@ Status: ready-for-agent
 6. As an 운영자, I want CLI `run`·`resume`도 시작할 때 같은 확인을 하기, so that 서버와 CLI의 진단이 같다.
 7. As an 운영자, I want `--model`이 `AGENT_OS_MODEL`을 이기기, so that 지금의 우선순위가 그대로다.
 8. As an 운영자, I want 모델을 끈 것이 서버 시작을 막지 않기, so that 운영 중에 켜고 끄는 상태가 시작의 조건이 되지 않는다.
-9. As an 운영자, I want 공통 넷만 적은 옛 모델 파일이 조용히 무시되지 않고 목록과 상세가 500으로 알리기, so that 등록했다고 믿는 것과 실제가 어긋나지 않는다.
+9. As an 운영자, I want 공통 넷만 적은 옛 모델 파일이 조용히 무시되지 않고 목록의 표지 행과 상세의 500으로 알리기, so that 등록했다고 믿는 것과 실제가 어긋나지 않는다.
 10. As an 운영자, I want API 키를 모델 파일이 아니라 환경변수에 두기, so that 비밀이 플러그인 파일과 관리 API 응답에 실리지 않는다.
 11. As an 운영자, I want 관리 화면의 모델 행에서 "로더가 생기기 전에는 효과가 없다"가 사라지기, so that 화면이 지금의 동작을 말한다.
 12. As an 운영자, I want 관리 화면의 모델 상세에서 `provider`·`model_id`·파라미터를 그대로 보기, so that 어느 설정이 돌고 있는지 확인한다.
@@ -55,14 +55,14 @@ Status: ready-for-agent
 
 ## Implementation Decisions
 
-구현 파일의 경로와 코드 조각은 적지 않는다. 규칙 문서·ADR·테스트 선례의 경로는 적는다.
+구현 파일의 경로와 코드 조각은 새로 짓지 않는다. 규칙 문서·ADR·테스트 선례의 경로와 ADR 0040이 이미 든 구현 경로는 옮겨 적는다.
 
 ### 모델 매니페스트의 칸 (넘겨받았다. 세부는 쟀다)
 
 - 공통 넷(`schema_version = "1"`, `kind = "model"`, `name`, `version`)에 `provider`, `model_id`, 선택 `max_tokens`, 선택 `temperature`다. `provider`는 sdk의 닫힌 열거(`StrEnum`)이고 값은 `anthropic` 하나다. 열거의 이름은 `ModelProvider`이고 그 이름 그대로 `openapi.json`의 컴포넌트가 된다(`PluginKind`처럼 이름 있는 정의여야 생성 클라이언트가 재사용한다, ADR 0008). `model_id`는 비지 않은 문자열이다. `max_tokens`는 `conversation_limit`과 같은 엄격 검증(`strict=True`, 1 이상)이고 `temperature`는 엄격한 실수(0 이상 1 이하)다.
 - 받고 거부하는 경계를 sdk `PluginManifest`와 같은 설정의 시제품으로 쟀다(`manifest_fields.py`, 사례 26. 실제 클래스에 칸을 더하는 것은 아래 계약 묶음이고, 시험이 같은 사례로 그 클래스를 잰다). TOML의 정수 `0`·`1`은 `temperature`에서 실수 `0.0`·`1.0`으로 받히고, `max_tokens`의 `0`·`2.0`·`true`·`"16"`, `temperature`의 `1.5`·`-0.1`·`"0.5"`·`true`, 모르는 `provider`, 빈 `model_id`, 모르는 칸, 종류에 맞지 않는 칸(모델이 아닌 종류의 네 칸, 에이전트가 아닌 종류의 `model`)은 읽는 단계에서 거부된다. 거부의 표지(pydantic 오류의 `type`과 검증자의 문구)는 그 프로브 README에 있고 시험은 같은 표지로 실패의 까닭을 단언한다(`CODING_STANDARDS.md`).
 - 칸 이름 `model_id`와 `model`은 pydantic 2.13.5의 기본 보호 이름 공간 경고를 내지 않는다(쟀다, 같은 프로브의 양성 대조 포함). sdk가 `protected_namespaces`를 손대지 않는다.
-- `schema_version`은 "1" 그대로다(ADR 0008의 2026-10-31 이력). 공통 넷만 적은 모델 파일은 필수 칸이 없어 거부되고 관리 API의 목록·상세도 500이다(ADR 0040 "공통 넷만 적은 모델 파일은 거부된다").
+- `schema_version`은 "1" 그대로다(ADR 0008의 2026-10-31 이력). 공통 넷만 적은 모델 파일은 필수 칸이 없어 거부되고 관리 API의 상세는 500이고 목록은 그 파일의 행만 표지 행이다(ADR 0040 "공통 넷만 적은 모델 파일은 거부된다").
 
 ### 에이전트 매니페스트의 `model` 칸 (넘겨받았다)
 
@@ -164,7 +164,7 @@ Status: ready-for-agent
 - core 준비: 위 이음매. 선례 `tests/core/test_run.py`.
 - 어댑터: `provider = "anthropic"`의 매니페스트로 만든 인스턴스에 `model_id`·`max_tokens`·`temperature`가 닿는지, 없는 `max_tokens`가 16000인지, 모델이 아닌 종류가 `PluginError`인지. 선례 `tests/adapters/test_anthropic.py`의 `test_정한_이름이_그대로_모델_인스턴스에_닿는다`.
 - 조립과 CLI: `serve`의 구성 문제 목록 네 갈래, `--model`이 환경변수를 이기는 것, CLI `run`·`resume`의 시작 확인과 종료 코드, 패턴 위반. 선례 `tests/test_main.py`의 `serve --model`과 구성 문제 시험, `workspace` 픽스처(기본 모델 매니페스트를 함께 쓰고 `--model`을 넘긴다).
-- HTTP 두 면: 운영자 채널에서 없는 모델 500(원문)과 꺼진 모델 409(종류·이름·에이전트), 최종 사용자 면에서 고정 문구 500과 409, `GET /plugins`가 모델 행을 새 칸과 함께 내는 것, 공통 넷만 적은 모델 파일의 500. 선례 `tests/test_server.py`(`_admin_app`, `SONNET`, 두 면의 상태 코드 시험).
+- HTTP 두 면: 운영자 채널에서 없는 모델 500(원문)과 꺼진 모델 409(종류·이름·에이전트), 최종 사용자 면에서 고정 문구 500과 409, `GET /plugins`가 모델 행을 새 칸과 함께 내는 것, 공통 넷만 적은 모델 파일의 상세 500과 목록의 표지 행. 선례 `tests/test_server.py`(`_admin_app`, `SONNET`, 두 면의 상태 코드 시험).
 - 관리 화면: `PluginList`의 모델 행에 안내 줄이 없는 것(vitest·스토리), 리터럴의 새 칸. 선례 `web/apps/admin/components/organisms/PluginList.stories.tsx`와 `components/pages/PluginPage.test.tsx`.
 - 두 e2e 스택: 기본 모델 매니페스트와 `--model`로 지금처럼 초록, 관리 화면 e2e의 모델 행 단언. 선례 `web/apps/admin/e2e/stack.ts`, `web/apps/widget/e2e/stack.ts`.
 - 저장소 상태: `plugins/models/claude-opus-5/plugin.toml`이 읽히는 것(플러그인 경계 시험 `tests/test_plugins_boundary.py`가 플러그인 파일을 읽는 자리와 같은 꼴).
