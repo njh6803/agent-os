@@ -339,6 +339,7 @@ def test_실행_전_오류는_무엇이_잘못됐는지_적고_종료_코드_1�
     clue: str,
 ) -> None:
     monkeypatch.chdir(tmp_path)
+    # source 가 없는 사례는 _write_plugin 을 거치지 않으니 모델을 따로 쓴다
     _write_model_plugin(tmp_path)
     if source is not None:
         _write_plugin(tmp_path, name, source, manifest)
