@@ -18,6 +18,7 @@ from langchain_core.callbacks import CallbackManagerForLLMRun
 from langchain_core.language_models.fake_chat_models import GenericFakeChatModel
 from langchain_core.messages import AIMessage, BaseMessage
 from langchain_core.outputs import ChatResult
+from tests.fake_models import FakeModels
 
 from agent_os.adapters.filesystem import FilesystemPlugins
 from agent_os.adapters.jsonl import JsonlTrace
@@ -25,6 +26,7 @@ from agent_os.core.ports import (
     ChatModel,
     Clock,
     McpServer,
+    ModelSource,
     PluginSource,
     ToolConnection,
     ToolResult,
@@ -49,6 +51,9 @@ from agent_os.sdk import (
 REPO_ROOT = Path(__file__).resolve().parents[1]
 PRINCIPAL = Principal("alice")
 NOW = datetime(2026, 10, 5, 12, 0, tzinfo=UTC)
+# 저장소의 기본 모델 플러그인(`plugins/models/claude-opus-5`). 모델 소스는 가짜라 매니페스트만
+# 읽힌다.
+DEFAULT_MODEL = PluginName("claude-opus-5")
 
 # 이 티켓 전의 calc 프롬프트 그대로. 이어 가지 않은 실행은 이것과 글자 그대로 같아야 한다.
 FRESH_PROMPT = (
@@ -115,6 +120,7 @@ async def _run_calc(
     previous_run: RunId | None = None,
 ) -> list[Event]:
     plugins: PluginSource = FilesystemPlugins(REPO_ROOT / "plugins")
+    models: ModelSource = FakeModels(model)
     tools: ToolSource = NoTools()
     return [
         event
@@ -124,7 +130,8 @@ async def _run_calc(
             PRINCIPAL,
             previous_run=previous_run,
             plugins=plugins,
-            model=model,
+            default_model=DEFAULT_MODEL,
+            models=models,
             tools=tools,
             trace=trace,
             clock=clock,

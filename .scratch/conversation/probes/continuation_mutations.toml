@@ -121,13 +121,13 @@ old = '''
     if visible_agents is not None and agent not in visible_agents:
         raise Absent(_no_agent(agent))
     manifest = _requested_manifest(plugins, agent)
-    prepared = _prepare(plugins, manifest)
+    prepared = _prepare(plugins, models, manifest, default_model)
 '''
 new = '''
     if visible_agents is not None and agent not in visible_agents:
         raise Absent(_no_agent(agent))
     manifest = _requested_manifest(plugins, agent)
-    prepared = _prepare(plugins, manifest)
+    prepared = _prepare(plugins, models, manifest, default_model)
     continued = (
         None
         if previous_run is None
@@ -462,11 +462,11 @@ expect = "red"
 file = "src/agent_os/channel/cli/main.py"
 old = '''
         previous_run=previous_run,
-        plugins=plugins,
+        default_model=default_model,
 '''
 new = '''
         previous_run=None,
-        plugins=plugins,
+        default_model=default_model,
 '''
 
 [[mutation]]

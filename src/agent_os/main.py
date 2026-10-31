@@ -33,7 +33,7 @@ from cryptography.hazmat.primitives.asymmetric.rsa import RSAPublicKey
 from cryptography.hazmat.primitives.serialization import load_pem_public_key
 from pydantic import BaseModel, ConfigDict, Field, TypeAdapter, ValidationError
 
-from agent_os.adapters.anthropic import anthropic_chat_model, resolve_model_name
+from agent_os.adapters.anthropic import AnthropicModels, resolve_model_name
 from agent_os.adapters.clock import SystemClock
 from agent_os.adapters.filesystem import FilesystemPlugins
 from agent_os.adapters.jsonl import JsonlTrace
@@ -50,10 +50,9 @@ from agent_os.channel.cli.main import (
     run_command,
 )
 from agent_os.channel.http.limits import DEFAULT_CONCURRENT_RUNS
-from agent_os.core.ports import ChatModel
 from agent_os.core.run import DEFAULT_RUN_TIMEOUT_SECONDS
 from agent_os.http.sites import PRINCIPAL_SEPARATOR, Site, SiteKey, SiteLimits, Sites
-from agent_os.sdk import AgentName, Principal, is_plugin_name
+from agent_os.sdk import PLUGIN_NAME_PATTERN, AgentName, PluginName, Principal, is_plugin_name
 from agent_os.server import create_app
 
 # 토큰은 환경변수로만 들어온다(ADR 0011, ADR 0015). 명령줄 인자는 프로세스 목록과 셸 이력에 남는다.
@@ -116,18 +115,30 @@ def main(argv: list[str] | None = None) -> int:
         sys.stderr.write(f"{problem}\n")
         return EXIT_FAILED
     try:
-        model = _chat_model(args.model)
+        default_model = _default_model(args.model)
     except ValueError as error:
         sys.stderr.write(f"{error}\n")
         return EXIT_FAILED
     if isinstance(args, ResumeArgs):
-        return run_interruptibly(lambda: _resume(args, model, Principal(user)))
-    return run_interruptibly(lambda: _run(args, model, Principal(user)))
+        return run_interruptibly(lambda: _resume(args, default_model, Principal(user)))
+    return run_interruptibly(lambda: _run(args, default_model, Principal(user)))
 
 
-def _chat_model(name: str | None) -> ChatModel:
-    """모델 이름은 플래그, 환경변수, 기본값 순. 빈 지정은 실행 전에 거부한다."""
-    return anthropic_chat_model(resolve_model_name(os.environ, name))
+def _default_model(flag: str | None) -> PluginName:
+    """기본 모델의 이름은 플래그, 환경변수, 기본값 순. 빈 지정과 이름의 패턴을 어긴 지정은 실행 전에
+    거부한다.
+
+    경계 입력이라 `is_plugin_name` 으로 걸러서 감싼다(`sdk/ids.py`). 패턴 위반이 실행 준비의
+    `PluginError` 까지 숨어들면 오타가 첫 실행에서야 드러나고 구성 오류를 준비 단계의 오류가
+    대신한다. 문구는 값과 패턴을 든다.
+    """
+    name = resolve_model_name(os.environ, flag)
+    if not is_plugin_name(name):
+        raise ValueError(
+            f"모델 이름 {name!r} 이 플러그인 이름의 패턴을 어긴다: {PLUGIN_NAME_PATTERN}\n"
+            "  모델은 plugins/models/<이름>/plugin.toml 의 플러그인이고 이름으로 고른다."
+        )
+    return PluginName(name)
 
 
 def _serve(args: ServeArgs) -> int:
@@ -136,8 +147,10 @@ def _serve(args: ServeArgs) -> int:
     실행 식별자가 생기기 전이라 트레이스가 없는 `PluginError` 계열과 같은 성격이다. 진단을 모아
     한 번에 내는 이유는 하나씩 내면 운영자가 고치고 다시 치고 또 막히기 때문이다.
 
-    모델은 여기서 한 번 풀고 요청마다 고르지 않는다(ADR 0014). API 키는 보지 않는다 — CLI 처럼
-    실행 안의 `run_failed` 로 드러난다. 채널 실행의 주체는 이 프로세스의 OS 사용자다(ADR 0015).
+    여기서 한 번 푸는 것은 기본 모델의 이름이고 모델이 아니다. 모델은 실행마다 core 가 모델
+    소스로 그 이름(이나 에이전트가 고른 이름)의 매니페스트에서 만든다(ADR 0040). 요청마다 고르지
+    않는다(ADR 0014). API 키는 보지 않는다 — CLI 처럼 실행 안의 `run_failed` 로 드러난다. 채널
+    실행의 주체는 이 프로세스의 OS 사용자다(ADR 0015).
     신원의 출처를 정하는 것이 조립이라 채널이 스스로 읽지 않고 여기서 넘긴다.
 
     마지막 줄에 닿기 전에 검사가 끝나 있어야 한다. 순서가 뒤집히면 토큰 없는 서버가 잠시라도
@@ -162,7 +175,8 @@ def _serve(args: ServeArgs) -> int:
         create_app(
             plugins=FilesystemPlugins(args.plugins_root),
             trace=JsonlTrace(args.traces),
-            model=_chat_model(args.model),
+            models=AnthropicModels(),
+            default_model=_default_model(args.model),
             tools=McpTools(),
             clock=SystemClock(),
             principal=Principal(user),
@@ -241,13 +255,13 @@ def _configuration_problems(
 
 
 def _model_problem(flag: str | None) -> str | None:
-    """빈 모델 지정이면 그 진단(질의). 모델을 시작 때 푸는 순간 이것도 시작 자리의 구성 오류다.
+    """기본 모델의 지정이 비었거나 이름의 패턴을 어기면 그 진단(질의). 시작 자리의 구성 오류다.
 
-    푸는 규칙은 CLI 와 같은 `resolve_model_name` 하나다. 여기서는 풀리는지만 보고 모델은 검사가
-    끝난 뒤 한 번 만든다.
+    푸는 규칙은 CLI 와 같은 `_default_model` 하나다. 여기서는 풀리는지만 보고 이름은 검사가 끝난
+    뒤 한 번 다시 푼다. 그 이름의 모델 매니페스트가 있는지는 시작 때 보지 않는다(ADR 0040).
     """
     try:
-        resolve_model_name(os.environ, flag)
+        _default_model(flag)
     except ValueError as error:
         return str(error)
     return None
@@ -665,14 +679,15 @@ def _site_file_diagnostic(path: Path, problems: Sequence[str]) -> str:
     )
 
 
-async def _run(args: RunArgs, model: ChatModel, principal: Principal) -> int:
+async def _run(args: RunArgs, default_model: PluginName, principal: Principal) -> int:
     return await run_command(
         args.agent,
         args.request,
         principal,
         previous_run=args.previous_run,
+        default_model=default_model,
         plugins=FilesystemPlugins(args.plugins_root),
-        model=model,
+        models=AnthropicModels(),
         tools=McpTools(),
         trace=JsonlTrace(args.traces),
         clock=SystemClock(),
@@ -684,7 +699,7 @@ async def _run(args: RunArgs, model: ChatModel, principal: Principal) -> int:
     )
 
 
-async def _resume(args: ResumeArgs, model: ChatModel, approver: Principal) -> int:
+async def _resume(args: ResumeArgs, default_model: PluginName, approver: Principal) -> int:
     """승인자는 요청한 주체와 같은 출처에서 온다. 결정은 그 실행의 주체만 내리므로 언제나 자기
     승인이고, 최종 사용자의 실행에는 core 가 다른 주체로 거절한다(ADR 0009 의 2026-10-03 이력)."""
     return await resume_command(
@@ -692,8 +707,9 @@ async def _resume(args: ResumeArgs, model: ChatModel, approver: Principal) -> in
         args.pause_index,
         args.decision,
         approver,
+        default_model=default_model,
         plugins=FilesystemPlugins(args.plugins_root),
-        model=model,
+        models=AnthropicModels(),
         tools=McpTools(),
         trace=JsonlTrace(args.traces),
         clock=SystemClock(),

@@ -35,6 +35,7 @@ from langchain_core.messages.tool import ToolCall as LangchainToolCall
 from langchain_core.outputs import ChatResult
 from langchain_core.runnables import Runnable
 from starlette.types import Message, Scope
+from tests.fake_models import DEFAULT_MODEL, FakeModels, model_manifest
 
 from agent_os.channel.http.runs import BACKLOG_FRAMES
 from agent_os.core.ports import (
@@ -42,6 +43,7 @@ from agent_os.core.ports import (
     Clock,
     Cursor,
     ManifestRow,
+    ModelSource,
     PluginError,
     PluginKey,
     PluginSource,
@@ -231,6 +233,8 @@ class FakePlugins:
         self.calls += 1
         if kind is PluginKind.AGENT and name == "broken":
             raise PluginError(UNREADABLE_REASON)
+        if kind is PluginKind.MODEL:
+            return model_manifest(name) if name == DEFAULT_MODEL else None
         return self._manifests.get((kind, name))
 
     def list_manifests(self, kind: PluginKind) -> Sequence[ManifestRow]:
@@ -493,16 +497,23 @@ def _app(
     plugins: PluginSource | None = None,
     trace: TraceStore | None = None,
     model: ChatModel | None = None,
+    models: ModelSource | None = None,
+    default_model: PluginName = DEFAULT_MODEL,
     tools: ToolSource | None = None,
     clock: Clock | None = None,
     stderr: io.StringIO | None = None,
     run_timeout_seconds: float | None = None,
 ) -> FastAPI:
-    """채널이 붙은 앱 하나. 인자 타입이 가짜의 포트 적합성을 검증하는 자리다."""
+    """채널이 붙은 앱 하나. 인자 타입이 가짜의 포트 적합성을 검증하는 자리다.
+
+    `model` 은 어느 매니페스트로 불러도 그 모델을 돌려주는 모델 소스로 감싸 넘긴다. 모델 소스를
+    직접 보려는 시험은 `models` 를 준다.
+    """
     return create_app(
         plugins=plugins or FakePlugins(),
         trace=trace or FakeTrace(),
-        model=model or GenericFakeChatModel(messages=iter(())),
+        models=models or FakeModels(model or GenericFakeChatModel(messages=iter(()))),
+        default_model=default_model,
         tools=tools or ScopedTools(),
         clock=clock or FakeClock(),
         principal=PRINCIPAL,
@@ -790,7 +801,8 @@ async def _pre_run_error(agent: str) -> PluginError:
         "2+3?",
         PRINCIPAL,
         plugins=FakePlugins(),
-        model=GenericFakeChatModel(messages=iter(())),
+        default_model=DEFAULT_MODEL,
+        models=FakeModels(GenericFakeChatModel(messages=iter(()))),
         tools=ScopedTools(),
         trace=FakeTrace(),
         clock=FakeClock(),
@@ -1191,7 +1203,8 @@ async def _paused_outside(
             "2+3?",
             principal,
             plugins=plugins,
-            model=GenericFakeChatModel(messages=iter(())),
+            default_model=DEFAULT_MODEL,
+            models=FakeModels(GenericFakeChatModel(messages=iter(()))),
             tools=tools,
             trace=trace,
             clock=clock,

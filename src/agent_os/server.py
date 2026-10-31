@@ -19,7 +19,7 @@ from fastapi import FastAPI
 from agent_os.admin.http import Health, admin_router
 from agent_os.channel.http.end_user import END_USER_PREFIX
 from agent_os.channel.http.router import CHANNEL_PREFIX, channel_router
-from agent_os.core.ports import ChatModel, Clock, PluginSource, ToolSource, TraceStore
+from agent_os.core.ports import Clock, ModelSource, PluginSource, ToolSource, TraceStore
 from agent_os.http.auth import RequireToken, SharedToken, SiteSigned
 from agent_os.http.cors import CorsUnderPrefix
 from agent_os.http.errors import (
@@ -29,7 +29,7 @@ from agent_os.http.errors import (
     install_error_handlers,
 )
 from agent_os.http.sites import Sites
-from agent_os.sdk import Principal
+from agent_os.sdk import PluginName, Principal
 
 # 계약 파일의 머리. 세 면을 함께 말한다(ADR 0010 의 2026-09-24 이력, ADR 0023). 관리만 말하면 채널이
 # 붙은 순간 "실행을 일으키지 않는다"가 거짓이 되고, 읽기만 말하면 켜고 끄는 경로가 선 순간
@@ -48,7 +48,8 @@ def create_app(
     *,
     plugins: PluginSource,
     trace: TraceStore,
-    model: ChatModel,
+    models: ModelSource,
+    default_model: PluginName,
     tools: ToolSource,
     clock: Clock,
     principal: Principal,
@@ -63,7 +64,9 @@ def create_app(
 
     관리 라우터는 플러그인과 트레이스 포트만 받는다. 도구 포트를 받지 않으므로 조회 하나가 MCP 서버
     여럿을 띄우는 것이 구조적으로 불가능하다(ADR 0010 의 2026-09-24 이력). 모델과 도구와 시계는
-    채널만 받는다. 운영자 채널의 주체도 채널이 받는다 — 요청에서 받지 않고, 그 출처(`serve` 의 OS
+    채널만 받는다. 모델은 만들어진 것이 아니라 모델 소스(`models`)와 기본 모델의 이름
+    (`default_model`)을 받아, 실행마다 core 가 에이전트가 고른 모델 매니페스트를 읽어 만든다(ADR
+    0040). 운영자 채널의 주체도 채널이 받는다 — 요청에서 받지 않고, 그 출처(`serve` 의 OS
     사용자)를 정하는 것은 부르는 쪽이다(ADR 0015). 어댑터를 만들어 넘기는 자리는 `main.py` 이고
     라우터는 받은 것만 쓴다(ADR 0010).
 
@@ -110,7 +113,8 @@ def create_app(
     app.include_router(
         channel_router(
             plugins=plugins,
-            model=model,
+            default_model=default_model,
+            models=models,
             tools=tools,
             trace=trace,
             clock=clock,

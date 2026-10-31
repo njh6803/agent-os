@@ -55,6 +55,7 @@ from agent_os.sdk import (
     Event,
     Json,
     LlmCalled,
+    PluginManifest,
     Principal,
     RunFinished,
     RunId,
@@ -188,11 +189,13 @@ MODEL_MANIFEST = (
 )
 
 
-def _write_model_plugin(root: Path) -> None:
-    """루트에 기본 모델 매니페스트를 둔다. 이미 있으면 같은 내용으로 덮어쓴다."""
-    directory = root / "plugins" / "models" / MODEL_PLUGIN
+def _write_model_plugin(root: Path, name: str = MODEL_PLUGIN) -> None:
+    """루트에 모델 매니페스트를 둔다. 기본은 기본 모델의 이름이고 `model_id` 는 그대로 둔다. 이미
+    있으면 같은 내용으로 덮어쓴다."""
+    directory = root / "plugins" / "models" / name
     directory.mkdir(parents=True, exist_ok=True)
-    (directory / "plugin.toml").write_text(MODEL_MANIFEST, encoding="utf-8")
+    manifest = MODEL_MANIFEST.replace(f'name = "{MODEL_PLUGIN}"', f'name = "{name}"')
+    (directory / "plugin.toml").write_text(manifest, encoding="utf-8")
 
 
 def _main(argv: list[str]) -> int:
@@ -365,6 +368,23 @@ def test_빈_모델_지정은_실행_전에_진단을_적고_종료_코드_1이�
     assert _trace_files(workspace / "t") == []
 
 
+@pytest.mark.parametrize(
+    "name", ["Bad Name", "../etc", "a"], ids=["대문자와 공백", "경로", "한 글자"]
+)
+def test_이름의_패턴을_어긴_모델_지정은_실행_전에_진단을_적고_종료_코드_1이다(
+    name: str, workspace: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """모델 이름은 매니페스트 경로의 한 조각이 된다. 패턴을 어긴 이름은 디스크에 닿기 전에
+    막는다."""
+    code = _main(["run", "echo", "hi", "--traces", "t", "--model", name])
+
+    out, err = capsys.readouterr()
+    assert code == 1
+    assert out == ""
+    assert "플러그인 이름의 패턴을 어긴다" in err
+    assert _trace_files(workspace / "t") == []
+
+
 def _cli(argv: list[str], *, cwd: Path) -> subprocess.CompletedProcess[str]:
     """실제 CLI 프로세스 하나를 띄우고 끝날 때까지 기다린다. 돌아오면 그 프로세스는 죽어 있다."""
     return _python(["-m", "agent_os.main", *argv], cwd=cwd)
@@ -413,17 +433,44 @@ def test_패키지_안의_파일을_스크립트로_실행하면_이유와_처�
 
 @pytest.mark.llm
 def test_calc_에이전트가_실제_모델로_답하고_트레이스에_모델_호출이_남는다(tmp_path: Path) -> None:
-    """바깥 이음매. 실제 CLI 프로세스와 실제 Anthropic 호출. 트레이스는 tmp_path 에 남긴다."""
+    """바깥 이음매. 실제 CLI 프로세스와 실제 Anthropic 호출. 트레이스는 tmp_path 에 남긴다.
+
+    저장소의 플러그인을 복사한 루트를 `--plugins-root` 로 주고 그 모델 플러그인의 이름을 `model_id`
+    와 다르게 바꾼다. 실제 호출에 닿은 모델이 이름이 아니라 매니페스트의 `model_id` 라는 것을 보기
+    위해서다(ADR 0040).
+    """
     assert "ANTHROPIC_API_KEY" in os.environ, "ANTHROPIC_API_KEY 가 없다. .env 를 확인한다"
+    plugins_root = tmp_path / "plugins"
+    shutil.copytree(REPO_ROOT / "plugins", plugins_root)
+    renamed = "main-brain"
+    shutil.move(plugins_root / "models" / MODEL_PLUGIN, plugins_root / "models" / renamed)
+    manifest_file = plugins_root / "models" / renamed / "plugin.toml"
+    manifest_file.write_text(
+        manifest_file.read_text(encoding="utf-8").replace(
+            f'name = "{MODEL_PLUGIN}"', f'name = "{renamed}"'
+        ),
+        encoding="utf-8",
+    )
+    traces = tmp_path / "traces"
 
     result = _cli(
-        ["run", "calc", "2 더하기 2는?", "--traces", str(tmp_path), "--model", MODEL_PLUGIN],
+        [
+            "run",
+            "calc",
+            "2 더하기 2는?",
+            "--traces",
+            str(traces),
+            "--plugins-root",
+            str(plugins_root),
+            "--model",
+            renamed,
+        ],
         cwd=REPO_ROOT,
     )
 
     assert result.returncode == 0, result.stderr
     assert "4" in result.stdout
-    (trace_file,) = _trace_files(tmp_path)
+    (trace_file,) = _trace_files(traces)
     events = [e for e in _read(trace_file).events if not isinstance(e, UnknownEvent)]
     types = [e.type for e in events]
     assert "llm_called" in types
@@ -434,6 +481,8 @@ def test_calc_에이전트가_실제_모델로_답하고_트레이스에_모델_
     assert any(e.tool_calls for e in events if isinstance(e, LlmCalled))
     assert any(e.args for e in tool_calls)
     assert any(e.content for e in tool_calls)
+    # 플러그인 이름이 아니라 매니페스트의 `model_id` 가 제공사에 닿았다.
+    assert all(e.model == MODEL_PLUGIN for e in events if isinstance(e, LlmCalled))
 
 
 def test_승인_대상에서_멈추면_실행_식별자와_승인_요청이_표준_출력에_찍히고_전용_종료_코드다(
@@ -1074,27 +1123,38 @@ async def test_통과하면_세운_앱이_두_토큰을_제자리에_받는다(
         assert (await client.get("/runs/unrouted", headers=admin)).status_code == 401
 
 
+class _RecordingModels:
+    """모델 소스의 가짜. 만들어 달라고 받은 모델 매니페스트의 이름을 쌓고 모델은 부르지 않는다."""
+
+    def __init__(self, names: list[str]) -> None:
+        self._names = names
+
+    def build(self, manifest: PluginManifest) -> ChatModel:
+        self._names.append(manifest.name)
+        return GenericFakeChatModel(messages=iter([AIMessage(content="답")]))
+
+
 @pytest.fixture
 def model_names(monkeypatch: pytest.MonkeyPatch) -> list[str]:
-    """`serve` 가 모델 어댑터를 몇 번, 어떤 이름으로 만들었는지 기록한다. 모델은 부르지 않는다."""
+    """`serve` 의 모델 소스가 어떤 이름의 매니페스트로 모델을 만들었는지 기록한다."""
     names: list[str] = []
-
-    def _record(name: str) -> ChatModel:
-        names.append(name)
-        return GenericFakeChatModel(messages=iter(()))
-
-    monkeypatch.setattr(main_module, "anthropic_chat_model", _record)
+    monkeypatch.setattr(main_module, "AnthropicModels", lambda: _RecordingModels(names))
     return names
 
 
-@pytest.mark.usefixtures("workspace", "tokens")
-def test_serve_는_모델을_시작_때_한_번_플래그_환경변수_기본값_순으로_푼다(
+@pytest.mark.usefixtures("tokens")
+async def test_serve_는_모델을_시작_때_만들지_않고_실행마다_푼_이름으로_만든다(
     monkeypatch: pytest.MonkeyPatch,
+    workspace: Path,
     uvicorn_calls: list[dict[str, object]],
     model_names: list[str],
 ) -> None:
-    """두 채널이 같은 모델로 돈다고 믿을 수 있게 CLI 와 같은 규칙이다(스토리 40). 요청마다 고르지
-    않는다(스토리 23)."""
+    """이름은 CLI 와 같은 규칙(플래그, 환경변수, 기본값 순)으로 시작 때 정한다. 두 채널이 같은
+    모델로 돈다고 믿을 수 있게 하기 위해서다(스토리 40). 요청마다 고르지 않는다(스토리 23). 시작
+    때는 이름만 정하고 모델을 만들지 않는다. 만드는 것은 실행을 준비할 때다."""
+    _write_plugin(workspace, "asking", ASKING_SRC)
+    _write_model_plugin(workspace, "from-flag")
+    _write_model_plugin(workspace, "from-env")
     monkeypatch.setenv(MODEL_ENV, "from-env")
 
     _main(["serve", "--model", "from-flag"])
@@ -1102,8 +1162,21 @@ def test_serve_는_모델을_시작_때_한_번_플래그_환경변수_기본값
     monkeypatch.delenv(MODEL_ENV)
     main(["serve"])
 
-    assert model_names == ["from-flag", "from-env", DEFAULT_MODEL]
     assert len(uvicorn_calls) == 3
+    assert model_names == []
+    channel = {"Authorization": f"Bearer {CHANNEL_TOKEN}"}
+    for call in uvicorn_calls:
+        app = call["app"]
+        assert isinstance(app, FastAPI)
+        async with (
+            app.router.lifespan_context(app),
+            AsyncClient(transport=ASGITransport(app=app), base_url="http://serve.test") as client,
+        ):
+            response = await client.post(
+                "/runs", json={"agent": "asking", "request": "hi"}, headers=channel
+            )
+        assert response.status_code == 200
+    assert model_names == ["from-flag", "from-env", DEFAULT_MODEL]
 
 
 def test_빈_모델_지정도_다른_구성_오류와_한꺼번에_나온다(
@@ -1111,7 +1184,7 @@ def test_빈_모델_지정도_다른_구성_오류와_한꺼번에_나온다(
     capsys: pytest.CaptureFixture[str],
     uvicorn_calls: list[dict[str, object]],
 ) -> None:
-    """모델을 시작 때 푸는 순간 빈 지정도 시작 자리의 구성 오류다(스토리 43)."""
+    """기본 모델의 이름을 시작 때 푸는 순간 빈 지정도 시작 자리의 구성 오류다(스토리 43)."""
     monkeypatch.delenv(ADMIN_TOKEN_ENV, raising=False)
     monkeypatch.delenv(CHANNEL_TOKEN_ENV, raising=False)
 
@@ -1123,6 +1196,24 @@ def test_빈_모델_지정도_다른_구성_오류와_한꺼번에_나온다(
     assert ADMIN_TOKEN_ENV in err
     assert CHANNEL_TOKEN_ENV in err
     assert "0.0.0.0" in err
+    assert uvicorn_calls == []
+
+
+def test_이름의_패턴을_어긴_모델_지정도_다른_구성_오류와_한꺼번에_나온다(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    uvicorn_calls: list[dict[str, object]],
+) -> None:
+    monkeypatch.delenv(ADMIN_TOKEN_ENV, raising=False)
+    monkeypatch.delenv(CHANNEL_TOKEN_ENV, raising=False)
+
+    code = _main(["serve", "--host", "0.0.0.0", "--model", "Bad Name"])
+
+    _, err = capsys.readouterr()
+    assert code == 1
+    assert "플러그인 이름의 패턴을 어긴다" in err
+    assert ADMIN_TOKEN_ENV in err
+    assert CHANNEL_TOKEN_ENV in err
     assert uvicorn_calls == []
 
 
@@ -1801,14 +1892,17 @@ class _LateModel(GenericFakeChatModel):
         return self._generate(messages, stop, None, **kwargs)
 
 
+class _LateModels:
+    """모델 소스의 가짜. 어느 매니페스트로 불러도 늦은 모델을 만든다."""
+
+    def build(self, manifest: PluginManifest) -> ChatModel:
+        return _LateModel(messages=iter([AIMessage(content="늦은 답")]))
+
+
 @pytest.fixture
 def late_model(monkeypatch: pytest.MonkeyPatch) -> None:
     """`serve` 가 만드는 모델을 늦은 가짜로 바꾼다."""
-
-    def _late(name: str) -> ChatModel:
-        return _LateModel(messages=iter([AIMessage(content="늦은 답")]))
-
-    monkeypatch.setattr(main_module, "anthropic_chat_model", _late)
+    monkeypatch.setattr(main_module, "AnthropicModels", _LateModels)
 
 
 @pytest.mark.parametrize(
@@ -1908,10 +2002,11 @@ async def test_serve_의_전역_동시_실행_상한이_세운_앱의_최종_사
     하나 뒤의 시작은 다른 주체여도 429 다. 운영자 채널은 세지 않는다."""
     gate = asyncio.Event()
 
-    def _gated(name: str) -> ChatModel:
-        return _GatedModel(messages=iter([AIMessage(content="답")]), gate=gate)
+    class _GatedModels:
+        def build(self, manifest: PluginManifest) -> ChatModel:
+            return _GatedModel(messages=iter([AIMessage(content="답")]), gate=gate)
 
-    monkeypatch.setattr(main_module, "anthropic_chat_model", _gated)
+    monkeypatch.setattr(main_module, "AnthropicModels", _GatedModels)
     _write_plugin(workspace, "asking", ASKING_SRC)
     sites = _site_file(_site(agents='["asking", "echo"]'))
     (workspace / "sites.toml").write_text(sites, encoding="utf-8")
