@@ -368,4 +368,50 @@ retro 스킬대로 돌았다(`writing-for-agents`를 불렀고, 원천은 이 �
 
 ## 다음
 
-기능 model-plugin은 설계가 끝났고 `.scratch/model-plugin/`이 없는 단계다. 다음은 명세(`/to-spec`, 사람이 부른다)이고, `next-session` 결정표의 "설계는 끝났고 `spec.md`가 없다" 줄이라 새 세션을 Fable 5.1 / xhigh로 연다. 화면 디자인 단계는 없다(ADR 0040 "계약이 바뀐다"). 명세가 정할 것은 ADR 0040이 "명세가 정한다"고 미룬 것이다. 격리된 플러그인 루트(시험·CI·두 e2e 스택)에 둘 모델 매니페스트의 이름, 기본 모델의 이름이 core에 드는 입구(`run()`·`resume()`의 새 인자인지, 모델을 만드는 것이 이름을 드는지), 모델의 없음·깨짐이 깨짐 안에서 mcp의 앞인지 뒤인지, 그리고 구현 티켓이 고칠 곳 목록(README의 `serve` 줄과 `disabled.toml` 줄, `.env.example`, `.claude/rules/core.md`·`adapters.md`·`sdk.md`의 문장들, `tests/test_server.py`의 `SONNET`과 관리 스택의 `models/sonnet` 픽스처, `PluginList.tsx`의 로더 없는 종류 집합)이다. 3라운드 두 질문의 선택지 전부와 고르지 않은 둘의 설명은 위 "PR 직전 리뷰" 4에 있다(대기열 554). 이 PR은 면제 PR(`docs/model-plugin`)에 회고가 쓴 harness 티켓 032를 함께 싣는다(헌법 3.0.64). PR과 병합, 그 뒤의 `next-session` 지시문은 이 세션이 이어서 한다.
+기능 model-plugin은 설계가 끝났고 `.scratch/model-plugin/`이 없는 단계다. 다음은 명세(`/to-spec`, 사람이 부른다)이고, `next-session` 결정표의 "설계는 끝났고 `spec.md`가 없다" 줄이라 새 세션을 Fable 5.1 / xhigh로 연다. 화면 디자인 단계는 없다(ADR 0040 "계약이 바뀐다"). 명세가 정할 것은 ADR 0040이 "명세가 정한다"고 미룬 것이다. 격리된 플러그인 루트(시험·CI·두 e2e 스택)에 둘 모델 매니페스트의 이름, 기본 모델의 이름이 core에 드는 입구(`run()`·`resume()`의 새 인자인지, 모델을 만드는 것이 이름을 드는지)와 그 이름을 `read_manifest`에 넘기기 전에 `is_plugin_name`으로 거를지(아래 "PR 직전 보안 리뷰" 2. 지금 `resolve_model_name`은 빈 값만 거부하고, 디렉터리 이름과 매니페스트 `name`의 대조가 어차피 막는다), 모델의 없음·깨짐이 깨짐 안에서 mcp의 앞인지 뒤인지, 그리고 구현 티켓이 고칠 곳 목록(README의 `serve` 줄과 `disabled.toml` 줄, `.env.example`, `.claude/rules/core.md`·`adapters.md`·`sdk.md`의 문장들, `tests/test_server.py`의 `SONNET`과 관리 스택의 `models/sonnet` 픽스처, `PluginList.tsx`의 로더 없는 종류 집합)이다. 3라운드 두 질문의 선택지 전부와 고르지 않은 둘의 설명은 위 "PR 직전 리뷰" 4에 있다(대기열 554). 이 PR은 면제 PR(`docs/model-plugin`)에 회고가 쓴 harness 티켓 032를 함께 싣는다(헌법 3.0.64). PR과 병합, 그 뒤의 `next-session` 지시문은 이 세션이 이어서 한다.
+
+- 워크트리에서 병합하므로 주 체크아웃은 당기지 않는다. 주 체크아웃 미갱신: 루트는 main(`git worktree list`의 첫 줄, 커밋 뒤 이어받은 세션이 봤다). 새 세션이 워크트리에 들어가기 전에 `tidy-checkouts`로 당긴다.
+
+## 인계 (커밋 뒤)
+
+커밋 `209b2f6a`(14개 파일, 463줄 더함·18줄 지움)가 pre-commit을 지나 섰다. `checks`(run_checks의 CHECKS 전부), 마크다운 표, 줄 구분 문자, 변이 표, 헌법 판, 인용 대조, 커밋 메시지가 Passed이고, `ruff` 둘과 canary specs는 대상 파일이 없어 Skipped다. 인용 대조 경고 7건은 README의 옛 메모 둘과 이 일지가 ADR을 고치기 전 문구를 적은 기록 다섯이라 막지 않았다. 커밋이 서자 인계 계기(`hook_handoff`. 세션 컨텍스트 354,831 토큰, 경계 `커밋 뒤`)가 왔고, `handoff.md`를 Read로 열어 따랐다. 인계하지 않는 때 다섯에 들지 않는다. 커밋은 성공했고, 요청 범위는 PR과 병합까지라 이 경계에서 끝나지 않고, 이 세션의 지시문의 "이어받을 상태"는 `인계: 셀프 리뷰 직전`이라 같은 경계가 아니고, 이 일지에 `인계 못함` 줄이 없고, `get_session self`에 `parentSessionId`가 없다. 열린 PR은 없다(`gh pr view docs/model-plugin`이 없음으로 끝났다). 그래서 넘긴다.
+
+이 세션의 사용자 프롬프트는 둘이다. 첫째는 위 "인계" 절의 지시문을 `open-session`이 `.claude/skills/grill-with-docs/SKILL.md 를 읽어 그대로 따른다. … 인자:` 한 줄로 옮긴 것이고, 둘째는 위 "ADR 0040 승인"의 답이다. 이 세션이 번복하거나 고친 것은 위 "셀프 리뷰"(표준 축 아홉, 명세 축 일곱), "PR 직전 리뷰"(넷. 그 4는 이 세션의 셀프 리뷰 반영이 틀렸던 것을 되돌렸다), "회고"(대기열 484 닫음, 554 신설, harness 티켓 032, 헌법 3.0.64)에 있다. 이 세션의 제목은 `docs/model-plugin`이고, 아래 지시문을 낸 뒤 `docs/model-plugin (인계함)`으로 바꾼다.
+
+새 세션이 할 일은 커밋 뒤의 남은 단계다. `/security-review`(보고를 이 일지에), 푸시와 PR(`/git-pr`. 면제 PR에 harness 티켓 032가 함께 든다), `@coderabbitai review` 코멘트와 `wait_ci`의 봇 회차, 워크트리에서의 병합(`merge.md` "워크트리에서 병합할 때"), 그 뒤 `next-session`(다음 단계는 명세 `/to-spec`, 사람이 부른다)이다. 회고는 이 세션이 커밋 전에 돌았다(위 "회고"). 이 절은 커밋하지 않았으므로 새 세션이 다음 커밋에 싣는다.
+
+지시문:
+
+```
+다음 작업: 기능 model-plugin. 모델 플러그인을 런타임이 읽게 하는 설계 인터뷰의 마무리(PR 직전 보안 리뷰, PR과 병합, next-session)
+다음 단계: 설계 인터뷰
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /grill-with-docs
+브랜치: docs/model-plugin
+모델: Fable 5.1 / xhigh. 2의 잇는 지시문
+읽을 것: docs/journal/2026-10-31-04-model-plugin-design.md의 "이어받음 (셀프 리뷰 직전)" 절부터 끝까지("다음"과 "인계 (커밋 뒤)" 절까지)
+이어받을 상태: 인계: 커밋 뒤 docs/journal/2026-10-31-04-model-plugin-design.md. 브랜치의 커밋 하나(209b2f6a, pre-commit 초록. ruff 둘과 canary specs는 대상 파일이 없어 Skipped)에 셀프 리뷰 반영, ADR 0040 승인(accepted), PR 직전 bug-perf-review 반영, 회고(대기열 484 닫음·554 신설, harness 티켓 032, 헌법 3.0.64), 일지 "다음"까지 실었다. 푸시하지 않았고 열린 PR은 없다. 인터뷰는 끝났으니 라운드를 올리지 않는다. 남은 것: /security-review(보고를 일지에), 푸시와 PR(/git-pr. 면제 PR에 harness 032 동봉), @coderabbitai review 코멘트와 wait_ci의 봇 회차, 워크트리에서의 병합(merge.md "워크트리에서 병합할 때"), 그 뒤 next-session(다음 단계는 명세 to-spec, 사람이 부른다. 명세 브랜치 선례는 docs/<slug>-spec). 회고는 앞 세션이 커밋 전에 돌았다(일지 "회고"). 일지의 "인계 (커밋 뒤)" 절은 커밋하지 않았으니 다음 커밋에 싣는다.
+확인할 선행 조건: 없음
+이번 요청 범위: PR과 병합까지
+```
+
+open-session을 부른다 2026-10-31T05:54:35Z
+
+## 이어받음 (커밋 뒤)
+
+위 지시문으로 연 새 세션이다. 첫 턴 훅대로 제목을 `docs/model-plugin`으로 바꾸고, `git worktree list`에서 그 브랜치가 체크아웃된 워크트리 `next-feature-grill`(`209b2f6a`)을 찾아 `EnterWorktree(path)`로 들어갔다. `grill-with-docs`가 가리키는 `grilling`·`domain-modeling`은 Skill 도구로 한 번씩 불렀고, 인터뷰는 끝났으므로 라운드를 올리지 않고 커밋 뒤의 남은 단계부터 이었다. `git fetch origin` 뒤에도 origin/main은 `8f0e5f81`로 이 브랜치의 밑과 같다. `uv run python tools/sibling_overlap.py`는 번호 겹침 없음이었다(다음 빈 번호는 일지 2026-10-31-06, 대기열 555, 티켓 034. 이 브랜치의 일지 2026-10-31-04를 이름순으로 앞서는 형제는 `wireframe-optional` 워크트리의 2026-10-31-05이고, 함께 고친 파일은 `mcp-shutdown-spec` 워크트리의 `.scratch/plan.md`다). `coderabbit auth status`는 여전히 `Plan: Free`, `Seat: not assigned`라 CLI 축은 돌지 못한다(PR 템플릿대로 PR마다 다시 봤다).
+
+## PR 직전 보안 리뷰
+
+운영 규약(리뷰 파이프라인 2)의 대체 둘 가운데 보안 축이다(버그·성능 축은 앞 세션의 위 "PR 직전 리뷰"). 내장 `/security-review`를 커밋 `209b2f6a` 위에서 돌렸다. origin/main 위에 바로 선 브랜치라 합칠 것이 없었고, 그 명령이 모은 범위는 커밋 하나와 바뀐 파일 14개(전부 마크다운)다. 커밋하지 않은 이 일지의 "인계 (커밋 뒤)" 절은 그 diff에 들지 않아 서브태스크에 따로 보라고 넘겼다. 취약점을 찾는 서브태스크 하나(general-purpose, 호출 24번)를 띄웠고, 보고가 발견 없음이라 오탐을 거르는 서브태스크는 띄우지 않았다.
+
+### 보안 축 보고와 판정
+
+보고는 High·Medium 발견 없음이고 확인한 것은 넷이다. 이 세션이 보고가 인용한 네 자리(`sdk/ids.py:22`의 패턴, `adapters/filesystem.py:132-135`의 이름 대조와 `:173-175`의 `_manifest_path`, `adapters/anthropic.py:18-24`의 `resolve_model_name`)를 `sed`로 다시 읽으니 보고와 같았다.
+
+1. 비밀 값(명령으로 봤다). diff 전체를 좁은 패턴(`sk-ant-`, `ghp_`, `AKIA`, `-----BEGIN`, `api_key = "…"`, `Bearer`)과 넓은 패턴(`api.?key`, `token`, `secret`, `password`)으로 훑어 일치 0건. `ANTHROPIC_API_KEY`는 환경 변수 이름으로만 나온다(ADR 0040과 이 일지).
+2. 플러그인 이름으로 경로를 잇는 자리의 경로 탐색(코드를 읽었다). `_manifest_path`는 루트, 종류 폴더, 이름, `plugin.toml`을 검증 없이 잇지만, `read_manifest`가 읽은 매니페스트의 `name`이 디렉터리 이름과 다르면 `PluginError`를 내고, 그 `name`은 `sdk/manifest.py:63`에서 `PLUGIN_NAME_PATTERN`(`^[a-z][a-z0-9-]{1,62}$`)으로 묶여 `.`·`/`·`\`가 든 이름은 설령 경로 조립까지 닿아도 이름 대조에서 거부된다. HTTP 경계(`admin/http.py:160·189`, `channel/http/bodies.py:28`)도 같은 패턴으로 막고, ADR 0040은 관리 API의 경로를 늘리지 않는다. `--model`·`AGENT_OS_MODEL`은 신뢰된 값으로 봤다. 참고로 지금 `resolve_model_name`은 빈 값만 거부하고 `is_plugin_name`을 부르지 않으며, ADR 0040 "기본 모델"도 그 이름을 `read_manifest`에 넘기기 전의 패턴 판정을 적지 않는다. 취약점은 아니고(이름 대조가 막는다) 심층 방어 거리라 발견으로 올리지 않았다.
+3. 매니페스트 값의 노출(코드와 문서를 읽었다). 모델 매니페스트의 칸(`provider`, `model_id`, `max_tokens`, `temperature`)에 비밀이 될 칸이 없고 API 키는 환경 변수 그대로다(ADR 0040, `adapters/anthropic.py:3`). 트레이스는 바뀌지 않는다. `adapters/filesystem.py:257-269`의 `_parse`가 pydantic 오류 문구(`input_value`가 든다)를 `PluginError`에 싣고 운영자 면이 그 원문을 500으로 내는 것(`http/errors.py:306`. 최종 사용자 면은 고정 문구)은 기존 동작이고 모델 파일에 비밀이 없어 신규 노출이 아니다. 요청 경로를 바꾸는 칸(`default_headers`, `base_url`, `model_kwargs`)을 모델 파일에 두는 안은 ADR 0040이 거부했다.
+4. 인증·인가, 주입, 역직렬화. 새 HTTP 경로와 인증 변경이 없고, 매니페스트는 `tomllib`과 pydantic으로 읽으며 `eval`·`pickle`·YAML은 설계에 없다. 커밋하지 않은 일지 수정에도 비밀 값이 없다.
+
+고친 것: 없음. 남긴 것: 없음. 2의 심층 방어 거리(기본 모델 이름을 `read_manifest`에 넘기기 전에 `is_plugin_name`으로 거를지)는 ADR 0040이 기본 모델 이름이 core에 드는 입구를 명세에 미뤘으므로 위 "다음"의 명세가 정할 것에 더했다.
