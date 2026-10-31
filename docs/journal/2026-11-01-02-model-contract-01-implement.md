@@ -28,9 +28,11 @@
 
 ## 남은 단계
 
-1. 셀프 리뷰(`/code-review origin/main`): 아직 하지 않았다. 새 세션이 한다.
-2. 카나리아: 이 브랜치가 `.claude/rules/sdk.md`를 고쳤다. `tools/sibling_overlap.py`가 그 파일을 원천으로 든 명세 `sdk_rule_failure_cause.toml`, `sdk_rule_shortcut_patterns.toml`의 `# 최신 결과:` 줄을 새 `claude -p` 세션에서 불러 본 뒤 고치라고 알렸다(`tools/canary.py`, `docs/constitution/operations.md` 환경 규약 상세). 새 세션이 커밋 전에 한다. 계정 한도로 못 돌리면 그 절의 한도 항목대로 사전 확인만 돌린다.
-3. 커밋, `/git-pr`로 PR, 봇 회차, 병합. PR 본문에 사진 여덟 장, 계약 영향(`openapi.json`·생성 타입·`schema_version` "1" 유지), 틈(런타임이 아직 모델 매니페스트를 읽지 않는다)을 적는다.
+셀프 리뷰, 카나리아, 커밋은 끝났다. 커밋 `f9ff889a`(`feat: 모델 매니페스트의 제공사·모델 id·파라미터와 에이전트의 model 칸을 계약에 더한다`)가 pre-commit을 모두 통과했다(출력을 읽었다: parallel-checks 441초 Passed, commit message Passed, constitution version은 헌법 파일을 안 고쳐 Skipped). 이 일지의 "셀프 리뷰"·"반영 뒤 검증" 절은 그 커밋에 들었고, 이 "남은 단계" 갱신만 커밋하지 않았다.
+
+1. 이 일지의 갱신을 커밋에 얹는다(푸시 전이라 별도 커밋으로 한다).
+2. 푸시하고 `/git-pr`로 PR을 연다. PR 본문에 사진 여덟 장(`organisms-plugindetail--{enabled,disabled}-{1280,320}-{light,dark}.png`, 매니페스트 JSON에 `conversation_limit` 뒤 다섯 줄이 늘어 상세가 길어졌다), 계약 영향(`openapi.json`·생성 타입·`schema_version` "1" 유지), 틈(런타임이 아직 모델 매니페스트를 읽지 않는다. 04가 닫는다)을 적는다. `Generated with` 줄도 넣는다.
+3. 봇 회차와 병합은 `merge.md`를 Read로 열어 따른다. 병합은 이 워크트리에서 하므로 "워크트리에서 병합할 때"를 따른다. 티켓 02(`feature/02-manifest-errors-omit-input`, PR #445)가 `tests/adapters/test_filesystem.py`를 같이 고친다. 뒤에 병합되는 쪽이 앞의 것을 합친다.
 
 ## 셀프 리뷰(`/code-review origin/main`, base `bf6c1f26`, 미커밋 파일 26개·미추적 1개·커밋 0)
 
@@ -55,6 +57,10 @@
 - 카나리아: `uv run python tools/canary.py .scratch/end-user-continuation/probes/canary/sdk_rule_failure_cause.toml <출력>`과 `…/sdk_rule_shortcut_patterns.toml`을 이 워크트리에서 돌렸다(claude 2.1.312, 대조군은 둘 다 이 체크아웃의 커밋 `bf6c1f26`의 `README.md`). 둘 다 러너의 판정이 통과 4·실패 0·"없음" 섞임 0이다(러너 출력을 읽었다). 두 명세의 `# 최신 결과:` 줄을 갱신했다.
 - 시험(반영 뒤 손으로 침): `tests/sdk/test_manifest.py`·`tests/adapters/test_filesystem.py`·`tests/channel/http/test_router.py` 238 passed, `tests/test_server.py -k "모델 or 표지 or openapi or 계약"` 22 passed. `ruff check`·`ruff format --check` 초록. 전체 러너는 pre-commit이 갈음한다.
 
+## 인계(`커밋 뒤`)
+
+컨텍스트가 인계 문턱을 두 번째로 넘은 `커밋 뒤`에 넘긴다. 이 세션의 제목은 `feature/01-contract-model-manifest-fields (인계함)`이다(바꾸기 전 제목은 `feature/01-contract-model-manifest-fields`). 이 세션의 사용자 프롬프트는 위 원문 그대로이고 결정 질문은 없었다. 이 세션이 번복한 것은 없고, 셀프 리뷰 지적은 위 절에 있다.
+
 ## 보류와 메모
 
 - README의 "skill과 model은 로더가 생길 때" 문장은 티켓 06이 고친다. 이 티켓에서 걷지 않았다. 관리 화면 모델 행의 안내 줄도 06이다.
@@ -62,3 +68,4 @@
 - 병합은 이 워크트리에서 하므로 `merge.md`의 "워크트리에서 병합할 때"를 따른다.
 
 open-session을 부른다 2026-10-31T17:11:16Z
+open-session을 부른다 2026-10-31T17:29:04Z
