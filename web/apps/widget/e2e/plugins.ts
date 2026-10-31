@@ -21,6 +21,8 @@ import { basename, dirname, join } from "node:path";
 export const AGENTS = ["tools", "html", "echo", "approval"] as const;
 /** 저장소의 계산 에이전트(`plugins/agents/calc`). 실제 모델을 부른다. */
 export const LLM_AGENT = "calc";
+/** 기본 모델 플러그인의 이름. 저장소의 `plugins/models/claude-opus-5` 와 같고 `serve` 에 `--model` 로 명시해 넘긴다. */
+export const DEFAULT_MODEL = "claude-opus-5";
 
 /** 저장소의 `plugins/` 를 `root` 에 옮긴다. 파이썬이 남긴 바이트코드 캐시는 옮기지 않는다. */
 export function copyRepoPlugins(repo: string, root: string): void {
@@ -105,6 +107,16 @@ export function writeFixturePlugins(
       'total = await ctx.tool("add", a=2, b=3)',
       'yield RunFinished(run_id=ctx.run_id, ts=ctx.now(), output=f"total:{total}")',
     ],
+  );
+  // 실제 모델 모드에서는 복사해 온 저장소의 파일이 이 자리에 이미 있다. `model_id` 를 다르게 적으면 그 파일이
+  // 가짜 id 로 덮여 `-m llm_widget` 이 제공사에 가짜 id 를 보낸다. 그래서 저장소의 파일과 같은 값을 쓴다.
+  write(
+    `models/${DEFAULT_MODEL}/plugin.toml`,
+    manifest(
+      "model",
+      DEFAULT_MODEL,
+      `provider = "anthropic"\nmodel_id = "${DEFAULT_MODEL}"\nmax_tokens = 16000\n`,
+    ),
   );
   write(
     "mcp/fixture/plugin.toml",

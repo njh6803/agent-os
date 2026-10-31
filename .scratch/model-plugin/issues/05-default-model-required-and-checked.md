@@ -8,6 +8,8 @@
 
 06과 나란히 돈다. 둘이 함께 고치는 파일은 `README.md` 하나이고 줄이 다르다(이 티켓은 `serve` 줄의 주석, 06은 `disabled.toml` 줄). 나머지는 이 티켓이 파이썬과 그 시험, 06이 관리 화면이다. 뒤에 병합되는 쪽이 앞의 것을 합친다.
 
+03에서 넘어온 메모 둘. (1) 03이 `serve` 줄 주석에 "지금은 그 이름이 제공사에 가는 모델 id 이기도 하다"를 적었다. 04가 모델 파일을 읽어 `model_id`로 푼 뒤에는 거짓이므로 이 티켓이 `serve` 줄 주석을 고칠 때 함께 지운다. (2) 모델 매니페스트의 사본이 넷이다(저장소 `plugins/models/claude-opus-5/plugin.toml`, `tests/test_main.py`의 `MODEL_MANIFEST`, 관리 화면과 위젯 e2e 스택의 문자열). 맞대는 검사는 없고 지금은 일곱 줄이 같다. 이 티켓이 저장소 파일의 `max_tokens`나 `temperature`를 바꾸면 위젯 스택이 그 값을 옛 값으로 덮으므로(`-m llm_widget`) 네 곳을 함께 고친다.
+
 **Blocked by:** 04(`main.py`와 `tests/test_main.py`의 같은 자리를 04가 고친다. 시작 때 확인이 읽는 거부 문구가 입력값을 싣지 않는 것은 02가 04를 거쳐 보장한다)
 
 **Status:** ready-for-agent
