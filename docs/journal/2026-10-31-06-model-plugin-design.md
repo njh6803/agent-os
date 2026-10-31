@@ -368,7 +368,7 @@ retro 스킬대로 돌았다(`writing-for-agents`를 불렀고, 원천은 이 �
 
 ## 다음
 
-기능 model-plugin은 설계가 끝났고 `.scratch/model-plugin/`이 없는 단계다. 다음은 명세(`/to-spec`, 사람이 부른다)이고, `next-session` 결정표의 "설계는 끝났고 `spec.md`가 없다" 줄이라 새 세션을 Fable 5.1 / xhigh로 연다. 화면 디자인 단계는 없다(ADR 0040 "계약이 바뀐다"). 명세가 정할 것은 ADR 0040이 "명세가 정한다"고 미룬 것이다. 격리된 플러그인 루트(시험·CI·두 e2e 스택)에 둘 모델 매니페스트의 이름, 기본 모델의 이름이 core에 드는 입구(`run()`·`resume()`의 새 인자인지, 모델을 만드는 것이 이름을 드는지)와 그 이름을 `read_manifest`에 넘기기 전에 `is_plugin_name`으로 거를지(아래 "PR 직전 보안 리뷰" 2. 지금 `resolve_model_name`은 빈 값만 거부하고, 디렉터리 이름과 매니페스트 `name`의 대조가 어차피 막는다), 모델의 없음·깨짐이 깨짐 안에서 mcp의 앞인지 뒤인지, `run()`·`resume()`이 받는 "매니페스트로 모델을 만드는 것"의 호출 가능 타입이 `core/ports.py`의 포트 표 안의 변형이어야 하고 여섯째 포트가 되면 안 된다는 조건(봇 둘째 회차 Minor, "포트는 다섯 그대로"), 그리고 구현 티켓이 고칠 곳 목록(README의 `serve` 줄과 `disabled.toml` 줄, `.env.example`, `.claude/rules/core.md`·`adapters.md`·`sdk.md`의 문장들, `tests/test_server.py`의 `SONNET`과 관리 스택의 `models/sonnet` 픽스처, `PluginList.tsx`의 로더 없는 종류 집합)이다. 3라운드 두 질문의 선택지 전부와 고르지 않은 둘의 설명은 위 "PR 직전 리뷰" 4에 있다(대기열 554). 이 PR은 면제 PR(`docs/model-plugin`)에 회고가 쓴 harness 티켓 032를 함께 싣는다(헌법 3.0.64). PR과 병합, 그 뒤의 `next-session` 지시문은 이 세션이 이어서 한다.
+기능 model-plugin은 설계가 끝났고 `.scratch/model-plugin/`이 없는 단계다. 다음은 명세(`/to-spec`, 사람이 부른다)이고, `next-session` 결정표의 "설계는 끝났고 `spec.md`가 없다" 줄이라 새 세션을 Fable 5.1 / xhigh로 연다. 화면 디자인 단계는 없다(ADR 0040 "계약이 바뀐다"). 명세가 정할 것은 ADR 0040이 "명세가 정한다"고 미룬 것이다. 격리된 플러그인 루트(시험·CI·두 e2e 스택)에 둘 모델 매니페스트의 이름, 기본 모델의 이름이 core에 드는 입구(`run()`·`resume()`의 새 인자인지, 모델을 만드는 것이 이름을 드는지)와 그 이름을 `read_manifest`에 넘기기 전에 `is_plugin_name`으로 거를지(아래 "PR 직전 보안 리뷰" 2. 지금 `resolve_model_name`은 빈 값만 거부하고, 디렉터리 이름과 매니페스트 `name`의 대조가 어차피 막는다), 모델의 없음·깨짐이 깨짐 안에서 mcp의 앞인지 뒤인지, `run()`·`resume()`이 받는 "매니페스트로 모델을 만드는 것"의 호출 가능 타입이 `core/ports.py`의 포트 표 안의 변형이어야 하고 여섯째 포트가 되면 안 된다는 조건(봇 둘째 회차 Minor, "포트는 다섯 그대로"), CLI `run`·`resume`이 기본 모델을 이름이 비었는지만 보는지 그 이름의 매니페스트가 읽히는지까지 보는지(`serve`는 시작 때 `_configuration_problems`로 읽혀야 한다고 ADR 0040이 적었으나 CLI는 "빈 이름을 거부하는 자리에서 끝난다"고만 적었다. 봇 셋째 회차 Minor), 모델이 꺼졌을 때 최종 사용자 면이 이름 없는 409를 내고 꺼진 모델의 이름을 응답 `message`에 싣지 않는다는 한 줄(ADR 0017 이력 2026-10-03 "최종 사용자 앞에서 꺼짐은 이름 없는 409다"에 맞춘다. 그 제목은 `grep`으로 ADR 0017에서 찾았다. 봇 셋째 회차 Minor), 그리고 구현 티켓이 고칠 곳 목록(README의 `serve` 줄과 `disabled.toml` 줄, `.env.example`, `.claude/rules/core.md`·`adapters.md`·`sdk.md`의 문장들, `tests/test_server.py`의 `SONNET`과 관리 스택의 `models/sonnet` 픽스처, `PluginList.tsx`의 로더 없는 종류 집합)이다. 3라운드 두 질문의 선택지 전부와 고르지 않은 둘의 설명은 위 "PR 직전 리뷰" 4에 있다(대기열 554). 이 PR은 면제 PR(`docs/model-plugin`)에 회고가 쓴 harness 티켓 032를 함께 싣는다(헌법 3.0.64). PR과 병합, 그 뒤의 `next-session` 지시문은 이 세션이 이어서 한다.
 
 - 워크트리에서 병합하므로 주 체크아웃은 당기지 않는다. 주 체크아웃 미갱신: 루트는 main(`git worktree list`의 첫 줄, 커밋 뒤 이어받은 세션이 봤다). 새 세션이 워크트리에 들어가기 전에 `tidy-checkouts`로 당긴다.
 
@@ -461,3 +461,13 @@ open-session을 부른다 2026-10-31T06:18:44Z
 3. **[Minor] "포트는 다섯 그대로"가 근거 없는 단정이다. 뒤로 넘겼다.** 새 호출 가능 타입이 `core/ports.py`의 어느 포트인지는 ADR 0040이 명세로 미룬 것이다. 위 "다음"의 명세가 정할 것에 "포트 표 안의 변형이어야 하고 여섯째 포트가 되면 안 된다"는 조건을 더했다(둘째 회차의 Minor라 이것으로 닫는다).
 
 푸시 전에 `git fetch origin`으로 보니 origin/main이 PR #441의 `a6c9404c` 하나 앞서 있었다(`git diff --name-only HEAD...origin/main`으로 본 바뀐 파일 다섯은 이 브랜치가 건드린 파일과 겹치지 않는다). 앱의 `sync_with_base_branch`가 이 워크트리를 앱이 만든 것이 아니라며 거부해(훅 오류 문구) 직접 합쳤다(`git merge origin/main`, 충돌 없음). 합친 뒤 `sibling_overlap.py`가 1로 끝났다. 이 일지 `2026-10-31-04`가 main의 최신 일지 `2026-10-31-05`보다 이름순으로 앞서 다음 세션이 지나친다는 것이었다. `--move`로 이 일지를 `2026-10-31-06`으로 옮겼고, 도구가 고친 인용(티켓 032, `.scratch/plan.md`, `.scratch/retro-queue.md`, ADR 0022, ADR 0040)을 `git status`로 보았다. 낱말 없이 든 번호와 줄인 꼴은 `grep`으로 이 브랜치의 파일에 남은 것이 없음을 봤다. PR 본문의 일지 경로와 번호 문장도 도구가 옮긴 판과 견주어 고쳤다(차이는 그 두 줄이었다). 위 `2026-10-31-06`은 그때 비어 있던 다음 번호를 적은 기록이다.
+
+### 셋째 회차(claude-review, 머리 `c55d0cc6`)
+
+합친 머리를 푸시하자 `wait_ci` 출력이 `끝: 모두 통과`(`CodeRabbit SKIPPED`)였다. 코멘트 본문을 손으로 읽었다. Critical·Major는 없고 Minor 둘과 Nit 하나다. 첫 회차 뒤 이 봇의 셋째 리뷰라 Critical·Major만 고치고 나머지는 보류한다. 보류 이유는 PR 코멘트에 지적마다 남긴다.
+
+1. **[Minor] CLI `run`·`resume`이 기본 모델 매니페스트가 읽히는지까지 보는지 ADR 0040에 없다. 뒤로 넘겼다.** ADR 0040이 명세에 미룬 입구·깨짐의 자리와 한 묶음이라 위 "다음"의 명세가 정할 것에 더했다.
+2. **[Minor] 꺼진 모델의 최종 사용자 면 응답이 적혀 있지 않다. 뒤로 넘겼다.** ADR 0017 이력 2026-10-03의 이름 없는 409에 맞추는 한 줄이다. 위 "다음"에 더했다.
+3. **[Nit] Consequences 불릿이 길고 고칠 곳 목록이 두 곳에 중복된다. 보류했다.** 읽기 어려울 뿐 틀린 데가 없고, 명세를 쓸 때 고칠 곳 목록을 한 곳으로 모으면 된다.
+
+이 절과 위 "다음"의 두 항목이 든 일지만 푸시한다. 그 푸시로 도는 리뷰는 넷째 회차라 Critical·Major만 보고, 거기서 보류한 일은 일지에 다시 적어 푸시하지 않고 PR 코멘트와 다음 지시문의 "이어받을 상태"에 적는다.
