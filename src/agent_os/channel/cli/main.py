@@ -2,8 +2,9 @@
 
 serve 는 관리 API 와 HTTP 채널을 한 앱으로 세운다. 앱을 세우는 것은 조립이라 `main.py` 의 일이고,
 채널은 `server` 를 import 할 수 없다(원칙 IV). 그래서 serve 는 명령 자체가 여기 없고 인자만 여기서
-갈린다. 모델은 받고 진행 표시는 받지 않는다 — HTTP 채널이 실행을 일으키므로 모델을 시작 때 한 번
-정하고, 진행 이벤트가 가는 곳은 표준 에러가 아니라 요청마다의 스트림이다.
+갈린다. 기본 모델의 이름은 받고 진행 표시는 받지 않는다 — HTTP 채널이 실행을 일으키므로 기본 모델의
+이름을 시작 때 한 번 정하고(모델은 실행마다 만든다, ADR 0040), 진행 이벤트가 가는 곳은 표준 에러가
+아니라 요청마다의 스트림이다.
 
 표준 출력은 실행의 결말만 싣는다. 끝나면 출력 문자열, 멈추면 실행 식별자와 승인 요청(도구 이름과
 인자. 마스킹된 인자는 마스킹된 채로)과 그 실행을 잇는 명령 둘(승인, 사유를 붙이는 거부). 표준
@@ -45,15 +46,24 @@ from typing import TextIO
 
 from agent_os.channel.http.limits import DEFAULT_CONCURRENT_RUNS
 from agent_os.core.ports import (
-    ChatModel,
     Clock,
+    ModelSource,
     PluginError,
     PluginSource,
     ToolSource,
     TraceStore,
 )
 from agent_os.core.run import DEFAULT_RUN_TIMEOUT_SECONDS, Approve, Decision, Deny, resume, run
-from agent_os.sdk import AgentName, Event, Principal, RunFailed, RunFinished, RunId, RunPaused
+from agent_os.sdk import (
+    AgentName,
+    Event,
+    PluginName,
+    Principal,
+    RunFailed,
+    RunFinished,
+    RunId,
+    RunPaused,
+)
 
 DEFAULT_TRACES = Path("traces")
 DEFAULT_PLUGINS_ROOT = Path("plugins")
@@ -251,7 +261,9 @@ def _add_shared(parser: argparse.ArgumentParser) -> None:
 
 def _add_model(parser: argparse.ArgumentParser) -> None:
     """명령 셋이 같이 받는 것. 푸는 규칙은 `main.py` 가 쓰는 `resolve_model_name` 하나다."""
-    parser.add_argument("--model", help="모델 이름. 없으면 AGENT_OS_MODEL, 그다음 기본값")
+    parser.add_argument(
+        "--model", help="기본 모델 플러그인의 이름. 없으면 AGENT_OS_MODEL, 그다음 기본값"
+    )
 
 
 def _add_directories(parser: argparse.ArgumentParser) -> None:
@@ -340,8 +352,9 @@ async def run_command(
     principal: Principal,
     *,
     previous_run: RunId | None,
+    default_model: PluginName,
     plugins: PluginSource,
-    model: ChatModel,
+    models: ModelSource,
     tools: ToolSource,
     trace: TraceStore,
     clock: Clock,
@@ -361,8 +374,9 @@ async def run_command(
         request,
         principal,
         previous_run=previous_run,
+        default_model=default_model,
         plugins=plugins,
-        model=model,
+        models=models,
         tools=tools,
         trace=trace,
         clock=clock,
@@ -384,8 +398,9 @@ async def resume_command(
     decision: Decision,
     approver: Principal,
     *,
+    default_model: PluginName,
     plugins: PluginSource,
-    model: ChatModel,
+    models: ModelSource,
     tools: ToolSource,
     trace: TraceStore,
     clock: Clock,
@@ -396,10 +411,10 @@ async def resume_command(
     plugins_root: Path,
 ) -> int:
     """재개할 수 없는 실행(없음, 형식 1, 손상, 일시정지 아님), 지나간 자리를 든 결정, 지금은 결정을
-    받지 않는 실행(그 에이전트나 그것이 쓰는 mcp 가 꺼짐, 운영자 파일의 손상)은 PluginError 로
-    진단만 적는다. 결정을 쓰기 전에 끝나 트레이스가 그대로다. 꺼짐과 손상은 다시 켜거나 고친 뒤 같은
-    명령으로 이어 간다. 지나간 자리는 같은 명령으로는 이어 가지 못한다. 그 결정이 본 일시정지가 이미
-    지나갔다.
+    받지 않는 실행(그 에이전트나 그것이 쓰는 mcp 나 모델이 꺼짐, 운영자 파일의 손상)은 PluginError
+    로 진단만 적는다. 결정을 쓰기 전에 끝나 트레이스가 그대로다. 꺼짐과 손상은 다시 켜거나 고친 뒤
+    같은 명령으로 이어 간다. 지나간 자리는 같은 명령으로는 이어 가지 못한다. 그 결정이 본 일시정지가
+    이미 지나갔다.
 
     재개 스트림의 첫 이벤트(결정)는 받은 자리 바로 다음에 선다. core 가 그 자리가 마지막 이벤트임을
     확인한 뒤에 결정을 쓰기 때문이다."""
@@ -408,8 +423,9 @@ async def resume_command(
         pause_index,
         decision,
         approver,
+        default_model=default_model,
         plugins=plugins,
-        model=model,
+        models=models,
         tools=tools,
         trace=trace,
         clock=clock,

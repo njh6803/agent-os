@@ -34,6 +34,7 @@ from langchain_core.messages.tool import ToolCall as LangchainToolCall
 from langchain_core.outputs import ChatResult
 from langchain_core.runnables import Runnable
 from starlette.types import Message, Scope
+from tests.fake_models import DEFAULT_MODEL, FakeModels, model_manifest
 from tests.signing import AUDIENCE, SigningKey, bearer, claims, new_key, sign
 
 from agent_os.channel.http.end_user import END_USER_PREFIX
@@ -48,6 +49,7 @@ from agent_os.core.ports import (
     Clock,
     Cursor,
     ManifestRow,
+    ModelSource,
     PluginError,
     PluginKey,
     PluginSource,
@@ -279,6 +281,8 @@ class FakePlugins:
         self.calls += 1
         if kind is PluginKind.MCP:
             return CALC_SERVER if name == "calc-server" else None
+        if kind is PluginKind.MODEL:
+            return model_manifest(name) if name == DEFAULT_MODEL else None
         return MANIFESTS.get(name)
 
     def list_manifests(self, kind: PluginKind) -> Sequence[ManifestRow]:
@@ -470,6 +474,8 @@ def _app(
     plugins: PluginSource | None = None,
     trace: TraceStore | None = None,
     model: ChatModel | None = None,
+    models: ModelSource | None = None,
+    default_model: PluginName = DEFAULT_MODEL,
     clock: Clock | None = None,
     stderr: io.StringIO | None = None,
     sites: Sites | None = None,
@@ -477,11 +483,17 @@ def _app(
     run_timeout_seconds: float | None = None,
     end_user_concurrent_runs: int | None = None,
 ) -> FastAPI:
-    """최종 사용자 경로가 선 앱 하나. 인자 타입이 가짜의 포트 적합성을 검증하는 자리다."""
+    """최종 사용자 경로가 선 앱 하나. 인자 타입이 가짜의 포트 적합성을 검증하는 자리다.
+
+    `model` 은 어느 매니페스트로 불러도 그 모델을 돌려주는 모델 소스로 감싸 넘긴다. 모델 소스를
+    직접 보려는 시험은 `models` 를 준다.
+    """
     return create_app(
         plugins=plugins or FakePlugins(),
         trace=trace or FakeTrace(),
-        model=model or GenericFakeChatModel(messages=iter([AIMessage(content="답")])),
+        models=models
+        or FakeModels(model or GenericFakeChatModel(messages=iter([AIMessage(content="답")]))),
+        default_model=default_model,
         tools=tools or ScopedTools(),
         clock=clock or StepClock(),
         principal=OPERATOR,
@@ -692,6 +704,48 @@ async def test_꺼진_에이전트는_종류도_이름도_없는_고정_문구�
     assert "echo" not in end_user.text
     assert operator.status_code == 409
     assert "agent echo" in operator.json()["message"]
+
+
+async def test_꺼진_모델은_운영자_면은_이름을_들고_최종_사용자_면은_고정_문구의_409다() -> None:
+    """모델 플러그인도 꺼질 수 있다(ADR 0040). 꺼진 것이 무엇인지는 최종 사용자에게 말하지 않는다.
+    준비에서 막히므로 모델 소스는 불리지 않고 트레이스도 없다."""
+    plugins = FakePlugins()
+    plugins.disabled = frozenset({PluginKey(kind=PluginKind.MODEL, name=DEFAULT_MODEL)})
+    models = FakeModels(GenericFakeChatModel(messages=iter(())))
+    trace = FakeTrace()
+
+    async with _serving(_app(plugins=plugins, models=models, trace=trace)) as client:
+        end_user = await client.post(START, json=_start("echo"), headers=_as())
+        operator = await client.post("/runs", json=_start("echo"), headers=CHANNEL)
+
+    assert end_user.status_code == 409
+    assert end_user.json()["message"] == UNAVAILABLE_MESSAGE
+    assert DEFAULT_MODEL not in end_user.text
+    assert operator.status_code == 409
+    assert f"model {DEFAULT_MODEL}" in operator.json()["message"]
+    assert "에이전트 echo" in operator.json()["message"]
+    assert models.built == []
+    assert trace.events == []
+
+
+async def test_없는_모델은_운영자_면은_500_원문이고_최종_사용자_면은_고정_문구의_500이다() -> None:
+    """기본 모델 플러그인의 이름이 가리키는 곳에 매니페스트가 없다. 운영자는 어느 이름이 없는지
+    봐야 하고 최종 사용자에게는 구성 오류의 원문을 싣지 않는다."""
+    models = FakeModels(GenericFakeChatModel(messages=iter(())))
+    trace = FakeTrace()
+    missing = PluginName("ghost")
+
+    async with _serving(_app(models=models, default_model=missing, trace=trace)) as client:
+        end_user = await client.post(START, json=_start("echo"), headers=_as())
+        operator = await client.post("/runs", json=_start("echo"), headers=CHANNEL)
+
+    assert end_user.status_code == 500
+    assert end_user.json()["message"] == INTERNAL_MESSAGE
+    assert missing not in end_user.text
+    assert operator.status_code == 500
+    assert operator.json()["message"] == f"기본 모델 플러그인이 없다: {missing}"
+    assert models.built == []
+    assert trace.events == []
 
 
 async def test_시작_경로의_구성_오류는_고정_문구의_500이고_원인은_서버_기록에만_있다() -> None:

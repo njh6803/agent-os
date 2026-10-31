@@ -20,12 +20,12 @@ from contextlib import AbstractAsyncContextManager
 from datetime import datetime
 from pathlib import Path
 
-from langchain_core.language_models.fake_chat_models import GenericFakeChatModel
-
 from agent_os.core.ports import (
+    ChatModel,
     Clock,
     Cursor,
     ManifestRow,
+    ModelSource,
     PluginKey,
     PluginSource,
     RunRow,
@@ -57,6 +57,7 @@ OPENAPI_PATH = ROOT / "openapi.json"
 _PLACEHOLDER_ADMIN_TOKEN = "openapi-export-only-admin"
 _PLACEHOLDER_CHANNEL_TOKEN = "openapi-export-only-channel"
 _PLACEHOLDER_PRINCIPAL = Principal("openapi-export-only")
+_PLACEHOLDER_MODEL = PluginName("openapi-export-only")
 
 
 class _SchemaOnlyPlugins:
@@ -75,6 +76,11 @@ class _SchemaOnlyPlugins:
         raise NotImplementedError("스키마 추출은 포트를 부르지 않는다")
 
     def write_enabled(self, kind: PluginKind, name: PluginName, *, enabled: bool) -> WriteOutcome:
+        raise NotImplementedError("스키마 추출은 포트를 부르지 않는다")
+
+
+class _SchemaOnlyModels:
+    def build(self, manifest: PluginManifest) -> ChatModel:
         raise NotImplementedError("스키마 추출은 포트를 부르지 않는다")
 
 
@@ -119,13 +125,15 @@ def document() -> str:
     """
     plugins: PluginSource = _SchemaOnlyPlugins()
     trace: TraceStore = _SchemaOnlyTrace()
+    models: ModelSource = _SchemaOnlyModels()
     tools: ToolSource = _SchemaOnlyTools()
     clock: Clock = _SchemaOnlyClock()
     app = create_app(
         plugins=plugins,
         trace=trace,
-        # 응답이 빈 가짜 모델이다. 불리면 곧바로 터진다 — 포트 스텁들과 같은 뜻이다.
-        model=GenericFakeChatModel(messages=iter(())),
+        # 불리면 곧바로 터진다. 포트 스텁들과 같은 뜻이다. 기본 모델의 이름은 자리표시자다.
+        models=models,
+        default_model=_PLACEHOLDER_MODEL,
         tools=tools,
         clock=clock,
         principal=_PLACEHOLDER_PRINCIPAL,

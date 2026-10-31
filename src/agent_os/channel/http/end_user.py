@@ -69,8 +69,8 @@ from agent_os.channel.http.limits import (
 )
 from agent_os.channel.http.runs import Indexed, Runs, RunStream
 from agent_os.core.ports import (
-    ChatModel,
     Clock,
+    ModelSource,
     PluginSource,
     ToolSource,
     TraceStore,
@@ -81,7 +81,7 @@ from agent_os.http.auth import end_user_of
 from agent_os.http.errors import request_id_of
 from agent_os.http.routes import EventSourceWithJsonErrors, documented_errors
 from agent_os.http.sites import EndUser
-from agent_os.sdk import RUN_ID_PATTERN, Event, RunId
+from agent_os.sdk import RUN_ID_PATTERN, Event, PluginName, RunId
 
 # 서명 토큰이 여는 접두사이자 이 면의 라우트의 접두사(ADR 0023). 한 값이라 이 면의 라우트가 서명
 # 토큰의 면 밖에 설 길이 없다. `/runs` 를 품지도 그것에 품기지도 않는다. 인증 표와 예외 표의 면을
@@ -110,7 +110,8 @@ def end_user_router(
     runs: Runs,
     *,
     plugins: PluginSource,
-    model: ChatModel,
+    default_model: PluginName,
+    models: ModelSource,
     tools: ToolSource,
     trace: TraceStore,
     clock: Clock,
@@ -143,7 +144,8 @@ def end_user_router(
             visible_agents=user.site.agents,
             timeout_seconds=run_timeout_seconds,
             plugins=plugins,
-            model=model,
+            default_model=default_model,
+            models=models,
             tools=tools,
             trace=trace,
             clock=clock,
@@ -198,7 +200,8 @@ def end_user_router(
             visible_agents=user.site.agents,
             timeout_seconds=run_timeout_seconds,
             plugins=plugins,
-            model=model,
+            default_model=default_model,
+            models=models,
             tools=tools,
             trace=trace,
             clock=clock,
@@ -212,10 +215,10 @@ def end_user_router(
 
     # 404 는 남의 실행, 없는 실행, 열 에이전트 밖의 실행, 손상된 실행이고 메시지가 모두 같은 고정
     # 문구다 — 손상된 트레이스의 주체는 믿을 수 없어 남의 것일 수 있다. 500 은 주체를 확인한 뒤의
-    # 고장(깨진 고리, 기록이 가리키는 에이전트의 부재, mcp 와 진입점의 구성 오류)이고 고정 문구다 —
-    # 숨길 남이 없고 원인은 서버 기록에 있다(ADR 0023 의 2026-10-16 이력). 409 는 자기 실행이 결정을
-    # 받을 수 없는 상태(형식 1, 일시정지 아님, 지나간 자리)이고 메시지가 가르며, 꺼짐은 고정 문구다.
-    # 받지 않은 결정은 쓰이지 않는다.
+    # 고장(깨진 고리, 기록이 가리키는 에이전트의 부재, mcp 와 모델과 진입점의 구성 오류)이고 고정
+    # 문구다 — 숨길 남이 없고 원인은 서버 기록에 있다(ADR 0023 의 2026-10-16 이력). 409 는 자기
+    # 실행이 결정을 받을 수 없는 상태(형식 1, 일시정지 아님, 지나간 자리)이고 메시지가 가르며,
+    # 꺼짐은 고정 문구다. 받지 않은 결정은 쓰이지 않는다.
     @router.post(
         f"{_RUNS}/{{run_id:verbatim}}/approval",
         operation_id="decide_end_user_approval",

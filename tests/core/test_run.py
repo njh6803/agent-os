@@ -34,6 +34,7 @@ from langchain_core.messages.tool import ToolCall as LangchainToolCall
 from langchain_core.outputs import ChatResult
 from langchain_core.runnables import Runnable
 from pydantic import BaseModel
+from tests.fake_models import DEFAULT_MODEL, FakeModels, model_manifest
 
 from agent_os.core.continuation import EXCHANGE_COUNT_LIMIT, READ_CAP, before_principal
 from agent_os.core.loop import MAX_TURNS
@@ -45,6 +46,7 @@ from agent_os.core.ports import (
     DifferentPrincipal,
     Disabled,
     ManifestRow,
+    ModelSource,
     NotContinuable,
     NotResumable,
     PluginError,
@@ -117,12 +119,16 @@ def _agent_manifest(
     mcp: Sequence[str] = (),
     requires_approval: Sequence[str] = (),
     conversation_limit: int | None = None,
+    model: str | None = None,
 ) -> PluginManifest:
     limit = "" if conversation_limit is None else f"conversation_limit = {conversation_limit}\n"
+    chosen = "" if model is None else f'model = "{model}"\n'
     return parse_manifest(
         f'schema_version = "1"\nkind = "agent"\nname = "{name}"\n'
         f'version = "0.1.0"\nentrypoint = "agent:Agent"\n'
-        f"mcp = {_toml_list(mcp)}\nrequires_approval = {_toml_list(requires_approval)}\n" + limit
+        f"mcp = {_toml_list(mcp)}\nrequires_approval = {_toml_list(requires_approval)}\n"
+        + limit
+        + chosen
     )
 
 
@@ -233,6 +239,11 @@ class FakePlugins:
     파일이 깨진 것이라 읽기가 어댑터처럼 PluginError 다. 대화 한도(`conversation_limit`)는 공개
     속성이라 멈춘 사이 매니페스트를 고친 것을 흉내 낸다. 매니페스트 읽기(`manifest_reads`)는 열
     에이전트 밖의 시작이 플러그인 포트에 닿지 않는 것을 센다.
+
+    모델 매니페스트는 이름별로 들고(`model_manifests`, 기본은 `DEFAULT_MODEL` 하나) 공개 속성이라
+    멈춘 사이 파일을 고친 것을 흉내 낸다. `agent_model` 이 있으면 모든 에이전트의 매니페스트가 그
+    이름을 `model` 로 적는다. `unreadable_models` 에 든 이름은 어댑터가 파싱하지 못한 모양으로
+    PluginError 다. 모델 매니페스트 읽기(`model_reads`)는 준비 한 번에 한 번이라는 것을 센다.
     """
 
     def __init__(
@@ -246,6 +257,8 @@ class FakePlugins:
         disabled: Iterable[PluginKey] = (),
         corrupt: str | None = None,
         conversation_limit: int | None = None,
+        models: Sequence[str] = (DEFAULT_MODEL,),
+        agent_model: str | None = None,
     ) -> None:
         self._agents = agents
         self._mcp = tuple(mcp)
@@ -255,18 +268,31 @@ class FakePlugins:
         self.disabled = frozenset(disabled)
         self.corrupt = corrupt
         self.conversation_limit = conversation_limit
+        self.model_manifests = {name: model_manifest(name) for name in models}
+        self.agent_model = agent_model
+        self.unreadable_models: dict[str, str] = {}
         self.loads = 0
         self.disabled_reads = 0
         self.manifest_reads = 0
+        self.model_reads = 0
 
     def read_manifest(self, kind: PluginKind, name: PluginName) -> PluginManifest | None:
         self.manifest_reads += 1
         if kind is PluginKind.AGENT and name in self._agents:
             return _agent_manifest(
-                name, self._mcp, self._requires_approval, self.conversation_limit
+                name,
+                self._mcp,
+                self._requires_approval,
+                self.conversation_limit,
+                self.agent_model,
             )
         if kind is PluginKind.MCP and name in self._servers:
             return _mcp_manifest(name, self._secret_args)
+        if kind is PluginKind.MODEL:
+            self.model_reads += 1
+            if name in self.unreadable_models:
+                raise PluginError(self.unreadable_models[name])
+            return self.model_manifests.get(name)
         return None
 
     def list_manifests(self, kind: PluginKind) -> tuple[ManifestRow, ...]:
@@ -353,7 +379,7 @@ class BrokenTools:
 class ToolAwareFakeModel(GenericFakeChatModel):
     """bind_tools 를 받아들이기만 하는 가짜. 응답은 정해진 대로이고 불린 횟수와 받은 메시지를 센다.
 
-    횟수는 재생이 모델 포트에 닿지 않는다는 것을 세는 데 쓴다. 응답 iterator 가 소진되는 것으로는
+    횟수는 재생이 모델에 닿지 않는다는 것을 세는 데 쓴다. 응답 iterator 가 소진되는 것으로는
     "모자라면 터진다"만 알 수 있지 "더 부르지 않았다"를 알 수 없다. 받은 메시지 열(`received`)은
     요약 호출이 보낸 것을 보는 데 쓰고, `binds` 는 요약 호출이 도구를 붙이지 않는 것을 본다.
     """
@@ -449,7 +475,10 @@ async def _run(
     name: str = "calc",
     visible_agents: frozenset[AgentName] | None = None,
     timeout_seconds: float | None = None,
+    models: ModelSource | None = None,
+    default_model: PluginName = DEFAULT_MODEL,
 ) -> list[Event]:
+    """`model` 은 가짜 모델 소스로 감싸서 넘긴다. 모델 소스를 직접 쓰는 시험만 `models` 를 준다."""
     plugins = plugins or FakePlugins({"calc": agent})
     tools = tools or FakeTools()
     return [
@@ -460,8 +489,9 @@ async def _run(
             PRINCIPAL,
             visible_agents=visible_agents,
             timeout_seconds=timeout_seconds,
+            default_model=default_model,
             plugins=plugins,
-            model=model,
+            models=models or FakeModels(model),
             tools=tools,
             trace=trace,
             clock=clock,
@@ -756,8 +786,9 @@ async def test_트레이스를_쓰지_못해_실행이_멈춰도_도구_연결�
         AgentName("calc"),
         "2+2?",
         PRINCIPAL,
+        default_model=DEFAULT_MODEL,
         plugins=plugins,
-        model=ToolAwareFakeModel(messages=iter(())),
+        models=FakeModels(ToolAwareFakeModel(messages=iter(()))),
         tools=tools,
         trace=FullDiskTrace(writable=1),
         clock=clock,
@@ -1182,6 +1213,8 @@ async def _resume(
     pause_index: int | None = None,
     visible_agents: frozenset[AgentName] | None = None,
     timeout_seconds: float | None = None,
+    models: ModelSource | None = None,
+    default_model: PluginName = DEFAULT_MODEL,
 ) -> list[Event]:
     """결정의 자리를 주지 않으면 결정 직전에 트레이스를 읽은 클라이언트가 볼 자리를 싣는다.
 
@@ -1197,8 +1230,9 @@ async def _resume(
             approver,
             visible_agents=visible_agents,
             timeout_seconds=timeout_seconds,
+            default_model=default_model,
             plugins=plugins or FakePlugins({"calc": OneShotAgent()}),
-            model=model,
+            models=models or FakeModels(model),
             tools=tools or FakeTools(),
             trace=trace,
             clock=clock,
@@ -3303,6 +3337,7 @@ async def _continue(
     plugins: PluginSource | None = None,
     visible_agents: frozenset[AgentName] | None = None,
     timeout_seconds: float | None = None,
+    models: ModelSource | None = None,
 ) -> list[Event]:
     """앞 실행을 가리켜 새 실행을 일으킨다. 에이전트를 주지 않으면 판정 에이전트다."""
     return [
@@ -3314,8 +3349,9 @@ async def _continue(
             previous_run=RunId(previous),
             visible_agents=visible_agents,
             timeout_seconds=timeout_seconds,
+            default_model=DEFAULT_MODEL,
             plugins=plugins or FakePlugins({name: agent or WeavingAgent()}),
-            model=model or GenericFakeChatModel(messages=iter([])),
+            models=models or FakeModels(model or GenericFakeChatModel(messages=iter([]))),
             tools=tools or FakeTools(),
             trace=trace,
             clock=clock,
@@ -5834,8 +5870,9 @@ async def test_태스크_그룹의_자식이_몰아도_run_failed_는_하나이�
         "2+2?",
         PRINCIPAL,
         timeout_seconds=SHORT,
+        default_model=DEFAULT_MODEL,
         plugins=plugins,
-        model=GenericFakeChatModel(messages=iter([])),
+        models=FakeModels(GenericFakeChatModel(messages=iter([]))),
         tools=tools,
         trace=trace,
         clock=clock,
@@ -6441,7 +6478,8 @@ def _events_of(
         "2+2?",
         PRINCIPAL,
         plugins=FakePlugins({"calc": agent}),
-        model=model,
+        default_model=DEFAULT_MODEL,
+        models=FakeModels(model),
         tools=tools,
         trace=trace,
         clock=clock,
@@ -6593,3 +6631,406 @@ async def test_소비자가_도중에_스트림을_닫으면_에이전트의_태
     assert agent.cleaned
     assert agent.cleanup_cancelled
     assert tools.closed
+
+
+# --- 모델 — 실행을 준비할 때마다 모델 매니페스트로 모델을 만든다 ---------------
+#
+# 모델이 에이전트, mcp와 같은 플러그인이다(ADR 0040). 런타임은 준비마다 에이전트가 고른 모델(없으면
+# `default_model`)의 매니페스트를 읽어 모델 소스가 그것으로 모델을 만들게 한다. 순서는 부재 →
+# 깨짐(mcp 없음 → 마스킹과 승인의 충돌 → 모델 없음·읽히지 않음 → 운영자 파일의 손상) → 꺼짐(에이전트
+# → mcp → 모델) → 진입점 import → 모델 만들기다. 모델 종류를 거르는 것은 어댑터의
+# `read_manifest(MODEL, …)`이고 core는 칸을 꺼내 쓰지 않으므로 여기서는 "없음"과 "읽히지
+# 않음(`PluginError`)" 둘만 본다.
+
+ALT_MODEL = PluginName("alt-model")
+
+
+def _model_key(name: str) -> PluginKey:
+    return PluginKey(kind=PluginKind.MODEL, name=PluginName(name))
+
+
+def _answering(text: str, model_name: str) -> ToolAwareFakeModel:
+    """`model_name` 을 응답의 실제 모델 이름으로 내는 가짜. 어느 모델이 쓰였는지 갈린다."""
+    reply = AIMessage(
+        content=text,
+        response_metadata={"model_name": model_name},
+        usage_metadata={"input_tokens": 7, "output_tokens": 3, "total_tokens": 10},
+    )
+    return ToolAwareFakeModel(messages=iter([reply]))
+
+
+def _idle() -> ChatModel:
+    """불리지 않아야 하는 모델. 응답이 없어 불리면 터진다."""
+    return GenericFakeChatModel(messages=iter([]))
+
+
+async def test_모델_소스는_실행을_준비할_때_기본_모델의_매니페스트로_모델을_만든다(
+    trace: FakeTrace, clock: FakeClock
+) -> None:
+    """첫 빨강이다. 가짜 모델 소스가 한 번도 불리지 않으면 이 시험이 먼저 빨갛다(명세 "좋은
+    시험")."""
+    models = FakeModels(GenericFakeChatModel(messages=iter([_reply("4")])))
+    plugins = FakePlugins({"calc": OneShotAgent()})
+
+    events = await _run(OneShotAgent(), _idle(), trace, clock, plugins=plugins, models=models)
+
+    assert [e.type for e in events] == ["run_started", "llm_called", "run_finished"]
+    assert [m.name for m in models.built] == [DEFAULT_MODEL]
+
+
+async def test_에이전트가_model_을_적으면_그_이름의_매니페스트로_만든다(
+    trace: FakeTrace, clock: FakeClock
+) -> None:
+    """기본 모델이 있어도 에이전트가 고른 모델이 이긴다(스토리 13). 응답의 모델 이름이 그 모델
+    쪽이다."""
+    models = FakeModels(
+        _answering("기본", "default-model-id"), {ALT_MODEL: _answering("골랐다", "alt-model-id")}
+    )
+    plugins = FakePlugins(
+        {"calc": OneShotAgent()}, models=[DEFAULT_MODEL, ALT_MODEL], agent_model=ALT_MODEL
+    )
+
+    events = await _run(OneShotAgent(), _idle(), trace, clock, plugins=plugins, models=models)
+
+    called = next(e for e in events if isinstance(e, LlmCalled))
+    assert called.model == "alt-model-id"
+    assert [m.name for m in models.built] == [ALT_MODEL]
+
+
+async def test_에이전트가_model_을_적지_않으면_받은_기본_모델_이름을_쓴다(
+    trace: FakeTrace, clock: FakeClock
+) -> None:
+    """기본 모델의 이름은 `default_model` 인자다(스토리 14). core 는 이름을 짓지 않는다."""
+    models = FakeModels(GenericFakeChatModel(messages=iter([_reply("4")])))
+    plugins = FakePlugins({"calc": OneShotAgent()}, models=[ALT_MODEL])
+
+    await _run(
+        OneShotAgent(),
+        _idle(),
+        trace,
+        clock,
+        plugins=plugins,
+        models=models,
+        default_model=ALT_MODEL,
+    )
+
+    assert [m.name for m in models.built] == [ALT_MODEL]
+
+
+async def test_실행마다_모델을_새로_만들고_두_실행_사이에_바뀐_매니페스트를_듣는다(
+    trace: FakeTrace, clock: FakeClock
+) -> None:
+    """만든 모델을 캐시하지 않는다(거부한 안). 운영자가 파일의 `max_tokens` 를 고치면 다음 실행의
+    모델 소스가 고친 매니페스트를 받는다(스토리 2)."""
+    models = FakeModels(GenericFakeChatModel(messages=iter([_reply("4"), _reply("5")])))
+    plugins = FakePlugins({"calc": OneShotAgent()})
+
+    await _run(OneShotAgent(), _idle(), trace, clock, plugins=plugins, models=models)
+    plugins.model_manifests[DEFAULT_MODEL] = model_manifest(DEFAULT_MODEL, max_tokens=7)
+    await _run(OneShotAgent(), _idle(), trace, clock, plugins=plugins, models=models)
+
+    assert [m.max_tokens for m in models.built] == [None, 7]
+
+
+@pytest.mark.parametrize(
+    ("agent_model", "message"),
+    [
+        (None, f"기본 모델 플러그인이 없다: {DEFAULT_MODEL}"),
+        ("ghost", "에이전트 calc 이 지정한 model 플러그인이 없다: ghost"),
+    ],
+    ids=["기본 모델", "에이전트가 적은 모델"],
+)
+async def test_없는_모델은_실행_전에_PluginError_이고_트레이스가_없다(
+    agent_model: str | None, message: str, trace: FakeTrace, clock: FakeClock
+) -> None:
+    """없음의 문구는 누구의 지정인지를 든다(스토리 17). 트레이스도 실행 식별자도 없고 모델 소스는
+    불리지 않는다."""
+    models = FakeModels(_idle())
+    plugins = FakePlugins({"calc": OneShotAgent()}, models=(), agent_model=agent_model)
+
+    with pytest.raises(PluginError) as caught:
+        await _run(OneShotAgent(), _idle(), trace, clock, plugins=plugins, models=models)
+
+    assert type(caught.value) is PluginError
+    assert str(caught.value) == message
+    assert trace.events == []
+    assert clock.ids_issued == 0
+    assert models.built == []
+
+
+async def test_읽히지_않는_모델은_어댑터의_PluginError_그대로_실행_전에_끝난다(
+    trace: FakeTrace, clock: FakeClock
+) -> None:
+    models = FakeModels(_idle())
+    plugins = FakePlugins({"calc": OneShotAgent()})
+    plugins.unreadable_models[DEFAULT_MODEL] = "매니페스트를 읽을 수 없다: plugins/models/x"
+
+    with pytest.raises(PluginError, match="매니페스트를 읽을 수 없다: plugins/models/x"):
+        await _run(OneShotAgent(), _idle(), trace, clock, plugins=plugins, models=models)
+
+    assert trace.events == []
+    assert models.built == []
+
+
+@pytest.mark.parametrize(
+    ("agent_model", "disabled_name"),
+    [(None, DEFAULT_MODEL), (ALT_MODEL, ALT_MODEL)],
+    ids=["기본 모델이 꺼짐", "에이전트가 고른 모델이 꺼짐"],
+)
+async def test_꺼진_모델을_쓰는_실행은_실행_전에_Disabled_이고_메시지에_모델과_에이전트가_있다(
+    agent_model: str | None, disabled_name: str, trace: FakeTrace, clock: FakeClock
+) -> None:
+    """꺼진 mcp와 같은 꼴이다(스토리 3·4). 기본 모델이 꺼진 것은 시작의 조건이 아니고 그것을 쓰는
+    실행의 거부다(스토리 8)."""
+    models = FakeModels(_idle())
+    plugins = FakePlugins(
+        {"calc": OneShotAgent()},
+        models=[DEFAULT_MODEL, ALT_MODEL],
+        agent_model=agent_model,
+        disabled=[_model_key(disabled_name)],
+    )
+
+    with pytest.raises(Disabled) as caught:
+        await _run(OneShotAgent(), _idle(), trace, clock, plugins=plugins, models=models)
+
+    assert str(caught.value) == f"꺼진 플러그인이다: model {disabled_name} (에이전트 calc 이 쓴다)"
+    assert trace.events == []
+    assert plugins.loads == 0
+    assert models.built == []
+
+
+async def test_기본_모델이_꺼져도_다른_모델을_고른_에이전트는_돈다(
+    trace: FakeTrace, clock: FakeClock
+) -> None:
+    models = FakeModels(GenericFakeChatModel(messages=iter([_reply("4")])))
+    plugins = FakePlugins(
+        {"calc": OneShotAgent()},
+        models=[DEFAULT_MODEL, ALT_MODEL],
+        agent_model=ALT_MODEL,
+        disabled=[_model_key(DEFAULT_MODEL)],
+    )
+
+    events = await _run(OneShotAgent(), _idle(), trace, clock, plugins=plugins, models=models)
+
+    assert events[-1].type == "run_finished"
+
+
+async def test_매니페스트와_꺼진_집합은_준비_한_번에_한_번씩_읽는다(
+    trace: FakeTrace, clock: FakeClock
+) -> None:
+    models = FakeModels(GenericFakeChatModel(messages=iter([_reply("4")])))
+    plugins = FakePlugins({"calc": OneShotAgent()})
+
+    await _run(OneShotAgent(), _idle(), trace, clock, plugins=plugins, models=models)
+
+    assert plugins.model_reads == 1
+    assert plugins.disabled_reads == 1
+
+
+async def test_모델_만들기는_준비의_마지막이고_실패하면_실행_전_실패다(
+    trace: FakeTrace, clock: FakeClock
+) -> None:
+    """만들기는 키도 네트워크도 요구하지 않아 실패할 길이 없지만(프로브), 어댑터가 거부하면 구성
+    오류다. `run_started` 전이라 트레이스가 없다."""
+    models = FakeModels(_idle(), failure="모델을 만들 수 없다")
+    plugins = FakePlugins({"calc": OneShotAgent()})
+
+    with pytest.raises(PluginError, match="모델을 만들 수 없다"):
+        await _run(OneShotAgent(), _idle(), trace, clock, plugins=plugins, models=models)
+
+    assert plugins.loads == 1
+    assert trace.events == []
+    assert clock.ids_issued == 0
+
+
+# 준비의 순서. 결함 둘을 함께 심어 어느 오류가 먼저 나오는지로 잰다.
+
+
+def _mcp_and_model_missing() -> FakePlugins:
+    plugins = FakePlugins({"calc": OneShotAgent()}, mcp=["ghost-mcp"])
+    plugins.model_manifests.clear()
+    return plugins
+
+
+def _masked_conflict_and_model_missing() -> FakePlugins:
+    plugins = FakePlugins(
+        {"calc": OneShotAgent()},
+        mcp=["srv"],
+        servers=["srv"],
+        requires_approval=["add"],
+        secret_args={"add": ["a"]},
+    )
+    plugins.model_manifests.clear()
+    return plugins
+
+
+def _model_missing_and_operator_file_corrupt() -> FakePlugins:
+    plugins = FakePlugins({"calc": OneShotAgent()}, corrupt=CORRUPT_OPERATOR_FILE)
+    plugins.model_manifests.clear()
+    return plugins
+
+
+def _model_missing_and_agent_disabled() -> FakePlugins:
+    plugins = FakePlugins({"calc": OneShotAgent()}, disabled=[_agent_key("calc")])
+    plugins.model_manifests.clear()
+    return plugins
+
+
+def _agent_and_model_disabled() -> FakePlugins:
+    return FakePlugins(
+        {"calc": OneShotAgent()}, disabled=[_agent_key("calc"), _model_key(DEFAULT_MODEL)]
+    )
+
+
+def _mcp_and_model_disabled() -> FakePlugins:
+    return FakePlugins(
+        {"calc": OneShotAgent()},
+        mcp=["srv"],
+        servers=["srv"],
+        disabled=[_mcp_key("srv"), _model_key(DEFAULT_MODEL)],
+    )
+
+
+def _model_disabled_and_entrypoint_unimportable() -> FakePlugins:
+    return UnimportablePlugins(disabled=[_model_key(DEFAULT_MODEL)])
+
+
+def _entrypoint_unimportable() -> FakePlugins:
+    return UnimportablePlugins()
+
+
+@pytest.mark.parametrize(
+    ("plant", "error", "message", "loads"),
+    [
+        (_mcp_and_model_missing, PluginError, "mcp 플러그인이 없다: ghost-mcp", 0),
+        (_masked_conflict_and_model_missing, PluginError, "마스킹된 인자를 가진 도구", 0),
+        (
+            _model_missing_and_operator_file_corrupt,
+            PluginError,
+            f"기본 모델 플러그인이 없다: {DEFAULT_MODEL}",
+            0,
+        ),
+        (
+            _model_missing_and_agent_disabled,
+            PluginError,
+            f"기본 모델 플러그인이 없다: {DEFAULT_MODEL}",
+            0,
+        ),
+        (_agent_and_model_disabled, Disabled, "꺼진 플러그인이다: agent calc", 0),
+        (_mcp_and_model_disabled, Disabled, "꺼진 플러그인이다: mcp srv", 0),
+        (_model_disabled_and_entrypoint_unimportable, Disabled, "꺼진 플러그인이다: model", 0),
+        (_entrypoint_unimportable, PluginError, "진입점을 import할 수 없다", 1),
+    ],
+    ids=[
+        "mcp 없음이 모델 없음보다 먼저",
+        "마스킹 충돌이 모델 없음보다 먼저",
+        "모델 없음이 운영자 파일의 손상보다 먼저",
+        "모델 없음이 에이전트 꺼짐보다 먼저",
+        "에이전트 꺼짐이 모델 꺼짐보다 먼저",
+        "mcp 꺼짐이 모델 꺼짐보다 먼저",
+        "모델 꺼짐이 진입점 import 실패보다 먼저",
+        "진입점 import 실패가 모델 만들기보다 먼저",
+    ],
+)
+async def test_준비의_순서는_부재_깨짐_꺼짐_진입점_모델_만들기다(
+    plant: Callable[[], FakePlugins],
+    error: type[PluginError],
+    message: str,
+    loads: int,
+    trace: FakeTrace,
+    clock: FakeClock,
+) -> None:
+    """모델의 자리는 mcp 뒤, 운영자 파일의 손상 앞(깨짐)과 mcp 뒤(꺼짐)이고 만들기는 import 뒤다.
+    모델 만들기도 함께 부서 있어서(`failure`), 만들기가 먼저였으면 그 문구가 나온다."""
+    models = FakeModels(_idle(), failure="모델을 만들 수 없다")
+    plugins = plant()
+
+    with pytest.raises(error, match=message):
+        await _run(OneShotAgent(), _idle(), trace, clock, plugins=plugins, models=models)
+
+    assert plugins.loads == loads
+    assert trace.events == []
+    assert models.built == []
+
+
+# 재개와 이어 가기
+
+
+async def test_재개는_지금_디스크의_모델_매니페스트로_모델을_다시_만든다(
+    trace: FakeTrace, clock: FakeClock
+) -> None:
+    """멈춘 사이 운영자가 `max_tokens` 를 고치면 재개가 그것을 듣는다(스토리 20). 모델 소스는
+    결정 이벤트를 쓰기 전의 준비에서 불린다."""
+    model = ToolAwareFakeModel(messages=iter([_tool_request("send"), _reply("보냈다")]))
+    models = FakeModels(model)
+    tools = _two_tools()
+    plugins = _gated_plugins(OneShotAgent())
+
+    await _run(OneShotAgent(), model, trace, clock, tools=tools, plugins=plugins, models=models)
+    plugins.model_manifests[DEFAULT_MODEL] = model_manifest(DEFAULT_MODEL, max_tokens=9)
+    events = await _resume(
+        RunId("run-1"), model, trace, clock, tools=tools, plugins=plugins, models=models
+    )
+
+    assert events[-1].type == "run_finished"
+    assert [m.max_tokens for m in models.built] == [None, 9]
+
+
+async def test_재개는_기록된_에이전트가_고른_모델을_쓴다(
+    trace: FakeTrace, clock: FakeClock
+) -> None:
+    model = ToolAwareFakeModel(messages=iter([_tool_request("send"), _reply("보냈다")]))
+    models = FakeModels(model)
+    tools = _two_tools()
+    plugins = _gated_plugins(OneShotAgent())
+    plugins.model_manifests[ALT_MODEL] = model_manifest(ALT_MODEL)
+    plugins.agent_model = ALT_MODEL
+
+    await _run(OneShotAgent(), model, trace, clock, tools=tools, plugins=plugins, models=models)
+    await _resume(RunId("run-1"), model, trace, clock, tools=tools, plugins=plugins, models=models)
+
+    assert [m.name for m in models.built] == [ALT_MODEL, ALT_MODEL]
+
+
+async def test_멈춘_사이_모델이_꺼지면_재개는_Disabled_이고_트레이스가_그대로다(
+    trace: FakeTrace, clock: FakeClock
+) -> None:
+    """모델 꺼짐도 에이전트·mcp처럼 결정 이벤트를 쓰기 전의 준비에서 막는다."""
+    model = ToolAwareFakeModel(messages=iter([_tool_request("send"), _reply("보냈다")]))
+    models = FakeModels(model)
+    tools = _two_tools()
+    plugins = _gated_plugins(OneShotAgent())
+    await _run(OneShotAgent(), model, trace, clock, tools=tools, plugins=plugins, models=models)
+    written = list(trace.events)
+    plugins.disabled |= {_model_key(DEFAULT_MODEL)}
+
+    with pytest.raises(Disabled, match="꺼진 플러그인이다: model"):
+        await _resume(
+            RunId("run-1"), model, trace, clock, tools=tools, plugins=plugins, models=models
+        )
+
+    assert trace.events == written
+
+
+async def test_이어_가기의_대화_요약은_에이전트가_고른_모델로_돈다(
+    clock: FakeClock,
+) -> None:
+    """요약 이벤트의 `model` 이 에이전트가 고른 모델 쪽이다(ADR 0022, 스토리 20). 모델 하나를 만들어
+    요약과 에이전트가 함께 쓴다."""
+    trace = FakeTrace()
+    last = _chain(trace, 4, 7)
+    models = FakeModels(
+        _answering("기본 요약", "default-model-id"),
+        {ALT_MODEL: _answering("고른 요약", "alt-model-id")},
+    )
+    plugins = FakePlugins(
+        {"calc": WeavingAgent()},
+        conversation_limit=10,
+        models=[DEFAULT_MODEL, ALT_MODEL],
+        agent_model=ALT_MODEL,
+    )
+
+    events = await _continue(last, trace, clock, plugins=plugins, models=models)
+
+    assert _summary_event(events).model == "alt-model-id"
+    assert [m.name for m in models.built] == [ALT_MODEL]

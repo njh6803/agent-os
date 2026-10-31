@@ -42,11 +42,11 @@ from agent_os import sdk
 from agent_os.channel.http.bodies import Decision, StartRun
 from agent_os.channel.http.end_user import end_user_router
 from agent_os.channel.http.runs import Runs, RunStream
-from agent_os.core.ports import ChatModel, Clock, PluginSource, ToolSource, TraceStore
+from agent_os.core.ports import Clock, ModelSource, PluginSource, ToolSource, TraceStore
 from agent_os.core.run import resume, run
 from agent_os.http.errors import request_id_of
 from agent_os.http.routes import EventSourceWithJsonErrors, documented_errors
-from agent_os.sdk import RUN_ID_PATTERN, Principal, RunId
+from agent_os.sdk import RUN_ID_PATTERN, PluginName, Principal, RunId
 
 # 채널 토큰이 여는 접두사이자 운영자 채널 라우트의 접두사(ADR 0015). 한 값이라 운영자 채널의
 # 라우트가 채널 토큰의 면 밖에 설 길이 없다. 인증 표를 넘기는 조립 층이 이것을 읽는다.
@@ -63,7 +63,8 @@ type Event = sdk.Event
 def channel_router(
     *,
     plugins: PluginSource,
-    model: ChatModel,
+    default_model: PluginName,
+    models: ModelSource,
     tools: ToolSource,
     trace: TraceStore,
     clock: Clock,
@@ -91,7 +92,8 @@ def channel_router(
         _operator_router(
             runs,
             plugins=plugins,
-            model=model,
+            default_model=default_model,
+            models=models,
             tools=tools,
             trace=trace,
             clock=clock,
@@ -103,7 +105,8 @@ def channel_router(
         end_user_router(
             runs,
             plugins=plugins,
-            model=model,
+            default_model=default_model,
+            models=models,
             tools=tools,
             trace=trace,
             clock=clock,
@@ -117,7 +120,8 @@ def _operator_router(
     runs: Runs,
     *,
     plugins: PluginSource,
-    model: ChatModel,
+    default_model: PluginName,
+    models: ModelSource,
     tools: ToolSource,
     trace: TraceStore,
     clock: Clock,
@@ -140,7 +144,8 @@ def _operator_router(
             previous_run=previous_run,
             timeout_seconds=run_timeout_seconds,
             plugins=plugins,
-            model=model,
+            default_model=default_model,
+            models=models,
             tools=tools,
             trace=trace,
             clock=clock,
@@ -191,7 +196,8 @@ def _operator_router(
             principal,
             timeout_seconds=run_timeout_seconds,
             plugins=plugins,
-            model=model,
+            default_model=default_model,
+            models=models,
             tools=tools,
             trace=trace,
             clock=clock,
@@ -206,12 +212,12 @@ def _operator_router(
     # 404 는 없는 실행, 409 는 결정을 받을 수 없는 실행이다. 뜻이 다섯이고 메시지가 가른다 — 그
     # 실행이 다른 주체의 것(ADR 0009 의 2026-10-03 이력), 형식 1 트레이스(ADR 0014), 일시정지가 아닌
     # 실행, 지금의 일시정지가 아닌 자리를 든 결정(ADR 0014 의 2026-09-28 이력), 그 실행의 에이전트나
-    # 그것이 쓰는 mcp 가 꺼짐(ADR 0017). 받지 않은 결정은 쓰이지 않는다. 꺼짐이면 다시 켠 뒤 같은
-    # 결정을 보낼 수 있다. 자리 어긋남은 그 결정이 본 일시정지가 이미 지나간 것이라 같은 결정은 다시
-    # 보내도 받아들여지지 않는다. 트레이스가 가리키는 에이전트가 사라진 실행은 요청이 아니라 서버의
-    # 기록이 댄 이름이라 404 가 아니라 500 이다(ADR 0014 의 2026-09-24 이력). `{run_id}` 는
-    # `traces/{run_id}.jsonl` 로 조립되는 원격 입력이라 관리의 `/traces/{run_id}` 와 같이 `verbatim`
-    # 과 sdk 의 패턴을 지난다. 계약의 경로는 변환기 없이 적힌다.
+    # 그것이 쓰는 mcp 나 모델이 꺼짐(ADR 0017, ADR 0040). 받지 않은 결정은 쓰이지 않는다. 꺼짐이면
+    # 다시 켠 뒤 같은 결정을 보낼 수 있다. 자리 어긋남은 그 결정이 본 일시정지가 이미 지나간 것이라
+    # 같은 결정은 다시 보내도 받아들여지지 않는다. 트레이스가 가리키는 에이전트가 사라진 실행은
+    # 요청이 아니라 서버의 기록이 댄 이름이라 404 가 아니라 500 이다(ADR 0014 의 2026-09-24 이력).
+    # `{run_id}` 는 `traces/{run_id}.jsonl` 로 조립되는 원격 입력이라 관리의 `/traces/{run_id}` 와
+    # 같이 `verbatim` 과 sdk 의 패턴을 지난다. 계약의 경로는 변환기 없이 적힌다.
     @router.post(
         "/{run_id:verbatim}/approval",
         operation_id="decide_approval",
@@ -239,8 +245,8 @@ def _operator_router(
     # 404 는 없는 앞 실행이거나 없는 에이전트이고 메시지가 가른다. 409 는 뜻이 셋이고 메시지가
     # 가른다 — 앞 실행이 다른 주체의 것(`DifferentPrincipal`), 앞 실행이 `run_finished` 로 끝나지
     # 않음 (`NotContinuable`, 메시지가 실패·일시정지·결말 없음을 든다), 요청한 에이전트나 그것이
-    # 쓰는 mcp 가 꺼짐(`Disabled`). 500 은 거슬러 읽는 고리가 깨진 것(없거나 손상이거나 주체가
-    # 다르거나 끝나지 않았거나 순환하는 실행)과 그 밖의 구성 오류이고, 봉투의 `message` 가 그
+    # 쓰는 mcp 나 모델이 꺼짐(`Disabled`). 500 은 거슬러 읽는 고리가 깨진 것(없거나 손상이거나
+    # 주체가 다르거나 끝나지 않았거나 순환하는 실행)과 그 밖의 구성 오류이고, 봉투의 `message` 가 그
     # `PluginError` 의 문구라 운영자가 어느 실행을 되살려야 하는지 안다. 전부 실행 식별자를 만들기
     # 전이라 트레이스가 생기지 않는다(ADR 0022). `{run_id}` 는 결정 경로와 같이 `verbatim` 과 sdk 의
     # 패턴을 지난다.

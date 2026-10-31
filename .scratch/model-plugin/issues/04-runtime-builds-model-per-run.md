@@ -8,60 +8,61 @@
 
 **Blocked by:** 01(에이전트의 `model`과 모델 매니페스트의 칸), 02(이 티켓부터 모든 실행이 모델 파일을 읽어, 거부 문구가 운영자 면 500과 서버 기록으로 나간다), 03(격리 루트와 두 e2e 스택의 기본 모델 매니페스트)
 
-**Status:** ready-for-agent
+**Status:** done
 
 ### 포트와 진입점
 
-- [ ] **`.claude/rules/core.md` 포트 표의 모델 행이 `ChatModel`에서 `ModelSource`로 바뀐다.** 메서드는 하나이고 모델 매니페스트(`PluginManifest`)를 받아 모델(`ChatModel`)을 돌려준다. **메서드는 동기다.** 재개는 준비를 결정 이벤트 쓰기 앞에서 해서 모델 만들기도 재개의 첫 걸음 안이고, 그 첫 걸음에 `await`가 없다는 불변식(core.md의 재개 항목)과 HTTP 채널의 동시 재개 시험이 여기 걸린다. `ChatModel`(`BaseChatModel`)은 포트가 아니라 만든 모델의 타입으로 남고, 루프와 대화 요약은 지금처럼 그 타입을 받는다. 포트는 다섯 그대로다(ADR 0012, 스토리 25). 메서드의 이름과 모델 소스를 받는 인자의 이름은 이 티켓이 짓되 `ToolSource`·`PluginSource`와 같은 꼴이다. 기본 모델의 인자 `default_model`은 명세의 "기본 모델의 입구"가 정했다
-- [ ] **`run()`·`resume()`이 모델 소스와 키워드 전용 필수 인자 `default_model`(`PluginName`)을 받고 옛 `model` 인자가 없어진다.** `create_app`, 운영자 채널과 최종 사용자 경로의 라우터, CLI의 `run`·`resume` 명령 함수가 같은 둘을 받아 그대로 넘긴다. 명세 검토가 명세의 목록에 없던 호출 자리를 더했다. `tools/export_openapi.py`(앱을 조립한다), `tests/test_calc_plugin.py`, `tests/channel/http/test_router.py`, `tests/channel/http/test_end_user.py`, `tests/test_server.py`다
-- [ ] **가짜 모델 소스는 포트 Protocol을 상속하지 않고 시그니처로 만족하며, 픽스처가 포트 타입으로 annotate한다**(`.claude/rules/tests.md`). 어느 매니페스트로 몇 번 만들었는지 기록하고 `GenericFakeChatModel`을 돌려준다. 가짜 플러그인 소스(`tests/core/test_run.py`의 `FakePlugins`)는 모델 매니페스트를 이름별로 든다. to-tickets 시점에 그 파일에서 가짜 모델을 만드는 호출은 170곳이다(`GenericFakeChatModel` 98, 그것을 상속한 `ToolAwareFakeModel` 65, 그 하위 클래스 `SleepyModel` 6과 `UnbindableModel` 1. 클래스 정의를 빼고 `grep -o`로 셌다). 시험 도우미(`_run`과 재개의 도우미)가 가짜 모델을 받아 가짜 모델 소스로 감싸면 그 자리들을 그대로 둘 수 있다
+- [x] **`.claude/rules/core.md` 포트 표의 모델 행이 `ChatModel`에서 `ModelSource`로 바뀐다.** 메서드는 하나이고 모델 매니페스트(`PluginManifest`)를 받아 모델(`ChatModel`)을 돌려준다. **메서드는 동기다.** 재개는 준비를 결정 이벤트 쓰기 앞에서 해서 모델 만들기도 재개의 첫 걸음 안이고, 그 첫 걸음에 `await`가 없다는 불변식(core.md의 재개 항목)과 HTTP 채널의 동시 재개 시험이 여기 걸린다. `ChatModel`(`BaseChatModel`)은 포트가 아니라 만든 모델의 타입으로 남고, 루프와 대화 요약은 지금처럼 그 타입을 받는다. 포트는 다섯 그대로다(ADR 0012, 스토리 25). 메서드의 이름과 모델 소스를 받는 인자의 이름은 이 티켓이 짓되 `ToolSource`·`PluginSource`와 같은 꼴이다. 기본 모델의 인자 `default_model`은 명세의 "기본 모델의 입구"가 정했다
+- [x] **`run()`·`resume()`이 모델 소스와 키워드 전용 필수 인자 `default_model`(`PluginName`)을 받고 옛 `model` 인자가 없어진다.** `create_app`, 운영자 채널과 최종 사용자 경로의 라우터, CLI의 `run`·`resume` 명령 함수가 같은 둘을 받아 그대로 넘긴다. 명세 검토가 명세의 목록에 없던 호출 자리를 더했다. `tools/export_openapi.py`(앱을 조립한다), `tests/test_calc_plugin.py`, `tests/channel/http/test_router.py`, `tests/channel/http/test_end_user.py`, `tests/test_server.py`다
+- [x] **가짜 모델 소스는 포트 Protocol을 상속하지 않고 시그니처로 만족하며, 픽스처가 포트 타입으로 annotate한다**(`.claude/rules/tests.md`). 어느 매니페스트로 몇 번 만들었는지 기록하고 `GenericFakeChatModel`을 돌려준다. 가짜 플러그인 소스(`tests/core/test_run.py`의 `FakePlugins`)는 모델 매니페스트를 이름별로 든다. to-tickets 시점에 그 파일에서 가짜 모델을 만드는 호출은 170곳이다(`GenericFakeChatModel` 98, 그것을 상속한 `ToolAwareFakeModel` 65, 그 하위 클래스 `SleepyModel` 6과 `UnbindableModel` 1. 클래스 정의를 빼고 `grep -o`로 셌다). 시험 도우미(`_run`과 재개의 도우미)가 가짜 모델을 받아 가짜 모델 소스로 감싸면 그 자리들을 그대로 둘 수 있다
 
 ### 준비의 순서와 문구
 
-- [ ] **준비의 순서는 부재 → 깨짐(mcp 없음 → 마스킹과 승인의 충돌 → 모델 없음·읽히지 않음 → 운영자 파일의 손상) → 꺼짐(에이전트 → mcp → 모델) → 진입점 import → 모델 만들기다.** 깨짐과 꺼짐이 같은 순서(에이전트 → mcp → 모델) 하나다. 시험은 결함 둘을 함께 심어 어느 오류가 먼저 나오는지로 잰다. 선례는 `tests/core/test_run.py`의 "실행 전 실패의 갈래"·"꺼진 플러그인" 절이다. 꺼진 에이전트를 import하지 않는다는 지금의 시험 불변식은 그대로다
-- [ ] **모델의 이름은 에이전트 매니페스트의 `model`, 없으면 `default_model`이다.** 없음의 문구는 에이전트가 적은 모델이면 `에이전트 X 이 지정한 model 플러그인이 없다: 이름`, 기본 모델이면 `기본 모델 플러그인이 없다: 이름`이다(명세가 정한 새 문구, 스토리 17). 읽히지 않음은 어댑터의 `PluginError` 그대로이고 02 덕분에 입력값을 싣지 않는다. 시험이 문구를 단언한다
-- [ ] **꺼진 모델은 `Disabled`이고 운영자 면의 문구는 `꺼진 플러그인이다: model 이름 (에이전트 X 이 쓴다)`다**(명세가 정한 새 문구, 스토리 3·4). 최종 사용자 면은 `failure_for`의 표가 지금처럼 고정 문구(`UNAVAILABLE_MESSAGE`)의 409로 덮는다. 라우트도 표도 바뀌지 않고 시험이 고정한다(스토리 18). 기본 모델이 꺼진 것은 그것을 쓰는 실행의 409다
-- [ ] **모델 매니페스트는 준비 한 번에 한 번 읽고, 꺼진 집합도 지금처럼 한 번 읽어 셋을 본다.** 가짜 플러그인 소스의 읽기 횟수로 잰다
-- [ ] **모델 만들기는 준비의 마지막이고 실행마다 새 객체다.** 준비 결과가 그것을 들어 몸통에 넘긴다. 만들기의 실패(어댑터의 `PluginError`)는 실행 전 실패이고 `run_started` 전이다. 만든 모델을 캐시하지 않는다(거부한 안). 같은 매니페스트로 두 번 돌면 두 번 만드는 것과, 두 실행 사이에 매니페스트의 `max_tokens`를 바꾸면 둘째가 바뀐 매니페스트로 만드는 것을 가짜 모델 소스의 기록으로 본다(스토리 2)
-- [ ] **재개는 기록된 에이전트의 매니페스트를 지금 디스크에서 읽어 같은 순서를 지나고, 이어 가기의 대화 요약은 그 실행의 모델이다**(ADR 0022, 스토리 20). 가짜 모델 소스가 매니페스트마다 다른 가짜 모델을 돌려주게 해서, 요약 이벤트의 `model`이 에이전트가 고른 모델 쪽인지 본다(명세의 "이음매" 2026-10-31 주석). 재개의 동시 결정 시험(첫 걸음에 `await`가 없음)이 초록이다
-- [ ] **실행 전 실패의 열거를 든 독스트링(`Absent`·`Disabled`·`PluginError`와 core 실행 모듈의 모듈 독스트링)에 모델이 는다**
+- [x] **준비의 순서는 부재 → 깨짐(mcp 없음 → 마스킹과 승인의 충돌 → 모델 없음·읽히지 않음 → 운영자 파일의 손상) → 꺼짐(에이전트 → mcp → 모델) → 진입점 import → 모델 만들기다.** 깨짐과 꺼짐이 같은 순서(에이전트 → mcp → 모델) 하나다. 시험은 결함 둘을 함께 심어 어느 오류가 먼저 나오는지로 잰다. 선례는 `tests/core/test_run.py`의 "실행 전 실패의 갈래"·"꺼진 플러그인" 절이다. 꺼진 에이전트를 import하지 않는다는 지금의 시험 불변식은 그대로다
+- [x] **모델의 이름은 에이전트 매니페스트의 `model`, 없으면 `default_model`이다.** 없음의 문구는 에이전트가 적은 모델이면 `에이전트 X 이 지정한 model 플러그인이 없다: 이름`, 기본 모델이면 `기본 모델 플러그인이 없다: 이름`이다(명세가 정한 새 문구, 스토리 17). 읽히지 않음은 어댑터의 `PluginError` 그대로이고 02 덕분에 입력값을 싣지 않는다. 시험이 문구를 단언한다
+- [x] **꺼진 모델은 `Disabled`이고 운영자 면의 문구는 `꺼진 플러그인이다: model 이름 (에이전트 X 이 쓴다)`다**(명세가 정한 새 문구, 스토리 3·4). 최종 사용자 면은 `failure_for`의 표가 지금처럼 고정 문구(`UNAVAILABLE_MESSAGE`)의 409로 덮는다. 라우트도 표도 바뀌지 않고 시험이 고정한다(스토리 18). 기본 모델이 꺼진 것은 그것을 쓰는 실행의 409다
+- [x] **모델 매니페스트는 준비 한 번에 한 번 읽고, 꺼진 집합도 지금처럼 한 번 읽어 셋을 본다.** 가짜 플러그인 소스의 읽기 횟수로 잰다
+- [x] **모델 만들기는 준비의 마지막이고 실행마다 새 객체다.** 준비 결과가 그것을 들어 몸통에 넘긴다. 만들기의 실패(어댑터의 `PluginError`)는 실행 전 실패이고 `run_started` 전이다. 만든 모델을 캐시하지 않는다(거부한 안). 같은 매니페스트로 두 번 돌면 두 번 만드는 것과, 두 실행 사이에 매니페스트의 `max_tokens`를 바꾸면 둘째가 바뀐 매니페스트로 만드는 것을 가짜 모델 소스의 기록으로 본다(스토리 2)
+- [x] **재개는 기록된 에이전트의 매니페스트를 지금 디스크에서 읽어 같은 순서를 지나고, 이어 가기의 대화 요약은 그 실행의 모델이다**(ADR 0022, 스토리 20). 가짜 모델 소스가 매니페스트마다 다른 가짜 모델을 돌려주게 해서, 요약 이벤트의 `model`이 에이전트가 고른 모델 쪽인지 본다(명세의 "이음매" 2026-10-31 주석). 재개의 동시 결정 시험(첫 걸음에 `await`가 없음)이 초록이다
+- [x] **실행 전 실패의 열거를 든 독스트링(`Absent`·`Disabled`·`PluginError`와 core 실행 모듈의 모듈 독스트링)에 모델이 는다**
 
 ### 어댑터
 
-- [ ] **`adapters/anthropic.py`에 모델 소스의 구현 하나가 선다.** 먼저 `provider`나 `model_id`가 없는 매니페스트(모델이 아닌 종류)를 `PluginError`로 거르는 갈래 하나를 두고, 그 뒤 `provider`를 닫힌 열거로 가른다(`match`. 값이 늘면 pyright가 빠진 갈래를 본다). `anthropic`이면 `model_id`를 모델 이름으로, `max_tokens`가 없으면 지금의 고정값 16000을, `temperature`는 있을 때만 넘기고, `timeout`·`stop`은 지금처럼 비워 `ChatAnthropic`을 만든다. `anthropic` 갈래 안에서 `model_id`를 다시 좁히지 않는다. sdk의 검증자가 둘이 함께 있음을 보장해 그 갈래는 어떤 입력도 닿지 않는다(명세 "어댑터의 모양"의 2026-10-31 주석). 선례 문구는 `entrypoint` 없는 매니페스트를 `load_agent`가 거부하는 것이다
-- [ ] **core는 모델 아닌 종류를 다시 거르지도 시험하지도 않는다.** `read_manifest(MODEL, …)`가 종류를 거르고 core는 칸을 꺼내 쓰지 않는다. core 시험은 "없음"과 "읽히지 않음(`PluginError`)" 둘만 본다
-- [ ] **이름으로 모델 하나를 만들던 함수(`anthropic_chat_model`)는 모델 소스 안으로 들어간다.** API 키는 지금처럼 `ChatAnthropic`이 환경에서 읽고 어댑터는 키 값을 만지지 않는다(원칙 V, 스토리 10). 키가 없는 것은 만들 때가 아니라 첫 호출에서 드러나 그 실행은 지금처럼 원인 `model_call`의 `run_failed`다(ADR 0031, 프로브가 쟀다)
-- [ ] **어댑터 시험(`tests/adapters/test_anthropic.py`).** 플러그인 이름과 `model_id`가 다른 매니페스트로 만든 인스턴스의 모델 이름이 `model_id`인 것, `max_tokens`가 있을 때와 없을 때(16000), `temperature`가 있을 때와 없을 때, 에이전트 매니페스트를 주면 `PluginError`인 것(이 갈래의 시험은 여기 하나다). 선례는 `test_정한_이름이_그대로_모델_인스턴스에_닿는다`다. `anthropic_chat_model`을 직접 부르던 사례는 모델 소스로 옮긴다. 기본값(`DEFAULT_MODEL`) 사례는 05가 걷는다
+- [x] **`adapters/anthropic.py`에 모델 소스의 구현 하나가 선다.** 먼저 `provider`나 `model_id`가 없는 매니페스트(모델이 아닌 종류)를 `PluginError`로 거르는 갈래 하나를 두고, 그 뒤 `provider`를 닫힌 열거로 가른다(`match`. 값이 늘면 pyright가 빠진 갈래를 본다). `anthropic`이면 `model_id`를 모델 이름으로, `max_tokens`가 없으면 지금의 고정값 16000을, `temperature`는 있을 때만 넘기고, `timeout`·`stop`은 지금처럼 비워 `ChatAnthropic`을 만든다. `anthropic` 갈래 안에서 `model_id`를 다시 좁히지 않는다. sdk의 검증자가 둘이 함께 있음을 보장해 그 갈래는 어떤 입력도 닿지 않는다(명세 "어댑터의 모양"의 2026-10-31 주석). 선례 문구는 `entrypoint` 없는 매니페스트를 `load_agent`가 거부하는 것이다
+- [x] **core는 모델 아닌 종류를 다시 거르지도 시험하지도 않는다.** `read_manifest(MODEL, …)`가 종류를 거르고 core는 칸을 꺼내 쓰지 않는다. core 시험은 "없음"과 "읽히지 않음(`PluginError`)" 둘만 본다
+- [x] **이름으로 모델 하나를 만들던 함수(`anthropic_chat_model`)는 모델 소스 안으로 들어간다.** API 키는 지금처럼 `ChatAnthropic`이 환경에서 읽고 어댑터는 키 값을 만지지 않는다(원칙 V, 스토리 10). 키가 없는 것은 만들 때가 아니라 첫 호출에서 드러나 그 실행은 지금처럼 원인 `model_call`의 `run_failed`다(ADR 0031, 프로브가 쟀다)
+- [x] **어댑터 시험(`tests/adapters/test_anthropic.py`).** 플러그인 이름과 `model_id`가 다른 매니페스트로 만든 인스턴스의 모델 이름이 `model_id`인 것, `max_tokens`가 있을 때와 없을 때(16000), `temperature`가 있을 때와 없을 때, 에이전트 매니페스트를 주면 `PluginError`인 것(이 갈래의 시험은 여기 하나다). 선례는 `test_정한_이름이_그대로_모델_인스턴스에_닿는다`다. `anthropic_chat_model`을 직접 부르던 사례는 모델 소스로 옮긴다. 기본값(`DEFAULT_MODEL`) 사례는 05가 걷는다
 
 ### 조립과 경계의 이름 검증
 
-- [ ] **`main.py`가 기본 모델의 이름을 지금 규칙(플래그 > 환경변수 > 코드의 기본값)으로 푼 뒤 `is_plugin_name`으로 걸러 `PluginName`으로 감싼다**(`sdk/ids.py`의 경계 규칙). 패턴을 어기면 빈 이름과 같은 자리의 구성 오류다. `serve`는 구성 문제 목록의 한 항목이고 CLI `run`·`resume`은 표준 에러에 문구를 적고 `EXIT_FAILED`로 끝난다. 문구는 값과 패턴을 든다. 시험이 둘 다 본다
-- [ ] **`serve`는 시작 때 모델을 만들지 않고, 모델 소스와 기본 모델의 이름을 `create_app`에 넘긴다.** `serve`가 모델 생성 함수를 가로채 이름과 횟수를 재던 시험(`tests/test_main.py`의 `test_serve_는_모델을_시작_때_한_번_플래그_환경변수_기본값_순으로_푼다`)은 넘긴 이름을 재도록 바꾸고, 같은 함수를 가로채 가짜 모델을 꽂던 다른 시험 둘(`serve`가 세운 앱의 실행 타임아웃과 전역 동시 실행 상한을 재는 것)은 가짜 모델 소스로 옮긴다. 기본값을 단언하는 줄은 05가 고친다
-- [ ] **`.claude/rules/adapters.md`의 "ChatAnthropic 인스턴스는 `adapters/anthropic.py`의 factory로 `main.py`가 만든다"를 고친다.** 조립(`main.py`)은 모델 소스를 만들어 넘기고 모델은 core가 실행마다 그것으로 만든다
-- [ ] **모델을 시작 때 한 번 푼다고 적은 독스트링을 고친다.** `main.py`의 `_serve`·`_model_problem`과 `channel/cli/main.py`의 모듈 독스트링이다. 시작 때 한 번 푸는 것은 이름이고 모델은 실행마다다
+- [x] **`main.py`가 기본 모델의 이름을 지금 규칙(플래그 > 환경변수 > 코드의 기본값)으로 푼 뒤 `is_plugin_name`으로 걸러 `PluginName`으로 감싼다**(`sdk/ids.py`의 경계 규칙). 패턴을 어기면 빈 이름과 같은 자리의 구성 오류다. `serve`는 구성 문제 목록의 한 항목이고 CLI `run`·`resume`은 표준 에러에 문구를 적고 `EXIT_FAILED`로 끝난다. 문구는 값과 패턴을 든다. 시험이 둘 다 본다
+- [x] **`serve`는 시작 때 모델을 만들지 않고, 모델 소스와 기본 모델의 이름을 `create_app`에 넘긴다.** `serve`가 모델 생성 함수를 가로채 이름과 횟수를 재던 시험(`tests/test_main.py`의 `test_serve_는_모델을_시작_때_한_번_플래그_환경변수_기본값_순으로_푼다`)은 넘긴 이름을 재도록 바꾸고, 같은 함수를 가로채 가짜 모델을 꽂던 다른 시험 둘(`serve`가 세운 앱의 실행 타임아웃과 전역 동시 실행 상한을 재는 것)은 가짜 모델 소스로 옮긴다. 기본값을 단언하는 줄은 05가 고친다
+- [x] **`.claude/rules/adapters.md`의 "ChatAnthropic 인스턴스는 `adapters/anthropic.py`의 factory로 `main.py`가 만든다"를 고친다.** 조립(`main.py`)은 모델 소스를 만들어 넘기고 모델은 core가 실행마다 그것으로 만든다
+- [x] **모델을 시작 때 한 번 푼다고 적은 독스트링을 고친다.** `main.py`의 `_serve`·`_model_problem`과 `channel/cli/main.py`의 모듈 독스트링이다. 시작 때 한 번 푸는 것은 이름이고 모델은 실행마다다
 
 ### HTTP 두 면
 
-- [ ] **운영자 채널에서 없는 모델은 원문의 500, 꺼진 모델은 종류·이름·에이전트를 든 409다.** 최종 사용자 면에서는 고정 문구의 500과 409이고 위젯이 저장한 대화를 지우지 않는다(스토리 19). 선례는 `tests/test_server.py`의 두 면 상태 코드 시험과 `SONNET`, `tests/channel/http/`의 라우터 시험이다
-- [ ] **`.claude/rules/http.md`의 최종 사용자 500 목록("요청한 에이전트와 그것이 쓰는 mcp와 진입점의 구성 오류")에 모델을 더한다**
+- [x] **운영자 채널에서 없는 모델은 원문의 500, 꺼진 모델은 종류·이름·에이전트를 든 409다.** 최종 사용자 면에서는 고정 문구의 500과 409이고 위젯이 저장한 대화를 지우지 않는다(스토리 19). 선례는 `tests/test_server.py`의 두 면 상태 코드 시험과 `SONNET`, `tests/channel/http/`의 라우터 시험이다
+- [x] **`.claude/rules/http.md`의 최종 사용자 500 목록("요청한 에이전트와 그것이 쓰는 mcp와 진입점의 구성 오류")에 모델을 더한다**
 
 ### 실제 모델 호출
 
-- [ ] **`tests/test_main.py`의 calc `-m llm` 시험이 어댑터가 `model_id`를 제공사에 보냈다는 바깥 증거를 든다.** 저장소의 플러그인을 복사한 `--plugins-root`에서 모델 플러그인의 이름을 `model_id`와 다르게 두고(내용은 저장소의 `claude-opus-5` 파일에서 `name`만 바꾼 것), `--model <그 이름>`으로 돌려 트레이스의 `llm_called.model`이 `claude-opus-5`인지 본다. 플러그인 이름과 `model_id`와 옛 기본값이 모두 같으면 이 단언은 어떤 구현에서도 초록이다(명세 "실제 모델 호출 하나"의 2026-10-31 주석, 스토리 21·23). 응답이 요청한 모델 이름을 그대로 돌려준다는 전제는 `tests/core/test_model.py`의 지금 단언에서 읽었고 API를 불러 보지 않았다. 다르게 돌아오면 그 값을 PR 본문에 적고 단언을 그 관계로 바꾼다
-- [ ] **`tests/core/test_model.py`의 `-m llm` 시험은 저장소 매니페스트로 모델 소스가 만든 모델을 쓴다.** 나머지 `-m llm` 시험은 수가 늘지 않는다
+- [x] **`tests/test_main.py`의 calc `-m llm` 시험이 어댑터가 `model_id`를 제공사에 보냈다는 바깥 증거를 든다.** 저장소의 플러그인을 복사한 `--plugins-root`에서 모델 플러그인의 이름을 `model_id`와 다르게 두고(내용은 저장소의 `claude-opus-5` 파일에서 `name`만 바꾼 것), `--model <그 이름>`으로 돌려 트레이스의 `llm_called.model`이 `claude-opus-5`인지 본다. 플러그인 이름과 `model_id`와 옛 기본값이 모두 같으면 이 단언은 어떤 구현에서도 초록이다(명세 "실제 모델 호출 하나"의 2026-10-31 주석, 스토리 21·23). 응답이 요청한 모델 이름을 그대로 돌려준다는 전제는 `tests/core/test_model.py`의 지금 단언에서 읽었고 API를 불러 보지 않았다. 다르게 돌아오면 그 값을 PR 본문에 적고 단언을 그 관계로 바꾼다
+- [x] **`tests/core/test_model.py`의 `-m llm` 시험은 저장소 매니페스트로 모델 소스가 만든 모델을 쓴다.** 나머지 `-m llm` 시험은 수가 늘지 않는다
 
 ### 규칙과 변이 표
 
-- [ ] **`.claude/rules/core.md`의 문장 넷을 고친다.** 포트 표의 모델 행, 준비 순서 문장(위 순서), `Disabled`를 적는 문장(에이전트와 그 mcp에 모델을 더한다), 대화 요약 항목의 "모델은 그 실행의 모델 포트 그대로"(그 실행의 모델 소스가 만든 모델)다
-- [ ] **`.claude/rules/sdk.md`에 런타임이 실행을 준비할 때마다 모델 매니페스트를 읽어 그 칸으로 모델을 만든다는 말을 더한다.** 01은 틈 동안에도 참인 칸의 모양만 적고 이 말을 이 티켓에 넘겼다
-- [ ] **원문에 지금 코드의 `model=model,`과 준비 호출을 든 변이 표 둘을 고친다.** `uv run python tools/mutate.py --check .scratch/end-user-channel/probes/timeout_mutations.toml .scratch/conversation/probes/continuation_mutations.toml`은 to-tickets 시점에 두 표의 변이 11개와 30개가 모두 원문을 한 번씩 찾는다고 냈다(명세 검토와 to-tickets 세션이 돌렸다). 바꾼 뒤 같은 명령이 다시 모두 원문을 찾는지 본다
-- [ ] **옛 표현을 저장소 전체에서 grep해 살아 있는 문서에 잔존이 0인지 본다**(`CLAUDE.md` 작업 규약 4). "모델 포트", "`main.py`가 만든다", 모델을 시작 때 한 번 푼다는 문장 따위다
+- [x] **`.claude/rules/core.md`의 문장 넷을 고친다.** 포트 표의 모델 행, 준비 순서 문장(위 순서), `Disabled`를 적는 문장(에이전트와 그 mcp에 모델을 더한다), 대화 요약 항목의 "모델은 그 실행의 모델 포트 그대로"(그 실행의 모델 소스가 만든 모델)다
+- [x] **`.claude/rules/sdk.md`에 런타임이 실행을 준비할 때마다 모델 매니페스트를 읽어 그 칸으로 모델을 만든다는 말을 더한다.** 01은 틈 동안에도 참인 칸의 모양만 적고 이 말을 이 티켓에 넘겼다
+- [x] **원문에 지금 코드의 `model=model,`과 준비 호출을 든 변이 표 둘을 고친다.** `uv run python tools/mutate.py --check .scratch/end-user-channel/probes/timeout_mutations.toml .scratch/conversation/probes/continuation_mutations.toml`은 to-tickets 시점에 두 표의 변이 11개와 30개가 모두 원문을 한 번씩 찾는다고 냈다(명세 검토와 to-tickets 세션이 돌렸다). 바꾼 뒤 같은 명령이 다시 모두 원문을 찾는지 본다
+- [x] **옛 표현을 저장소 전체에서 grep해 살아 있는 문서에 잔존이 0인지 본다**(`CLAUDE.md` 작업 규약 4). "모델 포트", "`main.py`가 만든다", 모델을 시작 때 한 번 푼다는 문장 따위다
 
 ### 검증
 
-- [ ] **빨강을 먼저 본다.** 첫 빨강은 가짜 모델 소스가 한 번도 불리지 않는 것이다(명세 "좋은 시험")
-- [ ] **검증 명령이 모두 초록이다.** 손으로 치는 다섯, `-m llm`, 그리고 서버 라우트와 최종 사용자 경로의 조립이 바뀌었으니 관리 화면 e2e와 위젯 e2e와 `-m llm_widget`을 친다
+- [x] **빨강을 먼저 본다.** 첫 빨강은 가짜 모델 소스가 한 번도 불리지 않는 것이다(명세 "좋은 시험")
+- [x] **검증 명령이 모두 초록이다.** 손으로 치는 다섯, `-m llm`, 그리고 서버 라우트와 최종 사용자 경로의 조립이 바뀌었으니 관리 화면 e2e와 위젯 e2e와 `-m llm_widget`을 친다
 
 ### 메모 (01의 PR 리뷰에서 넘어온 것)
 
 - sdk는 `model_id = "   "`(공백만)을 받는다. 01이 정한 경계는 "비지 않은 문자열"(`min_length=1`)뿐이고 공백 거르기는 요구에 없었다. 모델을 만드는 어댑터가 이 값을 제공사에 넘기기 전에 거를지(`PluginError`), 제공사가 거부하게 둘지 이 티켓이 정한다. 정하지 않으면 04 이후 첫 실행에서 제공사 오류로 드러난다.
+- **결정(04 구현):** 어댑터(`AnthropicModels.build`)가 공백뿐인 `model_id`를 제공사에 넘기기 전에 `PluginError`로 거른다. 모델이 아닌 종류의 매니페스트를 거르는 갈래 다음에 서는 둘째 갈래이고, 문구는 값을 되울리지 않는다. 실행은 `run_started` 전에 실패하고 트레이스가 남지 않는다. 시험은 `tests/adapters/test_anthropic.py`의 공백 `model_id` 사례(`" "`, `"\t"`, `" \n "`)다.

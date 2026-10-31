@@ -1,4 +1,4 @@
-"""ChatModel 포트가 돌려준 것을 우리 타입으로 바꾸는 경계.
+"""ChatModel(모델 소스가 만든 모델)이 돌려준 것을 우리 타입으로 바꾸는 경계.
 
 langchain의 AIMessage는 루프 밖으로 나가지 않는다(CODING_STANDARDS "서드파티는 경계에서 감싼다").
 """

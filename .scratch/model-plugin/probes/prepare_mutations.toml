@@ -1,0 +1,61 @@
+# 티켓 04(런타임이 실행마다 모델을 만든다)의 변이 표 3개. 구현 뒤에 쓴 시험과 구현 전부터 초록이던 순서 가드가
+# 빨강을 볼 수 있는지 잰다. 돌리는 법: uv run python tools/mutate.py .scratch/model-plugin/probes/prepare_mutations.toml
+
+[[mutation]]
+name = "에이전트가 고른 모델을 무시하고 늘 기본 모델의 이름을 쓴다"
+tests = ["tests/core/test_run.py", "-k", "모델"]
+expect = "red"
+expect_output = ["+ 에이전트 calc 이 지정한 model 플러그인이 없다: default-model"]
+
+[[mutation.edit]]
+file = "src/agent_os/core/run.py"
+old = '''
+    model_name = default_model if manifest.model is None else manifest.model
+    model_manifest = _resolve_model(plugins, manifest, model_name)
+'''
+new = '''
+    model_name = default_model
+    model_manifest = _resolve_model(plugins, manifest, model_name)
+'''
+
+[[mutation]]
+name = "모델 만들기를 진입점 import 앞으로 당긴다"
+tests = ["tests/core/test_run.py", "-k", "준비의_순서"]
+expect = "red"
+expect_output = ["Actual message: '모델을 만들 수 없다'"]
+
+[[mutation.edit]]
+file = "src/agent_os/core/run.py"
+old = '''
+    instance = plugins.load_agent(manifest)
+    return _Prepared(
+'''
+new = '''
+    built = models.build(model_manifest)
+    instance = plugins.load_agent(manifest)
+    return _Prepared(
+'''
+
+[[mutation.edit]]
+file = "src/agent_os/core/run.py"
+old = '''
+        model=models.build(model_manifest),
+'''
+new = '''
+        model=built,
+'''
+
+[[mutation]]
+name = "꺼진 집합을 에이전트가 고른 모델이 아니라 기본 모델의 이름으로 본다"
+tests = ["tests/core/test_run.py", "-k", "꺼진_모델을_쓰는_실행"]
+expect = "red"
+expect_output = ["DID NOT RAISE"]
+
+[[mutation.edit]]
+file = "src/agent_os/core/run.py"
+old = '''
+    _reject_disabled(plugins.read_disabled(), manifest, model_name)
+'''
+new = '''
+    _reject_disabled(plugins.read_disabled(), manifest, default_model)
+'''

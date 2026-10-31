@@ -27,6 +27,7 @@ from httpx import ASGITransport, AsyncClient
 from langchain_core.language_models.fake_chat_models import GenericFakeChatModel
 from pydantic import TypeAdapter
 from starlette.exceptions import HTTPException as StarletteHTTPException
+from tests.fake_models import DEFAULT_MODEL, FakeModels
 from tests.signing import (
     AUDIENCE,
     SigningKey,
@@ -53,6 +54,7 @@ from agent_os.core.ports import (
     Cursor,
     Disabled,
     ManifestRow,
+    ModelSource,
     NotResumable,
     PluginError,
     PluginKey,
@@ -435,12 +437,14 @@ def _admin_app(
 ) -> FastAPI:
     """관리를 미는 앱. 채널의 포트 셋은 불리지 않는 자리표시자다. 인자 타입이 포트 적합성을
     검증하는 자리다. 서명 토큰을 재는 테스트만 사이트 목록과 토큰의 시간을 셀 시계를 준다."""
+    models: ModelSource = FakeModels(GenericFakeChatModel(messages=iter(())))
     tools: ToolSource = IdleTools()
     idle: Clock = IdleClock()
     return create_app(
         plugins=plugins,
         trace=trace,
-        model=GenericFakeChatModel(messages=iter(())),
+        models=models,
+        default_model=DEFAULT_MODEL,
         tools=tools,
         clock=clock or idle,
         principal=Principal("alice"),

@@ -366,6 +366,7 @@ _Avoid_: 트리거, 호출(도구를 부르는 일과 섞인다)
 | `plan` | 무엇을 할지 정하고 아무것도 하지 않는다. 할 것이 없으면 None | `plan_fold` |
 | `<명사>_of` | 이미 손에 든 값에서 파생한다. 포트에 닿지 않는다 | `link_of`, `limit_of` |
 | `summarize` | 모델을 불러 대화 요약을 만든다. 명령이고 실패는 예외다 | `summarize` |
+| `build` | 받은 매니페스트 하나로 객체 하나를 새로 만든다. 포트 밖(키, 네트워크, 파일)에 닿지 않고, 부를 때마다 새 객체이며 캐시하지 않는다. 쓸 수 없는 모양의 매니페스트는 `PluginError` | `ModelSource.build` |
 | `take` | 상한을 보고 자리 하나를 차지한다. 명령이고, 걸리면 상한 초과를 던지며, 차지한 자리를 돌려준다 — 그것을 버리면 자리가 샌다 | `RunQuota.take`, `SubscriptionQuota.take` |
 | `give_back` | `take`가 준 자리를 돌려준다. 명령이고 자리 하나에 꼭 한 번이다 | `RunQuota.give_back`, `SubscriptionQuota.give_back` |
 | `add` | 받은 값 하나를 자기 집계에 더한다. 명령이고 자기 상태만 바꾼다 | `tools/token_report.py`의 `Tally.add`, `Period.add` |

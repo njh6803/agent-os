@@ -1,20 +1,25 @@
-"""ChatModel 포트가 돌려준 것이 경계에서 우리 타입으로 감싸이는지. 그리고 실제 호출 하나."""
+"""모델이 돌려준 것이 경계에서 우리 타입으로 감싸이는지. 그리고 실제 호출 하나."""
 
 import os
 from collections.abc import Mapping, Sequence
+from pathlib import Path
 
 import pytest
 from langchain_core.language_models.fake_chat_models import GenericFakeChatModel
 from langchain_core.messages import AIMessage, BaseMessage
 from langchain_core.messages.tool import ToolCall as LangchainToolCall
 
-from agent_os.adapters.anthropic import anthropic_chat_model, resolve_model_name
+from agent_os.adapters.anthropic import AnthropicModels
+from agent_os.adapters.filesystem import FilesystemPlugins
 from agent_os.core.loop import ModelCaller, model_caller, run_loop
 from agent_os.core.model import ModelReply, reply_from
-from agent_os.core.ports import ChatModel, ToolResult, ToolSpec
-from agent_os.sdk import Json, ToolCall
+from agent_os.core.ports import ChatModel, ModelSource, PluginSource, ToolResult, ToolSpec
+from agent_os.sdk import Json, PluginKind, PluginName, ToolCall
 
 NO_TOOLS: Sequence[ToolSpec] = []
+REPO_ROOT = Path(__file__).resolve().parents[2]
+# 저장소가 싣는 기본 모델 플러그인(`plugins/models/claude-opus-5`).
+DEFAULT_MODEL_PLUGIN = PluginName("claude-opus-5")
 
 
 async def _no_tool(name: str, args: Mapping[str, Json]) -> ToolResult:
@@ -73,10 +78,14 @@ async def test_도구_없는_루프는_한_바퀴로_끝나고_마지막_텍스�
 
 @pytest.mark.llm
 async def test_Anthropic_모델이_실제로_답한다() -> None:
-    """원칙 I의 판정. 키가 없으면 skip이 아니라 실패한다."""
+    """원칙 I의 판정. 키가 없으면 skip이 아니라 실패한다. 저장소의 모델 매니페스트를 읽어 모델
+    소스가 만든 모델로 부른다."""
     assert "ANTHROPIC_API_KEY" in os.environ, "ANTHROPIC_API_KEY 가 없다. .env 를 확인한다"
-    name = resolve_model_name(os.environ)
-    model = anthropic_chat_model(name)
+    plugins: PluginSource = FilesystemPlugins(REPO_ROOT / "plugins")
+    models: ModelSource = AnthropicModels()
+    manifest = plugins.read_manifest(PluginKind.MODEL, DEFAULT_MODEL_PLUGIN)
+    assert manifest is not None, "저장소의 기본 모델 플러그인이 없다"
+    model = models.build(manifest)
     calls: list[ModelReply] = []
 
     text = await run_loop(
@@ -84,6 +93,6 @@ async def test_Anthropic_모델이_실제로_답한다() -> None:
     )
 
     assert "4" in text
-    assert calls[0].model == name
+    assert calls[0].model == manifest.model_id
     assert calls[0].input_tokens > 0
     assert calls[0].output_tokens > 0
