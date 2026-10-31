@@ -205,7 +205,7 @@ open-session을 부른다 2026-10-31T12:23:58Z
 **회차.** CodeRabbit은 이 PR에 낸 첫 리뷰라 첫 회차다. claude-review는 12:23Z 코멘트가 첫 회차이고 12:35Z 코멘트(`6c6c1e80`)가 둘째 회차라 Critical·Major만 고친다.
 
 **고친 것.**
-1. [Major, CodeRabbit] 명세와 ADR 0040·0008이 "공통 넷만 적은 모델 파일이면 `GET /plugins`도 500"이라고 적었다. 코드를 읽어 보니 틀렸다. `adapters/filesystem.py`의 `list_manifests`가 `_row`에서 `PluginError`를 `UnreadableManifest`로 바꾸고 `admin/http.py`의 `_plugin_row`가 `PluginPlaceholder` 행으로 돌려준다. 500은 단건 조회에서만 난다(`.claude/rules/admin.md`가 목록의 전체 500을 운영자 파일 `disabled.toml`이 깨졌을 때로 한정한 것과 맞고, 일지 `2026-10-31-06`의 설계 세션이 ADR 0017의 그 문구를 매니페스트 쪽에도 걸친 것이 출처다). 그래서 ADR 0040 Consequences, ADR 0008 이력, 명세의 서두 (5)·사용자 이야기 9·`schema_version` 문장·Testing Decisions를 "상세는 500, 목록은 그 파일의 행만 표지 행"으로 고쳤다. 결정(옛 파일은 조용히 무시되지 않고 소리 나게 거부된다)은 그대로이고 소리가 나는 자리를 사실에 맞췄다. ADR 문구를 승인 뒤에 고친 것이라 사용자에게 보고에서 짚는다. 같은 까닭으로 claude-review 둘째 회차 Minor 중 "옛 파일 하나가 관리 목록 전체를 막는다"는 지적은 해소됐다(목록은 막히지 않는다).
+1. [Major, CodeRabbit] 명세와 ADR 0040·0008이 공통 넷만 적은 모델 파일이면 `GET /plugins`도 500이라고 적었다. 코드를 읽어 보니 틀렸다. `adapters/filesystem.py`의 `list_manifests`가 `_row`에서 `PluginError`를 `UnreadableManifest`로 바꾸고 `admin/http.py`의 `_plugin_row`가 `PluginPlaceholder` 행으로 돌려준다. 500은 단건 조회에서만 난다(`.claude/rules/admin.md`가 목록의 전체 500을 운영자 파일 `disabled.toml`이 깨졌을 때로 한정한 것과 맞고, 일지 `2026-10-31-06`의 설계 세션이 ADR 0017의 그 문구를 매니페스트 쪽에도 걸친 것이 출처다). 그래서 ADR 0040 Consequences, ADR 0008 이력, 명세의 서두 (5)·사용자 이야기 9·`schema_version` 문장·Testing Decisions를 상세는 500이고 목록은 그 파일의 행만 표지 행이라고 고쳤다. 결정(옛 파일은 조용히 무시되지 않고 소리 나게 거부된다)은 그대로이고 소리가 나는 자리를 사실에 맞췄다. ADR 문구를 승인 뒤에 고친 것이라 사용자에게 보고에서 짚는다. 같은 까닭으로 claude-review 둘째 회차 Minor 중 옛 파일 하나가 관리 목록 전체를 막는다는 지적은 해소됐다(목록은 막히지 않는다).
 2. [Minor, CodeRabbit] `.scratch/model-plugin/probes/manifest_fields.py`가 기대한 표지가 아닌 다른 표지의 거부와, 경고가 나지 않은 양성 대조를 측정으로 셌다(`probes.md` 첫 항목). 거부 회차는 `measured=matches(marker, expected)`로, 양성 대조는 `... and bool(texts)`로 고쳤다. 다시 돌려 종료 코드 0, 측정 29회차·측정 아님 0으로 README의 수와 같았다(`PYTHONUTF8=1 uv run python .scratch/model-plugin/probes/manifest_fields.py`, 손으로 봤다).
 3. [Minor, claude-review 두 회차가 같은 곳] 명세 Implementation Decisions 서두가 "구현 파일의 경로와 코드 조각은 적지 않는다"고 하면서 같은 절이 구현 경로를 들었다. "새로 짓지 않는다. 규칙 문서·ADR·테스트 선례의 경로와 ADR 0040이 이미 든 구현 경로는 옮겨 적는다"로 맞췄다.
 
@@ -220,3 +220,28 @@ to-tickets가 받을 일이 하나 있다. PR 직전 보안 리뷰가 봤지만 
 두 번째 일도 to-tickets가 받는다. 위 "이어받음"의 보류 (a)다. `ModelSource`가 모델 아닌 종류를 거르는 자리를 core의 준비 단계 한 곳에 둘지 어댑터에 둘지를 구현 티켓이 정해 두어야 시험이 중복되지 않는다.
 
 - 워크트리에서 병합하므로 주 체크아웃은 당기지 않는다. 새 세션을 열면 `directive.md`대로 "확인할 선행 조건"에 `주 체크아웃 미갱신`을 적고, 그 세션이 워크트리에 들어가기 전에 `tidy-checkouts`로 당긴다.
+
+## 인계 (커밋 뒤, 봇 회차 반영)
+
+커밋 `c109e0e9`(5개 파일, 22줄 더함·11줄 지움)가 pre-commit을 지나 섰다. `checks`(러너의 CHECKS 전부. pytest 365초, web-verify 458초), 마크다운 표, 줄 구분 문자, 변이 표, 인용 대조, 커밋 메시지가 Passed이고, ruff 둘은 `.py`가 스테이지되지 않아 Skipped다(`.scratch`의 프로브는 ruff 대상이 아니다). 인용 대조 경고 3건은 이 일지의 "이어받음"이 따옴표로 옮긴 문장이 저장소에 글자 그대로 없어서였고, 따옴표를 떼어 고쳤다(커밋하지 않았다). 커밋이 서자 인계 계기(`hook_handoff`. 세션 컨텍스트 202,416 토큰, 경계 `커밋 뒤`)가 와서 `handoff.md`를 Read로 열었다. 인계하지 않는 때 다섯에 들지 않는다. 커밋은 성공했고, 요청 범위는 PR과 병합까지라 이 경계에서 끝나지 않고, 이 세션의 지시문의 "이어받을 상태"는 `인계: PR 연 뒤`라 같은 경계가 아니고, 이 일지에 `인계 못함` 줄이 없다. 그래서 넘긴다.
+
+이 세션의 사용자 프롬프트는 지시문을 `open-session`이 한 줄로 옮긴 것 하나다. 이 세션이 고친 것은 위 "이어받음 (PR 연 뒤)"의 고친 것 셋이다. 이 세션의 제목은 `docs/model-plugin-spec`이고 지시문을 낸 뒤 `docs/model-plugin-spec (인계함)`으로 바꾼다.
+
+새 세션이 할 일은 `c109e0e9`를 푸시하는 것부터다. 이 일지의 커밋하지 않은 수정(따옴표 정리와 이 절)은 푸시 전에 한 커밋으로 싣는다. 푸시한 뒤 `@coderabbitai review` 코멘트와 `wait_ci`로 봇 회차를 잇는다. CodeRabbit은 이 PR에서 12:30Z에 첫 리뷰를 냈으므로 이 푸시 뒤의 리뷰는 둘째 회차이고, claude-review는 이 푸시로 셋째 회차이므로 둘 다 Critical·Major만 고치고 나머지는 보류 이유를 PR 코멘트에 남긴 뒤 병합한다. 보류한 Minor 셋은 위 "이어받음"의 보류 (a)(b)(c)이고 PR 코멘트에도 남긴다. (a)는 일지 "다음"에도 있다. 그 뒤 `merge.md` 4(워크트리에서 병합할 때), 이어서 `next-session`(다음 단계는 명세 검토와 `/to-tickets`)이다. 사용자에게 짚을 것이 하나 있다. ADR 0040 Consequences와 ADR 0008 이력의 문구를 승인 뒤에 고쳤다(목록은 500이 아니라 표지 행). 결정은 그대로이고 사실에 맞춘 것이다. 병합 보고에 이 한 줄을 넣는다.
+
+지시문:
+
+```
+다음 작업: 기능 model-plugin. 모델 플러그인을 런타임이 읽게 하는 설계(ADR 0040)의 명세 마무리(PR #443의 봇 회차 반영과 병합, next-session)
+다음 단계: PR 반영·병합
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /to-spec
+브랜치: docs/model-plugin-spec
+모델: Sonnet 5.5 / high. 2의 잇는 지시문
+읽을 것: docs/journal/2026-10-31-07-model-plugin-spec.md의 "이어받음 (PR 연 뒤)"부터 끝까지("인계 (커밋 뒤, 봇 회차 반영)"), .claude/skills/next-session/merge.md
+이어받을 상태: 인계: 커밋 뒤 docs/journal/2026-10-31-07-model-plugin-spec.md. PR #443(면제 PR, 티켓 없음)이 열려 있고 푸시된 헤드는 6c6c1e80이다. 로컬 커밋 c109e0e9(봇 첫 회차 반영)는 아직 푸시하지 않았고, 일지의 따옴표 정리와 "인계 (커밋 뒤, 봇 회차 반영)" 절은 커밋하지 않았다. 푸시 전에 일지만 한 커밋으로 싣는다. 남은 것: 푸시, @coderabbitai review 코멘트, wait_ci(CodeRabbit 둘째 회차·claude-review 셋째 회차라 Critical·Major만), 보류한 Minor 셋의 PR 코멘트, merge.md 4(워크트리에서 병합), 그 뒤 next-session(다음 단계는 명세 검토와 /to-tickets, 사람이 부른다). 병합 보고에 ADR 0040·0008 문구를 승인 뒤에 사실에 맞춰 고쳤다는 한 줄(목록은 500이 아니라 표지 행)을 넣는다. 명세는 끝났으니 다시 쓰지 않는다.
+확인할 선행 조건: 없음
+이번 요청 범위: PR과 병합까지
+```
+
+open-session을 부른다 2026-10-31T12:55:40Z
