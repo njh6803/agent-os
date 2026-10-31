@@ -368,7 +368,7 @@ retro 스킬대로 돌았다(`writing-for-agents`를 불렀고, 원천은 이 �
 
 ## 다음
 
-기능 model-plugin은 설계가 끝났고 `.scratch/model-plugin/`이 없는 단계다. 다음은 명세(`/to-spec`, 사람이 부른다)이고, `next-session` 결정표의 "설계는 끝났고 `spec.md`가 없다" 줄이라 새 세션을 Fable 5.1 / xhigh로 연다. 화면 디자인 단계는 없다(ADR 0040 "계약이 바뀐다"). 명세가 정할 것은 ADR 0040이 "명세가 정한다"고 미룬 것이다. 격리된 플러그인 루트(시험·CI·두 e2e 스택)에 둘 모델 매니페스트의 이름, 기본 모델의 이름이 core에 드는 입구(`run()`·`resume()`의 새 인자인지, 모델을 만드는 것이 이름을 드는지)와 그 이름을 `read_manifest`에 넘기기 전에 `is_plugin_name`으로 거를지(아래 "PR 직전 보안 리뷰" 2. 지금 `resolve_model_name`은 빈 값만 거부하고, 디렉터리 이름과 매니페스트 `name`의 대조가 어차피 막는다), 모델의 없음·깨짐이 깨짐 안에서 mcp의 앞인지 뒤인지, 그리고 구현 티켓이 고칠 곳 목록(README의 `serve` 줄과 `disabled.toml` 줄, `.env.example`, `.claude/rules/core.md`·`adapters.md`·`sdk.md`의 문장들, `tests/test_server.py`의 `SONNET`과 관리 스택의 `models/sonnet` 픽스처, `PluginList.tsx`의 로더 없는 종류 집합)이다. 3라운드 두 질문의 선택지 전부와 고르지 않은 둘의 설명은 위 "PR 직전 리뷰" 4에 있다(대기열 554). 이 PR은 면제 PR(`docs/model-plugin`)에 회고가 쓴 harness 티켓 032를 함께 싣는다(헌법 3.0.64). PR과 병합, 그 뒤의 `next-session` 지시문은 이 세션이 이어서 한다.
+기능 model-plugin은 설계가 끝났고 `.scratch/model-plugin/`이 없는 단계다. 다음은 명세(`/to-spec`, 사람이 부른다)이고, `next-session` 결정표의 "설계는 끝났고 `spec.md`가 없다" 줄이라 새 세션을 Fable 5.1 / xhigh로 연다. 화면 디자인 단계는 없다(ADR 0040 "계약이 바뀐다"). 명세가 정할 것은 ADR 0040이 "명세가 정한다"고 미룬 것이다. 격리된 플러그인 루트(시험·CI·두 e2e 스택)에 둘 모델 매니페스트의 이름, 기본 모델의 이름이 core에 드는 입구(`run()`·`resume()`의 새 인자인지, 모델을 만드는 것이 이름을 드는지)와 그 이름을 `read_manifest`에 넘기기 전에 `is_plugin_name`으로 거를지(아래 "PR 직전 보안 리뷰" 2. 지금 `resolve_model_name`은 빈 값만 거부하고, 디렉터리 이름과 매니페스트 `name`의 대조가 어차피 막는다), 모델의 없음·깨짐이 깨짐 안에서 mcp의 앞인지 뒤인지, `run()`·`resume()`이 받는 "매니페스트로 모델을 만드는 것"의 호출 가능 타입이 `core/ports.py`의 포트 표 안의 변형이어야 하고 여섯째 포트가 되면 안 된다는 조건(봇 둘째 회차 Minor, "포트는 다섯 그대로"), 그리고 구현 티켓이 고칠 곳 목록(README의 `serve` 줄과 `disabled.toml` 줄, `.env.example`, `.claude/rules/core.md`·`adapters.md`·`sdk.md`의 문장들, `tests/test_server.py`의 `SONNET`과 관리 스택의 `models/sonnet` 픽스처, `PluginList.tsx`의 로더 없는 종류 집합)이다. 3라운드 두 질문의 선택지 전부와 고르지 않은 둘의 설명은 위 "PR 직전 리뷰" 4에 있다(대기열 554). 이 PR은 면제 PR(`docs/model-plugin`)에 회고가 쓴 harness 티켓 032를 함께 싣는다(헌법 3.0.64). PR과 병합, 그 뒤의 `next-session` 지시문은 이 세션이 이어서 한다.
 
 - 워크트리에서 병합하므로 주 체크아웃은 당기지 않는다. 주 체크아웃 미갱신: 루트는 main(`git worktree list`의 첫 줄, 커밋 뒤 이어받은 세션이 봤다). 새 세션이 워크트리에 들어가기 전에 `tidy-checkouts`로 당긴다.
 
@@ -450,4 +450,12 @@ open-session을 부른다 2026-10-31T06:18:44Z
 - **CodeRabbit.** 무료 오픈소스 한도에 걸려 리뷰가 없다(`gh pr view 442 --json comments`로 읽은 CodeRabbit 코멘트의 `Review limit reached`와 `Review rate limited`, 다음 리뷰는 코멘트가 말한 약 56분 뒤. 검사는 `wait_ci` 출력에서 `NEUTRAL`). 한도에 걸린 푸시는 회차로 세지 않는다(`merge.md` 2).
 - **claude-review 첫 회차.** 같은 명령으로 읽은 코멘트 본문에 Critical·Major 없음. Minor 둘(ADR 0010 이력의 "시작 때 한 번 푼다"에 포인터 없음, ADR 0001 이력의 "ChatModel 포트" 문장)과 Nit 하나(Consequences 첫 불릿에 칸 목록과 검증 기록이 섞임)를 고치지 않았다. 앞의 둘은 지난 이력 항목이라 기록이고(`.claude/rules/adr.md`의 "달지 않는 것"), ADR 0010 포인터는 앞 세션이 달았다가 `test_check_adr_pointers.py`가 막아 걷은 것이다(위 "회고" 3). 뒤로 넘기는 일은 아니라 "다음"에 더한 것이 없다. 보류 이유는 PR 코멘트에 지적마다 남겼다.
 
-고친 것이 없는 회차라 이 절과 위 "인계 (PR 연 뒤)" 절만 일지 커밋으로 푸시한다. 그 푸시로 도는 claude-review는 둘째 회차라 Critical·Major만 고치고, 보류한 일은 PR 코멘트에 적는다.
+고친 것이 없는 회차라 이 절과 위 "인계 (PR 연 뒤)" 절만 일지 커밋 `24437e80`으로 푸시했다. 그 푸시로 돈 claude-review가 둘째 회차다(CodeRabbit은 한도로 리뷰 없음, `wait_ci` 출력 `CodeRabbit SKIPPED`, `끝: 모두 통과`).
+
+### 둘째 회차(claude-review, 머리 `24437e80`)
+
+코멘트 본문을 손으로 읽었다. Major 하나, Minor 둘이다.
+
+1. **[Major] `schema_version`을 "1"로 두는 근거가 ADR 0008의 기준과 맞지 않는다. 고쳤다.** ADR 0008 이력 2026-09-21의 기준은 "버전을 올리는 것은 기존 필드의 뜻이나 필수 여부가 바뀔 때다"(`grep`으로 읽었다)인데 이 PR의 새 이력은 "필수 여부는 바뀌지 않으므로 기준대로 '1'"이라 적으면서 같은 이력에서 공통 넷만 적은 옛 파일이 거부된다고 인정해 스스로 어긋났다. "런타임이 읽지 않았다"도 관리 API의 목록·상세가 이미 읽는다는 ADR 0017과 어긋났다(ADR 0017의 "깨지면 전부 거부"를 `grep`으로 읽었다). 결정(버전은 "1" 그대로)은 바꾸지 않고 근거를 고쳤다. ADR 0008 새 이력이 "기준의 예외 하나"를 명시하고(읽은 적도 실물 파일도 없던 종류의 첫 필수 칸은 버전을 올리지 않고 소리 나는 거부로 알린다. 올리면 공통 칸이라 에이전트·mcp까지 거부된다), 관리 API가 이미 읽는다는 것과 `GET /plugins`가 500이 된다는 것을 적었다. ADR 0040 "모델 매니페스트의 모양"도 같은 문장으로 맞췄다. 이 예외 문장은 설계 결정을 바꾸지 않는 근거의 정리지만, ADR 0008의 기준에 예외를 단 것이라 병합 뒤 사용자가 ADR 0040을 다시 볼 때 함께 볼 수 있게 보고에 적는다.
+2. **[Minor] 새 이력의 "새 필수 칸이 없어 … 거부된다"가 거꾸로 읽힌다. 고쳤다.** 위 1을 고치는 같은 문장이라 "필수 칸 `provider`와 `model_id`를 갖추지 못해"로 바꿨다.
+3. **[Minor] "포트는 다섯 그대로"가 근거 없는 단정이다. 뒤로 넘겼다.** 새 호출 가능 타입이 `core/ports.py`의 어느 포트인지는 ADR 0040이 명세로 미룬 것이다. 위 "다음"의 명세가 정할 것에 "포트 표 안의 변형이어야 하고 여섯째 포트가 되면 안 된다"는 조건을 더했다(둘째 회차의 Minor라 이것으로 닫는다).
