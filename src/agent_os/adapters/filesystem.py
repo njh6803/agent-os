@@ -277,7 +277,8 @@ def _describe(error: Exception) -> str:
     종류와 위치와 문구만 남긴다. 위치는 칸 이름이라 값이 아니라 키에 비밀을 적은 경우까지는
     막지 않는다(운영자가 어느 칸이 틀렸는지 알아야 하기 때문이다). 그 밖의 예외(OSError,
     UnicodeDecodeError, TOMLDecodeError)는 값이 아니라 경로, 바이트 위치, 줄·칸 위치를 담아
-    그대로다. 표를 두 번 선언한 TOML 문법 오류만 표 이름(키)을 싣는다. 트레이스 쪽의 `jsonl.py`
+    그대로다. 표나 키 경로를 선언·변경하다 난 TOML 문법 오류(표를 두 번 선언함 등)만 그 키
+    이름을 싣는다. 트레이스 쪽의 `jsonl.py`
     `_describe` 와 같은 모양이다. 어댑터 모듈끼리 import 하는 선례가 없어 따로 두었다.
     """
     if not isinstance(error, ValidationError):
