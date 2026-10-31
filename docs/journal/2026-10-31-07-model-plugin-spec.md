@@ -91,7 +91,7 @@ to-spec 스킬, 설계 일지 2026-10-31-06의 전문, ADR 0040·0008·0017(이�
 
 ## 이어받음 (셀프 리뷰 직전)과 셀프 리뷰
 
-위 지시문으로 연 새 세션이다. 첫 턴 훅대로 제목을 `docs/model-plugin-spec`으로 바꾸고, `git worktree list`에서 그 브랜치가 체크아웃된 워크트리 `model-plugin-spec`(`d5e2f1ec`. origin/main과 같다)을 찾아 `EnterWorktree(path)`로 들어갔다. 커밋은 0이고 변경은 모두 작업 트리에 있었다. `uv run python tools/sibling_overlap.py`는 번호 겹침 없음이었다(다음 빈 번호는 일지 2026-10-31-08, 대기열 555, 티켓 034. `mcp-shutdown-spec` 워크트리가 `.scratch/plan.md`를 함께 고쳤다).
+위 지시문으로 연 새 세션이다. 첫 턴 훅대로 제목을 `docs/model-plugin-spec`으로 바꾸고, `git worktree list`에서 그 브랜치가 체크아웃된 워크트리 `model-plugin-spec`(`d5e2f1ec`. origin/main과 같다)을 찾아 `EnterWorktree(path)`로 들어갔다. 커밋은 0이고 변경은 모두 작업 트리에 있었다. `uv run python tools/sibling_overlap.py`는 번호 겹침 없음이었다(다음 빈 번호는 일지 `2026-10-31-08`, 대기열 555, 티켓 034. `mcp-shutdown-spec` 워크트리가 `.scratch/plan.md`를 함께 고쳤다).
 
 `/code-review`(고정점 `origin/main` = `d5e2f1ec`. 범위는 수정 3, 미추적 5, 커밋 0)를 돌렸다. 표준 축(sonnet·high)은 Critical·Major 0, Minor 7, Nit 2이고, 명세 축(명세 원천은 ADR 0040, 설계 일지 "다음" 절, 지시문의 Minor 셋, 이음매의 사용자 답, to-spec 스킬)은 Critical·Major 0, Minor 3, Nit 4다. ADR 0040의 포인터 지적은 두 축이 함께 냈다. 두 축이 맞다고 확인한 밀 주장(서두의 수, 포트 다섯, mcp 문구의 꼴, 이름과 경로의 실재, 설치된 판, 프로브의 종료 코드와 회차 수, ADR 0010·0017 이력의 날짜, 설계 일지 "다음"의 일곱 항목에 결정이 있음, 지시문의 Minor 셋 반영, 이음매의 답 그대로)은 고칠 것이 없었다.
 
@@ -126,3 +126,47 @@ PR 직전 리뷰에 밀 주장(이 반영으로 새로 쓴 사실 문장): "두 
 > 사용자: 승인한다 (Recommended) — 이력 초안과 본문의 포인터 셋(기존 하나에 이 세션이 둘을 더했고 grep으로 셋을 확인했다)을 이대로 둔 채 커밋하고, merge.md의 규약대로 PR과 병합까지 묻지 않고 이어서 진행합니다.
 
 고르지 않은 선택지는 "고쳐서 다시 보여 달라"(고칠 점을 적어 주시면 이력과 명세를 그에 맞게 고친 뒤 다시 보여 드리고, 그 전에는 커밋하지 않습니다)였다. 첫 호출은 선택지 설명의 사실을 대 보라는 훅에 막혔고, 포인터 수를 grep으로 센 뒤 같은 질문과 라벨로 다시 물었다.
+
+## 인계 (커밋 뒤)
+
+커밋 `f8a9493d`(8개 파일, 795줄 더함·9줄 지움)가 pre-commit을 지나 섰다. `checks`(러너의 CHECKS 전부. pytest 362초, web-verify 440초), ruff 둘, 마크다운 표, 줄 구분 문자, 변이 표, 인용 대조, 커밋 메시지가 Passed이고, canary specs와 헌법 판 검사는 대상 파일이 없어 Skipped다(출력 파일을 손으로 읽었다). 인용 대조 경고 9건은 모두 이 일지가 고치기 전과 뒤의 문구를 따옴표로 적은 기록이라 막지 않았다. 커밋이 서자 인계 계기(`hook_handoff`. 세션 컨텍스트 333,419 토큰, 경계 `커밋 뒤`)가 왔고 `handoff.md`를 Read로 열어 따랐다. 인계하지 않는 때 다섯에 들지 않는다. 커밋은 성공했고, 요청 범위는 PR과 병합까지라 이 경계에서 끝나지 않고, 이 세션의 지시문의 "이어받을 상태"는 `인계: 셀프 리뷰 직전`이라 같은 경계가 아니고, 이 일지에 `인계 못함` 줄이 없고, `get_session self`에 `parentSessionId`가 없다. 열린 PR은 없다(`gh pr view docs/model-plugin-spec`이 없음으로 끝났다). 그래서 넘긴다. PR 직전 리뷰(보안·버그·성능 축)는 돌리지 않았다. 새 세션이 커밋 뒤의 남은 단계를 처음부터 한다.
+
+이 세션의 사용자 프롬프트는 둘이다. 첫째는 위 "인계" 절의 지시문을 `open-session`이 `.claude/skills/to-spec/SKILL.md 를 읽어 그대로 따른다. … 인자:` 한 줄로 옮긴 것이고, 둘째는 위 "ADR 0040 이력 승인"의 답이다. 이 세션이 번복하거나 고친 것은 위 "이어받음 (셀프 리뷰 직전)과 셀프 리뷰"의 고친 것 열셋이다. 이 세션의 제목은 `docs/model-plugin-spec`이고, 아래 지시문을 낸 뒤 `docs/model-plugin-spec (인계함)`으로 바꾼다.
+
+새 세션이 할 일은 커밋 뒤의 남은 단계다. PR 직전 리뷰(`coderabbit auth status`로 좌석을 보고, 못 돌면 `/security-review`(origin/main을 합친 뒤)와 `bug-perf-review` 서브에이전트. 보고를 이 일지에), 푸시와 PR(`/git-pr`. 면제 PR, 티켓 없음), `@coderabbitai review` 코멘트와 `wait_ci`의 봇 회차, 워크트리에서의 병합(`merge.md` "워크트리에서 병합할 때"), 그 뒤 `next-session`(다음 단계는 티켓 `/to-tickets`, 사람이 부른다)이다. 회고는 설계 세션이 돌았다(일지 2026-10-31-06 "회고"). 이 절은 커밋하지 않았으므로 새 세션이 다음 커밋에 싣는다.
+
+지시문:
+
+```
+다음 작업: 기능 model-plugin. 모델 플러그인을 런타임이 읽게 하는 설계(ADR 0040)의 명세 마무리(PR 직전 리뷰, PR과 병합, next-session)
+다음 단계: 명세
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /to-spec
+브랜치: docs/model-plugin-spec
+모델: Fable 5.1 / xhigh. 2의 잇는 지시문
+읽을 것: docs/journal/2026-10-31-07-model-plugin-spec.md의 "이어받음 (셀프 리뷰 직전)과 셀프 리뷰" 절부터 끝까지("ADR 0040 이력 승인", "인계 (커밋 뒤)"), .claude/skills/next-session/merge.md
+이어받을 상태: 인계: 커밋 뒤 docs/journal/2026-10-31-07-model-plugin-spec.md. 브랜치의 커밋 하나(f8a9493d, pre-commit 초록. canary specs와 헌법 판은 대상 파일이 없어 Skipped)에 명세·프로브 둘·ADR 0040 이력(사용자 승인)과 포인터 셋·ADR 0008·plan.md·일지를 실었다. 푸시하지 않았고 열린 PR은 없다. 명세는 끝났으니 다시 쓰지 않는다. 남은 것: PR 직전 리뷰(coderabbit auth status로 좌석을 보고, 못 돌면 /security-review(origin/main을 합친 뒤)와 bug-perf-review 서브에이전트. 셀프 리뷰 반영으로 새로 쓴 문장은 일지 "셀프 리뷰" 절 끝의 밀 주장 목록이다. 보고를 일지에), 푸시와 PR(/git-pr. 면제 PR, 티켓 없음), @coderabbitai review 코멘트와 wait_ci의 봇 회차, 워크트리에서의 병합(merge.md "워크트리에서 병합할 때"), 그 뒤 next-session(다음 단계는 티켓 /to-tickets, 사람이 부른다). 회고는 설계 세션이 돌았다(일지 2026-10-31-06 "회고"). 일지의 "인계 (커밋 뒤)" 절은 커밋하지 않았으니 다음 커밋에 싣는다.
+확인할 선행 조건: 없음
+이번 요청 범위: PR과 병합까지
+```
+
+open-session을 부른다 2026-10-31T11:56:52Z
+
+## PR 직전 리뷰
+
+위 "인계 (커밋 뒤)"의 지시문으로 연 새 세션이다. 첫 턴 훅대로 제목을 `docs/model-plugin-spec`으로 바꾸고 워크트리 `model-plugin-spec`(`f8a9493d`)에 `EnterWorktree(path)`로 들어갔다. CodeRabbit 좌석은 없다(`coderabbit auth status`가 `Plan: Free`, `Seat: not assigned`. 손으로 봤다). 그래서 리뷰 파이프라인 2의 대체 둘(`/security-review`, `bug-perf-review` 서브에이전트)을 나란히 돌렸다. `git fetch origin` 뒤 `origin/main`은 merge-base와 같은 `d5e2f1ec`라 합칠 것이 없었다. 돌리기 전의 `uv run python tools/sibling_overlap.py`는 1로 끝났다. 위 "이어받음 (셀프 리뷰 직전)과 셀프 리뷰"의 첫 문단이 앞 세션의 검사 출력을 옮기며 아직 없는 일지 번호를 맨 글로 적은 것이라, 출력대로 코드 스팬에 넣었고 다시 친 검사는 번호 겹침 없음(종료 코드 0)이다.
+
+**보안 축(`/security-review`).** 식별 서브태스크가 diff 전체와 프로브 둘의 원문을 읽었고 HIGH·MEDIUM 0건이라, 거짓 양성을 거르는 서브태스크는 띄울 것이 없었다. 보고의 판정은 넷이다. (1) API 키가 이벤트·로그·응답에 실리는 길이 명세에 없다. 키는 파일에 없고 환경변수이며, 키 없음의 `TypeError` 문구에 값이 없고 `run_failed.error`는 기존 길 그대로다. (2) 매니페스트가 호스트·프로토콜을 정하지 못한다. 칸은 `provider`(닫힌 목록)·`model_id`·`max_tokens`·`temperature`뿐이고 모르는 칸은 `extra_forbidden`으로 거부된다(프로브 `unknown_field` 사례). (3) 경로 조작은 `is_plugin_name`·`PLUGIN_NAME_PATTERN`과 `read_manifest`의 경로 조립이 막는다(기존 mcp 이름 처리와 같다). (4) 최종 사용자 면의 409·500은 고정 문구다. 봤지만 기준 미달로 뺀 것 하나: 운영자 면 500 본문과 `serve` 시작 때의 구성 문제 목록이 어댑터의 `PluginError` 문구를 그대로 싣고 그 문구가 pydantic `ValidationError` 전문(`input_value` 포함)을 담아(`adapters/filesystem.py`의 `_parse`를 이 세션이 읽었다. 이 PR 전부터다), 운영자가 실수로 모델 파일에 `api_key` 칸을 적으면 `extra_forbidden` 거부 문구가 그 값을 관리 토큰 뒤의 `GET /plugins` 응답과 stderr에 되울릴 수 있다. 모든 종류의 매니페스트에 이미 있던 동작이고 명세는 키를 파일에 두지 않는다고 못박았다. 트레이스 쪽은 `jsonl.py`의 `_describe`가 같은 까닭으로 `input_value`를 뺀다(`.claude/rules/adapters.md`). 매니페스트의 `PluginError` 문구도 같은 모양으로 할지는 구현 티켓의 일이라 to-tickets가 받는다(아래 "다음"). 고치지 않았다.
+
+**버그·성능 축(`bug-perf-review` 서브에이전트).** 기준 `d5e2f1ec`, 범위 8파일, 마지막 호출 40. 유효 Minor 둘, 오탐 넷, 코드 지적 없음. 밀 주장 여섯은 모두 근거와 맞았다(e2e 스택 둘의 TOML 문자열, `resolve_model_name`의 기본값 갈래, `-m llm` 시험 수, 프로브 두 실행의 중앙 0.1ms·최대 0.3ms, 호출 뒤 `_async_client`, 36개를 세는 프로브 없음). 서브에이전트는 두 프로브를 다시 돌려 `manifest_fields.py` 측정 29회차·측정 아님 0, `build_without_key.py` 측정 14회차·측정 아님 0을 봤다(그 보고의 출력이고 이 세션은 돌리지 않았다).
+
+고친 것은 둘이다.
+
+1. [Minor] `.scratch/plan.md`의 model-plugin 행 "만들기는 0.2ms 아래". 셀프 리뷰 6이 README·명세·ADR 0040 이력에서 고친 범위와 어긋난 채 남아 있었다. "1ms 아래(중앙 0.1ms)"로 고쳤다. 남은 `0.2ms`는 README의 "앞 세션의 두 판은 최대 0.2ms였다"와 이 일지의 기록이라 뒀다(이 브랜치의 파일을 grep했다).
+2. [Minor] 명세 "저장소의 기본 모델 플러그인과 격리 루트"와 "실제 모델 호출 하나"의 "위젯 스택이 저장소 플러그인을 복사하므로 그대로다". 스택은 실제 모델 모드에서 복사한 뒤 두 모드 모두 같은 루트에 픽스처를 쓰므로(`web/apps/widget/e2e/stack.ts`의 `copyRepoPlugins` 뒤 `writeFixturePlugins`, `plugins.ts` 머리 주석의 "픽스처는 그 위에 쓴다". 이 세션이 코드를 읽었다), 픽스처 `claude-opus-5`가 다른 `model_id`를 적으면 복사해 온 저장소 파일이 덮여 `-m llm_widget`이 가짜 id를 제공사에 보낸다. 격리 루트 절에 픽스처 모델이 저장소 파일과 같은 `model_id`를 적는다는 문장을 더하고, "그대로다"에 그 조건을 달았다. 절 제목과 "거부한 안:" 표시는 늘지 않았다.
+
+오탐 넷은 보고대로 둔다(calc 단언의 별칭 해석은 기존 `-m llm` 시험과 같은 꼴, 실행마다 만드는 모델의 연결 풀은 서브에이전트가 재어 밑의 httpx 클라이언트가 `lru_cache`로 공유됨을 봤다, 안내 줄 단언의 자리는 Testing Decisions가 포괄한다, 키 없는 호출 시간의 차이는 기계 잡음).
+
+서두의 수를 다시 셌다. 절 제목의 "명세가 정했다" 11, "거부한 안:" 13(서두 설명 줄 제외), 넘겨받은 것 12, 사용자가 고른 것 1, 이력 1로 서두와 같다(`grep -c`와 `grep -o | wc -l`로 셌다).
+
+다시 돌린 검사: `check_md_tables.py`·`check_line_separators.py`·`check_adr_pointers.py` 0, `check_quotes.py` 경고 0. 손으로 치는 다섯은 이 커밋의 pre-commit으로 갈음한다.

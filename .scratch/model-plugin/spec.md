@@ -121,7 +121,7 @@ Status: ready-for-agent
 ### 저장소의 기본 모델 플러그인과 격리 루트 (명세가 정했다)
 
 - 저장소의 `plugins/models/claude-opus-5/plugin.toml`은 `provider = "anthropic"`, `model_id = "claude-opus-5"`, `max_tokens = 16000`이고 `temperature`는 적지 않는다(지금의 동작 그대로). `version`은 `0.1.0`이다.
-- 격리된 플러그인 루트(실제 `serve`를 띄우는 시험, CI, 관리 화면 e2e 스택 `web/apps/admin/e2e/stack.ts`, 위젯 e2e 스택 `web/apps/widget/e2e/stack.ts`)의 기본 모델도 같은 이름 `claude-opus-5`이고 내용은 받아들여지는 모델 매니페스트면 된다. 시험과 스택은 `--model claude-opus-5`를 명시해 넘기고 셸의 `AGENT_OS_MODEL`에 기대지 않는다. 저장소 루트에서 실제 CLI를 돌리는 `-m llm` 시험도 `--model claude-opus-5`를 명시한다. 위젯 스택의 실제 모델 모드는 저장소의 플러그인을 복사하므로 그 파일이 함께 온다(`copyRepoPlugins`, 코드를 읽었다).
+- 격리된 플러그인 루트(실제 `serve`를 띄우는 시험, CI, 관리 화면 e2e 스택 `web/apps/admin/e2e/stack.ts`, 위젯 e2e 스택 `web/apps/widget/e2e/stack.ts`)의 기본 모델도 같은 이름 `claude-opus-5`이고 내용은 받아들여지는 모델 매니페스트면 된다. 시험과 스택은 `--model claude-opus-5`를 명시해 넘기고 셸의 `AGENT_OS_MODEL`에 기대지 않는다. 저장소 루트에서 실제 CLI를 돌리는 `-m llm` 시험도 `--model claude-opus-5`를 명시한다. 위젯 스택의 실제 모델 모드는 저장소의 플러그인을 복사하므로 그 파일이 함께 오고(`copyRepoPlugins`), 복사 뒤에는 두 모드 모두 같은 루트에 픽스처를 쓴다(`writeFixturePlugins`. 둘 다 코드를 읽었다). 그래서 위젯 스택의 픽스처 `claude-opus-5`는 저장소 파일과 같은 `model_id`를 적는다. 다른 id를 적으면 실제 모델 모드에서 복사해 온 저장소 파일이 그 픽스처로 덮여 `-m llm_widget`이 가짜 id를 제공사에 보낸다(코드를 읽은 시나리오이고 돌리지 않았다).
 - 둘째 모델 픽스처 `sonnet`(`tests/test_server.py`의 `SONNET`, 관리 스택의 `models/sonnet`)은 지우지 않고 `provider`·`model_id`를 갖춘 모델 매니페스트로 고친다. 목록에 모델이 둘 있어야 켜고 끄기와 "에이전트가 고른 모델" 시나리오를 잰다. 관리 화면 e2e(`web/apps/admin/e2e/admin-token.e2e.ts`)가 모델 행에 "로더가 생기기 전에는 효과가 없다"가 있다고 단언하는 줄은 그 줄이 없다는 단언으로 바뀐다.
 - 운영자 문서의 값. `.env.example`에 `AGENT_OS_MODEL=claude-opus-5` 줄이 들고, `README.md`의 `serve` 줄은 `--model claude-opus-5`를 적거나 그 환경변수를 안내하며, `disabled.toml` 줄의 "skill과 model은 로더가 생길 때" 문장에서 model이 빠진다.
 - 거부한 안: 격리 루트의 기본 모델을 `fake-model` 같은 다른 이름으로 두는 것. README·`.env.example`·스택·시험의 `--model` 값이 둘이 된다. 거부한 안: 스택이 `AGENT_OS_MODEL` 환경변수로 넘기는 것. 개발자 셸의 같은 변수에 가려지고, `--model`이 그것을 이긴다. 거부한 안: `sonnet` 픽스처를 지우고 기본 모델 하나만 두는 것. 둘째 모델이 없으면 켜고 끄기와 에이전트별 선택을 잴 수 없다.
@@ -171,7 +171,7 @@ Status: ready-for-agent
 
 ### 실제 모델 호출 하나 (명세가 정했다)
 
-더하는 하나는 새 시험이 아니라 `tests/test_main.py`의 calc 시험(실제 CLI로 calc가 답하고 트레이스에 모델 호출이 남는 것을 보는 `-m llm` 시험)에 드는 단언이다. 저장소 루트에서 실제 CLI를 `--model claude-opus-5`로 돌리고, 트레이스의 `llm_called.model`이 저장소 매니페스트의 `model_id`와 같은지 본다. 어댑터가 `model_id`를 제공사에 실제로 보냈다는 바깥 증거다. 나머지 `-m llm` 시험(`tests/test_main.py`의 다른 다섯, `tests/core/test_model.py`의 하나)은 수가 늘지 않고, 기본값 대신 저장소의 모델 플러그인을 쓰도록 `--model claude-opus-5`를 넘기거나 저장소 매니페스트로 모델 소스가 만든 모델을 쓰게 고칠 뿐이다. 위젯의 실제 모델 e2e(`-m llm_widget`)는 스택이 저장소 플러그인을 복사하므로 그대로다.
+더하는 하나는 새 시험이 아니라 `tests/test_main.py`의 calc 시험(실제 CLI로 calc가 답하고 트레이스에 모델 호출이 남는 것을 보는 `-m llm` 시험)에 드는 단언이다. 저장소 루트에서 실제 CLI를 `--model claude-opus-5`로 돌리고, 트레이스의 `llm_called.model`이 저장소 매니페스트의 `model_id`와 같은지 본다. 어댑터가 `model_id`를 제공사에 실제로 보냈다는 바깥 증거다. 나머지 `-m llm` 시험(`tests/test_main.py`의 다른 다섯, `tests/core/test_model.py`의 하나)은 수가 늘지 않고, 기본값 대신 저장소의 모델 플러그인을 쓰도록 `--model claude-opus-5`를 넘기거나 저장소 매니페스트로 모델 소스가 만든 모델을 쓰게 고칠 뿐이다. 위젯의 실제 모델 e2e(`-m llm_widget`)는 스택이 저장소 플러그인을 복사하므로, 픽스처 모델이 그 파일을 다른 `model_id`로 덮지 않는 한(위 "저장소의 기본 모델 플러그인과 격리 루트") 그대로다.
 
 ## Out of Scope
 
