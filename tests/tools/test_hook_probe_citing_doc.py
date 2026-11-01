@@ -118,6 +118,16 @@ def test_경로가_맞는_자리만_본다() -> None:
     assert is_citing_doc(ROOT + "\\Docs\\ADR\\0001-a.md")
 
 
+def test_이름이_spec_md_인_ADR_과_서브에이전트_정의도_본다() -> None:
+    # 명세 분기가 이름만 보고 돌려보내면, .scratch 밖의 spec.md 라는 이름의 ADR·정의를 놓친다.
+    adr = ROOT + "\\docs\\adr\\spec.md"
+    agent = ROOT + "\\.claude\\agents\\spec.md"
+    assert is_citing_doc(adr)
+    assert is_citing_doc(agent)
+    assert context_for(_edit(adr)) is not None
+    assert context_for(_edit(agent)) is not None
+
+
 def test_다른_자리의_파일은_지나간다() -> None:
     for path in (
         # 프로브 README 는 hook_probe_conclusion 이 맡는다.

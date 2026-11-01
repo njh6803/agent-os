@@ -121,8 +121,8 @@ def is_citing_doc(path: str) -> bool:
     if not parts:
         return False
     name = parts[-1]
-    if name == SPEC:
-        return len(parts) >= 3 and parts[-3] == SCRATCH
+    if name == SPEC and len(parts) >= 3 and parts[-3] == SCRATCH:
+        return True
     if not name.endswith(".md") or len(parts) < 3:
         return False
     parent, grandparent = parts[-2], parts[-3]

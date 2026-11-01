@@ -54,13 +54,24 @@
 
 다시 돌린 것: `uv run python tools/run_checks.py` 모든 단계 통과(check-ticket, zizmor, lint-imports, check-instructions, check-type-escapes, pyright-linux, pyright, run-hooks, pytest, web-verify. 반영 뒤에 쳤고, 그 뒤 알림 문장 한 군데를 더 고쳤다). `uv run ruff check .`와 `ruff format --check .` 통과. 변이 표는 알림 문장을 마지막으로 고친 뒤 `변이 14 모두 기대대로`를 도구가 찍었다. 카나리아는 `probes.md` 새 항목의 둘째 문장 한 군데와 `tools_rule_measure_word_hook.toml`의 머리 주석만 고쳐 다시 돌리지 않았다(기대 문구는 첫 문장과 `tools.md`에 있다).
 
+## PR 직전 리뷰 (세 번째 세션)
+
+`coderabbit auth status`가 `Seat: not assigned`(Plan: Free)라 CLI 축은 비어 있고, 규약의 대체 둘(`operations.md` 리뷰 파이프라인 2)을 나란히 돌렸다. 아래는 모델의 읽기이고, 판정은 이 세션이 코드와 직접 돌린 결과로 했다.
+
+- 내장 `/security-review`: 지적 없음. 훅이 입력을 문자열 견줌에만 쓰고, 표지 파일 이름이 `sha256` 16진이라 경로를 벗어날 수 없고, 출력이 입력을 되풀이하지 않는다. 임시 폴더에 같은 이름을 미리 만들어 알림을 끄는 길은 방어 심층이고 알림이 막는 장치가 아니어서 보고하지 않았다.
+- `bug-perf-review` 서브에이전트: 유효 1(Minor), 보류 1, 오탐 6.
+  - 유효: `is_citing_doc`이 이름이 `spec.md`이면 `.scratch`가 아닐 때도 곧바로 거짓을 돌려줘서 `docs/adr/spec.md`와 `.claude/agents/spec.md`를 놓쳤다(서브에이전트가 `-c`로 직접 불렀다). 고치는 값이 코드 두 줄이라 PR 전에 고쳤다. 시험 `test_이름이_spec_md_인_ADR_과_서브에이전트_정의도_본다`를 더했고, 변이 표에 그 회귀를 깨는 변이를 더하고 기존 변이 1의 원문을 새 코드에 맞췄다. 도구가 `변이 15 모두 기대대로`를 찍었다.
+  - 보류: `MultiEdit`로 고친 글. 이 세션의 도구 목록에 `MultiEdit`가 없고, 같은 매처 `Write|Edit`를 쓰는 다른 훅도 같은 한계라 독스트링에는 적지 않았다. 있다고 재지 않은 것을 못 보는 것으로 적으면 규칙(`tools.md` "못 본다고 적은 주장도 잰다")과 어긋난다. 도구가 생기면 `tools.md`의 매처 항목을 함께 고칠 일이다.
+  - 오탐: 깨진 입력의 종료 코드 1(fail-open), 표지 경쟁 조건(`O_EXCL`), 표지가 쌓임(래퍼와 같은 한계), cp949 출력(ASCII 출력), 짝 없는 서로게이트 세션 ID(`surrogatepass`), `tools.md`의 "열째"(맞다).
+
 ## 인계 메모 (이 절은 단계를 닫는 "다음"이 아니다)
 
-- 컨텍스트가 인계 문턱(20만 토큰)을 넘은 채 셀프 리뷰 직전(`/code-review` 호출 직후)에 왔다. 새 세션이 같은 브랜치·워크트리에서 셀프 리뷰부터 이어 커밋, PR, 병합, 회고까지 하고 이 일지에 "다음"을 쓴다.
-- 커밋하지 않은 변경이 워크트리에 있다: 훅·시험·등록·페이로드 표·변이 표와 README 행·카나리아 명세 둘·규칙 둘(`probes.md`, `tools.md`)·`issue-tracker.md` 한 문장·티켓·이 일지. 티켓 `035`는 아직 `in-progress`이고 수용 기준 상자는 모두 비어 있다. 셀프 리뷰를 반영하고 전체 검증을 마친 뒤 `done`과 상자를 채운다.
-- 전체 러너 `uv run python tools/run_checks.py`는 이 세션이 한 번 띄웠으나 일지 번호를 `--move`로 옮기기 전에 시작했고, 인계하며 멈췄다. 읽은 부분은 check-ticket, zizmor, lint-imports, check-type-escapes, check-instructions, pyright, pyright-linux가 Passed였고 pytest와 web 단계의 결과는 보지 못했다(출력 파일을 읽은 것이다). 새 세션이 다시 돌린다. 린트 둘(`ruff check .`, `ruff format --check .`)은 러너에 없어 따로 치고, 포맷 한 건을 `ruff format`으로 고친 뒤 다시 치지는 않았다.
-- 일지 번호는 형제 `037`과 겹쳐 `2026-11-01-07`에서 `-09`로 옮겼다(`sibling_overlap.py --move`). 이 일지의 옛 번호 인용도 도구가 옮겼다.
-- 카나리아 보고: 새 `probes_rule_citing_doc_hook.toml`(통과 4)과 고친 `tools_rule_measure_word_hook.toml`(통과 4)은 위 "카나리아" 절의 결과다. `probes_rule_conclusion_hook.toml`·`tools_rule_probe_conclusion_hook.toml`은 사전 확인만 통과했다.
-- 형제 `034`(`034-deletion-tool-adversarial-input-hook`)도 `.claude/settings.json`·`.claude/rules/tools.md`·`tools/hook_payloads.toml`·`.scratch/harness/probes/README.md`를 고친다(`sibling_overlap.py`의 함께 고친 파일). 뒤에 병합되는 쪽이 main을 합친다.
-- 세션 제목: 인계하며 `chore/035-probe-citing-doc-hook (인계함)`으로 바꿨다. 백그라운드 작업(전체 러너와 그 대기)은 TaskStop으로 멈췄고, 잠금은 `git worktree unlock`으로 풀었다.
-- open-session을 부른다 2026-11-01T05:57Z
+- 두 번째 인계다. 첫 인계는 셀프 리뷰 직전이었고, 이 세션이 셀프 리뷰를 돌려 반영하고 전체 검증을 마친 뒤 커밋(`b38d473b`)까지 했다. 컨텍스트가 인계 문턱(20만 토큰)을 넘어 `커밋 뒤` 경계에서 넘긴다.
+- 사용자 프롬프트는 위 "사용자 프롬프트" 절의 것 그대로다. 이 세션이 새로 받은 사용자 말은 없다. 요청 범위는 PR과 병합까지다.
+- 한 것: 셀프 리뷰 반영(위 "셀프 리뷰" 절), 대기열 540 닫기, 티켓 `done`과 수용 기준 상자 채우기, 전체 러너 통과, 린트 둘 통과, 변이 표 `변이 14 모두 기대대로`, 커밋 한 건. pre-commit은 통과했다(커밋이 600초를 넘겨 백그라운드로 넘어갔다가 종료 코드 0으로 끝났다).
+- 남은 일: 푸시, PR 열기, `merge.md`의 봇 회차(`@coderabbitai review` 코멘트와 CI 대기), 병합, 병합 뒤 이 일지에 `## 다음`을 쓰고 회고(`retro`). PR은 아직 열지 않았다.
+- 푸시하기 전에 `git fetch origin` 뒤 `origin/main`이 움직였는지 본다. 형제 `034`(`034-deletion-tool-adversarial-input-hook`)도 `.claude/settings.json`·`.claude/rules/tools.md`·`tools/hook_payloads.toml`·`.scratch/harness/probes/README.md`를 고친다. 먼저 병합되는 쪽이 있으면 뒤에 병합되는 쪽이 main을 합친다. `tools.md` 시간 항목의 서수("열째", "일곱 다")와 카나리아 `tools_rule_measure_word_hook.toml`의 물음 2·`expect`가 034의 훅 등록과 겹쳐 어긋날 수 있다. 합친 뒤 서수와 그 카나리아를 다시 맞춘다.
+- 일지 번호 `2026-11-01-09`보다 이름순으로 뒤인 형제 일지(`-10`, `-11`)가 있어 겹치지 않는다. 형제가 먼저 병합되고 같은 번호를 쓰면 `sibling_overlap.py --move`로 옮긴다.
+- 카나리아 `probes_rule_citing_doc_hook.toml`과 고친 `tools_rule_measure_word_hook.toml`은 셀프 리뷰 반영 전에 돌려 통과 4였다. 반영 뒤에는 `probes.md` 새 항목의 둘째 문장과 머리 주석만 고쳐 다시 돌리지 않았다.
+- 세션 제목: 인계하며 `chore/035-probe-citing-doc-hook (인계함)`으로 바꾼다.
+- open-session을 부른다 2026-11-01T06:47Z

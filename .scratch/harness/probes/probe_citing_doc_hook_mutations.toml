@@ -8,8 +8,19 @@ tests = ["tests/tools/test_hook_probe_citing_doc.py"]
 expect = "red"
 [[mutation.edit]]
 file = "tools/hook_probe_citing_doc.py"
-old = '''        return len(parts) >= 3 and parts[-3] == SCRATCH'''
-new = '''        return True'''
+old = '''    if name == SPEC and len(parts) >= 3 and parts[-3] == SCRATCH:'''
+new = '''    if name == SPEC:'''
+
+[[mutation]]
+name = "명세 이름이면 .scratch 가 아니어도 곧바로 돌려보낸다"
+tests = ["tests/tools/test_hook_probe_citing_doc.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_probe_citing_doc.py"
+old = '''    if name == SPEC and len(parts) >= 3 and parts[-3] == SCRATCH:
+        return True'''
+new = '''    if name == SPEC:
+        return len(parts) >= 3 and parts[-3] == SCRATCH'''
 
 [[mutation]]
 name = "ADR 에서 docs 조상을 요구하지 않는다"
