@@ -59,9 +59,13 @@ function isEndUserRun(trace: Trace): boolean {
 }
 
 /**
- * 이 실행을 재개할 수 없게 꺼진 플러그인(ADR 0017, 0019). 실행의 에이전트와 그 매니페스트의 `mcp` 를 목록의 행과
- * 잇는다. 목록이 없거나(아직 읽는 중이거나 읽다 실패했다), 에이전트를 모르거나, 에이전트 행이 표지이거나 없으면 미리
- * 알 수 없어 비어 있다. 그때는 누르면 서버의 봉투가 말한다.
+ * 이 실행을 재개할 수 없게 꺼진 플러그인(ADR 0017, 0019). 실행의 에이전트와 그 매니페스트의 `mcp`, `model` 을 목록의
+ * 행과 잇는다. 목록이 없거나(아직 읽는 중이거나 읽다 실패했다), 에이전트를 모르거나, 에이전트 행이 표지이거나 없으면
+ * 미리 알 수 없어 비어 있다. 그때는 누르면 서버의 봉투가 말한다.
+ *
+ * `model` 은 에이전트가 적었을 때만 본다. 적지 않은 에이전트는 기본 모델을 쓰는데, 관리 API 가 기본 모델의 이름을
+ * 내지 않아 화면이 모른다. 그때도 누르면 서버의 봉투가 말한다. 모델 행이 표지(읽지 못한 매니페스트)이면 꺼짐으로 세지
+ * 않는다. 읽지 못한 모델은 켜져 있어도 실행이 막히므로 그 까닭을 꺼짐이라 말하면 틀리다.
  */
 function disabledFor(agent: string | null, rows: readonly PluginRow[] | undefined): string[] {
   if (agent === null || rows === undefined) {
@@ -76,6 +80,16 @@ function disabledFor(agent: string | null, rows: readonly PluginRow[] | undefine
     if (rows.some(({ kind, name, enabled }) => kind === "mcp" && name === mcp && !enabled)) {
       found.push(`MCP ${mcp}`);
     }
+  }
+  const { model } = row.manifest;
+  if (
+    model !== null &&
+    rows.some(
+      (other) =>
+        other.kind === "model" && other.name === model && "manifest" in other && !other.enabled,
+    )
+  ) {
+    found.push(`모델 ${model}`);
   }
   return found;
 }

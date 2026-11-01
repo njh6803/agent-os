@@ -1,0 +1,61 @@
+# 티켓 06(관리 화면 모델 켜고 끄기와 결정 미리보기)의 변이 표 3개. 구현 전부터 초록이던 시험 셋(고르지 않은
+# 모델이 꺼진 것, model 을 적지 않은 에이전트, 모델 행이 표지)이 빨강을 볼 수 있는지 잰다. 돌리는 법:
+# PYTHONUTF8=1 uv run python tools/mutate.py .scratch/model-plugin/probes/decision_model_mutations.toml
+
+[runner.vitest]
+command = ["pnpm", "exec", "vitest", "run"]
+cwd = "web"
+judge = "vitest"
+
+[[mutation]]
+name = "에이전트가 고르지 않은 모델의 꺼짐도 센다"
+runner = "vitest"
+tests = ["apps/admin/components/pages/RunPage.decision.test.tsx", "-t", "에이전트가 고르지 않은 모델이 꺼진 것은"]
+expect = "red"
+expect_output = ["not to contain '꺼진 플러그인'"]
+
+[[mutation.edit]]
+file = "web/apps/admin/components/organisms/RunDecision.tsx"
+old = '''
+        other.kind === "model" && other.name === model && "manifest" in other && !other.enabled,
+'''
+new = '''
+        other.kind === "model" && "manifest" in other && !other.enabled,
+'''
+
+[[mutation]]
+name = "model 을 적지 않은 에이전트에도 꺼진 모델을 더한다"
+runner = "vitest"
+tests = ["apps/admin/components/pages/RunPage.decision.test.tsx", "-t", "model 을 적지 않은 에이전트는"]
+expect = "red"
+expect_output = ["not to contain '꺼진 플러그인'"]
+
+[[mutation.edit]]
+file = "web/apps/admin/components/organisms/RunDecision.tsx"
+old = '''
+    model !== null &&
+    rows.some(
+      (other) =>
+        other.kind === "model" && other.name === model && "manifest" in other && !other.enabled,
+'''
+new = '''
+    rows.some(
+      (other) =>
+        other.kind === "model" && "manifest" in other && !other.enabled,
+'''
+
+[[mutation]]
+name = "모델 행이 표지여도 꺼짐으로 센다"
+runner = "vitest"
+tests = ["apps/admin/components/pages/RunPage.decision.test.tsx", "-t", "모델의 행이 표지면"]
+expect = "red"
+expect_output = ["not to contain '꺼진 플러그인'"]
+
+[[mutation.edit]]
+file = "web/apps/admin/components/organisms/RunDecision.tsx"
+old = '''
+        other.kind === "model" && other.name === model && "manifest" in other && !other.enabled,
+'''
+new = '''
+        other.kind === "model" && other.name === model && !other.enabled,
+'''

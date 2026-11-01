@@ -578,13 +578,13 @@ describe("플러그인 목록", () => {
     expect(within(row("에이전트", "calc")).queryByRole("link", { name: "calc" })).toBeNull();
   });
 
-  test("스킬과 모델 행에만 로더가 생기기 전에는 효과가 없다가 보인다", async () => {
+  test("스킬 행에만 로더가 생기기 전에는 효과가 없다가 보인다", async () => {
     servePlugins(rows);
 
     await showList();
 
     expect(within(row("스킬", "summarize")).getByText(NO_EFFECT)).toBeTruthy();
-    expect(within(row("모델", "sonnet")).getByText(NO_EFFECT)).toBeTruthy();
+    expect(within(group("모델")).queryByText(NO_EFFECT)).toBeNull();
     expect(within(group("에이전트")).queryByText(NO_EFFECT)).toBeNull();
     expect(within(group("MCP")).queryByText(NO_EFFECT)).toBeNull();
   });

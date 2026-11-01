@@ -125,7 +125,7 @@ test("관리 토큰을 넣으면 종류별로 묶인 플러그인 목록이 보�
   await expect(row(page, "MCP", "fixture")).toContainText("켜짐");
   await expect(row(page, "스킬", "summarize")).toContainText("꺼짐");
   await expect(row(page, "스킬", "summarize")).toContainText("로더가 생기기 전에는 효과가 없다");
-  await expect(row(page, "모델", "sonnet")).toContainText("로더가 생기기 전에는 효과가 없다");
+  await expect(row(page, "모델", "sonnet")).not.toContainText("로더가 생기기 전에는 효과가 없다");
 
   const beforeReload = printed.length;
   await page.reload();

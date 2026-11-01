@@ -141,6 +141,38 @@ const FIXTURE: Plugin = {
 };
 const ROWS: PluginRow[] = [CALC, FIXTURE];
 
+/** 모델 플러그인 하나. 에이전트가 `model` 로 이름을 골라 쓴다. */
+function modelPlugin(name: string, { enabled }: { readonly enabled: boolean }): Plugin {
+  return {
+    kind: "model",
+    name,
+    enabled,
+    manifest: {
+      schema_version: "1",
+      kind: "model",
+      name,
+      version: "0.1.0",
+      entrypoint: null,
+      mcp: [],
+      requires_approval: [],
+      conversation_limit: null,
+      model: null,
+      provider: "anthropic",
+      model_id: "claude-sonnet-5",
+      max_tokens: 4096,
+      temperature: null,
+      server: null,
+    },
+  };
+}
+
+/** `model` 로 그 모델을 고른 `calc`. */
+function calcUsing(model: string | null): Plugin {
+  return CALC.kind === "agent" && "manifest" in CALC
+    ? { ...CALC, manifest: { ...CALC.manifest, model } }
+    : CALC;
+}
+
 /** 요청 하나가 실은 것. */
 interface Sent {
   readonly authorization: string;
@@ -808,6 +840,59 @@ describe("409 와 꺼짐", () => {
     expect(place().textContent).toContain("MCP fixture");
     expect(place().textContent).not.toContain("에이전트 calc");
     expect(button("승인").disabled).toBe(true);
+  });
+
+  test("에이전트가 고른 모델이 꺼졌으면 결정 버튼이 막히고 꺼진 모델이 보인다", async () => {
+    serveTrace(() => PAUSED);
+    servePlugins([calcUsing("sonnet"), FIXTURE, modelPlugin("sonnet", { enabled: false })]);
+    await openDecision();
+
+    expect(await within(place()).findByText(/꺼진 플러그인이 있어 재개할 수 없다/)).toBeTruthy();
+    expect(place().textContent).toContain("모델 sonnet");
+    expect(place().textContent).not.toContain("에이전트 calc");
+    expect(button("승인").disabled).toBe(true);
+    expect(button("거부").disabled).toBe(true);
+  });
+
+  test("에이전트가 고르지 않은 모델이 꺼진 것은 결정 버튼을 막지 않는다", async () => {
+    serveTrace(() => PAUSED);
+    servePlugins([
+      calcUsing("sonnet"),
+      FIXTURE,
+      modelPlugin("sonnet", { enabled: true }),
+      modelPlugin("opus", { enabled: false }),
+    ]);
+    await openDecision();
+
+    // 목록을 읽은 뒤에도 막지 않는다.
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    expect(place().textContent).not.toContain("꺼진 플러그인");
+    expect(button("승인").disabled).toBe(false);
+  });
+
+  test("model 을 적지 않은 에이전트는 꺼진 모델이 있어도 미리 막지 않는다", async () => {
+    serveTrace(() => PAUSED);
+    servePlugins([calcUsing(null), FIXTURE, modelPlugin("sonnet", { enabled: false })]);
+    await openDecision();
+
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    expect(place().textContent).not.toContain("꺼진 플러그인");
+    expect(button("승인").disabled).toBe(false);
+  });
+
+  test("에이전트가 고른 모델의 행이 표지면 꺼짐으로 세지 않고 결정 버튼을 막지 않는다", async () => {
+    serveTrace(() => PAUSED);
+    servePlugins([
+      calcUsing("sonnet"),
+      FIXTURE,
+      { kind: "model", name: "sonnet", enabled: false, reason: "매니페스트를 읽을 수 없다" },
+    ]);
+    await openDecision();
+
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    expect(place().textContent).not.toContain("꺼진 플러그인");
+    expect(place().textContent).not.toContain("모델 sonnet");
+    expect(button("승인").disabled).toBe(false);
   });
 
   test("플러그인 목록을 다시 읽다 실패하면 옛 꺼짐을 믿지 않고 미리 알 수 없다고 말하며 결정 버튼을 막지 않는다", async () => {
