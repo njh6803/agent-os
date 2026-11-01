@@ -13,7 +13,11 @@ MCP 사례의 자식은 처리기 아래에서 진짜 MCP 어댑터로 입력이
 신호를 올리는 법은 OS 마다 다르다. POSIX 에서 보조 스레드가 `raise_signal` 로 올리면 그 스레드가
 신호를 받아 주 스레드의 대기가 깨지지 않는다. 그래서 그 스레드는 SIGINT 를 막고 프로세스에 보낸다.
 윈도우는 C 처리기가 올린 스레드에서 돌고 이벤트 루프를 깨우므로 그대로 올린다. 시각은 모두
-벽시계이고 자식이 파일에 남긴다.
+벽시계이고 자식이 파일에 남긴다. 다만 앞뒤는 시각으로 가르지 않는다. MCP 사례의 자식은 표지를
+쓸 때마다 `order.txt` 에 이름을 덧붙이고, 시험은 그 줄의 순서로 가른다. 윈도우에서 `time.time()` 을
+연달아 부르면 같은 값이 나오는 때가 많아(이 PC 에서 20000쌍 중 19999쌍, `uv run python -c` 로
+손으로 봤다), 누른 시각과 취소 시각의 `<` 가 거짓이 됐다(대기열 531). 시각은 끝나기까지의
+길이를 재는 데만 쓴다.
 """
 
 import signal
@@ -65,6 +69,12 @@ server = McpServer(command=sys.executable, args=(lingering, "stay", str(folder))
 marker = folder / ("closing" if moment == "closing" else "slow")
 
 
+def record(name: str) -> None:
+    with (folder / "order.txt").open("a", encoding="utf-8") as order:
+        order.write(name + "\\n")
+    (folder / name).write_text(str(time.time()), encoding="utf-8")
+
+
 def appeared(path: Path) -> bool:
     end = time.monotonic() + 30
     while not path.exists():
@@ -82,7 +92,7 @@ def press() -> None:
             return
         if count == 0 and moment == "closing":
             time.sleep(0.5)
-        (folder / f"pressed-{count}").write_text(str(time.time()), encoding="utf-8")
+        record(f"pressed-{count}")
         if os.name == "posix":
             os.kill(os.getpid(), signal.SIGINT)
         else:
@@ -94,14 +104,14 @@ async def main() -> None:
         threading.Thread(target=press, daemon=True).start()
         if moment == "closing":
             await connection.call("slow", {"seconds": 0.1})
-            marker.write_text(str(time.time()), encoding="utf-8")
+            record("closing")
         else:
             try:
                 await connection.call("slow", {"seconds": 30})
             except asyncio.CancelledError:
-                (folder / "cancelled").write_text(str(time.time()), encoding="utf-8")
+                record("cancelled")
                 raise
-    (folder / "closed").write_text(str(time.time()), encoding="utf-8")
+    record("closed")
 
 
 run_interruptibly(main)
@@ -229,8 +239,17 @@ class _끝:
     pressed: list[float]
     cancelled: float | None
     closing: float | None
-    closed: float | None
     ended: float
+    order: list[str]
+
+    def 앞선다(self, first: str, second: str) -> bool:
+        """둘 다 순서 파일에 있고 `first`가 `second`보다 앞이다. 시계 값으로 견주지 않는다. 시계의
+        한 눈금보다 짧은 간격이면 두 값이 같아 앞뒤를 가르지 못한다(대기열 531)."""
+        return (
+            first in self.order
+            and second in self.order
+            and (self.order.index(first) < self.order.index(second))
+        )
 
 
 def _누른다(folder: Path, moment: str, presses: int) -> _끝:
@@ -244,6 +263,8 @@ def _누른다(folder: Path, moment: str, presses: int) -> _끝:
         pytest.fail(f"Ctrl+C 를 누른 자식이 {ENDED_WITHIN_SECONDS}초 안에 끝나지 않았다")
     ended = time.time()
     pressed = [_시각(folder / f"pressed-{count}") for count in range(presses)]
+    order_file = folder / "order.txt"
+    order = order_file.read_text(encoding="utf-8").split() if order_file.exists() else []
     return _끝(
         code=child.returncode,
         stderr=(folder / "stderr.txt").read_text(encoding="utf-8", errors="replace"),
@@ -251,8 +272,8 @@ def _누른다(folder: Path, moment: str, presses: int) -> _끝:
         pressed=[at for at in pressed if at is not None],
         cancelled=_시각(folder / "cancelled"),
         closing=_시각(folder / "closing"),
-        closed=_시각(folder / "closed"),
         ended=ended,
+        order=order,
     )
 
 
@@ -262,7 +283,7 @@ def test_도구_호출_도중에_한_번_누르면_서버를_닫고_중단으로
     assert 끝.called, "서버가 도구 호출을 받지 않았다"
     assert len(끝.pressed) == 1
     assert 끝.cancelled is not None, "첫째가 도구 호출을 취소하지 않았다"
-    assert 끝.pressed[0] < 끝.cancelled
+    assert 끝.앞선다("pressed-0", "cancelled"), 끝.order
     assert 끝.code == DIED_INTERRUPTED
     # 둘째의 한 줄이 첫째의 한 줄로 시작하므로 둘째의 것이 아님도 본다.
     assert INTERRUPTED in 끝.stderr
@@ -277,7 +298,7 @@ def test_닫는_도중에_한_번_더_누르면_닫기를_기다리지_않고_�
     assert 끝.called, "서버가 도구 호출을 받지 않았다"
     assert len(끝.pressed) == 2
     assert 끝.cancelled is not None, "첫째가 도구 호출을 취소하지 않았다"
-    assert 끝.cancelled < 끝.pressed[1], "둘째가 닫는 도중에 오지 않았다"
+    assert 끝.앞선다("cancelled", "pressed-1"), f"둘째가 닫는 도중에 오지 않았다: {끝.order}"
     assert 끝.code == DIED_INTERRUPTED
     assert FORCED in 끝.stderr
     assert 끝.ended - 끝.pressed[1] < FORCED_WITHIN_SECONDS
@@ -291,8 +312,10 @@ def test_서버를_닫기_시작한_뒤에_한_번_누르면_닫기를_마치고
 
     assert 끝.closing is not None, "자식이 연결을 나서지 않았다"
     assert len(끝.pressed) == 1
-    assert 끝.closing < 끝.pressed[0]
-    assert 끝.closed is None or 끝.pressed[0] < 끝.closed, "누르기 전에 닫기가 끝났다"
+    assert 끝.앞선다("closing", "pressed-0"), 끝.order
+    assert "closed" not in 끝.order or 끝.앞선다("pressed-0", "closed"), (
+        f"누르기 전에 닫기가 끝났다: {끝.order}"
+    )
     assert 끝.code == DIED_INTERRUPTED
     assert INTERRUPTED in 끝.stderr
     assert FORCED not in 끝.stderr
