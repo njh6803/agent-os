@@ -1,0 +1,413 @@
+# tools/hook_deletion_adversarial.py(대기열 442, harness 티켓 034)의 판정을 하나씩 깨는 변이.
+#   PYTHONUTF8=1 uv run python tools/mutate.py .scratch/harness/probes/deletion_adversarial_hook_mutations.toml
+# 끝의 하나는 대조군이다. 알림의 무시 조건 앞 낱말은 어느 시험도 보지 않는다.
+
+[[mutation]]
+name = "tools 폴더를 요구하지 않는다"
+tests = ["tests/tools/test_hook_deletion_adversarial.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_deletion_adversarial.py"
+old = '''        folder == "tools" and (index == 0 or folders[index - 1] != "tests")'''
+new = '''        (index == 0 or folders[index - 1] != "tests")'''
+
+[[mutation]]
+name = "tools 바로 앞 tests 토막을 빼지 않는다"
+tests = ["tests/tools/test_hook_deletion_adversarial.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_deletion_adversarial.py"
+old = '''        folder == "tools" and (index == 0 or folders[index - 1] != "tests")'''
+new = '''        folder == "tools"'''
+
+[[mutation]]
+name = "시험 파일을 빼지 않는다"
+tests = ["tests/tools/test_hook_deletion_adversarial.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_deletion_adversarial.py"
+old = '''    if _is_test_file(name):
+        return False'''
+new = '''    if False:
+        return False'''
+
+[[mutation]]
+name = "conftest 를 시험 파일로 세지 않는다"
+tests = ["tests/tools/test_hook_deletion_adversarial.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_deletion_adversarial.py"
+old = '''        name == "conftest.py"
+        or stem.startswith("test_")'''
+new = '''        stem.startswith("test_")'''
+
+[[mutation]]
+name = "점 시험(.test.) 꼴을 시험 파일로 세지 않는다"
+tests = ["tests/tools/test_hook_deletion_adversarial.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_deletion_adversarial.py"
+old = '''(".test.", ".test-d.", ".spec.")'''
+new = '''(".test-d.", ".spec.")'''
+
+[[mutation]]
+name = "시험 접두(test_) 꼴을 시험 파일로 세지 않는다"
+tests = ["tests/tools/test_hook_deletion_adversarial.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_deletion_adversarial.py"
+old = '''        or stem.startswith("test_")
+'''
+new = ''''''
+
+[[mutation]]
+name = "시험 접미(_test) 꼴을 시험 파일로 세지 않는다"
+tests = ["tests/tools/test_hook_deletion_adversarial.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_deletion_adversarial.py"
+old = '''        or stem.endswith("_test")
+'''
+new = ''''''
+
+[[mutation]]
+name = "점 시험(.test-d.) 꼴을 시험 파일로 세지 않는다"
+tests = ["tests/tools/test_hook_deletion_adversarial.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_deletion_adversarial.py"
+old = '''(".test.", ".test-d.", ".spec.")'''
+new = '''(".test.", ".spec.")'''
+
+[[mutation]]
+name = "점 시험(.spec.) 꼴을 시험 파일로 세지 않는다"
+tests = ["tests/tools/test_hook_deletion_adversarial.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_deletion_adversarial.py"
+old = '''(".test.", ".test-d.", ".spec.")'''
+new = '''(".test.", ".test-d.")'''
+
+[[mutation]]
+name = "코드 확장자를 보지 않는다"
+tests = ["tests/tools/test_hook_deletion_adversarial.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_deletion_adversarial.py"
+old = '''    if "." not in name or "." + name.rsplit(".", 1)[1] not in CODE_SUFFIXES:
+        return False'''
+new = '''    if False:
+        return False'''
+
+[[mutation]]
+name = "대소문자를 가린다"
+tests = ["tests/tools/test_hook_deletion_adversarial.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_deletion_adversarial.py"
+old = '''    parts = [part.casefold() for part in _SPLIT.split(path) if part]'''
+new = '''    parts = [part for part in _SPLIT.split(path) if part]'''
+
+[[mutation]]
+name = "주석 줄을 거르지 않는다"
+tests = ["tests/tools/test_hook_deletion_adversarial.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_deletion_adversarial.py"
+old = '''        if not line.lstrip().startswith(COMMENT_PREFIXES)
+        and any(call.search(line) for call in DELETION_CALLS)'''
+new = '''        if any(call.search(line) for call in DELETION_CALLS)'''
+
+[[mutation]]
+name = "// 주석을 거르지 않는다"
+tests = ["tests/tools/test_hook_deletion_adversarial.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_deletion_adversarial.py"
+old = '''COMMENT_PREFIXES = ("#", "//")'''
+new = '''COMMENT_PREFIXES = ("#",)'''
+
+[[mutation]]
+name = "shutil.rmtree 꼴을 뺀다"
+tests = ["tests/tools/test_hook_deletion_adversarial.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_deletion_adversarial.py"
+old = '''        r"\brmtree\s*\(",
+'''
+new = ''''''
+
+[[mutation]]
+name = "os.remove 꼴을 뺀다"
+tests = ["tests/tools/test_hook_deletion_adversarial.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_deletion_adversarial.py"
+old = '''        r"\bos\.(?:remove|unlink|rmdir|removedirs)\s*\(",
+'''
+new = ''''''
+
+[[mutation]]
+name = "Path.unlink 꼴을 뺀다"
+tests = ["tests/tools/test_hook_deletion_adversarial.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_deletion_adversarial.py"
+old = '''        r"\b(?:unlink|rmdir)\s*\(",
+'''
+new = ''''''
+
+[[mutation]]
+name = "rmSync 꼴을 뺀다"
+tests = ["tests/tools/test_hook_deletion_adversarial.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_deletion_adversarial.py"
+old = '''        r"\b(?:rmSync|rmdirSync|unlinkSync|rimraf(?:Sync)?)\s*\(",
+'''
+new = ''''''
+
+[[mutation]]
+name = "가져온 rm( 꼴을 뺀다"
+tests = ["tests/tools/test_hook_deletion_adversarial.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_deletion_adversarial.py"
+old = '''        r"(?<![\w$.])rm\s*\(",
+'''
+new = ''''''
+
+[[mutation]]
+name = "rm( 앞 단어 문자 검사를 뺀다(perform( 이 걸린다)"
+tests = ["tests/tools/test_hook_deletion_adversarial.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_deletion_adversarial.py"
+old = '''        r"(?<![\w$.])rm\s*\(",'''
+new = '''        r"rm\s*\(",'''
+
+[[mutation]]
+name = ".rm( 꼴을 뺀다"
+tests = ["tests/tools/test_hook_deletion_adversarial.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_deletion_adversarial.py"
+old = '''        r"\.rm\s*\(",
+'''
+new = ''''''
+
+[[mutation]]
+name = "git worktree remove 글 꼴을 뺀다"
+tests = ["tests/tools/test_hook_deletion_adversarial.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_deletion_adversarial.py"
+old = '''        r"\bworktree\s+remove\b",
+'''
+new = ''''''
+
+[[mutation]]
+name = "worktree remove 리스트 인자 꼴을 뺀다"
+tests = ["tests/tools/test_hook_deletion_adversarial.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_deletion_adversarial.py"
+old = '''        r"""["']worktree["']\s*,\s*["']remove["']""",
+'''
+new = ''''''
+
+[[mutation]]
+name = "git clean 꼴을 뺀다"
+tests = ["tests/tools/test_hook_deletion_adversarial.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_deletion_adversarial.py"
+old = '''        r"\bgit\s+(?:-\S+\s+)*clean\b",
+'''
+new = ''''''
+
+[[mutation]]
+name = "branch -D 꼴을 뺀다"
+tests = ["tests/tools/test_hook_deletion_adversarial.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_deletion_adversarial.py"
+old = '''        r"\bbranch\s+-[dD]\b",
+'''
+new = ''''''
+
+[[mutation]]
+name = "Remove-Item 꼴을 뺀다"
+tests = ["tests/tools/test_hook_deletion_adversarial.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_deletion_adversarial.py"
+old = '''        r"\bRemove-Item\b",
+'''
+new = ''''''
+
+[[mutation]]
+name = "셸 rm -rf 꼴을 뺀다"
+tests = ["tests/tools/test_hook_deletion_adversarial.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_deletion_adversarial.py"
+old = '''        r"(?:^|[\s;&|(])rm\s+-\w*[rf]",
+'''
+new = ''''''
+
+[[mutation]]
+name = "원래 있던 줄도 더한 줄로 센다"
+tests = ["tests/tools/test_hook_deletion_adversarial.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_deletion_adversarial.py"
+old = '''    return [line for line in new.splitlines() if line.strip() and line not in before]'''
+new = '''    return [line for line in new.splitlines() if line.strip()]'''
+
+[[mutation]]
+name = "Write 의 originalFile 을 읽지 않는다"
+tests = ["tests/tools/test_hook_deletion_adversarial.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_deletion_adversarial.py"
+old = '''    return (original if isinstance(original, str) else ""), content'''
+new = '''    return "", content'''
+
+[[mutation]]
+name = "Edit 의 originalFile 을 읽지 않는다(조각만 본다)"
+tests = ["tests/tools/test_hook_deletion_adversarial.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_deletion_adversarial.py"
+old = '''        if isinstance(original, str) and old and old in original:'''
+new = '''        if False:'''
+
+[[mutation]]
+name = "Edit 의 replace_all 을 보지 않는다"
+tests = ["tests/tools/test_hook_deletion_adversarial.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_deletion_adversarial.py"
+old = '''            count = -1 if tool_input.get("replace_all") is True else 1'''
+new = '''            count = 1'''
+
+[[mutation]]
+name = "Edit 를 도구에서 뺀다"
+tests = ["tests/tools/test_hook_deletion_adversarial.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_deletion_adversarial.py"
+old = '''TOOLS = ("Write", "Edit")'''
+new = '''TOOLS = ("Write",)'''
+
+[[mutation]]
+name = "걸린 줄의 수를 자르지 않는다"
+tests = ["tests/tools/test_hook_deletion_adversarial.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_deletion_adversarial.py"
+old = '''for line in flagged[:SHOWN_LINES])'''
+new = '''for line in flagged)'''
+
+[[mutation]]
+name = "걸린 줄의 글자를 자르지 않는다"
+tests = ["tests/tools/test_hook_deletion_adversarial.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_deletion_adversarial.py"
+old = '''f"- {line.strip()[:LINE_WIDTH]}"'''
+new = '''f"- {line.strip()}"'''
+
+[[mutation]]
+name = "표지를 에이전트별로 가르지 않는다"
+tests = ["tests/tools/test_hook_deletion_adversarial.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_deletion_adversarial.py"
+old = '''    joined = f"{session_id}\0{agent_id}"'''
+new = '''    joined = f"{session_id}"'''
+
+[[mutation]]
+name = "이미 있는 표지를 처음으로 읽는다"
+tests = ["tests/tools/test_hook_deletion_adversarial.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_deletion_adversarial.py"
+old = '''    except FileExistsError:
+        return False'''
+new = '''    except FileExistsError:
+        return True'''
+
+[[mutation]]
+name = "clean 리스트 인자 꼴을 뺀다"
+tests = ["tests/tools/test_hook_deletion_adversarial.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_deletion_adversarial.py"
+old = '''        r"""["']clean["']\s*,\s*["']-\w+["']""",
+'''
+new = ''''''
+
+[[mutation]]
+name = "branch -D 리스트 인자 꼴을 뺀다"
+tests = ["tests/tools/test_hook_deletion_adversarial.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_deletion_adversarial.py"
+old = '''        r"""["']branch["']\s*,\s*["']-[dD]["']""",
+'''
+new = ''''''
+
+[[mutation]]
+name = "표지 폴더를 못 만들면 알리지 않는다"
+tests = ["tests/tools/test_hook_deletion_adversarial.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_deletion_adversarial.py"
+old = '''        os.makedirs(directory, exist_ok=True)
+    except OSError:
+        return True'''
+new = '''        os.makedirs(directory, exist_ok=True)
+    except OSError:
+        return False'''
+
+[[mutation]]
+name = "표지 파일을 못 만들면 알리지 않는다"
+tests = ["tests/tools/test_hook_deletion_adversarial.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_deletion_adversarial.py"
+old = '''    except OSError:
+        return True
+    return True'''
+new = '''    except OSError:
+        return False
+    return True'''
+
+[[mutation]]
+name = "임시 폴더가 없으면 알리지 않는다"
+tests = ["tests/tools/test_hook_deletion_adversarial.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_deletion_adversarial.py"
+old = '''            directory = None'''
+new = '''            return 0'''
+
+[[mutation]]
+name = "빈 세션 ID 도 세션으로 센다"
+tests = ["tests/tools/test_hook_deletion_adversarial.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_deletion_adversarial.py"
+old = '''    if isinstance(session, str) and session:'''
+new = '''    if isinstance(session, str):'''
+
+[[mutation]]
+name = "대조군: 알림의 무시 조건 앞 낱말을 바꾼다"
+tests = ["tests/tools/test_hook_deletion_adversarial.py"]
+expect = "green"
+[[mutation.edit]]
+file = "tools/hook_deletion_adversarial.py"
+old = '''지우는 대상이 이 도구가 방금 만든 임시'''
+new = '''지우는 대상이 이 도구가 막 만든 임시'''

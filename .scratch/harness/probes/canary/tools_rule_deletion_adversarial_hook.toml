@@ -1,0 +1,29 @@
+# `.claude/rules/tools.md` 의 훅별 시간 항목에 더한 Write·Edit 문장(대기열 442, `hook_deletion_adversarial`)이
+# `paths` 에 맞는 파일을 Read 로 열 때 실리는지(harness 티켓 034).
+# 실험군은 규칙의 paths 안(tools/), 대조군은 밖(README.md)을 읽는다. 둘 다 이 체크아웃이다.
+# 카나리아는 이 PR 이 더한 문장에만 있는 글이다. 훅 이름은 git 상태의 바뀐 경로에도 들어 고르지 않았다.
+# 첫 판은 "괄호 안에 적은 두 번째 설명"을 물었다. 실험군 세 번 모두 그 문장을 인용해 규칙은 실렸지만, 한 번은 시간 설명의
+#   괄호를 옮겨 카나리아가 없다고 판정됐다(통과 3, 실패 1, 2026-11-01, 이 PC). 물음의 "두 번째 괄호"가 문장에서 모호했다.
+#   카나리아(expect)는 그대로 두고 물음만 괄호 대신 "파일을 열지 않는다고 적은 뒤 이어지는 구절"로 고쳤다. 그 구절은 한 곳에만 있다.
+# 최신 결과: 통과 4, 실패 0, "없음" 섞인 통과 0(2026-11-01, 이 PC, 러너가 찍은 커밋 544381ea에 이 PR 의 작업 트리를 얹은 체크아웃).
+# 돌리는 법: uv run python tools/canary.py .scratch/harness/probes/canary/tools_rule_deletion_adversarial_hook.toml <출력 디렉터리>
+kind = "rule"
+question = '''
+Read 도구로 `{target}` 파일 하나만 통째로 읽어라. 다른 파일은 읽지 않는다.
+그 뒤 이 세션에 실린 지시 가운데에서 하나를 찾아 답하라. 읽은 파일의 코드에서 추측하지 않는다.
+Write·Edit 의 PostToolUse 에 붙는다고 적힌 훅 가운데, 도구 코드에 지우는 호출이 든 줄을 더할 때를 다루는 훅 문장이 있으면,
+그 문장이 "파일을 열지 않으며" 라고 적은 바로 뒤에 이어지는 구절을, 문장 끝의 마침표 앞까지 글자 그대로 옮겨라.
+그런 문장이 없으면 "없음"이라고만 답하라.
+'''
+expect = ["지우는 호출 줄이 걸릴 때만 표지 파일 하나를 만든다"]
+source = ".claude/rules/tools.md"
+
+[[arm]]
+name = "paths-안"
+role = "experiment"
+target = "tools/hook_env_read.py"
+
+[[arm]]
+name = "paths-밖"
+role = "control"
+target = "README.md"
