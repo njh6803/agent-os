@@ -1,0 +1,131 @@
+# tools/hook_probe_citing_doc.py(대기열 540)의 판정과 표지와 알림 문장을 하나씩 깨는 변이.
+#   PYTHONUTF8=1 uv run python tools/mutate.py .scratch/harness/probes/probe_citing_doc_hook_mutations.toml
+# 끝의 하나는 대조군이다. 알림의 무시 조건 문장은 어느 시험도 보지 않는다.
+
+[[mutation]]
+name = "명세에서 .scratch 조상을 요구하지 않는다"
+tests = ["tests/tools/test_hook_probe_citing_doc.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_probe_citing_doc.py"
+old = '''        return len(parts) >= 3 and parts[-3] == SCRATCH'''
+new = '''        return True'''
+
+[[mutation]]
+name = "ADR 에서 docs 조상을 요구하지 않는다"
+tests = ["tests/tools/test_hook_probe_citing_doc.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_probe_citing_doc.py"
+old = '''    if parent == "adr" and grandparent == "docs":'''
+new = '''    if parent == "adr":'''
+
+[[mutation]]
+name = "ADR 색인도 센다"
+tests = ["tests/tools/test_hook_probe_citing_doc.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_probe_citing_doc.py"
+old = '''        return name != README'''
+new = '''        return True'''
+
+[[mutation]]
+name = "서브에이전트 정의에서 .claude 조상을 요구하지 않는다"
+tests = ["tests/tools/test_hook_probe_citing_doc.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_probe_citing_doc.py"
+old = '''    return parent == "agents" and grandparent == ".claude"'''
+new = '''    return parent == "agents"'''
+
+[[mutation]]
+name = "대소문자를 가린다"
+tests = ["tests/tools/test_hook_probe_citing_doc.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_probe_citing_doc.py"
+old = '''    parts = [part.casefold() for part in _SPLIT.split(path) if part]'''
+new = '''    parts = [part for part in _SPLIT.split(path) if part]'''
+
+[[mutation]]
+name = "프로브 낱말을 요구하지 않는다"
+tests = ["tests/tools/test_hook_probe_citing_doc.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_probe_citing_doc.py"
+old = '''    return any(cue in folded for cue in CUES)'''
+new = '''    return True'''
+
+[[mutation]]
+name = "낱말 탐침을 뺀다"
+tests = ["tests/tools/test_hook_probe_citing_doc.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_probe_citing_doc.py"
+old = '''CUES = ("probes/", "프로브", "탐침")'''
+new = '''CUES = ("probes/", "프로브")'''
+
+[[mutation]]
+name = "Write 의 content 를 보지 않는다"
+tests = ["tests/tools/test_hook_probe_citing_doc.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_probe_citing_doc.py"
+old = '''    for key in ("new_string", "content"):'''
+new = '''    for key in ("new_string",):'''
+
+[[mutation]]
+name = "지운 글도 더한 글로 본다"
+tests = ["tests/tools/test_hook_probe_citing_doc.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_probe_citing_doc.py"
+old = '''    for key in ("new_string", "content"):'''
+new = '''    for key in ("old_string", "new_string", "content"):'''
+
+[[mutation]]
+name = "표지를 보지 않고 늘 알린다"
+tests = ["tests/tools/test_hook_probe_citing_doc.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_probe_citing_doc.py"
+old = '''    except FileExistsError:
+        return False'''
+new = '''    except FileExistsError:
+        return True'''
+
+[[mutation]]
+name = "등록의 매처와 도구 목록이 갈린다"
+tests = ["tests/tools/test_hook_probe_citing_doc.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_probe_citing_doc.py"
+old = '''TOOLS = ("Write", "Edit")'''
+new = '''TOOLS = ("Write", "Edit", "MultiEdit")'''
+
+[[mutation]]
+name = "알림에서 셋째 항목을 뺀다"
+tests = ["tests/tools/test_hook_probe_citing_doc.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_probe_citing_doc.py"
+old = '''    " `.claude/rules/probes.md` 셋째 항목이 말하는 양성 대조와 다른 해석을 가르는 갈래가 없는"'''
+new = '''    " `.claude/rules/probes.md` 가 말하는 양성 대조와 다른 해석을 가르는 갈래가 없는"'''
+
+[[mutation]]
+name = "알림에서 근거 절의 이름을 틀리게 적는다"
+tests = ["tests/tools/test_hook_probe_citing_doc.py"]
+expect = "red"
+[[mutation.edit]]
+file = "tools/hook_probe_citing_doc.py"
+old = '''    " `docs/agents/issue-tracker.md` 프로브와 근거 절이다.'''
+new = '''    " `docs/agents/issue-tracker.md` 프로브 절이다.'''
+
+[[mutation]]
+name = "대조군: 알림의 무시 조건 문장을 바꾼다"
+tests = ["tests/tools/test_hook_probe_citing_doc.py"]
+expect = "green"
+[[mutation.edit]]
+file = "tools/hook_probe_citing_doc.py"
+old = '''프로브의 결과를 옮기지 않은 편집이면 이"'''
+new = '''프로브의 결과를 적지 않은 편집이면 이"'''
