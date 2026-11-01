@@ -48,3 +48,41 @@
 ## 인계
 
 open-session을 부른다 2026-11-01T05:39:25Z
+
+## 이어받은 세션이 한 것과 두 번째 인계(커밋 뒤)
+
+세션 제목: `chore/036-mutate-details-failure-lines`. 컨텍스트가 인계 문턱을 넘어 커밋 직후 새 세션으로 넘긴다.
+
+- 사용자 프롬프트 원문: 이어받은 세션의 첫 메시지는 앞 절과 같은 지시문이다(시작 프롬프트 "대기열 455를 티켓 .scratch/harness/issues/036-mutate-details-failure-lines.md로 쓰고 한다", 이번 요청 범위 "PR과 병합까지"). 그 뒤 사용자 메시지는 없다.
+- 한 것: 워크트리에 들어가 셀프 리뷰(표준·명세 두 서브에이전트)를 돌려 반영하고(위 "셀프 리뷰" 절), 커밋 하나를 만들었다. 제목은 `chore: 표지 없는 변이의 실패 머리 줄까지 mutate가 보인다 (harness 036)`. pre-commit이 `tools/run_checks.py`의 CHECKS 전부(check-ticket, zizmor, lint-imports, check-instructions, check-type-escapes, pyright, pyright-linux, run-hooks, pytest, web-verify)와 변이 표 확인을 통과했다. 이것이 티켓 마지막 수용 기준 "검증 명령이 모두 초록이다"의 근거다(커밋 출력에서 읽었다. pytest 450.3초). 커밋 전 `run_checks.py` 첫 판의 pytest 실패 하나(`test_interrupt.py`의 30초 기한)는 이 커밋의 pre-commit pytest에서는 났지 않았다.
+- 푸시하지 않았다. PR은 없다. 남은 단계: 커밋 뒤 `origin/main`을 합치고(`/security-review`는 합친 뒤에 돈다), PR 직전 리뷰, PR 열기, 봇 회차, 병합. PR 직전 리뷰는 CodeRabbit CLI가 좌석 미배정으로 돌지 못하면(`operations.md` 리뷰 파이프라인 2) 내장 `/security-review`와 `bug-perf-review` 서브에이전트를 나란히 돌린다. 이 세션은 둘을 돌리지 않았다.
+- PR 직전 리뷰의 브리프에 밀 주장으로 넘길 문장(셀프 리뷰 반영이 새로 쓴 사실 문장. 근거는 코드와 서브에이전트가 불러 본 것이다): (1) `tools/mutate.py` 모듈 독스트링 "머리 줄은 `AssertionError`·`TypeError` 처럼 `Error` 로 끝나는 낱말로 시작하는 줄, `Expected`·`Received` 로 시작하는 줄, diff 의 `-`·`+` 줄이다. 들여쓴 줄도 받고 앞에서 스무 줄까지 낸다" (2) 같은 독스트링의 못 보는 것 "고르는 상한이 끝에서가 아니라 맨 앞에서 스무 줄이라 … 마지막 실패 블록의 머리가 안 보일 수 있다. 줄 머리만 보므로 `Error` 만 있는 줄과 `- ` 로 시작하는 목록 줄도 머리로 받아". (3) 티켓 036 본문의 "판정이 어긋난 회차"를 좁게 읽는다는 문장(빨강을 기대했는데 초록이면 보일 실패 줄이 없고, 초록을 기대했는데 빨강이면 실패한 시험 이름이 이미 보인다).
+- 열기: 이 세션이 `git worktree unlock`을 쳤더니 `is not locked`였다(넘어간다).
+
+open-session을 부른다 2026-11-01T06:16:16Z
+
+- 이 세션이 확인하지 못한 것: 변이 표 README 행의 판 "기준 커밋 `544381ea` 위의 작업 트리"를 커밋 SHA로 바꾸지 않았다(병합 뒤 SHA가 달라진다. 위 남긴 것). `sibling_overlap.py`는 번호 겹침 없음이었고 일지 `2026-11-01-09`·`-10`을 쓰는 형제(035·034)가 이 일지보다 이름순으로 뒤에서 병합되면 그쪽이 옮긴다(도구 출력).
+
+지시문(그대로 `open-session`이 보낸다):
+
+```
+다음 작업: .scratch/harness/issues/036-mutate-details-failure-lines.md. tools/mutate.py의 _details가 표지 없는 변이의 실패 머리 줄까지 보이게 고친 작업(대기열 455)은 셀프 리뷰 반영과 커밋까지 마쳤고, 이제 PR 직전 리뷰, PR, 병합으로 간다
+다음 단계: 구현
+어디서: 새 세션. 같은 브랜치·워크트리라 git worktree list에서 chore/036-mutate-details-failure-lines가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: 대기열 455를 티켓 .scratch/harness/issues/036-mutate-details-failure-lines.md로 쓰고 한다
+브랜치: chore/036-mutate-details-failure-lines
+모델: Sonnet 5.5 / high. 2의 잇는 지시문
+읽을 것: docs/journal/2026-11-01-08-mutate-details-failure-lines.md의 "이어받은 세션이 한 것과 두 번째 인계" 절(셀프 리뷰 판정과 PR 직전 리뷰에 밀 주장)
+이어받을 상태: 인계: 커밋 뒤. 커밋 하나(셀프 리뷰 반영 포함)가 pre-commit을 통과했고 푸시하지 않았다. 남은 단계는 origin/main 합치기, PR 직전 리뷰(CodeRabbit CLI가 못 돌면 /security-review와 bug-perf-review), PR 열기, 봇 회차, 병합이다. 일지 docs/journal/2026-11-01-08-mutate-details-failure-lines.md
+확인할 선행 조건: 없음
+이번 요청 범위: PR과 병합까지
+```
+
+## PR 직전 리뷰(세 번째 세션, CodeRabbit CLI 좌석 미배정이라 대체 둘)
+
+`coderabbit auth status`가 `Seat: not assigned`라 `operations.md` 리뷰 파이프라인 2의 대체를 돌렸다. `origin/main`이 움직이지 않아(`git log HEAD..origin/main` 비어 있음) 합칠 것이 없었고, 커밋 `e3d98c16` 위에서 둘을 나란히 돌렸다.
+
+- `/security-review`: 보고할 취약점 없음. 이미 수집한 러너 출력의 줄을 정규식으로 골라 더 찍는 순수 문자열 처리이고 새 입력 경로·프로세스·파일 접근이 없다.
+- `bug-perf-review`(Critical·Major 없음, Minor 둘). 밀 주장 넷(정규식이 `TypeError:`는 받고 `Errors  1 error`·`Expectedly`·`ReceivedX`는 거름, 열 줄 이하 출력에서 빈 목록, 상한이 맨 앞 스무 줄, 위치로 거르는 중복)을 서브에이전트가 불러 확인했다. 정규식 시간은 200만 자 줄 다섯 개에 0.11초 등으로 선형이다. 변이 표 일곱은 서브에이전트가 돌리지 못했다(커밋의 pre-commit이 확인했다).
+  - 유효(Minor), 고쳤다: pytest의 `E       TypeError: x` 접두 줄은 줄 머리가 `E`라 머리로 안 잡힌다. 이 세션이 `_FAILURE_HEAD`를 직접 불러 `False`를 확인했다. 정규식을 넓히지 않고(이번 목적은 vitest) 모듈 독스트링의 못 보는 것에 한 줄을 더하고, 시험 `test_머리_줄은_pytest_의_E_접두_줄을_머리로_읽지_않는다`로 고정했다(`.claude/rules/tools.md`의 못 보는 것 규칙).
+  - 보류(Minor), 두었다: 머리 줄과 끝 10줄 사이에 구분 표시가 없다. 출력 모양을 바꾸는 설계 취향이고 시나리오가 틀린 출력은 아니다. 고치는 값은 시험 둘과 독스트링이라 이 티켓 범위를 넘는다고 보아 PR 체크리스트에 적는다.

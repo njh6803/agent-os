@@ -1592,6 +1592,17 @@ def test_머리_줄은_Errors_요약_같은_다른_낱말을_머리로_읽지_�
     assert not any("Errors" in 한줄 for 한줄 in 줄)
 
 
+def test_머리_줄은_pytest_의_E_접두_줄을_머리로_읽지_않는다(tmp_path: Path) -> None:
+    """모듈 독스트링의 못 보는 것: `E       TypeError: x` 는 줄 머리가 `E` 라 받지 않는다."""
+    출력 = "E       TypeError: x\nE       assert 1 == 2\n" + "".join(
+        f" {번호} |   x\n" for 번호 in range(12)
+    )
+
+    줄 = _표지가_없는_변이의_출력(tmp_path, 출력)
+
+    assert not any("TypeError" in 한줄 or "assert 1 == 2" in 한줄 for 한줄 in 줄)
+
+
 def test_머리_줄은_스무_줄까지만_보인다(tmp_path: Path) -> None:
     출력 = "".join(f"- 값 {번호}\n" for 번호 in range(50)) + "".join(
         f" {번호} |  x\n" for 번호 in range(12)
