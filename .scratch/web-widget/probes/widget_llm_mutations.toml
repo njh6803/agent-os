@@ -129,12 +129,12 @@ expect_output = ["Playwright 가 종료 코드 1 로 끝났다"]
 [[mutation.edit]]
 file = "web/apps/widget/e2e/stack.ts"
 old = '''
-    rmSync(work, { recursive: true, force: true });
+    rmSync(work, { recursive: true, force: true, maxRetries: 5 });
   };
   try {
 '''
 new = '''
-    rmSync(work, { recursive: true, force: true });
+    rmSync(work, { recursive: true, force: true, maxRetries: 5 });
     throw new Error("정리 뒤에 던지는 변이");
   };
   try {

@@ -185,7 +185,7 @@ function main(target: string, playwrightArgs: readonly string[]): number {
     const args = containerArgs(target, staged, workspaceLinks(packageDir), playwrightArgs);
     return exitCode(spawnSync("docker", args, { cwd: packageDir, stdio: "inherit" }), "docker");
   } finally {
-    rmSync(staged, { recursive: true, force: true });
+    rmSync(staged, { recursive: true, force: true, maxRetries: 5 });
   }
 }
 
