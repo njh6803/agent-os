@@ -81,7 +81,7 @@ test("빌드한 번들은 모듈이 아닌 스크립트 하나이고, 빌드 때
     expect(korean.filter((face) => face.unicodeRange === range).length).toBeGreaterThan(1);
     expect(bundle.split(range).length - 1).toBe(1);
   } finally {
-    rmSync(out, { recursive: true, force: true });
+    rmSync(out, { recursive: true, force: true, maxRetries: 5 });
   }
 });
 
@@ -101,6 +101,6 @@ test("빌드는 비어 있던 NODE_ENV 를 비운 채로 둔다", async () => {
     if (before !== undefined) {
       processEnv["NODE_ENV"] = before;
     }
-    rmSync(out, { recursive: true, force: true });
+    rmSync(out, { recursive: true, force: true, maxRetries: 5 });
   }
 });
