@@ -51,10 +51,29 @@ const BOOLEAN_PARAMETER = {
     "불리언 매개변수를 두지 않는다. 갈래를 고르는 플래그면 함수를 둘로 쪼개고, 값이면 이름 붙인 옵션 객체로 받는다(CODING_STANDARDS.md)",
 };
 
+// maxRetries 없는 재귀 rmSync(대기열 543). 윈도우에서 `rmSync(경로, { recursive: true })` 는 다른 프로세스가 그 안의
+// 파일을 잠깐 쥐고 있으면 `EPERM` 으로 끝난다. 시험의 `afterAll` 이면 시험이 다 지나도 실행이 1로 끝나고 임시 폴더가
+// 남는다. 사례마다 그 자리를 고쳐 온 것이 종류를 없애지 못해(65·379·543) 판정자가 종류를 막는다. 잡는 자리는
+// `rmSync(…)` 와 `<객체>.rmSync(…)` 호출의 옵션 객체 리터럴이 `recursive: true` 를 갖고 `maxRetries` 가 없거나 0 인 것이다.
+// `force` 와 `retryDelay` 는 보지 않는다. 키는 식별자(`recursive`)와 문자열(`"recursive"`) 둘 다 읽는다. 보지 못하는 자리는
+// 옵션을 변수로 넘기거나 `...펼침` 을 든 호출(펼친 쪽이 `maxRetries` 를 줄 수 있어 뺀다), 값이 리터럴이 아닌
+// `recursive`·`maxRetries`(변수, `!0`, `undefined`, 음수), 약식 속성(`{ recursive }`), `satisfies` 로 감싼 옵션, 별칭으로
+// 부른 `rmSync`, 괄호 접근(`fs["rmSync"]`), `rmdirSync`, 비동기 `rm` 이 대표적이고 이 목록이 전부는 아니다. 옵션
+// 객체 리터럴의 직계 속성만 보므로 안쪽 객체의 `maxRetries` 에 속지 않는다. `maxRetries` 는 일시 잠김을 다시 시도해 넘길 뿐이라, 다른 프로세스가 그 폴더를 작업 폴더로 쥔 경우는 못 푼다.
+const RM_CALL =
+  ":matches(CallExpression[callee.name='rmSync'], CallExpression[callee.property.name='rmSync'])";
+const optionKey = (name) => `:matches(Property[key.name='${name}'], Property[key.value='${name}'])`;
+const RECURSIVE_RM_WITHOUT_RETRIES = {
+  selector: `${RM_CALL} > ObjectExpression.arguments:has(> ${optionKey("recursive")}[value.value=true]):not(:has(> SpreadElement)):not(:has(> ${optionKey("maxRetries")}:not([value.value=0])))`,
+  message:
+    "재귀 rmSync 는 maxRetries 를 준다(예: `maxRetries: 5`). 윈도우에서 다른 프로세스가 쥔 파일 때문에 EPERM 으로 끝난다(대기열 543)",
+};
+
 // no-restricted-syntax 는 파일마다 한 번만 설정된다. 뒤 블록이 이 규칙을 다시 적으면 앞 목록을 통째로
 // 덮으므로, 금지 구문은 이 상수 하나에 두고 서버 파일 블록도 이것을 펼쳐 쓴다.
 const RESTRICTED_SYNTAX = [
   BOOLEAN_PARAMETER,
+  RECURSIVE_RM_WITHOUT_RETRIES,
   {
     selector: "TSEnumDeclaration",
     message: "TS enum 을 쓰지 않는다. `as const` 배열과 그 유니온을 쓴다(ADR 0021)",
