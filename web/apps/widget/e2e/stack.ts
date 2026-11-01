@@ -82,7 +82,7 @@ export default async function globalSetup(): Promise<() => Promise<void>> {
     for (const { name, output } of launched) {
       writeFileSync(join(LOGS, `${name}.log`), output());
     }
-    rmSync(work, { recursive: true, force: true });
+    rmSync(work, { recursive: true, force: true, maxRetries: 5 });
   };
   try {
     const [relayPort, sitePort, nextPort] = [await freePort(), await freePort(), await freePort()];

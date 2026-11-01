@@ -42,8 +42,24 @@ function projectTsconfig(project: string): string {
   });
 }
 
+// 재귀 rmSync 사례가 부르는 함수. node:fs 를 import 하지 않고 같은 꼴을 선언한다. 임시 트리의 tsconfig 가 `types: []` 라
+// 타입 해석이 사례의 결과를 바꾸지 못하게 한다. 규칙은 호출의 이름과 옵션 객체의 속성만 본다.
+const RM_DECLARATION =
+  "interface 지우기옵션 {\n  readonly recursive?: boolean;\n  readonly force?: boolean;\n  readonly maxRetries?: number;\n  readonly retryDelay?: number;\n}\n\nexport declare function rmSync(경로: string, 옵션?: 지우기옵션): void;\nexport declare const fs: { rmSync(경로: string, 옵션?: 지우기옵션): void };\n\n";
+
 // 임시 트리의 파일. 빨강과 초록 사례가 가리키고, import 되는 쪽도 여기 있다.
 const SOURCES: Readonly<Record<string, string>> = {
+  "apps/admin/lib/rm-no-retries.ts": `${RM_DECLARATION}export function 지운다(경로: string): void {\n  rmSync(경로, { recursive: true, force: true });\n}\n`,
+  "apps/admin/lib/rm-member-no-retries.ts": `${RM_DECLARATION}export function 지운다(경로: string): void {\n  fs.rmSync(경로, { recursive: true, force: true });\n}\n`,
+  "apps/admin/lib/rm-recursive-only.ts": `${RM_DECLARATION}export function 지운다(경로: string): void {\n  rmSync(경로, { recursive: true });\n}\n`,
+  "apps/admin/lib/rm-retry-delay-only.ts": `${RM_DECLARATION}export function 지운다(경로: string): void {\n  rmSync(경로, { recursive: true, force: true, retryDelay: 200 });\n}\n`,
+  "apps/admin/lib/rm-zero-retries.ts": `${RM_DECLARATION}export function 지운다(경로: string): void {\n  rmSync(경로, { recursive: true, maxRetries: 0 });\n}\n`,
+  "apps/admin/lib/rm-with-retries.ts": `${RM_DECLARATION}export function 지운다(경로: string): void {\n  rmSync(경로, { recursive: true, force: true, maxRetries: 5 });\n  fs.rmSync(경로, { maxRetries: 3, recursive: true });\n}\n`,
+  "apps/admin/lib/rm-string-key-no-retries.ts": `${RM_DECLARATION}export function 지운다(경로: string): void {\n  rmSync(경로, { "recursive": true });\n}\n`,
+  "apps/admin/lib/rm-string-key-with-retries.ts": `${RM_DECLARATION}export function 지운다(경로: string): void {\n  rmSync(경로, { recursive: true, "maxRetries": 5 });\n}\n`,
+  "apps/admin/lib/rm-nested-retries.ts": `${RM_DECLARATION}export function 지운다(경로: string): void {\n  rmSync(경로, { recursive: true, force: { maxRetries: 5 } });\n}\n`,
+  "apps/admin/lib/rm-not-recursive.ts": `${RM_DECLARATION}export function 지운다(경로: string): void {\n  rmSync(경로);\n  rmSync(경로, { force: true });\n  rmSync(경로, { recursive: false });\n}\n`,
+  "apps/admin/lib/rm-unseen-options.ts": `${RM_DECLARATION}const 공통: 지우기옵션 = { recursive: true, force: true };\n\nexport function 지운다(경로: string): void {\n  rmSync(경로, 공통);\n  rmSync(경로, { ...공통, force: true });\n}\n`,
   "apps/admin/lib/any.ts": "export function 받는다(값: any): void {\n  void 값;\n}\n",
   "apps/admin/lib/as.ts": 'export const 수 = JSON.parse("1") as number;\n',
   "apps/admin/lib/angle.ts": "export const 수 = <number>(<unknown>1);\n",
@@ -453,7 +469,30 @@ const BOOLEAN_PARAMETER_RED: readonly { readonly name: string; readonly path: st
   { name: "메서드의 boolean 매개변수", path: "apps/admin/lib/method-boolean-param.ts" },
 ];
 
+// 재귀 rmSync 도 다른 금지 구문과 규칙 ID 를 나눠 쓰므로 메시지의 표지까지 보고, 호출 하나가 한 번만 보고되는지도 본다.
+const RECURSIVE_RM = "재귀 rmSync";
+
+const RECURSIVE_RM_RED: readonly { readonly name: string; readonly path: string }[] = [
+  { name: "maxRetries 없는 rmSync", path: "apps/admin/lib/rm-no-retries.ts" },
+  { name: "maxRetries 없는 fs.rmSync", path: "apps/admin/lib/rm-member-no-retries.ts" },
+  { name: "force 없이 recursive 만 준 rmSync", path: "apps/admin/lib/rm-recursive-only.ts" },
+  { name: "retryDelay 만 준 rmSync", path: "apps/admin/lib/rm-retry-delay-only.ts" },
+  { name: "maxRetries 가 0 인 rmSync", path: "apps/admin/lib/rm-zero-retries.ts" },
+  { name: "문자열 키 recursive 만 준 rmSync", path: "apps/admin/lib/rm-string-key-no-retries.ts" },
+  { name: "안쪽 객체에만 maxRetries 가 든 rmSync", path: "apps/admin/lib/rm-nested-retries.ts" },
+];
+
 const GREEN: readonly { readonly name: string; readonly path: string }[] = [
+  { name: "maxRetries 를 준 재귀 rmSync", path: "apps/admin/lib/rm-with-retries.ts" },
+  {
+    name: "문자열 키 maxRetries 를 준 재귀 rmSync",
+    path: "apps/admin/lib/rm-string-key-with-retries.ts",
+  },
+  { name: "재귀가 아닌 rmSync", path: "apps/admin/lib/rm-not-recursive.ts" },
+  {
+    name: "설정 주석이 보지 않는다고 적은 rmSync(옵션을 변수로 넘김, 펼침)",
+    path: "apps/admin/lib/rm-unseen-options.ts",
+  },
   {
     name: "이름 붙인 옵션 객체로 받은 boolean",
     path: "apps/admin/lib/options-param.ts",
@@ -529,7 +568,7 @@ beforeAll(async () => {
 
 afterAll(() => {
   if (fixture !== "") {
-    rmSync(fixture, { recursive: true, force: true });
+    rmSync(fixture, { recursive: true, force: true, maxRetries: 5 });
   }
 });
 
@@ -574,6 +613,17 @@ describe("판정자가 불리언 매개변수로 빨갛게 보는 것", () => {
         .filter((message) => message.ruleId === RESTRICTED_SYNTAX)
         .map((message) => message.message);
       expect(found).toEqual([expect.stringContaining(BOOLEAN_PARAMETER)]);
+    });
+  }
+});
+
+describe("판정자가 재귀 rmSync 로 빨갛게 보는 것", () => {
+  for (const { name, path } of RECURSIVE_RM_RED) {
+    test(`${name} 은 ${RESTRICTED_SYNTAX} 의 재귀 rmSync 로 한 번 빨갛다`, () => {
+      const found = linted(path)
+        .filter((message) => message.ruleId === RESTRICTED_SYNTAX)
+        .map((message) => message.message);
+      expect(found).toEqual([expect.stringContaining(RECURSIVE_RM)]);
     });
   }
 });

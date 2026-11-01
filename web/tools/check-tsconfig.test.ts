@@ -26,7 +26,7 @@ function temporaryTree(files: Readonly<Record<string, unknown>>): string {
 
 afterEach(() => {
   for (const root of temporaries.splice(0)) {
-    rmSync(root, { recursive: true, force: true });
+    rmSync(root, { recursive: true, force: true, maxRetries: 5 });
   }
 });
 
