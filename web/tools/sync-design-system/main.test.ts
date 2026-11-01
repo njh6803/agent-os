@@ -20,7 +20,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
-  rmSync(scratch, { recursive: true, force: true });
+  rmSync(scratch, { recursive: true, force: true, maxRetries: 5 });
 });
 
 interface Outcome {

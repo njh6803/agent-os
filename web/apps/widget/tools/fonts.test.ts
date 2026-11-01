@@ -74,6 +74,6 @@ test("복사한 자리에는 고른 파일이 이름 그대로 하나씩 있다.
         .sort(),
     );
   } finally {
-    rmSync(target, { recursive: true, force: true });
+    rmSync(target, { recursive: true, force: true, maxRetries: 5 });
   }
 });
