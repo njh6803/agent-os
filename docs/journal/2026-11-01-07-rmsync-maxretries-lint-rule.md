@@ -33,3 +33,12 @@
 - `pnpm -C web/apps/widget exec playwright test`: 15 passed(1.6분), 출력 파일에 `EPERM`이 없었다.
 - `pnpm -C web/apps/admin exec playwright test` 첫 실행(`| tail -40`으로 앞을 잘라 받았다): 8 passed, 1 failed(`e2e/decision.e2e.ts:39`, `run_finished`가 안 보인다)와 "1 error was not a part of any test"였다. 시험 밖 오류의 본문은 잘려 못 봤다. 같은 `decision.e2e.ts:39` 실패와 시험 밖 오류는 이 변경 전 일지(`2026-10-30-11-admin-settings-theme.md` 47행)에도 있다. 같은 명령을 파일로 받아 다시 친 둘째 실행은 9 passed(52.1초)에 오류가 없었다.
 - 따라서 이 변경이 `stack.ts`의 `EPERM`을 없앴다고 말할 수 없다. 첫 실행의 시험 밖 오류가 `EPERM`이었는지 못 봤고 둘째 실행은 지났을 뿐이다. 규칙이 닫은 것은 재시도 없이 끝나는 종류이고, 재시도 뒤에도 나는 `EPERM`이 있으면 새 대기열 행으로 쓴다. `decision.e2e.ts:39` 실패는 이 티켓의 일이 아니다.
+
+## 커밋 뒤 인계(컨텍스트 25만 토큰 초과, 커밋 뒤 경계)
+
+- 이 세션의 제목은 `chore/037-rmsync-maxretries-lint-rule`이다. 사용자의 원문 요청은 위 "사용자 프롬프트 원문"과 같고 범위는 PR과 병합까지다.
+- 커밋은 로컬에 하나 만들었다(푸시 전, PR 없음). 커밋까지 세 번 시도했다. 첫 시도는 변이 표 검사(`widget_llm_mutations.toml`의 원문)에 막혀 표를 고쳤고, 둘째는 pytest 한 시험(`tests/adapters/test_filesystem.py`의 파일 교체 재시도, `PermissionError`)이 부하 중에 빨개졌으며 그 파일만 따로 치니 58 passed였다(손으로 봤다). 셋째가 통과해 커밋이 만들어졌다. 첫 `run_checks`에서 난 `test_interrupt.py`·`test_rerun_runner.py` 실패도 따로 치면 통과했다. 모두 부하 때문이라는 것은 어림이다.
+- 남은 일: 푸시, PR 열기(제목 관례는 기능 커밋 제목과 같다), `merge.md` 2(봇 회차)부터 병합까지. 병합은 이 워크트리 사본의 `.claude/skills/next-session/merge.md`의 "워크트리에서 병합할 때"를 Read로 열어 따른다. `.scratch/retro-queue.md`는 형제 티켓 035·036 브랜치도 고치므로 병합 때 글자 충돌 후보다(`tools/sibling_overlap.py` 출력).
+- 일지 번호 07은 형제 08~10보다 앞이라 옮길 일이 없다.
+- 제목을 `chore/037-rmsync-maxretries-lint-rule (인계함)`으로 바꿨다(바꾸기 전 제목은 `chore/037-rmsync-maxretries-lint-rule`).
+- open-session을 부른다 2026-11-01T07:14:00Z
