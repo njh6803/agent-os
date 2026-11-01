@@ -568,6 +568,32 @@ expect = "silent"
 note = "같은 probes 폴더의 프로브 스크립트 — README 가 아니다"
 payload = { tool_name = "Edit", tool_input = { file_path = "C:\\project\\agent\\.scratch\\harness\\probes\\guard_hooks_time.py", old_string = "a", new_string = "b" } }
 
+# --- hook_probe_citing_doc (PostToolUse Write|Edit) ---
+# session_id 를 빼 표지를 쓰지 않는 길(호출마다 알린다)로 돈다. 한 번만 알리는 것은 tests/tools 가 임시 폴더로 본다.
+[[case]]
+hook = "hook_probe_citing_doc.py"
+expect = "context"
+note = "명세에 프로브의 결과를 근거로 들었다(대기열 540 의 design-card-build 명세 꼴)"
+contains = [
+    ".claude/rules/probes.md",
+    "셋째 항목",
+    "양성 대조",
+    "docs/agents/issue-tracker.md",
+]
+payload = { tool_name = "Edit", tool_input = { file_path = "C:\\project\\agent\\.scratch\\design-card-build\\spec.md", old_string = "묶음이 같았다.", new_string = "`.scratch/design-card-build/probes/vite_cli.mjs`로 셸 없이 띄워도 묶음·장면·빌드 CSS·글꼴이 모두 바이트까지 같았다." } }
+
+[[case]]
+hook = "hook_probe_citing_doc.py"
+expect = "silent"
+note = "프로브를 가리키는 낱말이 없는 명세 편집 — 표지를 쓰지 않는다"
+payload = { tool_name = "Edit", tool_input = { file_path = "C:\\project\\agent\\.scratch\\design-card-build\\spec.md", old_string = "한 줄에 둘씩", new_string = "한 줄에 셋씩" } }
+
+[[case]]
+hook = "hook_probe_citing_doc.py"
+expect = "silent"
+note = "프로브를 드는 글이지만 코드 독스트링 — 이 훅의 경로 셋이 아니다(못 보는 것)"
+payload = { tool_name = "Edit", tool_input = { file_path = "C:\\project\\agent\\src\\agent_os\\core\\models.py", old_string = "a", new_string = "프로브 `probes/build_without_key.py` 가 쟀다" } }
+
 # --- hook_journal_evidence (PostToolUse Write|Edit, Bash) ---
 # session_id 를 빼 표지를 쓰지 않는 길(호출마다 알린다)로 돈다. 한 번만 알리는 것은 tests/tools 가 임시 폴더로 본다.
 [[case]]
@@ -622,6 +648,22 @@ hook = "hook_measure_word.py"
 expect = "silent"
 note = "ADR 0014 의 실제 줄 — 같은 줄에 \"쟀다\"와 그 프로브 경로를 든다"
 payload = { tool_name = "Edit", tool_input = { file_path = "C:\\project\\agent\\docs\\adr\\0014-http-channel-streams-the-run.md", old_string = "## 이력\n", new_string = "## 이력\n  취소가 결말로 바뀌고 태스크 그룹이 깨지지 않는 것을 쟀다(`.scratch/end-user-channel/probes/run_timeout.py`).\n" }, tool_response = { originalFile = "# 0014\n\n## 이력\n" } }
+
+# --- hook_deletion_adversarial (PostToolUse Write|Edit) ---
+# 발동은 대기열 442 의 사건 꼴(web/tools/judge-trees.ts 에 같은 꼴 이름의 폴더를 지우는 호출을 더했다)이고,
+# 침묵은 같은 파일에서 지우는 호출 없이 다른 줄만 더한 편집이다.
+[[case]]
+hook = "hook_deletion_adversarial.py"
+expect = "context"
+note = "web/tools 의 판정 도구에 지우는 호출을 더했다(대기열 442 의 꼴)"
+contains = ["커밋하지 않은 파일", "junction", "fs.rmSync(folder"]
+payload = { tool_name = "Edit", tool_input = { file_path = "C:\\project\\agent\\web\\tools\\judge-trees.ts", old_string = "const found = find(root);\n", new_string = "const found = find(root);\nfor (const folder of found) fs.rmSync(folder, { recursive: true });\n" }, tool_response = { originalFile = "const found = find(root);\n" } }
+
+[[case]]
+hook = "hook_deletion_adversarial.py"
+expect = "silent"
+note = "같은 파일에 지우는 호출 없이 찾는 줄만 더했다"
+payload = { tool_name = "Edit", tool_input = { file_path = "C:\\project\\agent\\web\\tools\\judge-trees.ts", old_string = "const found = find(root);\n", new_string = "const found = find(root);\nconsole.log(found.length);\n" }, tool_response = { originalFile = "const found = find(root);\n" } }
 
 # --- hook_edit_during_commit (PreToolUse Write|Edit|NotebookEdit) ---
 # 러너가 도는 동안 `${COMMITTING_REPO}` 안의 워크트리 `.claude/worktrees/side` 에서 pre-commit 훅에 멈춘 커밋이 돈다.
