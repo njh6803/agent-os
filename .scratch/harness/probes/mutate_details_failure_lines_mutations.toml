@@ -1,0 +1,81 @@
+# tools/mutate.py 의 `_details` 가 표지 없는 변이의 끝 10줄 앞에 실패 머리 줄을 보이는 규칙(대기열 455,
+# harness 티켓 036)에서 규칙 하나씩을 뺀 변이. 모두 tests/tools/test_mutate.py 의 새 시험을 빨갛게 해야
+# 한다. 도구가 자기 자신을 고치므로 분리 임시 워크트리에서 그 워크트리의 도구로 돌린다.
+#   PYTHONUTF8=1 uv run python tools/mutate.py .scratch/harness/probes/mutate_details_failure_lines_mutations.toml [번호 ...]
+
+[[mutation]]
+name = "실패 머리 줄을 고르지 않는다"
+tests = ["tests/tools/test_mutate.py", "-k", "머리_줄 or 실패_머리 or 끝_10줄"]
+expect = "red"
+expect_output = ["Object.is equality\" in ["]
+
+[[mutation.edit]]
+file = "tools/mutate.py"
+old = "    return heads[:_HEAD_LINES]"
+new = "    return []"
+
+[[mutation]]
+name = "끝 10줄에 든 머리 줄을 되풀이한다"
+tests = ["tests/tools/test_mutate.py", "-k", "머리_줄 or 실패_머리 or 끝_10줄"]
+expect = "red"
+expect_output = ["assert 2 == 1"]
+
+[[mutation.edit]]
+file = "tools/mutate.py"
+old = "    outside = lines[:-_TAIL_LINES]"
+new = "    outside = lines"
+
+[[mutation]]
+name = "머리 줄의 수를 제한하지 않는다"
+tests = ["tests/tools/test_mutate.py", "-k", "머리_줄 or 실패_머리 or 끝_10줄"]
+expect = "red"
+expect_output = ["assert 50 == 20"]
+
+[[mutation.edit]]
+file = "tools/mutate.py"
+old = "    return heads[:_HEAD_LINES]"
+new = "    return heads"
+
+[[mutation]]
+name = "들여쓴 줄은 머리로 읽지 않는다"
+tests = ["tests/tools/test_mutate.py", "-k", "머리_줄 or 실패_머리 or 끝_10줄"]
+expect = "red"
+expect_output = ["assert 0 == 1"]
+
+[[mutation.edit]]
+file = "tools/mutate.py"
+old = "_FAILURE_HEAD.match(line.lstrip())"
+new = "_FAILURE_HEAD.match(line)"
+
+[[mutation]]
+name = "diff 의 더하기와 빼기 줄은 머리로 읽지 않는다"
+tests = ["tests/tools/test_mutate.py", "-k", "머리_줄 or 실패_머리 or 끝_10줄"]
+expect = "red"
+expect_output = ["'   | - no'"]
+
+[[mutation.edit]]
+file = "tools/mutate.py"
+old = '|Received\b|[-+](\s|$))")'
+new = '|Received\b)")'
+
+[[mutation]]
+name = "Error 바로 뒤에 낱말이 이어져도 머리로 읽는다"
+tests = ["tests/tools/test_mutate.py", "-k", "머리_줄 or 실패_머리 or 끝_10줄"]
+expect = "red"
+expect_output = ["'   |      Errors  1 error' not in"]
+
+[[mutation.edit]]
+file = "tools/mutate.py"
+old = 'r"(\w*Error\b|'
+new = 'r"(\w*Error|'
+
+[[mutation]]
+name = "머리 줄을 끝 10줄 뒤에 낸다"
+tests = ["tests/tools/test_mutate.py", "-k", "머리_줄 or 실패_머리 or 끝_10줄"]
+expect = "red"
+expect_output = ["built-in method index of list object"]
+
+[[mutation.edit]]
+file = "tools/mutate.py"
+old = "(*_failure_heads(lines), *lines[-_TAIL_LINES:])"
+new = "(*lines[-_TAIL_LINES:], *_failure_heads(lines))"
