@@ -112,6 +112,10 @@ PR을 `chore/034-deletion-tool-adversarial-input-hook`에서 열었다(https://g
   - Minor: `tools/hook_deletion_adversarial.py`의 `DELETION_CALLS` 둘째 패턴의 `unlink|rmdir`를 다음 패턴 `\b(?:unlink|rmdir)\s*\(`이 이미 잡는다. 이 세션이 코드(88~106줄)를 읽어 사실임을 확인했다. 동작이 같은 정리인데 고치려면 변이 표 146행의 `old` 원문을 함께 바꾸고 `tools/mutate.py`를 다시 돌려야 하고, pre-commit(앞선 두 번이 각각 988초와 498.7초)과 푸시와 재리뷰가 한 바퀴 더 든다. 값이 작아 보류했다.
   - Nit: `main()`의 표지 부분을 작은 함수로 빼자는 것. 자매 훅 `hook_scratch_probe_rule.py`와 같은 모양을 일부러 따랐고 훅은 서로 import하지 않는다(`.claude/rules/tools.md`). 자매와 함께 정리할 때 한다. 보류했다.
   - 두 보류는 "뒤로 넘긴 일"이라 아래 "다음"에도 적었다.
+- 병합(#454)을 합친 푸시(`6e0d8db8`) 뒤 둘째 회차. CodeRabbit은 처음으로 실제 리뷰를 냈다(앞의 둘은 한도로 비었다. 그 봇의 첫 회차). claude-review는 둘째 회차다.
+  - CodeRabbit 인라인 Minor 1(`tools/hook_deletion_adversarial.py:175`, `is_tool_code`): 경로 어디에나 있는 `tools` 폴더를 대상으로 삼으니 `web/apps/admin/tools/`나 `plugins/x/tools/`에서도 알리고, 그 알림이 세션 표지를 먼저 써서 뒤의 실제 `tools/` 편집의 알림을 가릴 수 있으니 저장소 루트 기준 `tools/`·`web/tools/`로 좁히라는 것. 이 세션이 `is_tool_code`(161~175줄)와 독스트링을 읽어 관찰이 사실임을 확인했다. 그러나 독스트링 "못 보는 것"(63~68줄)이 두 가지(넓은 대상, 한 번만 알림)를 이미 적었고 시험이 고정한다. 좁히려면 절대 경로에서 저장소 루트를 가려내야 하는데(워크트리 경로 `.claude/worktrees/<이름>/tools/`가 한 겹 더 든다) 그 판정이 새 실패 길이고 시험·변이·pre-commit이 한 바퀴 더 든다. 거짓 양성의 값은 알림 한 번이다. 보류했다.
+  - claude-review Minor 둘, Nit 하나: 첫째는 첫 회차와 같은 `os.` 패턴 겹침(보류). 둘째 `claim_first`·`marker_name`이 `hook_scratch_probe_rule.py`의 복사라는 것은 훅끼리 import하지 않는다는 `.claude/rules/tools.md`의 결정이 낳은 비용이고 독스트링이 출처를 밝혔다(보류, 자매와 함께 정리할 때). Nit은 모듈 독스트링의 "왜 따로 등록하는가" 절(15~19줄)을 줄이자는 것(보류).
+  - 둘째 회차부터는 Critical·Major만 고치는 기준(`merge.md` 2)대로, 이번 지적에 Critical·Major는 없었다.
 
 ## 회고 (이어받은 둘째 세션)
 
@@ -129,6 +133,6 @@ PR을 `chore/034-deletion-tool-adversarial-input-hook`에서 열었다(https://g
 ## 다음
 
 - 이 PR(453)을 병합한 뒤 이 주제(지우는 호출을 쓰는 편집에 반박 알림)는 남지 않았다. 다음 작업은 `next-session` 결정표가 정한다. 대기열 회차 3 이상 행은 348이 3회차가 되어 하나 늘었고, 형제 035~038(나란히 도는 harness 티켓)이 따로 돈다.
-- 뒤로 넘긴 일(claude-review 첫 회차 보류 둘): `tools/hook_deletion_adversarial.py`의 `DELETION_CALLS`에서 둘째 패턴의 `unlink|rmdir`를 걷어 `remove|removedirs`만 남기는 정리(변이 표 `.scratch/harness/probes/deletion_adversarial_hook_mutations.toml` 146행의 `old` 원문과 변이 재실행이 함께 든다)와, `main()`의 표지 부분을 함수로 빼는 정리(자매 훅 `hook_scratch_probe_rule.py`와 함께). 둘 다 이 훅 파일을 다시 고칠 때 한다.
+- 뒤로 넘긴 일(claude-review 첫 회차 보류 둘): `tools/hook_deletion_adversarial.py`의 `DELETION_CALLS`에서 둘째 패턴의 `unlink|rmdir`를 걷어 `remove|removedirs`만 남기는 정리(변이 표 `.scratch/harness/probes/deletion_adversarial_hook_mutations.toml` 146행의 `old` 원문과 변이 재실행이 함께 든다)와, `main()`의 표지 부분을 함수로 빼는 정리(자매 훅 `hook_scratch_probe_rule.py`와 함께). 둘 다 이 훅 파일을 다시 고칠 때 한다. 둘째 회차의 보류 셋도 같은 때 한다: `is_tool_code`를 저장소 루트 기준 `tools/`·`web/tools/`로 좁히는 것(CodeRabbit Minor. 워크트리 경로와 `plugins/`·`node_modules/`의 `tools`를 어떻게 가를지가 먼저고 독스트링 "못 보는 것"의 해당 항목과 시험, 변이를 함께 바꾼다), `claim_first`·`marker_name` 복사본을 자매 훅과 함께 정리하는 것, 모듈 독스트링의 "왜 따로 등록하는가" 절을 줄이는 것.
 - 형제 035는 `.claude/rules/tools.md`, `.claude/settings.json`, 프로브 `README.md`, `tools/hook_payloads.toml`을, 036은 프로브 `README.md`를 함께 고친다. 이 PR이 먼저 병합되면 뒤에 병합되는 쪽이 main을 합친다.
 - 병합 뒤 `주 체크아웃 미갱신` 한 줄과 원격 브랜치 정리는 `merge.md` 워크트리 절 3·4대로 보고에 남긴다.
