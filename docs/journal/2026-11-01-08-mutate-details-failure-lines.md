@@ -86,3 +86,14 @@ open-session을 부른다 2026-11-01T06:16:16Z
 - `bug-perf-review`(Critical·Major 없음, Minor 둘). 밀 주장 넷(정규식이 `TypeError:`는 받고 `Errors  1 error`·`Expectedly`·`ReceivedX`는 거름, 열 줄 이하 출력에서 빈 목록, 상한이 맨 앞 스무 줄, 위치로 거르는 중복)을 서브에이전트가 불러 확인했다. 정규식 시간은 200만 자 줄 다섯 개에 0.11초 등으로 선형이다. 변이 표 일곱은 서브에이전트가 돌리지 못했다(커밋의 pre-commit이 확인했다).
   - 유효(Minor), 고쳤다: pytest의 `E       TypeError: x` 접두 줄은 줄 머리가 `E`라 머리로 안 잡힌다. 이 세션이 `_FAILURE_HEAD`를 직접 불러 `False`를 확인했다. 정규식을 넓히지 않고(이번 목적은 vitest) 모듈 독스트링의 못 보는 것에 한 줄을 더하고, 시험 `test_머리_줄은_pytest_의_E_접두_줄을_머리로_읽지_않는다`로 고정했다(`.claude/rules/tools.md`의 못 보는 것 규칙).
   - 보류(Minor), 두었다: 머리 줄과 끝 10줄 사이에 구분 표시가 없다. 출력 모양을 바꾸는 설계 취향이고 시나리오가 틀린 출력은 아니다. 고치는 값은 시험 둘과 독스트링이라 이 티켓 범위를 넘는다고 보아 PR 체크리스트에 적는다.
+
+## 봇 첫 회차(PR 451, 헤드 `44a3e149`)
+
+CodeRabbit(인라인 1)과 claude-review(코멘트 1)가 모두 첫 회차였고 Critical·Major는 없었다. 지적마다 판단했다.
+
+- 고쳤다(CodeRabbit Minor): 변이 6의 표지 `assert not True`는 첫 시험 마지막 단언(`assert not any(…)`)이 실패해도 나온다(`.claude/rules/probes.md` 첫 항목). `Errors` 시험의 단언을 `assert "   |      Errors  1 error" not in 줄`로 바꾸고, 변이 6을 손으로 돌려 실패 출력(`AssertionError: assert '   |      Errors  1 error' not in […`)을 본 뒤 표지를 `'   |      Errors  1 error' not in`으로 좁혔다. 변이 일곱 모두 표지까지 맞는 기대대로 빨강이다(`PYTHONUTF8=1 uv run python tools/mutate.py .scratch/harness/probes/mutate_details_failure_lines_mutations.toml 1 2 3 4 5 6 7`, 이 세션이 돌렸다).
+- 고쳤다(claude-review Minor, 일부만 맞았다): 시험 독스트링이 `Error:`라 적은 것을 `Error` 로 끝나는 낱말로 맞췄다. 함수 독스트링 `_failure_heads`·`_details`에는 `Error:`가 없어(`tools/mutate.py`를 `Error:`로 grep해 손으로 봤다) 그 부분은 사실과 달랐다.
+- 보류(claude-review Minor, 머리 줄과 끝 10줄 사이 구분 표시 없음): PR 직전 `bug-perf-review`가 이미 같은 지적을 Minor로 냈고 보류했다(위 절). 출력 모양을 정하는 설계 결정이고 새 변이와 시험이 따른다. 이 PR의 본문이 말하지 않은 범위라 넓히지 않았다. 뒤로 넘긴 일은 아래 "다음"에 적었다.
+- 둔다(claude-review Nit, `E ` 접두 한계를 시험으로 고정하는 것): 작성자 재량이라고 리뷰어가 적었다. `.claude/rules/tools.md`가 못 보는 것의 새 항목마다 시험 하나로 고정하라고 해서 둔다. 접두를 받도록 넓힐 때 그 시험을 같이 고친다.
+
+다음(뒤로 넘긴 일): 머리 줄과 끝 10줄 사이에 구분 표시(예: `   | …`)를 낼지는 별도 harness 티켓의 몫이다. 내려면 `tools/mutate.py`의 `_details`, 순서 시험, 변이 표에 변이 하나를 더해야 한다.

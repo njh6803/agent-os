@@ -62,7 +62,7 @@ new = '|Received\b)")'
 name = "Error 바로 뒤에 낱말이 이어져도 머리로 읽는다"
 tests = ["tests/tools/test_mutate.py", "-k", "머리_줄 or 실패_머리 or 끝_10줄"]
 expect = "red"
-expect_output = ["assert not True"]
+expect_output = ["'   |      Errors  1 error' not in"]
 
 [[mutation.edit]]
 file = "tools/mutate.py"

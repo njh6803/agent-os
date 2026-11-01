@@ -1564,7 +1564,8 @@ def _표지가_없는_변이의_출력(tmp_path: Path, 출력: str) -> list[str]
 
 def test_표지가_없으면_끝_밖에_있는_실패_머리_줄도_보인다(tmp_path: Path) -> None:
     """vitest 의 끝 10줄은 마지막 실패 블록의 코드 조각이라 고른 단언의 머리가 안 보였다(대기열
-    455). 머리 줄은 `AssertionError`·`Error:`·`Expected`·`Received`·diff 의 `-`/`+` 줄이다."""
+    455). 머리 줄은 `AssertionError` 처럼 `Error` 로 끝나는 낱말·`Expected`·`Received`·diff 의
+    `-`/`+` 줄이다."""
     줄 = _표지가_없는_변이의_출력(tmp_path, _실패_머리가_끝_밖에_있는_출력)
 
     assert "   | AssertionError: expected 'yes' to be 'no' // Object.is equality" in 줄
@@ -1589,7 +1590,7 @@ def test_머리_줄은_Errors_요약_같은_다른_낱말을_머리로_읽지_�
 
     줄 = _표지가_없는_변이의_출력(tmp_path, 출력)
 
-    assert not any("Errors" in 한줄 for 한줄 in 줄)
+    assert "   |      Errors  1 error" not in 줄
 
 
 def test_머리_줄은_pytest_의_E_접두_줄을_머리로_읽지_않는다(tmp_path: Path) -> None:
