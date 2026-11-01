@@ -42,3 +42,10 @@
 - 일지 번호 07은 형제 08~10보다 앞이라 옮길 일이 없다.
 - 제목을 `chore/037-rmsync-maxretries-lint-rule (인계함)`으로 바꿨다(바꾸기 전 제목은 `chore/037-rmsync-maxretries-lint-rule`).
 - open-session을 부른다 2026-11-01T07:14:00Z
+
+## 이어받은 세션(PR 직전 리뷰)
+
+- 새 세션이 `tidy-checkouts`를 돌았다. 루트는 이미 `origin/main`(544381ea)이어서 당길 것이 없었고, 지운 것은 병합된 `docs/model-plugin-tickets` 워크트리와 브랜치다. 그 워크트리를 쥔 쉬는 세션 다섯을 `end-holders`로 끝낸 뒤 지웠다. 지운 폴더의 `web/node_modules`는 `esbuild.exe`를 올린 `node.exe`·`esbuild.exe` 프로세스 때문에 `.tidy-trash/`에 남았고, 다음 정리가 다시 비운다.
+- CodeRabbit CLI는 `coderabbit auth status`로 로그인은 됐으나 `coderabbit-review` 서브에이전트가 `Seat: not assigned`(Free 플랜)를 보고 멈췄다. 리뷰는 돌지 않았다. 대체 둘을 돌렸다.
+- `bug-perf-review` 서브에이전트: 이슈 0건. `web/`의 재귀 `rmSync`를 Grep으로 전수 확인해 모두 `maxRetries`를 갖는다는 것(새로 5를 준 열세 곳이 티켓과 일치)과, `pnpm -C web exec vitest run eslint.config.test.ts` 101개 통과를 그 서브에이전트가 봤다. 계산된 키 `{ [recursive]: true }`가 `key.name` 일치로 잘못 걸릴 수 있다는 것은 쓰일 일이 거의 없어 지적으로 내지 않았다고 한다. e2e는 다시 치지 않았다.
+- `/security-review`: 취약점 0건. 이 세션이 diff를 읽고 내린 판정이고 재현한 것은 없다. 변경은 린트 시간의 AST selector와 임시 폴더 정리 옵션이어서 새 입력 경로가 없다.
