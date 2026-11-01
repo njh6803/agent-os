@@ -568,6 +568,32 @@ expect = "silent"
 note = "같은 probes 폴더의 프로브 스크립트 — README 가 아니다"
 payload = { tool_name = "Edit", tool_input = { file_path = "C:\\project\\agent\\.scratch\\harness\\probes\\guard_hooks_time.py", old_string = "a", new_string = "b" } }
 
+# --- hook_probe_citing_doc (PostToolUse Write|Edit) ---
+# session_id 를 빼 표지를 쓰지 않는 길(호출마다 알린다)로 돈다. 한 번만 알리는 것은 tests/tools 가 임시 폴더로 본다.
+[[case]]
+hook = "hook_probe_citing_doc.py"
+expect = "context"
+note = "명세에 프로브의 결과를 근거로 들었다(대기열 540 의 design-card-build 명세 꼴)"
+contains = [
+    ".claude/rules/probes.md",
+    "셋째 항목",
+    "양성 대조",
+    "docs/agents/issue-tracker.md",
+]
+payload = { tool_name = "Edit", tool_input = { file_path = "C:\\project\\agent\\.scratch\\design-card-build\\spec.md", old_string = "묶음이 같았다.", new_string = "`.scratch/design-card-build/probes/vite_cli.mjs`로 셸 없이 띄워도 묶음·장면·빌드 CSS·글꼴이 모두 바이트까지 같았다." } }
+
+[[case]]
+hook = "hook_probe_citing_doc.py"
+expect = "silent"
+note = "프로브를 가리키는 낱말이 없는 명세 편집 — 표지를 쓰지 않는다"
+payload = { tool_name = "Edit", tool_input = { file_path = "C:\\project\\agent\\.scratch\\design-card-build\\spec.md", old_string = "한 줄에 둘씩", new_string = "한 줄에 셋씩" } }
+
+[[case]]
+hook = "hook_probe_citing_doc.py"
+expect = "silent"
+note = "프로브를 드는 글이지만 코드 독스트링 — 이 훅의 경로 셋이 아니다(못 보는 것)"
+payload = { tool_name = "Edit", tool_input = { file_path = "C:\\project\\agent\\src\\agent_os\\core\\models.py", old_string = "a", new_string = "프로브 `probes/build_without_key.py` 가 쟀다" } }
+
 # --- hook_journal_evidence (PostToolUse Write|Edit, Bash) ---
 # session_id 를 빼 표지를 쓰지 않는 길(호출마다 알린다)로 돈다. 한 번만 알리는 것은 tests/tools 가 임시 폴더로 본다.
 [[case]]
