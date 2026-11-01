@@ -20,7 +20,7 @@ export const KIND_NAMES = {
 } as const satisfies Record<PluginKind, string>;
 
 /** 로더가 아직 없는 종류. 끄고 켜도 런타임이 달라지지 않는다(스토리 21). */
-const WITHOUT_LOADER: ReadonlySet<PluginKind> = new Set<PluginKind>(["skill", "model"]);
+const WITHOUT_LOADER: ReadonlySet<PluginKind> = new Set<PluginKind>(["skill"]);
 
 /** 스위치의 실패 하나. 누른 행이 다시 읽은 목록에서 빠져도 보이도록 목록이 든다. 제목이 실패한 플러그인을 든다. */
 interface SwitchFailure extends FailureNoticeProps {
