@@ -75,3 +75,29 @@
 - 카나리아 `probes_rule_citing_doc_hook.toml`과 고친 `tools_rule_measure_word_hook.toml`은 셀프 리뷰 반영 전에 돌려 통과 4였다. 반영 뒤에는 `probes.md` 새 항목의 둘째 문장과 머리 주석만 고쳐 다시 돌리지 않았다.
 - 세션 제목: 인계하며 `chore/035-probe-citing-doc-hook (인계함)`으로 바꾼다.
 - open-session을 부른다 2026-11-01T06:47Z
+
+## 검증 (세 번째 세션, PR 직전 리뷰 반영 뒤)
+
+- 훅 시험: `uv run pytest -q tests/tools/test_hook_probe_citing_doc.py`가 34건 통과(변이 도구의 기준선이 찍은 `34 passed in 0.71s`).
+- 변이 표: `PYTHONUTF8=1 uv run python tools/mutate.py .scratch/harness/probes/probe_citing_doc_hook_mutations.toml`이 `변이 15 모두 기대대로`를 찍었다. 변이 11(표지를 보지 않고 늘 알린다)과 12(등록의 매처와 도구 목록이 갈린다)는 각각 114초·107초가 걸렸다. 원인(실패 출력, 부하, 다른 세션의 `uv`)은 가르지 못했다.
+- 린트 둘: `uv run ruff check .`와 `uv run ruff format --check .`가 통과했다.
+- 전체 러너 `uv run python tools/run_checks.py`: lint-imports, check-ticket, zizmor, check-instructions, check-type-escapes, pyright, pyright-linux, run-hooks, web-verify가 Passed였고 pytest만 `2 failed, 6055 passed in 739.60s`였다. 실패 둘은 `tests/channel/cli/test_interrupt.py`의 `test_닫는_도중에_한_번_더_누르면_닫기를_기다리지_않고_끝난다`와 `test_서버를_닫기_시작한_뒤에_한_번_누르면_닫기를_마치고_중단으로_끝난다`이고 둘 다 `Ctrl+C 를 누른 자식이 30초 안에 끝나지 않았다`였다. 그 파일만 홀로 돌리니 `6 passed in 42.14s`였다(이 PC에서 손으로 쳤다). 이 브랜치는 그 시험과 코드를 건드리지 않았다.
+- 둘째 커밋(`c73ed050`)의 pre-commit이 종료 코드 0으로 끝났다(백그라운드로 돌려 알림으로 받았다).
+- PR #452를 열었다. 열기 전 `coderabbit auth status`가 `Seat: not assigned`였다.
+
+## 회고
+
+후보 4, 승인 0, 기각 4, 넘김 0. 사용자에게 묻지 않았다.
+
+1. **경로 판정의 이름 분기가 `.scratch` 밖의 `spec.md`를 놓친 것(기각).** PR 직전 `bug-perf-review`가 Minor로 잡았고 PR 전에 고쳤다. 손상은 없었고 시험 하나와 변이 하나로 고정했다. 리뷰가 제 몫을 한 사건이라 승인의 회차로 세지 않고, 경로 판정의 논리 허점이라 검사로 옮길 일반 규칙도 없다. 근거: 서브에이전트 보고와 이 세션이 변이 표로 돌린 결과(`변이 15 모두 기대대로`).
+2. **부하에서만 빨간 Ctrl+C 시간 시험 둘(기각, 일지에만).** 같은 종류를 대기열 306이 받아들이고 닫았고, 그 결정은 새 사례를 회차에 더하지 않고 일지에만 적는다(retro 5단계). 같은 파일의 열린 행 531은 `assert 끝.pressed[0] < 끝.cancelled`의 다른 단언이라 이 사건과 다른 일이다(`tools/queue_open_rows.py --ref origin/main --search test_interrupt --search Ctrl.C`로 찾았다). 근거: 러너 출력과 홀로 돌린 `6 passed`(위 검증 절). 일지만 바꾼 셋째 커밋의 pre-commit에서도 같은 종류가 한 번 더 났다. `tests/tools/test_rerun_runner.py::test_같은_갈래가_두_번_든_파일럿의_두_회차가_함께_돌아도_번호가_다르다`가 `assert max(...) == 2`에서 `1 == 2`로 빨갰고(`1 failed, 6056 passed in 836.12s`), 그 파일을 홀로 돌리니 `63 passed in 431.39s`였다(손으로 쳤다). 두 번 모두 pytest가 10분을 넘긴 러너였다.
+3. **CodeRabbit 좌석 미배정으로 CLI 축이 비어 있던 것(기각).** `operations.md` 리뷰 파이프라인 2가 이미 그 증상과 대체 둘을 적고 있고, 이 세션은 그대로 따랐다. 이미 있는 지침이 맡은 일이다.
+4. **변이 11·12가 각 1분 49초·1분 47초 걸린 것(기각).** 사건은 있으나 원인을 재지 않았다(위 검증 절). 가른 뒤에 다시 본다. 같은 시험을 홀로 돌리면 0.71초라 시험 몫은 아닌 듯하나 어림이다.
+
+만료할 행은 없었다(`uv run python tools/queue_open_rows.py --ref origin/main`의 "만료할 행" 줄이 `(없음)`).
+
+## 다음
+
+모델 플러그인 기능이 닫힌 뒤 하네스 chore 묶음(034~038)으로 열린 다섯 가운데 035가 이 PR(#452)이다. 병합하면 티켓 035는 `done`으로 main에 든다. 형제 034·036·037·038은 이미 각자 워크트리에서 돌고 있고(`git worktree list`), 그 가운데 034가 `.claude/settings.json`·`.claude/rules/tools.md`·`tools/hook_payloads.toml`·프로브 README를 같이 고치므로 먼저 병합되는 쪽의 뒤에 병합되는 쪽이 main을 합치고, 합칠 때 `tools.md` 시간 항목의 서수(열째, 일곱 다)와 카나리아 `tools_rule_measure_word_hook.toml`의 물음 2와 `expect`를 다시 맞춘다.
+
+`next-session` 결정표로는 프론티어를 고를 차례인데 `plan.md`의 프론티어에 남은 기능이 없다(model-plugin이 2026-11-01에 닫혔다). 그래서 이 세션은 다음 기능의 지시문을 내지 않는다. PRD 범위에서 다음 기능을 고르는 설계 인터뷰(`/grill-with-docs`)는 사용자가 기능을 정한 뒤에 연다. 대기열은 회차 3 이상 행이 여럿 남았지만 하네스 chore PR 뒤에는 chore를 잇지 않는 규칙(ADR 0036)이라 이어 열지 않는다.
