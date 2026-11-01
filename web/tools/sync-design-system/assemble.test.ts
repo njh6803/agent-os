@@ -244,7 +244,7 @@ beforeAll(() => {
 }, 300_000);
 
 afterAll(() => {
-  rmSync(scratch, { recursive: true, force: true });
+  rmSync(scratch, { recursive: true, force: true, maxRetries: 5 });
 });
 
 const read = (path: string): string => readFileSync(join(out, path), "utf-8");
