@@ -69,6 +69,8 @@ open-session을 부른다 2026-11-01T05:58:20Z
 
 ## 남은 일
 
+(이어받은 둘째 세션이 PR 직전 리뷰, 푸시, PR 453을 마쳤다. 병합은 아래 "PR 453과 봇 회차"와 "다음"이 이어 받는다.)
+
 - PR 직전 리뷰(`docs/constitution/operations.md` 리뷰 파이프라인 2), 푸시, PR, 봇 회차, 병합(`merge.md`의 워크트리 길), 회고. 이 PR은 `.claude/settings.json`과 `.claude/rules/tools.md`를 형제 035가 함께 고치므로 뒤에 병합되는 쪽이 main을 합친다. 형제 035는 `.claude/rules/tools.md`, `.claude/settings.json`, 프로브 `README.md`, `tools/hook_payloads.toml`을, 형제 036은 프로브 `README.md`를 함께 고친다.
 
 ## 인계 (커밋 뒤)
@@ -100,3 +102,33 @@ open-session을 부른다 2026-11-01T07:20:22Z
 - 보안(내장 `/security-review`의 식별 서브에이전트): 발견 없음. 표지 파일 이름이 `sha256` 16진 64자라 세션 ID가 경로로 들어가지 못하고, 훅에 `subprocess`·`eval`·`exec`가 없으며, 입력은 `json.load` 하나다. 확신 8 미만으로 접은 둘(임시 폴더의 표지 선점, 걸린 줄을 컨텍스트에 싣는 것)은 둘 다 약 2였다. 발견이 없어 오탐 거르기 서브에이전트는 띄우지 않았다.
 - 버그·성능(`bug-perf-review`): 지적 1건 Minor, 유효(문장 정정용). stdin이 빈 입력, `{not`, `[]`, `null`이면 훅이 예외로 죽고 종료 코드 1이다(서브에이전트가 자식 프로세스로 쟀다). 자매 훅 `hook_scratch_probe_rule.py`가 같은 모양이고 훅 안의 예외는 막지 않고 지나가므로(`.claude/rules/tools.md`의 fail-open) 피해가 없다. 훅 독스트링과 이 일지에 "예외로 죽지 않는다"는 문장이 없음을 이 세션이 `Grep`으로 확인해 코드를 고치지 않았다. 일지 셀프 리뷰 절의 밀 주장은 서브에이전트가 `deleting_lines`·`context_for`를 직접 불러 손으로 쟀고 사실로 나왔다(이 세션이 다시 재지는 않았다): 못 보는 것의 아홉 꼴과 알리는 여섯 꼴, `web/tools/**`가 `paths`에 없다는 것, 2MB 한 줄 입력 열다섯 꼴이 1.12초 안에 끝나는 선형 동작.
 - 보류: 표지 폴더를 만들 수 없는 길의 실행 시험은 하지 못했다(`tempfile.gettempdir()`가 다음 후보로 물러난다). 코드로는 `claim_first`의 `OSError` 처리를 읽었고 문제는 보이지 않았다. 서브에이전트는 `tools/run_hooks.py` 전체를 시간 안에 돌리지 못해 새 사례 두 건을 러너로 확인하지 못했으나, 이 변경의 pre-commit에서 이미 통과했다(위 커밋 절).
+
+## PR 453과 봇 회차 (이어받은 둘째 세션)
+
+PR을 `chore/034-deletion-tool-adversarial-input-hook`에서 열었다(https://github.com/njh6803/agent-os/pull/453). 푸시 직전 `uv run python tools/sibling_overlap.py`는 `번호 겹침 없음`이었고 일지 순번을 앞서는 형제는 038의 `2026-11-01-11` 하나였다(그쪽이 먼저 병합되면 옮긴다). `gh pr view`의 `headRefOid`와 `git rev-parse HEAD`가 같았다(`d00f85cd`). `@coderabbitai review`를 남겼고 `tools/wait_ci.py 453`이 `끝: 모두 통과`를 찍었다(손으로 쳤다).
+
+- CodeRabbit: 두 코멘트 모두 한도에 걸렸다("Review limit reached", "Review rate limited"). 리뷰 없음이다. 보안·버그·성능 축은 위 "PR 직전 리뷰"의 대체 둘이 맡았다.
+- claude-review 첫 회차(코멘트 하나, 이 PR에서 그 봇의 첫 리뷰): Minor 1, Nit 1. 둘째 회차부터 Critical·Major만 고친다는 기준(`merge.md` 2)대로, 첫 회차라 지적마다 판단했다.
+  - Minor: `tools/hook_deletion_adversarial.py`의 `DELETION_CALLS` 둘째 패턴의 `unlink|rmdir`를 다음 패턴 `\b(?:unlink|rmdir)\s*\(`이 이미 잡는다. 이 세션이 코드(88~106줄)를 읽어 사실임을 확인했다. 동작이 같은 정리인데 고치려면 변이 표 146행의 `old` 원문을 함께 바꾸고 `tools/mutate.py`를 다시 돌려야 하고, pre-commit(앞선 두 번이 각각 988초와 498.7초)과 푸시와 재리뷰가 한 바퀴 더 든다. 값이 작아 보류했다.
+  - Nit: `main()`의 표지 부분을 작은 함수로 빼자는 것. 자매 훅 `hook_scratch_probe_rule.py`와 같은 모양을 일부러 따랐고 훅은 서로 import하지 않는다(`.claude/rules/tools.md`). 자매와 함께 정리할 때 한다. 보류했다.
+  - 두 보류는 "뒤로 넘긴 일"이라 아래 "다음"에도 적었다.
+
+## 회고 (이어받은 둘째 세션)
+
+근거의 종류: 판정과 사건은 이 세션이 대기열(`uv run python tools/queue_open_rows.py --search …`로 손으로 찾았다)과 코드를 읽은 것이고, 서브에이전트의 주장은 보고라고 따로 적는다. 후보 5: 승인 1, 기각 4, 넘김 0.
+
+- 승인 1(대기열 348, 3회차): PR 직전 `bug-perf-review` 서브에이전트가 `uv run python tools/run_hooks.py --help`로 쓰는 법을 보려다 전체가 120초를 넘겨 백그라운드로 넘어갔고 `TaskStop`으로 멈춰, 새 훅의 페이로드 사례 두 건을 러너로 확인하지 못했다(서브에이전트의 보고. 이 세션이 `tools/run_hooks.py` 1018줄 `main()`이 인자를 읽지 않는 것을 코드로 읽었다). 열린 행 348이 그 처방(`-h`·`--help`면 쓰는 법을 찍고 0, 모르는 인자면 2)을 이미 든다. 사건·층(도구 고침)·되돌림 조건이 선다. 이 PR은 훅 하나를 더하는 일이라 범위를 넓히지 않고 행에 3회차를 더했다. 회차가 3이 되어 `next-session` 결정표의 chore 배치 조건에 든다.
+- 기각 4:
+  - 첫 커밋 시도가 pre-commit의 시간 단언 시험 하나(`tests/tools/test_rerun_runner.py`의 `동시에_둘까지_돌고_셋째는_자리가_빌_때_연다`)에서 막힌 일(위 "커밋" 절). 같은 시험은 단독으로 통과했다. 받아들여 닫은 306·332 종류의 새 사례라 회차를 더하지 않고 일지에만 적는다(retro 5단계).
+  - 서브에이전트에 넘긴 밀 주장 셋째("어떤 입력에서도 예외로 죽지 않고 종료 코드 0")를 이 세션이 일지 어디에도 없는 문장으로 지어 넘긴 것. 서브에이전트가 반박했고 코드와 독스트링에는 그 주장이 없었다. 피해 없이 같은 회차에 바로잡혔고 자동 검사로 옮길 것이 없다. 사건 없이 떠올린 지침이라 기각이다.
+  - 편집 도구 호출에서 매개변수 이름이 틀려 `InputValidationError`로 거부된 일. 도구 스키마가 그 자리에서 막았다.
+  - CodeRabbit CLI 좌석 미배정(`Seat: not assigned`). `docs/constitution/operations.md` 리뷰 파이프라인 2가 이미 그 상태와 대체 둘을 적는다.
+- 만료할 행: 없음(`queue_open_rows.py`와 `--ref origin/main`의 두 출력 모두 `(없음)`).
+- 이 세션에서 닫은 행: 442. 이 PR의 훅이 처방(대상 경로·호출 목록·문장은 반영 때 정한다)을 구현했다. 닫는 줄에 알림이 모델에게 닿는지는 재지 않았다고 적었다. 그 알림이 있은 뒤에도 같은 꼴이 PR 직전 리뷰에서 나오면 `442의 11회차`로 잇는다.
+
+## 다음
+
+- 이 PR(453)을 병합한 뒤 이 주제(지우는 호출을 쓰는 편집에 반박 알림)는 남지 않았다. 다음 작업은 `next-session` 결정표가 정한다. 대기열 회차 3 이상 행은 348이 3회차가 되어 하나 늘었고, 형제 035~038(나란히 도는 harness 티켓)이 따로 돈다.
+- 뒤로 넘긴 일(claude-review 첫 회차 보류 둘): `tools/hook_deletion_adversarial.py`의 `DELETION_CALLS`에서 둘째 패턴의 `unlink|rmdir`를 걷어 `remove|removedirs`만 남기는 정리(변이 표 `.scratch/harness/probes/deletion_adversarial_hook_mutations.toml` 146행의 `old` 원문과 변이 재실행이 함께 든다)와, `main()`의 표지 부분을 함수로 빼는 정리(자매 훅 `hook_scratch_probe_rule.py`와 함께). 둘 다 이 훅 파일을 다시 고칠 때 한다.
+- 형제 035는 `.claude/rules/tools.md`, `.claude/settings.json`, 프로브 `README.md`, `tools/hook_payloads.toml`을, 036은 프로브 `README.md`를 함께 고친다. 이 PR이 먼저 병합되면 뒤에 병합되는 쪽이 main을 합친다.
+- 병합 뒤 `주 체크아웃 미갱신` 한 줄과 원격 브랜치 정리는 `merge.md` 워크트리 절 3·4대로 보고에 남긴다.
