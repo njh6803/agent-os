@@ -1533,6 +1533,90 @@ def test_표지를_적은_변이는_기대대로여도_출력에_표지가_없�
     assert path.read_bytes() == b"x = 1\n"
 
 
+_코드_조각 = "".join(f" {번호} |   const a{번호} = {번호};\n" for 번호 in range(12))
+_실패_머리가_끝_밖에_있는_출력 = (
+    " FAIL  p.test.ts > 실패 한다\n"
+    "AssertionError: expected 'yes' to be 'no' // Object.is equality\n"
+    "- Expected\n"
+    "+ Received\n"
+    "- no\n"
+    "+ yes\n"
+    "    Expected: 'no'\n"
+    "    Received: 'yes'\n"
+    f"{_코드_조각}"
+)
+
+
+def _표지가_없는_변이의_출력(tmp_path: Path, 출력: str) -> list[str]:
+    path = _파일을_둔다(tmp_path, "m.json", b"x = 1\n")
+    _파일을_둔다(tmp_path, "check.mjs", b"")
+    줄: list[str] = []
+    변이 = _EXIT_러너 + _exit_변이(줄='expect_output = ["없는 표지"]')
+
+    def 러너(argv: Sequence[str], cwd: Path, timeout: int) -> CommandResult:
+        if b"x = 2" in path.read_bytes():
+            return CommandResult(1, 출력)
+        return CommandResult(0, "모두 맞다\n")
+
+    measure(load_spec(변이), root=tmp_path, runner=러너, out=줄.append)
+    return 줄
+
+
+def test_표지가_없으면_끝_밖에_있는_실패_머리_줄도_보인다(tmp_path: Path) -> None:
+    """vitest 의 끝 10줄은 마지막 실패 블록의 코드 조각이라 고른 단언의 머리가 안 보였다(대기열
+    455). 머리 줄은 `AssertionError`·`Error:`·`Expected`·`Received`·diff 의 `-`/`+` 줄이다."""
+    줄 = _표지가_없는_변이의_출력(tmp_path, _실패_머리가_끝_밖에_있는_출력)
+
+    assert "   | AssertionError: expected 'yes' to be 'no' // Object.is equality" in 줄
+    assert {"   | - Expected", "   | + Received", "   | - no", "   | + yes"} <= set(줄)
+    assert 줄.count("   |     Expected: 'no'") == 1  # 들여쓴 줄도 머리다
+    assert 줄.count("   |     Received: 'yes'") == 1
+    assert 줄.index("   | - Expected") < 줄.index("   |  2 |   const a2 = 2;")  # 머리가 끝 앞이다
+    assert not any("const a0 " in 한줄 for 한줄 in 줄)  # 머리 줄이 아닌 코드 조각은 끝 밖이면 뺀다
+
+
+def test_끝_10줄에_이미_든_머리_줄은_되풀이하지_않는다(tmp_path: Path) -> None:
+    출력 = _실패_머리가_끝_밖에_있는_출력 + "Error: 마지막 줄의 머리\n"
+
+    줄 = _표지가_없는_변이의_출력(tmp_path, 출력)
+
+    assert 줄.count("   | Error: 마지막 줄의 머리") == 1
+    assert 줄.count("   | AssertionError: expected 'yes' to be 'no' // Object.is equality") == 1
+
+
+def test_머리_줄은_Errors_요약_같은_다른_낱말을_머리로_읽지_않는다(tmp_path: Path) -> None:
+    출력 = "     Errors  1 error\n-\n" + "".join(f" {번호} |   x\n" for 번호 in range(12))
+
+    줄 = _표지가_없는_변이의_출력(tmp_path, 출력)
+
+    assert not any("Errors" in 한줄 for 한줄 in 줄)
+
+
+def test_머리_줄은_스무_줄까지만_보인다(tmp_path: Path) -> None:
+    출력 = "".join(f"- 값 {번호}\n" for 번호 in range(50)) + "".join(
+        f" {번호} |  x\n" for 번호 in range(12)
+    )
+
+    줄 = _표지가_없는_변이의_출력(tmp_path, 출력)
+
+    assert sum(한줄.startswith("   | - 값 ") for 한줄 in 줄) == 20
+
+
+def test_표지가_모두_있으면_머리_줄을_더하지_않는다(tmp_path: Path) -> None:
+    path = _파일을_둔다(tmp_path, "m.json", b"x = 1\n")
+    _파일을_둔다(tmp_path, "check.mjs", b"")
+    줄: list[str] = []
+    변이 = _EXIT_러너 + _exit_변이(줄='expect_output = ["AssertionError"]')
+
+    def 러너(argv: Sequence[str], cwd: Path, timeout: int) -> CommandResult:
+        if b"x = 2" in path.read_bytes():
+            return CommandResult(1, _실패_머리가_끝_밖에_있는_출력)
+        return CommandResult(0, "모두 맞다\n")
+
+    assert measure(load_spec(변이), root=tmp_path, runner=러너, out=줄.append) == 0
+    assert not any(한줄.startswith("   |") for 한줄 in 줄)
+
+
 def test_표지가_모두_있으면_기대대로다(tmp_path: Path) -> None:
     path = _파일을_둔다(tmp_path, "m.json", b"x = 1\n")
     _파일을_둔다(tmp_path, "check.mjs", b"")

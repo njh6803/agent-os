@@ -120,16 +120,22 @@ PR 직전 리뷰 전에 약 13분, 일지 2026-10-16-07). 이 문장을 두고�
 
 표지(`expect_output`, `baseline_output`). 판정이 기대와 맞아도 엉뚱한 까닭의 빨강일 수 있다
 (`.claude/rules/probes.md` 의 표지 항목). 그래서 변이마다 출력에 있어야 할 문구를 적을 수 있고, 색
-코드를 벗긴 출력에서 매 반복 찾는다. 하나라도 없으면 `표지 없음: …` 줄과 출력의 끝을 내고 어긋남으로
-센다. 러너의 `baseline_output` 은 기준선에서 같은 일을 한다. 없으면 기준선은 초록이 아니다. 종료
-코드 0 만으로는 아무것도 읽지 않고 끝난 검사기와 가를 수 없다. 빈 문자열은 어느 출력에나 있어 변이
-파일 오류다. 러너가 어느 실패나 통과에나 찍는 판정 낱말(`_VERDICT_WORDS`. pytest 의 `failed`·
-`passed`·`error`, vitest 의 `FAIL`, playwright 의 `passed` 따위, 대소문자를 가리지 않는다)만으로 된
-표지도 같은 까닭으로 변이 파일 오류다. 숫자와 기호는 낱말로 세지 않아 `1 failed` 도 걸린다.
-`["failed"]` 를 표지로 골랐더니 pytest 의 요약 줄과 단언 dict 의 `"type": "failed"` 에 늘 실려 고른
-단언이 빨개졌다는 표지가 되지 못했다(대기열 313). exit 판정은 요약을 읽지 않아 거를 낱말을 두지
-않는다. 못 보는 것: 판정 낱말이 아닌 낱말이 하나라도 섞이면 받는다(`test failed` 의 `test`). exit
-러너의 명령이 pytest 여도 그 출력의 판정 낱말을 거르지 않는다(`["failed"]` 를 받는다).
+코드를 벗긴 출력에서 매 반복 찾는다. 하나라도 없으면 `표지 없음: …` 줄과 출력의 끝 10줄, 그 앞의
+실패 머리 줄을 내고 어긋남으로 센다. 머리 줄은 `AssertionError`·`TypeError` 처럼 `Error` 로 끝나는
+낱말로 시작하는 줄, `Expected`·`Received` 로 시작하는 줄, diff 의 `-`·`+` 줄이다. 들여쓴 줄도
+받고 앞에서 스무 줄까지 낸다. 표지를 고르려고 돌린 출력에서 고른 단언의 머리가 끝 10줄 밖이어도
+보인다(대기열 455). 러너의 `baseline_output` 은 기준선에서 같은 일을 한다. 없으면 기준선은 초록이
+아니다. 종료 코드 0 만으로는 아무것도 읽지 않고 끝난 검사기와 가를 수 없다. 빈 문자열은 어느
+출력에나 있어 변이 파일 오류다. 러너가 어느 실패나 통과에나 찍는 판정 낱말(`_VERDICT_WORDS`. pytest
+의 `failed`·`passed`·`error`, vitest 의 `FAIL`, playwright 의 `passed` 따위, 대소문자를 가리지
+않는다)만으로 된 표지도 같은 까닭으로 변이 파일 오류다. 숫자와 기호는 낱말로 세지 않아 `1 failed` 도
+걸린다. `["failed"]` 를 표지로 골랐더니 pytest 의 요약 줄과 단언 dict 의 `"type": "failed"` 에 늘
+실려 고른 단언이 빨개졌다는 표지가 되지 못했다(대기열 313). exit 판정은 요약을 읽지 않아 거를 낱말을
+두지 않는다. 못 보는 것: 판정 낱말이 아닌 낱말이 하나라도 섞이면 받는다(`test failed` 의 `test`).
+exit 러너의 명령이 pytest 여도 그 출력의 판정 낱말을 거르지 않는다(`["failed"]` 를 받는다). 머리
+줄도 못 보는 것이 있다. 고르는 상한이 끝에서가 아니라 맨 앞에서 스무 줄이라, 실패가 여럿 쌓인
+출력에서는 앞 블록의 줄이 상한을 채워 마지막 실패 블록의 머리가 안 보일 수 있다. 줄 머리만 보므로
+`Error` 만 있는 줄과 `- ` 로 시작하는 목록 줄도 머리로 받아 상한을 소음이 채울 수 있다.
 
 표지의 메아리. 빨강이나 처리하지 않은 에러를 기대한 변이의 표지가 그 시험 파일(`tests` 인자 가운데
 옵션이 아닌 것을 러너의 자리 기준으로 이은 경로, `::` 뒤는 뗀다)의 원문에 글자 그대로 있으면
@@ -1004,15 +1010,32 @@ def _marker_note(missing: Sequence[str]) -> str:
     return f"표지 없음: {', '.join(missing)}"
 
 
+_TAIL_LINES = 10
+_HEAD_LINES = 20
+# 실패 머리 줄: `AssertionError: …`·`TypeError: …`·`Error: …`, `Expected`·`Received`, diff 의
+# `-`·`+` 줄. `Errors  1 error` 같은 요약 줄은 `Error` 바로 뒤가 낱말이라 맞지 않는다
+_FAILURE_HEAD = re.compile(r"(\w*Error\b|Expected\b|Received\b|[-+](\s|$))")
+
+
+def _failure_heads(lines: Sequence[str]) -> list[str]:
+    """끝 10줄 밖에서 고른 실패 머리 줄, 앞에서부터 스무 줄까지. vitest 의 끝 10줄은 마지막 실패
+    블록의 코드 조각이라 고른 단언의 머리와 `Received:` 줄이 거기 없다(대기열 455)."""
+    outside = lines[:-_TAIL_LINES]
+    heads = [line for line in outside if _FAILURE_HEAD.match(line.lstrip())]
+    return heads[:_HEAD_LINES]
+
+
 def _details(runs: Sequence[_Run], out: Callable[[str], None]) -> None:
-    """빨간 테스트의 이름, 그리고 빨강도 초록도 아니거나 표지가 없으면 출력의 끝."""
+    """빨간 테스트의 이름, 그리고 빨강도 초록도 아니거나 표지가 없으면 출력의 끝과 그 앞의 실패
+    머리 줄."""
     for name in dict.fromkeys(name for run in runs for name in run.verdict.failed):
         out(f"   {name}")
     for run in runs:
         if run.missing:
             out(f"   {_marker_note(run.missing)}")
         if run.verdict.outcome in ("error", "unhandled") or run.missing:
-            for line in run.result.plain.splitlines()[-10:]:
+            lines = run.result.plain.splitlines()
+            for line in (*_failure_heads(lines), *lines[-_TAIL_LINES:]):
                 out(f"   | {line}")
 
 
