@@ -1,4 +1,4 @@
-# 2026-11-01 (08) mutate.py의 _details가 실패 머리 줄까지 보인다
+# 2026-11-01 (12) mutate.py의 _details가 실패 머리 줄까지 보인다
 
 세션 제목: `chore/036-mutate-details-failure-lines`. 컨텍스트가 인계 문턱을 넘어 셀프 리뷰 직전에 새 세션으로 넘긴다.
 
@@ -72,8 +72,8 @@ open-session을 부른다 2026-11-01T06:16:16Z
 시작 프롬프트: 대기열 455를 티켓 .scratch/harness/issues/036-mutate-details-failure-lines.md로 쓰고 한다
 브랜치: chore/036-mutate-details-failure-lines
 모델: Sonnet 5.5 / high. 2의 잇는 지시문
-읽을 것: docs/journal/2026-11-01-08-mutate-details-failure-lines.md의 "이어받은 세션이 한 것과 두 번째 인계" 절(셀프 리뷰 판정과 PR 직전 리뷰에 밀 주장)
-이어받을 상태: 인계: 커밋 뒤. 커밋 하나(셀프 리뷰 반영 포함)가 pre-commit을 통과했고 푸시하지 않았다. 남은 단계는 origin/main 합치기, PR 직전 리뷰(CodeRabbit CLI가 못 돌면 /security-review와 bug-perf-review), PR 열기, 봇 회차, 병합이다. 일지 docs/journal/2026-11-01-08-mutate-details-failure-lines.md
+읽을 것: docs/journal/2026-11-01-12-mutate-details-failure-lines.md의 "이어받은 세션이 한 것과 두 번째 인계" 절(셀프 리뷰 판정과 PR 직전 리뷰에 밀 주장)
+이어받을 상태: 인계: 커밋 뒤. 커밋 하나(셀프 리뷰 반영 포함)가 pre-commit을 통과했고 푸시하지 않았다. 남은 단계는 origin/main 합치기, PR 직전 리뷰(CodeRabbit CLI가 못 돌면 /security-review와 bug-perf-review), PR 열기, 봇 회차, 병합이다. 일지 docs/journal/2026-11-01-12-mutate-details-failure-lines.md
 확인할 선행 조건: 없음
 이번 요청 범위: PR과 병합까지
 ```
