@@ -59,6 +59,44 @@ open-session을 부른다 2026-11-01T05:58:20Z
 
 다시 돌린 명령(이 세션이 워크트리에서 쳤다): `uv run pytest -q tests/tools/test_hook_deletion_adversarial.py` 87 통과, `uv run python tools/mutate.py --check <표>`가 `변이 42 모두 원문이 한 번씩 있다`, 전체 한 바퀴는 42 가운데 41이 기대대로이고 빈 세션 ID 하나가 어긋났다가 시험을 고친 뒤 그 번호만 다시 돌려 기대대로. `uv run python tools/run_checks.py`는 종료 0이고 열 단계(check-ticket, lint-imports, zizmor, check-instructions, check-type-escapes, pyright-linux, pyright, run-hooks, pytest, web-verify)가 모두 Passed였다(937.9초와 1339.3초는 pytest와 web-verify, 다른 세션이 도는 때였다). `uv run ruff check .`는 `All checks passed!`, `uv run ruff format --check .`는 `1214 files already formatted`. 커밋의 pre-commit 결과는 커밋 뒤 아래에 적는다. `-m llm`·e2e·사진 비교는 이 변경이 닿지 않아 돌리지 않았다.
 
+## 커밋
+
+커밋 `81c3656f`(`chore: 지우는 호출을 쓰는 도구 편집에 판정을 깨는 입력으로 반박하라는 알림을 넣는다 (harness 034)`)가 티켓을 done으로 바꾸고 수용 기준 여섯을 채운 채 들어갔다. 푸시하지 않았다.
+
+- 첫 커밋 시도는 pre-commit의 pytest 한 건에서 막혔다(988초). 실패한 시험은 `tests/tools/test_rerun_runner.py::test_동시에_둘까지_돌고_셋째는_자리가_빌_때_연다`이고 `assert 1 == 2`(동시에 도는 수의 최댓값)였다. 이 변경이 닿지 않는 파일이다. 그 시험만 단독으로 돌리면 14.03초에 통과했고(`uv run pytest -q tests/tools/test_rerun_runner.py -k 동시에_둘까지`, 손으로 쳤다), 같은 러너를 그 직전에 직접 돌렸을 때도 통과였다. 다른 세션이 여럿 돌던 때의 첫 실패라 진단 스킬로 가지 않고 같은 커밋을 한 번 더 시도했고, 둘째 시도에서 통과했다. 같은 시험이 또 빠지면 시간 단언의 상한을 늘리는 쪽(`.claude/rules/tests.md`의 시간 단언 항목, 대기열 332·306)으로 다룬다.
+- 둘째 시도의 pre-commit(`uv run pre-commit` 훅 출력): ruff check·ruff format·checks 묶음(check-ticket, zizmor, lint-imports, check-instructions, check-type-escapes, pyright, pyright-linux, run-hooks, pytest 498.7초, web-verify 905.5초), markdown tables, line separators, mutation tables, canary specs, quotes, commit message가 Passed이고 constitution version만 `no files to check`로 Skipped였다.
+- 앞서 직접 친 `uv run python tools/run_checks.py`는 종료 0이었다.
+
 ## 남은 일
 
-- 검증 명령 전부(`tools/run_checks.py`), 티켓을 done으로 바꾸고 체크박스 채우기, pre-commit이 도는 커밋, 푸시, PR, 봇 회차, 병합(`merge.md`의 워크트리 길), 회고. 이 PR은 `.claude/settings.json`과 `.claude/rules/tools.md`를 형제 035가 함께 고치므로 뒤에 병합되는 쪽이 main을 합친다. 형제 035는 `.claude/rules/tools.md`, `.claude/settings.json`, 프로브 `README.md`, `tools/hook_payloads.toml`을, 형제 036은 프로브 `README.md`를 함께 고친다.
+- PR 직전 리뷰(`docs/constitution/operations.md` 리뷰 파이프라인 2), 푸시, PR, 봇 회차, 병합(`merge.md`의 워크트리 길), 회고. 이 PR은 `.claude/settings.json`과 `.claude/rules/tools.md`를 형제 035가 함께 고치므로 뒤에 병합되는 쪽이 main을 합친다. 형제 035는 `.claude/rules/tools.md`, `.claude/settings.json`, 프로브 `README.md`, `tools/hook_payloads.toml`을, 형제 036은 프로브 `README.md`를 함께 고친다.
+
+## 인계 (커밋 뒤)
+
+컨텍스트가 인계 문턱(20만 토큰)을 넘은 채 `커밋 뒤` 경계에 와서 `handoff.md`대로 넘긴다. 이 세션의 제목은 바꾸기 전 `chore/034-deletion-tool-adversarial-input-hook`이다(`get_session`의 `self`에 `parentSessionId`가 없어 곁 세션이 아니다). 사용자 프롬프트는 위 `## 사용자 프롬프트`의 원문과 같고, 이 세션에서 사용자가 더 말한 것은 없다.
+
+넘기는 지시문:
+
+```
+다음 작업: .scratch/harness/issues/034-deletion-tool-adversarial-input-hook.md. 지우는 호출을 쓰는 편집에 커밋 전 판정을 깨는 입력으로 반박하라는 알림을 넣는 계기 훅(대기열 442). 티켓·훅·시험·등록·변이 표·카나리아를 쓰고 셀프 리뷰를 반영해 한 커밋으로 넣었다. 푸시하지 않았다
+다음 단계: 구현
+어디서: 새 세션. 같은 브랜치·워크트리라 git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: 대기열 442을 티켓 .scratch/harness/issues/034-deletion-tool-adversarial-input-hook.md로 쓰고 한다
+브랜치: chore/034-deletion-tool-adversarial-input-hook
+모델: Sonnet 5.5 / high. 2의 잇는 지시문
+읽을 것: docs/journal/2026-11-01-10-deletion-adversarial-hook.md(셀프 리뷰 절과 커밋 절이 이 세션이 한 것과 결과). 나란히 도는 형제 티켓 035-probe-citing-doc-hook, 036-mutate-details-failure-lines, 037-rmsync-maxretries-lint-rule, 038-interrupt-test-file-order. 035가 .claude/rules/tools.md, .claude/settings.json, 프로브 README.md, tools/hook_payloads.toml을 함께 고치고 036이 프로브 README.md를 함께 고치므로 뒤에 병합되는 쪽이 main을 합친다
+이어받을 상태: 인계: 커밋 뒤. 일지 docs/journal/2026-11-01-10-deletion-adversarial-hook.md. 커밋 81c3656f까지 했고(pre-commit 통과) 푸시하지 않았다. 남은 단계는 PR 직전 리뷰, 푸시, PR, 봇 회차, 병합(merge.md의 워크트리 길), 회고다. PR 직전 리뷰에는 일지 셀프 리뷰 절의 "반영으로 새로 쓴 사실 문장"을 밀 주장으로 넘긴다. 일지의 커밋·인계 절은 커밋하지 않은 채 워크트리에 있다
+확인할 선행 조건: 없음
+이번 요청 범위: PR과 병합까지
+```
+
+세션 제목을 `chore/034-deletion-tool-adversarial-input-hook (인계함)`으로 바꿨고 워크트리 잠금은 이미 풀려 있었다(`git worktree unlock`이 `is not locked`로 답했다).
+open-session을 부른다 2026-11-01T07:20:22Z
+
+## PR 직전 리뷰 (이어받은 둘째 세션)
+
+`coderabbit auth status`가 `Seat: not assigned`(Plan: Free)라 CLI는 돌지 못했다. 운영 문서 리뷰 파이프라인 2의 대체 둘을 커밋 `81c3656f` 위에서 돌렸다. origin/main이 브랜치를 딴 뒤 앞서지 않아 합칠 것이 없었다(`git log HEAD..origin/main` 빈 출력, merge-base `544381ea`).
+
+- 보안(내장 `/security-review`의 식별 서브에이전트): 발견 없음. 표지 파일 이름이 `sha256` 16진 64자라 세션 ID가 경로로 들어가지 못하고, 훅에 `subprocess`·`eval`·`exec`가 없으며, 입력은 `json.load` 하나다. 확신 8 미만으로 접은 둘(임시 폴더의 표지 선점, 걸린 줄을 컨텍스트에 싣는 것)은 둘 다 약 2였다. 발견이 없어 오탐 거르기 서브에이전트는 띄우지 않았다.
+- 버그·성능(`bug-perf-review`): 지적 1건 Minor, 유효(문장 정정용). stdin이 빈 입력, `{not`, `[]`, `null`이면 훅이 예외로 죽고 종료 코드 1이다(서브에이전트가 자식 프로세스로 쟀다). 자매 훅 `hook_scratch_probe_rule.py`가 같은 모양이고 훅 안의 예외는 막지 않고 지나가므로(`.claude/rules/tools.md`의 fail-open) 피해가 없다. 훅 독스트링과 이 일지에 "예외로 죽지 않는다"는 문장이 없음을 이 세션이 `Grep`으로 확인해 코드를 고치지 않았다. 일지 셀프 리뷰 절의 밀 주장은 서브에이전트가 `deleting_lines`·`context_for`를 직접 불러 손으로 쟀고 사실로 나왔다(이 세션이 다시 재지는 않았다): 못 보는 것의 아홉 꼴과 알리는 여섯 꼴, `web/tools/**`가 `paths`에 없다는 것, 2MB 한 줄 입력 열다섯 꼴이 1.12초 안에 끝나는 선형 동작.
+- 보류: 표지 폴더를 만들 수 없는 길의 실행 시험은 하지 못했다(`tempfile.gettempdir()`가 다음 후보로 물러난다). 코드로는 `claim_first`의 `OSError` 처리를 읽었고 문제는 보이지 않았다. 서브에이전트는 `tools/run_hooks.py` 전체를 시간 안에 돌리지 못해 새 사례 두 건을 러너로 확인하지 못했으나, 이 변경의 pre-commit에서 이미 통과했다(위 커밋 절).
