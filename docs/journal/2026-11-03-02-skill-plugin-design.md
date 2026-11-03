@@ -554,6 +554,10 @@ PR은 면제 PR(`docs/skill-plugin-design`)에 회고가 쓴 harness 티켓 040�
   `origin/main`과 같고 이 PR이 병합되면 하나 뒤진다). 새 세션이 워크트리에 들어가기 전에 `tidy-checkouts`로 당긴다. 이 세션은 가드 때문에 주
   체크아웃의 git 상태를 보지 못했고, 주 체크아웃의 `.claude/skills/writing-for-agents/SKILL.md`는 `file`로 보니 CRLF다(워크트리 사본은 LF,
   내용은 같다). 그 정리가 주 체크아웃을 깨끗하지 않다고 보면 그 파일부터 본다.
+- 봇 회차에서 보류한 둘(아래 "봇 회차 (셋째 세션)"). 명세가 정할 때 같이 본다. claude-review가 ADR 0041의 미룸 둘을 명세가 아니라 ADR에서
+  닫으라고 했다. 하나는 `yaml.YAMLError`를 `PluginError`로 바꾸는 층을 sdk 안 예외로 정하는 것이고, 다른 하나는 `read_skill`이 sdk의 `Skill`을
+  돌려준다고 정하는 것이다(후자가 원문을 돌려주고 core가 파싱하는 안이면 core가 `import yaml`을 하게 된다). 명세가 두 질문을 한 번에 받아 정하고
+  그 결과를 ADR 0041 이력과 ADR 0012 이력에 쌓는다.
 - 회고 후보(다음 회고가 센다): 커밋 뒤 인계 지시문이 리뷰 파이프라인 2가 요구하지 않는 `/security-review`를 남은 일로 들었고, "이어받을 상태"에
   돌지 않은 `bug-perf-review`를 반영했다고 적었다(위 "PR 직전 리뷰"는 CLI가 돌아 대체 둘을 돌리지 않았다고 적었다). 둘째 세션이 지시문대로 돌렸고
   발견 없음이었다(아래 "PR 직전 보안 리뷰와 PR (둘째 세션)"). 인계 절을 쓰는 세션이 남은 단계를 규약이 아니라 기억으로 적은 사건이다.
@@ -619,4 +623,63 @@ open-session을 부른다 2026-11-03T08:21:56Z
   더했다. (2) `read_skill`의 경로는 `PluginName`으로만 짓고 머리말의 `name`을 경로 조립에 쓰지 않는다. ADR "머리말의 `name`은 플러그인
   이름(폴더 이름)과 같아야 한다"와 이름 패턴(`/`·`\`·`.`이 없다)이 이미 다룬다. (3) `yaml.YAMLError`를 `PluginError`로 바꾸지 않으면 스택
   트레이스에 원문 조각이 서버 로그와 500 본문으로 샐 수 있다. ADR의 되울림 규칙과 위 "다음"의 명세 미룸(어느 층이 바꾸는지)에 이미 들고,
-  "머리말이 깨진 `SKILL.md`는 `PluginError`이고 문구에 원문이 없다"를 시험 하나로 고정하라는 제안도 위 "다음"에 더했다.
+  머리말이 깨진 `SKILL.md`가 `PluginError`로 서고 문구에 원문이 없음을 시험 하나로 고정하라는 제안도 위 "다음"에 더했다.
+- **커밋 뒤 인계 계기.** 커밋 명령을 백그라운드로 띄운 직후 인계 계기(세션 컨텍스트 252,166 토큰, 경계 `커밋 뒤`)가 왔고 `handoff.md`를
+  Read로 열어 따랐다. 인계하지 않는 때에 들었다. 이 세션의 지시문 "이어받을 상태"가 `인계: 커밋 뒤`로 시작해 넘겨받은 경계에 다시 온 것이고,
+  계기를 낸 커밋도 아직 끝나지 않았었다. 넘기지 않고 이었다.
+- **커밋과 푸시, PR.** 커밋 `51e4b17b`(일지만, 69줄 더함·1줄 지움)가 pre-commit을 지나 섰다. 열 검사 모두 Passed(pytest 299.0s, web-verify
+  445.7s), ruff 둘은 `.py`가 스테이지되지 않아 Skipped, 인용 대조 경고 1건(622행의 제안 문장은 아직 없는 시험이라 저장소에 없는 것이 맞다.
+  봇이 짚으면 따옴표를 뗀다). 백그라운드 출력 파일을 손으로 봤다. `git push -u origin docs/skill-plugin-design`으로 커밋 둘을 올리고
+  `gh pr create`로 PR #457을 열었다(제목은 첫 커밋의 제목, 본문은 PR #442의 모양). `get_status`가 PR을 이 세션에 묶었다고 했다(`bound: true`,
+  검사 pending 6). `@coderabbitai review` 코멘트와 대기는 남기지 않았다(`handoff.md` 3의 `PR 연 뒤`: 새 세션이 남긴다).
+- **PR 연 뒤 인계 계기.** PR을 연 직후 next-session 계기와 인계 계기(세션 컨텍스트 260,208 토큰, 경계 `PR 연 뒤`)가 함께 왔고 인계 계기가
+  앞선다. `handoff.md`를 Read로 열어 봤다. 인계하지 않는 때 다섯에 들지 않는다. PR은 열렸고, 요청 범위는 병합까지라 이 경계에서 끝나지 않고,
+  이 세션의 지시문의 "이어받을 상태"는 `인계: 커밋 뒤`라 같은 경계가 아니고, 이 일지에 `인계 못함` 줄이 없고, `get_session self`에
+  `parentSessionId`가 없다. 그래서 넘긴다. 이 세션의 사용자 프롬프트는 위 "인계 (커밋 뒤)"의 지시문 하나이고(라운드와 승인은 없었다), 이
+  세션이 번복한 것은 없다(위 "다음"에 명세가 받을 둘과 회고 후보 한 줄을 더했다). 이 세션의 제목은 `docs/skill-plugin-design`이고, 아래
+  지시문을 낸 뒤 `docs/skill-plugin-design (인계함)`으로 바꾼다.
+
+## 인계 지시문 (PR 연 뒤)
+
+새 세션이 할 일은 `merge.md` 2(봇 회차)부터다. 첫 `@coderabbitai review` 코멘트, `tools/wait_ci.py 457`, 반영, 워크트리에서의 병합(`merge.md`
+"워크트리에서 병합할 때". 주 체크아웃은 당기지 않는다), 그 뒤 `next-session`(다음 단계는 명세 `/to-spec`, 사람이 부른다). 회고는 첫 세션이
+커밋 전에 돌았다(위 "회고"). 이 절과 위 둘째 세션 절의 뒤쪽 불릿 셋은 커밋하지 않았으므로 새 세션이 봇 회차의 커밋에 싣는다.
+
+지시문:
+
+```
+다음 작업: 기능 skill-plugin. 스킬을 실행마다 읽어 컨텍스트로 넘기는 플러그인으로 정한 설계 PR #457의 봇 회차 반영과 워크트리에서의 병합, 그 뒤 next-session
+다음 단계: PR 반영·병합
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /grill-with-docs
+브랜치: docs/skill-plugin-design
+모델: Sonnet 5.5 / high. 2의 잇는 지시문
+읽을 것: docs/journal/2026-11-03-02-skill-plugin-design.md의 "다음" 절과 "PR 직전 보안 리뷰와 PR (둘째 세션)" 절부터 끝까지, .claude/skills/next-session/merge.md
+이어받을 상태: 인계: PR 연 뒤 docs/journal/2026-11-03-02-skill-plugin-design.md. PR #457(헤드 51e4b17b. 커밋 둘: a575f0d4 설계·ADR 0041·회고, 51e4b17b 인계 절과 보안 리뷰 보고)을 열었고 @coderabbitai review 코멘트와 wait_ci 대기는 아직 없다(새 세션이 남기고 띄운다). 일지의 "PR 직전 보안 리뷰와 PR (둘째 세션)" 절 뒤쪽 불릿 셋과 "인계 지시문 (PR 연 뒤)" 절은 커밋하지 않았으니 봇 회차의 커밋에 싣는다. 인터뷰는 끝났으니 라운드를 올리지 않는다. 남은 것: merge.md 2(봇 회차)부터 — @coderabbitai review 코멘트, wait_ci 457, 반영, 워크트리에서의 병합(merge.md "워크트리에서 병합할 때"), 그 뒤 next-session(다음 단계는 명세 to-spec, 사람이 부른다. 명세 브랜치 선례는 docs/<slug>-spec). 회고는 첫 세션이 커밋 전에 돌았다(일지 "회고"). check_quotes 경고 1건(일지 622행의 제안 문장)은 봇이 짚으면 따옴표를 뗀다.
+확인할 선행 조건: 없음
+이번 요청 범위: PR과 병합까지
+```
+
+잠금 풀기: `git worktree unlock`이 `is not locked`로 끝나 넘어갔다. open-session을 부른다 2026-11-03T08:44:03Z
+
+## 봇 회차 (셋째 세션)
+
+인계 지시문으로 연 셋째 세션이 제목을 `docs/skill-plugin-design`으로 바꾸고 워크트리 `next-feature-design`에 들어왔다. 지시문의 시작 프롬프트는
+`/grill-with-docs`였으나 인터뷰는 끝났다고 적혀 있어 두 스킬(`grilling`, `domain-modeling`)을 싣지 않고 `merge.md` 2(봇 회차)로 바로 갔다.
+
+- **대기.** 헤드 `51e4b17b`에 `gh pr comment 457 --body "@coderabbitai review"`를 남겼다(손으로 쳤다). 그 직전 `gh pr checks 457`은 `python`·`web`·
+  `visual`이 pending이어서 `tools/wait_ci.py 457`을 백그라운드로 띄웠고, 끝 줄이 `끝: 모두 통과`였다(출력 파일을 손으로 읽었다. 아홉 검사
+  모두 SUCCESS, CodeRabbit과 claude-review 포함).
+- **CodeRabbit(첫 회차).** `gh pr view 457 --json comments`로 읽었다. 요약 코멘트의 상태가 `No actionable comments were generated in the recent
+  review`이고 인라인 코멘트(`gh api repos/njh6803/agent-os/pulls/457/comments`)는 0건이다. 반영할 것이 없다.
+- **claude-review(첫 회차).** Critical·Major 없음, Minor 둘과 Nit 하나. 첫 회차라 Minor·Nit을 지적마다 판단했다.
+  - [Minor] `yaml.YAMLError`를 `PluginError`로 바꾸는 층을 명세가 아니라 ADR이 정하라. **보류.** ADR 0041은 사용자가 승인한 글이고(위 "ADR 0041
+    승인") 승인된 결정의 본문을 바꾸면 다시 승인을 받아야 한다(`CLAUDE.md` 작업 규약 5, `merge.md` 4). 이 미룸은 승인 때 이미 명세의 몫으로
+    합의됐고, 지적의 걱정(날것의 `YAMLError`가 500 본문으로 샌다)은 위 "다음"과 보안 리뷰 메모 (3)이 시험 하나로 고정하도록 명세에 넘겼다.
+    지적이 옳은 점은 있다(서드파티 예외를 sdk 경계에서 감싼다). 그래서 "다음"에 둘째 불릿으로 명세가 닫을 질문으로 적었다.
+  - [Minor] `read_skill`이 돌려주는 값의 자리를 ADR에서 닫으라(포트가 sdk의 `Skill`을 돌려준다). **보류.** 같은 까닭이다. ADR 0012 이력에
+    "명세가 정한다"로 쌓였고 명세 단계가 시그니처와 함께 정한다. 위 "다음"의 같은 불릿에 적었다.
+  - [Nit] ADR 0041 첫 문단과 Consequences 몇 항목이 길다. **보류.** 승인된 글의 문장 손질은 얻는 것보다 재승인 값이 크다. 구현 티켓이
+    "구현 티켓이 고칠 곳"을 읽는 길은 그대로다.
+- **뒤로 넘긴 일.** 보류한 Minor 둘은 위 "다음"에 적었다(`merge.md` 2의 뒤로 넘긴 일). 고친 것이 없는 회차라 일지(인계 절, 보안 리뷰 뒤쪽
+  불릿 셋, 이 절)만 푸시한다. 그 푸시로 도는 claude-review는 둘째 회차라 Critical·Major만 고친다.
