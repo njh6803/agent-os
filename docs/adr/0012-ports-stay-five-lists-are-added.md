@@ -221,3 +221,16 @@ skill-plugin에서 정했다(ADR 0041). 스킬의 `SKILL.md`는 플러그인 폴
 없는 스킬 폴더도 목록의 보통 행이고, 그것을 고른 에이전트의 실행이 준비 단계에서 거부된다. 정확한 시그니처와
 돌려주는 값의 자리(sdk인지 core인지)는 명세가 정한다. `.claude/rules/core.md`의 포트 표는 본문의 규약대로 코드와
 같은 티켓에서 고친다.
+
+### 2026-11-03 `read_skill`은 이름을 받아 sdk의 `Skill`을 돌려주고 없으면 `None`이다
+
+skill-plugin 명세(`.scratch/skill-plugin/spec.md`의 "포트 `read_skill`의 시그니처와 돌려주는 값의 자리")가 앞의
+이력이 명세에 넘긴 것을 정했다.
+
+**`PluginSource.read_skill(name: PluginName) -> Skill | None`이다.** 동기이고(재개의 첫 걸음에 `await`가 없다는
+불변식이 준비 단계에 걸린다), 종류 인자는 받지 않는다. 스킬 문서는 스킬 종류에만 있다. 돌려주는 값은 sdk의 불변
+값 `Skill`(이름, 설명, 본문)이다. 원문을 돌려주고 core가 파싱하는 안은 core가 `import yaml`을 하게 되어 두지
+않았다(PR 봇 claude-review가 짚었다. 일지 2026-11-03-02 "봇 회차 (셋째 세션)"). 그 이름의 스킬 폴더에 스킬 문서 파일이 없으면 `None`(부재는
+값. 매니페스트의 부재는 `read_manifest`가 따로 말한다)이고, 열지 못하거나 UTF-8이 아니거나 머리말을 떼지 못하거나
+YAML로 읽히지 않거나 두 칸이 거부되거나 머리말의 `name`이 인자와 다르면 `PluginError`(손상)다. 어댑터는 경로를
+인자의 `PluginName`으로만 조립하고 머리말의 값으로 경로를 만들지 않는다.
