@@ -1,0 +1,126 @@
+# 2026-11-03 (03) skill-plugin 명세
+
+## 사용자 프롬프트 원문
+
+> 사용자: .claude/skills/to-spec/SKILL.md 를 읽어 그대로 따른다. 이 세션을 연 저장소는 `C:\project\agent`이고 작업 폴더가 그곳이 아니면 따르지 말고 알린다. 스킬의 인자는 이 줄의 '인자:' 뒤부터 메시지 끝까지다. 인자:
+>
+> 다음 작업: 기능 skill-plugin. 스킬을 실행마다 읽어 컨텍스트로 넘기는 플러그인으로 정한 설계(ADR 0041, PR #457로 병합)의 명세
+> 다음 단계: 명세
+> 어디서: 새 세션. 주 체크아웃 미갱신이라 Skill 도구로 tidy-checkouts를 먼저 돌고(그 스킬이 사람에게 넘기는 것은 보고만 하고 답을 기다리지 않는다) 그 뒤 주 체크아웃에서 브랜치를 따지 않고 EnterWorktree(name은 skill-plugin-spec)로 새 워크트리에 먼저 들어가 거기서 브랜치를 바꾼다
+> 시작 프롬프트: /to-spec
+> 브랜치: docs/skill-plugin-spec
+> 모델: Fable 5.1 / xhigh
+> 읽을 것: docs/journal/2026-11-03-02-skill-plugin-design.md의 "다음" 절(명세가 정할 것 여섯: 머리말을 본문에서 떼는 자리, yaml.YAMLError를 PluginError로 바꾸는 층, 스킬 문서 단건 읽기의 시그니처와 돌려주는 값의 자리, 예시 스킬의 이름과 본문, 머리말 두 칸의 값이 문자열이 아닐 때의 거부, 깨진 SKILL.md가 PluginError로 서고 문구에 원문이 없음을 고정하는 시험)과 "봇 회차 (셋째 세션)" 절, docs/adr/0041-skill-is-a-plugin-read-per-run-into-the-context.md
+> 이어받을 상태: 봇 회차(claude-review 첫·둘째 회차)의 Minor 둘이 승인된 ADR 0041 본문을 바꾸지 않고 명세로 넘어왔다. 하나는 yaml.YAMLError를 PluginError로 바꾸는 층을 sdk 안 예외로 정하자는 것이고, 다른 하나는 read_skill이 sdk의 Skill을 돌려준다고 정하자는 것이다(원문을 돌려주고 core가 파싱하면 core가 import yaml을 하게 된다). 명세가 두 질문을 한 번에 받아 정하고 결과를 ADR 0041 이력과 ADR 0012 이력에 쌓는다. 이력을 쌓는 ADR 수정은 사용자 승인이 필요하다. 명세 브랜치 선례는 docs/<slug>-spec.
+> 확인할 선행 조건: 주 체크아웃 미갱신: 루트는 main. 병합은 이 워크트리 사본의 next-session merge.md(없으면 SKILL.md)의 "워크트리에서 병합할 때"를 Read로 열어 따른다
+> 이번 요청 범위: 명세 작성과 PR·병합까지
+
+첫 턴에 `tidy-checkouts`를 돌고 `EnterWorktree(skill-plugin-spec)`로 들어가 `docs/skill-plugin-spec` 브랜치를 땄다(origin/main 2ba2780d). 세션 제목은 브랜치 이름으로 붙였다.
+
+## 선택 화면 (명세를 쓴 뒤)
+
+명세 초안을 쓴 뒤 to-spec의 이음매 확인과 예시 스킬의 갈래를 선택 화면 하나로 물었다. 묻기 전에 "시험을 붙이는 자리(이음매)"를 어느 층에 가짜를 꽂고 어느 층의 바깥 행동을 단언할지로 풀었다. 고른 라벨과 설명은 글자 그대로다.
+
+- "스킬 기능의 시험을 주로 어디에 붙일까요?" → **런타임에 가짜 저장소를 꽂는다 (Recommended)**. 설명: "core의 run()·resume()에 가짜 플러그인 소스를 꽂아 준비 순서, 오류 문구, 컨텍스트에 실린 스킬 열, 읽은 횟수를 잽니다(지금 가짜 소스가 매니페스트·모델 읽은 횟수를 세는 것과 같은 길). 파일을 만들지 않아 빠르고 결정적입니다. 바깥 경계(sdk의 읽는 함수, 실제 폴더 어댑터, HTTP 두 면, 관리 화면, calc 프롬프트)는 기존 시험 자리에 얇게 하나씩 더하고, 실제 모델 호출은 기존 calc 시험에 단언 하나만 더합니다. 모델 플러그인 명세가 고른 자리와 같습니다." 고르지 않은 둘: "실제 폴더를 만들어 어댑터까지 돌린다"(임시 폴더에 `plugin.toml`과 `SKILL.md`를 실제로 쓰고 실제 어댑터로 `run()`을 돌린다. 파일 읽기까지 한 번에 보지만 결함 둘을 함께 심는 사례를 파일로 꾸미기가 번거롭고 읽은 횟수는 어댑터를 감싸야 셀 수 있다. 얼마나 느린지는 재지 않았다, 어림), "HTTP 요청을 넣어 응답으로만 본다"(상태 코드와 봉투로만 잰다. 컨텍스트의 열이나 읽은 횟수는 응답에 나오지 않아 잴 수 없고 준비 순서도 오류 문구로만 가늠한다).
+- "저장소에 둘 예시 스킬(calc가 고르는 하나)은 어느 것으로 할까요?" → **답 형식 스킬 (answer-format) (Recommended)**. 설명: "본문 세 문장: 답은 값 하나만 쓴다, 단위·설명·계산 과정을 붙이지 않는다, 계산할 수 없으면 왜 할 수 없는지 한 문장으로 답한다. calc의 머리 문장 "최종 답만 짧게 답한다"(지금 코드)와 같은 방향이라 실제 모델 시험의 답이 바뀌지 않을 것으로 봅니다(돌려 보지 않았다, 어림). 본문이 짧아 프롬프트가 조금만 큽니다." 고르지 않은 것: "한국어 계산 요청 읽기 스킬 (korean-arithmetic)"(더하기·빼기·곱하기·나누기·제곱·나머지·퍼센트·우선순위를 연산으로 옮기는 규칙. 본문이 길어 프롬프트가 커지고 규칙이 모델의 답을 바꿀 여지가 있어 실제 모델 시험을 다시 봐야 할 수 있다. 돌려 보지 않았다, 어림).
+
+선택 화면의 설명에 든 사실은 띄우기 전에 대 봤다. 모델 플러그인 명세의 이음매 절(`.scratch/model-plugin/spec.md` "이음매 (사용자가 골랐다)")이 같은 자리를 골랐고, `tests/core/test_run.py`의 `FakePlugins`가 `manifest_reads`·`model_reads`·`disabled_reads`를 세며, calc의 머리 문장은 `plugins/agents/calc/agent.py`의 `PROMPT` 그대로다. 첫 호출은 훅이 막아(처음 뜨는 선택 화면의 사실 확인) 대 본 뒤 어림을 적어 다시 띄웠다.
+
+## 명세가 정한 것 (인계 전까지)
+
+- 명세 `.scratch/skill-plugin/spec.md`(Status ready-for-agent)를 썼다. 서두의 셈은 넘겨받은 것 열하나, 사용자가 고른 것 둘, 명세가 정한 것 열셋, 이력 둘, 거부한 안 스물넷이다. 셈은 세션 스크래치패드의 일회성 스크립트로 세었다(`거부한 안:` 24, `(명세가 정했다` 12에 예시 스킬 절의 "엮는 모양은 명세가 정했다" 1).
+- 봇 회차가 보류한 둘의 답. `yaml.YAMLError`를 바꾸는 층은 sdk다 — `parse_skill(text) -> Skill`이 그것을 고정 문구의 `ValueError`(`머리말이 YAML로 읽히지 않는다: <오류 종류> (줄 N, 칸 M)`)로 바꿔 던지고, 어댑터의 `read_skill`은 매니페스트의 `_parse`와 같은 집합을 잡아 `PluginError`를 만든다. 포트는 `read_skill(name: PluginName) -> Skill | None`이고 sdk의 `Skill`(frozen dataclass, `name`·`description`·`body`)을 돌려준다.
+- 그 밖에 명세가 정한 것 열하나는 명세 서두의 목록이다. 줄 단위 `---` 가르기, strict pydantic 두 칸, 읽지 못한 문구와 이름 어긋남 문구, `skills`의 중복 거부, 준비 순서와 없음의 문구 둘, `AgentContext.skills: tuple[Skill, ...]`, calc의 `지침 <이름>:` 블록, sdk 밖의 `yaml` import를 막는 import-linter 계약, 고칠 자리의 묶음 넷(계약과 읽기 → 런타임·관리 화면 → 예시), 실제 모델 호출은 `tests/test_main.py`의 calc 시험에 단언 하나.
+- 근거의 종류. 쟀다: `.scratch/skill-plugin/probes/frontmatter_split.py`(16회차), `frontmatter_values.py`(19회차), 설계의 `yaml_frontmatter.py`. 원문을 읽었다: Agent Skills 표준 페이지(https://agentskills.io/specification)와 참조 구현 `skills-ref`의 `parser.py`·`validator.py`(github `agentskills/agentskills` main, 내장 브라우저), 설치된 PyYAML 6.0.3의 `yaml/scanner.py` `check_document_start`와 네 모듈(`scanner`·`parser`·`composer`·`constructor`)의 `%r` 자리(스크래치패드 스크립트로 훑었다). 코드를 읽었다: `core/run.py`의 `_prepare`·`_resolve_servers`·`_reject_disabled`, `adapters/filesystem.py`의 `_parse`·`_describe`·`read_manifest`, `tests/core/test_run.py`의 `FakePlugins`, `tests/test_main.py`의 `_copy_repo_plugins`, `web/apps/widget/e2e/plugins.ts`의 `copyRepoPlugins`, `tests/test_plugins_boundary.py`(`*.py`만 읽는다), `pyproject.toml`의 import-linter 계약. 어림: 매니페스트의 BOM을 `tomllib`이 거부하는지, 실제 폴더를 주 이음매로 썼을 때 얼마나 느린지, 예시 스킬로 모델의 답이 바뀌지 않는지.
+- 용어와 이력. `CONTEXT.md`에 "스킬 문서" 용어를 더했다(머리말 정의가 이미 쓰던 말). ADR 0041에 `## 이력`과 2026-11-03 이력 "명세가 머리말 가르기와 두 칸의 모양, 바꾸는 층, 포트의 시그니처, 예시 스킬을 정했다"를 쓰고 본문 문장 여섯에 포인터를 달았다(웹 요약을 원문과 대 보지 않았다는 문장, 거부 조건 문장, 떼는 자리, 바꾸는 층, 시그니처와 값의 자리, 예시 스킬의 이름과 본문). ADR 0012에 같은 날 둘째 이력 "`read_skill`은 이름을 받아 sdk의 `Skill`을 돌려주고 없으면 `None`이다"를 썼다. `uv run python tools/check_adr_pointers.py`와 `tools/check_line_separators.py`가 초록이었다. `tools/check_md_tables.py`도 초록이라 적었으나, 넷째 세션의 셀프 리뷰 표준 축이 돌리니 `.scratch/plan.md` 6행에 적은 `Skill | None`의 `|`가 표의 칸을 깨어 빨강이었다(아래 "셀프 리뷰 (넷째 세션)"). `.scratch/plan.md`의 6행에 명세와 측정의 경로, 고른 것과 정한 것을 적었다. 두 ADR 이력은 아직 사용자 승인을 받지 않았다(셀프 리뷰를 반영한 뒤 보여 준다).
+
+## 이 세션이 번복하거나 고친 것
+
+- 프로브 `frontmatter_split.py`의 첫 판은 머리말 안의 `---` 줄을 큰따옴표 스칼라 한 자리만 쟀는데, 명세가 그것을 "유효한 머리말 안에 있을 수 없다"로 넓혀 썼다. 프로브를 인용하는 문서의 계기 훅에 따라 블록 스칼라와 평문 스칼라의 이어지는 줄 두 자리를 더해 14회차에서 16회차로 다시 쟀고(둘은 `ComposerError`), 까닭은 스캐너의 `check_document_start`를 읽어 적었다. README의 그 절에 결과를 본 뒤 바꾼 것으로 적었다.
+- `frontmatter_values.py`의 받는 회차에 `compatibility`를 더했다. 명세가 표준의 선택 칸 넷이 무시된다고 적는데 첫 판은 셋만 넣었다. 19회차 그대로다.
+- 명세의 거부한 안 수를 열다섯에서 스물넷으로 고쳤다(손으로 센 수가 틀려 스크립트로 셌다). "500줄 권고"를 원문과 같았다는 목록에서 뺐다(이 세션이 원문에서 대 보지 않았다). `problem` 문구가 원문의 글자를 든다는 근거를 `scanner.py` 한 파일에서 네 모듈의 `%r` 자리로 고쳐 적었다.
+- 선택 화면의 첫 호출은 훅이 막았다(처음 뜨는 화면의 사실 확인). 모델 플러그인 명세의 이음매, 가짜 소스의 읽은 횟수, calc의 머리 문장을 대 본 뒤 돌려 보지 않은 것에 어림을 적어 다시 띄웠다.
+
+## 인계 (셀프 리뷰 직전)
+
+셀프 리뷰 직전의 계기 훅이 세션 컨텍스트 304,771 토큰으로 문턱을 넘었다고 알렸다. 곁 세션이 아니고(`get_session self`에 `parentSessionId`가 없다) 요청 범위가 병합까지라 인계한다. 셀프 리뷰는 새 세션이 한다. 이 세션의 제목은 `docs/skill-plugin-spec`이었고 `docs/skill-plugin-spec (인계함)`으로 바꾼다. 주 체크아웃은 main 2ba2780d이고 `git fetch origin` 뒤 `origin/main`과 같다(`git worktree list`와 `git rev-parse origin/main`으로 봤다). 이 세션이 띄운 백그라운드 작업은 없다.
+
+지시문:
+
+```
+다음 작업: 기능 skill-plugin. 스킬을 실행마다 읽어 컨텍스트로 넘기는 플러그인으로 정한 설계(ADR 0041, PR #457로 병합)의 명세
+다음 단계: 명세
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /to-spec
+브랜치: docs/skill-plugin-spec
+모델: Fable 5.1 / xhigh. 2의 잇는 지시문
+읽을 것: docs/journal/2026-11-03-03-skill-plugin-spec.md 전체(선택 화면의 답, 명세가 정한 것, 이 세션이 고친 것), .scratch/skill-plugin/spec.md, .scratch/skill-plugin/probes/README.md의 명세 세션 두 절, docs/adr/0041-skill-is-a-plugin-read-per-run-into-the-context.md의 "## 이력"과 docs/adr/0012-ports-stay-five-lists-are-added.md의 2026-11-03 둘째 이력(승인받을 초안)
+이어받을 상태: 인계: 셀프 리뷰 직전 docs/journal/2026-11-03-03-skill-plugin-spec.md. 커밋하지 않은 변경이 워크트리 C:/project/agent/.claude/worktrees/skill-plugin-spec에 있고 셀프 리뷰(/code-review origin/main)부터 한다. 변경은 명세 .scratch/skill-plugin/spec.md(새 파일), 프로브 둘 .scratch/skill-plugin/probes/frontmatter_split.py·frontmatter_values.py(새 파일)와 그 README.md, CONTEXT.md의 용어 "스킬 문서", ADR 0041의 포인터 여섯과 새 "## 이력" 절, ADR 0012의 2026-11-03 둘째 이력, .scratch/plan.md의 6행, 이 일지다. 두 ADR 이력 초안은 아직 사용자 승인을 받지 않았다. 셀프 리뷰를 반영한 뒤 보여 주고 승인받는다(CLAUDE.md 작업 규약 5). 사용자가 고른 둘(core에 가짜 플러그인 소스를 꽂는 이음매, 예시 스킬 answer-format)은 일지의 선택 화면 절에 글자 그대로 있다. 남은 단계는 to-spec의 순서대로 셀프 리뷰 반영 → 서두의 수 다시 세기 → ADR 이력 승인 → 커밋(커밋 전 git branch --show-current와 uv run python tools/sibling_overlap.py) → 일지 마무리(결과와 근거의 종류, "다음") → PR 직전 리뷰 → /git-pr → 봇 회차 → 병합은 이 워크트리 사본의 next-session merge.md "워크트리에서 병합할 때" → next-session(다음은 to-tickets)
+확인할 선행 조건: 없음
+이번 요청 범위: 명세 작성과 PR·병합까지
+```
+
+제목을 `docs/skill-plugin-spec (인계함)`으로 바꿨고 `git worktree unlock`이 조용히 끝났다. open-session을 부른다 2026-11-03T10:10:16Z
+
+## 셀프 리뷰 (넷째 세션)
+
+인계 지시문으로 연 넷째 세션이다. 제목을 `docs/skill-plugin-spec`으로 바꾸고, `git worktree list`에서 브랜치가 체크아웃된 워크트리 `skill-plugin-spec`에 `EnterWorktree(path)`로 들어갔다. `git fetch origin` 뒤 HEAD와 `origin/main`이 같은 `2ba2780d`였다(손으로 봤다).
+
+본 범위: base `2ba2780d`, 변경 파일 5(`.scratch/plan.md`, 프로브 README, `CONTEXT.md`, ADR 0012, ADR 0041), 커밋 0, 미추적 4(명세, 프로브 둘, 이 일지). 표준 축은 sonnet·high, 명세 축은 이 세션의 모델. 두 브리프에 표준 페이지와 참조 구현 `parser.py`·`validator.py`의 발췌와 URL을 실었고, 참조 구현 원문 둘을 `curl`로 세션 스크래치패드에 내려받아 두 축이 그 사본으로 대 봤다(명세 축이 그렇게 적었다).
+
+### 표준 축 보고 (sonnet·high)
+
+도구: `check_md_tables.py`는 실패(`.scratch/plan.md:25: 칸 6, 머리 행 5`), `check_line_separators.py`와 `check_adr_pointers.py`는 통과. 프로브 둘은 다시 돌려 16회차와 19회차, 측정 아님 0.
+
+1. [Major, 하드] 명세 "읽지 못한 문구" 절의 닫힌 주장. `parse_skill`이 `yaml.YAMLError`만 바꾸는데 `yaml.safe_load`는 `YAMLError`가 아닌 예외를 낸다. 손으로 쳐 봤다. `description: !!int sk-ant-probe-secret`는 값이 든 `ValueError`이고 어댑터 `_describe`가 `str(error)`를 그대로 싣는다. `!!bool`은 `KeyError`, `!!timestamp`는 `AttributeError`라 `except (OSError, ValidationError, ValueError)` 밖으로 나간다. 프로브는 이 길을 재지 않았다. 사용자 이야기 12의 약속이 깨진다.
+2. [Major, 도구가 판정] `.scratch/plan.md` 6행에 늘어난 문장의 코드 스팬 `Skill | None`이 표를 깬다. 일지는 `check_md_tables`가 초록이라 적었으니 그 문장도 거짓이다.
+3. [Minor, 출처] ADR 0041 이력은 "PR 직전 리뷰가 보류한 둘", ADR 0012 이력은 "PR 직전 리뷰가 짚었다"고 적는다. 일지 665행 이후를 보면 보류한 것은 PR 봇 claude-review(셋째 세션)다. 바꾸는 층은 CLI(PR 직전 리뷰)가 냈고 값의 자리는 봇이 냈다. 명세 서두("봇 회차")와도 어긋난다. 이력 서두의 "넘긴 넷"과 "보류 둘"은 겹친다.
+4. [Minor, 하드] ADR 0041 이력과 명세 Out of Scope가 "패턴이 보지 않는 것(연속 하이픈, 64자)"이라 적는다. 패턴 `^[a-z][a-z0-9-]{1,62}$`는 64자를 거부하고 끝 하이픈은 통과시킨다. ADR 0041 본문 26행과 어긋난다.
+5. [Minor] 로컬 `skills-ref` 사본에서 `parser.py`는 `strictyaml`을 쓰고 `validator.py`는 `ALLOWED_FIELDS`로 모르는 키를 거부하며 NFKC 정규화도 한다. 명세는 "원문을 읽었다"면서 모르는 키를 허용하는 결정과 부딪히는 이 사실을 적지 않았다.
+6. [Minor, 프로브] `split_front_matter`는 `rstrip("\r")`로 여러 개를 떼는데 규칙은 "하나"다. 세 자리 회차는 `YAMLError` 종류만 보고 README가 든 Scanner/Composer 종류를 단언하지 않는다. `---` 줄을 뺀 입력이 통과하는 대조도 없다. README는 근거 자리를 "절 셋"이라 적었는데 바꾸는 층 절도 `frontmatter_values.py`를 인용한다.
+7. [Minor] 규칙은 "본문은 글 그대로"인데 어댑터의 `read_text`는 CRLF를 LF로 바꾼다.
+8. [Nit] plan.md는 "명세가 정한 열셋"이라 쓰고 괄호에는 열둘만 있다. 명세 Solution에 `_Avoid_`인 "스킬 파일"이 있다. 고칠 자리 묶음은 구현 경로를 나열하는데 "ADR이 든 경로는 옮겨 적는다"는 예외는 to-spec에 없는 명세 자체의 예외다. 냄새(판단): ADR 0041 이력이 문구를 명세와 이중으로 들어 Duplicated Code 가능성.
+
+주장 검증에서 맞은 것: 서두의 수, 프로브 회차와 README 결과 문장, 열거한 테스트 이름과 식별자, `_prepare` 순서, `mcp` 중복이 조용히 하나가 됨(실제 호출), `YAMLError`는 `ValueError`가 아니고 TOML·pydantic 오류는 그 하위, `ReaderError`에 `problem_mark` 없음, 설치된 판 둘, `langchain-core`가 pyyaml을 끌어옴, sdk 계약 넷에 `yaml` 없음, `src`에 `import yaml` 0, 스킬이 다른 종류의 칸을 쓰면 전부 거부, ADR 0008 이력 실재, 두 ADR의 새 이력 제목 구분. 대 보지 못한 것: 스크래치패드의 `%r` 훑기, 내장 브라우저로 읽었다는 것(로컬 사본과 발췌는 일치), 500줄 권고.
+
+### 명세 축 보고 (이 세션의 모델)
+
+- (a) [Minor] plan.md 6행 "명세가 정한 열셋"의 나열이 열둘이고(sdk의 `Skill`·`parse_skill`이 "바꾸는 층"에 합쳐짐), "묶음 넷(계약과 읽기 → 런타임·관리 화면 → 예시)"이 명세의 의존(A→B, A→C, B→D. C→D 없음)과 다르다.
+- (b) [Minor] `skills` 중복 거부(sdk 검증자, 새 문구). ADR 0041은 "`mcp = [...]`와 같은 모양"으로만 정했고 넘긴 넷·보류 둘에 없다. 계약 규칙이 하나 느는 것이라 ADR 이력 승인 때 따로 짚을 것.
+- (c)1 [Minor, 가장 심각] ADR 0041 이력 "PR 직전 리뷰가 보류한 둘"과 ADR 0012 이력 "(PR 직전 리뷰가 짚었다)". 일지는 '어느 층' 질문을 PR 직전 리뷰가 냈고, 둘의 보류와 "core가 `import yaml`" 논증은 봇 회차로 적는다. 또 ADR 본문은 바꾸는 층도 명세가 정한다로 넘겼으니 넘긴 것은 넷이 아니라 다섯이다.
+- (c)2 [Minor] ADR 0041 이력 "계산할 수 없으면 한 문장으로 답한다" — 사용자 답·명세는 "왜 할 수 없는지 한 문장으로".
+- (c)3 [Minor] 명세 "예시 스킬" 절 "같은 방향이라 모델이 다른 답을 내지 않는다" — 사용자 답은 어림인데 단정이 됐다.
+- (c)4 [Minor] "이음매" 절 "바깥 경계는 … 얇은 시험 하나씩" vs "시험할 모듈" sdk 항목(프로브 사례 전부)과 스토리 24. 사용자 답 "sdk의 읽는 함수 … 얇게 하나씩"과 다르다. 의도면 sdk가 예외라고 적을 것.
+- (c)5 [Nit] "다른 멤버의 열이 모두 `tuple`" — 컨텍스트에 열 멤버는 `Conversation.exchanges` 하나다.
+- (c)6 [Nit] ADR 0012 첫 이력의 "명세가 정한다" 문장에 둘째 이력 포인터가 없다.
+
+주장 검증에서 맞은 것: 넘겨받은 열하나와 ADR Consequences, 서두의 수, "지금의 순서"와 `_prepare`(순서 시험 10개 통과), 줄·칸 계산(프로브를 돌렸다), calc 머리 문장 인용 둘, 묶음 넷이 ADR "고칠 곳"을 빠짐없이 덮음, `tests/test_main.py:551`의 실제 모델 시험이 `LlmCalled`를 읽고 `plugins/` 전체를 복사, Out of Scope 받는 쪽 없음, ADR 0012 첫 이력·ADR 0008 이력 옮김, 참조 구현 인용 여섯(스크래치패드 원문), 경로 14개와 계약 이름 둘과 sdk 밖 층 일곱. BOM 어림은 `tomllib.loads`가 BOM 글을 거부하는 것을 손으로 봐 어림 표기가 맞았다. 보류의 걱정(날것 `YAMLError`의 500 유출)은 `failure_for`가 `str(error)`만 싣고 HTTP 층에 traceback 기록이 없어 닫힌다. 잔존 0.
+
+### 판정과 반영
+
+표준 1(Major)은 고쳤다. 네 태그를 `uv run python -c`로 다시 쳐 같은 결과를 봤고(손으로 봤다. `!!float`도 값이 든 `ValueError`였다), `frontmatter_values.py`에 태그 회차 넷과 `!!python` 태그의 `ConstructorError` 대조 하나를 더해 쟀다(24회차, 측정 아님 0). 명세 "바꾸는 층" 절을 `parse_skill`이 `yaml.safe_load` 호출 하나를 `except Exception`으로 감싸 모든 예외를 고정 문구 `ValueError`로 바꾸는 것으로 고치고, 문구는 종류만이 기본이고 `MarkedYAMLError`에만 줄·칸이 붙게 했다. 거부한 안에 "`YAMLError`만 잡는 것(첫 판)"을 더해 스물다섯이 됐다. ADR 0041 이력의 셋째 불릿과 "sdk의 스킬 값" 절, "읽지 못한 문구" 절의 닫힌 주장(이제 참이 됐다), 시험 둘을 함께 고쳤다. 표준 2(Major)는 plan.md의 `Skill | None`을 말로 풀어 고치고 이 일지의 틀린 문장을 고쳤다(`check_md_tables.py` 초록, 손으로 돌렸다). 표준 3과 명세 (c)1은 설계 일지의 "PR 직전 리뷰"·"다음"·"봇 회차 (셋째 세션)" 절을 읽어 두 ADR 이력의 주체를 고쳤다. 명세 축의 "넷이 아니라 다섯"은 받지 않았다. ADR 0041 본문에 "명세가 정한다"로 미룬 문장은 셋(떼는 자리, 시그니처와 값의 자리, 예시 스킬)과 "묶음으로 나누는 것은 명세" 하나로 넷이고(grep으로 봤다), 바꾸는 층은 본문이 아니라 설계 일지 "다음"이 넘겼다. 그래서 이력 첫 문단을 "넘긴 넷, PR 직전 리뷰가 낸 하나, 보안 리뷰가 더한 둘, 봇이 ADR에서 닫으라 했으나 셋째 세션이 보류한 둘의 답"으로 썼다. 표준 4는 `sdk/ids.py`의 패턴을 읽어 명세 둘(거부한 안, Out of Scope)과 ADR 0041 이력을 "끝 하이픈, 연속 하이픈"으로 고쳤다. 표준 5는 내려받은 원문(`parser.py`의 `import strictyaml`, `validator.py`의 `ALLOWED_FIELDS` 여섯과 NFKC)을 읽어 명세 서두와 "두 칸" 절, README의 갈래 불릿에 사실로 적었다(결정은 ADR 0041 그대로다). 표준 6은 프로브의 표지 줄 판정을 `\r` 하나만 떼는 `_is_marker`로 바꾸고 `---\r\r\n` 거부 회차, 세 자리의 클래스 단언, `---` 줄만 뺀 대조 셋을 더했으며 README의 "절 셋"을 넷으로 고쳤다. 표준 7은 `adapters/filesystem.py` `_parse`의 `read_text(encoding="utf-8")`를 읽고 프로브에 파일 회차 셋(CRLF→LF, BOM 남음, 매니페스트의 BOM을 `tomllib`이 거부)을 더해 쟀다(23회차, 측정 아님 0). 명세 "떼는 규칙"에 어댑터의 읽기 길 불릿을 더했고 BOM 어림을 측정으로 바꿨다. 표준 8 가운데 plan.md의 열셋 목록과 "스킬 파일"→"스킬 문서"(명세 Solution)는 고쳤다. ADR 0041 본문의 같은 낱말은 승인된 글이라 두었다. 명세 (a)1은 plan.md의 묶음 의존을 "A → B와 C, B → D"로 고쳤다. 명세 (c)2·(c)3·(c)5는 글자대로 고쳤다. 명세 (c)4는 "이음매" 절에 sdk의 `parse_skill`과 머리말 모델만 프로브 사례 전부로 시험하는 예외를 밝혔다. 사용자가 고른 답을 그 함수에서 넓힌 자리라 승인 때 짚는다.
+
+남긴 것과 이유. 명세 (b)1 `skills` 중복 거부: 명세가 넘겨받은 것 안에서 정한 것으로 서두와 ADR 0041 이력 "명세가 더 정한 것"에 이미 있다. 매니페스트 검증 규칙 하나가 느는 계약 변경이라 ADR 이력 승인 때 사용자에게 따로 짚는다. 표준 8의 고칠 자리 묶음의 구현 경로: ADR 0041 "구현 티켓이 고칠 곳"이 원천이고 to-tickets가 항목을 이름으로 받아야 해 두었다(명세가 그 예외를 절 머리에 밝힌다). 표준 8의 이력 중복 냄새: `.claude/rules/adr.md`가 명세가 정한 것을 그 ADR의 이력에 적으라 하므로 두었다. 명세 (c)6: 같은 규칙의 "달지 않는 것: 앞의 이력을 바꾼 뒤의 이력(지난 이력 항목은 기록이다)"이라 두었다.
+
+### 반영으로 새로 쓴 문장 (PR 직전 리뷰에 밀 주장)
+
+1. 명세 "바꾸는 층": `yaml.safe_load`가 내는 예외는 `YAMLError`만이 아니다 — 명시적 태그(`!!int`, `!!float`, `!!bool`, `!!timestamp`)의 값 변환이 실패하면 변환 함수의 `ValueError`·`KeyError`·`AttributeError`가 그대로 올라오고, 앞의 셋은 `str`에 운영자가 적은 값을 싣는다. 넓은 `except`의 선례는 어댑터의 진입점 import `_import`다.
+2. 명세 "떼는 규칙": 어댑터는 스킬 문서를 매니페스트와 같은 길(텍스트 모드 `read_text(encoding="utf-8")`)로 읽는다. 그 길은 파이썬의 보편 줄 바꿈이라 CRLF 파일의 줄 끝이 `parse_skill`에 닿기 전에 `\n`이 된다. BOM은 그 길로 읽어도 U+FEFF가 첫 글자로 남아 거부된다. 매니페스트도 BOM 뒤의 TOML을 `tomllib`이 거부한다. `\r`이 둘이면 표지 줄이 아니다.
+3. 명세 "두 칸": 참조 구현의 `validator.py`는 표준의 여섯 칸 밖의 키를 거부하고 `name`을 NFKC로 정규화한다. 저장소 `.claude/skills` 가운데 다섯이 쓰는 `disable-model-invocation`이 참조 구현의 검증을 지나지 못하는 예다. 패턴이 ASCII 소문자만 받으므로 전각 글자처럼 정규화해야 맞는 이름은 그대로 거부된다. 참조 구현은 머리말 읽기에 strictyaml을 쓰고 이 가르기는 라이브러리와 무관하다.
+4. 명세 "거부한 안"·Out of Scope·ADR 0041 이력: 패턴이 보지 않는 것은 끝 하이픈 금지와 연속 하이픈 금지이고, 64자 이름은 패턴이 63자까지라 이미 받지 않는다.
+5. 명세 "이음매": sdk의 `parse_skill`과 머리말 모델은 얇은 하나가 아니라 프로브 두 파일의 사례 전부를 같은 입력으로 시험한다. 사용자가 고른 답은 sdk의 읽는 함수도 "얇게 하나씩"에 넣었는데 이 명세가 그 함수만 이렇게 넓혔다.
+6. ADR 0041 이력 첫 문단: 설계 세션의 PR 직전 리뷰가 낸 하나(바꾸는 층), 둘째 세션의 PR 직전 보안 리뷰가 더한 둘, PR 봇 claude-review가 ADR에서 닫으라 했고 셋째 세션이 보류한 둘. ADR 0012 이력: PR 봇 claude-review가 짚었다.
+7. README: 참조 구현은 머리말 읽기에 PyYAML이 아니라 strictyaml을 쓴다. `!!binary`는 틀린 글자를 버리고 bytes를 내 거부되지 않는다(손으로 봤다).
+8. 명세 "예시 스킬": 고르지 않은 것은 규칙이 모델의 답을 바꿀 여지가 있어 그 시험을 다시 봐야 할 수 있었다(어림).
+
+### 다시 돌린 명령
+
+프로브 둘(`PYTHONUTF8=1 uv run python .scratch/skill-plugin/probes/frontmatter_split.py`·`frontmatter_values.py`): 23회차·24회차, 측정 아님 0. `uv run ruff check .`: All checks passed. `uv run ruff format --check .`: 1235 files already formatted. `uv run python tools/check_md_tables.py`·`tools/check_line_separators.py`·`tools/check_adr_pointers.py`: 출력 없이 종료 0. 서두의 수를 스크립트로 다시 셌다(`(명세가 정했다` 절 제목 12에 "엮는 모양은 명세가 정했다" 1, `거부한 안:` 25, 넘겨받은 것 (1)~(11), 사용자가 고른 절 둘). 손으로 치는 다섯은 커밋의 pre-commit으로 갈음하고 결과는 커밋 뒤에 적는다.
+
+## ADR 이력 승인 (넷째 세션)
+
+셀프 리뷰를 반영한 두 ADR 이력 초안(ADR 0041 "명세가 머리말 가르기와 두 칸의 모양, 바꾸는 층, 포트의 시그니처, 예시 스킬을 정했다", ADR 0012 "`read_skill`은 이름을 받아 sdk의 `Skill`을 돌려주고 없으면 `None`이다")을 보여 주며 따로 짚은 셋 — `skills`의 중복 거부가 매니페스트 규칙 하나를 더하는 계약 변경인 것, 사용자가 고른 이음매 답의 "sdk의 읽는 함수는 얇게 하나씩"을 명세가 프로브 사례 전부로 넓힌 것, `parse_skill`이 `yaml.safe_load` 호출 하나를 `except Exception`으로 감싸는 것 — 을 함께 물었다(2026-11-04).
+
+> 사용자: 승인
+
+셋 모두 그대로 간다.
