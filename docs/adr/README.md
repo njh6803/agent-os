@@ -44,5 +44,6 @@
 | [0038](0038-env-read-hook-is-tested-against-real-ripgrep.md) | `.env` 읽기 훅의 glob 판정은 pytest가 실제 rg를 띄워 맞대고, rg는 PATH나 Claude Code 실행 파일에서 찾는다 | accepted | 2026-10-23 |
 | [0039](0039-runtime-relays-call-events-as-recorded.md) | 런타임은 모델·도구 호출의 이벤트를 기록하는 자리에서 흘리고, 에이전트는 몸통과 맞물린 제 태스크에서 돈다 | accepted | 2026-10-23 |
 | [0040](0040-model-is-a-plugin-built-per-run-from-its-manifest.md) | 모델은 플러그인이고, 런타임이 실행마다 그 매니페스트를 읽어 모델을 만든다 | accepted | 2026-10-31 |
+| [0041](0041-skill-is-a-plugin-read-per-run-into-the-context.md) | 스킬은 플러그인이고, 런타임이 실행마다 SKILL.md를 읽어 컨텍스트로 넘긴다 | accepted | 2026-11-03 |
 
 ADR을 먼저 확인하는 상황 넷: 스택이나 라이브러리를 바꿀 때, 디렉터리나 층 경계를 바꿀 때, 디스크 형식(매니페스트, 이벤트)을 바꿀 때, 기존 코드가 왜 이렇게 되어 있는지 이해되지 않을 때.

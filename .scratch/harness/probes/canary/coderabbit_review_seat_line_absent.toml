@@ -1,0 +1,29 @@
+# coderabbit-review 정의 1단계에 더한 `Seat:` 줄이 없는 갈래(harness 티켓 040, 대기열 557)가 새 세션의 서브에이전트에
+# 실리는지. 실험군은 이 워크트리, 대조군은 바뀌기 전 판(`origin/main` 의 4eb0b44)이다. 주 체크아웃도 처음에는 그 판이지만 병합
+# 뒤에는 새 사본이라 처음부터 `--control-commit 4eb0b44` 로 준다(README `canary/` 행). agent_tools 는 실험군 정의의 tools 줄과 같은
+# 집합이어야 한다(러너의 agent_problems).
+# 최신 결과: 통과 4(2026-11-03, 이 PC, claude 2.1.312, 러너는 이 워크트리의 `tools/canary.py`, 대조군은 `--control-commit 4eb0b44` 로
+# 꺼낸 임시 워크트리 `4eb0b44`, 실험군은 `4eb0b44` 위의 커밋 전 변경, 일지 2026-11-03-02). 대조군은 "없음"이라고만 답했고, 실험군
+# 셋은 1단계의 새 문장을 끝까지 옮겼다(원본을 읽었다).
+# 돌리는 법: 워크트리 `.claude/worktrees/<이름>/` 루트에서
+#   uv run python tools/canary.py --control-commit 4eb0b44 .scratch/harness/probes/canary/coderabbit_review_seat_line_absent.toml <출력 디렉터리>
+kind = "agent"
+agent = "coderabbit-review"
+agent_tools = ["Bash", "Read", "Grep", "Glob"]
+question = '''
+coderabbit-review 서브에이전트를 Agent 도구로 한 번만 불러라. 서브에이전트에게 줄 프롬프트는 아래 단락 그대로다.
+
+도구를 하나도 쓰지 마라. 파일을 읽지 말고, 지금 네 지시문(시스템 프롬프트)에 적힌 것만 보고 답한다. 절차 1단계에서 `coderabbit auth status` 출력에 `Seat:` 줄이 없을 때 무엇을 하라고 적은 문장이 있으면 그 문장을 끝까지 글자 그대로 옮겨라. 그런 문장이 없으면 '없음'이라고만 적어라.
+
+서브에이전트의 답을 고치거나 줄이지 말고 그대로 전하라.
+'''
+expect = ["종료하지 않고 3으로 가서", "그 줄이 없었다고 적는다"]
+source = ".claude/agents/coderabbit-review.md"
+
+[[arm]]
+name = "워크트리"
+role = "experiment"
+
+[[arm]]
+name = "옛-판"
+role = "control"
