@@ -15,28 +15,35 @@
 시작으로 보기 때문이다(설치된 6.0.3의 `yaml/scanner.py` `check_document_start`. 코드를 읽었다). 세
 갈래 밖의 자리(주석 줄은 `#`으로 시작해 `---` 그대로일 수 없다)는 재지 않았다. 세 자리마다 `---`
 줄만 뺀 같은 모양이 받아들여지는 대조를 두어, 거부의 까닭이 그 줄이지 둘러싼 모양이 아님을 가른다
-(평문 스칼라의 이어지는 줄은 들여쓰기가 있어야 이어지므로 대조는 들여쓴 줄이다). (4) 파일에서 읽는
-길 — 어댑터가 매니페스트를 읽는 길(`Path.read_text(encoding="utf-8")`. `adapters/filesystem.py` 의
-`_parse`, 코드를 읽었다)로 CRLF 파일을 읽으면 파이썬의 보편 줄 바꿈이 `\r\n` 을 `\n` 으로 바꿔 글에
-`\r` 이 없고, 같은 파일을 `read_bytes().decode("utf-8")` 로 읽으면 `\r\n` 이 남는다. BOM 파일은
-`utf-8` 로 읽으면 U+FEFF 가 첫 글자로 남아 규칙이 거부한다. 매니페스트 쪽의 같은 입력(BOM 뒤의
-TOML)은 `tomllib` 이 거부한다.
+(평문 스칼라의 이어지는 줄은 들여쓰기가 있어야 이어지므로 대조는 들여쓴 줄이고, 거부 입력은 그
+들여쓴 줄 앞에 `---` 줄을 둔 것이라 둘은 그 줄만 다르다). (4) 파일에서 읽는 길 — 어댑터가
+매니페스트를 읽는 길(`Path.read_text(encoding="utf-8")`. `adapters/filesystem.py` 의 `_parse`,
+코드를 읽었다)로 CRLF 파일을 읽으면 파이썬의 보편 줄 바꿈이 `\r\n` 을 `\n` 으로 바꿔 글에 `\r` 이
+없고, 같은 파일을 `read_bytes().decode("utf-8")` 로 읽으면 `\r\n` 이 남는다. BOM 파일은 `utf-8` 로
+읽으면 U+FEFF 가 첫 글자로 남아 규칙이 거부한다. 첫 줄 끝의 `\r` 이 둘인 파일과 홀로 선 `\r`(옛
+Mac)뿐인 파일은 그 길이 `\r` 을 모두 `\n` 으로 바꿔 받아들여진다(글을 직접 넘기면 둘 다
+"시작하지"로 거부된다). 매니페스트 쪽의 같은 입력(BOM 뒤의 TOML)은 `tomllib` 이 거부한다.
 
 표지. 양성 대조는 `yaml.YAMLError` 의 하위 타입이 났을 때만 측정이다. 규칙 회차는 뗀 머리말을
 `yaml.safe_load` 로 읽은 값과 본문이 기대한 것과 글자 그대로 같을 때만, 거부 회차는 기대한 예외와
 문구가 났을 때만 측정이다. 갈래 회차는 참조 구현의 가르기가 기대한 틀린 자리에서 끊겼을 때만, 세
 자리 회차는 기대한 클래스(큰따옴표는 `ScannerError`, 블록과 평문은 `ComposerError`)의 예외가 났을
-때만, 그 대조는 `description` 이 기대한 값일 때만 측정이다. 파일 회차는 두 읽기의 글이 `\r` 의
-있고 없음에서 기대와 같을 때, BOM 파일은 규칙이 "시작하지"로 거부할 때, `tomllib` 은
-`TOMLDecodeError` 일 때만 측정이다. 같지 않거나 다른 예외로 끝나면 측정이 아니다.
+때만, 그 대조는 `description` 이 기대한 값일 때만 측정이다. 참조 구현 갈래는 끊긴 자리와 YAML 이
+낸 값이 모두 기대와 같을 때만이다. 파일 회차는 두 읽기의 글이 `\r` 의 있고 없음에서 기대와 같을
+때, BOM 파일은 규칙이 "시작하지"로 거부할 때, `\r` 둘과 홀로 선 `\r` 의 파일은 읽은 글에 `\r` 이
+없고 규칙이 기대한 머리말과 본문을 낼 때(글을 직접 넘긴 대조는 "시작하지"로 거부할 때),
+`tomllib` 은 `TOMLDecodeError` 일 때만 측정이다. 같지 않거나 다른 예외로 끝나면 측정이 아니다.
 
 전제와 못 보는 것. 규칙의 구현은 이 파일의 `split_front_matter` 이고 명세의 글과 같아야 한다. 구현
 티켓이 sdk 에 두는 함수가 이것과 같은지는 그 티켓의 시험이 같은 사례로 잰다. 잰 것은 가르기까지이고
-칸의 검증(이름 패턴, 문자열 여부)은 `frontmatter_values.py` 가 잰다. 줄 끝 `\r` 하나(옛 Mac)는 넣지
-않았다. 둘째 판(셀프 리뷰 뒤)이 바꾼 것 셋: 첫 판은 표지 줄의 `\r` 을 `rstrip` 으로 떼어 둘 이상도
-뗐는데 규칙은 "하나"라 정확히 하나만 떼게 고치고 `---\r\r` 로 시작하는 입력을 거부 회차로 더했다.
-세 자리 회차는 첫 판이 `YAMLError` 하위인지만 봐서 README 가 적은 클래스를 단언하지 않았고, 그 줄만
-뺀 대조도 없었다. 파일에서 읽는 길은 첫 판이 재지 않았다.
+칸의 검증(이름 패턴, 문자열 여부)은 `frontmatter_values.py` 가 잰다. 둘째 판(셀프 리뷰 뒤)이
+바꾼 것 셋: 첫 판은 표지 줄의 `\r` 을 `rstrip` 으로 떼어 둘 이상도 뗐는데 규칙은 "하나"라 정확히
+하나만 떼게 고치고 `---\r\r` 로 시작하는 입력을 거부 회차로 더했다. 세 자리 회차는 첫 판이
+`YAMLError` 하위인지만 봐서 README 가 적은 클래스를 단언하지 않았고, 그 줄만 뺀 대조도 없었다.
+파일에서 읽는 길은 첫 판이 재지 않았다. 셋째 판(PR 직전 리뷰 뒤)이 바꾼 것 셋: 평문 갈래의 거부
+입력이 대조와 들여쓰기까지 달라 `---` 줄만 다른 쌍이 아니었던 것을 맞췄다. 참조 구현 갈래가 끊긴
+자리만 보고 YAML 이 낸 값은 단언하지 않던 것을 값까지 단언하게 했다. 줄 끝 `\r` 둘과 홀로 선
+`\r`(옛 Mac)의 파일을 어댑터의 길로 읽는 회차를 더했다(둘째 판까지 홀로 선 `\r` 은 넣지 않았다).
 
 돌리는 법: 저장소 루트에서
 `PYTHONUTF8=1 uv run python .scratch/skill-plugin/probes/frontmatter_split.py`
@@ -129,7 +136,7 @@ REJECTED: list[tuple[str, str, str]] = [
 EMPTY_HEAD = "---\n---\n본문\n"
 MARKER_IN_QUOTED = 'name: pdf-processing\ndescription: "앞\n---\n뒤"\n'
 MARKER_IN_BLOCK = "name: pdf-processing\ndescription: |\n  앞\n---\n  뒤\n"
-MARKER_IN_PLAIN = "name: pdf-processing\ndescription: 앞\n---\n뒤\n"
+MARKER_IN_PLAIN = "name: pdf-processing\ndescription: 앞\n---\n  뒤\n"
 # (자리, 입력, 기대한 YAMLError 하위 클래스 이름)
 MARKER_INSIDE: list[tuple[str, str, str]] = [
     ("큰따옴표 스칼라 안", MARKER_IN_QUOTED, "ScannerError"),
@@ -146,6 +153,10 @@ WITHOUT_MARKER: list[tuple[str, str, str]] = [
 CRLF_FILE = ACCEPTED[1][1]
 BOM_FILE = REJECTED[1][1]
 BOM_TOML = BOM + 'schema_version = "1"\n'
+CRCR_FILE = REJECTED[4][1]
+CR_FILE = "---\rname: pdf-processing\rdescription: PDF\r---\r본문\r"
+# REJECTED 와 CR_FILE 의 머리말은 description 이 짧은 "PDF" 다
+SHORT_HEAD = {"name": "pdf-processing", "description": "PDF"}
 
 
 def main() -> int:
@@ -193,7 +204,11 @@ def main() -> int:
             parsed = yaml.safe_load(head_by_split)
         except yaml.YAMLError as error:
             parsed = type(error).__name__
-        if head_by_split == "\nname: pdf-processing\ndescription: 가 ":
+        expected_by_split = {"name": "pdf-processing", "description": "가"}
+        if (
+            head_by_split == "\nname: pdf-processing\ndescription: 가 "
+            and parsed == expected_by_split
+        ):
             current.mark(measured=True, result=f"머리말이 '가 ' 에서 끊김, YAML 결과 {parsed!r}")
 
     for label, text, expected in MARKER_INSIDE:
@@ -238,6 +253,38 @@ def main() -> int:
                 except ValueError as error:
                     if "시작하지" in str(error):
                         current.mark(measured=True, result=f"U+FEFF 남음, ValueError '{error}'")
+
+        crcr_path = Path(directory) / "crcr.md"
+        crcr_path.write_bytes(CRCR_FILE.encode("utf-8"))
+        cr_path = Path(directory) / "cr.md"
+        cr_path.write_bytes(CR_FILE.encode("utf-8"))
+
+        with rounds.round(
+            "파일: 첫 줄 끝 \\r 둘인 파일은 어댑터의 길로 읽으면 \\r 이 사라져 받아들여진다"
+        ) as current:
+            text_mode = crcr_path.read_text(encoding="utf-8")
+            if "\r" not in text_mode and text_mode.startswith("---\n\n"):
+                head, rest = split_front_matter(text_mode)
+                if yaml.safe_load(head) == SHORT_HEAD and rest == "":
+                    current.mark(measured=True, result="'---\\n\\n' 으로 시작, 머리말 그대로")
+
+        with rounds.round(
+            "파일: 홀로 선 \\r(옛 Mac) 파일은 어댑터의 길로 읽으면 \\n 이 되어 받아들여진다"
+        ) as current:
+            text_mode = cr_path.read_text(encoding="utf-8")
+            if "\r" not in text_mode:
+                head, rest = split_front_matter(text_mode)
+                if yaml.safe_load(head) == SHORT_HEAD and rest == "본문\n":
+                    current.mark(measured=True, result="\\r 이 모두 \\n, 머리말과 본문 그대로")
+
+    with rounds.round(
+        "대조: 홀로 선 \\r 의 글을 직접 넘기면 첫 줄이 --- 가 아니라 거부"
+    ) as current:
+        try:
+            split_front_matter(CR_FILE)
+        except ValueError as error:
+            if "시작하지" in str(error):
+                current.mark(measured=True, result=f"ValueError '{error}'")
 
     with rounds.round(
         "대조: BOM 뒤의 TOML 은 tomllib 이 거부한다(매니페스트의 같은 입력)"

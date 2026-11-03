@@ -31,9 +31,11 @@ pydantic 으로 받고 거부하는 경계. 받는 것 — 두 칸이 문자열�
 두는 모델이 이것과 같은지는 그 티켓의 시험이 같은 사례로 잰다. pydantic lax 모드가 `int` 를 `str`
 로 받지 않는 것은 재지 않았다 — 명세가 `strict=True` 를 정했으므로 그 모드만 잰다. `description` 의
 길이 상한(표준의 1024)은 명세 범위 밖이라 넣지 않았다. 태그 회차의 넷은 PyYAML `SafeConstructor` 가
-값을 변환하는 태그 가운데 변환 함수가 자기 예외를 내는 것이고(`!!binary` 는 틀린 글자를 버리고
-bytes 를 내 거부되지 않는다), 다른 태그는 넣지 않았다. 둘째 판(셀프 리뷰 뒤)이 (4)를 더했다. 첫 판은
-`YAMLError` 가 YAML 거부의 전부라고 전제했고 셀프 리뷰 표준 축이 손으로 쳐 반례를 보였다.
+값을 변환하는 태그 가운데 변환 함수가 자기 예외를 내는 것이고, 다른 태그는 넣지 않았다.
+`!!binary` 는 글자 수가 base64 의 길이 규칙에 맞으면 틀린 글자를 버리고 bytes 를 내 YAML 단계에서
+거부되지 않고, 맞지 않거나(17자) ASCII 밖 글자가 있으면 `ConstructorError`(`YAMLError` 하위)다
+(손으로 봤다. 둘째 판은 "거부되지 않는다"로만 적었다). 둘째 판(셀프 리뷰 뒤)이 (4)를 더했다. 첫
+판은 `YAMLError` 가 YAML 거부의 전부라고 전제했고 셀프 리뷰 표준 축이 손으로 쳐 반례를 보였다.
 
 돌리는 법: 저장소 루트에서
 `PYTHONUTF8=1 uv run python .scratch/skill-plugin/probes/frontmatter_values.py`
