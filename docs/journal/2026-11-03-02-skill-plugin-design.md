@@ -542,7 +542,9 @@ CLI의 지적은 둘이고 근거 하나다(둘 다 ADR 0041 "준비 단계에 �
 ADR 0041이 "명세가 정한다"고 미룬 넷이다. 머리말을 본문에서 떼는 자리(`---` 가르기. 프로브 `yaml_frontmatter.py`는 YAML 읽기만 쟀다), 머리말을
 읽지 못한 `yaml.YAMLError`를 어느 층이 `PluginError`로 바꾸는지(`yaml.YAMLError`는 `ValueError`가 아니라 어댑터 `_parse`의 `except` 모양을
 그대로 따르면 날것으로 올라간다. PR 직전 리뷰가 냈다), 스킬 문서 단건 읽기의 정확한 시그니처와 돌려주는 값의 자리(sdk인지 core인지. ADR 0012
-이력), 예시 스킬의 이름과 본문(`plugins/skills/`에 예시가 서고 calc가 그것을 고른다. 4라운드). 구현 티켓이 고칠 곳 목록은 ADR 0041의 "구현
+이력), 예시 스킬의 이름과 본문(`plugins/skills/`에 예시가 서고 calc가 그것을 고른다. 4라운드). 둘째 세션의 PR 직전 보안 리뷰가 명세에 더한 것 둘(아래
+"PR 직전 보안 리뷰와 PR (둘째 세션)"): 머리말 두 칸의 값이 문자열이 아닐 때(`name: 123`, `description: [a, b]`)의 거부(ADR은 "없거나 비었거나"만
+적었다. pydantic 모델로 좁히는 안), 머리말이 깨진 `SKILL.md`가 `PluginError`로 서고 문구에 원문 조각이 없음을 고정하는 시험 하나. 구현 티켓이 고칠 곳 목록은 ADR 0041의 "구현
 티켓이 고칠 곳"이 원천이다(옛 셈 "mcp와 모델"을 적은 코드 셋의 독스트링·주석, `tests/test_main.py`의 `_copy_repo_plugins`, 관리 목록의 안내
 줄과 그 시험·스토리·e2e, 규칙 문서들). 준비 순서(깨짐과 꺼짐의 끝에 스킬)는 `tests/core/test_run.py`의 "꺼진 플러그인" 절이 고정한다. 이
 PR은 면제 PR(`docs/skill-plugin-design`)에 회고가 쓴 harness 티켓 040과 새 카나리아 명세 `coderabbit_review_seat_line_absent.toml`을 함께
@@ -552,3 +554,69 @@ PR은 면제 PR(`docs/skill-plugin-design`)에 회고가 쓴 harness 티켓 040�
   `origin/main`과 같고 이 PR이 병합되면 하나 뒤진다). 새 세션이 워크트리에 들어가기 전에 `tidy-checkouts`로 당긴다. 이 세션은 가드 때문에 주
   체크아웃의 git 상태를 보지 못했고, 주 체크아웃의 `.claude/skills/writing-for-agents/SKILL.md`는 `file`로 보니 CRLF다(워크트리 사본은 LF,
   내용은 같다). 그 정리가 주 체크아웃을 깨끗하지 않다고 보면 그 파일부터 본다.
+- 회고 후보(다음 회고가 센다): 커밋 뒤 인계 지시문이 리뷰 파이프라인 2가 요구하지 않는 `/security-review`를 남은 일로 들었고, "이어받을 상태"에
+  돌지 않은 `bug-perf-review`를 반영했다고 적었다(위 "PR 직전 리뷰"는 CLI가 돌아 대체 둘을 돌리지 않았다고 적었다). 둘째 세션이 지시문대로 돌렸고
+  발견 없음이었다(아래 "PR 직전 보안 리뷰와 PR (둘째 세션)"). 인계 절을 쓰는 세션이 남은 단계를 규약이 아니라 기억으로 적은 사건이다.
+
+## 인계 (커밋 뒤)
+
+커밋 `a575f0d4`(17개 파일, 832줄 더함·24줄 지움)가 pre-commit을 지나 섰다. `ruff` 둘(프로브 `.py`가 스테이지되어 돌았다), `checks`(run_checks의
+CHECKS 전부. pytest 299초, web-verify 449초), 마크다운 표, 줄 구분 문자, 변이 표, 카나리아 명세 모양, 헌법 판, 인용 대조(경고만 내는 검사), 커밋
+메시지가 모두 Passed다. 커밋이 서자 인계 계기(`hook_handoff`. 세션 컨텍스트 298,465 토큰, 경계 `커밋 뒤`)가 왔고 `handoff.md`를 Read로 열어
+따랐다. 인계하지 않는 때 다섯에 들지 않는다. 커밋은 성공했고, 이 세션의 지시문은 "이번 요청 범위: 설계 인터뷰와 ADR 초안까지"였으나 ADR 승인
+답(위 "ADR 0041 승인")의 설명대로 회고·커밋·PR 직전 리뷰·PR·봇 리뷰 반영·병합과 다음 지시문까지 묻지 않고 잇는 것이 이 세션의 범위라 이
+경계에서 끝나지 않고, 지시문의 "이어받을 상태"는 `없음`이라 같은 경계가 아니고, 이 일지에 `인계 못함` 줄이 없고, `get_session self`에
+`parentSessionId`가 없다. 열린 PR은 없다(`gh pr view docs/skill-plugin-design`이 없음으로 끝났다). 그래서 넘긴다.
+
+이 세션의 사용자 프롬프트는 위 "시작"의 지시문 하나와, 네 라운드와 ADR 승인의 `AskUserQuestion` 답(위 라운드 절과 "ADR 0041 승인"의
+`> 사용자:` 인용)이다. 이 세션이 번복하거나 고친 것은 위 "셀프 리뷰", "PR 직전 리뷰", "회고"에 있다. 이 세션의 제목은 `docs/skill-plugin-design`이고,
+아래 지시문을 낸 뒤 `docs/skill-plugin-design (인계함)`으로 바꾼다.
+
+새 세션이 할 일은 커밋 뒤의 남은 단계다. `/security-review`(보고를 이 일지에), 푸시와 PR(`/git-pr`. 면제 PR에 harness 티켓 040과 카나리아
+명세가 함께 든다), `@coderabbitai review` 코멘트와 `wait_ci`의 봇 회차, 워크트리에서의 병합(`merge.md` "워크트리에서 병합할 때"), 그 뒤
+`next-session`(다음 단계는 명세 `/to-spec`, 사람이 부른다)이다. 회고는 이 세션이 커밋 전에 돌았다(위 "회고"). 이 절은 커밋하지 않았으므로 새
+세션이 다음 커밋에 싣는다.
+
+지시문:
+
+```
+다음 작업: 기능 skill-plugin. 스킬을 실행마다 읽어 컨텍스트로 넘기는 플러그인으로 정한 설계 인터뷰의 마무리(PR 직전 보안 리뷰, PR과 병합, next-session)
+다음 단계: 설계 인터뷰
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /grill-with-docs
+브랜치: docs/skill-plugin-design
+모델: Fable 5.1 / xhigh. 2의 잇는 지시문
+읽을 것: docs/journal/2026-11-03-02-skill-plugin-design.md의 "검증" 절부터 끝까지("PR 직전 리뷰", "회고", "다음", "인계 (커밋 뒤)" 절까지), .claude/skills/next-session/merge.md
+이어받을 상태: 인계: 커밋 뒤 docs/journal/2026-11-03-02-skill-plugin-design.md. 브랜치의 커밋 하나(a575f0d4, pre-commit 초록. ruff 둘도 프로브 .py가 있어 돌았다)에 설계 인터뷰, ADR 0041 승인(accepted), 셀프 리뷰 반영, PR 직전 bug-perf-review·CodeRabbit CLI 반영, 회고(대기열 557 닫음, 420에 10회차, 558~563 신설, harness 티켓 040, 헌법 3.0.65, 카나리아 coderabbit_review_seat_line_absent.toml 통과 4), 일지 "다음"까지 실었다. 푸시하지 않았고 열린 PR은 없다. 인터뷰는 끝났으니 라운드를 올리지 않는다. 남은 것: /security-review(보고를 일지에), 푸시와 PR(/git-pr. 면제 PR docs/skill-plugin-design에 harness 040과 카나리아 명세 동봉), @coderabbitai review 코멘트와 wait_ci의 봇 회차, 워크트리에서의 병합(merge.md "워크트리에서 병합할 때"), 그 뒤 next-session(다음 단계는 명세 to-spec, 사람이 부른다. 명세 브랜치 선례는 docs/<slug>-spec). 회고는 앞 세션이 커밋 전에 돌았다(일지 "회고"). 일지의 "인계 (커밋 뒤)" 절은 커밋하지 않았으니 다음 커밋에 싣는다.
+확인할 선행 조건: 없음
+이번 요청 범위: PR과 병합까지
+```
+
+open-session을 부른다 2026-11-03T08:21:56Z
+
+## PR 직전 보안 리뷰와 PR (둘째 세션)
+
+지시문으로 연 둘째 세션이 제목을 `docs/skill-plugin-design`으로 바꾸고 `git worktree list`에서 그 브랜치가 체크아웃된 워크트리
+`next-feature-design`에 들어왔다. `/grill-with-docs`가 부르는 두 스킬(`grilling`, `domain-modeling`)을 실었고 인터뷰는 끝났으니 라운드를
+올리지 않았다. 지시문이 읽으라고 한 이 일지의 "검증" 절부터 끝까지와 `merge.md`를 읽었다.
+
+- **지시문과 규약의 어긋남.** 지시문은 `/security-review`를 남은 일로 들었지만, 리뷰 파이프라인 2(`operations.md`)와 PR 템플릿 체크리스트는
+  CLI가 실제로 돌아 findings를 내면 CLI 축이고 대체 둘(`/security-review`, `bug-perf-review`)은 CLI가 돌지 못할 때만 돌린다고 적으며, 위
+  "PR 직전 리뷰"도 그렇게 기록했다. 지시문 "이어받을 상태"의 "PR 직전 bug-perf-review·CodeRabbit CLI 반영"도 위 절과 다르다(`bug-perf-review`는
+  돌지 않았다). 추가로 도는 것은 해가 없고 지시문은 사람이 보낸 메시지라 그대로 돌렸고, 이 어긋남은 위 "다음"에 회고 후보로 적었다.
+- **`/security-review`(내장).** 커밋 `a575f0d4` 위에서 돌렸다. `git fetch origin` 뒤 `origin/main`은 `4eb0b44e`로 브랜치의 부모와 같아 합칠
+  것이 없었고, 미커밋은 이 일지의 "인계 (커밋 뒤)" 절뿐이다(그 명령의 diff는 커밋만 모은다, 리뷰 파이프라인 2). 취약점 식별 서브태스크
+  하나(도구 호출 22, 토큰 약 197k, 3분)가 High·Medium 0건으로 보고해 거짓 양성 거르기 서브태스크는 띄우지 않았다. 보고의 요지: 실행 가능한
+  파일은 프로브 `yaml_frontmatter.py`와 카나리아 명세 `.toml` 둘뿐이고 둘 다 새 공격면을 열지 않는다. 프로브는 YAML을 푸는 자리 셋이 모두
+  `yaml.safe_load`이고 읽는 파일이 `.claude/skills/*/SKILL.md`뿐이며 쓰기·네트워크·subprocess가 없다. 카나리아 명세의 `question`은
+  `tools/canary.py`의 `run_claude`에서 `subprocess.run`의 stdin으로만 가고 `agent_tools`는 `--tools` 뒤의 argv 원소 하나이며, 어느 칸도
+  `shell=True`·`os.system`·`eval`에 들지 않는다. diff 전체의 비밀 패턴 0건. 나머지 열다섯은 마크다운이고, 서브에이전트 정의의 변경은 이미 있던
+  명령을 조건 하나 더에서 돌릴 뿐이다. 본 세션이 다시 대 본 것: 프로브의 `yaml.safe_load` 세 자리(75·85·95행. `yaml.load`·`FullLoader`·
+  `UnsafeLoader` 없음), `canary.py`의 `input=stdin.encode("utf-8")`(1129행) 하나와 `shell=True`·`os.system`·`eval(` 0건, diff의 비밀 패턴
+  grep 0건. 모두 보고와 같았다.
+- **설계 메모 셋(취약점 아님. 보고가 구현 티켓이 지킬 것으로 냈다).** (1) 머리말 두 칸의 값 타입. ADR은 `safe_load`와 "없거나 비었거나"만
+  적고 `name: 123`·`description: [a, b]` 같은 문자열이 아닌 값에는 침묵한다. pydantic 모델로 좁히라는 제안은 명세가 정할 것으로 위 "다음"에
+  더했다. (2) `read_skill`의 경로는 `PluginName`으로만 짓고 머리말의 `name`을 경로 조립에 쓰지 않는다. ADR "머리말의 `name`은 플러그인
+  이름(폴더 이름)과 같아야 한다"와 이름 패턴(`/`·`\`·`.`이 없다)이 이미 다룬다. (3) `yaml.YAMLError`를 `PluginError`로 바꾸지 않으면 스택
+  트레이스에 원문 조각이 서버 로그와 500 본문으로 샐 수 있다. ADR의 되울림 규칙과 위 "다음"의 명세 미룸(어느 층이 바꾸는지)에 이미 들고,
+  "머리말이 깨진 `SKILL.md`는 `PluginError`이고 문구에 원문이 없다"를 시험 하나로 고정하라는 제안도 위 "다음"에 더했다.
