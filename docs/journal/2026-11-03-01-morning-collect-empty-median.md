@@ -87,4 +87,22 @@ open-session을 부른다 2026-11-03T03:21:02Z
 
 ## PR과 병합 (셋째 세션)
 
-- 지시문으로 연 셋째 세션이 제목을 `chore/039-morning-collect-empty-median`으로 바꾸고 워크트리 `morning-empty-median`에 들어와 위 "인계 (커밋 뒤)" 절을 커밋한다.
+- 지시문으로 연 셋째 세션이 제목을 `chore/039-morning-collect-empty-median`으로 바꾸고 워크트리 `morning-empty-median`에 들어와 위 "인계 (커밋 뒤)" 절을 커밋했다(`edb25fce`, pre-commit 열 검사 모두 Passed, 손으로 봤다).
+- `git fetch origin main` 뒤 `git log HEAD..origin/main`이 비어 rebase 없이 푸시하고 PR #456을 열었다. `@coderabbitai review`를 남기고 `tools/wait_ci.py 456`이 `끝: 모두 통과`(헤드 edb25fc)로 끝났다(손으로 봤다).
+- 봇 첫 회차. CodeRabbit은 `No actionable comments`. claude-review는 Minor 하나(`test_요약은_빈_목록의_중앙값만_빼고_비지_않은_목록의_중앙값은_적는다`가 같은 `Period`를 바꿔 가며 시나리오 둘을 이어 단언한다)와 Nit 하나(줄 찾기 `next(...)` 네 줄의 반복)를 냈다. 둘 다 고쳤다. 그 시험을 `test_요약은_직전_컨텍스트를_모르는_자동_압축만_있으면_압축_중앙값만_뺀다`와 `test_요약은_사람이_열지_않은_세션이_없으면_첫_호출_중앙값만_뺀다`로 나누고, 기간을 만드는 `하루_기간`과 두 줄을 찾는 `압축_줄과_헤드리스_줄` 도우미를 두었다. 위 셀프 리뷰 절의 옛 시험 이름은 그때의 기록이라 두었다. `uv run pytest tests/tools/test_morning_collect.py -q -k 요약은 -p no:randomly`가 `3 passed`였다(손으로 봤다).
+
+## 회고
+
+후보 넷: 승인 하나, 기각 둘, 일지에만 남기는 것 하나. 넘긴 것은 없다.
+
+- 승인(고침, 대기열 557, 1회차): `docs/constitution/operations.md` 리뷰 파이프라인 2의 "PR 직전 CLI 축은 구조적으로 비어 있다"가 이번 관찰(`coderabbit auth status`에 `Plan`·`Seat` 줄이 없고 `coderabbit review --committed`가 `No findings`로 돌았다, 위 "커밋과 PR 직전 리뷰" 절)과 어긋난다. 사건은 이 세션의 관찰이고, 층은 그 문서의 사실 고침이며, PR 하나로 되돌릴 수 있다. 한 번의 관찰이라 무료 판의 한도가 바뀐 것인지 가르지 못해 지금 고치지 않고, 다음 PR에서 같으면 고치도록 행에 적었다. PR 템플릿의 판정 길(PR마다 `auth status`를 본다)은 그대로라 ADR은 필요 없다.
+- 기각: claude-review의 Minor(시나리오 둘을 한 시험에 이은 것). `CODING_STANDARDS.md` 리뷰 관점 4가 리뷰에 맡긴 기준을 리뷰가 잡은 것이라 회차 셈에서 빠지고, 검사로 옮길 꼴도 아니다.
+- 기각: 둘째 세션 인계 때 `pytest`가 요약 줄 없이 멈춘 것. 같은 때 다른 무거운 명령이 함께 돌았고 다시 친 판은 끝났다(위 "한 것"). 원인을 가른 사건이 없다.
+- 일지에만: 첫 코드 커밋의 pre-commit에서 `test_rerun_runner.py`의 시험 하나가 부하로 빨갰다. 대기열 306이 받아들여 닫은 종류의 새 사례라 잇지 않는다.
+- 만료: `uv run python tools/queue_open_rows.py`와 `--ref origin/main`의 두 출력에 모두 든 349·351·363·364·366·371을 `만료 2026-11-03`으로 닫았다.
+
+## 다음
+
+- PR #456 병합 뒤 이 세션이 11-02 종합 아침 보고를 그린다(`C:\project\agent\tools\morning_tasks\common.md`의 "그리기와 보고", `--report summary`. 수집 JSON·시트는 보고 폴더에 있다).
+- 대기열 557: 다음 PR의 PR 직전 리뷰에서 `coderabbit auth status`와 CLI 리뷰가 또 돌면 `operations.md` 리뷰 파이프라인 2를 고친다.
+- 그 밖의 다음 작업은 `.scratch/plan.md`의 프론티어다.
