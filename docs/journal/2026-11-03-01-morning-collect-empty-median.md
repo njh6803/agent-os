@@ -63,3 +63,28 @@
 이번 요청 범위: PR과 병합까지, 그 뒤 11-02 종합 보고 그리기
 ```
 open-session을 부른다 2026-11-03T02:38:48Z
+
+## 인계 (커밋 뒤)
+
+- 이 세션(지시문으로 연 둘째 세션)의 지금 제목: `chore/039-morning-collect-empty-median`. 일지 커밋 `7cd407c8` 뒤에 인계 계기(컨텍스트 226,975 토큰, 경계 `커밋 뒤`)가 와서 넘긴다. 이 절은 커밋하지 않았으니 새 세션이 다음 커밋에 싣는다.
+- 회고 후보(retro가 판정): `coderabbit auth status`에 `Plan`·`Seat` 줄이 없고 CLI 리뷰가 실제로 돈 것이 `docs/constitution/operations.md` 리뷰 파이프라인 2의 "CLI 축은 구조적으로 비어 있다"와 어긋난다(위 "커밋과 PR 직전 리뷰" 절).
+
+## 인계 지시문 (커밋 뒤)
+
+```
+다음 작업: .scratch/harness/issues/039-morning-collect-empty-median.md. 아침 수집이 빈 목록의 중앙값에서 멈추던 것을 고친 변경을 푸시·PR·병합하고 11-02 종합 보고를 그린다
+다음 단계: 구현
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: 일지 docs/journal/2026-11-03-01-morning-collect-empty-median.md 를 읽고 티켓 039의 셀프 리뷰부터 잇는다
+브랜치: chore/039-morning-collect-empty-median
+모델: Opus 5.5 / medium. 2의 잇는 지시문
+읽을 것: docs/journal/2026-11-03-01-morning-collect-empty-median.md
+이어받을 상태: 인계: 커밋 뒤. 셀프 리뷰·반영·검증·커밋 둘(1f5210a2 코드, 7cd407c8 일지)과 PR 직전 리뷰(/security-review, bug-perf-review, CodeRabbit CLI 모두 지적 없음)를 마쳤다. 푸시하지 않았고 열린 PR은 없다. 남은 단계: 일지의 "인계 (커밋 뒤)" 절(미커밋)을 커밋하고, 푸시와 PR(/git-pr. PR 체크리스트의 PR 직전 리뷰 줄은 일지 "커밋과 PR 직전 리뷰" 절의 결과), @coderabbitai review 코멘트와 merge.md 2의 봇 회차, 워크트리에서의 병합(merge.md "워크트리에서 병합할 때"), 회고. 병합 뒤에는 주 체크아웃이 당겨진 다음 C:\project\agent\tools\morning_tasks\common.md 의 "그리기와 보고"를 --report summary 로 따라 11-02 종합 메모를 쓰고 그린다(수집 JSON·시트는 보고 폴더에 이미 있다). docs/journal/2026-11-03-01-morning-collect-empty-median.md
+확인할 선행 조건: 없음
+이번 요청 범위: PR과 병합까지, 그 뒤 11-02 종합 보고 그리기
+```
+open-session을 부른다 2026-11-03T03:21:02Z
+
+## PR과 병합 (셋째 세션)
+
+- 지시문으로 연 셋째 세션이 제목을 `chore/039-morning-collect-empty-median`으로 바꾸고 워크트리 `morning-empty-median`에 들어와 위 "인계 (커밋 뒤)" 절을 커밋한다.
