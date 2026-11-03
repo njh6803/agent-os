@@ -71,6 +71,7 @@ from tools.morning_collect import (
     size_groups,
     span_period,
     start_rows,
+    summary_piece,
     ticket_cells,
     ticket_start,
     timing,
@@ -105,7 +106,7 @@ from tools.morning_sources import (
     tasklist_load,
     worktree_entries,
 )
-from tools.token_report import Call, Json, Period, Start, StartParts
+from tools.token_report import Call, Compaction, Json, Period, Start, StartParts
 
 KST = timezone(timedelta(hours=9))
 
@@ -514,6 +515,48 @@ def test_시작_컨텍스트는_구성을_아는_세션의_중앙값이고_실�
         ("지연 도구 목록", "50자", "1/2"),
         ("그 밖의 첨부", "5자", "1/2"),
     ]
+
+
+def 하루_기간() -> Period:
+    p = Period([date(2026, 11, 2)])
+    p.add(호출("2026-11-02T01:00:00Z"), {}, {})
+    return p
+
+
+def 압축_줄과_헤드리스_줄(p: Period) -> tuple[str, str]:
+    lines = summary_piece(p).lines
+    compactions = next(line for line in lines if "대화 압축" in line)
+    headless = next(line for line in lines if "사람이 열지 않은 세션" in line)
+    return compactions, headless
+
+
+def test_요약은_자동_압축도_사람이_열지_않은_세션도_없는_날에_중앙값_없이_나온다() -> None:
+    # 2026-11-02 수집이 빈 목록의 중앙값에서 멈췄다(harness 티켓 039)
+    p = 하루_기간()
+    assert not p.compactions
+    assert not p.starts
+    compactions, headless = 압축_줄과_헤드리스_줄(p)
+    assert compactions.endswith("대화 압축 자동 0회 · 수동 0회.")
+    assert headless.startswith("- 사람이 열지 않은 세션 0개. 2만 자를 넘는 도구 결과")
+
+
+def test_요약은_직전_컨텍스트를_모르는_자동_압축만_있으면_압축_중앙값만_뺀다() -> None:
+    # 압축 쪽 목록만 빈다(대기열 553이 10-31에 본 갈래)
+    p = 하루_기간()
+    p.compactions.append(Compaction("c1", "2026-11-02T01:00:00Z", "auto", None))
+    p.starts.append(Start("h1", 50_000, None, human=False))
+    compactions, headless = 압축_줄과_헤드리스_줄(p)
+    assert compactions.endswith("대화 압축 자동 1회 · 수동 0회.")
+    assert "사람이 열지 않은 세션 1개 · 첫 호출의 중앙값 50K 토큰." in headless
+
+
+def test_요약은_사람이_열지_않은_세션이_없으면_첫_호출_중앙값만_뺀다() -> None:
+    p = 하루_기간()
+    p.compactions.append(Compaction("c1", "2026-11-02T01:00:00Z", "auto", None))
+    p.compactions.append(Compaction("c2", "2026-11-02T02:00:00Z", "auto", 300_000))
+    compactions, headless = 압축_줄과_헤드리스_줄(p)
+    assert compactions.endswith("자동 2회 · 수동 0회 (압축 직전 대화의 중앙값 300K 토큰).")
+    assert headless.startswith("- 사람이 열지 않은 세션 0개. 2만 자를 넘는 도구 결과")
 
 
 def test_상위_세션은_서브에이전트를_합친_비용이_큰_차례다() -> None:

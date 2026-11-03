@@ -1048,7 +1048,7 @@ def _token_section(
     """비용 보고로 가는 절. 비용 구성, 비용이 큰 세션과 브랜치, 낭비 후보의 표와 요약 줄이고, 시작
     구성 표는 작업 환경 보고로 간다. `handoff`와 `pr_at`은 브랜치 표(`branch_rows`)가, `rate`(주간
     한도 1%당 달러)는 주간 한도 칸이 쓴다."""
-    summary = _summary_piece(p)
+    summary = summary_piece(p)
     starts = _start_piece(p)
     waste = _waste_piece(p, main_checkout, wanted)
     period = day_period(p.dates[-1])
@@ -1128,7 +1128,7 @@ def _start_piece(p: token_report.Period) -> Piece:
     return Piece((table,), (), Collected())
 
 
-def _summary_piece(p: token_report.Period) -> Piece:
+def summary_piece(p: token_report.Period) -> Piece:
     """그날의 요약 줄(호출 수, 비중, 40만을 넘은 세션, 압축, 쉰 뒤 캐시 재작성, 캐시 효율, 사람이
     열지 않은 세션의 시작, 큰 도구 결과 수, 계정별 비용)과 확인할 수치로 남기는 값. 값 하나씩인
     요약은 견줄 것이 없어 표가 아니라 목록이다(digital.gov 쉬운 말 지침). 값에는 요약 줄에
@@ -1149,19 +1149,26 @@ def _summary_piece(p: token_report.Period) -> Piece:
         f"{k} ${t.cost:,.0f}({_share(t.cost, total)})"
         for k, t in sorted(p.accounts.items(), key=lambda kv: (-kv[1].cost, kv[0]))
     )
-    compact = f" (압축 직전 대화의 중앙값 {statistics.median(before) / 1000:,.0f}K 토큰)"
-    first = f" · 첫 호출의 중앙값 {statistics.median(headless) / 1000:,.0f}K 토큰"
+    # 중앙값은 목록이 빈 기간(자동 압축이 없거나 그 직전 컨텍스트를 모두 모르는 기간, 사람이 열지
+    # 않은 세션이 없는 기간)에 구하지 않는다(harness 티켓 039)
+    compact = (
+        f" (압축 직전 대화의 중앙값 {statistics.median(before) / 1000:,.0f}K 토큰)"
+        if before
+        else ""
+    )
+    first = (
+        f" · 첫 호출의 중앙값 {statistics.median(headless) / 1000:,.0f}K 토큰" if headless else ""
+    )
     summary = [
         f"- 모델 호출 {p.total.calls:,}회. 세션 {_share(main, total)}, 서브에이전트"
         f" {_share(total - main, total)}. 노력 xhigh의 비용 몫 {_share(xhigh, total)}.",
         f"- 대화가 40만 토큰을 넘긴 세션 {len(p.over)}개. 대화 압축 자동 {len(auto)}회 · 수동"
-        f" {len(p.compactions) - len(auto)}회" + (compact if before else "") + ".",
+        f" {len(p.compactions) - len(auto)}회{compact}.",
         f"- 캐시에서 읽은 몫(세션) {_share(p.cache_read, p.main_context)}, 호출당 평균 대화"
         f" {p.main_context / n_main / 1000 if n_main else 0:,.0f}K 토큰. 오래 쉰 뒤 캐시를 처음부터"
         f" 다시 쓴 것 {p.idle.calls}회(${p.idle.cost:,.0f}).",
-        f"- 사람이 열지 않은 세션 {len(headless)}개"
-        + (first if headless else "")
-        + f". 2만 자를 넘는 도구 결과 {len(p.large):,}건.",
+        f"- 사람이 열지 않은 세션 {len(headless)}개{first}. 2만 자를 넘는 도구 결과"
+        f" {len(p.large):,}건.",
         f"- 계정별 비용: {accounts or '-'}.",
     ]
     got.value("token:calls", "모델 호출 수", p.total.calls, "회")
