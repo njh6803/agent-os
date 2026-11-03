@@ -31,6 +31,12 @@
 - 다시 돌린 것: `uv run pytest tests/tools/test_morning_collect.py -q -k 요약은 -p no:randomly`가 `2 passed`, `uv run ruff check .`·`uv run ruff format --check .`가 초록, `uv run python tools/run_checks.py`가 종료 0으로 열 검사(check-ticket, lint-imports, zizmor, check-instructions, check-type-escapes, pyright-linux, pyright, run-hooks, pytest 262.8초, web-verify 454.9초) 모두 Passed였다(손으로 봤다). 커밋의 pre-commit 결과는 PR 본문에 적는다.
 - 남긴 것: `compact`·`first`의 같은 꼴은 두 줄이라 묶으면 오히려 읽기 어렵다. `summary_piece`만 공개인 것은 시험이 부르는 함수만 공개하는 이 파일의 관례(`start_rows`, `cost_rows`)를 따랐다. `first`라는 이름은 이 변경 전부터 있던 것이다.
 
+## 커밋과 PR 직전 리뷰
+
+- 커밋 첫 시도는 pre-commit의 pytest에서 `tests/tools/test_rerun_runner.py::test_다른_판의_확인을_쥐고_돌던_동안에도_첫_인계에서_멈춘다` 하나가 `assert False`로 빨개 막혔다(1 failed, 6151 passed). 그 시험만 따로 돌리니 `1 passed in 7.27s`였고, 10-27 일지 둘(2026-10-27-01, 2026-10-27-03)이 같은 시험의 같은 실패를 부하에 흔들리는 시험(대기열 306이 받아들여 닫은 종류)으로 보고 다시 쳐서 지난 것과 같아 다시 쳤다. 둘째 시도에서 pre-commit이 모두 지나 커밋 `1f5210a2`가 들어갔다(Skipped는 카나리아 명세·헌법 판 검사 둘로, 해당 파일이 없다). 인용 대조 경고 하나(이 일지의 버튼 글 인용)는 앞 세션이 버튼에 적은 글이라 저장소에 원문이 없어 막지 않는 경고로 두었다.
+- CodeRabbit CLI: 대체 둘을 먼저 돌린 뒤 PR 템플릿대로 `coderabbit auth status`를 쳤더니, 10-31 일지들이 적은 `Plan: Free`·`Seat: not assigned` 줄 없이 `User info`(계정·조직)와 `Review access`(`Default : njh6803/njh6803`)만 나왔다. 그래서 `coderabbit review --committed --base-commit 9d7ffcd3`를 직접 쳤고 `Review complete`, `No findings ✔`, 5개 파일 리뷰로 끝났다(CLI 0.7.5, 0.9.2 업데이트 알림, 손으로 봤다). `docs/constitution/operations.md` 리뷰 파이프라인 2의 "유료 전환 전까지 PR 직전 CLI 축은 구조적으로 비어 있고"와 어긋나는 관찰이다. 한 번 돈 것이라 이 PR에서는 그 문서를 고치지 않고 회고 후보로 넘긴다.
+- 대체 둘(CLI가 도는지 보기 전에 돌렸다). `/security-review`: 지적 없음(새 입력 출처·경로·subprocess·비밀 없음). `bug-perf-review`: 0건(유효 0, 오탐 2, 보류 0). 밀 주장 넷은 모두 맞다고 냈고, 11-02 JSON의 값만 열지 않아 보류로 남겼는데 이 세션이 그 파일을 Read로 열어 `token:auto_compactions`가 0인 것을 봤다. 같은 파일의 다른 `median`·`fmean`·`max`·`min` 호출은 모두 빈 입력을 막는다고 냈다(코드를 읽었다).
+
 ## 결정·번복
 
 - 하네스 일이라 워크트리 `morning-empty-median`에서 했고, 처음 붙은 브랜치 `worktree-morning-empty-median`을 티켓 stem `chore/039-morning-collect-empty-median`으로 바꿨다.
