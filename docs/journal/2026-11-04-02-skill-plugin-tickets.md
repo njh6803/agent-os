@@ -225,3 +225,65 @@ open-session을 부른다 2026-11-04T12:17:51Z
 - 보고가 대지 못했다고 적은 것은 `.scratch/plan.md`의 diff, 명세 주석 하나하나의 본문, ADR 0008·0010·0012·0017·0019의 본문, 티켓 05 본문과 프로브 `BODY`의 코드포인트 일치 등이다.
 
 리뷰를 반영해 고친 파일은 없다. PR 체크리스트에 CLI가 돌지 못한 것과 대체 둘의 결과를 적는다.
+
+### 커밋과 PR
+
+`fb06dc86`(이 일지 하나)이다. pre-commit은 묶음 검사 열(`lint-imports`, `zizmor`, `check-ticket`, `check-instructions`, `check-type-escapes`, `pyright`, `pyright-linux`, `run-hooks`, `pytest`, `web-verify`), 마크다운 표, 줄 구분 문자, 변이 표, 인용 대조, 커밋 메시지가 Passed다(백그라운드 출력을 읽었다). ruff 둘과 카나리아 명세, 헌법 판은 해당 파일이 없어 Skipped다. ruff는 앞 `02f99147`의 pre-commit에서 Passed라고 위 "커밋" 절이 적었다. 푸시 전에 `git fetch origin` 뒤 `git log --oneline HEAD..origin/main`이 비어 합칠 것이 없었다. [PR 460](https://github.com/njh6803/agent-os/pull/460)을 열었다. 커밋 뒤 계기는 이 세션의 지시문이 이미 `인계: 커밋 뒤`여서 `handoff.md` 1대로 넘기지 않았다.
+
+## 인계 (PR 연 뒤)
+
+이 세션의 제목은 `docs/skill-plugin-tickets`였다. PR을 연 직후 `hook_handoff`의 계기가 왔다(세션 컨텍스트 232,739 토큰, 문턱 200,000). 인계하지 않는 때 다섯에 들지 않는다. 명령은 성공했고(`gh pr view`가 `OPEN`), 요청 범위 "티켓까지"는 병합까지이며, 이 세션의 지시문은 다른 경계(`인계: 커밋 뒤`)이고, `인계 못함` 줄이 없고, `get_session`의 `self`에 `parentSessionId`가 없다. 이 세션의 사용자 메시지는 첫 메시지 하나이고 위 "인계 (커밋 뒤)"의 지시문과 같은 글이다. 사용자가 고치거나 되돌린 것은 없다.
+
+새 세션이 이어받을 것은 이렇다.
+
+- **봇 회차와 병합.** `.claude/skills/next-session/merge.md`를 Read로 열어 2(봇 회차)부터 한다. `@coderabbitai review`를 아직 남기지 않았고 `tools/wait_ci.py` 대기도 띄우지 않았다. ADR 0041은 위 "ADR 승인"대로 승인받았으니 병합은 묻지 않는다.
+- **회고와 `## 다음`.** 단계를 닫는 그 세션이 이 일지까지 읽고 돈다. `merge.md` 3대로 병합 대조 전에 푸시한다.
+- **회고 후보 하나.** CodeRabbit의 `auth status`가 2026-11-03에는 0.7.5에서 `Plan`·`Seat` 줄 없이 보였고 리뷰가 돌았다고 `docs/constitution/operations.md` 리뷰 파이프라인 2가 적었는데, 2026-11-04에는 같은 0.7.5에서 `Plan: Free`, `Seat: not assigned`가 보였다(위 "CodeRabbit CLI"). 그 문단이 가르지 못했다고 적은 "CLI 판인지"의 근거이고(대기열 557), `coderabbit-review` 정의가 `not assigned`에서 멈춰 리뷰가 실제로 거절되는지는 이 세션이 보지 못했다.
+- **후속 후보 둘.** 위 인계들이 넘긴 것이고 아직 내지 않았다. `mcp` 칸에 패턴이 없어 `../../evil`을 받는 것, 매니페스트 `_parse`의 `from error`가 `ValidationError`를 `__cause__`에 남기는 것이다. 받는 곳이 없다. 일감 카드나 대기열 후보로 낸다.
+- **원격 브랜치 `docs/agent-os-direction`.** 위 "ADR 승인"의 알림대로 사용자의 답이 없어 그대로 둔다.
+- **이 절 뒤의 일지는 커밋되지 않았다.** 새 세션이 이어 쓰고 다음 커밋에 싣는다. 그 커밋을 푸시하면 봇이 다시 돌므로 `merge.md` 2의 회차 세기를 따른다.
+
+낸 지시문은 이렇다.
+
+```
+다음 작업: 기능 skill-plugin. PR 직전 리뷰와 PR 열기까지 마쳤다. 봇 회차부터 이어 병합과 다음 지시문까지 간다
+다음 단계: PR 반영·병합
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /to-tickets .scratch/skill-plugin/spec.md
+브랜치: docs/skill-plugin-tickets
+모델: Sonnet 5.5 / high. 2의 잇는 지시문
+읽을 것: docs/journal/2026-11-04-02-skill-plugin-tickets.md의 "## 인계 (PR 연 뒤)"
+이어받을 상태: 인계: PR 연 뒤. PR 460이 열려 있고 merge.md 2(봇 회차)부터 한다. 첫 @coderabbitai review 코멘트도 새 세션이 남긴다. 회고와 일지의 "다음", 병합, 다음 지시문이 남았고 일지의 인계 절은 커밋되지 않은 채 워크트리에 있다. docs/journal/2026-11-04-02-skill-plugin-tickets.md
+확인할 선행 조건: 없음
+이번 요청 범위: 티켓까지
+```
+
+`git worktree unlock`은 `is not locked`로 끝났다. 띄운 백그라운드 작업은 모두 끝나 멈출 것이 없었다.
+
+open-session을 부른다 2026-11-04T12:41:53Z
+
+## 이어받음과 봇 회차
+
+새 세션이 위 지시문을 받아 이 워크트리에 들어와 `merge.md` 2(봇 회차)부터 이었다. 지시문의 첫 줄 "시작 프롬프트"는 `/to-tickets`였지만 "다음 단계: PR 반영·병합"과 "이어받을 상태"가 병합까지를 가리켜 티켓을 다시 나누지 않았다(`next-session` 결정표의 "같은 시작 프롬프트" 줄대로다). 제목은 `docs/skill-plugin-tickets`로 바꿨다.
+
+- 마지막 푸시 뒤(`fb06dc86`)에 `@coderabbitai review`를 남기고 `tools/wait_ci.py 460`을 백그라운드로 띄웠다. 끝 줄은 `모두 통과`였다(CodeRabbit, claude-review, e2e, e2e-widget, python, ticket, verify, visual, web 모두 SUCCESS).
+- claude-review는 이 PR의 첫 리뷰에서 지적이 없었다. CodeRabbit은 첫 회차에서 Minor 하나를 냈다(`answer_format_llm.py` 158행, `'4' in output`이 `14`도 참으로 세는 것. 같은 꼴의 `'20' in output`도 같다).
+- 판정은 보류다. 지적은 사실이지만 결과 문구의 `값=` 표지에만 닿는다. README 표의 출력 열("5회 모두 출력 `4`" 등)은 회차마다 찍는 `출력=` 줄(`print`, 155·169행)의 표준 출력이라 결론이 달라지지 않는다(프로브 코드를 읽은 결론이다. 회차의 원본 출력은 커밋되지 않았고 이 세션은 프로브를 다시 돌리지 않았다). 표지를 고치면 프로브 본문이 바뀌어 실제 모델로 대조와 블록 두 갈래(약 18만 토큰)를 다시 돌아야 한다. 그래서 코드는 그대로 두고 README에 한계 한 문장을 적었다.
+- 이 보류는 일을 뒤의 작업으로 넘기는 것이 아니다. 그래서 일지 "다음"에는 넣지 않고 PR 코멘트에만 남긴다. 같은 꼴이 되풀이되는지는 대기열 571이 센다.
+
+## 회고
+
+후보 셋: 승인 하나, 기각 둘. 넘긴 것은 없다.
+
+- 승인(대기열 571, 1회차): 프로브가 결과 문구에 적는 값 표지를 부분 문자열로 센 것을 PR 봇이 짚었다. 사건은 위 "이어받음과 봇 회차"의 CodeRabbit Minor이고, 층은 검사로 옮기기 어려워(값 표지는 프로브마다 다르다) 판단 기준이며, PR 하나로 되돌릴 수 있다. 더하는 것의 문턱(세 번째)에 닿지 않아 `CODING_STANDARDS.md`에는 더하지 않고 회차를 세는 행으로 두었다. 대기열에서 이 꼴을 찾았으나 같은 행이 없었다(`--search answer_format`, `부분.문자열.검사`, `숫자.경계`).
+- 기각: 이 PR 직전 리뷰에서 CodeRabbit CLI가 `Seat: not assigned`로 돌지 못한 것. 사람 몫인 대기열 570이 이미 같은 일(좌석 배정까지는 `operations.md` 리뷰 파이프라인 2의 대체 둘)을 덮고, 사람 몫 행은 다시 보아도 회차를 더하지 않는다.
+- 기각: 지시문의 "시작 프롬프트"가 세 지시문 내내 `/to-tickets`로 남은 것. `next-session` 결정표의 "작업을 마치지 못한 채 끊는다" 줄이 "같은 시작 프롬프트"로 정한 설계이고, 세 세션 모두 "다음 단계"와 "이어받을 상태"로 바로 이었다. 실수가 난 사건이 없다.
+- 만료할 행: 없음(`uv run python tools/queue_open_rows.py`).
+
+## 다음
+
+- PR 460 병합 뒤 `.scratch/plan.md`의 skill-plugin 행이 가리키는 구현 티켓을 시작한다. 01(매니페스트가 스킬을 고른다, 계약)과 02(스킬 문서를 읽는다)는 서로 막지 않아 나란히 열 수 있다. 같은 파일 `.claude/rules/sdk.md`와 `tests/test_server.py`를 줄이 다르게 고치므로 뒤에 병합되는 쪽이 앞의 것을 합친다(두 티켓 본문에 적었다). 03(실행 준비)은 01·02 뒤, 04(관리 화면)·05(예시 스킬)는 03 뒤다. 각 티켓은 `/implement .scratch/skill-plugin/issues/<파일>`로 시작한다.
+- 후속 후보 둘은 받는 곳이 아직 없다. `mcp` 칸에 이름 패턴이 없어 `../../evil`을 받는 것, 매니페스트 `_parse`의 `from error`가 `ValidationError`를 `__cause__`에 남기는 것이다. 사용자가 일감 카드나 대기열 후보로 낼지 정한다.
+- 원격 브랜치 `docs/agent-os-direction`이 남아 있다(위 "ADR 승인"의 알림에 사용자의 답이 없었다).
+- 대기열 571: 프로브의 값 표지가 부분 문자열로 센 사건이 두 번 더 나오면 `CODING_STANDARDS.md`에 더한다. 대기열 570은 사람 몫이다(CodeRabbit 좌석 배정).
+- `.scratch/plan.md`를 `mcp-shutdown-spec` 워크트리도 고쳤다(`sibling_overlap.py`). 그 PR이 먼저 병합되면 이쪽이 합친다.
