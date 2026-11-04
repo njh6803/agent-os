@@ -39,7 +39,7 @@
 - 변경 파일: 새 `plugins/skills/answer-format/{plugin.toml,SKILL.md}`, 고친 `plugins/agents/calc/{plugin.toml,agent.py}`, `tests/test_calc_plugin.py`, `tests/test_main.py`, 티켓 파일, 이 일지.
 - 커밋 전: `git branch --show-current`와 `uv run python tools/sibling_overlap.py`(이 세션의 마지막 결과는 번호 겹침 없음, 함께 고친 파일 없음, 일지 번호는 02). 카나리아 알림이 나오면 03 일지(2026-11-05-01)의 선례대로 `--preflight`만 돌릴지 본다. 이번에 바뀐 `.claude/rules/*.md`는 없다.
 - `.scratch/plan.md`의 skill-plugin 행은 이 티켓이 병합되면 04와 함께 상태를 맞춘다(03 일지의 선례). 이 세션은 건드리지 않았다.
-- PR 직전 리뷰에 밀 주장(이 세션이 새로 쓴 사실 문장): `agent.py` 독스트링의 "스킬을 고르지 않고 이어 가지도 않은 실행의 프롬프트는 블록이 없어 머리 문장과 요청뿐이다", 시험 독스트링의 "본문을 코드에 베낀 calc는 여기서 빨갛다", `test_main.py` `_copy_repo_plugins` 독스트링의 "calc의 매니페스트가 고른 스킬이 없으면 실행이 준비에서 멈춘다".
+- PR 직전 리뷰에 밀 주장(이 세션이 새로 쓴 사실 문장): `agent.py` 독스트링의 "스킬을 고르지 않고 이어 가지도 않은 실행의 프롬프트는 블록이 없어 머리 문장과 요청뿐이다", 시험 독스트링의 "본문을 코드에 베낀 calc 는 여기서 빨갛다", `test_main.py` `_copy_repo_plugins` 독스트링의 "calc 의 매니페스트가 고른 스킬이 없으면 실행이 준비에서 멈춘다".
 - 대기열 572(`is_file()`의 `OSError`)는 이 티켓의 몫이 아니고 병합 뒤 retro가 이어받는다.
 - 병합은 이 워크트리 사본의 next-session `merge.md`("워크트리에서 병합할 때")를 Read로 열어 따른다.
 
@@ -60,8 +60,17 @@ open-session을 부른다 2026-11-04T17:14:34Z
 - 표준 축의 주장 검증: 독스트링 인용(ADR 0022·0041, 명세 "예시 스킬", conversation 명세 "calc"·스토리 40)이 글자 그대로이고, 본문을 코드에 베낀 calc 사본(임시 복사)이 스킬 둘 시험과 `skills` 지운 시험에서 빨갛고 `FRESH_PROMPT`·순서 시험은 초록인 것을 서브에이전트가 돌려 봤다. `_copy_repo_plugins` 독스트링의 "준비에서 멈춘다"는 `core/run.py`의 `_prepare`가 `PluginError`를 내는 것과 맞는다.
 - 명세 축: Critical·Major 없음, 범위 넘침 없음. 요구 열일곱 모두 구현. 약한 지점 둘. (a) `plugin.toml`이 공통 넷뿐이라는 요구를 직접 재는 시험이 없다(내용은 맞고 어댑터 읽기 시험이 지난다). (b) 일지의 `run_checks`는 티켓이 `in-progress`일 때 돌았다.
 
-고친 것. 프로브 `_prepare`: 두 갈래 모두 복사한 calc 매니페스트에서 `skills = ["answer-format"]` 줄을 지우고(그래야 대조 갈래에 본문이 없고 블록 갈래에는 글로 넣은 블록 하나만 있다), `PROMPT_TAIL`을 새 모양으로 바꿨다. 독스트링에 한 문장을 더했다. 모델을 부르지 않고 `_prepare`를 두 갈래로 불러, 대조는 `머리\n\n요청: …`이고 블록은 `머리\n\n지침 answer-format: <본문>\n\n요청: …` 한 블록인 것을 봤다. LLM 프로브는 다시 돌리지 않았다(재던 것이 그대로이고, 본문은 바뀌지 않았다).
+고친 것. 프로브 `_prepare`: 모든 갈래(셋이다)에서 복사한 calc 매니페스트에서 `skills = ["answer-format"]` 줄을 지우고(그래야 대조 갈래에 본문이 없고 블록 갈래에는 글로 넣은 블록 하나만 있다), `PROMPT_TAIL`을 새 모양으로 바꿨다. 독스트링에 한 문장을 더했다. 모델을 부르지 않고 `_prepare`를 두 갈래로 불러, 대조는 `머리\n\n요청: …`이고 블록은 `머리\n\n지침 answer-format: <본문>\n\n요청: …` 한 블록인 것을 봤다. LLM 프로브는 다시 돌리지 않았다(재던 것이 그대로이고, 본문은 바뀌지 않았다).
 남긴 것. 위 Nit과 `plugin.toml` 시험 부재(Minor, 파일 내용이 공통 넷뿐인 것은 명세 축이 읽어 확인했고, 어댑터가 그 폴더를 `Skill`로 읽는 시험이 지난다). 일지의 "더한 시험은 다섯"은 넷이 맞아 고쳤다.
 다시 돌릴 것. 커밋의 pre-commit(티켓이 `done`인 채 도는 첫 판)이 손으로 치는 다섯을 갈음한다. 결과는 커밋 뒤 이 일지와 PR 본문에 적는다.
 
-PR 직전 리뷰에 밀 주장(이 세션이 새로 쓴 사실 문장): 프로브 `_prepare` 주석 "두 갈래 모두 그 줄을 지워 대조 갈래에 본문이 없고 블록 갈래에는 글로 넣은 블록 하나만 있게 한다(재던 것 그대로)", 프로브 독스트링 "티켓 05 뒤에도 같다".
+PR 직전 리뷰에 밀 주장(이 세션이 새로 쓴 사실 문장): 프로브 `_prepare` 주석 "모든 갈래에서 그 줄을 지워 대조 갈래에 본문이 없고 블록 갈래에는 글로 넣은 블록 하나만 있게 한다(재던 것 그대로)", 프로브 독스트링 "티켓 05 뒤에도 같다".
+
+## PR 직전 리뷰 (CLI 좌석 없음, 대체 둘)
+
+- `coderabbit auth status`가 `Seat: not assigned`를 냈다(이 세션이 쳤다). CLI는 돌지 못해 `bug-perf-review` 서브에이전트와 내장 `/security-review`를 대신 돌렸다. 둘 다 커밋 `ac14e4d7` 뒤에 돌았고 origin/main은 base 5b255a18 그대로였다(`git log HEAD..origin/main`이 비었다).
+- `/security-review`: 지적 없음. 코드를 읽어 본 판정이다. 스킬 본문은 `SKILL.format(name=…, body=…)`과 `PROMPT.format(skills=…)`의 인자로만 들어가 재해석되지 않고, 본문은 운영자가 둔 파일이라 지시로 쓰는 것이 ADR 0041의 결정이다. 이 변경은 새 입력 경로(네트워크, 경로, 명령)를 더하지 않는다.
+- `bug-perf-review`(서브에이전트): Critical·Major·Minor 없음, Nit 둘. 서브에이전트가 `uv run python`으로 `_skill_blocks`에 빈 목록, 중괄호(`{previous} {request} {0} {}`)와 줄바꿈이 든 본문을 넣어 재해석되지 않는 것을 봤고, 임시 폴더에서 프로브 `_prepare`를 세 갈래로 불러 매니페스트의 `skills`가 빠지는 것과 블록이 글로 넣은 하나뿐인 것을 봤고, 안 만든 스킬 폴더로 `_resolve_skills`를 불러 `PluginError`가 나는 것을 봤다(보고에 적힌 대로이고 이 세션은 되돌려 재지 않았다).
+  - Nit 1(고쳤다): 프로브 주석·독스트링의 "두 갈래 모두"가 틀리다. 갈래는 셋이다(`ARMS`). "모든 갈래"로 고쳤다.
+  - Nit 2(남겼다): 공백뿐인 본문은 `지침 a: \n\n`이라는 내용 없는 줄이 된다. `parse_skill`이 빈 본문을 거르지 않는다. 티켓은 본문의 앞뒤 공백을 다듬는 것까지만 요구하고 빈 본문 처리는 요구하지 않으며, 머리말만 있는 스킬 문서를 두는 운영자 실수의 몫이라 이 티켓에 넣지 않는다.
+- 일지 인용 두 곳의 띄어쓰기(`calc 는`, `calc 의`)를 코드의 독스트링과 같게 고쳤다(pre-commit의 인용 대조 경고 둘, 대기열 42).
