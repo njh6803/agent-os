@@ -35,9 +35,9 @@ src/agent_os/
                    cors(최종 사용자 접두사에만 거는 CORS), paths(접두사 비교)
   adapters/        포트 구현
 plugins/
-  agents/  mcp/  skills/  models/    각각 <name>/plugin.toml
+  agents/  mcp/  skills/  models/    각각 <name>/plugin.toml. 스킬에는 SKILL.md도 있다
   disabled.toml    선택. 운영자가 끈 플러그인의 이름(ADR 0017). 없으면 전부 켜짐. 관리 API의 PUT이 쓰고
-                   손으로 고쳐도 같다. skill은 로더가 생길 때 그 로더가 켜짐을 본다
+                   손으로 고쳐도 같다. skill은 에이전트가 고르면 런타임이 실행을 준비할 때 켜짐을 본다
 tests/             src를 미러링. fixtures/site_file/ 은 서버와 위젯 빌드의 시험이 함께 읽는 사이트 파일 픽스처
 web/               pnpm 워크스페이스(Node 24, TypeScript 5.9). 파이썬과 루트를 나눈다. 앱은 apps/*, 공유 패키지는 packages/*
   eslint.config.mjs  원칙 III의 TS 판정자와 층 경계. 변이 테스트는 eslint.config.test.ts

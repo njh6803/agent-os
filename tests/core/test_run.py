@@ -121,15 +121,33 @@ def _agent_manifest(
     requires_approval: Sequence[str] = (),
     conversation_limit: int | None = None,
     model: str | None = None,
+    skills: Sequence[str] = (),
 ) -> PluginManifest:
     limit = "" if conversation_limit is None else f"conversation_limit = {conversation_limit}\n"
     chosen = "" if model is None else f'model = "{model}"\n'
+    picked = f"skills = {_toml_list(skills)}\n" if skills else ""
     return parse_manifest(
         f'schema_version = "1"\nkind = "agent"\nname = "{name}"\n'
         f'version = "0.1.0"\nentrypoint = "agent:Agent"\n'
         f"mcp = {_toml_list(mcp)}\nrequires_approval = {_toml_list(requires_approval)}\n"
         + limit
         + chosen
+        + picked
+    )
+
+
+def _skill_manifest(name: str) -> PluginManifest:
+    return parse_manifest(
+        f'schema_version = "1"\nkind = "skill"\nname = "{name}"\nversion = "0.1.0"\n'
+    )
+
+
+def _skill_document(name: str, body: str | None = None) -> Skill:
+    """`name` 의 스킬 문서를 읽은 값. 본문은 이름마다 달라 어느 스킬이 실렸는지 갈린다."""
+    return Skill(
+        name=PluginName(name),
+        description=f"{name} 의 설명",
+        body=f"{name} 의 본문" if body is None else body,
     )
 
 
@@ -245,6 +263,13 @@ class FakePlugins:
     멈춘 사이 파일을 고친 것을 흉내 낸다. `agent_model` 이 있으면 모든 에이전트의 매니페스트가 그
     이름을 `model` 로 적는다. `unreadable_models` 에 든 이름은 어댑터가 파싱하지 못한 모양으로
     PluginError 다. 모델 매니페스트 읽기(`model_reads`)는 준비 한 번에 한 번이라는 것을 센다.
+
+    스킬은 에이전트가 적은 이름(`skills`)마다 매니페스트와 스킬 문서를 따로 든다. 둘은 이름별
+    공개 사전(`skill_manifests`, `skill_documents`)이라 "매니페스트는 있는데 스킬 문서가 없다"를
+    흉내 내고(`skill_documents.pop`), 멈춘 사이 본문을 고친 것도 흉내 낸다. 기본은 적은 이름마다
+    둘 다 있다. `unreadable_skill_manifests` 와 `unreadable_skill_documents` 에 든 이름은 어댑터가
+    읽지 못한 모양으로 PluginError 다. 읽은 이름의 열(`skill_manifest_reads`,
+    `skill_document_reads`)이 준비 한 번에 이름마다 한 번이라는 것과 읽은 순서를 보인다.
     """
 
     def __init__(
@@ -260,6 +285,7 @@ class FakePlugins:
         conversation_limit: int | None = None,
         models: Sequence[str] = (DEFAULT_MODEL,),
         agent_model: str | None = None,
+        skills: Sequence[str] = (),
     ) -> None:
         self._agents = agents
         self._mcp = tuple(mcp)
@@ -272,6 +298,13 @@ class FakePlugins:
         self.model_manifests = {name: model_manifest(name) for name in models}
         self.agent_model = agent_model
         self.unreadable_models: dict[str, str] = {}
+        self.agent_skills = tuple(skills)
+        self.skill_manifests = {name: _skill_manifest(name) for name in skills}
+        self.skill_documents = {name: _skill_document(name) for name in skills}
+        self.unreadable_skill_manifests: dict[str, str] = {}
+        self.unreadable_skill_documents: dict[str, str] = {}
+        self.skill_manifest_reads: list[str] = []
+        self.skill_document_reads: list[str] = []
         self.loads = 0
         self.disabled_reads = 0
         self.manifest_reads = 0
@@ -286,9 +319,15 @@ class FakePlugins:
                 self._requires_approval,
                 self.conversation_limit,
                 self.agent_model,
+                self.agent_skills,
             )
         if kind is PluginKind.MCP and name in self._servers:
             return _mcp_manifest(name, self._secret_args)
+        if kind is PluginKind.SKILL:
+            self.skill_manifest_reads.append(name)
+            if name in self.unreadable_skill_manifests:
+                raise PluginError(self.unreadable_skill_manifests[name])
+            return self.skill_manifests.get(name)
         if kind is PluginKind.MODEL:
             self.model_reads += 1
             if name in self.unreadable_models:
@@ -300,7 +339,10 @@ class FakePlugins:
         raise NotImplementedError("매니페스트 목록은 어댑터 테스트가 실물 디렉터리로 잰다")
 
     def read_skill(self, name: PluginName) -> Skill | None:
-        return None
+        self.skill_document_reads.append(name)
+        if name in self.unreadable_skill_documents:
+            raise PluginError(self.unreadable_skill_documents[name])
+        return self.skill_documents.get(name)
 
     def load_agent(self, manifest: PluginManifest) -> BaseAgent:
         self.loads += 1
@@ -1296,6 +1338,7 @@ def _gated_plugins(
     agent: BaseAgent,
     requires_approval: Sequence[str] = ("send",),
     secret_args: Mapping[str, Sequence[str]] | None = None,
+    skills: Sequence[str] = (),
 ) -> FakePlugins:
     """send 가 승인 대상인 에이전트 하나. 도구는 srv 하나에서 온다."""
     return FakePlugins(
@@ -1304,6 +1347,7 @@ def _gated_plugins(
         servers=["srv"],
         requires_approval=requires_approval,
         secret_args=secret_args,
+        skills=skills,
     )
 
 
@@ -1954,8 +1998,8 @@ class BrokenManifestPlugins(FakePlugins):
 class UnimportablePlugins(FakePlugins):
     """매니페스트는 읽히는데 진입점을 import하지 못한 모양. 어댑터는 이것도 PluginError 다."""
 
-    def __init__(self, *, disabled: Iterable[PluginKey] = ()) -> None:
-        super().__init__({"calc": OneShotAgent()}, disabled=disabled)
+    def __init__(self, *, disabled: Iterable[PluginKey] = (), skills: Sequence[str] = ()) -> None:
+        super().__init__({"calc": OneShotAgent()}, disabled=disabled, skills=skills)
 
     def load_agent(self, manifest: PluginManifest) -> BaseAgent:
         self.loads += 1
@@ -2080,12 +2124,12 @@ async def test_재생_구간의_모델_호출은_모델_포트를_부르지_않�
 # --- 꺼진 플러그인 ----------------------------------------------------------------
 #
 # 운영자가 끈 것을 부른 새 실행과 재개는 실행 전에 Disabled 로 끝난다(ADR 0017). 판정 순서는 두
-# 단이다. 앞 단은 깨짐(에이전트, 에이전트가 쓰는 mcp 들, 마스킹과 승인의 충돌)이고, 뒷 단에서 운영자
-# 파일을 한 번 읽어 에이전트, mcp 순으로 꺼짐을 본다. 진입점 import 는 그 뒤다 — 판정하려면 플러그인
-# 코드를 실행해야 해서 "깨짐이 먼저"의 유일한 예외다. 근거는 plugin-toggle 명세의 "core — 준비
-# 단계의 판정"이다. 막힌 실행에서 도구 포트가 연결되지 않는다는 것은 가짜 도구 포트가 받은 서버가
-# 없다는 것(`servers is None`)으로 본다. 결정의 "거부"(Deny)와 헷갈리지 않게 여기서는 "막힌다"고
-# 쓴다.
+# 단이다. 앞 단은 깨짐(에이전트, 에이전트가 쓰는 mcp 들, 마스킹과 승인의 충돌, 모델, 스킬)이고, 뒷
+# 단에서 운영자 파일을 한 번 읽어 에이전트, mcp, 모델, 스킬 순으로 꺼짐을 본다. 진입점 import 는 그
+# 뒤다 — 판정하려면 플러그인 코드를 실행해야 해서 "깨짐이 먼저"의 유일한 예외다. 근거는
+# plugin-toggle 명세의 "core — 준비 단계의 판정"이다. 막힌 실행에서 도구 포트가 연결되지 않는다는
+# 것은 가짜 도구 포트가 받은 서버가 없다는 것(`servers is None`)으로 본다. 결정의 "거부"(Deny)와
+# 헷갈리지 않게 여기서는 "막힌다"고 쓴다.
 
 
 def _agent_key(name: str) -> PluginKey:
@@ -2094,6 +2138,10 @@ def _agent_key(name: str) -> PluginKey:
 
 def _mcp_key(name: str) -> PluginKey:
     return PluginKey(kind=PluginKind.MCP, name=PluginName(name))
+
+
+def _skill_key(name: str) -> PluginKey:
+    return PluginKey(kind=PluginKind.SKILL, name=PluginName(name))
 
 
 class BrokenMcpPlugins(FakePlugins):
@@ -3262,10 +3310,14 @@ class WeavingAgent:
 
 
 class SkillsAgent:
-    """`ctx.skills` 를 출력에 옮긴다. 모델도 도구도 쓰지 않는다."""
+    """`ctx.skills` 를 출력에 JSON 으로 옮긴다. 모델도 도구도 쓰지 않는다."""
 
     async def run(self, request: str, ctx: AgentContext) -> AsyncIterator[Event]:
-        yield RunFinished(run_id=ctx.run_id, ts=ctx.now(), output=repr(ctx.skills))
+        yield RunFinished(run_id=ctx.run_id, ts=ctx.now(), output=_skills_json(ctx.skills))
+
+
+def _skills_json(skills: Sequence[Skill]) -> str:
+    return json.dumps([[s.name, s.description, s.body] for s in skills], ensure_ascii=False)
 
 
 class WeavingTwiceAgent:
@@ -3434,11 +3486,12 @@ async def test_이어_가지_않은_실행의_멤버는_요약이_없고_교환�
     assert started.previous_run is None
 
 
-async def test_스킬_멤버는_늘_빈_열이다(trace: FakeTrace, clock: FakeClock) -> None:
-    # 런타임이 아직 스킬 문서를 읽지 않는다. 읽어 싣는 것은 다음 티켓이다.
+async def test_스킬을_고르지_않은_실행의_스킬_멤버는_빈_열이다(
+    trace: FakeTrace, clock: FakeClock
+) -> None:
     events = await _run(SkillsAgent(), GenericFakeChatModel(messages=iter([])), trace, clock)
 
-    assert _output_of(events) == "()"
+    assert _output_of(events) == "[]"
 
 
 async def test_이어_가기는_새_실행이고_시작_이벤트가_앞_실행을_든다(
@@ -6655,9 +6708,9 @@ async def test_소비자가_도중에_스트림을_닫으면_에이전트의_태
 #
 # 모델이 에이전트, mcp와 같은 플러그인이다(ADR 0040). 런타임은 준비마다 에이전트가 고른 모델(없으면
 # `default_model`)의 매니페스트를 읽어 모델 소스가 그것으로 모델을 만들게 한다. 순서는 부재 →
-# 깨짐(mcp 없음 → 마스킹과 승인의 충돌 → 모델 없음·읽히지 않음 → 운영자 파일의 손상) → 꺼짐(에이전트
-# → mcp → 모델) → 진입점 import → 모델 만들기다. 모델 종류를 거르는 것은 어댑터의
-# `read_manifest(MODEL, …)`이고 core는 칸을 꺼내 쓰지 않으므로 여기서는 "없음"과 "읽히지
+# 깨짐(mcp 없음 → 마스킹과 승인의 충돌 → 모델 없음·읽히지 않음 → 스킬 → 운영자 파일의 손상) →
+# 꺼짐(에이전트 → mcp → 모델 → 스킬) → 진입점 import → 모델 만들기다. 모델 종류를 거르는 것은
+# 어댑터의 `read_manifest(MODEL, …)`이고 core는 칸을 꺼내 쓰지 않으므로 여기서는 "없음"과 "읽히지
 # 않음(`PluginError`)" 둘만 본다.
 
 ALT_MODEL = PluginName("alt-model")
@@ -6917,6 +6970,72 @@ def _entrypoint_unimportable() -> FakePlugins:
     return UnimportablePlugins()
 
 
+def _skill_missing(plugins: FakePlugins) -> FakePlugins:
+    """고른 스킬 `ghost` 의 매니페스트가 없다."""
+    plugins.agent_skills = ("ghost",)
+    return plugins
+
+
+def _model_and_skill_missing() -> FakePlugins:
+    plugins = _skill_missing(FakePlugins({"calc": OneShotAgent()}))
+    plugins.model_manifests.clear()
+    return plugins
+
+
+def _mcp_and_skill_missing() -> FakePlugins:
+    return _skill_missing(FakePlugins({"calc": OneShotAgent()}, mcp=["ghost-mcp"]))
+
+
+def _masked_conflict_and_skill_missing() -> FakePlugins:
+    return _skill_missing(
+        FakePlugins(
+            {"calc": OneShotAgent()},
+            mcp=["srv"],
+            servers=["srv"],
+            requires_approval=["add"],
+            secret_args={"add": ["a"]},
+        )
+    )
+
+
+def _skill_missing_and_operator_file_corrupt() -> FakePlugins:
+    return _skill_missing(FakePlugins({"calc": OneShotAgent()}, corrupt=CORRUPT_OPERATOR_FILE))
+
+
+def _skill_missing_and_agent_disabled() -> FakePlugins:
+    return _skill_missing(FakePlugins({"calc": OneShotAgent()}, disabled=[_agent_key("calc")]))
+
+
+def _agent_and_skill_disabled() -> FakePlugins:
+    return FakePlugins(
+        {"calc": OneShotAgent()},
+        skills=["answer-format"],
+        disabled=[_agent_key("calc"), _skill_key("answer-format")],
+    )
+
+
+def _mcp_and_skill_disabled() -> FakePlugins:
+    return FakePlugins(
+        {"calc": OneShotAgent()},
+        mcp=["srv"],
+        servers=["srv"],
+        skills=["answer-format"],
+        disabled=[_mcp_key("srv"), _skill_key("answer-format")],
+    )
+
+
+def _model_and_skill_disabled() -> FakePlugins:
+    return FakePlugins(
+        {"calc": OneShotAgent()},
+        skills=["answer-format"],
+        disabled=[_model_key(DEFAULT_MODEL), _skill_key("answer-format")],
+    )
+
+
+def _skill_disabled_and_entrypoint_unimportable() -> FakePlugins:
+    return UnimportablePlugins(skills=["answer-format"], disabled=[_skill_key("answer-format")])
+
+
 @pytest.mark.parametrize(
     ("plant", "error", "message", "loads"),
     [
@@ -6938,6 +7057,25 @@ def _entrypoint_unimportable() -> FakePlugins:
         (_mcp_and_model_disabled, Disabled, "꺼진 플러그인이다: mcp srv", 0),
         (_model_disabled_and_entrypoint_unimportable, Disabled, "꺼진 플러그인이다: model", 0),
         (_entrypoint_unimportable, PluginError, "진입점을 import할 수 없다", 1),
+        (_model_and_skill_missing, PluginError, f"기본 모델 플러그인이 없다: {DEFAULT_MODEL}", 0),
+        (_mcp_and_skill_missing, PluginError, "mcp 플러그인이 없다: ghost-mcp", 0),
+        (_masked_conflict_and_skill_missing, PluginError, "마스킹된 인자를 가진 도구", 0),
+        (
+            _skill_missing_and_operator_file_corrupt,
+            PluginError,
+            "에이전트 calc 이 지정한 skill 플러그인이 없다: ghost",
+            0,
+        ),
+        (
+            _skill_missing_and_agent_disabled,
+            PluginError,
+            "에이전트 calc 이 지정한 skill 플러그인이 없다: ghost",
+            0,
+        ),
+        (_agent_and_skill_disabled, Disabled, "꺼진 플러그인이다: agent calc", 0),
+        (_mcp_and_skill_disabled, Disabled, "꺼진 플러그인이다: mcp srv", 0),
+        (_model_and_skill_disabled, Disabled, "꺼진 플러그인이다: model", 0),
+        (_skill_disabled_and_entrypoint_unimportable, Disabled, "꺼진 플러그인이다: skill", 0),
     ],
     ids=[
         "mcp 없음이 모델 없음보다 먼저",
@@ -6948,6 +7086,15 @@ def _entrypoint_unimportable() -> FakePlugins:
         "mcp 꺼짐이 모델 꺼짐보다 먼저",
         "모델 꺼짐이 진입점 import 실패보다 먼저",
         "진입점 import 실패가 모델 만들기보다 먼저",
+        "모델 없음이 스킬 없음보다 먼저",
+        "mcp 없음이 스킬 없음보다 먼저",
+        "마스킹 충돌이 스킬 없음보다 먼저",
+        "스킬 없음이 운영자 파일의 손상보다 먼저",
+        "스킬 없음이 에이전트 꺼짐보다 먼저",
+        "에이전트 꺼짐이 스킬 꺼짐보다 먼저",
+        "mcp 꺼짐이 스킬 꺼짐보다 먼저",
+        "모델 꺼짐이 스킬 꺼짐보다 먼저",
+        "스킬 꺼짐이 진입점 import 실패보다 먼저",
     ],
 )
 async def test_준비의_순서는_부재_깨짐_꺼짐_진입점_모델_만들기다(
@@ -7052,3 +7199,429 @@ async def test_이어_가기의_대화_요약은_에이전트가_고른_모델�
 
     assert _summary_event(events).model == "alt-model-id"
     assert [m.name for m in models.built] == [ALT_MODEL]
+
+
+# --- 스킬 — 실행을 준비할 때마다 고른 스킬을 읽어 컨텍스트로 넘긴다 --------------------
+#
+# 스킬이 에이전트, mcp, 모델과 같은 플러그인이다(ADR 0041). 런타임은 준비마다 에이전트의 `skills` 에
+# 적힌 이름대로 스킬 매니페스트와 스킬 문서를 읽어 `ctx.skills` 로 넘긴다. 순서는 부재 → 깨짐(mcp
+# 없음 → 마스킹과 승인의 충돌 → 모델 없음·읽히지 않음 → 스킬) → 운영자 파일의 손상 → 꺼짐(에이전트 →
+# mcp → 모델 → 스킬) → 진입점 import → 모델 만들기다. 스킬의 깨짐은 적힌 순서대로 이름마다
+# 매니페스트 없음· 읽히지 않음 → 스킬 문서 없음·읽히지 않음이고 한 이름을 끝낸 뒤 다음 이름이다. 위
+# 순서의 교차는 `test_준비의_순서는_부재_깨짐_꺼짐_진입점_모델_만들기다` 가 재고, 여기는 스킬 안의
+# 순서와 값을 잰다.
+
+
+async def test_고른_스킬은_매니페스트에_적힌_순서대로_컨텍스트의_값이_된다(
+    trace: FakeTrace, clock: FakeClock
+) -> None:
+    """첫 빨강이다. 가짜의 스킬 문서 읽기가 한 번도 불리지 않으면 이 시험이 먼저 빨갛다.
+    매니페스트는 zeta 를 alpha 보다 먼저 적었다. 이름순으로 싣으면 순서가 뒤집힌다(스토리 2)."""
+    plugins = FakePlugins({"calc": SkillsAgent()}, skills=["zeta", "alpha"])
+
+    events = await _run(SkillsAgent(), _idle(), trace, clock, plugins=plugins)
+
+    assert _output_of(events) == _skills_json([_skill_document("zeta"), _skill_document("alpha")])
+
+
+async def test_스킬_매니페스트와_스킬_문서는_준비_한_번에_이름마다_한_번_읽는다(
+    trace: FakeTrace, clock: FakeClock
+) -> None:
+    plugins = FakePlugins({"calc": SkillsAgent()}, skills=["zeta", "alpha"])
+
+    await _run(SkillsAgent(), _idle(), trace, clock, plugins=plugins)
+
+    assert plugins.skill_manifest_reads == ["zeta", "alpha"]
+    assert plugins.skill_document_reads == ["zeta", "alpha"]
+    assert plugins.model_reads == 1
+    assert plugins.disabled_reads == 1
+
+
+def _drop_ghost_manifest(plugins: FakePlugins) -> None:
+    del plugins.skill_manifests["ghost"]
+
+
+def _drop_ghost_document(plugins: FakePlugins) -> None:
+    del plugins.skill_documents["ghost"]
+
+
+@pytest.mark.parametrize(
+    ("lacking", "message", "document_reads"),
+    [
+        (
+            _drop_ghost_manifest,
+            "에이전트 calc 이 지정한 skill 플러그인이 없다: ghost",
+            [],
+        ),
+        (
+            _drop_ghost_document,
+            "에이전트 calc 이 지정한 skill 플러그인에 SKILL.md 가 없다: ghost",
+            ["ghost"],
+        ),
+    ],
+    ids=["매니페스트가 없다", "매니페스트는 있는데 스킬 문서가 없다"],
+)
+async def test_없는_스킬은_실행_전에_PluginError_이고_트레이스가_없다(
+    lacking: Callable[[FakePlugins], object],
+    message: str,
+    document_reads: list[str],
+    trace: FakeTrace,
+    clock: FakeClock,
+) -> None:
+    """문구는 누구의 지정인지를 든다(스토리 6). 매니페스트가 없으면 스킬 문서를 읽지 않는다."""
+    plugins = FakePlugins({"calc": OneShotAgent()}, skills=["ghost"])
+    lacking(plugins)
+
+    with pytest.raises(PluginError) as caught:
+        await _run(OneShotAgent(), _idle(), trace, clock, plugins=plugins)
+
+    assert type(caught.value) is PluginError
+    assert str(caught.value) == message
+    assert plugins.skill_document_reads == document_reads
+    assert trace.events == []
+    assert clock.ids_issued == 0
+    assert plugins.loads == 0
+
+
+def _plant_unreadable_manifest(plugins: FakePlugins) -> None:
+    plugins.unreadable_skill_manifests["ghost"] = "매니페스트를 읽을 수 없다: plugins/skills/ghost"
+
+
+def _plant_unreadable_document(plugins: FakePlugins) -> None:
+    plugins.unreadable_skill_documents["ghost"] = (
+        "스킬 문서를 읽을 수 없다: plugins/skills/ghost/SKILL.md"
+    )
+
+
+@pytest.mark.parametrize(
+    "plant",
+    [_plant_unreadable_manifest, _plant_unreadable_document],
+    ids=["매니페스트가 읽히지 않는다", "스킬 문서가 읽히지 않는다"],
+)
+async def test_읽히지_않는_스킬은_어댑터의_PluginError_그대로_실행_전에_끝난다(
+    plant: Callable[[FakePlugins], object], trace: FakeTrace, clock: FakeClock
+) -> None:
+    plugins = FakePlugins({"calc": OneShotAgent()}, skills=["ghost"])
+    plant(plugins)
+
+    with pytest.raises(PluginError, match="읽을 수 없다: plugins/skills/ghost"):
+        await _run(OneShotAgent(), _idle(), trace, clock, plugins=plugins)
+
+    assert trace.events == []
+    assert clock.ids_issued == 0
+    assert plugins.loads == 0
+
+
+def _first_document_missing_and_second_manifest_missing() -> FakePlugins:
+    plugins = FakePlugins({"calc": OneShotAgent()}, skills=["first", "second"])
+    plugins.skill_documents.pop("first")
+    plugins.skill_manifests.pop("second")
+    return plugins
+
+
+def _first_manifest_missing_and_second_document_unreadable() -> FakePlugins:
+    plugins = FakePlugins({"calc": OneShotAgent()}, skills=["first", "second"])
+    plugins.skill_manifests.pop("first")
+    plugins.unreadable_skill_documents["second"] = "스킬 문서를 읽을 수 없다: second"
+    return plugins
+
+
+def _first_document_unreadable_and_second_manifest_missing() -> FakePlugins:
+    plugins = FakePlugins({"calc": OneShotAgent()}, skills=["first", "second"])
+    plugins.unreadable_skill_documents["first"] = "스킬 문서를 읽을 수 없다: first"
+    plugins.skill_manifests.pop("second")
+    return plugins
+
+
+@pytest.mark.parametrize(
+    ("plant", "message", "manifest_reads", "document_reads"),
+    [
+        (
+            _first_document_missing_and_second_manifest_missing,
+            "에이전트 calc 이 지정한 skill 플러그인에 SKILL.md 가 없다: first",
+            ["first"],
+            ["first"],
+        ),
+        (
+            _first_manifest_missing_and_second_document_unreadable,
+            "에이전트 calc 이 지정한 skill 플러그인이 없다: first",
+            ["first"],
+            [],
+        ),
+        (
+            _first_document_unreadable_and_second_manifest_missing,
+            "스킬 문서를 읽을 수 없다: first",
+            ["first"],
+            ["first"],
+        ),
+    ],
+    ids=[
+        "첫 스킬의 문서 없음이 둘째의 매니페스트 없음보다 먼저",
+        "첫 스킬의 매니페스트 없음이 둘째의 문서 읽히지 않음보다 먼저",
+        "첫 스킬의 문서 읽히지 않음이 둘째의 매니페스트 없음보다 먼저",
+    ],
+)
+async def test_스킬의_깨짐은_적힌_순서대로_한_이름을_끝낸_뒤_다음_이름을_본다(
+    plant: Callable[[], FakePlugins],
+    message: str,
+    manifest_reads: list[str],
+    document_reads: list[str],
+    trace: FakeTrace,
+    clock: FakeClock,
+) -> None:
+    """결함 둘을 함께 심어 어느 오류가 먼저 나오는지로 잰다. 이름 둘을 모두 읽고 나서 판정하면
+    둘째의 결함이 먼저 나올 수 있고, 읽은 열이 첫 이름에서 멈춘 것도 함께 본다."""
+    plugins = plant()
+
+    with pytest.raises(PluginError) as caught:
+        await _run(OneShotAgent(), _idle(), trace, clock, plugins=plugins)
+
+    assert str(caught.value) == message
+    assert plugins.skill_manifest_reads == manifest_reads
+    assert plugins.skill_document_reads == document_reads
+    assert trace.events == []
+
+
+async def test_꺼진_스킬을_쓰는_실행은_실행_전에_Disabled_이고_메시지에_스킬과_에이전트가_있다(
+    trace: FakeTrace, clock: FakeClock
+) -> None:
+    """꺼진 mcp, 모델과 같은 꼴이다(스토리 10·11). 켜진 에이전트가 꺼진 스킬 때문에 거부되면
+    운영자에게 켜 달라고 할 것이 그 스킬이다."""
+    plugins = FakePlugins(
+        {"calc": OneShotAgent()},
+        skills=["answer-format"],
+        disabled=[_skill_key("answer-format")],
+    )
+
+    with pytest.raises(Disabled) as caught:
+        await _run(OneShotAgent(), _idle(), trace, clock, plugins=plugins)
+
+    assert str(caught.value) == "꺼진 플러그인이다: skill answer-format (에이전트 calc 이 쓴다)"
+    assert trace.events == []
+    assert clock.ids_issued == 0
+    assert plugins.loads == 0
+
+
+async def test_꺼진_스킬이_여럿이면_매니페스트에_적힌_순서의_첫_스킬이_메시지에_든다(
+    trace: FakeTrace, clock: FakeClock
+) -> None:
+    plugins = FakePlugins(
+        {"calc": OneShotAgent()},
+        skills=["zeta", "alpha"],
+        disabled=[_skill_key("alpha"), _skill_key("zeta")],
+    )
+
+    with pytest.raises(Disabled) as caught:
+        await _run(OneShotAgent(), _idle(), trace, clock, plugins=plugins)
+
+    assert "skill zeta" in str(caught.value)
+    assert "alpha" not in str(caught.value)
+
+
+async def test_스킬을_고르지_않은_에이전트는_스킬을_읽지_않는다(
+    trace: FakeTrace, clock: FakeClock
+) -> None:
+    plugins = FakePlugins({"calc": SkillsAgent()})
+
+    events = await _run(SkillsAgent(), _idle(), trace, clock, plugins=plugins)
+
+    assert _output_of(events) == "[]"
+    assert plugins.skill_manifest_reads == []
+    assert plugins.skill_document_reads == []
+
+
+async def test_고르지_않은_스킬이_꺼져도_상관없다(trace: FakeTrace, clock: FakeClock) -> None:
+    plugins = FakePlugins(
+        {"calc": SkillsAgent()}, skills=["answer-format"], disabled=[_skill_key("other")]
+    )
+
+    events = await _run(SkillsAgent(), _idle(), trace, clock, plugins=plugins)
+
+    assert events[-1].type == "run_finished"
+
+
+async def test_두_실행_사이에_스킬_본문을_고치면_둘째_실행이_고친_본문을_받는다(
+    trace: FakeTrace, clock: FakeClock
+) -> None:
+    """서버를 다시 띄우지 않아도 다음 실행부터 듣는다(스토리 9의 core 몫). 캐시가 없다."""
+    plugins = FakePlugins({"calc": SkillsAgent()}, skills=["answer-format"])
+
+    first = await _run(SkillsAgent(), _idle(), trace, clock, plugins=plugins)
+    plugins.skill_documents["answer-format"] = _skill_document("answer-format", "고친 본문")
+    second = await _run(SkillsAgent(), _idle(), trace, clock, plugins=plugins)
+
+    assert _output_of(first) == _skills_json([_skill_document("answer-format")])
+    assert _output_of(second) == _skills_json([_skill_document("answer-format", "고친 본문")])
+
+
+async def test_스킬을_고르고_엮지_않는_에이전트의_프롬프트는_받은_글_그대로다(
+    trace: FakeTrace, clock: FakeClock
+) -> None:
+    """런타임이 `llm()` 의 프롬프트에 아무것도 붙이지 않는다(스토리 4). 모델이 받은 글과 기록된
+    프롬프트가 같다는 것이 바깥 증거다."""
+    model = ToolAwareFakeModel(messages=iter([_reply("4")]))
+    plugins = FakePlugins({"calc": OneShotAgent()}, skills=["answer-format"])
+
+    events = await _run(OneShotAgent(), model, trace, clock, plugins=plugins)
+
+    called = next(e for e in events if isinstance(e, LlmCalled))
+    assert called.prompt == "2+2?"
+    assert [[m.content for m in sent] for sent in model.received] == [["2+2?"]]
+
+
+async def test_트레이스는_스킬_이름을_이벤트에_적지_않고_이벤트의_키도_그대로다(
+    clock: FakeClock,
+) -> None:
+    plain = await _run(
+        OneShotAgent(), ToolAwareFakeModel(messages=iter([_reply("4")])), FakeTrace(), FakeClock()
+    )
+    picked_trace = FakeTrace()
+    plugins = FakePlugins({"calc": OneShotAgent()}, skills=["answer-format"])
+
+    picked = await _run(
+        OneShotAgent(),
+        ToolAwareFakeModel(messages=iter([_reply("4")])),
+        picked_trace,
+        clock,
+        plugins=plugins,
+    )
+
+    assert [sorted(e.model_dump()) for e in picked] == [sorted(e.model_dump()) for e in plain]
+    written = [e.model_dump_json() for e in picked_trace.events]
+    for text in ("answer-format", "answer-format 의 설명", "answer-format 의 본문"):
+        assert all(text not in line for line in written)
+
+
+# 재개와 이어 가기. 기록된 에이전트의 매니페스트를 지금 디스크에서 읽어 같은 준비를 지난다.
+
+
+class SkilledAgent:
+    """스킬 본문을 프롬프트에 엮어 모델을 부른다.
+
+    `tool_first` 면 모델보다 먼저 승인 대상 도구를 부른다.
+    """
+
+    def __init__(self, *, tool_first: bool = False) -> None:
+        self._tool_first = tool_first
+
+    async def run(self, request: str, ctx: AgentContext) -> AsyncIterator[Event]:
+        if self._tool_first:
+            await ctx.tool("send", to="bob")
+        prompt = "\n".join([*(skill.body for skill in ctx.skills), request])
+        yield RunFinished(run_id=ctx.run_id, ts=ctx.now(), output=await ctx.llm(prompt))
+
+
+async def test_첫_모델_호출_뒤_멈춘_사이_본문을_고치면_재개는_재개_대조로_실패한다(
+    trace: FakeTrace, clock: FakeClock
+) -> None:
+    """ADR 0041이 받아들인 한계의 한 갈래다. 재개는 지금 디스크의 본문으로 프롬프트를 엮고, 재생이
+    기록된 프롬프트와 견주어 어긋난다(스토리 19)."""
+    model = ToolAwareFakeModel(messages=iter([_tool_request("send"), _reply("보냈다")]))
+    tools = _two_tools()
+    plugins = _gated_plugins(SkilledAgent(), skills=["answer-format"])
+    await _run(SkilledAgent(), model, trace, clock, tools=tools, plugins=plugins)
+    plugins.skill_documents["answer-format"] = _skill_document("answer-format", "고친 본문")
+
+    events = await _resume(RunId("run-1"), model, trace, clock, tools=tools, plugins=plugins)
+
+    assert _cause(events) == "resume_mismatch"
+
+
+async def test_모델보다_먼저_승인_대상_도구를_부른_실행은_재개_뒤_바뀐_본문이_첫_프롬프트에_든다(
+    trace: FakeTrace, clock: FakeClock
+) -> None:
+    """ADR 0041이 받아들인 한계의 다른 갈래다. 재생할 모델 호출이 없어 대조가 없고, 바뀐 본문이 재개
+    뒤 첫 `llm_called.prompt` 에 그대로 남는다."""
+    model = ToolAwareFakeModel(messages=iter([_reply("끝")]))
+    tools = _two_tools()
+    plugins = _gated_plugins(SkilledAgent(tool_first=True), skills=["answer-format"])
+    paused = await _run(
+        SkilledAgent(tool_first=True), model, trace, clock, tools=tools, plugins=plugins
+    )
+    plugins.skill_documents["answer-format"] = _skill_document("answer-format", "고친 본문")
+
+    events = await _resume(RunId("run-1"), model, trace, clock, tools=tools, plugins=plugins)
+
+    assert [e.type for e in paused] == ["run_started", "run_paused"]
+    called = next(e for e in events if isinstance(e, LlmCalled))
+    assert called.prompt == "고친 본문\n2+2?"
+    assert events[-1].type == "run_finished"
+
+
+def _turn_off_skill(plugins: FakePlugins) -> None:
+    plugins.disabled = plugins.disabled | {_skill_key("answer-format")}
+
+
+def _drop_answer_format_document(plugins: FakePlugins) -> None:
+    del plugins.skill_documents["answer-format"]
+
+
+@pytest.mark.parametrize(
+    ("change", "error", "message"),
+    [
+        (_turn_off_skill, Disabled, "꺼진 플러그인이다: skill answer-format"),
+        (
+            _drop_answer_format_document,
+            PluginError,
+            "에이전트 calc 이 지정한 skill 플러그인에 SKILL.md 가 없다: answer-format",
+        ),
+    ],
+    ids=["멈춘 사이 스킬이 꺼짐", "멈춘 사이 스킬 문서가 없어짐"],
+)
+async def test_멈춘_사이_스킬이_막히면_재개는_결정을_쓰기_전에_끝나고_트레이스가_그대로다(
+    change: Callable[[FakePlugins], object],
+    error: type[PluginError],
+    message: str,
+    trace: FakeTrace,
+    clock: FakeClock,
+) -> None:
+    model = ToolAwareFakeModel(messages=iter([_tool_request("send"), _reply("보냈다")]))
+    tools = _two_tools()
+    plugins = _gated_plugins(SkilledAgent(), skills=["answer-format"])
+    await _run(SkilledAgent(), model, trace, clock, tools=tools, plugins=plugins)
+    written = list(trace.events)
+    change(plugins)
+
+    with pytest.raises(error, match=message):
+        await _resume(RunId("run-1"), model, trace, clock, tools=tools, plugins=plugins)
+
+    assert trace.events == written
+
+
+class SkillsWithConversationAgent:
+    """`ctx.skills` 와 `ctx.conversation` 을 함께 출력에 옮긴다. 모델도 도구도 쓰지 않는다."""
+
+    async def run(self, request: str, ctx: AgentContext) -> AsyncIterator[Event]:
+        output = f"{_skills_json(ctx.skills)}|{_woven(ctx.conversation)}"
+        yield RunFinished(run_id=ctx.run_id, ts=ctx.now(), output=output)
+
+
+async def test_이어_가기도_같은_준비를_지나_스킬과_대화를_함께_받는다(
+    trace: FakeTrace, clock: FakeClock
+) -> None:
+    _write_finished(trace, "run-0", request="2+2?", output="4")
+    agent = SkillsWithConversationAgent()
+    plugins = FakePlugins({"calc": agent}, skills=["answer-format"])
+
+    events = await _continue("run-0", trace, clock, agent=agent, plugins=plugins)
+
+    skills, conversation = _output_of(events).split("|", 1)
+    assert skills == _skills_json([_skill_document("answer-format")])
+    assert _unwoven(conversation) == (None, [["2+2?", "4"]])
+    assert plugins.skill_document_reads == ["answer-format"]
+
+
+async def test_이어_가기에서_꺼진_스킬은_고리를_읽은_뒤_Disabled_이고_트레이스가_그대로다(
+    trace: FakeTrace, clock: FakeClock
+) -> None:
+    _write_finished(trace, "run-0")
+    written = list(trace.events)
+    agent = SkillsWithConversationAgent()
+    plugins = FakePlugins(
+        {"calc": agent}, skills=["answer-format"], disabled=[_skill_key("answer-format")]
+    )
+
+    with pytest.raises(Disabled, match="꺼진 플러그인이다: skill answer-format"):
+        await _continue("run-0", trace, clock, agent=agent, plugins=plugins)
+
+    assert trace.events == written
