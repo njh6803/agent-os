@@ -615,6 +615,11 @@ export interface components {
        */
       schema_version: "1";
       server: components["schemas"]["McpServer"] | null;
+      /**
+       * Skills
+       * @default []
+       */
+      skills: string[];
       /** Temperature */
       temperature: number | null;
       /** Version */
