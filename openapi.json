@@ -851,6 +851,15 @@
               }
             ]
           },
+          "skills": {
+            "default": [],
+            "items": {
+              "pattern": "^[a-z][a-z0-9-]{1,62}$",
+              "type": "string"
+            },
+            "title": "Skills",
+            "type": "array"
+          },
           "temperature": {
             "anyOf": [
               {
@@ -879,6 +888,7 @@
           "requires_approval",
           "conversation_limit",
           "model",
+          "skills",
           "provider",
           "model_id",
           "max_tokens",

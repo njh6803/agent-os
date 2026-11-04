@@ -16,6 +16,7 @@ from agent_os.sdk import (
     approval_conflicts,
     parse_manifest,
 )
+from agent_os.sdk.ids import PLUGIN_NAME_PATTERN
 
 AGENT = """
 schema_version = "1"
@@ -402,6 +403,70 @@ def test_에이전트가_아니면_model을_갖지_못한다(kind: str) -> None:
 
     with pytest.raises(ValidationError, match=f"{kind} 플러그인은 model 을 갖지 않는다"):
         parse_manifest(manifest)
+
+
+# --- 에이전트의 skills(스킬 플러그인 이름들. 명세 skill-plugin "매니페스트 skills의 중복") ---
+
+
+def test_에이전트는_skills를_안_적으면_빈_목록이다() -> None:
+    assert parse_manifest(AGENT).skills == ()
+
+
+def test_에이전트는_쓸_스킬_플러그인_이름을_적은_순서대로_갖는다() -> None:
+    manifest = parse_manifest(AGENT + 'skills = ["zeta-skill", "alpha-skill"]\n')
+
+    assert manifest.skills == ("zeta-skill", "alpha-skill")
+    assert manifest.schema_version == "1"
+
+
+@pytest.mark.parametrize(
+    "name",
+    ["UPPER", "x", "../../evil"],
+    ids=["대문자", "한 글자", "경로 이탈"],
+)
+def test_skills의_이름이_패턴을_어기면_읽는_단계에서_거부한다(name: str) -> None:
+    """`mcp` 칸은 패턴 없이 선언되어 `../../evil` 도 받는다(이 칸만 원소마다 패턴을 든다)."""
+    assert _error_types(AGENT + f'skills = ["{name}"]\n') == ["string_pattern_mismatch"]
+
+
+def test_skills의_원소가_문자열이_아니면_거부한다() -> None:
+    assert _error_types(AGENT + "skills = [5]\n") == ["string_type"]
+
+
+def test_skills에_같은_이름이_두_번_있으면_거부하고_문구는_이름을_든다() -> None:
+    with pytest.raises(
+        ValidationError, match="agent 플러그인의 skills 에 같은 이름이 두 번 있다: answer-format"
+    ):
+        parse_manifest(AGENT + 'skills = ["answer-format", "other-skill", "answer-format"]\n')
+
+
+def test_패턴을_어긴_이름을_두_번_적어도_패턴_거부만_나고_중복_문구는_나지_않는다() -> None:
+    """중복 검증이 패턴 검증보다 먼저 돌면 `../../evil` 이 중복 문구에 실린다."""
+    with pytest.raises(ValidationError) as caught:
+        parse_manifest(AGENT + 'skills = ["../../evil", "../../evil"]\n')
+
+    assert {str(error["type"]) for error in caught.value.errors()} == {"string_pattern_mismatch"}
+    assert "두 번 있다" not in str(caught.value)
+
+
+@pytest.mark.parametrize("kind", ["mcp", "skill", "model"])
+def test_에이전트가_아니면_skills를_갖지_못한다(kind: str) -> None:
+    manifest = _other_kind(kind, 'skills = ["answer-format"]')
+
+    with pytest.raises(ValidationError, match=f"{kind} 플러그인은 skills 를 갖지 않는다"):
+        parse_manifest(manifest)
+
+
+def test_직렬화_스키마에서_skills는_required이고_null을_허락하지_않고_원소가_패턴을_든다() -> None:
+    """관리 API 의 응답 타입 그대로라 늘 실리는 칸이 required 로 나간다(ADR 0010 의 2026-09-23
+    이력). 원소의 패턴이 `items` 에 실려야 생성 클라이언트가 같은 규칙을 안다."""
+    schema = PluginManifest.model_json_schema(mode="serialization")
+    skills = schema["properties"]["skills"]
+
+    assert "skills" in schema["required"]
+    assert skills["type"] == "array"
+    assert skills["items"]["pattern"] == PLUGIN_NAME_PATTERN
+    assert "anyOf" not in skills
 
 
 def test_직렬화_스키마에서_새_다섯_칸은_모두_required이고_null을_허락한다() -> None:

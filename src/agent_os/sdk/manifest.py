@@ -9,15 +9,16 @@ from __future__ import annotations
 import tomllib
 from collections.abc import Mapping
 from enum import StrEnum
-from typing import Literal, Self
+from typing import Annotated, Literal, Self
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from agent_os.sdk.ids import PLUGIN_NAME_PATTERN, PluginName
 
 
-# skill은 첫 슬라이스에서 디렉터리와 값만 예약한다. 이 타입은 관리 API 계약에도 박히므로
-# 진행 상태는 독스트링이 아니라 여기 둔다. 독스트링이 곧 openapi.json 의 설명이다.
+# skill은 공통 넷만 가지고 종류별 칸이 없다. 에이전트가 매니페스트의 `skills` 로 이름을 골라 쓴다
+# (ADR 0041). 이 타입은 관리 API 계약에도 박히므로 진행 상태는 독스트링이 아니라 여기 둔다.
+# 독스트링이 곧 openapi.json 의 설명이다.
 class PluginKind(StrEnum):
     """플러그인의 종류. 값은 넷이다."""
 
@@ -90,6 +91,12 @@ class PluginManifest(BaseModel):
     # (ADR 0040). 패턴은 여기서 걸어 읽는 단계가 거부한다. 그 이름의 모델 플러그인이 실재하는지는
     # 매니페스트만으로 알 수 없어 sdk가 보지 않는다.
     model: PluginName | None = Field(default=None, pattern=PLUGIN_NAME_PATTERN)
+    # 에이전트만. 쓸 스킬 플러그인의 이름들이고 적은 순서를 지킨다. 비어 있는 것이 기본이다(ADR
+    # 0041). 원소마다 패턴을 거는 이유는 `PluginName` 이 패턴을 들지 않는 NewType 이라 `mcp` 칸처럼
+    # 선언하면 `../../evil` 을 받기 때문이다. 이름은 파일 경로로 조립되고 openapi.json 의 `items` 에
+    # 패턴이 실려야 계약이 같은 규칙을 드러낸다. 가리키는 스킬 플러그인이 실재하는지는
+    # 매니페스트만으로 알 수 없어 sdk가 보지 않는다.
+    skills: tuple[Annotated[PluginName, Field(pattern=PLUGIN_NAME_PATTERN)], ...] = ()
     # 모델만. 제공사와 모델 id 는 필수이고 아래 둘은 선택이다. 선택 둘에 숫자 기본값을 두지 않는
     # 이유는 `conversation_limit` 과 같다 — 두면 그 숫자가 직렬화 스키마와 관리 API 의 응답에
     # 박힌다. 없을 때의 값은 sdk가 정하지 않는다. 필수 둘이 기본값 없음(None)인 것은 직렬화 스키마를
@@ -117,6 +124,13 @@ class PluginManifest(BaseModel):
             raise ValueError(f"{self.kind} 플러그인은 requires_approval 목록을 갖지 않는다")
         if self.kind is not PluginKind.AGENT and "conversation_limit" in self.model_fields_set:
             raise ValueError(f"{self.kind} 플러그인은 conversation_limit 을 갖지 않는다")
+        if self.kind is not PluginKind.AGENT and "skills" in self.model_fields_set:
+            raise ValueError(f"{self.kind} 플러그인은 skills 를 갖지 않는다")
+        # 이 검증자는 필드 검증 뒤에 돌아 이름이 패턴을 지난 값이다. 어긴 값이 문구에 실리지 않는다.
+        # 조용히 합치지 않는 이유는 오타가 숨고 열이 적은 순서와 달라지기 때문이다.
+        for name in self.skills:
+            if self.skills.count(name) > 1:
+                raise ValueError(f"agent 플러그인의 skills 에 같은 이름이 두 번 있다: {name}")
         if self.kind is PluginKind.MODEL:
             if self.provider is None:
                 raise ValueError("model 플러그인은 provider가 필요하다")

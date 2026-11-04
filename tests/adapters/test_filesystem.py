@@ -416,6 +416,34 @@ def test_플러그인_이름_패턴을_어기는_디렉터리도_표지로_남�
     )
 
 
+def _write_skills_agent(root: Path, name: str, skills: str) -> None:
+    directory = root / "agents" / name
+    directory.mkdir(parents=True)
+    extra = f'entrypoint = "agent:Agent"\nskills = {skills}\n'
+    (directory / "plugin.toml").write_text(_manifest("agent", name, extra), encoding="utf-8")
+
+
+def test_skills는_적은_순서로_읽히고_패턴을_어기면_그_행만_표지다(root: Path) -> None:
+    """목록 전체가 실패하지 않는다. 표지의 문구에는 어긴 값이 실리지 않고 칸 이름과 오류 종류가
+    남는다(`../../evil` 은 파일 경로로 조립될 수 있는 값이다)."""
+    _write_skills_agent(root, "good", '["zeta-skill", "alpha-skill"]')
+    _write_skills_agent(root, "bad", '["../../evil"]')
+    plugins: PluginSource = FilesystemPlugins(root)
+
+    rows = plugins.list_manifests(PluginKind.AGENT)
+
+    assert _names(rows) == ["bad", "good"]
+    bad, good = rows
+    assert isinstance(good, PluginManifest)
+    assert good.skills == ("zeta-skill", "alpha-skill")
+    assert isinstance(bad, UnreadableManifest)
+    assert "skills" in bad.reason
+    assert "string_pattern_mismatch" in bad.reason
+    assert "../../evil" not in bad.reason
+    with pytest.raises(PluginError, match="skills"):
+        plugins.read_manifest(PluginKind.AGENT, PluginName("bad"))
+
+
 # 운영자 파일 — 켜짐은 플러그인 루트의 disabled.toml 이 든다(ADR 0017, plugin-toggle 티켓 01)
 
 DISABLED = "disabled.toml"
