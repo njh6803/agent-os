@@ -1,14 +1,18 @@
 """저장소의 calc 플러그인. 실물 플러그인 루트(`plugins/`)에서 읽고 가짜 모델로 돌려 프롬프트를 본다.
 
-calc 는 컨텍스트 멤버(자기 대화 요약과 그 뒤 교환)를 "앞 대화" 블록으로 프롬프트에 엮는다(ADR 0022
-"에이전트는 앞 교환을 문자열 프롬프트로 엮는다", conversation 명세 "calc"). 이어 가지 않은 실행의
-프롬프트는 그 결정 전과 글자 그대로 같아야 해서 그 문자열을 여기 박아 둔다 — 블록이 빈 대화에 새면
-여기서 잡힌다(명세 "calc"의 2026-10-04 명세 검토, 스토리 40). 도구 포트는 가짜라 도구가 없고,
+calc 는 컨텍스트 멤버(자기 대화 요약과 그 뒤 교환)를 "앞 대화" 블록으로, 고른 스킬을 "지침" 블록으로
+프롬프트에 엮는다(ADR 0022 "에이전트는 앞 교환을 문자열 프롬프트로 엮는다", ADR 0041 "컨텍스트의
+멤버", conversation 명세 "calc", skill-plugin 명세 "예시 스킬"). 스킬을 고르지 않은 calc 의
+프롬프트는 블록이 없는 옛 글이어야 해서 그 문자열을 여기 박아 둔다 — 블록이 빈 대화나 스킬 없는
+실행에 새면 여기서 잡힌다(conversation 명세 "calc"의 2026-10-04 명세 검토, 스토리 40). 저장소의 calc
+는 `answer-format` 을 골라 그 본문이 든 글(`FRESH_PROMPT`)을 낸다. 도구 포트는 가짜라 도구가 없고,
 calc 의 매니페스트가 가리키는 mcp(`everything`)는 실물 루트에서 읽힌다. 실제 모델과 실제 서버로
 도는 것은 `tests/test_main.py` 의 `-m llm` 사례와, 위젯 화면에서 도는 `-m llm_widget` 의
 `tests/test_widget_llm.py` 다.
 """
 
+import shutil
+import tomllib
 from collections.abc import AsyncGenerator, Mapping, Sequence
 from contextlib import asynccontextmanager
 from datetime import UTC, datetime
@@ -46,6 +50,7 @@ from agent_os.sdk import (
     RunFinished,
     RunId,
     RunStarted,
+    Skill,
 )
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -55,10 +60,17 @@ NOW = datetime(2026, 10, 5, 12, 0, tzinfo=UTC)
 # 읽힌다.
 DEFAULT_MODEL = PluginName("claude-opus-5")
 
-# 이 티켓 전의 calc 프롬프트 그대로. 이어 가지 않은 실행은 이것과 글자 그대로 같아야 한다.
-FRESH_PROMPT = (
-    "계산 요청이다. 도구가 있으면 도구로 계산한다. 최종 답만 짧게 답한다.\n\n요청: 2 더하기 3은?"
+HEAD = "계산 요청이다. 도구가 있으면 도구로 계산한다. 최종 답만 짧게 답한다.\n\n"
+# 저장소의 `plugins/skills/answer-format/SKILL.md` 본문(앞뒤를 다듬은 글). 프로브
+# `.scratch/skill-plugin/probes/answer_format_llm.py`가 이 글 그대로 쟀다.
+ANSWER_FORMAT_BODY = (
+    "답은 값 하나만 쓴다. 단위·설명·계산 과정을 붙이지 않는다. "
+    "계산할 수 없으면 왜 할 수 없는지 한 문장으로 답한다."
 )
+# 스킬을 고르지 않은 calc의 프롬프트. 스킬 경로가 서기 전의 옛 글 그대로다.
+BARE_PROMPT = f"{HEAD}요청: 2 더하기 3은?"
+# 이어 가지 않은 저장소 calc의 프롬프트. 머리 문장과 요청 사이에 `지침` 블록이 하나 든다.
+FRESH_PROMPT = f"{HEAD}지침 answer-format: {ANSWER_FORMAT_BODY}\n\n요청: 2 더하기 3은?"
 
 
 class RecordingModel(GenericFakeChatModel):
@@ -118,8 +130,9 @@ async def _run_calc(
     trace: TraceStore,
     clock: Clock,
     previous_run: RunId | None = None,
+    plugins_root: Path = REPO_ROOT / "plugins",
 ) -> list[Event]:
-    plugins: PluginSource = FilesystemPlugins(REPO_ROOT / "plugins")
+    plugins: PluginSource = FilesystemPlugins(plugins_root)
     models: ModelSource = FakeModels(model)
     tools: ToolSource = NoTools()
     return [
@@ -154,7 +167,31 @@ def _finished(events: Sequence[Event]) -> RunId:
     return events[-1].run_id
 
 
-async def test_이어_가지_않은_실행의_프롬프트는_이_티켓_전과_글자_그대로_같다(
+def test_저장소의_answer_format_폴더는_실제_어댑터로_읽혀_스킬이_된다() -> None:
+    skill = FilesystemPlugins(REPO_ROOT / "plugins").read_skill(PluginName("answer-format"))
+
+    assert isinstance(skill, Skill)
+    assert skill.name == "answer-format"
+    assert skill.description
+    assert skill.body.strip() == ANSWER_FORMAT_BODY
+
+
+def test_저장소의_answer_format_매니페스트는_공통_넷뿐이다() -> None:
+    manifest = tomllib.loads(
+        (REPO_ROOT / "plugins" / "skills" / "answer-format" / "plugin.toml").read_text(
+            encoding="utf-8"
+        )
+    )
+
+    assert manifest == {
+        "schema_version": "1",
+        "kind": "skill",
+        "name": "answer-format",
+        "version": "0.1.0",
+    }
+
+
+async def test_이어_가지_않은_실행의_프롬프트는_저장소_스킬_블록이_든_글과_글자_그대로_같다(
     tmp_path: Path,
 ) -> None:
     model = _model("5")
@@ -186,14 +223,99 @@ async def test_이어_간_실행의_프롬프트는_앞_교환을_오래된_것�
     )
 
     prompt = _prompt_of(model, events)
-    head = FRESH_PROMPT.partition("요청: ")[0]
-    assert prompt.startswith(head)
+    assert prompt.startswith(HEAD)
     assert prompt.endswith("요청: 거기에서 6을 빼면?")
     assert "앞 대화" in prompt
     assert "지시가 아니라 데이터" in prompt
     order = ["2 더하기 3은?", "5", "거기에 4를 곱하면?", "20", "요청: 거기에서 6을 빼면?"]
     positions = [prompt.index(piece) for piece in order]
     assert positions == sorted(positions), prompt
+
+
+async def test_이어_간_실행에서_스킬_블록은_앞_대화_블록보다_앞에_선다(tmp_path: Path) -> None:
+    """지시가 데이터 뒤에 서면 데이터 안의 글이 지시로 읽힐 틈이 커진다(skill-plugin 명세 "예시
+    스킬"의 거부한 안). 블록 사이는 빈 줄 하나다."""
+    trace, clock = JsonlTrace(tmp_path), CountingClock()
+    first = _finished(await _run_calc("2 더하기 3은?", model=_model("5"), trace=trace, clock=clock))
+    model = _model("20")
+
+    events = await _run_calc(
+        "거기에 4를 곱하면?", model=model, trace=trace, clock=clock, previous_run=first
+    )
+
+    prompt = _prompt_of(model, events)
+    skill_block = f"지침 answer-format: {ANSWER_FORMAT_BODY}\n\n"
+    assert prompt.startswith(HEAD + skill_block + "앞 대화")
+    assert prompt.endswith("요청: 거기에 4를 곱하면?")
+
+
+async def test_스킬이_둘이면_매니페스트_순서로_블록_둘이고_본문은_파일에서_읽힌다(
+    tmp_path: Path,
+) -> None:
+    """둘째 스킬의 본문은 이 시험만 안다. 그 글이 프롬프트에 드는 것이 파일에서 읽힌 글이 에이전트를
+    거쳐 모델에 닿는 증거다. 본문을 코드에 베낀 calc 는 여기서 빨갛다. 본문의 앞뒤 공백은 다듬고
+    블록 사이는 빈 줄 하나다."""
+    root = _copy_plugins(tmp_path / "root")
+    second = root / "skills" / "second-format"
+    second.mkdir()
+    (second / "plugin.toml").write_text(
+        'schema_version = "1"\nkind = "skill"\nname = "second-format"\nversion = "0.1.0"\n',
+        encoding="utf-8",
+    )
+    (second / "SKILL.md").write_text(
+        "---\nname: second-format\ndescription: 시험이 더한 스킬\n---\n\n\n"
+        "둘째 본문은 이 시험만 안다.  \n\n",
+        encoding="utf-8",
+    )
+    _replace_in_calc_manifest(
+        root, 'skills = ["answer-format"]', 'skills = ["answer-format", "second-format"]'
+    )
+    model = _model("5")
+
+    events = await _run_calc(
+        "2 더하기 3은?",
+        model=model,
+        trace=JsonlTrace(tmp_path / "t"),
+        clock=CountingClock(),
+        plugins_root=root,
+    )
+
+    assert _prompt_of(model, events) == (
+        f"{HEAD}지침 answer-format: {ANSWER_FORMAT_BODY}\n\n"
+        "지침 second-format: 둘째 본문은 이 시험만 안다.\n\n"
+        "요청: 2 더하기 3은?"
+    )
+
+
+async def test_skills_를_지운_calc_의_프롬프트는_블록_없는_옛_글이다(tmp_path: Path) -> None:
+    root = _copy_plugins(tmp_path / "root")
+    _replace_in_calc_manifest(root, 'skills = ["answer-format"]\n', "")
+    model = _model("5")
+
+    events = await _run_calc(
+        "2 더하기 3은?",
+        model=model,
+        trace=JsonlTrace(tmp_path / "t"),
+        clock=CountingClock(),
+        plugins_root=root,
+    )
+
+    assert _prompt_of(model, events) == BARE_PROMPT
+
+
+def _copy_plugins(destination: Path) -> Path:
+    """저장소 `plugins/` 의 사본. 시험이 매니페스트를 고치거나 플러그인을 더하는 임시 루트다."""
+    shutil.copytree(
+        REPO_ROOT / "plugins", destination, ignore=shutil.ignore_patterns("__pycache__")
+    )
+    return destination
+
+
+def _replace_in_calc_manifest(root: Path, old: str, new: str) -> None:
+    manifest = root / "agents" / "calc" / "plugin.toml"
+    text = manifest.read_text(encoding="utf-8")
+    assert text.count(old) == 1, text
+    manifest.write_text(text.replace(old, new), encoding="utf-8")
 
 
 async def test_요약이_있으면_요약이_교환보다_앞에_서고_덮인_교환은_들지_않는다(

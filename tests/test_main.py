@@ -62,6 +62,7 @@ from agent_os.sdk import (
     RunPaused,
     RunStarted,
     ToolCalled,
+    parse_skill,
 )
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -599,6 +600,13 @@ def test_calc_에이전트가_실제_모델로_답하고_트레이스에_모델_
     assert any(e.content for e in tool_calls)
     # 플러그인 이름이 아니라 매니페스트의 `model_id` 가 제공사에 닿았다.
     assert all(e.model == MODEL_PLUGIN for e in events if isinstance(e, LlmCalled))
+    # 저장소의 스킬 문서가 파일에서 읽혀 calc 가 엮은 프롬프트로 모델에 갔다(skill-plugin 명세
+    # "실제 모델 호출 하나"). 이 본문은 시험이 그 파일을 직접 읽어 다듬은 글이다.
+    skill_file = REPO_ROOT / "plugins" / "skills" / "answer-format" / "SKILL.md"
+    body = parse_skill(skill_file.read_text(encoding="utf-8")).body.strip()
+    assert body
+    first_prompt = next(e.prompt for e in events if isinstance(e, LlmCalled) and e.prompt)
+    assert body in first_prompt
 
 
 def test_승인_대상에서_멈추면_실행_식별자와_승인_요청이_표준_출력에_찍히고_전용_종료_코드다(
@@ -2792,8 +2800,14 @@ def _trace_events(trace_file: Path) -> list[Event]:
 
 
 def _copy_repo_plugins(root: Path) -> None:
-    """저장소의 calc 와 그것이 쓰는 mcp(`everything`), 기본 모델을 임시 루트에 복사한다."""
-    for kind, name in (("agents", "calc"), ("mcp", "everything"), ("models", MODEL_PLUGIN)):
+    """저장소의 calc 와 그것이 쓰는 mcp(`everything`)와 스킬(`answer-format`), 기본 모델을 임시
+    루트에 복사한다. calc 의 매니페스트가 고른 스킬이 없으면 실행이 준비에서 멈춘다."""
+    for kind, name in (
+        ("agents", "calc"),
+        ("mcp", "everything"),
+        ("skills", "answer-format"),
+        ("models", MODEL_PLUGIN),
+    ):
         shutil.copytree(
             REPO_ROOT / "plugins" / kind / name,
             root / "plugins" / kind / name,
