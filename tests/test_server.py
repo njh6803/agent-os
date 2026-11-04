@@ -101,6 +101,7 @@ from agent_os.sdk import (
     RunId,
     RunPaused,
     RunStarted,
+    Skill,
     ToolCall,
     is_run_id,
     parse_manifest,
@@ -238,6 +239,9 @@ class FakePlugins:
 
     def load_agent(self, manifest: PluginManifest) -> BaseAgent:
         raise NotImplementedError("관리는 실행을 일으키지 않는다")
+
+    def read_skill(self, name: PluginName) -> Skill | None:
+        raise NotImplementedError("관리는 스킬 문서를 읽지 않는다")
 
     def read_disabled(self) -> frozenset[PluginKey]:
         self.calls += 1

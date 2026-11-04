@@ -97,6 +97,7 @@ from agent_os.sdk import (
     RunPaused,
     RunResumed,
     RunStarted,
+    Skill,
     ToolCall,
     ToolCalled,
     ToolError,
@@ -297,6 +298,9 @@ class FakePlugins:
 
     def list_manifests(self, kind: PluginKind) -> tuple[ManifestRow, ...]:
         raise NotImplementedError("매니페스트 목록은 어댑터 테스트가 실물 디렉터리로 잰다")
+
+    def read_skill(self, name: PluginName) -> Skill | None:
+        return None
 
     def load_agent(self, manifest: PluginManifest) -> BaseAgent:
         self.loads += 1
@@ -3257,6 +3261,13 @@ class WeavingAgent:
         yield RunFinished(run_id=ctx.run_id, ts=ctx.now(), output=_woven(ctx.conversation))
 
 
+class SkillsAgent:
+    """`ctx.skills` 를 출력에 옮긴다. 모델도 도구도 쓰지 않는다."""
+
+    async def run(self, request: str, ctx: AgentContext) -> AsyncIterator[Event]:
+        yield RunFinished(run_id=ctx.run_id, ts=ctx.now(), output=repr(ctx.skills))
+
+
 class WeavingTwiceAgent:
     """모델 호출 앞뒤로 멤버를 읽는다. 실행 안에서 값이 바뀌지 않는 것을 본다."""
 
@@ -3421,6 +3432,13 @@ async def test_이어_가지_않은_실행의_멤버는_요약이_없고_교환�
     started = events[0]
     assert isinstance(started, RunStarted)
     assert started.previous_run is None
+
+
+async def test_스킬_멤버는_늘_빈_열이다(trace: FakeTrace, clock: FakeClock) -> None:
+    # 런타임이 아직 스킬 문서를 읽지 않는다. 읽어 싣는 것은 다음 티켓이다.
+    events = await _run(SkillsAgent(), GenericFakeChatModel(messages=iter([])), trace, clock)
+
+    assert _output_of(events) == "()"
 
 
 async def test_이어_가기는_새_실행이고_시작_이벤트가_앞_실행을_든다(

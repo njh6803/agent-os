@@ -12,6 +12,7 @@ import sys
 import threading
 import time
 import tomllib
+import traceback
 from collections.abc import Callable, Sequence
 from concurrent.futures import ThreadPoolExecutor
 from datetime import UTC, datetime
@@ -39,6 +40,7 @@ from agent_os.sdk import (
     PluginName,
     RunFinished,
     RunId,
+    Skill,
 )
 
 AGENT_SRC = """
@@ -79,6 +81,7 @@ def _write_mcp(root: Path, name: str) -> None:
 class FakeContext:
     run_id = RunId("r1")
     conversation = Conversation(summary=None, exchanges=())
+    skills: tuple[Skill, ...] = ()
 
     def now(self) -> datetime:
         return datetime(2026, 9, 21, tzinfo=UTC)
@@ -212,6 +215,175 @@ def test_디렉터리와_name이_어긋나면_에러다(root: Path) -> None:
 
     with pytest.raises(PluginError, match="name"):
         plugins.read_manifest(PluginKind.AGENT, PluginName("outer"))
+
+
+# 스킬 문서 — `read_skill` 은 `skills/<이름>/SKILL.md` 를 매니페스트와 같은 길로 읽는다(ADR 0041)
+
+SKILL_SECRET = "sk-ant-api03-PLANTED-SKILL-SECRET"
+SKILL_HEAD = "name: pdf-processing\ndescription: PDF 를 다룬다\n"
+
+
+def _skill_document(head: str = SKILL_HEAD, body: str = "본문\n") -> str:
+    return f"---\n{head}---\n{body}"
+
+
+def _write_skill(
+    root: Path, name: str, document: str | bytes | None, *, manifest: bool = True
+) -> Path:
+    """스킬 폴더 하나. 문서는 바이트로 쓴다(줄 끝과 BOM을 그대로 두려고). 돌려주는 것은 문서의
+    경로다."""
+    directory = root / "skills" / name
+    directory.mkdir(parents=True)
+    if manifest:
+        (directory / "plugin.toml").write_text(_manifest("skill", name), encoding="utf-8")
+    path = directory / "SKILL.md"
+    if document is not None:
+        path.write_bytes(document.encode("utf-8") if isinstance(document, str) else document)
+    return path
+
+
+def test_스킬_문서를_읽어_값으로_돌려준다(root: Path) -> None:
+    _write_skill(root, "pdf-processing", _skill_document(body="# 제목\n\n본문이다.\n"))
+    plugins: PluginSource = FilesystemPlugins(root)
+
+    skill = plugins.read_skill(PluginName("pdf-processing"))
+
+    assert skill == Skill(
+        name=PluginName("pdf-processing"), description="PDF 를 다룬다", body="# 제목\n\n본문이다.\n"
+    )
+
+
+def test_스킬_문서가_없으면_None이다(root: Path) -> None:
+    _write_skill(root, "pdf-processing", None)
+    plugins: PluginSource = FilesystemPlugins(root)
+
+    assert plugins.read_skill(PluginName("pdf-processing")) is None
+
+
+def test_스킬_폴더가_없어도_None이다(root: Path) -> None:
+    plugins: PluginSource = FilesystemPlugins(root)
+
+    assert plugins.read_skill(PluginName("nope")) is None
+
+
+def test_머리말의_name이_폴더_이름과_다르면_에러이고_가리킨_스킬의_파일을_읽지_않는다(
+    root: Path,
+) -> None:
+    _write_skill(root, "pdf-processing", _skill_document())
+    outer = _write_skill(
+        root, "outer", _skill_document("name: pdf-processing\ndescription: 바깥 자리다\n")
+    )
+    plugins: PluginSource = FilesystemPlugins(root)
+
+    with pytest.raises(PluginError) as raised:
+        plugins.read_skill(PluginName("outer"))
+
+    assert str(raised.value) == (
+        f"디렉터리와 머리말의 name이 어긋난다: {outer} 는 outer 자리인데 pdf-processing"
+    )
+
+
+def test_CRLF_파일의_본문은_LF로_읽힌다(root: Path) -> None:
+    # 텍스트 모드 읽기가 줄 끝을 \n 으로 바꾼다(매니페스트와 같은 길).
+    document = _skill_document(body="# 제목\n본문이다.\n").replace("\n", "\r\n")
+    _write_skill(root, "pdf-processing", document)
+    plugins: PluginSource = FilesystemPlugins(root)
+
+    skill = plugins.read_skill(PluginName("pdf-processing"))
+
+    assert skill is not None
+    assert skill.body == "# 제목\n본문이다.\n"
+
+
+def test_홀로_선_CR_파일도_텍스트_모드_읽기가_LF로_바꿔_받아들인다(root: Path) -> None:
+    # 글을 직접 넘기면 거부되는 입력이다. 어댑터 경로에서는 그 거부를 기대하지 않는다.
+    _write_skill(root, "pdf-processing", _skill_document(body="본문\n").replace("\n", "\r"))
+    plugins: PluginSource = FilesystemPlugins(root)
+
+    skill = plugins.read_skill(PluginName("pdf-processing"))
+
+    assert skill is not None
+    assert skill.body == "본문\n"
+
+
+def test_BOM으로_시작하는_스킬_문서는_머리말로_시작하지_않아_에러다(root: Path) -> None:
+    path = _write_skill(root, "pdf-processing", chr(0xFEFF) + _skill_document())
+    plugins: PluginSource = FilesystemPlugins(root)
+
+    with pytest.raises(PluginError) as raised:
+        plugins.read_skill(PluginName("pdf-processing"))
+
+    assert str(raised.value).splitlines()[0] == f"스킬 문서를 읽을 수 없다: {path}"
+    assert "머리말로 시작하지 않는다" in str(raised.value)
+
+
+def test_UTF_8이_아닌_스킬_문서는_에러다(root: Path) -> None:
+    path = _write_skill(root, "pdf-processing", b"---\nname: pdf-processing\n\xff\xfe\n---\n")
+    plugins: PluginSource = FilesystemPlugins(root)
+
+    with pytest.raises(PluginError) as raised:
+        plugins.read_skill(PluginName("pdf-processing"))
+
+    assert str(raised.value).splitlines()[0] == f"스킬 문서를 읽을 수 없다: {path}"
+    assert "utf-8" in str(raised.value)
+
+
+def test_닫히지_않은_따옴표_뒤의_값은_스킬을_읽지_못한_문구에_나오지_않는다(root: Path) -> None:
+    head = f'{SKILL_HEAD}extra: "{SKILL_SECRET}\n'
+    path = _write_skill(root, "pdf-processing", _skill_document(head))
+    assert SKILL_SECRET in path.read_text(encoding="utf-8")
+    plugins: PluginSource = FilesystemPlugins(root)
+
+    with pytest.raises(PluginError) as raised:
+        plugins.read_skill(PluginName("pdf-processing"))
+
+    message = str(raised.value)
+    assert message.splitlines()[0] == f"스킬 문서를 읽을 수 없다: {path}"
+    assert re.search(r"ScannerError \(줄 \d+, 칸 \d+\)", message)
+    assert SKILL_SECRET not in message
+
+
+def test_칸에_잘못_적은_값은_스킬_문구에도_예외_사슬에도_남지_않는다(root: Path) -> None:
+    head = f"name: pdf-processing\ndescription: [{SKILL_SECRET}]\n"
+    path = _write_skill(root, "pdf-processing", _skill_document(head))
+    plugins: PluginSource = FilesystemPlugins(root)
+
+    with pytest.raises(PluginError) as raised:
+        plugins.read_skill(PluginName("pdf-processing"))
+
+    message = str(raised.value)
+    assert message.splitlines()[0] == f"스킬 문서를 읽을 수 없다: {path}"
+    assert "string_type (description)" in message
+    assert SKILL_SECRET not in message
+    # 원인을 이으면 트레이스백 출력에 pydantic 의 str(입력 값 포함)이 실린다.
+    assert raised.value.__cause__ is None
+    assert raised.value.__context__ is None
+    assert SKILL_SECRET not in "".join(traceback.format_exception(raised.value))
+
+
+def test_같은_이름을_두_번_읽는_사이_파일을_고치면_둘째가_고친_글을_돌려준다(root: Path) -> None:
+    path = _write_skill(root, "pdf-processing", _skill_document(body="처음\n"))
+    plugins: PluginSource = FilesystemPlugins(root)
+    first = plugins.read_skill(PluginName("pdf-processing"))
+
+    path.write_text(_skill_document(body="고침\n"), encoding="utf-8")
+    second = plugins.read_skill(PluginName("pdf-processing"))
+
+    assert first is not None
+    assert second is not None
+    assert (first.body, second.body) == ("처음\n", "고침\n")
+
+
+def test_스킬_문서가_없거나_깨진_폴더도_목록의_보통_행이다(root: Path) -> None:
+    # 목록은 매니페스트만 읽는다. 문서의 깨짐은 그 스킬을 고른 에이전트의 실행 전에 드러난다.
+    _write_skill(root, "no-document", None)
+    _write_skill(root, "broken-document", "머리말 없이 본문뿐이다\n")
+    plugins: PluginSource = FilesystemPlugins(root)
+
+    rows = plugins.list_manifests(PluginKind.SKILL)
+
+    assert _names(rows) == ["broken-document", "no-document"]
+    assert all(isinstance(row, PluginManifest) for row in rows)
 
 
 def _names(rows: Sequence[ManifestRow]) -> list[str]:

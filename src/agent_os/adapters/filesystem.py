@@ -1,6 +1,7 @@
 """파일시스템 PluginSource. 진실의 원천은 디렉터리와 매니페스트와 운영자 파일이다(ADR 0003, 0017).
 
 `<root>/<kind 디렉터리>/<name>/plugin.toml`. 부재는 None, 파싱·import 실패는 PluginError.
+스킬 문서는 `<root>/skills/<name>/SKILL.md` 이고 `read_skill` 이 읽는다(ADR 0041). 같은 규칙이다.
 진입점은 플러그인 디렉터리 기준 파일이며 고유 모듈명 `agent_os_plugins.<name>.<module>`로 로드한다.
 sys.path 를 건드리지 않는다.
 
@@ -44,8 +45,10 @@ from agent_os.sdk import (
     PluginKind,
     PluginManifest,
     PluginName,
+    Skill,
     is_plugin_name,
     parse_manifest,
+    parse_skill,
 )
 
 _DIRECTORY = {
@@ -55,6 +58,7 @@ _DIRECTORY = {
     PluginKind.MODEL: "models",
 }
 _MANIFEST = "plugin.toml"
+_SKILL_DOCUMENT = "SKILL.md"
 _DISABLED = "disabled.toml"
 _OPERATOR_FILE_SCHEMA_VERSION = "1"
 
@@ -134,6 +138,22 @@ class FilesystemPlugins:
                 f"디렉터리와 name이 어긋난다: {path} 는 {name} 자리인데 {manifest.name}"
             )
         return manifest
+
+    def read_skill(self, name: PluginName) -> Skill | None:
+        """스킬 폴더의 `SKILL.md` 를 읽는다. 파일이 없으면(폴더가 없어도) None, 손상은 PluginError.
+
+        경로는 인자의 이름으로만 조립한다. 머리말의 name 으로 경로를 만들지 않고, 인자와 다르면
+        어긋남이다. 캐시하지 않아 부를 때마다 파일을 다시 읽는다. 동기다(포트의 독스트링).
+        """
+        path = self._root / _DIRECTORY[PluginKind.SKILL] / name / _SKILL_DOCUMENT
+        if not path.is_file():
+            return None
+        skill = _parse_skill(path)
+        if skill.name != name:
+            raise PluginError(
+                f"디렉터리와 머리말의 name이 어긋난다: {path} 는 {name} 자리인데 {skill.name}"
+            )
+        return skill
 
     def list_manifests(self, kind: PluginKind) -> tuple[ManifestRow, ...]:
         """종류 디렉터리의 매니페스트를 이름 순으로. 없는 디렉터리는 빈 목록이다."""
@@ -267,6 +287,22 @@ def _parse(path: Path) -> PluginManifest:
     except (OSError, ValidationError, ValueError) as error:
         # ValidationError 와 UnicodeDecodeError 가 둘 다 ValueError 다.
         raise PluginError(f"매니페스트를 읽을 수 없다: {path}\n{_describe(error)}") from error
+
+
+def _parse_skill(path: Path) -> Skill:
+    """읽지 못하는 모든 이유를 PluginError 로 만든다. 파일을 여는 것부터 머리말 검증까지 전부다.
+
+    어댑터는 YAML 을 모른다. sdk 의 `parse_skill` 이 YAML 읽기의 모든 예외를 `ValueError` 로 바꿔
+    내므로 잡는 집합이 매니페스트와 같다. 원인을 잇지 않는다 — `except` 에서는 이유 문구만 만들고
+    `PluginError` 는 그 블록 밖에서 던진다. `from error` 로 이으면 `description: [비밀]` 의
+    `ValidationError` 가 `__cause__` 에 남아 트레이스백 출력에 입력 값이 실린다.
+    """
+    try:
+        return parse_skill(path.read_text(encoding="utf-8"))
+    except (OSError, ValidationError, ValueError) as error:
+        # ValidationError 와 UnicodeDecodeError 가 둘 다 ValueError 다.
+        reason = _describe(error)
+    raise PluginError(f"스킬 문서를 읽을 수 없다: {path}\n{reason}")
 
 
 def _describe(error: Exception) -> str:

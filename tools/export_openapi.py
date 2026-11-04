@@ -46,6 +46,7 @@ from agent_os.sdk import (
     PluginName,
     Principal,
     RunId,
+    Skill,
 )
 from agent_os.server import create_app
 
@@ -67,6 +68,9 @@ class _SchemaOnlyPlugins:
         raise NotImplementedError("스키마 추출은 포트를 부르지 않는다")
 
     def list_manifests(self, kind: PluginKind) -> Sequence[ManifestRow]:
+        raise NotImplementedError("스키마 추출은 포트를 부르지 않는다")
+
+    def read_skill(self, name: PluginName) -> Skill | None:
         raise NotImplementedError("스키마 추출은 포트를 부르지 않는다")
 
     def load_agent(self, manifest: PluginManifest) -> BaseAgent:
