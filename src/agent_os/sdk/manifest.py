@@ -128,9 +128,11 @@ class PluginManifest(BaseModel):
             raise ValueError(f"{self.kind} 플러그인은 skills 를 갖지 않는다")
         # 이 검증자는 필드 검증 뒤에 돌아 이름이 패턴을 지난 값이다. 어긴 값이 문구에 실리지 않는다.
         # 조용히 합치지 않는 이유는 오타가 숨고 열이 적은 순서와 달라지기 때문이다.
+        seen: set[str] = set()
         for name in self.skills:
-            if self.skills.count(name) > 1:
+            if name in seen:
                 raise ValueError(f"agent 플러그인의 skills 에 같은 이름이 두 번 있다: {name}")
+            seen.add(name)
         if self.kind is PluginKind.MODEL:
             if self.provider is None:
                 raise ValueError("model 플러그인은 provider가 필요하다")

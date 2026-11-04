@@ -55,6 +55,14 @@
 
 `uv run python tools/canary.py`로 `sdk_rule_failure_cause.toml`과 `sdk_rule_shortcut_patterns.toml`을 새 `claude -p`(2.1.318)로 돌렸다. 둘 다 통과 4, 실패 0, "없음" 섞임 0이다(도구 집계 줄을 읽었다). 갈래의 체크아웃 커밋은 `c81f7973`이고 `sdk.md`의 변경은 커밋 전이라 그 커밋에 없다. 도구가 못 보는 것으로 적은 "커밋하지 않은 변경" 몫이며, 실험군이 읽은 사본에 이 세션의 `sdk.md` 변경이 실렸는지는 이 출력으로 재지 못했다. 두 명세의 카나리아는 이 티켓이 더한 불릿과 다른 항목이라 이 실행은 규칙이 여전히 `paths`로 실린다는 것까지 보인다. 리뷰 반영 뒤 `ruff check`·`ruff format --check` 통과, 건드린 시험 파일 셋의 `-k "skills or manifest or plugin"` 109개 통과를 직접 쳤다.
 
+## PR 직전 리뷰
+
+- 커밋 `a13be30a`(pre-commit 전부 통과, 인용 대조 경고 1건은 주석 문장을 일지가 따옴표로 줄여 옮긴 것이라 뜻이 같고 막지 않는다)를 origin/main(`c81f7973`, fetch로 새 커밋 0을 확인)에서 리뷰했다.
+- CodeRabbit CLI 축: 비었다. `coderabbit-review` 서브에이전트 보고에 따르면 0.7.5가 설치되어 있고 `auth status`의 Review access에 `Plan: Free`, `Seat: not assigned`가 있어 `coderabbit review`를 돌리지 않았다(서브에이전트가 친 `auth status` 출력, 이 세션은 직접 치지 않았다). 그래서 대체 둘을 돌린다.
+- `/security-review`: 이 커밋의 diff를 읽고 판정했다. 지적 없음. 근거는 코드를 읽은 것이다. 이 변경은 `skills` 이름에 패턴을 걸어 경로 이탈 값을 읽는 단계에서 거부하는 쪽이고, 새 파일 접근·실행·외부 호출을 더하지 않는다. 런타임은 아직 `skills`를 읽지 않는다(03의 몫). 실제로 경계 입력을 대 본 것은 위 셀프 리뷰의 서브에이전트들이다.
+
+- `bug-perf-review`(서브에이전트 보고): 유효 1(Minor), 오탐 0, 보류 0. 패턴 우회는 없다(끝 개행, 널 문자, 전각·켈빈 기호, 역슬래시, 64자 등을 `model_validate`에 넣어 모두 거부됨을 서브에이전트가 `uv run python`으로 봤다). 표지 문구에 어긴 값이 실리지 않고 직렬화 스키마·`openapi.json`·생성 타입이 맞는다고 했다. 유효 1건은 `manifest.py`의 중복 검사가 원소마다 `count`를 불러 O(n²)이라는 것이다(서로 다른 이름 20,000개에 3.8초라고 서브에이전트가 쟀다. 이 세션은 다시 재지 않았다). 고치는 값이 한 줄이라 PR 전에 `seen` 집합으로 바꿨고 문구와 동작은 그대로다. 같은 지적을 표준 축이 Nit으로 냈었다.
+
 ## 남은 일 (이 세션이 인계한다)
 
 - 셀프 리뷰(`/code-review`)를 아직 하지 않았다. 변경은 커밋하지 않은 워크트리에 있다. 인계 계기가 `셀프 리뷰 직전`에서 왔다.
