@@ -1,15 +1,22 @@
 # skill-plugin 프로브
 
-설계 세션(일지 2026-11-03-02)이 ADR 0041의 근거로 들고, 명세 세션(일지 2026-11-03-03)이 명세(`.scratch/skill-plugin/spec.md`)의 근거로 드는 측정 스크립트다. 규약은 `docs/agents/issue-tracker.md`의 "프로브와 근거", 짓는 규칙은 `.claude/rules/probes.md`다. 근거로 드는 자리는 ADR 0041 Consequences의 "머리말은 PyYAML로 전체를 읽고 두 칸만 본다"와 명세의 절 넷(아래 표)이다.
+설계 세션(일지 2026-11-03-02)이 ADR 0041의 근거로 들고, 명세 세션(일지 2026-11-03-03)이 명세(`.scratch/skill-plugin/spec.md`)의 근거로 드는 측정 스크립트다. 규약은 `docs/agents/issue-tracker.md`의 "프로브와 근거", 짓는 규칙은 `.claude/rules/probes.md`다. 근거로 드는 자리는 ADR 0041 Consequences의 "머리말은 PyYAML로 전체를 읽고 두 칸만 본다"와 명세의 절 넷(아래 표)이다. 티켓 세션(일지 2026-11-04-02)이 `answer_format_llm.py`를 더했고, 명세 "예시 스킬"의 2026-11-04 명세 검토 주석이 그것을 근거로 든다.
 
 ## 돌리는 법
 
-저장소 루트에서 저장소 `.venv`로 돈다(Windows, Git Bash). 네트워크에 닿지 않고 API 키가 필요 없다. 종료 코드 0은 모든 회차가 측정으로 섰다는 뜻이고, 결론은 출력의 "결과:" 줄로 읽는다(`tools/probe_kit.py`의 `Rounds`).
+저장소 루트에서 저장소 `.venv`로 돈다(Windows, Git Bash). 아래 첫 세 명령은 네트워크에 닿지 않고 API 키가 필요 없다. 종료 코드 0은 모든 회차가 측정으로 섰다는 뜻이고, 결론은 출력의 "결과:" 줄로 읽는다(`tools/probe_kit.py`의 `Rounds`).
 
 ```sh
 PYTHONUTF8=1 uv run python .scratch/skill-plugin/probes/yaml_frontmatter.py
 PYTHONUTF8=1 uv run python .scratch/skill-plugin/probes/frontmatter_split.py
 PYTHONUTF8=1 uv run python .scratch/skill-plugin/probes/frontmatter_values.py
+```
+
+`answer_format_llm.py`만 네트워크와 `ANTHROPIC_API_KEY`가 필요하고 실제 모델을 부른다. 워크트리에서는 키를 `--env-file`로 넘긴다(경로는 `docs/constitution/operations.md`의 LLM 테스트). 인자로 갈래 이름을 주면 그 갈래만 돈다.
+
+```sh
+uv run --env-file ../../../.env python .scratch/skill-plugin/probes/answer_format_llm.py
+uv run --env-file ../../../.env python .scratch/skill-plugin/probes/answer_format_llm.py 도구금지
 ```
 
 ## 결과 (2026-11-03)
@@ -49,8 +56,21 @@ PYTHONUTF8=1 uv run python .scratch/skill-plugin/probes/frontmatter_values.py
 - **갈래: 바꿔 던진 예외에 원래 예외가 남는 자리(셋).** 같은 입력의 예외를 `except` 안에서 `raise ValueError(고정 문구) from error`로 이으면 `__cause__`에 원래 예외가 남고 `traceback.format_exception`의 출력에 그 값이 실린다(양성 대조). `from None`으로 바꿔 던지면 `__cause__`는 `None`이고 `__suppress_context__`가 참이라 출력에는 값이 없지만, `__context__`에 원래 예외가 남아 그 `str`에 값이 있다. `except`에서 종류만 뽑고 블록 밖에서 던지면 `__cause__`와 `__context__`가 모두 `None`이고 출력에도 `str`에도 값이 없다. PR 봇 claude-review가 `__cause__`로 이은 원래 예외가 트레이스백으로 새는 것을 짚어 셋째 판이 더했다. 이 셋은 바꿔 던지는 자리만 흉내 내고 sdk의 함수를 부르지 않으며, 출력은 `traceback.format_exception` 하나로만 봤다(`logging.exception`과 pytest의 실패 출력은 재지 않았다).
 - 해석은 다섯이다. `strict=True`의 두 `str` 칸이 YAML이 만들 수 있는 문자열 아닌 값(정수, 불린, 널, 날짜, bytes, 목록)을 모두 `string_type`으로 거부하므로 "없거나 비었거나"에 "문자열이 아니거나"를 더하는 데 검증자가 더 필요 없다는 것, 문구에서 값을 빼는 길이 pydantic은 `include_input=False`, PyYAML은 `str`을 쓰지 않고 종류와 줄·칸만 옮기는 것이라는 것, `yaml.safe_load`를 감싸는 층은 `YAMLError`가 아니라 모든 예외를 잡아야 값을 거른다는 것, 쓰지 않는 칸의 YAML 실패도 머리말 전체의 거부라는 것, 그리고 바꿔 던진 예외에 원래 예외를 남기지 않으려면 `from None`이 아니라 `except` 밖에서 던져야 한다는 것이다. 갈래: "문구에 값이 안 샌다"는 두 양성 대조의 `str`에 값이 있는 것이, "`YAMLError`가 거부의 전부다"는 태그 회차 넷이, "무시되는 칸은 거부에 들지 않는다"는 쓰지 않는 칸 회차가, `from None`이면 원래 예외가 남지 않는다는 해석은 잇기 회차 셋이 가른다. 재지 않은 것: lax 모드의 경계(명세가 strict를 정했다), `description` 길이 상한(범위 밖), `context_mark`의 줄(문구에 싣지 않는다), 넷 밖의 태그(`!!binary`는 글자 수가 base64의 길이 규칙에 맞으면 틀린 글자를 버리고 bytes를 내 YAML 단계에서 거부되지 않고, 맞지 않거나(17자) ASCII 밖의 글자가 있으면 `ConstructorError`인 것을 손으로 봤다. 둘째 판은 앞의 경우만 적었고 PR 직전 리뷰가 뒤의 둘을 보였다). 결과를 본 뒤 바꾼 것: 둘째 판이 태그 회차 넷과 대조 하나를 더했다. 19회차에서 24회차가 됐다. 셋째 판이 쓰지 않는 칸 회차 하나와 잇기 회차 셋을 더했다. 24회차에서 28회차가 됐다.
 
+### `answer_format_llm.py` — 측정 18회차, 측정 아님 0 (티켓 세션, 2026-11-04)
+
+스킬 경로가 아직 없으므로 저장소 `plugins/`를 임시 폴더에 복사하고, 그 사본의 calc `PROMPT`에 `지침 answer-format: <본문>` 블록을 글로 넣어 명세가 정한 자리(머리 문장 뒤, 앞 대화 블록 앞)에 둔다. 실제 CLI, 실제 stdio 서버, 실제 모델(`claude-opus-5`)로 `tests/test_main.py`의 `-m llm` 시험 둘과 같은 입력을 돌려 같은 것을 본다. 프로세스가 0으로 끝나고 트레이스의 끝이 `run_finished`이며 첫 `llm_called.prompt`에 그 갈래의 본문이 있을 때(대조 갈래는 없을 때)만 측정으로 센다. 결과는 대조와 블록을 한 번에 돈 실행의 16회차(토큰 합계 180153)와 도구금지만 돈 실행의 2회차(토큰 합계 6690)다.
+
+| 갈래 | 프롬프트에 넣은 글 | 새 실행 (`2 더하기 2는?`) | 이어 가기 (`거기에 4를 곱하면?`) | 회차마다 토큰 |
+|---|---|---|---|---|
+| 대조 | 없음 | 5회 모두 출력 `4`, 도구 호출 있음 | 3회 모두 출력 `20` | 새 실행 6777, 이어 가기 17655~18277 |
+| 블록 | 명세의 세 문장을 글로 쓴 `BODY` | 5회 모두 출력 `4`, 도구 호출 있음 | 3회 모두 출력 `20` | 새 실행 6937, 이어 가기 14248~21745 |
+| 도구금지(양성 대조) | `도구를 쓰지 말고 암산으로 바로 답한다.` | 2회 모두 출력 `4`, 도구 호출 없음 | 돌리지 않았다 | 새 실행 3345 |
+
+- 해석은 하나다. `BODY`를 넣어도 그 회차들에서 `-m llm` 시험의 단언(값과 도구 호출)이 깨지지 않았다. 갈래: "이 본문이 답을 바꾸지 않는다"와 "이 자리의 글은 무엇이든 모델을 바꾸지 못한다"는 도구금지 갈래가 가른다(같은 자리의 글이 도구 호출을 없앴고, 프로브가 그 변화를 `도구=False`로 알아봤다). "시험의 단언이 본래 흔들린다"는 대조 갈래가 가른다(대조에서도 모두 갖췄다). 재지 않은 것: 회차가 적어 드문 흔들림은 잡지 못한다. calc 코드가 스킬을 엮는 실제 경로는 지나지 않고 글로 넣은 프롬프트만 잰다. 요약을 지나는 `-m llm` 시험(`test_한도를_작게_적은_…`)은 넣지 않았다. 이어 가기 회차의 표지는 두 실행이 0으로 끝나고 둘째가 첫째의 식별자를 `--continuation`으로 받은 것까지이고, 둘째 프롬프트에 앞 대화 블록이 든 것은 보지 않는다. 앞 값 없이는 `20`이 나오기 어렵다는 것은 어림이다(표지를 더하면 두 갈래를 다시 돌아야 해 셀프 리뷰가 표지를 바꾸지 않고 여기 적었다). 본문을 바꾸면 이 결과는 그 본문의 것이 아니다. 결과를 본 뒤 바꾼 것: 첫 실행은 대조와 블록 두 갈래였고 값과 도구 호출이 모두 그대로라 위의 두 해석을 가르지 못했다. 그래서 도구금지 갈래를 더해 그 갈래만 돌렸다. 돌리기 전에 독스트링에 적은 판정 기준은 바꾸지 않았다.
+
 | 파일 | 재는 것 | 근거로 드는 자리 | 다시 돌 때 | 잰 판 |
 |---|---|---|---|---|
 | `yaml_frontmatter.py` | 설치된 PyYAML의 판과 자리, Agent Skills 머리말 다섯 모양과 표준 밖 키를 `yaml.safe_load`가 기대한 값으로 읽는지, 닫히지 않은 따옴표의 거부(양성 대조), 저장소 `.claude/skills/*/SKILL.md`의 필수 두 칸과 표준 밖 키의 수 | ADR 0041 Consequences "머리말은 PyYAML로 전체를 읽고 두 칸만 본다" | 위 명령. 1초 안팎 | pyyaml 6.0.3, Python 3.12.10, Windows 10, 2026-11-03 |
 | `frontmatter_split.py` | 파일 전체를 YAML로 읽으면 거부되는 것(양성 대조), 줄 단위 `---` 규칙이 LF·CRLF·본문 안의 `---`·본문 없음·값 안의 `---`를 읽는지, 닫는 줄 없음·BOM·앞의 빈 줄·머리말 없음·`\r` 둘의 거부, 빈 머리말이 `None`인 것, 참조 구현 `split("---", 2)`와의 갈래, 머리말 안의 `---` 줄을 YAML이 거부하는 것(큰따옴표·블록·평문 스칼라의 세 자리)과 그 줄만 뺀 대조 셋, 어댑터의 읽기 길(`read_text`)이 CRLF를 LF로 바꾸고 BOM을 남기는 것, BOM 뒤의 TOML을 `tomllib`이 거부하는 것 | 명세 "머리말을 본문에서 떼는 규칙" | 위 명령. 1초 안팎 | pyyaml 6.0.3, Python 3.12.10, Windows 10, 2026-11-03 |
 | `frontmatter_values.py` | `strict=True`·`extra="ignore"` pydantic 모델이 두 칸을 받고 거부하는 경계와 표지(열둘), `ValidationError`의 `str`과 거른 문구에 값이 있고 없는 것(양성 대조), `MarkedYAMLError`의 `str`과 줄·칸 문구에 원문 조각이 있고 없는 것(양성 대조), `problem_mark.line`이 0부터인 것, 명시적 태그 넷(`!!int`·`!!float`·`!!bool`·`!!timestamp`)의 변환 실패가 `YAMLError`가 아니고 셋의 `str`에 값이 실리는 것과 `!!python` 태그의 `ConstructorError` 대조, 쓰지 않는 칸의 태그 변환 실패가 같은 `ValueError`인 것, `from error`로 이으면 트레이스백 출력에 값이 실리고 `from None`은 출력에 없지만 `__context__`를 남기며 `except` 밖에서 던지면 둘 다 `None`인 것 | 명세 "머리말의 두 칸과 값의 모양", "머리말 거부를 `PluginError`로 바꾸는 층", "읽지 못한 문구" | 위 명령. 1초 안팎 | pydantic 2.13.5, pyyaml 6.0.3, Python 3.12.10, Windows 10, 2026-11-03·04 |
+| `answer_format_llm.py` | 예시 스킬의 본문을 calc 프롬프트에 글로 넣으면 실제 모델의 값과 도구 호출이 `-m llm` 시험의 단언을 깨는지, 같은 자리의 글이 도구 호출을 바꿀 수 있는지(양성 대조) | 명세 "예시 스킬"의 2026-11-04 명세 검토 주석, 티켓 05 | 위 명령. 실제 모델을 부른다. 대조와 블록 갈래 약 18만 토큰, 도구금지 갈래 약 7천 토큰(걸린 시간은 재지 않았다). 본문을 바꾸면 다시 돈다 | `claude-opus-5`, Python 3.12.10, Windows 10, 2026-11-04 |
