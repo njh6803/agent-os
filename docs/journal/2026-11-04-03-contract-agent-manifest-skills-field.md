@@ -65,9 +65,14 @@
 
 ## 남은 일 (이 세션이 인계한다)
 
-- 셀프 리뷰(`/code-review`)를 아직 하지 않았다. 변경은 커밋하지 않은 워크트리에 있다. 인계 계기가 `셀프 리뷰 직전`에서 왔다.
-- 리뷰 뒤 Critical·Major를 고치고 티켓 `Status`를 `done`으로 바꿔 커밋한 다음 PR과 병합까지 간다. PR 본문에 바뀐 사진 여덟 장을 적는다.
-- `.claude/rules/sdk.md`를 고쳐서 카나리아 명세 `sdk_rule_failure_cause.toml`, `sdk_rule_shortcut_patterns.toml`을 새 `claude -p` 세션에서 불러 보고(`tools/canary.py`) 그 명세의 `# 최신 결과:` 줄을 고쳐야 한다(`tools/sibling_overlap.py`의 알림). 계정 한도로 돌리지 못하면 그 절의 계정 한도 항목대로 사전 확인만 돌린다.
-- `uv run python tools/sibling_overlap.py`가 02 워크트리와 `.claude/rules/sdk.md`, `tests/adapters/test_filesystem.py`, `tests/test_server.py`를 함께 고친 파일로 알렸다. 줄이 다르므로 뒤에 병합되는 쪽이 합친다.
+이 절은 두 번째 세션(`feature/01-contract-agent-manifest-skills-field`로 이어받은 세션)이 컨텍스트 문턱을 넘겨 `커밋 뒤`에서 인계하며 갱신했다.
+
+- 한 것: 셀프 리뷰, 카나리아 둘(통과 4씩, `# 최신 결과:` 줄 고침), 티켓 `done`, PR 직전 리뷰(CLI 좌석 미배정 → `/security-review` 지적 없음 + `bug-perf-review` Minor 1을 고침)가 끝났다. 커밋은 둘이다. `a13be30a` feat와 그 위의 fix(`seen` 집합). 둘 다 pre-commit 전부 통과했다.
+- 남은 것: ① 브랜치를 푸시하고 PR을 연다. 제목은 컨벤셔널 커밋이고 본문에 바뀐 사진 여덟 장(`organisms-plugindetail--{enabled,disabled}-{1280,320}-{light,dark}.png`)을 적는다. PR 체크리스트의 리뷰 줄에는 위 "PR 직전 리뷰"의 결과(CLI 비었음, 대체 둘의 결과)를 적는다. ② 연 직후 `gh pr comment <번호> --body "@coderabbitai review"`를 남긴다. ③ `merge.md` 2(봇 회차)대로 CI·봇 코멘트를 반영하고 병합한다. 워크트리에서 병합하므로 `merge.md`의 "워크트리에서 병합할 때"를 Read로 연다. 병합 뒤 일지의 "다음" 절과 회고(`retro`)는 단계를 닫는 세션이 한다.
+- 02 워크트리(`02-read-skill-document-into-sdk-value`)와 `.claude/rules/sdk.md`, `tests/adapters/test_filesystem.py`, `tests/test_server.py`를 함께 고쳤다. 줄이 다르므로 뒤에 병합되는 쪽이 합친다. 이 PR이 먼저 병합되면 02가 합치고, 02가 먼저 병합되면 이 PR에서 `main`을 합친다.
+- 인계 직전에 `uv run python tools/sibling_overlap.py`는 다시 치지 않았다. 푸시 전에 한 번 친다.
+- 막지 않는 경고 하나: 이 일지 29행의 따옴표 인용이 `manifest.py` 주석과 글자가 달라 인용 대조(`check-quotes`)가 경고했다. 뜻은 같고 막지 않는다.
 
 open-session을 부른다 2026-11-04T13:52:00Z
+
+open-session을 부른다 2026-11-04T14:20:50Z
