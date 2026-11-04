@@ -28,7 +28,7 @@ date: 2026-11-04
 - **직접 커밋 금지는 main과 dev 둘 다다.** 지금 `hook_git_main_commit`은 main 위의 커밋만 막는다(ADR 0005). dev도 막는다.
 - **도구의 기준.** 워크트리의 기준(`origin/main`)과 PR의 base를 브랜치 접두로 가른다. `hotfix/*`는 main, 그 밖(`feature/*`, `chore/*`, `docs/*`)은 dev다. `tools/sibling_overlap.py`, `next-session`의 merge.md, `tidy-checkouts`, `git-pr`·`git-pr-merge` 같은 main을 전제한 tools와 스킬(인터뷰 때의 셈으로 tools 12개, 스킬 8개)과 `CLAUDE.md`의 환경 함정, `docs/constitution/operations.md`의 "브랜치와 병합"이 바뀐다.
 - **전환.** harness 티켓이 dev를 main에서 딴다. 그 뒤에 연 PR부터 dev로 가고, 그때 열린 PR(이 ADR을 싣는 PR 포함)은 main으로 끝낸다. 하네스 고침(훅·스킬·CI·규약 문서)은 그 harness 티켓의 일이고 워크트리에서 하며 새 세션에서 불러 본다(작업 규약 3). 그때까지 지금 규약(main으로 PR)이 그대로다.
-- **되돌려 합치기.** hotfix를 main에 합친 세션이 바로 main을 dev에 merge 커밋으로 합친다. 잊으면 다음 dev→main에서 hotfix가 사라진다. 그 순서를 `next-session`의 merge.md에 적는 것도 harness 티켓이다.
+- **되돌려 합치기.** hotfix를 main에 합친 세션이 바로 main을 dev에 merge 커밋으로 합친다. 잊으면 다음 dev→main에서 hotfix가 사라진다. 그 순서를 `next-session`의 merge.md에 적는 것도 harness 티켓이다. 되돌려 합치기를 PR로 하는지 로컬 병합 뒤 푸시로 하는지와, dev 직접 커밋을 막는 훅이 그 병합 커밋을 어떻게 지나게 할지도 그 티켓이 정한다.
 - **원격 설정.** 저장소는 merge 커밋·squash·rebase 세 방식을 모두 허용한다(`gh repo view`로 봤다, 라운드 3 10호출). dev를 main처럼 보호 브랜치로 둘지는 인터뷰에서 묻지 않았고 harness 티켓이 정하며, 그 설정은 사람이 GitHub에서 한다.
-- **치르는 값.** main에 오르는 간격이 기능 길이를 따르고, 되돌려 합치기를 잊으면 다음 배포에서 hotfix가 사라지며, dev PR은 지금보다 빨라지지 않는다(컨테이너 pytest가 더해진다). 이 PR이 ADR 초안 둘(ADR 0042와 이것)을 들고 승인도 둘이다.
+- **치르는 값.** main에 오르는 간격이 기능 길이를 따르고, 되돌려 합치기를 잊으면 다음 배포에서 hotfix가 사라지며, dev PR은 지금보다 빨라지지 않는다(컨테이너 pytest가 더해진다). 이 PR이 ADR 둘(ADR 0042와 이것)을 들어 승인도 둘이었다(둘 다 2026-11-04에 승인됐다).
 - **용어.** `CONTEXT.md`에 티켓 PR, 운영 브랜치, 개발 브랜치, 기준 브랜치, 출시 PR, 핫픽스, 되돌려 합치기가 든다. 개발 브랜치가 서기 전에는 기준 브랜치가 모두 운영 브랜치(main)다.

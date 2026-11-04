@@ -1510,34 +1510,6 @@ API CRUD로 바꾼다. 한 번만 발화는 worker가 스케줄마다 Redis 잠�
 이 호출로 정해진 것: 묶음 ⑤의 합의 요약과 전체 합의 요약이 위 글 그대로 확정됐다. frontier가 비어 설계 인터뷰가 끝났다. 다음은 방향 ADR
 초안과 브랜치 전략 ADR 초안이다.
 
-## 다음
-
-(인터뷰 끝 경계에서 쓴다, 2026-11-04. 다음 단계를 마칠 때 이 절을 지우고 끝에 다시 쓴다.)
-
-설계 인터뷰(`/grill-with-docs`)가 끝났다(라운드 6 4호출에서 묶음 ⑤ 합의 요약과 전체 합의 요약을 확인받았다). 같은
-브랜치(`docs/agent-os-direction`)와 워크트리(`C:\project\agent\.claude\worktrees\agent-os-direction`)에서 잇는다. 결정의 원천은 이
-일지와 앞 일지(2026-11-03-04)의 `> 사용자:` 인용이고, 묶음의 확정은 "합의 요약" 절(묶음 ①은 라운드 2 4호출과 라운드 3 1호출의 바로잡기,
-묶음 ②와 브랜치 전략은 라운드 3 10호출, 묶음 ③은 라운드 4 5호출, 묶음 ④는 라운드 5 4호출, 묶음 ⑤와 전체는 라운드 6 4호출)이다.
-커밋하지 않은 것: 이 일지와 앞 일지(미추적), `CONTEXT.md`(묶음 ①~⑤ 용어와 정의 보강. Agent OS 정의는 아직 옛 문장), `.scratch/retro-queue.md`.
-
-남은 절차(라운드 6 4호출의 전체 합의 요약이 원천).
-1. 방향 ADR 초안과 브랜치 전략 ADR 초안. 번호는 `docs/adr/README.md`의 마지막 뒤와 `uv run python tools/sibling_overlap.py`의 "다음 빈
-   번호". 방향 ADR은 보장(중재·강제·기록), 묶음 ①~⑤ 절(각 합의 요약을 용어집의 말로, 원문은 일지 인용), 미룬 것 아홉·덮은 것·만들지
-   않는 것, 이력으로 가는 ADR 목록(0003 공유 볼륨 전제, 0009 만료와 승인자 스토리 20 철회, 0014 워커 하나·프로세스 사이 한계·스트림 닫힘,
-   0017 삭제, 0023 등록부·셈·구독·사이트 파일, 0031 원인 다섯 token_limit·approval_expired·interrupted·handoff·evaluation, JSONL의
-   0009·0012·0022, 0041 선언형 에이전트·업로드 포인터), sdk 계약 변경 목록, `tech.md`에 더할 것(PostgreSQL·Redis·testcontainers·OTel
-   SDK·exporter-otlp, 서버의 git 실행), OTel 본문을 늘 싣는 선택(컨벤션 Opt-In 권고와 다름)을 든다. 이력과 포인터는 `.claude/rules/adr.md`의
-   규칙. 셀프 리뷰를 반영한 뒤 proposed로 보여 승인받는다(먼저 묻지 않는다). ADR이 프로브를 근거로 들면 스크래치의
-   `probe_models_price.py`를 `.scratch/agent-os-direction/probes/`로 옮기고 README 행을 쓴다.
-2. `CONTEXT.md` 마무리. Agent OS 정의를 "에이전트, MCP 서버, 스킬, 모델을 플러그인으로 로드해 실행하고, 그 실행의 모델·도구 호출을
-   중재·강제·기록하는 런타임"으로.
-3. PRD 초안(사용자 승인). "보장하는 것" 절, 성공의 정의 줄 하나, 만들지 않는 것 셋, 미룬 것 아홉, 전제 교체(PostgreSQL·Redis를 갖춘 프로세스
-   넷, 다중 인스턴스는 공유 볼륨), 사실 둘(최종 사용자의 글이 트레이스에 남고 보존 기간이 수명, 기본 설정에서 OTLP 끝점으로 나간다).
-4. `.scratch/plan.md` 행 열일곱(① 6·7·11, ② 18·9·8·15·12·20, ③ 1·3·13, ④ 4·2·14, ⑤ 21·5). 10·16·17·19는 행이 없다.
-5. `/code-review` → origin/main 병합(`.scratch/retro-queue.md`의 글자 충돌은 둘 다 살린다: 만료 열두 행 취소선 동일, 이 브랜치의 528
-   2회차·564 유지, main의 565~567 유지) → `git branch --show-current`와 `uv run python tools/sibling_overlap.py` → 검증 → 커밋(heredoc이나
-   파일) → PR(main으로) → 병합(묻지 않는다) → next-session. 면제 PR(`docs/<slug>`)이라 회고의 대기열 편집은 같은 PR에 싣는다.
-
 ## 인터뷰 뒤(ADR 초안, 문서, 계획)
 
 라운드 6 4호출로 frontier가 비어 인터뷰 끝 절차를 밟았다. 순서는 "다음" 절의 1~4다.
@@ -1783,3 +1755,72 @@ open-session을 부른다 2026-11-04T03:46:36Z
 승인에 따라 ADR 0042·0043의 `status`와 `docs/adr/README.md`의 두 행을 `accepted`로, `docs/PRD.md` 3행을 "2026-11-04 개정 사용자 승인. 개정의 근거는 ADR 0042"로 바꿨다. 앞 인계 절이 넘긴 인용 대조 경고 둘은 둘 다 저장소 어디에도 글자 그대로 없는 풀이 문장이라 따옴표를 뗐다. ADR 0042 Considered Options 첫 불릿의 "런타임이 할 일인가 에이전트가 할 일인가"는 "런타임이 할 일인지 에이전트가 할 일인지"로, ADR 0043 Consequences "티켓 검사와 봇"의 "dev에 들어가는 티켓 PR과 hotfix PR"은 따옴표 없이 "dev에 들어가는 티켓 PR과 hotfix PR을 가리키는 것으로"로. 결정은 바뀌지 않았다.
 
 **인계 계기(잇는다).** 병합 커밋을 다시 치자 인계 계기(`hook_handoff`)가 왔다. 세션 컨텍스트 238,907 토큰이 문턱 200,000을 넘은 채 단계 경계 `커밋 뒤`에 온 것이다. `handoff.md`의 인계하지 않는 때 다섯 가운데 셋째에 든다. 이 세션의 지시문의 "이어받을 상태"가 `인계: 커밋 뒤`로 시작해 넘겨받은 경계에 다시 온 것이라, 넘기지 않고 잇는다(자동 압축이 받는다, ADR 0033).
+
+## PR 직전 리뷰(셋째 세션)
+
+승인 커밋의 pre-commit이 도는 동안 작업 트리는 최종 상태라 `coderabbit-review` 서브에이전트를 먼저 띄웠다. 브리프에 밀 주장은 "셀프 리뷰(이어받은 세션)"의 반영이 새로 쓴 사실 문장 일곱이다.
+
+**CodeRabbit CLI(돌지 못함).** 서브에이전트의 보고(받은 그대로 요약). `coderabbit --version`은 0.7.5. `coderabbit auth status`는 계정 njh6803, Provider GitHub, Region US, Organization njh6803 (1 available), `Review access Default: njh6803/njh6803`이고 `Seat:` 줄이 없었다(0.7.5는 `Review access`만 보인다). 정의 절차 1대로 3단계로 가서 `coderabbit review --agent --include-untracked`를 돌렸더니 서비스에 연결하는 단계에서 종료 코드 1로 끝났다. 출력은 `Review failed: Your CodeRabbit session or Git provider access could not be authenticated. Run 'coderabbit auth login', then retry the review.`, `Previous local review has no stored findings.`, `recoverable: false`. 재실행은 시간당 한도를 하나 더 쓰고 같은 오류가 날 가능성이 커서 하지 않았고 로그인을 대신 하지 않았다. 총 0건이고 이슈 없음이 아니라 리뷰를 마치지 못한 것이다. 그래서 본 세션이 대체 둘(`/security-review`, `bug-perf-review`)을 돌린다. 이 세션이 `coderabbit auth status`를 먼저 쳤을 때도 같은 출력이었다(손으로 봤다). `auth status`가 로그인으로 보여도 리뷰가 인증에 실패하는 모양은 이 세션에서 처음 봤고 까닭은 모른다(회고 후보).
+
+**보안 축(`/security-review`, 대체).** 스킬의 절차대로 식별 서브에이전트(general-purpose)를 띄웠고 보고는 아래다(받은 그대로 요약). >80% 확신 문턱을 넘는 보안 취약점은 없다. 변경 파일 22개 가운데 코드는 `.scratch/agent-os-direction/probes/probe_models_price.py` 하나이고 나머지 21개는 마크다운이라 스킬의 제외 규칙대로 보고 대상에서 뺐다. 선례 대조: `.claude/rules/probes.md`, `docs/agents/issue-tracker.md`의 프로브와 근거, `tools/hook_env_read.py` 독스트링, 원칙 V, 같은 모양의 기존 프로브 둘(`.scratch/conversation/probes/token_ratio.py`, `.scratch/model-plugin/probes/build_without_key.py`)과 같은 패턴이고 새 공격면이 없다. 데이터 흐름(코드를 읽었다): 입력은 `ANTHROPIC_API_KEY`(SDK `anthropic.Anthropic()`가 읽고 프로브 코드는 키 값을 변수로 쥐지 않는다)와 Models API 응답 둘, 출력은 stdout의 `RESULT` JSON 한 줄과 `rounds.summary()`뿐이며 실리는 것은 SDK 판·모델 id·응답 키의 이름(값이 아님)·회차 라벨과 결과다. 파일 쓰기와 네트워크 밖 송신이 없다. 예외 경로는 `tools/probe_kit.py`의 `Rounds.round`가 `repr(error)`를 찍는데, anthropic 1.7.0의 `_exceptions.py`·`_base_client.py`를 읽어 `APIStatusError` 메시지가 상태 코드와 응답 본문뿐이고 요청 헤더(`X-Api-Key`)는 들지 않음을 봤다. `eval`·`exec`·`pickle`·`yaml.load`·`subprocess`·`open(`·`write` 호출이 없다. 전체 diff(484KB)를 하드코딩 비밀 패턴(`sk-ant-`, `AKIA`, `ghp_`, `github_pat_`, `xox[baprs]-`, `-----BEGIN`, `Bearer`, `api_key = "`, `password = "`)으로 grep해 0건. 보고하지 않은 관찰 하나: anthropic 1.7.0은 키가 없으면 `default_credentials()`로 로컬 설정·프로필 파일을 찾는데(`_client.py`) 이 PR이 들인 동작이 아니라 SDK 기본이다. 지적이 0건이라 거짓 양성 거르기 서브태스크는 띄우지 않았다. 고친 것 없음.
+
+**버그·성능 축(`bug-perf-review` 서브에이전트, 대체).** 보고(받은 그대로 요약). 기준 b490a852, 범위 22개 파일(문서 20, 프로브 2)을 모두 읽었고 `uv run python tools/check_adr_pointers.py`는 출력 없이 끝났으며 충돌 표지는 없다. 도구 호출 40번에 닿아 멈췄고 따라가지 못한 것은 일지 2026-11-03-04 전체와 2026-11-04-01의 라운드 4~6, ADR 0032·0033 본문, `core/ports.py`, `tools/probe_kit.py`, `ci.yml`, plan.md 16~23행의 상태 칸이다. 유효 5(Minor 4, Nit 1), 보류 4. 브리프의 주장 일곱 가운데 다섯(1 후보 번호와 행 열일곱, 3 포인터 목록과 이력 아홉, 4 ADR 0043 8행의 풀어쓰기, 5 고르지 않은 선택지 셋, 6 병합 뒤 이력 순서와 대기열, 7 승인 표시)은 지적 없음이고, 2(운영자 파일)는 마지막 좋은 판 정의 하나만 어긋났다.
+
+- Minor `CONTEXT.md` 마지막 좋은 판: "`serve`가 요청마다 다시 읽는 사이트 파일"이 ADR 0042 묶음 ⑤ 21("요청마다 변경 시각으로 보고 바뀌었을 때만 다시 읽으며")과 plan.md admin-crud 행과 어긋난다. → 고쳤다. "요청마다 변경 시각을 보고 바뀌었을 때 다시 읽는 사이트 파일"로.
+- Minor `docs/PRD.md` 만들지 않는 것: "여러 에이전트는 리드가 맡기고 병렬로 받는 모양뿐"이 ADR 0042 묶음 ④의 실행 경계 넘김(4)을 배제하는 것으로 읽힌다. → 고쳤다. "리드가 맡기고 병렬로 받는 모양과 실행 경계의 넘김(앞 실행이 끝나며 다음 에이전트가 잇는다)뿐"으로. 승인받은 PRD 문장을 승인 뒤에 고친 것이라 PR 본문과 보고에 적고 사용자에게 알린다. 결정은 승인된 ADR 0042(묶음 ④에 4가 든다)와 같고 PRD 문장만 그것에 맞췄다.
+- Minor ADR 0042 Consequences "PRD 개정": "전제 교체"가 PRD에 없는 항목이다(PRD diff에 지운 줄이 없고 전제 둘은 "보장하는 것" 절의 새 문장이다). → 고쳤다. "전제 교체"를 뺐다.
+- Minor ADR 0042 묶음 ② 9: 프로브가 잰 범위(중첩 키까지의 가격 낱말 검색, 양성 대조 없음, 사람이 본 최상위 키 열하나)보다 넓게 "단가 칸이 없다"고 읽힌다. → 고쳤다. 괄호에 판정의 모양과 "중첩 안의 다른 이름 칸은 가르지 못한다"를 더했다. 프로브를 다시 돌리지 않았다.
+- Minor 미추적 폴더 `web/judge-5Y78Sm/`(타입 우회 픽스처가 든 판정 시험의 임시 트리): 서브에이전트가 `git status --porcelain --untracked-files=all`로 봤다. 이 세션이 `ls`로 보니 이미 없다(`No such file or directory`). `web/eslint.config.test.ts`가 시작할 때 남은 트리를 지우는 `tools/judge-trees.ts`를 부르므로, 승인 커밋의 pre-commit(web verify)이 서브에이전트가 도는 동안 돌며 지운 것으로 본다(어림). `git add -A`를 쓰지 않았고 PR에 들지 않는다.
+- Nit ADR 0043 치르는 값: 옛 문장(ADR 초안 둘을 들고 승인도 둘이다)이 승인 뒤에도 현재형. → 고쳤다. "승인도 둘이었다(둘 다 2026-11-04에 승인됐다)"로.
+- 보류 ADR 0032·0033(`operations.md` "브랜치와 병합"을 이름으로 든다): 이 세션이 두 파일을 grep했다. 0032의 25·60행은 워크트리의 위치·사전 확인·정리 항목을, 0033의 130·144행은 "PR을 연 세션이 반영과 병합까지 한다"를 가리키고, 두 본문에 `origin/main`이나 main을 기준으로 적은 문장이 없다(`sed -n '1,29p' … | grep main`과 `sed -n '1,151p' … | grep origin/main` 모두 빈 출력). ADR 0043이 거짓으로 만드는 문장이 없어 포인터를 달지 않는다.
+- 보류(Major 가능) ADR 0042 8행의 옛 문장(skill-plugin이 닫히면 프론티어에 남는 기능이 없다): `grep -nE '\| *(todo|doing|in-progress|blocked) *\| *$' .scratch/plan.md`로 done이 아닌 행은 25행(skill-plugin)과 이 PR이 더한 26~42행뿐이라 이 ADR 전의 상황으로는 참이다. 다만 행 열일곱이 선 지금 현재형으로 읽히므로 "없었다(이 ADR의 행 열일곱이 서기 전)"로 고쳤다.
+- 보류 ADR 0012 이력의 옛 문장(포트에 닿는 것은 넷): 12의 운영 설정 표, 14의 평가 표, 20의 임대가 어느 포트의 메서드가 되는지 적히지 않았다. `core/ports.py`를 열지 않고, 이력 문장을 "이 이력이 센 것은 넷"으로 좁히고 셋이 `TraceStore`의 메서드가 되는지 어댑터 안의 표로 그치는지는 그 기능의 계약 티켓이 정하며 포트를 늘리지 않는 것이 전제라는 문장을 더했다(라운드 3 7호출의 치르는 값을 근거로 든다).
+- 보류 ADR 0043 되돌려 합치기와 dev 직접 커밋 금지: 되돌려 합치기가 PR인지 로컬 병합 뒤 푸시인지와 훅의 병합 커밋 처리를 적지 않았다. → "되돌려 합치기" 불릿에 그 둘도 harness 티켓이 정한다는 문장을 더했다. 결정은 바뀌지 않았다.
+
+남긴 것: 프로브 재실행(중첩 키 경로 전체를 찍는 판)은 하지 않았다. ADR 문장을 잰 범위로 좁힌 것으로 닫았고, 단가 칸을 다시 찾을 때(README의 "다시 돌 때")가 그 자리다.
+
+**CodeRabbit CLI(재시도, 좌석 없음).** 회고 4단계가 넘긴 질문에 사용자가 재로그인 뒤 CLI 리뷰를 다시 돌리는 쪽을 골라(답의 원문은 아래 "회고" 2) `coderabbit-review` 서브에이전트를 한 번 더 띄웠다. 보고(받은 그대로 요약). `coderabbit --version`은 0.7.5. `coderabbit auth status`는 계정 njh6803, Provider GitHub, Region US, Organization njh6803 (1 available), `Review access Default: njh6803/njh6803`, `Plan: Free`, `Seat: not assigned`. 재로그인은 반영됐고(계정·조직·기본 리뷰 대상이 보이고 인증 오류가 없다) 막힌 까닭은 인증이 아니라 좌석이라, 정의 1단계의 `Seat:` 갈래대로 `coderabbit review`를 돌리지 않고 멈췄다(시간당 한도를 쓰지 않았다). 지적·오탐·보류 없음이고 CLI 축은 지적 0건이 아니라 리뷰를 하지 못한 것이다. 본 세션이 `coderabbit auth status`를 다시 쳐 같은 출력을 봤다(손으로 봤다). 재로그인 전에는 `Seat:` 줄이 없고 리뷰가 인증 실패로 끝났으니, 앞의 인증 실패는 묵은 세션 때문이었고 좌석은 처음부터 없던 것으로 본다(어림). 이 PR의 PR 직전 리뷰는 대체 둘(`/security-review` 지적 없음, `bug-perf-review` 유효 5 반영)의 결과다. 좌석 배정은 사람 몫이라 대기열 570에 둔다(아래 "회고" 2).
+
+## 회고
+
+단계를 닫으며 "다음"을 갱신하는 계기로 retro 스킬이 돌았다. 원천은 이 일지(셋째 세션의 세 절, 앞 세션의 인계 둘과 셀프 리뷰 절)와 이 세션이다. 후보 열, 판정은 넘김 둘, 승인 셋(열린 행에 회차 하나, 새 행 둘), 기각 넷, 일지만 하나. 만료는 `uv run python tools/queue_open_rows.py`와 `git fetch origin` 뒤 `--ref origin/main` 둘 다 만료할 행이 없었다. 새 훅·검사가 문턱을 지난 것이 없어 `tools/hook_report.py`는 돌리지 않았다. 행 찾기는 저장소 루트에서 `uv run python tools/queue_open_rows.py --search …`로 했고 낱말은 후보마다 아래에 적었다.
+
+1. **넘김 — 승인 뒤의 PRD 문장 변경.** 사용자 승인으로 쓰는 문서에 닿는다. 버그·성능 축이 PRD "만들지 않는 것"의 문장 하나를 승인된 ADR 0042 묶음 ④(실행 경계 넘김 4)에 맞춰 고쳤고(위 "PR 직전 리뷰(셋째 세션)"), 승인받은 글이라 물었다. 선택 화면 훅이 설명의 사실 대조를 한 번 요구해 같은 질문을 다시 올렸다.
+
+   > 사용자(질문에 답, PRD 문장): "이대로 둔다 (Recommended)" — 설명: "여러 에이전트는 리드가 맡기고 병렬로 받는 모양뿐"을 "…모양과 실행 경계의 넘김(앞 실행이 끝나며 다음 에이전트가 잇는다)뿐"으로 바꾼 판을 싣는다. ADR 0042 묶음 ④ 절(4 → 2 → 14)에 실행 경계 넘김(4)이 들어 있어 그것과 맞춘 것이고 결정은 그대로다
+
+   고르지 않은 하나: 원래 문장으로 되돌린다(설명: 승인하신 판 그대로 되돌리고, 넘김과의 관계는 ADR 0042에만 남긴다). 고친 판을 싣는다. 이 사건은 아래 4의 회차이기도 하다.
+
+2. **넘김 — CodeRabbit CLI 재로그인.** 사람만 할 수 있는 것. `auth status`가 로그인으로 보이는데 리뷰가 인증에 실패했다(위 "PR 직전 리뷰(셋째 세션)"의 첫 문단).
+
+   > 사용자(질문에 답, CodeRabbit): "지금 로그인했다, CLI 리뷰를 다시 돌린다" — 설명: 터미널에서 `coderabbit auth login`을 마친 뒤 고르면, PR을 열기 전에 `coderabbit-review` 서브에이전트를 한 번 더 띄운다(정의 2단계의 시간당 한도 3회 가운데 하나를 쓴다). 인증이 또 실패하면 대기열 행으로 둔다
+
+   고르지 않은 하나: 대기열에 사람 몫 행으로 둔다 (Recommended)(설명: `.scratch/retro-queue.md`에 재로그인을 사람 몫 행으로 적고 이 PR은 대체 둘의 결과로 진행한다. 다음 PR부터 로그인된 상태면 CLI 리뷰가 돌아온다). 답대로 다시 돌린 결과는 위 "CodeRabbit CLI(재시도, 좌석 없음)"이다. 인증은 됐고 좌석이 없어 CLI 축은 비었다. 고른 설명의 뒷문장(또 실패하면 대기열 행)대로 사람 몫 행 570(좌석 배정)을 쓴다. 행 찾기(`--search 좌석 --search Seat --search 사람.몫.*CodeRabbit --search 사람.몫.*coderabbit`)는 닫힌 넷(5, 136, 250, 557)만 맞았고 열린 사람 몫 행은 없었다. 136(CLI 좌석이 없을 때 대체 둘로 간다)과 557(`Seat:` 줄이 없는 갈래)은 같은 자리의 닫힌 행이지만 이번 사건은 그 처방이 그대로 돈 것이라 잇지 않는다.
+
+3. **승인(회차) — 셀프 리뷰를 반영하며 새로 쓴 사실 문장이 근거와 어긋나 PR 직전 리뷰가 잡았다. 열린 347에 3회차.** 사건: `CONTEXT.md` 마지막 좋은 판의 정의를 셀프 리뷰 반영에서 사이트 파일 몫으로 좁혀 쓰며 요청마다 다시 읽는 파일이라 적었는데(위 "셀프 리뷰(이어받은 세션)"의 `CONTEXT.md` 줄), ADR 0042 묶음 ⑤ 21(변경 시각을 보고 바뀌었을 때만 다시 읽는다)과 plan.md admin-crud 행에 어긋나 버그·성능 축이 Minor로 잡았다. 347의 처방(밀 주장 목록에 반영이 새로 쓴 사실 문장을 넣는다)은 이 세션의 브리프가 따랐고(일곱을 넘겼다) 그래서 잡혔다. 열린 행이 이미 처방한 사건이라 회차를 더한다. 행 찾기: 첫 찾기(`--search coderabbit --search CodeRabbit --search 다음.빈.번호 --search sibling_overlap --search PR.직전.리뷰`, 맞은 행 99)의 열린 행 가운데 347. 3회차라 다음 chore 계기에 든다.
+
+4. **승인(새 행 568, 2회차) — 승인받은 문서를 PR 직전 리뷰가 고쳐 사용자에게 다시 물었다.** 사건은 1이다. 같은 꼴이 skill-plugin 명세에도 있었다(일지 2026-11-03-03 "다음": ADR 0041 이력 첫 문단을 PR 직전 리뷰 뒤 고쳐 재승인받았다). 그 일지의 회고는 세지 않았고 이 행을 쓰며 찾아 1회차로 센다. 닫힌 126(사용자 승인 2026-10-06·07, `CLAUDE.md` 작업 규약 5로 닫힘)은 셀프 리뷰를 승인 앞에 두었지만, PR 직전 리뷰는 승인 → 커밋 → PR 직전 리뷰의 차례라 리뷰가 승인받은 글을 다시 고친다. 조건: 사건(이 세션과 2026-11-03-03), 층(지침 — 작업 규약 5나 `code-review` 6단계의 차례. 검사로 잡을 수 없다), 되돌림(PR 하나). 더하는 것이라 세 번째에 반영한다. 행 찾기: 둘째 찾기(`--search 126의 --search 347의 --search 승인.*뒤.*고`, 맞은 행 60)의 열린 행 셋(214, 215, 494)은 다른 일이고 126을 이은 열린 행은 없었다. 126의 처방을 어긴 것은 아니라 126의 k회차로 잇지 않고 새 행으로 쓴다.
+
+5. **승인(새 행 569, 1회차) — `tools/sibling_overlap.py`의 다음 빈 번호 줄을 일지에 옮겨 적으면 같은 도구가 없는 일지 참조로 잡는다.** 사건: 앞 세션이 "인계(커밋 뒤)" 절에 도구 출력대로 다음 빈 일지 번호를 적었고, 이 세션이 커밋 전에 친 같은 도구가 그 번호를 없는 일지의 참조로 보아 종료 1로 끝나 코드 스팬으로 감싸 지났다(그 절의 손으로 돌린 것 불릿). 조건: 사건(이 세션), 층(도구 — 그 줄의 번호를 코드 스팬으로 찍거나 판정이 자기 문구 뒤의 번호를 빼는 것, 또는 `handoff.md`의 한 줄), 되돌림(PR 하나). 더하는 것이라 세 번째에 반영한다. 행 찾기: 첫 찾기의 열린 행 가운데 `tools/sibling_overlap.py`를 대상으로 든 419·433·439·550과 476(`hook_journal_retro`의 다음 빈 순번)은 다른 일이다.
+
+6. **기각 — `bug-perf-review`가 도구 호출 40에서 멈췄다.** 예산대로 보고와 함께 멈춘 것이라(따라가지 못한 것을 보고에 적었다) 214(예산을 넘겨 계속 부른다)와 559(보고 없이 멈춘다)의 사건이 아니다. 사건이 없다.
+
+7. **기각 — PRD 문장의 불일치를 셀프 리뷰가 놓치고 PR 직전 리뷰가 잡았다.** 리뷰가 제 몫을 한 것이고(4단계의 셈에서 뺀다) 어긴 지침이 없다. 승인 뒤에 고친 꼴은 4가 센다.
+
+8. **기각 — 인계 계기가 같은 경계(`커밋 뒤`)에서 두 번 왔다.** `handoff.md`의 인계하지 않는 때 셋째가 그 자리에서 가른다(위 "origin/main 병합과 승인"). 이미 있는 지침이 막았다.
+
+9. **기각 — 큰 도구 출력(diff 484KB, 대기열 찾기 47KB·36KB)이 파일로 넘어갔다.** 하네스가 파일로 돌리고 미리 보기를 주어 비용 사건이 없다. 대기열 찾기가 넓어진 것은 넓은 낱말(`coderabbit`, `PR.직전.리뷰`) 탓이고 좁히라는 지침이 retro 5단계에 이미 있다.
+
+10. **일지만 — 병합 커밋의 첫 pre-commit에서 시간 시험 하나가 빨갰다.** 306(부하에서만 빨간 시간 시험, 받아들여 닫힘)의 새 사례라 잇지도 새 행을 쓰지도 않는다(위 "origin/main 병합과 승인").
+
+대기열 반영: 347에 3회차(일지 파일명 추가), 568·569·570 신설. 번호는 커밋 전에 친 `uv run python tools/sibling_overlap.py`의 다음 빈 대기열 번호부터다.
+
+## 다음
+
+(PR 직전에 쓴다, 2026-11-04. 병합 뒤 next-session이 이 절로 지시문을 짓는다. 봇 회차에서 뒤로 넘긴 일이 생기면 여기에 더한다.)
+
+- 이 PR(`docs/agent-os-direction`, main으로)이 병합되면 기능 agent-os-direction은 끝이다. 산출은 ADR 0042·0043(accepted, 2026-11-04), PRD 개정(같은 날 승인), `CONTEXT.md`의 Agent OS 정의와 용어, `.scratch/plan.md` 슬라이스 7~11의 행 열일곱, 옛 ADR 아홉의 이력과 포인터, 프로브 하나. 승인 뒤의 변경은 두 ADR의 status·색인 행·PRD 3행, 따옴표 둘, PR 직전 리뷰의 반영 여섯이고, 그 가운데 PRD 문장 하나는 회고 1에서 그대로 두기로 확인받았다.
+- 다음 작업은 결정표의 프론티어 줄이다. `.scratch/plan.md`의 프론티어는 skill-plugin이고 `spec.md`는 있고 `issues/`가 없다. 그래서 명세 검토(`spec-reviewer` 서브에이전트) 뒤 `/to-tickets .scratch/skill-plugin/spec.md`, 새 세션, `Opus 5.5 / xhigh`. 이 PR이 plan.md 프론티어 줄의 skill-plugin 대목에 명세가 선 문장을 더했다(#458이 더하지 않았던 것). 슬라이스 7~11의 행 열일곱은 skill-plugin 뒤에 차례로, 각 행에 `.scratch/<slug>/`가 없어 설계 인터뷰부터다.
+- ADR 0043의 전환(dev를 main에서 따고 훅·스킬·CI·규약 문서를 고친다)은 harness 티켓이고 아직 쓰지 않았다. 결정표에 ADR이 예고한 harness 티켓을 여는 줄이 없어 언제 여는지는 사용자가 정한다. 그때까지 PR은 main으로 간다.
+- 병합은 워크트리 길(`merge.md` "워크트리에서 병합할 때")이고 주 체크아웃은 당기지 않는다. 새 세션이 워크트리에 들어가기 전에 `tidy-checkouts`를 돈다.
+- 회고: 347에 3회차(chore 계기), 568(2회차)·569(1회차)·570(사람 몫: CodeRabbit 좌석) 신설. 만료 없음.
