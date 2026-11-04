@@ -76,6 +76,14 @@
 
 셀프 리뷰 반영까지 `45bf702a`(`feat: 런타임이 실행마다 고른 스킬을 준비해 ctx.skills로 넘긴다 (skill-plugin 03)`)로 커밋했다. 커밋의 pre-commit 출력은 이 세션이 읽었다: ruff 둘, 러너(check-ticket, zizmor, lint-imports, check-instructions, check-type-escapes, pyright, pyright-linux, run-hooks, pytest, web-verify), 표·줄 구분 문자·변이 표 모두 Passed이고 카나리아 명세와 헌법 판 검사는 파일이 없어 Skipped다. 인용 대조는 경고 하나였고(일지 69행의 따옴표 인용이 저장소에 글자 그대로 없다) 그 줄을 따옴표 없이 고쳐 커밋하지 않은 채 워크트리에 있다.
 
+## PR 직전 리뷰 (인계받은 세션)
+
+CodeRabbit 좌석이 없어 `bug-perf-review`로 돌렸다(기준 3012f78d, 범위 15파일). Critical·Major·Minor는 없고 Nit 둘이다. 밀 주장 셋(프롬프트에 엮은 본문이 `llm_called.prompt`에 실림, `is_file()`의 `OSError`가 감싸지 않고 올라옴, 스킬의 깨짐이 모델 뒤·운영자 파일 손상 앞)은 서브에이전트가 코드(`core/run.py`의 `ctx.llm`·`_prepare`, `filesystem.py`)와 시험(`tests/core/test_run.py`의 스킬·준비 순서 38개를 `-k`로 쳐서 통과)을 읽고 맞는다고 보고했다. 이 세션이 코드를 다시 읽거나 시험을 다시 치지는 않았다. `is_file()`이 `PermissionError`와 `OSError(EIO)`를 그대로 올리고 ENOTDIR는 `None`으로 삼킨다는 것도 서브에이전트가 `uv run python -c`로 `Path.stat`을 바꿔 쳐서 본 것이라고 보고한 값이고, 이 세션은 다시 치지 않았다.
+
+- 고친 것: `_resolve_skills` 독스트링의 "받는 것은 `PluginError` 뿐"에 `OSError` 예외 구절을 더했다.
+- 남긴 것: `is_file()`의 `OSError`가 `PluginError`가 아닌 채로 올라오고 트레이스가 비는 것을 고정하는 시험은 두지 않았다. 대기열 572가 포트 전체의 결정을 내리면 그 결정에 맞춰 둔다(감싸기로 정하면 이 시험은 뒤집힌다).
+- 한계: 카나리아 명세는 사전 확인(`--preflight`)만 돌렸고 본 회차는 돌리지 않았다.
+
 ## 인계
 
 이 세션이 컨텍스트 문턱을 넘은 채 `커밋 뒤`에 와서 인계한다(인계 경계 `커밋 뒤`). 새 세션이 할 일: 위 일지 수정을 커밋에 포함해 푸시하고, PR(`git-pr`)을 열고, `merge.md`의 봇 회차와 병합까지 한다. PR 직전 리뷰는 위 "셀프 리뷰"의 밀 주장 둘을 `bug-perf-review`나 `coderabbit-review`에 넘긴다. 유의: PR 본문에 카나리아는 사전 확인만 돌렸다는 것, `core.md`의 `OSError` 예외(대기열 572)를 적는다.

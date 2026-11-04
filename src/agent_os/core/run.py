@@ -1478,8 +1478,8 @@ def _resolve_skills(plugins: PluginSource, manifest: PluginManifest) -> tuple[Sk
     `read_skill` 에 넘기는 이름은 에이전트 매니페스트의 `skills` 칸에서 온다. 그 칸은 읽는 단계에서
     원소마다 플러그인 이름 패턴을 지났으므로(`PluginManifest.skills`) 여기서 다시 거르지 않는다.
     어댑터가 `read_manifest` 처럼 이름을 스스로 검증하지 않는 대신 호출부가 패턴을 지난 값만 넘기는
-    규약이다. 받는 것은 `PluginError` 뿐이고 머리말의 `ValidationError` 는 어댑터가 이미 값 없는
-    문구로 바꾼다.
+    규약이다. 받는 것은 `PluginError` 뿐이고(경로 존재 확인의 `OSError` 는 예외로 감싸지 않고
+    올라온다, 대기열 572) 머리말의 `ValidationError` 는 어댑터가 이미 값 없는 문구로 바꾼다.
     """
     skills: list[Skill] = []
     for name in manifest.skills:
