@@ -27,6 +27,12 @@
 - **남긴 것.** (1) `AgentContext.skills` 독스트링이 "이 에이전트가 쓰는"으로 적는 것은 계약이 약속하는 것을 말하라는 티켓의 요구라 그대로 둔다(틈은 `sdk.md`가 적는다). (2) `core/run.py`와 `tests/core/test_run.py`의 "다음 티켓이다" 주석은 지금 참이고 티켓 03이 고친다. (3) "머리말 안 `---` 줄 세 자리" 시험은 `yaml.safe_load`만 부른다(프로브도 같다). (4) `_parse_skill`과 `_parse`, `read_skill`과 `read_manifest`의 이름 대조가 같은 모양이다. 원인을 잇지 않는 차이가 티켓이 정한 의도라 합치지 않았다.
 - 다시 돌린 명령: ruff 둘은 통과. 고친 뒤 `tests/sdk/test_skill.py`와 `tests/adapters/test_filesystem.py`는 통과. 전체 러너는 고치기 전 판으로 통과했고, 고친 뒤는 커밋의 pre-commit이 돌려 통과했다.
 
+## PR 직전 리뷰 (CodeRabbit CLI)
+
+- `coderabbit auth status`는 Plan Free, `Seat: not assigned`였다. 그래도 `coderabbit-review` 서브에이전트가 `coderabbit review --agent --include-untracked --base origin/main`을 돌려 `review_completed`, 지적 0건, 검토 24개 파일로 끝났다(서브에이전트 보고를 옮긴 것이다). 한도나 인증 거절은 없었다. 좌석이 없는 Free 플랜이라 분석이 얕을 수 있다는 단서가 보고에 붙었다.
+- 서브에이전트가 보안 축을 코드로 직접 따라갔다고 보고했다. `read_skill`의 경로는 인자 이름으로만 조립되고, 예외 문구와 사슬은 머리말의 값을 싣지 않으며, YAML은 `safe_load`다. 서브에이전트가 `tests/sdk/test_skill.py`와 `tests/adapters/test_filesystem.py` 129개 통과, pyright와 lint-imports(6 kept)도 쳤다고 적었다. 비밀 값을 넣은 즉석 탐침은 못 돌렸다고 적었다.
+- 판정: 고칠 것 없음. 남기는 관찰 둘은 티켓 03의 몫이다. (1) 어댑터의 `read_skill`은 `name`을 스스로 검증하지 않는다. `read_manifest`와 같은 규약이라 호출부(03)가 `is_plugin_name`으로 거른 값만 넘기는지 03이 본다. (2) 새 호출부가 `parse_skill`의 `ValidationError`에 `str(error)`를 쓰지 않는지도 03이 본다. 둘 다 받는 쪽인 `.scratch/skill-plugin/issues/03-runtime-prepares-skills-per-run.md`의 수용 기준 한 줄로 옮겼다.
+
 ## 근거의 종류
 
 - 검사 통과(`ruff`, `run_checks.py`의 열 개, 커밋의 pre-commit)는 명령의 출력과 종료 코드 0으로 본 것이다(러너 출력은 스크래치의 `checks.txt`, 커밋은 백그라운드 명령의 종료 코드 0).
