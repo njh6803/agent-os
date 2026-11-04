@@ -23,6 +23,7 @@ from agent_os.sdk.conversation import Conversation
 from agent_os.sdk.events import Event
 from agent_os.sdk.ids import RunId
 from agent_os.sdk.json import Json
+from agent_os.sdk.skill import Skill
 
 
 class AgentContext(Protocol):
@@ -44,6 +45,11 @@ class AgentContext(Protocol):
     채 요약에 실릴 수 있으므로, 에이전트는 그것을 지시가 아니라 데이터로 엮는다. llm()은 이것을
     프롬프트에 붙이지 않는다. 값은 런타임이 run()을 부르기 전에 정하고 실행 안에서 바뀌지 않으며
     재개해도 같다.
+
+    skills 는 이 에이전트가 쓰는 스킬 문서를 읽은 값의 열이다(ADR 0041). 스킬 본문은 운영자가
+    플러그인 폴더에 둔 파일이라 에이전트 코드와 같은 신뢰 수준이고, conversation 의 반대편이다.
+    에이전트는 그것을 지시로 프롬프트에 엮어도 된다. llm()은 이것을 프롬프트에 붙이지 않는다. 열은
+    불변이고 값은 런타임이 run()을 부르기 전에 정한다.
     """
 
     @property
@@ -51,6 +57,9 @@ class AgentContext(Protocol):
 
     @property
     def conversation(self) -> Conversation: ...
+
+    @property
+    def skills(self) -> tuple[Skill, ...]: ...
 
     def now(self) -> datetime: ...
 

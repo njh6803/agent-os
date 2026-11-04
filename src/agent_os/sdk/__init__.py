@@ -42,6 +42,7 @@ from agent_os.sdk.manifest import (
     parse_manifest,
     secret_args_by_tool,
 )
+from agent_os.sdk.skill import Skill, parse_skill
 
 __all__ = [
     "PLUGIN_NAME_PATTERN",
@@ -71,6 +72,7 @@ __all__ = [
     "RunPaused",
     "RunResumed",
     "RunStarted",
+    "Skill",
     "ToolCall",
     "ToolCalled",
     "ToolError",
@@ -78,5 +80,6 @@ __all__ = [
     "is_plugin_name",
     "is_run_id",
     "parse_manifest",
+    "parse_skill",
     "secret_args_by_tool",
 ]

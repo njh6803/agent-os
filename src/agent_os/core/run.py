@@ -168,6 +168,7 @@ from agent_os.sdk import (
     RunPaused,
     RunResumed,
     RunStarted,
+    Skill,
     ToolCall,
     ToolCalled,
     ToolError,
@@ -425,6 +426,8 @@ class _Context:
         self.run_id = started.run_id
         self._thrown = thrown
         self.conversation = conversation
+        # 런타임이 스킬 문서를 읽어 싣는 것은 다음 티켓이다. 그 전까지 늘 빈 열이다.
+        self.skills: tuple[Skill, ...] = ()
         self._started_at = started.ts
         self._paused = False
         self._resumed = False

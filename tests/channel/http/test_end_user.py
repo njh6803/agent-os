@@ -85,6 +85,7 @@ from agent_os.sdk import (
     RunId,
     RunPaused,
     RunStarted,
+    Skill,
     ToolCall,
     ToolCalled,
     parse_manifest,
@@ -293,6 +294,10 @@ class FakePlugins:
         if manifest.name == "unloadable":
             raise PluginError(UNLOADABLE_REASON)
         return AGENTS[manifest.name]
+
+    def read_skill(self, name: PluginName) -> Skill | None:
+        self.calls += 1
+        return None
 
     def read_disabled(self) -> frozenset[PluginKey]:
         self.calls += 1

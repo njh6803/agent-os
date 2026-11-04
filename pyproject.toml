@@ -14,7 +14,8 @@ requires-python = "==3.12.*"
 # 0.140.7 까지는 SSE 항목을 스트림 항목 모델로 직렬화하지 않아, 프레임이 트레이스 줄과 문자열로
 # 다르고 계약의 항목 스키마가 이벤트 타입을 가리키지 않는다. anyio 는 전이 의존성으로도 오지만
 # core 의 실행 타임아웃과 채널의 실행 수명이 그 취소 범위에 직접 기대 선언하고, 5 는 측정을 다시
-# 돌린 뒤에 들인다(ADR 0014 의 2026-10-06 이력).
+# 돌린 뒤에 들인다(ADR 0014 의 2026-10-06 이력). pyyaml 은 sdk 의 스킬 문서 머리말 읽기가 직접 쓴다
+# (ADR 0041). langchain-core 의 전이 의존성과 같은 판이라 락의 패키지는 늘지 않는다.
 dependencies = [
     "langchain-core>=0.3",
     "pydantic>=2.9",
@@ -24,6 +25,7 @@ dependencies = [
     "uvicorn>=0.30",
     "pyjwt[crypto]>=2.14",
     "anyio>=4.15.1,<5",
+    "pyyaml>=6.0",
 ]
 
 [project.scripts]
@@ -150,3 +152,22 @@ name = "sdk knows no engine (ADR 0001)"
 type = "forbidden"
 source_modules = ["agent_os.sdk"]
 forbidden_modules = ["langgraph", "langchain_core", "langchain_anthropic", "mcp"]
+
+# YAML 을 읽는 층은 sdk 의 스킬 문서 모듈 하나다(ADR 0041). sdk 밖의 일곱 층이 직접 import 하지
+# 못한다. `allow_indirect_imports` 가 없으면 기본이 간접 import 까지 막아 일곱 층 모두
+# `agent_os.sdk -> agent_os.sdk.skill -> yaml` 사슬로 깨진다. 그래서 이 계약이 막는 것은 직접
+# import 다. sdk 가 YAML 을 import 하는 것은 위 "sdk knows no engine" 이 막는 넷에 yaml 이 없어 허락된다.
+[[tool.importlinter.contracts]]
+name = "only the sdk reads YAML (ADR 0041)"
+type = "forbidden"
+source_modules = [
+    "agent_os.core",
+    "agent_os.adapters",
+    "agent_os.channel",
+    "agent_os.admin",
+    "agent_os.http",
+    "agent_os.server",
+    "agent_os.main",
+]
+forbidden_modules = ["yaml"]
+allow_indirect_imports = true

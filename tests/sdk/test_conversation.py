@@ -6,7 +6,16 @@ from datetime import UTC, datetime
 
 import pytest
 
-from agent_os.sdk import AgentContext, BaseAgent, Conversation, Event, Exchange, RunFinished, RunId
+from agent_os.sdk import (
+    AgentContext,
+    BaseAgent,
+    Conversation,
+    Event,
+    Exchange,
+    RunFinished,
+    RunId,
+    Skill,
+)
 
 FIXED_NOW = datetime(2026, 10, 4, 12, 0, tzinfo=UTC)
 NEW = Conversation(summary=None, exchanges=())
@@ -16,6 +25,7 @@ class FakeContext:
     """시그니처로 AgentContext 를 만족한다. 멤버가 빠지면 아래의 포트 주해가 pyright 에서 깨진다."""
 
     run_id = RunId("r1")
+    skills: tuple[Skill, ...] = ()
 
     def __init__(self, conversation: Conversation = NEW) -> None:
         self.conversation = conversation

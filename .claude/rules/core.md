@@ -10,7 +10,7 @@ paths:
 | 포트 | 무엇 | 첫 어댑터 |
 |---|---|---|
 | TraceStore | 이벤트 쓰기, 한 실행의 트레이스 읽기, 실행 요약 목록(`list`) | JSONL 파일 |
-| PluginSource | 매니페스트와 코드 읽기, 종류별 매니페스트 목록(`list_manifests`), 꺼진 집합 읽기(`read_disabled`)와 켜짐 쓰기(`write_enabled`, 둘 다 동기) | 파일시스템(ADR 0003, 운영자 파일은 ADR 0017) |
+| PluginSource | 매니페스트와 코드 읽기, 종류별 매니페스트 목록(`list_manifests`), 꺼진 집합 읽기(`read_disabled`)와 켜짐 쓰기(`write_enabled`, 둘 다 동기), 스킬 문서 읽기(`read_skill`, 동기. 없으면 `None`, 깨졌으면 `PluginError`) | 파일시스템(ADR 0003, 운영자 파일은 ADR 0017) |
 | ToolSource | 도구 목록과 호출 | MCP(mcp 2의 stdio 클라이언트, ADR 0034) |
 | ModelSource | 모델 매니페스트로 모델을 만든다(동기 메서드 하나. 만든 모델의 타입 `ChatModel`은 langchain-core의 추상 클래스 `BaseChatModel`이고 포트가 아니다) | langchain-anthropic의 `ChatAnthropic`(ADR 0040) |
 | Clock | 시각과 run_id | 시스템 시계, uuid4 |
