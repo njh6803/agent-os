@@ -74,3 +74,19 @@ PR 직전 리뷰에 밀 주장(이 세션이 새로 쓴 사실 문장): 프로�
   - Nit 1(고쳤다): 프로브 주석·독스트링의 "두 갈래 모두"가 틀리다. 갈래는 셋이다(`ARMS`). "모든 갈래"로 고쳤다.
   - Nit 2(남겼다): 공백뿐인 본문은 `지침 a: \n\n`이라는 내용 없는 줄이 된다. `parse_skill`이 빈 본문을 거르지 않는다. 티켓은 본문의 앞뒤 공백을 다듬는 것까지만 요구하고 빈 본문 처리는 요구하지 않으며, 머리말만 있는 스킬 문서를 두는 운영자 실수의 몫이라 이 티켓에 넣지 않는다.
 - 일지 인용 두 곳의 띄어쓰기(`calc 는`, `calc 의`)를 코드의 독스트링과 같게 고쳤다(pre-commit의 인용 대조 경고 둘, 대기열 42).
+
+## 인계 2 (PR 연 뒤)
+
+- 커밋 둘(`ac14e4d7` 구현과 시험, `a76270a0` 리뷰 반영)을 푸시하고 PR [#464](https://github.com/njh6803/agent-os/pull/464)를 열었다. 두 커밋 모두 pre-commit의 손으로 치는 다섯(ruff 둘, pyright, lint-imports, pytest, web verify)이 `Passed`였다. 캐나리아 명세·헌법 판 검사는 `Skipped`(해당 파일 없음)였다. 두 번째 커밋에서 인용 경고는 없었다.
+- PR 본문은 `.github/PULL_REQUEST_TEMPLATE.md`를 채웠다. 사용자 프롬프트는 위 "사용자 프롬프트" 그대로(범위: PR과 병합까지)다.
+- 이 세션이 번복한 것: 없음. 표준 축이 낸 프로브 단절(Minor)을 고쳤고, 공백뿐인 본문의 빈 지침 줄(Nit)은 이 티켓의 요구 밖이라 남겼다.
+- 남은 일: `merge.md` 2의 봇 회차(첫 `@coderabbitai review` 코멘트 포함), 병합(`merge.md`의 "워크트리에서 병합할 때"), 병합 뒤 `.scratch/plan.md`의 skill-plugin 행을 04와 함께 맞추기. 대기열 572는 이 티켓의 몫이 아니고 병합 뒤 retro가 이어받는다.
+- 이 세션의 제목은 `feature/05-calc-uses-answer-format-skill`이었다.
+open-session을 부른다 2026-11-04T17:44:01Z
+
+## 봇 회차 (첫 회차)
+
+- 근거는 `gh pr view 464 --json comments`로 읽은 PR 코멘트다. CodeRabbit은 "No actionable comments"를 남겼고 `wait_ci.py 464`가 모든 검사를 통과로 찍었다. claude-review는 병합을 막는 지적이 없고 Minor 하나, Nit 둘이었다.
+  - Minor(고쳤다): `plugins/skills/answer-format/plugin.toml`이 공통 넷뿐이라는 티켓 요구를 재는 시험이 없었다. `test_저장소의_answer_format_매니페스트는_공통_넷뿐이다`를 `tests/test_calc_plugin.py`에 더했다. `uv run pytest -q tests/test_calc_plugin.py`가 8개 통과, 해당 파일의 ruff 검사와 서식 검사가 통과했다(손으로 쳤다).
+  - Nit(남겼다): `지침 answer-format: …` 꼴이 시험에 세 번 나온다. 프롬프트 모양을 글자 그대로 박는 것이 의도다.
+  - Nit(남겼다): 공백뿐인 본문의 빈 지침 줄은 위 리뷰 반영에서 이미 이 티켓 밖으로 적었다.

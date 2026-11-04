@@ -12,6 +12,7 @@ calc 의 매니페스트가 가리키는 mcp(`everything`)는 실물 루트에�
 """
 
 import shutil
+import tomllib
 from collections.abc import AsyncGenerator, Mapping, Sequence
 from contextlib import asynccontextmanager
 from datetime import UTC, datetime
@@ -173,6 +174,21 @@ def test_저장소의_answer_format_폴더는_실제_어댑터로_읽혀_스킬�
     assert skill.name == "answer-format"
     assert skill.description
     assert skill.body.strip() == ANSWER_FORMAT_BODY
+
+
+def test_저장소의_answer_format_매니페스트는_공통_넷뿐이다() -> None:
+    manifest = tomllib.loads(
+        (REPO_ROOT / "plugins" / "skills" / "answer-format" / "plugin.toml").read_text(
+            encoding="utf-8"
+        )
+    )
+
+    assert manifest == {
+        "schema_version": "1",
+        "kind": "skill",
+        "name": "answer-format",
+        "version": "0.1.0",
+    }
 
 
 async def test_이어_가지_않은_실행의_프롬프트는_저장소_스킬_블록이_든_글과_글자_그대로_같다(
