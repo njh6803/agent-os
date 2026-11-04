@@ -168,3 +168,60 @@ open-session을 부른다 2026-11-04T11:42:04Z
 > 사용자: 이대로 승인 (Recommended) — 이력 여섯 항목과 본문 표시 네 곳을 그대로 커밋합니다. 그 뒤 PR을 열어 병합하고 다음 작업 지시문을 냅니다. 구현 티켓은 바로잡은 내용(이름 규칙 검사, 읽지 못한 스킬을 꺼짐으로 세지 않기 등)을 따릅니다.
 
 같은 메시지에서 넘어온 알림 셋을 사용자에게 보였다. 체크아웃 정리의 보고, 원격에 남은 `docs/agent-os-direction`(`git ls-remote`로 `e0885d8a`를 손으로 봤다), ADR 0042의 차이(일지 2026-11-03-04 68행의 "모델·도구·스킬 접근"과 ADR 0042 6행·8행의 "모델·도구 호출"을 읽었다)와 어긋나지 않는다는 판단이다. 사용자는 승인 화면에서 이 알림에 답을 더하지 않았다.
+
+## 커밋
+
+`02f99147`(파일 11개)이다. pre-commit은 ruff 둘, 묶음 검사 열(`check-ticket`, `lint-imports`, `zizmor`, `check-instructions`, `check-type-escapes`, `pyright-linux`, `pyright`, `run-hooks`, `pytest`, `web-verify`), 마크다운 표, 줄 구분 문자, 변이 표, 커밋 메시지가 Passed다(백그라운드 출력을 읽었다). 카나리아 명세와 헌법 판은 해당 파일이 없어 Skipped다. 인용 대조 경고 5건은 막지 않는 경고이고 원문을 옮긴 것이 아니라 낼 일이 없다. 티켓 05의 스킬 본문(아직 없는 글), 프로브 README의 해석 문장, 이 일지가 지적을 줄여 옮긴 셋이다. 사진 비교와 e2e와 `-m llm`은 코드와 화면이 바뀌지 않아 돌리지 않았다.
+
+## 인계 (커밋 뒤)
+
+이 세션의 제목은 `docs/skill-plugin-tickets`였다. 커밋 직후 `hook_handoff`의 계기가 왔다(세션 컨텍스트 312,201 토큰, 문턱 200,000). 인계하지 않는 때 다섯에 들지 않는다. 명령은 성공했고, 요청 범위 "티켓까지"는 병합까지이며, 이 세션의 지시문은 다른 경계(`인계: 셀프 리뷰 직전`)이고, `인계 못함` 줄이 없고, `get_session`의 `self`에 `parentSessionId`가 없다. 사용자가 고치거나 되돌린 것은 없다. 아직 PR이 없다.
+
+새 세션이 이어받을 것은 이렇다.
+
+- **PR 직전 리뷰.** `coderabbit-review`부터다. 돌지 못하면 `/security-review`와 `bug-perf-review`다(`docs/constitution/operations.md` 리뷰 파이프라인 2). `bug-perf-review`로 가면 위 "고친 것"의 문장을 브리프에 밀 주장으로 나열한다.
+- **PR과 병합.** PR을 열고 `.claude/skills/next-session/merge.md`를 Read로 열어 따른다. ADR 0041은 위 "ADR 승인"대로 승인받았으니 병합은 묻지 않는다.
+- **후속 후보 둘.** 위 앞 세션 인계의 것이고 아직 내지 않았다. `mcp` 칸에 패턴이 없어 `../../evil`을 받는 것, 매니페스트 `_parse`의 `from error`가 `ValidationError`를 `__cause__`에 남기는 것이다. 받는 곳이 없다. 일감 카드나 대기열 후보로 낸다.
+- **원격 브랜치 `docs/agent-os-direction`.** 사용자에게 알렸고 지우라는 답은 없었다. 그대로 둔다.
+- **이 절 뒤의 일지는 커밋되지 않았다.** 새 세션이 이어 쓰고 다음 커밋에 싣는다. 회고와 `## 다음`은 단계를 닫는 그 세션이 한다.
+
+낸 지시문은 이렇다.
+
+```
+다음 작업: 기능 skill-plugin. 셀프 리뷰 반영과 ADR 0041 승인, 커밋까지 마쳤다. PR 직전 리뷰부터 이어 병합과 다음 지시문까지 간다
+다음 단계: 티켓
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /to-tickets .scratch/skill-plugin/spec.md
+브랜치: docs/skill-plugin-tickets
+모델: Opus 5.5 / xhigh. 2의 잇는 지시문
+읽을 것: docs/journal/2026-11-04-02-skill-plugin-tickets.md의 "## 인계 (커밋 뒤)"
+이어받을 상태: 인계: 커밋 뒤. 셀프 리뷰 반영과 ADR 0041 승인, 커밋까지 했고 PR은 아직 없다. 남은 단계는 PR 직전 리뷰, PR 열기, merge.md 2(봇 회차)부터의 병합, 회고와 일지의 "다음", 다음 지시문이다. 일지의 인계 절은 커밋되지 않은 채 워크트리에 있다. docs/journal/2026-11-04-02-skill-plugin-tickets.md
+확인할 선행 조건: 없음
+이번 요청 범위: 티켓까지
+```
+
+`git worktree unlock`은 `is not locked`로 끝났다. 띄운 백그라운드 작업은 모두 끝나 멈출 것이 없었다.
+
+open-session을 부른다 2026-11-04T12:17:51Z
+
+## 이어받음과 PR 직전 리뷰
+
+새 세션이 위 지시문을 받아 이 워크트리에 들어와 PR 직전 리뷰부터 이었다. `git fetch origin` 뒤 `origin/main`과 merge-base가 모두 `f5c944b8`이라 합칠 것이 없었다. `sibling_overlap.py`는 번호 겹침 없음이고, `.scratch/plan.md`를 `mcp-shutdown-spec` 워크트리도 고쳤다고 냈다.
+
+### CodeRabbit CLI
+
+돌지 못했다. `coderabbit-review`가 1단계에서 끝냈고, 이 세션이 `coderabbit auth status`를 다시 쳐 `Plan: Free`, `Seat: not assigned`를 봤다. CLI는 0.7.5다. `docs/constitution/operations.md` 리뷰 파이프라인 2의 2026-11-03 기록은 같은 0.7.5에 `Plan`·`Seat` 줄이 없고 리뷰가 돌았다고 적었다. 그래서 판이 달라서 생긴 차이는 아니다. 리뷰를 실제로 돌려 보지는 않았다(그 정의가 `not assigned`면 멈춘다). 대체 둘로 갔다.
+
+### `/security-review`
+
+보고는 이렇다. 찾은 취약점은 없다. 서브태스크가 지적을 내지 않아 거르는 단계는 돌 것이 없었다. 서브태스크가 전문을 읽은 코드는 프로브 `answer_format_llm.py` 하나다. `subprocess.run`은 목록 인자이고 `shell=True`가 없으며, `ANTHROPIC_API_KEY`는 있는지만 보고, 쓰는 곳은 임시 폴더뿐이다. 이 셋은 이 세션도 프로브를 읽어 맞다고 봤다. 마크다운은 지시의 제외 규칙으로 판정하지 않았고 비밀값 패턴만 Grep했다(일치한 줄은 키 이름과 경로뿐이고 실제 값은 없었다는 보고다). 티켓 01·04·05와 명세, ADR 0041의 나머지 줄은 줄마다 읽지 않았다는 보고다. MCP 어댑터가 키를 자식에 넘기지 않는다는 것은 코드를 읽은 결론이고 돌려 보지 않았다는 보고다.
+
+### `bug-perf-review`
+
+기준 `f5c944b8`, 파일 11개, 호출 40에서 멈췄다는 보고다. 유효 0, 보류 1, 오탐 4이고, 위 "고친 것"에서 넘긴 밀 주장 아홉은 모두 반례가 없었다는 보고다. 프로브는 돌리지 않았다(실제 모델을 부른다).
+
+- 보류 Minor: 티켓 02의 가짜 목록에 `.scratch` 프로브의 가짜 셋(`mcp-shutdown/probes/write_failure.py`, `web-widget/probes/event_timing.py`, `harness/probes/precommit_xdist/filesystem_read_retry.py`)이 없어, `read_skill`이 늘면 pyright가 빨개질 수 있다는 지적이다. **오탐으로 닫았다.** `pyproject.toml`의 `[tool.pyright]` `include`가 `src`, `tests`, `tools`뿐이라(이 세션이 Grep으로 읽었다) `.scratch`는 범위 밖이다. 티켓을 고치지 않았다. 앞의 둘이 `PluginSource` 자리에 넘어가는 것은 Grep으로 봤고, 지난 측정의 기록이라 지금 포트에 맞추지 않는다.
+- 오탐 넷은 티켓 03의 "넷을 본다"(읽는 대상의 넷째가 기존 `model_reads`로 읽힌다), 일지의 인계 지시문, 티켓 01의 "13곳"이 `conversation_limit: null`만 센 수인 것, 프로브의 표지와 종료 코드다(위 "남긴 것"의 판정 그대로).
+- 보고가 대지 못했다고 적은 것은 `.scratch/plan.md`의 diff, 명세 주석 하나하나의 본문, ADR 0008·0010·0012·0017·0019의 본문, 티켓 05 본문과 프로브 `BODY`의 코드포인트 일치 등이다.
+
+리뷰를 반영해 고친 파일은 없다. PR 체크리스트에 CLI가 돌지 못한 것과 대체 둘의 결과를 적는다.
