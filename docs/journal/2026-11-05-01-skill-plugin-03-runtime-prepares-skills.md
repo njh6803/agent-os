@@ -66,14 +66,20 @@
 - 남긴 것:
   - smell 셋(`_reject_disabled`의 세 갈래 중복, 종류를 더할 때 열거 문장 열 곳을 고치는 산탄 수정, `FakePlugins`의 스킬용 속성 여덟)은 판단 항목이라 고치지 않았다. 종류가 더 늘지 않는 한 되풀이되지 않는다.
   - 트레이스 시험이 "형식 3"을 단언하지 않는다는 지적은 형식 번호가 `jsonl` 어댑터 헤더의 몫이라 core 가짜로는 볼 수 없다. 시험은 시작 이벤트의 키 집합과 스킬 이름·본문의 부재를 잰다.
-  - "첫 빨강은 가짜의 스킬 문서 읽기가 불리지 않는 것"을 본 기록은 이 일지에 없다. 시험 독스트링의 그 문장은 "불리지 않으면 이 시험이 먼저 빨갛다"는 논리이고 측정이 아니다. 본 빨강은 위 "빨강을 본 것"의 프롬프트 불변 시험 하나뿐이다.
+  - 티켓의 첫 빨강(가짜의 스킬 문서 읽기가 한 번도 불리지 않는 것)을 본 기록은 이 일지에 없다. 시험 독스트링의 그 문장은 불리지 않으면 이 시험이 먼저 빨갛다는 논리이고 측정이 아니다. 본 빨강은 위 "빨강을 본 것"의 프롬프트 불변 시험 하나뿐이다.
   - 일지 위 "람다 다섯"의 셈은 이름 있는 함수가 여섯이라는 지적이 있다. 여섯째(`_turn_off_skill` 따위)가 바뀐 람다였는지 이 세션은 확인하지 않았다.
 - 다시 돌린 명령: `uv run ruff check .`와 `uv run ruff format --check .` 초록, 준비 순서 시험 17개 통과. 나머지는 커밋의 pre-commit이 갈음한다.
 - 카나리아: `uv run python tools/sibling_overlap.py`가 바뀐 규칙 파일(`core.md`, `http.md`, `sdk.md`)을 원천으로 든 명세 아홉을 새 `claude -p`로 돌리라고 알렸다(종료 코드 1은 이 알림이고 번호 겹침은 없다). 02의 선례대로 사전 확인(`--preflight`)만 돌렸고 아홉 모두 통과했다(`end-user-continuation`의 여덟은 한 번에 치고, 경로가 `web-widget` 아래인 `http_rule_llm_widget.toml`은 따로 쳤다). 본 회차는 돌리지 않았다. 바꾼 줄은 그 명세들이 묻는 줄이 아니다(`core.md` 새 불릿은 스킬 준비 한 줄, `http.md`는 최종 사용자 500 목록, `sdk.md`는 스킬 한 줄 — 손으로 읽은 판단이다). 그 알림이 남은 채 커밋한다.
 - PR 직전 리뷰에 밀 주장(이 세션이 새로 쓴 사실 문장): `core.md`의 "에이전트가 프롬프트에 엮은 본문은 그 프롬프트의 일부로 `llm_called.prompt`에 실린다", "경로 존재 확인의 `OSError`는 `read_manifest`와 같이 감싸지 않고 올라온다".
 
+## 커밋 (이 세션)
+
+셀프 리뷰 반영까지 `45bf702a`(`feat: 런타임이 실행마다 고른 스킬을 준비해 ctx.skills로 넘긴다 (skill-plugin 03)`)로 커밋했다. 커밋의 pre-commit 출력은 이 세션이 읽었다: ruff 둘, 러너(check-ticket, zizmor, lint-imports, check-instructions, check-type-escapes, pyright, pyright-linux, run-hooks, pytest, web-verify), 표·줄 구분 문자·변이 표 모두 Passed이고 카나리아 명세와 헌법 판 검사는 파일이 없어 Skipped다. 인용 대조는 경고 하나였고(일지 69행의 따옴표 인용이 저장소에 글자 그대로 없다) 그 줄을 따옴표 없이 고쳐 커밋하지 않은 채 워크트리에 있다.
+
 ## 인계
+
+이 세션이 컨텍스트 문턱을 넘은 채 `커밋 뒤`에 와서 인계한다(인계 경계 `커밋 뒤`). 새 세션이 할 일: 위 일지 수정을 커밋에 포함해 푸시하고, PR(`git-pr`)을 열고, `merge.md`의 봇 회차와 병합까지 한다. PR 직전 리뷰는 위 "셀프 리뷰"의 밀 주장 둘을 `bug-perf-review`나 `coderabbit-review`에 넘긴다. 유의: PR 본문에 카나리아는 사전 확인만 돌렸다는 것, `core.md`의 `OSError` 예외(대기열 572)를 적는다.
 
 제목을 `feature/03-runtime-prepares-skills-per-run (인계함)`으로 바꾸고 워크트리 잠금을 푼 뒤 `open-session`을 부른다.
 
-open-session을 부른다 2026-11-04T15:44:58Z
+open-session을 부른다 2026-11-04T16:03:13Z
