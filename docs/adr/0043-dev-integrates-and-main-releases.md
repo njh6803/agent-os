@@ -1,5 +1,5 @@
 ---
-status: proposed
+status: accepted
 date: 2026-11-04
 ---
 
@@ -24,7 +24,7 @@ date: 2026-11-04
 ## Consequences
 
 - **CI 분담.** dev PR은 지금의 잡(`.github/workflows/ci.yml`의 python, web, e2e, e2e-widget, visual, ticket와 모음 잡 verify)에 PostgreSQL·Redis 컨테이너를 띄운 pytest를 더한 것이다. main PR(dev→main, hotfix→main)과 main 푸시는 거기에 LLM 테스트(`-m llm`, `-m llm_widget`. API 키 시크릿이 CI에 든다)와 실제 이미지의 compose e2e(Dockerfile과 compose를 새로 짓는다)를 더한다. 잡 이름과 모양은 harness 티켓이 정한다.
-- **티켓 검사와 봇.** 커밋 검사(`tools/check_ticket.py`, ADR 0037)는 dev→main PR에서 면제한다. 머리가 dev라 티켓 하나를 가리키지 않기 때문이다. hotfix→main은 티켓 PR이라 그대로 지난다. 리뷰 봇은 dev→main에서 끄고 hotfix에서는 돈다. ADR 0037의 "main에 들어가는 PR은 모두 티켓 파일 하나를 가리킨다"는 "dev에 들어가는 티켓 PR과 hotfix PR"로 읽히고 그 문장에 이 ADR의 포인터를 단다. ADR 0005의 "squash 병합, main 이력은 PR 단위"도 같다(main 이력은 기능 단위의 merge 커밋이 된다).
+- **티켓 검사와 봇.** 커밋 검사(`tools/check_ticket.py`, ADR 0037)는 dev→main PR에서 면제한다. 머리가 dev라 티켓 하나를 가리키지 않기 때문이다. hotfix→main은 티켓 PR이라 그대로 지난다. 리뷰 봇은 dev→main에서 끄고 hotfix에서는 돈다. ADR 0037의 "main에 들어가는 PR은 모두 티켓 파일 하나를 가리킨다"는 dev에 들어가는 티켓 PR과 hotfix PR을 가리키는 것으로 읽히고 그 문장에 이 ADR의 포인터를 단다. ADR 0005의 "squash 병합, main 이력은 PR 단위"도 같다(main 이력은 기능 단위의 merge 커밋이 된다).
 - **직접 커밋 금지는 main과 dev 둘 다다.** 지금 `hook_git_main_commit`은 main 위의 커밋만 막는다(ADR 0005). dev도 막는다.
 - **도구의 기준.** 워크트리의 기준(`origin/main`)과 PR의 base를 브랜치 접두로 가른다. `hotfix/*`는 main, 그 밖(`feature/*`, `chore/*`, `docs/*`)은 dev다. `tools/sibling_overlap.py`, `next-session`의 merge.md, `tidy-checkouts`, `git-pr`·`git-pr-merge` 같은 main을 전제한 tools와 스킬(인터뷰 때의 셈으로 tools 12개, 스킬 8개)과 `CLAUDE.md`의 환경 함정, `docs/constitution/operations.md`의 "브랜치와 병합"이 바뀐다.
 - **전환.** harness 티켓이 dev를 main에서 딴다. 그 뒤에 연 PR부터 dev로 가고, 그때 열린 PR(이 ADR을 싣는 PR 포함)은 main으로 끝낸다. 하네스 고침(훅·스킬·CI·규약 문서)은 그 harness 티켓의 일이고 워크트리에서 하며 새 세션에서 불러 본다(작업 규약 3). 그때까지 지금 규약(main으로 PR)이 그대로다.
