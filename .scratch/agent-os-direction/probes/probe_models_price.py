@@ -2,10 +2,10 @@
 
 토큰을 쓰지 않는 GET 둘이다. 회차는 둘(목록의 첫 항목, 그 id 의 단건)이고, 재려는 상황이 났다는
 표지는 "응답이 실제 모델 객체다"이다. 문서가 적은 칸 `id`(비지 않은 문자열)와
-`max_input_tokens`(정수)가 있고 단건은 요청한 id 를 되돌려 줄 때만 측정으로 센다. 키가 없거나
-네트워크가 끊겨 예외로 끝난 회차는 측정이 아니다. 결과의 갈래는 응답 JSON 의 모든 키(중첩 포함)에
-price·pricing·cost·usd·dollar 가운데 하나라도 들어 있는지다. 이름 검색의 양성 대조는 없고, 대신
-최상위 키 전부를 RESULT 줄에 찍어 사람이 본다.
+`max_input_tokens`(정수. bool 은 정수로 세지 않는다)가 있고 단건은 요청한 id 를 되돌려 줄 때만
+측정으로 센다. 키가 없거나 네트워크가 끊겨 예외로 끝난 회차는 측정이 아니다. 결과의 갈래는 응답 JSON
+의 모든 키(중첩 포함)에 price·pricing·cost·usd·dollar 가운데 하나라도 들어 있는지다. 이름 검색의
+양성 대조는 없고, 대신 최상위 키 전부를 RESULT 줄에 찍어 사람이 본다.
 
 실행: 저장소 루트에서
 `uv run --env-file .env python .scratch/agent-os-direction/probes/probe_models_price.py`
@@ -46,7 +46,12 @@ def _keys(value: object, prefix: str = "") -> list[str]:
 def _is_model_object(data: Mapping[str, object]) -> bool:
     identifier = data.get("id")
     window = data.get("max_input_tokens")
-    return isinstance(identifier, str) and identifier != "" and isinstance(window, int)
+    return (
+        isinstance(identifier, str)
+        and identifier != ""
+        and isinstance(window, int)
+        and not isinstance(window, bool)
+    )
 
 
 def _price_keys(data: Mapping[str, object]) -> list[str]:

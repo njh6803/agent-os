@@ -1824,3 +1824,52 @@ open-session을 부른다 2026-11-04T03:46:36Z
 - ADR 0043의 전환(dev를 main에서 따고 훅·스킬·CI·규약 문서를 고친다)은 harness 티켓이고 아직 쓰지 않았다. 결정표에 ADR이 예고한 harness 티켓을 여는 줄이 없어 언제 여는지는 사용자가 정한다. 그때까지 PR은 main으로 간다.
 - 병합은 워크트리 길(`merge.md` "워크트리에서 병합할 때")이고 주 체크아웃은 당기지 않는다. 새 세션이 워크트리에 들어가기 전에 `tidy-checkouts`를 돈다.
 - 회고: 347에 3회차(chore 계기), 568(2회차)·569(1회차)·570(사람 몫: CodeRabbit 좌석) 신설. 만료 없음.
+- 봇 첫 회차에서 승인받은 ADR의 글에 닿는다는 까닭으로 뒤로 넘긴 보강 셋(아래 "봇 회차")은 해당 기능의 설계 인터뷰가 ADR 이력으로 사용자 승인을 받아 고친다. (a) 슬라이스 11 multi-instance: 구독을 트레이스 읽기보다 먼저 시작해 버퍼에 쌓고 인덱스로 중복을 거르는 순서(ADR 0023 본문 65행과 2026-11-04 이력, ADR 0042 묶음 ⑤ 5, plan.md 11행이 같은 순서를 적는다). (b) 슬라이스 8 trace-postgres: 실행 식별자 키의 Redis 분산 잠금(묶음 ② 18)이 어느 포트에 붙는지를 ADR 0012 2026-11-04 이력에서 계약 티켓이 정하기로 한 목록(운영 설정 표, 평가 표, 임대)에 더한다. (c) ADR 0042 묶음 ② 9의 "단가 칸이 없다"는 양성 대조 없는 판정이라 어림으로 적는다(프로브 README에는 이미 어림으로 적었다).
+
+## 인계(PR 연 뒤)
+
+PR #459를 열자 인계 계기(`hook_handoff`)가 왔다. 세션 컨텍스트 283,757 토큰이 문턱 200,000을 넘은 채 단계 경계 `PR 연 뒤`에 온 것이다. 그 앞 커밋(1f9046ad, 회고와 새 "다음")에서도 같은 계기가 267,401 토큰으로 경계 `커밋 뒤`에 왔지만, 이 세션의 지시문의 "이어받을 상태"가 `인계: 커밋 뒤`로 시작해 넘겨받은 경계에 다시 온 것이라(`handoff.md`의 인계하지 않는 때 셋째) 넘기지 않고 PR까지 이었다. 이번 경계는 다르다. 인계하지 않는 때 다섯을 봤다. 계기를 낸 `gh pr create`는 PR 주소를 내고 종료 코드 0이었고, 이번 요청 범위(PR과 병합까지)는 이 경계에서 끝나지 않으며, 지시문의 "이어받을 상태"는 `인계: 커밋 뒤`라 같은 경계가 아니고, 이 세션이 쓴 `인계 못함` 줄이 없고, `get_session`의 `self`에 `parentSessionId`가 없다(곁 세션이 아니다). 그래서 넘긴다. 함께 온 `hook_pr_next_session`의 계기(next-session으로 병합까지)는 이 인계가 앞선다. 이 세션의 지금 제목은 `docs/agent-os-direction`이고 넘기며 `docs/agent-os-direction (인계함)`으로 바꾼다.
+
+이 세션이 한 것은 위 "origin/main 병합과 승인(셋째 세션)", "PR 직전 리뷰(셋째 세션)", "회고", "다음" 절에 있다. 커밋은 셋이다. 1c4bd951(origin/main 병합), f7816a49(승인 반영), 1f9046ad(PR 직전 리뷰 반영 여섯, 회고, 옛 "다음"을 지우고 새 "다음", plan.md 프론티어 줄의 skill-plugin 문장). 사용자 프롬프트는 앞 세션이 낸 지시문 하나와 선택 화면의 답 다섯(승인 셋은 "origin/main 병합과 승인", 넘김 둘은 "회고")이고, 그 밖에 다시 시도해 달라는 짧은 요청이 두 번 왔다. 한 번은 커밋 직전 단계에서라 그 단계를 이었고, 한 번은 CodeRabbit 재시도 보고 뒤라 `coderabbit auth status`를 다시 쳐 좌석 없음을 확인하고 대체 둘의 결과로 이었다. 번복한 것은 없다.
+
+푸시와 PR. `git push -u origin docs/agent-os-direction`의 첫 시도는 원격이 `remote: fatal error in commit_refs`로 거부했고(로컬 오류가 아니다. 원격 쪽 일시 오류로 본다, 어림) 같은 명령을 한 번 더 치자 들어갔다. PR은 `/git-pr`로 열었다. 제목 `docs: Agent OS의 보장 셋과 다음 기능 열일곱을 ADR 0042·0043으로 정한다`, 본문은 `.github/PULL_REQUEST_TEMPLATE.md`를 채운 것(체크리스트의 PR 직전 리뷰 줄에 CLI가 좌석 없음으로 돌지 못했고 대체 둘로 했다고 적었다). base main, head 1f9046ad. `get_status`로 보니 PR은 이 세션에 묶였고(`bound: true`) 감시의 auto_fix·auto_merge는 꺼져 있다. 끄거나 켜지 않았다(`handoff.md` 6).
+
+새 세션에 넘기는 상태(지시문의 "이어받을 상태"가 가리키는 상세).
+
+- PR #459가 열려 있고 푸시하지 않은 커밋은 없다. `@coderabbitai review` 코멘트는 아직 남기지 않았고 `tools/wait_ci.py` 대기도 띄우지 않았다. 둘 다 새 세션이 `merge.md` 2(봇 회차)대로 한다.
+- 커밋하지 않은 것은 이 일지의 이 절뿐이다. 봇 회차의 반영 커밋에 싣는다(그 회차에 고친 것이 없으면 일지만 실은 커밋을 푸시한다, `merge.md` 3).
+- 남은 차례: `merge.md` 2(봇 회차. 둘째 회차부터 Critical·Major만, 뒤로 넘긴 일은 "다음"에도 적는다) → 4(병합 길. `gh pr view --json headRefOid`와 `git rev-parse HEAD` 대조, "워크트리에서 병합할 때" 1~4: `gh pr merge 459 --squash --match-head-commit <HEAD>`, `--delete-branch` 금지, `git fetch --prune origin`과 `git ls-remote --exit-code --heads origin refs/heads/docs/agent-os-direction`, 주 체크아웃은 당기지 않고 `주 체크아웃 미갱신: 루트는 <브랜치>` 한 줄) → next-session `SKILL.md` 순서 2~4(결정표. 위 "다음"이 가리키는 대로 프론티어 skill-plugin의 티켓 줄). 회고(`retro`)는 이 세션이 돌았고 "다음"도 썼으니 다시 돌리지 않는다. 다만 병합 뒤 next-session이 "다음"에 더할 것이 생기면 더한다.
+- `git worktree list`의 첫 줄은 지금 `C:/project/agent b490a852 [main]`이다. 병합 뒤 그 줄을 다시 보고 미갱신 한 줄을 쓴다.
+- PR 직전 리뷰의 CodeRabbit CLI는 좌석 없음(대기열 570, 사람 몫)이라 돌지 못했고 대체 둘로 끝났다. PR 봇(CodeRabbit·claude-review)은 이와 별개로 돈다.
+- `tools/sibling_overlap.py`가 형제 워크트리 `mcp-shutdown-spec`도 `.scratch/plan.md`를 고쳤다고 알렸다(글자 충돌 후보, 나중에 병합하는 쪽의 몫). 이 PR에는 영향이 없다.
+- 이 세션의 스크래치패드(`C:\Users\User\AppData\Local\Temp\claude\C--project-agent\fbc7d8e6-6759-4268-8f07-67aabb566959\scratchpad\`)의 스크립트(충돌 풀기, 리뷰 반영, 회고 반영)와 PR 본문 파일은 이미 쓰였으니 다시 돌리지 않는다.
+- 이 세션도 `C:\project`가 추가 작업 폴더였다.
+
+아래가 새 세션에 보내는 지시문이다.
+
+```
+다음 작업: 기능 agent-os-direction. PR #459(main으로)를 열었다. 봇 회차 반영과 병합, 병합 뒤의 다음 지시문을 잇는다
+다음 단계: PR 반영·병합
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /grill-with-docs 목표는 Agent OS다. 업계 조사 보고서(C:/project/reports/Agent OS 업계 동향과 방향 점검.md)와 우리 PRD를 대조해, 우리가 Agent OS라는 이름으로 무엇을 보장할지와 다음 기능(들)을 정하는 설계 인터뷰
+브랜치: docs/agent-os-direction
+모델: Sonnet 5.5 / high. 2의 잇는 지시문
+읽을 것: docs/journal/2026-11-04-01-agent-os-direction-design.md의 "## 인계(PR 연 뒤)"(넘기는 상태와 남은 차례)와 "## 다음", 이 워크트리 사본의 .claude/skills/next-session/merge.md
+이어받을 상태: 인계: PR 연 뒤. 일지 docs/journal/2026-11-04-01-agent-os-direction-design.md. merge.md 2(봇 회차)부터 한다. 첫 @coderabbitai review 코멘트와 wait_ci 대기도 새 세션이 띄운다. 푸시하지 않은 커밋은 없고 일지의 인계 절만 커밋하지 않았다(봇 회차의 커밋에 싣는다). 인터뷰·승인·회고·"다음"은 끝났고 라운드를 다시 올리지 않는다. 상세는 읽을 것의 인계 절
+확인할 선행 조건: 실행 중 세션과는 견주지 않았다. CodeRabbit CLI는 좌석이 없어(대기열 570) PR 직전 리뷰는 대체 둘로 끝났다
+이번 요청 범위: PR과 병합까지
+```
+잠금 풀기: `git worktree unlock C:/project/agent/.claude/worktrees/agent-os-direction`이 `is not locked`로 끝나 넘어갔다(handoff.md 4). 멈출 백그라운드 작업은 없었다(커밋과 CodeRabbit 재시도 서브에이전트가 모두 끝난 뒤다).
+
+open-session을 부른다 2026-11-04T09:41:05Z
+
+## 봇 회차(넷째 세션)
+
+인계로 이어받아 `merge.md` 2대로 했다. 세션 제목을 `docs/agent-os-direction`으로 바꾸고 워크트리에 들어갔다. PR #459는 앱이 묶지 못한 상태라 `bind_pr`로 묶었다(첫 시도는 저장소 이름을 잘못 짐작해 거부됐고 `gh pr view`의 주소 njh6803/agent-os로 다시 해 됐다). `@coderabbitai review` 코멘트를 남기고 `tools/wait_ci.py 459`를 백그라운드로 돌렸다. 헤드 1f9046a에서 아홉 검사가 모두 통과했다(`끝: 모두 통과`).
+
+봇마다 첫 회차다. CodeRabbit 인라인 셋과 claude-review 하나가 모두 Minor이고 Critical·Major는 없다. 첫 회차라 지적마다 판단했다.
+
+- **고쳤다** (CodeRabbit, `probe_models_price.py` 49행) `_is_model_object`가 bool을 정수로 받던 것을 제외했다. 독스트링에 적었다.
+- **고쳤다** (CodeRabbit, 프로브 `README.md` 13행) `price_absent`를 어림으로 적고 잰 뒤에 bool 제외를 더해 다시 돌리지 않았다고 적었다. 같은 지적의 ADR 0042 묶음 ② 9 문장은 승인받은 글이라 고치지 않았다(위 "다음" (c)).
+- **뒤로 넘겼다** (CodeRabbit, `.scratch/plan.md` 42행) 구독을 트레이스 읽기보다 먼저 두는 순서. 맞는 지적이나 ADR 0023·0042의 승인받은 결정 문장을 바꾸므로 슬라이스 11의 설계 인터뷰가 승인과 함께 고친다(위 "다음" (a)).
+- **뒤로 넘겼다** (claude-review, ADR 0012 이력) Redis 분산 잠금이 포트 셈의 목록에 없다. 승인받은 ADR 이력이라 슬라이스 8의 설계 인터뷰가 고친다(위 "다음" (b)).
