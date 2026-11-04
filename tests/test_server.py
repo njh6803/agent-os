@@ -1760,6 +1760,64 @@ async def test_공통_넷만_적은_모델_파일은_목록에서_그_행만_표
     assert "plugins/models/old/plugin.toml" in single.json()["message"]
 
 
+async def test_skills를_적은_에이전트는_목록과_단건이_적은_순서대로_싣고_안_적으면_빈_목록이다(
+    stderr: io.StringIO,
+) -> None:
+    """관리 API 의 매니페스트 응답에 `skills` 가 늘 실린다. 읽는 단계의 거부(패턴, 중복, 다른
+    종류)는 어댑터가 목록의 표지와 단건 500 으로 옮긴다(`tests/adapters/test_filesystem.py`)."""
+    picky = parse_manifest(
+        """
+schema_version = "1"
+kind = "agent"
+name = "picky"
+version = "0.1.0"
+entrypoint = "agent:Picky"
+skills = ["zeta-skill", "alpha-skill"]
+"""
+    )
+    plugins = FakePlugins(rows=(CALC, picky))
+    transport = ASGITransport(app=_admin_app(plugins=plugins, trace=FakeTrace(), stderr=stderr))
+
+    async with AsyncClient(transport=transport, base_url="http://admin.test") as client:
+        rows = (await client.get("/plugins", headers=BEARER)).json()
+        single = (await client.get("/plugins/agent/picky", headers=BEARER)).json()
+
+    by_name = {row["name"]: row["manifest"]["skills"] for row in rows}
+    assert by_name == {"calc": [], "picky": ["zeta-skill", "alpha-skill"]}
+    assert single["manifest"]["skills"] == ["zeta-skill", "alpha-skill"]
+
+
+async def test_skills가_패턴을_어긴_에이전트는_목록에서_그_행만_표지이고_단건으로는_500이다(
+    stderr: io.StringIO,
+) -> None:
+    """읽는 단계의 거부가 어댑터에서 표지가 되어 오는 모양(`reason` 에 거부 까닭)을 서버가 그대로
+    낸다. 목록 전체가 500 이 되지 않고 읽히는 행은 그대로 온다."""
+    skewed = UnreadableManifest(
+        kind=PluginKind.AGENT,
+        name="skewed",
+        reason=(
+            "매니페스트를 읽을 수 없다: plugins/agents/skewed/plugin.toml: "
+            "string_pattern_mismatch (skills.0): 이름 패턴을 어긴다"
+        ),
+    )
+    plugins = FakePlugins(rows=(CALC, skewed))
+    transport = ASGITransport(app=_admin_app(plugins=plugins, trace=FakeTrace(), stderr=stderr))
+
+    async with AsyncClient(transport=transport, base_url="http://admin.test") as client:
+        listing = await client.get("/plugins", headers=BEARER)
+        single = await client.get("/plugins/agent/skewed", headers=BEARER)
+
+    rows = listing.json()
+    assert listing.status_code == 200
+    marker = next(row for row in rows if row["name"] == "skewed")
+    assert "string_pattern_mismatch" in marker["reason"]
+    assert "manifest" not in marker
+    assert next(row for row in rows if row["name"] == "calc")["manifest"]["skills"] == []
+    assert single.status_code == 500
+    assert single.json()["code"] == "internal_error"
+    assert "plugins/agents/skewed/plugin.toml" in single.json()["message"]
+
+
 async def test_없는_종류는_422이고_포트가_불리지_않는다(
     client: AsyncClient, plugins: FakePlugins
 ) -> None:
