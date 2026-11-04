@@ -33,6 +33,11 @@
 - 서브에이전트가 보안 축을 코드로 직접 따라갔다고 보고했다. `read_skill`의 경로는 인자 이름으로만 조립되고, 예외 문구와 사슬은 머리말의 값을 싣지 않으며, YAML은 `safe_load`다. 서브에이전트가 `tests/sdk/test_skill.py`와 `tests/adapters/test_filesystem.py` 129개 통과, pyright와 lint-imports(6 kept)도 쳤다고 적었다. 비밀 값을 넣은 즉석 탐침은 못 돌렸다고 적었다.
 - 판정: 고칠 것 없음. 남기는 관찰 둘은 티켓 03의 몫이다. (1) 어댑터의 `read_skill`은 `name`을 스스로 검증하지 않는다. `read_manifest`와 같은 규약이라 호출부(03)가 `is_plugin_name`으로 거른 값만 넘기는지 03이 본다. (2) 새 호출부가 `parse_skill`의 `ValidationError`에 `str(error)`를 쓰지 않는지도 03이 본다. 둘 다 받는 쪽인 `.scratch/skill-plugin/issues/03-runtime-prepares-skills-per-run.md`의 수용 기준 한 줄로 옮겼다.
 
+## PR 봇 회차 (PR #461)
+
+- 헤드 e1dc567에서 검사 아홉(CodeRabbit, claude-review, e2e, e2e-widget, python, ticket, verify, visual, web)이 모두 통과했다(`tools/wait_ci.py`의 출력). claude-review는 "지적 없음"이라 코멘트를 남겼다.
+- CodeRabbit 첫 회차의 지적 하나(Minor, `adapters/filesystem.py`의 `read_skill`에서 `path.is_file()`의 `OSError`가 `PluginError`가 되지 않고 그대로 올라온다)는 **보류**했다. `Path.is_file()`이 일부 오류만 `False`로 바꾸고 나머지 `OSError`는 올린다는 것은 손으로 봤다: `uv run python -c "import pathlib, inspect; ..."`로 이 PC의 pathlib 소스를 읽었고 무시하는 오류 번호는 `(2, 20, 9, 10062)`였다(윈도우 판의 목록이라 CodeRabbit이 든 ELOOP는 이 PC에 없다). 같은 호출이 `read_manifest`(129행), `write_enabled`(118행), `list_manifests`(165행)에 보호 없이 있고 티켓이 매니페스트와 같은 길로 읽으라고 정했다는 것은 코드에서 읽었다. `read_skill`만 고치면 두 메서드의 부재 판정이 갈린다. 포트 전체의 부재 판정에서 `OSError`를 어떻게 다룰지는 따로 정할 일이라 PR 코멘트에 이유를 남겼다. **뒤로 넘긴 일**: 병합 뒤 회고 후보로 올리고, 03이 `read_skill`을 부르기 전에 이 결정이 서 있지 않으면 03이 호출부에서 다시 본다.
+
 ## 근거의 종류
 
 - 검사 통과(`ruff`, `run_checks.py`의 열 개, 커밋의 pre-commit)는 명령의 출력과 종료 코드 0으로 본 것이다(러너 출력은 스크래치의 `checks.txt`, 커밋은 백그라운드 명령의 종료 코드 0).
