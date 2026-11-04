@@ -45,5 +45,7 @@
 | [0039](0039-runtime-relays-call-events-as-recorded.md) | 런타임은 모델·도구 호출의 이벤트를 기록하는 자리에서 흘리고, 에이전트는 몸통과 맞물린 제 태스크에서 돈다 | accepted | 2026-10-23 |
 | [0040](0040-model-is-a-plugin-built-per-run-from-its-manifest.md) | 모델은 플러그인이고, 런타임이 실행마다 그 매니페스트를 읽어 모델을 만든다 | accepted | 2026-10-31 |
 | [0041](0041-skill-is-a-plugin-read-per-run-into-the-context.md) | 스킬은 플러그인이고, 런타임이 실행마다 SKILL.md를 읽어 컨텍스트로 넘긴다 | accepted | 2026-11-03 |
+| [0042](0042-agent-os-mediates-enforces-and-records-every-call.md) | Agent OS는 플러그인으로 실은 실행의 모델·도구 호출을 중재·강제·기록하는 런타임이고, 다음 기능은 다섯 묶음 열일곱이다 | proposed | 2026-11-04 |
+| [0043](0043-dev-integrates-and-main-releases.md) | 티켓 PR은 dev로 가고 기능이 끝나면 dev를 main에 merge 커밋으로 올리며 hotfix는 main에서 따 되돌려 합친다 | proposed | 2026-11-04 |
 
 ADR을 먼저 확인하는 상황 넷: 스택이나 라이브러리를 바꿀 때, 디렉터리나 층 경계를 바꿀 때, 디스크 형식(매니페스트, 이벤트)을 바꿀 때, 기존 코드가 왜 이렇게 되어 있는지 이해되지 않을 때.
