@@ -130,6 +130,9 @@ OPEN_AGENTS = frozenset(
         "unloadable",
         "unwired",
         "nope",
+        "skilled",
+        "skill-without-manifest",
+        "skill-without-document",
     )
 )
 
@@ -158,14 +161,30 @@ def _site(agents: frozenset[AgentName] = OPEN_AGENTS, *, limits: SiteLimits | No
     )
 
 
-def _manifest(name: str, mcp: Sequence[str] = (), approval: Sequence[str] = ()) -> PluginManifest:
+def _manifest(
+    name: str,
+    mcp: Sequence[str] = (),
+    approval: Sequence[str] = (),
+    skills: Sequence[str] = (),
+) -> PluginManifest:
     def listed(names: Sequence[str]) -> str:
         return "[" + ", ".join(f'"{n}"' for n in names) + "]"
 
+    picked = f"skills = {listed(skills)}\n" if skills else ""
     return parse_manifest(
         f'schema_version = "1"\nkind = "agent"\nname = "{name}"\nversion = "0.1.0"\n'
         f'entrypoint = "agent:Agent"\nmcp = {listed(mcp)}\nrequires_approval = {listed(approval)}\n'
+        + picked
     )
+
+
+# 스킬 플러그인. 매니페스트와 스킬 문서를 따로 들어 "매니페스트는 있는데 스킬 문서가 없다"를 흉내
+# 낸다.
+SKILL = PluginName("answer-format")
+SKILL_BODY = "스킬-본문-원문"
+SKILL_MANIFEST = parse_manifest(
+    f'schema_version = "1"\nkind = "skill"\nname = "{SKILL}"\nversion = "0.1.0"\n'
+)
 
 
 CALC_SERVER = parse_manifest(
@@ -193,6 +212,14 @@ class EchoAgent:
 
     async def run(self, request: str, ctx: AgentContext) -> AsyncIterator[Event]:
         yield RunFinished(run_id=ctx.run_id, ts=ctx.now(), output=f"echo:{request}")
+
+
+class SkilledAgent:
+    """컨텍스트의 스킬 본문을 출력으로 옮기고 끝낸다. 모델도 도구도 쓰지 않는다."""
+
+    async def run(self, request: str, ctx: AgentContext) -> AsyncIterator[Event]:
+        output = "|".join(skill.body for skill in ctx.skills)
+        yield RunFinished(run_id=ctx.run_id, ts=ctx.now(), output=output)
 
 
 class AskingAgent:
@@ -253,6 +280,9 @@ AGENTS: Mapping[str, BaseAgent] = {
     "chatty": ChattyAgent(),
     "forging": ForgingAgent(),
     "secret": EchoAgent(),
+    "skilled": SkilledAgent(),
+    "skill-without-manifest": SkilledAgent(),
+    "skill-without-document": SkilledAgent(),
 }
 MANIFESTS = {
     "echo": _manifest("echo"),
@@ -266,20 +296,36 @@ MANIFESTS = {
     "secret": _manifest("secret"),
     "unloadable": _manifest("unloadable"),
     "unwired": _manifest("unwired", mcp=["no-such-server"]),
+    "skilled": _manifest("skilled", skills=[SKILL]),
+    "skill-without-manifest": _manifest("skill-without-manifest", skills=["ghost-skill"]),
+    "skill-without-document": _manifest("skill-without-document", skills=["hollow-skill"]),
 }
 UNLOADABLE_REASON = "진입점을 불러올 수 없다: plugins/agents/unloadable/agent.py"
 UNWIRED_REASON = "지정한 mcp 플러그인이 없다: no-such-server"
 
 
 class FakePlugins:
-    """이름별 매니페스트와 에이전트와 꺼진 집합. 부른 횟수를 세어 판정이 포트보다 먼저인지 본다."""
+    """이름별 매니페스트와 에이전트와 꺼진 집합. 부른 횟수를 세어 판정이 포트보다 먼저인지 본다.
+
+    스킬은 매니페스트(`skill_manifests`)와 스킬 문서(`skill_documents`)를 이름별로 따로 든다.
+    기본은 `SKILL` 하나가 둘 다 있고, `hollow-skill` 은 매니페스트만 있고 스킬 문서가 없다.
+    """
 
     def __init__(self) -> None:
         self.disabled: frozenset[PluginKey] = frozenset()
         self.calls = 0
+        self.skill_manifests = {
+            SKILL: SKILL_MANIFEST,
+            PluginName("hollow-skill"): parse_manifest(
+                'schema_version = "1"\nkind = "skill"\nname = "hollow-skill"\nversion = "0.1.0"\n'
+            ),
+        }
+        self.skill_documents = {SKILL: Skill(name=SKILL, description="형식", body=SKILL_BODY)}
 
     def read_manifest(self, kind: PluginKind, name: PluginName) -> PluginManifest | None:
         self.calls += 1
+        if kind is PluginKind.SKILL:
+            return self.skill_manifests.get(name)
         if kind is PluginKind.MCP:
             return CALC_SERVER if name == "calc-server" else None
         if kind is PluginKind.MODEL:
@@ -297,7 +343,7 @@ class FakePlugins:
 
     def read_skill(self, name: PluginName) -> Skill | None:
         self.calls += 1
-        return None
+        return self.skill_documents.get(name)
 
     def read_disabled(self) -> frozenset[PluginKey]:
         self.calls += 1
@@ -751,6 +797,79 @@ async def test_없는_모델은_운영자_면은_500_원문이고_최종_사용�
     assert operator.json()["message"] == f"기본 모델 플러그인이 없다: {missing}"
     assert models.built == []
     assert trace.events == []
+
+
+async def test_꺼진_스킬은_운영자_면은_이름을_들고_최종_사용자_면은_고정_문구의_409다() -> None:
+    """스킬 플러그인도 꺼질 수 있다(ADR 0041). 꺼진 것이 무엇인지는 최종 사용자에게 말하지 않는다.
+    준비에서 막히므로 모델 소스는 불리지 않고 트레이스도 없다."""
+    plugins = FakePlugins()
+    plugins.disabled = frozenset({PluginKey(kind=PluginKind.SKILL, name=SKILL)})
+    models = FakeModels(GenericFakeChatModel(messages=iter(())))
+    trace = FakeTrace()
+
+    async with _serving(_app(plugins=plugins, models=models, trace=trace)) as client:
+        end_user = await client.post(START, json=_start("skilled"), headers=_as())
+        operator = await client.post("/runs", json=_start("skilled"), headers=CHANNEL)
+
+    assert end_user.status_code == 409
+    assert end_user.json()["message"] == UNAVAILABLE_MESSAGE
+    assert SKILL not in end_user.text
+    assert operator.status_code == 409
+    assert (
+        operator.json()["message"] == f"꺼진 플러그인이다: skill {SKILL} (에이전트 skilled 이 쓴다)"
+    )
+    assert models.built == []
+    assert trace.events == []
+
+
+@pytest.mark.parametrize(
+    ("agent", "missing", "operator_message"),
+    [
+        (
+            "skill-without-manifest",
+            "ghost-skill",
+            "에이전트 skill-without-manifest 이 지정한 skill 플러그인이 없다: ghost-skill",
+        ),
+        (
+            "skill-without-document",
+            "hollow-skill",
+            "에이전트 skill-without-document 이 지정한 "
+            "skill 플러그인에 SKILL.md 가 없다: hollow-skill",
+        ),
+    ],
+    ids=["스킬 매니페스트가 없다", "스킬 문서가 없다"],
+)
+async def test_없는_스킬은_운영자_면은_500_원문이고_최종_사용자_면은_고정_문구다(
+    agent: str, missing: str, operator_message: str
+) -> None:
+    """운영자는 어느 스킬이 없는지 봐야 하고 최종 사용자에게는 구성 오류의 원문을 싣지 않는다. 실행
+    전에 끝나므로 트레이스가 없고, 위젯이 저장한 대화는 지워지지 않는다(404가 아니라 500이다)."""
+    models = FakeModels(GenericFakeChatModel(messages=iter(())))
+    trace = FakeTrace()
+
+    async with _serving(_app(models=models, trace=trace)) as client:
+        end_user = await client.post(START, json=_start(agent), headers=_as())
+        operator = await client.post("/runs", json=_start(agent), headers=CHANNEL)
+
+    assert end_user.status_code == 500
+    assert end_user.json()["message"] == INTERNAL_MESSAGE
+    assert missing not in end_user.text
+    assert operator.status_code == 500
+    assert operator.json()["message"] == operator_message
+    assert models.built == []
+    assert trace.events == []
+
+
+async def test_고른_스킬의_본문은_최종_사용자_경로의_컨텍스트에_닿는다() -> None:
+    """실제 라우트와 준비를 지나 `ctx.skills` 가 채워진다. 에이전트가 출력으로 옮긴 본문이 끝남
+    항목에 실린다."""
+    async with _serving(_app()) as client:
+        response = await client.post(START, json=_start("skilled"), headers=_as())
+
+    frames = _frames(response.text)
+    assert response.status_code == 200
+    assert frames[-1][1]["type"] == "finished"
+    assert frames[-1][1]["output"] == SKILL_BODY
 
 
 async def test_시작_경로의_구성_오류는_고정_문구의_500이고_원인은_서버_기록에만_있다() -> None:

@@ -30,32 +30,32 @@ resume() 이 run() 의 인자가 아닌 이유는 입력이 실제로 다르기 
 처음 생긴 사실인 대조 불일치의 run_failed 는 쓴다. 사실이 한 번씩만 남는다.
 
 실행 전과 실행 중의 경계: 없는 플러그인, 매니페스트 오류, 진입점 import 실패, 없는 mcp 이름,
-없거나 읽히지 않는 모델 매니페스트, 모델 만들기의 실패(모델 소스가 거부한 매니페스트),
-마스킹과 승인이 겹치는 도구, 운영자 파일의 손상, 운영자가 끈 에이전트나 mcp나 모델, 이어 갈 수 없는
-앞 실행(없음, 손상, 다른 주체, 끝나지 않음)과 깨진 고리는 실행 식별자를 만들기 전에 PluginError 로
-끝나 트레이스가 없다. 재개할 수 없는 트레이스(없음, 손상, 다른 주체, 열 에이전트 밖, 형식 1,
-일시정지 아님)와 지금의 일시정지를 가리키지 않는 결정(자리 어긋남)도 같은 자리의 PluginError 다.
-재개에서는 위의 것이 전부(꺼짐과 운영자 파일의 손상, 깨진 고리도) 결정 이벤트를 쓰기 전에 나
-트레이스가 그대로다. 저장소가 결정 이벤트를 이어 쓰지 못해도 PluginError 이고 도구를 부르지
-않는다(ADR 0012 이력). 하위 타입을 가르는 기준은 "깨졌나"다 — 대상이 없거나 대상의 상태나 주체가
-요청을 허락하지 않는 것이 4xx 를 내는 하위 타입이고 그 밖의 것은 서버의 구성이나 기록이 깨진
-것이다(ADR 0014 의 2026-09-26 이력). 깨진 것 가운데 요청이 가리킨 실행을 그 주체와 견주기 전에 만난
-손상만 TraceDamagedBeforePrincipal 로 따로 선다(`before_principal`, ADR 0023 의 2026-10-16 이력).
-요청이 댄 에이전트나 실행이나 이어 갈 앞 실행이 없거나, 호출자가 볼 수 있는 에이전트의 집합 밖이면
-Absent, 실행이 형식 1 이거나 일시정지가 아니거나 결정이 가리킨 자리가 지금의 일시정지가 아니면
-NotResumable(ADR 0014 와 그 2026-09-28 이력), 요청이 부른 에이전트나 그것이 쓰는 mcp 나 모델을
-운영자가 꺼 두었으면 Disabled(ADR 0017, ADR 0040), 결정하는 쪽이 그 실행의 주체가 아니거나 앞 실행이
-다른 주체의 것이면 DifferentPrincipal, 앞 실행이 run_finished 로 끝나지 않았으면 NotContinuable
-이다(ADR 0022·0023). 재개할 실행의 트레이스가 가리키는 에이전트가 없는 것과 고리에서 만나는 실행이
-없거나 깨진 것은 요청이 아니라 서버의 기록이 댄 것이라 기록과 구성이 어긋난 것, 곧 기반 타입
-PluginError 그대로다. 판정 순서는 부재 → 깨짐 → 꺼짐 → 진입점 import → 모델 만들기다. 그 이유는
-`_prepare`. 이어 가기는 그 앞에 앞 실행(없음 → 손상 → 다른 주체 → 끝나지 않음)과 고리의 판정이 선다.
-그 이유는 core/continuation.py 다. 재개는 그 앞에 트레이스 판정(없음 → 손상 → 다른 주체 → 열
-에이전트 밖 → 형식 1 → 일시정지 아님 → 자리 어긋남)과 고리가 선다. 그 이유는 `_read_paused` 와
-`read_own_run` 이다. 요약이 실패한 실행은 run_started 뒤에 run_failed 로 끝나고 에이전트를 부르지
-않는다. MCP 서버 기동 실패부터는 실행 안이라 run_failed 로 끝나고 트레이스가 남는다. 매니페스트가
-가리키는 도구와 인자의 실재는 도구 목록이 연결 뒤에야 나오므로 연결 직후에 검사하고, 어긋나면
-실행 안의 실패다(ADR 0009). 그 검사는 재개에서도 같은 자리에서 돈다.
+없거나 읽히지 않는 모델 매니페스트, 없거나 읽히지 않는 스킬 매니페스트와 스킬 문서, 모델 만들기의
+실패(모델 소스가 거부한 매니페스트), 마스킹과 승인이 겹치는 도구, 운영자 파일의 손상, 운영자가 끈
+에이전트나 mcp나 모델이나 스킬, 이어 갈 수 없는 앞 실행(없음, 손상, 다른 주체, 끝나지 않음)과 깨진
+고리는 실행 식별자를 만들기 전에 PluginError 로 끝나 트레이스가 없다. 재개할 수 없는 트레이스(없음,
+손상, 다른 주체, 열 에이전트 밖, 형식 1, 일시정지 아님)와 지금의 일시정지를 가리키지 않는 결정(자리
+어긋남)도 같은 자리의 PluginError 다. 재개에서는 위의 것이 전부(꺼짐과 운영자 파일의 손상, 깨진
+고리도) 결정 이벤트를 쓰기 전에 나 트레이스가 그대로다. 저장소가 결정 이벤트를 이어 쓰지 못해도
+PluginError 이고 도구를 부르지 않는다(ADR 0012 이력). 하위 타입을 가르는 기준은 "깨졌나"다 — 대상이
+없거나 대상의 상태나 주체가 요청을 허락하지 않는 것이 4xx 를 내는 하위 타입이고 그 밖의 것은 서버의
+구성이나 기록이 깨진 것이다(ADR 0014 의 2026-09-26 이력). 깨진 것 가운데 요청이 가리킨 실행을 그
+주체와 견주기 전에 만난 손상만 TraceDamagedBeforePrincipal 로 따로 선다(`before_principal`, ADR 0023
+의 2026-10-16 이력). 요청이 댄 에이전트나 실행이나 이어 갈 앞 실행이 없거나, 호출자가 볼 수 있는
+에이전트의 집합 밖이면 Absent, 실행이 형식 1 이거나 일시정지가 아니거나 결정이 가리킨 자리가 지금의
+일시정지가 아니면 NotResumable(ADR 0014 와 그 2026-09-28 이력), 요청이 부른 에이전트나 그것이 쓰는
+mcp 나 모델이나 스킬을 운영자가 꺼 두었으면 Disabled(ADR 0017, ADR 0040, ADR 0041), 결정하는 쪽이 그
+실행의 주체가 아니거나 앞 실행이 다른 주체의 것이면 DifferentPrincipal, 앞 실행이 run_finished 로
+끝나지 않았으면 NotContinuable 이다(ADR 0022·0023). 재개할 실행의 트레이스가 가리키는 에이전트가
+없는 것과 고리에서 만나는 실행이 없거나 깨진 것은 요청이 아니라 서버의 기록이 댄 것이라 기록과
+구성이 어긋난 것, 곧 기반 타입 PluginError 그대로다. 판정 순서는 부재 → 깨짐 → 꺼짐 → 진입점 import
+→ 모델 만들기다. 그 이유는 `_prepare`. 이어 가기는 그 앞에 앞 실행(없음 → 손상 → 다른 주체 → 끝나지
+않음)과 고리의 판정이 선다. 그 이유는 core/continuation.py 다. 재개는 그 앞에 트레이스 판정(없음 →
+손상 → 다른 주체 → 열 에이전트 밖 → 형식 1 → 일시정지 아님 → 자리 어긋남)과 고리가 선다. 그 이유는
+`_read_paused` 와 `read_own_run` 이다. 요약이 실패한 실행은 run_started 뒤에 run_failed 로 끝나고
+에이전트를 부르지 않는다. MCP 서버 기동 실패부터는 실행 안이라 run_failed 로 끝나고 트레이스가
+남는다. 매니페스트가 가리키는 도구와 인자의 실재는 도구 목록이 연결 뒤에야 나오므로 연결 직후에
+검사하고, 어긋나면 실행 안의 실패다(ADR 0009). 그 검사는 재개에서도 같은 자리에서 돈다.
 
 실행 타임아웃(ADR 0014 의 2026-10-05 이력 "실행에 타임아웃이 생긴다"): 시작 이벤트(재개에서는 결정
 이벤트)를 쓴 뒤 정한 시간 안에 결말이 나지 않으면 run_failed("실행이 N초 안에 끝나지 않았다")로
@@ -333,6 +333,7 @@ class _Prepared:
     policy: _Policy
     instance: BaseAgent
     model: ChatModel
+    skills: tuple[Skill, ...]
 
 
 # 에이전트 태스크가 몸통에 울리는 초인종은 다음을 청하는 신호(`anyio.Event`) 하나다. 이벤트는 싣지
@@ -421,13 +422,13 @@ class _Context:
         replay: Replay,
         verdict: _Verdict | None,
         conversation: Conversation,
+        skills: tuple[Skill, ...],
         thrown: _Thrown,
     ) -> None:
         self.run_id = started.run_id
         self._thrown = thrown
         self.conversation = conversation
-        # 런타임이 스킬 문서를 읽어 싣는 것은 다음 티켓이다. 그 전까지 늘 빈 열이다.
-        self.skills: tuple[Skill, ...] = ()
+        self.skills = skills
         self._started_at = started.ts
         self._paused = False
         self._resumed = False
@@ -1045,6 +1046,7 @@ class _Body:
             self._replay,
             self._verdict,
             conversation,
+            prepared.skills,
             self._thrown,
         )
         try:
@@ -1241,24 +1243,27 @@ def _prepare(
     에이전트의 매니페스트는 부르는 쪽이 읽어 넘긴다. 없을 때의 뜻이 `run()` 과 `resume()` 에서
     다르기 때문이다(`_requested_manifest`, `_recorded_manifest`).
 
-    순서가 의도다. 깨짐(mcp 들, 마스킹과 승인의 충돌, 모델의 없음과 읽히지 않음, 운영자 파일의
-    손상)을 다 본 뒤에 꺼짐(에이전트, mcp, 모델)을 보고, 진입점 import 는 꺼짐보다 뒤, 모델 만들기는
-    import 뒤다. 깨진 것이 먼저 보여야 운영자가 다시 켜기 전에 고칠 것을 알고, import 실패를
-    판정하려면 플러그인 코드를 실행해야 하는데 꺼진 에이전트는 그 코드를 돌리지 않는다(ADR 0017,
-    plugin-toggle 명세의 "core — 준비 단계의 판정"). 깨짐과 꺼짐이 같은 순서(에이전트 → mcp → 모델)
-    하나다. 모델 만들기가 마지막인 이유는 만들기가 키도 네트워크도 요구하지 않아 실패하는 것이 모델
-    소스가 거부하는 모양의 매니페스트뿐이고(model-plugin 명세의 프로브가 잰 것은 키와 네트워크가
-    필요 없다는 것까지다), 꺼진 에이전트를 import 하지 않는다는 지금의 불변식을 그대로 두기
-    위해서다.
+    순서가 의도다. 깨짐(mcp 들, 마스킹과 승인의 충돌, 모델의 없음과 읽히지 않음, 스킬의 없음과
+    읽히지 않음, 운영자 파일의 손상)을 다 본 뒤에 꺼짐(에이전트, mcp, 모델, 스킬)을 보고, 진입점
+    import 는 꺼짐보다 뒤, 모델 만들기는 import 뒤다. 깨진 것이 먼저 보여야 운영자가 다시 켜기 전에
+    고칠 것을 알고, import 실패를 판정하려면 플러그인 코드를 실행해야 하는데 꺼진 에이전트는 그
+    코드를 돌리지 않는다(ADR 0017, plugin-toggle 명세의 "core — 준비 단계의 판정"). 깨짐과 꺼짐이
+    같은 순서(에이전트 → mcp → 모델 → 스킬) 하나다(ADR 0040, ADR 0041). 모델 만들기가 마지막인
+    이유는 만들기가 키도 네트워크도 요구하지 않아 실패하는 것이 모델 소스가 거부하는 모양의
+    매니페스트뿐이고(model-plugin 명세의 프로브가 잰 것은 키와 네트워크가 필요 없다는 것까지다),
+    꺼진 에이전트를 import 하지 않는다는 지금의 불변식을 그대로 두기 위해서다.
 
     모델의 이름은 에이전트 매니페스트의 `model`, 없으면 `default_model` 이다. 모델 매니페스트는 준비
     한 번에 한 번 읽고 만든 모델을 캐시하지 않는다 — 실행마다 새로 만들어야 운영자가 파일을 고친
-    것이 다음 실행부터 듣는다(ADR 0040).
+    것이 다음 실행부터 듣는다(ADR 0040). 스킬도 같다. 에이전트의 `skills` 에 적힌 이름마다 준비
+    한 번에 매니페스트와 스킬 문서를 한 번씩 읽어 `ctx.skills` 로 넘기고 캐시하지 않는다. 읽기가
+    동기라 재개의 첫 걸음에 `await` 가 없다는 불변식이 그대로다(ADR 0041).
     """
     servers = _resolve_servers(plugins, manifest)
     _reject_masked_approvals(manifest, servers)
     model_name = default_model if manifest.model is None else manifest.model
     model_manifest = _resolve_model(plugins, manifest, model_name)
+    skills = _resolve_skills(plugins, manifest)
     _reject_disabled(plugins.read_disabled(), manifest, model_name)
     instance = plugins.load_agent(manifest)
     return _Prepared(
@@ -1269,6 +1274,7 @@ def _prepare(
         ),
         instance=instance,
         model=models.build(model_manifest),
+        skills=skills,
     )
 
 
@@ -1462,6 +1468,32 @@ def _resolve_model(
     raise PluginError(f"기본 모델 플러그인이 없다: {name}")
 
 
+def _resolve_skills(plugins: PluginSource, manifest: PluginManifest) -> tuple[Skill, ...]:
+    """에이전트가 고른 스킬의 문서를 매니페스트에 적힌 순서대로. 비어 있으면 빈 열이다(ADR 0041).
+
+    이름마다 매니페스트 → 스킬 문서 순으로 한 번씩 읽고, 한 이름을 끝낸 뒤 다음 이름으로 간다.
+    매니페스트가 없으면 스킬 문서를 읽지 않는다. 문구는 누구의 지정인지를 들고, 읽히지 않음과 이름
+    어긋남은 어댑터의 `PluginError` 가 그대로 올라온다. 문구가 싣는 것은 패턴을 지난 이름뿐이다.
+
+    `read_skill` 에 넘기는 이름은 에이전트 매니페스트의 `skills` 칸에서 온다. 그 칸은 읽는 단계에서
+    원소마다 플러그인 이름 패턴을 지났으므로(`PluginManifest.skills`) 여기서 다시 거르지 않는다.
+    어댑터가 `read_manifest` 처럼 이름을 스스로 검증하지 않는 대신 호출부가 패턴을 지난 값만 넘기는
+    규약이다. 받는 것은 `PluginError` 뿐이고(경로 존재 확인의 `OSError` 는 예외로 감싸지 않고
+    올라온다, 대기열 572) 머리말의 `ValidationError` 는 어댑터가 이미 값 없는 문구로 바꾼다.
+    """
+    skills: list[Skill] = []
+    for name in manifest.skills:
+        if plugins.read_manifest(PluginKind.SKILL, name) is None:
+            raise PluginError(f"에이전트 {manifest.name} 이 지정한 skill 플러그인이 없다: {name}")
+        skill = plugins.read_skill(name)
+        if skill is None:
+            raise PluginError(
+                f"에이전트 {manifest.name} 이 지정한 skill 플러그인에 SKILL.md 가 없다: {name}"
+            )
+        skills.append(skill)
+    return tuple(skills)
+
+
 def _reject_masked_approvals(
     manifest: PluginManifest, servers: Mapping[PluginName, McpServer]
 ) -> None:
@@ -1476,13 +1508,14 @@ def _reject_masked_approvals(
 def _reject_disabled(
     disabled: frozenset[PluginKey], manifest: PluginManifest, model_name: PluginName
 ) -> None:
-    """운영자가 끈 것을 부른 실행을 거부한다. 에이전트가 먼저, mcp 는 매니페스트에 적힌 순서, 모델이
-    마지막이다.
+    """운영자가 끈 것을 부른 실행을 거부한다. 에이전트가 먼저, mcp 와 스킬은 매니페스트에 적힌
+    순서이고 모델이 mcp 뒤, 스킬이 마지막이다.
 
-    꺼진 집합은 부르는 쪽이 한 번 읽어 넘긴다. 에이전트와 mcp 들과 모델을 같은 순간의 상태로
-    판정하기 위해서다(ADR 0012 의 2026-09-26 이력). 메시지는 꺼진 것의 종류와 이름이다 — 켜진
-    에이전트가 꺼진 mcp 나 모델 때문에 거부되면 운영자에게 켜 달라고 할 것이 그 mcp 나 모델이기
-    때문이다. 기본 모델이 꺼진 것도 그것을 쓰는 실행의 거부다.
+    꺼진 집합은 부르는 쪽이 한 번 읽어 넘긴다. 에이전트와 mcp 들과 모델과 스킬들을 같은 순간의
+    상태로 판정하기 위해서다(ADR 0012 의 2026-09-26 이력). 메시지는 꺼진 것의 종류와 이름이다 —
+    켜진 에이전트가 꺼진 mcp 나 모델이나 스킬 때문에 거부되면 운영자에게 켜 달라고 할 것이 그 mcp 나
+    모델이나 스킬이기 때문이다. 기본 모델이 꺼진 것도 그것을 쓰는 실행의 거부다. 이 순서는
+    깨짐의 순서(mcp → 모델 → 스킬)와 같다.
     """
     agent = PluginKey(kind=PluginKind.AGENT, name=manifest.name)
     if agent in disabled:
@@ -1498,6 +1531,12 @@ def _reject_disabled(
         raise Disabled(
             f"꺼진 플러그인이다: {model.kind} {model.name} (에이전트 {manifest.name} 이 쓴다)"
         )
+    for name in manifest.skills:
+        skill = PluginKey(kind=PluginKind.SKILL, name=name)
+        if skill in disabled:
+            raise Disabled(
+                f"꺼진 플러그인이다: {skill.kind} {skill.name} (에이전트 {manifest.name} 이 쓴다)"
+            )
 
 
 def _reject_unknown_declarations(policy: _Policy, specs: Sequence[ToolSpec]) -> None:
