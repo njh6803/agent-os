@@ -80,3 +80,10 @@ open-session을 부른다 2026-11-05T09:01Z
 남은 일: 푸시, PR 열기(`/git-pr`. 본문의 자체 점검과 리뷰 결과는 위 "셀프 리뷰"와 "PR 직전 리뷰"를 가리킨다), 첫 `@coderabbitai review` 코멘트, `merge.md` 2의 봇 회차, 병합(워크트리에서 병합하는 길), `tidy-checkouts`. 일지 회고 절과 `## 다음`은 이미 썼으므로 봇 회차 결과만 이 일지에 덧붙인다. PR 직전 리뷰에서 고친 것은 독스트링 문장 하나뿐이라 PR 봇에 밀어 둘 새 사실 문장은 없다.
 
 open-session을 부른다 2026-11-05T09:56Z
+
+## 봇 회차 (PR #470)
+
+- 첫 푸시(`a32a99d`)의 검사는 모두 통과했다(`tools/wait_ci.py` 출력: python·verify·web·e2e·e2e-widget·visual·ticket SUCCESS).
+- claude-review 첫 회차: 지적 없음. Nit 하나(판정 논리와 시험 도우미가 한 파일에 섞임)는 PR 본문 "남긴 위험"에 이미 밝힌 것이라 작성자 재량으로 뒀다.
+- CodeRabbit: `@coderabbitai review`에 `Review rate limited`로 답해 리뷰가 없었다(무료 OSS 한도). PR 직전 CLI 리뷰가 지적 0건이었다는 것은 위 "PR 직전 리뷰"의 서브에이전트 보고를 옮긴 것이다. 이 세션은 CLI를 돌리지 않았다.
+- 푸시 뒤 main이 앞섰다(`b77f158f`, PR #469, ADR 0044). `.scratch/plan.md`를 바꿨으므로 `origin/main`을 합치고 `uv run pytest -q tests/test_plan_status.py`를 다시 돌려 12 passed를 봤다. 앱의 `sync_with_base_branch`는 앱이 만든 워크트리가 아니라는 까닭으로 거부해 `git merge --no-edit origin/main`으로 직접 합쳤다.
