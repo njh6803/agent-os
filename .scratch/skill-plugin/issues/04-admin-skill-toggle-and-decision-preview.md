@@ -10,29 +10,29 @@
 
 **Blocked by:** 03(켜고 끄기가 실제로 듣고, 꺼진 스킬의 409 문구가 선다)
 
-**Status:** ready-for-agent
+**Status:** done
 
 ### 목록의 안내 줄
 
-- [ ] **`PluginList.tsx`의 로더 없는 종류 집합과 안내 줄을 걷는다.** model이 이미 빠져 skill이 마지막이라 집합이 빈다(ADR 0041). 집합과 그 주석과 줄을 그리는 자리가 함께 사라진다
-- [ ] **같은 줄을 단언하는 자리를 고친다.** `web/apps/admin/components/pages/HomePage.test.tsx`의 `NO_EFFECT`와 "스킬 행에만 로더가 생기기 전에는 효과가 없다가 보인다"가 어느 행에도 없다는 단언으로 바뀐다. `PluginList.stories.tsx`의 play 단언(그 줄이 보인다)도 없다는 단언으로 바뀐다
-- [ ] **관리 화면 e2e(`web/apps/admin/e2e/admin-token.e2e.ts`)의 스킬 행 단언이 그 줄이 없다는 단언으로 바뀐다.** 스택의 `skills/summarize` 픽스처는 공통 넷뿐이고 스킬 문서가 없어도 보통 행이다(ADR 0041). 그대로 둔다
-- [ ] **`PluginList`의 사진 정답이 바뀌면 다시 만든다.** `List`와 `SwitchFailed` 두 스토리가 같은 `ROWS`를 그려 스킬 행이 있으므로, 안내 줄이 없어지며 `web/apps/admin/visual/snapshots/organisms-pluginlist--{list,switch-failed}-*` 여덟 장이 바뀔 것이다(코드를 읽은 어림, 돌리지 않았다). `pnpm -C web visual:admin`으로 빨강을 보고 `pnpm -C web visual:admin:update`로 정답을 컨테이너 안에서 다시 만든 뒤 바뀐 사진을 PR 본문에 적는다(`.claude/rules/web-design.md`). 다른 사진이 바뀌면 그것도 적는다
+- [x] **`PluginList.tsx`의 로더 없는 종류 집합과 안내 줄을 걷는다.** model이 이미 빠져 skill이 마지막이라 집합이 빈다(ADR 0041). 집합과 그 주석과 줄을 그리는 자리가 함께 사라진다
+- [x] **같은 줄을 단언하는 자리를 고친다.** `web/apps/admin/components/pages/HomePage.test.tsx`의 `NO_EFFECT`와 "스킬 행에만 로더가 생기기 전에는 효과가 없다가 보인다"가 어느 행에도 없다는 단언으로 바뀐다. `PluginList.stories.tsx`의 play 단언(그 줄이 보인다)도 없다는 단언으로 바뀐다
+- [x] **관리 화면 e2e(`web/apps/admin/e2e/admin-token.e2e.ts`)의 스킬 행 단언이 그 줄이 없다는 단언으로 바뀐다.** 스택의 `skills/summarize` 픽스처는 공통 넷뿐이고 스킬 문서가 없어도 보통 행이다(ADR 0041). 그대로 둔다
+- [x] **`PluginList`의 사진 정답이 바뀌면 다시 만든다.** `List`와 `SwitchFailed` 두 스토리가 같은 `ROWS`를 그려 스킬 행이 있으므로, 안내 줄이 없어지며 `web/apps/admin/visual/snapshots/organisms-pluginlist--{list,switch-failed}-*` 여덟 장이 바뀔 것이다(코드를 읽은 어림, 돌리지 않았다). `pnpm -C web visual:admin`으로 빨강을 보고 `pnpm -C web visual:admin:update`로 정답을 컨테이너 안에서 다시 만든 뒤 바뀐 사진을 PR 본문에 적는다(`.claude/rules/web-design.md`). 다른 사진이 바뀌면 그것도 적는다
 
 ### 결정 칸의 미리 알림
 
-- [ ] **결정 칸의 꺼짐 미리 알림(`components/organisms/RunDecision`의 `disabledFor`)이 에이전트 매니페스트의 `skills`를 본다.** 적힌 순서대로, 목록에 그 이름의 스킬 행이 있고 `manifest`가 있으며 꺼져 있으면 `스킬 <이름>`을 모델 뒤에 더한다. 서버의 꺼짐 순서(에이전트 → mcp → 모델 → 스킬)와 같다
-- [ ] **세는 꼴은 mcp가 아니라 모델의 것이다.** mcp 갈래는 `manifest`를 보지 않아 표지 행이 꺼져 있어도 꺼짐으로 센다. 읽지 못한 스킬은 켜도 실행이 막히므로 그 까닭을 꺼짐이라 말하면 틀리다(명세 C의 주석. ADR 0041 본문의 "mcp와 같은 꼴"은 2026-11-04 이력이 바꿨다). 함수의 독스트링에 `skills`와 표지 행을 세지 않는 까닭을 더한다
-- [ ] **시험은 `components/pages/RunPage.decision.test.tsx`의 모델 사례를 본뜬다.** 넷이다. 고른 스킬이 꺼졌으면 버튼이 막히고 `스킬 <이름>`이 보인다, 다른 스킬이 꺼진 것은 막지 않는다, `skills`가 빈 에이전트는 꺼진 스킬이 있어도 미리 막지 않는다, 고른 스킬의 행이 표지이면 버튼을 막지 않고 `스킬 <이름>`도 보이지 않는다. 선례는 "에이전트가 고른 모델이 꺼졌으면 결정 버튼이 막히고 꺼진 모델이 보인다", "에이전트가 고른 모델의 행이 표지면 꺼짐으로 세지 않고 결정 버튼을 막지 않는다"다. 목록을 다시 읽다 실패한 경우와 에이전트 행이 표지인 경우는 같은 파일의 기존 시험이 덮는다
-- [ ] **결정 칸의 꺼짐 스토리를 본다.** 꺼진 사례는 `components/organisms/RunDetail.stories.tsx`의 `DisabledPlugins`다. 경고의 모양은 그대로라 스킬 사례를 새 스토리로 더하지 않아도 된다(코드를 읽은 어림). 그 스토리의 목록에 꺼진 스킬을 더하면 문구와 사진이 함께 바뀌므로, 더할지는 시작할 때 고르고 바꾸면 정답을 다시 만들어 PR 본문에 적는다
-- [ ] **관리 화면 e2e의 꺼짐 흐름에 스킬 사례를 더하지 않고 vitest로 덮는다.** 미리 알림은 화면 안의 계산이고 서버를 지나지 않기 때문이다
+- [x] **결정 칸의 꺼짐 미리 알림(`components/organisms/RunDecision`의 `disabledFor`)이 에이전트 매니페스트의 `skills`를 본다.** 적힌 순서대로, 목록에 그 이름의 스킬 행이 있고 `manifest`가 있으며 꺼져 있으면 `스킬 <이름>`을 모델 뒤에 더한다. 서버의 꺼짐 순서(에이전트 → mcp → 모델 → 스킬)와 같다
+- [x] **세는 꼴은 mcp가 아니라 모델의 것이다.** mcp 갈래는 `manifest`를 보지 않아 표지 행이 꺼져 있어도 꺼짐으로 센다. 읽지 못한 스킬은 켜도 실행이 막히므로 그 까닭을 꺼짐이라 말하면 틀리다(명세 C의 주석. ADR 0041 본문의 "mcp와 같은 꼴"은 2026-11-04 이력이 바꿨다). 함수의 독스트링에 `skills`와 표지 행을 세지 않는 까닭을 더한다
+- [x] **시험은 `components/pages/RunPage.decision.test.tsx`의 모델 사례를 본뜬다.** 넷이다. 고른 스킬이 꺼졌으면 버튼이 막히고 `스킬 <이름>`이 보인다, 다른 스킬이 꺼진 것은 막지 않는다, `skills`가 빈 에이전트는 꺼진 스킬이 있어도 미리 막지 않는다, 고른 스킬의 행이 표지이면 버튼을 막지 않고 `스킬 <이름>`도 보이지 않는다. 선례는 "에이전트가 고른 모델이 꺼졌으면 결정 버튼이 막히고 꺼진 모델이 보인다", "에이전트가 고른 모델의 행이 표지면 꺼짐으로 세지 않고 결정 버튼을 막지 않는다"다. 목록을 다시 읽다 실패한 경우와 에이전트 행이 표지인 경우는 같은 파일의 기존 시험이 덮는다
+- [x] **결정 칸의 꺼짐 스토리를 본다.** 꺼진 사례는 `components/organisms/RunDetail.stories.tsx`의 `DisabledPlugins`다. 경고의 모양은 그대로라 스킬 사례를 새 스토리로 더하지 않아도 된다(코드를 읽은 어림). 그 스토리의 목록에 꺼진 스킬을 더하면 문구와 사진이 함께 바뀌므로, 더할지는 시작할 때 고르고 바꾸면 정답을 다시 만들어 PR 본문에 적는다
+- [x] **관리 화면 e2e의 꺼짐 흐름에 스킬 사례를 더하지 않고 vitest로 덮는다.** 미리 알림은 화면 안의 계산이고 서버를 지나지 않기 때문이다
 
 ### ADR과 문서
 
-- [ ] **ADR 0019에 이력 한 줄의 초안을 쓴다.** 미리 알림이 에이전트 매니페스트가 고른 스킬까지 본다는 것과 표지 행을 세지 않는다는 것이고, 근거는 ADR 0041이다. `.claude/rules/adr.md`에 따라 ADR 0019 본문의 그 문장에 있는 2026-11-01 포인터 뒤에 새 포인터를 잇고 `tools/check_adr_pointers.py`로 본다. `/code-review`의 셀프 리뷰를 반영한 뒤에 보여주고 승인을 받는다(`CLAUDE.md` 작업 규약 5)
-- [ ] **옛 표현을 저장소 전체에서 grep해 살아 있는 문서에 잔존이 0인지 본다.** 스킬을 로더 없는 종류로 적은 문장, 미리 알림이 에이전트와 mcp와 모델만 본다고 적은 문장이다. 기록은 고치지 않는다
+- [x] **ADR 0019에 이력 한 줄의 초안을 쓴다.** 미리 알림이 에이전트 매니페스트가 고른 스킬까지 본다는 것과 표지 행을 세지 않는다는 것이고, 근거는 ADR 0041이다. `.claude/rules/adr.md`에 따라 ADR 0019 본문의 그 문장에 있는 2026-11-01 포인터 뒤에 새 포인터를 잇고 `tools/check_adr_pointers.py`로 본다. `/code-review`의 셀프 리뷰를 반영한 뒤에 보여주고 승인을 받는다(`CLAUDE.md` 작업 규약 5)
+- [x] **옛 표현을 저장소 전체에서 grep해 살아 있는 문서에 잔존이 0인지 본다.** 스킬을 로더 없는 종류로 적은 문장, 미리 알림이 에이전트와 mcp와 모델만 본다고 적은 문장이다. 기록은 고치지 않는다
 
 ### 검증
 
-- [ ] **빨강을 먼저 본다**(헌법 원칙 II). 첫 빨강은 스킬 행에 안내 줄이 없다는 vitest 단언과 에이전트가 고른 스킬이 꺼진 실행에서 버튼이 막힌다는 단언이다
-- [ ] **검증 명령이 모두 초록이다.** `pnpm -C web verify`와 관리 화면 e2e(`pnpm -C web/apps/admin exec playwright test`)와 사진 비교 `pnpm -C web visual:admin`을 치고, 손으로 치는 나머지도 친다
+- [x] **빨강을 먼저 본다**(헌법 원칙 II). 첫 빨강은 스킬 행에 안내 줄이 없다는 vitest 단언과 에이전트가 고른 스킬이 꺼진 실행에서 버튼이 막힌다는 단언이다
+- [x] **검증 명령이 모두 초록이다.** `pnpm -C web verify`와 관리 화면 e2e(`pnpm -C web/apps/admin exec playwright test`)와 사진 비교 `pnpm -C web visual:admin`을 치고, 손으로 치는 나머지도 친다
