@@ -69,6 +69,14 @@
 
 만료할 행은 없었다(`tools/queue_open_rows.py`가 "만료할 행 (없음)"을 냈다).
 
+## PR 직전 리뷰
+
+CodeRabbit CLI는 돌지 못했다. `coderabbit auth status`가 `Seat: not assigned`, `Plan: Free`를 냈고 리뷰 명령은 치지 않았다(좌석이 없으면 CLI 리뷰를 쓸 수 없다). 대체 둘을 `origin/main`을 합친 병합 커밋 `1f90026a` 위에서 나란히 돌렸다.
+
+- **`/security-review`**: 지적 없음. 변경은 선택 칸 셋과 에이전트가 채운 칸을 막는 판정이라 입력 검증·인증·주입 갈래의 새 공격면이 없다. 거부 메시지가 든 `event.tool`은 에이전트가 적은 도구 이름이고 칸 값은 싣지 않는다.
+- **`bug-perf-review`**: 유효 0, 오탐 0, 보류 0. 밀 주장 다섯을 코드로 대 봤다. 판정이 `ctx.replay_event` 앞에 서고(`_reject_stray`, `_reject_runtime_only`, 재생 순서), `extra="forbid"`와 `_read_event`가 새 칸 줄을 옛 코드에서 거부하며, `match` 갈래는 서로 가리지 않고 서브클래스도 잡는다. 빈 칸 `tool_called`의 판정은 호출당 약 0.7µs다.
+- 서브에이전트가 지적으로 세지 않은 한 가지를 남긴다: `_reject_runtime_only` 독스트링의 "트레이스에 남으면 … 재개가 끝난다"는 실제 방아쇠가 줄이 아니라 재개된 에이전트가 같은 이벤트를 다시 yield하는 것이라 문구가 조금 느슨하다. 거짓은 아니라서 고치지 않았고, 04가 런타임이 칸을 채우게 할 때 그 독스트링을 다시 만지며 같이 다듬는다.
+
 ## 다음
 
 - 지금 단계(구현·리뷰·커밋)가 끝나면 다음은 이 브랜치의 PR을 열고 병합하는 것이다. 01이 병합돼야 02(규칙 파일 읽기)와 03(도구의 서버 이름·같은 이름 검사)이 나란히 돌 수 있다. 05는 04 바로 뒤에 한다.
@@ -84,5 +92,5 @@
 
 ## 남은 일
 
-- PR을 열고 병합하는 일은 이번 요청 범위 밖이라 하지 않았다. 병합할 때 `origin/main`이 `.scratch/plan.md`와 `.scratch/retro-queue.md`를 먼저 바꿔 두었으니(`git diff --name-only HEAD...origin/main`) 글자 충돌이 날 수 있다. 같은 일지 번호·대기열 번호는 `tools/sibling_overlap.py`가 겹침 없음으로 냈다(일지 03, 대기열 576).
+- 첫 요청(구현·리뷰·커밋)은 PR을 열고 병합하는 일을 범위 밖으로 두었고, 이어 사용자가 "PR 열고 병합"을 요청해 이 세션이 이어서 한다. 병합할 때 `origin/main`이 `.scratch/plan.md`와 `.scratch/retro-queue.md`를 먼저 바꿔 두었으니(`git diff --name-only HEAD...origin/main`) 글자 충돌이 날 수 있다. 같은 일지 번호·대기열 번호는 `tools/sibling_overlap.py`가 겹침 없음으로 냈다(일지 03, 대기열 576).
 - 이 PR 본문에 적을 것: 바뀐 사진 마흔여덟 장의 목록(위 "한 것"), 카나리아 여섯의 결과, 위젯 e2e와 `-m llm`을 치지 않은 까닭.
