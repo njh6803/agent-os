@@ -1,0 +1,116 @@
+# tools/mutate.py 의 `_quality_problems`(빨강을 기대했는데 표지가 없거나 pytest 의 단언 풀이 줄인 표지,
+# 대기열 350·517, harness 티켓 041)에서 규칙 하나씩을 뺀 변이. 모두 tests/tools/test_mutate.py 의 새 시험을
+# 빨갛게 해야 한다. 도구가 자기 자신을 고치므로 분리 임시 워크트리에서 그 워크트리의 도구로 돌린다.
+#   PYTHONUTF8=1 uv run python tools/mutate.py .scratch/harness/probes/mutate_marker_quality_mutations.toml [번호 ...]
+
+[[mutation]]
+name = "표지 없는 빨강을 알리지 않는다"
+tests = ["tests/tools/test_mutate.py", "-k", "표지를_뗀 or 표지가_없는 or 단언을_풀어 or 표지_품질 or 표지의_품질"]
+expect = "red"
+expect_output = ["AssertionError: 원문 확인: 변이 1 모두 원문이 한 번씩 있다"]
+
+[[mutation.edit]]
+file = "tools/mutate.py"
+old = "        if not mutation.expect_output:"
+new = "        if False:"
+
+[[mutation]]
+name = "초록을 기대한 변이도 표지를 요구한다"
+tests = ["tests/tools/test_mutate.py", "-k", "표지를_뗀 or 표지가_없는 or 표지가_없어도 or 단언을_풀어 or 표지_품질 or 표지의_품질"]
+expect = "red"
+expect_output = ["원문 확인: 변이 1 중 문제 1"]
+
+[[mutation.edit]]
+file = "tools/mutate.py"
+old = '''        if mutation.expect != "red" or mutation.runner not in runners:'''
+new = '''        if mutation.runner not in runners:'''
+
+[[mutation]]
+name = "단언 풀이 줄 표지를 알리지 않는다"
+tests = ["tests/tools/test_mutate.py", "-k", "표지를_뗀 or 표지가_없는 or 단언을_풀어 or 표지_품질 or 표지의_품질"]
+expect = "red"
+expect_output = ["AssertionError: 원문 확인: 변이 1 모두 원문이 한 번씩 있다"]
+
+[[mutation.edit]]
+file = "tools/mutate.py"
+old = "            if _ASSERT_REWRITE.match(marker)"
+new = "            if False"
+
+[[mutation]]
+name = "pytest 가 아닌 판정의 표지도 단언 풀이 줄로 본다"
+tests = ["tests/tools/test_mutate.py", "-k", "아닌_판정의_표지는"]
+expect = "red"
+expect_output = ["원문 확인: 변이 1 중 문제 1"]
+
+[[mutation.edit]]
+file = "tools/mutate.py"
+old = '''        if runners[mutation.runner].judge != "pytest":
+            continue
+'''
+new = ""
+
+[[mutation]]
+name = "줄 머리가 아니어도 단언 풀이로 읽는다"
+tests = ["tests/tools/test_mutate.py", "-k", "줄_머리가_단언_풀이가_아니면"]
+expect = "red"
+expect_output = ["원문 확인: 변이 1 중 문제 1"]
+
+[[mutation.edit]]
+file = "tools/mutate.py"
+old = "            if _ASSERT_REWRITE.match(marker)"
+new = "            if _ASSERT_REWRITE.search(marker)"
+
+[[mutation]]
+name = "E 접두 줄을 단언 풀이로 읽지 않는다"
+tests = ["tests/tools/test_mutate.py", "-k", "단언을_풀어"]
+expect = "red"
+expect_output = ["AssertionError: 원문 확인: 변이 1 모두 원문이 한 번씩 있다"]
+
+[[mutation.edit]]
+file = "tools/mutate.py"
+old = '''(?:E\s+)?[+\s]*(?:where'''
+new = '''[+\s]*(?:where'''
+
+[[mutation]]
+name = "더하기 접두 줄을 단언 풀이로 읽지 않는다"
+tests = ["tests/tools/test_mutate.py", "-k", "단언을_풀어"]
+expect = "red"
+expect_output = ["AssertionError: 원문 확인: 변이 1 모두 원문이 한 번씩 있다"]
+
+[[mutation.edit]]
+file = "tools/mutate.py"
+old = '''(?:E\s+)?[+\s]*(?:where'''
+new = '''(?:E\s+)?\s*(?:where'''
+
+[[mutation]]
+name = "고른 원문 확인이 표지의 품질을 보지 않는다"
+tests = ["tests/tools/test_mutate.py", "-k", "표지를_뗀 or 표지가_없는 or 단언을_풀어"]
+expect = "red"
+expect_output = ["AssertionError: 원문 확인: 변이 1 모두 원문이 한 번씩 있다"]
+
+[[mutation.edit]]
+file = "tools/mutate.py"
+old = "    return _report_check(spec, _picked_problems(root, spec) + _quality_problems(spec), out)"
+new = "    return _report_check(spec, _picked_problems(root, spec), out)"
+
+[[mutation]]
+name = "색인 확인이 새 변이의 표지 품질을 보지 않는다"
+tests = ["tests/tools/test_mutate.py", "-k", "색인_확인은_커밋에_든_새_표의_표지_품질"]
+expect = "red"
+expect_output = ["색인 확인: 커밋에 든 표 1, 고친 파일을 가리키는 다른 표의 변이 0, 문제 0"]
+
+[[mutation.edit]]
+file = "tools/mutate.py"
+old = " + _quality_problems(fresh)"
+new = ""
+
+[[mutation]]
+name = "변이를 돌리는 실행에도 표지의 품질을 건다"
+tests = ["tests/tools/test_mutate.py", "-k", "표지의_품질을_소급하지"]
+expect = "red"
+expect_output = ["SpecError: 하나: 빨강을 기대했는데"]
+
+[[mutation.edit]]
+file = "tools/mutate.py"
+old = "    return _file_problems(root, spec) + _echo_problems(root, spec)"
+new = "    return _file_problems(root, spec) + _echo_problems(root, spec) + _quality_problems(spec)"

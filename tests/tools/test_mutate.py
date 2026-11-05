@@ -1069,10 +1069,16 @@ def test_since_의_커밋에_표가_없으면_모두_새로_더한_변이다(tmp
 def test_원문_확인도_since_로_고른_것만_본다(tmp_path: Path) -> None:
     """코드를 고친 뒤 원문을 고친 변이만 다시 보는 길이다. 고르지 않은 변이의 원문은 보지 않는다.
     커밋이 그 원문을 깨는지는 `--staged` 가 커밋마다 본다(대기열 312)."""
-    표 = _커밋한_표(tmp_path, _글자_변이("하나", "x") + _글자_변이("둘", "y"))
+    # 표지 없는 빨강은 따로 알린다(대기열 350). 이 시험은 원문만 보려고 초록을 기대한다
+    표 = _커밋한_표(
+        tmp_path, _글자_변이("하나", "x", expect="green") + _글자_변이("둘", "y", expect="green")
+    )
     (tmp_path / "src/m.py").write_bytes(b"y = 1\nz = 1\n")  # 하나의 원문이 사라졌다
     표.write_text(
-        _글자_변이("하나", "x") + _글자_변이("둘", "y") + _글자_변이("셋", "z"), encoding="utf-8"
+        _글자_변이("하나", "x", expect="green")
+        + _글자_변이("둘", "y", expect="green")
+        + _글자_변이("셋", "z", expect="green"),
+        encoding="utf-8",
     )
     줄: list[str] = []
 
@@ -2203,7 +2209,7 @@ def test_원문만_보면_명령을_돌리지_않고_틀린_원문을_모두_알
 
 def test_원문만_보아_모두_맞으면_0이고_파일을_건드리지_않는다(tmp_path: Path) -> None:
     path = _파일을_둔다(tmp_path, "src/m.py", b"x = 1\n")
-    경로 = _변이_파일을_쓴다(tmp_path, _변이_파일(old="x = 1", new="x = 2"))
+    경로 = _변이_파일을_쓴다(tmp_path, _변이_파일(old="x = 1", new="x = 2", expect="green"))
     줄: list[str] = []
 
     code = main(
@@ -2336,7 +2342,8 @@ def test_pre_commit_처럼_띄우면_틀린_표의_경로를_UTF_8_로_알린다
 
 
 _표_경로 = "probes/m_mutations.toml"
-_맞는_표 = _변이_파일(old="x = 1", new="x = 2")
+# 초록을 기대해 표지 없는 빨강의 알림(대기열 350)에 걸리지 않는다. 이 절의 시험은 원문만 본다
+_맞는_표 = _변이_파일(old="x = 1", new="x = 2", expect="green")
 _깬_커밋 = "부모 판에서 맞던 원문을 이 커밋이 깼다"
 
 
@@ -2403,7 +2410,7 @@ def test_색인_확인은_표가_가리키지_않는_파일만_고친_커밋에�
 def test_색인_확인은_커밋에_든_표의_원문을_모두_본다(tmp_path: Path) -> None:
     """고치거나 더한 표는 이 커밋이 고친 파일과 상관없이 모든 원문을 본다(대기열 92)."""
     root = _저장소(tmp_path, {"src/m.py": "x = 1\n"})
-    둘 = _변이_파일(old="z = 1", new="z = 2").replace('"하나"', '"둘"')
+    둘 = _변이_파일(old="z = 1", new="z = 2", expect="green").replace('"하나"', '"둘"')
     _스테이지한다(root, _표_경로, (_맞는_표 + 둘).encode("utf-8"))
 
     code, 출력 = _색인_확인(root)
@@ -2485,7 +2492,9 @@ def test_색인_확인은_어느_판도_추적하지_않는_파일을_작업_트
     root = _저장소(tmp_path, {".gitignore": "gen/\n", "src/m.py": "x = 1\n"})
     _파일을_둔다(root, "gen/m.py", b"x = 1\n")
     _스테이지한다(
-        root, _표_경로, _변이_파일(old="x = 1", new="x = 2", file="gen/m.py").encode("utf-8")
+        root,
+        _표_경로,
+        _변이_파일(old="x = 1", new="x = 2", file="gen/m.py", expect="green").encode("utf-8"),
     )
 
     code, 출력 = _색인_확인(root)
@@ -2875,9 +2884,9 @@ def test_원문의_글자_그대로인_이스케이프를_풀어_찾히면_그_�
         assert any(까닭 in 한줄 for 한줄 in 줄), 줄
 
 
-def _시험이_든_저장소(root: Path) -> tuple[Path, str]:
+def _시험이_든_저장소(root: Path, *, expect: str = "red") -> tuple[Path, str]:
     """`src/m.py` 와 그 시험 `tests/test_x.py` 와 변이 표 `mutations.toml` 을 커밋한 저장소."""
-    표 = _변이_파일(old="x = 1", new="x = 2").replace(
+    표 = _변이_파일(old="x = 1", new="x = 2", expect=expect).replace(
         'tests = ["tests/test_x.py"]', 'tests = ["tests/test_x.py::test_x", "-q"]'
     )
     파일들 = {
@@ -3022,8 +3031,9 @@ def test_도구가_잡지_않는_예외로_끝나도_표지는_지운다(tmp_pat
 def test_원문만_볼_때는_표지를_두지_않는다(tmp_path: Path, 인자: list[str]) -> None:
     """파일을 쓰지 않는 확인은 변이와 겹칠 편집이 없다. 러너가 불리지 않으니 줄을 낼 때마다 git
     디렉터리를 본다(PR #308 claude-review: 도구 안의 이름을 갈아 끼우지 않고 행동으로 단언한다).
-    고르지 않은 `--check` 와 고른 `--check` 는 다른 길로 간다."""
-    root, 표 = _시험이_든_저장소(tmp_path)
+    고르지 않은 `--check` 와 고른 `--check` 는 다른 길로 간다. 초록을 기대해 표지 없는 빨강의
+    알림(대기열 350)에 걸리지 않게 한다."""
+    root, 표 = _시험이_든_저장소(tmp_path, expect="green")
     줄: list[str] = []
     본_표지: list[Path] = []
 
@@ -3279,3 +3289,208 @@ def test_색인_확인은_고친_변이의_표지를_본다(tmp_path: Path) -> N
 
     assert code == 2, 출력
     assert _메아리 in 출력
+
+
+# 대기열 350·517. 표지의 품질을 둘 더 본다. 빨강을 기대했는데 표지가 없는 변이(350)와, 표지가 pytest
+# 가 단언을 풀어 쓴 줄인 변이(517). 고른 `--check` 와 `--staged` 의 새 변이만 보고 옛 변이는
+# 소급하지 않는다.
+
+_표지_없음 = "빨강을 기대했는데 expect_output 이 없다"
+_단언_풀이 = "pytest 가 단언을 풀어 쓴 줄이다"
+
+
+def _표지_표(표지: str | None, *, expect: str = "red") -> str:
+    줄 = "" if 표지 is None else f"\nexpect_output = [{표지!r}]"
+    return _변이_파일(old="x = 1", new="x = 2", expect=expect).replace(
+        'tests = ["tests/test_x.py"]', f'tests = ["tests/test_x.py"]{줄}'
+    )
+
+
+def test_고른_원문_확인은_빨강을_기대했는데_표지가_없는_변이를_알린다(tmp_path: Path) -> None:
+    """엉뚱한 까닭의 빨강도 기대와 맞아, `wait_ci` 변이 열다섯이 표지 없이 두 리뷰를 지났다(대기열
+    350)."""
+    root, 표 = _메아리_저장소(tmp_path, _표지_표(None))
+
+    code, 출력 = _원문_확인(root, ["--check", 표, "1"])
+
+    assert code == 2, 출력
+    assert f"하나: {_표지_없음}" in 출력
+
+
+def test_since_로_고른_원문_확인은_표지를_뗀_변이를_알린다(tmp_path: Path) -> None:
+    root, 표 = _메아리_저장소(tmp_path, _표지_표("== 'x = 2'"))
+    Path(표).write_text(_표지_표(None), encoding="utf-8")
+
+    code, 출력 = _원문_확인(root, ["--check", 표, "--since", "HEAD"])
+
+    assert code == 2, 출력
+    assert _표지_없음 in 출력
+
+
+def test_초록을_기대한_변이는_표지가_없어도_알리지_않는다(tmp_path: Path) -> None:
+    root, 표 = _메아리_저장소(tmp_path, _표지_표(None, expect="green"))
+
+    code, 출력 = _원문_확인(root, ["--check", 표, "1"])
+
+    assert code == 0, 출력
+
+
+def test_고르지_않은_원문_확인은_표지_없는_옛_변이를_소급하지_않는다(tmp_path: Path) -> None:
+    root, 표 = _메아리_저장소(tmp_path, _표지_표(None))
+
+    code, 출력 = _원문_확인(root, ["--check", 표])
+
+    assert code == 0, 출력
+
+
+@pytest.mark.parametrize(
+    "표지",
+    ["where 1 = run()", "assert 0 == 1", "E       assert 4 == 1", "+  where False = f(1)"],
+    ids=["where", "assert", "E_접두", "더하기_접두"],
+)
+def test_고른_원문_확인은_pytest_가_단언을_풀어_쓴_줄인_표지를_알린다(
+    tmp_path: Path, 표지: str
+) -> None:
+    """`where 1 = run()` 은 러너가 다른 까닭으로 멈춰도 실려 맞았다(대기열 517)."""
+    root, 표 = _메아리_저장소(tmp_path, _표지_표(표지))
+
+    code, 출력 = _원문_확인(root, ["--check", 표, "1"])
+
+    assert code == 2, 출력
+    assert f"하나: expect_output 의 표지 {표지!r} 는 {_단언_풀이}" in 출력
+
+
+@pytest.mark.parametrize(
+    "표지",
+    [
+        "Received: 2",
+        "거부 문구가 단언 메시지에 실렸다",
+        "assert 만 있고 비교는 없다",
+        "where 만 있다",
+    ],
+    ids=["받은_값_줄", "메시지_문구", "비교_없는_assert", "호출_없는_where"],
+)
+def test_고른_원문_확인은_단언_풀이_줄이_아닌_표지를_받는다(tmp_path: Path, 표지: str) -> None:
+    root, 표 = _메아리_저장소(tmp_path, _표지_표(표지))
+
+    code, 출력 = _원문_확인(root, ["--check", 표, "1"])
+
+    assert code == 0, 출력
+
+
+def test_pytest_가_아닌_판정의_표지는_단언_풀이_줄이어도_보지_않는다(tmp_path: Path) -> None:
+    표 = _VITEST_러너 + _vitest_변이(줄='expect_output = ["assert 0 == 1"]')
+    _저장소(tmp_path, {"web/m.ts": "x = 1\n"})
+    경로 = _변이_파일을_쓴다(tmp_path, 표)
+
+    code, 출력 = _원문_확인(tmp_path, ["--check", 경로, "1"])
+
+    assert code == 0, 출력
+
+
+def test_못_보는_것_줄_머리가_단언_풀이가_아니면_받는다(tmp_path: Path) -> None:
+    """줄 머리만 본다. `AssertionError: assert 0 == 1` 처럼 앞에 낱말이 붙은 줄은 지나간다."""
+    root, 표 = _메아리_저장소(tmp_path, _표지_표("AssertionError: assert 0 == 1"))
+
+    code, 출력 = _원문_확인(root, ["--check", 표, "1"])
+
+    assert code == 0, 출력
+
+
+def test_처리하지_않은_에러를_기대한_변이는_표지가_없어도_알리지_않는다(tmp_path: Path) -> None:
+    표 = _VITEST_러너 + _vitest_변이().replace('expect = "red"', 'expect = "unhandled"')
+    _저장소(tmp_path, {"web/m.ts": "x = 1\n"})
+    경로 = _변이_파일을_쓴다(tmp_path, 표)
+
+    code, 출력 = _원문_확인(tmp_path, ["--check", 경로, "1"])
+
+    assert code == 0, 출력
+
+
+def test_못_보는_것_판정이_exit_인_러너는_명령이_pytest_여도_표지를_보지_않는다(
+    tmp_path: Path,
+) -> None:
+    러너 = _EXIT_러너.replace('["node", "check.mjs"]', '["uv", "run", "pytest", "-q"]')
+    변이 = _exit_변이(줄='expect_output = ["assert 0 == 1"]').replace("m.json", "src/m.py")
+    root, 표 = _메아리_저장소(tmp_path, 러너 + 변이)
+
+    code, 출력 = _원문_확인(root, ["--check", 표, "1"])
+
+    assert code == 0, 출력
+
+
+@pytest.mark.parametrize(
+    "표지",
+    ["assert 1 != 1", "assert 'a' in b", "assert x is None"],
+    ids=["다름", "포함", "동일성"],
+)
+def test_못_보는_것_같음_비교가_아닌_단언_풀이_줄은_받는다(tmp_path: Path, 표지: str) -> None:
+    """pytest 는 이 비교들도 풀어 쓰지만 `==` 만 본다(거짓 음성)."""
+    root, 표 = _메아리_저장소(tmp_path, _표지_표(표지))
+
+    code, 출력 = _원문_확인(root, ["--check", 표, "1"])
+
+    assert code == 0, 출력
+
+
+def test_못_보는_것_줄이_assert_로_시작하고_같음_비교를_든_메시지_문구도_알린다(
+    tmp_path: Path,
+) -> None:
+    """단언에 싣는 메시지가 그런 줄이면 풀이 줄과 갈라 볼 수 없다(거짓 양성)."""
+    root, 표 = _메아리_저장소(tmp_path, _표지_표("assert 결과 == 'done' 이어야 한다"))
+
+    code, 출력 = _원문_확인(root, ["--check", 표, "1"])
+
+    assert code == 2, 출력
+    assert _단언_풀이 in 출력
+
+
+@pytest.mark.parametrize("표지", [None, "where 1 = run()"], ids=["표지_없음", "단언_풀이"])
+def test_변이를_돌리는_실행은_표지의_품질을_소급하지_않는다(
+    tmp_path: Path, 표지: str | None
+) -> None:
+    """돌리는 실행에 걸면 옛 표를 다시 돌릴 때마다 멈춘다. 옛 표 3613 변이 가운데 표지 없는 빨강이
+    1883, 단언 풀이 줄 표지가 176이다(티켓 041)."""
+    path = _파일을_둔다(tmp_path, "src/m.py", b"x = 1\n")
+
+    def 러너(argv: Sequence[str], cwd: Path, timeout: int) -> CommandResult:
+        if b"x = 2" in path.read_bytes():
+            return CommandResult(1, "where 1 = run()\n1 failed\n")
+        return _초록
+
+    code = measure(load_spec(_표지_표(표지)), root=tmp_path, runner=러너, out=lambda _: None)
+
+    assert code == 0
+
+
+@pytest.mark.parametrize(
+    ("표지", "알림"),
+    [(None, _표지_없음), ("where 1 = run()", _단언_풀이)],
+    ids=["표지_없음", "단언_풀이"],
+)
+def test_색인_확인은_커밋에_든_새_표의_표지_품질을_알린다(
+    tmp_path: Path, 표지: str | None, 알림: str
+) -> None:
+    root = _저장소(tmp_path, {"src/m.py": "x = 1\n", "tests/test_x.py": _메아리_시험})
+    _스테이지한다(root, _표_경로, _표지_표(표지).encode("utf-8"))
+
+    code, 출력 = _색인_확인(root)
+
+    assert code == 2, 출력
+    assert f"{_표_경로}: !! 하나:" in 출력
+    assert 알림 in 출력
+
+
+def test_색인_확인은_부모_판과_같은_변이의_표지_품질은_소급하지_않는다(tmp_path: Path) -> None:
+    옛_표 = _표지_표(None)
+    root = _저장소(
+        tmp_path,
+        {"src/m.py": "x = 1\n", "tests/test_x.py": _메아리_시험, _표_경로: 옛_표},
+    )
+    둘 = _표지_표("== 'x = 2'").replace('"하나"', '"둘"')
+    _스테이지한다(root, _표_경로, (옛_표 + 둘).encode("utf-8"))
+
+    code, 출력 = _색인_확인(root)
+
+    assert code == 0, 출력
+    assert "문제 0" in 출력
