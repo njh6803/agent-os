@@ -27,14 +27,23 @@
 - 고친 것
   - 못 본다고 적었는데 시험이 없던 입력 둘(명세 축 a2, 표준 축 판단 1): 판정이 exit인 러너의 명령이 pytest여도 보지 않는다, 처리하지 않은 에러를 기대한 변이는 알리지 않는다. 시험 둘을 더했다.
   - 정규식이 `==`만 보고 `assert … ==`로 시작하는 메시지 문구도 알린다는 것(명세 축 c1, 표준 축 판단 2)을 모듈 독스트링의 못 보는 것에 적고 시험으로 고정했다. 거짓 음성(`!=`, `in`, `is`)은 사례 셋, 거짓 양성(메시지 문구)은 사례 하나.
-  - 독스트링의 "vitest는 이 모양의 줄을 찍지 않는다"는 재지 않은 주장이라 뺐다. 시험이 고정하는 것은 vitest 판정의 표지를 보지 않는다는 동작뿐이다.
+  - 독스트링의 vitest는 이 모양의 줄을 찍지 않는다는 문장은 재지 않은 주장이라 뺐다. 시험이 고정하는 것은 vitest 판정의 표지를 보지 않는다는 동작뿐이다.
   - 모듈 독스트링 `--staged` 문단에 품질 확인을 적었다(명세 축 a3, 표준 축 판단 4).
   - `_ASSERT_REWRITE_NOTE`를 `_quality_problems`보다 앞으로 옮겼다(표준 축 판단 5).
 - 남긴 것
-  - 변이 표 1·3·6·7·8번이 같은 표지 `AssertionError: 원문 확인: 변이 1 모두 원문이 한 번씩 있다`를 쓴다는 지적(표준 축 판단 3): 이 문구는 `assert code == 2, 출력`이 빨개질 때 그 메시지에 실린 출력이다. 곧 "알려야 할 자리에서 도구가 모두 맞다고 찍었다"는 뜻이고 호출 기록이나 코드 조각이 아니다. 같은 `-k` 안의 어느 규칙을 뺐는지는 가르지 못하지만, 규칙마다 뺀 변이가 따로 있고 열 모두 빨강을 봤다. 규칙별로 더 가르려면 시험을 쪼개야 해서 이 티켓의 몫이 아니다.
+  - 변이 표 1·3·6·7·8번이 같은 표지 `AssertionError: 원문 확인: 변이 1 모두 원문이 한 번씩 있다`를 쓴다는 지적(표준 축 판단 3): 이 문구는 `assert code == 2, 출력`이 빨개질 때 그 메시지에 실린 출력이다. 곧 알려야 할 자리에서 도구가 모두 맞다고 찍었다는 뜻이고 호출 기록이나 코드 조각이 아니다. 같은 `-k` 안의 어느 규칙을 뺐는지는 가르지 못하지만, 규칙마다 뺀 변이가 따로 있고 열 모두 빨강을 봤다. 규칙별로 더 가르려면 시험을 쪼개야 해서 이 티켓의 몫이 아니다.
   - `_runners(spec)`를 `_picked_problems`와 따로 만드는 중복(표준 축 판단 6): 낮은 우선순위의 판단 항목이라 두었다.
   - 티켓 본문의 "변이 3613"은 이 표를 더하기 전의 수다(더한 뒤는 3623). 티켓에 "이 세션에서 손으로 셌다"고 적혀 있어 시점이 읽히므로 고치지 않는다.
   - 닫힘 문장의 경로를 백틱으로 감싸지 않은 불일치(표준 축 기타): 사소해서 두었다.
 - 다시 돌린 것: `uv run ruff check`·`ruff format`(두 파일) 초록, 새 시험을 포함한 `tests/tools/test_mutate.py -k`(표지·단언·색인 확인 등) 114 passed. 전체 게이트는 커밋이 부르는 pre-commit으로 갈음한다. 결과는 커밋 뒤에 적는다.
 - 카나리아: `.claude/rules/probes.md` 첫 항목에 문장을 더했으므로 `tools/sibling_overlap.py`가 그 파일을 원천으로 든 명세 여덟을 알렸다. 같은 PR 안의 통과가 없어 갈음 조건에 맞지 않아서 `probes_rule.toml`(첫 항목이 든 규칙 파일이 실리는지를 재는 명세)을 실제로 돌렸다. 도구가 찍은 줄: 통과 4, 실패 0, "없음" 섞인 통과 0, 두 갈래 커밋 `ea1453cd`(커밋하지 않은 판), 돌린 뒤 `claude --version`은 2.1.318. 나머지 일곱은 `--preflight`로 갈음했고(여덟 모두 통과, claude는 돌리지 않았다) 더한 문장이 그 명세들이 묻는 자리 밖이라는 근거는 문장의 위치를 읽은 판단이다. 여덟 명세의 머리 주석에 이 결과와 갈음을 덧붙였고 `--shape`는 여덟 모두 통과했다.
+- 커밋: `9680699e`(브랜치 `chore/041-mutate-check-marker-quality`, 16개 파일). 커밋이 부른 pre-commit이 모두 Passed였다(도구가 찍은 줄: parallel-checks 498.91초, 그 안의 pytest 375.4초, web-verify 498.7초, pyright 39.7초, check-instructions·check-type-escapes·lint-imports·run-hooks·zizmor·check-ticket, mutation tables, canary specs, commit message. constitution version은 해당 파일이 없어 Skipped). 이 커밋 직전 `uv run ruff check`·`ruff format`도 두 파일에서 초록이었다.
+- 인계: 컨텍스트가 인계 문턱을 넘은 채 `커밋 뒤` 경계에 와서 넘긴다. 푸시와 PR은 아직 없다. 세션 제목은 인계 직전에 `chore/041-mutate-check-marker-quality`였고 `chore/041-mutate-check-marker-quality (인계함)`으로 바꿨다. 워크트리 잠금은 풀었다(`git worktree unlock`).
+- open-session을 부른다 2026-11-05T04:44:40Z
 - PR 직전 리뷰에 밀 주장: 모듈 독스트링 "못 보는 것"의 `!=`·`in`·`is` 거짓 음성과 `assert … ==`로 시작하는 메시지 거짓 양성.
+
+## PR 직전 리뷰 (이어받은 세션)
+
+- 시작: 새 세션이 제목을 바꾸고 이 워크트리에 들어왔다. `git fetch origin main` 뒤 `origin/main`은 여전히 `ea1453cd`이고 `tools/sibling_overlap.py`는 번호 겹침 없음이었다(일지 `2026-11-05-04`를 앞서는 형제는 042 워크트리의 `2026-11-05-05`, 그쪽이 먼저 병합되면 옮긴다).
+- `coderabbit auth status`: `Plan: Free`, `Seat: not assigned`. 그래도 `coderabbit-review` 서브에이전트가 `coderabbit review --agent --include-untracked`를 실제로 돌렸고 CLI 0.7.5가 `review_completed`, 지적 0건으로 끝났다(서브에이전트가 찍은 줄이고 이 세션이 다시 돌리지는 않았다). 검토한 파일 16개는 커밋 `9680699e`의 파일 16개와 같다. 한도나 인증 오류는 없었다. CLI 축은 돌았으므로 대체 둘(`/security-review`, `bug-perf-review`)은 돌리지 않았다.
+- 지적이 0건이라 트리아지할 것이 없다. 밀 주장 둘(독스트링 서술과 시험이 고정한 동작의 일치)은 CLI 쪽에서 나온 것이 없어 이 리뷰로 검증되지 않았다. 셀프 리뷰 때 시험으로 고정한 것이 근거의 전부다.
