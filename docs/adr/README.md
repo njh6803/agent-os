@@ -49,5 +49,8 @@
 | [0043](0043-dev-integrates-and-main-releases.md) | 티켓 PR은 dev로 가고 기능이 끝나면 dev를 main에 merge 커밋으로 올리며 hotfix는 main에서 따 되돌려 합친다 | accepted | 2026-11-04 |
 | [0044](0044-rules-file-is-enforced-per-call-and-operator-deny-beats-the-decision.md) | 운영자의 규칙 파일은 실행을 준비할 때 읽혀 도구 호출마다 집행되고, 적용 규칙이 기록에 남으며, 재개에서는 운영자의 deny가 결정을 이긴다 | accepted | 2026-11-05 |
 | [0045](0045-coordination-state-is-one-file-per-item-named-by-slug.md) | 여러 브랜치가 함께 쓰는 조율 상태는 항목마다 파일 하나로 나누고 새 것은 번호 대신 제목으로 부르며, 전체 계획은 기능 계획에서 만든 생성 파일이고 헌법 README는 판 줄만 남긴다 | accepted | 2026-11-06 |
+| [0046](0046-doc-qa-baseline-and-product-1-0-stand-before-the-rest-of-0042.md) | 다음은 설치형 문서 질의응답의 기준선과 제품 1.0이고, ADR 0042의 나머지 열셋은 그 뒤에 선다 | accepted | 2026-11-06 |
+| [0047](0047-agent-os-does-not-know-the-widget.md) | Agent OS는 위젯을 모른다: 관리 화면과 serve는 위젯 전용 기능을 갖지 않고, 위젯의 외형과 문구는 위젯과 사이트가 가진다 | accepted | 2026-11-06 |
+| [0048](0048-document-search-server-lives-in-another-repository.md) | 문서 검색 서버는 agent-os 밖의 저장소이고, agent-os의 런타임은 그 서버를 모른다 | accepted | 2026-11-06 |
 
 ADR을 먼저 확인하는 상황 넷: 스택이나 라이브러리를 바꿀 때, 디렉터리나 층 경계를 바꿀 때, 디스크 형식(매니페스트, 이벤트)을 바꿀 때, 기존 코드가 왜 이렇게 되어 있는지 이해되지 않을 때.
