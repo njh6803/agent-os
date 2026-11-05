@@ -240,7 +240,7 @@ def test_이스케이프한_파이프가_든_행의_칸을_맞게_읽는다() ->
 def test_티켓의_첫_Status_줄만_읽는다(tmp_path: Path) -> None:
     issues = tmp_path / "feat" / "issues"
     issues.mkdir(parents=True)
-    first = "# 01\n\n**Status:** in-progress\n\n본문 **Status:** done\n"
+    first = "# 01\n\n**Status:** in-progress\n\n본문 **Status:** done\n\n**Status:** done\n"
     (issues / "01-a.md").write_text(first, encoding="utf-8")
     quoted = "# 02\n\n`**Status:** done` 를 인용한 글\n"
     annotated = "# 03\n\n**Status:** done (2026-10-14 설명)\n"

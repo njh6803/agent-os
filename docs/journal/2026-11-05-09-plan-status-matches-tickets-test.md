@@ -12,7 +12,7 @@
 - `EnterWorktree`로 `044-plan-status-matches-tickets-test` 워크트리에 들어가 `chore/044-plan-status-matches-tickets-test` 브랜치를 땄다. 기준은 origin/main `403c9e96`이다.
 - `uv run python tools/sibling_overlap.py`로 티켓 044, 일지 09를 받고 티켓을 쓴 뒤 다시 쳐서 겹침이 없음을 봤다(출력을 읽었다).
 - 티켓 044를 썼다(`Status: in-progress`, 수용 기준 여섯, 체크박스는 모두 비어 있다).
-- `tests/test_plan_status.py`를 썼다. `plan.md` 표에서 `기능(slug)`와 `Status` 칸을 표 머리로 찾고, 행마다 `.scratch/<slug>/issues/*.md`의 첫 `**Status:**` 값을 읽는다. 규칙은 둘이다. 하나라도 `done`이면 행이 `todo`가 아니다. 티켓이 모두 닫혔고(`done`·`wontfix`) `done`이 하나 이상이면 행이 `done`이다. 열린 티켓이 있는 `done` 행은 보지 않는다(`docs/agents/issue-tracker.md`가 기능 밖 제품 코드 티켓을 더하면서 행을 `done` 그대로 두라고 한다). 티켓의 `Status:` 줄이 없거나 값이 모르는 것, 행 상태가 모르는 것, 칸 수가 표 머리와 다른 행, 표 머리가 없는 것은 문제로 센다. 시험은 열한 개이고 저장소 상태 하나, 읽은 범위가 비지 않는지 하나, 변이 아홉이다.
+- `tests/test_plan_status.py`를 썼다. `plan.md` 표에서 `기능(slug)`와 `Status` 칸을 표 머리로 찾고, 행마다 `.scratch/<slug>/issues/*.md`의 첫 `**Status:**` 값을 읽는다. 규칙은 둘이다. 하나라도 `done`이면 행이 `todo`가 아니다. 티켓이 모두 닫혔고(`done`·`wontfix`) `done`이 하나 이상이면 행이 `done`이다. 열린 티켓이 있는 `done` 행은 보지 않는다(`docs/agents/issue-tracker.md`가 기능 밖 제품 코드 티켓을 더하면서 행을 `done` 그대로 두라고 한다). 티켓의 `Status:` 줄이 없거나 값이 모르는 것, 행 상태가 모르는 것, 칸 수가 표 머리와 다른 행, 표 머리가 없는 것은 문제로 센다. 시험은 처음에 열한 개였고(저장소 상태 하나, 읽은 범위가 비지 않는지 하나, 변이 아홉) 아래 셀프 리뷰가 하나를 더해 열두 개가 됐다.
 - 첫 시험에서 main의 지금 상태가 한 번 빨갛게 나왔다. 어긋난 행이 아니라 내 정규식이 줄 끝까지 맞추게 되어 있어서, `.scratch/design-refresh/issues/05-claude-design-upload.md`의 `**Status:** done (2026-10-14 사람이 …)`처럼 값 뒤에 괄호 설명이 붙은 티켓을 못 읽은 것이었다. 정규식을 첫 낱말만 읽도록 고치고 그 모양을 시험(`test_티켓의_첫_Status_줄만_읽는다`)에 더했다. 고친 뒤 main의 상태는 어긋남 0으로 지난다(`uv run pytest -q tests/test_plan_status.py`가 11 passed).
 - 일부러 깨뜨려 손으로 봤다. `.scratch/plan.md` 25번 줄(skill-plugin)을 `sed`로 `in-progress`로 되돌리자 `skill-plugin(plan.md 25번 줄): 티켓이 모두 닫혔는데 행이 in-progress다`로 빨갰고, 23번 줄(design-card-build)을 `todo`로 되돌리자 `티켓 5/5개가 done인데 행이 todo다`로 빨갰다. 둘 다 `git checkout -- .scratch/plan.md`로 원복했다(`git status --short`가 새 파일 셋만 남았다).
 - 대기열 546을 닫았다(`.scratch/retro-queue.md`의 행 545번 줄). 「무엇」·「어디로」에 취소선을 긋고 승인 칸 끝에 닫힘 표기를 붙였다. `queue_open_rows.py --search`가 열린 행 0, 닫힌 행 1로 읽었고 `check_md_tables.py`는 출력이 없었다.
@@ -87,3 +87,10 @@ open-session을 부른다 2026-11-05T09:56Z
 - claude-review 첫 회차: 지적 없음. Nit 하나(판정 논리와 시험 도우미가 한 파일에 섞임)는 PR 본문 "남긴 위험"에 이미 밝힌 것이라 작성자 재량으로 뒀다.
 - CodeRabbit: `@coderabbitai review`에 `Review rate limited`로 답해 리뷰가 없었다(무료 OSS 한도). PR 직전 CLI 리뷰가 지적 0건이었다는 것은 위 "PR 직전 리뷰"의 서브에이전트 보고를 옮긴 것이다. 이 세션은 CLI를 돌리지 않았다.
 - 푸시 뒤 main이 앞섰다(`b77f158f`, PR #469, ADR 0044). `.scratch/plan.md`를 바꿨으므로 `origin/main`을 합치고 `uv run pytest -q tests/test_plan_status.py`를 다시 돌려 12 passed를 봤다. 앱의 `sync_with_base_branch`는 앱이 만든 워크트리가 아니라는 까닭으로 거부해 `git merge --no-edit origin/main`으로 직접 합쳤다.
+
+### 둘째 푸시(`ac1ba71`)의 회차
+
+- 검사는 모두 통과했고 CodeRabbit이 이번에는 리뷰했다(`tools/wait_ci.py` 출력과 `gh api .../pulls/470/comments`를 읽었다). CodeRabbit 첫 회차는 Minor 둘과 Trivial 하나, claude-review 둘째 회차는 Minor 하나와 Nit 하나였다.
+- 고쳤다: CodeRabbit Trivial(`test_티켓의_첫_Status_줄만_읽는다`의 픽스처가 첫 줄과 마지막 줄 선택을 가르지 못한다)과 claude-review Minor(일지 "한 것"의 시험 개수가 열한 개로 남아 12개와 어긋난다). 픽스처에 줄 머리 `**Status:** done`을 하나 더하고, 읽는 줄을 마지막 일치로 바꾼 변이에서 그 시험이 `01-a.md`가 `in-progress` 대신 `done`으로 읽혀 빨개지는 것을 손으로 봤다(`pytest -k 첫_Status_줄만`, 원복해 `git diff`가 픽스처 한 줄뿐인 것을 읽었다). 이 둘은 둘째 회차 규칙(Critical·Major만)을 넘지만 어차피 푸시하는 커밋에 실리고 회차를 늘리지 않아 같이 고쳤다.
+- 보류했다: CodeRabbit Minor 둘(코드 블록 안의 `**Status:**` 줄을 읽는다, 앞 파이프가 없는 표 행을 건너뛴다). 두 입력 모두 지금 저장소에 없다. 코드 블록은 `.scratch/design-reverse-sync/issues/10-enable-editing.md` 61~76번 줄 하나뿐이고 그 안에 `Status:` 줄이 없으며(`Grep`으로 읽었다), `plan.md`에는 `|`로 시작하지 않는 표 행이 없다(`Grep`으로 읽었다). 둘 다 실제 티켓이나 행이 생기면 그때 시험이 놓칠 수 있는 쪽의 가정 입력이라 뒤로 넘기는 일로 세지 않았고 다음 지시문에 적지 않는다.
+- claude-review Nit(`PlanTable` 튜플)은 첫 회차와 같은 판단으로 작성자 재량에 둔다.
