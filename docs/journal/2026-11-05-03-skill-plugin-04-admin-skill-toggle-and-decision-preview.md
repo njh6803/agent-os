@@ -8,7 +8,9 @@
 > 인자: .scratch/skill-plugin/issues/04-admin-skill-toggle-and-decision-preview.md
 > 다음 단계: 구현 / 어디서: 새 세션(나란히 여는 2 중 1, 주 체크아웃 미갱신이라 tidy-checkouts를 먼저 돌고 EnterWorktree로 새 워크트리에 들어간다) / 브랜치: feature/04-admin-skill-toggle-and-decision-preview / 모델: Sonnet 5.5 / high / 읽을 것: .scratch/skill-plugin/issues/05-calc-uses-answer-format-skill.md(나란히 도는 형제, 함께 고치는 파일은 없다), 일지 2026-11-05-01의 "결정" 절 / 이어받을 상태: 03은 PR 463으로 병합됐다. 대기열 572는 이 티켓의 몫이 아니다 / 이번 요청 범위: PR과 병합까지 (원문은 줄바꿈이 있는 지시문이었다. 위는 그 값을 옮긴 것이다.)
 
-## 한 것 (모두 커밋하지 않은 작업 트리에 있다)
+> 사용자: 승인 (셀프 리뷰 뒤 ADR 0019의 2026-11-05 이력 초안을 보여주고 받은 답이다. 이 승인으로 커밋·PR·병합까지 잇는다.)
+
+## 한 것 (아래 "셀프 리뷰" 앞까지는 앞 세션이 커밋하지 않은 작업 트리에 둔 것이고, 커밋 `c6c419a9`에 든다)
 
 - 시작: 제목을 브랜치 이름으로 바꾸고 `tidy-checkouts`를 돌았다. 루트를 `3012f78d`에서 `5b255a18`(`origin/main`)로 당겼다. 지울 후보였던 `05-default-model-required-and-checked` 워크트리는 `agent-os.exe`·`python.exe` 프로세스가 쥐고 있어 남겼고, 나머지도 병합되지 않았거나 바뀐 파일이 있거나 실행 중 세션이 쥐고 있어 남겼다. `EnterWorktree`로 들어간 뒤 브랜치를 `feature/04-admin-skill-toggle-and-decision-preview`로 바꿨다(`git branch -m`). `uv sync`와 `pnpm -C web install --frozen-lockfile`을 쳤다.
 - 티켓 `Status:`를 `ready-for-agent`에서 `in-progress`로 바꿨다. 체크박스는 아직 체크하지 않았고 `done`으로 바꾸는 것은 PR 직전이다.
@@ -69,7 +71,7 @@ open-session을 부른다 2026-11-04T17:27:35Z
 - 명세 축: 요구 전부 구현, 범위 넘침 없음. Minor 하나: 꺼진 것이 여럿일 때의 순서(모델 뒤 스킬, 적힌 순서)를 고정하는 시험이 없다.
 - 표준 축: Minor 둘, Nit 넷.
   - Minor: 새 시험 셋(고르지 않은 스킬, `skills`가 빈 에이전트, 표지 행)이 구현 전부터 초록이었고 변이로 빨강을 본 기록이 없다. 모델 티켓 06은 `decision_model_mutations.toml`로 잡았다.
-  - Minor: 독스트링의 "읽지 못한 스킬은 켜져 있어도 실행이 막힌다"가 표지 행만 말한다. `SKILL.md`가 없거나 깨진 스킬은 표지가 아니라 보통 행이고, 서버는 깨짐을 꺼짐보다 먼저 판정하므로 화면이 꺼짐을 알려도 서버는 읽을 수 없다고 답한다.
+  - Minor: 독스트링이 읽지 못한 스킬은 켜져 있어도 실행이 막힌다고 적은 것이 표지 행만 말한다. `SKILL.md`가 없거나 깨진 스킬은 표지가 아니라 보통 행이고, 서버는 깨짐을 꺼짐보다 먼저 판정하므로 화면이 꺼짐을 알려도 서버는 읽을 수 없다고 답한다.
   - Nit: `disabledFor`의 모델 갈래와 스킬 갈래의 중복(Duplicated Code) / `HomePage.test.tsx`의 `group("스킬")` 단언이 바로 위 `row` 단언을 포함한다 / 독스트링의 "ADR 0041의 2026-11-04 이력"이 같은 날짜의 이력 둘 가운데 어느 쪽인지 모호하다 / ADR 0019 새 이력에서 "Consequences의 해당 줄은 이렇게 읽는다"가 다른 문장 사이에 끼어 있다.
 
 ### 판정
@@ -92,3 +94,22 @@ open-session을 부른다 2026-11-04T17:27:35Z
 
 - 독스트링: "목록은 스킬 문서(`SKILL.md`)를 읽지 않아 문서가 없거나 깨진 스킬도 보통 행이다. 그런 스킬이 꺼져 있으면 화면은 꺼짐을 알리지만 서버는 깨짐을 꺼짐보다 먼저 판정해 읽을 수 없다고 답한다." 근거는 명세 사용자 이야기 16과 "실행 준비의 순서"(깨짐 → 꺼짐), 표준 축 보고가 `core/run.py`를 읽은 것이다. 이 세션은 `run.py`를 직접 열지 않았다.
 - ADR 0019 이력: 같은 한계 문장.
+
+## 커밋과 인계 (새 세션, 커밋 뒤 경계)
+
+- 티켓 체크박스 열세 개를 모두 체크하고 `Status:`를 `done`으로 바꿨다(`grep`으로 남은 `- [ ]` 0개와 Status 줄을 봤다). `.scratch/plan.md` 6행은 05가 나란히 돌아 같은 줄을 고치면 충돌하므로 이 PR에서 건드리지 않았다.
+- `uv run python tools/sibling_overlap.py`: 번호 겹침 없음, 함께 고친 파일 없음. `origin/main`이 05 병합으로 앞서 있고(`git diff --name-only HEAD...origin/main`이 05의 파일 아홉 개) 이 브랜치와 겹치는 파일은 없다.
+- 커밋 `c6c419a9` `feat: 결정 칸이 꺼진 스킬로 막힌 재개를 미리 알린다 (skill-plugin 04)`: pre-commit이 모두 통과했다(`run_checks` 묶음 482초: pytest·pyright·lint-imports·web-verify 등, 변이 표 원문 검사, 마크다운 표, 줄 구분 문자). ruff 둘은 `.py`가 없어 `Skipped`이고 이 변경이 파이썬을 건드리지 않았다. 따옴표 대조 경고 한 건(이 일지의 한 줄)은 따옴표를 떼어 고쳤다.
+- 아직 푸시하지 않았고 PR도 열지 않았다. 일지의 이 절과 위 승인 인용은 커밋하지 않은 채 워크트리에 있다.
+- 인계 사유: 컨텍스트가 인계 문턱을 넘은 채 `커밋 뒤` 경계에 왔다. 새 세션이 같은 워크트리에서 PR 직전 리뷰, 푸시, PR, 봇 회차, 병합을 잇는다.
+
+open-session을 부른다 2026-11-05T02:05:00Z
+인계 못함 커밋 뒤: open_session.ps1이 quitting= (앱이 업데이트용 끝내기를 시작하고 끝내지 못해 딥링크를 버리는 상태, 로그 줄 2026-11-05 09:28:14 CLI exit before update)으로 멈췄고 쏘지 않았다. 제목을 브랜치 이름으로 되돌렸고 이 세션에서 푸시·PR·병합을 잇는다.
+
+## PR 직전 리뷰 (CodeRabbit CLI)
+
+- 합치기: `git merge origin/main --no-edit`로 05의 병합분(파일 아홉 개, 이 브랜치와 겹치는 파일 없음)을 합쳤다. 충돌은 없었다.
+- `coderabbit auth status`는 `Plan: Free`, `Seat: not assigned`였지만 `coderabbit-review` 서브에이전트가 `coderabbit review --agent --include-untracked`를 돌려 리뷰가 실제로 끝났고 findings 1건을 냈다(서브에이전트의 보고. 이 세션이 CLI를 직접 치지 않았다). 그래서 CLI 축이 채워졌고 대체 둘(`/security-review`, `bug-perf-review`)은 돌리지 않았다.
+- 지적 1건(Minor): 변이 표의 네 번째 변이 `expect_output` 표지가 고른 단언의 실패에만 묶이지 않을 수 있다. 판정은 오탐이다. 그 변이는 `-t "꺼진 것이 여럿이면"` 한 시험만 돌리고, 그 시험의 단언은 `findByText` 하나이며(이 세션이 `Grep`으로 시험 원문을 봤다), 표지는 뒤집힌 순서 문구라 정상 순서에서는 나오지 않는다. 앞서 `tools/mutate.py` 전체 실행도 이 표지로 기대대로 빨강이었다. 고칠 것은 없다.
+- 밀 주장(독스트링: 목록은 `SKILL.md`를 읽지 않아 문서가 없거나 깨진 스킬도 보통 행이고, 서버는 깨짐을 꺼짐보다 먼저 판정한다): 서브에이전트가 코드를 읽어 맞다고 보고했다. `core/run.py`의 `_prepare`가 `_resolve_*`를 먼저, `_reject_disabled`를 마지막에 부르고, `list_manifests`는 `read_manifest`만 부른다. 측정이 아니라 코드를 읽은 것이다. 같은 한계가 깨진 mcp·모델에도 있다는 점은 이 변경의 범위 밖이라 그대로 둔다.
+- 사소한 말투: 문서 없음일 때 서버의 실제 문구는 `SKILL.md 가 없다`이고 독스트링은 "읽을 수 없다고 답한다"로 적었다. 뜻이 같아 고치지 않는다.
