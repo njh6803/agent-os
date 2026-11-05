@@ -46,4 +46,9 @@
 
 - 시작: 새 세션이 제목을 바꾸고 이 워크트리에 들어왔다. `git fetch origin main` 뒤 `origin/main`은 여전히 `ea1453cd`이고 `tools/sibling_overlap.py`는 번호 겹침 없음이었다(일지 `2026-11-05-04`를 앞서는 형제는 042 워크트리의 `2026-11-05-05`, 그쪽이 먼저 병합되면 옮긴다).
 - `coderabbit auth status`: `Plan: Free`, `Seat: not assigned`. 그래도 `coderabbit-review` 서브에이전트가 `coderabbit review --agent --include-untracked`를 실제로 돌렸고 CLI 0.7.5가 `review_completed`, 지적 0건으로 끝났다(서브에이전트가 찍은 줄이고 이 세션이 다시 돌리지는 않았다). 검토한 파일 16개는 커밋 `9680699e`의 파일 16개와 같다. 한도나 인증 오류는 없었다. CLI 축은 돌았으므로 대체 둘(`/security-review`, `bug-perf-review`)은 돌리지 않았다.
-- 지적이 0건이라 트리아지할 것이 없다. 밀 주장 둘(독스트링 서술과 시험이 고정한 동작의 일치)은 CLI 쪽에서 나온 것이 없어 이 리뷰로 검증되지 않았다. 셀프 리뷰 때 시험으로 고정한 것이 근거의 전부다.
+- PR #467을 헤드 `8f50a563`로 열었다. `tools/wait_ci.py`가 찍은 줄: 검사 모두 SUCCESS(claude-review 포함), CodeRabbit NEUTRAL. CodeRabbit의 PR 리뷰는 코멘트를 읽어 보니 "Review limit reached"(무료 OSS 한도)로 리뷰가 없었다. `@coderabbitai review` 요청도 "Review rate limited"로 답했다. 그 몫은 위 PR 직전 CLI 리뷰(지적 0건)가 맡았다.
+- claude-review 첫 회차(코멘트를 읽었다): Minor 1, Nit 2. 판정은 이 세션이 `tools/mutate.py`를 `Grep`으로 읽어 했다.
+  - Minor, 독스트링에서 "받는다"가 두 뜻(163번 줄은 알린다, 166번 줄 이하와 135번 줄 등은 지나간다)이라는 지적: 맞다. 한계를 서술하는 절이라 거꾸로 읽히면 한계가 뒤집힌다. 163번 줄만 "앞에 있어도 같은 줄로 보고 알린다"로 고쳤다. `ruff check` 초록.
+  - Nit, `_quality_problems`가 `_runners(spec)`를 다시 만드는 중복: 셀프 리뷰에서 낮은 우선순위로 둔 것과 같다. 두었다.
+  - Nit, `--staged` 절을 통째로 다시 줄바꿈해 diff가 커졌다는 지적: 이미 커밋된 줄바꿈이라 되돌리면 또 한 바퀴 돈다. 두었다.
+- 앞의 CLI 리뷰는 지적이 0건이라 트리아지할 것이 없었다. 밀 주장 둘(독스트링 서술과 시험이 고정한 동작의 일치)은 CLI 쪽에서 나온 것이 없어 이 리뷰로 검증되지 않았다. 셀프 리뷰 때 시험으로 고정한 것이 근거의 전부다.
