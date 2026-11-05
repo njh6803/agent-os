@@ -38,7 +38,7 @@
 - 관리 화면 e2e `pnpm -C web/apps/admin exec playwright test`: 9개 통과.
 - 위젯 e2e와 `-m llm`·`-m llm_widget`은 치지 않았다. 위젯과 api-client의 손으로 쓴 코드가 `ToolCalled`·`RunPaused`·`AppliedRule`을 쓰지 않는 것을 Grep으로 확인했고(생성 파일만 든다), 투영 코드는 바뀌지 않았다.
 - 규칙 파일(`sdk.md`, `core.md`)을 바꿨으므로 `tools/sibling_overlap.py`가 알린 카나리아 명세 여섯(`.scratch/end-user-continuation/probes/canary/{core_rule_runtime_only_events, core_rule_shortcuts, core_rule_pre_owner_damage, core_rule_read_cap_thread, sdk_rule_failure_cause, sdk_rule_shortcut_patterns}.toml`)을 새 `claude -p` 세션으로 `tools/canary.py`에 돌렸다(claude 2.1.318, 커밋 `15f11711`의 작업 트리). 여섯 모두 통과 4, 실패 0, "없음" 섞인 통과 0이다. 각 명세의 `# 최신 결과:` 줄을 고쳤다.
-- 전체 `tools/run_checks.py`는 따로 치지 않았다. 커밋의 pre-commit이 같은 명령들을 돌고 그 결과로 갈음한다(`CLAUDE.md` 검증 명령 절). 그 결과는 커밋 뒤 아래 "남은 일"에 옮긴다.
+- 전체 `tools/run_checks.py`는 따로 치지 않았다. 커밋의 pre-commit이 같은 명령들을 돌고 그 결과로 갈음한다(`CLAUDE.md` 검증 명령 절). 그 결과는 아래 "커밋과 pre-commit"에 옮겼다.
 
 ## 셀프 리뷰(`/code-review`)
 
@@ -74,6 +74,15 @@
 - 지금 단계(구현·리뷰·커밋)가 끝나면 다음은 이 브랜치의 PR을 열고 병합하는 것이다. 01이 병합돼야 02(규칙 파일 읽기)와 03(도구의 서버 이름·같은 이름 검사)이 나란히 돌 수 있다. 05는 04 바로 뒤에 한다.
 - 병합 뒤 새 세션에서 02·03을 나란히 연다(`next-session`의 병렬 규칙).
 
+## 커밋과 pre-commit
+
+커밋 `e47a3988`(브랜치 `feature/01-contract-trace-applied-rule-and-server-fields`)이 한 번에 서지 않았다. 근거는 두 시도의 pre-commit 출력이다.
+
+- **첫 시도는 막혔다.** `pytest`가 `tests/channel/http/test_router.py::test_스트림_항목이_이름_있는_Event_이고_TraceEvent_와_같은_멤버를_가리킨다`에서 빨갰다. 새 컴포넌트 `AppliedRule`이 "채널이 더한 이름만 늘어난다"고 고정한 집합(`EXISTING_COMPONENTS`)에 없었다. 나머지 검사는 통과였다. 전체 pytest를 이 커밋 전에 한 번도 치지 않아, 이 시험이 계약 파일의 컴포넌트 목록을 맞대는 줄을 몰랐다(앞서 돌린 것은 sdk·core·jsonl·end_user 시험과 `tests/channel/http/test_router.py`가 아닌 파일들이다). 선례 `FailureCause`가 같은 집합에 있는 것을 보고 `AppliedRule`을 더했다(`test_router.py` 107개 통과를 확인했다).
+- **둘째 시도는 통과했다.** `ruff`, `pyright`(리눅스 판 포함), `lint-imports`, `check-ticket`, `check-instructions`, `check-type-escapes`, `run-hooks`, `pytest`, `web-verify`, 마크다운 표, 줄 구분 문자, 변이 표, 카나리아 명세 모양, 인용, 커밋 메시지가 `Passed`였다. `constitution version`은 헌법 파일을 안 건드려 `Skipped`(건드리지 않았으니 정상)다.
+- 위 "검증"에서 따로 쳤던 `pyright`, `lint-imports`, `ruff`, `web verify`는 pre-commit이 같은 명령을 다시 돌려 갈음했다.
+
 ## 남은 일
 
-- 커밋의 pre-commit 결과를 여기에 옮긴다.
+- PR을 열고 병합하는 일은 이번 요청 범위 밖이라 하지 않았다. 병합할 때 `origin/main`이 `.scratch/plan.md`와 `.scratch/retro-queue.md`를 먼저 바꿔 두었으니(`git diff --name-only HEAD...origin/main`) 글자 충돌이 날 수 있다. 같은 일지 번호·대기열 번호는 `tools/sibling_overlap.py`가 겹침 없음으로 냈다(일지 03, 대기열 576).
+- 이 PR 본문에 적을 것: 바뀐 사진 마흔여덟 장의 목록(위 "한 것"), 카나리아 여섯의 결과, 위젯 e2e와 `-m llm`을 치지 않은 까닭.
