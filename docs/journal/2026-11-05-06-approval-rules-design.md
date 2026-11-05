@@ -189,3 +189,49 @@ Critical·Major 없음. 지적 11건(위반 3, 판단 5, 주장 3).
 고르지 않은 선택지(라벨만): "고칠 것이 있다".
 
 ADR 0044와 `docs/adr/README.md`의 status를 accepted로 바꿨다.
+
+## 검증과 커밋
+
+`git branch --show-current`는 `docs/approval-rules-design`이었고, `uv run python tools/sibling_overlap.py`는 번호 겹침 없음이었다(워크트리 041이 커밋하지 않은 일지 2026-11-05-07과 `.scratch/plan.md`를, mcp-shutdown-spec이 `.scratch/plan.md`를 함께 고치고 있다는 도구 출력). 커밋은 5dfd1b96 "docs: 운영자의 규칙 파일을 준비마다 읽어 호출마다 집행하는 설계를 ADR 0044로 정한다 (approval-rules)", 7 파일이다. pre-commit은 parallel-checks(pytest 나눠 돌기·타입체크·경계·web verify)가 581.88초에 Passed이고 나머지 검사도 Passed, Skipped는 셋이다. ruff check·ruff format(스테이지된 `.py` 없음), 카나리아 명세 모양(커밋에 `.scratch/**/probes/canary/*.toml` 없음), 헌법 버전(헌법 파일 없음). ruff 둘은 손으로 쳤다. `uv run ruff check .`는 All checks passed, `uv run ruff format --check .`는 1262 files already formatted. 카나리아 모양과 헌법 버전은 이 커밋에 대상 파일이 없어 칠 입력이 없다(`tools/canary.py --shape`는 명세 없이 치면 인자 오류 2로 끝난다).
+
+pre-commit의 인용 검사(경고만)가 이 일지의 여섯 줄(26·44·140·152·153·154)을 원문과 다르다고 알렸다. 26행의 사용자 원문 둘은 일지 2026-11-04-01의 150행과 156행에서 앞머리를 grep으로 찾았다(원문이 줄을 걸쳐 있어 검사가 한 줄로 맞추지 못한 것으로 보인다. 어림). 44행의 "고르지 않은 선택지"는 화면에 올린 라벨이라 저장소에 원문이 없고, 140·152~154행은 리뷰 보고가 고치기 전의 ADR 문장을 인용한 것이라 고친 뒤의 ADR과 다르다. 여섯 모두 고치지 않는다.
+
+## 인계(커밋 뒤)
+
+커밋 직후 인계 계기(`hook_handoff`)가 왔다. 세션 컨텍스트 363,552 토큰(문턱 200,000), 경계 "커밋 뒤". 계기 직후 자동 압축이 와서, 압축 뒤에 `handoff.md`를 Read로 열어 따랐다. 인계하지 않는 때 다섯에 들지 않는다. 계기를 낸 커밋은 pre-commit을 지나 성공했고, 요청 범위(PR과 병합까지)는 이 경계에서 끝나지 않으며, 이 세션의 지시문의 "이어받을 상태"는 `인계: 셀프 리뷰 직전`이라 같은 경계가 아니고, `인계 못함` 줄이 없고, 곁 세션이 아니다(`get_session`의 `self`에 `parentSessionId`가 없다).
+
+- 이 세션의 제목은 `docs/approval-rules-design`(이 세션이 첫 턴에 붙였다)이고 `docs/approval-rules-design (인계함)`으로 바꾼다.
+- 커밋한 것: 5dfd1b96 하나(위 "검증과 커밋"). 푸시하지 않았고 PR은 없다(`gh pr view docs/approval-rules-design`이 없음). 커밋하지 않은 변경은 이 일지뿐이다(위 두 절과 이 절). 새 세션이 이 일지를 커밋한다.
+- 이 세션이 번복하거나 고친 것: 셀프 리뷰 반영 아홉(위 "셀프 리뷰"의 "반영")과 ADR 0044·색인의 status를 accepted로. 결정을 번복한 것은 없다.
+- 백그라운드 작업은 없다(커밋의 pre-commit은 끝났다). 워크트리 잠금은 풀고 넘긴다.
+- 주 체크아웃: 루트는 main 050bb13b이고 origin/main도 050bb13b다(`git fetch origin` 뒤 `git worktree list`와 `git rev-parse --short origin/main`). 루트가 깨끗한지는 보지 못했다. 워크트리 세션의 가드가 `git -C <루트> status`를 거부했다.
+- 나란히 도는 것: PR 468(`chore/043-plan-skill-plugin-done`, 열림)이 `.scratch/plan.md`의 skill-plugin 행을 done으로 고친다(`gh pr view 468 --json files`). 이 브랜치의 커밋도 같은 행을 done으로 고쳤다. 먼저 병합되는 쪽이 있으면 뒤쪽이 origin/main을 합칠 때 그 행에서 글자 충돌이 날 수 있다. 워크트리 mcp-shutdown-spec도 plan.md를 고치고 있다(`sibling_overlap.py` 출력).
+- 넘기는 단계(새 세션이 이 차례로 한다. "다음" 절은 단계를 닫는 세션이 쓴다): 이 일지를 커밋 → PR 직전 리뷰(`coderabbit-review` 서브에이전트. 돌지 못하면 `/security-review`와 `bug-perf-review` 서브에이전트. 밀 주장은 위 "셀프 리뷰" "반영"의 고친 것 아홉 줄) → 지적 반영과 재검증 → `git-pr`로 PR(docs/ 면제 PR, 티켓 없음. 관련 티켓 칸은 면제의 종류 "기능의 설계") → `merge.md` 2의 봇 회차(`@coderabbitai review` 코멘트와 `uv run python tools/wait_ci.py <번호>` 백그라운드) → 병합은 `next-session` `merge.md`의 "워크트리에서 병합할 때"를 Read로 열어 따른다 → next-session 지시문(다음은 `/to-spec approval-rules`, 사용자가 부른다) → retro.
+- 이어받은 보류 하나는 그대로 넘긴다. PR 466(harness 042)의 Minor는 이 기능의 몫이 아니다(일지 2026-11-05-05).
+
+지시문:
+
+```
+다음 작업: 기능 approval-rules. 운영자의 승인 규칙 파일(후보 6) 설계 산출물(ADR 0044 accepted, ADR 0009·0012 이력, CONTEXT.md 용어 셋, plan.md 두 행, 일지)의 커밋을 PR 직전 리뷰·PR·봇 회차·병합까지 마친다
+다음 단계: 설계 인터뷰
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /grill-with-docs approval-rules
+브랜치: docs/approval-rules-design
+모델: Fable 5.1 / xhigh. 2의 잇는 지시문
+읽을 것: docs/journal/2026-11-05-06-approval-rules-design.md의 "인계(커밋 뒤)" 절(커밋한 것, 손으로 친 검사, 나란히 도는 PR 468, 넘기는 단계)과 "셀프 리뷰" 절의 "반영"(PR 직전 리뷰에 밀 주장), docs/adr/0044-rules-file-is-enforced-per-call-and-operator-deny-beats-the-decision.md(PR 본문의 원천)
+이어받을 상태: 인계: 커밋 뒤. 설계 산출물 7 파일의 커밋 하나(셀프 리뷰 반영과 ADR 0044 승인·accepted 포함)까지 했고 푸시·PR은 없으며, 남은 단계는 일지 커밋 → PR 직전 리뷰 → git-pr → 봇 회차 → 병합 → next-session → retro다. 일지 docs/journal/2026-11-05-06-approval-rules-design.md. 설계 인터뷰는 끝나 다시 묻지 않는다(라운드 둘, 합의 요약 확인됨, ADR 0044 승인됨). 커밋하지 않은 변경은 그 일지뿐이다. 일지의 "다음" 절은 아직 없다. PR 466의 Minor 보류는 이 기능의 몫이 아니다(일지 2026-11-05-05)
+확인할 선행 조건: 루트가 깨끗한지(워크트리 가드가 git -C <루트> status를 거부해 보지 못했다). PR 468(chore/043-plan-skill-plugin-done)이 .scratch/plan.md의 skill-plugin 행을 같은 뜻으로 고치고 있어, 먼저 병합되면 origin/main을 합칠 때 그 행의 충돌을 푼다
+이번 요청 범위: PR과 병합까지
+```
+
+제목을 `docs/approval-rules-design (인계함)`으로 바꿨다(앱이 묻지 않고 바꿨다). `git worktree unlock`은 이미 풀려 있다는 오류(`is not locked`)로 끝나 넘어갔다. 같은 제목으로 도는 다른 세션은 없고 이 세션을 뺀 도는 세션은 0이다(`list_sessions` limit 50. PR 468의 세션 `chore/043-plan-skill-plugin-done`은 쉬고 있다).
+
+open-session을 부른다 2026-11-05T07:57Z
+
+## 새 세션(PR까지)
+
+인계 지시문으로 연 세션이다. 제목을 `docs/approval-rules-design`으로 바꿨고(앱이 묻지 않고 바꿨다), `git worktree list`에서 이 브랜치가 워크트리 `approval-rules-design`에 체크아웃되어 있어 `EnterWorktree(path)`로 들어왔다. 지시문에 `tidy-checkouts`는 없다. `grill-with-docs`가 부르는 `grilling`·`domain-modeling`은 설계 인터뷰가 끝나 다시 부르지 않았다.
+
+선행 조건 둘을 봤다. 루트는 이 세션이 시작될 때 앱이 찍은 git 상태에서 main 050bb13b이고 깨끗했다(워크트리 가드가 `git -C <루트> status`를 거부해 직접 치지는 않았다). `git fetch origin` 뒤 origin/main은 050bb13b로 이 브랜치의 기준(5dfd1b96의 부모)과 같아 합칠 것이 없다. PR 468(`chore/043-plan-skill-plugin-done`)은 열려 있고 병합되지 않았다(`gh pr view 468 --json state,mergedAt`). 고치는 파일은 harness 티켓 043, `.scratch/plan.md`, `.scratch/retro-queue.md`, 일지 2026-11-05-07의 넷이다. 이 PR보다 먼저 병합되면 origin/main을 합칠 때 plan.md의 skill-plugin 행에서 충돌을 푼다.
+
+`coderabbit auth status`는 `Plan: Free`, `Seat: not assigned`였다. 2026-11-03의 두 PR에서는 `Seat` 줄이 없었는데(`operations.md` 리뷰 파이프라인 2) 오늘은 2026-09-23과 같은 모양이다. 서브에이전트 정의 1단계대로 CLI 축이 비어 있으므로 `coderabbit-review`는 부르지 않고 대체 둘(`/security-review`, `bug-perf-review` 서브에이전트)을 이 일지를 커밋한 뒤 나란히 돌린다(`operations.md` 리뷰 파이프라인 2). 밀 주장은 위 "셀프 리뷰"의 "반영"에 적은 고친 것 아홉 줄이다.
