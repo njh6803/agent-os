@@ -53,6 +53,7 @@ from agent_os.core.ports import (
     PluginError,
     PluginKey,
     PluginSource,
+    Rules,
     RunRow,
     RunStatus,
     ToolConnection,
@@ -348,6 +349,10 @@ class FakePlugins:
     def read_disabled(self) -> frozenset[PluginKey]:
         self.calls += 1
         return self.disabled
+
+    def read_rules(self) -> Rules:
+        self.calls += 1
+        return Rules()
 
     def write_enabled(self, kind: PluginKind, name: PluginName, *, enabled: bool) -> WriteOutcome:
         raise NotImplementedError("최종 사용자 경로는 켜고 끄지 않는다")

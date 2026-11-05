@@ -1,0 +1,157 @@
+# 티켓 02(규칙 파일 읽기)의 시험이 무엇을 재는지 변이로 본다. 변이마다 그 줄을 겨누는 시험 하나로
+# 좁히고, 표지는 그 단언이 빨개질 때만 찍히는 받은 값으로 고른다(변이를 손으로 넣어 실패 출력을 보고
+# 골랐다). 손으로 본 것이지 이 표가 재는 것이 아니다.
+# 돌리기: PYTHONUTF8=1 uv run python tools/mutate.py .scratch/approval-rules/probes/rules_file_read_mutations.toml
+# 원문 확인: uv run python tools/mutate.py --check .scratch/approval-rules/probes/rules_file_read_mutations.toml
+
+[[mutation]]
+name = "서버 칸을 보지 않고 맞는다"
+tests = ["tests/core/test_rules.py", "-k", "규칙은_세_꼴대로"]
+expect = "red"
+expect_output = ["matches(server='other-server', tool='add')"]
+
+[[mutation.edit]]
+file = "src/agent_os/core/ports.py"
+old = '''
+        return (self.server is None or self.server == server) and (
+            self.tool is None or self.tool == tool
+        )
+'''
+new = '''
+        return self.tool is None or self.tool == tool
+'''
+
+[[mutation]]
+name = "저자의 승인 요구가 운영자의 deny 보다 앞"
+tests = ["tests/core/test_rules.py", "-k", "deny는_저자의"]
+expect = "red"
+expect_output = ["+ requires_approval"]
+
+[[mutation.edit]]
+file = "src/agent_os/core/rules.py"
+old = '''
+    if _any_matches((table.deny for table in tables), server, tool):
+        return "deny"
+    if requires_approval:
+        return "requires_approval"
+'''
+new = '''
+    if requires_approval:
+        return "requires_approval"
+    if _any_matches((table.deny for table in tables), server, tool):
+        return "deny"
+'''
+
+[[mutation]]
+name = "그 에이전트의 표를 보지 않는다"
+tests = ["tests/core/test_rules.py", "-k", "그_에이전트의_표에"]
+expect = "red"
+expect_output = ["+ default"]
+
+[[mutation.edit]]
+file = "src/agent_os/core/rules.py"
+old = '''
+    return (rules.common,) if own is None else (rules.common, own)
+'''
+new = '''
+    return (rules.common,)
+'''
+
+[[mutation]]
+name = "에이전트 지도를 복사하지 않는다"
+tests = ["tests/core/test_rules.py", "-k", "복사해"]
+expect = "red"
+expect_output = ["mappingproxy"]
+
+[[mutation.edit]]
+file = "src/agent_os/core/ports.py"
+old = '''
+        object.__setattr__(self, "agents", MappingProxyType(dict(self.agents)))
+'''
+new = '''
+        object.__setattr__(self, "agents", MappingProxyType(self.agents))
+'''
+
+[[mutation]]
+name = "서버 전체 줄이 도구 이름 별표가 된다"
+tests = ["tests/adapters/test_filesystem.py", "-k", "세_꼴의_줄이_규칙_값으로"]
+expect = "red"
+expect_output = ["tool='*'"]
+
+[[mutation.edit]]
+file = "src/agent_os/adapters/filesystem.py"
+old = '''
+    return Rule(server=PluginName(server), tool=None if tool == "*" else tool)
+'''
+new = '''
+    return Rule(server=PluginName(server), tool=tool)
+'''
+
+[[mutation]]
+name = "allow 가 맨 이름을 받는다"
+tests = ["tests/adapters/test_filesystem.py", "-k", "깨진_규칙_파일은"]
+expect = "red"
+expect_output = ["DID NOT RAISE"]
+
+[[mutation.edit]]
+file = "src/agent_os/adapters/filesystem.py"
+old = '''
+    allow: tuple[_ScopedRuleLine, ...] = ()
+'''
+new = '''
+    allow: tuple[_AnyRuleLine, ...] = ()
+'''
+
+[[mutation]]
+name = "깨짐 문구가 검증 오류 전문을 싣는다"
+tests = ["tests/adapters/test_filesystem.py", "-k", "모르는_키에_심은_값을"]
+expect = "red"
+expect_output = ["input_type=str"]
+
+[[mutation.edit]]
+file = "src/agent_os/adapters/filesystem.py"
+old = '''
+        reason = _describe(error)
+    else:
+        return parsed.rules()
+'''
+new = '''
+        reason = str(error)
+    else:
+        return parsed.rules()
+'''
+
+[[mutation]]
+name = "깨짐 오류가 검증 오류를 원인으로 잇는다"
+tests = ["tests/adapters/test_filesystem.py", "-k", "원인으로_잇지"]
+expect = "red"
+expect_output = ["1 validation error for _RulesFile"]
+
+[[mutation.edit]]
+file = "src/agent_os/adapters/filesystem.py"
+old = '''
+        reason = _describe(error)
+    else:
+        return parsed.rules()
+    raise PluginError(f"운영자 파일이 깨졌다: {path}\n{reason}")
+'''
+new = '''
+        raise PluginError(f"운영자 파일이 깨졌다: {path}\n{_describe(error)}") from error
+    else:
+        return parsed.rules()
+'''
+
+[[mutation]]
+name = "읽기가 교체 재시도를 지나지 않는다"
+tests = ["tests/adapters/test_filesystem.py", "-k", "PermissionError를_몇_번_받다_성공하면_규칙을"]
+expect = "red"
+expect_output = ["Errno 13"]
+
+[[mutation.edit]]
+file = "src/agent_os/adapters/filesystem.py"
+old = '''
+        return _retrying(lambda: path.read_text(encoding="utf-8"))
+'''
+new = '''
+        return path.read_text(encoding="utf-8")
+'''

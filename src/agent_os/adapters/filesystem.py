@@ -15,6 +15,10 @@ sys.path 를 건드리지 않는다.
 쓴 뒤 이름을 바꿔 통째로 교체하고, 바뀌는 것이 없으면 파일을 건드리지 않으며, 깨진 파일은 덮어쓰지
 않는다. 열거나 교체하다 받는 `PermissionError` 만 짧게 동기로 다시 시도한다(ADR 0017 의 2026-09-27
 첫 이력). 윈도우에서 다른 핸들이 연 파일은 교체가, 교체되는 순간의 읽기가 그 오류이기 때문이다.
+
+**규칙은 `<root>/rules.toml` 이 든다(ADR 0044).** 읽기만 하고 쓰지 않는다. 형식은 이 어댑터가
+소유하고 `read_rules` 가 문자열 규칙 줄을 core 의 `Rule` 값으로 바꿔 넘긴다. 읽기 실패 문구는
+`disabled.toml` 과 같고 깨짐 문구는 값을 벗긴다(`_parse_rules_file`).
 """
 
 from __future__ import annotations
@@ -36,6 +40,9 @@ from agent_os.core.ports import (
     ManifestRow,
     PluginError,
     PluginKey,
+    Rule,
+    Rules,
+    RuleSet,
     UnreadableManifest,
     WriteOutcome,
 )
@@ -60,6 +67,7 @@ _DIRECTORY = {
 _MANIFEST = "plugin.toml"
 _SKILL_DOCUMENT = "SKILL.md"
 _DISABLED = "disabled.toml"
+_RULES = "rules.toml"
 _OPERATOR_FILE_SCHEMA_VERSION = "1"
 
 # `PermissionError` 를 다시 시도하는 간격. 합이 곧 상한이다. 부딪힌 순간에만 루프가 이만큼 멈춘다.
@@ -96,6 +104,63 @@ class _OperatorFile(BaseModel):
         )
 
 
+# 규칙 줄의 글자 모양(approval-rules 명세 "표와 키와 규칙 줄의 모양"). 콜론은 많아야 하나이고, 콜론
+# 앞은 플러그인 이름 패턴, 뒤는 `*` 또는 콜론과 공백이 아닌 글자 하나 이상이다. 도구 이름의 글자를
+# 더 좁히지 않는 이유는 규칙의 도구 이름이 MCP 서버가 정한 이름 그대로여야 해서다. 콜론 뒤의 `*` 는
+# 언제나 서버의 모든 도구다. 패턴은 모델 필드의 `pattern` 이라 검색이므로 앞뒤를 고정한다.
+_SERVER = PLUGIN_NAME_PATTERN.removeprefix("^").removesuffix("$")
+_TOOL = r"[^:\s]+"
+_SCOPED_RULE = rf"^{_SERVER}:(?:\*|{_TOOL})$"
+_ANY_RULE = rf"^(?:{_TOOL}|{_SERVER}:(?:\*|{_TOOL}))$"
+
+type _AnyRuleLine = Annotated[str, Field(pattern=_ANY_RULE)]
+type _ScopedRuleLine = Annotated[str, Field(pattern=_SCOPED_RULE)]
+
+
+def _rule_of(line: str) -> Rule:
+    """패턴을 지난 규칙 줄 하나를 값으로(질의). 맨 이름은 서버 없음, `서버:*` 는 도구 없음이다."""
+    server, colon, tool = line.partition(":")
+    if not colon:
+        return Rule(server=None, tool=line)
+    return Rule(server=PluginName(server), tool=None if tool == "*" else tool)
+
+
+# 표 하나의 모양. 세 배열은 모두 선택이고 기본은 빈 배열이다. `allow` 는 서버를 붙인 두 꼴만 받는다
+# — 열어 주는 규칙이 넓게 맞으면 뜻밖의 도구가 열리고, 막는 deny 와 묻는 ask 는 넓게 맞아도 안전한
+# 쪽이다. 같은 줄 둘이나 겹치는 줄, deny 와 allow 에 함께 적힌 도구는 거부하지 않는다.
+class _RuleTable(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    deny: tuple[_AnyRuleLine, ...] = ()
+    ask: tuple[_AnyRuleLine, ...] = ()
+    allow: tuple[_ScopedRuleLine, ...] = ()
+
+    def rule_set(self) -> RuleSet:
+        """줄을 값으로 바꾼 표. 한 열 안의 중복은 집합이 합친다."""
+        return RuleSet(
+            deny=frozenset(_rule_of(line) for line in self.deny),
+            ask=frozenset(_rule_of(line) for line in self.ask),
+            allow=frozenset(_rule_of(line) for line in self.allow),
+        )
+
+
+# 규칙 파일의 모양. `disabled.toml` 과 같이 모르는 키는 어느 층에서든 손상이고 형식 버전은 필수라
+# 빈 파일이 손상이다. 공통 표도 에이전트 표도 없어도 된다. 에이전트 이름은 플러그인 이름의 패턴을
+# 지나야 하고 그 에이전트가 실재하는지는 보지 않는다.
+class _RulesFile(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    schema_version: Literal["1"]
+    common: _RuleTable = _RuleTable()
+    agents: dict[_ValidName, _RuleTable] = {}
+
+    def rules(self) -> Rules:
+        return Rules(
+            common=self.common.rule_set(),
+            agents={name: table.rule_set() for name, table in self.agents.items()},
+        )
+
+
 class FilesystemPlugins:
     def __init__(self, root: Path) -> None:
         self._root = root
@@ -103,14 +168,22 @@ class FilesystemPlugins:
     def read_disabled(self) -> frozenset[PluginKey]:
         """운영자 파일이 없으면 빈 집합. 있으면 그 내용이고, 읽거나 검증하지 못하면 PluginError."""
         path = self._root / _DISABLED
-        try:
-            text = _retrying(lambda: path.read_text(encoding="utf-8"))
-        except FileNotFoundError:
+        text = _read_operator_text(path)
+        if text is None:
             return frozenset()
-        except (OSError, ValueError) as error:
-            # UnicodeDecodeError 가 ValueError 다. PermissionError 는 재시도가 다한 뒤에 여기 온다.
-            raise PluginError(f"운영자 파일을 읽을 수 없다: {path}\n{error}") from error
         return _parse_operator_file(path, text)
+
+    def read_rules(self) -> Rules:
+        """규칙 파일이 없으면 빈 `Rules`. 있으면 그 내용이고, 읽거나 검증하지 못하면 PluginError.
+
+        `read_disabled` 와 같이 교체 재시도를 지나고 캐시하지 않는다. 문자열 규칙 줄을 `Rule` 값으로
+        바꿔 넘기므로 부르는 쪽은 규칙의 글자 모양을 모른다.
+        """
+        path = self._root / _RULES
+        text = _read_operator_text(path)
+        if text is None:
+            return Rules()
+        return _parse_rules_file(path, text)
 
     def write_enabled(self, kind: PluginKind, name: PluginName, *, enabled: bool) -> WriteOutcome:
         """부재 판정 → 손상 판정 → 바뀌는 것이 있을 때만 통째로 교체. 순서가 의도다(포트의
@@ -225,6 +298,21 @@ def _retrying[T](attempt: Callable[[], T]) -> T:
     return attempt()
 
 
+def _read_operator_text(path: Path) -> str | None:
+    """운영자 파일의 글(질의). 파일이 없으면 None 이고, 열지 못하거나 UTF-8 이 아니면 PluginError.
+
+    두 운영자 파일이 같은 읽기를 쓴다. 교체 재시도(`_retrying`)가 한 곳에 있어야 한 파일만 윈도우의
+    교체 순간 읽기에 약해지지 않는다.
+    """
+    try:
+        return _retrying(lambda: path.read_text(encoding="utf-8"))
+    except FileNotFoundError:
+        return None
+    except (OSError, ValueError) as error:
+        # UnicodeDecodeError 가 ValueError 다. PermissionError 는 재시도가 다한 뒤에 여기 온다.
+        raise PluginError(f"운영자 파일을 읽을 수 없다: {path}\n{error}") from error
+
+
 def _parse_operator_file(path: Path, text: str) -> frozenset[PluginKey]:
     """문법부터 이름 패턴까지 손상 전부를 PluginError 로 만든다. 경로와 이유를 메시지에 든다."""
     try:
@@ -233,6 +321,25 @@ def _parse_operator_file(path: Path, text: str) -> frozenset[PluginKey]:
         # TOMLDecodeError 가 ValueError 다.
         raise PluginError(f"운영자 파일이 깨졌다: {path}\n{error}") from error
     return parsed.disabled()
+
+
+def _parse_rules_file(path: Path, text: str) -> Rules:
+    """문법부터 규칙 줄의 패턴까지 손상 전부를 PluginError 로 만든다. 값은 싣지 않는다.
+
+    첫 줄은 `disabled.toml` 의 깨짐 문구와 같고 경로가 파일을 가른다. 둘째 줄은 `_describe` 의
+    오류 종류와 칸의 자리와 문구다. 모르는 키에 적은 값(`api_key = "sk-ant-…"`)을 pydantic 의 문구가
+    그대로 싣고 이 문구는 운영자 면 500 봉투와 서버 기록으로 나가기 때문이다(헌법 원칙 V).
+    `PluginError` 는 `except` 밖에서 던져 원인을 잇지 않는다. `from error` 로 이으면
+    `ValidationError` 가 `__cause__` 에 남아 트레이스백 출력에 입력 값이 실린다(`_parse_skill`).
+    """
+    try:
+        parsed = _RulesFile.model_validate(tomllib.loads(text))
+    except (ValidationError, ValueError) as error:
+        # TOMLDecodeError 가 ValueError 다.
+        reason = _describe(error)
+    else:
+        return parsed.rules()
+    raise PluginError(f"운영자 파일이 깨졌다: {path}\n{reason}")
 
 
 def _render_operator_file(disabled: frozenset[PluginKey]) -> str:

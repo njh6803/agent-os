@@ -27,6 +27,9 @@ from agent_os.core.ports import (
     PluginError,
     PluginKey,
     PluginSource,
+    Rule,
+    Rules,
+    RuleSet,
     UnreadableManifest,
 )
 from agent_os.sdk import (
@@ -948,14 +951,16 @@ class Injected:
 
 
 def _refuse_reads(
-    monkeypatch: pytest.MonkeyPatch, *, error: OSError, times: int | None
+    monkeypatch: pytest.MonkeyPatch, *, error: OSError, times: int | None, name: str = DISABLED
 ) -> Injected:
-    """운영자 파일 읽기를 times 번(None 이면 끝까지) 거절한다. 매니페스트 읽기는 건드리지 않는다."""
+    """운영자 파일 읽기를 times 번(None 이면 끝까지) 거절한다. 매니페스트 읽기는 건드리지 않는다.
+
+    name 이 거절할 파일이다. 기본은 꺼진 집합의 파일이고 규칙 파일 시험은 그 이름을 준다."""
     injected = Injected()
     original = Path.read_text
 
     def refuse(self: Path, encoding: str | None = None, errors: str | None = None) -> str:
-        if self.name == DISABLED and (times is None or injected.refusals < times):
+        if self.name == name and (times is None or injected.refusals < times):
             injected.refusals += 1
             raise error
         return original(self, encoding, errors)
@@ -1308,3 +1313,365 @@ def test_다른_프로세스가_교체하는_동안의_읽기가_재시도_안�
 
     assert toggler.wait(timeout=10) == 0
     assert seen == TOGGLED_STATES
+
+
+# 규칙 파일 — 승인 규칙은 플러그인 루트의 rules.toml 이 든다(ADR 0044, approval-rules 티켓 02)
+
+RULES = "rules.toml"
+
+
+def _rules_file(root: Path, text: str) -> Path:
+    path = root / RULES
+    path.write_text(text, encoding="utf-8")
+    return path
+
+
+def _one(server: str, tool: str) -> Rule:
+    return Rule(server=PluginName(server), tool=tool)
+
+
+def _whole(server: str) -> Rule:
+    return Rule(server=PluginName(server), tool=None)
+
+
+def _bare(tool: str) -> Rule:
+    return Rule(server=None, tool=tool)
+
+
+def _rule_set(
+    *,
+    deny: tuple[Rule, ...] = (),
+    ask: tuple[Rule, ...] = (),
+    allow: tuple[Rule, ...] = (),
+) -> RuleSet:
+    return RuleSet(deny=frozenset(deny), ask=frozenset(ask), allow=frozenset(allow))
+
+
+def test_규칙_파일이_없으면_빈_규칙이다(root: Path) -> None:
+    """파일이 없는 것은 규칙이 없는 것이다. 공통 표가 비고 에이전트 표가 없다."""
+    rules = _plugins(root).read_rules()
+
+    assert rules == Rules()
+    assert rules.common == _rule_set()
+    assert dict(rules.agents) == {}
+
+
+def test_규칙_파일의_공통_표와_에이전트_표와_세_꼴의_줄이_규칙_값으로_읽힌다(root: Path) -> None:
+    """맨 이름은 서버 없음, `서버:*`는 도구 없음, `서버:도구`는 둘 다 있음이다. 어댑터가 문자열을
+    값으로 바꿔 넘기므로 `everything:*` 가 도구 없는 규칙으로 읽히는 것을 여기서 본다."""
+    _rules_file(
+        root,
+        'schema_version = "1"\n'
+        "[common]\n"
+        'deny = ["everything:send_mail", "rm"]\n'
+        'ask = ["everything:write_file"]\n'
+        'allow = ["everything:*"]\n'
+        "[agents.calc]\n"
+        'allow = ["everything:add"]\n',
+    )
+
+    assert _plugins(root).read_rules() == Rules(
+        common=_rule_set(
+            deny=(_one("everything", "send_mail"), _bare("rm")),
+            ask=(_one("everything", "write_file"),),
+            allow=(_whole("everything"),),
+        ),
+        agents={PluginName("calc"): _rule_set(allow=(_one("everything", "add"),))},
+    )
+
+
+def test_규칙_파일을_읽을_때마다_디스크를_다시_읽어_고친_규칙이_둘째_읽기에_보인다(
+    root: Path,
+) -> None:
+    """캐시하지 않는다. 운영자가 손으로 고친 것이 다음 읽기부터 듣는다."""
+    _rules_file(root, 'schema_version = "1"\n[common]\ndeny = ["rm"]\n')
+    plugins = _plugins(root)
+
+    first = plugins.read_rules()
+    _rules_file(root, 'schema_version = "1"\n[common]\nask = ["rm"]\n')
+    second = plugins.read_rules()
+
+    assert first.common == _rule_set(deny=(_bare("rm"),))
+    assert second.common == _rule_set(ask=(_bare("rm"),))
+
+
+def test_규칙_파일의_읽기도_PermissionError를_몇_번_받다_성공하면_규칙을_돌려준다(
+    root: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """꺼진 집합의 읽기와 같은 재시도를 지난다(ADR 0017 의 2026-09-27 첫 이력)."""
+    _rules_file(root, 'schema_version = "1"\n[common]\ndeny = ["rm"]\n')
+    injected = _refuse_reads(
+        monkeypatch, error=PermissionError(13, "다른 핸들이 쥐고 있다"), times=3, name=RULES
+    )
+
+    assert _plugins(root).read_rules().common == _rule_set(deny=(_bare("rm"),))
+    assert injected.refusals == 3
+
+
+def test_규칙_파일의_읽기가_끝까지_PermissionError면_읽을_수_없다는_PluginError다(
+    root: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    path = _rules_file(root, 'schema_version = "1"\n')
+    _refuse_reads(
+        monkeypatch, error=PermissionError(13, "다른 핸들이 쥐고 있다"), times=None, name=RULES
+    )
+
+    with pytest.raises(PluginError) as caught:
+        _plugins(root).read_rules()
+
+    assert str(caught.value).startswith(f"운영자 파일을 읽을 수 없다: {path}\n")
+
+
+def test_UTF_8이_아닌_규칙_파일은_읽을_수_없다는_PluginError다(root: Path) -> None:
+    path = root / RULES
+    path.write_bytes(b'schema_version = "1"\n[common]\ndeny = ["\xff"]\n')
+
+    with pytest.raises(PluginError) as caught:
+        _plugins(root).read_rules()
+
+    assert str(caught.value).startswith(f"운영자 파일을 읽을 수 없다: {path}\n")
+
+
+# 거부하지 않는 것. 효과가 같거나 포함 관계이거나 차례가 뜻을 하나로 만든다.
+ACCEPTED = (
+    pytest.param('schema_version = "1"\n', Rules(), id="표가 하나도 없다"),
+    pytest.param(
+        'schema_version = "1"\n[common]\n[agents.calc]\n',
+        Rules(agents={PluginName("calc"): _rule_set()}),
+        id="세 배열이 모두 없다",
+    ),
+    pytest.param(
+        'schema_version = "1"\n[common]\ndeny = ["rm", "rm"]\n',
+        Rules(common=_rule_set(deny=(_bare("rm"),))),
+        id="한 배열 안의 같은 줄 둘",
+    ),
+    pytest.param(
+        'schema_version = "1"\n[common]\nask = ["everything:*", "everything:add"]\n',
+        Rules(common=_rule_set(ask=(_whole("everything"), _one("everything", "add")))),
+        id="서로 겹치는 줄",
+    ),
+    pytest.param(
+        'schema_version = "1"\n[common]\ndeny = ["everything:add"]\nallow = ["everything:add"]\n',
+        Rules(
+            common=_rule_set(deny=(_one("everything", "add"),), allow=(_one("everything", "add"),))
+        ),
+        id="같은 도구가 deny 와 allow 에 함께",
+    ),
+    pytest.param(
+        'schema_version = "1"\n[agents.ghost]\ndeny = ["rm"]\n',
+        Rules(agents={PluginName("ghost"): _rule_set(deny=(_bare("rm"),))}),
+        id="실재하지 않는 에이전트의 표",
+    ),
+    pytest.param(
+        'schema_version = "1"\n[common]\ndeny = ["send.mail-2"]\n',
+        Rules(common=_rule_set(deny=(_bare("send.mail-2"),))),
+        id="점과 하이픈이 든 도구 이름",
+    ),
+    pytest.param(
+        'schema_version = "1"\n[common]\ndeny = ["*", "send_*"]\n',
+        Rules(common=_rule_set(deny=(_bare("*"), _bare("send_*")))),
+        id="맨 이름의 별표는 와일드카드가 아니라 글자 그대로다",
+    ),
+)
+
+
+@pytest.mark.parametrize(("text", "expected"), ACCEPTED)
+def test_규칙_파일이_받아들이는_모양은_거부하지_않고_그대로_읽는다(
+    root: Path, text: str, expected: Rules
+) -> None:
+    _rules_file(root, text)
+
+    assert _plugins(root).read_rules() == expected
+
+
+# 깨진 파일. (본문, 문구에 들어야 할 칸의 자리, 오류 종류)
+BROKEN_RULES = (
+    pytest.param('[common]\ndeny = ["rm"]\n', "schema_version", "missing", id="형식 버전이 없다"),
+    pytest.param('schema_version = "2"\n', "schema_version", "literal_error", id="모르는 버전"),
+    pytest.param(
+        'schema_version = "1"\n[common]\nallow = ["add"]\n',
+        "common.allow.0",
+        "string_pattern_mismatch",
+        id="공통 표 allow 의 맨 이름",
+    ),
+    pytest.param(
+        'schema_version = "1"\n[agents.calc]\nallow = ["everything:add", "add"]\n',
+        "agents.calc.allow.1",
+        "string_pattern_mismatch",
+        id="에이전트 표 allow 의 맨 이름",
+    ),
+    pytest.param(
+        'schema_version = "1"\n[common]\ndeny = ["a:b:c"]\n',
+        "common.deny.0",
+        "string_pattern_mismatch",
+        id="콜론 둘",
+    ),
+    pytest.param(
+        'schema_version = "1"\n[common]\ndeny = [":add"]\n',
+        "common.deny.0",
+        "string_pattern_mismatch",
+        id="서버 조각이 비었다",
+    ),
+    pytest.param(
+        'schema_version = "1"\n[common]\nask = ["everything:"]\n',
+        "common.ask.0",
+        "string_pattern_mismatch",
+        id="도구 조각이 비었다",
+    ),
+    pytest.param(
+        'schema_version = "1"\n[common]\ndeny = ["send mail"]\n',
+        "common.deny.0",
+        "string_pattern_mismatch",
+        id="공백이 든 맨 이름",
+    ),
+    pytest.param(
+        'schema_version = "1"\n[common]\ndeny = ["everything: add"]\n',
+        "common.deny.0",
+        "string_pattern_mismatch",
+        id="공백이 든 서버에 묶인 도구",
+    ),
+    pytest.param(
+        'schema_version = "1"\n[common]\ndeny = [""]\n',
+        "common.deny.0",
+        "string_pattern_mismatch",
+        id="빈 줄",
+    ),
+    pytest.param(
+        'schema_version = "1"\n[common]\ndeny = ["Every_Thing:add"]\n',
+        "common.deny.0",
+        "string_pattern_mismatch",
+        id="플러그인 이름 패턴을 어긴 서버",
+    ),
+    pytest.param(
+        'schema_version = "1"\n[common]\ndeny = "rm"\n',
+        "common.deny",
+        "tuple_type",
+        id="배열이 아닌 값",
+    ),
+    pytest.param(
+        'schema_version = "1"\n[common]\ndeny = [1]\n',
+        "common.deny.0",
+        "string_type",
+        id="문자열이 아닌 원소",
+    ),
+    pytest.param(
+        'schema_version = "1"\nagent = ["calc"]\n',
+        "agent",
+        "extra_forbidden",
+        id="맨 위의 모르는 키",
+    ),
+    pytest.param(
+        'schema_version = "1"\n[common]\nforbid = ["rm"]\n',
+        "common.forbid",
+        "extra_forbidden",
+        id="공통 표의 모르는 키",
+    ),
+    pytest.param(
+        'schema_version = "1"\n[agents.calc]\ndisallow = ["rm"]\n',
+        "agents.calc.disallow",
+        "extra_forbidden",
+        id="에이전트 표의 모르는 키",
+    ),
+    pytest.param(
+        'schema_version = "1"\n[agent.calc]\ndeny = ["rm"]\n',
+        "agent",
+        "extra_forbidden",
+        id="단수 agent 표",
+    ),
+    pytest.param(
+        'schema_version = "1"\n[agents.MyAgent]\ndeny = ["rm"]\n',
+        "agents.MyAgent.[key]",
+        "string_pattern_mismatch",
+        id="패턴을 어긴 에이전트 이름",
+    ),
+)
+
+
+@pytest.mark.parametrize(("text", "place", "kind"), BROKEN_RULES)
+def test_깨진_규칙_파일은_경로와_칸의_자리와_오류_종류를_든_PluginError다(
+    root: Path, text: str, place: str, kind: str
+) -> None:
+    """실패를 기대하는 시험은 까닭을 단언한다. 자리와 종류가 문구에 든다."""
+    path = _rules_file(root, text)
+
+    with pytest.raises(PluginError) as caught:
+        _plugins(root).read_rules()
+
+    message = str(caught.value)
+    assert message.startswith(f"운영자 파일이 깨졌다: {path}\n")
+    assert f"{kind} ({place})" in message
+
+
+@pytest.mark.parametrize(
+    "text",
+    (
+        pytest.param('schema_version = "1"\n[common\n', id="표 머리가 닫히지 않았다"),
+        pytest.param("", id="빈 파일"),
+        pytest.param('schema_version = "1"\n[common]\ndeny = ["rm"\n', id="배열이 닫히지 않았다"),
+        pytest.param('schema_version = "1"\n[common]\n[common]\n', id="표를 두 번 선언했다"),
+    ),
+)
+def test_문법이_틀린_규칙_파일도_깨졌다는_PluginError다(root: Path, text: str) -> None:
+    path = _rules_file(root, text)
+
+    with pytest.raises(PluginError) as caught:
+        _plugins(root).read_rules()
+
+    assert str(caught.value).startswith(f"운영자 파일이 깨졌다: {path}\n")
+
+
+def test_깨짐_문구는_모르는_키에_심은_값을_싣지_않는다(root: Path) -> None:
+    """원칙 V. pydantic 의 `extra_forbidden` 문구는 값을 `input_value` 로 싣는다. 이 문구는 운영자
+    면 500 봉투와 서버 기록으로 나간다. 칸의 이름(키)은 운영자가 어느 칸이 틀렸는지 알려고
+    싣는다."""
+    secret = "sk-ant-api03-SECRET"
+    _rules_file(root, f'schema_version = "1"\n[agents.calc]\napi_key = "{secret}"\n')
+
+    with pytest.raises(PluginError) as caught:
+        _plugins(root).read_rules()
+
+    assert "agents.calc.api_key" in str(caught.value)
+    assert secret not in str(caught.value)
+
+
+def test_깨짐_문구는_패턴을_어긴_규칙_줄의_값을_싣지_않는다(root: Path) -> None:
+    """allow 의 맨 이름 같은 패턴 위반은 자리(`agents.calc.allow.0`)와 종류로 드러나고 그 줄의 값은
+    싣지 않는다."""
+    _rules_file(root, 'schema_version = "1"\n[agents.calc]\nallow = ["hunter2-token"]\n')
+
+    with pytest.raises(PluginError) as caught:
+        _plugins(root).read_rules()
+
+    assert "string_pattern_mismatch (agents.calc.allow.0)" in str(caught.value)
+    assert "hunter2-token" not in str(caught.value)
+
+
+def test_깨짐의_PluginError는_검증_오류를_원인으로_잇지_않는다(root: Path) -> None:
+    """`from error` 로 이으면 `ValidationError` 가 `__cause__` 에 남아 트레이스백 출력에 입력 값이
+    실린다. 문구를 값 없이 만들어도 그 길이 열려 있으면 값이 샌다."""
+    _rules_file(root, 'schema_version = "1"\n[agents.calc]\napi_key = "sk-ant-SECRET"\n')
+
+    with pytest.raises(PluginError) as caught:
+        _plugins(root).read_rules()
+
+    printed = "".join(traceback.format_exception(caught.value))
+    assert caught.value.__cause__ is None
+    assert "sk-ant-SECRET" not in printed
+
+
+def test_규칙_파일의_깨짐은_꺼진_집합을_읽는_길에_닿지_않는다(root: Path) -> None:
+    """두 운영자 파일은 서로의 읽기를 막지 않는다. 파일 하나의 손상은 그 파일을 읽는 길에서만
+    드러난다."""
+    _rules_file(root, "깨진 파일")
+    _operator_file(root, 'schema_version = "1"\nagent = ["calc"]\n')
+
+    assert _plugins(root).read_disabled() == {_key(PluginKind.AGENT, "calc")}
+
+
+def test_꺼진_집합의_깨짐_문구는_검증_오류_전문을_싣는_그대로다(root: Path) -> None:
+    """`disabled.toml` 의 문구는 이 기능이 바꾸지 않는다. 규칙 파일의 문구만 값을 벗긴다. 이 틈
+    (원칙 V, `adapters.md` 의 닫지 않은 잔여)을 닫는 변경은 이 시험을 값이 없는 쪽으로 뒤집는다."""
+    _operator_file(root, 'schema_version = "1"\nunknown = "sk-ant-SECRET"\n')
+
+    with pytest.raises(PluginError, match="sk-ant-SECRET"):
+        _plugins(root).read_disabled()

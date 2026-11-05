@@ -11,6 +11,7 @@ from collections.abc import Mapping, Sequence
 from contextlib import AbstractAsyncContextManager
 from dataclasses import dataclass
 from datetime import UTC, datetime
+from types import MappingProxyType
 from typing import Literal, Protocol
 
 from langchain_core.language_models import BaseChatModel
@@ -237,6 +238,63 @@ class PluginKey:
     name: PluginName
 
 
+@dataclass(frozen=True)
+class Rule:
+    """운영자의 규칙 줄 하나. 서버(플러그인 이름 또는 없음)와 도구(이름 또는 없음)의 쌍이다(ADR
+    0044).
+
+    세 꼴이다. 맨 이름은 서버 없음이고 그 표가 덮는 에이전트의 모든 서버에서 그 이름의 도구에
+    맞는다. `서버:*` 는 도구 없음이고 그 서버 플러그인의 모든 도구에 맞는다. `서버:도구` 는 둘 다
+    있고 그 서버의 그 이름 도구에만 맞는다. 둘 다 없는 규칙은 어느 호출에나 맞게 되므로 만들 수
+    없다. 파일의 글자를 이 값으로 바꾸는 것은 형식을 소유한 어댑터의 몫이라 여기는 글자를 모른다.
+    """
+
+    server: PluginName | None
+    tool: str | None
+
+    def __post_init__(self) -> None:
+        if self.server is None and self.tool is None:
+            raise ValueError("규칙은 서버나 도구 가운데 하나는 있어야 한다")
+
+    def matches(self, *, server: PluginName, tool: str) -> bool:
+        """이 규칙이 (서버 플러그인 이름, 도구 이름) 한 쌍에 맞는가.
+
+        `ToolSpec` 이 아니라 쌍을 받는다. 서버 칸은 연결이 낸 명세에만 있어서, 명세를 받으면 연결이
+        서기 전의 판정(마스킹과 묻기의 충돌)이 이것을 쓰지 못한다. 매니페스트만으로 쌍을 안다.
+        """
+        return (self.server is None or self.server == server) and (
+            self.tool is None or self.tool == tool
+        )
+
+
+@dataclass(frozen=True)
+class RuleSet:
+    """표 하나의 규칙 줄들. 목록 종류가 셋이다(`deny`·`ask`·`allow`). 한 열은 집합이다.
+
+    같은 줄이 둘이거나 서로 겹쳐도 효과가 같거나 포함 관계라 해석이 갈리지 않으므로 거부하지 않고
+    집합이 합친다.
+    """
+
+    deny: frozenset[Rule] = frozenset()
+    ask: frozenset[Rule] = frozenset()
+    allow: frozenset[Rule] = frozenset()
+
+
+@dataclass(frozen=True)
+class Rules:
+    """파일 전체. 공통 표 하나와 에이전트 이름 → 표의 지도다.
+
+    에이전트 이름의 표가 실재하는 에이전트를 가리키는지는 보지 않는다. 지도는 받은 것을 복사해
+    읽기 전용으로 든다 — 받은 쪽이 나중에 원본을 고쳐도 읽은 규칙이 바뀌지 않는다.
+    """
+
+    common: RuleSet = RuleSet()
+    agents: Mapping[PluginName, RuleSet] = MappingProxyType({})
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, "agents", MappingProxyType(dict(self.agents)))
+
+
 # 켜짐 쓰기의 결과. 부재를 예외가 아니라 값으로 말하는 것이 이 포트의 약속이고(ADR 0012 의
 # 2026-09-26 이력), 손상과 쓰기 실패는 PluginError 다. 이미 그 상태였어도 `applied` 다 — 요청한
 # 켜짐이 지금 상태라는 뜻이지 파일을 건드렸다는 뜻이 아니다.
@@ -374,6 +432,17 @@ class PluginSource(Protocol):
         **동기다.** 준비 단계는 `resume()` 의 첫 걸음 안이고 그 첫 걸음에 `await` 가 없다는 것이
         동시 재개의 불변식이다(ADR 0014). 캐시하지 않는다 — 부를 때마다 읽으므로 손편집도 다음
         요청부터 효력이 난다.
+        """
+        ...
+
+    def read_rules(self) -> Rules:
+        """운영자의 규칙 파일을 한 번에. 파일이 없으면 빈 `Rules`, 깨졌으면 PluginError.
+
+        `read_disabled` 와 같은 모양이다. 인자가 없고, 공통 표와 에이전트별 표를 합치지 않고 파일의
+        모양 그대로 돌려준다(합치는 규칙은 core 의 `applied_rule` 이 소유한다). **동기다** — 준비
+        단계에서 부르는 메서드는 재개의 첫 걸음에 `await` 가 없다는 불변식에 걸린다(ADR 0014).
+        캐시하지 않아 부를 때마다 디스크를 읽는다. 이 메서드가 약속하는 것은 읽은 값이고, 언제
+        부르는지는 호출하는 쪽의 몫이다.
         """
         ...
 
