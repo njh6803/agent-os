@@ -279,3 +279,27 @@ PR 직전 리뷰에 밀 주장으로 넘길 새 문장: pilot-release의 "지원
 커밋 직전의 `uv run python tools/sibling_overlap.py`가 1로 끝났다. 워크트리 `retro-queue-per-item`의 커밋하지 않은 변경이 `docs/adr/0045-coordination-state-is-one-file-per-item-named-by-slug.md`를 들고 있어 이 브랜치의 ADR 0045와 번호가 겹쳤고, 출력의 "옮길 번호"는 ADR 0045 → 0046, 0046 → 0047, 0047 → 0048이었다. 사용자가 PRD를 승인하며 고른 설명("ADR 번호(0045·0046·0047)는 다른 세션이 먼저 가져가면 같이 옮깁니다")이 이 경우라 묻지 않고 `--move`로 옮겼다. 같은 출력에서 PR #472(approval-rules-tickets)와 두 워크트리가 `.scratch/plan.md`를, `retro-queue-per-item`이 `CONTEXT.md`·ADR 0042·색인을 함께 고친다고 나와, 나중에 병합하는 쪽이 그 충돌을 푼다.
 
 도구가 옮긴 것은 파일 이름 셋과 `ADR NNNN` 꼴의 인용이다(plan.md, PRD, ADR 0024·0042·0044·0046·0048, 색인, 이 일지). `>` 인용 줄은 옮기지 않았다. 손으로 고친 것: 0045가 0046이 되며 받침이 생긴 조사 열 곳(`0046가` → `0046이` 등, plan.md·ADR 0042 이력·이 일지), 이 일지 "인계 전 상태"의 "ADR 0046 → 0046 → 0047"(낱말 없는 번호가 옮겨지지 않았다)과 인계 지시문의 "ADR 0046~0047". 이 절 위의 글에서 낱말 없이 든 번호(대조 절의 "0044·0045·0046은 0045·0046·0047로", ADR 초안 절의 "0045(…), 0046(…), 0047(…)", 인계 전 상태의 "번호는 0045~0047", 명세 축의 "번호 0045~0047은 다음 빈 번호다")와 사용자 인용은 그때의 번호 그대로다. 지금 번호로는 기준선과 제품 1.0이 ADR 0046, 위젯 경계가 ADR 0047, 문서 검색 서버가 ADR 0048이다.
+
+## PR 직전 리뷰
+
+커밋 81f9ea41 뒤 `git fetch`에서 `git log 83a66cdc..origin/main`이 비어 합칠 것이 없었다. `coderabbit-review` 서브에이전트가 `coderabbit auth status`를 보니 CLI 0.7.5에 `Plan: Free`, `Seat: not assigned`였고, `coderabbit review`는 돌리지 않았다(서브에이전트의 보고). 그래서 대체 둘(`bug-perf-review`, `/security-review`)을 돌린다.
+
+`/security-review`: 합칠 것이 없어 커밋 뒤 바로 돌렸다. 그 명령이 모은 범위는 커밋 81f9ea41 하나와 바뀐 파일 열하나(모두 마크다운)였다. 취약점 식별 서브태스크는 찾은 것이 없다고 보고했다. 바뀐 파일에 코드·설정·워크플로·스크립트가 없어 새 공격 면이 없고, diff에서 비밀 값 모양(API 키·토큰 접두사, 대입 꼴, 주소 안의 인증 정보, 긴 영숫자 덩어리)과 개인정보 모양(이메일, 주민등록번호·전화번호)을 grep해 실제 값이 0건이었다(`secret_args`·`--api-key`는 이름뿐, io-guardrail 행의 "주민등록번호, 계좌번호, 전화번호"는 막을 종류의 이름이다). 찾은 것이 없어 거짓 양성 거르기 서브태스크는 돌리지 않았다.
+
+`bug-perf-review`: 범위는 base `83a66cd`, 문서 열한 파일, 미추적 0이었다. 유효 셋(모두 Minor, 고치는 값 작음), 보류 0, 오탐 열여섯 줄이 나왔고 성능 축은 해당이 없었다. 유효 셋은 다음과 같다.
+
+- ADR 0042 2026-11-06 이력의 "바뀐 것은 여섯이다"는 열거로 재현되지 않는다(센 사람은 일곱이나 여덟을 얻는다).
+- ADR 0046 Consequences "같은 PR에 드는 것"이 `CONTEXT.md`를 "배포 환경·참조 배포·문서 검색 서버"로 닫아 적었는데, diff에는 참조 에이전트, 참조 클라이언트, 값 기반 마스킹 `_Avoid_`도 들었다(첫 셀프 리뷰에서 더한 것을 ADR이 따라가지 못했다).
+- plan.md deploy-package 수락의 "밖으로 열린 포트가 443과 SSH뿐"이 PRD와 ADR 0046 14줄의 "밖으로 여는 포트는 하나다"와 어긋난다.
+
+오탐으로 대 본 밀 주장: ADR 0046의 다섯 묶음 이름, 위젯 질문자의 직접 승인(ADR 0044 29·63줄), PostgreSQL·Redis와 worker의 시점, ADR 0047의 "모두 주석과 독스트링"(`git grep` 스물여덟 줄에 코드 줄 0), 끊을 연결의 줄 근거, approval-rules 행의 넘긴 것(ADR 0046 66줄, `adapters/mcp.py` 있음), mcp-http의 근거(`uv.lock`, `streamable_http_client`를 `inspect.signature`로 불렀다, `pyproject.toml` 35~38줄), "권하는 조합 4", 설계 인터뷰 입력 머리의 표시, "표에서 이것 하나다"(Blocked by에 approval-rules가 든 행은 doc-qa-agent와 mcp-trust 둘이고 mcp-trust는 pilot-release 뒤), 번호 옮기기 뒤 조사와 옛 번호(0건). 서브에이전트가 따라가지 못했다고 적은 것: 제안서 원문은 발췌로만 대 봤다, `tools/check_ticket.py`는 돌리지 않았다, ADR 0046 8줄의 base 표 Blocked by 문장은 대 보지 않았다.
+
+고친 것(근거를 열고 판정했다):
+
+- ADR 0042 이력: "바뀐 것은 여섯이다."를 뺐다. 셀 기준이 본문에 없어 수로 닫지 않는다. 같은 말을 인용한 곳은 이 일지(기록)뿐이다(grep).
+- ADR 0046 Consequences: "`CONTEXT.md`의 용어(배포 환경, 참조 배포, 참조 에이전트, 참조 클라이언트, 문서 검색 서버)와 값 기반 마스킹의 `_Avoid_`"(`git diff -U0 83a66cdc -- CONTEXT.md`로 굵은 용어 다섯과 `_Avoid_` 한 줄을 봤다). 승인받은 ADR의 글이지만, 결정이 아니라 같은 PR에 든 파일의 목록을 사실에 맞춘 것이다.
+- plan.md deploy-package 수락: "그 VM에서 밖으로 열린 포트가 배포가 여는 443과 VM을 관리하는 SSH뿐임을 확인한다". 제안서 141줄도 443과 SSH를 함께 들고, 같은 행 앞 문장이 "밖으로 여는 포트는 … 443 하나"라 배포의 포트와 VM의 포트를 갈랐다. 승인받은 PRD는 고치지 않았다.
+
+PR 봇에 밀 주장으로 넘길 새 문장: ADR 0046의 `CONTEXT.md` 목록, plan.md의 "배포가 여는 443과 VM을 관리하는 SSH".
+
+다시 돌린 명령: `uv run python tools/check_adr_pointers.py`(0), `uv run python tools/check_md_tables.py`(바뀐 마크다운 넷, 0), `uv run pytest -q tests/test_plan_status.py`(12 passed). 나머지 검증 명령은 반영 커밋의 pre-commit으로 갈음한다.
