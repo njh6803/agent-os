@@ -18,18 +18,11 @@
   문자열 `tool_choice` 로 `any`·`auto`·도구 이름만 알고 dict 는 그대로 넘긴다(`chat_models.py`
   2475~2486행. 코드를 읽었다). 그래서 dict 로 준다.
 
-표지. 요청이 API 에 닿았을 때만 측정이다. 응답이 왔으면 `response_metadata` 에 모델 이름이 있고,
-거부면 예외에 `status_code` 400 이 있고 본문에 도구 문구(`tool`)가 있다(anthropic SDK 의
-`BadRequestError`). 다른 예외(키 없음, 네트워크)와 도구 문구가 없는 400(잘못된 파라미터 등)은 측정이
-아니다. 결과의 갈래는 `수락`(응답. 도구 호출이 있었는지 덧붙인다)과 `거부`(400. 본문 앞 300자를
-출력에 찍는다)다. 400 의 본문 조건은 측정 뒤 PR 직전 리뷰가 짚어 좁혔다(README 의 "측정 뒤 고친
-것").
-
-판정(돌리기 전에 적었다). 도구없음이 모두 거부이고 도구있음이 모두 수락이면 "도구 호출 블록이 든
-대화는 도구 정의가 없으면 API 가 거부한다"가 선다. 도구없음도 수락이면 ADR 의 어림이 틀린 것이고
-처리를 따로 두지 않는다. 도구있음이 거부이면 대화의 모양이 틀린 것이라 둘을 가르지 못한다.
-선택없음의 수락은 그 처리 후보가 API 에서 선다는 것까지이고, 모델이 도구를 부르지 않는 것은 결과로
-적되 표지가 아니다.
+표지와 판정. 판정에 쓰는 정의(모집단, 결과 변수, 측정인 회차, 문턱, 판정하지 않는 것)는 아래
+`DEFINITION` 한 절에 두고 내용의 해시를 `DEFINITION_SHA256` 에 고정한다. 돌릴 때 해시가 다르면
+측정 전에 멈춘다(`.claude/rules/probes.md`). 그 절은 돌리기 전에 적은 판정에 측정 뒤 좁힌 400 의
+조건을 현재 기준으로 합친 판이다(README 의 "측정 뒤 고친 것"). 결과의 갈래는 `수락`(응답. 도구
+호출이 있었는지 덧붙인다)과 `거부`(400. 본문 앞 300자를 출력에 찍는다)다.
 
 못 보는 것. 실제 재개 길(재생 뒤 게이트의 거부 기록)은 지나지 않고 그 길이 만드는 메시지 열을
 `run_loop` 의 모양대로 손으로 지었다. 모델 하나(claude-opus-5)와 한 날의 API 만 재고, 회차가 둘이라
@@ -39,6 +32,7 @@
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import sys
 from collections.abc import Sequence
 from pathlib import Path
@@ -55,6 +49,24 @@ from agent_os.core.loop import ModelCaller, model_caller  # noqa: E402
 from agent_os.core.ports import ChatModel, ToolSpec  # noqa: E402
 from agent_os.sdk import PluginKind, PluginName  # noqa: E402
 
+DEFINITION = """\
+모집단: 도구없음, 도구있음, 선택없음 세 갈래 각 2회차. 모델은 claude-opus-5 하나이고 대화는 손으로
+지은 하나(사람 메시지, 도구 호출 블록이 든 AI 메시지, 거부 결과 메시지)다.
+결과 변수: 회차의 결말(수락 또는 거부). 수락이면 응답에 도구 호출이 있었는지를 덧붙인다.
+측정인 회차: 응답이 왔고 응답에 모델 이름이 있는 회차(수락), 또는 예외의 status_code 가 400 이고
+본문에 도구 문구(`tool`)가 있는 회차(거부). 도구 문구는 도구 정의 없음의 본문을 관찰하지 못해 고른
+잠정 표지라서 400 이 나면 본문 앞 300자를 사람이 읽고 결론에 쓰기 전에 가른다.
+측정 아님: 그 밖의 예외(키 없음, 네트워크), 도구 문구가 없는 400, 응답에 모델 이름이 없는 회차.
+하나라도 있으면 종료 코드는 1이다.
+판정: 도구없음이 모두 거부이고 도구있음이 모두 수락이면 "도구 호출 블록이 든 대화는 도구 정의가
+없으면 API 가 거부한다"가 선다. 도구없음도 수락이면 ADR 0044 의 어림이 틀린 것이고 명세는 모두
+deny 인 재개에 처리를 따로 두지 않는다. 도구있음이 거부이면 대화의 모양이 틀린 것이라 둘을 가르지
+못한다.
+판정하지 않는 것: 선택없음의 수락은 그 처리 후보가 API 에서 선다는 것까지다. 모델이 도구를 부르지
+않는 것은 결과로 적되 표지가 아니다. 회차가 둘이라 드문 흔들림은 잡지 못하고 다른 모델과 다른 날의
+API 는 재지 않는다.
+"""
+DEFINITION_SHA256 = "840580837643bd5fd1700bc59f823a354d1b8c2e5262fbec2fc60f91beac4b54"
 MODEL = PluginName("claude-opus-5")
 ROUNDS = 2
 CALL_ID = "toolu_probe_01"
@@ -136,7 +148,15 @@ def none_caller(model: ChatModel) -> ModelCaller:
     return invoke
 
 
+def check_definition() -> None:
+    """판정 정의가 고정한 해시와 다르면 측정 전에 멈춘다."""
+    digest = hashlib.sha256(DEFINITION.encode("utf-8")).hexdigest()
+    if digest != DEFINITION_SHA256:
+        raise SystemExit(f"판정 정의가 고정한 해시와 다르다: {digest}")
+
+
 async def main() -> int:
+    check_definition()
     model = build_model()
     rounds = Rounds()
     totals = {"input": 0, "output": 0}

@@ -162,3 +162,96 @@ PR 직전 리뷰. `coderabbit auth status`가 `Plan: Free`, `Seat: not assigned`
 ### 보안 축 보고(`/security-review`)
 
 내장 `/security-review`를 커밋 d13dd2fe 뒤에 돌렸다(origin/main이 57316a5d 그대로라 합치지 않았다. 그 명령이 모은 diff는 177.5KB라 파일로 저장됐다). 1단계 식별 서브태스크(general-purpose)가 바뀐 파일 일곱을 전문으로 읽고 명세가 인용한 지금 코드(`run.py`의 `_Context._call`·`_mask`·`_reject_masked_args`·`_require_paused_call`·`_call_safely`·`_describe`·`_reject_runtime_only`·`_reject_unknown_declarations`, `filesystem.py`의 `_parse_operator_file`·`_describe`, `adapters/anthropic.py`, `channel/http/items.py`의 `project`, `tools/probe_kit.py`)와 대 봤으며, `.scratch/approval-rules/` 아래를 비밀 패턴(`sk-ant`, `api_key=`, `token=`, `password`)으로 grep해 0건이고 `.env`가 `.gitignore`에 드는 것을 확인했다. 결과는 **No findings**다. 신뢰도 0.7 이상의 취약점이 없어 2단계(오탐 거르기 서브태스크)는 띄울 것이 없었다. 보고가 확인한 것: 프로브는 키 값을 읽거나 찍지 않고(`uv run --env-file`이 환경에만 넣고 `ChatAnthropic`이 스스로 읽는다) 출력은 400 본문 앞 300자·모델 이름·토큰 수·응답 글 80자뿐이며 `subprocess`·`eval`·파일 삭제·역직렬화가 없다. 명세의 집행은 fail-closed(기본 묻는다, deny → requires_approval → ask → allow, 재개에서 deny가 결정을 이김, allow는 서버를 붙인 두 꼴만)이고, 에이전트가 `rule`·`server`를 채운 이벤트를 내면 `run_failed(agent_code)`라 운영자 규칙 기록을 에이전트 코드가 위조할 수 없으며, `items.py`의 투영이 `run_failed`를 고정 문구로, `tool_called`를 이름·ok만 옮겨 거부 문구와 검사 문구에 든 서버·도구 이름이 위젯에 가지 않는다. 문턱 아래 참고 셋: 깨진 `rules.toml`의 500 문구가 pydantic 전문을 싣는 것은 `disabled.toml`과 같은 규약이라 새 노출이 아니다, 공통 표의 deny 오타가 `<서버>:*` allow 뒤에 숨는 길은 ADR 0044가 받아들인 잔여 위험이고 이 명세의 에이전트 표 검사가 그 길을 좁혔다, 예시 `plugins/rules.toml`의 `[agents.calc] allow = ["everything:*"]`는 지금 calc가 everything의 도구를 묻지 않고 도는 상태를 그대로 두는 것이라 새 공격면이 아니다. 고친 것은 없다.
+
+### 둘째 커밋
+
+반영 넷(명세, 프로브, 프로브 README, 이 일지)을 커밋 706f1c29 `docs: approval-rules 명세의 PR 직전 리뷰 지적 다섯과 인용 경고 넷을 반영한다`(파일 넷, +55/-14)로 넣었다. 커밋 전 손으로 친 것: 프로브에 `uv run ruff check`("All checks passed!")와 `uv run ruff format --check`("1 file already formatted"), 고친 마크다운 셋에 `tools/check_md_tables.py`와 `tools/check_line_separators.py`(둘 다 출력 없이 종료 0), `git branch --show-current`(`docs/approval-rules-spec`), `uv run python tools/sibling_overlap.py`("번호 겹침 없음". 함께 고친 파일: mcp-shutdown-spec 워크트리의 `.scratch/plan.md`). 프로브 독스트링의 넘친 줄(25행, 폭 101)은 PostToolUse 훅이 짚어 `tools/rewrap_comments.py`로 감았다. pre-commit은 첫 커밋과 같은 검사가 모두 Passed(parallel-checks 478.36초, pytest 339.0초, web-verify 478.0초)이고 canary specs·constitution version은 해당 파일이 없어 Skipped, 인용 대조는 파일 셋의 인용 아홉에 경고 없음이다.
+
+## 인계(커밋 뒤)
+
+둘째 커밋을 치자 인계 계기(`hook_handoff`, 세션 컨텍스트 295,712 토큰, 경계 "커밋 뒤")가 왔다. `handoff.md`를 Read로 열어 인계하지 않는 때 다섯을 대 봤다. 계기를 낸 명령은 성공했다(706f1c29). 이 세션의 범위는 병합까지라 커밋에서 끝나지 않는다. 이 세션을 연 지시문의 "이어받을 상태"는 `인계: 셀프 리뷰 직전`이라 지금의 경계와 다르다. 이 일지에 `인계 못함` 줄이 없다. `get_session`의 `self`에 `parentSessionId`가 없어 곁 세션이 아니다. 다섯 모두 아니라 넘긴다. 이 세션의 제목은 바꾸기 전 `docs/approval-rules-spec`이다. 멈출 백그라운드 작업은 없다(커밋 둘과 서브에이전트 둘은 끝났다). 주 체크아웃은 main이고 origin/main(57316a5d)과 같아 미갱신이 아니다.
+
+넘기는 상태. 커밋 둘(d13dd2fe 명세, 706f1c29 PR 직전 리뷰 반영)이 로컬 브랜치에만 있고 푸시하지 않았으며 PR은 없다. 셀프 리뷰 반영, 사용자의 ADR 이력 다섯 승인, PR 직전 리뷰 둘은 끝났고 위 절들에 있다. `git-pr` 스킬은 이 세션이 Skill 도구로 실었으나 밟지 않았다(3단계 푸시 전). 남은 단계는 아래 지시문의 "이어받을 상태"에 있다. 이 절은 커밋하지 않은 채 넘기고 새 세션이 이어 쓰고 커밋한다.
+
+```
+다음 작업: 기능 approval-rules. 운영자의 승인 규칙 파일(후보 6) 명세의 산출물이 커밋 둘(d13dd2fe 명세, 706f1c29 PR 직전 리뷰 반영)로 워크트리 approval-rules-spec의 브랜치에 있다. 푸시·PR·봇 회차·병합과 일지 "다음"·다음 지시문·회고를 마친다
+다음 단계: 명세
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /to-spec approval-rules
+브랜치: docs/approval-rules-spec
+모델: Fable 5.1 / xhigh. 2의 잇는 지시문
+읽을 것: docs/journal/2026-11-05-10-approval-rules-spec.md의 "커밋과 PR 직전 리뷰" 절과 "인계(커밋 뒤)" 절(PR 본문의 체크리스트와 리뷰어 참고는 그 두 절로 채운다), .scratch/approval-rules/spec.md
+이어받을 상태: 인계: 커밋 뒤. docs/journal/2026-11-05-10-approval-rules-spec.md. 커밋 둘이 로컬 브랜치에만 있고 아직 푸시하지 않았으며 PR은 없다(gh pr list --head docs/approval-rules-spec가 비었다). 셀프 리뷰 반영, 사용자의 ADR 이력 다섯 승인, PR 직전 리뷰 둘(bug-perf-review의 Minor 다섯 반영, /security-review는 No findings)은 끝났고 일지에 있다. 남은 단계는 차례로 git-pr 스킬로 푸시와 PR(docs/ 면제 PR, 티켓 없음. 사용자에게 묻지 않는다) → PR 연 직후 @coderabbitai review 코멘트와 merge.md 2(봇 회차) → 병합은 이 워크트리 사본의 next-session merge.md "워크트리에서 병합할 때"를 Read로 열어 따른다(.scratch/plan.md를 mcp-shutdown-spec 워크트리도 고쳐 글자 충돌 후보다) → 일지 "## 다음" 절과 next-session 지시문(다음은 명세 검토와 /to-tickets approval-rules, 사용자가 부른다) → retro. 측정은 끝났고 다시 돌리지 않는다. 사용자가 정할 것은 모두 정했고 다시 묻지 않는다. 일지의 "인계(커밋 뒤)" 절은 커밋하지 않은 채 넘긴다
+확인할 선행 조건: 없음
+이번 요청 범위: 명세까지
+```
+
+제목을 `docs/approval-rules-spec (인계함)`으로 바꿨다. 잠금 풀기(`git worktree unlock`)는 `is not locked`라 넘어갔다. open-session을 부른다 2026-11-05T13:32:43Z
+
+## 새 세션(푸시부터)
+
+위 지시문으로 연 새 세션이다(사용자 프롬프트는 그 지시문 그대로이고 open-session이 보냈다. 원문은 위 "인계(커밋 뒤)" 절의 코드 블록). 제목을 `docs/approval-rules-spec`으로 바꿨다(앱이 묻지 않고 바꿨다). 지시문의 선행 조건이 없음이라 tidy-checkouts는 돌지 않았고, `git worktree list`에서 브랜치가 체크아웃된 자리를 찾아 `EnterWorktree(path)`로 이 워크트리에 들어왔다. 브랜치는 `docs/approval-rules-spec`, 머리는 706f1c29이고 커밋하지 않은 변경은 이 일지뿐이다(위 "인계(커밋 뒤)" 절). `git fetch origin` 뒤 origin/main은 57316a5d 그대로라 합칠 것이 없었다.
+
+git-pr 스킬을 Skill 도구로 실었다. 지시문대로 스킬의 확인 단계(6단계)는 밟지 않았다. `git push -u origin docs/approval-rules-spec`으로 커밋 둘(d13dd2fe, 706f1c29)을 푸시했고, PR #471 `docs: approval-rules 명세를 쓰고 ADR 0044·0009 이력 다섯에 고른 셋과 정한 것을 남긴다`를 열었다(docs/ 면제 PR, 티켓 없음. 본문은 PR #469의 본문을 본보기로 템플릿을 채웠고, 체크리스트와 리뷰어 참고는 이 일지의 "커밋과 PR 직전 리뷰"·"인계(커밋 뒤)" 절로 채웠다. 본문은 파일로 써서 `--body-file`로 넘겼다). 앱의 PR 바가 #471을 스스로 묶었다(`get_status`: bound, 열 때 검사 pending 6·passing 1·skipped 1, `MERGEABLE`·`BLOCKED`). `@coderabbitai review` 코멘트는 남기지 않았다(아래 인계. handoff.md 3의 `PR 연 뒤` 줄대로 새 세션이 남긴다).
+
+## 인계(PR 연 뒤)
+
+PR을 열자 인계 계기(`hook_handoff`, 세션 컨텍스트 228,112 토큰, 경계 "PR 연 뒤")가 왔고 `hook_pr_next_session`의 계기도 함께 왔다. `handoff.md`를 Read로 열어 인계하지 않는 때 다섯을 대 봤다. 계기를 낸 명령은 성공했다(#471). 이 세션의 범위는 병합까지라 PR 연 뒤에서 끝나지 않는다. 이 세션을 연 지시문의 "이어받을 상태"는 `인계: 커밋 뒤`라 지금의 경계와 다르다. 이 일지에 `인계 못함` 줄이 없다. `get_session`의 `self`에 `parentSessionId`가 없어 곁 세션이 아니다. 다섯 모두 아니라 넘긴다. 이 세션의 제목은 바꾸기 전 `docs/approval-rules-spec`이다. 멈출 백그라운드 작업은 없다(`wait_ci.py`는 띄우지 않았다). 주 체크아웃은 main이고 origin/main(57316a5d)과 같아 미갱신이 아니다. 이 세션이 번복하거나 고친 결정은 없다.
+
+넘기는 상태. PR #471이 열려 있고 HEAD 706f1c29가 PR head와 같다. 봇 회차(`merge.md` 2)는 시작하지 않았다. 이 일지의 "인계(커밋 뒤)" 절부터는 커밋하지 않았고 새 세션이 이어 쓰고 커밋한다.
+
+```
+다음 작업: 기능 approval-rules. 운영자의 승인 규칙 파일(후보 6) 명세의 PR #471(브랜치 docs/approval-rules-spec, 커밋 d13dd2fe 명세·706f1c29 PR 직전 리뷰 반영)이 열려 있다. 봇 회차·병합과 일지 "다음"·다음 지시문·회고를 마친다
+다음 단계: PR 반영·병합
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /to-spec approval-rules
+브랜치: docs/approval-rules-spec
+모델: Sonnet 5.5 / high. 2의 잇는 지시문
+읽을 것: docs/journal/2026-11-05-10-approval-rules-spec.md의 "인계(PR 연 뒤)" 절과 "커밋과 PR 직전 리뷰" 절, PR #471 본문(gh pr view 471), .scratch/approval-rules/spec.md(봇 지적을 반영하면 서두의 수를 다시 센다, to-spec 3)
+이어받을 상태: 인계: PR 연 뒤. docs/journal/2026-11-05-10-approval-rules-spec.md. merge.md 2(봇 회차)부터 한다. 첫 @coderabbitai review 코멘트도 새 세션이 남긴다. PR #471은 docs/ 면제 PR(티켓 없음)이고 열 때 검사는 pending이었으며 앱의 PR 바가 묶었다. 일지의 "인계(커밋 뒤)" 절부터는 커밋하지 않았다. 새 세션이 이어 쓰고 봇 회차 뒤 "## 다음" 절과 회고까지 마친 일지를 커밋해 병합 전에 푸시한다(merge.md 3. 그 푸시로 도는 리뷰도 회차로 센다). 셀프 리뷰 반영, 사용자의 ADR 이력 다섯 승인, PR 직전 리뷰 둘은 끝났고 PR 본문 체크리스트와 일지에 있다. 병합은 이 워크트리 사본의 next-session merge.md "워크트리에서 병합할 때"를 Read로 열어 따른다(.scratch/plan.md를 mcp-shutdown-spec 워크트리도 고쳐 글자 충돌 후보다). 다음 지시문은 명세 검토(spec-reviewer)와 /to-tickets approval-rules(사용자가 부른다). 측정은 끝났고 다시 돌리지 않는다. 사용자가 정할 것은 모두 정했고 다시 묻지 않는다
+확인할 선행 조건: 없음
+이번 요청 범위: 명세까지
+```
+
+제목을 `docs/approval-rules-spec (인계함)`으로 바꿨다(앱이 묻지 않고 바꿨다). 잠금 풀기(`git worktree unlock`)는 `is not locked`라 넘어갔다. open-session을 부른다 2026-11-05T13:42:53Z
+
+## 새 세션(봇 회차·병합)
+
+위 지시문으로 연 세션이다(사용자 프롬프트는 그 지시문 그대로이고 open-session이 보냈다. 원문은 위 "인계(PR 연 뒤)" 절의 코드 블록). 제목을 `docs/approval-rules-spec`으로 바꿨고(앱이 묻지 않고 바꿨다) `git worktree list`에서 브랜치가 체크아웃된 자리를 찾아 `EnterWorktree(path)`로 이 워크트리에 들어왔다. 지시문의 선행 조건이 없음이라 tidy-checkouts는 돌지 않았다. 브랜치는 `docs/approval-rules-spec`, 머리는 706f1c29이고 PR 471은 OPEN, `MERGEABLE`이었다. 시작 프롬프트 `/to-spec approval-rules`는 명세가 이미 서 있어 스킬을 다시 돌지 않았다. 지시문대로 봇 회차부터 했다.
+
+## 봇 회차
+
+헤드 706f1c29에서 `@coderabbitai review` 코멘트를 남기고 상태를 한 번 읽으니 검사 넷이 pending이라 `tools/wait_ci.py 471`을 백그라운드로 띄웠다. 끝 줄은 모두 통과였다(CodeRabbit, claude-review, e2e, e2e-widget, python, ticket, verify, visual, web).
+
+- **claude-review.** 지적 없음. 읽은 코멘트는 한 건이고 선택 칸 세 개가 형식 3 그대로라는 서술과 `read_rules()`가 포트 다섯을 늘리지 않는다는 서술을 `sdk.md`·`disabled.toml` 선례와 맞춰 확인했다고 적었다.
+- **CodeRabbit 첫 회차(인라인 일곱, Major 1과 Minor 6).** 첫 회차라 지적마다 판단했다. 근거는 명세와 ADR 0044, 코드(`adapters/mcp.py`의 `connect`)를 읽은 것이다(코드를 읽었다).
+  - 명세 집행의 차례 7 Major: 반영했다. 7번이 allow면 그냥 부른다로만 적어, 멈춘 사이 ask가 allow로 바뀐 재개에서 승인자의 거부가 무시되는 길이 있었다. 명세 "결정이 적용된 호출의 적용 규칙"(ask가 allow로 바뀌어도 결정을 그대로 적용하고 칸은 멈춘 까닭)과 ADR 0044의 재개 항목(그 밖의 변화는 지금 규칙대로 결정을 적용한다)에 어긋난 진짜 모순이었다. 7번을 결정이 없을 때만 그냥 부르고 있으면 6과 같이 적용하는 문장으로 고쳤다.
+  - 명세 에이전트 표 이름 거부한 안(76행 아래) Minor: 반영했다. 이름이 틀린 표는 어느 실행에도 걸리지 않아 해가 없다는 문장이 deny에는 거짓이었다. allow의 오타는 기본이 묻는다 덕에 뜻밖에 묻는 데서 그치고, deny의 오타는 조용히 효력이 없어 같은 도구에 맞는 공통 allow가 있으면 묻지 않고 돈다. 에이전트 표 검사도 그 에이전트가 돌 때만 돌아 표 이름의 오타는 닫지 못한다. 결정은 바꾸지 않았고 거짓이던 근거 문장만 ADR 0044 "모양"의 잔여 위험과 맞췄다.
+  - 명세 같은 이름 검사(158행) Minor: 반영했다. 모으기를 둘째 겹침에서 멈추면서 서버가 셋 이상이면 모두 나열한다는 두 문장이 어긋났다. 코드는 서버를 매니페스트 순서로 하나씩 열며 모으므로 겹친 서버 뒤의 서버는 열리지 않는다. 문구를 처음 겹친 두 서버만 싣는 쪽으로 맞추고, 끝까지 모아 던지는 쪽은 실패할 연결을 모든 서버까지 여는 값을 치른다고 적었다. 봇이 고르라 한 두 길 가운데 코드가 이미 가는 쪽이다.
+  - 명세 묶음 C·D 순서(201행) Minor: 반영했다. C가 기본이 묻는다를 집행하면 규칙 파일이 없는 기존 시험이 멈추는데, 규칙 파일은 D에 있어 묶음마다 혼자 초록이라는 명세 자신의 조건과 어긋났다. 봇은 `-m llm`만 말했지만 위젯 e2e와 파일시스템 루트를 만드는 테스트도 같은 모양이다. 어느 시험이 멈추는지는 PR 본문이 이미 구현 티켓이 센다고 적었으므로, C 티켓이 멈추는 시험의 규칙 파일을 같은 티켓에서 두고 D는 나머지를 맡는다고 묶음 절에 적었다. 티켓을 어떻게 쪼갤지의 결정이 아니라 명세의 조건을 지키게 하는 문장이다.
+  - 프로브 독스트링(31행) Minor: 반영했다. 프로브가 판정을 돌리기 전에 적었다고 밝히면서 `.claude/rules/probes.md`가 요구하는 고정 절과 내용 해시 대조를 두지 않았다. 판정 정의(모집단, 결과 변수, 측정인 회차, 판정, 판정하지 않는 것)를 `DEFINITION` 한 절로 모으고 `DEFINITION_SHA256`을 고정해 돌릴 때 대조하게 했다(`ast`로 값을 뽑아 해시를 계산했고 고정값과 같다). 해시는 400 조건을 좁힌 뒤의 현재 판이라 돌리기 전의 원래 글자와 같지 않다는 것, 해시는 앞으로의 몰래 바꿈만 막는다는 것을 프로브 README의 "판정 정의의 고정"에 적었다. 프로브를 다시 돌리지 않았다.
+  - 프로브 400 문구(105행) Minor: 보류했다. 도구 문구(`tool`)가 다른 도구 관련 400에도 나 표지가 못 된다는 지적은 맞다. 다만 도구 정의 없음의 실제 거부 본문을 한 번도 관찰하지 못해(여섯 회차 모두 수락) 더 좁은 문구를 고를 근거가 없다. 문구를 짐작으로 좁히면 거짓 표지가 된다. 판정 절에 잠정 표지라 적고 400이 나면 본문을 사람이 읽고 가른다고 못 박았다. 400이 나는 판에서 본문을 보고 고른다.
+  - 프로브 수락 회차의 요청 본문(110행) Minor: 보류했다. 수락 표지가 응답의 모델 이름뿐이라 블록이 드롭된 요청도 측정으로 센다는 지적이다. 셀프 리뷰 표준 축이 같은 지적을 냈고 그때 보류한 이유 그대로다. 프로브가 재는 것은 API의 수락이고 명세의 처리(모두 deny인 재개에 처리를 따로 두지 않는다)는 수락만 기대한다. 블록이 모델에 갔는지는 README가 되울림과 토큰 크기로 가른 둘째 물음이다. 요청 본문을 가로채는 일은 langchain 내부 호출을 건드려 크고, 실제 재개 길의 `run_finished`는 구현 티켓의 `-m llm` 시험이 잰다.
+- 보류한 일 가운데 뒤의 작업으로 넘기는 것은 없다. 위 둘은 구현 티켓의 `-m llm` 시험이 실제 재개 길로 다시 재는 일의 안에 있고 PR 본문의 남긴 위험에 이미 적혀 있다.
+- 반영 뒤 손으로 친 것: 프로브 `uv run ruff check`(All checks passed!)와 `uv run ruff format --check`(1 file already formatted), 명세와 README에 `tools/check_md_tables.py`·`tools/check_line_separators.py`(둘 다 출력 없이 종료 0). 서두의 수를 Grep으로 다시 셌다. `^### .*명세가 정했다` 18줄, `거부했다.` 48번이고 이번 반영은 문장 안을 고쳤을 뿐 표시를 더하거나 빼지 않아 열여덟·마흔여덟 그대로다(넘겨받은 것 열둘, 사용자가 고른 것 넷, 이력 다섯도 그대로).
+- PR 본문의 남긴 위험 두 자리(프로브 해시, 묶음 C가 멈추는 시험의 규칙 파일을 가져가는 것)를 푸시 전에 `gh pr edit`으로 고쳤다. 푸시 뒤에 보류 둘의 이유를 PR 코멘트로 남긴다.
+
+## 회고
+
+후보 넷, 승인 2, 기각 2, 넘김 0.
+
+- **승인: 새 프로브가 판정을 돌리기 전에 적었다고 하면서 `probes.md`의 사전 등록 항목(판정 정의 전부를 해시로 고정한 절에 두고 판정 스크립트가 대 본다)을 어겼다.** 사건: 첫 커밋의 프로브 독스트링이 판정을 해시 절 없이 산문으로 적었고, 셀프 리뷰 두 축과 PR 직전 리뷰 둘이 지나갔으며 PR 봇이 처음 짚었다. 층: 이 항목을 `tools/hook_scratch_probe_rule.py`의 훅으로 올리는 처방이 대기열 426에 이미 열려 있어 그 행을 잇는다. 되돌림: 행에 회차를 더하는 것은 PR 하나로 되돌린다. 간 자리: 대기열 426에 3회차를 더했다(336의 3회차). 426은 이제 회차 3 이상이고, 같은 훅을 고치는 430(9회차)이 이미 chore 계기다. 이 사건은 `.scratch/approval-rules/probes/`의 저장소 프로브라 훅이 지금 보는 세션 스크래치패드 스크립트 밖이라는 점이 새 정보다. 426의 처방이 사전 등록 절을 쓰는 문서에도 그 항목이 닿게 할지 함께 보도록 이미 적혀 있어, 반영 때 저장소 프로브의 독스트링도 대상에 넣는다.
+- **승인: CodeRabbit 인라인 코멘트가 한 건마다 분석 스크립트 출력과 AI 프롬프트 블록을 달고 와서 일곱 건을 읽는 데 약 24K자가 컨텍스트에 실렸다.** 사건: `gh api`로 읽은 본문 전체가 10.6K자, 걸러도 본문 3200자씩 13.7K자였다. 판단에는 심각도, 파일:줄, 첫 단락, 제안 diff면 충분했다. 층: 도구(요약 출력기)다. 되돌림: 새 도구 하나라 PR 하나로 되돌린다. 간 자리: 대기열 573(새 행, 1회차). 새 도구라 문턱은 세 번째 반복이고 그 전에는 회차를 센다. 찾기는 `queue_open_rows.py --search coderabbit --search 인라인.코멘트 --search Script.executed`로 했고 같은 일을 다룬 행이 없었다.
+- **기각: 명세 안의 모순(집행의 차례 7번과 138행)을 셀프 리뷰 두 축과 PR 직전 리뷰가 놓치고 PR 봇이 짚었다.** 같은 모양의 사건이 이 저장소에서 쌓인 행이 없고 명세 모순은 명세마다 자리가 달라 검사로 옮길 층이 없다. 판단 기준으로 올릴 사건 수도 못 채웠다. 다음 단계가 명세 검토(`spec-reviewer`)라 같은 종류의 결함을 한 번 더 거른다.
+- **기각: DEFINITION 문자열의 줄이 ruff의 폭 100을 넘었다.** 편집 직후 훅이 그 자리에서 네 줄을 알렸고 바로 감았다.
+- 만료: `tools/queue_open_rows.py`가 만료할 행 없음을 냈다. 워크트리에서는 `--ref origin/main`을 한 번 더 돌고 두 출력에 모두 든 행만 닫는다고 정해 두었으나, 첫 출력에 없으니 둘의 교집합도 비어 둘째를 돌리지 않았다.
+
+## 다음
+
+- 명세 검토(`spec-reviewer`)와 `/to-tickets approval-rules`(둘 다 사용자가 부른다). 명세는 ready-for-agent이고 PR 471로 병합되며, 서두의 수는 열둘·넷·열여덟·다섯·마흔여덟이다. 티켓을 쪼갤 때 묶음 A → C, B → C, C → D의 의존을 따르고, C 티켓은 기본이 묻는다가 서면 멈추는 기존 시험(`-m llm`의 calc 시험, 위젯 e2e 꾸러미, 파일시스템 루트를 만드는 테스트)의 규칙 파일을 같은 티켓에서 둔다(명세 묶음 절, 봇 첫 회차 뒤에 더했다).
+- 구현 티켓이 `.claude/rules/core.md` 재개 항목, `.claude/rules/sdk.md` 선택 필드 항목, 포트 표 두 행과 `adapters.md`의 운영자 파일·MCP 항목을 코드와 같은 티켓에서 고친다(명세 묶음 A·B·C).
+- 실제 재개 길이 `run_finished`로 끝나는지는 재지 않았다. 구현 티켓의 `-m llm` 시험이 잰다(PR 본문 남긴 위험).
+- 프로브를 다시 돌린다면 400이 나는 판에서 본문 앞 300자를 사람이 읽고 도구 문구 표지를 다듬는다(프로브 README).
+- 대기열 426(3회차)과 430(9회차)은 같은 훅을 고치는 chore 계기다. 저장소 프로브의 사전 등록 독스트링도 그 처방 대상에 넣는다.
+- 병합 뒤 상태(주 체크아웃 미갱신 한 줄, 원격 브랜치 정리 결과)는 병합한 세션의 보고와 다음 지시문의 이어받을 상태에 있다.
+
