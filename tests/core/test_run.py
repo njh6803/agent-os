@@ -107,6 +107,8 @@ from agent_os.sdk import (
 FIXED_NOW = datetime(2026, 9, 21, 12, 0, tzinfo=UTC)
 PRINCIPAL = Principal("alice")
 SERVER = McpServer(command="fake-server")
+# 가짜 연결이 도구를 낸 서버로 적는 이름. 도구마다 따로 적지 않으면 이 하나다.
+DEFAULT_SERVER = PluginName("fake")
 # 운영자 파일이 깨졌을 때 어댑터가 내는 문구의 모양. 경로가 든다.
 CORRUPT_OPERATOR_FILE = "운영자 파일이 깨졌다: plugins/disabled.toml"
 
@@ -359,16 +361,27 @@ class FakePlugins:
 
 
 class FakeConnection:
+    """도구마다 그 도구를 낸 서버 이름을 든다. `owners` 에 적지 않은 도구는 `DEFAULT_SERVER` 다."""
+
     def __init__(
-        self, results: Mapping[str, str | Exception], params: Mapping[str, Sequence[str]]
+        self,
+        results: Mapping[str, str | Exception],
+        params: Mapping[str, Sequence[str]],
+        owners: Mapping[str, PluginName] | None = None,
     ) -> None:
         self._results = results
         self._params = params
+        self._owners = owners or {}
         self.calls: list[tuple[str, Mapping[str, Json]]] = []
 
     def tools(self) -> Sequence[ToolSpec]:
         return [
-            ToolSpec(name=n, description=n, input_schema=_schema(self._params.get(n, ())))
+            ToolSpec(
+                name=n,
+                server=self._owners.get(n, DEFAULT_SERVER),
+                description=n,
+                input_schema=_schema(self._params.get(n, ())),
+            )
             for n in self._results
         ]
 
@@ -395,8 +408,9 @@ class FakeTools:
         self,
         results: Mapping[str, str | Exception] | None = None,
         params: Mapping[str, Sequence[str]] | None = None,
+        owners: Mapping[str, PluginName] | None = None,
     ) -> None:
-        self.connection = FakeConnection(results or {}, params or {})
+        self.connection = FakeConnection(results or {}, params or {}, owners)
         self.servers: Mapping[PluginName, McpServer] | None = None
         self.closed = False
 
@@ -419,6 +433,17 @@ class BrokenTools:
         self, servers: Mapping[PluginName, McpServer]
     ) -> AsyncGenerator[ToolConnection]:
         raise ConnectionError("server did not start")
+        yield FakeConnection({}, {})
+
+
+class DuplicateTools:
+    """같은 이름의 도구를 낸 서버 둘. 어댑터가 연결을 열며 던지는 문구와 같은 모양이다."""
+
+    @asynccontextmanager
+    async def connect(
+        self, servers: Mapping[PluginName, McpServer]
+    ) -> AsyncGenerator[ToolConnection]:
+        raise ValueError("같은 이름의 도구가 둘이다: add (alpha, beta)")
         yield FakeConnection({}, {})
 
 
@@ -745,6 +770,24 @@ async def test_MCP_서버_기동_실패는_실패_이벤트로_끝나고_트레�
     assert [e.type for e in events] == ["run_started", "run_failed"]
     assert isinstance(events[-1], RunFailed)
     assert "server did not start" in events[-1].error
+    assert _cause(events) == "tool_connection"
+    assert trace.events == events
+
+
+async def test_같은_이름의_도구_실패는_두_서버_이름이_든_채_도구_연결_원인으로_끝난다(
+    trace: FakeTrace, clock: FakeClock
+) -> None:
+    """검사는 어댑터에 있고 core 는 연결에 들어가는 동안의 예외를 도구 연결의 실패로 받는다.
+    어댑터가 던지는 문구를 가짜가 던져, 두 서버 이름이 트레이스까지 가는 것을 본다."""
+    model = GenericFakeChatModel(messages=iter([_reply("4")]))
+
+    events = await _run(OneShotAgent(), model, trace, clock, tools=DuplicateTools())
+
+    assert [e.type for e in events] == ["run_started", "run_failed"]
+    assert isinstance(events[-1], RunFailed)
+    assert "add" in events[-1].error
+    assert "alpha" in events[-1].error
+    assert "beta" in events[-1].error
     assert _cause(events) == "tool_connection"
     assert trace.events == events
 

@@ -72,6 +72,7 @@ ROUNDS = 2
 CALL_ID = "toolu_probe_01"
 ADD = ToolSpec(
     name="add",
+    server=PluginName("probe"),
     description="두 수를 더한다.",
     input_schema={
         "type": "object",

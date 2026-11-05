@@ -413,9 +413,11 @@ class Clock(Protocol):
 
 @dataclass(frozen=True)
 class ToolSpec:
-    """모델에게 붙일 도구 하나. input_schema 는 JSON Schema."""
+    """모델에게 붙일 도구 하나. server 는 그 도구를 낸 서버 플러그인의 이름이고 input_schema 는
+    JSON Schema."""
 
     name: str
+    server: PluginName
     description: str
     input_schema: Mapping[str, Json]
 
@@ -429,7 +431,12 @@ class ToolResult:
 
 
 class ToolConnection(Protocol):
-    """ToolSource 가 연 연결. 도구 목록을 주고 도구를 부른다."""
+    """ToolSource 가 연 연결. 도구 목록을 주고 도구를 부른다.
+
+    `tools()` 가 주는 목록에서 도구 이름은 한 연결 안에서 유일하고, 그것을 보장하는 것은 어댑터다.
+    같은 이름의 도구를 낸 서버가 둘이면 어댑터가 연결을 열며 실패한다. core 는 이름의 겹침을 다시
+    보지 않는다.
+    """
 
     def tools(self) -> Sequence[ToolSpec]: ...
 

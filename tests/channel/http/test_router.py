@@ -93,6 +93,8 @@ ADMIN = {"Authorization": f"Bearer {ADMIN_TOKEN}"}
 CHANNEL = {"Authorization": f"Bearer {CHANNEL_TOKEN}"}
 PRINCIPAL = Principal("alice")
 T0 = datetime(2026, 9, 26, 12, 0, tzinfo=UTC)
+# 가짜 연결이 도구를 낸 서버로 적는 이름. core 시험의 가짜와 같은 규약이다.
+DEFAULT_SERVER = PluginName("fake")
 
 # 실행 한 번이 트레이스에 남기는 결말. 스트림이 이것 가운데 하나를 보낸 뒤 닫힌다.
 TERMINAL = frozenset({"run_finished", "run_failed", "run_paused"})
@@ -375,8 +377,8 @@ class FakeConnection:
         schema: Mapping[str, Json] = {"type": "object", "properties": {"a": {}, "b": {}}}
         login: Mapping[str, Json] = {"type": "object", "properties": {"password": {}}}
         return [
-            ToolSpec(name="add", description="더한다", input_schema=schema),
-            ToolSpec(name="login", description="로그인", input_schema=login),
+            ToolSpec(name="add", server=DEFAULT_SERVER, description="더한다", input_schema=schema),
+            ToolSpec(name="login", server=DEFAULT_SERVER, description="로그인", input_schema=login),
         ]
 
     async def call(self, name: str, args: Mapping[str, Json]) -> ToolResult:
