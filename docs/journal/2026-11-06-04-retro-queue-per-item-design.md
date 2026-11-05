@@ -526,3 +526,13 @@ PR을 연 직후 계기가 `PR 연 뒤` 경계에서 다시 왔다(284,745 토�
 - 일지 번호: `uv run python tools/sibling_overlap.py`를 치니 형제 워크트리 `01-contract-trace-applied-rule-and-server-fields`가 일지 2026-11-06-03과 대기열 576을 이미 가져가 있어, 인계 절이 말한 03이 아니라 `옮길 번호: 일지 2026-11-06-01 → 2026-11-06-04, 대기열 576 → 577`을 냈다(도구 출력에서 읽었다). `--move`를 붙여 쳤고 파일 이름과 ADR 0036·0037·0045, 프로브, 대기열 안의 인용이 옮겨졌다(도구 출력의 "인용을 고친 파일" 줄). 줄인 꼴과 낱말 없이 든 번호는 손으로 `grep`해 이 일지의 576·03 표기를 고쳤다.
 - 옮긴 뒤 번호 겹침은 없다(`sibling_overlap.py --move` 마지막 출력의 `번호 겹침 없음`).
 - 대기열 쪽은 형제와 `.scratch/retro-queue.md`를 함께 고쳐, 나중에 병합하는 쪽이 글자 충돌을 풀어야 한다(같은 출력의 "함께 고친 파일").
+- 푸시는 2b4fad45다(`git push` 출력). pre-commit은 pytest 491.7초, web-verify 619.8초를 포함해 모두 Passed고, 인용 대조의 경고 1건(472행의 "어느 결정(ADR 0045 결정 번호)을 구현하는가")은 아직 없는 제안 문장이라 막지 않는 경고로 두었다(커밋 출력에서 읽었다).
+
+## CodeRabbit 첫 회차
+
+2b4fad45에 `@coderabbitai review`를 남기자 CodeRabbit이 처음으로 리뷰를 냈다(앞 푸시들은 `Review rate limited`라 회차로 세지 않았다). `tools/wait_ci.py 474`는 `끝: 모두 통과`를 냈고, 체크 런을 `gh api …/check-runs`로 읽으니 CodeRabbit은 제목 `Finished`, 요약 `Review completed with incomplete coverage`였다(손으로 봤다). claude-review는 지적 없음이다(PR 코멘트를 읽었다). CodeRabbit의 Minor 둘은 첫 회차라 지적마다 판단했고 둘 다 고쳤다.
+
+- Minor, `plan_changes.py`의 `git()`이 `color.ui=always`인 환경에서 diff 줄 앞에 색 코드가 붙어 `kinds_of`의 줄 머리(`+`·`-`) 판별이 어긋날 수 있다. 맞다. 코드를 읽어 확인했다(줄 머리를 `startswith`로 본다). `["git", "-c", "color.ui=never", *args]`로 고쳤다. 고친 뒤 `uv run python .scratch/retro-queue-per-item/probes/plan_changes.py 19bbfa06 83a66cdc`가 고치기 전과 같은 수(39회차: 내용 22, Status+내용 8, 행 추가 3, Status 3, 표 밖 3, 측정 아님 0)를 냈고 `ruff check`가 초록이다. 이 환경에서 `color.ui=always`를 켜 재현하지는 않았으므로 어긋남은 코드를 읽은 판단이다.
+- Minor, ADR 0036 "제품 먼저"의 "더하는 행은 세 번째 전이면 묶지 않는다."와 "만료"의 "회차 3 이상인 행은 chore가 반영할 때까지 남긴다."에 포인터가 없다. 맞다. 두 문장은 앞 포인터와 이어져 있지 않고(사이에 다른 문장이 낀다) `.claude/rules/adr.md`는 이어진 문장 묶음에만 포인터 하나를 허용한다. 두 문장 바로 뒤에 같은 포인터를 달았다. `uv run pytest -q -k "adr_pointers or adr_pointer" tests`가 19건 통과했다.
+
+뒤로 넘긴 일은 없다. 이 푸시로 도는 두 봇의 리뷰는 둘째 회차라 Critical·Major만 고친다.

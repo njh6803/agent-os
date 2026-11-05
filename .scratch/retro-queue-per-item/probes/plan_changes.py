@@ -54,7 +54,12 @@ COLUMNS = (("슬라이스", 0), ("내용", 2), ("Blocked by", 3), ("Status", 4))
 
 def git(*args: str) -> str:
     done = subprocess.run(
-        ["git", *args], cwd=ROOT, capture_output=True, text=True, encoding="utf-8", check=False
+        ["git", "-c", "color.ui=never", *args],
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        check=False,
     )
     if done.returncode != 0:
         words = " ".join(args)
