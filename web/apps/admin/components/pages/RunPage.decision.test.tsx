@@ -176,6 +176,39 @@ function calcUsing(model: string | null): Plugin {
     : CALC;
 }
 
+/** 스킬 플러그인 하나. 에이전트가 `skills` 로 이름을 골라 쓴다. */
+function skillPlugin(name: string, { enabled }: { readonly enabled: boolean }): Plugin {
+  return {
+    kind: "skill",
+    name,
+    enabled,
+    manifest: {
+      schema_version: "1",
+      kind: "skill",
+      name,
+      version: "0.1.0",
+      entrypoint: null,
+      mcp: [],
+      requires_approval: [],
+      conversation_limit: null,
+      model: null,
+      skills: [],
+      provider: null,
+      model_id: null,
+      max_tokens: null,
+      temperature: null,
+      server: null,
+    },
+  };
+}
+
+/** `skills` 로 그 스킬들을 고른 `calc`. `model` 을 주면 그 모델도 함께 고른다. */
+function calcSelecting(skills: readonly string[], model: string | null = null): Plugin {
+  return CALC.kind === "agent" && "manifest" in CALC
+    ? { ...CALC, manifest: { ...CALC.manifest, skills: [...skills], model } }
+    : CALC;
+}
+
 /** 요청 하나가 실은 것. */
 interface Sent {
   readonly authorization: string;
@@ -895,6 +928,101 @@ describe("409 와 꺼짐", () => {
     await new Promise((resolve) => setTimeout(resolve, 100));
     expect(place().textContent).not.toContain("꺼진 플러그인");
     expect(place().textContent).not.toContain("모델 sonnet");
+    expect(button("승인").disabled).toBe(false);
+  });
+
+  test("에이전트가 고른 스킬이 꺼졌으면 결정 버튼이 막히고 꺼진 스킬이 보인다", async () => {
+    serveTrace(() => PAUSED);
+    servePlugins([
+      calcSelecting(["answer-format"]),
+      FIXTURE,
+      skillPlugin("answer-format", { enabled: false }),
+    ]);
+    await openDecision();
+
+    expect(await within(place()).findByText(/꺼진 플러그인이 있어 재개할 수 없다/)).toBeTruthy();
+    expect(place().textContent).toContain("스킬 answer-format");
+    expect(place().textContent).not.toContain("에이전트 calc");
+    expect(reason()).toHaveProperty("disabled", true);
+    expect(button("승인").disabled).toBe(true);
+    expect(button("거부").disabled).toBe(true);
+  });
+
+  test("꺼진 것이 여럿이면 모델 뒤에 스킬이 매니페스트에 적힌 순서로 보인다", async () => {
+    serveTrace(() => PAUSED);
+    servePlugins([
+      calcSelecting(["brief", "answer-format"], "sonnet"),
+      FIXTURE,
+      skillPlugin("answer-format", { enabled: false }),
+      skillPlugin("brief", { enabled: false }),
+      modelPlugin("sonnet", { enabled: false }),
+    ]);
+    await openDecision();
+
+    expect(
+      await within(place()).findByText(
+        "꺼진 플러그인이 있어 재개할 수 없다: 모델 sonnet, 스킬 brief, 스킬 answer-format",
+      ),
+    ).toBeTruthy();
+  });
+
+  test("에이전트가 고르지 않은 스킬이 꺼진 것은 결정 버튼을 막지 않는다", async () => {
+    serveTrace(() => PAUSED);
+    servePlugins([
+      calcSelecting(["answer-format"]),
+      FIXTURE,
+      skillPlugin("answer-format", { enabled: true }),
+      skillPlugin("other", { enabled: false }),
+    ]);
+    await openDecision();
+
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    expect(place().textContent).not.toContain("꺼진 플러그인");
+    expect(button("승인").disabled).toBe(false);
+  });
+
+  test("같은 이름의 꺼진 모델 행이 있어도 고른 스킬은 꺼짐으로 세지 않는다", async () => {
+    serveTrace(() => PAUSED);
+    servePlugins([
+      calcSelecting(["answer-format"]),
+      FIXTURE,
+      skillPlugin("answer-format", { enabled: true }),
+      modelPlugin("answer-format", { enabled: false }),
+    ]);
+    await openDecision();
+
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    expect(place().textContent).not.toContain("꺼진 플러그인");
+    expect(button("승인").disabled).toBe(false);
+  });
+
+  test("skills 가 빈 에이전트는 꺼진 스킬이 있어도 미리 막지 않는다", async () => {
+    serveTrace(() => PAUSED);
+    servePlugins([calcSelecting([]), FIXTURE, skillPlugin("answer-format", { enabled: false })]);
+    await openDecision();
+
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    expect(place().textContent).not.toContain("꺼진 플러그인");
+    expect(button("승인").disabled).toBe(false);
+  });
+
+  test("에이전트가 고른 스킬의 행이 표지면 꺼짐으로 세지 않고 결정 버튼을 막지 않는다", async () => {
+    serveTrace(() => PAUSED);
+    servePlugins([
+      calcSelecting(["answer-format"]),
+      FIXTURE,
+      {
+        kind: "skill",
+        name: "answer-format",
+        enabled: false,
+        reason: "매니페스트를 읽을 수 없다",
+      },
+    ]);
+    await openDecision();
+
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    expect(place().textContent).not.toContain("꺼진 플러그인");
+    expect(place().textContent).not.toContain("스킬 answer-format");
     expect(button("승인").disabled).toBe(false);
   });
 

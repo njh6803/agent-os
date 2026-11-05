@@ -84,7 +84,7 @@ export const List: Story = {
     await expect(
       canvas.getByText("읽을 수 없는 매니페스트: [server] 표에 command가 없다"),
     ).toBeVisible();
-    await expect(canvas.getByText("로더가 생기기 전에는 효과가 없다")).toBeVisible();
+    await expect(canvas.queryByText("로더가 생기기 전에는 효과가 없다")).toBeNull();
     await expect(canvas.getByText("등록된 것이 없다")).toBeVisible();
   },
 };

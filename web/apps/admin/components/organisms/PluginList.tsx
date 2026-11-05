@@ -19,9 +19,6 @@ export const KIND_NAMES = {
   model: "모델",
 } as const satisfies Record<PluginKind, string>;
 
-/** 로더가 아직 없는 종류. 끄고 켜도 런타임이 달라지지 않는다(스토리 21). */
-const WITHOUT_LOADER: ReadonlySet<PluginKind> = new Set<PluginKind>(["skill"]);
-
 /** 스위치의 실패 하나. 누른 행이 다시 읽은 목록에서 빠져도 보이도록 목록이 든다. 제목이 실패한 플러그인을 든다. */
 interface SwitchFailure extends FailureNoticeProps {
   readonly title: string;
@@ -221,12 +218,6 @@ function Row({ row, onSetEnabled, onSwitchFailure }: RowProps) {
         <p className="flex items-start gap-2 text-small text-warning">
           <Icon name="triangle-alert" size="14" />
           <span className="min-w-0 wrap-anywhere">읽을 수 없는 매니페스트: {row.reason}</span>
-        </p>
-      ) : null}
-      {WITHOUT_LOADER.has(row.kind) ? (
-        <p className="flex items-start gap-2 text-small text-text-muted">
-          <Icon name="info" size="14" />
-          <span>로더가 생기기 전에는 효과가 없다</span>
         </p>
       ) : null}
     </li>
