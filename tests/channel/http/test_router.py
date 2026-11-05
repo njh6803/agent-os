@@ -1871,6 +1871,7 @@ async def test_트레이스를_쓰지_못해_멈춘_실행은_스트림을_결�
 # `PluginPlaceholder` 로 감싸고 본문 `SetEnabled` 를 더했다(ADR 0010 의 2026-09-26 이력).
 EXISTING_COMPONENTS = frozenset(
     {
+        "AppliedRule",
         "ApprovalDenied",
         "ApprovalGranted",
         "ConversationSummarized",

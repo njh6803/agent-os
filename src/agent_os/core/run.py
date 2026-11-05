@@ -8,9 +8,10 @@ conversation_summarized 는 런타임이 이어 가기에서 원문 교환이 �
 통과하되 런타임만 내는 둘, conversation_summarized 와 run_failed 는 예외다 — 에이전트가 내면 그
 실행은 런타임의 run_failed 로 끝나고 에이전트의 제너레이터는 그 자리에서 닫힌다. 앞의 것은 다음
 실행의 거슬러 읽기가 트레이스에서 읽는 입력이고(ADR 0022), 뒤의 것은 결말이라 런타임이 쓰는 하나여야
-하며 원인이 든 실패는 런타임만 낸다(ADR 0031). 이유는 `_reject_runtime_only`. 거부는 실행을 끝내지
-않는다. 거부된 도구 호출은 불리지 않고 tool_called(ok=false) 로 사유가 모델에게 돌아가며, 에이전트가
-정상적으로 끝맺는다(ADR 0009).
+하며 원인이 든 실패는 런타임만 낸다(ADR 0031). tool_called 와 run_paused 도 적용 규칙·서버 칸
+(rule, server)을 채우면 같은 길로 끝난다(ADR 0044). 이유는 `_reject_runtime_only`. 거부는 실행을
+끝내지 않는다. 거부된 도구 호출은 불리지 않고 tool_called(ok=false) 로 사유가 모델에게 돌아가며,
+에이전트가 정상적으로 끝맺는다(ADR 0009).
 
 이어 가기는 run() 의 키워드 인자 previous_run 이다(ADR 0022). 재개와 달리 입력이 run() 의 것에 앞
 실행 하나가 더해진 것이라 함수를 따로 두지 않는다. 없음(None)은 새 대화라는 뜻 하나뿐이고 고리를
@@ -1184,12 +1185,25 @@ def _reject_runtime_only(event: Event, run_id: RunId) -> None:
     것도 통과시키지 않는다 — 통과시키면 그 뒤 결말 없이 돌아온 에이전트에 런타임이 실패를 하나 더 써
     실패가 둘이 되고, 그 뒤 끝남을 내면 실패를 보인 실행이 끝남이 된다. 메시지는 에이전트가 적은
     글을 든다. 실패하려는 에이전트는 예외를 던지면 같은 결과를 얻는다.
+
+    도구 호출과 일시정지의 적용 규칙·서버 칸(`tool_called.rule`, `run_paused.rule`,
+    `run_paused.server`) 은 런타임만 쓴다. 에이전트의 기록이 운영자의 규칙을 사칭하면 트레이스를
+    읽는 운영자가 가를 수 없기 때문이다(ADR 0044). 칸이 비어 있는 이벤트는 지금처럼 통과한다. 칸을
+    채운 `run_paused` 는 지어낸 일시정지를 멈춘 것으로 치지 않는 길보다 먼저 여기서 끝난다.
+    에이전트가 채운 칸이 트레이스에 남으면 그 트레이스의 재개가 재생 구간에서 `agent_code` 로
+    끝나므로 쓰기 전에 막는다.
     """
     match event:
         case ConversationSummarized():
             raise RuntimeError(f"에이전트는 대화 요약 이벤트를 낼 수 없다: {run_id}")
         case RunFailed(error=error):
             raise RuntimeError(f"에이전트는 실패 이벤트를 낼 수 없다: {error}")
+        case ToolCalled(rule=rule) if rule is not None:
+            raise RuntimeError(f"에이전트는 tool_called 의 rule 칸을 채울 수 없다: {event.tool}")
+        case RunPaused(rule=rule) if rule is not None:
+            raise RuntimeError(f"에이전트는 run_paused 의 rule 칸을 채울 수 없다: {event.tool}")
+        case RunPaused(server=server) if server is not None:
+            raise RuntimeError(f"에이전트는 run_paused 의 server 칸을 채울 수 없다: {event.tool}")
         case _:
             return
 

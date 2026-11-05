@@ -7,6 +7,7 @@ from agent_os.sdk.agent import AgentContext, BaseAgent
 from agent_os.sdk.conversation import Conversation, Exchange
 from agent_os.sdk.errors import ToolError
 from agent_os.sdk.events import (
+    AppliedRule,
     ApprovalDenied,
     ApprovalGranted,
     BaseEvent,
@@ -49,6 +50,7 @@ __all__ = [
     "RUN_ID_PATTERN",
     "AgentContext",
     "AgentName",
+    "AppliedRule",
     "ApprovalDenied",
     "ApprovalGranted",
     "BaseAgent",

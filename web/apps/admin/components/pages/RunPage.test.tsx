@@ -54,6 +54,7 @@ const TRACE: Trace = {
       ok: true,
       args: { a: 1, b: 2 },
       content: "3",
+      rule: null,
     },
     {
       type: "tool_called",
@@ -63,6 +64,7 @@ const TRACE: Trace = {
       ok: false,
       args: { user: "ops", password: "***" },
       content: "인증에 실패했다",
+      rule: null,
     },
     { type: "unknown", raw: UNKNOWN_RAW },
     { type: "run_finished", run_id: RUN, ts: TS, output: "3" },
@@ -303,7 +305,14 @@ describe("실행 하나", () => {
       "앞 실행 previous_run",
       "바로가기 shortcuts",
     ]);
-    expect(names(3)).toEqual(["시각 ts", "도구 tool", "성공 ok", "인자 args", "결과 내용 content"]);
+    expect(names(3)).toEqual([
+      "시각 ts",
+      "도구 tool",
+      "성공 ok",
+      "인자 args",
+      "결과 내용 content",
+      "적용 규칙 rule",
+    ]);
     expect(names(4)).toEqual(["원문 raw"]);
   });
 
@@ -358,6 +367,84 @@ describe("실행 하나", () => {
     ).toEqual(["시각 ts", "에러 error", "실패 원인 cause"]);
     // 원인마다 문구를 짓는 것은 위젯의 몫이다. 관리 화면은 운영자에게 계약의 값을 보인다.
     expect(fieldValue(eventItem(1), "cause").textContent).toBe("timeout");
+  });
+
+  test("적용 규칙과 서버는 용어집의 말과 계약의 이름을 함께 보이고 값은 계약의 값 그대로 글자다", async () => {
+    const trace: Trace = {
+      run_id: RUN,
+      schema_version: "3",
+      events: [
+        {
+          type: "run_paused",
+          run_id: RUN,
+          ts: TS,
+          tool: "send",
+          args: { to: "bob" },
+          rule: "requires_approval",
+          server: "everything",
+        },
+        {
+          type: "tool_called",
+          run_id: RUN,
+          ts: TS,
+          tool: "add",
+          ok: false,
+          args: {},
+          content: "운영자가 거부했다: everything:add",
+          rule: "deny",
+        },
+      ],
+    };
+    serveTrace(`/traces/${RUN}`, () => HttpResponse.json(trace));
+
+    await openRun(RUN);
+
+    await screen.findByRole("region", { name: EVENTS });
+    expect(
+      within(eventItem(0))
+        .getAllByRole("term")
+        .map((term) => term.textContent),
+    ).toEqual(["시각 ts", "도구 tool", "인자 args", "적용 규칙 rule", "서버 server"]);
+    expect(fieldValue(eventItem(0), "rule").textContent).toBe("requires_approval");
+    expect(fieldValue(eventItem(0), "server").textContent).toBe("everything");
+    expect(
+      within(eventItem(1))
+        .getAllByRole("term")
+        .map((term) => term.textContent),
+    ).toEqual([
+      "시각 ts",
+      "도구 tool",
+      "성공 ok",
+      "인자 args",
+      "결과 내용 content",
+      "적용 규칙 rule",
+    ]);
+    expect(fieldValue(eventItem(1), "rule").textContent).toBe("deny");
+  });
+
+  test("옛 줄의 적용 규칙과 서버는 null 이고 칸이 글자로 남는다", async () => {
+    const trace: Trace = {
+      run_id: RUN,
+      schema_version: "3",
+      events: [
+        {
+          type: "run_paused",
+          run_id: RUN,
+          ts: TS,
+          tool: "send",
+          args: {},
+          rule: null,
+          server: null,
+        },
+      ],
+    };
+    serveTrace(`/traces/${RUN}`, () => HttpResponse.json(trace));
+
+    await openRun(RUN);
+
+    await screen.findByRole("region", { name: EVENTS });
+    expect(fieldValue(eventItem(0), "rule").textContent).toBe("null");
+    expect(fieldValue(eventItem(0), "server").textContent).toBe("null");
   });
 
   test("바로가기는 에이전트마다 이름이 글자이고 그 실행의 상세로 가는 링크 하나다", async () => {
@@ -575,6 +662,7 @@ describe("실행 하나", () => {
           ok: true,
           args: {},
           content: image,
+          rule: null,
         },
         { type: "unknown", raw: bold },
       ],

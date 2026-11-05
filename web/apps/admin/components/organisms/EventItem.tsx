@@ -41,6 +41,8 @@ const FIELD_NAMES = {
   ok: "성공",
   args: "인자",
   content: "결과 내용",
+  rule: "적용 규칙",
+  server: "서버",
   approver: "승인자",
   reason: "사유",
   output: "출력",

@@ -937,6 +937,64 @@ def test_새_필드_둘의_키가_없는_옛_줄은_원인과_바로가기가_�
     assert failed.cause is None
 
 
+def test_적용_규칙과_서버_칸이_왕복하고_헤더는_3_그대로다(tmp_path: Path) -> None:
+    """세 칸은 선택 필드라 형식을 올리지 않는다(ADR 0044)."""
+    store: TraceStore = JsonlTrace(tmp_path)
+    events: list[Event] = [
+        RunStarted(
+            run_id=RunId("run-4"),
+            ts=TS,
+            agent=AgentName("calc"),
+            request="2+2?",
+            principal=Principal("alice"),
+        ),
+        ToolCalled(run_id=RunId("run-4"), ts=TS, tool="add", ok=False, content="거부", rule="deny"),
+        RunPaused(
+            run_id=RunId("run-4"),
+            ts=TS,
+            tool="send",
+            args={"to": "bob"},
+            rule="requires_approval",
+            server="everything",
+        ),
+    ]
+    for event in events:
+        store.write(event)
+
+    trace = store.read(RunId("run-4"))
+
+    assert trace is not None
+    assert trace.schema_version == "3"
+    assert list(trace.events) == events
+    header = (tmp_path / "run-4.jsonl").read_text(encoding="utf-8").splitlines()[0]
+    assert json.loads(header) == {"schema_version": "3", "run_id": "run-4"}
+
+
+@pytest.mark.parametrize("version", ["1", "2", "3"])
+def test_세_칸의_키가_없는_옛_줄은_없음으로_읽힌다(
+    version: TraceSchemaVersion, tmp_path: Path
+) -> None:
+    """옛 형식의 런타임이 쓴 도구 호출과 일시정지 줄이 손상이 아니다."""
+    (tmp_path / "x.jsonl").write_text(
+        f'{{"schema_version":"{version}","run_id":"x"}}\n'
+        '{"type":"tool_called","run_id":"x","ts":"2026-09-21T12:00:00Z","tool":"add","ok":true}\n'
+        '{"type":"run_paused","run_id":"x","ts":"2026-09-21T12:00:01Z","tool":"send","args":{}}\n',
+        encoding="utf-8",
+    )
+    store: TraceStore = JsonlTrace(tmp_path)
+
+    trace = store.read(RunId("x"))
+
+    assert trace is not None
+    assert trace.schema_version == version
+    called, paused = trace.events
+    assert isinstance(called, ToolCalled)
+    assert called.rule is None
+    assert isinstance(paused, RunPaused)
+    assert paused.rule is None
+    assert paused.server is None
+
+
 def test_형식_2_파일에_재개가_이어_쓴_뒤에도_헤더는_2_다(tmp_path: Path) -> None:
     """재개는 헤더를 다시 쓰지 않는다. 형식이 오른 날 멈춰 있던 실행을 새 런타임이 그대로 재개한다
     (스토리 47). 재개가 형식 3 에만 있는 이벤트를 이어 쓰지 않으므로 그 파일은 형식 2 그대로다."""

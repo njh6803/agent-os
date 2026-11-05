@@ -10,7 +10,7 @@
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** done
 
 ### sdk — 두 이벤트의 세 칸과 `AppliedRule`
 
