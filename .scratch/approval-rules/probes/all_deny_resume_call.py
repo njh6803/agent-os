@@ -19,9 +19,11 @@
   2475~2486행. 코드를 읽었다). 그래서 dict 로 준다.
 
 표지. 요청이 API 에 닿았을 때만 측정이다. 응답이 왔으면 `response_metadata` 에 모델 이름이 있고,
-거부면 예외에 `status_code` 400 이 있다(anthropic SDK 의 `BadRequestError`). 다른 예외(키 없음,
-네트워크)는 측정이 아니다. 결과의 갈래는 `수락`(응답. 도구 호출이 있었는지 덧붙인다)과 `거부`(400.
-본문 앞 300자를 출력에 찍는다)다.
+거부면 예외에 `status_code` 400 이 있고 본문에 도구 문구(`tool`)가 있다(anthropic SDK 의
+`BadRequestError`). 다른 예외(키 없음, 네트워크)와 도구 문구가 없는 400(잘못된 파라미터 등)은 측정이
+아니다. 결과의 갈래는 `수락`(응답. 도구 호출이 있었는지 덧붙인다)과 `거부`(400. 본문 앞 300자를
+출력에 찍는다)다. 400 의 본문 조건은 측정 뒤 PR 직전 리뷰가 짚어 좁혔다(README 의 "측정 뒤 고친
+것").
 
 판정(돌리기 전에 적었다). 도구없음이 모두 거부이고 도구있음이 모두 수락이면 "도구 호출 블록이 든
 대화는 도구 정의가 없으면 API 가 거부한다"가 선다. 도구없음도 수락이면 ADR 의 어림이 틀린 것이고
@@ -99,7 +101,10 @@ async def send(call: ModelCaller, label: str, rounds: Rounds, totals: dict[str, 
                     raise
                 body = str(error).replace("\n", " ")[:300]
                 print(f"[{label} {i}] 거부 400: {body}")
-                slot.mark(measured=True, result="거부")
+                if "tool" in body.lower():
+                    slot.mark(measured=True, result="거부")
+                else:
+                    slot.mark(measured=False, result="400 이지만 본문에 도구 문구가 없다")
                 continue
             model_name = reply.response_metadata.get("model")
             if not model_name:
