@@ -120,6 +120,7 @@ class ToolCalled(BaseEvent):
     rule: AppliedRule | None = None
 
 
+# rule·server 칸의 근거와 기본값은 `ToolCalled` 위의 주석이다. 이 이벤트의 두 칸도 런타임만 채운다.
 class RunPaused(BaseEvent):
     """승인을 기다리며 멈췄다. 실패도 끝난 것도 아니다. 도구 하나만 담아 승인과 실행이 1:1이다."""
 

@@ -1308,6 +1308,7 @@ async def test_재생_구간에서도_런타임_전용_칸을_채운_이벤트�
     이벤트는 통과하지 않는다. 판정이 재생 구간 밖에만 있으면 기록의 빈 칸과 조용히 어긋난다."""
     agent = RuleForgingAgent(field)
     _write_paused(trace)
+    before = len(trace.events)
     model = GenericFakeChatModel(messages=iter([]))
 
     events = await _resume(
@@ -1319,6 +1320,9 @@ async def test_재생_구간에서도_런타임_전용_칸을_채운_이벤트�
     _assert_forged_failure(failed, field)
     assert "run_resumed" not in [e.type for e in events]
     assert trace.events[-1] == failed
+    # 흘러나온 이벤트는 events 와 트레이스 양쪽에 들어가 둘의 비교로는 안 보인다. 결정과 실패 밖의
+    # 이벤트(칸을 채운 tool_called·run_paused)가 실패 앞에 새지 않았는지는 추가 구간으로 본다.
+    assert [e.type for e in trace.events[before:]] == ["approval_granted", "run_failed"]
 
 
 async def test_규칙_칸이_빈_tool_called_는_막히지_않고_통과한다(

@@ -77,6 +77,17 @@ CodeRabbit CLI는 돌지 못했다. `coderabbit auth status`가 `Seat: not assig
 - **`bug-perf-review`**: 유효 0, 오탐 0, 보류 0. 밀 주장 다섯을 코드로 대 봤다. 판정이 `ctx.replay_event` 앞에 서고(`_reject_stray`, `_reject_runtime_only`, 재생 순서), `extra="forbid"`와 `_read_event`가 새 칸 줄을 옛 코드에서 거부하며, `match` 갈래는 서로 가리지 않고 서브클래스도 잡는다. 빈 칸 `tool_called`의 판정은 호출당 약 0.7µs다.
 - 서브에이전트가 지적으로 세지 않은 한 가지를 남긴다: `_reject_runtime_only` 독스트링의 "트레이스에 남으면 … 재개가 끝난다"는 실제 방아쇠가 줄이 아니라 재개된 에이전트가 같은 이벤트를 다시 yield하는 것이라 문구가 조금 느슨하다. 거짓은 아니라서 고치지 않았고, 04가 런타임이 칸을 채우게 할 때 그 독스트링을 다시 만지며 같이 다듬는다.
 
+## PR 리뷰 1회차 (PR 475, 헤드 `5713c57`)
+
+검사 아홉(CodeRabbit, claude-review, e2e, e2e-widget, python, ticket, verify, visual, web)이 모두 통과였다. 초록만 믿지 않고 두 봇의 코멘트를 읽어 지적마다 판정했다.
+
+- **CodeRabbit 인라인, `src/agent_os/core/run.py` 1206줄, Minor, 보류.** 지적은 "에이전트가 칸을 채운 이벤트를 낸 뒤 `finally`에서 승인 대상 도구를 부르면 일시정지가 붙잡은 `agent_code` 실패를 덮는다"이다. 이 PR이 만든 틈이 아니다. `_closing`의 독스트링(1148~1153줄)이 "못 보는 것: 정리 코드가 승인 대상을 부르면 게이트가 그 자리에서 일시정지를 기록하므로, 들고 나오던 실패가 있어도 실행은 멈춘 채 끝난다"로 이미 적은 한계이고, 대화 요약·`run_failed` 거부 갈래에도 똑같이 걸린다. 칸 셋만 따로 고치면 같은 한계의 다른 갈래와 어긋나므로 고치지 않는다. 한계 자체를 닫을지는 이 기능의 몫이 아니라 core 쪽 별도 결정이다.
+- **CodeRabbit nitpick, `tests/core/test_run.py` 재생 시험, 반영.** `trace.events[len(before):] == events`로는 실패 앞에 샌 이벤트가 안 보인다는 지적이 맞다(흘러나온 이벤트는 양쪽에 같이 들어간다). 일시정지를 쓴 직후의 길이를 재 두고 추가 구간이 `["approval_granted", "run_failed"]`인지 단언했다. 세 갈래 모두 통과.
+- **claude-review Minor, `src/agent_os/sdk/events.py`, 반영.** 세 칸의 설명이 `ToolCalled` 바로 위에만 있어 `RunPaused`의 칸이 그 클래스의 주석처럼 읽힌다는 지적이 맞다. `RunPaused` 위에 한 줄 참조 주석을 더했다.
+- **claude-review Nit, `.claude/rules/core.md` 항목 길이, 보류.** 괄호 하나를 더했을 뿐이고 항목을 가르는 일은 다음에 그 항목을 손볼 때 같이 한다.
+
+다시 돌린 것: `ruff check`, `ruff format --check`, 바꾼 시험 3개. 커밋 뒤 pre-commit과 CI가 전체를 다시 돈다. 2회차 봇 리뷰부터는 Critical·Major만 반영한다.
+
 ## 다음
 
 - 지금 단계(구현·리뷰·커밋)가 끝나면 다음은 이 브랜치의 PR을 열고 병합하는 것이다. 01이 병합돼야 02(규칙 파일 읽기)와 03(도구의 서버 이름·같은 이름 검사)이 나란히 돌 수 있다. 05는 04 바로 뒤에 한다.
