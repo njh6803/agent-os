@@ -1,4 +1,4 @@
-# 2026-11-06 (03) approval-rules 01 계약: 트레이스의 적용 규칙·서버 칸
+# 2026-11-06 (05) approval-rules 01 계약: 트레이스의 적용 규칙·서버 칸
 
 ## 시작
 
@@ -88,6 +88,17 @@ CodeRabbit CLI는 돌지 못했다. `coderabbit auth status`가 `Seat: not assig
 
 다시 돌린 것: `ruff check`, `ruff format --check`, 바꾼 시험 3개. 커밋 뒤 pre-commit과 CI가 전체를 다시 돈다. 2회차 봇 리뷰부터는 Critical·Major만 반영한다.
 
+## 인계 (커밋 뒤)
+
+컨텍스트가 인계 문턱을 넘은 채 `커밋 뒤` 경계에 와서 새 세션에 넘긴다. 이 세션의 제목은 인계 전 `feature/01-contract-trace-applied-rule-and-server-fields`였다.
+
+> 사용자: PR 열고 병합
+
+- PR 475를 열었다(헤드 `5713c57`). 검사 아홉이 모두 통과였고 위 "PR 리뷰 1회차"로 두 봇의 코멘트를 판정해, 반영분을 커밋 `5b7d5337`로 만들었다(pre-commit 통과). **이 커밋은 아직 푸시하지 않았다.** 푸시하면 CI가 다시 돌고, `@coderabbitai review`는 이미 한 번 남겼다.
+- 푸시 전에 할 일이 하나 있다. `uv run python tools/sibling_overlap.py`가 이 일지(`2026-11-06-05`)를 origin/main의 최신 일지 `2026-11-06-04`보다 이름순으로 앞서 다음 세션이 지나친다고 알리고 `2026-11-06-05`로 옮기라고 했다(번호 겹침은 없다). 같은 도구에 `--move`를 붙여 옮기고(일지 파일 이름과 머리 줄, 이 브랜치의 변경 안의 인용이 따라간다) 그 변경을 커밋한 뒤 푸시한다. 옮긴 번호로 PR 본문과 일지 안의 `2026-11-06-05` 인용이 남지 않았는지 grep한다.
+- open-session을 부른다 2026-11-05T21:03:59Z
+- 푸시 뒤에는 `merge.md` 2(봇 회차)를 따른다. 2회차부터는 Critical·Major만 반영한다. 병합은 `merge.md`의 "워크트리에서 병합할 때"를 따른다.
+
 ## 다음
 
 - 지금 단계(구현·리뷰·커밋)가 끝나면 다음은 이 브랜치의 PR을 열고 병합하는 것이다. 01이 병합돼야 02(규칙 파일 읽기)와 03(도구의 서버 이름·같은 이름 검사)이 나란히 돌 수 있다. 05는 04 바로 뒤에 한다.
@@ -103,5 +114,5 @@ CodeRabbit CLI는 돌지 못했다. `coderabbit auth status`가 `Seat: not assig
 
 ## 남은 일
 
-- 첫 요청(구현·리뷰·커밋)은 PR을 열고 병합하는 일을 범위 밖으로 두었고, 이어 사용자가 "PR 열고 병합"을 요청해 이 세션이 이어서 한다. 병합할 때 `origin/main`이 `.scratch/plan.md`와 `.scratch/retro-queue.md`를 먼저 바꿔 두었으니(`git diff --name-only HEAD...origin/main`) 글자 충돌이 날 수 있다. 같은 일지 번호·대기열 번호는 `tools/sibling_overlap.py`가 겹침 없음으로 냈다(일지 03, 대기열 576).
+- 첫 요청(구현·리뷰·커밋)은 PR을 열고 병합하는 일을 범위 밖으로 두었고, 이어 사용자가 "PR 열고 병합"을 요청해 이 세션이 이어서 한다. 병합할 때 `origin/main`이 `.scratch/plan.md`와 `.scratch/retro-queue.md`를 먼저 바꿔 두었으니(`git diff --name-only HEAD...origin/main`) 글자 충돌이 날 수 있다. 같은 일지 번호·대기열 번호는 `tools/sibling_overlap.py`가 겹침 없음으로 냈다(일지 03, 대기열 576). 그 뒤 origin/main이 일지 04를 먼저 가져가 이 일지를 05로 옮겼다(인계 절).
 - 이 PR 본문에 적을 것: 바뀐 사진 마흔여덟 장의 목록(위 "한 것"), 카나리아 여섯의 결과, 위젯 e2e와 `-m llm`을 치지 않은 까닭.
