@@ -72,3 +72,11 @@ open-session을 부른다 2026-11-05T09:01Z
 - `coderabbit-review` 서브에이전트: `coderabbit auth status`는 `Plan: Free`, `Seat: not assigned`였지만 `coderabbit review --agent --base origin/main`(0.7.5)이 오류 없이 `review_completed`, `findings: 0`으로 끝났다(서브에이전트 보고이고 이 세션이 CLI를 다시 돌리지는 않았다). 그래서 CLI 축이 찼고 대체 둘(`/security-review`, `bug-perf-review`)은 돌리지 않았다. 훑은 파일은 네 개다.
 - 밀게 한 주장 셋을 서브에이전트가 직접 댔다. 닫힘 칸의 사건 셋은 `git log`로 맞았고, 독스트링의 "뒤처진 쪽"과 "못 보는 것" 서술은 코드를 읽어 맞았으며, 구분선 수정은 정상 구분선(`['---','---']`, `[':--','--:']`)을 여전히 넘기고 빈 행(`['','','']`)을 행으로 읽는다고 조건을 실제로 돌려 보고했다.
 - 보류 판정 하나(Minor, 문체): 독스트링 끝 두 문장이 서술어 없이 명사구로 끝났다. 고치는 값이 작아 고쳤다("도 보지 않는다"를 더했다). 독스트링만 바뀌어 동작은 그대로다.
+
+## 인계 (커밋 뒤)
+
+컨텍스트가 인계 문턱(20만 토큰)을 넘은 채 `커밋 뒤` 경계에 왔다. 커밋 둘(`e7b6bdf5` 시험·티켓·일지·대기열, `9363f6e5` 독스트링 끝 문장과 PR 직전 리뷰 기록)이 브랜치에 있고 pre-commit이 모두 통과했다. 푸시도 PR도 아직 없다(`gh pr view chore/044-plan-status-matches-tickets-test`가 `no pull requests found`). 이 세션의 제목은 `chore/044-plan-status-matches-tickets-test`이고 넘기기 전에 `chore/044-plan-status-matches-tickets-test (인계함)`으로 바꾼다.
+
+남은 일: 푸시, PR 열기(`/git-pr`. 본문의 자체 점검과 리뷰 결과는 위 "셀프 리뷰"와 "PR 직전 리뷰"를 가리킨다), 첫 `@coderabbitai review` 코멘트, `merge.md` 2의 봇 회차, 병합(워크트리에서 병합하는 길), `tidy-checkouts`. 일지 회고 절과 `## 다음`은 이미 썼으므로 봇 회차 결과만 이 일지에 덧붙인다. PR 직전 리뷰에서 고친 것은 독스트링 문장 하나뿐이라 PR 봇에 밀어 둘 새 사실 문장은 없다.
+
+open-session을 부른다 2026-11-05T09:56Z
