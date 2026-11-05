@@ -1,4 +1,4 @@
-# 2026-11-05 (06) approval-rules 설계 인터뷰
+# 2026-11-05 (08) approval-rules 설계 인터뷰
 
 ## 시작
 
@@ -50,7 +50,7 @@ plan.md의 skill-plugin 행은 티켓 다섯이 모두 병합됐는데 `in-progr
 - ADR 0009의 2026-09-22 이력 "결정은 정책이 아니라 멈춘 호출에 묶인다"(141~142행)가 "같은 호출이면 정책이 바뀌었어도 결정을 적용한다"를 든다(읽었다). 재개에서 운영자의 deny가 결정을 이기는 것은 이 문장의 범위를 저자의 `requires_approval`로 좁히므로 ADR 0009의 새 이력이다. 지난 이력 항목은 기록이라 포인터는 달지 않는다(`.claude/rules/adr.md`).
 - 선택 칸을 더하며 트레이스 형식을 그대로 둔 선례는 ADR 0031(`RunFailed`의 원인)과 ADR 0009의 2026-09-22 이력(`LlmCalled.prompt`)이고, ADR 0040의 거부한 안이 그 선례와 치르는 값(`openapi.json`·생성 타입·관리 화면의 필드 이름 표)을 적어 두었다(읽었다). ADR 0008은 "버전을 올리는 것은 기존 필드의 뜻이나 필수 여부가 바뀔 때다"(27행).
 - ADR 0012의 2026-11-04 이력이 ADR 0042의 기능 가운데 포트에 닿는 것으로 센 넷에 후보 6은 없다(읽었다). `PluginSource`의 규칙 파일 읽기와 `ToolSpec`의 서버 칸이 이 기능의 이력으로 선다.
-- `docs/adr/README.md`의 마지막 행은 0043이다(`tail`로 손으로 봤다). `tools/sibling_overlap.py`가 낸 다음 빈 번호는 일지 2026-11-05-06, 대기열 573, 티켓 043이고 ADR 번호는 내지 않았다(이 브랜치에 새 번호가 없을 때라 커밋 전에 다시 친다). origin/main은 050bb13으로 이 워크트리의 기준(b98b8dd5)보다 앞섰다.
+- `docs/adr/README.md`의 마지막 행은 0043이다(`tail`로 손으로 봤다). `tools/sibling_overlap.py`가 낸 다음 빈 번호는 일지 2026-11-05-08, 대기열 573, 티켓 043이고 ADR 번호는 내지 않았다(이 브랜치에 새 번호가 없을 때라 커밋 전에 다시 친다). origin/main은 050bb13으로 이 워크트리의 기준(b98b8dd5)보다 앞섰다.
 
 ## 2라운드(합의 요약)
 
@@ -98,7 +98,7 @@ code-review 스킬을 부른 직후 인계 계기(`hook_handoff`)가 왔다. 세
 - 이 세션이 번복하거나 고친 것: ADR 0044 "근거의 종류"의 "쟀다고 적은 수치가 없다"를 "수치 근거가 없다"로 바꿨다(측정 낱말 훅 알림. 낱말을 이름으로 든 것이었지만 걷어 냈다). 그 밖에 번복한 결정은 없다.
 - 백그라운드 작업은 없다(`sibling_overlap.py`의 백그라운드 호출은 0으로 끝났다). 워크트리 잠금은 풀고 넘긴다.
 - 주 체크아웃은 이 세션이 시작할 때 b98b8dd5로 당겼으나 그 뒤 origin/main이 050bb13으로 앞섰다(`git worktree list`와 `git rev-parse --short origin/main`으로 손으로 봤다). 새 세션의 지시문에 미갱신으로 적는다.
-- 넘기는 단계(새 세션이 이 차례로 한다. "다음" 절은 단계를 닫는 세션이 쓴다): `/code-review`(기점 origin/main) 셀프 리뷰와 Critical·Major 반영 → ADR 0044 초안 승인을 AskUserQuestion으로 받고(작업 규약 5) 승인되면 ADR과 색인의 status를 accepted로 → 검증(문서만 바뀌어 손으로 치는 다섯은 pre-commit 결과로 갈음하되 마크다운 표·줄 구분 문자 검사는 pytest 저장소 상태 테스트가 본다) → origin/main을 이 브랜치에 합치고 `uv run python tools/sibling_overlap.py`로 ADR 0044·일지 06 번호를 다시 대조 → `git branch --show-current` 확인 뒤 커밋(메시지는 heredoc이나 파일) → `git-pr`로 PR(docs/ 면제 PR, 티켓 없음) → PR 직전 리뷰와 봇 회차 → 병합은 `next-session` `merge.md`의 "워크트리에서 병합할 때"를 Read로 열어 따른다 → next-session 지시문(다음은 `/to-spec approval-rules`, 사용자가 부른다) → retro.
+- 넘기는 단계(새 세션이 이 차례로 한다. "다음" 절은 단계를 닫는 세션이 쓴다): `/code-review`(기점 origin/main) 셀프 리뷰와 Critical·Major 반영 → ADR 0044 초안 승인을 AskUserQuestion으로 받고(작업 규약 5) 승인되면 ADR과 색인의 status를 accepted로 → 검증(문서만 바뀌어 손으로 치는 다섯은 pre-commit 결과로 갈음하되 마크다운 표·줄 구분 문자 검사는 pytest 저장소 상태 테스트가 본다) → origin/main을 이 브랜치에 합치고 `uv run python tools/sibling_overlap.py`로 ADR 0044·일지 08 번호를 다시 대조 → `git branch --show-current` 확인 뒤 커밋(메시지는 heredoc이나 파일) → `git-pr`로 PR(docs/ 면제 PR, 티켓 없음) → PR 직전 리뷰와 봇 회차 → 병합은 `next-session` `merge.md`의 "워크트리에서 병합할 때"를 Read로 열어 따른다 → next-session 지시문(다음은 `/to-spec approval-rules`, 사용자가 부른다) → retro.
 - 이어받은 보류 하나는 그대로 넘긴다. PR 466(harness 042)의 claude-review가 두 회차 모두 짚은 Minor(카나리아 넷의 물음이 "훅마다 적은 문단"으로 남음)는 병합된 일지 2026-11-05-05의 "셀프 리뷰"에 적혀 있고 이 기능의 몫이 아니다.
 
 지시문:
@@ -110,8 +110,8 @@ code-review 스킬을 부른 직후 인계 계기(`hook_handoff`)가 왔다. 세
 시작 프롬프트: /grill-with-docs approval-rules
 브랜치: docs/approval-rules-design
 모델: Fable 5.1 / xhigh. 2의 잇는 지시문
-읽을 것: docs/journal/2026-11-05-06-approval-rules-design.md의 "인계(셀프 리뷰 직전)" 절(커밋하지 않은 변경과 넘기는 단계)과 "2라운드(합의 요약)" 절, docs/adr/0044-rules-file-is-enforced-per-call-and-operator-deny-beats-the-decision.md 초안, docs/adr/0042의 묶음 ① 절
-이어받을 상태: 인계: 셀프 리뷰 직전. 커밋하지 않은 변경이 워크트리 approval-rules-design에 있고 셀프 리뷰(/code-review, 기점 origin/main)부터 한다. 일지 docs/journal/2026-11-05-06-approval-rules-design.md. 설계 인터뷰는 끝나 다시 묻지 않는다(라운드 둘, 합의 요약 확인됨). 산출물은 모두 쓰였고 셀프 리뷰·ADR 승인·검증·커밋·PR·병합이 남았다. ADR 0044와 색인의 status는 proposed이고 사용자 승인 뒤 accepted로 바꾼다. 일지의 "다음" 절은 아직 없다. PR 466의 Minor 보류는 이 기능의 몫이 아니다(일지 2026-11-05-05)
+읽을 것: docs/journal/2026-11-05-08-approval-rules-design.md의 "인계(셀프 리뷰 직전)" 절(커밋하지 않은 변경과 넘기는 단계)과 "2라운드(합의 요약)" 절, docs/adr/0044-rules-file-is-enforced-per-call-and-operator-deny-beats-the-decision.md 초안, docs/adr/0042의 묶음 ① 절
+이어받을 상태: 인계: 셀프 리뷰 직전. 커밋하지 않은 변경이 워크트리 approval-rules-design에 있고 셀프 리뷰(/code-review, 기점 origin/main)부터 한다. 일지 docs/journal/2026-11-05-08-approval-rules-design.md. 설계 인터뷰는 끝나 다시 묻지 않는다(라운드 둘, 합의 요약 확인됨). 산출물은 모두 쓰였고 셀프 리뷰·ADR 승인·검증·커밋·PR·병합이 남았다. ADR 0044와 색인의 status는 proposed이고 사용자 승인 뒤 accepted로 바꾼다. 일지의 "다음" 절은 아직 없다. PR 466의 Minor 보류는 이 기능의 몫이 아니다(일지 2026-11-05-05)
 확인할 선행 조건: 주 체크아웃 미갱신: 루트는 main(origin/main보다 뒤). 병합은 이 워크트리 사본의 next-session merge.md(없으면 SKILL.md)의 "워크트리에서 병합할 때"를 Read로 열어 따른다
 이번 요청 범위: PR과 병합까지
 ```
@@ -124,7 +124,7 @@ open-session을 부른다 2026-11-05T06:55Z
 
 인계 지시문으로 연 세션이다. 제목을 `docs/approval-rules-design`으로 바꾸고(앱이 묻지 않고 바꿨다) 주 체크아웃 정리(`tidy-checkouts`)를 먼저 돌았다. 루트 main을 b98b8dd5에서 050bb13b로 당겼다(`git merge --ff-only --no-overwrite-ignore origin/main`, 출력을 봤다). 휴지통의 04 `web/node_modules` 조각은 `empty-trash`가 지웠다. 남긴 것: 05는 `remove`가 종료 1이었다(agent-os.exe pid 7960, python.exe pid 26204·38052가 모듈을 올려 이름 바꾸기가 막혔다는 도구 출력). 042는 쉬는 세션 셋의 claude.exe를 `end-holders`로 끝냈는데 다시 친 `judge`에서 같은 세션 셋이 새 pid로 다시 쥐고 있어 그대로 두었다(앱이 다시 띄운 것으로 보이나 어림이다). 041은 한 시간 안에 활동한 세션(PR 467)이 쥐었다. 03·06은 바뀐 파일, admin-style-spec·admin-style-to-spec·approval-rules-design·mcp-shutdown-spec·web-widget-spec은 병합된 PR 없음, confident-wright·elegant-dijkstra는 앱 표지(모두 `judge` 출력). 그 뒤 `EnterWorktree`로 이 워크트리에 들어와 브랜치를 origin/main(050bb13b)으로 빨리 감기 했다. 커밋하지 않은 변경은 그대로다. `grill-with-docs`가 부르는 `grilling`·`domain-modeling`은 앞 세션이 마쳤으므로 다시 부르지 않았다.
 
-`uv run python tools/sibling_overlap.py`: 번호 겹침 없음(이 브랜치의 새 번호는 일지 2026-11-05-06, ADR 0044). 워크트리 mcp-shutdown-spec이 `.scratch/plan.md`를 함께 고치고 있어 나중에 병합하는 쪽의 글자 충돌 후보다(도구 출력).
+`uv run python tools/sibling_overlap.py`: 번호 겹침 없음(이 브랜치의 새 번호는 일지 2026-11-05-08, ADR 0044). 워크트리 mcp-shutdown-spec이 `.scratch/plan.md`를 함께 고치고 있어 나중에 병합하는 쪽의 글자 충돌 후보다(도구 출력).
 
 ## 셀프 리뷰
 
@@ -218,8 +218,8 @@ pre-commit의 인용 검사(경고만)가 이 일지의 여섯 줄(26·44·140·
 시작 프롬프트: /grill-with-docs approval-rules
 브랜치: docs/approval-rules-design
 모델: Fable 5.1 / xhigh. 2의 잇는 지시문
-읽을 것: docs/journal/2026-11-05-06-approval-rules-design.md의 "인계(커밋 뒤)" 절(커밋한 것, 손으로 친 검사, 나란히 도는 PR 468, 넘기는 단계)과 "셀프 리뷰" 절의 "반영"(PR 직전 리뷰에 밀 주장), docs/adr/0044-rules-file-is-enforced-per-call-and-operator-deny-beats-the-decision.md(PR 본문의 원천)
-이어받을 상태: 인계: 커밋 뒤. 설계 산출물 7 파일의 커밋 하나(셀프 리뷰 반영과 ADR 0044 승인·accepted 포함)까지 했고 푸시·PR은 없으며, 남은 단계는 일지 커밋 → PR 직전 리뷰 → git-pr → 봇 회차 → 병합 → next-session → retro다. 일지 docs/journal/2026-11-05-06-approval-rules-design.md. 설계 인터뷰는 끝나 다시 묻지 않는다(라운드 둘, 합의 요약 확인됨, ADR 0044 승인됨). 커밋하지 않은 변경은 그 일지뿐이다. 일지의 "다음" 절은 아직 없다. PR 466의 Minor 보류는 이 기능의 몫이 아니다(일지 2026-11-05-05)
+읽을 것: docs/journal/2026-11-05-08-approval-rules-design.md의 "인계(커밋 뒤)" 절(커밋한 것, 손으로 친 검사, 나란히 도는 PR 468, 넘기는 단계)과 "셀프 리뷰" 절의 "반영"(PR 직전 리뷰에 밀 주장), docs/adr/0044-rules-file-is-enforced-per-call-and-operator-deny-beats-the-decision.md(PR 본문의 원천)
+이어받을 상태: 인계: 커밋 뒤. 설계 산출물 7 파일의 커밋 하나(셀프 리뷰 반영과 ADR 0044 승인·accepted 포함)까지 했고 푸시·PR은 없으며, 남은 단계는 일지 커밋 → PR 직전 리뷰 → git-pr → 봇 회차 → 병합 → next-session → retro다. 일지 docs/journal/2026-11-05-08-approval-rules-design.md. 설계 인터뷰는 끝나 다시 묻지 않는다(라운드 둘, 합의 요약 확인됨, ADR 0044 승인됨). 커밋하지 않은 변경은 그 일지뿐이다. 일지의 "다음" 절은 아직 없다. PR 466의 Minor 보류는 이 기능의 몫이 아니다(일지 2026-11-05-05)
 확인할 선행 조건: 루트가 깨끗한지(워크트리 가드가 git -C <루트> status를 거부해 보지 못했다). PR 468(chore/043-plan-skill-plugin-done)이 .scratch/plan.md의 skill-plugin 행을 같은 뜻으로 고치고 있어, 먼저 병합되면 origin/main을 합칠 때 그 행의 충돌을 푼다
 이번 요청 범위: PR과 병합까지
 ```
@@ -235,3 +235,49 @@ open-session을 부른다 2026-11-05T07:57Z
 선행 조건 둘을 봤다. 루트는 이 세션이 시작될 때 앱이 찍은 git 상태에서 main 050bb13b이고 깨끗했다(워크트리 가드가 `git -C <루트> status`를 거부해 직접 치지는 않았다). `git fetch origin` 뒤 origin/main은 050bb13b로 이 브랜치의 기준(5dfd1b96의 부모)과 같아 합칠 것이 없다. PR 468(`chore/043-plan-skill-plugin-done`)은 열려 있고 병합되지 않았다(`gh pr view 468 --json state,mergedAt`). 고치는 파일은 harness 티켓 043, `.scratch/plan.md`, `.scratch/retro-queue.md`, 일지 2026-11-05-07의 넷이다. 이 PR보다 먼저 병합되면 origin/main을 합칠 때 plan.md의 skill-plugin 행에서 충돌을 푼다.
 
 `coderabbit auth status`는 `Plan: Free`, `Seat: not assigned`였다. 2026-11-03의 두 PR에서는 `Seat` 줄이 없었는데(`operations.md` 리뷰 파이프라인 2) 오늘은 2026-09-23과 같은 모양이다. 서브에이전트 정의 1단계대로 CLI 축이 비어 있으므로 `coderabbit-review`는 부르지 않고 대체 둘(`/security-review`, `bug-perf-review` 서브에이전트)을 이 일지를 커밋한 뒤 나란히 돌린다(`operations.md` 리뷰 파이프라인 2). 밀 주장은 위 "셀프 리뷰"의 "반영"에 적은 고친 것 아홉 줄이다.
+
+## PR 직전 리뷰
+
+CLI 축이 비어(위 "새 세션(PR까지)") 대체 둘을 나란히 돌렸다. `bug-perf-review` 서브에이전트(기준 050bb13b, 파일 7, 호출 40)와 `/security-review`(첫 하위 작업이 취약점을 찾고, 지적마다 거짓 양성 거르기 하위 작업을 나란히 띄우는 절차. 변경이 설계 문서뿐이라 ADR 0044를 그대로 구현했을 때 생기는 설계 수준의 취약점을 찾게 했다).
+
+### 버그·성능 축(bug-perf-review 보고)
+
+Critical·Major 없음. 유효 5(Minor 3, Nit 2), 보류 1, 오탐 0. 성능 지적 없음(규칙 파일 읽기는 준비마다 동기 한 번, 집행은 메모리의 대조).
+
+- Minor, ADR 0009의 2026-11-05 이력 제목과 첫 문단: "결정이 정책을 이기는 것은 저자의 승인 요구에만 남는다"가 같은 이력의 본문("그 밖의 변화에는 결정을 적용한다")과 어긋나, 제목만 읽으면 ask가 allow로 바뀐 호출에서 사람의 거부를 두고 도구를 부르는 쪽으로 읽힌다.
+- Minor, ADR 0044 36·43행: 멈춘 사이 deny가 된 호출에 거부 결정이 왔을 때의 적용 규칙 값이 정해져 있지 않다(36행은 "멈추게 한 것 그대로"라 ask, 43행은 승인인 경우만 운영자 deny).
+- Minor, ADR 0044 48~50행: 같은 이름 검사를 core의 `_reject_unknown_declarations` 자리에 두면 `McpConnection.tools()`가 이름으로 모은 딕셔너리의 값을 돌려줘 중복이 보이지 않는다. 이 제약이 ADR에 없다.
+- Nit, ADR 0044 77행: 일지의 두 선택지("두지 않는다. deny·ask 둘뿐", "두되 좁은 allow가 넓은 ask를 이긴다")를 한 항목으로 합쳐 모순된 한 안처럼 읽히고, 인용 "기본을 '물어본다'로"가 생략 표시 없이 끊겼다.
+- Nit, 이 일지 42행 인용의 "관리 API는 … 셋이고": 라우트는 여섯이고 위 "남긴 것과 이유"에 42행이 없다.
+- 보류(Minor), ADR 0044 28행과 재개: 도구가 모두 deny인 재개는 이미 도구 호출 블록이 든 대화에 빈 도구 목록으로 모델을 부르게 되어, API가 거부하면 원인 `model_call`의 `run_failed`다. 리뷰가 호출 예산에 닿아 `-m llm`으로 대 보지 못했다.
+- 맞은 것: 밀 주장 아홉 전부(1은 `run.py`의 `_prepare`가 `new_run_id`와 결정 이벤트 쓰기보다 앞, 5는 `uv run python -c`로 `_read_event`에 모르는 필드가 든 `tool_called`·`run_paused` 줄을 넣어 `ValidationError(extra_forbidden)`가 `PluginError`로 바뀌는 것을 봤다, 6은 `admin/http.py`의 `@router` 여섯), 포인터 검사(`check_adr_pointers.py` 출력 없음), 이 일지 마지막 절의 PR 468 파일 넷과 origin/main 050bb13b.
+
+반영. 근거를 먼저 봤다. ADR 0009 265~273행을 읽어 제목과 본문의 어긋남을 확인했고, `adapters/mcp.py` 74~102행에서 `routes[route.tool.name] = route`와 `tools()`가 `_routes.values()`를 돌려주는 것을 읽었으며, 일지 2026-11-04-01 156~161행에서 사용자 원문이 "근데 클로드코드는 자동모드가 있지 않나?"로 이어지고 allow 선택지가 둘인 것을 읽었다. `core/loop.py`의 `_bind`는 도구 목록이 비면 `bind_tools` 없이 모델을 돌려준다(코드를 읽었다). 이력 제목을 글자 그대로 옮긴 포인터는 없다(`이력 2026-11-05`로 grep. ADR 0019의 것은 다른 이력이다).
+
+고친 것(ADR 0044는 승인된 문서라 결정을 바꾸지 않는 보강만이고, 보강은 PR 본문에 적는다):
+
+- ADR 0009 이력 제목을 "운영자의 deny는 재개의 결정을 이기고, 그 밖의 정책 변화에는 결정이 그대로 적용된다"로, 첫 문단을 "승인 요구에서는 조건 없이 서고, 운영자의 규칙 파일에서는 예외 하나(deny)가 생긴다"로 고쳤다.
+- ADR 0044 36행에 "(멈춘 사이 deny가 되어 거부된 호출은 운영자 deny다. 재개 절)"를, 43행에 "결정이 거부여도 같다. 집행의 차례에서 운영자 deny가 먼저라 적용 규칙과 거부 문구는 결정의 것이 아니라 운영자 deny의 것이다"를 더했다. 집행의 차례가 이미 정한 것을 글로 적은 것이다.
+- ADR 0044 50행에 지금 `McpConnection.tools()`가 같은 이름을 하나로 보이는 사실과, core에 두려면 덮지 않은 목록이 필요하고 어댑터에 두려면 `connect`가 딕셔너리에 쓰기 전에 던진다는 제약을 더했다.
+- ADR 0044 77행을 두 선택지로 나누고 인용에 "…"를 붙였다. 27행의 같은 인용에도 "…"를 붙였다.
+- ADR 0044 치르는 값과 "명세로 넘긴 것"에 도구가 모두 deny인 재개의 모델 호출을 더했다. API가 거부하는지는 어림이고 재지 않았다. 명세가 실제 호출로 대 보고 처리를 정한다.
+
+남긴 것: 이 일지 42행 인용(Nit)은 32행과 같은 까닭(화면에 올린 선택지 설명을 글자 그대로 옮긴 기록)으로 고치지 않는다. 라우트 여섯 가운데 플러그인 경로 셋인 것은 23행과 ADR 0044의 "근거의 종류"가 적는다. 보류 1건은 명세에 넘겼고 "다음"에도 적는다.
+
+### 보안 축(/security-review 보고)
+
+식별 하위 작업이 둘을 냈고, 지적마다 거짓 양성 거르기 하위 작업을 나란히 띄웠다. 스킬의 문턱은 거르기 확신 8 이상이다.
+
+- Vuln 1, trust_boundary(CWE-863), Medium, 식별 확신 0.8 → 거르기 **유효, 확신 7**. 공통 표의 맨 도구 이름 allow는 그 표가 덮는 모든 에이전트의 모든 서버에서 그 이름의 도구에 맞고, 같은 이름 검사는 한 에이전트의 연결 안에서만 서므로, 운영자가 서버 A의 `read_file`을 뜻하고 쓴 공통 `allow = ["read_file"]`이 다른 에이전트가 고른 서버 B의 같은 이름 도구를 묻지 않고 돌린다. 도구 이름은 서버가 정한 원문 그대로다(`adapters/mcp.py` 77·97행). ADR 21행의 "뜻밖에 허락되는 일은 없다"는 오타에만 참이다. 지금 코드는 `requires_approval` 밖을 전부 묻지 않고 부르므로(`run.py` 579~581행) 이 열림은 기본을 "묻는다"로 좁히며 새로 드는 allow에만 있는 것이고, 저자의 `requires_approval`도 맨 이름이지만 묻는 방향이라 같은 문제가 아니다. 인터뷰 때 화면에 올린 설명은 "Claude Code의 MCP 도구 규칙(mcp__서버__도구, mcp__서버)과 같은 모양"이었는데(일지 2026-11-04-01 152~153행. 이 세션이 읽었다) Claude Code의 단일 도구 규칙은 서버에 묶이고 이 ADR의 "도구 이름" 꼴에는 서버 접두가 없다.
+- Vuln 2, privilege_escalation(CWE-862), Medium, 식별 확신 0.7 → 거르기 **거짓 양성, 확신 8**. 최종 사용자가 주체인 실행에서 운영자의 ask를 그 최종 사용자 자신이 결정하는 것은 ADR 0009의 2026-10-03 이력과 ADR 0023(21행이 "운영자도 채널 토큰으로 최종 사용자의 실행에 결정한다"를 거부했다. 이 세션이 grep으로 읽었다)이 이 PR 전에 정한 모델이고, 운영자의 ask는 기본 "묻는다"와 행동이 같아 요청자에게 새 능력을 주지 않는다. 남는 것은 운영자가 ask를 "운영자가 본다"로 오독할 수 있는 침묵이다.
+- 식별 보고가 따라가 보고 보고하지 않은 것: 규칙 파일 읽기는 `read_disabled` 선례와 같아 역직렬화·경로 탈출 길이 없다. 재개는 디스크에서 다시 읽어 fail-closed다. 최종 사용자 투영(`channel/http/items.py`의 `project`)은 `tool_called`에서 `tool`·`ok`만 옮겨 적용 규칙 칸도 거부 문구도 위젯에 가지 않는다(이 세션이 코드를 읽었다). 어댑터가 연결 때 받은 목록을 고정해 `tools/list_changed`의 틈이 없다. 가용성이라 뺀 것: 모델이 연결 목록에 없는 이름을 부르면 기본 "묻는다"에서 서버를 알 수 없는 호출이 "적힌 규칙 없음"으로 멈춰 없는 도구의 승인을 묻게 될 수 있다(명세가 "연결 목록에 없는 이름은 게이트 앞에서 거부"로 정하면 닫힌다). 이 PR 전부터 있던 것: 멈춘 사이 매니페스트의 `mcp`를 바꿔 같은 이름의 도구가 다른 서버에서 오면 승인이 그 서버의 도구를 실행한다(결정이 서버에 묶이지 않는다).
+
+문턱(8 이상)을 넘은 지적은 0건이라 스킬의 최종 보고는 비었다. 저장소의 트리아지로는 Vuln 1이 유효(설계 문서의 침묵), Vuln 2가 오탐이다.
+
+반영(결정을 바꾸지 않는 보강만):
+
+- ADR 0044 모양 절에 맨 이름 규칙의 범위와 같은 이름 검사의 범위를 적고 allow는 `<서버>:*`나 에이전트별 표로 쓰기를 권했다. 치르는 값에 같은 사실과, 서버에 묶인 단일 도구 꼴(`<서버>:<도구>`)은 이 ADR이 정하지 않았다는 것을 적었다. "명세로 넘긴 것"의 예시 allow 규칙 파일에 맨 이름이 아니라 `<서버>:*`를 쓰라는 조건을 달았다.
+- ADR 0044 범위 밖에 최종 사용자 실행에서 운영자의 ask가 그 사용자 자신의 확인이라는 것과 승인자 축이 범위 밖인 것을 적었다(Vuln 2의 선택 권고).
+- ADR 0044 범위 밖의 "위젯이 도구 결과를 그대로 보인다(어림)"를 투영 코드의 사실로 바로잡았다.
+
+남긴 것(사용자가 정할 것, "다음"에 적는다): 규칙 꼴에 `<서버>:<도구>`를 더할지, 더한다면 allow만은 맨 이름을 받지 않게 할지. 승인된 ADR의 결정이라 이 세션이 임의로 더하지 않았다. 가용성 지적(연결 목록에 없는 이름의 호출)은 명세의 몫으로 넘긴다.
