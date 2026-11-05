@@ -50,7 +50,7 @@ paths:
     - `hook_midturn_korean`은 매처가 없어 모든 도구 호출에 붙고, 트랜스크립트의 끝 2MiB를 읽어 가장 큰 트랜스크립트(31MB)에서 래퍼를 거쳐 234~243ms였다(읽지 않는 서브에이전트 길은 217~233ms, 2026-10-02 실측, `.scratch/harness/probes/pretool_text/time_hook.sh`). 병렬 호출의 앞쪽 호출에서는 자기 기록이 쓰일 때까지 최대 2초를 기다리고, 그동안 그 도구가 늦게 시작한다.
   - **Write·Edit·NotebookEdit**
     - Write·Edit에는 PostToolUse `hook_journal_retro`, `hook_ruff_line_width`, `hook_line_separators`, `hook_scratch_probe_rule`, `hook_probe_conclusion`, `hook_journal_evidence`, `hook_ui_design`, `hook_web_edit_check`, `hook_measure_word`, `hook_probe_citing_doc`이 붙는다. 훅마다 아래 항목이다.
-      - 새 일지 파일을 만든 Write에서는 `hook_journal_retro`가 `tools/sibling_overlap.py`를 자식으로 돌린다(대기열 232). 그 도구가 이 PC의 이 저장소에서 한 번에 9~11초(형제 워크트리가 스물 남짓일 때 `time`으로 세 번 손으로 쟀다, 2026-10-16)라 그 등록의 시간 제한은 45초이고, origin이 로컬 경로이고 형제가 없는 임시 저장소에서는 래퍼를 거쳐 1069~1250ms였다(다섯 번, 같은 프로브).
+      - 새 일지 파일을 만든 Write에서는 `hook_journal_retro`가 `tools/sibling_overlap.py`를 자식으로 돌린다(대기열 232). 그 도구가 이 PC의 이 저장소에서 한 번에 9~11초(형제 워크트리가 스물 남짓일 때 `time`으로 세 번 손으로 쟀다, 2026-10-16)라 그 등록의 시간 제한은 45초이고, origin이 로컬 경로이고 형제가 없는 임시 저장소에서는 래퍼를 거쳐 1069~1250ms였다(다섯 번, `.scratch/harness/probes/guard_hooks_time.py`).
       - 파이썬 파일이면 `hook_ruff_line_width`가 ruff를 한 번 더 띄워 약 0.33초다(2026-10-01 실측 323~325ms, 마크다운은 197~206ms — ruff 몫이 약 0.12초).
       - `hook_line_separators`는 쓴 파일을 한 번 읽고, 래퍼를 거쳐 약 29KB 파이썬 파일과 약 200KB 잠금 파일에서 202~234ms였다(한 번 326ms, 2026-10-07 실측, `.scratch/harness/probes/line_separators_hook_time.sh`). 대기열 52로 판정을 넓힌 뒤 옛 판과 번갈아 손으로 재 보니 갈리지 않았다(2026-10-12, 그 프로브의 README 행).
       - `hook_scratch_probe_rule`은 경로 문자열만 보고 세션 스크래치패드의 실행 스크립트일 때만 표지 파일 하나를 만든다.
@@ -67,7 +67,7 @@ paths:
   - **Skill**
     - Skill 호출에는 PreToolUse `hook_grill_design_check`가 붙어 입력의 `skill` 이름만 보고, 그 이름이 이 저장소의 `grill-with-docs`를 부르는 것일 때만 계기를 낸다. 앞의 `/`를 벗긴 뒤 그대로의 이름이거나, 접두가 `.claude`이거나 `.claude/`·`.claude\`로 시작하는 이름(워크트리 세션이 부르는 `.claude/worktrees/<이름>:grill-with-docs`. `hook_worktree_skill_overrides`가 돈 CLI 세션에서는 그 이름이 꺼졌지만 이 PC의 앱 세션에서는 붙었다, 그 훅의 못 보는 것)이고, 판정의 원천은 그 훅의 `context_for`(`/` 벗기기)와 `is_this_skill`(접두)이다(시간은 재지 않았고 다른 훅과 같은 약 0.2초로 어림한다).
     - 같은 매처에 `hook_security_review_journal`도 붙어, 앞의 `/`를 벗긴 이름이 내장 `security-review`일 때만 그 보고를 다 쓴 턴에 일지로 옮기라는 계기를 낸다(대기열 250. 시간은 재지 않았고 같은 약 0.2초로 어림한다).
-    - Skill에는 PreToolUse `hook_grill_design_check`·`hook_security_review_journal`·`hook_midturn_korean`(매처 없음)과 함께 훅이 넷 붙는다.
+    - Skill에는 PreToolUse `hook_grill_design_check`·`hook_security_review_journal`·`hook_midturn_korean`(매처 없음)과 PostToolUse `hook_handoff`까지 훅이 넷 붙는다.
   - **AskUserQuestion**
     - AskUserQuestion에는 PreToolUse `hook_choice_facts`와 매처가 없는 `hook_midturn_korean`이 붙고, 선택 화면은 훅이 끝난 뒤에 뜬다(`.scratch/harness/probes/choice_facts/probe.py`의 A와, 표지 훅이 1.5초를 기다리게 한 D에서 허락 요청이 훅의 끝 기록 뒤에 왔다). `hook_choice_facts`는 입력을 풀고 임시 폴더에 표지 파일 하나를 만들어(세션에서 처음 보는 화면이면 막는다, 대기열 394), 래퍼를 거쳐 처음 화면(막는 길) 192~206ms, 다시 부른 화면 193~454ms(454ms는 한 번이고, 둘째 번은 193~202ms), 세션을 모르는 길 189~219ms였다(다섯 번씩 두 번, 2026-10-22 실측, 같은 디렉터리의 `time_hook.py`. 막지 않고 알리던 전 판은 2026-10-19에 수가 든 설명에서 166~188ms였다). 막힌 화면에는 모델이 같은 화면을 다시 부르는 한 바퀴가 더 든다(같은 디렉터리 `probe.py`의 E에서 다시 부른 호출이 첫 호출 뒤 4.1~5.4초, haiku).
   - **앱의 세션 카드 도구**

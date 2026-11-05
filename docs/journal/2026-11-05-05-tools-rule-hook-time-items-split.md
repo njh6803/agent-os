@@ -51,4 +51,11 @@
 - **남긴다**: "대조군은 '없음'"의 원본 `out_*`은 이전 세션의 스크래치패드에만 있었다. 이 세션은 원본을 보지 못했다. 각 명세의 `# 최신 결과:` 줄과 앞 세션의 일지 말에 기댄 전언이다.
 - **명세 축**: 수용 기준 여섯 칸 모두 참(서브에이전트가 `uv run python -I`로 다중집합을, grep으로 서수 잔존과 `source = ".claude/rules/tools.md"` 명세 서른둘을 쟀다). 최장 725자는 이 세션도 파이썬으로 재서 맞았다(시간 항목 밖의 15행 1,668자 등은 이 변경이 안 바꾼 줄).
 
+## 검증과 PR 직전 리뷰
+
+- **검증**: `uv run python tools/run_checks.py`(백그라운드, 종료 코드 0)가 check-ticket·zizmor·lint-imports·check-instructions·check-type-escapes·pyright 둘·run-hooks·pytest·web-verify를 모두 통과했다. 이 판은 셀프 리뷰 반영 전의 나무였다. 반영 뒤 커밋의 pre-commit(`parallel-checks`)이 같은 러너를 다시 돌려 모두 `Passed`였다(510초). ruff 둘은 따로 쳐서 통과했고 바뀐 `.py`가 없다. 관리 화면·위젯 e2e와 사진 비교는 이 변경이 닿지 않아 치지 않았다. 티켓의 마지막 칸은 이 두 실행이 근거다.
+- **PR 직전 CLI**: `coderabbit auth status`가 `Plan: Free`, `Seat: not assigned`라 CLI 축이 비었다(서브에이전트가 출력을 읽었다). 규약대로 대체 둘을 돌렸다.
+- **`/security-review`**: 바뀐 파일이 마크다운과 카나리아 명세뿐이라 실행 코드가 없고 지적은 없다. 하위 작업은 띄우지 않고 이 세션이 범위를 읽어 판정했다.
+- **`bug-perf-review`**: 옛 한 줄과 새 54줄의 훅 이름·범위·경로·번호·날짜 다중집합은 늘거나 줄지 않았다(훅 이름 +14는 이 세션의 Counter와 같았다). 유효 Minor 둘을 고쳤다. (1) `tools.md` 53행 "같은 프로브"가 옮기며 `pretool_text`를 가리키게 됐다. 옛 줄에서 그 프로브는 `guard_hooks_time.py`였고 그 파일이 `hook_journal_retro`를 실제로 부른다(Grep으로 셌다). 경로를 풀어 썼다. (2) 70행 "훅이 넷 붙는다"가 셋만 나열했다. 넷째 PostToolUse `hook_handoff`를 이름으로 적었다. 오탐 다섯과 이 검증 줄 요구(위 검증)는 닫혔다.
+
 open-session을 부른다 2026-11-05T04:16:28Z
