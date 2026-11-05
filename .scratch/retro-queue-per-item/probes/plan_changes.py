@@ -1,7 +1,7 @@
 """기준 커밋 뒤의 `.scratch/plan.md` 커밋마다 표의 어느 칸을 고쳤는지 센다.
 
 ADR 0045 의 까닭("`plan.md`를 고친 커밋은 Status가 아니라 내용 칸을 고친다")이 근거로 든다.
-retro-queue-per-item 설계 인터뷰(일지 2026-11-06-01)에서 세션 스크래치패드의 스크립트로 먼저
+retro-queue-per-item 설계 인터뷰(일지 2026-11-06-04)에서 세션 스크래치패드의 스크립트로 먼저
 세었고, 그 값을 ADR 에 옮기며 여기로 가져왔다(`docs/agents/issue-tracker.md` 프로브와 근거).
 
 재는 것. `git log --format=%h <BASE>..<REF> -- .scratch/plan.md` 가 낸 커밋마다
@@ -22,6 +22,7 @@ retro-queue-per-item 설계 인터뷰(일지 2026-11-06-01)에서 세션 스크�
 칸 경계가 아니라 이스케이프라 `(?<!\\\\)\\|` 로 가른다. 표 밖의 `-`/`+` 줄은 칸이 다섯이
 아니라 걸러진다.
 
+git 이 0 이 아닌 코드로 끝나면 그 stderr 를 그대로 내보내, 실패가 빈 diff 로 읽히는 것과 가른다.
 표지. 커밋이 하나도 없으면 측정이 아니다(기준 커밋이나 가지가 틀렸다). 커밋마다 diff 가 비면
 그 회차는 측정이 아니다(git 이 그 커밋의 diff 를 내지 못했다). 측정 아닌 회차가 하나라도
 있으면 종료 코드가 1 이다(`.claude/rules/probes.md` 첫 항목, `tools/probe_kit.py` 의 `Rounds`).
@@ -52,9 +53,13 @@ COLUMNS = (("슬라이스", 0), ("내용", 2), ("Blocked by", 3), ("Status", 4))
 
 
 def git(*args: str) -> str:
-    return subprocess.run(
+    done = subprocess.run(
         ["git", *args], cwd=ROOT, capture_output=True, text=True, encoding="utf-8", check=False
-    ).stdout
+    )
+    if done.returncode != 0:
+        words = " ".join(args)
+        print(f"git {words} 실패({done.returncode}): {done.stderr.strip()}", file=sys.stderr)
+    return done.stdout
 
 
 def rows(lines: list[str]) -> dict[str, list[str]]:

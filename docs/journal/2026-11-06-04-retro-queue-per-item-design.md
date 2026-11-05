@@ -1,4 +1,4 @@
-# 2026-11-06 (01) retro-queue-per-item 설계 인터뷰: 조율 상태의 충돌과 회차 기준 5
+# 2026-11-06 (04) retro-queue-per-item 설계 인터뷰: 조율 상태의 충돌과 회차 기준 5
 
 브랜치 `docs/retro-queue-per-item`, 워크트리 `.claude/worktrees/retro-queue-per-item`. 2026-11-05에 열어 자정을 넘겼다.
 
@@ -159,8 +159,8 @@ domain-modeling 스킬을 불러 합의 요약을 용어와 ADR로 옮겼다. �
 시작 프롬프트: /grill-with-docs 여러 브랜치가 함께 쓰는 조율 상태(대기열, 일지·티켓·ADR 번호, plan.md, 헌법 판)가 충돌하지 않게 구조를 다시 짜고, 새 검사·훅·지침·규칙을 더하는 회차 기준을 3회에서 5회로 바꾼다
 브랜치: docs/retro-queue-per-item
 모델: Fable 5.1 / xhigh. 2의 잇는 지시문
-읽을 것: docs/journal/2026-11-06-01-retro-queue-per-item-design.md의 "합의 요약", "산출물", "인계" 절
-이어받을 상태: 인계: 셀프 리뷰 직전. 커밋하지 않은 변경이 워크트리에 있고 셀프 리뷰(/code-review origin/main)부터 한다. 일지 docs/journal/2026-11-06-01-retro-queue-per-item-design.md. 설계 인터뷰는 끝났고 합의 요약을 사용자가 확인했다. 인터뷰를 다시 하지 않는다. domain-modeling(CONTEXT.md 용어, ADR 0045 초안 proposed, ADR 0036·0037 이력과 포인터, ADR 0042 포인터, 프로브 plan_changes.py와 README 행)까지 끝났고 셀프 리뷰는 시작하지 않았다. 셀프 리뷰를 반영한 뒤 ADR 0045를 보여 승인받는다. 합의 요약에 없던 결정 둘(설계 인터뷰 계기를 spec.md 부재로, 생성 Status의 done을 끝 줄로)은 일지 산출물 절에 있으니 승인 화면에서 따로 짚는다. 승인 뒤 frontmatter와 ADR README 행을 accepted로 바꾸고 커밋·PR·병합한다. 일지의 "## 다음"과 회고는 단계를 닫는 세션(병합한 세션)이 쓴다
+읽을 것: docs/journal/2026-11-06-04-retro-queue-per-item-design.md의 "합의 요약", "산출물", "인계" 절
+이어받을 상태: 인계: 셀프 리뷰 직전. 커밋하지 않은 변경이 워크트리에 있고 셀프 리뷰(/code-review origin/main)부터 한다. 일지 docs/journal/2026-11-06-04-retro-queue-per-item-design.md. 설계 인터뷰는 끝났고 합의 요약을 사용자가 확인했다. 인터뷰를 다시 하지 않는다. domain-modeling(CONTEXT.md 용어, ADR 0045 초안 proposed, ADR 0036·0037 이력과 포인터, ADR 0042 포인터, 프로브 plan_changes.py와 README 행)까지 끝났고 셀프 리뷰는 시작하지 않았다. 셀프 리뷰를 반영한 뒤 ADR 0045를 보여 승인받는다. 합의 요약에 없던 결정 둘(설계 인터뷰 계기를 spec.md 부재로, 생성 Status의 done을 끝 줄로)은 일지 산출물 절에 있으니 승인 화면에서 따로 짚는다. 승인 뒤 frontmatter와 ADR README 행을 accepted로 바꾸고 커밋·PR·병합한다. 일지의 "## 다음"과 회고는 단계를 닫는 세션(병합한 세션)이 쓴다
 확인할 선행 조건: 일지 인계 절에 run_checks.py 결과가 없으면 그 한 바퀴를 보지 못한 것이니 셀프 리뷰 반영 뒤 pre-commit으로 갈음하거나 다시 돌린다. 노션 연결은 쓰지 않는다(사용자 결정)
 이번 요청 범위: PR과 병합까지
 ```
@@ -245,7 +245,7 @@ open-session을 부른다 2026-11-05T16:35:00Z
 - 열린 PR 0개 → `gh pr list --state open`은 #472 하나, `gh pr view 472`로 생성 시각 2026-11-05T16:45Z 확인.
 - 항목 9·10(부르는 쪽의 길, 코드 동작)에 해당하는 서술은 이 변경에 없다. 0036 이력 서술은 도구를 실제로 돌려 확인했다.
 
-참고 경로: `C:/project/agent/.claude/worktrees/retro-queue-per-item/` 아래 `docs/adr/0045-coordination-state-is-one-file-per-item-named-by-slug.md`, `docs/adr/0036-…md`, `docs/adr/0037-…md`, `CONTEXT.md`, `.scratch/harness/probes/plan_changes.py`, `.scratch/harness/probes/README.md`, `docs/journal/2026-11-06-01-retro-queue-per-item-design.md`.
+참고 경로: `C:/project/agent/.claude/worktrees/retro-queue-per-item/` 아래 `docs/adr/0045-coordination-state-is-one-file-per-item-named-by-slug.md`, `docs/adr/0036-…md`, `docs/adr/0037-…md`, `CONTEXT.md`, `.scratch/harness/probes/plan_changes.py`, `.scratch/harness/probes/README.md`, `docs/journal/2026-11-06-04-retro-queue-per-item-design.md`.
 
 ### Spec
 
@@ -358,7 +358,7 @@ ADR 0045의 frontmatter와 `docs/adr/README.md`의 행을 accepted로 바꿨다.
 이 세션이 커밋까지 한 것.
 
 - 셀프 리뷰 두 축의 지적을 반영했다(위 "셀프 리뷰" 절). 사용자가 ADR 0045와 합의 밖 결정 넷을 승인했고(위 "ADR 승인" 절) frontmatter와 색인 행을 accepted로 바꿨다.
-- 커밋 전 확인. `git branch --show-current`는 `docs/retro-queue-per-item`. `uv run python tools/sibling_overlap.py`는 종료 0, 번호 겹침 없음. 다만 둘을 알렸다. 워크트리 `doc-qa-direction`의 새 일지 2026-11-06-02가 이 브랜치의 일지 2026-11-06-01을 이름순으로 앞선다(그쪽이 먼저 병합되면 이 일지의 번호를 옮긴다). 같은 워크트리가 `CONTEXT.md`, ADR 0042, ADR README를 함께 고쳤다(나중에 병합하는 쪽에서 글자 충돌 후보).
+- 커밋 전 확인. `git branch --show-current`는 `docs/retro-queue-per-item`. `uv run python tools/sibling_overlap.py`는 종료 0, 번호 겹침 없음. 다만 둘을 알렸다. 워크트리 `doc-qa-direction`의 새 일지 2026-11-06-02가 이 브랜치의 일지 2026-11-06-04을 이름순으로 앞선다(그쪽이 먼저 병합되면 이 일지의 번호를 옮긴다). 같은 워크트리가 `CONTEXT.md`, ADR 0042, ADR README를 함께 고쳤다(나중에 병합하는 쪽에서 글자 충돌 후보).
 - pre-commit. check-ticket, zizmor, lint-imports, check-instructions, check-type-escapes, pyright-linux, pyright, run-hooks, pytest(378.2초), web-verify(504.2초), 마크다운 표, 줄 구분 문자, 변이 표, 커밋 메시지가 Passed. canary specs와 constitution version은 고친 파일이 없어 건너뛰었다. ruff 둘은 커밋 전에 손으로 친 결과가 초록이다("셀프 리뷰" 절의 다시 돌린 명령). 인용 대조(check-quotes, 경고만)가 20건을 알렸는데 모두 이 일지가 옮긴 리뷰 보고와 인계 절이 인용한 옛 문구(고치기 전 문장, 옛 수)라 원문과 다른 것이 맞고 막지 않는다.
 - PR 직전 리뷰는 아직이다. `coderabbit auth status`(CLI 0.7.5)가 `Plan: Free`, `Seat: not assigned`를 보여 CLI 축이 비었다(`docs/constitution/operations.md` 리뷰 파이프라인 2). 대체 둘(`/security-review`, `bug-perf-review` 서브에이전트)을 새 세션이 돌린다.
 
@@ -373,8 +373,8 @@ ADR 0045의 frontmatter와 `docs/adr/README.md`의 행을 accepted로 바꿨다.
 시작 프롬프트: /grill-with-docs 여러 브랜치가 함께 쓰는 조율 상태(대기열, 일지·티켓·ADR 번호, plan.md, 헌법 판)가 충돌하지 않게 구조를 다시 짜고, 새 검사·훅·지침·규칙을 더하는 회차 기준을 3회에서 5회로 바꾼다
 브랜치: docs/retro-queue-per-item
 모델: Fable 5.1 / xhigh. 2의 잇는 지시문
-읽을 것: docs/journal/2026-11-06-01-retro-queue-per-item-design.md
-이어받을 상태: 인계: 커밋 뒤. 일지 docs/journal/2026-11-06-01-retro-queue-per-item-design.md. 설계 산출물을 커밋 114c95ec로 커밋했고 푸시와 PR은 아직이다. 설계 인터뷰와 셀프 리뷰는 끝났고 사용자가 ADR 0045를 승인해 accepted다. 인터뷰·리뷰·승인을 다시 하지 않는다. 남은 단계는 넷이다. (1) PR 직전 리뷰. CodeRabbit CLI는 좌석 없음이라 /security-review와 bug-perf-review 서브에이전트를 나란히 돌린다. bug-perf-review 브리프에는 일지 "셀프 리뷰" 절 끝의 밀 주장 열한 항목을 나열하고 "나열 밖도 잰다"를 붙인다. 두 보고는 받은 턴에 일지로 옮기고 유효 지적은 고친다. (2) 일지의 인계 절(아직 커밋하지 않았다)과 리뷰 반영을 커밋·푸시하고 PR을 연다. PR 본문에 셀프 리뷰의 고친 것·남긴 것, pre-commit 결과, PR 직전 리뷰 결과를 적는다. (3) merge.md 2(봇 회차)와 "워크트리에서 병합할 때"로 병합한다. 병합할지는 묻지 않는다(ADR 승인은 받았다). (4) 병합한 세션이 일지의 "## 다음"과 회고(retro)를 쓴다. 다음 지시문은 to-spec(사용자가 부른다)을 가리킨다. doc-qa-direction 워크트리와 겹치는 일지 번호와 파일 셋(충돌 후보)은 일지 "인계 (커밋 뒤)" 절에 있다
+읽을 것: docs/journal/2026-11-06-04-retro-queue-per-item-design.md
+이어받을 상태: 인계: 커밋 뒤. 일지 docs/journal/2026-11-06-04-retro-queue-per-item-design.md. 설계 산출물을 커밋 114c95ec로 커밋했고 푸시와 PR은 아직이다. 설계 인터뷰와 셀프 리뷰는 끝났고 사용자가 ADR 0045를 승인해 accepted다. 인터뷰·리뷰·승인을 다시 하지 않는다. 남은 단계는 넷이다. (1) PR 직전 리뷰. CodeRabbit CLI는 좌석 없음이라 /security-review와 bug-perf-review 서브에이전트를 나란히 돌린다. bug-perf-review 브리프에는 일지 "셀프 리뷰" 절 끝의 밀 주장 열한 항목을 나열하고 "나열 밖도 잰다"를 붙인다. 두 보고는 받은 턴에 일지로 옮기고 유효 지적은 고친다. (2) 일지의 인계 절(아직 커밋하지 않았다)과 리뷰 반영을 커밋·푸시하고 PR을 연다. PR 본문에 셀프 리뷰의 고친 것·남긴 것, pre-commit 결과, PR 직전 리뷰 결과를 적는다. (3) merge.md 2(봇 회차)와 "워크트리에서 병합할 때"로 병합한다. 병합할지는 묻지 않는다(ADR 승인은 받았다). (4) 병합한 세션이 일지의 "## 다음"과 회고(retro)를 쓴다. 다음 지시문은 to-spec(사용자가 부른다)을 가리킨다. doc-qa-direction 워크트리와 겹치는 일지 번호와 파일 셋(충돌 후보)은 일지 "인계 (커밋 뒤)" 절에 있다
 확인할 선행 조건: 노션 연결은 쓰지 않는다(사용자 결정)
 이번 요청 범위: PR과 병합까지
 ```
@@ -404,3 +404,125 @@ open-session을 부른다 2026-11-05T17:48:46Z
 - 보류 Minor. "대기열 행" 37곳을 리뷰어가 재현하지 못했다(그 경로 묶음으로 34). 본 세션이 83a66cdc에서 `.claude`, `CLAUDE.md`, `CODING_STANDARDS.md`, `tools`, `docs/constitution`, `docs/agents`, `README.md`, `KICKOFF.md`, `kickoff`, `.github`를 `git grep -I -o "대기열 행"`으로 세니 37줄이었다(리뷰어 묶음 34에 런북 `KICKOFF.md` 2·`kickoff/pitfalls.md` 1). ADR 문장에 경로 묶음을 적었다. 고쳤다.
 
 리뷰어가 예산에 닿아 따라가지 못한 넷 가운데 둘을 본 세션이 봤다. 83a66cdc의 대기열에서 283을 든 행은 297행(283 자신, 닫힘)뿐이라 결정 9의 "열린 항목에서 283을 인용한 것 0"은 맞다(`git grep -n -E "(^|[^0-9])283([^0-9]|$)"`). `next-session` 스킬 파일에서 `plan.md`를 드는 다섯 줄은 모두 프론티어를 읽거나 지시문의 "읽을 것"으로 가리키는 것이라 "읽기만 한다"도 맞다(grep). 설계 계기 네 자리 문구의 차이는 셀프 리뷰 명세 축의 Nit가 네 원천을 읽고 적은 것이고(위 "셀프 리뷰"), ADR 44개와 티켓 001~044는 `sibling_overlap.py`의 "이 브랜치의 새 번호 ADR 0045"·"다음 빈 번호 티켓 045"와 맞는다.
+
+## 인계 (PR 연 뒤)
+
+리뷰 반영을 커밋 f520da26(`docs: PR 직전 리뷰를 반영하고 인계 절을 잇는다 (retro-queue-per-item)`, 파일 셋)으로 커밋했다. pre-commit은 check-ticket, zizmor, lint-imports, check-instructions, check-type-escapes, pyright, pyright-linux, run-hooks, web-verify(583.1초), pytest(605.3초), 마크다운 표, 줄 구분 문자, 변이 표, 인용 대조, 커밋 메시지가 Passed이고 ruff 둘·canary specs·constitution version은 해당 파일이 없어 Skipped다(커밋 출력에서 읽었다. ruff 둘은 커밋 전에 손으로 쳐 초록, 위 절). 그 직후 인계 계기(`hook_handoff`)가 `커밋 뒤` 경계에서 왔다(세션 컨텍스트 271,581 토큰). 이 세션의 지시문의 "이어받을 상태"가 `인계: 커밋 뒤`로 시작해 `handoff.md` 1의 셋째(같은 경계)에 들어 넘기지 않고 이었다. 푸시하고(원격에 새 브랜치) PR #474를 열었다. 제목은 설계 커밋의 제목이고 본문은 템플릿대로 셀프 리뷰의 고친 것·남긴 것, pre-commit 결과, PR 직전 리뷰 결과까지 적었다.
+
+PR을 연 직후 계기가 `PR 연 뒤` 경계에서 다시 왔다(284,745 토큰). `handoff.md`의 인계하지 않는 때 다섯 가운데 어디에도 들지 않아(PR은 열렸다, 범위는 "PR과 병합까지", 이 세션의 지시문의 경계는 `커밋 뒤`라 다르다, `인계 못함` 줄 없음, `get_session`의 `self`에 `parentSessionId` 없음) 새 세션에 넘긴다. 이 세션의 제목은 `docs/retro-queue-per-item`이었다(이 세션이 첫 턴에 붙였다). 앱의 PR 감시는 이 PR에 묶여 있고(`get_status`가 `bound: true`, 검사 passing 1·pending 6·skipped 1) Auto-fix는 꺼져 있다.
+
+이 세션이 한 것은 위 "PR 직전 리뷰" 절(커밋 f520da26에 들었다)과 이 절이다. 번복하거나 고친 것은 없다. 봇 회차(첫 `@coderabbitai review` 코멘트부터)와 병합, 일지의 "## 다음"과 회고는 새 세션이 한다.
+
+지시문(아래를 새 세션의 첫 메시지로 보낸다).
+
+```
+다음 작업: 기능 retro-queue-per-item. 열린 PR #474(설계 산출물: 승인된 ADR 0045, ADR 0036·0037 이력, CONTEXT.md 용어, 프로브, 일지)의 봇 회차 반영과 병합, 일지 "다음"과 회고까지 잇는다
+다음 단계: PR 반영·병합
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /grill-with-docs 여러 브랜치가 함께 쓰는 조율 상태(대기열, 일지·티켓·ADR 번호, plan.md, 헌법 판)가 충돌하지 않게 구조를 다시 짜고, 새 검사·훅·지침·규칙을 더하는 회차 기준을 3회에서 5회로 바꾼다
+브랜치: docs/retro-queue-per-item
+모델: Sonnet 5.5 / high. 2의 잇는 지시문
+읽을 것: docs/journal/2026-11-06-04-retro-queue-per-item-design.md
+이어받을 상태: 인계: PR 연 뒤. 일지 docs/journal/2026-11-06-04-retro-queue-per-item-design.md. PR #474(커밋 f520da26)를 열었고 PR 직전 리뷰 둘은 끝나 반영했다. 인터뷰·셀프 리뷰·ADR 승인·PR 직전 리뷰를 다시 하지 않는다. 남은 것은 merge.md 2(봇 회차)부터이고 첫 @coderabbitai review 코멘트도 새 세션이 남긴다. 그 뒤 "워크트리에서 병합할 때"로 병합하고(묻지 않는다. ADR 승인은 받았다), 병합 전에 일지 "## 다음"과 회고(retro)를 쓴 일지 커밋을 푸시한다. 일지의 "인계 (PR 연 뒤)" 절은 아직 커밋하지 않았다. 다음 지시문은 to-spec(사용자가 부른다)을 가리킨다. PR #473이 먼저 병합되면 이 일지 번호를 옮기고(sibling_overlap.py) CONTEXT.md·ADR 0042·ADR README가 글자 충돌 후보다
+확인할 선행 조건: 노션 연결은 쓰지 않는다(사용자 결정)
+이번 요청 범위: PR과 병합까지
+```
+
+`git worktree unlock`은 `is not locked`로 끝나 넘어갔다(handoff.md 4). open-session을 부른다 2026-11-05T18:24:42Z
+
+## 봇 회차 (새 세션, 2026-11-06)
+
+앞 세션의 지시문으로 열렸다. 세션 제목을 `docs/retro-queue-per-item`으로 붙이고 `EnterWorktree(path)`로 이 워크트리에 들어갔다. 시작 프롬프트가 `/grill-with-docs`라 그 스킬 파일은 읽었다(`grilling`과 `domain-modeling`을 차례로 부르는 라우터다). 다만 이어받을 상태가 "인터뷰·셀프 리뷰·ADR 승인·PR 직전 리뷰를 다시 하지 않는다"고 못박아 그 두 스킬은 부르지 않고 `merge.md` 2부터 이었다(대기열 577).
+
+**대기.** `git fetch origin` 뒤 `git log HEAD..origin/main`이 비어 origin/main은 15f11711 그대로였다. `tools/sibling_overlap.py`가 PR #473(`docs/doc-qa-direction`, 5bb870a)을 아직 열린 PR로 읽었다. PR #474는 `mergeable`이 MERGEABLE이었고 `mergeStateStatus`는 BLOCKED였다(그때 `python`과 `visual`이 pending이었다. 막는 까닭은 따로 읽지 않았다. `gh pr view 474 --json …`와 `gh pr checks 474`를 손으로 쳤다). `@coderabbitai review` 코멘트를 남기고(2026-11-05T18:27:50Z) `tools/wait_ci.py 474`를 백그라운드로 띄웠다. 대기는 `끝: 모두 통과`로 끝났다(출력 파일을 읽었다).
+
+**CodeRabbit은 한도로 리뷰가 없었다.** 코멘트에 대한 CodeRabbit의 답(18:27:57Z)이 `Action not completed … Review rate limited.`였다. 그런데 대기의 출력은 `CodeRabbit NEUTRAL` 한 줄과 `끝: 모두 통과`였고 리뷰 여부(`Review rate limited`)가 없었다. 그 헤드의 combined status를 `gh api repos/…/commits/<헤드>/status`로 읽으니 비어 있었고, 같은 호출이 #471·#472의 헤드에서도 비었다. `gh api …/check-runs`에서 `CodeRabbit`의 결론이 `neutral`이고 `output.title`이 `Review rate limited`였다(#474의 헤드에서만 손으로 봤다. #471·#472의 체크 런은 읽지 않았다). 독스트링이 전제한 "상태 설명으로 리뷰 여부를 가른다"가 세 헤드에서 설 자리가 없다는 뜻이고, 대기열 499(체크 런 제목으로 바뀐 것)의 5회차다. 한도로 리뷰가 없던 푸시는 회차로 세지 않으므로(`merge.md` 2) CodeRabbit 회차는 0이다. 보안·버그 축은 PR 직전에 돈 `/security-review`와 `bug-perf-review`의 결과가 대체다(`operations.md` 리뷰 파이프라인 2·3. 그 결과는 PR 본문 체크리스트에 있고 이 세션이 본문을 읽어 확인했다).
+
+**claude-review 첫 회차.** 지적은 Minor 셋과 Nit 하나다(경계 지적 없음). 첫 회차라 지적마다 판단했다.
+
+- Minor, ADR 0045 한 개가 결정 열을 담는다. 고치지 않았다. 사용자가 한 묶음으로 승인했고, 봇이 제안한 "조각마다 어느 결정을 구현하는가"는 ADR "단계"가 조각마다 결정 번호를 이미 적고 있다(`대기열 분할(결정 1과 10…)` 꼴). 명세 단계에서 조각별 결정 번호를 한 줄씩 옮겨 적는 일만 아래 "다음"에 둔다.
+- Minor, 83a66cdc 기준 표시가 일부 수에만 붙어 있다. 고쳤다. 까닭 서두에 "이 ADR의 수는 달리 적지 않으면 모두 이 기준이다"를 한 문장 더했다. 이미 붙은 표시는 두었다.
+- Minor, "명세가 정할 것"이 열세 항목을 쉼표로 이은 한 문장이다. 고쳤다. 글머리표 열세 줄로 쪼갰고 항목은 글자 그대로 옮겼다.
+- Nit, `plan_changes.py`의 `git()`이 stderr를 버려 실패가 빈 diff로 읽힌다. 고쳤다. 0이 아닌 종료 코드면 stderr를 내보낸다. `uv run python .scratch/retro-queue-per-item/probes/plan_changes.py 19bbfa06 83a66cdc`가 고치기 전과 같은 수(39회차: 내용 22, Status+내용 8, 행 추가 3, Status 3, 표 밖 3, 측정 아님 0)를 냈고, 없는 ref를 주면 `git log … 실패(128): fatal: bad revision`을 stderr에 찍고 종료 1이었다. `ruff check`와 `ruff format --check`는 이 파일에서 초록이다.
+
+보류한 일을 뒤로 넘기는 것은 하나뿐이고(위 첫 Minor의 명세 단계 한 줄) "다음"에 적었다.
+
+## 회고
+
+이 세션은 봇 회차와 일지 마무리만 했고 코드나 하네스를 이 세션에서 반영한 것은 없다. 읽은 자료는 이 일지(세 번에 나눠 읽었다), `merge.md`, `wait_ci.py`의 독스트링과 대기열 행들이다. 후보 다섯, 승인 셋, 기각 둘, 넘김 0이다.
+
+**승인 셋(모두 대기열에 두고 이 세션에서 반영하지 않는다).**
+
+1. 대기열 499(열림, 5회차): `wait_ci`가 CodeRabbit을 설명으로만 읽어, 한도로 리뷰가 없던 이 헤드에서도 `끝: 모두 통과`만 찍었다. 사건은 위 "CodeRabbit은 한도로 리뷰가 없었다"다. 층은 도구와 그 시험이고 PR 하나로 되돌릴 수 있다. 4회차이던 행에 5회차를 더했고 일지 파일명을 붙였다. 이미 회차 3 이상이라 chore 계기다. 이 PR은 `docs/` 설계 PR이고 범위가 "PR과 병합까지"라 코드를 섞지 않았다. 이 세션이 확인한 새 사실은 헤드의 combined status가 세 PR에서 비었다는 것과 결론 `neutral`·제목 `Review rate limited`의 체크 런 모양이다. 행의 처방(체크 런 제목을 상태 설명처럼 읽는다)이 그대로 맞다.
+2. 대기열 470(열림, 2회차): 인계 지시문의 "읽을 것"이 일지 파일만 들어 이 세션이 일지 432행을 세 번에 나눠 읽었다(`hook_large_result`가 알렸다). 이 일지는 셀프 리뷰 두 축의 보고 전문과 인계 절 셋이 쌓여 커졌다. 행의 처방(마지막 `## 인계`의 줄 번호를 계기에 싣는다)은 아직 세 번째 반복 전이다. 문턱 3에서 하나가 남는다.
+3. 대기열 577(새, 2회차): 지시문의 "시작 프롬프트"가 설계 인터뷰 단계의 `/grill-with-docs …`로 남은 채 "다음 단계"가 뒷단계(PR 직전 리뷰, PR 반영·병합)로 넘어갔다. 첫 줄을 글자 그대로 따르면 끝난 인터뷰를 다시 연다. PR 직전 리뷰 세션이 앞 절 "PR 직전 리뷰"에, 이 세션이 위 "봇 회차"에 각각 풀어 건너뛴 일을 적었다(두 세션). 열린 행에 같은 일이 없어(`--search 시작.프롬프트 --search grill-with-docs`로 찾았다) 새 행을 썼다. 층은 지시문 규약(`next-session` `directive.md`)이고 처방은 설계 인터뷰가 아닌 단계의 시작 프롬프트에서 스킬 명령을 빼는 것이다. 맡음 검색(대기열 283)이 이 줄의 조각을 견주므로 `open-session` 3의 스크립트와 함께 어느 줄을 견주는지 확인하라고 행에 적었다.
+
+**기각 둘.**
+
+- 대기열 찾기에서 `--search`와 `--today`를 함께 주어 사용법 오류가 났다. 도구가 그 자리에서 사용법을 찍어 알렸다.
+- 확인용으로 준 `--search 5회차`가 서른세 행을 내 큰 결과 알림이 떴다. 알림이 그 자리에서 알렸고 retro 5단계가 이미 낱말을 좁히라고 쓴다.
+
+**만료.** `tools/queue_open_rows.py --today 2026-11-06`과 `--ref origin/main`의 "만료할 행"이 모두 `(없음)`이었다. 열린 행은 125개에서 새 행 577(처음 이름은 576, 아래 "번호 옮김")을 더해 126개가 되었고, 이어 합친 #473의 575까지 127개다. 회차 3 이상 열린 행에 499(5회차)가 들었다(`uv run python tools/queue_open_rows.py --today 2026-11-06`로 손으로 봤다).
+
+**표와 줄 구분 문자.** `tools/check_md_tables.py`를 대기열에, `tools/check_line_separators.py`를 대기열, ADR 0045, 프로브에 주어 둘 다 출력 없이 끝났다.
+
+## 다음
+
+- **병합이 끝나면 이 기능은 설계 단계가 닫힌다.** 다음은 사용자가 `/to-spec`을 불러 `.scratch/retro-queue-per-item/spec.md`를 내는 것이다. 에이전트가 먼저 부르지 않는다(`CLAUDE.md` 지도의 to-spec 칸).
+- **명세가 받을 틀은 ADR 0045 "단계"에 있다.** 조각은 여섯(대기열 분할, 회차 다섯, 전체 계획 생성, 일지 이름, 티켓 이름, 헌법 README)이고, 순서 셋과 "명세가 정할 것" 열세 줄이 글머리표로 있다. 명세에서 조각마다 "어느 결정(ADR 0045 결정 번호)을 구현하는가"를 한 줄씩 적는다. 한 ADR이 결정 열을 담는 데 따른 추적을 위해서다(claude-review 첫 회차의 Minor, 위 "봇 회차").
+- **병합 순서에 주의할 두 조각.** 설계 인터뷰 계기(결정 4)는 전체 계획 생성(결정 3)과 같은 티켓이거나 먼저 병합된다. 대기열 분할·일지 이름·티켓 이름 셋은 같은 도구(`tools/sibling_overlap.py`와 그 시험, `tools/check_ticket.py`)를 고치므로 차례로 연다.
+- **대기열 반영 후보.** 499(5회차)는 이미 chore 계기다. 이 기능의 대기열 분할 티켓이 `wait_ci`가 읽는 CodeRabbit 상태와 무관하므로 따로 하네스 chore로 고친다. 470(2회차)과 577(2회차)은 문턱 전이다. 회차 기준 5는 회차 다섯 티켓이 서기 전까지 적용되지 않아, 그 전까지 retro의 문턱은 지금의 3이다.
+- **PR #473은 병합되었다(e02f6c0).** 이 일지(2026-11-06-04)가 #473의 일지 2026-11-06-02보다 이름순으로 앞서므로 번호를 옮긴다(이 줄을 쓸 때는 03으로 보았으나 형제가 03을 가져가 실제로는 04로 옮겼다. 아래 "번호 옮김"). `CONTEXT.md`는 자동으로 합쳐졌고, ADR README는 0045~0048 행을 모두 남기고, ADR 0042는 origin/main의 문장 끝에 `(바뀜: ADR 0045)`를 이어 달고, 대기열은 498을 origin/main의 4회차 판으로 499를 이 브랜치의 5회차 판으로 두고 575와 576을 모두 남겨 풀었다.
+- 병합 뒤 상태(주 체크아웃 미갱신 한 줄, 원격 브랜치 정리 결과)는 병합한 세션의 보고와 다음 지시문의 이어받을 상태에 있다.
+
+## 인계 (병합 커밋 뒤)
+
+병합 커밋 467b8f3d(`docs/retro-queue-per-item`) 직후 인계 계기(`hook_handoff`)가 `커밋 뒤` 경계에서 왔다(세션 컨텍스트 314,045 토큰). `handoff.md`의 인계하지 않는 때 다섯에 들지 않아(계기 명령은 성공, 범위는 "PR과 병합까지"라 이 경계에서 끝나지 않음, 지시문의 이어받을 상태는 `인계: PR 연 뒤`라 같은 경계가 아님, `인계 못함` 줄 없음, `get_session`의 `self`에 `parentSessionId` 없음) 새 세션에 넘긴다. 이 세션의 제목은 `docs/retro-queue-per-item`이었다(앞 세션의 지시문에 따라 첫 턴에 붙였다).
+
+**사용자 프롬프트 원문.** 이 세션의 사용자 메시지는 앞 세션이 낸 지시문 하나다.
+
+> 사용자: 다음 작업: 기능 retro-queue-per-item. 열린 PR #474(설계 산출물: 승인된 ADR 0045, ADR 0036·0037 이력, CONTEXT.md 용어, 프로브, 일지)의 봇 회차 반영과 병합, 일지 "다음"과 회고까지 잇는다 / 다음 단계: PR 반영·병합 / 이번 요청 범위: PR과 병합까지 / 확인할 선행 조건: 노션 연결은 쓰지 않는다(사용자 결정)
+
+**이 세션이 한 것.** 위 "봇 회차"와 "회고"에 있다. 번복한 것은 없다. 고친 것은 ADR 0045의 문구 둘, 프로브의 stderr, 대기열 행 셋, 일지의 근거 표기 몇 곳, PR 본문(`gh pr edit 474`로 범위를 넓혀 먼저 고쳤다)이다.
+
+**병합 커밋까지의 상태.**
+
+- origin/main이 e02f6c0(#473 병합)으로 움직여 `git merge origin/main --no-edit`로 합쳤다. 충돌은 `docs/adr/README.md`, ADR 0042 둘이었고 위 "다음"의 방법으로 풀었다. 병합 커밋의 pre-commit은 parallel-checks(pytest 408.1초, web-verify 513.4초)와 마크다운 표·줄 구분 문자·변이 표·인용 대조·커밋 메시지가 Passed다(출력에서 읽었다). canary specs와 constitution version은 해당 파일이 없어 Skipped다.
+- 합치기 전에 대기열 수정을 `git diff`로 패치로 떼었다가 합친 뒤 `git apply --3way`로 다시 적용했고, 충돌 둘(행 498·499 부근, 파일 끝의 575와 이 브랜치의 새 행. 당시 576, 지금 577)을 줄 내용을 단언하는 스크립트로 풀어 `git add`했다. 풀린 대기열은 `tools/queue_open_rows.py --today 2026-11-06`이 열린 행 127개, 회차 3 이상에 499(5회차)와 498(4회차)을 낸다.
+- 푸시는 아직이다. 원격 브랜치는 f520da26이다.
+
+**작업 트리의 커밋하지 않은 변경.** ADR 0045(까닭 서두의 수 기준 한 문장, "명세가 정할 것" 글머리표 열세 줄), 프로브 `plan_changes.py`(git 실패의 stderr), `.scratch/retro-queue.md`(499 5회차, 470 2회차, 새 행 577(당시 576); 충돌을 풀어 스테이지됨), 이 일지다.
+
+**남은 일(순서대로).**
+
+1. `uv run python tools/sibling_overlap.py`가 `옮길 번호: 일지 2026-11-06-01 → 2026-11-06-03`을 내면(이 세션이 치니 03은 형제가 쓰고 있어 04와 대기열 577을 냈다) `--move`를 붙여 다시 쳐 파일 이름과 인용을 옮긴다. 옮긴 뒤 `grep`으로 이 브랜치의 변경(`git diff --merge-base origin/main`과 미추적 파일)에 옛 이름이 남았는지 보고, 남은 곳은 손으로 고친다. 대기열 행 셋의 일지 파일명, ADR 0045의 일지 인용, 이 일지 안의 자기 이름이 대상이다.
+2. 새 일지 이름이 PR 본문에도 들어 있다. `gh pr view 474 --json body`로 읽어 옛 이름(`2026-11-06-01`)을 새 이름으로 고쳐 `gh pr edit 474 --body-file`로 올린다(`merge.md` 1: 푸시하기 전에).
+3. 커밋(메시지는 `git commit -F <파일>`)하면 pre-commit이 9분 남짓 걸린다(`timeout` 600000 또는 백그라운드). 푸시한다.
+4. `merge.md` 2대로 `@coderabbitai review` 코멘트를 남기고 `tools/wait_ci.py 474`를 백그라운드로 띄운다. CodeRabbit은 앞에서 한도(`Review rate limited`)였고 한도에 걸린 푸시는 회차로 세지 않는다. 이 푸시로 도는 claude-review는 둘째 회차라 Critical·Major만 고친다.
+5. `merge.md` "워크트리에서 병합할 때"로 병합한다(묻지 않는다. ADR 승인은 받았다). 병합 직전에 `headRefOid`와 `git rev-parse HEAD`를 맞대고 `gh pr merge 474 --squash --match-head-commit <HEAD>`를 쓴다. `--delete-branch`는 쓰지 않는다.
+6. 병합이 끝나면 위 "다음"은 이미 써 있다. 번호를 옮긴 이름과 맞는지, 병합 뒤 상태 줄(주 체크아웃 미갱신, 원격 브랜치 정리 결과)을 보고에 남긴다.
+
+지시문(아래를 새 세션의 첫 메시지로 보낸다).
+
+```
+다음 작업: 기능 retro-queue-per-item. 열린 PR #474(설계 산출물: 승인된 ADR 0045, ADR 0036·0037 이력, CONTEXT.md 용어, 프로브, 일지)의 일지 번호 옮김과 푸시, 봇 회차 반영, 병합까지 잇는다
+다음 단계: PR 반영·병합
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /grill-with-docs 여러 브랜치가 함께 쓰는 조율 상태(대기열, 일지·티켓·ADR 번호, plan.md, 헌법 판)가 충돌하지 않게 구조를 다시 짜고, 새 검사·훅·지침·규칙을 더하는 회차 기준을 3회에서 5회로 바꾼다
+브랜치: docs/retro-queue-per-item
+모델: Sonnet 5.5 / high. 2의 잇는 지시문
+읽을 것: docs/journal/2026-11-06-04-retro-queue-per-item-design.md의 "인계 (병합 커밋 뒤)" 절(남은 일 여섯)
+이어받을 상태: 인계: 커밋 뒤. 일지 docs/journal/2026-11-06-04-retro-queue-per-item-design.md. 병합 커밋 467b8f3d까지 로컬에 있고 푸시는 아직이다. 작업 트리에 커밋하지 않은 변경이 있다(ADR 0045 문구 둘, 프로브 stderr, 대기열 행 셋, 일지). 인터뷰·셀프 리뷰·ADR 승인·PR 직전 리뷰와 봇 회차의 첫 판단(일지 "봇 회차", "회고")을 다시 하지 않는다. 남은 일은 일지 "인계 (병합 커밋 뒤)"의 여섯이고, 먼저 sibling_overlap.py --move로 일지 번호를 옮기고 PR 본문의 옛 번호를 고친 뒤 커밋·푸시한다. 다음 지시문은 to-spec(사용자가 부른다)을 가리킨다
+확인할 선행 조건: 노션 연결은 쓰지 않는다(사용자 결정)
+이번 요청 범위: PR과 병합까지
+```
+
+`git worktree unlock`은 `is not locked`로 끝나 넘어갔다(handoff.md 4). open-session을 부른다 2026-11-05T18:55:59Z
+
+## 번호 옮김 (인계받은 세션)
+
+인계 지시문을 받아 `docs/retro-queue-per-item` 워크트리에 들어왔다. 설계 인터뷰는 다시 열지 않았다. 지시문의 시작 프롬프트가 `/grill-with-docs`로 남아 있었으나 같은 지시문의 "이어받을 상태"가 인터뷰를 다시 하지 않는다고 적었고, 대기열 577(처음 576)이 이 어긋남을 이미 다룬다.
+
+- 일지 번호: `uv run python tools/sibling_overlap.py`를 치니 형제 워크트리 `01-contract-trace-applied-rule-and-server-fields`가 일지 2026-11-06-03과 대기열 576을 이미 가져가 있어, 인계 절이 말한 03이 아니라 `옮길 번호: 일지 2026-11-06-01 → 2026-11-06-04, 대기열 576 → 577`을 냈다(도구 출력에서 읽었다). `--move`를 붙여 쳤고 파일 이름과 ADR 0036·0037·0045, 프로브, 대기열 안의 인용이 옮겨졌다(도구 출력의 "인용을 고친 파일" 줄). 줄인 꼴과 낱말 없이 든 번호는 손으로 `grep`해 이 일지의 576·03 표기를 고쳤다.
+- 옮긴 뒤 번호 겹침은 없다(`sibling_overlap.py --move` 마지막 출력의 `번호 겹침 없음`).
+- 대기열 쪽은 형제와 `.scratch/retro-queue.md`를 함께 고쳐, 나중에 병합하는 쪽이 글자 충돌을 풀어야 한다(같은 출력의 "함께 고친 파일").
