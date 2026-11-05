@@ -302,4 +302,13 @@ PR 직전 리뷰에 밀 주장으로 넘길 새 문장: pilot-release의 "지원
 
 PR 봇에 밀 주장으로 넘길 새 문장: ADR 0046의 `CONTEXT.md` 목록, plan.md의 "배포가 여는 443과 VM을 관리하는 SSH".
 
-다시 돌린 명령: `uv run python tools/check_adr_pointers.py`(0), `uv run python tools/check_md_tables.py`(바뀐 마크다운 넷, 0), `uv run pytest -q tests/test_plan_status.py`(12 passed). 나머지 검증 명령은 반영 커밋의 pre-commit으로 갈음한다.
+다시 돌린 명령: `uv run python tools/check_adr_pointers.py`(0), `uv run python tools/check_md_tables.py`(바뀐 마크다운 넷, 0), `uv run pytest -q tests/test_plan_status.py`(12 passed). 나머지 검증 명령은 반영 커밋의 pre-commit으로 갈음한다. 반영 커밋 06ca5929의 pre-commit은 모두 Passed였다(pytest 517.5s, web-verify 535.2s. ruff 둘과 카나리아·헌법 판 검사는 대상 파일이 없어 Skipped).
+
+## main을 합쳤다
+
+push를 훅이 막았다. 그 사이 PR #472(approval-rules 티켓 여섯)가 main에 병합되어(15f11711) 이 브랜치가 한 커밋 뒤처졌다. `git merge origin/main`이 `.scratch/plan.md`에서 충돌했다. main이 기준 `83a66cd`에서 바꾼 줄은 approval-rules 행과 프론티어 문단 둘뿐이었고(스크래치패드의 스크립트가 줄마다 견줘 확인했다), 이렇게 풀었다.
+
+- approval-rules 행: main의 행(티켓 여섯과 그 차례, "다음은 막힌 것이 없는 01 이다")에 이 브랜치의 "ADR 0046이 넘긴 것" 문장을 같은 자리(관리 API·관리 화면 문장 뒤)에 넣었다.
+- 프론티어 문단: 날짜 차례대로 main의 2026-11-06 문장(티켓 분할, 다음은 01) 뒤에 이 브랜치의 2026-11-06 문장(ADR 0046)을 이었다. 이 브랜치 문장의 "approval-rules 는 그대로 명세 검토와 티켓(to-tickets)이 다음이고"를 "approval-rules 는 위대로 막힌 것이 없는 티켓 01(계약)이 다음이고"로 고쳤다.
+
+ADR 0046~0048, ADR 0042, PRD, `CONTEXT.md`에는 approval-rules의 다음 단계를 적은 문장이 없었다(`to-tickets`·`명세 검토` grep 0건). 합친 뒤 `uv run pytest -q tests/test_plan_status.py`(12 passed), `uv run python tools/check_md_tables.py .scratch/plan.md`(0).
