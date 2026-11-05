@@ -16,27 +16,28 @@ LLM 테스트가 대상이면 `PYTHONUTF8=1 uv run --env-file .env python tools/
 모두 알린다. 코드를 고친 뒤 다른 변이 파일의 원문이 옮겨 가지 않았는지 볼 때 쓴다. `--check` 만 변이
 파일 여럿(`.toml` 로 끝나는 인자)을 받고, 그때는 이름·번호·`--since` 를 섞지 않는다. 고르지 않고
 주면 줄마다 그 파일의 경로가 붙고 읽지 못한 파일이 있어도 나머지를 본다. 이름·번호·`--since` 로
-고른 `--check` 와 변이를 돌리는 실행은 표지의 메아리(아래 표지 절)도 본다.
+고른 `--check` 와 변이를 돌리는 실행은 표지의 메아리(아래 표지 절)도 본다. 고른 `--check` 는 표지의
+품질(표지 없는 빨강, 단언 풀이 줄 표지)도 본다.
 
 `--staged` 는 커밋에 들 판(색인)에서 원문을 보고, pre-commit 이 커밋마다 띄운다. 이 커밋이 더하거나
 고친 표(`*_mutations.toml`)는 모든 원문을 보고, 그 표에서 어느 부모 판과도 다른 변이는 표지의
-메아리를 색인의 시험 파일로 본다. 변이를 돌린 뒤 `ruff format` 이 코드를 고쳐 커밋한
-표의 원문이 사라진 일이 있었다(대기열 92). 커밋에 들지 않은 표는 이 커밋이 고친 파일(지우거나 옮긴
-것 포함)을 가리키는 변이만 보고, 부모 판에서 맞던 원문이 색인에서 깨졌을 때 알린다. 표가 가리키는
-코드만 바뀌고 표는 커밋에 들지 않아, 커밋에 든 표만 보던 확인을 지나 원문이 0번인 표가 남았다(대기열
-312). 부모 판에서도 맞지 않던 원문은 썩어도 되고(대기열 73·92), 다시 돌리거나 그 표를 고쳐 커밋할 때
-이 확인이 알린다. 합치는 중이면(`MERGE_HEAD`) 표가 색인과 같은 부모 모두에서 맞던 원문만 본다. main
-을 합치는 커밋을 가지의 HEAD 하나와만 견주면 main 의 변경이 모두 들어, main 이 이미 깬 원문을 그
-커밋의 탓으로 읽는다. 색인을 읽으므로 ruff 훅이 고친 바이트는 다음 시도에서 본다(고친 시도는
-pre-commit 이 실패로 끝낸다). `git commit <경로>` 는 임시 색인을 `GIT_INDEX_FILE` 로 훅에 넘기고 이
-확인은 그 색인을 본다. 색인에도 어느 부모에도 없는 파일(추적하지 않는 생성물)은 이 커밋이 깰 수 없어
-옛 `--check` 처럼 작업 트리에서 읽고, 그래서 그 파일이 있는 체크아웃에서 커밋한다
-(`.scratch/design-refresh/probes/checker_mutations.toml` 의 머리 주석). 이 커밋이 추적을 끊은 파일은
-작업 트리에 남아도 읽지 못했다고 알린다. 못 보는 것: 색인의 블롭을 그대로 읽어 작업 트리의 줄 끝
-변환을 거치지 않는다. `eol=crlf` 인 파일에 CRLF 로 적은 원문은 디스크에서 맞아도 이 확인에서는
-0번이다. 이 저장소는 `* text=auto eol=lf` 라 색인과 작업 트리의 줄 끝이 같다. `git commit --amend`
-의 훅도 HEAD(고칠 커밋)를 부모로 본다. 그 커밋이 훅을 건너뛰고(`--no-verify`) 넣은 깨진 원문은 부모
-판에서도 맞지 않던 원문으로 읽혀 amend 에서 지나간다.
+메아리를 색인의 시험 파일로 보고 표지의 품질(표지 없는 빨강, 단언 풀이 줄 표지)도 본다. 변이를
+돌린 뒤 `ruff format` 이 코드를 고쳐 커밋한 표의 원문이 사라진 일이 있었다(대기열 92). 커밋에 들지
+않은 표는 이 커밋이 고친 파일(지우거나 옮긴 것 포함)을 가리키는 변이만 보고, 부모 판에서 맞던 원문이
+색인에서 깨졌을 때 알린다. 표가 가리키는 코드만 바뀌고 표는 커밋에 들지 않아, 커밋에 든 표만 보던
+확인을 지나 원문이 0번인 표가 남았다(대기열 312). 부모 판에서도 맞지 않던 원문은 썩어도 되고(대기열
+73·92), 다시 돌리거나 그 표를 고쳐 커밋할 때 이 확인이 알린다. 합치는 중이면(`MERGE_HEAD`) 표가
+색인과 같은 부모 모두에서 맞던 원문만 본다. main 을 합치는 커밋을 가지의 HEAD 하나와만 견주면 main
+의 변경이 모두 들어, main 이 이미 깬 원문을 그 커밋의 탓으로 읽는다. 색인을 읽으므로 ruff 훅이 고친
+바이트는 다음 시도에서 본다(고친 시도는 pre-commit 이 실패로 끝낸다). `git commit <경로>` 는 임시
+색인을 `GIT_INDEX_FILE` 로 훅에 넘기고 이 확인은 그 색인을 본다. 색인에도 어느 부모에도 없는
+파일(추적하지 않는 생성물)은 이 커밋이 깰 수 없어 옛 `--check` 처럼 작업 트리에서 읽고, 그래서 그
+파일이 있는 체크아웃에서 커밋한다 (`.scratch/design-refresh/probes/checker_mutations.toml` 의 머리
+주석). 이 커밋이 추적을 끊은 파일은 작업 트리에 남아도 읽지 못했다고 알린다. 못 보는 것: 색인의
+블롭을 그대로 읽어 작업 트리의 줄 끝 변환을 거치지 않는다. `eol=crlf` 인 파일에 CRLF 로 적은 원문은
+디스크에서 맞아도 이 확인에서는 0번이다. 이 저장소는 `* text=auto eol=lf` 라 색인과 작업 트리의 줄
+끝이 같다. `git commit --amend` 의 훅도 HEAD(고칠 커밋)를 부모로 본다. 그 커밋이 훅을
+건너뛰고(`--no-verify`) 넣은 깨진 원문은 부모 판에서도 맞지 않던 원문으로 읽혀 amend 에서 지나간다.
 
 고르기. 이름, 번호, `--since <커밋>` 으로 고르고 함께 주면 합친다. 아무것도 주지 않으면 전부다.
 번호는 표에 적힌 차례(1부터)이고, 출력의 줄 머리와 어긋났을 때의 마지막 줄(`다시 돌릴 번호`)에
@@ -151,6 +152,23 @@ pytest 의 `E ` 접두 줄(`E       TypeError: x`)은 받지 않는다.
 시험에만 있는 글자도 알린다(거짓 양성, 그 시험이 빨개질 때는 실리지 않는다). 폴더 인자는 그 안의
 파일을 보지 않는다(거짓 음성). 원문의 이스케이프(`\\"`)와 출력의 글자가 달라 글자 그대로 맞지 않는
 메아리는 놓친다.
+
+표지의 품질. 빨강(`expect = "red"`)을 기대한 변이의 표지에서 둘을 더 알린다. 고른 `--check` 와
+`--staged` 의 새 변이만 보고 변이를 돌리는 실행에는 걸지 않는다. 옛 표 3613 변이 가운데 빨강을
+기대하고 표지가 없는 것이 1883, 단언 풀이 줄 표지를 든 빨강이 176이라(`.scratch/**/*_mutations.toml`
+을 `tomllib` 로 읽어 손으로 셌다) 돌리는 실행에 걸면 옛 표를 다시 돌릴 때마다 멈춘다.
+- `expect_output` 이 없다. 다른 까닭으로 빨개져도 기대와 맞아, `wait_ci` 변이 열다섯이 표지 없이
+  두 리뷰를 지났다(대기열 350). 초록과 처리하지 않은 에러를 기대한 변이는 보지 않는다.
+- 러너의 판정이 pytest 인데 표지가 pytest 가 단언을 풀어 쓴 줄(`where 1 = run()`,
+  `assert 0 == 1`)이다. `E` 와 `+` 접두와 들여쓰기가 앞에 있어도 같은 줄로 보고 알린다. 시험이 다른
+  까닭으로 빨개져도 그 호출과 값이 실려, 러너가 다른 까닭으로 멈춰도 맞았다(대기열 517). 단언에 싣는
+  메시지나 변이를 손으로 넣어 본 실패 출력의 원인 문구로 고른다.
+못 보는 것: 줄 머리만 본다. `AssertionError: assert 0 == 1` 처럼 앞에 낱말이 붙은 줄은 받는다.
+`==` 만 본다. `assert 1 != 1`, `assert 'a' in b`, `assert x is None` 처럼 pytest 가 풀어 쓰는 다른
+비교는 받는다(거짓 음성). 반대로 단언에 싣는 메시지가 `assert 결과 == 'done'` 처럼 `assert` 로
+시작해 `==` 를 들면 풀이 줄과 갈라 볼 수 없어 알린다(거짓 양성). pytest 가 아닌 판정의 표지는 보지
+않는다. 판정이 exit 인 러너의 명령이 pytest 여도 보지 않는다. 표지가 있어도 고른 단언이 빨개졌다는
+표지인지는 가를 수 없다(이 확인은 없거나 알려진 나쁜 모양만 본다).
 
 하는 일, 차례대로:
 1. 변이 파일의 모양과 러너·판정의 짝을 보고, 변이마다 원문이 파일에 정확히 한 번 있는지, 러너의
@@ -866,6 +884,41 @@ def _echo_problems(root: Path, spec: Spec, read: Reader = _read_disk) -> list[st
     return problems
 
 
+# pytest 가 단언을 풀어 쓰는 줄의 머리(`where 1 = run()`, `assert 0 == 1`, `E       assert 4 == 1`,
+# `+  where False = f(1)`). 줄 머리만 본다
+_ASSERT_REWRITE = re.compile(r"\s*(?:E\s+)?[+\s]*(?:where\s.+=.+\(|assert\s.+==)")
+
+_ASSERT_REWRITE_NOTE = (
+    "pytest 가 단언을 풀어 쓴 줄이다. 시험이 다른 까닭으로 빨개져도 그 호출과 값이 실려, 고른"
+    " 단언이 빨개졌다는 표지가 되지 못한다(대기열 517). 단언에 싣는 메시지나, 변이를 손으로 넣어"
+    " 본 실패 출력의 원인 문구로 고른다"
+)
+
+
+def _quality_problems(spec: Spec) -> list[str]:
+    """빨강을 기대한 변이의 표지 품질. 표지가 없거나(대기열 350), pytest 판정인데 표지가 단언을 풀어
+    쓴 줄이다(대기열 517). 파일을 읽지 않는다. 옛 변이를 소급하지 않으려고 고른 `--check` 와
+    `--staged` 의 새 변이에만 쓰고 변이를 돌리는 실행에는 걸지 않는다(티켓 041)."""
+    runners = _runners(spec)
+    problems: list[str] = []
+    for mutation in spec.mutation:
+        if mutation.expect != "red" or mutation.runner not in runners:
+            continue
+        if not mutation.expect_output:
+            problems.append(
+                f"{mutation.name}: 빨강을 기대했는데 expect_output 이 없다. 다른 까닭으로 빨개져도"
+                " 기대와 맞는다(대기열 350). 고른 단언이 빨개질 때만 찍히는 문구를 적는다"
+            )
+        if runners[mutation.runner].judge != "pytest":
+            continue
+        problems += [
+            f"{mutation.name}: expect_output 의 표지 {marker!r} 는 {_ASSERT_REWRITE_NOTE}"
+            for marker in mutation.expect_output
+            if _ASSERT_REWRITE.match(marker)
+        ]
+    return problems
+
+
 def _picked_problems(root: Path, spec: Spec) -> list[str]:
     """넘겨받은 표의 원문 확인과 표지의 메아리. 고른 `--check` 에는 고른 변이가, 변이를
     돌리는 실행에는 돌릴 변이(고르지 않은 전체 실행이면 표의 모두)가 든 표가 온다."""
@@ -1111,8 +1164,9 @@ def check(spec: Spec, *, root: Path, out: Callable[[str], None], read: Reader = 
 
 def check_picked(spec: Spec, *, root: Path, out: Callable[[str], None]) -> int:
     """이름·번호·`--since` 로 고른 변이의 원문 확인. `check` 에 더해 표지가 시험 원문에 글자
-    그대로 있는지도 본다(옛 변이는 소급하지 않아 고른 변이에만 쓴다)."""
-    return _report_check(spec, _picked_problems(root, spec), out)
+    그대로 있는지, 빨강을 기대했는데 표지가 없거나 단언 풀이 줄인지도 본다(옛 변이는 소급하지 않아
+    고른 변이에만 쓴다)."""
+    return _report_check(spec, _picked_problems(root, spec) + _quality_problems(spec), out)
 
 
 def _report_check(spec: Spec, problems: list[str], out: Callable[[str], None]) -> int:
@@ -1479,7 +1533,7 @@ def staged(*, root: Path, out: Callable[[str], None]) -> int:
     for table, spec, fresh in authored:
         found = _file_problems(root, spec, index)
         if fresh is not None:
-            found += _echo_problems(root, fresh, index)
+            found += _echo_problems(root, fresh, index) + _quality_problems(fresh)
         lines += [f"{table}: !! {problem}" for problem in found]
         problems += len(found)
     for item in watched:
