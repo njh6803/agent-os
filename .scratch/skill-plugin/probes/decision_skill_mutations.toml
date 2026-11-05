@@ -71,3 +71,19 @@ old = '''
 new = '''
   for (const skill of [...row.manifest.skills].reverse()) {
 '''
+
+[[mutation]]
+name = "스킬 조회가 종류를 보지 않아 같은 이름의 모델 행도 센다"
+runner = "vitest"
+tests = ["apps/admin/components/pages/RunPage.decision.test.tsx", "-t", "같은 이름의 꺼진 모델 행이"]
+expect = "red"
+expect_output = ["not to contain '꺼진 플러그인'"]
+
+[[mutation.edit]]
+file = "web/apps/admin/components/organisms/RunDecision.tsx"
+old = '''
+          other.kind === "skill" && other.name === skill && "manifest" in other && !other.enabled,
+'''
+new = '''
+          other.name === skill && "manifest" in other && !other.enabled,
+'''

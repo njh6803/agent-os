@@ -981,6 +981,21 @@ describe("409 와 꺼짐", () => {
     expect(button("승인").disabled).toBe(false);
   });
 
+  test("같은 이름의 꺼진 모델 행이 있어도 고른 스킬은 꺼짐으로 세지 않는다", async () => {
+    serveTrace(() => PAUSED);
+    servePlugins([
+      calcSelecting(["answer-format"]),
+      FIXTURE,
+      skillPlugin("answer-format", { enabled: true }),
+      modelPlugin("answer-format", { enabled: false }),
+    ]);
+    await openDecision();
+
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    expect(place().textContent).not.toContain("꺼진 플러그인");
+    expect(button("승인").disabled).toBe(false);
+  });
+
   test("skills 가 빈 에이전트는 꺼진 스킬이 있어도 미리 막지 않는다", async () => {
     serveTrace(() => PAUSED);
     servePlugins([calcSelecting([]), FIXTURE, skillPlugin("answer-format", { enabled: false })]);
