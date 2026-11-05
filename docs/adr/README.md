@@ -47,5 +47,6 @@
 | [0041](0041-skill-is-a-plugin-read-per-run-into-the-context.md) | 스킬은 플러그인이고, 런타임이 실행마다 SKILL.md를 읽어 컨텍스트로 넘긴다 | accepted | 2026-11-03 |
 | [0042](0042-agent-os-mediates-enforces-and-records-every-call.md) | Agent OS는 플러그인으로 실은 실행의 모델·도구 호출을 중재·강제·기록하는 런타임이고, 다음 기능은 다섯 묶음 열일곱이다 | accepted | 2026-11-04 |
 | [0043](0043-dev-integrates-and-main-releases.md) | 티켓 PR은 dev로 가고 기능이 끝나면 dev를 main에 merge 커밋으로 올리며 hotfix는 main에서 따 되돌려 합친다 | accepted | 2026-11-04 |
+| [0044](0044-rules-file-is-enforced-per-call-and-operator-deny-beats-the-decision.md) | 운영자의 규칙 파일은 실행을 준비할 때 읽혀 도구 호출마다 집행되고, 적용 규칙이 기록에 남으며, 재개에서는 운영자의 deny가 결정을 이긴다 | accepted | 2026-11-05 |
 
 ADR을 먼저 확인하는 상황 넷: 스택이나 라이브러리를 바꿀 때, 디렉터리나 층 경계를 바꿀 때, 디스크 형식(매니페스트, 이벤트)을 바꿀 때, 기존 코드가 왜 이렇게 되어 있는지 이해되지 않을 때.
