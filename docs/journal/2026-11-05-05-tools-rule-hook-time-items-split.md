@@ -58,4 +58,23 @@
 - **`/security-review`**: 바뀐 파일이 마크다운과 카나리아 명세뿐이라 실행 코드가 없고 지적은 없다. 하위 작업은 띄우지 않고 이 세션이 범위를 읽어 판정했다.
 - **`bug-perf-review`**: 옛 한 줄과 새 54줄의 훅 이름·범위·경로·번호·날짜 다중집합은 늘거나 줄지 않았다(훅 이름 +14는 이 세션의 Counter와 같았다). 유효 Minor 둘을 고쳤다. (1) `tools.md` 53행 "같은 프로브"가 옮기며 `pretool_text`를 가리키게 됐다. 옛 줄에서 그 프로브는 `guard_hooks_time.py`였고 그 파일이 `hook_journal_retro`를 실제로 부른다(Grep으로 셌다). 경로를 풀어 썼다. (2) 70행 "훅이 넷 붙는다"가 셋만 나열했다. 넷째 PostToolUse `hook_handoff`를 이름으로 적었다. 오탐 다섯과 이 검증 줄 요구(위 검증)는 닫혔다.
 
+## 인계 (PR 연 뒤)
+
+이 세션(셀프 리뷰 직전에 인계받은 세션)의 제목은 `chore/042-tools-rule-hook-time-items-split`였다. 컨텍스트가 인계 문턱을 넘은 채 PR을 연 직후에 와서 새 세션에 넘긴다.
+
+- **한 것**: 셀프 리뷰(표준·명세 축), 전체 검증, 커밋 둘(`becd13cc` 본 변경, `ba1e3f96` PR 직전 리뷰 반영), 푸시, PR 466 열기까지. 검증과 PR 직전 리뷰의 근거는 위 "검증과 PR 직전 리뷰" 절이다.- **남은 일**: `merge.md` 2(봇 회차)부터. 첫 `@coderabbitai review` 코멘트도 새 세션이 남긴다. 병합은 워크트리에서 병합할 때의 절차대로 한다.
+- **미커밋**: 이 인계 절 하나(일지). 새 세션이 이어 쓰고 커밋한다.
+- **봇이 같은 자리를 짚을 후보**: 위 "셀프 리뷰"의 남긴 것(카나리아 넷의 "문단" 물음, 대조군을 `README.md`로 바꾼 명세 둘, "대조군은 '없음'"의 원본 부재). 보류 이유는 PR 본문 "남긴 위험"에 있다.
+- **check-quotes 경고**: 첫 커밋에서 일지 38·46행의 따옴표 인용 셋이 저장소에 글자 그대로 없다는 경고가 났다. 막지 않는 경고이고 옛 문장(46행은 `tools.md`에서 이제 없는 "그래서")을 인용한 것이다.
+
+## 봇 회차 (인계받은 세션, PR 466)
+
+- 이 세션은 `EnterWorktree`로 워크트리에 들어가 PR 466을 `bind_pr`로 묶고, 머리 `ba1e3f96`에서 `@coderabbitai review` 코멘트를 남긴 뒤 `tools/wait_ci.py 466`을 백그라운드로 띄웠다. 끝 줄은 `모두 통과`였고 `gh pr checks`의 CodeRabbit 줄은 `pass`(6분)였다.
+- **CodeRabbit 첫 회차**: 요약 코멘트가 "No actionable comments were generated"라고 적었다. 인라인 지적은 없다.
+- **claude-review 첫 회차**: Minor 둘이다.
+  - **고쳤다**: `tools.md` 52행 "훅마다 아래 항목이다"는 앞에 나열한 열 훅에만 맞고, 같은 Write·Edit PostToolUse 훅 `hook_deletion_adversarial`은 별도 항목에 있다. 코드를 읽어 사실임을 확인하고 "이 열 훅은 훅마다 아래 항목이고, 이 열 훅 밖의 `hook_deletion_adversarial`은 아래 별도 항목에 있다"로 고쳤다.
+  - **보류했다(이미 적은 것)**: 카나리아 넷(`tools_rule_large_result_hook`, `prompt_directive_time`, `session_card_hook`, `worktree_skill_overrides`)의 "문단" 물음이다. 위 "셀프 리뷰"의 남긴 것과 같고 PR 본문 "남긴 위험"에 있다. 실제 회차에서 "없음"이 나오면 물음을 "항목"으로 고친다.
+- 이 고침 커밋은 문구 한 줄과 이 일지뿐이다. 푸시로 도는 두 봇의 다음 회차는 봇마다 센 회차 세기대로 Critical·Major만 고친다.
+
 open-session을 부른다 2026-11-05T04:16:28Z
+open-session을 부른다 2026-11-05T04:53:52Z

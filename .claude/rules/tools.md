@@ -49,7 +49,7 @@ paths:
   - **매처가 없는 훅**
     - `hook_midturn_korean`은 매처가 없어 모든 도구 호출에 붙고, 트랜스크립트의 끝 2MiB를 읽어 가장 큰 트랜스크립트(31MB)에서 래퍼를 거쳐 234~243ms였다(읽지 않는 서브에이전트 길은 217~233ms, 2026-10-02 실측, `.scratch/harness/probes/pretool_text/time_hook.sh`). 병렬 호출의 앞쪽 호출에서는 자기 기록이 쓰일 때까지 최대 2초를 기다리고, 그동안 그 도구가 늦게 시작한다.
   - **Write·Edit·NotebookEdit**
-    - Write·Edit에는 PostToolUse `hook_journal_retro`, `hook_ruff_line_width`, `hook_line_separators`, `hook_scratch_probe_rule`, `hook_probe_conclusion`, `hook_journal_evidence`, `hook_ui_design`, `hook_web_edit_check`, `hook_measure_word`, `hook_probe_citing_doc`이 붙는다. 훅마다 아래 항목이다.
+    - Write·Edit에는 PostToolUse `hook_journal_retro`, `hook_ruff_line_width`, `hook_line_separators`, `hook_scratch_probe_rule`, `hook_probe_conclusion`, `hook_journal_evidence`, `hook_ui_design`, `hook_web_edit_check`, `hook_measure_word`, `hook_probe_citing_doc`이 붙는다. 이 열 훅은 훅마다 아래 항목이고, 이 열 훅 밖의 `hook_deletion_adversarial`은 아래 별도 항목에 있다.
       - 새 일지 파일을 만든 Write에서는 `hook_journal_retro`가 `tools/sibling_overlap.py`를 자식으로 돌린다(대기열 232). 그 도구가 이 PC의 이 저장소에서 한 번에 9~11초(형제 워크트리가 스물 남짓일 때 `time`으로 세 번 손으로 쟀다, 2026-10-16)라 그 등록의 시간 제한은 45초이고, origin이 로컬 경로이고 형제가 없는 임시 저장소에서는 래퍼를 거쳐 1069~1250ms였다(다섯 번, `.scratch/harness/probes/guard_hooks_time.py`).
       - 파이썬 파일이면 `hook_ruff_line_width`가 ruff를 한 번 더 띄워 약 0.33초다(2026-10-01 실측 323~325ms, 마크다운은 197~206ms — ruff 몫이 약 0.12초).
       - `hook_line_separators`는 쓴 파일을 한 번 읽고, 래퍼를 거쳐 약 29KB 파이썬 파일과 약 200KB 잠금 파일에서 202~234ms였다(한 번 326ms, 2026-10-07 실측, `.scratch/harness/probes/line_separators_hook_time.sh`). 대기열 52로 판정을 넓힌 뒤 옛 판과 번갈아 손으로 재 보니 갈리지 않았다(2026-10-12, 그 프로브의 README 행).
