@@ -66,3 +66,9 @@ open-session을 부른다 2026-11-05T09:01Z
 ## 첫 커밋 시도의 pre-commit (인계받은 세션)
 
 - 첫 `git commit`의 pre-commit에서 `pytest`가 1 failed, 6316 passed로 빨갰다. 실패는 `tests/tools/test_rerun_runner.py::test_본_측정에서_첫_인계_뒤_멈추고_확인_인자를_주면_잇는다`의 `any("인계" in line for line in board.lines)`였다(출력을 읽었다). 이 변경은 그 파일도 `tools/rerun`도 건드리지 않았다(`git diff --stat`의 파일 목록). 그 시험만 홀로 돌리자 통과했다(`uv run pytest -q tests/tools/test_rerun_runner.py -k 첫_인계_뒤_멈추고`, 1 passed, 47.69초). 반영 전후로 돌린 `run_checks.py` 둘은 같은 시험이 통과했다. 원인은 이 PC에서 확인하지 못했고, 한 프로세스에서만 통과하고 xdist에서 빨간 시험의 가능성은 어림이다. 같은 커밋을 다시 시도한다.
+
+## PR 직전 리뷰
+
+- `coderabbit-review` 서브에이전트: `coderabbit auth status`는 `Plan: Free`, `Seat: not assigned`였지만 `coderabbit review --agent --base origin/main`(0.7.5)이 오류 없이 `review_completed`, `findings: 0`으로 끝났다(서브에이전트 보고이고 이 세션이 CLI를 다시 돌리지는 않았다). 그래서 CLI 축이 찼고 대체 둘(`/security-review`, `bug-perf-review`)은 돌리지 않았다. 훑은 파일은 네 개다.
+- 밀게 한 주장 셋을 서브에이전트가 직접 댔다. 닫힘 칸의 사건 셋은 `git log`로 맞았고, 독스트링의 "뒤처진 쪽"과 "못 보는 것" 서술은 코드를 읽어 맞았으며, 구분선 수정은 정상 구분선(`['---','---']`, `[':--','--:']`)을 여전히 넘기고 빈 행(`['','','']`)을 행으로 읽는다고 조건을 실제로 돌려 보고했다.
+- 보류 판정 하나(Minor, 문체): 독스트링 끝 두 문장이 서술어 없이 명사구로 끝났다. 고치는 값이 작아 고쳤다("도 보지 않는다"를 더했다). 독스트링만 바뀌어 동작은 그대로다.

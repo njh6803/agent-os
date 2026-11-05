@@ -18,7 +18,7 @@ PR이 바꾸면 이 시험이 병합 커밋에서 초록이다.
 (`docs/agents/issue-tracker.md`). `in-progress` 행에 `done` 티켓이 없는 것도 보지 않는다. 세 사건이
 모두 행이 티켓보다 뒤처진 쪽이었고, 행을 티켓보다 먼저 올리는 순서까지 막지는 않기 위해서다.
 `plan.md`에 행이 없는 기능 폴더(하네스 기능은 티켓의 `Status:`가 상태다, ADR 0037)와 티켓 폴더가
-없는 행. 행의 `Blocked by`와 슬라이스 번호.
+없는 행도 보지 않는다. 행의 `Blocked by`와 슬라이스 번호도 보지 않는다.
 """
 
 from __future__ import annotations
