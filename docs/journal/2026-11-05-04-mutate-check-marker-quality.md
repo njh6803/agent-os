@@ -52,3 +52,23 @@
   - Nit, `_quality_problems`가 `_runners(spec)`를 다시 만드는 중복: 셀프 리뷰에서 낮은 우선순위로 둔 것과 같다. 두었다.
   - Nit, `--staged` 절을 통째로 다시 줄바꿈해 diff가 커졌다는 지적: 이미 커밋된 줄바꿈이라 되돌리면 또 한 바퀴 돈다. 두었다.
 - 앞의 CLI 리뷰는 지적이 0건이라 트리아지할 것이 없었다. 밀 주장 둘(독스트링 서술과 시험이 고정한 동작의 일치)은 CLI 쪽에서 나온 것이 없어 이 리뷰로 검증되지 않았다. 셀프 리뷰 때 시험으로 고정한 것이 근거의 전부다.
+- 병합 충돌: 반영 커밋을 푸시한 뒤 `tools/wait_ci.py`가 `끝: 충돌`을 찍었다. 그 사이 `origin/main`에 042(`b98b8dd5`, PR #466)가 병합되어 있었다. 앱의 `sync_with_base_branch`는 "앱이 만든 워크트리가 아니다"라며 거절했고(도구 오류 문구를 읽었다), 직접 `git merge origin/main`을 쳐 `.scratch/retro-queue.md` 한 파일에서 충돌했다. 516은 main 쪽 줄(042가 닫음)을, 350·517은 이 브랜치 쪽 줄(041이 닫음)을 살렸다. 병합 커밋 `35207446`의 pre-commit이 모두 통과했고, `wait_ci`는 이 헤드에서 `끝: 모두 통과`(CodeRabbit SKIPPED)였다. `gh pr view`의 `headRefOid`와 로컬 `git rev-parse HEAD`가 같았다(손으로 봤다).
+- 봇 둘째·셋째 회차(claude-review 코멘트를 읽었다). 둘째(헤드 `0c0c4a9a`)는 Minor 둘(`_runners` 중복, `where ` 줄 머리 정규식의 거짓 양성이 독스트링 "못 보는 것"에 없음)과 Nit 하나, 셋째(헤드 `35207446`)는 Minor 하나(`_runners` 중복)와 Nit 하나였다. Critical·Major는 없었다. 규칙대로 둘째 회차부터는 고치지 않고 PR 코멘트에 보류 이유를 남기고 병합한다. 그 가운데 `where ` 거짓 양성의 독스트링 한 문장과 시험은 뒤로 넘기는 일이라 아래 "다음"에 적었다.
+
+## 회고
+
+후보 다섯: 승인 0, 기각 넷, 일지에만 하나. 넘긴 것은 없다.
+
+- 기각: claude-review 첫 회차 Minor("받는다"가 알림과 통과의 두 뜻). `CODING_STANDARDS.md`가 리뷰에 맡긴 기준을 리뷰가 잡은 것이라 회차 셈에서 빠지고, 낱말의 뜻을 가르는 검사는 만들 수 없다.
+- 기각: claude-review 둘째 회차 Minor(`where ` 거짓 양성이 독스트링에 없음). 위와 같은 까닭이다. 이미 `.claude/rules/tools.md`에 "못 본다고 적은 주장도 잰다"는 항목이 있어, 이 사건은 그 지침을 어긴 사건이지만 리뷰가 제 몫을 했다.
+- 기각: 앱의 `sync_with_base_branch`가 앱이 만든 워크트리가 아니라며 거절한 것. 앱 가드가 그 자리에서 알렸고 직접 병합하는 길이 `merge.md`에 있다. 한 번의 호출 낭비였다.
+- 기각: `.scratch/retro-queue.md` 병합 충돌. 시작 때 `tools/sibling_overlap.py`가 "함께 고친 파일: 042 워크트리의 `.scratch/retro-queue.md`"로 이미 알렸다. 이미 알린 검사가 있다.
+- 일지에만: `coderabbit auth status`가 `Plan: Free`, `Seat: not assigned`였는데 `coderabbit review --agent --include-untracked`(CLI 0.7.5)가 `review_completed`, 지적 0건으로 끝났다(서브에이전트가 찍은 줄). 2026-09-23의 `Seat: not assigned`가 즉시 끝나던 것(`operations.md` 리뷰 파이프라인 2)과 다르다. 대기열 570(사람 몫, 열림)의 새 자료이지만 그 행은 회차를 세지 않고 사람이 정한다. 같은 날 PR 쪽 CodeRabbit은 "Review limit reached"(무료 OSS 한도, 다음 리뷰까지 56분)로 리뷰하지 못했다(PR 코멘트를 읽었다).
+- 만료: `uv run python tools/queue_open_rows.py`와 `--ref origin/main`의 두 출력에 모두 든 247·393·399·401·402·405·409·410을 `만료 2026-11-05`로 닫았다. 닫은 뒤 다시 센 출력의 "만료할 행"은 없음이었다.
+
+## 다음
+
+- PR #467 병합 뒤: 워크트리에서 병합했으므로 주 체크아웃은 새 세션이 `tidy-checkouts`로 당긴다(`merge.md` "워크트리에서 병합할 때" 4).
+- 뒤로 넘긴 일(PR #467 둘째 회차 Minor): `tools/mutate.py` 모듈 독스트링 "못 보는 것"에 `where `로 시작하는 메시지 문구의 거짓 양성(`_ASSERT_REWRITE`의 `where\s.+=.+\(` 갈래)을 한 문장 더하고 시험으로 고정한다. 티켓 041은 `done`이라 다시 열지 않고, 하려면 다음 번호의 새 harness 티켓이다. 대기열 행은 따로 쓰지 않았다.
+- 대기열 570: 이번 PR 직전 리뷰에서 `Seat: not assigned`인데 CLI가 돌았다는 자료가 생겼다. 사람이 그 행을 정할 때 본다.
+- 그 밖의 다음 작업은 `.scratch/plan.md`의 프론티어다.
