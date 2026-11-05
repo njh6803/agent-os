@@ -2,7 +2,9 @@
 달라지는지 재는 탐침. 명세의 "예시 스킬" 절이 근거로 든다. 네트워크와 `ANTHROPIC_API_KEY` 가
 필요하다.
 
-재는 것. 스킬 경로가 아직 없으므로 저장소 `plugins/` 를 임시 폴더에 복사하고, 블록 갈래에서는 그
+재는 것(티켓 05 뒤에도 같다. 그 티켓이 calc 에 `{skills}` 를 더하고 매니페스트에 `skills` 를 적어,
+`_prepare` 가 모든 갈래에서 그 줄을 지우고 글로 넣는 갈래는 `{skills}` 가 빠진 줄로 바꾼다).
+스킬 경로가 아직 없으므로 저장소 `plugins/` 를 임시 폴더에 복사하고, 블록 갈래에서는 그
 사본의 calc `PROMPT` 에 `지침 answer-format: <본문>` 블록을 글로 넣어 명세가 정한 자리(머리 문장 뒤,
 앞 대화 블록 앞)에 둔다. 대조 갈래는 사본을 고치지 않는다. 두 갈래를 실제
 CLI(`python -m agent_os.main run calc`) 와 실제 stdio 서버와 실제 모델로 돌려 `tests/test_main.py`
@@ -56,7 +58,8 @@ BODY = (
     "계산할 수 없으면 왜 할 수 없는지 한 문장으로 답한다."
 )
 NO_TOOL_BODY = "도구를 쓰지 말고 암산으로 바로 답한다."
-PROMPT_TAIL = '"{previous}요청: {request}"'
+PROMPT_TAIL = '"{skills}{previous}요청: {request}"'
+SKILLS_LINE = 'skills = ["answer-format"]\n'
 MODEL = "claude-opus-5"
 CALL_TIMEOUT = 300
 # 갈래 이름, 넣을 본문(없으면 고치지 않는다), 새 실행 회차, 이어 가기 회차.
@@ -71,6 +74,12 @@ def _prepare(root: Path, body: str | None) -> None:
     shutil.copytree(
         ROOT / "plugins", root / "plugins", ignore=shutil.ignore_patterns("__pycache__")
     )
+    # 티켓 05 뒤 저장소 calc 는 매니페스트의 `skills` 로 진짜 블록을 엮는다. 모든 갈래에서 그 줄을
+    # 지워 대조 갈래에 본문이 없고 블록 갈래에는 글로 넣은 블록 하나만 있게 한다(재던 것 그대로).
+    manifest = root / "plugins" / "agents" / "calc" / "plugin.toml"
+    text = manifest.read_text(encoding="utf-8")
+    assert text.count(SKILLS_LINE) == 1, "calc 의 매니페스트 모양이 바뀌었다"
+    manifest.write_text(text.replace(SKILLS_LINE, ""), encoding="utf-8")
     if body is None:
         return
     agent = root / "plugins" / "agents" / "calc" / "agent.py"
