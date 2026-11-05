@@ -1,6 +1,16 @@
 {
   "components": {
     "schemas": {
+      "AppliedRule": {
+        "enum": [
+          "deny",
+          "requires_approval",
+          "ask",
+          "allow",
+          "default"
+        ],
+        "type": "string"
+      },
       "ApprovalDenied": {
         "additionalProperties": false,
         "description": "사람이 거부했다. 사유는 거부에만 있다. 거부는 실행을 끝내지 않는다.",
@@ -1052,9 +1062,30 @@
             "title": "Args",
             "type": "object"
           },
+          "rule": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AppliedRule"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "run_id": {
             "title": "Run Id",
             "type": "string"
+          },
+          "server": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Server"
           },
           "tool": {
             "title": "Tool",
@@ -1077,7 +1108,9 @@
           "ts",
           "type",
           "tool",
-          "args"
+          "args",
+          "rule",
+          "server"
         ],
         "title": "RunPaused",
         "type": "object"
@@ -1418,6 +1451,16 @@
             "title": "Ok",
             "type": "boolean"
           },
+          "rule": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AppliedRule"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "run_id": {
             "title": "Run Id",
             "type": "string"
@@ -1445,7 +1488,8 @@
           "tool",
           "ok",
           "args",
-          "content"
+          "content",
+          "rule"
         ],
         "title": "ToolCalled",
         "type": "object"

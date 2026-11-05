@@ -91,6 +91,24 @@ class LlmCalled(BaseEvent):
     tool_calls: tuple[ToolCall, ...] = ()
 
 
+# 적용 규칙의 값 다섯(ADR 0044). 도구 호출 하나를 막을지, 멈출지, 그냥 부를지를 정한 규칙의 출처이고
+# 용어집 "적용 규칙"의 다섯과 하나씩 맞는다. deny·ask·allow 는 운영자만, requires_approval 은 저자만
+# 적을 수 있어 값이 이미 주체를 말하므로 이름에 주체를 붙이지 않는다. default 는 적힌 규칙이 없어
+# 그래서 묻는 경우다. 닫힌 목록이고 값을 늘리는 것은 계약의 가산 변경이다. 별칭 이름이 계약의
+# 컴포넌트 이름이 된다.
+type AppliedRule = Literal["deny", "requires_approval", "ask", "allow", "default"]
+
+
+# rule 은 그 호출을 정한 적용 규칙이고 없음(None)은 규칙이 기록되지 않은 호출이다. server 는 멈춘
+# 도구를 낸 서버 플러그인의 이름이다. 셋 다 기본값이 None 인 것은 형식 1·2·3 의 옛 줄에 이 키가 없기
+# 때문이고 형식은 3 그대로다. 직렬화 스키마에서는 BaseEvent 의 설정대로 required 이고 null 을
+# 허락한다. server 에 sdk 의 패턴을 걸지 않는 것은 이벤트의 다른 식별자 필드와 같은 규칙이다 — 걸면
+# 패턴 위반이 단건 읽기의 손상이 된다. 칸 이름이 `policy` 나 `reason` 이 아닌 이유는 관리 화면의
+# 필드 이름 표가 필드 이름을 키로 써서, 거부 사유(`ApprovalDenied.reason`)와 겹치면 붙일 이름이 없기
+# 때문이다. 도구 호출에 server 가 없는 것은 그 이벤트가 서버를 싣는 일을 mcp-trust 기능이 정하기
+# 때문이다. 이 칸을 채운 이벤트는 런타임만 낸다 — 에이전트가 채워 yield 하면 그 실행은 런타임의
+# run_failed 로 끝난다. 에이전트의 기록이 운영자의 규칙을 사칭하면 트레이스를 읽는 운영자가 가를 수
+# 없다.
 class ToolCalled(BaseEvent):
     """실행된 도구 호출 하나. ok 가 거짓이면 content 는 에러 내용이다(용어집 "도구 결과")."""
 
@@ -99,6 +117,7 @@ class ToolCalled(BaseEvent):
     ok: bool
     args: Mapping[str, Json] = {}
     content: str = ""
+    rule: AppliedRule | None = None
 
 
 class RunPaused(BaseEvent):
@@ -107,6 +126,8 @@ class RunPaused(BaseEvent):
     type: Literal["run_paused"] = "run_paused"
     tool: str
     args: Mapping[str, Json]
+    rule: AppliedRule | None = None
+    server: str | None = None
 
 
 class ApprovalGranted(BaseEvent):

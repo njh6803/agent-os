@@ -38,7 +38,7 @@ from tests.fake_models import DEFAULT_MODEL, FakeModels, model_manifest
 from tests.signing import AUDIENCE, SigningKey, bearer, claims, new_key, sign
 
 from agent_os.channel.http.end_user import END_USER_PREFIX
-from agent_os.channel.http.items import FAILED_MESSAGE
+from agent_os.channel.http.items import FAILED_MESSAGE, project
 from agent_os.channel.http.limits import (
     DEFAULT_REQUEST_CHARS,
     DEFAULT_SUBSCRIPTIONS_PER_PRINCIPAL,
@@ -684,6 +684,34 @@ async def test_항목은_프롬프트도_도구_결과도_주체도_싣지_않�
         assert TOOL_RESULT not in response.text
         assert PROMPT not in response.text
         assert "|alice" not in response.text
+
+
+def test_적용_규칙과_서버를_채운_이벤트도_항목은_두_칸을_싣지_않는다() -> None:
+    """운영자의 규칙과 서버 이름은 최종 사용자에게 서버 안쪽의 구성이다. 투영은 칸을 골라 항목을
+    만들어 새 칸이 저절로 실리지 않으므로, 이 시험은 그 선택이 바뀌는 회귀를 막는다(ADR 0044)."""
+    called = ToolCalled(
+        run_id=RunId("r1"), ts=T0, tool="add", ok=False, content="거부", rule="deny"
+    )
+    paused = RunPaused(
+        run_id=RunId("r1"),
+        ts=T0,
+        tool="add",
+        args={"a": 2},
+        rule="requires_approval",
+        server="calc-server",
+    )
+
+    progress, asking = project(called), project(paused)
+
+    assert progress is not None
+    assert asking is not None
+    assert progress.model_dump() == {"type": "progress", "tool": "add", "ok": False}
+    assert asking.model_dump() == {"type": "paused", "tool": "add", "args": {"a": 2}}
+    for item in (progress, asking):
+        dumped = item.model_dump_json()
+        assert "rule" not in dumped
+        assert "server" not in dumped
+        assert "calc-server" not in dumped
 
 
 async def test_실패한_실행은_고정_문구와_실행_식별자의_실패_항목이고_원문을_싣지_않는다() -> None:

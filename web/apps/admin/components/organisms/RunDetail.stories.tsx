@@ -50,6 +50,8 @@ const PAUSED: Event = {
   ts: "2026-10-12T14:03:25.117Z",
   tool: "payments.refund",
   args: ARGS,
+  rule: null,
+  server: null,
 };
 const GRANTED: Event = {
   type: "approval_granted",
@@ -66,6 +68,7 @@ const TOOL: Event = {
   ok: true,
   args: ARGS,
   content: '{"refund_id": "rf_8812", "status": "succeeded"}',
+  rule: null,
 };
 const FINISHED: Event = {
   type: "run_finished",

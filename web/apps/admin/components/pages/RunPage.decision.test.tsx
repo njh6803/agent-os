@@ -61,6 +61,8 @@ const paused = (args: Record<string, number>): RunEvent => ({
   ts: TS,
   tool: "add",
   args,
+  rule: null,
+  server: null,
 });
 const GRANTED: RunEvent = { type: "approval_granted", run_id: RUN, ts: TS, approver: "operator" };
 const RESUMED: RunEvent = { type: "run_resumed", run_id: RUN, ts: TS };
@@ -72,6 +74,7 @@ const tool = (args: Record<string, number>, content: string): RunEvent => ({
   ok: true,
   args,
   content,
+  rule: null,
 });
 const FINISHED: RunEvent = { type: "run_finished", run_id: RUN, ts: TS, output: "5/9" };
 

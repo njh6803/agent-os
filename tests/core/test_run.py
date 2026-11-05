@@ -1240,6 +1240,105 @@ async def test_에이전트가_지어낸_일시정지_이벤트는_실행을_멈
     assert _cause(events) == "agent_code"
 
 
+# 적용 규칙과 서버 칸은 런타임만 쓴다 — 에이전트가 낸 tool_called 와 run_paused 에 세 칸 가운데
+# 하나라도 채워져 있으면 그 이벤트를 쓰지 않고 실행이 run_failed(agent_code)로 끝난다. 재생
+# 구간에서도 같다(ADR 0044, 명세 "두 칸은 런타임만 쓴다").
+
+type ForgedField = Literal["tool_called.rule", "run_paused.rule", "run_paused.server"]
+
+
+def _forged(field: ForgedField, ctx: AgentContext) -> Event:
+    """세 칸 가운데 하나만 채운 이벤트. 나머지 칸은 비워 둔다."""
+    match field:
+        case "tool_called.rule":
+            return ToolCalled(run_id=ctx.run_id, ts=ctx.now(), tool="after", ok=True, rule="allow")
+        case "run_paused.rule":
+            return RunPaused(
+                run_id=ctx.run_id, ts=ctx.now(), tool="send", args={"to": "bob"}, rule="ask"
+            )
+        case "run_paused.server":
+            return RunPaused(
+                run_id=ctx.run_id, ts=ctx.now(), tool="send", args={"to": "bob"}, server="srv"
+            )
+
+
+class RuleForgingAgent:
+    """런타임만 쓰는 칸을 채운 이벤트를 지어내고 그 뒤 끝남을 내려 한다. 신뢰 경계 밖이다."""
+
+    def __init__(self, field: ForgedField) -> None:
+        self._field: ForgedField = field
+
+    async def run(self, request: str, ctx: AgentContext) -> AsyncIterator[Event]:
+        yield _forged(self._field, ctx)
+        yield RunFinished(run_id=ctx.run_id, ts=ctx.now(), output="닿지 않아야 한다")
+
+
+FORGED_FIELDS: list[ForgedField] = ["tool_called.rule", "run_paused.rule", "run_paused.server"]
+
+
+def _assert_forged_failure(failed: RunFailed, field: ForgedField) -> None:
+    """실패의 원인이 agent_code 이고 메시지가 막은 이벤트 종류와 칸 이름을 든다."""
+    assert failed.cause == "agent_code"
+    kind, _, name = field.partition(".")
+    assert kind in failed.error
+    assert name in failed.error
+
+
+@pytest.mark.parametrize("field", FORGED_FIELDS)
+async def test_에이전트가_런타임_전용_칸을_채운_이벤트를_내면_쓰지_않고_agent_code_로_끝난다(
+    field: ForgedField, trace: FakeTrace, clock: FakeClock
+) -> None:
+    model = GenericFakeChatModel(messages=iter([]))
+    agent = RuleForgingAgent(field)
+
+    events = await _run(agent, model, trace, clock)
+
+    assert [e.type for e in events] == ["run_started", "run_failed"]
+    failed = events[-1]
+    assert isinstance(failed, RunFailed)
+    _assert_forged_failure(failed, field)
+    assert trace.events == events
+
+
+@pytest.mark.parametrize("field", FORGED_FIELDS)
+async def test_재생_구간에서도_런타임_전용_칸을_채운_이벤트는_agent_code_로_끝난다(
+    field: ForgedField, trace: FakeTrace, clock: FakeClock
+) -> None:
+    """멈춘 사이 에이전트 코드가 바뀐 재개다. 재생 구간이라 기록과 맞춰 소비되는 자리에서도 그
+    이벤트는 통과하지 않는다. 판정이 재생 구간 밖에만 있으면 기록의 빈 칸과 조용히 어긋난다."""
+    agent = RuleForgingAgent(field)
+    _write_paused(trace)
+    model = GenericFakeChatModel(messages=iter([]))
+
+    events = await _resume(
+        _RUN_1, model, trace, clock, plugins=_gated_plugins(agent), tools=FakeTools({"send": "ok"})
+    )
+
+    failed = events[-1]
+    assert isinstance(failed, RunFailed)
+    _assert_forged_failure(failed, field)
+    assert "run_resumed" not in [e.type for e in events]
+    assert trace.events[-1] == failed
+
+
+async def test_규칙_칸이_빈_tool_called_는_막히지_않고_통과한다(
+    trace: FakeTrace, clock: FakeClock
+) -> None:
+    """양성 대조. 칸을 채우지 않은 에이전트의 tool_called 는 막히지 않는다."""
+    model = GenericFakeChatModel(messages=iter([AIMessage(content="답")]))
+
+    events = await _run(ChattyAgent(), model, trace, clock)
+
+    assert [e.type for e in events] == [
+        "run_started",
+        "tool_called",
+        "llm_called",
+        "tool_called",
+        "run_finished",
+    ]
+    assert all(e.rule is None for e in events if isinstance(e, ToolCalled))
+
+
 # --- 재개 ---------------------------------------------------------------------
 #
 # 일시정지한 실행을 승인해 이어 간다. 먼저 _run 으로 멈춘 실행을 만들고 같은 가짜들로 _resume 한다.

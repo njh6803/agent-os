@@ -227,6 +227,8 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
   schemas: {
+    /** @enum {string} */
+    AppliedRule: "deny" | "requires_approval" | "ask" | "allow" | "default";
     /**
      * ApprovalDenied
      * @description 사람이 거부했다. 사유는 거부에만 있다. 거부는 실행을 끝내지 않는다.
@@ -704,8 +706,11 @@ export interface components {
       args: {
         [key: string]: components["schemas"]["Json"];
       };
+      rule: components["schemas"]["AppliedRule"] | null;
       /** Run Id */
       run_id: string;
+      /** Server */
+      server: string | null;
       /** Tool */
       tool: string;
       /**
@@ -889,6 +894,7 @@ export interface components {
       content: string;
       /** Ok */
       ok: boolean;
+      rule: components["schemas"]["AppliedRule"] | null;
       /** Run Id */
       run_id: string;
       /** Tool */

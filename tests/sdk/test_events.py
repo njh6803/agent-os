@@ -7,6 +7,7 @@ from pydantic import TypeAdapter, ValidationError
 
 from agent_os.sdk import (
     AgentName,
+    AppliedRule,
     ApprovalDenied,
     ApprovalGranted,
     ConversationSummarized,
@@ -312,3 +313,85 @@ def test_직렬화_스키마에서_새_필드와_새_이벤트의_필드가_requ
     previous = defs["RunStarted"]["properties"]["previous_run"]
     assert previous["anyOf"] == [{"type": "string"}, {"type": "null"}]
     assert previous["default"] is None
+
+
+# 적용 규칙과 서버 칸(ADR 0044). tool_called.rule, run_paused.rule·server 는 선택이고 기본값이
+# 없음이다.
+
+APPLIED_RULES: tuple[AppliedRule, ...] = ("deny", "requires_approval", "ask", "allow", "default")
+
+
+@pytest.mark.parametrize("rule", APPLIED_RULES)
+def test_도구_호출과_일시정지의_적용_규칙은_JSON_왕복한다(rule: AppliedRule) -> None:
+    called = ToolCalled(run_id=RunId("r1"), ts=TS, tool="add", ok=True, rule=rule)
+    paused = RunPaused(
+        run_id=RunId("r1"), ts=TS, tool="add", args={"a": 1}, rule=rule, server="everything"
+    )
+
+    assert _round_trip(called) == called
+    assert _round_trip(paused) == paused
+    assert isinstance(_round_trip(paused), RunPaused)
+
+
+def test_세_칸은_옛_줄에_키가_없어도_읽히고_없음이다() -> None:
+    """선택이고 기본값이 없음이라 옛 줄이 손상이 아니다. 서버 칸은 도구 호출에 없다."""
+    adapter = TypeAdapter[Event](Event)
+    called = adapter.validate_python(
+        {"type": "tool_called", "run_id": "r1", "ts": TS, "tool": "add", "ok": True}
+    )
+    paused = adapter.validate_python(
+        {"type": "run_paused", "run_id": "r1", "ts": TS, "tool": "add", "args": {}}
+    )
+
+    assert isinstance(called, ToolCalled)
+    assert called.rule is None
+    assert isinstance(paused, RunPaused)
+    assert paused.rule is None
+    assert paused.server is None
+    assert "server" not in ToolCalled.model_fields
+
+
+@pytest.mark.parametrize("kind", ["tool_called", "run_paused"])
+def test_적용_규칙_밖의_값은_거부한다(kind: str) -> None:
+    raw: dict[str, Json] = {
+        "type": kind,
+        "run_id": "r1",
+        "ts": TS.isoformat(),
+        "tool": "add",
+        "ok": True,
+        "args": {},
+        "rule": "operator_deny",
+    }
+    if kind == "run_paused":
+        del raw["ok"]
+
+    with pytest.raises(ValidationError) as caught:
+        TypeAdapter[Event](Event).validate_python(raw)
+
+    assert [error["type"] for error in caught.value.errors()] == ["literal_error"]
+
+
+def test_서버_칸에는_sdk_의_패턴을_걸지_않는다() -> None:
+    """이벤트의 다른 식별자 필드와 같다. 패턴 위반이 단건 읽기의 손상이 되지 않게 한다."""
+    paused = RunPaused(run_id=RunId("r1"), ts=TS, tool="add", args={}, server="Not A Plugin!")
+
+    assert _round_trip(paused) == paused
+
+
+def test_직렬화_스키마에서_세_칸은_required_이고_적용_규칙은_닫힌_목록이다() -> None:
+    """서버는 칸을 언제나 전부 싣는다. 기본값 있는 칸이 required 에서 빠지면 생성 클라이언트가 선택
+    칸으로 받는다(`shortcuts`·`cause` 의 선례)."""
+    schema = TypeAdapter[Event](Event).json_schema(mode="serialization")
+    defs = schema["$defs"]
+
+    assert set(defs["AppliedRule"]["enum"]) == set(APPLIED_RULES)
+    for name, fields in (("ToolCalled", ["rule"]), ("RunPaused", ["rule", "server"])):
+        assert set(defs[name]["required"]) == set(defs[name]["properties"]), name
+        for field in fields:
+            prop = defs[name]["properties"][field]
+            assert {"type": "null"} in prop["anyOf"], (name, field)
+            assert prop["default"] is None, (name, field)
+    applied_rule = {"$ref": "#/$defs/AppliedRule"}
+    assert applied_rule in defs["ToolCalled"]["properties"]["rule"]["anyOf"]
+    assert applied_rule in defs["RunPaused"]["properties"]["rule"]["anyOf"]
+    assert {"type": "string"} in defs["RunPaused"]["properties"]["server"]["anyOf"]
