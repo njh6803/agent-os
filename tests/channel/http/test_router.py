@@ -47,7 +47,9 @@ from agent_os.core.ports import (
     PluginError,
     PluginKey,
     PluginSource,
+    Rule,
     Rules,
+    RuleSet,
     RunRow,
     RunStatus,
     RunSummary,
@@ -231,6 +233,7 @@ class FakePlugins:
         )
         self._manifests = {(m.kind, m.name): m for m in (*manifests, CALC_SERVER, SECRET_SERVER)}
         self.disabled: frozenset[PluginKey] = frozenset()
+        self.corrupt_rules: str | None = None
         self.calls = 0
 
     def read_manifest(self, kind: PluginKind, name: PluginName) -> PluginManifest | None:
@@ -260,8 +263,13 @@ class FakePlugins:
         return self.disabled
 
     def read_rules(self) -> Rules:
+        """공통 표의 allow 가 자기 서버 전부와 기본 서버를 연다. 에이전트 표는 두지 않는다."""
         self.calls += 1
-        return Rules()
+        if self.corrupt_rules is not None:
+            raise PluginError(self.corrupt_rules)
+        opened = (PluginName("calc-server"), PluginName("secret-server"), DEFAULT_SERVER)
+        allow = frozenset(Rule(server=name, tool=None) for name in opened)
+        return Rules(common=RuleSet(allow=allow))
 
     def write_enabled(self, kind: PluginKind, name: PluginName, *, enabled: bool) -> WriteOutcome:
         self.calls += 1
@@ -846,6 +854,21 @@ async def test_실행_전_구성_오류는_500_봉투이고_message_가_그_Plug
     assert body["code"] == "internal_error"
     assert body["message"] == str(expected)
     assert body["message"] != INTERNAL_MESSAGE
+    assert trace.lines == []
+
+
+async def test_깨진_규칙_파일은_500_봉투이고_message_가_그_PluginError_의_원문이다() -> None:
+    """운영자 채널은 구성 오류의 원문을 본다. 실행 식별자가 생기기 전이라 트레이스가 없다."""
+    plugins = FakePlugins()
+    plugins.corrupt_rules = "운영자 파일이 깨졌다: rules.toml\n표 [common] 의 칸 deny"
+    trace = FakeTrace()
+
+    async with _serving(_app(plugins=plugins, trace=trace)) as client:
+        response = await client.post("/runs", json=_start("echo"), headers=CHANNEL)
+
+    assert response.status_code == 500
+    assert response.json()["code"] == "internal_error"
+    assert response.json()["message"] == plugins.corrupt_rules
     assert trace.lines == []
 
 

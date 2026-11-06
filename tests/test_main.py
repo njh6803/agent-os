@@ -221,6 +221,14 @@ def _write_plugin(root: Path, name: str, source: str, manifest: str | None = Non
     (directory / "agent.py").write_text(source, encoding="utf-8")
 
 
+def _write_rules(root: Path, allow: str) -> None:
+    """`gatedcalc` 하나의 규칙 파일. 기본이 묻는다라서 서버를 허락해 두지 않으면 승인 요구가 든 도구
+    말고 다른 도구를 부르는 호출도 멈춘다."""
+    (root / "plugins" / "rules.toml").write_text(
+        f'schema_version = "1"\n[agents.gatedcalc]\nallow = ["{allow}"]\n', encoding="utf-8"
+    )
+
+
 def _write_mcp_plugin(root: Path, name: str) -> None:
     directory = root / "plugins" / "mcp" / name
     directory.mkdir(parents=True)
@@ -1037,6 +1045,7 @@ def test_멈춘_실행은_그_프로세스가_끝난_뒤_다른_프로세스가_
     assert "ANTHROPIC_API_KEY" in os.environ, "ANTHROPIC_API_KEY 가 없다. .env 를 확인한다"
     _write_mcp_plugin(tmp_path, "fixture")
     _write_plugin(tmp_path, "gatedcalc", GATEDCALC_SRC, GATEDCALC_MANIFEST)
+    _write_rules(tmp_path, "fixture:*")
 
     paused = _cli(
         ["run", "gatedcalc", "2 더하기 3은?", "--traces", "t", "--model", MODEL_PLUGIN],
@@ -2452,6 +2461,7 @@ def test_실제_serve_에서_HTTP_로_일으킨_실행이_승인_대상에서_�
     assert "ANTHROPIC_API_KEY" in os.environ, "ANTHROPIC_API_KEY 가 없다. .env 를 확인한다"
     _write_mcp_plugin(tmp_path, "fixture")
     _write_plugin(tmp_path, "gatedcalc", GATEDCALC_SRC, GATEDCALC_MANIFEST)
+    _write_rules(tmp_path, "fixture:*")
     # 소켓이 듣는 동안 같은 기계의 다른 프로세스가 짐작할 수 없는 값. 둘이 달라야 선다(ADR 0015).
     admin_token, channel_token = secrets.token_urlsafe(), secrets.token_urlsafe()
 
@@ -2800,8 +2810,9 @@ def _trace_events(trace_file: Path) -> list[Event]:
 
 
 def _copy_repo_plugins(root: Path) -> None:
-    """저장소의 calc 와 그것이 쓰는 mcp(`everything`)와 스킬(`answer-format`), 기본 모델을 임시
-    루트에 복사한다. calc 의 매니페스트가 고른 스킬이 없으면 실행이 준비에서 멈춘다."""
+    """저장소의 calc 와 그것이 쓰는 mcp(`everything`)와 스킬(`answer-format`), 기본 모델, 운영자의
+    규칙 파일을 임시 루트에 복사한다. calc 의 매니페스트가 고른 스킬이 없으면 실행이 준비에서
+    멈추고, 규칙 파일이 없으면 calc 의 도구 호출이 묻는다로 멈춘다."""
     for kind, name in (
         ("agents", "calc"),
         ("mcp", "everything"),
@@ -2813,6 +2824,7 @@ def _copy_repo_plugins(root: Path) -> None:
             root / "plugins" / kind / name,
             ignore=shutil.ignore_patterns("__pycache__"),
         )
+    shutil.copy2(REPO_ROOT / "plugins" / "rules.toml", root / "plugins" / "rules.toml")
 
 
 def _set_conversation_limit(root: Path, limit: int) -> None:

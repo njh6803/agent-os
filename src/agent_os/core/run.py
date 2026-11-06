@@ -11,7 +11,10 @@ conversation_summarized 는 런타임이 이어 가기에서 원문 교환이 �
 하며 원인이 든 실패는 런타임만 낸다(ADR 0031). tool_called 와 run_paused 도 적용 규칙·서버 칸
 (rule, server)을 채우면 같은 길로 끝난다(ADR 0044). 이유는 `_reject_runtime_only`. 거부는 실행을
 끝내지 않는다. 거부된 도구 호출은 불리지 않고 tool_called(ok=false) 로 사유가 모델에게 돌아가며,
-에이전트가 정상적으로 끝맺는다(ADR 0009).
+에이전트가 정상적으로 끝맺는다(ADR 0009). 게이트는 도구를 부르는 한 자리(`_Context._call`)이고,
+운영자의 규칙 파일(rules.toml)이 그 자리에서 도구 호출마다 집행된다. deny 는 거부로 기록하고, 저자의
+requires_approval 과 ask 와 어디에도 맞지 않는 default 는 일시정지, allow 만 곧바로 부른다(ADR
+0044). 서버 이름 대조와 그 검사들은 아직 없다(approval-rules 05).
 
 이어 가기는 run() 의 키워드 인자 previous_run 이다(ADR 0022). 재개와 달리 입력이 run() 의 것에 앞
 실행 하나가 더해진 것이라 함수를 따로 두지 않는다. 없음(None)은 새 대화라는 뜻 하나뿐이고 고리를
@@ -138,6 +141,7 @@ from agent_os.core.ports import (
     PluginError,
     PluginKey,
     PluginSource,
+    Rules,
     ToolConnection,
     ToolResult,
     ToolSource,
@@ -146,8 +150,10 @@ from agent_os.core.ports import (
     TraceStore,
 )
 from agent_os.core.replay import Mismatch, Record, Replay
+from agent_os.core.rules import applied_rule
 from agent_os.sdk import (
     AgentName,
+    AppliedRule,
     ApprovalDenied,
     ApprovalGranted,
     BaseAgent,
@@ -320,10 +326,17 @@ class _Verdict:
 
 @dataclass(frozen=True)
 class _Policy:
-    """매니페스트가 정한 도구별 가드레일. 마스킹과 승인이 늘 함께 다녀서 한 덩어리다."""
+    """한 실행의 도구별 가드레일. 마스킹과 승인이 늘 함께 다녀서 한 덩어리다.
+
+    `secrets` 와 `approvals` 는 매니페스트가 정한 것이고, `rules` 는 준비할 때 읽은 운영자의 규칙
+    파일이다. `agent` 는 그 규칙의 에이전트 표를 고르는 이름이다. 셋을 한 덩어리로 들어 컨텍스트가
+    적용 규칙을 내는 한 자리(`_Context._rule_of`)에서 모델 목록 거르기와 게이트가 같은 값을 쓴다.
+    """
 
     secrets: Mapping[str, tuple[str, ...]]
     approvals: frozenset[str]
+    rules: Rules
+    agent: PluginName
 
 
 @dataclass(frozen=True)
@@ -489,12 +502,16 @@ class _Context:
 
         인스턴스에 두면 에이전트가 llm() 을 겹쳐 부를 때 서로 덮어써 대조가 엉뚱해진다.
 
+        모델에 붙이는 도구 목록은 연결의 목록에서 운영자의 deny 에 맞는 도구를 뺀 것이다. 저자의
+        승인 요구와 ask 에 맞는 도구는 그대로 붙는다. 거르는 판정은 게이트와 같은 적용 규칙 함수
+        (`_rule_of`)가 내서 두 자리가 다른 판단을 하지 않는다. 목록이 비면 도구 없는 모델을 부른다.
+
         모델에 도구를 붙이는 것은 루프 밖이지만 모델에 닿는 몫이라 모델 호출의 실패다. 루프
         상한의 예외는 `run_loop` 가 내고, 그 안에서 도는 것은 런타임의 클로저뿐이라 여기서 받은 그
         예외는 언제나 런타임의 것이다.
         """
         self._stay_paused()
-        specs = self._tools.tools()
+        specs = [spec for spec in self._tools.tools() if self._rule_of(spec) != "deny"]
         with self._thrown.blamed("model_call"):
             invoke = model_caller(self._model, specs)
         first = True
@@ -565,6 +582,17 @@ class _Context:
 
         대조가 소비보다 앞이다. Mismatch 는 Exception 이라 에이전트가 삼키고 다시 부를 수 있는데,
         먼저 소비하면 그때 결정이 사라져 거부한 호출이 정책이 풀린 도구로 실행될 수 있다.
+
+        재생이 끝난 뒤의 차례는 다음과 같다(ADR 0044 "집행의 차례").
+        1. 연결 목록에 없는 이름이면 게이트에 들지 않고 거부한다(`rule` 없음). 결정이 있었으면 이미
+           소비되어 버려졌다.
+        2. 운영자의 deny 에 맞으면 부르지 않고 거부한다. 결정이 있어도 같다 — 승인자가 승인해도
+           멈춘 사이 deny 가 된 도구는 불리지 않는다.
+        3. 저자의 승인 요구, 운영자의 ask, 적힌 규칙 없음이면 결정이 없을 때 멈춘다. 결정이 있으면
+           승인은 부르고 거부는 부르지 않는다.
+        4. 운영자의 allow 이면 결정이 없을 때 묻지 않고 부른다. 결정이 있으면(멈춘 사이 ask 가
+           allow 로 바뀐 재개) 3 과 같이 결정을 적용한다.
+        결정이 적용된 호출의 `rule` 은 그 호출을 멈춘 `run_paused.rule` 이다.
         """
         self._stay_paused()
         masked = _mask(name, args, self._policy.secrets)
@@ -577,16 +605,28 @@ class _Context:
                 _require_paused_call(self._verdict.paused, name, masked)
         verdict = self._take_verdict()
         self._resume()
+        spec = self._connected_spec(name)
+        if spec is None:
+            return await self._refuse(name, masked, f"도구가 없다: {name}", rule=None)
+        rule = self._rule_of(spec)
+        if rule == "deny":
+            return await self._refuse(
+                name, masked, f"운영자가 거부했다: {spec.server}:{name}", rule="deny"
+            )
+        recorded = rule
         if verdict is None:
-            if name in self._policy.approvals:
-                self._pause(name, masked)
+            if rule != "allow":
+                self._pause(name, masked, rule, spec.server)
         else:
             # 결정의 종류마다 갈래가 있어야 한다. 폴스루로 승인하면 새 결정이 조용히 승인으로 돈다.
+            # 이 기능 전에 멈춘 기록에는 까닭 칸이 없다. 그때 멈추는 까닭은 저자의 승인 요구
+            # 하나뿐이었다.
+            recorded = verdict.paused.rule or "requires_approval"
             match verdict.decision:
                 case Deny(reason=reason):
-                    denied = self._deny(name, masked, reason)
-                    await self.release()
-                    return denied
+                    return await self._refuse(
+                        name, masked, f"승인자가 거부했다: {reason}", rule=recorded
+                    )
                 case Approve():
                     pass
                 case _:
@@ -595,7 +635,7 @@ class _Context:
         with self._thrown.blamed("resume_mismatch"):
             _reject_masked_args(name, args, self._policy.secrets)
         result = await _call_safely(self._tools, name, args)
-        self._record_tool_call(name, masked, result)
+        self._record_tool_call(name, masked, result, recorded)
         await self.release()
         return result
 
@@ -604,15 +644,38 @@ class _Context:
         verdict, self._verdict = self._verdict, None
         return verdict
 
-    def _deny(self, name: str, masked: Mapping[str, Json], reason: str) -> ToolResult:
+    def _connected_spec(self, name: str) -> ToolSpec | None:
+        """연결 목록의 그 이름의 명세(질의). 없으면 연결에 없는 이름이다."""
+        return next((spec for spec in self._tools.tools() if spec.name == name), None)
+
+    def _rule_of(self, spec: ToolSpec) -> AppliedRule:
+        """그 도구에 적용되는 규칙 하나(질의). 모델 목록 거르기와 게이트가 이 한 자리를 쓴다.
+
+        차례와 표의 합집합은 `applied_rule` 이 소유한다. 여기서 정하는 것은 입력뿐이다 — 도구를 낸
+        서버는 연결이 낸 명세에서, 저자의 승인 요구는 이 실행의 매니페스트에서 온다.
+        """
+        policy = self._policy
+        return applied_rule(
+            policy.rules,
+            agent=policy.agent,
+            server=spec.server,
+            tool=spec.name,
+            requires_approval=spec.name in policy.approvals,
+        )
+
+    async def _refuse(
+        self, name: str, masked: Mapping[str, Json], content: str, *, rule: AppliedRule | None
+    ) -> ToolResult:
         """거부는 실행을 끝내지 않는다. 도구를 부르지 않은 채 실패한 결과로 기록해 돌려준다.
 
         이미 있는 도구 실패 경로 그대로다. 루프는 사유를 모델에 되돌려 계속하고, 직접 부른
         에이전트는 ToolError 로 받아 이름으로 잡는다(ADR 0009). 기록이 남으므로 다음 재생에서도
         이 호출은 실패로 되살아나고 실제로 불리지 않는다. 뒤의 승인이 앞의 거부를 뒤집지 않는다.
+        거부의 주인은 셋이다 — 승인자, 운영자의 deny, 연결에 없는 이름. 문구와 `rule` 이 가른다.
         """
-        result = ToolResult(ok=False, content=f"승인자가 거부했다: {reason}")
-        self._record_tool_call(name, masked, result)
+        result = ToolResult(ok=False, content=content)
+        self._record_tool_call(name, masked, result, rule)
+        await self.release()
         return result
 
     def _resume(self) -> None:
@@ -622,10 +685,23 @@ class _Context:
         self._resumed = True
         self._pending.append(RunResumed(run_id=self.run_id, ts=self._clock.now()))
 
-    def _pause(self, name: str, masked: Mapping[str, Json]) -> NoReturn:
-        """도구를 부르지 않은 채 일시정지를 기록하고 실행을 끝낸다."""
+    def _pause(
+        self, name: str, masked: Mapping[str, Json], rule: AppliedRule, server: PluginName
+    ) -> NoReturn:
+        """도구를 부르지 않은 채 일시정지를 기록하고 실행을 끝낸다.
+
+        까닭(`rule`)과 멈춘 도구의 서버를 일시정지에 싣는다. 재개가 결정을 적용한 호출의 `rule` 을
+        이 까닭으로 기록하고, 승인자는 그 칸으로 왜 물었는지 본다(ADR 0044 "기록").
+        """
         self._pending.append(
-            RunPaused(run_id=self.run_id, ts=self._clock.now(), tool=name, args=masked)
+            RunPaused(
+                run_id=self.run_id,
+                ts=self._clock.now(),
+                tool=name,
+                args=masked,
+                rule=rule,
+                server=server,
+            )
         )
         self._paused = True
         raise _Paused()
@@ -656,7 +732,14 @@ class _Context:
             )
         )
 
-    def _record_tool_call(self, name: str, masked: Mapping[str, Json], result: ToolResult) -> None:
+    def _record_tool_call(
+        self,
+        name: str,
+        masked: Mapping[str, Json],
+        result: ToolResult,
+        rule: AppliedRule | None,
+    ) -> None:
+        """`rule` 은 그 호출을 정한 규칙이다. 연결에 없는 이름은 정한 규칙이 없어 없음이다."""
         self._pending.append(
             ToolCalled(
                 run_id=self.run_id,
@@ -665,6 +748,7 @@ class _Context:
                 ok=result.ok,
                 args=masked,
                 content=result.content,
+                rule=rule,
             )
         )
 
@@ -1258,8 +1342,9 @@ def _prepare(
     다르기 때문이다(`_requested_manifest`, `_recorded_manifest`).
 
     순서가 의도다. 깨짐(mcp 들, 마스킹과 승인의 충돌, 모델의 없음과 읽히지 않음, 스킬의 없음과
-    읽히지 않음, 운영자 파일의 손상)을 다 본 뒤에 꺼짐(에이전트, mcp, 모델, 스킬)을 보고, 진입점
-    import 는 꺼짐보다 뒤, 모델 만들기는 import 뒤다. 깨진 것이 먼저 보여야 운영자가 다시 켜기 전에
+    읽히지 않음, 운영자 파일의 손상. 규칙 파일을 꺼진 집합보다 먼저 읽는다)을 다 본 뒤에
+    꺼짐(에이전트, mcp, 모델, 스킬)을 보고, 진입점 import 는 꺼짐보다 뒤,
+    모델 만들기는 import 뒤다. 깨진 것이 먼저 보여야 운영자가 다시 켜기 전에
     고칠 것을 알고, import 실패를 판정하려면 플러그인 코드를 실행해야 하는데 꺼진 에이전트는 그
     코드를 돌리지 않는다(ADR 0017, plugin-toggle 명세의 "core — 준비 단계의 판정"). 깨짐과 꺼짐이
     같은 순서(에이전트 → mcp → 모델 → 스킬) 하나다(ADR 0040, ADR 0041). 모델 만들기가 마지막인
@@ -1278,6 +1363,7 @@ def _prepare(
     model_name = default_model if manifest.model is None else manifest.model
     model_manifest = _resolve_model(plugins, manifest, model_name)
     skills = _resolve_skills(plugins, manifest)
+    rules = plugins.read_rules()
     _reject_disabled(plugins.read_disabled(), manifest, model_name)
     instance = plugins.load_agent(manifest)
     return _Prepared(
@@ -1285,6 +1371,8 @@ def _prepare(
         policy=_Policy(
             secrets=secret_args_by_tool(servers),
             approvals=frozenset(manifest.requires_approval),
+            rules=rules,
+            agent=manifest.name,
         ),
         instance=instance,
         model=models.build(model_manifest),

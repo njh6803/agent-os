@@ -32,6 +32,9 @@ from agent_os.core.ports import (
     McpServer,
     ModelSource,
     PluginSource,
+    Rule,
+    Rules,
+    RuleSet,
     ToolConnection,
     ToolResult,
     ToolSource,
@@ -189,6 +192,18 @@ def test_저장소의_answer_format_매니페스트는_공통_넷뿐이다() -> 
         "name": "answer-format",
         "version": "0.1.0",
     }
+
+
+def test_저장소의_rules_toml_은_실제_어댑터로_읽혀_calc_의_표_하나가_된다() -> None:
+    """저장소가 기본이 묻는다인 런타임에서 calc 가 자기 mcp 의 도구를 묻지 않고 부르는 규칙이다.
+    공통 표는 두지 않는다 — 예시가 배치 전체를 여는 모양을 보이지 않기 위해서다."""
+    rules = FilesystemPlugins(REPO_ROOT / "plugins").read_rules()
+
+    assert rules == Rules(
+        agents={
+            PluginName("calc"): RuleSet(allow=frozenset({Rule(PluginName("everything"), None)}))
+        }
+    )
 
 
 async def test_이어_가지_않은_실행의_프롬프트는_저장소_스킬_블록이_든_글과_글자_그대로_같다(

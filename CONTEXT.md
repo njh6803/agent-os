@@ -174,7 +174,7 @@ _Avoid_: HTTP 서버(일반), SSE 서버(받지 않는다), 클라우드 MCP
 
 **문서 검색 서버(Document Search Server)**:
 문서를 모아 색인하고 검색 도구를 원격 MCP 서버로 내는, 다른 저장소의 서버. Agent OS의 일부가 아니다.
-_Avoid_: RAG 서버(글에서는 쓰지 않고 `plan.md` 행의 접두사 `rag-server:`로만 쓴다), 벡터 DB, 검색 엔진
+_Avoid_: RAG 서버, rag-engine(그 서버를 담은 저장소의 이름이다. 서버를 이를 때는 쓰지 않고 그 저장소와 `plan.md` 행의 접두사 `rag-engine:`에만 쓴다), 벡터 DB, 검색 엔진
 
 **스킬(Skill)**:
 에이전트가 매니페스트로 골라 컨텍스트로 받는 절차 지식의 폴더. 이름, 설명, 본문을 가지며 도구가 아니다.

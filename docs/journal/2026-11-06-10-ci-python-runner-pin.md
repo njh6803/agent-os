@@ -2,13 +2,13 @@
 
 ## 사용자 프롬프트
 
-PR #479(docs/rag-engine-name)의 CI가 문서와 무관한 `python` 잡 실패로 막혔을 때, 그 세션이 원인을 알리고 해법을 물었다(경위는 일지 2026-11-06-08 "이어받은 세션(PR 반영·병합부터)").
+PR #479(docs/rag-engine-name)의 CI가 문서와 무관한 `python` 잡 실패로 막혔을 때, 그 세션이 원인을 알리고 해법을 물었다(경위는 일지 2026-11-06-11 "이어받은 세션(PR 반영·병합부터)". 이 일지가 쓰일 때는 2026-11-06-08이었고 이름순으로 뒤처지지 않게 11로 옮겼다).
 
 > 사용자: (PR #479가 문서와 무관한 CI 실패로 병합되지 않습니다. CI 서버의 운영체제 이미지가 최근에 새 판(ubuntu-26.04)으로 바뀌어 검색 도구 ripgrep이 14.1.0에서 15.1.0으로 올라갔고, 14 판의 동작을 가정한 훅 테스트 한 건이 깨졌습니다. 어떻게 풀까요?) "러너를 24.04로 고정" — 설명: 이 워크트리에서 새 브랜치를 따서 ci.yml의 python 잡(ripgrep을 까는 유일한 잡)만 ubuntu-24.04로 고정합니다. main의 마지막 초록 실행(06:05 UTC)이 그 이미지였고, 이 PR의 실패 실행(07:46 UTC)이 26.04였습니다. 그 PR을 먼저 병합하고 #479에 main을 합쳐 다시 돌립니다. CI 한 바퀴가 이번 실행 기준 9분 32초라 그만큼 걸립니다. ripgrep 15에서 훅이 어떻게 다른지는 재 보지 않은 채 일지 '다음'에 별도 일로 적습니다.
 
 ## 한 일
 
-티켓 `.scratch/harness/issues/045-ci-python-runner-pin.md`를 쓰고 `.github/workflows/ci.yml`의 `python` 잡 `runs-on`을 `ubuntu-latest`에서 `ubuntu-24.04`로 바꿨다. 까닭을 그 줄 위에 두 줄로 적었다. 다른 잡은 바꾸지 않았다. 원인과 근거(두 실행의 이미지와 ripgrep 판)는 티켓의 What to build와 일지 2026-11-06-08에 있다.
+티켓 `.scratch/harness/issues/045-ci-python-runner-pin.md`를 쓰고 `.github/workflows/ci.yml`의 `python` 잡 `runs-on`을 `ubuntu-latest`에서 `ubuntu-24.04`로 바꿨다. 까닭을 그 줄 위에 두 줄로 적었다. 다른 잡은 바꾸지 않았다. 원인과 근거(두 실행의 이미지와 ripgrep 판)는 티켓의 What to build와 일지 2026-11-06-11(옛 번호 08)에 있다.
 
 근거의 종류. 두 실행의 `Image:`와 `Setting up ripgrep` 줄은 `gh run view <실행> --log --job <잡>`의 출력을 손으로 본 것이다. 26.04의 ripgrep 15.1.0에서 `{{.env}}`는 실패 로그의 단언 설명(`where True = _rg_reads_secret((['/usr/bin/rg'], None), …, ['--hidden', '--glob', '{{.env}}'])`)을 읽은 대로 겹친 묶음을 풀어 `.env`를 읽었다. 시험이 기대한 "훅이 더 넓게 막는다"가 아니라 둘이 같아져 실패한 것이다. 그 밖의 항목이 15에서 달라졌는지는 재지 않았다(통과한 6441개가 달라지지 않았다는 간접 근거뿐이다).
 

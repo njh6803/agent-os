@@ -16,7 +16,7 @@ date: 2026-11-06
   | agent-os | 런타임, 채널, 관리 화면, 위젯과 질문 페이지, 참조 에이전트 doc-qa, 답변 평가, 이미지와 참조 배포 | 런타임은 MCP 표준만 안다. doc-qa 플러그인과 참조 배포만 문서 검색 서버의 검색 도구 형식과 이미지 판을 안다 |
   | 문서 검색 서버 | 문서 수집, 색인, 검색, 관리 API(REST)와 관리자 페이지, 자기 배포와 운영 | MCP 표준과, MCP `_meta`에 실린 주체의 범용 형식만 안다. agent-os를 모른다 |
 
-  그 저장소는 아직 없다. 이름이 정해지기 전에는 `.scratch/plan.md`가 그 저장소의 행을 `rag-server:<slug>`로 가리킨다.
+  그 저장소는 아직 없다. 이름이 정해지기 전에는 `.scratch/plan.md`가 그 저장소의 행을 `rag-server:<slug>`로 가리킨다. (바뀜: 이력 2026-11-06 "문서 검색 서버의 저장소 이름을 rag-engine으로 정한다")
 - **의존은 agent-os의 플러그인과 참조 배포에서 문서 검색 서버로만 간다.** 클라이언트가 서버의 도구 형식을 알고, 서버는 어떤 클라이언트가 쓰는지 모른다. 런타임(`src/`)은 calc를 모르듯 doc-qa도 모른다. agent-os의 `plan.md`는 문서 검색 서버의 행을 가리킬 수 있고, 문서 검색 서버의 계획은 agent-os의 행을 가리키지 않는다.
 - **검색 도구의 형식이 두 저장소 사이의 계약이다.** 입력은 질문, 개수, 필터이고, 출력은 조각, 문서 경로, 쪽, 위치, 갱신일, 점수다. 이 형식에 판을 붙이고, 문서 검색 서버 저장소에 MCP 클라이언트로 그 형식을 확인하는 계약 시험을 둔다. agent-os는 ADR 0043의 CI 분담대로, 빠른 검사에서는 그 판을 흉내 내는 가짜 검색 서버(테스트 픽스처)로 시험하고 실제 이미지의 compose e2e에서는 판을 고정한 실제 이미지로 시험한다.
 - **문서 검색 서버는 MCP로 읽기 도구만 연다.** 수집, 삭제, 재색인 같은 쓰기는 관리 API로만 연다. 문서 속 지시에 속은 에이전트가 문서를 지우는 일을 구조로 막기 위해서다.
@@ -40,3 +40,9 @@ date: 2026-11-06
 - **데이터베이스의 값.** 데이터베이스를 서비스마다 띄우므로 컨테이너 하나와 메모리 수백 MB(어림)가 더 든다.
 - **e2e의 기댐.** agent-os의 실제 이미지 compose e2e가 판을 고정한 문서 검색 서버 이미지에 기댄다.
 - **런타임의 경계.** 플러그인 경계 시험(`tests/test_plugins_boundary.py`)과 import-linter는 코드의 import만 본다. 런타임이 doc-qa와 문서 검색 서버의 이름을 모르는지는 리뷰가 본다.
+
+## 이력
+
+### 2026-11-06 문서 검색 서버의 저장소 이름을 rag-engine으로 정한다
+
+같은 날 받은 계획 제안서의 둘째 판(일지 2026-11-06-11)이 문서 검색 서버 저장소의 이름을 `rag-engine`으로 정했다. 그래서 `.scratch/plan.md`는 그 저장소의 행을 `rag-engine:<slug>`로 가리킨다. 그 판은 그 저장소의 행도 다시 나눴다. ADR 0046 본문이 든 첫 판의 행 다섯(bootstrap, rag-mcp, rag-admin, search-eval, rag-ops)은 기준선의 행 일곱(core, source-sync, admin, search-eval, release-image, backup-upgrade, diag-bundle)이 됐다. rag-mcp는 core로, rag-admin은 source-sync와 admin으로, rag-ops는 release-image와 backup-upgrade와 diag-bundle로 나뉘었고, bootstrap은 빠졌다. 새 저장소는 agent-os의 킥오프 런북(`KICKOFF.md`)으로 시작하므로 뼈대를 만드는 행을 따로 두지 않는다. 1.0 열에는 db-source와 change-log가 더해졌다. 그에 따라 agent-os의 두 행이 기다리는 행이 바뀌었다. answer-eval은 `rag-engine:core`를, deploy-package는 `rag-engine:release-image`, `rag-engine:backup-upgrade`, `rag-engine:diag-bundle`을 기다린다. stale-warning이 기다리는 `rag-engine:doc-freshness`는 접두사만 바뀌었다. 이 행들은 그 저장소의 계획에만 있고, 이 저장소에는 만들지 않는다. 그 저장소는 아직 없다(2026-11-06에 이 PC의 `C:\project`를 `ls`로, GitHub의 njh6803 계정을 `gh repo view njh6803/rag-engine`과 `gh repo list njh6803`으로 봤다. 둘 다 없었다). 저장소 둘, 한 방향의 의존, 검색 도구 형식의 계약이라는 결정은 바뀌지 않았다.
