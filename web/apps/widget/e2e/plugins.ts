@@ -108,6 +108,15 @@ export function writeFixturePlugins(
       'yield RunFinished(run_id=ctx.run_id, ts=ctx.now(), output=f"total:{total}")',
     ],
   );
+  // 운영자의 규칙 파일. 기본이 묻는다라서 픽스처 서버의 도구를 허락하지 않으면 `tools` 에이전트의 첫 호출이
+  // 멈춘다. 모드와 무관하게 늘 쓴다 — 실제 모델 모드는 저장소의 플러그인 루트를 복사한 뒤 이 꾸러미를 그 위에
+  // 써서(`copyRepoPlugins` 뒤 `writeFixturePlugins`) 이 파일이 저장소의 것을 덮는다. 그래서 저장소의 파일이 든
+  // calc 의 줄(`everything:*`)도 여기 다시 적는다. 에이전트 이름이 실재하는지는 보지 않으므로 calc 가 없는
+  // 모드에서도 깨지지 않는다. 승인 요구가 든 `approval` 은 이 허락 뒤에도 저자의 승인 요구로 멈춘다.
+  write(
+    "rules.toml",
+    'schema_version = "1"\n\n[agents.tools]\nallow = ["fixture:*"]\n\n[agents.calc]\nallow = ["everything:*"]\n',
+  );
   // 실제 모델 모드에서는 복사해 온 저장소의 파일이 이 자리에 이미 있다. `model_id` 를 다르게 적으면 그 파일이
   // 가짜 id 로 덮여 `-m llm_widget` 이 제공사에 가짜 id 를 보낸다. 그래서 저장소의 파일과 같은 값을 쓴다.
   write(
