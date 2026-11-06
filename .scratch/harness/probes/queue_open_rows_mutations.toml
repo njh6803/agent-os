@@ -136,6 +136,21 @@ file = "tools/queue_open_rows.py"
 old = '''row.rounds >= MIN_ROUNDS'''
 new = '''row.rounds > MIN_ROUNDS'''
 
+# 문턱을 3에서 5로 올린 티켓(retro-queue-per-item 01, ADR 0036 이력 2026-11-06)이 더했다. 회차 4 행이
+# 만료 후보로 남는지를 보는 시험이 문턱을 되돌리면 빨개진다.
+[[mutation]]
+name = "회차 문턱을 셋으로 되돌린다"
+tests = ["tests/tools/test_queue_open_rows.py", "-k", "반영할_때까지_만료하지"]
+expect = "red"
+# 문턱 3이면 첫 단언이 빨개져 출력(repr)에 "회차 3 이상: 1(5회차) 2(4회차)"가 찍힌다. 둘째 단언(만료 줄)이
+# 빨개질 때는 이 줄이 출력 전체의 repr 에 실리지 않는다
+expect_output = ["회차 3 이상: 1(5회차) 2(4회차)"]
+
+[[mutation.edit]]
+file = "tools/queue_open_rows.py"
+old = '''MIN_ROUNDS = 5'''
+new = '''MIN_ROUNDS = 3'''
+
 [[mutation]]
 name = "같은 대상 파일의 문턱을 둘로 낮춘다"
 tests = ["tests/tools/test_queue_open_rows.py", "-k", "결정표의_조건을_모은다"]
@@ -239,9 +254,11 @@ new = '''    if False:'''
 # ADR 0036 의 사람 몫·만료 판정(2026-10-19).
 
 [[mutation]]
-name = "사람 몫을 회차 3 이상과 만료에서 빼지 않는다"
+name = "사람 몫을 회차 5 이상과 만료에서 빼지 않는다"
 tests = ["tests/tools/test_queue_open_rows.py", "-k", "사람_몫_행은_회차"]
 expect = "red"
+# 사람 몫 행이 세어지면 첫 단언이 빨개져 출력(repr)에 사람 몫 238 이 회차 5 이상 줄에 든 꼴이 찍힌다
+expect_output = ["회차 5 이상: 238(11회차) 306(9회차)"]
 
 [[mutation.edit]]
 file = "tools/queue_open_rows.py"
@@ -352,9 +369,11 @@ old = '''                today = date.fromisoformat(args.pop(0))'''
 new = '''                date.fromisoformat(args.pop(0))'''
 
 [[mutation]]
-name = "만료에서 회차 3 이상을 빼지 않는다"
+name = "만료에서 회차 5 이상을 빼지 않는다"
 tests = ["tests/tools/test_queue_open_rows.py", "-k", "반영할_때까지_만료하지"]
 expect = "red"
+# 회차 5 행이 만료 줄에 들면 둘째 단언이 빨개져 출력의 만료 줄에 1(2026-09-01)이 먼저 찍힌다
+expect_output = ["전): 1(2026-09-01) 2(2026-09-01) 3(2026-09-01)"]
 
 [[mutation.edit]]
 file = "tools/queue_open_rows.py"
@@ -525,7 +544,7 @@ tests = ["tests/tools/test_queue_open_rows.py", "-k", "search를_주면_맞은_�
 expect = "red"
 # 출력 단언의 실패 줄은 출력을 repr 로 찍어 줄바꿈이 `\n` 두 글자다. 다른 단언이 빨개질 때 pytest 가
 # 찍는 읽지 않은 출력(Captured stdout call)은 줄을 실제로 바꿔 이 표지에 맞지 않는다
-expect_output = ["in '열린 행 2개\\n회차 3 이상"]
+expect_output = ["in '열린 행 2개\\n회차 5 이상"]
 
 [[mutation.edit]]
 file = "tools/queue_open_rows.py"
