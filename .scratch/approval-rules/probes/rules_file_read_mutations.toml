@@ -6,19 +6,19 @@
 
 [[mutation]]
 name = "서버 칸을 보지 않고 맞는다"
-tests = ["tests/core/test_rules.py", "-k", "규칙은_세_꼴대로"]
+tests = ["tests/core/test_rules.py", "-k", "별표_패턴대로"]
 expect = "red"
-expect_output = ["matches(server='other-server', tool='add')"]
+expect_output = ["rule = Rule(server='everything', tool=None), server = 'other-server'"]
 
 [[mutation.edit]]
 file = "src/agent_os/core/ports.py"
 old = '''
         return (self.server is None or self.server == server) and (
-            self.tool is None or self.tool == tool
+            self.tool is None or _name_matches(self.tool, tool)
         )
 '''
 new = '''
-        return self.tool is None or self.tool == tool
+        return self.tool is None or _name_matches(self.tool, tool)
 '''
 
 [[mutation]]
@@ -103,18 +103,63 @@ new = '''
 '''
 
 [[mutation]]
-name = "도구 이름이 별표를 받는다"
-tests = ["tests/adapters/test_filesystem.py", "-k", "깨진_규칙_파일은 and 별표"]
+name = "도구 이름의 별표를 패턴으로 읽지 않는다"
+tests = ["tests/core/test_rules.py", "-k", "별표_패턴대로"]
 expect = "red"
-expect_output = ["DID NOT RAISE"]
+expect_output = ["rule = Rule(server=None, tool='*'), server = 'everything', tool = 'add'"]
 
 [[mutation.edit]]
-file = "src/agent_os/adapters/filesystem.py"
+file = "src/agent_os/core/ports.py"
 old = '''
-_TOOL = r"[^:\s*]+"
+            self.tool is None or _name_matches(self.tool, tool)
 '''
 new = '''
-_TOOL = r"[^:\s]+"
+            self.tool is None or self.tool == tool
+'''
+
+[[mutation]]
+name = "패턴이 이름의 앞부분에만 맞아도 맞는다"
+tests = ["tests/core/test_rules.py", "-k", "별표_패턴대로"]
+expect = "red"
+expect_output = ["rule = Rule(server=None, tool='add'), server = 'everything', tool = 'add_more'"]
+
+[[mutation.edit]]
+file = "src/agent_os/core/ports.py"
+old = '''
+    return re.fullmatch(".*".join(re.escape(part) for part in parts), name, re.DOTALL) is not None
+'''
+new = '''
+    return re.match(".*".join(re.escape(part) for part in parts), name, re.DOTALL) is not None
+'''
+
+[[mutation]]
+name = "패턴의 점이나 괄호를 정규식으로 읽는다"
+tests = ["tests/core/test_rules.py", "-k", "별표_패턴대로"]
+expect = "red"
+expect_output = ["rule = Rule(server=None, tool='a.b'), server = 'everything', tool = 'aXb'"]
+
+[[mutation.edit]]
+file = "src/agent_os/core/ports.py"
+old = '''
+    return re.fullmatch(".*".join(re.escape(part) for part in parts), name, re.DOTALL) is not None
+'''
+new = '''
+    return re.fullmatch(".*".join(parts), name, re.DOTALL) is not None
+'''
+
+[[mutation]]
+name = "별표가 개행이 든 이름에 맞지 않는다"
+tests = ["tests/core/test_rules.py", "-k", "별표_패턴대로"]
+expect = "red"
+expect_output = ["rule = Rule(server=None, tool='*'), server = 'everything', tool = 'a\\nb'"]
+
+[[mutation.edit]]
+file = "src/agent_os/core/ports.py"
+old = '''
+    return re.fullmatch(".*".join(re.escape(part) for part in parts), name, re.DOTALL) is not None
+'''
+new = '''
+    return re.fullmatch(".*".join(re.escape(part) for part in parts), name) is not None
 '''
 
 [[mutation]]

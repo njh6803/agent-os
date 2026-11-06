@@ -1467,6 +1467,27 @@ ACCEPTED = (
         Rules(common=_rule_set(deny=(_bare("send.mail-2"),))),
         id="점과 하이픈이 든 도구 이름",
     ),
+    # 도구 이름의 별표는 패턴이다(Claude Code 와 같다). 막는 deny 와 묻는 ask 는 맨 이름도 받고,
+    # allow 는 서버를 붙인 꼴의 도구 칸에서만 받는다.
+    pytest.param(
+        'schema_version = "1"\n[common]\ndeny = ["*", "send_*"]\n',
+        Rules(common=_rule_set(deny=(_bare("*"), _bare("send_*")))),
+        id="deny 의 맨 별표와 접두 패턴",
+    ),
+    pytest.param(
+        'schema_version = "1"\n[agents.calc]\nask = ["*_mail", "everything:get_*"]\n',
+        Rules(
+            agents={
+                PluginName("calc"): _rule_set(ask=(_bare("*_mail"), _one("everything", "get_*")))
+            }
+        ),
+        id="ask 의 접미 패턴과 서버에 묶인 패턴",
+    ),
+    pytest.param(
+        'schema_version = "1"\n[common]\nallow = ["everything:get_*"]\n',
+        Rules(common=_rule_set(allow=(_one("everything", "get_*"),))),
+        id="allow 의 서버에 묶인 패턴",
+    ),
 )
 
 
@@ -1531,25 +1552,31 @@ BROKEN_RULES = (
         "string_pattern_mismatch",
         id="빈 줄",
     ),
-    # 별표는 `서버:*` 의 꼴로만 쓴다. 맨 이름이나 도구 이름 안의 별표를 와일드카드로 읽을 줄 알고
-    # 적은 줄은 조용히 아무 도구에도 맞지 않으므로(deny = ["send_*"] 가 막지 않는다) 깨진 파일이다.
+    # 별표는 도구 이름의 패턴이다. 서버 칸은 패턴이 아니라 플러그인 이름이고, 열어 주는 allow 는
+    # 맨 이름(별표 포함)을 받지 않는다.
     pytest.param(
-        'schema_version = "1"\n[common]\ndeny = ["*"]\n',
+        'schema_version = "1"\n[common]\nallow = ["*"]\n',
+        "common.allow.0",
+        "string_pattern_mismatch",
+        id="allow 의 맨 별표",
+    ),
+    pytest.param(
+        'schema_version = "1"\n[agents.calc]\nallow = ["send_*"]\n',
+        "agents.calc.allow.0",
+        "string_pattern_mismatch",
+        id="allow 의 맨 접두 패턴",
+    ),
+    pytest.param(
+        'schema_version = "1"\n[common]\ndeny = ["*:add"]\n',
         "common.deny.0",
         "string_pattern_mismatch",
-        id="맨 별표",
+        id="서버 칸의 별표",
     ),
     pytest.param(
-        'schema_version = "1"\n[common]\ndeny = ["rm", "send_*"]\n',
-        "common.deny.1",
+        'schema_version = "1"\n[common]\nask = ["every*:add"]\n',
+        "common.ask.0",
         "string_pattern_mismatch",
-        id="도구 이름 안의 별표",
-    ),
-    pytest.param(
-        'schema_version = "1"\n[agents.calc]\nask = ["everything:send_*"]\n',
-        "agents.calc.ask.0",
-        "string_pattern_mismatch",
-        id="서버에 묶인 도구 이름 안의 별표",
+        id="서버 칸 안의 별표",
     ),
     pytest.param(
         'schema_version = "1"\n[common]\ndeny = ["Every_Thing:add"]\n',

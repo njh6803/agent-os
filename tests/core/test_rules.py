@@ -67,24 +67,45 @@ MATCHES = (
     pytest.param(_one(EVERYTHING, "add"), EVERYTHING, "add", True, id="묶인 도구-그 이름"),
     pytest.param(_one(EVERYTHING, "add"), OTHER_SERVER, "add", False, id="묶인 도구-다른 서버"),
     pytest.param(_one(EVERYTHING, "add"), EVERYTHING, "sub", False, id="묶인 도구-다른 이름"),
+    # 도구 이름의 `*` 는 아무 글자열(빈 것 포함)에 맞고, 패턴은 도구 이름 전체에 맞아야 한다.
+    pytest.param(_bare("*"), EVERYTHING, "add", True, id="맨 별표-어느 도구"),
+    pytest.param(_bare("*"), OTHER_SERVER, "sub", True, id="맨 별표-다른 서버의 도구"),
+    pytest.param(_bare("send_*"), EVERYTHING, "send_mail", True, id="접두 패턴-맞는 이름"),
+    pytest.param(_bare("send_*"), EVERYTHING, "send_", True, id="접두 패턴-별표가 빈 글자열"),
+    pytest.param(_bare("send_*"), EVERYTHING, "resend_mail", False, id="접두 패턴-앞이 다른 이름"),
+    pytest.param(_bare("send_*"), EVERYTHING, "sendmail", False, id="접두 패턴-밑줄이 없는 이름"),
+    pytest.param(_bare("*_mail"), EVERYTHING, "send_mail", True, id="접미 패턴-맞는 이름"),
+    pytest.param(_bare("*_mail"), EVERYTHING, "mail_send", False, id="접미 패턴-뒤가 다른 이름"),
+    pytest.param(_bare("a*b*c"), EVERYTHING, "aXbYc", True, id="별표 둘-맞는 이름"),
+    pytest.param(_bare("a*b*c"), EVERYTHING, "aXcYb", False, id="별표 둘-순서가 다른 이름"),
+    pytest.param(_bare("a.b"), EVERYTHING, "aXb", False, id="점은 글자 그대로다"),
+    pytest.param(_bare("a.b"), EVERYTHING, "a.b", True, id="점이 든 이름"),
+    # 개행이 든 이름에도 `*` 가 맞아야 deny 가 그 이름 앞에서 조용히 새지 않는다.
+    pytest.param(_bare("*"), EVERYTHING, "a\nb", True, id="맨 별표-개행이 든 이름"),
+    pytest.param(_bare("add"), EVERYTHING, "add_more", False, id="별표 없는 이름-더 긴 이름"),
+    pytest.param(_bare("*_mail"), EVERYTHING, "send_mail_log", False, id="접미 패턴-더 긴 이름"),
+    pytest.param(_one(EVERYTHING, "get_*"), EVERYTHING, "get_user", True, id="묶인 패턴-그 서버"),
+    pytest.param(
+        _one(EVERYTHING, "get_*"), OTHER_SERVER, "get_user", False, id="묶인 패턴-다른 서버"
+    ),
+    pytest.param(
+        _one(EVERYTHING, "get_*"), EVERYTHING, "set_user", False, id="묶인 패턴-다른 이름"
+    ),
 )
 
 
 @pytest.mark.parametrize(("rule", "server", "tool", "expected"), MATCHES)
-def test_규칙은_세_꼴대로_도구에_맞거나_안_맞는다(
+def test_규칙은_세_꼴과_별표_패턴대로_도구에_맞거나_안_맞는다(
     rule: Rule, server: PluginName, tool: str, *, expected: bool
 ) -> None:
     assert rule.matches(server=server, tool=tool) is expected
 
 
-def test_이름이_별표인_도구에도_서버_전체_규칙은_맞고_맨_이름은_별표_글자_그대로다() -> None:
-    """콜론 뒤의 `*`는 언제나 서버의 모든 도구다. 이름이 `*`인 도구 하나만 가리키는 표기는 없고,
-    그런 도구가 있어도 서버 전체 규칙에 함께 든다(spec 이 받아들인 잔여). 값 `Rule`은 도구 이름을
-    글자 그대로 견줄 뿐이라 `*`를 와일드카드로 읽지 않는다. 규칙 파일은 맨 이름의 `*`를 읽을 때
-    거부하므로(어댑터의 규칙 줄 패턴) 이 값은 파일에서 나오지 않고, 값의 동작만 고정한다."""
+def test_이름이_별표인_도구에도_서버_전체_규칙과_맨_별표는_맞는다() -> None:
+    """콜론 뒤의 `*`는 언제나 서버의 모든 도구이고, 맨 `*`는 모든 서버의 모든 도구다. 이름이 `*`인
+    도구가 있어도(MCP 규약 밖이다) 패턴 `*`가 아무 글자열에 맞으므로 그 도구에도 맞는다."""
     assert _whole(EVERYTHING).matches(server=EVERYTHING, tool="*")
     assert _bare("*").matches(server=EVERYTHING, tool="*")
-    assert not _bare("*").matches(server=EVERYTHING, tool="add")
 
 
 def test_아무_규칙도_없으면_기본이다() -> None:

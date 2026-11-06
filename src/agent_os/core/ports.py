@@ -7,6 +7,7 @@
 
 from __future__ import annotations
 
+import re
 from collections.abc import Mapping, Sequence
 from contextlib import AbstractAsyncContextManager
 from dataclasses import dataclass
@@ -238,15 +239,26 @@ class PluginKey:
     name: PluginName
 
 
+def _name_matches(pattern: str, name: str) -> bool:
+    """도구 이름 패턴이 이름 전체에 맞는가. `*` 는 아무 글자열(빈 것 포함)이고 다른 글자는 그대로다.
+
+    `?` 나 `[...]` 같은 글롭의 다른 문법은 없다. Claude Code 의 도구 이름 패턴과 같은 범위다.
+    """
+    parts = pattern.split("*")
+    return re.fullmatch(".*".join(re.escape(part) for part in parts), name, re.DOTALL) is not None
+
+
 @dataclass(frozen=True)
 class Rule:
-    """운영자의 규칙 줄 하나. 서버(플러그인 이름 또는 없음)와 도구(이름 또는 없음)의 쌍이다(ADR
+    """운영자의 규칙 줄 하나. 서버(플러그인 이름 또는 없음)와 도구(이름 패턴 또는 없음)의 쌍이다(ADR
     0044).
 
     세 꼴이다. 맨 이름은 서버 없음이고 그 표가 덮는 에이전트의 모든 서버에서 그 이름의 도구에
     맞는다. `서버:*` 는 도구 없음이고 그 서버 플러그인의 모든 도구에 맞는다. `서버:도구` 는 둘 다
-    있고 그 서버의 그 이름 도구에만 맞는다. 둘 다 없는 규칙은 어느 호출에나 맞게 되므로 만들 수
-    없다. 파일의 글자를 이 값으로 바꾸는 것은 형식을 소유한 어댑터의 몫이라 여기는 글자를 모른다.
+    있고 그 서버의 그 이름 도구에만 맞는다. 도구 칸의 `*` 는 패턴이라 맨 `*` 는 모든 서버의 모든
+    도구에, `send_*` 는 그 접두로 시작하는 도구에 맞는다. 둘 다 없는 규칙은 어느 호출에나 맞게
+    되므로 만들 수 없다. 파일의 글자를 이 값으로 바꾸는 것은 형식을 소유한 어댑터의 몫이라 여기는
+    글자를 모른다.
     """
 
     server: PluginName | None
@@ -263,7 +275,7 @@ class Rule:
         서기 전의 판정(마스킹과 묻기의 충돌)이 이것을 쓰지 못한다. 매니페스트만으로 쌍을 안다.
         """
         return (self.server is None or self.server == server) and (
-            self.tool is None or self.tool == tool
+            self.tool is None or _name_matches(self.tool, tool)
         )
 
 
