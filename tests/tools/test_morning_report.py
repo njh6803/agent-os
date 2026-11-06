@@ -20,6 +20,7 @@ from tools.morning_report import (
     Data,
     Decision,
     Head,
+    Json,
     Limit,
     Metric,
     Named,
@@ -89,7 +90,7 @@ def 자료(**kw: object) -> Data:
         values={CHECK: Value("git commit 중앙값", 385.2, "초")},
         sections=(),
         prs={301: Pr(301, "test: 부하에서 흔들린 Ctrl-C 판정", "본문", "chore/mutate-ctrl-c")},
-        queue={238: QueueRow(238, 11, human=True, what="남은 워크트리 여섯")},
+        queue={"238": QueueRow("238", 11, human=True, what="남은 워크트리 여섯")},
         branches={},
         journal="",
         limit=한도(),
@@ -100,7 +101,7 @@ def 자료(**kw: object) -> Data:
 def 메모(**kw: object) -> Notes:
     base = Notes(
         prs={301: Named("Ctrl-C 판정 안정화", CONTENT, "부하 시험")},
-        queue={238: Named("남은 워크트리 정리", "정리 도구가 지우지 못한 워크트리 여섯")},
+        queue={"238": Named("남은 워크트리 정리", "정리 도구가 지우지 못한 워크트리 여섯")},
         branches={},
         todos=(),
         decisions=(),
@@ -141,6 +142,26 @@ def 절(*tables: Table, report: str = "work", lines: tuple[str, ...] = ()) -> Se
 
 
 ROW = ("#301", "{{name:301}}", "{{content:301}}")
+SLUG = "coderabbit-inline-size"  # 새 대기열 항목의 식별자는 영어 제목 슬러그다(ADR 0045)
+SLUG_NAMED = Named("인라인 크기 정리", "인라인 코멘트의 크기를 줄인다")
+
+
+def 슬러그_자료_메모(*todos: Todo) -> tuple[Data, Notes]:
+    """숫자 항목 238과 슬러그 항목을 함께 든 수집 JSON과 메모."""
+    data = 자료(
+        queue={
+            "238": QueueRow("238", 11, human=True, what="남은 워크트리 여섯"),
+            SLUG: QueueRow(SLUG, 5, human=False, what="인라인 크기"),
+        }
+    )
+    notes = 메모(
+        queue={
+            "238": Named("남은 워크트리 정리", "정리 도구가 지우지 못한 워크트리 여섯"),
+            SLUG: SLUG_NAMED,
+        },
+        todos=todos,
+    )
+    return data, notes
 
 
 # 핵심 지표와 표
@@ -509,10 +530,48 @@ def test_글_속_대기열_번호에도_이름과_내용을_붙인다() -> None:
     )
 
 
-def test_대기열_뒤의_수에_세는_말이_붙으면_행_번호로_보지_않는다() -> None:
-    todo = Todo("정리", "대기열 5회 이상 행이 12개이고 대기열 4개가 사람 몫이다")
+def test_글_속_슬러그_대기열_식별자에도_이름과_내용을_붙이고_뒤에서는_이름만_붙인다() -> None:
+    todos = (
+        Todo("정리", f"대기열 {SLUG} 은 열려 있다"),
+        Todo("다시", f"대기열 {SLUG} 을 본다"),
+    )
+    data, notes = 슬러그_자료_메모(*todos)
+    text, _, warnings = render(data, notes, {}, "summary")
+    assert f"대기열 {SLUG} 인라인 크기 정리(인라인 코멘트의 크기를 줄인다) 은 열려 있다" in text
+    assert f"대기열 {SLUG} 인라인 크기 정리 을 본다" in text
+    assert warnings == []
+
+
+def test_앞에_0을_채운_숫자_대기열_번호도_같은_항목으로_읽는다() -> None:
+    todo = Todo("정리", "대기열 0238 은 사람 몫이다")
     text, _, warnings = render(자료(), 메모(todos=(todo,)), {}, "summary")
-    assert "대기열 5회 이상 행이 12개이고 대기열 4개가 사람 몫이다" in text
+    assert (
+        "대기열 0238 남은 워크트리 정리(정리 도구가 지우지 못한 워크트리 여섯) 은 사람 몫이다"
+        in text
+    )
+    assert warnings == []
+
+
+def test_메모에_없는_슬러그_대기열_식별자는_이름_없음을_붙이고_경고한다() -> None:
+    todo = Todo("정리", "대기열 no-such-item 을 본다")
+    _, _, warnings = render(자료(), 메모(todos=(todo,)), {}, "summary")
+    assert any("대기열 no-such-item" in w for w in warnings)
+
+
+def test_대기열_자리_표시자는_슬러그_식별자를_채운다() -> None:
+    data, notes = 슬러그_자료_메모()
+    row = (f"대기열 {SLUG}", f"{{{{qname:{SLUG}}}}}", f"{{{{qcontent:{SLUG}}}}}")
+    zero = ("대기열 0238", "{{qname:0238}}", "{{qcontent:0238}}")  # 0을 채워도 같은 항목
+    data = replace(data, sections=(절(표(row, zero, key="work.a")),))
+    text, _, _ = render(data, notes, {}, "work")
+    assert f"| 대기열 {SLUG} | 인라인 크기 정리 | 인라인 코멘트의 크기를 줄인다 |" in text
+    assert "| 대기열 0238 | 남은 워크트리 정리 |" in text
+
+
+def test_대기열_뒤의_수에_세는_말이_붙으면_항목_번호로_보지_않는다() -> None:
+    todo = Todo("정리", "대기열 5회 이상 항목이 12개이고 대기열 4개가 사람 몫이다")
+    text, _, warnings = render(자료(), 메모(todos=(todo,)), {}, "summary")
+    assert "대기열 5회 이상 항목이 12개이고 대기열 4개가 사람 몫이다" in text
     assert warnings == []
 
 
@@ -543,9 +602,9 @@ def test_작업_번호_바로_뒤에_조사가_붙으면_경고한다() -> None:
     ]
 
 
-def test_대기열_할_일은_제목에_행_번호와_회차와_이름을_넣고_처음이면_내용을_붙인다() -> None:
+def test_대기열_할_일은_제목에_항목_번호와_회차와_이름을_넣고_처음이면_내용을_붙인다() -> None:
     todos = (
-        Todo("", "주 체크아웃에서 직접 보고 지운다", queue=238),
+        Todo("", "주 체크아웃에서 직접 보고 지운다", queue="238"),
         Todo("다시", "대기열 238 본다"),
     )
     text, _, _ = render(자료(), 메모(todos=todos), {}, "summary")
@@ -554,6 +613,15 @@ def test_대기열_할_일은_제목에_행_번호와_회차와_이름을_넣고
         " 주 체크아웃에서 직접 보고 지운다" in text
     )
     assert "- [ ] **다시**: 대기열 238 남은 워크트리 정리 본다" in text
+
+
+def test_슬러그_대기열_할_일도_제목에_식별자와_회차와_이름을_넣는다() -> None:
+    data, notes = 슬러그_자료_메모(Todo("", "그 크기를 줄인다", queue=SLUG))
+    text, _, _ = render(data, notes, {}, "summary")
+    assert (
+        f"- [ ] **대기열 {SLUG} (5회차) 인라인 크기 정리**(인라인 코멘트의 크기를 줄인다):"
+        " 그 크기를 줄인다" in text
+    )
 
 
 def test_할_일의_까닭이_두_문장_이상이면_경고한다() -> None:
@@ -580,6 +648,18 @@ def test_못_보는_것_세는_말이_붙은_대기열_번호는_놓친다() -> 
     text, _, warnings = render(자료(), 메모(todos=(todo,)), {}, "summary")
     assert "대기열 238건 은 사람 몫이다" in text
     assert warnings == []
+
+
+def test_못_보는_것_대기열_뒤_영어_낱말은_항목이_아니어도_슬러그로_읽는다() -> None:
+    todo = Todo("정리", "대기열 items가 많다")
+    text, _, _ = render(자료(), 메모(todos=(todo,)), {}, "summary")
+    assert "대기열 items (이름 없음)가 많다" in text
+
+
+def test_못_보는_것_대기열_번호_뒤_항목은_세는_말에_없어_번호로_읽는다() -> None:
+    todo = Todo("정리", "대기열 3항목이 남았다")
+    text, _, _ = render(자료(), 메모(todos=(todo,)), {}, "summary")
+    assert "대기열 3 (이름 없음)항목이 남았다" in text
 
 
 def test_못_보는_것_다로_끝나지_않는_문장은_세지_않는다() -> None:
@@ -672,6 +752,30 @@ def test_메모_JSON의_빠진_칸은_빈_값으로_읽는다() -> None:
     notes = Notes.of({"prs": {"301": {"name": "이름", "content": "내용"}}})
     assert notes.prs == {301: Named("이름", "내용", "")}
     assert (notes.todos, notes.decisions, notes.heads, notes.blocks) == ((), (), {}, {})
+
+
+def test_메모_JSON의_대기열_열쇠는_문자열_식별자이고_숫자는_앞의_0을_뗀다() -> None:
+    named: Json = {"name": "이름", "content": "내용"}
+    queue: Json = {"238": named, "0243": named, SLUG: named, "Bad Key": named}
+    notes = Notes.of({"queue": queue})
+    expected = Named("이름", "내용")
+    assert notes.queue == {"238": expected, "243": expected, SLUG: expected}
+
+
+def test_할_일의_대기열_식별자는_숫자와_슬러그를_문자열로_읽는다() -> None:
+    assert Todo.of({"queue": 238}).queue == "238"
+    assert Todo.of({"queue": "0238"}).queue == "238"
+    assert Todo.of({"queue": SLUG}).queue == SLUG
+    assert Todo.of({"queue": "대기열 238"}).queue is None
+    assert Todo.of({"queue": True}).queue is None
+    assert Todo.of({"queue": -3}).queue is None
+    assert Todo.of({"title": "정리"}).queue is None
+
+
+def test_수집_JSON의_대기열은_슬러그_식별자까지_쓰고_다시_읽어도_같다() -> None:
+    data, _ = 슬러그_자료_메모()
+    assert Data.of(data.to_json()) == data
+    assert list(data.queue) == ["238", SLUG]
 
 
 def test_메모_JSON의_머리와_블록과_원인을_읽는다() -> None:

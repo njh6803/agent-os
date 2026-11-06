@@ -43,16 +43,20 @@ pre-commit 에서 HEAD 는 아직 병합 전이라, HEAD 만으로 구하면 C �
 면제 모양. 이 목록이 모양의 원천이다(`docs/agents/issue-tracker.md` 가 여기를 가리킨다). 기능의
 설계·명세·티켓을 쓰는 PR 과 기록만 남기는 PR 이 쓰는 파일이다.
 
-- `docs/journal/*.md`, `.scratch/retro-queue.md`
+- `docs/journal/*.md`, `.scratch/retro-queue/*.md`
 - `docs/adr/*.md`(색인 `README.md` 포함), `CONTEXT.md`, `.scratch/plan.md`, `docs/PRD.md`
 - `docs/constitution/tech.md`, `docs/constitution/README.md`
 - `.scratch/<slug>/spec.md`, `.scratch/<slug>/issues/*.md`, `.scratch/<slug>/probes/**`,
   `.scratch/<slug>/design/**`. 이 넷은 `<slug>` 가 `harness` 이면 면제가 아니다.
   `.scratch/harness/issues/` 는 하는 일의 티켓이 사는 자리이고 `.scratch/harness/probes/` 는 하네스
-  도구를 받치는 측정이라 그 도구를 고치는 티켓에 든다.
+  도구를 받치는 측정이라 그 도구를 고치는 티켓에 든다. `<slug>` 가 `retro-queue` 여도 면제가
+  아니다. 그 폴더는 기능이 아니라 회고 반영 대기열(항목마다 파일 하나)이라, 바로 아래의 `.md` 만
+  면제이고 `.scratch/retro-queue/issues/x.md` 같은 꼴은 면제가 아니다.
 
 `*` 는 경로 조각 하나이고 `**` 는 그 아래 전부다. 표에 없는 기능 폴더의 파일(`design.md`, `mock/`)은
-면제가 아니다.
+면제가 아니다. 대기열 폴더의 하위 폴더(`.scratch/retro-queue/sub/x.md`), `.md` 가 아닌 파일, 비슷한
+이름의 폴더(`.scratch/retro-queue-x/x.md`), 이행 전의 표 파일 `.scratch/retro-queue.md` 도 면제가
+아니다.
 
 전환. 규약 전에 연 브랜치는 그 브랜치의 첫 자기 커밋의 부모 트리에 이 파일
 (`tools/check_ticket.py`)이 없는 것으로 가른다. 첫 자기 커밋은 `origin/main` 에 없는 이 브랜치의
@@ -177,7 +181,6 @@ CONVENTION = "규약 원천: docs/agents/issue-tracker.md"
 
 _EXEMPT_FILES = frozenset(
     {
-        ".scratch/retro-queue.md",
         "CONTEXT.md",
         ".scratch/plan.md",
         "docs/PRD.md",
@@ -186,6 +189,9 @@ _EXEMPT_FILES = frozenset(
     }
 )
 _HARNESS_ISSUES = ".scratch/harness/issues/"
+_QUEUE_FOLDER = "retro-queue"
+# 기능 폴더의 갈래(명세·티켓·프로브·디자인)가 기능 slug 로 읽지 않는 `.scratch/` 아래 폴더
+_NOT_FEATURES = frozenset({"harness", _QUEUE_FOLDER})
 _STATUS_HEADS = ("Status:", "**Status:**")
 
 
@@ -264,7 +270,9 @@ def exempt(path: str) -> bool:
     parts = path.split("/")
     if len(parts) == 3 and parts[0] == "docs" and parts[1] in ("journal", "adr"):
         return parts[2].endswith(".md")
-    if len(parts) >= 3 and parts[0] == ".scratch" and parts[1] != "harness":
+    if len(parts) == 3 and parts[:2] == [".scratch", _QUEUE_FOLDER]:
+        return parts[2].endswith(".md")
+    if len(parts) >= 3 and parts[0] == ".scratch" and parts[1] not in _NOT_FEATURES:
         rest = parts[2:]
         if rest == ["spec.md"]:
             return True

@@ -11,8 +11,9 @@
 `morning_report.latest_checks`)다. 이 도구가 부르는 gh·git·tasklist는
 `morning_sources`에 있고, 다른 도구를 불러 쓰는 읽기는 그 도구의 명령을 그대로 쓴다(훅의 들인 날과
 주 체크아웃을 찾는 git은 `hook_report`의 것이라 시간 제한과 실패 갈래도 그 도구의 것이다).
-비용·장부·명령 이름은 `token_report`, 훅의 발동은 `hook_report`, 대기열 행은 `queue_open_rows`를
-그대로 불러 쓴다.
+비용·장부·명령 이름은 `token_report`, 훅의 발동은 `hook_report`, 대기열 항목은 `queue_open_rows`를
+그대로 불러 쓴다(대기열은 항목마다 파일 하나인 폴더라 `morning_sources.main_queue`가 `origin/main`의
+폴더를 한 번에 읽고, 항목의 식별자는 파일 이름의 stem인 문자열이다. 숫자 ID는 앞의 0을 떼 찍는다).
 
 짜임. 읽기와 짓기를 가른다. 파일과 명령을 읽는 것은 `main`(앞 날의 메모), `collect`, 그리고 그
 둘이 부르는 읽기 함수다. 읽기 함수의 예는 `morning_sources`, `token_report`·`hook_report`의 읽기,
@@ -62,7 +63,7 @@
   세션·인계(`ticket_cells`). ADR 0033은 세션 컨텍스트가 20만을 넘은 뒤의 단계 경계에서 인계하므로,
   인계가 난 티켓은 한 세션에 들지 않은 티켓이고 더 쪼갤 후보다(사용자, 일지 2026-10-16-01). 그 앞의
   티켓은 인계가 날 수 없어 분모에서 뺀다.
-- 대기열(5회차 이상 행과, 열린 행이 대상과 인용으로 셋 이상 든 파일 `shared_files`), 열린 PR의
+- 대기열(5회차 이상 항목과, 열린 항목이 대상과 인용으로 셋 이상 든 파일 `shared_files`), 열린 PR의
   초안·리뷰 결정·CI, 진행 중인 세션(마지막 기록이 `ACTIVE_H`시간 안인 워크트리), PR이 병합됐는데
   남은 워크트리, 지금의 부하, 가장 최근 일지의 "다음".
 
@@ -94,6 +95,9 @@
   list`는 클라우드에서 본 기록이 없다. gh가 실패하면 그 표와 줄을 `(수집 안 됨)`으로 적고
   0으로 끝난다. 이 갈래는 코드를 읽은 것이고 클라우드에서 돌려 보지는 않았다.
 - `tasklist`가 없는 기계(윈도 밖)에서는 프로세스 수가 수집 안 됨이다.
+- 대기열 폴더에서 라벨 줄이 빠진 항목 파일은 세지 않고 알리지도 않는다(`queue_open_rows`는
+  1로 끝나며 알린다). 폴더가 없는 `origin/main`(이행 전)이나 git 실패는 대기열 절이
+  `(수집 안 됨)` 한 줄이다.
 
 쓰임: `uv run python -m tools.morning_collect --reports <폴더> [--day YYYY-MM-DD]`(다른 도구를
 불러 써서 모듈로 띄운다, 선례 `tools/check_constitution_version.py`). 종료 0은 수집 JSON을
@@ -147,6 +151,7 @@ from tools.morning_sources import (
     branch_subject,
     ci_runs,
     latest_journal,
+    main_queue,
     main_text,
     merged_prs,
     open_prs,
@@ -436,16 +441,18 @@ def review_rounds(opened: datetime, commits: Iterable[tuple[datetime, str]]) -> 
     return sum(1 for t, headline in commits if t > opened and not headline.startswith("Merge "))
 
 
-def queue_whats(text: str) -> dict[int, str]:
-    """대기열 표의 행 번호마다 "무엇" 칸의 글."""
-    out: dict[int, str] = {}
-    for line in text.splitlines():
-        m = queue_open_rows.ROW.match(line)
-        if m is None:
+def queue_whats(files: Mapping[str, str]) -> dict[str, str]:
+    """대기열 항목마다 머리 줄(파일 첫 줄 `# <ID>: ` 뒤)의 글. 열쇠는 `queue_open_rows.display_id`다
+    (숫자 ID는 앞의 0을 뗀다). 첫 줄이 그 꼴이 아닌 파일과 `README.md`는 뺀다."""
+    out: dict[str, str] = {}
+    for name, text in files.items():
+        if not queue_open_rows.is_item_name(name):
             continue
-        cells = queue_open_rows.CELL_SPLIT.split(line)
-        if len(cells) >= 3:
-            out[int(m.group(1))] = cells[2].strip().replace("\\|", "|")
+        ident = name.removesuffix(".md")
+        first = text.partition("\n")[0].rstrip("\r")
+        prefix = f"# {ident}: "
+        if first.startswith(prefix):
+            out[queue_open_rows.display_id(ident)] = first[len(prefix) :].strip()
     return out
 
 
@@ -933,15 +940,15 @@ def body_excerpt(body: str) -> str:
 @dataclass
 class Collected:
     """절 하나를 짓는 동안 모으는 것. `values`는 확인할 수치로 고를 수 있는 값, `refs`는 이름을 지을
-    PR, `branches`는 PR이 없는 브랜치의 마지막 커밋 제목, `queue`는 이름을 지을 대기열 행이다. 절을
-    짓는 함수와 그 도움 함수(`load_line` 등)는 스스로 만든 것이나 자기가 부른 도움 함수가 돌려준
-    것을 채워 돌려주며(값은 `value`로, 이름 지을 것은 그 칸에 바로, 다른 조각이 모은 것은 `add`로),
-    인자로 받은 것은 바꾸지 않는다. 여러 절의 것은 `merged_got`이 새것 하나에 합친다."""
+    PR, `branches`는 PR이 없는 브랜치의 마지막 커밋 제목, `queue`는 이름을 지을 대기열 항목이다.
+    절을 짓는 함수와 그 도움 함수(`load_line` 등)는 스스로 만든 것이나 자기가 부른 도움 함수가
+    돌려준 것을 채워 돌려주며(값은 `value`로, 이름 지을 것은 그 칸에 바로, 다른 조각이 모은 것은
+    `add`로), 인자로 받은 것은 바꾸지 않는다. 여러 절의 것은 `merged_got`이 새것 하나에 합친다."""
 
     values: dict[str, Value] = field(default_factory=dict[str, Value])
     refs: set[int] = field(default_factory=set[int])
     branches: dict[str, str] = field(default_factory=dict[str, str])
-    queue: dict[int, QueueRow] = field(default_factory=dict[int, QueueRow])
+    queue: dict[str, QueueRow] = field(default_factory=dict[str, QueueRow])
     works: set[str] = field(default_factory=set[str])
 
     def value(self, key: str, label: str, v: float | None, unit: str) -> None:
@@ -1712,27 +1719,30 @@ def _works_piece(
     return Piece(tuple(tables), tuple(lines), got)
 
 
-def _queue_section(day: date, text: str | None, snapshot: str) -> Part:
-    """`text`는 `origin/main`의 대기열 파일 글이고, 읽지 못했으면 None이다. `snapshot`은 모은 시각의
-    기간 글이다."""
-    source = f"`origin/main:{QUEUE_PATH}`(`tools/queue_open_rows.py --ref origin/main`와 같은 읽기)"
-    if text is None:
-        lines = (f"- 대기열 {UNCOLLECTED}(git show 실패)",)
+def queue_section(day: date, files: Mapping[str, str] | None, snapshot: str) -> Part:
+    """`files`는 `origin/main`의 대기열 폴더에 든 항목 파일의 이름→내용(`main_queue`)이고, 읽지
+    못했으면 None이다. `snapshot`은 모은 시각의 기간 글이다."""
+    source = (
+        f"`origin/main:{QUEUE_PATH}/`(`tools/queue_open_rows.py --ref origin/main`와 같은 읽기)"
+    )
+    if files is None:
+        lines = (f"- 대기열 {UNCOLLECTED}(git 실패)",)
         return Part(Section(5, "회고 대기열", "environment", (), lines, source), Collected())
-    return queue_part(day, text, source, snapshot)
+    return queue_part(day, files, source, snapshot)
 
 
-def shared_files(rows: Sequence[queue_open_rows.Row]) -> tuple[tuple[str, ...], ...]:
-    """열린 행이 대상으로 든 수와 괄호 안에 인용한 수를 더해 `MIN_ROWS` 이상인 파일. 디렉터리와
+def shared_files(items: Sequence[queue_open_rows.Item]) -> tuple[tuple[str, ...], ...]:
+    """열린 항목이 대상으로 든 수와 괄호 안에 인용한 수를 더해 `MIN_ROWS` 이상인 파일. 디렉터리와
     패턴은 여러 파일을 담는 그릇이라 넣지 않는다. `queue_open_rows`는 대상만으로 묶음을 가르고 인용
-    경로는 "대상이면 위의 수에 더한다"며 따로 찍는데, 이 표는 두 수를 한 행에 두어 사람이 가르게
-    한다. 차례는 대상인 행이 많은 것, 합이 많은 것, 경로 차례다."""
+    경로는 "대상이면 위의 수에 더한다"며 따로 찍는데, 이 표는 두 수를 한 줄에 두어 사람이 가르게
+    한다. 차례는 대상인 항목이 많은 것, 합이 많은 것, 경로 차례다."""
 
-    def numbers(group: Iterable[queue_open_rows.Row]) -> str:
-        return ", ".join(str(n) for n in sorted(r.number for r in group)) or "-"
+    def numbers(group: Iterable[queue_open_rows.Item]) -> str:
+        ordered = sorted((r.ident for r in group), key=queue_open_rows.sort_key)
+        return ", ".join(queue_open_rows.display_id(i) for i in ordered) or "-"
 
-    targets = queue_open_rows.by_target(list(rows))
-    cited = queue_open_rows.by_citation(list(rows))
+    targets = queue_open_rows.by_target(list(items))
+    cited = queue_open_rows.by_citation(list(items))
     paths = [
         p
         for p in {*targets, *cited}
@@ -1752,36 +1762,39 @@ def shared_files(rows: Sequence[queue_open_rows.Row]) -> tuple[tuple[str, ...], 
     )
 
 
-def queue_part(day: date, text: str, source: str, snapshot: str) -> Part:
-    """대기열 파일의 글(`text`)로 지은 대기열 절. 5회차 이상 행과, 열린 행이 대상과 인용으로
-    `MIN_ROWS`개 이상 든 파일(`shared_files`)을 표로 적어, 행이 늘어도 목록은 한 줄이다."""
+def queue_part(day: date, files: Mapping[str, str], source: str, snapshot: str) -> Part:
+    """대기열 폴더의 항목 파일(`files`, 이름→내용)로 지은 대기열 절. 5회차 이상 항목과, 열린
+    항목이 대상과 인용으로 `MIN_ROWS`개 이상 든 파일(`shared_files`)을 표로 적어, 항목이 늘어도
+    목록은 한 줄이다. 라벨 줄이 빠진 파일은 세지 않는다(독스트링의 못 보는 것). 이름을 지을 때
+    메모가 읽는 글은 항목의 머리 줄(`queue_whats`)이다."""
     got = Collected()
-    rows, _ = queue_open_rows.read_rows(text)
-    whats = queue_whats(text)
+    items, _ = queue_open_rows.read_items(dict(files))
+    whats = queue_whats(files)
     ripe = [
         r
-        for r in rows
+        for r in items
         if not r.human and r.rounds is not None and r.rounds >= queue_open_rows.MIN_ROUNDS
     ]
-    humans = [r for r in rows if r.human]
+    humans = [r for r in items if r.human]
     cutoff = day + timedelta(days=1 - queue_open_rows.EXPIRY_DAYS)
     stale = [
-        r for r in rows if r not in ripe and not r.human and r.last is not None and r.last < cutoff
+        r for r in items if r not in ripe and not r.human and r.last is not None and r.last < cutoff
     ]
     for r in [*ripe, *humans]:
-        got.queue[r.number] = QueueRow(r.number, r.rounds, r.human, whats.get(r.number, ""))
+        shown = queue_open_rows.display_id(r.ident)
+        got.queue[shown] = QueueRow(shown, r.rounds, r.human, whats.get(shown, ""))
     lines = (
-        f"- 열린 행 {len(rows)}개 · 기한 지난 행 {len(stale)}개 · 사람 몫 {len(humans)}개"
+        f"- 열린 항목 {len(items)}개 · 기한 지난 항목 {len(stale)}개 · 사람 몫 {len(humans)}개"
         "(직접 하실 일 참고)",
     )
     cells = tuple(
         (
-            f"대기열 {r.number}",
+            f"대기열 {queue_open_rows.display_id(r.ident)}",
             f"{r.rounds}회차",
-            f"{{{{qname:{r.number}}}}}",
-            f"{{{{qcontent:{r.number}}}}}",
+            f"{{{{qname:{queue_open_rows.display_id(r.ident)}}}}}",
+            f"{{{{qcontent:{queue_open_rows.display_id(r.ident)}}}}}",
         )
-        for r in sorted(ripe, key=lambda r: (-(r.rounds or 0), r.number))
+        for r in sorted(ripe, key=lambda r: (-(r.rounds or 0), queue_open_rows.sort_key(r.ident)))
     )
     head = ("대기열", "회차", "작업 이름", "작업 내용")
     ripe_table = Table(
@@ -1795,7 +1808,7 @@ def queue_part(day: date, text: str, source: str, snapshot: str) -> Part:
         cells,
     )
     tables = [ripe_table] if cells else []
-    shared = shared_files(rows)
+    shared = shared_files(items)
     if shared:
         head = (
             "대상 파일",
@@ -1816,9 +1829,9 @@ def queue_part(day: date, text: str, source: str, snapshot: str) -> Part:
                 shared,
             )
         )
-    got.value("queue:open", "대기열 열린 행", len(rows), "개")
-    got.value("queue:expired", "대기열 기한 지난 행", len(stale), "개")
-    got.value("queue:ripe", f"대기열 {queue_open_rows.MIN_ROUNDS}회 이상 행", len(ripe), "개")
+    got.value("queue:open", "대기열 열린 항목", len(items), "개")
+    got.value("queue:expired", "대기열 기한 지난 항목", len(stale), "개")
+    got.value("queue:ripe", f"대기열 {queue_open_rows.MIN_ROUNDS}회 이상 항목", len(ripe), "개")
     return Part(Section(5, "회고 대기열", "environment", tuple(tables), lines, source), got)
 
 
@@ -2407,7 +2420,7 @@ def collect(
             span_period(week[0], day),
             rate,
         ),
-        _queue_section(day, main_text(root, QUEUE_PATH), snapshot),
+        queue_section(day, main_queue(root), snapshot),
         _yesterday_section(
             day, merged_all, opened, active, leftover, now, tz, journal_path, snapshot
         ),
@@ -2438,10 +2451,10 @@ def sheet_lines(data: Data) -> list[str]:
     for n, p in sorted(data.prs.items()):
         title = p.title if p.title is not None else "(제목 조회 실패)"
         out.append(f"- #{n} [{p.branch}] {title} :: {p.body[:SHEET_CHARS]}")
-    out.append(f"## 대기열 행 {len(data.queue)}개")
+    out.append(f"## 대기열 항목 {len(data.queue)}개")
     out += [
         f"- {n} ({q.rounds}회차{', 사람 몫' if q.human else ''}) {q.what[:SHEET_CHARS]}"
-        for n, q in sorted(data.queue.items())
+        for n, q in sorted(data.queue.items(), key=lambda kv: queue_open_rows.sort_key(kv[0]))
     ]
     out.append(f"## PR 없는 브랜치 {len(data.branches)}개(마지막 커밋 제목)")
     out += [f"- {b}: {s}" for b, s in sorted(data.branches.items())]

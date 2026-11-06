@@ -1,6 +1,7 @@
 """PostToolUse 훅(Write|Edit). 근거로 읽히는 문서(`docs/adr/`, `.scratch/**/probes/README.md`,
-`.scratch/retro-queue.md`)에 더한 줄이 측정 낱말(`쟀다`·`재니`·`실측`)을 들면서 같은 줄에 `probes/`
-경로도 `손으로`도 없으면, `docs/agents/issue-tracker.md` 의 "프로브와 근거" 절을 컨텍스트에 넣는다.
+`.scratch/retro-queue/` 바로 아래의 `.md`)에 더한 줄이 측정 낱말(`쟀다`·`재니`·`실측`)을 들면서 같은
+줄에 `probes/` 경로도 `손으로`도 없으면, `docs/agents/issue-tracker.md` 의 "프로브와 근거" 절을
+컨텍스트에 넣는다.
 
 왜. 그 절은 "쟀다"·"실측"을 커밋한 프로브가 다시 내는 것에만 쓰고 그 파일을 가리키며, 손으로 돌려 본
 것은 손으로 봤다고 적으라고 한다(대기열 45). 그 절이 지침이 된 뒤에도 ADR 이력에 손으로 돌린 시간
@@ -41,11 +42,12 @@ Write 와 Edit 에서 문자열이고, 새 파일을 만든 Write 에서는 null
 
 못 보는 것:
 - 다른 꼴의 측정 낱말(`잰`, `재 보니`, `측정했다`). 대기열 227 이 고른 셋만 본다.
-- 낱말을 이름으로만 든 줄(대기열 행이 "`쟀다`·`실측`을 든 줄"이라고 적은 것). 근거 문장과 가르지
+- 낱말을 이름으로만 든 줄(대기열 항목이 "`쟀다`·`실측`을 든 줄"이라고 적은 것). 근거 문장과 가르지
   않고 알린다.
-- 옛 줄을 고쳐 쓴 것. 줄의 다른 자리만 고쳐도(대기열 행에 취소선을 긋는 것) 쓴 뒤 파일에서는 그 줄
-  전체가 새 줄이라 옛 낱말이 다시 걸린다. 알림이 이 경우는 무시하라고 적는다. `originalFile` 이 없는
-  Edit 은 조각만 보므로 거꾸로 낱말이 조각 밖에 있으면 지나간다.
+- 옛 줄을 고쳐 쓴 것. 줄의 다른 자리만 고쳐도(대기열 항목의 상태 줄을 `열림`에서 `닫힘 (…)`으로
+  고치는 것) 쓴 뒤 파일에서는 그 줄 전체가 새 줄이라, 그 줄이 이미 들고 있던 낱말이 다시 걸린다.
+  알림이 이 경우는 무시하라고 적는다. `originalFile` 이 없는 Edit 은 조각만 보므로 거꾸로 낱말이
+  조각 밖에 있으면 지나간다.
 - 근거가 같은 줄 밖에 있는 문장. 줄을 바꿔 `probes/` 를 적은 감긴 문단도, 프로브를 첫 칸에 파일
   이름으로만 드는 프로브 README 의 행도 알린다. 알림이 그 줄의 결과를 같은 줄 밖의 프로브가 다시
   내면 무시하라고 적는다. 그 결과를 프로브가 냈는지 손으로 봤는지는 모델이 가른다.
@@ -53,7 +55,9 @@ Write 와 Edit 에서 문자열이고, 새 파일을 만든 Write 에서는 null
   실측했다"). 같은 줄에 그 문자열이 있으면 지나간다.
 - 정규화하지 않은 경로(`docs/./adr/`, `..`). 토막을 그대로 견준다. 거꾸로 `docs/adr` 토막은 어느
   깊이에 있든, 확장자가 무엇이든 받고, `.scratch` 토막도 어느 깊이에 있든
-  받는다(`web/.scratch/retro-queue.md`).
+  받는다(`web/.scratch/retro-queue/0573.md`). 대기열 폴더는 바로 아래의 `.md` 만 본다. 하위 폴더,
+  `.md` 가 아닌 파일, 비슷한 이름의 폴더(`.scratch/retro-queue-x/`), 이행 전의 표 파일
+  `.scratch/retro-queue.md` 는 지나간다.
 - `probes/` 아래 하위 폴더의 README(`.scratch/harness/probes/session_cost/README.md`). 대기열 227 이
   고른 `.scratch/**/probes/README.md` 꼴만 본다. 그 README 는 `hook_probe_conclusion` 만 알린다.
 - Bash heredoc·`>>`·`sed -i` 로 쓴 문서. 이 훅은 편집 도구에만 붙는다.
@@ -83,9 +87,9 @@ _BODY = (
     "프로브가 다시 내는 것에만 쓰고 그 파일을 가리킨다. 손으로 돌려 본 것은 그 명령과 함께 손으로 "
     "봤다고, 코드를 읽은 것은 파일과 판과 함께 읽었다고, 재지 않은 것은 어림이라고 고쳐 적는다. "
     "다음 셋이면 고치지 않고 이 알림은 무시한다. 낱말을 이름으로 든 것뿐이다. 이미 있던 줄의 다른 "
-    "자리만 고쳤다(취소선, 닫힘 표지). 그 줄의 결과를 같은 줄 밖(감긴 문단의 앞뒤 줄, "
-    "프로브 README 행의 첫 칸)의 커밋한 프로브가 다시 낸다. 프로브 README 의 행이어도 손으로 본 "
-    "결과를 측정 낱말로 적었으면 무시하지 않는다. 걸린 줄({count}개):\n{lines}"
+    "자리만 고쳤다(상태 줄을 열림에서 닫힘으로 고친 것). 그 줄의 결과를 같은 줄 밖(감긴 문단의 "
+    "앞뒤 줄, 프로브 README 행의 첫 칸)의 커밋한 프로브가 다시 낸다. 프로브 README 의 행이어도 "
+    "손으로 본 결과를 측정 낱말로 적었으면 무시하지 않는다. 걸린 줄({count}개):\n{lines}"
 )
 _SPLIT = re.compile(r"[\\/]+")
 
@@ -113,15 +117,15 @@ class HookPayload(TypedDict, total=False):
 
 
 def is_evidence_doc(path: str) -> bool:
-    """`docs/adr/` 아래 파일, `.scratch/` 아래의 `probes/README.md`, `.scratch/retro-queue.md`
-    인가."""
+    """`docs/adr/` 아래 파일, `.scratch/` 아래의 `probes/README.md`, `.scratch/retro-queue/` 바로
+    아래의 `.md`(하위 폴더 없이 직계)인가."""
     parts = [part.casefold() for part in _SPLIT.split(path) if part]
     if len(parts) < 2:
         return False
     *folders, name = parts
     if any(folders[index : index + 2] == ["docs", "adr"] for index in range(len(folders) - 1)):
         return True
-    if folders[-1] == ".scratch" and name == "retro-queue.md":
+    if folders[-2:] == [".scratch", "retro-queue"] and name.endswith(".md"):
         return True
     return name == "readme.md" and folders[-1] == "probes" and ".scratch" in folders[:-1]
 

@@ -28,10 +28,10 @@ WBR·What/So what/Now what·Google SRE·Few·영국 정부 표 지침에서 규�
 
 작업 표기. 작업이 나오는 곳에는 번호·이름·내용을 함께 쓰되, 내용은 그 작업이 처음 나온 자리에만
 쓰고 뒤에서는 번호와 이름만 쓴다. 수집 도구의 칸은 `{{name:N}}`·`{{content:N}}`(PR),
-`{{qname:N}}`·`{{qcontent:N}}`(대기열 행), `{{branch:B}}`(PR 없는 브랜치), `{{work:B}}`(브랜치의
+`{{qname:ID}}`·`{{qcontent:ID}}`(대기열 항목), `{{branch:B}}`(PR 없는 브랜치), `{{work:B}}`(브랜치의
 작업. PR이 있으면 그 PR의 이름, 없으면 메모의 브랜치 이름과 브랜치), `{{group:N}}`(병합 PR의 분류)로
 자리를 남기고, 표의 내용 칸은 뒤에서 `→ 「<질문>」 표`로 가리킨다. 수집 도구가 쓴 줄은 `{{ref:N}}`,
-모델이 쓴 글은 `#N`과 `대기열 N`을 찾아 같은 규칙으로 `<번호> <이름>(<내용>)`을 붙인다. PR 제목을
+모델이 쓴 글은 `#N`과 `대기열 ID`를 찾아 같은 규칙으로 `<번호> <이름>(<내용>)`을 붙인다. PR 제목을
 가져오지 못했으면 `LOOKUP_FAILED`로 적는다(이름을 지을 근거가 없어 경고하지 않는다). 메모에 이름이
 없으면 `NO_NAME`, 내용이 없으면 `NO_CONTENT`로 적고 경고한다.
 
@@ -47,9 +47,16 @@ WBR·What/So what/Now what·Google SRE·Few·영국 정부 표 지침에서 규�
 
 못 보는 것.
 - 메모의 글이 사실인지는 보지 않는다. 수치는 표에서만 오고, 글은 해석이다.
-- 모델이 글에 작업 번호를 `#N`·`대기열 N` 꼴이 아닌 모양(`PR 301`)으로 쓰면 이름을 붙이지 않는다.
+- 모델이 글에 작업 번호를 `#N`·`대기열 ID` 꼴이 아닌 모양(`PR 301`)으로 쓰면 이름을 붙이지 않는다.
   `대기열 238·243`처럼 번호를 이어 쓰면 앞 번호에만 붙인다. `대기열 3회`처럼 수 뒤에 세는 말
-  (`COUNTERS`)이 붙으면 행 번호로 보지 않으므로, `대기열 238건` 같은 행 번호도 놓친다.
+  (`COUNTERS`)이 붙으면 항목 번호로 보지 않으므로, `대기열 238건` 같은 항목 번호도 놓친다.
+- 대기열 항목의 식별자 `ID`는 문자열이다(ADR 0045). 숫자(`238`. 앞을 0으로 채운 `0238`도 같은
+  항목이다)이거나 영어 소문자 슬러그(`coderabbit-inline-size`)다. 슬러그는 뒤에 이어지는 영어
+  소문자·숫자·`-` 전체를 한 식별자로 읽는다. 이 도구는 스크립트로 돌아 `queue_open_rows`를 가져오지
+  못해, 그 `display_id`와 같은 규칙을 `queue_key`에 따로 둔다.
+- 항목이 아닌 영어 낱말도 `대기열 ` 뒤에 오면 슬러그로 읽는다. 메모에 그 이름이 없으면 `(이름
+  없음)`이 붙고 경고가 난다(`대기열 items가 많다`). 번호 뒤에 `항목`이 붙은 `대기열 3항목`은
+  `COUNTERS`에 `항`이 없어 항목 3으로 읽는다.
 - 문장 수는 `다.`로 끝나는 문장만 센다. `…함.`이나 물음표로 끝나는 문장은 세지 않는다.
 - 같은 사실이 두 보고에 되풀이되는지는 표의 자리(`Table.report`)로만 막는다. 모델의 글이 표의 수치를
   다시 적으면 막지 못한다.
@@ -96,8 +103,10 @@ MAX_DECISIONS = 3
 DAILY_BUDGET = 100 / 7  # 주간 한도를 이레로 나눈 하루 몫(%p)
 WEEKDAYS = "월화수목금토일"
 PLACEHOLDER = re.compile(r"\{\{(name|content|qname|qcontent|ref|branch|work|group):([^{}]+)\}\}")
-COUNTERS = "회개줄행건"  # `대기열 3회`처럼 수 뒤에 붙으면 행 번호가 아니라 셈이다
-REF = re.compile(rf"#(\d+)|대기열 (\d+)(?![\d{COUNTERS}])")
+COUNTERS = "회개줄행건"  # `대기열 3회`처럼 수 뒤에 붙으면 항목 번호가 아니라 셈이다
+SLUG = r"[a-z][a-z0-9-]*"  # 대기열 항목 파일 이름의 슬러그 꼴(`queue_open_rows.SLUG`와 같다)
+QUEUE_ID = re.compile(rf"[0-9]+|{SLUG}")
+REF = re.compile(rf"#(\d+)|대기열 (?:(\d+)(?![\d{COUNTERS}])|({SLUG}))")
 PR_KIND = re.compile(r"^(\w+)(?:\(.*?\))?!?:")
 HANGUL = re.compile(r"[가-힣]")
 SENTENCE_END = re.compile(r"(?<=다)\.(?:\s|$)")
@@ -118,6 +127,24 @@ def json_list(v: Json) -> list[Json]:
 
 def json_str(v: Json) -> str:
     return v if isinstance(v, str) else ""
+
+
+def queue_key(ident: str) -> str:
+    """대기열 항목의 열쇠. 숫자는 앞의 0을 뗀 정수 모양이고 슬러그는 그대로다
+    (`queue_open_rows.display_id`와 같다)."""
+    return str(int(ident)) if re.fullmatch(r"[0-9]+", ident) else ident
+
+
+def json_queue(v: Json) -> str | None:
+    """메모의 `queue` 값. 정수나 숫자·슬러그 글을 열쇠로 읽고, 그 밖의 값(참거짓, 음수, 공백이 든
+    글)은 None이다."""
+    if isinstance(v, bool):
+        return None
+    if isinstance(v, int):
+        return str(v) if v >= 0 else None
+    if isinstance(v, str) and QUEUE_ID.fullmatch(v):
+        return queue_key(v)
+    return None
 
 
 def json_int(v: Json) -> int | None:
@@ -368,7 +395,9 @@ class Pr:
 
 @dataclass(frozen=True)
 class QueueRow:
-    number: int
+    """대기열 항목 하나. `ident`는 문자열 식별자(`queue_key`)이고 `what`은 항목의 머리 줄이다."""
+
+    ident: str
     rounds: int | None
     human: bool
     what: str
@@ -377,10 +406,10 @@ class QueueRow:
         return {"rounds": self.rounds, "human": self.human, "what": self.what}
 
     @staticmethod
-    def of(number: int, j: Json) -> QueueRow:
+    def of(ident: str, j: Json) -> QueueRow:
         o = json_obj(j)
         return QueueRow(
-            number, json_int(o.get("rounds")), o.get("human") is True, json_str(o.get("what"))
+            ident, json_int(o.get("rounds")), o.get("human") is True, json_str(o.get("what"))
         )
 
 
@@ -410,6 +439,15 @@ def _numbered[T](j: Json, make: Callable[[int, Json], T]) -> dict[int, T]:
     return out
 
 
+def _queued[T](j: Json, make: Callable[[str, Json], T]) -> dict[str, T]:
+    """대기열 항목 열쇠(숫자나 슬러그)마다. 숫자는 앞의 0을 떼고 그 밖의 열쇠는 버린다."""
+    out: dict[str, T] = {}
+    for k, v in json_obj(j).items():
+        if QUEUE_ID.fullmatch(k):
+            out[queue_key(k)] = make(queue_key(k), v)
+    return out
+
+
 @dataclass(frozen=True)
 class Data:
     """수집 도구의 출력. `branches`는 PR이 없는 브랜치의 마지막 커밋 제목이고, `journal`은 가장
@@ -421,7 +459,7 @@ class Data:
     values: dict[str, Value]
     sections: tuple[Section, ...]
     prs: dict[int, Pr]
-    queue: dict[int, QueueRow]
+    queue: dict[str, QueueRow]
     branches: dict[str, str]
     journal: str
     limit: Limit | str
@@ -469,7 +507,7 @@ class Data:
             values,
             tuple(Section.of(s) for s in json_list(o.get("sections"))),
             _numbered(o.get("prs"), Pr.of),
-            _numbered(o.get("queue"), QueueRow.of),
+            _queued(o.get("queue"), QueueRow.of),
             {k: json_str(v) for k, v in json_obj(o.get("branches")).items()},
             json_str(o.get("journal")),
             Limit.of(o.get("limit")),
@@ -486,7 +524,7 @@ class Named:
     group: str = ""
 
     @staticmethod
-    def of(_number: int, j: Json) -> Named:
+    def of(_ident: int | str, j: Json) -> Named:
         o = json_obj(j)
         return Named(json_str(o.get("name")), json_str(o.get("content")), json_str(o.get("group")))
 
@@ -495,12 +533,12 @@ class Named:
 class Todo:
     title: str
     why: str
-    queue: int | None = None
+    queue: str | None = None
 
     @staticmethod
     def of(j: Json) -> Todo:
         o = json_obj(j)
-        return Todo(json_str(o.get("title")), json_str(o.get("why")), json_int(o.get("queue")))
+        return Todo(json_str(o.get("title")), json_str(o.get("why")), json_queue(o.get("queue")))
 
 
 @dataclass(frozen=True)
@@ -557,7 +595,7 @@ class Notes:
     `causes`는 지표 열쇠마다 평소와 다른 원인이다."""
 
     prs: dict[int, Named]
-    queue: dict[int, Named]
+    queue: dict[str, Named]
     branches: dict[str, str]
     todos: tuple[Todo, ...]
     decisions: tuple[Decision, ...]
@@ -570,7 +608,7 @@ class Notes:
         o = json_obj(j)
         return Notes(
             _numbered(o.get("prs"), Named.of),
-            _numbered(o.get("queue"), Named.of),
+            _queued(o.get("queue"), Named.of),
             {k: json_str(v) for k, v in json_obj(o.get("branches")).items()},
             tuple(Todo.of(t) for t in json_list(o.get("todos"))),
             tuple(Decision.of(d) for d in json_list(o.get("decisions"))),
@@ -806,8 +844,9 @@ class Namer:
             return LOOKUP_FAILED, LOOKUP_FAILED, frozenset()
         return _parts(self.notes.prs.get(n), f"#{n}")
 
-    def queue_parts(self, n: int) -> tuple[str, str, frozenset[str]]:
-        return _parts(self.notes.queue.get(n), f"대기열 {n}")
+    def queue_parts(self, ident: str) -> tuple[str, str, frozenset[str]]:
+        """대기열 항목의 (이름, 내용, 메모에 빠진 것). `ident`는 `queue_key`를 거친 열쇠다."""
+        return _parts(self.notes.queue.get(ident), f"대기열 {ident}")
 
     def fill(self, text: str, where: str, marks: Marks) -> tuple[str, Marks]:
         """수집 도구가 남긴 자리 표시자를 채운다. 표의 내용 칸은 처음 나온 자리에만 내용을 쓰고
@@ -829,8 +868,9 @@ class Namer:
         if kind == "group":
             return self._group(n), marks
         queue = kind in ("qname", "qcontent")
-        key = f"queue:{n}" if queue else f"pr:{n}"
-        name, content, lack = self.queue_parts(n) if queue else self.pr_parts(n)
+        ident = queue_key(arg)
+        key = f"queue:{ident}" if queue else f"pr:{n}"
+        name, content, lack = self.queue_parts(ident) if queue else self.pr_parts(n)
         marks = marks.lacking(lack)
         if kind in ("name", "qname"):
             return name, marks
@@ -866,7 +906,7 @@ class Namer:
         return f"`{branch}`", marks
 
     def expand(self, text: str, where: str, marks: Marks) -> tuple[str, Marks]:
-        """모델이 쓴 글의 `#N`과 `대기열 N`에 이름을 붙인다. 처음 나온 자리면
+        """모델이 쓴 글의 `#N`과 `대기열 ID`에 이름을 붙인다. 처음 나온 자리면
         `<번호> <이름>(<내용>)`, 뒤에서는 `<번호> <이름>`이다. 번호 뒤에 이름이 이미 있으면 이름은
         다시 붙이지 않는다. 번호 바로 뒤에 한글이 붙으면 조사가 붙은 것으로 센다(이름을 끼우면
         받침이 어긋난다)."""
@@ -876,9 +916,13 @@ class Namer:
             if m.start() < pos:
                 continue
             pr = m.group(1) is not None
-            n = int(m.group(1) or m.group(2))
-            key = f"pr:{n}" if pr else f"queue:{n}"
-            name, content, lack = self.pr_parts(n) if pr else self.queue_parts(n)
+            if pr:
+                key = f"pr:{int(m.group(1))}"
+                name, content, lack = self.pr_parts(int(m.group(1)))
+            else:
+                ident = queue_key(m.group(2) or m.group(3))
+                key = f"queue:{ident}"
+                name, content, lack = self.queue_parts(ident)
             marks = marks.lacking(lack)
             end = m.end()
             if text.startswith(f" {name}", end):

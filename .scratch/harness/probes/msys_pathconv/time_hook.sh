@@ -7,7 +7,7 @@
 set -eu
 root=$(cd "$(dirname "$0")/../../../.." && pwd)
 for i in 1 2 3 4 5 6 7; do
-  for case in "침묵|ls -la tools" "알림|git show origin/main:.scratch/retro-queue.md"; do
+  for case in "침묵|ls -la tools" "알림|git show origin/main:.scratch/retro-queue/0425.md"; do
     expected=${case%%|*}
     command=${case#*|}
     payload="{\"tool_name\": \"Bash\", \"tool_input\": {\"command\": \"$command\"}}"

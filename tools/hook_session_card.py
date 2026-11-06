@@ -45,7 +45,7 @@ BLOCKED_INITIATION = "own_initiative"
 
 REASON = (
     "모델이 스스로 내는 세션 카드(`initiation: own_initiative`)는 이 저장소에서 막는다. "
-    '후속 일은 지금 일지의 "다음"이나 대기열 행(`.scratch/retro-queue.md`, 회고)으로 적는다. '
+    '후속 일은 지금 일지의 "다음"이나 대기열 항목(`.scratch/retro-queue/`, 회고)으로 적는다. '
     "`initiation` 을 `user_asked` 나 `offer` 로 바꿔 다시 부르지 않는다 — 그 값은 사용자가 말로 "
     '새 세션을 시켰거나 사용자에게 물을 때만 쓴다. 근거는 ADR 0037 의 "세션 카드"다.'
 )

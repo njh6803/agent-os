@@ -9,7 +9,7 @@
 판정한다. 그 단계는 pre-commit 단계의 검사가 모두 끝난 뒤라, 제목 하나 때문에 약 7~8분의 게이트를
 한 번 더 돌았다. 세 번(일지 2026-10-13-06 의 484초, 2026-10-13-12·2026-10-13-30 의 약 7분)
 있었다(대기열 222).
-대기열 행은 "알린다"였지만 막는다. PreToolUse 의 additionalContext 는 도구 결과 옆에 들어가고
+대기열 항목은 "알린다"였지만 막는다. PreToolUse 의 additionalContext 는 도구 결과 옆에 들어가고
 Claude 는 그것을 다음 모델 요청에서 읽는다(공식 hooks 문서, 2026-10-13 내려받아 글자 그대로 대
 봤다: "next to the tool result", "Claude reads the reminder on the next model request"). 커밋이
 게이트를 다 돈 뒤에야 모델이 알림을 보니 되풀이를 줄이지 못한다.

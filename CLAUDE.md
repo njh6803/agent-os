@@ -35,7 +35,7 @@
 | `docs/model-selection.md` | 결정표의 모델 칸을 바꾸려 할 때, 새 모델이 나왔을 때 | 공식 원문을 다시 대 보거나 다시 잰 뒤 |
 | `CODING_STANDARDS.md` | code-review 때 | retro가 다섯 번째 반복에서 더할 때 |
 | `.scratch/plan.md` | 이어서 할 때, 티켓을 고를 때 | 기능 상태가 바뀔 때 |
-| `.scratch/retro-queue.md` | 회고 뒤, chore 브랜치를 딸 때 | 후보가 승인될 때와 반영을 닫을 때 |
+| `.scratch/retro-queue/`(폴더, 항목마다 파일 하나. 모양과 인용을 푸는 규칙은 그 `README.md`) | 회고 뒤, chore 브랜치를 딸 때 | 후보가 승인될 때와 반영을 닫을 때 |
 | `.scratch/<slug>/spec.md`, `issues/` | 티켓 작업을 시작하기 전 | to-spec, to-tickets 스킬이(사용자만 부른다). harness 티켓은 그 일을 하는 세션이(`docs/agents/issue-tracker.md`) |
 | `docs/journal/` | 이어서 할 때 최신 파일 끝의 "다음" | 단계를 마칠 때. 사용자 프롬프트 원문 포함 |
 | `docs/agents/` | 트래커·도메인 문서 규약이 헷갈릴 때 | setup 스킬이 |
@@ -66,7 +66,7 @@
 - 자동 검사로 잡을 수 없는 판단 기준만 CODING_STANDARDS.md에 한 줄 후보로 올린다. 더할지는 retro가 판정한다(아래 회고 줄).
 - 새 검사·훅·지침 문장과 규칙(CODING_STANDARDS.md의 줄)은 같은 실수의 다섯 번째이거나 손상이 한 번 났을 때 더한다. 그 전에는 대기열에서 회차를 센다. 고침(버그, 틀린 사실, 깨진 경로)은 사건 하나로 한다(retro 4단계, ADR 0036). 지침으로 적은 뒤에도 어겨지면 막는 훅 후보다. 계기만 넣는 훅은 단계를 닫는 순간의 지침에 처음부터 붙인다(retro, next-session).
 - 규칙은 강제력이 가장 높은 층에 둔다. 타입 → 린터·훅 → 아키텍처 테스트 → 지침 → 리뷰. 린터가 잡는 것을 지침에 적지 않고, 거짓 양성이 많은 규칙을 하드 게이트로 만들지 않는다.
-- 회고는 retro 스킬이 정해진 계기에 스스로 돈다. 계기는 그 스킬의 설명이 원천이다. 후보의 승인도 retro가 스스로 판정하고, 나에게는 그 스킬이 넘긴 것만 묻는다. 승인됐는데 아직 반영하지 않은 것은 `.scratch/retro-queue.md`가 든다.
+- 회고는 retro 스킬이 정해진 계기에 스스로 돈다. 계기는 그 스킬의 설명이 원천이다. 후보의 승인도 retro가 스스로 판정하고, 나에게는 그 스킬이 넘긴 것만 묻는다. 승인됐는데 아직 반영하지 않은 것은 `.scratch/retro-queue/`의 항목 파일이 든다.
 
 지침을 추가할 때는 내용보다 로드 시점을 먼저 정한다. `paths` 없는 `.claude/rules/*.md`와 `@` 임포트로 쪼개도 컨텍스트는 줄지 않는다. 그것들도 이 파일과 똑같이 매 세션 전부 실린다.
 
@@ -89,7 +89,7 @@
 - 검사 도구가 내가 생각하는 것을 실제로 봤는지 먼저 확인한다(되풀이해 겪었다). 탐침은 실제 호출과 같은 실행 위치·환경으로 돈다. 실행 위치가 다르자 ruff가 그 프로젝트의 `fix` 설정을 읽지 않았다. pyright 프로브의 자리와 인자는 `docs/constitution/operations.md` 환경 규약 상세.
 - Glob 도구는 설정 `env`의 `CLAUDE_CODE_GLOB_NO_IGNORE=false`로 `.gitignore`를 따른다. `.venv` 안의 파일은 루트에서도 `path` `.venv`에서도 찾지 않고, 그 파일이 든 하위 폴더(`.venv/Lib/site-packages`)를 `path`로 주면 찾았다(`claude -p`에서 `.venv`만 손으로 봤다, harness 티켓 010). 루트의 Glob이 시간 초과로 끝나면 `path`를 무시된 폴더(`.venv`, `node_modules`, `.claude/worktrees/`)를 품지 않는 하위 폴더(`.claude/skills`, `src`)로 좁힌다. 패턴에 `/`가 들면 `**/`로 연다. `**/` 없이 `/`가 든 패턴은 좁힌 `path`에서 찾지 못할 수 있어, `path` `.claude/skills`에 `tidy-checkouts/SKILL.md`를 주면 "No files found"가 났다(2026-10-19 claude 2.1.299에서 손으로 봤다, 일지 2026-10-19-21, 대기열 211).
 - Grep 도구는 glob이 없으면 `.gitignore`를 따른다. glob을 주면 그 glob(중괄호면 갈래 하나)에 바로 맞는 무시된 파일과 폴더는 넘고, 맞은 폴더는 안까지 훑는다. `.claude/**`는 `.claude/worktrees/`에, `[!.]*`는 거의 모든 폴더 이름에 맞으니, 갈래마다 폴더 이름에 맞지 않는 조각(`*.md`, `SKILL.md`)으로 끝낸다. 두 도구 모두 결과 경로에 `.claude/worktrees/<이름>/`이 들면 그 파일은 `<이름>` 워크트리의 사본이다(2026-10-19 claude 2.1.299에서 손으로 봤다, 일지 2026-10-19-21, 대기열 211).
-- 커밋 전에 `git branch --show-current`로 브랜치를 본다. 같은 체크아웃을 다른 세션이 옮길 수 있고, 몇 분 전의 `git status`는 캐시다. main 위의 커밋은 훅이 막는다. 그리고 `uv run python tools/sibling_overlap.py`를 친다(무엇을 보는지는 그 독스트링). 긴 세션 동안 main에 병합된 PR(대기열 48)과 아직 열린 PR(대기열 115)이 번호를 먼저 가져갔다. 1로 끝나면 출력대로 고친다. 번호는 "옮길 번호"대로 비켜 가고, 이 브랜치의 변경(`git diff --merge-base origin/main`과 미추적 파일)에서 옛 번호를 가리킨 인용도 고친다. 출력의 origin/main 줄이 움직였으면 `git diff --name-only HEAD...origin/main`을 이 브랜치가 이름으로 든 파일과도 대조한다. 따라야 할 규약이 새로 섰을 수 있다(대기열 48).
+- 커밋 전에 `git branch --show-current`로 브랜치를 본다. 같은 체크아웃을 다른 세션이 옮길 수 있고, 몇 분 전의 `git status`는 캐시다. main 위의 커밋은 훅이 막는다. 그리고 `uv run python tools/sibling_overlap.py`를 친다(무엇을 보는지는 그 독스트링. 번호로는 `일지 X, 티켓 NNN`과 ADR 번호, 헌법 판을 대 본다). 긴 세션 동안 main에 병합된 PR(대기열 48)과 아직 열린 PR(대기열 115)이 번호를 먼저 가져갔다. 1로 끝나면 출력대로 고친다. 번호는 "옮길 번호"대로 비켜 가고, 이 브랜치의 변경(`git diff --merge-base origin/main`과 미추적 파일)에서 옛 번호를 가리킨 인용도 고친다. 출력의 origin/main 줄이 움직였으면 `git diff --name-only HEAD...origin/main`을 이 브랜치가 이름으로 든 파일과도 대조한다. 따라야 할 규약이 새로 섰을 수 있다(대기열 48).
 - 백그라운드 작업(워크플로, 서브에이전트, 백그라운드 명령)이 도는지는 기록 파일의 시각이 아니라 작업 도구의 상태로 본다. 멈춘 워크플로를 이어 돌렸으면, 사용자의 중지 메시지를 자기에게 온 말로 읽고 검증 없이 거절한 판정을 세어 그 몫을 다시 돌린다(일지 2026-10-05-05, 대기열 109·110).
 - main을 합친 뒤 바뀐 스킬은 Skill 도구가 합치기 전의 사본을 싣는다(스킬은 세션을 시작한 체크아웃의 사본이 실린다, `docs/constitution/operations.md` 환경 규약 상세). 그 스킬은 Read로 디스크의 `SKILL.md`를 열어 따른다(일지 2026-10-13-04).
 

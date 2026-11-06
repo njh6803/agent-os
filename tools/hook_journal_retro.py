@@ -84,7 +84,7 @@ OVERLAP_COMMAND = "uv run python tools/sibling_overlap.py"
 OVERLAP_TIMEOUT = 40.0
 JOURNAL_KEY = re.compile(r"^(\d{4}-\d{2}-\d{2})-(\d{2})-.+\.md$")
 # 도구 출력의 두 줄(`tools/sibling_overlap.py` 의 `render`). 꼴이 바뀌면 테스트의 실제 실행이
-# 갈린다.
+# 갈린다. 다음 빈 번호 줄은 `일지 X, 티켓 NNN` 꼴이라 일지 순번 뒤의 쉼표가 정규식의 끝이다.
 NEXT_LINE = re.compile(r"^다음 빈 번호\(형제 포함\): 일지 (\d{4}-\d{2}-\d{2}-\d{2}),", re.MULTILINE)
 MOVES_LINE = re.compile(r"^옮길 번호: (.+)$", re.MULTILINE)
 OURS_LINE = re.compile(r"^이 브랜치의 새 번호(?:: (.+)| 없음)$", re.MULTILINE)

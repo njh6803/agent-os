@@ -1,22 +1,281 @@
-# chore/queue-open-rows-tool 의 열린 대기열 행 세기 변이(대기열 167). 형식은 tools/mutate.py 의 독스트링.
+# retro-queue-per-item 02(항목마다 파일 하나인 대기열 폴더)가 다시 썼다. 형식은 tools/mutate.py 의 독스트링.
 # 사용: PYTHONUTF8=1 uv run python tools/mutate.py .scratch/harness/probes/queue_open_rows_mutations.toml
-# tools/queue_open_rows.py 의 판정(닫힘, 회차, 대상과 인용, 칸 수, 결정표 조건, 종료 코드)을 하나씩 꺼서
-# 그것을 지키는 테스트가 빨강이 되는지 잰다. 체크아웃을 고치므로 도는 동안 그 체크아웃을 읽거나 고치지 않는다.
+# tools/queue_open_rows.py 의 판정(상태, 라벨 줄, 폴더 읽기, 회차, 대상과 인용, 사람 몫, 만료, 식별자,
+# 찾기, --ref 폴더 읽기)을 하나씩 꺼서 그것을 지키는 테스트가 빨강이 되는지 잰다. 시험은
+# tests/tools/test_queue_open_rows.py 이고, 이름 규칙과 라벨 줄을 저장소에서 보는
+# tests/test_retro_queue_names.py 를 겨눈 둘이 있다. 체크아웃을 고치므로 도는 동안 그 체크아웃을
+# 읽거나 고치지 않는다.
+#
+# 이 표의 옛 판(항목이 표의 행이던 때)은 줄이 사라진 변이를 새 도구의 같은 판정으로 옮겼다. 칸 수·이스케이프한
+# 파이프·머리의 취소선을 걷는 변이는 판정이 없어져 뺐고, 폴더 읽기(README.md 제외, 하위 폴더와 .md 가
+# 아닌 파일), 식별자 정렬, item_name 의 네 자리 채우기, 찾기의 경로 출력, --ref 의 폴더 읽기 변이를
+# 더했다. `read_ref_folder` 의 `is_item_name` 거르기는 `read_items` 가 같은 거르기를 다시 하므로 끄면
+# 결과가 같아(같은 값 변이) 표에 넣지 않았다. 표지는 고른 단언이 실패할 때만 나오는 문구다(.claude/rules/probes.md 첫 항목).
 
 [[mutation]]
-name = "굵게 시작한 취소선을 닫힘으로 읽지 않는다"
-tests = ["tests/tools/test_queue_open_rows.py", "-k", "취소선으로_시작하는"]
+name = "만료 상태를 닫힘으로 읽지 않는다"
+tests = ["tests/tools/test_queue_open_rows.py", "-k", "닫힘과_만료_상태"]
 expect = "red"
+expect_output = ["Left contains one more item: '0004.md'"]
 
 [[mutation.edit]]
 file = "tools/queue_open_rows.py"
-old = '''    return what.lstrip("*").startswith("~~")'''
-new = '''    return what.startswith("~~")'''
+old = '''    elif status.startswith(("닫힘", "만료")):'''
+new = '''    elif status.startswith("닫힘"):'''
+
+[[mutation]]
+name = "알 수 없는 상태를 닫힘으로 읽는다"
+tests = ["tests/tools/test_queue_open_rows.py", "-k", "라벨_줄이_빠진_항목은"]
+expect = "red"
+expect_output = ["At index 1 diff: '0004.md' != '0003.md'"]
+
+[[mutation.edit]]
+file = "tools/queue_open_rows.py"
+old = '''    else:
+        return f"상태 값이 열림·닫힘·만료로 시작하지 않는다: {status!r}"'''
+new = '''    else:
+        is_open = False'''
+
+[[mutation]]
+name = "라벨 줄이 맞는지 보지 않는다"
+tests = ["tests/tools/test_queue_open_rows.py", "-k", "라벨_줄이_빠진_항목은"]
+expect = "red"
+expect_output = ["At index 0 diff: '0006' != '0008'"]
+
+[[mutation.edit]]
+file = "tools/queue_open_rows.py"
+old = '''        if index >= len(lines) or not lines[index].startswith(label):'''
+new = '''        if index >= len(lines):'''
+
+[[mutation]]
+name = "라벨 줄의 차례를 승인이 먼저로 바꾼다"
+tests = ["tests/tools/test_queue_open_rows.py", "-k", "라벨_줄이_빠진_항목은"]
+expect = "red"
+expect_output = ["At index 0 diff: '0006' != '0008'"]
+
+[[mutation.edit]]
+file = "tools/queue_open_rows.py"
+old = '''LABELS = ("**상태:**", "**어디로:**", "**승인:**")'''
+new = '''LABELS = ("**상태:**", "**승인:**", "**어디로:**")'''
+
+[[mutation]]
+name = "첫 줄의 ID 가 파일 이름과 달라도 받는다"
+tests = ["tests/tools/test_queue_open_rows.py", "-k", "라벨_줄이_빠진_항목은"]
+expect = "red"
+expect_output = ["At index 0 diff: '0005' != '0008'"]
+
+[[mutation.edit]]
+file = "tools/queue_open_rows.py"
+old = '''    head = lines[0][len(prefix) :].strip() if lines[0].startswith(prefix) else ""'''
+new = '''    head = lines[0][len(prefix) :].strip() if True else ""'''
+
+[[mutation]]
+name = "라벨 줄 앞의 빈 줄을 건너뛰지 않는다"
+tests = ["tests/tools/test_queue_open_rows.py", "-k", "라벨_줄_사이와_앞의_빈_줄은"]
+expect = "red"
+expect_output = ["Left contains one more item: '0001.md'"]
+
+[[mutation.edit]]
+file = "tools/queue_open_rows.py"
+old = '''        while index < len(lines) and not lines[index].strip():'''
+new = '''        while False:'''
+
+[[mutation]]
+name = "닫힌 항목을 열린 목록에 넣는다"
+tests = ["tests/tools/test_queue_open_rows.py", "-k", "닫힘과_만료_상태"]
+expect = "red"
+expect_output = ["Left contains 2 more items, first extra item: '0004'"]
+
+[[mutation.edit]]
+file = "tools/queue_open_rows.py"
+old = '''        if not fields.open:'''
+new = '''        if False:'''
+
+[[mutation]]
+name = "라벨 줄이 빠진 항목을 알리지 않는다"
+tests = ["tests/tools/test_queue_open_rows.py", "-k", "라벨_줄이_빠진_항목은"]
+expect = "red"
+expect_output = ["Right contains 6 more items, first extra item: '0002.md'"]
+
+[[mutation.edit]]
+file = "tools/queue_open_rows.py"
+old = '''            broken.append(name)'''
+new = '''            pass'''
+
+[[mutation]]
+name = "라벨 줄이 빠진 항목을 기본 출력에 찍지 않는다"
+tests = ["tests/tools/test_queue_open_rows.py", "-k", "라벨_줄이_빠진_항목은"]
+expect = "red"
+expect_output = ["'날짜를 찾지 못한 항목: 8'"]
+
+[[mutation.edit]]
+file = "tools/queue_open_rows.py"
+old = '''    if broken:
+        out.append('''
+new = '''    if False:
+        out.append('''
+
+[[mutation]]
+name = "빠진 항목의 파일 경로를 찍지 않는다"
+tests = ["tests/tools/test_queue_open_rows.py", "-k", "main을_실제로"]
+expect = "red"
+expect_output = ["\\n  0010.md (빠진 줄"]
+
+[[mutation.edit]]
+file = "tools/queue_open_rows.py"
+old = '''        f"{(directory / name).as_posix()} ('''
+new = '''        f"{name} ('''
+
+[[mutation]]
+name = "라벨 줄이 빠진 항목이 있어도 0 으로 끝난다"
+tests = ["tests/tools/test_queue_open_rows.py", "-k", "main을_실제로"]
+expect = "red"
+expect_output = ["stderr='').returncode"]
+
+[[mutation.edit]]
+file = "tools/queue_open_rows.py"
+old = '''    return 1 if broken else 0'''
+new = '''    return 0'''
+
+[[mutation]]
+name = "label_problem 이 늘 문제없다고 답한다"
+tests = ["tests/test_retro_queue_names.py", "-k", "라벨_줄이_빠진_항목을_잡는다"]
+expect = "red"
+expect_output = ["IndexError: list index out of range"]
+
+[[mutation.edit]]
+file = "tools/queue_open_rows.py"
+old = '''    return found if isinstance(found, str) else None'''
+new = '''    return None'''
+
+[[mutation]]
+name = "README.md 를 항목으로 읽는다"
+tests = ["tests/tools/test_queue_open_rows.py", "-k", "폴더를_읽을_때_README"]
+expect = "red"
+expect_output = ["{'README.md': 'c'}"]
+
+[[mutation.edit]]
+file = "tools/queue_open_rows.py"
+old = '''    return name.endswith(".md") and len(name) > len(".md") and name != README'''
+new = '''    return name.endswith(".md") and len(name) > len(".md")'''
+
+[[mutation]]
+name = "확장자를 보지 않고 항목으로 읽는다"
+tests = ["tests/tools/test_queue_open_rows.py", "-k", "폴더를_읽을_때_README"]
+expect = "red"
+expect_output = ["{'notes.txt': 'd'}"]
+
+[[mutation.edit]]
+file = "tools/queue_open_rows.py"
+old = '''    return name.endswith(".md") and len(name) > len(".md") and name != README'''
+new = '''    return len(name) > len(".md") and name != README'''
+
+[[mutation]]
+name = "하위 폴더인 이름도 파일로 읽는다"
+tests = ["tests/tools/test_queue_open_rows.py", "-k", "폴더를_읽을_때_README"]
+expect = "red"
+expect_output = ["Errno"]
+
+[[mutation.edit]]
+file = "tools/queue_open_rows.py"
+old = '''        if is_item_name(entry.name) and entry.is_file():'''
+new = '''        if is_item_name(entry.name):'''
+
+[[mutation]]
+name = "read_items 가 README 를 걸러내지 않는다"
+tests = ["tests/tools/test_queue_open_rows.py", "-k", "README만_든_폴더"]
+expect = "red"
+expect_output = ["At index 1 diff: ['README.md'] != []"]
+
+[[mutation.edit]]
+file = "tools/queue_open_rows.py"
+old = '''        if not is_item_name(name):
+            continue'''
+new = '''        if False:
+            continue'''
+
+[[mutation]]
+name = "README 를 항목으로 읽는다(저장소 상태 시험)"
+tests = ["tests/test_retro_queue_names.py", "-k", "라벨_줄이_빠진_항목을_잡는다"]
+expect = "red"
+expect_output = ["too many values to unpack (expected 1)"]
+
+[[mutation.edit]]
+file = "tools/queue_open_rows.py"
+old = '''    return name.endswith(".md") and len(name) > len(".md") and name != README'''
+new = '''    return name.endswith(".md") and len(name) > len(".md")'''
+
+[[mutation]]
+name = "ref 를 주어도 디스크의 대기열을 읽는다"
+tests = ["tests/tools/test_queue_open_rows.py", "-k", "ref로_커밋의"]
+expect = "red"
+expect_output = ["(6회차)\\n만료할 항목"]
+
+[[mutation.edit]]
+file = "tools/queue_open_rows.py"
+old = '''if args.ref is not None else'''
+new = '''if False else'''
+
+[[mutation]]
+name = "git 이 실패해도 빈 폴더로 센다"
+tests = ["tests/tools/test_queue_open_rows.py", "-k", "ref로_커밋의"]
+expect = "red"
+expect_output = ["stdout='열린 항목 0개"]
+
+[[mutation.edit]]
+file = "tools/queue_open_rows.py"
+old = '''    if done.returncode != 0:'''
+new = '''    if False:'''
+
+[[mutation]]
+name = "cat-file 출력에서 내용 뒤 줄바꿈을 건너뛰지 않는다"
+tests = ["tests/tools/test_queue_open_rows.py", "-k", "두_번에_받는다"]
+expect = "red"
+expect_output = ["git cat-file 의 출력을 읽지 못했다: 0002.md"]
+
+[[mutation.edit]]
+file = "tools/queue_open_rows.py"
+old = '''        position = stop + 1'''
+new = '''        position = stop'''
+
+[[mutation]]
+name = "대시로 시작하는 ref 를 넘긴다"
+tests = ["tests/tools/test_queue_open_rows.py", "-k", "대시로_시작하는"]
+expect = "red"
+expect_output = ["error: unknown option"]
+
+[[mutation.edit]]
+file = "tools/queue_open_rows.py"
+old = '''path is None and not args[0].startswith("-"):'''
+new = '''path is None:'''
+
+[[mutation]]
+name = "queue 와 ref 를 함께 받는다"
+tests = ["tests/tools/test_queue_open_rows.py", "-k", "main은_인자가_틀리면"]
+expect = "red"
+expect_output = ["Not a valid object name HEAD:.scratch/retro-queue"]
+
+[[mutation.edit]]
+file = "tools/queue_open_rows.py"
+old = '''elif arg == "--ref" and args and path is None and'''
+new = '''elif arg == "--ref" and args and'''
+
+[[mutation]]
+name = "UTF-8 해독 실패를 잡지 않는다"
+tests = ["tests/tools/test_queue_open_rows.py", "-k", "UTF8이_아닌"]
+expect = "red"
+expect_output = ["UnicodeDecodeError: 'utf-8' codec can't decode byte 0xc0"]
+
+[[mutation.edit]]
+file = "tools/queue_open_rows.py"
+old = '''    except (OSError, UnicodeDecodeError) as error:'''
+new = '''    except OSError as error:'''
 
 [[mutation]]
 name = "회차를 무엇 칸에서 먼저 찾는다"
-tests = ["tests/tools/test_queue_open_rows.py", "-k", "승인_칸에서_먼저"]
+tests = ["tests/tools/test_queue_open_rows.py", "-k", "승인_줄에서_먼저_찾는다"]
 expect = "red"
+expect_output = ["rounds=2, round_cell='무엇'"]
 
 [[mutation.edit]]
 file = "tools/queue_open_rows.py"
@@ -25,8 +284,9 @@ new = '''ROUND_CELLS = ("무엇", "승인", "어디로")'''
 
 [[mutation]]
 name = "회차를 승인 칸에서만 찾는다"
-tests = ["tests/tools/test_queue_open_rows.py", "-k", "무엇_칸에서_찾는다"]
+tests = ["tests/tools/test_queue_open_rows.py", "-k", "머리와_본문에서_찾는다"]
 expect = "red"
+expect_output = ["At index 0 diff: (None, None) != (3, '무엇')"]
 
 [[mutation.edit]]
 file = "tools/queue_open_rows.py"
@@ -34,9 +294,21 @@ old = '''ROUND_CELLS = ("승인", "무엇", "어디로")'''
 new = '''ROUND_CELLS = ("승인",)'''
 
 [[mutation]]
+name = "회차를 어디로 줄에서 찾지 않는다"
+tests = ["tests/tools/test_queue_open_rows.py", "-k", "어디로_줄에서_찾는다"]
+expect = "red"
+expect_output = ["At index 0 diff: None != 2"]
+
+[[mutation.edit]]
+file = "tools/queue_open_rows.py"
+old = '''ROUND_CELLS = ("승인", "무엇", "어디로")'''
+new = '''ROUND_CELLS = ("승인", "무엇")'''
+
+[[mutation]]
 name = "한 칸의 회차 가운데 처음 것을 쓴다"
 tests = ["tests/tools/test_queue_open_rows.py", "-k", "가장_큰_것을"]
 expect = "red"
+expect_output = ["Item(ident='0009', rounds=2"]
 
 [[mutation.edit]]
 file = "tools/queue_open_rows.py"
@@ -44,9 +316,43 @@ old = '''            return max(found), name'''
 new = '''            return found[0], name'''
 
 [[mutation]]
+name = "무엇 칸에서 본문을 보지 않는다"
+tests = ["tests/tools/test_queue_open_rows.py", "-k", "머리와_본문에서_찾는다"]
+expect = "red"
+expect_output = ["At index 1 diff: (None, None) != (4, '무엇')"]
+
+[[mutation.edit]]
+file = "tools/queue_open_rows.py"
+old = '''        "무엇": f"{fields.head}\n{fields.body}",'''
+new = '''        "무엇": fields.head,'''
+
+[[mutation]]
+name = "무엇 칸에서 머리를 보지 않는다"
+tests = ["tests/tools/test_queue_open_rows.py", "-k", "머리와_본문에서_찾는다"]
+expect = "red"
+expect_output = ["At index 0 diff: (None, None) != (3, '무엇')"]
+
+[[mutation.edit]]
+file = "tools/queue_open_rows.py"
+old = '''        "무엇": f"{fields.head}\n{fields.body}",'''
+new = '''        "무엇": fields.body,'''
+
+[[mutation]]
+name = "회차를 모르는 항목을 알리지 않는다"
+tests = ["tests/tools/test_queue_open_rows.py", "-k", "어느_줄에도"]
+expect = "red"
+expect_output = ["Item(ident='0004', rounds=None"]
+
+[[mutation.edit]]
+file = "tools/queue_open_rows.py"
+old = '''    if unknown:'''
+new = '''    if False:'''
+
+[[mutation]]
 name = "괄호 깊이를 보지 않고 모두 대상으로 센다"
 tests = ["tests/tools/test_queue_open_rows.py", "-k", "괄호_밖의_경로는"]
 expect = "red"
+expect_output = ["Left contains one more item: '.claude/rules/tools.md'"]
 
 [[mutation.edit]]
 file = "tools/queue_open_rows.py"
@@ -57,6 +363,7 @@ new = '''                targets.append(span)'''
 name = "닫는 괄호에서 깊이를 줄이지 않는다"
 tests = ["tests/tools/test_queue_open_rows.py", "-k", "겹친_괄호"]
 expect = "red"
+expect_output = ["Right contains one more item: 'e/f.md'"]
 
 [[mutation.edit]]
 file = "tools/queue_open_rows.py"
@@ -67,6 +374,7 @@ new = '''            pass'''
 name = "코드 스팬 안의 괄호도 깊이를 바꾼다"
 tests = ["tests/tools/test_queue_open_rows.py", "-k", "코드_스팬_안의"]
 expect = "red"
+expect_output = ["Right contains one more item: 'a/b.py'"]
 
 [[mutation.edit]]
 file = "tools/queue_open_rows.py"
@@ -80,6 +388,7 @@ new = '''            depth += span.count("(")
 name = "슬래시 명령을 경로로 센다"
 tests = ["tests/tools/test_queue_open_rows.py", "-k", "경로가_아닌"]
 expect = "red"
+expect_output = ["At index 0 diff: '/security-review' != 'uv.lock'"]
 
 [[mutation.edit]]
 file = "tools/queue_open_rows.py"
@@ -90,6 +399,7 @@ new = '''span.startswith("-")'''
 name = "자리표시가 든 코드 스팬을 경로로 센다"
 tests = ["tests/tools/test_queue_open_rows.py", "-k", "경로가_아닌"]
 expect = "red"
+expect_output = ["At index 0 diff: 'repos/{owner}/{repo}/logs' != 'uv.lock'"]
 
 [[mutation.edit]]
 file = "tools/queue_open_rows.py"
@@ -97,9 +407,21 @@ old = '''NOT_PATH = re.compile(r"[\s{<$]")'''
 new = '''NOT_PATH = re.compile(r"[\s]")'''
 
 [[mutation]]
+name = "확장자가 붙은 파일 이름을 경로로 세지 않는다"
+tests = ["tests/tools/test_queue_open_rows.py", "-k", "경로가_아닌"]
+expect = "red"
+expect_output = ["Right contains 2 more items, first extra item: 'CODING_STANDARDS.md'"]
+
+[[mutation.edit]]
+file = "tools/queue_open_rows.py"
+old = '''    return "/" in span or FILE_NAME.match(span) is not None'''
+new = '''    return "/" in span'''
+
+[[mutation]]
 name = "대상이면서 인용인 경로를 인용에도 둔다"
 tests = ["tests/tools/test_queue_open_rows.py", "-k", "대상이면서_인용인"]
 expect = "red"
+expect_output = ["Left contains one more item: 'c/d.md'"]
 
 [[mutation.edit]]
 file = "tools/queue_open_rows.py"
@@ -107,54 +429,10 @@ old = '''tuple(path for path in dict.fromkeys(citations) if path not in kept)'''
 new = '''tuple(dict.fromkeys(citations))'''
 
 [[mutation]]
-name = "칸이 넷보다 많은 행을 센다"
-tests = ["tests/tools/test_queue_open_rows.py", "-k", "넷이_아닌_행은"]
-expect = "red"
-
-[[mutation.edit]]
-file = "tools/queue_open_rows.py"
-old = '''    if len(cells) != 4:'''
-new = '''    if len(cells) < 4:'''
-
-[[mutation]]
-name = "이스케이프한 파이프에서도 칸을 가른다"
-tests = ["tests/tools/test_queue_open_rows.py", "-k", "넷이_아닌_행은"]
-expect = "red"
-
-[[mutation.edit]]
-file = "tools/queue_open_rows.py"
-old = '''CELL_SPLIT = re.compile(r"(?<!\\)\|")'''
-new = '''CELL_SPLIT = re.compile(r"\|")'''
-
-[[mutation]]
-name = "회차 문턱을 넘는 것만 센다"
-tests = ["tests/tools/test_queue_open_rows.py", "-k", "결정표의_조건을_모은다"]
-expect = "red"
-
-[[mutation.edit]]
-file = "tools/queue_open_rows.py"
-old = '''row.rounds >= MIN_ROUNDS'''
-new = '''row.rounds > MIN_ROUNDS'''
-
-# 문턱을 3에서 5로 올린 티켓(retro-queue-per-item 01, ADR 0036 이력 2026-11-06)이 더했다. 회차 4 행이
-# 만료 후보로 남는지를 보는 시험이 문턱을 되돌리면 빨개진다.
-[[mutation]]
-name = "회차 문턱을 셋으로 되돌린다"
-tests = ["tests/tools/test_queue_open_rows.py", "-k", "반영할_때까지_만료하지"]
-expect = "red"
-# 문턱 3이면 첫 단언이 빨개져 출력(repr)에 "회차 3 이상: 1(5회차) 2(4회차)"가 찍힌다. 둘째 단언(만료 줄)이
-# 빨개질 때는 이 줄이 출력 전체의 repr 에 실리지 않는다
-expect_output = ["회차 3 이상: 1(5회차) 2(4회차)"]
-
-[[mutation.edit]]
-file = "tools/queue_open_rows.py"
-old = '''MIN_ROUNDS = 5'''
-new = '''MIN_ROUNDS = 3'''
-
-[[mutation]]
 name = "같은 대상 파일의 문턱을 둘로 낮춘다"
 tests = ["tests/tools/test_queue_open_rows.py", "-k", "결정표의_조건을_모은다"]
 expect = "red"
+expect_output = ["`web/a.mjs`: 64 65"]
 
 [[mutation.edit]]
 file = "tools/queue_open_rows.py"
@@ -162,29 +440,10 @@ old = '''and len(group) >= MIN_ROWS'''
 new = '''and len(group) >= 2'''
 
 [[mutation]]
-name = "칸이 넷이 아닌 행이 있어도 0으로 끝난다"
-tests = ["tests/tools/test_queue_open_rows.py", "-k", "main을_실제로"]
-expect = "red"
-
-[[mutation.edit]]
-file = "tools/queue_open_rows.py"
-old = '''    return 1 if broken else 0'''
-new = '''    return 0'''
-
-[[mutation]]
-name = "회차를 모르는 행을 알리지 않는다"
-tests = ["tests/tools/test_queue_open_rows.py", "-k", "어느_칸에도"]
-expect = "red"
-
-[[mutation.edit]]
-file = "tools/queue_open_rows.py"
-old = '''    if unknown:'''
-new = '''    if False:'''
-
-[[mutation]]
 name = "디렉터리와 패턴도 같은 대상 파일 조건에 센다"
 tests = ["tests/tools/test_queue_open_rows.py", "-k", "디렉터리와_패턴은"]
 expect = "red"
+expect_output = ["not enough values to unpack (expected 2, got 1)"]
 
 [[mutation.edit]]
 file = "tools/queue_open_rows.py"
@@ -195,6 +454,7 @@ new = '''    return True'''
 name = "괄호 안의 인용을 기본 출력에 찍지 않는다"
 tests = ["tests/tools/test_queue_open_rows.py", "-k", "괄호_안의_인용도"]
 expect = "red"
+expect_output = ["항목: 141 2\\n같은"]
 
 [[mutation.edit]]
 file = "tools/queue_open_rows.py"
@@ -202,73 +462,65 @@ old = '''    if cited:'''
 new = '''    if False:'''
 
 [[mutation]]
-name = "ref 를 주어도 디스크의 대기열을 읽는다"
-tests = ["tests/tools/test_queue_open_rows.py", "-k", "ref로_커밋의"]
+name = "회차 문턱을 넘는 것만 센다"
+tests = ["tests/tools/test_queue_open_rows.py", "-k", "결정표의_조건을_모은다"]
 expect = "red"
+expect_output = ["회차 5 이상: 238(7회차)\\n만료할"]
 
 [[mutation.edit]]
 file = "tools/queue_open_rows.py"
-old = '''            if args.ref is not None'''
-new = '''            if False'''
+old = '''item.rounds >= MIN_ROUNDS'''
+new = '''item.rounds > MIN_ROUNDS'''
 
 [[mutation]]
-name = "git show 가 실패해도 빈 대기열로 센다"
-tests = ["tests/tools/test_queue_open_rows.py", "-k", "ref로_커밋의"]
+name = "회차 문턱을 셋으로 되돌린다"
+tests = ["tests/tools/test_queue_open_rows.py", "-k", "반영할_때까지_만료하지"]
 expect = "red"
+expect_output = ["회차 3 이상: 1(5회차) 2(4회차)"]
 
 [[mutation.edit]]
 file = "tools/queue_open_rows.py"
-old = '''    if done.returncode != 0:'''
-new = '''    if False:'''
+old = '''MIN_ROUNDS = 5'''
+new = '''MIN_ROUNDS = 3'''
 
 [[mutation]]
-name = "대시로 시작하는 ref 를 넘긴다"
-tests = ["tests/tools/test_queue_open_rows.py", "-k", "대시로_시작하는"]
+name = "회차 5 이상을 회차 오름차순으로 놓는다"
+tests = ["tests/tools/test_queue_open_rows.py", "-k", "결정표의_조건을_모은다"]
 expect = "red"
+expect_output = ["회차 5 이상: 167(5회차) 238(7회차)"]
 
 [[mutation.edit]]
 file = "tools/queue_open_rows.py"
-old = '''path is None and not args[0].startswith("-"):'''
-new = '''path is None:'''
+old = '''(-(item.rounds or MIN_ROUNDS), *_item_key(item))'''
+new = '''((item.rounds or MIN_ROUNDS), *_item_key(item))'''
 
 [[mutation]]
-name = "UTF-8 해독 실패를 잡지 않는다"
-tests = ["tests/tools/test_queue_open_rows.py", "-k", "UTF8이_아닌"]
+name = "같은 회차를 식별자로 가르지 않는다"
+tests = ["tests/tools/test_queue_open_rows.py", "-k", "숫자_식별자는_앞의_0을"]
 expect = "red"
+expect_output = ["zeta(7회차) coderabbit-inline-size(5회차)"]
 
 [[mutation.edit]]
 file = "tools/queue_open_rows.py"
-old = '''    except (OSError, UnicodeDecodeError) as error:'''
-new = '''    except OSError as error:'''
-
-[[mutation]]
-name = "rows 를 주어도 행마다의 줄을 찍지 않는다"
-tests = ["tests/tools/test_queue_open_rows.py", "-k", "rows를_주면"]
-expect = "red"
-
-[[mutation.edit]]
-file = "tools/queue_open_rows.py"
-old = '''    if args.each:'''
-new = '''    if False:'''
-
-# ADR 0036 의 사람 몫·만료 판정(2026-10-19).
+old = '''(-(item.rounds or MIN_ROUNDS), *_item_key(item))'''
+new = '''(-(item.rounds or MIN_ROUNDS),)'''
 
 [[mutation]]
 name = "사람 몫을 회차 5 이상과 만료에서 빼지 않는다"
-tests = ["tests/tools/test_queue_open_rows.py", "-k", "사람_몫_행은_회차"]
+tests = ["tests/tools/test_queue_open_rows.py", "-k", "사람_몫_항목은_회차"]
 expect = "red"
-# 사람 몫 행이 세어지면 첫 단언이 빨개져 출력(repr)에 사람 몫 238 이 회차 5 이상 줄에 든 꼴이 찍힌다
 expect_output = ["회차 5 이상: 238(11회차) 306(9회차)"]
 
 [[mutation.edit]]
 file = "tools/queue_open_rows.py"
-old = '''    counted = [row for row in rows if not row.human]'''
-new = '''    counted = rows'''
+old = '''    counted = [item for item in items if not item.human]'''
+new = '''    counted = items'''
 
 [[mutation]]
 name = "사람 몫 줄을 찍지 않는다"
-tests = ["tests/tools/test_queue_open_rows.py", "-k", "사람_몫_행은_회차"]
+tests = ["tests/tools/test_queue_open_rows.py", "-k", "사람_몫_항목은_회차"]
 expect = "red"
+expect_output = ["306(9회차)\\n만료할 항목"]
 
 [[mutation.edit]]
 file = "tools/queue_open_rows.py"
@@ -279,26 +531,29 @@ new = '''    if False:'''
 name = "만료에서 사람 몫을 빼지 않는다"
 tests = ["tests/tools/test_queue_open_rows.py", "-k", "14일_넘게"]
 expect = "red"
+expect_output = ["2026-10-05 전): 4(2026-09-01) 1(2026-10-04)"]
 
 [[mutation.edit]]
 file = "tools/queue_open_rows.py"
-old = '''(row for row in waiting if row.last is not None and row.last < cutoff)'''
-new = '''(row for row in rows if row.last is not None and row.last < cutoff)'''
+old = '''(item for item in waiting if item.last is not None and item.last < cutoff)'''
+new = '''(item for item in items if item not in ripe and item.last is not None and item.last < cutoff)'''
 
 [[mutation]]
 name = "만료 경계를 그날까지 넓힌다"
 tests = ["tests/tools/test_queue_open_rows.py", "-k", "14일_넘게"]
 expect = "red"
+expect_output = ["2026-10-05 전): 1(2026-10-04) 2(2026-10-05)"]
 
 [[mutation.edit]]
 file = "tools/queue_open_rows.py"
-old = '''row.last < cutoff)'''
-new = '''row.last <= cutoff)'''
+old = '''item.last < cutoff),'''
+new = '''item.last <= cutoff),'''
 
 [[mutation]]
 name = "만료를 13일로 줄인다"
 tests = ["tests/tools/test_queue_open_rows.py", "-k", "14일_넘게"]
 expect = "red"
+expect_output = ["2026-10-06 전): 1(2026-10-04)"]
 
 [[mutation.edit]]
 file = "tools/queue_open_rows.py"
@@ -306,9 +561,21 @@ old = '''EXPIRY_DAYS = 14'''
 new = '''EXPIRY_DAYS = 13'''
 
 [[mutation]]
+name = "만료에서 회차 5 이상을 빼지 않는다"
+tests = ["tests/tools/test_queue_open_rows.py", "-k", "반영할_때까지_만료하지"]
+expect = "red"
+expect_output = ["2026-10-05 전): 1(2026-09-01) 2(2026-09-01) 3(2026-09-01)"]
+
+[[mutation.edit]]
+file = "tools/queue_open_rows.py"
+old = '''    waiting = [item for item in counted if item not in ripe]'''
+new = '''    waiting = counted'''
+
+[[mutation]]
 name = "가장 이른 날짜를 고른다"
 tests = ["tests/tools/test_queue_open_rows.py", "-k", "가장_늦은_날짜와_사람_몫을"]
 expect = "red"
+expect_output = ["At index 0 diff: ('0001', datetime.date(2026, 10, 1), False)"]
 
 [[mutation.edit]]
 file = "tools/queue_open_rows.py"
@@ -319,6 +586,7 @@ new = '''    return min(found, default=None)'''
 name = "없는 날짜에서 멈춘다"
 tests = ["tests/tools/test_queue_open_rows.py", "-k", "없는_날짜는"]
 expect = "red"
+expect_output = ["ValueError: day is out of range for month"]
 
 [[mutation.edit]]
 file = "tools/queue_open_rows.py"
@@ -329,9 +597,10 @@ old = '''        try:
 new = '''        found.append(date.fromisoformat(text))'''
 
 [[mutation]]
-name = "날짜를 찾지 못한 행을 찍지 않는다"
-tests = ["tests/tools/test_queue_open_rows.py", "-k", "날짜가_없는_행은"]
+name = "날짜를 찾지 못한 항목을 찍지 않는다"
+tests = ["tests/tools/test_queue_open_rows.py", "-k", "날짜가_없는_항목은"]
 expect = "red"
+expect_output = ["(없음)\\n같은 대상 파일이 3개 항목 이상: (없음)\\n회차를"]
 
 [[mutation.edit]]
 file = "tools/queue_open_rows.py"
@@ -342,48 +611,29 @@ new = '''    if False:'''
 name = "사람 몫을 무엇 칸에서 읽는다"
 tests = ["tests/tools/test_queue_open_rows.py", "-k", "가장_늦은_날짜와_사람_몫을"]
 expect = "red"
+expect_output = ["At index 1 diff: ('0002', datetime.date(2026, 10, 13), False)"]
 
 [[mutation.edit]]
 file = "tools/queue_open_rows.py"
-old = '''named["어디로"].lstrip("*")'''
-new = '''named["무엇"].lstrip("*")'''
+old = '''fields.where.lstrip("*").startswith(HUMAN_MARK)'''
+new = '''fields.head.lstrip("*").startswith(HUMAN_MARK)'''
 
 [[mutation]]
 name = "날짜를 모든 칸에서 찾는다"
-tests = ["tests/tools/test_queue_open_rows.py", "-k", "무엇과_어디로_칸의_날짜는"]
+tests = ["tests/tools/test_queue_open_rows.py", "-k", "어디로_줄의_날짜"]
 expect = "red"
+expect_output = ["round_cell='승인', targets=('a.md',), citations=(), last=datetime.date(2026, 10, 18)"]
 
 [[mutation.edit]]
 file = "tools/queue_open_rows.py"
-old = '''_last_date(named["승인"])'''
-new = '''_last_date(" ".join(named.values()))'''
-
-[[mutation]]
-name = "--today 의 값을 버린다"
-tests = ["tests/tools/test_queue_open_rows.py", "-k", "today를_기준일로"]
-expect = "red"
-
-[[mutation.edit]]
-file = "tools/queue_open_rows.py"
-old = '''                today = date.fromisoformat(args.pop(0))'''
-new = '''                date.fromisoformat(args.pop(0))'''
-
-[[mutation]]
-name = "만료에서 회차 5 이상을 빼지 않는다"
-tests = ["tests/tools/test_queue_open_rows.py", "-k", "반영할_때까지_만료하지"]
-expect = "red"
-# 회차 5 행이 만료 줄에 들면 둘째 단언이 빨개져 출력의 만료 줄에 1(2026-09-01)이 먼저 찍힌다
-expect_output = ["전): 1(2026-09-01) 2(2026-09-01) 3(2026-09-01)"]
-
-[[mutation.edit]]
-file = "tools/queue_open_rows.py"
-old = '''    waiting = [row for row in counted if row not in ripe]'''
-new = '''    waiting = counted'''
+old = '''_last_date(fields.approval)'''
+new = '''_last_date(" ".join((fields.head, fields.body, fields.where, fields.approval)))'''
 
 [[mutation]]
 name = "사람 몫의 쌍점을 보지 않는다"
 tests = ["tests/tools/test_queue_open_rows.py", "-k", "쌍점으로_시작할_때만"]
 expect = "red"
+expect_output = ["At index 1 diff: ('0002', True) != ('0002', False)"]
 
 [[mutation.edit]]
 file = "tools/queue_open_rows.py"
@@ -394,92 +644,198 @@ new = '''.startswith(HUMAN)'''
 name = "사람 몫 앞의 굵게 표시를 벗기지 않는다"
 tests = ["tests/tools/test_queue_open_rows.py", "-k", "쌍점으로_시작할_때만"]
 expect = "red"
+expect_output = ["At index 0 diff: ('0001', False) != ('0001', True)"]
 
 [[mutation.edit]]
 file = "tools/queue_open_rows.py"
-old = '''named["어디로"].lstrip("*").startswith'''
-new = '''named["어디로"].startswith'''
-
-# harness 021 의 찾기(`--search`) 판정(대기열 425, 2026-10-28).
+old = '''fields.where.lstrip("*").startswith'''
+new = '''fields.where.startswith'''
 
 [[mutation]]
-name = "찾기가 닫힌 행을 건너뛴다"
-tests = ["tests/tools/test_queue_open_rows.py", "-k", "닫힌_행까지_행_원문에"]
+name = "--today 의 값을 버린다"
+tests = ["tests/tools/test_queue_open_rows.py", "-k", "today를_기준일로"]
 expect = "red"
+expect_output = ["2026-10-24 전): 9(2026-09-01)"]
 
 [[mutation.edit]]
 file = "tools/queue_open_rows.py"
-old = '''        state = HitState.CLOSED if _is_closed(named["무엇"]) else HitState.OPEN
-'''
-new = '''        state = HitState.CLOSED if _is_closed(named["무엇"]) else HitState.OPEN
+old = '''                today = date.fromisoformat(args.pop(0))'''
+new = '''                date.fromisoformat(args.pop(0))'''
+
+[[mutation]]
+name = "날짜가 같은 만료 후보를 식별자로 가르지 않는다"
+tests = ["tests/tools/test_queue_open_rows.py", "-k", "같은_키로_놓인다"]
+expect = "red"
+expect_output = ["2026-10-05 전): beta(2026-09-01) 9(2026-09-01) alpha(2026-09-01)"]
+
+[[mutation.edit]]
+file = "tools/queue_open_rows.py"
+old = '''key=lambda item: (item.last or cutoff, *_item_key(item)),'''
+new = '''key=lambda item: (item.last or cutoff,),'''
+
+[[mutation]]
+name = "--rows 를 주어도 항목마다의 줄을 찍지 않는다"
+tests = ["tests/tools/test_queue_open_rows.py", "-k", "rows를_주면"]
+expect = "red"
+expect_output = ["ValueError: substring not found"]
+
+[[mutation.edit]]
+file = "tools/queue_open_rows.py"
+old = '''    if args.each:'''
+new = '''    if False:'''
+
+[[mutation]]
+name = "숫자 식별자의 앞의 0 을 떼지 않는다"
+tests = ["tests/tools/test_queue_open_rows.py", "-k", "숫자_식별자는_앞의_0을"]
+expect = "red"
+expect_output = ["0100(5회차) 0573(5회차)"]
+
+[[mutation.edit]]
+file = "tools/queue_open_rows.py"
+old = '''    return str(int(ident)) if NUMBER.fullmatch(ident) else ident'''
+new = '''    return ident'''
+
+[[mutation]]
+name = "숫자 식별자를 슬러그 뒤에 놓는다"
+tests = ["tests/tools/test_queue_open_rows.py", "-k", "숫자_식별자는_앞의_0을"]
+expect = "red"
+expect_output = ["zeta(7회차) alpha(5회차) coderabbit-inline-size(5회차) 100(5회차)"]
+
+[[mutation.edit]]
+file = "tools/queue_open_rows.py"
+old = '''        return (0, int(ident), "")'''
+new = '''        return (2, int(ident), "")'''
+
+[[mutation]]
+name = "슬러그를 이름 순으로 놓지 않는다"
+tests = ["tests/tools/test_queue_open_rows.py", "-k", "숫자_식별자는_앞의_0을"]
+expect = "red"
+expect_output = ["573(5회차) coderabbit-inline-size(5회차) alpha(5회차)"]
+
+[[mutation.edit]]
+file = "tools/queue_open_rows.py"
+old = '''    return (1, 0, ident)'''
+new = '''    return (1, 0, "")'''
+
+[[mutation]]
+name = "이름 정렬이 식별자 키를 쓰지 않는다"
+tests = ["tests/tools/test_queue_open_rows.py", "-k", "맞은_항목은_번호가_먼저고"]
+expect = "red"
+expect_output = ["At index 0 diff: 'zeta' != '0100'"]
+
+[[mutation.edit]]
+file = "tools/queue_open_rows.py"
+old = '''    return sort_key(_stem(name))'''
+new = '''    return (0, 0, "")'''
+
+[[mutation]]
+name = "item_name 이 번호를 네 자리로 채우지 않는다"
+tests = ["tests/tools/test_queue_open_rows.py", "-k", "573과_0573"]
+expect = "red"
+expect_output = ["+ 573.md"]
+
+[[mutation.edit]]
+file = "tools/queue_open_rows.py"
+old = '''        return f"{int(identifier):04d}.md"'''
+new = '''        return f"{identifier}.md"'''
+
+[[mutation]]
+name = "item_name 이 번호를 세 자리로 채운다"
+tests = ["tests/tools/test_queue_open_rows.py", "-k", "573과_0573"]
+expect = "red"
+expect_output = ["+ 573.md"]
+
+[[mutation.edit]]
+file = "tools/queue_open_rows.py"
+old = ''':04d}.md'''
+new = ''':03d}.md'''
+
+[[mutation]]
+name = "item_name 이 슬러그에 .md 를 붙이지 않는다"
+tests = ["tests/tools/test_queue_open_rows.py", "-k", "573과_0573"]
+expect = "red"
+expect_output = ["- coderabbit-inline-size.md"]
+
+[[mutation.edit]]
+file = "tools/queue_open_rows.py"
+old = '''    if SLUG.fullmatch(identifier):
+        return f"{identifier}.md"'''
+new = '''    if SLUG.fullmatch(identifier):
+        return identifier'''
+
+[[mutation]]
+name = "item_name 이 슬러그 꼴을 가리지 않는다"
+tests = ["tests/tools/test_queue_open_rows.py", "-k", "틀린_식별자는"]
+expect = "red"
+expect_output = ["DID NOT RAISE ValueError"]
+
+[[mutation.edit]]
+file = "tools/queue_open_rows.py"
+old = '''    if SLUG.fullmatch(identifier):'''
+new = '''    if True:'''
+
+[[mutation]]
+name = "슬러그가 숫자나 하이픈으로 시작해도 받는다"
+tests = ["tests/tools/test_queue_open_rows.py", "-k", "틀린_식별자는"]
+expect = "red"
+expect_output = ["DID NOT RAISE ValueError"]
+
+[[mutation.edit]]
+file = "tools/queue_open_rows.py"
+old = '''SLUG = re.compile(r"[a-z][a-z0-9-]*")'''
+new = '''SLUG = re.compile(r"[a-z0-9-]+")'''
+
+[[mutation]]
+name = "찾기가 닫힌 항목을 건너뛴다"
+tests = ["tests/tools/test_queue_open_rows.py", "-k", "닫힌_항목까지_파일_원문에"]
+expect = "red"
+expect_output = ["At index 0 diff: ('0002', <HitState.OPEN"]
+
+[[mutation.edit]]
+file = "tools/queue_open_rows.py"
+old = '''        state = HitState.OPEN if fields.open else HitState.CLOSED'''
+new = '''        state = HitState.OPEN if fields.open else HitState.CLOSED
         if state is HitState.CLOSED:
-            continue
-'''
+            continue'''
 
 [[mutation]]
 name = "찾기를 첫 정규식에만 맞춘다"
 tests = ["tests/tools/test_queue_open_rows.py", "-k", "여러_번_주면"]
 expect = "red"
+expect_output = ["Right contains one more item: '0003'"]
 
 [[mutation.edit]]
 file = "tools/queue_open_rows.py"
-old = '''any(pattern.search(line) for pattern in patterns)'''
-new = '''patterns[0].search(line)'''
+old = '''any(pattern.search(text) for pattern in patterns)'''
+new = '''patterns[0].search(text)'''
 
 [[mutation]]
-name = "찾기의 줄을 splitlines 로 가른다"
-tests = ["tests/tools/test_queue_open_rows.py", "-k", "줄바꿈으로만"]
+name = "찾기를 파일의 첫 줄에만 맞춘다"
+tests = ["tests/tools/test_queue_open_rows.py", "-k", "닫힌_항목까지_파일_원문에"]
 expect = "red"
+expect_output = ["Right contains 3 more items, first extra item: ('0001', <HitState.CLOSED"]
 
 [[mutation.edit]]
 file = "tools/queue_open_rows.py"
-old = '''enumerate(text.split("\n"), start=1)'''
-new = '''enumerate(text.splitlines(), start=1)'''
+old = '''any(pattern.search(text) for pattern in patterns)'''
+new = '''any(pattern.search(text.partition("\n")[0]) for pattern in patterns)'''
 
 [[mutation]]
-name = "찾기의 줄 번호를 0부터 센다"
-tests = ["tests/tools/test_queue_open_rows.py", "-k", "닫힌_행까지_행_원문에"]
+name = "찾기의 경로에 폴더를 붙이지 않는다"
+tests = ["tests/tools/test_queue_open_rows.py", "-k", "닫힌_항목까지_파일_원문에"]
 expect = "red"
+expect_output = ["+ 0001.md"]
 
 [[mutation.edit]]
 file = "tools/queue_open_rows.py"
-old = '''enumerate(text.split("\n"), start=1)'''
-new = '''enumerate(text.split("\n"), start=0)'''
-
-[[mutation]]
-name = "머리에서 앞의 표지를 걷지 않는다"
-tests = ["tests/tools/test_queue_open_rows.py", "-k", "앞의_표지를_걷고"]
-expect = "red"
-
-[[mutation.edit]]
-file = "tools/queue_open_rows.py"
-old = '''    text = what.lstrip("*~")'''
-new = '''    text = what'''
-
-[[mutation]]
-name = "머리를 취소선의 닫는 표지에서 끊지 않는다"
-tests = ["tests/tools/test_queue_open_rows.py", "-k", "앞의_표지를_걷고"]
-expect = "red"
-
-[[mutation.edit]]
-file = "tools/queue_open_rows.py"
-old = '''(text.find("**"), text.find("~~"))'''
-new = '''(text.find("**"),)'''
-
-[[mutation]]
-name = "머리를 마지막 닫는 표지에서 끊는다"
-tests = ["tests/tools/test_queue_open_rows.py", "-k", "앞의_표지를_걷고"]
-expect = "red"
-
-[[mutation.edit]]
-file = "tools/queue_open_rows.py"
-old = '''text[: min(ends, default=len(text))]'''
-new = '''text[: max(ends, default=len(text))]'''
+old = '''ident, path = _stem(name), (directory / name).as_posix()'''
+new = '''ident, path = _stem(name), name'''
 
 [[mutation]]
 name = "문턱과 같은 길이의 머리도 자른다"
 tests = ["tests/tools/test_queue_open_rows.py", "-k", "자른_글자_수를"]
 expect = "red"
+expect_output = ["…(0자 줄임)"]
 
 [[mutation.edit]]
 file = "tools/queue_open_rows.py"
@@ -490,6 +846,7 @@ new = '''    if len(head) < HEAD_CHARS:'''
 name = "문턱과 같은 길이의 승인 칸도 줄인다"
 tests = ["tests/tools/test_queue_open_rows.py", "-k", "가운데를_줄이고"]
 expect = "red"
+expect_output = ["…(가운데 0자 줄임)…"]
 
 [[mutation.edit]]
 file = "tools/queue_open_rows.py"
@@ -500,6 +857,7 @@ new = '''    if cut < 0:'''
 name = "승인 칸을 줄일 때 끝을 남기지 않는다"
 tests = ["tests/tools/test_queue_open_rows.py", "-k", "가운데를_줄이고"]
 expect = "red"
+expect_output = ["+ 가운데 3자 줄임)…"]
 
 [[mutation.edit]]
 file = "tools/queue_open_rows.py"
@@ -507,29 +865,32 @@ old = '''줄임)… {approval[-APPROVAL_TAIL:]}"'''
 new = '''줄임)…"'''
 
 [[mutation]]
-name = "칸이 넷이 아닌 맞은 행을 빠뜨린다"
-tests = ["tests/tools/test_queue_open_rows.py", "-k", "칸이_넷이_아니면_그_행을"]
+name = "라벨 줄이 빠진 맞은 항목을 빠뜨린다"
+tests = ["tests/tools/test_queue_open_rows.py", "-k", "맞은_항목의_라벨_줄이_빠졌으면"]
 expect = "red"
+expect_output = ["At index 0 diff: ('0008', <HitState.OPEN: '열림'>) != ('0007', <HitState.BROKEN"]
 
 [[mutation.edit]]
 file = "tools/queue_open_rows.py"
-old = '''            hits.append(Hit(number, index, HitState.BROKEN))'''
+old = '''            hits.append(Hit(ident, path, HitState.BROKEN, problem=fields))'''
 new = '''            pass'''
 
 [[mutation]]
-name = "닫힌 행의 수를 세지 않는다"
-tests = ["tests/tools/test_queue_open_rows.py", "-k", "열린_행과_닫힌_행을_세고"]
+name = "닫힌 항목의 수를 세지 않는다"
+tests = ["tests/tools/test_queue_open_rows.py", "-k", "열린_항목과_닫힌_항목을_세고"]
 expect = "red"
+expect_output = ["닫힌 항목 0개). 같은 일로"]
 
 [[mutation.edit]]
 file = "tools/queue_open_rows.py"
-old = '''        f"닫힌 행 {_count(hits, HitState.CLOSED)}개",'''
-new = '''        f"닫힌 행 0개",'''
+old = '''        f"닫힌 항목 {_count(hits, HitState.CLOSED)}개",'''
+new = '''        f"닫힌 항목 0개",'''
 
 [[mutation]]
-name = "칸이 넷이 아닌 맞은 행을 머리 줄에 세지 않는다"
-tests = ["tests/tools/test_queue_open_rows.py", "-k", "칸이_넷이_아니면_그_행을"]
+name = "라벨 줄이 빠진 맞은 항목을 머리 줄에 세지 않는다"
+tests = ["tests/tools/test_queue_open_rows.py", "-k", "맞은_항목의_라벨_줄이_빠졌으면"]
 expect = "red"
+expect_output = ["닫힌 항목 0개). 같은 일로 보이는 항목은 그 파일을 Read 로 연다:\\n  .scratch/retro-queue/0007.md"]
 
 [[mutation.edit]]
 file = "tools/queue_open_rows.py"
@@ -540,23 +901,20 @@ new = '''    if False:
 
 [[mutation]]
 name = "찾기를 주어도 기본 출력을 낸다"
-tests = ["tests/tools/test_queue_open_rows.py", "-k", "search를_주면_맞은_행만"]
+tests = ["tests/tools/test_queue_open_rows.py", "-k", "search를_주면_맞은_항목만"]
 expect = "red"
-# 출력 단언의 실패 줄은 출력을 repr 로 찍어 줄바꿈이 `\n` 두 글자다. 다른 단언이 빨개질 때 pytest 가
-# 찍는 읽지 않은 출력(Captured stdout call)은 줄을 실제로 바꿔 이 표지에 맞지 않는다
-expect_output = ["in '열린 행 2개\\n회차 5 이상"]
+expect_output = ["열린 항목 2개\\n회차 5 이상: 1(5회차)\\n만료할"]
 
 [[mutation.edit]]
 file = "tools/queue_open_rows.py"
-old = '''    if args.patterns:
-'''
-new = '''    if False:
-'''
+old = '''    if args.patterns:'''
+new = '''    if False:'''
 
 [[mutation]]
-name = "칸이 넷이 아닌 맞은 행이 있어도 찾기가 0으로 끝난다"
-tests = ["tests/tools/test_queue_open_rows.py", "-k", "search에_칸이_넷이_아닌_행이_맞으면"]
+name = "라벨 줄이 빠진 항목이 맞아도 찾기가 0 으로 끝난다"
+tests = ["tests/tools/test_queue_open_rows.py", "-k", "search에_라벨_줄이_빠진_항목이_맞으면"]
 expect = "red"
+expect_output = ["0002.md 라벨 줄이 빠졌다(빠진 줄: **승인:**)"]
 
 [[mutation.edit]]
 file = "tools/queue_open_rows.py"
@@ -567,6 +925,7 @@ new = '''        return 0'''
 name = "찾기와 함께 준 rows 를 받는다"
 tests = ["tests/tools/test_queue_open_rows.py", "-k", "search의_인자가_틀리면"]
 expect = "red"
+expect_output = ["'--search', 'a', '--rows'])"]
 
 [[mutation.edit]]
 file = "tools/queue_open_rows.py"
@@ -577,6 +936,7 @@ new = '''    if patterns and today is not None:'''
 name = "찾기와 함께 준 today 를 받는다"
 tests = ["tests/tools/test_queue_open_rows.py", "-k", "search의_인자가_틀리면"]
 expect = "red"
+expect_output = ["'--today', '2026-10-01', '--search', 'a'])"]
 
 [[mutation.edit]]
 file = "tools/queue_open_rows.py"
@@ -587,6 +947,7 @@ new = '''    if patterns and each:'''
 name = "틀린 정규식을 잡지 않는다"
 tests = ["tests/tools/test_queue_open_rows.py", "-k", "search의_인자가_틀리면"]
 expect = "red"
+expect_output = ["re.error: missing ), unterminated subpattern at position 0"]
 
 [[mutation.edit]]
 file = "tools/queue_open_rows.py"
@@ -597,6 +958,7 @@ new = '''            except ValueError as error:'''
 name = "큰 반복 수의 정규식 오류를 잡지 않는다"
 tests = ["tests/tools/test_queue_open_rows.py", "-k", "search의_인자가_틀리면"]
 expect = "red"
+expect_output = ["OverflowError: the repetition number is too large"]
 
 [[mutation.edit]]
 file = "tools/queue_open_rows.py"
@@ -607,6 +969,7 @@ new = '''            except (re.error, RecursionError) as error:'''
 name = "깊은 괄호의 정규식 오류를 잡지 않는다"
 tests = ["tests/tools/test_queue_open_rows.py", "-k", "search의_인자가_틀리면"]
 expect = "red"
+expect_output = ["RecursionError: maximum recursion depth exceeded"]
 
 [[mutation.edit]]
 file = "tools/queue_open_rows.py"
@@ -617,6 +980,7 @@ new = '''            except (re.error, OverflowError) as error:'''
 name = "쓰임 오류의 메시지를 버린다"
 tests = ["tests/tools/test_queue_open_rows.py", "-k", "search의_인자가_틀리면"]
 expect = "red"
+expect_output = ["err='쓰임: uv run python tools/queue_open_rows.py"]
 
 [[mutation.edit]]
 file = "tools/queue_open_rows.py"
@@ -625,10 +989,13 @@ new = '''        sys.stderr.write(USAGE)'''
 
 [[mutation]]
 name = "회차를 줄인 승인 칸에서 찾는다"
-tests = ["tests/tools/test_queue_open_rows.py", "-k", "줄이기_전의_승인_칸에서"]
+tests = ["tests/tools/test_queue_open_rows.py", "-k", "줄이기_전의_승인_줄에서"]
 expect = "red"
+expect_output = ["Hit(ident='0001', path='.scratch/retro-queue/0001.md', state=<HitState.OPEN: '열림'>, rounds=None"]
 
 [[mutation.edit]]
 file = "tools/queue_open_rows.py"
-old = '''        rounds, _ = _rounds(named)'''
-new = '''        rounds, _ = _rounds({**named, "승인": _approval(named["승인"])})'''
+old = '''        rounds, _ = _rounds(fields)'''
+new = '''        rounds, _ = _rounds(
+            _Fields(fields.head, fields.open, fields.where, _approval(fields.approval), fields.body)
+        )'''

@@ -108,23 +108,28 @@ echo "== B. MSYS 프로그램(/usr/bin/printf, /usr/bin/echo). 모양 | 받은 �
   'a/b:c/d' 'a/b:c/d'
 /usr/bin/echo "origin/main:.scratch/retro-queue.md|$(/usr/bin/echo 'origin/main:.scratch/retro-queue.md')"
 
+# 우회 셋이 지나가는지(종료 0)는 origin/main 에 그 경로가 있어야 뜻이 있다. 옛 표 파일 `.scratch/retro-queue.md`
+# 는 대기열이 항목마다 파일 하나인 폴더가 되며(retro-queue-per-item 02) 사라졌으므로, 항목은 지우지 않아 늘
+# 있는 `.scratch/retro-queue/0425.md` 를 쓰도록 바꿨다(이 경로로는 아직 다시 돌리지 않았다). 그 폴더가 origin/main 에 있기 전(이행 PR 이 병합되기 전)에는
+# 우회 셋이 1로 끝난다. 위 A·B 의 첫 모양은 사건의 명령(옛 파일 이름)이라 그대로 둔다.
+item='.scratch/retro-queue/0425.md'
 echo "== C. git 의 종료 코드. 기본 git show 는 실패의 까닭(바뀐 인자)이 오류에 있는지도 본다"
-show_error=$(git show 'origin/main:.scratch/retro-queue.md' 2>&1 > /dev/null)
+show_error=$(git show "origin/main:$item" 2>&1 > /dev/null)
 echo "git show 기본: $?"
 case $show_error in
-  *"origin\\main;.scratch\\retro-queue.md"*) ;;
+  *"origin\\main;.scratch\\retro-queue\\0425.md"*) ;;
   *)
     echo "실패: git show 의 오류에 바뀐 인자가 없다. 다른 까닭으로 실패했다: $show_error" >&2
     exit 1
     ;;
 esac
-quiet_output=$(git rev-parse --verify --quiet 'origin/main:.scratch/retro-queue.md' 2>&1)
+quiet_output=$(git rev-parse --verify --quiet "origin/main:$item" 2>&1)
 echo "rev-parse --verify --quiet 기본: $?, 출력 ${#quiet_output}자"
-MSYS_NO_PATHCONV=1 git rev-parse --verify --quiet 'origin/main:.scratch/retro-queue.md' > /dev/null
+MSYS_NO_PATHCONV=1 git rev-parse --verify --quiet "origin/main:$item" > /dev/null
 echo "MSYS_NO_PATHCONV=1: $?"
-MSYS2_ARG_CONV_EXCL='*' git rev-parse --verify --quiet 'origin/main:.scratch/retro-queue.md' > /dev/null
+MSYS2_ARG_CONV_EXCL='*' git rev-parse --verify --quiet "origin/main:$item" > /dev/null
 echo "MSYS2_ARG_CONV_EXCL='*': $?"
-git rev-parse --verify --quiet 'origin/main:./.scratch/retro-queue.md' > /dev/null
+git rev-parse --verify --quiet "origin/main:./$item" > /dev/null
 echo "콜론 뒤에 ./ (저장소 루트에서): $?"
 git rev-parse --verify --quiet 'origin/main:README.md' > /dev/null
 echo "왼쪽에만 / (origin/main:README.md): $?"

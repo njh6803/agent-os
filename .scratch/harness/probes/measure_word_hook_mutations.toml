@@ -11,14 +11,47 @@ file = "tools/hook_measure_word.py"
 old = '''    if any(folders[index : index + 2] == ["docs", "adr"] for index in range(len(folders) - 1)):'''
 new = '''    if "adr" in folders:'''
 
+# 대기열이 폴더 `.scratch/retro-queue/` 의 항목 파일이 된 뒤(retro-queue-per-item 02)의 넷. 근거 문서 판정이
+# 폴더 바로 아래의 `.md` 만 받는지를 하나씩 깬다.
 [[mutation]]
-name = "retro-queue.md 의 부모를 보지 않는다"
-tests = ["tests/tools/test_hook_measure_word.py"]
+name = "대기열 폴더의 부모를 보지 않는다"
+tests = ["tests/tools/test_hook_measure_word.py", "-k", "다른_파일은_지나간다"]
 expect = "red"
+expect_output = ['docs\retro-queue\0573.md']
 [[mutation.edit]]
 file = "tools/hook_measure_word.py"
-old = '''    if folders[-1] == ".scratch" and name == "retro-queue.md":'''
-new = '''    if name == "retro-queue.md":'''
+old = '''    if folders[-2:] == [".scratch", "retro-queue"] and name.endswith(".md"):'''
+new = '''    if folders[-1:] == ["retro-queue"] and name.endswith(".md"):'''
+
+[[mutation]]
+name = "대기열 폴더의 하위 폴더까지 받는다"
+tests = ["tests/tools/test_hook_measure_word.py", "-k", "다른_파일은_지나간다"]
+expect = "red"
+expect_output = ['retro-queue\sub\0573.md']
+[[mutation.edit]]
+file = "tools/hook_measure_word.py"
+old = '''    if folders[-2:] == [".scratch", "retro-queue"] and name.endswith(".md"):'''
+new = '''    if ".scratch" in folders and "retro-queue" in folders and name.endswith(".md"):'''
+
+[[mutation]]
+name = "대기열 폴더의 .md 가 아닌 파일까지 받는다"
+tests = ["tests/tools/test_hook_measure_word.py", "-k", "다른_파일은_지나간다"]
+expect = "red"
+expect_output = ['retro-queue\0573.txt']
+[[mutation.edit]]
+file = "tools/hook_measure_word.py"
+old = '''    if folders[-2:] == [".scratch", "retro-queue"] and name.endswith(".md"):'''
+new = '''    if folders[-2:] == [".scratch", "retro-queue"]:'''
+
+[[mutation]]
+name = "대기열 폴더의 항목을 근거 문서로 보지 않는다"
+tests = ["tests/tools/test_hook_measure_word.py", "-k", "세_자리와_세_낱말을"]
+expect = "red"
+expect_output = ["coderabbit-inline-size.md', '쟀다')"]
+[[mutation.edit]]
+file = "tools/hook_measure_word.py"
+old = '''    if folders[-2:] == [".scratch", "retro-queue"] and name.endswith(".md"):'''
+new = '''    if False:'''
 
 [[mutation]]
 name = "프로브 README 에서 .scratch 조상을 요구하지 않는다"
