@@ -145,7 +145,7 @@ def test_사용자가_순서를_올린_행은_표지가_없어_세지_않는다(
     """못 보는 것. 결정표의 둘째 조건은 행에서 읽지 않는다."""
     approval = "사용자가 순서를 올렸다, 1회차, 2026-10-18"
     out = render(read_rows(queue(f"| 5 | 일 | `a.md` | {approval} |"))[0], [], TODAY)
-    assert "회차 3 이상: (없음)" in out
+    assert "회차 5 이상: (없음)" in out
     assert "만료할 행(승인 칸의 가장 늦은 날짜가 2026-10-05 전): (없음)" in out
     assert "날짜를 찾지 못한 행" not in out
 
@@ -223,18 +223,28 @@ def test_사람_몫은_어디로_칸이_사람_몫과_쌍점으로_시작할_때
     assert [(r.number, r.human) for r in rows] == [(1, True), (2, False)]
 
 
-def test_회차_3_이상인_행은_반영할_때까지_만료하지_않는다() -> None:
+def test_회차_5_이상인_행은_반영할_때까지_만료하지_않는다() -> None:
     """셀프 리뷰: chore 를 기능 뒤에만 여니 문턱을 넘은 행이 반영을 기다리다 14일을 넘겨 닫힐 수
-    있었다."""
-    out = render([row(1, 3, last=date(2026, 9, 1)), row(2, 2, last=date(2026, 9, 1))], [], TODAY)
-    assert "회차 3 이상: 1(3회차)" in out
-    assert "만료할 행(승인 칸의 가장 늦은 날짜가 2026-10-05 전): 2(2026-09-01)" in out.splitlines()
+    있었다. 문턱이 3에서 5로 올랐으니 회차 4 행은 보호선 밖이라 만료 후보다(ADR 0036 이력
+    2026-11-06)."""
+    out = render(
+        [
+            row(1, 5, last=date(2026, 9, 1)),
+            row(2, 4, last=date(2026, 9, 1)),
+            row(3, 2, last=date(2026, 9, 1)),
+        ],
+        [],
+        TODAY,
+    )
+    assert "회차 5 이상: 1(5회차)" in out
+    expired = "만료할 행(승인 칸의 가장 늦은 날짜가 2026-10-05 전): 2(2026-09-01) 3(2026-09-01)"
+    assert expired in out.splitlines()
 
 
-def test_사람_몫_행은_회차_3_이상에_넣지_않고_따로_적는다() -> None:
+def test_사람_몫_행은_회차_5_이상에_넣지_않고_따로_적는다() -> None:
     """대기열 238: 사람이 할 일을 세션마다 다시 보며 회차가 11까지 쌓여 chore 계기가 됐다."""
     out = render([row(238, 11, human=True), row(306, 9)], [], TODAY)
-    assert "회차 3 이상: 306(9회차)" in out
+    assert "회차 5 이상: 306(9회차)" in out
     assert "사람 몫(회차를 chore 계기로 세지 않고 만료하지 않는다): 238" in out
 
 
@@ -263,9 +273,9 @@ def test_만료할_행이_없으면_없다고_적고_날짜가_없는_행은_따
     assert "날짜를 찾지 못한 행: 4" in out
 
 
-def test_날짜가_없어도_회차_3_이상인_행은_날짜를_찾지_못한_행에_적지_않는다() -> None:
+def test_날짜가_없어도_회차_5_이상인_행은_날짜를_찾지_못한_행에_적지_않는다() -> None:
     """PR 직전 버그 축: 만료하지 않는 행까지 적어, retro 가 그 행의 날짜를 git 에서 찾게 했다."""
-    out = render([row(1, 3), row(4, 1)], [], TODAY)
+    out = render([row(1, 5), row(4, 1)], [], TODAY)
     assert "날짜를 찾지 못한 행: 4" in out.splitlines()
 
 
@@ -283,11 +293,11 @@ def test_못_보는_것_무엇과_어디로_칸의_날짜는_보지_않는다() 
 
 
 def test_결정표의_조건을_모은다() -> None:
-    """`next-session` 결정표의 chore 배치 조건은 회차 3 이상이다. 같은 대상 파일 셋 이상은
+    """`next-session` 결정표의 chore 배치 조건은 회차 5 이상이다. 같은 대상 파일 셋 이상은
     계기가 아니라 배치를 고른 뒤 함께 묶을 행이다(ADR 0036)."""
     out = render(
         [
-            row(167, 3, "tools/"),
+            row(167, 5, "tools/"),
             row(238, 7),
             row(68, 1, "CODING_STANDARDS.md"),
             row(71, 2, "CODING_STANDARDS.md"),
@@ -298,7 +308,7 @@ def test_결정표의_조건을_모은다() -> None:
         [],
     )
     assert "열린 행 7개" in out
-    assert "회차 3 이상: 238(7회차) 167(3회차)" in out
+    assert "회차 5 이상: 238(7회차) 167(5회차)" in out
     assert "`CODING_STANDARDS.md`: 68 71 107" in out
     assert "web/a.mjs" not in out
 
@@ -328,7 +338,7 @@ def test_괄호_안의_인용도_행_번호와_함께_기본_출력에_찍는다
 
 def test_조건에_드는_것이_없으면_없다고_적는다() -> None:
     out = render([row(1, 1, "a.md")], [])
-    assert "회차 3 이상: (없음)" in out
+    assert "회차 5 이상: (없음)" in out
     assert "같은 대상 파일이 3개 행 이상: (없음)" in out
 
 
@@ -341,7 +351,7 @@ def test_이_저장소의_대기열을_빠짐없이_읽는다() -> None:
 def test_main을_실제로_불러_임시_대기열의_조건을_찍는다(tmp_path: Path) -> None:
     path = tmp_path / "queue.md"
     path.write_text(
-        queue("| 9 | 일 | `a.md` | 3회차 |", "| 10 | 일 | `a.md` | 1회차 | 덤 |"),
+        queue("| 9 | 일 | `a.md` | 5회차 |", "| 10 | 일 | `a.md` | 1회차 | 덤 |"),
         encoding="utf-8",
     )
     done = subprocess.run(
@@ -353,7 +363,7 @@ def test_main을_실제로_불러_임시_대기열의_조건을_찍는다(tmp_pa
         check=False,
     )
     assert done.returncode == 1, done.stderr
-    assert "회차 3 이상: 9(3회차)" in done.stdout
+    assert "회차 5 이상: 9(5회차)" in done.stdout
     assert "칸이 넷이 아닌 행: 10" in done.stdout
 
 
@@ -439,16 +449,16 @@ def test_ref로_커밋의_대기열을_읽고_모두_읽으면_0으로_끝난다
     _git(tmp_path, "init", "-q")
     path = tmp_path / QUEUE
     path.parent.mkdir(parents=True)
-    path.write_text(queue("| 1 | 일 | `a.md` | 3회차 |"), encoding="utf-8")
+    path.write_text(queue("| 1 | 일 | `a.md` | 5회차 |"), encoding="utf-8")
     _git(tmp_path, "add", ".")
     _git(tmp_path, "-c", "user.name=t", "-c", "user.email=t@t", "commit", "-q", "-m", "q")
     path.write_text(queue("| 2 | 일 | `b.md` | 1회차 |"), encoding="utf-8")
     from_ref = _run("--ref", "HEAD", cwd=tmp_path)
     assert from_ref.returncode == 0, from_ref.stderr
-    assert "회차 3 이상: 1(3회차)" in from_ref.stdout
+    assert "회차 5 이상: 1(5회차)" in from_ref.stdout
     from_disk = _run(cwd=tmp_path)
     assert from_disk.returncode == 0, from_disk.stderr
-    assert "회차 3 이상: (없음)" in from_disk.stdout
+    assert "회차 5 이상: (없음)" in from_disk.stdout
     missing = _run("--ref", "없는-커밋", cwd=tmp_path)
     assert missing.returncode == 2
     assert "대기열을 읽지 못했다" in missing.stderr
@@ -604,12 +614,12 @@ def test_main은_search를_주면_맞은_행만_찍고_기본_출력을_내지_�
     출력 단언에 닿기 전에 종료 코드 단언에서 빨개진다."""
     path = tmp_path / "queue.md"
     path.write_text(
-        queue("| 1 | 일 | `a.md` | 3회차 |", "| 2 | 일 | `b.md` | 1회차 |"), encoding="utf-8"
+        queue("| 1 | 일 | `a.md` | 5회차 |", "| 2 | 일 | `b.md` | 1회차 |"), encoding="utf-8"
     )
     assert main(["--queue", str(path), "--search", r"a\.md"]) == 0
     out = capsys.readouterr().out
-    assert "  1 줄 3 열림 3회차" in out
-    assert "회차 3 이상" not in out
+    assert "  1 줄 3 열림 5회차" in out
+    assert "회차 5 이상" not in out
 
 
 def test_main은_search에_칸이_넷이_아닌_행이_맞으면_1로_끝난다(

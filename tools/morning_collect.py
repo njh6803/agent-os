@@ -62,7 +62,7 @@
   세션·인계(`ticket_cells`). ADR 0033은 세션 컨텍스트가 20만을 넘은 뒤의 단계 경계에서 인계하므로,
   인계가 난 티켓은 한 세션에 들지 않은 티켓이고 더 쪼갤 후보다(사용자, 일지 2026-10-16-01). 그 앞의
   티켓은 인계가 날 수 없어 분모에서 뺀다.
-- 대기열(3회차 이상 행과, 열린 행이 대상과 인용으로 셋 이상 든 파일 `shared_files`), 열린 PR의
+- 대기열(5회차 이상 행과, 열린 행이 대상과 인용으로 셋 이상 든 파일 `shared_files`), 열린 PR의
   초안·리뷰 결정·CI, 진행 중인 세션(마지막 기록이 `ACTIVE_H`시간 안인 워크트리), PR이 병합됐는데
   남은 워크트리, 지금의 부하, 가장 최근 일지의 "다음".
 
@@ -1753,7 +1753,7 @@ def shared_files(rows: Sequence[queue_open_rows.Row]) -> tuple[tuple[str, ...], 
 
 
 def queue_part(day: date, text: str, source: str, snapshot: str) -> Part:
-    """대기열 파일의 글(`text`)로 지은 대기열 절. 3회차 이상 행과, 열린 행이 대상과 인용으로
+    """대기열 파일의 글(`text`)로 지은 대기열 절. 5회차 이상 행과, 열린 행이 대상과 인용으로
     `MIN_ROWS`개 이상 든 파일(`shared_files`)을 표로 적어, 행이 늘어도 목록은 한 줄이다."""
     got = Collected()
     rows, _ = queue_open_rows.read_rows(text)

@@ -510,9 +510,9 @@ def test_글_속_대기열_번호에도_이름과_내용을_붙인다() -> None:
 
 
 def test_대기열_뒤의_수에_세는_말이_붙으면_행_번호로_보지_않는다() -> None:
-    todo = Todo("정리", "대기열 3회 이상 행이 12개이고 대기열 4개가 사람 몫이다")
+    todo = Todo("정리", "대기열 5회 이상 행이 12개이고 대기열 4개가 사람 몫이다")
     text, _, warnings = render(자료(), 메모(todos=(todo,)), {}, "summary")
-    assert "대기열 3회 이상 행이 12개이고 대기열 4개가 사람 몫이다" in text
+    assert "대기열 5회 이상 행이 12개이고 대기열 4개가 사람 몫이다" in text
     assert warnings == []
 
 
