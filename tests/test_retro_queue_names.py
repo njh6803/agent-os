@@ -161,9 +161,10 @@ def test_폴더의_잔여물을_잡는다_하위_폴더와_다른_확장자와_�
     (tmp_path / "0582.txt").write_text("x", encoding="utf-8")
     (tmp_path / "0583.MD").write_text("x", encoding="utf-8")
     (tmp_path / "sub").mkdir()
+    (tmp_path / "dir.md").mkdir()
     problems = stray_problems(tmp_path)
-    assert len(problems) == 3
-    for name in ("0582.txt", "0583.MD", "sub"):
+    assert len(problems) == 4
+    for name in ("0582.txt", "0583.MD", "sub", "dir.md"):
         assert any(p.startswith(f".scratch/retro-queue/{name}: ") for p in problems), name
 
 

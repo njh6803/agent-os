@@ -66,6 +66,30 @@
 
 **다시 돌린 명령.** 전체 러너는 서브에이전트 보고를 받기 전에 한 번 돌았다. 결과: zizmor·lint-imports·지침 검사·타입 우회 검사·pyright 둘·훅 러너·pytest·web-verify가 초록이었고 `check-ticket`만 빨강이었다. 까닭은 티켓 파일이 색인에 없어서였고 `git add -A` 뒤 `uv run python tools/check_ticket.py`가 출력 없이 끝났다. 리뷰를 반영한 뒤의 다섯 게이트는 커밋의 pre-commit 결과로 갈음한다.
 
+## PR 직전 리뷰
+
+HEAD `8cb60333`(커밋 둘, 작업 트리 깨끗), origin/main(`288686a5`)을 이미 합친 상태에서 돌렸다.
+
+- **카나리아(셀프 리뷰 반영의 문장 둘).** 두 명세에 그 문장을 묻는 물음을 하나씩 더해(`retro_row_search` 물음 5, `next_session_queue_open_rows` 물음 3) 새 `claude -p` 세션(2.1.318)에서 실제로 돌렸다. retro 통과 4, next-session 통과 4, "없음" 섞임 0, 대조군은 모든 물음에 "없음"이었다(러너 `tools/canary.py`가 찍은 집계 줄과 답을 손으로 읽었다). 결과는 두 명세의 `# 최신 결과:` 줄에 있다.
+- **CodeRabbit CLI.** `coderabbit auth status`가 `Plan: Free`, `Seat: not assigned`였다. 전체 범위는 파일 616개가 한도 150을 넘어 거절됐다(`Too many files`. `coderabbit review --agent --include-untracked`의 출력을 손으로 봤다). 그래서 `coderabbit review --agent --dir tools`(파일 15개)로 좁혀 돌렸고 `findings: 0`으로 끝났다(출력의 `complete` 줄을 읽었다). `tests/`·`docs/`·`.claude/`는 이 CLI로 보지 못했다.
+- **`bug-perf-review` 서브에이전트.** 유효 0건, Minor 1건이다. 밀어 둔 주장 넷(상태 값은 시작만 본다, `대기열 ` 뒤 영어 낱말이 슬러그로 읽힌다, `stray_problems`의 세 갈래, `check_ticket`의 면제 범위)은 모두 코드를 읽어 맞다고 판정했고, `queue_open_rows.py --ref origin/main`은 실제로 쳐서 종료 2와 `Not a valid object name`을 봤다. 관련 시험 325건 통과를 서브에이전트가 돌렸다(`test_sibling_overlap.py`는 돌리지 않았다). Minor는 `tests/test_retro_queue_names.py`의 잔여물 시험이 `dir.md`라는 하위 폴더를 넣지 않아 `entry.is_file()` 조건이 변이에 잡히지 않는다는 것이다. **고쳤다.** `dir.md` 폴더를 넣고 기대를 3에서 4로 올렸으며, `is_file()` 조건을 손으로 지우자 `assert 3 == 4`로 빨갛고(`uv run pytest tests/test_retro_queue_names.py -k 잔여물`) 되돌리자 10건 통과했다.
+- **`/security-review`.** 지적 0건이다. 새로 외부 입력이 닿는 자리는 `queue_open_rows.py`의 `--ref`(git 인자 목록으로 넘기고 셸을 거치지 않으며, 파일 이름은 `is_item_name`을 지난 것만 읽는다)와 `morning_sources.py`의 `gh`·`git` 호출(고정 인자)뿐이었다. 근거는 코드를 읽은 것이고 변이나 입력을 넣어 돌려 보지는 않았다.
+
+## 회고
+
+후보 둘, 둘 다 승인(회차로 세는 것)이고 넘김은 없다. 기각 둘은 일지에만 남긴다.
+
+1. **승인: `coderabbit-review` 정의의 `Seat: not assigned` 종료(대기열 0578에 6회차).**
+   - 사건: 이 PR의 PR 직전 리뷰에서 서브에이전트가 `Seat: not assigned`만 보고 `coderabbit review`를 돌리지 않고 종료했다. 브리프가 "종료하지 말고 돌려서 판정하라"고 적었는데도 정의 1단계가 우선했다. 본 세션이 `coderabbit review --agent --include-untracked`를 직접 치자 연결·분석 단계까지 갔고, 파일 616개가 한도 150을 넘어 거절됐다(`Too many files`. 출력을 손으로 봤다). `--dir tools`로 좁히자 `findings: 0`으로 끝났다.
+   - 새 사실: 무료 판의 CLI는 좌석이 없어도 돌고, 한 번에 보는 파일에 150개 한도가 있다. 대기열 이행처럼 파일이 많은 PR은 `--dir`로 나눠 돌려야 한다. 0578의 처방(1단계가 `Seat: not assigned`로 종료하지 않는다)에 이 한도 문장을 함께 넣는다.
+   - 층: 정의 문장의 고침이다. 항목 0578이 5회차로 chore 배치 조건을 이미 채웠으니, 새로 만들지 않고 회차만 더했다(승인 줄 5회차에서 6회차).
+2. **승인: 문장을 더한 셀프 리뷰 반영이 카나리아의 `expect`에 묶이지 않았다(대기열 0310에 3회차).**
+   - 사건: 셀프 리뷰 반영이 `retro`와 `next-session`에 문장 둘을 더했는데, 두 카나리아 명세의 물음이 그 문장을 묻지 않아 다시 돌려도 그 문장이 실렸는지 알 수 없었다. 이 세션이 물음을 하나씩 더해(`retro_row_search` 5번, `next_session_queue_open_rows` 3번) 돌리고서야 확인했다.
+   - 층: `tools/canary.py`가 판정하는 쪽은 대기열 538이 맡는다. 0310의 처방(바뀐 단락이 결정을 여럿 담으면 결정마다 카나리아 하나)과 같은 꼴이라 회차만 더했다.
+3. **기각 둘.** 커밋 메시지 제목 72자 초과(`hook_bash_commit_msg`가 커밋 전에 막았다. 이미 있는 훅이 제 몫을 했다). 워크트리 가드의 "too complex" 거부(`git add`와 `cat` heredoc을 한 명령으로 묶은 것. `CLAUDE.md` 환경 함정이 이미 적은 모양이다).
+
+0578은 이제 6회차이므로 다음 chore 배치 조건에 계속 든다.
+
 ## 인계
 
 컨텍스트가 인계 문턱을 넘은 채 단계 경계 `커밋 뒤`에 닿아 이 세션을 같은 브랜치의 새 세션으로 넘긴다. 커밋은 pre-commit을 통과했고(종료 0) 푸시와 PR은 아직이다. 세션 제목은 `feature/02-retro-queue-one-file-per-item (인계함)`으로 바꿨고 워크트리 잠금을 풀었다.
@@ -74,4 +98,10 @@ open-session을 부른다 2026-11-06T20:31:20Z
 
 ## 다음
 
-(회고와 함께 PR 직전에 채운다.)
+이 PR(티켓 02)이 병합되면 같은 기능의 막힘이 풀린 티켓은 03(리뷰 봇 경로 거르기)과 04(일지 이름)이고, 둘은 나란히 연다. 05 이후는 03·04가 끝나야 열린다.
+
+- **먼저 할 것(병합 직후).** `.scratch/harness/probes/msys_pathconv/run.sh`의 C절을 병합된 main에서 다시 돌린다. 이 PR에서는 폴더가 origin/main에 없어 우회 종료 코드가 기대와 다르게 나왔다(1이 찍혔다). 코드를 읽은 것이 아니라 실행 결과를 받아야 하는 몫이다.
+- **03의 몫으로 남긴 것.** `.github/workflows/claude-code-review.yml:97`의 `\.scratch/retro-queue\.md$` 거르기와 `review_workflow.py`의 `QUEUE`, `.github/PULL_REQUEST_TEMPLATE.md:43`·`claude-code-review.yml:77·99`의 "일지·대기열·하네스 탐침 밖의 파일" 경로 문구다. 리뷰 봇 워크플로를 바꾸는 PR은 따로 먼저 병합한다는 규약 때문에 이 PR에 싣지 않았다.
+- **회고 후보.** `retro/SKILL.md` 머리 주석의 "행", `MIN_ROWS`·`--rows`·`QueueRow`·`retro_rows`처럼 행 단위로 남은 이름은 이름 낡음이라 바꾸면 인용이 깨진다. 지금은 두고 대기열 후보로 올릴지 다음 회고가 정한다.
+- **CodeRabbit CLI.** 파일이 많은 PR은 150개 한도에 걸린다(0578의 6회차에 적었다). 03·04처럼 작은 PR은 전체를 돌린다.
+- **주 체크아웃.** 이 세션은 병합 뒤 주 체크아웃을 당기지 않는다. 다음 세션이 워크트리에 들어가기 전에 `tidy-checkouts`를 먼저 돈다.
