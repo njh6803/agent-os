@@ -1,6 +1,6 @@
 # 04: 일지를 날짜·시각·제목으로 짓고 번호를 받지 않는다
 
-**What to build:** 새 일지는 `docs/journal/2026-11-06-1432-<슬러그>.md`처럼 그 세션이 일지를 만든 로컬 시분을 넣어 짓는다. 세션은 번호 도구를 치지 않고 `date +%Y-%m-%d-%H%M`로 앞부분을 짓고, 먼저 만들고 늦게 병합해도 이름을 옮기지 않는다. 이어서 할 때는 이 브랜치가 더한 일지를 git으로 찾아, main을 합친 뒤 들어온 남의 일지와 섞이지 않는다. 아침 보고는 main에 가장 늦게 더해진 일지 가운데 `## 다음`을 든 첫 일지를 쓴다. 옛 인용 "일지 2026-10-19-21"과 새 인용 "일지 2026-11-06-1432"가 같은 접두 규칙으로 풀린다. 번호 대조 도구는 일지 순번을 보지 않고, 일지 훅은 새 일지의 이름이 새 꼴인지만 본다. 전환일 뒤에 순번 꼴로 만든 일지와, 같은 분에 만든 두 일지는 저장소 상태 시험이 막는다.
+**What to build:** 새 일지는 `docs/journal/2026-11-06-1432-<슬러그>.md`처럼 그 세션이 일지를 만든 로컬 시분을 넣어 짓는다. 세션은 번호 도구를 치지 않고 Bash의 `date +%Y-%m-%d-%H%M`(PowerShell은 `Get-Date -Format yyyy-MM-dd-HHmm`)으로 앞부분을 짓고, 먼저 만들고 늦게 병합해도 이름을 옮기지 않는다. 이어서 할 때는 이 브랜치가 더한 일지를 git으로 찾아, main을 합친 뒤 들어온 남의 일지와 섞이지 않는다. 아침 보고는 main에 가장 늦게 더해진 일지 가운데 `## 다음`을 든 첫 일지를 쓴다. 옛 인용 "일지 2026-10-19-21"과 새 인용 "일지 2026-11-06-1432"가 같은 접두 규칙으로 풀린다. 번호 대조 도구는 일지 순번을 보지 않고, 일지 훅은 새 일지의 이름이 새 꼴인지만 본다. 전환일 뒤에 순번 꼴로 만든 일지와, 같은 분에 만든 두 일지는 저장소 상태 시험이 막는다.
 
 근거는 `.scratch/retro-queue-per-item/spec.md`의 "일지 이름", "인용을 푸는 규칙"의 일지, "전환일과 고정하는 값"의 일지·다시 합칠 때·못 보는 것, "저장소 상태 시험의 실패 문장"의 일지, "바뀌는 자리"의 일지 이름, Testing Decisions의 "번호 대조 도구"·"저장소 상태 시험"·"훅"·"아침 보고"·"스킬과 규칙"·"변이 표", Further Notes의 "헌법 판을 올리는 티켓"과 "전환기의 세션", 사용자 스토리 13·27·28·30·32·34·36이다. 결정은 ADR 0045 결정 7, 8의 일지 몫, 10의 일지 상태 시험이다. 이 티켓이 병합되면 ADR 0045 이력 2026-11-06의 최신 일지·일지 이름의 겹침·일지 상수·일지 실패 문장·판 올리기가 선다.
 
@@ -15,8 +15,8 @@
 
 ### 이름과 최신 일지
 
-- [ ] **이름.** `docs/journal/<YYYY-MM-DD>-<HHMM>-<슬러그>.md`이고 시각은 그 세션이 일지를 만든 로컬 시분이다. 다음 빈 번호를 보라던 문장(`tools/hook_choice_facts.py`, `tools/hook_prompt_directive.py`의 붙여 넣은 지시문 갈래, `code-review`, `next-session` merge.md)과 번호 규칙대로 만들라던 `next-session` handoff.md가 `date +%Y-%m-%d-%H%M`을 가리킨다
-- [ ] **이 브랜치의 일지.** `git diff --merge-base origin/main --name-only --diff-filter=A -- docs/journal/`에 커밋하지 않은 새 일지(`git status --porcelain -- docs/journal/`)를 더한 것이고, 여럿이면 이름의 날짜·시각이 가장 늦은 것이다. 다음 일을 잇는 세션과 retro(`## 회고` 절을 쓸 일지)가 쓴다. `retro`의 최신 일지 두 곳을 이것으로 고친다
+- [ ] **이름.** `docs/journal/<YYYY-MM-DD>-<HHMM>-<슬러그>.md`이고 시각은 그 세션이 일지를 만든 로컬 시분이다. 다음 빈 번호를 보라던 문장(`tools/hook_choice_facts.py`, `tools/hook_prompt_directive.py`의 붙여 넣은 지시문 갈래, `code-review`, `next-session` merge.md)과 번호 규칙대로 만들라던 `next-session` handoff.md가 Bash의 `date +%Y-%m-%d-%H%M`과 PowerShell의 `Get-Date -Format yyyy-MM-dd-HHmm`을 가리킨다
+- [ ] **이 브랜치의 일지.** `git diff --merge-base origin/main --name-only --diff-filter=A -- docs/journal/`에 커밋하지 않은 새 일지(`git status --porcelain -- docs/journal/`)를 더한 것이고, 여럿이면 이름의 날짜·시각이 가장 늦은 것이다. 다음 일을 잇는 세션과 retro(`## 회고` 절을 쓸 일지)가 쓴다. squash로 병합된 뒤 main을 합친 브랜치에서 빠지는 것은 명세 "최신 일지를 찾는 법"의 못 보는 것이다. `retro`의 최신 일지 두 곳을 이것으로 고친다
 - [ ] **main의 최신 일지.** origin/main에 가장 늦게 더해진 일지다. 아침 보고(`tools/morning_sources.py`)는 늦게 더한 커밋부터, 한 커밋 안에서는 이름이 늦은 것부터 읽어 `## 다음`을 든 첫 일지를 쓴다. 이름순으로 고르지 않는다(전환일 하루는 옛 이름과 새 이름이 이름순과 시각순에서 어긋난다)
 - [ ] **인용.** `일지 <날짜>-<NN 또는 HHMM>`은 `docs/journal/<인용>-*.md`로 푼다. 접두 뒤의 하이픈이 `2026-11-06-14`와 `2026-11-06-1432-…`를 가른다. 이 규칙을 `docs/constitution/operations.md`의 일지 규칙에 적는다. 새 CLI는 두지 않는다
 

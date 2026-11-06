@@ -173,9 +173,9 @@ Status: ready-for-agent
 
 ### 일지 이름
 
-- **이름.** `docs/journal/<YYYY-MM-DD>-<HHMM>-<슬러그>.md`이고, 시각은 그 세션이 일지를 만든 로컬 시분이다(ADR 0045 결정 7). 세션은 `date +%Y-%m-%d-%H%M`로 앞부분을 짓는다. 번호 도구의 "다음 빈 번호"를 보라던 문장(`hook_choice_facts`, `hook_prompt_directive`의 붙여 넣은 지시문 갈래, `code-review`, `next-session` merge.md)과 merge.md의 번호 규칙대로 만들라던 `next-session` handoff.md는 이 명령을 가리킨다 (명세가 정했다).
+- **이름.** `docs/journal/<YYYY-MM-DD>-<HHMM>-<슬러그>.md`이고, 시각은 그 세션이 일지를 만든 로컬 시분이다(ADR 0045 결정 7). 세션은 Bash에서 `date +%Y-%m-%d-%H%M`로, PowerShell에서 `Get-Date -Format yyyy-MM-dd-HHmm`으로 앞부분을 짓는다. PowerShell의 `date`는 `Get-Date`의 별칭이라 앞의 명령이 그 셸에서 종료 1로 실패하고, 뒤의 명령은 Bash의 앞 명령과 같은 값을 냈다(두 셸에서 쳐 손으로 봤다, 일지 2026-11-06-12 "PR 직전 리뷰"). 번호 도구의 "다음 빈 번호"를 보라던 문장(`hook_choice_facts`, `hook_prompt_directive`의 붙여 넣은 지시문 갈래, `code-review`, `next-session` merge.md)과 merge.md의 번호 규칙대로 만들라던 `next-session` handoff.md는 이 두 명령을 가리킨다 (명세가 정했다).
 - **최신 일지를 찾는 법.** 뜻이 둘이다 (명세가 정했다).
-  - **이 브랜치의 일지.** 이 브랜치가 더한 일지다. `git diff --merge-base origin/main --name-only --diff-filter=A -- docs/journal/`에 커밋하지 않은 일지(`git status --porcelain -- docs/journal/`의 새 파일)를 더한 것이고, 여럿이면 이름의 날짜·시각이 가장 늦은 것이다. main을 합친 뒤에는 merge-base가 main의 끝으로 옮겨, main에서 들어온 일지는 여기 들지 않는다. 다음 일을 잇는 세션과 retro(`## 회고` 절을 쓸 일지)가 이것을 쓴다.
+  - **이 브랜치의 일지.** 이 브랜치가 더한 일지다. `git diff --merge-base origin/main --name-only --diff-filter=A -- docs/journal/`에 커밋하지 않은 일지(`git status --porcelain -- docs/journal/`의 새 파일)를 더한 것이고, 여럿이면 이름의 날짜·시각이 가장 늦은 것이다. main을 합친 뒤에는 merge-base가 main의 끝으로 옮겨, main에서 들어온 일지는 여기 들지 않는다. 다음 일을 잇는 세션과 retro(`## 회고` 절을 쓸 일지)가 이것을 쓴다. 못 보는 것은 이 브랜치의 PR이 squash로 병합된 뒤 main을 합친 브랜치다. merge-base가 그 병합을 품어 이 브랜치의 일지도 빠진다(임시 저장소에서 병합 전, squash 병합 뒤 main을 합치기 전, 합친 뒤에 이 명령을 쳐 셋째에서만 빠지는 것을 손으로 봤다, 일지 2026-11-06-12 "PR 직전 리뷰"). 그 길은 규약에 없다. retro와 "다음"은 병합 전에 마치고(`next-session` merge.md 3), 병합 뒤에 이어 갈 때는 origin/main에서 새 브랜치를 딴다(같은 파일 5).
   - **main의 최신 일지.** origin/main에 가장 늦게 더해진 일지다. `git log -1 --diff-filter=A --format= --name-only origin/main -- docs/journal/`는 일지를 더한 가장 늦은 커밋 하나가 더한 일지만 내고(07d80b96에서 `2026-11-06-11-rag-engine-name.md` 하나가 나오는 것을 손으로 봤다), 그 커밋이 여럿을 더했으면 이름이 가장 늦은 것이다. 아침 보고(`morning_sources`)는 `## 다음`을 든 일지를 골라야 해서, `-1` 없이 같은 차례(늦게 더한 커밋부터, 한 커밋 안에서는 이름이 늦은 것부터)로 읽어 `## 다음`을 든 첫 일지를 쓴다. 가장 늦게 더한 일지에 `## 다음`이 없을 수 있다. 전환일 하루는 옛 이름(`-12-`)과 새 이름(`-0930-`)이 이름순과 시각순에서 어긋나 이름순으로 고르지 않는다.
 - **번호 대조 도구.** `sibling_overlap`에서 일지 순번의 읽기·겹침·다음 빈 번호·앞섬(이름순)·옮길 번호와 머리 한 줄 파일 안내를 뗀다. 빈 자리 검사에서 일지를 뗀다. 없는 일지 인용 검사(종료 1의 한 갈래)는 겹침이 아니라 깨진 참조를 보는 검사라 남기고, 새 인용 `일지 2026-11-06-1432`도 읽게 넓힌다(아래 "인용을 푸는 규칙") (명세가 정했다).
 - **일지 훅.** `hook_journal_retro`의 순번 대조(번호 도구를 자식 프로세스로 돌리는 몫)를 걷고, 일지를 Write할 때 이름이 새 꼴인지만 본다. 자식 프로세스 몫으로 잡은 등록 제한 45초와 `.claude/rules/tools.md`의 그 항목은 새 훅을 지은 뒤 손으로 재어 다시 정한다. retro 계기는 그대로다 (명세가 정했다).
@@ -206,7 +206,7 @@ Status: ready-for-agent
 ### 끝 줄 (사용자가 골랐다)
 
 - **막는 자리.** 저장소 상태 시험이다. 기능 계획의 폴더 `issues/`에 든 티켓이 모두 닫혔고(done 또는 wontfix) done이 하나 이상인데 그 기능 계획에 `**끝:**` 줄이 없으면 빨갛다(ADR 0045 결정 3). 시험이 보는 기능 계획은 아래 "보지 않는 것"이 좁힌다. 지금 `tests/test_plan_status.py`가 티켓이 모두 닫히고 done이 하나 이상인 행을 done으로 보는 판정을 기능 계획의 `끝` 줄로 옮긴 것이다. 실패 문장은 아래 "저장소 상태 시험의 실패 문장"에 있다.
-- **마지막 티켓의 PR.** 기능의 마지막 열린 티켓을 닫는 커밋(done이나 wontfix로 바꾸거나 그 티켓을 지우는 커밋)이 pre-commit의 pytest에서 막히므로, 그 PR이 같은 커밋에서 `끝` 줄을 적는다. ADR 0045 결정 3은 그 줄을 마지막 티켓을 병합한 세션이 적는다고 적었는데, 병합 뒤에 적으면 그 사이 main의 시험이 빨갛다.
+- **마지막 티켓의 PR.** 기능의 마지막 열린 티켓을 닫는 커밋(done이나 wontfix로 바꾸거나 그 티켓을 지우는 커밋)은, 닫은 뒤 그 기능의 done 티켓이 하나 이상이면 위 막는 자리대로 pre-commit의 pytest에서 막히므로, 그 PR이 같은 커밋에서 `끝` 줄을 적는다. done 티켓이 하나도 없이 닫힌 기능은 시험이 막지 않고 `끝` 줄도 적지 않는다. ADR 0045 결정 3은 그 줄을 마지막 티켓을 병합한 세션이 적는다고 적었는데, 병합 뒤에 적으면 그 사이 main의 시험이 빨갛다.
 - **날짜.** `끝` 줄의 날짜는 그 줄을 적은 커밋의 로컬 날짜다. 병합 날짜는 커밋할 때 알 수 없다. 이행 때 적는 옛 기능의 날짜(병합 커밋의 날짜)와 하루쯤 어긋날 수 있다 (명세가 정했다).
 - **나란히 돈 마지막 티켓 둘.** 두 PR은 저마다 다른 티켓이 열린 판을 보아 초록이다. main 보호가 strict(필수 검사 `verify`)라 늦게 병합되는 PR은 main을 합친 뒤의 CI에서 이 시험에 막히고, 그 PR이 `끝` 줄을 적는다. `gh api repos/:owner/:repo/branches/main/protection/required_status_checks`가 `"strict":true`를 내는 것은 손으로 봤고, `verify`가 pytest를 도는 `python` 잡을 포함한 여섯 잡을 기다리는 것은 `.github/workflows/ci.yml`의 `needs`를 읽었다. 다른 세션까지 막히는 것은 관리자 우회 병합이나 main 직접 푸시 뒤뿐이고, 일지 이름 시험(`tests/test_journal_names.py`)이 막지 못하는 것으로 적은 것과 같다.
 - **보지 않는 것.** `**슬라이스:**` 줄이 없는 기능 계획(하네스 기능)과 기능 계획이 없는 폴더(지금 전체 계획에 행이 없는 폴더 여덟)는 보지 않는다. 하네스 기능은 티켓이 모두 done이면 끝난 것이다(ADR 0037). to-tickets가 첫 티켓들을 쓰는 브랜치는 새 티켓이 모두 열려 있어 빨개지지 않는다 (명세가 정했다).
@@ -264,7 +264,7 @@ Status: ready-for-agent
 시험마다 무엇이 틀렸는지, 새 꼴이 무엇인지, 규칙의 원천이 어디인지를 한 문단으로 적는다. ADR 0045 결정 10은 "그 실패 문장은 폴더의 README를 가리킨다"고 적었다. 일지와 티켓의 규칙은 대기열 README가 아니라 제 원천 문서에 있어, 시험마다 제 원천을 가리킨다(ADR 0045 이력 2026-11-06). 문장의 뜻은 아래와 같고 글자는 구현이 다듬는다.
 
 - **대기열.** "`.scratch/retro-queue.md`가 있다. 대기열은 `.scratch/retro-queue/` 폴더의 항목 파일이다. 이 파일에 적은 변경은 항목 파일로 옮겨 적고 옛 파일을 지운다. 파일 모양과 제목 규칙은 `.scratch/retro-queue/README.md`에 있다." 라벨 줄이 빠진 항목은 그 경로와 빠진 줄을, 이름이 규칙 밖인 항목은 그 경로와 상수를 들고 같은 README를 가리킨다.
-- **일지.** "`<이름>`은 전환일(<날짜>) 뒤의 일지인데 순번 꼴(`<날짜>-<NN>-`)이다. 일지 이름은 `<날짜>-<HHMM>-<슬러그>.md`이고 앞부분은 `date +%Y-%m-%d-%H%M`로 짓는다(`docs/constitution/operations.md` 일지 규칙). `git mv`로 이름을 바꾸고, 이 브랜치가 들인 그 일지의 인용도 고친다."
+- **일지.** "`<이름>`은 전환일(<날짜>) 뒤의 일지인데 순번 꼴(`<날짜>-<NN>-`)이다. 일지 이름은 `<날짜>-<HHMM>-<슬러그>.md`이고 앞부분은 Bash의 `date +%Y-%m-%d-%H%M`이나 PowerShell의 `Get-Date -Format yyyy-MM-dd-HHmm`으로 짓는다(`docs/constitution/operations.md` 일지 규칙). `git mv`로 이름을 바꾸고, 이 브랜치가 들인 그 일지의 인용도 고친다."
 - **티켓.** "`<이름>`은 전환 때의 마지막 번호(<NNN>)보다 큰 번호로 시작한다. 새 하네스 티켓은 `<slug>.md`이고 브랜치는 `chore/<slug>`다(`docs/agents/issue-tracker.md`). 파일과 브랜치 이름에서 번호를 떼고, 세션 제목도 새 브랜치로 바꾼다."
 - **전체 계획.** "`.scratch/plan.md`가 기능 계획과 티켓에서 만든 표와 다르다. `uv run python tools/plan_table.py`를 쳐서 다시 만들고 같은 커밋에 싣는다. 손으로 고칠 글은 기능 계획(`.scratch/<slug>/plan.md`)이나 `.scratch/plan-head.md`에 있다."
 - **끝 줄.** "`<기능 계획 경로>`의 티켓이 모두 닫혔는데 `**끝:**` 줄이 없다. 마지막 티켓을 닫는 커밋에서 그 파일에 `**끝:** YYYY-MM-DD`(그 커밋의 로컬 날짜)를 적는다. 규칙은 `docs/agents/issue-tracker.md`의 전체 계획 절에 있다."
