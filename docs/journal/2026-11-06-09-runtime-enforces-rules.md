@@ -72,3 +72,28 @@
 - 묻지 않고 정한 것(이 줄 아래 `open-session` 줄이 마지막에 온다): `DEFAULT_SERVER`는 세 시험 파일에 따로 둔 채다(공용 상수로 올리지 않았다. 세 시험 파일이 서로를 import하지 않고 03의 선택을 그대로 둔다).
 
 open-session을 부른다 2026-11-06T06:44Z
+
+## 인계 시점의 상태 (커밋 뒤, 둘째 세션)
+
+세션 제목은 `feature/04-runtime-enforces-rules-per-tool-call`이었다. 앞 세션의 인계를 받아 이어 쓴 세션이다.
+
+> 사용자: `.claude/skills/implement/SKILL.md` 를 읽어 그대로 따른다. … 인자: `.scratch/approval-rules/issues/04-runtime-enforces-rules-per-tool-call.md` … 다음 단계: 구현 … 이어받을 상태: 인계: 셀프 리뷰 직전. … 이번 요청 범위: PR과 병합까지
+
+- 한 것: 위 '셀프 리뷰'와 '검증' 절의 것이다. 백그라운드 `run_checks`와 `-m llm`의 결과를 읽고, 위젯 e2e와 `-m llm_widget`을 쳤고, 셀프 리뷰 두 축(Critical·Major 0)을 반영했고, 티켓을 `done`으로 바꿨다.
+- 커밋: `e9f271c4`(브랜치 `feature/04-runtime-enforces-rules-per-tool-call`). 첫 커밋 시도는 pre-commit의 `mutate.py --staged`가 막았다(빨강을 기대한 변이 일곱에 `expect_output`이 없었다). 변이를 손으로 넣어 본 출력에서 표지를 골라 달고 변이마다 `-k`로 좁힌 뒤 다시 커밋했고, 둘째 시도는 pre-commit 전체(ruff 둘, `run_checks`의 열 검사, 마크다운 표·줄 구분 문자·변이 표·카나리아 모양)를 통과했다. 이 세션이 `git commit`의 종료 코드 0을 봤다.
+- 푸시하지 않았다. PR도 없다. 아직 안 한 것: 푸시, PR 열기, 봇 회차와 병합. PR 본문에는 "기본 규칙을 넣기 전의 빨강 수는 재지 않았다"를 적는다(티켓이 어림이라 했고 기준이 크게 다르면 적으라 했다). 관리 화면 e2e와 사진 비교는 CI의 잡에 맡긴다(티켓).
+- 병합 전에 05가 곧 이어진다는 티켓의 문장(04와 05는 연달아 병합한다)을 PR 본문과 병합 뒤 지시문에 옮긴다.
+- 새 세션이 알아야 할 것: 이 일지의 '셀프 리뷰'에서 남긴 것(05가 병합될 때 같이 고칠 "아직 없다(approval-rules 05)" 문장들)은 05 티켓의 잔존 grep이 받는다(05 티켓 39행을 Grep으로 봤다).
+
+open-session을 부른다 2026-11-06T07:24Z
+
+## PR 직전 리뷰 (셋째 세션)
+
+세션 제목은 `feature/04-runtime-enforces-rules-per-tool-call`이다. 둘째 세션의 인계로 이어 받았고 푸시와 PR 열기, 봇 회차, 병합이 이 세션의 몫이다.
+
+> 사용자: `.claude/skills/implement/SKILL.md` 를 읽어 그대로 따른다. … 인자: `.scratch/approval-rules/issues/04-runtime-enforces-rules-per-tool-call.md` … 이어받을 상태: 인계: 커밋 뒤. … 이번 요청 범위: PR과 병합까지
+
+- CodeRabbit CLI는 돌지 못했다. `coderabbit auth status`가 `Plan: Free`, `Seat: not assigned`를 보였고(이 세션이 직접 쳤다), `coderabbit-review` 서브에이전트도 같은 값을 보고 리뷰를 돌리지 않고 끝났다. 그래서 대체 둘을 돌렸다. origin/main은 이 브랜치의 merge-base(`d0f5a195`)와 같아 합칠 것이 없었다(`git fetch` 뒤 `git rev-parse`로 봤다).
+- `/security-review`: 취약점을 찾는 서브태스크가 지적 없음을 보고했다. 후보가 없어 거짓 양성을 거르는 서브태스크는 돌리지 않았다. 참고로 적힌 것 하나(확신도 7 미만)는, 규칙 줄의 도구 칸 패턴이 `[^:\s]+`라서 이름에 `:`나 공백이 든 MCP 도구는 정확한 이름의 deny 줄을 쓸 수 없다는 것이다. 우회 경로가 아니고 하드닝이라 이 PR에서 고치지 않는다. 와일드카드 deny는 맞는다고 보고했다. 이 문장은 서브에이전트의 보고를 옮긴 것이고 이 세션이 그 패턴을 읽지 않았다.
+- `bug-perf-review`: 유효 0 · 오탐 3 · 보류 0. 알려진 틈 셋(05의 몫)은 새 지적이 아니라고 분류했다. 오탐 셋은 `tools()`를 호출마다 다시 부르는 비용, 규칙 파일 읽기의 `PermissionError` 동기 재시도(`read_disabled`와 같은 기존 설계), 재생 구간이 규칙이 지금 deny여도 기록을 돌려주는 것(의도이고 문서화)이다. 이 보고는 서브에이전트가 `tests/core/test_run.py`의 24건과 `tests/channel`·`test_main.py`·`test_calc_plugin.py`·`test_server.py`를 돌려 통과를 봤다고 적었다(이 세션이 다시 치지 않았다). `tools/canary.py --shape`는 인자를 잘못 주어 보지 못했다고 적었다. 카나리아 명세 모양은 커밋의 pre-commit이 이미 통과했다.
+- 두 보고 모두 지적이 없어 고친 것도, 남긴 것도 없다.
