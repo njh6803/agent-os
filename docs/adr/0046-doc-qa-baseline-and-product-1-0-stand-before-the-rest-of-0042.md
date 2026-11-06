@@ -26,7 +26,7 @@ skill-plugin이 2026-11-05에 닫혀 ADR 0042의 열일곱 가운데 첫 행 app
   | 바깥에서 받아 온 공개 MCP 서버 | 배포된 모양 그대로(대부분 stdio, 어림) | 파일 시스템, git |
   | 사용자별 비밀 값이 필요한 도구 | stdio(실행마다 격리) | 개인 계정으로 접속하는 도구 |
 
-- **문서 검색 서버는 다른 저장소다(ADR 0048).** `.scratch/plan.md`는 그 저장소의 행을 `rag-server:<slug>`로 가리킨다.
+- **문서 검색 서버는 다른 저장소다(ADR 0048).** `.scratch/plan.md`는 그 저장소의 행을 `rag-server:<slug>`로 가리킨다. (바뀜: ADR 0048 이력 2026-11-06 "문서 검색 서버의 저장소 이름을 rag-engine으로 정한다")
 
 ## agent-os의 기준선
 
@@ -44,7 +44,7 @@ skill-plugin이 2026-11-05에 닫혀 ADR 0042의 열일곱 가운데 첫 행 app
 | deploy-package | 참조 배포: 문서 검색 서버와 함께 띄우는 compose, 밖으로 여는 포트 하나, 관리 명령 |
 | pilot-release | 판 0.1.0, 릴리스 노트, 지원 범위 문서 |
 
-문서 검색 서버의 행(bootstrap, rag-mcp, rag-admin, search-eval, rag-ops)은 그 저장소의 계획에 둔다. 그 저장소는 아직 없다.
+문서 검색 서버의 행(bootstrap, rag-mcp, rag-admin, search-eval, rag-ops)은 그 저장소의 계획에 둔다. (바뀜: ADR 0048 이력 2026-11-06 "문서 검색 서버의 저장소 이름을 rag-engine으로 정한다") 그 저장소는 아직 없다.
 
 ## 앞당김
 
