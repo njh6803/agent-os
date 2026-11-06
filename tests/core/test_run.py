@@ -52,7 +52,9 @@ from agent_os.core.ports import (
     PluginError,
     PluginKey,
     PluginSource,
+    Rule,
     Rules,
+    RuleSet,
     RunRow,
     RunStatus,
     ToolConnection,
@@ -273,6 +275,12 @@ class FakePlugins:
     둘 다 있다. `unreadable_skill_manifests` 와 `unreadable_skill_documents` 에 든 이름은 어댑터가
     읽지 못한 모양으로 PluginError 다. 읽은 이름의 열(`skill_manifest_reads`,
     `skill_document_reads`)이 준비 한 번에 이름마다 한 번이라는 것과 읽은 순서를 보인다.
+
+    규칙은 공개 속성(`rules`)이라 멈춘 사이 운영자가 규칙 파일을 고친 것을 흉내 낸다. 주지 않으면
+    공통 표의 allow 가 자기 서버 전부와 가짜 연결의 기본 서버(`DEFAULT_SERVER`)를 연다 — 규칙을 재는
+    시험이 아닌 시험은 게이트의 기본(묻는다)에 걸리지 않고 지금처럼 돈다. 읽은 횟수(`rules_reads`)가
+    준비 한 번에 한 번이라는 것을 세고, `corrupt_rules` 가 있으면 규칙 파일이 깨진 것이라 읽기가
+    PluginError 다.
     """
 
     def __init__(
@@ -289,6 +297,8 @@ class FakePlugins:
         models: Sequence[str] = (DEFAULT_MODEL,),
         agent_model: str | None = None,
         skills: Sequence[str] = (),
+        rules: Rules | None = None,
+        corrupt_rules: str | None = None,
     ) -> None:
         self._agents = agents
         self._mcp = tuple(mcp)
@@ -297,6 +307,9 @@ class FakePlugins:
         self._secret_args = secret_args
         self.disabled = frozenset(disabled)
         self.corrupt = corrupt
+        self.rules = _open_rules(self._servers) if rules is None else rules
+        self.corrupt_rules = corrupt_rules
+        self.rules_reads = 0
         self.conversation_limit = conversation_limit
         self.model_manifests = {name: model_manifest(name) for name in models}
         self.agent_model = agent_model
@@ -358,10 +371,22 @@ class FakePlugins:
         return self.disabled
 
     def read_rules(self) -> Rules:
-        return Rules()
+        self.rules_reads += 1
+        if self.corrupt_rules is not None:
+            raise PluginError(self.corrupt_rules)
+        return self.rules
 
     def write_enabled(self, kind: PluginKind, name: PluginName, *, enabled: bool) -> WriteOutcome:
         raise NotImplementedError("core 는 켜고 끄지 않는다. 관리가 한다")
+
+
+def _open_rules(servers: Sequence[str]) -> Rules:
+    """공통 표의 allow 가 자기 서버 전부와 가짜 연결의 기본 서버를 여는 규칙. 에이전트 표는 두지
+    않는다 — 에이전트 표를 검사하는 쪽이 매니페스트 `mcp` 에 없는 서버를 거부하기 때문이다."""
+    opened = (*servers, DEFAULT_SERVER)
+    return Rules(
+        common=RuleSet(allow=frozenset(Rule(server=PluginName(name), tool=None) for name in opened))
+    )
 
 
 class FakeConnection:
@@ -451,6 +476,11 @@ class DuplicateTools:
         yield FakeConnection({}, {})
 
 
+def _is_named(tool: object) -> TypeGuard[Mapping[str, object]]:
+    """langchain 에 넘기는 도구 dict. `isinstance` 로 좁히면 타입 인자가 Unknown 이 된다."""
+    return isinstance(tool, Mapping) and "name" in tool
+
+
 class ToolAwareFakeModel(GenericFakeChatModel):
     """bind_tools 를 받아들이기만 하는 가짜. 응답은 정해진 대로이고 불린 횟수와 받은 메시지를 센다.
 
@@ -462,6 +492,7 @@ class ToolAwareFakeModel(GenericFakeChatModel):
     calls: int = 0
     binds: int = 0
     received: list[list[BaseMessage]] = []
+    bound: list[list[str]] = []
 
     def bind_tools(
         self,
@@ -470,7 +501,9 @@ class ToolAwareFakeModel(GenericFakeChatModel):
         tool_choice: str | None = None,
         **kwargs: object,
     ) -> Runnable[LanguageModelInput, AIMessage]:
+        """붙인 도구의 이름을 `bound` 에 쌓는다. 운영자의 deny 가 목록에서 도구를 빼는 것을 본다."""
         self.binds += 1
+        self.bound.append([str(tool["name"]) for tool in tools if _is_named(tool)])
         return self
 
     def _generate(
@@ -963,6 +996,7 @@ async def test_도구_호출_이벤트가_인자와_결과_내용을_담는다(
         ok=True,
         args={"a": 2, "b": 2},
         content="4",
+        rule="allow",
     )
 
 
@@ -981,6 +1015,7 @@ async def test_직접_부른_도구도_인자와_결과_내용을_담는다(
         ok=True,
         args={"a": 2, "b": 2},
         content="4",
+        rule="allow",
     )
 
 
@@ -1072,7 +1107,12 @@ async def test_승인_대상_도구를_모델이_부르려_하면_일시정지�
 
     assert [e.type for e in events] == ["run_started", "llm_called", "run_paused"]
     assert events[-1] == RunPaused(
-        run_id=RunId("run-1"), ts=FIXED_NOW, tool="send", args={"a": 2, "b": 2}
+        run_id=RunId("run-1"),
+        ts=FIXED_NOW,
+        tool="send",
+        args={"a": 2, "b": 2},
+        rule="requires_approval",
+        server=DEFAULT_SERVER,
     )
     assert tools.connection.calls == []
     assert trace.events == events
@@ -6347,7 +6387,7 @@ async def test_직접_부른_도구의_실패를_에이전트가_잡지_않으�
 async def test_재개에서_거부된_직접_호출을_에이전트가_잡지_않으면_원인은_도구_실패다(
     trace: FakeTrace, clock: FakeClock
 ) -> None:
-    """승인자가 거부한 직접 호출도 ToolError 다(`_deny`)."""
+    """승인자가 거부한 직접 호출도 ToolError 다(`_refuse`)."""
     agent = UncaughtToolAgent("send")
     model = GenericFakeChatModel(messages=iter([]))
     tools = FakeTools({"send": "sent"})
@@ -7773,5 +7813,448 @@ async def test_이어_가기에서_꺼진_스킬은_고리를_읽은_뒤_Disable
 
     with pytest.raises(Disabled, match="꺼진 플러그인이다: skill answer-format"):
         await _continue("run-0", trace, clock, agent=agent, plugins=plugins)
+
+    assert trace.events == written
+
+
+# 운영자의 규칙을 도구 호출마다 집행한다(approval-rules 04, ADR 0044). 규칙을 재는 시험은 가짜
+# 플러그인에 규칙을 명시한다 — 그렇지 않은 시험은 `FakePlugins` 의 기본 규칙(자기 서버 전부 allow)이
+# 게이트의 기본(묻는다)을 비켜 간다.
+
+
+def _rule(text: str) -> Rule:
+    """규칙 파일의 글자 한 줄을 값으로. 맨 이름은 서버 없음이고 `서버:*` 는 도구 없음이다."""
+    server, colon, tool = text.partition(":")
+    if not colon:
+        return Rule(server=None, tool=text)
+    return Rule(server=PluginName(server), tool=None if tool == "*" else tool)
+
+
+def _table(
+    *, deny: Sequence[str] = (), ask: Sequence[str] = (), allow: Sequence[str] = ()
+) -> RuleSet:
+    return RuleSet(
+        deny=frozenset(_rule(text) for text in deny),
+        ask=frozenset(_rule(text) for text in ask),
+        allow=frozenset(_rule(text) for text in allow),
+    )
+
+
+def _common(
+    *, deny: Sequence[str] = (), ask: Sequence[str] = (), allow: Sequence[str] = ()
+) -> Rules:
+    return Rules(common=_table(deny=deny, ask=ask, allow=allow))
+
+
+def _ruled(agent: BaseAgent, rules: Rules, requires_approval: Sequence[str] = ()) -> FakePlugins:
+    """규칙을 명시한 에이전트 하나. 도구는 가짜 연결의 기본 서버(`fake`)에서 온다."""
+    return FakePlugins({"calc": agent}, requires_approval=requires_approval, rules=rules)
+
+
+async def test_규칙이_없으면_도구_호출은_묻는다로_멈추고_서버를_든다(
+    trace: FakeTrace, clock: FakeClock
+) -> None:
+    """규칙 없는 가짜로 도구를 부른 실행이 멈춘다. 기본이 허용이던 때와 갈리는 자리다."""
+    model = ToolAwareFakeModel(messages=iter([_tool_request("add"), _reply("unreachable")]))
+    tools = FakeTools({"add": "4"})
+    plugins = _ruled(OneShotAgent(), Rules())
+
+    events = await _run(OneShotAgent(), model, trace, clock, tools=tools, plugins=plugins)
+
+    assert [e.type for e in events] == ["run_started", "llm_called", "run_paused"]
+    assert events[-1] == RunPaused(
+        run_id=RunId("run-1"),
+        ts=FIXED_NOW,
+        tool="add",
+        args={"a": 2, "b": 2},
+        rule="default",
+        server=DEFAULT_SERVER,
+    )
+    assert tools.connection.calls == []
+
+
+async def test_ask_에_맞는_도구는_ask_로_멈춘다(trace: FakeTrace, clock: FakeClock) -> None:
+    model = ToolAwareFakeModel(messages=iter([_tool_request("add"), _reply("unreachable")]))
+    tools = FakeTools({"add": "4"})
+    plugins = _ruled(OneShotAgent(), _common(ask=["fake:*"], allow=["fake:add"]))
+
+    events = await _run(OneShotAgent(), model, trace, clock, tools=tools, plugins=plugins)
+
+    assert isinstance(events[-1], RunPaused)
+    assert events[-1].rule == "ask"
+    assert events[-1].server == DEFAULT_SERVER
+    assert tools.connection.calls == []
+
+
+async def test_allow_에_맞는_도구는_묻지_않고_부르고_규칙을_기록한다(
+    trace: FakeTrace, clock: FakeClock
+) -> None:
+    model = ToolAwareFakeModel(messages=iter([_tool_request("add"), _reply("끝")]))
+    tools = FakeTools({"add": "4"})
+    plugins = _ruled(OneShotAgent(), _common(allow=["fake:add"]))
+
+    events = await _run(OneShotAgent(), model, trace, clock, tools=tools, plugins=plugins)
+
+    assert [e.type for e in events] == [
+        "run_started",
+        "llm_called",
+        "tool_called",
+        "llm_called",
+        "run_finished",
+    ]
+    assert events[2] == ToolCalled(
+        run_id=RunId("run-1"),
+        ts=FIXED_NOW,
+        tool="add",
+        ok=True,
+        args={"a": 2, "b": 2},
+        content="4",
+        rule="allow",
+    )
+    assert [name for name, _ in tools.connection.calls] == ["add"]
+
+
+async def test_저자의_승인_요구에_든_도구는_운영자의_allow_에도_멈춘다(
+    trace: FakeTrace, clock: FakeClock
+) -> None:
+    """저자의 승인 요구는 운영자의 allow 보다 먼저라 allow 가 풀지 못한다(스토리 12)."""
+    model = ToolAwareFakeModel(messages=iter([_tool_request("send"), _reply("unreachable")]))
+    tools = FakeTools({"send": "sent"})
+    plugins = _ruled(OneShotAgent(), _common(allow=["fake:*"]), requires_approval=["send"])
+
+    events = await _run(OneShotAgent(), model, trace, clock, tools=tools, plugins=plugins)
+
+    assert isinstance(events[-1], RunPaused)
+    assert events[-1].rule == "requires_approval"
+    assert events[-1].server == DEFAULT_SERVER
+    assert tools.connection.calls == []
+
+
+async def test_운영자의_deny_는_도구를_부르지_않고_모델이_거부를_받아_이어_간다(
+    trace: FakeTrace, clock: FakeClock
+) -> None:
+    model = ToolAwareFakeModel(messages=iter([_tool_request("send"), _reply("못 보냈다")]))
+    tools = FakeTools({"send": "sent"})
+    plugins = _ruled(OneShotAgent(), _common(deny=["fake:send"], allow=["fake:*"]))
+
+    events = await _run(OneShotAgent(), model, trace, clock, tools=tools, plugins=plugins)
+
+    assert [e.type for e in events] == [
+        "run_started",
+        "llm_called",
+        "tool_called",
+        "llm_called",
+        "run_finished",
+    ]
+    assert events[2] == ToolCalled(
+        run_id=RunId("run-1"),
+        ts=FIXED_NOW,
+        tool="send",
+        ok=False,
+        args={"a": 2, "b": 2},
+        content="운영자가 거부했다: fake:send",
+        rule="deny",
+    )
+    assert isinstance(events[-1], RunFinished)
+    assert events[-1].output == "못 보냈다"
+    assert tools.connection.calls == []
+
+
+async def test_직접_부른_도구가_deny_이면_같은_문구의_ToolError_다(
+    trace: FakeTrace, clock: FakeClock
+) -> None:
+    model = GenericFakeChatModel(messages=iter([]))
+    tools = FakeTools({"add": "4"})
+    plugins = _ruled(DirectToolAgent(), _common(deny=["add"]))
+
+    events = await _run(DirectToolAgent(), model, trace, clock, tools=tools, plugins=plugins)
+
+    assert isinstance(events[-1], RunFinished)
+    assert events[-1].output == "error:운영자가 거부했다: fake:add"
+    assert tools.connection.calls == []
+
+
+async def test_deny_는_저자의_승인_요구보다_먼저다(trace: FakeTrace, clock: FakeClock) -> None:
+    model = ToolAwareFakeModel(messages=iter([_tool_request("send"), _reply("끝")]))
+    tools = FakeTools({"send": "sent"})
+    plugins = _ruled(OneShotAgent(), _common(deny=["send"]), requires_approval=["send"])
+
+    events = await _run(OneShotAgent(), model, trace, clock, tools=tools, plugins=plugins)
+
+    assert "run_paused" not in [e.type for e in events]
+    assert isinstance(events[2], ToolCalled)
+    assert events[2].rule == "deny"
+    assert tools.connection.calls == []
+
+
+async def test_deny_에_맞는_도구는_모델의_도구_목록에서_빠진다(
+    trace: FakeTrace, clock: FakeClock
+) -> None:
+    model = ToolAwareFakeModel(messages=iter([_reply("끝")]))
+    tools = FakeTools({"add": "4", "send": "sent", "ask_me": "?"})
+    rules = _common(deny=["send"], ask=["ask_me"], allow=["fake:add"])
+    plugins = _ruled(OneShotAgent(), rules, requires_approval=[])
+
+    await _run(OneShotAgent(), model, trace, clock, tools=tools, plugins=plugins)
+
+    assert model.bound == [["add", "ask_me"]]
+
+
+async def test_모두_deny_이면_도구_없는_모델을_부른다(trace: FakeTrace, clock: FakeClock) -> None:
+    model = ToolAwareFakeModel(messages=iter([_reply("끝")]))
+    tools = FakeTools({"add": "4", "send": "sent"})
+    plugins = _ruled(OneShotAgent(), _common(deny=["fake:*"]))
+
+    await _run(OneShotAgent(), model, trace, clock, tools=tools, plugins=plugins)
+
+    assert model.binds == 0
+    assert model.calls == 1
+
+
+async def test_거르기_전의_목록에_대어_승인_요구가_가리키는_도구의_실재를_본다(
+    trace: FakeTrace, clock: FakeClock
+) -> None:
+    """deny 로 모델 목록에서 빠진 도구라도 저자의 승인 요구가 가리킨 도구는 실재한다."""
+    model = ToolAwareFakeModel(messages=iter([_reply("끝")]))
+    tools = FakeTools({"send": "sent"})
+    plugins = _ruled(OneShotAgent(), _common(deny=["send"]), requires_approval=["send"])
+
+    events = await _run(OneShotAgent(), model, trace, clock, tools=tools, plugins=plugins)
+
+    assert isinstance(events[-1], RunFinished)
+
+
+async def test_연결에_없는_이름은_묻지_않고_접두_없는_문구로_거부되어_이어_간다(
+    trace: FakeTrace, clock: FakeClock
+) -> None:
+    model = ToolAwareFakeModel(messages=iter([_tool_request("ghost"), _reply("없다더라")]))
+    tools = FakeTools({"add": "4"})
+    plugins = _ruled(OneShotAgent(), Rules())
+
+    events = await _run(OneShotAgent(), model, trace, clock, tools=tools, plugins=plugins)
+
+    assert [e.type for e in events] == [
+        "run_started",
+        "llm_called",
+        "tool_called",
+        "llm_called",
+        "run_finished",
+    ]
+    assert events[2] == ToolCalled(
+        run_id=RunId("run-1"),
+        ts=FIXED_NOW,
+        tool="ghost",
+        ok=False,
+        args={"a": 2, "b": 2},
+        content="도구가 없다: ghost",
+    )
+
+
+async def test_도구마다_서버가_달라도_적용_규칙은_그_도구의_서버로_낸다(
+    trace: FakeTrace, clock: FakeClock
+) -> None:
+    """`alpha:send` 만 allow 이고 같은 이름이 아닌 `beta:drop` 은 규칙이 없어 묻는다."""
+    owners = {"send": PluginName("alpha"), "drop": PluginName("beta")}
+    model = ToolAwareFakeModel(messages=iter([_tool_request("send", "drop"), _reply("끝")]))
+    tools = FakeTools({"send": "sent", "drop": "gone"}, owners=owners)
+    plugins = _ruled(OneShotAgent(), _common(allow=["alpha:*"]))
+
+    events = await _run(OneShotAgent(), model, trace, clock, tools=tools, plugins=plugins)
+
+    assert [e.type for e in events] == ["run_started", "llm_called", "tool_called", "run_paused"]
+    assert isinstance(events[2], ToolCalled)
+    assert events[2].rule == "allow"
+    assert isinstance(events[-1], RunPaused)
+    assert (events[-1].tool, events[-1].rule, events[-1].server) == ("drop", "default", "beta")
+
+
+async def test_실행마다_규칙_파일을_한_번_읽고_재개도_다시_읽는다(
+    trace: FakeTrace, clock: FakeClock
+) -> None:
+    model = ToolAwareFakeModel(messages=iter([_tool_request("send"), _reply("보냈다")]))
+    tools = FakeTools({"send": "sent"})
+    plugins = _ruled(OneShotAgent(), _common(ask=["fake:send"]))
+
+    await _run(OneShotAgent(), model, trace, clock, tools=tools, plugins=plugins)
+    assert plugins.rules_reads == 1
+    await _resume(RunId("run-1"), model, trace, clock, tools=tools, plugins=plugins)
+
+    assert plugins.rules_reads == 2
+
+
+async def test_멈춘_사이_ask_가_deny_가_되면_승인해도_도구는_불리지_않는다(
+    trace: FakeTrace, clock: FakeClock
+) -> None:
+    model = ToolAwareFakeModel(messages=iter([_tool_request("send"), _reply("못 보냈다")]))
+    tools = FakeTools({"send": "sent"})
+    plugins = _ruled(OneShotAgent(), _common(ask=["fake:send"]))
+    await _run(OneShotAgent(), model, trace, clock, tools=tools, plugins=plugins)
+    plugins.rules = _common(deny=["fake:send"])
+
+    events = await _resume(RunId("run-1"), model, trace, clock, tools=tools, plugins=plugins)
+
+    assert isinstance(events[2], ToolCalled)
+    assert (events[2].ok, events[2].rule) == (False, "deny")
+    assert events[2].content == "운영자가 거부했다: fake:send"
+    assert tools.connection.calls == []
+
+
+async def test_멈춘_사이_deny_가_되면_거부_결정에서도_deny_로_기록한다(
+    trace: FakeTrace, clock: FakeClock
+) -> None:
+    model = ToolAwareFakeModel(messages=iter([_tool_request("send"), _reply("못 보냈다")]))
+    tools = FakeTools({"send": "sent"})
+    plugins = _ruled(OneShotAgent(), _common(ask=["fake:send"]))
+    await _run(OneShotAgent(), model, trace, clock, tools=tools, plugins=plugins)
+    plugins.rules = _common(deny=["fake:send"])
+
+    events = await _resume(
+        RunId("run-1"), model, trace, clock, tools=tools, plugins=plugins, decision=Deny(DENIAL)
+    )
+
+    assert isinstance(events[2], ToolCalled)
+    assert (events[2].ok, events[2].rule) == (False, "deny")
+    assert events[2].content == "운영자가 거부했다: fake:send"
+
+
+async def test_멈춘_사이_ask_가_allow_로_바뀌면_승인이_불리고_멈춘_까닭을_기록한다(
+    trace: FakeTrace, clock: FakeClock
+) -> None:
+    """양성 대조: deny 가 아닌 변화에서는 승인이 도구를 부른다. 기록은 멈춘 까닭 그대로다."""
+    model = ToolAwareFakeModel(messages=iter([_tool_request("send"), _reply("보냈다")]))
+    tools = FakeTools({"send": "sent"})
+    plugins = _ruled(OneShotAgent(), _common(ask=["fake:send"]))
+    await _run(OneShotAgent(), model, trace, clock, tools=tools, plugins=plugins)
+    plugins.rules = _common(allow=["fake:send"])
+
+    events = await _resume(RunId("run-1"), model, trace, clock, tools=tools, plugins=plugins)
+
+    assert isinstance(events[2], ToolCalled)
+    assert (events[2].ok, events[2].rule) == (True, "ask")
+    assert [name for name, _ in tools.connection.calls] == ["send"]
+
+
+@pytest.mark.parametrize("decision", [Approve(), Deny(DENIAL)], ids=["승인", "거부"])
+async def test_칸_없는_옛_멈춤_기록의_결정은_승인_요구로_기록한다(
+    decision: Decision, trace: FakeTrace, clock: FakeClock
+) -> None:
+    model = ToolAwareFakeModel(messages=iter([_tool_request("send"), _reply("끝")]))
+    tools = FakeTools({"send": "sent"})
+    plugins = _ruled(OneShotAgent(), _common(allow=["fake:*"]), requires_approval=["send"])
+    await _run(OneShotAgent(), model, trace, clock, tools=tools, plugins=plugins)
+    trace.events = [
+        e.model_copy(update={"rule": None, "server": None}) if isinstance(e, RunPaused) else e
+        for e in trace.events
+    ]
+
+    events = await _resume(
+        RunId("run-1"), model, trace, clock, tools=tools, plugins=plugins, decision=decision
+    )
+
+    assert isinstance(events[2], ToolCalled)
+    assert events[2].rule == "requires_approval"
+
+
+async def test_거부_결정의_호출도_멈춘_까닭을_기록한다(trace: FakeTrace, clock: FakeClock) -> None:
+    model = ToolAwareFakeModel(messages=iter([_tool_request("send"), _reply("끝")]))
+    tools = FakeTools({"send": "sent"})
+    plugins = _ruled(OneShotAgent(), _common(ask=["fake:send"]))
+    await _run(OneShotAgent(), model, trace, clock, tools=tools, plugins=plugins)
+
+    events = await _resume(
+        RunId("run-1"), model, trace, clock, tools=tools, plugins=plugins, decision=Deny(DENIAL)
+    )
+
+    assert isinstance(events[2], ToolCalled)
+    assert (events[2].ok, events[2].rule) == (False, "ask")
+    assert events[2].content == f"승인자가 거부했다: {DENIAL}"
+
+
+async def test_멈춘_도구가_연결에서_사라지면_결정은_소비되고_없는_도구로_거부된다(
+    trace: FakeTrace, clock: FakeClock
+) -> None:
+    model = ToolAwareFakeModel(messages=iter([_tool_request("send"), _reply("없다더라")]))
+    plugins = _ruled(OneShotAgent(), _common(ask=["fake:send"]))
+    await _run(
+        OneShotAgent(), model, trace, clock, tools=FakeTools({"send": "sent"}), plugins=plugins
+    )
+    gone = FakeTools({"add": "4"})
+
+    events = await _resume(RunId("run-1"), model, trace, clock, tools=gone, plugins=plugins)
+
+    assert [e.type for e in events] == [
+        "approval_granted",
+        "run_resumed",
+        "tool_called",
+        "llm_called",
+        "run_finished",
+    ]
+    assert isinstance(events[2], ToolCalled)
+    assert (events[2].ok, events[2].rule, events[2].content) == (False, None, "도구가 없다: send")
+    assert gone.connection.calls == []
+
+
+async def test_재생_구간의_기록은_다시_쓰이지_않아_옛_줄의_없음이_새_값으로_채워지지_않는다(
+    trace: FakeTrace, clock: FakeClock
+) -> None:
+    model = ToolAwareFakeModel(messages=iter([_tool_request("add", "send"), _reply("끝")]))
+    tools = FakeTools({"add": "4", "send": "sent"})
+    plugins = _ruled(OneShotAgent(), _common(allow=["fake:add"], ask=["fake:send"]))
+    await _run(OneShotAgent(), model, trace, clock, tools=tools, plugins=plugins)
+    trace.events = [
+        e.model_copy(update={"rule": None}) if isinstance(e, ToolCalled) else e
+        for e in trace.events
+    ]
+    before = [e for e in trace.events if isinstance(e, ToolCalled)]
+
+    await _resume(RunId("run-1"), model, trace, clock, tools=tools, plugins=plugins)
+
+    assert [e for e in trace.events if isinstance(e, ToolCalled)][: len(before)] == before
+
+
+async def test_규칙_파일이_깨졌으면_실행_식별자도_트레이스도_없이_PluginError_다(
+    trace: FakeTrace, clock: FakeClock
+) -> None:
+    model = GenericFakeChatModel(messages=iter([]))
+    plugins = FakePlugins(
+        {"calc": OneShotAgent()}, corrupt_rules="운영자 파일이 깨졌다: rules.toml"
+    )
+
+    with pytest.raises(PluginError, match="rules.toml"):
+        await _run(OneShotAgent(), model, trace, clock, plugins=plugins)
+
+    assert trace.events == []
+    assert clock.ids_issued == 0
+
+
+async def test_두_운영자_파일이_모두_깨졌으면_규칙_파일의_문구가_나온다(
+    trace: FakeTrace, clock: FakeClock
+) -> None:
+    """규칙 파일을 먼저 읽고 꺼진 집합을 읽는다."""
+    model = GenericFakeChatModel(messages=iter([]))
+    plugins = FakePlugins(
+        {"calc": OneShotAgent()},
+        corrupt="운영자 파일이 깨졌다: disabled.toml",
+        corrupt_rules="운영자 파일이 깨졌다: rules.toml",
+    )
+
+    with pytest.raises(PluginError, match="rules.toml"):
+        await _run(OneShotAgent(), model, trace, clock, plugins=plugins)
+
+    assert plugins.disabled_reads == 0
+
+
+async def test_멈춘_사이_규칙_파일이_깨지면_재개는_결정을_쓰기_전에_끝난다(
+    trace: FakeTrace, clock: FakeClock
+) -> None:
+    model = ToolAwareFakeModel(messages=iter([_tool_request("send"), _reply("끝")]))
+    tools = FakeTools({"send": "sent"})
+    plugins = _ruled(OneShotAgent(), _common(ask=["fake:send"]))
+    await _run(OneShotAgent(), model, trace, clock, tools=tools, plugins=plugins)
+    written = list(trace.events)
+    plugins.corrupt_rules = "운영자 파일이 깨졌다: rules.toml"
+
+    with pytest.raises(PluginError, match="rules.toml"):
+        await _resume(RunId("run-1"), model, trace, clock, tools=tools, plugins=plugins)
 
     assert trace.events == written
