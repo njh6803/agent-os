@@ -52,6 +52,7 @@ from agent_os.core.ports import (
     PluginError,
     PluginKey,
     PluginSource,
+    Rules,
     RunRow,
     RunStatus,
     ToolConnection,
@@ -355,6 +356,9 @@ class FakePlugins:
         if self.corrupt is not None:
             raise PluginError(self.corrupt)
         return self.disabled
+
+    def read_rules(self) -> Rules:
+        return Rules()
 
     def write_enabled(self, kind: PluginKind, name: PluginName, *, enabled: bool) -> WriteOutcome:
         raise NotImplementedError("core 는 켜고 끄지 않는다. 관리가 한다")

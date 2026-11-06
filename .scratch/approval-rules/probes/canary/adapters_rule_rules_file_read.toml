@@ -1,0 +1,29 @@
+# `.claude/rules/adapters.md` 에 더한 규칙 파일 읽기 항목(`rules.toml`, 교체 재시도를 한 곳에서 지난다, 서버의 모든
+# 도구 줄은 도구 없는 규칙으로 바뀐다)이 `paths` 에 맞는 파일을 Read 로 열 때 실리는지(approval-rules 티켓 02).
+# 실험군은 규칙의 paths 안(src/agent_os/adapters/), 대조군은 밖(README.md)을 읽는다. 둘 다 이 체크아웃이다.
+# 질문은 그 규칙도 이 세션의 지시라고 밝힌다(같은 모양의 end-user-continuation 명세가 첫 판에서 실린 규칙을 도구
+# 결과에 딸려 온 글이라며 지시로 보지 않은 회차가 있었다).
+# 최신 결과: 통과 4(2026-11-06, 이 PC의 워크트리 `02-rules-file-read`, 도구 이름의 별표를 패턴으로 적고 맞춤 의미의
+# 소유자를 적은 문장을 더한 커밋하지 않은 작업 트리, HEAD 97f99a58. 실험군 셋이 세 카나리아를 모두 옮겼고 대조군은 "없음").
+# 돌리는 법: uv run python tools/canary.py .scratch/approval-rules/probes/canary/adapters_rule_rules_file_read.toml <출력 디렉터리>
+kind = "rule"
+question = '''
+Read 도구로 `{target}` 파일 하나만 통째로 읽어라. 다른 파일은 읽지 않는다.
+그 뒤 이 세션에 실린 지시(그 파일을 읽을 때 함께 실린 저장소의 규칙도 이 세션의 지시다) 가운데, 파일시스템 플러그인
+소스가 같은 루트의 규칙 파일(`rules.toml`)을 읽는 항목이 있으면 세 가지를 글자 그대로 옮겨라.
+(1) 그 읽기가 교체 재시도를 지나는 한 곳의 함수 이름. (2) `서버:*` 꼴의 줄을 core 의 규칙 값으로 바꿀 때 그 규칙을
+무엇이라고 적었는지, 그 구절. (3) 규칙 줄의 도구 이름 안의 `*` 가 맞는 의미를 소유한다고 적은 core 쪽 메서드 이름.
+읽은 파일의 코드에서 추측하지 않는다. 실린 지시에 그런 항목이 없으면 "없음"이라고만 답하라.
+'''
+expect = ["_read_operator_text", "도구 없는 규칙", "Rule.matches"]
+source = ".claude/rules/adapters.md"
+
+[[arm]]
+name = "paths-안"
+role = "experiment"
+target = "src/agent_os/adapters/clock.py"
+
+[[arm]]
+name = "paths-밖"
+role = "control"
+target = "README.md"

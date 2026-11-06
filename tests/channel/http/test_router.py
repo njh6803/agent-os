@@ -47,6 +47,7 @@ from agent_os.core.ports import (
     PluginError,
     PluginKey,
     PluginSource,
+    Rules,
     RunRow,
     RunStatus,
     RunSummary,
@@ -257,6 +258,10 @@ class FakePlugins:
     def read_disabled(self) -> frozenset[PluginKey]:
         self.calls += 1
         return self.disabled
+
+    def read_rules(self) -> Rules:
+        self.calls += 1
+        return Rules()
 
     def write_enabled(self, kind: PluginKind, name: PluginName, *, enabled: bool) -> WriteOutcome:
         self.calls += 1

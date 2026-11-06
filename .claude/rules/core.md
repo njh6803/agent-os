@@ -10,7 +10,7 @@ paths:
 | 포트 | 무엇 | 첫 어댑터 |
 |---|---|---|
 | TraceStore | 이벤트 쓰기, 한 실행의 트레이스 읽기, 실행 요약 목록(`list`) | JSONL 파일 |
-| PluginSource | 매니페스트와 코드 읽기, 종류별 매니페스트 목록(`list_manifests`), 꺼진 집합 읽기(`read_disabled`)와 켜짐 쓰기(`write_enabled`, 둘 다 동기), 스킬 문서 읽기(`read_skill`, 동기. 없으면 `None`, 깨졌으면 `PluginError`) | 파일시스템(ADR 0003, 운영자 파일은 ADR 0017) |
+| PluginSource | 매니페스트와 코드 읽기, 종류별 매니페스트 목록(`list_manifests`), 꺼진 집합 읽기(`read_disabled`)와 켜짐 쓰기(`write_enabled`, 둘 다 동기), 규칙 읽기(`read_rules`, 동기. 없으면 빈 `Rules`, 깨졌으면 `PluginError`. 규칙 값 `Rule`·`RuleSet`·`Rules`는 `core/ports.py`가, 한 호출의 적용 규칙을 내는 순수 함수 `applied_rule`은 `core/rules.py`가 소유한다), 스킬 문서 읽기(`read_skill`, 동기. 없으면 `None`, 깨졌으면 `PluginError`) | 파일시스템(ADR 0003, 운영자 파일은 ADR 0017, 규칙 파일은 ADR 0044) |
 | ToolSource | 도구 목록과 호출. 도구 명세(`ToolSpec`)는 그 도구를 낸 서버 플러그인의 이름(`server`)을 들고, 한 연결 안에서 도구 이름은 유일하다. 유일함은 어댑터가 보장하고 core는 다시 보지 않는다 | MCP(mcp 2의 stdio 클라이언트, ADR 0034) |
 | ModelSource | 모델 매니페스트로 모델을 만든다(동기 메서드 하나. 만든 모델의 타입 `ChatModel`은 langchain-core의 추상 클래스 `BaseChatModel`이고 포트가 아니다) | langchain-anthropic의 `ChatAnthropic`(ADR 0040) |
 | Clock | 시각과 run_id | 시스템 시계, uuid4 |
