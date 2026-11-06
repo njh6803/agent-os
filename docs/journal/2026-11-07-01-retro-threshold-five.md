@@ -81,6 +81,10 @@ open-session을 부른다 2026-11-06T16:36:11Z
 
 인계 지시문(이어받을 상태 `인계: 커밋 뒤`)으로 연 세션이 이었다(Sonnet 5.5 / high). `git worktree list`에서 브랜치가 `.claude/worktrees/01-retro-threshold-five`에 있어 `EnterWorktree(path)`로 들어갔고, 제목은 브랜치 이름으로 바꿨다. 푸시 전 상태는 커밋 `083927ba` 하나와 커밋하지 않은 이 일지 변경이었다. `git fetch origin main` 뒤 `HEAD..origin/main`이 비어 rebase할 것이 없었고, `uv run python tools/sibling_overlap.py`는 번호 겹침 없음, 함께 고친 파일 없음으로 끝났다(종료 0). 요청 범위가 "PR과 병합까지"라 PR 제목·본문 확인은 묻지 않고 연다.
 
+## PR 직전 리뷰
+
+PR 체크리스트가 요구하는 `coderabbit-review` 서브에이전트를 푸시한 뒤 PR을 열기 전에 돌렸다(인계 세션들은 셀프 리뷰만 돌렸다). 서브에이전트의 보고에서 읽은 것이다(이 세션이 CLI를 직접 치지 않았다): `coderabbit review --agent --include-untracked --base origin/main`, 버전 0.7.5, 계정 Free 플랜, 출력에 `Seat: not assigned`가 있었지만 리뷰는 끝까지 돌아 `review_completed`, `findings: 0`(22개 파일, Critical·Major·Minor 모두 0)이었다. 대기열 578의 처방 대상 사건이 이번에도 났다는 뜻이지만(좌석 표시가 `not assigned`인데 리뷰는 돌았다) 이 세션에서 578의 회차를 더하지 않는다. 이 세션은 `coderabbit-review` 정의를 읽지 않았고, 서브에이전트가 그 정의의 1단계와 어긋난다고 보고한 것을 근거로만 안다. 지적이 0건이라 고칠 것도 보류할 것도 없다. 이 리뷰는 CLI 축 하나라 `/security-review`와 `bug-perf-review`는 돌리지 않았다.
+
 ## 회고
 
 후보 넷을 냈다. 승인 0, 기각 넷, 넘김 없음.
