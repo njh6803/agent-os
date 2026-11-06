@@ -73,6 +73,32 @@
 
 만료할 행은 없었다(`tools/queue_open_rows.py --ref origin/main`이 "만료할 행 (없음)"을 냈다).
 
+## 인계 (커밋 뒤)
+
+컨텍스트가 인계 문턱(20만 토큰)을 넘은 채 `커밋 뒤` 경계에 와서 새 세션에 넘긴다. 이 세션의 제목은 인계 전 `feature/02-rules-file-read`였다. 이 절은 커밋하지 않았다. 새 세션이 PR을 열기 전에 커밋한다.
+
+> 사용자: 승인
+> 사용자: 이어서 진행
+
+- ADR 0044의 새 이력 "도구 이름의 별표는 패턴이다"는 사용자가 "승인"으로 승인했다. 이어 "이어서 진행"으로 PR 열기와 병합을 요청했다. 병합은 묻지 않는다(`merge.md` 4).
+- 이 세션은 푸시 전에 PR 직전 리뷰를 마쳤다(위 "PR 직전 리뷰"). 커밋 넷(`ebc01446`, `97f99a58`, `a1bccadb`, 일지·대기열 커밋)은 모두 pre-commit을 통과했고 아직 푸시하지 않았다. PR은 없다.
+- 지시문(`handoff.md` 3):
+
+```
+다음 작업: .scratch/approval-rules/issues/02-rules-file-read.md. 규칙 줄의 도구 이름에 든 `*`를 패턴으로 받는 규칙 파일 읽기의 PR을 열고 병합한다
+다음 단계: PR 반영·병합
+어디서: 새 세션. 같은 브랜치의 워크트리라 git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /implement .scratch/approval-rules/issues/02-rules-file-read.md
+브랜치: feature/02-rules-file-read
+모델: Sonnet 5.5 / high. 2의 잇는 지시문
+읽을 것: docs/journal/2026-11-06-07-approval-rules-02-rules-file-read.md의 "인계"와 "다음" 절
+이어받을 상태: 인계: 커밋 뒤. 일지 docs/journal/2026-11-06-07-approval-rules-02-rules-file-read.md. 구현, 셀프 리뷰, PR 직전 리뷰(CodeRabbit CLI 지적 0건), 회고, 일지가 모두 커밋됐다. 아직 푸시하지 않았고 PR도 없다. 일지의 "인계" 절은 커밋하지 않았으니 PR을 열기 전에 커밋한다. 이 PR은 새 구현을 하지 않는다: 푸시하고 PR을 열고(본문에 03 워크트리와 글자 충돌 후보인 ports.py, adapters.md, core.md와, ADR 0044 새 이력을 사용자가 승인한 것을 적는다) merge.md 2(봇 회차)와 워크트리 병합 길을 따른다. 대기열 578(coderabbit-review 정의의 좌석 판정), 579(변이 표지), 580(선택 질문의 빠진 안)은 이 PR에 실린 행이고 반영은 하지 않는다
+확인할 선행 조건: 없음
+이번 요청 범위: PR과 병합까지
+```
+
+- open-session을 부른다 2026-11-06T04:39:45Z
+
 ## 다음
 
 - 이 브랜치의 PR을 열고 병합한다. 병합 뒤 02는 `done`이다(티켓 `Status`는 이미 `done`, plan.md의 approval-rules 행은 `in-progress` 그대로).
