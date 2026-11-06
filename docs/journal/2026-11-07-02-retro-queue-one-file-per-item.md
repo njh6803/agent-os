@@ -96,6 +96,31 @@ HEAD `8cb60333`(커밋 둘, 작업 트리 깨끗), origin/main(`288686a5`)을 �
 
 open-session을 부른다 2026-11-06T20:31:20Z
 
+## 인계 (PR 연 뒤)
+
+앞 인계로 받은 세션(제목 `feature/02-retro-queue-one-file-per-item`)이 한 일: 지시문(`인계: 커밋 뒤`)대로 카나리아를 실제로 돌렸고(retro 통과 4, next-session 통과 4, "없음" 섞임 0), 두 명세에 물음을 하나씩 더해 커밋 `8cb60333`을 만들었다. PR 직전 리뷰 셋을 돌려 Minor 하나(`dir.md` 하위 폴더 시험)를 고치고, 회고와 "다음"을 써 커밋 `46c87757`을 만들었다. 그 브랜치를 푸시하고 PR [#483](https://github.com/njh6803/agent-os/pull/483)을 열었다. 앱 감시에는 이미 묶여 있었다(`get_status`가 `bound: true`). 체크는 열린 직후 통과 1, 대기 6, 실패 0이었다.
+
+컨텍스트가 인계 문턱을 다시 넘은 채 단계 경계 `PR 연 뒤`에 닿았다. 앞 지시문은 `인계: 커밋 뒤`로 시작해 같은 경계가 아니고, 이번 요청 범위는 "PR과 병합까지"라 이 경계에서 끝나지 않으며, 곁 세션도 아니다(`get_session`에 `parentSessionId`가 없다). 그래서 `handoff.md` 1의 다섯 갈래에 들지 않아 넘긴다. 남은 단계는 첫 `@coderabbitai review` 코멘트, 봇 회차, 이 일지의 커밋·푸시, 병합 직전의 열린 PR 수 세기, 병합, 병합 뒤 `msys_pathconv/run.sh` C절 다시 돌리기다.
+
+낸 지시문(`open-session`이 첫 메시지로 넣는다):
+
+```
+다음 작업: .scratch/retro-queue-per-item/issues/02-retro-queue-one-file-per-item.md. PR #483(회고 반영 대기열을 항목마다 파일 하나인 폴더로 나눈다)의 봇 회차와 병합이 남았다
+다음 단계: PR 반영·병합
+어디서: 새 세션. 같은 브랜치·워크트리라 git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /implement .scratch/retro-queue-per-item/issues/02-retro-queue-one-file-per-item.md
+브랜치: feature/02-retro-queue-one-file-per-item
+모델: Sonnet 5.5 / high. 2의 잇는 지시문
+읽을 것: docs/journal/2026-11-07-02-retro-queue-one-file-per-item.md (끝의 "## 다음"과 "## 인계 (PR 연 뒤)")
+이어받을 상태: 인계: PR 연 뒤 (일지 docs/journal/2026-11-07-02-retro-queue-one-file-per-item.md). 푸시 완료(HEAD 46c87757), PR #483이 열렸고 앱에 묶여 있다. 이 일지의 "인계 (PR 연 뒤)" 절이 커밋되지 않은 채 남아 있어 새 세션이 커밋한다. 남은 일: 첫 `@coderabbitai review` 코멘트, merge.md 2(봇 회차), 일지 커밋·푸시(병합 직전 headRefOid 대조 전), 티켓 "PR을 연 뒤" 칸의 병합 직전 `gh pr list --state open`으로 옛 파일(.scratch/retro-queue.md)을 고친 열린 PR 수를 세어 PR 본문 "남긴 위험"의 그 줄을 고쳐 적기(푸시 직후에는 열린 PR이 0이었다), merge.md "워크트리에서 병합할 때"대로 병합, 병합 뒤 msys_pathconv/run.sh C절 다시 돌리기(일지 "다음"의 먼저 할 것). 봇이 지적하면 둘째 회차부터는 Critical·Major만 고친다
+확인할 선행 조건: 없음
+이번 요청 범위: PR과 병합까지
+```
+
+세션 제목은 `feature/02-retro-queue-one-file-per-item (인계함)`으로 바꿨고, 워크트리 잠금은 이미 풀려 있었다(`git worktree unlock`이 `is not locked`).
+
+open-session을 부른다 2026-11-06T21:03:10Z
+
 ## 다음
 
 이 PR(티켓 02)이 병합되면 같은 기능의 막힘이 풀린 티켓은 03(리뷰 봇 경로 거르기)과 04(일지 이름)이고, 둘은 나란히 연다. 05 이후는 03·04가 끝나야 열린다.
