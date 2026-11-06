@@ -292,7 +292,7 @@ Status: ready-for-agent
 - 그 밖: 옛 머리말(폴더 README로), 열린 항목 중 이 조각이 닫을 후보(분할이 해소하는 것은 그 티켓이 가린다).
 
 **리뷰 봇의 경로 거르기.**
-- `.github/workflows/claude-code-review.yml`의 경로 거르기와 그 곁 주석, 실패할 때 내는 `::error::` 문구(일지·대기열·하네스 탐침 밖의 파일), `.scratch/harness/probes/review_workflow.py`.
+- `.github/workflows/claude-code-review.yml`의 경로 거르기와 그 곁 주석, 실패할 때 내는 `::error::` 문구(일지·대기열·하네스 탐침 밖의 파일), `.scratch/harness/probes/review_workflow.py`와 `.scratch/harness/probes/README.md`의 그 행(일지 이름 조각이 고치는 `journal_cite_scan.py` 행 바로 곁이라, 나란히 돌면 늦게 병합되는 쪽이 글자 충돌을 푼다).
 
 **일지 이름.**
 - 도구: `tools/sibling_overlap.py`(일지 순번 몫 전부, 빈 자리 검사의 일지, 없는 인용 정규식을 두 꼴로), `tools/hook_journal_retro.py`(순번 대조 몫을 걷고 이름 꼴만), `tools/hook_choice_facts.py`(일지가 없을 때의 안내), `tools/hook_prompt_directive.py`(붙여 넣은 지시문 갈래의 안내), `tools/morning_sources.py`(main의 최신 일지), `tools/run_hooks.py`(`${TODAY}`·`${NUMBERED_REPO}` 설명과 번호 저장소).
@@ -310,11 +310,11 @@ Status: ready-for-agent
 - 스킬: `next-session` SKILL.md(프론티어와 상태를 정하는 문장, 결정표의 설계 인터뷰·화면 디자인·명세 줄), `to-spec`(읽는 자리와 넘기는 것을 적는 자리), `to-tickets`(받는 기능 행에 적는 자리), `code-review`(받는 쪽 행), `grill-with-docs`(설명과 산출물 단계의 설계 줄), `implement`(마지막 티켓의 `끝` 줄. 지금은 그 문장이 없다), `.claude/agents/spec-reviewer.md`(그 기능 행, 다른 기능에 넘긴 것).
 - 지침·문서: `CLAUDE.md`(지도의 `.scratch/plan.md` 행과 `.scratch/<slug>/` 행, 작업 규약 1), `.claude/rules/web-design.md`(그 기능 행), `docs/agents/issue-tracker.md`(기능 디렉터리의 구성, done 기능의 고침 티켓, 전체 계획 절, 근거 문서), `docs/constitution/operations.md`(전체 계획, 문서 위치의 done 기준과 살아 있는 문서. 판을 올린다), `README.md`(전체 계획 링크, 원천 표, 목표 배치의 자리), `CONTEXT.md`의 "기능(전체 계획의 행)"(기능 계획으로 고칠지 본다), `.scratch/approval-rules/spec.md`의 "mcp-trust 행"(진행 중인 기능의 명세라 살아 있다).
 - 런북: `KICKOFF.md`(미래 배치, 전체 계획 절, 첫 커밋 목록, 점검표), `kickoff/claude-md-template.md`.
-- 그 밖: 지금 `.scratch/plan.md`의 표 밖 글(손 파일로)과 프론티어 문단(버린다), 열린 항목 523·532(이 조각이 해소해 닫을 후보). ADR 본문 가운데 전환 뒤 거짓이 되는 `plan.md` 문장은 ADR 0025의 "명세 전에 그리는 화면은 ADR과 `plan.md`의 그 기능 행이고" 하나이고, 이 티켓이 그 문장 뒤에 `(바뀜: ADR 0045)`를 단다. ADR 0043·0046·0048의 "`plan.md`의 행" 문장은 생성한 표도 행과 Blocked by 칸을 들어 참이다. 이력 항목과 "함께 고치는 것" 문장은 기록이다(셀프 리뷰 때 `docs/adr`에서 `plan.md`가 든 줄을 모두 읽었다).
+- 그 밖: 지금 `.scratch/plan.md`의 표 밖 글(손 파일로)과 프론티어 문단(버린다), 열린 항목 523·532(이 조각이 해소해 닫을 후보). ADR 본문 가운데 전체 계획의 행이나 칸에 무엇을 적는다고 서술하는 현재형 문장은 전환 뒤 거짓이 되고, 이 티켓이 그 문장 뒤에 `(바뀜: ADR 0045)`를 단다. ADR 0025의 "명세 전에 그리는 화면은 ADR과 `plan.md`의 그 기능 행이고"와 ADR 0046 Consequences의 "행마다 설계 인터뷰가 먼저 볼 것은 그 행의 내용 칸에 적고"가 그렇다(앞의 것은 셀프 리뷰 때 `docs/adr`에서 `plan.md`가 든 줄을 모두 읽어 찾았고, 뒤의 것은 티켓 셀프 리뷰의 표준 축이 반례로 냈다). ADR 0043·0048의 "`plan.md`의 행" 문장은 생성한 표도 행과 Blocked by 칸을 들어 참이다. 이력 항목과 "함께 고치는 것" 문장은 기록이다.
 
 **헌법 README.**
 - 도구: `tools/sibling_overlap.py`(독스트링의 비워 둔 판, 못 보는 것, 정규식 둘, 이력 문단을 자르는 함수, 비워 둔 판 판정, 판을 부르는 조건, 알림 문장), `tools/check_constitution_version.py`(독스트링, 판정, 막는 글), `tools/check_ticket.py`(면제 모양).
-- 시험: `tests/tools/test_sibling_overlap.py`(비워 둔 판 사례 다섯과 그 import), `tests/tools/test_check_constitution_version.py`(비워 둔 판의 사례 넷), `tests/tools/test_check_ticket.py`(면제 사례).
+- 시험: `tests/tools/test_sibling_overlap.py`(비워 둔 판 사례 다섯과 그 import), `tests/tools/test_check_constitution_version.py`(비워 둔 판의 사례 셋과 이력 문단을 든 못 보는 것 하나), `tests/tools/test_check_ticket.py`(면제 사례).
 - 변이 표: `sibling_overlap_mutations.toml`의 비워 둔 판 변이 열, `check_constitution_version_mutations.toml`의 둘, `.scratch/harness/probes/README.md`의 두 행.
 - 문서: `docs/constitution/README.md`, 새 `docs/constitution/history.md`, `docs/constitution/operations.md`(문서 위치의 "헌법 README의 버전 이력"), `KICKOFF.md`(헌법 판 검사를 복사하는 법의 설명).
 - 그 밖: 열린 항목 550(비워 둔 문장을 "헌법 README 이력"에 적는다)은 그 자리가 판 줄 곁으로 바뀐다.
