@@ -67,6 +67,50 @@ async def test_서버의_도구_목록과_입력_스키마를_준다() -> None:
     assert set(properties) == {"a", "b"}
 
 
+async def test_도구_명세는_그_도구를_낸_서버_플러그인의_이름을_든다() -> None:
+    """서버 하나만 여는 양성 대조이기도 하다. 겹치는 이름이 없으면 그대로 열린다."""
+    async with _fixture_connection() as connection:
+        servers = {spec.name: spec.server for spec in connection.tools()}
+
+    assert servers == {
+        "add": PluginName("fixture"),
+        "fail": PluginName("fixture"),
+        "blocks": PluginName("fixture"),
+    }
+
+
+async def test_같은_이름의_도구를_낸_서버_둘은_두_서버_이름을_든_값_오류다() -> None:
+    """같은 픽스처 서버를 두 플러그인 이름으로 열어 같은 이름을 만든다. 예외는 예외 그룹이 아니라
+    정한 내장 타입 그대로 나와야 한다. 앞서 연 서버의 태스크 그룹이 그것을 감싸는 길을 문맥이
+    벗기는지를 이 단언이 잰다."""
+    tools: ToolSource = McpTools()
+    servers = {PluginName("first"): FIXTURE, PluginName("second"): FIXTURE}
+
+    message = r"같은 이름의 도구가 둘이다: \w+ \(first, second\)"
+    with pytest.raises(ValueError, match=message) as raised:
+        async with tools.connect(servers):
+            pytest.fail("겹친 연결이 열렸다")
+
+    assert type(raised.value) is ValueError
+
+
+async def test_겹친_서버_뒤의_서버는_열리지_않는다() -> None:
+    """셋째 서버는 띄울 수 없는 명령이다. 열렸다면 ConnectionError 가 났을 것이다."""
+    tools: ToolSource = McpTools()
+    broken = McpServer(command="definitely-not-a-command-agent-os")
+    servers = {
+        PluginName("first"): FIXTURE,
+        PluginName("second"): FIXTURE,
+        PluginName("third"): broken,
+    }
+
+    with pytest.raises(ValueError, match=r"\(first, second\)") as raised:
+        async with tools.connect(servers):
+            pytest.fail("겹친 연결이 열렸다")
+
+    assert type(raised.value) is ValueError
+
+
 async def test_도구를_부르면_결과_텍스트가_온다() -> None:
     async with _fixture_connection() as connection:
         result = await connection.call("add", {"a": 2, "b": 3})

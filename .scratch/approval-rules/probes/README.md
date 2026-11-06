@@ -40,4 +40,4 @@ LLM 토큰 합계: 입력 2214 출력 920(여섯 회차의 `usage_metadata`를 �
 
 | 파일 | 재는 것 | 근거로 드는 자리 | 다시 돌 때 | 잰 판 |
 |---|---|---|---|---|
-| `all_deny_resume_call.py` | 도구 호출 블록이 든 대화를 도구 정의 없이(도구없음), 거부된 도구의 정의와 함께(도구있음, 양성 대조), 정의와 `tool_choice` none으로(선택없음) 실제 API에 보냈을 때 받는지 | 명세 "모두 deny인 재개 (명세가 정했다. 쟀다)", ADR 0044의 2026-11-05 이력 "명세가 정한 것과 잰 것" | 위 명령. 여섯 회차에 30초 안팎, 토큰 3천 안팎. 묶음 B가 `ToolSpec.server`를 필수로 더한 뒤에는 `ADD`에 `server=`를 더해야 가져온다 | claude-opus-5, langchain-anthropic 1.7.2, anthropic 1.7.0, Python 3.12.10, Windows 10, 2026-11-05 |
+| `all_deny_resume_call.py` | 도구 호출 블록이 든 대화를 도구 정의 없이(도구없음), 거부된 도구의 정의와 함께(도구있음, 양성 대조), 정의와 `tool_choice` none으로(선택없음) 실제 API에 보냈을 때 받는지 | 명세 "모두 deny인 재개 (명세가 정했다. 쟀다)", ADR 0044의 2026-11-05 이력 "명세가 정한 것과 잰 것" | 위 명령. 여섯 회차에 30초 안팎, 토큰 3천 안팎. 티켓 03이 `ToolSpec.server`를 필수로 더하며 `ADD`에 `server=`를 더했다. `ADD`가 만들어지는 것은 모듈로 불러 손으로 봤고(커밋한 프로브의 결과가 아니다), 이 프로브의 회차는 다시 돌리지 않았다 | claude-opus-5, langchain-anthropic 1.7.2, anthropic 1.7.0, Python 3.12.10, Windows 10, 2026-11-05 |

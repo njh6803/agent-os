@@ -7,10 +7,13 @@ ToolSpec 과 ToolResult 로 바뀌고 밖으로 나가지 않는다. 도구가 i
 (`__cause__`)에는 mcp 의 원래 예외가 남는다. 서버를 여는 동안(띄우기, 세션 열기, `initialize()`,
 도구 목록 읽기)의 실패는 서버 이름과 매니페스트의 명령과 원인을 든 ConnectionError 이고 원래 예외가
 `__cause__` 다. 취소는 바꾸지 않는다.
-도구 호출의 실패는 서버와 도구를 든 RuntimeError 다. 연결 안(부르는 쪽)에서 난 예외는 그 객체 그대로
-나온다. mcp 의 태스크 그룹이 그것을 그룹으로 두 겹 감싸므로, 겹마다 그 하나만 들었으면 벗긴다.
-닫기에서 다른 예외가 더 났으면 그 그룹을 그대로 낸다. core 가 연결 안의 yield 에 멈춘 제너레이터를
-닫을 때 들어가는 GeneratorExit 도 같다. 벗기지 않으면 결말을 쓴 실행이 그 그룹을 밖으로 올린다.
+서버들이 같은 이름의 도구를 내면 연결을 열며 모으는 자리에서 도구와 겹친 두 서버를 든 ValueError 로
+실패한다. 서버를 차례로 열며 모으므로 겹친 서버 뒤의 서버는 열리지 않고, 셋 이상이 겹쳐도 문구에는
+처음 겹친 둘만 든다. 도구 호출의 실패는 서버와 도구를 든 RuntimeError 다. 연결 안(부르는 쪽)에서 난
+예외는 그 객체 그대로 나온다. mcp 의 태스크 그룹이 그것을 그룹으로 두 겹 감싸므로, 겹마다 그 하나만
+들었으면 벗긴다. 닫기에서 다른 예외가 더 났으면 그 그룹을 그대로 낸다. core 가 연결 안의 yield 에
+멈춘 제너레이터를 닫을 때 들어가는 GeneratorExit 도 같다. 벗기지 않으면 결말을 쓴 실행이 그 그룹을
+밖으로 올린다.
 
 **닫기는 취소된 실행에서도 끝까지 간다(ADR 0034).** 서버들은 연 순서의 반대로 하나씩 닫는다(탈출
 스택의 순서). mcp 2 의 stdio 클라이언트가 서버마다의 닫기를 취소에서 보호하므로, 실행 타임아웃이나
@@ -74,6 +77,12 @@ class McpTools:
             routes: dict[str, _Route] = {}
             for name, server in servers.items():
                 for route in await stack.enter_async_context(_opened(name, server)):
+                    earlier = routes.get(route.tool.name)
+                    if earlier is not None:
+                        raise ValueError(
+                            f"같은 이름의 도구가 둘이다: {route.tool.name} "
+                            f"({earlier.server}, {route.server})"
+                        )
                     routes[route.tool.name] = route
             yield McpConnection(routes)
 
@@ -95,6 +104,7 @@ class McpConnection:
         return [
             ToolSpec(
                 name=route.tool.name,
+                server=route.server,
                 description=route.tool.description or "",
                 input_schema=dict(route.tool.input_schema),
             )

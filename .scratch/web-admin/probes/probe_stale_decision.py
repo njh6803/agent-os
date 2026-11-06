@@ -74,7 +74,14 @@ class Connection:
 
     def tools(self) -> Sequence[ToolSpec]:
         schema: Mapping[str, Json] = {"type": "object", "properties": {"a": {}, "b": {}}}
-        return [ToolSpec(name="add", description="더한다", input_schema=schema)]
+        return [
+            ToolSpec(
+                name="add",
+                server=PluginName("probe"),
+                description="더한다",
+                input_schema=schema,
+            )
+        ]
 
     async def call(self, name: str, args: Mapping[str, Json]) -> ToolResult:
         self._calls.append((name, dict(args)))

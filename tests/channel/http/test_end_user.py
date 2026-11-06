@@ -99,6 +99,8 @@ CHANNEL = {"Authorization": f"Bearer {CHANNEL_TOKEN}"}
 # 운영자 채널의 주체(`serve` 의 OS 사용자). `|` 가 없다.
 OPERATOR = Principal("operator")
 T0 = datetime(2026, 10, 5, 12, 0, tzinfo=UTC)
+# 가짜 연결이 도구를 낸 서버로 적는 이름. core 시험의 가짜와 같은 규약이다.
+DEFAULT_SERVER = PluginName("fake")
 
 ISSUER = "https://shop.example"
 OTHER_ISSUER = "https://other.example"
@@ -424,7 +426,9 @@ class FakeConnection:
         if not self._servers:
             return []
         schema: Mapping[str, Json] = {"type": "object", "properties": {"a": {}, "b": {}}}
-        return [ToolSpec(name="add", description="더한다", input_schema=schema)]
+        return [
+            ToolSpec(name="add", server=DEFAULT_SERVER, description="더한다", input_schema=schema)
+        ]
 
     async def call(self, name: str, args: Mapping[str, Json]) -> ToolResult:
         return ToolResult(ok=True, content=TOOL_RESULT)

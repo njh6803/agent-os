@@ -176,7 +176,12 @@ class _SlowConnection:
 
     def tools(self) -> Sequence[ToolSpec]:
         return [
-            ToolSpec(name=n, description=n, input_schema={"type": "object", "properties": {}})
+            ToolSpec(
+                name=n,
+                server=PluginName("probe"),
+                description=n,
+                input_schema={"type": "object", "properties": {}},
+            )
             for n in (*TOOLS, INSTANT)
         ]
 
