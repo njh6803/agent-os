@@ -1,4 +1,4 @@
-# 2026-11-06 (08) 문서 검색 서버의 저장소 이름 rag-engine(제안서 둘째 판 반영)
+# 2026-11-06 (11) 문서 검색 서버의 저장소 이름 rag-engine(제안서 둘째 판 반영)
 
 ## 사용자 프롬프트
 
@@ -31,7 +31,7 @@
 
 ## PRD 개정(승인)
 
-화면에 두 곳을 diff로 보였다. 상태 줄의 "2026-11-06 개정 사용자 승인. 개정의 근거는 ADR 0042와 ADR 0046"을 "2026-11-06 개정 두 번 사용자 승인. 개정의 근거는 ADR 0042와 ADR 0046, 일지 2026-11-06-08"로, 미룬 것 목록 끝에 "구조화 데이터 질의(Text-to-SQL)"를 더하고 "돌아오면 …" 뒤에 "구조화 데이터 질의는 매출이나 재고처럼 숫자가 바뀌고 합계를 내야 하는 데이터를 묻는 것이고, 문서 검색 서버는 그런 데이터를 색인하지 않는다."를 넣는다. 제안서의 "SQL 커넥터는 데이터베이스에 든 글만 가져온다"는 그 저장소가 정할 일이라 넣지 않았다고 함께 적었다.
+화면에 두 곳을 diff로 보였다. 상태 줄의 "2026-11-06 개정 사용자 승인. 개정의 근거는 ADR 0042와 ADR 0046"을 "2026-11-06 개정 두 번 사용자 승인. 개정의 근거는 ADR 0042와 ADR 0046, 일지 2026-11-06-11"로, 미룬 것 목록 끝에 "구조화 데이터 질의(Text-to-SQL)"를 더하고 "돌아오면 …" 뒤에 "구조화 데이터 질의는 매출이나 재고처럼 숫자가 바뀌고 합계를 내야 하는 데이터를 묻는 것이고, 문서 검색 서버는 그런 데이터를 색인하지 않는다."를 넣는다. 제안서의 "SQL 커넥터는 데이터베이스에 든 글만 가져온다"는 그 저장소가 정할 일이라 넣지 않았다고 함께 적었다.
 
 > 사용자: (위 PRD 개정안(상태 줄과 미룬 것의 구조화 데이터 질의)을 이대로 승인하시겠습니까?) "이대로 승인 (Recommended)" — 설명: 적힌 문장 그대로 docs/PRD.md의 3줄과 24줄을 고칩니다. 그다음에는 ADR 0048에 더할 저장소 이름 이력을 써서 셀프 리뷰를 한 뒤 보여 드립니다.
 
@@ -64,11 +64,11 @@ ADR 0048에 `## 이력`과 `### 2026-11-06 문서 검색 서버의 저장소 이
 다음 작업: 기능 rag-engine-name. 제안서 둘째 판이 정한 문서 검색 서버 저장소 이름(rag-engine)을 저장소 절차대로 반영한다(셀프 리뷰, ADR 0048 이력 승인, plan.md, PR)
 다음 단계: 설계 인터뷰
 어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
-시작 프롬프트: docs/journal/2026-11-06-08-rag-engine-name.md의 "사용자 프롬프트" 절의 요청을 "인계 전 상태"의 남은 일 1부터 잇는다. 제안서는 C:\Users\User\Downloads\agent-os-rag-baseline-plan (1).md
+시작 프롬프트: docs/journal/2026-11-06-11-rag-engine-name.md의 "사용자 프롬프트" 절의 요청을 "인계 전 상태"의 남은 일 1부터 잇는다. 제안서는 C:\Users\User\Downloads\agent-os-rag-baseline-plan (1).md
 브랜치: docs/rag-engine-name
 모델: Fable 5.1 / xhigh. 2의 잇는 지시문
-읽을 것: docs/journal/2026-11-06-08-rag-engine-name.md 전체, 제안서 둘째 판 2~5절
-이어받을 상태: 인계: 셀프 리뷰 직전. 커밋하지 않은 변경이 워크트리에 있고 셀프 리뷰(/code-review)부터 한다. PRD 개정은 승인받아 반영했고 ADR 0048 이력은 승인 전 초안이다. docs/journal/2026-11-06-08-rag-engine-name.md
+읽을 것: docs/journal/2026-11-06-11-rag-engine-name.md 전체, 제안서 둘째 판 2~5절
+이어받을 상태: 인계: 셀프 리뷰 직전. 커밋하지 않은 변경이 워크트리에 있고 셀프 리뷰(/code-review)부터 한다. PRD 개정은 승인받아 반영했고 ADR 0048 이력은 승인 전 초안이다. docs/journal/2026-11-06-11-rag-engine-name.md
 확인할 선행 조건: rag-engine 저장소가 원격(GitHub)에 있는지 보지 않았다. ADR 0048 이력 초안은 이 PC의 C:\project만 보고 "아직 없다"고 적었다
 이번 요청 범위: PR과 병합까지(ADR 0048 이력은 사용자 승인)
 ```
@@ -164,11 +164,11 @@ plan.md를 고친 뒤 `uv run python tools/run_checks.py`를 워크트리에서 
 다음 작업: 기능 rag-engine-name. 제안서 둘째 판이 정한 문서 검색 서버 저장소 이름(rag-engine)을 저장소 절차대로 반영한다(셀프 리뷰, ADR 0048 이력 승인, plan.md, PR)
 다음 단계: 설계 인터뷰
 어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
-시작 프롬프트: docs/journal/2026-11-06-08-rag-engine-name.md의 "사용자 프롬프트" 절의 요청을 "인계 전 상태"의 남은 일 1부터 잇는다. 제안서는 C:\Users\User\Downloads\agent-os-rag-baseline-plan (1).md
+시작 프롬프트: docs/journal/2026-11-06-11-rag-engine-name.md의 "사용자 프롬프트" 절의 요청을 "인계 전 상태"의 남은 일 1부터 잇는다. 제안서는 C:\Users\User\Downloads\agent-os-rag-baseline-plan (1).md
 브랜치: docs/rag-engine-name
 모델: Fable 5.1 / xhigh. 2의 잇는 지시문
-읽을 것: docs/journal/2026-11-06-08-rag-engine-name.md 전체. "인계 전 상태"의 남은 일 1~3과 4의 둘째 셀프 리뷰·검증·커밋은 끝났고, "이어받은 세션"부터 "인계(커밋 뒤)"까지가 이 세션의 기록이다. 제안서 둘째 판은 지금 C:\Users\User\Downloads\agent-os-rag-baseline-plan.md(15:04)이고 "(1)" 파일은 없다
-이어받을 상태: 인계: 커밋 뒤. docs/journal/2026-11-06-08-rag-engine-name.md. 커밋 0a0f3bba(docs: 문서 검색 서버 저장소 이름을 ADR 0048 이력과 plan.md에 반영한다 (rag-engine-name))까지 했고 푸시하지 않았으며 열린 PR은 없다. 남은 단계: PR 직전 리뷰의 대체 둘(CodeRabbit CLI는 `Seat: not assigned`라 돌지 못했다. `/security-review`는 커밋 뒤 origin/main을 합친 상태에서, `bug-perf-review` 서브에이전트는 나란히. 두 보고를 일지에 옮기고 Critical·Major를 고친 뒤 커밋), 푸시, PR(docs/<slug> 면제 PR. 템플릿의 체크리스트에 CLI가 돌지 못한 것과 대체 둘의 결과를 적는다), `@coderabbitai review` 코멘트, merge.md 2~4의 "워크트리에서 병합할 때", 일지 "다음", retro, next-session. `tools/sibling_overlap.py`가 커밋 전에 알린 것 둘: 형제 워크트리 04-runtime-enforces-rules-per-tool-call에 일지 2026-11-06-09가 있어 그쪽이 먼저 병합되면 이 일지의 번호를 옮긴다(병합 직전에 다시 친다), 워크트리 mcp-shutdown-spec도 .scratch/plan.md를 고쳐 나중에 병합하는 쪽에 글자 충돌 후보다
+읽을 것: docs/journal/2026-11-06-11-rag-engine-name.md 전체. "인계 전 상태"의 남은 일 1~3과 4의 둘째 셀프 리뷰·검증·커밋은 끝났고, "이어받은 세션"부터 "인계(커밋 뒤)"까지가 이 세션의 기록이다. 제안서 둘째 판은 지금 C:\Users\User\Downloads\agent-os-rag-baseline-plan.md(15:04)이고 "(1)" 파일은 없다
+이어받을 상태: 인계: 커밋 뒤. docs/journal/2026-11-06-11-rag-engine-name.md. 커밋 0a0f3bba(docs: 문서 검색 서버 저장소 이름을 ADR 0048 이력과 plan.md에 반영한다 (rag-engine-name))까지 했고 푸시하지 않았으며 열린 PR은 없다. 남은 단계: PR 직전 리뷰의 대체 둘(CodeRabbit CLI는 `Seat: not assigned`라 돌지 못했다. `/security-review`는 커밋 뒤 origin/main을 합친 상태에서, `bug-perf-review` 서브에이전트는 나란히. 두 보고를 일지에 옮기고 Critical·Major를 고친 뒤 커밋), 푸시, PR(docs/<slug> 면제 PR. 템플릿의 체크리스트에 CLI가 돌지 못한 것과 대체 둘의 결과를 적는다), `@coderabbitai review` 코멘트, merge.md 2~4의 "워크트리에서 병합할 때", 일지 "다음", retro, next-session. `tools/sibling_overlap.py`가 커밋 전에 알린 것 둘: 형제 워크트리 04-runtime-enforces-rules-per-tool-call에 일지 2026-11-06-09가 있어 그쪽이 먼저 병합되면 이 일지의 번호를 옮긴다(병합 직전에 다시 친다), 워크트리 mcp-shutdown-spec도 .scratch/plan.md를 고쳐 나중에 병합하는 쪽에 글자 충돌 후보다
 확인할 선행 조건: 없음
 이번 요청 범위: PR과 병합까지(ADR 0048 이력은 사용자 승인을 받았다)
 ```
@@ -208,3 +208,73 @@ open-session을 부른다 2026-11-06T07:18:27Z
 오탐 넷은 리뷰가 근거를 적어 닫았다. PRD 24줄의 "그런 데이터를 색인하지 않는다"는 `rag-engine-plan.md` 126~128줄이 SQL 커넥터를 "데이터베이스에 든 글"로 한정해 db-source와 모순되지 않는다. 인계 지시문이 첫 지시문의 "시작 프롬프트"·"다음 단계"를 되풀이한 것은 `handoff.md` 38줄의 모양이다. PRD 상태 줄의 "개정 두 번"은 앞선 셀프 리뷰가 다룬 해석 문제이고 사용자가 승인한 문장이다. 일지 23줄의 "코드 변경은 approval-rules 01·02뿐"은 그때의 origin/main(e9bbfcc)을 서술한 기록이다.
 
 다시 돌린 명령: 일지만 고쳐 다시 돌릴 검사가 없고, 커밋의 pre-commit으로 갈음한다. PR 직전 리뷰를 반영하며 새로 쓴 문장은 이 일지 21줄의 두 판 줄 번호와 159줄의 "둘째 시도에서 들어간 커밋"이고, PR 리뷰어 참고에 적는다.
+
+## 커밋 뒤의 인계 계기(넘기지 않음)
+
+커밋 명령(`git commit -F`)을 백그라운드로 띄운 직후 인계 계기(`hook_handoff`, 컨텍스트 270,395 토큰, 경계 `커밋 뒤`)가 왔다. `handoff.md`를 Read로 열어 1의 다섯을 봤다. 이 세션을 연 지시문의 "이어받을 상태"가 `인계: 커밋 뒤`로 시작해 셋째(인계로 연 세션이 넘겨받은 경계에 다시 왔다)에 들어 넘기지 않고 이었다. 커밋이 도는 동안은 편집 훅(`hook_edit_during_commit`)이 막으므로 이 판단은 커밋이 끝난 뒤에 적었다.
+
+## 커밋(이 세션의 것)과 PR
+
+커밋 `ccfbd2c9`(docs: PR 직전 리뷰 대체 둘의 보고를 일지에 옮기고 Minor 둘을 고친다)는 pre-commit을 모두 지났다(백그라운드 출력 파일을 `tail -45`로 읽었다). 열 단계 Passed(pytest 403.8s, web-verify 583.3s, 러너 584.16s), 마크다운 표·줄 구분 문자·변이 표·커밋 메시지 검사 Passed, ruff 둘과 카나리아 명세·헌법 판 검사는 `(no files to check)`로 Skipped다(일지만 든 커밋이라 대상 파일이 없다). 인용 대조 경고 1건은 206줄의 "hwp-binary, doc-permission, doc-freshness, db-source, change-log"로, 제안서 둘째 판 2절 표의 rag-engine 1.0 칸을 글자 그대로 옮긴 것이라 둔다. 커밋 전에 친 `uv run python tools/sibling_overlap.py`는 처음 1로 끝났다. 이 일지가 적은 "다음 빈 번호 일지 2026-11-06-10"이 어디에도 없는 일지 번호를 가리켜서였고, 그 출력의 안내대로 코드 스팬에 넣고 다시 쳐 `번호 겹침 없음`으로 0이었다. `git branch --show-current`는 `docs/rag-engine-name`이었다. 커밋 뒤 `git status --short`는 비었다.
+
+`git push -u origin docs/rag-engine-name`으로 커밋 둘(`0a0f3bba`, `ccfbd2c9`)을 푸시하고, `gh pr create --base main --head docs/rag-engine-name --title … --body-file …`로 PR #479(https://github.com/njh6803/agent-os/pull/479)를 열었다(docs/<slug> 면제 PR, 티켓 없음. 제목은 첫 커밋의 제목 그대로이고, 본문은 PR #473을 본보기로 템플릿을 채웠으며 체크리스트의 PR 직전 리뷰 줄은 위 "PR 직전 리뷰(대체 둘)" 절의 결과다. 따옴표가 든 `--title`을 워크트리 가드가 거부하지 않았다).
+
+## 인계(PR 연 뒤)
+
+PR을 연 명령 직후 인계 계기(`hook_handoff`, 컨텍스트 283,907 토큰, 경계 `PR 연 뒤`)와 next-session 계기(`hook_pr_next_session`)가 함께 왔다. `handoff.md`대로 앞의 것이 이기고 Skill 도구로 next-session을 부르지 않는다. 1의 다섯을 봤다. PR은 열렸고(명령 성공), 요청 범위는 PR과 병합까지라 이 경계에서 끝나지 않고, 이 세션의 지시문의 "이어받을 상태"는 `인계: 커밋 뒤`로 시작해 지금 경계(`PR 연 뒤`)와 다르며, 이 일지에 이 세션이 쓴 `인계 못함` 줄이 없고, 곁 세션이 아니다(`get_session`의 `self`에 `parentSessionId`가 없다). 다섯에 들지 않아 넘긴다. `@coderabbitai review` 코멘트는 남기지 않았다(`handoff.md` 3의 `PR 연 뒤` 줄대로 새 세션이 남긴다). 앱의 PR 바는 #479를 스스로 묶었다(`get_status`: bound, 열 때 검사 pending 6·passing 1·skipped 1, `MERGEABLE`·`BLOCKED`). 자동 고침(auto_fix)은 켜지 않았다. 새 세션이 자기 대기(`tools/wait_ci.py`)를 띄우기 때문이다(`handoff.md` 6). 이 세션이 띄운 백그라운드 작업은 없다(커밋은 끝났고 서브에이전트 둘은 보고를 냈다). 이 세션의 제목은 `docs/rag-engine-name`이었다. 커밋하지 않은 변경은 이 일지의 "커밋 뒤의 인계 계기(넘기지 않음)" 절부터 이 절까지이고, 새 세션이 이어 쓰고 커밋한다.
+
+### 인계 지시문
+
+```
+다음 작업: 기능 rag-engine-name. 제안서 둘째 판이 정한 문서 검색 서버 저장소 이름(rag-engine)을 저장소 절차대로 반영한다(셀프 리뷰, ADR 0048 이력 승인, plan.md, PR)
+다음 단계: PR 반영·병합
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: docs/journal/2026-11-06-11-rag-engine-name.md의 "사용자 프롬프트" 절의 요청을 "인계 전 상태"의 남은 일 1부터 잇는다. 제안서는 C:\Users\User\Downloads\agent-os-rag-baseline-plan (1).md
+브랜치: docs/rag-engine-name
+모델: Sonnet 5.5 / high. 2의 잇는 지시문
+읽을 것: docs/journal/2026-11-06-11-rag-engine-name.md 전체. "이어받은 세션(PR 직전 리뷰부터)"부터 "인계(PR 연 뒤)"까지가 이 세션의 기록이다. PR 본문은 `gh pr view 479 --json body`로 읽는다. 제안서 둘째 판은 지금 C:\Users\User\Downloads\agent-os-rag-baseline-plan.md(15:04)이고 "(1)" 파일은 없다
+이어받을 상태: 인계: PR 연 뒤. docs/journal/2026-11-06-11-rag-engine-name.md. PR #479(docs/rag-engine-name)를 열었고 `@coderabbitai review` 코멘트는 아직 남기지 않았다. 남은 단계: merge.md 2(봇 회차)부터. 첫 `@coderabbitai review` 코멘트를 남기고 `uv run python tools/wait_ci.py 479`를 백그라운드로 띄워 기다린다. 봇 지적을 반영한다(첫 회차의 Minor·Nit은 지적마다 판단). 이 일지의 "다음"과 retro를 마친 일지를 커밋해 푸시한다. "다음"에 적을 것 하나: answer-eval(plan.md 32줄)의 Blocked by가 rag-engine:core만인데 수락은 실제 문서 검색 서버 이미지를 요구하고 이미지는 그 저장소의 release-image가 만든다. 제안서가 그대로라 이 PR에서는 두었고 answer-eval의 설계 인터뷰가 먼저 본다(PR 직전 버그 축의 보류). 그 뒤 merge.md "워크트리에서 병합할 때" 1~4(--match-head-commit, --delete-branch 금지, 원격 정리, 주 체크아웃 미갱신 한 줄)와 next-session. 커밋하지 않은 변경은 이 일지의 인계 절들이고 새 세션이 이어 쓰고 커밋한다. 병합 직전 tools/sibling_overlap.py를 다시 친다. 형제 워크트리 04-runtime-enforces-rules-per-tool-call의 일지 2026-11-06-09가 먼저 병합되면 이 일지의 번호를 옮기고 PR 본문의 일지 이름도 `gh pr edit 479 --body-file`로 고친다. 워크트리 mcp-shutdown-spec도 .scratch/plan.md를 고쳐 나중에 병합하는 쪽에 글자 충돌 후보다
+확인할 선행 조건: 없음
+이번 요청 범위: PR과 병합까지(ADR 0048 이력은 사용자 승인을 받았다)
+```
+
+제목을 `docs/rag-engine-name (인계함)`으로 바꿨다(바꾸기 전 제목은 `docs/rag-engine-name`. 세션이 스스로 붙인 제목이라 앱이 묻지 않고 바꿨다). 이 세션이 띄운 백그라운드 작업은 없어 멈출 것이 없다. `git worktree unlock C:/project/agent/.claude/worktrees/rag-engine-name`(경로는 `git rev-parse --show-toplevel`의 출력 그대로)은 `is not locked`로 끝나 `handoff.md` 4대로 넘어갔다. 이 턴에서는 가드가 Bash의 `git worktree unlock`을 거부하지 않았다.
+
+open-session을 부른다 2026-11-06T07:49:24Z
+
+## 이어받은 세션(PR 반영·병합부터)
+
+인계 지시문대로 새 세션이 제목을 `docs/rag-engine-name`으로 바꾸고 워크트리에 들어갔다(HEAD `ccfbd2c9`가 PR #479의 `headRefOid`와 같다). `@coderabbitai review` 코멘트를 남기고 `uv run python tools/wait_ci.py 479`를 백그라운드로 띄웠다.
+
+### CI 실패: 러너의 ripgrep이 14에서 15로 올랐다
+
+대기 명령이 `python`과 `verify` 실패로 끝났다(`CodeRabbit NEUTRAL`, 나머지 초록). `python` 잡의 실패는 `tests/tools/test_hook_env_read_rg.py::test_Grep_도구의_glob_에서_훅이_rg_보다_넓게_막는_자리[{{.env}}]` 한 건이다(`1 failed, 6441 passed`). 이 PR은 문서만 바꿔 원인이 아니다. 원인은 러너다. main의 마지막 초록 실행(`42172283644`, 06:05 UTC)은 `ubuntu-24.04`(이미지 `20261101.360.1`)에서 ripgrep 14.1.0-1을 깔았고, 이 PR의 실패 실행(`42183052219`, 07:46 UTC)은 `ubuntu-26.04`(이미지 `20261101.186.1`)에서 ripgrep 15.1.0-1ubuntu1을 깔았다(두 잡 로그의 `Image:`와 `Setting up ripgrep` 줄을 `gh run view --log --job`으로 봤다). `ci.yml`이 `ubuntu-latest`를 쓰고 `rg`를 까는 잡은 `python` 하나다(`grep -n`, 59줄). 테스트의 `_GREP_TOOL_STRICTER` 주석(117줄)이 "rg 14.1.1 은 겹친 묶음을 풀지 못해 오류로 끝난다"고 적은 그 동작이 15.1.0에서 달라졌을 것으로 보이나 15를 직접 재지는 않았다. 열린 PR은 #478(04)도 같은 잡을 돌린다. 세션 카드(`start_session` own_initiative)는 훅이 막았다(ADR 0037 "세션 카드").
+
+> 사용자: (PR #479가 문서와 무관한 CI 실패로 병합되지 않습니다. CI 서버의 운영체제 이미지가 최근에 새 판(ubuntu-26.04)으로 바뀌어 검색 도구 ripgrep이 14.1.0에서 15.1.0으로 올라갔고, 14 판의 동작을 가정한 훅 테스트 한 건이 깨졌습니다. 어떻게 풀까요?) "러너를 24.04로 고정" — 설명: 이 워크트리에서 새 브랜치를 따서 ci.yml의 python 잡(ripgrep을 까는 유일한 잡)만 ubuntu-24.04로 고정합니다. main의 마지막 초록 실행(06:05 UTC)이 그 이미지였고, 이 PR의 실패 실행(07:46 UTC)이 26.04였습니다. 그 PR을 먼저 병합하고 #479에 main을 합쳐 다시 돌립니다. CI 한 바퀴가 이번 실행 기준 9분 32초라 그만큼 걸립니다. ripgrep 15에서 훅이 어떻게 다른지는 재 보지 않은 채 일지 '다음'에 별도 일로 적습니다.
+
+고르지 않은 선택지(라벨만): "테스트를 ripgrep 15도 아는 쪽으로 고침", "고치지 않고 멈춤".
+
+이 세션은 거기서 러너 고정을 새 브랜치 `chore/045-ci-python-runner-pin`으로 옮겨 PR #480으로 열었다. 일지는 `docs/journal/2026-11-06-10-ci-python-runner-pin.md`다.
+
+## 이어받은 세션(러너 고정 병합 뒤 PR #479로 돌아옴)
+
+PR #480(`chore/045-ci-python-runner-pin`)을 먼저 병합했다. 병합 커밋은 `6f205c0e`이고 `gh pr view 480 --json state,mergeCommit`이 `MERGED`를 냈다. 그 실행의 `python` 잡은 `Image: ubuntu-24.04`와 `Setting up ripgrep (14.1.0-1)`에서 `6442 passed`로 초록이었다(`gh run view --log --job`을 받아 `grep`으로 손으로 봤다). 원격 브랜치는 `git fetch --prune origin` 뒤 `git ls-remote --exit-code --heads origin refs/heads/chore/045-ci-python-runner-pin`이 종료 2로 끝나 없다. 주 체크아웃 미갱신: 루트는 main(`d0f5a195`, `git worktree list --porcelain`으로 봤다).
+
+이 워크트리로 돌아와 보니 HEAD는 `ccfbd2c9`이고 작업 트리의 변경은 이 일지뿐이었다(`git status --short`). 아래 "회고"와 "다음"을 쓰고 이 일지를 커밋한 뒤 `git merge origin/main`으로 러너 고정을 합쳐 다시 돌린다.
+
+## 회고
+
+후보 3, 승인 1(회차로 세는 것), 기각 2, 넘김 0. 넘긴 것이 없어 사용자에게 묻지 않았다. 일지는 이 일지 하나와 PR #480의 일지(2026-11-06-10)를 읽었다. 이 PR이 연 CI 실패(ripgrep 14→15)는 2026-11-06-10의 회고가 대기열 500의 2회차로 이미 셌다.
+
+1. **승인(회차로 센다).** 문서 검색 서버의 저장소 이름을 바꾸며 앞 세션이 옛 이름 `rag-server`로만 `grep`해, 옛 행 이름 `rag-mcp`·`rag-ops`가 든 ADR 0046 47줄을 놓쳤고 셀프 리뷰 두 축이 같은 자리를 Major로 잡았다(이 일지 "셀프 리뷰" 절 Standards 1·Spec 1). `CLAUDE.md` 작업 규약 4(결정이 바뀌면 옛 표현을 저장소 전체에서 grep해 잔존이 0인지 본다)가 이미 정한 것을 어긴 사건이다. 열린 대기열 420("결정이나 측정이 바뀐 뒤 옛 표현이 살아 있는 문서 셋에 남아 셀프 리뷰가 잡았다", 10회차)과 같은 가족이고, 이번에는 이름 바꿈에서 새 이름의 옛 표기 하나만 찾은 것이 달랐다. 420에 11회차를 더했다(`자체 승인 2026-11-06, 11회차`). 420은 3회차를 훨씬 넘겨 지침이 아닌 검사(옮긴 이름을 낱말로 받아 살아 있는 문서의 잔존을 세는 도구)를 고르는 행이라 이 PR에서 반영하지 않는다. 넘김이 아니다(가드레일을 느슨하게 하지 않는다). 문턱: 사건은 이 일지, 층은 420이 고르는 검사, 되돌림은 PR 하나다. 이 사건에서 드러난 모양(새 이름 하나로 grep하면 옛 이름이 둘 이상일 때 놓친다)은 그 행의 도구 설계가 받는다.
+2. **기각.** 첫 커밋이 commit-msg 훅의 "제목 79자 > 72자"에 막혔다(이 일지 "커밋" 절). 이미 있는 훅이 그 자리에서 막은 것이다.
+3. **기각.** `coderabbit auth status`를 `head -12`로 잘라 `Seat` 줄을 못 봤다(이 일지 "PR 직전 리뷰(CodeRabbit CLI)" 절). `CLAUDE.md` 환경 함정의 "검사 도구가 내가 생각하는 것을 실제로 봤는지 먼저 확인한다"가 이미 있고, 그 세션이 스스로 알아차려 비용이 호출 하나였다.
+
+만료할 행: `uv run python tools/queue_open_rows.py --ref origin/main`이 없다고 냈다. 회차 3 이상의 열린 행이 이미 여럿 있어 chore 계기는 그쪽이 낸다.
+
+## 다음
+
+- answer-eval(`.scratch/plan.md` 32줄)의 Blocked by가 `rag-engine:core`만인데 수락 문장은 실제 문서 검색 서버 이미지를 요구하고, 그 이미지는 `rag-engine:release-image`가 만든다. 제안서 둘째 판 143줄이 그대로여서 이 PR은 이름만 바꾸고 두었다. answer-eval의 설계 인터뷰가 먼저 본다(PR 직전 버그 축의 보류).
+- `rag-engine` 저장소는 아직 없다(2026-11-06에 `gh repo view`·`gh repo list`로 봤다). 만들 때 `KICKOFF.md`를 복사해 시작하고, `plan.md`의 `rag-engine:<slug>` 행이 닫혔는지는 그 저장소를 본 뒤 확인한다(ADR 0048).
+- principal-propagation의 Blocked by에 그 저장소의 문서 권한 행(doc-permission)을 넣을지는 그 행의 설계 인터뷰가 정한다.
+- ripgrep 15에서 훅과 `rg`의 동작 차이를 재서 `tests/tools/test_hook_env_read_rg.py`가 두 판을 모두 아는 쪽으로 고치고 러너 고정을 풀지 정하는 harness 티켓과, ADR 0038 이력·12줄 포인터(사용자 승인)는 일지 2026-11-06-10 "다음"에 적혀 있다. 새 harness 티켓으로 쓴다.
