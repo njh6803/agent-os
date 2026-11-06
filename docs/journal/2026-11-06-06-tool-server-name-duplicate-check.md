@@ -53,3 +53,13 @@ open-session을 부른다 2026-11-05T21:57Z
   - 한 서버 안에서 같은 이름이 겹치면 `(x, x)`로 던지는 갈래(Nit): MCP가 한 서버 안의 이름 겹침을 막는지는 확인하지 않았고, 동작은 안전한 쪽(실패)이다. 문구와 문서가 "서버들이 같은 이름의 도구를 내면"이라 이 갈래를 말하지 않는다. 시험은 더하지 않았다.
   - `McpTools.connect` 독스트링이 같은 이름 검사의 실패를 말하지 않는 것(Nit): 모듈 독스트링과 `adapters.md`·`core.md`에 있다.
 - **다시 돌린 명령.** 새 시험 셋은 초록이다(`uv run pytest tests/adapters/test_mcp.py -q -k "겹친_서버 or 같은_이름 or 도구_명세는"` 3 passed, `tests/core/test_run.py -k 같은_이름의_도구` 1 passed). 린트·형식은 `ruff format`을 시험 파일 둘에 쳤다. 전체 검증 명령은 커밋이 부르는 pre-commit으로 갈음한다(결과는 커밋 뒤).
+
+## PR 직전 리뷰 (CodeRabbit CLI 대신 대체 둘)
+
+`coderabbit auth status`가 `Seat: not assigned`(`Plan: Free`)라 CLI를 돌리지 못했다. 대체 둘인 `bug-perf-review` 서브에이전트와 내장 `/security-review`를 나란히 돌렸다.
+
+- **`/security-review`**: 지적 없음. 같은 이름 검사는 서버가 다른 서버의 도구를 덮어쓰던 길을 막는 쪽이고, 오류 문구에 서버가 낸 도구 이름이 실리는 것은 로그 스푸핑 범주라 제외 대상이다(이 세션이 diff의 실행 코드 둘을 읽고 판정했다. 하위 작업으로 가르지 않았다).
+- **`bug-perf-review`**: Critical·Major 0, Minor 1, 오탐 2. 서브에이전트가 어댑터 시험 22개를 돌려 통과를 봤다고 보고했다(보고의 말이고 이 세션이 다시 돌린 것이 아니다).
+  - **유효(Minor), 고쳤다.** `.scratch/web-admin/probes/probe_stale_decision.py`와 `.scratch/web-widget/probes/event_timing.py`가 `ToolSpec`을 `server=` 없이 만든다. 이 세션이 `ToolSpec(` grep으로 두 줄을 확인했다. pyright·pytest 범위 밖이라 게이트에 잡히지 않는다. 두 곳에 `server=PluginName("probe")`를 더했다(`PluginName`은 두 파일이 이미 불러온다). 두 프로브를 다시 돌리지는 않았다.
+  - **오탐.** 셋 이상이 겹칠 때 문구에 처음 겹친 둘만 드는 것은 문서에 적힌 의도다. 겹침을 던지기 전에 열린 서버는 `AsyncExitStack`이 닫는다.
+  - **남은 한계.** core 시험의 `DuplicateTools`는 가짜가 `ValueError`를 직접 던지는 것이라 어댑터와 core를 한 번에 잇는 시험은 없다. 이음새는 코드를 읽어 확인했고 함수로 부르지는 않았다.
