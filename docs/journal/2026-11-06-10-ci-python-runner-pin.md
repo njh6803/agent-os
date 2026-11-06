@@ -34,7 +34,51 @@ PR #479(docs/rag-engine-name)의 CI가 문서와 무관한 `python` 잡 실패�
 
 ## 검증
 
-(커밋 뒤에 적는다)
+커밋 `f5607a77`(`chore: python 잡의 러너를 ubuntu-24.04로 고정한다 (harness 045)`)의 pre-commit이 모두 지났다(백그라운드 출력 파일을 `tail -40`으로 읽었다). 열 단계(check-ticket, zizmor, lint-imports, check-instructions, check-type-escapes, pyright-linux, pyright, run-hooks, pytest 306.6s, web-verify 502.6s)와 마크다운 표·줄 구분 문자·변이 표·커밋 메시지 검사가 Passed이고, ruff 둘과 카나리아 명세·헌법 판 검사는 `(no files to check)`로 Skipped다(`.py`와 명세·헌법 파일이 커밋에 없다). zizmor는 커밋 전에 손으로도 쳐서 지적 없음이었다. 린트 둘(`uv run ruff check .`, `uv run ruff format --check .`)은 `.py`를 바꾸지 않아 손으로 치지 않았다. 인용 대조 경고 5건은 막지 않았고 하나씩 봤다. 대기열 500의 제안 문장 인용(이미 있던 행의 글), 이 일지가 옛 문구를 따옴표로 되짚은 둘(21줄 "일지 2026-11-06-08 '다음'"과 대기열 500의 머리를 줄여 옮긴 43줄), 티켓의 가리킴을 따옴표 모양만 바꿔 옮긴 29줄, 훅 안내문 인용(45줄)이다. 모두 글을 읽는 데 지장이 없어 두었다. `-m llm`·`-m llm_widget`·e2e·사진 비교는 돌리지 않았다. `ci.yml`의 러너 한 줄이 이 PR의 CI에서 그 이미지로 도는지가 수용 기준 2이고, 그 결과는 PR의 검사로 확인한다(아직 푸시하지 않았다).
+
+## PR 직전 리뷰(이어받은 세션, 기준 d0f5a195)
+
+`coderabbit auth status`가 `Seat: not assigned`(Plan Free)라 CLI는 돌지 못했다. 대체 둘을 돌렸다. origin/main은 이 브랜치의 기준에서 움직이지 않았다(`git log HEAD..origin/main`이 비었다).
+
+`/security-review`: 보고할 취약점 없음. 바뀐 것은 `runs-on` 라벨과 주석뿐이라 권한·트리거·`${{ }}` 식·외부 액션 참조가 그대로다.
+
+`bug-perf-review` 서브에이전트: Minor 3건, 코드·CI 단계의 버그·성능 문제는 없음. 잡 안의 다른 단계(`uv` 설치, pyright, 캐시, `rg` 설치 단계)와 어긋남이 없고 다른 `runs-on` 여섯 곳은 그대로다. (1) ADR 0038 12줄의 현재형 문장이 새 `ci.yml`과 어긋난다. (2) 티켓 본문은 "한 줄", 수용 기준은 "주석 두 줄"이다. (3) 티켓 `Status: done`인데 수용 기준 2가 열려 있다.
+
+반영: (2) 티켓 본문을 "두 줄"로 고쳤다. (1)은 셀프 리뷰 "남긴 것"대로 이 PR에서 고치지 않고 PR 본문 "남긴 위험"과 아래 "다음"에 둔다. (3)은 PR의 CI가 돈 뒤 `gh run view --log`로 확인해 기준 2를 닫는다(CI 확인은 PR을 연 뒤라 지금은 닫을 수 없다). 서브에이전트가 접은 오탐 하나(24.04에서 26.04로 넘어갈 때 `setup-uv` 캐시를 되살려 깨질 가능성)는 근거가 없어 그대로 둔다.
+
+## 인계(커밋 뒤)
+
+세션 컨텍스트가 인계 문턱을 넘어(계기 문장은 256,758 토큰) `커밋 뒤` 경계에서 넘긴다. 이 세션을 연 지시문의 "이어받을 상태"는 `인계: PR 연 뒤`로 시작해 지금 경계와 다르고, 곁 세션도 아니다(`get_session`의 `self`에 `parentSessionId`가 없다). 계기를 낸 커밋은 성공했다. 작업 트리는 이 일지의 "검증"·"인계"를 쓴 뒤라 이 일지만 커밋하지 않았다. 푸시하지 않았고 이 브랜치에 PR은 없다.
+
+이 세션은 PR #479(`docs/rag-engine-name`)를 이어받아 봇 회차를 시작했다가 `python`·`verify` 실패를 만났고, 사용자가 "러너를 24.04로 고정"을 골라 이 브랜치로 옮겨 왔다. 그래서 새 세션이 이을 일이 둘이다. 이 브랜치의 PR을 병합하는 것(먼저), 그다음에 #479를 잇는 것이다.
+
+제목을 `chore/045-ci-python-runner-pin (인계함)`으로 바꿨다(바꾸기 전 제목은 `docs/rag-engine-name`). 이 세션이 띄운 백그라운드 작업은 없다(CI 대기와 커밋은 끝났고 서브에이전트 둘은 보고를 냈다). 워크트리 잠금을 푸는 명령은 `045-ci-python-runner-pin`과 `rag-engine-name` 둘 다 `is not locked`로 끝나 넘어갔다.
+
+open-session을 부른다 2026-11-06T08:17:51Z #479의 상태는 `C:/project/agent/.claude/worktrees/rag-engine-name/docs/journal/2026-11-06-08-rag-engine-name.md`의 "이어받은 세션(PR 반영·병합부터)" 절에 있고 그 절은 커밋하지 않았다(그 워크트리에 있다).
+
+### 남은 단계
+
+(가) 이 브랜치(`chore/045-ci-python-runner-pin`). 1. PR 직전 리뷰. `coderabbit auth status`가 `Seat: not assigned`이면 CLI는 돌지 못한다. 그때는 대체 둘인 `/security-review`와 `bug-perf-review` 서브에이전트를 돌려 두 보고를 이 일지에 옮기고 Critical·Major를 고친다. 2. 이 일지를 커밋해 푸시한다. 3. PR을 연다. 면제 PR이 아닌 chore 티켓 PR이므로 템플릿 체크리스트를 채우고, 본문 "남긴 위험"에 ADR 0038 12줄의 현재형 문장과 후속 티켓 둘을 적는다. 4. `@coderabbitai review` 코멘트를 남기고 `uv run python tools/wait_ci.py <번호>`를 백그라운드로 띄운다. 5. 수용 기준 2(`python` 잡 로그에 `Image: ubuntu-24.04`와 `Setting up ripgrep (14.1.0-1)`이 보이고 `python`·`verify`가 초록)를 `gh run view --log`로 확인해 이 일지와 티켓에 적는다. 6. `merge.md` "워크트리에서 병합할 때" 1~4로 병합한다.
+
+(나) 병합 뒤 PR #479(`docs/rag-engine-name`). 1. `C:/project/agent/.claude/worktrees/rag-engine-name`에 `EnterWorktree(path)`로 들어간다. 그 워크트리의 일지 `docs/journal/2026-11-06-08-rag-engine-name.md`에 커밋하지 않은 변경(이어받은 세션 절)이 있으니 먼저 커밋하고 `git merge origin/main`을 한다. 2. 그 일지의 "다음"과 retro를 마친다. "다음"에 적을 것: answer-eval(`.scratch/plan.md` 32줄)의 Blocked by가 `rag-engine:core`만인데 수락은 실제 문서 검색 서버 이미지를 요구하고 그 이미지는 `release-image`가 만든다(제안서를 그대로 옮겼고 answer-eval의 설계 인터뷰가 먼저 본다). 이 CI 실패가 낳은 후속 둘은 새 harness 티켓으로 쓴다: 훅 시험이 ripgrep 14와 15 모두에서 맞게 고치고 러너 고정을 풀지 정하는 일, ADR 0038 이력과 12줄 포인터(사용자 승인). 3. 푸시한 뒤 첫 `@coderabbitai review` 코멘트를 다시 남긴다(이 세션이 07:58 UTC쯤 남긴 것은 옛 헤드 `ccfbd2c`에 대한 것이다). `wait_ci`를 띄우고 봇 지적을 반영한다(첫 회차의 Minor·Nit은 지적마다 판단, 둘째부터 Critical·Major만). 4. 병합 직전 `tools/sibling_overlap.py`를 다시 치고, 형제 워크트리 `04-runtime-enforces-rules-per-tool-call`의 일지 2026-11-06-09가 먼저 병합되면 일지 번호를 옮긴다. 병합은 `merge.md` "워크트리에서 병합할 때"대로 한다.
+
+대기열 500에는 이 세션이 2회차를 더했다(이 브랜치의 커밋에 들어 있다). 열린 PR #478(approval-rules 04)도 같은 `python` 잡이 실패했을 것이라, 이 브랜치가 병합된 뒤 그쪽 세션이 main을 합쳐 다시 돌려야 한다.
+
+### 인계 지시문
+
+```
+다음 작업: .scratch/harness/issues/045-ci-python-runner-pin.md. CI의 python 잡을 ubuntu-24.04로 고정하는 PR을 열어 병합하고, 그 뒤 막혀 있던 PR #479(docs/rag-engine-name)를 이어 병합한다
+다음 단계: PR 반영·병합
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: docs/journal/2026-11-06-10-ci-python-runner-pin.md의 "인계(커밋 뒤)" 절의 "남은 단계" (가)부터 잇는다
+브랜치: chore/045-ci-python-runner-pin
+모델: Sonnet 5.5 / high. 2의 잇는 지시문
+읽을 것: docs/journal/2026-11-06-10-ci-python-runner-pin.md 전체. #479는 C:/project/agent/.claude/worktrees/rag-engine-name/docs/journal/2026-11-06-08-rag-engine-name.md의 "이어받은 세션(PR 반영·병합부터)" 절과 gh pr view 479 --json body
+이어받을 상태: 인계: 커밋 뒤. docs/journal/2026-11-06-10-ci-python-runner-pin.md. 커밋 f5607a77까지 했고 푸시하지 않았으며 이 브랜치에 PR이 없다. 남은 단계는 그 일지 "인계(커밋 뒤)" 절의 "남은 단계"에 있다. 그 절은 커밋하지 않았다
+확인할 선행 조건: 없음
+이번 요청 범위: PR과 병합까지(#479의 ADR 0048 이력은 사용자 승인을 받았다. 러너 고정은 사용자가 "러너를 24.04로 고정"을 골라 승인했다)
+```
+
 
 ## 회고
 
