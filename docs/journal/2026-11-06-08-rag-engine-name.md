@@ -18,7 +18,7 @@
 ## 대조(고치기 전)
 
 - 큰 어긋남. 앞 판은 PR #473으로 이미 반영되어 병합되었다(일지 2026-11-06-02). PRD 개정은 승인받았고, 제안서의 ADR 셋은 0046·0047·0048로 accepted이며(0044는 approval-rules, 0045는 retro-queue-per-item이 가졌다), plan.md에 새 행이 들어갔고, 제안서 11~13절은 그 일지의 "설계 인터뷰 입력" 절에 있다.
-- 두 판을 `git diff --no-index --word-diff`로 견줬다. PRD 개정안(6절), 위젯 ADR 초안(8절), 10~13절은 같다. 달라진 것은 둘이다. (1) 문서 검색 서버 저장소의 이름이 `rag-engine`으로 정해지고 그 행이 다시 나뉘었다(rag-mcp → core, rag-admin → source-sync와 admin, rag-ops → release-image와 backup-upgrade와 diag-bundle, 1.0에 db-source와 change-log). (2) 5절 접점 표에 "구조화 데이터"(Text-to-SQL은 기준선과 1.0 범위 밖) 줄이 더해졌다. 행 이름은 같은 폴더의 `rag-engine-plan.md` 표(165~177줄)와 맞는다.
+- 두 판을 `git diff --no-index --word-diff`로 견줬다. PRD 개정안(6절), 위젯 ADR 초안(8절), 10~13절은 같다. 달라진 것은 둘이다. (1) 문서 검색 서버 저장소의 이름이 `rag-engine`으로 정해지고 그 행이 다시 나뉘었다(rag-mcp → core, rag-admin → source-sync와 admin, rag-ops → release-image와 backup-upgrade와 diag-bundle, 1.0에 db-source와 change-log). (2) 5절 접점 표에 "구조화 데이터"(Text-to-SQL은 기준선과 1.0 범위 밖) 줄이 더해졌다. 행 이름은 같은 폴더의 `rag-engine-plan.md` 6절 "행" 표와 맞는다(앞 세션이 읽은 판에서는 165~177줄이었고, 15:04 판에서는 "## 6. 행"이 179줄, 표 머리가 183줄, 행 열둘이 185~196줄이다. PR 직전 버그 축이 `grep -n "^## "`로, 이어받은 세션이 같은 명령과 `sed -n '183,196p'`로 봤다).
 - 둘째 판도 앞 판의 전제를 들고 있어 그대로 따르지 않는 곳: approval-rules를 슬라이스 10·pilot-release 뒤로 미루는 것(어제 "지금 자리에서 계속"을 골랐고 지금 `in-progress`, 티켓 01 #475·02 #476 병합), ADR 번호 0044~0046, install-package(→ deploy-package), "주소 모양 MCP 서버"(→ 원격 MCP 서버), doc-qa-agent의 Blocked by(approval-rules가 든다), pilot-release 알려진 한계의 "운영자 승인 규칙 없음"(빠졌다).
 - 1절의 사실. `403c9e9` 뒤로 origin/main은 `e9bbfcc`이고, 일지 2026-11-06-02가 대 본 `83a66cd` 뒤의 코드 변경은 approval-rules 01·02뿐이다(`git diff --stat 83a66cd..origin/main -- src plugins uv.lock pyproject.toml openapi.json`). 걸리는 사실을 다시 봤다. `ModelProvider`는 `ANTHROPIC` 하나, `run.py` 1009줄의 `self._tools.connect`, `RunFinished`는 `output` 하나, `uv.lock`의 mcp 2.3.0, Dockerfile 없음. `C:\project`에 rag-engine 저장소는 없다.
 - `rag-server:`가 든 살아 있는 문서: `.scratch/plan.md` 32·35·38·43·59줄(33·34줄은 접두사 없는 옛 행 이름 `rag-ops`만 든다. 처음에는 일곱 줄 모두 `rag-server:`가 든다고 적었고, 이어받은 세션의 셀프 리뷰 두 축이 `git grep`으로 다시 세어 고쳤다), ADR 0046 29줄, ADR 0048 19줄, `CONTEXT.md` 177줄(`git grep`, 일지 제외). ADR 0046 47줄은 첫 판의 행 이름 다섯(bootstrap, rag-mcp, rag-admin, search-eval, rag-ops)을 들고 있는데 `rag-server`로만 grep해 놓쳤고, 같은 셀프 리뷰가 잡았다(아래 "셀프 리뷰"). `tests/test_plan_status.py`는 Blocked by 칸을 보지 않는다(21줄 독스트링).
@@ -153,3 +153,58 @@ plan.md를 고친 뒤 `uv run python tools/run_checks.py`를 워크트리에서 
 ## 커밋
 
 첫 커밋(`git commit -F`)은 pre-commit의 검사를 모두 지나고(열 단계와 인용 대조·헌법 판 검사. 헌법 판은 `(no files to check)Skipped`) commit-msg 훅에서 "제목 79자 > 72자"로 막혔다(로그를 `tail`로 읽었다). 제목을 67자로 줄였다. 인용 대조 경고 10건은 하나씩 봤다. 둘(42줄의 선택지 설명 인용에서 "과 용어집 177줄의"가 빠진 것, 109줄의 "두 행(answer-eval, deploy-package)"이 ADR 글과 다른 풀어 쓴 말인 것)을 고쳤고, 나머지 여덟은 바뀌기 전의 옛 글(PRD 상태 줄, ADR 0048 초안의 두 문구, plan.md 59줄의 옛 접두사 문장)과 저장소 밖 문서(제안서 둘째 판 293줄, `rag-engine-plan.md` 9줄, 제안서 5절의 SQL 커넥터 문장, `gh`의 오류 문구)를 글자 그대로 옮긴 것이라 둔다. 그 커밋 명령 뒤에 인계 계기(`hook_handoff`, 컨텍스트 328,990 토큰, 경계 `커밋 뒤`)가 왔지만 계기를 낸 명령이 실패해 `handoff.md` 1의 첫 줄(인계하지 않는 때)대로 넘기지 않고 이었다. 이 세션은 곁 세션이 아니다(`get_session`의 `self`에 `parentSessionId`가 없다).
+
+## 인계(커밋 뒤)
+
+세션 컨텍스트가 인계 문턱을 넘어(계기 문장은 363,435 토큰) `커밋 뒤` 경계에서 넘긴다. 둘째 시도에서 들어간 커밋 `0a0f3bba`(제목 67자. 첫 시도는 commit-msg 훅에 막혀 커밋이 만들어지지 않았으므로 이 브랜치의 커밋은 이 하나다)는 pre-commit을 모두 지났다. 열 단계와 인용 대조·변이 표 검사는 Passed이고, ruff 둘과 카나리아 명세·헌법 판 검사는 `(no files to check)`로 Skipped다(`.py`와 명세·헌법 파일이 커밋에 없다. ruff 둘은 "검증" 절대로 손으로 쳐 0이었다). 인용 대조는 경고 9건을 냈고 막지 않았다. 첫 커밋의 10건에서 둘을 고쳤고, 고친 것을 적은 "커밋" 절의 155줄이 바뀌기 전 문구를 따옴표로 인용해 하나가 늘었다. 아홉 모두 바뀌기 전의 옛 글(PRD 상태 줄, ADR 0048 초안의 두 문구, plan.md 59줄의 옛 접두사 문장, 이 일지가 고친 옛 문구)과 저장소 밖 문서·`gh` 오류 문구를 글자 그대로 옮긴 것이라 둔다. 작업 트리는 깨끗하고(`git status --short`가 비었다) 푸시하지 않았으며 이 브랜치에 열린 PR은 없다(`gh pr view docs/rag-engine-name --json state`가 PR이 없다고 답했다). 이 세션의 제목은 `docs/rag-engine-name`이었다. 이 세션은 곁 세션이 아니다(`get_session`의 `self`에 `parentSessionId`가 없다). `handoff.md` 1의 다섯에 들지 않아 넘긴다. 이 세션이 띄운 백그라운드 작업은 없다. 남은 단계는 아래 지시문의 "이어받을 상태"에 있다.
+
+### 인계 지시문
+
+```
+다음 작업: 기능 rag-engine-name. 제안서 둘째 판이 정한 문서 검색 서버 저장소 이름(rag-engine)을 저장소 절차대로 반영한다(셀프 리뷰, ADR 0048 이력 승인, plan.md, PR)
+다음 단계: 설계 인터뷰
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: docs/journal/2026-11-06-08-rag-engine-name.md의 "사용자 프롬프트" 절의 요청을 "인계 전 상태"의 남은 일 1부터 잇는다. 제안서는 C:\Users\User\Downloads\agent-os-rag-baseline-plan (1).md
+브랜치: docs/rag-engine-name
+모델: Fable 5.1 / xhigh. 2의 잇는 지시문
+읽을 것: docs/journal/2026-11-06-08-rag-engine-name.md 전체. "인계 전 상태"의 남은 일 1~3과 4의 둘째 셀프 리뷰·검증·커밋은 끝났고, "이어받은 세션"부터 "인계(커밋 뒤)"까지가 이 세션의 기록이다. 제안서 둘째 판은 지금 C:\Users\User\Downloads\agent-os-rag-baseline-plan.md(15:04)이고 "(1)" 파일은 없다
+이어받을 상태: 인계: 커밋 뒤. docs/journal/2026-11-06-08-rag-engine-name.md. 커밋 0a0f3bba(docs: 문서 검색 서버 저장소 이름을 ADR 0048 이력과 plan.md에 반영한다 (rag-engine-name))까지 했고 푸시하지 않았으며 열린 PR은 없다. 남은 단계: PR 직전 리뷰의 대체 둘(CodeRabbit CLI는 `Seat: not assigned`라 돌지 못했다. `/security-review`는 커밋 뒤 origin/main을 합친 상태에서, `bug-perf-review` 서브에이전트는 나란히. 두 보고를 일지에 옮기고 Critical·Major를 고친 뒤 커밋), 푸시, PR(docs/<slug> 면제 PR. 템플릿의 체크리스트에 CLI가 돌지 못한 것과 대체 둘의 결과를 적는다), `@coderabbitai review` 코멘트, merge.md 2~4의 "워크트리에서 병합할 때", 일지 "다음", retro, next-session. `tools/sibling_overlap.py`가 커밋 전에 알린 것 둘: 형제 워크트리 04-runtime-enforces-rules-per-tool-call에 일지 2026-11-06-09가 있어 그쪽이 먼저 병합되면 이 일지의 번호를 옮긴다(병합 직전에 다시 친다), 워크트리 mcp-shutdown-spec도 .scratch/plan.md를 고쳐 나중에 병합하는 쪽에 글자 충돌 후보다
+확인할 선행 조건: 없음
+이번 요청 범위: PR과 병합까지(ADR 0048 이력은 사용자 승인을 받았다)
+```
+
+제목을 `docs/rag-engine-name (인계함)`으로 바꿨다(바꾸기 전 제목은 `docs/rag-engine-name`). 이 세션이 띄운 백그라운드 작업은 없어 멈출 것이 없다. `git worktree unlock C:/project/agent/.claude/worktrees/rag-engine-name`은 `is not locked`로 끝나 `handoff.md` 4대로 넘어갔다. 이 문장을 `printf`로 바로 일지에 더하려 하자 워크트리 가드가 명령 글자 속의 `git worktree unlock`을 보고 거부해, 파일로 써서 `cat`으로 붙였다.
+
+open-session을 부른다 2026-11-06T07:18:27Z
+
+## 이어받은 세션(PR 직전 리뷰부터)
+
+인계 지시문대로 새 세션이 제목을 `docs/rag-engine-name`으로 바꾸고 워크트리 `C:/project/agent/.claude/worktrees/rag-engine-name`에 들어갔다(`git worktree list`에서 그 브랜치가 체크아웃된 자리를 찾았다).
+
+- 상태. HEAD는 `0a0f3bba`이고 origin/main은 `d0f5a195` 그대로라(`git fetch origin main` 뒤 `git log --oneline -3 origin/main`으로 봤다) 이 브랜치는 origin/main 바로 위의 커밋 하나다. 합칠 것이 없어 `/security-review`의 전제(커밋 뒤 origin/main을 합친 상태)는 이미 차 있다. 작업 트리에는 앞 세션이 커밋하지 않은 이 일지의 "인계(커밋 뒤)" 절이 있다(`git status --short`). 제안서 둘째 판은 지시문대로 `Downloads/agent-os-rag-baseline-plan.md`(15:04)이고 "(1)" 파일은 없다(`ls -la`).
+- 좌석. `coderabbit auth status`를 다시 쳤다. `Plan: Free`, `Seat: not assigned` 그대로라 CLI 축은 비었고 대체 둘로 간다.
+- 형제. `uv run python tools/sibling_overlap.py`는 `번호 겹침 없음`이고, 다음 빈 번호는 일지 `2026-11-06-10`·대기열 581·티켓 045(아직 어디에도 없는 번호라 코드 스팬에 넣었다. 그 도구가 그렇게 안내했다), 이름순으로 앞서는 형제는 워크트리 04-runtime-enforces-rules-per-tool-call의 일지 2026-11-06-09 하나, 함께 고친 파일은 워크트리 mcp-shutdown-spec의 `.scratch/plan.md`였다. 열린 PR은 없다(`gh pr list --state open`이 빈 목록을 냈다).
+
+## PR 직전 리뷰(대체 둘)
+
+`bug-perf-review` 서브에이전트(기준 d0f5a195, 밀 주장 여섯)와 내장 `/security-review`를 나란히 돌렸다.
+
+### /security-review
+
+내장 명령의 1단계(취약점 식별 서브태스크)에 저장소 규약(PR 템플릿 체크리스트의 "설계 문서의 침묵이 곧 구현의 침묵")을 함께 넘겨, 지시의 HARD EXCLUSIONS 가운데 "Insecure documentation"은 글투와 설명 부족에만 적용하고, 설계 문서의 결정·Blocked by·신뢰 경계가 그대로 구현되면 CWE가 되는 자리는 보게 했다. 결과는 찾은 것 없음(No findings)이고, 식별이 0건이라 2·3단계(거짓 양성 거르기와 신뢰도 8 미만 제외)는 돌 것이 없었다. 서브태스크가 따라가 본 것: 바뀐 파일 여섯과 작업 트리의 일지 추가분을 ADR 0046·0048 본문, `CONTEXT.md`의 신뢰 수준·도구 결과·주체·사이트 항목, plan.md의 바뀌지 않은 행(approval-rules, local-model, mcp-http, doc-qa-agent, mcp-trust, value-masking)과 대 봤다. Blocked by 셋의 대응(answer-eval은 1:1, deploy-package는 ADR 0048 이력의 분할 셋과 글자 그대로, stale-warning은 접두사만)에서 agent-os 쪽 선행 행은 하나도 빠지지 않았고, 보안 결정이 든 내용 칸(검색 도구를 허락하는 규칙 파일, 토큰은 환경 변수, 443 하나, 진단 묶음에 비밀 값 없음, 문서 속 지시를 데이터로)의 글자는 바뀌지 않았다. 신뢰 경계 문장(검색 결과는 최종 사용자 입력과 같은 신뢰 수준, MCP로 읽기 도구만, `_meta` 주체의 범용 형식)은 이 diff가 건드리지 않았고, 포인터 셋은 옛 문장을 이력으로 넘기기만 해 옛 결정과 새 결정 사이에 구현자가 더 약한 쪽을 고를 어긋남이 없다. PRD의 구조화 데이터 질의 미룸과 ADR 0048 이력의 1.0 db-source(다른 저장소의 행) 사이의 긴장은 범위 서술이라 CWE 경로로 이어지지 않는다고 판정했다(신뢰도 0.7 미만, 보고하지 않음). 일지와 이력에 실린 값은 경로·계정 이름·`Seat`·`Plan` 줄·토큰 수뿐이고 비밀 값은 없다(원칙 V). 고칠 것 없음.
+
+### bug-perf-review
+
+기준 d0f5a195, 범위 파일 여섯(전부 문서, 여섯 모두 따라갔다), 도구 호출 37, 백그라운드 작업 없음. Critical·Major 없음, Minor 셋(유효 둘, 보류 하나), 오탐 넷.
+
+- 유효 Minor — 이 일지 21줄. `rag-engine-plan.md` 표를 "165~177줄"로 적었는데 지금 파일(15:04)에서는 "## 6. 행"이 179줄, 표 머리가 183줄, 행 열둘이 185~196줄이다(리뷰가 `grep -n "^## "`로 봤고, 이 세션이 같은 명령과 `sed -n '183,196p'`로 다시 봤다. 165~177줄은 5절 끝 근처다). 앞 세션이 읽은 판은 지금과 달랐을 수 있다(두 파일 모두 15:04에 다시 저장되었다). 고침: 절 이름으로 가리키고 두 판의 줄 번호를 함께 적었다.
+- 유효 Minor — 이 일지 159줄(커밋되지 않았던 "인계(커밋 뒤)" 절). "둘째 커밋 `0a0f3bba`"라고 썼지만 이 브랜치의 커밋은 그 하나다(`git log --oneline origin/main..HEAD`가 한 줄을 냈다). 첫 시도는 commit-msg 훅에 막혀 커밋이 만들어지지 않았다(155줄). 이어받는 세션이 "첫 커밋"을 찾거나 둘을 합치려 들 수 있다. 고침: "둘째 시도에서 들어간 커밋"으로 고치고 커밋이 하나라고 덧붙였다.
+- 보류 Minor — `.scratch/plan.md` 32줄. answer-eval이 `rag-engine:core`만 기다리는데 수락 문장은 "실제 문서 검색 서버 이미지에 공개 문서 묶음을 넣고 돌린 평가 세트"를 요구하고, 그 저장소에서 이미지를 만드는 행은 release-image(슬라이스 2)이며 core는 HTTP 서버다(`sed -n '32p'`로 수락 문장을, `rag-engine-plan.md` 6절 표로 행을 봤다). 제안서 둘째 판 143줄도 같은 Blocked by와 같은 수락 문장이라 이번 변경이 만든 문제가 아니라 제안서를 그대로 옮긴 것이고, 첫 판의 `rag-mcp`가 어디까지 맡았는지는 남아 있지 않아 이번 이름 바꿈이 뜻을 바꿨는지는 가릴 수 없다. 사용자가 "이름 바뀐 곳만 고친다"를 골랐으므로 이 PR에서는 두고, answer-eval의 설계 인터뷰가 먼저 볼 것으로 이 일지 "다음"과 PR 남긴 위험에 적는다.
+
+요청받은 확인은 모두 맞았다. Blocked by의 행 이름 다섯(core, release-image, backup-upgrade, diag-bundle, doc-freshness)이 `rag-engine-plan.md` 6절 표에 있다. `tests/test_plan_status.py`는 Blocked by 칸을 보지 않고 `.py` 가운데 그 칸을 읽는 곳도 없다. `uv run python tools/check_adr_pointers.py`는 출력 없이 끝났고 포인터 셋은 `.claude/rules/adr.md` 13줄 모양이며 제목이 ADR 0048의 `###` 줄과 글자 그대로 같다. `git diff --check`도 깨끗하다. `CONTEXT.md` 177줄 _Avoid_는 지금 plan.md와 맞는다. 살아 있는 문서의 옛 이름은 plan.md 59줄, ADR 0046 29·47줄, ADR 0048 19·48줄 다섯 자리뿐이고 모두 포인터나 대응 설명이 붙은 자리다. plan.md의 일곱 줄 변경(7행 추가·7행 삭제)은 행을 더하거나 지우지 않았다.
+
+밀 주장 여섯의 대조. (1) 행 대응 가운데 rag-ops의 분할 셋은 옛 plan.md 글(33·34줄이 백업과 진단을, deploy-package가 rag-ops를 기다린 것)과, rag-mcp→core는 answer-eval의 옛 Blocked by와, bootstrap 빠짐은 제안서 293줄의 일곱 행 목록과 맞았다. rag-admin→source-sync·admin은 첫 판이 저장소에도 Downloads에도 없어 대 보지 못했다(앞 세션의 word-diff에 기댄다. 커밋 메시지의 남긴 위험과 같다). (2) 킥오프 런북은 `rag-engine-plan.md` 9줄과 제안서 293줄이 들고 `KICKOFF.md`는 루트에 추적되어 있다. (3) 1.0 열은 제안서 2절 표의 rag-engine 1.0 칸이 "hwp-binary, doc-permission, doc-freshness, db-source, change-log"라 둘이 들어 있는 것까지 확인했고, "더해졌다"는 변화는 첫 판이 없어 대 보지 못했다. ADR 0046에도 그 저장소의 1.0 행 목록이 없다. (4) stale-warning은 43줄 diff가 접두사만 바뀐 것이다. (5) 59줄 세 문장은 맞고, 프론티어는 approval-rules·local-model·mcp-http·pilot-portal 넷 그대로이며 바뀐 Blocked by 행 셋은 모두 다른 선행 행도 기다리는 todo라 풀리거나 새로 막힌 행이 없다. (6) "이어받은 세션"의 명령 결과는 `git diff --name-only e9bbfcc9 d0f5a195`에 plan.md가 없고 origin/main이 d0f5a195이며 두 파일이 15:04인 것으로 맞았다(`gh`는 다시 치지 않았다).
+
+오탐 넷은 리뷰가 근거를 적어 닫았다. PRD 24줄의 "그런 데이터를 색인하지 않는다"는 `rag-engine-plan.md` 126~128줄이 SQL 커넥터를 "데이터베이스에 든 글"로 한정해 db-source와 모순되지 않는다. 인계 지시문이 첫 지시문의 "시작 프롬프트"·"다음 단계"를 되풀이한 것은 `handoff.md` 38줄의 모양이다. PRD 상태 줄의 "개정 두 번"은 앞선 셀프 리뷰가 다룬 해석 문제이고 사용자가 승인한 문장이다. 일지 23줄의 "코드 변경은 approval-rules 01·02뿐"은 그때의 origin/main(e9bbfcc)을 서술한 기록이다.
+
+다시 돌린 명령: 일지만 고쳐 다시 돌릴 검사가 없고, 커밋의 pre-commit으로 갈음한다. PR 직전 리뷰를 반영하며 새로 쓴 문장은 이 일지 21줄의 두 판 줄 번호와 159줄의 "둘째 시도에서 들어간 커밋"이고, PR 리뷰어 참고에 적는다.
