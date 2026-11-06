@@ -97,3 +97,22 @@ open-session을 부른다 2026-11-06T07:24Z
 - `/security-review`: 취약점을 찾는 서브태스크가 지적 없음을 보고했다. 후보가 없어 거짓 양성을 거르는 서브태스크는 돌리지 않았다. 참고로 적힌 것 하나(확신도 7 미만)는, 규칙 줄의 도구 칸 패턴이 `[^:\s]+`라서 이름에 `:`나 공백이 든 MCP 도구는 정확한 이름의 deny 줄을 쓸 수 없다는 것이다. 우회 경로가 아니고 하드닝이라 이 PR에서 고치지 않는다. 와일드카드 deny는 맞는다고 보고했다. 이 문장은 서브에이전트의 보고를 옮긴 것이고 이 세션이 그 패턴을 읽지 않았다.
 - `bug-perf-review`: 유효 0 · 오탐 3 · 보류 0. 알려진 틈 셋(05의 몫)은 새 지적이 아니라고 분류했다. 오탐 셋은 `tools()`를 호출마다 다시 부르는 비용, 규칙 파일 읽기의 `PermissionError` 동기 재시도(`read_disabled`와 같은 기존 설계), 재생 구간이 규칙이 지금 deny여도 기록을 돌려주는 것(의도이고 문서화)이다. 이 보고는 서브에이전트가 `tests/core/test_run.py`의 24건과 `tests/channel`·`test_main.py`·`test_calc_plugin.py`·`test_server.py`를 돌려 통과를 봤다고 적었다(이 세션이 다시 치지 않았다). `tools/canary.py --shape`는 인자를 잘못 주어 보지 못했다고 적었다. 카나리아 명세 모양은 커밋의 pre-commit이 이미 통과했다.
 - 두 보고 모두 지적이 없어 고친 것도, 남긴 것도 없다.
+
+## PR 봇 회차와 병합 (셋째 세션)
+
+- PR 478을 열고 `@coderabbitai review`를 요청했다. CodeRabbit의 첫 리뷰가 `core/run.py`에 Major 셋을 냈다(PR의 인라인 코멘트를 `gh api`로 읽었다). claude-review는 Critical·Major 0, Minor 둘과 Nit 둘이었다.
+- CI의 `python` 잡이 `tests/tools/test_hook_env_read_rg.py`의 `{{.env}}` 한 건으로 두 번 실패했다(한 번 다시 돌려도 같았다). 이 PR과 무관했다. 문서만 바꾼 PR 479도 같은 시험에서 같은 모양으로 실패했다. 원인은 다른 세션의 티켓 harness 045가 적었다: `ubuntu-latest`가 ripgrep 14.1.0의 `ubuntu-24.04`에서 15.1.0의 `ubuntu-26.04`로 넘어갔다(티켓 본문을 읽었고 이 세션이 rg 판을 재지 않았다). PR 480이 `python` 잡만 `ubuntu-24.04`로 못 박아 병합되었고, 이 세션이 `origin/main`을 합쳐(커밋 `3c47799a`) CI를 다시 돌려 초록을 `wait_ci.py`의 끝 줄로 봤다.
+- CodeRabbit의 둘째 `@coderabbitai review`는 "Review rate limited"로 끝났다(PR 코멘트에서 읽었다). 이 PR의 CodeRabbit 리뷰는 첫 회차 하나다.
+
+판정(CodeRabbit Major 셋, 모두 첫 회차):
+- `run.py` 611행, 재개 때 `RunPaused.server`와 현재 서버를 대조하지 않는다: 티켓 04가 적은 틈 셋째이고 05가 닫는다. PR 본문과 `core.md`가 이 틈을 이미 적었다. 04만 병합된 채 멈추면 05를 먼저 한다.
+- `run.py` 619행, `secret_args` 도구가 ask·default에 걸리면 멈춘 뒤 승인 시점에 실패한다: 티켓 04가 적은 틈 첫째이고 05가 닫는다. 저장소의 플러그인과 e2e 꾸러미에는 그런 도구가 없다(티켓 04, to-tickets 시점의 Grep).
+- `run.py` 1366행에 달린 코멘트, 한 호출이 `_Paused`를 내도 `asyncio.gather`로 함께 부른 형제 호출은 계속 돌아 `tool_called`가 기록되지 않고, 재개하면 같은 부작용이 다시 실행될 수 있다: 이 PR이 만든 동작이 아니다. `_Paused`와 `gather`의 겹침은 main(`d0f5a195`)에도 있었고(`git show`와 grep으로 봤다), `_relay` 독스트링이 함께 부른 호출은 맞물림 밖에서 겹쳐 돈다고 이미 적는다. 이 PR이 바꾼 것은 멈추는 계기(ask·default가 멈춤에 든다)뿐이다. 고치려면 멈춤의 설계를 건드려 큰 일이다(CodeRabbit도 Heavy lift로 표시했다). 이 세션은 CodeRabbit이 짚은 시나리오를 재현하지 않았다.
+
+claude-review의 Minor·Nit(첫 회차 판단): `_call`이 길다는 것은 05가 서버 대조를 더할 때 가른다(05 티켓의 몫으로 넘긴다). `DEFAULT_SERVER`가 시험 세 파일에 따로 있다는 것은 03의 선택을 그대로 둔 것이다(위 "묻지 않고 정한 것"). `recorded` 대입은 셀프 리뷰가 이미 `rule`·`recorded`로 나눠 고쳤다. Nit 둘(`tools()` 선형 훑기, `_prepare` 독스트링의 괄호)은 고치지 않는다. 둘째 claude-review 회차는 Critical·Major 0이었다.
+
+## 다음
+
+- 05(`.scratch/approval-rules/issues/05-checks-before-run-after-connect-and-on-resume.md`, 서버 대조와 검사 둘)를 먼저 한다. 04가 병합되었으므로 승인 없이 도구가 도는 길(둘째·셋째 틈)이 main에 열려 있다. 05가 04의 `_call`이 길어진 것(claude-review의 Minor)을 가르는 때이기도 하다.
+- 뒤로 넘긴 일 하나: 함께 부른 도구 호출 중 하나가 멈춤을 낼 때 형제 호출의 부작용과 `tool_called` 기록이 어긋나는 문제(CodeRabbit Major, run.py 1366행). 대기열 행이나 ADR로 따로 다룬다. 이 PR이 만든 것이 아니라 `_Paused`와 `gather`가 있던 때부터의 설계다.
+- 이 세션은 사용자의 말에 따라 병합 뒤 다음 지시문을 내지 않고 멈춘다.
