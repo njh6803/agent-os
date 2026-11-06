@@ -79,8 +79,9 @@ def test_규칙은_세_꼴대로_도구에_맞거나_안_맞는다(
 
 def test_이름이_별표인_도구에도_서버_전체_규칙은_맞고_맨_이름은_별표_글자_그대로다() -> None:
     """콜론 뒤의 `*`는 언제나 서버의 모든 도구다. 이름이 `*`인 도구 하나만 가리키는 표기는 없고,
-    그런 도구가 있어도 서버 전체 규칙에 함께 든다(spec 이 받아들인 잔여). 맨 이름 `*`는 글자
-    그대로 이름이 `*`인 도구에만 맞고 와일드카드가 아니다."""
+    그런 도구가 있어도 서버 전체 규칙에 함께 든다(spec 이 받아들인 잔여). 값 `Rule`은 도구 이름을
+    글자 그대로 견줄 뿐이라 `*`를 와일드카드로 읽지 않는다. 규칙 파일은 맨 이름의 `*`를 읽을 때
+    거부하므로(어댑터의 규칙 줄 패턴) 이 값은 파일에서 나오지 않고, 값의 동작만 고정한다."""
     assert _whole(EVERYTHING).matches(server=EVERYTHING, tool="*")
     assert _bare("*").matches(server=EVERYTHING, tool="*")
     assert not _bare("*").matches(server=EVERYTHING, tool="add")

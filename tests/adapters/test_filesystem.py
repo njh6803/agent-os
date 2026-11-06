@@ -1467,11 +1467,6 @@ ACCEPTED = (
         Rules(common=_rule_set(deny=(_bare("send.mail-2"),))),
         id="점과 하이픈이 든 도구 이름",
     ),
-    pytest.param(
-        'schema_version = "1"\n[common]\ndeny = ["*", "send_*"]\n',
-        Rules(common=_rule_set(deny=(_bare("*"), _bare("send_*")))),
-        id="맨 이름의 별표는 와일드카드가 아니라 글자 그대로다",
-    ),
 )
 
 
@@ -1535,6 +1530,26 @@ BROKEN_RULES = (
         "common.deny.0",
         "string_pattern_mismatch",
         id="빈 줄",
+    ),
+    # 별표는 `서버:*` 의 꼴로만 쓴다. 맨 이름이나 도구 이름 안의 별표를 와일드카드로 읽을 줄 알고
+    # 적은 줄은 조용히 아무 도구에도 맞지 않으므로(deny = ["send_*"] 가 막지 않는다) 깨진 파일이다.
+    pytest.param(
+        'schema_version = "1"\n[common]\ndeny = ["*"]\n',
+        "common.deny.0",
+        "string_pattern_mismatch",
+        id="맨 별표",
+    ),
+    pytest.param(
+        'schema_version = "1"\n[common]\ndeny = ["rm", "send_*"]\n',
+        "common.deny.1",
+        "string_pattern_mismatch",
+        id="도구 이름 안의 별표",
+    ),
+    pytest.param(
+        'schema_version = "1"\n[agents.calc]\nask = ["everything:send_*"]\n',
+        "agents.calc.ask.0",
+        "string_pattern_mismatch",
+        id="서버에 묶인 도구 이름 안의 별표",
     ),
     pytest.param(
         'schema_version = "1"\n[common]\ndeny = ["Every_Thing:add"]\n',

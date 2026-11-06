@@ -103,6 +103,21 @@ new = '''
 '''
 
 [[mutation]]
+name = "도구 이름이 별표를 받는다"
+tests = ["tests/adapters/test_filesystem.py", "-k", "깨진_규칙_파일은 and 별표"]
+expect = "red"
+expect_output = ["DID NOT RAISE"]
+
+[[mutation.edit]]
+file = "src/agent_os/adapters/filesystem.py"
+old = '''
+_TOOL = r"[^:\s*]+"
+'''
+new = '''
+_TOOL = r"[^:\s]+"
+'''
+
+[[mutation]]
 name = "깨짐 문구가 검증 오류 전문을 싣는다"
 tests = ["tests/adapters/test_filesystem.py", "-k", "모르는_키에_심은_값을"]
 expect = "red"
