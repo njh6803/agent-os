@@ -522,3 +522,69 @@ CLI에는 밀 주장을 넘기는 인자가 없다(`code-review` 6단계). 그�
 
 - 명세 "끝 줄": "닫은 뒤 그 기능의 done 티켓이 하나 이상이면 위 막는 자리대로 pre-commit의 pytest에서 막히므로", "done 티켓이 하나도 없이 닫힌 기능은 시험이 막지 않고 `끝` 줄도 적지 않는다."
 - 명세 "일지 이름": "PowerShell의 `date`는 `Get-Date`의 별칭이라 앞의 명령이 그 셸에서 종료 1로 실패하고, 뒤의 명령은 Bash의 앞 명령과 같은 값을 냈다".
+
+### 커밋과 PR
+
+두 리뷰의 반영을 `docs: retro-queue-per-item PR 직전 리뷰의 지적 다섯을 명세와 티켓에 반영한다`(`8d29cdeb`)로 커밋했다. pre-commit은 통과했다(출력 파일을 `grep`으로 읽었다). 러너의 검사 열이 Passed이고(pytest 327.2s, web-verify 463.9s), 마크다운 표·줄 구분 문자·변이 표·인용 대조·커밋 메시지 검사도 Passed다. ruff 둘은 `.py`가 없어, 카나리아 명세와 헌법 판은 대상 파일이 없어 Skipped였다. ruff 둘은 손으로 쳐 `All checks passed!`, `1304 files already formatted`로 끝났다. 인용 대조 경고 1건은 명세 267행(일지 시험이 앞으로 낼 실패 문장의 제안)이라 둔다. 커밋 직전의 `tools/sibling_overlap.py`가 처음에 이 절의 "다음 빈 번호" 옮김을 없는 일지의 인용으로 짚어(종료 1) 코드 스팬에 넣었고, 다시 친 도구는 0으로 끝났다.
+
+`git push -u origin docs/retro-queue-per-item-spec` 뒤 PR [#481](https://github.com/njh6803/agent-os/pull/481)을 열었다. 본문은 선례 #472의 꼴로 쓰고, 체크리스트에 CLI가 돈 것과 두 리뷰의 결과를 적었다. 앱의 PR 바가 이 세션에 #481을 묶었다(`get_status`가 `bound: true`를 냈다). `@coderabbitai review`는 아직 남기지 않았다.
+
+## 인계 (PR 연 뒤)
+
+PR을 연 명령 뒤에 인계 계기가 왔다(컨텍스트 336,471). 넘기지 않는 때 다섯은 하나도 맞지 않는다(PR이 열렸다, 범위는 티켓까지라 봇 회차와 병합이 남았다, 이 세션의 이어받을 상태는 다른 경계인 커밋 뒤, 인계 못함 줄 없음, `get_session`의 `self`에 `parentSessionId`가 없다). 앞서 커밋 8d29cdeb 뒤에도 인계 계기가 왔는데, 그때는 이 세션의 이어받을 상태가 같은 경계(`인계: 커밋 뒤`)라 넘기지 않고 이었다.
+
+이 세션은 Opus 5.5 / xhigh로 돌았고(`get_session`의 `self`), 제목은 `docs/retro-queue-per-item-spec`이다. 번복한 것은 없다. 고친 것은 위 "CLI 보고"와 "`bug-perf-review` 보고"의 판정이다. 지시문과 달리 대체 둘이 아니라 CLI 축으로 간 까닭은 위 "PR 직전 리뷰"의 첫 문단들이다.
+
+다음 작업: 기능 retro-queue-per-item. ADR 0045를 구현할 명세와 티켓 일곱 장의 PR #481을 봇 회차부터 잇는다
+다음 단계: PR 반영·병합
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /to-spec
+브랜치: docs/retro-queue-per-item-spec
+모델: Sonnet 5.5 / high. 2의 잇는 지시문
+읽을 것: docs/journal/2026-11-06-12-retro-queue-per-item-spec.md의 "PR 직전 리뷰"(CLI 보고, `bug-perf-review` 보고, 커밋과 PR)와 "인계 (PR 연 뒤)" 절
+이어받을 상태: 인계: PR 연 뒤. PR #481을 열었고 `merge.md` 2(봇 회차)부터 한다. 첫 `@coderabbitai review` 코멘트도 새 세션이 남긴다. 커밋하지 않은 변경은 일지 하나(이 세션의 "커밋과 PR"과 이 인계 절)이고, 봇 회차의 반영 커밋에 싣는다. 반영으로 명세 본문을 고치면 서두의 수를 다시 센다(to-spec 3단계). 이 PR이 retro-queue-per-item의 명세·티켓 단계를 닫으므로, 봇 회차 뒤 retro와 일지 "다음"(다음은 막힌 것이 없는 티켓 01)을 쓰고 `merge.md` 3대로 `headRefOid` 대조 전에 푸시한 뒤 4의 "워크트리에서 병합할 때"로 병합한다. retro에 넘길 사건 하나: `coderabbit-review` 정의 1단계는 `Seat: not assigned`면 리뷰 없이 끝나라고 하는데, 이 세션의 CLI는 그 표시에서도 리뷰를 마치고 findings 2를 냈다(대기열 557, harness 티켓 040). 일지 docs/journal/2026-11-06-12-retro-queue-per-item-spec.md
+확인할 선행 조건: 노션 연결은 쓰지 않는다(사용자 결정)
+이번 요청 범위: 티켓까지
+
+제목을 `docs/retro-queue-per-item-spec (인계함)`으로 바꿨고, 멈출 백그라운드 작업은 없었으며(CLI 리뷰, `bug-perf-review`, 커밋은 끝났다), 워크트리 잠금은 이미 풀려 있었다(`git worktree unlock`이 `is not locked`로 끝났다).
+
+open-session을 부른다 2026-11-06T14:29:31Z
+
+## 이어받은 세션 (PR 반영·병합부터)
+
+인계 지시문으로 연 여덟 번째 세션이 이었다(Sonnet 5.5 / high). 사용자 메시지는 그 지시문을 `.claude/skills/to-spec/SKILL.md`를 읽어 따르라는 한 줄로 감싼 것이다. `git worktree list`에서 브랜치가 `.claude/worktrees/retro-queue-per-item-spec`에 있어 `EnterWorktree(path)`로 들어갔고, 커밋하지 않은 변경은 이 일지 하나였다. 제목은 브랜치 이름으로 바꿨다.
+
+## 봇 회차 (PR #481, 헤드 8d29cdeb)
+
+`@coderabbitai review` 코멘트를 남기고 `tools/wait_ci.py 481`을 백그라운드로 띄웠다. 아홉 검사가 모두 초록으로 끝났다(CodeRabbit, claude-review, e2e, e2e-widget, python, ticket, verify, visual, web). 두 봇 모두 이 PR의 첫 리뷰라 둘 다 첫 회차이고, Minor·Nit은 지적마다 판단한다. Critical·Major는 없었다. CodeRabbit 인라인 넷과 Nit 하나, claude-review Minor 하나와 Nit 하나를 봤다(`gh pr view --json comments,reviews`, `gh api .../pulls/481/comments`로 읽었다).
+
+- **CodeRabbit Minor, 티켓 02 `--ref`, 유효로 보고 문장만 더했다.** 이행 전 커밋에는 `.scratch/retro-queue/`가 없어 `--ref`가 오류로 끝난다. 부르는 자리를 `grep`으로 보니 아침 보고(`tools/morning_collect.py`)와 `retro`·`next-session`의 `--ref origin/main`뿐이라 이행 전 커밋을 읽는 곳이 없다. 옛 파일로 돌아가는 갈래는 죽은 갈래라 두지 않고, 티켓 02에 "오류로 끝나고, 부르는 자리는 이행 뒤의 main을 읽는다"를 적었다.
+- **CodeRabbit Minor, 티켓 04 서머타임, 보류.** 서머타임이 끝나는 날 `0159` 일지보다 나중에 만든 `0105` 일지가 이름순으로 앞선다는 지적이다. 이 PC의 시간대는 `date +%z`가 `+0900`이고 한국 표준시에는 서머타임이 없으며(어림, 다른 환경의 세션은 확인하지 않았다), CodeRabbit도 "Low value"로 매겼다. 일지 이름이 로컬 시분인 것은 ADR 0045 결정 7이 정한 것이라 순서 기준을 새로 세우지 않는다. PR 코멘트에 이유를 남긴다.
+- **CodeRabbit Minor, 티켓 04 옛 `-12-`와 새 `-0930-`, 유효로 보고 고쳤다.** 같은 날 옛 이름과 새 이름이 섞이면 이름순은 `-12-`를 `-0930-`보다 뒤에 세워 옛 일지를 고른다. 명세 "최신 일지를 찾는 법"의 이 브랜치의 일지 글머리표와 티켓 04의 같은 줄에 "날짜가 같은 날 옛 꼴과 새 꼴이 섞였으면 새 꼴이 늦다"를 더했고, 티켓 04의 시험에 임시 git 저장소 사례를 더했다. 옛 꼴은 전환일 뒤에 만들 수 없고 새 꼴은 전환 뒤에야 생기므로 이 규칙이 맞다(명세의 상수 규칙을 읽었다).
+- **CodeRabbit Minor, 티켓 04 전환일의 순번 일지, 보류.** 전환일에 순번 꼴로 만든 일지를 정확한 파일명 목록으로만 허용하자는 지적이다. 명세 "일지" 글머리표가 상수를 날짜 하나로 두고, 상수가 앞서 그 사이에 옛 꼴로 만든 일지도 빨강이 되게 한 것이 사용자가 승인한 ADR 0045 이력의 "시험이 고정하는 값" 항목이다. 정확한 이름 목록은 main을 합칠 때마다 옮겨야 하는 값을 하나 더 만든다. 같은 날 순번이 겹치는 일지는 옛 꼴의 겹침 판정이 계속 잡는다. PR 코멘트에 이유를 남긴다.
+- **CodeRabbit Nit, 티켓 02 이행의 필드 대조, 유효로 보고 고쳤다.** 항목 수와 번호 집합이 같아도 승인 칸의 회차가 바뀌면 다음 사건을 잘못 센다. 티켓 02의 이행 글머리표에 "열린 항목과 회차를 이은 항목은 상태·어디로·승인 줄을 옛 칸의 글자와 항목마다 맞대고, 방법과 결과를 적는다"를 더했다.
+- **claude-review Minor, ADR 0045 "단계" 문단의 포인터, 유효로 보고 달았다.** "조각 사이의 순서는 셋이다"로 시작하는 순서 문장들을 이력의 "조각은 차례로 연다" 항목이 바꿨는데 그 문단에만 `(바뀜: …)`이 없었다. `.claude/rules/adr.md`의 "이력이 본문의 문장을 거짓으로 만들면 포인터를 단다"대로 순서 문장 묶음의 끝(`차례로 연다(ADR 0037 …)` 뒤)에 하나 달았다. 본문의 다른 글자는 고치지 않았고, 이력 글은 그대로다. `tools/check_adr_pointers.py`는 출력 없이 끝났다. 명세 서두가 포인터를 다는 본문 자리를 열로 적어 열한 자리로 고쳤다(`grep -o`로 포인터 열한 개를 셌다).
+- **claude-review Nit, 결정 10의 포인터 위치, 보류.** 포인터는 시험 셋의 고정값과 실패 문장을 바꾼 이력 항목의 끝 문장 바로 뒤에 있고, 그 뒤의 면제 모양·경로 거르기·아침 보고 문장은 이 이력이 바꾸지 않았다(이력의 아홉 항목에 그 문장은 없다). 포인터가 문장 중간에 서는 것은 규칙의 "바로 뒤" 때문이다. PR 코멘트에 이유를 남긴다.
+
+반영 뒤 명세 서두의 수를 다시 셌다. 서두 뒤(17행부터)의 `(명세가 정했다)` 마흔, `(사용자가 골랐다)` 다섯, `grep -c "^- 거부한 안\."`의 열여섯이 그대로이고, 서두의 포인터 자리만 열에서 열한 자리로 고쳤다. `tools/check_adr_pointers.py`, `tools/check_md_tables.py`, `tools/check_line_separators.py`는 출력 없이 끝났고 고친 네 파일의 CR 줄은 0이다.
+
+보류 셋(서머타임, 전환일 순번 일지, 결정 10의 포인터)은 모두 뒤의 작업으로 넘기는 일이 아니라 고치지 않는다는 판단이라 "다음"에 적지 않는다.
+
+## 회고
+
+후보 셋을 냈다. 승인 하나, 기각 둘, 넘김 없음.
+
+- **승인, 사건 하나: `coderabbit-review` 정의 1단계가 `Seat: not assigned`면 리뷰 없이 끝나라고 하는데, 이 세션의 CLI는 그 표시에서도 리뷰를 마치고 findings 2를 냈다.** 사건은 위 "PR 직전 리뷰"에 있다(출력 파일을 `grep`으로 읽었다). 대기열 578이 같은 사건을 이미 처방했다(정의 1단계가 `Seat:` 줄이 `not assigned`여도 종료하지 않고 리뷰가 실제로 findings를 내는지로 판정한다). 사다리의 층은 정의 한 줄을 고치는 것이라 지침이다. `tools/queue_open_rows.py --search auth.status --search Seat`로 행 찾기를 쳐 578(열림 3회차), 557(닫힘 2회차), 570(사람 몫)이 나왔고, 578에 회차를 더했다. 578은 4회차가 되었다(도구 출력의 `578(4회차)`). 고침(틀린 사실)은 사건 하나로 반영하는 종류라 문턱을 넘었고, 회차 3 이상이라 `next-session`의 chore 배치 조건이다. 이 세션에서는 반영하지 않는다(spec PR의 범위 밖이다).
+- **기각: `gh pr view --json comments,reviews`와 `gh api .../pulls/481/comments`의 결과가 각각 1만 자를 넘어 컨텍스트에 남았다.** 큰 결과 알림 훅이 두 번 그 사실을 알렸다. 이미 있는 훅이 그 자리에서 알린 것이다.
+- **기각: 워크트리 가드가 `git show HEAD:… | …`를 넣은 `for` 반복을 거부했다.** `CLAUDE.md` 환경 함정이 그 모양을 이미 적고 있고, 앱 가드가 막았으며, 명령을 하나씩 나눠 치자 지나갔다. 사건 없이 가드가 제 몫을 한 것이다.
+
+`만료할 행`은 없었다(`uv run python tools/queue_open_rows.py`와 `git fetch origin main` 뒤 `--ref origin/main`을 붙인 출력이 모두 `만료할 행 … (없음)`이다).
+
+## 다음
+
+이 PR(#481)이 retro-queue-per-item의 명세와 티켓 일곱 장 단계를 닫는다. 구현은 티켓 일곱 장이 차례로 연다.
+
+- **막힌 것이 없는 티켓은 01이다.** `.scratch/retro-queue-per-item/issues/01-retro-threshold-five.md`의 `Blocked by`가 없다. 시작 프롬프트는 `.scratch/retro-queue-per-item/issues/01-retro-threshold-five.md를 구현한다`로, 첫 편집으로 그 티켓의 `Status:`를 `in-progress`로 바꾼다.
+- **차례는 티켓의 `Blocked by`가 정한다**(일곱 장을 `grep`으로 읽었다). 01 뒤에 02(대기열 분할)가 서고, 02 뒤에 03(리뷰 봇 경로 거르기)과 04(일지 이름)가 나란히 열린다. 05(전체 계획 생성)는 03과 04 뒤, 06(헌법 README)은 05 뒤, 07(하네스 티켓 이름)은 06 뒤다. 02는 옛 대기열 파일을 고친 열린 PR이 적은 때에 병합한다(티켓 02 "PR을 연 뒤").
+- **대기열 578(4회차)은 chore 배치 조건이다.** `coderabbit-review` 정의 1단계의 `Seat: not assigned` 갈래를 고치는 harness 티켓이 필요하다. 이 기능의 티켓 01과 파일이 겹치지 않는다. `next-session` 결정표의 chore 배치로 고른다.
+- **명세 서두의 수를 병합 전에 고치는 반영마다 다시 센다.** 지금 값은 정했다 마흔, 골랐다 다섯, 거부한 안 열여섯, ADR 포인터 자리 열한 곳이다.

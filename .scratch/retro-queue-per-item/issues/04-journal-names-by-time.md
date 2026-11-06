@@ -16,7 +16,7 @@
 ### 이름과 최신 일지
 
 - [ ] **이름.** `docs/journal/<YYYY-MM-DD>-<HHMM>-<슬러그>.md`이고 시각은 그 세션이 일지를 만든 로컬 시분이다. 다음 빈 번호를 보라던 문장(`tools/hook_choice_facts.py`, `tools/hook_prompt_directive.py`의 붙여 넣은 지시문 갈래, `code-review`, `next-session` merge.md)과 번호 규칙대로 만들라던 `next-session` handoff.md가 Bash의 `date +%Y-%m-%d-%H%M`과 PowerShell의 `Get-Date -Format yyyy-MM-dd-HHmm`을 가리킨다
-- [ ] **이 브랜치의 일지.** `git diff --merge-base origin/main --name-only --diff-filter=A -- docs/journal/`에 커밋하지 않은 새 일지(`git status --porcelain -- docs/journal/`)를 더한 것이고, 여럿이면 이름의 날짜·시각이 가장 늦은 것이다. 다음 일을 잇는 세션과 retro(`## 회고` 절을 쓸 일지)가 쓴다. squash로 병합된 뒤 main을 합친 브랜치에서 빠지는 것은 명세 "최신 일지를 찾는 법"의 못 보는 것이다. `retro`의 최신 일지 두 곳을 이것으로 고친다
+- [ ] **이 브랜치의 일지.** `git diff --merge-base origin/main --name-only --diff-filter=A -- docs/journal/`에 커밋하지 않은 새 일지(`git status --porcelain -- docs/journal/`)를 더한 것이고, 여럿이면 이름의 날짜·시각이 가장 늦은 것이고, 날짜가 같은 날 옛 꼴(`-12-`)과 새 꼴(`-0930-`)이 섞였으면 새 꼴이 늦은 것이다(이름순으로 고르면 옛 일지가 걸린다). 다음 일을 잇는 세션과 retro(`## 회고` 절을 쓸 일지)가 쓴다. squash로 병합된 뒤 main을 합친 브랜치에서 빠지는 것은 명세 "최신 일지를 찾는 법"의 못 보는 것이다. `retro`의 최신 일지 두 곳을 이것으로 고친다
 - [ ] **main의 최신 일지.** origin/main에 가장 늦게 더해진 일지다. 아침 보고(`tools/morning_sources.py`)는 늦게 더한 커밋부터, 한 커밋 안에서는 이름이 늦은 것부터 읽어 `## 다음`을 든 첫 일지를 쓴다. 이름순으로 고르지 않는다(전환일 하루는 옛 이름과 새 이름이 이름순과 시각순에서 어긋난다)
 - [ ] **인용.** `일지 <날짜>-<NN 또는 HHMM>`은 `docs/journal/<인용>-*.md`로 푼다. 접두 뒤의 하이픈이 `2026-11-06-14`와 `2026-11-06-1432-…`를 가른다. 이 규칙을 `docs/constitution/operations.md`의 일지 규칙에 적는다. 새 CLI는 두지 않는다
 
@@ -38,7 +38,7 @@
 
 ### 시험
 
-- [ ] `tests/tools/test_sibling_overlap.py`에서 일지·순번·이름순 사례와 일지 꼴을 예로 쓴 옮기기 사례를 걷거나 다른 꼴로 옮긴다. merge-base에 순번 일지가 없어도 2로 끝나지 않는 사례와, 일지 인용 `2026-11-06-14`가 `2026-11-06-1432-…`에 맞지 않는 사례를 더한다
+- [ ] `tests/tools/test_sibling_overlap.py`에서 일지·순번·이름순 사례와 일지 꼴을 예로 쓴 옮기기 사례를 걷거나 다른 꼴로 옮긴다. merge-base에 순번 일지가 없어도 2로 끝나지 않는 사례와, 일지 인용 `2026-11-06-14`가 `2026-11-06-1432-…`에 맞지 않는 사례를 더한다. 이 브랜치의 일지를 고르는 사례로, 같은 날 옛 이름 일지(`-12-`)와 더 늦게 더한 새 이름 일지(`-0930-`)가 함께 있으면 새 일지가 걸리는 사례를 임시 git 저장소에서 본다
 - [ ] `tests/tools/test_hook_journal_retro.py`(순번 시험을 이름 꼴 시험으로), `tests/tools/test_hook_choice_facts.py`, `tests/tools/test_run_hooks.py`(번호 저장소 모양)를 고친다. 훅은 순수 함수 시험과 실제 입력 표(`tools/hook_payloads.toml`의 순번 대조 두 사례, choice_facts 사례)를 `tools/run_hooks.py`로 돌린다
 - [ ] **아침 보고.** 임시 git 저장소에 `origin/main` ref를 두고, 가장 늦게 더한 일지에 `## 다음`이 없으면 그 앞의 일지를 고르는 사례와, 같은 날 옛 이름 일지(`-12-`)보다 늦은 커밋이 더한 새 이름 일지(`-0930-`)를 고르는 사례를 본다
 - [ ] **빨강을 먼저 본다.** 바꾸기 전의 시험과 도구로 새 꼴 일지 이름 사례가 빨간 것을 본다(원칙 II)
