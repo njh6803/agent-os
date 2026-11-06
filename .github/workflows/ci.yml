@@ -37,7 +37,9 @@ jobs:
   # 스택이 둘 다 남았고, 테스트 도중의 충돌은 C 스택만 남았다(파이썬 스택은 pytest 가 붙잡은 stderr 에 갇힌 것으로
   # 본다. 어림). 코어 이름은 core.pytest.<pid> 였다. %e 가 스크립트 이름이 되므로 코어를 이름으로 거르지 않는다.
   python:
-    runs-on: ubuntu-latest
+    # ubuntu-latest 가 2026-11-06 에 24.04(ripgrep 14.1.0)에서 26.04(15.1.0)로 넘어가 rg 14 의 동작을 가정한
+    # tests/tools/test_hook_env_read_rg.py 가 깨졌다(.scratch/harness/issues/045-ci-python-runner-pin.md).
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     env:
       PYTHONUTF8: "1"
