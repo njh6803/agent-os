@@ -50,4 +50,56 @@
 
 셀프 리뷰(`/code-review`, main 대비 이 브랜치의 변경 전체와 미추적 `next_session_queue_threshold.toml`·이 일지) → Critical·Major 반영 → 커밋(커밋 전에 `git branch --show-current`와 `uv run python tools/sibling_overlap.py`) → PR(`/git-pr`) → `merge.md`의 봇 회차 → 일지 "다음"과 회고(retro) → 병합 → `tidy-checkouts`. 요청 범위는 "PR과 병합까지"다.
 
+## 인계 세션 이후 (커밋 뒤 인계)
+
+세션 제목: `feature/01-retro-threshold-five`(인계로 열린 세션). 이 절은 두 번째 인계(`커밋 뒤`, 컨텍스트 20만 토큰 초과)를 위해 쓴다. 커밋하지 않았고 `## 다음`과 회고는 아직 없다.
+
+### 사용자 프롬프트
+
+> 사용자: .claude/skills/implement/SKILL.md 를 읽어 그대로 따른다. … 인자: .scratch/retro-queue-per-item/issues/01-retro-threshold-five.md (지시문의 이어받을 상태는 `인계: 셀프 리뷰 직전`, 이번 요청 범위는 "PR과 병합까지")
+
+### 한 일
+
+1. 세션 제목을 브랜치로 바꾸고 `EnterWorktree(path)`로 이 워크트리에 들어갔다. `git worktree list --porcelain`에 이 브랜치의 워크트리가 있었다.
+2. 셀프 리뷰(`/code-review`)를 돌렸다. 범위는 기준 `819782eb`, 20개 파일, 커밋 0, 미추적 2였다. 표준 축(sonnet·high)과 명세 축 서브에이전트 둘이 보고했고, 위 11항에 지적과 판정을 적었다. 이 세션이 다시 확인한 것: `CODING_STANDARDS.md` 12행의 날짜 거짓, 오늘 날짜의 만료 후보 15개(옛 도구 13개).
+3. 커밋을 두 번 시도했다. 첫 시도는 pre-commit의 `check-mutations`에서 실패했고(위 11항 고친 것 4), 고친 뒤 둘째 시도가 들어갔다. 커밋은 `083927ba`(`feat: 회고가 항목을 반영하는 문턱을 같은 실수의 다섯 번째로 올린다 (retro-queue-per-item 01)`)이고, 둘째 시도의 pre-commit 출력(스크래치패드 `commit2.txt`)에서 `Failed`가 없고 `Passed`가 19줄이었다(손으로 셌다). `ruff`와 `Skipped`는 세지 않았다. 갈음된 다섯 게이트(pytest·pyright·lint-imports·ruff·check-instructions 등)는 이 커밋의 pre-commit 결과다.
+4. 커밋 뒤 이 일지에 이 절만 더했다. 이 절과 마지막 `open-session을 부른다` 줄은 커밋하지 않았다.
+
+### 남은 단계
+
+- 커밋 전에 `git branch --show-current`와 `uv run python tools/sibling_overlap.py`(이 절을 커밋하는 다음 커밋도).
+- PR(`/git-pr`)을 열고 `merge.md`의 봇 회차 → 일지 `## 다음`과 회고(`retro`) → 병합 → `tidy-checkouts`. 요청 범위는 "PR과 병합까지"다.
+- PR 본문에 적을 것(티켓 요구): 명세 목록 밖에서 고친 열린 행 15개(362 420 490 493 500 559 560 561 562 563 566 567 568 569 580), 새 카나리아 명세 `next_session_queue_threshold.toml`, 만료 후보(2026-11-06 기준 435 하나는 명세와 같고, 2026-11-07 기준은 15개이며 옛 문턱에서의 13개에 435와 362가 더해진다), 위 "재현하지 못한 근거"(pytest 296.1초 등은 인계 세션의 실행이고 커밋 때 pre-commit이 다시 돌았다).
+- 변이 표 `queue_open_rows_mutations.toml`은 커밋에 `expect_output` 셋이 들어 있다. 로컬 `tools/mutate.py --staged`가 "문제 0"이었다.
+- 티켓 `Status:`는 이미 `done`이다(티켓 체크박스 "첫 커밋에 `in-progress`를 싣는다"는 인계 세션이 커밋 없이 `done`까지 와서 첫 커밋에 `done`이 실린 것이 사실이다).
+
 open-session을 부른다 2026-11-06T16:05:16Z
+
+open-session을 부른다 2026-11-06T16:36:11Z
+
+## 이어받은 세션 (PR부터)
+
+인계 지시문(이어받을 상태 `인계: 커밋 뒤`)으로 연 세션이 이었다(Sonnet 5.5 / high). `git worktree list`에서 브랜치가 `.claude/worktrees/01-retro-threshold-five`에 있어 `EnterWorktree(path)`로 들어갔고, 제목은 브랜치 이름으로 바꿨다. 푸시 전 상태는 커밋 `083927ba` 하나와 커밋하지 않은 이 일지 변경이었다. `git fetch origin main` 뒤 `HEAD..origin/main`이 비어 rebase할 것이 없었고, `uv run python tools/sibling_overlap.py`는 번호 겹침 없음, 함께 고친 파일 없음으로 끝났다(종료 0). 요청 범위가 "PR과 병합까지"라 PR 제목·본문 확인은 묻지 않고 연다.
+
+## 회고
+
+후보 넷을 냈다. 승인 0, 기각 넷, 넘김 없음.
+
+- **기각: 첫 커밋 시도에서 pre-commit의 `check-mutations`가 `expect_output` 없는 변이 셋(14·25·36)을 알렸다.** 이미 있는 훅이 커밋 앞에서 막은 것이고 처방한 열린 행(350 닫힘, 579 열림 6회차)이 있다. 인계 세션의 `--check`와 전체 실행은 그것을 알리지 않았다는 사실은 11항 "고친 것 4"에 적혀 있다. 훅이 제 몫을 했다.
+- **기각: 카나리아 둘을 `--control-commit` 없이 돌려 "명세 오류"로 아무것도 돌리지 않고 2로 끝났다.** 도구가 그 자리에서 까닭과 처방을 냈고 두 명세의 머리 주석이 이미 그 인자를 일러 두었다.
+- **기각: `CODING_STANDARDS.md` 12행에 "2026-10-12부터는 같은 실수의 다섯 번째"라는 거짓 날짜를 썼다.** 셀프 리뷰의 표준 축이 잡았다. 기준을 어겨 리뷰가 잡은 사건이 아니라 이 PR의 사실 오류를 리뷰가 제 몫으로 잡은 것이라 회차로 세지 않고, 검사로 옮길 수 있는 꼴(날짜와 문턱의 대응)도 아니다.
+- **기각: 컨텍스트가 20만 토큰을 넘어 인계가 두 번 있었다.** 인계 계기가 설계대로 돈 것이고 이 세션이 일을 잃지 않았다.
+
+**만료.** `uv run python tools/queue_open_rows.py`와 `git fetch origin` 뒤 `--ref origin/main`을 붙인 출력이 "만료할 행"으로 같은 열다섯(435 319 362 438 439 441 443 444 446 447 450 451 452 453 454)을 냈다. 문턱을 올려 보호선이 5회차로 오른 값이다. 열다섯 모두 취소선과 `만료 2026-11-07 (ADR 0036)`을 달아 닫았고, 닫은 뒤 같은 도구가 열린 행 117개, 만료할 행 (없음)을 냈다(처음 132개). 435와 362는 옛 도구에서 빠지던 행이다(앞 세션이 `git show HEAD:tools/queue_open_rows.py`를 풀어 같은 날짜로 손으로 쳐서 본 것이고, 11항 "고친 것 2"에 있다. 이 세션은 옛 도구를 다시 치지 않았다). 열 줄 수와 "처음 132개"는 이 세션이 위 두 명령과 닫은 뒤의 같은 명령을 손으로 쳐서 본 출력이다. 이 열다섯을 닫은 변경은 이 PR의 `.scratch/retro-queue.md` diff 30줄에 든다.
+
+회차를 더한 행도, 이 세션에서 반영한 것도 없다. 문턱이 오른 뒤 chore 계기는 회차 5 이상 열 행(420 430 431 565 558 579 214 475 499 535)이고, 앞 회고가 계기로 본 578은 앞 회고가 4회차로 적었고 위 "회차 5 이상" 출력에 들지 않아 더는 계기가 아니다(출력은 이 세션이 손으로 쳐서 읽었고, 578의 회차 수는 앞 일지 `2026-11-06-12-retro-queue-per-item-spec.md`에서 읽었다).
+
+## 다음
+
+이 PR이 retro-queue-per-item의 티켓 01(문턱 다섯)을 닫는다. 구현은 티켓이 차례로 연다.
+
+- **막힌 것이 없는 티켓은 02(대기열 분할)다.** `.scratch/retro-queue-per-item/issues/02-retro-queue-one-file-per-item.md`의 `Blocked by`가 01뿐이고 이 PR이 병합되면 풀린다. 티켓이 크다고 적어 두었으니 한 세션에 못 하면 인계로 잇는다. 02는 옛 대기열 파일을 고친 열린 PR이 적은 때에 병합한다(티켓 02 "PR을 연 뒤").
+- **02 뒤에 03(리뷰 봇 경로 거르기)과 04(일지 이름)가 나란히 열린다.** 05는 03과 04 뒤, 06은 05 뒤, 07은 06 뒤다.
+- **이 PR이 명세 목록 밖에서 고친 것**은 PR 본문에 있다. 열린 행 열다섯(362 420 490 493 500 559 560 561 562 563 566 567 568 569 580)과 새 카나리아 명세 `next_session_queue_threshold.toml`이다.
+- **인계 세션이 잰 것 가운데 이 세션이 다시 재지 않은 것**(pytest 296.1초, web-verify 469.5초, 빨강 7건, 카나리아 통과 4)은 커밋 때의 pre-commit이 다시 돌았고, PR의 CI가 전체를 다시 돈다.
+- 지시문이 말한 `tests/tools/test_rerun_runner.py::test_다른_판의_확인을_쥐고_돌던_동안에도_첫_인계에서_멈춘다`는 인계 세션의 전체 러너에서 빨갛지 않았고 원인을 진단하지 않았다. 다시 빨가면 `diagnosing-bugs`로 간다.
