@@ -18,6 +18,8 @@ from pathlib import Path
 import pytest
 from tools.run_hooks import REPO_LOCATION_VARS
 
+from tools import check_ticket
+
 ROOT = Path(__file__).resolve().parents[2]
 CHECK = ROOT / "tools" / "check_ticket.py"
 _IDENTITY = ("-c", "user.name=t", "-c", "user.email=t@example.com")
@@ -175,7 +177,9 @@ def test_면제_모양만_바꾼_커밋은_지난다(저장소: Repo) -> None:
         저장소.stage_commit(
             {
                 "docs/journal/2026-01-02-01-x.md": "일지\n",
-                ".scratch/retro-queue.md": "대기열\n",
+                ".scratch/retro-queue/0573.md": "대기열 항목\n",
+                ".scratch/retro-queue/coderabbit-inline-size.md": "대기열 항목\n",
+                ".scratch/retro-queue/README.md": "대기열 폴더\n",
                 "docs/adr/0002-x.md": "결정\n",
                 "docs/adr/README.md": "색인\n",
                 "CONTEXT.md": "용어\n",
@@ -200,6 +204,44 @@ def test_면제_모양_밖의_scratch_파일을_섞으면_막는다(저장소: R
     저장소.git("switch", "-q", "-c", "docs/design")
     out = _막혔다(저장소.stage_commit({"docs/journal/2026-01-02-01-x.md": "일지\n", path: "x\n"}))
     assert path in out
+
+
+@pytest.mark.parametrize(
+    "path",
+    [
+        ".scratch/retro-queue.md",
+        ".scratch/retro-queue-x/x.md",
+        ".scratch/retro-queue/issues/x.md",
+        ".scratch/retro-queue/probes/p.py",
+        ".scratch/retro-queue/design/a.html",
+        ".scratch/retro-queue/sub/x.md",
+        ".scratch/retro-queue/x.txt",
+    ],
+)
+def test_대기열_폴더의_면제_꼴이_아닌_파일을_섞으면_막는다(저장소: Repo, path: str) -> None:
+    # 폴더 바로 아래의 `.md` 만 면제다. 옛 파일, 비슷한 이름의 폴더, 기능 폴더의 갈래, 하위 폴더,
+    # `.md` 가 아닌 파일은 면제가 아니다
+    저장소.git("switch", "-q", "-c", "docs/design")
+    out = _막혔다(저장소.stage_commit({"docs/journal/2026-01-02-01-x.md": "일지\n", path: "x\n"}))
+    assert path in out
+
+
+def test_대기열_폴더_바로_아래의_md는_다른_면제_모양_밖의_파일과_섞으면_막는다(
+    저장소: Repo,
+) -> None:
+    저장소.git("switch", "-q", "-c", "docs/design")
+    out = _막혔다(
+        저장소.stage_commit({".scratch/retro-queue/0573.md": "항목\n", "tools/b.py": "B = 1\n"})
+    )
+    assert "tools/b.py" in out
+    assert ".scratch/retro-queue/0573.md" not in out
+
+
+def test_독스트링의_면제_모양_원천이_대기열_폴더를_든다() -> None:
+    doc = check_ticket.__doc__
+    assert doc is not None
+    assert "`.scratch/retro-queue/*.md`" in doc
+    assert "- `docs/journal/*.md`, `.scratch/retro-queue.md`" not in doc
 
 
 def test_이름_바꾸기는_지운_것과_더한_것으로_센다(저장소: Repo) -> None:
@@ -734,6 +776,30 @@ def test_CI는_면제_모양만_바꾼_PR을_티켓_상태와_상관없이_지�
         )
     )
     _CI가_지났다(_CI로_친다(저장소, _PR_병합_커밋(저장소, "feature/02-thing")))
+
+
+def test_CI는_대기열_폴더_바로_아래의_md만_바꾼_PR을_지난다(저장소: Repo) -> None:
+    저장소.git("switch", "-q", "-c", "docs/retro")
+    _훅을_건너뛰고_커밋한다(
+        저장소,
+        {
+            ".scratch/retro-queue/0573.md": "항목\n",
+            ".scratch/retro-queue/coderabbit-inline-size.md": "항목\n",
+            "docs/journal/2026-01-02-01-x.md": "일지\n",
+        },
+    )
+    _CI가_지났다(_CI로_친다(저장소, _PR_병합_커밋(저장소, "docs/retro")))
+
+
+@pytest.mark.parametrize(
+    "path",
+    [".scratch/retro-queue.md", ".scratch/retro-queue-x/x.md", ".scratch/retro-queue/issues/x.md"],
+)
+def test_CI는_대기열_폴더의_면제_꼴이_아닌_파일이_든_PR을_막는다(저장소: Repo, path: str) -> None:
+    저장소.git("switch", "-q", "-c", "docs/retro")
+    _훅을_건너뛰고_커밋한다(저장소, {".scratch/retro-queue/0573.md": "항목\n", path: "x\n"})
+    out = _CI가_막았다(_CI로_친다(저장소, _PR_병합_커밋(저장소, "docs/retro")))
+    assert path in out
 
 
 def test_CI는_분리_HEAD인_병합_커밋에서도_티켓_없는_PR을_막는다(저장소: Repo) -> None:

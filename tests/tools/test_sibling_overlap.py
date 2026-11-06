@@ -21,7 +21,6 @@ from tools.sibling_overlap import (
     JOURNAL_DIR,
     ON_FAILURE,
     ON_STUCK,
-    QUEUE,
     Move,
     MoveError,
     MovePlan,
@@ -77,24 +76,21 @@ from tools.sibling_overlap import (
 from tools import sibling_overlap
 
 TOOL = Path(__file__).resolve().parents[2] / "tools" / "sibling_overlap.py"
-QUEUE_HEAD = "# 회고 반영 대기열\n\n| 번호 | 무엇 | 어디로 | 근거 |\n|---|---|---|---|\n"
 
 
 def _번호(
     journals: dict[str, str] | None = None,
     adrs: dict[str, str] | None = None,
-    rows: dict[int, str] | None = None,
     version: str | None = None,
     tickets: dict[str, str] | None = None,
 ) -> Numbers:
-    return Numbers(journals or {}, adrs or {}, rows or {}, version, tickets or {})
+    return Numbers(journals or {}, adrs or {}, version, tickets or {})
 
 
-def test_일지_ADR_대기열_헌법_티켓의_번호를_읽는다() -> None:
+def test_일지_ADR_헌법_티켓의_번호를_읽는다() -> None:
     numbers = read_numbers(
         ["2026-10-07-09-session-web-deps-hook.md", "2026-10-07-10-x.md"],
         ["0026-design-system.md", "README.md"],
-        QUEUE_HEAD + "| 114 | 첫 줄 |\n| 115 | 둘째 줄 |\r\n",
         "**Version**: 3.0.18 | **Ratified**: 2026-09-19",
         ["001-morning-report-ties.md", "002-x.md"],
     )
@@ -104,17 +100,15 @@ def test_일지_ADR_대기열_헌법_티켓의_번호를_읽는다() -> None:
         "2026-10-07-10": "2026-10-07-10-x.md",
     }
     assert numbers.adrs == {"0026": "0026-design-system.md"}
-    assert numbers.rows == {114: "| 114 | 첫 줄 |", 115: "| 115 | 둘째 줄 |"}
     assert numbers.version == "3.0.18"
     assert numbers.tickets == {"001": "001-morning-report-ties.md", "002": "002-x.md"}
 
 
-def test_규약_밖의_이름과_표의_머리는_번호가_아니다() -> None:
+def test_규약_밖의_이름은_번호가_아니다() -> None:
     """티켓은 세 자리다. 기능 폴더의 두 자리 번호와 네 자리 ADR 꼴은 티켓이 아니다."""
     numbers = read_numbers(
         ["2026-10-07-x.md", "README.md", "2026-10-07-09-a.txt"],
         ["README.md", "26-short.md"],
-        QUEUE_HEAD + "본문 | 1 | 표가 아니다\n",
         "버전 없음",
         ["01-feature.md", "0001-adr.md", "001.md", "001-a.txt", "README.md"],
     )
@@ -126,67 +120,59 @@ def test_새_번호는_아는_번호_어디에도_없는_것이다() -> None:
     theirs = _번호(
         {"2026-10-07-03": "2026-10-07-03-a.md", "2026-10-07-04": "2026-10-07-04-b.md"},
         {"0026": "0026-x.md", "0027": "0027-y.md"},
-        {135: "| 135 | 가 |", 141: "| 141 | 나 |"},
         "3.0.17",
     )
-    base = _번호({"2026-10-07-03": "2026-10-07-03-a.md"}, {"0026": "0026-x.md"}, {135: "| 135 |"})
+    base = _번호({"2026-10-07-03": "2026-10-07-03-a.md"}, {"0026": "0026-x.md"})
     main_ = _번호({"2026-10-07-04": "2026-10-07-04-b.md"}, version="3.0.17")
 
-    expected = _번호(adrs={"0027": "0027-y.md"}, rows={141: "| 141 | 나 |"})
+    expected = _번호(adrs={"0027": "0027-y.md"})
     assert fresh(theirs, base, main_) == expected
 
 
-def test_공유한_이력은_같은_번호에_같은_파일이나_같은_행이고_헌법_판은_가르지_않는다() -> None:
+def test_공유한_이력은_같은_번호에_같은_파일이고_헌법_판은_가르지_않는다() -> None:
     ours = _번호(
         {"2026-10-07-05": "a.md", "2026-10-07-06": "ours.md"},
         {"0002": "0002-x.md"},
-        {2: "| 2 | 같다 |", 3: "| 3 | 이쪽 |"},
         "1.0.1",
     )
     main_ = _번호(
         {"2026-10-07-05": "a.md", "2026-10-07-06": "main.md"},
         {"0002": "0002-x.md"},
-        {2: "| 2 | 같다 |", 3: "| 3 | 그쪽 |"},
         "1.0.1",
     )
 
-    expected = _번호({"2026-10-07-06": "ours.md"}, rows={3: "| 3 | 이쪽 |"}, version="1.0.1")
+    expected = _번호({"2026-10-07-06": "ours.md"}, version="1.0.1")
     assert unshared(ours, main_) == expected
 
 
-def test_같은_번호에_다른_파일이나_다른_행이나_같은_판이면_겹침이다() -> None:
+def test_같은_번호에_다른_파일이거나_같은_판이면_겹침이다() -> None:
     ours = _번호(
         {"2026-10-07-10": "2026-10-07-10-ours.md"},
         {"0027": "0027-ours.md"},
-        {141: "| 141 | 이 브랜치 |"},
         "3.0.19",
     )
     theirs = _번호(
         {"2026-10-07-10": "2026-10-07-10-theirs.md"},
         {"0027": "0027-theirs.md"},
-        {141: "| 141 | 그쪽 |"},
         "3.0.19",
     )
 
     assert [(clash.kind, clash.key) for clash in clashes(ours, theirs)] == [
         ("일지", "2026-10-07-10"),
         ("ADR", "0027"),
-        ("대기열", "141"),
         ("헌법", "3.0.19"),
     ]
 
 
-def test_같은_파일과_같은_행과_다른_판은_겹침이_아니다() -> None:
+def test_같은_파일과_다른_판은_겹침이_아니다() -> None:
     ours = _번호(
         {"2026-10-07-10": "2026-10-07-10-same.md"},
         {"0027": "0027-same.md"},
-        {141: "| 141 | 같다 |"},
         "3.0.19",
     )
     theirs = _번호(
         {"2026-10-07-10": "2026-10-07-10-same.md", "2026-10-07-11": "2026-10-07-11-z.md"},
         {"0027": "0027-same.md"},
-        {141: "| 141 | 같다 |", 142: "| 142 | 다르다 |"},
         "3.0.20",
     )
 
@@ -197,24 +183,23 @@ def test_같은_파일과_같은_행과_다른_판은_겹침이_아니다() -> N
 def test_옮길_번호는_겹친_종류의_이_브랜치_새_번호_전부를_차례대로_형제_뒤에_붙인다() -> None:
     """일지 2026-10-07-09 의 실제 이동.
 
-    이 브랜치 03~07·행 135~137, 열린 PR 03·135·136, main 04·137.
+    이 브랜치 03~07, 열린 PR 03, main 04.
     """
     ours = _번호(
         {f"2026-10-07-0{n}": f"2026-10-07-0{n}-ours.md" for n in range(3, 8)},
         {"0027": "0027-ours.md"},
-        {135: "a", 136: "b", 137: "c"},
         "3.0.18",
     )
     taken = [
         _번호({"2026-10-07-01": "x.md", "2026-10-07-02": "y.md", "2026-10-06-15": "z.md"}),
-        _번호({"2026-10-07-03": "pr.md"}, rows={135: "p", 136: "q"}, version="3.0.17"),
-        _번호({"2026-10-07-04": "main.md"}, {"0026": "a.md"}, {137: "m"}),
+        _번호({"2026-10-07-03": "pr.md"}, version="3.0.17"),
+        _번호({"2026-10-07-04": "main.md"}, {"0026": "a.md"}),
     ]
     found = clashes(ours, taken[1]) + clashes(ours, taken[2])
 
     assert moves(ours, taken, found) == [
         Move("일지", f"2026-10-07-0{old}", f"2026-10-07-0{old + 2}") for old in range(3, 8)
-    ] + [Move("대기열", str(old), str(old + 3)) for old in (135, 136, 137)]
+    ]
 
 
 def test_옮길_번호는_자리가_그대로인_것을_빼고_ADR은_네_자리다() -> None:
@@ -224,19 +209,16 @@ def test_옮길_번호는_자리가_그대로인_것을_빼고_ADR은_네_자리
     assert moves(ours, taken, clashes(ours, taken[0])) == [Move("ADR", "0002", "0008")]
 
 
-def test_다음_빈_일지는_그날의_가장_큰_순번_다음이고_대기열은_가장_큰_행_다음이다() -> None:
+def test_다음_빈_일지는_그날의_가장_큰_순번_다음이다() -> None:
     """빈 사이 번호(02~06)는 고르지 않는다. 새 일지는 이름순으로 맨 뒤여야 한다."""
     numbers = [
-        _번호(
-            {"2026-10-12-01": "a.md", "2026-10-12-07": "b.md", "2026-10-13-02": "c.md"},
-            rows={1: "x", 183: "y"},
-        ),
-        _번호({"2026-10-12-10": "d.md", "2026-10-11-20": "e.md"}, rows={182: "z"}),
+        _번호({"2026-10-12-01": "a.md", "2026-10-12-07": "b.md", "2026-10-13-02": "c.md"}),
+        _번호({"2026-10-12-10": "d.md", "2026-10-11-20": "e.md"}),
     ]
 
-    assert next_numbers(numbers, "2026-10-12") == ("2026-10-12-11", 184, "001")
-    assert next_numbers(numbers, "2026-10-14") == ("2026-10-14-01", 184, "001")
-    assert next_numbers([], "2026-10-12") == ("2026-10-12-01", 1, "001")
+    assert next_numbers(numbers, "2026-10-12") == ("2026-10-12-11", "001")
+    assert next_numbers(numbers, "2026-10-14") == ("2026-10-14-01", "001")
+    assert next_numbers([], "2026-10-12") == ("2026-10-12-01", "001")
 
 
 def test_다음_빈_티켓은_어디에도_없으면_001이고_가장_큰_번호_다음의_세_자리다() -> None:
@@ -246,9 +228,9 @@ def test_다음_빈_티켓은_어디에도_없으면_001이고_가장_큰_번호
         _번호(tickets={"009": "009-c.md"}),
     ]
 
-    assert next_numbers(numbers, "2026-10-12")[2] == "010"
-    assert next_numbers([_번호(tickets={"099": "099-a.md"})], "2026-10-12")[2] == "100"
-    assert next_numbers([_번호()], "2026-10-12")[2] == "001"
+    assert next_numbers(numbers, "2026-10-12")[1] == "010"
+    assert next_numbers([_번호(tickets={"099": "099-a.md"})], "2026-10-12")[1] == "100"
+    assert next_numbers([_번호()], "2026-10-12")[1] == "001"
 
 
 def test_같은_티켓_번호에_다른_파일이면_겹침이고_같은_파일은_공유한_이력이다() -> None:
@@ -646,8 +628,6 @@ def test_옮길_번호대로_인용을_한_번에_바꾼다() -> None:
             Move("일지", "2026-10-07-03", "2026-10-07-05"),
             Move("일지", "2026-10-07-05", "2026-10-07-07"),
             Move("ADR", "0027", "0028"),
-            Move("대기열", "135", "137"),
-            Move("대기열", "136", "138"),
         ]
     )
     text = (
@@ -657,27 +637,27 @@ def test_옮길_번호대로_인용을_한_번에_바꾼다() -> None:
         "(대기열 135·48·136, 대기열 136의 2회차)\n"
         "| 135 | 행 |\n"
     )
+    # 대기열 인용과 행 머리는 번호가 아니라 항목의 이름이라 옮기지 않는다
     expected = (
         "# 2026-10-07 (05) 제목\n"
         "일지 2026-10-07-05·2026-10-07-07, docs/journal/2026-10-07-07-b.md\r\n"
         "ADR 0028·0026, [0028](0028-x.md), docs/adr/0028-x.md\n"
-        "(대기열 137·48·138, 대기열 138의 2회차)\n"
+        "(대기열 135·48·136, 대기열 136의 2회차)\n"
         "| 135 | 행 |\n"
     )
 
     assert rewrite(text, plan, "docs/journal/2026-10-07-03-a.md") == expected
-    # 대기열 행의 머리는 대기열 파일에서만 바꾼다. 일지의 다른 표에도 `| 135 |` 꼴이 있다
-    assert rewrite(text, plan, QUEUE) == expected.replace("| 135 |", "| 137 |")
+    assert rewrite(text, plan, ".scratch/retro-queue/0135.md") == expected
     # 더 긴 수의 일부는 번호가 아니다
     longer = "2026-10-07-031, 대기열 1350, ADR 00271, 10027-x, v1.0027-x\n"
-    assert rewrite(longer, plan, QUEUE) == longer
+    assert rewrite(longer, plan, "docs/notes.md") == longer
 
 
 def test_인용_블록의_줄은_원문이라_옮기지_않는다() -> None:
     """일지는 사용자 프롬프트를 원문으로 인용한다(`> 사용자:`). 이 브랜치를 옮긴 첫 `--move` 가 그
     원문의 일지 번호를 새 번호로 바꿨다(일지 2026-10-15-15). 못 보는 것: `>` 없이 이어지는 줄은
     인용 블록이어도 옮긴다."""
-    plan = renumber([Move("일지", "2026-10-07-03", "2026-10-07-05"), Move("대기열", "2", "3")])
+    plan = renumber([Move("일지", "2026-10-07-03", "2026-10-07-05")])
     text = (
         '> 사용자: "일지 2026-10-07-03의 다음부터, 대기열 2를 닫는다"\n'
         "> 2026-10-07-03\n"
@@ -696,11 +676,11 @@ def test_인용_블록의_줄은_원문이라_옮기지_않는다() -> None:
 def test_줄인_인용과_조사는_옮기지_않고_같은_꼴이면_다른_뜻도_옮긴다() -> None:
     """못 보는 것. 줄인 꼴("일지 03"), 낱말 없이 든 번호, 번호 뒤의 조사는 그대로다. 같은 꼴이면
     형제의 같은 번호를 가리킨 인용도 이 브랜치의 번호로 읽어 옮긴다."""
-    plan = renumber([Move("일지", "2026-10-07-03", "2026-10-07-05"), Move("대기열", "2", "3")])
+    plan = renumber([Move("일지", "2026-10-07-03", "2026-10-07-05")])
     text = "일지 03, 새로 연 것은 2·5다. 대기열 2를 연다. 형제의 일지 2026-10-07-03 과 겹쳤다\n"
 
     assert rewrite(text, plan, "docs/journal/2026-10-07-03-a.md") == (
-        "일지 03, 새로 연 것은 2·5다. 대기열 3를 연다. 형제의 일지 2026-10-07-05 과 겹쳤다\n"
+        "일지 03, 새로 연 것은 2·5다. 대기열 2를 연다. 형제의 일지 2026-10-07-05 과 겹쳤다\n"
     )
 
 
@@ -727,10 +707,10 @@ def test_티켓은_stem을_slug까지_맞대어_옮기고_머리_줄은_harness_
     assert rewrite(text, plan, ".scratch/feature/issues/01-a.md").startswith(
         "# 002: 이쪽\n브랜치 `chore/003-ours`"
     )
-    # 이 브랜치의 티켓이 아닌 머리 줄은 두고, 대기열 파일의 행 머리는 함께 옮긴다
-    other = renumber([Move("티켓", "005-x", "006-x"), Move("대기열", "2", "3")])
+    # 이 브랜치의 티켓이 아닌 머리 줄은 두고, 행 머리 꼴(`| 2 |`)은 어느 파일에서도 옮기지 않는다
+    other = renumber([Move("티켓", "005-x", "006-x")])
     assert rewrite("# 002: 이쪽\n", other, ".scratch/harness/issues/002-ours.md") == "# 002: 이쪽\n"
-    assert rewrite("| 2 | 005-x |\n", other, QUEUE) == "| 3 | 006-x |\n"
+    assert rewrite("| 2 | 005-x |\n", other, "docs/notes.md") == "| 2 | 006-x |\n"
 
 
 def test_워크트리_폴더를_가리킨_stem은_폴더_이름을_옮기지_않으므로_둔다() -> None:
@@ -853,15 +833,15 @@ def test_분리_HEAD면_PR_본문을_묻지_않는다(
 
 
 def test_옮길_번호대로_인용이_바뀌는_PR_본문만_옮긴_본문으로_낸다() -> None:
-    """대기열 376. 인용 블록은 두고, 대기열 행의 머리 꼴(`| N |`)은 PR 본문에서 옮기지 않는다."""
-    shifted = [Move("일지", "2026-10-07-03", "2026-10-07-05"), Move("대기열", "135", "137")]
+    """대기열 376. 인용 블록은 두고, 대기열 인용과 행의 머리 꼴(`| N |`)은 옮기지 않는다."""
+    shifted = [Move("일지", "2026-10-07-03", "2026-10-07-05")]
     bodies = {
         8: "무관한 본문\n",
         7: "일지 2026-10-07-03, 대기열 135\r\n> 일지 2026-10-07-03\r\n| 135 | 표 |\r\n",
     }
 
     assert moved_bodies(bodies, shifted) == {
-        7: "일지 2026-10-07-05, 대기열 137\r\n> 일지 2026-10-07-03\r\n| 135 | 표 |\r\n"
+        7: "일지 2026-10-07-05, 대기열 135\r\n> 일지 2026-10-07-03\r\n| 135 | 표 |\r\n"
     }
 
 
@@ -926,27 +906,29 @@ def test_옮기기는_이_브랜치가_고친_글만_고치고_이름을_바꾸�
         # 줄 끝은 바이트 그대로 둔다(`write_text` 는 윈도에서 줄 끝을 바꿔 바이트로 쓴다)
         journal: "# 2026-10-07 (03) 이쪽\r\nADR 0002, 대기열 2\r\n",
         "docs/adr/0002-ours.md": "번호 없는 글\n",
-        ".scratch/retro-queue.md": "| 1 | 씨앗 |\n| 2 | 이쪽 |\n",
+        # 대기열 인용은 번호가 아니라 항목의 이름이라 옮기지 않는다
+        ".scratch/retro-queue/0002.md": "# 0002: 이쪽\n\n대기열 2\n",
         # 둘 줄(`kept`)을 주지 않으면 merge-base 에 있던 줄도 옮긴다. CLI 는 merge-base 와 main 의
         # 줄을 준다
-        "docs/notes.md": "merge-base 에 있던 줄의 대기열 2\n이 브랜치가 더한 줄\n",
-        "README.md": "대기열 2\n",
+        "docs/notes.md": "merge-base 에 있던 줄의 일지 2026-10-07-03\n이 브랜치가 더한 줄\n",
+        "README.md": "일지 2026-10-07-03\n",
     }
     for name, text in files.items():
         (tmp_path / name).parent.mkdir(parents=True, exist_ok=True)
         (tmp_path / name).write_bytes(text.encode("utf-8"))
-    binary = b"\xff\xfe" + "대기열 2".encode()  # UTF-8 이 아니라 인용 꼴이 있어도 두는 파일
+    binary = (
+        b"\xff\xfe" + "일지 2026-10-07-03".encode()
+    )  # UTF-8 이 아니라 인용 꼴이 있어도 두는 파일
     (tmp_path / "logo.png").write_bytes(binary)
-    ours = _번호({"2026-10-07-03": "2026-10-07-03-ours.md"}, {"0002": "0002-ours.md"}, {2: "x"})
+    ours = _번호({"2026-10-07-03": "2026-10-07-03-ours.md"}, {"0002": "0002-ours.md"})
     shifted = [
         Move("일지", "2026-10-07-03", "2026-10-07-04"),
         Move("ADR", "0002", "0003"),
-        Move("대기열", "2", "3"),
     ]
     changed = [
         journal,
         "docs/adr/0002-ours.md",
-        ".scratch/retro-queue.md",
+        ".scratch/retro-queue/0002.md",
         "docs/notes.md",
         "logo.png",
         "gone.md",
@@ -958,11 +940,10 @@ def test_옮기기는_이_브랜치가_고친_글만_고치고_이름을_바꾸�
         (journal, "docs/journal/2026-10-07-04-ours.md"),
         ("docs/adr/0002-ours.md", "docs/adr/0003-ours.md"),
     ]
-    moved_text = "# 2026-10-07 (04) 이쪽\r\nADR 0003, 대기열 3\r\n"
+    moved_text = "# 2026-10-07 (04) 이쪽\r\nADR 0003, 대기열 2\r\n"
     assert plan.texts == {
         journal: moved_text,
-        ".scratch/retro-queue.md": "| 1 | 씨앗 |\n| 3 | 이쪽 |\n",
-        "docs/notes.md": "merge-base 에 있던 줄의 대기열 3\n이 브랜치가 더한 줄\n",
+        "docs/notes.md": "merge-base 에 있던 줄의 일지 2026-10-07-04\n이 브랜치가 더한 줄\n",
     }
     assert plan.originals == {path: files[path].encode() for path in plan.texts}
 
@@ -972,7 +953,7 @@ def test_옮기기는_이_브랜치가_고친_글만_고치고_이름을_바꾸�
     moved = tmp_path / "docs/journal/2026-10-07-04-ours.md"
     assert moved.read_bytes() == moved_text.encode("utf-8")
     assert (tmp_path / "docs/adr/0003-ours.md").read_bytes() == "번호 없는 글\n".encode()
-    assert (tmp_path / "README.md").read_bytes() == "대기열 2\n".encode()
+    assert (tmp_path / "README.md").read_bytes() == "일지 2026-10-07-03\n".encode()
     assert (tmp_path / "logo.png").read_bytes() == binary
 
     blocked = _번호(adrs={"0003": "0003-ours.md"})
@@ -1018,8 +999,8 @@ def test_심볼릭_링크는_따라가_쓰지_않는다(tmp_path: Path, monkeypa
 
     링크를 만드는 권한이 없는 윈도에서도 돌도록 `is_symlink` 를 바꿔 끼운다.
     """
-    (tmp_path / "link.md").write_bytes("대기열 2\n".encode())
-    (tmp_path / "plain.md").write_bytes("대기열 2\n".encode())
+    (tmp_path / "link.md").write_bytes("일지 2026-10-07-03\n".encode())
+    (tmp_path / "plain.md").write_bytes("일지 2026-10-07-03\n".encode())
     real = Path.is_symlink
 
     def 링크다(self: Path) -> bool:
@@ -1027,7 +1008,9 @@ def test_심볼릭_링크는_따라가_쓰지_않는다(tmp_path: Path, monkeypa
 
     monkeypatch.setattr(Path, "is_symlink", 링크다)
 
-    plan = plan_moves(tmp_path, _번호(), [Move("대기열", "2", "3")], ["link.md", "plain.md"])
+    shifted = [Move("일지", "2026-10-07-03", "2026-10-07-05")]
+    ours = _번호({"2026-10-07-03": "2026-10-07-03-x.md"})
+    plan = plan_moves(tmp_path, ours, shifted, ["link.md", "plain.md"])
 
     assert list(plan.texts) == ["plain.md"]
 
@@ -1172,20 +1155,29 @@ def test_BOM으로_시작하는_일지도_머리_줄을_옮기고_BOM을_지킨�
 
 
 def test_merge_base나_main에_글자_그대로_있는_줄은_옮기지_않는다() -> None:
-    """PR 직전 버그 축: main 을 합치다 같은 대기열 행 번호의 두 행을 남긴 채 옮기면 main 의 행
-    머리와 색인 행까지 옮겨졌다. main 에 이미 있던 같은 번호의 참조는 상대를 가리킨다
-    (`.claude/rules/adr.md`). 그 줄을 이 브랜치가 고쳤으면 글자가 달라져 옮긴다."""
-    plan = renumber([Move("대기열", "256", "259"), Move("ADR", "0027", "0028")])
-    main_row, main_index = "| 256 | main 의 행 |", "- [0027](0027-sibling.md) 형제"
-    kept = frozenset({"| 255 | 씨앗 |", main_row, main_index})
-    queue = f"| 255 | 씨앗 |\r\n{main_row}\r\n| 256 | 이쪽 행, ADR 0027 |\r\n"
+    """PR 직전 버그 축: main 을 합치다 같은 번호의 줄 둘을 남긴 채 옮기면 main 의 색인 행까지
+    옮겨졌다. main 에 이미 있던 같은 번호의 참조는 상대를 가리킨다(`.claude/rules/adr.md`). 그
+    줄을 이 브랜치가 고쳤으면 글자가 달라져 옮긴다."""
+    plan = renumber([Move("ADR", "0027", "0028")])
+    main_index = "- [0027](0027-sibling.md) 형제"
+    kept = frozenset({main_index})
     index = f"{main_index}\n- [0027](0027-ours.md) 이쪽\n- [0027](0027-sibling.md) 형제(고침)\n"
 
-    assert rewrite(queue, plan, QUEUE, kept) == (
-        f"| 255 | 씨앗 |\r\n{main_row}\r\n| 259 | 이쪽 행, ADR 0028 |\r\n"
-    )
     assert rewrite(index, plan, "docs/adr/README.md", kept) == (
         f"{main_index}\n- [0028](0028-ours.md) 이쪽\n- [0028](0028-sibling.md) 형제(고침)\n"
+    )
+
+
+def test_CRLF_파일의_둘_줄도_줄_끝의_CR을_빼고_견주어_글자가_같으면_옮기지_않는다() -> None:
+    """윈도에서 CRLF 로 체크아웃한 파일의 줄은 `\\r` 로 끝나지만 둘 줄 집합(`_kept_lines`)은 CR 을
+    뺀 줄이다. CR 을 떼지 않고 견주면 main 의 줄이 둘 줄과 달라 옮겨지고, 줄 끝은 CR 이 남는다."""
+    plan = renumber([Move("ADR", "0027", "0028")])
+    main_index = "- [0027](0027-sibling.md) 형제"
+    kept = frozenset({main_index})
+    index = f"{main_index}\r\n- [0027](0027-ours.md) 이쪽\r\n"
+
+    assert rewrite(index, plan, "docs/adr/README.md", kept) == (
+        f"{main_index}\r\n- [0028](0028-ours.md) 이쪽\r\n"
     )
 
 
@@ -1242,7 +1234,6 @@ SEED = {
     "docs/journal/2026-10-07-01-seed.md": "씨앗\n",
     "docs/adr/0001-seed.md": "씨앗\n",
     "docs/adr/README.md": "색인\n",
-    ".scratch/retro-queue.md": QUEUE_HEAD + "| 1 | 씨앗 |\n",
     "docs/constitution/README.md": _헌법("1.0.0"),
     "docs/constitution/operations.md": "운영\n",
     "README.md": "읽어 보기\n",
@@ -1307,13 +1298,11 @@ def test_열린_PR과_겹치면_알리고_1로_끝나며_닫힌_PR은_보지_않
     저장소: tuple[Path, Path, Path], capsys: pytest.CaptureFixture[str]
 ) -> None:
     _, work, pusher = 저장소
-    queue_pr = SEED[".scratch/retro-queue.md"] + "| 2 | 그쪽 행 |\n"
     pr5 = _PR을_민다(
         pusher,
         5,
         {
             "docs/journal/2026-10-07-02-pr.md": "그쪽\n",
-            ".scratch/retro-queue.md": queue_pr,
             "docs/constitution/README.md": _헌법("1.0.1"),
             "CLAUDE.md": "그쪽 지침\n",
         },
@@ -1325,7 +1314,6 @@ def test_열린_PR과_겹치면_알리고_1로_끝나며_닫힌_PR은_보지_않
         {
             "docs/journal/2026-10-07-02-ours.md": "이쪽\n",
             "docs/adr/0002-ours.md": "이쪽\n",
-            ".scratch/retro-queue.md": SEED[".scratch/retro-queue.md"] + "| 2 | 이쪽 행 |\n",
             "docs/constitution/README.md": _헌법("1.0.1"),
             "CLAUDE.md": "이쪽 지침\n",
         },
@@ -1336,14 +1324,13 @@ def test_열린_PR과_겹치면_알리고_1로_끝나며_닫힌_PR은_보지_않
     out = capsys.readouterr().out
     assert code == 1
     assert "열린 PR 을 읽은 길: merge ref" in out
-    assert "이 브랜치의 새 번호: 일지 2026-10-07-02, ADR 0002, 대기열 2, 헌법 1.0.1" in out
+    assert "이 브랜치의 새 번호: 일지 2026-10-07-02, ADR 0002, 헌법 1.0.1" in out
     assert "PR #5 일지 2026-10-07-02" in out
     assert "2026-10-07-02-ours.md" in out and "2026-10-07-02-pr.md" in out
-    assert "PR #5 대기열 2" in out
     assert "PR #5 헌법 1.0.1" in out
     assert "PR #4" not in out and "ADR 0002:" not in out
-    assert "옮길 번호: 일지 2026-10-07-02 → 2026-10-07-03, 대기열 2 → 3\n" in out
-    assert "PR #5: .scratch/retro-queue.md, CLAUDE.md, docs/constitution/README.md" in out
+    assert "옮길 번호: 일지 2026-10-07-02 → 2026-10-07-03\n" in out
+    assert "PR #5: CLAUDE.md, docs/constitution/README.md" in out
 
 
 def test_gh_api가_읽은_열린_PR은_merge_ref가_없어도_형제다(
@@ -1404,9 +1391,7 @@ def test_main이_이_브랜치_뒤에_들인_번호와_겹치면_CLI가_알린�
     assert "옮길 번호: ADR 0002 → 0004\n" in result.stdout
     # 날짜를 주지 않으면 이 기계의 오늘이다(자정을 넘길 수 있어 앞뒤 둘). 임시 저장소에 그날 일지는
     # 없다
-    lines = {
-        f"다음 빈 번호(형제 포함): 일지 {day}-01, 대기열 2, 티켓 001\n" for day in (before, after)
-    }
+    lines = {f"다음 빈 번호(형제 포함): 일지 {day}-01, 티켓 001\n" for day in (before, after)}
     assert any(line in result.stdout for line in lines), result.stdout
 
 
@@ -1785,26 +1770,17 @@ def test_이_브랜치에_새_번호가_없어도_형제를_넘은_다음_빈_�
 ) -> None:
     """대기열 157·182 의 경위: 일지를 쓰기 전의 대조는 "새 번호 없음" 만 내 헛돌았다."""
     _, work, pusher = 저장소
-    queue = SEED[".scratch/retro-queue.md"]
-    pr5_files = {
-        "docs/journal/2026-10-07-02-pr.md": "그쪽\n",
-        ".scratch/retro-queue.md": queue + "| 2 | 그쪽 |\n",
-    }
-    pr5 = _PR을_민다(pusher, 5, pr5_files)
+    pr5 = _PR을_민다(pusher, 5, {"docs/journal/2026-10-07-02-pr.md": "그쪽\n"})
     _연다(pusher, 5, pr5)
     sibling = work.parent / "sibling"
     _git(work, "worktree", "add", "-q", "-b", "other", str(sibling), "origin/main")
-    sibling_files = {
-        "docs/journal/2026-10-07-03-sibling.md": "형제\n",
-        ".scratch/retro-queue.md": queue + "| 3 | 형제 |\n",
-    }
-    _쓴다(sibling, sibling_files)
+    _쓴다(sibling, {"docs/journal/2026-10-07-03-sibling.md": "형제\n"})
 
     code = main([str(work)], today=date(2026, 10, 7))
 
     out = capsys.readouterr().out
     assert code == 0
-    assert "다음 빈 번호(형제 포함): 일지 2026-10-07-04, 대기열 4, 티켓 001\n" in out
+    assert "다음 빈 번호(형제 포함): 일지 2026-10-07-04, 티켓 001\n" in out
     assert "이 브랜치의 새 번호 없음" in out
     # 대기열 220: 번호를 받는 자리에서 바로 파일을 만들라고 한다. 그 안내가 next-session 에만 있었다
     reserve = "일지를 쓸 세션이면 다른 일보다 먼저 docs/journal/2026-10-07-04-<슬러그>.md 를"
@@ -1815,11 +1791,7 @@ def test_이_브랜치에_새_번호가_없어도_형제를_넘은_다음_빈_�
     assert "형제가 쓴 가장 높은 헌법 판: 1.0.0(origin/main)." in out
 
     # 받은 번호로 쓰면(next-session merge.md 3 이 안내하는 길) 겹치지도 앞서지도 않는다
-    ours_files = {
-        "docs/journal/2026-10-07-04-ours.md": "이쪽\n",
-        ".scratch/retro-queue.md": queue + "| 4 | 이쪽 |\n",
-    }
-    _쓴다(work, ours_files)
+    _쓴다(work, {"docs/journal/2026-10-07-04-ours.md": "이쪽\n"})
 
     code = main([str(work)], today=date(2026, 10, 7))
 
@@ -1843,12 +1815,7 @@ def test_새_일지가_main의_최신_일지보다_이름순으로_앞이면_1�
     _커밋한다(pusher, {"docs/journal/2026-10-11-01-main.md": "main\n"}, "main 이 나아간다")
     _git(pusher, "push", "-q", "origin", "main")
     _git(work, "pull", "-q", "--ff-only", "origin", "main")
-    queue = SEED[".scratch/retro-queue.md"]
-    ours_files = {
-        "docs/journal/2026-10-07-20-ours.md": "이쪽\n",
-        ".scratch/retro-queue.md": queue + "| 2 | 이쪽 |\n",
-    }
-    _쓴다(work, ours_files)
+    _쓴다(work, {"docs/journal/2026-10-07-20-ours.md": "이쪽\n"})
 
     code = main([str(work)], today=date(2026, 10, 12))
 
@@ -1859,32 +1826,24 @@ def test_새_일지가_main의_최신_일지보다_이름순으로_앞이면_1�
     behind = "이 브랜치의 새 일지 2026-10-07-20 이 origin/main 의 최신 일지 2026-10-11-01 보다"
     assert behind + " 이름순으로 앞이다" in out
     assert "옮길 번호: 일지 2026-10-07-20 → 2026-10-12-01\n" in out
-    assert "다음 빈 번호(형제 포함): 일지 2026-10-12-01, 대기열 3, 티켓 001\n" in out
+    assert "다음 빈 번호(형제 포함): 일지 2026-10-12-01, 티켓 001\n" in out
 
-    # 새 main 위에 같은 일지·같은 대기열 행을 가진 PR 이 열린다
-    pr9_files = {
-        "docs/journal/2026-10-07-20-pr9.md": "그쪽\n",
-        ".scratch/retro-queue.md": queue + "| 2 | 그쪽 |\n",
-    }
-    pr9 = _PR을_민다(pusher, 9, pr9_files)
+    # 새 main 위에 같은 순번의 일지를 가진 PR 이 열린다
+    pr9 = _PR을_민다(pusher, 9, {"docs/journal/2026-10-07-20-pr9.md": "그쪽\n"})
     _연다(pusher, 9, pr9)
 
     code = main([str(work)], today=date(2026, 10, 12))
 
     out = capsys.readouterr().out
     assert code == 1
-    assert "번호 겹침 2:" in out
-    assert "옮길 번호: 일지 2026-10-07-20 → 2026-10-12-01, 대기열 2 → 3\n" in out
+    assert "번호 겹침 1:" in out
+    assert "옮길 번호: 일지 2026-10-07-20 → 2026-10-12-01\n" in out
     # main 의 일지는 main 줄에만 나온다. 그 위의 PR #9 가 되풀이하지 않는다
     assert "앞서는 형제" not in out
 
     # "옮길 번호" 대로 옮기면(커밋 전 줄이 안내하는 길) 0 으로 끝난다
     (work / "docs/journal/2026-10-07-20-ours.md").unlink()
-    moved = {
-        "docs/journal/2026-10-12-01-ours.md": "이쪽\n",
-        ".scratch/retro-queue.md": queue + "| 3 | 이쪽 |\n",
-    }
-    _쓴다(work, moved)
+    _쓴다(work, {"docs/journal/2026-10-12-01-ours.md": "이쪽\n"})
 
     code = main([str(work)], today=date(2026, 10, 12))
 
@@ -1894,18 +1853,39 @@ def test_새_일지가_main의_최신_일지보다_이름순으로_앞이면_1�
     assert "최신 일지" not in out and "옮길 번호" not in out
 
 
+def test_main보다_앞선_새_일지와_ADR_번호_겹침이_함께_있으면_둘_다_옮길_번호로_낸다(
+    저장소: tuple[Path, Path, Path], capsys: pytest.CaptureFixture[str]
+) -> None:
+    """일지가 main 의 최신 일지보다 앞서면 일지는 닫는 날로 옮기고, 일지가 아닌 겹침(ADR)의 이동은
+    그것과 함께 낸다. 앞선 것만 옮기고 ADR 겹침의 이동을 버리면 `--move` 뒤에 다시 쳐야 한다."""
+    _, work, pusher = 저장소
+    _커밋한다(pusher, {"docs/journal/2026-10-11-01-main.md": "main\n"}, "main 이 나아간다")
+    _git(pusher, "push", "-q", "origin", "main")
+    _git(work, "pull", "-q", "--ff-only", "origin", "main")
+    pr9 = _PR을_민다(pusher, 9, {"docs/adr/0002-pr9.md": "그쪽\n"})
+    _연다(pusher, 9, pr9)
+    ours_files = {"docs/journal/2026-10-07-19-ours.md": "이쪽\n", "docs/adr/0002-ours.md": "이쪽\n"}
+    _쓴다(work, ours_files)
+
+    code = main([str(work)], today=date(2026, 10, 12))
+
+    out = capsys.readouterr().out
+    assert code == 1, out
+    moved = [line for line in out.splitlines() if line.startswith("옮길 번호:")]
+    assert moved == ["옮길 번호: 일지 2026-10-07-19 → 2026-10-12-01, ADR 0002 → 0003"]
+
+
 def test_main에_같은_파일로_이미_든_일지는_새_일지가_아니다(
     저장소: tuple[Path, Path, Path], capsys: pytest.CaptureFixture[str]
 ) -> None:
     """쌓아 올린 아래 PR 이 squash 로 main 에 들어간 뒤 아직 main 을 들이지 않은 브랜치.
 
-    아래 PR 의 일지·대기열 행은 merge-base 에 없어 이 브랜치의 새 번호로 읽히지만 main 과 같은
-    파일·같은 행이라 공유한 이력이다. 새 일지로 세면 main 의 더 늦은 일지보다 앞이라며 1로 끝나고
+    아래 PR 의 일지는 merge-base 에 없어 이 브랜치의 새 번호로 읽히지만 main 과 같은 파일이라
+    공유한 이력이다. 새 일지로 세면 main 의 더 늦은 일지보다 앞이라며 1로 끝나고
     main 에 이미 있는 일지를 옮기라고 한다(PR 직전 버그 축).
     """
     _, work, pusher = 저장소
-    queue = SEED[".scratch/retro-queue.md"] + "| 2 | 아래 PR |\n"
-    below = {"docs/journal/2026-10-07-05-below.md": "아래\n", ".scratch/retro-queue.md": queue}
+    below = {"docs/journal/2026-10-07-05-below.md": "아래\n"}
     _커밋한다(work, below, "아래 PR")
     _커밋한다(pusher, below, "아래 PR 을 squash 로 들인다")
     _커밋한다(pusher, {"docs/journal/2026-10-07-07-main.md": "main\n"}, "main 이 나아간다")
@@ -1917,7 +1897,7 @@ def test_main에_같은_파일로_이미_든_일지는_새_일지가_아니다(
     assert code == 0, out
     assert "이 브랜치의 새 번호 없음" in out
     assert "최신 일지" not in out and "옮길 번호" not in out
-    assert "다음 빈 번호(형제 포함): 일지 2026-10-07-08, 대기열 3, 티켓 001\n" in out
+    assert "다음 빈 번호(형제 포함): 일지 2026-10-07-08, 티켓 001\n" in out
 
 
 def test_열린_PR의_일지가_이름순으로_뒤면_알리기만_한다(
@@ -1927,15 +1907,14 @@ def test_열린_PR의_일지가_이름순으로_뒤면_알리기만_한다(
     _, work, pusher = 저장소
     pr8 = _PR을_민다(pusher, 8, {"docs/journal/2026-10-07-03-pr.md": "그쪽\n"})
     _연다(pusher, 8, pr8)
-    queue = SEED[".scratch/retro-queue.md"] + "| 2 | 이쪽 |\n"
-    _쓴다(work, {"docs/journal/2026-10-07-02-ours.md": "이쪽\n", ".scratch/retro-queue.md": queue})
+    _쓴다(work, {"docs/journal/2026-10-07-02-ours.md": "이쪽\n"})
 
     code = main([str(work)], today=date(2026, 10, 7))
 
     out = capsys.readouterr().out
     assert code == 0
     # 다음 빈 번호는 이 브랜치의 새 번호도 넘는다
-    assert "다음 빈 번호(형제 포함): 일지 2026-10-07-04, 대기열 3, 티켓 001\n" in out
+    assert "다음 빈 번호(형제 포함): 일지 2026-10-07-04, 티켓 001\n" in out
     ahead = "이 브랜치의 새 일지 2026-10-07-02 를 이름순으로 앞서는 형제"
     ahead += "(그쪽이 먼저 병합되면 옮긴다, 종료 코드와 무관):\n"
     assert ahead + "- PR #8: 2026-10-07-03\n" in out
@@ -2017,6 +1996,49 @@ def test_merge_base에서_번호의_자리가_비면_2로_끝난다(
     assert ON_FAILURE in captured.err
 
 
+def test_merge_base에_옛_대기열_표가_없어도_2로_끝나지_않는다(
+    저장소: tuple[Path, Path, Path], capsys: pytest.CaptureFixture[str]
+) -> None:
+    """대기열이 항목마다 파일 하나인 폴더가 된 뒤에는 `.scratch/retro-queue.md` 가 어느 브랜치의
+    merge-base 에도 없다. 빈 자리 검사가 그 표를 보면 분할 뒤에 딴 모든 브랜치에서 대조가 2로
+    멈춘다. 씨앗 저장소가 바로 그 모양이다."""
+    _, work, _ = 저장소
+    assert ".scratch/retro-queue.md" not in SEED
+    _쓴다(work, {"docs/journal/2026-10-07-02-ours.md": "이쪽\n"})
+
+    code = main([str(work)], today=date(2026, 10, 7))
+
+    captured = capsys.readouterr()
+    assert code == 0, captured.err
+    assert "번호의 자리가 비었다" not in captured.err
+    assert "번호 겹침 없음\n" in captured.out
+    assert "다음 빈 번호(형제 포함): 일지 2026-10-07-03, 티켓 001\n" in captured.out
+    assert "대기열" not in captured.out
+
+
+def test_대기열_폴더의_항목_파일은_번호로_읽지_않아_같은_이름이어도_겹침이_아니다(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """항목은 번호가 아니라 이름이 식별자라 이 도구가 대조하는 번호가 아니다. 두 브랜치가 같은
+    이름의 항목을 다른 글로 더해도 함께 고친 파일로 알릴 뿐 번호 겹침으로 세지 않고, 그 파일에서
+    `대기열 N` 인용도 옮기지 않는다."""
+    item = ".scratch/retro-queue/0582.md"
+    seed = {**SEED, ".scratch/retro-queue/0001.md": "# 0001: 씨앗\n"}
+    _, work, pusher = _원격과_클론(tmp_path, seed)
+    pr5 = _PR을_민다(pusher, 5, {item: "# 0582: 그쪽\n"})
+    _연다(pusher, 5, pr5)
+    _쓴다(work, {item: "# 0582: 이쪽\n\n대기열 0581을 잇는다\n"})
+
+    code = main([str(work)], today=date(2026, 10, 7))
+
+    out = capsys.readouterr().out
+    assert code == 0, out
+    assert "이 브랜치의 새 번호 없음\n" in out
+    assert "번호 겹침 없음\n" in out
+    assert f"- PR #5: {item}\n" in out
+    assert "대기열" not in out
+
+
 def test_원격을_읽지_못하면_2로_끝나고_까닭과_할_일을_알린다(
     저장소: tuple[Path, Path, Path], capsys: pytest.CaptureFixture[str]
 ) -> None:
@@ -2030,7 +2052,7 @@ def test_원격을_읽지_못하면_2로_끝나고_까닭과_할_일을_알린�
     assert code == 2
     assert "ls-remote" in captured.err
     assert ON_FAILURE in captured.err
-    assert "번호(일지 순번, ADR, 대기열 행, 헌법 판, harness 티켓)를 손으로 고르지" in ON_FAILURE
+    assert "번호(일지 순번, ADR, 헌법 판, harness 티켓)를 손으로 고르지" in ON_FAILURE
 
 
 @pytest.mark.parametrize("flag", ["-h", "--help"])
@@ -2167,54 +2189,22 @@ def test_합치기를_커밋하기_전에도_main이_올린_헌법_판은_이_�
     assert "번호 겹침 없음" in out
 
 
-def test_합치다_대기열_행이_겹쳐도_옮기기는_main의_행을_둔다(
-    tmp_path: Path, capsys: pytest.CaptureFixture[str]
-) -> None:
-    """PR 직전 버그 축: 양쪽이 같은 번호의 행을 더해 충돌을 풀고 두 행을 남긴 채 `--move` 를 치면
-    main 의 행 머리까지 옮겨졌다. merge-base 와 main 의 판에 글자 그대로 있는 줄은 둔다."""
-    queue = SEED[QUEUE]
-    _, work, pusher = _원격과_클론(tmp_path, SEED)
-    ours = {QUEUE: queue + "| 2 | 이쪽 |\n", "docs/notes.md": "대기열 2를 본다\n"}
-    _커밋한다(work, ours, "이 브랜치")
-    _커밋한다(pusher, {QUEUE: queue + "| 2 | main |\n"}, "main")
-    _git(pusher, "push", "-q", "origin", "main")
-    _git(work, "fetch", "-q", "origin")
-    with pytest.raises(subprocess.CalledProcessError):
-        _git(work, "merge", "-q", "origin/main")  # 대기열 끝이 충돌한다
-    _쓴다(work, {QUEUE: queue + "| 2 | main |\n| 2 | 이쪽 |\n"})
-    _git(work, "add", QUEUE)
-
-    code = main([str(work), "--move"])
-
-    out = capsys.readouterr().out
-    assert code == 0, out
-    assert "옮겼다: 대기열 2 → 3" in out
-    assert (work / QUEUE).read_text(encoding="utf-8") == queue + "| 2 | main |\n| 3 | 이쪽 |\n"
-    assert (work / "docs/notes.md").read_text(encoding="utf-8") == "대기열 3를 본다\n"
-
-
 def test_옮기기를_고르면_옮길_번호대로_옮기고_다시_대조한다(
     저장소: tuple[Path, Path, Path], capsys: pytest.CaptureFixture[str]
 ) -> None:
     """대기열 249: 형제가 더 높은 번호를 들고 먼저 병합해 한 세션에서 번호를 두 번 옮기고, 그때마다
     인용(다섯에서 아홉)을 손으로 고쳤다(일지 2026-10-13-59·2026-10-13-61)."""
     _, work, pusher = 저장소
-    queue = SEED[".scratch/retro-queue.md"]
-    pr5_files = {
-        "docs/journal/2026-10-07-02-pr.md": "# 2026-10-07 (02) 그쪽\n",
-        ".scratch/retro-queue.md": queue + "| 2 | 그쪽 |\n",
-    }
-    pr5 = _PR을_민다(pusher, 5, pr5_files)
+    pr5 = _PR을_민다(pusher, 5, {"docs/journal/2026-10-07-02-pr.md": "# 2026-10-07 (02) 그쪽\n"})
     _연다(pusher, 5, pr5)
     old = "docs/journal/2026-10-07-02-ours.md"
     _커밋한다(work, {old: "# 2026-10-07 (02) 이쪽\n\n대기열 2를 연다.\n"}, "일지")
-    _쓴다(work, {".scratch/retro-queue.md": queue + "| 2 | 이쪽, 일지 2026-10-07-02 |\n"})
 
     code = main([str(work)], today=date(2026, 10, 7))
 
     out = capsys.readouterr().out
     assert code == 1, out
-    assert "옮길 번호: 일지 2026-10-07-02 → 2026-10-07-03, 대기열 2 → 3\n" in out
+    assert "옮길 번호: 일지 2026-10-07-02 → 2026-10-07-03\n" in out
     assert "`--move` 를 붙여 다시 치면" in out
 
     # 옮길 자리에 무엇이 있으면 아무것도 고치지 않고 2로 끝난다
@@ -2229,8 +2219,6 @@ def test_옮기기를_고르면_옮길_번호대로_옮기고_다시_대조한�
     assert ON_FAILURE in captured.err
     journal_text = (work / old).read_text(encoding="utf-8")
     assert journal_text == "# 2026-10-07 (02) 이쪽\n\n대기열 2를 연다.\n"
-    queue_text = (work / ".scratch/retro-queue.md").read_text(encoding="utf-8")
-    assert queue_text == queue + "| 2 | 이쪽, 일지 2026-10-07-02 |\n"
 
     blocker.rmdir()
 
@@ -2238,20 +2226,18 @@ def test_옮기기를_고르면_옮길_번호대로_옮기고_다시_대조한�
 
     out = capsys.readouterr().out
     assert code == 0, out
-    assert out.startswith("옮겼다: 일지 2026-10-07-02 → 2026-10-07-03, 대기열 2 → 3.")
+    assert out.startswith("옮겼다: 일지 2026-10-07-02 → 2026-10-07-03.")
     renamed = f"이름을 바꾼 파일: {old} → docs/journal/2026-10-07-03-ours.md."
     assert renamed in out
-    texts = "인용을 고친 파일: .scratch/retro-queue.md, docs/journal/2026-10-07-03-ours.md."
-    assert texts in out
+    assert "인용을 고친 파일: docs/journal/2026-10-07-03-ours.md." in out
     assert "옛 이름의 지움까지 함께 스테이지한다(`git add -A`)" in out
     assert "번호 뒤의 조사는 옮기지 않았으니 손으로 본다" in out
     assert "번호 겹침 없음" in out and "옮길 번호" not in out
     assert "PR 본문" not in out  # origin 이 GitHub 이 아니면 PR 본문을 묻지 않는다
     assert not (work / old).exists()
     moved = (work / "docs/journal/2026-10-07-03-ours.md").read_text(encoding="utf-8")
-    assert moved == "# 2026-10-07 (03) 이쪽\n\n대기열 3를 연다.\n"
-    queue_text = (work / ".scratch/retro-queue.md").read_text(encoding="utf-8")
-    assert queue_text == queue + "| 3 | 이쪽, 일지 2026-10-07-03 |\n"
+    # 대기열 인용은 번호가 아니라 항목의 이름이라 옮기지 않는다
+    assert moved == "# 2026-10-07 (03) 이쪽\n\n대기열 2를 연다.\n"
     # 인덱스는 건드리지 않는다. 옛 일지가 인덱스에 남아도 대조는 작업 트리를 읽어 0이다(못 보는 것)
     assert old in _git(work, "ls-files")
 
@@ -2260,6 +2246,52 @@ def test_옮기기를_고르면_옮길_번호대로_옮기고_다시_대조한�
     out = capsys.readouterr().out
     assert code == 0, out
     assert out.startswith("옮길 번호가 없어 옮기지 않았다\n")
+
+
+def test_옮기기는_merge_base와_main의_판에_글자_그대로_있는_같은_번호의_줄을_둔다(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """PR 직전 버그 축: 양쪽이 같은 ADR 번호를 쓰고 충돌을 풀어 세 줄을 남긴 채 `--move` 를 치면
+    merge-base 에 있던 줄과 main 이 더한 줄까지 옮겨졌다. 두 판에 글자 그대로 있는 줄은 상대를
+    가리키니 둔다. 이 브랜치가 더한 줄만 옮긴다."""
+    base_line = "merge-base 의 줄: ADR 0002 를 쓸 예정\n"
+    _, work, pusher = _원격과_클론(tmp_path, {**SEED, "docs/notes.md": base_line})
+    ours_line, main_line = "이 브랜치의 줄: ADR 0002\n", "main 의 줄: ADR 0002\n"
+    ours = {"docs/adr/0002-ours.md": "이쪽\n", "docs/notes.md": base_line + ours_line}
+    _커밋한다(work, ours, "이 브랜치")
+    main_files = {"docs/adr/0002-main.md": "main\n", "docs/notes.md": base_line + main_line}
+    _커밋한다(pusher, main_files, "main")
+    _git(pusher, "push", "-q", "origin", "main")
+    _git(work, "fetch", "-q", "origin")
+    with pytest.raises(subprocess.CalledProcessError):
+        _git(work, "merge", "-q", "origin/main")  # 둘 다 더한 docs/notes.md 끝이 충돌한다
+    _쓴다(work, {"docs/notes.md": base_line + main_line + ours_line})
+    _git(work, "add", "docs/notes.md")
+
+    code = main([str(work), "--move"])
+
+    out = capsys.readouterr().out
+    assert code == 0, out
+    assert "옮겼다: ADR 0002 → 0003" in out
+    notes = (work / "docs/notes.md").read_text(encoding="utf-8")
+    assert notes == base_line + main_line + "이 브랜치의 줄: ADR 0003\n"
+
+
+def test_옮기기는_이_브랜치가_더한_줄의_번호만_옮기고_나머지_줄은_그대로_둔다(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """위 시험의 대조군. 같은 파일에서 이 브랜치가 더한 줄이 옮겨졌는지 따로 본다."""
+    _, work, pusher = _원격과_클론(tmp_path, SEED)
+    _커밋한다(pusher, {"docs/adr/0002-main.md": "main\n"}, "main")
+    _git(pusher, "push", "-q", "origin", "main")
+    _git(work, "fetch", "-q", "origin")
+    _쓴다(work, {"docs/adr/0002-ours.md": "이쪽\n", "docs/notes.md": "이 브랜치의 줄: ADR 0002\n"})
+
+    code = main([str(work), "--move"])
+
+    out = capsys.readouterr().out
+    assert code == 0, out
+    assert (work / "docs/notes.md").read_text(encoding="utf-8") == "이 브랜치의 줄: ADR 0003\n"
 
 
 def test_옮기기는_이_브랜치의_열린_PR_본문에_남은_옛_번호를_알린다(
@@ -2383,118 +2415,23 @@ def test_합치는_도중_main에서_들어온_줄의_일지_인용은_이_브�
     assert "어디에도 없는 일지" not in out
 
 
-def test_합치는_도중_main이_더한_행에_글을_더해도_이_브랜치의_새_행이_아니다(
-    tmp_path: Path, capsys: pytest.CaptureFixture[str]
-) -> None:
-    """대기열 492: 합치기를 커밋하기 전에 merge-base 를 `HEAD` 와 main 으로만 구해 옛 main 에
-    머물렀고, main 이 더한 행에 회차만 더한 것을 이 브랜치의 새 행으로 읽어 다음 번호로 옮겼다."""
-    _, work, pusher = _원격과_클론(tmp_path, SEED)
-    _커밋한다(work, {"docs/notes.md": "이쪽\n"}, "이 브랜치")
-    queue = QUEUE_HEAD + "| 1 | 씨앗 |\n| 2 | main 의 행 | 자체 승인, 1회차 |\n"
-    _커밋한다(pusher, {".scratch/retro-queue.md": queue}, "main")
-    _git(pusher, "push", "-q", "origin", "main")
-    _git(work, "fetch", "-q", "origin")
-    _git(work, "merge", "-q", "--no-ff", "--no-commit", "origin/main")
-    assert _git(work, "rev-parse", "-q", "--verify", "MERGE_HEAD")
-    _쓴다(work, {".scratch/retro-queue.md": queue.replace("1회차", "2회차")})
-
-    code = main([str(work)])
-
-    out = capsys.readouterr().out
-    assert code == 0, out
-    assert "이 브랜치의 새 번호 없음" in out
-    assert "옮길 번호" not in out
-
-
-def test_합치는_도중_main이_더한_행과_같은_번호로_새_행을_더하면_겹침이다(
-    tmp_path: Path, capsys: pytest.CaptureFixture[str]
-) -> None:
-    """대기열 492 의 뺌은 작업 트리에 그 번호가 한 줄일 때만이다. 합치는 중에 커밋하지 않은 새 행을
-    main 의 행과 같은 번호로 더하면 두 줄이라 진짜 겹침으로 알린다."""
-    _, work, pusher = _원격과_클론(tmp_path, SEED)
-    _커밋한다(work, {"docs/notes.md": "이쪽\n"}, "이 브랜치")
-    queue = QUEUE_HEAD + "| 1 | 씨앗 |\n| 2 | main 의 행 |\n"
-    _커밋한다(pusher, {".scratch/retro-queue.md": queue}, "main")
-    _git(pusher, "push", "-q", "origin", "main")
-    _git(work, "fetch", "-q", "origin")
-    _git(work, "merge", "-q", "--no-ff", "--no-commit", "origin/main")
-    _쓴다(work, {".scratch/retro-queue.md": queue + "| 2 | 이쪽 |\n"})
-
-    code = main([str(work)])
-
-    out = capsys.readouterr().out
-    assert code == 1, out
-    assert "이 브랜치의 새 번호: 대기열 2" in out
-    assert "옮길 번호: 대기열 2 → 3\n" in out
-
-
-def test_합치는_도중_두_줄이면_main의_행이_뒤에_와도_겹침이다(
-    tmp_path: Path, capsys: pytest.CaptureFixture[str]
-) -> None:
-    """셀프 리뷰 명세 축: 행 사전은 같은 번호를 뒤 줄로 덮어, main 의 행이 뒤에 오면 이 브랜치의
-    행을 잃고 0으로 끝났다. 합칠 머리에 글자 그대로 없는 줄을 이 브랜치의 행으로 둔다."""
-    _, work, pusher = _원격과_클론(tmp_path, SEED)
-    _커밋한다(work, {"docs/notes.md": "이쪽\n"}, "이 브랜치")
-    queue = QUEUE_HEAD + "| 1 | 씨앗 |\n"
-    _커밋한다(pusher, {".scratch/retro-queue.md": queue + "| 2 | main 의 행 |\n"}, "main")
-    _git(pusher, "push", "-q", "origin", "main")
-    _git(work, "fetch", "-q", "origin")
-    _git(work, "merge", "-q", "--no-ff", "--no-commit", "origin/main")
-    _쓴다(work, {".scratch/retro-queue.md": queue + "| 2 | 이쪽 |\n| 2 | main 의 행 |\n"})
-
-    code = main([str(work)])
-
-    out = capsys.readouterr().out
-    assert code == 1, out
-    assert "이 브랜치의 새 번호: 대기열 2" in out
-    assert "옮길 번호: 대기열 2 → 3\n" in out
-
-
 def test_main이_아닌_브랜치를_합치는_도중에는_그_번호를_이_브랜치_밖의_것으로_센다(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    """셀프 리뷰 명세 축: 합칠 머리가 main 이 아니면 그 일지를 이 브랜치의 새 일지로 읽었고, 그
-    대기열 행은 뺐는데 다음 빈 번호가 그 행의 번호를 냈다."""
+    """셀프 리뷰 명세 축: 합칠 머리가 main 이 아니면 그 일지를 이 브랜치의 새 일지로 읽었다."""
     _, work, _ = _원격과_클론(tmp_path, SEED)
     _커밋한다(work, {"docs/notes.md": "이쪽\n"}, "이 브랜치")
     _git(work, "checkout", "-q", "-b", "side", "origin/main")
-    queue = QUEUE_HEAD + "| 1 | 씨앗 |\n| 2 | 옆의 행, 1회차 |\n"
-    files = {".scratch/retro-queue.md": queue, "docs/journal/2026-10-07-05-side.md": "# x\n"}
-    _커밋한다(work, files, "side")
+    _커밋한다(work, {"docs/journal/2026-10-07-05-side.md": "# x\n"}, "side")
     _git(work, "checkout", "-q", "-")
     _git(work, "merge", "-q", "--no-ff", "--no-commit", "side")
-    _쓴다(work, {".scratch/retro-queue.md": queue.replace("1회차", "2회차")})
 
     code = main([str(work)], today=date(2026, 10, 7))
 
     out = capsys.readouterr().out
     assert code == 0, out
     assert "이 브랜치의 새 번호 없음" in out
-    assert "다음 빈 번호(형제 포함): 일지 2026-10-07-06, 대기열 3," in out
-
-
-def test_합치는_도중_이_브랜치가_커밋한_행을_한_줄로_풀어도_겹침이다(
-    tmp_path: Path, capsys: pytest.CaptureFixture[str]
-) -> None:
-    """셀프 리뷰 표준 축: `HEAD` 에도 있던 번호를 두는 갈래를 지워도 초록이었다. 양쪽이 같은 번호로
-    행을 커밋하고 충돌을 이 브랜치의 행 한 줄로 풀면, 그 번호는 이 브랜치의 것이라 겹침이다."""
-    queue = SEED[QUEUE]
-    _, work, pusher = _원격과_클론(tmp_path, SEED)
-    _커밋한다(work, {QUEUE: queue + "| 2 | 이쪽 |\n"}, "이 브랜치")
-    _커밋한다(pusher, {QUEUE: queue + "| 2 | main |\n"}, "main")
-    _git(pusher, "push", "-q", "origin", "main")
-    _git(work, "fetch", "-q", "origin")
-    with pytest.raises(subprocess.CalledProcessError):
-        _git(work, "merge", "-q", "origin/main")  # 대기열 끝이 충돌한다
-    _쓴다(work, {QUEUE: queue + "| 2 | 이쪽 |\n"})
-    _git(work, "add", QUEUE)
-
-    code = main([str(work)])
-
-    out = capsys.readouterr().out
-    assert code == 1, out
-    assert "이 브랜치의 새 번호: 대기열 2" in out
-    assert "옮길 번호: 대기열 2 → 3\n" in out
+    assert "다음 빈 번호(형제 포함): 일지 2026-10-07-06," in out
 
 
 def test_여러_머리를_합치는_도중에는_머리마다_그_번호를_이_브랜치_밖의_것으로_센다(
@@ -2503,43 +2440,21 @@ def test_여러_머리를_합치는_도중에는_머리마다_그_번호를_이_
     """셀프 리뷰 표준 축: octopus 합치기(`MERGE_HEAD` 가 여러 줄)를 만드는 시험이 없었다."""
     _, work, _ = _원격과_클론(tmp_path, SEED)
     _커밋한다(work, {"docs/notes.md": "이쪽\n"}, "이 브랜치")
-    queue = QUEUE_HEAD + "| 1 | 씨앗 |\n| 2 | 옆의 행, 1회차 |\n"
     _git(work, "checkout", "-q", "-b", "side1", "origin/main")
-    _커밋한다(work, {QUEUE: queue}, "side1")
+    _커밋한다(work, {"docs/journal/2026-10-07-04-side1.md": "# y\n"}, "side1")
     _git(work, "checkout", "-q", "-b", "side2", "origin/main")
     _커밋한다(work, {"docs/journal/2026-10-07-05-side.md": "# x\n"}, "side2")
     _git(work, "checkout", "-q", "topic")
     _git(work, "merge", "-q", "--no-ff", "--no-commit", "side1", "side2")
     merge_head = (work / ".git" / "MERGE_HEAD").read_text(encoding="utf-8")
     assert len(merge_head.split()) == 2, merge_head
-    _쓴다(work, {QUEUE: queue.replace("1회차", "2회차")})
 
     code = main([str(work)], today=date(2026, 10, 7))
 
     out = capsys.readouterr().out
     assert code == 0, out
     assert "이 브랜치의 새 번호 없음" in out
-    assert "다음 빈 번호(형제 포함): 일지 2026-10-07-06, 대기열 3," in out
-
-
-def test_합치는_도중_main이_더한_행을_같은_번호의_다른_행으로_바꾸면_보지_못한다(
-    tmp_path: Path, capsys: pytest.CaptureFixture[str]
-) -> None:
-    """못 보는 것: 한 줄이면 행의 글로는 회차를 더한 것과 가르지 못해 main 의 행으로 보고 뺀다."""
-    _, work, pusher = _원격과_클론(tmp_path, SEED)
-    _커밋한다(work, {"docs/notes.md": "이쪽\n"}, "이 브랜치")
-    queue = QUEUE_HEAD + "| 1 | 씨앗 |\n"
-    _커밋한다(pusher, {".scratch/retro-queue.md": queue + "| 2 | main 의 행 |\n"}, "main")
-    _git(pusher, "push", "-q", "origin", "main")
-    _git(work, "fetch", "-q", "origin")
-    _git(work, "merge", "-q", "--no-ff", "--no-commit", "origin/main")
-    _쓴다(work, {".scratch/retro-queue.md": queue + "| 2 | 이쪽 |\n"})
-
-    code = main([str(work)])
-
-    out = capsys.readouterr().out
-    assert code == 0, out
-    assert "이 브랜치의 새 번호 없음" in out
+    assert "다음 빈 번호(형제 포함): 일지 2026-10-07-06," in out
 
 
 def test_main이_이_브랜치_몫으로_비워_둔_헌법_판에_이력을_더했으면_판을_올린_것이다(
@@ -2618,7 +2533,7 @@ def test_merge_base에_harness_폴더가_없어도_2로_끝나지_않고_다음_
     captured = capsys.readouterr()
     out = captured.out
     assert code == 0, out + captured.err  # 2로 끝난 까닭은 stderr 에 있다
-    assert "다음 빈 번호(형제 포함): 일지 2026-10-07-02, 대기열 2, 티켓 001\n" in out
+    assert "다음 빈 번호(형제 포함): 일지 2026-10-07-02, 티켓 001\n" in out
 
     _커밋한다(pusher, {f"{ISSUES}/001-main.md": "# 001: main\n"}, "main 이 첫 티켓을 들인다")
     _git(pusher, "push", "-q", "origin", "main")
@@ -2627,7 +2542,7 @@ def test_merge_base에_harness_폴더가_없어도_2로_끝나지_않고_다음_
 
     out = capsys.readouterr().out
     assert code == 0, out
-    assert "다음 빈 번호(형제 포함): 일지 2026-10-07-02, 대기열 2, 티켓 002\n" in out
+    assert "다음 빈 번호(형제 포함): 일지 2026-10-07-02, 티켓 002\n" in out
 
     _형제_워크트리(work, {f"{ISSUES}/002-sibling.md": "# 002: 형제\n"})
 
@@ -2635,7 +2550,7 @@ def test_merge_base에_harness_폴더가_없어도_2로_끝나지_않고_다음_
 
     out = capsys.readouterr().out
     assert code == 0, out
-    assert "다음 빈 번호(형제 포함): 일지 2026-10-07-02, 대기열 2, 티켓 003\n" in out
+    assert "다음 빈 번호(형제 포함): 일지 2026-10-07-02, 티켓 003\n" in out
 
 
 def test_형제_워크트리의_커밋하지_않은_harness_티켓과_번호가_겹치면_1로_끝나고_옮길_번호를_낸다(
@@ -2653,7 +2568,7 @@ def test_형제_워크트리의_커밋하지_않은_harness_티켓과_번호가_
     clash = f"- 워크트리 {sibling} 티켓 001: 이 브랜치 001-ours.md, 그쪽 001-sibling.md\n"
     assert clash in out
     assert "옮길 번호: 티켓 001-ours → 002-ours\n" in out
-    assert "다음 빈 번호(형제 포함): 일지 2026-10-07-02, 대기열 2, 티켓 002\n" in out
+    assert "다음 빈 번호(형제 포함): 일지 2026-10-07-02, 티켓 002\n" in out
 
 
 def test_열린_PR의_harness_티켓과_번호가_겹치면_1로_끝나고_닫힌_PR은_보지_않는다(
@@ -2946,7 +2861,7 @@ def test_harness_티켓_폴더의_경로가_어긋나면_조용히_겹침_없음
     out = captured.out
     assert code == 0, out + captured.err  # 2로 끝난 까닭은 stderr 에 있다
     assert "번호 겹침 없음\n" in out
-    assert "다음 빈 번호(형제 포함): 일지 2026-10-07-02, 대기열 2, 티켓 001\n" in out
+    assert "다음 빈 번호(형제 포함): 일지 2026-10-07-02, 티켓 001\n" in out
 
 
 def test_지시문이_받아_두고_파일이_없는_티켓_번호는_다음_빈_번호로_다시_나온다(
@@ -2961,7 +2876,7 @@ def test_지시문이_받아_두고_파일이_없는_티켓_번호는_다음_빈
 
     out = capsys.readouterr().out
     assert code == 0, out
-    assert "다음 빈 번호(형제 포함): 일지 2026-10-07-02, 대기열 2, 티켓 001\n" in out
+    assert "다음 빈 번호(형제 포함): 일지 2026-10-07-02, 티켓 001\n" in out
 
 
 def test_기능_폴더의_두_자리_티켓은_형제와_같은_번호여도_겹침이_아니다(
@@ -2977,4 +2892,4 @@ def test_기능_폴더의_두_자리_티켓은_형제와_같은_번호여도_겹
     out = capsys.readouterr().out
     assert code == 0, out
     assert "번호 겹침 없음\n" in out
-    assert "다음 빈 번호(형제 포함): 일지 2026-10-07-02, 대기열 2, 티켓 001\n" in out
+    assert "다음 빈 번호(형제 포함): 일지 2026-10-07-02, 티켓 001\n" in out

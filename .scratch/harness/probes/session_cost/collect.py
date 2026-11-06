@@ -898,8 +898,16 @@ def build(args: argparse.Namespace) -> dict[str, Json]:
         for n in set(re.findall(r"#(\d+)\b", text)):
             if int(n) < int(str(pr["number"])):
                 later_mentions[int(n)] += 1
-    queue = (repo / ".scratch" / "retro-queue.md").read_text(encoding="utf-8")
-    queue_rows = [ln for ln in queue.splitlines() if re.match(r"^\| \d+ \|", ln)]
+    # 대기열은 2026-11-07부터 항목마다 파일 하나인 폴더다(retro-queue-per-item 02). 사전 등록의
+    # "행"은 항목 파일 하나(README.md 는 항목이 아니다)로 읽는다. 옛 표의 행은 한 줄이었고 항목
+    # 파일은 본문까지 들어, 같은 PR 번호를 본문에서 든 항목도 센다(README 의 "결과" 절 끝에
+    # 적었다).
+    queue_dir = repo / ".scratch" / "retro-queue"
+    queue_items = [
+        entry.read_text(encoding="utf-8")
+        for entry in sorted(queue_dir.glob("*.md"))
+        if entry.is_file() and entry.name != "README.md"
+    ]
     subjects = git.main_subjects()
     runs_by_branch: dict[str, list[dict[str, Json]]] = defaultdict(list)
     for r in runs:
@@ -983,7 +991,7 @@ def build(args: argparse.Namespace) -> dict[str, Json]:
                 "ci_failures": ci_fail,
                 "rework": after + crit_major + ci_fail,
                 "followup_mentions": later_mentions.get(num, 0),
-                "retro_rows": sum(1 for ln in queue_rows if tag.search(ln)),
+                "retro_rows": sum(1 for text in queue_items if tag.search(text)),
                 "reverts": reverts,
                 "cost": round(a.cost, 4),
                 "cost_main": round(a.cost_main, 4),

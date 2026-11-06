@@ -12,9 +12,9 @@
   이다.
 
 임시 저장소는 변형마다 새로 짓는다. origin 은 같은 디렉터리의 bare 저장소이고, main 에는 오늘 날짜의
-01 일지와 ADR, 대기열 행, 헌법 판이 있다(`tools/sibling_overlap.py` 는 merge-base 에서 네 자리가
-비면 2로 끝난다). 작업 브랜치는 main 에서 딴 `chore/probe` 다. 오늘은 이 기계의 지역 날짜로, 그
-도구와 같다.
+01 일지와 ADR, 헌법 판이 있다(`tools/sibling_overlap.py` 는 merge-base 에서 세 자리(일지, ADR, 헌법
+판)가 비면 2로 끝난다). 작업 브랜치는 main 에서 딴 `chore/probe` 다. 오늘은 이 기계의 지역 날짜로,
+그 도구와 같다.
 
 돌리는 법: 저장소 루트에서
 `uv run python .scratch/harness/probes/journal_number_hook/run.py <저장소 밖 디렉터리> [변형 ...]`.

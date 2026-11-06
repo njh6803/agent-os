@@ -859,8 +859,9 @@ def journal_repository(where: Path, today: str) -> Path:
     저장소를 짓는다. 훅의 순번 대조를 재는 픽스처다(페이로드 표, `tests/tools/`, 프로브가 함께
     쓴다).
 
-    origin 은 `where/origin.git` 의 bare 저장소다. main 에는 ADR·대기열 행·헌법 판도 둔다.
-    `tools/sibling_overlap.py` 는 merge-base 에서 네 자리 가운데 하나라도 비면 2로 끝난다.
+    origin 은 `where/origin.git` 의 bare 저장소다. main 에는 ADR·헌법 판도 둔다.
+    `tools/sibling_overlap.py` 는 merge-base 에서 세 자리(일지·ADR·헌법 판) 가운데 하나라도
+    비면 2로 끝난다. 대기열은 그 도구가 번호로 읽지 않아 파일을 심지 않는다.
     """
     origin = where / "origin.git"
     repo = where / "repo"
@@ -873,7 +874,6 @@ def journal_repository(where: Path, today: str) -> Path:
     files = {
         f"docs/journal/{today}-01-main.md": f"# {today} (01) main\n",
         "docs/adr/0001-x.md": "# 0001\n",
-        ".scratch/retro-queue.md": "| 1 | x |\n",
         "docs/constitution/README.md": "**Version**: 1.0.0\n",
     }
     for name, text in files.items():

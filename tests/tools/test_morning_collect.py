@@ -62,6 +62,7 @@ from tools.morning_collect import (
     money_unit,
     over_cap,
     queue_part,
+    queue_section,
     queue_whats,
     review_rounds,
     session_rows,
@@ -100,6 +101,7 @@ from tools.morning_sources import (
     OpenPr,
     ci_state,
     journal_next,
+    main_queue,
     merged_prs,
     open_prs,
     open_state,
@@ -309,12 +311,30 @@ def test_tasklist_의_CSV_에서_프로세스_수와_메모리_합을_MB로_읽�
     assert tasklist_load("정보: 지정된 조건에 일치하는 작업이 없습니다.\n") == (0, 0)
 
 
-def test_대기열_행의_무엇_칸을_번호로_꺼낸다() -> None:
-    text = (
-        "| # | 무엇 | 어디로 | 승인 |\n|---|---|---|---|\n"
-        "| 238 | 남은 워크트리 \\| 여섯 | 사람 몫: 정리 | 2026-10-19 11회차 |\n"
+def 항목(ident: str, head: str, where: str, approval: str, status: str = "열림") -> tuple[str, str]:
+    """대기열 항목 파일 하나(파일 이름, 내용). 꼴은 `.scratch/retro-queue/README.md`다."""
+    labels = f"**상태:** {status}\n**어디로:** {where}\n**승인:** {approval}"
+    return f"{ident}.md", f"# {ident}: {head}\n\n{labels}\n\n본문\n"
+
+
+def 폴더(*items: tuple[str, str]) -> dict[str, str]:
+    return dict(items)
+
+
+SLUG = "coderabbit-inline-size"
+
+
+def test_대기열_항목의_머리_줄을_식별자로_꺼낸다() -> None:
+    files = 폴더(
+        항목("0238", "남은 워크트리 | 여섯", "사람 몫: 정리", "2026-10-19 11회차"),
+        항목(SLUG, "인라인 크기", "`a.md`", "2026-11-07 5회차"),
     )
-    assert queue_whats(text) == {238: "남은 워크트리 | 여섯"}
+    files["README.md"] = "# 대기열 규칙\n"
+    assert queue_whats(files) == {"238": "남은 워크트리 | 여섯", SLUG: "인라인 크기"}
+
+
+def test_첫_줄이_항목_꼴이_아닌_파일은_머리_줄을_꺼내지_않는다() -> None:
+    assert queue_whats({"0001.md": "첫 줄이 다르다\n", "0002.md": "# 0003: 이름이 다르다\n"}) == {}
 
 
 def test_훅_표는_최근_14일과_앞_14일을_견주고_조용한_훅을_가른다() -> None:
@@ -661,11 +681,11 @@ def test_조각이_모은_것을_더하면_자기만_채우고_더한_조각은_
     piece = Collected()
     piece.value("y", "와이", 2.0, "개")
     piece.refs.add(7)
-    row = QueueRow(3, 2, human=False, what="무엇")
-    piece.queue[3] = row
+    row = QueueRow("3", 2, human=False, what="무엇")
+    piece.queue["3"] = row
     mine.add(piece)
     assert list(mine.values) == ["x", "y"]
-    assert (mine.refs, mine.queue) == ({7}, {3: row})
+    assert (mine.refs, mine.queue) == ({7}, {"3": row})
     assert (list(piece.values), piece.refs) == (["y"], {7})
 
 
@@ -690,19 +710,19 @@ def test_한계를_넘은_호출은_호출이_모두_넘은_이름표까지_센�
     assert over_cap([[1.0, 700.0], [900.0, 800.0], []]) == 3
 
 
-def test_대기열_5회차_이상_행과_같은_대상_파일_묶음은_목록이_아니라_표로_적는다() -> None:
-    # 숫자는 문장으로 나열하지 않고 표에 넣는다(작성 규칙 1). 행 수가 늘어도 목록은 한 줄이다.
+def test_대기열_5회차_이상_항목과_같은_대상_파일_묶음은_목록이_아니라_표로_적는다() -> None:
+    # 숫자는 문장으로 나열하지 않고 표에 넣는다(작성 규칙 1). 항목 수가 늘어도 목록은 한 줄이다.
     # 243(4회차)은 문턱이 다섯이라 표에서 빠진다(ADR 0036 이력 2026-11-06)
-    text = (
-        "| # | 무엇 | 어디로 | 승인 |\n|---|---|---|---|\n"
-        "| 238 | 남은 워크트리 | 사람 몫: 정리 | 2026-10-19 11회차 |\n"
-        "| 240 | 규칙 넷 | `CLAUDE.md` | 2026-10-19 5회차 |\n"
-        "| 241 | 규칙 다섯 | `CLAUDE.md` | 2026-10-19 6회차 |\n"
-        "| 242 | 규칙 하나 | `CLAUDE.md` | 2026-10-19 2회차 |\n"
-        "| 243 | 규칙 여섯 | `x.md` | 2026-10-19 4회차 |\n"
+    files = 폴더(
+        항목("0238", "남은 워크트리", "사람 몫: 정리", "2026-10-19 11회차"),
+        항목("0240", "규칙 넷", "`CLAUDE.md`", "2026-10-19 5회차"),
+        항목("0241", "규칙 다섯", "`CLAUDE.md`", "2026-10-19 6회차"),
+        항목("0242", "규칙 하나", "`CLAUDE.md`", "2026-10-19 2회차"),
+        항목("0243", "규칙 여섯", "`x.md`", "2026-10-19 4회차"),
+        항목(SLUG, "인라인 크기", "`CLAUDE.md`", "2026-10-19 6회차"),
     )
-    part = queue_part(date(2026, 10, 19), text, "원본", "10-20 09:00 기준")
-    summary = "- 열린 행 5개 · 기한 지난 행 0개 · 사람 몫 1개(직접 하실 일 참고)"
+    part = queue_part(date(2026, 10, 19), files, "원본", "10-20 09:00 기준")
+    summary = "- 열린 항목 6개 · 기한 지난 항목 0개 · 사람 몫 1개(직접 하실 일 참고)"
     assert part.section.lines == (summary,)
     ripe, shared = part.section.tables
     assert (ripe.key, ripe.report, ripe.period) == (
@@ -710,44 +730,145 @@ def test_대기열_5회차_이상_행과_같은_대상_파일_묶음은_목록�
         "environment",
         "10-20 09:00 기준",
     )
+    # 회차가 같으면 숫자 항목이 먼저, 그다음 슬러그다
     assert ripe.rows == (
         ("대기열 241", "6회차", "{{qname:241}}", "{{qcontent:241}}"),
+        (f"대기열 {SLUG}", "6회차", f"{{{{qname:{SLUG}}}}}", f"{{{{qcontent:{SLUG}}}}}"),
         ("대기열 240", "5회차", "{{qname:240}}", "{{qcontent:240}}"),
     )
     assert shared.key == "environment.queue_files"
     assert shared.head[1] == "대상인 항목(개)"
-    assert shared.rows == (("CLAUDE.md", "3", "240, 241, 242", "0", "-"),)
-    assert sorted(part.got.queue) == [238, 240, 241]
+    assert shared.rows == (("CLAUDE.md", "4", f"240, 241, 242, {SLUG}", "0", "-"),)
+    assert sorted(part.got.queue) == ["238", "240", "241", SLUG]
+    assert part.got.queue[SLUG] == QueueRow(SLUG, 6, human=False, what="인라인 크기")
+    assert part.got.queue["238"] == QueueRow("238", 11, human=True, what="남은 워크트리")
+    assert part.got.values["queue:open"] == Value("대기열 열린 항목", 6, "개")
+    assert part.got.values["queue:ripe"] == Value("대기열 5회 이상 항목", 3, "개")
+    assert part.got.values["queue:expired"] == Value("대기열 기한 지난 항목", 0, "개")
 
 
-def test_대상_파일_표는_괄호_안의_인용을_대상과_더해_행_셋이면_넣는다() -> None:
+def test_대기열은_닫힌_항목과_README를_세지_않고_기한_지난_항목을_센다() -> None:
+    files = 폴더(
+        항목("0001", "닫힌 일", "`a.md`", "2026-10-01 9회차", "닫힘 (반영)"),
+        항목("0002", "만료한 일", "`a.md`", "2026-10-01 1회차", "만료 2026-10-20 (ADR 0036)"),
+        항목("0003", "오래된 열린 일", "`a.md`", "자체 승인 2026-10-01, 1회차"),
+        항목("0004", "최근 열린 일", "`a.md`", "자체 승인 2026-10-30, 1회차"),
+    )
+    files["README.md"] = "# 규칙\n"
+    part = queue_part(date(2026, 11, 7), files, "원본", "11-08 09:00 기준")
+    assert part.section.lines == (
+        "- 열린 항목 2개 · 기한 지난 항목 1개 · 사람 몫 0개(직접 하실 일 참고)",
+    )
+
+
+def test_못_보는_것_라벨_줄이_빠진_항목_파일은_세지도_알리지도_않는다() -> None:
+    files = 폴더(항목("0001", "온전한 일", "`a.md`", "2026-11-06 1회차"))
+    files["0002.md"] = "# 0002: 라벨 줄이 없다\n\n본문\n"
+    part = queue_part(date(2026, 11, 7), files, "원본", "스냅샷")
+    assert part.section.lines == (
+        "- 열린 항목 1개 · 기한 지난 항목 0개 · 사람 몫 0개(직접 하실 일 참고)",
+    )
+
+
+def test_대기열_기한은_보고하는_날의_다음_날에서_14일_앞이다() -> None:
+    # 보고하는 날 11-07이면 경계는 10-25이고, 그 날 승인한 항목은 아직 기한 안이다
+    files = 폴더(
+        항목("0001", "경계 앞날", "`a.md`", "자체 승인 2026-10-24, 1회차"),
+        항목("0002", "경계날", "`a.md`", "자체 승인 2026-10-25, 1회차"),
+    )
+    part = queue_part(date(2026, 11, 7), files, "원본", "스냅샷")
+    assert part.got.values["queue:expired"].value == 1
+
+
+def test_대상_파일_표는_괄호_안의_인용을_대상과_더해_항목_셋이면_넣는다() -> None:
     # `queue_open_rows`는 인용 경로를 늘 찍고 "대상이면 위의 수에 더한다"고 적는데, 첫 판은 인용을
     # 버렸다
-    text = (
-        "| # | 무엇 | 어디로 | 승인 |\n|---|---|---|---|\n"
-        "| 1 | 가 | `a.md` | 2026-10-19 1회차 |\n"
-        "| 2 | 나 | `a.md` | 2026-10-19 1회차 |\n"
-        "| 3 | 다 | `b.md`(근거 `a.md`) | 2026-10-19 1회차 |\n"
-        "| 4 | 라 | `c.md`(근거 `r.md`) | 2026-10-19 1회차 |\n"
-        "| 5 | 마 | `c.md`(근거 `r.md`) | 2026-10-19 1회차 |\n"
-        "| 6 | 바 | `d.md`(근거 `r.md`) | 2026-10-19 1회차 |\n"
+    files = 폴더(
+        항목("0001", "가", "`a.md`", "2026-10-19 1회차"),
+        항목("0002", "나", "`a.md`", "2026-10-19 1회차"),
+        항목("0003", "다", "`b.md`(근거 `a.md`)", "2026-10-19 1회차"),
+        항목("0004", "라", "`c.md`(근거 `r.md`)", "2026-10-19 1회차"),
+        항목("0005", "마", "`c.md`(근거 `r.md`)", "2026-10-19 1회차"),
+        항목("0006", "바", "`d.md`(근거 `r.md`)", "2026-10-19 1회차"),
     )
-    [table] = queue_part(date(2026, 10, 19), text, "원본", "10-20 09:00 기준").section.tables
+    [table] = queue_part(date(2026, 10, 19), files, "원본", "10-20 09:00 기준").section.tables
     assert table.rows == (
         ("a.md", "2", "1, 2", "1", "3"),
         ("r.md", "0", "-", "3", "4, 5, 6"),
     )
 
 
-def test_대상_파일_표는_행_둘이_든_파일과_디렉터리_대상을_넣지_않는다() -> None:
-    # `queue_open_rows`의 묶음 보고처럼 파일 하나에 열린 행이 셋 이상일 때만 묶음이다
-    text = (
-        "| # | 무엇 | 어디로 | 승인 |\n|---|---|---|---|\n"
-        "| 1 | 가 | `a.md` · `.claude/rules/` | 2026-10-19 1회차 |\n"
-        "| 2 | 나 | `a.md` · `.claude/rules/` | 2026-10-19 1회차 |\n"
-        "| 3 | 다 | `.claude/rules/` | 2026-10-19 1회차 |\n"
+def test_대상_파일_표는_항목_둘이_든_파일과_디렉터리_대상을_넣지_않는다() -> None:
+    # `queue_open_rows`의 묶음 보고처럼 파일 하나에 열린 항목이 셋 이상일 때만 묶음이다
+    files = 폴더(
+        항목("0001", "가", "`a.md` · `.claude/rules/`", "2026-10-19 1회차"),
+        항목("0002", "나", "`a.md` · `.claude/rules/`", "2026-10-19 1회차"),
+        항목("0003", "다", "`.claude/rules/`", "2026-10-19 1회차"),
     )
-    assert queue_part(date(2026, 10, 19), text, "원본", "10-20 09:00 기준").section.tables == ()
+    part = queue_part(date(2026, 10, 19), files, "원본", "10-20 09:00 기준")
+    assert part.section.tables == ()
+
+
+def _git(cwd: Path, *args: str) -> None:
+    subprocess.run(["git", *args], cwd=cwd, check=True, capture_output=True, timeout=30)
+
+
+def _commit_as_origin_main(repo: Path, files: dict[str, str], where: str) -> None:
+    """임시 저장소의 `where` 폴더에 파일을 커밋하고 그 커밋을 `origin/main` ref로 둔다."""
+    _git(repo, "init", "-q")
+    folder = repo / where
+    folder.mkdir(parents=True)
+    for name, text in files.items():
+        (folder / name).write_text(text, encoding="utf-8", newline="\n")
+    _git(repo, "add", "-A")
+    _git(repo, "-c", "user.name=t", "-c", "user.email=t@t", "commit", "-q", "-m", "q")
+    _git(repo, "update-ref", "refs/remotes/origin/main", "HEAD")
+
+
+def test_main_queue는_작업_폴더가_아니라_root의_origin_main_폴더를_읽는다(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    other = tmp_path / "other"
+    other.mkdir()
+    files = 폴더(
+        항목("0238", "남은 워크트리", "사람 몫: 정리", "2026-10-19 11회차"),
+        항목(SLUG, "인라인 크기", "`CLAUDE.md`", "2026-11-07 5회차"),
+    )
+    files["README.md"] = "# 규칙\n"
+    _commit_as_origin_main(repo, files, ".scratch/retro-queue")
+    # 커밋하지 않은 항목은 origin/main에 없으므로 읽지 않는다
+    (repo / ".scratch" / "retro-queue" / "0999.md").write_text("# 0999: 미커밋\n", encoding="utf-8")
+    monkeypatch.chdir(other)  # 저장소가 아닌 자리에서도 `--root`의 저장소를 읽는다
+    got = main_queue(repo)
+    assert got is not None
+    assert sorted(got) == ["0238.md", f"{SLUG}.md"]
+    assert Path.cwd().resolve() == other.resolve()  # 읽고 나면 작업 폴더를 되돌린다
+    part = queue_section(date(2026, 11, 7), got, "스냅샷")
+    assert part.got.queue["238"].human
+    assert part.got.queue[SLUG].rounds == 5
+
+
+def test_main_queue는_origin_main이_없거나_폴더가_없으면_None이고_옛_파일로_돌아가지_않는다(
+    tmp_path: Path,
+) -> None:
+    empty = tmp_path / "empty"
+    empty.mkdir()
+    _git(empty, "init", "-q")
+    assert main_queue(empty) is None  # origin/main이 없다
+    old = tmp_path / "old"
+    old.mkdir()
+    table = "| # | 무엇 | 어디로 | 승인 |\n|---|---|---|---|\n| 1 | 일 | `a.md` | 1회차 |\n"
+    _commit_as_origin_main(old, {"retro-queue.md": table}, ".scratch")
+    assert main_queue(old) is None  # 이행 전 커밋은 폴더가 없다
+
+
+def test_대기열을_읽지_못하면_절은_수집_안_됨_한_줄이다() -> None:
+    part = queue_section(date(2026, 11, 7), None, "스냅샷")
+    assert part.section.tables == ()
+    assert part.section.lines == (f"- 대기열 {UNCOLLECTED}(git 실패)",)
+    assert part.got.queue == {}
 
 
 def 기록(at: str, *content: dict[str, Json]) -> dict[str, Json]:

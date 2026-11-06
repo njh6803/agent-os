@@ -9,7 +9,7 @@ google/fonts 사본의 머리를 요약으로 보고 근거로 적었다가 PR �
 WebFetch 로 확인한 수를 대화에서 "원문 대조"라고 보고했다(대기열 209, 일지 2026-10-12-37). 지침이
 어겨졌으니 훅으로 간다(CLAUDE.md 교정 루프는 막는 훅 후보로 본다). 막지 않고 알린다 — 요약을 읽는
 것은 잘못이 아니고, 잘못은 그 뒤의 보고에서 그것을 원문처럼 쓰는 데 있는데 훅은 그 문장을 보지
-못한다. 대기열 행도 계기 훅으로 정했다.
+못한다. 대기열 항목도 계기 훅으로 정했다.
 
 가르는 것은 결과 객체(`tool_response`)다. 키는 `bytes`·`code`·`codeText`·`durationMs`·`result`·`url`
 이다(Claude Code 2.1.296, `.scratch/harness/probes/webfetch_payload/run.sh` 의 A).

@@ -27,14 +27,81 @@ expect_output = ["AssertionError: 지나면 안 된다"]
 
 [[mutation.edit]]
 file = "tools/check_ticket.py"
-old = '''    if len(parts) >= 3 and parts[0] == ".scratch" and parts[1] != "harness":'''
-new = '''    if len(parts) >= 3 and parts[0] == ".scratch":'''
+old = '''    if len(parts) >= 3 and parts[0] == ".scratch" and parts[1] not in _NOT_FEATURES:'''
+new = '''    if len(parts) >= 3 and parts[0] == ".scratch" and parts[1] != _QUEUE_FOLDER:'''
+
+# retro-queue-per-item 02(대기열 폴더)가 면제 모양에 갈래를 더했다. 아래 다섯은 그 갈래의 판정을 하나씩
+# 꺼서 `_막혔다` 의 첫 단언이 빨개지는지 잰다.
+
+[[mutation]]
+name = "기능 slug 갈래가 retro-queue 를 빼지 않는다"
+tests = ["tests/tools/test_check_ticket.py", "-k", "대기열_폴더의_면제_꼴이_아닌"]
+expect = "red"
+expect_output = ["AssertionError: 지나면 안 된다"]
+
+[[mutation.edit]]
+file = "tools/check_ticket.py"
+old = '''_NOT_FEATURES = frozenset({"harness", _QUEUE_FOLDER})'''
+new = '''_NOT_FEATURES = frozenset({"harness"})'''
+
+[[mutation]]
+name = "대기열 폴더 면제가 직계가 아닌 하위 폴더까지 받는다"
+tests = ["tests/tools/test_check_ticket.py", "-k", "대기열_폴더의_면제_꼴이_아닌 and sub"]
+expect = "red"
+expect_output = ["AssertionError: 지나면 안 된다"]
+
+[[mutation.edit]]
+file = "tools/check_ticket.py"
+old = '''    if len(parts) == 3 and parts[:2] == [".scratch", _QUEUE_FOLDER]:
+        return parts[2].endswith(".md")'''
+new = '''    if len(parts) >= 3 and parts[:2] == [".scratch", _QUEUE_FOLDER]:
+        return parts[-1].endswith(".md")'''
+
+[[mutation]]
+name = "대기열 폴더 면제가 .md 가 아닌 파일까지 받는다"
+tests = ["tests/tools/test_check_ticket.py", "-k", "대기열_폴더의_면제_꼴이_아닌 and txt"]
+expect = "red"
+expect_output = ["AssertionError: 지나면 안 된다"]
+
+[[mutation.edit]]
+file = "tools/check_ticket.py"
+old = '''    if len(parts) == 3 and parts[:2] == [".scratch", _QUEUE_FOLDER]:
+        return parts[2].endswith(".md")'''
+new = '''    if len(parts) == 3 and parts[:2] == [".scratch", _QUEUE_FOLDER]:
+        return True'''
+
+[[mutation]]
+name = "대기열 폴더 면제가 이름이 비슷한 폴더까지 받는다"
+tests = ["tests/tools/test_check_ticket.py", "-k", "대기열_폴더의_면제_꼴이_아닌 and retro-queue-x"]
+expect = "red"
+expect_output = ["AssertionError: 지나면 안 된다"]
+
+[[mutation.edit]]
+file = "tools/check_ticket.py"
+old = '''    if len(parts) == 3 and parts[:2] == [".scratch", _QUEUE_FOLDER]:
+        return parts[2].endswith(".md")'''
+new = '''    if len(parts) == 3 and parts[0] == ".scratch" and parts[1].startswith(_QUEUE_FOLDER):
+        return parts[2].endswith(".md")'''
+
+[[mutation]]
+name = "이행 전의 표 파일을 면제로 둔다"
+tests = ["tests/tools/test_check_ticket.py", "-k", "대기열_폴더의_면제_꼴이_아닌 and retro-queue.md"]
+expect = "red"
+expect_output = ["AssertionError: 지나면 안 된다"]
+
+[[mutation.edit]]
+file = "tools/check_ticket.py"
+old = '''        "CONTEXT.md",
+        ".scratch/plan.md",'''
+new = '''        ".scratch/retro-queue.md",
+        "CONTEXT.md",
+        ".scratch/plan.md",'''
 
 [[mutation]]
 name = "전환을 merge-base 의 트리로 가른다"
 tests = ["tests/tools/test_check_ticket.py", "-k", "main을_합친_뒤에도"]
 expect = "red"
-expect_output = ["막히면 안 된다"]
+expect_output = ["이미 푸시했으면 새 이름으로 푸시하고 옛 원격 브랜치를 지운다"]
 
 [[mutation.edit]]
 file = "tools/check_ticket.py"
@@ -46,7 +113,7 @@ new = '''    return not _has_check(cwd, _out(cwd, "merge-base", base, head))
 name = "병합을 마무리하는 커밋의 merge-base 에서 MERGE_HEAD 를 뺀다"
 tests = ["tests/tools/test_check_ticket.py", "-k", "충돌을_풀고_친"]
 expect = "red"
-expect_output = ["막히면 안 된다"]
+expect_output = ["이미 푸시했으면 새 이름으로 푸시하고 옛 원격 브랜치를 지운다"]
 
 [[mutation.edit]]
 file = "tools/check_ticket.py"
@@ -57,7 +124,7 @@ new = '''        pass'''
 name = "MERGE_HEAD 를 작업 트리 루트의 .git/MERGE_HEAD 경로로 찾는다"
 tests = ["tests/tools/test_check_ticket.py", "-k", "충돌을_풀고_친 and 링크드_워크트리"]
 expect = "red"
-expect_output = ["막히면 안 된다"]
+expect_output = ["이미 푸시했으면 새 이름으로 푸시하고 옛 원격 브랜치를 지운다"]
 
 [[mutation.edit]]
 file = "tools/check_ticket.py"
@@ -143,7 +210,7 @@ new = '''    if current_branch(cwd) is None or pr.branch == "main":
 name = "CI 가 바뀐 파일을 base 커밋이 아니라 origin/main 에 견준다"
 tests = ["tests/tools/test_check_ticket.py", "-k", "PR의_변경에_base_브랜치의"]
 expect = "red"
-expect_output = ["CI 가 지나야 한다"]
+expect_output = ["이미 푸시했으면 새 이름으로 푸시하고 옛 원격 브랜치를 지운다"]
 
 [[mutation.edit]]
 file = "tools/check_ticket.py"

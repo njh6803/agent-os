@@ -6,7 +6,8 @@
 실패하거나 시간을 넘기면 대개 None을 돌려주고, 빈 값과 실패를 가르지 않는 함수는 빈 것을
 돌려준다(예: `worktree_list`, `ticket_paths`, `latest_journal`). 함수마다의 값은 그 반환형과
 독스트링이 원천이고, 그 값으로 무엇을 적는지는 수집 도구가 정한다. `origin/main`을 읽는 git은
-fetch하지 않는다.
+fetch하지 않는다. 예외는 `main_queue`다. 대기열 폴더는 `queue_open_rows.read_ref_folder`로 읽어
+git을 띄우는 시간 제한이 그 도구의 `GIT_TIMEOUT`이고, 작업 폴더를 `root`로 옮긴 동안 부른다.
 
 못 보는 것.
 - 클라우드 세션에서 `gh pr list`는 실패했고 `gh pr view`는 요청한 필드에 따라 갈렸다. 이 도구가
@@ -17,6 +18,7 @@ fetch하지 않는다.
 
 from __future__ import annotations
 
+import contextlib
 import csv
 import io
 import json
@@ -30,6 +32,8 @@ from pathlib import Path
 # 바깥 명령 층이 그리기 도구에서 JSON 풀이를 가져오는 까닭은 `morning_report.py`의 JSON 풀이
 # 주석에 있다(그리기 도구는 스크립트로 돌아 `tools` 패키지를 가져오지 못한다).
 from tools.morning_report import Json, json_int, json_list, json_obj, json_str, json_time
+
+from tools import queue_open_rows
 
 CALL_TIMEOUT = 60
 PR_LIMIT = 1000  # `gh pr list`의 기본 한도는 30이라 넘으면 조용히 잘린다
@@ -290,6 +294,18 @@ def worktree_list(root: Path) -> list[tuple[str, str | None]]:
 def main_text(root: Path, path: str) -> str | None:
     """`origin/main`에 있는 파일 `path`의 글. 없거나 git이 실패하면 None이다."""
     return _run(["git", "show", f"origin/main:{path}"], root)
+
+
+def main_queue(root: Path) -> dict[str, str] | None:
+    """`origin/main`의 회고 대기열 폴더(`queue_open_rows.QUEUE`)에 든 항목 파일의 이름→내용.
+    `README.md`는 뺀다. `queue_open_rows.read_ref_folder`의 읽기를 그대로 쓰며(목록 한 번, 내용
+    한 번), 그 함수가 git을 띄우는 곳이 작업 폴더라 `root`로 옮겨 간 동안만 부른다. 폴더가
+    없거나(이행 전 커밋. 옛 파일로 돌아가지 않는다) git이 실패하거나 UTF-8이 아니면 None이다."""
+    try:
+        with contextlib.chdir(root):
+            return queue_open_rows.read_ref_folder("origin/main")
+    except (OSError, UnicodeDecodeError):
+        return None
 
 
 def branch_subject(root: Path, branch: str) -> str | None:

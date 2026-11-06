@@ -23,7 +23,7 @@ from tools.run_hooks import registered_matchers
 
 ROOT = "C:\\project\\agent\\.claude\\worktrees\\measure-word-hook"
 ADR = ROOT + "\\docs\\adr\\0035-precommit-pytest-is-split-by-xdist-in-the-runner.md"
-QUEUE = ROOT + "\\.scratch\\retro-queue.md"
+QUEUE = ROOT + "\\.scratch\\retro-queue\\coderabbit-inline-size.md"
 PROBE_README = ROOT + "\\.scratch\\harness\\probes\\README.md"
 
 
@@ -128,6 +128,12 @@ def test_다른_파일은_지나간다() -> None:
         ROOT + "\\tools\\adr\\x.md",
         ROOT + "\\docs\\retro-queue.md",
         ROOT + "\\web\\probes\\README.md",
+        # 옛 대기열 표 파일, 비슷한 이름의 폴더, 대기열 폴더의 하위 폴더, .md 가 아닌 파일
+        ROOT + "\\.scratch\\retro-queue.md",
+        ROOT + "\\.scratch\\retro-queue-x\\0573.md",
+        ROOT + "\\.scratch\\retro-queue\\sub\\0573.md",
+        ROOT + "\\.scratch\\retro-queue\\0573.txt",
+        ROOT + "\\docs\\retro-queue\\0573.md",
     ):
         assert context_for(_edit(path, "", "실측\n")) is None, path
 
@@ -189,19 +195,21 @@ def test_못_보는_것_다른_꼴의_측정_낱말은_지나간다() -> None:
 
 
 def test_못_보는_것_낱말을_인용만_한_줄에도_알린다() -> None:
-    # 대기열 행이 낱말을 이름으로 들기만 해도 근거 문장과 가르지 못한다.
-    assert context_for(_edit(QUEUE, "", "| 9 | `쟀다`·`실측`을 든 줄 | tools/ | 자체 승인 |\n"))
+    # 대기열 항목이 낱말을 이름으로 들기만 해도 근거 문장과 가르지 못한다.
+    assert context_for(_edit(QUEUE, "", "# x: `쟀다`·`실측`을 든 줄을 알린다\n"))
 
 
-def test_못_보는_것_옛_줄을_고쳐_쓰면_더한_줄이다() -> None:
-    # 줄 하나의 다른 자리만 고쳐도 그 줄 전체가 새 줄이라, 옛 낱말이 다시 걸린다.
-    old = "| 1 | 4초 실측 | x | 승인 |\n"
-    assert context_for(_edit(QUEUE, old, old.replace("| 1 |", "| ~~1~~ |"))) is not None
-    context = context_for(_edit_file(old, "| 1 |", "| ~~1~~ |"))
+def test_못_보는_것_상태_줄을_고쳐_쓰면_더한_줄이다() -> None:
+    # 항목 파일의 상태 줄을 열림에서 닫힘으로 고칠 때, 그 줄이 이미 낱말을 들고 있으면 줄 전체가
+    # 새 줄이라 옛 낱말이 다시 걸린다.
+    old = "**상태:** 열림 (한 바퀴 4초 실측)\n"
+    new = old.replace("열림", "닫힘")
+    assert context_for(_edit(QUEUE, old, new)) is not None
+    context = context_for(_edit_file(old, "열림", "닫힘"))
     assert context is not None
-    assert "취소선" in context  # 알림이 이 경우는 무시하라고 적는다
+    assert "상태 줄" in context  # 알림이 이 경우는 무시하라고 적는다
     # originalFile 이 없는 Edit 은 조각만 보므로 거꾸로 지나간다.
-    assert context_for(_edit(QUEUE, "| 1 |", "| ~~1~~ |")) is None
+    assert context_for(_edit(QUEUE, "열림", "닫힘")) is None
 
 
 def test_못_보는_것_근거가_같은_줄_밖이면_알린다() -> None:
@@ -224,7 +232,7 @@ def test_못_보는_것_표지는_글자만_본다() -> None:
 def test_못_보는_것_경로를_정규화하지_않는다() -> None:
     assert not is_evidence_doc("docs/./adr/y.md")
     assert is_evidence_doc("C:/docs/adr/proj/src/a.py")
-    assert is_evidence_doc("C:/project/agent/web/.scratch/retro-queue.md")
+    assert is_evidence_doc("C:/project/agent/web/.scratch/retro-queue/0573.md")
 
 
 def test_못_보는_것_probes_하위_폴더의_README_는_지나간다() -> None:

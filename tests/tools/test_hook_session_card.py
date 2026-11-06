@@ -40,6 +40,8 @@ def test_스스로_낸_카드는_막고_까닭을_준다() -> None:
 
     assert '일지의 "다음"' in reason
     assert "대기열" in reason
+    assert "`.scratch/retro-queue/`" in reason
+    assert "retro-queue.md" not in reason
     assert "user_asked" in reason
     assert "offer" in reason
     assert "ADR 0037" in reason
