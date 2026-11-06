@@ -1,0 +1,90 @@
+# approval-rules 04 의 런타임 집행을 재는 변이 표. 구현과 같은 티켓에서 시험을 먼저 쓴 터라 빨강을 본 뒤에
+# 시험이 무엇을 재는지 변이로 다시 본다. 실행: PYTHONUTF8=1 uv run python tools/mutate.py <이 파일>
+# 변이마다 겨눈 시험을 -k 로 좁혀 두었다. 전체 파일을 돌리면 먼저 빨개진 남의 시험이 출력을 채워 표지가
+# 안 보인다. 표지(expect_output)는 변이를 손으로 넣어 본 실패 출력에서 골랐다 — 시험 파일의 원문에 없고,
+# 고른 단언이 받은 값이 찍힌 줄이다.
+# 최신 결과: 2026-11-06, 변이 일곱이 모두 기대대로(빨강)였다. 표지를 달기 전 판(-k 없이 전체 파일)도 일곱이
+# 모두 빨강이었다.
+
+[[mutation]]
+name = "멈춘 사이 deny 가 된 도구도 결정이 있으면 통과한다"
+tests = ["tests/core/test_run.py", "-k", "test_멈춘_사이_deny_가_되면_거부_결정에서도_deny_로_기록한다 or test_멈춘_사이_ask_가_deny_가_되면_승인해도_도구는_불리지_않는다"]
+expect = "red"
+expect_output = ["At index 0 diff: True != False"]
+
+[[mutation.edit]]
+file = "src/agent_os/core/run.py"
+old = '''if rule == "deny":'''
+new = '''if rule == "deny" and verdict is None:'''
+
+[[mutation]]
+name = "칸 없는 옛 멈춤 기록의 기본이 requires_approval 이 아니다"
+tests = ["tests/core/test_run.py", "-k", "test_칸_없는_옛_멈춤_기록의_결정은_승인_요구로_기록한다"]
+expect = "red"
+expect_output = ["+ ask"]
+
+[[mutation.edit]]
+file = "src/agent_os/core/run.py"
+old = '''recorded = verdict.paused.rule or "requires_approval"'''
+new = '''recorded = verdict.paused.rule or "ask"'''
+
+[[mutation]]
+name = "모델 목록이 deny 를 거르지 않는다"
+tests = ["tests/core/test_run.py", "-k", "test_deny_에_맞는_도구는_모델의_도구_목록에서_빠진다"]
+expect = "red"
+expect_output = ["['add', 'send', 'ask_me'] != ['add', 'ask_me']"]
+
+[[mutation.edit]]
+file = "src/agent_os/core/run.py"
+old = '''if self._rule_of(spec) != "deny"]'''
+new = '''if self._rule_of(spec) != "never"]'''
+
+[[mutation]]
+name = "규칙 파일이 꺼진 집합보다 뒤에 읽힌다"
+tests = ["tests/core/test_run.py", "-k", "test_두_운영자_파일이_모두_깨졌으면_규칙_파일의_문구가_나온다"]
+expect = "red"
+expect_output = ["Actual message: '운영자 파일이 깨졌다: disabled.toml'"]
+
+[[mutation.edit]]
+file = "src/agent_os/core/run.py"
+old = '''    rules = plugins.read_rules()
+    _reject_disabled(plugins.read_disabled(), manifest, model_name)
+'''
+new = '''    _reject_disabled(plugins.read_disabled(), manifest, model_name)
+    rules = plugins.read_rules()
+'''
+
+[[mutation]]
+name = "ask 와 저자의 승인 요구가 멈추지 않는다"
+tests = ["tests/core/test_run.py", "-k", "test_ask_에_맞는_도구는_ask_로_멈춘다 or test_저자의_승인_요구에_든_도구는_운영자의_allow_에도_멈춘다"]
+expect = "red"
+expect_output = ["output='unreachable'"]
+
+[[mutation.edit]]
+file = "src/agent_os/core/run.py"
+old = '''            if rule != "allow":
+                self._pause('''
+new = '''            if rule == "default":
+                self._pause('''
+
+[[mutation]]
+name = "연결에 없는 이름의 거부가 rule 을 싣는다"
+tests = ["tests/core/test_run.py", "-k", "test_멈춘_도구가_연결에서_사라지면_결정은_소비되고_없는_도구로_거부된다"]
+expect = "red"
+expect_output = ["At index 1 diff: 'allow' != None"]
+
+[[mutation.edit]]
+file = "src/agent_os/core/run.py"
+old = '''f"도구가 없다: {name}", rule=None)'''
+new = '''f"도구가 없다: {name}", rule="allow")'''
+
+[[mutation]]
+name = "운영자의 거부가 deny 가 아닌 rule 을 싣는다"
+tests = ["tests/core/test_run.py", "-k", "test_멈춘_사이_ask_가_deny_가_되면_승인해도_도구는_불리지_않는다"]
+expect = "red"
+expect_output = ["At index 1 diff: 'requires_approval' != 'deny'"]
+
+[[mutation.edit]]
+file = "src/agent_os/core/run.py"
+old = '''f"운영자가 거부했다: {spec.server}:{name}", rule="deny"'''
+new = '''f"운영자가 거부했다: {spec.server}:{name}", rule="requires_approval"'''

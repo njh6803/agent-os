@@ -53,7 +53,9 @@ from agent_os.core.ports import (
     PluginError,
     PluginKey,
     PluginSource,
+    Rule,
     Rules,
+    RuleSet,
     RunRow,
     RunStatus,
     ToolConnection,
@@ -316,6 +318,7 @@ class FakePlugins:
 
     def __init__(self) -> None:
         self.disabled: frozenset[PluginKey] = frozenset()
+        self.corrupt_rules: str | None = None
         self.calls = 0
         self.skill_manifests = {
             SKILL: SKILL_MANIFEST,
@@ -353,8 +356,13 @@ class FakePlugins:
         return self.disabled
 
     def read_rules(self) -> Rules:
+        """공통 표의 allow 가 자기 서버 전부와 기본 서버를 연다. 에이전트 표는 두지 않는다."""
         self.calls += 1
-        return Rules()
+        if self.corrupt_rules is not None:
+            raise PluginError(self.corrupt_rules)
+        opened = (PluginName("calc-server"), DEFAULT_SERVER)
+        allow = frozenset(Rule(server=name, tool=None) for name in opened)
+        return Rules(common=RuleSet(allow=allow))
 
     def write_enabled(self, kind: PluginKind, name: PluginName, *, enabled: bool) -> WriteOutcome:
         raise NotImplementedError("최종 사용자 경로는 켜고 끄지 않는다")
@@ -833,6 +841,27 @@ async def test_없는_모델은_운영자_면은_500_원문이고_최종_사용�
     assert operator.status_code == 500
     assert operator.json()["message"] == f"기본 모델 플러그인이 없다: {missing}"
     assert models.built == []
+    assert trace.events == []
+
+
+async def test_깨진_규칙_파일은_운영자_면은_500_원문이고_최종_사용자_면은_고정_문구의_500이다() -> (
+    None
+):
+    """규칙 파일의 문구는 칸의 위치를 싣는다. 운영자는 어느 칸이 틀렸는지 봐야 하고 최종
+    사용자에게는 구성 오류의 원문을 싣지 않는다."""
+    plugins = FakePlugins()
+    plugins.corrupt_rules = "운영자 파일이 깨졌다: rules.toml\n표 [common] 의 칸 deny"
+    trace = FakeTrace()
+
+    async with _serving(_app(plugins=plugins, trace=trace)) as client:
+        end_user = await client.post(START, json=_start("echo"), headers=_as())
+        operator = await client.post("/runs", json=_start("echo"), headers=CHANNEL)
+
+    assert end_user.status_code == 500
+    assert end_user.json()["message"] == INTERNAL_MESSAGE
+    assert "rules.toml" not in end_user.text
+    assert operator.status_code == 500
+    assert operator.json()["message"] == plugins.corrupt_rules
     assert trace.events == []
 
 
