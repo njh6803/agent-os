@@ -80,6 +80,10 @@ MATCHES = (
     pytest.param(_bare("a*b*c"), EVERYTHING, "aXcYb", False, id="별표 둘-순서가 다른 이름"),
     pytest.param(_bare("a.b"), EVERYTHING, "aXb", False, id="점은 글자 그대로다"),
     pytest.param(_bare("a.b"), EVERYTHING, "a.b", True, id="점이 든 이름"),
+    pytest.param(_bare("send_?"), EVERYTHING, "send_?", True, id="물음표가 든 이름"),
+    pytest.param(_bare("send_?"), EVERYTHING, "send_a", False, id="물음표는 글자 그대로다"),
+    pytest.param(_bare("send_[ab]"), EVERYTHING, "send_[ab]", True, id="대괄호가 든 이름"),
+    pytest.param(_bare("send_[ab]"), EVERYTHING, "send_a", False, id="대괄호는 글자 그대로다"),
     # 개행이 든 이름에도 `*` 가 맞아야 deny 가 그 이름 앞에서 조용히 새지 않는다.
     pytest.param(_bare("*"), EVERYTHING, "a\nb", True, id="맨 별표-개행이 든 이름"),
     pytest.param(_bare("add"), EVERYTHING, "add_more", False, id="별표 없는 이름-더 긴 이름"),

@@ -99,8 +99,19 @@
 
 - open-session을 부른다 2026-11-06T04:39:45Z
 
+## PR 봇 회차 (PR 476)
+
+첫 푸시(`01466663`)의 봇 둘이 모두 Critical·Major 없이 끝났다. 첫 회차라 Minor·Nit을 지적마다 판단했다.
+
+- **CodeRabbit 인라인 Minor(`core/ports.py:248`, 별표 패턴의 백트래킹).** 보류. 패턴은 운영자가 쓴 규칙 파일에서, 이름은 플러그인에서 오는 짧은 글자열이라 공격자가 정하는 입력이 아니다. 별표가 여럿인 패턴에서 비교가 다항으로 느려질 수는 있으나(코드를 읽은 어림, 재지 않았다) 이 PR이 닿는 값의 크기에서는 문제가 아니다. 바꾸려면 `re`를 버리고 조각을 차례로 `find`하는 매칭이 되어 변이 표(13개 가운데 `re.DOTALL` 변이)와 시험을 다시 짜야 한다.
+- **CodeRabbit 요약 Nit(`tests/core/test_rules.py:80-81`).** 반영. `?`와 `[ab]`가 글자 그대로 맞는 사례 넷을 더했다.
+- **claude-review Minor 둘.** 보류, 아래 "다음"에 적었다. 하나, `Rule(server, "*")`와 `Rule(server, None)`이 `frozenset[Rule]`에서 다른 원소다(PR 본문이 남긴 위험). 둘, `Rule.matches`와 `_name_matches`는 값의 의미라 `ports.py`보다 `rules.py`가 맞는 자리다.
+- **claude-review Nit(`adapters/filesystem.py:107`, 정규식 주석이 길다).** 보류. 동작과 무관하고 이 PR이 쓰지 않는 문장 다듬기다.
+
 ## 다음
 
 - 이 브랜치의 PR을 열고 병합한다. 병합 뒤 02는 `done`이다(티켓 `Status`는 이미 `done`, plan.md의 approval-rules 행은 `in-progress` 그대로).
+- 04가 `Rule`을 직접 만들거나 비교하기 전에 `Rule(server, "*")`와 `Rule(server, None)`을 한 꼴로 접는다(`__post_init__` 정규화나 생성 한 곳). 어댑터의 `_rule_of`만 접고 있어 지금은 드러나지 않는다. 04 티켓의 첫 손질 후보다.
+- `Rule.matches`와 `_name_matches`를 `core/rules.py`로 옮길지는 03이 `ports.py`를 병합한 뒤 정한다(같은 파일에서 글자 충돌이 나는 자리다). 옮기지 않아도 동작은 같다.
 - 03(도구의 서버 이름·같은 이름 검사)은 다른 워크트리에서 나란히 돌고 있다. `src/agent_os/core/ports.py`, `.claude/rules/adapters.md`, `.claude/rules/core.md`를 함께 고치므로, 나중에 병합하는 쪽이 글자 충돌을 합친다(`tools/sibling_overlap.py` 출력).
 - 04(런타임이 도구 호출마다 규칙을 집행한다)는 02와 03이 모두 병합된 뒤다. 05는 04 바로 뒤이고, 05의 에이전트 표 검사는 `*`가 든 줄을 도구 실재 검사에서 빼도록 티켓이 이미 고쳐져 있다.
