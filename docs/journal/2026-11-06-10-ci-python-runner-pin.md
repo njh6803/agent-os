@@ -46,6 +46,10 @@ PR #479(docs/rag-engine-name)의 CI가 문서와 무관한 `python` 잡 실패�
 
 반영: (2) 티켓 본문을 "두 줄"로 고쳤다. (1)은 셀프 리뷰 "남긴 것"대로 이 PR에서 고치지 않고 PR 본문 "남긴 위험"과 아래 "다음"에 둔다. (3)은 PR의 CI가 돈 뒤 `gh run view --log`로 확인해 기준 2를 닫는다(CI 확인은 PR을 연 뒤라 지금은 닫을 수 없다). 서브에이전트가 접은 오탐 하나(24.04에서 26.04로 넘어갈 때 `setup-uv` 캐시를 되살려 깨질 가능성)는 근거가 없어 그대로 둔다.
 
+### PR #480의 CI(수용 기준 2)
+
+헤드 `102ceb01`의 실행 `42188182473`에서 `python`·`verify`·`web`·`e2e`·`e2e-widget`·`visual`·`ticket`·`claude-review`가 초록이다(`uv run python tools/wait_ci.py 480`의 끝 줄 `끝: 모두 통과`와 `gh pr checks 480`을 읽었다). `python` 잡 로그(`gh run view 42188182473 --log --job 127793435135`를 받아 `grep`으로 손으로 봤다)에 `Image: ubuntu-24.04`(`Version: 20261101.360.1`), `Setting up ripgrep (14.1.0-1)`, `6442 passed, 8 deselected`가 있다. 수용 기준 2를 닫았다. CodeRabbit은 무료 한도에 걸려 리뷰가 없다(PR 코멘트 `Review limit reached`, 체크 `skipping`). claude-review는 지적 없음 코멘트를 남겼다.
+
 ## 인계(커밋 뒤)
 
 세션 컨텍스트가 인계 문턱을 넘어(계기 문장은 256,758 토큰) `커밋 뒤` 경계에서 넘긴다. 이 세션을 연 지시문의 "이어받을 상태"는 `인계: PR 연 뒤`로 시작해 지금 경계와 다르고, 곁 세션도 아니다(`get_session`의 `self`에 `parentSessionId`가 없다). 계기를 낸 커밋은 성공했다. 작업 트리는 이 일지의 "검증"·"인계"를 쓴 뒤라 이 일지만 커밋하지 않았다. 푸시하지 않았고 이 브랜치에 PR은 없다.

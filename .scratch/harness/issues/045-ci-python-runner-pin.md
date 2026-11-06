@@ -11,5 +11,5 @@
 ## 수용 기준
 
 - [x] `ci.yml`의 `python` 잡만 `runs-on: ubuntu-24.04`이고 까닭을 적었다(주석 두 줄). 다른 잡의 `runs-on`은 바뀌지 않았다
-- [ ] 이 PR의 CI에서 `python` 잡의 로그에 `Image: ubuntu-24.04`와 `Setting up ripgrep (14.1.0-1)`이 보이고 `python`과 `verify`가 초록이다
+- [x] 이 PR의 CI에서 `python` 잡의 로그에 `Image: ubuntu-24.04`와 `Setting up ripgrep (14.1.0-1)`이 보이고 `python`과 `verify`가 초록이다
 - [x] 워크플로 감사(zizmor)와 지침 검사를 포함해 검증 명령이 모두 초록이다(손으로 치는 명령 전부와 `uv run python tools/run_checks.py`. 커밋 직전의 pre-commit이 갈음하는 것은 그 결과로 갈음한다)
