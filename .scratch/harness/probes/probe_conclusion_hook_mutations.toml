@@ -73,10 +73,42 @@ new = '''    if tool_input is None:'''
 name = "file_path 가 문자열인지 보지 않는다"
 tests = ["tests/tools/test_hook_probe_conclusion.py", "-k", "꼴이_어긋난"]
 expect = "red"
+expect_output = ["TypeError: expected string or bytes-like object, got 'int'"]
 [[mutation.edit]]
 file = "tools/hook_probe_conclusion.py"
-old = '''    if not isinstance(path, str) or not is_probe_readme(path):'''
-new = '''    if path is None or not is_probe_readme(path):'''
+old = '''    if not isinstance(path, str):'''
+new = '''    if path is None:'''
+
+# 아래 셋은 대기열 535 가 더한 프로브 파일 알림을 깬다.
+[[mutation]]
+name = "프로브 파일 알림이 더한 글의 낱말을 보지 않는다"
+tests = ["tests/tools/test_hook_probe_conclusion.py", "-k", "더한_글에_고친_길이_없으면_지나간다"]
+expect = "red"
+expect_output = ['''AssertionError: assert '프로브 파일에 고친 길을 적었다''']
+[[mutation.edit]]
+file = "tools/hook_probe_conclusion.py"
+old = '''    if is_probe_file(path) and FIXED_PATH in _added_text(tool_input):'''
+new = '''    if is_probe_file(path):'''
+
+[[mutation]]
+name = "프로브 파일 알림이 지우는 쪽 글도 본다"
+tests = ["tests/tools/test_hook_probe_conclusion.py", "-k", "지운_글에만_있으면"]
+expect = "red"
+expect_output = ['''AssertionError: assert '프로브 파일에 고친 길을 적었다''']
+[[mutation.edit]]
+file = "tools/hook_probe_conclusion.py"
+old = '''    parts = [tool_input.get("content"), tool_input.get("new_string")]'''
+new = '''    parts = [tool_input.get("content"), tool_input.get("new_string"), tool_input.get("old_string")]'''
+
+[[mutation]]
+name = "파일 알림이 README 알림과 표지를 같이 쓴다"
+tests = ["tests/tools/test_hook_probe_conclusion.py", "-k", "파일_알림과_README_알림을_각각"]
+expect = "red"
+expect_output = ['''AssertionError: assert '프로브 README 를 고쳤다' in''']
+[[mutation.edit]]
+file = "tools/hook_probe_conclusion.py"
+old = '''        name = marker_name(session, agent if isinstance(agent, str) else "", kind)'''
+new = '''        name = marker_name(session, agent if isinstance(agent, str) else "")'''
 
 [[mutation]]
 name = "알림에서 규칙 파일 경로를 뺀다"
@@ -289,5 +321,5 @@ tests = ["tests/tools/test_hook_probe_conclusion.py"]
 expect = "green"
 [[mutation.edit]]
 file = "tools/hook_probe_conclusion.py"
-old = '''에이전트마다 한 번이다."'''
-new = '''에이전트마다 한 번만 낸다."'''
+old = '''" 편집이면 이 알림은 무시한다. 이 알림은 세션·에이전트마다 한 번이다."'''
+new = '''" 편집이면 이 알림은 무시한다. 이 알림은 세션·에이전트마다 한 번만 낸다."'''

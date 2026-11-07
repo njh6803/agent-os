@@ -574,6 +574,24 @@ expect = "silent"
 note = "같은 probes 폴더의 프로브 스크립트 — README 가 아니다"
 payload = { tool_name = "Edit", tool_input = { file_path = "C:\\project\\agent\\.scratch\\harness\\probes\\guard_hooks_time.py", old_string = "a", new_string = "b" } }
 
+[[case]]
+hook = "hook_probe_conclusion.py"
+expect = "context"
+note = "프로브 스크립트의 머리 주석에 고친 길의 표지를 단정했다(대기열 535 의 repeat.mjs 꼴)"
+contains = [
+    "프로브 파일에 고친 길을 적었다",
+    ".claude/rules/probes.md",
+    "첫 항목",
+    "고치기 전 판이라면 실패했을 회차에서만 나는 관찰",
+]
+payload = { tool_name = "Edit", tool_input = { file_path = "C:\\project\\agent\\.scratch\\harness\\probes\\widget_char_count\\repeat.mjs", old_string = "// 표지", new_string = "// 고친 길의 표지: 카드 직후 포커스가 제목이 아닌 회차. 고치기 전 판에서는 빨갰다." } }
+
+[[case]]
+hook = "hook_probe_conclusion.py"
+expect = "silent"
+note = "프로브 스크립트를 고쳤지만 더한 글에 고친 길이 없다 — 지우는 쪽에만 있는 편집"
+payload = { tool_name = "Edit", tool_input = { file_path = "C:\\project\\agent\\.scratch\\harness\\probes\\widget_char_count\\repeat.mjs", old_string = "// 고친 길의 표지", new_string = "// 표지" } }
+
 # --- hook_probe_citing_doc (PostToolUse Write|Edit) ---
 # session_id 를 빼 표지를 쓰지 않는 길(호출마다 알린다)로 돈다. 한 번만 알리는 것은 tests/tools 가 임시 폴더로 본다.
 [[case]]
