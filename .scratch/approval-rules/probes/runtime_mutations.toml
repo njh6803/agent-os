@@ -48,9 +48,9 @@ expect_output = ["Actual message: '운영자 파일이 깨졌다: disabled.toml'
 [[mutation.edit]]
 file = "src/agent_os/core/run.py"
 old = '''    rules = plugins.read_rules()
-    _reject_disabled(plugins.read_disabled(), manifest, model_name)
+    disabled = plugins.read_disabled()
 '''
-new = '''    _reject_disabled(plugins.read_disabled(), manifest, model_name)
+new = '''    disabled = plugins.read_disabled()
     rules = plugins.read_rules()
 '''
 

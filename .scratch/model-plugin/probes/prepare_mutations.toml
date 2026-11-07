@@ -54,8 +54,8 @@ expect_output = ["DID NOT RAISE"]
 [[mutation.edit]]
 file = "src/agent_os/core/run.py"
 old = '''
-    _reject_disabled(plugins.read_disabled(), manifest, model_name)
+    _reject_disabled(disabled, manifest, model_name)
 '''
 new = '''
-    _reject_disabled(plugins.read_disabled(), manifest, default_model)
+    _reject_disabled(disabled, manifest, default_model)
 '''

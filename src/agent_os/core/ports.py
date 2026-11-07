@@ -10,7 +10,7 @@ from __future__ import annotations
 import re
 from collections.abc import Mapping, Sequence
 from contextlib import AbstractAsyncContextManager
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from types import MappingProxyType
 from typing import Literal, Protocol
@@ -259,10 +259,15 @@ class Rule:
     도구에, `send_*` 는 그 접두로 시작하는 도구에 맞는다. 둘 다 없는 규칙은 어느 호출에나 맞게
     되므로 만들 수 없다. 파일의 글자를 이 값으로 바꾸는 것은 형식을 소유한 어댑터의 몫이라 여기는
     글자를 모른다.
+
+    `position` 은 이 줄이 파일의 그 배열에서 몇째(0부터)인지이고, 어긋난 줄을 가리키는 문구가
+    쓴다. 같음과 해시에 들지 않는다 — 같은 규칙이 다른 자리에 적혀도 한 규칙이고, 한 배열 안의 같은
+    줄 둘을 집합이 합칠 때는 앞선 줄의 자리가 남는다. 파일에서 읽지 않은 값은 없음이다.
     """
 
     server: PluginName | None
     tool: str | None
+    position: int | None = field(default=None, compare=False)
 
     def __post_init__(self) -> None:
         if self.server is None and self.tool is None:
