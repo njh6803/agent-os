@@ -67,6 +67,15 @@
   - Nit — `journal_order` 열쇠가 새 꼴에서 시분만 써서 같은 분의 일지 둘이 같은 열쇠를 낸다. 병합 뒤 CI가 같은 분의 겹침을 막으므로 병합 전 한 브랜치가 같은 분에 일지 둘을 만들 때만 난다.
   - Nit — `morning_sources`의 새 `git log`에 `-c core.quotepath=false`가 없어 한글 슬러그가 8진수 이스케이프로 나온다(실측). 기존 `git grep`도 같고 이 저장소의 슬러그는 모두 영문이다.
 
+## 봇 첫 회차(PR 485)
+
+CI는 모두 초록이었다. CodeRabbit이 인라인 코멘트 아홉(모두 Minor)을, claude-review가 Minor 셋과 Nit 하나를 냈다. 첫 회차라 지적마다 판단했다. 아래는 코멘트 본문을 이 세션이 읽은 것이다.
+
+- **고쳤다 — `--move`가 일지 경로의 시각을 ADR 번호로 옮긴다(CodeRabbit, `tools/sibling_overlap.py` 375).** 정규식 `(?<![\w.])(?P<adr>\d{4})(?=-[a-z0-9]|\])`는 `docs/journal/2026-11-08-0049-notes.md`의 `0049`에 맞는다. 시험을 먼저 써서 이 경로가 `0050`으로 바뀌는 빨강을 보고(`uv run pytest tests/tools/test_sibling_overlap.py -k 시각_네_자리는_ADR`) `(?<!\d{4}-\d{2}-\d{2}-)` 뒷보기를 더해 초록이 됐다. 옛 순번 꼴은 두 자리라 걸리지 않았고 이 PR의 새 이름이 연 길이다. 변이 "일지 이름의 시각 네 자리도 ADR 로 본다"를 더하고 인접 변이 "수나 점 뒤의 네 자리도 ADR 로 본다"의 원문을 새 줄에 맞춰 둘을 번호(59·60)로 돌려 모두 기대대로 빨강이었다.
+- **두었다 — 이미 "다음"에 후속으로 적은 것.** 같은 분 일지의 순서(`sibling_overlap.py` 571, 같은 갈래), 병합 중 `--journal`(1796), `morning_sources`의 경로 인용(369의 둘째 지적). 약한 표지 둘(`journal_names_mutations.toml` 28·85)도 이미 적은 세 약한 표지에 든다.
+- **두었다 — 이 PR에서 얻는 것이 작은 것.** `journal_cite_scan.py` 77(프로브 스크립트이고 `docs/journal/`에는 `.md` 외 파일이 없다), `tests/test_journal_names.py` 121(거부할 날짜를 `TRANSITION_DAY` 다음 날로 계산하라는 지적. 상수를 옮기면 하드코딩 날짜는 느슨해질 뿐 빨개지지 않는다. 상수 옮김을 알리는 후속과 같이 한다), `hook_journal_retro.py` 39(훅은 이름의 모양만 보는 것이 티켓이 정한 설계라 `9999`나 없는 날짜는 일부러 받는다), `morning_sources.py` 369의 첫 지적(`git log` 실패를 수집 실패로 표시. 이 도구의 기존 `git grep` 실패 길과 같이 다룰 후속).
+- **두었다 — claude-review의 Minor·Nit.** `Numbers.journals`가 번호가 아닌 이름 집합이라 칸마다 의미가 다르다는 지적은 필드 주석 한 줄이 있고 인용 풀이용 `known`을 `Numbers` 밖으로 빼는 것은 구조를 또 바꾸는 일이다. 세 정규식(`JOURNAL_FILE`, 훅의 `STAMPED_NAME`, 시험의 `_STAMPED_NAME`)이 같은 이름을 같게 판정하는지 보는 시험 하나는 후속에 적는다. `TRANSITION_DAY` 옮김을 알리는 일은 이미 후속 후보다. `latest_journal`의 파싱과 순서 계산을 가르는 Nit은 두었다.
+
 ## 회고
 
 후보 7개: 승인 1, 기각 6, 넘김 0. 만료할 항목은 없었다(`uv run python tools/queue_open_rows.py`가 "(없음)"). 같은 일을 다룬 항목은 `--search`로 찾았다.
@@ -85,6 +94,7 @@
 - main(`d3be038f`, 티켓 03)을 합쳤다. 충돌은 `.scratch/harness/probes/README.md` 한 덩어리였고, 기준 커밋과 대 본 결과 `sibling_overlap_mutations.toml`·`journal_cite_scan.py` 두 줄은 이 브랜치만, `review_workflow.py` 한 줄은 티켓 03만 고친 것이라 줄마다 바뀐 쪽을 썼다. 티켓 03이 들인 일지 `2026-11-07-03-review-bot-path-filter.md`는 순번 꼴이지만 전환일 당일이라 `tests/test_journal_names.py`가 통과한다(시험은 전환일 "뒤"만 잡는다). main을 또 합치는 날이 11-07 뒤면 `TRANSITION_DAY`를 그날로 옮긴다.
 - 후속 후보: `--journal`이 경로를 찍으면 그 파일을 이어 쓴다는 한 줄을 `merge.md` 3·`handoff.md` 2·`code-review` 6단계·두 훅의 문구에 더하는 일. 컨텍스트 압축 뒤에 다른 분으로 일지를 둘째로 만드는 일을 막는다. 스킬 본문을 또 바꾸면 카나리아가 다섯 더 걸려 이 PR에서는 두었다.
 - 후속 후보(PR 직전 리뷰의 남김): `journal_order` 열쇠 끝에 파일 이름을 더해 같은 분의 순서를 정하는 한 줄, `branch_journals`가 `MERGE_HEAD` 상태에서 main이 들여온 일지를 빼는지 임시 저장소 시험으로 확인하는 일(안 되면 독스트링의 못 보는 것에 적는다), `morning_sources`의 `git log`·`git grep`에 `-c core.quotepath=false`를 붙이는 일. 셋 모두 `tools/sibling_overlap.py`·`tools/morning_sources.py`를 다시 고치므로 변이 표가 걸려 이 PR에서는 두었다.
+- 후속 후보(봇 첫 회차의 남김): 세 일지 이름 정규식이 같은 이름을 같게 판정하는지 보는 시험 하나, `TRANSITION_DAY`를 옮길 날을 알리는 자리(`next-session` 병합 절차나 `sibling_overlap.py` 출력)와 그 상수를 쓰는 시험의 날짜를 상수에서 계산하게 하는 일, `morning_sources`가 `git log` 실패를 `(수집 안 됨)`으로 적게 하는 일.
 - 약한 표지 셋(`sibling_overlap` 22, `journal_names` 3, `journal_number_and_guards` 4)은 시험 쪽에 단언 메시지를 더하면 단단해진다. 시험을 고치는 PR이 생길 때 같이 한다.
 - 이 세션은 병합 커밋(main의 티켓 03을 합침) 뒤 `커밋 뒤` 인계 계기를 받아 새 세션에 넘겼다. 푸시와 PR 열기, `ccd_pr` 바인딩, 봇 회차, 병합이 남았다. 회고는 이 세션이 돌았고 `## 회고` 절이 있어 retro 계기는 다시 오지 않는다.
 - open-session을 부른다 2026-11-07T03:10:33Z

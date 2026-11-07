@@ -372,7 +372,7 @@ HARNESS = re.compile(r"^\.claude/(?:skills/[^/]+|rules|agents)/[^/]+\.md$")
 _CITATIONS = (
     r"^(?P<quote>>[^\n]*)"
     r"|(?<=ADR )(?P<adrs>\d{4}(?:·\d{4})*)(?!\d)"
-    r"|(?<![\w.])(?P<adr>\d{4})(?=-[a-z0-9]|\])"
+    r"|(?<![\w.])(?<!\d{4}-\d{2}-\d{2}-)(?P<adr>\d{4})(?=-[a-z0-9]|\])"
 )
 CITATION = re.compile(_CITATIONS, re.MULTILINE)
 # 티켓 머리 줄(`# NNN: <제목>`). 기능 폴더의 티켓도 같은 꼴이라 harness 티켓 파일에서만 바꾼다

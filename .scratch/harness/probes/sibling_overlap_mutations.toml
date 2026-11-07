@@ -616,10 +616,21 @@ new = '''            return adr'''
 name = "수나 점 뒤의 네 자리도 ADR 로 본다"
 tests = ["tests/tools/test_sibling_overlap.py", "-k", "카나리아 or 도움말 or 인자가 or 옮기 or 옮길_번호대로 or 줄인 or 2로"]
 expect = "red"
+expect_output = ["v1.0028-x"]
 [[mutation.edit]]
 file = "tools/sibling_overlap.py"
-old = '''    r"|(?<![\w.])(?P<adr>\d{4})(?=-[a-z0-9]|\])"'''
-new = '''    r"|(?P<adr>\d{4})(?=-[a-z0-9]|\])"'''
+old = '''    r"|(?<![\w.])(?<!\d{4}-\d{2}-\d{2}-)(?P<adr>\d{4})(?=-[a-z0-9]|\])"'''
+new = '''    r"|(?<!\d{4}-\d{2}-\d{2}-)(?P<adr>\d{4})(?=-[a-z0-9]|\])"'''
+
+[[mutation]]
+name = "일지 이름의 시각 네 자리도 ADR 로 본다"
+tests = ["tests/tools/test_sibling_overlap.py", "-k", "시각_네_자리는_ADR"]
+expect = "red"
+expect_output = ["+ docs/journal/2026-11-08-0050-notes.md, ADR 0050"]
+[[mutation.edit]]
+file = "tools/sibling_overlap.py"
+old = '''    r"|(?<![\w.])(?<!\d{4}-\d{2}-\d{2}-)(?P<adr>\d{4})(?=-[a-z0-9]|\])"'''
+new = '''    r"|(?<![\w.])(?P<adr>\d{4})(?=-[a-z0-9]|\])"'''
 
 [[mutation]]
 name = "UTF-8 이 아닌 파일의 글도 고친다"
