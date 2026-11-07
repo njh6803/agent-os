@@ -10,6 +10,7 @@ CodeRabbit 상태 이력에 나온 그대로다 (`.scratch/harness/probes/ci_wai
 
 from __future__ import annotations
 
+import json
 import subprocess
 from collections.abc import Callable, Sequence
 
@@ -74,14 +75,45 @@ def coderabbit(
     return [context("CodeRabbit", rollup_state or state), combined]
 
 
+def coderabbit_run(
+    conclusion: str = "NEUTRAL",
+    title: str = RATE_LIMITED,
+    status: str = "COMPLETED",
+    rollup_status: str | None = None,
+    rollup_conclusion: str | None = None,
+) -> list[Json]:
+    """롤업의 CodeRabbit CheckRun 과 헤드의 check-runs 의 그 항목을 함께 낸다.
+
+    CodeRabbit 은 결과를 상태의 설명이 아니라 체크 런의 `output.title` 로 낸다(PR #401·#405·#489,
+    2026-11-08 손으로 봤다). 롤업의 CheckRun 에는 `output` 이 없다. rollup_status 와
+    rollup_conclusion 을 주면 롤업만 그 값으로 둔다. 두 조회가 다른 시각의 것일 때다.
+    """
+    finished = status == "COMPLETED"
+    listed: Json = {
+        "name": "CodeRabbit",
+        "status": status.lower(),
+        "conclusion": conclusion.lower() if finished else None,
+        "output": {"title": title},
+    }
+    rollup = run(
+        "CodeRabbit",
+        status=rollup_status or status,
+        conclusion=rollup_conclusion or conclusion,
+    )
+    return [rollup, listed]
+
+
 def payload(*checks: Json, head: str = HEAD, mergeable: str = "MERGEABLE") -> Json:
-    rollup: list[Json] = [c for c in checks if isinstance(c, dict) and "__typename" in c]
-    statuses: list[Json] = [c for c in checks if isinstance(c, dict) and "__typename" not in c]
+    dicts = [c for c in checks if isinstance(c, dict)]
+    rollup: list[Json] = [c for c in dicts if "__typename" in c]
+    check_runs: list[Json] = [c for c in dicts if "output" in c]
+    statuses: list[Json] = [c for c in dicts if "__typename" not in c and "output" not in c]
     return {
         "headRefOid": head,
         "mergeable": mergeable,
         "statusCheckRollup": rollup,
         "statuses": statuses,
+        "check_runs": check_runs,
     }
 
 
@@ -144,6 +176,75 @@ def test_StatusContext의_상태는_설명과_같은_combined_status에서_읽�
     )
     assert snapshot.checks["CodeRabbit"] is None
     assert not judge(snapshot, EXPECTED).done
+
+
+def test_체크_런_모양의_CodeRabbit_건너뜀_제목도_요청하기_전으로_센다() -> None:
+    # CodeRabbit 은 결과를 체크 런의 제목으로 내게 바뀌어 combined status 가 비었다. 롤업만
+    # 보면 SKIPPED 라 통과로 끝나 리뷰를 기다리지 않았다(PR #489, 대기열 499).
+    snapshot = parse_snapshot(
+        payload(run("verify"), run("claude-review"), *coderabbit_run("SKIPPED", SKIPPED))
+    )
+    verdict = judge(snapshot, EXPECTED)
+    assert snapshot.notes == {"CodeRabbit": SKIPPED}
+    assert verdict.unrequested == ("CodeRabbit",)
+    assert not verdict.done
+
+
+def test_체크_런의_상태는_제목과_같은_check_runs에서_읽는다() -> None:
+    # 롤업과 check-runs 는 따로 읽어 시각이 다르다. 롤업이 건너뜀을 보는 사이 체크 런이 이미
+    # 진행 중이면, 롤업을 믿으면 통과로 끝난다(StatusContext 와 같은 시각 차).
+    snapshot = parse_snapshot(
+        payload(
+            run("verify"),
+            run("claude-review"),
+            *coderabbit_run(
+                "",
+                "Review in progress",
+                status="IN_PROGRESS",
+                rollup_status="COMPLETED",
+                rollup_conclusion="SKIPPED",
+            ),
+        )
+    )
+    assert snapshot.checks["CodeRabbit"] is None
+    assert not judge(snapshot, EXPECTED).done
+
+
+def test_제목이_없는_진행_중_체크_런도_끝나지_않은_것으로_읽는다() -> None:
+    # 리뷰가 진행 중일 때의 제목은 보지 못했다. 제목이 비어 있어도 status 가 completed 가 아니면
+    # 롤업의 건너뜀 SKIPPED 를 믿고 통과로 끝나면 안 된다.
+    snapshot = parse_snapshot(
+        payload(
+            run("verify"),
+            run("claude-review"),
+            *coderabbit_run(
+                "",
+                "",
+                status="IN_PROGRESS",
+                rollup_status="COMPLETED",
+                rollup_conclusion="SKIPPED",
+            ),
+        )
+    )
+    assert snapshot.checks["CodeRabbit"] is None
+    assert "CodeRabbit" not in snapshot.notes
+    assert not judge(snapshot, EXPECTED).done
+
+
+def test_제목이_없는_체크_런은_설명으로_읽지_않는다() -> None:
+    # GitHub Actions 의 체크 런은 `output.title` 이 null 이다. 통과 줄에 이름만 늘면 안 된다.
+    untitled: Json = {"name": "verify", "status": "completed", "output": {"title": None}}
+    no_output: Json = {"name": "python", "status": "completed", "output": None}
+    blank: Json = {"name": "lint", "status": "completed", "output": {"title": "  "}}
+    snapshot = parse_snapshot(
+        payload(
+            run("verify"), run("python"), run("lint"), untitled, no_output, blank, *coderabbit_run()
+        )
+    )
+    assert snapshot.notes == {"CodeRabbit": RATE_LIMITED}
+    assert snapshot.checks["verify"] == "SUCCESS"
+    assert snapshot.checks["python"] == "SUCCESS"
+    assert snapshot.checks["lint"] == "SUCCESS"
 
 
 @pytest.mark.parametrize("conclusion", ["SKIPPED", "NEUTRAL"])
@@ -255,6 +356,48 @@ def test_한도에_걸린_리뷰는_통과로_끝나되_끝_줄에_적는다() -
     code, out = waited(script)
     assert code == EXIT_PASSED
     assert out.endswith(f"CodeRabbit: {RATE_LIMITED}")
+
+
+@pytest.mark.parametrize(
+    ("conclusion", "title"), [("NEUTRAL", RATE_LIMITED), ("SUCCESS", "Finished")]
+)
+def test_체크_런_모양의_CodeRabbit이_끝나면_통과_줄에_제목을_적는다(
+    conclusion: str, title: str
+) -> None:
+    # 한도에 걸린 것(neutral)과 리뷰한 것(success)이 같은 통과 줄이면 사람이 코멘트를 열어 봐야
+    # 갈린다. PR #489 의 대기가 리뷰 여부 없이 끝났다(대기열 499).
+    script = Script(
+        payload(run("verify"), run("claude-review"), *coderabbit_run(conclusion, title), head=HEAD)
+    )
+    code, out = waited(script)
+    assert code == EXIT_PASSED
+    assert out.endswith(f"끝: 모두 통과. CodeRabbit: {title}")
+
+
+def test_체크_런_모양의_CodeRabbit이_건너뜀이면_요청_유예_뒤에_기다릴_수_없다() -> None:
+    script = Script(
+        payload(run("verify"), run("claude-review"), *coderabbit_run("SKIPPED", SKIPPED))
+    )
+    code, out = waited(script)
+    assert code == EXIT_CANNOT_WAIT
+    assert "@coderabbitai review" in out.splitlines()[-1]
+    assert script.sleeps == [30.0, 30.0]
+
+
+def test_체크_런_모양의_CodeRabbit이_건너뜀에서_진행을_거쳐_끝날_때까지_기다린다() -> None:
+    script = Script(
+        payload(run("verify"), run("claude-review"), *coderabbit_run("SKIPPED", SKIPPED)),
+        payload(
+            run("verify"),
+            run("claude-review"),
+            *coderabbit_run("", "Review in progress", status="IN_PROGRESS"),
+        ),
+        payload(run("verify"), run("claude-review"), *coderabbit_run("SUCCESS", "Finished")),
+    )
+    code, out = waited(script)
+    assert code == EXIT_PASSED
+    assert script.sleeps == [30.0, 30.0]
+    assert out.endswith("CodeRabbit: Finished")
 
 
 def test_리뷰가_요청되면_건너뜀에서_진행을_거쳐_끝날_때까지_기다린다() -> None:
@@ -696,6 +839,46 @@ def test_gh_호출이_멈추면_시간_제한으로_끊고_조회_실패로_센�
     with pytest.raises(FetchError):
         fetch_pr("221")
     assert seen == [CALL_TIMEOUT]
+
+
+def test_fetch_pr은_헤드의_check_runs를_읽어_check_runs_칸으로_붙인다(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    listed: Json = {"name": "CodeRabbit", "status": "completed", "output": {"title": SKIPPED}}
+    commit = f"repos/{{owner}}/{{repo}}/commits/{HEAD}"
+    answers: dict[str, Json] = {
+        "pr": {"headRefOid": HEAD, "mergeable": "MERGEABLE", "statusCheckRollup": []},
+        f"{commit}/status": {"statuses": []},
+        f"{commit}/check-runs?per_page=100": {"check_runs": [listed]},
+    }
+    calls: list[list[str]] = []
+    timeouts: list[object] = []
+
+    def gh(args: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
+        calls.append(args)
+        timeouts.append(kwargs.get("timeout"))
+        key = "pr" if args[1] == "pr" else args[2]
+        return subprocess.CompletedProcess(args, 0, stdout=json.dumps(answers[key]), stderr="")
+
+    monkeypatch.setattr(subprocess, "run", gh)
+    fetched = fetch_pr("221")
+    assert isinstance(fetched, dict)
+    assert fetched["check_runs"] == [listed]
+    assert fetched["statuses"] == []
+    assert len(calls) == 3
+    assert timeouts == [CALL_TIMEOUT] * 3
+
+
+def test_check_runs_조회가_실패하면_조회_실패로_센다(monkeypatch: pytest.MonkeyPatch) -> None:
+    def gh(args: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
+        if "check-runs" in args[2]:
+            return subprocess.CompletedProcess(args, 1, stdout="", stderr="HTTP 502")
+        body: Json = {"headRefOid": HEAD, "statuses": []}
+        return subprocess.CompletedProcess(args, 0, stdout=json.dumps(body), stderr="")
+
+    monkeypatch.setattr(subprocess, "run", gh)
+    with pytest.raises(FetchError, match="HTTP 502"):
+        fetch_pr("221")
 
 
 def test_gh를_띄우지_못하면_조회_실패로_센다(monkeypatch: pytest.MonkeyPatch) -> None:
