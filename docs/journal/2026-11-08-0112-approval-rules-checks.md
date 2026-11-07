@@ -50,9 +50,30 @@
 
 첫 커밋의 pre-commit에서 `parallel-checks`(pytest 443.1초, web-verify 542.3초 포함)는 모두 `Passed`였고 변이 표 검사(`mutation tables`)만 `Failed`였다. 다른 기능의 변이 표 셋이 겨누던 원문을 이 변경이 바꾼 탓이다. `rules_file_read_mutations.toml`(`_rule_of`의 반환 줄에 `position=position`이 붙음), `runtime_mutations.toml`과 `prepare_mutations.toml`(`_prepare`의 규칙 읽기·꺼진 집합 읽기가 두 줄로 갈라짐). 원문을 새 줄로 옮기고 세 표를 표마다 돌렸다(`tools/mutate.py`, 종료 코드 모두 0). 그 과정에서 `rules_file_read_mutations.toml`의 변이 다섯(1·7·8·9·10)이 빨강이긴 한데 표지(`expect_output`)가 없다고 어긋났다. `Rule`의 repr에 `position=None`이 생겨 표지의 글자가 바뀐 것이다(어림이 아니라 같은 실행의 출력 줄 `where matches = Rule(server=None, tool='*', position=None).matches`를 읽었다). 표지를 `where True = matches(server=..., tool=...)` 줄로 바꾸고 그 다섯만 다시 돌려 통과했으나, 둘째 커밋 시도에서 `mutate.py --staged`가 그 줄을 막았다. pytest가 단언을 풀어 쓴 줄은 다른 까닭으로 빨개져도 같은 호출과 값이 찍히므로 표지가 될 수 없다는 검사 문구다. 그래서 `tests/core/test_rules.py`의 `test_규칙은_세_꼴과_별표_패턴대로_도구에_맞거나_안_맞는다`에 단언 메시지(`규칙 {rule}, 서버 {server}, 도구 {tool!r}`)를 더하고, 표지를 그 메시지의 글자로 바꿨다. 다섯 변이를 다시 돌려 모두 통과했다(`mutate.py` 종료 코드 0, `--check` 원문 13개 한 번씩). 인용 검사 경고(따옴표 인용 둘)는 따옴표를 떼서 풀었다.
 
+## 두 번째 세션의 기록 (셀프 리뷰 직전에서 커밋 뒤까지)
+
+세션 제목: `feature/05-checks-before-run-after-connect-and-on-resume`(둘째 세션). 인계하며 `… (인계함)`으로 바꾼다.
+
+> 사용자: `.claude/skills/implement/SKILL.md` 를 읽어 그대로 따른다. … 인자: `.scratch/approval-rules/issues/05-checks-before-run-after-connect-and-on-resume.md` … 이어받을 상태: 인계: 셀프 리뷰 직전. … 이번 요청 범위: PR과 병합까지
+
+- 한 일: `tidy-checkouts`로 주 체크아웃을 `origin/main`(778db404)에 맞췄다(워크트리 정리는 지울 것이 없었다). 워크트리에 들어와 셀프 리뷰, 반영, 위젯 e2e·`-m llm_widget`·카나리아 일곱, 티켓 05 `done`, 커밋까지 했다. 커밋은 `3c132b42`이다.
+- 커밋이 두 번 막혔다. 둘 다 `mutate.py --staged`(변이 표 검사)였고 위 "첫 커밋 시도가 막힌 것"에 적었다. pytest·pyright·web-verify 등 나머지 검사는 모두 `Passed`였다.
+- 이 세션이 번복한 것: 위젯 e2e의 첫 판 15개 빨강을 코드 결함으로 읽지 않고 동시 실행 탓으로 어림해 단독으로 다시 돌렸다(위 "검증 결과").
+
+## 세 번째 세션의 기록 (커밋 뒤에서 PR까지)
+
+세션 제목: `feature/05-checks-before-run-after-connect-and-on-resume`(셋째 세션).
+
+> 사용자: `.claude/skills/implement/SKILL.md` 를 읽어 그대로 따른다. … 인자: `.scratch/approval-rules/issues/05-checks-before-run-after-connect-and-on-resume.md` … 다음 단계: PR 반영·병합 … 이번 요청 범위: PR과 병합까지
+
+- 한 일: 워크트리에 들어가 `sibling_overlap.py`를 쳤다(번호 겹침 없음, 함께 고친 파일 없음, origin/main은 778db404로 그대로. 이 세션이 친 명령의 출력을 읽은 것이다: `uv run python tools/sibling_overlap.py`, `git log HEAD..origin/main`).
+- 일지 커밋이 `tests/tools/test_probe_kit.py::test_배출은_줄이_계속_와도_제한_시간에_끝난다` 하나에 막혔다(pre-commit의 pytest: 6628 통과 1 실패, 1265초). 이 브랜치는 `tools/`와 `tests/tools/`를 건드리지 않았다(`git diff --merge-base origin/main --stat -- tools tests/tools`가 빈 출력). 단독으로 4번 쳐서 4번 빨갰다. 손으로 쟀다. 시험의 자식이 첫 줄을 내기까지 0.125~0.891초(다섯 번, 스크래치 프로브)였고, 시험과 같은 방식의 `LineReader.drain(0.5)`는 회차에 따라 줄 7개를 받거나 0개를 받았다(셋 가운데 하나가 0, 스크래치 프로브 `drain_probe.py`). 원인 어림: 제한 0.5초가 자식 파이썬의 기동 시간을 포함하는데, 이 PC에 다른 세션이 여럿 돌아 기동이 0.5초 안팎이다. 부하가 가라앉은 때 다시 쳐서 통과하는지는 보지 못했고, `origin/main`에서도 빨간지는 재지 않았다. 원칙 II에 따라 시험은 고치지 않았다. 대기열 후보다(시험이 첫 줄을 기다리는 시간과 배출의 마감을 가르면 된다는 것은 어림이다).
+- `origin/main`에 06(#490)이 병합돼 합쳤다(`git merge origin/main`, 충돌 없음). 06의 실제 모델 시험 `test_멈춘_사이_규칙_파일이_…`을 합친 작업 트리에서 `-m llm -k 멈춘_사이_규칙_파일`로 쳐서 통과했다(1개, 119.56초, 토큰 3,725, 모델 호출 2건). 05가 먼저 병합돼도 06이 초록이어야 한다던 걱정은 반대 순서로(06이 먼저) 풀렸다.
+- 05가 기능의 마지막 열린 티켓이 되어(`.scratch/approval-rules/issues/`의 `Status:` 여섯이 모두 done을 Grep으로 봤다) 기능 계획 `.scratch/approval-rules/plan.md`에 `**끝:** 2026-11-08`을 적고 `uv run python tools/plan_table.py`로 `.scratch/plan.md`를 갱신했다(도구는 출력 없이 끝났고 파일 둘이 바뀐 것을 `git status`로 봤다). 이 변경들을 한 커밋으로 싣고 푸시해 PR을 연다.
+
 ## 아직 안 한 것
 
-- 커밋(pre-commit이 `mutate.py --staged`를 돈다. 표지가 이미 있다), 푸시, PR(ccd_pr `get_status` → 없으면 `bind_pr`), 봇 회차와 병합(`merge.md`의 "워크트리에서 병합할 때"), 병합 뒤 다음 지시문. 병합 직전에 06 티켓 상태를 다시 보고 05가 마지막 열린 티켓이 되면 기능 계획에 `**끝:**` 줄을 적는다.
+- 봇 회차와 병합(`merge.md`의 "워크트리에서 병합할 때"), 병합 뒤 다음 지시문. 병합 직전에 06 티켓 상태를 다시 보고 05가 마지막 열린 티켓이 되면 기능 계획에 `**끝:**` 줄을 적는다.
 
 ## PR 본문과 일지에 적을 것
 
@@ -75,3 +96,5 @@
 - 커밋하지 않은 변경: `.claude/rules/core.md`, `.claude/rules/sdk.md`, 티켓 05, `adapters/filesystem.py`, `core/ports.py`, `core/rules.py`, `core/run.py`, `tests/adapters/test_filesystem.py`, `tests/core/test_rules.py`, `tests/core/test_run.py`, 미추적 `.scratch/approval-rules/probes/checks_mutations.toml`, 이 일지.
 
 open-session을 부른다 2026-11-07T16:13Z
+
+open-session을 부른다 2026-11-07T17:06Z
