@@ -105,17 +105,17 @@ PR을 읽으려고 이미 치는 `ls-remote`의 `refs/pull/*/head` 가운데 열
 리뷰가 잡았다(일지 2026-10-13-18).
 
 main 이 이 브랜치 몫으로 비워 둔 헌법 판은 이 브랜치가 올린 판으로 센다(대기열 279). 함께 돌던
-형제가 이 브랜치가 매긴 판을 건너뛰어 더 높은 판으로 먼저 병합하면, 그 형제는 헌법 README 의 이력에
-"<판>은 함께 돌던 형제 브랜치(<백틱으로 감싼 이 브랜치의 이름>)가 먼저 매겨 비워 두었다" 를 적는다.
-그 뒤 main 을 합친 이 브랜치는 판 줄을 main 의 판으로 두고 비워 둔 판의 이력 문단을 더한다. 그 판
+형제가 이 브랜치가 매긴 판을 건너뛰어 더 높은 판으로 먼저 병합하면, 그 형제는 헌법 README 에
+"<판>은 함께 돌던 형제 브랜치(<백틱으로 감싼 이 브랜치의 이름>)가 먼저 매겨 비워 두었다" 를 한 줄에
+하나씩 적는다. 그 뒤 main 을 합친 이 브랜치는 판 줄을 main 의 판으로 두고 그 문장을 지운다. 그 판
 줄은 합치기를 커밋한 뒤 merge-base 와 같아 판을 올리지 않고 헌법 파일을 고쳤다고 1로 끝났고(합칠
 때마다, 두 번. 일지 2026-10-15-19), 합친 main 이 판 줄을 바꿨으면 커밋하기 전에는 main 과 같아 main
 과 같은 판으로 겹쳤다고 1로 끝난다. 그래서 판 줄이 merge-base 나 main 의 것이고 헌법 README 를
-고쳤을 때, main 의 이력이 지금 브랜치의 이름으로 비워 둔 판에 이 브랜치가 이력 문단을 더했으면 그
-판을 이 브랜치의 새 판으로 센다. 이력 문단은 판 머리(`<판>은`·`<판>는`)부터 다음 판 머리까지이고,
-main 의 이력에 같은 글의 문단이 없으면 더한 것이다. 비워 둔 문장으로 시작하는 문단은 더한 것으로
-세지 않는다. 그 문장은 다른 판의 문단 중간에 끼어(헌법 README 의 3.0.36) 그 뒤의 다른 판 본문까지 한
-문단으로 묶여, 그 본문만 고쳐도 더한 것으로 셌다(셀프 리뷰 표준 축).
+고쳤을 때, 이 브랜치의 판 줄이 main 의 판 줄과 같고 main 의 README 에 지금 브랜치의 이름으로 비워
+둔 판의 문장이 있는데 이 브랜치의 README 에는 없으면 그 판을 이 브랜치의 새 판으로 센다. 판을 올린
+까닭은 헌법 README 가 아니라 그 변경의 ADR 이력이나 일지에 적는다(retro-queue-per-item 06. 헌법
+README 의 이력 문단을 더하던 옛 신호는 그 문단이 `docs/constitution/history.md` 로 옮겨 가 기록이
+되면서 없어졌다). 판 줄을 비워 둔 판으로 낮추는 길은 두지 않는다. 병합하면 main 의 판이 내려간다.
 
 바꾼 하네스 파일의 카나리아도 본다(대기열 235). 이 브랜치가 merge-base 뒤에 고친 스킬 본문
 (`.claude/skills/*/*.md`. `SKILL.md` 가 Read 로 열게 하는 하위 파일도 카나리아의 하위 파일 갈래가
@@ -239,8 +239,9 @@ main 의 끝으로 옮겨, main 에서 들어온 남의 일지는 들지 않는�
   맞지 않아도(원칙을 바꾸고 patch로 올려도) 지나간다. 헌법 README의 판 줄 밖 문장(색인)과 세 파일
   밖의 새 헌법 파일은 고쳐도 알리지 않는다.
 - main 이 비워 둔 헌법 판은 위의 꼴 그대로 적은 문장만 읽는다. 지금 브랜치의 이름이 그 문장의 이름과
-  다르면(이름을 바꿔 달았거나 분리 HEAD) 판을 올리지 않은 것으로 본다. 이 브랜치가 문단을 더하지
-  않고 비워 둔 문장을 그 꼴이 깨지게 고쳐도 그 판의 문단을 더한 것으로 센다.
+  다르면(이름을 바꿔 달았거나 분리 HEAD) 판을 올리지 않은 것으로 본다. 이 브랜치가 문장을 지우지
+  않고 그 꼴이 깨지게 고쳐도 그 판을 가져간 것으로 센다. 문장을 지운 까닭이 판을 가져가려는 것인지는
+  보지 않는다. main 을 합치기 전이라 판 줄이 main 과 다른 브랜치는 이 신호를 쓰지 않는다.
 - 일지 인용 가운데 `일지` 낱말 없이 든 번호, 목록의 줄인 꼴(`일지 2026-10-13-66·67` 의 67), 코드
   스팬·펜스·인용 블록 안의 인용, merge-base 나 main 의 판에 글자 그대로 있는 줄(옮겨 오거나 되돌린
   줄), 지운 파일과 UTF-8 로 읽지 못하는 파일, 커밋 메시지와 PR 본문의 인용. 파일이 있으면 뜻이 다른
@@ -356,11 +357,10 @@ type Json = dict[str, Json] | list[Json] | str | int | float | bool | None
 JOURNAL_CITE = re.compile(r"일지 (\d{4}-\d{2}-\d{2}-\d{2,4}(?:·\d{4}-\d{2}-\d{2}-\d{2,4})*)(?!\d)")
 CODE_SPAN = re.compile(r"`[^`\n]+`")
 FENCE = re.compile(r"^[ \t]*(`{3,}|~{3,})")
-# main 의 헌법 이력이 함께 돌던 형제 브랜치 몫으로 비워 둔 판(대기열 279)과 이력 문단의 머리
+# main 의 헌법 README 가 함께 돌던 형제 브랜치 몫으로 비워 둔 판(대기열 279)
 RESERVED = re.compile(
     r"(?<![\d.])(\d+\.\d+\.\d+)[은는] 함께 돌던 형제 브랜치\(`([^`]+)`\)가 먼저 매겨 비워 두었다"
 )
-HISTORY_HEAD = re.compile(r"(?<![\d.])(\d+\.\d+\.\d+)[은는] ")
 
 CANARY_SPECS = ".scratch/**/probes/canary/*.toml"
 # 새 `claude -p` 세션에서 불러 보는 하네스 파일(`docs/constitution/operations.md` 환경 규약 상세)
@@ -480,7 +480,7 @@ class Survey:
     harness: list[str]  # 이 브랜치가 고친 하네스 파일 가운데 지금 있는 것
     specs: dict[str, str | None]  # 카나리아 명세 → 그 `source`
     base: str  # 이 브랜치와 main 의 merge-base. `--move` 가 둘 줄도 이 판에서 읽는다
-    # main 의 헌법 이력이 이 브랜치 몫으로 비워 둔 판으로 `ours.version` 을 채웠으면 그 판
+    # main 의 헌법 README 가 이 브랜치 몫으로 비워 둔 판의 문장을 이 브랜치가 지웠으면 그 판
     reserved: str | None
     # 이 브랜치가 고친 파일 → 이 브랜치가 더한 줄에서 어디에도 없는 일지 번호를 가리킨 인용의 번호
     dangling: list[tuple[str, list[str]]]
@@ -621,33 +621,18 @@ def highest_version(held: Sequence[tuple[str, str | None]]) -> tuple[str, list[s
     return top, [label for label, version in held if version == top]
 
 
-def history_entries(text: str) -> frozenset[tuple[str, str]]:
-    """헌법 README 의 이력 문단. 판 머리(`<판>은`·`<판>는`)부터 다음 판 머리까지의 (판, 글).
-
-    판 머리가 없는 글(지웠거나 비운 README)은 빈 집합이다.
-    """
-    heads = list(HISTORY_HEAD.finditer(text))
-    if not heads:
-        return frozenset()
-    ends = [head.start() for head in heads[1:]] + [len(text)]
-    return frozenset(
-        (head[1], text[head.start() : end].strip()) for head, end in zip(heads, ends, strict=True)
-    )
-
-
 def reserved_version(branch: str | None, main_text: str, ours_text: str) -> str | None:
-    """main 의 헌법 이력(`main_text`)이 `branch` 몫으로 비워 둔 판 가운데, 이 브랜치의 헌법
-    README(`ours_text`)가 그 판의 이력 문단을 더한 것. 둘 이상이면 가장 높은 판이다. 분리 HEAD
-    (`branch` 가 None)의 몫은 없다. 비워 둔 문장으로 시작하는 문단은 더한 문단이 아니다. 그 문장은
-    다른 판의 문단 중간에 끼어, 그 뒤의 다른 판 본문까지 한 문단으로 묶인다(헌법 README 의
-    3.0.36)."""
+    """main 의 헌법 README(`main_text`)가 `branch` 몫으로 비워 둔 판 가운데, 이 브랜치의 헌법
+    README(`ours_text`)가 그 문장을 지운 것. 이 브랜치의 판 줄이 main 의 판 줄과 같아야 한다. 판
+    줄이 다르면 판 줄로 보고(main 을 합치기 전의 브랜치는 그 문장이 아예 없다), 판 줄이 없는
+    글(지웠거나 비운 README)은 가져간 판이 없다. 둘 이상이면 가장 높은 판이다. 분리 HEAD(`branch` 가
+    None)의 몫은 없다."""
+    ours_line, main_line = VERSION.search(ours_text), VERSION.search(main_text)
+    if ours_line is None or main_line is None or ours_line[1] != main_line[1]:
+        return None
     reserved = {version for version, owner in RESERVED.findall(main_text) if owner == branch}
-    added = {
-        version
-        for version, entry in history_entries(ours_text) - history_entries(main_text)
-        if RESERVED.match(entry) is None
-    }
-    return max(reserved & added, key=_version_key, default=None)
+    kept = {version for version, owner in RESERVED.findall(ours_text) if owner == branch}
+    return max(reserved - kept, key=_version_key, default=None)
 
 
 def dangling_cites(
@@ -1478,8 +1463,8 @@ def survey(root: Path, remote: Remote) -> Survey:
         # 판 줄이 main 과 같다. 합치기를 커밋하기 전에는 main 이 올린 판이 디스크에 있다
         ours = replace(ours, version=None)
     elif ours.version in (None, main_numbers.version):
-        # 판 줄은 merge-base 나 main 의 것이다. main 이 이 브랜치 몫으로 비워 둔 판에 이력 문단을
-        # 더했으면 그 판으로 올린 것이다(대기열 279)
+        # 판 줄은 merge-base 나 main 의 것이다. main 이 이 브랜치 몫으로 비워 둔 판의 문장을 이
+        # 브랜치가 지웠으면 그 판으로 올린 것이다(대기열 279)
         main_text = Tree(root, main_sha).text(CONSTITUTION)
         disk_text = Disk(root).text(CONSTITUTION)
         reserved = reserved_version(branch, main_text, disk_text)
@@ -1622,8 +1607,8 @@ def render(result: Survey, verdict: Verdict) -> str:
     lines.append(_ours_line(result.ours))
     if result.reserved:
         lines.append(
-            f"올린 판으로 센 헌법 {result.reserved}: {MAIN} 의 이력이 이 브랜치 몫으로 비워 둔"
-            " 판이고, 이 브랜치가 그 판의 이력 문단을 더했다"
+            f"올린 판으로 센 헌법 {result.reserved}: {MAIN} 의 헌법 README 가 이 브랜치 몫으로"
+            " 비워 둔 판이고, 이 브랜치가 그 문장을 지웠다"
         )
     if verdict.found:
         lines.append(f"번호 겹침 {len(verdict.found)}:")

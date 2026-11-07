@@ -50,8 +50,12 @@ def _커밋한다(root: Path, files: dict[str, str], message: str) -> None:
     _git(root, "commit", "-q", "-m", message)
 
 
-def _헌법(version: str, history: str = "1.0.0은 처음이다.") -> str:
-    return f"# 헌법\n\n**Version**: {version} | **Ratified**: 2026-09-19\n\n{history}\n"
+def _헌법(version: str, vacated: str = "") -> str:
+    """판 줄과, 아직 쓰이지 않은 비워 둔 판의 문장(한 줄에 하나)만 든 헌법 README."""
+    return f"# 헌법\n\n**Version**: {version} | **Ratified**: 2026-09-19\n\n{vacated}\n"
+
+
+RESERVE = "1.0.1은 함께 돌던 형제 브랜치(`topic`)가 먼저 매겨 비워 두었다."
 
 
 SEED = {README: _헌법("1.0.0"), OPERATIONS: "운영\n", TECH: "스택\n", "README.md": "읽어 보기\n"}
@@ -108,7 +112,7 @@ def _판정(root: Path) -> tuple[int, str]:
         "main_이_같은_판을_먼저_매겼다",
         "merge_base_의_판_그대로다",
         "판_줄이_없다",
-        "main_이_이_가지_몫으로_비워_둔_판에_문단을_더했다",
+        "main_이_이_가지_몫으로_비워_둔_판의_문장을_지웠다",
     ],
 )
 def test_판을_올렸는지는_main_과_merge_base_의_판_둘과_다른지로_본다(
@@ -128,6 +132,10 @@ def test_헌법_파일을_고치고_판을_올리지_않으면_막는다(저장�
     assert "판을 올리지 않았다" in 출력
     assert OPERATIONS in 출력
     assert "1.0.0" in 출력
+    # 막는 글은 이력 문단을 더하라는 말 대신 비워 둔 판의 신호와 까닭을 적을 자리를 알려 준다
+    assert "이력 문단" not in 출력
+    assert "비워 둔" in 출력
+    assert "ADR 이력이나 일지" in 출력
 
 
 def test_같은_커밋에서_판을_올리면_지나간다(저장소: tuple[Path, Path]) -> None:
@@ -155,10 +163,11 @@ def test_못_보는_것_고친_커밋과_판을_올린_커밋을_나누면_앞_�
     assert _판정(work)[0] == 0
 
 
-def test_못_보는_것_판_줄만_바뀌면_크기와_이력_문단은_보지_않고_지나간다(
+def test_못_보는_것_판_줄만_바뀌면_크기와_까닭을_적었는지는_보지_않고_지나간다(
     저장소: tuple[Path, Path],
 ) -> None:
-    """문구 하나를 고치고 major 로 올리며 이력 문단을 더하지 않아도 지나간다(놓친다)."""
+    """문구 하나를 고치고 major 로 올리며 까닭을 어디에도 적지 않아도 지나간다(놓친다). 헌법
+    README 에는 판 줄 곁에 비워 둔 판의 문장만 있고 이력 문단이 없다."""
     work, _ = 저장소
     _스테이지한다(work, {OPERATIONS: "운영의 문구\n", README: _헌법("2.0.0")})
 
@@ -192,21 +201,40 @@ def test_main_이_같은_판을_먼저_매겼으면_막는다(저장소: tuple[P
     assert "판을 올리지 않았다" in 출력
 
 
-def test_main_이_이_가지_몫으로_비워_둔_판에_이력_문단을_더했으면_지나간다(
+def test_main_이_이_가지_몫으로_비워_둔_판의_문장을_지웠으면_지나간다(
     저장소: tuple[Path, Path],
 ) -> None:
-    """main 을 합치며 판 줄을 main 의 것으로 두고 먼저 매긴 판의 문단을 남기는 모양이다(대기열
-    279, `tools/sibling_overlap.py` 의 `reserved_version`)."""
+    """main 을 합치며 판 줄을 main 의 것으로 두고 이 가지 몫으로 비워 둔 문장을 지우는 모양이다
+    (대기열 279, retro-queue-per-item 06, `tools/sibling_overlap.py` 의 `reserved_version`)."""
     work, pusher = 저장소
-    main_이력 = "1.0.2는 스택이다. 1.0.1은 함께 돌던 형제 브랜치(`topic`)가 먼저 매겨 비워 두었다."
-    main_헌법 = _헌법("1.0.2", f"{main_이력} 1.0.0은 처음이다.")
-    _main_에_민다(work, pusher, {TECH: "그쪽 스택\n", README: main_헌법})
-    우리_이력 = f"{main_이력} 1.0.1은 운영이다. 1.0.0은 처음이다."
-    _스테이지한다(work, {OPERATIONS: "운영을 고쳤다\n", README: _헌법("1.0.2", 우리_이력)})
+    _main_에_민다(work, pusher, {TECH: "그쪽 스택\n", README: _헌법("1.0.2", RESERVE)})
+    _스테이지한다(work, {OPERATIONS: "운영을 고쳤다\n", README: _헌법("1.0.2")})
 
     code, 출력 = _판정(work)
 
     assert code == 0, 출력
+
+
+def test_비워_둔_판의_문장을_지우지_않고_판_줄만_main_과_같으면_막는다(
+    저장소: tuple[Path, Path],
+) -> None:
+    """판 줄이 main 과 같아도 main 이 이 가지 몫으로 비워 둔 문장을 그대로 두면 판을 가져가지 않은
+    것이다. 다른 가지 몫의 문장을 지운 것도 이 가지의 판이 아니다."""
+    work, pusher = 저장소
+    other = "1.0.3은 함께 돌던 형제 브랜치(`other`)가 먼저 매겨 비워 두었다."
+    main_헌법 = _헌법("1.0.4", f"{RESERVE}\n{other}")
+    _main_에_민다(work, pusher, {TECH: "그쪽 스택\n", README: main_헌법})
+    _스테이지한다(work, {OPERATIONS: "운영을 고쳤다\n", README: main_헌법})
+
+    assert _판정(work)[0] == 1
+
+    _스테이지한다(work, {README: _헌법("1.0.4", RESERVE)})
+
+    assert _판정(work)[0] == 1
+
+    _스테이지한다(work, {README: _헌법("1.0.4", other)})
+
+    assert _판정(work)[0] == 0
 
 
 def test_main_이_고친_헌법_파일은_이_가지가_고친_것으로_세지_않는다(
@@ -362,10 +390,8 @@ def test_못_보는_것_분리_HEAD_에서는_비워_둔_판을_찾지_못해_�
 ) -> None:
     """비워 둔 판은 브랜치 이름으로 찾는다(잘못 막는다). 같은 색인이 가지 위에서는 지나간다."""
     work, pusher = 저장소
-    main_이력 = "1.0.2는 스택이다. 1.0.1은 함께 돌던 형제 브랜치(`topic`)가 먼저 매겨 비워 두었다."
-    _main_에_민다(work, pusher, {TECH: "그쪽 스택\n", README: _헌법("1.0.2", main_이력)})
-    우리_이력 = f"{main_이력} 1.0.1은 운영이다."
-    _스테이지한다(work, {OPERATIONS: "운영을 고쳤다\n", README: _헌법("1.0.2", 우리_이력)})
+    _main_에_민다(work, pusher, {TECH: "그쪽 스택\n", README: _헌법("1.0.2", RESERVE)})
+    _스테이지한다(work, {OPERATIONS: "운영을 고쳤다\n", README: _헌법("1.0.2")})
 
     assert _판정(work)[0] == 0
 

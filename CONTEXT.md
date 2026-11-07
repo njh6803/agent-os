@@ -651,7 +651,7 @@ _Avoid_: plan.md(파일 이름으로만), 로드맵, 백로그
 _Avoid_: 빌드 산출(저장소 밖의 것), 캐시, 스냅샷
 
 **헌법 판(Constitution Version)**:
-헌법 파일을 고칠 때마다 올리는 semver 번호. 올린 까닭은 전환일 전에는 헌법 README의 이력 줄이 들고, 뒤에는 그 변경의 ADR 이력이나 일지가 든다(ADR 0045).
+헌법 파일을 고칠 때마다 올리는 semver 번호. 올린 까닭은 그 변경의 ADR 이력이나 일지가 든다. 헌법 README에는 판 줄과 아직 쓰이지 않은 비워 둔 판의 문장만 남고, 3.0.69까지 그 README에 쌓였던 이력은 `docs/constitution/history.md`에 기록으로 있다(ADR 0045).
 _Avoid_: 버전(단독, 플러그인의 버전과 섞인다), 리비전
 
 **비워 둔 판(Reserved Version)**:
