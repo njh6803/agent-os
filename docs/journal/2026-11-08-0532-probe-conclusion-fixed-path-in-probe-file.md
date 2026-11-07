@@ -58,8 +58,15 @@ open-session을 부른다 2026-11-07T20:33:55Z
 
 첫 커밋 시도의 pre-commit 결과(커밋은 만들어지지 않았다): web-verify 통과, 변이 표 검사(`mutate.py --staged`)가 빨강, pytest가 6644 통과에 1 실패. 변이 표의 8번 `file_path 가 문자열인지 보지 않는다`는 `old`를 새 코드에 맞추며 `expect_output`이 없어 걸렸다. 변이를 손으로 넣어 실패 출력을 보니 `TypeError: expected string or bytes-like object, got 'int'`가 있어 그 줄을 `expect_output`으로 더했고 `mutate.py` 8번은 기대대로였다. pytest의 실패 하나는 `tests/adapters/test_filesystem.py::test_다른_스레드가_교체하는_동안의_읽기가_재시도_안에서_성공한다`(윈도 교체 순간 읽기의 `Permission denied`)로, 이 변경과 무관하다. 그 시험 둘을 단독으로 돌리니 통과했다(60초).
 
+둘째 커밋 시도(커밋 `d6c7044b`, 제목 `chore: 프로브 파일도 짚는다 (harness probe-conclusion-fixed-path-in-probe-file)`)는 pre-commit을 모두 지나 만들어졌다. 첫 시도 때 단독 재실행으로 지나가던 그 pytest 시험도 이번 전체 실행에서는 통과로 끝났다(출력 원본은 보지 못했고 커밋이 만들어진 것으로 안다). 티켓의 마지막 칸은 `[x]`로 고쳐 같은 커밋에 실렸다. `uv run python tools/sibling_overlap.py`(커밋 전)는 번호 겹침 없음이었고 글자 충돌 후보는 `origin/main`(`.scratch/harness/probes/README.md`), `measure-word-journal-scope`·`scratch-probe-hook-rounds-and-reread`·`mutate-marker-call-fragment` 워크트리(`probes/README.md`, `docs/agents/issue-tracker.md`, `tools/hook_payloads.toml`, `.claude/rules/tools.md`)다.
+
+## 인계 (둘째)
+
+인계 경계는 `커밋 뒤`다(컨텍스트 206,000 토큰, 문턱 200,000). 제목을 `chore/probe-conclusion-fixed-path-in-probe-file (인계함)`으로 바꾸고 워크트리 잠금을 푼다. 이 일지 파일은 이 인계에서 고쳤고 커밋하지 않았다.
+
+open-session을 부른다 2026-11-07T21:13:59Z
+
 ## 남은 일
 
-1. 셀프 리뷰(`/code-review`)를 한다. base는 `git merge-base origin/main HEAD`. Critical·Major를 고친다.
-2. 커밋 전에 `git branch --show-current`와 `uv run python tools/sibling_overlap.py`. 커밋의 pre-commit이 손으로 치는 다섯을 갈음한다.
-3. 티켓의 마지막 수용 기준 칸을 채운다. PR을 열고(커밋 제목 꼬리는 `(harness probe-conclusion-fixed-path-in-probe-file)`), `merge.md` 2의 봇 회차부터 병합까지 한다.
+1. 푸시하기 전에 `origin/main`이 움직였다(`e575f66`, `.scratch/harness/probes/README.md`를 고쳤다). `sync_with_base_branch` 도구로 최신화하고 충돌이 나면 글자 충돌을 푼다(`probes/README.md`의 변이 행, `tools.md`와 `issue-tracker.md`의 이 훅 문장).
+2. 푸시하고 PR을 연다(제목 꼬리 `(harness probe-conclusion-fixed-path-in-probe-file)`). `merge.md` 2의 봇 회차부터 병합까지 한다.
