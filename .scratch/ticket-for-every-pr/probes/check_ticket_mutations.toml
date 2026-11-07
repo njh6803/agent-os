@@ -203,8 +203,34 @@ expect_output = ["AssertionError: 지나면 안 된다"]
 
 [[mutation.edit]]
 file = "tools/check_ticket.py"
-old = '''        and ticket_stem(f"chore/{name.removesuffix('.md')}") is not None'''
+old = '''        and _HARNESS_STEM.fullmatch(stem) is not None'''
 new = '''        and bool(name)'''
+
+[[mutation]]
+name = "판정 6 이 번호 없는 slug 의 티켓을 세지 않는다"
+tests = ["tests/tools/test_check_ticket.py", "-k", "번호_없는_harness_티켓도"]
+expect = "red"
+expect_output = ["AssertionError: 막히면 안 된다"]
+
+[[mutation.edit]]
+file = "tools/check_ticket.py"
+old = '''_HARNESS_STEM = re.compile(r"[a-z][a-z0-9-]*|\d{3}-.+")'''
+new = '''_HARNESS_STEM = re.compile(r"\d{3}-.+")'''
+
+[[mutation]]
+name = "chore 브랜치가 세 자리 번호 꼴만 티켓 모양으로 읽는다"
+tests = ["tests/tools/test_check_ticket.py", "-k", "chore_브랜치의_slug가_그_티켓을_실으면"]
+expect = "red"
+expect_output = ["AssertionError: 막히면 안 된다"]
+
+[[mutation.edit]]
+file = "tools/check_ticket.py"
+old = '''    if kind == "chore":
+        return (kind, stem) if _HARNESS_STEM.fullmatch(stem) else None
+    number, dash, slug = stem.partition("-")
+    if len(number) != 2 or'''
+new = '''    number, dash, slug = stem.partition("-")
+    if len(number) != {"feature": 2, "chore": 3}[kind] or'''
 
 [[mutation]]
 name = "symbolic-ref 의 git 실패를 분리 HEAD 로 읽는다"

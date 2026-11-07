@@ -759,7 +759,7 @@ payload = { prompt = "다음 작업: 기능 x\n다음 단계: 구현\n어디서:
 [[case]]
 hook = "hook_prompt_directive.py"
 expect = "context"
-contains = ["`.scratch/harness/issues/NNN-<slug>.md`", "`git branch -m", "`set_session_title` 에 `self` 와", "`tools/check_ticket.py`"]
+contains = ["`.scratch/harness/issues/<slug>.md`", "번호 없이", "`git branch -m", "`set_session_title` 에 `self` 와", "`tools/check_ticket.py`"]
 note = "사람이 보는 세션의 첫 턴 보통 프롬프트 — 티켓·브랜치·제목의 차례를 알린다(티켓 ticket-for-every-pr 05). 러너가 헤드리스 변수 둘을 벗겨 러너를 띄운 세션과 상관없다"
 payload = { prompt = "끝났어?", cwd = "${ROOT}", transcript_path = "${NEW_TRANSCRIPT}" }
 

@@ -628,8 +628,8 @@ def test_사람이_보는_세션의_첫_턴_보통_프롬프트에는_티켓_차
     for word in (
         "`EnterWorktree`",
         "제품 코드",
-        "`.scratch/harness/issues/NNN-<slug>.md`",
-        "`uv run python tools/sibling_overlap.py`",
+        "`.scratch/harness/issues/<slug>.md`",
+        "번호 없이",
         "`in-progress`",
         "`ready-for-agent`",
         "`git branch -m",
@@ -643,23 +643,26 @@ def test_사람이_보는_세션의_첫_턴_보통_프롬프트에는_티켓_차
         "`docs/agents/issue-tracker.md`",
     ):
         assert word in notice, word
+    # harness 티켓은 번호를 받지 않아 번호 도구를 치라는 말과 다시 치라는 말이 없다
+    assert "sibling_overlap" not in notice
+    assert "티켓 NNN" not in notice
+    assert "NNN" not in notice
 
 
 def test_알림의_규약_낱말은_원천_문서에_있다(tmp_path: Path) -> None:
     """알림은 `docs/agents/issue-tracker.md` 의 규약을 옮긴 사본이다. 원천이 브랜치 모양, 상태 값,
-    번호 명령, 면제 브랜치, 커밋 검사의 이름을 바꾸면 여기서 빨갛다(PR #354 claude-review). 원천에
-    다른 말로 적힌 것(워크트리, 제목 도구)은 대조하지 않는다."""
+    면제 브랜치, 커밋 검사의 이름을 바꾸면 여기서 빨갛다(PR #354 claude-review). 원천에 다른 말로
+    적힌 것(워크트리, 제목 도구)은 대조하지 않는다."""
     notice = _notice(transcript=str(tmp_path / "없음.jsonl"))
     source = ISSUE_TRACKER.read_text(encoding="utf-8")
 
     assert notice is not None
     for word in (
         "`feature/<NN>-<slug>`",
-        "`chore/<NNN>-<slug>`",
+        "`chore/<slug>`",
+        "`.scratch/harness/issues/<slug>.md`",
         "`ready-for-agent`",
         "`in-progress`",
-        "`uv run python tools/sibling_overlap.py`",
-        "`티켓 NNN`",
         "`docs/<slug>`",
         "`tools/check_ticket.py`",
     ):

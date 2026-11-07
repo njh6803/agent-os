@@ -36,7 +36,7 @@ Look for the originating spec, in this order:
 
 1. Issue references in the commit messages (`#123`, `Closes #45`, GitLab `!67`, etc.), fetched via the workflow in `docs/agents/issue-tracker.md`.
 2. A path the user passed as an argument.
-3. 브랜치가 가리키는 티켓 파일. 브랜치 이름의 stem이 티켓 파일 이름이다. `feature/<NN>-<slug>`이면 이 브랜치의 변경에 든 `.scratch/<기능>/issues/<NN>-<slug>.md`이고 그 기능 디렉터리의 `spec.md`도 명세다. `chore/<NNN>-<slug>`이면 `.scratch/harness/issues/<NNN>-<slug>.md`다(`docs/agents/issue-tracker.md`, ADR 0037).
+3. 브랜치가 가리키는 티켓 파일. 브랜치 이름의 stem이 티켓 파일 이름이다. `feature/<NN>-<slug>`이면 이 브랜치의 변경에 든 `.scratch/<기능>/issues/<NN>-<slug>.md`이고 그 기능 디렉터리의 `spec.md`도 명세다. `chore/<slug>`이면 `.scratch/harness/issues/<slug>.md`다(옛 티켓은 `chore/<NNN>-<slug>`와 `<NNN>-<slug>.md`. `docs/agents/issue-tracker.md`, ADR 0037·0045).
 4. A spec file under `docs/`, `specs/`, or `.scratch/` matching the branch name or feature.
 5. If nothing is found, ask the user where the spec is. If they say there isn't one, the **Spec** sub-agent will skip and report "no spec available".
 
