@@ -41,7 +41,6 @@ from tools.sibling_overlap import (
     github_repo,
     harness_files,
     highest_version,
-    history_entries,
     journal_order,
     main,
     moved_bodies,
@@ -516,71 +515,66 @@ def test_지운_파일과_UTF_8로_읽지_못하는_파일의_일지_인용은_�
     assert found == [("b.md", ["2026-10-07-05"])]
 
 
-RESERVED_MAIN = (
-    "1.0.2는 스택의 문구다. 1.0.1은 함께 돌던 형제 브랜치(`topic`)가 먼저 매겨 비워 두었다."
-    " 1.0.0은 처음이다."
-)
+RESERVE = "1.0.1은 함께 돌던 형제 브랜치(`topic`)가 먼저 매겨 비워 두었다."
 
 
 def _이력(version: str, history: str) -> str:
     return _헌법(version) + f"\n{history}\n"
 
 
-def test_main이_이_브랜치_몫으로_비워_둔_판에_이력_문단을_더했으면_그_판이다() -> None:
-    """대기열 279: main 이 이 브랜치 몫으로 비워 둔 판(3.0.35)을 판 줄을 main 그대로 둔 이
-    브랜치에서 알아보지 못해, 합칠 때마다 판을 올리지 않았다고 1로 끝났다(일지 2026-10-15-19). 이력
-    문단은 판 머리(`<판>은`·`<판>는`)부터 다음 판 머리까지다."""
-    main_text = _이력("1.0.2", RESERVED_MAIN)
-    ours = _이력("1.0.2", RESERVED_MAIN.replace("1.0.0은", "1.0.1은 운영의 문구다. 1.0.0은"))
+def test_비워_둔_판의_문장을_지웠고_판_줄이_main과_같으면_그_판이다() -> None:
+    """비워 둔 판의 새 신호(retro-queue-per-item 06). 대기열 279의 옛 신호는 이력 문단을 더했는지
+    봤는데, 헌법 README 에 이력 문단이 없어졌다. 이 브랜치의 판 줄이 main 의 판 줄과 같고 main 에
+    있던 이 브랜치 몫의 비워 둔 문장을 이 브랜치가 지웠으면 그 판을 가져간 것이다."""
+    main_text = _이력("1.0.2", RESERVE)
+    ours = _이력("1.0.2", "")
 
     assert reserved_version("topic", main_text, ours) == "1.0.1"
     # 다른 브랜치 몫이거나 분리 HEAD 면 올리지 않은 것이다
-    assert reserved_version("other", main_text, ours) is None
+    assert reserved_version("other", main_text, ours) is None, (
+        "다른 브랜치 몫으로 비워 둔 판은 가져간 판이 아니다"
+    )
     assert reserved_version(None, main_text, ours) is None
-    # 그 판의 이력 문단을 더하지 않았으면 올리지 않은 것이다
-    assert reserved_version("topic", main_text, main_text) is None
-    # 비워 두지 않은 판에 더한 문단은 이 판정 밖이다(판 줄로 본다)
-    other = _이력("1.0.2", RESERVED_MAIN.replace("1.0.0은", "1.0.3은 운영의 문구다. 1.0.0은"))
-    assert reserved_version("topic", main_text, other) is None
-    # 문단은 다음 판 머리에서 끝난다. 그 판의 문단이 main 에 이미 있으면 뒤의 문단만 고쳐도 더한
-    # 것이 아니다
-    done = RESERVED_MAIN.replace("1.0.0은", "1.0.1은 운영의 문구다. 1.0.0은")
-    later = done.replace("처음이다", "처음의 판이다")
-    assert reserved_version("topic", _이력("1.0.2", done), _이력("1.0.2", later)) is None
-    # 둘 이상이면 가장 높은 판이다
-    reserve = "1.0.3은 함께 돌던 형제 브랜치(`topic`)가 먼저 매겨 비워 두었다."
-    twice = RESERVED_MAIN.replace("1.0.2는", f"1.0.4는 X다. {reserve} 1.0.2는")
-    both = twice.replace("1.0.0은", "1.0.3은 A다. 1.0.1은 B다. 1.0.0은")
-    assert reserved_version("topic", _이력("1.0.4", twice), _이력("1.0.4", both)) == "1.0.3"
+    # 문장을 지우지 않았으면 가져가지 않은 것이다
+    assert reserved_version("topic", main_text, main_text) is None, (
+        "문장을 지우지 않았으면 가져간 것이 아니다"
+    )
+    # 판 줄이 main 과 다르면 이 신호가 아니라 판 줄로 본다. main 을 합치기 전의 브랜치는 비워 둔
+    # 문장이 아예 없어도 판 줄이 main 의 것이 아니다
+    assert reserved_version("topic", main_text, _이력("1.0.3", "")) is None, (
+        "판 줄이 main 과 다르면 신호가 아니다"
+    )
+    assert reserved_version("topic", main_text, _이력("1.0.0", "")) is None
+    # 다른 브랜치 몫의 문장을 지운 것은 이 브랜치의 판이 아니다
+    other = "1.0.3은 함께 돌던 형제 브랜치(`other`)가 먼저 매겨 비워 두었다."
+    both = _이력("1.0.4", f"{RESERVE}\n{other}")
+    assert reserved_version("topic", both, _이력("1.0.4", RESERVE)) is None
+    assert reserved_version("other", both, _이력("1.0.4", RESERVE)) == "1.0.3"
+    # 둘 이상이면 가장 높은 판이다. 지우지 않은 것은 센 것에서 뺀다
+    mine = "1.0.3은 함께 돌던 형제 브랜치(`topic`)가 먼저 매겨 비워 두었다."
+    twice = _이력("1.0.4", f"{RESERVE}\n{mine}")
+    assert reserved_version("topic", twice, _이력("1.0.4", "")) == "1.0.3", (
+        "둘 이상이면 가장 높은 판이다"
+    )
+    assert reserved_version("topic", twice, _이력("1.0.4", mine)) == "1.0.1"
 
 
-def test_판_머리가_없는_README는_이력_문단도_비워_둔_판도_없다() -> None:
-    """PR 직전 버그 축: 이 브랜치가 헌법 README 를 지웠거나 비우면 이력 문단을 가르다 ValueError 가
-    나, 도구가 트레이스백과 함께 1(출력대로 고친다)로 끝났다."""
-    assert history_entries("") == frozenset()
-    assert reserved_version("topic", _이력("1.0.2", RESERVED_MAIN), "") is None
+def test_판_줄이_없는_README는_비워_둔_판을_가져가지_않은_것이다() -> None:
+    """PR 직전 버그 축: 이 브랜치가 헌법 README 를 지웠거나 비워도 도구가 트레이스백 없이 판정한다.
+    지운 README 는 판 줄이 없어 main 의 판 줄과 같지 않다."""
+    assert reserved_version("topic", _이력("1.0.2", RESERVE), "") is None
+    assert reserved_version("topic", "", "") is None
 
 
-def test_비워_둔_문장_뒤에_이어진_다른_판의_본문만_고치면_더한_것이_아니다() -> None:
-    """셀프 리뷰 표준 축: 헌법 README 에서 비워 둔 문장은 3.0.36 문단 중간에 끼어, 그 뒤의 3.0.36
-    본문까지 한 문단으로 묶인다. 그 본문 한 낱말만 고쳐도 3.0.35 문단을 더한 것으로 셌다."""
-    tail = "1.0.1은 함께 돌던 형제 브랜치(`topic`)가 먼저 매겨 비워 두었다. 1.0.2의 본문이 잇는다."
-    main_text = _이력("1.0.2", f"1.0.2는 스택의 문구다. {tail} 1.0.0은 처음이다.")
-    ours = main_text.replace("본문이 잇는다", "본문을 고쳤다")
-
-    assert reserved_version("topic", main_text, ours) is None
-
-
-def test_비워_둔_판은_그_꼴의_문장만_읽고_그_문장을_깨뜨려_고쳐도_더한_것으로_센다() -> None:
-    """못 보는 것. 다른 꼴로 적은 예약은 읽지 않는다. 이 브랜치가 문단을 더하지 않고 비워 둔 문장을
-    그 꼴이 깨지게 고쳐도 그 판의 문단을 더한 것으로 센다."""
-    main_text = _이력("1.0.2", RESERVED_MAIN)
-    reworded = _이력("1.0.2", RESERVED_MAIN.replace("먼저 매겨", "앞서 매겨"))
+def test_비워_둔_판은_그_꼴의_문장만_읽고_그_문장을_깨뜨려_고쳐도_가져간_것으로_센다() -> None:
+    """못 보는 것. 다른 꼴로 적은 예약은 읽지 않는다. 이 브랜치가 문장을 지우지 않고 그 꼴이
+    깨지게 고쳐도 그 판을 가져간 것으로 센다."""
+    main_text = _이력("1.0.2", RESERVE)
+    reworded = _이력("1.0.2", RESERVE.replace("먼저 매겨", "앞서 매겨"))
 
     assert reserved_version("topic", main_text, reworded) == "1.0.1"
-    loose = _이력("1.0.2", "1.0.2는 스택의 문구다. 1.0.1은 형제 `topic` 몫으로 비웠다.")
-    ours = loose.replace("1.0.1은 형제", "1.0.1은 운영의 문구다. 1.0.1은 형제")
-    assert reserved_version("topic", loose, ours) is None
+    loose = _이력("1.0.2", "1.0.1은 형제 `topic` 몫으로 비웠다.")
+    assert reserved_version("topic", loose, _이력("1.0.2", "")) is None
 
 
 def test_옮길_번호대로_인용을_한_번에_바꾼다() -> None:
@@ -2337,27 +2331,28 @@ def test_여러_머리를_합치는_도중에는_머리마다_그_번호를_이_
     assert "다음 빈 번호(형제 포함): 티켓 001\n" in out
 
 
-def test_main이_이_브랜치_몫으로_비워_둔_헌법_판에_이력을_더했으면_판을_올린_것이다(
+def test_main이_이_브랜치_몫으로_비워_둔_헌법_판의_문장을_지웠으면_판을_올린_것이다(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    """대기열 279: #243 이 3.0.35 를 이 브랜치 몫으로 비워 두었는데, 판 줄을 main 그대로 둔 이
-    브랜치에 합칠 때마다 "헌법 파일을 고치고 판을 올리지 않았다" 로 1을 냈다(일지 2026-10-15-19).
-    합치기를 커밋하기 전(판 줄이 main 과 같다)과 뒤(판 줄이 merge-base 와 같다)가 모두 그렇다."""
-    seed = {**SEED, CONSTITUTION: _이력("1.0.0", "1.0.0은 처음이다.")}
+    """대기열 279, retro-queue-per-item 06: #243 이 3.0.35 를 이 브랜치 몫으로 비워 두었는데, 판
+    줄을 main 그대로 둔 이 브랜치에 합칠 때마다 "헌법 파일을 고치고 판을 올리지 않았다" 로 1을
+    냈다(일지 2026-10-15-19). 헌법 README 의 이력 문단이 없어진 뒤의 신호는 판 줄이 main 과 같고
+    main 에 있던 이 브랜치 몫의 비워 둔 문장을 지운 것이다. 합치기를 커밋하기 전(판 줄이 main 과
+    같다)과 뒤(판 줄이 merge-base 와 같다)가 모두 그렇다."""
+    seed = {**SEED, CONSTITUTION: _이력("1.0.0", "")}
     _, work, pusher = _원격과_클론(tmp_path, seed)
     ours = {
         "docs/constitution/operations.md": "고친 운영\n",
-        CONSTITUTION: _이력("1.0.1", "1.0.1은 운영의 문구다. 1.0.0은 처음이다."),
+        CONSTITUTION: _이력("1.0.1", ""),
     }
     _커밋한다(work, ours, "이 브랜치")
-    _커밋한다(pusher, {CONSTITUTION: _이력("1.0.2", RESERVED_MAIN)}, "main")
+    _커밋한다(pusher, {CONSTITUTION: _이력("1.0.2", RESERVE)}, "main")
     _git(pusher, "push", "-q", "origin", "main")
     _git(work, "fetch", "-q", "origin")
     with pytest.raises(subprocess.CalledProcessError):
-        _git(work, "merge", "-q", "origin/main")  # 판 줄과 이력이 충돌한다
+        _git(work, "merge", "-q", "origin/main")  # 판 줄이 충돌한다
     assert _git(work, "rev-parse", "-q", "--verify", "MERGE_HEAD")
-    merged = RESERVED_MAIN.replace("1.0.0은", "1.0.1은 운영의 문구다. 1.0.0은")
-    _쓴다(work, {CONSTITUTION: _이력("1.0.2", merged)})
+    _쓴다(work, {CONSTITUTION: _이력("1.0.2", "")})
     _git(work, "add", CONSTITUTION)
 
     code = main([str(work)])
@@ -2365,7 +2360,8 @@ def test_main이_이_브랜치_몫으로_비워_둔_헌법_판에_이력을_더�
     out = capsys.readouterr().out
     assert code == 0, out
     assert "이 브랜치의 새 번호: 헌법 1.0.1\n" in out
-    assert "올린 판으로 센 헌법 1.0.1: origin/main 의 이력이 이 브랜치 몫으로 비워 둔 판" in out
+    assert "올린 판으로 센 헌법 1.0.1: origin/main 의 헌법 README 가" in out
+    assert "이 브랜치 몫으로 비워 둔 판이고, 이 브랜치가 그 문장을 지웠다" in out
     assert "번호 겹침 없음" in out
 
     _git(work, "commit", "-q", "--no-edit")

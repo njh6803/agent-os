@@ -34,7 +34,7 @@ new = '''
 name = "비워 둔 판을 올린 것으로 세지 않는다"
 tests = ["tests/tools/test_check_constitution_version.py"]
 expect = "red"
-expect_output = ["FAILED tests/tools/test_check_constitution_version.py::test_판을_올렸는지는_main_과_merge_base_의_판_둘과_다른지로_본다[main_이_이_가지_몫으로_비워_둔_판에_문단을_더했다]"]
+expect_output = ["FAILED tests/tools/test_check_constitution_version.py::test_판을_올렸는지는_main_과_merge_base_의_판_둘과_다른지로_본다[main_이_이_가지_몫으로_비워_둔_판의_문장을_지웠다]"]
 [[mutation.edit]]
 file = "tools/check_constitution_version.py"
 old = '''
@@ -94,7 +94,7 @@ new = '''
 name = "판정할 때 비워 둔 판을 찾지 않는다"
 tests = ["tests/tools/test_check_constitution_version.py"]
 expect = "red"
-expect_output = ["FAILED tests/tools/test_check_constitution_version.py::test_main_이_이_가지_몫으로_비워_둔_판에_이력_문단을_더했으면_지나간다"]
+expect_output = ["FAILED tests/tools/test_check_constitution_version.py::test_main_이_이_가지_몫으로_비워_둔_판의_문장을_지웠으면_지나간다"]
 [[mutation.edit]]
 file = "tools/check_constitution_version.py"
 old = '''
