@@ -56,14 +56,27 @@
 
 ## 남은 일
 
-1. 셀프 리뷰(`/code-review`)를 한다. 범위는 origin/main 이후의 커밋하지 않은 변경 전부다. 아직 이 세션은 리뷰를 돌리지 않았다.
-2. 전체 검증(`uv run python tools/run_checks.py`)을 돌린다. `-m llm`·`-m llm_widget`·e2e·사진 비교는 이 변경이 닿지 않는다.
-3. 티켓의 수용 기준 체크박스를 채운다(지금은 모두 비어 있다. 상태 줄은 이미 `done`).
-4. 커밋 → 푸시 → PR → 봇 회차 → 병합. 병합은 워크트리 세션이라 `merge.md`의 "워크트리에서 병합할 때"를 따른다.
+(두 번째 세션이 갱신, 커밋 뒤 인계 직전. 앞 세션의 "남은 일" 1~3은 끝났다.)
+
+끝난 것: 셀프 리뷰(위), 전체 검증(`pre-commit`이 두 커밋 모두 통과, 첫 `run_checks`의 pyright 2건은 고쳤고 시간 의존 시험 둘은 홀로 돌려 통과), 티켓 수용 기준 체크, 커밋 둘(`f39c0fb3`, `5a6d8826`)과 origin/main 합치기(`ff67406d`), PR 직전 리뷰(위). 푸시와 PR은 아직 없다.
+
+남은 일:
+
+1. 푸시하고 PR을 연다(제목은 컨벤셔널 커밋 형식, 본문은 PR 템플릿). PR 체크리스트에 PR 직전 리뷰를 적는다: CodeRabbit CLI는 좌석 미배정이라 못 돌았고 `/security-review`와 `bug-perf-review`로 갈음했다. 보류한 지적 둘(검사가 `Wake-Display`·잠금보다 뒤인 Minor, 아래 절대 경로 건)과 값은 위 "PR 직전 리뷰"에 있다.
+2. 앱 PR 도구 `get_status`로 PR이 묶였는지 보고 안 묶였으면 `bind_pr`. `@coderabbitai review` 코멘트를 남기고 `merge.md` 2의 봇 회차로 간다.
+3. **병합 전에 사용자에게 물을 것.** `/security-review`가 짚은 지적(확신도 7/10, 보류): 허용 규칙이 스크립트를 상대 경로로 적어, 작업 폴더를 스크래치패드로 옮긴 호출이 가짜 `tools/open_session.ps1`을 확인 없이 돌릴 수 있다. 절대 경로(`C:\project\agent\tools\open_session.ps1`)로 규칙과 스킬 3단계 호출을 바꾸면 막히지만, 승인받은 규칙의 꼴이 바뀌고 도는 사본이 워크트리 것에서 주 체크아웃 것으로 바뀐다(스킬 `open-session` 4단계의 사본 논거도 고쳐야 한다). 사용자의 답이 오기 전에는 병합하지 않는다. 답이 "바꾼다"면 settings.json, `.claude/skills/open-session/SKILL.md` 3·4단계, 시험의 `_ALLOW_PREFIX`, 티켓 문구를 고치고(스킬은 `writing-for-agents`를 먼저 부른다) 새 세션에서 불러 본다.
+4. 병합은 워크트리 세션이라 `merge.md`의 "워크트리에서 병합할 때"를 따른다.
 5. 병합 뒤 일지의 "다음"에 `분류기가 다음 인계 열기를 거부하지 않는지`를 남긴다(티켓 What to build의 마지막 항목).
+6. 사고: 명세 축 서브에이전트가 연 새 세션 `local_e462dbe9-59fd-4fc1-a6e4-91808ea732d5`(제목 `S`)가 사용자 앱에 남아 있다(실행 중은 아니다). 사용자에게 알리고 보관할지 묻는다.
 
 ## 이 세션의 제목
 
 `chore/open-session-prompt-file-path-check` (인계하며 `chore/open-session-prompt-file-path-check (인계함)`으로 바꿨다)
 
 open-session을 부른다 2026-11-07T17:30:01Z
+
+## 두 번째 인계 (커밋 뒤)
+
+두 번째 세션(`local_ad86f5d4-ec79-4513-b14c-21a10bbfbaa2`)이 위 셀프 리뷰·전체 검증·커밋 둘·main 합치기·PR 직전 리뷰를 하고, 컨텍스트가 문턱(20만 토큰)을 넘은 `커밋 뒤` 경계에서 `handoff.md`대로 넘긴다. 이 세션의 제목은 인계하며 `chore/open-session-prompt-file-path-check (인계함)`으로 바꾼다. 위 "남은 일"이 새 세션의 순서다.
+
+open-session을 부른다 2026-11-07T19:07:50Z
