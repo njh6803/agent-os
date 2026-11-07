@@ -1,0 +1,239 @@
+# tools/hook_scratch_probe_reread.py(대기열 426)의 판정을 하나씩 깨는 변이.
+#   PYTHONUTF8=1 uv run python tools/mutate.py .scratch/harness/probes/scratch_probe_reread_hook_mutations.toml
+# 끝의 하나는 대조군이다. 거부 이유의 끝 낱말은 어느 시험도 보지 않는다.
+
+[[mutation]]
+name = "거부 상한을 세 번으로 늘린다"
+tests = ["tests/tools/test_hook_scratch_probe_reread.py"]
+expect = "red"
+expect_output = ["FAILED tests/tools/test_hook_scratch_probe_reread.py::test_거부는_두_번까지고_그_뒤_시도는_지나간다"]
+[[mutation.edit]]
+file = "tools/hook_scratch_probe_reread.py"
+old = '''DENY_LIMIT = 2'''
+new = '''DENY_LIMIT = 3'''
+
+[[mutation]]
+name = "첫 시도도 거부한다"
+tests = ["tests/tools/test_hook_scratch_probe_reread.py"]
+expect = "red"
+expect_output = ["FAILED tests/tools/test_hook_scratch_probe_reread.py::test_첫_시도는_지나간다"]
+[[mutation.edit]]
+file = "tools/hook_scratch_probe_reread.py"
+old = '''not 1 <= history.earlier <= DENY_LIMIT'''
+new = '''not 0 <= history.earlier <= DENY_LIMIT'''
+
+[[mutation]]
+name = "상한을 넘겨도 계속 거부한다"
+tests = ["tests/tools/test_hook_scratch_probe_reread.py"]
+expect = "red"
+expect_output = ["FAILED tests/tools/test_hook_scratch_probe_reread.py::test_거부는_두_번까지고_그_뒤_시도는_지나간다"]
+[[mutation.edit]]
+file = "tools/hook_scratch_probe_reread.py"
+old = '''not 1 <= history.earlier <= DENY_LIMIT'''
+new = '''not 1 <= history.earlier'''
+
+[[mutation]]
+name = "읽음이 있어도 거부한다"
+tests = ["tests/tools/test_hook_scratch_probe_reread.py"]
+expect = "red"
+expect_output = ["FAILED tests/tools/test_hook_scratch_probe_reread.py::test_probes_md_를_Read_로_열었으면_지나간다"]
+[[mutation.edit]]
+file = "tools/hook_scratch_probe_reread.py"
+old = '''    if history.read or not 1 <= history.earlier <= DENY_LIMIT:'''
+new = '''    if not 1 <= history.earlier <= DENY_LIMIT:'''
+
+[[mutation]]
+name = "이 호출의 기록도 앞선 시도로 센다"
+tests = ["tests/tools/test_hook_scratch_probe_reread.py"]
+expect = "red"
+expect_output = ["FAILED tests/tools/test_hook_scratch_probe_reread.py::test_이_호출의_기록은_앞선_시도로_세지_않는다"]
+[[mutation.edit]]
+file = "tools/hook_scratch_probe_reread.py"
+old = '''            if tool_id == own_id:'''
+new = '''            if tool_id is None:'''
+
+[[mutation]]
+name = "같은 호출을 두 줄에서 두 번 센다"
+tests = ["tests/tools/test_hook_scratch_probe_reread.py"]
+expect = "red"
+expect_output = ["FAILED tests/tools/test_hook_scratch_probe_reread.py::test_같은_호출이_두_줄에_나뉘어_기록돼도_한_번으로_센다"]
+[[mutation.edit]]
+file = "tools/hook_scratch_probe_reread.py"
+old = '''    attempts: dict[str, None] = {}'''
+new = '''    attempts: list[str] = []'''
+[[mutation.edit]]
+file = "tools/hook_scratch_probe_reread.py"
+old = '''                attempts[tool_id] = None'''
+new = '''                attempts.append(tool_id)'''
+
+[[mutation]]
+name = "서브에이전트 쪽 기록도 센다"
+tests = ["tests/tools/test_hook_scratch_probe_reread.py"]
+expect = "red"
+expect_output = ["FAILED tests/tools/test_hook_scratch_probe_reread.py::test_서브에이전트_쪽_기록은_세지_않는다"]
+[[mutation.edit]]
+file = "tools/hook_scratch_probe_reread.py"
+old = '''        if not isinstance(record, dict) or record.get("isSidechain") is True:'''
+new = '''        if not isinstance(record, dict):'''
+
+[[mutation]]
+name = "Read 가 아닌 도구가 probes.md 를 가리킨 것도 읽음으로 센다"
+tests = ["tests/tools/test_hook_scratch_probe_reread.py"]
+expect = "red"
+expect_output = ["FAILED tests/tools/test_hook_scratch_probe_reread.py::test_Read_가_아닌_도구가_probes_md_를_가리킨_것은_읽음이_아니다"]
+[[mutation.edit]]
+file = "tools/hook_scratch_probe_reread.py"
+old = '''            if name == "Read" and is_probes_rule(path):'''
+new = '''            if is_probes_rule(path):'''
+
+[[mutation]]
+name = "규칙 파일 이름만 맞으면 읽음으로 센다"
+tests = ["tests/tools/test_hook_scratch_probe_reread.py"]
+expect = "red"
+expect_output = ["FAILED tests/tools/test_hook_scratch_probe_reread.py::test_probes_md_판정은_규칙_파일_이름으로_끝날_때만_참이다"]
+[[mutation.edit]]
+file = "tools/hook_scratch_probe_reread.py"
+old = '''    return parts[-len(_RULE_TAIL) :] == _RULE_TAIL'''
+new = '''    return bool(parts) and parts[-1] == "probes.md"'''
+
+[[mutation]]
+name = "규칙 파일 이름을 대소문자로 가린다"
+tests = ["tests/tools/test_hook_scratch_probe_reread.py"]
+expect = "red"
+expect_output = ["FAILED tests/tools/test_hook_scratch_probe_reread.py::test_probes_md_를_Read_로_열었으면_지나간다"]
+[[mutation.edit]]
+file = "tools/hook_scratch_probe_reread.py"
+old = '''    parts = tuple(part.casefold() for part in _SPLIT.split(path) if part)
+    return parts[-len(_RULE_TAIL) :] == _RULE_TAIL'''
+new = '''    parts = tuple(part for part in _SPLIT.split(path) if part)
+    return parts[-len(_RULE_TAIL) :] == _RULE_TAIL'''
+
+[[mutation]]
+name = "스크래치 쓰기가 아닌 쓰기도 앞선 시도로 센다"
+tests = ["tests/tools/test_hook_scratch_probe_reread.py"]
+expect = "red"
+expect_output = ["FAILED tests/tools/test_hook_scratch_probe_reread.py::test_스크래치패드가_아닌_쓰기는_앞선_시도로_세지_않는다"]
+[[mutation.edit]]
+file = "tools/hook_scratch_probe_reread.py"
+old = '''            if name in TOOLS and is_scratch_script(path) and isinstance(tool_id, str):'''
+new = '''            if name in TOOLS and isinstance(tool_id, str):'''
+
+[[mutation]]
+name = "Edit 를 앞선 시도로 세지 않는다"
+tests = ["tests/tools/test_hook_scratch_probe_reread.py"]
+expect = "red"
+expect_output = ["FAILED tests/tools/test_hook_scratch_probe_reread.py::test_실패한_시도도_도구_결과가_있으면_센다"]
+[[mutation.edit]]
+file = "tools/hook_scratch_probe_reread.py"
+old = '''            if name in TOOLS and is_scratch_script(path) and isinstance(tool_id, str):'''
+new = '''            if name == "Write" and is_scratch_script(path) and isinstance(tool_id, str):'''
+
+[[mutation]]
+name = "스크래치패드가 아닌 경로도 거부한다"
+tests = ["tests/tools/test_hook_scratch_probe_reread.py"]
+expect = "red"
+expect_output = ["FAILED tests/tools/test_hook_scratch_probe_reread.py::test_스크래치패드가_아닌_경로와_다른_도구는_지나간다"]
+[[mutation.edit]]
+file = "tools/hook_scratch_probe_reread.py"
+old = '''    if not isinstance(path, str) or not is_scratch_script(path):
+        return None
+    if payload.get("agent_id"):'''
+new = '''    if not isinstance(path, str):
+        return None
+    if payload.get("agent_id"):'''
+
+[[mutation]]
+name = "서브에이전트의 호출도 거부한다"
+tests = ["tests/tools/test_hook_scratch_probe_reread.py"]
+expect = "red"
+expect_output = ["FAILED tests/tools/test_hook_scratch_probe_reread.py::test_못_보는_것_서브에이전트의_호출은_막지_않는다"]
+[[mutation.edit]]
+file = "tools/hook_scratch_probe_reread.py"
+old = '''    if payload.get("agent_id"):
+        return None
+    transcript'''
+new = '''    transcript'''
+
+[[mutation]]
+name = "tool_use_id 가 없어도 거부한다"
+tests = ["tests/tools/test_hook_scratch_probe_reread.py"]
+expect = "red"
+expect_output = ["FAILED tests/tools/test_hook_scratch_probe_reread.py::test_못_보는_것_기록을_알_수_없으면_막지_않는다"]
+[[mutation.edit]]
+file = "tools/hook_scratch_probe_reread.py"
+old = '''        or not isinstance(own_id, str)
+        or not own_id
+    ):
+        return None'''
+new = '''    ):
+        return None
+    own_id = own_id if isinstance(own_id, str) else ""'''
+
+[[mutation]]
+name = "기록을 열지 못하면 거부한다"
+tests = ["tests/tools/test_hook_scratch_probe_reread.py"]
+expect = "red"
+expect_output = ["FAILED tests/tools/test_hook_scratch_probe_reread.py::test_못_보는_것_기록을_알_수_없으면_막지_않는다"]
+[[mutation.edit]]
+file = "tools/hook_scratch_probe_reread.py"
+old = '''    except OSError:
+        return None
+    if history.read'''
+new = '''    except OSError:
+        return _REASON.format(lead=LEAD)
+    if history.read'''
+
+[[mutation]]
+name = "Write·Edit 가 아닌 도구도 본다"
+tests = ["tests/tools/test_hook_scratch_probe_reread.py"]
+expect = "red"
+expect_output = ["FAILED tests/tools/test_hook_scratch_probe_reread.py::test_스크래치패드가_아닌_경로와_다른_도구는_지나간다"]
+[[mutation.edit]]
+file = "tools/hook_scratch_probe_reread.py"
+old = '''    if payload.get("tool_name") not in TOOLS:
+        return None
+    tool_input = payload.get("tool_input")'''
+new = '''    tool_input = payload.get("tool_input")'''
+
+[[mutation]]
+name = "거부 이유에서 규칙 파일 경로를 뺀다"
+tests = ["tests/tools/test_hook_scratch_probe_reread.py"]
+expect = "red"
+expect_output = ["FAILED tests/tools/test_hook_scratch_probe_reread.py::test_스크래치_스크립트를_이미_쓴_세션이_probes_md_를_열지_않았으면_거부한다"]
+[[mutation.edit]]
+file = "tools/hook_scratch_probe_reread.py"
+old = '''썼고 `.claude/rules/probes.md` 를"'''
+new = '''썼고 규칙 파일을"'''
+[[mutation.edit]]
+file = "tools/hook_scratch_probe_reread.py"
+old = '''지금 `.claude/rules/probes.md` 를 Read 로 열어"'''
+new = '''지금 규칙 파일을 Read 로 열어"'''
+
+[[mutation]]
+name = "거부를 PreToolUse 가 아닌 이벤트 이름으로 낸다"
+tests = ["tests/tools/test_hook_scratch_probe_reread.py"]
+expect = "red"
+expect_output = ["FAILED tests/tools/test_hook_scratch_probe_reread.py::test_main_은_거부를_PreToolUse_형식으로_낸다"]
+[[mutation.edit]]
+file = "tools/hook_scratch_probe_reread.py"
+old = '''"hookEventName": "PreToolUse",'''
+new = '''"hookEventName": "PostToolUse",'''
+
+[[mutation]]
+name = "대조군: 거부 이유의 한 문장을 바꾼다"
+tests = ["tests/tools/test_hook_scratch_probe_reread.py"]
+expect = "green"
+[[mutation.edit]]
+file = "tools/hook_scratch_probe_reread.py"
+old = '''이 호출은 아직 실행되지 않았다.'''
+new = '''이 호출은 아직 실행되지 않은 상태다.'''
+
+[[mutation]]
+name = "도구 결과가 없는 병렬 형제도 앞선 시도로 센다"
+tests = ["tests/tools/test_hook_scratch_probe_reread.py"]
+expect = "red"
+expect_output = ["FAILED tests/tools/test_hook_scratch_probe_reread.py::test_병렬_형제가_있어도_결과가_온_앞선_시도는_센다"]
+[[mutation.edit]]
+file = "tools/hook_scratch_probe_reread.py"
+old = '''    return History(earlier=sum(tool_id in answered for tool_id in attempts), read=False)'''
+new = '''    return History(earlier=len(attempts), read=False)'''

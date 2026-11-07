@@ -53,7 +53,7 @@ paths:
       - 새 일지 파일을 만든 Write에서는 `hook_journal_retro`가 파일 이름이 시각 꼴(`<날짜>-<HHMM>-<슬러그>.md`)인지만 본다. 자식 프로세스를 띄우지 않는다(ADR 0045 결정 7. 번호 도구를 자식으로 돌리던 판은 이 PC의 이 저장소에서 한 번에 9~11초라 등록 제한이 45초였다, 대기열 232). 이름이 꼴이 아닌 새 일지 Write를 래퍼를 거쳐 263~328ms에 냈고(다섯 번, 2026-11-07 실측, 명령은 `uv run python .scratch/harness/probes/guard_hooks_time.py`. 서브에이전트가 도는 때라 같은 실행의 다른 훅도 276~354ms였다), 등록의 시간 제한은 다른 Write·Edit 훅과 같은 20초다.
       - 파이썬 파일이면 `hook_ruff_line_width`가 ruff를 한 번 더 띄워 약 0.33초다(2026-10-01 실측 323~325ms, 마크다운은 197~206ms — ruff 몫이 약 0.12초).
       - `hook_line_separators`는 쓴 파일을 한 번 읽고, 래퍼를 거쳐 약 29KB 파이썬 파일과 약 200KB 잠금 파일에서 202~234ms였다(한 번 326ms, 2026-10-07 실측, `.scratch/harness/probes/line_separators_hook_time.sh`). 대기열 52로 판정을 넓힌 뒤 옛 판과 번갈아 손으로 재 보니 갈리지 않았다(2026-10-12, 그 프로브의 README 행).
-      - `hook_scratch_probe_rule`은 경로 문자열만 보고 세션 스크래치패드의 실행 스크립트일 때만 표지 파일 하나를 만든다.
+      - `hook_scratch_probe_rule`은 세션 스크래치패드의 실행 스크립트이거나 `.scratch/**/probes/*.py`(저장소 프로브)일 때만 표지 파일 하나를 만든다. 스크래치패드의 스크립트는 경로 문자열만 보고, 저장소 프로브는 Write면 입력의 `content`를, Edit면 디스크의 파일 하나를 읽어 `probe_kit`과 `Rounds`가 없는지 본다(대기열 430).
       - `hook_probe_conclusion`도 경로 문자열만 보고 프로브 README일 때만 표지 파일 하나를 만든다(대기열 346).
       - `hook_journal_evidence`도 경로 문자열만 보고 일지일 때만 표지 파일 하나를 만든다(대기열 445).
       - `hook_ui_design`도 경로 문자열만 보고 기능의 디자인 폴더 아래일 때만 표지 파일 하나를 만든다(harness 티켓 002).
@@ -62,6 +62,7 @@ paths:
       - `hook_probe_citing_doc`도 경로 문자열과 더한 글만 보고, 명세·ADR·서브에이전트 정의에 프로브 낱말을 더한 편집에서만 표지 파일 하나를 만든다(harness 티켓 035).
       - `hook_scratch_probe_rule`부터 `hook_probe_citing_doc`까지 일곱 훅 모두 시간은 재지 않았고 다른 훅과 같은 약 0.2초로 어림한다.
     - Write·Edit의 PostToolUse에는 `hook_deletion_adversarial`도 붙는다(harness 티켓 034, 대기열 442). 경로 문자열과 입력의 글만 보고 파일을 열지 않으며, 도구 코드에 지우는 호출 줄이 걸릴 때만 표지 파일 하나를 만든다(시간은 재지 않았고 다른 훅과 같은 약 0.2초로 어림한다).
+    - Write·Edit의 PreToolUse에는 `hook_scratch_probe_reread`도 붙는다(대기열 426). 스크래치패드 스크립트를 쓰거나 고치는 호출에서만 대화 기록(`transcript_path`) 전체를 한 번 읽어, 앞선 스크래치 스크립트 시도와 `.claude/rules/probes.md`를 연 Read를 센다. 그 밖의 호출은 경로 문자열만 보고 지나간다. 도구 결과가 기록에 있는 시도만 앞선 시도로 센다(같은 메시지의 병렬 형제는 세지 않는다). 기록 전체를 훑는 시간은 재지 않았고 다른 훅과 같은 약 0.2초로 어림한다.
     - Write·Edit·NotebookEdit에는 PreToolUse `hook_edit_during_commit`도 붙어 편집 전에 돈다(대기열 293·412). 고친 파일이 체크아웃 안이면 이름이 git인 프로세스만 열어 실행 파일 경로와 명령 줄과 작업 디렉터리를 읽고, 래퍼를 거쳐 체크아웃 밖의 파일(프로세스를 훑지 않는다)에서 175~185ms, 훑는 두 길(커밋이 돌지 않는 체크아웃, 커밋이 도는 워크트리에서 막는 길)에서 186~199ms였다(다섯 번씩 두 번, git 프로세스 하나~셋이 떠 있을 때, 2026-10-22 실측, `.scratch/harness/probes/edit_during_commit_time.py`. PostToolUse에서 알리던 전 판은 이 PC에 다른 세션이 여럿 돌던 2026-10-16에 231~757ms·325~667ms였다).
     - Write·Edit·NotebookEdit의 PostToolUse에는 `hook_edit_during_mutate`가 붙는다(대기열 358). 고친 파일의 체크아웃이 있으면 그 git 디렉터리에서 `tools/mutate.py`의 표지를 찾고 표지의 pid가 살았는지와 그 pid의 시작 시각이 표지의 것과 같은지만 본다(시간은 재지 않았고 다른 훅과 같은 약 0.2초로 어림한다).
   - **Skill**
