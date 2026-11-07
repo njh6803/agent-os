@@ -36,6 +36,17 @@
 - **남긴 것.** `morning_collect.TICKET_BRANCH`의 `[\w.-]+`가 `check_ticket`보다 넓다(`chore/Foo`·`001-`을 티켓 행으로 맞춘다). 아침 보고는 보여 주기만 하고 게이트가 아니며, `test_morning_collect.py`가 `001-` 행을 고정해 둔 것이라 이 티켓에서 좁히지 않는다. `gather_tickets`의 하네스 폴더 가드는 실제로 닿지 않는 길이지만 동작에 해가 없다. `.scratch/harness/probes/README.md` 102행의 지운 변이 족 서술은 기록 표라 둔다. `TICKET_BRANCH`의 `$`가 개행 하나를 받는 것은 브랜치 이름에 개행이 못 든다. 변이 표 `check_ticket`·`prompt_directive` 새 변이는 `--check`(원문 확인)만 했고 전체 실행은 하지 않았다(`check_ticket_mutations` 18번만 직접 돌렸다).
 - **다시 돌린 것.** `uv run ruff check . && uv run ruff format --check .` 통과, `uv run python tools/run_checks.py` 종료 코드 0, `tests/tools/test_check_ticket.py`·`test_morning_collect.py` 186건 통과(이 세션이 돌렸다), `uv run python tools/sibling_overlap.py` 번호 겹침 없음(origin/main `cd29fa1`).
 
+## PR 직전 리뷰 (인계받은 세션)
+
+CodeRabbit CLI는 `coderabbit auth status`가 `Seat: not assigned`(Plan Free)라 돌지 못했다. 대체 둘을 돌렸다(둘 다 base `cd29fa1e`, 커밋 둘).
+
+- **`/security-review`.** 보고할 취약점 0건. 도구 변경은 정규식을 조이고 번호 처리 코드를 걷어낸 것이고, 새 `subprocess`·셸·파일 이름 변환이 없다.
+- **`bug-perf-review` 서브에이전트.** Critical·Major 없음. Minor 둘을 판정했고 둘 다 이 PR에서 고치지 않는다.
+  1. `tools/morning_collect.py:237`의 `TICKET_BRANCH` harness 갈래가 `check_ticket._HARNESS_STEM`보다 넓다. 위 "셀프 리뷰"의 "남긴 것"과 같은 지적이다. 아침 보고가 `chore/Foo` 같은 티켓 없는 브랜치를 "찾지 못한 PR" 줄에 올릴 뿐 값은 틀리지 않고, `test_morning_collect.py`가 `001-` 행을 고정하고 있어 이 티켓에서 좁히지 않는다.
+  2. `_HARNESS_STEM`과 `tests/test_harness_ticket_names.py`의 `\d{3}`이 유니코드 숫자(`١٢٣`)를 받아 옛 `isascii()` 검사보다 넓다. 같은 이름의 파일을 일부러 싣는 사람만 닿고 막는 쪽(`check_ticket`)이 아니라 이름 규칙 쪽이 느슨해지는 것이라 해가 없다. 고치려면 정규식 세 곳(`check_ticket.py`, 시험, `sibling_overlap_mutations.toml`과 `check_ticket_mutations.toml`의 원문)을 함께 바꿔야 한다. 둘째 이후 회차에 Minor라 뒤로 넘긴다.
+- 근거의 종류. 두 보고의 내용은 서브에이전트의 최종 보고에서 옮긴 것이다(보안 보고는 이 세션이 `tool-results`의 diff에서 `subprocess`·셸 호출을 Grep으로 찾아 새로 더해진 것이 시험 코드의 `_git` 호출뿐임을 본 뒤 코드를 읽어 쓴 판정이고, 다시 도구로 재현하지 않았다). `bug-perf-review`가 정규식에 입력을 넣어 불러 봤다는 사례와 그 시험 통과는 그 서브에이전트가 돌린 것이며 이 세션이 다시 돌리지 않았다. 둘째 지적의 정규식 위치 네 곳(`check_ticket.py:207`, `tests/test_harness_ticket_names.py:28`, 변이 표 두 곳)은 이 세션이 `\d{3}`을 Grep으로 찾아 확인했다.
+- 위 둘은 병합 뒤 `chore/` 후속 티켓의 후보다(이름 규칙을 `morning_collect`와 `check_ticket`이 한 상수로 나누게 하면서 `[0-9]{3}`도 같이).
+
 ## 남은 일
 
 1. (끝) 셀프 리뷰를 마쳤고 Critical·Major를 고쳤다(위 "셀프 리뷰").
