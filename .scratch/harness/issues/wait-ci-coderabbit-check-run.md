@@ -18,6 +18,6 @@
 - [x] 체크 런 모양의 CodeRabbit이 `Review rate limited`(neutral)나 `Finished`(success)면 통과 줄에 그 제목이 `CodeRabbit: <제목>`으로 붙어 한도와 리뷰를 가른다
 - [x] 롤업이 건너뜀을 보는 사이 체크 런이 진행 중이면 끝나지 않은 것으로 읽는다. 건너뜀에서 진행을 거쳐 끝날 때까지 기다린다
 - [x] `fetch_pr`가 체크 런 목록을 읽어 `check_runs` 칸으로 붙이고, 그 호출도 시간 제한(`CALL_TIMEOUT`)을 지킨다. 기존 combined status 길의 시험은 그대로 초록이다
-- [x] 변이: 체크 런의 제목을 읽지 않는 변이와 체크 런의 상태를 롤업에서만 읽는 변이가 빨강이다(`wait_ci_mutations.toml` 45~48번, 표 전체를 돌려 기대 표지로 빨강)
+- [x] 변이: 체크 런의 제목을 읽지 않는 변이와 체크 런의 상태를 롤업에서만 읽는 변이가 빨강이다(`wait_ci_mutations.toml` 45~49번. 45~48은 표 전체를 돌려 기대 표지로 빨강이었고, 49번(제목 없는 진행 중 체크 런)을 더한 뒤 45~49를 번호로 돌려 모두 기대대로였다)
 - [x] 독스트링의 CodeRabbit 상태 문단과 못 보는 것(진행 중 제목을 보지 못했다, 파일 수 한도의 체크 런 모양)이 이 변경과 맞다. `next-session`의 `merge.md` 2 대기 문장은 고치지 않았다. 끝 줄의 모양(`끝:`과 종료 코드)은 그대로이고, 문장이 든 `Review completed`는 상태 모양의 예로 남는다. 그 파일은 카나리아 명세 아홉 개(`next_session_*.toml`)의 원천이라 한 구절을 더해도 `claude -p` 재실행이 따라붙어, 체크 런 모양의 완료 제목 `Finished`는 `wait_ci.py` 독스트링에만 적었다
 - [x] 검증 명령이 모두 초록이다(손으로 치는 명령 전부와 `uv run python tools/run_checks.py`. 커밋 직전의 pre-commit이 갈음하는 것은 그 결과로 갈음한다)

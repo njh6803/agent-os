@@ -21,8 +21,8 @@ CodeRabbit은 2026-10-26 무렵부터 결과를 상태가 아니라 체크 런�
 한도는 `neutral`과 `Review rate limited`, 리뷰를 마치면 `success`와 `Finished`다(PR #489·#401·#405
 의 헤드에서 `gh api …/commits/<헤드>/check-runs`로 손으로 봤다, 대기열 499). 롤업의 CheckRun에는
 `output`이 없어 `fetch_pr`가 그 목록(`check_runs`)도 읽고, 제목이 비지 않은 체크 런은 제목을
-설명으로, `status`와 `conclusion`을 상태로 읽는다. 롤업의 건너뜀과 목록의 진행 중이 함께 오면
-통과로 읽히기 때문이다.
+설명으로, `status`와 `conclusion`을 상태로 읽는다. 제목이 없어도 `status`가 `completed`가
+아니면 진행 중으로 읽는다. 롤업의 건너뜀과 목록의 진행 중이 함께 오면 통과로 읽히기 때문이다.
 
 판정. `gh pr view <N> --json headRefOid,mergeable,statusCheckRollup`과 그 헤드의 combined
 status(`gh api repos/{owner}/{repo}/commits/<헤드>/status`, 맥락마다 마지막 상태와 설명), 그
@@ -219,18 +219,20 @@ def parse_snapshot(payload: Json) -> Snapshot:
     # CodeRabbit 은 결과를 체크 런의 `output.title` 로 내기도 한다. 롤업의 CheckRun 에는 제목이
     # 없어 헤드의 check-runs 에서 읽는다. 상태도 그 목록에서 읽는다. 롤업은 따로 읽어 시각이
     # 달라, 롤업의 건너뜀 SKIPPED 와 목록의 진행 중이 함께 오면 통과로 읽힌다. 제목이 없는 체크
-    # 런(GitHub Actions 의 것)은 롤업의 것을 그대로 둔다.
+    # 런(GitHub Actions 의 것)은 끝난 것이면 롤업의 것을 그대로 두고, 끝나지 않았으면 제목이 있든
+    # 없든 진행 중으로 읽는다.
     listed = payload.get("check_runs")
     for run in listed if isinstance(listed, list) else []:
         if not isinstance(run, dict):
             continue
         output = run.get("output")
         title = _text(output.get("title")).strip() if isinstance(output, dict) else ""
-        if not title:
-            continue
         name = _text(run.get("name"))
-        notes[name] = title
         completed = _text(run.get("status")) == "completed"
+        if title:
+            notes[name] = title
+        elif completed:
+            continue
         checks[name] = (_text(run.get("conclusion")).upper() or "UNKNOWN") if completed else None
     # StatusContext 의 상태는 설명과 같은 combined status 에서 읽는다. 롤업은 따로 읽어 시각이
     # 달라, 롤업의 건너뜀 SUCCESS 와 combined 의 Review in progress 가 함께 오면 통과로 읽힌다.

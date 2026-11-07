@@ -488,9 +488,12 @@ expect_output = ["Right contains 1 more item"]
 
 [[mutation.edit]]
 file = "tools/wait_ci.py"
-old = '''        notes[name] = title
-        completed'''
-new = '''        completed'''
+old = '''        if title:
+            notes[name] = title
+        elif completed:'''
+new = '''        if title:
+            pass
+        elif completed:'''
 
 [[mutation]]
 name = "체크 런의 상태를 롤업에서만 읽는다"
@@ -507,14 +510,15 @@ new = '''        del completed'''
 name = "제목이 없는 체크 런의 제목도 설명으로 담는다"
 tests = ["tests/tools/test_wait_ci.py", "-k", "제목이_없는_체크_런은"]
 expect = "red"
-expect_output = ["Left contains 2 more items"]
+expect_output = ["Left contains 3 more items"]
 
 [[mutation.edit]]
 file = "tools/wait_ci.py"
-old = '''        if not title:
-            continue
-        name = _text(run.get("name"))'''
-new = '''        name = _text(run.get("name"))'''
+old = '''        if title:
+            notes[name] = title
+        elif completed:
+            continue'''
+new = '''        notes[name] = title'''
 
 [[mutation]]
 name = "체크 런 목록을 붙이지 않는다"
@@ -527,3 +531,16 @@ file = "tools/wait_ci.py"
 old = '''        "check_runs": check_runs if isinstance(check_runs, list) else [],
 '''
 new = ''''''
+
+[[mutation]]
+name = "제목이 없는 체크 런은 진행 중이어도 건너뛴다"
+tests = ["tests/tools/test_wait_ci.py", "-k", "제목이_없는_진행_중_체크_런도"]
+expect = "red"
+expect_output = ["assert 'SKIPPED' is None"]
+
+[[mutation.edit]]
+file = "tools/wait_ci.py"
+old = '''        elif completed:
+            continue'''
+new = '''        else:
+            continue'''

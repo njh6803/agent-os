@@ -210,6 +210,27 @@ def test_체크_런의_상태는_제목과_같은_check_runs에서_읽는다() -
     assert not judge(snapshot, EXPECTED).done
 
 
+def test_제목이_없는_진행_중_체크_런도_끝나지_않은_것으로_읽는다() -> None:
+    # 리뷰가 진행 중일 때의 제목은 보지 못했다. 제목이 비어 있어도 status 가 completed 가 아니면
+    # 롤업의 건너뜀 SKIPPED 를 믿고 통과로 끝나면 안 된다.
+    snapshot = parse_snapshot(
+        payload(
+            run("verify"),
+            run("claude-review"),
+            *coderabbit_run(
+                "",
+                "",
+                status="IN_PROGRESS",
+                rollup_status="COMPLETED",
+                rollup_conclusion="SKIPPED",
+            ),
+        )
+    )
+    assert snapshot.checks["CodeRabbit"] is None
+    assert "CodeRabbit" not in snapshot.notes
+    assert not judge(snapshot, EXPECTED).done
+
+
 def test_제목이_없는_체크_런은_설명으로_읽지_않는다() -> None:
     # GitHub Actions 의 체크 런은 `output.title` 이 null 이다. 통과 줄에 이름만 늘면 안 된다.
     untitled: Json = {"name": "verify", "status": "completed", "output": {"title": None}}

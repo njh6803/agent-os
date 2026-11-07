@@ -39,7 +39,17 @@
 - **남긴 것.** 같은 이름의 체크 런이 둘일 때 뒤의 것이 이기는 것(체크 런 목록은 기본이 최신이라 어림으로 실해 가능성이 낮다), 같은 이름이 `statuses`에도 있으면 StatusContext가 덮는 것(티켓이 정하지 않았고 겹침을 본 적이 없다), `parse_snapshot`의 같은 모양 루프 둘과 시험 헬퍼의 닮음(smell 판단 항목이라 추출하지 않는다), 롤업 `FAILURE`와 목록 `success`가 어긋나는 시각 차(지금은 영향 없음, 티켓 범위 밖).
 - **다시 돌린 명령.** `uv run pytest tests/tools/test_wait_ci.py -q` 67개 통과, `uv run ruff check`와 `ruff format --check` 통과. 전체 게이트는 커밋의 pre-commit으로 갈음하고 결과는 커밋 뒤 적는다.
 
-남은 일: 커밋(티켓 꼬리 `(harness wait-ci-coderabbit-check-run)`)과 PR, 봇 회차와 병합까지다.
+## PR 직전 리뷰
+
+CLI는 `coderabbit auth status`가 `Seat: not assigned`라 돌리지 않았고(손으로 봤다) 대체 둘을 돌렸다.
+
+- **`/security-review`.** 지적 0건. 새 `gh api` 호출은 셸 없는 인자 목록이고 경로의 헤드는 GitHub이 준 SHA다. 체크 런 제목은 출력 줄에만 닿는다(코드를 읽었다).
+- **`bug-perf-review`.** 유효 1건(Minor). 제목이 없는 체크 런이 `in_progress`이고 롤업에 `SKIPPED`가 남으면 `parse_snapshot`이 목록의 항목을 건너뛰어 `judge`가 `done=True`를 낸다(서브에이전트가 `uv run python`으로 불렀다). 독스트링의 못 보는 것 절이 진행 중을 `status`가 `completed`가 아닌 것으로 판정한다고 적은 것과도 어긋났다.
+  - 고친 것: 제목이 없어도 `status`가 `completed`가 아니면 `checks[name] = None`으로 읽는다. 제목이 없고 끝난 체크 런만 건너뛴다. 독스트링 두 곳과 코드 주석을 맞췄고, 시험 `test_제목이_없는_진행_중_체크_런도_끝나지_않은_것으로_읽는다`와 변이 49번을 더했다. 변이 45·47의 원문은 새 코드 모양에 맞췄다. 번호로 45~49를 돌려 모두 기대대로였다(47의 표지는 `Left contains 3 more items`로 고침).
+  - 판단 근거: 이 틈은 롤업과 목록의 시각 차가 겹쳐야 나서 흔하지 않을 수 있으나, 고치는 값이 작고 독스트링이 이미 그렇게 약속했다.
+- **확인했고 문제 없는 길(서브에이전트가 입력으로 확인했다).** 완료인데 conclusion이 null이면 UNKNOWN으로 실패 취급, 새 호출도 `CALL_TIMEOUT`과 `FetchError`를 지난다, 100개 넘는 목록은 독스트링이 한계로 적었다.
+
+남은 일: 고친 판의 커밋과 푸시, PR, 봇 회차와 병합까지다.
 
 ## 인계
 
