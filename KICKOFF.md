@@ -105,7 +105,7 @@
 
 사람 몫(사람만): github.com에서 그 조직의 Billing 화면을 보거나 조직 소유자에게 물어, 이번 달 남은 Actions 분량을 이 세션에 알린다(주인이 조직이고, 위에서 사용량을 읽지 못했고, 비공개를 골랐을 때만). 확인: 없음 — 화면의 값은 사람이 알린다
 
-**CodeRabbit.** 세션이 `coderabbit auth status`를 본다. 출력에 `Seat` 줄이 있으면 로그인한 것으로 보고, 그 값을 진행 파일의 "준비에서 정한 것"과 일지에 적는다. 로그인한 출력의 모양은 agent-os의 명세가 손으로 봤고(CLI 0.7.5, `User info`와 `Review access` 두 절이고 `Seat` 줄은 뒤의 절에 있다) 로그인하지 않은 출력은 보지 못했다. 그래서 이 판단은 그 모양에 기댄다. 그 줄은 `Seat`과 콜론 사이에 공백이 여럿이라(`Seat         : not assigned`) 글자 그대로의 `Seat:`이 아니라 줄 머리의 `Seat`, 공백, 콜론, 값의 모양으로 찾는다. `not assigned`는 실패가 아니다. `not assigned`면 유료 구독 없이는 CLI 축이 비어 있다(agent-os 2026-09-23 실측. 좌석 배정에는 활성 유료 구독이 필요하다, `kickoff/facts.md`). 그러면 PR 직전 리뷰가 대체 경로로 간다(9단계 7). `coderabbit --usage`는 청구 주기 누적만 보여주고 시간당 잔량을 보여주지 않는다.
+**CodeRabbit.** 세션이 `coderabbit auth status`를 본다. 출력에 `Seat` 줄이 있으면 로그인한 것으로 보고, 그 값을 진행 파일의 "준비에서 정한 것"과 일지에 적는다. 로그인한 출력의 모양은 agent-os의 명세가 손으로 봤고(CLI 0.7.5, `User info`와 `Review access` 두 절이고 `Seat` 줄은 뒤의 절에 있다) 로그인하지 않은 출력은 보지 못했다. 그래서 이 판단은 그 모양에 기댄다. 그 줄은 `Seat`과 콜론 사이에 공백이 여럿이라(`Seat         : not assigned`) 글자 그대로의 `Seat:`이 아니라 줄 머리의 `Seat`, 공백, 콜론, 값의 모양으로 찾는다. `not assigned`는 실패가 아니고 CLI 축이 비었다는 뜻도 아니다. 그 값은 진행 파일에 적고, 리뷰는 PR 직전에 실제로 돌려 본다(9단계 7. agent-os는 `Seat: not assigned`에서도 리뷰가 돌았다, 대기열 578). 좌석 배정에는 활성 유료 구독이 필요하다(`kickoff/facts.md`). `coderabbit --usage`는 청구 주기 누적만 보여주고 시간당 잔량을 보여주지 않는다.
 
 사람 몫(사람만): 터미널에서 `coderabbit auth login`을 친다(로그인이 안 돼 있을 때만). 확인: `coderabbit auth status`에 `Seat` 줄
 
@@ -300,8 +300,8 @@ Critical(보안, 데이터 유실, 장애) 병합 차단 / Major(명백한 버�
 - 브랜치 보호 본문 `tools/protection.json`. 8단계의 `gh api --input`이 이 파일을 읽으므로 복사하지 않으면 그 명령이 입력을 찾지 못한다(PR #91 리뷰). (바꿀 곳: `required_status_checks.contexts`의 검사 이름이 `verify`가 아니면 그것)
 - `.coderabbit.yaml`. 보안·버그·성능만. 린터는 끈다(CI가 돌린다). 제외는 생성물·락파일·남이 쓴 스킬 사본(`.claude/skills/**`)만. 로컬 CLI도 이 파일을 읽으므로 테스트 경로를 빼면 로컬 리뷰도 사라진다. 비공개 저장소에 무료 플랜이면 `auto_review.enabled: false`. PR에서는 요약만 남고 체크가 `pass`로 보인다. (바꿀 곳: `path_instructions` 아홉 블록과 "이 저장소의 특수성" 문단은 그 프로젝트의 층과 원칙으로 **새로 쓴다**. 골격만 복사하고 대부분을 다시 쓴다)
 - `.github/workflows/claude-code-review.yml`. 유지보수성(리뷰 관점 넷)과 경계. 플러그인 대신 직접 프롬프트로, 읽을 파일(CLAUDE.md, CODING_STANDARDS.md, 용어집, rules)과 담당 축, 완료 조건(요약 코멘트 하나를 `gh pr comment`로)을 명시한다. 뒤에 "코멘트가 0개면 실패" 스텝을 둔다. `show_full_output: true`. 시크릿은 사람이 넣는다. (바꿀 곳: 경계 축 문장을 그 프로젝트의 원칙으로 새로 쓴다. agent-os 것은 LangGraph·LangChain 타입의 누출이다)
-- `.claude/agents/coderabbit-review.md`. CLI 실행, 좌석 확인(`coderabbit auth status`의 `Seat:`), 트리아지. 코드를 고치지 않는다. (바꿀 곳: 오탐 목록을 그 프로젝트의 자동 검사가 잡는 것으로)
-- `.claude/agents/bug-perf-review.md`. CLI가 못 돌 때(미설치, 로그인·좌석 없음, 한도 초과) 버그·성능 축을 같은 트리아지(유효·오탐·보류)로 본다. 보안 축은 내장 `/security-review`가 맡는다(agent-os ADR 0006의 2026-10-07 이력). (바꿀 곳: 성능 항목의 훅 시간 포인터를 그 프로젝트의 것으로)
+- `.claude/agents/coderabbit-review.md`. CLI 실행, `Seat:` 줄 보고(`coderabbit auth status`), 트리아지. 코드를 고치지 않는다. (바꿀 곳: 오탐 목록을 그 프로젝트의 자동 검사가 잡는 것으로)
+- `.claude/agents/bug-perf-review.md`. CLI가 못 돌 때(미설치, 로그인 없음, 좌석 거절, 한도 초과) 버그·성능 축을 같은 트리아지(유효·오탐·보류)로 본다. 보안 축은 내장 `/security-review`가 맡는다(agent-os ADR 0006의 2026-10-07 이력). (바꿀 곳: 성능 항목의 훅 시간 포인터를 그 프로젝트의 것으로)
 - `.claude/agents/spec-reviewer.md`. 명세를 티켓 전에 검토하는 읽기 전용 검토자. 9단계 3번의 체크리스트와 질문의 원천이다. (바꿀 곳: 체크리스트 2와 6의 원칙 항목을 그 프로젝트 헌법으로)
 - `.claude/skills/code-review/SKILL.md` 사본. 원본은 `<fixed-point>...HEAD`만 보고 리포트에서 멈춘다. 덧댄 것은 사본 첫머리 주석이 원천이다 — 범위를 미커밋·미추적까지, 보고 뒤 반영 절차, 본 범위 한 줄, 표준 축은 언제나 sonnet·high(agent-os ADR 0033), 요구·참고 가름, 두 브리프의 주장 검증 목록, 받는 쪽 확인. 근거 확인은 서브에이전트가 격리된 컨텍스트에서 ADR도 주변 코드도 모른 채 판단한다는 사실에 대한 장치이고, 부록 A의 초록 착시와 한 쌍이다. 문서만 바뀐 변경을 리뷰에서 면제하지 않는다. (바꿀 곳 0)
 - 나머지 덧댄 사본 여섯(`grill-with-docs`, `grilling`, `implement`, `retro`, `to-spec`, `to-tickets`). 무엇을 덧댔는지는 각 사본 첫머리 주석이 원천이다. `grill-with-docs` 사본은 모델이 부르는 스킬이라 `tools/hook_grill_design_check.py`와 그 테스트, 등록(PreToolUse 매처 `Skill`), 페이로드 표의 두 건을 함께 복사한다. 훅을 복사하지 않는 프로젝트는 사본 첫머리 주석의 훅 문장을 뺀다. 덧댄 사본은 `npx skills update -p`가 조용히 되돌리므로 그 주석을 센티널로 삼아 지침 검사가 본다. 사람이 기억하는 대신 훅이 판정한다. 부록 A의 `disable-model-invocation` 줄과 같은 병이다. (바꿀 곳: 덧댐이 그 프로젝트에 맞지 않으면 사본을 원본으로 두고 `PATCHED_SKILLS`에서 뺀다)
@@ -434,7 +434,7 @@ PR을 열면 7단계가 복사한 `hook_pr_next_session`이 next-session을 지�
 4. `/to-tickets` 로 수직 슬라이스 티켓. 원격 트래커면 4단계에서 적은 흐름대로 발행한다.
 5. `/implement` 로 구현. tdd 스킬이 테스트 먼저를 강제한다. 이 티켓의 몫만 쓴다. 기능의 마지막 티켓을 닫는 커밋은(닫은 뒤 done 티켓이 하나 이상일 때) 기능 계획에 `**끝:** YYYY-MM-DD`를 적고 전체 계획 도구를 돌려 결과를 같은 커밋에 싣는다.
 6. 커밋 전 `/code-review`. 범위(미커밋·미추적까지)와 반영 규칙(Critical·Major는 커밋 전에, 근거를 먼저, 보류는 티켓이나 회고 후보로)은 사본 6단계가 원천이다.
-7. PR 직전 `coderabbit-review` 서브에이전트. 좌석이 있을 때만이다(준비). CLI가 못 돌면(미설치, 로그인·좌석 없음, 한도 초과) 내장 `/security-review`(보안)와 `bug-perf-review` 서브에이전트(버그·성능)를 나란히 돌린다.
+7. PR 직전 `coderabbit-review` 서브에이전트. `Seat: not assigned`여도 돌려 본다(준비에서 적은 값은 보고에 옮기는 값이다). CLI가 못 돌면(미설치, 로그인 없음, 좌석 거절, 한도 초과) 내장 `/security-review`(보안)와 `bug-perf-review` 서브에이전트(버그·성능)를 나란히 돌린다.
 8. `/git-pr`로 PR. 별이 10개 미만인 공개 저장소는 `gh pr comment <번호> --body "@coderabbitai review"`로 부른다. 봇 둘과 CI의 역할 분담, 코멘트 0개인 초록을 읽는 법은 `operations.md` 리뷰 파이프라인이 원천이다. `/git-pr-feedback`으로 반영하고 `/git-pr-merge`로 squash 병합한다. 반영과 병합은 PR을 연 세션이 하고(인계 훅을 들인 프로젝트에서 인계 계기가 오면 인계로 연 세션이 한다), 병합 뒤는 10단계다.
 
 ## 10단계. 세션 마감
