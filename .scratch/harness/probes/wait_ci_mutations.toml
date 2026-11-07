@@ -478,3 +478,69 @@ expect_output = [">       assert code == EXIT_FAILED", "E       assert 0 == 1"]
 file = "tools/wait_ci.py"
 old = '''            if job in self._unclear:'''
 new = '''            if False:'''
+
+# 대기열 499. CodeRabbit 이 결과를 체크 런의 제목으로 낼 때 그 제목을 설명처럼 읽는 판정.
+[[mutation]]
+name = "체크 런의 제목을 설명으로 읽지 않는다"
+tests = ["tests/tools/test_wait_ci.py", "-k", "체크_런_모양의_CodeRabbit_건너뜀_제목도"]
+expect = "red"
+expect_output = ["Right contains 1 more item"]
+
+[[mutation.edit]]
+file = "tools/wait_ci.py"
+old = '''        if title:
+            notes[name] = title
+        elif completed:'''
+new = '''        if title:
+            pass
+        elif completed:'''
+
+[[mutation]]
+name = "체크 런의 상태를 롤업에서만 읽는다"
+tests = ["tests/tools/test_wait_ci.py", "-k", "제목과_같은_check_runs에서"]
+expect = "red"
+expect_output = ["assert 'SKIPPED' is None"]
+
+[[mutation.edit]]
+file = "tools/wait_ci.py"
+old = '''        checks[name] = (_text(run.get("conclusion")).upper() or "UNKNOWN") if completed else None'''
+new = '''        del completed'''
+
+[[mutation]]
+name = "제목이 없는 체크 런의 제목도 설명으로 담는다"
+tests = ["tests/tools/test_wait_ci.py", "-k", "제목이_없는_체크_런은"]
+expect = "red"
+expect_output = ["Left contains 3 more items"]
+
+[[mutation.edit]]
+file = "tools/wait_ci.py"
+old = '''        if title:
+            notes[name] = title
+        elif completed:
+            continue'''
+new = '''        notes[name] = title'''
+
+[[mutation]]
+name = "체크 런 목록을 붙이지 않는다"
+tests = ["tests/tools/test_wait_ci.py", "-k", "check_runs_칸으로"]
+expect = "red"
+expect_output = ["KeyError: 'check_runs'"]
+
+[[mutation.edit]]
+file = "tools/wait_ci.py"
+old = '''        "check_runs": check_runs if isinstance(check_runs, list) else [],
+'''
+new = ''''''
+
+[[mutation]]
+name = "제목이 없는 체크 런은 진행 중이어도 건너뛴다"
+tests = ["tests/tools/test_wait_ci.py", "-k", "제목이_없는_진행_중_체크_런도"]
+expect = "red"
+expect_output = ["assert 'SKIPPED' is None"]
+
+[[mutation.edit]]
+file = "tools/wait_ci.py"
+old = '''        elif completed:
+            continue'''
+new = '''        else:
+            continue'''
