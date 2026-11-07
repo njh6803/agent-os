@@ -70,3 +70,22 @@ PR 직전 리뷰에 밀 주장(이 턴에 새로 쓴 사실 문장):
 - `coderabbit-review.md` 3단계: "`You are not a member of the requested organization`으로 즉시 끝나면 좌석 거절이다(2026-09-23, `operations.md` 리뷰 파이프라인 2)". 증상 문구와 날짜는 `operations.md`의 기존 문장에서 옮겼다.
 - `kickoff/pitfalls.md`·`kickoff/facts.md`: "`Seat: not assigned`여도 리뷰가 돈 적이 있다, 2026-11-06"(일지 2026-11-06-07 57~58행의 관찰).
 - `KICKOFF.md` 준비 절: "`not assigned`는 … CLI 축이 비었다는 뜻도 아니다".
+
+## 인계 (커밋 뒤)
+
+컨텍스트가 문턱(20만 토큰)을 넘은 채 `커밋 뒤` 경계에 와서 새 세션에 넘긴다(`next-session` `handoff.md`). 커밋은 `3d95c132`이고 푸시 전이다. 남은 일은 main 합치기, PR 직전 리뷰, PR, 병합이다. 이 세션은 `chore/coderabbit-review-seat-not-assigned (인계함)`으로 제목을 바꿨다.
+
+open-session을 부른다 2026-11-07T18:48:36Z
+
+## PR 직전 (커밋 뒤 이어받은 새 세션)
+
+**main 합치기.** `git merge origin/main`이 충돌 없이 끝났다(34개 파일). `tools/sibling_overlap.py`는 번호 겹침 없음, 함께 고친 파일 없음이고 형제의 가장 높은 헌법 판이 3.0.71이라 3.0.72를 그대로 둔다. `tools/plan_table.py`는 합친 뒤에도 출력과 변경이 없다.
+
+**pre-commit이 시간 의존 시험에서 세 번 빨갰다.** 이 일지의 인계 절 한 파일을 커밋하려던 시도마다 pytest 한두 건이 빨갰고(6572~6575 통과), 시험이 매번 달랐다. 첫 시도는 `test_interrupt.py` 하나, 둘째는 같은 파일 셋과 `test_rerun_runner.py` 하나, 셋째는 `test_rerun_runner.py` 둘이다. 실패 메시지는 앞의 파일이 "Ctrl+C 를 누른 자식이 30초 안에 끝나지 않았다", 뒤의 파일이 두 실행이 겹쳐 돌았는지 재는 단언(`assert 1 == 2`)이다. 빨간 뒤 그 두 파일만 따로 돌리자 부하가 낮을 때 69건이 모두 통과했다(5분이 걸렸다, `--durations`로 읽었다). 첫 실패 때 CPU 사용률이 100%였던 것은 손으로 봤고, 그 부하가 pre-commit이 pytest, web-verify, run-hooks를 함께 띄운 탓인지 다른 세션 탓인지는 가르지 않았다(어림이다). 이 변경은 문서와 카나리아 명세뿐이라 그 시험이 읽는 코드를 건드리지 않았다. 그래서 인계 절만 따로 커밋하지 않고 main을 합친 뒤 이 절과 함께 한 커밋에 싣는다.
+
+**`coderabbit-review` 서브에이전트(CLI 0.7.5).** `Seat: not assigned`(`Plan: Free`)인 채 `coderabbit review --agent --committed --base origin/main`이 종료 코드 0으로 끝났고 `review_completed`, 검토 파일 18개, 지적 2건이었다(보고를 읽었다). 이 정의가 고친 동작, 곧 `not assigned`에서 종료하지 않고 3단계로 가는 길이 실제로 도는 것이 한 번 더 확인됐다. 한도는 1회 썼다. 두 지적 모두 Minor로 낮춰 보았다.
+
+- 정의 20행: `--dir`로 좁힐 때 루트 직속 파일이 안 보인다는 서술이 "한도에 걸리면" 문장 바로 뒤에 붙어, 한도에 걸리지 않고 폴더를 다 돌린 경우에도 적용되는지 모호했다. 유효로 판정하고 고쳤다. `--dir`로 좁혀 돌렸으면 한도에 걸렸든 아니든 `--dir`가 닿지 않은 몫을 보고에 적는 별도 항목으로 뗐다. 카나리아 명세가 묻는 두 문구는 건드리지 않았다.
+- `KICKOFF.md:108`: 로그인 판정이 `Seat` 줄의 존재에 묶여 `Review access`만 보이는 출력(2026-11-03에 본 모양)을 다루지 않는다. 이번 변경이 바꾼 문장이 아니고 범위 밖이라 고치지 않았다. 회고 후보로 남긴다.
+
+**밀 주장 판정.** 다섯 중 셋째와 넷째(`Seat: not assigned`여도 돈다)는 이번 실행이 같은 조건이라 확인됐다. 첫째의 `Too many files`와 `findings: 0`, 둘째의 `--dir` 시험 호출·폴더마다 3회·좌석 거절 문구는 이번 실행이 그 경로를 타지 않아 확인하지 못했다(근거는 일지 2026-11-07-02와 2026-09-23의 기록뿐이다). 다섯째는 살아 있는 문서에서 옛 전제가 남은 곳을 찾지 못했다. 보고가 알려 준 `docs/adr/0006-review-pipeline.md` 34·41행은 기록이라 두었고, 거기에 정정 이력을 쌓을지는 이 티켓의 범위 밖이다.
