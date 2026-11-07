@@ -1729,7 +1729,6 @@ def test_폴더_밖을_가리키는_링크가_낀_경로는_멈춘다(prompt_roo
     assert "링크" in completed.stderr
 
 
-@pytest.mark.skipif(os.name != "nt", reason="대체 데이터 스트림은 윈도(NTFS)의 것이다")
 def test_대체_데이터_스트림이_붙은_경로는_멈춘다(prompt_root: Path) -> None:
     prompt = prompt_root / "session" / "scratchpad" / "prompt.md"
     prompt.with_name("prompt.md:secret").write_text("x\n", encoding="utf-8")
