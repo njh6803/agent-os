@@ -96,5 +96,5 @@ CI는 모두 초록이었다. CodeRabbit이 인라인 코멘트 아홉(모두 Mi
 - 후속 후보(PR 직전 리뷰의 남김): `journal_order` 열쇠 끝에 파일 이름을 더해 같은 분의 순서를 정하는 한 줄, `branch_journals`가 `MERGE_HEAD` 상태에서 main이 들여온 일지를 빼는지 임시 저장소 시험으로 확인하는 일(안 되면 독스트링의 못 보는 것에 적는다), `morning_sources`의 `git log`·`git grep`에 `-c core.quotepath=false`를 붙이는 일. 셋 모두 `tools/sibling_overlap.py`·`tools/morning_sources.py`를 다시 고치므로 변이 표가 걸려 이 PR에서는 두었다.
 - 후속 후보(봇 첫 회차의 남김): 세 일지 이름 정규식이 같은 이름을 같게 판정하는지 보는 시험 하나, `TRANSITION_DAY`를 옮길 날을 알리는 자리(`next-session` 병합 절차나 `sibling_overlap.py` 출력)와 그 상수를 쓰는 시험의 날짜를 상수에서 계산하게 하는 일, `morning_sources`가 `git log` 실패를 `(수집 안 됨)`으로 적게 하는 일.
 - 약한 표지 셋(`sibling_overlap` 22, `journal_names` 3, `journal_number_and_guards` 4)은 시험 쪽에 단언 메시지를 더하면 단단해진다. 시험을 고치는 PR이 생길 때 같이 한다.
-- 이 세션은 병합 커밋(main의 티켓 03을 합침) 뒤 `커밋 뒤` 인계 계기를 받아 새 세션에 넘겼다. 푸시와 PR 열기, `ccd_pr` 바인딩, 봇 회차, 병합이 남았다. 회고는 이 세션이 돌았고 `## 회고` 절이 있어 retro 계기는 다시 오지 않는다.
+- 첫 세션은 병합 커밋(main의 티켓 03을 합침) 뒤 `커밋 뒤` 인계 계기를 받아 새 세션에 넘겼다. 그 새 세션이 푸시, PR 485 열기(`ccd_pr`는 이미 바인딩돼 있었다), 봇 두 회차를 했다. 둘째 회차는 claude-review에 Critical·Major가 없었고 CodeRabbit은 한도(`Review rate limited`)로 리뷰가 없어 회차에 세지 않았다. 둘째 회차의 Minor·Nit(시험이 `JOURNAL_FILE`을 가져다 쓰는 일, `Numbers.journals` 이름, `latest_journal`의 이력 읽기 비용, 모듈 독스트링의 이력 문장)은 PR 코멘트에 보류 이유를 남겼고 앞의 후속 후보와 겹친다. 병합은 이 줄을 푸시한 뒤 같은 세션이 한다. 회고는 첫 세션이 돌았고 `## 회고` 절이 있어 retro 계기는 다시 오지 않는다.
 - open-session을 부른다 2026-11-07T03:10:33Z
