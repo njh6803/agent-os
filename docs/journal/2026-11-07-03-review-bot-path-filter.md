@@ -112,3 +112,41 @@ open-session을 부른다 2026-11-07T01:39:52Z
 - **03의 몫으로 남은 것은 없다.** PR 템플릿 43행은 문구가 아직 맞아 고치지 않았다.
 - **낡은 주석 하나.** `.scratch/harness/probes/msys_pathconv/run.sh` 113행 주석("아직 다시 돌리지 않았다")이 낡았을 수 있다. 이 티켓의 몫이 아니라 고치지 않았고, 02 일지 "다음"의 C절 다시 돌리기를 한 세션이 판정한다.
 - **주 체크아웃.** 이 세션은 병합 뒤 주 체크아웃을 당기지 않는다. 다음 세션이 워크트리에 들어가기 전에 `tidy-checkouts`를 먼저 돈다.
+
+## 인계 (PR 연 뒤)
+
+이 세션의 제목: `feature/03-review-bot-path-filter`. 컨텍스트가 인계 문턱(20만 토큰)을 넘은 채 단계 경계 `PR 연 뒤`에 왔다(`PostToolUse` 훅이 알렸다). 앞 지시문의 "이어받을 상태"는 `인계: 커밋 뒤`로 시작해 같은 경계가 아니고, 이번 요청 범위는 "PR과 병합까지"라 이 경계에서 끝나지 않으며, 곁 세션도 아니다(`get_session`에 `parentSessionId`가 없다). 그래서 넘긴다.
+
+지금까지: 이어받은 세션이 대체 리뷰 둘(지적 0건)을 돌리고 회고와 "다음"을 써 커밋 `8c40208e`을 만들었다(pre-commit 열여섯 검사가 모두 `Passed` 또는 `Skipped`, `Skipped`는 카나리아 명세 모양과 헌법 판 검사 둘이고 이 커밋은 그 파일을 건드리지 않았다. 출력을 손으로 읽었다). 푸시하고 PR [#484](https://github.com/njh6803/agent-os/pull/484)를 열었다. 앱 감시에는 이미 묶여 있었다(`get_status`가 `bound: true`). 체크는 열린 직후 아직 집계되지 않았다(passing 0, failing 0, pending 0).
+
+남은 단계:
+1. 첫 `@coderabbitai review` 코멘트를 남기고 `merge.md` 2(봇 회차)대로 상태를 읽는다. 이 PR은 `claude-code-review.yml`을 바꿔 claude-review가 건너뛰며 `pass`가 되므로 코멘트를 기다리지 않는다.
+2. 티켓의 마지막 체크박스를 채운다. PR의 checks에서 `Fail when Claude left no comment` 스텝(가드)이 새 패턴으로 지나는지, 실린 파일이 허용 목록(워크플로, 탐침, 탐침 README, 티켓, 일지)뿐인지 본다. `[ ]`로 남아 있고, 확인한 뒤 일지에 적는다. 가드가 빨가면 이 PR이 싣는 파일이 허용 경로 밖인지부터 본다.
+3. 병합 직전에 `origin/main`이 움직였는지와 04(`feature/04-journal-names-by-time`)의 상태를 본다. 04가 이 PR보다 먼저 병합됐으면 05가 열리므로 일지 "다음"의 첫 문단과 첫 불릿을 그 상태로 고쳐 병합 전에 같은 커밋으로 푸시한다. 아니면 지금 "다음"이 맞다.
+4. `merge.md`의 "워크트리에서 병합할 때"로 병합한다. 일지의 커밋·푸시는 병합 직전 `headRefOid` 대조 전에 한다. 이 "인계 (PR 연 뒤)" 절은 커밋되지 않은 채 남아 있어 새 세션이 커밋한다.
+
+낸 지시문(`open-session`이 첫 메시지로 넣는다):
+
+```
+다음 작업: .scratch/retro-queue-per-item/issues/03-review-bot-path-filter.md. PR #484(리뷰 봇 워크플로가 대기열 폴더와 티켓 파일을 기록으로 받는다)의 봇 회차와 병합이 남았다
+다음 단계: PR 반영·병합
+어디서: 새 세션. 같은 브랜치·워크트리라 git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /implement .scratch/retro-queue-per-item/issues/03-review-bot-path-filter.md
+브랜치: feature/03-review-bot-path-filter
+모델: Sonnet 5.5 / high. 2의 잇는 지시문
+읽을 것: docs/journal/2026-11-07-03-review-bot-path-filter.md (끝의 "## 다음"과 "## 인계 (PR 연 뒤)")
+이어받을 상태: 인계: PR 연 뒤 (일지 docs/journal/2026-11-07-03-review-bot-path-filter.md). 푸시 완료(HEAD 8c40208e), PR #484가 열렸고 앱에 묶여 있다. 일지의 "인계 (PR 연 뒤)" 절이 커밋되지 않은 채 남아 새 세션이 커밋한다. 남은 일: 첫 `@coderabbitai review` 코멘트, merge.md 2(봇 회차), 티켓 마지막 체크박스(PR의 checks에서 `Fail when Claude left no comment` 가드가 새 패턴으로 지나는지, 실린 파일이 허용 목록뿐인지)를 일지에 적기, 병합 직전 04(feature/04-journal-names-by-time) 상태를 보고 04가 먼저 병합됐으면 일지 "다음"을 05가 열린 상태로 고쳐 같은 커밋으로 푸시, merge.md "워크트리에서 병합할 때"대로 병합. 보류한 지적 둘(파일 이름 개행, 탐침 폴더의 확장자·깊이 제한 없음)은 PR 본문 "남긴 위험"에 이미 적었다. 봇이 지적하면 둘째 회차부터는 Critical·Major만 고친다
+확인할 선행 조건: 04(feature/04-journal-names-by-time)가 병합됐는지 확인하지 못했다. 이 세션이 볼 때는 PR이 없었다
+이번 요청 범위: PR과 병합까지
+```
+
+세션 제목은 `feature/03-review-bot-path-filter (인계함)`으로 바꿨고, 백그라운드 작업은 없었으며, 워크트리 잠금은 이미 풀려 있었다(`git worktree unlock`이 `is not locked`).
+
+open-session을 부른다 2026-11-07T02:00:10Z
+
+## 병합 세션이 한 일
+
+위 인계로 이어받은 세션(제목 `feature/03-review-bot-path-filter`)이 한 일이다. `git worktree list`에서 이 브랜치가 체크아웃된 `.claude/worktrees/03-review-bot-path-filter`를 찾아 `EnterWorktree`로 들어갔다. 그 워크트리는 잠겨 있지 않았다. `git fetch origin` 뒤 `origin/main`은 `9a1d8542`로 그대로였다(`git log HEAD..origin/main`이 비었다).
+
+- **티켓 마지막 체크박스(PR을 연 뒤).** PR #484의 `claude-review` 잡 로그(실행 `42326876409`)를 읽었다. `Run Claude Code Review`가 `Skipping action due to workflow validation`으로 건너뛰었고, `Fail when Claude left no comment` 스텝이 새 정규식 `^(docs/journal/|\.scratch/retro-queue/|\.scratch/[^/]+/issues/[^/]+\.md$|\.scratch/harness/probes/)`로 돌아 "이 워크플로를 바꾼 PR: 액션이 건너뛰므로 코멘트는 세지 않는다"를 출력하고 종료 0으로 지났다. `gh pr view 484 --json files`가 실은 파일은 워크플로, 탐침 `review_workflow.py`, 탐침 README, 티켓, 일지 다섯이고 모두 허용 경로 안이다. 티켓의 두 칸(`검증 명령이 모두 초록이다`와 이 칸)을 `[x]`로 바꿨다. 앞 칸은 로컬 러너와 커밋의 pre-commit 결과(위 "다시 돌린 명령")를 근거로 했고, CI의 `python`·`web`·`visual`은 이 일지를 쓸 때 아직 pending이었다.
+- **04 상태.** `feature/04-journal-names-by-time`은 원격에 브랜치가 없고(`git ls-remote --heads origin`이 비었다) PR도 없다(`gh pr list --state all --search journal-names-by-time`에 04의 PR이 없다). 병합되지 않았으므로 위 "다음"은 그대로 맞다.
