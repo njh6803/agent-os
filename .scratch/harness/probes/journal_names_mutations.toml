@@ -6,10 +6,11 @@
 name = "겹침은 같은 날의 순번으로 묶는다"
 tests = ["tests/test_journal_names.py"]
 expect = "red"
+expect_output = ["Right contains one more item: '2026-10-03-01: 순번이 겹친다 — 2026-10-03-01-a.md, 2026-10-03-01-b.md'"]
 [[mutation.edit]]
 file = "tests/test_journal_names.py"
-old = '''        by_number.setdefault(match["number"], []).append(name)'''
-new = '''        by_number.setdefault(name, []).append(name)'''
+old = '''by_number.setdefault(numbered["number"], []).append(name)'''
+new = '''by_number.setdefault(name, []).append(name)'''
 
 [[mutation]]
 name = "순번은 빠질 수 없다"
@@ -24,19 +25,21 @@ new = '''(?P<number>\d{4}-\d{2}-\d{2}(?:-\d{2})?)'''
 name = "순번 모양이 아닌 새 이름을 알린다"
 tests = ["tests/test_journal_names.py"]
 expect = "red"
+expect_output = ["test_journal_names.py::test_이름이_새_꼴도"]
 [[mutation.edit]]
 file = "tests/test_journal_names.py"
-old = '''            if name not in BEFORE_NUMBERING:'''
-new = '''            if not name:'''
+old = '''elif name not in BEFORE_NUMBERING:'''
+new = '''elif not name:'''
 
 [[mutation]]
 name = "순번 규약 전의 옛 이름은 예외다"
-tests = ["tests/test_journal_names.py"]
+tests = ["tests/test_journal_names.py", "-k", "이름이_새_꼴도"]
 expect = "red"
+expect_output = ["2026-09-21-first-slice.md: 이름이"]
 [[mutation.edit]]
 file = "tests/test_journal_names.py"
-old = '''            if name not in BEFORE_NUMBERING:'''
-new = '''            if name:'''
+old = '''elif name not in BEFORE_NUMBERING:'''
+new = '''elif name:'''
 
 [[mutation]]
 name = "이미 병합된 한 쌍은 정확히 그 둘일 때만 예외다"
@@ -64,3 +67,23 @@ expect = "red"
 file = "tests/test_journal_names.py"
 old = '''JOURNAL = ROOT / "docs" / "journal"'''
 new = '''JOURNAL = ROOT / "docs" / "journals"'''
+
+[[mutation]]
+name = "전환일 당일의 순번 꼴도 잡는다"
+tests = ["tests/test_journal_names.py", "-k", "전환일_뒤_날짜의_순번_꼴을_잡는다"]
+expect = "red"
+expect_output = ["-05-same-day.md: 전환일("]
+[[mutation.edit]]
+file = "tests/test_journal_names.py"
+old = '''if name[:10] > TRANSITION_DAY:'''
+new = '''if name[:10] >= TRANSITION_DAY:'''
+
+[[mutation]]
+name = "같은 분의 겹침은 앞부분으로 묶는다"
+tests = ["tests/test_journal_names.py"]
+expect = "red"
+expect_output = ["ValueError: not enough values to unpack (expected 1, got 0)"]
+[[mutation.edit]]
+file = "tests/test_journal_names.py"
+old = '''by_stamp.setdefault(stamped["stamp"], []).append(name)'''
+new = '''by_stamp.setdefault(name, []).append(name)'''

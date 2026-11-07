@@ -110,13 +110,15 @@ old = '''    joined = f"{session_id}\0{agent_id}\0{key}"'''
 new = '''    joined = f"{session_id}\0{key}"'''
 
 [[mutation]]
-name = "답 뒤 계기에서 일지 번호 받기를 뺀다"
+name = "답 뒤 계기에서 일지 이름 짓기를 뺀다"
 tests = ["tests/tools/test_hook_choice_facts.py"]
 expect = "red"
+expect_output = ["AssertionError: 일지가 없으면 시각 꼴 이름으로 먼저 만든다"]
 [[mutation.edit]]
 file = "tools/hook_choice_facts.py"
-old = '''    " 일지 파일이 아직 없으면 `uv run python tools/sibling_overlap.py` 의 `다음 빈 번호` 줄에서"
-    " 번호를 받아 머리 한 줄 파일을 먼저 만든다(code-review 6단계 끝과 같은 길)."
+old = '''    " 일지 파일이 아직 없으면 `docs/journal/<날짜>-<HHMM>-<슬러그>.md` 를 머리 한 줄 파일로 먼저"
+    " 만든다. 앞부분은 Bash 의 `date +%Y-%m-%d-%H%M` 이나 PowerShell 의"
+    " `Get-Date -Format yyyy-MM-dd-HHmm` 으로 짓는다(code-review 6단계 끝과 같은 길)."
 '''
 new = ''
 

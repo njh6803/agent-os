@@ -1,0 +1,27 @@
+# code-review 6단계 끝이 일지 파일이 아직 없을 때 만들라는 이름 규칙(날짜·시각 꼴, 번호를 받지 않는다)이 새 세션에
+# 실리는지(retro-queue-per-item 티켓 04, ADR 0045 결정 7). 옛 문장은 `sibling_overlap.py` 의 `다음 빈 번호` 줄에서
+# 번호를 받으라는 것이었다.
+# 실험군은 이 워크트리, 대조군은 이 변경 전의 main 커밋 `9a1d8542` 이다. 돌릴 때는 `--control-commit 9a1d8542` 를
+#   준다(README `canary/` 행).
+# 최신 결과: 통과 4, "없음" 섞임 0(2026-11-07, 이 PC, claude 2.1.318, 실험군은 이 워크트리의 커밋하지 않은 본문(러너가 찍은 커밋은 `9a1d8542`), 대조군 `--control-commit 9a1d8542`, 일지 2026-11-07-1047).
+# 돌리는 법: 워크트리 `.claude/worktrees/<이름>/` 루트에서
+#   uv run python tools/canary.py --control-commit 9a1d8542 .scratch/harness/probes/canary/code_review_journal_name.toml <출력 디렉터리>
+kind = "skill"
+question = '''
+code-review 스킬을 Skill 도구로 불러 본문을 읽어라. 스킬이 시키는 일(리뷰)은 하지 않고 본문만 읽는다.
+본문의 6단계 끝에서, 자기 작업을 리뷰해 일지를 쓰는 세션이 일지 파일이 아직 없을 때 어떻게 하라고 적은 문장을
+찾아, 그 문장과 바로 이어진 문장 하나까지 둘을 마침표까지 글자 그대로 옮겨라. 그런 문장이 없으면 "없음"이라고만
+답하라.
+'''
+expect = ["PowerShell의 Get-Date -Format yyyy-MM-dd-HHmm으로 짓는다"]
+source = ".claude/skills/code-review/SKILL.md"
+skill = "code-review"
+
+[[arm]]
+name = "워크트리"
+role = "experiment"
+
+[[arm]]
+name = "옛-판"
+role = "control"
+checkout = "../../.."

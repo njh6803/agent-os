@@ -101,6 +101,7 @@ from tools.morning_sources import (
     OpenPr,
     ci_state,
     journal_next,
+    latest_journal,
     main_queue,
     merged_prs,
     open_prs,
@@ -862,6 +863,65 @@ def test_main_queue는_origin_main이_없거나_폴더가_없으면_None이고_�
     table = "| # | 무엇 | 어디로 | 승인 |\n|---|---|---|---|\n| 1 | 일 | `a.md` | 1회차 |\n"
     _commit_as_origin_main(old, {"retro-queue.md": table}, ".scratch")
     assert main_queue(old) is None  # 이행 전 커밋은 폴더가 없다
+
+
+def _journal_repo(tmp_path: Path, files: dict[str, str]) -> Path:
+    """일지 `files`를 커밋 하나로 `origin/main`에 둔 임시 저장소."""
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    _commit_as_origin_main(repo, files, "docs/journal")
+    return repo
+
+
+def _commit_journals(repo: Path, files: dict[str, str]) -> None:
+    """임시 저장소에 일지를 커밋 하나로 더하고 그 커밋을 `origin/main` ref로 둔다. 저장소는 이미
+    있고, 앞선 커밋 위에 쌓는다."""
+    for name, text in files.items():
+        (repo / "docs" / "journal" / name).write_text(text, encoding="utf-8", newline="\n")
+    _git(repo, "add", "-A")
+    _git(repo, "-c", "user.name=t", "-c", "user.email=t@t", "commit", "-q", "-m", "j")
+    _git(repo, "update-ref", "refs/remotes/origin/main", "HEAD")
+
+
+def test_latest_journal은_늦게_더한_일지_가운데_다음을_든_첫_일지를_쓴다(tmp_path: Path) -> None:
+    repo = _journal_repo(tmp_path, {"2026-11-06-1000-early.md": "# a\n\n## 다음\n- 먼저\n"})
+    _commit_journals(repo, {"2026-11-06-1100-late.md": "# b\n\n## 다음\n- 나중\n"})
+    path, section = latest_journal(repo)
+    assert path == "docs/journal/2026-11-06-1100-late.md"
+    assert section == "- 나중"
+    # 가장 늦게 더한 일지에 `## 다음`이 없으면 그 앞의 일지다
+    _commit_journals(repo, {"2026-11-06-1200-none.md": "# c\n\n## 한 일\n- 없다\n"})
+    path, section = latest_journal(repo)
+    assert path == "docs/journal/2026-11-06-1100-late.md"
+    assert section == "- 나중"
+
+
+def test_latest_journal은_이름순이_아니라_더한_차례로_골라_전환일의_옛_이름보다_늦은_새_이름을_쓴다(
+    tmp_path: Path,
+) -> None:
+    """`-12-`는 이름순에서 `-0930-`보다 뒤다. 늦게 더한 커밋의 새 이름 일지가 걸려야 한다."""
+    repo = _journal_repo(tmp_path, {"2026-11-06-12-old.md": "# a\n\n## 다음\n- 옛 이름\n"})
+    _commit_journals(repo, {"2026-11-06-0930-new.md": "# b\n\n## 다음\n- 새 이름\n"})
+    path, section = latest_journal(repo)
+    assert path == "docs/journal/2026-11-06-0930-new.md"
+    assert section == "- 새 이름"
+
+
+def test_latest_journal은_한_커밋이_여럿을_더했으면_이름이_늦은_것부터_본다(tmp_path: Path) -> None:
+    repo = _journal_repo(
+        tmp_path,
+        {
+            "2026-11-06-1000-a.md": "# a\n\n## 다음\n- a\n",
+            "2026-11-06-1300-b.md": "# b\n\n## 다음\n- b\n",
+            "2026-11-06-1100-c.md": "# c\n\n## 다음\n- c\n",
+        },
+    )
+    assert latest_journal(repo)[0] == "docs/journal/2026-11-06-1300-b.md"
+
+
+def test_latest_journal은_다음을_든_일지가_없으면_빈_글_둘이다(tmp_path: Path) -> None:
+    repo = _journal_repo(tmp_path, {"2026-11-06-1000-a.md": "# a\n\n## 한 일\n- x\n"})
+    assert latest_journal(repo) == ("", "")
 
 
 def test_대기열을_읽지_못하면_절은_수집_안_됨_한_줄이다() -> None:

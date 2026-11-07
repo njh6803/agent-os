@@ -91,24 +91,6 @@ old = '''    if ours.version is not None and ours.version == theirs.version:'''
 new = '''    if False:'''
 
 [[mutation]]
-name = "옮길 일지 순번이 날짜를 가리지 않는다"
-tests = ["tests/tools/test_sibling_overlap.py"]
-expect = "red"
-[[mutation.edit]]
-file = "tools/sibling_overlap.py"
-old = '''    return max((int(k[11:]) for n in numbers for k in n.journals if k[:10] == day), default=0)'''
-new = '''    return max((int(k[11:]) for n in numbers for k in n.journals), default=0)'''
-
-[[mutation]]
-name = "겹친 번호만 옮긴다"
-tests = ["tests/tools/test_sibling_overlap.py"]
-expect = "red"
-[[mutation.edit]]
-file = "tools/sibling_overlap.py"
-old = '''        olds = [int(key[11:]) for key in ours.journals if key[:10] == day]'''
-new = '''        olds = [int(c.key[11:]) for c in found if c.kind == "일지" and c.key[:10] == day]'''
-
-[[mutation]]
 name = "자리가 그대로인 번호도 옮길 번호로 낸다"
 tests = ["tests/tools/test_sibling_overlap.py"]
 expect = "red"
@@ -276,10 +258,11 @@ new = '''        if False:'''
 name = "겹쳐도 0 으로 끝난다"
 tests = ["tests/tools/test_sibling_overlap.py"]
 expect = "red"
+expect_output = ["test_sibling_overlap.py::test_열린_PR과_겹치면_알리고_1로_끝나며"]
 [[mutation.edit]]
 file = "tools/sibling_overlap.py"
-old = '''        fix = self.found or self.behind or self.unbumped or self.uncanaried or self.dangling'''
-new = '''        fix = self.behind or self.unbumped or self.uncanaried or self.dangling'''
+old = '''        fix = self.found or self.unbumped or self.uncanaried or self.dangling'''
+new = '''        fix = self.unbumped or self.uncanaried or self.dangling'''
 
 # 공유한 이력(PR 직전 버그 축: 쌓아 올린 아래 PR 이 squash 로 main 에 든 뒤)
 
@@ -293,155 +276,39 @@ old = '''    ours = unshared(fresh(disk, base_numbers), main_numbers)'''
 new = '''    ours = fresh(disk, base_numbers)'''
 
 [[mutation]]
-name = "공유한 일지를 번호만으로 가린다"
-tests = ["tests/tools/test_sibling_overlap.py"]
-expect = "red"
-[[mutation.edit]]
-file = "tools/sibling_overlap.py"
-old = '''    journals = {k: v for k, v in numbers.journals.items() if other.journals.get(k) != v}'''
-new = '''    journals = {k: v for k, v in numbers.journals.items() if k not in other.journals}'''
-
-[[mutation]]
 name = "같은 헌법 판을 공유한 이력으로 보고 뺀다"
 tests = ["tests/tools/test_sibling_overlap.py", "-k", "판"]
 expect = "red"
 expect_output = ["version: None != '1.0.1'"]
 [[mutation.edit]]
 file = "tools/sibling_overlap.py"
-old = '''    return Numbers(journals, adrs, numbers.version, tickets)'''
-new = '''    return Numbers(journals, adrs, None if numbers.version == other.version else numbers.version, tickets)'''
+old = '''    return Numbers(frozenset(), adrs, numbers.version, tickets)'''
+new = '''    return Numbers(frozenset(), adrs, None if numbers.version == other.version else numbers.version, tickets)'''
 
 # 다음 빈 번호(대기열 157·182)
 
 [[mutation]]
 name = "다음 빈 번호가 형제를 보지 않는다"
-tests = ["tests/tools/test_sibling_overlap.py", "-k", "다음_빈 or 이미_든_일지는 or 이름순으로 or 더한_줄의_일지_인용 or harness_티켓과_번호가"]
+tests = ["tests/tools/test_sibling_overlap.py", "-k", "이_브랜치에_새_번호가_없어도 or 다음_빈"]
 expect = "red"
-expect_output = ["assert '다음 빈 번호(형제 포함): 일지 2026-10-07-04, 티켓 001\\n' in"]
+expect_output = ["assert '다음 빈 번호(형제 포함): 티켓 003\\n' in"]
 [[mutation.edit]]
 file = "tools/sibling_overlap.py"
-old = '''    journal, ticket = next_numbers([*result.taken, result.ours], day)'''
-new = '''    journal, ticket = next_numbers([result.ours], day)'''
+old = '''    ticket = next_ticket([*result.taken, result.ours])'''
+new = '''    ticket = next_ticket([result.ours])'''
 
 [[mutation]]
 name = "다음 빈 번호가 이 브랜치의 새 번호를 보지 않는다"
-tests = ["tests/tools/test_sibling_overlap.py", "-k", "다음_빈 or 이미_든_일지는 or 이름순으로 or 더한_줄의_일지_인용 or harness_티켓과_번호가 or 옛_대기열_표가_없어도"]
+tests = ["tests/tools/test_sibling_overlap.py", "-k", "이_브랜치에_새_번호가_없어도 or 다음_빈"]
 expect = "red"
-expect_output = ["assert '다음 빈 번호(형제 포함): 일지 2026-10-07-03, 티켓 001\\n' in"]
+expect_output = ["assert '다음 빈 번호(형제 포함): 티켓 004\\n' in"]
 [[mutation.edit]]
 file = "tools/sibling_overlap.py"
-old = '''    journal, ticket = next_numbers([*result.taken, result.ours], day)'''
-new = '''    journal, ticket = next_numbers(result.taken, day)'''
+old = '''    ticket = next_ticket([*result.taken, result.ours])'''
+new = '''    ticket = next_ticket(result.taken)'''
 
-[[mutation]]
-name = "새 일지의 날짜가 main 의 더 늦은 날짜를 보지 않는다"
-tests = ["tests/tools/test_sibling_overlap.py"]
-expect = "red"
-[[mutation.edit]]
-file = "tools/sibling_overlap.py"
-old = '''    return max(today, main_latest[:10]) if main_latest else today'''
-new = '''    return today'''
-
-# 이름순 차례(대기열 175)
-
-[[mutation]]
-name = "main 보다 앞선 새 일지가 있어도 0 으로 끝난다"
-tests = ["tests/tools/test_sibling_overlap.py"]
-expect = "red"
-[[mutation.edit]]
-file = "tools/sibling_overlap.py"
-old = '''        fix = self.found or self.behind or self.unbumped or self.uncanaried or self.dangling'''
-new = '''        fix = self.found or self.unbumped or self.uncanaried or self.dangling'''
-
-[[mutation]]
-name = "뒤처짐을 가장 이른 새 일지로 가린다"
-tests = ["tests/tools/test_sibling_overlap.py"]
-expect = "red"
-[[mutation.edit]]
-file = "tools/sibling_overlap.py"
-old = '''    mine = latest_journal(ours)'''
-new = '''    mine = min(ours.journals, default=None)'''
-
-[[mutation]]
-name = "같은 순번도 뒤처진 것으로 본다"
-tests = ["tests/tools/test_sibling_overlap.py"]
-expect = "red"
-[[mutation.edit]]
-file = "tools/sibling_overlap.py"
-old = '''    return mine is not None and latest is not None and mine < latest'''
-new = '''    return mine is not None and latest is not None and mine <= latest'''
-
-[[mutation]]
-name = "main 의 최신 일지를 main 이 새로 매긴 일지에서만 고른다"
-tests = ["tests/tools/test_sibling_overlap.py"]
-expect = "red"
-[[mutation.edit]]
-file = "tools/sibling_overlap.py"
-old = '''        latest=latest_journal(main_numbers),'''
-new = '''        latest=latest_journal(main_new),'''
-
-[[mutation]]
-name = "다른 형제의 최신 일지를 main 이 가진 일지에서도 고른다"
-tests = ["tests/tools/test_sibling_overlap.py"]
-expect = "red"
-[[mutation.edit]]
-file = "tools/sibling_overlap.py"
-old = '''                latest=latest_journal(new),'''
-new = '''                latest=latest_journal(numbers),'''
-
-[[mutation]]
-name = "main 보다 앞선 새 일지를 옮기지 않는다"
-tests = ["tests/tools/test_sibling_overlap.py"]
-expect = "red"
-[[mutation.edit]]
-file = "tools/sibling_overlap.py"
-old = '''        shifted = behind_moves(result.ours, result.taken, day)'''
-new = '''        shifted = behind_moves(result.ours, result.taken, day)[:0]'''
-
-[[mutation]]
-name = "main 보다 앞선 새 일지를 차례 없이 옮긴다"
-tests = ["tests/tools/test_sibling_overlap.py"]
-expect = "red"
-[[mutation.edit]]
-file = "tools/sibling_overlap.py"
-old = '''        Move("일지", old, f"{day}-{top + 1 + i:02d}") for i, old in enumerate(sorted(ours.journals))'''
-new = '''        Move("일지", old, f"{day}-{top + 1:02d}") for i, old in enumerate(sorted(ours.journals))'''
-
-[[mutation]]
-name = "main 보다 앞서도 날짜 안의 일지 겹침 이동을 함께 낸다"
-tests = ["tests/tools/test_sibling_overlap.py"]
-expect = "red"
-[[mutation.edit]]
-file = "tools/sibling_overlap.py"
-old = '''        shifted += moves(result.ours, result.taken, [c for c in clashed if c.kind != "일지"])'''
-new = '''        shifted += moves(result.ours, result.taken, clashed)'''
-
-[[mutation]]
-name = "날짜를 주지 않을 때 이 기계의 오늘을 쓰지 않는다"
-tests = ["tests/tools/test_sibling_overlap.py"]
-expect = "red"
-[[mutation.edit]]
-file = "tools/sibling_overlap.py"
-old = '''    day = (today or datetime.now().astimezone().date()).isoformat()  # 이 기계의 시간대'''
-new = '''    day = (today or date(2000, 1, 1)).isoformat()'''
-
-[[mutation]]
-name = "앞서는 형제에 main 도 넣는다"
-tests = ["tests/tools/test_sibling_overlap.py"]
-expect = "red"
-[[mutation.edit]]
-file = "tools/sibling_overlap.py"
-old = '''    later = [s for s in result.others if is_behind(result.ours, s.latest)]'''
-new = '''    later = [s for s in result.siblings if is_behind(result.ours, s.latest)]'''
-
-[[mutation]]
-name = "앞서는 형제를 알리지 않는다"
-tests = ["tests/tools/test_sibling_overlap.py"]
-expect = "red"
-[[mutation.edit]]
-file = "tools/sibling_overlap.py"
-old = '''    later = [s for s in result.others if is_behind(result.ours, s.latest)]'''
-new = '''    later: list[Sibling] = []'''
+# 일지의 이름순 차례(대기열 175)와 일지 순번을 받는 동작은 일지 이름이 시각 꼴이 되며 걷혔다(ADR 0045 결정 7).
+# 그 동작을 겨눈 변이는 지웠다. 일지 이름 꼴의 판정은 journal_names_mutations.toml 이 잰다
 
 # PR 이 닫힌 형제 워크트리(대기열 194)
 
@@ -544,26 +411,6 @@ file = "tools/sibling_overlap.py"
 old = '''    if folded := sum(1 for s in siblings if s.closed is not None):'''
 new = '''    if folded := 0:'''
 
-# 받은 일지 번호로 바로 파일을 만들라는 안내(대기열 220)
-
-[[mutation]]
-name = "다음 빈 일지 번호에 파일 안내를 붙이지 않는다"
-tests = ["tests/tools/test_sibling_overlap.py"]
-expect = "red"
-[[mutation.edit]]
-file = "tools/sibling_overlap.py"
-old = '''    if not result.ours.journals:'''
-new = '''    if False:'''
-
-[[mutation]]
-name = "이 브랜치에 새 일지가 있어도 파일 안내를 붙인다"
-tests = ["tests/tools/test_sibling_overlap.py"]
-expect = "red"
-[[mutation.edit]]
-file = "tools/sibling_overlap.py"
-old = '''    if not result.ours.journals:'''
-new = '''    if True:'''
-
 # 형제가 쓴 가장 높은 헌법 판(대기열 199)
 
 [[mutation]]
@@ -644,10 +491,11 @@ new = '''    if False:'''
 name = "판을 올리지 않고 헌법 파일을 고쳐도 0 으로 끝난다"
 tests = ["tests/tools/test_sibling_overlap.py"]
 expect = "red"
+expect_output = ["헌법 파일을 고치고 판을 올리지 않았다: docs/constitution/operations.md. 위의 가장 높은 판보다 높게 올린다"]
 [[mutation.edit]]
 file = "tools/sibling_overlap.py"
-old = '''        fix = self.found or self.behind or self.unbumped or self.uncanaried or self.dangling'''
-new = '''        fix = self.found or self.behind or self.uncanaried or self.dangling'''
+old = '''        fix = self.found or self.unbumped or self.uncanaried or self.dangling'''
+new = '''        fix = self.found or self.uncanaried or self.dangling'''
 
 # 대기열 235(카나리아 누락), 249(`--move`), 251(도움말과 2의 할 일). 시험은 그 셋의 시험만 고른다
 
@@ -702,10 +550,11 @@ new = '''HARNESS = re.compile(r"^\.claude/(?:skills/[^/]+/SKILL|(?:rules|agents)
 name = "카나리아 누락에도 0 으로 끝난다"
 tests = ["tests/tools/test_sibling_overlap.py", "-k", "카나리아 or 도움말 or 인자가 or 옮기 or 옮길_번호대로 or 줄인 or 2로"]
 expect = "red"
+expect_output = ["하네스 파일. 새 `claude -p` 세션에서 불러 보고(`tools/canary.py`)"]
 [[mutation.edit]]
 file = "tools/sibling_overlap.py"
-old = '''        fix = self.found or self.behind or self.unbumped or self.uncanaried or self.dangling'''
-new = '''        fix = self.found or self.behind or self.unbumped or self.dangling'''
+old = '''        fix = self.found or self.unbumped or self.uncanaried or self.dangling'''
+new = '''        fix = self.found or self.unbumped or self.dangling'''
 
 [[mutation]]
 name = "카나리아 누락을 찍지 않는다"
@@ -746,15 +595,6 @@ new = '''    for old, new in plan.journals.items():
     pattern = _citation_pattern(path, plan)'''
 
 [[mutation]]
-name = "일지 머리 줄을 옮기지 않는다"
-tests = ["tests/tools/test_sibling_overlap.py", "-k", "카나리아 or 도움말 or 인자가 or 옮기 or 옮길_번호대로 or 줄인 or 2로"]
-expect = "red"
-[[mutation.edit]]
-file = "tools/sibling_overlap.py"
-old = '''            return match[0] if new is None else f"# {new[:10]} ({new[11:]})"'''
-new = '''            return match[0]'''
-
-[[mutation]]
 name = "ADR 목록을 통째로만 옮긴다"
 tests = ["tests/tools/test_sibling_overlap.py", "-k", "카나리아 or 도움말 or 인자가 or 옮기 or 옮길_번호대로 or 줄인 or 2로"]
 expect = "red"
@@ -771,15 +611,6 @@ expect = "red"
 file = "tools/sibling_overlap.py"
 old = '''            return plan.adrs.get(adr, adr)'''
 new = '''            return adr'''
-
-[[mutation]]
-name = "더 긴 수의 앞부분도 일지 순번으로 본다"
-tests = ["tests/tools/test_sibling_overlap.py", "-k", "카나리아 or 도움말 or 인자가 or 옮기 or 옮길_번호대로 or 줄인 or 2로"]
-expect = "red"
-[[mutation.edit]]
-file = "tools/sibling_overlap.py"
-old = '''    r"|(?<!\d)(?P<journal>\d{4}-\d{2}-\d{2}-\d{2})(?!\d)"'''
-new = '''    r"|(?<!\d)(?P<journal>\d{4}-\d{2}-\d{2}-\d{2})"'''
 
 [[mutation]]
 name = "수나 점 뒤의 네 자리도 ADR 로 본다"
@@ -830,11 +661,12 @@ new = '''    check = _check'''
 name = "옮긴 뒤 다시 대조하지 않는다"
 tests = ["tests/tools/test_sibling_overlap.py", "-k", "카나리아 or 도움말 or 인자가 or 옮기 or 옮길_번호대로 or 줄인 or 2로"]
 expect = "red"
+expect_output = ["옮긴다. 티켓의 stem 인 브랜치에 있으면 브랜치 이름을 바꾸는 명령도 찍는다"]
 [[mutation.edit]]
 file = "tools/sibling_overlap.py"
 old = '''    report_own_pulls(root, verdict.shifted)
     result = survey(root, remote)
-    return result, judge(result, day)'''
+    return result, judge(result)'''
 new = '''    report_own_pulls(root, verdict.shifted)
     return result, verdict'''
 
@@ -864,10 +696,11 @@ new = '''    except MoveError:
 name = "--move 안내를 찍지 않는다"
 tests = ["tests/tools/test_sibling_overlap.py", "-k", "카나리아 or 도움말 or 인자가 or 옮기 or 옮길_번호대로 or 줄인 or 2로"]
 expect = "red"
+expect_output = ["AssertionError: assert '`--move` 를 붙여 다시 치면' in"]
 [[mutation.edit]]
 file = "tools/sibling_overlap.py"
-old = '''            "`--move` 를 붙여 다시 치면 이 번호대로 일지·ADR·티켓의 파일 이름과 일지·티켓 머리"'''
-new = '''            "다시 치면 이 번호대로 일지·ADR·티켓의 파일 이름과 일지·티켓 머리"'''
+old = '''            "`--move` 를 붙여 다시 치면 이 번호대로 ADR·티켓의 파일 이름과 티켓 머리 줄, 이"'''
+new = '''            "다시 치면 이 번호대로 ADR·티켓의 파일 이름과 티켓 머리 줄, 이"'''
 
 [[mutation]]
 name = "도움말을 받지 않는다"
@@ -981,15 +814,6 @@ old = '''        f"옮겼다: {moved}. 이름을 바꾼 파일: {names}. 인용�
 new = '''        f"옮겼다: {moved}. 인용을 고친 파일: {texts}. 스테이지하지"'''
 
 [[mutation]]
-name = "스크래치에 둔 것을 일지로 옮기라고 하지 않는다"
-tests = ["tests/tools/test_sibling_overlap.py", "-k", "카나리아 or 도움말 or 인자가 or 옮기 or 옮길_번호대로 or 줄인 or 2로 or 되돌리 or 자리가_다른 or 심볼릭 or 새_번호가_없어도"]
-expect = "red"
-[[mutation.edit]]
-file = "tools/sibling_overlap.py"
-old = '''        " 파일로 찬 번호를 본다. 이 대조가 2로 끝난 동안 스크래치 파일에 적어 둔 것이 있으면 만든"'''
-new = '''        " 파일로 찬 번호를 본다. 만든"'''
-
-[[mutation]]
 name = "카나리아를 계정 한도로 돌리지 못하는 갈래를 알리지 않는다"
 tests = ["tests/tools/test_sibling_overlap.py", "-k", "카나리아 or 도움말 or 인자가 or 옮기 or 옮길_번호대로 or 줄인 or 2로 or 되돌리 or 자리가_다른 or 심볼릭 or 새_번호가_없어도"]
 expect = "red"
@@ -1002,11 +826,12 @@ new = '''            " 한도로 돌리지 못하면 이 알림이 남은 채"''
 name = "인용 블록의 줄도 옮긴다"
 tests = ["tests/tools/test_sibling_overlap.py", "-k", "인용"]
 expect = "red"
+expect_output = ["- > ADR 0027"]
 [[mutation.edit]]
 file = "tools/sibling_overlap.py"
 old = '''    r"^(?P<quote>>[^\n]*)"
-    r"|(?<!\d)(?P<journal>'''
-new = '''    r"(?<!\d)(?P<journal>'''
+    r"|(?<=ADR )(?P<adrs>'''
+new = '''    r"(?<=ADR )(?P<adrs>'''
 
 [[mutation]]
 name = "줄 머리가 아닌 > 뒤도 인용 블록으로 본다"
@@ -1116,16 +941,6 @@ old = '''        line if line.rstrip("\r") in kept else pattern.sub(swap, line) 
 new = '''        line if line in kept else pattern.sub(swap, line) for line in lines'''
 
 [[mutation]]
-name = "main 보다 앞서면 다른 종류의 겹침 이동을 버린다"
-tests = ["tests/tools/test_sibling_overlap.py", "-k", "ADR_번호_겹침이_함께"]
-expect = "red"
-expect_output = ["At index 0 diff: '옮길 번호: 일지 2026-10-07-19 → 2026-10-12-01' != "]
-[[mutation.edit]]
-file = "tools/sibling_overlap.py"
-old = '''        shifted += moves(result.ours, result.taken, [c for c in clashed if c.kind != "일지"])'''
-new = '''        shifted += []'''
-
-[[mutation]]
 name = "헌법 README 가 main 과 같아도 판을 이 브랜치의 것으로 센다"
 tests = ["tests/tools/test_sibling_overlap.py", "-k", "main이_올린_헌법_판"]
 expect = "red"
@@ -1149,10 +964,11 @@ new = '''    if True:'''
 name = "없는 일지 인용을 종료 코드에 넣지 않는다"
 tests = ["tests/tools/test_sibling_overlap.py", "-k", "일지_인용이_어디에도"]
 expect = "red"
+expect_output = ["`docs/journal/<인용>-*.md` 가 없다). 가리키려던 일지 파일 이름의 앞부분(`<날짜>-<HHMM>`"]
 [[mutation.edit]]
 file = "tools/sibling_overlap.py"
-old = '''        fix = self.found or self.behind or self.unbumped or self.uncanaried or self.dangling'''
-new = '''        fix = self.found or self.behind or self.unbumped or self.uncanaried'''
+old = '''        fix = self.found or self.unbumped or self.uncanaried or self.dangling'''
+new = '''        fix = self.found or self.unbumped or self.uncanaried'''
 
 [[mutation]]
 name = "없는 일지 인용을 출력에 알리지 않는다"
@@ -1185,19 +1001,21 @@ new = '''        dangling_files(root, (), changed, known),'''
 name = "형제의 일지를 있는 번호로 치지 않는다"
 tests = ["tests/tools/test_sibling_overlap.py", "-k", "일지_인용이_어디에도"]
 expect = "red"
+expect_output = ["`docs/journal/<인용>-*.md` 가 없다). 가리키려던 일지 파일 이름의 앞부분(`<날짜>-<HHMM>`"]
 [[mutation.edit]]
 file = "tools/sibling_overlap.py"
-old = '''    known = {key for numbers in [*taken, disk] for key in numbers.journals}'''
-new = '''    known = {key for numbers in [base_numbers, main_numbers, disk] for key in numbers.journals}'''
+old = '''    known = {name for numbers in [*taken, disk] for name in numbers.journals}'''
+new = '''    known = {name for numbers in [base_numbers, main_numbers, disk] for name in numbers.journals}'''
 
 [[mutation]]
 name = "이 브랜치의 일지를 있는 번호로 치지 않는다"
 tests = ["tests/tools/test_sibling_overlap.py", "-k", "일지_인용이_어디에도"]
 expect = "red"
+expect_output = ["- docs/journal/2026-10-07-02-ours.md: 2026-10-07-02"]
 [[mutation.edit]]
 file = "tools/sibling_overlap.py"
-old = '''    known = {key for numbers in [*taken, disk] for key in numbers.journals}'''
-new = '''    known = {key for numbers in taken for key in numbers.journals}'''
+old = '''    known = {name for numbers in [*taken, disk] for name in numbers.journals}'''
+new = '''    known = {name for numbers in taken for name in numbers.journals}'''
 
 [[mutation]]
 name = "일지 인용의 목록 꼴을 번호 하나로 읽는다"
@@ -1212,10 +1030,31 @@ new = '''            for key in [cite[1][:13]]:'''
 name = "없는 일지 번호를 나올 때마다 든다"
 tests = ["tests/tools/test_sibling_overlap.py", "-k", "없는_일지_번호를"]
 expect = "red"
+expect_output = ["Left contains one more item: '2026-10-07-05'"]
 [[mutation.edit]]
 file = "tools/sibling_overlap.py"
-old = '''                if key not in known and key not in found:'''
-new = '''                if key not in known:'''
+old = '''                if key not in found and not any(name.startswith(f"{key}-") for name in known):'''
+new = '''                if not any(name.startswith(f"{key}-") for name in known):'''
+
+[[mutation]]
+name = "일지 인용을 접두 뒤의 하이픈 없이 파일 이름에 맞춘다"
+tests = ["tests/tools/test_sibling_overlap.py", "-k", "접두_뒤의_하이픈이_가른다"]
+expect = "red"
+expect_output = ["Right contains one more item: '2026-11-06-14'"]
+[[mutation.edit]]
+file = "tools/sibling_overlap.py"
+old = '''                if key not in found and not any(name.startswith(f"{key}-") for name in known):'''
+new = '''                if key not in found and not any(name.startswith(key) for name in known):'''
+
+[[mutation]]
+name = "이 브랜치의 일지를 시각순이 아니라 경로의 이름순으로 고른다"
+tests = ["tests/tools/test_sibling_overlap.py", "-k", "같은_날_옛_꼴보다_늦게"]
+expect = "red"
+expect_output = ["+ docs/journal/2026-11-06-12-old.md"]
+[[mutation.edit]]
+file = "tools/sibling_overlap.py"
+old = '''    return sorted(names, key=lambda path: journal_order(PurePosixPath(path).name))'''
+new = '''    return sorted(names)'''
 
 [[mutation]]
 name = "인용 블록의 일지 인용을 본다"
@@ -1872,7 +1711,7 @@ new = '''        (CONSTITUTION, numbers.version is None),
 name = "티켓: 티켓이 없을 때 다음 빈 티켓을 000 으로 낸다"
 tests = ["tests/tools/test_sibling_overlap.py", "-k", "지시문이_받아_두고"]
 expect = "red"
-expect_output = ["assert '다음 빈 번호(형제 포함): 일지 2026-10-07-02, 티켓 001\\n' in"]
+expect_output = ["assert '다음 빈 번호(형제 포함): 티켓 001\\n' in"]
 [[mutation.edit]]
 file = "tools/sibling_overlap.py"
 old = '''f"{_top_ticket(numbers) + 1:03d}"'''

@@ -16,20 +16,25 @@
 판)가 비면 2로 끝난다). 작업 브랜치는 main 에서 딴 `chore/probe` 다. 오늘은 이 기계의 지역 날짜로,
 그 도구와 같다.
 
+2026-11-07 이후(retro-queue-per-item 티켓 04, ADR 0045 결정 7): `hook_journal_retro` 가 일지 순번을
+받지 않고 파일 이름 꼴만 보게 되어 B_clash 와 C_next 가 재던 번호 알림(`NUMBER_LEAD`)과 그 픽스처
+(`tools/run_hooks.py` 의 `journal_repository`)가 없어졌다. 두 변형은 2026-10-16 측정의 기록으로만
+두고 돌리지 않는다. 돌리면 모른다고 알리고 1로 끝난다. A_payload(훅이 받는 `tool_response` 의
+모양)는 그대로 돌고, `tools/hook_payloads.toml` 과 `tests/tools/test_hook_journal_retro.py` 가 그
+결과를 인용한다.
+
 돌리는 법: 저장소 루트에서
 `uv run python .scratch/harness/probes/journal_number_hook/run.py <저장소 밖 디렉터리> [변형 ...]`.
-변형을 주지 않으면 셋 다 돈다. `claude` CLI 와 인증이 든다. 변형마다 haiku 세션 하나다. 저장소
-밖에서 `--setting-sources project,local` 로 돌려 이 저장소와 사용자 전역의 훅을 뺀다. 탐침 기록이
-없거나 재려는 Write 가 돌지 않은 변형은 측정이 아니라고 세고, 측정이 아니거나 기대와 다른 변형이
-하나라도 있으면 1로 끝난다.
+변형을 주지 않으면 A_payload 만 돈다. `claude` CLI 와 인증이 든다. 변형마다 haiku 세션 하나다.
+저장소 밖에서 `--setting-sources project,local` 로 돌려 이 저장소와 사용자 전역의 훅을 뺀다. 탐침
+기록이 없거나 재려는 Write 가 돌지 않은 변형은 측정이 아니라고 세고, 측정이 아니거나 기대와 다른
+변형이 하나라도 있으면 1로 끝난다.
 """
 
 from __future__ import annotations
 
-import ast
 import io
 import json
-import os
 import shutil
 import subprocess
 import sys
@@ -38,12 +43,9 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parents[3]
-sys.path.insert(0, str(ROOT))
 
-from tools.run_hooks import journal_repository  # noqa: E402
-
-NO_NOTICE = "알림 없음"
-VARIANTS = ("A_payload", "B_clash", "C_next")
+VARIANTS = ("A_payload",)
+RETIRED = ("B_clash", "C_next")
 BASE = [
     "--setting-sources",
     "project,local",
@@ -56,10 +58,6 @@ BASE = [
     "--max-turns",
     "6",
 ]
-ASK_NOTICE = (
-    "그 뒤 그 Write 호출에 붙어 온 훅 알림이나 시스템 리마인더가 있으면 그 첫 문장을 그대로 옮기고,"
-    f" 없으면 '{NO_NOTICE}' 라고 한국어 한 줄로 답한다."
-)
 
 
 def today() -> str:
@@ -74,27 +72,9 @@ def hook_command(script: Path, *args: str) -> dict[str, object]:
     return {"type": "command", "command": command.rstrip(), "timeout": 30}
 
 
-def real_hook() -> dict[str, object]:
-    """등록 모양의 실제 훅. 시간 제한도 `.claude/settings.json` 의 그 훅과 같다."""
-    entry = hook_command(ROOT / "tools" / "launch_hook.py", "hook_journal_retro.py")
-    entry["timeout"] = 45
-    return entry
-
-
 def write_settings(path: Path, hooks: list[dict[str, object]]) -> None:
     settings = {"hooks": {"PostToolUse": [{"matcher": "Write|Edit", "hooks": hooks}]}}
     path.write_text(json.dumps(settings, ensure_ascii=False), encoding="utf-8")
-
-
-def fixture_repo(where: Path) -> Path:
-    """main 에 오늘 날짜의 01 일지가 있고 작업 브랜치가 그 위인 저장소(`tools/run_hooks.py` 의
-    `journal_repository`). 그 함수가 임시 저장소를 짓는 동안 저장소를 가리키는 `GIT_*` 를 벗긴다."""
-    for path in (where / "origin.git", where / "repo"):
-        if path.exists():
-            shutil.rmtree(path)
-    for name in [name for name in os.environ if name.startswith("GIT_")]:
-        del os.environ[name]
-    return journal_repository(where, today())
 
 
 def run_claude(cwd: Path, settings: Path, tools: str, prompt: str, stream: Path) -> None:
@@ -126,24 +106,6 @@ def read_jsonl(path: Path) -> list[dict[str, object]]:
     return records
 
 
-def final_answer(stream: list[dict[str, object]]) -> str:
-    answers = [str(event.get("result", "")) for event in stream if event.get("type") == "result"]
-    return answers[-1] if answers else ""
-
-
-def lead() -> str:
-    """훅의 번호 알림 첫 문장(`NUMBER_LEAD`). 훅 파일의 대입문을 읽는다."""
-    tree = ast.parse((ROOT / "tools" / "hook_journal_retro.py").read_text(encoding="utf-8"))
-    for node in tree.body:
-        if (
-            isinstance(node, ast.Assign)
-            and any(isinstance(t, ast.Name) and t.id == "NUMBER_LEAD" for t in node.targets)
-            and isinstance(value := ast.literal_eval(node.value), str)
-        ):
-            return value
-    raise SystemExit("tools/hook_journal_retro.py 에 NUMBER_LEAD 가 없다")
-
-
 def variant_a(out: Path) -> tuple[bool, bool, str]:
     work = out / "A_payload"
     if work.exists():
@@ -173,36 +135,6 @@ def variant_a(out: Path) -> tuple[bool, bool, str]:
     return ran, ran, f"Write·Edit 결과의 type: {kinds}"
 
 
-def variant_bc(out: Path, name: str, seq: str, *, expect_notice: bool) -> tuple[bool, bool, str]:
-    where = out / name
-    where.mkdir(parents=True, exist_ok=True)
-    repo = fixture_repo(where)
-    log = out / f"{name}_posttool.jsonl"
-    log.unlink(missing_ok=True)
-    settings = out / f"{name}.settings.json"
-    write_settings(settings, [real_hook(), hook_command(HERE / "dump_posttool.py", log.as_posix())])
-    journal = f"docs/journal/{today()}-{seq}-probe.md"
-    prompt = (
-        f"Write 도구로 {journal} 를 '# {today()} ({seq}) probe' 한 줄로 새로 만든다."
-        f" 한 번만 부른다. {ASK_NOTICE}"
-    )
-    run_claude(repo, settings, "Write", prompt, out / f"{name}.jsonl")
-    entries = read_jsonl(log)
-    created = any(
-        entry.get("tool_name") == "Write"
-        and (entry.get("tool_response") or {}).get("type") == "create"
-        and str(entry.get("file_path", "")).replace("\\", "/").endswith(journal)
-        for entry in entries
-    )
-    answer = final_answer(read_jsonl(out / f"{name}.jsonl"))
-    print(f"{name}: 새 일지 Write 가 돌았다={created}, 답={answer!r}")
-    if expect_notice:
-        ok = lead() in answer
-    else:
-        ok = NO_NOTICE in answer and lead() not in answer
-    return created, ok, answer
-
-
 def main() -> int:
     stream = sys.stdout
     if isinstance(stream, io.TextIOWrapper):
@@ -214,10 +146,10 @@ def main() -> int:
     for variant in variants:
         if variant == "A_payload":
             measured, ok, detail = variant_a(out)
-        elif variant == "B_clash":
-            measured, ok, detail = variant_bc(out, variant, "01", expect_notice=True)
-        elif variant == "C_next":
-            measured, ok, detail = variant_bc(out, variant, "02", expect_notice=False)
+        elif variant in RETIRED:
+            print(f"{variant}: 번호 알림이 없어져 더는 돌지 않는다(2026-10-16 측정의 기록)")
+            bad += 1
+            continue
         else:
             print(f"모르는 변형: {variant}")
             bad += 1
