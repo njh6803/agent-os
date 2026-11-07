@@ -69,3 +69,25 @@ open-session을 부른다 2026-11-07T14:21Z
 - `tidy-checkouts`가 `05-default-model-required-and-checked`의 휴지통 항목 하나를 지우지 못했다(이 세션 시작 때 본 것).
 - `sibling_overlap_mutations.toml`은 133개 가운데 24개와 티켓 이름 시험 3개만 돌렸다. 나머지 106개는 `--check`로 원문만 봤다.
 - `prompt_directive_mutations.toml` 9번은 `docs/agents/issue-tracker.md` 12행의 문구에 기댄다.
+
+## 병합 세션이 한 일 (PR 489)
+
+- PR 489를 열었다(제목 꼬리 `(retro-queue-per-item 07)`). CodeRabbit 로컬 CLI는 좌석이 없어 돌지 못했고, PR의 CodeRabbit은 무료 한도(`Review limit reached`)로 리뷰가 없었다. 그래서 CodeRabbit 회차는 세지 않는다. claude-review가 첫 회차(헤드 `ad3e6e5d`)에 Critical·Major 없이 Minor 둘과 Nit 하나를 냈다. 근거의 종류: `gh api`로 PR 코멘트를 읽은 것이고 `tools/wait_ci.py 489`의 출력(검사 모두 통과)도 이 세션이 돌렸다.
+- **Minor 1, 규칙 세 곳(`check_ticket._HARNESS_STEM`, `test_harness_ticket_names._TICKET_NAME`, `morning_collect.TICKET_BRANCH`)이 따로 있다.** 이 PR에서 고치지 않는다. 앞서 "남긴 것"으로 적은 지적과 같고, 셋을 맞대는 시험이나 한 상수로 모으는 일은 도구 사이 import 규약(`.claude/rules/tools.md`)을 먼저 정해야 해서 이 티켓의 체크박스 밖이다.
+- **Minor 2, 옛 꼴의 꼬리 `.+`가 제한 없어 `chore/001-[x]`가 티켓 stem으로 맞고 `tickets_on_disk`의 glob 패턴이 된다.** 이 PR에서 고치지 않는다. 판정은 `points_at`의 정확 비교라 바뀌지 않고 영향은 막는 글의 알림이 엉뚱한 파일을 가리키는 정도다. 꼬리를 `[a-z0-9-]+`로 좁히는 고침은 정규식 세 곳과 변이 표 원문 둘을 함께 바꾸므로 위 `[0-9]{3}`과 한 티켓에 묶는다.
+- **Nit, 전환기가 끝나면 `LAST_NUMBER`와 `_HARNESS_STEM`의 옛 꼴 갈래를 걷는 후속이 필요하다.** 이 PR에서 고치지 않는다. 옛 티켓 번호가 더 늘 수 없을 때(옛 지시문을 든 세션이 모두 끝났을 때)의 일이다.
+
+## 회고
+
+후보 셋을 냈다. 승인 0, 기각 3, 넘김 0이다. 만료할 항목은 없었다(`git fetch origin` 뒤 `uv run python tools/queue_open_rows.py --ref origin/main`의 출력, 열린 항목 115개).
+
+- **기각: 변이 표 검사가 첫 커밋을 막았다.** 사건은 실제로 났다(`sibling_overlap_mutations.toml`의 변이 여섯이 새 표지 규칙에 걸렸다). 막는 훅이 그 자리에서 막았고 고친 뒤 통과했으니 이미 있는 검사가 제 몫을 한 것이다.
+- **기각: 카나리아 `code_review_branch_ticket` 첫 실행이 통과 3·실패 1이었다.** 같은 명세를 다시 돌려 통과 4였고 명세 머리 주석에 사정을 적었다. 사례 하나를 고친 것이고 종류를 세는 항목은 새로 서지 않는다.
+- **기각: 도구 호출 사이 문장이 한국어가 아니라는 훅 알림과 워크트리 가드의 복합 명령 거부.** 훅과 앱 가드가 그 자리에서 알리거나 막았다(`CLAUDE.md` 환경 함정에 적힌 모양이다).
+- **회차에서 뺀 것: claude-review의 Minor·Nit 셋.** 리뷰가 제 몫을 한 것이다. 셋은 코드의 후속 일(규칙을 한곳으로 모으기, 꼬리 좁히기, 전환기 걷기)이라 환경 개선 후보가 아니고, 아래 "다음"의 후속 티켓으로 둔다.
+
+## 다음
+
+- 이 일지의 PR 489는 봇 첫 회차를 지났다(claude-review Minor·Nit만, CodeRabbit은 무료 한도). 이 회고를 푸시한 뒤 `merge.md`의 "워크트리에서 병합할 때"대로 병합한다. 이 푸시로 도는 claude-review는 둘째 회차라 Critical·Major만 고친다.
+- 이 기능(`retro-queue-per-item`)의 마지막 티켓이었다. 병합 뒤 `next-session` 결정표의 "그 기능의 마지막 티켓이었고 대기열에 회차 5 이상" 줄이 맞아 하네스 chore 배치로 간다(`queue_open_rows.py --ref origin/main`: 420 430 431 565 558 578 579 214 475 498 499 535).
+- 뒤로 넘긴 일: (1) harness 티켓 stem 규칙이 세 곳에 따로 있고 `morning_collect`가 넓다. 셋을 맞대는 시험이나 한 상수로 모은다. (2) 그 규칙의 `\d{3}`을 `[0-9]{3}`으로, 옛 꼴 꼬리 `.+`를 `[a-z0-9-]+`로 좁힌다(변이 표 원문 둘도 함께). (1)과 (2)는 한 harness 티켓(예: `harness-ticket-stem-one-rule`)으로 묶는다. (3) 전환기가 끝나면 `LAST_NUMBER`와 옛 꼴 갈래를 걷는다. (4) `tidy-checkouts`가 `05-default-model-required-and-checked`의 휴지통 항목 하나를 지우지 못하고 있다.
