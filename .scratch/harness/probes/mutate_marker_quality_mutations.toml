@@ -1,5 +1,5 @@
-# tools/mutate.py 의 `_quality_problems`(빨강을 기대했는데 표지가 없거나 pytest 의 단언 풀이 줄인 표지,
-# 대기열 350·517, harness 티켓 041)에서 규칙 하나씩을 뺀 변이. 모두 tests/tools/test_mutate.py 의 새 시험을
+# tools/mutate.py 의 `_quality_problems`(빨강을 기대했는데 표지가 없거나 pytest 의 단언 풀이 줄이거나
+# 호출 한 토막인 표지, 대기열 350·517·579, harness 티켓 041)에서 규칙 하나씩을 뺀 변이. 모두 tests/tools/test_mutate.py 의 새 시험을
 # 빨갛게 해야 한다. 도구가 자기 자신을 고치므로 분리 임시 워크트리에서 그 워크트리의 도구로 돌린다.
 #   PYTHONUTF8=1 uv run python tools/mutate.py .scratch/harness/probes/mutate_marker_quality_mutations.toml [번호 ...]
 
@@ -103,6 +103,28 @@ expect_output = ["색인 확인: 커밋에 든 표 1, 고친 파일을 가리키
 file = "tools/mutate.py"
 old = " + _quality_problems(fresh)"
 new = ""
+
+[[mutation]]
+name = "호출 한 토막 표지를 알리지 않는다"
+tests = ["tests/tools/test_mutate.py", "-k", "줄_머리가_호출_한_토막인_표지를"]
+expect = "red"
+expect_output = ["AssertionError: 원문 확인: 변이 1 모두 원문이 한 번씩 있다"]
+
+[[mutation.edit]]
+file = "tools/mutate.py"
+old = "            elif _CALL_FRAGMENT.match(marker):"
+new = "            elif False:"
+
+[[mutation]]
+name = "줄 머리가 아니어도 호출 한 토막으로 읽는다"
+tests = ["tests/tools/test_mutate.py", "-k", "줄_머리가_아닌_호출_조각은"]
+expect = "red"
+expect_output = ["원문 확인: 변이 1 중 문제 1"]
+
+[[mutation.edit]]
+file = "tools/mutate.py"
+old = "            elif _CALL_FRAGMENT.match(marker):"
+new = "            elif _CALL_FRAGMENT.search(marker):"
 
 [[mutation]]
 name = "변이를 돌리는 실행에도 표지의 품질을 건다"
