@@ -75,6 +75,18 @@
 - 첫 CI에서 `python` 잡이 실패했다. CI 로그(`gh run view 42406534877 --log-failed`)에서 읽은 것: pytest는 `6646 passed, 1 skipped`이고 출력에 `skip 1건. skip된 테스트는 초록이 아니다`가 찍혔으며 종료 코드는 1이었다. 그 skip이 이 PR의 `test_대체_데이터_스트림이_붙은_경로는_멈춘다`에 단 윈도 전용 `skipif`라는 것은 코드를 읽은 추정이다(`skipif`는 그 시험 하나뿐이었다. 로그에는 시험 이름이 없다). `.claude/rules/tests.md`가 `tests/tools/`는 CI 리눅스에서도 돈다고 적은 규칙을 어긴 것이다. 스크립트의 `:` 검사는 경로 뿌리 뒤의 `:`만 보므로 리눅스에서도 같은 거부가 난다고 코드를 읽어 판단해 `skipif`를 뺐다. 리눅스에서 돌려 본 것은 아니다. 이 PC에서 `uv run pytest -q tests/tools/test_open_session.py -k "대체_데이터 or 점점으로 or 접두만 or 링크 or 저장소_뿌리"`로 14건이 통과한 것은 손으로 보았고, 리눅스 pwsh에서의 통과는 다음 CI가 보여 준다. `verify` 잡의 빨강은 로그의 `needs` 출력에 `python: failure`가 있어 그것을 옮긴 것이다.
 - 자동 보안 알림이 허용 규칙을 두 건 짚었다(상대 경로 스크립트는 위 `/security-review`와 같은 건, 열린 `-PromptFile *`은 권한 규칙이 `;`·`|` 뒤의 명령까지 `*`로 받는지 재현하지 못한 미확인 위험). 둘 다 PR 코멘트에 남겼고 사용자 답을 기다린다.
 
+- 두 번째 푸시(`5c96f304`)의 CI는 `python` 포함 모두 초록이었다(`wait_ci.py` 출력). `skipif` 제거가 리눅스 CI에서 통한 것이다. 커밋 pre-commit은 부하 때문으로 보이는 시간 시험 실패(`test_interrupt.py` 3건, `test_rerun_runner.py` 1건, `test_interrupt.py` 1건)로 세 번 막혔고 홀로 돌린 앞의 둘은 통과했다(6건, 63건. 셋째는 홀로 돌리지 않았다). 그 시각 이 PC의 CPU 사용률 100%와 다른 두 워크트리의 검사를 `Get-CimInstance Win32_Process`로 보았고, 그 검사가 끝난 뒤 네 번째 시도가 통과했다. 부하가 원인이라는 것은 이 관찰에서 나온 추정이다.
+- CodeRabbit 첫 회차(헤드 `5c96f304`)가 인라인 3건(Major 1, Minor 2)과 Nitpick 1건을 냈다. 판정:
+  - **고침(Major, `open_session.ps1` 반복문)**: `Resolve-PromptFile`의 링크 검사가 `claude` 루트에 닿기 전에 멈춰 루트 자체가 밖을 가리키는 링크이면 그 아래 파일이 통과했다. 코드를 읽어 유효하다고 판단했고, 새 시험 `test_폴더_뿌리_자체가_링크이면_멈춘다`가 고침 전에 빨간 것(`.env`를 받아 냈다)과 고침 뒤에 초록인 것을 손으로 보았다(`uv run pytest -q tests/tools/test_open_session.py -k …`, 링크 관련 아홉 건 통과). 이 PC의 실제 `claude` 폴더는 링크가 아니고(`Get-Item`의 `Attributes=Directory`) 실제 스크래치패드 파일은 받고 `C:\project\agent\.env`는 거부하는 것도 손으로 보았다.
+  - **보류(Minor, `settings.json` 상대 경로)**: 위 사용자 판단 대기 건과 같다.
+  - **보류(Minor, `Get-RepoRoots`가 `GIT_DIR`·`GIT_COMMON_DIR`을 벗기지 않는다)**: 공격이 되려면 `pwsh` 프로세스 환경에 그 변수를 먼저 넣어야 하는데, 허용 규칙은 명령 글자 전체가 맞아야 하고 PowerShell 도구는 호출 사이에 셸 상태를 잇지 않는다고 도구 설명이 적었다(읽은 것이고 재지 않았다). 시험하려면 `$PSScriptRoot`에 기대는 함수를 시험 서버에서 띄워야 한다. 아래 "뒤로 넘긴 일"에 둔다.
+  - **보류(Nitpick, 검사 순서 시험이 소스 글자 위치를 본다)**: 앞서 일지에 적은 한계 그대로다. 실제 `Send-Prompt`를 돌리려면 UI 자동화가 필요하다.
+  - claude-review의 Minor·Nit(`Test-RepoFolder`의 이름, 정규화 중복, `Get-RepoRoots` 시험 없음, 검사가 `Wake-Display` 뒤)는 앞의 셀프 리뷰에서 이미 판정한 것과 같다.
+- **뒤로 넘긴 일**(병합 뒤 지시문이 읽도록 여기에 둔다. 단계를 닫는 세션이 "다음"에 옮긴다):
+  1. `Get-RepoRoots`가 `git`을 부르기 전에 저장소 위치 환경 변수(`GIT_DIR`, `GIT_COMMON_DIR`, `GIT_WORK_TREE`)를 벗기고 그 입력을 시험으로 고정한다. `$PSScriptRoot` 의존을 인자로 빼야 시험할 수 있다(`tools/open_session.ps1`, `tests/tools/test_open_session.py`).
+  2. `Send-Prompt`의 검사 부분을 UI와 떨어진 함수로 빼 호출 순서를 행동으로 시험한다(글자 위치 시험을 대체한다).
+  3. 검사를 `Wake-Display`와 잠금 앞으로 옮기는 일은 2와 함께 한다.
+
 ## 이 세션의 제목
 
 `chore/open-session-prompt-file-path-check` (인계하며 `chore/open-session-prompt-file-path-check (인계함)`으로 바꿨다)

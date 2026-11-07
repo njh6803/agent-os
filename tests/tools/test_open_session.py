@@ -1729,6 +1729,19 @@ def test_폴더_밖을_가리키는_링크가_낀_경로는_멈춘다(prompt_roo
     assert "링크" in completed.stderr
 
 
+def test_폴더_뿌리_자체가_링크이면_멈춘다(tmp_path: Path) -> None:
+    elsewhere = tmp_path / "elsewhere"
+    (elsewhere / "session").mkdir(parents=True)
+    (elsewhere / "session" / ".env").write_text("API_KEY=x\n", encoding="utf-8")
+    root = tmp_path / "claude"
+    _link_dir(root, elsewhere)
+
+    completed = _resolve(root / "session" / ".env", root)
+
+    assert completed.returncode == 1
+    assert "링크" in completed.stderr
+
+
 def test_대체_데이터_스트림이_붙은_경로는_멈춘다(prompt_root: Path) -> None:
     prompt = prompt_root / "session" / "scratchpad" / "prompt.md"
     prompt.with_name("prompt.md:secret").write_text("x\n", encoding="utf-8")

@@ -164,7 +164,7 @@ function Resolve-PromptFile([string] $path, [string] $root) {
     }
     if (-not (Test-Path -LiteralPath $full -PathType Leaf)) { throw "-PromptFile '$full' 가 없다." }
     $node = $full
-    while ($node.Length -gt $rootFull.Length) {
+    while ($node.Length -ge $rootFull.Length) {   # 루트 자체도 본다. 루트가 밖을 가리키는 링크면 그 아래 파일이 모두 밖의 것이다
         if ((Get-Item -LiteralPath $node -Force).Attributes -band [IO.FileAttributes]::ReparsePoint) {
             throw "-PromptFile 의 경로 '$node' 가 링크다. 링크는 폴더 밖을 가리킬 수 있어 읽지 않았다."
         }
