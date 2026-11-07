@@ -34,9 +34,9 @@
 | `docs/adr/` | 결정을 바꾸기 전, 그 영역을 처음 만질 때 | 아키텍처 결정 뒤 초안을 보여주고 승인 |
 | `docs/model-selection.md` | 결정표의 모델 칸을 바꾸려 할 때, 새 모델이 나왔을 때 | 공식 원문을 다시 대 보거나 다시 잰 뒤 |
 | `CODING_STANDARDS.md` | code-review 때 | retro가 다섯 번째 반복에서 더할 때 |
-| `.scratch/plan.md` | 이어서 할 때, 티켓을 고를 때 | 기능 상태가 바뀔 때 |
+| `.scratch/plan.md` | 이어서 할 때, 티켓을 고를 때 | 손으로 쓰지 않는다. `uv run python tools/plan_table.py`가 `.scratch/plan-head.md`와 기능 계획과 티켓에서 만들고, 그 입력을 고친 세션이 돌려 같은 커밋에 싣는다 |
 | `.scratch/retro-queue/`(폴더, 항목마다 파일 하나. 모양과 인용을 푸는 규칙은 그 `README.md`) | 회고 뒤, chore 브랜치를 딸 때 | 후보가 승인될 때와 반영을 닫을 때 |
-| `.scratch/<slug>/spec.md`, `issues/` | 티켓 작업을 시작하기 전 | to-spec, to-tickets 스킬이(사용자만 부른다). harness 티켓은 그 일을 하는 세션이(`docs/agents/issue-tracker.md`) |
+| `.scratch/<slug>/spec.md`, `plan.md`(기능 계획), `issues/` | 티켓 작업을 시작하기 전 | to-spec, to-tickets 스킬이(사용자만 부른다). 기능 계획의 `**설계:**` 줄은 설계 인터뷰를 마친 세션이, `**끝:**` 줄은 마지막 티켓을 닫는 커밋이 적는다. harness 티켓은 그 일을 하는 세션이(`docs/agents/issue-tracker.md`) |
 | `docs/journal/` | 이어서 할 때 지시문이 가리킨 일지 끝의 "다음". 이 브랜치의 일지는 `uv run python tools/sibling_overlap.py --journal` | 단계를 마칠 때. 이름은 `<날짜>-<HHMM>-<슬러그>.md`. 사용자 프롬프트 원문 포함 |
 | `docs/agents/` | 트래커·도메인 문서 규약이 헷갈릴 때 | setup 스킬이 |
 | `tools/token_report.py` 독스트링, `.scratch/token-report/` | 토큰·비용·한도를 묻거나 잴 때 | 지표를 바꿀 때 |
@@ -53,7 +53,7 @@
 게이트는 열여섯(린트는 명령 둘)이고 다섯은 그중 손으로 치는 것이다. pre-commit도 그 다섯의 명령을 돌린다(pytest만 프로세스를 나눠 돌고, 한 프로세스에서만 나는 실패는 CI가 본다. ADR 0035). 그래서 셀프 리뷰를 반영한 뒤 커밋 직전의 그 다섯은 그 커밋의 pre-commit 결과로 갈음한다. 갈음되지 않는 것은 위 괄호의 `-m llm`·`-m llm_widget`·e2e·사진 비교와, 출력에서 `Skipped`인 검사다. ruff는 스테이지된 `.py`만 보므로 `.py` 없이 ruff 설정이나 판만 바꾼 커밋에서 `Skipped`이고, `SKIP`으로 뺀 검사도 그렇다. 그것은 손으로 친다. 나머지 가운데 여덟은 pre-commit이 돌린다 — 지침 검사(`tools/check_instructions.py`), 타입 우회 검사(`tools/check_type_escapes.py`, 원칙 III의 파이썬 판정자, ADR 0013), 훅 러너(`tools/run_hooks.py`), 워크플로 감사(zizmor, ADR 0027), 커밋 검사(`tools/check_ticket.py`, ADR 0037. CI는 가리키는 티켓이 done인지도 본다)는 CI도 돌리고, 마크다운 표·줄 구분 문자·카나리아 명세 모양 검사(`tools/check_md_tables.py`, `tools/check_line_separators.py`, `tools/canary.py --shape`)는 CI에서 pytest의 저장소 상태 테스트로 돈다. 남은 셋인 관리 화면 e2e, 위젯 e2e, 사진 비교는 CI만 돈다(위 web 괄호). 커밋 전에 보려면 직접 친다. 티켓의 "검증 명령이 모두 초록이다"는 위의 손으로 치는 명령 전부를 말한다.
 
 ## 작업 규약
-1. 작업 전에 `.scratch/<slug>/`의 명세와 티켓, 건드릴 영역의 ADR을 읽는다. 다음 작업 지시문 없이 새 기능을 시작하는데 그 폴더가 아직 없으면, 그 전에 Skill 도구로 `grill-with-docs`를 불러 설계 인터뷰부터 한다. ADR을 먼저 보는 상황은 넷이다. 스택·라이브러리를 바꿀 때, 디렉터리나 층 경계를 바꿀 때, 디스크 형식(매니페스트·이벤트)을 바꿀 때, 기존 코드가 왜 이런지 이해되지 않을 때. 색인은 `docs/adr/README.md`. 경로를 안다고 추측으로 대신하지 않는다.
+1. 작업 전에 `.scratch/<slug>/`의 명세와 티켓, 건드릴 영역의 ADR을 읽는다. 다음 작업 지시문 없이 새 기능을 시작하는데 명세(`.scratch/<slug>/spec.md`)도 기능 계획의 `**설계:**` 줄도 없으면, 그 전에 Skill 도구로 `grill-with-docs`를 불러 설계 인터뷰부터 한다. ADR을 먼저 보는 상황은 넷이다. 스택·라이브러리를 바꿀 때, 디렉터리나 층 경계를 바꿀 때, 디스크 형식(매니페스트·이벤트)을 바꿀 때, 기존 코드가 왜 이런지 이해되지 않을 때. 색인은 `docs/adr/README.md`. 경로를 안다고 추측으로 대신하지 않는다.
 2. 고칠 파일과 영향을 세 줄로 적고 시작한다. 계약(`sdk/`, `openapi.json`, 헌법)에 닿으면 그 티켓이 다른 티켓을 막는다.
 3. 끝나면 검증 명령을 모두 돌린다. 하네스(스킬, 훅, rules, 설정)를 바꿨으면 실제 실행 결과로 확인한다. 바꾼 스킬과 rules는 새 세션에서 불러 본다(`docs/constitution/operations.md` 환경 규약 상세). 파일이 그럴듯해 보이는 것은 확인이 아니다.
 4. 결정이 바뀌면 그것을 참조하는 스킬·훅·rules·워크플로·명세를 같이 고치고, 옛 표현을 저장소 전체에서 grep해 살아 있는 문서에 잔존이 0인지 본 뒤 3을 다시 돈다. 기록과의 가름은 `docs/constitution/operations.md` 문서 위치. 하네스는 언젠가 맞출 문서가 아니라 다음 실행에 바로 영향을 주는 코드다.

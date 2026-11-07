@@ -24,6 +24,17 @@ def test_grill_with_docs_호출이면_설계_인터뷰인지_확인하라고_알
     assert ".scratch/<slug>/" in context
 
 
+def test_설계_단계의_조건은_명세도_설계_줄도_없는_기능이다() -> None:
+    """계기 문장 넷(ADR 0045 결정 4)이 같은 조건 하나를 말한다. 폴더의 유무가 아니다."""
+    context = context_for(_호출(SKILL))
+
+    assert context is not None
+    assert "spec.md" in context
+    assert "**설계:**" in context
+    assert "기능 계획" in context
+    assert "가 없는 설계 단계" not in context
+
+
 def test_앞의_슬래시는_벗겨_비교한다() -> None:
     assert context_for(_호출("/grill-with-docs")) is not None
 

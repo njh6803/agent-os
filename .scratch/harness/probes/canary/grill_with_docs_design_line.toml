@@ -1,0 +1,25 @@
+# grill-with-docs 에 더한 산출물 단계 문단(두 스킬이 끝나고 사용자가 설계를 승인하면 기능 계획에 `**설계:**` 줄을 적는다,
+# retro-queue-per-item 05, ADR 0045 결정 4)이 새 세션에 실리는지. 이 스킬에는 이 명세 전에 카나리아가 없었다.
+# 실험군은 이 명세를 부른 체크아웃, 대조군은 더하기 전 판(origin/main `277b4e59`)이다. 옛 판에도 이 스킬이 있어 대조군도
+# 스킬을 부르고, 본문에 이 문단이 없어 "없음"이 나와야 한다.
+# 최신 결과: 통과 4, "없음" 섞임 0(2026-11-07, 이 PC, claude 2.1.318, 대조군 `--control-commit 277b4e59` 은 "없음", 실험군은
+#   `277b4e59` 위의 커밋 전 변경, 일지 2026-11-07-1400).
+# 돌리는 법: 워크트리 `.claude/worktrees/<이름>/` 루트에서
+#   uv run python tools/canary.py --control-commit 277b4e59 .scratch/harness/probes/canary/grill_with_docs_design_line.toml <출력 디렉터리>
+kind = "skill"
+question = '''
+grill-with-docs 스킬을 Skill 도구로 불러 본문을 읽어라. 스킬이 시키는 일(스킬 호출, 인터뷰, 파일 쓰기)은 하지 않고 본문만 읽는다.
+본문에서 두 스킬이 끝나고 사용자가 설계를 승인한 뒤 어느 파일에 무슨 줄을 적으라고 하는지 말한 문장을 처음부터 마침표까지 글자 그대로 옮겨라.
+판단이나 설명은 덧붙이지 않는다. 본문에 그런 문장이 없으면 "없음"이라고만 답하라.
+'''
+expect = ["기능 계획 .scratch/<slug>/plan.md에 **설계:** ADR NNNN 줄을 적는다"]
+source = ".claude/skills/grill-with-docs/SKILL.md"
+skill = "grill-with-docs"
+
+[[arm]]
+name = "워크트리"
+role = "experiment"
+
+[[arm]]
+name = "옛-판"
+role = "control"

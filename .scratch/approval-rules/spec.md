@@ -240,7 +240,7 @@ ADR 0044 Consequences의 "구현 티켓이 코드와 같은 티켓에서 고치�
 
 ## Out of Scope
 
-- `tool_called`의 서버 칸과 신뢰 수준. mcp-trust가 운영자의 서버 파일과 함께 정한다(`.scratch/plan.md`의 mcp-trust 행).
+- `tool_called`의 서버 칸과 신뢰 수준. mcp-trust가 운영자의 서버 파일과 함께 정한다(기능 계획 `.scratch/mcp-trust/plan.md`).
 - 운영자의 서버 파일(`servers.toml`)과 믿지 않는 서버의 결과 감싸기. mcp-trust.
 - 인자 패턴 규칙. 내장 도구가 생길 때 더한다(ADR 0044 "모양"). 전역 `*`는 2026-11-06에 도구 이름의 패턴으로 들어왔다(ADR 0044의 같은 날 이력).
 - 저자의 `requires_approval`에 `<서버>:<도구>` 꼴을 더하는 것. 저자의 목록은 맨 이름 그대로이고 묻는 방향이라 넓게 맞아도 안전하다(사용자의 첫째 답이 deny와 ask가 맨 이름을 받는 까닭으로 든 판단, 일지 2026-11-05-10). 받는 기능은 없다.

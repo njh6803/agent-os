@@ -2,7 +2,7 @@
 
 플러그인 기반 에이전트 런타임. an agent OS.
 
-규칙은 [docs/constitution/](docs/constitution/README.md), 용어는 [CONTEXT.md](CONTEXT.md), 결정은 [docs/adr/](docs/adr/), 진행 기록은 [docs/journal/](docs/journal/), 전체 계획은 [.scratch/plan.md](.scratch/plan.md).
+규칙은 [docs/constitution/](docs/constitution/README.md), 용어는 [CONTEXT.md](CONTEXT.md), 결정은 [docs/adr/](docs/adr/), 진행 기록은 [docs/journal/](docs/journal/), 전체 계획은 [.scratch/plan.md](.scratch/plan.md)(기능 계획에서 도구가 만든 생성 파일).
 
 ```bash
 uv sync
@@ -76,19 +76,19 @@ web/               pnpm 워크스페이스(Node 24, TypeScript 5.9). 파이썬�
 docs/
   constitution/    헌법 (principles, tech, operations)
   adr/  agents/  journal/
-.scratch/          로컬 이슈 트래커. plan.md와 기능별 spec·티켓
+.scratch/          로컬 이슈 트래커. 생성 파일 plan.md(손 파일 plan-head.md)와 기능별 plan·spec·티켓
 .claude/
   agents/          프로젝트 서브에이전트. coderabbit-review(트리아지만), bug-perf-review(CLI가 못 돌 때 버그·성능), spec-reviewer(명세 검토). 모두 수정 없음
   rules/           디렉터리별 규칙. 해당 파일을 Read 도구로 열 때만 로드
   skills/          엔지니어링 스킬
   settings.json    훅 등록, 권한(`.env` 읽기 거부), 플러그인, 스킬 덮어쓰기
-tools/             배포되지 않는 저장소 유틸. 훅(hook_*)과 그 실행 래퍼(launch_hook), 검사(check_*), 검사 러너(run_checks), 훅 러너(run_hooks + hook_payloads.toml), 변이 도구, 체크아웃 정리(tidy_checkouts), OpenAPI 내보내기, Actions 요약, 커밋 직전 형제 번호 대조(sibling_overlap), 주석·독스트링 감기(rewrap_comments), PR 검사의 대기(wait_ci)
+tools/             배포되지 않는 저장소 유틸. 훅(hook_*)과 그 실행 래퍼(launch_hook), 검사(check_*), 검사 러너(run_checks), 훅 러너(run_hooks + hook_payloads.toml), 변이 도구, 체크아웃 정리(tidy_checkouts), OpenAPI 내보내기, 전체 계획 생성(plan_table), Actions 요약, 커밋 직전 형제 번호 대조(sibling_overlap), 주석·독스트링 감기(rewrap_comments), PR 검사의 대기(wait_ci)
 kickoff/           다른 프로젝트용 킥오프 런북(KICKOFF.md)의 진행 규율(runner.md, /kickoff가 읽는다), 템플릿, 부록. 이 프로젝트의 문서가 아니다
 .coderabbit.yaml   CodeRabbit 설정. PR 봇과 로컬 CLI가 같이 읽는다
 openapi.json       관리 API와 HTTP 채널(운영자와 최종 사용자)의 계약. 손으로 고치지 않고 tools/export_openapi.py로 뽑는다
 ```
 
-아직 없는 것은 [.scratch/plan.md](.scratch/plan.md)의 목표 배치에 있다.
+아직 없는 것은 [.scratch/plan.md](.scratch/plan.md)의 목표 배치에 있다. 그 글의 원천은 손 파일 `.scratch/plan-head.md`다.
 
 ## 관리 화면
 
@@ -128,8 +128,9 @@ pnpm -C web/apps/admin start       # http://127.0.0.1:3000
 | 디렉터리별 규칙 | `.claude/rules/*.md` | 해당 파일을 Read 도구로 열 때만 실림 |
 | 지침의 로드 시점 표 | `CLAUDE.md` 교정 루프 절 | ADR 0004는 결정의 기록, 런북 3단계 템플릿은 새 프로젝트용 사본 |
 | 현재 구조 | 코드 | 이 README의 트리는 안내 |
-| 미래 배치, 기능 순서, 상태 | `.scratch/plan.md` | 제품 기능만. 하네스 기능과 harness 티켓의 상태는 티켓의 `Status:` |
-| 기능 명세와 티켓 | `.scratch/<slug>/` | harness 티켓은 `.scratch/harness/issues/`. 규약은 `docs/agents/issue-tracker.md` |
+| 미래 배치 | `.scratch/plan-head.md` | 손으로 쓴다. `.scratch/plan.md`의 머리에 그대로 붙는다 |
+| 기능 순서, 슬라이스, 막는 기능, 상태 | 기능 계획 `.scratch/<slug>/plan.md`와 그 폴더의 티켓 | `.scratch/plan.md`는 `uv run python tools/plan_table.py`가 만든 생성 파일이라 손으로 고치지 않는다. 제품 기능만. 하네스 기능과 harness 티켓의 상태는 티켓의 `Status:` |
+| 기능 계획, 명세, 티켓 | `.scratch/<slug>/` | harness 티켓은 `.scratch/harness/issues/`. 규약은 `docs/agents/issue-tracker.md` |
 | 디스크 형식(매니페스트, 이벤트) | `src/agent_os/sdk/`와 `tests/sdk/` | `rules/sdk.md`는 결정만 |
 | 설치된 스킬과 해시 | `skills-lock.json` | |
 | 진행 기록 | `docs/journal/` | 이력이지 원천이 아니다 |
