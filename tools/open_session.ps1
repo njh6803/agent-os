@@ -10,7 +10,7 @@
 # 새 세션 화면을 쓰는 `send`·`defaults` 는 다른 열기와 겹치지 않게 기계 전체의 잠금 안에서 돈다(`Invoke-SendLocked`, 대기열 360).
 #
 # 사용:
-#   pwsh -NoProfile -File tools/open_session.ps1 -Action send  -Folder <절대경로> -PromptFile <파일>   [-LockTimeoutSec <초>]
+#   pwsh -NoProfile -File tools/open_session.ps1 -Action send  -Folder <이 저장소의 뿌리> -PromptFile <임시 폴더>\claude 아래의 파일   [-LockTimeoutSec <초>]
 #   pwsh -NoProfile -File tools/open_session.ps1 -Action split -Title <세션 제목>
 #   pwsh -NoProfile -File tools/open_session.ps1 -Action focus -Title <세션 제목>   (이미 패널에 있을 때)
 #   pwsh -NoProfile -File tools/open_session.ps1 -Action defaults -Model <모델 메뉴의 이름> -Effort <레벨>   (기본값 복구)
@@ -140,9 +140,66 @@ function Press-Element($el, [string] $key = '{ENTER}') {
     return "key:$key"
 }
 
+# `-PromptFile` 은 새 세션의 입력창에 그대로 실려 가는 파일이다. 경로를 검사하지 않으면 `.env` 같은 파일을 실어 보내는 호출이
+# `.env` 읽기 금지 규칙(`.claude/settings.json` 의 `permissions.deny`)을 돌아간다. 이 스크립트를 좁은 허용 규칙으로 여는 것(대기열
+# 498)은 파일을 여기서 좁힌다는 전제 위에 선다. 허용하는 곳은 세션 스크래치패드가 사는 `<임시 폴더>\claude` 아래뿐이다. 경로를
+# 정규화해(`..`, 슬래시 방향) 그 폴더 아래인지 보고(접두만 같은 형제 폴더 `claude-x` 는 아니다), 파일에서 그 폴더까지 올라가며
+# 링크(심볼릭 링크, junction)가 있으면 멈춘다. 링크는 정규화가 풀어 주지 않아 폴더 밖을 가리킬 수 있다. 순수하다(파일 시스템은
+# 읽기만 한다). 대체 데이터 스트림(`파일:스트림`)은 같은 파일의 다른 내용이라 드라이브 문자 뒤에 `:` 가 든 경로를 거부한다.
+# 못 보는 것: 폴더 `claude` 자체가 링크인 경우, 폴더 안에 만든 하드링크(바깥 파일과 같은 파일이지만 링크 표지가 없다), 읽는 사이
+# 파일을 바꿔치는 경쟁.
+function Get-PromptRoot { return Join-Path ([IO.Path]::GetTempPath()) 'claude' }
+
+function Resolve-PromptFile([string] $path, [string] $root) {
+    if (-not $path) { throw '-PromptFile 이 비었다.' }
+    $rootFull = [IO.Path]::GetFullPath($root).TrimEnd('\', '/')
+    $full = [IO.Path]::GetFullPath($path)
+    $sep = [IO.Path]::DirectorySeparatorChar
+    $cmp = if ($sep -eq '\') { [StringComparison]::OrdinalIgnoreCase } else { [StringComparison]::Ordinal }
+    if (-not $full.StartsWith($rootFull + $sep, $cmp)) {
+        throw "-PromptFile '$path' 가 '$rootFull' 아래가 아니다. 세션 스크래치패드가 사는 이 폴더 아래의 프롬프트 파일만 보낸다. 읽지 않았다."
+    }
+    if ($full.Substring([IO.Path]::GetPathRoot($full).Length).Contains(':')) {
+        throw "-PromptFile '$path' 에 대체 데이터 스트림(':')이 들었다. 읽지 않았다."
+    }
+    if (-not (Test-Path -LiteralPath $full -PathType Leaf)) { throw "-PromptFile '$full' 가 없다." }
+    $node = $full
+    while ($node.Length -gt $rootFull.Length) {
+        if ((Get-Item -LiteralPath $node -Force).Attributes -band [IO.FileAttributes]::ReparsePoint) {
+            throw "-PromptFile 의 경로 '$node' 가 링크다. 링크는 폴더 밖을 가리킬 수 있어 읽지 않았다."
+        }
+        $node = Split-Path -Parent $node
+    }
+    return $full
+}
+
+# `-Folder` 는 신뢰 대화상자와 새 세션 화면의 폴더를 견주는 기준이다. 호출자가 아무 폴더나 주면 그 폴더의 신뢰 수락이 판정기
+# 없이 지난다(대기열 498). 그래서 이 스크립트가 있는 저장소의 뿌리(이 사본이 든 체크아웃과, 워크트리면 그 주 체크아웃)와 같을 때만
+# 받는다. 끝의 구분자, `/`·`\`, 대소문자는 가리지 않는다(윈도 경로). 순수하다. 뿌리는 `Get-RepoRoots` 가 찾는다.
+function Test-RepoFolder([string] $folder, [string[]] $roots) {
+    if (-not $folder) { throw '-Folder 가 비었다.' }
+    $want = $folder.Replace('/', '\').TrimEnd('\')
+    $same = @($roots | Where-Object { $_ -and ($_.Replace('/', '\').TrimEnd('\') -ieq $want) })
+    if ($same.Count -eq 0) {
+        throw "-Folder '$folder' 가 이 스크립트가 든 저장소의 뿌리($(@($roots | Where-Object { $_ }) -join ', '))가 아니다. 신뢰 대화상자를 수락하지 않으려고 멈춘다."
+    }
+}
+
+function Get-RepoRoots {
+    $roots = @(Split-Path -Parent $PSScriptRoot)
+    try {
+        $common = @(& git -C $PSScriptRoot rev-parse --path-format=absolute --git-common-dir 2>$null)
+        if ($LASTEXITCODE -eq 0 -and $common.Count -gt 0 -and $common[0]) { $roots += Split-Path -Parent $common[0] }
+    }
+    catch { }   # git 이 없거나 저장소가 아니면 이 사본의 뿌리만 남긴다(더 좁은 쪽)
+    return $roots
+}
+
 function Send-Prompt {
     if (-not $Folder -or -not $PromptFile) { throw 'send 에는 -Folder 와 -PromptFile 이 필요하다.' }
-    $prompt = Get-Content -Path $PromptFile -Raw -Encoding UTF8
+    Test-RepoFolder $Folder (Get-RepoRoots)
+    $promptPath = Resolve-PromptFile $PromptFile (Get-PromptRoot)
+    $prompt = Get-Content -LiteralPath $promptPath -Raw -Encoding UTF8
     $firstLine = ($prompt -split "`r?`n")[0]
     $startLine = Convert-StartLine $firstLine $Folder
     if ($startLine -cne $firstLine) {
@@ -203,7 +260,8 @@ function Send-Prompt {
     "page=$(Get-Date -Format HH:mm:ss.fff)"
 
     # 기본 폴더가 아직 신뢰되지 않았으면 앱이 워크스페이스 신뢰를 묻는다. 대화상자에 적힌 폴더가
-    # -Folder 와 정확히 같을 때만 수락한다(사용자 승인, 일지 2026-09-21 open-session).
+    # -Folder 와 정확히 같을 때만 수락한다(사용자 승인, 일지 2026-09-21 open-session). -Folder 는 Send-Prompt 맨 앞에서
+    # 이 스크립트가 든 저장소의 뿌리와 같음을 확인했으므로(Test-RepoFolder) 이 견줌은 저장소 뿌리와의 견줌이다(대기열 498).
     $trust = Find-ByName $win @('작업 공간 신뢰', 'Trust workspace') $Types::Button
     if ($trust) {
         # 대화상자만 전체 경로를 Text 로 보인다(사이드바는 폴더 이름뿐). 창에 보이는 전체 경로가
