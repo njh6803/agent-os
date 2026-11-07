@@ -2918,7 +2918,9 @@ def test_멈춘_사이_규칙_파일이_그_도구를_모두_deny로_돌려도_�
     실행에서 보고, 재개도 같은 `_Context.llm` 을 지난다. 다른 모델이나 다른 날의 API 가 그런 요청을
     거부해 이 시험이 빨개지면 측정이 바뀌었다는 표지이니 시험을 고치지 않고 멈춰 보고한다.
     """
-    assert "ANTHROPIC_API_KEY" in os.environ, "ANTHROPIC_API_KEY 가 없다. .env 를 확인한다"
+    # assert 로 쓰면 실패 출력에 os.environ 전체가 실린다(대기열 0463). 환경이 없으면 실패다.
+    if "ANTHROPIC_API_KEY" not in os.environ:
+        pytest.fail("ANTHROPIC_API_KEY 가 없다. .env 를 확인한다", pytrace=False)
     _copy_repo_plugins(tmp_path)
     rules = tmp_path / "plugins" / "rules.toml"
     head = 'schema_version = "1"\n\n[agents.calc]\n'

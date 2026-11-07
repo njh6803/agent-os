@@ -67,4 +67,11 @@
 - 내장 `/security-review`: 지적 없음. 코드 변경이 시험 함수 하나뿐이고 소스·계약·워크플로는 그대로라는 판단이다.
 - `bug-perf-review` 서브에이전트: 지적 없음. 서브에이전트 보고에 따르면 `core/run.py:597-640`의 `_call`과 `core/loop.py:72`를 읽어 재개의 규칙 다시 읽기, deny 우선, 도구 없는 모델 호출을 확인했다(이 세션은 그 코드를 직접 읽지 않았다).
 
+## PR 봇 첫 회차 (PR 490, 헤드 4cf8a1fa)
+
+`gh pr checks`는 아홉 검사가 모두 통과였다. claude-review는 지적 없음 코멘트를 남겼고, CodeRabbit은 인라인 지적 둘을 남겼다(`gh api repos/njh6803/agent-os/pulls/490/comments`로 읽었다).
+
+- Major(보안·개인정보) `tests/test_main.py` 키 확인: `assert "ANTHROPIC_API_KEY" in os.environ, …`는 실패하면 pytest의 단언 재작성이 `os.environ`을 출력에 싣는다. 고쳤다. `if … not in os.environ: pytest.fail(…, pytrace=False)`로 바꿨고, 키 없이 이 시험만 돌려(`env -u ANTHROPIC_API_KEY uv run pytest -m llm tests/test_main.py -k run_finished`) 환경 덤프 없이 메시지 한 줄로 실패하는 것을 봤다. 키가 있으면 같은 시험이 1 passed(45.95초, 토큰 3,741, 모델 호출 2건)였다. 같은 현상을 적은 대기열 0463은 이 PR이 만료로 닫았고, 같은 `assert`가 든 다른 일곱 곳(`tests/test_main.py` 여섯, `tests/core/test_model.py`)은 이 PR의 몫이 아니라 그대로 두었다.
+- Minor(정확성) 같은 파일 첫 도구 호출: 모델이 도구를 안 부르면 `EXIT_PAUSED` 단언이 빨개지니 첫 호출의 도구 사용을 강제하라는 제안이다. 받지 않았다. 같은 파일의 선례 시험이 같은 전제로 멈춤을 가정하고, 이 시험은 멈춘 줄을 가장 먼저 단언하며 실패하면 `paused.stderr`가 원인을 보인다. 도구 선택을 강제하려면 모델 호출 쪽에 칸이 하나 늘 것으로 보는데 이 시험 하나를 위한 칸이다(코드로 확인하지 않은 어림이다. 티켓 06이 비슷한 이유로 관찰 지점을 받지 않았다). 도구를 안 부르는 날의 빨강은 시험을 고치지 않고 멈춰 보고한다(헌법 원칙 II).
+
 open-session을 부른다 2026-11-07T16:12Z
