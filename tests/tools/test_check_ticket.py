@@ -26,6 +26,7 @@ _IDENTITY = ("-c", "user.name=t", "-c", "user.email=t@example.com")
 _TIMEOUT = 120
 
 NUMBER_COMMAND = "uv run python tools/sibling_overlap.py"
+SLUG_RULE = "번호 없이"
 BRANCH_COMMAND = "git branch -m"
 CONVENTION = "docs/agents/issue-tracker.md"
 NOTICE = "in-progress"
@@ -296,9 +297,52 @@ def test_chore_브랜치가_티켓을_빠뜨리면_막고_할_일을_든다(저�
     out = _막혔다(저장소.stage_commit({"tools/b.py": "B = 1\n"}))
     assert "tools/b.py" in out
     assert ".scratch/harness/issues/002-thing.md" in out
-    assert NUMBER_COMMAND in out
+    assert SLUG_RULE in out and NUMBER_COMMAND not in out
     assert BRANCH_COMMAND in out
     assert CONVENTION in out
+
+
+def test_chore_브랜치의_slug가_그_티켓을_실으면_지난다(저장소: Repo) -> None:
+    저장소.git("switch", "-q", "-c", "chore/ci-python-runner-pin")
+    _지났다(
+        저장소.stage_commit(
+            {
+                ".scratch/harness/issues/ci-python-runner-pin.md": "# ci-python-runner-pin: 고정\n",
+                "tools/b.py": "B = 1\n",
+            }
+        )
+    )
+
+
+def test_chore_브랜치의_slug가_티켓을_빠뜨리면_막고_번호_없는_할_일을_든다(저장소: Repo) -> None:
+    저장소.git("switch", "-q", "-c", "chore/ci-python-runner-pin")
+    out = _막혔다(저장소.stage_commit({"tools/b.py": "B = 1\n"}))
+    assert "tools/b.py" in out
+    assert ".scratch/harness/issues/ci-python-runner-pin.md" in out
+    assert SLUG_RULE in out and NUMBER_COMMAND not in out
+    assert BRANCH_COMMAND in out and "chore/<slug>" in out
+    assert CONVENTION in out
+
+
+@pytest.mark.parametrize("이름", ["Foo", "09-x", "a_b"])
+def test_이름_규칙에_맞지_않는_chore_브랜치는_같은_이름의_파일도_티켓으로_세지_않는다(
+    저장소: Repo, 이름: str
+) -> None:
+    저장소.git("switch", "-q", "-c", f"chore/{이름}")
+    _막혔다(
+        저장소.stage_commit(
+            {f".scratch/harness/issues/{이름}.md": "# 티켓\n", "tools/b.py": "B = 1\n"}
+        )
+    )
+
+
+def test_다른_slug의_티켓은_가리키지_않는다(저장소: Repo) -> None:
+    저장소.git("switch", "-q", "-c", "chore/ci-python-runner-pin")
+    _막혔다(
+        저장소.stage_commit(
+            {".scratch/harness/issues/other-thing.md": "# other-thing\n", "tools/b.py": "B = 1\n"}
+        )
+    )
 
 
 def test_다른_번호의_티켓은_가리키지_않는다(저장소: Repo) -> None:
@@ -336,6 +380,15 @@ def test_docs_브랜치는_harness_티켓을_하나라도_실으면_지난다(�
     )
 
 
+def test_docs_브랜치는_번호_없는_harness_티켓도_세어_지난다(저장소: Repo) -> None:
+    저장소.git("switch", "-q", "-c", "docs/retro")
+    _지났다(
+        저장소.stage_commit(
+            {".scratch/harness/issues/queue-split.md": "# queue-split\n", "tools/b.py": "B = 1\n"}
+        )
+    )
+
+
 def test_docs_브랜치는_이미_있는_harness_티켓을_고치기만_해도_지난다(저장소: Repo) -> None:
     # 못 보는 것: 회고 반영이 아닌 일을 실어도 지난다
     저장소.git("switch", "-q", "-c", "docs/retro")
@@ -353,6 +406,9 @@ def test_docs_브랜치는_이미_있는_harness_티켓을_고치기만_해도_�
         ".scratch/harness/issues/sub/009-x.md",
         ".scratch/harness/issues/009-x.txt",
         ".scratch/harness/issues/09-x.md",
+        ".scratch/harness/issues/queue-split.txt",
+        ".scratch/harness/issues/sub/queue-split.md",
+        ".scratch/harness/issues/Queue-Split.md",
     ],
 )
 def test_docs_브랜치는_harness_티켓_모양이_아닌_파일로는_지나지_않는다(
@@ -373,7 +429,7 @@ def test_면제_밖_파일이_열_개를_넘으면_나머지_수를_든다(저�
 def test_앱_워크트리_모양의_브랜치는_막는다(저장소: Repo) -> None:
     저장소.git("switch", "-q", "-c", "claude/happy-dijkstra")
     out = _막혔다(저장소.stage_commit({"tools/b.py": "B = 1\n"}))
-    assert NUMBER_COMMAND in out and BRANCH_COMMAND in out
+    assert SLUG_RULE in out and BRANCH_COMMAND in out and NUMBER_COMMAND not in out
 
 
 # --- 디스크에는 있는데 커밋에 들지 않은 티켓 -----------------------------------------------
@@ -859,7 +915,29 @@ def test_CI는_분리_HEAD인_병합_커밋에서도_티켓_없는_PR을_막는�
     assert 저장소.git("rev-parse", "--abbrev-ref", "HEAD") == "HEAD"
     assert "tools/b.py" in out
     assert ".scratch/harness/issues/002-thing.md" in out
-    assert NUMBER_COMMAND in out and BRANCH_COMMAND in out and CONVENTION in out
+    assert SLUG_RULE in out and BRANCH_COMMAND in out and CONVENTION in out
+    assert NUMBER_COMMAND not in out
+
+
+def test_CI는_chore_slug_브랜치의_티켓_상태를_읽는다(저장소: Repo) -> None:
+    ticket = ".scratch/harness/issues/ci-python-runner-pin.md"
+    저장소.git("switch", "-q", "-c", "chore/ci-python-runner-pin")
+    _지났다(
+        저장소.stage_commit({ticket: "# x\n\n**Status:** in-progress\n", "tools/b.py": "B = 1\n"})
+    )
+    out = _CI가_막았다(_CI로_친다(저장소, _PR_병합_커밋(저장소, "chore/ci-python-runner-pin")))
+    assert ticket in out and "in-progress" in out
+    저장소.git("switch", "-q", "chore/ci-python-runner-pin")
+    _지났다(저장소.stage_commit({ticket: "# x\n\n**Status:** done\n"}))
+    _CI가_지났다(_CI로_친다(저장소, _PR_병합_커밋(저장소, "chore/ci-python-runner-pin")))
+
+
+def test_CI는_chore_slug_브랜치가_티켓을_빠뜨리면_막는다(저장소: Repo) -> None:
+    저장소.git("switch", "-q", "-c", "chore/ci-python-runner-pin")
+    _훅을_건너뛰고_커밋한다(저장소, {"tools/b.py": "B = 1\n"})
+    out = _CI가_막았다(_CI로_친다(저장소, _PR_병합_커밋(저장소, "chore/ci-python-runner-pin")))
+    assert ".scratch/harness/issues/ci-python-runner-pin.md" in out
+    assert SLUG_RULE in out
 
 
 def test_CI는_머리_커밋에는_있지만_PR의_변경에_들지_않은_티켓을_알린다(저장소: Repo) -> None:

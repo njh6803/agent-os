@@ -1,0 +1,29 @@
+# sync-design-system 올리기(`upload.md`) 6의 6 "목록 갱신과 돌아가기"가 돌아갈 브랜치가 명세 브랜치일 때 harness 티켓의
+# 브랜치를 번호 없는 `chore/<slug>`로 따라고 적은 문장이 새 세션에 실리는지(retro-queue-per-item 티켓 07, ADR 0045 결정
+# 6). 실험군은 이 워크트리, 대조군은 옛 판을 든 주 체크아웃이다. 이 PR 이 병합되기 전의 주 체크아웃에는 옛 문장
+# `chore/<NNN>-<slug>` 가 있다. 병합 뒤에 다시 돌리려면 병합 전 커밋을 `--control-commit` 으로 준다(README `canary/` 행).
+# 최신 결과: 통과 4, "없음" 섞임 0(2026-11-07, 이 PC, 실험군은 `cd29fa1e` 위의 커밋하지 않은 본문, 대조군은 주 체크아웃 `cd29fa1e`,
+#   retro-queue-per-item 티켓 07). 실험군은 세 회차 모두 `upload.md` 를 Read 로 열어 "그 stem으로 `git switch -c chore/<slug>`를
+#   친 뒤"를 옮겼고, 대조군은 옛 문장 `chore/<NNN>-<slug>` 를 옮겼다.
+# 돌리는 법: 워크트리 `.claude/worktrees/<이름>/` 루트에서
+#   uv run python tools/canary.py .scratch/harness/probes/canary/sync_design_system_chore_branch.toml <출력 디렉터리>
+kind = "skill"
+question = '''
+sync-design-system 스킬을 Skill 도구로 불러 본문을 읽어라. 스킬이 시키는 일은 하지 않는다.
+본문이 올리기를 다루는 하위 파일로 가리키는 것을 Read로 열고, 아래를 그 파일에서만 찾는다. 스킬 본문(SKILL.md)에 든 글은 옮기지 않는다.
+본문이 그런 하위 파일을 가리키지 않거나 그 파일에 없으면 그 물음에 "없음"이라고만 답하라.
+1. "목록 갱신과 돌아가기" 항목에서, 돌아갈 브랜치가 명세 브랜치(`docs/<slug>`)이거나 새로 든 워크트리였을 때 harness 티켓을 쓰고 어떤 브랜치를 따라고 적은 구절을 글자 그대로 옮겨라.
+'''
+expect = ["그 stem으로 git switch -c chore/<slug>를 친 뒤"]
+source = ".claude/skills/sync-design-system/upload.md"
+skill = "sync-design-system"
+skill_body = "files"
+
+[[arm]]
+name = "워크트리"
+role = "experiment"
+
+[[arm]]
+name = "주-체크아웃"
+role = "control"
+checkout = "../../.."

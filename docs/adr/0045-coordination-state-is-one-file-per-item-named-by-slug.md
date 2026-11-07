@@ -127,3 +127,14 @@ date: 2026-11-06
 - **판 훅의 안내 문장이 새 길을 든다.** 판을 올리지 않고 막힐 때의 문장이 "이력 문단을 더한다" 대신 "판을 올린 까닭은 ADR 이력이나 일지에 적고 README에는 적지 않는다"와 "main이 비워 둔 판을 쓰려면 판 줄은 main의 것 그대로 두고 그 문장을 지운다"를 든다. `tools/check_ticket.py`의 헌법 면제 목록에 `docs/constitution/history.md`를 더했다. 그 파일은 기록이라 티켓 없이 옮기거나 고칠 수 있다.
 - **헌법 판은 3.0.70이다.** `operations.md`의 문서 위치 절이 바뀌어 올렸다(`history.md`를 기록으로 들이고, "살아 있는 문서 안의 이력"에서 헌법 README의 버전 이력을 뺐다).
 
+### 2026-11-07 하네스 티켓 이름 티켓이 도구와 문서에서 정한 세부
+
+하네스 티켓 이름 티켓(`.scratch/retro-queue-per-item/issues/07-harness-tickets-by-slug.md`)을 구현하며 정한 세부다. 결정은 바뀌지 않았고, 본문의 결정 6과 8이 말한 것을 도구와 문서가 어떻게 하는지 적는다.
+
+- **커밋 검사는 `chore/` 뒤의 글자를 그대로 이름으로 본다.** `tools/check_ticket.py`는 브랜치 `chore/<이름>`의 이름이 비지 않고 `/`가 없으며 아래 이름 규칙에 맞으면 티켓 이름으로 읽고, 그 이름의 티켓 파일 `.scratch/harness/issues/<이름>.md`를 이 브랜치가 실었는지 본다. 파일 이름의 모양은 영어 소문자로 시작하는 `[a-z][a-z0-9-]*`이거나 옛 꼴 `NNN-<slug>`이다. 그래서 옛 꼴과 새 꼴이 같은 규칙 하나로 맞고, `README.md`, 대문자 이름, 하위 폴더, `.md`가 아닌 파일, 두 자리 번호로 시작하는 이름(`09-x.md`)은 티켓이 아니다. 막힐 때의 문장은 번호를 받는 명령 대신 "번호 없이 영어 소문자로 시작하는 이름을 직접 짓는다"를 든다.
+- **옛 번호의 상한은 시험이 고정한다.** `tests/test_harness_ticket_names.py`의 `LAST_NUMBER`는 이 PR이 마지막으로 origin/main을 합친 때의 가장 큰 옛 티켓 번호 45이고, 그보다 큰 번호로 시작하는 파일은 빨갛다. 같은 번호의 옛 티켓 둘도 계속 잡는다. 상수가 실제 최대 번호와 같은지도 시험이 본다. 실패 문장은 마지막 번호, 새 꼴 `<slug>.md`와 브랜치 `chore/<slug>`, 원천(`docs/agents/issue-tracker.md`), 번호를 떼고 세션 제목도 새 브랜치로 바꾸라는 할 일을 든다. 위 이력 2026-11-06의 시험의 고정값과 실패 문장 항목을 이 시험이 단언한다. 본문 결정 6이 적은 옛 티켓의 수 44는 그 결정을 쓸 때의 셈이고 지금은 45장이다.
+- **번호 대조 도구는 티켓 몫을 걷었다.** `tools/sibling_overlap.py`는 ADR 번호와 헌법 판만 대조한다. 지운 것은 다음 빈 티켓 번호, 티켓 겹침과 누가 옮기나, 티켓 파일 이름과 브랜치를 옮기는 길, 원격 브랜치와 형제 워크트리의 브랜치로 PR을 다시 여는 길이다. `Numbers`에서 티켓 몫이 빠져 지금은 `(journals, adrs, version)`만 든다. `--move`는 ADR의 파일 이름과 인용만 옮긴다. 쓰는 곳이 없어진 `Worktree.branch`와 `Remote.branches`도 지웠다. 변이 표는 174에서 133이 됐다.
+- **첫 턴 알림과 아침 보고가 새 이름을 안다.** 지시문 없이 연 세션의 티켓 알림(`tools/hook_prompt_directive.py`의 `TICKET_NOTICE`)은 번호 명령 대신 이름을 직접 짓게 안내하고, 아침 보고(`tools/morning_collect.py`)는 브랜치 `chore/<이름>`과 `.scratch/harness/issues/` 아래 경로를 받는다.
+- **스킬과 런북이 같은 글을 가리킨다.** next-session 지시문의 "칸마다" 첫 항목은 "티켓 번호"가 "티켓 이름"이 되어 하네스 chore 배치의 티켓은 번호를 받지 않고 받는 세션이 이름을 짓는다. `implement`·`retro`·`code-review`·`sync-design-system`의 브랜치와 티켓 경로 문장, `docs/agents/issue-tracker.md`, `.github/PULL_REQUEST_TEMPLATE.md`, `KICKOFF.md`의 번호 대조 서술이 같이 바뀌었다. 커밋과 PR 제목의 꼬리는 `(harness <slug>)`이고 옛 티켓은 `(harness <NNN>)`을 지킨다.
+- **헌법 판은 3.0.71이다.** `operations.md`의 브랜치와 병합 절에서 harness 티켓의 브랜치와 이름 문장이 바뀌어 올렸다.
+

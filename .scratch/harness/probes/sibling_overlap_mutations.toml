@@ -44,6 +44,17 @@
 # 원문을 고친 165, 표지를 고친 190, 더한 195 와, 고친 시험 파일을 쓰는 나머지 189 를 번호로 골라
 # 돌린 넷이 모두 기대대로다(같은 날, 같은 일지). 이 표에서 그 시험 파일을 쓰는 변이는 그 셋뿐이라
 # 시험을 고친 몫의 전체 실행을 갈음한다.
+# retro-queue-per-item 07 이 harness 티켓을 번호가 아니라 이름으로 바꾸며 도구에서 티켓 번호 몫(다음
+# 빈 티켓, 티켓 겹침과 누가 옮기나, 티켓 파일 이름과 브랜치 옮기기, 원격·PR 다시 열기)을 걷었다. 그 몫을
+# 깨던 "티켓: …" 변이 마흔하나와 "다음 빈 번호가 …" 둘을 지우고, 둘레 코드가 바뀌어 원문을 다시 쓴
+# 열(4·24·56·68·90·93 등)과 더한 둘("다음 빈 번호 줄을 되살린다", "harness 티켓 폴더를 번호 폴더로
+# 읽는다")을 두어 표는 174 에서 133 이 됐다(`--check` 모두 한 번씩 있다). 번호로 골라 돌린 스물넷
+# (4~7·14·19·20·23~26·56~58·62·65·68·79·80·84·85·90·93·130)이 모두 기대대로 빨강이었다고 서브에이전트가
+# 보고했다(기준선 전체 시험 약 100초, 변이 0.5~38초, 2026-11-07. 이 세션이 다시 돌린 것이 아니라 그
+# 보고에서 옮겼다). 그 가운데 4 는 처음에 `new` 의 들여쓰기를 두고 와
+# IndentationError 로 어긋났고, 고쳐 다시 돌려 빨강이었다. 끝의 "티켓 이름 시험" 셋(131~133)은
+# `tests/test_harness_ticket_names.py` 를 쓰므로, 그 시험 파일을 슬러그 판으로 다시 쓴 뒤 따로 돌려
+# 셋 모두 기대대로 빨강이었다(기준선 둘 각 0.03초, 변이 각 0.22초, 2026-11-07).
 
 [[mutation]]
 name = "merge ref 가 없는 닫힌 PR 도 열린 PR 로 본다"
@@ -74,12 +85,13 @@ new = '''    if version is None:'''
 
 [[mutation]]
 name = "같은 파일의 일지·ADR 도 겹침으로 본다"
+expect_output = ["Left contains one more item: Clash(kind='ADR', key='0027'"]
 tests = ["tests/tools/test_sibling_overlap.py"]
 expect = "red"
 [[mutation.edit]]
 file = "tools/sibling_overlap.py"
-old = '''            if mine[key] != other[key]:'''
-new = '''            if True:'''
+old = '''        if ours.adrs[key] != theirs.adrs[key]:'''
+new = '''        if True:'''
 
 [[mutation]]
 name = "헌법 판의 겹침을 보지 않는다"
@@ -282,30 +294,36 @@ expect = "red"
 expect_output = ["version: None != '1.0.1'"]
 [[mutation.edit]]
 file = "tools/sibling_overlap.py"
-old = '''    return Numbers(frozenset(), adrs, numbers.version, tickets)'''
-new = '''    return Numbers(frozenset(), adrs, None if numbers.version == other.version else numbers.version, tickets)'''
+old = '''    return Numbers(frozenset(), adrs, numbers.version)'''
+new = '''    return Numbers(frozenset(), adrs, None if numbers.version == other.version else numbers.version)'''
 
-# 다음 빈 번호(대기열 157·182)
-
-[[mutation]]
-name = "다음 빈 번호가 형제를 보지 않는다"
-tests = ["tests/tools/test_sibling_overlap.py", "-k", "이_브랜치에_새_번호가_없어도 or 다음_빈"]
-expect = "red"
-expect_output = ["assert '다음 빈 번호(형제 포함): 티켓 003\\n' in"]
-[[mutation.edit]]
-file = "tools/sibling_overlap.py"
-old = '''    ticket = next_ticket([*result.taken, result.ours])'''
-new = '''    ticket = next_ticket([result.ours])'''
+# harness 티켓은 번호가 아니다(retro-queue-per-item 07). 다음 빈 번호 줄(대기열 157·182)과 티켓 번호
+# 읽기는 걷혔다
 
 [[mutation]]
-name = "다음 빈 번호가 이 브랜치의 새 번호를 보지 않는다"
-tests = ["tests/tools/test_sibling_overlap.py", "-k", "이_브랜치에_새_번호가_없어도 or 다음_빈"]
+name = "다음 빈 번호 줄을 되살린다"
+tests = ["tests/tools/test_sibling_overlap.py", "-k", "새_번호가_없어도 or 다음_빈_번호를_찍지"]
 expect = "red"
-expect_output = ["assert '다음 빈 번호(형제 포함): 티켓 004\\n' in"]
+expect_output = ["assert '다음 빈 번호' not in"]
 [[mutation.edit]]
 file = "tools/sibling_overlap.py"
-old = '''    ticket = next_ticket([*result.taken, result.ours])'''
-new = '''    ticket = next_ticket(result.taken)'''
+old = '''    if verdict.top_version:'''
+new = '''    lines.append("다음 빈 번호(형제 포함): 티켓 001")
+    if verdict.top_version:'''
+
+[[mutation]]
+name = "harness 티켓 폴더를 번호 폴더로 읽는다"
+tests = ["tests/tools/test_sibling_overlap.py", "-k", "번호로_읽지_않아"]
+expect = "red"
+expect_output = ["번호 겹침 1:"]
+[[mutation.edit]]
+file = "tools/sibling_overlap.py"
+old = '''        snapshot.names(ADR_DIR),'''
+new = '''        snapshot.names(ADR_DIR) + snapshot.names(".scratch/harness/issues"),'''
+[[mutation.edit]]
+file = "tools/sibling_overlap.py"
+old = '''ADR_NAME = re.compile(r"^(\d{4})-.+\.md$")'''
+new = '''ADR_NAME = re.compile(r"^(\d{3,4})-.+\.md$")'''
 
 # 일지의 이름순 차례(대기열 175)와 일지 순번을 받는 동작은 일지 이름이 시각 꼴이 되며 걷혔다(ADR 0045 결정 7).
 # 그 동작을 겨눈 변이는 지웠다. 일지 이름 꼴의 판정은 journal_names_mutations.toml 이 잰다
@@ -585,31 +603,34 @@ new = '''CANARY_SPECS = ".scratch/**/*.toml"'''
 
 [[mutation]]
 name = "옮길 번호를 차례대로 바꿔 사슬이 두 번 간다"
+expect_output = ["+ # ADR 0029 제목"]
 tests = ["tests/tools/test_sibling_overlap.py", "-k", "카나리아 or 도움말 or 인자가 or 옮기 or 옮길_번호대로 or 줄인 or 2로"]
 expect = "red"
 [[mutation.edit]]
 file = "tools/sibling_overlap.py"
-old = '''    pattern = _citation_pattern(path, plan)'''
-new = '''    for old, new in plan.journals.items():
-        text = text.replace(old, new)
-    pattern = _citation_pattern(path, plan)'''
+old = '''    bom = BOM if text.startswith(BOM) else ""'''
+new = '''    for old, new in plan.items():
+        text = text.replace(f"ADR {old}", f"ADR {new}")
+    bom = BOM if text.startswith(BOM) else ""'''
 
 [[mutation]]
 name = "ADR 목록을 통째로만 옮긴다"
+expect_output = ["+ ADR 0027·0028·0026, [0"]
 tests = ["tests/tools/test_sibling_overlap.py", "-k", "카나리아 or 도움말 or 인자가 or 옮기 or 옮길_번호대로 or 줄인 or 2로"]
 expect = "red"
 [[mutation.edit]]
 file = "tools/sibling_overlap.py"
-old = '''            return "·".join(plan.adrs.get(number, number) for number in adrs.split("·"))'''
-new = '''            return plan.adrs.get(adrs, adrs)'''
+old = '''            return "·".join(plan.get(number, number) for number in adrs.split("·"))'''
+new = '''            return plan.get(adrs, adrs)'''
 
 [[mutation]]
 name = "ADR 파일 이름과 색인의 꼴을 옮기지 않는다"
+expect_output = ["ADR 0028·0029·0026, [0027](0027-x.md)"]
 tests = ["tests/tools/test_sibling_overlap.py", "-k", "카나리아 or 도움말 or 인자가 or 옮기 or 옮길_번호대로 or 줄인 or 2로"]
 expect = "red"
 [[mutation.edit]]
 file = "tools/sibling_overlap.py"
-old = '''            return plan.adrs.get(adr, adr)'''
+old = '''            return plan.get(adr, adr)'''
 new = '''            return adr'''
 
 [[mutation]]
@@ -672,7 +693,7 @@ new = '''    check = _check'''
 name = "옮긴 뒤 다시 대조하지 않는다"
 tests = ["tests/tools/test_sibling_overlap.py", "-k", "카나리아 or 도움말 or 인자가 or 옮기 or 옮길_번호대로 or 줄인 or 2로"]
 expect = "red"
-expect_output = ["옮긴다. 티켓의 stem 인 브랜치에 있으면 브랜치 이름을 바꾸는 명령도 찍는다"]
+expect_output = ["미추적 파일 안의 인용을 옮긴다"]
 [[mutation.edit]]
 file = "tools/sibling_overlap.py"
 old = '''    report_own_pulls(root, verdict.shifted)
@@ -710,8 +731,8 @@ expect = "red"
 expect_output = ["AssertionError: assert '`--move` 를 붙여 다시 치면' in"]
 [[mutation.edit]]
 file = "tools/sibling_overlap.py"
-old = '''            "`--move` 를 붙여 다시 치면 이 번호대로 ADR·티켓의 파일 이름과 티켓 머리 줄, 이"'''
-new = '''            "다시 치면 이 번호대로 ADR·티켓의 파일 이름과 티켓 머리 줄, 이"'''
+old = '''            "`--move` 를 붙여 다시 치면 이 번호대로 ADR 의 파일 이름과 이 브랜치의 변경과"'''
+new = '''            "다시 치면 이 번호대로 ADR 의 파일 이름과 이 브랜치의 변경과"'''
 
 [[mutation]]
 name = "도움말을 받지 않는다"
@@ -911,12 +932,13 @@ new = '''    bom = ""'''
 
 [[mutation]]
 name = "merge-base 나 main 에 있는 줄도 옮긴다"
+expect_output = ["+ - [0028](0028-sibling."]
 tests = ["tests/tools/test_sibling_overlap.py", "-k", "글자_그대로"]
 expect = "red"
 [[mutation.edit]]
 file = "tools/sibling_overlap.py"
-old = '''        line if line.rstrip("\r") in kept else pattern.sub(swap, line) for line in lines'''
-new = '''        pattern.sub(swap, line) for line in lines'''
+old = '''        line if line.rstrip("\r") in kept else CITATION.sub(swap, line) for line in lines'''
+new = '''        CITATION.sub(swap, line) for line in lines'''
 
 # 아래 넷은 회고 대기열이 폴더가 되며 그 방어를 재던 시험(대기열 행을 쓴 `--move` 시험, CRLF 대기열
 # 반쪽, 대기열 겹침이 든 이름순 시험)이 지워져 시험 없이 남았다가, 일지·ADR 픽스처 시험으로 되살렸다.
@@ -948,8 +970,8 @@ expect = "red"
 expect_output = ["+ - [0028](0028-sibling."]
 [[mutation.edit]]
 file = "tools/sibling_overlap.py"
-old = '''        line if line.rstrip("\r") in kept else pattern.sub(swap, line) for line in lines'''
-new = '''        line if line in kept else pattern.sub(swap, line) for line in lines'''
+old = '''        line if line.rstrip("\r") in kept else CITATION.sub(swap, line) for line in lines'''
+new = '''        line if line in kept else CITATION.sub(swap, line) for line in lines'''
 
 [[mutation]]
 name = "헌법 README 가 main 과 같아도 판을 이 브랜치의 것으로 센다"
@@ -1332,326 +1354,7 @@ old = '''text.split("\n"):  # splitlines'''
 new = '''text.splitlines():  # splitlines'''
 
 [[mutation]]
-name = "티켓: 같은 번호의 다른 티켓 파일을 겹침으로 보지 않는다"
-tests = ["tests/tools/test_sibling_overlap.py", "-k", "같은_티켓_번호에_다른_파일이면"]
-expect = "red"
-expect_output = ["Right contains one more item: ('티켓', '002', '002-ours.md', '002-theirs.md')"]
-[[mutation.edit]]
-file = "tools/sibling_overlap.py"
-old = '''        ("ADR", ours.adrs, theirs.adrs),
-        ("티켓", ours.tickets, theirs.tickets),'''
-new = '''        ("ADR", ours.adrs, theirs.adrs),'''
-
-[[mutation]]
-name = "티켓: harness 폴더를 읽지 않는다"
-tests = ["tests/tools/test_sibling_overlap.py", "-k", "열린_PR의_harness_티켓과"]
-expect = "red"
-expect_output = ["E         번호 겹침 없음"]
-[[mutation.edit]]
-file = "tools/sibling_overlap.py"
-old = '''        snapshot.names(HARNESS_ISSUES),'''
-new = '''        [],'''
-
-[[mutation]]
-name = "티켓: 다음 빈 티켓을 가장 큰 번호 자체로 낸다"
-tests = ["tests/tools/test_sibling_overlap.py", "-k", "다음_빈_티켓은"]
-expect = "red"
-expect_output = ["assert '009' == '010'"]
-[[mutation.edit]]
-file = "tools/sibling_overlap.py"
-old = '''f"{_top_ticket(numbers) + 1:03d}"'''
-new = '''f"{_top_ticket(numbers):03d}"'''
-
-[[mutation]]
-name = "티켓: merge-base 에 harness 폴더가 없으면 2로 끝낸다"
-tests = ["tests/tools/test_sibling_overlap.py", "-k", "harness_폴더가_없어도"]
-expect = "red"
-expect_output = ["assert 2 == 0", "번호의 자리가 비었다: .scratch/harness/issues"]
-[[mutation.edit]]
-file = "tools/sibling_overlap.py"
-old = '''        (CONSTITUTION, numbers.version is None),
-    )'''
-new = '''        (CONSTITUTION, numbers.version is None),
-        (HARNESS_ISSUES, not numbers.tickets),
-    )'''
-
-[[mutation]]
-name = "티켓: 이 브랜치의 새 번호 줄에 티켓을 들지 않는다"
-tests = ["tests/tools/test_sibling_overlap.py", "-k", "형제_워크트리의_커밋하지_않은_harness"]
-expect = "red"
-expect_output = ["assert '이 브랜치의 새 번호: 티켓 001\\n' in"]
-[[mutation.edit]]
-file = "tools/sibling_overlap.py"
-old = '''    keys += [f"티켓 {key}" for key in sorted(ours.tickets)]'''
-new = '''    keys += []'''
-
-[[mutation]]
-name = "티켓: 겹친 티켓의 번호만 옮긴다"
-tests = ["tests/tools/test_sibling_overlap.py", "-k", "옮길_티켓은_stem으로"]
-expect = "red"
-expect_output = ["Right contains one more item: Move(kind='티켓', old='003-next', new='004-next')"]
-[[mutation.edit]]
-file = "tools/sibling_overlap.py"
-old = '''        stems = {int(key): name.removesuffix(".md") for key, name in ours.tickets.items()}'''
-new = '''        clashed = {clash.key for clash in found if clash.kind == "티켓"}
-        stems = {
-            int(key): name.removesuffix(".md")
-            for key, name in ours.tickets.items()
-            if key in clashed
-        }'''
-
-[[mutation]]
-name = "티켓: 둘 다 열린 PR 이면 번호가 작은 쪽이 옮긴다"
-tests = ["tests/tools/test_sibling_overlap.py", "-k", "둘_다_열린_PR"]
-expect = "red"
-expect_output = ["E         `--move` 를 붙여 다시 치면"]
-[[mutation.edit]]
-file = "tools/sibling_overlap.py"
-old = '''own_pull > their_pull'''
-new = '''own_pull < their_pull'''
-
-[[mutation]]
-name = "티켓: main 에 병합된 티켓이어도 열린 PR 이 있으면 옮기지 않는다"
-tests = ["tests/tools/test_sibling_overlap.py", "-k", "main이_이미_쓴_티켓"]
-expect = "red"
-expect_output = ["E         - origin/main 티켓 001: 이 브랜치 001-ours.md, 그쪽 001-main.md"]
-[[mutation.edit]]
-file = "tools/sibling_overlap.py"
-old = '''        sibling is result.main or ours_moves_ticket(result.own_pull, sibling.pull)'''
-new = '''        ours_moves_ticket(result.own_pull, sibling.pull)'''
-
-[[mutation]]
-name = "티켓: 겹친 형제 모두가 옮기라고 할 때만 옮긴다"
-tests = ["tests/tools/test_sibling_overlap.py", "-k", "둘_다_열린_PR"]
-expect = "red"
-expect_output = ["E         - PR #9 티켓 001: 이 브랜치 001-ours.md, 그쪽 001-pr9.md"]
-[[mutation.edit]]
-file = "tools/sibling_overlap.py"
-old = '''    moving = any('''
-new = '''    moving = all('''
-
-[[mutation]]
-name = "티켓: 그쪽이 옮기는 겹침도 1로 끝낸다"
-tests = ["tests/tools/test_sibling_overlap.py", "-k", "열린_PR이_있는_이_브랜치는"]
-expect = "red"
-expect_output = ["E         `--move` 를 붙여 다시 치면"]
-[[mutation.edit]]
-file = "tools/sibling_overlap.py"
-old = '''        found = [(sibling, clash) for sibling, clash in found if clash.kind != "티켓"]'''
-new = '''        pass'''
-
-[[mutation]]
-name = "티켓: 그쪽이 옮길 때도 번호 겹침 없음을 찍는다"
-tests = ["tests/tools/test_sibling_overlap.py", "-k", "열린_PR이_있는_이_브랜치는"]
-expect = "red"
-expect_output = ["'번호 겹침 없음' is contained here"]
-[[mutation.edit]]
-file = "tools/sibling_overlap.py"
-old = '''    elif not verdict.yielded:'''
-new = '''    else:'''
-
-[[mutation]]
-name = "티켓: 이 브랜치의 열린 PR 을 모른다"
-tests = ["tests/tools/test_sibling_overlap.py", "-k", "열린_PR이_있는_이_브랜치는"]
-expect = "red"
-expect_output = ["E         `--move` 를 붙여 다시 치면"]
-[[mutation.edit]]
-file = "tools/sibling_overlap.py"
-old = '''        own_pull=branch_pull(remote, branch, own),'''
-new = '''        own_pull=None,'''
-
-[[mutation]]
-name = "티켓: 열린 PR 형제의 번호를 모른다"
-tests = ["tests/tools/test_sibling_overlap.py", "-k", "둘_다_열린_PR"]
-expect = "red"
-expect_output = ["E         - PR #9 티켓 001: 이 브랜치 001-ours.md, 그쪽 001-pr9.md"]
-[[mutation.edit]]
-file = "tools/sibling_overlap.py"
-old = '''changed, pull=number)'''
-new = '''changed)'''
-
-[[mutation]]
-name = "티켓: 형제 워크트리의 열린 PR 을 모른다"
-tests = ["tests/tools/test_sibling_overlap.py", "-k", "브랜치의_원격_끝으로_알아"]
-expect = "red"
-expect_output = ["E         - 워크트리 "]
-[[mutation.edit]]
-file = "tools/sibling_overlap.py"
-old = '''changed, pull=pull)'''
-new = '''changed)'''
-
-[[mutation]]
-name = "티켓: 옮기지 않는 브랜치에도 PR 을 다시 열라고 한다"
-tests = ["tests/tools/test_sibling_overlap.py", "-k", "둘_다_열린_PR"]
-expect = "red"
-expect_output = ["assert ('옮길 번호' not in", "'다시 열고' is contained here"]
-[[mutation.edit]]
-file = "tools/sibling_overlap.py"
-old = '''        reopen=result.own_pull if renamed else None,'''
-new = '''        reopen=result.own_pull,'''
-
-[[mutation]]
-name = "티켓: stem 이 아닌 브랜치도 PR 을 다시 열라고 한다"
-tests = ["tests/tools/test_sibling_overlap.py", "-k", "stem이_아닌_브랜치는"]
-expect = "red"
-expect_output = ["'다시 열고' is contained here"]
-[[mutation.edit]]
-file = "tools/sibling_overlap.py"
-old = '''        if move.kind == "티켓" and branch == f"chore/{move.old}":'''
-new = '''        if move.kind == "티켓":'''
-
-[[mutation]]
-name = "티켓: stem 경계에 하이픈이 없다"
-tests = ["tests/tools/test_sibling_overlap.py", "-k", "stem을_slug까지"]
-expect = "red"
-expect_output = ["+ next 다. 003-ours-ext"]
-[[mutation.edit]]
-file = "tools/sibling_overlap.py"
-old = '''STEM_EDGE = "A-Za-z0-9_-"'''
-new = '''STEM_EDGE = "A-Za-z0-9_"'''
-
-[[mutation]]
-name = "티켓: stem 경계가 한글을 품는다"
-tests = ["tests/tools/test_sibling_overlap.py", "-k", "stem을_slug까지"]
-expect = "red"
-expect_output = ["+ urs.md, 002-ours를 본다"]
-[[mutation.edit]]
-file = "tools/sibling_overlap.py"
-old = '''STEM_EDGE = "A-Za-z0-9_-"'''
-new = '''STEM_EDGE = r"\w-"'''
-
-[[mutation]]
-name = "티켓: stem 인용을 옮기지 않는다"
-tests = ["tests/tools/test_sibling_overlap.py", "-k", "stem을_slug까지"]
-expect = "red"
-expect_output = ["+ # 002: 이쪽"]
-[[mutation.edit]]
-file = "tools/sibling_overlap.py"
-old = '''    if not plan.stems:'''
-new = '''    if True:'''
-
-[[mutation]]
-name = "티켓: 머리 줄을 harness 티켓 파일 밖에서도 바꾼다"
-tests = ["tests/tools/test_sibling_overlap.py", "-k", "stem을_slug까지"]
-expect = "red"
-expect_output = [">('# 002: 이쪽\\n브랜치 `chore/003-ours`')", "= '# 003: 이쪽\\n브랜치 `chore/003-ours`"]
-[[mutation.edit]]
-file = "tools/sibling_overlap.py"
-old = '''    if path.startswith(f"{HARNESS_ISSUES}/"):'''
-new = '''    if True:'''
-
-[[mutation]]
-name = "티켓: 이 브랜치의 티켓이 아닌 머리 줄도 바꾼다"
-tests = ["tests/tools/test_sibling_overlap.py", "-k", "stem을_slug까지"]
-expect = "red"
-expect_output = ["assert '# 999: 이쪽\\n' == '# 002: 이쪽\\n'"]
-[[mutation.edit]]
-file = "tools/sibling_overlap.py"
-old = '''            return f"# {plan.tickets[ticket]}:" if ticket in plan.tickets else match[0]'''
-new = '''            return f"# {plan.tickets.get(ticket, '999')}:"'''
-
-[[mutation]]
-name = "티켓: --move 가 티켓 파일 이름을 바꾸지 않는다"
-tests = ["tests/tools/test_sibling_overlap.py", "-k", "옮기기는_티켓_파일_이름과"]
-expect = "red"
-expect_output = ["assert 1 == 0", "이름을 바꾼 파일: 없음"]
-[[mutation.edit]]
-file = "tools/sibling_overlap.py"
-old = '''        renames.append((f"{HARNESS_ISSUES}/{old}.md", f"{HARNESS_ISSUES}/{new}.md"))'''
-new = '''        pass'''
-
-[[mutation]]
-name = "티켓: --move 뒤에 브랜치 줄을 찍지 않는다"
-tests = ["tests/tools/test_sibling_overlap.py", "-k", "옮기기는_티켓_파일_이름과"]
-expect = "red"
-expect_output = ["assert '바꾸는 명령: git branch -m chore/001-ours chore/002-ours\\n' in"]
-[[mutation.edit]]
-file = "tools/sibling_overlap.py"
-old = '''renamed_branch(result.branch, verdict.shifted)) is not None:'''
-new = '''renamed_branch(result.branch, [])) is not None:'''
-
-[[mutation]]
-name = "티켓: 원격에 브랜치가 있어도 푸시하지 않은 것으로 본다"
-tests = ["tests/tools/test_sibling_overlap.py", "-k", "옮기기는_티켓_파일_이름과"]
-expect = "red"
-expect_output = ["assert '새 이름으로 푸시하는 명령: git push -u origin chore/002-ours\\n' in"]
-[[mutation.edit]]
-file = "tools/sibling_overlap.py"
-old = '''        own_head=remote.own_head,'''
-new = '''        own_head=None,'''
-
-[[mutation]]
-name = "티켓: 옮긴 줄에 번호만 든 티켓 인용을 손으로 보라고 하지 않는다"
-tests = ["tests/tools/test_sibling_overlap.py", "-k", "옮기기는_티켓_파일_이름과"]
-expect = "red"
-expect_output = ["in '옮겼다: 티켓 001-ours → 002-ours. 이름을 바꾼 파일:"]
-[[mutation.edit]]
-file = "tools/sibling_overlap.py"
-old = '''        if any(m.kind == "티켓" for m in shifted)'''
-new = '''        if False'''
-
-[[mutation]]
-name = "티켓: chore 가 아닌 브랜치에도 브랜치 줄을 찍는다"
-tests = ["tests/tools/test_sibling_overlap.py", "-k", "브랜치_줄은"]
-expect = "red"
-expect_output = ["assert ('feature/01-x', 'chore/002-ours') is None"]
-[[mutation.edit]]
-file = "tools/sibling_overlap.py"
-old = '''        if move.kind == "티켓" and branch == f"chore/{move.old}":'''
-new = '''        if move.kind == "티켓":'''
-
-[[mutation]]
-name = "티켓: 원격에 없는 브랜치에도 푸시·지우기 명령을 찍는다"
-tests = ["tests/tools/test_sibling_overlap.py", "-k", "원격에_없는_chore_브랜치에는"]
-expect = "red"
-expect_output = ["'git push' is contained here"]
-[[mutation.edit]]
-file = "tools/sibling_overlap.py"
-old = '''        if result.own_head is not None:'''
-new = '''        if True:'''
-
-[[mutation]]
-name = "티켓: 열린 PR 이 있어도 다시 열라는 할 일을 찍지 않는다"
-tests = ["tests/tools/test_sibling_overlap.py", "-k", "브랜치_줄은"]
-expect = "red"
-expect_output = ["= '옛 원격 브랜치를 지우는 명령: git push origin --delete chore/001-ours'.startswith"]
-[[mutation.edit]]
-file = "tools/sibling_overlap.py"
-old = '''    if own_pull is not None:'''
-new = '''    if False:'''
-
-[[mutation]]
-name = "티켓: 형제 워크트리의 열린 PR 을 HEAD 로만 가린다"
-tests = ["tests/tools/test_sibling_overlap.py", "-k", "브랜치의_원격_끝으로_알아"]
-expect = "red"
-expect_output = ["E         - 워크트리 "]
-[[mutation.edit]]
-file = "tools/sibling_overlap.py"
-old = '''        pull = branch_pull(remote, tree.branch, head)'''
-new = '''        pull = next((n for n, h in remote.pulls.items() if h == head), None)'''
-
-[[mutation]]
-name = "티켓: 원격 브랜치를 이 브랜치 것만 읽는다"
-tests = ["tests/tools/test_sibling_overlap.py", "-k", "브랜치의_원격_끝으로_알아"]
-expect = "red"
-expect_output = ["E         - 워크트리 "]
-[[mutation.edit]]
-file = "tools/sibling_overlap.py"
-old = '''    patterns = ["refs/pull/*/head", "refs/pull/*/merge", "refs/heads/*"]'''
-new = '''    patterns = ["refs/pull/*/head", "refs/pull/*/merge", f"refs/heads/{branch}"]'''
-
-[[mutation]]
-name = "티켓: 워크트리의 브랜치를 읽지 않는다"
-tests = ["tests/tools/test_sibling_overlap.py", "-k", "워크트리_목록은"]
-expect = "red"
-expect_output = ["At index 0 diff: Worktree(path='/repo', head='111', branch=None) != Worktree(path='/repo', head='111', branch='main')"]
-[[mutation.edit]]
-file = "tools/sibling_overlap.py"
-old = '''            branch = fields["branch"].removeprefix("refs/heads/") if "branch" in fields else None'''
-new = '''            branch = None'''
-
-[[mutation]]
-name = "티켓: 브랜치가 아닌 ref 도 원격 브랜치로 읽는다"
+name = "브랜치가 아닌 ref 도 원격 브랜치로 읽는다"
 tests = ["tests/tools/test_sibling_overlap.py", "-k", "merge_ref가_있는_PR"]
 expect = "red"
 expect_output = ["Left contains 4 more items:", "'refs/pull/158/merge': 'ccc'"]
@@ -1659,73 +1362,6 @@ expect_output = ["Left contains 4 more items:", "'refs/pull/158/merge': 'ccc'"]
 file = "tools/sibling_overlap.py"
 old = '''        if (name := ref.strip().removeprefix("refs/heads/")) != ref.strip():'''
 new = '''        if (name := ref.strip().removeprefix("refs/heads/")):'''
-
-[[mutation]]
-name = "티켓: 같은 끝을 든 열린 PR 가운데 큰 번호를 고른다"
-tests = ["tests/tools/test_sibling_overlap.py", "-k", "브랜치의_PR은_원격_끝과"]
-expect = "red"
-expect_output = ["assert 9 == 7"]
-[[mutation.edit]]
-file = "tools/sibling_overlap.py"
-old = '''    return min((number for number, sha in remote.pulls.items() if sha == target), default=None)'''
-new = '''    return max((number for number, sha in remote.pulls.items() if sha == target), default=None)'''
-
-[[mutation]]
-name = "티켓: 워크트리 폴더 경로의 stem 도 옮긴다"
-tests = ["tests/tools/test_sibling_overlap.py", "-k", "워크트리_폴더를_가리킨"]
-expect = "red"
-expect_output = ["+ rktrees/002-ours`"]
-[[mutation.edit]]
-file = "tools/sibling_overlap.py"
-old = '''{parents}(?P<stem>'''
-new = '''(?P<stem>'''
-
-[[mutation]]
-name = "티켓: 기능 폴더의 두 자리 티켓도 harness 티켓으로 읽는다"
-tests = ["tests/tools/test_sibling_overlap.py", "-k", "기능_폴더의_두_자리"]
-expect = "red"
-expect_output = ["assert 1 == 0", "티켓 01: 이 브랜치 01-ours.md, 그쪽 01-sibling.md"]
-[[mutation.edit]]
-file = "tools/sibling_overlap.py"
-old = '''HARNESS_ISSUES = ".scratch/harness/issues"'''
-new = '''HARNESS_ISSUES = ".scratch/feature/issues"'''
-[[mutation.edit]]
-file = "tools/sibling_overlap.py"
-old = '''TICKET_NAME = re.compile(r"^(\d{3})-.+\.md$")'''
-new = '''TICKET_NAME = re.compile(r"^(\d{2,3})-.+\.md$")'''
-
-[[mutation]]
-name = "티켓: main 을 들이기 전에도 main 에 병합된 티켓과의 겹침에서 비켜 준다"
-tests = ["tests/tools/test_sibling_overlap.py", "-k", "main을_merge_커밋으로"]
-expect = "red"
-expect_output = ["E         - origin/main 티켓 001: 이 브랜치 001-ours.md, 그쪽 001-main.md"]
-[[mutation.edit]]
-file = "tools/sibling_overlap.py"
-old = '''        sibling is result.main or ours_moves_ticket(result.own_pull, sibling.pull)'''
-new = '''        ours_moves_ticket(result.own_pull, sibling.pull)'''
-
-[[mutation]]
-name = "티켓: 경로가 어긋난 harness 폴더를 빈 자리로 보고 2로 끝낸다"
-tests = ["tests/tools/test_sibling_overlap.py", "-k", "경로가_어긋나면"]
-expect = "red"
-expect_output = ["assert 2 == 0", "번호의 자리가 비었다: .scratch/harness/tickets"]
-[[mutation.edit]]
-file = "tools/sibling_overlap.py"
-old = '''        (CONSTITUTION, numbers.version is None),
-    )'''
-new = '''        (CONSTITUTION, numbers.version is None),
-        (HARNESS_ISSUES, not numbers.tickets),
-    )'''
-
-[[mutation]]
-name = "티켓: 티켓이 없을 때 다음 빈 티켓을 000 으로 낸다"
-tests = ["tests/tools/test_sibling_overlap.py", "-k", "지시문이_받아_두고"]
-expect = "red"
-expect_output = ["assert '다음 빈 번호(형제 포함): 티켓 001\\n' in"]
-[[mutation.edit]]
-file = "tools/sibling_overlap.py"
-old = '''f"{_top_ticket(numbers) + 1:03d}"'''
-new = '''f"{_top_ticket(numbers):03d}"'''
 
 [[mutation]]
 name = "티켓 이름 시험: 같은 번호의 티켓 둘을 겹침으로 보지 않는다"
@@ -1746,46 +1382,6 @@ expect_output = ["번호 꼴의 티켓 없음: []"]
 file = "tests/test_harness_ticket_names.py"
 old = '''ISSUES = ROOT / ".scratch" / "harness" / "issues"'''
 new = '''ISSUES = ROOT / ".scratch" / "harness" / "tickets"'''
-
-[[mutation]]
-name = "티켓: 원격에 브랜치가 없는 워크트리의 열린 PR 을 HEAD 로 가리지 않는다"
-tests = ["tests/tools/test_sibling_overlap.py", "-k", "원격에_브랜치가_없는"]
-expect = "red"
-expect_output = ["E         - 워크트리 "]
-[[mutation.edit]]
-file = "tools/sibling_overlap.py"
-old = '''    target = head if tip is None else tip'''
-new = '''    target = tip'''
-
-[[mutation]]
-name = "티켓: 이 브랜치의 열린 PR 을 HEAD 로 가리지 않는다"
-tests = ["tests/tools/test_sibling_overlap.py", "-k", "원격에_브랜치가_없는"]
-expect = "red"
-expect_output = ["E         `--move` 를 붙여 다시 치면"]
-[[mutation.edit]]
-file = "tools/sibling_overlap.py"
-old = '''        own_pull=branch_pull(remote, branch, own),'''
-new = '''        own_pull=branch_pull(remote, branch, ""),'''
-
-[[mutation]]
-name = "티켓: 이스케이프한 역슬래시 둘 뒤의 워크트리 폴더 stem 도 옮긴다"
-tests = ["tests/tools/test_sibling_overlap.py", "-k", "워크트리_폴더를_가리킨"]
-expect = "red"
-expect_output = ['+ {"cwd": "C:\\repo\\.claude\\worktrees\\002-ours"}']
-[[mutation.edit]]
-file = "tools/sibling_overlap.py"
-old = '''WORKTREE_PARENTS = (r"(?i:worktrees)[/\\]", r"(?i:worktrees)\\\\")'''
-new = '''WORKTREE_PARENTS = (r"(?i:worktrees)[/\\]",)'''
-
-[[mutation]]
-name = "티켓: 대문자 워크트리 폴더 경로의 stem 도 옮긴다"
-tests = ["tests/tools/test_sibling_overlap.py", "-k", "워크트리_폴더를_가리킨"]
-expect = "red"
-expect_output = ['+ C:\repo\.claude\Worktrees\002-ours 에서 연다']
-[[mutation.edit]]
-file = "tools/sibling_overlap.py"
-old = '''WORKTREE_PARENTS = (r"(?i:worktrees)[/\\]",'''
-new = '''WORKTREE_PARENTS = (r"worktrees[/\\]",'''
 
 [[mutation]]
 name = "티켓 이름 시험: 번호 꼴이 저장소의 티켓 이름을 읽지 못한다"
