@@ -38,14 +38,18 @@
 
 ## 남은 일
 
-1. 셀프 리뷰(`/code-review`)부터 한다. 커밋하지 않은 변경이 워크트리에 있다. Critical·Major를 고친다.
-2. 커밋한다. 제목 꼬리는 기능 티켓 규약인 `(retro-queue-per-item 07)`이다. 메시지는 `git commit -F`로 넘기고 끝에 `Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>`를 붙인다.
-3. PR을 열고 병합한다. 병합은 이 워크트리 사본의 next-session `merge.md`의 "워크트리에서 병합할 때"를 Read로 열어 따른다. 병합은 승인 없이 진행한다.
+1. (끝) 셀프 리뷰를 마쳤고 Critical·Major를 고쳤다(위 "셀프 리뷰").
+2. (끝) 커밋했다. `9177b7c6`, 제목 꼬리 `(retro-queue-per-item 07)`. pre-commit(ruff, 러너 전체, 변이 표 검사 등)이 통과했다. 첫 시도는 변이 표 검사가 막았고 위 "커밋 훅이 더 막은 것"대로 고쳐 다시 커밋했다.
+3. 푸시하고 PR을 열고 병합한다. 사용자가 `/git-pr`를 부르지 않았어도 이 요청의 범위가 "PR과 병합까지"다. PR 본문은 아래 "PR 본문에 적을 것"에 이 줄들을 더해 쓴다(변이 24개, 변이 표 훅이 더 막은 여섯 건의 고침, `chore/<이름>` 이름 규칙을 `ticket_stem`에 건 것, `morning_collect` 규칙이 `check_ticket`보다 넓은 것). 이 일지의 수정은 커밋하지 않았으니 새 세션이 커밋에 싣는다.
+4. 병합 규약: 병합은 이 워크트리 사본의 next-session `merge.md`의 "워크트리에서 병합할 때"를 Read로 열어 따른다. 병합은 승인 없이 진행한다.
 
 ## 인계
 
 세션 제목을 `feature/07-harness-tickets-by-slug (인계함)`으로 바꿨고(바꾸기 전 제목은 `feature/07-harness-tickets-by-slug`), 워크트리 잠금을 풀었다. 경계는 `셀프 리뷰 직전`이다.
 open-session을 부른다 2026-11-07T13:31Z
+
+두 번째 인계. 이 세션(셀프 리뷰 직전에 이어받았다)이 셀프 리뷰·반영·커밋(`9177b7c6`)을 마치고 컨텍스트 문턱을 넘어 경계 `커밋 뒤`에서 넘긴다. 받은 요청 범위는 "PR과 병합까지"라 경계에서 끝나지 않고, 이어받을 상태가 `인계: 셀프 리뷰 직전`이었으므로 같은 경계가 아니다. 세션 제목을 `feature/07-harness-tickets-by-slug (인계함)`으로 바꾼다(바꾸기 전 제목은 `feature/07-harness-tickets-by-slug`). 사용자 프롬프트는 위 "사용자 프롬프트"와 같다. 워크트리 잠금은 이미 풀려 있었다(`git worktree unlock`이 `is not locked`).
+open-session을 부른다 2026-11-07T14:21Z
 
 ## PR 본문에 적을 것
 
