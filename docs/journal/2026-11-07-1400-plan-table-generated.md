@@ -87,7 +87,26 @@ open-session을 부른다 2026-11-07T05:13:30Z
   - Minor 2. 오류 갈래 여럿(`없음` 혼용, 숫자 아닌 슬라이스, 빈 `Blocked by:` 값, 달력에 없는 끝 날짜)과 순환·자기 Blocked by를 거르지 않는다는 못 보는 것에 시험이 없다.
   - Minor 3. 티켓이 모두 `wontfix`이고 `끝` 줄이 없는 기능은 영원히 todo로 프론티어에 남는다. 지금 저장소에는 해당 기능이 없다.
   - Nit. 슬라이스 줄이 키 철자 오류로 사라진 기능은 조용히 표에서 빠지고, 저장소 상태 시험의 행 수 대조는 이를 못 잡는다(독스트링이 적은 동작).
-- **판정.** 넷 모두 이 PR에서 고치지 않고 "다음"의 후속 후보로 넘긴다. 이 티켓의 요구 밖이고, 고치면 봇 회차가 한 번 더 돌아 병합이 미뤄진다. 독스트링이 이미 적은 동작이거나 지금 저장소에서 일어나지 않는 입력이다.
+- **판정(PR을 열기 전).** 넷 모두 이 PR에서 고치지 않고 "다음"의 후속 후보로 넘기기로 했다. 이 티켓의 요구 밖이고, 고치면 봇 회차가 한 번 더 돌아 병합이 미뤄진다고 보았다. 그 뒤 봇 첫 회차가 Minor 2·3과 같은 지적을 내서 둘은 아래 "봇 첫 회차"에서 시험으로 고정했다. Minor 1과 Nit은 넘긴 채다.
+
+## 봇 첫 회차
+
+PR 486, 헤드 `2f7b9c62`. 검사는 모두 통과했고(`tools/wait_ci.py` 출력), claude-review는 Critical·Major 없음이다. CodeRabbit은 인라인 11건(Major 1, Minor 9, 한 건은 Trivial 닛픽)을 냈다. 각 코멘트의 결론은 PR의 인라인 코멘트를 읽은 것이고 코드를 돌려 확인한 것은 아래 "고친 것"의 시험뿐이다. 첫 회차이므로 Minor·Nit은 지적마다 판단했다.
+
+**고친 것.**
+- CodeRabbit Major(`tests/test_plan_status.py` 78행): `KICKOFF.md`의 복사 목록이 `test_이_저장소에서_기능_계획과_끝_줄을_하나는_읽는다`를 그대로 넘기면, 끝 줄과 done 티켓이 아직 없는 새 프로젝트에서 그 시험이 빨개진다. 코드를 읽어 맞다고 판단했고(78행의 `any("done" in …)`와 77행의 `any(feature.end …)`), 복사 목록 항목에 그 두 단언을 첫 기능의 끝 줄이나 done 티켓이 생길 때까지 빼라고 적었다.
+- CodeRabbit Minor(`KICKOFF.md` 215행): 4단계가 복사 전의 도구를 쓰라고 해 7단계의 복사와 순서가 어긋난다. 첫 판은 7단계에서 도구를 복사한 뒤 새 프로젝트의 루트에서 돌려 만든다고 적었고, 맨 끝 점검표도 맞췄다.
+- CodeRabbit Minor(`KICKOFF.md` 290행): 로컬 마크다운 트래커가 아니면 이 도구와 두 시험을 복사하지 않는다고 적었다. 4단계가 `plan-head.md`를 로컬 트래커에서만 만든다.
+- CodeRabbit Minor(`operations.md` 51행)와 내가 PR 직전에 받은 Minor 3: 요약본 세 곳(`operations.md`, `CLAUDE.md`, `KICKOFF.md`)이 끝 줄 조건을 빼 모든 티켓이 `wontfix`인 기능에도 끝 줄을 적게 읽힌다. 상세 규약(`docs/agents/issue-tracker.md`)은 이미 "닫은 뒤 done 티켓이 하나 이상이면"이다. 세 곳에 같은 조건을 더했다. 헌법 판 검사(`PYTHONPATH=. uv run python tools/check_constitution_version.py`)는 origin/main 3.0.68 대비 3.0.69로 통과했다.
+- claude-review Minor, CodeRabbit Minor(`tools/plan_table.py` 42행), 내가 받은 Minor 2: 독스트링이 거르지 않는다고 적은 입력과 오류 갈래에 시험이 없었다. `tests/tools/test_plan_table.py`에 시험 함수 일곱(사례 아홉)을 더했다(비 ASCII 숫자 슬라이스 둘, 빈 `Blocked by:`, `없음` 혼용, 자기 자신을 막는 기능, 서로 막는 두 기능, `2026-13-99`, 슬라이스 키 철자 오류, 모두 `wontfix`인 기능). `uv run pytest tests/tools/test_plan_table.py`가 37개 통과했다. 모두 현재 동작을 고정하는 시험이라 처음부터 초록이고 변이는 넣지 않았다.
+
+**미룬 것과 이유.**
+- CodeRabbit Minor(`tools/plan_table.py` 138·146·176행): 슬라이스 키 누락, 달력에 없는 끝 날짜, 순환 Blocked by를 오류로 바꾸라는 지적이다. 독스트링이 "못 보는 것"으로 적은 동작이고 방금 시험으로 고정했다. 거르는 것은 동작을 바꾸는 일이라 후속 후보로 둔다(해당 입력은 이 저장소에 없다).
+- CodeRabbit Minor(`tools/plan_table.py` 177행): 기능이 하나도 없을 때 빈 표로 덮어쓴다. 저장소 대조 시험 `test_이_저장소에서_기능_계획과_끝_줄을_하나는_읽는다`가 이 저장소에서는 읽은 기능이 0이면 빨개진다. 도구 자체의 거절은 후속 후보로 둔다.
+- CodeRabbit Minor(`.scratch/doc-qa-agent/plan.md` 3행): 문서 검색 서버 이미지를 Blocked by에 넣자는 내용 판단이다. 이 티켓의 이행은 옛 표를 글자 그대로 옮기는 일이라 이 PR에서 바꾸지 않는다.
+- CodeRabbit Minor(`.scratch/harness/probes/canary/to_tickets_path_rule.toml` 25행): 표지를 더하면 카나리아를 새 `claude -p` 세션에서 다시 돌려야 한다. 재실행 비용에 비해 얻는 것이 작아 미룬다.
+- CodeRabbit Trivial 닛픽(`tests/tools/test_hook_grill_design_check.py`)과 claude-review Nit 둘(`Feature.tickets` 이름, `drift_message` 중복): 이미 일지가 Nit으로 남긴 것이다.
+- 내가 받은 Minor 1(읽기 오류의 종료 코드)과 Nit(슬라이스 줄이 사라진 기능을 저장소 상태 시험이 못 잡음): claude-review도 같은 Minor 1을 냈고 "병합을 막지는 않는다"고 했다. 후속 후보다.
 
 ## 회고
 
@@ -105,7 +124,7 @@ open-session을 부른다 2026-11-07T05:13:30Z
 - 커밋 `716e5bb0`(pre-commit 전부 통과, `Skipped` 없음)까지 마쳤고 푸시하지 않았다. 컨텍스트가 인계 문턱을 넘은 채 `커밋 뒤` 경계에 와서 새 세션에 넘긴다. 새 세션은 푸시, PR(`git-pr`), `merge.md` 2의 봇 회차, 병합을 한다. 병합 직전 `git fetch origin` 뒤 origin/main이 움직였으면 합치고 main의 `.scratch/plan.md` 행 집합과 내용 칸을 생성한 표와 다시 맞댄다(지금 origin/main은 base `277b4e59`와 같아 맞댈 것이 없다). 맞댈 일이 생기면 손으로 고친 몫을 기능 계획으로 옮기고 `uv run python tools/plan_table.py`를 다시 돌린다. `mcp-shutdown-spec` 워크트리가 `.scratch/plan.md`를 함께 고치고 있어 그쪽을 나중에 병합하면 글자 충돌이 난다(`tools/sibling_overlap.py` 출력). 이 파일은 도구가 만드는 파일이라 충돌은 도구를 다시 돌려 푼다.
 - PR 본문에 적을 것: 끝 날짜 어긋남(design-system 옛 2026-10-07/끝 2026-10-11, mcp-shutdown 옛 2026-10-21/끝 2026-10-22, design-card-build 옛 2026-10-29/끝 2026-10-30. design-artifacts·design-reverse-sync는 `git log`로 대 보니 `끝`과 같았다. design-refresh의 `2026-10-13`은 티켓이 done이 된 #234의 날짜이고 #239의 8줄 고침은 읽지 않았다), `CONTEXT.md`를 고치지 않은 판단, ADR 0024에 `(바뀜: ADR 0045)`를 단 것과 ADR 0044 89번 줄을 둔 것, 닫은 대기열 523·532, `tidy-checkouts`가 지우지 못한 `05-default-model-required-and-checked` 워크트리, 이 세션이 셀프 리뷰로 고친 것(위 "고친 것").
 - 후속 후보(셀프 리뷰의 남김): 새 기능 계획의 슬라이스 번호를 고르는 규칙이 명세에 없다. 키 철자가 틀려 슬라이스 줄이 없어진 기능이 오류 없이 하네스 기능으로 읽혀 표에서 빠지는 일은 못 보는 것에만 적었다. `Feature.tickets`는 티켓이 아니라 상태 문자열이라 이름이 어긋난다. `tests/test_plan_status.py`의 `drift_message`가 `--check`의 비교를 되풀이한다.
-- 후속 후보(PR 직전 `bug-perf-review`의 남김): 읽기 오류(`UnicodeDecodeError`·`OSError`)를 `PlanError`로 바꿔 종료 코드 2로 끝내기, 오류 갈래와 순환 Blocked by를 거르지 않는 동작을 고정하는 시험, 모두 `wontfix`인 기능의 상태 규칙, 슬라이스 줄이 사라진 기능을 저장소 상태 시험이 잡게 하기. 자세한 것은 위 "PR 직전 리뷰".
+- 후속 후보(PR 직전 리뷰와 봇 첫 회차의 남김): 읽기 오류(`UnicodeDecodeError`·`OSError`)를 `PlanError`로 바꿔 종료 코드 2로 끝내기, 슬라이스 키 누락·달력에 없는 끝 날짜·순환 Blocked by를 오류로 바꾸기(지금은 시험으로 고정된 "못 보는 것"이라 바꾸면 그 시험도 고친다), 기능이 하나도 없을 때 빈 표로 덮어쓰지 않기, 슬라이스 줄이 사라진 기능을 저장소 상태 시험이 잡게 하기. 닛픽으로 `doc-qa-agent`의 Blocked by에 문서 검색 서버 이미지를 넣을지(내용 판단)와 `to_tickets_path_rule` 카나리아 표지를 더할지가 있다. 자세한 것은 위 "PR 직전 리뷰"와 "봇 첫 회차".
 - 이 PR이 병합되면 `06-round-drive-record`(Blocked by 05)가 풀린다.
 
 open-session을 부른다 2026-11-07T09:17:49Z

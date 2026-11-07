@@ -36,7 +36,7 @@
 | `CODING_STANDARDS.md` | code-review 때 | retro가 다섯 번째 반복에서 더할 때 |
 | `.scratch/plan.md` | 이어서 할 때, 티켓을 고를 때 | 손으로 쓰지 않는다. `uv run python tools/plan_table.py`가 `.scratch/plan-head.md`와 기능 계획과 티켓에서 만들고, 그 입력을 고친 세션이 돌려 같은 커밋에 싣는다 |
 | `.scratch/retro-queue/`(폴더, 항목마다 파일 하나. 모양과 인용을 푸는 규칙은 그 `README.md`) | 회고 뒤, chore 브랜치를 딸 때 | 후보가 승인될 때와 반영을 닫을 때 |
-| `.scratch/<slug>/spec.md`, `plan.md`(기능 계획), `issues/` | 티켓 작업을 시작하기 전 | to-spec, to-tickets 스킬이(사용자만 부른다). 기능 계획의 `**설계:**` 줄은 설계 인터뷰를 마친 세션이, `**끝:**` 줄은 마지막 티켓을 닫는 커밋이 적는다. harness 티켓은 그 일을 하는 세션이(`docs/agents/issue-tracker.md`) |
+| `.scratch/<slug>/spec.md`, `plan.md`(기능 계획), `issues/` | 티켓 작업을 시작하기 전 | to-spec, to-tickets 스킬이(사용자만 부른다). 기능 계획의 `**설계:**` 줄은 설계 인터뷰를 마친 세션이, `**끝:**` 줄은 마지막 티켓을 닫는 커밋이(닫은 뒤 done 티켓이 하나 이상일 때) 적는다. harness 티켓은 그 일을 하는 세션이(`docs/agents/issue-tracker.md`) |
 | `docs/journal/` | 이어서 할 때 지시문이 가리킨 일지 끝의 "다음". 이 브랜치의 일지는 `uv run python tools/sibling_overlap.py --journal` | 단계를 마칠 때. 이름은 `<날짜>-<HHMM>-<슬러그>.md`. 사용자 프롬프트 원문 포함 |
 | `docs/agents/` | 트래커·도메인 문서 규약이 헷갈릴 때 | setup 스킬이 |
 | `tools/token_report.py` 독스트링, `.scratch/token-report/` | 토큰·비용·한도를 묻거나 잴 때 | 지표를 바꿀 때 |

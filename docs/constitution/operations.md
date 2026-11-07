@@ -48,7 +48,7 @@ LLM을 실제로 호출하는 테스트는 마커 둘 가운데 하나를 붙인
 전제 둘은 사람이 한 번 한다. `claude setup-token`으로 만든 토큰을 저장소 시크릿 `CLAUDE_CODE_OAUTH_TOKEN`에 등록, 로컬 `coderabbit auth login`. 에이전트는 토큰과 시크릿을 다루지 않는다. 등록 여부만 `gh secret list`로 본다. 이름과 시각만 나온다.
 
 ## 이슈 관리
-로컬 마크다운. 기능마다 기능 계획(`.scratch/<feature-slug>/plan.md`)과 명세와 티켓이 `.scratch/<feature-slug>/`에 있다. 전체 계획 `.scratch/plan.md`는 `uv run python tools/plan_table.py`가 손 파일 `.scratch/plan-head.md`와 기능 계획과 티켓에서 만드는 생성 파일이라 손으로 고치지 않는다(ADR 0045 결정 3). 표의 내용 칸은 기능 계획의 한 줄 요약과 그 계획으로 가는 링크다. 기능 계획이나 손 파일을 고치거나 티켓 상태를 바꾼 세션이 도구를 돌려 결과를 같은 커밋에 싣고, 저장소 대조 시험이 어긋남을 잡는다. 이 파일의 병합 충돌은 도구를 다시 돌려 푼다. 기능의 상태는 손으로 바꾸지 않는다. 기능 계획의 `끝` 줄이 있으면 done, 없고 done 티켓이 있으면 in-progress, 아니면 todo다. 기능의 마지막 티켓을 닫는 커밋이 기능 계획에 `**끝:** YYYY-MM-DD`를 적고, 설계 인터뷰를 마친 세션이 `**설계:** ADR NNNN`(ADR이 없으면 설계 일지의 이름)을 적는다. 규약은 `docs/agents/issue-tracker.md`. 팀원이 생겨 티켓 번호가 충돌하면 setup 스킬을 다시 돌려 트래커를 바꾼다.
+로컬 마크다운. 기능마다 기능 계획(`.scratch/<feature-slug>/plan.md`)과 명세와 티켓이 `.scratch/<feature-slug>/`에 있다. 전체 계획 `.scratch/plan.md`는 `uv run python tools/plan_table.py`가 손 파일 `.scratch/plan-head.md`와 기능 계획과 티켓에서 만드는 생성 파일이라 손으로 고치지 않는다(ADR 0045 결정 3). 표의 내용 칸은 기능 계획의 한 줄 요약과 그 계획으로 가는 링크다. 기능 계획이나 손 파일을 고치거나 티켓 상태를 바꾼 세션이 도구를 돌려 결과를 같은 커밋에 싣고, 저장소 대조 시험이 어긋남을 잡는다. 이 파일의 병합 충돌은 도구를 다시 돌려 푼다. 기능의 상태는 손으로 바꾸지 않는다. 기능 계획의 `끝` 줄이 있으면 done, 없고 done 티켓이 있으면 in-progress, 아니면 todo다. 기능의 마지막 티켓을 닫는 커밋이(닫은 뒤 done 티켓이 하나 이상일 때) 기능 계획에 `**끝:** YYYY-MM-DD`를 적고, 설계 인터뷰를 마친 세션이 `**설계:** ADR NNNN`(ADR이 없으면 설계 일지의 이름)을 적는다. 규약은 `docs/agents/issue-tracker.md`. 팀원이 생겨 티켓 번호가 충돌하면 setup 스킬을 다시 돌려 트래커를 바꾼다.
 
 ## TODO
 `TODO(<기능슬러그>/<티켓번호>): 설명` 형식만 쓴다. ruff TD 규칙이 판정한다. 티켓 없는 TODO는 금지다.

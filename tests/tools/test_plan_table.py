@@ -347,6 +347,84 @@ def test_끝_줄의_날짜가_날짜_꼴이_아니면_2로_끝난다(
     _broken(tmp_path, capsys, "어제")
 
 
+@pytest.mark.parametrize("value", ["둘", "１"])
+def test_슬라이스가_ASCII_숫자가_아니면_2로_끝난다(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str], value: str
+) -> None:
+    _feature(tmp_path, "a", slice_no=value)
+
+    out = _broken(tmp_path, capsys, value)
+
+    assert ".scratch/a/plan.md" in out
+
+
+def test_Blocked_by_값이_비었으면_2로_끝난다(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    _feature(tmp_path, "a", blocked="")
+
+    _broken(tmp_path, capsys, "Blocked by")
+
+
+def test_없음을_다른_막는_기능과_함께_적으면_2로_끝난다(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    _feature(tmp_path, "root", end="2026-11-01")
+    _feature(tmp_path, "a", slice_no="2", blocked="없음, root")
+
+    _broken(tmp_path, capsys, "없음")
+
+
+# --- 거르지 않는다고 독스트링이 적은 입력(못 보는 것). 거르게 바꾸면 이 시험을 함께 고친다 ---
+
+
+def test_자기_자신을_막는_기능은_오류_없이_어느_목록에도_들지_않는다(tmp_path: Path) -> None:
+    _feature(tmp_path, "loop", blocked="loop")
+
+    text = _generate(tmp_path)
+
+    assert "loop" not in _section(text, "프론티어")
+    assert "loop" not in _section(text, "다른 저장소를 기다리는 기능")
+
+
+def test_서로_막는_두_기능은_오류_없이_어느_목록에도_들지_않는다(tmp_path: Path) -> None:
+    _feature(tmp_path, "left", blocked="right")
+    _feature(tmp_path, "right", blocked="left")
+
+    text = _generate(tmp_path)
+
+    assert "left" not in _section(text, "프론티어")
+    assert "right" not in _section(text, "프론티어")
+
+
+def test_달력에_없는_끝_날짜도_꼴만_맞으면_done으로_읽는다(tmp_path: Path) -> None:
+    _feature(tmp_path, "a", end="2026-13-99")
+
+    assert _status_of(tmp_path, "a") == "done"
+
+
+def test_슬라이스_키의_철자가_틀린_기능은_오류_없이_표에서_빠진다(tmp_path: Path) -> None:
+    plan = _feature(tmp_path, "typo")
+    plan.write_text(
+        plan.read_text(encoding="utf-8").replace("**슬라이스:**", "**슬라이드:**"), "utf-8"
+    )
+    _feature(tmp_path, "other")
+
+    text = _generate(tmp_path)
+
+    assert "[typo](" not in text
+    assert "[other](" in text
+
+
+def test_티켓이_모두_wontfix이고_끝_줄이_없으면_todo로_프론티어에_남는다(tmp_path: Path) -> None:
+    _feature(tmp_path, "dropped", tickets={"01-x.md": "wontfix"})
+
+    text = _generate(tmp_path)
+
+    assert _status_of(tmp_path, "dropped") == "todo"
+    assert "dropped" in _section(text, "프론티어")
+
+
 def test_손_파일이_없으면_2로_끝난다(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
     folder = tmp_path / ".scratch" / "a"
     folder.mkdir(parents=True)
