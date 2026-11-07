@@ -6,10 +6,10 @@ PR 직전 리뷰의 보고는 받은 턴에 일지로 옮긴다(`code-review` 6�
 직전 리뷰를 받는 턴에는 맥락에 없을 수 있다. 서브에이전트 보고(`bug-perf-review`,
 `coderabbit-review`)는 정의가 보고 끝에 그 한 줄을 글자 그대로 적게 해서 덮는다. 내장
 `/security-review`는 고칠 수 없는 명령이고, 본 세션이 그 명령의 지시를 따라 보고를 스스로 쓴다.
-그래서 그 명령을 부르는 이 순간에 문장을 넣는다. 본 세션은 CodeRabbit 좌석을
-`coderabbit auth status` 한 줄로 보고(PR 템플릿의 PR 직전 리뷰 줄) 좌석이 없으면
-`coderabbit-review`를 거치지 않고 대체 둘로 가므로, `coderabbit-review` 정의에 둔 문장은 흔한 길에서
-읽히지 않는다(셀프 리뷰 명세 축, 일지 2026-10-28-08).
+그래서 그 명령을 부르는 이 순간에 문장을 넣는다. 본 세션이 CLI 미설치나 좌석 거절을 이미 알면
+`coderabbit-review`를 거치지 않고 대체 둘로 가므로(PR 템플릿의 PR 직전 리뷰 줄),
+`coderabbit-review` 정의에 둔 문장은 그 길에서 읽히지 않는다(셀프 리뷰 명세 축, 일지
+2026-10-28-08). `Seat: not assigned`만 보고는 그 길로 가지 않는다(대기열 578).
 
 가르는 것은 입력의 `tool_input.skill` 하나다. 앞의 `/`를 벗긴 이름이 `security-review`와 같을 때만
 알린다. 이 PC의 트랜스크립트에서 그 호출의 입력은 `{"skill": "security-review"}`가 136번,
