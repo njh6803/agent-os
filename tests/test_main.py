@@ -2900,3 +2900,52 @@ def test_한도를_작게_적은_calc_의_셋째_이어_가기는_요약을_지�
     assert summarized.output_tokens > 0
     assert isinstance(events[-1], RunFinished)
     assert "14" in events[-1].output
+
+
+@pytest.mark.llm
+def test_멈춘_사이_규칙_파일이_그_도구를_모두_deny로_돌려도_승인한_재개가_run_finished까지_간다(
+    tmp_path: Path,
+) -> None:
+    """바깥 이음매(approval-rules 06, 명세 스토리 20). 실제 CLI 프로세스 둘, 실제 Anthropic 호출,
+    실제 stdio 서버.
+
+    운영자가 calc 의 everything 도구를 묻게 두어 실행이 멈추고, 멈춘 사이 규칙 파일이 그 도구를
+    모두 deny 로 돌린다. 승인한 재개는 파일을 다시 읽어 멈춘 호출을 부르지 않고 deny 로 기록한 뒤,
+    도구 정의 없는 모델 호출로 이어져 끝난다. 이 하나가 재개의 규칙 다시 읽기, 운영자의 deny 가
+    승인을 이기는 것, 그렇게 도구가 빠진 요청을 API 가 받아 끝까지 가는 것을 실제 길에서 함께
+    잰다. 요청에 도구 정의가 실렸는지는 이 시험이 관찰하지 않는다. 빠졌다는 것은 core 시험
+    (`tests/core/test_run.py` 의 `test_모두_deny_이면_도구_없는_모델을_부른다`, binds 0)이 새
+    실행에서 보고, 재개도 같은 `_Context.llm` 을 지난다. 다른 모델이나 다른 날의 API 가 그런 요청을
+    거부해 이 시험이 빨개지면 측정이 바뀌었다는 표지이니 시험을 고치지 않고 멈춰 보고한다.
+    """
+    assert "ANTHROPIC_API_KEY" in os.environ, "ANTHROPIC_API_KEY 가 없다. .env 를 확인한다"
+    _copy_repo_plugins(tmp_path)
+    rules = tmp_path / "plugins" / "rules.toml"
+    head = 'schema_version = "1"\n\n[agents.calc]\n'
+    rules.write_text(f'{head}ask = ["everything:*"]\n', encoding="utf-8")
+
+    paused = _cli(
+        ["run", "calc", "2 더하기 3은?", "--traces", "t", "--model", MODEL_PLUGIN], cwd=tmp_path
+    )
+    # 먼저 단언한다. 멈추지 못했으면 안내 줄을 찾다 나는 StopIteration 이 원인을 가린다.
+    assert paused.returncode == EXIT_PAUSED, paused.stderr
+    (trace_file,) = _trace_files(tmp_path / "t")
+    (stop,) = (e for e in _trace_events(trace_file) if isinstance(e, RunPaused))
+    # 멈춘 도구의 이름은 결과이지 표지가 아니다. 모델이 첫 호출로 무엇을 불렀든 멈춘 것을 본다.
+    assert stop.rule == "ask"
+    assert stop.server == "everything"
+
+    rules.write_text(f'{head}deny = ["everything:*"]\n', encoding="utf-8")
+    resumed = _cli(_guidance(paused.stdout), cwd=tmp_path)
+
+    assert resumed.returncode == 0, resumed.stderr
+    (trace_file,) = _trace_files(tmp_path / "t")  # 재개가 끼어도 실행 하나에 파일 하나다
+    events = _trace_events(trace_file)
+    types = [e.type for e in events]
+    assert "run_failed" not in types, events[-1]
+    assert types[-1] == "run_finished"
+    denied = [e for e in events[types.index("run_resumed") :] if isinstance(e, ToolCalled)]
+    assert denied  # 멈춘 호출이 재개 뒤에 deny 로 기록됐다
+    assert [(e.ok, e.rule) for e in denied] == [(False, "deny")] * len(denied)
+    assert denied[0].tool == stop.tool
+    assert denied[0].content == f"운영자가 거부했다: everything:{stop.tool}"

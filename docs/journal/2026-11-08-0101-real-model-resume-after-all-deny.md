@@ -1,0 +1,53 @@
+# 2026-11-08 실제 모델 시험: 멈춘 사이 모두 deny가 된 재개가 끝까지 간다 (approval-rules 티켓 06)
+
+세션 제목: `feature/06-real-model-resume-after-all-deny`. 브랜치도 같다. 워크트리는 `.claude/worktrees/06-real-model-resume-after-all-deny`.
+
+## 사용자 프롬프트
+
+> 사용자: `.claude/skills/implement/SKILL.md` 를 읽어 그대로 따른다. … 인자: `.scratch/approval-rules/issues/06-real-model-resume-after-all-deny.md`
+> 다음 작업: 멈춘 사이 규칙 파일이 그 도구를 모두 deny로 돌려도, 승인한 재개가 실제 모델과 실제 CLI로 run_finished까지 가는 것을 시험한다. 이번 요청 범위: PR과 병합까지
+
+## 한 것
+
+- `tests/test_main.py` 끝에 `-m llm` 시험 하나를 더했다: `test_멈춘_사이_규칙_파일이_그_도구를_모두_deny로_돌려도_승인한_재개가_run_finished까지_간다`. 저장소 `plugins/`를 복사하고(`_copy_repo_plugins`가 04부터 `rules.toml`도 옮긴다) `[agents.calc] ask = ["everything:*"]`로 실제 CLI를 돌려 멈추게 한 뒤, 파일을 `deny = ["everything:*"]`로 바꾸고 안내된 승인 명령으로 다른 프로세스에서 재개한다.
+- 단언은 멈춘 줄(`run_paused.rule == "ask"`, `server == "everything"`)과 끝(`run_failed` 없음, 마지막이 `run_finished`, `run_resumed` 뒤의 `tool_called`가 모두 `ok=false`·`rule="deny"`, 첫 것의 도구가 멈춘 도구이고 내용이 `운영자가 거부했다: everything:<도구>`)이다. 멈춘 도구 이름은 `run_paused.tool`에서 읽고 `add`를 가정하지 않는다.
+- 소스·계약·다른 시험은 건드리지 않았다. `-m llm` 시험은 7개에서 8개가 됐다.
+- 티켓 06을 `done`으로 바꾸고 체크박스를 닫았다. 05가 아직 열려 있어 기능 계획의 끝 줄은 적지 않았고 `plan_table.py`는 바뀐 것이 없었다.
+
+## 빨강 (PR 본문에 옮긴다)
+
+04가 병합된 main이라 행동이 이미 있어 처음부터 초록이었다. 마지막 단언의 `"deny"`를 `"ask"`로 틀리게 두고 실제 모델로 돌렸다. 실패 출력: `assert [(False, 'deny')] == [(False, 'ask')]`, `At index 0 diff: (False, 'deny') != (False, 'ask')`(`tests/test_main.py` 그 단언 줄). 앞의 `run_finished`와 `run_failed` 없음 단언을 지나 그 줄에서 빨갰으므로 시험이 재개 뒤 기록을 실제로 본다. 되돌렸다.
+
+## 검증 (이 세션이 쳤다)
+
+- `uv run --env-file ../../../.env pytest -m llm tests/test_main.py -k run_finished -q`: 1 passed(70.98초, LLM 토큰 합계 3,745, 모델 호출 2건). 셀프 리뷰 반영 뒤 한 번 더: 1 passed(131.40초, 토큰 3,749, 모델 호출 2건).
+- `uv run --env-file ../../../.env pytest -m llm -q`(전체): 8 passed, 235초. LLM 토큰 합계 53,782(입력 52,845, 출력 937), 트레이스 11개, 모델 호출 22건.
+- `uv run ruff check .`와 `uv run ruff format --check .`: 통과.
+- `uv run python tools/run_checks.py`(반영 전 작업 트리): check-ticket, lint-imports, zizmor, check-instructions, check-type-escapes, pyright, pyright-linux, run-hooks, pytest, web-verify 모두 Passed. 반영 뒤 판은 커밋의 pre-commit이 갈음한다.
+- 관리 화면 e2e·위젯 e2e·사진 비교는 치지 않았다(이 변경은 `tests/test_main.py` 하나라 해당 없음).
+
+## 셀프 리뷰 (`/code-review`)
+
+범위: base `2117515b`(= 브랜치를 딴 main), 파일 2개, 커밋 0개, 미추적 0개. 표준 축은 sonnet·high, 명세 축은 세션 모델을 상속했다. Critical·Major 0.
+
+고친 것:
+- 티켓 체크박스 8개가 `[ ]`로 남아 있었다(명세 축). 앞 티켓 02·03·04의 관례대로 `[x]`로 닫았다.
+- 독스트링의 "도구 정의 없는 요청을 API가 받는 것을 함께 잰다"가 과했다(표준 축). 이 시험은 요청에 도구가 실렸는지를 관찰하지 않는다. 문장을 "그렇게 도구가 빠진 요청을 API가 받아 끝까지 가는 것"으로 좁히고, 빠졌다는 것은 `tests/core/test_run.py`의 `test_모두_deny_이면_도구_없는_모델을_부른다`(binds 0)가 새 실행에서 보고 재개도 같은 `_Context.llm`을 지난다고 적었다. 서브에이전트 보고는 재개용 deny 시험 둘이 binds를 단언하지 않는다고 했다(이 세션이 그 시험들을 읽지 않았다).
+- `"run_failed" not in types`를 `types[-1] == "run_finished"`보다 앞에 두고 실패 때 마지막 이벤트가 출력에 나오게 했다(표준 축 Nit).
+
+남긴 것: 변수 이름 `head`·`denied`·`stop`이 더 구체적일 수 있다는 judgement call(Mysterious Name), `rules.write_text`가 두 번 나오는 약한 Duplicated Code. 각각 한 시험 안의 짧은 지역 이름이고 `_write_rules`는 `gatedcalc`용 allow 전용이라 재사용할 수 없다.
+
+근거의 종류: 두 축의 지적과 "코드를 읽었다"는 서브에이전트 보고를 옮긴 것이다. 위 시험·린트·러너의 통과는 이 세션이 본 출력이다.
+
+## 회고
+
+후보 3 · 승인 0 · 기각 3 · 넘김 0. 반영한 것도 대기열에 새로 둔 항목도 없다. 사건은 이 세션의 도구 출력에서 이 세션이 본 것이다.
+
+- 기각: 40줄을 넘는 heredoc을 훅이 막았다. 막는 훅이 그 자리에서 막았고 `CLAUDE.md` 환경 함정에도 있다. Write·Edit로 바꿔 한 번에 지났다.
+- 기각: 워크트리 가드가 한국어 `-k` 인자와 리다이렉트가 든 명령을 거부했다. 이미 `CLAUDE.md` 환경 함정이 적고 명령을 쪼개 지났다. 새로 더할 지침은 없다.
+- 기각: 셀프 리뷰가 티켓 체크박스를 닫지 않은 것을 짚었다. 리뷰가 제 몫을 했고, 표준 축 보고에 따르면 `docs/agents/issue-tracker.md`는 체크박스를 규정하지 않으며 done인 티켓 01도 `[ ]`로 남아 있다(이 세션이 그 규정을 직접 읽지 않았다). 사건 하나이고 검사로 옮길 일관된 규칙이 없다.
+- 만료: `uv run python tools/queue_open_rows.py`와 `--ref origin/main`의 만료 목록이 같은 일곱(0457 0458 0460 0461 0462 0463 0466)이라 상태 줄을 `만료 2026-11-08 (ADR 0036)`로 고쳤다.
+
+## 다음
+
+- 05(서버 대조와 검사 둘)가 나란히 돈다. 06은 05가 먼저 병합돼도 그대로 초록이어야 한다. 병합 뒤 `-m llm`이 둘 다 합쳐진 main에서 초록인지는 05를 병합하는 쪽이 본다.
