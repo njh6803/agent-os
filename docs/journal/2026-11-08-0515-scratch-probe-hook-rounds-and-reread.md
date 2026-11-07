@@ -24,11 +24,22 @@
 - "낱말 경계 없이 Rounds 를 찾는다"가 처음에 초록이었다. `MyRounds`, `RoundsList` 같은 이름에 `Rounds` 낱말이 들었다고 지나가지 않는다는 시험이 없었다. 시험을 더하고 다시 빨강을 확인했다.
 - 리팩터가 기존 변이 둘의 원문을 어긋나게 했다(원문이 2곳 존재, 0곳 존재). `tools/mutate.py --check`로 알아보고 고쳤다.
 
+## 회고
+
+후보 네 개를 냈다. 승인 1(대기열에 둠), 기각 3, 넘김 0이다. 둘째 인계 세션이 일지에 남긴 후보 둘과 이 세션이 본 둘을 함께 판정했다.
+
+- 승인(대기열에 둠): 같은 세션에서 `origin/main`을 합쳐 서브에이전트 정의(`.claude/agents/coderabbit-review.md`)가 바뀌었는데 서브에이전트가 세션 시작 사본으로 돌아 CLI를 건너뛰었다. 사건은 이 일지 "푸시와 PR 단계"의 세 번째 세션이고, 층은 지침(`CLAUDE.md` 환경 함정의 스킬 줄 곁)이며 PR 하나로 되돌릴 수 있다. 새 지침 문장이라 문턱(다섯 번째 반복)에 이르지 않아 `.scratch/retro-queue/subagent-definition-stale-after-merge.md`에 1회차로 두었다. 닫힌 0128·0189(주 체크아웃의 옛 훅·스킬 사본)와는 다른 일이라 잇지 않았다.
+- 기각: `tests/tools/test_probe_kit.py`의 `test_배출은_줄이_계속_와도_제한_시간에_끝난다`가 부하에 흔들린 일. 닫힌 306이 "부하에서 시간 시험이 빨개지면 그 커밋을 다시 치는 값을 받아들이고 사례를 더 고치지 않는다"로 닫혔고(ADR 0036), 새 사례는 회차를 더하지 않고 일지에만 적는다.
+- 기각: approval-rules 05 PR(njh6803/agent-os#491)의 CodeRabbit Minor(마스킹을 선언한 서버와 도구를 내는 서버가 다르면 `core/run.py`의 `_reject_masked_asks`와 실행 중 게이트의 규칙이 어긋난다). 환경이 아니라 제품 코드의 결함 후보라 retro의 범위가 아니다. approval-rules 기능 계획의 몫으로 "다음"에 적었다.
+- 기각: `mcp__ccd_host__sync_with_base_branch`가 이 워크트리에서 "앱이 만든 워크트리가 아니다"라며 거부했다. 거부 문구가 이유를 말하고, 이 저장소의 병합 길 문서(`merge.md`)와 이 일지가 `git merge origin/main`을 가리킨다. 한 번의 호출 비용이고 이미 있는 안내가 그 자리에서 알렸다.
+- 만료: `uv run python tools/queue_open_rows.py --ref origin/main`의 "만료할 항목"이 없었다. 닫은 항목은 0426·0430 둘이다(상태 줄에 이 티켓을 적었다).
+
 ## 다음
 
 - 대기열 431(`pyright` 계기 훅)과 475(`hook_edit_during_commit` Bash 확장)도 `.claude/settings.json`과 `tools/hook_payloads.toml`을 건드린다. 이 티켓이 PreToolUse 등록 한 그룹과 페이로드 표의 `hook_scratch_probe_rule`·`hook_scratch_probe_reread` 사례를 고쳤으므로, 두 항목을 반영할 때 이 PR이 병합된 main에서 시작해 합친다. 같이 열지 않았다.
 - 거부 훅이 선 뒤에도 사전 등록 문서(`.scratch/<slug>/design.md` 등)에서 같은 사고가 나면 그 사건을 대기열에 센다.
-- retro 후보 둘이 이 chore의 몫이 아니다. 하나는 approval-rules 05 PR(njh6803/agent-os#491)의 CodeRabbit Minor(마스킹을 선언한 서버와 도구를 내는 서버가 다르면 `core/run.py`의 `_reject_masked_asks`와 실행 중 게이트의 규칙이 어긋난다)이고, 다른 하나는 `tests/tools/test_probe_kit.py`의 `test_배출은_줄이_계속_와도_제한_시간에_끝난다`가 부하에 흔들린 것이다. 이 세션이 마칠 때 retro가 후보로 판정한다.
+- approval-rules 05 PR(njh6803/agent-os#491)의 CodeRabbit Minor가 열린 채다. 마스킹을 선언한 서버와 도구를 내는 서버가 다르면 `core/run.py`의 `_reject_masked_asks`와 실행 중 게이트의 규칙이 어긋난다는 지적이다(일지 앞부분이 옮긴 보고에서 읽은 것이고 이 세션이 코드를 열어 확인하지 않았다). 환경 후보가 아니라 제품 코드 결함 후보라 retro가 기각했다. approval-rules 기능 계획의 티켓으로 쓸지는 그 기능을 이어 가는 세션이 정한다.
+- `tests/tools/test_probe_kit.py`의 `test_배출은_줄이_계속_와도_제한_시간에_끝난다`가 부하에 흔들린 일은 닫힌 306이 받아들인 종류라 일지에만 남긴다(위 "회고").
 
 ## 인계 시점의 상태 (셀프 리뷰 직전)
 
@@ -73,3 +84,30 @@ open-session을 부른다 2026-11-07T20:45Z
 - 일지 "셀프 리뷰"와 "반영"의 "남겼다" 줄이 새 세션에 남는 열린 것이다: 병렬 형제의 `tool_use` 줄이 PreToolUse 전에 기록에 실제로 오는지는 재지 않았고, 카나리아 명세 일곱은 사전 확인만 돌렸다.
 
 open-session을 부른다 2026-11-07T21:59Z
+
+## 푸시와 PR 단계 (세 번째 세션, 2026-11-07T22:0xZ부터)
+
+- 첫 턴에 `tidy-checkouts`를 돌았다. 루트(main)를 `e575f661`에서 `fe461837`까지 당겼고 정리 스킬 파일은 바뀌지 않았다. 병합된 워크트리는 모두 쥔 프로세스(쉬는 세션의 `claude.exe` 포함)나 커밋하지 않은 변경이 있어 지울 것이 없었다. 휴지통(`.tidy-trash/`)에 `node_modules` 둘이 남았고 `empty-trash`가 `node.exe`(pid 2740)·`esbuild.exe`가 올린 `.node`·`.exe`에 막혀 지우지 못했다. 그 프로세스가 끝난 뒤의 정리가 다시 비운다.
+- 일지 편집을 커밋(`1c123aae`)한 뒤 `origin/main`을 합쳤다. `mcp__ccd_host__sync_with_base_branch`는 "앱이 만든 워크트리가 아니다"라며 거부해(거부 문구는 "이 세션은 앱이 만든 워크트리에서 돌지 않는다"였다. 왜 그렇게 보였는지는 확인하지 않았다) `git merge origin/main`으로 직접 합쳤다. 충돌은 `.scratch/harness/probes/canary/probes_rule.toml` 머리의 `최신 결과` 주석 한 곳뿐이었다. 두 쪽의 결과 줄을 시간순으로 모두 남기고, 합친 뒤 카나리아를 다시 돌리지 않았다는 것을 최신 줄에 적었다(합쳐 들어온 `probes.md` 변경은 첫 항목 본문이고 이 명세가 옮기는 첫 제목과 종료 코드 조각은 그대로다. 코드를 읽은 판단이다). `probes.md`, 프로브 README는 자동으로 합쳐졌다.
+- 병합 커밋 `d2127f52`의 pre-commit이 모두 통과했다(checks 463.5초 안에 pytest 303.4초·web-verify 463.3초·pyright 둘·run-hooks 57.9초, 변이 표·카나리아 모양·표·줄 구분 문자·따옴표·커밋 메시지 검사. `git commit` 출력의 Passed 줄을 이 세션이 봤다).
+- PR 직전 리뷰: `coderabbit-review` 서브에이전트가 먼저 돌았으나 이 세션이 로드한 정의가 `origin/main`을 합치기 전의 옛 사본(좌석 `not assigned`면 종료)이라 CLI를 돌리지 않고 대체 둘을 권하며 끝났다. 서브에이전트가 자기 보고에서 이 워크트리의 `.claude/agents/coderabbit-review.md`가 다르다고 알렸고, 이 세션이 그 파일을 Read로 열어 15행이 "`not assigned`여도 종료하지 않고 3으로 간다"인 것을 봤다. 그래서 새 정의 3단계의 명령 `coderabbit review --agent --include-untracked`를 이 세션이 직접 백그라운드로 돌렸다. 러너 출력의 마지막 줄이 `{"type":"complete","status":"review_completed","findings":0,...}`이었고 본 파일 17개(규칙·설정·티켓·프로브 README와 변이 표 둘·`issue-tracker.md`·일지·시험 둘·`hook_payloads.toml`·훅 둘·`run_hooks.py`)가 `reviewedFiles`에 들었다. 서브에이전트 보고의 `Seat: not assigned`, `Plan: Free`, CLI 0.7.5는 그 보고에서 옮겼다. CLI 리뷰가 끝까지 돌았으므로 대체 둘(`/security-review`, `bug-perf-review`)은 돌리지 않았다.
+- 푸시하려 하니 푸시 앞의 훅이 "이 브랜치는 origin/main 보다 1커밋 뒤처졌다"며 막았다(훅 이름은 확인하지 않았다). `origin/main`이 한 커밋 더 나아가 있었고, 다시 합치자(`git merge origin/main`) 충돌이 `.claude/rules/tools.md`의 `hook_probe_conclusion` 줄 근처 한 곳과 `docs/agents/issue-tracker.md`의 프로브 문장 한 곳이었다. 둘 다 이 브랜치의 문장(`hook_scratch_probe_rule`이 저장소 프로브도 본다, 거부 훅과 `Rounds` 알림)과 `origin/main`이 더한 문장(대기열 535의 `고친 길`)을 둘 다 남겨 풀었다. `issue-tracker.md`는 문장이 길어 스크래치패드의 풀기 스크립트로 풀었다. 병합 커밋 `b5f7d0aa`의 pre-commit이 모두 통과했다(checks 534초, `git commit` 출력의 Passed 줄을 이 세션이 봤다). 푸시 전 `uv run python tools/sibling_overlap.py`는 번호 겹침 없음이었다.
+- PR #497을 열었다(제목 `feat: Rounds 없는 프로브를 짚고 읽지 않은 재편집을 막는다 (harness scratch-probe-hook-rounds-and-reread)`, 본문은 템플릿대로 썼다).
+
+## 인계 시점의 상태 (PR 연 뒤)
+
+세션 제목은 `chore/scratch-probe-hook-rounds-and-reread`였다. 컨텍스트가 인계 문턱을 넘어 `PR 연 뒤`에서 세 번째로 넘긴다.
+
+- PR: https://github.com/njh6803/agent-os/pull/497 . 푸시한 머리는 `b5f7d0aa`이다. 이 일지의 이 절과 앞 절의 편집(위 "푸시와 PR 단계" 세 줄과 이 절)은 커밋하지 않았다. 새 세션이 이어 쓰고 봇 회차의 커밋에 싣는다(`merge.md` 3).
+- 안 한 것: `@coderabbitai review` 코멘트(첫 코멘트는 새 세션이 남긴다), `ccd_pr`의 `get_status`와 `bind_pr`(이 세션은 `get_session`에서 `prNumber` 497, `prState` OPEN이 이미 보였다), 봇 회차와 반영, retro(이 일지 "다음"의 후보 둘과 이 세션이 본 것), 일지 "다음" 마무리, 대기열 426·430의 항목 닫기, 병합(`merge.md`의 "워크트리에서 병합할 때"를 Read로 열어 따른다. 주 체크아웃에서 열지 않았다), 병합 뒤 원격 정리.
+- 이 세션이 본 것 하나: `mcp__ccd_host__sync_with_base_branch`가 이 워크트리에서 "앱이 만든 워크트리가 아니다"라며 거부했다. 병합 충돌을 풀 때는 `git merge origin/main`을 직접 쓴다.
+- 이 세션이 본 것 둘: 서브에이전트 정의는 세션이 시작할 때 로드되어 `origin/main`을 합쳐도 같은 세션에서는 옛 사본이 돈다. 이 일지는 그것이 대기열 후보인지 판정하지 않았다(retro가 판정한다).
+- 열린 것: 병렬 형제의 `tool_use` 줄이 PreToolUse 전에 기록에 실제로 오는지는 재지 않았다. 카나리아 명세 일곱은 사전 확인만 돌렸고 `probes_rule.toml`은 `origin/main`을 합친 뒤 다시 돌리지 않았다.
+- 충돌 후보(`sibling_overlap.py`): PR #492와 워크트리 `open-session-prompt-file-path-check`가 `.claude/settings.json`을, 워크트리 `measure-word-journal-scope`가 `.scratch/harness/probes/README.md`·`docs/agents/issue-tracker.md`·`tools/hook_payloads.toml`을 함께 고친다. 병합 전에 `origin/main`을 다시 합친다. `sync_with_base_branch`가 거부하므로 `git merge origin/main`이다.
+
+open-session을 부른다 2026-11-07T22:38Z
+
+## 봇 회차 (이 세션, 2026-11-07T22:5xZ)
+
+- `tools/wait_ci.py 497`의 끝 줄(이 세션이 본 출력)은 헤드 `b5f7d0a`에서 CodeRabbit NEUTRAL(`Review rate limited`), claude-review·e2e·e2e-widget·python·ticket·verify·visual·web 모두 SUCCESS이고 종료 0이었다. CodeRabbit의 PR 코멘트는 "다음 리뷰는 3분 뒤"라고 했고, 이 세션이 남긴 `@coderabbitai review` 코멘트에는 같은 한도 문구로 답했다. 한도에 걸린 푸시는 회차로 세지 않는다.
+- claude-review의 첫 회차(PR 코멘트에서 읽었다): Critical·Major 없음, Minor 1, Nit 2. 셋 모두 고치지 않고 PR 코멘트에 이유를 남겼다. Minor(`History.earlier`가 읽음일 때와 아닐 때 뜻이 다르다)는 제안한 `earlier=0` 반환을 셀프 리뷰 반영 중 이미 해 보았고 그러면 `history.read` 검사가 중복이 되어 변이가 살아남아 되돌렸다는 이유다(위 "반영"). Nit 둘(알림 종류의 빈 문자열 센티널, `is_scratch_script` 복사)은 의도된 비용이고, 복사된 판정이 갈라지는 것은 `test_hook_scratch_probe_reread.py`의 판정 대조 시험이 이미 잡는다(그 시험 364행을 Grep으로 열어 같은 입력으로 견주는 것을 보았다). 뒤의 작업으로 넘기는 일은 없다.
