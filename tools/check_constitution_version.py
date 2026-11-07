@@ -14,8 +14,9 @@ merge-base 의 판과도 달라야 한다. 이 가지가 고친 파일은 merge-
 것이다. main 과 같은 파일은 main 이 들여온 것이라, main 을 합치는 커밋이 main 의 변경을 이 가지의
 것으로 세지 않는다(거르는 규칙은 `tools/sibling_overlap.py` 의 `_own_changes` 와 같고, 그 도구는
 작업 트리와 추적하지 않는 파일을, 이 검사는 색인을 견준다). 판 줄이 main 이나
-merge-base 의 것이어도, main 의 이력이 이 가지 몫으로 비워 둔 판에 이 가지가 이력 문단을 더했으면 그
-판으로 올린 것이다(대기열 279, `reserved_version`). 판은 가지마다 한 번 올리면 되어, 앞 커밋에서
+merge-base 의 것이어도, 판 줄이 main 의 판 줄과 같고 main 의 헌법 README 가 이 가지 몫으로 비워 둔
+판의 문장을 이 가지가 지웠으면 그 판으로 올린 것이다(대기열 279, retro-queue-per-item 06,
+`reserved_version`). 판은 가지마다 한 번 올리면 되어, 앞 커밋에서
 올렸으면 다른 헌법 파일만 고친 뒤 커밋도 지나간다. 형제 가지와 번호가 겹치는지는 보지 않는다. 그것은
 `tools/sibling_overlap.py` 가 본다.
 
@@ -26,7 +27,8 @@ merge-base 의 것이어도, main 의 이력이 이 가지 몫으로 비워 둔 
 못 보는 것: 판정이 커밋 단위라, 헌법 파일을 고친 커밋과 판을 올린 커밋을 나누면 가지 전체로는 맞아도
 앞 커밋이 막힌다(잘못 막는다, 대기열 31의 자리 후보 (1)). 판을 올리는 문장은 같은 커밋에 둔다. CI 는
 이 검사를 돌리지 않는다(pre-commit 에만 있다). 판을 올렸는지는 판 줄이 달라졌는지만 보고,
-크기(patch, minor, major)가 맞는지와 이력 문단을 더했는지는 보지 않는다. 헌법 파일을 지우기만 한
+크기(patch, minor, major)가 맞는지와 판을 올린 까닭을 그 변경의 ADR 이력이나 일지에 적었는지는 보지
+않는다(헌법 README 에는 이력 문단이 없다). 헌법 파일을 지우기만 한
 커밋은 pre-commit 이 지운 파일을 훅의 `files` 거르기에 넘기지 않아 이 검사가 돌지 않는다(놓친다.
 도구를 바로 부르면 막는다). 모든 커밋에 띄우면(`always_run`) 커밋마다 수 초에서 십수 초(이 PC 에서
 `uv run` 의 시작까지 손으로 본 값이 4.5~17초, 다른 세션이 함께 돌 때)가 더 들어 두지 않았다.
@@ -68,7 +70,7 @@ class Judged:
     ours: str | None  # 색인의 판
     main: str | None  # origin/main 의 판
     base: str | None  # merge-base 의 판
-    reserved: str | None  # main 이 이 가지 몫으로 비워 둔 판 가운데 이 가지가 이력 문단을 더한 것
+    reserved: str | None  # main 이 이 가지 몫으로 비워 둔 판 가운데 이 가지가 문장을 지운 것
 
     @property
     def passes(self) -> bool:
@@ -146,8 +148,10 @@ def _report(judged: Judged, out: Callable[[str], None]) -> None:
     ours = "판 줄이 없다" if judged.ours is None else f"판 {judged.ours}"
     out(f"   {ours} — {MAIN} 의 판 {judged.main}, merge-base 의 판 {judged.base}")
     out(
-        f"   {CONSTITUTION} 의 판을 같은 커밋에서 올리고 이력 문단을 더한다"
-        "(principles.md 거버넌스의 semver)."
+        f"   {CONSTITUTION} 의 판 줄을 같은 커밋에서 올린다(principles.md 거버넌스의 semver)."
+        " 판을 올린 까닭은 이 변경의 ADR 이력이나 일지에 적고 README 에는 적지 않는다."
+        " main 이 이 가지 몫으로 비워 둔 판을 쓰려면 판 줄은 main 의 것 그대로 두고 README 에서"
+        " 그 비워 둔 문장을 지운다."
         " 형제 가지와 겹치지 않는 번호는 `uv run python tools/sibling_overlap.py` 가 알린다"
     )
 
