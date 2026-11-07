@@ -77,6 +77,18 @@ open-session을 부른다 2026-11-07T05:13:30Z
 
 `uv run ruff check .`, `uv run ruff format --check .`, `uv run python tools/plan_table.py --check`, `uv run python tools/check_instructions.py`, `uv run pytest tests/tools/test_plan_table.py tests/test_plan_status.py -q`가 모두 초록(41개 통과)이다. 전체 `tools/run_checks.py`는 커밋의 pre-commit으로 갈음하고 결과는 커밋 뒤에 적는다.
 
+## PR 직전 리뷰
+
+`coderabbit auth status`가 `Seat: not assigned`라 CLI는 돌지 못했고 대체 둘을 돌렸다(인계받은 새 세션, 커밋 `983bf0ad`에서).
+
+- **`/security-review`.** 식별 서브태스크가 `tools/plan_table.py`·`tools/check_ticket.py`·`tools/hook_grill_design_check.py`를 읽고 발견 없음으로 보고했다(필터 서브태스크는 걸러낼 항목이 없어 띄우지 않았다). 서브에이전트가 읽은 결과이고 이 세션이 코드를 다시 읽지는 않았다.
+- **`bug-perf-review`.** Critical·Major 없음, Minor 3, Nit 1. 서브에이전트는 `--check`가 0으로 끝나는 것과 임시 폴더에서 경계 입력을 넣어 본 것을 직접 돌렸고 pytest는 돌리지 않았다.
+  - Minor 1. 읽다가 나는 `UnicodeDecodeError`·`OSError`가 `PlanError`가 아니어서 트레이스백과 종료 코드 1로 끝난다(`tools/plan_table.py` 117·130·221행). `--check`의 1(표가 다름)과 섞인다.
+  - Minor 2. 오류 갈래 여럿(`없음` 혼용, 숫자 아닌 슬라이스, 빈 `Blocked by:` 값, 달력에 없는 끝 날짜)과 순환·자기 Blocked by를 거르지 않는다는 못 보는 것에 시험이 없다.
+  - Minor 3. 티켓이 모두 `wontfix`이고 `끝` 줄이 없는 기능은 영원히 todo로 프론티어에 남는다. 지금 저장소에는 해당 기능이 없다.
+  - Nit. 슬라이스 줄이 키 철자 오류로 사라진 기능은 조용히 표에서 빠지고, 저장소 상태 시험의 행 수 대조는 이를 못 잡는다(독스트링이 적은 동작).
+- **판정.** 넷 모두 이 PR에서 고치지 않고 "다음"의 후속 후보로 넘긴다. 이 티켓의 요구 밖이고, 고치면 봇 회차가 한 번 더 돌아 병합이 미뤄진다. 독스트링이 이미 적은 동작이거나 지금 저장소에서 일어나지 않는 입력이다.
+
 ## 회고
 
 후보 6개: 승인 1, 기각 5, 넘김 0. 만료할 항목은 없었다(`uv run python tools/queue_open_rows.py`가 "(없음)"). 같은 일을 다룬 항목은 `--search`로 찾았다.
@@ -93,6 +105,7 @@ open-session을 부른다 2026-11-07T05:13:30Z
 - 커밋 `716e5bb0`(pre-commit 전부 통과, `Skipped` 없음)까지 마쳤고 푸시하지 않았다. 컨텍스트가 인계 문턱을 넘은 채 `커밋 뒤` 경계에 와서 새 세션에 넘긴다. 새 세션은 푸시, PR(`git-pr`), `merge.md` 2의 봇 회차, 병합을 한다. 병합 직전 `git fetch origin` 뒤 origin/main이 움직였으면 합치고 main의 `.scratch/plan.md` 행 집합과 내용 칸을 생성한 표와 다시 맞댄다(지금 origin/main은 base `277b4e59`와 같아 맞댈 것이 없다). 맞댈 일이 생기면 손으로 고친 몫을 기능 계획으로 옮기고 `uv run python tools/plan_table.py`를 다시 돌린다. `mcp-shutdown-spec` 워크트리가 `.scratch/plan.md`를 함께 고치고 있어 그쪽을 나중에 병합하면 글자 충돌이 난다(`tools/sibling_overlap.py` 출력). 이 파일은 도구가 만드는 파일이라 충돌은 도구를 다시 돌려 푼다.
 - PR 본문에 적을 것: 끝 날짜 어긋남(design-system 옛 2026-10-07/끝 2026-10-11, mcp-shutdown 옛 2026-10-21/끝 2026-10-22, design-card-build 옛 2026-10-29/끝 2026-10-30. design-artifacts·design-reverse-sync는 `git log`로 대 보니 `끝`과 같았다. design-refresh의 `2026-10-13`은 티켓이 done이 된 #234의 날짜이고 #239의 8줄 고침은 읽지 않았다), `CONTEXT.md`를 고치지 않은 판단, ADR 0024에 `(바뀜: ADR 0045)`를 단 것과 ADR 0044 89번 줄을 둔 것, 닫은 대기열 523·532, `tidy-checkouts`가 지우지 못한 `05-default-model-required-and-checked` 워크트리, 이 세션이 셀프 리뷰로 고친 것(위 "고친 것").
 - 후속 후보(셀프 리뷰의 남김): 새 기능 계획의 슬라이스 번호를 고르는 규칙이 명세에 없다. 키 철자가 틀려 슬라이스 줄이 없어진 기능이 오류 없이 하네스 기능으로 읽혀 표에서 빠지는 일은 못 보는 것에만 적었다. `Feature.tickets`는 티켓이 아니라 상태 문자열이라 이름이 어긋난다. `tests/test_plan_status.py`의 `drift_message`가 `--check`의 비교를 되풀이한다.
+- 후속 후보(PR 직전 `bug-perf-review`의 남김): 읽기 오류(`UnicodeDecodeError`·`OSError`)를 `PlanError`로 바꿔 종료 코드 2로 끝내기, 오류 갈래와 순환 Blocked by를 거르지 않는 동작을 고정하는 시험, 모두 `wontfix`인 기능의 상태 규칙, 슬라이스 줄이 사라진 기능을 저장소 상태 시험이 잡게 하기. 자세한 것은 위 "PR 직전 리뷰".
 - 이 PR이 병합되면 `06-round-drive-record`(Blocked by 05)가 풀린다.
 
 open-session을 부른다 2026-11-07T09:17:49Z
