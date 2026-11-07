@@ -55,7 +55,19 @@
 - 전체 `uv run python tools/run_checks.py`는 주석 고침 전에 모두 통과했다(check-ticket, zizmor, lint-imports, check-instructions, check-type-escapes, pyright, pyright-linux, run-hooks, pytest 371초, web-verify 529초). 이후 바뀐 것은 문구뿐이라 커밋의 pre-commit이 다시 돌고, 그 결과는 커밋 뒤에 적는다.
 - `uv run ruff check .`와 `uv run ruff format --check .`는 통과했다. `uv run python tools/sibling_overlap.py`는 번호 겹침 없음(헌법 3.0.70)이다.
 
+## PR 직전 리뷰
+
+CodeRabbit 좌석이 없어 CLI 대신 대체 둘을 돈다.
+
+- 내장 `/security-review`: 지적 없음. 이 변경은 `tools/`의 정규식 문자열 대조와 문서 이동뿐이고, 새 서브프로세스·역직렬화·경로 조립·네트워크 호출이 없다. 읽는 입력은 `git`이 낸 README 본문과 브랜치 이름이고 둘 다 정규식 대조에만 쓴다. diff에서 `subprocess`·`eval`·`open(`·`Path(`를 더한 줄을 grep해 0건을 확인했다.
+
+- `bug-perf-review`(기준 커밋 29165af3, 18개 파일): 유효·보류 지적 0건이다. `reserved_version`의 경계 입력(같은 글, 문장 삭제, 판 줄 상승, 공백 없는 두 문장, CRLF, 판 줄 둘, 3.0.9와 3.0.10 비교, 빈 글, branch=None, 백틱이 든 이름)은 모두 바르게 처리했다. `exempt()`는 정확한 경로에서만 면제한다(`.bak`, 하위 폴더, 다른 폴더, 대소문자는 거부). 변이 표 `--check`는 "174 모두 한 번씩 있다"로 끝났다. `history.md`는 옛 README의 이력과 2.0.0 문단을 문자열 포함으로 대 봤고 바이트 비교는 내가 따로 했다. 변이를 넣어 돌리는 것과 변이 113~119·121·122의 짝 대조는 하지 않았다고 보고했다. Nit: README의 3.0.61 문장 뒤 "3.0.62 뒤에 병합되어 3.0.63"이 남는데 명세대로 남긴 것이라 두었다.
+
 ## 다음
 
-- 셀프 리뷰와 전체 검사, 커밋, PR, 봇 회차, 병합. 병합 직전에 `git fetch origin` 뒤 main이 움직였으면 합치고 `docs/constitution/README.md`의 판 줄과 `history.md`가 다른 브랜치의 변경과 부딪히지 않았는지 본다. 다른 브랜치가 옛 한 줄 이력에 문단을 더했으면 충돌 해결 때 그 문단이 사라지지 않게 `history.md`에 옮긴다.
+- 커밋 `4f4c73d4`까지 마쳤고(pre-commit 전부 통과, `Skipped`는 카나리아 명세 모양뿐이다. 이 커밋이 카나리아 명세를 건드리지 않았다) 푸시하지 않았다. 컨텍스트가 인계 문턱을 넘은 채 `커밋 뒤` 경계에 와서 새 세션에 넘긴다. 새 세션은 푸시, PR(`git-pr`), `merge.md` 2의 봇 회차, 회고(`retro`, 이 일지에 `## 회고` 절을 더한다), 병합을 한다. 이 세션은 `retro`를 아직 돌지 않았다. PR을 열기 전에 `uv run python tools/sibling_overlap.py`를 한 번 더 친다(지금은 번호 겹침 없음, 헌법 3.0.70). 병합 직전에 `git fetch origin` 뒤 main이 움직였으면 합치고 `docs/constitution/README.md`의 판 줄과 `history.md`가 다른 브랜치의 변경과 부딪히지 않았는지 본다. 다른 브랜치가 옛 한 줄 이력에 문단을 더했으면 충돌 해결 때 그 문단이 사라지지 않게 `history.md`에 옮긴다.
 - PR 본문에 적을 것: `05-default-model-required-and-checked` 워크트리를 `tidy-checkouts`가 지우지 못한 것, 옛 이력과 `history.md`의 바이트 대조, 열린 항목 550 판단, `CONTEXT.md`를 고친 것, 후속 후보(`tests/test_plan_status.py`의 `len(rows) - 1`이 `plan-head.md`에 표 줄이 없다는 가정에 기댄다. 이 티켓과 무관하면 후속).
+
+open-session을 부른다 2026-11-07T11:34:10Z
+
+인계 못함 커밋 뒤: open-session의 열기 스크립트(tools/open_session.ps1)를 자동 모드 분류기가 거부했다. 제목을 되돌리고 이 세션에서 푸시와 PR부터 잇는다(2026-11-07, 워크트리 잠금은 이미 풀었고 다시 잠그지 않는다).
