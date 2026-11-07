@@ -57,6 +57,22 @@
   - `journal_order`의 마법수와 `morning_sources`의 `sibling_overlap` import: 값이 셋뿐이고 `morning_sources`가 이미 같은 도구에서 꼴을 가져와 두었다.
   - `TRANSITION_DAY`를 옮기라는 지시가 시험 독스트링과 ADR 이력에만 있고 `merge.md`에는 없다는 지적: 티켓이 정한 자리(시험 독스트링)이고, 어긋나면 시험이 느슨해질 뿐 빨개지지 않는다.
 
+## 회고
+
+후보 7개: 승인 1, 기각 6, 넘김 0. 만료할 항목은 없었다(`uv run python tools/queue_open_rows.py`가 "(없음)"). 같은 일을 다룬 항목은 `--search`로 찾았다.
+
+- **승인 — 프로브 README 행 병합 충돌.** 사건은 main(티켓 03)을 합칠 때 `.scratch/harness/probes/README.md`의 세 행이 한 덩어리로 충돌한 것이다. 층은 구조(결과를 각 변이 표 머리 주석과 탐침 독스트링으로 옮김)와 행 길이를 막는 저장소 상태 시험이고, 한 PR로 되돌릴 수 있다. 닫힌 `대기열 0196`(카나리아 행)과 같은 갈래라 새 항목 `probe-readme-result-cells`를 `0196의 4회차`로 이었다. 지금 반영하지 않고 대기열 폴더에 두었다.
+- **기각 — 서브에이전트가 같은 보고를 네 번 되풀이.** 변이 표지를 맡긴 서브에이전트가 긴 변이 실행을 백그라운드에 두고 턴을 끝내, 완료 알림마다 같은 보고가 다시 왔다. 같은 갈래의 `대기열 0188`은 `bug-perf-review` 정의를 고친 것이라 이 서브에이전트(그때그때 짓는 브리프)에는 반영할 자리가 없다.
+- **기각 — 스킬이 합치기 전 사본으로 실림.** 이 브랜치가 고친 `code-review`가 옛 본문으로 실렸다. `CLAUDE.md` 환경 함정이 이미 적은 길(디스크의 `SKILL.md`를 Read)을 따라 해를 입지 않았다.
+- **기각 — `sync_with_base_branch`가 거부됨.** 앱이 만든 워크트리가 아니라는 까닭을 훅이 그 자리에서 알렸고, 직접 `git merge`로 이었다.
+- **기각 — `mutate.py --check`에 `--since`를 섞음.** 도구가 종료 2와 까닭으로 그 자리에서 알렸고 표마다 따로 쳤다.
+- **기각 — 변이 21개의 `expect_output` 누락으로 첫 커밋이 막힘.** pre-commit의 `mutation tables`가 설계대로 막았다.
+- **기각 — 인계 계기가 자동 압축 뒤에 읽힘.** 계기가 컨텍스트 20만 토큰을 넘은 때 들어오고, 읽은 때는 압축 직후라 컨텍스트가 작았다. 요청 범위가 병합까지라 이어 갔고 비용은 나지 않았다.
+
 ## 다음
 
-(PR을 연 뒤 채운다.)
+- 티켓 03(#484)은 이미 main에 들었고, 이 PR(티켓 04)이 병합되면 `05-plan-table-generated`(Blocked by 03·04)가 풀린다. 다음 세션은 `.scratch/retro-queue-per-item/issues/05-plan-table-generated.md`를 연다. 06은 05에 막혀 있다.
+- main(`d3be038f`, 티켓 03)을 합쳤다. 충돌은 `.scratch/harness/probes/README.md` 한 덩어리였고, 기준 커밋과 대 본 결과 `sibling_overlap_mutations.toml`·`journal_cite_scan.py` 두 줄은 이 브랜치만, `review_workflow.py` 한 줄은 티켓 03만 고친 것이라 줄마다 바뀐 쪽을 썼다. 티켓 03이 들인 일지 `2026-11-07-03-review-bot-path-filter.md`는 순번 꼴이지만 전환일 당일이라 `tests/test_journal_names.py`가 통과한다(시험은 전환일 "뒤"만 잡는다). main을 또 합치는 날이 11-07 뒤면 `TRANSITION_DAY`를 그날로 옮긴다.
+- 후속 후보: `--journal`이 경로를 찍으면 그 파일을 이어 쓴다는 한 줄을 `merge.md` 3·`handoff.md` 2·`code-review` 6단계·두 훅의 문구에 더하는 일. 컨텍스트 압축 뒤에 다른 분으로 일지를 둘째로 만드는 일을 막는다. 스킬 본문을 또 바꾸면 카나리아가 다섯 더 걸려 이 PR에서는 두었다.
+- 약한 표지 셋(`sibling_overlap` 22, `journal_names` 3, `journal_number_and_guards` 4)은 시험 쪽에 단언 메시지를 더하면 단단해진다. 시험을 고치는 PR이 생길 때 같이 한다.
+- 이 세션은 `커밋 뒤` 인계 계기를 받았으나 자동 압축을 막 거쳐 컨텍스트가 작았고 요청 범위가 병합까지라 넘기지 않고 이어 갔다.

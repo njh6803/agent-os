@@ -18,13 +18,18 @@
 1 이면 목록 실패다. 그 밖은 이상으로 찍고 어긋남으로 센다. 종료 코드만
 보면 스크립트를 찾지 못한 실행도 "실패"로 기대와 맞아 버린다(첫 판이 그랬다).
 
-기대는 대기열 50·158·161 을 반영한 판이다. 가드는 이 워크플로 파일 자체가 바뀐 PR 에서만 코멘트를
-세지 않고, `ci.yml` 같은 다른 워크플로만 바뀐 PR 에서는 센다(50). 이 파일을 바꾼 PR 이 일지
-(`docs/journal/`), 대기열(`.scratch/retro-queue.md`), 하네스 탐침(`.scratch/harness/probes/`) 밖의
-파일을 함께 실으면 실패한다(158). 목록을 얻지 못하면 그 까닭을 찍고 실패한다(161). 50 반영 전의 판
-(`.github/workflows/` 아래 어느 파일이든 건너뛰기)에 돌리면 `ci.yml` 만 바꾼 두 사례와 같은 이름의
-다른 경로(`x/...`, `....orig`)가 어긋나고, 158·161 반영 전의 판에 돌리면 함께 실음 사례들이
-건너뜀으로, 목록 실패 사례들이 코멘트를 센 통과·실패로 어긋난다.
+기대는 대기열 50·158·161 과 대기열 분할 뒤의 기록 경로를 반영한 판이다. 가드는 이 워크플로 파일
+자체가 바뀐 PR 에서만 코멘트를 세지 않고, `ci.yml` 같은 다른 워크플로만 바뀐 PR 에서는 센다(50).
+이 파일을 바꾼 PR 이 일지(`docs/journal/`), 대기열(`.scratch/retro-queue/` 폴더), 티켓
+(`.scratch/<폴더>/issues/` 바로 아래의 `.md`), 하네스 탐침(`.scratch/harness/probes/`) 밖의 파일을
+함께 실으면 실패한다(158). 옛 대기열 파일(`.scratch/retro-queue.md`)과 기능 폴더의 다른
+파일(`spec.md`, `issues/` 아래 더 깊은 경로)도 밖이다. 목록을 얻지 못하면 그 까닭을 찍고
+실패한다(161). 50 반영 전의 판(`.github/workflows/` 아래 어느 파일이든 건너뛰기)에 돌리면 `ci.yml`
+만 바꾼 두 사례와 같은 이름의 다른 경로(`x/...`, `....orig`)가 어긋나고, 158·161 반영 전의 판에
+돌리면 함께 실음 사례들이 건너뜀으로, 목록 실패 사례들이 코멘트를 센 통과·실패로 어긋난다.
+티켓·대기열 폴더를 반영하기 전의 판에 돌리면 그 둘이 기록으로 지나가야 하는 사례가 함께 실음으로,
+옛 대기열 파일 사례가 건너뜀으로, 오류 문구에 티켓이 없는 함께 실음 사례들이 문구 검사로 어긋난다.
+대기열 폴더는 일지 폴더처럼 앞부분만 보므로 그 아래 더 깊은 경로도 기록으로 지난다.
 
 사용: 저장소 루트에서 Git Bash 로
     PYTHONUTF8=1 uv run python .scratch/harness/probes/review_workflow.py [<rev>]
@@ -86,11 +91,15 @@ SKIP, PASS, FAIL, MIXED, LIST_FAIL = "건너뜀", "통과", "실패", "함께 �
 
 JOURNAL = "docs/journal/2026-10-07-19-x.md"
 JOURNAL_KO = "docs/journal/2026-10-07-19-한글 이름.md"
-QUEUE = ".scratch/retro-queue.md"
+QUEUE = ".scratch/retro-queue/0001.md"
+QUEUE_DEEP = ".scratch/retro-queue/sub/0999.md"
+TICKET = ".scratch/retro-queue-per-item/issues/03-review-bot-path-filter.md"
 PROBE = ".scratch/harness/probes/review_workflow.py"
 MOVED = ".scratch/harness/probes/moved.py"
 # 사례가 기록으로 쓰는 경로. 함께 실음의 목록에서 빠져야 한다
-RECORDS = (JOURNAL, JOURNAL_KO, QUEUE, PROBE, MOVED)
+RECORDS = (JOURNAL, JOURNAL_KO, QUEUE, QUEUE_DEEP, TICKET, PROBE, MOVED)
+# 함께 실음의 오류 문구가 받는 기록으로 들어야 하는 낱말
+RECORD_WORDS = ("일지", "대기열", "티켓", "하네스 탐침")
 
 # (이름, 바뀐 파일(None 이면 목록 호출이 실패한다), 코멘트, 기대 결과)
 CASES: list[tuple[str, list[str] | None, list[dict[str, object]], str]] = [
@@ -102,14 +111,50 @@ CASES: list[tuple[str, list[str] | None, list[dict[str, object]], str]] = [
     ("목록 실패, 시작 뒤 코멘트", None, [AFTER], LIST_FAIL),
     ("목록 실패, 코멘트 없음", None, [], LIST_FAIL),
     ("이 워크플로만 바꿈, 코멘트 없음", [WORKFLOW], [], SKIP),
-    ("이 워크플로와 기록 셋", [WORKFLOW, JOURNAL, QUEUE, PROBE], [], SKIP),
+    ("이 워크플로와 기록 넷", [WORKFLOW, JOURNAL, QUEUE, TICKET, PROBE], [], SKIP),
+    # 이 워크플로를 바꾸는 PR 은 커밋 검사 때문에 티켓 파일을 싣는다. 그 PR 자신이 지나야 한다
+    ("이 워크플로와 티켓만", [WORKFLOW, TICKET], [], SKIP),
+    ("이 워크플로와 대기열 폴더의 새 항목", [WORKFLOW, ".scratch/retro-queue/0999.md"], [], SKIP),
+    # 폴더는 일지처럼 앞부분만 본다. 이 동작을 고정한다
+    ("이 워크플로와 대기열 폴더 아래 더 깊은 경로", [WORKFLOW, QUEUE_DEEP], [], SKIP),
     ("이 워크플로와 다른 문서", [WORKFLOW, JOURNAL, "docs/x.md"], [], MIXED),
     ("이 워크플로와 코드", [WORKFLOW, "src/agent_os/main.py"], [AFTER], MIXED),
     ("이 워크플로와 다른 워크플로", [WORKFLOW, ".github/workflows/ci.yml"], [], MIXED),
     ("기록 비슷한 이름: 일지 폴더 밖", [WORKFLOW, "docs/journal.md"], [], MIXED),
-    ("기록 비슷한 이름: 대기열 뒤에 더 붙음", [WORKFLOW, QUEUE + ".bak"], [], MIXED),
+    # 분할 뒤에는 옛 파일이 기록이 아니다. 옛 갈래를 남기지 않는다
+    ("기록 비슷한 이름: 옛 대기열 파일", [WORKFLOW, ".scratch/retro-queue.md"], [], MIXED),
+    (
+        "기록 비슷한 이름: 대기열 폴더와 앞부분만 같은 폴더",
+        [WORKFLOW, ".scratch/retro-queue-x/0001.md"],
+        [],
+        MIXED,
+    ),
     ("기록 비슷한 이름: 다른 기능의 탐침", [WORKFLOW, ".scratch/x/probes/a.py"], [], MIXED),
     ("기록 비슷한 이름: 앞에 더 붙음", [WORKFLOW, "x/docs/journal/a.md"], [], MIXED),
+    ("기록 비슷한 이름: 대기열 폴더 앞에 더 붙음", [WORKFLOW, "x/" + QUEUE], [], MIXED),
+    # 티켓은 기능 폴더의 `issues/` 바로 아래 `.md` 뿐이다
+    (
+        "기록 비슷한 이름: 기능 폴더의 명세",
+        [WORKFLOW, ".scratch/retro-queue-per-item/spec.md"],
+        [],
+        MIXED,
+    ),
+    (
+        "기록 비슷한 이름: 티켓 폴더 아래 더 깊은 경로",
+        [WORKFLOW, ".scratch/x/issues/sub/a.md"],
+        [],
+        MIXED,
+    ),
+    ("기록 비슷한 이름: issues 폴더가 아님", [WORKFLOW, ".scratch/x/other/issues/a.md"], [], MIXED),
+    ("기록 비슷한 이름: 기능 폴더 없이 issues", [WORKFLOW, ".scratch/issues/a.md"], [], MIXED),
+    (
+        "기록 비슷한 이름: 티켓 폴더의 md 가 아닌 파일",
+        [WORKFLOW, ".scratch/x/issues/a.py"],
+        [],
+        MIXED,
+    ),
+    ("기록 비슷한 이름: 티켓 뒤에 더 붙음", [WORKFLOW, TICKET + ".bak"], [], MIXED),
+    ("기록 비슷한 이름: 티켓 앞에 더 붙음", [WORKFLOW, "x/" + TICKET], [], MIXED),
     ("ci.yml 만, 코멘트 없음", [".github/workflows/ci.yml"], [], FAIL),
     ("ci.yml 만, 시작 뒤 코멘트", [".github/workflows/ci.yml"], [AFTER], PASS),
     ("코드만, 코멘트 없음", ["src/agent_os/main.py"], [], FAIL),
@@ -226,7 +271,13 @@ def _run(
         start = next(i for i, line in enumerate(lines) if line.startswith(MIXED_LINE))
         listed = lines[start + 1 :]
         others = [path for path in _api_names(files) if path not in (WORKFLOW, *RECORDS)]
-        outcome = MIXED if listed == others else f"{MIXED}(목록 {listed}, 기대 {others})"
+        if listed != others:
+            outcome = f"{MIXED}(목록 {listed}, 기대 {others})"
+        elif not all(word in lines[start] for word in RECORD_WORDS):
+            # 오류 문구가 받는 기록을 다 들어야 사람이 무엇을 함께 실을 수 있는지 안다
+            outcome = f"{MIXED}(문구가 받는 기록을 다 들지 않음: {lines[start]})"
+        else:
+            outcome = MIXED
     else:
         outcome = f"이상(종료 {done.returncode})"
     return outcome, lines[-1] if lines else ""
