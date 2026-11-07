@@ -10,13 +10,13 @@
 
 **Blocked by:** 04 (런타임이 규칙 파일을 도구 호출마다 집행한다 — 막고, 묻고, 그냥 부른다). 04의 저장소 `plugins/rules.toml`, `rules.toml`도 복사하는 `_copy_repo_plugins`, 재개의 규칙 다시 읽기와 운영자 deny 우선을 쓴다
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] **`tests/test_main.py`에 `-m llm` 시험 하나를 더한다.** 저장소 `plugins/`를 임시 루트에 복사하고(04가 고친 `_copy_repo_plugins`가 `rules.toml`도 옮긴다) 그 `rules.toml`을 `[agents.calc] ask = ["everything:*"]`로 바꿔 실제 CLI로 calc를 돌린다. 첫 도구 호출에서 멈추고 `run_paused.rule`이 `ask`, `server`가 `everything`인 것을 본다
-- [ ] **멈춘 뒤 파일을 `[agents.calc] deny = ["everything:*"]`로 바꾸고 다른 프로세스에서 승인으로 재개한다.** 선례는 같은 파일의 `test_멈춘_실행은_그_프로세스가_끝난_뒤_다른_프로세스가_재개해_끝까지_간다`다
-- [ ] **단언은 셋이다.** 트레이스의 끝이 `run_finished`이고, 재개 뒤의 `tool_called`가 `ok=false`·`rule="deny"`·내용 `운영자가 거부했다: everything:<도구>`이며, `run_failed`가 없다. 멈추는 자리를 보는 단언은 모델이 첫 호출로 `add`를 부르는 데 기대지 않고 어느 도구든 멈춘 것을 본다. 도구 이름은 결과이지 표지가 아니다
-- [ ] **이 하나가 재개의 규칙 다시 읽기, 운영자 deny가 결정을 이기는 것, 도구 정의 없는 모델 호출을 API가 받는 것을 실제 길에서 함께 잰다.** 위 단언 셋은 재개 요청에 도구 정의가 실렸는지를 관찰하지 않는다. 도구 정의가 빠졌다는 것은 04의 core 시험(모두 deny면 `binds`가 0)이 보고, 이 시험은 그렇게 빠진 요청을 API가 받아 `run_finished`까지 가는지만 잰다. 실제 CLI는 다른 프로세스라 트레이스 밖에서 요청 기록을 볼 길이 없어 보이고, 트레이스에 관찰 지점을 더하면 이 시험 하나를 위한 칸이 는다(리뷰 봇의 제안을 이 이유로 받지 않았다. 코드로 확인하지 않은 어림이다) 다른 모델이나 다른 날의 API가 도구 정의 없는 요청을 거부하면 결말은 지금 실패 정책대로 원인 `model_call`의 `run_failed`이고, 그때 이 시험의 빨강은 측정이 바뀌었다는 표지다. 시험을 고치지 않고 멈춰 보고한다(헌법 원칙 II)
-- [ ] **나머지 `-m llm` 시험은 저장소의 예시 규칙 파일로 그대로 지나간다.** `-m llm` 시험의 수는 이 하나만 는다
-- [ ] **환경이 없으면 skip이 아니라 실패다**(`.claude/rules/tests.md`). `ANTHROPIC_API_KEY`가 없으면 실패한다
-- [ ] **빨강을 먼저 본다**(헌법 원칙 II). 04가 병합된 main에서는 행동이 이미 있으므로, 단언 하나를 일부러 틀리게 두어 시험이 그 자리를 실제로 보는지 확인한 뒤 되돌린다. 무엇을 틀리게 두었는지와 그 빨강의 출력을 PR 본문에 적는다
-- [ ] **검증 명령이 모두 초록이다.** 손으로 치는 다섯에 더해 `uv run --env-file .env pytest -m llm`이다. 워크트리에서 쓸 `.env` 경로는 `docs/constitution/operations.md`의 LLM 테스트다
+- [x] **`tests/test_main.py`에 `-m llm` 시험 하나를 더한다.** 저장소 `plugins/`를 임시 루트에 복사하고(04가 고친 `_copy_repo_plugins`가 `rules.toml`도 옮긴다) 그 `rules.toml`을 `[agents.calc] ask = ["everything:*"]`로 바꿔 실제 CLI로 calc를 돌린다. 첫 도구 호출에서 멈추고 `run_paused.rule`이 `ask`, `server`가 `everything`인 것을 본다
+- [x] **멈춘 뒤 파일을 `[agents.calc] deny = ["everything:*"]`로 바꾸고 다른 프로세스에서 승인으로 재개한다.** 선례는 같은 파일의 `test_멈춘_실행은_그_프로세스가_끝난_뒤_다른_프로세스가_재개해_끝까지_간다`다
+- [x] **단언은 셋이다.** 트레이스의 끝이 `run_finished`이고, 재개 뒤의 `tool_called`가 `ok=false`·`rule="deny"`·내용 `운영자가 거부했다: everything:<도구>`이며, `run_failed`가 없다. 멈추는 자리를 보는 단언은 모델이 첫 호출로 `add`를 부르는 데 기대지 않고 어느 도구든 멈춘 것을 본다. 도구 이름은 결과이지 표지가 아니다
+- [x] **이 하나가 재개의 규칙 다시 읽기, 운영자 deny가 결정을 이기는 것, 도구 정의 없는 모델 호출을 API가 받는 것을 실제 길에서 함께 잰다.** 위 단언 셋은 재개 요청에 도구 정의가 실렸는지를 관찰하지 않는다. 도구 정의가 빠졌다는 것은 04의 core 시험(모두 deny면 `binds`가 0)이 보고, 이 시험은 그렇게 빠진 요청을 API가 받아 `run_finished`까지 가는지만 잰다. 실제 CLI는 다른 프로세스라 트레이스 밖에서 요청 기록을 볼 길이 없어 보이고, 트레이스에 관찰 지점을 더하면 이 시험 하나를 위한 칸이 는다(리뷰 봇의 제안을 이 이유로 받지 않았다. 코드로 확인하지 않은 어림이다) 다른 모델이나 다른 날의 API가 도구 정의 없는 요청을 거부하면 결말은 지금 실패 정책대로 원인 `model_call`의 `run_failed`이고, 그때 이 시험의 빨강은 측정이 바뀌었다는 표지다. 시험을 고치지 않고 멈춰 보고한다(헌법 원칙 II)
+- [x] **나머지 `-m llm` 시험은 저장소의 예시 규칙 파일로 그대로 지나간다.** `-m llm` 시험의 수는 이 하나만 는다
+- [x] **환경이 없으면 skip이 아니라 실패다**(`.claude/rules/tests.md`). `ANTHROPIC_API_KEY`가 없으면 실패한다
+- [x] **빨강을 먼저 본다**(헌법 원칙 II). 04가 병합된 main에서는 행동이 이미 있으므로, 단언 하나를 일부러 틀리게 두어 시험이 그 자리를 실제로 보는지 확인한 뒤 되돌린다. 무엇을 틀리게 두었는지와 그 빨강의 출력을 PR 본문에 적는다
+- [x] **검증 명령이 모두 초록이다.** 손으로 치는 다섯에 더해 `uv run --env-file .env pytest -m llm`이다. 워크트리에서 쓸 `.env` 경로는 `docs/constitution/operations.md`의 LLM 테스트다
