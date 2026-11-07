@@ -1,0 +1,129 @@
+# approval-rules 05 의 검사 셋(마스킹과 묻기의 충돌, 에이전트 표의 줄, 재개의 서버 대조)을 재는 변이 표.
+# 구현과 같은 티켓에서 시험을 먼저 쓴 터라 빨강을 본 뒤 시험이 무엇을 재는지 변이로 다시 본다.
+# 실행: PYTHONUTF8=1 uv run python tools/mutate.py <이 파일> [번호 ...]
+# 변이마다 겨눈 시험을 -k 로 좁혀 두었다. 표지(expect_output)는 변이를 손으로 넣어 본 실패 출력에서
+# 골랐다 — 시험 파일의 원문에 없고, 고른 단언이 받은 값이 찍힌 줄이다.
+
+[[mutation]]
+name = "마스킹 도구를 적힌 규칙이 없어도 거부하지 않는다"
+tests = ["tests/core/test_run.py", "-k", "test_마스킹된_인자를_가진_도구가_묻는_규칙에_걸리면_실행_전에_거부한다"]
+expect = "red"
+expect_output = ["Failed: DID NOT RAISE PluginError"]
+
+[[mutation.edit]]
+file = "src/agent_os/core/run.py"
+old = '''in ("ask", "default")'''
+new = '''in ("ask",)'''
+
+[[mutation]]
+name = "마스킹 도구를 ask 규칙이 있어도 거부하지 않는다"
+tests = ["tests/core/test_run.py", "-k", "test_마스킹된_인자를_가진_도구가_묻는_규칙에_걸리면_실행_전에_거부한다"]
+expect = "red"
+expect_output = ["Failed: DID NOT RAISE PluginError"]
+
+[[mutation.edit]]
+file = "src/agent_os/core/run.py"
+old = '''in ("ask", "default")'''
+new = '''in ("default",)'''
+
+[[mutation]]
+name = "마스킹된 인자가 비어 있는 선언도 충돌로 센다"
+tests = ["tests/core/test_run.py", "-k", "test_마스킹된_인자가_비어_있는_선언은_마스킹이_아니라_충돌하지_않는다"]
+expect = "red"
+expect_output = ["agent_os.core.ports.PluginError: 마스킹된 인자를 가진 도구는 묻는 규칙에 걸릴 수 없다: srv:send"]
+
+[[mutation.edit]]
+file = "src/agent_os/core/run.py"
+old = '''        if names
+        and applied_rule('''
+new = '''        if applied_rule('''
+
+[[mutation]]
+name = "에이전트 표의 검사를 연결 직후에 부르지 않는다"
+tests = ["tests/core/test_run.py", "-k", "test_그_에이전트의_표가_가리키는_도구가_연결에_없으면_연결_직후_실패한다 or test_deny_의_오타는_같은_도구에_맞는_공통_allow_가_있어도_도구를_부르기_전에_드러난다"]
+expect = "red"
+expect_output = ["At index 1 diff: 'llm_called' != 'run_failed'"]
+
+[[mutation.edit]]
+file = "src/agent_os/core/run.py"
+old = '''            _reject_unknown_rule_lines(prepared, specs)'''
+new = '''            pass'''
+
+[[mutation]]
+name = "서버 전체 줄이 mcp 에 없는 서버여도 지나간다"
+tests = ["tests/core/test_rules.py", "-k", "test_서버_전체_줄은_그_서버가_에이전트의_mcp에_있어야_한다"]
+expect = "red"
+expect_output = ["Right contains one more item: 'agents.calc.ask.1'"]
+
+[[mutation.edit]]
+file = "src/agent_os/core/rules.py"
+old = '''        return rule.server in servers
+    if rule.server is None:'''
+new = '''        return True
+    if rule.server is None:'''
+
+[[mutation]]
+name = "맨 도구 이름이 연결에 없어도 지나간다"
+tests = ["tests/core/test_rules.py", "-k", "test_맨_도구_이름은_연결의_도구_가운데_그_이름이_하나는_있어야_한다"]
+expect = "red"
+expect_output = ["Right contains one more item: 'agents.calc.deny.1'"]
+
+[[mutation.edit]]
+file = "src/agent_os/core/rules.py"
+old = '''        return any(spec.name == rule.tool for spec in specs)'''
+new = '''        return True'''
+
+[[mutation]]
+name = "서버에 묶인 도구가 다른 서버의 같은 이름으로 채워진다"
+tests = ["tests/core/test_rules.py", "-k", "test_서버에_묶인_도구는_그_서버가_낸_그_이름의_도구가_있어야_한다"]
+expect = "red"
+expect_output = ["Right contains one more item: 'agents.calc.allow.2'"]
+
+[[mutation.edit]]
+file = "src/agent_os/core/rules.py"
+old = '''any(spec.server == rule.server and spec.name == rule.tool for spec in specs)'''
+new = '''any(spec.name == rule.tool for spec in specs)'''
+
+[[mutation]]
+name = "서버에 묶인 패턴이 mcp 에 없는 서버여도 지나간다"
+tests = ["tests/core/test_rules.py", "-k", "test_서버에_묶인_패턴은_그_서버가_mcp에_없으면_어긋난다"]
+expect = "red"
+expect_output = ["Right contains one more item: 'agents.calc.ask.0'"]
+
+[[mutation.edit]]
+file = "src/agent_os/core/rules.py"
+old = '''        return rule.server is None or rule.server in servers'''
+new = '''        return True'''
+
+[[mutation]]
+name = "재개가 멈춘 도구의 서버를 대 보지 않는다"
+tests = ["tests/core/test_run.py", "-k", "test_멈춘_사이_같은_이름의_도구가_다른_서버에서_오면_두_서버를_든_재개_불일치다 or test_서버가_다른_거부_결정도_다른_호출에_적용되지_않고_재개_불일치다"]
+expect = "red"
+expect_output = ["At index 1 diff: 'run_resumed' != 'run_failed'"]
+
+[[mutation.edit]]
+file = "src/agent_os/core/run.py"
+old = '''and paused.server != connected.server'''
+new = '''and False'''
+
+[[mutation]]
+name = "재개가 연결에 없는 도구의 서버도 대 본다"
+tests = ["tests/core/test_run.py", "-k", "test_멈춘_도구가_연결에서_사라지면_결정은_소비되고_없는_도구로_거부된다"]
+expect = "red"
+expect_output = ["At index 1 diff: 'run_failed' != 'run_resumed'"]
+
+[[mutation.edit]]
+file = "src/agent_os/core/run.py"
+old = '''paused.server is not None and connected is not None and paused.server != connected.server'''
+new = '''paused.server is not None and (connected is None or paused.server != connected.server)'''
+
+[[mutation]]
+name = "서버 칸 없는 옛 멈춤 기록도 서버를 대 본다"
+tests = ["tests/core/test_run.py", "-k", "test_서버_칸이_없는_옛_멈춤_기록은_서버를_대_보지_않고_이름과_인자만_본다"]
+expect = "red"
+expect_output = ["At index 1 diff: 'run_failed' != 'run_resumed'"]
+
+[[mutation.edit]]
+file = "src/agent_os/core/run.py"
+old = '''paused.server is not None and connected is not None and paused.server != connected.server'''
+new = '''connected is not None and paused.server != connected.server'''

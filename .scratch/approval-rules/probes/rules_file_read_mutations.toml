@@ -8,7 +8,7 @@
 name = "서버 칸을 보지 않고 맞는다"
 tests = ["tests/core/test_rules.py", "-k", "별표_패턴대로"]
 expect = "red"
-expect_output = ["rule = Rule(server='everything', tool=None), server = 'other-server'"]
+expect_output = ["규칙 Rule(server='everything', tool=None, position=None), 서버 other-server, 도구 'add'"]
 
 [[mutation.edit]]
 file = "src/agent_os/core/ports.py"
@@ -81,10 +81,10 @@ expect_output = ["tool='*'"]
 [[mutation.edit]]
 file = "src/agent_os/adapters/filesystem.py"
 old = '''
-    return Rule(server=PluginName(server), tool=None if tool == "*" else tool)
+    return Rule(server=PluginName(server), tool=None if tool == "*" else tool, position=position)
 '''
 new = '''
-    return Rule(server=PluginName(server), tool=tool)
+    return Rule(server=PluginName(server), tool=tool, position=position)
 '''
 
 [[mutation]]
@@ -106,7 +106,7 @@ new = '''
 name = "도구 이름의 별표를 패턴으로 읽지 않는다"
 tests = ["tests/core/test_rules.py", "-k", "별표_패턴대로"]
 expect = "red"
-expect_output = ["rule = Rule(server=None, tool='*'), server = 'everything', tool = 'add'"]
+expect_output = ["규칙 Rule(server=None, tool='*', position=None), 서버 everything, 도구 'add'"]
 
 [[mutation.edit]]
 file = "src/agent_os/core/ports.py"
@@ -121,7 +121,7 @@ new = '''
 name = "패턴이 이름의 앞부분에만 맞아도 맞는다"
 tests = ["tests/core/test_rules.py", "-k", "별표_패턴대로"]
 expect = "red"
-expect_output = ["rule = Rule(server=None, tool='add'), server = 'everything', tool = 'add_more'"]
+expect_output = ["규칙 Rule(server=None, tool='add', position=None), 서버 everything, 도구 'add_more'"]
 
 [[mutation.edit]]
 file = "src/agent_os/core/ports.py"
@@ -136,7 +136,7 @@ new = '''
 name = "패턴의 점이나 괄호를 정규식으로 읽는다"
 tests = ["tests/core/test_rules.py", "-k", "별표_패턴대로"]
 expect = "red"
-expect_output = ["rule = Rule(server=None, tool='a.b'), server = 'everything', tool = 'aXb'"]
+expect_output = ["규칙 Rule(server=None, tool='a.b', position=None), 서버 everything, 도구 'aXb'"]
 
 [[mutation.edit]]
 file = "src/agent_os/core/ports.py"
@@ -151,7 +151,7 @@ new = '''
 name = "별표가 개행이 든 이름에 맞지 않는다"
 tests = ["tests/core/test_rules.py", "-k", "별표_패턴대로"]
 expect = "red"
-expect_output = ["rule = Rule(server=None, tool='*'), server = 'everything', tool = 'a\\nb'"]
+expect_output = ["규칙 Rule(server=None, tool='*', position=None), 서버 everything, 도구 'a\\nb'"]
 
 [[mutation.edit]]
 file = "src/agent_os/core/ports.py"
