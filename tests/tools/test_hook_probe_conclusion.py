@@ -16,11 +16,14 @@ from pathlib import Path
 
 import pytest
 from tools.hook_probe_conclusion import (
+    FILE_LEAD,
+    FIXED_PATH,
     LEAD,
     TOOLS,
     HookPayload,
     claim_first,
     context_for,
+    is_probe_file,
     is_probe_readme,
     main,
     marker_name,
@@ -29,10 +32,21 @@ from tools.run_hooks import registered_matchers
 
 ROOT = "C:\\project\\agent"
 README = ROOT + "\\.scratch\\harness\\probes\\README.md"
+PROBE_FILE = ROOT + "\\.scratch\\harness\\probes\\widget_char_count\\repeat.mjs"
 
 
 def _edit(file_path: str) -> HookPayload:
     return {"tool_name": "Edit", "tool_input": {"file_path": file_path}}
+
+
+def _edit_text(file_path: str, new_string: str, old_string: str = "") -> HookPayload:
+    # HookPayload 에 없는 칸(old_string)을 실으려고 main 처럼 JSON 에서 풀어 넘긴다.
+    tool_input = {"file_path": file_path, "old_string": old_string, "new_string": new_string}
+    return json.loads(json.dumps({"tool_name": "Edit", "tool_input": tool_input}))
+
+
+def _write_text(file_path: str, content: str) -> HookPayload:
+    return {"tool_name": "Write", "tool_input": {"file_path": file_path, "content": content}}
 
 
 def test_프로브_README_를_고치면_셋째_항목을_짚는다() -> None:
@@ -136,6 +150,8 @@ def test_못_보는_것_Bash_로_고친_README_는_지나간다() -> None:
 
 
 def test_못_보는_것_README_밖에_적은_결과와_결론은_지나간다() -> None:
+    # 프로브 파일은 더한 글에 "고친 길" 이 있을 때만 알린다(아래 시험). 칸 없이 경로만 있는
+    # 편집은 지나간다.
     for path in (
         ROOT + "\\.claude\\rules\\tools.md",
         ROOT + "\\docs\\adr\\0036-x.md",
@@ -267,6 +283,156 @@ def test_main_은_임시_폴더가_없으면_호출마다_알린다(
     monkeypatch.setattr(tempfile, "gettempdir", no_temp)
     assert LEAD in _run_main(monkeypatch, capsys, _session_edit(README))
     assert LEAD in _run_main(monkeypatch, capsys, _session_edit(README))
+
+
+SENTENCE = "// 고친 길의 표지: 카드 직후 포커스가 제목이 아닌 회차. 고치기 전 판에서는 빨갰다."
+
+
+def test_프로브_파일에_고친_길을_적으면_첫_항목을_짚는다() -> None:
+    # 대기열 535: repeat.mjs 의 머리 주석이 고친 길의 표지를 "고치기 전 판에서는 빨갰다" 고
+    # 단정했다.
+    context = context_for(_edit_text(PROBE_FILE, SENTENCE))
+    assert context is not None
+    assert context.startswith(FILE_LEAD)
+    assert ".claude/rules/probes.md" in context
+    assert "첫 항목" in context
+    assert "고치기 전 판이라면 실패했을 회차에서만 나는 관찰" in context
+    assert "어림" in context
+    # README 의 문장(셋째 항목, 근거의 종류)이 아니라 따로 지은 문장이다.
+    assert "양성 대조" not in context
+    assert FILE_LEAD != LEAD
+
+
+def test_프로브_파일의_Write_도_더한_글에_고친_길이_있으면_알린다() -> None:
+    assert context_for(_write_text(PROBE_FILE, SENTENCE)) is not None
+    assert FIXED_PATH in SENTENCE
+
+
+def test_프로브_파일이라도_더한_글에_고친_길이_없으면_지나간다() -> None:
+    assert context_for(_edit_text(PROBE_FILE, "const rounds = 20;")) is None
+    assert context_for(_write_text(PROBE_FILE, "print('x')")) is None
+    assert context_for(_write_text(PROBE_FILE, "")) is None
+
+
+def test_낱말이_지운_글에만_있으면_지나간다() -> None:
+    # old_string 은 지우는 쪽이다. 고친 길 문장을 지우는 편집에는 알릴 일이 없다.
+    assert context_for(_edit_text(PROBE_FILE, "const rounds = 20;", old_string=SENTENCE)) is None
+
+
+def test_고친_길이_지운_글과_더한_글_양쪽에_있으면_알린다() -> None:
+    assert context_for(_edit_text(PROBE_FILE, SENTENCE, old_string=SENTENCE)) is not None
+
+
+def test_프로브_폴더_밖의_파일은_고친_길이_있어도_지나간다() -> None:
+    # 명세·ADR·서브에이전트 정의는 hook_probe_citing_doc 의 몫이다. 도구 코드도 이 훅의 대상이
+    # 아니다.
+    for path in (
+        ROOT + "\\tools\\hook_choice_facts.py",
+        ROOT + "\\.scratch\\model-rerun\\spec.md",
+        ROOT + "\\.scratch\\harness\\issues\\x.md",
+        ROOT + "\\docs\\adr\\0036-x.md",
+        ROOT + "\\web\\probes\\repeat.mjs",
+        "C:\\probes\\.scratch\\x\\repeat.mjs",
+    ):
+        assert context_for(_edit_text(path, SENTENCE)) is None, path
+
+
+def test_프로브_README_는_더한_글에_낱말이_없어도_README_알림을_낸다() -> None:
+    # README 의 판정은 그대로다. 파일 알림의 낱말 조건이 README 에 번지지 않는다.
+    context = context_for(_edit_text(README, "| a |"))
+    assert context is not None
+    assert context.startswith(LEAD)
+    both = context_for(_edit_text(README, SENTENCE))
+    assert both is not None
+    assert both.startswith(LEAD)
+
+
+def test_프로브_파일_경로는_README_를_뺀_프로브_폴더_아래_파일이다() -> None:
+    assert is_probe_file(PROBE_FILE)
+    assert is_probe_file(ROOT + "\\.scratch\\harness\\probes\\guard_hooks_time.py")
+    assert is_probe_file(".scratch/conversation/probes/run.sh")
+    assert is_probe_file(ROOT + "\\.scratch\\x\\probes\\y\\z\\case.toml")
+    assert is_probe_file(ROOT + "\\.Scratch\\harness\\Probes\\Repeat.MJS")
+    assert is_probe_file(ROOT + "\\.scratch\\x\\probes\\README.md.bak")
+    assert not is_probe_file(README)
+    assert not is_probe_file(ROOT + "\\.scratch\\harness\\probes\\Readme.md")
+    assert not is_probe_file(ROOT + "\\.scratch\\harness\\probes")
+    assert not is_probe_file(ROOT + "\\.scratch\\harness\\issues\\x.md")
+    assert not is_probe_file("")
+
+
+@pytest.mark.parametrize(
+    "tool_input",
+    [
+        {"file_path": PROBE_FILE, "new_string": 1},
+        {"file_path": PROBE_FILE, "content": None},
+        {"file_path": PROBE_FILE, "new_string": ["고친 길"]},
+    ],
+)
+def test_더한_글이_문자열이_아니면_예외_없이_지나간다(tool_input: object) -> None:
+    payload = json.loads(json.dumps({"tool_name": "Edit", "tool_input": tool_input}))
+    assert context_for(payload) is None
+
+
+def test_못_보는_것_낱말_없는_표현과_Bash_로_쓴_프로브_파일은_지나간다() -> None:
+    for text in ("// 수정한 경로의 표지", "// 고친 판이 지났다는 표지", "// 고친길"):
+        assert context_for(_edit_text(PROBE_FILE, text)) is None, text
+    command = f"printf '%s' '{SENTENCE}' > '{PROBE_FILE}'"
+    bash = {"tool_name": "Bash", "tool_input": {"command": command}}
+    assert context_for(json.loads(json.dumps(bash))) is None
+
+
+def test_못_보는_것_고친_길을_말했을_뿐인_주석에도_알린다() -> None:
+    # 낱말만 보므로 고친 길의 표지를 정하지 않고 이름만 든 편집도 알린다(거짓 양성).
+    # 세션마다 한 번이라 값이 작다.
+    for text in ("// 고친 길 이름은 repeat", "# 고친 길을 다음 회차에서 잰다"):
+        context = context_for(_edit_text(PROBE_FILE, text))
+        assert context is not None, text
+        assert context.startswith(FILE_LEAD)
+
+
+def test_파일_알림의_표지는_README_알림과_따로다(tmp_path: Path) -> None:
+    readme_key = marker_name("s1", "")
+    file_key = marker_name("s1", "", "file")
+    assert readme_key != file_key
+    # README 쪽 표지 이름은 이 변경 전과 같다.
+    assert readme_key == marker_name("s1", "", "")
+    assert claim_first(readme_key, tmp_path)
+    assert claim_first(file_key, tmp_path)
+    assert not claim_first(file_key, tmp_path)
+    assert claim_first(marker_name("s1", "agent-a", "file"), tmp_path)
+
+
+def test_main_은_파일_알림과_README_알림을_각각_한_번_알린다(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    monkeypatch.setattr(tempfile, "gettempdir", lambda: str(tmp_path))
+
+    def file_edit(agent_id: str = "") -> HookPayload:
+        payload = _edit_text(PROBE_FILE, SENTENCE)
+        payload["session_id"] = "session-1"
+        if agent_id:
+            payload["agent_id"] = agent_id
+        return payload
+
+    assert FILE_LEAD in _run_main(monkeypatch, capsys, file_edit())
+    assert _run_main(monkeypatch, capsys, file_edit()) == ""
+    # 파일 알림을 받은 세션도 README 의 결론에는 따로 한 번 알림을 받는다.
+    assert LEAD in _run_main(monkeypatch, capsys, _session_edit(README))
+    assert _run_main(monkeypatch, capsys, _session_edit(README)) == ""
+    assert FILE_LEAD in _run_main(monkeypatch, capsys, file_edit("agent-a"))
+
+
+def test_main_은_낱말_없는_프로브_파일_편집에_표지를_쓰지_않는다(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    monkeypatch.setattr(tempfile, "gettempdir", lambda: str(tmp_path))
+    plain = _edit_text(PROBE_FILE, "const rounds = 20;")
+    plain["session_id"] = "session-1"
+    assert _run_main(monkeypatch, capsys, plain) == ""
+    withword = _edit_text(PROBE_FILE, SENTENCE)
+    withword["session_id"] = "session-1"
+    assert FILE_LEAD in _run_main(monkeypatch, capsys, withword)
 
 
 def test_등록의_매처가_훅이_아는_도구와_같다() -> None:
