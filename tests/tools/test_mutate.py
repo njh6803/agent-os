@@ -3291,12 +3291,13 @@ def test_색인_확인은_고친_변이의_표지를_본다(tmp_path: Path) -> N
     assert _메아리 in 출력
 
 
-# 대기열 350·517. 표지의 품질을 둘 더 본다. 빨강을 기대했는데 표지가 없는 변이(350)와, 표지가 pytest
-# 가 단언을 풀어 쓴 줄인 변이(517). 고른 `--check` 와 `--staged` 의 새 변이만 보고 옛 변이는
-# 소급하지 않는다.
+# 대기열 350·517·579. 표지의 품질을 셋 더 본다. 빨강을 기대했는데 표지가 없는 변이(350)와, 표지가
+# pytest 가 단언을 풀어 쓴 줄인 변이(517), 그 줄에서 머리를 뗀 호출 한 토막인 변이(579). 고른
+# `--check` 와 `--staged` 의 새 변이만 보고 옛 변이는 소급하지 않는다.
 
 _표지_없음 = "빨강을 기대했는데 expect_output 이 없다"
 _단언_풀이 = "pytest 가 단언을 풀어 쓴 줄이다"
+_호출_토막 = "호출 한 토막(`이름(…)` 꼴)이다"
 
 
 def _표지_표(표지: str | None, *, expect: str = "red") -> str:
@@ -3445,6 +3446,128 @@ def test_못_보는_것_줄이_assert_로_시작하고_같음_비교를_든_메�
     assert _단언_풀이 in 출력
 
 
+@pytest.mark.parametrize(
+    "표지",
+    [
+        "matches(server='other-server', tool='add')",
+        "Rule(server=None, tool='*')",
+        "marker_name('s1', 'agent-a')",
+        "process_alive(4242)",
+        "isinstance(Plan(arms=('A', 'B')), Halt)",
+        "self.matches(x)",
+        "+ Rule(server=None, tool='*')",
+        "E   process_alive()",
+    ],
+    ids=[
+        "이름과_인자",
+        "값_생성자",
+        "문자열_인자",
+        "숫자_인자",
+        "겹친_호출",
+        "점_이름",
+        "더하기_접두",
+        "E_접두",
+    ],
+)
+def test_고른_원문_확인은_줄_머리가_호출_한_토막인_표지를_알린다(tmp_path: Path, 표지: str) -> None:
+    """변이 1·7·8·9의 표지 `matches(…)`·`Rule(…)` 는 `+  where False = matches(…)` 줄에 든 부분
+    문자열이라 줄 머리 기준을 지났고, 표준 축 리뷰가 잡았다(대기열 579)."""
+    root, 표 = _메아리_저장소(tmp_path, _표지_표(표지))
+
+    code, 출력 = _원문_확인(root, ["--check", 표, "1"])
+
+    assert code == 2, 출력
+    assert f"하나: expect_output 의 표지 {표지!r} 는 {_호출_토막}" in 출력
+
+
+@pytest.mark.parametrize(
+    "표지",
+    [
+        "rule = Rule(server=None, tool='*'), server = 'everything', tool = 'add'",
+        "Received: Rule(server=None, tool='*')",
+        "At index 0 diff: Hit(ident='0001', rounds=None)",
+        "Left contains one more item: Hit(pattern='x', tool='Read')",
+        "zeta(7회차) coderabbit-inline-size(5회차)",
+        "DID NOT RAISE",
+        "tool='*'",
+    ],
+    ids=[
+        "인자_줄",
+        "받은_값_줄",
+        "차이_줄",
+        "더_든_항목_줄",
+        "목록_출력",
+        "예외_문구",
+        "인자_조각",
+    ],
+)
+def test_고른_원문_확인은_인자_줄과_받은_값_줄은_호출_꼴이어도_받는다(
+    tmp_path: Path, 표지: str
+) -> None:
+    """줄 머리가 `이름(` 이 아니면 호출 한 토막이 아니다. 고른 단언이 빨개질 때만 찍히는 줄이다."""
+    root, 표 = _메아리_저장소(tmp_path, _표지_표(표지))
+
+    code, 출력 = _원문_확인(root, ["--check", 표, "1"])
+
+    assert code == 0, 출력
+
+
+def test_pytest_가_아닌_판정의_표지는_호출_한_토막이어도_보지_않는다(tmp_path: Path) -> None:
+    표 = _VITEST_러너 + _vitest_변이(줄="expect_output = [\"Rule(server=None, tool='*')\"]")
+    _저장소(tmp_path, {"web/m.ts": "x = 1\n"})
+    경로 = _변이_파일을_쓴다(tmp_path, 표)
+
+    code, 출력 = _원문_확인(tmp_path, ["--check", 경로, "1"])
+
+    assert code == 0, 출력
+
+
+def test_초록을_기대한_변이의_표지는_호출_한_토막이어도_보지_않는다(tmp_path: Path) -> None:
+    root, 표 = _메아리_저장소(tmp_path, _표지_표("Rule(server=None, tool='*')", expect="green"))
+
+    code, 출력 = _원문_확인(root, ["--check", 표, "1"])
+
+    assert code == 0, 출력
+
+
+def test_못_보는_것_값의_repr_인_호출_꼴_줄_머리도_알린다(tmp_path: Path) -> None:
+    """`Hit(ident='0001', rounds=None` 이 비교 실패의 diff 줄이라면 고른 단언만 찍는 줄일 수 있다.
+    줄 머리가 호출 꼴이면 풀이 줄과 갈라 볼 수 없어 알린다(거짓 양성)."""
+    root, 표 = _메아리_저장소(tmp_path, _표지_표("Hit(ident='0001', rounds=None"))
+
+    code, 출력 = _원문_확인(root, ["--check", 표, "1"])
+
+    assert code == 2, 출력
+    assert _호출_토막 in 출력
+
+
+def test_못_보는_것_줄_머리가_아닌_호출_조각은_받는다(tmp_path: Path) -> None:
+    """줄 머리만 본다. `AssertionError: matches('a')` 처럼 앞에 낱말이 붙은 줄은 지나간다(거짓
+    음성)."""
+    root, 표 = _메아리_저장소(tmp_path, _표지_표("AssertionError: matches('a')"))
+
+    code, 출력 = _원문_확인(root, ["--check", 표, "1"])
+
+    assert code == 0, 출력
+
+
+@pytest.mark.parametrize(
+    "표지",
+    ["f(1.5)", "f(b'x')", "f(f'x')", "f(*args)", "f(-x)", "f(x[0])", "f(안녕)", "Rule("],
+    ids=["소수", "바이트_접두", "f_접두", "별표_인자", "음수_식별자", "첨자", "한글_인자", "줄_끝"],
+)
+def test_못_보는_것_인자가_정수_식별자_따옴표로_시작하지_않는_호출_조각은_받는다(
+    tmp_path: Path, 표지: str
+) -> None:
+    """정규식이 받는 인자 꼴은 `)`, 따옴표나 괄호, 정수와 식별자 뒤의 `,` `)` 뿐이다(거짓
+    음성)."""
+    root, 표 = _메아리_저장소(tmp_path, _표지_표(표지))
+
+    code, 출력 = _원문_확인(root, ["--check", 표, "1"])
+
+    assert code == 0, 출력
+
+
 @pytest.mark.parametrize("표지", [None, "where 1 = run()"], ids=["표지_없음", "단언_풀이"])
 def test_변이를_돌리는_실행은_표지의_품질을_소급하지_않는다(
     tmp_path: Path, 표지: str | None
@@ -3465,8 +3588,12 @@ def test_변이를_돌리는_실행은_표지의_품질을_소급하지_않는�
 
 @pytest.mark.parametrize(
     ("표지", "알림"),
-    [(None, _표지_없음), ("where 1 = run()", _단언_풀이)],
-    ids=["표지_없음", "단언_풀이"],
+    [
+        (None, _표지_없음),
+        ("where 1 = run()", _단언_풀이),
+        ("Rule(server=None, tool='*')", _호출_토막),
+    ],
+    ids=["표지_없음", "단언_풀이", "호출_토막"],
 )
 def test_색인_확인은_커밋에_든_새_표의_표지_품질을_알린다(
     tmp_path: Path, 표지: str | None, 알림: str
