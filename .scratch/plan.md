@@ -51,7 +51,7 @@ web/                       슬라이스 3부터. pnpm 워크스페이스. 파이
 | 4 | [web-widget](web-widget/plan.md) | 다른 사이트에 붙이는 채팅 위젯을 만들어, 질문하고 답과 도구 호출과 승인을 대화 안에서 본다. | conversation, end-user-channel, end-user-continuation, design-system, design-refresh, design-artifacts | done |
 | 5 | [model-plugin](model-plugin/plan.md) | 모델을 플러그인으로 읽어, 에이전트가 고른 모델 설정을 서버를 다시 띄우지 않고 쓴다. | 없음 | done |
 | 6 | [skill-plugin](skill-plugin/plan.md) | 스킬을 플러그인으로 읽어, 에이전트가 고른 스킬의 이름과 설명과 본문을 받아 쓴다. | 없음 | done |
-| 7 | [approval-rules](approval-rules/plan.md) | 운영자가 승인 규칙 파일로 도구 호출을 거부하거나 승인을 요구하거나 허용하게 정한다. | skill-plugin | in-progress |
+| 7 | [approval-rules](approval-rules/plan.md) | 운영자가 승인 규칙 파일로 도구 호출을 거부하거나 승인을 요구하거나 허용하게 정한다. | skill-plugin | done |
 | 7 | [local-model](local-model/plan.md) | 바깥 API를 쓸 수 없는 환경에서도 OpenAI 호환 모델 서버로 에이전트를 돌릴 수 있게 한다. | 없음 | todo |
 | 7 | [mcp-http](mcp-http/plan.md) | 원격 MCP 서버에 주소로 접속해, 실행마다 서버를 새로 띄우는 시작 비용을 없앤다. | 없음 | todo |
 | 7 | [pilot-portal](pilot-portal/plan.md) | 위젯을 담는 질문 페이지가 로그인 없이 온 사람에게 사이트 토큰을 내, 포털이 없는 공개 데모와 배포 환경을 돕는다. | 없음 | todo |
@@ -88,7 +88,7 @@ web/                       슬라이스 3부터. pnpm 워크스페이스. 파이
 
 ## 프론티어
 
-done 이 아니고, Blocked by 가 비었거나 이 저장소의 막는 기능이 모두 done 인 기능이다. `approval-rules`, `local-model`, `mcp-http`, `pilot-portal`
+done 이 아니고, Blocked by 가 비었거나 이 저장소의 막는 기능이 모두 done 인 기능이다. `local-model`, `mcp-http`, `pilot-portal`
 
 ## 다른 저장소를 기다리는 기능
 
