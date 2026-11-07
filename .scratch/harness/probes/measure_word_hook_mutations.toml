@@ -53,6 +53,58 @@ file = "tools/hook_measure_word.py"
 old = '''    if folders[-2:] == [".scratch", "retro-queue"] and name.endswith(".md"):'''
 new = '''    if False:'''
 
+# 일지를 범위에 더한 뒤(measure-word-journal-scope)의 다섯. 앞 넷은 일지 판정이 폴더 바로 아래의 `.md` 만,
+# `docs/journal` 두 토막을 잇달아 받는지를 하나씩 깨고, 마지막은 알림 본문의 사용자 인용 문구를 지운다.
+[[mutation]]
+name = "일지를 근거 문서로 보지 않는다"
+tests = ["tests/tools/test_hook_measure_word.py", "-k", "일지에_근거_없는_쟀다를"]
+expect = "red"
+expect_output = ["assert None is not None"]
+[[mutation.edit]]
+file = "tools/hook_measure_word.py"
+old = '''    if folders[-2:] == ["docs", "journal"] and name.endswith(".md"):'''
+new = '''    if False:'''
+
+[[mutation]]
+name = "일지 폴더의 하위 폴더까지 받는다"
+tests = ["tests/tools/test_hook_measure_word.py", "-k", "다른_파일은_지나간다"]
+expect = "red"
+expect_output = ['journal\sub\2026-11-03-02-x.md']
+[[mutation.edit]]
+file = "tools/hook_measure_word.py"
+old = '''    if folders[-2:] == ["docs", "journal"] and name.endswith(".md"):'''
+new = '''    if "journal" in folders and name.endswith(".md"):'''
+
+[[mutation]]
+name = "일지 폴더의 .md 가 아닌 파일까지 받는다"
+tests = ["tests/tools/test_hook_measure_word.py", "-k", "다른_파일은_지나간다"]
+expect = "red"
+expect_output = ['journal\2026-11-03-02-x.txt']
+[[mutation.edit]]
+file = "tools/hook_measure_word.py"
+old = '''    if folders[-2:] == ["docs", "journal"] and name.endswith(".md"):'''
+new = '''    if folders[-2:] == ["docs", "journal"]:'''
+
+[[mutation]]
+name = "일지 폴더의 부모를 보지 않는다"
+tests = ["tests/tools/test_hook_measure_word.py", "-k", "다른_파일은_지나간다"]
+expect = "red"
+expect_output = ['\journal\2026-11-03-02-x.md']
+[[mutation.edit]]
+file = "tools/hook_measure_word.py"
+old = '''    if folders[-2:] == ["docs", "journal"] and name.endswith(".md"):'''
+new = '''    if folders[-1:] == ["journal"] and name.endswith(".md"):'''
+
+[[mutation]]
+name = "알림이 일지의 사용자 인용을 이름으로 든 것으로 읽으라고 적지 않는다"
+tests = ["tests/tools/test_hook_measure_word.py", "-k", "사용자_프롬프트"]
+expect = "red"
+expect_output = ["assert '일지의 `> 사용자:` 인용' in"]
+[[mutation.edit]]
+file = "tools/hook_measure_word.py"
+old = '''    "(일지의 `> 사용자:` 인용 포함). 이미 있던'''
+new = '''    ". 이미 있던'''
+
 [[mutation]]
 name = "프로브 README 에서 .scratch 조상을 요구하지 않는다"
 tests = ["tests/tools/test_hook_measure_word.py"]

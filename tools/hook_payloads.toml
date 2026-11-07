@@ -655,6 +655,19 @@ expect = "silent"
 note = "ADR 0014 의 실제 줄 — 같은 줄에 \"쟀다\"와 그 프로브 경로를 든다"
 payload = { tool_name = "Edit", tool_input = { file_path = "C:\\project\\agent\\docs\\adr\\0014-http-channel-streams-the-run.md", old_string = "## 이력\n", new_string = "## 이력\n  취소가 결말로 바뀌고 태스크 그룹이 깨지지 않는 것을 쟀다(`.scratch/end-user-channel/probes/run_timeout.py`).\n" }, tool_response = { originalFile = "# 0014\n\n## 이력\n" } }
 
+[[case]]
+hook = "hook_measure_word.py"
+expect = "context"
+note = "일지에 손으로 돌린 스크래치 스크립트로 본 것을 근거 표지 없이 \"쟀다\"로 적었다(대기열 558 의 꼴)"
+contains = ["docs/agents/issue-tracker.md", "yaml_probe.py"]
+payload = { tool_name = "Edit", tool_input = { file_path = "C:\\project\\agent\\docs\\journal\\2026-11-03-02-skill-plugin-design.md", old_string = "## 단계\n", new_string = "## 단계\n- `yaml_probe.py` 로 앵커 두 개가 같은 노드로 풀리는 것을 쟀다\n" }, tool_response = { originalFile = "# 일지\n\n## 단계\n" } }
+
+[[case]]
+hook = "hook_measure_word.py"
+expect = "silent"
+note = "일지에 같은 줄에 \"손으로\"와 그 명령을 든 줄을 더했다"
+payload = { tool_name = "Edit", tool_input = { file_path = "C:\\project\\agent\\docs\\journal\\2026-11-03-02-skill-plugin-design.md", old_string = "## 단계\n", new_string = "## 단계\n- 앵커 두 개가 같은 노드로 풀리는 것을 손으로 봤다(`uv run python yaml_probe.py`)\n" }, tool_response = { originalFile = "# 일지\n\n## 단계\n" } }
+
 # --- hook_deletion_adversarial (PostToolUse Write|Edit) ---
 # 발동은 대기열 442 의 사건 꼴(web/tools/judge-trees.ts 에 같은 꼴 이름의 폴더를 지우는 호출을 더했다)이고,
 # 침묵은 같은 파일에서 지우는 호출 없이 다른 줄만 더한 편집이다.

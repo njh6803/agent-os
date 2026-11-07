@@ -7,6 +7,8 @@ import json
 import sys
 
 import pytest
+from tools.hook_journal_evidence import HookPayload as JournalEvidencePayload
+from tools.hook_journal_evidence import context_for as journal_evidence_context
 from tools.hook_measure_word import (
     LEAD,
     TOOLS,
@@ -25,6 +27,7 @@ ROOT = "C:\\project\\agent\\.claude\\worktrees\\measure-word-hook"
 ADR = ROOT + "\\docs\\adr\\0035-precommit-pytest-is-split-by-xdist-in-the-runner.md"
 QUEUE = ROOT + "\\.scratch\\retro-queue\\coderabbit-inline-size.md"
 PROBE_README = ROOT + "\\.scratch\\harness\\probes\\README.md"
+JOURNAL = ROOT + "\\docs\\journal\\2026-11-03-02-skill-plugin-design.md"
 
 
 def _edit(file_path: str, old: str, new: str) -> HookPayload:
@@ -121,7 +124,6 @@ def test_원래_있던_줄은_보지_않는다() -> None:
 
 def test_다른_파일은_지나간다() -> None:
     for path in (
-        ROOT + "\\docs\\journal\\2026-10-19-02-x.md",
         ROOT + "\\docs\\PRD.md",
         ROOT + "\\.scratch\\harness\\probes\\run.py",
         ROOT + "\\.scratch\\plan.md",
@@ -134,8 +136,80 @@ def test_다른_파일은_지나간다() -> None:
         ROOT + "\\.scratch\\retro-queue\\sub\\0573.md",
         ROOT + "\\.scratch\\retro-queue\\0573.txt",
         ROOT + "\\docs\\retro-queue\\0573.md",
+        # 일지 폴더의 하위 폴더, .md 가 아닌 파일, 비슷한 이름의 폴더
+        ROOT + "\\docs\\journal\\sub\\2026-11-03-02-x.md",
+        ROOT + "\\docs\\journal\\2026-11-03-02-x.txt",
+        ROOT + "\\docs\\journals\\2026-11-03-02-x.md",
+        ROOT + "\\journal\\2026-11-03-02-x.md",
+        ROOT + "\\docs\\agents\\journal\\2026-11-03-02-x.md",
     ):
         assert context_for(_edit(path, "", "실측\n")) is None, path
+
+
+def test_일지에_근거_없는_쟀다를_더하면_알린다() -> None:
+    """대기열 558. 손으로 돌린 스크래치 스크립트로 본 것을 일지에 쟀다로 적었다."""
+    line = "- `yaml_probe.py` 로 앵커 두 개를 쟀다\n"
+    context = context_for(_edit(JOURNAL, "## 단계\n", "## 단계\n" + line))
+    assert context is not None
+    assert context.startswith(LEAD)
+    assert "yaml_probe.py" in context
+    assert context_for(_edit(JOURNAL, "", "앵커 두 개를 쟀다(손으로 돌렸다)\n")) is None
+    assert context_for(_edit(JOURNAL, "", "쟀다(`.scratch/harness/probes/x.py`)\n")) is None
+
+
+def test_일지의_경로_꼴과_대소문자가_달라도_본다() -> None:
+    assert is_evidence_doc(JOURNAL.replace("\\", "/"))
+    assert is_evidence_doc(JOURNAL.replace("\\journal\\", "\\Journal\\"))
+    assert is_evidence_doc(JOURNAL.replace(".md", ".MD"))
+
+
+def test_일지_폴더는_앞_토막의_깊이를_가리지_않는다() -> None:
+    """독스트링의 경로 깊이 항목. 마지막 두 폴더가 `docs`·`journal` 이면 얕아도 깊어도 받고, 두 폴더
+    사이에 다른 폴더가 끼면(`docs/agents/journal`) 지나간다."""
+    assert is_evidence_doc("docs/journal/2026-11-03-02-x.md")
+    assert is_evidence_doc("agent/docs/journal/2026-11-03-02-x.md")
+    assert is_evidence_doc("C:\\a\\b\\c\\docs\\journal\\2026-11-03-02-x.md")
+    assert not is_evidence_doc("docs/agents/journal/2026-11-03-02-x.md")
+
+
+def test_일지_경로의_대문자는_이_훅만_알린다() -> None:
+    """독스트링의 "경로 판정도 다르다". 이 훅은 대소문자를 가리지 않고 `hook_journal_evidence` 는
+    소문자 `docs/journal/<이름>.md` 만 받아서, 대문자 경로의 편집은 이 훅만 알린다."""
+    upper = JOURNAL.replace("\\journal\\", "\\Journal\\")
+    assert context_for(_edit(upper, "", "한 바퀴 4초를 쟀다\n")) is not None
+    evidence: JournalEvidencePayload = {"tool_name": "Edit", "tool_input": {"file_path": upper}}
+    assert journal_evidence_context(evidence) is None
+
+
+def test_일지에_더한_세_낱말을_모두_본다() -> None:
+    for word in ("쟀다", "재니", "실측"):
+        assert context_for(_edit(JOURNAL, "", f"시간을 {word}\n")) is not None, word
+
+
+def test_일지의_원래_있던_줄은_보지_않는다() -> None:
+    old = "옛 줄은 실측이라 적었다\n"
+    assert context_for(_edit(JOURNAL, old, old + "새 줄은 낱말이 없다\n")) is None
+
+
+def test_일지의_사용자_프롬프트_인용을_알림이_무시하라고_적는다() -> None:
+    """일지는 `> 사용자:` 인용으로 프롬프트 원문을 싣는다. 그 줄이 낱말을 들면 걸리지만 알림이
+    이름으로 든 줄과 같이 무시하라고 적는다."""
+    quote = "> 사용자: 쟀다고 적은 곳을 다시 보자\n"
+    context = context_for(_edit(JOURNAL, "", quote))
+    assert context is not None
+    assert "일지의 `> 사용자:` 인용" in context
+
+
+def test_일지를_고친_편집에는_일지_근거_계기와_함께_알린다() -> None:
+    """독스트링의 "일지와 `hook_journal_evidence`" 문단. 같은 편집에 두 훅의 판정이 함께 참이다. 그
+    훅은 경로만 보므로 입력 꼴에 경로만 싣는다. 그 훅이 세션·에이전트마다 한 번만 알리는 것은 그
+    훅의 시험이 본다."""
+    assert context_for(_edit(JOURNAL, "## 단계\n", "## 단계\n- 한 바퀴 4초를 쟀다\n"))
+    evidence: JournalEvidencePayload = {
+        "tool_name": "Edit",
+        "tool_input": {"file_path": JOURNAL},
+    }
+    assert journal_evidence_context(evidence) is not None
 
 
 def test_Write_는_원래_파일에_없던_줄만_본다() -> None:
@@ -244,9 +318,14 @@ def test_못_보는_것_probes_하위_폴더의_README_는_지나간다() -> Non
 
 
 def test_못_보는_것_Bash_로_쓴_파일은_지나간다() -> None:
-    command = f"cat >> '{ADR}' <<'EOF'\n실측\nEOF"
-    payload = json.loads(json.dumps({"tool_name": "Bash", "tool_input": {"command": command}}))
-    assert context_for(payload) is None
+    for path in (ADR, JOURNAL):
+        command = f"cat >> '{path}' <<'EOF'\n실측\nEOF"
+        payload = json.loads(json.dumps({"tool_name": "Bash", "tool_input": {"command": command}}))
+        assert context_for(payload) is None, path
+    # 독스트링의 나머지 절반: Bash 로 쓴 일지는 `hook_journal_evidence` 의 Bash 묶음이 계기를 낸다.
+    journal_command = f"cat >> '{JOURNAL}' <<'EOF'\n실측\nEOF"
+    bash: JournalEvidencePayload = {"tool_name": "Bash", "tool_input": {"command": journal_command}}
+    assert journal_evidence_context(bash) is not None
 
 
 def _run_main(
