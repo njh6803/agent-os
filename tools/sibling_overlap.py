@@ -1,20 +1,22 @@
-"""이 브랜치가 새로 매긴 번호와 고친 파일을 형제와 대조하고 다음 빈 번호를 낸다.
+"""이 브랜치가 새로 매긴 번호와 고친 파일을 형제와 대조한다.
 
-커밋 직전에 대조하고(대기열 48·115), 번호를 쓰기 전에 다음 빈 번호를 받는다(대기열 182).
+커밋 직전에 대조한다(대기열 48·115).
 
 형제는 셋이다. 이미 병합된 `origin/main`, 아직 병합되지 않은 열린 PR의 head,
 아직 커밋되지 않은 같은 저장소의 다른 워크트리다. `origin/main`과 워크트리만 보던 손 대조는
 아직 열린 PR이 먼저 가져간 번호와 다섯 번 부딪혔다(대기열 115). 클라우드 세션에서는 형제가
 워크트리가 아니라 다른 세션의 열린 PR이라 손 대조가 보는 것이 main뿐이다(일지 2026-10-07-09).
 
-번호는 셋이고, 형제가 새로 매긴 번호를 이 브랜치도 새로 매겼으면 겹침이다.
+번호는 둘이고, 형제가 새로 매긴 번호를 이 브랜치도 새로 매겼으면 겹침이다.
 
 - ADR 번호: `docs/adr/NNNN-*.md`의 `NNNN`. 같은 번호에 다른 파일이면 겹침이다.
 - 헌법 판: `docs/constitution/README.md`의 `**Version**: X.Y.Z`.
   둘이 같은 판으로 올렸으면 겹침이다.
-- harness 티켓 번호: `.scratch/harness/issues/NNN-*.md`의 세 자리 `NNN`. 같은 번호에 다른 파일이면
-  겹침이다. 기능 없이 하네스를 고치는 PR 도 티켓 하나를 가리키게 되어(ADR 0037 "번호"), 나란히
-  도는 세션이 같은 번호로 티켓을 쓰면 부딪힌다.
+
+harness 티켓(`.scratch/harness/issues/<slug>.md`)은 번호가 아니다. 세션이 영어 소문자로 시작하는
+이름을 직접 지어, 형제와 나눠 쓰는 순번이 없다(retro-queue-per-item 07, ADR 0037 "번호"의 개정).
+이 도구가 harness 티켓에서 읽던 세 자리 번호와 다음 빈 번호는 그 전환으로 뺐다. 옛 45장의 파일
+이름(`NNN-<slug>.md`)도 읽지 않는다. 이름을 짓는 규약은 `docs/agents/issue-tracker.md`가 원천이다.
 
 일지는 번호가 아니다. 이름이 `docs/journal/<날짜>-<HHMM>-<슬러그>.md`이고 앞부분은 그 세션이
 일지를 만든 로컬 시분이라 형제와 나눠 쓰는 순번이 없다(ADR 0045 결정 7). 옛 이름
@@ -35,14 +37,12 @@
 번호에서 뺀다. merge-base 를 `git merge-base origin/main HEAD MERGE_HEAD`(`tools/check_ticket.py` 의
 꼴)로 구하면 합칠 머리가 main 일 때 main 자체가 되어, 그 겹침과 main 이 함께 고친 파일까지 사라져
 그러지 않는다 (그 꼴로 바꾼 판에서 이 도구의 시험 둘이 빨개진 것을 손으로 봤다, harness 티켓 024).
-이 브랜치는 작업 트리(커밋하지 않은 변경과 미추적 파일)를 읽는다. merge-base에서 앞의 두 자리(ADR,
+이 브랜치는 작업 트리(커밋하지 않은 변경과 미추적 파일)를 읽는다. merge-base에서 두 자리(ADR,
 헌법 판) 가운데 하나라도 비면 경로가 어긋난 것으로 보고 2로 끝난다(조용히 겹침 없음이 되지 않게).
 일지는 그 자리에 들지 않는다. 번호를 읽지 않아 비어도 겹침 없음이 되는 일이 없고, 일지 폴더가
 비었거나 순번 일지가 하나도 없는 merge-base에서도 대조가 멈추지 않는다. 대기열도 그 자리에 들지
 않는다. 대기열이 폴더가 된 뒤에는 옛 표 (`.scratch/retro-queue.md`)가 어느 브랜치의 merge-base에도
-없어, 넣으면 그 뒤에 딴 모든 브랜치에서 대조가 2로 멈춘다. harness 티켓 자리는 비어도 2로 끝나지
-않는다. #335 전에 딴 브랜치의 merge-base 에는 harness 폴더가 없어, 그 자리를 넣으면 그 브랜치들이
-대조를 잃는다. 그 값은 못 보는 것의 경로가 어긋난 harness 티켓 폴더 항목이다.
+없어, 넣으면 그 뒤에 딴 모든 브랜치에서 대조가 2로 멈춘다.
 
 열린 PR은 GitHub REST(`gh api repos/<owner>/<repo>/pulls?state=open`)로 읽는다. `origin`이
 github.com이 아니거나 `gh`가 없거나 실패하면 `refs/pull/N/merge`가 있는 PR을 열린 것으로 본다.
@@ -88,13 +88,10 @@ PR을 읽으려고 이미 치는 `ls-remote`의 `refs/pull/*/head` 가운데 열
 `.scratch/harness/probes/sibling_overlap_merge_cost.sh`). 병합 없이 닫힌 PR은 그때 0개였다.
 번호는 접지 않고 그대로 대조한다.
 
-다음 빈 번호를 늘 찍는다(대기열 157·182). 번호를 쓰기 전에는 이 브랜치에 새 번호가 없어
-겹침 대조가 아무것도 알리지 못하고, 먼저 쓴 번호는 겹친 뒤에야 옮겨져 그 번호를 든 인용도
-함께 고쳐야 했다. 지금 찍는 것은 harness 티켓의 세 자리 번호(어디에도 티켓이 없으면 `001`)이고,
-이 브랜치와 merge-base·main·형제 전체가 쓴 가장 큰 번호의 다음이다. 빈 사이 번호는 고르지 않는다.
-일지의 번호는 없다(위).
+다음 빈 번호는 찍지 않는다. 찍던 것은 harness 티켓의 세 자리 번호뿐이었고(대기열 157·182),
+티켓이 번호 없는 이름이 되며 뺐다. ADR 번호는 겹친 뒤 "옮길 번호"로 받고, 일지의 번호는 없다(위).
 
-형제가 쓴 가장 높은 헌법 판도 늘 찍는다(대기열 199). 판을 올리기 전의 대조는 겹침을 알리지
+형제가 쓴 가장 높은 헌법 판은 늘 찍는다(대기열 199). 판을 올리기 전의 대조는 겹침을 알리지
 못해, 올린 뒤 다시 친 대조가 형제가 먼저 매긴 같은 판을 알렸다. main은 가진 판, 다른 형제는
 새로 매긴 판이 후보이고, 판은 글자가 아니라 수로 견준다. 다음 판은 고르지 않는다(아래).
 
@@ -149,7 +146,7 @@ merge-base, main, 형제(열린 PR, 형제 워크트리의 커밋하지 않은 �
 
 `--move` 는 "옮길 번호" 를 실제로 옮긴다(대기열 249). 형제가 더 높은 번호를 들고 먼저 병합해, 한
 세션에서 받은 번호를 두 번 옮기고 그때마다 그 번호의 인용(다섯에서 아홉)을 손으로 고쳤다(일지
-2026-10-13-59·2026-10-13-61). ADR 과 티켓은 파일 이름을 바꾸고, 이 브랜치의 변경과 미추적 파일 안의
+2026-10-13-59·2026-10-13-61). ADR 은 파일 이름을 바꾸고, 이 브랜치의 변경과 미추적 파일 안의
 인용을 바꾼다. 인용의 꼴은 `ADR NNNN` 과 목록 속 `·NNNN`, ADR 의 파일 이름(`NNNN-…`)과 색인의
 `[NNNN]`이다. 일지는 번호를 옮기지 않는다. `대기열 N` 인용과
 대기열 항목은 번호가 아니라 이름이라 옮기지 않는다. ADR 의 꼴은 `.claude/rules/adr.md` 의 번호
@@ -170,40 +167,6 @@ origin 이 GitHub 이고 브랜치 위이면 이 브랜치를 head 로 든 열�
 줄을 찍는다(대기열 376). 본문은 올리지 않는다. 번호를 옮긴 뒤 열린 PR 본문에 옛 일지 경로가 남아
 claude-review 가 짚은 것이 세 번이었다(일지 2026-10-13-01·2026-10-13-64·2026-10-20-01). 옮긴
 뒤에는 다시 대조해 찍고 그 종료 코드로 끝난다.
-
-harness 티켓은 파일 이름(`NNN-<slug>.md`)과 stem 인용(`NNN-<slug>`)을 옮긴다. stem 은 slug 까지
-맞대고, 앞뒤가 영문·숫자·`_`·`-` 가 아닐 때만 맞는다. 그래서 `001-ours-extra` 와 `1001-ours` 는
-두고, `chore/001-ours`, `001-ours.md`, 뒤에 조사가 붙은 `001-ours를` 은 옮긴다. 번호만 맞대면 다른
-번호의 글(기능 폴더의 티켓)과 섞인다. harness 티켓 파일 안에서는 머리 줄(`# NNN:`)도
-옮긴다. 지금 브랜치가 옮긴 stem 의 `chore/` 브랜치면 브랜치를 바꾸는 명령(`git branch -m`)과 세션
-제목을 새 브랜치로 바꾸라는 할 일을 찍고, 원격에 그 브랜치가 있으면 새 이름으로 푸시하는 명령과 옛
-원격 브랜치를 지우는 명령도 찍는다. 도구는 브랜치와 인덱스를 바꾸지 않고(원격 추적 ref 는 아래
-쓰임의 fetch 가 움직인다), 워크트리 폴더 이름도 그대로 둔다. 그래서 그 폴더를 가리킨
-인용(`worktrees/`·`worktrees\\` 바로 뒤의 stem. 대소문자를 가리지 않고, 문자열 리터럴과 JSON 이
-이스케이프한 역슬래시 둘도 구분자다)도 옮기지 않는다. 옮기면 없는 폴더를 가리킨다(셀프 리뷰에서
-`rewrite` 를 불러 봤다. 역슬래시 둘과 대문자는 PR 직전 버그 축이 불러 봤다).
-
-티켓 번호가 겹치면 누가 옮기는지가 다른 번호와 다르다(ADR 0037 "번호", 명세 "번호"의 2026-10-21
-명세 검토 주석). 기본은 이 브랜치가 비켜 간다. 다만 티켓의 브랜치 이름은 그 stem 이라, 옮기면 브랜치
-이름이 바뀌어 그 브랜치의 열린 PR 이 끊긴다. 그래서 이 브랜치에 열린 PR 이 있으면 옮기지 않고 그쪽이
-옮긴다고 알리기만 한다. 고칠 것이 이 브랜치에 없어 종료 코드를 바꾸지 않는다. 그쪽의 대조는 이
-브랜치를 열린 PR 로 보고 1을 내는데, 이 브랜치의 티켓이 그쪽에 보일 때만이다. 같은 기계의 형제
-워크트리는 이 브랜치의 작업 트리를 읽지만, 다른 기계의 형제는 이 브랜치의 PR head 만 읽어 커밋하고
-푸시하기 전의 티켓을 보지 못한다(못 보는 것의 다른 기계 항목을 그쪽에서 본 것). 둘 다 열린 PR 이면
-PR 번호가 큰 쪽이 옮긴다. 그쪽이 main 에
-병합된 티켓이면 그쪽은 옮길 수 없어, 열린 PR 이 있어도 이 브랜치가 옮긴다. 열린 PR 이 있는데 옮기는
-이 두 갈래에서 지금 브랜치가 옮길 티켓의 `chore/` 브랜치면, 새 이름의 브랜치로 PR 을 다시 열고 옛
-PR 을 닫으라는 할 일을 낸다. 다른 이름의 브랜치는 이름이 그대로라 PR 이 끊기지 않는다. 겹친 형제
-가운데 하나라도 이 브랜치가 옮기라고 하면 다른 번호처럼 이 브랜치의 새 티켓 전부를 옮긴다.
-
-열린 PR 은 이 브랜치와 형제 워크트리를 같은 규칙으로 가린다(`branch_pull`). head 가 원격의 같은 이름
-브랜치 끝과 같은 PR 이 그 브랜치의 PR 이다. 원격에 같은 이름의 브랜치가 없거나 분리 HEAD 면 head 가
-그 체크아웃의 HEAD 와 같은 PR 이다. 두 대조가 같은 규칙으로 가려야 겹친 두 쪽이 같은 쪽을 옮기라고
-한다. 형제 워크트리를 HEAD 로만 가린 첫 판에서는, head 뒤에 커밋을 더한 형제와 이 브랜치가 서로
-상대가 옮긴다고 알려 둘 다 옮기지 않았다(셀프 리뷰 명세 축이 임시 저장소로 양쪽을 돌려 봤다). 원격
-끝으로만 가린 둘째 판에서는, 이름을 바꾼 형제 워크트리가 PR 의 head 에 커밋한 티켓을 이쪽은 그 PR 로
-보고 그쪽은 자기 PR 이 없다고 보아, PR 번호가 작은 그쪽까지 둘 다 옮겼다(PR 직전 버그 축이 임시
-저장소로 양쪽을 돌려 봤다).
 
 `-h`·`--help` 는 쓰임과 종료 코드를 찍는다. 2로 끝나면 stderr 에 할 일(번호를 손으로 고르지
 않는다)을 함께 싣는다(대기열 251). 시작 경로만 받던 때 `--help` 를 경로로 읽어 2로 끝났고, 2일 때
@@ -250,14 +213,10 @@ main 의 끝으로 옮겨, main 에서 들어온 남의 일지는 들지 않는�
   인용으로 읽어 알린다. 그래서 이 도구의 시험은 임시 저장소에 없고 이 저장소에 있는 일지를 쓴다.
 - 푸시했지만 PR을 열지 않은 브랜치, 다른 기계·다른 클라우드 세션의 커밋하지 않은 변경.
 - main을 이미 들여 작업 트리 안에서 같은 번호가 둘이 된 것. 둘 다 merge-base에 있거나 merge-base에
-  든 번호와 같아 "새로"가 아니다. ADR은 `tools/check_adr_pointers.py`, harness 티켓은
-  `tests/test_harness_ticket_names.py`가 본다. 일지는 번호가 없고 같은 분의 겹침을
-  `tests/test_journal_names.py`가 본다. 티켓은
-  main 에 병합된 것과 겹치면 열린 PR 이 있어도 이 브랜치가 옮기는데, main 을 merge 커밋으로 들인
-  뒤에는 그 겹침도 보지 못한다(셀프 리뷰 명세 축).
+  든 번호와 같아 "새로"가 아니다. ADR은 `tools/check_adr_pointers.py`가 본다. 일지는 번호가 없고
+  같은 분의 겹침을 `tests/test_journal_names.py`가 본다.
 - `--move` 가 옮기지 못하는 인용. 줄인 꼴("일지 03"), 꼴의 낱말 없이 든 번호("새로 연 것은
-  250·251"), stem 없이 번호만 든 티켓 인용("티켓 002". 번호만으로는 기능 폴더의 티켓이나 다른 수와
-  가를 수 없다), 커밋 메시지와 PR 제목, 번호 뒤의 조사(받침에 따라 갈리는 을·를), 심볼릭 링크인
+  250·251"), 커밋 메시지와 PR 제목, 번호 뒤의 조사(받침에 따라 갈리는 을·를), 심볼릭 링크인
   파일(따라가 쓰지 않는다)은 그대로다. PR 본문은 옮긴 판과 명령만 내고 올리지 않는다. 인용 블록에서
   `>` 없이 이어지는 줄은 옮긴다. 거꾸로 같은 꼴이면 뜻을 가리지 않고 이 브랜치의 번호로 읽어 옮긴다.
   코드 스팬과 펜스 안도 옮긴다. 파일 이름 인용(`docs/journal/…`)이 대개 그 안에 있어서다. 그래서
@@ -289,23 +248,13 @@ main 의 끝으로 옮겨, main 에서 들어온 남의 일지는 들지 않는�
   끝난다. 다시 치면 그 PR은 열린 PR이 아니거나 ref 없는 PR의 길로 간다.
 - 이 브랜치가 고쳤어도 main 과 내용이 같아진 파일(main 의 같은 변경을 손으로 옮긴 것). 이 브랜치가
   고친 파일로 세지 않는다.
-- 다음 빈 번호나 가장 높은 헌법 판을 받은 뒤에 다른 세션이 같은 번호를 쓰는 것. 그 순간의
+- 가장 높은 헌법 판을 받은 뒤에 다른 세션이 같은 판을 쓰는 것. 그 순간의
   형제만 본다. 그 뒤의 겹침은 커밋 직전의 대조가 잡는다. 이 브랜치의 판이 형제가 쓴 판보다 낮은
   것은 그 줄에 찍히기만 하고 종료 코드를 바꾸지 않는다. 그 형제가 판을 새로 올렸으면 둘이 같은 판
   줄을 고쳐, 나중에 병합하는 쪽에서 글자 충돌로 드러난다.
-- 기능 폴더(`.scratch/<slug>/issues/`)의 두 자리 티켓 번호. 그 번호는 한 기능 안에서 한 세션이
-  매긴다(`to-tickets`). 나란히 도는 세션이 같은 기능 폴더에 티켓을 더하면 겹쳐도 알리지 않는다.
-- 지시문이 받아 두고 아직 파일이 없는 티켓 번호. 디스크의 티켓 파일로 찬 번호를 보므로, 다음 세션에
-  넘길 지시문에 번호만 적어 둔 동안 형제가 같은 번호를 받아 간다. 받은 번호로 바로 파일을 만든다.
-- 경로가 어긋난 harness 티켓 폴더. 그 자리는 merge-base 에서 비어도 2로 끝나지 않으므로(위), 폴더를
-  옮기거나 이름을 바꾸면 티켓은 겹침 없음이 되고 다음 빈 티켓 번호는 `001` 이 된다.
-- 원격에 같은 이름의 브랜치가 없고(분리 HEAD 이거나 이름을 바꾼 브랜치) HEAD 가 열린 PR 의 head 와
-  다른(그 head 뒤에 커밋을 더한) 형제 워크트리의 열린 PR. 열린 PR 이 없는 것으로 보고, 그
-  워크트리의 대조도 같은 규칙으로 자기 PR 이 없다고 본다. 그 형제의 티켓이 커밋하지 않은 것이면 이
-  브랜치에 열린 PR 이 있을 때 그쪽이 옮기고 그쪽도 그렇게 안다. 그 티켓이 PR 의 head 에 있으면
-  이쪽은 그 PR 을 PR 형제로 보아, 그 PR 번호가 이 브랜치의 것보다 작으면 두 쪽이 다 옮긴다.
-- `--move` 의 브랜치 줄은 `chore/<stem>` 꼴의 브랜치만 본다. 다른 이름의 브랜치(`feature/…`)와 분리
-  HEAD 에서는 찍지 않는다.
+- harness 티켓의 이름. 번호가 아니라 이름이라 겹침을 읽지 않는다. 같은 이름의 티켓을 두 세션이
+  짓는 것은 함께 고친 파일로만 나온다. 기능 폴더(`.scratch/<slug>/issues/`)의 두 자리 번호도 한 기능
+  안에서 한 세션이 매겨(`to-tickets`) 보지 않는다.
 """
 
 from __future__ import annotations
@@ -319,7 +268,7 @@ import sys
 import tempfile
 import tomllib
 from collections.abc import Collection, Iterable, Mapping, Sequence
-from dataclasses import dataclass, field, replace
+from dataclasses import dataclass, replace
 from pathlib import Path, PurePosixPath
 from typing import NoReturn, Protocol
 from urllib.parse import quote
@@ -330,7 +279,6 @@ MAIN = f"{REMOTE}/{BRANCH}"
 JOURNAL_DIR = "docs/journal"
 ADR_DIR = "docs/adr"
 CONSTITUTION = "docs/constitution/README.md"
-HARNESS_ISSUES = ".scratch/harness/issues"
 # 판을 올려야 하는 헌법 파일. 어느 변경이든 판을 올린다(`principles.md` 거버넌스의 semver)
 CONSTITUTION_TEXTS = frozenset(
     f"docs/constitution/{name}.md" for name in ("principles", "tech", "operations")
@@ -342,7 +290,6 @@ JOURNAL_FILE = re.compile(r"^(\d{4}-\d{2}-\d{2})-(?:(\d{4})|(\d{2}))-.+\.md$")
 # 일지 폴더의 파일 가운데 일지로 세는 것. 규약 전의 이름도 든다. `README.md` 와 `.txt` 는 아니다
 JOURNAL_ANY = re.compile(r"^\d{4}-\d{2}-\d{2}-.+\.md$")
 ADR_NAME = re.compile(r"^(\d{4})-.+\.md$")
-TICKET_NAME = re.compile(r"^(\d{3})-.+\.md$")
 VERSION = re.compile(r"\*\*Version\*\*: (\d+\.\d+\.\d+)")
 PULL_REF = re.compile(r"^refs/pull/(\d+)/(head|merge)$")
 GITHUB_URL = re.compile(r"github\.com[:/]([^/\s]+)/([^/\s]+?)(?:\.git)?/?$")
@@ -375,15 +322,6 @@ _CITATIONS = (
     r"|(?<![\w.])(?<!\d{4}-\d{2}-\d{2}-)(?P<adr>\d{4})(?=-[a-z0-9]|\])"
 )
 CITATION = re.compile(_CITATIONS, re.MULTILINE)
-# 티켓 머리 줄(`# NNN: <제목>`). 기능 폴더의 티켓도 같은 꼴이라 harness 티켓 파일에서만 바꾼다
-_TICKET_HEAD = r"|^# (?P<ticket>\d{3}):"
-# 티켓 stem 의 경계. slug 는 영문·숫자·하이픈이다. `\w` 는 한글을 품어 stem 뒤에 붙은 조사에서
-# 맞지 않는다
-STEM_EDGE = "A-Za-z0-9_-"
-# 워크트리 폴더 이름은 옮기지 않으므로 그 폴더를 가리킨 인용의 stem 도 두는 앞자리. 대소문자를
-# 가리지 않고, 문자열 리터럴과 JSON 이 이스케이프한 역슬래시 둘도 구분자다. 뒤보기는 폭이 고정이라
-# 꼴마다 하나씩 둔다
-WORKTREE_PARENTS = (r"(?i:worktrees)[/\\]", r"(?i:worktrees)\\\\")
 BOM = chr(0xFEFF)
 
 NETWORK_TIMEOUT = 120
@@ -391,14 +329,14 @@ LOCAL_TIMEOUT = 30
 SHALLOW_HINT = "얕은 클론이면 `git fetch --unshallow origin` 뒤 다시 친다"
 
 USAGE = (
-    "이 브랜치가 새로 매긴 번호(ADR, 헌법 판, harness 티켓)와 고친 파일을 형제(origin/main,"
-    " 열린 PR, 형제 워크트리)와 대조하고 다음 빈 번호를 낸다. 바꾼 하네스 파일의 카나리아 명세를"
+    "이 브랜치가 새로 매긴 번호(ADR, 헌법 판)와 고친 파일을 형제(origin/main,"
+    " 열린 PR, 형제 워크트리)와 대조한다. 바꾼 하네스 파일의 카나리아 명세를"
     " 고치지 않았거나, 이 브랜치가 더한 줄의 일지 인용이 어디에도 없는 일지를 가리키면 알린다."
     " 먼저 origin 의 main 과 열린 PR 의 head 를 fetch 한다. `--journal` 은 대조하지 않고"
     " 이 브랜치의 일지 경로를 찍는다. 판정의 근거와 못 보는 것은 이 파일의 독스트링에 있다."
 )
 EXITS = (
-    "종료 코드: 0 고칠 것이 없다(함께 고친 파일, 그쪽이 옮기는 티켓 겹침은 알리기만 한다)."
+    "종료 코드: 0 고칠 것이 없다(함께 고친 파일은 알리기만 한다)."
     " 1 출력대로 고친다(번호 겹침, 판을 올리지 않고 고친 헌법 파일, 카나리아 명세를 고치지"
     " 않고 바꾼 하네스 파일, 어디에도 없는 일지를 가리킨 인용). `--journal` 에서는 이 브랜치가"
     " 더한 일지가 없다."
@@ -406,7 +344,7 @@ EXITS = (
 )
 # 2로 끝날 때 stderr 에 함께 싣는 할 일(대기열 251)
 ON_FAILURE = (
-    "할 일: 번호(ADR, 헌법 판, harness 티켓)를 손으로 고르지 않는다. 형제를 넘은 번호인지 알 수"
+    "할 일: 번호(ADR, 헌법 판)를 손으로 고르지 않는다. 형제를 넘은 번호인지 알 수"
     " 없다. 원인을 고쳐 다시 친다. 번호를 쓸 파일이 아직 없으면 그동안 옮길 것은 스크래치 파일에"
     " 적어 두고, 번호를 받은 뒤 옮긴다. 일지는 번호가 없어 기다리지 않고 만든다"
 )
@@ -436,7 +374,6 @@ class Numbers:
     journals: frozenset[str]
     adrs: dict[str, str]  # 번호 → 파일 이름
     version: str | None
-    tickets: dict[str, str]  # harness 티켓 번호 → 파일 이름
 
 
 @dataclass(frozen=True)
@@ -464,9 +401,6 @@ class Sibling:
     version: str | None
     # HEAD 가 닫힌 PR 의 head 인 워크트리면 그 PR 번호. `changed` 는 커밋하지 않은 변경뿐이다
     closed: int | None = None
-    # 이 형제의 열린 PR 번호. 열린 PR 이면 그 번호, 워크트리면 그 브랜치의 PR(`branch_pull`)이다.
-    # 티켓 번호가 겹쳤을 때 누가 옮기는지(`ours_moves_ticket`)에 쓴다
-    pull: int | None = None
 
 
 @dataclass(frozen=True)
@@ -485,9 +419,6 @@ class Survey:
     # 이 브랜치가 고친 파일 → 이 브랜치가 더한 줄에서 어디에도 없는 일지 번호를 가리킨 인용의 번호
     dangling: list[tuple[str, list[str]]]
     unfetched: tuple[int, ...] = ()  # head 커밋을 받지 못해 형제에서 뺀 열린 PR(대기열 288)
-    branch: str | None = None  # 지금 브랜치. 분리 HEAD 면 None
-    own_pull: int | None = None  # 이 브랜치의 열린 PR(`branch_pull`)
-    own_head: str | None = None  # 원격의 같은 이름 브랜치 끝. 없으면 원격에 이 브랜치가 없다
 
     @property
     def siblings(self) -> list[Sibling]:
@@ -498,13 +429,11 @@ def read_numbers(
     journal_names: list[str],
     adr_names: list[str],
     constitution: str,
-    ticket_names: list[str],
 ) -> Numbers:
     journals = frozenset(name for name in journal_names if JOURNAL_FILE.match(name))
     adrs = {m.group(1): name for name in adr_names if (m := ADR_NAME.match(name))}
     version = VERSION.search(constitution)
-    tickets = {m.group(1): name for name in ticket_names if (m := TICKET_NAME.match(name))}
-    return Numbers(journals, adrs, version.group(1) if version else None, tickets)
+    return Numbers(journals, adrs, version.group(1) if version else None)
 
 
 def fresh(numbers: Numbers, *known: Numbers) -> Numbers:
@@ -513,8 +442,7 @@ def fresh(numbers: Numbers, *known: Numbers) -> Numbers:
     if version is not None and any(version == other.version for other in known):
         version = None
     adrs = {k: v for k, v in numbers.adrs.items() if all(k not in n.adrs for n in known)}
-    tickets = {k: v for k, v in numbers.tickets.items() if all(k not in n.tickets for n in known)}
-    return Numbers(frozenset(), adrs, version, tickets)
+    return Numbers(frozenset(), adrs, version)
 
 
 def unshared(numbers: Numbers, other: Numbers) -> Numbers:
@@ -524,8 +452,7 @@ def unshared(numbers: Numbers, other: Numbers) -> Numbers:
     README 가 main 과 같은지로 `survey` 가 가른다.
     """
     adrs = {k: v for k, v in numbers.adrs.items() if other.adrs.get(k) != v}
-    tickets = {k: v for k, v in numbers.tickets.items() if other.tickets.get(k) != v}
-    return Numbers(frozenset(), adrs, numbers.version, tickets)
+    return Numbers(frozenset(), adrs, numbers.version)
 
 
 def clashes(ours: Numbers, theirs: Numbers) -> list[Clash]:
@@ -534,30 +461,12 @@ def clashes(ours: Numbers, theirs: Numbers) -> list[Clash]:
     같은 파일은 겹침이 아니라 공유한 이력이다(쌓아 올린 브랜치).
     """
     found: list[Clash] = []
-    named = (
-        ("ADR", ours.adrs, theirs.adrs),
-        ("티켓", ours.tickets, theirs.tickets),
-    )
-    for kind, mine, other in named:
-        for key in sorted(mine.keys() & other.keys()):
-            if mine[key] != other[key]:
-                found.append(Clash(kind, key, mine[key], other[key]))
+    for key in sorted(ours.adrs.keys() & theirs.adrs.keys()):
+        if ours.adrs[key] != theirs.adrs[key]:
+            found.append(Clash("ADR", key, ours.adrs[key], theirs.adrs[key]))
     if ours.version is not None and ours.version == theirs.version:
         found.append(Clash("헌법", ours.version, ours.version, ours.version))
     return found
-
-
-def ours_moves_ticket(own_pull: int | None, their_pull: int | None) -> bool:
-    """티켓 번호가 겹친 열린 PR·워크트리 형제 하나에 대해 이 브랜치가 옮기는가.
-
-    다른 번호처럼 이 브랜치가 비켜 가되, 이 브랜치에 열린 PR(`own_pull`)이 있으면 옮기지 않는다.
-    티켓의 브랜치 이름은 그 stem 이라 옮기면 이름이 바뀌어 PR 이 끊긴다. 둘 다 열린 PR 이면 PR
-    번호가 큰 쪽이 옮긴다. main 에 병합된 티켓과의 겹침은 이 함수로 가르지 않는다. 그쪽은 옮길 수
-    없어 언제나 이 브랜치가 옮긴다(`judge`, 명세 "번호"의 2026-10-21 명세 검토 주석).
-    """
-    if own_pull is None:
-        return True
-    return their_pull is not None and own_pull > their_pull
 
 
 def journal_order(name: str) -> tuple[str, int, str]:
@@ -569,15 +478,6 @@ def journal_order(name: str) -> tuple[str, int, str]:
         return name[:10], -1, name
     day, stamp, seq = found.groups()
     return (day, 1, stamp) if stamp is not None else (day, 0, seq)
-
-
-def _top_ticket(numbers: Iterable[Numbers]) -> int:
-    return max((int(k) for n in numbers for k in n.tickets), default=0)
-
-
-def next_ticket(numbers: list[Numbers]) -> str:
-    """`numbers` 어디에도 없는 다음 harness 티켓 번호(세 자리. 티켓이 없으면 001)."""
-    return f"{_top_ticket(numbers) + 1:03d}"
 
 
 def _shift(olds: list[int], top: int) -> list[tuple[int, int]]:
@@ -592,20 +492,11 @@ def moves(ours: Numbers, taken: list[Numbers], found: list[Clash]) -> list[Move]
     겹친 번호만 옮기면 이 브랜치의 다른 새 번호와 부딪히거나 차례가 뒤집힌다.
     헌법 판은 고르지 않는다.
     """
-    kinds = {clash.kind for clash in found}
-    result: list[Move] = []
-    if "ADR" in kinds:
-        top = max((int(k) for n in taken for k in n.adrs), default=0)
-        olds = [int(key) for key in ours.adrs]
-        result += [Move("ADR", f"{a:04d}", f"{b:04d}") for a, b in _shift(olds, top)]
-    if "티켓" in kinds:
-        # 티켓은 stem(`NNN-<slug>`)을 옮긴다. 인용을 slug 까지 맞대어 바꾼다
-        stems = {int(key): name.removesuffix(".md") for key, name in ours.tickets.items()}
-        result += [
-            Move("티켓", stems[a], f"{b:03d}{stems[a][3:]}")
-            for a, b in _shift(list(stems), _top_ticket(taken))
-        ]
-    return result
+    if not any(clash.kind == "ADR" for clash in found):
+        return []
+    top = max((int(k) for n in taken for k in n.adrs), default=0)
+    olds = [int(key) for key in ours.adrs]
+    return [Move("ADR", f"{a:04d}", f"{b:04d}") for a, b in _shift(olds, top)]
 
 
 def _version_key(version: str) -> tuple[int, ...]:
@@ -700,65 +591,32 @@ def uncanaried(
     return found
 
 
-@dataclass(frozen=True)
-class Renumber:
-    """옮길 번호를 종류마다 옛 번호 → 새 번호로 든다. 티켓은 번호와 stem 둘로 든다."""
-
-    adrs: dict[str, str]
-    tickets: dict[str, str]  # 티켓 번호(머리 줄의 `NNN`)
-    stems: dict[str, str]  # 티켓 stem(`NNN-<slug>`)
+def renumber(shifted: Iterable[Move]) -> dict[str, str]:
+    """옮길 ADR 번호를 옛 번호 → 새 번호로 든다."""
+    return {move.old: move.new for move in shifted if move.kind == "ADR"}
 
 
-def renumber(shifted: Iterable[Move]) -> Renumber:
-    by_kind: dict[str, dict[str, str]] = {"ADR": {}, "티켓": {}}
-    for move in shifted:
-        by_kind[move.kind][move.old] = move.new
-    stems = by_kind["티켓"]
-    tickets = {old.partition("-")[0]: new.partition("-")[0] for old, new in stems.items()}
-    return Renumber(by_kind["ADR"], tickets, stems)
-
-
-def _citation_pattern(path: str, plan: Renumber) -> re.Pattern[str]:
-    """`path` 에서 옮길 인용의 꼴. 티켓 stem 은 `plan` 의 stem 그대로를 앞뒤 경계와 함께 맞대고,
-    워크트리 폴더 경로(`worktrees/`·`worktrees\\` 뒤, `WORKTREE_PARENTS`)의 stem 은 둔다."""
-    if not plan.stems:
-        return CITATION
-    source = _CITATIONS
-    stems = "|".join(re.escape(stem) for stem in sorted(plan.stems, key=len, reverse=True))
-    parents = "".join(f"(?<!{parent})" for parent in WORKTREE_PARENTS)
-    source += rf"|(?<![{STEM_EDGE}]){parents}(?P<stem>{stems})(?![{STEM_EDGE}])"
-    if path.startswith(f"{HARNESS_ISSUES}/"):
-        source += _TICKET_HEAD
-    return re.compile(source, re.MULTILINE)
-
-
-def rewrite(text: str, plan: Renumber, path: str, kept: frozenset[str] = frozenset()) -> str:
-    """`plan` 의 옛 번호를 든 인용을 한 번에 새 번호로 바꾼다. `path` 가 harness 티켓 파일이면
-    티켓 머리 줄도 바꾼다. 인용 블록(`>` 로 시작하는 줄)은 다른
-    데서 옮겨 온 원문이라 둔다.
+def rewrite(text: str, plan: Mapping[str, str], kept: frozenset[str] = frozenset()) -> str:
+    """`plan`(옛 ADR 번호 → 새 번호)의 옛 번호를 든 인용을 한 번에 새 번호로 바꾼다. 인용 블록
+    (`>` 로 시작하는 줄)은 다른 데서 옮겨 온 원문이라 둔다.
 
     `kept` 와 글자가 같은 줄(줄 끝의 CR 은 빼고 견준다)도 둔다. merge-base 나 main 의 판에 있던
     줄의 같은 번호는 상대를 가리킨다(`.claude/rules/adr.md`). BOM 은 떼고 바꾼 뒤 다시 붙인다.
-    BOM 이 `^` 를 막아 일지 머리 줄만 옛 번호에 남았다(PR 직전 버그 축).
+    BOM 이 `^` 를 막아 첫 줄만 규칙에서 벗어났다(PR 직전 버그 축).
     """
 
     def swap(match: re.Match[str]) -> str:
         found = match.groupdict()
         if (adrs := found["adrs"]) is not None:
-            return "·".join(plan.adrs.get(number, number) for number in adrs.split("·"))
+            return "·".join(plan.get(number, number) for number in adrs.split("·"))
         if (adr := found["adr"]) is not None:
-            return plan.adrs.get(adr, adr)
-        if (stem := found.get("stem")) is not None:
-            return plan.stems[stem]
-        if (ticket := found.get("ticket")) is not None:
-            return f"# {plan.tickets[ticket]}:" if ticket in plan.tickets else match[0]
+            return plan.get(adr, adr)
         return match[0]
 
-    pattern = _citation_pattern(path, plan)
     bom = BOM if text.startswith(BOM) else ""
     lines = text[len(bom) :].split("\n")
     return bom + "\n".join(
-        line if line.rstrip("\r") in kept else pattern.sub(swap, line) for line in lines
+        line if line.rstrip("\r") in kept else CITATION.sub(swap, line) for line in lines
     )
 
 
@@ -785,11 +643,9 @@ def plan_moves(
     """
     plan = renumber(shifted)
     renames: list[tuple[str, str]] = []
-    for old, new in plan.adrs.items():
+    for old, new in plan.items():
         name = ours.adrs[old]
         renames.append((f"{ADR_DIR}/{name}", f"{ADR_DIR}/{new}{name[len(old) :]}"))
-    for old, new in plan.stems.items():
-        renames.append((f"{HARNESS_ISSUES}/{old}.md", f"{HARNESS_ISSUES}/{new}.md"))
     sources = {source for source, _ in renames}
     for _, target in renames:
         if target not in sources and (root / target).exists():
@@ -808,7 +664,7 @@ def plan_moves(
         except OSError as error:
             raise MoveError(f"{path} 를 읽지 못했다({error}). 아무것도 고치지 않았다") from error
         lines = (kept or {}).get(path, frozenset())
-        if (changed_text := rewrite(text, plan, path, lines)) != text:
+        if (changed_text := rewrite(text, plan, lines)) != text:
             texts[path] = changed_text
             originals[path] = raw
     return MovePlan(vacating_first(renames), texts, originals)
@@ -953,7 +809,6 @@ def remote_branches(listing: str) -> dict[str, str]:
 class Worktree:
     path: str
     head: str
-    branch: str | None  # 분리 HEAD 면 None
 
 
 def worktrees(porcelain: str) -> list[Worktree]:
@@ -967,8 +822,7 @@ def worktrees(porcelain: str) -> list[Worktree]:
         if "bare" in fields or "prunable" in fields:
             continue
         if "worktree" in fields and "HEAD" in fields:
-            branch = fields["branch"].removeprefix("refs/heads/") if "branch" in fields else None
-            found.append(Worktree(fields["worktree"], fields["HEAD"], branch))
+            found.append(Worktree(fields["worktree"], fields["HEAD"]))
     return found
 
 
@@ -1085,7 +939,7 @@ def moved_bodies(bodies: Mapping[int, str], shifted: Iterable[Move]) -> dict[int
     꼴은 `rewrite` 와 같다.
     """
     plan = renumber(shifted)
-    moved = {number: rewrite(body, plan, "") for number, body in bodies.items()}
+    moved = {number: rewrite(body, plan) for number, body in bodies.items()}
     return {number: moved[number] for number in sorted(moved) if moved[number] != bodies[number]}
 
 
@@ -1200,7 +1054,6 @@ def numbers_of(snapshot: Snapshot) -> Numbers:
         snapshot.names(JOURNAL_DIR),
         snapshot.names(ADR_DIR),
         snapshot.text(CONSTITUTION),
-        snapshot.names(HARNESS_ISSUES),
     )
 
 
@@ -1227,9 +1080,8 @@ def canary_sources(root: Path) -> dict[str, str | None]:
 
 
 def empty_places(numbers: Numbers) -> list[str]:
-    """비면 경로가 어긋난 것으로 보는 번호의 자리. harness 티켓은 들지 않는다. #335 전에 딴
-    브랜치의 merge-base 에는 harness 폴더가 없다. 대기열도 들지 않는다. 폴더가 된 뒤에는 옛 표가
-    어느 merge-base 에도 없다. 일지는 번호가 아니라 들지 않는다."""
+    """비면 경로가 어긋난 것으로 보는 번호의 자리. 대기열은 들지 않는다. 폴더가 된 뒤에는 옛 표가
+    어느 merge-base 에도 없다. 일지와 harness 티켓은 번호가 아니라 들지 않는다."""
     places = (
         (ADR_DIR, not numbers.adrs),
         (CONSTITUTION, numbers.version is None),
@@ -1297,17 +1149,6 @@ class Remote:
     closed: dict[str, int]  # 닫힌 PR 의 head → 번호
     heads: frozenset[int] = frozenset()  # 원격에 `refs/pull/<N>/head` 가 있는 PR
     unfetched: tuple[int, ...] = ()  # head 커밋을 받지 못해 `pulls` 에서 뺀 열린 PR(대기열 288)
-    branches: dict[str, str] = field(default_factory=dict[str, str])  # 원격 브랜치 → 끝
-
-
-def branch_pull(remote: Remote, branch: str | None, head: str) -> int | None:
-    """`branch` 의 열린 PR. head 가 원격의 같은 이름 브랜치 끝과 같은 PR 이다. 원격에 그 브랜치가
-    없거나 분리 HEAD(`branch` 가 None)면 head 가 그 체크아웃의 HEAD(`head`)와 같은 PR 이다. 둘
-    이상이면 가장 작은 번호다. 이 브랜치와 형제 워크트리가 같이 쓴다. 규칙이 갈리면 티켓이 겹친 두
-    대조가 서로 다른 쪽을 옮기라고 한다(모듈 독스트링)."""
-    tip = remote.branches.get(branch) if branch is not None else None
-    target = head if tip is None else tip
-    return min((number for number, sha in remote.pulls.items() if sha == target), default=None)
 
 
 def pull_heads(listing: str) -> frozenset[int]:
@@ -1321,10 +1162,7 @@ def pull_heads(listing: str) -> frozenset[int]:
 
 
 def read_remote(root: Path) -> Remote:
-    """열린 PR, 원격 브랜치의 끝, 닫힌 PR 의 head 를 읽는다. 로컬의 ref 는 움직이지 않는다.
-
-    원격 브랜치는 전부 읽는다. 형제 워크트리의 열린 PR 도 그 브랜치의 원격 끝으로 가린다
-    (`branch_pull`)."""
+    """열린 PR, 이 브랜치의 원격 끝, 닫힌 PR 의 head 를 읽는다. 로컬의 ref 는 움직이지 않는다."""
     branch = current_branch(root)
     patterns = ["refs/pull/*/head", "refs/pull/*/merge", "refs/heads/*"]
     listing = git(root, "ls-remote", REMOTE, *patterns, timeout=NETWORK_TIMEOUT)
@@ -1337,7 +1175,7 @@ def read_remote(root: Path) -> Remote:
     branches = remote_branches(listing)
     own = branches.get(branch) if branch else None
     closed = closed_heads(listing, pulls)
-    return Remote(pulls, pulls_from, own, closed, pull_heads(listing), branches=branches)
+    return Remote(pulls, pulls_from, own, closed, pull_heads(listing))
 
 
 def has_commit(root: Path, sha: str) -> bool:
@@ -1404,7 +1242,6 @@ def survey(root: Path, remote: Remote) -> Survey:
     others: list[Sibling] = []
     taken = [base_numbers, main_numbers]
     branch = current_branch(root)
-    own = git(root, "rev-parse", "HEAD").strip()
 
     def add(
         label: str,
@@ -1412,7 +1249,6 @@ def survey(root: Path, remote: Remote) -> Survey:
         numbers: Numbers,
         changed: frozenset[str] | None,
         closed: int | None = None,
-        pull: int | None = None,
     ) -> None:
         new = fresh(numbers, base_numbers, main_numbers)
         others.append(
@@ -1423,7 +1259,6 @@ def survey(root: Path, remote: Remote) -> Survey:
                 changed=changed,
                 version=new.version,
                 closed=closed,
-                pull=pull,
             )
         )
         taken.append(numbers)
@@ -1433,7 +1268,7 @@ def survey(root: Path, remote: Remote) -> Survey:
             continue
         since = merge_base(root, head, main_sha)
         changed = _lines(git(root, "diff", "--name-only", since, head)) if since else None
-        add(f"PR #{number}", head, numbers_of(Tree(root, head)), changed, pull=number)
+        add(f"PR #{number}", head, numbers_of(Tree(root, head)), changed)
     for tree in worktrees(git(root, "worktree", "list", "--porcelain")):
         path, head = Path(tree.path).resolve(), tree.head
         if path == root or not path.is_dir():
@@ -1446,8 +1281,7 @@ def survey(root: Path, remote: Remote) -> Survey:
             continue
         since = merge_base(root, head, main_sha)
         changed = _own_changes(path, since, main_sha) if since else None
-        pull = branch_pull(remote, tree.branch, head)
-        add(f"워크트리 {path}", head, numbers, changed, pull=pull)
+        add(f"워크트리 {path}", head, numbers, changed)
     disk = numbers_of(Disk(root))
     ours = unshared(fresh(disk, base_numbers), main_numbers)
     if heads := merge_heads(root):
@@ -1485,9 +1319,6 @@ def survey(root: Path, remote: Remote) -> Survey:
         reserved,
         dangling_files(root, (base, main_sha), changed, known),
         remote.unfetched,
-        branch=branch,
-        own_pull=branch_pull(remote, branch, own),
-        own_head=remote.own_head,
     )
 
 
@@ -1511,7 +1342,6 @@ _PULLS_FROM = {FROM_GH: "gh api", FROM_MERGE_REF: "merge ref(gh api 를 쓰지 �
 def _ours_line(ours: Numbers) -> str:
     keys = [f"ADR {key}" for key in sorted(ours.adrs)]
     keys += [f"헌법 {ours.version}"] if ours.version else []
-    keys += [f"티켓 {key}" for key in sorted(ours.tickets)]
     return f"이 브랜치의 새 번호: {', '.join(keys)}" if keys else "이 브랜치의 새 번호 없음"
 
 
@@ -1524,11 +1354,6 @@ class Verdict:
     """
 
     found: list[tuple[Sibling, Clash]]
-    next_ticket: str
-    # 티켓 번호가 겹쳤지만 그쪽이 옮기는 것. 이 브랜치가 고칠 것이 아니라 종료 코드를 바꾸지 않는다
-    yielded: list[tuple[Sibling, Clash]]
-    # 이 브랜치가 티켓을 옮겨 브랜치 이름이 바뀌어 끊기는 이 브랜치의 열린 PR
-    reopen: int | None
     shifted: list[Move]
     top_version: tuple[str, list[str]] | None  # 형제가 쓴 가장 높은 헌법 판과 그 자리
     unbumped: list[str]  # 판을 올리지 않고 고친 헌법 파일
@@ -1545,26 +1370,10 @@ class Verdict:
 
 def judge(result: Survey) -> Verdict:
     found = findings(result)
-    # 티켓은 겹친 형제 하나라도 이 브랜치가 옮기라고 하면 새 티켓 전부를 옮기고(다른 번호처럼),
-    # 아니면 옮기지 않고 그쪽이 옮긴다고 알린다. main 에 병합된 티켓은 옮길 수 없어 이 브랜치가
-    # 옮긴다
-    tickets = [(sibling, clash) for sibling, clash in found if clash.kind == "티켓"]
-    moving = any(
-        sibling is result.main or ours_moves_ticket(result.own_pull, sibling.pull)
-        for sibling, _ in tickets
-    )
-    yielded = [] if moving else tickets
-    if yielded:
-        found = [(sibling, clash) for sibling, clash in found if clash.kind != "티켓"]
-    ticket = next_ticket([*result.taken, result.ours])
     shifted = moves(result.ours, result.taken, [clash for _, clash in found])
-    renamed = renamed_branch(result.branch, shifted) is not None
     top = highest_version([(s.label, s.version) for s in result.siblings])
     return Verdict(
         found=found,
-        next_ticket=ticket,
-        yielded=yielded,
-        reopen=result.own_pull if renamed else None,
         shifted=shifted,
         top_version=top,
         unbumped=unbumped(result.changed, result.ours),
@@ -1597,7 +1406,6 @@ def render(result: Survey, verdict: Verdict) -> str:
             " 보지 않았으니 잠시 뒤 다시 친다. 다시 쳐도 같으면 기다리지 않는다. 포크의 PR 이거나"
             " 원격에 없는 커밋일 수 있고, 그 PR 과의 겹침은 PR 화면에서 손으로 본다"
         )
-    lines.append(f"다음 빈 번호(형제 포함): 티켓 {verdict.next_ticket}")
     if verdict.top_version:
         version, labels = verdict.top_version
         lines.append(
@@ -1613,22 +1421,8 @@ def render(result: Survey, verdict: Verdict) -> str:
     if verdict.found:
         lines.append(f"번호 겹침 {len(verdict.found)}:")
         lines += _clash_lines(verdict.found)
-    elif not verdict.yielded:
+    else:
         lines.append("번호 겹침 없음")
-    if verdict.yielded:
-        lines.append(
-            "티켓 번호가 겹쳤지만 이 브랜치는 옮기지 않는다. 이 브랜치에 열린 PR"
-            f" #{result.own_pull} 이 있어서다. 티켓의 브랜치(`chore/<stem>`)는 옮기면 이름이 바뀌어"
-            " PR 이 끊기므로, 열린 PR 이 없거나 PR 번호가 더 큰 그쪽이 옮긴다(종료 코드와 무관):"
-        )
-        lines += _clash_lines(verdict.yielded)
-    if verdict.reopen is not None:
-        lines.append(
-            f"이 브랜치의 열린 PR #{verdict.reopen} 은 옮길 티켓의 브랜치 {result.branch} 를 머리로"
-            " 든다. 겹친 그쪽이 main 에 병합됐거나 PR 번호가 더 작아 이 브랜치가 옮긴다. 브랜치"
-            " 이름이 바뀌면 그 PR 이 끊기므로, `--move` 뒤 새 이름의 브랜치로 PR 을 다시 열고"
-            f" PR #{verdict.reopen} 을 닫는다"
-        )
     if verdict.unbumped:
         lines.append(
             f"헌법 파일을 고치고 판을 올리지 않았다: {', '.join(verdict.unbumped)}."
@@ -1662,9 +1456,8 @@ def render(result: Survey, verdict: Verdict) -> str:
         moved = ", ".join(f"{m.kind} {m.old} → {m.new}" for m in verdict.shifted)
         lines.append(f"옮길 번호: {moved}")
         lines.append(
-            "`--move` 를 붙여 다시 치면 이 번호대로 ADR·티켓의 파일 이름과 티켓 머리 줄, 이"
-            " 브랜치의 변경과 미추적 파일 안의 인용을 옮긴다. 티켓의 stem 인 브랜치에 있으면"
-            " 브랜치 이름을 바꾸는 명령도 찍는다"
+            "`--move` 를 붙여 다시 치면 이 번호대로 ADR 의 파일 이름과 이 브랜치의 변경과"
+            " 미추적 파일 안의 인용을 옮긴다"
         )
     shared: list[str] = []
     for sibling in result.siblings:
@@ -1685,49 +1478,11 @@ def _moved_line(shifted: Sequence[Move], plan: MovePlan) -> str:
     moved = ", ".join(f"{m.kind} {m.old} → {m.new}" for m in shifted)
     names = ", ".join(f"{old} → {new}" for old, new in plan.renames) or "없음"
     texts = ", ".join(sorted(renamed.get(path, path) for path in plan.texts)) or "없음"
-    tickets = (
-        ', stem 없이 번호만 든 티켓 인용("티켓 002")'
-        if any(m.kind == "티켓" for m in shifted)
-        else ""
-    )
     return (
         f"옮겼다: {moved}. 이름을 바꾼 파일: {names}. 인용을 고친 파일: {texts}. 스테이지하지"
         " 않았으니 옛 이름의 지움까지 함께 스테이지한다(`git add -A`). 낱말 없이 든 번호,"
-        f" 번호 뒤의 조사{tickets}는 옮기지 않았으니 손으로 본다"
+        " 번호 뒤의 조사는 옮기지 않았으니 손으로 본다"
     )
-
-
-def renamed_branch(branch: str | None, shifted: Sequence[Move]) -> tuple[str, str] | None:
-    """지금 브랜치가 옮길 티켓의 stem 인 `chore/` 브랜치면 (옛 이름, 새 이름). 아니면 None."""
-    if branch is None:
-        return None
-    for move in shifted:
-        if move.kind == "티켓" and branch == f"chore/{move.old}":
-            return branch, f"chore/{move.new}"
-    return None
-
-
-def rename_lines(old: str, new: str) -> list[str]:
-    """옮긴 티켓의 stem 인 브랜치의 이름을 바꾸는 명령과 세션 제목의 할 일. 도구는 브랜치·인덱스·
-    참조를 바꾸지 않고 찍기만 한다."""
-    return [
-        f"이 브랜치 {old} 는 옮긴 티켓의 stem 이라 이름도 옮긴다. 도구는 브랜치를 바꾸지 않았고"
-        f" 워크트리 폴더 이름은 그대로 둔다. 바꾸는 명령: git branch -m {old} {new}",
-        f"바꾼 뒤 이 세션의 제목을 새 브랜치로 바꾼다: `set_session_title` 에 `self` 와 `{new}`",
-    ]
-
-
-def remote_lines(old: str, new: str, own_pull: int | None) -> list[str]:
-    """원격에도 있는 브랜치의 이름을 바꿀 때 새 이름으로 푸시하고 옛 원격 브랜치를 지우는 명령.
-    이 브랜치의 열린 PR(`own_pull`)이 있으면 그 사이에 PR 을 다시 열고 닫는 할 일을 넣는다."""
-    lines = [f"새 이름으로 푸시하는 명령: git push -u origin {new}"]
-    if own_pull is not None:
-        lines.append(
-            f"새 이름의 브랜치로 PR 을 다시 열고 PR #{own_pull} 을 닫는다. 열린 PR 의 머리를"
-            " 지우는 푸시는 훅이 막으니, 옛 원격 브랜치는 그 PR 을 닫은 뒤 지운다"
-        )
-    lines.append(f"옛 원격 브랜치를 지우는 명령: git push origin --delete {old}")
-    return lines
 
 
 class _Parser(argparse.ArgumentParser):
@@ -1744,9 +1499,8 @@ def _parser() -> argparse.ArgumentParser:
     group.add_argument(
         "--move",
         action="store_true",
-        help="옮길 번호대로 ADR·티켓의 파일 이름과 티켓 머리 줄, 이 브랜치의 변경과"
-        " 미추적 파일 안의 인용을 옮기고 다시 대조한다. 이 브랜치의 열린 PR 본문은 옮긴 판과 올리는"
-        " 명령만, 티켓의 stem 인 브랜치는 이름을 바꾸는 명령만 낸다",
+        help="옮길 번호대로 ADR 의 파일 이름과 이 브랜치의 변경과 미추적 파일 안의 인용을"
+        " 옮기고 다시 대조한다. 이 브랜치의 열린 PR 본문은 옮긴 판과 올리는 명령만 낸다",
     )
     group.add_argument(
         "--journal",
@@ -1866,11 +1620,6 @@ def _move_and_check(start: Path) -> tuple[Survey, Verdict]:
     plan = plan_moves(root, result.ours, verdict.shifted, result.changed, kept)
     apply_moves(root, plan)
     print(_moved_line(verdict.shifted, plan))
-    if (names := renamed_branch(result.branch, verdict.shifted)) is not None:
-        lines = rename_lines(*names)
-        if result.own_head is not None:
-            lines += remote_lines(*names, result.own_pull)
-        print("\n".join(lines))
     report_own_pulls(root, verdict.shifted)
     result = survey(root, remote)
     return result, judge(result)

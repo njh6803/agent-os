@@ -230,11 +230,14 @@ GH_SUB = frozenset({"pr", "run", "api", "issue", "repo", "workflow", "auth", "se
 GH_SUB2 = frozenset(
     {"checks", "view", "create", "merge", "list", "watch", "diff", "edit", "ready", "comment"}
 )
-# 티켓 PR의 브랜치. 기능 티켓은 `feature/NN-<slug>`, harness 티켓은 `chore/NNN-<slug>`이고(ADR
-# 0037), 묶음 1(`NN-<slug>`, `NNN-<slug>`)을 `ticket_paths`의 열쇠로 쓴다. 규약대로 지은 브랜치면
-# 그 값이 티켓 파일 이름의 stem이고, 이름이 다르면 티켓 파일을 찾지 못한 행이 된다. 번호 없는
-# `chore/<slug>`는 티켓이 없는 하네스 브랜치라 맞추지 않는다.
-TICKET_BRANCH = re.compile(r"^(?:feature/(?=\d{2}-)|chore/(?=\d{3}-))(\d+-[\w.-]+)$")
+# 티켓 PR의 브랜치. 기능 티켓은 `feature/NN-<slug>`, harness 티켓은 `chore/` 뒤의 글자가 그대로
+# 티켓 파일 이름의 stem인 `chore/<stem>`이다(ADR 0037, 0045). 옛 꼴 `chore/NNN-<slug>`와 새 꼴
+# `chore/<slug>`가 같은 규칙이다. 묶음 `stem`을 `ticket_paths`의 열쇠로 쓴다. 규약대로 지은
+# 브랜치면 그 값이 티켓 파일 이름의 stem이고, 이름이 다르면 티켓 파일을 찾지 못한 행이 된다.
+TICKET_BRANCH = re.compile(
+    r"^(?:feature/(?=\d{2}-)(?P<feature>\d+-[\w.-]+)|chore/(?P<harness>[\w.-]+))$"
+)
+_HARNESS_ISSUES = ".scratch/harness/issues/"
 WORK = re.compile(r"{{work:([^{}]+)}}")
 CHECKBOX = re.compile(r"^\s*[-*] \[[ xX]\]", re.MULTILINE)
 COMMENT = re.compile(r"<!--.*?-->", re.DOTALL)
@@ -2223,9 +2226,15 @@ def gather_tickets(
         m = TICKET_BRANCH.match(p.branch)
         if p.merged is None or m is None or not first <= p.merged.astimezone(tz).date() <= day:
             continue
-        path = paths.get(m.group(1))
+        harness = m.group("harness")
+        stem = harness or m.group("feature")
+        path = paths.get(stem)
+        # 같은 stem이 기능 폴더에도 있으면 `ticket_paths`가 먼저 본 것을 주므로 하네스 브랜치는
+        # 하네스 폴더의 파일일 때만 맞춘다
+        if harness and path and not path.startswith(_HARNESS_ISSUES):
+            path = None
         text = main_text(root, path) if path else None
-        rows.append(_ticket_row(p.number, m.group(1), text, by_branch.get(p.branch, []), handoff))
+        rows.append(_ticket_row(p.number, stem, text, by_branch.get(p.branch, []), handoff))
     return rows
 
 

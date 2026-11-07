@@ -38,7 +38,7 @@ You are running a **retrospective** for this session, either because the user as
    - **반영할 때**는 승인한 것의 종류가 정한다. 지금 반영하지 않는 것은 5단계대로 대기열에 둔다.
      - 고침(도구·훅·스킬의 버그, 틀린 사실, 깨진 경로)은 사건 하나로 반영한다.
      - 더하는 것(새 훅·검사, 스킬·rules·지침에 더하는 문장, `CODING_STANDARDS.md`의 줄)은 같은 실수의 다섯 번째이거나 손상이 한 번 났을 때 반영한다. 손상은 작업이나 데이터를 잃은 것, 비밀이 밖으로 나간 것, main이 깨진 것(병합 뒤 main의 검사가 빨갛다), 다른 세션이나 체크아웃의 상태를 망가뜨린 것이다. 그 전에는 회차를 세는 항목으로 대기열에 둔다. 단계를 닫는 순간의 지침에 붙이는 계기 훅은 따로 세지 않고 그 지침과 함께 간다. 문장을 사건 하나로 더하던 동안 하네스 chore가 다음 하네스 chore를 불렀다(ADR 0036).
-     - 어느 종류든 이 세션에서 반영하면 지금 PR의 티켓에 수용 기준 한 줄 `회고 반영: <한 것>, 일지 <파일>`을 더해 같은 PR에 싣는다. 티켓이 없는 면제 PR(`docs/<slug>`)이면 harness 티켓 한 장을 같은 PR에 쓰고 브랜치는 그대로 둔다. 지금 PR이 이미 병합됐으면 반영은 새 PR이라 다음 번호의 새 harness 티켓을 쓰고 그 stem으로 브랜치를 딴다. harness 티켓을 새로 쓰면 자리·번호·서식은 `docs/agents/issue-tracker.md`이고, 쓴 직후에 `uv run python tools/sibling_overlap.py`를 다시 친다. 새로 쓴 티켓은 쓸 때 `in-progress`이고 반영을 싣는 커밋에서 `done`이다(ADR 0037).
+     - 어느 종류든 이 세션에서 반영하면 지금 PR의 티켓에 수용 기준 한 줄 `회고 반영: <한 것>, 일지 <파일>`을 더해 같은 PR에 싣는다. 티켓이 없는 면제 PR(`docs/<slug>`)이면 harness 티켓 한 장을 같은 PR에 쓰고 브랜치는 그대로 둔다. 지금 PR이 이미 병합됐으면 반영은 새 PR이라 새 harness 티켓을 쓰고(이름은 그 반영을 보여 주는 slug) 그 stem으로 브랜치를 딴다. harness 티켓을 새로 쓰면 자리·이름·서식은 `docs/agents/issue-tracker.md`이고 번호를 받지 않는다. 새로 쓴 티켓은 쓸 때 `in-progress`이고 반영을 싣는 커밋에서 `done`이다(ADR 0037).
      - 새 훅·검사가 문턱을 지나면(이 세션에서 반영하든 대기열에 두든) 그 전에 저장소 루트에서 `uv run python tools/hook_report.py`를 돌린다(1분 남짓 걸려 Bash의 `timeout`을 300000으로 준다). 출력의 "뺄 후보"에 든 훅(창 안에서 알리지도 막지도 않았다)은 빼자고 넘긴다(넘김의 가드레일을 느슨하게 하는 것). 손상을 막는 훅은 0건이어도 넘기지 않는다.
      - 막는 훅은 `.claude/rules/tools.md`의 계기 훅·막는 훅 가름을 따른다.
      - `CODING_STANDARDS.md`의 줄은 위 문턱을 지나고 자동 검사로 옮길 수 없을 때 더한다. 대기열 항목의 `**어디로:**` 줄에 `CODING_STANDARDS.md`(다섯 번째 반복에서 retro가 더할 때)라 적는다.

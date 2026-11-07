@@ -24,7 +24,7 @@ retro 스킬이 낸 후보 가운데 **승인했으나 아직 반영하지 않�
 - 만료는 retro 5단계가 하는 일이다. 만료는 고쳐졌다는 판정이 아니라 목록에서 내리는 것이다.
 - 머리는 한 문장이다. 길어진 설명은 본문에 둔다. 회차의 서술과 효과의 근거는 일지 회고 절이 원천이다(retro 스킬 5단계).
 - 어디로 줄에는 반영할 자리를 코드 스팬 경로로 적는다. 괄호 밖의 경로는 대상이고 괄호 안의 경로는 근거로 든 인용이다(`tools/queue_open_rows.py` 독스트링). 계약이나 헌법에 닿는 것은 ADR과 사용자 승인이 따로 필요하므로 어디로 줄에 적는다. 사람이 할 일이면 `사람 몫:`으로 시작한다.
-- 기본 반영 자리는 harness 티켓(`.scratch/harness/issues/<NNN>-<slug>.md`)의 `chore/<NNN>-<slug>` 브랜치다. 티켓은 항목 식별자만 가리키고 항목의 내용은 옮기지 않는다(`docs/agents/issue-tracker.md`).
+- 기본 반영 자리는 harness 티켓(`.scratch/harness/issues/<slug>.md`)의 `chore/<slug>` 브랜치다(옛 티켓은 `<NNN>-<slug>`). 티켓은 항목 식별자만 가리키고 항목의 내용은 옮기지 않는다(`docs/agents/issue-tracker.md`).
 
 ## 이름
 

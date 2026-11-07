@@ -104,12 +104,23 @@ old = '''    f"3) 세션 제목을 그 브랜치로 바꾼다 — {TITLE_CALL} �
 new = '''    f"3) 세션 제목을 그 브랜치로 바꾼다 — {TITLE_CALL} 그 브랜치. 거부하면 사용자에게 알린다. "'''
 
 [[mutation]]
-name = "원천 문서가 번호 명령의 이름을 바꿨다"
+name = "원천 문서가 harness 티켓의 자리 이름을 바꿨다"
 tests = ["tests/tools/test_hook_prompt_directive.py", "-k", "규약_낱말은_원천_문서에"]
 expect = "red"
-expect_output = ["'`uv run python tools/sibling_overlap.py`' in '# 이슈 트래커"]
+expect_output = ["'`.scratch/harness/issues/<slug>.md`' in '# 이슈 트래커"]
 
 [[mutation.edit]]
 file = "docs/agents/issue-tracker.md"
-old = '''번호는 `uv run python tools/sibling_overlap.py`가 내는 다음 빈 번호'''
-new = '''번호는 `uv run python tools/next_number.py`가 내는 다음 빈 번호'''
+old = '''은 `.scratch/harness/issues/<slug>.md`다. 번호를 받지 않고'''
+new = '''은 `.scratch/harness/tickets/<slug>.md`다. 번호를 받지 않고'''
+
+[[mutation]]
+name = "알림이 harness 티켓의 번호를 번호 도구로 받으라고 한다"
+tests = ["tests/tools/test_hook_prompt_directive.py", "-k", "사람이_보는_세션의_첫_턴_보통"]
+expect = "red"
+expect_output = ["assert 'sibling_overlap' not in"]
+
+[[mutation.edit]]
+file = "tools/hook_prompt_directive.py"
+old = '''    "이며 그 <slug> 는 번호 없이 영어 소문자로 시작하는 이름을 직접 짓는다. "'''
+new = '''    "이며 그 <slug> 는 번호 없이 짓고 `uv run python tools/sibling_overlap.py` 로 받는다. "'''

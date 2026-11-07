@@ -68,8 +68,8 @@
    - **옛 별칭.** 계획의 `firstCanonical`이 true였으면 파일 목록(`list`의 `scope: "files"`)을 다시 받아 옛 별칭이 남지 않았는지 본다.
    - 깨진 카드나 남은 옛 별칭을 보면 되돌리지 않고 사람에게 알리며, 고칠 일을 그 동작을 만든 기능 디렉터리의 다음 두 자리 번호 티켓으로 써서(`docs/agents/issue-tracker.md`의 기능 밖 제품 고침) 아래 "목록 갱신과 돌아가기"가 고르는 브랜치에 싣는다.
    - **목록 갱신과 돌아가기.** `<작업 폴더>/output-paths.json`(4의 `--paths`가 쓴 목록)이 `web/tools/sync-design-system/previous-output.json`과 다르면 그 파일로 바꿔 커밋한다. 그 파일은 커밋 검사의 면제 모양이 아니라서(`tools/check_ticket.py`) 티켓을 가리키는 브랜치에만 실린다. 싣는 브랜치와 차례는 1의 자리로 가른다. 주 체크아웃의 main은 옮기지 않는다(1).
-     - 돌아갈 브랜치(`return-branch.txt`)가 티켓 모양(`feature/<NN>-<slug>`, `chore/<NNN>-<slug>`)이면 1의 "돌아가기"대로 그 브랜치로 돌아간 뒤, 거기서 목록과 위 티켓을 그 브랜치의 일과 함께 커밋한다.
-     - 돌아갈 브랜치가 명세 브랜치(`docs/<slug>`)이거나 1에서 새로 든 워크트리였으면, 돌아가기 전에 지금 자리에서 `docs/agents/issue-tracker.md`의 규약대로 harness 티켓을 쓰고 그 stem으로 `git switch -c chore/<NNN>-<slug>`를 친 뒤 목록과 위 티켓을 커밋한다. 그 브랜치는 따로 PR로 병합한다. 그 뒤 1의 "돌아가기"대로 돌아간다.
+     - 돌아갈 브랜치(`return-branch.txt`)가 티켓 모양(`feature/<NN>-<slug>`, `chore/<slug>`)이면 1의 "돌아가기"대로 그 브랜치로 돌아간 뒤, 거기서 목록과 위 티켓을 그 브랜치의 일과 함께 커밋한다.
+     - 돌아갈 브랜치가 명세 브랜치(`docs/<slug>`)이거나 1에서 새로 든 워크트리였으면, 돌아가기 전에 지금 자리에서 `docs/agents/issue-tracker.md`의 규약대로 harness 티켓을 쓰고 그 stem으로 `git switch -c chore/<slug>`를 친 뒤 목록과 위 티켓을 커밋한다. 그 브랜치는 따로 PR로 병합한다. 그 뒤 1의 "돌아가기"대로 돌아간다.
      - 목록이 같으면 1의 "돌아가기"대로 돌아가고 위 티켓은 돌아간 브랜치에 싣는다. 새로 든 워크트리였으면 `ExitWorktree` 전에 그 티켓만 싣는 `docs/<slug>` 브랜치를 딴다. 기능 디렉터리의 티켓은 커밋 검사의 면제 모양이라(`tools/check_ticket.py`) 그 PR이 지난다.
 
 끝: 마지막 호출이 받아들여졌고, 보낸 뒤 확인이 `clean`이며, 카드와 옛 별칭을 볼 올리기였으면 그 결과를 알렸다. 5에서 보낼 것이 없어 끝냈으면 그 알림이 끝이고, 목록이 달라 갱신했으면 카드와 옛 별칭의 결과도 알렸다.

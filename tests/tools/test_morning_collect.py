@@ -1145,10 +1145,12 @@ def test_작업_칸의_브랜치는_PR_번호를_모으고_PR이_없으면_커�
     assert got == {"chore/c": "다를 고친다"}
 
 
-def test_티켓_PR은_기능_브랜치와_번호_세_자리_하네스_브랜치를_티켓_파일_이름으로_맞춘다(
+def test_티켓_PR은_기능_브랜치와_하네스_브랜치를_티켓_파일_이름으로_맞춘다(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    # 번호 없는 `chore/<slug>`는 티켓이 없는 하네스 브랜치이고, 자릿수가 다른 번호도 맞추지 않는다
+    # `chore/` 뒤의 글자가 그대로 하네스 티켓의 stem이라 번호 없는 `chore/<slug>`도 맞춘다. 기능
+    # 폴더 티켓의 stem과 같은 `chore/01-a`는 하네스 폴더의 파일이 아니라 티켓 파일을 찾지 못한
+    # 행(기준 0)이 되고, 기능 브랜치는 두 자리 번호만 맞춘다
     at = datetime(2026, 10, 19, tzinfo=UTC)
     paths = {
         "01-a": ".scratch/f/issues/01-a.md",
@@ -1178,7 +1180,14 @@ def test_티켓_PR은_기능_브랜치와_번호_세_자리_하네스_브랜치�
     ]
     day = date(2026, 10, 19)
     rows = gather_tickets(Path("."), merged, {}, {}, day, day, UTC)
-    assert [(r.number, r.ticket, r.criteria) for r in rows] == [(1, "01-a", 2), (2, "001-b", 2)]
+    assert [(r.number, r.ticket, r.criteria) for r in rows] == [
+        (1, "01-a", 2),
+        (2, "001-b", 2),
+        (3, "c", 2),
+        (4, "01-a", 0),
+        (5, "0001-d", 2),
+        (6, "001-", 2),
+    ]
 
 
 def test_한도_기록이_없으면_주간_한도는_그_까닭이다(tmp_path: Path) -> None:
