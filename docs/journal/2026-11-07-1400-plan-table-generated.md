@@ -90,7 +90,9 @@ open-session을 부른다 2026-11-07T05:13:30Z
 
 ## 다음
 
-- 이 PR(티켓 05)은 커밋·푸시·PR·봇 회차·병합까지 이 세션이 한다. 병합 직전 `git fetch origin` 뒤 origin/main이 움직였으면 합치고 main의 `.scratch/plan.md` 행 집합과 내용 칸을 생성한 표와 다시 맞댄다(지금 origin/main은 base `277b4e59`와 같아 맞댈 것이 없다). 맞댈 일이 생기면 손으로 고친 몫을 기능 계획으로 옮기고 `uv run python tools/plan_table.py`를 다시 돌린다. `mcp-shutdown-spec` 워크트리가 `.scratch/plan.md`를 함께 고치고 있어 그쪽을 나중에 병합하면 글자 충돌이 난다(`tools/sibling_overlap.py` 출력). 이 파일은 도구가 만드는 파일이라 충돌은 도구를 다시 돌려 푼다.
+- 커밋 `716e5bb0`(pre-commit 전부 통과, `Skipped` 없음)까지 마쳤고 푸시하지 않았다. 컨텍스트가 인계 문턱을 넘은 채 `커밋 뒤` 경계에 와서 새 세션에 넘긴다. 새 세션은 푸시, PR(`git-pr`), `merge.md` 2의 봇 회차, 병합을 한다. 병합 직전 `git fetch origin` 뒤 origin/main이 움직였으면 합치고 main의 `.scratch/plan.md` 행 집합과 내용 칸을 생성한 표와 다시 맞댄다(지금 origin/main은 base `277b4e59`와 같아 맞댈 것이 없다). 맞댈 일이 생기면 손으로 고친 몫을 기능 계획으로 옮기고 `uv run python tools/plan_table.py`를 다시 돌린다. `mcp-shutdown-spec` 워크트리가 `.scratch/plan.md`를 함께 고치고 있어 그쪽을 나중에 병합하면 글자 충돌이 난다(`tools/sibling_overlap.py` 출력). 이 파일은 도구가 만드는 파일이라 충돌은 도구를 다시 돌려 푼다.
 - PR 본문에 적을 것: 끝 날짜 어긋남(design-system 옛 2026-10-07/끝 2026-10-11, mcp-shutdown 옛 2026-10-21/끝 2026-10-22, design-card-build 옛 2026-10-29/끝 2026-10-30. design-artifacts·design-reverse-sync는 `git log`로 대 보니 `끝`과 같았다. design-refresh의 `2026-10-13`은 티켓이 done이 된 #234의 날짜이고 #239의 8줄 고침은 읽지 않았다), `CONTEXT.md`를 고치지 않은 판단, ADR 0024에 `(바뀜: ADR 0045)`를 단 것과 ADR 0044 89번 줄을 둔 것, 닫은 대기열 523·532, `tidy-checkouts`가 지우지 못한 `05-default-model-required-and-checked` 워크트리, 이 세션이 셀프 리뷰로 고친 것(위 "고친 것").
 - 후속 후보(셀프 리뷰의 남김): 새 기능 계획의 슬라이스 번호를 고르는 규칙이 명세에 없다. 키 철자가 틀려 슬라이스 줄이 없어진 기능이 오류 없이 하네스 기능으로 읽혀 표에서 빠지는 일은 못 보는 것에만 적었다. `Feature.tickets`는 티켓이 아니라 상태 문자열이라 이름이 어긋난다. `tests/test_plan_status.py`의 `drift_message`가 `--check`의 비교를 되풀이한다.
 - 이 PR이 병합되면 `06-round-drive-record`(Blocked by 05)가 풀린다.
+
+open-session을 부른다 2026-11-07T09:17:49Z
