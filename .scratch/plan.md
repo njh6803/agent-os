@@ -54,14 +54,16 @@ web/                       슬라이스 3부터. pnpm 워크스페이스. 파이
 | 7 | [approval-rules](approval-rules/plan.md) | 운영자가 승인 규칙 파일로 도구 호출을 거부하거나 승인을 요구하거나 허용하게 정한다. | skill-plugin | in-progress |
 | 7 | [local-model](local-model/plan.md) | 바깥 API를 쓸 수 없는 환경에서도 OpenAI 호환 모델 서버로 에이전트를 돌릴 수 있게 한다. | 없음 | todo |
 | 7 | [mcp-http](mcp-http/plan.md) | 원격 MCP 서버에 주소로 접속해, 실행마다 서버를 새로 띄우는 시작 비용을 없앤다. | 없음 | todo |
-| 7 | [pilot-portal](pilot-portal/plan.md) | 위젯을 담는 질문 페이지와 사이트 토큰 발급을 맡는 작은 본보기 포털을 함께 줘, 포털이 없는 배포 환경을 돕는다. | 없음 | todo |
-| 8 | [answer-eval](answer-eval/plan.md) | 고정 질문으로 에이전트를 돌려 검색 적중과 출처 적중을 재고 평가 보고서를 낸다. | doc-qa-agent, rag-engine:core | todo |
+| 7 | [pilot-portal](pilot-portal/plan.md) | 위젯을 담는 질문 페이지가 로그인 없이 온 사람에게 사이트 토큰을 내, 포털이 없는 공개 데모와 배포 환경을 돕는다. | 없음 | todo |
+| 8 | [answer-eval](answer-eval/plan.md) | 고정 질문으로 에이전트를 돌려 검색 적중과 출처 적중을 재고 평가 보고서를 낸다. | doc-qa-agent, rag-engine:release-image | todo |
 | 8 | [doc-qa-agent](doc-qa-agent/plan.md) | 문서 검색 서버를 불러 근거를 찾고 출처를 달아 답하는 참조 질의응답 에이전트를 준다. | mcp-http, approval-rules | todo |
+| 8 | [public-demo](public-demo/plan.md) | 공개 정부 문서를 넣은 클라우드 VM 한 대를 공개 주소에 열어, 누구나 로그인 없이 묻고 출처가 붙은 답을 받게 한다. | doc-qa-agent, release-image, answer-eval, rag-engine:release-image, rag-engine:search-eval | todo |
 | 8 | [release-image](release-image/plan.md) | 판마다 서버와 관리 화면과 위젯과 포털의 컨테이너 이미지를 짓고 올리며 단독 배포 안내도 낸다. | pilot-portal | todo |
-| 9 | [deploy-package](deploy-package/plan.md) | agent-os와 문서 검색 서버를 Docker Compose로 한 번에 띄우는 참조 배포를 준다. | local-model, doc-qa-agent, release-image, ops-backup-upgrade, diag-bundle, rag-engine:release-image, rag-engine:backup-upgrade, rag-engine:diag-bundle | todo |
+| 9 | [deploy-package](deploy-package/plan.md) | agent-os와 문서 검색 서버를 Docker Compose로 한 번에 띄우는 참조 배포를 준다. | local-model, portal-login, doc-qa-agent, release-image, ops-backup-upgrade, diag-bundle, rag-engine:release-image, rag-engine:admin, rag-engine:backup-upgrade, rag-engine:diag-bundle | todo |
 | 9 | [diag-bundle](diag-bundle/plan.md) | 문제를 살필 때 판과 구성과 최근 실패 원인을 비밀 값 없이 파일 하나로 묶는 명령을 준다. | release-image | todo |
 | 9 | [ops-backup-upgrade](ops-backup-upgrade/plan.md) | agent-os 데이터를 백업하고 새 서버에 복원하며, 판을 올린 뒤에도 옛 트레이스를 읽게 한다. | release-image | todo |
-| 9 | [pilot-release](pilot-release/plan.md) | 기준선의 기능이 모두 끝나면 제품 0.1 판을 내고 지원 범위와 고지를 문서로 남긴다. | answer-eval, deploy-package | todo |
+| 9 | [pilot-release](pilot-release/plan.md) | public-demo를 뺀 기준선의 기능이 모두 끝나면 제품 0.1 판을 내고 지원 범위와 고지를 문서로 남긴다. | answer-eval, deploy-package | todo |
+| 9 | [portal-login](portal-login/plan.md) | 질문 페이지에 사내 로그인 모드를 더해, 배포 환경에서는 사내 사람만 질문하게 한다. | pilot-portal | todo |
 | 10 | [audit-export](audit-export/plan.md) | 운영자가 트레이스를 주체와 기간과 에이전트와 도구별로 조회하고 파일로 내보낸다. | io-guardrail | todo |
 | 10 | [io-guardrail](io-guardrail/plan.md) | 최종 사용자의 입력과 에이전트의 출력에서 주민등록번호 같은 패턴을 규칙으로 막거나 가린다. | value-masking | todo |
 | 10 | [mcp-trust](mcp-trust/plan.md) | MCP 서버마다 믿는 정도와 도구 정의 해시를 정해, 믿지 않는 서버의 결과를 바깥 글로 다룬다. | approval-rules, pilot-release | todo |
