@@ -4,6 +4,9 @@
 어림. 손으로 본 것은 그 명령과 함께)와 결과를 본 뒤 바꾼 판정 기준을 밝히라는 계기를
 세션·에이전트마다 한 번 컨텍스트에 넣는다.
 근거의 갈래는 `docs/agents/issue-tracker.md` 프로브와 근거 절이 원천이라 알림은 그 절을 가리킨다.
+둘째 알림도 있다. 프로브 폴더의 README 가 아닌 파일(`.scratch/**/probes/**`)을 쓰거나 고쳐 더한
+글에 `고친 길` 이 있으면, 그 문장이 고친 길의 표지를 정한 것이 아닌지 `.claude/rules/probes.md`
+첫 항목의 꼴(고치기 전 판이라면 실패했을 회차에서만 나는 관찰)에 대 보라는 계기를 낸다.
 
 왜. 셋째 항목을 어긴 결론이 세 번 리뷰에서야 잡혔다(대기열 346, 닫힌 179 의 3회차). AskUserQuestion
 에서만 잰 차례를 PreToolUse 계기 전부로 일반화한 것은 셀프 리뷰가, 허락 요청이 훅을 기다린다는
@@ -20,6 +23,11 @@
 기댄 문장을 명령 없이 적었고(일지 2026-10-22-16), 이 브랜치가 보지 않은 빨강을 본 것처럼 적었다(일지
 2026-10-22-24). 셋 다 프로브 README 에도 들었고 셀프 리뷰나 PR 직전 리뷰가 잡았다. 그래서 같은
 자리의 이 계기에 그 몫을 얹었다.
+프로브 파일의 알림은 대기열 535(367부터 센 5회차)가 낸다. 위젯 센 수 프로브의 머리 주석이 고친
+길의 표지(카드 직후 포커스가 제목이 아닌 회차)를 "고치기 전 판에서는 빨갰다" 고 단정했는데, 효과가
+시험의 포커스보다 먼저 돌면 고치기 전 판도 초록이라 첫 항목의 꼴을 어긴 것이었다. 셀프 리뷰는
+지나갔고 PR 직전 리뷰가 잡았다. 첫 항목은 지침으로 이미 적혀 있어, 어겨지는 자리인 프로브 파일에
+계기를 붙인다.
 
 왜 따로 등록하는가. 같은 규칙 파일의 계기인 `hook_scratch_probe_rule` 은 세션 스크래치패드의 실행
 스크립트를 판정한다. 그 하나에 얹으면 독스트링의 왜·못 보는 것과 페이로드 표의 사례가 두 판정으로
@@ -35,17 +43,31 @@ Write·Edit 마다 래퍼를 거친 파이썬 한 번(약 0.2초, `.claude/rules
 README(`.scratch/harness/probes/session_cost/README.md`)도 든다. 저장소 루트를 모르고 토막만 보므로
 그 `paths` 보다 넓다. 루트가 아닌 자리의 `.scratch`(`docs/.scratch/x/probes/README.md`)에도 알린다.
 
+프로브 파일의 판정. 도구가 Write·Edit 이고 `file_path` 가 위와 같은 `.scratch` 뒤 `probes` 아래의
+README 가 아닌 파일이며(마지막 토막이 `README.md` 가 아니다. 폴더 판정은 README 의 것을 그대로
+쓴다), 더한 글에 `고친 길` 이 있으면 알린다. 더한 글은 Write 의 `content` 와 Edit 의 `new_string`
+이고, 지우는 쪽의 `old_string` 은 보지 않는다. 낱말은 띄어쓰기까지 이 모양 그대로다. README 에는
+낱말 조건이 걸리지 않는다(위의 판정 그대로, 더한 글이 무엇이든 알린다).
+
 한 번. 표지는 `tools/launch_hook.py` 의 모양이다. 임시 폴더(`tempfile.gettempdir()`) 아래
 `STATE_DIR` 에 세션 ID 와 `agent_id`(서브에이전트는 컨텍스트가 따로다)의 해시로 빈 파일을 `O_EXCL`
 로 만든다. 세션을 모르거나 표지를 쓰지 못하면 호출마다 알린다 — 알리지 못하는 것보다 되풀이가
-낫다(래퍼와 같다).
+낫다(래퍼와 같다). README 알림과 프로브 파일 알림은 표지가 따로다(`marker_name` 의 `kind`). 같은
+표지를 쓰면 한쪽 알림이 다른 쪽을 가려, 프로브 스크립트에서 먼저 알림을 받은 세션이 뒤에 쓰는 README
+의 결론에는 알림을 받지 못한다. README 표지 이름은 이 알림을 더하기 전과 같다.
 
 못 보는 것:
 - Bash heredoc·`>`·`sed -i` 로 고친 README. 이 훅은 편집 도구에만 붙는다.
-- README 밖에 적은 결과와 결론. 근거 문장은 rules·ADR·명세·프로브 독스트링에도 적히고, 그 편집에는
-  알리지 않는다. 대기열 421 의 세 사례는 README 밖에도 들었다. 첫째는 훅
+- README 와 프로브 파일 밖에 적은 결과와 결론. 근거 문장은 rules·ADR·명세·훅 독스트링에도 적히고,
+  그 편집에는 알리지 않는다. 대기열 421 의 세 사례는 README 밖에도 들었다. 첫째는 훅
   독스트링(`tools/hook_choice_facts.py`), 둘째는 명세(`.scratch/model-rerun/spec.md`), 셋째는 변이
-  표 머리(`.scratch/design-reverse-sync/probes/contrast_module_mutations.toml`)다.
+  표 머리(`.scratch/design-reverse-sync/probes/contrast_module_mutations.toml`)다. 셋째는 프로브
+  폴더의 파일이라 `고친 길` 이 있을 때만 알린다. 명세와 ADR 은 `tools/hook_probe_citing_doc.py` 의
+  몫이다.
+- 프로브 파일의 다른 낱말. `고친 길` 이 없는 표현(`수정한 경로`, `고친 판이 지났다`, 붙여 쓴
+  `고친길`)과 결과·결론의 다른 문장은 알리지 않는다. 낱말이 있어도 고친 길의 표지를 정한 문장이
+  아닌 편집(고친 길을 말했을 뿐인 주석)에는 알린다(거짓 양성, 세션마다 한 번이라 값이 작다).
+- Bash(heredoc, `>`, `sed -i`)로 쓴 프로브 파일. 이 훅은 편집 도구에만 붙는다.
 - 결과나 결론인지. 경로가 맞으면 결과도 결론도 아닌 편집(변이 수만 고친 행)에도 알린다(세션마다
   한 번이라 값이 작다).
 - 한 번 알린 뒤의 결과와 결론. 표지는 세션·에이전트마다 하나라, 결과도 결론도 아닌 편집으로 알림을
@@ -90,11 +112,26 @@ _BODY = (
     " `docs/agents/issue-tracker.md` 프로브와 근거 절이다. 결과도 결론도 건드리지 않은"
     " 편집이면 이 알림은 무시한다. 이 알림은 세션·에이전트마다 한 번이다."
 )
+FIXED_PATH = "고친 길"
+FILE_KIND = "file"
+# 프로브 파일(README 가 아닌 것)의 알림 첫 문장. README 알림과 따로 지은 문장이다.
+FILE_LEAD = "프로브 파일에 고친 길을 적었다"
+_FILE_BODY = (
+    "{lead}. 더한 글에 `고친 길` 이 있다. 그 문장이 고친 길의 표지(고친 판이 그 길을 지났다는"
+    " 관찰)를 정한 것이라면 `.claude/rules/probes.md` 첫 항목의 꼴을 대 본다. 표지는 고치기 전"
+    " 판이라면 실패했을 회차에서만 나는 관찰이어야 한다. 고치기 전 판도 같은 관찰을 냈을 길이"
+    " 있는가. 예를 들어 효과가 시험의 포커스보다 먼저 돌면 고치기 전 판도 같은 회차에서 초록이다."
+    " 고치기 전 판으로 돌려 빨강을 본 적이 없으면 `고치기 전에는 빨갰다` 로 단정하지 말고 어림"
+    " 이라고 적거나, 고치기 전 판으로 돌려 확인한 명령과 함께 적는다. 고친 길을 말했을 뿐 표지를"
+    " 정하지 않은 편집이면 이 알림은 무시한다. 이 알림은 세션·에이전트마다 한 번이다."
+)
 _SPLIT = re.compile(r"[\\/]+")
 
 
 class ToolInput(TypedDict, total=False):
     file_path: object
+    content: object
+    new_string: object
 
 
 class HookPayload(TypedDict, total=False):
@@ -116,22 +153,54 @@ def is_probe_readme(path: str) -> bool:
     return SCRATCH in folders and PROBES in folders[folders.index(SCRATCH) + 1 :]
 
 
-def context_for(payload: HookPayload) -> str | None:
-    """프로브 README 를 쓰거나 고쳤으면 컨텍스트 문장, 아니면 None."""
+def is_probe_file(path: str) -> bool:
+    """`.scratch` 토막 뒤의 `probes` 토막 아래에 있는, README 가 아닌 파일인가. 폴더 자체(마지막
+    토막이 `probes`)는 파일이 아니다."""
+    parts = [part for part in _SPLIT.split(path) if part]
+    if len(parts) < 2 or parts[-1].casefold() == README:
+        return False
+    # 폴더 판정은 README 와 하나다. 같은 폴더에 README 가 있다고 보고 묻는다.
+    return is_probe_readme("/".join([*parts[:-1], README]))
+
+
+def _added_text(tool_input: ToolInput) -> str:
+    """이 편집이 더한 글. Write 는 `content`, Edit 는 `new_string` 이다. 문자열이 아니면 빈 글이다.
+    지우는 쪽의 `old_string` 은 보지 않는다."""
+    parts = [tool_input.get("content"), tool_input.get("new_string")]
+    return "\n".join(part for part in parts if isinstance(part, str))
+
+
+def kind_of(payload: HookPayload) -> str | None:
+    """알릴 편집이면 그 종류("" 는 프로브 README, `FILE_KIND` 는 프로브 파일), 아니면 None."""
     if payload.get("tool_name") not in TOOLS:
         return None
     tool_input = payload.get("tool_input")
     if not isinstance(tool_input, dict):
         return None
     path = tool_input.get("file_path")
-    if not isinstance(path, str) or not is_probe_readme(path):
+    if not isinstance(path, str):
         return None
-    return _BODY.format(lead=LEAD)
+    if is_probe_readme(path):
+        return ""
+    if is_probe_file(path) and FIXED_PATH in _added_text(tool_input):
+        return FILE_KIND
+    return None
 
 
-def marker_name(session_id: str, agent_id: str) -> str:
-    """세션·에이전트 하나의 표지 파일 이름. 둘의 해시다(`tools/launch_hook.py` 의 모양)."""
-    joined = f"{session_id}\0{agent_id}"
+def context_for(payload: HookPayload) -> str | None:
+    """프로브 README 를 쓰거나 고쳤으면, 또는 프로브 파일에 `고친 길` 을 더했으면 컨텍스트 문장,
+    아니면 None."""
+    kind = kind_of(payload)
+    if kind is None:
+        return None
+    return _FILE_BODY.format(lead=FILE_LEAD) if kind == FILE_KIND else _BODY.format(lead=LEAD)
+
+
+def marker_name(session_id: str, agent_id: str, kind: str = "") -> str:
+    """세션·에이전트 하나의 표지 파일 이름. 둘의 해시다(`tools/launch_hook.py` 의 모양). `kind` 가
+    있으면 그 종류의 표지를 따로 만든다. 비어 있으면 이 파일을 바꾸기 전의 README 표지 이름
+    그대로다."""
+    joined = f"{session_id}\0{agent_id}" + (f"\0{kind}" if kind else "")
     return hashlib.sha256(joined.encode("utf-8", "surrogatepass")).hexdigest()
 
 
@@ -155,13 +224,14 @@ def claim_first(name: str, directory: Path) -> bool:
 
 def main() -> int:
     payload: HookPayload = json.load(sys.stdin.buffer)
+    kind = kind_of(payload)
     context = context_for(payload)
-    if context is None:
+    if kind is None or context is None:
         return 0
     session = payload.get("session_id")
     agent = payload.get("agent_id")
     if isinstance(session, str) and session:
-        name = marker_name(session, agent if isinstance(agent, str) else "")
+        name = marker_name(session, agent if isinstance(agent, str) else "", kind)
         try:
             directory = Path(tempfile.gettempdir()) / STATE_DIR
         except OSError:

@@ -54,7 +54,7 @@ paths:
       - 파이썬 파일이면 `hook_ruff_line_width`가 ruff를 한 번 더 띄워 약 0.33초다(2026-10-01 실측 323~325ms, 마크다운은 197~206ms — ruff 몫이 약 0.12초).
       - `hook_line_separators`는 쓴 파일을 한 번 읽고, 래퍼를 거쳐 약 29KB 파이썬 파일과 약 200KB 잠금 파일에서 202~234ms였다(한 번 326ms, 2026-10-07 실측, `.scratch/harness/probes/line_separators_hook_time.sh`). 대기열 52로 판정을 넓힌 뒤 옛 판과 번갈아 손으로 재 보니 갈리지 않았다(2026-10-12, 그 프로브의 README 행).
       - `hook_scratch_probe_rule`은 세션 스크래치패드의 실행 스크립트이거나 `.scratch/**/probes/*.py`(저장소 프로브)일 때만 표지 파일 하나를 만든다. 스크래치패드의 스크립트는 경로 문자열만 보고, 저장소 프로브는 Write면 입력의 `content`를, Edit면 디스크의 파일 하나를 읽어 `probe_kit`과 `Rounds`가 없는지 본다(대기열 430).
-      - `hook_probe_conclusion`도 경로 문자열만 보고 프로브 README일 때만 표지 파일 하나를 만든다(대기열 346).
+      - `hook_probe_conclusion`도 경로 문자열만 보고 프로브 README일 때만 표지 파일 하나를 만든다(대기열 346). 프로브 폴더의 다른 파일은 경로에 더해 더한 글에 `고친 길`이 있을 때만 표지 파일 하나를 따로 만든다(대기열 535).
       - `hook_journal_evidence`도 경로 문자열만 보고 일지일 때만 표지 파일 하나를 만든다(대기열 445).
       - `hook_ui_design`도 경로 문자열만 보고 기능의 디자인 폴더 아래일 때만 표지 파일 하나를 만든다(harness 티켓 002).
       - `hook_web_edit_check`도 경로 문자열만 보고 화면 코드(`web/packages/ui`나 `web/apps/<앱>` 아래)일 때만 표지 파일 하나를 만들고, 그 세션·에이전트에서 처음 판정할 때만 고친 파일에서 위로 `.git`을 찾아 `HEAD` 한 줄을 읽고 티켓 파일 하나가 있는지 본다. git은 띄우지 않는다(design-reverse-sync 티켓 09).
