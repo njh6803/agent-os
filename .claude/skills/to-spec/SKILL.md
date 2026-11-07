@@ -8,7 +8,7 @@ disable-model-invocation: true
 
 This skill takes the current conversation context and codebase understanding and produces a spec. Do NOT interview the user; just synthesize what you already know.
 
-이 저장소에서 명세는 설계 인터뷰와 다른 새 세션에서 돈다(`next-session` 결정표). 그래서 current conversation context에는 설계가 없다. 그 기능의 ADR과 설계가 다른 ADR에 남긴 이력, `.scratch/plan.md`의 그 기능 행, 설계 일지를 읽어 대화를 대신한다. 그것으로 모자란 결정은 명세에 확정하지 않고 사용자에게 묻는다. 위의 "Do NOT interview the user"는 이미 정해진 것을 다시 인터뷰하지 말라는 뜻이다(대기열 103).
+이 저장소에서 명세는 설계 인터뷰와 다른 새 세션에서 돈다(`next-session` 결정표). 그래서 current conversation context에는 설계가 없다. 그 기능의 ADR과 설계가 다른 ADR에 남긴 이력, 그 기능의 기능 계획 `.scratch/<slug>/plan.md`(본문, `**Blocked by:**`, `**설계:**` 줄이 가리키는 ADR이나 설계 일지), 설계 일지를 읽어 대화를 대신한다. 그것으로 모자란 결정은 명세에 확정하지 않고 사용자에게 묻는다. 위의 "Do NOT interview the user"는 이미 정해진 것을 다시 인터뷰하지 말라는 뜻이다(대기열 103).
 
 The issue tracker and triage label vocabulary should have been provided to you. If not, tell the user to run `/setup-matt-pocock-skills`.
 
@@ -76,7 +76,7 @@ A list of testing decisions that were made. Include:
 
 A description of the things that are out of scope for this spec.
 
-다른 기능에 넘기는 것은 받는 쪽을 이름으로 적고, `.scratch/plan.md`의 그 기능 행에도 적는다. 그 행의 Blocked by가 이 기능을 포함하는지 본다 — 받는 쪽이 이 기능보다 먼저 돌 수 있다(대기열 3).
+다른 기능에 넘기는 것은 받는 쪽을 이름으로 적고, 받는 기능의 기능 계획(`.scratch/<받는 slug>/plan.md`) 본문에도 적는다. 그 기능 계획의 `**Blocked by:**` 줄이 이 기능을 포함하는지 본다 — 받는 쪽이 이 기능보다 먼저 돌 수 있다(대기열 3).
 
 ## Further Notes
 

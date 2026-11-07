@@ -48,7 +48,7 @@ LLM을 실제로 호출하는 테스트는 마커 둘 가운데 하나를 붙인
 전제 둘은 사람이 한 번 한다. `claude setup-token`으로 만든 토큰을 저장소 시크릿 `CLAUDE_CODE_OAUTH_TOKEN`에 등록, 로컬 `coderabbit auth login`. 에이전트는 토큰과 시크릿을 다루지 않는다. 등록 여부만 `gh secret list`로 본다. 이름과 시각만 나온다.
 
 ## 이슈 관리
-로컬 마크다운. 전체 계획은 `.scratch/plan.md`, 기능별 명세와 티켓은 `.scratch/<feature-slug>/`. 규약은 `docs/agents/issue-tracker.md`. 팀원이 생겨 티켓 번호가 충돌하면 setup 스킬을 다시 돌려 트래커를 바꾼다.
+로컬 마크다운. 기능마다 기능 계획(`.scratch/<feature-slug>/plan.md`)과 명세와 티켓이 `.scratch/<feature-slug>/`에 있다. 전체 계획 `.scratch/plan.md`는 `uv run python tools/plan_table.py`가 손 파일 `.scratch/plan-head.md`와 기능 계획과 티켓에서 만드는 생성 파일이라 손으로 고치지 않는다(ADR 0045 결정 3). 표의 내용 칸은 기능 계획의 한 줄 요약과 그 계획으로 가는 링크다. 기능 계획이나 손 파일을 고치거나 티켓 상태를 바꾼 세션이 도구를 돌려 결과를 같은 커밋에 싣고, 저장소 대조 시험이 어긋남을 잡는다. 이 파일의 병합 충돌은 도구를 다시 돌려 푼다. 기능의 상태는 손으로 바꾸지 않는다. 기능 계획의 `끝` 줄이 있으면 done, 없고 done 티켓이 있으면 in-progress, 아니면 todo다. 기능의 마지막 티켓을 닫는 커밋이(닫은 뒤 done 티켓이 하나 이상일 때) 기능 계획에 `**끝:** YYYY-MM-DD`를 적고, 설계 인터뷰를 마친 세션이 `**설계:** ADR NNNN`(ADR이 없으면 설계 일지의 이름)을 적는다. 규약은 `docs/agents/issue-tracker.md`. 팀원이 생겨 티켓 번호가 충돌하면 setup 스킬을 다시 돌려 트래커를 바꾼다.
 
 ## TODO
 `TODO(<기능슬러그>/<티켓번호>): 설명` 형식만 쓴다. ruff TD 규칙이 판정한다. 티켓 없는 TODO는 금지다.
@@ -56,7 +56,7 @@ LLM을 실제로 호출하는 테스트는 마커 둘 가운데 하나를 붙인
 ## 문서 위치
 문서는 범위가 있는 곳에 둔다. 저장소 전체에 해당하면 루트 `docs/`, 한 앱에만 해당하면 그 앱 안(README). 한 앱에만 걸리는 지침은 중첩 `CLAUDE.md`가 아니라 그 경로를 `paths`로 든 `.claude/rules/*.md`에 둔다. 규약을 한곳에 모으는 쪽이고(ADR 0004), 중첩 `CLAUDE.md`는 그 안의 `@` 임포트까지 따라와 루트 지침에 거는 검사(줄 수, 임포트 허용 목록) 밖에 놓인다(ADR 0021). `tools/check_instructions.py`가 빨강으로 본다. 같은 사실을 두 곳에 두지 않고, 지역 문서는 루트를 요약하지 않고 가리키며, 루트가 지역 문서를 색인한다. 헌법, 용어집, ADR 번호열은 하나다. 지역 결정도 루트 ADR 열에 넣고 제목에 범위를 적는다.
 
-잔존 grep(`CLAUDE.md` 작업 규약 4)은 살아 있는 문서만 본다. 기록은 당시의 사실이라 옛 말이 남아도 잔존이 아니다. 기록은 일지(`docs/journal/`), 끝난 기능의 `.scratch/<slug>/` 명세·티켓·프로브(제품 기능은 `plan.md`의 상태가 done일 때, 하네스 기능은 그 디렉터리에 티켓이 있고 모두 done일 때. done인 제품 기능에 고침 티켓이 열려도 나머지는 기록이고 그 티켓만 살아 있다), `.scratch/harness/issues/`에서 `Status:`가 done인 티켓 하나하나(`.scratch/harness/`는 기능 디렉터리가 아니어서 폴더째 기록이 되지 않고 티켓을 하나씩 본다), ADR의 지난 이력 항목, 대기열의 닫힌 항목 파일(`.scratch/retro-queue/`에서 `**상태:**`가 `닫힘 (…)`이나 `만료 …`인 것), 그리고 살아 있는 문서 안의 이력(헌법 README의 버전 이력, 프로브 README의 지난 결과, 카나리아 명세 머리 주석의 `# 최신 결과:` 줄과 그 뒤에 이어 적은 줄)이다. 살아 있는 문서는 `plan.md`, 진행 중인 기능의 명세·티켓, done이 아닌 harness 티켓과 열린 고침 티켓, `.scratch/harness/probes/`, 대기열의 열린 항목 파일(`**상태:**`가 `열림`인 것), ADR의 본문, 헌법, `CLAUDE.md`, rules, 스킬, 독스트링과 주석이다. PR #117에서 셀프 리뷰는 `plan.md`를 잔존으로 짚어 맞았고, claude-review는 done인 web-admin의 명세·티켓을 잔존으로 짚었다. 이 가름이 없어 둘의 기준이 갈렸다(대기열 87).
+잔존 grep(`CLAUDE.md` 작업 규약 4)은 살아 있는 문서만 본다. 기록은 당시의 사실이라 옛 말이 남아도 잔존이 아니다. 기록은 일지(`docs/journal/`), 끝난 기능의 `.scratch/<slug>/` 명세·티켓·프로브(제품 기능은 기능 계획에 `끝` 줄이 있을 때, 하네스 기능은 그 디렉터리에 티켓이 있고 모두 done일 때. done인 제품 기능에 고침 티켓이 열려도 나머지는 기록이고 그 티켓만 살아 있다), `.scratch/harness/issues/`에서 `Status:`가 done인 티켓 하나하나(`.scratch/harness/`는 기능 디렉터리가 아니어서 폴더째 기록이 되지 않고 티켓을 하나씩 본다), ADR의 지난 이력 항목, 대기열의 닫힌 항목 파일(`.scratch/retro-queue/`에서 `**상태:**`가 `닫힘 (…)`이나 `만료 …`인 것), 그리고 살아 있는 문서 안의 이력(헌법 README의 버전 이력, 프로브 README의 지난 결과, 카나리아 명세 머리 주석의 `# 최신 결과:` 줄과 그 뒤에 이어 적은 줄)이다. 살아 있는 문서는 생성 파일 `.scratch/plan.md`와 손 파일 `.scratch/plan-head.md`, 기능 계획 `.scratch/<slug>/plan.md`(기능이 끝나도 살아 있다. 전체 계획 표의 원천이다), 진행 중인 기능의 명세·티켓, done이 아닌 harness 티켓과 열린 고침 티켓, `.scratch/harness/probes/`, 대기열의 열린 항목 파일(`**상태:**`가 `열림`인 것), ADR의 본문, 헌법, `CLAUDE.md`, rules, 스킬, 독스트링과 주석이다. PR #117에서 셀프 리뷰는 `plan.md`를 잔존으로 짚어 맞았고, claude-review는 done인 web-admin의 명세·티켓을 잔존으로 짚었다. 이 가름이 없어 둘의 기준이 갈렸다(대기열 87).
 
 ## 환경 규약 상세
 명령을 치기 전에 알아야 하는 것은 `CLAUDE.md` 환경 함정에 있다. 그 밖에 선행 저장소가 겪은 것과 가끔 쓰는 것.

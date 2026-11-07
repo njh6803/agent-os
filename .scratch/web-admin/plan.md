@@ -1,0 +1,6 @@
+# web-admin: 웹 관리 화면의 뼈대를 세워, 플러그인 보기와 켜고 끄기, 실행 보기, 승인을 화면에서 할 수 있게 한다.
+**슬라이스:** 3
+**Blocked by:** admin-api, http-channel, plugin-toggle
+**끝:** 2026-09-30
+
+`web/` pnpm 워크스페이스, `apps/admin`(Next 16, 아토믹 디자인), `packages/api-client`(openapi-typescript로 `openapi.json`에서 생성해 커밋). 범위는 읽기, 켜고 끄기, 승인이다. 승인은 운영자가 채널 토큰을 넣었을 때만 보이고 마지막 티켓이다. 브라우저가 두 토큰을 sessionStorage에 들고, Next는 `rewrites`(`compress: false`) 중계이며 루프백에만 선다(ADR 0019, ADR 0011의 2026-09-28 이력). 파이썬 서버와 계약 파일은 결정의 자리 하나 밖에서는 바뀌지 않는다(ADR 0010의 2026-09-28 이력, ADR 0014의 2026-09-28 이력). 스택은 ADR 0021. 원칙 III을 TypeScript로 넓힌다(ADR 0020, 헌법 3.0.0). 첫 티켓은 헌법과 하네스와 web 뼈대다. 원칙 III 개정, `tech.md`의 웹·프론트 구성 행, `CLAUDE.md`의 검증 명령 다섯과 레이어, `.claude/rules/web-*.md`, pre-commit, 다섯째 명령이 실제로 도는 web 워크스페이스 뼈대, `ci.yml`이 든다. 결정의 자리를 바꾸는 계약 티켓이 그것과 나란한 뿌리다. 검증 명령을 "넷"으로 세는 살아 있는 문장도 함께 고친다. 그 목록과 grep 패턴은 티켓 01이 원천이다. `ci.yml` 변경은 web 뼈대와 같은 PR이고 e2e도 필수 검사 `verify` 안에서 돈다(ADR 0021의 2026-09-28 이력. 잡 구조는 첫째 2026-10-01 이력). 결정은 그것이 답하는 일시정지의 자리(`pause_index`, 트레이스 상세 `events`의 인덱스)를 필수로 들고, 어긋나면 HTTP는 409, CLI는 진단과 종료 코드 1이다. 계약 티켓 02가 실었다(ADR 0014의 2026-09-28 이력). 명세는 `.scratch/web-admin/spec.md`, 티켓은 `.scratch/web-admin/issues/` 01~08(뿌리는 01·02), 설계는 일지 2026-09-28-06, 측정은 `.scratch/web-admin/probes/`

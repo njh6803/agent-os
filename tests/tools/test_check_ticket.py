@@ -184,10 +184,12 @@ def test_면제_모양만_바꾼_커밋은_지난다(저장소: Repo) -> None:
                 "docs/adr/README.md": "색인\n",
                 "CONTEXT.md": "용어\n",
                 ".scratch/plan.md": "계획\n",
+                ".scratch/plan-head.md": "손 파일\n",
                 "docs/PRD.md": "범위\n",
                 "docs/constitution/tech.md": "스택\n",
                 "docs/constitution/README.md": "판\n",
                 ".scratch/feat/spec.md": "명세\n",
+                ".scratch/feat/plan.md": "기능 계획\n",
                 ".scratch/feat/issues/03-next.md": READY,
                 ".scratch/feat/probes/deep/p.py": "P = 1\n",
                 ".scratch/feat/design/a.html": "<p>화면</p>\n",
@@ -198,7 +200,16 @@ def test_면제_모양만_바꾼_커밋은_지난다(저장소: Repo) -> None:
 
 @pytest.mark.parametrize(
     "path",
-    [".scratch/harness/spec.md", ".scratch/harness/probes/p.py", ".scratch/feat/design.md"],
+    [
+        ".scratch/harness/spec.md",
+        ".scratch/harness/probes/p.py",
+        ".scratch/feat/design.md",
+        ".scratch/harness/plan.md",
+        ".scratch/feat/sub/plan.md",
+        ".scratch/feat/plan.md.bak",
+        ".scratch/plan-head.md.bak",
+        ".scratch/other/plan-head.md",
+    ],
 )
 def test_면제_모양_밖의_scratch_파일을_섞으면_막는다(저장소: Repo, path: str) -> None:
     저장소.git("switch", "-q", "-c", "docs/design")
@@ -242,6 +253,13 @@ def test_독스트링의_면제_모양_원천이_대기열_폴더를_든다() ->
     assert doc is not None
     assert "`.scratch/retro-queue/*.md`" in doc
     assert "- `docs/journal/*.md`, `.scratch/retro-queue.md`" not in doc
+
+
+def test_독스트링의_면제_모양_원천이_기능_계획과_손_파일을_든다() -> None:
+    doc = check_ticket.__doc__
+    assert doc is not None
+    assert "`.scratch/<slug>/plan.md`" in doc
+    assert "`.scratch/plan-head.md`" in doc
 
 
 def test_이름_바꾸기는_지운_것과_더한_것으로_센다(저장소: Repo) -> None:
@@ -776,6 +794,19 @@ def test_CI는_면제_모양만_바꾼_PR을_티켓_상태와_상관없이_지�
         )
     )
     _CI가_지났다(_CI로_친다(저장소, _PR_병합_커밋(저장소, "feature/02-thing")))
+
+
+def test_CI는_기능_계획과_손_파일만_바꾼_PR을_지난다(저장소: Repo) -> None:
+    저장소.git("switch", "-q", "-c", "docs/plan")
+    _훅을_건너뛰고_커밋한다(
+        저장소,
+        {
+            ".scratch/feat/plan.md": "기능 계획\n",
+            ".scratch/plan-head.md": "손 파일\n",
+            ".scratch/plan.md": "생성 파일\n",
+        },
+    )
+    _CI가_지났다(_CI로_친다(저장소, _PR_병합_커밋(저장소, "docs/plan")))
 
 
 def test_CI는_대기열_폴더_바로_아래의_md만_바꾼_PR을_지난다(저장소: Repo) -> None:

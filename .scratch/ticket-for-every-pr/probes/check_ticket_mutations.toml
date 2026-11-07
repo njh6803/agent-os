@@ -97,6 +97,58 @@ new = '''        ".scratch/retro-queue.md",
         "CONTEXT.md",
         ".scratch/plan.md",'''
 
+# retro-queue-per-item 05(전체 계획 생성)가 면제 모양에 기능 계획 `.scratch/<slug>/plan.md`와 손 파일
+# `.scratch/plan-head.md`를 더했다. 아래 넷은 그 둘의 판정을 하나씩 깨서 `_지났다`·`_막혔다`의 첫
+# 단언이 빨개지는지 잰다. harness 폴더의 plan.md 는 위 "harness 폴더를 빼지 않는다" 변이가 같은
+# 시험(`면제_모양_밖의`)의 `.scratch/harness/plan.md` 사례로 잰다.
+
+[[mutation]]
+name = "기능 계획 면제를 빼서 spec.md 만 받는다"
+tests = ["tests/tools/test_check_ticket.py", "-k", "면제_모양만"]
+expect = "red"
+expect_output = ["AssertionError: 막히면 안 된다"]
+
+[[mutation.edit]]
+file = "tools/check_ticket.py"
+old = '''        if rest in (["spec.md"], ["plan.md"]):'''
+new = '''        if rest == ["spec.md"]:'''
+
+[[mutation]]
+name = "손 파일 면제를 뺀다"
+tests = ["tests/tools/test_check_ticket.py", "-k", "면제_모양만"]
+expect = "red"
+expect_output = ["AssertionError: 막히면 안 된다"]
+
+[[mutation.edit]]
+file = "tools/check_ticket.py"
+old = '''        ".scratch/plan.md",
+        ".scratch/plan-head.md",'''
+new = '''        ".scratch/plan.md",'''
+
+[[mutation]]
+name = "기능 계획 면제가 하위 폴더의 plan.md 까지 받는다"
+tests = ["tests/tools/test_check_ticket.py", "-k", "면제_모양_밖의 and sub"]
+expect = "red"
+expect_output = ["AssertionError: 지나면 안 된다"]
+
+[[mutation.edit]]
+file = "tools/check_ticket.py"
+old = '''        if rest in (["spec.md"], ["plan.md"]):'''
+new = '''        if rest[-1] in ("spec.md", "plan.md"):'''
+
+[[mutation]]
+name = "손 파일 면제가 다른 폴더의 plan-head.md 까지 받는다"
+tests = ["tests/tools/test_check_ticket.py", "-k", "면제_모양_밖의 and other"]
+expect = "red"
+expect_output = ["AssertionError: 지나면 안 된다"]
+
+[[mutation.edit]]
+file = "tools/check_ticket.py"
+old = '''    if path in _EXEMPT_FILES:
+        return True'''
+new = '''    if path in _EXEMPT_FILES or path.endswith("/plan-head.md"):
+        return True'''
+
 [[mutation]]
 name = "전환을 merge-base 의 트리로 가른다"
 tests = ["tests/tools/test_check_ticket.py", "-k", "main을_합친_뒤에도"]

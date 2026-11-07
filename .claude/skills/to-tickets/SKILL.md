@@ -68,7 +68,7 @@ Publish the approved tickets. **How** depends on the tracker `/setup-matt-pocock
 
 Work the **frontier**: any ticket whose blockers are all done. For a purely linear chain that means top to bottom.
 
-명세나 리뷰가 다른 티켓·기능에 넘긴 것("그 층에서 재확인", 측정)은 받는 티켓의 수용 기준이나 `.scratch/plan.md`의 받는 기능 행에 적는다. 받는 쪽의 Blocked by가 넘기는 쪽을 포함하는지 본다 — 받는 쪽이 먼저 돌 수 있다(대기열 3, 세 번).
+명세나 리뷰가 다른 티켓·기능에 넘긴 것("그 층에서 재확인", 측정)은 받는 티켓의 수용 기준이나 받는 기능의 기능 계획(`.scratch/<받는 slug>/plan.md`) 본문에 적는다. 기능 계획의 한 줄 요약은 전체 계획 표의 내용 칸이 되므로 넘긴 것은 요약이 아니라 본문에 둔다. 받는 쪽의 Blocked by가 넘기는 쪽을 포함하는지 본다 — 받는 쪽이 먼저 돌 수 있다(대기열 3, 세 번).
 
 명세 검토나 리뷰가 제안한 테스트 문장을 수용 기준으로 옮길 때는 그 테스트를 지금 이음매(주입되는 포트, 시계)로 잴 수 있는지 코드로 본다. 잴 수 없는 테스트는 어떤 구현에서도 초록이다. 명세 검토의 "가짜 시계를 `exp` 너머로"를 그대로 옮겼는데, 그때의 인증 미들웨어는 시계 포트를 받지 않았고 PyJWT는 벽시계를 읽었다(대기열 106, 검토의 문구를 뜻을 되짚지 않고 옮긴 세 번째).
 
