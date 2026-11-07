@@ -402,20 +402,26 @@ expect = "silent"
 note = "다른 절을 적어 넣고 '다음' 절은 그대로 옮긴 Edit(대기열 62)"
 payload = { tool_name = "Edit", tool_input = { file_path = "${OPEN_JOURNAL}", old_string = "## 다음\n\n- web-admin의 04가 다음이다.", new_string = "## 한 것\n\n- 04\n\n## 다음\n\n- web-admin의 04가 다음이다." } }
 
-# 순번 대조(대기열 232). 결과(tool_response)는 journal_number_hook/run.py 의 A 가 잰 새 파일 Write 의 모양이다(claude 2.1.300).
-# 그 결과의 originalFile 은 null 인데 TOML 에 null 이 없어 뺐다. 훅은 type 만 읽는다. 저장소는 origin 이 임시 bare 저장소라 네트워크에 기대지 않는다.
+# 이름 꼴(ADR 0045 결정 7). 결과(tool_response)는 journal_number_hook/run.py 의 A 가 잰 새 파일 Write 의 모양이다(claude 2.1.300).
+# 그 결과의 originalFile 은 null 인데 TOML 에 null 이 없어 뺐다. 훅은 type 만 읽고 파일 이름만 본다. 파일은 만들지 않는다.
 [[case]]
 hook = "hook_journal_retro.py"
 expect = "context"
-contains = ["다음 빈 번호와 다르다", "옮길 번호는"]
-note = "main(merge-base)에 이미 있는 순번으로 새 일지를 만든 Write — 도구가 새 번호로 세지 않아 겹침으로도 알리지 않는 갈래(셀프 리뷰에서 실제 도구로 돈 테스트가 잡았다)"
-payload = { tool_name = "Write", tool_input = { file_path = "${NUMBERED_REPO}/docs/journal/${TODAY}-01-x.md", content = "# ${TODAY} (01) x\n" }, tool_response = { type = "create", filePath = "${NUMBERED_REPO}/docs/journal/${TODAY}-01-x.md", content = "# ${TODAY} (01) x\n", structuredPatch = [], userModified = false } }
+contains = ["`<날짜>-<HHMM>-<슬러그>.md` 꼴이 아니다", "date +%Y-%m-%d-%H%M", "Get-Date -Format yyyy-MM-dd-HHmm", "docs/constitution/operations.md"]
+note = "옛 순번 꼴(`-03-`)로 새 일지를 만든 Write — 지으라는 명령과 원천을 알린다"
+payload = { tool_name = "Write", tool_input = { file_path = "${ROOT}/docs/journal/2026-11-07-03-x.md", content = "# x\n" }, tool_response = { type = "create", filePath = "${ROOT}/docs/journal/2026-11-07-03-x.md", content = "# x\n", structuredPatch = [], userModified = false } }
 
 [[case]]
 hook = "hook_journal_retro.py"
 expect = "silent"
-note = "다음 빈 순번으로 새 일지를 만든 Write — 도구에서 번호를 받고 만든 세션의 입력"
-payload = { tool_name = "Write", tool_input = { file_path = "${NUMBERED_REPO}/docs/journal/${TODAY}-02-y.md", content = "# ${TODAY} (02) y\n" }, tool_response = { type = "create", filePath = "${NUMBERED_REPO}/docs/journal/${TODAY}-02-y.md", content = "# ${TODAY} (02) y\n", structuredPatch = [], userModified = false } }
+note = "시각 꼴(`-0930-`)로 새 일지를 만든 Write"
+payload = { tool_name = "Write", tool_input = { file_path = "${ROOT}/docs/journal/2026-11-07-0930-x.md", content = "# x\n" }, tool_response = { type = "create", filePath = "${ROOT}/docs/journal/2026-11-07-0930-x.md", content = "# x\n", structuredPatch = [], userModified = false } }
+
+[[case]]
+hook = "hook_journal_retro.py"
+expect = "silent"
+note = "이미 있는 옛 이름의 일지를 덮어쓴 Write(type = update)는 이름을 보지 않는다 — 못 보는 것"
+payload = { tool_name = "Write", tool_input = { file_path = "${ROOT}/docs/journal/2026-11-07-03-x.md", content = "# x\n" }, tool_response = { type = "update", filePath = "${ROOT}/docs/journal/2026-11-07-03-x.md", content = "# x\n", structuredPatch = [], userModified = false } }
 
 # --- hook_ruff_line_width (PostToolUse Write|Edit) ---
 [[case]]
@@ -1099,7 +1105,7 @@ payload = { session_id = "choice-case-first", transcript_path = "${NEW_TRANSCRIP
 hook = "hook_choice_facts.py"
 expect = "context"
 note = "같은 세션이 같은 화면을 다시 불렀다 — 지나가고, 받은 답을 이 턴에 일지에 옮기라고 알린다(대기열 395)"
-contains = ["선택 화면의 답을 받았다", "다음 빈 번호"]
+contains = ["선택 화면의 답을 받았다", "<날짜>-<HHMM>-<슬러그>.md"]
 env = { TEMP = "${EMPTY_TEMP}", TMP = "${EMPTY_TEMP}", TMPDIR = "${EMPTY_TEMP}" }
 payload = { session_id = "choice-case-first", transcript_path = "${NEW_TRANSCRIPT}", cwd = "${ROOT}", permission_mode = "default", effort = { level = "medium" }, hook_event_name = "PreToolUse", tool_name = "AskUserQuestion", tool_input = { questions = [ { question = "어느 쪽으로 할까요?", header = "탐침", options = [ { label = "빨강", description = "서버 하나에 약 4.5초가 든다." }, { label = "파랑", description = "지금 코드는 그대로 둔다." } ], multiSelect = false } ] }, tool_use_id = "toolu_choice_again" }
 

@@ -1,0 +1,23 @@
+# `.claude/rules/tools.md` 의 Write·Edit 훅 시간 항목에서 `hook_journal_retro` 의 설명이 번호 도구를 자식 프로세스로 돌리던
+# 것에서 파일 이름 꼴만 보는 것으로 바뀐 문장(retro-queue-per-item 티켓 04, ADR 0045 결정 7)이 `tools/` 의 파일을 Read 로 열
+# 때 실리는지. 실험군은 규칙의 paths 안(tools/), 대조군은 밖(README.md)을 읽는다. 둘 다 이 체크아웃이다.
+# 최신 결과: 통과 4, "없음" 섞임 0(2026-11-07, 이 PC, claude 2.1.318, 두 갈래 모두 이 워크트리의 커밋하지 않은 본문(러너가 찍은 커밋은 `9a1d8542`), 일지 2026-11-07-1047).
+# 돌리는 법: uv run python tools/canary.py .scratch/harness/probes/canary/tools_rule_journal_name_hook.toml <출력 디렉터리>
+kind = "rule"
+question = '''
+Read 도구로 `{target}` 파일 하나만 통째로 읽어라. 다른 파일은 읽지 않는다.
+그 뒤 이 세션에 실린 지시 가운데, 새 일지 파일을 만든 Write 에서 PostToolUse 훅 `hook_journal_retro` 가 무엇을 보는지
+설명한 항목의 첫 문장을 글자 그대로 옮겨라. 읽은 파일에서 추측하지 않는다. 그런 항목이 없으면 "없음"이라고만 답하라.
+'''
+expect = ["파일 이름이 시각 꼴(<날짜>-<HHMM>-<슬러그>.md)인지만 본다"]
+source = ".claude/rules/tools.md"
+
+[[arm]]
+name = "paths-안"
+role = "experiment"
+target = "tools/sibling_overlap.py"
+
+[[arm]]
+name = "paths-밖"
+role = "control"
+target = "README.md"

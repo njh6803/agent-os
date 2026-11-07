@@ -1,13 +1,13 @@
-# 대기열 232·262·272 의 판정(hook_journal_retro 의 순번 대조, hook_push_delete_open_pr, hook_user_settings_read)의 규칙 하나씩을 뺀 변이.
+# 대기열 232·262·272 의 판정(hook_journal_retro 의 이름 꼴 대조, hook_push_delete_open_pr, hook_user_settings_read)의 규칙 하나씩을 뺀 변이.
 #   PYTHONUTF8=1 uv run python tools/mutate.py .scratch/harness/probes/journal_number_and_guards_mutations.toml
-# 훅의 main 이 순번 대조를 부르는 것은 순수 함수 테스트 밖이라 페이로드 표(tools/run_hooks.py)로 잰다. 빨강이 어긋남인지는
-# 결과의 요약 줄("어긋남 N건")로 본다. 자식 출력의 인코딩과 CRLF 변이는 윈도에서만 빨강이다(리눅스는 그 둘이 이미 맞다).
+# 훅의 main 이 이름 꼴 대조를 부르는 것은 순수 함수 테스트 밖이라 페이로드 표(tools/run_hooks.py)로 잰다. 빨강이 어긋남인지는
+# 결과의 요약 줄("어긋남 N건")로 본다.
 
 [runner.hooks]
 command = ["uv", "run", "--no-sync", "python", "tools/run_hooks.py"]
 judge = "pytest"
 
-# --- hook_journal_retro 의 순번 대조(대기열 232) ---
+# --- hook_journal_retro 의 이름 꼴 대조(대기열 232, ADR 0045 결정 7) ---
 [[mutation]]
 name = "새 파일을 만든 Write 만 대 본다(결과의 type)"
 tests = ["tests/tools/test_hook_journal_retro.py"]
@@ -18,75 +18,33 @@ old = '''        and response.get("type") == "create"'''
 new = '''        and response.get("type") in ("create", "update")'''
 
 [[mutation]]
-name = "새 번호 줄에 없는 순번은 이미 있는 번호다"
-tests = ["tests/tools/test_hook_journal_retro.py"]
-expect = "red"
-[[mutation.edit]]
-file = "tools/hook_journal_retro.py"
-old = '''    if moved is None and current in fresh:'''
-new = '''    if moved is None:'''
-
-[[mutation]]
-name = "옮길 번호에 든 순번은 도구가 고른 번호와 --move 를 든다"
-tests = ["tests/tools/test_hook_journal_retro.py"]
-expect = "red"
-[[mutation.edit]]
-file = "tools/hook_journal_retro.py"
-old = '''    moved = moves.get(current)'''
-new = '''    moved = None'''
-
-[[mutation]]
-name = "날짜가 다르면 순번이 맞아 보여도 알린다"
-tests = ["tests/tools/test_hook_journal_retro.py"]
-expect = "red"
-[[mutation.edit]]
-file = "tools/hook_journal_retro.py"
-old = '''        if key.group(1) == day and int(key.group(2)) + 1 == number:'''
-new = '''        if int(key.group(2)) + 1 == number:'''
-
-[[mutation]]
-name = "대 보지 못하면 침묵하지 않고 알린다"
-tests = ["tests/tools/test_hook_journal_retro.py"]
-expect = "red"
-[[mutation.edit]]
-file = "tools/hook_journal_retro.py"
-old = '''        return _unchecked(name, f"도구를 띄우지 못했거나 {OVERLAP_TIMEOUT:.0f}초를 넘겼다")'''
-new = '''        return None'''
-
-[[mutation]]
 name = "옮길 때 옛 파일의 이름을 바꾸라고 안내한다"
 tests = ["tests/tools/test_hook_journal_retro.py"]
 expect = "red"
+expect_output = ["assert 'mv <옛> <새>' in"]
 [[mutation.edit]]
 file = "tools/hook_journal_retro.py"
-old = '''        f" 않는다(대기열 232). {RENAME_NOTE}"'''
-new = '''        " 않는다(대기열 232)."'''
+old = '''        f" {RENAME_NOTE} 이 일지를 든 인용이 있으면 함께 고친다."'''
+new = '''        " 이 일지를 든 인용이 있으면 함께 고친다."'''
 
 [[mutation]]
-name = "자식은 PYTHONUTF8 없이도 UTF-8 로 낸다(윈도)"
+name = "시각은 네 자리여야 한다"
 tests = ["tests/tools/test_hook_journal_retro.py"]
 expect = "red"
+expect_output = ["assert None is not None"]
 [[mutation.edit]]
 file = "tools/hook_journal_retro.py"
-old = '''    environment["PYTHONIOENCODING"] = "utf-8"'''
-new = '''    environment.pop("PYTHONIOENCODING", None)'''
+old = '''STAMPED_NAME = re.compile(r"^\d{4}-\d{2}-\d{2}-\d{4}-.+\.md$")'''
+new = '''STAMPED_NAME = re.compile(r"^\d{4}-\d{2}-\d{2}-\d+-.+\.md$")'''
 
 [[mutation]]
-name = "파일로 받은 출력의 CRLF 를 맞춘다(윈도)"
-tests = ["tests/tools/test_hook_journal_retro.py"]
-expect = "red"
-[[mutation.edit]]
-file = "tools/hook_journal_retro.py"
-old = '''        stdout = out.read().decode("utf-8", "replace").replace("\r\n", "\n")'''
-new = '''        stdout = out.read().decode("utf-8", "replace")'''
-
-[[mutation]]
-name = "main 이 새 일지의 Write 에 순번 대조를 붙인다"
+name = "main 이 새 일지의 Write 에 이름 꼴 대조를 붙인다"
 runner = "hooks"
 expect = "red"
+expect_output = ["어긋남 1건"]
 [[mutation.edit]]
 file = "tools/hook_journal_retro.py"
-old = '''        contexts.append(number_context(file_path, run_overlap(directory)))'''
+old = '''        contexts.append(name_context(file_path))'''
 new = '''        contexts.append(None)'''
 
 # --- hook_push_delete_open_pr(대기열 262) ---

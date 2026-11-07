@@ -716,25 +716,13 @@ def test_origin_main보다_한_커밋_뒤처진_저장소를_만든다(tmp_path:
     assert git_line("rev-list", "--count", "HEAD..origin/main") == "1"
 
 
-def test_일지_번호_저장소는_main_의_01_과_커밋하지_않은_새_일지_둘을_든다(tmp_path: Path) -> None:
-    """`${NUMBERED_REPO}` 는 hook_journal_retro 의 순번 대조 사례가 기대는 모양이다. main 과 같은
-    순번 01 은 발동, 다음 빈 순번 02 는 침묵이다."""
+def test_일지_훅의_이름_꼴_사례는_저장소_픽스처를_쓰지_않는다(tmp_path: Path) -> None:
+    """이름 꼴(ADR 0045 결정 7)은 파일 이름만 보므로 번호 저장소와 `${TODAY}` 가 없다. 훅이 자식
+    프로세스로 번호 도구를 돌리던 때의 픽스처가 되살아나지 않게 한다."""
     replacements = create_fixtures(tmp_path)
-    repo, today = replacements["NUMBERED_REPO"], replacements["TODAY"]
 
-    def git_lines(*args: str) -> list[str]:
-        result = subprocess.run(
-            ["git", "-C", repo, *args], check=True, capture_output=True, text=True
-        )
-        return result.stdout.split()
-
-    assert git_lines("ls-tree", "--name-only", "origin/main", "docs/journal/") == [
-        f"docs/journal/{today}-01-main.md"
-    ]
-    assert sorted(git_lines("ls-files", "--others", "docs/journal/")) == [
-        f"docs/journal/{today}-01-x.md",
-        f"docs/journal/{today}-02-y.md",
-    ]
+    assert "NUMBERED_REPO" not in replacements
+    assert "TODAY" not in replacements
 
 
 def test_열린_PR_저장소는_origin_에_브랜치_끝을_머리로_둔_PR_의_ref_를_든다(tmp_path: Path) -> None:

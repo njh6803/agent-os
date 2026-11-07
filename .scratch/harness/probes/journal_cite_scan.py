@@ -74,7 +74,7 @@ def main() -> int:
     sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8")
     commit = _git("rev-parse", sys.argv[1] if len(sys.argv) > 1 else "HEAD").strip()
     files = blobs(commit)
-    known = {PurePosixPath(path).name[:13] for path in files if path.startswith("docs/journal/")}
+    known = {PurePosixPath(path).name for path in files if path.startswith("docs/journal/")}
     read = 0
     total = 0
     raw: list[str] = []
@@ -91,7 +91,7 @@ def main() -> int:
             for cite in JOURNAL_CITE.finditer(bare):
                 for key in cite[1].split("·"):
                     total += 1
-                    if key in known:
+                    if any(name.startswith(f"{key}-") for name in known):
                         continue
                     place = "인용 블록" if bare.startswith(">") else "나머지"
                     if place == "나머지" and key in spans:

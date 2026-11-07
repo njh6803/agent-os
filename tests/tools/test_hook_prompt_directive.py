@@ -451,7 +451,9 @@ def test_반각_슬래시의_이_저장소_스킬로_시작하면_손으로_연_
     assert context.index("set_session_title") < context.index(PASTED)
     # 계기는 첫 턴에만 와서, 단계를 닫을 때까지 미루면 압축이나 끊김에 사라진다(셀프 리뷰 두 축)
     assert "바로 적는다" in context
-    assert "tools/sibling_overlap.py" in context
+    assert "`date +%Y-%m-%d-%H%M`" in context
+    assert "`Get-Date -Format yyyy-MM-dd-HHmm`" in context
+    assert "docs/journal/<날짜>-<HHMM>-<슬러그>.md" in context
 
 
 def test_첫_줄이_지시문의_라벨_줄이면_손으로_연_세션이다() -> None:

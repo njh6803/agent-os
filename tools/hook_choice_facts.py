@@ -97,8 +97,9 @@ _FACTS = (
 _JOURNAL = (
     "결정을 받은 화면(설계 인터뷰의 라운드, 승인)이면 받은 답(고른 라벨과 그 설명을 글자 그대로)과"
     " 이 화면으로 확인받은 요약을 이 턴에 일지에 옮긴다(grilling 의 '옮길 때')."
-    " 일지 파일이 아직 없으면 `uv run python tools/sibling_overlap.py` 의 `다음 빈 번호` 줄에서"
-    " 번호를 받아 머리 한 줄 파일을 먼저 만든다(code-review 6단계 끝과 같은 길)."
+    " 일지 파일이 아직 없으면 `docs/journal/<날짜>-<HHMM>-<슬러그>.md` 를 머리 한 줄 파일로 먼저"
+    " 만든다. 앞부분은 Bash 의 `date +%Y-%m-%d-%H%M` 이나 PowerShell 의"
+    " `Get-Date -Format yyyy-MM-dd-HHmm` 으로 짓는다(code-review 6단계 끝과 같은 길)."
     " 미루면 컨텍스트 압축 뒤 요지만 남는다."
 )
 _DENY_BODY = (

@@ -10,14 +10,14 @@
 - `hook_push_delete_open_pr`: 지우지 않는 Bash 명령(git 을 부르지 않는 길, 침묵)과, origin 이 로컬
   bare 저장소인 열린 PR 의 머리 지우기(`git remote get-url` 과 `ls-remote` 의 길, 막음). gh 와
   네트워크는 재지 않는다.
-- `hook_journal_retro`: 새 일지 파일의 Write(`tools/sibling_overlap.py` 를 자식으로 돌리는 길,
-  알림). origin 이 로컬 bare 저장소이고 형제 워크트리가 없는 임시 저장소라 이 저장소에서 그 도구가
-  쓰는 9~11초는 재지 않는다.
+- `hook_journal_retro`: 시각 꼴이 아닌 이름의 새 일지 파일 Write(파일 이름만 보고 자식 프로세스를
+  띄우지 않는 길, 알림). 이름 꼴로 바꾸기 전 판은 `tools/sibling_overlap.py` 를 자식으로 돌려 이
+  저장소에서 한 번에 9~11초가 들었다(대기열 232).
 
 회차마다 판정(`outcome_of`)이 그 갈래의 기대와 같고, 발동 갈래는 훅이 낸 문장(`message_of`)에 그
-동작의 표지(설정 훅의 "키 이름만", 푸시 훅의 "#7", 일지 훅의 `NUMBER_LEAD` 조각)가 있어야 측정이다.
-일지 훅의 대조 실패 안내도 같은 `context` 라 판정만으로는 재려는 길을 지났는지 가를 수 없다(셀프
-리뷰 표준 축). 어긋난 회차가 하나라도 있으면 1로 끝난다. 끝 줄에 갈래마다 최소·최대 밀리초를 찍는다.
+동작의 표지(설정 훅의 "키 이름만", 푸시 훅의 "#7", 일지 훅의 `NAME_LEAD` 조각)가 있어야 측정이다.
+일지 훅은 retro 계기도 같은 `context` 라 판정만으로는 재려는 길을 지났는지 가를 수 없다(셀프 리뷰
+표준 축). 어긋난 회차가 하나라도 있으면 1로 끝난다. 끝 줄에 갈래마다 최소·최대 밀리초를 찍는다.
 
 쓰임: 저장소 루트에서 `uv run python .scratch/harness/probes/guard_hooks_time.py`
 """
@@ -48,8 +48,7 @@ RUNS = 5
 
 def cases(fixtures: dict[str, str]) -> list[tuple[str, str, str, str, dict[str, object]]]:
     """(이름, 훅, 기대, 문장의 표지, 페이로드). 침묵 갈래의 표지는 빈 글자다."""
-    today, numbered = fixtures["TODAY"], fixtures["NUMBERED_REPO"]
-    journal = f"{numbered}/docs/journal/{today}-01-x.md"
+    journal = f"{ROOT.as_posix()}/docs/journal/2026-11-07-03-x.md"
     settings, project = "hook_user_settings_read.py", f"{ROOT.as_posix()}/.claude/settings.json"
     push, repo = "hook_push_delete_open_pr.py", fixtures["OPEN_PR_REPO"]
     delete = "git push origin --delete chore/x"
@@ -64,7 +63,7 @@ def cases(fixtures: dict[str, str]) -> list[tuple[str, str, str, str, dict[str, 
             "일지: 새 파일 Write",
             "hook_journal_retro.py",
             "context",
-            "다음 빈 번호와 다르다",
+            "꼴이 아니다",
             {
                 "tool_name": "Write",
                 "tool_input": {"file_path": journal, "content": "x"},

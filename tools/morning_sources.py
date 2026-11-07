@@ -32,6 +32,7 @@ from pathlib import Path
 # 바깥 명령 층이 그리기 도구에서 JSON 풀이를 가져오는 까닭은 `morning_report.py`의 JSON 풀이
 # 주석에 있다(그리기 도구는 스크립트로 돌아 `tools` 패키지를 가져오지 못한다).
 from tools.morning_report import Json, json_int, json_list, json_obj, json_str, json_time
+from tools.sibling_overlap import journal_order
 
 from tools import queue_open_rows
 
@@ -331,12 +332,44 @@ def journal_next(text: str) -> str:
 def latest_journal(root: Path) -> tuple[str, str]:
     """`origin/main`에서 `## 다음`으로 시작하는 줄이 있는 가장 늦은 일지의 (경로, 그 일지의
     `## 다음` 절). 그런 일지가 없으면 빈 글 둘이다. 그 일지를 읽지 못하거나 그 줄이 `## 다음(…)`처럼
-    덧붙은 것뿐이면 절은 빈 글이다(`journal_next`)."""
+    덧붙은 것뿐이면 절은 빈 글이다(`journal_next`).
+
+    가장 늦은 일지는 이름이 아니라 main에 더해진 차례로 고른다. 같은 날 옛 순번 꼴(`-12-`)이
+    새 시각 꼴(`-0930-`)보다 이름순으로 뒤라서, 이름순으로 고르면 나중에 더한 일지를 지나친다.
+    한 커밋이 일지를 여럿 더했으면 그 안에서는 이름순이 아니라 시각순(`journal_order`)으로 늦은
+    것부터 본다.
+
+    못 보는 것. `git mv` 로 이름만 바뀐 일지는 더한 파일(`--diff-filter=A`)로 잡히지 않아
+    더한 차례가 없는 일지로 밀리고, 더한 차례가 있는 일지가 모두 `## 다음` 이 없을 때에만 걸린다.
+    얕은 클론은 경계 커밋이 그 시점의 파일을 모두 더한 것으로 보이므로, 그 일지들이 한 커밋의
+    블록으로 들어가 시각순으로 가려진다(코드를 읽은 것이고 얕은 클론으로 돌려 보지는 않았다).
+    """
     out = _run(["git", "grep", "-n", "^## 다음", "origin/main", "--", "docs/journal/"], root)
-    names = sorted({line.split(":", 2)[1] for line in (out or "").splitlines() if ":" in line})
-    if not names:
+    wanted = {line.split(":", 2)[1] for line in (out or "").splitlines() if ":" in line}
+    if not wanted:
         return "", ""
-    return names[-1], journal_next(main_text(root, names[-1]) or "")
+    added = _run(
+        [
+            "git",
+            "log",
+            "--diff-filter=A",
+            "--name-only",
+            "--format=%x00",
+            "origin/main",
+            "--",
+            "docs/journal/",
+        ],
+        root,
+    )
+    ordered: list[str] = []
+    for block in (added or "").split("\0"):
+        names = {line for line in block.splitlines() if line}
+        ordered += sorted(names, key=lambda name: journal_order(Path(name).name), reverse=True)
+    rest = sorted(wanted - set(ordered), key=lambda name: journal_order(Path(name).name))
+    found = next((name for name in [*ordered, *reversed(rest)] if name in wanted), None)
+    if found is None:
+        return "", ""
+    return found, journal_next(main_text(root, found) or "")
 
 
 def ticket_paths(root: Path) -> dict[str, str]:

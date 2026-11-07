@@ -1,0 +1,28 @@
+# retro 2단계가 읽을 일지를 "docs/journal/ 의 최신 파일"이 아니라 이 브랜치의 일지(`sibling_overlap.py --journal` 이
+# 찍는 경로)로 적은 것이 새 세션에 실리는지(retro-queue-per-item 티켓 04, ADR 0045 결정 7). 같은 날 옛 순번 꼴 일지와
+# 새 시각 꼴 일지가 섞이면 이름순 최신이 옛 일지라서 바꿨다.
+# 실험군은 이 워크트리, 대조군은 이 변경 전의 main 커밋 `9a1d8542` 이다. 돌릴 때는 `--control-commit 9a1d8542` 를
+#   준다(README `canary/` 행).
+# 최신 결과: 통과 4, "없음" 섞임 0(2026-11-07, 이 PC, claude 2.1.318, 실험군은 이 워크트리의 커밋하지 않은 본문(러너가 찍은 커밋은 `9a1d8542`), 대조군 `--control-commit 9a1d8542`, 일지 2026-11-07-1047).
+#   대조군은 "the latest file in docs/journal/" 이라고만 답해 expect 가 빠진다(실험군에만 실린다).
+#   셀프 리뷰를 반영하며 원천의 괄호 문구만 고쳐(물음과 expect 는 그대로) 같은 PR·같은 판에서 사전 확인(`--preflight --control-commit 9a1d8542`)으로 갈음했다. 통과 1.
+# 돌리는 법: 워크트리 `.claude/worktrees/<이름>/` 루트에서
+#   uv run python tools/canary.py --control-commit 9a1d8542 .scratch/harness/probes/canary/retro_branch_journal.toml <출력 디렉터리>
+kind = "skill"
+question = '''
+retro 스킬을 Skill 도구로 불러 본문을 읽어라. 스킬이 시키는 일(일지 읽기, 회고, 파일 쓰기)은 하지 않고 본문만 읽는다.
+본문의 2단계에서 이 저장소의 주된 원천이 어느 일지라고 적은 문장 앞부분을 "primary source" 구절부터 쉼표 앞까지
+글자 그대로 옮겨라. 본문에 그런 문장이 없으면 "없음"이라고만 답하라.
+'''
+expect = ["primary source is this branch's journal"]
+source = ".claude/skills/retro/SKILL.md"
+skill = "retro"
+
+[[arm]]
+name = "워크트리"
+role = "experiment"
+
+[[arm]]
+name = "옛-판"
+role = "control"
+checkout = "../../.."

@@ -257,8 +257,9 @@ def context_for(prompt: str, cwd: str | None = None) -> str | None:
             "open-session 이 이 세션을 열지 못했거나 쓰이지 않았다. 그 일은 앞 세션의 일지가 "
             "병합된 뒤에 나서 거기 적힐 자리가 없으므로, 이 세션의 일지에 그 사실을 한 줄 "
             "적는다(대기열 72). 이 계기는 첫 턴에만 오니 미루지 않는다. 위의 제목·워크트리 "
-            "계기를 따른 뒤 일지 파일이 아직 없으면 `uv run python tools/sibling_overlap.py` 의 "
-            "다음 빈 번호로 머리 한 줄 파일을 만들고 그 한 줄을 바로 적는다. 까닭을 모르면 "
+            "계기를 따른 뒤 일지 파일이 아직 없으면 `docs/journal/<날짜>-<HHMM>-<슬러그>.md` 를 "
+            "머리 한 줄 파일로 만들고(앞부분은 Bash 의 `date +%Y-%m-%d-%H%M` 이나 PowerShell 의 "
+            "`Get-Date -Format yyyy-MM-dd-HHmm`) 그 한 줄을 바로 적는다. 까닭을 모르면 "
             "모른다고 적는다."
         )
     return context

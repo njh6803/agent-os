@@ -1,0 +1,29 @@
+# next-session `handoff.md` "인계할 때" 2가 일지 파일을 만들 때 따르라는 이름 규칙(날짜·시각 꼴)이 새 세션에 실리는지
+# (retro-queue-per-item 티켓 04, ADR 0045 결정 7). 옛 문장은 "번호 규칙대로 만든다"였다.
+# 실험군은 이 워크트리, 대조군은 이 변경 전의 main 커밋 `9a1d8542` 이다. 그 판에는 카나리아가 없다. 돌릴 때는
+#   `--control-commit 9a1d8542` 를 준다(README `canary/` 행).
+# 최신 결과: 통과 4, "없음" 섞임 0(2026-11-07, 이 PC, claude 2.1.318, 실험군은 이 워크트리의 커밋하지 않은 본문(러너가 찍은 커밋은 `9a1d8542`), 대조군 `--control-commit 9a1d8542`, 일지 2026-11-07-1047).
+# 돌리는 법: 워크트리 `.claude/worktrees/<이름>/` 루트에서
+#   uv run python tools/canary.py --control-commit 9a1d8542 .scratch/harness/probes/canary/next_session_handoff_journal_name.toml <출력 디렉터리>
+kind = "skill"
+question = '''
+next-session 스킬을 Skill 도구로 불러 본문을 읽어라. 스킬이 시키는 일은 하지 않는다.
+본문이 상황마다 Read로 열라고 가리키는 하위 파일 가운데 단계 경계에서 인계 계기를 받은 세션이 여는 파일 하나를
+Read로 열고, 아래를 그 파일에서만 찾는다. 스킬 본문(SKILL.md)에 든 글은 옮기지 않는다.
+본문이 그런 하위 파일을 가리키지 않거나 그 파일에 없으면 그 물음에 "없음"이라고만 답하라.
+인계 절차에서 일지 파일이 아직 없으면 `merge.md`의 일지 항목 규칙대로 만들라고 적은 문장을 찾아,
+그 규칙이 일지 파일 이름을 어떤 꼴로 짓는다고 가리키는 구절을 글자 그대로 옮겨라.
+'''
+expect = ["Get-Date -Format yyyy-MM-dd-HHmm으로 지은 날짜·시각 꼴"]
+source = ".claude/skills/next-session/handoff.md"
+skill = "next-session"
+skill_body = "files"
+
+[[arm]]
+name = "워크트리"
+role = "experiment"
+
+[[arm]]
+name = "옛-판"
+role = "control"
+checkout = "../../.."
