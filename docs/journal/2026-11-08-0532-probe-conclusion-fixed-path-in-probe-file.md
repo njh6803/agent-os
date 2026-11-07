@@ -66,7 +66,12 @@ open-session을 부른다 2026-11-07T20:33:55Z
 
 open-session을 부른다 2026-11-07T21:13:59Z
 
+## 인계를 받은 세션 (PR 직전)
+
+- `origin/main`(`fe461837`)을 합쳤다(합친 커밋 `1241dbbe`, 충돌 없음). 이 세션은 앱이 만든 워크트리가 아니라 `sync_with_base_branch`가 거부해 직접 `git merge`했다. 합친 뒤 `mutate.py <표> --since dd1c0190 --check`(원문과 표지 품질)는 통과했고, `uv run python tools/run_checks.py`는 전부 통과했다(pytest 496.6초, web-verify 639.3초). ruff 둘도 통과했다.
+- 일지 커밋 제목이 72자를 넘어 커밋 메시지 검사에서 두 번 실패했다(84자, 78자). 68자로 줄여 지나갔다.
+- PR 직전 리뷰: `coderabbit-review` 서브에이전트는 이 세션의 옛 정의로 돌아 `Seat: not assigned`를 보고 CLI를 건너뛰었다. 병합한 #495의 정의는 그 경우에도 CLI를 돌리라고 해서 직접 `coderabbit review --agent --include-untracked --base-commit fe461837`을 돌렸다. `review_completed`, 지적 0건, 본 파일 11개다. 보안·버그·성능 축은 이 CLI가 본 것으로 센다.
+
 ## 남은 일
 
-1. 푸시하기 전에 `origin/main`이 움직였다(`e575f66`, `.scratch/harness/probes/README.md`를 고쳤다). `sync_with_base_branch` 도구로 최신화하고 충돌이 나면 글자 충돌을 푼다(`probes/README.md`의 변이 행, `tools.md`와 `issue-tracker.md`의 이 훅 문장).
-2. 푸시하고 PR을 연다(제목 꼬리 `(harness probe-conclusion-fixed-path-in-probe-file)`). `merge.md` 2의 봇 회차부터 병합까지 한다.
+1. PR을 연다(제목 꼬리 `(harness probe-conclusion-fixed-path-in-probe-file)`). `merge.md` 2의 봇 회차부터 병합까지 한다.
