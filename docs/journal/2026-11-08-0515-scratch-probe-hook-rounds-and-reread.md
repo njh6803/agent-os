@@ -61,3 +61,15 @@
 - 다시 돌렸다(러너 출력을 이 세션이 봤다): `uv run ruff check .`는 통과, `uv run ruff format --check .`는 1939개 이미 정렬, `uv run pyright`는 0 errors. `uv run python tools/run_checks.py`는 종료 코드 0이고 check-ticket·lint-imports·zizmor·check-instructions·check-type-escapes·pyright(40.6초)·pyright-linux(41.0초)·run-hooks(62.7초)·pytest(447.7초)·web-verify(534.2초)가 모두 Passed였다. 인계 때 다시 치지 못했던 pyright-linux도 이 판에서 통과했다. 카나리아는 `uv run python tools/canary.py .scratch/harness/probes/canary/tools_rule_scratch_probe_hook.toml <출력 디렉터리>`로 반영한 문장에 다시 돌려 통과 4, 실패 0, "없음" 섞인 통과 0, 대조군 "없음", 러너가 찍은 커밋 `dd1c0190`이었다. `sibling_overlap.py`가 `probes.md`를 원천으로 든 명세 여덟을 다시 돌리라고 알려, 여덟의 사전 확인(`uv run python tools/canary.py --preflight <여덟 경로>`)은 모두 통과했고 일반 명세 `probes_rule.toml`만 실제 회차를 돌려 통과 4, 실패 0, "없음" 섞인 통과 0을 봤다(`최신 결과` 줄을 고쳤다). 나머지 일곱은 실제 회차를 돌리지 않았다. 이 변경이 고친 것은 `probes.md`의 머리 문단뿐이고 일곱이 기대하는 문구(항목 본문, 예: `Rounds`, `LineReader`)는 건드리지 않았다는 것은 코드를 읽은 판단이다. 이 세션이 `-m llm`·e2e·사진 비교는 돌리지 않았다(이 변경은 그 영역을 건드리지 않았다).
 
 open-session을 부른다 2026-11-07T20:45Z
+
+## 인계 시점의 상태 (커밋 뒤)
+
+세션 제목은 `chore/scratch-probe-hook-rounds-and-reread`였다. 컨텍스트가 인계 문턱을 넘어 `커밋 뒤`에서 두 번째로 넘긴다. 앞의 "셀프 리뷰 직전" 인계로 연 세션이 이 세션이고, 셀프 리뷰와 반영을 마치고 커밋했다.
+
+- 커밋: `2bbb3e02 feat: Rounds 없는 프로브를 짚고 읽지 않은 재편집을 막는다`. pre-commit이 ruff 둘, checks, check-ticket, lint-imports, zizmor, check-instructions, check-type-escapes, pyright, pyright-linux, run-hooks, pytest, web-verify, 표·줄 구분 문자·변이 표·카나리아 명세·헌법 판·따옴표 검사, 커밋 메시지 검사를 모두 통과했다(`git commit` 출력의 Passed 줄을 이 세션이 봤다). 작업 트리는 깨끗하다(`git status --short`가 비었다).
+- 푸시하지 않았다. PR도 없다. 이 일지의 이 절과 마지막 줄은 커밋하지 않은 편집이므로, 새 세션이 일지를 이어 쓰며 다음 커밋에 싣는다.
+- 안 한 것: `origin/main` 합치기(`mcp__ccd_host__sync_with_base_branch`), 합친 뒤 검사 재확인, `uv run python tools/sibling_overlap.py`, 푸시, PR(끝에 `🤖 Generated with [Claude Code](https://claude.com/claude-code)`), `ccd_pr`의 `get_status`와 `bind_pr`, 봇 회차, 병합(`merge.md`의 "워크트리에서 병합할 때"를 Read로 열어 따른다), retro(이 일지의 "다음"에 적은 후보 둘), 대기열 426·430의 항목 닫기.
+- 합칠 때의 충돌 후보: 앞 인계 시점에 `sibling_overlap.py`가 알린 대로 `.claude/settings.json`, `tools/hook_payloads.toml`, `.claude/rules/tools.md`, `docs/agents/issue-tracker.md`, `.scratch/harness/probes/README.md`다.
+- 일지 "셀프 리뷰"와 "반영"의 "남겼다" 줄이 새 세션에 남는 열린 것이다: 병렬 형제의 `tool_use` 줄이 PreToolUse 전에 기록에 실제로 오는지는 재지 않았고, 카나리아 명세 일곱은 사전 확인만 돌렸다.
+
+open-session을 부른다 2026-11-07T21:59Z
