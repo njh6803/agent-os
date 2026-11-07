@@ -27,6 +27,8 @@ upstream 으로 두고 그 위에 푸시하지 않은 커밋이 하나 있는 �
 bare 저장소를 origin 으로 두고 작업 브랜치가 origin/main 보다 한 커밋 뒤처진 저장소),
 `${NEW_TRANSCRIPT}`·`${USED_TRANSCRIPT}`(아직 없는 트랜스크립트와 assistant 기록이 있는 트랜스크립트
 — 첫 턴과 그 반례), `${MIDTURN_TRANSCRIPT}`(영어와 한국어 중간 문장 뒤의 호출이 든 트랜스크립트),
+`${SCRATCH_WRITTEN_TRANSCRIPT}`·`${PROBES_READ_TRANSCRIPT}`(스크래치패드 스크립트를 Write 로 한
+번 쓴 트랜스크립트와, 그 뒤에 `.claude/rules/probes.md` 를 Read 로 연 기록이 더 있는 것),
 `${OVER_HANDOFF_TRANSCRIPT}`·`${UNDER_HANDOFF_TRANSCRIPT}`(마지막 모델 응답의 usage 가 인계 문턱을
 넘는 트랜스크립트와 넘지 않는 트랜스크립트), `${EMPTY_TEMP}`(표지를 쓸 빈 임시 폴더. 사례의 `env` 로
 `TEMP`·`TMP`·`TMPDIR` 에 준다 — 시스템 임시 폴더에 남은 표지로 발동 사례가 PC 마다 처음 한 번만
@@ -151,6 +153,13 @@ _MIDTURN_RECORDS: tuple[dict[str, JsonValue], ...] = tuple(
     else {"type": "assistant", "isSidechain": False, "message": {"id": message, "content": [block]}}
     for message, block in _MIDTURN_BLOCKS
 )
+# `${SCRATCH_WRITTEN_TRANSCRIPT}`·`${PROBES_READ_TRANSCRIPT}` 의 기록에 든 파일 경로. 앞은 이 훅을
+# 만든 세션(2026-10-17, 데스크톱 앱)의 스크래치패드 꼴이고, 표의 사례가 쓰려는 파일의 경로도 같다.
+_SCRATCH_SCRIPT = (
+    "C:\\Users\\User\\AppData\\Local\\Temp\\claude\\C--project-agent"
+    "\\627ad275-7ef2-4b63-96e0-b8dabac0ed18\\scratchpad\\measure.py"
+)
+_PROBES_RULE = "C:\\project\\agent\\.claude\\rules\\probes.md"
 # 저장소를 가리키는 git 환경 변수. tests/conftest.py 도 여기서 import 한다 — 목록의 원천은 하나다.
 REPO_LOCATION_VARS = (
     "GIT_DIR",
@@ -646,6 +655,12 @@ def create_fixtures(scratch: Path) -> dict[str, str]:
         "NEW_TRANSCRIPT": (scratch / "transcript-not-yet.jsonl").as_posix(),
         "USED_TRANSCRIPT": used_transcript.as_posix(),
         "MIDTURN_TRANSCRIPT": midturn_transcript.as_posix(),
+        "SCRATCH_WRITTEN_TRANSCRIPT": _scratch_written_transcript(
+            scratch, "written", opened_rule=False
+        ).as_posix(),
+        "PROBES_READ_TRANSCRIPT": _scratch_written_transcript(
+            scratch, "read", opened_rule=True
+        ).as_posix(),
         "OVER_HANDOFF_TRANSCRIPT": _handoff_transcript(scratch, "over", 250_000).as_posix(),
         "UNDER_HANDOFF_TRANSCRIPT": _handoff_transcript(scratch, "under", 120_000).as_posix(),
         "EMPTY_TEMP": empty_temp.as_posix(),
@@ -740,6 +755,42 @@ def _usage_home(scratch: Path) -> Path:
     account = {"accountUuid": "00000000-0000-0000-0000-0000000000aa", "emailAddress": "run@hooks"}
     (home / ".claude.json").write_text(json.dumps({"oauthAccount": account}), encoding="utf-8")
     return home
+
+
+def _scratch_written_transcript(scratch: Path, name: str, *, opened_rule: bool) -> Path:
+    """세션 스크래치패드의 스크립트를 Write 로 한 번 쓴 트랜스크립트. `opened_rule` 이면 그 뒤에
+    `.claude/rules/probes.md` 를 Read 로 연 기록이 더 있다. `hook_scratch_probe_reread` 가 읽는다.
+
+    기록의 모양은 실제 트랜스크립트의 assistant 기록이다(`message.content` 의 `tool_use` 블록에
+    `input.file_path` 가 든다. 이 저장소의 트랜스크립트 하나를 손으로 봤다)."""
+    calls: list[tuple[str, str, str]] = [("toolu_scratch_a", "Write", _SCRATCH_SCRIPT)]
+    if opened_rule:
+        calls.append(("toolu_rule_read", "Read", _PROBES_RULE))
+    records: list[dict[str, JsonValue]] = []
+    for tool_id, tool, file_path in calls:
+        block: dict[str, JsonValue] = {
+            "type": "tool_use",
+            "id": tool_id,
+            "name": tool,
+            "input": {"file_path": file_path},
+        }
+        message: dict[str, JsonValue] = {"id": f"msg_{tool_id}", "content": [block]}
+        records.append({"type": "assistant", "isSidechain": False, "message": message})
+        # 도구 결과가 기록에 있는 시도만 앞선 시도로 센다. user 줄의 `tool_result` 블록이고 키
+        # 순서는 이 저장소의 트랜스크립트 하나에서 손으로 본 대로다(type, tool_use_id, content).
+        result: dict[str, JsonValue] = {
+            "type": "tool_result",
+            "tool_use_id": tool_id,
+            "content": "ok",
+        }
+        records.append({"type": "user", "message": {"role": "user", "content": [result]}})
+    path = scratch / f"transcript-scratch-{name}.jsonl"
+    path.write_text(
+        "\n".join(json.dumps(record, ensure_ascii=False) for record in records) + "\n",
+        encoding="utf-8",
+        newline="\n",
+    )
+    return path
 
 
 def _handoff_transcript(scratch: Path, name: str, tokens: int) -> Path:
