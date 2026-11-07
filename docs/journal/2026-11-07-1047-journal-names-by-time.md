@@ -57,6 +57,16 @@
   - `journal_order`의 마법수와 `morning_sources`의 `sibling_overlap` import: 값이 셋뿐이고 `morning_sources`가 이미 같은 도구에서 꼴을 가져와 두었다.
   - `TRANSITION_DAY`를 옮기라는 지시가 시험 독스트링과 ADR 이력에만 있고 `merge.md`에는 없다는 지적: 티켓이 정한 자리(시험 독스트링)이고, 어긋나면 시험이 느슨해질 뿐 빨개지지 않는다.
 
+## PR 직전 리뷰
+
+`coderabbit auth status`가 `Plan: Free`, `Seat: not assigned`라 CLI 축은 돌지 못했다(서브에이전트 보고, 리뷰는 시작하지 않았다). 대체 둘을 돌렸다. 아래는 그 보고를 이 세션이 읽은 것이다.
+
+- **`/security-review`(후보 식별 서브에이전트 한 개).** 확신 8 이상의 취약점 0건이라 거르는 서브에이전트는 띄우지 않았다. git·gh 호출은 모두 리스트 형식이고 인용은 파일 경로로 바뀌지 않으며 훅은 자식 프로세스를 걷어 면이 줄었다. 참고로 `morning_sources.latest_journal`이 `git grep` 출력을 `split(":", 2)`로 가르므로 이름에 `:`가 든 파일은 잘못 갈린다(확신 3 미만, 취약점 아님, 손대지 않음).
+- **`bug-perf-review`(서브에이전트 보고).** Critical·Major 0건, Minor 1건과 Nit 2건이다. 어느 것도 이 PR에서 고치지 않고 "다음"에 적었다.
+  - Minor — `--journal`이 병합을 커밋하기 전(`MERGE_HEAD` 상태)에 main이 들여온 일지를 이 브랜치의 것으로 셀 수 있다. 코드를 읽은 것이고 불러 보지 않았다.
+  - Nit — `journal_order` 열쇠가 새 꼴에서 시분만 써서 같은 분의 일지 둘이 같은 열쇠를 낸다. 병합 뒤 CI가 같은 분의 겹침을 막으므로 병합 전 한 브랜치가 같은 분에 일지 둘을 만들 때만 난다.
+  - Nit — `morning_sources`의 새 `git log`에 `-c core.quotepath=false`가 없어 한글 슬러그가 8진수 이스케이프로 나온다(실측). 기존 `git grep`도 같고 이 저장소의 슬러그는 모두 영문이다.
+
 ## 회고
 
 후보 7개: 승인 1, 기각 6, 넘김 0. 만료할 항목은 없었다(`uv run python tools/queue_open_rows.py`가 "(없음)"). 같은 일을 다룬 항목은 `--search`로 찾았다.
@@ -74,6 +84,7 @@
 - 티켓 03(#484)은 이미 main에 들었고, 이 PR(티켓 04)이 병합되면 `05-plan-table-generated`(Blocked by 03·04)가 풀린다. 다음 세션은 `.scratch/retro-queue-per-item/issues/05-plan-table-generated.md`를 연다. 06은 05에 막혀 있다.
 - main(`d3be038f`, 티켓 03)을 합쳤다. 충돌은 `.scratch/harness/probes/README.md` 한 덩어리였고, 기준 커밋과 대 본 결과 `sibling_overlap_mutations.toml`·`journal_cite_scan.py` 두 줄은 이 브랜치만, `review_workflow.py` 한 줄은 티켓 03만 고친 것이라 줄마다 바뀐 쪽을 썼다. 티켓 03이 들인 일지 `2026-11-07-03-review-bot-path-filter.md`는 순번 꼴이지만 전환일 당일이라 `tests/test_journal_names.py`가 통과한다(시험은 전환일 "뒤"만 잡는다). main을 또 합치는 날이 11-07 뒤면 `TRANSITION_DAY`를 그날로 옮긴다.
 - 후속 후보: `--journal`이 경로를 찍으면 그 파일을 이어 쓴다는 한 줄을 `merge.md` 3·`handoff.md` 2·`code-review` 6단계·두 훅의 문구에 더하는 일. 컨텍스트 압축 뒤에 다른 분으로 일지를 둘째로 만드는 일을 막는다. 스킬 본문을 또 바꾸면 카나리아가 다섯 더 걸려 이 PR에서는 두었다.
+- 후속 후보(PR 직전 리뷰의 남김): `journal_order` 열쇠 끝에 파일 이름을 더해 같은 분의 순서를 정하는 한 줄, `branch_journals`가 `MERGE_HEAD` 상태에서 main이 들여온 일지를 빼는지 임시 저장소 시험으로 확인하는 일(안 되면 독스트링의 못 보는 것에 적는다), `morning_sources`의 `git log`·`git grep`에 `-c core.quotepath=false`를 붙이는 일. 셋 모두 `tools/sibling_overlap.py`·`tools/morning_sources.py`를 다시 고치므로 변이 표가 걸려 이 PR에서는 두었다.
 - 약한 표지 셋(`sibling_overlap` 22, `journal_names` 3, `journal_number_and_guards` 4)은 시험 쪽에 단언 메시지를 더하면 단단해진다. 시험을 고치는 PR이 생길 때 같이 한다.
 - 이 세션은 병합 커밋(main의 티켓 03을 합침) 뒤 `커밋 뒤` 인계 계기를 받아 새 세션에 넘겼다. 푸시와 PR 열기, `ccd_pr` 바인딩, 봇 회차, 병합이 남았다. 회고는 이 세션이 돌았고 `## 회고` 절이 있어 retro 계기는 다시 오지 않는다.
 - open-session을 부른다 2026-11-07T03:10:33Z
