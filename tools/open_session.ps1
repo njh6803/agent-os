@@ -175,7 +175,9 @@ function Resolve-PromptFile([string] $path, [string] $root) {
 
 # `-Folder` 는 신뢰 대화상자와 새 세션 화면의 폴더를 견주는 기준이다. 호출자가 아무 폴더나 주면 그 폴더의 신뢰 수락이 판정기
 # 없이 지난다(대기열 498). 그래서 이 스크립트가 있는 저장소의 뿌리(이 사본이 든 체크아웃과, 워크트리면 그 주 체크아웃)와 같을 때만
-# 받는다. 끝의 구분자, `/`·`\`, 대소문자는 가리지 않는다(윈도 경로). 순수하다. 뿌리는 `Get-RepoRoots` 가 찾는다.
+# 받는다. 끝의 구분자, `/`·`\`, 대소문자는 가리지 않는다(윈도 경로). 순수하다. 뿌리는 `Get-RepoRoots` 가 찾는다. 못 보는 것: 공통
+# git 폴더가 `.git` 이 아닌 배치(`--separate-git-dir`, bare 저장소의 워크트리)에서는 그 폴더의 부모를 뿌리로 본다(코드를 읽었다.
+# 재현하지 않았고, 이 PC 의 `C:\project\agent\.git` 배치에는 해당하지 않는다).
 function Test-RepoFolder([string] $folder, [string[]] $roots) {
     if (-not $folder) { throw '-Folder 가 비었다.' }
     $want = $folder.Replace('/', '\').TrimEnd('\')

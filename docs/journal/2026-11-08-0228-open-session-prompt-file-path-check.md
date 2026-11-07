@@ -19,7 +19,7 @@
 
 ## 확인한 것(손으로)
 
-- 새 시험 19개를 `uv run pytest -q tests/tools/test_open_session.py -k …`로 돌려 통과했다. 변이(`Resolve-PromptFile`의 폴더 아래 검사와 링크 검사를 꺼 둠)에서 네 시험이 빨개졌고 되돌렸다.
+- 새 시험(처음 판은 17건, 셀프 리뷰 뒤 18건이다. 이 줄에 처음 적힌 19는 셈이 틀렸다)을 `uv run pytest -q tests/tools/test_open_session.py -k …`로 돌려 통과했다. 변이(`Resolve-PromptFile`의 폴더 아래 검사와 링크 검사를 꺼 둠)에서 네 시험이 빨개졌고 되돌렸다.
 - 실제 환경에서 `Get-PromptRoot`가 `C:\Users\User\AppData\Local\Temp\claude`를 내고 스크래치패드의 파일을 받는 것을 PowerShell 도구로 손으로 봤다. `git rev-parse --path-format=absolute --git-common-dir`는 워크트리에서 `C:/project/agent/.git`을 냈다.
 - `uv run ruff check .`와 `uv run ruff format --check .`는 초록이다. 전체 `uv run python tools/run_checks.py`는 이 세션이 백그라운드로 띄웠으나 인계로 멈추므로 끝나지 않았다. 새 세션이 다시 돌린다.
 - `uv run python tools/sibling_overlap.py`는 번호·파일 겹침 없음이었다. 그 뒤 origin/main이 `cfc5ac0`으로 움직였고 바뀐 파일은 이 브랜치의 파일과 겹치지 않았다(승인 규칙 티켓 06, 대기열 0457~0466, 일지 하나, `tests/test_main.py`).
@@ -43,6 +43,16 @@
   - `Get-RepoRoots`는 시험이 없다(`$PSScriptRoot`에 기대 시험 서버에서 재현하기 어렵다). 실제 환경에서는 손으로 봤다(위 "확인한 것").
   - 스킬 `open-session` 3단계에 두 거부(파일 밖, 뿌리 아닌 폴더)의 안내가 없다. 이번 변경이 스킬을 건드리지 않아 두었다.
 - 사고: 명세 축 서브에이전트가 대체 데이터 스트림 탐침을 실제 스크립트로 돌려 사용자 앱에 제목 `S`인 새 세션(`local_e462dbe9-59fd-4fc1-a6e4-91808ea732d5`, 폴더 `C:\project\agent`)이 열렸다. 탐침 파일은 지웠다고 보고했다. 세션은 이 세션이 지우지 않고 사용자에게 알린다.
+
+## PR 직전 리뷰 (main 합치기 뒤, 기준 cfc5ac01)
+
+- CodeRabbit CLI는 `coderabbit auth status`가 `Seat: not assigned`(Plan: Free)였고 `coderabbit-review` 서브에이전트가 돌지 못한다고 보고했다. 규약 대로 대체 둘을 나란히 돌렸다: 내장 `/security-review`(식별 서브에이전트, 코드를 읽어 판정)와 `bug-perf-review`(함수를 `pwsh -NoProfile`로 직접 불러 재현).
+- `bug-perf-review` 보고(서브에이전트가 `pwsh`로 잰 결과): `.env` 읽기 금지를 돌아가는 입력은 하나도 통과하지 못했다. 통과한 것은 하드링크뿐이고 주석이 이미 적었다. 끝의 점·공백, 예약 장치 이름, `\\.\`·`\\?\`, 8.3 이름, 와일드카드는 거부되거나 폴더 안에 머물렀다. `Get-RepoRoots`는 git이 없거나 `GIT_DIR`이 틀리면 사본의 뿌리만 남겼다(fail-closed). 허용 규칙과 스킬 3단계의 호출 모양은 글자가 같았다.
+  - 고친 것: 일지 22행의 시험 수 19(낡은 숫자). 공통 git 폴더가 `.git`이 아닌 배치에서 그 부모를 뿌리로 보는 점을 `Test-RepoFolder` 주석의 "못 보는 것"에 적었다(코드를 읽은 것이고 재현하지 않았다).
+  - 남긴 것: `Wake-Display`와 잠금이 검사보다 앞이라 잘못된 입력도 화면을 깨우고 잠금을 기다린다(Minor. 읽기 전에 검사하는 수용 기준은 충족한다. 검사를 `switch` 앞으로 옮기면 고치지만 시험이 가리키는 `Send-Prompt` 안의 자리를 옮겨야 해 이번에는 두었다).
+- `/security-review` 식별 서브에이전트 보고(코드를 읽어 판정, 확신도 7/10, 스킬의 거르는 기준 8 미만): 허용 규칙이 스크립트를 상대 경로 `tools/open_session.ps1`로 적어, 모델이 PowerShell 도구의 작업 폴더를 스크래치패드로 옮기고(`Set-Location`, `hook_bash_cd_outside`는 Bash만 본다) 거기에 같은 상대 경로의 가짜 스크립트를 써서 규칙과 같은 글자로 부르면 이 PR의 두 검사가 통째로 빠진 채 확인 없이 돈다는 지적이다. 제안은 규칙과 스킬 3단계 호출을 절대 경로(`C:\project\agent\tools\open_session.ps1`)로 고정하는 것이다.
+  - 판정: 보류(사용자 판단). 유효한 구멍으로 보이나 고침이 이 PR이 허용 규칙으로 받은 승인(대기열 0498, 사용자 승인 2026-10-27)의 꼴과 스킬 호출 모양을 바꾸고, 어느 사본(워크트리 것/주 체크아웃 것)의 스크립트가 도는지가 바뀌어 `open-session` 4단계의 훅·스크립트 사본 논거와 얽힌다. 확신도도 기준 미만이다. 이 세션은 상대 경로 꼴 그대로 두고 판정과 값을 PR 체크리스트에 적고, 사용자에게 묻는다.
+  - 값: 규칙·스킬 3단계 호출·시험의 `_ALLOW_PREFIX` 세 곳과 티켓 문구를 고친다. 새 세션이 읽는 스킬이라 새 세션에서 불러 보는 검증이 따른다.
 
 ## 남은 일
 
