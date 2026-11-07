@@ -16,8 +16,17 @@ limited`(한도 초과, 리뷰 없음)나 `Review completed`로 끝난다. 롤�
 설명을 함께 읽는다. 시간과 빈도는 `.scratch/harness/probes/ci_wait/check_timing.py`와 그 README 행이
 원천이다.
 
+CodeRabbit은 2026-10-26 무렵부터 결과를 상태가 아니라 체크 런으로 내기도 한다. combined status는
+비고, 설명 자리에는 체크 런의 `output.title`이 온다. 건너뜀은 `skipped`와 `Review skipped: …`,
+한도는 `neutral`과 `Review rate limited`, 리뷰를 마치면 `success`와 `Finished`다(PR #489·#401·#405
+의 헤드에서 `gh api …/commits/<헤드>/check-runs`로 손으로 봤다, 대기열 499). 롤업의 CheckRun에는
+`output`이 없어 `fetch_pr`가 그 목록(`check_runs`)도 읽고, 제목이 비지 않은 체크 런은 제목을
+설명으로, `status`와 `conclusion`을 상태로 읽는다. 롤업의 건너뜀과 목록의 진행 중이 함께 오면
+통과로 읽히기 때문이다.
+
 판정. `gh pr view <N> --json headRefOid,mergeable,statusCheckRollup`과 그 헤드의 combined
-status(`gh api repos/{owner}/{repo}/commits/<헤드>/status`, 맥락마다 마지막 상태와 설명)를
+status(`gh api repos/{owner}/{repo}/commits/<헤드>/status`, 맥락마다 마지막 상태와 설명), 그
+헤드의 체크 런 목록(`gh api repos/{owner}/{repo}/commits/<헤드>/check-runs?per_page=100`)을
 `interval`초마다 읽는다. gh와 git 호출 하나는 `CALL_TIMEOUT`초에서 끊고 실패로 센다. 멈춘 호출은
 돌아오지 않아 대기의 시간 제한에도 걸리지 않는다(PR 직전 버그 리뷰). StatusContext의 상태는
 설명과 같은 combined status에서 읽는다. 따로 읽은 롤업은 시각이 달라, 롤업의 건너뜀 SUCCESS와
@@ -63,6 +72,12 @@ combined의 `Review in progress`가 함께 오면 통과로 읽힌다.
 - 이름이 바뀐 기대 검사. 끝내 나타나지 않아 시간 초과로 끝나고, 출력에 빠진 이름을 적는다.
 - 요청이 늦게 닿은 리뷰. 나머지 검사가 끝나고 요청 유예가 지날 때까지 건너뜀 상태면 요청이 없다고
   끝난다.
+- 리뷰가 진행 중일 때의 체크 런 제목. 보지 못했다. 진행 중은 제목이 아니라 `status`가
+  `completed`가 아닌 것으로 판정한다.
+- 파일 수 한도(`Review skipped: … files exceed the limit …`)의 체크 런 모양. 보지 못했다. 제목이
+  `Review skipped`로 시작하면 요청 전의 건너뜀과 같이 읽혀, 이 도구는 다시 요청하라고 끝낸다
+  (대기열 374는 만료됐고 이 변경이 고치지 않았다).
+- 체크 런 목록의 쪽. 한 번에 100개까지만 읽는다. 그 헤드의 검사는 열 개 안팎이다.
 - 충돌은 한 번의 조회로 판정한다. 충돌을 풀고 푸시한 직후의 조회가 옛 헤드 기준의 `CONFLICTING`을
   읽는지는 재지 않았다. 틀리면 대기를 한 번 더 띄운다.
 - 리뷰 코멘트의 내용. 끝났다는 것만 알리고, 코멘트는 깨어난 세션이 읽는다
@@ -133,8 +148,9 @@ class Snapshot:
     """한 번 읽은 PR.
 
     checks 는 이름에서 결과로 가고, 끝나지 않은 검사는 None 이다. notes 는 StatusContext 의
-    이름에서 마지막 상태의 설명으로 간다. failed_jobs 는 CheckRun 의 이름에서, 끝나서 빨간 그
-    이름의 실행마다 `detailsUrl` 의 잡 번호(주소가 없으면 None)로 간다.
+    이름에서 마지막 상태의 설명으로, 제목이 있는 CheckRun 은 이름에서 `output.title` 로 간다.
+    failed_jobs 는 CheckRun 의 이름에서, 끝나서 빨간 그 이름의 실행마다 `detailsUrl` 의 잡
+    번호(주소가 없으면 None)로 간다.
     """
 
     head: str
@@ -185,7 +201,7 @@ def _worse(left: str | None, right: str | None) -> str | None:
 
 
 def parse_snapshot(payload: Json) -> Snapshot:
-    """`fetch_pr` 의 출력(PR 의 세 칸과 combined status 의 `statuses`)을 읽는다."""
+    """`fetch_pr` 의 출력(PR 의 세 칸, 그 헤드의 `statuses` 와 `check_runs`)을 읽는다."""
     if not isinstance(payload, dict):
         raise FetchError(f"PR 응답이 객체가 아니다: {payload!r}")
     rollup = payload.get("statusCheckRollup")
@@ -199,10 +215,26 @@ def parse_snapshot(payload: Json) -> Snapshot:
         if result is not None and result not in PASSING:
             job = JOB_URL.search(_text(check.get("detailsUrl")))
             failed_jobs[name] = (*failed_jobs.get(name, ()), job.group(1) if job else None)
+    notes: dict[str, str] = {}
+    # CodeRabbit 은 결과를 체크 런의 `output.title` 로 내기도 한다. 롤업의 CheckRun 에는 제목이
+    # 없어 헤드의 check-runs 에서 읽는다. 상태도 그 목록에서 읽는다. 롤업은 따로 읽어 시각이
+    # 달라, 롤업의 건너뜀 SKIPPED 와 목록의 진행 중이 함께 오면 통과로 읽힌다. 제목이 없는 체크
+    # 런(GitHub Actions 의 것)은 롤업의 것을 그대로 둔다.
+    listed = payload.get("check_runs")
+    for run in listed if isinstance(listed, list) else []:
+        if not isinstance(run, dict):
+            continue
+        output = run.get("output")
+        title = _text(output.get("title")).strip() if isinstance(output, dict) else ""
+        if not title:
+            continue
+        name = _text(run.get("name"))
+        notes[name] = title
+        completed = _text(run.get("status")) == "completed"
+        checks[name] = (_text(run.get("conclusion")).upper() or "UNKNOWN") if completed else None
     # StatusContext 의 상태는 설명과 같은 combined status 에서 읽는다. 롤업은 따로 읽어 시각이
     # 달라, 롤업의 건너뜀 SUCCESS 와 combined 의 Review in progress 가 함께 오면 통과로 읽힌다.
     statuses = payload.get("statuses")
-    notes: dict[str, str] = {}
     for status in statuses if isinstance(statuses, list) else []:
         if not isinstance(status, dict):
             continue
@@ -470,14 +502,22 @@ def _gh(*args: str) -> Json:
 
 
 def fetch_pr(number: str) -> Json:
-    """PR 의 세 칸에 그 헤드의 combined status 의 `statuses` 를 붙여 한 번의 조회로 낸다."""
+    """PR 의 세 칸에 그 헤드의 combined status 의 `statuses` 와 `check_runs` 를 붙여 낸다."""
     pr = _gh("pr", "view", number, "--json", "headRefOid,mergeable,statusCheckRollup")
     if not isinstance(pr, dict):
         raise FetchError(f"PR 응답이 객체가 아니다: {pr!r}")
     head = _text(pr.get("headRefOid"))
-    combined = _gh("api", f"repos/{{owner}}/{{repo}}/commits/{head}/status")
+    commit = f"repos/{{owner}}/{{repo}}/commits/{head}"
+    combined = _gh("api", f"{commit}/status")
     statuses = combined.get("statuses") if isinstance(combined, dict) else None
-    return {**pr, "statuses": statuses if isinstance(statuses, list) else []}
+    # 한 쪽에 100개를 넘는 검사는 없다고 본다. 롤업의 검사 이름이 열 안팎이다.
+    runs = _gh("api", f"{commit}/check-runs?per_page=100")
+    check_runs = runs.get("check_runs") if isinstance(runs, dict) else None
+    return {
+        **pr,
+        "statuses": statuses if isinstance(statuses, list) else [],
+        "check_runs": check_runs if isinstance(check_runs, list) else [],
+    }
 
 
 def job_limit(job: str) -> str | None:
