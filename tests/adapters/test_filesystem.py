@@ -1500,6 +1500,35 @@ def test_규칙_파일이_받아들이는_모양은_거부하지_않고_그대�
     assert _plugins(root).read_rules() == expected
 
 
+def test_읽은_규칙은_자기_배열에서_몇째_줄인지를_든다(root: Path) -> None:
+    """에이전트 표의 검사가 어긋난 줄을 `agents.calc.deny.2` 로 가리키려면 줄의 자리가 값에 남아야
+    한다. 자리는 같음의 판정에 들지 않는다(앞 시험들이 `==` 로 읽은 규칙을 견준다)."""
+    _rules_file(
+        root,
+        'schema_version = "1"\n'
+        "[agents.calc]\n"
+        'deny = ["rm", "everything:send_mail", "snd_*"]\n'
+        'allow = ["everything:*"]\n',
+    )
+
+    calc = _plugins(root).read_rules().agents[PluginName("calc")]
+
+    assert {rule.position: rule.tool for rule in calc.deny} == {
+        0: "rm",
+        1: "send_mail",
+        2: "snd_*",
+    }
+    assert [rule.position for rule in calc.allow] == [0]
+
+
+def test_한_배열_안의_같은_줄_둘은_하나로_합쳐지고_자리는_앞선_줄의_것이다(root: Path) -> None:
+    _rules_file(root, 'schema_version = "1"\n[common]\ndeny = ["rm", "ls", "rm"]\n')
+
+    deny = _plugins(root).read_rules().common.deny
+
+    assert {rule.position: rule.tool for rule in deny} == {0: "rm", 1: "ls"}
+
+
 # 깨진 파일. (본문, 문구에 들어야 할 칸의 자리, 오류 종류)
 BROKEN_RULES = (
     pytest.param('[common]\ndeny = ["rm"]\n', "schema_version", "missing", id="형식 버전이 없다"),

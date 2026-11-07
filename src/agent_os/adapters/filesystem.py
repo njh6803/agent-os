@@ -119,12 +119,13 @@ type _AnyRuleLine = Annotated[str, Field(pattern=_ANY_RULE)]
 type _ScopedRuleLine = Annotated[str, Field(pattern=_SCOPED_RULE)]
 
 
-def _rule_of(line: str) -> Rule:
-    """패턴을 지난 규칙 줄 하나를 값으로(질의). 맨 이름은 서버 없음, `서버:*` 는 도구 없음이다."""
+def _rule_of(line: str, position: int) -> Rule:
+    """패턴을 지난 규칙 줄 하나를 값으로(질의). 맨 이름은 서버 없음, `서버:*` 는 도구 없음이다.
+    `position` 은 그 줄이 배열에서 몇째인지이고 값에 남는다."""
     server, colon, tool = line.partition(":")
     if not colon:
-        return Rule(server=None, tool=line)
-    return Rule(server=PluginName(server), tool=None if tool == "*" else tool)
+        return Rule(server=None, tool=line, position=position)
+    return Rule(server=PluginName(server), tool=None if tool == "*" else tool, position=position)
 
 
 # 표 하나의 모양. 세 배열은 모두 선택이고 기본은 빈 배열이다. `allow` 는 서버를 붙인 두 꼴만 받는다
@@ -138,11 +139,11 @@ class _RuleTable(BaseModel):
     allow: tuple[_ScopedRuleLine, ...] = ()
 
     def rule_set(self) -> RuleSet:
-        """줄을 값으로 바꾼 표. 한 열 안의 중복은 집합이 합친다."""
+        """줄을 값으로 바꾼 표. 한 열 안의 중복은 집합이 합치고 앞선 줄의 자리가 남는다."""
         return RuleSet(
-            deny=frozenset(_rule_of(line) for line in self.deny),
-            ask=frozenset(_rule_of(line) for line in self.ask),
-            allow=frozenset(_rule_of(line) for line in self.allow),
+            deny=frozenset(_rule_of(line, index) for index, line in enumerate(self.deny)),
+            ask=frozenset(_rule_of(line, index) for index, line in enumerate(self.ask)),
+            allow=frozenset(_rule_of(line, index) for index, line in enumerate(self.allow)),
         )
 
 

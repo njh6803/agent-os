@@ -4,10 +4,12 @@
 "핵심의 규칙 값과 포트 메서드", ADR 0044 "집행의 차례").
 """
 
+from collections.abc import Collection, Sequence
+
 import pytest
 
-from agent_os.core.ports import Rule, Rules, RuleSet
-from agent_os.core.rules import applied_rule
+from agent_os.core.ports import Rule, Rules, RuleSet, ToolSpec
+from agent_os.core.rules import applied_rule, unresolved_rule_lines
 from agent_os.sdk import AppliedRule, PluginName
 
 EVERYTHING = PluginName("everything")
@@ -102,7 +104,9 @@ MATCHES = (
 def test_규칙은_세_꼴과_별표_패턴대로_도구에_맞거나_안_맞는다(
     rule: Rule, server: PluginName, tool: str, *, expected: bool
 ) -> None:
-    assert rule.matches(server=server, tool=tool) is expected
+    assert rule.matches(server=server, tool=tool) is expected, (
+        f"규칙 {rule}, 서버 {server}, 도구 {tool!r}"
+    )
 
 
 def test_이름이_별표인_도구에도_서버_전체_규칙과_맨_별표는_맞는다() -> None:
@@ -239,6 +243,115 @@ def test_공통_표의_ask를_에이전트_표의_allow가_풀지_못한다() ->
     )
 
     assert _applied(rules) == "ask"
+
+
+# 에이전트 표의 줄이 그 에이전트의 연결에 실재하는가(approval-rules 05, 명세 "에이전트 표의 검사").
+
+
+def _at(rule: Rule, position: int | None) -> Rule:
+    return Rule(server=rule.server, tool=rule.tool, position=position)
+
+
+def _spec(server: PluginName, tool: str) -> ToolSpec:
+    return ToolSpec(name=tool, server=server, description=tool, input_schema={})
+
+
+def _unresolved(
+    table: RuleSet,
+    *,
+    servers: Collection[PluginName] = (EVERYTHING,),
+    specs: Sequence[ToolSpec] = (),
+) -> tuple[str, ...]:
+    return unresolved_rule_lines(
+        Rules(agents={CALC: table}), agent=CALC, servers=servers, specs=specs
+    )
+
+
+def test_맨_도구_이름은_연결의_도구_가운데_그_이름이_하나는_있어야_한다() -> None:
+    table = _set(deny=(_at(_bare("add"), 0), _at(_bare("snd"), 1)))
+    specs = (_spec(EVERYTHING, "add"), _spec(OTHER_SERVER, "send"))
+
+    assert _unresolved(table, specs=specs) == ("agents.calc.deny.1",)
+
+
+def test_맨_도구_이름은_어느_서버의_도구든_맞으면_된다() -> None:
+    table = _set(ask=(_at(_bare("send"), 0),))
+
+    assert _unresolved(table, specs=(_spec(OTHER_SERVER, "send"),)) == ()
+
+
+def test_서버_전체_줄은_그_서버가_에이전트의_mcp에_있어야_한다() -> None:
+    table = _set(ask=(_at(_whole(EVERYTHING), 0), _at(_whole(OTHER_SERVER), 1)))
+
+    assert _unresolved(table, servers=(EVERYTHING,)) == ("agents.calc.ask.1",)
+
+
+def test_서버에_묶인_도구는_그_서버가_낸_그_이름의_도구가_있어야_한다() -> None:
+    table = _set(
+        allow=(
+            _at(_one(EVERYTHING, "add"), 0),
+            _at(_one(EVERYTHING, "snd"), 1),
+            _at(_one(OTHER_SERVER, "add"), 2),
+        )
+    )
+    specs = (_spec(EVERYTHING, "add"),)
+
+    assert _unresolved(table, servers=(EVERYTHING, OTHER_SERVER), specs=specs) == (
+        "agents.calc.allow.1",
+        "agents.calc.allow.2",
+    )
+
+
+def test_도구_이름에_별표가_든_줄은_도구가_없어도_어긋나지_않는다() -> None:
+    """패턴은 맞는 도구가 지금 없어도 뜻이 있다. 패턴 줄의 오타는 이 검사로 드러나지 않는 받아들인
+    잔여다."""
+    table = _set(
+        deny=(_at(_bare("*"), 0), _at(_bare("send_*"), 1), _at(_bare("snd_*"), 2)),
+        ask=(_at(_one(EVERYTHING, "get_*"), 0),),
+    )
+
+    assert _unresolved(table) == ()
+
+
+def test_서버에_묶인_패턴은_그_서버가_mcp에_없으면_어긋난다() -> None:
+    table = _set(ask=(_at(_one(OTHER_SERVER, "get_*"), 0),))
+
+    assert _unresolved(table, servers=(EVERYTHING,)) == ("agents.calc.ask.0",)
+
+
+def test_어긋난_줄은_deny_ask_allow의_차례로_줄_번호_순으로_모두_든다() -> None:
+    table = _set(
+        deny=(_at(_bare("zzz"), 2), _at(_bare("yyy"), 0)),
+        ask=(_at(_bare("xxx"), 1),),
+        allow=(_at(_one(EVERYTHING, "www"), 0),),
+    )
+
+    assert _unresolved(table) == (
+        "agents.calc.deny.0",
+        "agents.calc.deny.2",
+        "agents.calc.ask.1",
+        "agents.calc.allow.0",
+    )
+
+
+def test_공통_표의_줄과_다른_에이전트의_표는_보지_않는다() -> None:
+    """공통 표는 여러 에이전트에 걸쳐 한 실행에서 다 대 볼 수 없어 모양만 본다."""
+    typo = _set(deny=(_at(_bare("snd"), 0),))
+    rules = Rules(common=typo, agents={OTHER_AGENT: typo})
+
+    assert unresolved_rule_lines(rules, agent=CALC, servers=(EVERYTHING,), specs=()) == ()
+
+
+def test_그_에이전트의_표가_없으면_어긋난_줄도_없다() -> None:
+    assert unresolved_rule_lines(Rules(), agent=CALC, servers=(), specs=()) == ()
+
+
+def test_줄_번호를_모르는_규칙은_번호_없이_자리를_든다() -> None:
+    """어댑터가 아닌 곳에서 만든 값은 번호가 없을 수 있다. 번호만 빠지고 어느 표의 어느 목록인지는
+    든다."""
+    table = _set(deny=(_bare("snd"),))
+
+    assert _unresolved(table) == ("agents.calc.deny",)
 
 
 def test_규칙_값은_받은_표를_복사해_들어서_나중에_바뀐_원본을_보지_않는다() -> None:
