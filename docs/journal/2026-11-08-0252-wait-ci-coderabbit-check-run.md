@@ -56,3 +56,19 @@ CLI는 `coderabbit auth status`가 `Seat: not assigned`라 돌리지 않았고(�
 컨텍스트가 인계 문턱을 넘은 채 `셀프 리뷰 직전` 경계에 와서 인계한다(`handoff.md`). 제목을 `chore/wait-ci-coderabbit-check-run (인계함)`으로 바꿨고 워크트리 잠금을 풀었다. 도는 백그라운드 작업은 없었다.
 
 open-session을 부른다 2026-11-07T17:53Z
+
+## 두 번째 세션 (`커밋 뒤`에서 인계)
+
+사용자 프롬프트는 같다: `> 사용자: 대기열 499를 티켓 .scratch/harness/issues/wait-ci-coderabbit-check-run.md로 쓰고 한다`. 이번 세션 제목은 `chore/wait-ci-coderabbit-check-run`, 모델 Sonnet 5.5 / high.
+
+- **한 것.** 셀프 리뷰(`/code-review`, 기준 `778db404`)를 돌려 반영했고(위 절), `origin/main`(`cfc5ac01`)을 직접 `git merge origin/main`으로 합쳤고(충돌 없음, 앱의 `sync_with_base_branch`는 "앱이 만든 워크트리가 아니다"로 거절했다), PR 직전 리뷰(위 절)를 돌려 반영했다. 커밋은 셋이다: `7ba03c83`(본체), `933500e2`(병합), `c4ff0b0e`(PR 직전 리뷰 반영).
+- **검증.** 첫 커밋(`7ba03c83`)의 pre-commit은 pytest 6585개 포함 모두 통과였다. 둘째 커밋을 처음 시도했을 때 `tests/channel/cli/test_interrupt.py::test_도구_호출_도중에_한_번_누르면_서버를_닫고_중단으로_끝난다`가 "Ctrl+C 를 누른 자식이 30초 안에 끝나지 않았다"로 실패했다(pre-commit 출력에서 읽었다). 이 변경이 닿지 않는 파일이고, 그 파일만 홀로 돌리면 6개가 34초에 통과였다(손으로 돌렸다). 원인(다른 세션이 함께 돌아 느려졌는지)은 재지 않았다. 같은 커밋을 다시 시도해 통과했다. 이 시험이 두 번 실패한 것이 아니라 한 번이다.
+- **푸시하지 않은 것.** 아직 푸시하지 않았다. `git push`가 `hook_push_behind_main`에 막혀 `origin/main`을 합친 뒤에 하려던 참이었고, 합친 뒤 `c4ff0b0e`가 더해졌다. PR도 열지 않았다.
+- **남은 일.** `origin/main`이 또 움직였는지 `git fetch`로 본 뒤 푸시, PR 열기(제목 꼬리 `(harness wait-ci-coderabbit-check-run)`, 본문은 `#489`처럼 변경사항·왜·남긴 위험·체크리스트, 체크리스트의 PR 직전 리뷰 줄에는 위 "PR 직전 리뷰" 절을 옮긴다), `@coderabbitai review` 코멘트, `merge.md` 2의 봇 회차와 병합까지다.
+- **PR 본문에 옮길 남긴 위험.** 같은 이름 체크 런이 둘일 때 뒤의 것이 이기는 것, statuses가 체크 런을 덮는 것, 롤업 FAILURE와 목록 success의 시각 차(위 "셀프 리뷰"의 남긴 것). 파일 수 한도(대기열 374)의 체크 런 모양과 진행 중 제목은 보지 못했다(독스트링의 못 보는 것).
+- **셀프 리뷰·PR 직전 리뷰로 새로 쓴 사실 문장(다음 리뷰층에 밀 주장).** `wait_ci.py` 독스트링의 "2026-10-26 무렵부터"(`gh pr view 390`의 `createdAt`이 `2026-10-26T11:18:33Z`, 396이 `2026-10-26T17:37:48Z`, 손으로 봤다), "제목이 없어도 `status`가 `completed`가 아니면 진행 중으로 읽는다", probes README 행의 "마흔아홉"과 "45~49를 번호로 돌려 모두 기대대로".
+
+open-session을 부른다 2026-11-07T19:33Z
+인계 못함 커밋 뒤: `tools/open_session.ps1`을 부르는 PowerShell 호출을 자동 모드 분류기가 "dangerous"로 거부했다(까닭 설명 없음). 제목을 되돌렸고 이 세션이 푸시, PR, 병합을 잇는다.
+
+이어 한 것: `origin/main`(`dd1c0190`, PR #491)을 `git merge origin/main`으로 한 번 더 합쳤다(겹치는 파일 없음, 커밋 `3c0ec54e`). 푸시하고 PR [#493](https://github.com/njh6803/agent-os/pull/493)을 열었다. 앱이 PR을 이미 이 세션에 묶었다(`get_status`가 `bound: true`). 일지의 미커밋 줄은 이 커밋에 싣는다.
