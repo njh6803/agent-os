@@ -107,6 +107,21 @@
 
 그 에이전트(결론을 알려 주지 않고 파일 경로만 준 Sonnet 서브에이전트, 읽기만 했다)의 보고: 3단계 호출을 절대 경로 그대로 말했고, 도는 사본이 주 체크아웃이며, 당기기 전에는 열면 안 된다고 읽었고, 4단계의 사본 설명이 "보통 같은 판"으로 읽혔다. 짚은 빈 자리 넷 가운데 둘을 SKILL.md에 한 문장씩 메웠다(5단계 `split`·`focus`가 허용 규칙에 없어 상대 경로로 남은 까닭, 당기기는 주 체크아웃 세션이 하고 워크트리 세션은 사람에게 `/tidy-checkouts`를 부탁한다는 것). 둘은 두었다. 막히면 절의 프로브 명령이 상대 경로인 것은 허용 규칙 밖이라 이번 변경과 무관하다. 당기지 않고 돌렸을 때 출력의 어떤 표지로 옛 판을 알아챌지는 지금 표지가 없다. 이 둘은 이번 범위 밖이고, 뒤로 넘긴 일 4로 둔다.
 
+### 카나리아 여섯을 새 세션에서 다시 돌렸다 (2026-11-08)
+
+SKILL.md 본문이 바뀌어 `open_session_*` 카나리아 명세 여섯의 `source`가 움직였고, `tools/sibling_overlap.py`가 그 의무를 알렸다. 실험군 `9f942870`(이 브랜치), `claude 2.1.318`(`claude --version`), 이 PC에서 `uv run python tools/canary.py --control-commit <대조군> <명세> <출력 디렉터리>`로 명세마다 한 번씩 돌렸다.
+
+| 명세 | 대조군 | 결과 |
+|---|---|---|
+| `open_session_effort_errors` | `df705c17` | 통과 4, 실패 0 |
+| `open_session_folder_check` | `bea74a07` | 통과 4, 실패 0 |
+| `open_session_lock` | `71433a0d` | 통과 4, 실패 0 |
+| `open_session_model_pick` | `80445cff^`(`f0b3379a`) | 통과 4, 실패 0, "없음" 섞임 2 |
+| `open_session_model_source` | `f01ce1e9` | 통과 4, 실패 0 |
+| `open_session_parallel_cap` | `06a8f85b` | 통과 4, 실패 0 |
+
+`model_pick`의 "없음" 섞임 2는 거짓 표지다. 찍힌 답을 읽어 보니 두 답 모두 카나리아 둘(`restored=<모델> / <레벨>`, `같거나 싼 모델`)을 그대로 옮겼고, 본문 문구 `restored=바뀐 것 없음`을 인용하다 "없음"이 센 것이었다. 여섯 명세의 `# 최신 결과:` 줄에 이 실행을 쓰고 옛 결과는 `# 그 전:`으로 남겼다.
+
 ## 이 세션의 제목
 
 `chore/open-session-prompt-file-path-check` (인계하며 `chore/open-session-prompt-file-path-check (인계함)`으로 바꿨다)
