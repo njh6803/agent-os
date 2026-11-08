@@ -93,3 +93,24 @@ open-session을 부른다 2026-11-07T18:52Z
 인계 계기 `PR 연 뒤`(세션 컨텍스트 223,827 토큰). 세션 제목을 `chore/measure-word-journal-scope (인계함)`으로 바꾼다. 이 세션이 띄운 백그라운드 작업은 모두 끝나 멈출 것이 없다(`tools/wait_ci.py` 대기는 띄우지 않았다). 이 세션은 딥링크로 열린 세션이라 곁 세션이 아니고(`get_session`으로는 보지 않았다, 어림), 받은 인계 경계가 `커밋 뒤`로 이번 `PR 연 뒤`와 다르며, 요청 범위가 `PR과 병합까지`라 인계하지 않는 때에 들지 않는다. 인계 줄: PR 열린 상태, `merge.md` 2(봇 회차)부터. 첫 `@coderabbitai review` 코멘트는 새 세션이 남긴다.
 
 open-session을 부른다 2026-11-08T03:12Z
+
+## 네 번째 세션: 봇 회차
+
+일지 인계 절을 커밋해(`0545bec0`) 푸시했고 `@coderabbitai review`를 남겼다. 커밋은 `git commit` 종료 코드 0이었고 pre-commit 출력의 끝 줄들이 `Passed`/`Skipped`로 찍힌 것을 손으로 봤다. 커밋 전에 PowerShell `Get-CimInstance Win32_Process`로 `pytest|run_checks` 프로세스를 찾아 없음을 손으로 봤다. `tools/wait_ci.py 498`은 `끝: 모두 통과. CodeRabbit: Finished`를 찍었고 목록의 아홉 줄이 모두 SUCCESS였다(출력을 손으로 읽었다).
+
+- CodeRabbit: 지적 0건(`No actionable comments`).
+- claude-review 첫 회차(앞 푸시): Minor 1, Nit 2. Minor는 PR 본문이 "인용을 지운다"고 쓴 것이 코드에 없다는 지적이라 사실이었다. `gh pr edit`으로 본문을 "무시하라는 문구를 더했다. 코드가 걸러 내지는 않는다"로 고쳤다(코드는 그대로). Nit 둘(독스트링 25줄, 시험이 `hook_journal_evidence`를 import하는 결합)은 보류한다. 앞의 것은 대기열 558이 겹침을 적으라고 요구했고, 뒤의 것은 겹침 계약을 한 시험에서 고정하려는 의도다.
+- claude-review 둘째 회차(이번 푸시): Minor 2, Nit 1. 둘째 회차라 Critical·Major만 고친다. 보류 이유는 PR 코멘트에 지적마다 남겼다. `is_evidence_doc`의 두 `if`를 합치면 변이 표의 원문이 사라져 막힌다는 근거는 이 일지 "번복하거나 고친 것"이 적은 앞 세션의 일이다(`tools/mutate.py --check`가 그때 0번이라고 알렸다). 이 세션은 합쳐 보지 않았고, pre-commit의 `mutation tables` 검사가 이름대로 원문이 정확히 한 번 있는지 본다는 것은 훅 출력의 설명 줄에서 읽었다.
+
+## 회고
+
+후보 셋, 승인 1, 기각 2, 넘김 0.
+
+- 승인: PR 본문이 코드에 없는 동작을 적었다(claude-review 첫 회차 Minor). 사건 1회라 더하는 것의 문턱(다섯 번째) 전이고, 자동 검사로는 본문과 diff의 일치를 가릴 수 없어 대기열 항목 `pr-body-claims-behavior-code-lacks`(1회차)로 둔다. 같은 일을 다룬 항목을 `uv run python tools/queue_open_rows.py --search PR.본문`으로 찾았으나 맞은 셋 가운데 0200(범위를 넓힌 뒤 본문을 늦게 고침), 0376(옛 일지 경로가 남음)은 출력의 머리 줄을 읽어 다른 사건으로 가렸고(파일은 열지 않았다), 0218은 본문과 무관하다. 그래서 새 항목이다.
+- 기각: 부하에서 시간 시험이 일지 커밋의 pre-commit을 막았다. 대기열 306이 이 종류를 받아들여 닫았고(ADR 0036) 새 사례는 일지에만 적는다. 세 번째 세션 절이 그 사례이고 사용자 승인으로 `SKIP=pytest`를 한 번 썼다.
+- 기각: 훅 독스트링이 길다는 지적(첫 회차 Nit, 둘째 회차 Minor). 실수가 아니라 취향이고 리뷰가 제 몫을 했다. 뒤로 넘기는 일은 아래 "다음"에 적는다.
+
+## 다음
+
+- 이 PR(#498)이 병합되면 남은 주제는 없다. `next-session` 결정표의 "harness 티켓의 PR이었고 그 PR이 든 주제가 남지 않았다" 줄에 든다.
+- 뒤로 넘긴 일(선택): `tools/hook_measure_word.py` 독스트링의 `hook_journal_evidence`와의 겹침 설명을 각 훅이 서로를 가리키는 한 줄로 줄이는 정리. claude-review 둘째 회차 Minor가 후속으로 미뤄도 된다고 했다. 새 근거 문서를 더할 때 이 독스트링이 같은 모양으로 늘면 그때 한다.
