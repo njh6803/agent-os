@@ -79,3 +79,7 @@ open-session을 부른다 2026-11-07T18:52Z
 ## 병합에서 고친 것
 
 `origin/main`을 합치자 main의 일지 `2026-11-08-0222-mutate-marker-call-fragment.md`와 이 일지의 `<날짜>-<HHMM>` 앞부분이 겹쳐 `tests/test_journal_names.py`가 빨개졌다(pre-commit의 pytest 출력에서 봤다). 이 일지를 `2026-11-08-1148-measure-word-journal-scope.md`로 `git mv`하고 제목 줄도 고쳤다. 이 브랜치가 더한 줄 가운데 옛 이름을 가리킨 것은 이 일지 자신뿐이었고(`git diff origin/main`을 `2026-11-08-0222`로 grep해 봤다), 다른 파일은 슬러그로만 가리켜 고칠 곳이 없었다. 일지 이름 시험은 아래 병합 커밋의 pre-commit pytest가 다시 돈다.
+
+## PR 직전 리뷰
+
+`coderabbit-review` 서브에이전트가 `coderabbit review --agent --include-untracked`(CLI 0.7.5)를 돌렸고 종료 코드 0, 출력 `{"type":"complete","status":"review_completed","findings":0}`을 냈다(서브에이전트의 보고에 적힌 출력이고, 이 세션이 다시 돌리지는 않았다). `coderabbit auth status`는 `Seat: not assigned`, `Plan: Free`였지만 리뷰가 실제로 돌아 CLI 축이 채워졌다. 리뷰한 파일은 아홉(`tools/hook_measure_word.py`, `tests/tools/test_hook_measure_word.py`, `tools/hook_payloads.toml`, 변이 표, 프로브 README, 티켓, 대기열 항목 `0558.md`, `docs/agents/issue-tracker.md`, 이 일지)이다. 지적이 없어 유효·보류·오탐 모두 0건이고 고친 것도 없다. 서브에이전트는 Read로 코드를 훑는 보강 리뷰를 하지 않았다(그 정의의 몫이 아니라고 보고했다). 내장 `/security-review`와 `bug-perf-review`는 CLI가 돌았으므로 돌리지 않았다(`.github/PULL_REQUEST_TEMPLATE.md` 체크리스트가 CLI가 돌지 못할 때의 대체로 정한다).
