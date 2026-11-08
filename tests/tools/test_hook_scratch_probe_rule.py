@@ -16,14 +16,18 @@ from pathlib import Path
 import pytest
 from tools.hook_scratch_probe_rule import (
     LEAD,
+    ROUNDS_LEAD,
     TOOLS,
     HookPayload,
     claim_first,
     context_for,
+    is_repo_probe,
     is_scratch_script,
     main,
     marker_name,
+    rounds_context_for,
 )
+from tools.probe_kit import Rounds, Slot
 from tools.run_hooks import registered_matchers
 
 SCRATCH = (
@@ -192,3 +196,189 @@ def test_main_은_임시_폴더가_없으면_호출마다_알린다(
 
 def test_등록의_매처가_훅이_아는_도구와_같다() -> None:
     assert registered_matchers("hook_scratch_probe_rule.py", "PostToolUse") == ["|".join(TOOLS)]
+
+
+def test_표지_이름은_이유마다_갈린다() -> None:
+    assert marker_name("s1", "") == marker_name("s1", "", "")
+    assert marker_name("s1", "", "rounds") != marker_name("s1", "")
+    assert marker_name("s1", "agent-a", "rounds") != marker_name("s1", "", "rounds")
+
+
+# --- 저장소 프로브의 Rounds (대기열 430) ---
+
+
+def _probe_path(tmp_path: Path, name: str = "measure.py", folder: str = "harness") -> Path:
+    return tmp_path / ".scratch" / folder / "probes" / name
+
+
+def _repo_write(path: Path, content: str) -> HookPayload:
+    return {"tool_name": "Write", "tool_input": {"file_path": str(path), "content": content}}
+
+
+WITH_ROUNDS = "from tools.probe_kit import Rounds\nrounds = Rounds()\n"
+
+
+def test_Rounds_가_없는_저장소_프로브를_쓰면_알린다(tmp_path: Path) -> None:
+    context = rounds_context_for(_repo_write(_probe_path(tmp_path), "print(1)\n"))
+    assert context is not None
+    assert context.startswith(ROUNDS_LEAD)
+    assert ".claude/rules/probes.md" in context
+    assert "tools/probe_kit.py" in context
+    assert "Rounds" in context
+
+
+def test_알림이_가리키는_이름이_probe_kit_에_있다() -> None:
+    context = rounds_context_for(_repo_write(Path(".scratch/x/probes/m.py"), "print(1)\n"))
+    assert context is not None
+    for name in ("round", "mark", "exit_code"):
+        assert f"`{name}`" in context, name
+    assert hasattr(Rounds, "round")
+    assert hasattr(Rounds, "exit_code")
+    assert hasattr(Slot, "mark")
+
+
+def test_알림이_가리키는_첫_항목_문장이_규칙_파일에_있다() -> None:
+    rule = Path(__file__).resolve().parents[2] / ".claude" / "rules" / "probes.md"
+    items = [
+        line for line in rule.read_text(encoding="utf-8").splitlines() if line.startswith("- ")
+    ]
+    assert items, "규칙 파일에서 첫 항목을 찾지 못했다"
+    first = items[0]
+    for sentence in (
+        "재려는 상황이 그 회차에 실제로 났다는 표지",
+        "표지가 없는 회차",
+        "종료 코드를 0으로 두지 않는다",
+        "`Rounds`",
+        "`round`",
+        "`mark`",
+        "`exit_code`",
+    ):
+        assert sentence in first, sentence
+
+
+def test_못_보는_것_측정이_아닌_저장소_프로브에도_알린다(tmp_path: Path) -> None:
+    # 변이 표를 읽는 도우미도 Rounds 가 없으면 알린다. 세션마다 한 번이라 값이 작다(거짓 양성).
+    helper = "import json\nprint(json.dumps({}))\n"
+    payload = _repo_write(_probe_path(tmp_path, "read_table.py"), helper)
+    assert rounds_context_for(payload) is not None
+
+
+def test_Rounds_를_가져오면_지나간다(tmp_path: Path) -> None:
+    assert rounds_context_for(_repo_write(_probe_path(tmp_path), WITH_ROUNDS)) is None
+
+
+def test_probe_kit_만_가져오고_Rounds_는_쓰지_않으면_알린다(tmp_path: Path) -> None:
+    content = "from tools.probe_kit import LineReader\n"
+    assert rounds_context_for(_repo_write(_probe_path(tmp_path), content)) is not None
+
+
+def test_Rounds_가_다른_이름의_일부이면_알린다(tmp_path: Path) -> None:
+    content = "from tools.probe_kit import LineReader\nMyRounds = 1\nRoundsList = 2\n"
+    assert rounds_context_for(_repo_write(_probe_path(tmp_path), content)) is not None
+
+
+def test_Rounds_낱말만_있고_probe_kit_이_없으면_알린다(tmp_path: Path) -> None:
+    payload = _repo_write(_probe_path(tmp_path), "# Rounds 는 나중에\n")
+    assert rounds_context_for(payload) is not None
+
+
+def test_Edit_는_고쳐진_디스크의_파일을_읽는다(tmp_path: Path) -> None:
+    path = _probe_path(tmp_path)
+    path.parent.mkdir(parents=True)
+    edit: HookPayload = {
+        "tool_name": "Edit",
+        "tool_input": {"file_path": str(path), "new_string": "x = 1"},
+    }
+    path.write_text(WITH_ROUNDS + "x = 1\n", encoding="utf-8")
+    assert rounds_context_for(edit) is None
+    path.write_text("x = 1\n", encoding="utf-8")
+    assert rounds_context_for(edit) is not None
+
+
+def test_Edit_의_파일을_읽지_못하면_알린다(tmp_path: Path) -> None:
+    edit: HookPayload = {
+        "tool_name": "Edit",
+        "tool_input": {"file_path": str(_probe_path(tmp_path)), "new_string": "x"},
+    }
+    assert rounds_context_for(edit) is not None
+
+
+def test_하위_폴더의_프로브도_센다(tmp_path: Path) -> None:
+    path = tmp_path / ".scratch" / "harness" / "probes" / "precommit_xdist" / "run.py"
+    assert is_repo_probe(str(path))
+    assert rounds_context_for(_repo_write(path, "print(1)\n")) is not None
+
+
+def test_파이썬_프로브만_센다(tmp_path: Path) -> None:
+    for name in ("run.sh", "probe.mjs", "README.md", "cases.toml", "data.json"):
+        assert not is_repo_probe(str(_probe_path(tmp_path, name))), name
+
+
+def test_프로브_폴더_밖의_파이썬은_지나간다(tmp_path: Path) -> None:
+    assert not is_repo_probe(str(tmp_path / ".scratch" / "harness" / "tools" / "m.py"))
+    assert not is_repo_probe(str(tmp_path / "tools" / "probes" / "m.py"))
+    assert not is_repo_probe(str(tmp_path / ".scratch" / "harness" / "m.py"))
+    assert not is_repo_probe(str(tmp_path / "probes" / ".scratch" / "m.py"))
+
+
+def test_스크래치패드의_스크립트에는_Rounds_알림이_없다() -> None:
+    payload = _write(SCRATCH + "\\measure.py")
+    assert rounds_context_for(payload) is None
+    assert context_for(payload) is not None
+
+
+def test_저장소_프로브에는_스크래치패드_알림이_없다(tmp_path: Path) -> None:
+    assert context_for(_repo_write(_probe_path(tmp_path), "print(1)\n")) is None
+
+
+def test_다른_도구와_꼴이_어긋난_입력은_지나간다(tmp_path: Path) -> None:
+    path = str(_probe_path(tmp_path))
+    assert rounds_context_for({"tool_name": "Read", "tool_input": {"file_path": path}}) is None
+    for tool_input in ("x", {"file_path": 1}, {}):
+        payload = json.loads(json.dumps({"tool_name": "Write", "tool_input": tool_input}))
+        assert rounds_context_for(payload) is None
+
+
+def test_Write_의_content_가_문자열이_아니면_알린다(tmp_path: Path) -> None:
+    payload = json.loads(
+        json.dumps(
+            {
+                "tool_name": "Write",
+                "tool_input": {"file_path": str(_probe_path(tmp_path)), "content": 1},
+            }
+        )
+    )
+    assert rounds_context_for(payload) is not None
+
+
+def test_못_보는_것_Rounds_를_주석에만_적은_프로브는_지나간다(tmp_path: Path) -> None:
+    content = "# from tools.probe_kit import Rounds 로 바꿀 것\nprint(1)\n"
+    assert rounds_context_for(_repo_write(_probe_path(tmp_path), content)) is None
+
+
+def test_main_은_스크래치패드_알림과_Rounds_알림을_따로_한_번씩_낸다(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    state = tmp_path / "state"
+    state.mkdir()
+    monkeypatch.setattr(tempfile, "gettempdir", lambda: str(state))
+    probe = _repo_write(_probe_path(tmp_path), "print(1)\n")
+    probe["session_id"] = "session-1"
+    assert ROUNDS_LEAD in _run_main(monkeypatch, capsys, probe)
+    assert _run_main(monkeypatch, capsys, probe) == ""
+    # 스크래치패드 알림의 표지는 따로다.
+    assert LEAD in _run_main(monkeypatch, capsys, _session_write(SCRATCH + "\\a.py"))
+    assert _run_main(monkeypatch, capsys, _session_write(SCRATCH + "\\a.py")) == ""
+    # 에이전트마다 따로 센다.
+    other = probe.copy()
+    other["agent_id"] = "agent-a"
+    assert ROUNDS_LEAD in _run_main(monkeypatch, capsys, other)
+
+
+def test_main_은_Rounds_가_있는_프로브에_아무것도_내지_않는다(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    monkeypatch.setattr(tempfile, "gettempdir", lambda: str(tmp_path / "state"))
+    payload = _repo_write(_probe_path(tmp_path), WITH_ROUNDS)
+    payload["session_id"] = "session-1"
+    assert _run_main(monkeypatch, capsys, payload) == ""

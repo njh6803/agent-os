@@ -32,7 +32,30 @@
 로 만든다. 세션을 모르거나 표지를 쓰지 못하면 호출마다 알린다 — 알리지 못하는 것보다 되풀이가
 낫다(래퍼와 같다).
 
+저장소 프로브의 Rounds(대기열 430). 같은 이벤트·도구라서 이 훅이 맡는다. 저장소의 프로브
+(`.scratch` 토막 뒤 어딘가에 `probes` 토막이 있는 파이썬 파일)를 쓰거나 고친 뒤 그 내용에
+`tools/probe_kit.py` 를 가져와 `Rounds` 를 쓰는 흔적(`probe_kit` 과 낱말 `Rounds` 가 둘 다 있다)이
+없으면, `.claude/rules/probes.md` 첫 항목(재려는 상황이 났다는 표지의 단언)과 `Rounds` 를 가리키는
+계기를 낸다. 첫 판 `headless_flags.py` 가 `tools/probe_kit.py` 가 들어오기 전에 짜져 측정 표지로
+init·result·한도만 보았고, 재려던 상황이 나지 않아도 종료 0 이었다(셀프 리뷰가 Major 로 잡았다.
+대기열 430 은 339 의 5회차이고, 이 알림 전에는 저장소 프로브에 `Rounds` 를 짚는 자리가 없었다).
+Write 는 `content` 를 보고, Edit 는 `new_string` 만으로는 파일 전체를 알 수 없어 이미 고쳐진
+디스크의 파일을 읽는다. 읽지 못하면 알린다. 스크래치패드 알림과는 표지의 이유가 달라(`marker_name`
+의 `kind`) 둘 다 세션·에이전트마다 한 번씩 나간다. 막지 않는다. 계기·막는 훅의 가름은
+`.claude/rules/tools.md` 를 따른다. 알린 뒤에도 probes.md 를 열지 않은 스크래치 스크립트의 재편집을
+막는 일은 `tools/hook_scratch_probe_reread.py` 가 맡는다(대기열 426. 러너가 훅 하나를 이벤트 둘에
+등록하는 것을 받지 않아 파일을 나눴다).
+
 못 보는 것:
+- Rounds 를 쓰는 척한 프로브. `probe_kit` 과 `Rounds` 낱말이 주석에만 있어도 지나간다. 가져와서
+  쓰지 않아도 지나간다. 쓰는 방식(`mark` 로 표지를 적는지)은 보지 못한다.
+- 저장소 프로브가 측정이 아닌 경우. 도우미, 변이 표를 읽는 스크립트에도 알린다(세션마다 한 번이라
+  값이 작다).
+- 파이썬이 아닌 프로브(`.sh`, `.mjs`, `.ps1`). `probe_kit` 이 파이썬이라 알리지 않는다.
+- 한 번 알린 뒤의 다른 프로브. 표지는 세션·에이전트마다 하나라, 첫 프로브에 `Rounds` 가 없다는
+  알림을 넘긴 세션이 뒤에 쓴 프로브에는 다시 알리지 않는다.
+- Edit 가 읽는 디스크의 파일이 훅이 도는 때 이미 고쳐졌다는 것. PostToolUse 라 그렇다고 보지만
+  재지 않았다.
 - Bash heredoc·`>`·`sed -i` 로 쓴 스크래치 파일. 이 훅은 편집 도구에만 붙는다. 대기열 336 이 센 사건
   셋 가운데 둘이 `spec-reviewer` 의 heredoc 이었다(그 에이전트에는 Write 가 없다). 그 몫은
   `.claude/agents/spec-reviewer.md` 의 프로브 문단(대기열 303)이 든다.
@@ -58,6 +81,7 @@ import os
 import re
 import sys
 import tempfile
+from collections.abc import Callable
 from pathlib import Path
 from typing import TypedDict
 
@@ -76,11 +100,26 @@ _BODY = (
     " 때 다시 재지 않는다. 측정이 아니면 이 알림은 무시한다. 이 알림은 세션·"
     "에이전트마다 한 번이다."
 )
+# 저장소 프로브에 Rounds 가 없을 때 알림의 첫 문장.
+ROUNDS_LEAD = "저장소 프로브에 Rounds 를 쓴 흔적이 없다"
+_ROUNDS_KIND = "rounds"
+_ROUNDS_BODY = (
+    "{lead}. 이 프로브가 측정 스크립트(그 결과를 보고·명세·ADR·대기열의 근거로 쓸 것)라면"
+    " `.claude/rules/probes.md` 첫 항목을 따른다. 재려는 상황이 그 회차에 실제로 났다는 표지를"
+    " 단언하고, 표지 없는 회차를 측정으로 세지 않고, 그런 회차가 있으면 종료 코드를 0 으로 두지"
+    " 않는다. 파이썬 프로브는 이 셈을 `tools/probe_kit.py` 의 `Rounds` 로 한다. 회차를 `round` 로"
+    " 감싸고 표지를 본 뒤 `mark` 를 부르면, 표지를 적지 않은 회차와 예외로 끝난 회차를"
+    " 측정 아님으로 세고 `exit_code` 가 그런 회차가 있을 때 1 이다. 측정이 아니면(도우미, 변이 표를"
+    " 읽는 스크립트) 이 알림은 무시한다. 이 알림은 세션·에이전트마다 한 번이다."
+)
 _SPLIT = re.compile(r"[\\/]+")
+_ROUNDS_WORD = re.compile(r"\bRounds\b")
 
 
 class ToolInput(TypedDict, total=False):
     file_path: object
+    content: object
+    new_string: object
 
 
 class HookPayload(TypedDict, total=False):
@@ -105,22 +144,84 @@ def is_scratch_script(path: str) -> bool:
     )
 
 
-def context_for(payload: HookPayload) -> str | None:
-    """스크래치패드의 실행 스크립트를 쓰거나 고쳤으면 컨텍스트 문장, 아니면 None."""
+def is_repo_probe(path: str) -> bool:
+    """저장소의 파이썬 프로브(`.scratch` 토막 뒤 어딘가에 `probes` 토막이 있는 `.py`)인가."""
+    parts = [part.casefold() for part in _SPLIT.split(path) if part]
+    if not parts or Path(parts[-1]).suffix != ".py":
+        return False
+    folders = parts[:-1]
+    return any(
+        folder == ".scratch" and "probes" in folders[index + 1 :]
+        for index, folder in enumerate(folders)
+    )
+
+
+def uses_rounds(text: str) -> bool:
+    """`probe_kit` 과 낱말 `Rounds` 가 둘 다 든 글인가. 가져와 쓰는지는 보지 않는다."""
+    return "probe_kit" in text and _ROUNDS_WORD.search(text) is not None
+
+
+def read_text(path: str) -> str | None:
+    """디스크의 파일 내용. 열 수 없으면 None."""
+    try:
+        return Path(path).read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return None
+
+
+def _edited_path(payload: HookPayload) -> str | None:
+    """Write·Edit 가 고친 파일의 경로. 다른 도구나 꼴이 어긋난 입력이면 None."""
     if payload.get("tool_name") not in TOOLS:
         return None
     tool_input = payload.get("tool_input")
     if not isinstance(tool_input, dict):
         return None
     path = tool_input.get("file_path")
-    if not isinstance(path, str) or not is_scratch_script(path):
+    return path if isinstance(path, str) else None
+
+
+def context_for(payload: HookPayload) -> str | None:
+    """스크래치패드의 실행 스크립트를 쓰거나 고쳤으면 컨텍스트 문장, 아니면 None."""
+    path = _edited_path(payload)
+    if path is None or not is_scratch_script(path):
         return None
     return _BODY.format(lead=LEAD)
 
 
-def marker_name(session_id: str, agent_id: str) -> str:
-    """세션·에이전트 하나의 표지 파일 이름. 둘의 해시다(`tools/launch_hook.py` 의 모양)."""
-    joined = f"{session_id}\0{agent_id}"
+def rounds_context_for(
+    payload: HookPayload, read_file: Callable[[str], str | None] = read_text
+) -> str | None:
+    """저장소 프로브를 쓰거나 고쳤는데 `Rounds` 를 쓴 흔적이 없으면 컨텍스트 문장, 아니면 None.
+    Write 는 더한 `content` 를, Edit 는 고쳐진 디스크의 파일을 본다. 읽지 못하면 알린다."""
+    path = _edited_path(payload)
+    if path is None or not is_repo_probe(path):
+        return None
+    tool_input = payload.get("tool_input")
+    content = tool_input.get("content") if isinstance(tool_input, dict) else None
+    text = content if payload.get("tool_name") == "Write" and isinstance(content, str) else None
+    if text is None and payload.get("tool_name") == "Edit":
+        text = read_file(path)
+    if text is not None and uses_rounds(text):
+        return None
+    return _ROUNDS_BODY.format(lead=ROUNDS_LEAD)
+
+
+def notice_for(payload: HookPayload) -> tuple[str, str] | None:
+    """낼 알림의 (표지 이유, 문장). 이유는 스크래치패드 알림이면 빈 문자열이다. 한 호출은 두
+    경로(스크래치패드, 저장소 프로브) 가운데 하나에만 든다."""
+    context = context_for(payload)
+    if context is not None:
+        return "", context
+    rounds = rounds_context_for(payload)
+    if rounds is not None:
+        return _ROUNDS_KIND, rounds
+    return None
+
+
+def marker_name(session_id: str, agent_id: str, kind: str = "") -> str:
+    """세션·에이전트·이유 하나의 표지 파일 이름. 셋의 해시다(`tools/launch_hook.py` 의 모양).
+    이유가 빈 문자열이면 스크래치패드 알림의 표지다."""
+    joined = f"{session_id}\0{agent_id}" + (f"\0{kind}" if kind else "")
     return hashlib.sha256(joined.encode("utf-8", "surrogatepass")).hexdigest()
 
 
@@ -144,13 +245,14 @@ def claim_first(name: str, directory: Path) -> bool:
 
 def main() -> int:
     payload: HookPayload = json.load(sys.stdin.buffer)
-    context = context_for(payload)
-    if context is None:
+    notice = notice_for(payload)
+    if notice is None:
         return 0
+    kind, context = notice
     session = payload.get("session_id")
     agent = payload.get("agent_id")
     if isinstance(session, str) and session:
-        name = marker_name(session, agent if isinstance(agent, str) else "")
+        name = marker_name(session, agent if isinstance(agent, str) else "", kind)
         try:
             directory = Path(tempfile.gettempdir()) / STATE_DIR
         except OSError:
