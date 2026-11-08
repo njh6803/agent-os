@@ -1621,3 +1621,222 @@ def test_딥링크는_잠금_안에서만_쏜다() -> None:
     calls = [line for line in lines if not line.startswith("fires=")]
     assert {"Send-Prompt=True", "Set-Defaults=True"} <= set(calls), completed.stdout
     assert all(call.endswith("=True") for call in calls), completed.stdout
+
+
+# `-PromptFile` 은 새 세션의 입력창에 그대로 실려 가는 파일이고 `-Folder` 는 신뢰
+# 대화상자를 수락할 폴더의 기준이다. 둘을 스크립트가 스스로 좁혀야 좁은 허용 규칙
+# (`.claude/settings.json`)을 열 수 있다(대기열 498).
+_RESOLVE_PROMPT = """
+Resolve-PromptFile $given.path $given.root
+"""
+
+_REPO_FOLDER = """
+Test-RepoFolder $given.folder @($given.roots)
+'ok'
+"""
+
+
+@pytest.fixture
+def prompt_root(tmp_path: Path) -> Path:
+    """`<임시 폴더>/claude` 를 흉내 낸 폴더. 안에 프롬프트 파일이 하나 있다."""
+    root = tmp_path / "claude"
+    (root / "session" / "scratchpad").mkdir(parents=True)
+    (root / "session" / "scratchpad" / "prompt.md").write_text("/implement x\n", encoding="utf-8")
+    return root
+
+
+def _resolve(path: Path | str, root: Path) -> subprocess.CompletedProcess[str]:
+    return _call("Resolve-PromptFile", _RESOLVE_PROMPT, {"path": str(path), "root": str(root)})
+
+
+def _link_dir(link: Path, target: Path) -> None:
+    """폴더 링크. 윈도에서는 권한이 필요 없는 junction, 그 밖에서는 심볼릭 링크."""
+    if os.name == "nt":
+        subprocess.run(
+            ["cmd", "/c", "mklink", "/J", str(link), str(target)],
+            check=True,
+            capture_output=True,
+            timeout=30,
+        )
+    else:
+        link.symlink_to(target, target_is_directory=True)
+
+
+def test_스크래치패드_아래의_프롬프트_파일은_받는다(prompt_root: Path) -> None:
+    prompt = prompt_root / "session" / "scratchpad" / "prompt.md"
+
+    completed = _resolve(prompt, prompt_root)
+
+    assert completed.returncode == 0, completed.stderr
+    assert completed.stdout.strip().lower() == str(prompt).lower()
+
+
+def test_점점_경로는_정규화한_뒤_폴더_안이면_받는다(prompt_root: Path) -> None:
+    detour = prompt_root / "session" / "scratchpad" / ".." / "scratchpad" / "prompt.md"
+
+    completed = _resolve(detour, prompt_root)
+
+    assert completed.returncode == 0, completed.stderr
+
+
+def test_폴더_밖의_파일은_읽지_않고_멈춘다(prompt_root: Path) -> None:
+    outside = prompt_root.parent / ".env"
+    outside.write_text("API_KEY=x\n", encoding="utf-8")
+
+    completed = _resolve(outside, prompt_root)
+
+    assert completed.returncode == 1
+    assert "아래가 아니다" in completed.stderr
+
+
+def test_점점으로_폴더_밖으로_빠져나가는_경로는_멈춘다(prompt_root: Path) -> None:
+    (prompt_root.parent / ".env").write_text("API_KEY=x\n", encoding="utf-8")
+    escape = prompt_root / "session" / ".." / ".." / ".env"
+
+    completed = _resolve(escape, prompt_root)
+
+    assert completed.returncode == 1
+    assert "아래가 아니다" in completed.stderr
+
+
+def test_이름이_접두만_같은_형제_폴더는_폴더_안이_아니다(prompt_root: Path) -> None:
+    sibling = prompt_root.parent / "claude-evil"
+    sibling.mkdir()
+    (sibling / "prompt.md").write_text("x\n", encoding="utf-8")
+
+    completed = _resolve(sibling / "prompt.md", prompt_root)
+
+    assert completed.returncode == 1
+    assert "아래가 아니다" in completed.stderr
+
+
+def test_없는_파일은_멈춘다(prompt_root: Path) -> None:
+    completed = _resolve(prompt_root / "session" / "none.md", prompt_root)
+
+    assert completed.returncode == 1
+    assert "없다" in completed.stderr
+
+
+def test_폴더_밖을_가리키는_링크가_낀_경로는_멈춘다(prompt_root: Path) -> None:
+    secret = prompt_root.parent / "secret"
+    secret.mkdir()
+    (secret / ".env").write_text("API_KEY=x\n", encoding="utf-8")
+    _link_dir(prompt_root / "session" / "door", secret)
+
+    completed = _resolve(prompt_root / "session" / "door" / ".env", prompt_root)
+
+    assert completed.returncode == 1
+    assert "링크" in completed.stderr
+
+
+def test_폴더_뿌리_자체가_링크이면_멈춘다(tmp_path: Path) -> None:
+    elsewhere = tmp_path / "elsewhere"
+    (elsewhere / "session").mkdir(parents=True)
+    (elsewhere / "session" / ".env").write_text("API_KEY=x\n", encoding="utf-8")
+    root = tmp_path / "claude"
+    _link_dir(root, elsewhere)
+
+    completed = _resolve(root / "session" / ".env", root)
+
+    assert completed.returncode == 1
+    assert "링크" in completed.stderr
+
+
+def test_대체_데이터_스트림이_붙은_경로는_멈춘다(prompt_root: Path) -> None:
+    prompt = prompt_root / "session" / "scratchpad" / "prompt.md"
+    prompt.with_name("prompt.md:secret").write_text("x\n", encoding="utf-8")
+
+    completed = _resolve(f"{prompt}:secret", prompt_root)
+
+    assert completed.returncode == 1
+    assert "대체 데이터 스트림" in completed.stderr
+
+
+_REPO_ROOTS = ["C:\\project\\agent\\.claude\\worktrees\\x", "C:\\project\\agent"]
+
+
+@pytest.mark.parametrize(
+    "folder",
+    [
+        pytest.param("C:\\project\\agent", id="그대로"),
+        pytest.param("C:/project/agent/", id="슬래시와_끝_구분자"),
+        pytest.param("c:\\PROJECT\\Agent", id="대소문자"),
+    ],
+)
+def test_저장소_뿌리와_같은_폴더는_받는다(folder: str) -> None:
+    given: dict[str, object] = {"folder": folder, "roots": _REPO_ROOTS}
+
+    completed = _call("Test-RepoFolder", _REPO_FOLDER, given)
+
+    assert completed.returncode == 0, completed.stderr
+    assert completed.stdout.strip() == "ok"
+
+
+@pytest.mark.parametrize(
+    "folder",
+    [
+        pytest.param("C:\\project", id="뿌리의_상위"),
+        pytest.param("C:\\project\\agent\\src", id="뿌리_안의_하위"),
+        pytest.param("C:\\project\\agent-other", id="접두만_같은_형제"),
+        pytest.param("D:\\project\\agent", id="다른_드라이브"),
+        pytest.param("C:\\Users\\User", id="아무_폴더"),
+    ],
+)
+def test_저장소_뿌리가_아닌_폴더는_멈춘다(folder: str) -> None:
+    given: dict[str, object] = {"folder": folder, "roots": _REPO_ROOTS}
+
+    completed = _call("Test-RepoFolder", _REPO_FOLDER, given)
+
+    assert completed.returncode == 1
+    assert "저장소의 뿌리" in completed.stderr
+
+
+def _send_prompt_text() -> str:
+    source = SCRIPT.read_text(encoding="utf-8")
+    start = source.index("\nfunction Send-Prompt {")
+    return source[start : source.index("\nfunction ", start + 1)]
+
+
+def test_보내기는_두_검사를_파일을_읽기_전에_부르고_링크를_따라가지_않고_읽는다() -> None:
+    text = _send_prompt_text()
+
+    assert "Test-RepoFolder $Folder" in text
+    assert "Resolve-PromptFile $PromptFile" in text
+    read = text.index("Get-Content")
+    assert text.index("Test-RepoFolder") < read
+    assert text.index("Resolve-PromptFile") < read
+    assert "Get-Content -LiteralPath $promptPath" in text
+    assert "$PromptFile -Raw" not in text
+
+
+_ALLOW_PREFIX = (
+    "pwsh -NoProfile -File C:\\project\\agent\\tools\\open_session.ps1 -Action send "
+    "-Folder C:\\project\\agent -PromptFile "
+)
+
+
+def test_좁은_허용_규칙은_스킬이_가리키는_호출_모양과_글자가_같다() -> None:
+    root = SCRIPT.parents[1]
+    settings = json.loads((root / ".claude" / "settings.json").read_text(encoding="utf-8"))
+    skill = (root / ".claude" / "skills" / "open-session" / "SKILL.md").read_text(encoding="utf-8")
+
+    allow = settings["permissions"]["allow"]
+
+    assert f"PowerShell({_ALLOW_PREFIX}*)" in allow
+    assert _ALLOW_PREFIX in skill
+
+
+def test_허용_규칙의_스크립트는_절대_경로다() -> None:
+    """상대 경로이면 작업 폴더를 옮기고 같은 상대 경로에 만든 가짜 스크립트가
+    같은 글자로 확인 없이 돈다."""
+    root = SCRIPT.parents[1]
+    settings = json.loads((root / ".claude" / "settings.json").read_text(encoding="utf-8"))
+
+    scripts = [
+        rule.split("-File ", 1)[1].split(" ", 1)[0]
+        for rule in settings["permissions"]["allow"]
+        if "open_session.ps1" in rule
+    ]
+
+    assert scripts, "open_session.ps1 을 가리키는 허용 규칙이 없다"
+    assert all(re.match(r"^[A-Za-z]:\\", script) for script in scripts), scripts
