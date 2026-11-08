@@ -1810,7 +1810,7 @@ def test_보내기는_두_검사를_파일을_읽기_전에_부르고_링크를_
 
 
 _ALLOW_PREFIX = (
-    "pwsh -NoProfile -File tools/open_session.ps1 -Action send "
+    "pwsh -NoProfile -File C:\\project\\agent\\tools\\open_session.ps1 -Action send "
     "-Folder C:\\project\\agent -PromptFile "
 )
 
@@ -1824,3 +1824,19 @@ def test_좁은_허용_규칙은_스킬이_가리키는_호출_모양과_글자�
 
     assert f"PowerShell({_ALLOW_PREFIX}*)" in allow
     assert _ALLOW_PREFIX in skill
+
+
+def test_허용_규칙의_스크립트는_절대_경로다() -> None:
+    """상대 경로이면 작업 폴더를 옮기고 같은 상대 경로에 만든 가짜 스크립트가
+    같은 글자로 확인 없이 돈다."""
+    root = SCRIPT.parents[1]
+    settings = json.loads((root / ".claude" / "settings.json").read_text(encoding="utf-8"))
+
+    scripts = [
+        rule.split("-File ", 1)[1].split(" ", 1)[0]
+        for rule in settings["permissions"]["allow"]
+        if "open_session.ps1" in rule
+    ]
+
+    assert scripts, "open_session.ps1 을 가리키는 허용 규칙이 없다"
+    assert all(re.match(r"^[A-Za-z]:\\", script) for script in scripts), scripts

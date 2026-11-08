@@ -7,7 +7,7 @@
 - `-PromptFile`: `Resolve-PromptFile`이 경로를 정규화해 세션 스크래치패드가 사는 `<임시 폴더>\claude` 아래인지 보고(`..`, 접두만 같은 형제 폴더, 슬래시 방향), 파일에서 그 폴더까지 올라가며 링크가 있으면 멈춘다. 읽기는 `-LiteralPath`로 한다.
 - `-Folder`: `Test-RepoFolder`가 이 스크립트가 든 저장소의 뿌리(이 사본이 든 체크아웃과, 워크트리면 그 주 체크아웃)와 같을 때만 받는다. 신뢰 대화상자와 새 세션 화면의 폴더 견줌이 이 검사를 지난 값을 기준으로 한다.
 - `tests/tools/test_open_session.py`에 두 검사의 시험을 더한다. 스크래치패드 아래는 지나고, `.env` 같은 바깥 파일·`..`로 빠져나가는 경로·접두만 같은 형제 폴더·폴더 밖을 가리키는 링크·없는 파일은 멈춘다. 저장소 뿌리가 아닌 폴더는 멈춘다.
-- `.claude/settings.json`의 `permissions.allow`에 `PowerShell(pwsh -NoProfile -File tools/open_session.ps1 -Action send -Folder C:\project\agent -PromptFile *)`를 더하고, `open-session` 스킬의 3단계가 가리키는 호출 모양과 글자가 같음을 시험이 대조한다.
+- `.claude/settings.json`의 `permissions.allow`에 `PowerShell(pwsh -NoProfile -File C:\project\agent\tools\open_session.ps1 -Action send -Folder C:\project\agent -PromptFile *)`를 더하고, `open-session` 스킬의 3단계가 가리키는 호출 모양과 글자가 같음을 시험이 대조한다. 스크립트 경로를 절대 경로로 적는 것은 사용자 결정이다(2026-11-08, "절대 경로로 바꿈"). 상대 경로이면 작업 폴더를 옮기고 같은 상대 경로에 만든 가짜 스크립트가 규칙과 같은 글자로 확인 없이 돌아 두 검사가 빠지기 때문이다. 이 호출이 도는 사본은 주 체크아웃의 것이다.
 - 다음 인계 열기가 분류기에 거부되지 않는지는 이 PR을 병합한 뒤 실제 인계에서 본다(병합 뒤 일지의 "다음"에 남긴다).
 
 **대기열:** 498
