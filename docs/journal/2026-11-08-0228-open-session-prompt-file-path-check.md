@@ -87,6 +87,13 @@
   2. `Send-Prompt`의 검사 부분을 UI와 떨어진 함수로 빼 호출 순서를 행동으로 시험한다(글자 위치 시험을 대체한다).
   3. 검사를 `Wake-Display`와 잠금 앞으로 옮기는 일은 2와 함께 한다.
   4. 주 체크아웃을 당기기 전에 `send`를 돌리면 옛 판(두 검사가 없는 스크립트)이 도는데, 출력에 옛 판임을 알리는 표지가 없다. 스크립트가 판을 찍게 하고 스킬 3단계가 그 표지를 확인하게 하는 일이다(`tools/open_session.ps1`, `.claude/skills/open-session/SKILL.md`). 사용자 결정(절대 경로)이 만든 창이다.
+  5. 허용 규칙의 `C:\project\agent`는 이 PC의 경로라, 저장소를 다른 경로에 둔 체크아웃에서는 규칙이 조용히 맞지 않아 분류기가 다시 거부한다(claude-review Minor). JSON 설정에는 주석을 달 수 없어 전제를 규칙 가까이에 적을 자리가 없다. 적는다면 스킬 3단계의 절대 경로 문장이나 `docs/constitution/operations.md` 환경 규약 상세다.
+  6. `Test-RepoFolder`가 `Test-` 이름인데 불리언이 아니라 throw로 알리고, `Resolve-PromptFile`과 `Test-RepoFolder`가 각자 경로를 정규화한다(claude-review Minor). 2와 함께 정리한다.
+  7. PR 본문은 새 시험 함수를 열네 개, 일지는 18건이라 적는다. 센 기준이 달랐다(claude-review Nit). 이 PR 본문의 수는 `tests/tools/test_open_session.py`에서 이 브랜치가 더한 `def test_`를 세어 다시 맞춘다.
+
+### 병합 직전 라운드 (푸시 `5cef3584` 뒤)
+
+CI 아홉이 모두 초록이고 CodeRabbit은 호출 한도에 걸려 이번 푸시를 검토하지 못했다(`Review rate limited`). claude-review의 새 지적은 Minor 셋과 Nit 둘이다. 고친 것은 `Resolve-PromptFile` 위 주석의 낡은 항목 하나다(루트 자체가 링크인 경우를 "못 보는 것"에서 지우고 본다고 적었다. 코드를 읽어 고쳤고 주석만 바뀌어 시험은 그대로다). 나머지는 위 뒤로 넘긴 일 5~7로 옮겼다.
 
 ## 결정: 허용 규칙의 스크립트를 절대 경로로 (사용자 답, 2026-11-08)
 
