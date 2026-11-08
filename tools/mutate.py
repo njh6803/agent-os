@@ -17,11 +17,12 @@ LLM 테스트가 대상이면 `PYTHONUTF8=1 uv run --env-file .env python tools/
 파일 여럿(`.toml` 로 끝나는 인자)을 받고, 그때는 이름·번호·`--since` 를 섞지 않는다. 고르지 않고
 주면 줄마다 그 파일의 경로가 붙고 읽지 못한 파일이 있어도 나머지를 본다. 이름·번호·`--since` 로
 고른 `--check` 와 변이를 돌리는 실행은 표지의 메아리(아래 표지 절)도 본다. 고른 `--check` 는 표지의
-품질(표지 없는 빨강, 단언 풀이 줄 표지)도 본다.
+품질(표지 없는 빨강, 단언 풀이 줄 표지, 호출 한 토막 표지)도 본다.
 
 `--staged` 는 커밋에 들 판(색인)에서 원문을 보고, pre-commit 이 커밋마다 띄운다. 이 커밋이 더하거나
 고친 표(`*_mutations.toml`)는 모든 원문을 보고, 그 표에서 어느 부모 판과도 다른 변이는 표지의
-메아리를 색인의 시험 파일로 보고 표지의 품질(표지 없는 빨강, 단언 풀이 줄 표지)도 본다. 변이를
+메아리를 색인의 시험 파일로 보고 표지의 품질(표지 없는 빨강, 단언 풀이 줄 표지, 호출 한 토막
+표지)도 본다. 변이를
 돌린 뒤 `ruff format` 이 코드를 고쳐 커밋한 표의 원문이 사라진 일이 있었다(대기열 92). 커밋에 들지
 않은 표는 이 커밋이 고친 파일(지우거나 옮긴 것 포함)을 가리키는 변이만 보고, 부모 판에서 맞던 원문이
 색인에서 깨졌을 때 알린다. 표가 가리키는 코드만 바뀌고 표는 커밋에 들지 않아, 커밋에 든 표만 보던
@@ -153,7 +154,7 @@ pytest 의 `E ` 접두 줄(`E       TypeError: x`)은 받지 않는다.
 파일을 보지 않는다(거짓 음성). 원문의 이스케이프(`\\"`)와 출력의 글자가 달라 글자 그대로 맞지 않는
 메아리는 놓친다.
 
-표지의 품질. 빨강(`expect = "red"`)을 기대한 변이의 표지에서 둘을 더 알린다. 고른 `--check` 와
+표지의 품질. 빨강(`expect = "red"`)을 기대한 변이의 표지에서 셋을 더 알린다. 고른 `--check` 와
 `--staged` 의 새 변이만 보고 변이를 돌리는 실행에는 걸지 않는다. 옛 표 3613 변이 가운데 빨강을
 기대하고 표지가 없는 것이 1883, 단언 풀이 줄 표지를 든 빨강이 176이라(`.scratch/**/*_mutations.toml`
 을 `tomllib` 로 읽어 손으로 셌다) 돌리는 실행에 걸면 옛 표를 다시 돌릴 때마다 멈춘다.
@@ -163,11 +164,23 @@ pytest 의 `E ` 접두 줄(`E       TypeError: x`)은 받지 않는다.
   `assert 0 == 1`)이다. `E` 와 `+` 접두와 들여쓰기가 앞에 있어도 같은 줄로 보고 알린다. 시험이 다른
   까닭으로 빨개져도 그 호출과 값이 실려, 러너가 다른 까닭으로 멈춰도 맞았다(대기열 517). 단언에 싣는
   메시지나 변이를 손으로 넣어 본 실패 출력의 원인 문구로 고른다.
-못 보는 것: 줄 머리만 본다. `AssertionError: assert 0 == 1` 처럼 앞에 낱말이 붙은 줄은 받는다.
-`==` 만 본다. `assert 1 != 1`, `assert 'a' in b`, `assert x is None` 처럼 pytest 가 풀어 쓰는 다른
-비교는 받는다(거짓 음성). 반대로 단언에 싣는 메시지가 `assert 결과 == 'done'` 처럼 `assert` 로
-시작해 `==` 를 들면 풀이 줄과 갈라 볼 수 없어 알린다(거짓 양성). pytest 가 아닌 판정의 표지는 보지
-않는다. 판정이 exit 인 러너의 명령이 pytest 여도 보지 않는다. 표지가 있어도 고른 단언이 빨개졌다는
+- 같은 판정인데 표지의 줄 머리가 호출 한 토막(`matches(server='x', tool='add')`, `Rule(server=None,
+  tool='*')`)이다. `+  where False = matches(…)` 줄에서 머리를 뗀 부분 문자열만 골라 풀이 줄 머리
+  기준을 지났다. 그 줄은 다른 단언이 빨개져도 실려 맞았다(대기열 579). `이름(` 뒤가 인자처럼
+  생긴 것(`)`, 따옴표나 괄호, 숫자나 식별자 뒤의 `,` `)`, 식별자 뒤의 `=` `,` `)` `(`)만 받는다.
+  인자 줄(`rule = Rule(…)`), 비교 실패의 diff 줄(`At index 0 diff: Hit(…)`)은 줄 머리가 호출이
+  아니라 알리지 않는다. 옛 표 pytest 판정의 빨강 표지 1330개 가운데 줄 머리가 `이름(` 꼴인 것은
+  12개였고, 그중 열이 이 규칙에 걸리고 둘(`zeta(7회차) …` 목록 출력)은 인자처럼 생기지 않아
+  걸리지 않는다(`.scratch/**/*_mutations.toml` 을 `tomllib` 로 읽어 손으로 셌다).
+못 보는 것: 줄 머리만 본다. `AssertionError: assert 0 == 1`, `AssertionError: matches('a')` 처럼
+앞에 낱말이 붙은 줄은 받는다. 호출 꼴이지만 값의 repr 인 줄 머리(`Hit(ident='0001', rounds=None`)는
+고른 단언만 찍는 줄이어도 풀이 줄과 갈라 볼 수 없어 알린다(거짓 양성). 인자가 정수 하나나 식별자,
+따옴표로 바로 시작하는 문자열이 아니면 받는다(거짓 음성). `f(1.5)`, `f(b'x')`·`f(f'x')`,
+`f(*args)`, `f(-x)`, `f(x[0])`, `f(안녕)` 과 인자가 줄 끝에서 끊긴 `Rule(` 이 그 예다. `==` 만 본다.
+`assert 1 != 1`, `assert 'a' in b`, `assert x is None` 처럼 pytest 가 풀어 쓰는 다른 비교는
+받는다(거짓 음성). 반대로 단언에 싣는 메시지가 `assert 결과 == 'done'` 처럼 `assert` 로 시작해 `==`
+를 들면 풀이 줄과 갈라 볼 수 없어 알린다(거짓 양성). pytest 가 아닌 판정의 표지는 보지 않는다.
+판정이 exit 인 러너의 명령이 pytest 여도 보지 않는다. 표지가 있어도 고른 단언이 빨개졌다는
 표지인지는 가를 수 없다(이 확인은 없거나 알려진 나쁜 모양만 본다).
 
 하는 일, 차례대로:
@@ -894,11 +907,28 @@ _ASSERT_REWRITE_NOTE = (
     " 본 실패 출력의 원인 문구로 고른다"
 )
 
+# 줄 머리가 호출 한 토막(`matches(server='x')`, `Rule(server=None`)인 표지. 풀이 줄 머리(`+  where
+# False = `)를 떼고 그 뒤의 부분 문자열만 고른 것이다. `이름(` 뒤가 인자처럼 생긴 것(`)`, 따옴표나
+# 괄호, 숫자나 식별자 뒤의 `,` `)`, 식별자 뒤의 `=` `,` `)` `(`)만 받아 `zeta(7회차)` 같은 목록
+# 출력은 거른다
+_CALL_FRAGMENT = re.compile(
+    r"\s*(?:E\s+)?[+\s]*[A-Za-z_][\w.]*\("
+    r"(?:\s*\)|\s*['\"\[{(]|\s*-?\d+\s*[,)]|\s*[A-Za-z_][\w.]*\s*[=,)(])"
+)
+
+_CALL_FRAGMENT_NOTE = (
+    "호출 한 토막(`이름(…)` 꼴)이다. `+  where False = 이름(…)` 같은 pytest 의 단언 풀이 줄에 든"
+    " 부분 문자열이면 시험이 다른 까닭으로 빨개져도 그 호출과 값이 실려, 고른 단언이 빨개졌다는"
+    " 표지가 되지 못한다(대기열 579). 변이를 손으로 넣어 본 실패 출력에서 인자 줄(`rule = …`)이나"
+    " 단언에 싣는 메시지를 고른다"
+)
+
 
 def _quality_problems(spec: Spec) -> list[str]:
     """빨강을 기대한 변이의 표지 품질. 표지가 없거나(대기열 350), pytest 판정인데 표지가 단언을 풀어
-    쓴 줄이다(대기열 517). 파일을 읽지 않는다. 옛 변이를 소급하지 않으려고 고른 `--check` 와
-    `--staged` 의 새 변이에만 쓰고 변이를 돌리는 실행에는 걸지 않는다(티켓 041)."""
+    쓴 줄이거나(대기열 517) 줄 머리가 호출 한 토막이다(대기열 579). 파일을 읽지 않는다. 옛 변이를
+    소급하지 않으려고 고른 `--check` 와 `--staged` 의 새 변이에만 쓰고 변이를 돌리는 실행에는 걸지
+    않는다(티켓 041)."""
     runners = _runners(spec)
     problems: list[str] = []
     for mutation in spec.mutation:
@@ -911,11 +941,14 @@ def _quality_problems(spec: Spec) -> list[str]:
             )
         if runners[mutation.runner].judge != "pytest":
             continue
-        problems += [
-            f"{mutation.name}: expect_output 의 표지 {marker!r} 는 {_ASSERT_REWRITE_NOTE}"
-            for marker in mutation.expect_output
-            if _ASSERT_REWRITE.match(marker)
-        ]
+        for marker in mutation.expect_output:
+            if _ASSERT_REWRITE.match(marker):
+                note = _ASSERT_REWRITE_NOTE
+            elif _CALL_FRAGMENT.match(marker):
+                note = _CALL_FRAGMENT_NOTE
+            else:
+                continue
+            problems.append(f"{mutation.name}: expect_output 의 표지 {marker!r} 는 {note}")
     return problems
 
 
@@ -1164,8 +1197,8 @@ def check(spec: Spec, *, root: Path, out: Callable[[str], None], read: Reader = 
 
 def check_picked(spec: Spec, *, root: Path, out: Callable[[str], None]) -> int:
     """이름·번호·`--since` 로 고른 변이의 원문 확인. `check` 에 더해 표지가 시험 원문에 글자
-    그대로 있는지, 빨강을 기대했는데 표지가 없거나 단언 풀이 줄인지도 본다(옛 변이는 소급하지 않아
-    고른 변이에만 쓴다)."""
+    그대로 있는지, 빨강을 기대했는데 표지가 없거나 단언 풀이 줄이거나 호출 한 토막인지도 본다(옛
+    변이는 소급하지 않아 고른 변이에만 쓴다)."""
     return _report_check(spec, _picked_problems(root, spec) + _quality_problems(spec), out)
 
 

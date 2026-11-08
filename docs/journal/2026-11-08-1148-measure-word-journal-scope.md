@@ -1,4 +1,4 @@
-# 2026-11-08 0222 measure-word-journal-scope
+# 2026-11-08 1148 measure-word-journal-scope
 
 세션 제목: `chore/measure-word-journal-scope`. 브랜치 `chore/measure-word-journal-scope`, 티켓 `.scratch/harness/issues/measure-word-journal-scope.md`, 대기열 558.
 
@@ -75,3 +75,7 @@ open-session을 부른다 2026-11-07T18:52Z
 > 사용자: (선택 화면 "일지만 바꾼 커밋이 pre-commit의 pytest에서 세 번 연속 막혔습니다. 어떻게 할까요?"에서 "pytest만 건너뛰고 커밋"을 골랐다. 그 설명: SKIP=pytest로 이 커밋 하나에서 pytest만 빼고 나머지 검사는 그대로 돈다. 건너뛴 사실은 PR 본문에 적고 푸시 뒤 CI가 pytest를 다시 돌린다.)
 
 이 커밋은 `SKIP=pytest`로 만들었다.
+
+## 병합에서 고친 것
+
+`origin/main`을 합치자 main의 일지 `2026-11-08-0222-mutate-marker-call-fragment.md`와 이 일지의 `<날짜>-<HHMM>` 앞부분이 겹쳐 `tests/test_journal_names.py`가 빨개졌다(pre-commit의 pytest 출력에서 봤다). 이 일지를 `2026-11-08-1148-measure-word-journal-scope.md`로 `git mv`하고 제목 줄도 고쳤다. 이 브랜치가 더한 줄 가운데 옛 이름을 가리킨 것은 이 일지 자신뿐이었고(`git diff origin/main`을 `2026-11-08-0222`로 grep해 봤다), 다른 파일은 슬러그로만 가리켜 고칠 곳이 없었다. 일지 이름 시험은 아래 병합 커밋의 pre-commit pytest가 다시 돈다.
