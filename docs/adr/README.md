@@ -53,5 +53,6 @@
 | [0047](0047-agent-os-does-not-know-the-widget.md) | Agent OS는 위젯을 모른다: 관리 화면과 serve는 위젯 전용 기능을 갖지 않고, 위젯의 외형과 문구는 위젯과 사이트가 가진다 | accepted | 2026-11-06 |
 | [0048](0048-document-search-server-lives-in-another-repository.md) | 문서 검색 서버는 agent-os 밖의 저장소이고, agent-os의 런타임은 그 서버를 모른다 | accepted | 2026-11-06 |
 | [0049](0049-mcp-server-has-a-transport-field-and-remote-servers-connect-per-run-by-manifest-url.md) | MCP 매니페스트의 `[server]`는 `transport` 칸으로 stdio와 http를 가르고, 원격 MCP 서버에는 매니페스트에 적은 주소로 실행마다 붙되 헤더 값은 환경에서 읽고 닫기는 취소에서 보호한다 | accepted | 2026-11-09 |
+| [0050](0050-portal-is-one-node-server-hosting-many-sites-and-signing-anonymous-site-tokens.md) | 질문 페이지는 `node:http` 서버 하나로 사이트 여럿을 담고, 고지를 확인한 브라우저의 익명 식별자로 사이트 토큰을 낸다 | accepted | 2026-11-09 |
 
 ADR을 먼저 확인하는 상황 넷: 스택이나 라이브러리를 바꿀 때, 디렉터리나 층 경계를 바꿀 때, 디스크 형식(매니페스트, 이벤트)을 바꿀 때, 기존 코드가 왜 이렇게 되어 있는지 이해되지 않을 때.

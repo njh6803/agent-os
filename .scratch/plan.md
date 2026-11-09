@@ -58,7 +58,7 @@ web/                       슬라이스 3부터. pnpm 워크스페이스. 파이
 | 8 | [answer-eval](answer-eval/plan.md) | 고정 질문으로 에이전트를 돌려 검색 적중과 출처 적중을 재고 평가 보고서를 낸다. | doc-qa-agent, rag-engine:release-image | todo |
 | 8 | [doc-qa-agent](doc-qa-agent/plan.md) | 문서 검색 서버를 불러 근거를 찾고 출처를 달아 답하는 참조 질의응답 에이전트를 준다. | mcp-http, approval-rules | todo |
 | 8 | [public-demo](public-demo/plan.md) | 공개 정부 문서를 넣은 클라우드 VM 한 대를 공개 주소에 열어, 누구나 로그인 없이 묻고 출처가 붙은 답을 받게 한다. | doc-qa-agent, release-image, answer-eval, rag-engine:release-image, rag-engine:search-eval | todo |
-| 8 | [release-image](release-image/plan.md) | 판마다 서버와 관리 화면과 위젯과 포털의 컨테이너 이미지를 짓고 올리며 단독 배포 안내도 낸다. | pilot-portal | todo |
+| 8 | [release-image](release-image/plan.md) | 판마다 서버와 관리 화면과 위젯과 질문 페이지의 컨테이너 이미지를 짓고 올리며 단독 배포 안내도 낸다. | pilot-portal | todo |
 | 9 | [deploy-package](deploy-package/plan.md) | agent-os와 문서 검색 서버를 Docker Compose로 한 번에 띄우는 참조 배포를 준다. | local-model, portal-login, doc-qa-agent, release-image, ops-backup-upgrade, diag-bundle, mcp-http, rag-engine:release-image, rag-engine:admin, rag-engine:backup-upgrade, rag-engine:diag-bundle | todo |
 | 9 | [diag-bundle](diag-bundle/plan.md) | 문제를 살필 때 판과 구성과 최근 실패 원인을 비밀 값 없이 파일 하나로 묶는 명령을 준다. | release-image, mcp-http | todo |
 | 9 | [ops-backup-upgrade](ops-backup-upgrade/plan.md) | agent-os 데이터를 백업하고 새 서버에 복원하며, 판을 올린 뒤에도 옛 트레이스를 읽게 한다. | release-image | todo |
@@ -67,11 +67,13 @@ web/                       슬라이스 3부터. pnpm 워크스페이스. 파이
 | 10 | [audit-export](audit-export/plan.md) | 운영자가 트레이스를 주체와 기간과 에이전트와 도구별로 조회하고 파일로 내보낸다. | io-guardrail | todo |
 | 10 | [io-guardrail](io-guardrail/plan.md) | 최종 사용자의 입력과 에이전트의 출력에서 주민등록번호 같은 패턴을 규칙으로 막거나 가린다. | value-masking | todo |
 | 10 | [mcp-trust](mcp-trust/plan.md) | MCP 서버마다 믿는 정도와 도구 정의 해시를 정해, 믿지 않는 서버의 결과를 바깥 글로 다룬다. | approval-rules, pilot-release, mcp-http | todo |
+| 10 | [portal-admin](portal-admin/plan.md) | 질문 페이지 설정을 화면에서 고치는 관리 화면을 질문 페이지 쪽에 두어, 운영자가 파일을 열지 않고 사이트마다의 위젯 설정을 바꾼다. | pilot-portal | todo |
 | 10 | [principal-propagation](principal-propagation/plan.md) | 운영자가 켠 MCP 서버에만 실행의 주체를 넘겨, 사용자가 볼 수 있는 문서로만 답하게 한다. | mcp-trust | todo |
 | 10 | [run-feedback](run-feedback/plan.md) | 최종 사용자가 틀린 답을 신고하고, 운영자가 신고된 실행을 관리 화면에서 볼 수 있게 한다. | pilot-release | todo |
 | 10 | [stale-warning](stale-warning/plan.md) | 검색 결과의 근거 문서가 오래됐다고 표시돼 있으면 답에 경고를 붙여, 낡은 근거로 답했음을 알린다. | pilot-release, rag-engine:doc-freshness | todo |
 | 10 | [usage-report](usage-report/plan.md) | 기간별 질문 수와 사용자 수와 오류 신고 비율을 이용 보고로 내보내 운영 상황을 한눈에 알게 한다. | audit-export, run-feedback | todo |
 | 10 | [value-masking](value-masking/plan.md) | 런타임이 아는 비밀 값을 트레이스에 쓰기 직전에 모든 글 칸에서 찾아 가려, 기록에 새지 않게 한다. | principal-propagation | todo |
+| 10 | [widget-appearance](widget-appearance/plan.md) | 레이아웃과 아이콘 같은 새 모양 칸을 위젯의 임베드 속성과 질문 페이지 설정에 더해, 사이트마다 위젯의 생김새를 더 넓게 고른다. | pilot-portal | todo |
 | 11 | [orphan-recovery](orphan-recovery/plan.md) | 서버가 죽거나 멈춰 결말 없이 남은 고아 실행을 임대 만료로 찾아내 worker가 실패로 닫는다. | retention-worker | todo |
 | 11 | [retention-worker](retention-worker/plan.md) | 별도 worker 명령이 승인 만료 닫기와 보존 기간이 지난 기록 지우기를 주기로 돌린다. | token-limit | todo |
 | 11 | [run-cost](run-cost/plan.md) | 모델과 도구 호출에 걸린 시간을 남기고, 모델 단가로 실행 비용을 읽을 때 셈한다. | trace-postgres | todo |
