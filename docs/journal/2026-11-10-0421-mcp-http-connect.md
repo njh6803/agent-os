@@ -125,4 +125,63 @@ open-session을 부른다 2026-11-09T20:16:30Z
 
 밀 주장 다섯을 서브에이전트가 코드와 대 봤고 모두 맞았다. 근거: `_stdio_session`만 `stdio_client`를 쓴다는 것(1), `.venv`의 mcp 2.3.0 `client/streamable_http.py` 789~793행의 `finally`가 `terminate_session`을 `await`한다는 것(2, 어림 표시가 옳고 `serve` 종료 경로는 재지 않았다), 로컬 서버를 띄워 `httpx2` 2.13.0에 개행·앞 공백·뒤 탭 값을 보내 `LocalProtocolError: Illegal header value`를, 비ASCII 글자는 `UnicodeEncodeError`를 본 것(3), 프로브 README 71행의 두 OS 33회차 `token_in_log` 빈 목록(4), mcp 2.3.0 `METADATA`의 `Requires-Dist: httpx2>=2.10.0`과 락의 2.13.0(5).
 
-고친 것: 4번의 정확도 차이 하나. 양성 대조가 접속을 연 아홉 사례에만 있고 `unauthorized`·`closed_port`에는 없는데 독스트링 문장에는 그 단서가 없었다. 고치는 값이 한 줄이라 독스트링에 그 단서를 더했다(`mcp.py` 모듈 독스트링 "로그" 끝). 남긴 것: 없음. 오탐: 없음.
+고친 것(반영 커밋 `21276f05`): 4번의 정확도 차이 하나. 양성 대조가 접속을 연 아홉 사례에만 있고 `unauthorized`·`closed_port`에는 없는데 독스트링 문장에는 그 단서가 없었다. 고치는 값이 한 줄이라 독스트링에 그 단서를 더했다(`mcp.py` 모듈 독스트링 "로그" 끝). 남긴 것: 없음. 오탐: 없음.
+
+반영 커밋 `21276f05`의 pre-commit은 종료 코드 0이었고 출력의 끝을 읽었다(손으로 봤다). ruff 둘 Passed, 러너 줄(check-ticket, zizmor, lint-imports, check-instructions, check-type-escapes, pyright-linux, pyright, run-hooks, pytest 370.0초, web-verify 471.9초) Passed, 마크다운 표·줄 구분 문자·변이 표·인용 대조 Passed, 카나리아 명세와 헌법 판 검사는 대상 없음 Skipped(이 커밋은 일지와 `mcp.py`뿐이다).
+
+## PR
+
+푸시(`git push -u origin feature/02-connect-to-remote-mcp-server-by-url`, 커밋 둘)했고 `gh pr create`로 PR #507(`feat: 원격 MCP 서버에 매니페스트의 주소로 실행마다 붙는다 (mcp-http 02)`)을 열었다. 본문은 저장소 템플릿을 채웠고(`--body-file`, 계약 영향에 `sdk/manifest.py`의 헤더 이름 금지 목록을 적었다) 관련 티켓은 02다. 아직 `@coderabbitai review` 코멘트를 남기지 않았고 `wait_ci`도 띄우지 않았다. 열리자마자 컨텍스트가 인계 문턱(203,983 토큰)을 넘어 "PR 연 뒤" 계기가 왔고, 이 세션은 `get_session`의 `self`에 `parentSessionId`가 없어 곁 세션이 아니라서 `handoff.md`대로 넘긴다. 이 세션은 PR 직전 리뷰, 커밋, 푸시, PR 열기까지 했다. 회고(`retro`)와 "다음" 절은 쓰지 않았다(봇 회차 뒤에 쓰는 순서는 앞선 일지 `2026-11-09-1229-mcp-http-design.md`와 같다).
+
+## 인계(PR 연 뒤)
+
+제목을 `feature/02-connect-to-remote-mcp-server-by-url (인계함)`으로 바꾸고 워크트리 잠금을 풀었다. 멈출 백그라운드 작업은 없었다. 낸 지시문은 아래 그대로다.
+
+```
+다음 작업: .scratch/mcp-http/issues/02-connect-to-remote-mcp-server-by-url.md (원격 MCP 서버에 매니페스트의 주소로 실행마다 붙는다)
+다음 단계: PR 반영·병합
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /implement .scratch/mcp-http/issues/02-connect-to-remote-mcp-server-by-url.md
+브랜치: feature/02-connect-to-remote-mcp-server-by-url
+모델: Sonnet 5.5 / high. 2의 잇는 지시문
+읽을 것: docs/journal/2026-11-10-0421-mcp-http-connect.md
+이어받을 상태: 인계: PR 연 뒤. 일지는 docs/journal/2026-11-10-0421-mcp-http-connect.md 이고 "인계(PR 연 뒤)"가 이 인계다. PR #507이 열렸고 헤드는 21276f05이며 PR 직전 리뷰(CLI 지적 0건)와 반영·푸시까지 끝났다. 일지의 "PR"·"인계(PR 연 뒤)" 절은 커밋되지 않았다. 구현을 다시 하지 않는다. 남은 일: 첫 @coderabbitai review 코멘트와 wait_ci(merge.md 2 봇 회차), 봇 지적 반영, 회고(retro)와 일지의 "다음" 절(앞선 일지 2026-11-09-1229-mcp-http-design.md처럼 봇 회차 뒤), 일지 커밋·푸시, merge.md의 워크트리 병합. 병합 뒤 next-session으로 티켓 03·04 지시문을 낸다(둘은 02 뒤에 나란히 돈다).
+확인할 선행 조건: 없음
+이번 요청 범위: PR과 병합까지
+```
+
+open-session을 부른다 2026-11-09T20:31:00Z
+
+## 이어받은 세션(넷째)와 PR 봇 회차 1
+
+제목은 `feature/02-connect-to-remote-mcp-server-by-url`로 되돌렸고 `EnterWorktree(path)`로 워크트리에 들어갔다. PR #507은 `njh6803/agent-os`의 것이다(첫 `bind_pr`을 git 사용자 이름으로 지은 `njh4803/agent`로 불러 거부되었고, `gh pr view --json url`의 주소로 묶었다). `@coderabbitai review`를 남기고 `tools/wait_ci.py 507`을 띄웠다. 끝 줄은 "모두 통과. CodeRabbit: Review rate limited"다.
+
+이 절의 PR 코멘트와 검사 상태는 `gh pr view 507 --json comments`와 `gh pr checks 507`을 손으로 읽은 것이다. CodeRabbit은 두 번 다 `Review rate limited`(요약 코멘트의 "Next included review available in 42 minutes")라 이 PR의 CodeRabbit 회차는 아직 0이다(merge.md 회차 세기). claude-review는 첫 회차이고 Critical·Major 없이 Minor 넷과 Nit 하나를 냈다. 경계 쪽은 지적이 없었다. 첫 회차라 지적마다 판단했고, 고칠 것은 없다고 보아 코드는 건드리지 않았다.
+
+- [Minor] 어댑터 독스트링·`adapters.md`의 "취소된 실행은 DELETE를 보내지 않는다"가 ADR 0049의 "닫기" 결정과 어긋나 읽힌다. 보류. 그 결정은 티켓 03이 구현하고, 03의 체크박스가 같은 독스트링을 "취소된 실행이 종료 요청만큼 늦게 끝난다"로 바꾸게 한다(티켓 03 49행). 결정은 아직 유효하고 02는 그 틈을 티켓에 이미 적었으므로 ADR에 단서를 달지 않는다.
+- [Minor] `_forget_own_cancellation`이 인자 `error`의 `__context__`를 바꾼다. 보류. 독스트링이 변형을 밝히고 있고 예외 사슬을 끊는 것이 목적이다.
+- [Minor] `_Attempt`가 가림과 상태 보관을 함께 든다. 보류. 셀프 리뷰가 이미 같은 이유로 남겼다.
+- [Minor] 가림 경계(7자와 8자)·긴 글 우선 순서를 직접 가르는 시험이 없다. 보류. 셀프 리뷰가 남긴 것과 같다(위 셀프 리뷰 절). 맡은 티켓은 없다.
+- [Nit] `Timeout(30, read=300)`을 상수 이름 하나로 올린다. 보류. 독스트링이 근거를 적고 있다.
+
+## 회고
+
+후보 일곱. 승인 없음, 기각 여섯, 일지에만 남기는 것 하나. 만료 없음(`tools/queue_open_rows.py`를 이 워크트리와 `--ref origin/main`으로 두 번 돌려 "만료할 항목: (없음)"을 보았다). 넘긴 것은 없다.
+
+기각.
+- 어댑터 시험이 `ConnectionError`만 보아 mcp가 남긴 `CancelledError`의 문맥 사슬을 놓치고, core를 지나는 시험이 빨개져 찾았다(위 "접속 시험이 드러낸 것"). 시험이 제 몫을 했다.
+- 첫 커밋을 pre-commit의 변이 표 검사가 막았다(위 셀프 리뷰 절). 검사가 제 몫을 했다.
+- 인계 계기가 세 번 와 세션을 둘 건너 넘겼다. 정해진 절차(`handoff.md`)대로 되었다.
+- CodeRabbit이 두 번 한도에 걸렸다. merge.md 회차 세기가 이미 정한 길이고 회차로 세지 않았다.
+- 큰 결과 알림이 한 번 왔다(ADR 0049와 티켓 03의 grep 11KB). 훅이 알렸고 명령을 거르는 것은 세션의 몫이다.
+- Grep에 없는 ADR 파일 이름을 추측해 넘겼다. 오류가 바로 알렸고 `ls`로 이름을 찾았다.
+
+일지에만 남기는 것.
+- `bind_pr`에 PR 주소를 git 사용자 이름으로 지어 넘겼다. 도구가 그 저장소가 아니라고 바로 알렸고 `gh pr view --json url`이 준 주소로 풀렸다. 사건 하나라 회차로 세지 않는다. 같은 일을 다룬 항목 찾기(`--search`)는 하지 않았다.
+
+## 다음
+
+- 다음 작업은 티켓 03과 04다. 둘 다 02가 병합되면 막힌 것이 없고 서로 파일이 겹치지 않아 나란히 돈다(티켓 03·04의 머리 문단). 03은 `mcp.py`의 닫는 길과 HTTP 픽스처에 선택 인자를, 04는 실제 모델 시험을 더한다. 기능 계획의 `**끝:**` 줄은 마지막 티켓(둘째로 닫히는 쪽)이 적는다.
+- 02에서 보류하고 맡은 티켓이 없는 것: 가림 경계(7자와 8자)·긴 글 우선 순서를 직접 가르는 시험(셀프 리뷰와 claude-review 첫 회차가 같은 지적). 03·04의 체크박스 밖이라 이 티켓들에서 하지 않는다. `_Attempt`의 가림 규칙을 고치는 다음 작업이 같이 한다.
+- 워크트리에서 병합하므로 주 체크아웃은 갱신되지 않는다. 새 세션이 워크트리에 들어가기 전에 주 체크아웃 세션의 `tidy-checkouts`가 당긴다(merge.md "워크트리에서 병합할 때").
+- 열린 PR #507은 CodeRabbit이 한도에서 돌아오면 첫 회차 리뷰가 올 수 있다. 그때 Critical·Major가 있으면 이 세션이 고치고 나머지는 보류 이유를 PR 코멘트에 적는다.
