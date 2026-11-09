@@ -197,3 +197,60 @@ ADR 이력을 고치기 전에 `.claude/rules/adr.md`대로 Skill 도구로 `dom
 > 사용자: 라이브러리 규칙 그대로 (Recommended) — 예를 들어 http://rag/mcp 에 보낸 종료 요청을 서버가 https://rag/mcp/ 로 보내라고 하면 따라갑니다(mcp 2.3.0의 판정 함수에 넣어 손으로 확인했습니다). 같은 서버로 암호화된 연결을 타고 가는 것이라 토큰이 덜 드러납니다. user:pw@가 든 주소와 다른 호스트로는 따라가지 않습니다. 명세의 '닫기' 주석과 티켓 03에 이미 이렇게 적혀 있어 바뀌는 것이 없습니다.
 
 고르지 않은 안: "고칠 곳이 있다", "scheme까지 같아야만 따라간다".
+
+### 커밋
+
+커밋 전에 `git branch --show-current`가 `docs/mcp-http-tickets`였고, `git fetch origin` 뒤 `uv run python tools/sibling_overlap.py`는 "이 브랜치의 새 번호: 헌법 3.0.75", "번호 겹침 없음", "함께 고친 파일 없음"을 냈다. `uv run python tools/plan_table.py`는 `.scratch/plan.md`를 바꾸지 않았다(done 티켓이 없다). 바꾼 파일은 모두 `tools/check_ticket.py`의 면제 모양이다(`_EXEMPT_FILES`에 `docs/constitution/tech.md`·`README.md`가 든다, 읽었다).
+
+`4797c95b` "docs: mcp-http 티켓 네 장을 쓰고 명세 검토를 반영하며 ADR 0049에 가리기 이력을 남긴다". pre-commit은 ruff 둘이 `.py`가 없어 Skipped, 병렬 검사 열(check-ticket, zizmor, lint-imports, check-instructions, check-type-escapes, pyright, pyright-linux, run-hooks, pytest 356.9초, web-verify 512.3초)과 마크다운 표·줄 구분·변이 표·헌법 판·커밋 메시지 검사가 Passed였다(카나리아 명세는 해당 파일 없음으로 Skipped). 인용 대조는 경고 12건을 냈고 막지 않았다. 모두 이 일지가 리뷰 서브에이전트의 보고나 옛 문장을 따옴표로 줄여 든 자리라 저장소에 글자 그대로 없는 것이다.
+
+## 인계(커밋 뒤)
+
+커밋 뒤 세션 컨텍스트가 300,899 토큰으로 문턱 200,000을 넘었다는 인계 계기(`커밋 뒤`)가 왔다. `handoff.md` 1의 인계하지 않는 때 다섯에 들지 않는다(커밋은 성공했다, 요청 범위는 병합까지다, 지시문의 이어받을 상태는 `인계: 셀프 리뷰 직전`이라 경계가 다르다, 이 일지에 `인계 못함`이 없다, `get_session`의 `self`에 `parentSessionId`가 없다). `gh pr view docs/mcp-http-tickets --json state`는 PR이 없다고 냈고, 아직 푸시하지 않았다. 이 세션의 지금 제목은 `docs/mcp-http-tickets`다.
+
+지시문:
+
+```
+다음 작업: 기능 mcp-http. 원격 MCP 서버에 주소로 접속해, 실행마다 MCP 서버를 새로 띄우는 시작 비용을 없앤다
+다음 단계: 티켓
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /to-tickets .scratch/mcp-http/spec.md
+브랜치: docs/mcp-http-tickets
+모델: Opus 5.5 / xhigh. 2의 잇는 지시문
+읽을 것: docs/journal/2026-11-09-2138-mcp-http-tickets.md의 "새 세션(인계를 받은 쪽)"부터 끝까지(셀프 리뷰 보고, 반영과 "반영으로 새로 쓴 사실 문장" 열, 승인, 커밋, 인계)
+이어받을 상태: 인계: 커밋 뒤. 커밋 4797c95b까지 셀프 리뷰 반영과 사용자 승인(ADR 0049 새 이력과 포인터, 헌법 tech.md 문구와 판 3.0.75, 리디렉션 조건)을 마쳤다. 아직 푸시하지 않았고 열린 PR이 없다. 남은 단계는 PR 직전 리뷰(coderabbit-review. 못 돌면 /security-review와 bug-perf-review이고, 그 브리프에 일지 "반영으로 새로 쓴 사실 문장" 열을 밀 주장으로 넘긴다), 푸시와 PR, 봇 회차, 병합(이 워크트리 사본의 next-session merge.md "워크트리에서 병합할 때"를 Read로 연다), 회고, 다음 지시문이다. 대기열 0518의 "세 번"이 넷이 맞다는 것은 다음 회고가 바로잡는다(docs/journal/2026-11-09-2138-mcp-http-tickets.md)
+확인할 선행 조건: 없음
+이번 요청 범위: 티켓까지
+```
+
+open-session을 부른다 2026-11-09T13:54:21Z
+
+## 셋째 세션(커밋 뒤 인계를 받은 쪽)
+
+세션 제목 `docs/mcp-http-tickets`(훅이 시킨 대로 다시 붙였다. 앞 제목은 "MCP HTTP 티켓"이었다). 사용자 프롬프트는 위 "인계(커밋 뒤)"의 지시문 그대로다. `git worktree list`에서 브랜치가 `.claude/worktrees/mcp-http-tickets`에 체크아웃된 것을 보고 `EnterWorktree(path)`로 들어왔다. `git fetch origin` 뒤 origin/main은 `9d789569`(#502)였고, `git merge --no-edit origin/main`으로 합쳤다(두 명령의 출력에서 충돌 없음과 커밋 메시지 검사 Passed를 봤다). `/security-review`가 merge-base부터 diff를 모으므로 PR 직전 리뷰 전에 합쳤다(`docs/constitution/operations.md` 리뷰 파이프라인 2).
+
+### PR 직전 리뷰(`coderabbit-review`)
+
+브리프에 위 "반영으로 새로 쓴 사실 문장" 열을 밀 주장으로 넘기고, 그 가운데 코드로 대 볼 여덟 가지(오류 응답의 되울림 조건, 유휴 만료, 같은 출처 판정, 따르지 않은 리디렉션의 경고 글, `server.command` 자리와 `McpServer(` 열 곳, 03의 선례, 02의 307 사례가 빨개질 수 있는지, 가린 예외가 원인 체인으로 새는지)를 따로 적었다. 서브에이전트의 보고: CLI 0.7.5, `auth status`는 `Plan: Free`·`Seat: not assigned`·`Review access Default: njh6803/njh6803`. 친 명령은 `coderabbit review --agent --committed --base origin/main`이고 종료 코드 0, `review_completed`, `findings: 5`, 9개 파일을 모두 봤다. CLI 축이다.
+
+CLI 지적 다섯은 유효 하나(명세 131줄. 원인은 CLI의 주장과 반대 방향이다)와 오탐 넷이었고, 서브에이전트가 CLI 밖에서 유효 Minor 하나, 보류 Minor 둘, Nit 하나를 더 냈다. 밀 주장 열 가운데 8번은 틀렸고 나머지는 맞다고 봤다(3·9번은 라이브러리가 보낸 URL과 같은 사용자 정보를 허용하지만 매니페스트가 사용자 정보를 거부하므로 실제로는 같다는 단서를 달았다).
+
+- 유효 Minor. 명세 131줄 "실리는 것은 서버가 정한 위치 전체이고 … 쿼리 문자열을 옮겨 적으면 그것도 실린다"는 틀렸다. `_unfollowed_redirect`가 부르는 `redirect_location`이 사용자 정보·쿼리·조각을 뗀다.
+- 유효 Minor. 02의 가리기 시험이 `__cause__`만 봐서 `from None`을 빠뜨린 구현(`except` 안에서 `from` 없이 던짐)도 초록이다. 그때 `__context__`의 원래 예외가 트레이스백에 실린다.
+- 보류 Minor. 응답 훅이 GET 응답을 받아 두지 않는다는 쪽을 빨갛게 할 사례가 없다. 픽스처에 GET을 405로 답하는 인자를 더하자는 제안이다.
+- 보류 Minor. 변수 이름 칸에 토큰 자체를 적는 실수(패턴 `^[A-Za-z0-9_]+$`를 지나는 토큰)가 "환경 변수 <변수 이름>이 없다"로 실패 문구에 실리는데 알려진 한계에 없다.
+- Nit. 02가 어댑터 모듈 독스트링의 `__cause__` 문장을 이름으로 들지 않는다.
+- 오탐 넷: ADR "닫기"의 셋째 문장 뒤 포인터(사용자가 고른 자리), 01의 `additionalProperties: false`(pydantic 2.13이 `patternProperties`만 내고 읽는 단계가 `string_pattern_mismatch`로 거부한다는 것을 서브에이전트가 스크래치패드 스크립트로 봤다. 01이 그 거부 시험을 요구한다), 02의 `isError` 본문과 8자 미만 토큰(둘 다 사용자가 고른 한계로 ADR 새 이력과 명세 111줄에 적혀 있다), 명세 131줄의 WARNING 쿼리 노출(라이브러리가 이미 뗀다. 근거가 된 문장의 잘못은 위 첫 유효로 옮겼다).
+
+### 반영(PR 직전 리뷰)
+
+고친 것:
+
+- 명세 131줄. mcp 2.3.0 `shared/_httpx_utils.py` 172~177줄의 `redirect_location`(`copy_with(userinfo=b"", query=None, fragment=None)`, 독스트링 "without userinfo, query or fragment")과 `client/streamable_http.py` 70~84줄을 읽고 "사용자 정보·쿼리 문자열·조각을 뗀 주소(scheme·호스트·포트·경로)이고 … 서버가 그 위치의 경로에 옮겨 적은 글은 실린다"로 고쳤다. 같은 문장이 다른 파일에 있는지 `Redirect to|not followed|따르지 않은 리디렉션`으로 명세·티켓·ADR 0049를 grep해 131줄 한 곳뿐인 것을 봤다. 위 셀프 리뷰 반영의 표준 Minor 4 항목과 "반영으로 새로 쓴 사실 문장" 8번은 그때 쓴 기록이라 고치지 않고 여기에 틀렸다고 적는다. 그 반영이 `_unfollowed_redirect`만 읽고 그것이 부르는 함수를 따라가지 않았다.
+- 02 53줄과 명세 177줄. 가리기 시험에 "`__suppress_context__`가 참이라 `traceback.format_exception`으로 펼친 글에도 값이 없다"를 더하고 그 까닭을 적었다. 스크래치패드 스크립트(`C:\Users\User\AppData\Local\Temp\claude\C--project-agent\8936549f-c8b3-4de6-a00e-3e4a72df16f0\scratchpad\suppress_context.py`)를 `uv run python -I`로 한 번 돌려, `except` 안에서 `from None`으로 던지면 `__cause__=None`, `__suppress_context__=True`, 트레이스백 글에 비밀이 없고, `from` 없이 던지면 `__cause__=None`이어도 `__suppress_context__=False`라 트레이스백 글에 비밀이 실리는 것을 손으로 봤다(Windows. 두 경우 모두 `__context__`에는 비밀이 든다).
+- Nit. 02의 독스트링 항목에 "원인(`__cause__`)에는 mcp 의 원래 예외가 남는다"와 "원래 예외가 `__cause__` 다"를 가린 경우를 들어 고친다는 괄호를 더했다(`src/agent_os/adapters/mcp.py` 6~9줄을 읽었다).
+
+남긴 것:
+
+- 보류 Minor, GET 405 사례. mcp 2.3.0 클라이언트는 `notifications/initialized`를 보낼 때 GET 흐름을 따로 연다(`client/streamable_http.py` 637~639줄의 `start_get_stream()`, 224~272줄의 `handle_get_stream`을 읽었다). 그래서 GET의 405와 도구 목록 요청의 응답은 순서가 정해지지 않는다. 새 규칙은 POST의 2xx에서 지우므로 GET을 받아 두는 구현이 빨개지려면 405가 마지막 POST 응답 뒤, 실패 문구를 짓기 전에 와야 하고, 그 순서를 픽스처가 고정하려면 클라이언트 안쪽의 시점에 기대야 한다(어림. 돌려 보지 않았다). 명세 167줄은 응답 훅 같은 안쪽을 시험하지 않는다고 정했다. PR 체크리스트에 판정과 값을 적는다.
+- 보류 Minor, 변수 이름 칸의 토큰. 그 칸에 토큰을 적으면 그 토큰은 이미 플러그인 매니페스트 파일에 있고, 관리 API의 매니페스트 응답도 파일 그대로다(명세 105줄). 실패 문구에서 변수 이름을 빼면 운영자가 어느 변수가 없는지 모른다. 한계 한 줄을 더해도 막는 것이 없어 두었다. PR 체크리스트에 적는다.
