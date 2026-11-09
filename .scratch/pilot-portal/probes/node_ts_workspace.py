@@ -107,6 +107,7 @@ CSS 짓기의 시간은 실행마다 회차 하나씩 잰 값이다(README 가 �
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 import re
@@ -293,19 +294,30 @@ def entry_json_round(
         current.mark(measured=True, result=verdict)
 
 
-def failure_round(probe: Probe, label: str, entry: Path, codes: tuple[str, ...]) -> None:
-    """실패를 기대하는 대조 회차. 표지는 기대한 오류 코드 가운데 하나가 stderr 에 있는 것이다."""
+def failure_round(
+    probe: Probe,
+    label: str,
+    entry: Path,
+    codes: tuple[str, ...],
+    specifier: str | None = None,
+) -> None:
+    """실패를 기대하는 대조 회차. 표지는 기대한 오류 코드 가운데 하나가 stderr 에 있는 것이고,
+    `specifier` 를 주면 찾지 못한 지정자(구분자를 `/` 로 맞춘 것)에 그 조각까지 있어야 한다. 패키지
+    자체가 없어도 `ERR_MODULE_NOT_FOUND` 는 나므로, 확장자 없는 상대 import 에서 막히는 것을 재는
+    회차는 그 지정자를 표지에 둔다(PR #504 의 CodeRabbit 이 짚었다)."""
     with probe.rounds.round(label) as current:
         result = probe.node_run(label, [str(entry)])
         code = _error_code(result.stderr)
-        if result.code == 0 or code not in codes:
+        where = _missing_specifier(result.stderr)
+        normalized = (where or "").replace("\\", "/")
+        wrong_specifier = specifier is not None and specifier not in normalized
+        if result.code == 0 or code not in codes or wrong_specifier:
             probe.detail(
                 label,
-                f"기대한 코드 {codes} 가 아님. 종료 {result.code}, 코드 {code}, "
-                f"stderr 머리: {result.stderr.strip()[:300]!r}",
+                f"기대한 코드 {codes} 나 지정자 조각 {specifier!r} 이 아님. 종료 {result.code}, "
+                f"코드 {code}, 지정자 {where!r}, stderr 머리: {result.stderr.strip()[:300]!r}",
             )
             return
-        where = _missing_specifier(result.stderr)
         verdict = f"거부 {code}" + (f" ({where})" if where else "")
         probe.detail(label, verdict)
         current.mark(measured=True, result=verdict)
@@ -474,7 +486,13 @@ def strip_rounds(probe: Probe) -> None:
         'import { createWidgetClient } from "@agent-os/api-client";\n'
         "console.log(JSON.stringify({ client: typeof createWidgetClient }));\n",
     )
-    failure_round(probe, "strip_api_client_root", api_root, ("ERR_MODULE_NOT_FOUND",))
+    failure_round(
+        probe,
+        "strip_api_client_root",
+        api_root,
+        ("ERR_MODULE_NOT_FOUND",),
+        specifier="packages/api-client/src/clients",
+    )
 
 
 def tsc_verdict(resolution: str, variant: str, code: int | None, output: str) -> str | None:
@@ -559,13 +577,22 @@ def mockup_variables() -> list[str]:
     return sorted(set(CSS_VAR_USE.findall(DESIGN_PAGE.read_text(encoding="utf-8"))))
 
 
+@dataclass(frozen=True)
+class DirectBuild:
+    """바로 돌린 회차의 산출. 자식 회차가 같은 내용인지 sha256 으로 대 본다. 바이트 수가 같아도
+    내용이 다를 수 있다(PR #504 의 CodeRabbit 이 짚었다)."""
+
+    bytes: int
+    sha256: str
+
+
 def theme_css_rounds(probe: Probe) -> None:
-    direct_bytes = theme_css_direct_round(probe)
-    theme_css_child_round(probe, direct_bytes)
+    direct = theme_css_direct_round(probe)
+    theme_css_child_round(probe, direct)
 
 
-def theme_css_direct_round(probe: Probe) -> int | None:
-    """Tailwind CLI 를 바로 돌린다. 측정이면 산출의 바이트 수를 돌려준다."""
+def theme_css_direct_round(probe: Probe) -> DirectBuild | None:
+    """Tailwind CLI 를 바로 돌린다. 측정이면 산출의 바이트 수와 sha256 을 돌려준다."""
     label = "theme_css_build"
     out_css = probe.tmp / "theme.css"
     source = UI / "src" / "styles" / "theme.css"
@@ -593,6 +620,7 @@ def theme_css_direct_round(probe: Probe) -> int | None:
             "rawDirectives": len(raw_directives),
             "leftDirectives": left,
             "bytes": len(built.encode("utf-8")),
+            "sha256": hashlib.sha256(built.encode("utf-8")).hexdigest(),
             "seconds": round(result.seconds, 2),
             "declaredVariables": len(declared),
             "usedByMockup": used,
@@ -609,14 +637,15 @@ def theme_css_direct_round(probe: Probe) -> int | None:
         covered = len(used) - len(missing)
         verdict = f"지시문 {len(raw_directives)}→0, 그림의 변수 {covered}/{len(used)} 선언"
         current.mark(measured=True, result=verdict)
-        return len(built.encode("utf-8"))
+        encoded = built.encode("utf-8")
+        return DirectBuild(bytes=len(encoded), sha256=hashlib.sha256(encoded).hexdigest())
     return None
 
 
-def theme_css_child_round(probe: Probe, direct_bytes: int | None) -> None:
+def theme_css_child_round(probe: Probe, direct: DirectBuild | None) -> None:
     """node 프로세스가 Tailwind CLI 를 자식으로 띄워 산출을 메모리에 읽고 파일을 지운다. 질문 페이지
     서버가 시작 때 하는 모양이다. 표지는 자식의 종료 0, 지운 뒤 파일 없음, 바로 돌린 회차와 같은
-    바이트, 같은 변수 판정이다."""
+    sha256(바이트 수만 같은 것은 표지가 아니다), 같은 변수 판정이다."""
     label = "theme_css_build_child"
     script = probe.tmp / "css_child.mjs"
     out_css = probe.tmp / "theme-child.css"
@@ -667,27 +696,32 @@ def theme_css_child_round(probe: Probe, direct_bytes: int | None) -> None:
         declared = set(CSS_VAR_DECL.findall(css_text))
         used = mockup_variables()
         missing = [name for name in used if name not in declared]
-        child_bytes = len(css_text.encode("utf-8"))
+        encoded = css_text.encode("utf-8")
+        child_bytes = len(encoded)
+        child_sha256 = hashlib.sha256(encoded).hexdigest()
         summary = {
             "status": parsed.get("status"),
             "removed": parsed.get("removed"),
             "childSeconds": parsed.get("seconds"),
             "totalSeconds": round(result.seconds, 2),
             "bytes": child_bytes,
-            "directBytes": direct_bytes,
+            "sha256": child_sha256,
+            "directBytes": direct.bytes if direct is not None else None,
+            "directSha256": direct.sha256 if direct is not None else None,
             "leftDirectives": left,
             "missingForMockup": missing,
             "bodySizeDeclared": "--body-size" in declared,
         }
         probe.raw[f"{label}.summary"] = summary
         probe.detail(label, json.dumps(summary, ensure_ascii=False))
-        same_as_direct = direct_bytes is not None and child_bytes == direct_bytes
+        same_as_direct = direct is not None and child_sha256 == direct.sha256
         if parsed.get("status") != 0 or parsed.get("removed") is not True or not css_text:
             return
         if left or missing or "--body-size" not in declared or not same_as_direct:
             return
         verdict = (
-            f"자식이 지은 {child_bytes}바이트를 메모리에 읽고 파일을 지움, 바로 돌린 것과 같음"
+            f"자식이 지은 {child_bytes}바이트를 메모리에 읽고 파일을 지움, "
+            "바로 돌린 것과 sha256 이 같음"
         )
         current.mark(measured=True, result=verdict)
 

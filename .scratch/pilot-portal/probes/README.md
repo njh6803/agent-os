@@ -17,7 +17,7 @@ uv run python .scratch/pilot-portal/probes/node_ts_workspace.py --group next --r
 
 ## 결과
 
-2026-11-09에 네 번, 2026-11-10에 한 번 돌렸다. 첫 실행은 16회차 가운데 15회차가 측정이었고 `next_config_legacy`가 측정 아님(종료 코드 1)이었다. 그 회차는 작업 디렉터리를 임시 폴더로 둔 채 Next의 기본 길을 돌렸고 `Cannot find module './local.ts'`로 끝났다. 원인을 가르는 회차 둘을 더하고 양성 회차의 작업 디렉터리를 설정 파일의 폴더로 옮긴 둘째 실행은 18회차 모두 측정, 측정 아님 0, 종료 코드 0이었다. 명세를 쓰며 페이지 스크립트 묶음(아래 "페이지 스크립트") 두 회차를 더해 그 묶음만 돌렸고(셋째 실행), 이어 여섯 묶음 스무 회차 전체를 한 번 더 돌렸다(넷째 실행. 스무 회차 모두 측정, 측정 아님 0, 종료 코드 0). 2026-11-10에는 셀프 리뷰를 받아 회차 넷(`tsc_nodenext_extensionless`, `tsc_bundler_extensionless`, `theme_css_build_child`, `fonts_css_self_reference`)을 더하고 스물네 회차 전체를 돌렸다(다섯째 실행. 스물네 회차 모두 측정, 측정 아님 0, 종료 코드 0). 실행마다 겹치는 회차의 판정은 같았다. 아래 값은 그 회차를 처음 측정으로 돌린 실행의 것이고, 시간은 프로브가 잰 초이며 실행마다 다른 값은 괄호에 적는다.
+2026-11-09에 네 번, 2026-11-10에 한 번 돌렸다. 첫 실행은 16회차 가운데 15회차가 측정이었고 `next_config_legacy`가 측정 아님(종료 코드 1)이었다. 그 회차는 작업 디렉터리를 임시 폴더로 둔 채 Next의 기본 길을 돌렸고 `Cannot find module './local.ts'`로 끝났다. 원인을 가르는 회차 둘을 더하고 양성 회차의 작업 디렉터리를 설정 파일의 폴더로 옮긴 둘째 실행은 18회차 모두 측정, 측정 아님 0, 종료 코드 0이었다. 명세를 쓰며 페이지 스크립트 묶음(아래 "페이지 스크립트") 두 회차를 더해 그 묶음만 돌렸고(셋째 실행), 이어 여섯 묶음 스무 회차 전체를 한 번 더 돌렸다(넷째 실행. 스무 회차 모두 측정, 측정 아님 0, 종료 코드 0). 2026-11-10에는 셀프 리뷰를 받아 회차 넷(`tsc_nodenext_extensionless`, `tsc_bundler_extensionless`, `theme_css_build_child`, `fonts_css_self_reference`)을 더하고 스물네 회차 전체를 돌렸다(다섯째 실행. 스물네 회차 모두 측정, 측정 아님 0, 종료 코드 0). 같은 날 PR #504의 CodeRabbit을 받아 표지 둘을 좁혔다. `strip_api_client_root`는 오류 코드에 더해 찾지 못한 지정자에 `packages/api-client/src/clients`가 있어야 표지이고(패키지 자체가 없어도 같은 코드가 나므로), `theme_css_build_child`는 바이트 수 대신 sha256이 바로 돌린 회차와 같아야 표지다(바이트 수가 같아도 내용이 다를 수 있으므로). 스물네 회차 전체를 다시 돌렸다(여섯째 실행. 스물네 회차 모두 측정, 측정 아님 0, 종료 코드 0. 좁힌 표지 둘 다 섰다). 실행마다 겹치는 회차의 판정은 같았다. 아래 값은 그 회차를 처음 측정으로 돌린 실행의 것이고, 시간은 프로브가 잰 초이며 실행마다 다른 값은 괄호에 적는다.
 
 ### 타입 벗기기 — `strip_*`
 
@@ -62,7 +62,7 @@ uv run python .scratch/pilot-portal/probes/node_ts_workspace.py --group next --r
 | 산출에 남은 지시문 | 0 |
 | 크기 | 29,569바이트 |
 | 걸린 시간 | 0.67(첫 실행 0.31, 다섯째 0.36) |
-| 자식으로 띄운 회차(`theme_css_build_child`) | 자식 종료 0, 산출 29,569바이트(바로 돌린 것과 같음)를 메모리에 읽고 파일을 지움(지운 뒤 없음), 지시문 0, 그림의 변수 27개 모두 선언, `--body-size` 선언. 자식 0.31초, node 전체 0.38초 |
+| 자식으로 띄운 회차(`theme_css_build_child`) | 자식 종료 0, 산출 29,569바이트(sha256 `51ace4d2…`가 바로 돌린 것과 같음. 여섯째 실행에서 sha256으로 견줬고 다섯째까지는 바이트 수였다)를 메모리에 읽고 파일을 지움(지운 뒤 없음), 지시문 0, 그림의 변수 27개 모두 선언, `--body-size` 선언. 자식 0.31초, node 전체 0.38초 |
 | 선언된 CSS 변수 수 | 167 |
 | 화면 그림 `pp-page.dc.html`이 `var()`로 읽는 변수 | 27개 모두 선언됨(`--accent`, `--bg`, `--bg-active`, `--bg-raised`, `--bg-selected`, `--border`, `--border-control`, `--control-h`, `--focus-ring`, `--font-weight-medium`, `--on-primary`, `--primary`, `--radius-l`, `--radius-m`, `--radius-s`, `--sans`, `--spacing-1`, `--spacing-2`, `--spacing-3`, `--spacing-4`, `--spacing-6`, `--spacing-8`, `--text`, `--text-muted`, `--text-title`, `--text-title--font-weight`, `--text-title--line-height`) |
 | 밀도 변수 `--body-size` | 선언됨 |
@@ -71,7 +71,7 @@ uv run python .scratch/pilot-portal/probes/node_ts_workspace.py --group next --r
 
 - **이 명령의 산출은 토큰만 든 CSS가 아니다.** 변수 선언과 함께 `base` 레이어의 기본 초기화와 유틸리티 클래스 122개가 든다(프로브가 셌다). 같은 명령을 스크래치패드로 한 번 더 돌려 손으로 봤다(`node web/packages/ui/node_modules/@tailwindcss/cli/dist/index.mjs -i web/packages/ui/src/styles/theme.css -o <스크래치패드>/theme-built.css --cwd web/packages/ui` 뒤 `head -40`과 `grep -n "^@layer"`). 산출은 `@layer theme { :root, :host { --text-title: 24px; …`로 시작하고 51행의 `@layer base` 바로 아래가 `*, ::after, ::before, ::backdrop, ::file-selector-button {`이며 199행부터 `@layer utilities`다. 유틸리티가 드는 까닭은 Tailwind v4가 작업 디렉터리 아래 소스에서 클래스 이름을 스스로 긁기 때문으로 본다(어림. 작업 디렉터리를 바꿔 가르지 않았다). 질문 페이지가 이 파일을 그대로 실으면 페이지의 보통 HTML에도 그 초기화가 걸린다. 토큰만 뽑는 입력(`@import "tailwindcss/theme"`만 두는 등)은 재지 않았다.
 - 화면 그림이 쓰는 변수 27개는 모두 선언된다. 그 가운데 `--text-title--font-weight`·`--text-title--line-height`는 원본 `@theme static`이 `--text-title` 곁에 함께 선언한 것이다(`theme.css` 39~41행을 읽었다).
-- **node 프로세스가 CLI를 자식으로 띄워 메모리에 읽는 길이 선다.** 다섯째 실행에서 더한 회차다. 양성 대조는 바로 돌린 회차와 같은 바이트의 산출이 나와 같은 변수 판정을 지난 것이고, 갈래는 지운 뒤 파일이 없는데도 메모리의 글이 그대로인 것(디스크의 산출에 기대지 않는다)이다. 명세의 "토큰 CSS는 시작 때 짓는다"가 ADR 0050이 거부한 `dist/theme.css`로 되돌아갈 길은 이 측정 안에서는 없다. 두 회차 모두 작업 디렉터리가 `web/packages/ui`이고, 질문 페이지 앱 폴더를 작업 디렉터리로 두는 길은 재지 않았다(Tailwind v4가 작업 디렉터리 아래 소스를 긁으므로 유틸리티의 수는 달라질 수 있다. 어림. 명세는 작업 디렉터리를 디자인 시스템 패키지 폴더로 정했다).
+- **node 프로세스가 CLI를 자식으로 띄워 메모리에 읽는 길이 선다.** 다섯째 실행에서 더한 회차다. 양성 대조는 바로 돌린 회차와 sha256이 같은 산출이 나와 같은 변수 판정을 지난 것이고, 갈래는 지운 뒤 파일이 없는데도 메모리의 글이 그대로인 것(디스크의 산출에 기대지 않는다)이다. 명세의 "토큰 CSS는 시작 때 짓는다"가 ADR 0050이 거부한 `dist/theme.css`로 되돌아갈 길은 이 측정 안에서는 없다. 두 회차 모두 작업 디렉터리가 `web/packages/ui`이고, 질문 페이지 앱 폴더를 작업 디렉터리로 두는 길은 재지 않았다(Tailwind v4가 작업 디렉터리 아래 소스를 긁으므로 유틸리티의 수는 달라질 수 있다. 어림. 명세는 작업 디렉터리를 디자인 시스템 패키지 폴더로 정했다).
 
 ### 글꼴 — `fonts_files`·`fonts_css_self_reference`
 
@@ -111,6 +111,6 @@ uv run python .scratch/pilot-portal/probes/node_ts_workspace.py --group next --r
 | `page_script_strip` | 타입 별칭 하나와 주석 넷이 든 스크립트를 `strip` 모드로 벗긴 뒤 `vm.runInThisContext`로 돌림 | 돌았음(전역에 둔 라벨 글이 기대와 같음). 산출에 타입 주석과 `type` 선언 잔존 없음. 줄 수가 원본과 같음 | 0.1 |
 | `page_script_strip_enum` | `enum Mode { Light }`를 같은 모드로 벗김 | 거부 `ERR_UNSUPPORTED_TYPESCRIPT_SYNTAX` | 0.1 |
 
-- **페이지 스크립트는 `.ts`로 두고 시작 때 벗겨 내줄 수 있다.** 양성 대조는 벗긴 산출이 실제로 돌아 기대한 값을 낸 것이고(`page_script_strip`), 갈래는 지울 수 없는 문법이 거부된 것이다(`page_script_strip_enum`). 그래서 벗기기는 기준 tsconfig의 `erasableSyntaxOnly`와 같은 선에 서고, tsc를 지난 스크립트가 벗기기에서 막히는 경우는 그 선 밖의 문법뿐이다. 줄 수가 같으므로 브라우저의 오류 줄 번호가 원본 `.ts`의 줄과 맞는다.
+- **페이지 스크립트는 `.ts`로 두고 시작 때 벗겨 내줄 수 있다.** 양성 대조는 벗긴 산출이 실제로 돌아 기대한 값을 낸 것이고(`page_script_strip`), 갈래는 지울 수 없는 문법이 거부된 것이다(`page_script_strip_enum`). 잰 것은 그 둘뿐이다. 벗기지 못하는 문법의 목록(`enum`, 런타임 코드가 있는 `namespace`, 매개변수 프로퍼티)과 TypeScript 5.8 이상에서 `erasableSyntaxOnly: true`를 두라는 권고는 Node 문서(`nodejs.org/api/typescript.html`, 2026-11-10에 읽었다)가 적는 것이라, 기준 tsconfig의 `erasableSyntaxOnly`를 지난 스크립트가 벗기기에서 막히지 않는 것은 문서로 아는 것이고 이 프로브가 잰 것이 아니다(PR #504의 CodeRabbit이 일반화를 짚었다). 줄 수가 같으므로 브라우저의 오류 줄 번호가 원본 `.ts`의 줄과 맞는다.
 - 결과를 본 뒤 바꾼 기준 하나. 갈래의 표지를 첫 판은 `ERR_INVALID_TYPESCRIPT_SYNTAX`로 적었고, 첫 실행의 원본(stdout의 `{"code":"ERR_UNSUPPORTED_TYPESCRIPT_SYNTAX"}`)이 다른 코드라 그 코드로 고쳤다(틀린 문법이 아니라 지원하지 않는 문법의 코드다). 첫 실행은 그 회차가 측정 아님으로 끝나 종료 코드 1이었고, 고친 뒤의 실행이 두 회차 모두 측정이었다.
 - node가 그 API를 처음 부를 때 stderr에 두 줄을 찍는다. 첫 줄은 `(node:<pid>) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time`이고 둘째 줄은 `--trace-warnings`로 경고가 난 자리를 보라는 안내 `(Use \`node.EXE --trace-warnings ...\` to show where the warning was created)`다(`node.EXE`는 이 PC의 실행 파일 이름이다). 저장소 루트에서 `node -e "const {stripTypeScriptTypes}=require('node:module'); stripTypeScriptTypes('const a: number = 1;', {mode:'strip'});"`를 쳐 손으로 봤고, 두 회차의 원본 stderr에도 같은 두 줄이 있다. 서버의 stderr에도 남을 것이다(어림. 끄는 플래그는 재지 않았다).
