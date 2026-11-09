@@ -130,3 +130,47 @@
 고르지 않은 선택지(라벨만): "고칠 것이 있다".
 
 ADR 0049의 status와 색인 행을 accepted로 바꾸고, 기능 계획 `.scratch/mcp-http/plan.md`에 `**설계:** ADR 0049`를 `**Blocked by:**` 뒤에 적고 `uv run python tools/plan_table.py`로 `.scratch/plan.md`를 재생성했다.
+
+## 인계
+
+커밋 `02baaf75`의 pre-commit: ruff 둘은 `.py`가 없어 Skipped라 손으로 쳐 둘 다 초록이었고(`All checks passed!`, `1955 files already formatted`), 카나리아 명세 검사는 대상 없음 Skipped, 나머지는 전부 Passed(pytest 379.8초, web-verify 497.6초). 그 커밋 뒤에 인계 계기(`hook_handoff`, 컨텍스트 325,481 토큰, 경계 `커밋 뒤`)가 왔다. `handoff.md`의 인계하지 않는 때 다섯에 들지 않아 인계한다. 커밋은 성공했고, 범위는 PR과 병합까지라 이 경계에서 끝나지 않으며, 이어받은 인계가 아니고, 인계 못함 줄이 없고, `get_session self`에 `parentSessionId`가 없다. 이 브랜치에 열린 PR은 없다(`gh pr view`). 이 절부터는 커밋하지 않았고 새 세션이 이어 쓰고 커밋한다. 지시문은 다음이다.
+
+```
+다음 작업: 기능 mcp-http. 원격 MCP 서버에 주소로 접속해, 실행마다 MCP 서버를 새로 띄우는 시작 비용을 없앤다
+다음 단계: 설계 인터뷰
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /grill-with-docs mcp-http
+브랜치: docs/mcp-http-design
+모델: Fable 5.1 / xhigh. 2의 잇는 지시문
+읽을 것: docs/journal/2026-11-09-1229-mcp-http-design.md(인터뷰의 사용자 인용, 합의 요약, 셀프 리뷰 두 축의 보고와 반영, 승인, 이 지시문. "다음" 절은 아직 없다)
+이어받을 상태: 인계: 커밋 뒤. docs/journal/2026-11-09-1229-mcp-http-design.md. 설계 인터뷰를 마치고 ADR 0049, CONTEXT.md의 전송 항목, tech.md의 httpx2 문장과 헌법 판 3.0.73, ADR 0034의 포인터 둘, 기능 계획의 설계 줄과 .scratch/plan.md 재생성, 일지를 한 커밋으로 이 브랜치에 두었다. 일지의 인계 절은 그 뒤에 적어 커밋하지 않았다. 남은 단계: PR 직전 리뷰(Skill 도구로 coderabbit-review, 안 되면 /security-review와 bug-perf-review. 밀 주장은 일지 셀프 리뷰 절의 "고친 것" 문장들), PR(/git-pr), 병합(이 워크트리 사본의 next-session merge.md "워크트리에서 병합할 때"를 Read로 열어 따른다), 그 뒤 next-session 지시문(설계 줄이 있고 spec.md가 없으니 결정표대로 /to-spec, 새 세션)과 open-session. 일지의 "다음" 절과 retro는 단계를 닫는 그 세션이 쓴다.
+확인할 선행 조건: 없음
+이번 요청 범위: PR과 병합까지
+```
+
+세션 제목을 `docs/mcp-http-design (인계함)`으로 바꿨고, 멈출 백그라운드 작업은 없었으며, 워크트리 잠금을 풀었다. open-session을 부른다 2026-11-09T04:44:31Z
+
+열기는 멈췄다. `tools/open_session.ps1 -Action send`의 출력은 `idle=0s`, `lock=13:48:00.945 waited=0s`, `start=.claude/skills/grill-with-docs/SKILL.md`, `stale=1`, `fired=13:48:02.840`이고, `page=` 없이 "30초 안에 프롬프트 첫 줄이 채워진 새 세션 화면을 찾지 못했다"로 끝났다(종료 코드 1). `fired=` 뒤의 멈춤이라 같은 파일로 다시 돌리지 않았다(세션이 둘 생긴다, open-session "막히면"). `deeplink_timeline.ps1`은 10-27 02:14 뒤의 딥링크를 보이지 않았고, `deeplink_overlap.py`는 이 계정의 열기 셋이 1분 40초 안에 있었다고 냈다. 13:46:57.230 다른 세션의 열기(입력창-없음), 13:48:02.840 이 열기(화면-없음), 13:48:37.353 다른 세션의 열기(보냄. 그 뒤 `list_sessions`에 `docs/pilot-portal-design`이 실행 중으로 새로 보였다). 셋 다 "자기 딥링크를 로그에서 찾지 못했다"라 앱 로그로는 겹침을 가르지 못했다(10-27 02:23 뒤의 열기가 모두 그렇다). `stale=1`은 앞 열기가 남긴 새 세션 화면의 첫 줄로 보인다(같은 스킬 grill-with-docs라 비교하는 앞 24자가 같다). 그 화면이 남은 채 온 이 딥링크가 새 화면으로 보이지 않았다고 어림한다. 잠금은 순서를 지켰다(다음 열기는 이 스크립트가 멈춘 뒤 약 4초에 쏘았다). 이 세션의 `get_window_layout`은 메인 창의 첫 패널이 세션이 아닌 `page`였다고 보였다. 그 화면에 이 지시문이 남아 있는지는 보지 못했다. 인계 못함 커밋 뒤. handoff.md 4의 열기 항목대로 제목을 `docs/mcp-http-design`으로 되돌렸고, 멈춘 대기는 없었으며, 이 세션에서 PR 직전 리뷰부터 잇는다.
+
+## PR 직전 리뷰(coderabbit-review)
+
+범위: 기준 `origin/main`(분기 뒤 움직이지 않았다), 커밋 하나(`02baaf75`)와 미커밋 일지. `coderabbit-review` 서브에이전트가 CLI 0.7.5로 `coderabbit review --agent --include-untracked`를 돌렸다. `auth status`는 `Seat: not assigned`(Plan: Free)였으나 리뷰는 `review_completed`, findings 4로 끝까지 돌아 CLI 축이다. 본 파일은 여덟(기능 계획, `CONTEXT.md`, ADR 0034·0049, ADR 색인, 헌법 README·tech.md, 일지)이고 생성 파일 `.scratch/plan.md`는 목록에 없었다.
+
+보고(서브에이전트의 트리아지).
+- 유효 [Minor] ADR 0049 결정의 매니페스트 항목(CLI는 Major, "https 강제, 로컬 개발만 http 예외"): http 주소로는 헤더 값이 평문으로 가는데 ADR이 그 사실도 https 강제를 거부한 근거도 적지 않았다. 서브에이전트는 CLI의 제안(루프백만 http 허용)을 그대로 받으면 compose 서비스 이름 주소로 붙는 이 기능의 첫 배포가 깨진다고 보고, 거부 안과 배포 경고를 더하자고 했다.
+- 유효 [Minor] ADR 0049 Consequences(CLI는 Critical): mcp의 streamable HTTP 클라이언트가 DEBUG에서 보낸 메시지 전체를 로그에 싣고(`streamable_http.py` 635·191줄) 그 메시지에 `secret_args` 값이 든다. 이 저장소는 로깅을 설정하지 않아 기본에서는 나오지 않는 조건부 위험이라 Minor로 봤다.
+- 오탐 ADR 0049 문구 항목(CLI Critical, 쿼리 문자열의 비밀이 `run_failed`와 관리 API에 노출): ADR이 알려진 한계로 이미 적었고, 주소를 비밀이 아닌 것으로 보는 결정은 인터뷰에서 확인했다(위 라운드 1의 주소 질문 인용). 최종 사용자 경로의 실패 항목은 고정 문구와 `cause`만 싣는다(`channel/http/items.py`, ADR 0023).
+- 오탐 ADR 0034 10행(CLI Minor, 런처 도입 이유를 이력으로 옮기라): 이번 변경은 포인터 둘뿐이고 지적한 문장은 원래 있던 글이다(`.claude/rules/adr.md` "본문의 다른 글자는 고치지 않는다").
+- CLI 밖 관찰(보류): ADR 0009의 2026-09-22 이력이 "다시 볼 때"의 둘째로 적은 날(매니페스트에 환경변수 필드가 생기는 날)이 ADR 0049인데, ADR 0009에 그 계기가 닿았다는 기록이 없다.
+
+근거를 대 봤다. `streamable_http.py` 47줄 `logger = logging.getLogger(__name__)`, 172줄 `logger.info(f"Received session ID: …")`, 191줄 `logger.debug(f"SSE message: {message}")`, 635줄 `logger.debug(f"Sending client message: {message}")`, 756줄 접속 주소 로그를 Read로 봤고, `mcp/client/`를 `logger.`로 grep해 `stdio/`에는 로그 호출이 없음을 봤다. `src/agent_os`에 `logging.`·`getLogger`·`basicConfig`·`setLevel`이 없고(Grep), `secret_args`를 가리는 자리는 `core/run.py`의 이벤트뿐이다(Grep). `http://rag-engine:8000/mcp`는 이 일지 38행의 인용에만 있고 ADR 0046·0048에는 compose 참조 배포와 저장소 이름 rag-engine만 있어, 서브에이전트가 적은 출처(ADR 0046·0048)를 그대로 옮기지 않고 일지와 두 ADR의 몫을 갈라 적었다.
+
+고친 것(새로 쓴 사실 문장은 PR 봇 회차의 밀 주장이다). 넷 다 결정을 바꾸지 않고 사실과 거부 안을 더한 것이라 승인을 다시 묻지 않았다.
+- ADR 0049 Considered Options에 거부 안을 더했다: "**https를 강제한다(루프백 주소만 http 예외).** http 주소로는 헤더 값(토큰)이 평문으로 간다. 그러나 이 기능의 첫 쓰임이 참조 배포의 compose 네트워크 안에서 문서 검색 서버에 서비스 이름으로 붙는 주소(…)라 루프백만 예외로 두면 그 배포가 깨지고, 내부 네트워크마다 인증서를 두어야 한다. 거부했다."
+- ADR 0049 Consequences "배포가 알아야 할 것 셋"을 넷으로 바꾸고 첫 항목을 더했다: "http 주소에서는 헤더 값(토큰)이 평문으로 가므로, http 주소는 신뢰하는 내부 네트워크(compose 네트워크의 서비스 이름 주소)에서만 쓰고 인터넷을 지나는 주소는 https로 적는다." 넘기는 곳도 "앞의 둘은 deploy-package의 배포 안내에"로 고쳤다.
+- ADR 0049 Consequences에 "**로그.**" 항목을 더했다: 로거 이름 `mcp.client.streamable_http`와 세 줄(172·191·635), stdio 클라이언트에는 메시지를 찍는 로그가 없음, `secret_args`의 실제 값이 호출 본문에 실림, 저장소가 로깅을 설정하지 않아 기본 WARNING에서는 나오지 않음, 구현 티켓의 수락에 "`secret_args`가 있는 도구를 http 모양의 서버에 부르며 루트 로거를 DEBUG로 켠 테스트에서 그 값이 로그에 나타나지 않는다"를 넣음.
+- ADR 0049 "다른 ADR의 본문"에 ADR 0009의 둘째 날 문장을 더하고, ADR 0009에 이력 "2026-11-09 매니페스트에 환경 변수 필드가 생겼고 그 자리는 이름만 담는다"를 더했다(그 ADR의 2026-10-03 이력이 첫째 날을 적은 선례). 포인터는 달지 않았다(지난 이력 항목은 기록이다).
+
+남긴 것: 없음. 오탐 둘은 위 근거로 고치지 않았다.
+
+다시 돌린 명령: `uv run python tools/check_adr_pointers.py`는 출력 없이 끝났다(종료 0). 나머지 손으로 치는 다섯은 다음 커밋의 pre-commit으로 갈음하고 결과는 커밋 뒤에 적는다.
