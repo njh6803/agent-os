@@ -126,6 +126,9 @@ importers:
       '@agent-os/api-client':
         specifier: workspace:*
         version: link:../../packages/api-client
+      '@agent-os/site-file':
+        specifier: workspace:*
+        version: link:../../packages/site-file
       '@agent-os/ui':
         specifier: workspace:*
         version: link:../../packages/ui
@@ -138,9 +141,6 @@ importers:
       react-dom:
         specifier: 19.3.0
         version: 19.3.0(react@19.3.0)
-      smol-toml:
-        specifier: 1.9.1
-        version: 1.9.1
     devDependencies:
       '@playwright/test':
         specifier: ^1.63.0
@@ -187,6 +187,12 @@ importers:
       openapi-fetch:
         specifier: ^0.17.0
         version: 0.17.0
+
+  packages/site-file:
+    dependencies:
+      smol-toml:
+        specifier: 1.9.1
+        version: 1.9.1
 
   packages/ui:
     dependencies:

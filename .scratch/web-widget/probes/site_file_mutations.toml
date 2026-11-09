@@ -290,17 +290,17 @@ new = '''
 DEFAULT_REQUEST_CHARS = 20_001
 '''
 
-# --- Node: 지나는 표기(web/apps/widget/tools/site-file.ts) ----------------------------------------------------
+# --- Node: 지나는 표기(web/packages/site-file/src/site-file.ts) ----------------------------------------------------
 
 [[mutation]]
 name = "Node 가 포트 0 을 막으면 지나는 표기가 빨갛다"
 runner = "node"
-tests = ["apps/widget/tools/site-file.test.ts", "-t", "브라우저가 싣는 표기라 지난다"]
+tests = ["packages/site-file/src/site-file.test.ts", "-t", "브라우저가 싣는 표기라 지난다"]
 expect = "red"
 expect_output = ["expected 'port' to be null"]
 
 [[mutation.edit]]
-file = "web/apps/widget/tools/site-file.ts"
+file = "web/packages/site-file/src/site-file.ts"
 old = '''
 const PORT = /^(?:0|[1-9][0-9]{0,4})$/u;
 '''
@@ -311,12 +311,12 @@ const PORT = /^(?:[1-9][0-9]{0,4})$/u;
 [[mutation]]
 name = "Node 가 0 하나도 :: 로 줄이면 지나는 표기가 빨갛다"
 runner = "node"
-tests = ["apps/widget/tools/site-file.test.ts", "-t", "브라우저가 싣는 표기라 지난다"]
+tests = ["packages/site-file/src/site-file.test.ts", "-t", "브라우저가 싣는 표기라 지난다"]
 expect = "red"
 expect_output = ["expected 'ipv6' to be null"]
 
 [[mutation.edit]]
-file = "web/apps/widget/tools/site-file.ts"
+file = "web/packages/site-file/src/site-file.ts"
 old = '''
   let bestLength = 1;
 '''
@@ -327,12 +327,12 @@ new = '''
 [[mutation]]
 name = "Node 가 길이가 같은 0 의 열 가운데 뒤의 것을 줄이면 지나는 표기가 빨갛다"
 runner = "node"
-tests = ["apps/widget/tools/site-file.test.ts", "-t", "브라우저가 싣는 표기라 지난다"]
+tests = ["packages/site-file/src/site-file.test.ts", "-t", "브라우저가 싣는 표기라 지난다"]
 expect = "red"
 expect_output = ["expected 'ipv6' to be null"]
 
 [[mutation.edit]]
-file = "web/apps/widget/tools/site-file.ts"
+file = "web/packages/site-file/src/site-file.ts"
 old = '''
     if (index - start + 1 > bestLength) {
 '''
@@ -343,12 +343,12 @@ new = '''
 [[mutation]]
 name = "Node 가 끝 라벨 대신 첫 라벨로 IPv4 를 가르면 지나는 표기가 빨갛다"
 runner = "node"
-tests = ["apps/widget/tools/site-file.test.ts", "-t", "브라우저가 싣는 표기라 지난다"]
+tests = ["packages/site-file/src/site-file.test.ts", "-t", "브라우저가 싣는 표기라 지난다"]
 expect = "red"
 expect_output = ["expected 'ipv4' to be null"]
 
 [[mutation.edit]]
-file = "web/apps/widget/tools/site-file.ts"
+file = "web/packages/site-file/src/site-file.ts"
 old = '''
   if (NUMERIC_LABEL.test(names.at(-1) ?? "")) {
 '''
@@ -359,12 +359,12 @@ new = '''
 [[mutation]]
 name = "Node 가 끝 점을 라벨로 세면 끝 점이 붙은 IPv4 가 지나 막는 시험이 빨갛다"
 runner = "node"
-tests = ["apps/widget/tools/site-file.test.ts", "-t", "규칙 ipv4 에 막힌다"]
+tests = ["packages/site-file/src/site-file.test.ts", "-t", "규칙 ipv4 에 막힌다"]
 expect = "red"
 expect_output = ["expected null to be 'ipv4'"]
 
 [[mutation.edit]]
-file = "web/apps/widget/tools/site-file.ts"
+file = "web/packages/site-file/src/site-file.ts"
 old = '''
   const names = labels.length > 1 && labels.at(-1) === "" ? labels.slice(0, -1) : labels;
 '''
@@ -375,12 +375,12 @@ new = '''
 [[mutation]]
 name = "Node 가 끝 점을 뗀 라벨로 IPv4 정규형을 보면 끝 점이 붙은 IPv4 가 지나 막는 시험이 빨갛다"
 runner = "node"
-tests = ["apps/widget/tools/site-file.test.ts", "-t", "규칙 ipv4 에 막힌다"]
+tests = ["packages/site-file/src/site-file.test.ts", "-t", "규칙 ipv4 에 막힌다"]
 expect = "red"
 expect_output = ["expected null to be 'ipv4'"]
 
 [[mutation.edit]]
-file = "web/apps/widget/tools/site-file.ts"
+file = "web/packages/site-file/src/site-file.ts"
 old = '''
     return isCanonicalIpv4(labels) ? null : "ipv4";
 '''
@@ -391,12 +391,12 @@ new = '''
 [[mutation]]
 name = "Node 가 밑줄을 금지된 글자로 세면 밑줄이 든 지나는 표기가 빨갛다"
 runner = "node"
-tests = ["apps/widget/tools/site-file.test.ts", "-t", "브라우저가 싣는 표기라 지난다"]
+tests = ["packages/site-file/src/site-file.test.ts", "-t", "브라우저가 싣는 표기라 지난다"]
 expect = "red"
 expect_output = ["expected 'host' to be null"]
 
 [[mutation.edit]]
-file = "web/apps/widget/tools/site-file.ts"
+file = "web/packages/site-file/src/site-file.ts"
 old = '''
 const FORBIDDEN_DOMAIN_SIGNS = "#%/:<>?@[\\]^|";
 '''
@@ -407,12 +407,12 @@ const FORBIDDEN_DOMAIN_SIGNS = "#%/:<>?@[\\]^|_";
 [[mutation]]
 name = "Node 가 % 를 금지된 글자에서 빼면 퍼센트 인코딩이 든 호스트가 지나 막는 시험이 빨갛다"
 runner = "node"
-tests = ["apps/widget/tools/site-file.test.ts", "-t", "규칙 host 에 막힌다"]
+tests = ["packages/site-file/src/site-file.test.ts", "-t", "규칙 host 에 막힌다"]
 expect = "red"
 expect_output = ["expected null to be 'host'"]
 
 [[mutation.edit]]
-file = "web/apps/widget/tools/site-file.ts"
+file = "web/packages/site-file/src/site-file.ts"
 old = '''
 const FORBIDDEN_DOMAIN_SIGNS = "#%/:<>?@[\\]^|";
 '''
@@ -423,12 +423,12 @@ const FORBIDDEN_DOMAIN_SIGNS = "#/:<>?@[\\]^|";
 [[mutation]]
 name = "Node 가 공백을 금지된 글자에서 빼면 공백이 든 호스트가 지나 막는 시험이 빨갛다"
 runner = "node"
-tests = ["apps/widget/tools/site-file.test.ts", "-t", "규칙 host 에 막힌다"]
+tests = ["packages/site-file/src/site-file.test.ts", "-t", "규칙 host 에 막힌다"]
 expect = "red"
 expect_output = ["expected null to be 'host'"]
 
 [[mutation.edit]]
-file = "web/apps/widget/tools/site-file.ts"
+file = "web/packages/site-file/src/site-file.ts"
 old = '''
     return code <= SPACE || code === DELETE || FORBIDDEN_DOMAIN_SIGNS.includes(char);
 '''
@@ -439,12 +439,12 @@ new = '''
 [[mutation]]
 name = "Node 가 DEL 을 금지된 글자에서 빼면 DEL 이 든 호스트가 지나 막는 시험이 빨갛다"
 runner = "node"
-tests = ["apps/widget/tools/site-file.test.ts", "-t", "규칙 host 에 막힌다"]
+tests = ["packages/site-file/src/site-file.test.ts", "-t", "규칙 host 에 막힌다"]
 expect = "red"
 expect_output = ["expected null to be 'host'"]
 
 [[mutation.edit]]
-file = "web/apps/widget/tools/site-file.ts"
+file = "web/packages/site-file/src/site-file.ts"
 old = '''
     return code <= SPACE || code === DELETE || FORBIDDEN_DOMAIN_SIGNS.includes(char);
 '''
@@ -455,12 +455,12 @@ new = '''
 [[mutation]]
 name = "Node 의 기본 포트가 스킴과 엇갈리면 지나는 표기가 빨갛다"
 runner = "node"
-tests = ["apps/widget/tools/site-file.test.ts", "-t", "브라우저가 싣는 표기라 지난다"]
+tests = ["packages/site-file/src/site-file.test.ts", "-t", "브라우저가 싣는 표기라 지난다"]
 expect = "red"
 expect_output = ["expected 'default-port' to be null"]
 
 [[mutation.edit]]
-file = "web/apps/widget/tools/site-file.ts"
+file = "web/packages/site-file/src/site-file.ts"
 old = '''
   if (after === `:${scheme === "http" ? "80" : "443"}`) {
 '''
@@ -471,12 +471,12 @@ new = '''
 [[mutation]]
 name = "Node 가 IPv4 의 255 를 막으면 지나는 표기가 빨갛다"
 runner = "node"
-tests = ["apps/widget/tools/site-file.test.ts", "-t", "브라우저가 싣는 표기라 지난다"]
+tests = ["packages/site-file/src/site-file.test.ts", "-t", "브라우저가 싣는 표기라 지난다"]
 expect = "red"
 expect_output = ["expected 'ipv4' to be null"]
 
 [[mutation.edit]]
-file = "web/apps/widget/tools/site-file.ts"
+file = "web/packages/site-file/src/site-file.ts"
 old = '''
 const MAX_IPV4_PART = 255;
 '''
@@ -489,7 +489,7 @@ const MAX_IPV4_PART = 254;
 [[mutation]]
 name = "브라우저가 바꾸는 표기를 지나는 사례에 두면 URL 파서 대조가 빨갛다"
 runner = "node"
-tests = ["apps/widget/tools/site-file.test.ts", "-t", "URL 파서가 바꾸지 않는다"]
+tests = ["packages/site-file/src/site-file.test.ts", "-t", "URL 파서가 바꾸지 않는다"]
 expect = "red"
 expect_output = ["to be 'http://127.1'"]
 
@@ -505,7 +505,7 @@ new = '''
 [[mutation]]
 name = "브라우저가 그대로 싣는 표기를 표기 규칙의 막힘으로 적으면 URL 파서 대조가 빨갛다"
 runner = "node"
-tests = ["apps/widget/tools/site-file.test.ts", "-t", "다른 값으로 바꾸거나 거절한다"]
+tests = ["packages/site-file/src/site-file.test.ts", "-t", "다른 값으로 바꾸거나 거절한다"]
 expect = "red"
 expect_output = ["not to be 'https://*.shop.example'"]
 
@@ -544,30 +544,28 @@ expect = "red"
 expect_output = ["http://localhost:3000 https://shop.example"]
 
 [[mutation.edit]]
-file = "web/apps/widget/tools/site-file.ts"
+file = "web/packages/site-file/src/site-file.ts"
 old = '''
-    allowedOrigins: [...new Set(sites.flatMap(({ origins }) => origins))],
+    allowedOrigins: [...new Set(sites.flatMap(({ allowedOrigins }) => allowedOrigins))],
 '''
 new = '''
-    allowedOrigins: sites.flatMap(({ origins }) => origins),
+    allowedOrigins: sites.flatMap(({ allowedOrigins }) => allowedOrigins),
 '''
 
 [[mutation]]
 name = "가장 작은 상한을 기본값에서 세기 시작하면 기본값보다 큰 상한의 시험이 빨갛다"
 runner = "node"
-tests = ["apps/widget/tools/site-file.test.ts", "-t", "기본값보다 큰 상한"]
+tests = ["packages/site-file/src/site-file.test.ts", "-t", "기본값보다 큰 상한"]
 expect = "red"
 expect_output = ['"requestChars": 20000']
 
 [[mutation.edit]]
-file = "web/apps/widget/tools/site-file.ts"
+file = "web/packages/site-file/src/site-file.ts"
 old = '''
-    requestChars: Number(limits.reduce((smallest, limit) => (limit < smallest ? limit : smallest))),
+    requestChars: Math.min(...sites.map(({ requestChars }) => requestChars)),
 '''
 new = '''
-    requestChars: Number(
-      limits.reduce((smallest, limit) => (limit < smallest ? limit : smallest), BigInt(DEFAULT_REQUEST_CHARS)),
-    ),
+    requestChars: Math.min(DEFAULT_REQUEST_CHARS, ...sites.map(({ requestChars }) => requestChars)),
 '''
 
 [[mutation]]
@@ -578,7 +576,7 @@ expect = "red"
 expect_output = ["expected 20001 to be 20000"]
 
 [[mutation.edit]]
-file = "web/apps/widget/tools/site-file.ts"
+file = "web/packages/site-file/src/site-file.ts"
 old = '''
 export const DEFAULT_REQUEST_CHARS = 20_000;
 '''
@@ -589,11 +587,10 @@ export const DEFAULT_REQUEST_CHARS = 20_001;
 [[mutation]]
 name = "사이트 항목의 필수 키를 보지 않으면 키마다의 필수 키 시험이 모두 빨갛다"
 runner = "node"
-tests = ["apps/widget/tools/site-file.test.ts", "-t", "사이트 항목의 필수 키"]
+tests = ["packages/site-file/src/site-file.test.ts", "-t", "사이트 항목의 필수 키"]
 expect = "red"
 # 실패한 시험의 이름은 실패 목록에만 실린다. 다섯이 모두 있어야 키마다의 시험이 그 키의 판정에 기댄다.
 expect_output = [
-  "받아들일 수 없는 사이트 파일을 받아들였다",
   "필수 키 issuer 가 빠지면",
   "필수 키 audience 가 빠지면",
   "필수 키 allowed_origins 가 빠지면",
@@ -602,7 +599,7 @@ expect_output = [
 ]
 
 [[mutation.edit]]
-file = "web/apps/widget/tools/site-file.ts"
+file = "web/packages/site-file/src/site-file.ts"
 old = '''
 const REQUIRED_SITE_KEYS: readonly string[] = [
   "issuer",
@@ -619,12 +616,13 @@ const REQUIRED_SITE_KEYS: readonly string[] = [];
 [[mutation]]
 name = "빠진 schema_version 을 보지 않으면 판이 빠진 시험이 빨갛다"
 runner = "node"
-tests = ["apps/widget/tools/site-file.test.ts", "-t", "판 schema_version 이 빠지면"]
+tests = ["packages/site-file/src/site-file.test.ts", "-t", "판 schema_version 이 빠지면"]
 expect = "red"
-expect_output = ["받아들일 수 없는 사이트 파일을 받아들였다"]
+# 시험이 던지는 문구는 원문에 있어 표지가 못 된다. 받아들인 결과를 글로 찍은 값은 받아들였을 때만 오류 문구에 실린다.
+expect_output = ['"requestChars":20000']
 
 [[mutation.edit]]
-file = "web/apps/widget/tools/site-file.ts"
+file = "web/packages/site-file/src/site-file.ts"
 old = '''
     return ["schema_version: 빠졌다"];
 '''
@@ -635,12 +633,13 @@ new = '''
 [[mutation]]
 name = "BOM 을 따로 막지 않으면 smol-toml 이 받아 BOM 시험이 빨갛다"
 runner = "node"
-tests = ["apps/widget/tools/site-file.test.ts", "-t", "BOM"]
+tests = ["packages/site-file/src/site-file.test.ts", "-t", "BOM"]
 expect = "red"
-expect_output = ["받아들일 수 없는 사이트 파일을 받아들였다"]
+# 시험이 던지는 문구는 원문에 있어 표지가 못 된다. 받아들인 결과를 글로 찍은 값은 받아들였을 때만 오류 문구에 실린다.
+expect_output = ['"requestChars":20000']
 
 [[mutation.edit]]
-file = "web/apps/widget/tools/site-file.ts"
+file = "web/packages/site-file/src/site-file.ts"
 old = '''
     return { problems: ["TOML 이 아니다: 파일 머리에 BOM 이 있다. BOM 없는 UTF-8 로 저장한다"] };
 '''
@@ -656,7 +655,7 @@ expect = "red"
 expect_output = ["instead of rejecting"]
 
 [[mutation.edit]]
-file = "web/apps/widget/tools/site-file.ts"
+file = "web/packages/site-file/src/site-file.ts"
 old = '''
     return new TextDecoder("utf-8", { fatal: true, ignoreBOM: true }).decode(bytes);
 '''
@@ -669,10 +668,11 @@ name = "UTF-8 이 아닌 바이트를 바꿔 넣으면 UTF-8 시험이 다른 �
 runner = "node"
 tests = ["apps/widget/next.config.test.ts", "-t", "UTF-8 이 아니다"]
 expect = "red"
-expect_output = ["TOML 이 아니다"]
+# 디코더가 거절하지 않고 쓰레기 글을 넘기면 TOML 파서의 문구가 받은 값에 실린다.
+expect_output = ["Invalid TOML document"]
 
 [[mutation.edit]]
-file = "web/apps/widget/tools/site-file.ts"
+file = "web/packages/site-file/src/site-file.ts"
 old = '''
     return new TextDecoder("utf-8", { fatal: true, ignoreBOM: true }).decode(bytes);
 '''

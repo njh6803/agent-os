@@ -4,13 +4,13 @@
 //
 // 표지: face 가 하나 이상이고 범위가 face 보다 적다(겹치는 범위가 실제로 있다). 아니면 재려는 상황이 아니라 1로 끝난다.
 //
-// 사용: node .scratch/web-widget/probes/font_list_size.mjs web/apps/widget
+// 사용: node .scratch/web-widget/probes/font_list_size.mjs web/packages/ui
 import { brotliCompressSync, gzipSync } from "node:zlib";
 import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 
-const app = resolve(process.argv[2] ?? "web/apps/widget");
-const { fontFaces } = await import(pathToFileURL(join(app, "tools", "fonts.ts")).href);
+const ui = resolve(process.argv[2] ?? "web/packages/ui");
+const { fontFaces } = await import(pathToFileURL(join(ui, "node", "fonts.ts")).href);
 const faces = fontFaces();
 const ranges = [...new Set(faces.map((face) => face.unicodeRange))];
 if (faces.length === 0 || ranges.length >= faces.length) {

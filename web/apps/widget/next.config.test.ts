@@ -1,20 +1,20 @@
 // 위젯의 설정 파일. next dev·build·start 가 읽는 그 파일을 사이트 파일 변수마다 새로 읽어, iframe 페이지가 어디에 서고
 // 어떤 응답 헤더를 다는지, 사이트 파일에서 무엇을 빌드에 싣는지 본다(web-widget 티켓 04). 헤더가 basePath 아래의 실제
 // 경로에 붙는지는 빌드한 앱의 응답을 보는 e2e 가 판정한다. `frame-ancestors` 는 06 이, 글꼴과 페이지 안 번들 응답의
-// `Access-Control-Allow-Origin` 은 10 이 본다. 표기와 모양의 판정 하나하나는 tools/site-file.test.ts 가 본다.
+// `Access-Control-Allow-Origin` 은 10 이 본다. 표기와 모양의 판정 하나하나는 `@agent-os/site-file` 의 시험(`web/packages/site-file/src/site-file.test.ts`)이 본다.
 
 import { mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import type { NextConfig } from "next";
-import { afterEach, describe, expect, test, vi } from "vitest";
-import { expectedSiteFile, SITE_FILE_FIXTURES } from "./testing/site-file.ts";
 import {
   DEFAULT_REQUEST_CHARS,
   SITE_FILE_ENV,
   WIDGET_ORIGINS_ENV,
   WIDGET_REQUEST_CHARS_ENV,
-} from "./tools/site-file.ts";
+} from "@agent-os/site-file";
+import type { NextConfig } from "next";
+import { afterEach, describe, expect, test, vi } from "vitest";
+import { expectedSiteFile, SITE_FILE_FIXTURES } from "./testing/site-file.ts";
 
 afterEach(() => {
   vi.unstubAllEnvs();

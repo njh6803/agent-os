@@ -51,8 +51,13 @@ web/               pnpm 워크스페이스(Node 24, TypeScript 5.9). 파이썬�
                    원본과 기초 카드 원본, previous-output.json 은 지난 산출 목록. 절차는 `/sync-design-system` 스킬)
   packages/api-client/  생성 클라이언트. src/generated(생성물, 커밋하고 손으로 고치지 않는다), 관리·채널·위젯 클라이언트 셋,
                    운영자·최종 사용자 스트림을 프레임으로 읽는 것(ADR 0021·0024)
+  packages/site-file/  사이트 파일 읽기(@agent-os/site-file). 서버와 같은 규칙으로 사이트 파일(ADR 0023)을 읽어 사이트마다
+                   발급자·audience·열 에이전트·허용 출처·공개 키·요청 글자 수 상한을 든 모델과 위젯 빌드의 입력을 낸다.
+                   node 가 빌드 없이 읽는 꼴이라 상대 import 에 확장자를 붙인다. smol-toml 을 제 의존성으로 든다
   packages/ui/     디자인 시스템(@agent-os/ui). src/styles/(디자인 토큰 CSS theme.css, 글꼴 CSS fonts.css, shadow 보정,
-                   판정 스토리), src/components/atoms/·molecules/(컴포넌트와 스토리, <Name>.md), src/testing/(판정 함수),
+                   판정 스토리), src/themes.ts(`./themes`), node/(`./fonts`. 글꼴 파일을 고르고 복사하는 node 쪽
+                   도우미와 FontFaceSource 타입), src/components/atoms/·molecules/(컴포넌트와 스토리, <Name>.md),
+                   src/testing/(판정 함수),
                    src/storybook/(앱도 나눠 쓰는 미리보기), .storybook/(Storybook 설정), visual/(사진 비교와 정답
                    사진 snapshots/, 앱도 나눠 쓰는 정적 빌드 열기 index.ts). 스토리 테스트는 뿌리 vitest.config.ts 의
                    storybook 프로젝트가 실제 chromium 에서 돈다(ADR 0026)
@@ -68,8 +73,8 @@ web/               pnpm 워크스페이스(Node 24, TypeScript 5.9). 파이썬�
                    `<agent-os-widget>` 과 번들 입구), styles/(위젯 CSS),
                    tools/start.ts(루프백에만 띄우고 빌드 전에 글꼴을 public/fonts/ 에 복사하고 번들을 짓는 시작 래퍼),
                    tools/element.ts(번들을 Vite 라이브러리 빌드로 public/element.js 에 내는 설정),
-                   tools/site-file.ts(AGENT_OS_SITE_FILE 의 사이트 파일에서 합친 허용 출처와 가장 작은 요청 글자 수
-                   상한을 끌어내는 빌드 입력. next.config.ts 가 frame-ancestors 와 env 에, 번들이 상한을 싣는다),
+                   빌드 입력(packages/site-file 의 buildInput. AGENT_OS_SITE_FILE 의 사이트 파일에서 합친 허용 출처와
+                   가장 작은 요청 글자 수 상한을 끌어내고, next.config.ts 가 frame-ancestors 와 env 에, 번들이 상한을 싣는다),
                    .storybook/·visual/(위젯의 Storybook 과 사진 비교. 스토리 테스트는 widget-storybook 프로젝트),
                    e2e/·playwright.config.ts(실제 serve·Next 앞의 같은 출처 중계 뒤에서 두 방식의 위젯을 미는 e2e),
                    EMBED.md(사이트 개발자가 읽는 임베드 안내)

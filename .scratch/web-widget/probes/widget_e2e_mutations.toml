@@ -108,7 +108,7 @@ expect = "red"
 expect_output = ["Error: expect(locator).toBeVisible() failed"]
 
 [[mutation.edit]]
-file = "web/apps/widget/tools/site-file.ts"
+file = "web/packages/site-file/src/site-file.ts"
 old = '''
 export const DEFAULT_REQUEST_CHARS = 20_000;
 '''

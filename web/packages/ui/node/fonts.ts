@@ -1,7 +1,12 @@
 /**
- * 위젯이 내주는 글꼴 파일. 시작 래퍼(`start.ts`)가 `dev` 와 `build` 전에 `public/fonts/` 로 복사하고, Next 가 그것을
- * `/widget/fonts/` 아래에서 낸다(web-widget 명세 "위젯 앱의 배치와 빌드"). 페이지 안 번들(티켓 10)이 사이트 문서에서
- * `FontFace` 로 받는 파일이다. iframe 페이지는 이 자리를 쓰지 않고 글꼴 CSS 를 Next 의 번들로 싣는다.
+ * 디자인 시스템 패키지의 글꼴 파일 도우미(`@agent-os/ui/fonts`). node 가 빌드 없이 읽는 쪽 코드라 `node:fs` 를 들이고,
+ * 브라우저 코드는 `FontFaceSource` 타입만 `import type` 으로 읽는다(pilot-portal 명세 "앱과 패키지"). 파일이 `src/` 밖
+ * `node/` 에 있는 것은 패키지의 tsconfig 가 node 타입을 싣지 않기 때문이다(`./visual` 이 `visual/` 에 있는 것과 같다).
+ *
+ * 위젯이 내주는 글꼴 파일이 이것으로 골라진다. 위젯의 시작 래퍼(`start.ts`)가 `dev` 와 `build` 전에 `public/fonts/` 로
+ * 복사하고, Next 가 그것을 `/widget/fonts/` 아래에서 낸다(web-widget 명세 "위젯 앱의 배치와 빌드"). 페이지 안
+ * 번들(티켓 10)이 사이트 문서에서 `FontFace` 로 받는 파일이다. iframe 페이지는 이 자리를 쓰지 않고 글꼴 CSS 를 Next 의
+ * 번들로 싣는다.
  *
  * 고르는 것은 글꼴 CSS(`@agent-os/ui/fonts.css`)가 `@import` 하는 굵기 CSS 들이 `url()` 로 가리키는 woff2 이고, 이름을
  * 바꾸지 않는다. woff 는 고르지 않는다. 굵기 CSS 는 woff2 를 먼저 적고, 위젯이 지원하는 브라우저는 모두 woff2 를 읽는다.
@@ -9,14 +14,23 @@
  * 않는다.
  *
  * 페이지 안 번들은 같은 굵기 CSS 의 @font-face 마다 family·굵기·모양·글자 범위·woff2 이름을 받아(`fontFaces`) 사이트
- * 문서에 등록한다(element/fonts.ts). 빌드 설정(element.ts)이 그 목록을 번들에 싣는다. 블록에서 하나라도 읽지 못하면
- * 던져 빌드를 멈춘다. 글자 범위를 빠뜨린 face 는 모든 글자를 맡는다고 읽힌다.
+ * 문서에 등록한다(위젯의 element/fonts.ts). 빌드 설정(element.ts)이 그 목록을 번들에 싣는다. 블록에서 하나라도 읽지
+ * 못하면 던져 빌드를 멈춘다. 글자 범위를 빠뜨린 face 는 모든 글자를 맡는다고 읽힌다.
  */
 
 import { copyFileSync, mkdirSync, readFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { basename, dirname, join } from "node:path";
-import type { FontFaceSource } from "../element/fonts.ts";
+
+/** 글꼴 CSS 의 @font-face 하나. 빌드가 뽑는다(`fontFaces`). */
+export interface FontFaceSource {
+  readonly family: string;
+  readonly weight: string;
+  readonly style: string;
+  readonly unicodeRange: string;
+  /** woff2 의 파일 이름. */
+  readonly file: string;
+}
 
 const IMPORT = /@import\s+"([^"]+)"\s*;/g;
 const WOFF2 = /url\(\s*["']?(\.\/files\/[^"')]+\.woff2)["']?\s*\)/g;
