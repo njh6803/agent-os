@@ -391,12 +391,18 @@ def _parse(path: Path) -> PluginManifest:
     뒤 실제로 읽는 사이에 파일이 사라지거나, 권한이 없거나, 네트워크 드라이브가 끊기면 OSError 이고
     ValueError 가 아니다. 그러면 매니페스트 하나가 목록 전체를 가리는데 그것이 ADR 0012 의
     2026-09-22 이력이 막으려 한 모양이다(PR 직전 보안·버그 축).
+
+    원인을 잇지 않는다 — `except` 에서는 이유 문구만 만들고 `PluginError` 는 그 블록 밖에서
+    던진다. `from error` 로 이으면 `ValidationError` 가 `__cause__` 에 남아 트레이스백 출력에
+    입력 값이 실린다. mcp 의 http 모양에서 주소의 사용자 정보나 환경 변수 이름 칸에 잘못 적은
+    토큰이 그 값이다.
     """
     try:
         return parse_manifest(path.read_text(encoding="utf-8"))
     except (OSError, ValidationError, ValueError) as error:
         # ValidationError 와 UnicodeDecodeError 가 둘 다 ValueError 다.
-        raise PluginError(f"매니페스트를 읽을 수 없다: {path}\n{_describe(error)}") from error
+        reason = _describe(error)
+    raise PluginError(f"매니페스트를 읽을 수 없다: {path}\n{reason}")
 
 
 def _parse_skill(path: Path) -> Skill:

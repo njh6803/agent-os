@@ -44,6 +44,22 @@
 
 다시 돌린 명령: `uv run ruff check src`, `uv run ruff format --check src`, `uv run pytest -q tests/sdk tests/adapters/test_mcp.py tests/test_server.py`(443개 통과), `uv run python tools/check_adr_pointers.py`. 나머지 손으로 치는 다섯은 커밋의 pre-commit 결과로 갈음한다.
 
+## PR 직전 리뷰(`coderabbit-review`)
+
+인계받은 세션이 푸시 전에 돌렸다. CLI(0.7.5)는 `review_completed`로 끝까지 돌아 findings 0건이었고(검토 파일 42개, `Seat: not assigned`, Plan Free), 서브에이전트가 비밀을 되울리는 길을 직접 읽고 `uv run python -c`로 재현해 넷을 보고했다.
+
+고친 것(Major 유효 1):
+
+- 매니페스트 `_parse`의 `from error`가 `ValidationError`를 `__cause__`에 남겨, 주소의 사용자 정보(`https://user:<비밀번호>@host/x`)나 환경 변수 이름 칸에 잘못 적은 토큰이 트레이스백 출력에 실린다. 서브에이전트가 재현했고 이 세션도 첫 사례를 `uv run python -c`로 `HttpServer.model_validate`에 쳐 `input_value='https://user:SECRETPW@host/x'` 줄을 봤다. `__cause__` 쪽은 고치기 전의 시험이 빨간 것으로 봤다. ADR 0041이 "매니페스트 `_parse`의 같은 사슬은 이 기능이 고치지 않는다"고 둔 것은 매니페스트에 비밀이 들 칸이 없다는 전제였고, 이 PR의 http 모양이 그 전제를 깼다. `_parse`가 `_parse_skill`처럼 `except`에서 이유 문구만 만들고 `PluginError`는 블록 밖에서 던지게 고쳤다. 시험(`tests/adapters/test_filesystem.py`의 `test_칸에_잘못_적은_비밀은_mcp_매니페스트의_문구에도_예외_사슬에도_남지_않는다`, 두 사례)은 고치기 전에 `__cause__` 단언에서 빨간 것을 봤고 고친 뒤 초록이다(`tests/adapters/test_filesystem.py`·`tests/sdk`·`tests/test_server.py` 541개 통과). `.claude/rules/adapters.md`의 "매니페스트의 `_parse`는 이 규칙을 따르지 않는다"가 거짓이 되어 같은 모양으로 원인을 잇지 않는다고 고쳤다. ADR 0041의 문장은 그때의 기록이라 두었다.
+- `adapters.md`를 다시 고쳤으나 카나리아는 다시 돌리지 않았다. 그 규칙을 원천으로 든 명세 셋 가운데 `adapters_rule_new_optional_fields`는 JSONL 항목의 문장이 `paths`에 맞는 파일을 Read할 때 실리는지를 보고, 이번에 고친 `read_skill` 항목은 어느 명세도 인용하지 않으며 실리는 장치(`paths`)도 바뀌지 않았다. 나머지 둘의 원천 문장도 다른 항목이다(어림. 둘의 원천 문장을 열어 대 보지는 않았다).
+
+남긴 것과 이유(Minor와 보류):
+
+- [Major 보류] `_where`가 `server.url` 전체(쿼리 문자열과 조각 포함)를 `run_failed` 문구에 싣는다. ADR 0049 Consequences "문구에 실리는 것과 실리지 않는 것"과 2026-11-09 이력 "실패 문구"가 정했고 쿼리를 떼는 안은 사용자가 거부했다. `?token=...`처럼 쿼리에 비밀을 적으면 트레이스에 남는다는 한계는 02의 시험이 고정한다.
+- [Minor] `url`이 개행·제어 문자(`urlsplit`이 지워 통과한다)와 앞뒤 공백, 범위 밖 포트를 받는다. 명세가 "그 밖은 판정하지 않는다"고 정했다. 다만 개행이 든 주소가 `_where`를 거쳐 문구와 로그에 줄바꿈째 실리면 로그 위조가 되므로, 02가 주소를 문구에 쓰기 전에 거를지를 본다(아래 "다음").
+- [Minor] `_RESERVED_HEADERS`에 `upgrade`·`te`·`trailer`·`keep-alive`·`proxy-authorization`·`cookie`가 없다. 어느 이름이 라이브러리가 정하는 것인지는 02가 접속을 만들며 재어 본다(받았다가 나중에 막으면 매니페스트가 깨지므로 그때 판단한다).
+- [Minor] 모르는 `transport` 값이 `union_tag_invalid` 문구에 실린다. 값이 열거형 이름이라 비밀일 가능성은 낮다.
+
 ## 결정
 
 사용자에게 물은 것은 없다. 티켓과 명세가 정한 대로 구현했다. 사진 정답 갱신은 티켓이 "바뀌면 까닭을 PR 본문에 적는다"고 정한 갈래다.
@@ -69,4 +85,24 @@
 
 - 02는 이 PR이 둔 `NotImplementedError("http 전송은 아직 구현되지 않았다")` 갈래를 실제 접속으로 바꾼다. `tests/adapters/test_mcp.py`의 http 갈래 시험 둘과 `tests/core/test_run.py`의 `BrokenTools` 시험을 실제 접속의 시험으로 바꾼다.
 - `.claude/rules/adapters.md`·`.claude/rules/core.md`의 stdio 전제 문장(ADR 0049 Consequences "구현 티켓이 함께 고칠 자리")은 02의 몫이다. 이 PR은 틈 동안 거짓이 되는 `[server]` 문장과 연결 실패 문장만 고쳤다.
+- 02가 `_where`로 주소를 실패 문구에 싣는 자리를 만질 때 둘을 본다. 하나는 쿼리 문자열의 비밀이 `run_failed` 문구에 남는다는 한계(ADR 0049가 정한 것이니 시험으로 고정한다)이고, 다른 하나는 개행·제어 문자가 든 주소(이 PR의 읽는 단계는 받는다)가 문구에 줄바꿈째 실려 로그가 위조되는 길을 문구에 쓰기 전에 거를지다. 헤더 이름 금지 목록(`_RESERVED_HEADERS`)에 연결 계층 이름(`upgrade`, `te`, `trailer`, `keep-alive`, `proxy-authorization`, `cookie`)을 더할지도 02가 접속을 만들며 정한다. 셋 모두 코드래빗 CLI 뒤 서브에이전트의 수동 점검이 낸 것이다.
 - `.scratch/end-user-channel/probes/run_timeout.py`와 `.scratch/mcp-shutdown/probes/`의 `McpServer(` 생성자는 기록이라 고치지 않았다(합이 호출 불가라 지금 실행하면 `TypeError`일 것이다. 명세 축 서브에이전트가 `McpServer(...)`를 불러 `TypeError`를 확인했고, 그 프로브 파일들을 직접 돌려 보지는 않았다).
+
+## 인계
+
+커밋 `cabdbbd4`(브랜치 `feature/01-contract-mcp-server-transport-stdio-or-http`) 뒤, 컨텍스트가 문턱을 넘어 인계한다. 이 세션의 제목은 `feature/01-contract-mcp-server-transport-stdio-or-http`였고 `(인계함)`을 붙여 넘긴다. 낸 지시문은 아래 그대로다.
+
+```
+다음 작업: .scratch/mcp-http/issues/01-contract-mcp-server-transport-stdio-or-http.md (mcp 매니페스트의 [server]가 transport로 stdio와 http를 가르는 계약을 세운다)
+다음 단계: 구현
+어디서: 새 세션. 주 체크아웃 미갱신이라 Skill 도구로 tidy-checkouts를 먼저 돌고(그 스킬이 사람에게 넘기는 것은 보고만 하고 답을 기다리지 않는다) 그 뒤 git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /implement .scratch/mcp-http/issues/01-contract-mcp-server-transport-stdio-or-http.md
+브랜치: feature/01-contract-mcp-server-transport-stdio-or-http
+모델: Sonnet 5.5 / high. 2의 잇는 지시문
+읽을 것: docs/journal/2026-11-10-0152-mcp-http-contract.md
+이어받을 상태: 인계: 커밋 뒤. 구현, 게이트, 셀프 리뷰 반영, 커밋(cabdbbd4)까지 마쳤고 푸시하지 않았다. 티켓 파일은 이미 done이다. 남은 일은 푸시, /git-pr로 PR 열기, PR 연결(mcp__ccd_pr__get_status 뒤 필요하면 bind_pr), 봇 회차, 병합이고, 구현을 다시 하지 않는다. PR 본문에 적을 것 셋: (1) 사진 정답 네 장(organisms-plugindetail--disabled-{1280,320}-{light,dark}.png)이 바뀐 까닭은 PluginDetail이 매니페스트 전체를 JSON으로 그려 transport 줄이 더해져서이고 ADR 0049 이력 2026-11-10이 정정했다. (2) sync-design-system 확인은 스토리와 시험 픽스처만 바뀌어 건너뛰었다. (3) .scratch/end-user-channel/probes/run_timeout.py와 .scratch/mcp-shutdown/probes/는 McpServer( 생성자를 기록 그대로 둔다. 병합 뒤에는 next-session으로 티켓 02(.scratch/mcp-http/issues/02-connect-to-remote-mcp-server-by-url.md)의 지시문을 낸다. PR 504(pilot-portal-spec)가 먼저 병합됐으면 .scratch/plan.md를 uv run python tools/plan_table.py로 다시 만들어 싣는다
+확인할 선행 조건: 주 체크아웃 미갱신: 루트는 main. 병합은 이 워크트리 사본의 next-session merge.md의 "워크트리에서 병합할 때"를 Read로 열어 따른다
+이번 요청 범위: PR과 병합까지
+```
+
+open-session을 부른다 2026-11-09T17:08:42Z
