@@ -164,7 +164,7 @@ open-session을 부른다 2026-11-09T06:49:04Z
 (a) 누락·부분
 
 1. **Major** — 고지의 기본 글과 식별자 고지가 ADR에 없다. 라운드 1 답 "고지의 글은 배포 설정이 주고 포털은 기본 글을 듭니다(ADR 0047: 문구는 사이트가 가진다)"와 "고지에 '식별자 쿠키를 둔다'를 적습니다". ADR 0050 "시작 인자와 시작 검사"·"페이지" 항목에 "기본 글"이 0건이고, 고지 글이 필수 칸인지 빠졌을 때 기본 글을 드는지가 비어 "빠진 필수 키는 구성 오류"와 어느 쪽인지 알 수 없다. 식별자 고지는 CONTEXT.md 고지 항목에만 있고 용어집은 결정이 아니다.
-2. **Minor** — 라운드 2 답 "compose에서 프록시가 다른 컨테이너에 있을 때의 이음은 release-image 설계 인터뷰가 네 프로세스에 한꺼번에 정합니다"가 어디에도 적히지 않았다. ADR 0050은 "프록시 뒤에만 선다"와 "컨테이너 이미지도 하나다(release-image 몫)"뿐이고, `.scratch/release-image/plan.md`는 아직 "`serve`와 두 Next 앱 … 루프백 목록은 세 곳이 따로 든다"(잔존). 그 계획의 "포털"도 CONTEXT.md가 이번에 _Avoid_로 둔 말이다.
+2. **Minor** — 라운드 2 답 "compose에서 프록시가 다른 컨테이너에 있을 때의 이음은 release-image 설계 인터뷰가 네 프로세스에 한꺼번에 정합니다"가 어디에도 적히지 않았다. ADR 0050은 "프록시 뒤에만 선다"와 "컨테이너 이미지도 하나다(release-image 몫)"뿐이고, `.scratch/release-image/plan.md`는 아직 루프백 목록이 세 곳이라던 문장 그대로다(잔존. 반영 전의 글). 그 계획의 "포털"도 CONTEXT.md가 이번에 _Avoid_로 둔 말이다.
 3. **Minor** — 라운드 3 답 "'아직 없음' 화면 둘을 이번에 그리고 e2e로 고정합니다". ADR 테스트 결정은 "로그인 사이트의 알림"만 들고 '둘 다' 사이트의 비활성 로그인 단추는 없다.
 4. **Minor** — 라운드 1 "발급자는 페이지의 공개 출처 하나"와 "사이트 파일의 허용 출처는 공개 출처 하나"가 라운드 3에서 사이트별 발급자·"허용 출처에 든다"로 바뀌었는데, 일지의 "다시 꺼냄" 절 끝은 바뀐 라운드 1 답을 둘(TOML 하나, 에이전트 하나)만 들고 ADR Considered Options도 쿠키 경로·두 모양만 적는다. 교체 기록이 없다.
 
@@ -237,7 +237,7 @@ Critical와 Major는 없다. 지적은 Minor 5개와 Nit 6개이고, 가장 센 
 - 명세 9(Nit): "120초면 느린 망에서도 넉넉하다고 어림하며", "토큰은 서명 한 번이고 그 CPU 비용은 작다고 어림하며(재지 않았다)"로 어림 표시를 달았다.
 - 표준 a1(Minor): `CONTEXT.md`에 **사이트 토큰(Site Token)** 항목을 더했다. "사이트가 최종 사용자의 신원을 보증해 RS256으로 서명하고, 위젯이 최종 사용자 경로의 요청마다 싣는 토큰. 발급자가 그 사이트이고 `serve`는 사이트 파일의 공개 키로 검증한다(ADR 0023)." _Avoid_에 "서명 토큰(ADR 0023과 `http/sites.py`가 토큰의 꼴을 말할 때 쓴 이름. 누가 냈는지가 빠진다)"을 두었다. 용어집에는 두 말 모두 정의가 없었고(`grep -n '^\*\*.*토큰' CONTEXT.md`로 봤다), 사용자의 지시문과 기능 계획 첫 줄이 "사이트 토큰"을 쓴다.
 - 표준 a2(Minor): `CONTEXT.md` 사이트 항목에 "발급자 하나가 사이트 하나이고"를, 질문 페이지 항목을 "이 저장소가 함께 내는, 사이트 여럿을 담는 웹 페이지와 그 서버. … 사이트 쪽의 것이라 위젯처럼 Agent OS의 일부가 아니다"로 고쳐 서로를 가리키는 정의를 풀었다. ADR 0050에서 페이지가 사이트라던 두 자리도 "사이트 쪽"으로 맞췄다.
-- 표준 a3(Minor): `.scratch/pilot-portal/plan.md`의 "사이트가 이 페이지 하나인 배치에서뿐이다"를 "사이트가 하나인 배치에서뿐이다(질문 페이지는 사이트 여럿을 담을 수 있다, ADR 0050)"로 고쳤다.
+- 표준 a3(Minor): `.scratch/pilot-portal/plan.md`에서 사이트가 이 페이지 하나인 배치에서뿐이라던 문장을 "사이트가 하나인 배치에서뿐이다(질문 페이지는 사이트 여럿을 담을 수 있다, ADR 0050)"로 고쳤다.
 - 표준 b Nit 1: ADR 0050 Consequences "전역 `fetch` 금지" 항목에 "같은 설정의 Next 서버 파일 금지도 파일 이름 글롭(`**/{route,middleware,proxy,instrumentation}.{ts,tsx,mts,cts,js,jsx,mjs,cjs}`)으로 모든 앱에 걸리므로, 질문 페이지의 파일 이름은 그 넷을 피한다"를 더했다. 글롭은 `web/eslint.config.mjs` 314줄을 열어 글자 그대로 옮겼다.
 - 표준 b Nit 2: Consequences "상한"에 "사이트 여럿은 `serve`의 사이트 파일이 처음부터 받던 것이고(ADR 0023), 사이트는 테넌트가 아니라(`CONTEXT.md`의 사이트 _Avoid_) PRD가 미룬 멀티테넌시는 이 설계가 건드리지 않는다"를 더했다.
 - 표준 b Nit 3: `.scratch/portal-login/plan.md`의 "모드를 바꿀 때"를 "보증 모드를 바꿀 때"로 고쳤다.
@@ -273,3 +273,45 @@ Critical와 Major는 없다. 지적은 Minor 5개와 Nit 6개이고, 가장 센 
 ## 커밋 1차와 헌법 판
 
 첫 커밋은 pre-commit의 `check-constitution-version`에 막혔다(종료 1. `docs/constitution/tech.md`를 고쳤는데 `docs/constitution/README.md`의 판이 3.0.72 그대로). 계기를 낸 명령이 실패한 것이라 `handoff.md` 1에 따라 인계하지 않고 잇는다. 판을 3.0.74로 올렸다(`tech.md` 웹 행과 원격·CI 행의 문구 수정이라 patch. origin/main이 3.0.73을 썼으므로 그 위, `sibling_overlap`의 안내대로). 같은 pre-commit의 `check-quotes`가 막지 않는 경고로 낸 인용 열두 건(일지의 리뷰 보고가 반영 전 글을 따옴표로 든 것 아홉, ADR 0050 "다른 행"의 고친 문장 인용 둘, "이미지도 하나" 축약 하나)은 원문 그대로 옮기거나 따옴표를 뗐다. 나머지 검사(parallel-checks 562초 포함)는 모두 Passed였다.
+
+## 인계(둘째, 커밋 뒤)
+
+커밋 뒤 경계에서 `hook_handoff`의 계기를 받았다(세션 컨텍스트 364,981 토큰, 문턱 200,000). `handoff.md`의 인계하지 않는 다섯 경우에 들지 않는다. 계기를 낸 커밋 50214b60은 pre-commit을 지나 성공했고, 이번 요청 범위는 PR과 병합까지이며, 이 세션의 지시문 "이어받을 상태"는 `인계: 셀프 리뷰 직전`이라 같은 경계가 아니고, 이 일지에 `인계 못함` 줄이 없고, `get_session self`에 `parentSessionId`가 없다. 그래서 넘긴다. 이 세션의 지금 제목은 `docs/pilot-portal-design`이고, 넘기며 `docs/pilot-portal-design (인계함)`으로 바꾼다.
+
+이 세션이 한 것과 고친 것은 위 "셀프 리뷰(인계받은 세션)"·"반영"·"승인 화면"·"승인 뒤"·"검증(커밋 전)"·"커밋 1차와 헌법 판" 절에 있다. 번복한 결정은 없다. 앞 세션의 ADR 초안에 셀프 리뷰로 문장을 더하고(고지 기본 글과 식별자 문장, 시작 때 한 번 읽음, 둘 다 사이트의 e2e, 라운드 1 답의 교체 기록, 서버 파일 이름 글롭, 멀티테넌시 아님), `CONTEXT.md`에 사이트 토큰을 더했으며, release-image 계획에 넘기는 문장을 적었다. 사용자는 ADR 0050을 승인하고 새 행 둘을 슬라이스 10에 두기로 골랐다. 헌법 판은 이 커밋에서 3.0.74로 올렸다(앞 절).
+
+커밋 50214b60의 pre-commit은 parallel-checks(517초) 아래 열 검사와 마크다운 표·줄 구분 문자·변이 표·헌법 판·커밋 메시지 검사가 모두 Passed였다. ruff 둘은 스테이지된 `.py`가 없어 Skipped라 손으로 쳤다(`uv run ruff check .` All checks passed, `uv run ruff format --check .` 1957 files already formatted). `check-quotes`가 막지 않는 경고 둘을 남겼는데(이 일지의 셀프 리뷰 보고가 반영 전의 글을 따옴표로 든 두 자리), 이 절을 쓰며 따옴표를 떼고 반영 전의 글이라고 적었다. 이 절과 그 수정은 커밋하지 않았다. 새 세션이 origin/main을 합친 커밋에 함께 싣는다.
+
+### 새 세션이 할 일
+
+1. `git fetch origin main` 뒤 `git merge origin/main`. origin/main에 mcp-http의 ADR 0049가 들어와 `docs/adr/README.md`의 같은 자리에 0049 행을 더했으므로 이 브랜치의 0050 행과 글자 충돌이 예상된다. 둘 다 남긴다(0049 위, 0050 아래). `docs/constitution/README.md`의 판 줄은 origin/main이 3.0.73, 이 브랜치가 3.0.74라 충돌하면 3.0.74와 이 브랜치의 Last Amended(2026-11-09)를 남긴다. `CONTEXT.md`(MCP 서버·전송 항목)와 `docs/constitution/tech.md`(런타임 의존성 행)는 자리가 달라 자동 병합을 확인한다. `.scratch/plan.md`는 손으로 풀지 않고 `uv run python tools/plan_table.py`를 다시 돌린다.
+2. 검증을 다시 돌리고(`uv run ruff check .`, `uv run ruff format --check .`, `uv run python tools/run_checks.py`는 백그라운드로, `uv run python tools/sibling_overlap.py`), `git branch --show-current`를 본 뒤 커밋한다(heredoc이나 `-F`, 끝에 `Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>`). 이 일지의 이 절도 그 커밋에 든다.
+3. 푸시, PR(제목은 첫 커밋 제목, 본문 끝에 `🤖 Generated with [Claude Code](https://claude.com/claude-code)`), next-session `merge.md` 2(봇 회차: PR 직전 리뷰 `coderabbit-review`, 봇 코멘트 반영)부터 병합(묻지 않는다)까지, next-session.
+4. 이 일지에 병합 전 리뷰와 봇 회차, `## 다음` 절. 회고(`retro`)는 단계를 닫는 세션이 돈다.
+
+### 지시문
+
+```
+다음 작업: 기능 pilot-portal. 위젯을 담는 질문 페이지가 로그인 없이 온 사람에게 사이트 토큰을 내, 포털이 없는 공개 데모와 배포 환경을 돕는다
+다음 단계: 설계 인터뷰
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /grill-with-docs pilot-portal
+브랜치: docs/pilot-portal-design
+모델: Fable 5.1 / xhigh. 2의 잇는 지시문
+읽을 것: docs/journal/2026-11-09-1410-pilot-portal-design.md의 "인계(둘째, 커밋 뒤)" 절(남은 단계 넷과 예상 충돌)
+이어받을 상태: 인계: 커밋 뒤. docs/journal/2026-11-09-1410-pilot-portal-design.md. 설계 인터뷰와 셀프 리뷰 반영, 승인(ADR 0050 승인, 새 행 portal-admin·widget-appearance는 슬라이스 10), 설계 줄, 새 기능 계획 둘, plan_table, 헌법 판 3.0.74까지 커밋 50214b60에 있다. 푸시하지 않았고 PR은 없다. 일지의 인계 절은 커밋하지 않은 채 워크트리에 있다. 남은 것은 origin/main 합치기, 검증 다시, 커밋, 푸시, PR, 봇 회차, 병합, next-session이다
+확인할 선행 조건: 없음
+이번 요청 범위: PR과 병합까지
+```
+
+워크트리 잠금 풀기는 `git worktree unlock`이 `is not locked`로 끝났다(이미 풀려 있었다). open-session을 부른다 2026-11-09T07:51:13Z
+
+`open_session.ps1`은 `page=16:52:08` 뒤 새 세션 화면의 폴더가 `C:\project\rag-engine`이라(앱의 마지막 폴더. `C:\project\agent`가 아니다) 보내지 않고 멈췄다(`stale=1`은 앞서 열린 화면의 글자를 거른 것). 지시문은 그 화면에 남아 있고 모델은 아직 고르지 않았다. open-session 3의 폴더 오류 갈래대로 같은 파일로 다시 돌리지 않고, 사람에게 환경 버튼에서 `C:\project\agent`를 고르고 모델을 `Fable 5.1 / xhigh`로 맞춰 보내 달라고 부탁하고 턴을 끝냈다. 제목은 `(인계함)` 그대로 둔다. 사람이 보내면 그 세션이 이 브랜치를 잇는다(대기열 378의 다섯 번째 회차).
+
+## origin/main 합치기(셋째 세션)
+
+둘째 인계를 받은 세션이다. 주 체크아웃 `C:\project\agent`에서 시작해 제목을 `docs/pilot-portal-design`으로 바꾸고, `git worktree list`에서 이 브랜치가 체크아웃된 `.claude/worktrees/pilot-portal-design`을 찾아 `EnterWorktree(path)`로 들어왔다. 워크트리에는 커밋 50214b60 위에 이 일지의 수정만 커밋하지 않은 채 있었다.
+
+`git fetch origin main` 뒤 `git merge origin/main`(1d5d0ed8, mcp-http의 ADR 0049). 앞 절이 예상한 대로 셋이 충돌했다. `docs/adr/README.md`는 0049 행 아래에 0050 행을 두어 둘 다 남겼고, `docs/constitution/README.md`의 판 줄은 3.0.74와 Last Amended 2026-11-09를 남겼으며, `.scratch/plan.md`는 손으로 풀지 않고 `uv run python tools/plan_table.py`를 돌려 다시 만들었다(종료 0. origin/main 대비 release-image 행의 "질문 페이지"와 새 행 둘만 다르다). `CONTEXT.md`와 `docs/constitution/tech.md`는 자동 병합됐고 `git diff origin/main`에 이 브랜치의 변경만 남은 것을 봤다. 충돌 표지는 `docs/**/*.md`와 `.scratch/plan.md`에서 0건이다.
+
+검증: `uv run ruff check .`(All checks passed), `uv run ruff format --check .`(1960 files already formatted), `uv run python tools/sibling_overlap.py`(종료 0. 번호 겹침 없음, 형제가 쓴 가장 높은 헌법 판은 origin/main의 3.0.73이라 3.0.74 그대로. mcp-shutdown-spec 워크트리가 `.scratch/plan.md`를 함께 고쳤다고 알렸는데 그 파일은 도구가 만드므로 나중에 병합하는 쪽이 다시 돌린다), `git branch --show-current`는 `docs/pilot-portal-design`. `run_checks.py`는 이 병합 커밋의 pre-commit 결과로 갈음한다(`CLAUDE.md` 검증 명령). 그 결과와 PR 직전 리뷰, 봇 회차는 아래 절에 적는다.
