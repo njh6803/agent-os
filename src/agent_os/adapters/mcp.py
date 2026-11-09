@@ -385,7 +385,7 @@ async def _end_session(client: httpx2.AsyncClient, url: str, attempt: _Attempt) 
         try:
             await _delete(client, url, headers)
         except httpx2.HTTPError:
-            pass
+            pass  # 닫는 중의 실패는 실행의 결말을 바꾸지 않는다(응답은 보지 않는다)
 
 
 async def _delete(client: httpx2.AsyncClient, url: str, headers: Mapping[str, str]) -> None:
@@ -465,12 +465,15 @@ class _HeaderUnusable(Exception):
 
 @dataclass
 class _Attempt:
-    """서버 하나에 붙는 한 번의 곁정보. 실패 문구를 지을 때와 도구 호출이 실패할 때 쓴다.
+    """서버 하나에 붙는 한 번의 곁정보. 실패 문구를 지을 때, 도구 호출이 실패할 때, 닫으며 세션
+    종료 요청을 보낼 때 쓴다.
 
     `secrets` 는 서버가 오류 글에 되울릴 수 있어 가릴 글이다. 헤더마다 환경에서 읽은 값 전체와, 값이
     공백 하나로 나뉜 `<낱말> <나머지>` 꼴이면 그 나머지(`Bearer <토큰>` 의 토큰)다. 8자보다 짧은
     글은 가리지 않는다. 상관없는 글자까지 바꾸게 되기 때문이다. `status` 는 마지막 POST 응답이 2xx
-    가 아니었을 때의 그 상태다.
+    가 아니었을 때의 그 상태다. `session_id` 는 응답 헤더 `mcp-session-id` 로 받아 둔 세션 번호이고
+    `protocol_version` 은 `initialize` 결과의 프로토콜 판이다. 둘 다 종료 요청(`_end_session`)이
+    쓰며, 서버가 세션 번호를 주지 않았으면 `session_id` 는 `None` 이고 종료 요청을 보내지 않는다.
     """
 
     secrets: list[tuple[str, str]] = field(default_factory=list[tuple[str, str]])

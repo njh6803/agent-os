@@ -6310,7 +6310,7 @@ async def test_run_finished_없이_돌아온_뒤_연결을_닫다_기한이_오�
     tools = ScopedTools(FakeConnection({}, {}), close_seconds=LATE)
     model = GenericFakeChatModel(messages=iter([]))
 
-    events = await _run(SilentAgent(), model, trace, clock, tools=tools, timeout_seconds=SHORT)
+    events = await _run(SilentAgent(), model, trace, clock, tools=tools, timeout_seconds=PACED)
 
     assert [e.type for e in events] == ["run_started", "tool_called", "run_failed"]
     assert _failure(events) == (NO_FINISH, "agent_code")
