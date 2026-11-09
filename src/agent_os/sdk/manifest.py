@@ -68,13 +68,23 @@ _EnvName = Annotated[str, StringConstraints(pattern=r"^[A-Za-z0-9_]+$")]
 
 # 라이브러리나 HTTP 가 스스로 정하는 헤더 이름(소문자). 클라이언트의 기본 헤더는 요청마다의 헤더보다
 # 먼저 합쳐져 mcp 가 요청마다 싣는 이름은 매니페스트의 값을 조용히 덮고, `Host` 는 요청을 다른
-# 호스트 이름으로 보낸다. 받았다가 나중에 막으면 있던 매니페스트가 깨지므로 지금 막는다.
+# 호스트 이름으로 보낸다. 받았다가 나중에 막으면 있던 매니페스트가 깨지므로 지금 막는다. 연결 계층의
+# 이름(`upgrade`, `te`, `trailer`, `keep-alive`, `proxy-authorization`)도 같은 까닭으로 막는다. 앞의
+# 넷은 연결마다 뜻이 있어 원격 서버에 기본 헤더로 실을 것이 아니고, `proxy-authorization` 은
+# 프록시에게 줄 자격이 원격 서버로 새는 길이다. `cookie` 는 막지 않는다. 쿠키로 인증하는 서버가 있고
+# httpx2 는 그 헤더를 쿠키 저장소와 합쳐 보낼 뿐 연결을 바꾸지 않는다(어림. 02 가 접속을 만들며
+# 코드를 읽고 정했다).
 _RESERVED_HEADERS = frozenset(
     {
         "host",
         "content-length",
         "transfer-encoding",
         "connection",
+        "upgrade",
+        "te",
+        "trailer",
+        "keep-alive",
+        "proxy-authorization",
         "accept",
         "content-type",
         "mcp-session-id",

@@ -315,6 +315,11 @@ def test_대소문자만_다른_헤더_이름_둘은_거부한다() -> None:
         "Mcp-Session-Id",
         "Mcp-Protocol-Version",
         "Last-Event-Id",
+        "Upgrade",
+        "TE",
+        "Trailer",
+        "Keep-Alive",
+        "Proxy-Authorization",
         "mcp-session-id",
         "ACCEPT",
     ],
@@ -325,6 +330,16 @@ def test_라이브러리와_HTTP가_정하는_헤더_이름은_대소문자를_�
     )
 
     assert errors == [("server.http.headers", "value_error")]
+
+
+def test_쿠키_헤더는_받는다() -> None:
+    """쿠키로 인증하는 서버가 있어 연결 계층의 이름과 달리 막지 않는다(`_RESERVED_HEADERS`)."""
+    text = _http('transport = "http"\nurl = "http://x/mcp"\n[server.headers]\nCookie = "SESSION"\n')
+
+    server = parse_manifest(text).server
+
+    assert isinstance(server, HttpServer)
+    assert dict(server.headers) == {"Cookie": "SESSION"}
 
 
 def test_헤더_이름_거부_문구는_환경_변수_이름을_되울리지_않는다() -> None:
