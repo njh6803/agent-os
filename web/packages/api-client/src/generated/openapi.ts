@@ -461,6 +461,33 @@ export interface components {
        */
       status: "ok";
     };
+    /**
+     * HttpServer
+     * @description mcp 플러그인이 주소로 붙는 원격 서버의 정보.
+     */
+    HttpServer: {
+      /**
+       * Headers
+       * @default {}
+       */
+      headers: {
+        [key: string]: string;
+      };
+      /**
+       * Secret Args
+       * @default {}
+       */
+      secret_args: {
+        [key: string]: string[];
+      };
+      /**
+       * Transport
+       * @constant
+       */
+      transport: "http";
+      /** Url */
+      url: string;
+    };
     Json: unknown;
     /**
      * LimitEnvelope
@@ -520,26 +547,6 @@ export interface components {
        * @enum {string}
        */
       type: "llm_called";
-    };
-    /**
-     * McpServer
-     * @description mcp 플러그인이 가리키는 stdio 서버의 실행 정보.
-     */
-    McpServer: {
-      /**
-       * Args
-       * @default []
-       */
-      args: string[];
-      /** Command */
-      command: string;
-      /**
-       * Secret Args
-       * @default {}
-       */
-      secret_args: {
-        [key: string]: string[];
-      };
     };
     /**
      * ModelProvider
@@ -616,7 +623,8 @@ export interface components {
        * @constant
        */
       schema_version: "1";
-      server: components["schemas"]["McpServer"] | null;
+      /** Server */
+      server: (components["schemas"]["StdioServer"] | components["schemas"]["HttpServer"]) | null;
       /**
        * Skills
        * @default []
@@ -860,6 +868,32 @@ export interface components {
        * @enum {string}
        */
       type: "started";
+    };
+    /**
+     * StdioServer
+     * @description mcp 플러그인이 띄우는 stdio 서버의 실행 정보.
+     */
+    StdioServer: {
+      /**
+       * Args
+       * @default []
+       */
+      args: string[];
+      /** Command */
+      command: string;
+      /**
+       * Secret Args
+       * @default {}
+       */
+      secret_args: {
+        [key: string]: string[];
+      };
+      /**
+       * Transport
+       * @default stdio
+       * @constant
+       */
+      transport: "stdio";
     };
     /**
      * ToolCall

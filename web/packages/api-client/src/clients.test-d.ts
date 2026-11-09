@@ -171,3 +171,29 @@ expectTypeOf<Exclude<keyof paths, keyof AdminPaths>>().toEqualTypeOf<
   | "/end-user/runs/{run_id}/subscription"
   | "/end-user/runs/{run_id}/continuation"
 >();
+
+// 매니페스트의 `server` 는 `transport` 로 좁히는 합이다(ADR 0049). 좁히지 않고 읽으면 안 되는 자리를 타입이 막는지
+// 본다. 두 모양을 섞어 읽는 코드가 실행 전에 컴파일에서 걸리게 하려는 것이다(mcp-http 스토리 15).
+type 서버 = NonNullable<Schemas["PluginManifest"]["server"]>;
+
+export function 서버는_transport_로_좁힌_뒤_모양의_칸을_읽는다(server: 서버): string {
+  expectTypeOf(server).toEqualTypeOf<Schemas["StdioServer"] | Schemas["HttpServer"]>();
+  if (server.transport === "http") {
+    expectTypeOf(server).toEqualTypeOf<Schemas["HttpServer"]>();
+    return server.url;
+  }
+  expectTypeOf(server).toEqualTypeOf<Schemas["StdioServer"]>();
+  return server.command;
+}
+
+// 읽은 값을 `unknown` 으로 받아, 컴파일 오류가 난 칸의 값(`any`)이 린트의 안전하지 않은 사용으로 번지지 않게 한다.
+function 읽는다(value: unknown): void {
+  expectTypeOf(value).toBeUnknown();
+}
+
+export function 서버를_좁히지_않고_모양의_칸을_읽으면_컴파일이_실패한다(server: 서버): void {
+  // @ts-expect-error: 주소는 http 모양에만 있다. transport 로 좁히지 않고 읽으면 stdio 모양에서 빠진 칸을 읽는다
+  읽는다(server.url);
+  // @ts-expect-error: 명령은 stdio 모양에만 있다. transport 로 좁히지 않고 읽으면 http 모양에서 빠진 칸을 읽는다
+  읽는다(server.command);
+}

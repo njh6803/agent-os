@@ -126,7 +126,8 @@ def admin_router(*, health: Health, plugins: PluginSource, trace: TraceStore) ->
     def read_health() -> Health:
         return health
 
-    # 두 조회 라우트는 매니페스트를 통째로 내보내므로 mcp 매니페스트의 command 와 args 도 나간다.
+    # 두 조회 라우트는 매니페스트를 통째로 내보내므로 mcp 매니페스트의 command 와 args(http 모양이면
+    # url 과 헤더 이름)도 나간다.
     # 가리지 않는 것이 결정이고 경계는 인증이다(ADR 0009 의 2026-09-22 이력, 네 번째 열린 문제).
     # MCP 서버에는 붙지 않는다 — 이 라우터는 도구 포트를 받지 않는다. 꺼진 집합은 요청 하나에 한 번
     # 읽고, 운영자 파일이 깨지면 목록 전체가 500 이다. 행마다 "알 수 없음"을 실으면 행의 타입이

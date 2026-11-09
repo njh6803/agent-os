@@ -141,7 +141,7 @@ const FIXTURE: Plugin = {
     model_id: null,
     max_tokens: null,
     temperature: null,
-    server: { command: "python", args: ["fixture.py"], secret_args: {} },
+    server: { transport: "stdio", command: "python", args: ["fixture.py"], secret_args: {} },
   },
 };
 const ROWS: PluginRow[] = [CALC, FIXTURE];

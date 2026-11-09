@@ -133,7 +133,7 @@ const MCP_ROW: PluginRow = {
     model_id: null,
     max_tokens: null,
     temperature: null,
-    server: { command: "python", args: ["filesystem.py"], secret_args: {} },
+    server: { transport: "stdio", command: "python", args: ["filesystem.py"], secret_args: {} },
   },
 };
 

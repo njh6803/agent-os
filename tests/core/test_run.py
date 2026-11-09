@@ -101,6 +101,7 @@ from agent_os.sdk import (
     RunResumed,
     RunStarted,
     Skill,
+    StdioServer,
     ToolCall,
     ToolCalled,
     ToolError,
@@ -109,7 +110,7 @@ from agent_os.sdk import (
 
 FIXED_NOW = datetime(2026, 9, 21, 12, 0, tzinfo=UTC)
 PRINCIPAL = Principal("alice")
-SERVER = McpServer(command="fake-server")
+SERVER = StdioServer(command="fake-server")
 # 가짜 연결이 도구를 낸 서버로 적는 이름. 도구마다 따로 적지 않으면 이 하나다.
 DEFAULT_SERVER = PluginName("fake")
 # 운영자 파일이 깨졌을 때 어댑터가 내는 문구의 모양. 경로가 든다.
