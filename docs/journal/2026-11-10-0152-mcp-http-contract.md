@@ -106,3 +106,25 @@
 ```
 
 open-session을 부른다 2026-11-09T17:08:42Z
+
+## 인계 2
+
+PR을 연 뒤(PR 505, 커밋 `6b49601c`까지 푸시), 컨텍스트가 문턱을 넘어 두 번째로 인계한다. 앞 인계의 세션이 푸시 전 `coderabbit-review`를 돌려 Major 하나(`_parse`의 예외 사슬)를 고친 커밋 둘을 더했고, PR 본문은 저장소 템플릿으로 채워 열었다. 이 세션의 제목은 `feature/01-contract-mcp-server-transport-stdio-or-http`였고 `(인계함)`을 붙여 넘긴다. 낸 지시문은 아래 그대로다. PR 505는 이미 이 세션에 연결되어 있고(`get_status`), 검사는 아직 시작 전이었다.
+
+```
+다음 작업: .scratch/mcp-http/issues/01-contract-mcp-server-transport-stdio-or-http.md (mcp 매니페스트의 [server]가 transport로 stdio와 http를 가르는 계약. PR 505를 반영하고 병합한다)
+다음 단계: PR 반영·병합
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /implement .scratch/mcp-http/issues/01-contract-mcp-server-transport-stdio-or-http.md
+브랜치: feature/01-contract-mcp-server-transport-stdio-or-http
+모델: Sonnet 5.5 / high. 2의 잇는 지시문
+읽을 것: docs/journal/2026-11-10-0152-mcp-http-contract.md
+이어받을 상태: 인계: PR 연 뒤. 일지는 docs/journal/2026-11-10-0152-mcp-http-contract.md 이고 "인계 2"가 이 인계다. PR 505(https://github.com/njh6803/agent-os/pull/505)가 열려 있고 커밋 셋(cabdbbd4, 11a464cc, 6b49601c)이 푸시됐다. 이 일지의 "인계 2" 구간은 커밋하지 않았다(앞 세션이 만든 변경). 남은 일은 merge.md 2(봇 회차)부터이고 구현을 다시 하지 않는다. 첫 @coderabbitai review 코멘트도 새 세션이 남긴다. 병합은 이 워크트리 사본의 next-session merge.md의 "워크트리에서 병합할 때"를 Read로 열어 따른다. PR 504(pilot-portal-spec)와 이 PR이 같은 대기열 항목 일곱(0215, 0418, 0472, 0473, 0474, 0478, 0479)을 만료로 고쳤다. 504가 먼저 병합되면 이 브랜치에 origin/main을 합쳐 글자 충돌을 풀고(같은 줄이면 같은 만료 줄 하나만 남긴다), 504가 .scratch/plan.md도 바꾸므로 합친 뒤 uv run python tools/plan_table.py로 다시 만들어 싣는다. 병합 뒤에는 next-session으로 티켓 02(.scratch/mcp-http/issues/02-connect-to-remote-mcp-server-by-url.md)의 지시문을 낸다. 코드래빗 첫 회차의 Minor·Nit은 지적마다 판단하고, 이 PR의 의도적 한계(쿼리 문자열의 비밀이 문구에 실림, 주소의 제어 문자, 헤더 이름 금지 목록)는 일지의 "PR 직전 리뷰"와 티켓 02의 "01이 넘긴 메모"에 이미 있다.
+확인할 선행 조건: 없음
+이번 요청 범위: PR과 병합까지
+```
+open-session을 부른다 2026-11-09T17:41:09Z
+
+## 봇 회차 (인계 2를 받은 세션)
+
+PR 505에 `@coderabbitai review` 코멘트를 남기고 `tools/wait_ci.py`로 기다렸다. 헤드 `6b49601c`의 검사는 전부 초록이었고 CodeRabbit은 `Review rate limited`(다음 리뷰는 4분 뒤)로 리뷰를 내지 않았다. claude-review는 통과였고 인라인 리뷰 코멘트는 없었다. 한도에 걸려 리뷰가 없던 푸시는 회차로 세지 않으므로 CodeRabbit의 첫 회차는 아직 오지 않았다. 이 PR의 보안·버그 축은 푸시 전에 돈 `coderabbit-review`(위 "PR 직전 리뷰")가 대신한다. 이 일지를 푸시하면 CodeRabbit이 다시 돌 수 있어 그 결과를 첫 회차로 받는다.
