@@ -9,9 +9,19 @@ from __future__ import annotations
 import tomllib
 from collections.abc import Mapping
 from enum import StrEnum
-from typing import Annotated, Literal, Self
+from typing import Annotated, Literal, Self, TypeGuard
+from urllib.parse import urlsplit
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Discriminator,
+    Field,
+    StringConstraints,
+    Tag,
+    field_validator,
+    model_validator,
+)
 
 from agent_os.sdk.ids import PLUGIN_NAME_PATTERN, PluginName
 
@@ -49,17 +59,124 @@ _MANIFEST_CONFIG = ConfigDict(
 )
 
 
-class McpServer(BaseModel):
-    """mcp 플러그인이 가리키는 stdio 서버의 실행 정보."""
+# 헤더 이름은 RFC 9110 의 토큰 문자(특수 기호 열다섯, 글자, 숫자)만 받고, 환경 변수 이름은
+# 글자·숫자· 밑줄만 받는다. 패턴을 타입의 제약으로 거는 이유는 `skills` 칸과 같다. 그래야
+# openapi.json 의 `patternProperties` 에 같은 규칙이 실려 계약이 그것을 드러낸다(ADR 0049). 공백이나
+# 콜론이 든 이름을 httpx2 는 요청을 만들 때 거부하지 않고 그대로 싣는다.
+_HeaderName = Annotated[str, StringConstraints(pattern=r"^[!#$%&'*+\-.^_`|~0-9A-Za-z]+$")]
+_EnvName = Annotated[str, StringConstraints(pattern=r"^[A-Za-z0-9_]+$")]
+
+# 라이브러리나 HTTP 가 스스로 정하는 헤더 이름(소문자). 클라이언트의 기본 헤더는 요청마다의 헤더보다
+# 먼저 합쳐져 mcp 가 요청마다 싣는 이름은 매니페스트의 값을 조용히 덮고, `Host` 는 요청을 다른
+# 호스트 이름으로 보낸다. 받았다가 나중에 막으면 있던 매니페스트가 깨지므로 지금 막는다.
+_RESERVED_HEADERS = frozenset(
+    {
+        "host",
+        "content-length",
+        "transfer-encoding",
+        "connection",
+        "accept",
+        "content-type",
+        "mcp-session-id",
+        "mcp-protocol-version",
+        "last-event-id",
+    }
+)
+
+
+class StdioServer(BaseModel):
+    """mcp 플러그인이 띄우는 stdio 서버의 실행 정보."""
 
     model_config = _MANIFEST_CONFIG
 
+    # 기본값이 `"stdio"` 인 이유는 `transport` 가 없는 지금의 매니페스트가 그대로 읽히게 하기
+    # 위해서다.
+    transport: Literal["stdio"] = "stdio"
     command: str
     args: tuple[str, ...] = ()
     # 도구 이름 -> 트레이스에 마스킹해 쓸 인자 이름들(ADR 0009). 도구별인 이유는 금지 규칙을
     # 매니페스트만으로 판정하려면 도구 단위여야 하기 때문이다. 어느 도구가 어느 서버의
-    # 것인지는 MCP 에 붙어야 알 수 있어서, 평면 목록으로는 정적 판정이 성립하지 않는다.
+    # 것인지는 MCP 에 붙어야 알 수 있어서, 평면 목록으로는 정적 판정이 성립하지 않는다. 두 모양이
+    # 같이 쓰므로 `HttpServer` 도 같은 칸을 선언한다.
     secret_args: Mapping[str, tuple[str, ...]] = {}
+
+
+class HttpServer(BaseModel):
+    """mcp 플러그인이 주소로 붙는 원격 서버의 정보."""
+
+    model_config = _MANIFEST_CONFIG
+
+    transport: Literal["http"]
+    # 문자열 그대로 보관한다. `AnyHttpUrl` 은 빈 경로에 `/` 를 붙이고 호스트를 소문자로 바꿔, 관리
+    # API 응답이 파일에 적은 글자와 달라진다. 쿼리 문자열과 조각은 막지 않는다(ADR 0049 Consequences
+    # "문구에 실리는 것과 실리지 않는 것").
+    url: str
+    # 헤더 이름 -> 값을 읽을 환경 변수 이름. 값은 매니페스트에 없다(ADR 0009).
+    headers: Mapping[_HeaderName, _EnvName] = {}
+    secret_args: Mapping[str, tuple[str, ...]] = {}
+
+    # 아래 두 검증자의 문구는 `url` 의 글자와 환경 변수 이름을 되울리지 않는다. 매니페스트를 읽지
+    # 못한 문구가 운영자 면에 나가기 때문이다(헌법 원칙 V). 헤더 이름은 비밀이 아니라 문구에 싣는다.
+    # 검증자는 필드 검증 뒤에 돌아 헤더 이름이 패턴을 지난 값이다.
+    @field_validator("url")
+    @classmethod
+    def _url_is_plain_http(cls, value: str) -> str:
+        # 파서의 오류 문구는 대괄호 안의 호스트를 되울린다. 예외를 이 블록 밖으로 잇지 않고 고정
+        # 문구로 바꾼다.
+        try:
+            parts = urlsplit(value)
+        except ValueError:
+            parts = None
+        if parts is None:
+            raise ValueError("url 이 주소 모양이 아니다")
+        if parts.scheme not in ("http", "https"):
+            raise ValueError("url 은 http 나 https 주소여야 한다")
+        if "@" in parts.netloc:
+            raise ValueError("url 에 사용자 정보를 적을 수 없다")
+        if not parts.hostname:
+            raise ValueError("url 에 호스트가 있어야 한다")
+        return value
+
+    @field_validator("headers")
+    @classmethod
+    def _header_names_are_distinct_and_not_reserved(
+        cls, value: Mapping[str, str]
+    ) -> Mapping[str, str]:
+        seen: set[str] = set()
+        for name in value:
+            lowered = name.lower()
+            if lowered in _RESERVED_HEADERS:
+                raise ValueError(f"헤더 이름을 적을 수 없다: {name}")
+            # HTTP 헤더 이름은 대소문자를 가리지 않아 한 헤더에 값 둘이 실린다. TOML 은 막지 않는다.
+            if lowered in seen:
+                raise ValueError(f"대소문자만 다른 헤더 이름이 둘이다: {name}")
+            seen.add(lowered)
+        return value
+
+
+def _is_mapping(value: object) -> TypeGuard[Mapping[str, object]]:
+    """isinstance 로 좁히면 pyright 가 키와 값을 Unknown 으로 둔다. 여기서 명시한다."""
+    return isinstance(value, Mapping)
+
+
+def _transport_of(value: object) -> str | None:
+    """`transport` 가 없으면 `"stdio"` 로 읽는다. 보통 판별자(`Field(discriminator=)`)는 칸이 없는
+    입력을 `union_tag_not_found` 로 거부해 지금의 매니페스트가 모두 깨진다. 문자열이 아닌 값은
+    태그가 없는 것으로 넘겨 pydantic 이 거부하게 한다."""
+    if _is_mapping(value):
+        tag = value.get("transport", "stdio")
+        return tag if isinstance(tag, str) else None
+    tag = getattr(value, "transport", "stdio")
+    return tag if isinstance(tag, str) else None
+
+
+# 호출할 수 없는 별칭이다. 모델을 만드는 곳은 `StdioServer(...)`·`HttpServer(...)` 이고, 읽는 쪽은
+# 모양을 좁혀(`isinstance`) 칸을 읽는다. 호출 가능 판별자라 openapi.json 의 `oneOf` 에
+# `discriminator.mapping` 은 없다.
+McpServer = Annotated[
+    Annotated[StdioServer, Tag("stdio")] | Annotated[HttpServer, Tag("http")],
+    Discriminator(_transport_of),
+]
 
 
 class PluginManifest(BaseModel):
@@ -146,7 +263,10 @@ class PluginManifest(BaseModel):
             raise ValueError(f"{self.kind} 플러그인은 model 을 갖지 않는다")
         if self.kind is PluginKind.MCP:
             if self.server is None:
-                raise ValueError("mcp 플러그인은 [server] 표가 필요하다 (command, args)")
+                raise ValueError(
+                    "mcp 플러그인은 [server] 표가 필요하다 "
+                    '(command, args 또는 transport = "http", url)'
+                )
         elif self.server is not None:
             raise ValueError(f"{self.kind} 플러그인은 [server] 표를 갖지 않는다")
         return self

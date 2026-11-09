@@ -62,10 +62,10 @@ from pathlib import Path
 
 from agent_os.adapters.mcp import McpTools
 from agent_os.channel.cli.interrupt import run_interruptibly
-from agent_os.sdk import McpServer, PluginName
+from agent_os.sdk import StdioServer, PluginName
 
 lingering, folder, moment, presses = sys.argv[1], Path(sys.argv[2]), sys.argv[3], int(sys.argv[4])
-server = McpServer(command=sys.executable, args=(lingering, "stay", str(folder)))
+server = StdioServer(command=sys.executable, args=(lingering, "stay", str(folder)))
 marker = folder / ("closing" if moment == "closing" else "slow")
 
 

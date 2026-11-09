@@ -18,6 +18,7 @@ import json
 import time
 from collections.abc import AsyncIterator, Iterable, Mapping, Sequence
 from datetime import UTC, datetime, timedelta, timezone
+from pathlib import Path
 from typing import Literal, get_type_hints
 
 import httpx
@@ -40,6 +41,7 @@ from tests.signing import (
 )
 
 from agent_os import server as server_module
+from agent_os.adapters.filesystem import FilesystemPlugins
 from agent_os.admin import http as admin_http
 from agent_os.admin import traces as admin_traces
 from agent_os.admin.http import Health
@@ -92,6 +94,7 @@ from agent_os.sdk import (
     AgentName,
     BaseAgent,
     Event,
+    HttpServer,
     LlmCalled,
     McpServer,
     PluginKind,
@@ -103,6 +106,7 @@ from agent_os.sdk import (
     RunPaused,
     RunStarted,
     Skill,
+    StdioServer,
     ToolCall,
     is_run_id,
     parse_manifest,
@@ -1592,11 +1596,43 @@ async def test_mcp_매니페스트의_command_와_args_도_가리지_않고_내�
     rows = (await client.get("/plugins", headers=BEARER)).json()
 
     everything = next(row for row in rows if row["name"] == "everything")
+    assert everything["manifest"]["server"]["transport"] == "stdio"
     assert everything["manifest"]["server"]["command"] == "npx"
     assert everything["manifest"]["server"]["args"] == [
         "-y",
         "@modelcontextprotocol/server-everything",
     ]
+
+
+async def test_http_모양의_mcp_매니페스트는_파일에_적은_글자_그대로_내보낸다(
+    tmp_path: Path, stderr: io.StringIO, traces: FakeTrace
+) -> None:
+    """스토리 14. 파일을 읽는 어댑터를 지나 관리 API 응답까지 간다. `url` 은 대문자가 든 호스트와 빈
+    경로로 적어, `AnyHttpUrl` 처럼 `/` 를 붙이고 호스트를 소문자로 바꾸는 정규화가 끼면 빨개진다
+    (ADR 0049 결정 "주소"). 헤더는 값이 아니라 환경 변수의 이름만 실린다."""
+    directory = tmp_path / "mcp" / "doc-search"
+    directory.mkdir(parents=True)
+    (directory / "plugin.toml").write_text(
+        'schema_version = "1"\nkind = "mcp"\nname = "doc-search"\nversion = "0.1.0"\n\n'
+        '[server]\ntransport = "http"\nurl = "http://Rag-Engine:8000"\n\n'
+        '[server.headers]\nAuthorization = "DOC_SEARCH_TOKEN"\n',
+        encoding="utf-8",
+    )
+    plugins: PluginSource = FilesystemPlugins(tmp_path)
+    transport = ASGITransport(app=_admin_app(plugins=plugins, trace=traces, stderr=stderr))
+
+    async with AsyncClient(transport=transport, base_url="http://admin.test") as client:
+        single = await client.get("/plugins/mcp/doc-search", headers=BEARER)
+        listed = (await client.get("/plugins", headers=BEARER)).json()
+
+    expected = {
+        "transport": "http",
+        "url": "http://Rag-Engine:8000",
+        "headers": {"Authorization": "DOC_SEARCH_TOKEN"},
+        "secret_args": {},
+    }
+    assert single.json()["manifest"]["server"] == expected
+    assert [row["manifest"]["server"] for row in listed] == [expected]
 
 
 async def test_읽을_수_없는_매니페스트가_있어도_나머지가_오고_그것은_켜짐과_이유를_든_표지다(
@@ -1936,7 +1972,9 @@ def test_늘_실리는_매니페스트_필드와_행의_필드는_계약에서�
     schemas = app.openapi()["components"]["schemas"]
 
     assert set(schemas["PluginManifest"]["required"]) == set(PluginManifest.model_fields)
-    assert set(schemas["McpServer"]["required"]) == set(McpServer.model_fields)
+    assert set(schemas["StdioServer"]["required"]) == set(StdioServer.model_fields)
+    assert set(schemas["HttpServer"]["required"]) == set(HttpServer.model_fields)
+    assert "McpServer" not in schemas
     assert set(schemas["Plugin"]["required"]) == {"kind", "name", "enabled", "manifest"}
     assert set(schemas["PluginPlaceholder"]["required"]) == {"kind", "name", "enabled", "reason"}
     assert schemas["Plugin"]["additionalProperties"] is False

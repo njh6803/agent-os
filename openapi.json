@@ -493,6 +493,51 @@
         "title": "Health",
         "type": "object"
       },
+      "HttpServer": {
+        "additionalProperties": false,
+        "description": "mcp 플러그인이 주소로 붙는 원격 서버의 정보.",
+        "properties": {
+          "headers": {
+            "default": {},
+            "patternProperties": {
+              "^[!#$%&'*+\\-.^_`|~0-9A-Za-z]+$": {
+                "pattern": "^[A-Za-z0-9_]+$",
+                "type": "string"
+              }
+            },
+            "title": "Headers",
+            "type": "object"
+          },
+          "secret_args": {
+            "additionalProperties": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "default": {},
+            "title": "Secret Args",
+            "type": "object"
+          },
+          "transport": {
+            "const": "http",
+            "title": "Transport",
+            "type": "string"
+          },
+          "url": {
+            "title": "Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "transport",
+          "url",
+          "headers",
+          "secret_args"
+        ],
+        "title": "HttpServer",
+        "type": "object"
+      },
       "Json": {
         "anyOf": [
           {
@@ -632,42 +677,6 @@
           "tool_calls"
         ],
         "title": "LlmCalled",
-        "type": "object"
-      },
-      "McpServer": {
-        "additionalProperties": false,
-        "description": "mcp 플러그인이 가리키는 stdio 서버의 실행 정보.",
-        "properties": {
-          "args": {
-            "default": [],
-            "items": {
-              "type": "string"
-            },
-            "title": "Args",
-            "type": "array"
-          },
-          "command": {
-            "title": "Command",
-            "type": "string"
-          },
-          "secret_args": {
-            "additionalProperties": {
-              "items": {
-                "type": "string"
-              },
-              "type": "array"
-            },
-            "default": {},
-            "title": "Secret Args",
-            "type": "object"
-          }
-        },
-        "required": [
-          "command",
-          "args",
-          "secret_args"
-        ],
-        "title": "McpServer",
         "type": "object"
       },
       "ModelProvider": {
@@ -854,12 +863,20 @@
           "server": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/McpServer"
+                "oneOf": [
+                  {
+                    "$ref": "#/components/schemas/StdioServer"
+                  },
+                  {
+                    "$ref": "#/components/schemas/HttpServer"
+                  }
+                ]
               },
               {
                 "type": "null"
               }
-            ]
+            ],
+            "title": "Server"
           },
           "skills": {
             "default": [],
@@ -1400,6 +1417,49 @@
           "run_id"
         ],
         "title": "StartedItem",
+        "type": "object"
+      },
+      "StdioServer": {
+        "additionalProperties": false,
+        "description": "mcp 플러그인이 띄우는 stdio 서버의 실행 정보.",
+        "properties": {
+          "args": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Args",
+            "type": "array"
+          },
+          "command": {
+            "title": "Command",
+            "type": "string"
+          },
+          "secret_args": {
+            "additionalProperties": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "default": {},
+            "title": "Secret Args",
+            "type": "object"
+          },
+          "transport": {
+            "const": "stdio",
+            "default": "stdio",
+            "title": "Transport",
+            "type": "string"
+          }
+        },
+        "required": [
+          "transport",
+          "command",
+          "args",
+          "secret_args"
+        ],
+        "title": "StdioServer",
         "type": "object"
       },
       "ToolCall": {

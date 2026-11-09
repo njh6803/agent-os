@@ -3,10 +3,16 @@
 서버마다 프로세스와 세션 하나를 열어 connect 가 살아 있는 동안 유지한다. MCP 의 타입은 여기서
 ToolSpec 과 ToolResult 로 바뀌고 밖으로 나가지 않는다. 도구가 isError 를 돌려주면 ok=false 다.
 
+매니페스트의 `[server]` 는 `transport` 로 stdio 와 http 두 모양이다(ADR 0049). **http 모양은
+읽히지만 아직 붙지 않는다.** 그 서버를 여는 단계는
+`NotImplementedError("http 전송은 아직 구현되지 않았다")`로 실패하고, 아래 연결 오류의 규칙을 그대로
+지나 그 실행은 원인 `tool_connection` 의 `run_failed` 로 끝난다. 아래 닫기와 런처의 서술은 stdio
+모양의 것이다.
+
 **던지는 예외의 타입은 내장이다(`.scratch/mcp-shutdown/spec.md` 의 "경계를 넘는 예외").** 원인
 (`__cause__`)에는 mcp 의 원래 예외가 남는다. 서버를 여는 동안(띄우기, 세션 열기, `initialize()`,
-도구 목록 읽기)의 실패는 서버 이름과 매니페스트의 명령과 원인을 든 ConnectionError 이고 원래 예외가
-`__cause__` 다. 취소는 바꾸지 않는다.
+도구 목록 읽기)의 실패는 서버 이름과 매니페스트의 명령(http 모양이면 주소)과 원인을 든
+ConnectionError 이고 원래 예외가 `__cause__` 다. 취소는 바꾸지 않는다.
 서버들이 같은 이름의 도구를 내면 연결을 열며 모으는 자리에서 도구와 겹친 두 서버를 든 ValueError 로
 실패한다. 서버를 차례로 열며 모으므로 겹친 서버 뒤의 서버는 열리지 않고, 셋 이상이 겹쳐도 문구에는
 처음 겹친 둘만 든다. 도구 호출의 실패는 서버와 도구를 든 RuntimeError 다. 연결 안(부르는 쪽)에서 난
@@ -58,7 +64,7 @@ from mcp.types import (
 )
 
 from agent_os.core.ports import ToolConnection, ToolResult, ToolSpec
-from agent_os.sdk import Json, McpServer, PluginName
+from agent_os.sdk import HttpServer, Json, McpServer, PluginName, StdioServer
 
 # 윈도우가 아닌 OS 에서 서버 앞에 세우는 런처(그 모듈의 독스트링).
 LAUNCHER = Path(__file__).with_name("mcp_launcher.py")
@@ -128,9 +134,9 @@ class McpConnection:
 async def _opened(name: PluginName, server: McpServer) -> AsyncGenerator[list[_Route]]:
     """서버 하나의 도구들을 내주고, 나갈 때 그 서버를 닫는다.
 
-    여는 동안의 실패는 서버 이름과 명령을 든 ConnectionError 다(`_connecting`). 이 서버의 태스크
-    그룹 두 겹을 지나 나온 예외는 여기서 겉봉을 벗긴다(`_Escaped`). 서버마다 이 문맥 하나를 두어,
-    탈출 스택을 인자로 받아 거기에 등록하는 꼴(출력 인자)을 두지 않는다.
+    여는 동안의 실패는 서버 이름과 명령(http 모양이면 주소)을 든 ConnectionError 다(`_connecting`).
+    이 서버의 태스크 그룹 두 겹을 지나 나온 예외는 여기서 겉봉을 벗긴다(`_Escaped`). 서버마다 이
+    문맥 하나를 두어, 탈출 스택을 인자로 받아 거기에 등록하는 꼴(출력 인자)을 두지 않는다.
     """
     escaped = _Escaped()
     unwrapped: BaseException | None = None
@@ -151,19 +157,31 @@ async def _opened(name: PluginName, server: McpServer) -> AsyncGenerator[list[_R
 
 @contextmanager
 def _connecting(name: PluginName, server: McpServer) -> Generator[None]:
-    """이 안의 예외를 서버 이름과 명령과 원인을 든 ConnectionError 로 바꾼다. 원인의 글은 예외
-    그룹을 펼친 것이다. 취소는 Exception 이 아니라 바꾸지 않는다."""
+    """이 안의 예외를 서버 이름과 명령(http 모양이면 주소)과 원인을 든 ConnectionError 로 바꾼다.
+    원인의 글은 예외 그룹을 펼친 것이다. 취소는 Exception 이 아니라 바꾸지 않는다."""
     try:
         yield
     except Exception as error:
         raise ConnectionError(
-            f"MCP 서버 {name}({server.command})에 붙지 못했다: {_describe(error)}"
+            f"MCP 서버 {name}({_where(server)})에 붙지 못했다: {_describe(error)}"
         ) from error
+
+
+def _where(server: McpServer) -> str:
+    """실패 문구의 괄호에 들 것. stdio 면 매니페스트의 명령, http 면 매니페스트의 주소 그대로다."""
+    return server.url if isinstance(server, HttpServer) else server.command
 
 
 @asynccontextmanager
 async def _session(server: McpServer) -> AsyncGenerator[tuple[ClientSession, list[Tool]]]:
-    """서버를 띄워 세션을 열고 도구 목록을 읽는다. 나갈 때 세션과 프로세스를 닫는다."""
+    """서버에 붙어 세션을 열고 도구 목록을 읽는다. 나갈 때 세션과 연결을 닫는다.
+
+    서버를 여는 문맥과 실패를 바꾸는 자리는 두 전송이 함께 쓰고, 세션을 여는 자리만 모양으로 갈린다.
+    http 모양은 매니페스트가 읽히지만 아직 붙지 않는다. 접속이 들어오기 전까지 여는 단계 안에서
+    실패해 그 실행이 원인 `tool_connection` 의 `run_failed` 로 끝난다.
+    """
+    if isinstance(server, HttpServer):
+        raise NotImplementedError("http 전송은 아직 구현되지 않았다")
     parameters = _parameters(server)
     async with stdio_client(parameters) as (read, write), ClientSession(read, write) as session:
         await session.initialize()
@@ -200,7 +218,7 @@ class _Escaped:
         return current
 
 
-def _parameters(server: McpServer) -> StdioServerParameters:
+def _parameters(server: StdioServer) -> StdioServerParameters:
     """서버를 띄울 명령. 윈도우가 아니면 런처를 앞에 세우고, 그 전에 명령이 있는지 본다.
 
     명령이 없다는 실패가 런처 안에서 나면 클라이언트에는 연결이 닫힌 것으로만 보이므로 여기서

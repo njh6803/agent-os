@@ -53,7 +53,7 @@ web/                       슬라이스 3부터. pnpm 워크스페이스. 파이
 | 6 | [skill-plugin](skill-plugin/plan.md) | 스킬을 플러그인으로 읽어, 에이전트가 고른 스킬의 이름과 설명과 본문을 받아 쓴다. | 없음 | done |
 | 7 | [approval-rules](approval-rules/plan.md) | 운영자가 승인 규칙 파일로 도구 호출을 거부하거나 승인을 요구하거나 허용하게 정한다. | skill-plugin | done |
 | 7 | [local-model](local-model/plan.md) | 바깥 API를 쓸 수 없는 환경에서도 OpenAI 호환 모델 서버로 에이전트를 돌릴 수 있게 한다. | 없음 | todo |
-| 7 | [mcp-http](mcp-http/plan.md) | 원격 MCP 서버에 주소로 접속해, 실행마다 서버를 새로 띄우는 시작 비용을 없앤다. | 없음 | todo |
+| 7 | [mcp-http](mcp-http/plan.md) | 원격 MCP 서버에 주소로 접속해, 실행마다 서버를 새로 띄우는 시작 비용을 없앤다. | 없음 | in-progress |
 | 7 | [pilot-portal](pilot-portal/plan.md) | 위젯을 담는 질문 페이지가 로그인 없이 온 사람에게 사이트 토큰을 내, 위젯을 붙일 사이트가 없는 공개 데모와 배포 환경을 돕는다. | 없음 | todo |
 | 8 | [answer-eval](answer-eval/plan.md) | 고정 질문으로 에이전트를 돌려 검색 적중과 출처 적중을 재고 평가 보고서를 낸다. | doc-qa-agent, rag-engine:release-image | todo |
 | 8 | [doc-qa-agent](doc-qa-agent/plan.md) | 문서 검색 서버를 불러 근거를 찾고 출처를 달아 답하는 참조 질의응답 에이전트를 준다. | mcp-http, approval-rules | todo |

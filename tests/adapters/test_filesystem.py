@@ -44,6 +44,7 @@ from agent_os.sdk import (
     RunFinished,
     RunId,
     Skill,
+    StdioServer,
 )
 
 AGENT_SRC = """
@@ -203,7 +204,7 @@ def test_mcp_매니페스트는_서버_실행_정보를_돌려준다(root: Path)
     manifest = plugins.read_manifest(PluginKind.MCP, PluginName("everything"))
 
     assert manifest is not None
-    assert manifest.server is not None
+    assert isinstance(manifest.server, StdioServer)
     assert manifest.server.command == "npx"
     assert plugins.read_manifest(PluginKind.MCP, PluginName("missing")) is None
 
@@ -220,7 +221,52 @@ def test_디렉터리와_name이_어긋나면_에러다(root: Path) -> None:
         plugins.read_manifest(PluginKind.AGENT, PluginName("outer"))
 
 
-# 스킬 문서 — `read_skill` 은 `skills/<이름>/SKILL.md` 를 매니페스트와 같은 길로 읽는다(ADR 0041)
+MCP_SECRET = "PLANTED-MCP-SECRET-sk-ant-api03"
+
+
+@pytest.mark.parametrize(
+    "server",
+    [
+        # 주소에 사용자 정보로 비밀번호를 적은 경우.
+        f'transport = "http"\nurl = "https://user:{MCP_SECRET}@host/x"\n',
+        # 헤더가 읽을 환경 변수 이름 칸에 토큰 값을 적은 경우.
+        'transport = "http"\nurl = "https://host/x"\n[server.headers]\n'
+        f'Authorization = "{MCP_SECRET}!"\n',
+        # 대괄호 호스트 자리에 토큰을 적은 경우. 주소 파서의 오류 문구가 그 호스트를 싣는다.
+        f'transport = "http"\nurl = "https://[{MCP_SECRET}]/x"\n',
+        # transport 칸에 토큰을 적은 경우. 판별자의 오류 문구가 그 태그를 싣는다.
+        f'transport = "{MCP_SECRET}"\nurl = "https://host/x"\n',
+    ],
+    ids=[
+        "주소의_사용자_정보",
+        "환경_변수_이름_칸의_토큰",
+        "대괄호_호스트의_토큰",
+        "transport_칸의_토큰",
+    ],
+)
+def test_칸에_잘못_적은_비밀은_mcp_매니페스트의_문구에도_예외_사슬에도_남지_않는다(
+    root: Path, server: str
+) -> None:
+    directory = root / "mcp" / "remote"
+    directory.mkdir(parents=True)
+    path = directory / "plugin.toml"
+    text = _manifest("mcp", "remote", f"[server]\n{server}")
+    path.write_text(text, encoding="utf-8")
+    assert MCP_SECRET in path.read_text(encoding="utf-8")
+    plugins: PluginSource = FilesystemPlugins(root)
+
+    with pytest.raises(PluginError) as raised:
+        plugins.read_manifest(PluginKind.MCP, PluginName("remote"))
+
+    assert str(raised.value).splitlines()[0] == f"매니페스트를 읽을 수 없다: {path}"
+    assert MCP_SECRET not in str(raised.value)
+    # 원인을 이으면 트레이스백 출력에 pydantic 의 str(입력 값 포함)이 실린다.
+    assert raised.value.__cause__ is None
+    assert raised.value.__context__ is None
+    assert MCP_SECRET not in "".join(traceback.format_exception(raised.value))
+
+
+# 스킬 문서 —`read_skill` 은 `skills/<이름>/SKILL.md` 를 매니페스트와 같은 길로 읽는다(ADR 0041)
 
 SKILL_SECRET = "sk-ant-api03-PLANTED-SKILL-SECRET"
 SKILL_HEAD = "name: pdf-processing\ndescription: PDF 를 다룬다\n"
