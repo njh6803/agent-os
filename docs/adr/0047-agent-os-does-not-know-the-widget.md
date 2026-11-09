@@ -33,8 +33,8 @@ main 83a66cd에서 지금 상태를 읽었다. 관리 화면(`web/apps/admin`)�
 
 ## 떼어 낼 때 끊을 연결
 
-- 위젯 빌드(`web/apps/widget/tools/site-file.ts`)가 `serve`의 사이트 파일을 직접 읽어, 허용 출처(frame-ancestors)와 가장 작은 `request_chars`를 `serve`와 같은 규칙으로 판정한다(`main.py`의 주석, ADR 0024). 그 규칙의 이름과 차례와 사례는 두 언어가 함께 읽는 픽스처(`tests/fixtures/site_file/`)가 원천이다. 떼어 내면 위젯이 다른 저장소의 운영자 파일 형식에 기대게 되므로, 위젯 배포 설정에 값을 따로 적거나 `serve`가 범용 공개 경로로 사이트 정보를 내주는 방식 가운데 하나로 바꾼다. 어느 쪽인지는 떼어 내는 ADR이 정한다.
-- 루프백만 받는 호스트 목록을 `serve`(`main.py`의 `LOOPBACK_HOSTS`), 관리 화면(`tools/loopback.ts`), 위젯의 시작 래퍼(`tools/start.ts`)가 따로 들고, 바꾸면 셋을 함께 고친다(세 파일의 주석). 떼어 내면 위젯의 목록은 그 저장소가 혼자 가진다.
+- 위젯 빌드(`web/apps/widget/tools/site-file.ts`)가 `serve`의 사이트 파일을 직접 읽어, 허용 출처(frame-ancestors)와 가장 작은 `request_chars`를 `serve`와 같은 규칙으로 판정한다(`main.py`의 주석, ADR 0024). (바뀜: ADR 0050) 그 규칙의 이름과 차례와 사례는 두 언어가 함께 읽는 픽스처(`tests/fixtures/site_file/`)가 원천이다. 떼어 내면 위젯이 다른 저장소의 운영자 파일 형식에 기대게 되므로, 위젯 배포 설정에 값을 따로 적거나 `serve`가 범용 공개 경로로 사이트 정보를 내주는 방식 가운데 하나로 바꾼다. 어느 쪽인지는 떼어 내는 ADR이 정한다.
+- 루프백만 받는 호스트 목록을 `serve`(`main.py`의 `LOOPBACK_HOSTS`), 관리 화면(`tools/loopback.ts`), 위젯의 시작 래퍼(`tools/start.ts`)가 따로 들고, 바꾸면 셋을 함께 고친다(세 파일의 주석). (바뀜: ADR 0050) 떼어 내면 위젯의 목록은 그 저장소가 혼자 가진다.
 - 위젯이 쓰는 api-client와 디자인 시스템(`packages/api-client`, `packages/ui`)을 패키지로 배포한다. 떼어 내기로 정하기 전에는 하지 않는다.
 - 위젯 e2e와 `-m llm_widget`은 지금 실제 `serve`를 띄워 돈다(`web/apps/widget/playwright.config.ts`의 머리 주석을 읽었다). 떼어 낸 뒤에는 판을 고정한 `serve` 이미지(release-image)에 대고 돈다.
 
