@@ -315,3 +315,27 @@ Critical와 Major는 없다. 지적은 Minor 5개와 Nit 6개이고, 가장 센 
 `git fetch origin main` 뒤 `git merge origin/main`(1d5d0ed8, mcp-http의 ADR 0049). 앞 절이 예상한 대로 셋이 충돌했다. `docs/adr/README.md`는 0049 행 아래에 0050 행을 두어 둘 다 남겼고, `docs/constitution/README.md`의 판 줄은 3.0.74와 Last Amended 2026-11-09를 남겼으며, `.scratch/plan.md`는 손으로 풀지 않고 `uv run python tools/plan_table.py`를 돌려 다시 만들었다(종료 0. origin/main 대비 release-image 행의 "질문 페이지"와 새 행 둘만 다르다). `CONTEXT.md`와 `docs/constitution/tech.md`는 자동 병합됐고 `git diff origin/main`에 이 브랜치의 변경만 남은 것을 봤다. 충돌 표지는 `docs/**/*.md`와 `.scratch/plan.md`에서 0건이다.
 
 검증: `uv run ruff check .`(All checks passed), `uv run ruff format --check .`(1960 files already formatted), `uv run python tools/sibling_overlap.py`(종료 0. 번호 겹침 없음, 형제가 쓴 가장 높은 헌법 판은 origin/main의 3.0.73이라 3.0.74 그대로. mcp-shutdown-spec 워크트리가 `.scratch/plan.md`를 함께 고쳤다고 알렸는데 그 파일은 도구가 만드므로 나중에 병합하는 쪽이 다시 돌린다), `git branch --show-current`는 `docs/pilot-portal-design`. `run_checks.py`는 이 병합 커밋의 pre-commit 결과로 갈음한다(`CLAUDE.md` 검증 명령). 그 결과와 PR 직전 리뷰, 봇 회차는 아래 절에 적는다.
+
+## 커밋 2차(병합)와 인계 계기
+
+병합 커밋 be508f9d(`git commit -F`, 백그라운드)의 pre-commit은 checks 러너 아래 열 검사(check-ticket 1.0초, zizmor 1.0초, lint-imports 1.4초, check-instructions 7.7초, check-type-escapes 8.9초, pyright 53.4초, pyright-linux 54.3초, run-hooks 114.2초, pytest 401.7초, web-verify 555.9초)와 마크다운 표·줄 구분 문자·변이 표·헌법 판·인용·커밋 메시지 검사가 모두 Passed였다(백그라운드 출력 파일을 grep으로 봤다). ruff 둘은 스테이지된 `.py`가 없어 Skipped라 앞 절의 손으로 친 결과로 갈음하고, 카나리아 명세 검사는 해당 파일이 없어 Skipped다. 인용 대조는 경고 없음.
+
+커밋 명령을 띄운 직후 `hook_handoff`의 계기를 받았다(세션 컨텍스트 205,475 토큰, 문턱 200,000, 경계 `커밋 뒤`). `handoff.md`의 인계하지 않는 다섯 경우 가운데 셋째에 든다. 이 세션의 지시문 "이어받을 상태"가 `인계: 커밋 뒤`로 시작해 넘겨받은 경계에 다시 온 것이다. 그래서 넘기지 않고 잇는다. 계기가 왔을 때 커밋은 아직 백그라운드에서 돌고 있어 성공한 경계도 아니었다(첫째 경우와도 맞닿는다).
+
+## PR 직전 리뷰
+
+`coderabbit-review` 서브에이전트(sonnet)를 돌렸다. 변경이 모두 커밋되어 있어 3단계의 명령은 `coderabbit review --agent --committed --base origin/main`이었다. 보고에 따르면 CLI 0.7.5, `auth status`는 로그인됨에 `Plan: Free`, `Seat: not assigned`였고, 리뷰는 `review_completed`, findings 3, 종료 코드 0으로 끝까지 돌았다(CLI 축). 한도·좌석 거절·`Too many files`는 없었고 열네 파일을 훑어 지적은 모두 ADR 0050에 걸렸다.
+
+지적 셋과 판정(서브에이전트의 트리아지를 본 세션이 ADR 본문과 대 보고 그대로 받았다).
+
+1. **Major, 유효** — 쿠키를 내는 확인 끝점(POST)이 다른 사이트에서 온 요청을 막는지 어디에도 없다. ADR Consequences의 "`SameSite=Strict`라 다른 사이트의 페이지에서 일으킨 요청에는 실리지 않는다"는 쿠키를 보내는 쪽의 말이고, 확인 끝점은 쿠키 없이 불리는 받는 쪽이다. 공격자 페이지가 사용자의 브라우저로 폼 POST를 보내면 고지를 보지 않은 채 "확인한" 상태가 되고, 이미 쿠키가 있을 때 새 UUID로 덮어쓰는지도 적혀 있지 않아 요청 하나로 식별자가 바뀌어 위젯이 대화를 지울 수 있다(다른 사이트에서 온 최상위 이동의 응답이 `SameSite=Strict` 쿠키를 심을 수 있다는 것은 서브에이전트가 RFC 6265bis 저장 규칙을 읽은 것이고 브라우저로 재지 않았다).
+2. **Minor, 유효**(CLI는 Major, 서브에이전트가 한 단계 낮췄다) — 페이지의 CSP에 프레임을 막는 지시문이 없다. `frame-ancestors`·`base-uri`는 `default-src`로 되돌아가지 않는 지시문이다(CSP3 명세를 읽은 것, 재지 않았다). 낮춘 까닭은 다른 사이트의 프레임 안에서는 `SameSite=Strict` 쿠키가 실리지 않아 토큰 끝점이 401이 되므로 남는 위험이 덮개 화면의 클릭 가로채기와 형제 하위 도메인의 프레임뿐이라는 것이다.
+3. **Major(CLI), 보류** — UUID 꼴만 검사하고 서명이나 서버 쪽 만료가 없다. 결정을 바꾸라는 지적이고 그 결정은 ADR 0050이 이미 적는다(결정 "앱과 서버"의 무상태와 꼴 검사, "익명 식별자 쿠키"의 꼴 아니면 없는 것, Consequences의 값은 비밀이 아니다와 주체별 상한 회피 인정). 서명을 더해도 확인 끝점을 직접 부르면 고지를 건너뛸 수 있어 얻는 것이 작고, 서버가 비밀 키를 하나 더 갖게 되어 "키 하나, 무상태"가 바뀐다. 남는 빈칸은 "고지 확인은 화면의 관문이지 접근 통제가 아니다"를 글자로 적지 않은 것이다.
+
+반영(모두 결정을 바꾸지 않는 문장 추가다. 사용자가 승인한 결정은 그대로이고, 승인 뒤 셀프 리뷰·PR 봇의 지적을 ADR에 더한 선례는 PR #499다).
+
+- 1: 결정 "익명 식별자 쿠키"에 확인 끝점은 `Origin` 헤더가 설정의 공개 출처와 같을 때만 쿠키를 내고 없거나 다르면 거절한다(상태 코드는 명세), `SameSite=Strict`는 보내는 요청만 막는다, 이미 꼴이 맞는 쿠키가 있으면 새로 만들지 않고 만료만 다시 적는다를 더했다. Consequences의 그 문장을 "쿠키가 실리지 않는다"로 좁히고 확인 끝점은 `Origin` 검사가 맡는다고 이었다. 테스트 결정에 Vitest의 `Origin` 세 갈래와 기존 쿠키 보존, e2e의 다른 출처 폼 POST 뒤 상태 끝점이 미확인인 것을 더했다. "명세가 짓는 것"에 그 거절의 상태 코드를 더했다.
+- 2: 결정 "페이지"의 CSP에 `frame-ancestors 'none'`과 `base-uri 'none'`을 더하고 까닭(되돌아가지 않는 지시문, 프레임에 들어갈 까닭이 없음, 프록시에 기대지 않음)을 적었다. 테스트 결정에 페이지 응답의 CSP 헤더 단언을 더했다.
+- 3: Consequences "위젯은 바뀌지 않는다"에 고지 확인은 화면의 관문이지 접근 통제가 아니라는 것, 쿠키를 직접 만들어 보내는 클라이언트는 고지 화면을 건너뛸 수 있고 그것은 새 브라우저와 같은 익명 주체라는 것, 서명을 두지 않는 까닭과 꼴 검사의 몫을 더했다.
+
+다시 돌린 명령과 결과는 아래 커밋 절에 적는다.
