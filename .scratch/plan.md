@@ -59,8 +59,8 @@ web/                       슬라이스 3부터. pnpm 워크스페이스. 파이
 | 8 | [doc-qa-agent](doc-qa-agent/plan.md) | 문서 검색 서버를 불러 근거를 찾고 출처를 달아 답하는 참조 질의응답 에이전트를 준다. | mcp-http, approval-rules | todo |
 | 8 | [public-demo](public-demo/plan.md) | 공개 정부 문서를 넣은 클라우드 VM 한 대를 공개 주소에 열어, 누구나 로그인 없이 묻고 출처가 붙은 답을 받게 한다. | doc-qa-agent, release-image, answer-eval, rag-engine:release-image, rag-engine:search-eval | todo |
 | 8 | [release-image](release-image/plan.md) | 판마다 서버와 관리 화면과 위젯과 질문 페이지의 컨테이너 이미지를 짓고 올리며 단독 배포 안내도 낸다. | pilot-portal | todo |
-| 9 | [deploy-package](deploy-package/plan.md) | agent-os와 문서 검색 서버를 Docker Compose로 한 번에 띄우는 참조 배포를 준다. | local-model, portal-login, doc-qa-agent, release-image, ops-backup-upgrade, diag-bundle, rag-engine:release-image, rag-engine:admin, rag-engine:backup-upgrade, rag-engine:diag-bundle | todo |
-| 9 | [diag-bundle](diag-bundle/plan.md) | 문제를 살필 때 판과 구성과 최근 실패 원인을 비밀 값 없이 파일 하나로 묶는 명령을 준다. | release-image | todo |
+| 9 | [deploy-package](deploy-package/plan.md) | agent-os와 문서 검색 서버를 Docker Compose로 한 번에 띄우는 참조 배포를 준다. | local-model, portal-login, doc-qa-agent, release-image, ops-backup-upgrade, diag-bundle, mcp-http, rag-engine:release-image, rag-engine:admin, rag-engine:backup-upgrade, rag-engine:diag-bundle | todo |
+| 9 | [diag-bundle](diag-bundle/plan.md) | 문제를 살필 때 판과 구성과 최근 실패 원인을 비밀 값 없이 파일 하나로 묶는 명령을 준다. | release-image, mcp-http | todo |
 | 9 | [ops-backup-upgrade](ops-backup-upgrade/plan.md) | agent-os 데이터를 백업하고 새 서버에 복원하며, 판을 올린 뒤에도 옛 트레이스를 읽게 한다. | release-image | todo |
 | 9 | [pilot-release](pilot-release/plan.md) | public-demo를 뺀 기준선의 기능이 모두 끝나면 제품 0.1 판을 내고 지원 범위와 고지를 문서로 남긴다. | answer-eval, deploy-package | todo |
 | 9 | [portal-login](portal-login/plan.md) | 질문 페이지에 사내 로그인 모드를 더해, 배포 환경에서는 사내 사람만 질문하게 한다. | pilot-portal | todo |
