@@ -254,3 +254,76 @@ CLI 지적 다섯은 유효 하나(명세 131줄. 원인은 CLI의 주장과 반
 
 - 보류 Minor, GET 405 사례. mcp 2.3.0 클라이언트는 `notifications/initialized`를 보낼 때 GET 흐름을 따로 연다(`client/streamable_http.py` 637~639줄의 `start_get_stream()`, 224~272줄의 `handle_get_stream`을 읽었다). 그래서 GET의 405와 도구 목록 요청의 응답은 순서가 정해지지 않는다. 새 규칙은 POST의 2xx에서 지우므로 GET을 받아 두는 구현이 빨개지려면 405가 마지막 POST 응답 뒤, 실패 문구를 짓기 전에 와야 하고, 그 순서를 픽스처가 고정하려면 클라이언트 안쪽의 시점에 기대야 한다(어림. 돌려 보지 않았다). 명세 167줄은 응답 훅 같은 안쪽을 시험하지 않는다고 정했다. PR 체크리스트에 판정과 값을 적는다.
 - 보류 Minor, 변수 이름 칸의 토큰. 그 칸에 토큰을 적으면 그 토큰은 이미 플러그인 매니페스트 파일에 있고, 관리 API의 매니페스트 응답도 파일 그대로다(명세 105줄). 실패 문구에서 변수 이름을 빼면 운영자가 어느 변수가 없는지 모른다. 한계 한 줄을 더해도 막는 것이 없어 두었다. PR 체크리스트에 적는다.
+
+다시 돌린 명령: `uv run python tools/check_adr_pointers.py`, `uv run python tools/check_md_tables.py`, `uv run python tools/check_line_separators.py`가 모두 출력 없이 끝났다(종료 0).
+
+### 커밋과 PR
+
+커밋 전에 `git branch --show-current`가 `docs/mcp-http-tickets`였고, `uv run python tools/sibling_overlap.py`는 "이 브랜치의 새 번호: 헌법 3.0.75", "번호 겹침 없음", "함께 고친 파일 없음"을 냈다. `6ccfd77a` "docs: PR 직전 리뷰를 반영해 리디렉션 위치 문장과 가리기 시험을 고친다". pre-commit은 ruff 둘이 `.py`가 없어 Skipped, 병렬 검사 열(check-ticket, zizmor, lint-imports, check-instructions, check-type-escapes, pyright, pyright-linux, run-hooks, pytest 342.5초, web-verify 484.4초)과 마크다운 표·줄 구분·변이 표·커밋 메시지 검사가 Passed였다(카나리아 명세와 헌법 판은 해당 파일 없음으로 Skipped. 출력을 봤다). 인용 대조 경고 셋은 명령 출력, 앞 커밋 제목, 라이브러리 독스트링을 따옴표로 든 자리라 저장소에 글자 그대로 없는 것이다.
+
+`git push -u origin docs/mcp-http-tickets` 뒤 `gh pr create`로 [#503](https://github.com/njh6803/agent-os/pull/503)을 열었다(본문은 템플릿대로, PR 직전 리뷰의 판정과 보류 둘의 까닭을 체크리스트에 적었다). `get_status`는 이 세션에 묶였다고 냈다(검사 pending 6). `@coderabbitai review` 코멘트는 남기지 않았다(인계 줄대로 새 세션이 남긴다).
+
+## 인계(PR 연 뒤)
+
+PR을 연 뒤 세션 컨텍스트가 239,766 토큰으로 문턱 200,000을 넘었다는 인계 계기(`PR 연 뒤`)가 왔다. `handoff.md` 1의 인계하지 않는 때 다섯에 들지 않는다(PR은 열렸다, 요청 범위는 병합까지다, 지시문의 이어받을 상태는 `인계: 커밋 뒤`라 경계가 다르다, 이 일지에 `인계 못함`이 없다, `get_session`의 `self`에 `parentSessionId`가 없다). 앞서 커밋 `6ccfd77a` 뒤에 온 `커밋 뒤` 계기는 같은 경계라(지시문의 이어받을 상태가 `인계: 커밋 뒤`로 시작한다) 넘기지 않고 이었다. 이 세션의 지금 제목은 `docs/mcp-http-tickets`다. 이 절은 커밋하지 않았다.
+
+지시문:
+
+```
+다음 작업: 기능 mcp-http. 원격 MCP 서버에 주소로 접속해, 실행마다 MCP 서버를 새로 띄우는 시작 비용을 없앤다
+다음 단계: PR 반영·병합
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /to-tickets .scratch/mcp-http/spec.md
+브랜치: docs/mcp-http-tickets
+모델: Sonnet 5.5 / high. 2의 잇는 지시문
+읽을 것: docs/journal/2026-11-09-2138-mcp-http-tickets.md의 "셋째 세션(커밋 뒤 인계를 받은 쪽)"부터 끝까지(PR 직전 리뷰의 보고와 반영, 커밋과 PR, 인계)
+이어받을 상태: 인계: PR 연 뒤. PR #503을 열었고 커밋 6ccfd77a까지 푸시했다. merge.md 2(봇 회차)부터 한다. 첫 @coderabbitai review 코멘트도 새 세션이 남긴다. 일지의 "커밋과 PR"·"인계(PR 연 뒤)" 절은 커밋하지 않은 채 워크트리에 있으니 봇 회차의 커밋에 싣는다. PR 직전 리뷰가 남긴 보류 둘(GET 405 사례, 변수 이름 칸의 토큰)은 판정과 까닭을 PR 체크리스트에 적었다. 대기열 0518의 "세 번"이 넷이 맞다는 것은 다음 회고가 바로잡는다(docs/journal/2026-11-09-2138-mcp-http-tickets.md)
+확인할 선행 조건: 없음
+이번 요청 범위: 티켓까지
+```
+
+제목을 `docs/mcp-http-tickets (인계함)`으로 바꿨다. 멈출 백그라운드 작업은 없었다(커밋과 리뷰 서브에이전트가 끝났다). `git worktree unlock C:/project/agent/.claude/worktrees/mcp-http-tickets`는 `is not locked`로 끝나 넘어갔다.
+
+open-session을 부른다 2026-11-09T14:20:14Z
+
+## 넷째 세션(PR 연 뒤 인계를 받은 쪽)
+
+세션 제목 `docs/mcp-http-tickets`(훅이 시킨 대로 다시 붙였다. 앞 제목은 "MCP HTTP 티켓 작업"이었다). 사용자 프롬프트는 위 "인계(PR 연 뒤)"의 지시문 그대로다(첫 줄 `.claude/skills/to-tickets/SKILL.md 를 읽어 그대로 따른다. …`, 끝에 `이번 요청 범위: 티켓까지`). `git worktree list`에서 브랜치가 `.claude/worktrees/mcp-http-tickets`에 체크아웃된 것을 보고 `EnterWorktree(path)`로 들어왔다. 헤드는 `6ccfd77a`이고 일지의 변경만 커밋하지 않은 채 있었다.
+
+### 봇 회차
+
+`gh pr comment 503 --body "@coderabbitai review"`로 리뷰를 요청했고 검사가 pending이어서 `tools/wait_ci.py 503`을 백그라운드로 띄웠다. 끝 줄은 `끝: 모두 통과. CodeRabbit: Finished`이고, 검사 아홉(CodeRabbit, claude-review, e2e, e2e-widget, python, ticket, verify, visual, web)이 모두 SUCCESS였다. claude-review는 "지적 없음"이고 "`.scratch/mcp-http/spec.md`의 주석 26줄과 일지는 줄 단위로 대조하지 않았다"를 못 본 것으로 적었다.
+
+CodeRabbit의 첫 회차(리뷰 대상 `6ccfd77a`)는 인라인 다섯(Major 하나, Minor 넷)과 Nit 셋이다. 출력이 한글이 깨져 보여 UTF-8 파일로 다시 만들어 읽었다. 첫 회차라 Minor와 Nit도 지적마다 판단했고, 고친 것은 없다. 판정과 까닭은 PR 코멘트([#503 코멘트](https://github.com/njh6803/agent-os/pull/503#issuecomment-6742852978))에 지적마다 적었다.
+
+- Major, 02의 25줄(짧은 헤더 값, `isError` 본문). 사용자가 고른 알려진 한계다(명세 111줄, ADR 0049 이력 "서버가 되울린 헤더 값을 실패 문구에서 가린다"의 "남는 한계"와 "거부한 안"). 고치지 않았다.
+- Minor, 02의 24줄(따른 307이 뒤의 전송 실패에 붙는다). 같은 출처의 307 뒤 응답 없는 실패가 일어나야 하고 규칙을 바꾸려면 요청 때 상태를 지우는 훅이 더 필요해 ADR 이력과 명세의 규칙이 바뀐다. 고치지 않았다.
+- Minor, 명세 82줄(`additionalProperties: false`). pydantic 2.13이 `patternProperties`만 내고 읽는 단계가 패턴 밖을 거부하며 01이 그 시험을 요구한다. 고치지 않았다.
+- Minor, 명세 131줄(리디렉션 WARNING의 경로). 명세가 "경로에 옮겨 적은 글은 실린다"를 이미 적었고, 가리려면 라이브러리의 로거를 건드리는 새 결정이 필요하다. 고치지 않았다.
+- Minor, ADR 0049(코멘트는 93줄에 달렸지만 가리킨 자리는 Consequences 42줄). 아래 "뒤로 넘긴 일"이다.
+- Nit 셋(02 GET 405 시험, 02 DEBUG 로그의 SSE 되울림, 04 `add` 실행 기록). 앞의 둘은 PR 직전 리뷰가 보류한 것이거나 오류 본문 한계와 같은 범주이고, 셋째는 어댑터에 도구를 로컬에서 실행하는 길이 없다(`src/agent_os/adapters/mcp.py` 114~124줄의 `call`이 `route.session.call_tool` 하나로 나간다. 읽었다). 고치지 않았다.
+
+뒤로 넘긴 일. ADR 0049 Consequences 42줄("`[server]`에 `command`가 없는 매니페스트의 거부 문구를 든 스토리(`PluginList.stories.tsx`)는 문구가 바뀌면 함께 고친다")는 명세 78줄("그 거부를 든 관리 화면 스토리의 글은 … 그대로 둔다(명세가 정했다)")이 거짓으로 만들었다. 이력도 포인터도 없어 `.claude/rules/adr.md`의 기준에 걸린다. 명세 7줄(서두의 요약)도 "문구가 바뀌면 함께 고치며"를 그대로 적는다. ADR 수정이라 사용자의 승인이 필요해 이 PR에서는 고치지 않았다. 티켓 01이 "그대로 둔다"를 수락 기준에 적어 구현자가 오독하지는 않는다.
+
+### 커밋
+
+커밋 전에 `git branch --show-current`가 `docs/mcp-http-tickets`였고 `git fetch origin` 뒤 `uv run python tools/sibling_overlap.py`는 "이 브랜치의 새 번호: 헌법 3.0.75", "번호 겹침 없음", 함께 고친 파일 하나(워크트리 `pilot-portal-spec`의 `docs/constitution/tech.md`)를 냈다. 두 쪽이 같은 파일을 만지니 나중에 병합하는 쪽에서 글자 충돌이 날 수 있다. 이 커밋은 일지와 대기열 항목만 싣는다.
+
+## 회고
+
+후보 여섯, 판정은 승인 하나, 기각 다섯, 넘김 없음이다.
+
+1. `uv run python -I -c`로 푼 CodeRabbit JSON을 `print`하자 한글이 깨졌다. 닫힌 대기열 484(`-I`가 `PYTHONUTF8`을 무시해 `-X utf8`을 함께 준다는 `operations.md` 환경 규약 상세의 줄)가 처방한 바로 그 실수이고, 이 세션은 그 절이 컨텍스트에 없었다. 승인(회차로 센다. 사건은 이 세션이고, 층은 지침 다음 층인 훅이며, PR 하나로 되돌릴 수 있다). 484의 4회차이고 훅은 새로 더하는 것이라 문턱(다섯 번째)에 닿지 않아 대기열에 둔다: 새 항목 `isolated-python-xutf8-hook`.
+2. 셀프 리뷰 반영이 쓴 사실 문장 8번("실리는 것은 서버가 정한 위치 전체")이 틀렸고 PR 직전 리뷰가 잡았다(앞 세션 "PR 직전 리뷰"). 기각: "반영으로 새로 쓴 사실 문장" 열을 밀 주장으로 넘기는 장치가 제 몫을 한 것이라 회차로 세지 않는다.
+3. `$S` 변수가 든 복합 Bash 명령을 워크트리 가드가 거부했다. 기각: `CLAUDE.md` 환경 함정이 적은 가드이고 그 자리에서 막았다.
+4. `python3`를 직접 불러 `hook_bash_python_stub.py`가 막았다. 기각: 이미 있는 훅이 그 자리에서 막았다.
+5. Grep이 긴 줄을 `[Omitted long matching line]`으로 내고 `hook_grep_omitted.py`가 알렸다. 기각: 이미 있는 훅이 알렸고 그 알림대로 Read로 열었다.
+6. CodeRabbit이 사용자가 고른 한계와 앞서 PR 직전 리뷰가 보류한 지적을 되풀이했다. 기각: 지적마다 보류 이유를 PR 코멘트에 남기는 절차(`merge.md` 2)가 처리했다.
+
+대기열 정리. 항목 0518의 승인 줄은 이 회고가 "이 세션에서 세 번"을 "넷"으로 바로잡았고 이 일지 파일명을 더했다(회차는 그대로 3이다. 셋째 세션이 겪은 `커밋 뒤` 계기의 재발은 `인계 못함`을 적은 뒤의 재발이 아니라 `handoff.md` 1의 셋째 항목이 처리하는 같은 경계의 재발이라 새 회차로 세지 않았다. 이 세션에서는 인계 계기가 오지 않았다). 만료할 항목은 `uv run python tools/queue_open_rows.py`에서 없었다(워크트리 규칙의 `--ref origin/main` 대조는 비어 있어 교집합이 없다).
+
+## 다음
+
+- 다음 작업: 기능 mcp-http의 구현. 막는 선은 01 → 02 → {03, 04}라 지금 프론티어는 01 하나다. `/implement .scratch/mcp-http/issues/01-contract-mcp-server-transport-stdio-or-http.md`, 새 세션, `Sonnet 5.5 / high`. 02는 01 뒤에, 03과 04는 02 뒤에 나란히 돈다.
+- 뒤로 넘긴 일. 위 "봇 회차"의 ADR 0049 Consequences 42줄과 명세 7줄: 이력을 더하고 포인터를 달지는 사용자의 승인이 필요하다.
+- 대기열의 회차 5 이상 항목(420·431·565·579·214·475)은 이 기능의 마지막 티켓 뒤에 chore 배치로 고른다(`next-session` 결정표).
