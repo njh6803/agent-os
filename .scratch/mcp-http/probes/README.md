@@ -36,18 +36,18 @@ PR 직전 리뷰(CodeRabbit CLI, 같은 날) 뒤 `unauthorized`의 표지에 응
 | 사례 | 기한 표지 | 종료 요청 | 새어 나온 예외 | Windows | Linux |
 |---|---|---|---|---|---|
 | `normal` | 기한 없음 | 라이브러리가 보냄. 닿음, 세션 일치, 200 | 없음 | 닫기 0.0~0.016 | 닫기 0.002~0.003 |
-| `normal_own_delete`(따로 돌림) | 기한 없음 | 프로브가 보냄. 닿음, 세션 일치, 200, 유예 안(`grace_expired` 거짓) | 없음 | 닫기 0.0~0.015(같은 실행의 `normal` 0.015) | 닫기 0.003~0.005(같은 실행의 `normal` 0.003~0.004) |
+| `normal_own_delete`(따로 돌림) | 기한 없음 | 프로브가 보냄. 닿음, 세션 일치, 200, 유예 안(`grace_expired` 거짓) | 없음 | 닫기 0.0(같은 실행의 `normal` 0.0~0.016) | 닫기 0.002~0.004(같은 실행의 `normal` 0.002~0.003) |
 | `deadline_plain` | 참 | 닿지 않음 | 없음 | 기한에서 돌아오기까지 0.008~0.023 | 0.003 |
 | `deadline_shield_exit` | 기록 없음(예외로 끝남) | 라이브러리가 보냄. 닿음, 세션 일치, 200 | `RuntimeError: Attempted to exit a cancel scope that isn't the current tasks's current cancel scope` | 열기에서 예외까지 1.017~1.02 | 1.007~1.01 |
 | `deadline_shield_delete` | 기록 없음 | 닿지 않음 | 같은 `RuntimeError` | 1.001~1.014 | 1.009 |
 | `deadline_shield_exit_hang` | 기록 없음 | 닿음(서버 기록. 답은 30초 뒤라 받지 못함) | 같은 `RuntimeError` | 닫기 2.0~2.015, 열기에서 예외까지 3.019~3.046 | 닫기 2.003, 3.01~3.011 |
 | `deadline_shield_after` | 참 | 닿지 않음. `grace_expired`가 기록되지 않음(보호 문장이 돌지 않았다) | 없음 | 기한에서 돌아오기까지 0.005~0.019 | 0.003~0.004 |
-| `deadline_shield_finally` | 참 | 프로브가 보냄. 닿음, 세션 일치, 200, 유예 안(`grace_expired` 거짓) | 없음 | 닫기 0.0, 기한에서 돌아오기까지 0.012~0.022 | 닫기 0.002~0.008, 0.005~0.011 |
-| `deadline_shield_finally_hang` | 참 | 닿음(서버 기록). 유예 2초에 끊음(`grace_expired` 참) | 없음 | 닫기 2.0~2.016, 기한에서 돌아오기까지 1.998~2.034 | 닫기 2.003, 2.005~2.006 |
+| `deadline_shield_finally` | 참 | 프로브가 보냄. 닿음, 세션 일치, 200, 유예 안(`grace_expired` 거짓) | 없음 | 닫기 0.0~0.016, 기한에서 돌아오기까지 0.02~0.031 | 닫기 0.002~0.003, 0.005 |
+| `deadline_shield_finally_hang` | 참 | 닿음(서버 기록). 유예 2초에 끊음(`grace_expired` 참). 그 뒤 클라이언트 닫기가 이어져 끝남(`client_closed` 참) | 없음 | 닫기 2.0~2.016, 기한에서 돌아오기까지 2.003~2.019 | 닫기 2.003, 2.005~2.006 |
 
 - **첫째 안의 예외는 보호의 자리 때문이다.** 라이브러리의 종료 요청을 끄고 같은 자리에 보호를 둔 갈래(`deadline_shield_delete`)도 같은 `RuntimeError`로 끝났으므로 원인은 종료 요청이 아니다. 보호의 자리만 `finally`로 옮긴 `deadline_shield_finally`는 예외 없이 종료 요청이 닿아 양성 대조가 된다. anyio 문구의 뜻(라이브러리가 안에서 연 취소 범위가 아직 현재 범위인 채로 바깥의 보호 범위를 나가게 된다)은 문구를 읽은 해석이고 anyio의 코드로 확인하지 않았다.
 - **취소된 범위에서 문맥 닫기의 `await` 뒤 문장은 돌지 않는다.** `deadline_shield_after`와 `deadline_shield_finally`는 같은 코드에서 `try`와 `finally`로 나눴는지만 다르다. 앞은 `grace_expired`가 기록되지 않고 종료 요청이 닿지 않았고, 뒤는 둘 다 됐다.
-- **2초 유예가 닫기를 끊는다.** 답하지 않는 서버의 두 사례에서 닫기가 두 OS 모두 2.0초 안팎이었고, `deadline_shield_finally_hang`에서 `grace_expired`가 참이었다. 답하는 서버(`deadline_shield_finally`)에서는 거짓이다.
+- **2초 유예가 종료 요청을 끊고, 클라이언트 닫기는 그 뒤에도 이어진다.** 답하지 않는 서버의 두 사례에서 닫기가 두 OS 모두 2.0초 안팎이었고, `deadline_shield_finally_hang`에서 `grace_expired`가 참이었다. 답하는 서버(`deadline_shield_finally`)에서는 거짓이다. 이 프로브의 첫 판은 종료 요청과 클라이언트 닫기를 한 유예 안에 두어 종료 요청이 걸리면 닫기가 건너뛰어졌다(PR 봇이 짚었다). 지금 판(`_delete_then_close`)은 유예를 종료 요청에만 두고 닫기는 유예 밖의 보호 안에서 한다. 이 길에서 `deadline_shield_finally`·`deadline_shield_finally_hang`·`normal_own_delete`는 `client_closed`가 참이었고(프로브가 `_marked`로 센다) 걸리는 시간 `client_close_seconds`는 두 OS 모두 0.0초였다(유예가 지난 `hang`의 세 회차 포함). `deadline_shield_after`는 보호 문장이 돌지 않아 종료 요청도 클라이언트 닫기도 기록이 없고 이전 판과 같다.
 - **종료 요청 도달의 양성 대조**는 `normal`(라이브러리가 보내 닿는다)과 `deadline_plain`(보호 없이는 닿지 않는다)이다. 서버 기록의 `mcp-session-id`가 응답 훅이 받아 둔 세션 식별자와 같은 것으로 세션 일치를 봤다.
 - **기한의 결말.** `cancelled_caught`를 기록한 네 사례(`deadline_plain`, `deadline_shield_after`, `deadline_shield_finally`, `deadline_shield_finally_hang`) 모두 참이었다. ADR 0034가 stdio에서 본 양상(안쪽 task group이 취소를 삼켜 거짓이 된다)은 어느 사례에서도 나지 않았다.
 - **정상 종료가 명세의 길을 지날 때.** `normal_own_delete`가 같은 실행의 `normal`과 같은 범위였다(Windows 0.0~0.015 대 0.015, Linux 0.003~0.005 대 0.003~0.004). 종료 요청은 프로브가 보내 같은 세션으로 닿았고(200) 유예 안에 끝났다. 명세 "닫기"와 ADR 0049 이력의 "정상 종료는 늦지 않는다"는 이 측정에 기댄다. 첫 실행에서는 이 사례가 없어 어림으로 두었던 자리다.

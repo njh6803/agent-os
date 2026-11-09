@@ -173,7 +173,10 @@ def read_case(rounds: Rounds, branch: str, name: str) -> None:
             )
         )
         expected = ACCEPTED[branch].get(name)
-        current.mark(measured=expected is not None, result=f"accepted {kind} expected={expected}")
+        current.mark(
+            measured=expected is not None and kind == expected,
+            result=f"accepted {kind} expected={expected}",
+        )
 
 
 def openapi_of(model: type[BaseModel]) -> dict[str, object]:
@@ -315,6 +318,7 @@ def main() -> int:
     parser.add_argument("--node-modules", type=Path, default=ROOT / "web" / "node_modules")
     parser.add_argument("--branch", choices=tuple(BRANCHES), action="append")
     options = parser.parse_args()
+    options.node_modules = options.node_modules.resolve()  # 소비자 회차는 임시 폴더에서 돈다
     branches: list[str] = options.branch or list(BRANCHES)
     header = {
         "pydantic": importlib.metadata.version("pydantic"),

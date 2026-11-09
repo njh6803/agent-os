@@ -206,13 +206,27 @@ class Server:
 
 
 def _describe(error: BaseException) -> dict[str, object]:
+    text = str(error)
     described: dict[str, object] = {
         "type": f"{type(error).__module__}.{type(error).__qualname__}",
-        "str": str(error)[:300],
+        "str": text[:300],
+        # 비밀값 검사는 자르기 전의 전체 글에서 한다(자른 글만 보면 300자 뒤의 값을 놓친다)
+        "has_query": QUERY_SECRET in text,
+        "has_token": TOKEN_VALUE in text,
     }
     if isinstance(error, BaseExceptionGroup):
         described["inner"] = [_describe(inner) for inner in error.exceptions]
     return described
+
+
+def _flagged(described: object, key: str) -> bool:
+    """`_describe`가 적은 예외 글(예외 그룹은 안쪽까지)에 `key`의 표지가 서 있는가."""
+    if not isinstance(described, dict):
+        return False
+    inner = described.get("inner")
+    return described.get(key) is True or (
+        isinstance(inner, list) and any(_flagged(item, key) for item in inner)
+    )
 
 
 def _leaves(error: BaseException) -> list[BaseException]:
@@ -270,7 +284,11 @@ async def _connected(
         if case in DEADLINE:
             scope.deadline = anyio.current_time() + DEADLINE_SECONDS
             deadline_wall = time.time() + DEADLINE_SECONDS
-            await session.call_tool("slow", {"seconds": 30})
+            try:
+                await session.call_tool("slow", {"seconds": 30})
+            except anyio.get_cancelled_exc_class():
+                record["slow_cancelled"] = True  # 기한이 slow 를 기다리는 중에 취소했다
+                raise
             record["unexpected"] = "slow(30) 이 기한 안에 돌아왔다"
             return
         result = await session.call_tool("add", {"a": 1, "b": 2})
@@ -285,19 +303,15 @@ async def _connected(
             return
         if case == "deadline_shield_after":
             await stack.aclose()
-            with anyio.CancelScope(shield=True), anyio.move_on_after(GRACE_SECONDS) as grace:
-                await own_delete()
-                await client.aclose()
-            record["grace_expired"] = grace.cancelled_caught
+            with anyio.CancelScope(shield=True):
+                await _delete_then_close()
             return
         if case in SHIELD_FINALLY:
             try:
                 await stack.aclose()
             finally:
-                with anyio.CancelScope(shield=True), anyio.move_on_after(GRACE_SECONDS) as grace:
-                    await own_delete()
-                    await client.aclose()
-                record["grace_expired"] = grace.cancelled_caught
+                with anyio.CancelScope(shield=True):
+                    await _delete_then_close()
             return
         with anyio.CancelScope(shield=True), anyio.move_on_after(GRACE_SECONDS) as grace:
             await stack.aclose()
@@ -305,6 +319,17 @@ async def _connected(
                 await own_delete()
             await client.aclose()
         record["grace_expired"] = grace.cancelled_caught
+
+    async def _delete_then_close() -> None:
+        """종료 요청만 2초 유예 안에 두고, 클라이언트 닫기는 유예가 지났어도 이어서 한다.
+        유예 안에 둘을 함께 두면 종료 요청이 걸렸을 때 닫기가 건너뛰어진다."""
+        with anyio.move_on_after(GRACE_SECONDS) as grace:
+            await own_delete()
+        record["grace_expired"] = grace.cancelled_caught
+        closing = anyio.current_time()
+        await client.aclose()
+        record["client_closed"] = True
+        record["client_close_seconds"] = round(anyio.current_time() - closing, 3)
 
     async def own_delete() -> None:
         """라이브러리 대신 프로브가 세션 번호로 종료 요청을 보낸다. 세션 번호가 없으면 보내지
@@ -318,7 +343,11 @@ async def _connected(
         }
         if protocol_version:
             headers["mcp-protocol-version"] = protocol_version
-        response = await client.delete(url, headers=headers)
+        try:
+            response = await client.delete(url, headers=headers)
+        except httpx2.HTTPError as error:
+            record["delete_error"] = type(error).__name__  # 명세대로 삼킨다. 닫기는 이어진다
+            return
         record["delete_status"] = response.status_code
 
     async def drive() -> None:
@@ -369,10 +398,10 @@ def _server_facts(
 
 
 def _query_facts(record: dict[str, object], capture: LogCapture) -> None:
-    exception = json.dumps(record.get("exception"), ensure_ascii=False)
-    record["query_in_exception"] = QUERY_SECRET in exception
+    exception = record.get("exception")
+    record["query_in_exception"] = _flagged(exception, "has_query")
     record["query_in_log"] = capture.mentioning(QUERY_SECRET)
-    record["token_in_exception"] = TOKEN_VALUE in exception
+    record["token_in_exception"] = _flagged(exception, "has_token")
     record["token_in_log"] = capture.mentioning(TOKEN_VALUE)
     record["log_lines"] = len(capture.lines)
     record["log_sample"] = [
@@ -399,7 +428,9 @@ def _marked(case: str, record: dict[str, object]) -> bool:
         return (
             record.get("initialized") is True
             and record.get("slow_started_before_deadline") is True
+            and record.get("slow_cancelled") is True
             and "unexpected" not in record
+            and (case not in SHIELD_FINALLY or record.get("client_closed") is True)
         )
     return record.get("initialized") is True and record.get("add") == ["3"]
 
