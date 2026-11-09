@@ -76,3 +76,22 @@
 
 - 병합 뒤 프론티어는 02와 04다. 둘 다 01 뒤에 나란히 돈다(`.scratch/pilot-portal/plan.md`).
 - 변이 표 `site_file_mutations.toml`의 남은 표지 다섯(10~13, 16)을 대기열 417이 허용하는 문구(변이가 낸 받은 값처럼 그 단언이 빨개질 때만 찍히는 것)로 고쳐 표 전체를 한 번 돌린다. 이 변경이 만든 문제가 아니라 표를 만든 뒤 생긴 검사에 걸린 것이다.
+
+### 인계 지시문 (커밋 뒤 경계, 같은 브랜치)
+
+- 다음 작업: `.scratch/pilot-portal/issues/01-site-file-package-and-ui-subpaths.md`의 PR과 병합(사이트 파일 읽기를 `@agent-os/site-file` 패키지로 뽑고 디자인 시스템에 서브패스 `./themes`, `./fonts`를 낸 변경. 구현과 커밋은 끝났다)
+- 다음 단계: 구현
+- 어디서: 새 세션. `git worktree list`에서 `feature/01-site-file-package-and-ui-subpaths`가 체크아웃된 자리(`C:/project/agent/.claude/worktrees/01-site-file-package-and-ui-subpaths`)를 찾아 EnterWorktree(path)로 들어간다. 주 체크아웃에서 tidy-checkouts를 먼저 돌지 않는다(같은 워크트리를 잇는다).
+- 시작 프롬프트: `/implement .scratch/pilot-portal/issues/01-site-file-package-and-ui-subpaths.md` (남은 것은 푸시, PR, 봇 회차, 병합이다)
+- 브랜치: `feature/01-site-file-package-and-ui-subpaths`
+- 모델: Sonnet 5.5 / high
+- 읽을 것: 이 일지 전체, 티켓과 `.scratch/pilot-portal/spec.md`, `.claude/skills/next-session/merge.md`의 "워크트리에서 병합할 때"(워크트리 사본을 Read로 연다)
+- 이어받을 상태: 인계: 커밋 뒤 `8406c575`까지 커밋했고 푸시 전이다. 검증(pytest, pyright, lint-imports, ruff, web verify, 위젯 e2e, `llm_widget`, 사진 비교 셋)은 모두 통과했고 셀프 리뷰 반영도 끝났다. 일지 `docs/journal/2026-11-10-0814-site-file-package-and-ui-subpaths.md`. origin/main이 `0dac7ae`로 앞서 있어 `tests/test_main.py`가 겹칠 수 있고 `.scratch/plan.md`가 충돌하면 `uv run python tools/plan_table.py`로 다시 만든다.
+- 확인할 선행 조건: 주 체크아웃 미갱신(병합은 워크트리의 병합 길로 한다)
+- 이번 요청 범위: PR과 병합까지
+
+open-session을 부른다 2026-11-09T23:43:46Z (이 일지의 인계 지시문 편집은 커밋 전이다. 새 세션의 첫 커밋에 함께 싣는다)
+
+## 이어받은 세션 (푸시, PR, 병합)
+
+위 인계 지시문으로 연 세션이다. `origin/main`(`0dac7aed`, mcp-http 04)을 이 브랜치에 병합했다. `tests/test_main.py`는 글자 충돌 없이 자동으로 합쳐졌고 `uv run pytest -q tests/test_main.py`가 215개 통과했다. `uv run python tools/plan_table.py`는 `.scratch/plan.md`를 바꾸지 않았다. `uv run python tools/sibling_overlap.py`는 번호 겹침이 없다고 했다(헌법 3.0.78은 형제가 쓴 가장 높은 판 3.0.77보다 높다).
