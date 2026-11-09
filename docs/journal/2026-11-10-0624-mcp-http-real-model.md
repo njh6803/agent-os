@@ -40,3 +40,60 @@
 - `"42" in result.stdout`은 선례(`"4"`)와 같은 수준이다. 모델이 도구를 안 불러도 이 단언만으로는 통과하지만 `tool_called` 단언이 그것을 막는다.
 
 다시 돌린 명령: `uv run ruff check tests/test_main.py`와 포맷 검사는 고친 뒤 초록이다. 손으로 치는 나머지 다섯과 `-m llm`은 고치기 전의 판으로 초록이었고(`-m llm`은 고친 뒤 판으로 다시 돌려 아홉 통과), 커밋의 pre-commit이 고친 판을 다시 돈다.
+
+## PR 직전 리뷰(coderabbit-review)
+
+범위: 기준 `origin/main`, 커밋 하나(`cecd4162`), 미커밋 변경 없음(이 일지의 이 절은 이 뒤에 쓴 것이다). 서브에이전트가 CLI 0.7.5로 `coderabbit review --agent --include-untracked --base origin/main`을 돌렸다. `Plan: Free`, `Seat: not assigned`였으나 리뷰는 파일 3개를 끝까지 돌아 `review_completed`, 지적 0건이다(CLI 축).
+
+밀 주장 셋을 서브에이전트가 코드와 대 봤고 모두 맞았다. 근거는 `grep -o`로 센 `mcp = ["everything"]`(`plugins/agents/calc/plugin.toml`)와 `allow = ["everything:*"]`(`plugins/rules.toml`)가 각각 정확히 한 번이라는 것, ADR 0049 "시험" 항목의 같은 문장, `.claude/rules/core.md`와 `core/run.py`의 `tool_connection` 규정, `git diff origin/main --stat`이 세 파일(시험, 티켓, 일지)뿐이고 픽스처와 `src/`가 비어 있다는 것이다. 일지의 시간·토큰 수치는 재현하지 않았고 일지 기록을 읽었다고 서브에이전트가 밝혔다.
+
+고친 것: 없음. 남긴 것: 없음. 오탐: 없음.
+
+## PR
+
+푸시(`git push -u origin feature/04-real-model-calc-over-remote-mcp-server`, 커밋 하나 `cecd4162`)하고 `gh pr create`로 PR #508(`test: 실제 모델로 calc가 원격 MCP 서버의 도구를 쓰고 트레이스가 남는 시험 (mcp-http 04)`)을 열었다. 본문은 저장소 템플릿을 채웠다(`--body-file`, 계약 영향 없음, 변경 유형 `test`). 저장소는 `njh6803/agent-os`다. 열린 직후 컨텍스트가 인계 문턱을 넘어 "PR 연 뒤" 계기가 왔고, `get_session`의 `self`에 `parentSessionId`가 없어 곁 세션이 아니므로 `handoff.md`대로 넘긴다. 이 세션은 구현, 셀프 리뷰, 커밋, PR 직전 리뷰, 푸시, PR 열기까지 했다. 봇 회차, 회고(`retro`), "다음" 절은 쓰지 않았다(봇 회차 뒤에 쓰는 순서는 앞선 일지 `2026-11-10-0421-mcp-http-connect.md`와 같다).
+
+## 인계(PR 연 뒤)
+
+제목을 `feature/04-real-model-calc-over-remote-mcp-server (인계함)`으로 바꾸고 워크트리 잠금을 풀었다. 이 세션이 띄운 백그라운드 작업은 모두 끝나 있어 멈출 것이 없었다. 낸 지시문은 아래 그대로다.
+
+```
+다음 작업: .scratch/mcp-http/issues/04-real-model-calc-over-remote-mcp-server.md (실제 모델로 calc 예시가 원격 MCP 서버의 도구를 쓰고 트레이스가 남는다)
+다음 단계: PR 반영·병합
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /implement .scratch/mcp-http/issues/04-real-model-calc-over-remote-mcp-server.md
+브랜치: feature/04-real-model-calc-over-remote-mcp-server
+모델: Sonnet 5.5 / high. 2의 잇는 지시문
+읽을 것: docs/journal/2026-11-10-0624-mcp-http-real-model.md
+이어받을 상태: 인계: PR 연 뒤. 일지는 docs/journal/2026-11-10-0624-mcp-http-real-model.md 이고 "PR"·"인계(PR 연 뒤)"가 이 인계다. PR #508이 열렸고 헤드는 cecd4162이며 셀프 리뷰(Critical·Major 없음)와 PR 직전 리뷰(CLI 지적 0건)는 끝났다. 일지의 "PR 직전 리뷰"·"PR"·"인계(PR 연 뒤)" 절은 커밋되지 않았다. 구현을 다시 하지 않는다. 남은 일: 첫 @coderabbitai review 코멘트와 wait_ci(merge.md 2 봇 회차), 봇 지적 반영, 회고(retro)와 일지의 "다음" 절(앞선 일지 2026-11-10-0421-mcp-http-connect.md처럼 봇 회차 뒤), 일지 커밋·푸시, merge.md의 워크트리 병합. 병합 직전에 origin/main에 티켓 03이 done으로 병합되었는지 본다(.scratch/mcp-http/issues/03-session-close-request-from-cancelled-runs.md). 03이 먼저 병합되었으면 이 PR이 그 기능의 마지막 열린 티켓을 닫는 것이라 기능 계획 .scratch/mcp-http/plan.md에 **끝:** 줄을 적고 plan_table.py를 돌려 같은 PR에 싣는다(implement SKILL.md의 티켓 맞추기). 이 PR이 먼저 병합되면 끝 줄은 03이 적는다.
+확인할 선행 조건: 없음
+이번 요청 범위: PR과 병합까지
+```
+
+open-session을 부른다 2026-11-09T21:48:30Z
+
+## 이어받은 세션과 PR 봇 회차 1
+
+제목을 `feature/04-real-model-calc-over-remote-mcp-server`로 되돌리고 `EnterWorktree(path)`로 워크트리에 들어갔다(헤드 `cecd4162`, origin/main은 앞서 있지 않았다). PR #508은 `njh6803/agent-os`의 것이다. `@coderabbitai review`를 남기고 `tools/wait_ci.py 508`을 띄웠다. 끝 줄은 "모두 통과. CodeRabbit: Review rate limited"다(`gh pr view 508 --json comments`와 `gh pr checks 508`을 손으로 읽었다).
+
+CodeRabbit은 한도에 걸려("Next included review available in 28 minutes") 이 PR의 CodeRabbit 회차는 0이다. claude-review는 첫 회차이고 Critical·Major 없이 Minor 하나와 Nit 하나를 냈다. 경계 쪽은 지적이 없었다. 보류 이유를 PR 코멘트에 남겼다(`issuecomment-6752558568`).
+
+- [Minor] 새 시험의 본문이 임시 루트 준비, CLI 실행, 단언을 한 함수에 잇는다. 보류. 쓰는 곳이 하나라 도우미로 뽑는 것은 이 티켓의 몫을 넘는다(implement "이 티켓의 몫만 쓰기"). 티켓 03이 비슷한 시험을 더하면 그때 뽑는다(아래 "다음").
+- [Nit] 일지 날짜 `2026-11-10`이 리뷰 시점과 다르다는 지적. 오탐. 이름은 파일을 만든 로컬 날짜이고(ADR 0045 결정 7) 차이는 리뷰어 쪽 시계다.
+
+## 회고
+
+후보 넷. 승인 없음, 기각 넷. 만료 없음(`tools/queue_open_rows.py`를 이 워크트리와 `--ref origin/main`으로 두 번 돌려 "만료할 항목: (없음)"을 보았다). 넘긴 것은 없다.
+
+기각.
+- 구현 전에 빨강을 볼 수 없었다(02가 접속을 이미 들였다). 티켓이 정한 길(단언을 일부러 틀리게 두고 그 단언에서 실패하는 것을 본다)로 풀었고 새 사고가 아니다.
+- `_replace_in`의 독스트링이 동작과 어긋난 것을 셀프 리뷰가 잡았다. 리뷰가 제 몫을 한 것이고 표준에 더할 새 판단 기준도 아니다.
+- 인계 계기로 구현 세션과 봇 회차 세션이 나뉘었다. 정해진 절차(`handoff.md`)대로 되었다.
+- CodeRabbit이 한도에 걸렸다. merge.md 회차 세기가 이미 정한 길이고 회차로 세지 않았다.
+
+## 다음
+
+- 남은 티켓은 03(`.scratch/mcp-http/issues/03-session-close-request-from-cancelled-runs.md`) 하나다. 이 PR(04)이 먼저 병합되면 03이 기능 `mcp-http`의 마지막 열린 티켓이므로, 03을 닫는 커밋이 기능 계획 `.scratch/mcp-http/plan.md`에 `**끝:** YYYY-MM-DD`를 적고 `uv run python tools/plan_table.py`를 돌려 `.scratch/plan.md`까지 같은 PR에 싣는다(implement SKILL.md "티켓 맞추기"). 03의 워크트리(`.claude/worktrees/03-session-close-request-from-cancelled-runs`)는 이미 있다.
+- 04에서 보류하고 맡은 티켓이 없는 것: 새 시험의 준비 코드(임시 루트에 플러그인을 쓰고 매니페스트와 규칙 파일을 치환하는 부분)를 도우미로 뽑는 일(claude-review 첫 회차 Minor). 03이 `tests/test_main.py`에 같은 모양의 시험을 더하게 되면 그때 같이 뽑는다. 03의 체크박스에는 없다.
+- 셀프 리뷰가 남긴 것(양성 대조가 도구 호출까지는 증명하지 않는 점)도 그대로다. `tool_called`에 `server` 칸이 없어 이벤트 계약을 바꾸지 않고는 단언할 수 없다.
+- 워크트리에서 병합하므로 주 체크아웃은 갱신되지 않는다. 새 세션이 워크트리에 들어가기 전에 주 체크아웃 세션의 `tidy-checkouts`가 당긴다(merge.md "워크트리에서 병합할 때").
