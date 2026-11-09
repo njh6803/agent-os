@@ -24,9 +24,9 @@ import pytest
 
 from agent_os.adapters.mcp import McpTools
 from agent_os.core.ports import ToolConnection, ToolSource
-from agent_os.sdk import McpServer, PluginName
+from agent_os.sdk import HttpServer, PluginName, StdioServer
 
-FIXTURE = McpServer(
+FIXTURE = StdioServer(
     command=sys.executable, args=(str(Path(__file__).with_name("mcp_fixture_server.py")),)
 )
 # 가짜 프로세스. 테스트는 importlib 모드라 같은 폴더의 모듈을 import 하지 못해 경로와 파일 이름으로
@@ -97,7 +97,7 @@ async def test_같은_이름의_도구를_낸_서버_둘은_두_서버_이름을
 async def test_겹친_서버_뒤의_서버는_열리지_않는다() -> None:
     """셋째 서버는 띄울 수 없는 명령이다. 열렸다면 ConnectionError 가 났을 것이다."""
     tools: ToolSource = McpTools()
-    broken = McpServer(command="definitely-not-a-command-agent-os")
+    broken = StdioServer(command="definitely-not-a-command-agent-os")
     servers = {
         PluginName("first"): FIXTURE,
         PluginName("second"): FIXTURE,
@@ -144,7 +144,7 @@ async def test_없는_도구는_에러다() -> None:
 
 async def test_서버_기동_실패는_서버_이름과_명령을_든_연결_오류다() -> None:
     tools: ToolSource = McpTools()
-    broken = McpServer(command="definitely-not-a-command-agent-os")
+    broken = StdioServer(command="definitely-not-a-command-agent-os")
 
     with pytest.raises(
         ConnectionError, match="broken.*definitely-not-a-command-agent-os"
@@ -154,10 +154,37 @@ async def test_서버_기동_실패는_서버_이름과_명령을_든_연결_오
     assert isinstance(raised.value.__cause__, FileNotFoundError)
 
 
+async def test_http_모양의_서버는_아직_붙지_않아_주소를_든_연결_오류다() -> None:
+    """02 가 이 갈래를 실제 접속으로 바꿀 때까지의 틈이다. 문구의 괄호는 stdio 의 명령 자리에
+    매니페스트의 `url` 이 글자 그대로 서고, 원인은 여는 단계 안에서 난 `NotImplementedError` 다."""
+    tools: ToolSource = McpTools()
+    remote = HttpServer(transport="http", url="http://Rag-Engine:8000?tenant=a")
+
+    expected = (
+        r"MCP 서버 remote\(http://Rag-Engine:8000\?tenant=a\)에 붙지 못했다: "
+        r"NotImplementedError: http 전송은 아직 구현되지 않았다"
+    )
+    with pytest.raises(ConnectionError, match=expected) as raised:
+        async with tools.connect({PluginName("remote"): remote}):
+            pytest.fail("http 서버가 열렸다")
+
+    assert isinstance(raised.value.__cause__, NotImplementedError)
+
+
+async def test_http_모양의_서버가_뒤에_있어도_앞선_stdio_서버를_연_뒤_연결_오류_하나다() -> None:
+    """앞 서버의 태스크 그룹 안에서 난 실패도 그 그룹에 싸이지 않고 연결 오류 하나로 나온다."""
+    tools: ToolSource = McpTools()
+    remote = HttpServer(transport="http", url="http://rag-engine:8000/mcp")
+
+    with pytest.raises(ConnectionError, match=r"remote\(http://rag-engine:8000/mcp\)"):
+        async with tools.connect({PluginName("fixture"): FIXTURE, PluginName("remote"): remote}):
+            pytest.fail("http 서버가 열렸다")
+
+
 async def test_둘째_서버가_열리지_않아도_연결_오류_하나다() -> None:
     """둘째 서버의 실패는 먼저 연 서버의 태스크 그룹 안에서 나므로 그 그룹에도 싸인다."""
     tools: ToolSource = McpTools()
-    broken = McpServer(command="definitely-not-a-command-agent-os")
+    broken = StdioServer(command="definitely-not-a-command-agent-os")
 
     with pytest.raises(ConnectionError, match="broken.*definitely-not-a-command-agent-os"):
         async with tools.connect({PluginName("fixture"): FIXTURE, PluginName("broken"): broken}):
@@ -178,7 +205,7 @@ async def test_뜨자마자_끝나는_서버는_서버_이름을_든_연결_오�
     """세션을 연 뒤 실패하므로 그 예외가 상류의 태스크 그룹을 지나 두 겹으로 싸인다. 어댑터가
     벗겨 그 `ConnectionError` 하나로 낸다."""
     tools: ToolSource = McpTools()
-    exiting = McpServer(command=sys.executable, args=("-c", "pass"))
+    exiting = StdioServer(command=sys.executable, args=("-c", "pass"))
 
     with pytest.raises(ConnectionError, match="exiting.*Connection closed"):
         async with tools.connect({PluginName("exiting"): exiting}):
@@ -220,8 +247,8 @@ async def test_서버를_지정하지_않으면_도구_없이_연다() -> None:
         assert list(opened.tools()) == []
 
 
-def _paged(shape: str) -> dict[PluginName, McpServer]:
-    server = McpServer(command=sys.executable, args=(str(PAGED), shape))
+def _paged(shape: str) -> dict[PluginName, StdioServer]:
+    server = StdioServer(command=sys.executable, args=(str(PAGED), shape))
     return {PluginName("paged"): server}
 
 
@@ -253,8 +280,8 @@ def folder(tmp_path: Path) -> Iterator[Path]:
     (tmp_path / STOP).touch()
 
 
-def _lingering(role: str, folder: Path) -> dict[PluginName, McpServer]:
-    server = McpServer(command=sys.executable, args=(str(LINGERING), role, str(folder)))
+def _lingering(role: str, folder: Path) -> dict[PluginName, StdioServer]:
+    server = StdioServer(command=sys.executable, args=(str(LINGERING), role, str(folder)))
     return {PluginName("lingering"): server}
 
 
@@ -319,10 +346,10 @@ from pathlib import Path
 import anyio
 
 from agent_os.adapters.mcp import McpTools
-from agent_os.sdk import McpServer, PluginName
+from agent_os.sdk import StdioServer, PluginName
 
 lingering, folder, connected = sys.argv[1], Path(sys.argv[2]), sys.argv[3]
-server = McpServer(command=sys.executable, args=(lingering, "wrapper", str(folder)))
+server = StdioServer(command=sys.executable, args=(lingering, "wrapper", str(folder)))
 
 
 async def main() -> None:

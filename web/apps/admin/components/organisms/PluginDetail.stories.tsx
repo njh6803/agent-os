@@ -48,6 +48,7 @@ const EVERYTHING: Plugin = {
     max_tokens: null,
     temperature: null,
     server: {
+      transport: "stdio",
       command: "npx",
       args: ["-y", "@modelcontextprotocol/server-everything"],
       secret_args: {},

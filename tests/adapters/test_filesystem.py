@@ -44,6 +44,7 @@ from agent_os.sdk import (
     RunFinished,
     RunId,
     Skill,
+    StdioServer,
 )
 
 AGENT_SRC = """
@@ -203,7 +204,7 @@ def test_mcp_매니페스트는_서버_실행_정보를_돌려준다(root: Path)
     manifest = plugins.read_manifest(PluginKind.MCP, PluginName("everything"))
 
     assert manifest is not None
-    assert manifest.server is not None
+    assert isinstance(manifest.server, StdioServer)
     assert manifest.server.command == "npx"
     assert plugins.read_manifest(PluginKind.MCP, PluginName("missing")) is None
 

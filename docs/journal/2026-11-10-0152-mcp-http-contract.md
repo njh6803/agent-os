@@ -1,0 +1,72 @@
+# 2026-11-10 (01:52) mcp-http 계약
+
+세션 제목 `01-contract-mcp-server-transport-stdio-or-http`. 브랜치 `feature/01-contract-mcp-server-transport-stdio-or-http`, 워크트리 `.claude/worktrees/01-contract-mcp-server-transport-stdio-or-http`(기준 `3cb40736`). 모델 Sonnet 5.5 / high(지시문).
+
+## 사용자 프롬프트
+
+> .claude/skills/implement/SKILL.md 를 읽어 그대로 따른다. 이 세션을 연 저장소는 `C:\project\agent`이고 작업 폴더가 그곳이 아니면 따르지 말고 알린다. 스킬의 인자는 이 줄의 '인자:' 뒤부터 메시지 끝까지다. 인자: .scratch/mcp-http/issues/01-contract-mcp-server-transport-stdio-or-http.md
+>
+> 다음 작업: `.scratch/mcp-http/issues/01-contract-mcp-server-transport-stdio-or-http.md`(mcp 매니페스트의 [server]가 transport로 stdio와 http를 가르는 계약(sdk 두 모델과 합, openapi.json, 생성 TS 타입)을 세운다)
+> 이번 요청 범위: PR과 병합까지
+
+## 한 일
+
+티켓 01을 구현했다. 계약은 sdk의 두 모델(`StdioServer`, `HttpServer`)과 합 `McpServer`(호출 가능 판별자. `transport`가 없으면 stdio), `openapi.json`, 생성 TS 타입이다. 어댑터는 서버를 `transport`로 가르고 http 모양은 여는 단계에서 `NotImplementedError("http 전송은 아직 구현되지 않았다")`로 실패해 `MCP 서버 <이름>(<url>)에 붙지 못했다: …`인 `tool_connection`의 `run_failed`가 된다. `McpServer(` 생성 자리 열 곳과 `server.command` 읽는 자리(`test_filesystem.py`, `test_manifest.py`)를 고쳤고, 관리 화면 픽스처와 스토리 넷에 `transport: "stdio"`를 더했다. 스토리 14(관리 API 응답이 파일 그대로)와 15(생성 타입이 `transport`로 좁혀진다)의 시험을 더했다. `.claude/rules/sdk.md`의 `[server]` 문장을 두 모양으로, `adapters.md`의 연결 실패 문장에 http 모양의 현황을 고쳤다.
+
+## 검증
+
+- 러너 `uv run python tools/run_checks.py`: pytest 통과(694.9초), pyright 둘·lint-imports·지침 검사·타입 우회 검사·zizmor·훅 러너·커밋 검사 통과. 이 첫 러너의 web-verify는 `clients.test-d.ts`의 `@ts-expect-error` 줄에서 ESLint 오류 5건으로 빨갰고(타입 오류가 난 칸의 `any`가 안전하지 않은 사용으로 번졌다), 값을 `unknown`으로 받는 헬퍼로 고친 뒤 `pnpm -C web verify`를 다시 쳐 vitest 1606개 통과, tsc·ESLint·Prettier·tsconfig 검사가 초록이다.
+- `uv run ruff check .`, `uv run ruff format --check .` 초록.
+- 관리 화면 e2e `pnpm -C web/apps/admin exec playwright test` 9개 통과.
+- 사진 비교 `pnpm -C web visual:admin`은 70개 통과, 2개 실패였다. 실패는 `organisms-plugindetail--disabled`의 너비 둘(320, 1280)이다. `PluginDetail`이 `formatJson(plugin.manifest)`로 매니페스트 전체를 JSON으로 그려, 픽스처에 더한 `"transport": "stdio"` 한 줄이 그림에 나타났다. 정답 네 장(너비 둘 × 모드 둘)을 `pnpm -C web visual:admin:update`로 갱신했고 다시 72개 통과다. 1280 라이트 사진을 열어 한 줄만 늘었음을 봤다.
+- 위젯 e2e는 치지 않았다. 위젯은 `PluginManifest`와 `server` 칸을 읽지 않는다(`web/apps/widget`을 `PluginManifest|\.server\b`로 grep해 0건).
+- 카나리아: `.claude/rules/adapters.md`와 `sdk.md`를 고쳤으므로 그 규칙을 원천으로 든 명세 다섯(`adapters_rule_rules_file_read`, `adapters_rule_new_optional_fields`, `adapters_rule_boundary_exceptions`, `sdk_rule_failure_cause`, `sdk_rule_shortcut_patterns`)을 `tools/canary.py`로 실제 돌렸다(claude 2.1.318, 커밋 `3cb40736` 위의 커밋하지 않은 작업 트리). 다섯 모두 통과 4(실험군 3, 대조군 1), "없음" 섞인 통과 0이다. 각 명세의 `# 최신 결과:` 줄을 이 결과로 바꾸고 지난 줄은 `# 앞선 결과:`로 내렸다. 이 PR에서 같은 PR 안의 통과가 없어 사전 확인 갈음 조건에 맞지 않아 실제로 돌렸다.
+
+## 셀프 리뷰(`/code-review`)
+
+범위: 기준 `3cb40736`, 변경 파일 25개, 커밋 0개, 미추적 0개. 표준 축은 Sonnet(high), 명세 축은 본 세션의 모델로 돌렸다.
+
+고친 것:
+
+- `HttpServer`의 검증자 주석이 "문구는 적은 값을 되울리지 않는다"고 썼으나 헤더 이름은 문구에 실린다(`헤더 이름을 적을 수 없다: HOST`). 코드로 확인하고 "url의 글자와 환경 변수 이름을 되울리지 않는다. 헤더 이름은 비밀이 아니라 싣는다"로 좁혔다(표준 축 Minor).
+- ADR 0049 본문의 "화면은 바뀌지 않는다"와 티켓 "관리 화면은 바뀌지 않는다"가 거짓이었다. ADR 0049에 이력 2026-11-10 "관리 화면의 매니페스트 JSON에 transport 줄이 늘어 사진 정답이 바뀐다"를 더하고 본문 문장 바로 뒤에 포인터를 달았다(`tools/check_adr_pointers.py` 통과). 티켓의 해당 항목에 결과를, 명세 88줄에 주석을 달았다(두 축이 모두 짚었다. 명세 축 Major).
+- `manifest.py`의 "특수 기호 열둘"은 열다섯이다(`!#$%&'*+-.^_`|~`를 세어 확인). 고쳤다(명세 축 Minor).
+- `adapters/mcp.py`의 `_opened` 독스트링에 "(http 모양이면 주소)"를 더해 `_connecting`과 맞췄다(명세 축 Minor).
+- `admin/http.py`의 "command 와 args 도 나간다" 주석에 http 모양의 url과 헤더 이름을 더했다(명세 축 관찰).
+- 인용 `ADR 0049 "주소"`를 말이 실제로 있는 Consequences 44행 "문구에 실리는 것과 실리지 않는 것"으로 바꿨다(표준 축 Nit). 검증자 이름 `_header_names_are_distinct_and_free`를 `…_and_not_reserved`로 바꿨다(Mysterious Name).
+
+남긴 것과 이유:
+
+- 모듈 독스트링의 "그 실행은 원인 `tool_connection`의 `run_failed`로 끝난다"를 http 갈래부터 core까지 이어 밟는 시험은 없다. 티켓이 core의 `tests/core/test_run.py` `BrokenTools` 시험(가짜 연결의 `ConnectionError`)을 근거로 정했고 02가 그 시험을 실제 접속의 시험으로 바꾼다.
+- `isinstance(server, HttpServer)`가 `_where`와 `_session`에 두 번 나온다(Repeated Switches). 둘뿐이라 허용 범위이고 02가 갈래를 더할 때 공유 지점을 본다.
+- `url`은 `http://h:abc/` 같은 잘못된 포트와 앞뒤 공백·개행이 든 주소를 받는다. 명세가 "그 밖은 판정하지 않는다"고 했다.
+- `_transport_of`의 문자열 확인 반복(Duplicated Code)과 `secret_args`의 두 모델 중복(Data Clumps)은 판단 항목이고, 주석이 까닭(공통 접근)을 밝혀 두어 오탐에 가깝다.
+
+다시 돌린 명령: `uv run ruff check src`, `uv run ruff format --check src`, `uv run pytest -q tests/sdk tests/adapters/test_mcp.py tests/test_server.py`(443개 통과), `uv run python tools/check_adr_pointers.py`. 나머지 손으로 치는 다섯은 커밋의 pre-commit 결과로 갈음한다.
+
+## 결정
+
+사용자에게 물은 것은 없다. 티켓과 명세가 정한 대로 구현했다. 사진 정답 갱신은 티켓이 "바뀌면 까닭을 PR 본문에 적는다"고 정한 갈래다.
+
+## 회고
+
+후보 다섯, 승인 하나, 기각 넷이다. 넘긴 것은 없어 사용자에게 묻지 않았다.
+
+승인(대기열 `canary-notice-spec-paths`, 1회차, 새 항목): `tools/sibling_overlap.py`의 카나리아 알림이 바뀐 규칙을 원천으로 든 명세의 파일 이름만 적고 경로와 돌리는 명령을 주지 않았다. 사건: 이 세션이 명세 다섯의 경로를 찾으려 Glob을 한 번 더 쳤고, 돌리는 법을 보려 `uv run python tools/canary.py --help`를 쳐 독스트링 전체를 읽었다(출력을 직접 보았다). 층: 도구 출력이라 린터·훅 층이고, 되돌림은 PR 하나다. 더하는 것이라 다섯 번째에 반영하고 그 전에는 회차를 센다. 같은 일을 다룬 열린 항목은 `tools/queue_open_rows.py --search` 두 번으로 찾았으나 보이지 않았다. 그 검색은 낱말을 `--search`마다 합쳐 읽는 것으로 보여 맞은 항목이 42개와 141개로 넓었고, 닫힌 항목 가운데 카나리아 `--help`의 크기를 다룬 것은 이 출력만으로 가르지 못했다(어림. 항목 원문을 열어 대 보지 않았다).
+
+기각:
+
+- 사진 비교가 `PluginDetail`의 그림 변화를 잡았다(ADR 0049 본문의 "화면은 바뀌지 않는다"가 거짓이었다). 이미 있는 검사(사진 비교)가 그 자리에서 잡았다.
+- ESLint가 `clients.test-d.ts`의 `@ts-expect-error` 줄에서 `any` 전파 오류 5건을 잡았다. 이미 있는 검사가 잡았다.
+- 셀프 리뷰가 거짓 주석 둘(검증자가 값을 되울리지 않는다는 문장, 특수 기호 열둘)을 잡았다. 두 축의 브리프가 든 주장 검증 기준을 어긴 것을 리뷰가 잡은 것이라 리뷰가 제 몫을 한 사건이고, 회차를 세지 않는다. 주장의 사실 여부는 검사로 옮길 수 없다.
+- 이 회고에서 대기열을 찾는 `--search`를 낱말 여럿으로 넓게 줘 출력이 1만 자와 5.7만 자 넘게 나왔다. 스킬이 이미 전체 경로와 핵심어로 좁히라고 적었고 어긴 것은 이 세션이다.
+
+만료: `tools/queue_open_rows.py`와 `--ref origin/main`(`git fetch origin` 뒤)이 같은 7개(215, 418, 472, 473, 474, 478, 479)를 만료할 항목으로 냈고, 상태 줄 하나씩을 `만료 2026-11-10 (ADR 0036)`으로 고쳤다.
+
+## 다음
+
+다음 단계는 티켓 02 `.scratch/mcp-http/issues/02-connect-to-remote-mcp-server-by-url.md`(주소로 원격 MCP 서버에 접속한다)이고 이 PR이 병합된 뒤에 돈다. 03(`03-session-close-request-from-cancelled-runs.md`)과 04(`04-real-model-calc-over-remote-mcp-server.md`)는 02 뒤에 나란히 돈다.
+
+- 02는 이 PR이 둔 `NotImplementedError("http 전송은 아직 구현되지 않았다")` 갈래를 실제 접속으로 바꾼다. `tests/adapters/test_mcp.py`의 http 갈래 시험 둘과 `tests/core/test_run.py`의 `BrokenTools` 시험을 실제 접속의 시험으로 바꾼다.
+- `.claude/rules/adapters.md`·`.claude/rules/core.md`의 stdio 전제 문장(ADR 0049 Consequences "구현 티켓이 함께 고칠 자리")은 02의 몫이다. 이 PR은 틈 동안 거짓이 되는 `[server]` 문장과 연결 실패 문장만 고쳤다.
+- `.scratch/end-user-channel/probes/run_timeout.py`와 `.scratch/mcp-shutdown/probes/`의 `McpServer(` 생성자는 기록이라 고치지 않았다(합이 호출 불가라 지금 실행하면 `TypeError`일 것이다. 명세 축 서브에이전트가 `McpServer(...)`를 불러 `TypeError`를 확인했고, 그 프로브 파일들을 직접 돌려 보지는 않았다).

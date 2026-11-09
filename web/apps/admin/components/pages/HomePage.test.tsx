@@ -70,7 +70,12 @@ const ROWS: PluginRow[] = [
       model_id: null,
       max_tokens: null,
       temperature: null,
-      server: { command: "npx", args: ["-y", "server-everything"], secret_args: {} },
+      server: {
+        transport: "stdio",
+        command: "npx",
+        args: ["-y", "server-everything"],
+        secret_args: {},
+      },
     },
   },
   {

@@ -35,10 +35,12 @@ from agent_os.sdk.ids import (
 )
 from agent_os.sdk.json import Json
 from agent_os.sdk.manifest import (
+    HttpServer,
     McpServer,
     ModelProvider,
     PluginKind,
     PluginManifest,
+    StdioServer,
     approval_conflicts,
     parse_manifest,
     secret_args_by_tool,
@@ -60,6 +62,7 @@ __all__ = [
     "Event",
     "Exchange",
     "FailureCause",
+    "HttpServer",
     "Json",
     "LlmCalled",
     "McpServer",
@@ -75,6 +78,7 @@ __all__ = [
     "RunResumed",
     "RunStarted",
     "Skill",
+    "StdioServer",
     "ToolCall",
     "ToolCalled",
     "ToolError",

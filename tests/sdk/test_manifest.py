@@ -8,11 +8,13 @@ import pytest
 from pydantic import ValidationError
 
 from agent_os.sdk import (
+    HttpServer,
     McpServer,
     ModelProvider,
     PluginKind,
     PluginManifest,
     PluginName,
+    StdioServer,
     approval_conflicts,
     parse_manifest,
 )
@@ -91,19 +93,283 @@ def test_에이전트가_아니면_MCP_서버_목록을_갖지_못한다() -> No
 
 def test_mcp는_서버_실행_명령과_인자를_가진다() -> None:
     manifest = parse_manifest(MCP)
-    assert manifest.server is not None
+    assert isinstance(manifest.server, StdioServer)
     assert manifest.server.command == "npx"
     assert manifest.server.args == ("-y", "@modelcontextprotocol/server-everything")
 
 
-def test_mcp는_서버_표가_없으면_거부한다() -> None:
-    with pytest.raises(ValidationError):
+def test_mcp는_서버_표가_없으면_두_모양을_든_문구로_거부한다() -> None:
+    with pytest.raises(ValidationError, match=r'command, args 또는 transport = "http", url'):
         parse_manifest(MCP.split("[server]")[0])
 
 
 def test_mcp가_아니면_서버_표를_갖지_못한다() -> None:
     with pytest.raises(ValidationError):
         parse_manifest(AGENT + '[server]\ncommand = "npx"\n')
+
+
+# --- [server]의 두 모양: transport 로 stdio 와 http 를 가른다(ADR 0049, mcp-http 티켓 01) ---
+
+HTTP = """
+schema_version = "1"
+kind = "mcp"
+name = "doc-search"
+version = "0.1.0"
+
+[server]
+transport = "http"
+url = "http://rag-engine:8000/mcp"
+
+[server.headers]
+Authorization = "DOC_SEARCH_TOKEN"
+"""
+
+
+def _errors(manifest: str) -> list[tuple[str, str]]:
+    """거부된 입력의 (위치, 까닭) 쌍. 위치는 점으로 이은 `loc`, 까닭은 pydantic 의 `type` 이다."""
+    with pytest.raises(ValidationError) as caught:
+        parse_manifest(manifest)
+    return [
+        (".".join(str(part) for part in error["loc"]), str(error["type"]))
+        for error in caught.value.errors()
+    ]
+
+
+def _http(server: str) -> str:
+    return HTTP.split("[server]")[0] + "[server]\n" + server
+
+
+def test_transport_가_없는_서버_표는_stdio_로_읽힌다() -> None:
+    manifest = parse_manifest(MCP)
+
+    assert isinstance(manifest.server, StdioServer)
+    assert manifest.server.transport == "stdio"
+
+
+def test_transport_를_stdio_로_적어도_같은_모양이다() -> None:
+    manifest = parse_manifest(MCP.replace("[server]", '[server]\ntransport = "stdio"'))
+
+    assert manifest.server == parse_manifest(MCP).server
+
+
+def test_http_모양은_주소와_헤더_이름과_환경_변수_이름을_가진다() -> None:
+    manifest = parse_manifest(HTTP)
+
+    assert isinstance(manifest.server, HttpServer)
+    assert manifest.server.transport == "http"
+    assert manifest.server.url == "http://rag-engine:8000/mcp"
+    assert manifest.server.headers == {"Authorization": "DOC_SEARCH_TOKEN"}
+    assert manifest.server.secret_args == {}
+
+
+def test_http_모양의_헤더_표는_없어도_되고_비어_있다() -> None:
+    manifest = parse_manifest(HTTP.split("[server.headers]")[0])
+
+    assert isinstance(manifest.server, HttpServer)
+    assert manifest.server.headers == {}
+
+
+def test_http_모양도_secret_args_를_가진다() -> None:
+    manifest = parse_manifest(HTTP + '\n[server.secret_args]\nsend_email = ["api_key"]\n')
+
+    assert isinstance(manifest.server, HttpServer)
+    assert manifest.server.secret_args == {"send_email": ("api_key",)}
+
+
+def test_형식_버전은_두_모양_모두_1_이다() -> None:
+    assert parse_manifest(MCP).schema_version == "1"
+    assert parse_manifest(HTTP).schema_version == "1"
+
+
+def test_http_모양에_command_를_적으면_모르는_칸으로_거부한다() -> None:
+    errors = _errors(HTTP.replace("[server.headers]", 'command = "npx"\n\n[server.headers]'))
+
+    assert errors == [("server.http.command", "extra_forbidden")]
+
+
+def test_stdio_모양에_url_을_적으면_모르는_칸으로_거부한다() -> None:
+    errors = _errors(MCP.replace("[server]", '[server]\nurl = "http://x/mcp"'))
+
+    assert errors == [("server.stdio.url", "extra_forbidden")]
+
+
+def test_모르는_transport_는_server_자리에서_거부한다() -> None:
+    errors = _errors(_http('transport = "grpc"\nurl = "http://x/mcp"\n').replace('"http"', '"x"'))
+
+    assert errors == [("server", "union_tag_invalid")]
+
+
+def test_stdio_모양에_command_가_없으면_그_자리의_missing_으로_거부한다() -> None:
+    errors = _errors(MCP.replace('command = "npx"\n', ""))
+
+    assert errors == [("server.stdio.command", "missing")]
+
+
+def test_http_모양은_url_이_없으면_거부한다() -> None:
+    errors = _errors(_http('transport = "http"\n'))
+
+    assert errors == [("server.http.url", "missing")]
+
+
+@pytest.mark.parametrize(
+    "url",
+    [
+        "ftp://rag-engine/mcp",
+        "rag-engine:8000/mcp",
+        "//rag-engine:8000/mcp",
+        "/mcp",
+        "http://user:secret@rag-engine:8000/mcp",
+        "https://user@rag-engine/mcp",
+        "http:///mcp",
+        "http://:8000/mcp",
+    ],
+    ids=[
+        "ftp",
+        "scheme 없는 주소",
+        "scheme 없는 //",
+        "경로만",
+        "사용자 정보 둘",
+        "사용자 정보 하나",
+        "빈 호스트",
+        "포트만",
+    ],
+)
+def test_http_도_https_도_아니거나_사용자_정보가_들거나_호스트가_빈_주소는_거부한다(
+    url: str,
+) -> None:
+    errors = _errors(_http(f'transport = "http"\nurl = "{url}"\n'))
+
+    assert errors == [("server.http.url", "value_error")]
+
+
+def test_주소_거부_문구는_적은_주소를_되울리지_않는다() -> None:
+    with pytest.raises(ValidationError) as caught:
+        parse_manifest(_http('transport = "http"\nurl = "http://user:hunter2@rag-engine/mcp"\n'))
+
+    assert all("hunter2" not in str(error["msg"]) for error in caught.value.errors())
+
+
+@pytest.mark.parametrize(
+    "url",
+    [
+        "http://Rag-Engine:8000",
+        "https://rag-engine/mcp?tenant=a#frag",
+        "HTTP://rag-engine/mcp",
+        "http://[::1]:8000/mcp",
+    ],
+    ids=["대문자 호스트와 빈 경로", "쿼리와 조각", "대문자 scheme", "IPv6"],
+)
+def test_url_은_받아들이면_글자_그대로_보관한다(url: str) -> None:
+    manifest = parse_manifest(_http(f'transport = "http"\nurl = "{url}"\n'))
+
+    assert isinstance(manifest.server, HttpServer)
+    assert manifest.server.url == url
+
+
+@pytest.mark.parametrize(
+    "name",
+    ["Bad Name", "A:B", "X(Y)", "한글", "", "A\\tB"],
+    ids=["공백", "콜론", "괄호", "비ASCII", "빈 이름", "탭"],
+)
+def test_토큰_문자가_아닌_헤더_이름은_거부한다(name: str) -> None:
+    errors = _errors(
+        _http(f'transport = "http"\nurl = "http://x/mcp"\n[server.headers]\n"{name}" = "TOKEN"\n')
+    )
+
+    assert [kind for _, kind in errors] == ["string_pattern_mismatch"]
+    assert errors[0][0].startswith("server.http.headers.")
+
+
+@pytest.mark.parametrize(
+    "variable",
+    ["MY TOKEN", "TOKEN-1", "토큰", "", "A=B"],
+    ids=["공백", "하이픈", "비ASCII", "빈 이름", "등호"],
+)
+def test_패턴_밖의_환경_변수_이름은_거부한다(variable: str) -> None:
+    headers = f'[server.headers]\nAuthorization = "{variable}"\n'
+    errors = _errors(_http('transport = "http"\nurl = "http://x/mcp"\n' + headers))
+
+    assert errors == [("server.http.headers.Authorization", "string_pattern_mismatch")]
+
+
+def test_대소문자만_다른_헤더_이름_둘은_거부한다() -> None:
+    errors = _errors(
+        _http(
+            'transport = "http"\nurl = "http://x/mcp"\n[server.headers]\n'
+            'Authorization = "A_TOKEN"\nauthorization = "B_TOKEN"\n'
+        )
+    )
+
+    assert errors == [("server.http.headers", "value_error")]
+
+
+@pytest.mark.parametrize(
+    "name",
+    [
+        "Host",
+        "Content-Length",
+        "Transfer-Encoding",
+        "Connection",
+        "Accept",
+        "Content-Type",
+        "Mcp-Session-Id",
+        "Mcp-Protocol-Version",
+        "Last-Event-Id",
+        "mcp-session-id",
+        "ACCEPT",
+    ],
+)
+def test_라이브러리와_HTTP가_정하는_헤더_이름은_대소문자를_가리지_않고_거부한다(name: str) -> None:
+    errors = _errors(
+        _http(f'transport = "http"\nurl = "http://x/mcp"\n[server.headers]\n"{name}" = "TOKEN"\n')
+    )
+
+    assert errors == [("server.http.headers", "value_error")]
+
+
+def test_헤더_이름_거부_문구는_환경_변수_이름을_되울리지_않는다() -> None:
+    with pytest.raises(ValidationError) as caught:
+        parse_manifest(
+            _http('transport = "http"\nurl = "http://x/mcp"\n[server.headers]\nHost = "VAR_9"\n')
+        )
+
+    assert all("VAR_9" not in str(error["msg"]) for error in caught.value.errors())
+
+
+def test_직렬화_스키마에서_server_는_두_모양의_oneOf_와_null_이다() -> None:
+    schema = PluginManifest.model_json_schema(mode="serialization")
+    branches = schema["properties"]["server"]["anyOf"]
+
+    unions = [branch["oneOf"] for branch in branches if "oneOf" in branch]
+    assert len(unions) == 1
+    assert sorted(item["$ref"].rsplit("/", 1)[-1] for item in unions[0]) == [
+        "HttpServer",
+        "StdioServer",
+    ]
+    assert {"type": "null"} in branches
+
+
+def test_직렬화_스키마에서_두_모양_모두_transport_가_required_다() -> None:
+    defs = PluginManifest.model_json_schema(mode="serialization")["$defs"]
+
+    assert set(defs["StdioServer"]["required"]) == set(StdioServer.model_fields)
+    assert set(defs["HttpServer"]["required"]) == set(HttpServer.model_fields)
+    assert "transport" in defs["StdioServer"]["required"]
+    assert "transport" in defs["HttpServer"]["required"]
+    assert defs["StdioServer"]["properties"]["transport"]["const"] == "stdio"
+    assert defs["HttpServer"]["properties"]["transport"]["const"] == "http"
+
+
+def test_직렬화_스키마에서_headers_는_이름과_변수_이름의_패턴을_patternProperties_로_싣는다() -> (
+    None
+):
+    headers = PluginManifest.model_json_schema(mode="serialization")["$defs"]["HttpServer"][
+        "properties"
+    ]["headers"]
+    ((header_pattern, variable),) = headers["patternProperties"].items()
+
+    assert "0-9A-Za-z" in header_pattern
+    assert variable["pattern"] == "^[A-Za-z0-9_]+$"
 
 
 def test_에이전트는_승인이_필요한_도구를_안_적으면_빈_목록이다() -> None:
