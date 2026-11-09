@@ -52,5 +52,6 @@
 | [0046](0046-doc-qa-baseline-and-product-1-0-stand-before-the-rest-of-0042.md) | 다음은 설치형 문서 질의응답의 기준선과 제품 1.0이고, ADR 0042의 나머지 열셋은 그 뒤에 선다 | accepted | 2026-11-06 |
 | [0047](0047-agent-os-does-not-know-the-widget.md) | Agent OS는 위젯을 모른다: 관리 화면과 serve는 위젯 전용 기능을 갖지 않고, 위젯의 외형과 문구는 위젯과 사이트가 가진다 | accepted | 2026-11-06 |
 | [0048](0048-document-search-server-lives-in-another-repository.md) | 문서 검색 서버는 agent-os 밖의 저장소이고, agent-os의 런타임은 그 서버를 모른다 | accepted | 2026-11-06 |
+| [0050](0050-portal-is-one-node-server-hosting-many-sites-and-signing-anonymous-site-tokens.md) | 질문 페이지는 `node:http` 서버 하나로 사이트 여럿을 담고, 고지를 확인한 브라우저의 익명 식별자로 사이트 토큰을 낸다 | accepted | 2026-11-09 |
 
 ADR을 먼저 확인하는 상황 넷: 스택이나 라이브러리를 바꿀 때, 디렉터리나 층 경계를 바꿀 때, 디스크 형식(매니페스트, 이벤트)을 바꿀 때, 기존 코드가 왜 이렇게 되어 있는지 이해되지 않을 때.
