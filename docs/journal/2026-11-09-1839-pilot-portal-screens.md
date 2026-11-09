@@ -138,3 +138,52 @@ PR 직전 리뷰에 밀 주장으로 넘길, 반영으로 새로 쓴 사실 문�
 - "디자인 토큰 CSS는 속성이 없으면 폭 768px 이상에서 촘촘(조작 높이 32px, 본문 14px)을 준다." 그리고 "`text-small`(고지 줄, 라벨)은 밀도와 상관없는 12px이다."
 - "`pp-page.dc.html`은 대화를 다크 화면과 고지 전문 펼침에서만 그린다. 그래서 라이트에서 위젯이 보이는 기본 화면, 셀렉트 포커스, 사이트 하나, 둘 다 사이트 확인 뒤의 위젯은 소개가 든 첫 화면이다."
 - "같은 용어집의 질문 페이지·고지·고지 확인 항목은 그 이름이나 정의에 "질문"을 쓴다."
+
+다시 돌린 명령: 커밋 전 `uv run python tools/check_md_tables.py`가 종료 0이었다. 손으로 치는 다섯은 커밋 `38e79184`의 pre-commit으로 갈음했다. pre-commit 출력에서 `checks`(zizmor, check-ticket, lint-imports, check-instructions, check-type-escapes, pyright, pyright-linux, run-hooks, pytest 328.2s, web-verify 468.2s), 마크다운 표, 줄 구분 문자, 변이 표, 따옴표 인용, 커밋 메시지가 Passed였다. ruff 둘과 카나리아 명세, 헌법 판은 바꾼 파일이 없어 Skipped였고, ruff 둘은 커밋 뒤 손으로 쳐 `uv run ruff check .`이 "All checks passed!", `uv run ruff format --check .`이 "1963 files already formatted"였다. `-m llm`·`-m llm_widget`·e2e·사진 비교는 위젯·서버·`packages/ui`를 건드리지 않아 치지 않았다.
+
+## 인계 (커밋 뒤)
+
+커밋 `38e79184` 뒤 세션 컨텍스트가 약 28만 토큰으로 인계 문턱을 넘어 인계 계기 `커밋 뒤`가 왔다. `handoff.md`의 인계하지 않는 다섯 때에 들지 않는다. 커밋은 종료 0이었고, 요청 범위는 병합까지이며, 이 세션의 지시문은 `인계: 셀프 리뷰 직전`이라 경계가 다르고, `인계 못함` 줄이 없으며, `get_session`의 `self`에 `parentSessionId`가 없다. 넘기기 전 세션 제목은 `docs/pilot-portal-screens`다. 커밋하지 않은 변경은 이 일지의 "셀프 리뷰" 끝 문단과 이 절이다.
+
+낸 지시문:
+
+> 다음 작업: 기능 pilot-portal. 위젯을 담는 질문 페이지가 로그인 없이 온 사람에게 사이트 토큰을 내, 포털이 없는 공개 데모와 배포 환경을 돕는다
+> 다음 단계: 화면 디자인
+> 어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+> 시작 프롬프트: /ui-design pilot-portal
+> 브랜치: docs/pilot-portal-screens
+> 모델: Opus 5.5 / xhigh. 2의 잇는 지시문
+> 읽을 것: docs/journal/2026-11-09-1839-pilot-portal-screens.md의 "셀프 리뷰"와 "인계 (커밋 뒤)", .scratch/pilot-portal/design/README.md
+> 이어받을 상태: 인계: 커밋 뒤. 셀프 리뷰 반영까지 커밋 38e79184에 실렸고 아직 푸시하지 않았으며 PR이 없다. 일지의 커밋 결과 문단과 인계 절은 커밋하지 않은 채 워크트리에 있다. 남은 단계는 PR 직전 리뷰(docs/constitution/operations.md 리뷰 파이프라인 2. coderabbit-review, 돌지 못하면 대체 둘), 푸시와 PR, 이 워크트리 사본의 next-session merge.md 2(봇 회차)부터 병합까지, 일지의 "다음"이다. bug-perf-review를 돌리면 일지 "셀프 리뷰"의 "PR 직전 리뷰에 밀 주장으로 넘길" 목록을 브리프에 넣는다. "다음"에 옮길 것: README "그림이 시작 프롬프트나 근거 문서와 다른 자리" 넷(밀도, 라이트 기본 화면의 대화, 입력창 이름 "질문"과 용어집, ADR 0050의 "같은 알림이 붙은 비활성 로그인 단추")은 명세 전에 사람에게 묻는다. 위젯 문구 변경(422 오류 글 포함)과 TextField 이름표 숨기기는 명세가 정한다. 질문 페이지와 위젯(/widget/element.js)이 같은 출처여야 한다는 배치 전제는 release-image 설계 인터뷰가 정한다(PR 500 코멘트에만 있다). ADR 0050 첫 단락의 일반 명사 "포털"은 명세 때 ADR 문장을 손볼 때 함께 본다. 일지 docs/journal/2026-11-09-1839-pilot-portal-screens.md
+> 확인할 선행 조건: 없음
+> 이번 요청 범위: PR과 병합까지
+
+제목을 `docs/pilot-portal-screens (인계함)`으로 바꿨다. 멈출 백그라운드 작업은 없었다(커밋과 서브에이전트 둘이 끝나 있었다). `git worktree unlock`은 `is not locked`로 끝나 넘어갔다.
+
+open-session을 부른다 2026-11-09T12:02:33Z
+
+## 웹 편집 확인과 origin/main 합치기(셋째 세션)
+
+둘째 인계를 받은 세션(Opus 5.5 / xhigh)이다. 주 체크아웃 `C:\project\agent`에서 시작해 제목을 `docs/pilot-portal-screens`로 바꾸고, `git worktree list`에서 이 브랜치가 체크아웃된 `.claude/worktrees/pilot-portal-screens`를 찾아 `EnterWorktree(path)`로 들어왔다. 워크트리에는 커밋 `38e79184` 위에 이 일지의 수정만 커밋하지 않은 채 있었다.
+
+지시문의 첫 줄대로 `ui-design` SKILL.md를 읽고 따랐다. `design/README.md`에 화면 줄이 있으므로 1~2를 한 뒤 웹 편집 확인을 하고, 더 그릴 화면이 없어 거기서 끝났다.
+
+- 1: `frontend-design@claude-plugins-official`은 `enabled`(사용자 범위)였다.
+- 2: 디자인 시스템 아티팩트의 머리는 지금 계정을 편집자(`shared with you from another organization (writer; …)`)로 적었고, `project/README.md`와 `project/tokens.json`을 받았다(`tokens.json`이 있다). `/sync-design-system 확인`의 판정은 `clean`(기록 `ok`, `pending` 없음)이고 결정은 `continue`였다. 그리기 직전의 올리기는 부르지 않았다. 이 세션은 그리지 않고, 앞 세션이 `baf39230`에서 올리기를 마친 뒤 `origin/main`(`5af643d7`)까지 `web/packages/ui`, `.claude/rules/web-design.md`, `web/tools/sync-design-system`이 바뀌지 않았다(`git diff --name-only baf39230 origin/main -- <셋>`의 출력이 비었다).
+- 웹 편집 확인: 화면 아티팩트(판 `1794223886-014f`)에서 README 표의 `.dc.html` 35개와 `canvas.json`을 받아 sha256을 맞댔다. 워크트리 가드가 `git show "HEAD:<경로>"`를 넣은 반복문을 거부해, `git status --short -- .scratch/pilot-portal/design`이 비고 그 폴더의 파일에 CR이 0개인 것을 본 뒤 작업 트리의 파일과 맞댔다. CR이 없는 파일은 `.gitattributes`의 `text=auto eol=lf`가 커밋 때 바꾸지 않으므로 커밋한 바이트와 같다고 보았다(추론이고, `git show`로 꺼내 맞대지는 않았다). 받은 파일과 작업 트리 파일의 `sha256sum`은 36개 모두 같았다(손으로 쳤다). 웹에서 고친 화면은 없다.
+
+`git merge --no-edit origin/main`으로 `5af643d7`(#501, mcp-http 명세와 프로브)을 합쳤다. 충돌은 없었고 이 브랜치가 바꾼 파일과 겹치는 파일도 없었다(병합 출력의 파일 목록을 봤다). `uv run python tools/sibling_overlap.py`는 새 번호 없음, 번호 겹침 없음, 함께 고친 파일 없음이었다.
+
+## PR 직전 리뷰
+
+`coderabbit-review` 서브에이전트(sonnet)를 돌렸다. 브리프에 셀프 리뷰가 넘긴 사실 문장 여섯을 넣어, 근거 파일과 대 보게 했다. 보고에 따르면 CLI 0.7.5, `auth status`는 로그인됨에 `Plan: Free`, `Seat: not assigned`였고, `coderabbit review --agent --include-untracked`가 종료 코드 0으로 `review_completed`, findings 0을 냈다(CLI 축). `reviewedFiles` 41개가 `git diff --name-only --merge-base origin/main`의 41개와 같았고(서브에이전트가 `comm`으로 맞댔다), `--dir`로 좁히지 않아 보지 못한 몫은 없다.
+
+여섯 문장은 서브에이전트가 근거 파일을 열어 모두 맞다고 했다. `Spinner`의 쓰임(`Icon.tsx`, `Button.tsx`, `IconButton.tsx`, `Progress.tsx`), 같은 `grep`의 14파일 33줄, `Composer.tsx`의 `INVALID`가 `TextField`의 `error`로 가는 길, `theme.css`의 `@media (width >= 768px)`와 고정값 `--text-small`, `pp-page.dc.html`의 `talk`·`firstScreen` 조건, `CONTEXT.md`의 질문 페이지·고지·고지 확인과 요청(Request)의 피할 말이다(서브에이전트가 코드를 읽은 것이다). 덧붙여 확인함: 사이트를 바꾼 화면 가운데 확인한 사이트끼리(`switch-new`)도 첫 화면인데 README 문장은 그 화면을 따로 대지 않았고, 문장이 틀린 것은 아니라고 했다. README는 이미 괄호에 "확인한 사이트끼리 바꾼 화면은 빈 새 대화가 맞다"고 적고 있어 고치지 않았다.
+
+고친 것은 없다. `/security-review`와 `bug-perf-review`는 CLI가 돌았으므로 돌리지 않았다(`docs/constitution/operations.md` 리뷰 파이프라인 2).
+
+## 커밋(일지)
+
+일지만 실은 첫 커밋 시도는 pre-commit의 pytest 하나로 막혔다(302초, 6770 통과 1 실패). 실패는 `tests/tools/test_rerun_runner.py::test_본_측정에서_첫_인계_뒤_멈추고_확인_인자를_주면_잇는다`의 끝 기록 단언이었고(`('A', 1, '끝남', None)`이 없고 두 갈래 모두 `측정 아님`), 그 시험 하나만 따로 돌리니 54.36초에 지났다(손으로 쳤다). 이 브랜치는 파이썬을 바꾸지 않았고 커밋 `38e79184`의 pre-commit에서는 pytest가 지났다. 대기열 306이 받아들여 닫은 종류(전체 스위트의 부하 아래에서만 빨간 시험)이고 같은 파일의 선례가 일지 2026-10-25-02와 2026-10-26-03에 있어, 회차를 더하지 않고 여기에만 적고 커밋을 다시 쳤다.
+
+커밋 명령 직후 `hook_handoff`의 `커밋 뒤` 계기가 왔다(세션 컨텍스트 244,208 토큰). `handoff.md`의 인계하지 않는 다섯 때 가운데 셋째에 든다. 이 세션의 지시문 "이어받을 상태"가 `인계: 커밋 뒤`로 시작해 넘겨받은 경계에 다시 온 것이다. 그래서 넘기지 않고 잇는다.
