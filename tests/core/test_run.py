@@ -6112,6 +6112,42 @@ async def test_기한의_취소를_도구_연결의_닫기가_다른_예외로_�
     assert tools.closed
 
 
+async def test_도구_호출_도중에_실행_기한이_오면_원인은_시간_초과이고_종료_요청이_서버에_닿는다(
+    trace: FakeTrace, clock: FakeClock, tmp_path: Path
+) -> None:
+    """실제 어댑터와 HTTP 픽스처를 지난다. 모델이 잠드는 도구(`slow`)를 불러 기한이 도구 호출
+    도중에 온다. 어댑터의 닫기가 그 취소를 다른 결말로 바꾸지 않아야 하고(원인 `timeout`), 취소된
+    실행도 서버에 세션 종료 요청을 보낸다(스토리 11)."""
+    request = AIMessage(
+        content="", tool_calls=[LangchainToolCall(name="slow", args={"seconds": 30}, id="c1")]
+    )
+    model = ToolAwareFakeModel(messages=iter([request, _reply("늦은 답")]))
+
+    with serving(tmp_path) as fixture:
+        plugins = FakePlugins(
+            {"calc": OneShotAgent()}, mcp=["remote"], servers=["remote"], remote=fixture.url
+        )
+        events = await _run(
+            OneShotAgent(),
+            model,
+            trace,
+            clock,
+            tools=McpTools(),
+            plugins=plugins,
+            timeout_seconds=AMPLE,
+        )
+        deleted = fixture.headers_of("DELETE")
+        sessions = {
+            h["mcp-session-id"] for h in fixture.headers_of("POST") if "mcp-session-id" in h
+        }
+
+    assert fixture.slow_marker.exists(), "기한이 도구 호출보다 먼저 왔다"
+    assert _failure(events) == (f"실행이 {AMPLE:g}초 안에 끝나지 않았다", "timeout")
+    assert trace.events == events
+    assert len(deleted) == 1, "기한에 취소된 실행이 종료 요청을 보내지 않았다"
+    assert deleted[0]["mcp-session-id"] in sessions
+
+
 async def test_요약_호출에서_시간이_지나도_같은_메시지의_run_failed_하나이고_요약_이벤트가_없다(
     clock: FakeClock,
 ) -> None:

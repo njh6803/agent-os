@@ -21,6 +21,7 @@ import json
 from collections.abc import AsyncGenerator, AsyncIterator, Callable, Iterator, Mapping, Sequence
 from contextlib import AbstractAsyncContextManager, asynccontextmanager
 from datetime import UTC, datetime, timedelta
+from pathlib import Path
 
 import anyio
 import pytest
@@ -35,8 +36,10 @@ from langchain_core.outputs import ChatResult
 from langchain_core.runnables import Runnable
 from starlette.types import Message, Scope
 from tests.fake_models import DEFAULT_MODEL, FakeModels, model_manifest
+from tests.mcp_http import serving
 from tests.signing import AUDIENCE, SigningKey, bearer, claims, new_key, sign
 
+from agent_os.adapters.mcp import McpTools
 from agent_os.channel.http.end_user import END_USER_PREFIX
 from agent_os.channel.http.items import FAILED_MESSAGE, project
 from agent_os.channel.http.limits import (
@@ -138,6 +141,7 @@ OPEN_AGENTS = frozenset(
         "skilled",
         "skill-without-manifest",
         "skill-without-document",
+        "remote-slow",
     )
 )
 
@@ -196,6 +200,17 @@ CALC_SERVER = parse_manifest(
     'schema_version = "1"\nkind = "mcp"\nname = "calc-server"\nversion = "0.1.0"\n'
     '[server]\ncommand = "fake-server"\n'
 )
+REMOTE_SERVER = PluginName("remote-server")
+
+
+def _remote_server(url: str) -> PluginManifest:
+    """원격 MCP 서버(http 모양). 주소는 테스트가 띄운 HTTP 픽스처의 것이다."""
+    return parse_manifest(
+        'schema_version = "1"\nkind = "mcp"\nname = "remote-server"\nversion = "0.1.0"\n'
+        f'[server]\ntransport = "http"\nurl = "{url}"\n'
+    )
+
+
 # 도구가 돌려주는 글. 진행 항목에 실리면 안 된다.
 TOOL_RESULT = "도구-결과-원문"
 # 모델에 가는 프롬프트. 어떤 항목에도 실리면 안 된다.
@@ -240,6 +255,15 @@ class ToolAgent:
     async def run(self, request: str, ctx: AgentContext) -> AsyncIterator[Event]:
         await ctx.tool("add", a=2, b=3)
         yield RunFinished(run_id=ctx.run_id, ts=ctx.now(), output="다 했다")
+
+
+class RemoteSlowAgent:
+    """원격 서버의 잠드는 도구(`slow`)를 직접 부른다. 앱이 멈추며 취소하는 실행이 도구 호출 도중에
+    있게 한다."""
+
+    async def run(self, request: str, ctx: AgentContext) -> AsyncIterator[Event]:
+        output = await ctx.tool("slow", seconds=30)
+        yield RunFinished(run_id=ctx.run_id, ts=ctx.now(), output=output)
 
 
 class SilentAgent:
@@ -288,6 +312,7 @@ AGENTS: Mapping[str, BaseAgent] = {
     "skilled": SkilledAgent(),
     "skill-without-manifest": SkilledAgent(),
     "skill-without-document": SkilledAgent(),
+    "remote-slow": RemoteSlowAgent(),
 }
 MANIFESTS = {
     "echo": _manifest("echo"),
@@ -304,6 +329,7 @@ MANIFESTS = {
     "skilled": _manifest("skilled", skills=[SKILL]),
     "skill-without-manifest": _manifest("skill-without-manifest", skills=["ghost-skill"]),
     "skill-without-document": _manifest("skill-without-document", skills=["hollow-skill"]),
+    "remote-slow": _manifest("remote-slow", mcp=[REMOTE_SERVER]),
 }
 UNLOADABLE_REASON = "진입점을 불러올 수 없다: plugins/agents/unloadable/agent.py"
 UNWIRED_REASON = "지정한 mcp 플러그인이 없다: no-such-server"
@@ -319,6 +345,8 @@ class FakePlugins:
     def __init__(self) -> None:
         self.disabled: frozenset[PluginKey] = frozenset()
         self.corrupt_rules: str | None = None
+        # 주면 `remote-server` 가 그 주소의 http 모양 서버로 있다(`remote-slow` 에이전트가 쓴다).
+        self.remote_url: str | None = None
         self.calls = 0
         self.skill_manifests = {
             SKILL: SKILL_MANIFEST,
@@ -333,6 +361,8 @@ class FakePlugins:
         if kind is PluginKind.SKILL:
             return self.skill_manifests.get(name)
         if kind is PluginKind.MCP:
+            if name == REMOTE_SERVER and self.remote_url is not None:
+                return _remote_server(self.remote_url)
             return CALC_SERVER if name == "calc-server" else None
         if kind is PluginKind.MODEL:
             return model_manifest(name) if name == DEFAULT_MODEL else None
@@ -360,7 +390,7 @@ class FakePlugins:
         self.calls += 1
         if self.corrupt_rules is not None:
             raise PluginError(self.corrupt_rules)
-        opened = (PluginName("calc-server"), DEFAULT_SERVER)
+        opened = (PluginName("calc-server"), REMOTE_SERVER, DEFAULT_SERVER)
         allow = frozenset(Rule(server=name, tool=None) for name in opened)
         return Rules(common=RuleSet(allow=allow))
 
@@ -2405,6 +2435,31 @@ async def test_앱이_멈추며_취소한_실행도_칸을_돌려준다() -> Non
     assert _refusal(refused) == CONCURRENT
     assert admitted.status_code == 200
     assert not model.gate.is_set()
+
+
+async def test_앱이_멈추며_취소한_실행은_원격_서버에_세션_종료_요청을_보낸다(
+    tmp_path: Path,
+) -> None:
+    """수명을 닫으면 도는 실행이 곧바로 취소되고, 수명은 그 실행의 태스크가 끝나기를 기다린다. 그
+    끝에 서버의 닫기가 들므로 수명이 닫히고 나면 종료 요청이 서버에 닿아 있다(스토리 12). 서버가
+    잠드는 도구를 받은 뒤, 곧 도구 호출 도중에 수명을 닫는다."""
+    with serving(tmp_path) as fixture:
+        plugins = FakePlugins()
+        plugins.remote_url = fixture.url
+        app = _app(plugins=plugins, tools=McpTools())
+
+        async with _serving(app):
+            held, _ = await _held(app, _starting(_token()), _start("remote-slow"))
+            await _until(fixture.slow_marker.exists, within=30)
+        async with asyncio.timeout(5):
+            await held
+        deleted = fixture.headers_of("DELETE")
+        sessions = {
+            h["mcp-session-id"] for h in fixture.headers_of("POST") if "mcp-session-id" in h
+        }
+
+    assert len(deleted) == 1, "앱이 멈추며 취소한 실행이 종료 요청을 보내지 않았다"
+    assert deleted[0]["mcp-session-id"] in sessions
 
 
 async def test_시작_응답의_연결이_끊겨도_칸은_실행이_끝날_때까지_차_있다() -> None:
