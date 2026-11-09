@@ -1,4 +1,6 @@
-"""MCP ToolSource. 파이썬으로 쓴 진짜 stdio 서버(mcp_fixture_server.py)에 붙는다. 네트워크가 없다.
+"""MCP ToolSource. 파이썬으로 쓴 진짜 stdio 서버(mcp_fixture_server.py)와 루프백의 streamable HTTP
+서버(`tests/mcp_http_server.py`, 띄우는 도우미는 `tests/mcp_http.py`)에 붙는다. 바깥 네트워크가
+없다.
 
 세션을 async 픽스처로 열지 않는다. pytest-asyncio 가 픽스처의 setup 과 teardown 을 다른 태스크에서
 돌리는데 MCP 의 stdio 클라이언트는 anyio 취소 범위라 같은 태스크에서 닫혀야 한다(ADR 0007 이력).
@@ -12,15 +14,18 @@
 뒤 스스로 끝난다.
 """
 
+import logging
 import subprocess
 import sys
 import time
+import traceback
 from collections.abc import AsyncGenerator, Iterator
 from contextlib import asynccontextmanager
 from pathlib import Path
 
 import anyio
 import pytest
+from tests.mcp_http import free_port, serving
 
 from agent_os.adapters.mcp import McpTools
 from agent_os.core.ports import ToolConnection, ToolSource
@@ -154,31 +159,298 @@ async def test_서버_기동_실패는_서버_이름과_명령을_든_연결_오
     assert isinstance(raised.value.__cause__, FileNotFoundError)
 
 
-async def test_http_모양의_서버는_아직_붙지_않아_주소를_든_연결_오류다() -> None:
-    """02 가 이 갈래를 실제 접속으로 바꿀 때까지의 틈이다. 문구의 괄호는 stdio 의 명령 자리에
-    매니페스트의 `url` 이 글자 그대로 서고, 원인은 여는 단계 안에서 난 `NotImplementedError` 다."""
-    tools: ToolSource = McpTools()
-    remote = HttpServer(transport="http", url="http://Rag-Engine:8000?tenant=a")
+# --- 원격 서버(streamable HTTP, ADR 0049) ---
+
+REMOTE = PluginName("remote")
+TOKEN_VARIABLE = "AGENT_OS_TEST_TOKEN"
+SECOND_VARIABLE = "AGENT_OS_TEST_SECOND"
+# 서버가 되울릴 수 있는 비밀과 쿼리 문자열의 비밀. 둘 다 8자 이상이라 가리는 대상이다.
+TOKEN = "echo-secret-9f3a"
+QUERY_SECRET = "query-secret-4b9d"
+
+
+def _remote(url: str, **headers: str) -> HttpServer:
+    """헤더 인자는 헤더 이름 -> 환경 변수 이름이다. 파이썬 이름에 못 쓰는 `-` 는 `_` 로 적는다."""
+    return HttpServer(
+        transport="http",
+        url=url,
+        headers={name.replace("_", "-"): variable for name, variable in headers.items()},
+    )
+
+
+def _traceback_text(error: BaseException) -> str:
+    return "".join(traceback.format_exception(error))
+
+
+async def test_원격_서버의_도구가_stdio_서버의_도구와_같은_연결에_서고_서버_이름이_실린다(
+    tmp_path: Path,
+) -> None:
+    """두 서버 가운데 하나가 http 여도 `ToolSpec.server` 는 그 도구를 낸 서버 플러그인의
+    이름이다."""
+    with serving(tmp_path) as fixture:
+        servers = {**_paged("empty"), REMOTE: _remote(fixture.url)}
+        async with McpTools().connect(servers) as connection:
+            owners = {spec.name: spec.server for spec in connection.tools()}
+            result = await connection.call("add", {"a": 2, "b": 3})
+
+    assert owners == {
+        "paged": PluginName("paged"),
+        "add": REMOTE,
+        "slow": REMOTE,
+        "keep": REMOTE,
+    }
+    assert result.ok is True
+    assert result.content == "5"
+
+
+async def test_헤더_변수의_값이_서버의_요청_헤더에_닿고_빈_값도_그대로_닿는다(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv(TOKEN_VARIABLE, f"Bearer {TOKEN}")
+    monkeypatch.setenv(SECOND_VARIABLE, "")
+
+    with serving(tmp_path) as fixture:
+        remote = _remote(fixture.url, Authorization=TOKEN_VARIABLE, X_Empty=SECOND_VARIABLE)
+        async with McpTools().connect({REMOTE: remote}) as connection:
+            await connection.call("add", {"a": 1, "b": 1})
+        posted = fixture.headers_of("POST")
+
+    assert posted
+    assert all(headers["authorization"] == f"Bearer {TOKEN}" for headers in posted)
+    assert all(headers["x-empty"] == "" for headers in posted)
+
+
+async def test_헤더_변수가_없으면_붙지_않고_문구가_헤더_이름과_변수_이름을_든다(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.delenv(TOKEN_VARIABLE, raising=False)
+    monkeypatch.setenv(SECOND_VARIABLE, "present")
+
+    with serving(tmp_path) as fixture:
+        remote = _remote(fixture.url, Authorization=TOKEN_VARIABLE, X_Other=SECOND_VARIABLE)
+        with pytest.raises(ConnectionError) as raised:
+            async with McpTools().connect({REMOTE: remote}):
+                pytest.fail("헤더 변수가 없는데 열렸다")
+        reached = fixture.requests()
 
     expected = (
-        r"MCP 서버 remote\(http://Rag-Engine:8000\?tenant=a\)에 붙지 못했다: "
-        r"NotImplementedError: http 전송은 아직 구현되지 않았다"
+        f"MCP 서버 remote({fixture.url})에 붙지 못했다: "
+        f"헤더 Authorization의 환경 변수 {TOKEN_VARIABLE}이 없다"
     )
-    with pytest.raises(ConnectionError, match=expected) as raised:
-        async with tools.connect({PluginName("remote"): remote}):
-            pytest.fail("http 서버가 열렸다")
-
-    assert isinstance(raised.value.__cause__, NotImplementedError)
+    assert str(raised.value) == expected
+    assert reached == [], "변수가 없는데 서버에 붙었다"
 
 
-async def test_http_모양의_서버가_뒤에_있어도_앞선_stdio_서버를_연_뒤_연결_오류_하나다() -> None:
+async def test_변수가_둘_없으면_둘을_매니페스트_순서로_잇는다(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.delenv(TOKEN_VARIABLE, raising=False)
+    monkeypatch.delenv(SECOND_VARIABLE, raising=False)
+
+    remote = _remote(f"http://127.0.0.1:{free_port()}/mcp", X_B=SECOND_VARIABLE, X_A=TOKEN_VARIABLE)
+    with pytest.raises(ConnectionError) as raised:
+        async with McpTools().connect({REMOTE: remote}):
+            pytest.fail("헤더 변수가 없는데 열렸다")
+
+    assert str(raised.value).endswith(
+        f": 헤더 X-B의 환경 변수 {SECOND_VARIABLE}이 없다; "
+        f"헤더 X-A의 환경 변수 {TOKEN_VARIABLE}이 없다"
+    )
+
+
+async def test_끝에_개행이_붙은_값은_붙지_않고_값은_어디에도_남지_않는다(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """파일에서 읽은 비밀의 끝에는 개행이 흔히 붙는다. 라이브러리가 그 값을 글에 실어 거부하므로
+    라이브러리에 넘기기 전에 막는다."""
+    monkeypatch.setenv(TOKEN_VARIABLE, f"Bearer {TOKEN}\n")
+
+    remote = _remote(f"http://127.0.0.1:{free_port()}/mcp", Authorization=TOKEN_VARIABLE)
+    with pytest.raises(ConnectionError) as raised:
+        async with McpTools().connect({REMOTE: remote}):
+            pytest.fail("개행이 든 값으로 열렸다")
+
+    assert str(raised.value).endswith(
+        f": 헤더 Authorization의 환경 변수 {TOKEN_VARIABLE}의 값에 "
+        "헤더 값으로 쓸 수 없는 글자가 있다"
+    )
+    assert TOKEN not in _traceback_text(raised.value)
+
+
+@pytest.mark.parametrize("value", [f" {TOKEN}", f"{TOKEN} ", f"\t{TOKEN}", f"{TOKEN}\t", "ab "])
+async def test_앞뒤에_공백이나_탭이_붙은_값은_붙지_않고_거부_글에도_실리지_않는다(
+    monkeypatch: pytest.MonkeyPatch, value: str
+) -> None:
+    """라이브러리는 앞뒤의 공백과 탭이 든 값을 그 값을 실은 예외로 거부한다. 8자보다 짧은 값은
+    가림도 닿지 않으므로 라이브러리에 넘기기 전에 막는다."""
+    monkeypatch.setenv(TOKEN_VARIABLE, value)
+
+    remote = _remote(f"http://127.0.0.1:{free_port()}/mcp", Authorization=TOKEN_VARIABLE)
+    with pytest.raises(ConnectionError) as raised:
+        async with McpTools().connect({REMOTE: remote}):
+            pytest.fail("앞뒤에 공백이나 탭이 든 값으로 열렸다")
+
+    assert str(raised.value).endswith(
+        f": 헤더 Authorization의 환경 변수 {TOKEN_VARIABLE}의 값에 "
+        "헤더 값으로 쓸 수 없는 글자가 있다"
+    )
+    assert "Illegal header value" not in _traceback_text(raised.value)
+
+
+async def test_꺼진_서버의_문구는_이름과_쿼리_문자열이_든_주소_그대로이고_비밀은_글과_로그에_없다(
+    monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+) -> None:
+    monkeypatch.setenv(TOKEN_VARIABLE, f"Bearer {TOKEN}")
+    caplog.set_level(logging.WARNING)
+    url = f"http://127.0.0.1:{free_port()}/mcp?token={QUERY_SECRET}#frag"
+
+    with pytest.raises(ConnectionError, match=r"^MCP 서버 remote\(") as raised:
+        async with McpTools().connect({REMOTE: _remote(url, Authorization=TOKEN_VARIABLE)}):
+            pytest.fail("닫힌 포트에 열렸다")
+
+    assert str(raised.value).startswith(f"MCP 서버 remote({url})에 붙지 못했다: ")
+    assert "ConnectError" in str(raised.value)
+    assert TOKEN not in _traceback_text(raised.value)
+    # 라이브러리가 자기 태스크 그룹을 취소하며 남긴 취소가 문맥에 남으면 core 가 이 실패를 기한이나
+    # 바깥의 취소로 읽는다(core 시험이 그 결과를 재고, 여기는 원인을 고정한다).
+    chain: list[BaseException] = []
+    link: BaseException | None = raised.value
+    while link is not None and link not in chain:
+        chain.append(link)
+        link = link.__context__
+    assert not any(isinstance(link, anyio.get_cancelled_exc_class()) for link in chain)
+    # 지금의 구현으로는 빨개질 수 없는 회귀 단언이다. 뒤에 주소를 찍는 로거가 기본 수준으로 들어오면
+    # 빨개진다(명세 "로그"). 이 티켓의 수락으로 세지 않는다.
+    assert QUERY_SECRET not in caplog.text
+
+
+async def test_개행이_든_주소는_문구에서_이스케이프되어_줄을_바꾸지_못한다() -> None:
+    """읽는 단계는 개행이 든 주소를 받는다(`urlsplit` 이 개행을 지운다). 그 주소가 문구에 줄바꿈째
+    실리면 로그가 위조된다."""
+    url = f"http://127.0.0.1:{free_port()}/mcp\nFORGED line"
+
+    with pytest.raises(ConnectionError) as raised:
+        async with McpTools().connect({REMOTE: _remote(url)}):
+            pytest.fail("닫힌 포트에 열렸다")
+
+    assert "\n" not in str(raised.value)
+    assert "\\nFORGED line" in str(raised.value)
+
+
+async def test_틀린_토큰으로_401을_받으면_원인_끝에_상태가_붙는다(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """라이브러리는 본문이 JSON-RPC 오류가 아닌 401 을 상태 코드 없는 예외로 바꾼다. 응답 훅이 받아
+    둔 상태가 꺼진 서버와 틀린 토큰을 문구에서 가른다."""
+    monkeypatch.setenv(TOKEN_VARIABLE, "Bearer wrong-token-0000")
+
+    with serving(tmp_path, "--expect-authorization", "Bearer right-token-1111") as fixture:
+        remote = _remote(fixture.url, Authorization=TOKEN_VARIABLE)
+        with pytest.raises(ConnectionError) as raised:
+            async with McpTools().connect({REMOTE: remote}):
+                pytest.fail("틀린 토큰으로 열렸다")
+        reached = fixture.headers_of("POST")
+
+    assert str(raised.value).endswith(" (HTTP 401 Unauthorized)")
+    assert reached, "요청이 서버에 닿지 않았다"
+    assert reached[0]["authorization"] == "Bearer wrong-token-0000"
+    assert "wrong-token-0000" not in _traceback_text(raised.value)
+
+
+def _값이_어디에도_없다(error: BaseException) -> None:
+    """문구, 원인 체인, 펼친 트레이스백 어디에도 서버가 되울린 값이 없다. `from None` 이 없으면
+    `__cause__` 는 비어도 `__context__` 의 원래 예외가 트레이스백에 실린다."""
+    assert TOKEN not in str(error)
+    assert error.__cause__ is None
+    assert error.__suppress_context__ is True
+    assert TOKEN not in _traceback_text(error)
+
+
+async def test_서버가_되울린_값은_여는_동안의_실패_문구에서_가려진다(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv(TOKEN_VARIABLE, f"Bearer {TOKEN}")
+
+    with serving(tmp_path, "--echo", "initialize") as fixture:
+        remote = _remote(fixture.url, Authorization=TOKEN_VARIABLE)
+        with pytest.raises(ConnectionError) as raised:
+            async with McpTools().connect({REMOTE: remote}):
+                pytest.fail("되울린 401 로 열렸다")
+        reached = fixture.headers_of("POST")
+
+    assert reached[0]["authorization"] == f"Bearer {TOKEN}", "값이 서버에 닿지 않았다(양성 대조)"
+    assert "bad credentials" in str(raised.value)
+    assert str(raised.value).count("[가림: 헤더 Authorization]") == 2
+    _값이_어디에도_없다(raised.value)
+
+
+async def test_서버가_되울린_값은_도구_호출_실패_문구에서도_가려진다(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv(TOKEN_VARIABLE, f"Bearer {TOKEN}")
+
+    with serving(tmp_path, "--echo", "tools/call") as fixture:
+        remote = _remote(fixture.url, Authorization=TOKEN_VARIABLE)
+        async with McpTools().connect({REMOTE: remote}) as connection:
+            with pytest.raises(RuntimeError, match="remote.*add.*호출이 실패했다") as raised:
+                await connection.call("add", {"a": 1, "b": 2})
+
+    assert "bad credentials" in str(raised.value)
+    assert "[가림: 헤더 Authorization]" in str(raised.value)
+    _값이_어디에도_없다(raised.value)
+
+
+async def test_같은_출처의_307_은_라이브러리가_따라가서_초기화와_도구_호출이_선다(
+    tmp_path: Path,
+) -> None:
+    with serving(tmp_path, "--redirect") as fixture:
+        async with McpTools().connect({REMOTE: _remote(fixture.url)}) as connection:
+            result = await connection.call("add", {"a": 2, "b": 3})
+        paths = [row["path"] for row in fixture.requests() if row["method"] == "POST"]
+
+    assert result.content == "5"
+    assert "/mcp" in paths, "리디렉션을 받는 첫 요청이 없다"
+    assert "/mcp/" in paths, "라이브러리가 307 을 따르지 않았다"
+
+
+async def test_지나간_307_은_뒤의_실패_원인_끝에_붙지_않는다(tmp_path: Path) -> None:
+    """마지막 POST 가 307 을 지나 2xx 로 끝났다. 응답 훅이 POST 의 2xx 에서 받아 둔 상태를 지우지
+    않으면 옛 규칙(2xx 가 아닌 응답의 마지막 하나)대로 지나간 307 이 붙는다."""
+    with serving(tmp_path, "--redirect", "--list-error") as fixture:
+        with pytest.raises(ConnectionError) as raised:
+            async with McpTools().connect({REMOTE: _remote(fixture.url)}):
+                pytest.fail("도구 목록이 거절되었는데 열렸다")
+
+    assert "tool list refused" in str(raised.value)
+    assert "HTTP 307" not in str(raised.value)
+
+
+async def test_정상으로_닫으면_종료_요청이_앞선_요청과_같은_세션_번호로_서버에_닿는다(
+    tmp_path: Path,
+) -> None:
+    with serving(tmp_path) as fixture:
+        async with McpTools().connect({REMOTE: _remote(fixture.url)}) as connection:
+            await connection.call("add", {"a": 1, "b": 1})
+        deleted = fixture.headers_of("DELETE")
+        sessions = {
+            h["mcp-session-id"] for h in fixture.headers_of("POST") if "mcp-session-id" in h
+        }
+
+    assert len(deleted) == 1
+    assert len(sessions) == 1
+    assert deleted[0]["mcp-session-id"] in sessions
+
+
+async def test_원격_서버가_뒤에_있어도_앞선_stdio_서버를_연_뒤_연결_오류_하나다(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     """앞 서버의 태스크 그룹 안에서 난 실패도 그 그룹에 싸이지 않고 연결 오류 하나로 나온다."""
-    tools: ToolSource = McpTools()
-    remote = HttpServer(transport="http", url="http://rag-engine:8000/mcp")
+    url = f"http://127.0.0.1:{free_port()}/mcp"
+    servers = {PluginName("fixture"): FIXTURE, REMOTE: _remote(url)}
 
-    with pytest.raises(ConnectionError, match=r"remote\(http://rag-engine:8000/mcp\)"):
-        async with tools.connect({PluginName("fixture"): FIXTURE, PluginName("remote"): remote}):
-            pytest.fail("http 서버가 열렸다")
+    with pytest.raises(ConnectionError, match=rf"remote\({url}\)"):
+        async with McpTools().connect(servers):
+            pytest.fail("닫힌 포트에 열렸다")
 
 
 async def test_둘째_서버가_열리지_않아도_연결_오류_하나다() -> None:

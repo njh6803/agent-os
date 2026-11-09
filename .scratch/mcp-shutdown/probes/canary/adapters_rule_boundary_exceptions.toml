@@ -3,7 +3,9 @@
 # 실험군은 규칙의 paths 안(src/agent_os/adapters/), 대조군은 밖(README.md)을 읽는다. 둘 다 이 체크아웃이다.
 # 질문은 선례 `.scratch/end-user-continuation/probes/canary/adapters_rule_new_optional_fields.toml` 의 둘째 판처럼
 # Read 결과에 붙어 실린 규칙도 지시라고 밝힌다. 기대 낱말은 규칙의 그 항목에만 있다(`clock.py` 에는 없다).
-# 최신 결과: 통과 4(2026-11-10, 이 PC의 mcp-http 티켓 01 워크트리, claude 2.1.318, HEAD 3cb40736 위의 커밋하지 않은
+# 최신 결과: 통과 4(2026-11-10, 이 PC의 mcp-http 티켓 02 워크트리, claude 2.1.318, HEAD bc2b9c2d 위의 커밋하지 않은
+# 작업 트리, 일지 2026-11-10-0421). 티켓 02 가 adapters.md 의 MCP 항목 셋과 예외 항목을 고친 뒤 돌렸다.
+# 앞선 결과: 통과 4(2026-11-10, 이 PC의 mcp-http 티켓 01 워크트리, claude 2.1.318, HEAD 3cb40736 위의 커밋하지 않은
 # 작업 트리). 티켓 01 이 adapters.md 의 MCP 연결 실패 항목에 http 모양의 NotImplementedError 를 더한 뒤 돌렸다.
 # 앞선 결과: 통과 4(2026-11-06, 이 PC의 approval-rules 티켓 03 워크트리, claude 2.1.318, HEAD c974bea9 위의 커밋하지 않은
 # 작업 트리, 일지 2026-11-06-06). 티켓 03 이 이 항목에 같은 이름 검사와 ToolSpec.server 를 더한 뒤 다시 돌렸다.

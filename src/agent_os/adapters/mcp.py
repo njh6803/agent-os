@@ -1,18 +1,58 @@
-"""MCP ToolSource. mcp 의 stdio 클라이언트와 세션으로 서버에 붙어 도구 목록을 주고 도구를 부른다.
+"""MCP ToolSource. mcp 의 클라이언트와 세션으로 서버에 붙어 도구 목록을 주고 도구를 부른다.
 
-서버마다 프로세스와 세션 하나를 열어 connect 가 살아 있는 동안 유지한다. MCP 의 타입은 여기서
+서버마다 연결과 세션 하나를 열어 connect 가 살아 있는 동안 유지한다. MCP 의 타입은 여기서
 ToolSpec 과 ToolResult 로 바뀌고 밖으로 나가지 않는다. 도구가 isError 를 돌려주면 ok=false 다.
 
-매니페스트의 `[server]` 는 `transport` 로 stdio 와 http 두 모양이다(ADR 0049). **http 모양은
-읽히지만 아직 붙지 않는다.** 그 서버를 여는 단계는
-`NotImplementedError("http 전송은 아직 구현되지 않았다")`로 실패하고, 아래 연결 오류의 규칙을 그대로
-지나 그 실행은 원인 `tool_connection` 의 `run_failed` 로 끝난다. 아래 닫기와 런처의 서술은 stdio
-모양의 것이다.
+매니페스트의 `[server]` 는 `transport` 로 stdio 와 http 두 모양이다(ADR 0049). stdio 는 서버
+프로세스를 띄워 붙고, http 는 원격 서버의 주소에 streamable HTTP 로 붙는다. 서버를 여는 문맥과
+실패를 바꾸는 자리는 두 전송이 함께 쓰고 세션을 여는 자리만 갈린다. 아래 "닫기"와 "런처"의 서술은
+stdio 모양의 것이다.
+
+**http 모양은 실행마다 붙고 닫는다.** 접속 직전에 `[server.headers]` 의 환경 변수를 매니페스트에
+적힌 순서로 읽어 `httpx2.AsyncClient` 의 기본 헤더로 싣는다. 값의 내용은 판정하지 않고(빈 문자열도
+있는 것이다) 막는 것은 ASCII 인쇄 가능 글자와 탭이 아닌 글자가 든 값, 그리고 공백이나 탭으로
+시작하거나 끝나는 값이다. 라이브러리가 그런 값을 글에 실어 거부하기 때문이다. 환경 변수가 없거나
+값을 쓸 수 없으면 붙지 않고 문구가 헤더 이름과 변수 이름을 든다(값은 어디에도 없다). 기한은 mcp 가
+자기 클라이언트에 쓰는 값이고 `trust_env` 와 `follow_redirects` 는 기본값이다. 같은 출처의
+리디렉션은 라이브러리가 자기 요청마다 스스로 따른다. 응답 훅 하나가 POST 응답마다 상태를 받아 두고
+2xx 면 지운다. 여는 동안 실패했을 때 받아 둔 상태가 있으면 원인 끝에
+` (HTTP <상태 코드> <이유 구절>)` 로 덧붙인다. 라이브러리는 본문이 JSON-RPC 오류가 아닌 오류
+응답(401 등)을 상태 코드 없는 예외로 바꾸므로, 이것이 꺼진 서버와 틀린 토큰을 문구에서 가른다. 응답
+본문은 읽지 않는다. GET 알림 흐름의 405 와 라이브러리가 따른 307 이 뒤의 다른 실패에 붙지 않게 POST
+의 2xx 에서 지운다. **이 티켓에서 http 전송을 닫는 길은 라이브러리의 종료 요청이다.** 정상으로
+닫으면 라이브러리가 세션 종료 요청(DELETE)을 보내 서버에 닿지만, 실행 기한으로 취소된 실행은
+보내지 않는다(프로브가 쟀다). serve 의 종료로 취소된 실행도 같은 취소라 보내지 않는다고 본다(어림.
+프로브는 기한만 쟀다). 그 세션은 서버의 유휴 만료까지 남는다. "취소된 실행에서도 닫는다"는 http
+전송에 대해 약속하지 않는다. 닫을 프로세스가 없으므로 stdio 의 "닫는 시간"(아래, 2초 유예와
+프로세스 트리 끄기)은 http 만 쓰는 연결에 걸리지 않고, 정상 닫기에는 종료 요청의 왕복이 드는
+것으로 본다(어림. 왕복 시간은 재지 않았다).
+
+**서버가 되울린 헤더 값은 실패 문구에서 가린다.** 서버가 400 이상의 오류 응답에 JSON-RPC 오류를
+담아 받은 `Authorization` 값을 글에 되울리면 라이브러리가 그 글을 그대로 예외로 올린다. 가릴 글은
+헤더마다 환경에서 읽은 값 전체와, 값이 공백 하나로 나뉜 `<낱말> <나머지>` 꼴이면 그 나머지다.
+8자보다 짧은 글은 가리지 않는다. 가리는 자리는 이 어댑터가 짓는 두 문구, 곧 여는 동안의
+ConnectionError 와 도구 호출이 실패할 때의 RuntimeError 다. 긴 글부터 글자 그대로 찾아
+`[가림: 헤더 <헤더 이름>]` 으로 바꾸고, 가린 것이 있으면 그 예외를 원인을 잇지 않고(`from None`)
+던진다. 알려진 한계는 셋이다. 서버가 값을 바꿔(인코딩, 일부, 대소문자) 되울리면 놓친다. 8자보다 짧은
+값은 가리지 않는다. 도구가 오류로 돌려준 결과(isError)의 본문은 예외가 아니라 도구 결과로 모델과
+트레이스에 가므로 가리지 않는다.
+
+**로그.** 이 어댑터는 로그를 쓰지 않는다. 다만 mcp 의 클라이언트
+로거(`mcp.client.streamable_http`)는 DEBUG 로 메시지 전체(`Sending client message: …`)를 찍는데,
+거기에 도구 호출의 인자가 그대로 들어 `secret_args` 로 가린 값이 로그에 남는다. 그래서 이 모듈을
+불러 들일 때 그 로거에 DEBUG 기록을 버리는 필터를 단다. 로거를 낮추는 수준 설정과 달리 누가 그
+로거의 수준을 다시 올려도 걸러진다. httpx2 가 INFO 로 찍는 `HTTP Request: POST <주소 전체>` 는 쿼리
+문자열을 싣지만 라이브러리의 동작이라 막지 않는다 (배포 안내의 몫이다). 헤더 값은 `mcp`·`httpx2`·
+`httpcore2` 로거의 DEBUG 줄에 실리지 않는다(`.scratch/mcp-http` 의 프로브가 그 셋을 쟀다.
+접속이 막힌 `unauthorized` 와 `closed_port` 사례에는 양성 대조가 없다).
 
 **던지는 예외의 타입은 내장이다(`.scratch/mcp-shutdown/spec.md` 의 "경계를 넘는 예외").** 원인
-(`__cause__`)에는 mcp 의 원래 예외가 남는다. 서버를 여는 동안(띄우기, 세션 열기, `initialize()`,
-도구 목록 읽기)의 실패는 서버 이름과 매니페스트의 명령(http 모양이면 주소)과 원인을 든
-ConnectionError 이고 원래 예외가 `__cause__` 다. 취소는 바꾸지 않는다.
+(`__cause__`)에는 mcp 의 원래 예외가 남는다. 서버를 여는 동안(띄우기나 접속, 세션 열기,
+`initialize()`, 도구 목록 읽기)의 실패는 서버 이름과 매니페스트의 명령(http 모양이면 주소)과 원인을
+든 ConnectionError 이고 원래 예외가 `__cause__` 다. 다만 서버가 되울린 헤더 값을 가렸으면 원인을
+잇지 않는다. 문구의 주소는 매니페스트의 `url` 그대로이고(쿼리 문자열 포함이라 쿼리에 비밀을 적으면
+`run_failed` 에 남는다. ADR 0049 가 정한 한계다) 개행 같은 제어 문자만 이스케이프한다. 취소는
+바꾸지 않는다.
 서버들이 같은 이름의 도구를 내면 연결을 열며 모으는 자리에서 도구와 겹친 두 서버를 든 ValueError 로
 실패한다. 서버를 차례로 열며 모으므로 겹친 서버 뒤의 서버는 열리지 않고, 셋 이상이 겹쳐도 문구에는
 처음 겹친 둘만 든다. 도구 호출의 실패는 서버와 도구를 든 RuntimeError 다. 연결 안(부르는 쪽)에서 난
@@ -44,16 +84,21 @@ Object 를 곧바로 끝내고, POSIX 는 그룹에 SIGTERM 을 보내 2초 안�
 from __future__ import annotations
 
 import errno
+import logging
+import math
 import os
 import shutil
 import sys
 from collections.abc import AsyncGenerator, Generator, Mapping, Sequence
 from contextlib import AsyncExitStack, asynccontextmanager, contextmanager
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import TypeGuard
 
+import anyio
+import httpx2
 from mcp import ClientSession, StdioServerParameters, stdio_client
+from mcp.client.streamable_http import streamable_http_client
 from mcp.types import (
     CallToolResult,
     EmbeddedResource,
@@ -71,6 +116,18 @@ LAUNCHER = Path(__file__).with_name("mcp_launcher.py")
 # 도구 목록을 읽는 쪽 수의 상한. 이 어댑터가 mcp 를 직접 쓰기 전에 기대던 라이브러리(ADR 0034 가
 # 바꾼 것)와 같은 값이다(`_all_tools`).
 MAX_TOOL_PAGES = 1000
+# 이보다 짧은 헤더 값은 실패 문구에서 가리지 않는다. 상관없는 글자까지 바꾸게 되기 때문이다.
+MIN_REDACTED_LENGTH = 8
+
+
+class _NoDebug(logging.Filter):
+    """DEBUG 기록을 버린다. 아래 필터가 붙는 이유는 모듈 독스트링의 "로그"다."""
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        return record.levelno > logging.DEBUG
+
+
+logging.getLogger("mcp.client.streamable_http").addFilter(_NoDebug())
 
 
 class McpTools:
@@ -100,6 +157,7 @@ class _Route:
     server: PluginName
     session: ClientSession
     tool: Tool
+    attempt: _Attempt
 
 
 class McpConnection:
@@ -124,9 +182,14 @@ class McpConnection:
         try:
             result = await route.session.call_tool(name, dict(args))
         except Exception as error:
-            raise RuntimeError(
+            message, masked = route.attempt.redact(
                 f"MCP 서버 {route.server}의 도구 {name} 호출이 실패했다: {_describe(error)}"
-            ) from error
+            )
+            # 가린 것이 있으면 `from None` 이다(`_connecting` 과 같은 까닭이고 `except` 안에서
+            # 던진다).
+            if masked:
+                raise RuntimeError(message) from None
+            raise RuntimeError(message) from error
         return ToolResult(ok=not result.is_error, content=_text_of(result))
 
 
@@ -139,13 +202,17 @@ async def _opened(name: PluginName, server: McpServer) -> AsyncGenerator[list[_R
     문맥 하나를 두어, 탈출 스택을 인자로 받아 거기에 등록하는 꼴(출력 인자)을 두지 않는다.
     """
     escaped = _Escaped()
+    attempt = _Attempt()
     unwrapped: BaseException | None = None
     try:
         async with AsyncExitStack() as stack:
             with escaped.watching():
-                with _connecting(name, server):
-                    session, tools = await stack.enter_async_context(_session(server))
-                yield [_Route(server=name, session=session, tool=tool) for tool in tools]
+                with _connecting(name, server, attempt):
+                    session, tools = await stack.enter_async_context(_session(server, attempt))
+                yield [
+                    _Route(server=name, session=session, tool=tool, attempt=attempt)
+                    for tool in tools
+                ]
     except BaseExceptionGroup as group:
         unwrapped = escaped.unwrap(group)
         if unwrapped is None:
@@ -156,36 +223,195 @@ async def _opened(name: PluginName, server: McpServer) -> AsyncGenerator[list[_R
 
 
 @contextmanager
-def _connecting(name: PluginName, server: McpServer) -> Generator[None]:
+def _connecting(name: PluginName, server: McpServer, attempt: _Attempt) -> Generator[None]:
     """이 안의 예외를 서버 이름과 명령(http 모양이면 주소)과 원인을 든 ConnectionError 로 바꾼다.
-    원인의 글은 예외 그룹을 펼친 것이다. 취소는 Exception 이 아니라 바꾸지 않는다."""
+    원인의 글은 예외 그룹을 펼친 것이고, 서버가 오류 응답을 돌려줬으면 그 상태가 끝에 붙는다.
+    헤더 값을 되울린 글은 가리고, 가린 것이 있으면 원인을 잇지 않는다(`_Attempt.redact`).
+    취소는 Exception 이 아니라 바꾸지 않는다."""
     try:
         yield
     except Exception as error:
-        raise ConnectionError(
-            f"MCP 서버 {name}({_where(server)})에 붙지 못했다: {_describe(error)}"
-        ) from error
+        _forget_own_cancellation(error)
+        message, masked = attempt.redact(
+            f"MCP 서버 {name}({_where(server)})에 붙지 못했다: "
+            f"{_describe(error)}{attempt.status_suffix()}"
+        )
+        # 가린 것이 있으면 `from None` 이라 `__cause__` 가 비고 트레이스백도 원래 예외를 싣지
+        # 않는다. `__context__` 는 남지만 core 는 그것을 취소를 찾는 데만 쓴다. `except` 밖에서
+        # 던지는 모양은 쓰지 않는다. 그 모양은 core 가 닫기의 정리 코드가 덮은 취소를 `__context__`
+        # 로 찾는 길을 막는다.
+        if masked:
+            raise ConnectionError(message) from None
+        raise ConnectionError(message) from error
+
+
+def _forget_own_cancellation(error: BaseException) -> None:
+    """원래 예외의 문맥 사슬에서 mcp 가 자기 태스크 그룹을 취소하며 남긴 취소를 뗀다.
+
+    서버가 연결을 거절하면 상류의 전송 태스크가 실패하고 그 그룹이 세션을 여는 코드를 취소한다.
+    그 취소는 그룹을 나오며 난 실제 예외의 `__context__` 에 남는다. core 는 닫기의 정리 코드가
+    덮은 기한의 취소를 `__context__` 에서 찾아 다시 던지므로(`_cancellation_under`), 그대로
+    두면 서버를 못 찾은 실패가 기한이나 바깥의 취소로 읽혀 `run_failed` 없이 취소로 끝난다.
+    바깥 범위가 취소되는 중이면(`current_effective_deadline` 이 -inf) 그 취소는 진짜라 건드리지
+    않는다. 아닐 때만 사슬을 따라가며 취소를 문맥으로 가진 자리를 끊는다.
+    """
+    if anyio.current_effective_deadline() == -math.inf:
+        return
+    cancelled = anyio.get_cancelled_exc_class()
+    seen: set[int] = set()
+    current: BaseException | None = error
+    while current is not None and id(current) not in seen:
+        seen.add(id(current))
+        if isinstance(current.__context__, cancelled):
+            current.__context__ = None
+            return
+        current = current.__context__
 
 
 def _where(server: McpServer) -> str:
-    """실패 문구의 괄호에 들 것. stdio 면 매니페스트의 명령, http 면 매니페스트의 주소 그대로다."""
-    return server.url if isinstance(server, HttpServer) else server.command
+    """실패 문구의 괄호에 들 것. stdio 면 매니페스트의 명령, http 면 매니페스트의 주소다.
+
+    주소는 글자 그대로 싣되(ADR 0049 결정 "주소") 개행 같은 제어 문자는 이스케이프한다. 읽는 단계의
+    검사는 개행이 든 주소를 받으므로(`urlsplit` 이 개행을 지운다), 그대로 실으면 문구가 줄을 바꿔
+    로그가 위조된다.
+    """
+    if not isinstance(server, HttpServer):
+        return server.command
+    return "".join(
+        char if char.isprintable() else char.encode("unicode_escape").decode("ascii")
+        for char in server.url
+    )
 
 
 @asynccontextmanager
-async def _session(server: McpServer) -> AsyncGenerator[tuple[ClientSession, list[Tool]]]:
+async def _session(
+    server: McpServer, attempt: _Attempt
+) -> AsyncGenerator[tuple[ClientSession, list[Tool]]]:
     """서버에 붙어 세션을 열고 도구 목록을 읽는다. 나갈 때 세션과 연결을 닫는다.
 
     서버를 여는 문맥과 실패를 바꾸는 자리는 두 전송이 함께 쓰고, 세션을 여는 자리만 모양으로 갈린다.
-    http 모양은 매니페스트가 읽히지만 아직 붙지 않는다. 접속이 들어오기 전까지 여는 단계 안에서
-    실패해 그 실행이 원인 `tool_connection` 의 `run_failed` 로 끝난다.
     """
     if isinstance(server, HttpServer):
-        raise NotImplementedError("http 전송은 아직 구현되지 않았다")
+        async with _http_session(server, attempt) as opened:
+            yield opened
+    else:
+        async with _stdio_session(server) as opened:
+            yield opened
+
+
+@asynccontextmanager
+async def _stdio_session(
+    server: StdioServer,
+) -> AsyncGenerator[tuple[ClientSession, list[Tool]]]:
     parameters = _parameters(server)
     async with stdio_client(parameters) as (read, write), ClientSession(read, write) as session:
         await session.initialize()
         yield session, await _all_tools(session)
+
+
+@asynccontextmanager
+async def _http_session(
+    server: HttpServer, attempt: _Attempt
+) -> AsyncGenerator[tuple[ClientSession, list[Tool]]]:
+    """매니페스트의 주소에 streamable HTTP 로 붙는다. 환경을 읽는 코드는 이 갈래에만 있다.
+
+    클라이언트의 기본 헤더가 `[server.headers]` 의 값이다. 기한은 mcp 가 자기 클라이언트에 쓰는
+    값(접속·쓰기·풀 30초, 읽기 300초)이고 `trust_env` 와 `follow_redirects` 는 기본값이다. 같은
+    출처의 리디렉션은 라이브러리가 자기 요청마다 스스로 따른다. 응답 훅이 오류 응답의 상태를 받아
+    둔다. 종료 요청(DELETE)은 라이브러리가 닫을 때 보낸다.
+    """
+    headers = _read_headers(server, attempt)
+    timeout = httpx2.Timeout(30, read=300)
+    async with (
+        httpx2.AsyncClient(
+            headers=headers, timeout=timeout, event_hooks={"response": [attempt.on_response]}
+        ) as client,
+        streamable_http_client(server.url, http_client=client) as (read, write),
+        ClientSession(read, write) as session,
+    ):
+        await session.initialize()
+        yield session, await _all_tools(session)
+
+
+def _read_headers(server: HttpServer, attempt: _Attempt) -> dict[str, str]:
+    """`[server.headers]` 의 환경 변수를 매니페스트에 적힌 순서로 읽는다.
+
+    값의 내용은 보지 않는다. 빈 문자열도 있는 것으로 본다. 막는 것은 둘이다. 값에 ASCII 인쇄 가능
+    글자와 탭이 아닌 글자가 든 경우, 그리고 값이 공백이나 탭으로 시작하거나 끝나는 경우다.
+    라이브러리는 개행이 든 값을 그 값 전체를 실은 예외로, 비ASCII 글자를 그 글자를 실은 예외로,
+    앞뒤에 공백이나 탭이 붙은 값을 그 값을 실은 예외로 거부하므로(손으로 `httpx2` 를 대 봤다),
+    라이브러리에 넘기기 전에 막아야 값이 `run_failed` 로 트레이스에 남지 않는다. 어느 문장에도 값은
+    없다.
+    """
+    headers: dict[str, str] = {}
+    problems: list[str] = []
+    for header, variable in server.headers.items():
+        value = os.environ.get(variable)
+        if value is None:
+            problems.append(f"헤더 {header}의 환경 변수 {variable}이 없다")
+        elif value != value.strip(" \t") or not all(
+            char == "\t" or " " <= char <= "~" for char in value
+        ):
+            problems.append(
+                f"헤더 {header}의 환경 변수 {variable}의 값에 헤더 값으로 쓸 수 없는 글자가 있다"
+            )
+        else:
+            headers[header] = value
+            attempt.protect(header, value)
+    if problems:
+        raise _HeaderUnusable("; ".join(problems))
+    return headers
+
+
+class _HeaderUnusable(Exception):
+    """헤더의 환경 변수가 없거나 값을 쓸 수 없다. 글에는 이름만 있고 값이 없다."""
+
+
+@dataclass
+class _Attempt:
+    """서버 하나에 붙는 한 번의 곁정보. 실패 문구를 지을 때와 도구 호출이 실패할 때 쓴다.
+
+    `secrets` 는 서버가 오류 글에 되울릴 수 있어 가릴 글이다. 헤더마다 환경에서 읽은 값 전체와, 값이
+    공백 하나로 나뉜 `<낱말> <나머지>` 꼴이면 그 나머지(`Bearer <토큰>` 의 토큰)다. 8자보다 짧은
+    글은 가리지 않는다. 상관없는 글자까지 바꾸게 되기 때문이다. `status` 는 마지막 POST 응답이 2xx
+    가 아니었을 때의 그 상태다.
+    """
+
+    secrets: list[tuple[str, str]] = field(default_factory=list[tuple[str, str]])
+    status: str | None = None
+
+    def protect(self, header: str, value: str) -> None:
+        head, space, rest = value.partition(" ")
+        candidates = [value, rest] if head and space else [value]
+        self.secrets.extend(
+            (header, text) for text in candidates if len(text) >= MIN_REDACTED_LENGTH
+        )
+
+    def redact(self, text: str) -> tuple[str, bool]:
+        """긴 글부터 글자 그대로 찾아 `[가림: 헤더 <헤더 이름>]` 으로 바꾼다. 가린 것이 있었는지도
+        준다."""
+        masked = False
+        for header, secret in sorted(self.secrets, key=lambda pair: len(pair[1]), reverse=True):
+            if secret in text:
+                text = text.replace(secret, f"[가림: 헤더 {header}]")
+                masked = True
+        return text, masked
+
+    def status_suffix(self) -> str:
+        return "" if self.status is None else f" ({self.status})"
+
+    async def on_response(self, response: httpx2.Response) -> None:
+        """POST 응답마다 받아 둔 상태를 바꾸고 2xx 면 지운다. GET 과 DELETE 의 응답은 받아 두지
+        않는다.
+
+        라이브러리가 삼킨 GET 알림 흐름의 405 나, 라이브러리가 따른 307 이 뒤의 다른 실패에 붙지
+        않게 한다. 응답 본문은 읽지 않는다.
+        """
+        if response.request.method != "POST":
+            return
+        self.status = (
+            None if response.is_success else f"HTTP {response.status_code} {response.reason_phrase}"
+        )
 
 
 class _Escaped:
@@ -272,7 +498,10 @@ def _text_of(result: CallToolResult) -> str:
 
 
 def _describe(error: BaseException) -> str:
-    """ExceptionGroup 은 겉만 보면 원인을 알 수 없어서 안의 예외를 펼친다."""
+    """ExceptionGroup 은 겉만 보면 원인을 알 수 없어서 안의 예외를 펼친다. 헤더 환경 변수의 문제는
+    종류 이름 없이 그 글만 낸다(글이 곧 원인이다)."""
+    if isinstance(error, _HeaderUnusable):
+        return str(error)
     if _is_group(error):
         return "; ".join(_describe(inner) for inner in error.exceptions)
     return f"{type(error).__name__}: {error}"
