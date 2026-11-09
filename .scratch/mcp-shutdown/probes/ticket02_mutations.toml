@@ -14,11 +14,11 @@ expect_output = ["붙지 못했다: CancelledError"]
 file = "src/agent_os/adapters/mcp.py"
 old = '''
     except Exception as error:
-        raise ConnectionError(
+        _forget_own_cancellation(error)
 '''
 new = '''
     except BaseException as error:
-        raise ConnectionError(
+        _forget_own_cancellation(error)
 '''
 
 [[mutation]]
@@ -46,13 +46,19 @@ expect_output = ["ExceptionGroup: unhandled errors in a TaskGroup"]
 file = "src/agent_os/adapters/mcp.py"
 old = '''
             with escaped.watching():
-                with _connecting(name, server):
-                    session, tools = await stack.enter_async_context(_session(server))
-                yield [_Route(server=name, session=session, tool=tool) for tool in tools]
+                with _connecting(name, server, attempt):
+                    session, tools = await stack.enter_async_context(_session(server, attempt))
+                yield [
+                    _Route(server=name, session=session, tool=tool, attempt=attempt)
+                    for tool in tools
+                ]
 '''
 new = '''
             with escaped.watching():
-                with _connecting(name, server):
-                    session, tools = await stack.enter_async_context(_session(server))
-            yield [_Route(server=name, session=session, tool=tool) for tool in tools]
+                with _connecting(name, server, attempt):
+                    session, tools = await stack.enter_async_context(_session(server, attempt))
+            yield [
+                _Route(server=name, session=session, tool=tool, attempt=attempt)
+                for tool in tools
+            ]
 '''

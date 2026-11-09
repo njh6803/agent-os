@@ -6,6 +6,7 @@
 import asyncio
 import itertools
 import json
+import logging
 import sys
 import threading
 import time
@@ -22,6 +23,7 @@ from collections.abc import (
 from contextlib import aclosing, asynccontextmanager
 from dataclasses import fields
 from datetime import UTC, datetime, timedelta
+from pathlib import Path
 from typing import Literal, NoReturn, TypeGuard
 
 import anyio
@@ -35,7 +37,9 @@ from langchain_core.outputs import ChatResult
 from langchain_core.runnables import Runnable
 from pydantic import BaseModel
 from tests.fake_models import DEFAULT_MODEL, FakeModels, model_manifest
+from tests.mcp_http import free_port, serving
 
+from agent_os.adapters.mcp import McpTools
 from agent_os.core.continuation import EXCHANGE_COUNT_LIMIT, READ_CAP, before_principal
 from agent_os.core.loop import MAX_TURNS
 from agent_os.core.ports import (
@@ -158,13 +162,27 @@ def _skill_document(name: str, body: str | None = None) -> Skill:
 
 
 def _mcp_manifest(
-    name: str, secret_args: Mapping[str, Sequence[str]] | None = None
+    name: str,
+    secret_args: Mapping[str, Sequence[str]] | None = None,
+    remote: str | None = None,
+    remote_headers: Mapping[str, str] | None = None,
 ) -> PluginManifest:
+    """`remote`(주소)가 있으면 http 모양의 서버이고, 없으면 stdio 모양이다. 헤더는 헤더 이름 ->
+    환경 변수 이름이다."""
     table = "".join(f"{tool} = {_toml_list(args)}\n" for tool, args in (secret_args or {}).items())
+    shape = (
+        f'command = "{SERVER.command}"\n'
+        if remote is None
+        else f'transport = "http"\nurl = "{remote}"\n'
+    )
+    pairs = "".join(
+        f'{header} = "{variable}"\n' for header, variable in (remote_headers or {}).items()
+    )
     return parse_manifest(
         f'schema_version = "1"\nkind = "mcp"\nname = "{name}"\nversion = "0.1.0"\n'
-        f'[server]\ncommand = "{SERVER.command}"\n'
+        f"[server]\n{shape}"
         + (f"\n[server.secret_args]\n{table}" if table else "")
+        + (f"\n[server.headers]\n{pairs}" if pairs else "")
     )
 
 
@@ -300,8 +318,12 @@ class FakePlugins:
         skills: Sequence[str] = (),
         rules: Rules | None = None,
         corrupt_rules: str | None = None,
+        remote: str | None = None,
+        remote_headers: Mapping[str, str] | None = None,
     ) -> None:
         self._agents = agents
+        self._remote = remote
+        self._remote_headers = remote_headers
         self._mcp = tuple(mcp)
         self._servers = tuple(servers)
         self._requires_approval = tuple(requires_approval)
@@ -339,7 +361,7 @@ class FakePlugins:
                 self.agent_skills,
             )
         if kind is PluginKind.MCP and name in self._servers:
-            return _mcp_manifest(name, self._secret_args)
+            return _mcp_manifest(name, self._secret_args, self._remote, self._remote_headers)
         if kind is PluginKind.SKILL:
             self.skill_manifest_reads.append(name)
             if name in self.unreadable_skill_manifests:
@@ -549,6 +571,17 @@ class DirectToolAgent:
             output = await ctx.tool("add", a=2, b=2)
         except ToolError as error:
             output = f"error:{error}"
+        yield RunFinished(run_id=ctx.run_id, ts=ctx.now(), output=output)
+
+
+class SecretToolAgent:
+    """모델을 거치지 않고 비밀 인자가 든 도구를 직접 부른다."""
+
+    def __init__(self, secret: str) -> None:
+        self._secret = secret
+
+    async def run(self, request: str, ctx: AgentContext) -> AsyncIterator[Event]:
+        output = await ctx.tool("keep", secret=self._secret)
         yield RunFinished(run_id=ctx.run_id, ts=ctx.now(), output=output)
 
 
@@ -810,6 +843,70 @@ async def test_MCP_서버_기동_실패는_실패_이벤트로_끝나고_트레�
     assert "server did not start" in events[-1].error
     assert _cause(events) == "tool_connection"
     assert trace.events == events
+
+
+async def test_꺼진_원격_서버로_돌린_실행은_서버_이름과_주소가_든_도구_연결_원인으로_끝난다(
+    trace: FakeTrace, clock: FakeClock
+) -> None:
+    """실제 어댑터가 닫힌 포트에 붙어 던진 `ConnectionError` 를 core 가 원인 `tool_connection` 의
+    `run_failed` 로 쓴다(기능 계획의 수락)."""
+    url = f"http://127.0.0.1:{free_port()}/mcp"
+    plugins = FakePlugins({"calc": OneShotAgent()}, mcp=["remote"], servers=["remote"], remote=url)
+    model = GenericFakeChatModel(messages=iter([_reply("4")]))
+
+    events = await _run(OneShotAgent(), model, trace, clock, tools=McpTools(), plugins=plugins)
+
+    assert [e.type for e in events] == ["run_started", "run_failed"]
+    assert isinstance(events[-1], RunFailed)
+    assert f"MCP 서버 remote({url})에 붙지 못했다" in events[-1].error
+    assert _cause(events) == "tool_connection"
+    assert trace.events == events
+
+
+async def test_비밀_인자와_헤더_값은_루트_로거를_DEBUG_로_켜도_로그에_남지_않는다(
+    trace: FakeTrace,
+    clock: FakeClock,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """mcp 의 클라이언트 로거는 DEBUG 로 보내는 메시지 전체(`Sending client message: …`)를 찍으므로
+    도구 호출의 인자가 그대로 든다. 막는 자리는 어댑터다(`adapters/mcp.py` 의 "로그").
+
+    단언 전에 양성 대조로 두 값이 서버에 닿았는지를 본다. 비밀 인자는 도구가 돌려준 길이로, 헤더
+    값은 서버의 기록으로 본다. 라이브러리 로거가 실제로 로그를 남겼는지도 본다(`HTTP Request:`).
+    로그가 비어서 초록인 것을 가르기 위해서다."""
+    secret = "tool-arg-secret-5d2c"
+    token = "Bearer header-secret-8e1f"
+    monkeypatch.setenv("AGENT_OS_TEST_TOKEN", token)
+    caplog.set_level(logging.DEBUG)
+
+    with serving(tmp_path) as fixture:
+        plugins = FakePlugins(
+            {"calc": SecretToolAgent(secret)},
+            mcp=["remote"],
+            servers=["remote"],
+            secret_args={"keep": ["secret"]},
+            remote=fixture.url,
+            remote_headers={"Authorization": "AGENT_OS_TEST_TOKEN"},
+        )
+        events = await _run(
+            SecretToolAgent(secret),
+            GenericFakeChatModel(messages=iter([])),
+            trace,
+            clock,
+            tools=McpTools(),
+            plugins=plugins,
+        )
+        posted = fixture.headers_of("POST")
+
+    finished = events[-1]
+    assert isinstance(finished, RunFinished), [e.type for e in events]
+    assert finished.output == str(len(secret)), "비밀 인자가 서버에 닿지 않았다(양성 대조)"
+    assert any(h.get("authorization") == token for h in posted), "헤더 값이 서버에 닿지 않았다"
+    assert "HTTP Request" in caplog.text, "로그가 비었다. 단언이 아무것도 보지 못한다"
+    assert secret not in caplog.text
+    assert "header-secret-8e1f" not in caplog.text
 
 
 async def test_같은_이름의_도구_실패는_두_서버_이름이_든_채_도구_연결_원인으로_끝난다(
