@@ -83,3 +83,46 @@ open-session을 부른다 2026-11-09T19:41:45Z
 첫 커밋 시도가 pre-commit의 변이 표 검사(`check-mutations`)에 막혔다. `.scratch/mcp-shutdown/probes/ticket02_mutations.toml`의 변이 둘이 가리키던 `mcp.py`의 원문(`_connecting`과 `_session`이 `attempt` 인자를 받기 전의 모양)이 이 커밋에서 바뀌어 원문이 0번이었다. 원문 둘을 지금 코드 모양으로 고치고 `uv run python tools/mutate.py --check`(변이 3 모두 원문 한 번씩)와 실제 실행(`PYTHONUTF8=1 uv run python tools/mutate.py <그 파일>`, 변이 3 모두 기대대로 빨강)을 손으로 쳐서 봤다. 둘 다 이 세션이 손으로 본 결과다.
 
 다시 돌린 명령: `uv run ruff check .`·`uv run ruff format --check .`·`uv run pyright`(0 errors)·`uv run lint-imports`(6 kept)는 고친 뒤 초록이고 `uv run pytest -q tests/adapters/test_mcp.py`는 41개 통과다(검사 확장 직후). 손으로 치는 나머지 다섯은 커밋의 pre-commit 결과로 갈음한다(결과는 커밋 뒤에 적는다).
+
+## 커밋 뒤 인계
+
+커밋 `40e288e7`(`feat: 원격 MCP 서버에 매니페스트의 주소로 실행마다 붙는다 (mcp-http 02)`)이 섰다. pre-commit은 두 번째 시도가 종료 코드 0으로 끝났다(그 출력은 읽지 않았다). 첫 시도의 출력은 러너 줄이 통과(pytest 387.4초, web-verify 492.6초, pyright 둘, lint-imports, 지침 검사, 타입 우회 검사, zizmor, 훅 러너, 커밋 검사)였고 변이 표 검사만 실패했다(위). 푸시하지 않았고 PR도 없다. 이 일지의 이 절과 위 셀프 리뷰 절의 고친 변이 표 줄은 커밋 뒤에 쓴 것이라 커밋되지 않았다. 이 세션의 제목은 `feature/02-connect-to-remote-mcp-server-by-url`였고 `(인계함)`을 붙여 넘긴다. 남은 일은 회고(`retro`)와 이 일지의 "다음" 절, PR 직전 리뷰(`docs/constitution/operations.md` 리뷰 파이프라인), `/git-pr`, 봇 회차, 워크트리 병합, 병합 뒤 티켓 03·04 지시문이다.
+
+PR 직전 리뷰에 밀 주장은 이 세션이 셀프 리뷰를 반영하며 새로 쓴 사실 문장이다. 글자 그대로는 `src/agent_os/adapters/mcp.py` 모듈 독스트링과 `_read_headers`의 독스트링, `pyproject.toml` `[project]` 머리 주석, `src/agent_os/core/ports.py`의 `ToolSource` 독스트링에 있고 요지는 다섯이다.
+
+- 어댑터 독스트링: 닫을 프로세스가 없으므로 stdio의 "닫는 시간"(2초 유예와 프로세스 트리 끄기)은 http만 쓰는 연결에 걸리지 않고, 정상 닫기에는 종료 요청의 왕복이 드는 것으로 본다(어림, 왕복 시간은 재지 않았다).
+- 어댑터 독스트링: `serve`의 종료로 취소된 실행도 같은 취소라 DELETE를 보내지 않는다고 본다(어림. `.scratch/mcp-http/probes/http_close.py`가 다시 내는 것은 기한뿐이다).
+- `_read_headers`: 개행, 비ASCII 글자, 앞뒤의 공백이나 탭이 든 값을 `httpx2`가 그 값을 실은 예외로 거부한다(손으로 `httpx2`를 대 봤다).
+- 어댑터 독스트링 "로그": 헤더 값은 `mcp`·`httpx2`·`httpcore2` 로거의 DEBUG 줄에 실리지 않는다(`.scratch/mcp-http/probes/README.md`가 그 셋만 적는다).
+- `pyproject.toml` 주석: mcp는 httpx2의 하한(2.10)만 걸어 두므로 쓰는 판은 락이 정하고 하한은 직접 선언한 쪽이 올린다. `ports.py`: 첫 어댑터는 MCP(stdio와 http).
+
+PR 본문에 적을 것: `uv.lock`의 차이는 agent-os 자신의 의존 두 줄(`{ name = "httpx2" }`와 `{ name = "httpx2", specifier = ">=2.13,<3" }`)이고 패키지 84개는 그대로다(위 검증 절). 접속 시험이 드러낸 취소 문제와 고침(`_forget_own_cancellation`, 위). 결정 셋(제어 문자 이스케이프, 헤더 이름 금지 목록에 다섯 이름을 더하고 `cookie`는 받음, 쿼리 문자열의 비밀을 시험으로 고정)과 셀프 리뷰가 더한 헤더 값 앞뒤 공백 검사. 헌법 판 3.0.77.
+
+낸 지시문은 아래 그대로다.
+
+```
+다음 작업: .scratch/mcp-http/issues/02-connect-to-remote-mcp-server-by-url.md (원격 MCP 서버에 매니페스트의 주소로 실행마다 붙는다)
+다음 단계: 구현
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /implement .scratch/mcp-http/issues/02-connect-to-remote-mcp-server-by-url.md
+브랜치: feature/02-connect-to-remote-mcp-server-by-url
+모델: Sonnet 5.5 / high. 2의 잇는 지시문
+읽을 것: docs/journal/2026-11-10-0421-mcp-http-connect.md
+이어받을 상태: 인계: 커밋 뒤. 일지는 docs/journal/2026-11-10-0421-mcp-http-connect.md 이고 "커밋 뒤 인계"가 이 인계다. 구현·셀프 리뷰 반영·커밋(40e288e7)은 끝났고 푸시 전이며 PR은 없다. 일지의 "커밋 뒤 인계" 절과 "셀프 리뷰" 절의 변이 표 줄은 커밋되지 않았다. 구현을 다시 하지 않는다. 남은 일: 회고(retro)와 일지의 "다음" 절, PR 직전 리뷰(밀 주장은 일지 "커밋 뒤 인계"), /git-pr(본문에 일지 "PR 본문에 적을 것"), PR 연결, 봇 회차, merge.md의 워크트리 병합. 병합 뒤 next-session으로 티켓 03·04 지시문을 낸다(둘은 02 뒤에 나란히 돈다).
+확인할 선행 조건: 없음
+이번 요청 범위: PR과 병합까지
+```
+
+open-session을 부른다 2026-11-09T20:16:30Z
+
+## 이어받은 세션(셋째)
+
+제목은 `feature/02-connect-to-remote-mcp-server-by-url`로 되돌렸고 워크트리에 `EnterWorktree(path)`로 들어갔다(`git status`는 이 일지의 수정만 보였다). `sibling_overlap`은 번호 겹침 없음(헌법 3.0.77), 함께 고친 파일 없음, origin/main은 분기 뒤 움직이지 않았다(`git log HEAD..origin/main` 빈 출력).
+
+## PR 직전 리뷰(coderabbit-review)
+
+범위: 기준 `origin/main`, 커밋 하나(`40e288e7`)와 미커밋 일지. 서브에이전트가 CLI 0.7.5로 `coderabbit review --agent --include-untracked`를 돌렸다. `auth status`는 `Plan: Free`, `Seat: not assigned`였으나 리뷰는 파일 27개를 끝까지 돌아 `review_completed`, 지적 0건이다(CLI 축).
+
+밀 주장 다섯을 서브에이전트가 코드와 대 봤고 모두 맞았다. 근거: `_stdio_session`만 `stdio_client`를 쓴다는 것(1), `.venv`의 mcp 2.3.0 `client/streamable_http.py` 789~793행의 `finally`가 `terminate_session`을 `await`한다는 것(2, 어림 표시가 옳고 `serve` 종료 경로는 재지 않았다), 로컬 서버를 띄워 `httpx2` 2.13.0에 개행·앞 공백·뒤 탭 값을 보내 `LocalProtocolError: Illegal header value`를, 비ASCII 글자는 `UnicodeEncodeError`를 본 것(3), 프로브 README 71행의 두 OS 33회차 `token_in_log` 빈 목록(4), mcp 2.3.0 `METADATA`의 `Requires-Dist: httpx2>=2.10.0`과 락의 2.13.0(5).
+
+고친 것: 4번의 정확도 차이 하나. 양성 대조가 접속을 연 아홉 사례에만 있고 `unauthorized`·`closed_port`에는 없는데 독스트링 문장에는 그 단서가 없었다. 고치는 값이 한 줄이라 독스트링에 그 단서를 더했다(`mcp.py` 모듈 독스트링 "로그" 끝). 남긴 것: 없음. 오탐: 없음.

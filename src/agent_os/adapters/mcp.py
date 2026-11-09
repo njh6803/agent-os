@@ -43,7 +43,8 @@ ConnectionError 와 도구 호출이 실패할 때의 RuntimeError 다. 긴 글�
 불러 들일 때 그 로거에 DEBUG 기록을 버리는 필터를 단다. 로거를 낮추는 수준 설정과 달리 누가 그
 로거의 수준을 다시 올려도 걸러진다. httpx2 가 INFO 로 찍는 `HTTP Request: POST <주소 전체>` 는 쿼리
 문자열을 싣지만 라이브러리의 동작이라 막지 않는다 (배포 안내의 몫이다). 헤더 값은 `mcp`·`httpx2`·
-`httpcore2` 로거의 DEBUG 줄에 실리지 않는다(`.scratch/mcp-http` 의 프로브가 그 셋을 쟀다).
+`httpcore2` 로거의 DEBUG 줄에 실리지 않는다(`.scratch/mcp-http` 의 프로브가 그 셋을 쟀다.
+접속이 막힌 `unauthorized` 와 `closed_port` 사례에는 양성 대조가 없다).
 
 **던지는 예외의 타입은 내장이다(`.scratch/mcp-shutdown/spec.md` 의 "경계를 넘는 예외").** 원인
 (`__cause__`)에는 mcp 의 원래 예외가 남는다. 서버를 여는 동안(띄우기나 접속, 세션 열기,
