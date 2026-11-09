@@ -37,6 +37,7 @@ from langchain_core.language_models.fake_chat_models import GenericFakeChatModel
 from langchain_core.messages import AIMessage, BaseMessage
 from langchain_core.outputs import ChatResult
 from pydantic import BaseModel, ConfigDict, Field
+from tests.mcp_http import serving
 from tests.signing import AUDIENCE, bearer, claims, new_key, sign
 
 from agent_os import main as main_module
@@ -615,6 +616,73 @@ def test_calc_에이전트가_실제_모델로_답하고_트레이스에_모델_
     assert body
     first_prompt = next(e.prompt for e in events if isinstance(e, LlmCalled) and e.prompt)
     assert body in first_prompt
+
+
+@pytest.mark.llm
+def test_calc_가_원격_mcp_서버에_주소로_붙어_그_도구로_계산하고_트레이스에_도구_호출이_남는다(
+    tmp_path: Path,
+) -> None:
+    """바깥 이음매. 실제 CLI 프로세스와 실제 Anthropic 호출, 시험이 띄운 원격 MCP 서버(mcp-http
+    명세 "실제 모델 시험 하나"). `plugins/mcp/` 에는 http 모양의 예시를 두지 않으므로(ADR 0049)
+    매니페스트는 임시 루트에 적는다. calc 가 고른 mcp 는 그 플러그인 하나뿐이라 트레이스의 도구
+    호출은 그 서버의 것이다."""
+    assert "ANTHROPIC_API_KEY" in os.environ, "ANTHROPIC_API_KEY 가 없다. .env 를 확인한다"
+    _copy_repo_plugins(tmp_path)
+    remote = "remote-calc"
+    server_folder = tmp_path / "server"
+    server_folder.mkdir()
+    traces = tmp_path / "traces"
+    with serving(server_folder) as fixture:
+        directory = tmp_path / "plugins" / "mcp" / remote
+        directory.mkdir(parents=True)
+        (directory / "plugin.toml").write_text(
+            'schema_version = "1"\nkind = "mcp"\nname = "remote-calc"\nversion = "0.1.0"\n'
+            f'[server]\ntransport = "http"\nurl = "{fixture.url}"\n',
+            encoding="utf-8",
+        )
+        _replace_in(
+            tmp_path / "plugins" / "agents" / "calc" / "plugin.toml",
+            'mcp = ["everything"]',
+            f'mcp = ["{remote}"]',
+        )
+        # 규칙 줄이 연결에 없는 서버를 가리키면 실행이 연결 직후 `tool_connection` 으로 끝난다.
+        _replace_in(
+            tmp_path / "plugins" / "rules.toml",
+            'allow = ["everything:*"]',
+            f'allow = ["{remote}:*"]',
+        )
+
+        result = _cli(
+            [
+                "run",
+                "calc",
+                "17 더하기 25는?",
+                "--traces",
+                str(traces),
+                "--plugins-root",
+                str(tmp_path / "plugins"),
+                "--model",
+                MODEL_PLUGIN,
+            ],
+            cwd=REPO_ROOT,
+        )
+
+        assert result.returncode == 0, result.stderr
+        assert "42" in result.stdout
+        (trace_file,) = _trace_files(traces)
+        events = _trace_events(trace_file)
+        assert any(isinstance(e, ToolCalled) and e.ok for e in events)
+        assert events[-1].type == "run_finished"
+        # 양성 대조: 그 서버에 실제로 요청이 닿았다.
+        assert any(row.get("method") == "POST" for row in fixture.requests())
+
+
+def _replace_in(path: Path, old: str, new: str) -> None:
+    """파일에서 그 글이 정확히 한 번 나올 때만 바꾼다. 없거나 여럿이면 실패한다(조용한 무변경이나
+    뜻밖의 여러 곳 변경으로 초록이 되지 않게)."""
+    text = path.read_text(encoding="utf-8")
+    assert text.count(old) == 1, f"{path} 에 {old!r} 가 정확히 한 번 있어야 한다"
+    path.write_text(text.replace(old, new), encoding="utf-8")
 
 
 def test_승인_대상에서_멈추면_실행_식별자와_승인_요청이_표준_출력에_찍히고_전용_종료_코드다(
