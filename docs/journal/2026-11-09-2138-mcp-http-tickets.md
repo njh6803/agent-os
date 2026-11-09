@@ -325,7 +325,7 @@ CodeRabbit의 첫 회차(리뷰 대상 `6ccfd77a`)는 인라인 다섯(Major 하
 ## 다음
 
 - 다음 작업: 기능 mcp-http의 구현. 막는 선은 01 → 02 → {03, 04}라 지금 프론티어는 01 하나다. `/implement .scratch/mcp-http/issues/01-contract-mcp-server-transport-stdio-or-http.md`, 새 세션, `Sonnet 5.5 / high`. 02는 01 뒤에, 03과 04는 02 뒤에 나란히 돈다.
-- 뒤로 넘긴 일. 위 "봇 회차"의 ADR 0049 Consequences 42줄과 명세 7줄: 이력을 더하고 포인터를 달지는 사용자의 승인이 필요하다.
+- 뒤로 넘긴 일은 없다. 위 "봇 회차"가 넘긴 ADR 0049 Consequences 42줄과 명세 7줄은 다섯째 세션이 사용자의 승인을 받아 고쳤다(아래 "다섯째 세션").
 - 대기열의 회차 5 이상 항목(420·431·565·579·214·475)은 이 기능의 마지막 티켓 뒤에 chore 배치로 고른다(`next-session` 결정표).
 
 ## 인계(커밋 뒤, 넷째 세션)
@@ -350,3 +350,19 @@ CodeRabbit의 첫 회차(리뷰 대상 `6ccfd77a`)는 인라인 다섯(Major 하
 제목을 `docs/mcp-http-tickets (인계함)`으로 바꾼다. 멈출 백그라운드 작업은 없다(`wait_ci.py`는 끝났다).
 
 open-session을 부른다 2026-11-09T14:56:03Z
+
+## 다섯째 세션(커밋 뒤 인계를 받은 쪽)
+
+세션 제목 `docs/mcp-http-tickets`(훅이 시킨 대로 붙였다). 사용자 프롬프트는 위 "인계(커밋 뒤, 넷째 세션)"의 지시문 그대로다(끝에 `이번 요청 범위: 티켓까지`). `git worktree list`에서 브랜치가 `.claude/worktrees/mcp-http-tickets`에 체크아웃된 것을 보고 `EnterWorktree(path)`로 들어왔다.
+
+### 푸시와 둘째 회차
+
+일지만 담은 커밋 `388ffe5e`(앞의 `bb78a744`와 함께)를 푸시하고 `@coderabbitai review` 코멘트를 남긴 뒤 `tools/wait_ci.py 503`을 백그라운드로 띄웠다. 끝 줄은 `끝: 모두 통과. CodeRabbit: Review rate limited`이고 검사 여덟(claude-review, e2e, e2e-widget, python, ticket, verify, visual, web)이 SUCCESS, CodeRabbit이 NEUTRAL(한도)이었다. CodeRabbit은 이 푸시에서 리뷰하지 않았고(PR 코멘트의 자동 답글 `Review rate limited`를 읽었다) 한도에 걸린 푸시는 회차로 세지 않는다. claude-review의 코멘트는 "병합을 막을 지적은 없고 Nit 하나"다(코멘트 전문을 읽었다). Nit은 ADR 0049 결정 "닫기" 단락에 같은 포인터가 네 번 붙어 읽기 흐름을 끊는다는 것이고 작성자 재량이라고 했다. 포인터의 자리는 사용자가 골랐으므로(PR 본문 "남긴 위험"의 앞 회차 판정) 고치지 않고 PR 코멘트에 보류 이유를 남겼다. 둘째 회차라 Critical·Major만 고치므로 이 회차에 고친 것은 없다.
+
+### 승인 (사용자가 골랐다)
+
+넘겨받은 질문 하나를 물었다. ADR 0049 Consequences 42줄("`[server]`에 `command`가 없는 … 스토리는 문구가 바뀌면 함께 고친다")과 명세 78줄·티켓 01의 수락 기준(37줄, "그대로 둔다")과 명세 7줄(서두 요약, "함께 고치며")이 서로 어긋난다. 네 줄은 `Read`로 직접 열어 대 봤다. 선택지는 "이 PR에서 고친다"와 "고치지 않고 병합한다"였고 답은 다음과 같다.
+
+> 사용자: 이 PR에서 고친다 (선택지 설명: ADR 0049 이력에 "스토리 글은 그대로 둔다" 결정을 한 줄 더하고 42줄에 그 이력을 가리키는 포인터를 단다. 명세 7줄도 "그대로 둔다"로 맞춘다. 푸시하면 봇이 한 번 더 돌아 병합이 조금 늦어진다.)
+
+고친 것. ADR 0049 이력 "2026-11-10 거부 문구를 든 관리 화면 스토리의 글은 그대로 둔다"를 더하고(결정과 거부한 안은 명세 78줄이 정한 것을 옮겼다), Consequences 42줄의 해당 문장 뒤에 포인터를 달았으며, 명세 7줄의 "문구가 바뀌면 함께 고치며"를 "운영자 파일의 문구를 흉내 낸 임의의 글이라 그대로 두며"로 바꿨다. `.claude/rules/adr.md`대로 `domain-modeling`을 먼저 불렀다(새 용어도 새 ADR도 없어 `CONTEXT.md`는 그대로다). `uv run python tools/check_adr_pointers.py`는 출력 없이 끝났다. PR 본문은 푸시 전에 `gh pr edit`으로 넓힌 범위(이력 둘, 포인터 여섯)로 고쳤다.
