@@ -232,8 +232,17 @@ MCP_SECRET = "PLANTED-MCP-SECRET-sk-ant-api03"
         # 헤더가 읽을 환경 변수 이름 칸에 토큰 값을 적은 경우.
         'transport = "http"\nurl = "https://host/x"\n[server.headers]\n'
         f'Authorization = "{MCP_SECRET}!"\n',
+        # 대괄호 호스트 자리에 토큰을 적은 경우. 주소 파서의 오류 문구가 그 호스트를 싣는다.
+        f'transport = "http"\nurl = "https://[{MCP_SECRET}]/x"\n',
+        # transport 칸에 토큰을 적은 경우. 판별자의 오류 문구가 그 태그를 싣는다.
+        f'transport = "{MCP_SECRET}"\nurl = "https://host/x"\n',
     ],
-    ids=["주소의_사용자_정보", "환경_변수_이름_칸의_토큰"],
+    ids=[
+        "주소의_사용자_정보",
+        "환경_변수_이름_칸의_토큰",
+        "대괄호_호스트의_토큰",
+        "transport_칸의_토큰",
+    ],
 )
 def test_칸에_잘못_적은_비밀은_mcp_매니페스트의_문구에도_예외_사슬에도_남지_않는다(
     root: Path, server: str

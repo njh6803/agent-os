@@ -128,3 +128,18 @@ open-session을 부른다 2026-11-09T17:41:09Z
 ## 봇 회차 (인계 2를 받은 세션)
 
 PR 505에 `@coderabbitai review` 코멘트를 남기고 `tools/wait_ci.py`로 기다렸다. 헤드 `6b49601c`의 검사는 전부 초록이었고 CodeRabbit은 `Review rate limited`(다음 리뷰는 4분 뒤)로 리뷰를 내지 않았다. claude-review는 통과였고 인라인 리뷰 코멘트는 없었다. 한도에 걸려 리뷰가 없던 푸시는 회차로 세지 않으므로 CodeRabbit의 첫 회차는 아직 오지 않았다. 이 PR의 보안·버그 축은 푸시 전에 돈 `coderabbit-review`(위 "PR 직전 리뷰")가 대신한다. 이 일지를 푸시하면 CodeRabbit이 다시 돌 수 있어 그 결과를 첫 회차로 받는다.
+
+CodeRabbit의 첫 회차(헤드 `72666f50`)는 지적 여섯 건이었다(Major 셋, Minor 셋). 판정은 이렇다.
+
+고친 것(Major 둘):
+
+- `transport` 칸에 잘못 적은 값이 `union_tag_invalid` 문구(`Input tag '<값>' found using _transport_of() …`)로 관리 API 응답과 로그에 실린다. 앞 세션이 "값이 열거형 이름이라 비밀일 가능성이 낮다"며 보류했으나, 칸에 비밀을 잘못 적을 자리라는 점은 `url`·헤더와 같아 고쳤다. `filesystem._describe`가 이 종류에만 고정 문구(`transport 는 stdio 나 http 여야 한다`)를 쓴다.
+- 주소의 대괄호 호스트(`https://[<값>]/x`)에서 `urlsplit`의 `ValueError`가 그 호스트를 문구에 싣는다. `uv run python -c`로 `HttpServer.model_validate`를 쳐 `'PLANTED_SECRET' does not appear to be an IPv4 or IPv6 address`가 문구에 나오는 것을 직접 봤다. 검증자가 예외를 블록 밖으로 잇지 않고 고정 문구(`url 이 주소 모양이 아니다`)로 바꾼다.
+- 두 사례를 `tests/adapters/test_filesystem.py`의 비밀 시험에 더했고 고치기 전에 둘 다 빨간 것을 봤다(`transport` 칸은 문구에 값이 실려, 대괄호 호스트는 같은 단언에서). 고친 뒤 `tests/adapters/test_filesystem.py`·`tests/sdk`·`tests/test_server.py` 543개 통과.
+
+보류한 것:
+
+- [Major] `_where`가 `server.url` 전체를 `run_failed` 문구에 싣는다(서버 이름으로 바꾸라는 제안). ADR 0049 Consequences "문구에 실리는 것과 실리지 않는 것"과 이력 2026-11-09 "실패 문구"가 사용자의 결정으로 정한 것이라 이 PR이 바꾸지 않는다. 02가 시험으로 고정한다(위 "다음").
+- [Minor] `.scratch/end-user-channel/probes/run_timeout.py`의 `McpServer(...)`를 `StdioServer(...)`로 바꾸라는 제안. 프로브는 그때 측정의 기록이라 고치지 않는다(PR 본문 (3)).
+- [Minor] HTTP 매니페스트를 읽어 실제 `McpTools`로 실행하는 통합 시험. 이 PR의 http 갈래는 접속을 하지 않고 `NotImplementedError`로 실패하는 자리표시이고, 02가 그 시험을 실제 접속의 시험으로 바꾼다(티켓 02).
+- [Minor] `headers` 스키마에 `additionalProperties: false`. 생성 스키마의 `patternProperties` 모양은 `skills` 칸이 이미 쓰는 것이고, 거부는 모델의 검증이 한다. 생성 스키마를 손으로 바꾸는 장치를 이 계약에 들이지 않는다.

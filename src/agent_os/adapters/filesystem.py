@@ -437,8 +437,16 @@ def _describe(error: Exception) -> str:
         return str(error)
     details = error.errors(include_url=False, include_context=False, include_input=False)
     return "; ".join(
-        f"{detail['type']}{_location(detail['loc'])}: {detail['msg']}" for detail in details
+        f"{detail['type']}{_location(detail['loc'])}: {_message(detail['type'], detail['msg'])}"
+        for detail in details
     )
+
+
+def _message(kind: str, message: str) -> str:
+    """판별자의 오류 문구는 받은 태그를 싣는다. mcp 의 `transport` 칸에 잘못 적은 값이 그것이다."""
+    if kind == "union_tag_invalid":
+        return "transport 는 stdio 나 http 여야 한다"
+    return message
 
 
 def _location(loc: tuple[int | str, ...]) -> str:

@@ -121,7 +121,14 @@ class HttpServer(BaseModel):
     @field_validator("url")
     @classmethod
     def _url_is_plain_http(cls, value: str) -> str:
-        parts = urlsplit(value)
+        # 파서의 오류 문구는 대괄호 안의 호스트를 되울린다. 예외를 이 블록 밖으로 잇지 않고 고정
+        # 문구로 바꾼다.
+        try:
+            parts = urlsplit(value)
+        except ValueError:
+            parts = None
+        if parts is None:
+            raise ValueError("url 이 주소 모양이 아니다")
         if parts.scheme not in ("http", "https"):
             raise ValueError("url 은 http 나 https 주소여야 한다")
         if "@" in parts.netloc:
