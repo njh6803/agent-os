@@ -14,7 +14,7 @@
 
 ### 페이지 HTML과 경로
 
-- [ ] **`GET /portal/`은 명세 "페이지" 첫 항목의 HTML을 낸다.** 질의와 쿠키를 보지 않고 같은 HTML이다. `lang="ko"`, 뿌리의 `data-density="regular"`와 첫 사이트의 `data-theme`·`data-mode`, 토큰 CSS·글꼴 CSS·페이지 CSS 링크, 데이터 블록 `<script type="application/json">`(사이트마다 `name`, `heading`, `intro`, `theme`, `mode`, `assurance`, `notice`(전문), `reportUrl`과 쿠키 수명 일수. `<`는 `\u003c`로 이스케이프한다), 페이지 스크립트, 위젯 번들 `/widget/element.js`, `<noscript>`의 한 줄이다. 인라인 스크립트와 인라인 스타일은 없다
+- [ ] **`GET /portal/`은 명세 "페이지" 첫 항목의 HTML을 낸다.** 질의와 쿠키를 보지 않고 같은 HTML이다. `lang="ko"`, 뿌리의 `data-density="regular"`와 첫 사이트의 `data-theme`·`data-mode`, 토큰 CSS·글꼴 CSS·페이지 CSS 링크, 데이터 블록 `<script type="application/json">`(사이트마다 `name`, `agent`, `heading`, `intro`, `theme`, `mode`, `assurance`, `notice`(전문), `reportUrl`과 쿠키 수명 일수. `<`는 `\u003c`로 이스케이프한다), 페이지 스크립트, 위젯 번들 `/widget/element.js`, `<noscript>`의 한 줄이다. 인라인 스크립트와 인라인 스타일은 없다
 - [ ] **응답 헤더에 `Content-Security-Policy: default-src 'none'; script-src 'self'; connect-src 'self'; style-src 'self'; font-src 'self'; img-src 'self'; frame-ancestors 'none'; base-uri 'none'`을 글자 그대로 단다**
 - [ ] **`GET /`는 302 `Location: /portal/`이고 질의를 그대로 붙인다.** `/portal`(끝 슬래시 없음)은 302하지 않는다(명세 "경로와 끝점"의 거부한 안)
 

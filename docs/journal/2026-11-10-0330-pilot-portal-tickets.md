@@ -177,3 +177,60 @@ PR 직전 리뷰에 밀 주장으로 넘길 새 문장(원문):
 ## 커밋
 
 첫 `git commit -F`는 pre-commit의 pytest 하나로 막혔다(`1 failed, 6770 passed`). 실패는 `tests/tools/test_probe_kit.py::test_배출은_줄이_계속_와도_제한_시간에_끝난다`의 `assert lines`(0.05초마다 줄을 쓰는 자식에서 `drain(0.5)`가 빈 목록을 냈다)이고, 이 브랜치의 변경은 문서뿐이라 그 시험과 닿지 않는다. 그 커밋의 pre-commit에서 pytest는 588.9초, web-verify는 767.2초로, 같은 변경에 앞서 돌린 `run_checks`(pytest 410.6초, web-verify 625.4초)보다 느렸다. 그 시험만 `uv run pytest -q tests/tools/test_probe_kit.py -k 배출은`으로 다시 치니 `3 passed`였다. 부하 아래에서 자식의 첫 줄이 0.5초 안에 오지 않은 것으로 어림하고, 한 번 실패라 작업 규약 6(두 번 연속)에 들지 않아 같은 커밋을 다시 친다. 같은 pre-commit이 막지 않고 낸 인용 대조 경고 여섯 가운데 이 세션이 셀프 리뷰 절에 쓴 둘(명세 축 지적의 풀어 쓴 인용, to-tickets 문장의 번역 인용)은 따옴표를 떼거나 원문으로 바꿨다. 나머지 넷 가운데 셋은 이 일지가 옛 글이나 질문 화면의 글을 옮긴 기록이고(지금 저장소에 원문이 없다), 명세 178줄의 하나는 이 브랜치의 diff에 없다(`git diff --cached -U0`에서 0건).
+
+다시 친 커밋은 `a1ac6050`으로 들어갔다. 그 pre-commit 출력에서 check-ticket, zizmor, lint-imports, check-instructions, check-type-escapes, pyright, pyright-linux, run-hooks, pytest(314.1초), web-verify(501.1초)가 `Passed`였고, ruff 둘은 스테이지된 `.py`가 없어 `Skipped`였다(ruff 설정도 바꾸지 않아 손으로 칠 몫이 없다). 마크다운 표와 줄 구분 문자 검사도 지났다.
+
+## 인계 (커밋 뒤)
+
+커밋 뒤 세션 컨텍스트가 인계 문턱을 넘어(309,951 토큰) `hook_handoff` 계기가 왔다. `handoff.md`의 인계하지 않는 때 다섯에 들지 않는다. 명령은 성공했고, 요청 범위("티켓까지", 지시문의 다음 작업이 병합까지)는 커밋에서 끝나지 않으며, 이 세션의 "이어받을 상태"는 `인계: 셀프 리뷰 직전`으로 경계가 다르고, `인계 못함` 줄이 없으며, `get_session`의 `self`에 `parentSessionId`가 없다. 남은 것은 푸시, PR 직전 리뷰(밀 주장은 위 "셀프 리뷰"의 원문 목록), PR, 반영과 병합, 다음 지시문, 회고다. 이 세션의 지금 제목은 `docs/pilot-portal-tickets`다.
+
+지시문:
+
+```
+다음 작업: 기능 pilot-portal. 셀프 리뷰를 반영해 커밋한 티켓 아홉과 명세 검토 주석을 푸시하고 PR 직전 리뷰·PR·반영·병합한다
+다음 단계: 티켓
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /to-tickets .scratch/pilot-portal/spec.md
+브랜치: docs/pilot-portal-tickets
+모델: Opus 5.5 / xhigh. 2의 잇는 지시문
+읽을 것: docs/journal/2026-11-10-0330-pilot-portal-tickets.md(그 "커밋"·"인계 (커밋 뒤)" 절은 미커밋이라 그 워크트리에만 있다)
+이어받을 상태: 인계: 커밋 뒤. 셀프 리뷰(두 축)를 반영한 변경을 브랜치에 커밋했고 아직 푸시하지 않았다(열린 PR 없음). 남은 것은 푸시, PR 직전 리뷰(밀 주장은 일지 "셀프 리뷰"의 새 문장 원문 목록), PR, 반영과 병합, 다음 지시문, 회고다. 커밋 뒤에 일지에 더한 두 절은 커밋하지 않았다. 일지 docs/journal/2026-11-10-0330-pilot-portal-tickets.md
+확인할 선행 조건: 없음
+이번 요청 범위: 티켓까지
+```
+
+제목을 `docs/pilot-portal-tickets (인계함)`으로 바꿨다. 이 세션이 띄운 백그라운드 작업은 모두 끝나 멈출 것이 없었다. `git worktree unlock C:/project/agent/.claude/worktrees/pilot-portal-tickets`는 `is not locked`로 끝나 넘어갔다.
+
+open-session을 부른다 2026-11-09T19:46:30Z
+
+## 셋째 세션(커밋 뒤 인계를 받은 쪽)
+
+새 세션이 위 지시문을 첫 메시지로 받았다(첫 줄은 "`.claude/skills/to-tickets/SKILL.md` 를 읽어 그대로 따른다…", 나머지는 위 지시문과 같다). 훅대로 제목을 `docs/pilot-portal-tickets`로 바꾸고(앞 제목은 "Pilot-portal 티켓 PR 및 병합"이었다), `git worktree list`에서 그 브랜치가 `.claude/worktrees/pilot-portal-tickets`에 체크아웃된 것을 보고 `EnterWorktree(path)`로 들어갔다. HEAD는 `a1ac6050`이고 미커밋 변경은 이 일지 하나였다(위 "커밋"·"인계 (커밋 뒤)" 두 절).
+
+`git fetch origin` 뒤 origin/main은 `bc2b9c2d`(#505)였고, `git merge --no-edit origin/main`으로 합쳤다(`0a412b6b`, 충돌 없음, 커밋 메시지 검사 Passed). `/security-review`가 merge-base부터 diff를 모으므로 PR 직전 리뷰 전에 합쳤다(`docs/constitution/operations.md` 리뷰 파이프라인 2). 합친 뒤 `uv run python tools/plan_table.py`를 돌려도 `git status --porcelain`에 `.scratch/plan.md`가 없었다. `uv run python tools/sibling_overlap.py`는 "이 브랜치의 새 번호 없음", "번호 겹침 없음", "함께 고친 파일 없음"을 냈다.
+
+### PR 직전 리뷰(`coderabbit-review`)
+
+브리프에 위 "셀프 리뷰"의 새 문장 원문 열 묶음을 밀 주장으로 넘기고, 묶음마다 코드로 대 볼 자리를 적었다. 서브에이전트는 첫 실행에서 턴 한도(40)에 닿아 보고 없이 멈췄고, SendMessage로 도구를 더 부르지 말고 보고하라고 하자 보고를 냈다. 그 보고: CLI 0.7.5, `auth status`는 `Plan: Free`·`Seat: not assigned`. 친 명령은 `coderabbit review --agent --committed --base origin/main`이고 종료 코드 0, `review_completed`, `findings: 2`, 14개 파일을 모두 봤다. CLI 축이다.
+
+- CLI 유효(CLI는 Major, 서브에이전트 판정 Minor). 06 17줄과 명세 133줄의 데이터 블록 목록에 `agent`가 없어, 페이지 스크립트가 위젯 속성 `agent`를 채울 값이 없다.
+- CLI 오탐. 05 23줄에 쿠키 값의 진위 확인과 `__Secure-` 접두를 요구했다. ADR 0050 46줄과 명세 115~118줄이 받아들인 한계다.
+- 서브에이전트가 더한 유효 Minor. 02 23줄 "주체 이름의 꼴은 ADR 0023이 정했다"가 부정확하다. ADR 0023 43줄은 "계약 티켓이 정한다"고 넘기고, `<발급자>|<sub>`는 같은 ADR의 이력 102~107줄이 "명세가 든다"고 기록한다.
+- 밀 주장 열 가운데 아홉은 맞고 7의 뒷문장(위 02 23줄)이 어긋난다고 했다. 단서는 셋이다. 1은 설정을 읽는 쪽 호출부에 리터럴 30을 박아도 두 사례가 초록이다(상수가 30인 한 가를 시험이 없다). 4는 02 뒤에도 위젯의 `e2e/stack.ts`가 남아 "위젯 준비 경로를 고친다"는 설명을 고친다는 뜻에 가깝다. 8의 1,553줄은 시험 파일 둘을 넣고 `stack.ts` 329줄을 통째로 세야 재현된다.
+- 확인 못함: 03이 드는 명세 주석의 "14파일 36줄"(다른 패턴으로 15파일 60줄이 나왔다), `web/pnpm-lock.yaml`, `EMBED.md` 129줄, 디자인 화면 목록.
+
+### 반영(PR 직전 리뷰)
+
+판정은 지적마다 근거를 연 뒤 했다.
+
+고친 것:
+
+- `agent`(유효). 명세 76줄의 `[[sites]]`에 `agent`가 필수 칸이고 135줄의 사이트 고르기가 `<agent-os-widget>`의 속성 다섯을 채우는데, 133줄의 데이터 블록 목록에 `agent`가 없는 것을 Read로 봤다. `reportUrl`로 grep해 데이터 블록의 칸을 나열한 자리가 명세 133줄과 06 17줄 둘뿐인 것을 봤다. 명세 페이지 절 끝에 `(2026-11-10 PR 직전 리뷰: …)` 주석을 달고 06 17줄의 목록에 `agent`를 더했다. ADR 0050 19줄(`sed`로 읽었다)의 공개 설정 목록에도 에이전트가 없지만, 실리는 것을 더하기만 해 그 문장이 글자 그대로 여전히 참이므로 이력과 포인터를 달지 않았다(`.claude/rules/adr.md` 16줄의 달지 않는 것). 에이전트 이름은 위젯 속성으로 DOM에 보이는 값이라 새로 드러나는 것이 없다. 머리를 `명세 검토`가 아니라 `PR 직전 리뷰`로 달아, 명세 서두와 PR 본문이 세는 "명세 검토 주석 열다섯"은 그대로다.
+- 02 23줄(유효). ADR 0023의 2026-10-05 이력 82줄(end-user-channel 명세를 쓰며 정했다)과 102줄을 Read로 읽고, `.scratch/end-user-channel/spec.md` 196줄 "이름은 `<발급자>|<sub>`다"를 grep으로 봤다. "주체 이름의 꼴은 end-user-channel 명세가 정했고 ADR 0023의 2026-10-05 이력이 기록한다"로 고쳤다. pilot-portal의 명세와 티켓에서 `ADR 0023`을 grep하니 다른 두 자리(명세 23줄, 05 9줄)는 사이트 토큰을 가리켜 맞다. 위 "셀프 리뷰"의 고친 것 줄("02의 `sites.py`는 ADR 0023(주체 이름 `<발급자>|<sub>`, 102줄)으로")은 그때의 기록이라 고치지 않고 여기에 어긋났다고 적는다. 그 반영이 102줄을 열었지만 그 줄이 무엇을 기록하는지(명세의 결정을 ADR 결정으로 올리지 않는다는 107줄)를 읽지 않았다.
+
+남긴 것:
+
+- 오탐(05 23줄). 위 근거대로 받아들인 한계다.
+- 밀 주장 1의 단서. 상수가 30인 한 호출부의 리터럴 30과 상수를 가를 시험이 없다. 막을 길이 없어 두었다.
+- 밀 주장 4·8의 단서. 4는 06의 그 문장이 "02가 그 주석의 위젯 준비 경로를 고친다"고만 적어 틀린 말이 아니다. 8의 명세 문장은 이미 "옮길 파일을 `wc -l`로 센 합. `stack.ts`의 일부는 위젯에 남는다"고 적고, 거부한 안의 근거(그때의 어림)라 고치지 않았다.
+- "14파일 36줄". 명세 160줄의 주석이 "검토가 grep으로 셌다"고 출처를 밝히고, 디자인 `README.md` 16줄도 패턴 없이 분류로 센 수다. 03의 수용 기준은 줄 수가 아니라 잔존 0이라 두었다.
