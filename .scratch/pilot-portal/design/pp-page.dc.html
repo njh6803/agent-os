@@ -1,0 +1,220 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>질문 페이지 기본 화면</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/agent-os/styles.css">
+<link rel="stylesheet" href="ds/agent-os/fonts/fonts.css">
+<link rel="stylesheet" href="ds/agent-os/_ds_bundle.css">
+<script src="ds/agent-os/_ds_bundle.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0}
+</style>
+</helmet>
+<div data-theme="nokcheong" data-mode="{{mode}}" class="flex flex-col" style="width: 100%; min-height: {{rootH}}; box-sizing: border-box; background: var(--bg); color: var(--text); font-family: var(--sans);">
+<h1 style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; margin: 0;">{{site.title}}</h1>
+<sc-if value="{{wide}}" hint-placeholder-val="{{true}}">
+<header class="flex items-center gap-4 shrink-0" style="height: 64px; box-sizing: border-box; padding: 0 var(--spacing-6); border-bottom: 1px solid var(--border);">
+<sc-if value="{{multi}}" hint-placeholder-val="{{true}}">
+<div class="flex items-center gap-2">
+<label for="pp-site-w" class="text-small text-text-muted">사이트</label>
+<span style="position: relative; display: inline-flex; align-items: center;">
+<select id="pp-site-w" class="text-body" value="{{siteValue}}" onChange="{{noop}}" style="appearance: none; -webkit-appearance: none; width: 260px; height: var(--control-h); box-sizing: border-box; margin: 0; padding: 0 var(--spacing-8) 0 var(--spacing-3); border: 1px solid var(--border-control); border-radius: var(--radius-m); background: var(--bg-raised); color: var(--text); font-family: var(--sans); text-overflow: ellipsis; outline: {{selOutline}}; outline-offset: 2px;">
+<option value="calc-demo">계산 도우미 (calc-demo)</option>
+<option value="store">매장 계산 도우미 (store)</option>
+<option value="staff">직원 계산 도우미 (staff)</option>
+</select>
+<svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" style="position: absolute; right: 12px; pointer-events: none; color: var(--text-muted);"><path d="m6 9 6 6 6-6" stroke-width="1.5" vector-effect="non-scaling-stroke"></path></svg>
+</span>
+</div>
+</sc-if>
+<div style="margin-left: auto;"><x-import component-from-global-scope="AgentOsUi.Switch" label="다크 모드" checked="{{dark}}" onChange="{{noop}}"></x-import></div>
+</header>
+</sc-if>
+<sc-if value="{{narrow}}" hint-placeholder-val="{{false}}">
+<header class="flex flex-col gap-3 shrink-0" style="padding: var(--spacing-3) var(--spacing-4); border-bottom: 1px solid var(--border);">
+<sc-if value="{{multi}}" hint-placeholder-val="{{true}}">
+<div class="flex items-center gap-2">
+<label for="pp-site-n" class="text-small text-text-muted shrink-0">사이트</label>
+<span style="position: relative; display: flex; align-items: center; flex: 1; min-width: 0;">
+<select id="pp-site-n" class="text-body" value="{{siteValue}}" onChange="{{noop}}" style="appearance: none; -webkit-appearance: none; width: 100%; height: var(--control-h); box-sizing: border-box; margin: 0; padding: 0 var(--spacing-8) 0 var(--spacing-3); border: 1px solid var(--border-control); border-radius: var(--radius-m); background: var(--bg-raised); color: var(--text); font-family: var(--sans); text-overflow: ellipsis; outline: {{selOutline}}; outline-offset: 2px;">
+<option value="calc-demo">계산 도우미 (calc-demo)</option>
+<option value="store">매장 계산 도우미 (store)</option>
+<option value="staff">직원 계산 도우미 (staff)</option>
+</select>
+<svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" style="position: absolute; right: 12px; pointer-events: none; color: var(--text-muted);"><path d="m6 9 6 6 6-6" stroke-width="1.5" vector-effect="non-scaling-stroke"></path></svg>
+</span>
+</div>
+</sc-if>
+<div class="flex items-center"><x-import component-from-global-scope="AgentOsUi.Switch" label="다크 모드" checked="{{dark}}" onChange="{{noop}}"></x-import></div>
+</header>
+</sc-if>
+<main class="flex flex-col items-center" style="flex: 1; padding: {{mainPad}};">
+<div class="flex flex-col gap-3" style="width: {{colW}}; max-width: 100%;">
+<sc-if value="{{both}}" hint-placeholder-val="{{false}}">
+<div style="display: flex; flex-direction: {{loginDir}}; align-items: {{loginAlign}}; gap: var(--spacing-3);">
+<span class="shrink-0"><x-import component-from-global-scope="AgentOsUi.Button" variant="secondary" disabled="{{yes}}">로그인하고 질문하기</x-import></span>
+<p class="text-small text-text-muted" style="margin: 0;">로그인은 아직 제공하지 않습니다. 지금은 로그인 없이 질문할 수 있습니다.</p>
+</div>
+</sc-if>
+<sc-if value="{{switched}}" hint-placeholder-val="{{false}}">
+<div role="status" class="flex items-start gap-2 text-small text-text-muted">
+<span class="flex shrink-0" style="padding-top: 3px;"><x-import component-from-global-scope="AgentOsUi.Icon" name="info" size="14"></x-import></span>
+<p style="margin: 0;">사이트를 바꿔 새 대화로 시작합니다.</p>
+</div>
+</sc-if>
+<sc-if value="{{loading}}" hint-placeholder-val="{{false}}">
+<div aria-busy="true" aria-label="고지 확인 여부를 묻는 중" class="flex flex-col gap-3 shadow-float" style="width: 100%; height: 560px; box-sizing: border-box; padding: var(--spacing-6); background: var(--bg-raised); border: 1px solid var(--border); border-radius: var(--radius-l);">
+<div style="width: 60%; height: 20px; border-radius: var(--radius-s); background: var(--bg-active);"></div>
+<div style="width: 100%; height: 12px; margin-top: var(--spacing-3); border-radius: var(--radius-s); background: var(--bg-active);"></div>
+<div style="width: 92%; height: 12px; border-radius: var(--radius-s); background: var(--bg-active);"></div>
+<div style="width: 70%; height: 12px; border-radius: var(--radius-s); background: var(--bg-active);"></div>
+<div style="flex: 1;"></div>
+<div style="width: 100%; height: var(--control-h); border-radius: var(--radius-m); background: var(--bg-active);"></div>
+</div>
+</sc-if>
+<sc-if value="{{cover}}" hint-placeholder-val="{{false}}">
+<section aria-labelledby="pp-cover-title" data-mode="{{mode}}" class="flex flex-col shadow-float" style="width: 100%; height: 560px; box-sizing: border-box; background: var(--bg-raised); color: var(--text); border: 1px solid var(--border); border-radius: var(--radius-l); overflow: hidden;">
+<h2 id="pp-cover-title" style="margin: 0; padding: var(--spacing-6) var(--spacing-6) var(--spacing-3); font-size: var(--text-title); line-height: var(--text-title--line-height); font-weight: var(--text-title--font-weight);">질문하기 전에 읽어 주세요</h2>
+<div class="flex flex-col gap-3 text-body" style="flex: 1; min-height: 0; overflow-y: auto; padding: 0 var(--spacing-6) var(--spacing-4);">
+<sc-for list="{{coverParas}}" as="para" hint-placeholder-count="3"><p style="margin: 0;">{{para}}</p></sc-for>
+</div>
+<div class="flex flex-col gap-3" style="padding: var(--spacing-4) var(--spacing-6) var(--spacing-6); border-top: 1px solid var(--border);">
+<sc-if value="{{failed}}" hint-placeholder-val="{{false}}"><x-import component-from-global-scope="AgentOsUi.Alert" tone="danger" title="고지 확인을 기록하지 못했습니다.">잠시 뒤 다시 눌러 주세요.</x-import></sc-if>
+<button type="button" aria-busy="{{busyAttr}}" aria-disabled="{{busyAttr}}" class="text-body" style="position: relative; display: flex; align-items: center; justify-content: center; width: 100%; height: var(--control-h); box-sizing: border-box; padding: 0 var(--spacing-3); border: 1px solid transparent; border-radius: var(--radius-m); background: var(--primary); color: var(--on-primary); font-family: var(--sans); font-weight: var(--font-weight-medium); cursor: pointer;">
+<span style="opacity: {{labelOpacity}};">확인하고 질문하기</span>
+<sc-if value="{{busy}}" hint-placeholder-val="{{false}}"><span style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-6.219-8.56" stroke-width="1.5" vector-effect="non-scaling-stroke"></path></svg></span></sc-if>
+</button>
+</div>
+</section>
+</sc-if>
+<sc-if value="{{login}}" hint-placeholder-val="{{false}}">
+<div class="flex flex-col justify-center shadow-float" style="width: 100%; height: 560px; box-sizing: border-box; padding: var(--spacing-6); background: var(--bg-raised); border: 1px solid var(--border); border-radius: var(--radius-l);">
+<x-import component-from-global-scope="AgentOsUi.Alert" tone="info" title="이 사이트는 로그인이 필요합니다.">로그인은 아직 제공하지 않습니다.</x-import>
+</div>
+</sc-if>
+<sc-if value="{{widget}}" hint-placeholder-val="{{true}}">
+<div data-theme="nokcheong" data-mode="{{mode}}" data-density="regular" class="flex flex-col shadow-float" style="width: 100%; height: 560px; box-sizing: border-box; background: var(--bg-raised); color: var(--text); font-family: var(--sans); border: 1px solid var(--border); border-radius: var(--radius-l); overflow: hidden;">
+<header class="flex items-center justify-between gap-2 shrink-0" style="padding: var(--spacing-2) var(--spacing-2) var(--spacing-2) var(--spacing-4); border-bottom: 1px solid var(--border);">
+<span class="text-body font-semibold">{{site.title}}</span>
+<x-import component-from-global-scope="AgentOsUi.Button" variant="secondary">새 대화</x-import>
+</header>
+<sc-if value="{{firstScreen}}" hint-placeholder-val="{{true}}">
+<div class="flex flex-col items-center justify-center gap-2" style="flex: 1; min-height: 0; padding: var(--spacing-6); text-align: center;">
+<p class="text-body" style="margin: 0;">{{site.intro}}</p>
+<p class="text-small text-text-muted" style="margin: 0;">아래 입력창에 적어 보내 주세요.</p>
+</div>
+</sc-if>
+<sc-if value="{{talk}}" hint-placeholder-val="{{false}}">
+<ol aria-label="대화" class="flex flex-col gap-4" style="flex: 1; min-height: 0; overflow: hidden; justify-content: flex-end; margin: 0; padding: var(--spacing-4); list-style: none;">
+<li class="text-body" style="align-self: flex-end; max-width: 85%; padding: var(--spacing-2) var(--spacing-3); border-radius: var(--radius-l); background: var(--bg-selected); overflow-wrap: anywhere;">1,284 더하기 3,716은 얼마예요?</li>
+<li class="flex flex-col gap-2">
+<button type="button" aria-expanded="false" class="flex items-center gap-2 text-small text-text-muted" style="align-self: flex-start; min-height: 24px; padding: 0; border: 0; background: transparent; font-family: inherit; cursor: pointer;"><x-import component-from-global-scope="AgentOsUi.Icon" name="wrench" size="14"></x-import><span>도구 1개를 불렀습니다</span></button>
+<p class="text-body" style="margin: 0; overflow-wrap: anywhere;">5,000입니다.</p>
+</li>
+</ol>
+</sc-if>
+<form class="flex gap-2 shrink-0" style="align-items: flex-end; margin: 0; padding: var(--spacing-3); border-top: 1px solid var(--border);">
+<div style="flex: 1; min-width: 0;"><textarea rows="1" aria-label="질문" placeholder="무엇을 도와드릴까요?" class="block w-full min-w-0 rounded-m border text-body resize-y px-3 py-2 border-border-control bg-bg-raised text-text placeholder:text-text-muted hover:border-text-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring" style="box-sizing: border-box; margin: 0; font-family: inherit;"></textarea></div>
+<x-import component-from-global-scope="AgentOsUi.IconButton" icon="send" label="보내기" variant="primary"></x-import>
+</form>
+</div>
+</sc-if>
+<sc-if value="{{showNotice}}" hint-placeholder-val="{{true}}">
+<div class="flex flex-col gap-2">
+<div class="flex items-start gap-2 text-small text-text-muted">
+<span class="flex shrink-0" style="padding-top: 3px;"><x-import component-from-global-scope="AgentOsUi.Icon" name="info" size="14"></x-import></span>
+<p style="margin: 0;">질문과 출력은 기록되고 모델 API로 보내집니다. 개인정보를 넣지 마세요. <button type="button" aria-expanded="{{noticeExpanded}}" aria-controls="pp-notice-full" style="min-height: 24px; padding: 0; border: 0; background: transparent; font: inherit; color: var(--accent); text-decoration: underline; cursor: pointer;">고지 전문</button></p>
+</div>
+<sc-if value="{{noticeOpen}}" hint-placeholder-val="{{false}}">
+<div id="pp-notice-full" class="flex flex-col gap-2 text-small text-text-muted" style="padding-left: 22px;">
+<sc-for list="{{defaultParas}}" as="para" hint-placeholder-count="3"><p style="margin: 0;">{{para}}</p></sc-for>
+</div>
+</sc-if>
+</div>
+</sc-if>
+<sc-if value="{{site.report}}" hint-placeholder-val="{{true}}">
+<a href="#" class="text-small" style="display: inline-flex; align-items: center; gap: var(--spacing-1); align-self: flex-start; min-height: 24px; color: var(--accent);">이 에이전트의 평가 보고서<svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6" stroke-width="1.5" vector-effect="non-scaling-stroke"></path><path d="M10 14 21 3" stroke-width="1.5" vector-effect="non-scaling-stroke"></path><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" stroke-width="1.5" vector-effect="non-scaling-stroke"></path></svg></a>
+</sc-if>
+</div>
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"screen":{"editor":"enum","default":"base","options":["base","select-focus","single","cover-loading","cover","cover-busy","cover-failed","cover-long","switch-cover","switch-new","login","both-cover","both","notice-open"]},"narrow":{"editor":"boolean","default":false},"dark":{"editor":"boolean","default":false},"$preview":{"width":1280,"height":920}}'>
+class Component extends DCLogic {
+renderVals() {
+const screen = this.props.screen ?? 'base';
+const narrow = this.props.narrow === true;
+const dark = this.props.dark === true;
+const sites = {
+calc: { slug: 'calc-demo', title: '계산 도우미', intro: '더하기와 빼기를 물어보세요.', report: true },
+store: { slug: 'store', title: '매장 계산 도우미', intro: '가격 합계와 거스름돈을 물어보세요.', report: true },
+staff: { slug: 'staff', title: '직원 계산 도우미', intro: '', report: false }
+};
+const key = screen === 'login' ? 'staff' : (screen === 'both' || screen === 'both-cover') ? 'store' : 'calc';
+const site = sites[key];
+const cookie = '이 브라우저를 알아보기 위해 익명 식별자를 쿠키로 둡니다. 쿠키는 마지막으로 질문한 뒤 30일 동안 남습니다.';
+const defaultParas = [
+'이 페이지에서 보낸 질문과 받은 출력은 기록되고, 출력을 만들기 위해 모델 API로 보내집니다.',
+cookie,
+'이름, 연락처, 주민등록번호 같은 개인정보를 질문에 넣지 마세요.'
+];
+const longParas = [
+'이 계산 도우미는 시험 운영 중인 에이전트입니다. 출력이 틀릴 수 있으니 중요한 계산은 직접 다시 확인해 주세요.',
+'보낸 질문과 받은 출력은 기록되고, 출력을 만들기 위해 모델 API로 보내집니다.',
+'기록은 에이전트를 고치고 평가하는 데에만 씁니다. 평가 보고서에는 질문의 원문을 싣지 않습니다.',
+'질문에는 이름, 연락처, 주민등록번호, 카드 번호 같은 개인정보를 넣지 마세요.',
+'이 사이트에 궁금한 점이 있으면 사이트를 운영하는 곳에 물어 주세요.',
+cookie
+];
+const coverScreens = ['cover', 'cover-busy', 'cover-failed', 'cover-long', 'switch-cover', 'both-cover'];
+const cover = coverScreens.includes(screen);
+const loading = screen === 'cover-loading';
+const login = screen === 'login';
+const widget = !cover && !loading && !login;
+const busy = screen === 'cover-busy';
+const talk = widget && (screen === 'notice-open' || dark);
+return {
+yes: true,
+noop: () => {},
+mode: dark ? 'dark' : 'light',
+dark: dark,
+wide: !narrow,
+narrow: narrow,
+rootH: narrow ? '960px' : '920px',
+mainPad: narrow ? 'var(--spacing-4)' : 'var(--spacing-8) var(--spacing-6)',
+colW: narrow ? '100%' : '400px',
+loginDir: narrow ? 'column' : 'row',
+loginAlign: narrow ? 'flex-start' : 'center',
+multi: screen !== 'single',
+site: site,
+siteValue: site.slug,
+selOutline: screen === 'select-focus' ? '2px solid var(--focus-ring)' : 'revert',
+both: key === 'store',
+switched: screen === 'switch-cover' || screen === 'switch-new',
+loading: loading,
+cover: cover,
+login: login,
+widget: widget,
+firstScreen: widget && !talk,
+talk: talk,
+failed: screen === 'cover-failed',
+busy: busy,
+busyAttr: busy ? 'true' : undefined,
+labelOpacity: busy ? '0' : '1',
+coverParas: screen === 'cover-long' ? longParas : defaultParas,
+defaultParas: defaultParas,
+showNotice: widget,
+noticeOpen: screen === 'notice-open',
+noticeExpanded: screen === 'notice-open' ? 'true' : 'false'
+};
+}
+}
+</script>
+</body>
+</html>

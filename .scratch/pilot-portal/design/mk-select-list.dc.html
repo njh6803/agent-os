@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>셀렉트 펼친 목록</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/agent-os/styles.css">
+<link rel="stylesheet" href="ds/agent-os/fonts/fonts.css">
+<link rel="stylesheet" href="ds/agent-os/_ds_bundle.css">
+<script src="ds/agent-os/_ds_bundle.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0}
+</style>
+</helmet>
+<div data-theme="nokcheong" data-mode="light" class="flex flex-col" style="width: 320px; height: 240px; box-sizing: border-box; padding: var(--spacing-4); background: var(--bg); color: var(--text); font-family: var(--sans);">
+<ul aria-label="사이트 목록" class="flex flex-col shadow-float" style="margin: 0; padding: var(--spacing-1) 0; list-style: none; background: var(--bg-raised); border: 1px solid var(--border-control); border-radius: var(--radius-m);">
+<li class="text-body" style="padding: var(--spacing-2) var(--spacing-3); background: var(--bg-selected);">계산 도우미 (calc-demo)</li>
+<li class="text-body" style="padding: var(--spacing-2) var(--spacing-3);">매장 계산 도우미 (store)</li>
+<li class="text-body" style="padding: var(--spacing-2) var(--spacing-3);">직원 계산 도우미 (staff)</li>
+</ul>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":320,"height":240}}'>
+class Component extends DCLogic {
+renderVals() {
+return {};
+}
+}
+</script>
+</body>
+</html>

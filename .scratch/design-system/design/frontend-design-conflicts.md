@@ -14,3 +14,8 @@
 | 2026-10-23 | web-widget 모든 화면 | 늘 쓰는 기본 글꼴 대신 이 브리프에 맞춰 고른 서체를 쓴다 | 모든 테마가 Noto Sans KR과 Noto Sans Mono를 쓴다(ADR 0026 이력 2026-10-12 "테마는 넷이고 색만 바꾸며, 글꼴은 모든 테마가 Noto Sans KR과 Noto Sans Mono를 쓴다") |
 | 2026-10-23 | web-widget 대화, 승인 묻기, 실패 | 작은 데이터 라벨에 고정폭을 쓰는 것은 생성물의 흔한 표지이니 고른 뒤에만 쓴다 | 도구 이름과 인자는 글자 그대로 고정폭이다(`.claude/rules/web-design.md` 50행). 실패 알림의 실행 식별자도 고정폭이다(`.scratch/web-widget/design/screens-prompt.md` "2. UI mockups") |
 | 2026-10-23 | web-widget 모든 화면 | 그리면서 화면을 찍어 보고 고친다 | 찍어 보거나 렌더해 확인하는 일은 사람이 청할 때만 한다(`.claude/skills/ui-design/SKILL.md` 23행, Design 형식 지침) |
+| 2026-11-09 | pilot-portal 모든 화면 | 브리프에 맞춰 기본 팔레트를 이름 붙인 hex 4~6개로 새로 짓는다 | 색은 쓰임새 토큰만 쓰고 값은 디자인 토큰 CSS 한 자리에 있다(`.claude/rules/web-design.md` 9행과 23행) |
+| 2026-11-09 | pilot-portal 모든 화면 | 늘 쓰는 기본 글꼴 대신 이 브리프에 맞춰 고른 서체를 쓴다 | 모든 테마가 Noto Sans KR과 Noto Sans Mono를 쓴다(ADR 0026 이력 2026-10-12 "테마는 넷이고 색만 바꾸며, 글꼴은 모든 테마가 Noto Sans KR과 Noto Sans Mono를 쓴다") |
+| 2026-11-09 | pilot-portal 모든 화면 | 페이지를 그 주제의 가장 특징적인 것(히어로)으로 열고, 대담함을 한 곳에 쓴다 | 페이지는 위젯을 받쳐 주는 평평한 바탕이고 떠 있는 것은 위젯 자리 하나다(`.claude/rules/web-design.md` 43행, `.scratch/pilot-portal/design/screens-prompt.md` "2. 완성 화면"의 시각 방향) |
+| 2026-11-09 | pilot-portal 모든 화면 | 페이지를 열 때의 연출 움직임 한 번으로 시선을 끈다 | 움직임은 디자인 시스템의 도는 표시 하나이고 움직임 줄이기에서 멈춘다(`.claude/rules/web-design.md` 28행, `.scratch/pilot-portal/design/screens-prompt.md`의 시각 방향) |
+| 2026-11-09 | pilot-portal 모든 화면 | 그리면서 화면을 찍어 보고 고친다 | 찍어 보거나 렌더해 확인하는 일은 사람이 청할 때만 한다(`.claude/skills/ui-design/SKILL.md` 23행, Design 형식 지침) |
