@@ -8,9 +8,9 @@ openapi-typescript 와 tsc 를 지나 좁혀지는지를 소비 지점까지 잰
 
 읽기 사례(두 갈래 모두): 칸 없음, http 모양, http 에 command 를 섞음, 모르는 값, stdio 에 url 을
 섞음, stdio 에 command 없음. 표지는 받아들인 사례는 읽힌 모델의 종류이고, 거부 사례는
-`ValidationError` 의 글에 그 자리와 까닭이 있는 것이다. 스키마 사례의 표지는 `server` 의 갈래가
-`StdioServer` 와 `HttpServer` 를 가리키는 `$ref` 둘인 것이다(`anyOf [X, null]` 처럼 수만 둘인 모양은
-표지가 아니다).
+`ValidationError` 의 오류에 기대한 자리와 까닭의 쌍(`REJECTED`)이 있는 것이다. 스키마 사례의 표지는
+`server` 의 갈래가 `StdioServer` 와 `HttpServer` 를 가리키는 `$ref` 둘인 것이다(`anyOf [X, null]`
+처럼 수만 둘인 모양은 표지가 아니다).
 
 소비 지점: `_MANIFEST_CONFIG` 와 같은 설정(`extra="forbid"`, `frozen`, 직렬화 기본값 required)의
 모델을 FastAPI 응답 모델로 둔 앱에서 `app.openapi()` 를 뽑고(`tools/export_openapi.py` 의 모양), 그
@@ -121,6 +121,16 @@ ACCEPTED: dict[str, dict[str, str]] = {
     "field": {"http": "HttpServer"},
     "callable": {"omitted": "StdioServer", "http": "HttpServer"},
 }
+# 거부를 기대하는 입력이 거부될 자리(`loc` 를 점으로 이은 것)와 까닭(pydantic 의 `type`). 두 갈래가
+# 같고, `omitted` 는 `field` 갈래에서만 거부된다. 이 쌍이 오류에 있어야 측정이다. 어떤 검증 오류든
+# 세면 입력 오타 같은 엉뚱한 까닭의 거부도 측정이 된다(PR 직전 리뷰가 짚었다).
+REJECTED: dict[str, tuple[str, str]] = {
+    "omitted": ("server", "union_tag_not_found"),
+    "http_with_command": ("server.http.command", "extra_forbidden"),
+    "unknown": ("server", "union_tag_invalid"),
+    "stdio_with_url": ("server.stdio.url", "extra_forbidden"),
+    "stdio_without_command": ("server.stdio.command", "missing"),
+}
 GOOD_CONSUMER = """import type { components } from "./openapi";
 type Server = NonNullable<components["schemas"]["{manifest}"]["server"]>;
 export function where(server: Server): string {
@@ -149,8 +159,12 @@ def read_case(rounds: Rounds, branch: str, name: str) -> None:
             kinds = [item["type"] for item in errors]
             detail = {"locations": locations, "types": kinds, "message": str(error)[:300]}
             print(json.dumps({"case": f"read:{branch}:{name}", **detail}, ensure_ascii=False))
-            expected = name not in ACCEPTED[branch]
-            current.mark(measured=expected and bool(errors), result=f"rejected {locations} {kinds}")
+            expected = REJECTED.get(name) if name not in ACCEPTED[branch] else None
+            seen = set(zip(locations, kinds, strict=True))
+            current.mark(
+                measured=expected is not None and expected in seen,
+                result=f"rejected {locations} {kinds} expected={expected}",
+            )
             return
         kind = type(parsed.server).__name__
         print(

@@ -44,8 +44,9 @@ mcp 2.3.0 의 `streamable_http_client`와 `ClientSession`을 직접 쓴다(어�
 
 표지: 연결을 연 사례는 `initialize`가 끝났고 add 가 3 을 돌려줬다. 기한 사례는 서버의 slow 표지
 파일이 기한보다 먼저 생겼고 slow 가 돌아오지 않았다. `closed_port`는 예외의 잎 가운데 httpx2 의 전송
-오류 (`TransportError`)가 있다. `unauthorized`는 서버 기록에 헤더 없는 POST 가 있고 예외가 났다.
-표지가 없는 회차는 측정이 아니라고 따로 세고 종료 코드를 1 로 둔다(`tools/probe_kit.py`의 `Rounds`).
+오류 (`TransportError`)가 있다. `unauthorized`는 서버 기록에 헤더 없는 POST 가 있고 예외가 났으며
+응답 훅이 401 응답을 받았다(401 아닌 까닭의 예외는 측정이 아니다). 표지가 없는 회차는 측정이
+아니라고 따로 세고 종료 코드를 1 로 둔다(`tools/probe_kit.py`의 `Rounds`).
 
 서버 프로세스는 프로브가 쥔 `Popen` 핸들로만 끈다. 번호를 보고 끄지 않는다.
 
@@ -389,7 +390,11 @@ def _marked(case: str, record: dict[str, object]) -> bool:
             for leaf in _as_list(record.get("leaf_types"))
         )
     if case == "unauthorized":
-        return "exception" in record and "None" in _as_list(record.get("authorization_seen"))
+        return (
+            "exception" in record
+            and "None" in _as_list(record.get("authorization_seen"))
+            and any(" 401 " in status for status in _as_list(record.get("statuses")))
+        )
     if case in DEADLINE:
         return (
             record.get("initialized") is True
@@ -470,6 +475,10 @@ def main() -> int:
     parser.add_argument("--repeat", type=int, default=3)
     parser.add_argument("cases", nargs="*")
     options = parser.parse_args()
+    unknown = [case for case in options.cases if case not in CASES]
+    if unknown:
+        # 모르는 이름이 기본 갈래로 돌아 측정으로 세어진 적이 있다(PR 직전 리뷰 뒤의 양성 대조).
+        parser.error(f"모르는 사례 {unknown}. 고를 수 있는 것: {list(CASES)}")
     os.environ[TOKEN_VARIABLE] = TOKEN_VALUE
     cases = options.cases or list(CASES)
     header = {

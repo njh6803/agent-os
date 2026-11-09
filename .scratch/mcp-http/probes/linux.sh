@@ -11,4 +11,6 @@ uv venv /tmp/env -q --python 3.12 || exit 1
 uv pip install -q --python /tmp/env/bin/python mcp==2.3.0 anyio==4.15.1 uvicorn==0.53.0 \
     starlette==1.6.0 httpx2==2.13.0 || exit 1
 PYTHONUTF8=1 /tmp/env/bin/python /repo/.scratch/mcp-http/probes/http_close.py "$@"
-echo "exit $?"
+code=$?
+echo "exit $code"
+exit "$code"

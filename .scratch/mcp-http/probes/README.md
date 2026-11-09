@@ -4,7 +4,7 @@
 
 ## 돌리는 법
 
-저장소의 `.venv`에 mcp 2.3.0, httpx2 2.13.0, anyio 4.15.1, uvicorn 0.53.0, starlette 1.6.0이 있어(`uv.lock`) 그대로 돈다. 저장소 루트에서 돈다(Windows, Git Bash). `http_close.py`는 인자 없이 돌리면 사례 열하나를 세 회차씩 돌고, 사례 이름을 주면 그것만 돈다(`--repeat`로 회차 수를 바꾼다). `manifest_shape.py`는 openapi-typescript와 tsc를 `web/node_modules`에서 찾는다. 워크트리에는 `node_modules`가 없어 주 체크아웃의 것을 준다. `--branch field`나 `--branch callable`로 한 갈래만 돌 수 있다.
+저장소의 `.venv`에 mcp 2.3.0, httpx2 2.13.0, anyio 4.15.1, uvicorn 0.53.0, starlette 1.6.0이 있어(`uv.lock`) 그대로 돈다. 저장소 루트에서 돈다(Windows, Git Bash). `http_close.py`는 인자 없이 돌리면 사례 열둘을 세 회차씩 돌고, 사례 이름을 주면 그것만 돈다(`--repeat`로 회차 수를 바꾼다. 모르는 이름은 돌리지 않고 2로 끝낸다). `manifest_shape.py`는 openapi-typescript와 tsc를 `web/node_modules`에서 찾는다. 워크트리에는 `node_modules`가 없어 주 체크아웃의 것을 준다. `--branch field`나 `--branch callable`로 한 갈래만 돌 수 있다.
 
 ```sh
 uv run python .scratch/mcp-http/probes/http_close.py
@@ -12,7 +12,7 @@ uv run python .scratch/mcp-http/probes/http_close.py deadline_shield_finally dea
 uv run python .scratch/mcp-http/probes/manifest_shape.py --node-modules <주 체크아웃>/web/node_modules
 ```
 
-Linux는 Docker 컨테이너에서 돈다. `linux.sh`가 컨테이너 안에 환경 하나를 만들어(판은 저장소의 `uv.lock`과 같게 고정한다) `http_close.py`를 돌고 끝에 종료 코드를 찍는다. 저장소 루트를 `/repo`에 읽기 전용으로 붙인다(프로브가 `tools/probe_kit.py`를 저장소 루트에서 가져온다). 네트워크로 패키지를 받는다. 인자는 그대로 프로브에 넘긴다.
+Linux는 Docker 컨테이너에서 돈다. `linux.sh`가 컨테이너 안에 환경 하나를 만들어(판은 저장소의 `uv.lock`과 같게 고정한다) `http_close.py`를 돌고 끝에 `exit <코드>`를 찍은 뒤 그 코드로 끝난다. 그래서 `docker run`의 종료 코드가 프로브의 것이다(PR 직전 리뷰 전에는 마지막 `echo`의 0이 덮어 프로브가 1로 끝나도 `docker run`은 0이었다. 고친 뒤 모르는 사례 이름 `bogus_case`로 돌려 `docker run`이 2로 끝나는 것을 봤다. 손으로 봤다, 아래 명령의 끝에 `bogus_case`). 저장소 루트를 `/repo`에 읽기 전용으로 붙인다(프로브가 `tools/probe_kit.py`를 저장소 루트에서 가져온다). 네트워크로 패키지를 받는다. 인자는 그대로 프로브에 넘긴다.
 
 ```sh
 MSYS_NO_PATHCONV=1 docker run --rm --init -v "<저장소 루트>:/repo:ro" python:3.12.10-slim-bookworm sh /repo/.scratch/mcp-http/probes/linux.sh
@@ -30,6 +30,8 @@ MSYS_NO_PATHCONV=1 docker run --rm --init -v "<저장소 루트>:/repo:ro" pytho
 ### 닫기 — `http_close.py`
 
 같은 날 네 번 돌린 실행 가운데 마지막(응답 훅의 상태 기록, 토큰 로그, `httpcore2` 로거를 더한 판)의 것이다. 앞선 세 실행은 사례와 기록 칸을 더해 가며 돌았고 겹치는 사례의 판정은 마지막 실행과 같았다(출력은 세션 스크래치패드에 두고 커밋하지 않았다). Windows와 Linux 모두 33회차가 측정이고 측정 아님은 0, 종료 코드 0이었다. 시간은 초이고 세 회차의 범위다. Windows의 0.0은 시계(`time.monotonic`)의 해상도 아래라는 뜻으로 본다(어림. 같은 사례의 Linux 값이 수 밀리초다). `normal_own_delete`는 셀프 리뷰 뒤 더한 사례라 같은 날 `normal`과 함께 두 OS에서 따로 돌렸다(두 사례 각 3회차. 두 OS 모두 6회차 측정, 측정 아님 0, 종료 코드 0). 그 행의 괄호 안 `normal` 값은 그 실행의 것이다.
+
+PR 직전 리뷰(CodeRabbit CLI, 같은 날) 뒤 `unauthorized`의 표지에 응답 훅이 401 응답을 받았다는 조건을 더했다. 그 전 표지는 예외가 났고 서버 기록에 헤더 없는 POST가 있다는 것뿐이라 401 아닌 까닭의 예외도 측정으로 세어졌다(픽스처가 기대와 다른 `Authorization`을 모두 401로 막아 그런 회차가 실제로 난 적은 없다). 그 사례만 두 OS에서 다시 돌려 각 3회차 측정, 측정 아님 0, 종료 코드 0이었고 세 회차 모두 훅이 `POST 401 Unauthorized`를 받았다(프로브가 찍은 `statuses`). 위 33회차의 셈은 마지막 실행의 것이고, 그 실행의 `unauthorized` 3회차도 훅이 401을 받았으므로(아래 "접속 실패" 표의 응답 훅 칸) 새 표지로도 33회차가 측정이다. 같은 리뷰 뒤 모르는 사례 이름을 거부하게 했다. 그 전에는 모르는 이름이 기본 갈래로 돌아 측정으로 세어졌다(`bogus_case`를 주니 세 회차가 `initialized`와 add 3으로 측정이 되고 0으로 끝났다. 손으로 봤다, `uv run python .scratch/mcp-http/probes/http_close.py bogus_case`). 지금은 돌리지 않고 2로 끝난다(같은 명령).
 
 | 사례 | 기한 표지 | 종료 요청 | 새어 나온 예외 | Windows | Linux |
 |---|---|---|---|---|---|
@@ -61,6 +63,7 @@ MSYS_NO_PATHCONV=1 docker run --rm --init -v "<저장소 루트>:/repo:ro" pytho
 | `query_url_normal` | 없음(add가 3) | 2xx뿐 | 서버 기록의 요청 여섯(DELETE 포함)이 모두 `/mcp?token=…`로 닿음(양성 대조). 로그 `mcp` DEBUG 한 줄과 `httpx2` INFO 여섯 줄에 있음. 로그 89줄 | 닫기 0.0~0.015 / 0.003~0.004 |
 
 - `unauthorized`의 서버 기록은 헤더 없는 `POST` 하나뿐이었다. 라이브러리는 401에 다시 보내지 않았다.
+- 표지를 더한 뒤 다시 돌린 `unauthorized`(위 "닫기"의 문단)는 예외까지 Windows 0.004~0.005, Linux 0.003~0.004로 위 표의 범위와 같았다(프로브가 찍은 값).
 - Windows의 닫힌 포트 2초는 루프백에서 IPv6와 IPv4를 차례로 시도하며 생기는 거부 지연으로 본다(어림. 가르지 않았다. 설계 일지 2026-11-09-1229가 손으로 본 2.175초와 같은 자리다). Linux에서는 그 지연이 없었다.
 
 ### 토큰 값은 로그에 실리지 않는다 — `http_close.py`
@@ -69,7 +72,7 @@ MSYS_NO_PATHCONV=1 docker run --rm --init -v "<저장소 루트>:/repo:ro" pytho
 
 ### 매니페스트 — `manifest_shape.py`
 
-Windows에서 돌았다(`--node-modules`는 주 체크아웃). 첫 실행은 14회차 측정이었다. 셀프 리뷰 뒤 stdio에 `command` 없음 사례와 스키마 표지(oneOf의 갈래가 두 모델의 `$ref`인지. 그 전 표지는 갈래의 수만 봐 `anyOf [X, null]`에도 참이었다)를 더해 전체를 다시 돌렸고 16회차가 측정, 측정 아님 0, 종료 코드 0이었다. 아래 표는 다시 돌린 실행의 것이다.
+Windows에서 돌았다(`--node-modules`는 주 체크아웃). 첫 실행은 14회차 측정이었다. 셀프 리뷰 뒤 stdio에 `command` 없음 사례와 스키마 표지(oneOf의 갈래가 두 모델의 `$ref`인지. 그 전 표지는 갈래의 수만 봐 `anyOf [X, null]`에도 참이었다)를 더해 전체를 다시 돌렸고 16회차가 측정, 측정 아님 0, 종료 코드 0이었다. PR 직전 리뷰(CodeRabbit CLI, 같은 날) 뒤 거부 사례의 표지를 어떤 검증 오류든 있으면 측정에서 기대한 위치·종류의 쌍(`REJECTED` 표)이 오류에 있을 때만 측정으로 바꾸고 전체를 한 번 더 돌렸다. 바꾼 까닭은 입력 오타 같은 엉뚱한 까닭의 거부도 측정으로 세어졌기 때문이다. 16회차 측정, 측정 아님 0, 종료 코드 0이었고 아래 표의 값은 그대로였다(거부 회차의 결과 줄이 기대 쌍을 함께 찍는다). 아래 표는 그 실행들의 것이다.
 
 | 사례 | `field`(보통 판별자) | `callable`(호출 가능 판별자) |
 |---|---|---|
