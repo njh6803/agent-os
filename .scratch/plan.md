@@ -66,7 +66,7 @@ web/                       슬라이스 3부터. pnpm 워크스페이스. 파이
 | 9 | [portal-login](portal-login/plan.md) | 질문 페이지에 사내 로그인 모드를 더해, 배포 환경에서는 사내 사람만 질문하게 한다. | pilot-portal | todo |
 | 10 | [audit-export](audit-export/plan.md) | 운영자가 트레이스를 주체와 기간과 에이전트와 도구별로 조회하고 파일로 내보낸다. | io-guardrail | todo |
 | 10 | [io-guardrail](io-guardrail/plan.md) | 최종 사용자의 입력과 에이전트의 출력에서 주민등록번호 같은 패턴을 규칙으로 막거나 가린다. | value-masking | todo |
-| 10 | [mcp-trust](mcp-trust/plan.md) | MCP 서버마다 믿는 정도와 도구 정의 해시를 정해, 믿지 않는 서버의 결과를 바깥 글로 다룬다. | approval-rules, pilot-release | todo |
+| 10 | [mcp-trust](mcp-trust/plan.md) | MCP 서버마다 믿는 정도와 도구 정의 해시를 정해, 믿지 않는 서버의 결과를 바깥 글로 다룬다. | approval-rules, pilot-release, mcp-http | todo |
 | 10 | [principal-propagation](principal-propagation/plan.md) | 운영자가 켠 MCP 서버에만 실행의 주체를 넘겨, 사용자가 볼 수 있는 문서로만 답하게 한다. | mcp-trust | todo |
 | 10 | [run-feedback](run-feedback/plan.md) | 최종 사용자가 틀린 답을 신고하고, 운영자가 신고된 실행을 관리 화면에서 볼 수 있게 한다. | pilot-release | todo |
 | 10 | [stale-warning](stale-warning/plan.md) | 검색 결과의 근거 문서가 오래됐다고 표시돼 있으면 답에 경고를 붙여, 낡은 근거로 답했음을 알린다. | pilot-release, rag-engine:doc-freshness | todo |

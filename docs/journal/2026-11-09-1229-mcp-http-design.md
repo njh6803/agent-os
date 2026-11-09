@@ -174,3 +174,64 @@ ADR 0049의 status와 색인 행을 accepted로 바꾸고, 기능 계획 `.scrat
 남긴 것: 없음. 오탐 둘은 위 근거로 고치지 않았다.
 
 다시 돌린 명령: `uv run python tools/check_adr_pointers.py`는 출력 없이 끝났다(종료 0). 나머지 손으로 치는 다섯은 다음 커밋의 pre-commit으로 갈음하고 결과는 커밋 뒤에 적는다.
+
+반영 커밋 `8ebfcd65`의 pre-commit: ruff 둘은 `.py`가 없어 Skipped라 손으로 쳐 둘 다 초록(`All checks passed!`, `1955 files already formatted`), checks Passed(check-ticket 0.8s, lint-imports 1.9s, zizmor 2.0s, check-instructions 8.5s, check-type-escapes 10.0s, pyright 37.3s, pyright-linux 37.6s, run-hooks 55.2s, pytest 311.8s, web-verify 510.1s), 마크다운 표·줄 구분 문자·변이 표·인용 대조 Passed, 카나리아 명세와 헌법 판 검사는 대상 없음 Skipped(헌법 파일은 이 커밋에 없다). `tools/sibling_overlap.py`는 번호 겹침 없음(ADR 0049, 헌법 3.0.73)이었고, 워크트리 `mcp-shutdown-spec`이 ADR 0034를 함께 고치고 있어 나중에 병합하는 쪽의 글자 충돌 후보로 냈다.
+
+## PR
+
+커밋 둘을 `origin/docs/mcp-http-design`으로 푸시하고 `gh pr create`로 PR #499(`docs: mcp-http 설계를 ADR 0049로 확정한다`)를 열었다. 본문은 저장소 템플릿을 채웠고 "관련 티켓"은 면제(기능의 설계)로 적었다. `@coderabbitai review` 코멘트를 남기고 `gh pr checks`를 한 번 읽었다(`ticket` pass, 나머지 여섯 pending, CodeRabbit 체크는 skipping). `uv run python tools/wait_ci.py 499`를 백그라운드로 띄웠다. 앱의 PR 감시는 이 세션에 묶였다(`get_status`의 `bound: true`, 자동 고침은 꺼짐).
+
+인계 계기는 커밋 뒤(281,285 토큰)와 PR 연 뒤(298,575 토큰)에 두 번 더 왔다. 위의 `인계 못함 커밋 뒤` 줄이 handoff.md 1의 넷째(이 세션이 쓴 `인계 못함` 줄이 있다)에 들어 넘기지 않고 이었다. 봇 회차와 병합도 이 세션이 한다.
+
+## PR 봇 회차 1
+
+`wait_ci`는 헤드 `8ebfcd6`에서 "끝: 실패 claude-review"로 끝났다(CodeRabbit·e2e·e2e-widget·python·ticket·verify·visual·web은 SUCCESS). `tools/gh_run_summary.py`로 그 run을 보니 Claude 단계가 시작되기 전에 `Unexpected HTTP response: 504`로 끝났고(종료 127) "You've hit your weekly limit"는 없었다. 한도가 아니라 리뷰가 돌지 않은 것이라, 반영 커밋의 푸시로 다시 돈다.
+
+CodeRabbit은 인라인 넷과 nitpick 하나를 냈다. 첫 회차라 Minor·Nit도 판단했다(merge.md).
+- 유효 [Minor] ADR 0034 10행: 첫 문장("`mcp`(`>=2.3,<3`)의 `stdio_client`와 `ClientSession`을 직접 써서 …")도 http 전송이 더해지면 stdio에만 참인데 포인터가 없었다. 고쳤다.
+- 보류 [Major] ADR 0049 16~18행(Security): 매니페스트 저자가 `url`과 `[server.headers]`의 환경 변수 이름을 함께 적어 운영자의 환경 변수를 제 주소로 보내게 할 수 있으니 헤더 전송을 운영자 승인에 묶으라. 승인을 두는 것은 새 결정이라 사용자 승인 없이 이 반영에서 정하지 않는다(`CLAUDE.md` 작업 규약 5). 지금의 신뢰 경계는 매니페스트를 플러그인 디렉터리에 두는 운영자다. 플러그인 디렉터리는 배포의 몫이고(ADR 0042 전제. 켜짐은 운영자 파일이 든다, ADR 0017) stdio 모양의 `command`·`args`는 이미 임의의 프로세스를 띄울 수 있어 http 모양이 새 경계를 만들지 않는다. 서버마다 넘길 환경 변수 이름을 운영자가 허락하는 자리는 mcp-trust의 서버 파일이라(그 기능 계획의 "넘길 환경 변수 이름") 받는 쪽에 요구를 적었다(code-review 6의 4. 아래 고친 것).
+- 보류 [Critical] ADR 0049 17행(Security): 쿼리 문자열의 비밀이 `run_failed`와 관리 API 응답에 노출된다. 주소를 매니페스트에 그대로 적고 비밀로 보지 않는 것은 라운드 1에서 사용자가 확인한 결정이고 ADR 0009 2026-09-22 이력의 논증과 같다(PR 직전 리뷰도 같은 지적을 오탐으로 가렸다). 다만 실패 문구는 트레이스에 남는 자리라, 그 문구의 주소에서 쿼리 문자열을 뺄지를 명세가 정하도록 적었다(아래 고친 것). 결정의 주소 항목은 바뀌지 않는다.
+- 유효 [Minor] ADR 0049 18행(Security): `NO_PROXY`를 빠뜨린 요청은 접속 실패로만 보이는 것이 아니라 헤더 값(토큰)을 프록시에 넘긴다. 고쳤다.
+- 유효 [Nit] ADR 0049 22행 시험: 헤더 변수가 있을 때 값이 실제로 요청 헤더로 가는 성공 사례가 없고 "헤더 변수 없음"만 있었다. 고쳤다.
+
+고친 것(새로 쓴 사실 문장은 다음 회차의 밀 주장이다). 결정은 하나도 바꾸지 않아 승인을 다시 묻지 않았다.
+- ADR 0034 10행 첫 문장 뒤에 `(바뀜: ADR 0049)`를 달고, ADR 0049 "다른 ADR의 본문"의 "두 문장"을 "세 문장(결정의 "`mcp`(`>=2.3,<3`)의 `stdio_client`와 `ClientSession`을 직접 써서 …"와 …)"으로 고쳤다.
+- ADR 0049 시험 항목의 사례에 "헤더 변수가 있을 때 그 값이 요청 헤더로 서버에 닿음(픽스처가 받은 헤더를 본다. PR #499의 CodeRabbit이 짚었다)"을 더했다.
+- ADR 0049 배포 항목의 `NO_PROXY` 문장 뒤에 "빠뜨린 요청은 헤더 값(토큰)을 그 프록시에 넘기므로, 프록시가 서버에 닿지 못해도 토큰은 프록시에 남는다. 프록시를 믿을 수 있는지도 함께 본다"를 더했다.
+- ADR 0049 문구 항목 끝에 "관리 API의 매니페스트 응답은 파일 그대로다(운영자가 자기 파일시스템의 파일을 보는 자리라는 같은 이력의 논증). 다만 실패 문구는 `run_failed`로 트레이스에 남으므로, 그 문구의 주소를 원점과 경로만 싣고 쿼리 문자열을 뺄지는 명세가 정한다"를 더했다.
+- ADR 0049 Consequences에 "**매니페스트 저자와 운영자.**" 항목을 더했다: http 모양의 매니페스트가 `url`과 `[server.headers]`의 이름을 함께 들어 저자가 운영자의 환경 변수를 제 주소로 보내게 쓸 수 있음, 이 ADR은 그것을 막는 승인을 두지 않음, 지금의 신뢰 경계(플러그인 디렉터리는 배포의 몫, stdio의 `command`가 이미 임의 실행), 허락하는 자리는 mcp-trust의 서버 파일이고 그 기능이 `[server.headers]`의 이름을 그 목록으로 좁히고 목록 밖의 이름을 접속 전에 거부하는 요구를 받음.
+- `.scratch/mcp-trust/plan.md`의 Blocked by에 mcp-http를 더하고 본문 끝에 "ADR 0049(PR #499의 CodeRabbit 리뷰)가 넘긴 것"으로 위 요구를 적었다. `.scratch/plan.md`는 `tools/plan_table.py`로 다시 만들어 같은 커밋에 싣는다.
+
+남긴 것: 운영자 승인(Major)과 쿼리 문자열(Critical)의 결정 변경 부분. 이유는 위 판정 줄이고, 받는 쪽은 mcp-trust 계획과 mcp-http 명세다("다음"에도 적는다). PR 코멘트에 지적마다 판정과 근거를 답한다.
+
+다시 돌린 명령: `uv run python tools/check_adr_pointers.py`는 출력 없이 끝났다(종료 0). 나머지 손으로 치는 다섯은 반영 커밋의 pre-commit으로 갈음하고 결과는 커밋 뒤에 적는다.
+
+## 회고
+
+후보 열둘. 승인 셋(회차를 더한 둘, 새 항목 하나), 기각 여덟, 일지에만 남기는 것 하나. 만료 넷. 넘긴 것은 없다.
+
+승인(회차로 센다).
+- 0519의 2회차: 인계 열기(`tools/open_session.ps1 -Action send`)가 `stale=1`을 찍고 30초 안에 새 세션 화면을 찾지 못했다(위 인계 절). 이번은 이 세션의 앞 시도가 아니라 1분 5초 전 다른 세션의 열기(같은 스킬 grill-with-docs라 견주는 앞 24자가 같다)가 남긴 첫 줄로 보여, 항목의 처방(새 화면을 가르는 견줌을 고친다)이 그대로 맞는다. 조건: 열린 항목이 이미 처방한 사건. 승인 줄에 2회차와 이 일지를 더했다.
+- 0518의 3회차: `인계 못함` 줄을 적은 뒤에도 `hook_handoff`가 커밋 뒤와 PR 연 뒤에 계기를 넣어, 두 번 handoff.md의 넷째 조건으로 넘기지 않는다고 판정했다(위 PR 절). 조건: 열린 항목이 이미 처방한 사건. 승인 줄에 3회차와 이 일지를 더했다.
+- 새 항목 `claude-review-504-before-claude-step`(1회차): PR 봇 claude-review가 Claude 단계 전에 `Unexpected HTTP response: 504`(종료 127)로 빨개져 `tools/wait_ci.py`가 실패로 끝났고 리뷰는 돌지 않았다(위 봇 회차 1 절). 사건은 이것 하나, 층은 워크플로(`.github/workflows/claude-code-review.yml`)의 재시도 또는 `wait_ci.py`가 `gh_run_summary.py`의 가름으로 인프라 실패를 나누는 것, PR 하나로 되돌릴 수 있다. 더하는 것이라 회차를 세는 항목으로 두었고, 닫힌 327(한도의 빨강을 실패로 셈)과 같은 자리라 그 항목을 가리킨다. 찾기(`--search Unexpected.HTTP --search 504`)에 같은 일의 항목은 없었다.
+
+기각.
+- 라운드 1 첫 호출을 `hook_choice_facts`가 막았다("재지 않았다"고 적은 어림). 훅이 그 자리에서 막았다.
+- Bash의 재귀 grep을 `.env` 훅이 막았고 Grep 도구로 바꿨다. 훅이 제 몫을 했다.
+- Grep 도구가 `.venv` 아래를 glob 없이 찾지 못했다. `CLAUDE.md` 환경 함정에 이미 있는 동작이고 그대로 풀었다.
+- 조사 절의 없는 경로(`web/apps/admin/src`) 주장과 관리 픽스처 넷이 바뀐다는 Major를 셀프 리뷰 표준 축이 잡았다. 리뷰가 잡도록 둔 기준(닫힌 주장을 민다)을 리뷰가 잡은 것이라 셈에서 뺀다. 없는 경로를 훑은 것을 그 자리에서 알릴 검사는 이번에 찾지 않았다(`--search 없는.경로`에 항목 없음).
+- ADR 0034 첫 문장의 포인터 누락을 셀프 리뷰와 PR 직전 리뷰가 지나치고 PR 봇이 잡았다. 어느 문장이 거짓이 되는지는 판단이라 검사로 옮길 수 없고, 리뷰가 제 몫을 했다.
+- PR 직전 CLI가 낸 쿼리 문자열 Critical을 오탐으로 가른 뒤 PR 봇이 같은 지적을 Critical로 다시 냈다. ADR 본문이 이미 알려진 한계와 ADR 0009의 논증을 적고 있었고 결정은 사용자가 확인한 것이라, 반영은 문구의 모양을 명세에 넘기는 한 문장이다. 봇이 결정과 다른 의견을 낸 것이고 하네스의 틈이 아니다.
+- 큰 결과 알림이 네 번 왔다(grep 12KB, `gh api` 24KB, 일지 `sed` 29.9KB, 대기열 찾기 11.5KB). 훅이 알렸고 명령을 거르는 것은 세션의 몫이다.
+- 응답 하나가 안전 분류기에 막혔다(내용은 모른다). 환경이고 다시 만들지 않았다.
+
+일지에만 남기는 것.
+- PR 직전 리뷰 서브에이전트가 적은 출처(`http://rag-engine:8000/mcp`를 ADR 0046·0048로)를 그대로 옮겨 적었다가 근거를 열어 보니 그 주소는 이 일지 38행에만 있어 고쳤다(위 PR 직전 리뷰 절). 근거를 끝까지 열고 쓰라는 `code-review` 6의 1 지침이 그 자리에서 잡았고 리뷰 전에 바로잡혀, 347(셀프 리뷰 반영 문장이 어긋나 PR 직전 리뷰가 잡음)의 회차로 세지 않는다.
+
+만료(`tools/queue_open_rows.py`를 이 워크트리와 `--ref origin/main`으로 두 번 돌려 둘 다에 든 넷): 467(retro 5단계 끝 문장과 결정표 앞 조건의 어긋남), 468(hook_report를 먼저 돌리는 4단계를 어김), 469(78의 2회차, 회고 절 제목의 단계), 471(hook_bash_gate_pipe가 백그라운드 e2e를 띄운 뒤 알림). 상태 줄을 `만료 2026-11-09 (ADR 0036)`로 고쳤다. 회차 5 이상인 열린 항목은 420(11) 431(8) 565(8) 579(6) 214(5) 475(5)이지만 chore 배치는 기능의 마지막 티켓 뒤에만 열어(`next-session` 결정표) 이 PR의 다음은 명세다.
+
+## 다음
+
+- 다음 작업은 mcp-http의 명세(`/to-spec mcp-http`, 새 세션, Fable 5.1 / xhigh. 결정표의 "기능 계획에 `**설계:**` 줄이 있고 `spec.md`가 없다"). ADR 0049가 명세에 넘긴 것: 닫기 보호를 두는 자리(결정의 닫기 항목), 실패 문구의 주소에서 쿼리 문자열을 뺄지(Consequences 문구 항목, PR #499 Critical 보류). 구현 티켓에 넘긴 것: `secret_args` 값이 DEBUG 로그에 나타나지 않는 수락과 막는 자리(Consequences 로그 항목). mcp-trust 계획에 넘긴 것: `[server.headers]`의 이름을 서버 파일의 허락 목록으로 좁히기(PR #499 Major 보류. Blocked by에 mcp-http를 더했다).
+- 워크트리에서 병합하므로 주 체크아웃은 갱신되지 않는다. 새 세션이 워크트리에 들어가기 전에 주 체크아웃 세션의 `tidy-checkouts`가 당긴다(merge.md "워크트리에서 병합할 때"). 워크트리 `mcp-shutdown-spec`이 ADR 0034를 함께 고치고 있어 나중에 병합하는 쪽이 글자 충돌을 볼 수 있다(sibling_overlap).
+- 대기열: 0519·0518에 회차를 더했고 `claude-review-504-before-claude-step`을 새로 썼다. 열린 PR #499의 CodeRabbit 둘째 회차가 Critical·Major를 내면 이 세션이 고치고, 나머지는 PR 코멘트에 보류 이유를 적는다(merge.md 회차 세기).
