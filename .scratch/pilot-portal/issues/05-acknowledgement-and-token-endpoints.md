@@ -1,6 +1,6 @@
 # 05: 사이트마다 고지 확인 끝점이 익명 식별자 쿠키를 주고, 토큰 끝점이 그 쿠키로 120초짜리 사이트 토큰을 낸다
 
-**What to build:** 질문 페이지가 사이트마다 `/portal/sites/<이름>/` 아래 끝점 셋을 낸다. `GET …/acknowledgement`는 그 사이트의 고지 확인 여부를 `{"acknowledged":true}` 또는 `{"acknowledged":false}`로 답한다. `POST …/acknowledgement`는 `Origin`이 공개 출처와 같을 때만 204와 함께 익명 식별자 쿠키 `portal_anon`(소문자 UUID v4, `HttpOnly; SameSite=Strict; Path=/portal/sites/<이름>; Max-Age=2592000`, 공개 출처가 https일 때만 `Secure`)을 주고, `Origin`이 없거나 다르면 쿠키 없이 403이다. `POST …/token`은 꼴이 맞는 쿠키가 있으면 RS256 사이트 토큰 하나를 `text/plain`으로 내며 쿠키의 만료를 다시 적고, 없으면 401 "고지 확인이 필요합니다."다. 토큰의 `sub`가 `anon-<UUID>`라 운영자는 트레이스와 관리 화면에서 익명 주체를 바로 알아본다(스토리 1, 2, 12). 보증 모드가 `login`인 사이트의 세 끝점은 메서드와 쿠키와 상관없이 403 "이 사이트는 로그인이 필요합니다. 로그인은 아직 제공하지 않습니다."다(스토리 6).
+**What to build:** 질문 페이지가 사이트마다 `/portal/sites/<이름>/` 아래 끝점 셋을 낸다. `GET …/acknowledgement`는 그 사이트의 고지 확인 여부를 `{"acknowledged":true}` 또는 `{"acknowledged":false}`로 답한다. `POST …/acknowledgement`는 `Origin`이 공개 출처와 같을 때만 204와 함께 익명 식별자 쿠키 `portal_anon`(소문자 UUID v4, `HttpOnly; SameSite=Strict; Path=/portal/sites/<이름>; Max-Age=2592000`, 공개 출처가 https일 때만 `Secure`)을 주고, `Origin`이 없거나 다르면 쿠키 없이 403이다. `POST …/token`은 꼴이 맞는 쿠키가 있으면 RS256 사이트 토큰 하나를 `text/plain`으로 내며 쿠키의 만료를 다시 적고, 없으면 401 "고지 확인이 필요합니다."다. 토큰의 `sub`가 `anon-<쿠키 UUID의 해시>`라 운영자는 트레이스와 관리 화면에서 익명 주체를 바로 알아본다(스토리 1, 2, 12). 보증 모드가 `login`인 사이트의 세 끝점은 메서드와 쿠키와 상관없이 403 "이 사이트는 로그인이 필요합니다. 로그인은 아직 제공하지 않습니다."다(스토리 6).
 
 05는 04 뒤이고 06을 막는다. 04가 만든 순수 HTTP 요청 처리기에 경로를 더한다.
 
@@ -26,7 +26,7 @@
 
 ### 토큰
 
-- [ ] **헤더는 `{"alg":"RS256","typ":"JWT","kid":<설정의 kid>}`, 본문은 `iss`(그 사이트의 발급자), `sub`(`anon-<쿠키의 UUID>`), `aud`(사이트 파일의 그 사이트 `audience`), `iat`, `exp`(`iat`+120)의 다섯이다.** `nbf`는 넣지 않는다. 서명은 `node:crypto`의 RSA-SHA256이고 키 하나로 모든 사이트에 서명한다. 선례는 위젯 e2e의 `token.ts`다. 05는 02에 막히지 않으므로, 02가 먼저 병합됐으면 `@agent-os/e2e-stack`에서, 아니면 `web/apps/widget/e2e/`에서 읽는다. 서버는 그것을 import하지 않는다(`@agent-os/e2e-stack`은 앱의 devDependency다)
+- [ ] **헤더는 `{"alg":"RS256","typ":"JWT","kid":<설정의 kid>}`, 본문은 `iss`(그 사이트의 발급자), `sub`(`anon-<해시 32자>`. 쿠키 값 글자 36자의 SHA-256을 소문자 16진으로 쓴 앞 32자이고 소금은 없다. 시험이 같은 해시를 스스로 계산해 대조하고 토큰 본문에 쿠키 값 원문이 없는 것도 본다), `aud`(사이트 파일의 그 사이트 `audience`), `iat`, `exp`(`iat`+120)의 다섯이다.** `nbf`는 넣지 않는다. 서명은 `node:crypto`의 RSA-SHA256이고 키 하나로 모든 사이트에 서명한다. 선례는 위젯 e2e의 `token.ts`다. 05는 02에 막히지 않으므로, 02가 먼저 병합됐으면 `@agent-os/e2e-stack`에서, 아니면 `web/apps/widget/e2e/`에서 읽는다. 서버는 그것을 import하지 않는다(`@agent-os/e2e-stack`은 앱의 devDependency다)
 - [ ] **응답은 `text/plain; charset=utf-8`의 토큰 글 하나다**(명세 "토큰"의 거부한 안: JSON 봉투)
 - [ ] **어떤 출력에도 쿠키 값과 토큰을 싣지 않는다**(ADR 0050 결정 "기록")
 

@@ -234,3 +234,98 @@ open-session을 부른다 2026-11-09T19:46:30Z
 - 밀 주장 1의 단서. 상수가 30인 한 호출부의 리터럴 30과 상수를 가를 시험이 없다. 막을 길이 없어 두었다.
 - 밀 주장 4·8의 단서. 4는 06의 그 문장이 "02가 그 주석의 위젯 준비 경로를 고친다"고만 적어 틀린 말이 아니다. 8의 명세 문장은 이미 "옮길 파일을 `wc -l`로 센 합. `stack.ts`의 일부는 위젯에 남는다"고 적고, 거부한 안의 근거(그때의 어림)라 고치지 않았다.
 - "14파일 36줄". 명세 160줄의 주석이 "검토가 grep으로 셌다"고 출처를 밝히고, 디자인 `README.md` 16줄도 패턴 없이 분류로 센 수다. 03의 수용 기준은 줄 수가 아니라 잔존 0이라 두었다.
+
+다시 돌린 명령: `uv run python tools/check_md_tables.py`와 `tools/check_line_separators.py`를 고친 문서 넷에 쳐 둘 다 출력 없이 끝났다.
+
+### 커밋과 PR
+
+커밋 전에 `git branch --show-current`가 `docs/pilot-portal-tickets`였고 `uv run python tools/sibling_overlap.py`는 "이 브랜치의 새 번호 없음", "번호 겹침 없음", "함께 고친 파일 없음"을 냈다. `20db308c` "docs: PR 직전 리뷰를 반영해 데이터 블록에 agent를 더하고 주체 이름의 출처를 고친다". pre-commit 출력에서 check-ticket, lint-imports, zizmor, check-instructions, check-type-escapes, pyright, pyright-linux, run-hooks, pytest(467.3초), web-verify(568.0초)와 마크다운 표·줄 구분·변이 표·커밋 메시지 검사가 Passed였고, ruff 둘은 `.py`가 없어, 카나리아 명세와 헌법 판은 해당 파일이 없어 Skipped였다. 인용 대조 경고 하나는 이 일지 "셋째 세션"의 앞 제목 인용이고, 그 글은 `set_session_title`의 결과("was …")에서 옮긴 것이라 저장소에 없다. ruff 둘은 그 뒤 손으로 쳐 `All checks passed!`, `1993 files already formatted`를 봤다.
+
+커밋 명령 직후 `hook_handoff`의 `커밋 뒤` 계기가 왔지만, 이 세션의 지시문의 "이어받을 상태"가 `인계: 커밋 뒤`로 시작해(`handoff.md` 1의 셋째) 넘기지 않았다.
+
+`git push -u origin docs/pilot-portal-tickets`는 새 브랜치로 올라갔고, `gh pr create`로 [#506](https://github.com/njh6803/agent-os/pull/506)(`docs/pilot-portal-tickets` → `main`, 제목은 첫 커밋 제목)을 열었다. 본문은 템플릿대로 채웠고 PR 직전 리뷰의 판정과 체크리스트의 실행 결과, ADR 0050에 이력을 달지 않은 까닭을 적었다. `@coderabbitai review` 코멘트는 남기지 않았다(`handoff.md`의 `PR 연 뒤` 줄. 새 세션이 남긴다).
+
+## 인계 (PR 연 뒤)
+
+PR을 연 명령 직후 세션 컨텍스트가 인계 문턱을 넘어(252,907 토큰) `hook_handoff`의 `PR 연 뒤` 계기가 왔다. `handoff.md`의 인계하지 않는 때 다섯에 들지 않는다. 명령은 성공했고(PR #506), 요청 범위는 병합까지이며, 이 세션의 "이어받을 상태"는 `인계: 커밋 뒤`로 경계가 다르고, `인계 못함` 줄이 없으며, `get_session`의 `self`에 `parentSessionId`가 없다. 함께 온 `hook_pr_next_session` 계기보다 인계가 앞선다. 남은 것은 봇 회차(첫 `@coderabbitai review` 코멘트와 `tools/wait_ci.py` 대기부터), 반영, 병합, 회고, 일지 "다음", 다음 지시문이다. 이 세션의 지금 제목은 `docs/pilot-portal-tickets`다.
+
+07의 셋째 틈(07까지 병합된 동안 로그인 사이트를 `?site=`로 열면 끝점 셋이 403이고 그때의 모습은 명세가 정하지 않았다)은 분할 질문 때 알린 틈 둘의 하위 경우라, 이 세션이 넘기며 사람에게 보이는 글에서 따로 알렸다.
+
+지시문:
+
+```
+다음 작업: 기능 pilot-portal. PR #506(티켓 아홉과 명세 검토 주석)의 봇 회차를 반영하고 병합한다
+다음 단계: PR 반영·병합
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /to-tickets .scratch/pilot-portal/spec.md
+브랜치: docs/pilot-portal-tickets
+모델: Sonnet 5.5 / high. 2의 잇는 지시문
+읽을 것: docs/journal/2026-11-10-0330-pilot-portal-tickets.md의 "셋째 세션(커밋 뒤 인계를 받은 쪽)"부터 끝까지(PR 직전 리뷰의 보고와 반영, 커밋과 PR, 인계). 이 워크트리 사본의 .claude/skills/next-session/merge.md를 Read로 연다("병합 전" 2~4, "워크트리에서 병합할 때")
+이어받을 상태: 인계: PR 연 뒤. PR #506을 열었고 커밋 20db308c까지 푸시했다. merge.md 2(봇 회차)부터 한다. 첫 @coderabbitai review 코멘트도 새 세션이 남긴다. 일지의 "커밋과 PR"·"인계 (PR 연 뒤)" 절은 커밋하지 않은 채 워크트리에 있으니 봇 회차의 커밋에 싣는다. 이 브랜치는 티켓 단계를 닫으므로 회고(retro)와 일지 "다음"도 병합 전에 푸시한다(merge.md 3). PR 직전 리뷰가 데이터 블록에 agent를 더하며 ADR 0050에 이력을 달지 않은 까닭은 PR 본문 "리뷰어 참고"에 적었다(docs/journal/2026-11-10-0330-pilot-portal-tickets.md)
+확인할 선행 조건: 없음
+이번 요청 범위: 티켓까지
+```
+
+제목을 `docs/pilot-portal-tickets (인계함)`으로 바꿨다. 이 세션이 띄운 백그라운드 작업(origin/main 합치기, 커밋, PR 직전 리뷰 서브에이전트)은 모두 끝나 멈출 것이 없었다. `git worktree unlock C:/project/agent/.claude/worktrees/pilot-portal-tickets`는 `is not locked`로 끝나 넘어갔다.
+
+open-session을 부른다 2026-11-09T20:13:15Z
+
+## 넷째 세션(PR 연 뒤 인계를 받은 쪽)
+
+새 세션이 위 지시문을 첫 메시지로 받았다. 첫 줄은 "`.claude/skills/to-tickets/SKILL.md` 를 읽어 그대로 따른다…"이고 "시작 프롬프트"도 `/to-tickets .scratch/pilot-portal/spec.md`인데 "다음 단계"는 PR 반영·병합이다. 티켓은 이미 PR #506에 있어 `to-tickets`를 다시 돌리지 않고 "다음 작업"과 "이어받을 상태"를 따랐다(대기열 0577의 4회차. 아래 "회고"). 훅대로 제목을 `docs/pilot-portal-tickets`로 바꾸고(앞 제목은 "Pilot-portal PR #506 병합"이었다), `git worktree list`에서 그 브랜치가 `.claude/worktrees/pilot-portal-tickets`에 체크아웃된 것을 보고 `EnterWorktree(path)`로 들어갔다. HEAD는 `20db308c`이고 미커밋 변경은 이 일지 하나였다.
+
+사용자가 한 일은 봇 회차의 질문 하나에 답한 것이다.
+
+> 사용자(선택 화면의 답): 해시 이름으로 고친다 (Recommended)
+
+고른 라벨의 설명은 "익명 사용자 이름을 `anon-<쿠키 UUID의 해시>`로 바꿉니다. `anon-`이 든 문서 다섯(ADR 0050, 명세, 티켓 05·07·09)을 grep으로 확인했고, 그중 ADR 0050에는 이력을 달고 명세·05·07의 기대값을 고쳐 푸시합니다. 문서만 바뀌는 지금이 구현 뒤보다 싸다고 봅니다(어림). 봇 회차를 한 번 더 기다립니다."였다.
+
+### 봇 회차
+
+`@coderabbitai review` 코멘트를 남기고(issuecomment-6750342171) `uv run python tools/wait_ci.py 506`을 백그라운드로 띄웠다. 대기는 `끝: 모두 통과. CodeRabbit: Finished`로 끝났다(헤드 `20db308`). `gh pr checks`는 CodeRabbit이 12분 23초, claude-review가 48초이고 나머지 일곱(`e2e`, `e2e-widget`, `python`, `ticket`, `verify`, `visual`, `web`)이 모두 통과였다. claude-review의 코멘트는 "지적 없음"이다. CodeRabbit의 첫 회차는 인라인 하나(Major, 보안·개인정보, `.scratch/pilot-portal/issues/07-anonymous-question-after-notice.md` 29줄)다.
+
+- 지적: 트레이스의 주체에 쿠키 값 원문이 남는다. 트레이스를 읽을 수 있는 사람이 그 값을 쿠키로 심으면 그 익명 주체의 토큰을 받고, 실행이 승인 대기 중이면 대신 승인할 수 있다. 쿠키에서 되돌릴 수 없는 식별자를 `sub`에 쓰라고 했다.
+- 판정: 유효. 근거는 세 가지다. 명세 115~118줄과 ADR 0050 46줄이 쿠키 값을 "비밀이 아니라 이름 재료"로 두었고 `sub`가 그 값을 그대로 담는다. `src/agent_os/channel/http/end_user.py` 223~237줄의 결정 끝점과 `first_step`이 `read_own_run(trace, run_id, user.principal, …)`로 주체를 견준다. ADR 0050 46줄은 새는 대가를 "그 익명 주체로 질문할 수 있을 뿐"이라고만 적고 승인을 헤아리지 않았다. PR 직전 리뷰가 오탐으로 둔 것(05 23줄의 쿠키 진위 확인과 `__Secure-` 접두)과는 다른 지적이다.
+- 이 지적은 사용자가 승인한 ADR 0050의 결정을 바꾸므로 제 판정으로 고치지 않고 사용자에게 물었다(`CLAUDE.md` 작업 규약 5). 첫 선택 화면은 `AskUserQuestion` 훅이 막았다. 내 설명이 "티켓 02·05·07"이라고 적었는데 `anon-`을 grep하니 02에는 없고 ADR 0050, 명세, 05, 07, 09였다. 설명을 고쳐 다시 냈고 위 답을 받았다.
+
+고친 것:
+
+- ADR 0050: 이력 "2026-11-10 익명 주체의 이름은 쿠키 값의 해시다"를 더했다. `sub`는 `anon-` 뒤에 쿠키 값 36자 글자의 SHA-256을 소문자 16진으로 쓴 앞 32자를 붙인 것이다. 소금은 두지 않는다(같은 쿠키가 같은 주체로 이어져야 한다). 본문 포인터를 넷 달았다(첫 단락의 토큰 문장, 결정 "토큰"의 두 문장 묶음, Consequences "위젯은 바뀌지 않는다"의 "이름 재료" 문장, 같은 항목의 "꼴 검사" 문장). 형제 도메인이 UUID를 심는 한계는 그대로라고 이력에 적었다.
+- 명세: 요약 (6), 사용자 이야기 11, 토큰 절(해시의 정의와 주석), e2e 사례의 트레이스 주체(원문이 없다는 단언)를 고쳤다.
+- 티켓 05(`sub` 수용 기준과 머리)와 티켓 07(트레이스 주체 사례)의 기대값을 고쳤다. 티켓 09는 `anon-` 접두만 보므로 그대로 참이라 두었다.
+- `CONTEXT.md`의 "익명 식별자" 항목에서 "익명 주체의 이름 재료다"를 "그 값의 해시가 익명 주체의 이름이 되고, 값 자체는 기록에 싣지 않는다"로 고쳤다.
+
+다시 돌린 명령: `uv run python tools/check_adr_pointers.py`(종료 0), `tools/check_md_tables.py`와 `tools/check_line_separators.py`를 고친 문서 셋에 쳤고 둘 다 종료 0이었다. `grep "이름 재료"`가 남긴 곳은 ADR 0050 46줄(포인터가 있다)과 이 이력의 서술뿐이다.
+
+푸시하기 전에 `gh pr edit`로 PR 제목과 본문을 넓힌 범위로 고친다(`merge.md` 2의 1. 이 푸시가 ADR 0050 이력과 `CONTEXT.md`를 더해 범위를 넓힌다). 푸시한 뒤 둘째 회차의 claude-review와 CodeRabbit은 Critical·Major만 고친다.
+
+## 회고
+
+후보 넷을 냈다. 판정은 승인 둘, 기각 둘, 넘김 0이다. 만료할 항목은 `uv run python tools/queue_open_rows.py`의 "만료할 항목"이 `(없음)`이라 닫지 않았다(두 출력의 교집합이라 `--ref origin/main`으로 다시 돌릴 것도 없다).
+
+1. **0577의 4회차(승인).** 이 세션의 지시문 첫 줄이 `/to-tickets …`인데 "다음 단계"는 PR 반영·병합이었다. 사건은 이 세션이 첫 줄과 "다음 작업" 사이를 스스로 풀어야 했던 것이다. 층: 4단계의 "열린 항목이 이미 처방한 사건"이라 회차를 더한다. 처방은 0577이 이미 들고 있다. 같은 일지의 앞 인계(2026-11-09-2138-mcp-http-tickets.md의 넷째 지시문도 시작 프롬프트가 `/to-tickets .scratch/mcp-http/spec.md`, 다음 단계가 PR 반영·병합이다)가 같은 모양이나 그 회고가 세었는지는 보지 않았고 이 회차에는 세지 않았다. 항목에 4회차를 적고 일지 이름을 더했다.
+2. **`credential-value-in-principal-name`(승인, 새 항목, 1회차).** 사건은 위 "봇 회차"다. 설계 인터뷰와 명세 검토(`spec-reviewer`)와 PR 직전 리뷰 둘이 지나갔는데 쿠키 원문이 `sub`로 흘러드는 길을 CodeRabbit의 첫 회차가 처음 짚었다. 층: 값의 구실이 글자가 아니라 설계에 있어 자동 검사로 옮길 수 없고, 판단 기준이라 `spec-reviewer`의 체크리스트 질문(그리고 문턱을 지나면 `CODING_STANDARDS.md`)이다. 되돌림은 PR 하나로 된다. 새 지침 문장이라 문턱은 다섯 번째 반복이고 그 전에는 회차를 세므로 항목으로 둔다. 항목을 쓰기 전에 `--search 쿠키 --search 열쇠 --search credential --search bearer`로 찾았고 닫힌 항목 둘(0050, 0142)만 맞았으며 둘 다 다른 일이다. 이 PR의 CodeRabbit이 리뷰가 잡도록 둔 기준을 어긴 사건은 아니다(그 기준이 아직 없다).
+3. **기각. `AskUserQuestion` 훅이 첫 선택 화면을 막았다.** 설명에 적은 "티켓 02·05·07"이 grep과 어긋났다. 훅이 대 보게 했고 고쳐 다시 냈다. 이미 있는 훅이 그 자리에서 막았다.
+4. **기각. 워크트리 가드가 명령 둘을 거부했다.** `sed`에 변수를 넘긴 명령과, 정규식 괄호가 든 `queue_open_rows.py --search` 명령이다. `CLAUDE.md` 환경 함정(변수 대신 절대 경로)과 retro 5단계(낱말에는 글자·숫자·`/_-.`만)가 이미 적었고 가드가 막았다.
+
+## 다음
+
+- 병합 뒤 다음 작업은 pilot-portal의 구현이다. 막는 선은 01 → 02 → 03, 01 → 04 → 05 → 06 → 07 → {08, 09}라 지금 프론티어는 01 하나다. 02와 04는 01 뒤에 나란히 돈다. 시작은 `/implement .scratch/pilot-portal/issues/01-site-file-package-and-ui-subpaths.md`(새 세션, `Sonnet 5.5 / high`)다.
+- 구현 티켓에 넘긴 것: 05는 `sub`가 쿠키 값의 해시 32자인 것(시험이 같은 해시를 스스로 계산해 대조하고 토큰 본문에 쿠키 값 원문이 없는 것까지)을, 07은 트레이스 어디에도 쿠키 값 원문이 없는 것을 본다. ADR 0050 이력 "2026-11-10 익명 주체의 이름은 쿠키 값의 해시다"가 원천이다.
+- 뒤로 넘긴 일은 없다. 이 PR의 CodeRabbit 첫 회차 지적은 하나였고 위에서 고쳤다.
+- 대기열: `0577`에 4회차를 더했고 `credential-value-in-principal-name`을 새로 썼다. 회차 5 이상 항목(420·431·565·579·214·475)은 이 기능의 마지막 티켓 뒤에 chore 배치로 고른다(`next-session` 결정표).
+- 워크트리에서 병합하므로 주 체크아웃은 갱신되지 않는다. 새 세션이 워크트리에 들어가기 전에 주 체크아웃 세션의 `tidy-checkouts`가 당긴다(merge.md "워크트리에서 병합할 때" 4). 병합 뒤에 지시문의 "확인할 선행 조건"에 `주 체크아웃 미갱신: 루트는 <브랜치>` 한 줄을 채운다.
+- 병합 뒤 낼 지시문(결정표의 구현 줄. 병합 전이라 "확인할 선행 조건"은 병합 뒤 채운다):
+
+```
+다음 작업: 기능 pilot-portal. 위젯을 담는 질문 페이지가 로그인 없이 온 사람에게 사이트 토큰을 내, 포털이 없는 공개 데모와 배포 환경을 돕는다
+다음 단계: 구현
+어디서: 새 세션. 주 체크아웃 미갱신이면 Skill 도구로 tidy-checkouts를 먼저 돌고 그 뒤 주 체크아웃에서 브랜치를 따지 않고 EnterWorktree(name은 브랜치의 마지막 토막)로 새 워크트리에 들어가 거기서 브랜치를 딴다
+시작 프롬프트: /implement .scratch/pilot-portal/issues/01-site-file-package-and-ui-subpaths.md
+브랜치: feature/01-site-file-package-and-ui-subpaths
+모델: Sonnet 5.5 / high
+읽을 것: .scratch/pilot-portal/issues/01-site-file-package-and-ui-subpaths.md와 명세 .scratch/pilot-portal/spec.md, ADR 0050(이력 셋까지), docs/journal/2026-11-10-0330-pilot-portal-tickets.md의 "다음"
+이어받을 상태: 없음
+확인할 선행 조건: <병합 뒤 채운다>
+이번 요청 범위: PR과 병합까지
+```
