@@ -217,7 +217,7 @@ _Avoid_: 툴 서버
 _Avoid_: 프로토콜(MCP 자체와 섞인다), 연결 방식, 모드, 스트림의 전송(일반 낱말. 최종 사용자 항목·구독의 _Avoid_가 그 뜻으로 쓴다)
 
 **원격 MCP 서버(Remote MCP Server)**:
-프로세스를 띄우지 않고 주소로 붙는 MCP 서버. 전송은 streamable HTTP 하나이고 헤더의 값은 환경 변수에서 온다.
+프로세스를 띄우지 않고 주소로 붙는 MCP 서버. 전송은 streamable HTTP 하나이고 헤더의 값은 환경 변수에서 온다. 매니페스트에서는 `[server]`의 `transport = "http"`가 이 서버이고 그 값이 뜻하는 전송이 streamable HTTP다.
 _Avoid_: HTTP 서버(일반), SSE 서버(받지 않는다), 클라우드 MCP
 
 **문서 검색 서버(Document Search Server)**:
