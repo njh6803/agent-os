@@ -410,3 +410,140 @@ base `a9d7d94`, 파일 16개, 커밋 0개, 미추적 31개. 표준 축 5건(Mino
 
 - 고친 것 하나. 이 일지 "반영" 절의 표준 4가 ADR 0051의 새 문장을 글자 그대로 옮기지 않았다(ADR에는 근거를 단 괄호가 사이에 있다). 두 문장으로 나눠 그대로 옮겼다.
 - 그대로 둔 것. 앞 세션의 선택 화면과 합의 요약 첫 판에서 온 인용 넷(29·240·351줄과 PRD의 옛 문장 249줄)은 원문이 저장소 밖이거나 이 PR이 고친 글이다. 293줄은 `open_session`이 낸 오류 글이다. 315·317·335줄은 두 축의 보고가 고치기 전의 ADR 0051을 인용한 기록이다. ADR 0051 8줄은 사용자의 답 두 줄을 한 줄로 이은 것이고(이 일지 148~149줄), 32줄은 인용이 아니라 둘 시험의 이름이다.
+
+### 둘째 커밋 시도의 pre-commit
+
+같은 메시지로 다시 친 커밋이 지났다(`c3e35d3c`, 파일 50개). 손으로 치는 다섯 가운데 넷(pytest, pyright, lint-imports, web verify)은 이 결과로 갈음하고, ruff 둘은 위에서 손으로 쳤다.
+
+- 러너(`parallel-checks`)는 535.31초에 `Passed`였다. check-ticket 0.8초, zizmor 1.0초, lint-imports 1.3초, check-instructions 7.5초, check-type-escapes 9.5초, pyright 45.5초, pyright-linux 49.2초, run-hooks 73.2초, pytest 461.3초, web-verify 535.1초다. 첫 시도에서 실패한 시험은 이번에 지났다.
+- `Skipped`는 넷이다. ruff check와 ruff format(`.py`가 없다. 손으로 쳤다), canary specs와 constitution version(해당 파일이 없다).
+- markdown tables, line separators, mutation tables, commit message는 `Passed`였다. 인용 대조 경고는 일지 10건과 ADR 0051의 2건이고, 일지에서 새로 뜬 둘은 위 절이 따옴표로 옮긴 pytest의 출력이다.
+
+## PR 직전 리뷰
+
+`coderabbit-review` 서브에이전트(sonnet)를 띄웠다. 브리프에는 커밋 `c3e35d3c`와 그 부모 `686ae72`, 바뀐 파일 50개, 변경의 성격(설계 문서와 프로브)을 적었다. CLI가 도는 PR이라 셀프 리뷰 "반영" 절의 새 문장을 밀 주장으로 넘길 길은 없었다(`code-review` 6단계 1).
+
+### 보고
+
+- 이슈 없음. CLI가 리뷰를 끝까지 돌려 `review_completed`를 냈고 지적은 0건, 종료 코드는 0이었다.
+- `coderabbit --version`은 0.7.5이고, `coderabbit auth status`는 `Plan: Free`, `Seat: not assigned`였다. 좌석 거절 없이 돌았다.
+- 돌린 명령은 `coderabbit review --agent --committed --base-commit 686ae728a6d45ff355480d1495af7c541fd3697f`다. 브리프의 `--base origin/main`과 다르게 돌린 까닭을 두 가지로 보고했다. 커밋하지 않은 변경과 미추적 파일이 없어 기본 명령을 건너뛰었고, 로컬 `origin/main`이 이미 `2a61330e`(#516)로 앞서 있어 `--base origin/main`이면 이 PR의 몫이 아닌 변경이 섞였다(`git diff --stat origin/main HEAD`가 99개, `HEAD~1 HEAD`가 50개였다고 보고했다).
+- 리뷰 대상 목록(`reviewedFiles`)이 이 PR의 50개와 같았고, 프로브의 `safe-url.ts`, `MarkdownReact.tsx`, `MarkdownJsx.tsx`도 들었다고 보고했다. `--dir`로 좁히지 않아 보지 못한 몫은 없다.
+- CLI의 지적이 아니라 서브에이전트가 읽고 덧붙인 것 둘. 프로브 `safe-url.ts`의 `httpUrl`은 스킴만 보아 사용자 정보가 든 주소도 지난다(ADR 0053 "링크"가 이미 적었고 부품을 짓는 티켓이 규칙을 넣는다). `origin/main`이 #516으로 움직였고 충돌이 날지는 보지 않았다.
+
+### 반영
+
+고칠 지적이 없어 고친 것도 남긴 것도 없다. 서브에이전트가 덧붙인 첫째는 이미 ADR 0053과 answer-markdown 계획의 수락에 있다(셀프 리뷰 명세 6). 둘째는 아래에서 `origin/main`을 다시 합친다.
+
+## origin/main 다시 합치기
+
+- `git merge --no-edit origin/main`으로 `2a61330e`(#516, pilot-portal 06)를 합쳤다. 충돌은 없었고 들어온 파일 49개 가운데 이 브랜치가 고친 파일은 없다(`git diff --name-only HEAD...origin/main`의 목록을 대 봤다).
+- 들어온 변경을 이 브랜치가 이름으로 든 파일과 대 봤다(`git diff 686ae728 2a61330e`로 `CLAUDE.md`, `docs/constitution/tech.md`, `docs/constitution/README.md`, `web/packages/ui/package.json`을 읽었다). `CLAUDE.md`와 `tech.md`에 질문 페이지 e2e(CI의 `e2e-portal` 잡)가 더해졌고 헌법 판이 3.0.82가 됐다. ADR 0053이 드는 사진 비교 셋과 `tech.md`를 고치는 티켓의 문장은 그대로 참이다.
+- 넘긴 것 하나. 질문 페이지가 위젯을 그리게 됐으므로 answer-markdown 계획의 시험 문장 뒤에, 여덟 곳은 ADR 0053을 쓴 때의 셈이고 명세가 다시 세며 질문 페이지 쪽에 답의 글자를 보는 시험이 생겼으면 함께 고친다고 적었다. 지금 `web/apps/portal`의 `*.ts`에는 그런 시험이 없다(`출력|OUTPUT_PREFIX|toHaveText|toContainText`를 Grep했고 맞은 단언은 `portal.e2e.ts` 50줄의 제목 하나다).
+- 다시 돌린 것. `uv run python tools/plan_table.py`, `uv run python tools/check_adr_pointers.py`, `uv run python tools/check_md_tables.py`가 출력 없이 끝났다. `uv run python tools/sibling_overlap.py`는 "번호 겹침 없음"이다(origin/main `2a61330`, 주 체크아웃도 `2a61330`). ruff 둘은 손으로 다시 쳤고 지났다(파일 2014개).
+
+## PR
+
+- `git push -u origin docs/doc-qa-agent-design`으로 커밋 둘(설계 커밋 `c3e35d3c`, 병합 커밋 `20d3954d`)을 푸시하고 PR #517을 열었다(`https://github.com/njh6803/agent-os/pull/517`). 제목은 첫 커밋의 제목 그대로이고 본문은 PR 템플릿을 채운 것이다. 명령은 `gh pr create --base main --head docs/doc-qa-agent-design --fill-first --body-file <파일>`로, 따옴표 인자 없이 쳤다.
+- 연 직후 앱의 `get_status`는 PR이 이 세션에 묶였고 검사는 통과 1, 대기 7, 건너뜀 1이라고 냈다. 결과는 보지 못했다.
+- 커밋하지 않고 남긴 것 둘. 이 일지의 "둘째 커밋 시도의 pre-commit" 절부터 끝까지와, `.scratch/answer-markdown/plan.md`의 한 문장(위 "origin/main 다시 합치기"의 넘긴 것)이다. 회고와 "다음"까지 한 커밋에 실어 pre-commit(한 바퀴에 약 9분)과 푸시를 한 번 줄이려고 미뤘다.
+
+## 인계 (PR 연 뒤)
+
+PR을 열자 인계 계기(`hook_handoff`, 컨텍스트 348,282 토큰, 경계 `PR 연 뒤`)가 왔다. `handoff.md`의 인계하지 않는 때 다섯에 들지 않아 인계한다. 계기를 낸 명령은 성공했고(PR #517), 범위는 PR과 병합까지라 이 경계에서 끝나지 않으며, 이 세션의 지시문은 `인계: 셀프 리뷰 직전`이라 같은 경계가 아니고, 인계 못함 줄이 없고, `get_session self`에 `parentSessionId`가 없다. 함께 온 `hook_pr_next_session`의 계기는 따르지 않았다. 이 세션의 지금 제목은 `docs/doc-qa-agent-design`이다. 지시문은 다음이다.
+
+```
+다음 작업: 기능 base-agent. 기본 에이전트 assistant의 설계 PR #517(answer-markdown과 admin-answer-preview의 설계가 함께 있다)
+다음 단계: PR 반영·병합
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /grill-with-docs base-agent
+브랜치: docs/doc-qa-agent-design
+모델: Sonnet 5.5 / high. 2의 잇는 지시문
+읽을 것: docs/journal/2026-11-10-1345-doc-qa-agent-design.md의 "인계 (PR 연 뒤)" 절("다음" 절은 아직 없다)
+이어받을 상태: 인계: PR 연 뒤. docs/journal/2026-11-10-1345-doc-qa-agent-design.md. PR #517이 열려 있고 merge.md 2(봇 회차)부터 한다. 첫 @coderabbitai review 코멘트도 새 세션이 남긴다. 커밋하지 않은 변경 둘(그 일지, .scratch/answer-markdown/plan.md)이 워크트리에 있어 봇 회차의 커밋에 싣는다. 설계 인터뷰와 ADR·PRD 승인은 끝났으므로 다시 돌리지 않는다. 회고는 아직 돌지 않았다. 상세는 그 일지 "인계 (PR 연 뒤)" 절에 있다
+확인할 선행 조건: PR #517의 CI 결과를 보지 못했다(열 때 pending). 나머지는 그 일지 "인계 (PR 연 뒤)" 절에 있다
+이번 요청 범위: PR과 병합까지
+```
+
+이어받을 상태의 상세.
+
+- 남은 단계: `merge.md` 2의 봇 회차(마지막 푸시 뒤 `@coderabbitai review` 코멘트, 상태를 한 번 읽고 pending이면 `tools/wait_ci.py`를 백그라운드로), 반영, 회고(`retro`)와 "다음" 절, 병합(`merge.md` "워크트리에서 병합할 때"), 다음 지시문이다. 회고와 "다음"을 실은 일지는 병합 전 마지막 푸시에 싣는다.
+- 승인받은 글: ADR 0051·0052·0053은 accepted이고 PRD 22줄과 함께 사용자가 승인했다. 봇 지적을 반영하다 그 결정을 바꾸게 되면 고치기 전에 사용자에게 묻는다(`CLAUDE.md` 작업 규약 5). 사실을 바로잡는 고침은 묻지 않는다.
+- PR 본문: 범위를 넓히는 커밋을 푸시하려면 먼저 본문을 고친다(`merge.md` 1). 지금 본문은 answer-markdown 계획에 더한 한 문장을 말하지 않는다.
+- 확인하지 못한 전제: PR #517의 검사 결과. 프로브 `registry.mjs`·`typecheck.mjs`·`lint.mjs`는 이 세션도 다시 돌리지 않았다. `.scratch/plan.md`는 계획에 한 문장을 더한 뒤 `tools/plan_table.py`를 돌려도 바뀌지 않았다(`git status --short`로 봤다).
+
+회고에 넘기는 것. 이 세션은 Skill 도구로 `retro`를 불러 후보를 고르던 중에 인계 계기를 받았다. `## 회고` 절과 대기열 항목은 쓰지 않았고, 만료 확인(`tools/queue_open_rows.py`와 `--ref origin/main`)도 돌리지 않았다. 판정은 단계를 닫는 세션이 한다.
+
+1. 넘김으로 본 후보. 지시문이 설계 인터뷰와 명세 단계에 적는 모델 이름 `Fable 5.1`이 지금 모델 메뉴에 없다. 사건은 앞 세션의 인계 열기가 그 이름을 찾지 못해 멈춘 것이다(위 "인계" 절). 그 이름이 적힌 자리는 `.claude/skills/next-session/SKILL.md` 54·56·58줄과 `directive.md` 26줄이고(읽었다), `docs/model-selection.md` 여덟 곳, 카나리아 명세 넷(`.scratch/harness/probes/canary/next_session_fable_cut_row.toml`, `next_session_fable_design_spec.toml`, `next_session_handoff_fable.toml`, `next_session_continue_ladder.toml`), `tools/rerun_cost.py`, `tools/token_report.py`, `tests/tools/test_rerun_cost.py`에도 있다(`Fable 5\.1|fable-5-1`을 Grep한 수만 봤고 줄은 읽지 않았다). 그 칸의 값은 ADR 0029의 2026-10-31 이력이 사용자의 결정으로 적은 것이라, 바꾸려면 그 ADR의 이력과 승인이 든다(retro 4단계의 넘김 가운데 ADR이 필요한 것). 대기열을 `Fable.5`, `next-session/directive.md`, `model-selection.md`, `모델.메뉴`로 찾았고 맞은 넷(0413, 0432, 0577, directive-length-bound-at-writing)은 다른 일이다. 이 PR을 병합한 뒤 base-agent의 다음 단계는 명세이고 결정표의 값이 `Fable 5.1 / xhigh`라, 그대로 적으면 열기가 같은 자리에서 다시 멈춘다.
+2. 0577의 회차로 본 사건. 이 세션의 첫 메시지는 `grill-with-docs`의 스킬 파일을 읽어 따르라는 줄이었는데 할 일은 셀프 리뷰부터였다(지시문의 시작 프롬프트가 `/grill-with-docs base-agent`로 남았다). 위 지시문도 `handoff.md` 인계 줄대로 같은 시작 프롬프트를 옮긴다. 0577은 열림 4회차다(`tools/queue_open_rows.py --search`의 출력으로 봤다).
+3. 일지에만 남길 것. 첫 커밋 시도의 `tests/tools/test_rerun_runner.py` 시험은 닫힌 306의 종류다. 306은 받아들여 닫은 종류라 회차를 더하지 않는다(`.scratch/retro-queue/0306.md`의 상태 줄을 읽었다).
+4. 기각으로 본 것. 인용 대조가 알린 일지의 옮김(이미 있는 검사가 알렸다), 셀프 리뷰가 잡은 Minor·Nit 열두 건(리뷰가 잡도록 둔 기준이다). 앞 세션의 선택지 설명에 든 calc의 "머리 문장 한 줄"은 파일을 읽고 옮기며 틀린 것이고 표준 축의 주장 검증이 잡았다. 닫힌 394·427의 종류로 셀지는 닫는 세션이 다시 본다.
+
+넘기기 전에 한 것. 제목을 `docs/doc-qa-agent-design (인계함)`으로 바꿨다(앱이 묻지 않고 바꿨다). 이 세션이 띄운 백그라운드 작업은 남은 것이 없어 멈춘 것이 없다. `git worktree unlock C:/project/agent/.claude/worktrees/doc-qa-agent-design`는 `is not locked`로 끝나 넘어갔다.
+
+open-session을 부른다 2026-11-10T08:40:23Z
+
+## 이어받은 세션 (봇 회차)
+
+세션 제목 `docs/doc-qa-agent-design`. 위 지시문대로 `git worktree list`에서 브랜치가 체크아웃된 자리를 찾아 `EnterWorktree(path)`로 들어왔다. 모델은 `claude-sonnet-5-5`다. 첫 메시지의 시작 프롬프트가 `/grill-with-docs base-agent`라 그 스킬 파일을 읽었는데, 이 세션의 일은 설계 인터뷰가 아니라 PR 반영·병합이어서 인터뷰는 다시 돌리지 않았다(지시문의 "설계 인터뷰와 ADR·PRD 승인은 끝났으므로 다시 돌리지 않는다").
+
+- 시작할 때 본 것. 브랜치는 `docs/doc-qa-agent-design`이고 커밋하지 않은 변경은 지시문대로 둘(이 일지, `.scratch/answer-markdown/plan.md`)이었다. PR #517은 열려 있고 병합할 수 있는 상태였다. 검사는 `claude-review`·`web`·`e2e`·`e2e-widget`·`e2e-portal`·`ticket`이 통과, `python`·`visual`이 진행 중, CodeRabbit이 건너뜀이었다(`gh pr view 517 --json statusCheckRollup`).
+- 첫 `@coderabbitai review` 코멘트를 남겼다(`https://github.com/njh6803/agent-os/pull/517#issuecomment-6762944779`). 상태를 한 번 읽으니 pending이어서 `tools/wait_ci.py 517`을 백그라운드로 띄웠다.
+
+> 사용자: (붙여 넣은 글) 사용자가 넘긴 것 둘이다(2026-11-10). 첫째는 base-agent의 명세가 읽을 입력이고, 둘째는 answer-eval의 설계 인터뷰가 읽을 입력이다. 이 세션이 base-agent의 명세를 쓰는 세션이면 첫째를 명세에 반영하고, 아니면 `.scratch/base-agent/plan.md`의 "명세가 정할 것"에 옮겨 적는다. 둘째는 어느 세션이든 판정하지 않고 `.scratch/answer-eval/plan.md` 본문에 "사용자가 넘긴 것(2026-11-10)"으로 옮겨 적는다. 옮겨 적은 것은 같은 PR에 싣는다.
+
+글의 본문은 둘이다. 첫째는 옛 프로젝트의 파이프라인에서 시나리오 매칭과 용어 검증을 뺀 나머지(검색어 생성, 다시 검색, 관련성 판단, 점수 거르기)를 기본 에이전트가 기본으로 하되 자리는 스킬·매니페스트·검색 서버로 한다는 명세의 입력이다. 둘째는 모델이 지은 검색어 목록, 첫 검색과 다시 검색의 적중 구분과 검색 횟수 분포, 검색 결과에 없는 출처를 적은 답의 수라는 평가 항목 셋이다. 이 세션은 명세를 쓰는 세션이 아니므로 아래대로 옮겼다.
+
+- `.scratch/base-agent/plan.md`의 "명세가 정할 것" 뒤에 첫째를 옮겼다. 스킬 `cite-sources`가 적을 지시 넷, 명세가 함께 볼 것 셋(별도 yes/no 모델 호출을 두지 않음, 두 끝의 값에 넣어 셈, 강제력이 없다는 것을 안내 문서에 한 줄), 이미 정해진 것(supervisor 라우팅을 들이지 않음)이다. "조사 결과가 있다(원문 미확인)"는 사용자가 전한 말이고 이 세션도 원문을 확인하지 못해 그렇게 적었다.
+- `.scratch/answer-eval/plan.md` 본문에 둘째를 "사용자가 넘긴 것(2026-11-10)"으로 옮겼고 넣을지는 판정하지 않았다.
+- `uv run python tools/plan_table.py`와 `uv run python tools/check_md_tables.py`는 출력 없이 0으로 끝났다. 전체 계획표 `.scratch/plan.md`는 바뀌지 않았다.
+- 범위를 넓히는 푸시라 푸시 전에 `gh pr edit 517 --body-file`로 PR 본문에 "사용자가 넘긴 입력 둘" 항목을 더했다(`merge.md` 1).
+
+## 봇 회차 (첫 회차)
+
+- 첫 `@coderabbitai review`(위 코멘트)로 CodeRabbit이 리뷰를 냈다. `gh pr checks 517`에서 CodeRabbit이 통과(9분 50초)였고 인라인 지적은 둘이다(`gh api repos/njh6803/agent-os/pulls/517/comments`로 읽었다).
+- Major, `docs/adr/0046-…md` 121줄: 대화 요약의 모델 호출이 `max_turns`에 들지 않아, 이어 가기를 열면 실행 하나의 토큰 최댓값이 `max_turns`만으로 센 값보다 크다. 사실이다. 코드는 `src/agent_os/core/continuation.py` 624줄의 `model.ainvoke(messages)`를 읽었고, ADR 0052의 13줄이 "대화 요약의 모델 호출은 지금처럼 턴에 들지 않는다"고 적는 것을 읽었다. 결정을 바꾸지 않는 사실의 보충이라 사용자에게 묻지 않고 고쳤다. ADR 0046의 이 PR이 더한 항목(121줄)과 `.scratch/public-demo/plan.md`의 이어 가기 문장에 "요약 호출의 입출력 토큰도 실행 하나의 최댓값에 넣어 센다"를 더했고, 이어 가기를 열지는 공개 데모의 설계가 정한다는 기존 문장을 그대로 두었다.
+- Minor, `.scratch/answer-markdown/probes/markdown_render/probe/registry.mjs` 22줄: `fetch`에 제한 시간과 실패 처리가 없다. 첫 회차의 Minor라 지적마다 판단했고 보류했다. 이 스크립트를 이 세션에서도 앞 세션에서도 다시 돌려 보지 못했고(위 "인계 (PR 연 뒤)"의 확인하지 못한 전제), 돌리지 않은 코드를 고치면 확인 없는 수정이 된다. 프로브를 설치할 판으로 다시 돌리는 일은 answer-markdown의 명세가 먼저 한다고 이미 계획에 있어서, 그 문장 뒤에 이 지적을 더했다(`.scratch/answer-markdown/plan.md`). 아래 "다음"의 answer-markdown 지시문 "이어받을 상태"에도 있다.
+- CI의 `python` 잡이 `tests/tools/test_rerun_runner.py::test_다른_판의_확인을_쥐고_돌던_동안에도_첫_인계에서_멈춘다` 하나로 빨갰고(6866 통과, 1 실패, 잡 로그), `verify`는 그 결과를 받아 빨갰다. 이 PR이 건드린 파일이 아니다. 그 한 시험만 로컬에서 따로 돌리니 통과했다(`uv run pytest tests/tools/test_rerun_runner.py -q -k 다른_판의_확인`, 1 통과, 63.77초). 대기열 306이 받아들여 닫은 종류(부하에서 빨간 시간 시험)의 새 사례로 보고 회차를 더하지 않는다(어림. 로그에서 이 시험의 실패 줄은 읽었지만 시각에 기대는지 시험 코드는 읽지 않았다).
+- 사용자가 넘긴 입력 둘(위)과 위 두 반영을 한 커밋으로 푸시하고, 푸시 전에 PR 본문을 고쳤다(`merge.md` 1).
+
+## 회고
+
+이 일지를 낸 세션의 끝에서 `retro`를 돌렸다. 앞 세션이 넘긴 후보 넷(위 "인계 (PR 연 뒤)"의 회고에 넘기는 것)과 이 세션에서 난 것을 판정했다. 낸 후보 다섯, 승인 1(회차 세기), 넘김 1, 기각 3이다. 만료는 `uv run python tools/queue_open_rows.py`와 `--ref origin/main`(`git fetch origin` 뒤) 둘 다 "만료할 항목: (없음)"이라 닫을 것이 없다.
+
+1. **모델 칸 `Fable 5.1`이 모델 메뉴에 없다 → 넘김.** 사건은 앞 세션의 `open_session.ps1`이 "5초 안에 모델 메뉴의 'Fable 5.1' 을(를) 찾지 못했다"며 멈춘 것이다(이 일지 293줄에서 읽었다). 조건은 ADR이 필요한 것이다. 칸의 값은 ADR 0029의 2026-10-31 이력이 사용자의 결정으로 적었다(`docs/adr/0029-session-model-is-picked-before-send.md` 378줄을 읽었다). 선택 화면으로 사용자에게 물었고 "병합 뒤 따로 고침 (Recommended)"을 골랐다. 이 PR에는 싣지 않는다. 대기열에 `model-menu-name-fable-5-1-stale`(사용자 승인, 1회차)을 새로 썼다. 같은 일을 다룬 항목을 `--search Fable.5 --search model-selection --search 모델.메뉴`로 찾았고 열린 항목은 없었다(닫힌 0432는 단가 문서의 다른 일이다).
+
+   > 사용자: (선택 화면의 답) 병합 뒤 따로 고침 (Recommended)
+
+2. **`/grill-with-docs` 시작 프롬프트가 PR 반영·병합 세션에 남았다 → 승인(회차 세기).** 이 세션도 첫 메시지가 `grill-with-docs`의 스킬 파일을 읽어 따르라는 줄이었는데 할 일은 PR 반영·병합이었다(위 "이어받은 세션"). 앞 세션의 같은 사건과 함께 센다. 열린 대기열 0577의 처방(`directive.md`의 "시작 프롬프트"를 단계에 맞게)이 그대로라 새 항목을 쓰지 않고 0577의 승인 줄을 4회차에서 6회차로 올렸다(앞 세션 5회차, 이 세션 6회차). 회차 5 이상이 되어 다음 하네스 chore 배치의 계기다. 이 세션에서는 반영하지 않는다. 설계 문서 PR에 `next-session`의 스킬 파일 고침이 섞이기 때문이다.
+3. **CI `python` 잡의 시간 시험 빨강 → 기각(일지에만).** 위 "봇 회차 (첫 회차)"의 넷째 항목이다. 받아들여 닫은 종류(대기열 306)의 새 사례라 회차를 더하지 않는다.
+4. **PR 봇이 잡은 ADR 0046의 요약 호출 누락 → 기각.** 셀프 리뷰가 놓치고 PR 봇이 Major로 잡았다. 셀프 리뷰가 놓칠 수 있는 판단 기준(리뷰가 제 몫을 한 것)이라 이 셈에서 뺀다. 검사로 옮길 수 있는 모양도 아니고 `CODING_STANDARDS.md`에 더할 새 기준도 아니다.
+5. **앞 세션이 기각으로 넘긴 묶음 → 기각.** 인용 대조가 알린 일지의 옮김(이미 있는 검사가 알렸다), 셀프 리뷰가 잡은 Minor·Nit 열두 건(리뷰가 잡도록 둔 기준이다), 선택지 설명에 든 calc의 "머리 문장 한 줄"이 틀린 것(표준 축의 주장 검증이 잡았다). 닫힌 394·427의 종류로 셀지는 닫는 세션이 다시 본다는 앞 세션의 말은, 이 세션이 두 항목을 읽지 않아 판정하지 않았다.
+
+## 다음
+
+기능 계획의 프론티어는 `local-model`, `pilot-portal`, `answer-markdown`, `base-agent`다(`.scratch/plan.md` 95줄을 읽었다). `pilot-portal`은 티켓 07이 잠긴 워크트리에서 도는 중이고(`git worktree list`에서 `feature/07-anonymous-question-after-notice [locked]`), `local-model`은 기능 계획이 공개 데모 뒤로 미뤘다(앞 일지). 이 PR로 설계 줄이 선 `base-agent`와 `answer-markdown`이 둘 다 명세 전 단계이고 서로 기다리지 않아(ADR 0053) 나란히 연다. 결정표에서 base-agent는 "기능 계획에 `**설계:**` 줄이 있고 `spec.md`가 없다"(명세), answer-markdown은 기능 계획 본문이 명세 전에 화면을 그린다고 적어 화면 디자인이다. `admin-answer-preview`는 answer-markdown을 기다리는 기능이라 아직 열지 않는다.
+
+```
+다음 작업: 기능 base-agent. 기본 에이전트 assistant의 명세(스킬 cite-sources의 지시 넷과 매니페스트 두 끝의 값 포함)
+다음 단계: 명세
+어디서: 새 세션. 나란히 여는 2 중 1. 주 체크아웃 미갱신이라 Skill 도구로 tidy-checkouts를 먼저 돌고(그 스킬이 사람에게 넘기는 것은 보고만 하고 답을 기다리지 않는다) 그 뒤 주 체크아웃에서 브랜치를 따지 않고 EnterWorktree(name은 base-agent-spec)로 새 워크트리에 먼저 들어가 거기서 브랜치를 바꾼다
+시작 프롬프트: /to-spec base-agent
+브랜치: docs/base-agent-spec
+모델: Fable 5.2 / xhigh. 결정표의 Fable 5.1이 모델 메뉴에 없어 임시로 적었다(대기열 model-menu-name-fable-5-1-stale)
+읽을 것: .scratch/base-agent/plan.md의 "명세가 정할 것"과 "명세가 먼저 확인할 것", docs/journal/2026-11-10-1345-doc-qa-agent-design.md의 "확인받은 합의 요약" A 절. 나란히 여는 다른 지시문은 answer-markdown의 화면 디자인이다
+이어받을 상태: 사용자가 넘긴 명세의 입력(검색어 짓기, 다시 검색, 관련성 판단, 점수 참고)은 .scratch/base-agent/plan.md에 옮겨 적혀 있다. 그 입력대로 스킬의 지시를 명세에 반영한다. 설계 인터뷰는 끝났으므로 다시 하지 않는다
+확인할 선행 조건: 주 체크아웃 미갱신: 루트는 main. 병합은 이 워크트리 사본의 next-session merge.md(없으면 SKILL.md)의 "워크트리에서 병합할 때"를 Read로 열어 따른다. 모델 메뉴에 Fable 5.2가 있는지는 이 세션이 확인하지 못했다(앞 세션의 열기 출력이 원래 값으로 Fable 5.2를 찍은 것만 읽었다)
+이번 요청 범위: PR과 병합까지
+---
+다음 작업: 기능 answer-markdown. 위젯 답의 마크다운 표시 화면을 `/ui-design answer-markdown`으로 그려 고르고 저장소로 옮긴다
+다음 단계: 화면 디자인
+어디서: 새 세션. 나란히 여는 2 중 2. 주 체크아웃에서 브랜치를 따지 않고 EnterWorktree(name은 answer-markdown-screens)로 새 워크트리에 먼저 들어가 거기서 브랜치를 바꾼다
+시작 프롬프트: /ui-design answer-markdown
+브랜치: docs/answer-markdown-screens
+모델: Opus 5.5 / xhigh
+읽을 것: .scratch/answer-markdown/plan.md, docs/adr/0053-model-answers-are-drawn-as-markdown-by-one-shared-component.md. 나란히 여는 다른 지시문은 base-agent의 명세다
+이어받을 상태: 목업이 정할 것은 제목·목록·표·코드·인용·링크가 좁은 위젯에서 어떻게 보이는지다. 계획의 "명세가 먼저 할 것"(프로브를 설치할 판으로 다시 돌리기)에 PR 봇이 지적한 registry.mjs의 fetch 제한 시간과 실패 처리가 더해져 있으나 목업 단계의 일은 아니다
+확인할 선행 조건: 없음
+이번 요청 범위: PR과 병합까지
+```
