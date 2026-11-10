@@ -3,7 +3,8 @@
 //
 // - 익명 사이트 둘. 같은 픽스처 에이전트를 열고 하나(`limited`)는 사이트의 시간당 실행 상한이 1이다.
 // - 익명과 로그인 둘 다 되는 사이트 하나, 로그인만 되는 사이트 하나.
-// - 첫 사이트만 소개 글과 모드를 적어, `?site=` 를 주지 않은 첫 그림과 속성 다섯이 채워지는 것을 가르게 한다.
+// - 첫 사이트만 소개 글과 모드와 고지 글을 적어, `?site=` 를 주지 않은 첫 그림과 속성 다섯이 채워지는 것, 사이트의 고지 글이
+//   덮개의 전문이 되는 것을 가르게 한다. 나머지는 기본 고지 글이다.
 
 export interface E2eSite {
   readonly name: string;
@@ -13,6 +14,8 @@ export interface E2eSite {
   readonly intro?: string;
   readonly theme: string;
   readonly mode?: string;
+  /** 사이트가 적은 고지 글. 없으면 질문 페이지의 기본 글이다. */
+  readonly notice?: string;
   readonly assurance: "anonymous" | "login" | "both";
   /** 사이트 파일의 `hourly_runs_per_site`. */
   readonly hourlyRunsPerSite?: number;
@@ -29,6 +32,7 @@ export const SITES: readonly E2eSite[] = [
     intro: "첫째 사이트의 소개 글입니다.",
     theme: "jacho",
     mode: "dark",
+    notice: "첫째 사이트가 직접 적은 고지 글입니다.",
     assurance: "anonymous",
   },
   {

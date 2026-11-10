@@ -157,6 +157,7 @@ function configToml(publicOrigin: string, port: number): string {
       ...(site.intro === undefined ? {} : { intro: site.intro }),
       theme: site.theme,
       ...(site.mode === undefined ? {} : { mode: site.mode }),
+      ...(site.notice === undefined ? {} : { notice: site.notice }),
       assurance: site.assurance,
     })),
   });
