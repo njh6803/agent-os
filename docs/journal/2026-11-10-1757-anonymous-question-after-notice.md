@@ -87,6 +87,54 @@ open-session을 부른다 2026-11-10T09:46:30Z
 
 셋째 세션은 워크트리에 들어와 `origin/main`(3dc3f15e, 문서만 바뀜)을 합치고(겹친 파일 없음, `plan_table.py`가 만든 `.scratch/plan.md`에 차이 없음) PR 직전에 `coderabbit-review` 서브에이전트를 돌렸다.
 
-- 명령은 `coderabbit review --agent --include-untracked --base origin/main`이고 종료 코드 0, 끝 줄이 `review_completed`에 `findings` 0이었다. `Seat: not assigned`(Plan: Free)였지만 리뷰는 정상으로 돌았다.
+- 아래 CLI 수치는 서브에이전트의 보고에서 옮긴 것이고 이 세션이 CLI를 직접 돌리지 않았다. 명령은 `coderabbit review --agent --include-untracked --base origin/main`이고 종료 코드 0, 끝 줄이 `review_completed`에 `findings` 0이었다고 보고했다. `Seat: not assigned`(Plan: Free)였지만 리뷰는 정상으로 돌았다.
 - 리뷰한 파일은 16개(질문 페이지 코드와 시험 10, 문서 6)이다. 지적은 없었다.
 - 서브에이전트가 CLI와 별개로 `server/page.ts`, `browser/portal.ts`, `server/paths.ts`의 diff를 읽었다(CSS는 훑기만 했다). 고지 글이 `textContent`로만 들어가고 데이터 블록이 이스케이프되어 XSS 경로가 보이지 않았고, 눈에 띄는 버그와 성능 문제도 없었다. 이 부분은 CLI 결과가 아니라 서브에이전트가 읽은 판단이다.
+
+## PR
+
+PR 518(`gh pr create`의 출력으로 번호를 읽었다). 헤드 `b4f2d83e`에서 아홉 검사가 모두 통과였다(`tools/wait_ci.py 518`의 끝 줄 `끝: 모두 통과. CodeRabbit: Finished`를 읽었다).
+
+## 봇 회차 (첫 회차)
+
+- CodeRabbit: PR 코멘트에 `No actionable comments were generated in the recent review.`가 있다(코멘트를 읽었다). 지적 0건이다.
+- claude-review(PR 코멘트를 읽었다): Critical·Major 없음, Minor 셋과 Nit 하나. 첫 회차라 지적마다 판단했다.
+  - **Minor `portal.ts:103` 끝점 모양 사본.** 역방향 주석(`paths.ts` 쪽에 "브라우저 스크립트에 사본이 있다")을 권했는데 `server/paths.ts`의 머리 주석이 이미 그것과 "그 경로를 바꿀 때는 `browser/portal.ts`도 같이 고친다"를 적고 있다(파일 1~5행을 읽었다). 반영할 것이 없다.
+  - **Minor `portal.ts:263` 늦게 온 답.** 리뷰가 08 티켓에 체크박스가 있는지만 확인하면 된다고 했고, 있다(`git diff origin/main...HEAD`로 08 티켓에 더한 줄을 보았다). 반영할 것이 없다.
+  - **Minor 상태 묻기 실패 갈래의 e2e 부재.** 일지 "결정"에는 있었으나 08 티켓에는 체크박스가 없어, 이 회차에 08 티켓에 체크박스 하나를 더했다(뒤로 넘긴 일을 놓치지 않게 하려는 것이다).
+  - **Nit `portal.ts:141` 실패를 `false`로 접는 모양.** 리뷰가 지금은 값을 한다고 했고 고치지 않는다.
+
+## 회고
+
+후보 둘을 냈고, 승인 0, 기각 2, 넘김 0이다. 근거는 이 세션에서 본 것에 한한다.
+
+- **기각: 문서만 바꾼 일지 커밋의 pre-commit이 길다.** 일지 한 줄을 고친 커밋이 Bash 도구의 5분 시간 제한에 닿아 백그라운드로 넘어갔다(첫 커밋 `5ac2907f`. 알림이 올 때까지 기다렸다). 원인을 재지 않았다. 4단계의 승인 조건(사건, 층, 되돌림) 가운데 사건의 원인을 대지 못해 기각한다. 다시 겪으면 어떤 훅이 얼마를 쓰는지 재서 올린다.
+- **기각: 사용자 수준 `git-pr` 스킬의 "생성 전 확인" 단계와 지시문의 "PR과 병합까지"가 갈린다.** 이 세션은 지시문의 범위를 승인으로 읽고 확인 없이 열었다. 그 스킬은 사용자 수준(`C:\Users\User\.claude\skills`)이라 저장소에서 고칠 수 없고, 이 세션에서 막힌 일도 없었다. 사건이 없어 기각한다.
+
+## 다음
+
+기능 `pilot-portal`의 열린 티켓은 08과 09이고, 둘 다 `Blocked by`가 07뿐이라(각 티켓 파일의 `Blocked by` 줄을 읽었다) 나란히 연다. 마지막으로 닫히는 쪽이 기능 계획에 `**끝:**` 줄을 적는다. 이월 몫(`e2e-widget`·`e2e-portal`을 `.scratch/harness/probes/ci_job_durations.py`의 `JOBS`에 더하고 `ci.yml`의 `timeout-minutes`를 잰 값(약 15)으로 고치는 일)은 기능의 마지막 티켓이 닫힌 뒤의 chore가 맡는다. 지금은 마지막 티켓이 아니라서 chore 배치를 열지 않는다.
+
+```
+다음 작업: .scratch/pilot-portal/issues/08-site-switching-and-assurance-modes.md. 셀렉트로 사이트를 바꾸고, 보증 모드와 다크 모드와 보고서 링크가 화면에 보인다
+다음 단계: 구현
+어디서: 새 세션. 나란히 여는 2 중 1. 주 체크아웃 미갱신이라 Skill 도구로 tidy-checkouts를 먼저 돌고(그 스킬이 사람에게 넘기는 것은 보고만 하고 답을 기다리지 않는다) 그 뒤 주 체크아웃에서 브랜치를 따지 않고 EnterWorktree(name은 08-site-switching-and-assurance-modes)로 새 워크트리에 먼저 들어가 거기서 브랜치를 바꾼다
+시작 프롬프트: /implement .scratch/pilot-portal/issues/08-site-switching-and-assurance-modes.md
+브랜치: feature/08-site-switching-and-assurance-modes
+모델: Sonnet 5.5 / high
+읽을 것: docs/journal/2026-11-10-1757-anonymous-question-after-notice.md의 "다음". 나란히 여는 다른 지시문은 09(.scratch/pilot-portal/issues/09-real-model-calc-on-portal.md)다
+이어받을 상태: 07이 남긴 것은 08 티켓의 체크박스 둘이다(늦게 온 상태 답을 가리는 번호, 상태 묻기 실패 때 덮개를 보이는 갈래의 e2e 사례). 09와 둘 다 질문 페이지 e2e의 준비를 고칠 수 있어 나중에 병합하는 쪽이 main을 받아 맞춘다. 둘 가운데 나중에 닫히는 티켓이 기능 계획의 `**끝:**` 줄을 적는다
+확인할 선행 조건: 주 체크아웃 미갱신: 루트는 main. 병합은 이 워크트리 사본의 next-session merge.md(없으면 SKILL.md)의 "워크트리에서 병합할 때"를 Read로 열어 따른다
+이번 요청 범위: PR과 병합까지
+---
+다음 작업: .scratch/pilot-portal/issues/09-real-model-calc-on-portal.md. 실제 모델 시험: 질문 페이지에서 고지를 확인하고 calc에 질문하면 답이 서고 익명 주체의 트레이스가 남는다
+다음 단계: 구현
+어디서: 새 세션. 나란히 여는 2 중 2. 주 체크아웃에서 브랜치를 따지 않고 EnterWorktree(name은 09-real-model-calc-on-portal)로 새 워크트리에 먼저 들어가 거기서 브랜치를 바꾼다
+시작 프롬프트: /implement .scratch/pilot-portal/issues/09-real-model-calc-on-portal.md
+브랜치: feature/09-real-model-calc-on-portal
+모델: Sonnet 5.5 / high
+읽을 것: docs/journal/2026-11-10-1757-anonymous-question-after-notice.md의 "다음". 나란히 여는 다른 지시문은 08(.scratch/pilot-portal/issues/08-site-switching-and-assurance-modes.md)이다
+이어받을 상태: 08과 둘 다 질문 페이지 e2e의 준비를 고칠 수 있어 나중에 병합하는 쪽이 main을 받아 맞춘다. 둘 가운데 나중에 닫히는 티켓이 기능 계획의 `**끝:**` 줄을 적는다
+확인할 선행 조건: 주 체크아웃 미갱신: 루트는 main. tidy-checkouts는 묶음의 첫 세션이 돈다. 병합은 이 워크트리 사본의 next-session merge.md(없으면 SKILL.md)의 "워크트리에서 병합할 때"를 Read로 열어 따른다
+이번 요청 범위: PR과 병합까지
+```
