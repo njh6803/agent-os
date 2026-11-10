@@ -11,8 +11,10 @@
  * 사용: node tools/start.ts --config <질문 페이지 설정> --site-file <사이트 파일>
  */
 
+import { randomUUID } from "node:crypto";
 import { resolve } from "node:path";
 import { parseArgs } from "node:util";
+import { portalContext } from "../server/context.ts";
 import { configErrorText, listenLine } from "../server/diagnostics.ts";
 import { handle } from "../server/handler.ts";
 import { loadPortal } from "../server/load.ts";
@@ -63,8 +65,12 @@ async function main(argv: readonly string[]): Promise<void> {
     return;
   }
   const { host, port, sites } = loaded.config;
+  const context = portalContext(loaded, {
+    now: () => Date.now(),
+    newAnonymousId: () => randomUUID(),
+  });
   try {
-    await listen(handle, host, port);
+    await listen((request) => handle(request, context), host, port);
   } catch (error: unknown) {
     console.error(`질문 페이지를 열지 못했다(${failureCode(error)})`);
     process.exitCode = 1;

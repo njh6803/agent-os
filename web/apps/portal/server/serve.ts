@@ -9,7 +9,7 @@ import {
   type Server,
 } from "node:http";
 import { parseCookieHeader } from "./cookies.ts";
-import type { PortalRequest, PortalResponse } from "./handler.ts";
+import { type PortalRequest, type PortalResponse, SERVER_ERROR } from "./handler.ts";
 
 export type Handler = (request: PortalRequest) => PortalResponse;
 
@@ -39,10 +39,28 @@ function toRequest(incoming: IncomingMessage): PortalRequest {
   };
 }
 
-/** `host` 와 `port` 에서 듣기 시작한다. 서지 못하면(포트가 쓰이는 중 등) 그 오류로 거부한다. */
+/**
+ * 처리기가 던져도 그 요청만 500 으로 답한다. 던진 예외를 그대로 두면 프로세스가 죽어 요청 하나가 모든 사이트의 서비스를
+ * 멈춘다. 오류의 이름만 stderr 에 남기고 메시지는 싣지 않는다(메시지에 쿠키 값이나 토큰이 섞일 수 있다).
+ */
+function answer(handler: Handler, incoming: IncomingMessage): PortalResponse {
+  try {
+    return handler(toRequest(incoming));
+  } catch (error: unknown) {
+    console.error(
+      `요청을 처리하지 못했다(${error instanceof Error ? error.name : "알 수 없는 오류"})`,
+    );
+    return SERVER_ERROR;
+  }
+}
+
+/**
+ * `host` 와 `port` 에서 듣기 시작한다. 서지 못하면(포트가 쓰이는 중 등) 그 오류로 거부한다. 선 뒤의 서버 `error` 는 처리기를
+ * 두지 않아 프로세스가 죽는다. 듣던 소켓이 깨진 서버는 요청을 받지 못하니 프로세스 관리자가 다시 띄우는 편이 낫다.
+ */
 export function listen(handler: Handler, host: string, port: number): Promise<Server> {
   const server = createServer((incoming, outgoing) => {
-    const response = handler(toRequest(incoming));
+    const response = answer(handler, incoming);
     outgoing.writeHead(response.status, response.headers);
     outgoing.end(response.body);
   });
