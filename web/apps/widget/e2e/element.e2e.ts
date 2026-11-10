@@ -79,7 +79,7 @@ async function widgetLayout(page: Page) {
     }),
     root: await measure(page.locator("[data-ui-root]")),
     heading: { ...(await measure(page.getByRole("heading", { name: "echo" }))), width: null },
-    field: await measure(page.getByRole("textbox", { name: "요청" })),
+    field: await measure(page.getByRole("textbox", { name: "질문" })),
     button: { ...(await measure(page.getByRole("button", { name: "보내기" }))), width: null },
   };
 }
@@ -165,7 +165,7 @@ test("document.currentScript 가 이름 있는 요소에 가려진 페이지에�
   await page.goto(`${siteOrigin}/element?agent=echo&clobber=1`);
 
   await expect(page.getByText("위젯 설정이 올바르지 않습니다.")).toBeVisible();
-  await expect(page.getByRole("textbox", { name: "요청" })).toBeDisabled();
+  await expect(page.getByRole("textbox", { name: "질문" })).toBeDisabled();
   await page.evaluate(async () => {
     await document.fonts.ready;
   });
@@ -281,7 +281,7 @@ test("CSP 가 style-src 'self' 인 사이트 페이지에서도 위젯이 디자
   await settled(page, "echo");
 
   // 빈 입력창이면 보내기가 쓸 수 없음의 색이다. 글을 넣어 주 버튼의 색으로 둔다.
-  await page.getByRole("textbox", { name: "요청" }).fill("csp");
+  await page.getByRole("textbox", { name: "질문" }).fill("csp");
   const button = page.getByRole("button", { name: "보내기" });
   await expect(button).toBeEnabled();
   const painted = await button.evaluate((element) => {

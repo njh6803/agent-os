@@ -33,8 +33,13 @@ test("첫 화면은 위쪽 띠에 이름과 새 대화를, 대화 자리에 할 
   expect(screen.getByRole("heading", { name: "주문 도우미" })).toBeTruthy();
   expect(screen.getByRole("button", { name: "새 대화" })).toBeTruthy();
   expect(screen.getByText("주문, 배송, 환불을 물어볼 수 있습니다.")).toBeTruthy();
-  expect(screen.getByText("아래에 요청을 적어 보내 주세요.")).toBeTruthy();
-  expect(screen.getByRole("textbox", { name: "요청" })).toHaveProperty("disabled", false);
+  expect(screen.getByText("아래 입력창에 적어 보내 주세요.")).toBeTruthy();
+  const field = screen.getByRole("textbox", { name: "질문" });
+  expect(field).toHaveProperty("disabled", false);
+  expect(field.getAttribute("placeholder")).toBe("무엇을 도와드릴까요?");
+  // 이름표 "질문"은 화면에서 숨고 칸의 이름으로만 남는다. 칸 위에 보이는 글자로는 서지 않는다.
+  expect(screen.getByText("질문").tagName).toBe("LABEL");
+  expect(screen.getByText("질문").className).toContain("sr-only");
   // 입력이 비어 보내기는 막혀 있다(티켓 05). 글을 넣으면 열리는 것은 WidgetConversation.test.tsx 가 본다.
   expect(screen.getByRole("button", { name: "보내기" })).toHaveProperty("disabled", true);
   expect(screen.queryByRole("alert")).toBeNull();
@@ -47,7 +52,7 @@ test("할 수 있는 일을 주지 않으면 그 줄 없이 안내만 보이고,
   expect(screen.getByRole("heading", { name: "order-helper" })).toBeTruthy();
   const conversation = screen.getByRole("main");
   expect(conversation.querySelectorAll("p")).toHaveLength(1);
-  expect(conversation.textContent).toBe("아래에 요청을 적어 보내 주세요.");
+  expect(conversation.textContent).toBe("아래 입력창에 적어 보내 주세요.");
 });
 
 for (const [label, query] of [
@@ -60,8 +65,8 @@ for (const [label, query] of [
     const alert = screen.getByRole("alert");
     expect(alert.textContent).toContain("위젯 설정이 올바르지 않습니다.");
     expect(alert.textContent).toContain("사이트 관리자에게 알려 주세요.");
-    expect(screen.queryByText("아래에 요청을 적어 보내 주세요.")).toBeNull();
-    expect(screen.getByRole("textbox", { name: "요청" })).toHaveProperty("disabled", true);
+    expect(screen.queryByText("아래 입력창에 적어 보내 주세요.")).toBeNull();
+    expect(screen.getByRole("textbox", { name: "질문" })).toHaveProperty("disabled", true);
     expect(screen.getByRole("button", { name: "보내기" })).toHaveProperty("disabled", true);
     expect(errors).toEqual([expect.stringContaining("위젯 질의 agent")]);
   });
@@ -92,7 +97,7 @@ test("목록 밖의 테마와 모드는 기본값으로 그리고, 위젯은 그
 
   expect(rootAttributes()).toEqual({ theme: "nokcheong", mode: undefined, density: "regular" });
   expect(screen.queryByRole("alert")).toBeNull();
-  expect(screen.getByRole("textbox", { name: "요청" })).toHaveProperty("disabled", false);
+  expect(screen.getByRole("textbox", { name: "질문" })).toHaveProperty("disabled", false);
   expect(errors).toEqual([
     expect.stringContaining("위젯 질의 theme"),
     expect.stringContaining("위젯 질의 mode"),

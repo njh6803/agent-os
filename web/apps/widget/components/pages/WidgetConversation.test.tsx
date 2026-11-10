@@ -519,7 +519,7 @@ test("'새 대화'는 응답이 결말 전이면 막히고 끝나면 열리며, 
   await user.click(newConversation);
 
   expect(screen.queryByText("첫째")).toBeNull();
-  expect(screen.getByText("아래에 요청을 적어 보내 주세요.")).toBeTruthy();
+  expect(screen.getByText("아래 입력창에 적어 보내 주세요.")).toBeTruthy();
   await ask(user, "둘째");
   await findOutput("도착 예정입니다.");
   expect(started).toHaveLength(2);

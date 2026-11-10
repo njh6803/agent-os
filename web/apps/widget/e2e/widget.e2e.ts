@@ -63,7 +63,7 @@ test("iframe 페이지의 위젯은 디자인 토큰의 값으로 칠해진다",
   await page.goto(`${stack().siteOrigin}/?agent=tools`);
   const frame = widget(page);
   // 빈 입력창이면 보내기가 쓸 수 없음의 색이다. 글을 넣어 주 버튼의 색으로 둔다.
-  await frame.getByRole("textbox", { name: "요청" }).fill("css");
+  await frame.getByRole("textbox", { name: "질문" }).fill("css");
   const send = frame.getByRole("button", { name: "보내기" });
   await expect(send).toBeEnabled();
 
@@ -208,7 +208,7 @@ test("입력창의 글자 수 상한은 서버의 기본값과 같다", async ({
   const { siteOrigin, widgetOrigin } = stack();
   await page.goto(`${siteOrigin}/?agent=echo`);
   const frame = widget(page);
-  const field = frame.getByRole("textbox", { name: "요청" });
+  const field = frame.getByRole("textbox", { name: "질문" });
   const sendButton = frame.getByRole("button", { name: "보내기" });
 
   await field.fill("a".repeat(REQUEST_CHARS + 1));

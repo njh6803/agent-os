@@ -115,7 +115,10 @@ name = "보낼 때 422 의 안내를 걷지 않으면 걷히는 시험이 빨갛
 runner = "pages"
 tests = ["apps/widget/components/pages/WidgetFailures.test.tsx", "-t", "422 의 안내는 다음에 보낼 때 걷힌다"]
 expect = "red"
-expect_output = ["요청을 보낼 수 없습니다. 요청을 고쳐 다시 보내 주세요."]
+# 안내 글(`INVALID`)은 시험 원문에 글자 그대로 있어 표지가 못 된다. 걷히지 않은 안내 문단을 받았다는
+# 풀이 줄(`expected <p …>…</p> to be null`)은 마지막 단언이 빨개질 때만 찍힌다. 앞의 `<p id=…>`는 useId 라
+# 값이 바뀔 수 있어 뗀다.
+expect_output = ["</p> to be null"]
 
 [[mutation.edit]]
 file = "web/apps/widget/components/pages/useConversation.ts"

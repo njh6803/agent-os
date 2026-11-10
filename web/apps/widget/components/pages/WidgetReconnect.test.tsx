@@ -31,7 +31,7 @@ import {
 } from "../../testing/widget";
 
 const CUT = "연결이 끊겨 다시 잇고 있습니다. 받은 내용은 그대로 있습니다.";
-const WELCOME = "아래에 요청을 적어 보내 주세요.";
+const WELCOME = "아래 입력창에 적어 보내 주세요.";
 const EXPIRED = "이 승인 묻기는 더 이상 받을 수 없습니다.";
 const SUBSCRIPTION = `${location.origin}/end-user/runs/run_1/subscription`;
 

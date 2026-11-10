@@ -1,10 +1,13 @@
-// 글 입력(재탐색 디자인 파일 2.3). 라벨이 칸 위에 늘 보이고, 칸 아래 한 줄이 도움말이나 오류다. 변형 둘(한 줄, 여러
+// 글 입력(재탐색 디자인 파일 2.3). 라벨이 기본으로 칸 위에 보이고, 칸 아래 한 줄이 도움말이나 오류다. 변형 둘(한 줄, 여러
 // 줄). 한 줄은 `type` 으로 넣은 글을 가릴 수 있고(admin-style 명세), 모양은 가리지 않은 칸과 같다. 색과 치수는
 // 재탐색의 상태 표와 해부도다. 한 줄 칸의 높이와 칸의 글자 크기는 밀도를 따르고(촘촘 32px·14px, 보통 40px·15px),
 // 여러 줄 칸의 높이는 줄 수(`rows`)가 정한다. 안쪽 좌우 12px, 여러 줄의 안쪽 위아래 8px, 모서리 8px, 라벨과 칸 사이
 // 8px, 칸과 도움말 사이 4px 이다. 라벨은 작은 글자 500, 도움말과 오류는 작은 글자다.
 // 클래스는 쓰임새 토큰과 공통 크기의 유틸리티만 쓰고 상태마다 고른다. 쓸 수 없음과 오류에는 올림의 클래스를 두지 않는다.
 // 누름과 불러오는 중은 디자인 파일의 상태 표가 두지 않았다.
+//
+// `hideLabel` 은 라벨을 `sr-only` 로 화면에서만 숨긴다. 라벨이 흐름에서 빠져 칸이 묶음의 맨 위에 서고, 접근 이름은
+// 여전히 라벨에서 나온다(라벨을 없애고 `aria-label` 만 두는 길은 `<label for>` 로 짓는 규칙에 맞지 않아 쓰지 않는다).
 //
 // 라벨은 `<label for>` 로 칸에 잇는다. 도움말을 라벨 안에 두면 이름에 섞이고 `aria-describedby` 로 한 번 더 읽힌다.
 // 오류가 있으면 그 글이 도움말의 자리를 차지한다(첫 탐색 디자인 파일 02.3 의 오류 상태 그림). "선택"은 공백 하나 뒤의
@@ -18,8 +21,10 @@ import { Icon } from "../atoms/Icon";
 export type TextFieldVariant = "single" | "multi";
 
 interface FieldOwnProps {
-  /** 칸 위에 늘 보이는 이름. */
+  /** 칸 위에 늘 보이는 이름. `hideLabel` 이면 화면에서만 숨고 칸의 접근 이름은 이 글이다. */
   label: string;
+  /** 라벨을 화면에서만 숨긴다. `<label for>` 는 그대로라 접근 이름이 라벨에서 나온다. 칸의 쓰임이 둘레 글로 뻔할 때만 쓴다. */
+  hideLabel?: boolean;
   /** 없으면 브라우저가 글을 든다. */
   value?: string;
   /** 예시만. 라벨을 대신하지 않는다. */
@@ -85,6 +90,7 @@ const NOTE_COLOR = {
 
 export function TextField({
   label,
+  hideLabel = false,
   help = null,
   error = null,
   optional = false,
@@ -135,7 +141,7 @@ export function TextField({
       <div className="flex min-w-0 flex-col gap-2">
         <label
           htmlFor={id}
-          className={`text-small font-medium ${disabled ? "text-text-disabled" : "text-text"}`}
+          className={`text-small font-medium ${disabled ? "text-text-disabled" : "text-text"}${hideLabel ? " sr-only" : ""}`}
         >
           {label}
           {optional ? (
