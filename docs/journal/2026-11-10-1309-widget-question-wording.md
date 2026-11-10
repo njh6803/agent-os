@@ -97,7 +97,22 @@ open-session을 부른다 2026-11-10T04:11:25Z
 
 ## 다음
 
-- 병합 뒤에도 이 티켓이 새로 막힘을 푸는 티켓은 없다. 07은 06과 03을 기다리고(03은 이 PR로 풀린다), 06은 05를 기다린다. 05(`05-acknowledgement-and-token-endpoints`)는 04가 병합돼 ready지만 이미 워크트리 `feature/05-acknowledgement-and-token-endpoints`에서 다른 세션이 진행하는 것으로 보인다(`git worktree list`에 있다. 그 세션이 도는지는 이 세션이 확인하지 않았다).
+- 병합 뒤에도 이 티켓이 새로 막힘을 푸는 티켓은 없다. 07은 06과 03을 기다리고(03은 이 PR로 풀린다), 06은 05를 기다린다. 05는 이 세션이 일하는 사이 PR 513으로 병합됐고(`git log HEAD..origin/main`이 `cb26ca5c`를 보였다) 06 세션(`feature/06-portal-page-draws-widget`)이 돌고 있다(`list_sessions`). 07은 06을 기다린다.
 - 이 PR이 하지 않은 것: 디자인 시스템 아티팩트에 `TextField.md` 카드를 올리는 일(`sync-design-system 올리기`)은 티켓 범위 밖이라 하지 않았다. 병합 뒤 필요한지는 `docs/agents/issue-tracker.md`와 그 스킬의 `upload.md`로 판단한다.
 - 사용자가 판단할 것(뒤로 넘기는 일): 입력창 밖에 사람에게 보이는 "요청"(`FailureAlert.tsx`의 "요청을 나눠 보내 주세요.", `ApprovalCard.tsx`, 진행 표시의 이름)이 남아 있다. 이 티켓이 정한 글 넷이 아니고 개념어는 "요청" 그대로라는 명세와 맞아 이번에는 바꾸지 않았다(표준 축 리뷰의 범위 메모). 입력창에서 단어를 뺀 것처럼 이 글들도 바꿀지는 사람이 정한다.
 - 시험·스토리·e2e 12파일이 입력창을 `{ name: "질문" }`으로 직접 찾는다(Shotgun Surgery 판단 항목). 다음 이름 변경에 대비해 `testing/widget.tsx`와 `e2e/helpers.ts`의 도우미로 모으는 일은 아직 티켓이 아니다.
+
+### 인계 지시문 (커밋 뒤 경계, 같은 브랜치)
+
+- 다음 작업: `.scratch/pilot-portal/issues/03-widget-question-wording-and-hidden-label.md`의 푸시와 PR, 봇 회차, 병합(위젯 입력창을 "질문"으로 부르고 TextField에 이름표를 숨기는 속성을 더한 변경. 구현과 셀프 리뷰 반영, PR 직전 리뷰, 회고는 끝났다)
+- 다음 단계: 구현
+- 어디서: 새 세션. `git worktree list`에서 `feature/03-widget-question-wording-and-hidden-label`이 체크아웃된 자리(`C:/project/agent/.claude/worktrees/03-widget-question-wording-and-hidden-label`)를 찾아 EnterWorktree(path)로 들어간다. 주 체크아웃은 이 세션이 `origin/main`과 같은 것을 보았으므로 `tidy-checkouts`를 먼저 돌지 않는다.
+- 시작 프롬프트: `/implement .scratch/pilot-portal/issues/03-widget-question-wording-and-hidden-label.md` (남은 것은 푸시, PR, 봇 회차, 병합이다)
+- 브랜치: `feature/03-widget-question-wording-and-hidden-label`
+- 모델: Sonnet 5.5 / high. 2의 잇는 지시문
+- 읽을 것: 이 일지 전체, `.claude/skills/next-session/merge.md`의 "워크트리에서 병합할 때"(워크트리 사본을 Read로 연다)
+- 이어받을 상태: 인계: 커밋 뒤(일지 `docs/journal/2026-11-10-1309-widget-question-wording.md`). `f5f29eeb`까지 커밋했고 푸시 전이며 PR은 아직 열지 않았다. 검증(`run_checks.py` 전 단계, ruff, 커밋 두 번의 pre-commit, 위젯 e2e 16건, `-m llm_widget` 1건, 사진 비교)과 셀프 리뷰·PR 직전 CodeRabbit CLI 리뷰(지적 0건, 유효한 Minor 하나는 고쳤다)·회고는 끝났다. 이 일지는 이 커밋 뒤에 "인계 지시문" 절만 더 고쳤으니 새 세션의 첫 커밋에 싣는다. PR 본문에는 일지의 "검증"과 "사진 비교" 결과(위젯 사진 35장과 UI 사진 넷이 바뀌었고 `visual:admin`은 바뀌지 않았다)를 옮기고, 변경 유형은 `feat`, 계약 영향은 없음으로 적는다. 본문의 "남긴 위험"에는 일지 "다음"의 뒤로 넘긴 일(입력창 밖의 "요청" 글, 12파일의 입력창 찾기 중복, 디자인 시스템 아티팩트에 `TextField.md` 올리기)을 적는다. `origin/main`이 `cb26ca5c`(05, PR 513)만큼 앞섰고 이 브랜치와 겹치는 파일은 없다(`git diff --name-only HEAD...origin/main`으로 봤다). 푸시 전에 `git-pr` 2단계대로 main을 받아 맞추고(겹치는 파일이 없어 충돌은 없을 것으로 어림한다) 맞춘 상태에서 검증 명령을 다시 돌린다. `.scratch/plan.md`가 충돌하면 `uv run python tools/plan_table.py`로 다시 만든다. 06 세션이 `web/apps/portal`과 `README.md`를 만지는 중일 수 있다.
+- 확인할 선행 조건: 없음
+- 이번 요청 범위: PR과 병합까지
+
+open-session을 부른다 2026-11-10T05:09:34Z
