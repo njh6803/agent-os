@@ -75,3 +75,18 @@
 
 - 병합 뒤 프론티어는 03(위젯 문구, 이 티켓 뒤)과 06(질문 페이지 e2e 준비)이다. 04는 나란히 돌고 있고(워크트리 `04-portal-server-starts-after-checking-config`), 헌법 판 3.0.80을 쓴다. 나중에 병합하는 쪽이 main을 받아 README, `tech.md` 웹 행, 헌법의 판, `web/pnpm-lock.yaml`을 맞춘다.
 - 06은 이 패키지로 질문 페이지의 e2e 준비를 지으면서 중계의 셋째 상류와 `upstreamOf` 사례를 더한다. 07의 트레이스 주체 사례는 이 티켓이 연 `startedRuns` 길을 쓴다.
+
+### 인계 지시문 (커밋 뒤 경계, 같은 브랜치)
+
+- 다음 작업: `.scratch/pilot-portal/issues/02-e2e-stack-package.md`의 PR과 병합(위젯 e2e의 준비를 `@agent-os/e2e-stack`으로 뽑고 트레이스 폴더를 시험에 넘긴 변경. 구현과 커밋, 셀프 리뷰 반영은 끝났다)
+- 다음 단계: 구현
+- 어디서: 새 세션. `git worktree list`에서 `feature/02-e2e-stack-package`가 체크아웃된 자리(`C:/project/agent/.claude/worktrees/02-e2e-stack-package`)를 찾아 EnterWorktree(path)로 들어간다. 주 체크아웃에서 tidy-checkouts를 먼저 돌지 않는다(같은 워크트리를 잇는다).
+- 시작 프롬프트: `/implement .scratch/pilot-portal/issues/02-e2e-stack-package.md` (남은 것은 푸시, PR, 봇 회차, 병합이다)
+- 브랜치: `feature/02-e2e-stack-package`
+- 모델: Sonnet 5.5 / high. 2의 잇는 지시문
+- 읽을 것: 이 일지 전체, 티켓과 `.scratch/pilot-portal/spec.md`, `.claude/skills/next-session/merge.md`의 "워크트리에서 병합할 때"(워크트리 사본을 Read로 연다)
+- 이어받을 상태: 인계: 커밋 뒤 `f5861e7e`까지 커밋했고 푸시 전이다. 검증(pytest 696초, pyright 둘, lint-imports, ruff 둘, `pnpm -C web verify`, 위젯 e2e 16개, `llm_widget`, 변이 표 여섯)은 통과했고 셀프 리뷰 반영도 끝났다. 이 일지는 이 커밋 뒤에 "인계 지시문" 절만 더 고쳤으니 새 세션의 첫 커밋에 싣는다. 일지 `docs/journal/2026-11-10-1013-e2e-stack-package.md`. 형제 04(`04-portal-server-starts-after-checking-config`)가 헌법 3.0.80을 쓰고 README, `docs/constitution/tech.md` 웹 행, `web/pnpm-lock.yaml`을 함께 고친다. 04가 먼저 병합되면 main을 받아 그 파일을 맞추고 이 브랜치의 헌법 판(3.0.79)을 먼저 병합된 판보다 높게 올린다. `.scratch/plan.md`가 충돌하면 `uv run python tools/plan_table.py`로 다시 만든다.
+- 확인할 선행 조건: 주 체크아웃 미갱신(병합은 워크트리의 병합 길로 한다)
+- 이번 요청 범위: PR과 병합까지
+
+open-session을 부른다 2026-11-10T01:44:30Z (이 일지의 인계 지시문 편집은 커밋 전이다. 새 세션의 첫 커밋에 함께 싣는다)
