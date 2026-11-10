@@ -34,15 +34,15 @@ expect = "red"
 expect_output = ["트레이스 1개에 llm_called 가 없다"]
 
 [[mutation.edit]]
-file = "web/apps/widget/e2e/stack.ts"
+file = "web/packages/e2e-stack/src/serve.ts"
 old = '''
-        PYTHONUTF8: "1",
-        AGENT_OS_ADMIN_TOKEN: unusedToken(),
+      PYTHONUTF8: "1",
+      AGENT_OS_ADMIN_TOKEN: unusedToken(),
 '''
 new = '''
-        PYTHONUTF8: "1",
-        ANTHROPIC_API_KEY: undefined,
-        AGENT_OS_ADMIN_TOKEN: unusedToken(),
+      PYTHONUTF8: "1",
+      ANTHROPIC_API_KEY: undefined,
+      AGENT_OS_ADMIN_TOKEN: unusedToken(),
 '''
 
 [[mutation]]
@@ -127,15 +127,15 @@ expect = "red"
 expect_output = ["Playwright 가 종료 코드 1 로 끝났다"]
 
 [[mutation.edit]]
-file = "web/apps/widget/e2e/stack.ts"
+file = "web/packages/e2e-stack/src/stack.ts"
 old = '''
-    rmSync(work, { recursive: true, force: true, maxRetries: 5 });
-  };
-  try {
+        rmSync(work, { recursive: true, force: true, maxRetries: 5 });
+      }
+    },
 '''
 new = '''
-    rmSync(work, { recursive: true, force: true, maxRetries: 5 });
-    throw new Error("정리 뒤에 던지는 변이");
-  };
-  try {
+        rmSync(work, { recursive: true, force: true, maxRetries: 5 });
+      }
+      throw new Error("정리 뒤에 던지는 변이");
+    },
 '''

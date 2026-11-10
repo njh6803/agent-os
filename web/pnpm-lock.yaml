@@ -161,6 +161,9 @@ importers:
         specifier: 19.3.0
         version: 19.3.0(react@19.3.0)
     devDependencies:
+      '@agent-os/e2e-stack':
+        specifier: workspace:*
+        version: link:../../packages/e2e-stack
       '@playwright/test':
         specifier: ^1.63.0
         version: 1.63.0
@@ -206,6 +209,8 @@ importers:
       openapi-fetch:
         specifier: ^0.17.0
         version: 0.17.0
+
+  packages/e2e-stack: {}
 
   packages/site-file:
     dependencies:

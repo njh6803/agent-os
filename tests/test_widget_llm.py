@@ -9,7 +9,8 @@
 
 - 프로젝트 `llm` 은 이 시험이 자식의 환경에 준 `AGENT_OS_WIDGET_LLM=1` 이 있을 때만 서고
   (`web/apps/widget/playwright.config.ts`), serve 는 `AGENT_OS_WIDGET_TRACES` 가 준 `tmp_path`
-  아래에 트레이스를 남긴다(`e2e/stack.ts`). 두 이름은 `e2e/env.ts` 와 같은 글자다. 키는 이
+  아래에 트레이스를 남긴다(`e2e/stack.ts` 가 패키지 `@agent-os/e2e-stack` 의 `startServe` 로
+  띄운다). 두 이름은 `e2e/env.ts` 와 같은 글자다. 키는 이
   프로세스의 환경이 pnpm → Playwright → serve 로 물려 간다.
 - pnpm 은 이름이 아니라 `shutil.which` 가 준 경로로 띄운다. 이 PC 의 Windows 에서
   `uv run --env-file` 아래의 pytest 는 `pnpm` 을 이름으로 띄우지 못했다(`FileNotFoundError`,
