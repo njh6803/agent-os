@@ -52,8 +52,19 @@ export function parseStartArgs(argv: readonly string[]): StartArgs {
   return { config, siteFile };
 }
 
-function failureCode(error: unknown): string {
-  return error instanceof Error && "code" in error ? String(error.code) : "알 수 없는 오류";
+/**
+ * 시작 실패의 진단에 실을 코드. 코드는 오류 자체에 있기도 하고(`EADDRINUSE`) 원인(`cause`)에만 있기도 하다
+ * (페이지 스크립트를 벗기지 못한 오류는 `stripTypeScriptTypes` 의 오류를 원인으로 싼다). 문자열이나 숫자가 아닌
+ * 코드(자식 프로세스가 시간 제한으로 죽을 때의 `null`)는 건너뛰고 원인을 따라간다. 메시지와 경로는 싣지 않는다.
+ */
+export function failureCode(error: unknown): string {
+  if (error instanceof Error) {
+    if ("code" in error && (typeof error.code === "string" || typeof error.code === "number")) {
+      return String(error.code);
+    }
+    if (error.cause !== undefined) return failureCode(error.cause);
+  }
+  return "알 수 없는 오류";
 }
 
 async function main(argv: readonly string[]): Promise<void> {

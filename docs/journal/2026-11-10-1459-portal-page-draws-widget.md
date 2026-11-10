@@ -110,3 +110,10 @@ open-session을 부른다 2026-11-10T06:56Z
 
 - `origin/main`(`686ae728`)을 직접 merge했고 충돌이 없었다. `sibling_overlap.py`는 번호 겹침 없음, 함께 고친 파일 없음이었다(헌법 판 3.0.82는 3.0.81 위).
 - `coderabbit-review` 서브에이전트가 `coderabbit review --agent --include-untracked --base origin/main`(CLI 0.7.5)을 끝까지 돌렸고 `review_completed`, `findings: 0`이다. `Seat: not assigned`였지만 리뷰는 거절되지 않았다. 지적이 없어 반영할 것도 없다. 서브에이전트는 지적이 없다는 이유로 서버 파일을 따로 열어 보지 않았다고 보고했다.
+
+## 봇 회차 (PR 516, 첫 회차)
+
+- CI는 헤드 `0adf04e`에서 `e2e-portal`(1분 15초)을 포함해 모두 초록이다(`tools/wait_ci.py 516`의 끝 줄과 `gh pr checks 516`에서 읽었다). 티켓의 마지막 체크박스를 채웠다.
+- CodeRabbit 첫 리뷰의 Minor 하나: `tools/start.ts`의 `failureCode`가 `error.code`만 읽어 `cause`에만 든 `ERR_UNSUPPORTED_TYPESCRIPT_SYNTAX`를 진단에 못 싣는다. 코드를 읽어 타당하다고 판단해 고쳤다. `failureCode`를 내보내 `cause`를 따라가게 하고, 문자열이나 숫자가 아닌 코드(`null`)는 건너뛴다. 시험 넷을 먼저 더해 빨강을 보았고(`failureCode is not a function`, 4건 실패) 고친 뒤 포털 Vitest가 199건 통과 1건 건너뜀이다(출력 끝 줄을 읽었다).
+- claude-review 첫 리뷰의 Minor 하나: `browser/portal.ts`의 토큰 끝점 경로 글자가 `server/paths.ts`의 `SITE_ENDPOINT`와 따로 적혀 있다. 브라우저 번들이 서버 모듈을 가져올 수 없어 둘로 두는 것이 이 티켓의 설계이고 두 파일 머리 주석이 그 사실과 "이 티켓의 e2e가 보지 못한다"를 적었다. 둘을 잇는 e2e는 티켓 07의 사례가 맡는다(티켓 07 29행). 보류하고 PR 코멘트에 이유를 남긴다.
+- 다음: 이 반영을 푸시한 뒤 둘째 회차부터는 Critical·Major만 고친다.

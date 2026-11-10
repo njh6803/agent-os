@@ -68,5 +68,5 @@
 
 - [x] **빨강을 먼저 본다**(헌법 원칙 II). 페이지 HTML과 정적 파일의 Vitest, 이 티켓의 e2e 사례가 구현 전에 빨갛다
 - [x] **질문 페이지 e2e와 위젯 e2e(`pnpm -C web/apps/widget exec playwright test`)가 로컬에서 초록이다.** 중계를 바꿨으므로 위젯 e2e도 친다. `packages/ui`의 `package.json`을 고쳤으므로 사진 비교 셋(`pnpm -C web visual`, `visual:widget`, `visual:admin`)도 친다
-- [ ] **CI의 `e2e-portal` 잡이 초록이다**
+- [x] **CI의 `e2e-portal` 잡이 초록이다**
 - [x] **검증 명령이 모두 초록이다.** 손으로 치는 다섯과 위의 e2e 둘·사진 비교다
