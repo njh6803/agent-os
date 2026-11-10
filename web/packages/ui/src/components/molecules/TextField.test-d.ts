@@ -32,3 +32,18 @@ export const 한_줄_칸에_type_으로_number_를_주면_컴파일이_실패한
   // @ts-expect-error: 한 줄 변형의 type 은 text 와 password 뿐이다
   type: "number",
 };
+
+// 라벨을 화면에서만 숨기는 선택 속성 `hideLabel` 은 두 변형이 모두 받는다.
+export const 한_줄_칸은_hideLabel_을_받는다: TextFieldProps = { label: "질문", hideLabel: true };
+export const 여러_줄_칸은_hideLabel_을_받는다: TextFieldProps = {
+  variant: "multi",
+  label: "질문",
+  hideLabel: true,
+};
+export const hideLabel_은_생략할_수_있다: TextFieldProps = { label: "질문" };
+
+export const hideLabel_에_불리언이_아닌_값을_주면_컴파일이_실패한다: TextFieldProps = {
+  label: "질문",
+  // @ts-expect-error: hideLabel 은 불리언이다
+  hideLabel: "예",
+};

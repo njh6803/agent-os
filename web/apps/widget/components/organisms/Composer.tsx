@@ -46,7 +46,7 @@ export interface ComposerProps {
   readonly reconnect: Reconnect | null;
 }
 
-const INVALID = "요청을 보낼 수 없습니다. 요청을 고쳐 다시 보내 주세요.";
+const INVALID = "질문을 보낼 수 없습니다. 질문을 고쳐 다시 보내 주세요.";
 
 const APPROVAL: Band = { kind: "notice", icon: "info", text: "승인이나 거부를 먼저 골라 주세요." };
 
@@ -169,8 +169,9 @@ export function Composer({
             ref={box}
             variant="multi"
             rows={1}
-            label="요청"
-            placeholder="요청을 적어 주세요"
+            label="질문"
+            hideLabel
+            placeholder="무엇을 도와드릴까요?"
             value={value}
             onChange={onChange}
             disabled={disabled}

@@ -38,7 +38,7 @@ import {
   untilSaved,
 } from "../../testing/widget";
 
-const WELCOME = "아래에 요청을 적어 보내 주세요.";
+const WELCOME = "아래 입력창에 적어 보내 주세요.";
 
 function finished(runId: string, output: string): () => Response {
   return () => items({ type: "started", run_id: runId }, { type: "finished", output });
