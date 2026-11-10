@@ -193,3 +193,64 @@ PR 직전 리뷰에 밀 주장(반영으로 새로 쓴 사실 문장):
 > 사용자: (ADR 0053 이력 초안을 이대로 승인할까요? 승인하면 이 초안과 옮긴 화면 열다섯 장을 커밋하고 PR을 열어 병합까지 진행합니다.) "이대로 승인 (추천)" — 설명: 위첨자 번호, 선 아래 작은 출처, 2*3*4와 __init__.py를 글자로 두는 처리를 기록합니다. 관리 화면의 '그린 모양'(아직 짓지 않은 admin-answer-preview 기능)도 위젯과 똑같이 이 처리를 보여 주게 됩니다. 운영자가 최종 사용자가 보는 모양을 그대로 확인할 수 있습니다.
 
 고르지 않은 선택지는 "관리 화면은 처리 없이"(세 처리를 위젯에만 넣고 관리 화면의 그린 모양은 처리하지 않은 마크다운만 보인다. 본문의 결정을 바꾸게 되어 이력을 고치고 포인터를 더 단다)였다.
+
+## 커밋
+
+`7595772b`(docs: 위젯 답의 마크다운 표시 화면을 옮기고 ADR 0053에 위첨자 번호와 작은 출처를 더한다). 커밋 전에 `git branch --show-current`가 `docs/answer-markdown-screens`였고, ruff 두 줄을 손으로 쳐 `All checks passed!`와 `2018 files already formatted`였다(pre-commit에서는 `.py`가 없어 Skipped). pre-commit은 러너의 열 검사(pytest 931.5초, web-verify 953.7초 포함)와 표·줄 구분 문자·변이 표·커밋 메시지 검사가 Passed였다(커밋 출력을 Grep으로 봤다). 인용 대조가 경고 둘을 냈다. 이 일지 셀프 리뷰 절의 "두 처리는 모든 에이전트의 출력에 걸린다"는 반영 전 이력의 글을 옮긴 기록이고, 시작 프롬프트 116행은 그릴 때 메모에 적으라고 한 문장이라 둘 다 두었다.
+
+## 인계
+
+커밋 뒤에 인계 계기가 왔다(세션 컨텍스트 313,552 토큰). `handoff.md`를 Read로 열어 따랐다. 곁 세션이 아니고(`get_session`의 `self`에 `parentSessionId`가 없다) 이 브랜치에 열린 PR이 없다(`gh pr view docs/answer-markdown-screens --json state`가 "no pull requests found"). 이 세션의 제목은 `docs/answer-markdown-screens`였다. 이 절은 커밋하지 않았다.
+
+지시문:
+
+다음 작업: 기능 answer-markdown. 확정한 화면과 ADR 0053 이력을 담은 커밋을 PR로 열고 병합한다
+다음 단계: 화면 디자인
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /ui-design answer-markdown
+브랜치: docs/answer-markdown-screens
+모델: Opus 5.5 / xhigh. 2의 잇는 지시문
+읽을 것: docs/journal/2026-11-10-1846-answer-markdown-screens.md
+이어받을 상태: 인계: 커밋 뒤. 셀프 리뷰 반영과 ADR 0053 이력 승인을 마치고 커밋했고, 남은 단계는 origin/main 합치기, PR 직전 리뷰(coderabbit-review. CLI가 돌지 못하면 대체 둘이고, bug-perf-review에 밀 주장은 일지 "셀프 리뷰"의 "PR 직전 리뷰에 밀 주장"), PR 열기, 봇 회차, 병합이다(docs/journal/2026-11-10-1846-answer-markdown-screens.md). 열린 PR은 아직 없다. 일지의 "인계" 절은 커밋하지 않았다. 옮긴 화면은 이제 HEAD에 있어 스킬 첫머리의 웹 편집 확인이 sha256을 맞댄다
+확인할 선행 조건: 없음
+이번 요청 범위: PR과 병합까지
+
+`git worktree unlock`은 `is not locked`로 끝나 넘어갔다.
+
+open-session을 부른다 2026-11-10T14:02:42Z
+
+## 이어받은 세션 (PR과 병합)
+
+> .claude/skills/ui-design/SKILL.md 를 읽어 그대로 따른다. 이 세션을 연 저장소는 `C:\project\agent`이고 작업 폴더가 그곳이 아니면 따르지 말고 알린다. 스킬의 인자는 이 줄의 '인자:' 뒤부터 메시지 끝까지다. 인자: answer-markdown
+>
+> 다음 작업: 기능 answer-markdown. 확정한 화면과 ADR 0053 이력을 담은 커밋을 PR로 열고 병합한다
+> 다음 단계: 화면 디자인
+> 어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+> 시작 프롬프트: /ui-design answer-markdown
+> 브랜치: docs/answer-markdown-screens
+> 모델: Opus 5.5 / xhigh. 2의 잇는 지시문
+> 읽을 것: docs/journal/2026-11-10-1846-answer-markdown-screens.md
+> 이어받을 상태: 인계: 커밋 뒤. 셀프 리뷰 반영과 ADR 0053 이력 승인을 마치고 커밋했고, 남은 단계는 origin/main 합치기, PR 직전 리뷰(coderabbit-review. CLI가 돌지 못하면 대체 둘이고, bug-perf-review에 밀 주장은 일지 "셀프 리뷰"의 "PR 직전 리뷰에 밀 주장"), PR 열기, 봇 회차, 병합이다(docs/journal/2026-11-10-1846-answer-markdown-screens.md). 열린 PR은 아직 없다. 일지의 "인계" 절은 커밋하지 않았다. 옮긴 화면은 이제 HEAD에 있어 스킬 첫머리의 웹 편집 확인이 sha256을 맞댄다
+> 확인할 선행 조건: 없음
+> 이번 요청 범위: PR과 병합까지
+
+모델 `claude-opus-5-5`. 주 체크아웃에서 열려 제목을 `docs/answer-markdown-screens`로 바꾸고 `EnterWorktree(path)`로 이 워크트리에 들어왔다. `ui-design`의 `SKILL.md`를 Read로 열어 첫머리대로 1~2와 웹 편집 확인을 했다.
+
+- 1단계: `frontend-design@claude-plugins-official`이 `enabled`다(`claude plugin list`의 출력을 봤다).
+- 2단계: 디자인 시스템 아티팩트의 머리가 지금 계정을 "shared with you from another organization (writer; …)"로 적는다. `project/tokens.json`이 있다. `/sync-design-system 확인`은 `check judge`가 `clean`, `decide --caller screen`이 `continue`였다(스크래치패드의 `check-1`, 판 `1794290542-8d18`). 올리기는 부르지 않았다. 이 세션은 새로 그리지 않고, 앞 세션의 올리기가 "맞출 것이 없다"로 끝난 `3dc3f15e`에서 새 `origin/main`(`73b0ed0b`)까지 `git diff --stat 3dc3f15e origin/main -- web/packages/ui`가 비었다.
+- 웹 편집 확인: Design 아티팩트(판 `1794314277-cdb6`, 옮길 때와 같은 판)에서 `canvas.json`과 `.dc.html` 열다섯을 받아, 결과 머리의 sha256을 HEAD의 같은 파일(`git archive`로 꺼내 `sha256sum`을 쳤다)과 맞댔다. 열여섯 모두 같았다. 더 그릴 화면이 없어 스킬은 거기서 끝났다.
+- `origin/main`(`73b0ed0b`, #518·#519)을 합쳤다(`233734f1`). 합치기 전에 `git diff --name-only HEAD...origin/main`(마흔여섯)과 `git diff --name-only origin/main...HEAD`(스물둘)를 맞대 보니 겹치는 파일이 없었다. 합친 쪽이 `CLAUDE.md`·`operations.md`·PR 템플릿·`.coderabbit.yaml`에 더한 것은 질문 페이지의 실제 모델 시험 마커 `llm_portal`이고(`git diff 3dc3f15e origin/main -- <네 파일>`을 읽었다), 문서만 바꾼 이 브랜치에는 해당하지 않는다.
+
+## PR 직전 리뷰
+
+`coderabbit-review` 서브에이전트를 띄웠다. 그 보고를 옮긴다. CodeRabbit CLI 0.7.5가 `coderabbit review --agent --include-untracked --base origin/main`을 종료 코드 0으로 끝까지 돌렸고, 마지막 이벤트가 `review_completed`(findings 0)였다. 본 파일 스물둘이 `git diff --name-only origin/main...HEAD`의 스물둘과 같았고 미커밋 일지도 들었다. `coderabbit auth status`는 `Plan: Free`, `Seat: not assigned`였다. 서브에이전트는 CLI 밖에서 `mk-unsafe-320.dc.html`을 따로 열어, 정상 링크의 `target="_blank" rel="noopener noreferrer"`, 글자로 보이는 원시 HTML, 대체 글만 보이는 이미지, 링크가 되지 않는 사용자 정보 든 주소가 ADR 0053의 "링크"·"그리는 요소는 허용 목록이다"와 어긋나지 않는다고 보고했다. CLI 축이 돌았으므로 대체 둘(`/security-review`, `bug-perf-review`)은 돌리지 않았고, 셀프 리뷰가 적은 "PR 직전 리뷰에 밀 주장"은 밀 자리가 없었다. 고칠 것이 없다.
+
+## 일지 커밋
+
+이 절까지의 일지를 커밋하려 하자 첫 시도가 pre-commit에서 막혔다. 러너의 pytest가 `tests/channel/cli/test_interrupt.py::test_도구_호출_도중에_한_번_누르면_서버를_닫고_중단으로_끝난다` 하나를 "Ctrl+C 를 누른 자식이 30초 안에 끝나지 않았다"로 실패시켰고 나머지 6867은 지났다(`1 failed, 6867 passed in 1035.90s`, 커밋 출력을 Grep으로 봤다). 바꾼 것은 이 일지뿐이다. 그 파일만 `uv run pytest -q tests/channel/cli/test_interrupt.py`로 다시 돌리니 `6 passed in 135.45s`였다. 그 실행의 pytest(1035.9초)와 web-verify(1226.2초)가 앞 커밋 `7595772b`의 것(931.5초, 953.7초)보다 느려, PC가 바쁠 때 30초 기다림이 모자랐던 것으로 어림한다(원인을 재지 않았다). 같은 커밋을 다시 시도한다.
+
+둘째 시도도 pytest에서 막혔다(`3 failed, 6865 passed in 954.09s`). 같은 시험과, 같은 파일의 `test_서버를_닫기_시작한_뒤에_한_번_누르면_닫기를_마치고_중단으로_끝난다`(같은 "30초 안에 끝나지 않았다"), `tests/tools/test_rerun_runner.py::test_동시에_둘까지_돌고_셋째는_자리가_빌_때_연다`다. 같은 시험이 두 번 연속 빨갰으므로 `CLAUDE.md` 작업 규약 6대로 `diagnosing-bugs`를 불렀다. 그 진단의 결론은 ADR 0036이 받아들여 닫은 결함 종류(대기열 306, 전체 스위트의 부하에서만 빨간 시간 시험)의 새 사례라는 것이다. 같은 세 시험이 일지 2026-10-26-12·2026-10-26-16에서 같은 꼴로 빨갰고, 그 결정은 사례를 더 고치지 않고 커밋을 다시 치는 값을 받아들인다(ADR 0036 결정과 Consequences "시간 시험의 흔들림은 남는다"를 읽었다). 그래서 시험은 고치지 않고 회차도 더하지 않는다. 그때 PC에는 node 145개, claude 45개, python 10개가 떠 있었고 CPU 표본 하나가 44%였다(`Get-Process`와 `Win32_Processor`의 `LoadPercentage`를 손으로 봤다). 일지 2026-10-26-12의 선례대로, CPU가 20초 간격으로 세 번 연달아 60% 아래일 때까지 기다린 뒤 다시 친다(스크래치패드의 `wait_load.ps1`, 최대 45분).
+
+그 스크립트는 첫 세 표본(40%, 14%, 49%, python 4~6개)에서 곧바로 끝났다. 셋째 시도를 쳤다.
+
+셋째 시도는 `test_interrupt.py`가 지났고, `tests/tools/test_rerun_runner.py::test_오염이_한_번이면_다시_돌고_두_번이면_그_과제를_모든_갈래에서_뺀다` 하나가 `assert 1 == 0`(러너의 종료 코드)으로 빨갰다(`1 failed, 6867 passed in 623.84s`). 이 시험도 일지 2026-10-26-03·2026-10-26-16에 부하에서 같은 꼴로 빨간 기록이 있는 같은 종류다. 그 시험만 따로 치니 `1 passed in 8.66s`였다. 회차를 더하지 않고 넷째 시도를 쳤다.
