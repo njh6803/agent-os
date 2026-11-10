@@ -86,8 +86,11 @@ web/               pnpm 워크스페이스(Node 24, TypeScript 5.9). 파이썬�
                    바로 돌린다). server/(설정 읽기 config, 고지 전문 notice, 쿠키 수명 cookie-policy, 쿠키 머리글 읽기
                    cookies, 익명 식별자 쿠키 anonymous-cookie, 사이트 토큰 서명과 익명 주체 이름 token, 사이트 파일과
                    개인 키를 대는 시작 검사 site-check·load, 시작 검사 결과를 요청 처리기가 쓰는 값으로 잇는 context,
-                   진단 글 diagnostics, 고지 확인·토큰·health 끝점을 내는 요청 처리기 handler, node:http 에 거는
-                   serve), tools/start.ts(설정과 사이트 파일을 대 본 뒤에야 뜨는 시작 명령),
+                   진단 글 diagnostics, 서버가 쓰는 경로의 한 자리 paths, 질문 페이지 HTML을 짓는 page, 시작 때 짓는 정적 파일
+                   assets, 질문 페이지·정적 파일·고지 확인·토큰·health 끝점을 내는 요청 처리기 handler, node:http 에 거는
+                   serve), browser/(브라우저가 받는 페이지 스크립트 portal.ts 와 페이지 CSS portal.css),
+                   e2e/·playwright.config.ts(실제 serve·위젯·질문 페이지를 한 출처로 모으는 중계 뒤에서 도는 e2e),
+                   tools/start.ts(설정과 사이트 파일을 대 본 뒤, 정적 파일을 짓고서야 뜨는 시작 명령),
                    tools/make-key.ts(RSA 키 쌍과 사이트 파일에 붙일 공개 키 조각을 내는 명령), tools/args.ts(두 명령이
                    함께 쓰는 인자 도우미), testing/(시험이 임시 폴더에 짓는 설정·사이트 파일·키)
 docs/

@@ -3,7 +3,7 @@
 import { expect, test } from "vitest";
 import { portalContext } from "./context.ts";
 import { loadPortal } from "./load.ts";
-import { rsaKey, siteSpec, writeSetup } from "../testing/fixtures.ts";
+import { rsaKey, siteSpec, testAssets, writeSetup } from "../testing/fixtures.ts";
 
 function loaded(edits: Parameters<typeof writeSetup>[0] = {}) {
   const setup = writeSetup(edits);
@@ -17,7 +17,7 @@ function loaded(edits: Parameters<typeof writeSetup>[0] = {}) {
 const CLOCK = { now: () => 1_800_000_000_000, newAnonymousId: () => "id" };
 
 test("설정의 사이트마다 이름과 발급자와 보증 모드에 사이트 파일의 audience 를 붙인다", () => {
-  const context = portalContext(loaded(), CLOCK);
+  const context = portalContext(loaded(), testAssets(), CLOCK);
 
   expect(context.sites).toEqual([
     { name: "demo", issuer: "https://demo.example", audience: "agent-os", assurance: "anonymous" },
@@ -27,7 +27,7 @@ test("설정의 사이트마다 이름과 발급자와 보증 모드에 사이�
 test("공개 출처와 kid 와 시작 때 읽은 개인 키를 그대로 든다", () => {
   const result = loaded();
 
-  const context = portalContext(result, CLOCK);
+  const context = portalContext(result, testAssets(), CLOCK);
 
   expect(context.publicOrigin).toBe(result.config.publicOrigin);
   expect(context.kid).toBe(result.config.kid);
@@ -35,7 +35,7 @@ test("공개 출처와 kid 와 시작 때 읽은 개인 키를 그대로 든다"
 });
 
 test("시계와 식별자 만들기는 받은 것을 그대로 든다", () => {
-  const context = portalContext(loaded(), CLOCK);
+  const context = portalContext(loaded(), testAssets(), CLOCK);
 
   expect(context.now()).toBe(1_800_000_000_000);
   expect(context.newAnonymousId()).toBe("id");
@@ -63,7 +63,7 @@ test("발급자마다 audience 가 다른 사이트 파일에서 사이트마다
     },
   });
 
-  const context = portalContext(result, CLOCK);
+  const context = portalContext(result, testAssets(), CLOCK);
 
   expect(context.sites.map(({ name, issuer, audience }) => [name, issuer, audience])).toEqual([
     ["demo", "https://demo.example", "agent-os"],
@@ -75,5 +75,15 @@ test("발급자마다 audience 가 다른 사이트 파일에서 사이트마다
 test("발급자가 사이트 파일에 없으면 서버가 뜨기 전에 오류로 멈춘다", () => {
   const result = loaded();
 
-  expect(() => portalContext({ ...result, siteFile: { sites: [] } }, CLOCK)).toThrow(/demo/u);
+  expect(() => portalContext({ ...result, siteFile: { sites: [] } }, testAssets(), CLOCK)).toThrow(
+    /demo/u,
+  );
+});
+
+test("시작 때 지은 정적 파일 묶음을 그대로 든다", () => {
+  const assets = testAssets();
+
+  const context = portalContext(loaded(), assets, CLOCK);
+
+  expect(context.assets).toBe(assets);
 });

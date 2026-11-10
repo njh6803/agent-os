@@ -4,6 +4,7 @@
 
 import { COOKIE_LIFETIME_DAYS } from "./cookie-policy.ts";
 import type { Cookie } from "./cookies.ts";
+import { siteCookiePath } from "./paths.ts";
 
 export const ANONYMOUS_COOKIE = "portal_anon";
 
@@ -32,7 +33,7 @@ export function anonymousCookie({ id, siteName, publicOrigin }: CookieSpec): str
     `${ANONYMOUS_COOKIE}=${id}`,
     "HttpOnly",
     "SameSite=Strict",
-    `Path=/portal/sites/${siteName}`,
+    `Path=${siteCookiePath(siteName)}`,
     `Max-Age=${String(COOKIE_LIFETIME_DAYS * SECONDS_PER_DAY)}`,
     ...(publicOrigin.startsWith("https://") ? ["Secure"] : []),
   ].join("; ");

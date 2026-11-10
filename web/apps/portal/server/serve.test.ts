@@ -1,7 +1,10 @@
 // `node:http` 겉. 요청을 값으로 옮기는 일과 응답 값을 쓰는 일, 처리기가 던졌을 때의 500 을 실제 소켓으로 본다. 전역 `fetch` 는
 // 쓰지 않고 `node:http` 의 `request` 로 부른다.
 
+import { mkdtempSync, writeFileSync } from "node:fs";
 import { request, type Server } from "node:http";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { afterEach, expect, test, vi } from "vitest";
 import type { PortalRequest, PortalResponse } from "./handler.ts";
 import { listen } from "./serve.ts";
@@ -93,6 +96,61 @@ test("요청을 메서드와 질의를 뗀 경로와 소문자 헤더와 쿠키�
     { name: "portal_anon", value: "abc" },
     { name: "other", value: "1" },
   ]);
+});
+
+test("질의는 물음표를 붙여 그대로 요청에 싣는다", async () => {
+  const seen: PortalRequest[] = [];
+  const port = await start((incoming) => {
+    seen.push(incoming);
+    return { status: 204, headers: {}, body: "" };
+  });
+
+  await send(port, "GET", "/?site=other&x=1");
+  await send(port, "GET", "/portal/");
+
+  expect(seen.map((one) => one.query)).toEqual(["?site=other&x=1", ""]);
+  expect(seen.map((one) => one.path)).toEqual(["/", "/portal/"]);
+});
+
+test("응답이 파일 경로를 주면 그 파일을 본문으로 흘려보낸다", async () => {
+  const path = join(mkdtempSync(join(tmpdir(), "portal-serve-")), "font.woff2");
+  writeFileSync(path, "글꼴 바이트");
+  const port = await start(() => ({
+    status: 200,
+    headers: { "Content-Type": "font/woff2" },
+    body: "",
+    file: path,
+  }));
+
+  const answer = await send(port, "GET", "/portal/fonts/font.woff2");
+
+  expect(answer.status).toBe(200);
+  expect(answer.headers["content-type"]).toBe("font/woff2");
+  expect(answer.body).toBe("글꼴 바이트");
+});
+
+test("파일을 열지 못하면 그 요청만 500 으로 답하고 서버는 다음 요청을 받는다", async () => {
+  const log = vi.spyOn(console, "error").mockImplementation(() => undefined);
+  const missing = join(mkdtempSync(join(tmpdir(), "portal-serve-")), "없는 파일.woff2");
+  let calls = 0;
+  const port = await start((): PortalResponse => {
+    calls += 1;
+    if (calls === 1) {
+      return { status: 200, headers: { "Content-Type": "font/woff2" }, body: "", file: missing };
+    }
+    return { status: 200, headers: {}, body: "살아 있다" };
+  });
+
+  const failed = await send(port, "GET", "/x");
+  const next = await send(port, "GET", "/x");
+
+  expect(failed.status).toBe(500);
+  expect(failed.headers["content-type"]).toBe("text/plain; charset=utf-8");
+  expect(failed.body).toBe("서버 오류입니다.");
+  expect(next.body).toBe("살아 있다");
+  // 읽기 오류도 이름만 남기고 경로와 메시지는 싣지 않는다.
+  expect(log).toHaveBeenCalledTimes(1);
+  expect(String(log.mock.calls[0]?.[0])).not.toContain("없는 파일");
 });
 
 test("204 응답은 본문 없이 나간다", async () => {

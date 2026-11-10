@@ -3,15 +3,18 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "start": "node tools/start.ts",
+    "start": "node --disable-warning=ExperimentalWarning tools/start.ts",
     "make-key": "node tools/make-key.ts"
   },
   "dependencies": {
     "@agent-os/site-file": "workspace:*",
     "@agent-os/ui": "workspace:*",
+    "@tailwindcss/cli": "^4.3.3",
     "smol-toml": "1.9.1"
   },
   "devDependencies": {
+    "@agent-os/e2e-stack": "workspace:*",
+    "@playwright/test": "^1.63.0",
     "@types/node": "^24.19.0",
     "typescript": "~5.9.3"
   }
