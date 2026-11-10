@@ -19,6 +19,20 @@
 
 이 세션에서 사용자가 더한 말은 없었다.
 
+## 두 번째 세션 (셀프 리뷰, 커밋, PR 준비)
+
+세션 제목 `feature/05-acknowledgement-and-token-endpoints`. 첫 세션의 인계 지시문(`인계: 셀프 리뷰 직전`, 범위 "구현·리뷰·커밋까지")으로 열렸다. 같은 워크트리에 `EnterWorktree(path)`로 들어갔다. 사용자의 말:
+
+> .claude/skills/implement/SKILL.md 를 읽어 그대로 따른다. … 인자: .scratch/pilot-portal/issues/05-acknowledgement-and-token-endpoints.md
+> (이어받을 상태) 인계: 셀프 리뷰 직전. 커밋하지 않은 변경이 워크트리에 있고 셀프 리뷰(/code-review)부터 한다.
+> (이번 요청 범위) 구현·리뷰·커밋까지
+
+커밋 뒤 사용자가 범위를 넓혔다(원문):
+
+> pr 병합까지
+
+한 일: 셀프 리뷰(위 "셀프 리뷰"), 반영, 티켓 `done`과 `plan_table.py`, 커밋 `feat: …(pilot-portal 05)`, `origin/main`(`a9d7d942`)으로 rebase(충돌은 `probes/README.md`의 표 행 둘 다 남기기), rebase 뒤 전체 러너 통과, PR 직전 CodeRabbit CLI(지적 0), 회고와 "다음" 절, 일지 커밋. 컨텍스트가 문턱(20만 토큰)을 넘은 `커밋 뒤` 경계라 새 세션에 인계한다. 아직 푸시하지 않았고 PR도 없다. 이 절 추가는 커밋하지 않았다.
+
 ## 한 일
 
 - `tidy-checkouts`: 루트가 main이고 깨끗해 `c4af6063`에서 `2402362d`로 당겼다. 병합된 `feature/01-site-file-package-and-ui-subpaths`와 `docs/pilot-portal-screens`의 워크트리와 브랜치, 병합된 `worktree-02-e2e-stack-package` 브랜치를 지웠다(쉬는 세션이 쥔 둘은 `end-holders`로 그 세션의 프로세스를 끈 뒤 지웠다). 휴지통 둘(`.claude/worktrees/.tidy-trash/`의 `node_modules`)은 다른 프로세스(`node.exe` 14504, `esbuild.exe` 30772·34812)가 `esbuild.exe`를 쥐어 지우지 못하고 남았다. 그 프로세스가 끝난 뒤의 정리가 다시 비운다.
@@ -106,3 +120,5 @@
 - 변이 표 `endpoints_mutations.toml`은 구현 뒤 커밋하지 않은 작업 트리에서 두 번 돌았다. 커밋 뒤 `--check`가 pre-commit `--staged`로 알릴 수 있다. 표의 `old` 원문(`handler.ts`의 `Math.floor(context.now() / 1000)`, `startsWith("https://")` 등)은 반영 뒤 코드가 옮기면 따라 고친다.
 
 open-session을 부른다 2026-11-10T03:26Z
+
+open-session을 부른다 2026-11-10T04:26Z
