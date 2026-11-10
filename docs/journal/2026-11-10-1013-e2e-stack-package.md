@@ -37,6 +37,7 @@
 - 위젯 e2e: 16개 통과. `uv run --env-file ../../../.env pytest -m llm_widget`: 1개 통과(LLM 토큰 합계 6,937, 입력 6,865, 출력 72, 트레이스 1개, 모델 호출 2건).
 - `uv run python tools/run_checks.py`: pyright 둘, lint-imports, pytest(696.1초), run-hooks 통과. web-verify는 Prettier가 `env.ts`의 긴 줄을 짚어 빨갰고 `prettier --write`로 고친 뒤 `pnpm -C web verify`가 통과했다. `check-ticket`은 티켓 파일이 아직 스테이지되지 않았다고 알렸고 커밋에서 스테이지해 푼다(러너 출력에서 읽었다).
 - `uv run ruff check .`, `uv run ruff format --check .`: 통과. 디자인 시스템 확인(`sync-design-system 확인`)은 깨끗했다.
+- PR 직전 `coderabbit-review` 서브에이전트(2026-11-10, 이어받은 세션): CLI가 끝까지 돌았고(`coderabbit review --agent --include-untracked --base-commit c4af6063`, 0.7.5, 파일 36개, `Seat: not assigned`·`Plan: Free`인데도 리뷰가 끝났다) findings 0건이다. 에이전트가 새 코드를 직접 읽고도 보안·버그·성능 지적이 없었다(보고에서 읽었다). 즉시 고칠 것도 보류할 것도 없다.
 
 ## 셀프 리뷰
 
