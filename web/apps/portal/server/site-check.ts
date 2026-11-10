@@ -83,9 +83,13 @@ function keyProblems(
 
 /**
  * 공개 키의 SPKI DER 바이트. 공개 키 PEM 이나 개인 키 객체(그 키에서 난 공개 키)를 받는다. 읽히지 않으면 undefined.
- * `createPublicKey` 는 공개 키 객체를 받지 않는다.
+ * `createPublicKey` 는 공개 키 객체를 받지 않고, 글로 받은 개인 키 PEM 에서도 공개 키를 뽑아 준다. 사이트 파일의 `pem` 에
+ * 개인 키가 들어도 통과하지 않게 글은 `BEGIN PUBLIC KEY` 표지가 있는 것만 받는다(서버 쪽도 SPKI 공개 키 PEM 만 받는다).
  */
 function spkiOf(source: string | KeyObject): Buffer | undefined {
+  if (typeof source === "string" && !source.includes("-----BEGIN PUBLIC KEY-----")) {
+    return undefined;
+  }
   try {
     return createPublicKey(source).export({ type: "spki", format: "der" });
   } catch {

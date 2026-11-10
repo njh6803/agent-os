@@ -148,6 +148,20 @@ test("kid 로 고른 공개 키가 개인 키에서 난 공개 키와 다르면 
   ]);
 });
 
+test("사이트 파일의 pem 에 개인 키가 들어 있으면 공개 키로 읽지 못한다고 알린다", () => {
+  const problems = problemsOf({
+    sites: (sites) => {
+      const [site] = sites;
+      const [key] = site?.keys ?? [];
+      if (key !== undefined) {
+        key.pem = rsaKey().pkcs8;
+      }
+    },
+  });
+
+  expect(problems).toEqual(["portal.kid: sites[0]에서 그 kid 로 고른 공개 키를 읽지 못한다"]);
+});
+
 test("개인 키 파일이 없으면 읽지 못한다고 알린다", () => {
   expect(problemsOf({ privateKey: null })).toEqual(["portal.private_key: 읽지 못한다"]);
 });
