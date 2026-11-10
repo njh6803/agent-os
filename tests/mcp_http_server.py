@@ -15,6 +15,12 @@
 - `--redirect`: 경로 끝에 `/` 가 없는 요청을 `/` 를 붙인 같은 출처의 경로로 307 로 돌려보낸다. 끝에
   `/` 가 붙은 요청은 `/` 를 떼고 앱에 넘긴다.
 - `--list-error`: 도구 목록 요청(`tools/list`)에 HTTP 200 과 JSON-RPC 오류 본문으로 답한다.
+- `--delete-sleep <초>`: 세션 종료 요청(DELETE)에 답하지 않고 그 초만큼 잠든다.
+- `--delete-drop`: DELETE 에 상태줄과 헤더만 보내고 본문 없이 연결을 끊는다. 클라이언트에는 응답이
+  끝까지 오지 않은 채 연결이 끊긴 것으로 보인다.
+- `--delete-redirect <주소>`: DELETE 만 그 주소로 307 로 돌려보낸다. 다른 출처(다른 포트의 두 번째
+  서버)를 주면 그 서버의 기록 파일로 요청이 닿았는지 본다.
+- `--stateless`: 세션을 두지 않는 서버로 띄운다. 응답에 `mcp-session-id` 헤더가 없다.
 """
 
 from __future__ import annotations
@@ -38,7 +44,15 @@ App = Callable[[Scope, Receive, Send], Awaitable[None]]
 
 server = MCPServer("http-fixture")
 _options = argparse.Namespace(
-    record="", expect_authorization=None, echo=None, redirect=False, list_error=False
+    record="",
+    expect_authorization=None,
+    echo=None,
+    redirect=False,
+    list_error=False,
+    delete_sleep=0.0,
+    delete_drop=False,
+    delete_redirect=None,
+    stateless=False,
 )
 
 
@@ -91,6 +105,8 @@ class Recording:
         if expected is not None and authorization != expected:
             await _text(send, 401, "unauthorized")
             return
+        if method == "DELETE" and await self._answer_delete(send, path):
+            return
         if _options.echo is not None and rpc_method == _options.echo:
             echoed = f"bad credentials: {authorization} token={_last_word(authorization)}"
             await _json(send, 401, _rpc_error(rpc_id, echoed))
@@ -105,6 +121,25 @@ class Recording:
             scope["path"] = path.rstrip("/")
             scope["raw_path"] = path.rstrip("/").encode("utf-8")
         await self._app(scope, _replay(body, receive), send)
+
+    @staticmethod
+    async def _answer_delete(send: Send, path: str) -> bool:
+        """DELETE 만 받는 선택 인자 셋을 처리한다. 앱에 넘기지 않고 끝냈으면 참이다."""
+        if _options.delete_redirect is not None:
+            await _redirect(send, _options.delete_redirect)
+            return True
+        if _options.delete_drop:
+            await send(
+                {
+                    "type": "http.response.start",
+                    "status": 200,
+                    "headers": [(b"content-length", b"10")],
+                }
+            )
+            raise ConnectionAbortedError(f"DELETE {path} 의 연결을 끊는다")
+        if _options.delete_sleep > 0:
+            await asyncio.sleep(_options.delete_sleep)
+        return False
 
 
 def _headers(scope: Scope) -> dict[str, str]:
@@ -213,9 +248,13 @@ def main() -> None:
     parser.add_argument("--echo")
     parser.add_argument("--redirect", action="store_true")
     parser.add_argument("--list-error", action="store_true")
+    parser.add_argument("--delete-sleep", type=float, default=0.0)
+    parser.add_argument("--delete-drop", action="store_true")
+    parser.add_argument("--delete-redirect")
+    parser.add_argument("--stateless", action="store_true")
     parser.parse_args(namespace=_options)
     uvicorn.run(
-        Recording(server.streamable_http_app()),
+        Recording(server.streamable_http_app(stateless_http=_options.stateless)),
         host="127.0.0.1",
         port=_options.port,
         log_level="warning",
