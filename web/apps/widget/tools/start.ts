@@ -19,8 +19,8 @@
  *
  * 공유 자리로 옮기지 않고 위젯이 자기 래퍼를 둔다(web-widget 티켓 03 이 정했다). 관리 화면의 래퍼(apps/admin/tools)를
  * 옮기면 관리 화면의 e2e 와 시험까지 고치게 되고, 위젯의 래퍼는 빌드도 맡아 하는 일이 다르다. 대가로 루프백 목록이
- * 세 벌이 된다(`serve` 의 `src/agent_os/main.py` 의 `LOOPBACK_HOSTS`, 관리 화면의 `tools/loopback.ts`, 이 파일).
- * 앱 사이 import 는 층 경계가 막는다. 목록을 바꾸면 셋을 함께 고친다.
+ * 네 벌이 된다(`serve` 의 `src/agent_os/main.py` 의 `LOOPBACK_HOSTS`, 관리 화면의 `tools/loopback.ts`, 이 파일, 질문
+ * 페이지의 `web/apps/portal/server/config.ts`). 앱 사이 import 는 층 경계가 막는다. 목록을 바꾸면 넷을 함께 고친다.
  *
  * 판정을 지나면 next CLI 를 이 프로세스에서 부른다. 신호와 종료 코드가 next 의 것 그대로다(관리 화면의 래퍼와 같다).
  *
