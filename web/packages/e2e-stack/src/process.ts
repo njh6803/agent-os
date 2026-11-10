@@ -30,6 +30,10 @@ export function launch(
   let output = "";
   child.stdout.on("data", (chunk: Buffer) => (output += chunk.toString("utf-8")));
   child.stderr.on("data", (chunk: Buffer) => (output += chunk.toString("utf-8")));
+  // 명령이 없으면 처리기가 없는 `error` 가 러너를 죽인다. 이유를 출력에 남겨 `until` 이 그것으로 실패하게 한다.
+  child.on("error", (error: Error) => {
+    output += `\n[spawn 오류] ${error.message}\n`;
+  });
   return { name, child, output: () => output };
 }
 

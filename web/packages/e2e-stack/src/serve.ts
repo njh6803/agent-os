@@ -41,9 +41,13 @@ export function interpreter(): string {
     cwd: REPO,
     encoding: "utf-8",
   });
-  const path = found.stdout.trim();
+  // `uv` 를 실행하지 못하면 선언과 달리 stdout·stderr 가 null 이고 이유는 `error` 에만 있다.
+  const stdout: unknown = found.stdout;
+  const stderr: unknown = found.stderr;
+  const path = typeof stdout === "string" ? stdout.trim() : "";
   if (found.status !== 0 || path === "") {
-    throw new Error(`파이썬 인터프리터를 찾지 못했다(uv run python):\n${found.stderr}`);
+    const reason = found.error?.message ?? (typeof stderr === "string" ? stderr : "");
+    throw new Error(`파이썬 인터프리터를 찾지 못했다(uv run python):\n${reason}`);
   }
   return path;
 }

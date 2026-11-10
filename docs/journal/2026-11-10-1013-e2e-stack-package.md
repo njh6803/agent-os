@@ -62,6 +62,24 @@
 - `plugins.ts`·`relay.ts`의 머리 주석이 위젯 e2e 한정으로 읽힌다. 06이 질문 페이지를 더할 때 고친다.
 - 명세 (a)1. 티켓의 마지막 체크박스(검증 명령이 모두 초록)와 `Status: done`은 전체 게이트가 끝난 뒤 닫는다.
 
+## PR 봇 첫 회차 (PR 511, 헤드 `740e1a1d`)
+
+claude-review는 Critical·Major 0건에 Minor 둘과 Nit 둘을 냈고, CodeRabbit은 Minor 넷을 냈다(`gh pr view`와 `gh api .../pulls/511/comments`로 읽었다). 둘 다 첫 회차라 지적마다 판단했다.
+
+고친 것(셋, 모두 옮긴 코드의 실패 경로):
+
+- CodeRabbit `process.ts`. `launch`에 `error` 처리기가 없어 없는 명령이면 러너가 처리되지 않은 예외로 죽었다. 처리기를 달아 이유를 출력에 남긴다. 새 시험 `process.test.ts`가 먼저 빨갰고(vitest 출력의 `Uncaught Exception ... spawn ... ENOENT`), 처리기를 더한 뒤 초록이다.
+- CodeRabbit `stack.ts`. `teardown`의 한 단계가 던지면 임시 작업 폴더 삭제가 건너뛰어졌다. `try/finally`로 묶었다. 새 시험 `stack.test.ts`(로그 폴더 자리에 파일을 둔다)가 작업 폴더가 남아 먼저 빨갰고 초록이 됐다.
+- CodeRabbit `serve.ts`. `uv`를 못 띄우면 `stdout`이 `null`이라 `TypeError`가 났다. 타입 선언이 `string`이라 `??`는 `no-unnecessary-condition`에 걸려, `unknown`으로 받아 `typeof`로 좁히고 `error.message`를 이유에 넣었다. 이 갈래는 시험하지 못했다(`uv`를 없애는 환경이 시험 안에 없다). 코드를 읽어 확인했다.
+
+고친 뒤 `pnpm -C web verify` 통과(1630개), 위젯 e2e 16개 통과, `tools/mutate.py --check`로 변이 표 원문 확인을 통과했다. 첫 커밋 시도는 pre-commit의 변이 표 검사가 막았다. `widget_llm_mutations.toml`의 "정리 뒤에 던지는 변이"가 `stack.ts`의 옛 `teardown` 끝 원문을 가리켰기 때문이고(러너 출력에서 읽었다), `finally` 안으로 들어간 들여쓰기에 맞춰 `old`·`new`를 고쳐 `--check`(변이 9개 모두 원문 한 번)를 통과시켰다. 그 변이를 실제 모델로 다시 돌리지는 않았다. 던지는 자리는 `finally` 바로 뒤로 같다.
+
+보류한 것과 이유:
+
+- CodeRabbit `probes/README.md`. 변이 5의 표지 `alice"`가 `token.test.ts`의 audience 단언에도 있어 구분이 안 된다는 지적이다. 변이 5는 `principalOf`를 건드리고 audience 단언은 다른 코드 길이라 그 변이로는 실패하지 않으며, 변이 표를 돌려 기대한 시험 둘이 빨간 것을 이미 봤다. 첫 회차 Minor라 보류한다.
+- claude-review `index.ts`의 쓰이지 않는 `launch`·`stop`·`sleep` 내보내기, `Stack`과 위젯 `stack()`의 이름 겹침, `plugins.ts`·`relay.ts` 머리 주석(Nit). 아래 "다음"에 적었다.
+- claude-review의 헌법 판 Nit. 형제 04와의 판 정리로, "다음"의 첫 줄이 이미 말한다.
+
 ## 회고
 
 후보 다섯을 냈다. 판정은 승인 0, 기각 5, 넘김 0이다. 만료할 항목은 `uv run python tools/queue_open_rows.py`의 "만료할 항목"이 `(없음)`이라 닫지 않았다(그 출력이 비어 `--ref origin/main`과의 교집합도 비어서 다시 돌리지 않았다). 새 훅이나 검사를 더하지 않아 `hook_report.py`는 돌리지 않았다.
@@ -75,6 +93,7 @@
 ## 다음
 
 - 병합 뒤 프론티어는 03(위젯 문구, 이 티켓 뒤)과 06(질문 페이지 e2e 준비)이다. 04는 나란히 돌고 있고(워크트리 `04-portal-server-starts-after-checking-config`), 헌법 판 3.0.80을 쓴다. 나중에 병합하는 쪽이 main을 받아 README, `tech.md` 웹 행, 헌법의 판, `web/pnpm-lock.yaml`을 맞춘다.
+- PR 봇이 짚고 뒤로 넘긴 것(06이 이 패키지를 만질 때 함께): `index.ts`가 앱이 쓰지 않는 `launch`·`stop`·`sleep`을 내보낸다(06에서 실제로 쓰이지 않으면 뺀다). 패키지의 `Stack`과 위젯 `env.ts`의 `stack()`이 이름이 겹친다(사례 열여섯 곳이 쓰는 이름이라 이름을 가르는 일은 따로 한다). `plugins.ts`·`relay.ts`의 머리 주석을 위젯 e2e 한정에서 패키지 소속으로 고친다.
 - 06은 이 패키지로 질문 페이지의 e2e 준비를 지으면서 중계의 셋째 상류와 `upstreamOf` 사례를 더한다. 07의 트레이스 주체 사례는 이 티켓이 연 `startedRuns` 길을 쓴다.
 
 ### 인계 지시문 (커밋 뒤 경계, 같은 브랜치)

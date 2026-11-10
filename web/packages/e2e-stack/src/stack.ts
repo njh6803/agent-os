@@ -47,22 +47,29 @@ export function createStack(options: StackOptions): Stack {
       return server;
     },
     async teardown() {
-      for (const server of servers.toReversed()) {
-        await new Promise<void>((resolve) => {
-          server.close(() => {
-            resolve();
+      // 앞 단계가 던져도 임시 작업 폴더는 지워야 해서 `finally` 로 묶는다. 던진 오류는 그대로 올라간다.
+      try {
+        for (const server of servers.toReversed()) {
+          await new Promise<void>((resolve) => {
+            server.close(() => {
+              resolve();
+            });
+            server.closeAllConnections();
           });
-          server.closeAllConnections();
-        });
+        }
+        try {
+          for (const { child } of launched.toReversed()) {
+            await stop(child);
+          }
+        } finally {
+          mkdirSync(options.logs, { recursive: true });
+          for (const { name, output } of launched) {
+            writeFileSync(join(options.logs, `${name}.log`), output());
+          }
+        }
+      } finally {
+        rmSync(work, { recursive: true, force: true, maxRetries: 5 });
       }
-      for (const { child } of launched.toReversed()) {
-        await stop(child);
-      }
-      mkdirSync(options.logs, { recursive: true });
-      for (const { name, output } of launched) {
-        writeFileSync(join(options.logs, `${name}.log`), output());
-      }
-      rmSync(work, { recursive: true, force: true, maxRetries: 5 });
     },
   };
 }
