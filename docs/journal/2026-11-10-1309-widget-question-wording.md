@@ -78,3 +78,26 @@ open-session을 부른다 2026-11-10T04:11:25Z
 
 - 고침: 표지를 실제 빨강 출력에서 골랐다. 임시 표지 `__PROBE__`로 변이를 한 번 돌려 실패 출력(`AssertionError: expected <p id="_r_0_-note" …(1)>…(1)</p> to be null`)을 본 뒤, 앞의 `<p id=…>`는 뗀 `</p> to be null`로 바꿨다. 이 표지가 단언 풀이 줄에서 나오는 것은 그 출력이 보였다.
 - 다시 돌림: `mutate.py … --since origin/main`이 변이 1을 "모두 기대대로"로 끝냈다(손으로 쳤다, 종료 0). 표지 주석의 "useId 라 값이 바뀔 수 있다"는 id 모양(`_r_0_`)에서 낸 어림이고 여러 번 돌려 보지 않았다.
+
+### PR 직전 리뷰 (CodeRabbit CLI 0.7.5)
+
+`coderabbit-review` 서브에이전트가 `--committed --base origin/main`을 파일 150개 한도 때문에 `--dir web/packages/ui/src`와 `--dir web/apps/widget`으로 나눠 돌렸다. 둘 다 `review_completed`에 `findings: 0`이었다(`Plan: Free`, `Seat: not assigned`에서도 끝까지 돌았다. 서브에이전트 보고). 시간당 3회 중 2회를 썼다. 티켓·변이 표 셋·일지는 `--dir`에 닿지 않아 CLI가 보지 못했고, 변이 표의 6번은 서브에이전트가 `mutate.py … 6`을 직접 돌려 기대대로 빨강인 것을 봤다(보고).
+
+- 밀어 본 주장 넷은 서브에이전트가 모두 참으로 확인했다(보고. 코드를 읽고 grep했고 변이는 직접 돌렸다).
+- 유효 지적 하나(Minor): `TextField.stories.tsx` `HiddenLabel` 주석의 "1px 로 잘리고"는 단언이 재는 것(상자 1×1, `overflow: hidden`)보다 말이 넓다. → 고쳤다("1px 상자로 줄고 넘침이 숨으며"). 이 세션이 `prettier --check`를 손으로 쳐 통과했다.
+
+## 회고
+
+후보 네 개를 냈다. 판정은 승인 0, 기각 4, 넘김 0이다. 만료할 항목은 `uv run python tools/queue_open_rows.py`의 "만료할 항목"이 `(없음)`이라 닫지 않았다(출력이 비어 `--ref origin/main`과의 교집합도 비어서 다시 돌리지 않았다). 새 훅이나 검사를 더하지 않아 `hook_report.py`는 돌리지 않았다.
+
+1. **기각. 변이 표의 표지가 시험 원문에 글자 그대로 있어 첫 커밋이 막혔다**(`failures_mutations.toml` 6번, pre-commit `check-mutations`). 앞 세션이 표를 `--check`로만 봤는데, 표지 품질(표지가 시험 원문에 있는지)은 이름·번호·`--since`로 고른 `--check`가 본다(`tools/mutate.py` 독스트링). 그래서 12분 걸리는 pre-commit에서야 걸렸다. 그러나 pre-commit 검사가 그 자리에서 막았고 잃은 것은 한 바퀴의 시간뿐이다. 같은 꼴이 직전 일지(e2e-stack-package) 회고 후보 3이다. 둘째 사건이지만 그 둘 다 도구가 알렸으므로 회차로 세지 않는다.
+2. **기각. 리뷰 둘이 거짓이 된 문장을 잡았다.** `WidgetFailures.test.tsx` 머리 독스트링(422 글을 옛 명세 표에서 옮겼다는 문장)과 `TextField`의 "늘 보입니다" 둘이다. 리뷰가 제 몫을 한 것이라 회차로 세지 않는다(4단계).
+3. **기각. 일지가 "plan.md까지 갱신했다"고 적었으나 diff에 plan.md 변경이 없었다.** 명세 축 리뷰가 잡았고, 일지 결과 문장의 근거 종류를 묻는 훅이 알렸다.
+4. **기각. 일지에 옛 문장을 따옴표로 인용해 인용 대조 경고가 났다.** `check-quotes`가 그 자리에서 알렸고 따옴표를 뗐다.
+
+## 다음
+
+- 병합 뒤에도 이 티켓이 새로 막힘을 푸는 티켓은 없다. 07은 06과 03을 기다리고(03은 이 PR로 풀린다), 06은 05를 기다린다. 05(`05-acknowledgement-and-token-endpoints`)는 04가 병합돼 ready지만 이미 워크트리 `feature/05-acknowledgement-and-token-endpoints`에서 다른 세션이 진행하는 것으로 보인다(`git worktree list`에 있다. 그 세션이 도는지는 이 세션이 확인하지 않았다).
+- 이 PR이 하지 않은 것: 디자인 시스템 아티팩트에 `TextField.md` 카드를 올리는 일(`sync-design-system 올리기`)은 티켓 범위 밖이라 하지 않았다. 병합 뒤 필요한지는 `docs/agents/issue-tracker.md`와 그 스킬의 `upload.md`로 판단한다.
+- 사용자가 판단할 것(뒤로 넘기는 일): 입력창 밖에 사람에게 보이는 "요청"(`FailureAlert.tsx`의 "요청을 나눠 보내 주세요.", `ApprovalCard.tsx`, 진행 표시의 이름)이 남아 있다. 이 티켓이 정한 글 넷이 아니고 개념어는 "요청" 그대로라는 명세와 맞아 이번에는 바꾸지 않았다(표준 축 리뷰의 범위 메모). 입력창에서 단어를 뺀 것처럼 이 글들도 바꿀지는 사람이 정한다.
+- 시험·스토리·e2e 12파일이 입력창을 `{ name: "질문" }`으로 직접 찾는다(Shotgun Surgery 판단 항목). 다음 이름 변경에 대비해 `testing/widget.tsx`와 `e2e/helpers.ts`의 도우미로 모으는 일은 아직 티켓이 아니다.
