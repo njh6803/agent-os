@@ -1,8 +1,9 @@
 // 페이지 안 번들의 글꼴. 빌드가 뽑은 face 를 위젯 출처의 `/widget/fonts/` 에서 받도록 위젯만 쓰는 family 이름으로
 // 등록하고, 감싼 요소에서 `--sans`·`--mono` 를 그 이름으로 다시 정한다(web-widget 명세 "테마·모드·밀도·글꼴").
 
+import type { FontFaceSource } from "@agent-os/ui/fonts";
 import { expect, test } from "vitest";
-import { type FontFaceSource, registerFonts, WIDGET_MONO, WIDGET_SANS } from "./fonts";
+import { registerFonts, WIDGET_MONO, WIDGET_SANS } from "./fonts";
 import { hostRules } from "./styles";
 
 const FACES: readonly FontFaceSource[] = [

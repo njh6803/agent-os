@@ -1,6 +1,6 @@
 # 사이트 파일 픽스처
 
-서버(`serve --site-file`)와 위젯 빌드가 같은 사이트 파일에서 같은 값을 읽는다는 것을 두 언어의 시험이 함께 고정하는 자리다(web-widget 티켓 04, ADR 0024). 파이썬은 `tests/test_main.py`의 사이트 파일 절이, Node는 `web/apps/widget/tools/site-file.test.ts`와 `web/apps/widget/next.config.test.ts`가 읽는다. 한쪽만 고치면 다른 쪽의 시험이 빨개진다.
+서버(`serve --site-file`)와 위젯 빌드가 같은 사이트 파일에서 같은 값을 읽는다는 것을 두 언어의 시험이 함께 고정하는 자리다(web-widget 티켓 04, ADR 0024). 파이썬은 `tests/test_main.py`의 사이트 파일 절이, Node는 `web/packages/site-file/src/site-file.test.ts`와 `web/apps/widget/next.config.test.ts`가 읽는다. 한쪽만 고치면 다른 쪽의 시험이 빨개진다.
 
 - `origins.json`: 허용 출처 표기의 지나는 사례(`pass`)와 막히는 사례(`block`). 막히는 사례는 어긴 규칙의 이름(`rule`)을 든다. 두 언어의 판정은 막히는 표기마다 같은 규칙을 말한다.
 - `sites.toml`: 사이트 둘이 든 사이트 파일. 한 사이트는 상한 표에 `request_chars`를 적지 않고, 다른 사이트만 기본값보다 작은 `request_chars`를 적는다. 두 사이트가 허용 출처 하나를 함께 든다.

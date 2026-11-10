@@ -316,7 +316,7 @@ _OS_USER_DIAGNOSTIC = (
 # 글자로, 글자를 목록으로, 불린이나 실수를 정수로 받아 주지 않는다. 그래서 열은 TOML 배열이 읽히는
 # 그대로 `list` 다(엄격한 검증은 `tuple` 필드에 리스트를 받지 않는다). 허용 출처는 브라우저가
 # `Origin` 헤더에 싣는 표기 그대로다(`_origin_rule`). 위젯
-# 빌드(`web/apps/widget/tools/site-file.ts`)도 이 파일을 읽어 합친 허용 출처와 가장 작은
+# 빌드(`web/packages/site-file`)도 이 파일을 읽어 합친 허용 출처와 가장 작은
 # `request_chars` 를 쓴다(web-widget 티켓 04). 빌드는 키와 타입과 판, `request_chars` 의 범위, 허용
 # 출처의 표기를 이 모양과 같게 보고, 그 밖의 제약(공개 키의 수, 다른 상한의 범위, 서버만 읽는 값의
 # 뜻)은 보지 않는다. 빌드의 TOML 파서는 TOML 1.1 을 따라 tomllib(1.0)이 거절하는 문법도 받는다. 그런
@@ -518,8 +518,8 @@ def _key_id_problems(place: str, entries: Sequence[_PublicKeyEntry]) -> list[str
 # 허용 출처의 표기(web-widget 티켓 04, ADR 0024). 값은 브라우저가 `Origin` 헤더에 싣는 직렬화
 # 그대로여야 한다 — 다른 표기는 CORS 와 `frame-ancestors` 에서 조용히 어느 출처와도 맞지 않는다.
 # 규칙의 이름과 차례와 사례는 `tests/fixtures/site_file/` 가 원천이고, 위젯 빌드
-# (`web/apps/widget/tools/site-file.ts`)가 같은 차례로 판정한다. 차례가 다르면 두 규칙을 함께 어긴
-# 값에서 두 언어가 다른 이름을 낸다.
+# (`web/packages/site-file/src/site-file.ts`)가 같은 차례로 판정한다. 차례가 다르면 두 규칙을 함께
+# 어긴 값에서 두 언어가 다른 이름을 낸다.
 type _OriginRule = Literal[
     "wildcard",
     "null",

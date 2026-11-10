@@ -39,7 +39,7 @@ blob-report/
 # 빠진다. 패키지 안의 .gitignore 나 앵커 없는 dist/ 는 판정자나 판정 범위 테스트에 걸렸다(ADR 0026, storybook/build.mjs).
 /web/packages/ui/dist/
 /web/packages/ui/storybook-static/
-# 위젯의 Storybook 정적 빌드(위젯 사진 비교의 입력)와 시작 래퍼가 복사하는 글꼴 파일(web/apps/widget/tools/fonts.ts),
+# 위젯의 Storybook 정적 빌드(위젯 사진 비교의 입력)와 시작 래퍼가 복사하는 글꼴 파일(web/packages/ui/node/fonts.ts),
 # 시작 래퍼가 짓는 페이지 안 번들(web/apps/widget/tools/element.ts).
 /web/apps/widget/storybook-static/
 /web/apps/widget/public/fonts/

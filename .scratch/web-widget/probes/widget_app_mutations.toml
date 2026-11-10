@@ -496,12 +496,12 @@ new = '''
 [[mutation]]
 name = "woff 까지 고르면 글꼴 파일 수 시험이 빨갛다"
 runner = "node"
-tests = ["apps/widget/tools/fonts.test.ts", "-t", "다섯 굵기"]
+tests = ["packages/ui/node/fonts.test.ts", "-t", "다섯 굵기"]
 expect = "red"
 expect_output = ["to have a length of"]
 
 [[mutation.edit]]
-file = "web/apps/widget/tools/fonts.ts"
+file = "web/packages/ui/node/fonts.ts"
 old = '''const WOFF2 = /url\(\s*["']?(\.\/files\/[^"')]+\.woff2)["']?\s*\)/g;'''
 new = '''const WOFF2 = /url\(\s*["']?(\.\/files\/[^"')]+\.woff2?)["']?\s*\)/g;'''
 

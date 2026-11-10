@@ -1,9 +1,13 @@
 /**
- * 위젯 빌드의 입력. 서버(`serve --site-file`)가 읽는 사이트 파일(ADR 0023)을 빌드도 읽어 두 값을 끌어낸다(web-widget
- * 티켓 04). 하나는 모든 사이트의 허용 출처를 합친 목록(처음 나온 차례, 겹친 것은 한 번)이고 iframe 페이지의
- * `frame-ancestors` 가 쓴다. 다른 하나는 모든 사이트의 요청 글자 수 상한 가운데 가장 작은 값(적지 않은 사이트는 서버의
- * 기본값)이다. 설정 파일(`next.config.ts`)이 이것을 부르고 두 값을 `env` 로 번들에 싣는다. 번들에서 읽는 법은 티켓 05
- * 의 머리에 적었다.
+ * 사이트 파일 읽기(`@agent-os/site-file`). 서버(`serve --site-file`)가 읽는 사이트 파일(ADR 0023)을 TypeScript 쪽도 같은
+ * 규칙으로 읽는다. 읽은 결과는 사이트마다 발급자, `audience`, 열 에이전트, 허용 출처, 공개 키(`kid`, `pem`), 요청 글자 수
+ * 상한을 든 모델(`parseSiteFile`, `readSiteFile`)이고, 위젯 빌드와 질문 페이지가 각자 필요한 칸을 쓴다(pilot-portal 명세
+ * "앱과 패키지").
+ *
+ * 위젯 빌드의 입력은 그 모델에서 끌어낸 두 값이다(web-widget 티켓 04). 하나는 모든 사이트의 허용 출처를 합친
+ * 목록(처음 나온 차례, 겹친 것은 한 번)이고 iframe 페이지의 `frame-ancestors` 가 쓴다. 다른 하나는 모든 사이트의 요청 글자
+ * 수 상한 가운데 가장 작은 값(적지 않은 사이트는 서버의 기본값)이다. 위젯의 설정 파일(`next.config.ts`)이 `buildInput`
+ * 을 부르고 두 값을 `env` 로 번들에 싣는다. 번들에서 읽는 법은 티켓 05 의 머리에 적었다.
  *
  * 판정은 fail-closed 다(ADR 0024). 변수가 없으면 사이트 없음(빈 허용 출처와 기본 상한)이고, 변수를 줬는데 비었거나 그
  * 파일이 없거나 읽지 못하면 빌드가 실패한다. 읽지 못하는 것은 둘이다. 하나는 모양이 서버의 pydantic 모델과 어긋난
@@ -46,6 +50,30 @@ export interface SiteFileProblems {
   readonly problems: readonly string[];
 }
 
+/** 사이트가 검증에 쓰는 공개 키 하나. `kid` 는 적지 않을 수 있다. */
+export interface PublicKey {
+  readonly kid: string | undefined;
+  readonly pem: string;
+}
+
+/**
+ * 읽은 사이트 하나. 요청 글자 수 상한은 적지 않은 사이트도 서버의 기본값으로 채워 낸다. 상한이 2^53 을 넘으면 `number` 를
+ * 거쳐 가까운 정수가 된다(`WIDGET_REQUEST_CHARS_ENV` 와 같다).
+ */
+export interface Site {
+  readonly issuer: string;
+  readonly audience: string;
+  readonly agents: readonly string[];
+  readonly allowedOrigins: readonly string[];
+  readonly publicKeys: readonly PublicKey[];
+  readonly requestChars: number;
+}
+
+/** 읽은 사이트 파일. 사이트는 파일에 적은 차례다. */
+export interface SiteFile {
+  readonly sites: readonly Site[];
+}
+
 const NO_SITES: BuildInput = { allowedOrigins: [], requestChars: DEFAULT_REQUEST_CHARS };
 
 /** 환경 변수가 가리키는 사이트 파일의 빌드 입력. 읽지 못하면 진단을 든 오류를 던져 빌드를 멈춘다. */
@@ -57,16 +85,17 @@ export function buildInput(env: Readonly<Record<string, string | undefined>>): B
   if (path === "") {
     throw new Error(`${SITE_FILE_ENV} 가 비었다. 사이트 파일의 경로를 주거나 변수를 뺀다.`);
   }
-  const input = readSiteFile(path);
-  if ("problems" in input) {
-    throw new Error(diagnostic(path, input.problems));
+  const file = readSiteFile(path);
+  if ("problems" in file) {
+    throw new Error(diagnostic(path, file.problems));
   }
-  return input;
+  return buildInputOf(file.sites);
 }
 
-function readSiteFile(path: string): BuildInput | SiteFileProblems {
+/** 사이트 파일의 경로에서 모델을, 또는 받아들일 수 없는 이유들을 읽는다. */
+export function readSiteFile(path: string): SiteFile | SiteFileProblems {
   const text = textOf(path);
-  return typeof text === "string" ? siteFileInput(universalNewlines(text)) : text;
+  return typeof text === "string" ? parseSiteFile(universalNewlines(text)) : text;
 }
 
 /**
@@ -107,6 +136,23 @@ function diagnostic(path: string, problems: readonly string[]): string {
 
 /** 사이트 파일의 글에서 빌드 입력을, 또는 받아들일 수 없는 이유들을 끌어낸다. */
 export function siteFileInput(text: string): BuildInput | SiteFileProblems {
+  const file = parseSiteFile(text);
+  return "problems" in file ? file : buildInputOf(file.sites);
+}
+
+/** 읽은 사이트들의 합친 허용 출처와 가장 작은 요청 글자 수 상한. 사이트가 없으면 빈 허용 출처와 서버의 기본 상한이다. */
+function buildInputOf(sites: readonly Site[]): BuildInput {
+  if (sites.length === 0) {
+    return NO_SITES;
+  }
+  return {
+    allowedOrigins: [...new Set(sites.flatMap(({ allowedOrigins }) => allowedOrigins))],
+    requestChars: Math.min(...sites.map(({ requestChars }) => requestChars)),
+  };
+}
+
+/** 사이트 파일의 글에서 사이트마다 읽은 모델을, 또는 받아들일 수 없는 이유들을 읽는다. */
+export function parseSiteFile(text: string): SiteFile | SiteFileProblems {
   if (text.startsWith("\uFEFF")) {
     return { problems: ["TOML 이 아니다: 파일 머리에 BOM 이 있다. BOM 없는 UTF-8 로 저장한다"] };
   }
@@ -116,22 +162,15 @@ export function siteFileInput(text: string): BuildInput | SiteFileProblems {
   } catch (error: unknown) {
     return { problems: [`TOML 이 아니다: ${parseFailure(error)}`] };
   }
-  const { value: sites, problems } = sitesOf(document);
+  const { value: entries, problems } = sitesOf(document);
   if (problems.length > 0) {
     return { problems };
   }
-  const notation = sites.flatMap(originProblems);
+  const notation = entries.flatMap(originProblems);
   if (notation.length > 0) {
     return { problems: notation };
   }
-  if (sites.length === 0) {
-    return NO_SITES;
-  }
-  const limits = sites.map(({ requestChars }) => requestChars ?? BigInt(DEFAULT_REQUEST_CHARS));
-  return {
-    allowedOrigins: [...new Set(sites.flatMap(({ origins }) => origins))],
-    requestChars: Number(limits.reduce((smallest, limit) => (limit < smallest ? limit : smallest))),
-  };
+  return { sites: entries.flatMap(({ site }) => (site === undefined ? [] : [site])) };
 }
 
 function parseFailure(error: unknown): string {
@@ -175,7 +214,8 @@ const LIMIT_KEYS: readonly string[] = [
 interface SiteEntry {
   readonly place: string;
   readonly origins: readonly string[];
-  readonly requestChars: bigint | undefined;
+  /** 발급자와 `audience` 가 글자일 때만 있다. 문제가 있는 파일은 모델을 내지 않아 그때 값은 쓰이지 않는다. */
+  readonly site: Site | undefined;
 }
 
 /** 모양을 보며 읽은 값과 그 자리에서 찾은 문제들. 문제가 있어도 값은 읽을 수 있는 만큼 채운다. */
@@ -219,43 +259,71 @@ function versionProblems(version: TomlValue | undefined): readonly string[] {
 
 function siteOf(site: TomlTable, place: string): Read<SiteEntry> {
   const origins = textsOf(site["allowed_origins"], `${place}.allowed_origins`);
+  const agents = textsOf(site["agents"], `${place}.agents`);
+  const keys = keysOf(site["public_keys"], `${place}.public_keys`);
   const requestChars = requestCharsOf(site["limits"], `${place}.limits`);
+  const issuer = site["issuer"];
+  const audience = site["audience"];
   return {
-    value: { place, origins: origins.value, requestChars: requestChars.value },
+    value: {
+      place,
+      origins: origins.value,
+      site:
+        typeof issuer === "string" && typeof audience === "string"
+          ? {
+              issuer,
+              audience,
+              agents: agents.value,
+              allowedOrigins: origins.value,
+              publicKeys: keys.value,
+              requestChars: Number(requestChars.value ?? BigInt(DEFAULT_REQUEST_CHARS)),
+            }
+          : undefined,
+    },
     problems: [
       ...unknownKeyProblems(site, SITE_KEYS, place),
       ...REQUIRED_SITE_KEYS.filter((key) => site[key] === undefined).map(
         (key) => `${place}.${key}: 빠졌다`,
       ),
-      ...textProblems(site["issuer"], `${place}.issuer`),
-      ...textProblems(site["audience"], `${place}.audience`),
-      ...keyProblems(site["public_keys"], `${place}.public_keys`),
-      ...textsOf(site["agents"], `${place}.agents`).problems,
+      ...textProblems(issuer, `${place}.issuer`),
+      ...textProblems(audience, `${place}.audience`),
+      ...keys.problems,
+      ...agents.problems,
       ...origins.problems,
       ...requestChars.problems,
     ],
   };
 }
 
-function keyProblems(value: TomlValue | undefined, place: string): readonly string[] {
+/** 공개 키 표의 배열의 모양을 보며 키들을 읽는다. `pem` 이 글자가 아닌 키는 빼고 그 자리를 문제로 낸다. */
+function keysOf(value: TomlValue | undefined, place: string): Read<readonly PublicKey[]> {
   if (value === undefined) {
-    return [];
+    return { value: [], problems: [] };
   }
   if (!Array.isArray(value)) {
-    return [`${place}: 표의 배열이어야 한다`];
+    return { value: [], problems: [`${place}: 표의 배열이어야 한다`] };
   }
-  return value.flatMap((entry, at) => {
+  const keys = value.map((entry, at): Read<readonly PublicKey[]> => {
     const where = `${place}[${String(at)}]`;
     if (!isTable(entry)) {
-      return [`${where}: 표여야 한다`];
+      return { value: [], problems: [`${where}: 표여야 한다`] };
     }
-    return [
-      ...unknownKeyProblems(entry, KEY_KEYS, where),
-      ...(entry["pem"] === undefined ? [`${where}.pem: 빠졌다`] : []),
-      ...textProblems(entry["pem"], `${where}.pem`),
-      ...textProblems(entry["kid"], `${where}.kid`),
-    ];
+    const { pem, kid } = entry;
+    return {
+      value:
+        typeof pem === "string" ? [{ kid: typeof kid === "string" ? kid : undefined, pem }] : [],
+      problems: [
+        ...unknownKeyProblems(entry, KEY_KEYS, where),
+        ...(pem === undefined ? [`${where}.pem: 빠졌다`] : []),
+        ...textProblems(pem, `${where}.pem`),
+        ...textProblems(kid, `${where}.kid`),
+      ],
+    };
   });
+  return {
+    value: keys.flatMap(({ value: found }) => found),
+    problems: keys.flatMap(({ problems }) => problems),
+  };
 }
 
 /** 상한 표의 모양을 보며 `request_chars` 를 읽는다. 적지 않았으면 값은 undefined. */

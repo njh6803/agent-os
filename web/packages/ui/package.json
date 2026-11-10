@@ -8,6 +8,8 @@
     "./fonts.css": "./src/styles/fonts.css",
     "./testing": "./src/testing/index.ts",
     "./contrast": "./src/styles/contrast.ts",
+    "./themes": "./src/themes.ts",
+    "./fonts": "./node/fonts.ts",
     "./storybook": "./src/storybook/preview.tsx",
     "./storybook/expect": "./src/storybook/expect.ts",
     "./visual": "./visual/index.ts"

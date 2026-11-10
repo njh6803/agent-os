@@ -4,7 +4,7 @@
  * - `dev`·`start` 는 관리 화면의 래퍼와 같은 모양이다. 바인딩 호스트가 루프백이 아니면 next 를 부르기 전에 구성
  *   오류로 끝나고 SSH 포트 포워딩을 안내한다. 호스트를 주지 않으면 `127.0.0.1` 이다. `next dev`·`next start` 는 인자
  *   없이 `0.0.0.0` 과 `[::]` 에 서서, 위젯이 nginx 와 TLS 를 거치지 않고 LAN 에 평문으로 열린다.
- * - `dev`·`build` 는 next 를 부르기 전에 빌드의 입력을 준비한다. 글꼴 파일을 `public/fonts/` 에 복사하고(`fonts.ts`),
+ * - `dev`·`build` 는 next 를 부르기 전에 빌드의 입력을 준비한다. 글꼴 파일을 `public/fonts/` 에 복사하고(`@agent-os/ui/fonts`),
  *   페이지 안 번들을 `public/element.js` 로 짓는다(`element.ts`). `start` 는 빌드 산출물과 그 `public/` 을 그대로 낸다.
  *   `dev` 도 번들을 한 번 지을 뿐 고칠 때마다 다시 짓지 않는다.
  * - 사이트 파일(티켓 04)은 페이지 안 번들의 빌드와 설정 파일(`next.config.ts`)이 `AGENT_OS_SITE_FILE` 로 읽는다. 래퍼는
@@ -30,9 +30,9 @@
 import { createRequire } from "node:module";
 import { dirname, join, resolve } from "node:path";
 import { parseArgs } from "node:util";
+import { SITE_FILE_ENV } from "@agent-os/site-file";
+import { copyFonts } from "@agent-os/ui/fonts";
 import { buildElement } from "./element.ts";
-import { copyFonts } from "./fonts.ts";
-import { SITE_FILE_ENV } from "./site-file.ts";
 
 const APP = dirname(import.meta.dirname);
 // 순서가 진단의 문장이 된다. serve 의 진단과 같은 순서다.
@@ -106,7 +106,7 @@ function parse(argv: readonly string[]) {
 /**
  * 사이트 파일의 경로를 래퍼를 부른 자리 기준의 절대 경로로 바꾼다. next 를 부르기 전에 작업 폴더를 앱으로 옮기므로, 상대
  * 경로를 그대로 두면 설정 파일이 앱 폴더에서 풀어 운영자가 준 파일을 찾지 못한다. 비었거나 없으면 그대로 둔다. 그
- * 판정은 설정 파일(tools/site-file.ts)이 한다.
+ * 판정은 설정 파일(`@agent-os/site-file`을 부르는 `next.config.ts`)이 한다.
  */
 export function absoluteSiteFile(value: string | undefined, cwd: string): string | undefined {
   return value === undefined || value === "" ? value : resolve(cwd, value);

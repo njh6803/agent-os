@@ -8,7 +8,7 @@
  * - 번들의 꼴은 즉시 실행되는 classic 스크립트 하나(IIFE)다. 다른 출처의 `<script type="module">` 은 CORS 로 받고,
  *   classic 스크립트는 청크로 나뉘지 않아 사이트가 넣을 것이 한 줄로 남는다(명세 "번들의 꼴"). 입구가 아무것도 내보내지
  *   않아 사이트 페이지의 전역 이름을 짓지 않는다.
- * - 빌드의 입력은 iframe 페이지와 같은 사이트 파일이다(`site-file.ts` 의 `buildInput`). 가장 작은 요청 글자 수 상한을
+ * - 빌드의 입력은 iframe 페이지와 같은 사이트 파일이다(`@agent-os/site-file` 의 `buildInput`). 가장 작은 요청 글자 수 상한을
  *   `process.env.AGENT_OS_WIDGET_REQUEST_CHARS` 의 자리에 글자로 박는다. lib/build.ts 가 Next 의 env 와 같은 자리를 읽기
  *   때문이다. 변수가 준 파일을 읽지 못하면 던져 빌드가 멈춘다(fail-closed, ADR 0024). 페이지 안 방식은 postMessage 를
  *   쓰지 않아 허용 출처는 싣지 않는다. 상대 경로의 `AGENT_OS_SITE_FILE` 은 시작 래퍼가 푼다.
@@ -24,11 +24,10 @@
  */
 
 import { join } from "node:path";
+import { buildInput, WIDGET_REQUEST_CHARS_ENV } from "@agent-os/site-file";
+import { type FontFaceSource, fontFaces } from "@agent-os/ui/fonts";
 import tailwindcss from "@tailwindcss/vite";
 import { build, type InlineConfig, type Plugin } from "vite";
-import type { FontFaceSource } from "../element/fonts.ts";
-import { fontFaces } from "./fonts.ts";
-import { buildInput, WIDGET_REQUEST_CHARS_ENV } from "./site-file.ts";
 
 const APP = join(import.meta.dirname, "..");
 export const ELEMENT_FILE = "element.js";

@@ -10,7 +10,7 @@
     "verify": "pnpm run clean:judge-trees && pnpm run check:api-client && pnpm run lint && pnpm run format && pnpm run typecheck && pnpm run test && pnpm run check:tsconfig",
     "lint": "eslint --max-warnings 0",
     "format": "prettier --check . --ignore-path ../.gitignore --ignore-path .prettierignore",
-    "typecheck": "tsc --noEmit && pnpm -r exec tsc --noEmit && tsc --noEmit -p packages/ui/visual && tsc --noEmit -p apps/widget/visual && tsc --noEmit -p apps/admin/visual",
+    "typecheck": "tsc --noEmit && pnpm -r exec tsc --noEmit && tsc --noEmit -p packages/ui/visual && tsc --noEmit -p packages/ui/node && tsc --noEmit -p apps/widget/visual && tsc --noEmit -p apps/admin/visual",
     "test": "vitest run",
     "visual": "node tools/visual.ts packages/ui",
     "visual:update": "node tools/visual.ts packages/ui --update",

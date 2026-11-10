@@ -5,7 +5,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, test } from "vitest";
-import { DEFAULT_REQUEST_CHARS, originRule, siteFileInput } from "./site-file.ts";
+import { DEFAULT_REQUEST_CHARS, originRule, parseSiteFile, siteFileInput } from "./site-file.ts";
 
 const FIXTURES = join(
   import.meta.dirname,
@@ -92,7 +92,7 @@ function site(origins: string, extra = ""): string {
 function problemsOf(text: string): readonly string[] {
   const input = siteFileInput(text);
   if (!("problems" in input)) {
-    throw new Error("받아들일 수 없는 사이트 파일을 받아들였다");
+    throw new Error(`받아들일 수 없는 사이트 파일을 받아들였다: ${JSON.stringify(input)}`);
   }
   return input.problems;
 }
@@ -213,5 +213,66 @@ describe("사이트 파일의 모양", () => {
     ],
   ])("%s. 그 자리를 말하고 받아들이지 않는다", (_, text, place) => {
     expect(problemsOf(text)).toEqual([expect.stringContaining(place)]);
+  });
+});
+
+describe("사이트마다 읽은 모델", () => {
+  const FIXTURE_TEXT = readFileSync(join(FIXTURES, "sites.toml"), "utf-8");
+
+  function sitesOf(text: string) {
+    const file = parseSiteFile(text);
+    if ("problems" in file) {
+      throw new Error(`받아들일 수 없는 사이트 파일이다: ${file.problems.join(", ")}`);
+    }
+    return file.sites;
+  }
+
+  test("픽스처의 사이트 둘을 발급자, audience, 열 에이전트, 허용 출처, 요청 글자 수 상한으로 읽는다", () => {
+    const sites = sitesOf(FIXTURE_TEXT);
+
+    expect(
+      sites.map(({ issuer, audience, agents, allowedOrigins, requestChars }) => ({
+        issuer,
+        audience,
+        agents,
+        allowedOrigins,
+        requestChars,
+      })),
+    ).toEqual([
+      {
+        issuer: "https://shop.example",
+        audience: "agent-os",
+        agents: ["echo"],
+        allowedOrigins: ["https://shop.example", "https://www.shop.example"],
+        requestChars: DEFAULT_REQUEST_CHARS,
+      },
+      {
+        issuer: "https://blog.example",
+        audience: "agent-os",
+        agents: ["echo"],
+        allowedOrigins: ["http://localhost:3000", "https://shop.example"],
+        requestChars: 4000,
+      },
+    ]);
+  });
+
+  test("공개 키는 kid 와 PEM 을 그대로 읽고 kid 를 적지 않은 키는 kid 가 없다", () => {
+    const [shop, blog] = sitesOf(FIXTURE_TEXT);
+    const pem: unknown = expect.stringMatching(
+      /^-----BEGIN PUBLIC KEY-----\n[\s\S]*\n-----END PUBLIC KEY-----\n$/,
+    );
+
+    expect(shop?.publicKeys).toEqual([{ kid: "shop-1", pem }]);
+    expect(blog?.publicKeys).toEqual([{ kid: undefined, pem }]);
+  });
+
+  test("모양을 어긴 파일은 빌드 입력을 읽을 때와 같은 진단을 낸다", () => {
+    const text = `schema_version = "1"\n${site('["https://a.example"]').replace('agents = ["echo"]', "")}`;
+
+    expect(parseSiteFile(text)).toEqual({ problems: ["sites[0].agents: 빠졌다"] });
+  });
+
+  test("사이트가 없는 파일은 빈 목록이다", () => {
+    expect(parseSiteFile('schema_version = "1"\n')).toEqual({ sites: [] });
   });
 });

@@ -1,16 +1,16 @@
 // 페이지 안 번들의 빌드 설정(web-widget 티켓 10). 사이트 파일에서 무엇을 번들에 싣고 무엇을 싣지 않는지, 읽지 못하면
 // 빌드가 멈추는지, 산출물이 청크로 나뉘지 않는 classic 스크립트 하나인지를 본다. 번들이 사이트 페이지에서 실려 도는지는
-// 위젯 e2e 가 본다. 표기와 모양의 판정 하나하나는 tools/site-file.test.ts 가 본다.
+// 위젯 e2e 가 본다. 표기와 모양의 판정 하나하나는 `@agent-os/site-file` 의 시험(`src/site-file.test.ts`)이 본다.
 
 import { mkdtempSync, readdirSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Script } from "node:vm";
+import { SITE_FILE_ENV, WIDGET_ORIGINS_ENV, WIDGET_REQUEST_CHARS_ENV } from "@agent-os/site-file";
+import { fontFaces } from "@agent-os/ui/fonts";
 import { describe, expect, test } from "vitest";
 import { expectedSiteFile, SITE_FILE_FIXTURES } from "../testing/site-file.ts";
 import { buildElement, ELEMENT_FILE, elementBuildConfig } from "./element.ts";
-import { fontFaces } from "./fonts.ts";
-import { SITE_FILE_ENV, WIDGET_ORIGINS_ENV, WIDGET_REQUEST_CHARS_ENV } from "./site-file.ts";
 
 const CHARS = `process.env.${WIDGET_REQUEST_CHARS_ENV}`;
 const FIXTURE = join(SITE_FILE_FIXTURES, "sites.toml");
