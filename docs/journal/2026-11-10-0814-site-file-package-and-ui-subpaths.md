@@ -76,6 +76,7 @@
 
 - 병합 뒤 프론티어는 02와 04다. 둘 다 01 뒤에 나란히 돈다(`.scratch/pilot-portal/plan.md`).
 - 변이 표 `site_file_mutations.toml`의 남은 표지 다섯(10~13, 16)을 대기열 417이 허용하는 문구(변이가 낸 받은 값처럼 그 단언이 빨개질 때만 찍히는 것)로 고쳐 표 전체를 한 번 돌린다. 이 변경이 만든 문제가 아니라 표를 만든 뒤 생긴 검사에 걸린 것이다.
+- PR #510의 claude-review 첫 회차가 낸 Minor 둘을 뒤로 넘겼다. 04(질문 페이지 서버)가 `@agent-os/site-file`을 import하기 전에 본다. (1) `siteFileInput`은 테스트만 부르는 export인데 `index.ts`의 `export *`로 패키지 공개 표면에 오른다. 테스트를 `parseSiteFile`과 `buildInput` 조합으로 바꾸고 export를 걷는다. (2) `site-file.ts`가 약 600줄 한 파일에 TOML 읽기, 허용 출처 표기 판정, 칸 모양 판정, 빌드 입력 합성을 함께 든다. 04가 칸을 더하기 전에 나눈다.
 
 ### 인계 지시문 (커밋 뒤 경계, 같은 브랜치)
 
@@ -97,3 +98,5 @@ open-session을 부른다 2026-11-09T23:43:46Z (이 일지의 인계 지시문 �
 위 인계 지시문으로 연 세션이다. `origin/main`(`0dac7aed`, mcp-http 04)을 이 브랜치에 병합했다. `tests/test_main.py`는 글자 충돌 없이 자동으로 합쳐졌고 `uv run pytest -q tests/test_main.py`가 215개 통과했다. `uv run python tools/plan_table.py`는 `.scratch/plan.md`를 바꾸지 않았다. `uv run python tools/sibling_overlap.py`는 번호 겹침이 없다고 했다(헌법 3.0.78은 형제가 쓴 가장 높은 판 3.0.77보다 높다). 그 뒤 일지 커밋(`4724297d`)의 pre-commit이 pyright 둘, lint-imports, pytest(416.6초), web-verify를 통과시켰고, `uv run ruff check .`와 `uv run ruff format --check .`는 손으로 쳐 통과했다.
 
 PR 직전 리뷰는 `coderabbit-review` 서브에이전트가 돌렸다(서브에이전트의 보고에서 읽었다). `coderabbit auth status`는 `Plan: Free`, `Seat: not assigned`였고, CLI 0.7.5의 `coderabbit review --agent --committed --base origin/main`이 파일 42개를 돌아 `review_completed`, 지적 0건으로 끝났다(CLI 축). 첫 시도는 `--include-untracked`를 함께 줘 `option '--committed' cannot be used with option '--include-untracked'`로 리뷰 전에 거절됐다.
+
+푸시는 훅이 한 번 막았다. `origin/main`이 `35364b67`(mcp-http 03)로 한 커밋 더 앞서 있었다. 다시 병합하니 `.scratch/plan.md`가 충돌했고 `uv run python tools/plan_table.py`로 다시 만들었다(충돌 표지 0개를 Grep으로 봤다). 병합 커밋(`a993acf`)의 pre-commit이 통과했고 ruff 둘을 손으로 쳐 통과했다. PR #510을 열었다. `uv run python tools/wait_ci.py 510`의 끝 줄은 `모두 통과. CodeRabbit: Review rate limited`였다(검사 여덟 SUCCESS). CodeRabbit은 PR에서 한도에 걸려 리뷰가 없었고 그 축은 위 CLI 결과가 대신한다. claude-review 첫 회차는 Critical·Major 없이 Minor 둘을 냈고(`gh pr view 510 --json comments,reviews`로 읽었다), 둘 다 셀프 리뷰가 이미 남긴 것이라 고치지 않고 "다음"에 넘겼다.
