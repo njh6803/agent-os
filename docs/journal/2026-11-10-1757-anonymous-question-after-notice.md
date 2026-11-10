@@ -82,3 +82,11 @@ open-session을 부른다 2026-11-10T09:11:31Z
 둘째 세션은 셀프 리뷰를 밟고(위 "셀프 리뷰 (2차 세션)") 반영한 뒤 `uv run python tools/run_checks.py`와 질문 페이지 e2e 18건이 초록인 것을 보고 커밋했다(`9e1b70d2`, pre-commit 통과). 컨텍스트가 인계 문턱을 넘은 채 `커밋 뒤`에 와서 `인계: 커밋 뒤`로 넘긴다. 남은 단계는 푸시, PR, 봇 회차와 CI, 병합, 이 일지의 "다음"과 retro, 다음 지시문이다. 이 세션의 제목은 `feature/07-anonymous-question-after-notice` (인계 때 `(인계함)`을 붙인다). 이월 몫은 첫 인계 때와 같다. 이 기능의 마지막 티켓 뒤에 `e2e-widget`·`e2e-portal`을 `.scratch/harness/probes/ci_job_durations.py`의 `JOBS`에 더하고 `ci.yml`의 `timeout-minutes`를 잰 값으로 고치는 일이고 07의 몫이 아니다. 08·09가 남아 있어 기능 계획의 `**끝:**` 줄은 쓰지 않는다.
 
 open-session을 부른다 2026-11-10T09:46:30Z
+
+## PR 직전 리뷰 (셋째 세션)
+
+셋째 세션은 워크트리에 들어와 `origin/main`(3dc3f15e, 문서만 바뀜)을 합치고(겹친 파일 없음, `plan_table.py`가 만든 `.scratch/plan.md`에 차이 없음) PR 직전에 `coderabbit-review` 서브에이전트를 돌렸다.
+
+- 명령은 `coderabbit review --agent --include-untracked --base origin/main`이고 종료 코드 0, 끝 줄이 `review_completed`에 `findings` 0이었다. `Seat: not assigned`(Plan: Free)였지만 리뷰는 정상으로 돌았다.
+- 리뷰한 파일은 16개(질문 페이지 코드와 시험 10, 문서 6)이다. 지적은 없었다.
+- 서브에이전트가 CLI와 별개로 `server/page.ts`, `browser/portal.ts`, `server/paths.ts`의 diff를 읽었다(CSS는 훑기만 했다). 고지 글이 `textContent`로만 들어가고 데이터 블록이 이스케이프되어 XSS 경로가 보이지 않았고, 눈에 띄는 버그와 성능 문제도 없었다. 이 부분은 CLI 결과가 아니라 서브에이전트가 읽은 판단이다.
