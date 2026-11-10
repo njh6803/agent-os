@@ -68,6 +68,7 @@ web/                       슬라이스 3부터. pnpm 워크스페이스. 파이
 | 10 | [admin-answer-preview](admin-answer-preview/plan.md) | 관리 화면 실행 상세의 최종 출력 칸에서 원문과 마크다운으로 그린 모양을 오가며 보게 해, 운영자가 최종 사용자에게 보인 모양을 바로 확인한다. | answer-markdown, pilot-release | todo |
 | 10 | [audit-export](audit-export/plan.md) | 운영자가 트레이스를 주체와 기간과 에이전트와 도구별로 조회하고 파일로 내보낸다. | io-guardrail | todo |
 | 10 | [io-guardrail](io-guardrail/plan.md) | 최종 사용자의 입력과 에이전트의 출력에서 주민등록번호 같은 패턴을 규칙으로 막거나 가린다. | value-masking | todo |
+| 10 | [kb-selection](kb-selection/plan.md) | 기본 에이전트가 지식베이스 목록을 보고 질문에 맞는 지식베이스를 골라 검색한다. | base-agent, principal-propagation | todo |
 | 10 | [mcp-trust](mcp-trust/plan.md) | MCP 서버마다 믿는 정도와 도구 정의 해시를 정해, 믿지 않는 서버의 결과를 바깥 글로 다룬다. | approval-rules, pilot-release, mcp-http | todo |
 | 10 | [portal-admin](portal-admin/plan.md) | 질문 페이지 설정을 화면에서 고치는 관리 화면을 질문 페이지 쪽에 두어, 운영자가 파일을 열지 않고 사이트마다의 위젯 설정을 바꾼다. | pilot-portal | todo |
 | 10 | [principal-propagation](principal-propagation/plan.md) | 운영자가 켠 MCP 서버에만 실행의 주체를 넘겨, 사용자가 볼 수 있는 문서로만 답하게 한다. | mcp-trust | todo |
@@ -89,6 +90,11 @@ web/                       슬라이스 3부터. pnpm 워크스페이스. 파이
 | 13 | [run-handoff](run-handoff/plan.md) | 앞 에이전트가 끝나며 다음 에이전트를 지목하면 런타임이 이어서 곧바로 시작한다. | otel-export | todo |
 | 14 | [admin-crud](admin-crud/plan.md) | 관리 화면에서 플러그인의 매니페스트와 본문 파일을 직접 만들고 고치고 지우며, 잘못된 내용은 거절한다. | replay-evaluation | todo |
 | 14 | [multi-instance](multi-instance/plan.md) | 서버 인스턴스를 여럿 띄워도 동시 실행 상한과 실시간 구독이 하나의 서버처럼 동작하게 한다. | admin-crud | todo |
+| 15 | [named-query](named-query/plan.md) | 운영자가 적어 둔 조회문을 모델이 값만 넘겨 불러, 데이터베이스의 숫자를 그 사람이 볼 수 있는 데이터로만 답한다. | principal-propagation, user-memory | todo |
+| 15 | [plan-tool](plan-tool/plan.md) | 여러 단계를 밟는 커스텀 에이전트가 계획표를 적고, 그 계획표가 질문한 사람의 화면에도 보인다. | text-to-sql | todo |
+| 15 | [system-lookup](system-lookup/plan.md) | 사내 시스템을 조회하는 도구 서버의 본보기 하나와 만드는 방법의 안내를 낸다. | principal-propagation, user-memory | todo |
+| 15 | [text-to-sql](text-to-sql/plan.md) | 모델이 조회문을 스스로 써서 데이터베이스에 묻고, 그 사람이 볼 수 있는 데이터로만 답한다. | named-query, system-lookup | todo |
+| 15 | [user-memory](user-memory/plan.md) | 로그인한 최종 사용자마다 대화를 넘어 남는 기억을 커스텀 에이전트가 골라 붙이는 부품으로 낸다. | mcp-trust, principal-propagation | todo |
 
 ## 프론티어
 
