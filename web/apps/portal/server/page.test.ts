@@ -148,12 +148,95 @@ test("스크립트를 끈 브라우저에 보일 한 줄을 noscript 에 둔다"
   expect(html).toContain("<noscript>이 페이지는 스크립트가 있어야 동작합니다.</noscript>");
 });
 
-test("위젯 자리에 위젯 요소가 속성 없이 서 있다. 속성은 페이지 스크립트가 채운다", () => {
+test("위젯 자리는 tabindex -1 의 상자이고 뼈대와 덮개와 위젯 요소를 차례로 든다", () => {
+  const html = pageHtml([site()], 30);
+
+  expect(html).toContain('<div class="pp-widget" id="pp-widget" tabindex="-1">');
+  const skeleton = html.indexOf('id="pp-skeleton"');
+  const cover = html.indexOf('id="pp-cover"');
+  const widget = html.indexOf("<agent-os-widget");
+  expect(skeleton).toBeGreaterThan(html.indexOf('id="pp-widget"'));
+  expect(cover).toBeGreaterThan(skeleton);
+  expect(widget).toBeGreaterThan(cover);
+});
+
+test("위젯 요소는 속성 없이 숨겨져 서 있고 tabindex 를 두지 않는다. 속성은 페이지 스크립트가 채운다", () => {
+  const html = pageHtml([site()], 30);
+
+  expect(html).toContain("<agent-os-widget hidden></agent-os-widget>");
+  expect(html).not.toMatch(/<agent-os-widget[^>]*tabindex/u);
+});
+
+test("뼈대는 처음에 숨겨져 있고 움직이지 않으며 상태를 묻는 중이라고 이름을 단다", () => {
   const html = pageHtml([site()], 30);
 
   expect(html).toMatch(
-    /<div class="pp-widget" id="pp-widget"><agent-os-widget><\/agent-os-widget><\/div>/u,
+    /<div class="pp-skeleton" id="pp-skeleton" aria-busy="true" aria-label="고지 확인 여부를 묻는 중" hidden>/u,
   );
+});
+
+test("덮개는 대화 상자가 아니라 제목을 단 영역이고 처음에 숨겨져 있으며 자동 포커스가 없다", () => {
+  const html = pageHtml([site()], 30);
+
+  expect(html).toMatch(
+    /<section class="pp-cover" id="pp-cover" aria-labelledby="pp-cover-title" hidden>/u,
+  );
+  expect(html).toContain(
+    '<h2 class="pp-cover-title" id="pp-cover-title">질문하기 전에 읽어 주세요</h2>',
+  );
+  expect(html).not.toContain("autofocus");
+  expect(html).not.toContain('role="dialog"');
+  expect(html).not.toContain("aria-modal");
+});
+
+test("덮개의 주 버튼은 폭을 채우는 확인 단추이고 도는 표시는 꾸밈이라 화면 읽기 프로그램에서 숨긴다", () => {
+  const html = pageHtml([site()], 30);
+
+  const button =
+    /<button type="button" class="pp-primary" id="pp-acknowledge">(.*?)<\/button>/su.exec(html);
+  expect(button?.[1]).toContain('<span class="pp-primary-label">확인하고 질문하기</span>');
+  expect(button?.[1]).toMatch(/<svg class="pp-spinner"[^>]*aria-hidden="true"/u);
+});
+
+test("덮개 안의 위험 알림은 role alert 이고 처음에 숨겨져 있다", () => {
+  const html = pageHtml([site()], 30);
+
+  const alert =
+    /<div class="pp-alert" id="pp-cover-failure" role="alert" hidden>(.*?)<\/div>\s*<\/div>/su.exec(
+      html,
+    );
+  expect(alert?.[1]).toContain("고지 확인을 기록하지 못했습니다.");
+  expect(alert?.[1]).toContain("잠시 뒤 다시 눌러 주세요.");
+  expect(alert?.[1]).toMatch(/<svg[^>]*aria-hidden="true"/u);
+});
+
+test("짧은 고지와 고지 전문 단추는 처음에 숨겨져 있고 단추가 펼침 상태와 전문을 알린다", () => {
+  const html = pageHtml([site()], 30);
+
+  expect(html).toMatch(/<div class="pp-notice" id="pp-notice" hidden>/u);
+  expect(html).toContain("질문과 출력은 기록되고 모델 API로 보내집니다. 개인정보를 넣지 마세요.");
+  expect(html).toContain(
+    '<button type="button" class="pp-link" id="pp-notice-toggle" aria-expanded="false" aria-controls="pp-notice-full">고지 전문</button>',
+  );
+  expect(html).toMatch(/<div class="pp-notice-full" id="pp-notice-full" hidden><\/div>/u);
+});
+
+test("짧은 고지는 위젯 자리 바로 뒤에 와서 Tab 차례가 위젯 또는 덮개의 단추, 고지 전문 단추 순이다", () => {
+  const html = pageHtml([site()], 30);
+
+  const acknowledgeAt = html.indexOf('id="pp-acknowledge"');
+  const widgetAt = html.indexOf("<agent-os-widget");
+  const toggleAt = html.indexOf('id="pp-notice-toggle"');
+  expect(widgetAt).toBeGreaterThan(acknowledgeAt);
+  expect(toggleAt).toBeGreaterThan(widgetAt);
+});
+
+test("고지 글은 HTML 에 박지 않는다. 사이트마다의 글은 데이터 블록에서 스크립트가 채운다", () => {
+  const html = pageHtml([site({ notice: "사이트 고지 글" })], 30);
+
+  const outsideData = html.replace(DATA_BLOCK, "");
+  expect(outsideData).not.toContain("사이트 고지 글");
+  expect(html).toContain('<div class="pp-cover-notice" id="pp-cover-notice"></div>');
 });
 
 test("위쪽 띠의 자리가 본문 앞에 비어 있다. 내용은 뒤 티켓이 채운다", () => {
