@@ -96,4 +96,12 @@
 - 위젯 e2e·사진 비교 셋은 이 반영이 건드린 파일(`web/apps/portal`, 위젯과 무관한 주석 둘, 문서)이 위 앞서 친 결과를 바꾸지 않으므로 다시 치지 않았다. 중계 코드(`relay.ts`)와 `packages/ui`는 이 반영에서 고치지 않았다(손으로 `git diff`로 확인하지 않고 고친 파일 목록으로 안다).
 
 
-open-session을 부른다 2026-11-10T06:19Z
+## 인계 상태 (커밋 뒤)
+
+- 지금까지: 셀프 리뷰(표준 축·명세 축)와 반영, 검증 전부(위 "다시 돌린 명령"), 커밋 `1e31d502`(pre-commit 통과). 푸시하지 않았고 PR도 없다. 세션 제목은 `feature/06-portal-page-draws-widget`이었다.
+- 다음: (1) `git fetch origin main` 뒤 `origin/main`을 직접 merge한다. main이 `cb26ca5c`에서 `686ae728`로 움직였고 티켓 03(위젯 입력창 이름 "질문", `web/apps/widget/`와 `web/packages/ui/` TextField의 변경과 사진 스냅샷)과 chore(웹 편집 훅)가 들어왔다. `sibling_overlap.py`는 겹치는 파일이 없다고 했고 헌법 판 3.0.82는 3.0.81 위다. merge 뒤 충돌이 있으면 논리로 푼다. (2) 푸시하고 `git-pr`로 PR을 연다(본문 끝 `🤖 Generated with [Claude Code](https://claude.com/claude-code)`). `ccd_pr`의 `get_status`로 보고 없으면 `bind_pr`. (3) CI에서 `e2e-portal` 잡이 초록인 것을 본 뒤 티켓 `.scratch/pilot-portal/issues/06-portal-page-draws-widget.md`의 마지막 체크박스를 채워 커밋한다. 이 줄은 비워 두었다. (4) `next-session`의 `merge.md`(워크트리에서 병합할 때)로 병합한다. 사용자의 기억 메모가 병합은 묻지 않고 한다고 적었다. (5) `e2e-portal`이 CI에서 한 번 돈 뒤 `.scratch/harness/probes/ci_job_durations.py`의 `JOBS`에 `e2e-widget`과 `e2e-portal`을 더하고 그 실행의 브랜치를 주어 돌려 `timeout-minutes`(어림 15)를 잰 값으로 고친다.
+- 알려진 위험: 첫 e2e 실행에서 `serve`가 서지 않은 일이 한 번 있었고 재실행에서 사라졌다(원인 미상). 이번 세션의 e2e 재실행은 4건 통과했다. CI에서 `e2e-portal`이 같은 모양으로 빨가면 `test-results/serve.log`(CI 산출)를 먼저 본다.
+- 남긴 것: 위 "남긴 것과 이유". 두 앱의 `e2e/stack.ts` 중복은 회고 후보다.
+- 위젯 e2e와 사진 비교 셋은 앞 세션이 중계·`packages/ui` 변경 때 쳤고(위 "확인한 것") 셀프 리뷰 반영은 그 파일을 건드리지 않았다. main에 들어온 티켓 03이 위젯과 `packages/ui`를 바꿨으므로 merge 뒤 CI의 `e2e-widget`·`visual`이 초록인지 본다.
+
+open-session을 부른다 2026-11-10T06:56Z
