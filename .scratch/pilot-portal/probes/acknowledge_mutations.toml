@@ -1,0 +1,257 @@
+# pilot-portal 티켓 07(고지 확인 흐름)의 변이 표. 질문 페이지 e2e(web/apps/portal/e2e/acknowledge.e2e.ts)의 사례는 구현과 함께
+# 써서 처음부터 초록이었다. 사례마다 그 사례가 겨눈 판정을 되돌려 빨개지는지 본다(원칙 II). 준비가 위젯과 질문 페이지를 띄우므로
+# 변이 하나가 30초 안팎 걸린다.
+#   PYTHONUTF8=1 uv run python tools/mutate.py .scratch/pilot-portal/probes/acknowledge_mutations.toml [번호 ...]
+# chromium 이 Playwright 의 브라우저 캐시에 있어야 하고 uv 의 가상 환경이 서 있어야 한다.
+# 8번(위젯 요소의 tabindex)은 Tab 으로 입력창에 닿는 단언이 먼저 빨개져 "tabindex 속성이 없다"는 단언 자체는 따로 빨강을 보이지
+# 못한다. 이 표가 보이지 않는 것은 상태를 묻다 실패했을 때의 모습(명세가 정하지 않았다)과, 늦은 답이 지금 화면을 덮지 못하게 하는
+# 모습이다. 이 표의 `-g` 대상에 없는 사례(사이트 고지 글이 전문이 되는 것, 새로 고침, 쿠키 삭제, 시간당 상한, 출력의 쿠키·토큰
+# 부재, 확인 사례의 트레이스 주체 해시와 쿠키 원문 부재)도 단언마다의 빨강을 보지 못했다.
+
+[runner.e2e]
+command = ["pnpm", "exec", "playwright", "test"]
+cwd = "web/apps/portal"
+judge = "playwright"
+
+[[mutation]]
+name = "확인이 기록돼도 포커스를 위젯 자리로 옮기지 않으면 빨갛다"
+runner = "e2e"
+tests = ["-g", "확인하면 덮개가 걷히고"]
+expect = "red"
+expect_output = ["Expect \"toBeFocused\" locator('#pp-widget')"]
+
+[[mutation.edit]]
+file = "web/apps/portal/browser/portal.ts"
+old = '''
+          show(parts, "widget");
+          parts.box.focus();
+'''
+new = '''
+          show(parts, "widget");
+'''
+
+[[mutation]]
+name = "페이지 스크립트의 토큰 끝점 경로가 서버와 어긋나면 질문에 답이 서지 않아 빨갛다"
+runner = "e2e"
+tests = ["-g", "확인하면 덮개가 걷히고"]
+expect = "red"
+expect_output = ["Expect \"toBeVisible\" getByText('출력: chars:12')"]
+
+[[mutation.edit]]
+file = "web/apps/portal/browser/portal.ts"
+old = '''
+      const response = await fetch(endpoint(site, "token"), {
+'''
+new = '''
+      const response = await fetch(`${endpoint(site, "token")}s`, {
+'''
+
+[[mutation]]
+name = "서버의 토큰 끝점 경로가 페이지 스크립트와 어긋나면 질문에 답이 서지 않아 빨갛다"
+runner = "e2e"
+tests = ["-g", "확인하면 덮개가 걷히고"]
+expect = "red"
+expect_output = ["Expect \"toBeVisible\" getByText('출력: chars:12')"]
+
+[[mutation.edit]]
+file = "web/apps/portal/server/paths.ts"
+old = '''
+(acknowledgement|token)$/u;
+'''
+new = '''
+(acknowledgement|tokens)$/u;
+'''
+
+[[mutation]]
+name = "페이지 스크립트의 확인 끝점 경로가 서버와 어긋나면 같은 출처의 확인이 204를 받지 못해 빨갛다"
+runner = "e2e"
+tests = ["-g", "다른 출처 페이지의 폼 POST"]
+expect = "red"
+expect_output = ["Received: 404"]
+
+[[mutation.edit]]
+file = "web/apps/portal/browser/portal.ts"
+old = '''
+      const response = await fetch(endpoint(site, "acknowledgement"), {
+        method: "POST",
+'''
+new = '''
+      const response = await fetch(`${endpoint(site, "acknowledgement")}s`, {
+        method: "POST",
+'''
+
+[[mutation]]
+name = "상태 끝점의 답을 보지 않고 늘 확인한 것으로 읽으면 처음 온 브라우저에 덮개가 없어 빨갛다"
+runner = "e2e"
+tests = ["-g", "처음 온 브라우저에는 덮개가"]
+expect = "red"
+expect_output = ["Expect \"toBeVisible\" getByRole('region', { name: '질문하기 전에 읽어 주세요' })"]
+
+[[mutation.edit]]
+file = "web/apps/portal/browser/portal.ts"
+old = '''
+      const response = await fetch(endpoint(site, "acknowledgement"), {
+        credentials: "same-origin",
+        cache: "no-store",
+      });
+      if (response.status !== 200) {
+        return false;
+      }
+      const body: unknown = await response.json();
+      return isRecord(body) && body["acknowledged"] === true;
+'''
+new = '''
+      await fetch(endpoint(site, "acknowledgement"), {
+        credentials: "same-origin",
+        cache: "no-store",
+      });
+      return true;
+'''
+
+[[mutation]]
+name = "짧은 고지를 덮개가 있을 때도 보이면 처음 온 브라우저에서 빨갛다"
+runner = "e2e"
+tests = ["-g", "처음 온 브라우저에는 덮개가"]
+expect = "red"
+expect_output = ["Expect \"toBeHidden\" getByText('질문과 출력은 기록되고"]
+
+[[mutation.edit]]
+file = "web/apps/portal/browser/portal.ts"
+old = '''
+    parts.notice.hidden = view !== "widget";
+'''
+new = '''
+    parts.notice.hidden = view === "waiting";
+'''
+
+[[mutation]]
+name = "덮개가 나타날 때 포커스를 위젯 자리로 옮기면 빨갛다"
+runner = "e2e"
+tests = ["-g", "덮개가 나타날 때 포커스를 옮기지 않는다"]
+expect = "red"
+expect_output = ["Received: false"]
+
+[[mutation.edit]]
+file = "web/apps/portal/browser/portal.ts"
+old = '''
+    parts.notice.hidden = view !== "widget";
+'''
+new = '''
+    parts.notice.hidden = view !== "widget";
+    if (view === "cover") {
+      parts.box.focus();
+    }
+'''
+
+[[mutation]]
+name = "위젯 요소 자신에 tabindex 를 달면 Tab 으로 입력창에 닿지 못해 빨갛다"
+runner = "e2e"
+tests = ["-g", "Tab으로 위젯을 벗어났다가"]
+expect = "red"
+expect_output = ["Expect \"toBeFocused\" getByRole('button', { name: '새 대화' })"]
+
+[[mutation.edit]]
+file = "web/apps/portal/browser/portal.ts"
+old = '''
+    widget.setAttribute("agent", site.agent);
+'''
+new = '''
+    widget.setAttribute("agent", site.agent);
+    widget.setAttribute("tabindex", "-1");
+'''
+
+[[mutation]]
+name = "상태를 묻는 답이 늦어도 뼈대를 보이지 않으면 빨갛다"
+runner = "e2e"
+tests = ["-g", "뼈대가 보이고"]
+expect = "red"
+expect_output = ["Expect \"toBeVisible\" getByLabel('고지 확인 여부를 묻는 중')"]
+
+[[mutation.edit]]
+file = "web/apps/portal/browser/portal.ts"
+old = '''
+      show(parts, "waiting");
+'''
+new = '''
+      show(parts, "asking");
+'''
+
+[[mutation]]
+name = "고지 전문 단추가 aria-expanded 를 바꾸지 않으면 빨갛다"
+runner = "e2e"
+tests = ["-g", "고지 전문 단추를 누르면"]
+expect = "red"
+expect_output = ["Expect \"toHaveAttribute\" getByRole('button', { name: '고지 전문' })"]
+
+[[mutation.edit]]
+file = "web/apps/portal/browser/portal.ts"
+old = '''
+      parts.toggle.setAttribute("aria-expanded", open ? "false" : "true");
+'''
+new = '''
+'''
+
+[[mutation]]
+name = "고지 전문 단추가 전문을 펼치지 않으면 빨갛다"
+runner = "e2e"
+tests = ["-g", "고지 전문 단추를 누르면"]
+expect = "red"
+expect_output = ["Expect \"toBeVisible\" locator('#pp-notice-full')"]
+
+[[mutation.edit]]
+file = "web/apps/portal/browser/portal.ts"
+old = '''
+      parts.noticeFull.hidden = open;
+'''
+new = '''
+      parts.noticeFull.hidden = true;
+'''
+
+[[mutation]]
+name = "확인 기록에 실패해도 위험 알림을 보이지 않으면 빨갛다"
+runner = "e2e"
+tests = ["-g", "확인을 기록하지 못하면"]
+expect = "red"
+expect_output = ['Expected substring: "고지 확인을 기록하지 못했습니다."']
+
+[[mutation.edit]]
+file = "web/apps/portal/browser/portal.ts"
+old = '''
+          parts.failure.hidden = false;
+        }
+'''
+new = '''
+          parts.failure.hidden = true;
+        }
+'''
+
+[[mutation]]
+name = "기록하는 동안의 두 번째 누름을 무시하지 않으면 확인 요청이 두 번 가 빨갛다"
+runner = "e2e"
+tests = ["-g", "확인 요청은 한 번만 간다"]
+expect = "red"
+expect_output = ["Received: 2"]
+
+[[mutation.edit]]
+file = "web/apps/portal/browser/portal.ts"
+old = '''
+      if (parts.acknowledge.getAttribute("aria-busy") === "true" || current === undefined) {
+'''
+new = '''
+      if (current === undefined) {
+'''
+
+[[mutation]]
+name = "기록하는 동안 aria-busy 를 두지 않으면 빨갛다"
+runner = "e2e"
+tests = ["-g", "확인 요청은 한 번만 간다"]
+expect = "red"
+expect_output = ["Expect \"toHaveAttribute\" getByRole('region'"]
+
+[[mutation.edit]]
+file = "web/apps/portal/browser/portal.ts"
+old = '''
+    parts.acknowledge.setAttribute("aria-busy", "true");
+'''
+new = '''
+'''

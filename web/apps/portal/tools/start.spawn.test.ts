@@ -97,7 +97,7 @@ test("맞는 설정과 사이트 파일이면 시작 로그 한 줄을 찍고 he
     // 페이지와 정적 파일은 시작 때 지어 두었으므로 첫 요청부터 답한다.
     const page = await get(port, "/portal/");
     expect(page.status).toBe(200);
-    expect(page.body).toContain("<agent-os-widget>");
+    expect(page.body).toContain("<agent-os-widget hidden>");
     expect((await get(port, "/portal/portal.js")).status).toBe(200);
     expect((await get(port, "/portal/theme.css")).body).toContain("--bg-raised");
     expect((await get(port, "/portal/nothing")).status).toBe(404);

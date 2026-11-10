@@ -108,15 +108,15 @@ old = '''    if all(item.get_closest_marker(marker) is None for marker in _LLM_M
 new = '''    if item.get_closest_marker("llm") is None:'''
 
 [[mutation]]
-name = "기본 실행이 llm 만 빼면 llm_widget 시험이 돌아 빨갛다"
+name = "기본 실행이 llm_widget 을 빼먹으면 그 시험이 돌아 빨갛다"
 tests = ["tests/test_conftest.py", "-k", "기본_실행은"]
 expect = "red"
-expect_output = ["nomatch: '*= 1 passed, 2 deselected in *'"]
+expect_output = ["nomatch: '*= 1 passed, 3 deselected in *'"]
 
 [[mutation.edit]]
 file = "pyproject.toml"
-old = '''addopts = "-m \"not llm and not llm_widget\" --import-mode=importlib --strict-markers"'''
-new = '''addopts = "-m \"not llm\" --import-mode=importlib --strict-markers"'''
+old = '''addopts = "-m \"not llm and not llm_widget and not llm_portal\" --import-mode=importlib --strict-markers"'''
+new = '''addopts = "-m \"not llm and not llm_portal\" --import-mode=importlib --strict-markers"'''
 
 # --- 실제 모델 e2e 의 종료 코드(PR #383 의 CodeRabbit 첫 회차가 더했다. 앞의 번호를 옮기지 않으려 끝에 둔다) ---------
 

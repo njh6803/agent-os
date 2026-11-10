@@ -118,7 +118,7 @@ export function writeFixturePlugins(
     'schema_version = "1"\n\n[agents.tools]\nallow = ["fixture:*"]\n\n[agents.calc]\nallow = ["everything:*"]\n',
   );
   // 실제 모델 모드에서는 복사해 온 저장소의 파일이 이 자리에 이미 있다. `model_id` 를 다르게 적으면 그 파일이
-  // 가짜 id 로 덮여 `-m llm_widget` 이 제공사에 가짜 id 를 보낸다. 그래서 저장소의 파일과 같은 값을 쓴다.
+  // 가짜 id 로 덮여 `-m llm_widget` 과 `-m llm_portal` 이 제공사에 가짜 id 를 보낸다. 그래서 저장소의 파일과 같은 값을 쓴다.
   write(
     `models/${DEFAULT_MODEL}/plugin.toml`,
     manifest(

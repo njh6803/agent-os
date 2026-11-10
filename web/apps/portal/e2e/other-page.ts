@@ -1,5 +1,5 @@
 // 다른 출처의 작은 페이지(pilot-portal 명세 "Playwright e2e"). 폼 하나가 질문 페이지의 고지 확인 끝점으로 POST 를 보낸다. 다른
-// 출처에서 일으킨 확인 요청이 쿠키를 받지 못하는 것을 보는 사례(티켓 07)가 쓴다. 이 티켓은 페이지만 세운다.
+// 출처에서 일으킨 확인 요청이 쿠키를 받지 못하는 것을 보는 사례(`acknowledge.e2e.ts`)가 쓴다.
 
 import { createServer, type Server } from "node:http";
 

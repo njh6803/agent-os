@@ -2,7 +2,9 @@
  * 질문 페이지의 페이지 CSS(pilot-portal 명세 "모양"). 손으로 쓴 파일 하나이고 서버가 시작 때 읽어 `/portal/portal.css` 로 낸다.
  * 클래스 이름은 모두 `pp-` 접두이고, 색과 글꼴과 모서리와 밀도를 따르는 글자는 디자인 토큰을 `var(--…)` 로만 읽는다.
  * 토큰 CSS(`/portal/theme.css`) 산출의 유틸리티 클래스는 쓰지 않는다. 밀도는 뿌리의 `data-density="regular"` 가 정한다.
- * 이 티켓이 그리는 것은 위쪽 띠의 자리와 위젯 자리와 위젯이다. 위쪽 띠의 내용, 덮개, 단추 줄은 뒤 티켓이 같은 접두로 더한다.
+ * 이 파일이 그리는 것은 위쪽 띠의 자리, 위젯 자리와 그 안의 세 면(뼈대, 덮개, 위젯), 짧은 고지다. 위험 알림과 주 버튼은
+ * 디자인 시스템 Alert·Button 의 마크업과 ARIA 를 옮긴 HTML 을 이 파일로 칠한 것이다(React 를 싣지 않는 페이지라 부품을 쓰지
+ * 못한다). 위쪽 띠의 내용과 단추 줄은 뒤 티켓이 같은 접두로 더한다.
  */
 
 .pp-body {
@@ -24,21 +26,32 @@
   border-bottom: 1px solid var(--border);
 }
 
+/* 위젯 자리 아래에 짧은 고지가 이어 놓이므로 위쪽에 붙인다. 가운데에 두면 전문을 펼칠 때 위젯 자리가 움직인다. */
 .pp-main {
   box-sizing: border-box;
   display: flex;
   flex: 1;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
   padding: 24px 16px;
 }
 
-/* 폭 400px, 높이 560px. 좁은 폭에서는 좌우 16px 여백(위 padding)에 남은 폭을 쓴다. */
-.pp-widget {
+/* 폭 400px. 좁은 폭에서는 좌우 16px 여백(위 padding)에 남은 폭을 쓴다. */
+.pp-column {
   box-sizing: border-box;
+  display: flex;
   width: 400px;
   max-width: 100%;
+  flex-direction: column;
+  gap: var(--spacing-3);
+}
+
+/* 높이 560px. 이 상자가 확인 뒤 포커스를 받는다(`tabindex="-1"`). 위젯 요소 자신에는 `tabindex` 를 두지 않는다. */
+.pp-widget {
+  box-sizing: border-box;
+  width: 100%;
   height: 560px;
+  flex-shrink: 0;
   overflow: hidden;
   border: 1px solid var(--border);
   border-radius: var(--radius-l);
@@ -47,6 +60,11 @@
   box-shadow:
     0 8px 24px var(--shadow-color),
     0 1px 2px var(--shadow-color);
+}
+
+.pp-widget:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
 }
 
 .pp-widget > * {
@@ -68,6 +86,258 @@
   white-space: nowrap;
 }
 
-.pp-main > noscript {
+.pp-main noscript {
   color: var(--text-muted);
+}
+
+.pp-icon {
+  flex-shrink: 0;
+}
+
+/* 상태를 묻는 답이 0.3초를 넘길 때만 보이는 뼈대. 움직이지 않는다. */
+.pp-widget > .pp-skeleton {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-3);
+  padding: var(--spacing-6);
+}
+
+.pp-bar {
+  display: block;
+  border-radius: var(--radius-s);
+  background: var(--bg-active);
+}
+
+.pp-bar-title {
+  width: 60%;
+  height: 20px;
+}
+
+.pp-bar-line {
+  height: 12px;
+}
+
+.pp-bar-wide {
+  width: 100%;
+  margin-top: var(--spacing-3);
+}
+
+.pp-bar-medium {
+  width: 92%;
+}
+
+.pp-bar-narrow {
+  width: 70%;
+}
+
+.pp-bar-action {
+  width: 100%;
+  height: var(--control-h);
+  margin-top: auto;
+  border-radius: var(--radius-m);
+}
+
+/* 덮개. 제목, 넘치면 이 칸만 스크롤하는 전문, 아래에 폭을 채운 주 버튼. */
+.pp-widget > .pp-cover {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  color: var(--text);
+}
+
+.pp-cover-title {
+  margin: 0;
+  padding: var(--spacing-6) var(--spacing-6) var(--spacing-3);
+  font-size: var(--text-title);
+  line-height: var(--text-title--line-height);
+  font-weight: var(--text-title--font-weight);
+}
+
+.pp-cover-notice {
+  display: flex;
+  min-height: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--spacing-3);
+  overflow-y: auto;
+  padding: 0 var(--spacing-6) var(--spacing-4);
+}
+
+.pp-cover-notice p,
+.pp-notice-full p {
+  margin: 0;
+  overflow-wrap: anywhere;
+  white-space: pre-line;
+}
+
+.pp-cover-actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-3);
+  padding: var(--spacing-4) var(--spacing-6) var(--spacing-6);
+  border-top: 1px solid var(--border);
+}
+
+/* 위험 알림. 디자인 시스템 Alert 의 해부도(모서리 12px, 안쪽 위아래 12px·좌우 16px, 아이콘과 글 사이 12px)를 옮겼다. */
+.pp-alert {
+  box-sizing: border-box;
+  display: flex;
+  align-items: flex-start;
+  gap: var(--spacing-3);
+  padding: var(--spacing-3) var(--spacing-4);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-l);
+  background: var(--bg-raised);
+  color: var(--text);
+}
+
+.pp-alert-icon {
+  display: flex;
+  flex-shrink: 0;
+  color: var(--danger);
+}
+
+.pp-alert-text {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--spacing-1);
+}
+
+.pp-alert-title,
+.pp-alert-body {
+  margin: 0;
+}
+
+.pp-alert-title {
+  font-weight: var(--font-weight-semibold);
+}
+
+.pp-alert-body {
+  color: var(--text-muted);
+}
+
+/* 폭을 채운 주 버튼. 디자인 시스템 Button 의 주 변형을 옮겼다. 기록하는 동안은 `aria-busy` 라 글자를 감추고 도는 표시를 보인다. */
+.pp-primary {
+  position: relative;
+  box-sizing: border-box;
+  display: flex;
+  width: 100%;
+  height: var(--control-h);
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+  padding: 0 var(--spacing-3);
+  border: 1px solid transparent;
+  border-radius: var(--radius-m);
+  background: var(--primary);
+  color: var(--on-primary);
+  font-family: inherit;
+  font-size: var(--body-size);
+  line-height: var(--body-lh);
+  font-weight: var(--font-weight-medium);
+  cursor: pointer;
+}
+
+.pp-primary:hover {
+  background: var(--primary-hover);
+}
+
+.pp-primary:active {
+  background: var(--primary-active);
+}
+
+.pp-primary:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+.pp-primary[aria-busy="true"],
+.pp-primary[aria-busy="true"]:hover,
+.pp-primary[aria-busy="true"]:active {
+  background: var(--primary);
+  cursor: progress;
+}
+
+.pp-primary[aria-busy="true"] .pp-primary-label {
+  opacity: 0;
+}
+
+.pp-spinner {
+  position: absolute;
+  inset: 0;
+  display: none;
+  margin: auto;
+  animation: pp-spin 1s linear infinite;
+}
+
+.pp-primary[aria-busy="true"] .pp-spinner {
+  display: block;
+}
+
+@keyframes pp-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pp-spinner {
+    animation: none;
+  }
+}
+
+/* 위젯이 보일 때만 보이는 짧은 고지. 작은 글자이고 "고지 전문" 단추가 전문을 아래로 펼친다. */
+.pp-notice {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-2);
+  color: var(--text-muted);
+  font-size: var(--text-small);
+  line-height: var(--text-small--line-height);
+}
+
+.pp-notice-line {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--spacing-2);
+}
+
+.pp-notice-line p {
+  margin: 0;
+}
+
+.pp-notice-icon {
+  margin-top: 1px;
+}
+
+.pp-notice-full {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-2);
+  padding-left: 22px;
+}
+
+.pp-link {
+  min-height: var(--spacing-6);
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--accent);
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.pp-link:focus-visible {
+  border-radius: var(--radius-s);
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+/* 숨긴 면은 위의 `display` 지정(`.pp-widget > *` 과 면마다의 지정)에 이겨 숨긴다. 끝에 두고 `!important` 로 이긴다. */
+[hidden] {
+  display: none !important;
 }
