@@ -1,0 +1,107 @@
+# open_session.ps1 이 화면의 폴더를 환경 버튼으로 고치는 길(harness 티켓 open-session-selects-repo-folder, 대기열 378·387.
+# `Get-FolderEnvName`, `Select-FolderEnvNames`, `Select-ComposerFolder`, `Repair-ShownFolder`, `Send-Prompt` 의 연결)의 테스트가
+# 무엇을 재는지 변이로 본다(여섯). 규칙 하나를 빼면 빨강이어야 한다.
+#   PYTHONUTF8=1 uv run python tools/mutate.py .scratch/harness/probes/open_session_folder_fix_mutations.toml
+# 앞의 셋은 pwsh 서버로 순수 함수를 부르고, 나머지 셋은 스크립트 원문의 순서와 조건을 본다. 접근성 트리를 읽고 누르는
+# 부분(`Select-ComposerFolder` 의 UIA 호출)은 시험이 없고, 실제 앱의 새 세션 화면에서 손으로 본 것이 있다(티켓의 "손으로 본 것").
+# 표지는 시험 파일 원문에 없는 pytest 실패 요약 줄이다(`FAILED <파일>::<시험>`).
+
+[[mutation]]
+name = "환경 이름을 마지막 토막이 아니라 첫 토막으로 뽑는다"
+tests = ["tests/tools/test_open_session.py", "-k", "마지막_토막"]
+expect = "red"
+expect_output = ["FAILED tests/tools/test_open_session.py::test_폴더_경로의_마지막_토막이_환경_이름이다"]
+[[mutation.edit]]
+file = "tools/open_session.ps1"
+old = '''-split '\\')[-1]'''
+new = '''-split '\\')[0]'''
+
+[[mutation]]
+name = "앞부분만 같은 이름의 항목도 그 환경으로 센다"
+tests = ["tests/tools/test_open_session.py", "-k", "이름이_정확히"]
+expect = "red"
+expect_output = ["FAILED tests/tools/test_open_session.py::test_환경_메뉴에서_이름이_정확히_같은_환경의_항목만_고른다"]
+[[mutation.edit]]
+file = "tools/open_session.ps1"
+old = '''StartsWith("$envName , ", [StringComparison]::OrdinalIgnoreCase)'''
+new = '''StartsWith("$envName", [StringComparison]::OrdinalIgnoreCase)'''
+
+[[mutation]]
+name = "환경 이름의 대소문자를 가린다"
+tests = ["tests/tools/test_open_session.py", "-k", "이름이_정확히"]
+expect = "red"
+expect_output = ["FAILED tests/tools/test_open_session.py::test_환경_메뉴에서_이름이_정확히_같은_환경의_항목만_고른다"]
+[[mutation.edit]]
+file = "tools/open_session.ps1"
+old = '''StartsWith("$envName , ", [StringComparison]::OrdinalIgnoreCase)'''
+new = '''StartsWith("$envName , ", [StringComparison]::Ordinal)'''
+
+[[mutation]]
+name = "이름이 같은 항목이 둘이어도 고른다"
+tests = ["tests/tools/test_open_session.py", "-k", "하나일_때만"]
+expect = "red"
+expect_output = ["FAILED tests/tools/test_open_session.py::test_환경_항목은_Folder_에서_뽑은_이름_하나일_때만_고른다"]
+[[mutation.edit]]
+file = "tools/open_session.ps1"
+old = '''if ($items.Count -ne 1) {'''
+new = '''if ($items.Count -lt 1) {'''
+
+[[mutation]]
+name = "고른 뒤 다시 읽은 폴더가 -Folder 인지 견주지 않고 돌려준다"
+tests = ["tests/tools/test_open_session.py", "-k", "다시_읽어_견준"]
+expect = "red"
+expect_output = ["FAILED tests/tools/test_open_session.py::test_환경을_고른_뒤에는_화면의_폴더를_다시_읽어_견준_뒤에만_돌려준다"]
+[[mutation.edit]]
+file = "tools/open_session.ps1"
+old = '''if ($shown.Count -gt 0 -and -not (Get-FolderMismatch $shown $folder)) {'''
+new = '''if ($shown.Count -gt 0) {'''
+
+[[mutation]]
+name = "화면에서 폴더를 읽지 못했어도 환경을 고른다"
+tests = ["tests/tools/test_open_session.py", "-k", "고치는_길"]
+expect = "red"
+expect_output = ["FAILED tests/tools/test_open_session.py::test_폴더를_고치는_길은_저장소_뿌리_검사_뒤_모델을_고르기_전에_있다"]
+[[mutation.edit]]
+file = "tools/open_session.ps1"
+old = '''if ($mismatch -and $shown.Count -gt 0 -and'''
+new = '''if ($mismatch -and'''
+
+[[mutation]]
+name = "읽은 경로 가운데 -Folder 가 이미 있어도 환경을 고른다"
+tests = ["tests/tools/test_open_session.py", "-k", "이미_있으면"]
+expect = "red"
+expect_output = ["FAILED tests/tools/test_open_session.py::test_읽은_경로_가운데_Folder_가_이미_있으면_환경을_고르지_않고_멈춘다"]
+[[mutation.edit]]
+file = "tools/open_session.ps1"
+old = ''' -and @($shown | Where-Object { -not (Get-FolderMismatch @($_) $Folder) }).Count -eq 0) {'''
+new = ''') {'''
+
+[[mutation]]
+name = "다시 읽은 폴더의 견줌 결과를 뒤집어 다르면 돌려준다"
+tests = ["tests/tools/test_open_session.py", "-k", "다시_읽어_견준"]
+expect = "red"
+expect_output = ["FAILED tests/tools/test_open_session.py::test_환경을_고른_뒤에는_화면의_폴더를_다시_읽어_견준_뒤에만_돌려준다"]
+[[mutation.edit]]
+file = "tools/open_session.ps1"
+old = '''if ($shown.Count -gt 0 -and -not (Get-FolderMismatch $shown $folder)) {'''
+new = '''if ($shown.Count -gt 0 -and (Get-FolderMismatch $shown $folder)) {'''
+
+[[mutation]]
+name = "골랐는데 폴더가 바뀌지 않아도 열린 메뉴를 접지 않고 던진다"
+tests = ["tests/tools/test_open_session.py", "-k", "열린_채_남은"]
+expect = "red"
+expect_output = ["FAILED tests/tools/test_open_session.py::test_골랐는데_폴더가_바뀌지_않으면_열린_채_남은_환경_메뉴를_접고_던진다"]
+[[mutation.edit]]
+file = "tools/open_session.ps1"
+old = '''if ($reopened -and (Test-Expanded $reopened)) { Invoke-PatternTimed $reopened 'collapse' | Out-Null }'''
+new = '''if ($reopened -and (Test-Expanded $reopened)) { }'''
+
+[[mutation]]
+name = "열린 메뉴를 접으려 환경 버튼을 입력창 요소가 아니라 창에서 찾는다"
+tests = ["tests/tools/test_open_session.py", "-k", "열린_채_남은"]
+expect = "red"
+expect_output = ["FAILED tests/tools/test_open_session.py::test_골랐는데_폴더가_바뀌지_않으면_열린_채_남은_환경_메뉴를_접고_던진다"]
+[[mutation.edit]]
+file = "tools/open_session.ps1"
+old = '''$reopened = Find-ComposerButton $lastBox '환경:''''
+new = '''$reopened = Find-ComposerButton $win '환경:''''
