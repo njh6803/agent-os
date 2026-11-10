@@ -10,6 +10,8 @@
 
 **Blocked by:** 05 (사이트마다 고지 확인 끝점이 익명 식별자 쿠키를 주고, 토큰 끝점이 사이트 토큰을 낸다). 05의 토큰 끝점을 `tokenProvider`가 부른다. 02 (위젯 e2e의 준비를 `@agent-os/e2e-stack`으로 뽑는다). 02의 중계, `serve` 띄우기, 픽스처 플러그인, 키 도우미, 트레이스 폴더를 넘기는 길을 쓴다
 
+**05가 넘긴 메모.** 05가 순수 처리기를 `handle(request, context)`로 바꿨다. `context`는 `server/context.ts`의 `PortalContext`(공개 출처, `kid`, 개인 키, 사이트마다 이름·발급자·`audience`·보증 모드, `now`와 `newAnonymousId`)이고 `tools/start.ts`가 `portalContext(loaded, {now, newAnonymousId})`로 짓는다. 이 티켓의 페이지·정적 파일 경로는 같은 `handle`에 더하고, 페이지가 데이터 블록에 쓸 사이트 값(`heading`, `intro`, `theme`, `mode`, `assurance`, `notice`, `reportUrl`)은 `PortalContext`의 `SiteContext`에 없어 더하거나 설정에서 따로 받는다. `handle`의 `/portal/sites/` 아래 응답에 `Cache-Control: no-store`를 다는 자리는 `handler.ts`의 `handle`이고 페이지와 정적 파일의 `no-cache`와 `ETag`는 그와 다른 길이다. `respond`·`noContent`·`methodNotAllowed`는 `handler.ts` 안에서만 쓰는 도우미다. `serve.ts`의 `answer`는 처리기가 던진 예외를 500 `SERVER_ERROR`(`text/plain`, `no-store`)로 바꾸고 오류의 이름만 stderr에 남긴다. 글꼴 파일을 흘려보내는 `serve.ts`의 길은 그 `try`/`catch` 밖에서 읽기 오류를 따로 다뤄야 한다(`handle`이 파일 경로만 돌려주므로 `createReadStream`의 `error`는 `answer`가 잡지 못한다).
+
 **Status:** ready-for-agent
 
 ### 페이지 HTML과 경로

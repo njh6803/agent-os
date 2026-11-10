@@ -1,0 +1,256 @@
+# pilot-portal 티켓 05(고지 확인과 토큰 끝점)의 변이 표. 끝점과 토큰의 시험은 구현 전에 모듈이 없어 빨갰을 뿐이라 단언
+# 하나하나의 빨강은 보지 못했다. 변이마다 그 단언이 재는 줄 하나만 바꾸고 그 사례 하나로 좁혀(`-t`) 빨개지는지 본다.
+#   PYTHONUTF8=1 uv run python tools/mutate.py .scratch/pilot-portal/probes/endpoints_mutations.toml [번호 ...]
+# 표지는 변이를 넣어 본 실패 출력에서 고른 것이다(표지를 맞지 않는 값으로 둔 사본으로 돌려 `표지 없음` 줄 밑의 출력을
+# 읽었다). 시험 원문에 글자 그대로 있는 문구는 쓰지 않았다. 네트워크를 타지 않는다. `uv sync` 와
+# `pnpm -C web install` 이 된 체크아웃에서 돈다.
+
+[runner.node]
+command = ["pnpm", "exec", "vitest", "run", "--project", "node"]
+cwd = "web"
+judge = "vitest"
+
+# --- 고지 확인의 Origin 검사 ----------------------------------------------------------------------------------
+
+[[mutation]]
+name = "Origin 을 견주지 않으면 다른 출처의 고지 확인이 204 로 받아들여진다"
+runner = "node"
+tests = ["apps/portal/server/handler.test.ts", "-t", "Origin 이 공개 출처와 다르면 쿠키 없이 403"]
+expect = "red"
+expect_output = ['''"http://evil.example": expected 204 to be 403''']
+
+[[mutation.edit]]
+file = "web/apps/portal/server/handler.ts"
+old = '''  if (request.headers["origin"] !== context.publicOrigin) {'''
+new = '''  if (false) {'''
+
+[[mutation]]
+name = "Origin 이 없는 요청을 같은 출처로 보면 쿠키 없이 403 이어야 하는 사례가 빨갛다"
+runner = "node"
+tests = ["apps/portal/server/handler.test.ts", "-t", "Origin 이 없으면 쿠키 없이 403"]
+expect = "red"
+expect_output = ["AssertionError: expected 204 to be 403"]
+
+[[mutation.edit]]
+file = "web/apps/portal/server/handler.ts"
+old = '''  if (request.headers["origin"] !== context.publicOrigin) {'''
+new = '''  if (request.headers["origin"] !== undefined && request.headers["origin"] !== context.publicOrigin) {'''
+
+# --- 쿠키 판정 -----------------------------------------------------------------------------------------------
+
+[[mutation]]
+name = "같은 이름이 둘이면 마지막 것을 쓰면 첫 것을 쓰는 사례가 빨갛다"
+runner = "node"
+tests = ["apps/portal/server/anonymous-cookie.test.ts", "-t", "같은 이름이 둘 이상 실리면 첫 것을 쓴다"]
+expect = "red"
+expect_output = ["to be '3f2b8c1e-5d4a-4e7b-9a6c-0d1e2f3a4b5c' // Object.is equality"]
+
+[[mutation.edit]]
+file = "web/apps/portal/server/anonymous-cookie.ts"
+old = '''  const first = cookies.find((cookie) => cookie.name === ANONYMOUS_COOKIE);'''
+new = '''  const first = cookies.findLast((cookie) => cookie.name === ANONYMOUS_COOKIE);'''
+
+[[mutation]]
+name = "UUID 의 버전 자리를 가리지 않으면 v4 가 아닌 값이 받아들여진다"
+runner = "node"
+tests = ["apps/portal/server/anonymous-cookie.test.ts", "-t", "꼴이 틀린 값은 없는 것으로 본다"]
+expect = "red"
+expect_output = ["expected '3f2b8c1e-5d4a-1e7b-9a6c-0d1e2f3a4b5c' to be undefined"]
+
+[[mutation.edit]]
+file = "web/apps/portal/server/anonymous-cookie.ts"
+old = '''-4[0-9a-f]{3}-'''
+new = '''-[0-9a-f]{4}-'''
+
+[[mutation]]
+name = "대문자 16진수를 받으면 소문자만 받는 사례가 빨갛다"
+runner = "node"
+tests = ["apps/portal/server/anonymous-cookie.test.ts", "-t", "꼴이 틀린 값은 없는 것으로 본다"]
+expect = "red"
+expect_output = ["expected '3F2B8C1E-5D4A-4E7B-9A6C-0D1E2F3A4B5C' to be undefined"]
+
+[[mutation.edit]]
+file = "web/apps/portal/server/anonymous-cookie.ts"
+old = '''const UUID_V4 = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/u;'''
+new = '''const UUID_V4 = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;'''
+
+[[mutation]]
+name = "Secure 를 늘 붙이면 http 공개 출처의 쿠키에도 붙는다"
+runner = "node"
+tests = ["apps/portal/server/anonymous-cookie.test.ts", "-t", "Secure 는 https 공개 출처일 때만"]
+expect = "red"
+expect_output = ["to not include 'Secure'"]
+
+[[mutation.edit]]
+file = "web/apps/portal/server/anonymous-cookie.ts"
+old = '''    ...(publicOrigin.startsWith("https://") ? ["Secure"] : []),'''
+new = '''    "Secure",'''
+
+[[mutation]]
+name = "쿠키가 https 를 http 로도 읽으면 http 공개 출처에 Secure 가 붙는다"
+runner = "node"
+tests = ["apps/portal/server/handler.test.ts", "-t", "Secure 는 공개 출처가 https 일 때만"]
+expect = "red"
+expect_output = ["to not include 'Secure'"]
+
+[[mutation.edit]]
+file = "web/apps/portal/server/anonymous-cookie.ts"
+old = '''startsWith("https://")'''
+new = '''startsWith("http")'''
+
+[[mutation]]
+name = "쿠키 수명을 바꾸면 Max-Age 2592000 을 보는 사례가 빨갛다"
+runner = "node"
+tests = ["apps/portal/server/anonymous-cookie.test.ts", "-t", "Set-Cookie 는 사이트 경로와 30일 수명"]
+expect = "red"
+expect_output = ['''+   "Max-Age=108000",''']
+
+[[mutation.edit]]
+file = "web/apps/portal/server/anonymous-cookie.ts"
+old = '''COOKIE_LIFETIME_DAYS * SECONDS_PER_DAY'''
+new = '''COOKIE_LIFETIME_DAYS * 3600'''
+
+[[mutation]]
+name = "이미 있는 쿠키를 두고 새 값을 내면 같은 값으로 만료만 다시 적는 사례가 빨갛다"
+runner = "node"
+tests = ["apps/portal/server/handler.test.ts", "-t", "꼴이 맞는 쿠키가 있으면 같은 값으로 만료만 다시"]
+expect = "red"
+expect_output = ['''Received: "portal_anon=aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee"''']
+
+[[mutation.edit]]
+file = "web/apps/portal/server/handler.ts"
+old = '''  const id = anonymousIdOf(request.cookies) ?? context.newAnonymousId();'''
+new = '''  const id = context.newAnonymousId();'''
+
+# --- 토큰 -----------------------------------------------------------------------------------------------------
+
+[[mutation]]
+name = "토큰 수명을 300초로 하면 120초 사례가 빨갛다"
+runner = "node"
+tests = ["apps/portal/server/token.test.ts", "-t", "만료는 발급 시각에서 120초 뒤다"]
+expect = "red"
+expect_output = ['''+   "exp": 300,''']
+
+[[mutation.edit]]
+file = "web/apps/portal/server/token.ts"
+old = '''export const TOKEN_LIFETIME_SECONDS = 120;'''
+new = '''export const TOKEN_LIFETIME_SECONDS = 300;'''
+
+[[mutation]]
+name = "주체의 해시를 31자로 자르면 32자 해시를 시험이 스스로 계산해 맞대는 사례가 빨갛다"
+runner = "node"
+tests = ["apps/portal/server/token.test.ts", "-t", "익명 주체는 쿠키 값 글자 36자의 SHA-256"]
+expect = "red"
+expect_output = ["to be 'anon-"]
+
+[[mutation.edit]]
+file = "web/apps/portal/server/token.ts"
+old = '''.slice(0, 32)}`'''
+new = '''.slice(0, 31)}`'''
+
+[[mutation]]
+name = "처리기가 주체를 해시하지 않고 쿠키 값 원문을 넣으면 원문이 토큰에 없는 사례가 빨갛다"
+runner = "node"
+tests = ["apps/portal/server/handler.test.ts", "-t", "어느 곳에도 쿠키 값 원문이 없다"]
+expect = "red"
+expect_output = ['''"sub":"3f2b8c1e-5d4a-4e7b-9a6c-0d1e2f3a4b5c","aud":"agent-os"''']
+
+[[mutation.edit]]
+file = "web/apps/portal/server/handler.ts"
+old = '''    subject: anonymousSubject(id),'''
+new = '''    subject: id,'''
+
+[[mutation]]
+name = "발급 시각을 밀리초로 두면 토큰의 iat 를 시계의 초와 맞대는 사례가 빨갛다"
+runner = "node"
+tests = ["apps/portal/server/handler.test.ts", "-t", "토큰은 공개 키로 검증되고 클레임이 그 사이트의 것이다"]
+expect = "red"
+expect_output = ['''+   "iat": 1800000000000,''']
+
+[[mutation.edit]]
+file = "web/apps/portal/server/handler.ts"
+old = '''Math.floor(context.now() / 1000)'''
+new = '''context.now()'''
+
+[[mutation]]
+name = "토큰 200 이 쿠키를 다시 적지 않으면 만료를 다시 적는 사례가 빨갛다"
+runner = "node"
+tests = ["apps/portal/server/handler.test.ts", "-t", "토큰 200 은 받은 쿠키와 같은 값으로 만료를 다시 적는다"]
+expect = "red"
+expect_output = ["expected [] to deeply equal"]
+
+[[mutation.edit]]
+file = "web/apps/portal/server/handler.ts"
+old = '''  return respond(200, TEXT, signed, { "Set-Cookie": cookieFor(id, site, context) });'''
+new = '''  return respond(200, TEXT, signed);'''
+
+[[mutation]]
+name = "토큰 끝점이 Origin 을 요구하면 Origin 을 보지 않는 사례가 빨갛다"
+runner = "node"
+tests = ["apps/portal/server/handler.test.ts", "-t", "토큰 끝점은 Origin 을 보지 않는다"]
+expect = "red"
+expect_output = ["{}: expected 403 to be 200"]
+
+[[mutation.edit]]
+file = "web/apps/portal/server/handler.ts"
+old = '''    return methodNotAllowed("POST");
+  }
+  const id = anonymousIdOf(request.cookies);'''
+new = '''    return methodNotAllowed("POST");
+  }
+  if (request.headers["origin"] !== context.publicOrigin) {
+    return respond(403, TEXT, "허용하지 않는 출처입니다.");
+  }
+  const id = anonymousIdOf(request.cookies);'''
+
+# --- 로그인 사이트와 캐시 ---------------------------------------------------------------------------------------
+
+[[mutation]]
+name = "로그인 사이트를 막지 않으면 세 끝점의 403 사례가 빨갛다"
+runner = "node"
+tests = ["apps/portal/server/handler.test.ts", "-t", "로그인 사이트의 세 끝점은 메서드와 쿠키와 Origin 과 상관없이 403"]
+expect = "red"
+expect_output = ["GET /portal/sites/gate/acknowledgement: expected 200 to be 403"]
+
+[[mutation.edit]]
+file = "web/apps/portal/server/handler.ts"
+old = '''  if (site.assurance === "login") {'''
+new = '''  if (site.assurance === "never") {'''
+
+[[mutation]]
+name = "사이트 끝점에 no-store 를 달지 않으면 캐시 사례가 빨갛다"
+runner = "node"
+tests = ["apps/portal/server/handler.test.ts", "-t", "사이트 끝점의 모든 응답은 캐시하지 않는다"]
+expect = "red"
+expect_output = ["200: expected undefined to be 'no-store'"]
+
+[[mutation.edit]]
+file = "web/apps/portal/server/handler.ts"
+old = '''    return { ...response, headers: { ...response.headers, "Cache-Control": "no-store" } };'''
+new = '''    return response;'''
+
+# --- 사이트 파일의 audience 와 서버 겉 ---------------------------------------------------------------------------
+
+[[mutation]]
+name = "audience 를 발급자로 찾지 않고 첫 항목을 쓰면 둘째 사이트의 audience 사례가 빨갛다"
+runner = "node"
+tests = ["apps/portal/server/context.test.ts", "-t", "발급자마다 audience 가 다른 사이트 파일"]
+expect = "red"
+expect_output = ['''+     "second-aud",''']
+
+[[mutation.edit]]
+file = "web/apps/portal/server/context.ts"
+old = '''candidate.issuer === site.issuer'''
+new = '''candidate.issuer.length > 0'''
+
+[[mutation]]
+name = "처리기가 던지는 예외를 다시 던지면 서버가 500 으로 답하는 사례가 빨갛다"
+runner = "node"
+tests = ["apps/portal/server/serve.test.ts", "-t", "처리기가 던지면 500 으로 답하고"]
+expect = "red"
+expect_output = ["Error: 응답이 없다"]
+
+[[mutation.edit]]
+file = "web/apps/portal/server/serve.ts"
+old = '''    return SERVER_ERROR;'''
+new = '''    throw error;'''

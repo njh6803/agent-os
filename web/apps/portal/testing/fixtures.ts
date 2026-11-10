@@ -50,6 +50,8 @@ export function ecPrivateKeyPem(): string {
 
 export interface SiteSpec {
   issuer: string;
+  /** 주지 않으면 `agent-os` 다. */
+  audience?: string;
   agents: string[];
   allowedOrigins: string[];
   keys: { kid?: string; pem: string }[];
@@ -59,9 +61,9 @@ export interface SiteSpec {
 export function siteFileToml(sites: readonly SiteSpec[]): string {
   return stringify({
     schema_version: "1",
-    sites: sites.map(({ issuer, agents, allowedOrigins, keys }) => ({
+    sites: sites.map(({ issuer, audience, agents, allowedOrigins, keys }) => ({
       issuer,
-      audience: "agent-os",
+      audience: audience ?? "agent-os",
       agents,
       allowed_origins: allowedOrigins,
       public_keys: keys,
