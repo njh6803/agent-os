@@ -502,7 +502,7 @@ open-session을 부른다 2026-11-10T08:40:23Z
 ## 봇 회차 (첫 회차)
 
 - 첫 `@coderabbitai review`(위 코멘트)로 CodeRabbit이 리뷰를 냈다. `gh pr checks 517`에서 CodeRabbit이 통과(9분 50초)였고 인라인 지적은 둘이다(`gh api repos/njh6803/agent-os/pulls/517/comments`로 읽었다).
-- Major, `docs/adr/0046-…md` 121줄: 대화 요약의 모델 호출이 `max_turns`에 들지 않아, 이어 가기를 열면 실행 하나의 토큰 최댓값이 `max_turns`만으로 센 값보다 크다. 사실이다. 코드는 `src/agent_os/core/continuation.py` 624줄의 `model.ainvoke(messages)`를 읽었고, ADR 0052의 13줄이 "대화 요약의 모델 호출은 지금처럼 턴에 들지 않는다"고 적는 것을 읽었다. 결정을 바꾸지 않는 사실의 보충이라 사용자에게 묻지 않고 고쳤다. ADR 0046의 이 PR이 더한 항목(121줄)과 `.scratch/public-demo/plan.md`의 이어 가기 문장에 "요약 호출의 입출력 토큰도 실행 하나의 최댓값에 넣어 센다"를 더했고, 이어 가기를 열지는 공개 데모의 설계가 정한다는 기존 문장을 그대로 두었다.
+- Major, `docs/adr/0046-…md` 121줄: 대화 요약의 모델 호출이 `max_turns`에 들지 않아, 이어 가기를 열면 실행 하나의 토큰 최댓값이 `max_turns`만으로 센 값보다 크다. 사실이다. 코드는 `src/agent_os/core/continuation.py` 624줄의 `model.ainvoke(messages)`를 읽었고, ADR 0052의 13줄이 "대화 요약의 모델 호출은 지금처럼 턴에 들지 않는다"고 적는 것을 읽었다. 결정을 바꾸지 않는 사실의 보충이라 사용자에게 묻지 않고 고쳤다. ADR 0046의 이 PR이 더한 항목(121줄)과 `.scratch/public-demo/plan.md`의 이어 가기 문장에 요약 호출의 입출력 토큰도 실행 하나의 최댓값에 넣어 센다는 문장을 더했고, 이어 가기를 열지는 공개 데모의 설계가 정한다는 기존 문장을 그대로 두었다.
 - Minor, `.scratch/answer-markdown/probes/markdown_render/probe/registry.mjs` 22줄: `fetch`에 제한 시간과 실패 처리가 없다. 첫 회차의 Minor라 지적마다 판단했고 보류했다. 이 스크립트를 이 세션에서도 앞 세션에서도 다시 돌려 보지 못했고(위 "인계 (PR 연 뒤)"의 확인하지 못한 전제), 돌리지 않은 코드를 고치면 확인 없는 수정이 된다. 프로브를 설치할 판으로 다시 돌리는 일은 answer-markdown의 명세가 먼저 한다고 이미 계획에 있어서, 그 문장 뒤에 이 지적을 더했다(`.scratch/answer-markdown/plan.md`). 아래 "다음"의 answer-markdown 지시문 "이어받을 상태"에도 있다.
 - CI의 `python` 잡이 `tests/tools/test_rerun_runner.py::test_다른_판의_확인을_쥐고_돌던_동안에도_첫_인계에서_멈춘다` 하나로 빨갰고(6866 통과, 1 실패, 잡 로그), `verify`는 그 결과를 받아 빨갰다. 이 PR이 건드린 파일이 아니다. 그 한 시험만 로컬에서 따로 돌리니 통과했다(`uv run pytest tests/tools/test_rerun_runner.py -q -k 다른_판의_확인`, 1 통과, 63.77초). 대기열 306이 받아들여 닫은 종류(부하에서 빨간 시간 시험)의 새 사례로 보고 회차를 더하지 않는다(어림. 로그에서 이 시험의 실패 줄은 읽었지만 시각에 기대는지 시험 코드는 읽지 않았다).
 - 사용자가 넘긴 입력 둘(위)과 위 두 반영을 한 커밋으로 푸시하고, 푸시 전에 PR 본문을 고쳤다(`merge.md` 1).
@@ -547,3 +547,35 @@ open-session을 부른다 2026-11-10T08:40:23Z
 확인할 선행 조건: 없음
 이번 요청 범위: PR과 병합까지
 ```
+
+## 인계 (커밋 뒤)
+
+커밋 929b4f42가 pre-commit을 모두 지나자 인계 계기(`hook_handoff`, 컨텍스트 256,545 토큰, 경계 `커밋 뒤`)가 왔다. `handoff.md`의 인계하지 않는 때 다섯에 들지 않는다. 계기를 낸 명령은 성공했고(`git log`에서 929b4f42를 봤다), 요청 범위는 PR과 병합까지라 이 경계에서 끝나지 않으며, 이 세션의 지시문의 이어받을 상태는 `인계: PR 연 뒤`로 시작해 같은 경계가 아니고, 인계 못함 줄이 없고, `get_session self`에 `parentSessionId`가 없다. 이 세션의 지금 제목은 `docs/doc-qa-agent-design`이다. 지시문은 다음이다.
+
+```
+다음 작업: 기능 base-agent. 기본 에이전트 assistant의 설계 PR #517(answer-markdown과 admin-answer-preview의 설계가 함께 있다)
+다음 단계: PR 반영·병합
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /grill-with-docs base-agent
+브랜치: docs/doc-qa-agent-design
+모델: Sonnet 5.5 / high. 2의 잇는 지시문
+읽을 것: docs/journal/2026-11-10-1345-doc-qa-agent-design.md의 "인계 (커밋 뒤)" 절
+이어받을 상태: 인계: 커밋 뒤. docs/journal/2026-11-10-1345-doc-qa-agent-design.md. 커밋 929b4f42(봇 첫 회차 반영, 사용자가 넘긴 입력 둘, 회고, 다음 지시문 둘)까지 pre-commit을 지났고 아직 푸시하지 않았다. PR 본문은 이미 넓혀 두었다. 남은 것은 푸시, @coderabbitai review 코멘트, tools/wait_ci.py 대기, 둘째 회차(Critical·Major만 고친다), 병합(워크트리 길), next-session 순서 2다. 회고와 "다음"은 이미 일지에 있으니 다시 돌지 않는다. 설계 인터뷰와 ADR·PRD 승인은 끝났다. 커밋하지 않은 변경은 이 일지뿐이고(이 인계 절과 인용 하나를 따옴표 없이 고친 것) 푸시 전에 커밋에 싣는다. 시작 프롬프트의 /grill-with-docs는 앞 단계의 잔재(대기열 0577)라 스킬 파일을 읽더라도 인터뷰를 다시 하지 않는다
+확인할 선행 조건: 푸시 뒤 CI. 첫 푸시에서 python 잡이 tests/tools/test_rerun_runner.py의 시간 시험 하나로 빨갰다(이 PR과 무관, 대기열 306이 받아들여 닫은 종류. 그 시험만 따로 돌리면 지났다). 같은 시험이 또 빨가면 gh run rerun --failed로 다시 돌린다
+이번 요청 범위: PR과 병합까지
+```
+
+넘기기 전에 한 것. 제목을 `docs/doc-qa-agent-design (인계함)`으로 바꾼다. 이 세션이 띄운 백그라운드 작업은 `tools/wait_ci.py`(끝남)와 커밋(끝남)뿐이라 멈출 것이 없다.
+
+open-session을 부른다 2026-11-10T09:12:13Z
+
+## 이어받은 세션 (봇 둘째 회차 준비)
+
+세션 제목 `docs/doc-qa-agent-design`. 위 지시문대로 `git worktree list`에서 브랜치가 체크아웃된 자리를 찾아 `EnterWorktree(path)`로 들어왔다. 모델은 `claude-sonnet-5-5`다. 첫 메시지의 시작 프롬프트가 `/grill-with-docs base-agent`라 그 스킬 파일을 읽었으나 이 세션의 일은 PR 반영·병합이어서 인터뷰는 돌리지 않았다(지시문이 그렇게 적었다).
+
+- 시작할 때 본 것. 브랜치는 `docs/doc-qa-agent-design`이고 커밋 929b4f42가 푸시 전이었으며, 커밋하지 않은 변경은 이 일지뿐이었다. `origin/main`은 움직이지 않았다(`git fetch origin` 뒤 `git log HEAD..origin/main`이 비었다). PR #517은 열려 있고 병합할 수 있는 상태였다(`gh pr view 517`).
+- 작업 중에 사용자가 글을 하나 더 붙여 넣었다. 앞의 글(위 "이어받은 세션 (봇 회차)")에 더하는 요구다.
+
+> 사용자: (붙여 넣은 글) 앞의 글에 더한다(2026-11-10, 사용자 요구). 기본 에이전트는 문서와 관련 없는 질문에 답하지 않는다. 인사에는 답하고, 검색 결과에 없는 것은 답하지 않는다. 사용자가 든 예는 "오늘 점심 메뉴 추천해줘"와 "우리나라 대통령이 누구야?"이고 둘 다 답하지 않아야 한다.
+
+글의 본문은 base-agent의 스킬 지시에 다섯째(범위)를 더하고, 명세가 정할 것 셋과 알아 둘 것 셋을 적으며, answer-eval의 평가 항목에 넷째(범위 밖 질문 유형별 기대 응답 비율)를 더하는 것이다. 이 세션은 명세를 쓰는 세션이 아니라서 앞의 글처럼 옮겼다. `.scratch/base-agent/plan.md`에는 "명세가 먼저 확인할 것" 앞에, `.scratch/answer-eval/plan.md`에는 평가 항목 셋째 뒤에 "넷째"로 적었고 넣을지는 판정하지 않았다. 글이 "문구는 명세가 정한다고 ADR 0051이 적었다"고 한 것은 ADR 0051의 16줄과 33줄이 근거 없을 때 모른다고 답한다고 적는 것까지만 읽었고, 문구를 명세가 정한다는 문장은 기능 계획의 "명세가 정할 것"에 이미 있다.
