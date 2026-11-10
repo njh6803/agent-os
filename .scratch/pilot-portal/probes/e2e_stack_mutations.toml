@@ -1,0 +1,104 @@
+# pilot-portal 티켓 02 의 변이 표. `@agent-os/e2e-stack` 의 단위 시험 가운데 코드와 함께 써서 빨강을 본 적 없는 것을 겨눈다
+# (트레이스 읽기 `traces.ts`, 환경 변수를 넘기는 길 `env.ts`, 실행 주체의 이름 `token.ts` 의 `principalOf`). 위젯 e2e 의
+# 트레이스 주체 사례는 넘기는 길을 더하기 전에 빨강을 봤다(준비가 `AGENT_OS_E2E_TRACES` 를 넘기지 않았다는 오류).
+#   PYTHONUTF8=1 uv run python tools/mutate.py .scratch/pilot-portal/probes/e2e_stack_mutations.toml [번호 ...]
+# 네트워크를 타지 않는다. `pnpm -C web install` 이 된 체크아웃에서 돈다.
+
+[runner.node]
+command = ["pnpm", "exec", "vitest", "run", "--project", "node", "packages/e2e-stack"]
+cwd = "web"
+judge = "vitest"
+
+[[mutation]]
+name = "읽다 만 줄에서 건너뛰지 않고 던지면 쓰는 도중 사례가 빨갛다"
+runner = "node"
+expect = "red"
+expect_output = ["Unterminated string in JSON"]
+
+[[mutation.edit]]
+file = "web/packages/e2e-stack/src/traces.ts"
+old = '''
+  } catch {
+    return null;
+  }
+'''
+new = '''
+  } catch (error: unknown) {
+    throw error;
+  }
+'''
+
+[[mutation]]
+name = "주체를 에이전트 칸에서 읽으면 주체를 읽는 사례가 빨갛다"
+runner = "node"
+expect = "red"
+expect_output = ['+     "principal": "echo"']
+
+[[mutation.edit]]
+file = "web/packages/e2e-stack/src/traces.ts"
+old = '''
+        principal: event["principal"],
+'''
+new = '''
+        principal: event["agent"],
+'''
+
+[[mutation]]
+name = "폴더가 없다는 오류도 던지면 빈 목록 사례가 빨갛다"
+runner = "node"
+expect = "red"
+expect_output = ["ENOENT"]
+
+[[mutation.edit]]
+file = "web/packages/e2e-stack/src/traces.ts"
+old = '''
+  return error instanceof Error && "code" in error && error.code === "ENOENT";
+'''
+new = '''
+  return false;
+'''
+
+[[mutation]]
+name = "jsonl 이 아닌 파일까지 읽으면 jsonl 이 아닌 파일 사례가 빨갛다"
+runner = "node"
+expect = "red"
+expect_output = ['"runId": "note"']
+
+[[mutation.edit]]
+file = "web/packages/e2e-stack/src/traces.ts"
+old = '''
+    names = readdirSync(traces).filter((name) => name.endsWith(".jsonl"));
+'''
+new = '''
+    names = readdirSync(traces);
+'''
+
+[[mutation]]
+name = "주체를 발급자와 sub 의 콜론 이음으로 지으면 주체 이름을 보는 사례 둘이 빨갛다"
+runner = "node"
+expect = "red"
+expect_output = ['alice"']
+
+[[mutation.edit]]
+file = "web/packages/e2e-stack/src/token.ts"
+old = '''
+  return `${ISSUER}|${sub}`;
+'''
+new = '''
+  return `${ISSUER}:${sub}`;
+'''
+
+[[mutation]]
+name = "넘기지 않은 값에도 던지지 않고 undefined 를 돌려주면 던지는 사례가 빨갛다"
+runner = "node"
+expect = "red"
+expect_output = ["expected [Function] to throw an error"]
+
+[[mutation.edit]]
+file = "web/packages/e2e-stack/src/env.ts"
+old = '''
+  if (value === undefined) {
+'''
+new = '''
+  if (value === undefined && process.env["NEVER"] === "1") {
+'''

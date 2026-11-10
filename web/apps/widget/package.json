@@ -18,6 +18,7 @@
     "react-dom": "19.3.0"
   },
   "devDependencies": {
+    "@agent-os/e2e-stack": "workspace:*",
     "@playwright/test": "^1.63.0",
     "@tailwindcss/postcss": "^4.3.3",
     "@tailwindcss/vite": "^4.3.3",

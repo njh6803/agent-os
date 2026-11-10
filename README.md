@@ -54,6 +54,9 @@ web/               pnpm 워크스페이스(Node 24, TypeScript 5.9). 파이썬�
   packages/site-file/  사이트 파일 읽기(@agent-os/site-file). 서버와 같은 규칙으로 사이트 파일(ADR 0023)을 읽어 사이트마다
                    발급자·audience·열 에이전트·허용 출처·공개 키·요청 글자 수 상한을 든 모델과 위젯 빌드의 입력을 낸다.
                    node 가 빌드 없이 읽는 꼴이라 상대 import 에 확장자를 붙인다. smol-toml 을 제 의존성으로 든다
+  packages/e2e-stack/  e2e 준비(@agent-os/e2e-stack, 앱의 devDependency). 같은 출처 중계, 픽스처 플러그인(저장소 플러그인 복사
+                   포함), 실제 serve 띄우기와 빈 포트·기다리기·끄기 도우미(Stack), 사이트 키와 토큰 서명, 준비가 시험에 넘긴
+                   트레이스 폴더에서 실행의 주체를 읽는 것. 환경 변수 이름은 앱이 준다. 상대 import 에 확장자를 붙인다
   packages/ui/     디자인 시스템(@agent-os/ui). src/styles/(디자인 토큰 CSS theme.css, 글꼴 CSS fonts.css, shadow 보정,
                    판정 스토리), src/themes.ts(`./themes`), node/(`./fonts`. 글꼴 파일을 고르고 복사하는 node 쪽
                    도우미와 FontFaceSource 타입), src/components/atoms/·molecules/(컴포넌트와 스토리, <Name>.md),
@@ -76,7 +79,8 @@ web/               pnpm 워크스페이스(Node 24, TypeScript 5.9). 파이썬�
                    빌드 입력(packages/site-file 의 buildInput. AGENT_OS_SITE_FILE 의 사이트 파일에서 합친 허용 출처와
                    가장 작은 요청 글자 수 상한을 끌어내고, next.config.ts 가 frame-ancestors 와 env 에, 번들이 상한을 싣는다),
                    .storybook/·visual/(위젯의 Storybook 과 사진 비교. 스토리 테스트는 widget-storybook 프로젝트),
-                   e2e/·playwright.config.ts(실제 serve·Next 앞의 같은 출처 중계 뒤에서 두 방식의 위젯을 미는 e2e),
+                   e2e/·playwright.config.ts(실제 serve·Next 앞의 같은 출처 중계 뒤에서 두 방식의 위젯을 미는 e2e.
+                   준비의 몸통은 packages/e2e-stack 이고 e2e/stack.ts 에는 위젯 빌드와 사이트 서버를 띄우는 일이 남는다),
                    EMBED.md(사이트 개발자가 읽는 임베드 안내)
 docs/
   constitution/    헌법 (principles, tech, operations)

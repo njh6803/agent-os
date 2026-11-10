@@ -48,9 +48,10 @@ describe("사진 비교의 이미지", () => {
 });
 
 describe("컨테이너 안의 워크스페이스 패키지", () => {
-  test("위젯이 기대는 워크스페이스 패키지(생성 클라이언트, 사이트 파일, 디자인 시스템)를 컨테이너 안의 web/ 자리로 잇는다", () => {
+  test("위젯이 기대는 워크스페이스 패키지(생성 클라이언트, e2e 준비, 사이트 파일, 디자인 시스템)를 컨테이너 안의 web/ 자리로 잇는다", () => {
     expect(workspaceLinks(join(WEB, "apps", "widget"))).toEqual({
       "@agent-os/api-client": "/web/packages/api-client",
+      "@agent-os/e2e-stack": "/web/packages/e2e-stack",
       "@agent-os/site-file": "/web/packages/site-file",
       "@agent-os/ui": "/web/packages/ui",
     });

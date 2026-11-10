@@ -8,10 +8,10 @@
 
 import { writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { HTML_OUTPUT, principalOf, startedRuns } from "@agent-os/e2e-stack";
 import { expect, type FrameLocator, type Page, type Request, test } from "@playwright/test";
-import { stack } from "./env";
+import { stack, traces } from "./env";
 import { loopback, recordRequests, send } from "./helpers";
-import { HTML_OUTPUT } from "./plugins";
 
 const REQUEST_CHARS = 20_000;
 
@@ -185,6 +185,23 @@ test("새로 고친 뒤 멈춘 실행에 다시 붙으면 승인 카드가 다�
   await card.getByRole("button", { name: "승인" }).click();
   const conversation = frame.getByRole("region", { name: "대화" });
   await expect(conversation.getByText("출력: total:5", { exact: true })).toBeVisible();
+});
+
+test("위젯에서 보낸 요청의 실행 주체는 사이트 토큰의 발급자와 sub 로 트레이스에 남는다", async ({
+  page,
+}) => {
+  const request = "trace-subject";
+  await page.goto(`${stack().siteOrigin}/?agent=echo&sub=trace-subject-user`);
+  const frame = widget(page);
+  await send(frame, request);
+  const conversation = frame.getByRole("region", { name: "대화" });
+  await expect(conversation.getByText(`출력: chars:${String(request.length)}`)).toBeVisible();
+
+  // 같은 serve 를 다른 사례도 쓰므로 이 사례의 요청 글로 가린다.
+  const runs = startedRuns(traces()).filter((run) => run.request === request);
+  expect(runs.map((run) => [run.agent, run.principal])).toEqual([
+    ["echo", principalOf("trace-subject-user")],
+  ]);
 });
 
 test("입력창의 글자 수 상한은 서버의 기본값과 같다", async ({ page }) => {

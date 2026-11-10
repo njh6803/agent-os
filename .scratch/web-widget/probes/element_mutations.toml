@@ -531,10 +531,10 @@ expect = "red"
 expect_output = ["Locator: getByText('요청을 처리하지 못했습니다.')"]
 
 [[mutation.edit]]
-file = "web/apps/widget/e2e/stack.ts"
+file = "web/packages/e2e-stack/src/serve.ts"
 old = '''
-    `allowed_origins = [${JSON.stringify(siteOrigin)}]`,
+    `allowed_origins = [${JSON.stringify(origin)}]`,
 '''
 new = '''
-    `allowed_origins = [${JSON.stringify(siteOrigin)}, ${JSON.stringify(siteOrigin.replace("site.", "other."))}]`,
+    `allowed_origins = [${JSON.stringify(origin)}, ${JSON.stringify(origin.replace("site.", "other."))}]`,
 '''

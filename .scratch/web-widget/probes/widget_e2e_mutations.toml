@@ -17,7 +17,7 @@ expect = "red"
 expect_output = ["getByText('add', { exact: true })"]
 
 [[mutation.edit]]
-file = "web/apps/widget/e2e/relay.ts"
+file = "web/packages/e2e-stack/src/relay.ts"
 old = '''
       pipeline(response, outgoing, () => {
         // 끊김은 destroy 된 응답으로 브라우저에 그대로 보인다. 여기서 더 할 일은 없다.

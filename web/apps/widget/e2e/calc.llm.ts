@@ -6,9 +6,9 @@
 // 트레이스의 `run_finished` 출력과 같은지는 감싸는 시험이 본다. 출력 문단 머리의 "출력: " 은 화면 읽기 프로그램에만
 // 읽히는 숨긴 글이라 떼고 싣는다.
 
+import { LLM_AGENT } from "@agent-os/e2e-stack";
 import { expect, test } from "@playwright/test";
 import { stack } from "./env";
-import { LLM_AGENT } from "./plugins";
 
 // 감싸는 시험이 리포트에서 찾는 주석의 이름(tests/test_widget_llm.py 의 SHOWN_ANNOTATION).
 const SHOWN_ANNOTATION = "화면의 출력";

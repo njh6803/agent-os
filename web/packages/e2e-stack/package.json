@@ -1,0 +1,8 @@
+{
+  "name": "@agent-os/e2e-stack",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  }
+}

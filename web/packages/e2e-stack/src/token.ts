@@ -25,6 +25,14 @@ export function siteKey(): SiteKey {
   };
 }
 
+/**
+ * 그 `sub` 의 사용자가 서버에서 갖는 실행 주체. 서버는 `발급자|sub` 으로 지어 실행의 시작 이벤트(`run_started`)에 그대로
+ * 남긴다(ADR 0023 의 2026-10-05 이력).
+ */
+export function principalOf(sub: string): string {
+  return `${ISSUER}|${sub}`;
+}
+
 function encode(value: object): string {
   return Buffer.from(JSON.stringify(value)).toString("base64url");
 }
