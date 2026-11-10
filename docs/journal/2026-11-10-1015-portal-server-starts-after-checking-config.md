@@ -70,6 +70,7 @@
 - 05는 `handle`에 시계와 UUID 만들기를 인자로 더하고, `loadPortal`의 `privateKey`와 `siteFile`을 쓴다(05 티켓 메모).
 - 06이 질문 페이지 앱의 DOM 라이브러리를 `lib`에 더하고, 페이지 스크립트의 `fetch` 예외 블록을 eslint 설정에 둔다. 앱의 `browser/` 폴더 이름은 04가 정한 금지 폴더 목록과 겹치지 않는다.
 - 05가 `config.ts`와 `start.ts`·`make-key.ts`를 더 고치기 전에 셀프 리뷰의 Minor 넷(출력 인자 변형, 실패 분기의 되풀이, 오류 코드 뽑기 세 벌, `_of`·`read` 이름)을 맞출지 정한다. 맞추면 이 앱 안의 정리이고 계약은 건드리지 않는다.
+- 05가 `serve.ts`에 끝점을 더하기 전에 요청 처리기의 동기 예외 처리와 서버 `error` 처리기를 시작 뒤에도 둘지 정한다(PR 봇 첫 회차의 Nit, 위 "PR 직전 리뷰"의 남긴 것 (5)와 같은 일). 지금은 `health` 하나라 던질 곳이 없다.
 - site-file 패키지의 보류 넷은 아직 안 고쳤다. (1) `siteFileInput`이 테스트만 부르는 export이고 `index.ts`의 `export *`로 공개 표면에 오른다. (2) `site-file.ts`가 약 600줄 한 파일이다. (3) `SiteEntry.origins`와 `site.allowedOrigins`가 같은 배열을 두 번 든다. (4) 위젯 전용 값(`buildInput`, `WIDGET_ORIGINS_ENV`, `WIDGET_REQUEST_CHARS_ENV`, `BuildInput`)이 공유 패키지에 있다. 질문 페이지가 그 패키지에 칸을 더하는 일이 생기면 그 전에 harness 티켓이나 고침 티켓으로 나눈다. 칸을 더하지 않으면 급하지 않다.
 - 변이 표 `site_file_mutations.toml`의 남은 표지 다섯(10~13, 16)은 앞 일지의 "다음"대로 그대로 남아 있다.
 
@@ -98,3 +99,21 @@
 - 고친 것(서브에이전트가 스크래치 프로브로 재현했고, 이 세션이 시험으로 다시 빨강을 봤다): 사이트 파일의 `pem`에 개인 키 PEM이 들어 있어도 `spkiOf`가 `createPublicKey`로 그 개인 키에서 공개 키를 뽑아 키 대조를 통과시켰다. `load.test.ts`에 시험을 먼저 더해 `어긋난 파일이 받아들여졌다`로 빨간 것을 보고(`pnpm -C web/apps/portal exec vitest run server/load.test.ts`), `site-check.ts`의 `spkiOf`가 글을 `BEGIN PUBLIC KEY` 표지가 있는 것만 받게 고쳤다. 서버 쪽이 SPKI 공개 키 PEM만 받는 것은 `src/agent_os/main.py`의 `_SPKI_HEADER`와 그 독스트링을 Grep으로 읽어 확인했다. 고친 뒤 portal 시험 103개 통과, 1개 건너뜀.
 - 남긴 것(모두 Minor, 코드를 읽은 판정이고 실행으로 재현하지 않았다. 05가 같은 파일을 만질 때 함께 정한다): (1) `config.ts`의 `unknownKeys`가 모르는 칸 이름을 날것으로 진단에 싣는다. 서브에이전트가 ESC와 개행이 든 이름으로 `parseConfig`를 불러 가짜 진단 줄이 서는 것을 재현했다. 앞의 `portal.host` Nit과 같은 종류다. (2) `site-file` 패키지의 `읽을 수 없다(${error.message})`는 경로와 errno를 싣고 `load.ts`는 싣지 않는다. 진단에 값을 싣지 않는다는 규칙이 두 곳에서 다르다. (3) `make-key`가 쓰다 실패하면 잘린 키 파일이 남고 다음 실행은 `이미 파일이 있다`고만 말한다. (4) `HEAD /portal/health`가 405다. (5) `serve.ts`가 서면 `error` 처리기를 떼고 요청 콜백의 동기 예외를 잡지 않는다. 지금은 `health`만 있어 던질 곳이 없고 05가 끝점을 더할 때 문제가 된다. (6) RSA 키 길이의 하한이 없다.
 - 밀어 달라고 한 주장 판정(서브에이전트): 3.0.79는 02 브랜치의 푸시된 커밋(`origin/feature/02-e2e-stack-package`)에도 이미 있었다(앞의 "셀프 리뷰"와 "인계"가 이 값을 "02 워크트리의 미커밋 README"에서 읽은 것으로 적은 것은 틀렸다. 판 README 문장 자체는 그대로 맞다). `cookie`가 `; `로 이어진다는 것은 서버를 띄운 프로브를 못 돌려 확인하지 못했다(`cookies.ts`는 `;`로 쪼개 `trim`하므로 동작은 같다). `identityOf`는 코드를 읽어 맞다. `make-key`의 `wx`와 0600은 코드를 읽어 맞다. 진단이 값을 싣지 않는다는 주장은 위 (1)과 (2) 때문에 예외가 둘 더 있다.
+
+## 인계 (PR 연 뒤)
+
+컨텍스트가 인계 문턱을 넘은 채 `PR 연 뒤` 경계에 와서 넘긴다. 이 세션의 제목은 `feature/04-portal-server-starts-after-checking-config`였다. 사용자 프롬프트는 맨 위 "사용자 프롬프트" 절의 지시문 그대로이고, 이 세션에서 사용자가 더한 말은 없었다.
+
+- PR #512(`https://github.com/njh6803/agent-os/pull/512`)를 열었다. 푸시한 머리는 `fb0b3fae`이고 pre-commit이 세 커밋 모두 통과했다. 이 일지의 이 절만 커밋하지 않은 변경이다.
+- 남은 단계는 `merge.md` 2의 봇 회차(첫 `@coderabbitai review` 코멘트도 새 세션이 남긴다), `tools/wait_ci.py 512`, 병합(`merge.md`의 "워크트리에서 병합할 때")이다. 앱의 PR 묶음(`get_status`)은 이 세션에 이미 묶여 있고 열었을 때 검사는 통과 1, 진행 6, 건너뜀 1이었다.
+- PR 본문의 "남긴 위험"과 "리뷰어 참고"는 위 "PR 직전 리뷰"를 담았다. 봇 회차의 지적이 위 Minor 여섯과 겹치면 PR 코멘트에서 일지를 가리켜 답한다.
+- 이 세션이 띄운 백그라운드 작업은 없다(끝난 pre-commit 둘과 서브에이전트뿐). 이 세션은 기동 확인 때 이전 세션이 남긴 `start` 프로세스를 끝냈고, 그 밖의 프로세스는 남기지 않았다.
+- 이 세션은 `sync-design-system 확인` 알림(웹 편집 훅)이 서버 시험 편집에도 한 번 와서 건너뛰었다. 화면 코드가 아니다.
+- 워크트리 잠금은 이미 풀려 있었다(`git worktree unlock`이 `is not locked`).
+- open-session을 부른다 2026-11-10T02:19:23Z
+## 이어받은 세션 (병합 단계)
+
+세션 제목 `feature/04-portal-server-starts-after-checking-config`. PR #512의 봇 회차와 병합을 이었다.
+
+- 첫 `@coderabbitai review` 코멘트를 남긴 뒤 `tools/wait_ci.py 512`가 `끝: 모두 통과. CodeRabbit: Review rate limited`로 끝났다(그 명령의 출력을 읽었다). CodeRabbit 코멘트의 "Next included review available in 50 minutes"도 읽었다. 이 PR의 CodeRabbit 리뷰는 없고, 보안·버그 축은 PR 직전에 돈 CLI 리뷰(위 "PR 직전 리뷰")가 대신한다.
+- claude-review 첫 회차(`gh api repos/njh6803/agent-os/issues/512/comments`로 읽었다): Critical·Major 없음, Minor 셋과 Nit 하나. 넷 모두 위 "PR 직전 리뷰"의 남긴 것이나 "다음"에 있던 일이라 고치지 않고 PR 코멘트에 보류 이유를 적었다. Nit(`serve.ts`)은 "다음"에 없어 한 줄 더했다.
