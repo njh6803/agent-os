@@ -4,6 +4,11 @@
  * 띄운다. 프로세스와 서버를 띄우고 거두는 몸통은 패키지 `@agent-os/e2e-stack` 이 내고, 여기에는 질문 페이지만의 몫(설정과
  * 사이트 파일, 두 번째 앱 프로세스, 출처의 모양)이 남는다. 선례는 위젯 e2e 의 준비(`apps/widget/e2e/stack.ts`)다.
  *
+ * 기본은 모델을 부르지 않는다. 실제 모델 e2e(티켓 09)를 감싸는 파이썬 시험이 `LLM_ENV` 를 `1` 로 주면 둘이 더해진다. 임시
+ * 플러그인 루트에 저장소의 플러그인 루트를 먼저 옮기고(`copyRepoPlugins`), 첫 사이트가 계산 에이전트를 연다(설정의 에이전트가
+ * 그것이고 사이트 파일의 에이전트에도 든다). 그 에이전트만 모델을 부르고, 키는 serve 환경이 물려준다. 그 시험이
+ * `TRACES_ENV` 로 준 자리에 serve 가 트레이스를 남기고, 주지 않으면 작업 폴더에 남겨 끝에 지운다.
+ *
  * - 출처는 모두 `*.localhost` 호스트 이름이다. 질문 페이지는 `portal.localhost`(중계의 포트), 다른 출처의 페이지는
  *   `other.localhost`, 08 이 둘째 인스턴스로 쓸 출처는 `second.localhost` 이고 포트로 가른다. 이름 풀기는 Playwright 설정이
  *   맡는다. 질문 페이지의 `public_origin` 은 중계의 주소이고 사이트 파일의 모든 사이트가 그것과 둘째 출처를 허용 출처로 든다.
@@ -22,11 +27,14 @@ import {
   accepts,
   AUDIENCE,
   createStack,
+  copyRepoPlugins,
   freePort,
   interpreter,
   KEY_ID,
+  LLM_AGENT,
   MCP_FIXTURE_SERVER,
   publish,
+  REPO,
   siteKey,
   startRelay,
   startServe,
@@ -37,14 +45,16 @@ import {
 } from "@agent-os/e2e-stack";
 import { stringify } from "smol-toml";
 import {
+  LLM_ENV,
   OTHER_ORIGIN_ENV,
   PORTAL_ORIGIN_ENV,
   PORTAL_OUTPUT_ENV,
   SECOND_ORIGIN_ENV,
   TRACES_DIR_ENV,
+  TRACES_ENV,
 } from "./env.ts";
 import { startOtherPage } from "./other-page.ts";
-import { AGENT, SITES } from "./sites.ts";
+import { AGENT, SITES, type E2eSite } from "./sites.ts";
 
 const APP = dirname(import.meta.dirname);
 const WIDGET = join(dirname(APP), "widget");
@@ -69,15 +79,20 @@ export default async function globalSetup(): Promise<() => Promise<void>> {
     const otherOrigin = `http://other.localhost:${String(otherPort)}`;
     const secondOrigin = `http://second.localhost:${String(secondPort)}`;
 
+    const llm = process.env[LLM_ENV] === "1";
+    const firstAgent = llm ? LLM_AGENT : AGENT;
     const python = interpreter();
     const plugins = join(stack.work, "plugins");
     const gates = join(stack.work, "gates");
     mkdirSync(gates);
+    if (llm) {
+      copyRepoPlugins(REPO, plugins);
+    }
     writeFixturePlugins(plugins, python, MCP_FIXTURE_SERVER, gates);
     const key = siteKey();
     const siteFile = join(stack.work, "sites.toml");
-    writeFileSync(siteFile, siteFileToml([portalOrigin, secondOrigin], key));
-    const traces = join(stack.work, "traces");
+    writeFileSync(siteFile, siteFileToml([portalOrigin, secondOrigin], key, firstAgent));
+    const traces = process.env[TRACES_ENV] ?? join(stack.work, "traces");
 
     const serveUrl = await startServe(stack, { plugins, traces, siteFile, python });
 
@@ -95,7 +110,7 @@ export default async function globalSetup(): Promise<() => Promise<void>> {
 
     const output = join(stack.work, "portal-output.log");
     writeFileSync(output, "");
-    await startPortal(stack, { portalOrigin, portalPort, siteFile, key, output });
+    await startPortal(stack, { portalOrigin, portalPort, siteFile, key, output, firstAgent });
 
     stack.own(
       await startRelay(relayPort, {
@@ -122,15 +137,23 @@ export default async function globalSetup(): Promise<() => Promise<void>> {
   }
 }
 
-/** 사이트마다 항목 하나. 모두 같은 공개 키와 같은 허용 출처를 들고 상한만 사이트가 정한다. */
-function siteFileToml(origins: readonly string[], key: SiteKey): string {
+/** 그 사이트가 설정에서 여는 에이전트. 첫 사이트만 `firstAgent` 이고 나머지는 픽스처 에이전트다. */
+function agentOf(site: E2eSite, firstAgent: string): string {
+  return site === SITES[0] ? firstAgent : AGENT;
+}
+
+/**
+ * 사이트마다 항목 하나. 모두 같은 공개 키와 같은 허용 출처를 들고 상한만 사이트가 정한다. 에이전트는 픽스처 에이전트이고,
+ * 첫 사이트가 다른 에이전트를 열면(실제 모델 모드의 계산 에이전트) 그것도 든다.
+ */
+function siteFileToml(origins: readonly string[], key: SiteKey, firstAgent: string): string {
   return stringify({
     schema_version: "1",
     sites: SITES.map((site) => ({
       issuer: site.issuer,
       audience: AUDIENCE,
       allowed_origins: [...origins],
-      agents: [AGENT],
+      agents: [...new Set([AGENT, agentOf(site, firstAgent)])],
       public_keys: [{ kid: KEY_ID, pem: key.publicPem }],
       ...(site.hourlyRunsPerSite === undefined
         ? {}
@@ -140,7 +163,7 @@ function siteFileToml(origins: readonly string[], key: SiteKey): string {
 }
 
 /** 질문 페이지 설정. 개인 키는 설정 파일 옆 `keys/` 에 둔다. */
-function configToml(publicOrigin: string, port: number): string {
+function configToml(publicOrigin: string, port: number, firstAgent: string): string {
   return stringify({
     schema_version: "1",
     portal: {
@@ -152,7 +175,7 @@ function configToml(publicOrigin: string, port: number): string {
     sites: SITES.map((site) => ({
       name: site.name,
       issuer: site.issuer,
-      agent: AGENT,
+      agent: agentOf(site, firstAgent),
       heading: site.heading,
       ...(site.intro === undefined ? {} : { intro: site.intro }),
       theme: site.theme,
@@ -170,6 +193,8 @@ interface PortalLaunch {
   readonly key: SiteKey;
   /** 프로세스의 출력을 받는 대로 이어 쓸 파일. */
   readonly output: string;
+  /** 첫 사이트가 여는 에이전트. */
+  readonly firstAgent: string;
 }
 
 /** 질문 페이지를 띄우고 서는 것을 기다린다. 설정과 개인 키는 작업 폴더에 쓴다. */
@@ -177,7 +202,7 @@ async function startPortal(stack: Stack, launch: PortalLaunch): Promise<void> {
   const dir = join(stack.work, "portal");
   mkdirSync(join(dir, "keys"), { recursive: true });
   const config = join(dir, "portal.toml");
-  writeFileSync(config, configToml(launch.portalOrigin, launch.portalPort));
+  writeFileSync(config, configToml(launch.portalOrigin, launch.portalPort, launch.firstAgent));
   writeFileSync(
     join(dir, "keys", "portal.pem"),
     launch.key.privateKey.export({ type: "pkcs8", format: "pem" }),

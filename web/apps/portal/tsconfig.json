@@ -14,6 +14,7 @@
     "testing/**/*",
     "browser/**/*",
     "e2e/**/*",
-    "playwright.config.ts"
+    "playwright.config.ts",
+    "playwright.config.test.ts"
   ]
 }
