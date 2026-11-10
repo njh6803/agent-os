@@ -10,6 +10,8 @@
 
 **Blocked by:** 04 (질문 페이지 서버가 설정과 사이트 파일을 대 본 뒤에야 뜬다). 04의 순수 HTTP 요청 처리기, 설정 모델(사이트마다 `issuer`·`assurance`, 공통 `public_origin`·`kid`), 시작 때 읽은 개인 키와 사이트 파일의 `audience`를 쓴다
 
+**04가 넘긴 메모.** 04의 순수 처리기는 `handle(request)`이고 요청은 메서드, 경로, 헤더, 쿠키(실린 차례의 `{name, value}` 열)를 든다. 시계와 UUID 만들기를 인자로 받는 자리는 04에 쓰는 끝점이 없어 두지 않았다(안 쓰는 인자는 린트의 `no-unused-vars`에 걸린다. `web/eslint.config.mjs`가 켠 `strictTypeChecked`의 규칙이고 설정을 읽은 것이다). 이 티켓이 `handle`의 인자로 더한다. 시작 검사를 지난 결과 `loadPortal`은 `{config, privateKey, siteFile}`을 낸다(`server/load.ts`). 토큰의 서명 키는 `privateKey`이고 `audience`는 `siteFile.sites`에서 `issuer`로 찾는다. 진단과 시험의 `sites[<i>]`는 사이트 파일과 설정 모두 0부터다. 쿠키 수명 일수는 `server/cookie-policy.ts`의 `COOKIE_LIFETIME_DAYS`이고 `Max-Age=2592000`은 그 값에서 그린다.
+
 **Status:** ready-for-agent
 
 ### 끝점

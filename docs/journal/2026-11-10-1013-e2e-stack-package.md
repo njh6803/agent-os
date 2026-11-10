@@ -26,7 +26,7 @@
 위젯 쪽은 `stack.ts`를 패키지 도우미로 다시 썼고(사례와 사이트 서버는 그대로), 준비가 `serve`의 트레이스 폴더를 `AGENT_OS_E2E_TRACES`로 시험에 넘긴다. 위젯 e2e 사례 하나(「위젯에서 보낸 요청의 실행 주체는 사이트 토큰의 발급자와 sub 로 트레이스에 남는다」)가 그 길로 트레이스를 열어 주체가 `principalOf("trace-subject-user")`인 것을 본다.
 
 - 위젯의 `package.json`에 devDependency를 더했고 잠금 파일을 맞췄다. 사진 비교 컨테이너가 위젯이 의존하는 워크스페이스 패키지를 자동으로 잇기 때문에 `web/tools/visual.test.ts`의 기대값과 `visual.ts` 머리 주석에도 새 패키지를 더했다(01에서 겪은 것과 같은 자리다).
-- 옛 경로를 가리키던 곳을 고쳤다: `EMBED.md`, `tests/test_widget_llm.py` 독스트링, 관리 화면 `e2e/stack.ts` 머리 주석(사본은 그대로 둔다는 ADR 0050), 위젯 `site.ts` 주석, README의 트리, `docs/constitution/tech.md` 웹 행. 헌법의 판은 3.0.78에서 3.0.79로 올렸다.
+- 옛 경로를 가리키던 곳을 고쳤다: `EMBED.md`, `tests/test_widget_llm.py` 독스트링, 관리 화면 `e2e/stack.ts` 머리 주석(사본은 그대로 둔다는 ADR 0050), 위젯 `site.ts` 주석, README의 트리, `docs/constitution/tech.md` 웹 행. 헌법의 판은 3.0.78에서 3.0.79로 올렸다가, 형제 04가 3.0.80으로 먼저 병합되어 main을 받은 뒤 3.0.81로 다시 올렸다.
 - 기존 변이 표 셋(`widget_e2e_mutations.toml`, `widget_llm_mutations.toml`, `element_mutations.toml`)의 `file =` 경로를 새 자리로 고쳐 `--check`를 통과시켰다.
 
 ## 검증 (이 세션이 친 것)
@@ -92,7 +92,7 @@ claude-review는 Critical·Major 0건에 Minor 둘과 Nit 둘을 냈고, CodeRab
 
 ## 다음
 
-- 병합 뒤 프론티어는 03(위젯 문구, 이 티켓 뒤)과 06(질문 페이지 e2e 준비)이다. 04는 나란히 돌고 있고(워크트리 `04-portal-server-starts-after-checking-config`), 헌법 판 3.0.80을 쓴다. 나중에 병합하는 쪽이 main을 받아 README, `tech.md` 웹 행, 헌법의 판, `web/pnpm-lock.yaml`을 맞춘다.
+- 병합 뒤 프론티어는 03(위젯 문구, 이 티켓 뒤)과 06(질문 페이지 e2e 준비)이다. 04는 PR 512로 먼저 병합됐고 헌법 판 3.0.80을 썼다. 이 브랜치가 main을 받아 `docs/constitution/README.md`와 `tech.md` 웹 행의 충돌을 풀었고(main 쪽 문장에 `e2e-stack` 문장을 다시 끼웠다), 헌법 판을 3.0.81로 올리고 04가 남긴 "3.0.79는 형제 브랜치가 비워 두었다" 문장을 지웠다. 루트 `README.md`는 자동으로 합쳐졌고 `pnpm -C web install --frozen-lockfile`이 통과했다(손으로 쳤다).
 - PR 봇이 짚고 뒤로 넘긴 것(06이 이 패키지를 만질 때 함께): `index.ts`가 앱이 쓰지 않는 `launch`·`stop`·`sleep`을 내보낸다(06에서 실제로 쓰이지 않으면 뺀다). 패키지의 `Stack`과 위젯 `env.ts`의 `stack()`이 이름이 겹친다(사례 열여섯 곳이 쓰는 이름이라 이름을 가르는 일은 따로 한다). `plugins.ts`·`relay.ts`의 머리 주석을 위젯 e2e 한정에서 패키지 소속으로 고친다.
 - 06은 이 패키지로 질문 페이지의 e2e 준비를 지으면서 중계의 셋째 상류와 `upstreamOf` 사례를 더한다. 07의 트레이스 주체 사례는 이 티켓이 연 `startedRuns` 길을 쓴다.
 

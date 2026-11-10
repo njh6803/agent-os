@@ -82,6 +82,12 @@ web/               pnpm 워크스페이스(Node 24, TypeScript 5.9). 파이썬�
                    e2e/·playwright.config.ts(실제 serve·Next 앞의 같은 출처 중계 뒤에서 두 방식의 위젯을 미는 e2e.
                    준비의 몸통은 packages/e2e-stack 이고 e2e/stack.ts 에는 위젯 빌드와 사이트 서버를 띄우는 일이 남는다),
                    EMBED.md(사이트 개발자가 읽는 임베드 안내)
+  apps/portal/     질문 페이지(@agent-os/portal. Next 가 아니라 node:http 서버 하나이고 빌드 없이 node 가 타입만 벗겨 .ts 를
+                   바로 돌린다). server/(설정 읽기 config, 고지 전문 notice, 쿠키 수명 cookie-policy, 쿠키 머리글 읽기
+                   cookies, 사이트 파일과 개인 키를 대는 시작 검사 site-check·load, 진단 글 diagnostics, 요청 처리기
+                   handler, node:http 에 거는 serve), tools/start.ts(설정과 사이트 파일을 대 본 뒤에야 뜨는 시작 명령),
+                   tools/make-key.ts(RSA 키 쌍과 사이트 파일에 붙일 공개 키 조각을 내는 명령), tools/args.ts(두 명령이
+                   함께 쓰는 인자 도우미), testing/(시험이 임시 폴더에 짓는 설정·사이트 파일·키)
 docs/
   constitution/    헌법 (principles, tech, operations)
   adr/  agents/  journal/
