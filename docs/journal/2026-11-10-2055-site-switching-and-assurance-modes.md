@@ -84,7 +84,7 @@ Critical·Major는 없었다. 화면 문구, 사이트 하나일 때 셀렉트·
 
 ### 기능 계획의 끝 줄
 
-09가 `ready-for-agent`라 이 PR은 `.scratch/pilot-portal/plan.md`에 `**끝:**` 줄을 쓰지 않는다. `plan_table.py`를 돌렸고 `.scratch/plan.md`는 바뀌지 않았다.
+셀프 리뷰 때는 09가 `ready-for-agent`라 `.scratch/pilot-portal/plan.md`에 `**끝:**` 줄을 쓰지 않았고 `plan_table.py`도 `.scratch/plan.md`를 바꾸지 않았다. 그 뒤 09(PR 519)가 먼저 병합되어 이 티켓이 기능의 마지막 열린 티켓을 닫게 되었다. 그래서 main을 합친 커밋에서 `**끝:** 2026-11-10`을 적고 `plan_table.py`를 다시 돌려 `.scratch/plan.md`까지 실었다(합치기 전의 pytest가 `test_이_저장소의_기능_계획은_티켓이_모두_닫히면_끝_줄을_든다`로 빨개져 알았다).
 
 > 사용자: (구현이 ADR 0050 본문의 한 문장과 달라졌습니다. 오른쪽 초안의 이력과 본문 표시를 이 PR에 실을까요?) "이 PR에 싣는다" — 설명: ADR 0050에 이력 한 항목과 본문 문장 끝의 '바뀜' 표시를 더합니다. 결정은 그대로이고 방법의 설명만 바로잡습니다. 이 PR 하나로 되돌릴 수 있습니다.
 

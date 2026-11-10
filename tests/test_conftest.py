@@ -70,7 +70,10 @@ def test_skip_이_없으면_그대로_통과한다(pytester: pytest.Pytester) ->
     assert result.ret == pytest.ExitCode.OK
 
 
-LLM_INI = "[pytest]\nmarkers =\n    llm: 실제 호출\n    llm_widget: 위젯의 실제 호출\n"
+LLM_INI = (
+    "[pytest]\nmarkers =\n    llm: 실제 호출\n    llm_widget: 위젯의 실제 호출\n"
+    "    llm_portal: 질문 페이지의 실제 호출\n"
+)
 
 
 def test_deselect_는_skip_이_아니다(pytester: pytest.Pytester) -> None:
@@ -81,6 +84,7 @@ def test_deselect_는_skip_이_아니다(pytester: pytest.Pytester) -> None:
         "import pytest\n\n"
         "@pytest.mark.llm\ndef test_llm():\n    assert False\n\n"
         "@pytest.mark.llm_widget\ndef test_llm_widget():\n    assert False\n\n"
+        "@pytest.mark.llm_portal\ndef test_llm_portal():\n    assert False\n\n"
         "def test_ok():\n    assert True\n"
     )
 
@@ -172,17 +176,66 @@ def test_llm_widget_시험이_tmp_path_에_남긴_트레이스도_합계에_든�
     )
 
 
-def test_기본_실행은_두_LLM_마커를_돌리지_않고_합계를_찍지_않는다(
+# `llm_portal` 마커의 시험은 질문 페이지 e2e 를 자식으로 돌리고 serve 의 트레이스 자리로 `tmp_path`
+# 아래를 준다 (`tests/test_portal_llm.py`).
+PORTAL_TRACED = (
+    "import json\n"
+    "import pytest\n\n"
+    'LINE = json.dumps({"type": "llm_called", "input_tokens": 20, "output_tokens": 3}) + "\\n"\n\n'
+    "@pytest.mark.llm_portal\n"
+    "def test_portal(tmp_path):\n"
+    '    (tmp_path / "traces").mkdir()\n'
+    '    (tmp_path / "traces" / "r1.jsonl").write_text(LINE * 2, encoding="utf-8")\n\n'
+    "@pytest.mark.llm_widget\n"
+    "def test_widget(tmp_path):\n"
+    '    (tmp_path / "r2.jsonl").write_text(LINE, encoding="utf-8")\n\n'
+    "def test_fake_model(tmp_path):\n"
+    '    (tmp_path / "r3.jsonl").write_text(LINE, encoding="utf-8")\n'
+)
+
+
+def test_llm_portal_시험이_tmp_path_에_남긴_트레이스도_합계에_든다(
+    pytester: pytest.Pytester,
+) -> None:
+    """`-m llm_portal` 실행이다. 그 시험의 트레이스만 세고 `llm_widget` 시험과 가짜 모델의 시험은
+    돌지 않는다."""
+    pytester.makeconftest(CONFTEST)
+    pytester.makeini(LLM_INI)
+    pytester.makepyfile(PORTAL_TRACED)
+
+    result = pytester.runpytest("-p", "no:cacheprovider", "-m", "llm_portal")
+
+    assert result.ret == pytest.ExitCode.OK
+    result.stdout.fnmatch_lines(
+        [
+            "*LLM 토큰 합계 46(입력 40, 출력 6)*트레이스 1개, 모델 호출 2건. 일지*",
+            "*= 1 passed, 2 deselected in *",
+        ],
+        consecutive=True,
+    )
+
+
+# 세 마커를 하나씩 붙인 시험과 가짜 모델의 시험. 마커 하나가 제외에서 빠지면 그 시험이 돌아 통과
+# 수가 는다.
+ALL_MARKERS_TRACED = (
+    PORTAL_TRACED
+    + "\n@pytest.mark.llm\n"
+    + "def test_llm(tmp_path):\n"
+    + '    (tmp_path / "r4.jsonl").write_text(LINE, encoding="utf-8")\n'
+)
+
+
+def test_기본_실행은_세_LLM_마커를_돌리지_않고_합계를_찍지_않는다(
     pytester: pytest.Pytester,
 ) -> None:
     """기본 실행의 마커 제외(`pyproject.toml` 의 `addopts` 의 `-m`)다. 끝에 0 이 찍히면 LLM 테스트를
     돌렸다고 읽힌다."""
     pytester.makeconftest(CONFTEST)
     pytester.makeini(LLM_INI)
-    pytester.makepyfile(WIDGET_TRACED)
+    pytester.makepyfile(ALL_MARKERS_TRACED)
 
     result = pytester.runpytest("-p", "no:cacheprovider", "-m", DEFAULT_MARKERS)
 
     assert result.ret == pytest.ExitCode.OK
-    result.stdout.fnmatch_lines(["*= 1 passed, 2 deselected in *"])
+    result.stdout.fnmatch_lines(["*= 1 passed, 3 deselected in *"])
     assert "LLM 토큰 합계" not in result.stdout.str()
