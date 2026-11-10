@@ -9,7 +9,7 @@ export function Welcome({ intro }: WelcomeProps) {
   return (
     <div className="flex flex-1 flex-col items-center justify-center gap-2 p-6 text-center">
       {intro === null ? null : <p className="text-body">{intro}</p>}
-      <p className="text-small text-text-muted">아래에 요청을 적어 보내 주세요.</p>
+      <p className="text-small text-text-muted">아래 입력창에 적어 보내 주세요.</p>
     </div>
   );
 }

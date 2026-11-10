@@ -294,6 +294,43 @@ export const Optional: Story = {
   },
 };
 
+// 숨긴 이름표는 `sr-only` 라 1px 상자로 줄고 넘침이 숨으며, 칸은 그 이름표로 이름을 얻는다. 이름표가 흐름에서 빠져 칸이
+// 묶음의 맨 위에 선다(라벨과 칸 사이 간격 8px 이 남지 않는다).
+export const HiddenLabel: Story = {
+  name: "hideLabel 이면 이름표는 화면에서 보이지 않고 칸의 접근 이름은 그대로 이름표의 글이다",
+  args: { label: "질문", placeholder: "무엇을 도와드릴까요?", hideLabel: true },
+  render: (args) => (
+    <div className="flex flex-col gap-4">
+      <TextField {...args} />
+      <TextField variant="multi" label="질문 길게" hideLabel onChange={args.onChange} />
+    </div>
+  ),
+  play: async ({ canvas, canvasElement }) => {
+    for (const name of ["질문", "질문 길게"]) {
+      const field = fieldNamed(canvasElement, name);
+      await expect(field).toBe(canvas.getByRole("textbox", { name }));
+      const label = field.labels?.[0];
+      if (label === undefined) {
+        throw new Error("이름표가 없다");
+      }
+      const style = getComputedStyle(label);
+      const box = label.getBoundingClientRect();
+      await expect({
+        tag: label.tagName,
+        position: style.position,
+        overflow: style.overflow,
+        width: box.width,
+        height: box.height,
+      }).toEqual({ tag: "LABEL", position: "absolute", overflow: "hidden", width: 1, height: 1 });
+      await expect(field.getBoundingClientRect().top).toBe(
+        field.parentElement?.getBoundingClientRect().top,
+      );
+    }
+    // 자리 글자는 이름을 대신하지 않는다. 이름이 "무엇을 도와드릴까요?" 인 칸은 없다.
+    await expect(canvas.queryByRole("textbox", { name: "무엇을 도와드릴까요?" })).toBeNull();
+  },
+};
+
 export const Disabled: Story = {
   name: "쓸 수 없으면 글을 넣지 못하고 bg-disabled 바탕, border 테두리, text-disabled 글자와 라벨이며 도움말은 text-muted 로 남는다",
   render: (args) => (

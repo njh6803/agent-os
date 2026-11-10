@@ -155,7 +155,7 @@ export const Paused: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await expect(canvas.getByRole("group", { name: "승인 묻기" })).toBeVisible();
-    await expect(canvas.getByRole("textbox", { name: "요청" })).toBeDisabled();
+    await expect(canvas.getByRole("textbox", { name: "질문" })).toBeDisabled();
     await expect(canvas.getByRole("button", { name: "보내기" })).toBeDisabled();
     await expect(canvas.getByRole("button", { name: "새 대화" })).toBeEnabled();
     await expect(canvas.getByText("승인이나 거부를 먼저 골라 주세요.")).toBeVisible();
@@ -250,7 +250,7 @@ export const Restoring: Story = {
     await expect(
       canvas.getByRole("progressbar", { name: "이전 대화를 불러오고 있습니다." }),
     ).toBeVisible();
-    await expect(canvas.getByRole("textbox", { name: "요청" })).toBeDisabled();
+    await expect(canvas.getByRole("textbox", { name: "질문" })).toBeDisabled();
     await expect(canvas.getByRole("button", { name: "새 대화" })).toBeDisabled();
   },
 };
@@ -267,7 +267,7 @@ export const RestoreUnauthorizedWide: Story = {
     const alert = canvas.getByRole("alert");
     await expect(alert).toHaveTextContent("로그인 정보를 받지 못했습니다.");
     await expect(within(alert).queryAllByRole("button")).toHaveLength(0);
-    await expect(canvas.getByRole("textbox", { name: "요청" })).toBeDisabled();
+    await expect(canvas.getByRole("textbox", { name: "질문" })).toBeDisabled();
     await expect(canvas.getByRole("button", { name: "새 대화" })).toBeEnabled();
   },
 };
@@ -282,7 +282,7 @@ export const NearLimit: Story = {
   args: { draft: NEAR },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    const box = canvas.getByRole("textbox", { name: "요청" });
+    const box = canvas.getByRole("textbox", { name: "질문" });
     await expect(canvas.getByText("19,850 / 20,000")).toBeVisible();
     const send = canvas.getByRole("button", { name: "보내기" });
     await expect(send).toBeEnabled();
@@ -366,9 +366,9 @@ export const Invalid: Story = {
   args: { exchanges: [FINISHED_EXCHANGE], draft: RETURNED_NARROW, invalid: true },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    const box = canvas.getByRole("textbox", { name: "요청" });
+    const box = canvas.getByRole("textbox", { name: "질문" });
     await expect(box).toHaveAccessibleDescription(
-      "요청을 보낼 수 없습니다. 요청을 고쳐 다시 보내 주세요.",
+      "질문을 보낼 수 없습니다. 질문을 고쳐 다시 보내 주세요.",
     );
     const send = canvas.getByRole("button", { name: "보내기" });
     await expect(send).toBeEnabled();

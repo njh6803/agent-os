@@ -1,7 +1,8 @@
 // 위젯의 실패와 거절(web-widget 티켓 07). 실행이 실패하면 원인마다 정한 위험 알림이 서고, 시작이나 이어 가기가
 // 거절되면 상태 코드마다 정한 길을 가며, 상한에 걸리면 입력창 위 띠가 기다릴 시간을 보이는지를 화면에 보이는 글과
 // 역할로 본다. 기대하는 문구는 명세(.scratch/web-widget/spec.md)의 "실패 원인의 문구", "요청이 거절될 때", "상한"
-// 절의 표에서 그대로 옮겼다. 가짜는 HTTP(MSW)와 부모 창(testing/site.ts)뿐이다.
+// 절의 표에서 그대로 옮겼다. 다만 422의 오류 글은 pilot-portal 명세(.scratch/pilot-portal/spec.md)의 "위젯 문구와
+// TextField"가 바꾼 글이다. 가짜는 HTTP(MSW)와 부모 창(testing/site.ts)뿐이다.
 
 import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import type { UserEvent } from "@testing-library/user-event";
@@ -146,7 +147,7 @@ test("알림의 '새 대화'는 화면과 기억을 비워 다음 요청이 시�
   );
 
   expect(screen.queryByText("첫째")).toBeNull();
-  expect(screen.getByText("아래에 요청을 적어 보내 주세요.")).toBeTruthy();
+  expect(screen.getByText("아래 입력창에 적어 보내 주세요.")).toBeTruthy();
   await ask(user, "셋째");
   await findOutput("도착 예정입니다.");
   expect(started).toHaveLength(2);
@@ -464,7 +465,7 @@ for (const status of [422, 429] as const) {
 
 // --- 요청을 입력창으로 되돌리는 거절(422, 429) ---
 
-const INVALID = "요청을 보낼 수 없습니다. 요청을 고쳐 다시 보내 주세요.";
+const INVALID = "질문을 보낼 수 없습니다. 질문을 고쳐 다시 보내 주세요.";
 
 for (const path of ["시작", "이어 가기"] as const) {
   test(`${path}의 422 는 요청을 대화에서 빼 입력창으로 되돌리고 그 아래 "${INVALID}"를 묶어 보인다`, async () => {
