@@ -5,8 +5,9 @@
  * 사이트 파일, 두 번째 앱 프로세스, 출처의 모양)이 남는다. 선례는 위젯 e2e 의 준비(`apps/widget/e2e/stack.ts`)다.
  *
  * - 출처는 모두 `*.localhost` 호스트 이름이다. 질문 페이지는 `portal.localhost`(중계의 포트), 다른 출처의 페이지는
- *   `other.localhost`, 08 이 둘째 인스턴스로 쓸 출처는 `second.localhost` 이고 포트로 가른다. 이름 풀기는 Playwright 설정이
- *   맡는다. 질문 페이지의 `public_origin` 은 중계의 주소이고 사이트 파일의 모든 사이트가 그것과 둘째 출처를 허용 출처로 든다.
+ *   `other.localhost`, 사이트 하나만 적은 둘째 질문 페이지는 `second.localhost` 이고 포트로 가른다. 이름 풀기는 Playwright
+ *   설정이 맡는다. 첫 질문 페이지의 `public_origin` 은 중계의 주소이고 사이트 파일의 모든 사이트가 그것과 둘째 출처를 허용
+ *   출처로 든다. 둘째 질문 페이지는 중계를 거치지 않고 제 주소로 열고, 그 `public_origin` 이 둘째 출처다.
  * - 사이트는 넷이다(`sites.ts`). 키 쌍은 `node:crypto` 가 짓고 개인 키는 작업 폴더의 파일로만 간다. 질문 페이지의 `kid` 는
  *   사이트 파일의 모든 사이트가 같은 공개 키로 든다.
  * - 위젯 Next 는 질문 페이지가 쓰는 사이트 파일로 빌드한다. 허용 출처가 빌드에 박힌다. 위젯의 시작 래퍼는 이 앱이 import 하지
@@ -44,7 +45,7 @@ import {
   TRACES_DIR_ENV,
 } from "./env.ts";
 import { startOtherPage } from "./other-page.ts";
-import { AGENT, SITES } from "./sites.ts";
+import { AGENT, SITES, type E2eSite } from "./sites.ts";
 
 const APP = dirname(import.meta.dirname);
 const WIDGET = join(dirname(APP), "widget");
@@ -95,7 +96,29 @@ export default async function globalSetup(): Promise<() => Promise<void>> {
 
     const output = join(stack.work, "portal-output.log");
     writeFileSync(output, "");
-    await startPortal(stack, { portalOrigin, portalPort, siteFile, key, output });
+    await startPortal(stack, {
+      name: "portal",
+      portalOrigin,
+      portalPort,
+      sites: SITES,
+      siteFile,
+      key,
+      output,
+    });
+    // 둘째 인스턴스. 설정에 사이트 하나만 적은 질문 페이지가 제 루프백 주소에 선다(중계 뒤가 아니다). 위젯 번들은 그 출처에
+    // 없어 위젯은 그리지 않고, 사이트가 하나일 때 셀렉트와 라벨이 숨는 것만 본다(명세 "Playwright e2e").
+    const [onlySite] = SITES;
+    if (onlySite === undefined) {
+      throw new Error("e2e 사이트 목록이 비었다");
+    }
+    await startPortal(stack, {
+      name: "portal-second",
+      portalOrigin: secondOrigin,
+      portalPort: secondPort,
+      sites: [onlySite],
+      siteFile,
+      key,
+    });
 
     stack.own(
       await startRelay(relayPort, {
@@ -140,7 +163,7 @@ function siteFileToml(origins: readonly string[], key: SiteKey): string {
 }
 
 /** 질문 페이지 설정. 개인 키는 설정 파일 옆 `keys/` 에 둔다. */
-function configToml(publicOrigin: string, port: number): string {
+function configToml(publicOrigin: string, port: number, sites: readonly E2eSite[]): string {
   return stringify({
     schema_version: "1",
     portal: {
@@ -149,7 +172,7 @@ function configToml(publicOrigin: string, port: number): string {
       kid: KEY_ID,
       port,
     },
-    sites: SITES.map((site) => ({
+    sites: sites.map((site) => ({
       name: site.name,
       issuer: site.issuer,
       agent: AGENT,
@@ -158,32 +181,36 @@ function configToml(publicOrigin: string, port: number): string {
       theme: site.theme,
       ...(site.mode === undefined ? {} : { mode: site.mode }),
       ...(site.notice === undefined ? {} : { notice: site.notice }),
+      ...(site.reportUrl === undefined ? {} : { report_url: site.reportUrl }),
       assurance: site.assurance,
     })),
   });
 }
 
 interface PortalLaunch {
+  /** 프로세스와 설정 파일의 이름. 같은 작업 폴더에서 질문 페이지가 둘 서므로 가른다. */
+  readonly name: string;
   readonly portalOrigin: string;
   readonly portalPort: number;
+  readonly sites: readonly E2eSite[];
   readonly siteFile: string;
   readonly key: SiteKey;
-  /** 프로세스의 출력을 받는 대로 이어 쓸 파일. */
-  readonly output: string;
+  /** 프로세스의 출력을 받는 대로 이어 쓸 파일. 없으면 모으지 않는다. */
+  readonly output?: string;
 }
 
 /** 질문 페이지를 띄우고 서는 것을 기다린다. 설정과 개인 키는 작업 폴더에 쓴다. */
 async function startPortal(stack: Stack, launch: PortalLaunch): Promise<void> {
-  const dir = join(stack.work, "portal");
+  const dir = join(stack.work, launch.name);
   mkdirSync(join(dir, "keys"), { recursive: true });
   const config = join(dir, "portal.toml");
-  writeFileSync(config, configToml(launch.portalOrigin, launch.portalPort));
+  writeFileSync(config, configToml(launch.portalOrigin, launch.portalPort, launch.sites));
   writeFileSync(
     join(dir, "keys", "portal.pem"),
     launch.key.privateKey.export({ type: "pkcs8", format: "pem" }),
   );
   const portal = stack.launch(
-    "portal",
+    launch.name,
     process.execPath,
     [
       "--disable-warning=ExperimentalWarning",
@@ -196,10 +223,13 @@ async function startPortal(stack: Stack, launch: PortalLaunch): Promise<void> {
     APP,
     process.env,
   );
-  for (const stream of [portal.child.stdout, portal.child.stderr]) {
-    stream?.on("data", (chunk: Buffer) => {
-      appendFileSync(launch.output, chunk);
-    });
+  const { output } = launch;
+  if (output !== undefined) {
+    for (const stream of [portal.child.stdout, portal.child.stderr]) {
+      stream?.on("data", (chunk: Buffer) => {
+        appendFileSync(output, chunk);
+      });
+    }
   }
   await until(portal, "질문 페이지가 서지 않았다", () =>
     portal.output().includes(LISTENING) ? true : null,

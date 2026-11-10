@@ -5,6 +5,8 @@
 // - 익명과 로그인 둘 다 되는 사이트 하나, 로그인만 되는 사이트 하나.
 // - 첫 사이트만 소개 글과 모드와 고지 글을 적어, `?site=` 를 주지 않은 첫 그림과 속성 다섯이 채워지는 것, 사이트의 고지 글이
 //   덮개의 전문이 되는 것을 가르게 한다. 나머지는 기본 고지 글이다.
+// - 보고서 주소는 첫 사이트와 둘 다 사이트만 적는다. 보고서 링크가 있는 사이트와 없는 사이트(한도가 작은 사이트, 로그인
+//   사이트)를 모두 둔다. 주소는 열리지 않는 자리(`report.example`)이고 시험은 링크의 속성만 본다.
 
 export interface E2eSite {
   readonly name: string;
@@ -16,6 +18,8 @@ export interface E2eSite {
   readonly mode?: string;
   /** 사이트가 적은 고지 글. 없으면 질문 페이지의 기본 글이다. */
   readonly notice?: string;
+  /** 평가 보고서 주소. 없으면 페이지가 보고서 링크를 그리지 않는다. */
+  readonly reportUrl?: string;
   readonly assurance: "anonymous" | "login" | "both";
   /** 사이트 파일의 `hourly_runs_per_site`. */
   readonly hourlyRunsPerSite?: number;
@@ -33,6 +37,7 @@ export const SITES: readonly E2eSite[] = [
     theme: "jacho",
     mode: "dark",
     notice: "첫째 사이트가 직접 적은 고지 글입니다.",
+    reportUrl: "https://report.example/first",
     assurance: "anonymous",
   },
   {
@@ -48,6 +53,7 @@ export const SITES: readonly E2eSite[] = [
     issuer: "https://either.portal.e2e.example",
     heading: "둘 다 되는 사이트",
     theme: "jjokbit",
+    reportUrl: "https://report.example/either",
     assurance: "both",
   },
   {

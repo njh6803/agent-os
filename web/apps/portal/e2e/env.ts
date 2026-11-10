@@ -12,8 +12,8 @@ export const TRACES_DIR_ENV = "AGENT_OS_PORTAL_E2E_TRACES";
 export const PORTAL_OUTPUT_ENV = "AGENT_OS_PORTAL_E2E_OUTPUT";
 
 /**
- * 질문 페이지의 출처(같은 출처 중계의 주소), 확인 끝점으로 폼을 보내는 다른 출처의 페이지, 08 의 둘째 인스턴스가 쓸 루프백
- * 출처(사이트 파일의 허용 출처에 들어 있다. 이 티켓의 시험은 쓰지 않는다).
+ * 질문 페이지의 출처(같은 출처 중계의 주소), 확인 끝점으로 폼을 보내는 다른 출처의 페이지, 설정에 사이트 하나만 적은 둘째
+ * 질문 페이지의 루프백 출처(사이트 파일의 허용 출처에 들어 있다. 중계를 거치지 않는다).
  */
 export function stack(): {
   readonly portalOrigin: string;
