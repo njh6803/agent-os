@@ -94,4 +94,6 @@ open-session을 부른다 2026-11-09T23:43:46Z (이 일지의 인계 지시문 �
 
 ## 이어받은 세션 (푸시, PR, 병합)
 
-위 인계 지시문으로 연 세션이다. `origin/main`(`0dac7aed`, mcp-http 04)을 이 브랜치에 병합했다. `tests/test_main.py`는 글자 충돌 없이 자동으로 합쳐졌고 `uv run pytest -q tests/test_main.py`가 215개 통과했다. `uv run python tools/plan_table.py`는 `.scratch/plan.md`를 바꾸지 않았다. `uv run python tools/sibling_overlap.py`는 번호 겹침이 없다고 했다(헌법 3.0.78은 형제가 쓴 가장 높은 판 3.0.77보다 높다).
+위 인계 지시문으로 연 세션이다. `origin/main`(`0dac7aed`, mcp-http 04)을 이 브랜치에 병합했다. `tests/test_main.py`는 글자 충돌 없이 자동으로 합쳐졌고 `uv run pytest -q tests/test_main.py`가 215개 통과했다. `uv run python tools/plan_table.py`는 `.scratch/plan.md`를 바꾸지 않았다. `uv run python tools/sibling_overlap.py`는 번호 겹침이 없다고 했다(헌법 3.0.78은 형제가 쓴 가장 높은 판 3.0.77보다 높다). 그 뒤 일지 커밋(`4724297d`)의 pre-commit이 pyright 둘, lint-imports, pytest(416.6초), web-verify를 통과시켰고, `uv run ruff check .`와 `uv run ruff format --check .`는 손으로 쳐 통과했다.
+
+PR 직전 리뷰는 `coderabbit-review` 서브에이전트가 돌렸다(서브에이전트의 보고에서 읽었다). `coderabbit auth status`는 `Plan: Free`, `Seat: not assigned`였고, CLI 0.7.5의 `coderabbit review --agent --committed --base origin/main`이 파일 42개를 돌아 `review_completed`, 지적 0건으로 끝났다(CLI 축). 첫 시도는 `--include-untracked`를 함께 줘 `option '--committed' cannot be used with option '--include-untracked'`로 리뷰 전에 거절됐다.
