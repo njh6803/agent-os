@@ -167,6 +167,12 @@ SECOND_VARIABLE = "AGENT_OS_TEST_SECOND"
 # 서버가 되울릴 수 있는 비밀과 쿼리 문자열의 비밀. 둘 다 8자 이상이라 가리는 대상이다.
 TOKEN = "echo-secret-9f3a"
 QUERY_SECRET = "query-secret-4b9d"
+# 기한이 도구 호출 도중에 오게 하는 사례의 기한. 서버가 호출을 받은 뒤여야 해서 1초보다 넉넉히 둔다.
+DEADLINE_SECONDS = 2
+# 종료 요청에 답하지 않는 서버의 닫기. 어댑터의 유예는 2초이고 홀로 돌려 2초 남짓이었다. 하한은
+# 유예가 걸렸는지 보고, 상한은 `.claude/rules/tests.md` 의 시간 단언대로 그 몇 배다.
+GRACE_FLOOR_SECONDS = 1.8
+GRACE_CEILING_SECONDS = 15.0
 
 
 def _remote(url: str, **headers: str) -> HttpServer:
@@ -439,6 +445,125 @@ async def test_정상으로_닫으면_종료_요청이_앞선_요청과_같은_�
     assert len(deleted) == 1
     assert len(sessions) == 1
     assert deleted[0]["mcp-session-id"] in sessions
+    assert deleted[0]["mcp-protocol-version"]
+    assert deleted[0]["content-type"] == "application/json"
+    assert deleted[0]["accept"] == "application/json, text/event-stream"
+
+
+async def test_도구_호출_도중에_기한이_오면_종료_요청이_같은_세션_번호로_닿고_기한의_표지가_참이다(
+    tmp_path: Path,
+) -> None:
+    """core 의 실행 타임아웃과 같은 범위(`move_on_after`)다. 보호된 닫기가 기한의 취소를 삼키지
+    않아야 하고(`cancelled_caught`), 닫기에서 예외가 새지 않아야 한다."""
+    with serving(tmp_path) as fixture:
+        with anyio.move_on_after(60) as scope:
+            async with McpTools().connect({REMOTE: _remote(fixture.url)}) as connection:
+                scope.deadline = anyio.current_time() + DEADLINE_SECONDS
+                await connection.call("slow", {"seconds": 30})
+        deleted = fixture.headers_of("DELETE")
+        sessions = {
+            h["mcp-session-id"] for h in fixture.headers_of("POST") if "mcp-session-id" in h
+        }
+
+    assert fixture.slow_marker.exists(), "서버가 도구 호출을 받지 않았다"
+    assert scope.cancelled_caught
+    assert len(deleted) == 1, "기한에 취소된 실행이 종료 요청을 보내지 않았다"
+    assert deleted[0]["mcp-session-id"] in sessions
+
+
+async def test_종료_요청에_답하지_않는_서버는_닫기를_2초_안팎에_돌려보낸다(tmp_path: Path) -> None:
+    """상한은 홀로 돌린 시간(2초 남짓)의 넉넉한 배수다. 하한은 유예가 실제로 걸렸는지 본다."""
+    with serving(tmp_path, "--delete-sleep", "30") as fixture:
+        async with McpTools().connect({REMOTE: _remote(fixture.url)}) as connection:
+            await connection.call("add", {"a": 1, "b": 1})
+            closing = time.monotonic()
+        elapsed = time.monotonic() - closing
+        deleted = fixture.headers_of("DELETE")
+
+    assert len(deleted) == 1, "종료 요청이 서버에 닿지 않았다"
+    assert elapsed >= GRACE_FLOOR_SECONDS, f"유예가 걸리지 않았다: {elapsed:.2f}초"
+    assert elapsed < GRACE_CEILING_SECONDS, f"닫기가 {elapsed:.2f}초 걸렸다"
+
+
+async def test_여는_도중_실패해_세션_번호를_받지_못했으면_종료_요청을_보내지_않는다(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv(TOKEN_VARIABLE, "Bearer wrong-token-0000")
+
+    with serving(tmp_path, "--expect-authorization", "Bearer right-token-1111") as fixture:
+        with pytest.raises(ConnectionError):
+            async with McpTools().connect(
+                {REMOTE: _remote(fixture.url, Authorization=TOKEN_VARIABLE)}
+            ):
+                pytest.fail("틀린 토큰으로 열렸다")
+        methods = [row["method"] for row in fixture.requests()]
+
+    assert "POST" in methods, "서버에 닿지 않았다"
+    assert "DELETE" not in methods
+
+
+async def test_세션_번호를_주지_않는_서버는_정상으로_닫히고_종료_요청을_받지_않는다(
+    tmp_path: Path,
+) -> None:
+    with serving(tmp_path, "--stateless") as fixture:
+        async with McpTools().connect({REMOTE: _remote(fixture.url)}) as connection:
+            result = await connection.call("add", {"a": 2, "b": 3})
+        methods = [row["method"] for row in fixture.requests()]
+
+    assert (result.ok, result.content) == (True, "5")
+    assert "DELETE" not in methods
+
+
+async def test_리디렉션하는_서버에서도_정상_닫기의_종료_요청이_슬래시를_붙인_최종_주소에_닿는다(
+    tmp_path: Path,
+) -> None:
+    with serving(tmp_path, "--redirect") as fixture:
+        async with McpTools().connect({REMOTE: _remote(fixture.url)}) as connection:
+            await connection.call("add", {"a": 1, "b": 1})
+        deleted = [row for row in fixture.requests() if row["method"] == "DELETE"]
+
+    assert "/mcp/" in [row["path"] for row in deleted], "종료 요청이 최종 주소에 닿지 않았다"
+
+
+async def test_리디렉션하는_서버에서도_취소된_실행의_종료_요청이_슬래시를_붙인_최종_주소에_닿는다(
+    tmp_path: Path,
+) -> None:
+    with serving(tmp_path, "--redirect") as fixture:
+        with anyio.move_on_after(60) as scope:
+            async with McpTools().connect({REMOTE: _remote(fixture.url)}) as connection:
+                scope.deadline = anyio.current_time() + DEADLINE_SECONDS
+                await connection.call("slow", {"seconds": 30})
+        deleted = [row for row in fixture.requests() if row["method"] == "DELETE"]
+
+    assert scope.cancelled_caught
+    assert "/mcp/" in [row["path"] for row in deleted], "종료 요청이 최종 주소에 닿지 않았다"
+
+
+async def test_종료_요청을_다른_출처로_돌려보내면_그_출처에는_요청이_닿지_않고_닫기가_돌아온다(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv(TOKEN_VARIABLE, f"Bearer {TOKEN}")
+    other_folder = tmp_path / "other"
+    other_folder.mkdir()
+
+    with serving(other_folder) as other, serving(tmp_path, "--delete-redirect", other.url) as main:
+        remote = _remote(main.url, Authorization=TOKEN_VARIABLE)
+        async with McpTools().connect({REMOTE: remote}) as connection:
+            await connection.call("add", {"a": 1, "b": 1})
+        sent_to_main = [row["method"] for row in main.requests()]
+        sent_to_other = other.requests()
+
+    assert "DELETE" in sent_to_main, "종료 요청이 원래 서버에 닿지 않았다"
+    assert sent_to_other == [], f"다른 출처에 요청이 닿았다: {sent_to_other}"
+
+
+async def test_종료_요청의_연결이_끊겨도_닫기는_예외_없이_돌아온다(tmp_path: Path) -> None:
+    with serving(tmp_path, "--delete-drop") as fixture:
+        async with McpTools().connect({REMOTE: _remote(fixture.url)}) as connection:
+            await connection.call("add", {"a": 1, "b": 1})
+        deleted = fixture.headers_of("DELETE")
+
+    assert len(deleted) == 1, "종료 요청이 서버에 닿지 않았다"
 
 
 async def test_원격_서버가_뒤에_있어도_앞선_stdio_서버를_연_뒤_연결_오류_하나다(

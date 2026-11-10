@@ -19,13 +19,29 @@ stdio 모양의 것이다.
 ` (HTTP <상태 코드> <이유 구절>)` 로 덧붙인다. 라이브러리는 본문이 JSON-RPC 오류가 아닌 오류
 응답(401 등)을 상태 코드 없는 예외로 바꾸므로, 이것이 꺼진 서버와 틀린 토큰을 문구에서 가른다. 응답
 본문은 읽지 않는다. GET 알림 흐름의 405 와 라이브러리가 따른 307 이 뒤의 다른 실패에 붙지 않게 POST
-의 2xx 에서 지운다. **이 티켓에서 http 전송을 닫는 길은 라이브러리의 종료 요청이다.** 정상으로
-닫으면 라이브러리가 세션 종료 요청(DELETE)을 보내 서버에 닿지만, 실행 기한으로 취소된 실행은
-보내지 않는다(프로브가 쟀다). serve 의 종료로 취소된 실행도 같은 취소라 보내지 않는다고 본다(어림.
-프로브는 기한만 쟀다). 그 세션은 서버의 유휴 만료까지 남는다. "취소된 실행에서도 닫는다"는 http
-전송에 대해 약속하지 않는다. 닫을 프로세스가 없으므로 stdio 의 "닫는 시간"(아래, 2초 유예와
-프로세스 트리 끄기)은 http 만 쓰는 연결에 걸리지 않고, 정상 닫기에는 종료 요청의 왕복이 드는
-것으로 본다(어림. 왕복 시간은 재지 않았다).
+의 2xx 에서 지운다.
+
+**http 모양은 취소된 실행에서도 세션 종료 요청을 보내고 닫는다.** 라이브러리의 종료 요청은 끄고
+(`terminate_on_close=False`) 어댑터가 자기 클라이언트로 DELETE 를 직접 보낸다. 실행 기한이나 serve
+의 종료로 취소된 실행은 라이브러리 문맥을 닫는 `await` 에서 취소를 다시 받아 라이브러리의 요청이
+나가지 못하기 때문이다(라이브러리 코드를 읽은 해석이고, 프로브는 요청이 닿지 않는 것까지만 쟀다).
+문맥은 보호 없이 닫고, 같은 `finally` 의 보호 범위 안에서 종료 요청과
+클라이언트 닫기를 한다(문맥을 닫는 호출을 보호로 감싸면 anyio 가 범위 중첩 위반으로 거부한다).
+종료 요청에는 `[server.headers]` 를 포함한 클라이언트의 기본 헤더에 `mcp-session-id`(응답 훅이
+`mcp-session-id` 응답 헤더에서 받아 둔 값)와 `mcp-protocol-version`(`initialize()` 결과)을 더하며,
+세션 번호를 받지 못했으면(여는 도중 실패, `initialize` 응답 헤더가 오기 전의 취소, 세션을 두지 않는
+서버) 보내지 않는다. 응답은 보지 않고
+`httpx2.HTTPError` 와 유예의 초과를 삼키며 기록하지 않는다. 유예(`CLOSE_GRACE_SECONDS`, 2초)는 종료
+요청에만 걸려 있어 서버가 답하지 않아도 클라이언트 닫기는 건너뛰지 않는다. 그러므로 기한으로
+취소된 실행의 끝은 종료 요청에 답하지 않는 서버 하나당 2초까지 늦어질 수 있고(서버는 차례로
+닫으므로 ADR 0034, 늦춤은 서버 수에 비례한다), 기한의 결말(원인 `timeout`)은 그대로다. 종료
+요청에 답하는 서버라면 정상 닫기는 늦어지지 않는다(왕복이 Windows 0.0~0.016초, Linux
+0.002~0.005초. `.scratch/mcp-http/spec.md` 의 "닫기"). 종료 요청의 리디렉션은
+`follow_redirects=False` 로 받아 직접 따르되, 같은 출처(http 에서 https 로 올리는 것 포함)이고
+메서드가 그대로이며 주소에 사용자 정보가 없는 것만 `client.max_redirects` 번까지 따른다. 그 밖의
+위치로는 세션 번호도 헤더도 실려 가지 않고 그 응답으로 끝난다. 연결 방식과 알려진 한계의 근거는
+`.scratch/mcp-http/spec.md` 의 "닫기"(ADR 0049 의 이력)다. 닫을 프로세스가 없으므로 stdio 의 "닫는
+시간"(아래, 2초 유예와 프로세스 트리 끄기)은 http 만 쓰는 연결에 걸리지 않는다.
 
 **서버가 되울린 헤더 값은 실패 문구에서 가린다.** 서버가 400 이상의 오류 응답에 JSON-RPC 오류를
 담아 받은 `Authorization` 값을 글에 되울리면 라이브러리가 그 글을 그대로 예외로 올린다. 가릴 글은
@@ -118,6 +134,9 @@ LAUNCHER = Path(__file__).with_name("mcp_launcher.py")
 MAX_TOOL_PAGES = 1000
 # 이보다 짧은 헤더 값은 실패 문구에서 가리지 않는다. 상관없는 글자까지 바꾸게 되기 때문이다.
 MIN_REDACTED_LENGTH = 8
+# http 전송의 세션 종료 요청을 기다리는 유예. stdio 상류가 서버가 스스로 끝나기를 기다리는 유예와
+# 같은 값이다(ADR 0034·0049). 종료 요청에만 걸린다(`_end_session`).
+CLOSE_GRACE_SECONDS = 2
 
 
 class _NoDebug(logging.Filter):
@@ -317,20 +336,97 @@ async def _http_session(
 
     클라이언트의 기본 헤더가 `[server.headers]` 의 값이다. 기한은 mcp 가 자기 클라이언트에 쓰는
     값(접속·쓰기·풀 30초, 읽기 300초)이고 `trust_env` 와 `follow_redirects` 는 기본값이다. 같은
-    출처의 리디렉션은 라이브러리가 자기 요청마다 스스로 따른다. 응답 훅이 오류 응답의 상태를 받아
-    둔다. 종료 요청(DELETE)은 라이브러리가 닫을 때 보낸다.
+    출처의 리디렉션은 라이브러리가 자기 요청마다 스스로 따른다. 응답 훅이 오류 응답의 상태와 세션
+    번호를 받아 둔다. 종료 요청(DELETE)은 라이브러리가 아니라 `finally` 의 보호 범위 안에서 어댑터가
+    보낸다(`_end_session`). 취소된 실행도 그 자리를 지난다.
     """
     headers = _read_headers(server, attempt)
     timeout = httpx2.Timeout(30, read=300)
-    async with (
-        httpx2.AsyncClient(
-            headers=headers, timeout=timeout, event_hooks={"response": [attempt.on_response]}
-        ) as client,
-        streamable_http_client(server.url, http_client=client) as (read, write),
-        ClientSession(read, write) as session,
-    ):
-        await session.initialize()
-        yield session, await _all_tools(session)
+    client = httpx2.AsyncClient(
+        headers=headers, timeout=timeout, event_hooks={"response": [attempt.on_response]}
+    )
+    try:
+        async with (
+            streamable_http_client(server.url, http_client=client, terminate_on_close=False) as (
+                read,
+                write,
+            ),
+            ClientSession(read, write) as session,
+        ):
+            initialized = await session.initialize()
+            attempt.protocol_version = initialized.protocol_version
+            yield session, await _all_tools(session)
+    finally:
+        # 라이브러리 문맥을 닫은 뒤의 `finally` 다. 취소된 실행은 그 문맥을 닫는 `await` 에서 취소를
+        # 다시 받으므로 보호는 여기에 둔다. 문맥을 닫는 호출을 감싸면 라이브러리 안의 취소 범위와
+        # 중첩이 어긋나 anyio 가 거부한다(`.scratch/mcp-http/probes` 의 `deadline_shield_exit`).
+        with anyio.CancelScope(shield=True):
+            await _end_session(client, server.url, attempt)
+            await client.aclose()
+
+
+async def _end_session(client: httpx2.AsyncClient, url: str, attempt: _Attempt) -> None:
+    """세션 종료 요청(DELETE)을 서버에 보낸다. 응답은 보지 않고 실패도 삼킨다.
+
+    유예는 이 요청에만 걸린다. 클라이언트를 닫는 일까지 한 유예에 두면 요청이 유예에 걸렸을 때
+    닫기가 건너뛰어진다. 세션 번호를 받지 못했으면(`initialize` 전에 실패했거나 서버가 주지 않았다)
+    보내지 않는다.
+    """
+    if attempt.session_id is None:
+        return
+    headers = {
+        "accept": "application/json, text/event-stream",
+        "content-type": "application/json",
+        "mcp-session-id": attempt.session_id,
+    }
+    if attempt.protocol_version is not None:
+        headers["mcp-protocol-version"] = attempt.protocol_version
+    with anyio.move_on_after(CLOSE_GRACE_SECONDS):
+        try:
+            await _delete(client, url, headers)
+        except httpx2.HTTPError:
+            pass  # 닫는 중의 실패는 실행의 결말을 바꾸지 않는다(응답은 보지 않는다)
+
+
+async def _delete(client: httpx2.AsyncClient, url: str, headers: Mapping[str, str]) -> None:
+    """DELETE 를 보낸다. 리디렉션은 `follow_redirects=False` 로 받고, 같은 서버 안에서 메서드가
+    그대로인 것만 `client.max_redirects` 번까지 따른다. 그 밖의 리디렉션은 그 응답으로 끝낸다.
+
+    httpx2 의 횟수 상한은 한 번의 `send` 안에서만 세므로 따른 횟수를 여기서 센다. 따르지 않은
+    위치로는 `Authorization` 밖의 인증 헤더도 세션 번호도 실려 가지 않는다.
+    """
+    request = client.build_request("DELETE", url, headers=dict(headers))
+    followed = 0
+    while True:
+        response = await client.send(request, follow_redirects=False)
+        following = response.next_request
+        if following is None or followed == client.max_redirects:
+            return
+        if not _stays_in_server(response.request, following):
+            return
+        request = following
+        followed += 1
+
+
+def _stays_in_server(sent: httpx2.Request, following: httpx2.Request) -> bool:
+    """다음 요청이 방금 보낸 요청과 같은 서버 안이고 메서드가 그대로이며 사용자 정보가 없는가.
+
+    같은 서버는 scheme·호스트·포트가 같거나, 기본 포트를 쓰는 같은 호스트의 http 에서 https 로
+    올리는 것이다. 라이브러리가 자기 요청의 리디렉션을 따르는 조건과 같되 사용자 정보는 보낸 요청의
+    것이어도 거른다(매니페스트가 url 의 사용자 정보를 거부하므로 실효 차이는 없다). 그 판정은 비공개
+    모듈이라 가져다 쓰지 않고, httpx2 의 공개 API 만 쓴다. httpx2 는 기본 포트를 `None` 으로 두고
+    호스트를 소문자로 바꾼다. 302·303 은 메서드를 GET 으로 바꾸므로 여기서 걸러진다.
+    """
+    old, new = sent.url, following.url
+    same_origin = (old.scheme, old.host, old.port) == (new.scheme, new.host, new.port)
+    https_upgrade = (
+        old.host == new.host
+        and old.scheme == "http"
+        and old.port is None
+        and new.scheme == "https"
+        and new.port is None
+    )
+    return following.method == sent.method and not new.userinfo and (same_origin or https_upgrade)
 
 
 def _read_headers(server: HttpServer, attempt: _Attempt) -> dict[str, str]:
@@ -369,16 +465,21 @@ class _HeaderUnusable(Exception):
 
 @dataclass
 class _Attempt:
-    """서버 하나에 붙는 한 번의 곁정보. 실패 문구를 지을 때와 도구 호출이 실패할 때 쓴다.
+    """서버 하나에 붙는 한 번의 곁정보. 실패 문구를 지을 때, 도구 호출이 실패할 때, 닫으며 세션
+    종료 요청을 보낼 때 쓴다.
 
     `secrets` 는 서버가 오류 글에 되울릴 수 있어 가릴 글이다. 헤더마다 환경에서 읽은 값 전체와, 값이
     공백 하나로 나뉜 `<낱말> <나머지>` 꼴이면 그 나머지(`Bearer <토큰>` 의 토큰)다. 8자보다 짧은
     글은 가리지 않는다. 상관없는 글자까지 바꾸게 되기 때문이다. `status` 는 마지막 POST 응답이 2xx
-    가 아니었을 때의 그 상태다.
+    가 아니었을 때의 그 상태다. `session_id` 는 응답 헤더 `mcp-session-id` 로 받아 둔 세션 번호이고
+    `protocol_version` 은 `initialize` 결과의 프로토콜 판이다. 둘 다 종료 요청(`_end_session`)이
+    쓰며, 서버가 세션 번호를 주지 않았으면 `session_id` 는 `None` 이고 종료 요청을 보내지 않는다.
     """
 
     secrets: list[tuple[str, str]] = field(default_factory=list[tuple[str, str]])
     status: str | None = None
+    session_id: str | None = None
+    protocol_version: str | None = None
 
     def protect(self, header: str, value: str) -> None:
         head, space, rest = value.partition(" ")
@@ -401,12 +502,15 @@ class _Attempt:
         return "" if self.status is None else f" ({self.status})"
 
     async def on_response(self, response: httpx2.Response) -> None:
-        """POST 응답마다 받아 둔 상태를 바꾸고 2xx 면 지운다. GET 과 DELETE 의 응답은 받아 두지
-        않는다.
+        """모든 응답의 `mcp-session-id` 헤더를 세션 번호로 받아 둔다. POST 응답마다 받아 둔 상태를
+        바꾸고 2xx 면 지운다. GET 과 DELETE 의 응답은 상태로 받아 두지 않는다.
 
         라이브러리가 삼킨 GET 알림 흐름의 405 나, 라이브러리가 따른 307 이 뒤의 다른 실패에 붙지
         않게 한다. 응답 본문은 읽지 않는다.
         """
+        session = response.headers.get("mcp-session-id")
+        if session:
+            self.session_id = session
         if response.request.method != "POST":
             return
         self.status = (

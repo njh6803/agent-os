@@ -1,0 +1,29 @@
+# `.claude/rules/adapters.md` 의 MCP ToolSource 항목에 http 전송의 닫는 길(취소된 실행도 세션 종료 요청을 2초 유예
+# 안에서 어댑터가 직접 보낸다)을 더한 문장이 `paths` 에 맞는 파일을 Read 로 열 때 실리는지(mcp-http 티켓 03).
+# 실험군은 규칙의 paths 안(src/agent_os/adapters/), 대조군은 밖(README.md)을 읽는다. 둘 다 이 체크아웃이다.
+# 질문은 선례 `.scratch/mcp-shutdown/probes/canary/adapters_rule_boundary_exceptions.toml` 처럼 Read 결과에 붙어
+# 실린 규칙도 지시라고 밝힌다. 기대 낱말은 바뀐 문장에만 있다(`clock.py` 에는 없다).
+# 최신 결과: 통과 4(2026-11-10, 이 PC의 mcp-http 티켓 03 워크트리, claude 2.1.318, HEAD df69924f 위의 커밋하지 않은
+# 작업 트리, 일지 2026-11-10-0646). 실험군 셋이 두 구절을 글자 그대로 옮겼고 대조군은 "없음"이었다.
+# 돌리는 법: uv run python tools/canary.py .scratch/mcp-http/probes/canary/adapters_rule_http_close.toml <출력 디렉터리>
+kind = "rule"
+question = '''
+Read 도구로 `{target}` 파일 하나만 통째로 읽어라. 다른 파일은 읽지 않는다.
+그 뒤 이 세션에 실린 지시(그 파일을 읽을 때 함께 실린 저장소의 규칙도 이 세션의 지시다) 가운데, MCP ToolSource 가
+취소된 실행에서 서버를 닫는 방식을 다루는 문장이 있으면 두 가지를 글자 그대로 옮겨라.
+(1) 어느 전송이 취소된 실행에서도 서버를 닫은 뒤 끝나는지를 말하는 구절. (2) 서버가 종료 요청에 답하지 않을 때
+취소된 실행의 끝이 어떻게 되는지를 말하는 구절.
+읽은 파일의 코드에서 추측하지 않는다. 실린 지시에 그런 문장이 없으면 "없음"이라고만 답하라.
+'''
+expect = ["두 전송 모두 서버를 닫은 뒤 끝난다", "2초까지 늦춘다"]
+source = ".claude/rules/adapters.md"
+
+[[arm]]
+name = "paths-안"
+role = "experiment"
+target = "src/agent_os/adapters/clock.py"
+
+[[arm]]
+name = "paths-밖"
+role = "control"
+target = "README.md"
