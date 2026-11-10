@@ -85,3 +85,10 @@ open-session을 부른다 2026-11-10T11:41:50Z
 열기가 폴더 오류로 멈췄다(2026-11-10T11:42Z). 새 세션 화면의 폴더가 C:\projectag-engine 이었고 보내지 않았다. 지시문은 새 세션 화면에 남아 있어 사람이 폴더와 모델을 맞춰 보낸다. 지시문 파일은 스크래치패드 directive-09-b.txt다. 같은 파일로 다시 돌리지 않는다.
 
 다시 열기(사용자 요청, 2026-11-10 21:25 로컬)는 sent= 로 끝났다. 폴더 C:\projectgent, 모델 Sonnet 5.5 / high. 앞의 폴더 오류 줄은 이 줄로 풀렸다.
+
+## PR 직전 리뷰 (coderabbit-review 서브에이전트)
+
+CodeRabbit CLI 0.7.5(`Plan: Free`, `Seat: not assigned`)가 `coderabbit review --agent --include-untracked --base origin/main`으로 파일 32개를 끝까지 리뷰해 지적 0건을 냈다. 이 세션은 서브에이전트의 보고를 읽었고 CLI를 직접 치지 않았다. 보고가 코드를 읽고 덧붙인 관찰 둘은 아래처럼 판정해 둘 다 보류했다.
+
+- Minor, `web/apps/portal/e2e/stack.ts`의 질문 페이지 프로세스가 `process.env`를 통째로 물려받아 실제 모델 모드에서 `ANTHROPIC_API_KEY`를 받는다. 위젯 e2e의 준비와 같은 모양을 따른 것이고 키가 로그나 트레이스로 새는 경로는 서브에이전트가 읽은 범위에서 찾지 못했다. 질문 페이지와 위젯의 자식 환경을 함께 다듬는 별도 일이라 뒤로 넘긴다.
+- Nit, `tests/test_portal_llm.py`의 키 확인(`"ANTHROPIC_API_KEY" not in os.environ`)은 빈 문자열 키를 통과시킨다. `llm_called` 단언이 있어 초록 착시는 없고 실패 문구만 덜 직접적이라 보류한다.
