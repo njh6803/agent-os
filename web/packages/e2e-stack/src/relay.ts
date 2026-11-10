@@ -2,6 +2,7 @@
 // 출처 아래에 모은다. 그 설정은 web-widget 의 범위 밖이라 위젯 e2e 는 이 작은 중계로 같은 출처를 만든다.
 //
 // - `/end-user/` 아래는 serve 로, `/widget`(질의가 붙은 것 포함)과 `/widget/` 아래는 Next 로 넘기고 나머지는 404 로 답한다.
+//   질문 페이지 상류를 주면 `/`(정확히, 질의 포함)와 `/portal/` 아래를 그 상류로도 넘긴다. 주지 않으면 그 둘도 404 다.
 // - 응답은 모으지 않고 받는 대로 넘긴다. 그래서 도구 줄이 결말 전에 서는지를 이 중계가 가리지 않는다.
 // - 받은 요청 줄의 경로를 그대로 넘긴다. nginx 의 경로 정규화, 버퍼링, 대소문자 비교, 본문 상한은 흉내 내지 않는다.
 // - 루프백에만 선다. 브라우저는 `widget.localhost` 로 부르고, Playwright 설정이 `*.localhost` 를 127.0.0.1 로 푼다.
@@ -20,6 +21,8 @@ export interface Upstreams {
   readonly serve: string;
   /** Next 의 주소. */
   readonly next: string;
+  /** 질문 페이지의 주소. 주지 않으면 `/`(정확히)와 `/portal/` 아래도 404 라 위젯 e2e 의 동작은 그대로다. */
+  readonly portal?: string;
 }
 
 /** 그 경로를 넘길 상류. 넘기지 않으면 null 이다. */
@@ -29,6 +32,10 @@ export function upstreamOf(path: string, upstreams: Upstreams): string | null {
   }
   if (path === "/widget" || path.startsWith("/widget?") || path.startsWith("/widget/")) {
     return upstreams.next;
+  }
+  // 질문 페이지는 `/`(질의가 붙은 것 포함)와 `/portal/` 아래다. `/portal` 은 끝 슬래시가 없어 넘기지 않는다.
+  if (path === "/" || path.startsWith("/?") || path.startsWith("/portal/")) {
+    return upstreams.portal ?? null;
   }
   return null;
 }

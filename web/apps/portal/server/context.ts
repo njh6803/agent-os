@@ -2,6 +2,7 @@
 // 받아 시험이 고정한다(pilot-portal 명세 "HTTP 요청 처리기와 서버").
 
 import type { KeyObject } from "node:crypto";
+import type { Assets } from "./assets.ts";
 import type { Assurance } from "./config.ts";
 import type { LoadedPortal } from "./load.ts";
 
@@ -27,13 +28,19 @@ export interface PortalContext extends PortalSources {
   /** 시작 때 읽어 둔 개인 키. 모든 사이트의 토큰에 서명한다. */
   readonly privateKey: KeyObject;
   readonly sites: readonly SiteContext[];
+  /** 시작 때 지어 둔 페이지와 정적 파일과 글꼴 표. 요청 처리 중에는 파일을 읽지 않는다. */
+  readonly assets: Assets;
 }
 
 /**
  * 시작 검사를 지난 결과의 사이트마다 사이트 파일에서 발급자로 `audience` 를 찾아 붙인다. 시작 검사가 발급자가 사이트 파일에
  * 있음을 이미 보았으므로 못 찾으면 시작 검사가 어긋난 것이라, 서버가 뜨기 전에 오류로 멈춘다.
  */
-export function portalContext(loaded: LoadedPortal, sources: PortalSources): PortalContext {
+export function portalContext(
+  loaded: LoadedPortal,
+  assets: Assets,
+  sources: PortalSources,
+): PortalContext {
   const { config, privateKey, siteFile } = loaded;
   const sites = config.sites.map((site): SiteContext => {
     const entry = siteFile.sites.find((candidate) => candidate.issuer === site.issuer);
@@ -52,6 +59,7 @@ export function portalContext(loaded: LoadedPortal, sources: PortalSources): Por
     kid: config.kid,
     privateKey,
     sites,
+    assets,
     now: sources.now,
     newAnonymousId: sources.newAnonymousId,
   };
