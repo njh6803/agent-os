@@ -76,3 +76,9 @@
 컨텍스트가 인계 문턱(20만 토큰)을 넘은 채 셀프 리뷰 직전에 와서 `인계: 셀프 리뷰 직전`으로 넘겼다. 이 세션은 `/code-review`를 밟지 않았다. 지시문은 스크래치패드 `directive-07.txt`에 있고 새 세션의 첫 메시지가 된다. 잠금은 풀었다.
 
 open-session을 부른다 2026-11-10T09:11:31Z
+
+## 인계 (둘째 세션)
+
+둘째 세션은 셀프 리뷰를 밟고(위 "셀프 리뷰 (2차 세션)") 반영한 뒤 `uv run python tools/run_checks.py`와 질문 페이지 e2e 18건이 초록인 것을 보고 커밋했다(`9e1b70d2`, pre-commit 통과). 컨텍스트가 인계 문턱을 넘은 채 `커밋 뒤`에 와서 `인계: 커밋 뒤`로 넘긴다. 남은 단계는 푸시, PR, 봇 회차와 CI, 병합, 이 일지의 "다음"과 retro, 다음 지시문이다. 이 세션의 제목은 `feature/07-anonymous-question-after-notice` (인계 때 `(인계함)`을 붙인다). 이월 몫은 첫 인계 때와 같다. 이 기능의 마지막 티켓 뒤에 `e2e-widget`·`e2e-portal`을 `.scratch/harness/probes/ci_job_durations.py`의 `JOBS`에 더하고 `ci.yml`의 `timeout-minutes`를 잰 값으로 고치는 일이고 07의 몫이 아니다. 08·09가 남아 있어 기능 계획의 `**끝:**` 줄은 쓰지 않는다.
+
+open-session을 부른다 2026-11-10T09:46:30Z
