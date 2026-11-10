@@ -1,7 +1,8 @@
 // 질문 페이지 e2e 가 설정과 사이트 파일에 싣는 사이트 넷(pilot-portal 명세 "Playwright e2e"). 준비(`stack.ts`)가 설정과 사이트
 // 파일을 짓는 데, 시험이 기대하는 값을 읽는 데 같은 목록을 쓴다.
 //
-// - 익명 사이트 둘. 같은 픽스처 에이전트를 열고 하나(`limited`)는 사이트의 시간당 실행 상한이 1이다.
+// - 익명 사이트 둘. 기본 모드에서는 같은 픽스처 에이전트를 열고(실제 모델 모드에서는 첫 사이트만 계산 에이전트를 연다. `stack.ts`)
+//   하나(`limited`)는 사이트의 시간당 실행 상한이 1이다.
 // - 익명과 로그인 둘 다 되는 사이트 하나, 로그인만 되는 사이트 하나.
 // - 첫 사이트만 소개 글과 모드와 고지 글을 적어, `?site=` 를 주지 않은 첫 그림과 속성 다섯이 채워지는 것, 사이트의 고지 글이
 //   덮개의 전문이 되는 것을 가르게 한다. 나머지는 기본 고지 글이다.
@@ -21,7 +22,7 @@ export interface E2eSite {
   readonly hourlyRunsPerSite?: number;
 }
 
-/** 모든 사이트가 여는 픽스처 에이전트(`@agent-os/e2e-stack` 의 `AGENTS`). */
+/** 기본 모드에서 모든 사이트가 여는 픽스처 에이전트(`@agent-os/e2e-stack` 의 `AGENTS`). 실제 모델 모드의 첫 사이트는 다르다. */
 export const AGENT = "echo";
 
 export const SITES: readonly E2eSite[] = [
