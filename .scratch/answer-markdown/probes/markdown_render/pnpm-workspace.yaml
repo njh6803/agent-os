@@ -1,0 +1,8 @@
+# 저장소 web/pnpm-workspace.yaml 과 같은 설치 정책이다. 설치 스크립트를 돌리지 않는다.
+# 공급망 유예(minimumReleaseAge)의 예외(minimumReleaseAgeExclude)를 두지 않는다(ADR 0024). 첫 설치에서 marked 18.2.0
+# (2026-11-09T23:05Z 에 나온 판)을 적자 pnpm 11.24.0 이 이 파일에 예외를 스스로 썼고, 그 줄을 지우고 18.1.3 으로 내렸다.
+packages:
+  - "."
+allowBuilds:
+  esbuild: false
+  "@parcel/watcher": false
