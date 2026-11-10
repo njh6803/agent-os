@@ -45,9 +45,9 @@
   - 표준 축 Major: `.scratch/web-widget/probes/widget_llm_mutations.toml` 의 변이 "기본 실행이 llm 만 빼면 …"의 `old` 가 옛 `addopts` 줄이라 `tools/mutate.py --check` 가 `원문이 0번` 으로 빨갛다. 이 세션이 `--check` 로 같은 빨강을 다시 봤다. 새 `addopts` 로 `old` 를, 변이를 `not llm and not llm_portal` 로 고쳤고(이름도 "기본 실행이 llm_widget 을 빼먹으면 그 시험이 돌아 빨갛다"), `--check` 초록(변이 9 모두 원문 한 번씩), 그 변이 8번만 돌려 `기대 빨강, 결과 빨강` 을 봤다.
   - 표준 축 Minor: `tests/test_conftest.py` 의 기본 실행 시험이 `WIDGET_TRACED` 에서 `PORTAL_TRACED` 로 바뀌며 `llm` 마커 사례가 빠져 `addopts` 의 `not llm` 만 지워도 초록일 수 있었다. 이 세션이 두 소스를 대 보아 `llm` 사례가 없음을 확인했고, `ALL_MARKERS_TRACED` 로 세 마커를 모두 붙인 시험 소스를 두어 기대를 `1 passed, 3 deselected` 로 고쳤다. 위젯 변이 8번의 `expect_output` 도 같은 문구로 맞췄다.
   - 표준 축 Minor: `web/apps/portal/e2e/sites.ts` 의 "모든 사이트가 여는 픽스처 에이전트"는 실제 모델 모드에서 거짓이다(첫 사이트가 `calc`). 두 문장에 "기본 모드에서"를 붙였다.
-  - 표준 축 Minor: `tests/test_portal_llm.py` 독스트링의 "거기서 제한 시간·pnpm 부재의 시험도 잰다"는 위젯 사본만 재는 시험이라 이 사본이 갈라져도 못 잡는다는 말로 고쳤다. 위젯 독스트링의 "코드를 읽은 것이고 재지 않았다"를 이 사본의 "못 보는 것"에도 옮겼다.
+  - 표준 축 Minor: `tests/test_portal_llm.py` 독스트링의 제한 시간·pnpm 부재 시험을 위젯 파일에서 잰다는 말은 위젯 사본만 재는 시험이라 이 사본이 갈라져도 못 잡는다는 말로 고쳤다. 위젯 독스트링의 "코드를 읽은 것이고 재지 않았다"를 이 사본의 "못 보는 것"에도 옮겼다.
   - 표준 축 Nit: `playwright.config.ts` 의 `chromium` 상수가 프로젝트 이름과 같아 `desktopChrome` 으로 바꿨다.
-  - 남김: 표준 축이 `_run_tree`·`_pnpm`·`_read_report`·`_failures`·`_read_trace` 약 150줄의 복제(Duplicated Code)를 판단 항목으로 냈다. 이 세션은 복제를 유지한다. 근거는 위젯 변이 표(`file = "tests/test_widget_llm.py"` 를 겨누는 변이 둘)가 그 파일의 글자를 겨누는 것이다(Grep 으로 그 줄 둘을 셌다). 또 티켓 09 가 "`tests/test_widget_llm.py` 와 같은 모양"을 요구하며 도우미 추출을 요구하지 않는다. 도우미로 빼는 일은 위젯 변이 표를 다시 쓰는 별도 일이다.
+  - 남김: 표준 축이 `_run_tree`·`_pnpm`·`_read_report`·`_failures`·`_read_trace` 약 150줄의 복제(Duplicated Code)를 판단 항목으로 냈다. 이 세션은 복제를 유지한다. 근거는 위젯 변이 표(`file = "tests/test_widget_llm.py"` 를 겨누는 변이 둘)가 그 파일의 글자를 겨누는 것이다(Grep 으로 그 줄 둘을 셌다). 또 티켓 09 가 `tests/test_widget_llm.py` 와 같은 모양이라고 적으며 도우미 추출을 요구하지 않는다. 도우미로 빼는 일은 위젯 변이 표를 다시 쓰는 별도 일이다.
   - 표준 축의 `.scratch/harness/probes/README.md` 108행과 `llm_tokens_mutations.toml` 머리의 "-m llm 과 -m llm_widget"은 프로브 기록이라 두었다. 그 변이 표는 `--check` 에서 12 모두 원문이 있다.
 - 반영 뒤 다시 돌린 것(이 세션이 출력을 읽었다):
   - `uv run --env-file ../../../.env pytest -m llm_portal -q`: `1 passed, 6878 deselected in 124.26s`, `LLM 토큰 합계 6,937(입력 6,865, 출력 72). 트레이스 1개, 모델 호출 2건`.
@@ -74,6 +74,14 @@
 
 ## 인계
 
-컨텍스트가 인계 문턱(20만 토큰)을 넘은 채 셀프 리뷰 직전에 와서 `인계: 셀프 리뷰 직전`으로 넘겼다. 이 세션은 `/code-review`의 서브에이전트를 띄우지 않았다. 지시문은 스크래치패드 `directive-09.txt`에 있다. 잠금을 풀었다(`git worktree unlock`).
+첫 인계: 컨텍스트가 인계 문턱(20만 토큰)을 넘은 채 셀프 리뷰 직전에 와서 `인계: 셀프 리뷰 직전`으로 넘겼다. 이 세션은 `/code-review`의 서브에이전트를 띄우지 않았다. 지시문은 스크래치패드 `directive-09.txt`에 있다. 잠금을 풀었다(`git worktree unlock`).
 
 open-session을 부른다 2026-11-10T10:59:37Z
+
+둘째 인계(`인계: 커밋 뒤`): 이어받은 세션이 셀프 리뷰, 검증, 티켓 done까지 마치고 커밋 `0463e24e`를 만들었다. pre-commit 통과(출력 끝 `32 files changed`). 인용 대조 경고 둘은 일지의 따옴표를 떼어 처리했고 그 편집은 커밋하지 않았다. 남은 일은 푸시, PR 열기, 봇 회차, 병합(`merge.md`)이다. 컨텍스트가 인계 문턱을 넘은 채 커밋 뒤에 와서 넘긴다. 이 세션의 제목은 `feature/09-real-model-calc-on-portal (인계함)`으로 바꾼다.
+
+open-session을 부른다 2026-11-10T11:41:50Z
+
+열기가 폴더 오류로 멈췄다(2026-11-10T11:42Z). 새 세션 화면의 폴더가 C:\projectag-engine 이었고 보내지 않았다. 지시문은 새 세션 화면에 남아 있어 사람이 폴더와 모델을 맞춰 보낸다. 지시문 파일은 스크래치패드 directive-09-b.txt다. 같은 파일로 다시 돌리지 않는다.
+
+다시 열기(사용자 요청, 2026-11-10 21:25 로컬)는 sent= 로 끝났다. 폴더 C:\projectgent, 모델 Sonnet 5.5 / high. 앞의 폴더 오류 줄은 이 줄로 풀렸다.
