@@ -21,7 +21,7 @@ export function openWidget(query = QUERY): UserEvent {
 }
 
 export function requestBox(): HTMLElement {
-  return screen.getByRole("textbox", { name: "요청" });
+  return screen.getByRole("textbox", { name: "질문" });
 }
 
 export function sendButton(): HTMLElement {

@@ -19,7 +19,7 @@ const ANSWER_MS = 150_000;
 test("계산 에이전트가 위젯에서 보낸 요청 하나에 실제 모델로 답한다", async ({ page }) => {
   await page.goto(`${stack().siteOrigin}/?agent=${LLM_AGENT}`);
   const frame = page.frameLocator('iframe[title="위젯"]');
-  await frame.getByRole("textbox", { name: "요청" }).fill("2 더하기 3은?");
+  await frame.getByRole("textbox", { name: "질문" }).fill("2 더하기 3은?");
   await frame.getByRole("button", { name: "보내기" }).click();
 
   const conversation = frame.getByRole("region", { name: "대화" });

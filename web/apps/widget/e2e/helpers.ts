@@ -4,7 +4,7 @@ import type { FrameLocator, Page, Request } from "@playwright/test";
 
 /** 위젯의 입력창에 요청을 넣고 보낸다. iframe 위젯이면 그 프레임을, 페이지 안 위젯이면 페이지를 준다. */
 export async function send(scope: Page | FrameLocator, request: string): Promise<void> {
-  await scope.getByRole("textbox", { name: "요청" }).fill(request);
+  await scope.getByRole("textbox", { name: "질문" }).fill(request);
   await scope.getByRole("button", { name: "보내기" }).click();
 }
 

@@ -52,7 +52,7 @@ name = "묶음을 sub 로만 견주면 발급자가 다른 토큰의 시험이 �
 runner = "pages"
 tests = ["apps/widget/components/pages/WidgetStorage.test.tsx", "-t", "토큰의 발급자가"]
 expect = "red"
-expect_output = ["Unable to find an element with the text: 아래에 요청을 적어 보내 주세요."]
+expect_output = ["Unable to find an element with the text: 아래 입력창에 적어 보내 주세요."]
 
 [[mutation.edit]]
 file = "web/apps/widget/lib/storage.ts"
@@ -68,7 +68,7 @@ name = "묶음을 발급자로만 견주면 sub 가 다른 토큰의 시험이 �
 runner = "pages"
 tests = ["apps/widget/components/pages/WidgetStorage.test.tsx", "-t", "새로 고친 뒤 받은 토큰의 sub가"]
 expect = "red"
-expect_output = ["Unable to find an element with the text: 아래에 요청을 적어 보내 주세요."]
+expect_output = ["Unable to find an element with the text: 아래 입력창에 적어 보내 주세요."]
 
 [[mutation.edit]]
 file = "web/apps/widget/lib/storage.ts"

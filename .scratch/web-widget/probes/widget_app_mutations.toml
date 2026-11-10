@@ -414,10 +414,10 @@ expect_output = ["Snapshot: pages-widgetscreen--without-intro-light.png", "of al
 [[mutation.edit]]
 file = "web/apps/widget/components/molecules/Welcome.tsx"
 old = '''
-      <p className="text-small text-text-muted">아래에 요청을 적어 보내 주세요.</p>
+      <p className="text-small text-text-muted">아래 입력창에 적어 보내 주세요.</p>
 '''
 new = '''
-      <p className="text-small text-text">아래에 요청을 적어 보내 주세요.</p>
+      <p className="text-small text-text">아래 입력창에 적어 보내 주세요.</p>
 '''
 
 [[mutation]]

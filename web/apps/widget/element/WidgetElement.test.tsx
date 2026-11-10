@@ -57,7 +57,7 @@ test("붙이면 open 모드의 shadow root 안 감싼 요소에 위젯이 그려
   expect(root.parentNode).toBe(host.shadowRoot);
   expect(within(root).getByRole("heading", { name: "주문 도우미" })).toBeTruthy();
   expect(within(root).getByText("주문을 찾아 드립니다.")).toBeTruthy();
-  expect(within(root).getByRole("textbox", { name: "요청" })).toBeTruthy();
+  expect(within(root).getByRole("textbox", { name: "질문" })).toBeTruthy();
   // 위젯은 light DOM 에 아무것도 그리지 않는다.
   expect(screen.queryByRole("heading")).toBeNull();
 });
@@ -81,18 +81,18 @@ test("agent 를 바꾸면 위젯을 새로 띄워 대화를 새로 시작하고,
   // 대화의 상태(이어 갈 실행, 초안)는 위젯 한 벌이 든다. jsdom 의 shadow root 에서는 user-event 로 친 글자가 React 의
   // onChange 에 닿지 않아(ADR 0024) 초안 대신 입력창이 새 요소인지로 본다.
   const host = mount(define(), { agent: "order-helper" });
-  const first = within(wrapper(host)).getByRole("textbox", { name: "요청" });
+  const first = within(wrapper(host)).getByRole("textbox", { name: "질문" });
 
   act(() => {
     host.setAttribute("heading", "주문 도우미");
     host.setAttribute("theme", "jacho");
   });
-  expect(within(wrapper(host)).getByRole("textbox", { name: "요청" })).toBe(first);
+  expect(within(wrapper(host)).getByRole("textbox", { name: "질문" })).toBe(first);
 
   act(() => {
     host.setAttribute("agent", "refund-helper");
   });
-  expect(within(wrapper(host)).getByRole("textbox", { name: "요청" })).not.toBe(first);
+  expect(within(wrapper(host)).getByRole("textbox", { name: "질문" })).not.toBe(first);
 });
 
 test("잘못 준 agent 는 위험 알림과 막힌 입력창, 그 속성 이름을 든 console.error 를 남긴다", () => {
@@ -101,7 +101,7 @@ test("잘못 준 agent 는 위험 알림과 막힌 입력창, 그 속성 이름�
 
   const root = wrapper(host);
   expect(within(root).getByText("위젯 설정이 올바르지 않습니다.")).toBeTruthy();
-  expect(within(root).getByRole("textbox", { name: "요청" })).toHaveProperty("disabled", true);
+  expect(within(root).getByRole("textbox", { name: "질문" })).toHaveProperty("disabled", true);
   const logged = errors.mock.calls.map((call) => String(call[0]));
   expect(logged.filter((line) => line.startsWith("위젯 속성 agent: "))).toHaveLength(1);
   expect(logged.filter((line) => line.startsWith("위젯 속성 mode: "))).toHaveLength(1);
@@ -115,7 +115,7 @@ test("번들의 기준 주소가 없으면 위험 알림과 console.error 를 �
 
   const root = wrapper(host);
   expect(within(root).getByText("위젯 설정이 올바르지 않습니다.")).toBeTruthy();
-  expect(within(root).getByRole("textbox", { name: "요청" })).toHaveProperty("disabled", true);
+  expect(within(root).getByRole("textbox", { name: "질문" })).toHaveProperty("disabled", true);
   const logged = errors.mock.calls.map((call) => String(call[0]));
   expect(logged.filter((line) => line.includes("document.currentScript"))).toHaveLength(1);
 });
@@ -145,5 +145,5 @@ test("떼면 그림을 걷고, 다시 붙이면 다시 그린다", () => {
   act(() => {
     document.body.append(host);
   });
-  expect(within(wrapper(host)).getByRole("textbox", { name: "요청" })).toBeTruthy();
+  expect(within(wrapper(host)).getByRole("textbox", { name: "질문" })).toBeTruthy();
 });
