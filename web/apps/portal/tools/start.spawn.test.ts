@@ -4,6 +4,7 @@
 // `node:http` 다(전역 `fetch` 금지). 운영체제별 명령에 기대지 않아 윈도우와 CI 의 ubuntu 에서 같이 돈다.
 
 import { type ChildProcess, spawn, spawnSync } from "node:child_process";
+import { readFileSync } from "node:fs";
 import { request } from "node:http";
 import { createServer, type Server } from "node:net";
 import { join } from "node:path";
@@ -93,11 +94,66 @@ test("맞는 설정과 사이트 파일이면 시작 로그 한 줄을 찍고 he
     const health = await get(port, "/portal/health");
     expect(health.status).toBe(200);
     expect(JSON.parse(health.body)).toEqual({ status: "ok" });
-    // 이 티켓에는 페이지가 없어 그 밖의 경로는 404 다.
-    expect((await get(port, "/portal/")).status).toBe(404);
+    // 페이지와 정적 파일은 시작 때 지어 두었으므로 첫 요청부터 답한다.
+    const page = await get(port, "/portal/");
+    expect(page.status).toBe(200);
+    expect(page.body).toContain("<agent-os-widget>");
+    expect((await get(port, "/portal/portal.js")).status).toBe(200);
+    expect((await get(port, "/portal/theme.css")).body).toContain("--bg-raised");
+    expect((await get(port, "/portal/nothing")).status).toBe(404);
   } finally {
     child.kill();
   }
+});
+
+/** 출력을 모아 서서 첫 줄을 찍은 뒤 끝낸다. `nodeFlags` 는 `package.json` 의 `start` 가 node 에 주는 인자다. */
+async function runUntilListening(
+  nodeFlags: readonly string[],
+): Promise<{ stdout: string; stderr: string; port: number }> {
+  const port = await freePort();
+  const setup = writeSetup({ config: withPort(port) });
+  const child = spawn(
+    process.execPath,
+    [...nodeFlags, START, "--config", setup.configPath, "--site-file", setup.siteFilePath],
+    { stdio: ["ignore", "pipe", "pipe"] },
+  );
+  let stderr = "";
+  child.stderr.setEncoding("utf-8");
+  child.stderr.on("data", (chunk: string) => (stderr += chunk));
+  try {
+    const line = await firstLine(child);
+    await get(port, "/portal/");
+    await get(port, "/portal/theme.css");
+    return { stdout: `${line}\n`, stderr, port };
+  } finally {
+    child.kill();
+  }
+}
+
+test("실험 기능 경고만 끄고 시작하면 stderr 는 비고 stdout 은 시작 로그 한 줄이다", async () => {
+  const run = await runUntilListening(["--disable-warning=ExperimentalWarning"]);
+
+  expect(run.stderr).toBe("");
+  expect(run.stdout.split("\n")).toEqual([
+    `질문 페이지가 http://127.0.0.1:${String(run.port)}/portal/ 에 섰다. 사이트 1개.`,
+    "",
+  ]);
+  // 키 파일의 글과 쿠키 이름이 출력에 실리지 않는다.
+  expect(run.stdout + run.stderr).not.toMatch(/PRIVATE KEY|portal_anon/u);
+});
+
+test("package.json 의 start 가 실험 기능 경고를 끄는 인자를 node 에 준다", () => {
+  const manifest = readFileSync(join(import.meta.dirname, "..", "package.json"), "utf-8");
+
+  expect(manifest).toContain(
+    '"start": "node --disable-warning=ExperimentalWarning tools/start.ts"',
+  );
+});
+
+test("경고를 끄지 않으면 stderr 에 실험 기능 경고가 찍힌다(끄는 인자가 필요한 까닭)", async () => {
+  const run = await runUntilListening([]);
+
+  expect(run.stderr).toContain("ExperimentalWarning");
 });
 
 test("상대 경로로 준 파일을 래퍼를 부른 자리에서 찾는다", async () => {

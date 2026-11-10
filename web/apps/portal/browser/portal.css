@@ -1,0 +1,73 @@
+/*
+ * 질문 페이지의 페이지 CSS(pilot-portal 명세 "모양"). 손으로 쓴 파일 하나이고 서버가 시작 때 읽어 `/portal/portal.css` 로 낸다.
+ * 클래스 이름은 모두 `pp-` 접두이고, 색과 글꼴과 모서리와 밀도를 따르는 글자는 디자인 토큰을 `var(--…)` 로만 읽는다.
+ * 토큰 CSS(`/portal/theme.css`) 산출의 유틸리티 클래스는 쓰지 않는다. 밀도는 뿌리의 `data-density="regular"` 가 정한다.
+ * 이 티켓이 그리는 것은 위쪽 띠의 자리와 위젯 자리와 위젯이다. 위쪽 띠의 내용, 덮개, 단추 줄은 뒤 티켓이 같은 접두로 더한다.
+ */
+
+.pp-body {
+  display: flex;
+  min-height: 100dvh;
+  flex-direction: column;
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--sans);
+  font-size: var(--body-size);
+  line-height: var(--body-lh);
+}
+
+/* 위쪽 띠. 내용은 08 이 채우고 여기서는 본문과 가르는 경계선 한 줄을 둔 자리다. */
+.pp-band {
+  box-sizing: border-box;
+  min-height: 56px;
+  border-bottom: 1px solid var(--border);
+}
+
+.pp-main {
+  box-sizing: border-box;
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 16px;
+}
+
+/* 폭 400px, 높이 560px. 좁은 폭에서는 좌우 16px 여백(위 padding)에 남은 폭을 쓴다. */
+.pp-widget {
+  box-sizing: border-box;
+  width: 400px;
+  max-width: 100%;
+  height: 560px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-l);
+  background: var(--bg-raised);
+  /* 떠 있는 것의 그림자. 원천은 `theme.css` 의 `--shadow-float` 이고 값이 같다. */
+  box-shadow:
+    0 8px 24px var(--shadow-color),
+    0 1px 2px var(--shadow-color);
+}
+
+.pp-widget > * {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* 화면 읽기 프로그램만 읽는다. 제목은 위젯 안에도 보이므로 화면에는 겹쳐 두지 않는다. */
+.pp-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  border: 0;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.pp-main > noscript {
+  color: var(--text-muted);
+}

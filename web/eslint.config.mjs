@@ -108,6 +108,17 @@ const HTTP_GLOBALS = [
   })),
 ];
 
+// 전역 객체의 프로퍼티로 같은 HTTP 전역을 부르는 길(`window.fetch` 등)도 같은 목록으로 막는다.
+const restrictedProperties = (globals) =>
+  ["globalThis", "window", "self"].flatMap((object) =>
+    globals.map(({ name, message }) => ({ object, property: name, message })),
+  );
+
+// 질문 페이지의 페이지 스크립트 파일 하나. 이 파일만 전역 `fetch` 를 쓴다(pilot-portal 명세 "전역 `fetch` 금지의 예외").
+// 부르는 것이 Agent OS 의 API 가 아니라 질문 페이지 자신의 토큰 끝점이라 생성 클라이언트를 거치지 않는다.
+const PORTAL_PAGE_SCRIPT = "**/apps/portal/browser/portal.ts";
+const HTTP_GLOBALS_WITHOUT_FETCH = HTTP_GLOBALS.filter(({ name }) => name !== "fetch");
+
 // 생성 클라이언트 패키지(ADR 0021). 앱이 워크스페이스 의존성으로 든다.
 const API_CLIENT = "@agent-os/api-client";
 
@@ -208,12 +219,7 @@ export default defineConfig(
     rules: {
       "no-restricted-syntax": ["error", ...RESTRICTED_SYNTAX],
       "no-restricted-globals": ["error", ...HTTP_GLOBALS],
-      "no-restricted-properties": [
-        "error",
-        ...["globalThis", "window", "self"].flatMap((object) =>
-          HTTP_GLOBALS.map(({ name, message }) => ({ object, property: name, message })),
-        ),
-      ],
+      "no-restricted-properties": ["error", ...restrictedProperties(HTTP_GLOBALS)],
       "no-restricted-imports": [
         "error",
         { paths: [ICON_SET_IMPORT, OPENAPI_FETCH_IMPORT], patterns: [API_CLIENT_INTERNALS] },
@@ -295,6 +301,15 @@ export default defineConfig(
         "error",
         { paths: [ICON_SET_IMPORT], patterns: [API_CLIENT_INTERNALS] },
       ],
+    },
+  },
+  {
+    // 질문 페이지의 페이지 스크립트 파일 하나만 전역 `fetch` 를 푼다. 규칙을 끄지 않고 `fetch` 를 뺀 목록으로 다시 건다.
+    // 같은 앱의 다른 파일은 그대로 막히고, 이 파일에서도 EventSource 와 XMLHttpRequest 는 막힌다.
+    files: [PORTAL_PAGE_SCRIPT],
+    rules: {
+      "no-restricted-globals": ["error", ...HTTP_GLOBALS_WITHOUT_FETCH],
+      "no-restricted-properties": ["error", ...restrictedProperties(HTTP_GLOBALS_WITHOUT_FETCH)],
     },
   },
   {

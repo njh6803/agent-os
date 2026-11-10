@@ -2,7 +2,7 @@
 
 import { createHash, createPrivateKey, createPublicKey, verify } from "node:crypto";
 import { expect, test } from "vitest";
-import { rsaKey } from "../testing/fixtures.ts";
+import { rsaKey, testAssets } from "../testing/fixtures.ts";
 import type { Cookie } from "./cookies.ts";
 import { handle, type PortalRequest, type PortalResponse } from "./handler.ts";
 import type { PortalContext } from "./context.ts";
@@ -29,6 +29,7 @@ function context(overrides: Partial<PortalContext> = {}): PortalContext {
       { name: "wide", issuer: "https://wide.example", audience: "wide-aud", assurance: "both" },
       { name: "gate", issuer: "https://gate.example", audience: "agent-os", assurance: "login" },
     ],
+    assets: testAssets(),
     now: () => NOW_MS,
     newAnonymousId: () => FRESH_ID,
     ...overrides,
@@ -38,10 +39,18 @@ function context(overrides: Partial<PortalContext> = {}): PortalContext {
 interface Extras {
   readonly headers?: Record<string, string>;
   readonly cookies?: readonly Cookie[];
+  /** 물음표를 포함한 질의. 주지 않으면 비어 있다. */
+  readonly query?: string;
 }
 
 function request(method: string, path: string, extras: Extras = {}): PortalRequest {
-  return { method, path, headers: extras.headers ?? {}, cookies: extras.cookies ?? [] };
+  return {
+    method,
+    path,
+    query: extras.query ?? "",
+    headers: extras.headers ?? {},
+    cookies: extras.cookies ?? [],
+  };
 }
 
 function call(method: string, path: string, extras: Extras = {}, ctx = context()): PortalResponse {
@@ -66,10 +75,127 @@ test("health 는 살아 있다고 JSON 으로 답하고 캐시하지 않는다",
 
 test("모르는 경로는 404 다", () => {
   expect(call("GET", "/nothing").status).toBe(404);
-  // 이 티켓에는 페이지가 없다. 끝 슬래시가 없는 /portal 도 모르는 경로다.
-  expect(call("GET", "/portal/").status).toBe(404);
+  // 끝 슬래시가 없는 /portal 은 넘기지 않고 404 다(운영의 프록시가 그 경로를 404 로 답한다).
   expect(call("GET", "/portal").status).toBe(404);
-  expect(call("GET", "/").status).toBe(404);
+  expect(call("GET", "/portal/nothing").status).toBe(404);
+  expect(call("GET", "/portal/portal.js/extra").status).toBe(404);
+});
+
+const CSP =
+  "default-src 'none'; script-src 'self'; connect-src 'self'; style-src 'self'; font-src 'self'; img-src 'self'; frame-ancestors 'none'; base-uri 'none'";
+
+test("페이지는 질의와 쿠키를 보지 않고 같은 HTML 을 낸다", () => {
+  const plain = call("GET", "/portal/");
+  const withQuery = call("GET", "/portal/", {
+    query: "?site=other",
+    cookies: [anon(ID)],
+    headers: { cookie: `portal_anon=${ID}` },
+  });
+
+  expect(plain.status).toBe(200);
+  expect(plain.headers["Content-Type"]).toBe("text/html; charset=utf-8");
+  expect(plain.body).toBe(testAssets().page.body);
+  expect(withQuery.body).toBe(plain.body);
+});
+
+test("페이지 응답의 Content-Security-Policy 는 글자 그대로다", () => {
+  const response = call("GET", "/portal/");
+
+  expect(response.headers["Content-Security-Policy"]).toBe(CSP);
+});
+
+test("페이지와 정적 파일은 no-cache 와 ETag 와 nosniff 를 단다", () => {
+  for (const path of ["/portal/", "/portal/portal.js", "/portal/portal.css", "/portal/theme.css"]) {
+    const response = call("GET", path);
+
+    expect(response.status, path).toBe(200);
+    expect(response.headers["Cache-Control"], path).toBe("no-cache");
+    expect(response.headers["ETag"], path).toMatch(/^"[0-9a-f]{32}"$/u);
+    expect(response.headers["X-Content-Type-Options"], path).toBe("nosniff");
+  }
+});
+
+test("정적 파일의 콘텐츠 타입은 명세 표대로다", () => {
+  const types = (path: string): string | undefined => call("GET", path).headers["Content-Type"];
+
+  expect(types("/portal/portal.js")).toBe("text/javascript; charset=utf-8");
+  expect(types("/portal/portal.css")).toBe("text/css; charset=utf-8");
+  expect(types("/portal/theme.css")).toBe("text/css; charset=utf-8");
+  expect(types("/portal/fonts.css")).toBe("text/css; charset=utf-8");
+  expect(types("/portal/fonts/font-a.woff2")).toBe("font/woff2");
+});
+
+test("조건부 요청이 같은 ETag 를 보내면 304 와 빈 본문으로 답한다", () => {
+  for (const path of ["/portal/", "/portal/portal.js", "/portal/fonts/font-a.woff2"]) {
+    const first = call("GET", path);
+    const etag = first.headers["ETag"] ?? "";
+
+    const second = call("GET", path, { headers: { "if-none-match": etag } });
+
+    expect(second.status, path).toBe(304);
+    expect(second.body, path).toBe("");
+    expect(second.headers["ETag"], path).toBe(etag);
+    expect(second.headers["Cache-Control"], path).toBe("no-cache");
+    expect(second.file, path).toBeUndefined();
+  }
+});
+
+const PAGE_ETAG = call("GET", "/portal/").headers["ETag"] ?? "";
+
+function conditional(value: string): number {
+  return call("GET", "/portal/", { headers: { "if-none-match": value } }).status;
+}
+
+test("다른 ETag 를 보내면 304 가 아니라 200 이다", () => {
+  expect(conditional('"other"')).toBe(200);
+});
+
+test("쉼표로 이은 목록의 가운데에 같은 ETag 가 있으면 304 다", () => {
+  expect(conditional(`"x", ${PAGE_ETAG}`)).toBe(304);
+});
+
+test("약한 표시(W/)가 붙은 같은 ETag 도 304 다", () => {
+  expect(conditional(`W/${PAGE_ETAG}`)).toBe(304);
+});
+
+test("별표는 어느 ETag 와도 맞아 304 다", () => {
+  expect(conditional("*")).toBe(304);
+});
+
+test("글꼴 파일은 목록의 이름만 파일 경로로 내고 본문은 비운다", () => {
+  const response = call("GET", "/portal/fonts/font-a.woff2");
+
+  expect(response.status).toBe(200);
+  expect(response.body).toBe("");
+  expect(response.file).toBe(testAssets().fonts.get("font-a.woff2")?.path);
+  expect(response.headers["Content-Length"]).toBe("3");
+});
+
+test("글꼴 목록 밖 이름은 404 다", () => {
+  expect(call("GET", "/portal/fonts/not-in-list.woff2").status).toBe(404);
+  expect(call("GET", "/portal/fonts/").status).toBe(404);
+  // 경로를 거슬러 오르는 이름도 목록에 없어 404 다.
+  expect(call("GET", "/portal/fonts/../portal.js").status).toBe(404);
+  expect(call("GET", "/portal/fonts/%2e%2e%2fportal.js").status).toBe(404);
+});
+
+test("루트는 질의를 그대로 붙여 /portal/ 로 302 한다", () => {
+  const plain = call("GET", "/");
+  const withQuery = call("GET", "/", { query: "?site=other&x=1" });
+
+  expect(plain.status).toBe(302);
+  expect(plain.headers["Location"]).toBe("/portal/");
+  expect(withQuery.status).toBe(302);
+  expect(withQuery.headers["Location"]).toBe("/portal/?site=other&x=1");
+});
+
+test("정적 경로와 루트의 다른 메서드는 405 와 Allow 로 답한다", () => {
+  for (const path of ["/", "/portal/", "/portal/portal.js", "/portal/fonts/font-a.woff2"]) {
+    const response = call("POST", path);
+
+    expect(response.status, path).toBe(405);
+    expect(response.headers["Allow"], path).toBe("GET");
+  }
 });
 
 test("아는 경로의 다른 메서드는 405 와 Allow 로 답한다", () => {

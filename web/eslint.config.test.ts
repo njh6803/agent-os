@@ -22,7 +22,14 @@ const ESLINT_BIN = join(WEB, "node_modules", "eslint", "bin", "eslint.js");
 const API_CLIENT = join(WEB, "packages", "api-client");
 
 // 자기 tsconfig 를 두는 자리. 임시 트리 뿌리에는 tsconfig 가 없다.
-const PROJECTS = ["apps/admin", "apps/widget", "packages/api-client", "packages/ui", "cli"];
+const PROJECTS = [
+  "apps/admin",
+  "apps/portal",
+  "apps/widget",
+  "packages/api-client",
+  "packages/ui",
+  "cli",
+];
 
 // 경로 참조(`/// <reference path>`). 디자인 시스템 패키지의 Icon.tsx 에서만 푼다.
 const PATH_REFERENCE = '/// <reference path="./glyphs.d.ts" />\nexport const 아이콘 = 1;\n';
@@ -205,6 +212,11 @@ const SOURCES: Readonly<Record<string, string>> = {
   "apps/admin/app/settings/page.ts":
     'import { 종류 } from "../../lib/kinds";\n\nexport const 설정 = 종류;\n',
   "apps/widget/lib/widget.ts": "export const 위젯 = 1;\n",
+  // 질문 페이지의 페이지 스크립트 파일 하나만 전역 fetch 를 푼다. 같은 앱의 다른 파일은 그대로 막힌다.
+  "apps/portal/browser/portal.ts":
+    'export async function 부른다(): Promise<Response> {\n  return fetch("/portal/sites/demo/token", { method: "POST" });\n}\n',
+  "apps/portal/server/fetch.ts":
+    'export async function 부른다(): Promise<Response> {\n  return fetch("/portal/sites/demo/token", { method: "POST" });\n}\n',
   "packages/api-client/src/client.ts":
     'export function 부른다(): Promise<Response> {\n  return fetch("/api/runs");\n}\n',
   "packages/api-client/src/global-fetch.ts":
@@ -430,6 +442,11 @@ const RED: readonly RedCase[] = [
     rule: "no-restricted-properties",
   },
   {
+    name: "질문 페이지 앱의 페이지 스크립트가 아닌 파일의 전역 fetch",
+    path: "apps/portal/server/fetch.ts",
+    rule: "no-restricted-globals",
+  },
+  {
     name: "디자인 시스템 패키지의 Icon.tsx 밖의 경로 참조",
     path: "packages/ui/src/components/atoms/Button.tsx",
     rule: "@typescript-eslint/triple-slash-reference",
@@ -534,6 +551,10 @@ const GREEN: readonly { readonly name: string; readonly path: string }[] = [
   {
     name: "디자인 시스템 패키지의 Icon.tsx 가 아이콘 모듈 선언을 경로로 참조",
     path: "packages/ui/src/components/atoms/Icon.tsx",
+  },
+  {
+    name: "질문 페이지 앱의 페이지 스크립트 파일의 전역 fetch",
+    path: "apps/portal/browser/portal.ts",
   },
 ];
 
@@ -669,6 +690,23 @@ describe("실제 생성 클라이언트 자리", () => {
     const source = `${readFileSync(path, "utf-8")}\nexport const 부른다 = (): Promise<Response> => fetch("/api/runs");\n`;
 
     expect(await ruleIdsAt(path, source)).toContain("no-restricted-globals");
+  });
+});
+
+// 페이지 스크립트 파일에서도 fetch 밖의 HTTP 전역은 막힌다. 임시 트리의 그 파일 자리에 XMLHttpRequest 를 넣어 잰다.
+describe("질문 페이지의 페이지 스크립트 자리", () => {
+  test("그 파일에서도 XMLHttpRequest 는 빨갛다", async () => {
+    const path = join(fixture, "apps/portal/browser/portal.ts");
+    const source = "export const 요청 = new XMLHttpRequest();\n";
+
+    expect(await ruleIdsAt(path, source)).toContain("no-restricted-globals");
+  });
+
+  test("그 파일에서 window 로 부른 EventSource 도 빨갛다", async () => {
+    const path = join(fixture, "apps/portal/browser/portal.ts");
+    const source = 'export const 연결 = new window.EventSource("/portal/events");\n';
+
+    expect(await ruleIdsAt(path, source)).toContain("no-restricted-properties");
   });
 });
 

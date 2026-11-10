@@ -1,0 +1,310 @@
+# pilot-portal 티켓 06(질문 페이지가 위젯을 그린다)의 변이 표. 페이지·정적 파일·글꼴·루트 넘김·중계 상류의 시험은 구현 전에
+# 모듈이 없어 빨갰을 뿐이라 단언 하나하나의 빨강은 보지 못했다. 변이마다 그 단언이 재는 줄 하나만 바꾸고 그 사례로 좁혀(`-t`)
+# 빨개지는지 본다. ESLint 설정 변이 하나는 `web/eslint.config.test.ts` 의 사례 이름 머리 "질문 페이지" 로 좁힌다.
+#   PYTHONUTF8=1 uv run python tools/mutate.py .scratch/pilot-portal/probes/page_and_static_mutations.toml [번호 ...]
+# 표지는 변이를 넣어 본 실패 출력에서 고른 것이다(표지를 맞지 않는 값으로 둔 사본으로 돌려 `표지 없음` 줄 밑의 출력을 읽었다).
+# 네트워크를 타지 않는다. `uv sync` 와 `pnpm -C web install` 이 된 체크아웃에서 돈다.
+
+[runner.node]
+command = ["pnpm", "exec", "vitest", "run", "--project", "node"]
+cwd = "web"
+judge = "vitest"
+
+# --- 처리기: 페이지 응답 ----------------------------------------------------------------------------------------
+
+[[mutation]]
+name = "CSP 에서 frame-ancestors 를 빼면 글자 그대로 견주는 사례가 빨갛다"
+runner = "node"
+tests = ["apps/portal/server/handler.test.ts", "-t", "Content-Security-Policy 는 글자 그대로다"]
+expect = "red"
+expect_output = ["img-src 'self'; base-uri 'none'"]
+
+[[mutation.edit]]
+file = "web/apps/portal/server/handler.ts"
+old = '''frame-ancestors 'none'; base-uri 'none''''
+new = '''base-uri 'none''''
+
+[[mutation]]
+name = "페이지 응답에서 CSP 머리글을 빼면 글자 그대로 견주는 사례가 빨갛다"
+runner = "node"
+tests = ["apps/portal/server/handler.test.ts", "-t", "Content-Security-Policy 는 글자 그대로다"]
+expect = "red"
+expect_output = ["AssertionError: expected undefined to be 'default-src"]
+
+[[mutation.edit]]
+file = "web/apps/portal/server/handler.ts"
+old = '''      return staticFile(request, assets.page, { "Content-Security-Policy": PAGE_CSP });'''
+new = '''      return staticFile(request, assets.page);'''
+
+[[mutation]]
+name = "루트의 302 가 질의를 버리면 질의를 지키는 사례가 빨갛다"
+runner = "node"
+tests = ["apps/portal/server/handler.test.ts", "-t", "루트는 질의를 그대로 붙여"]
+expect = "red"
+expect_output = ["expected '/portal/' to be '/portal/?site=other&x=1'"]
+
+[[mutation.edit]]
+file = "web/apps/portal/server/handler.ts"
+old = '''      Location: `${PAGE}${request.query}`,'''
+new = '''      Location: PAGE,'''
+
+[[mutation]]
+name = "루트가 POST 도 넘기면 405 사례가 빨갛다"
+runner = "node"
+tests = ["apps/portal/server/handler.test.ts", "-t", "정적 경로와 루트의 다른 메서드는 405"]
+expect = "red"
+expect_output = ["AssertionError: /: expected 302 to be 405"]
+
+[[mutation.edit]]
+file = "web/apps/portal/server/handler.ts"
+old = '''    return request.method === "GET" ? redirectToPage(request) : methodNotAllowed("GET");'''
+new = '''    return redirectToPage(request);'''
+
+# --- 처리기: 조건부 요청 ----------------------------------------------------------------------------------------
+
+[[mutation]]
+name = "약한 표시(W/)를 벗기지 않으면 W/ ETag 가 304 가 아니다"
+runner = "node"
+tests = ["apps/portal/server/handler.test.ts", "-t", "가 붙은 같은 ETag 도 304 다"]
+expect = "red"
+expect_output = ["AssertionError: expected 200 to be 304"]
+
+[[mutation.edit]]
+file = "web/apps/portal/server/handler.ts"
+old = '''.map((tag) => tag.trim().replace(/^W\//u, ""))'''
+new = '''.map((tag) => tag.trim())'''
+
+[[mutation]]
+name = "별표를 맞는 것으로 치지 않으면 If-None-Match * 가 304 가 아니다"
+runner = "node"
+tests = ["apps/portal/server/handler.test.ts", "-t", "별표는 어느 ETag 와도 맞아"]
+expect = "red"
+expect_output = ["AssertionError: expected 200 to be 304"]
+
+[[mutation.edit]]
+file = "web/apps/portal/server/handler.ts"
+old = '''.some((tag) => tag === "*" || tag === etag);'''
+new = '''.some((tag) => tag === etag);'''
+
+[[mutation]]
+name = "쉼표로 가르지 않으면 목록 가운데의 ETag 가 304 가 아니다"
+runner = "node"
+tests = ["apps/portal/server/handler.test.ts", "-t", "쉼표로 이은 목록의 가운데"]
+expect = "red"
+expect_output = ["AssertionError: expected 200 to be 304"]
+
+[[mutation.edit]]
+file = "web/apps/portal/server/handler.ts"
+old = '''    .split(",")'''
+new = '''    .split(";")'''
+
+[[mutation]]
+name = "304 가 Cache-Control 을 빼면 조건부 요청 사례가 빨갛다"
+runner = "node"
+tests = ["apps/portal/server/handler.test.ts", "-t", "조건부 요청이 같은 ETag 를 보내면"]
+expect = "red"
+expect_output = ["AssertionError: /portal/: expected undefined to be 'no-cache'"]
+
+[[mutation.edit]]
+file = "web/apps/portal/server/handler.ts"
+old = '''    headers: { ...SECURITY_HEADERS, ETag: etag, "Cache-Control": NO_CACHE },'''
+new = '''    headers: { ...SECURITY_HEADERS, ETag: etag },'''
+
+[[mutation]]
+name = "정적 파일이 Cache-Control 을 빼면 no-cache 사례가 빨갛다"
+runner = "node"
+tests = ["apps/portal/server/handler.test.ts", "-t", "no-cache 와 ETag 와 nosniff"]
+expect = "red"
+expect_output = ["AssertionError: /portal/: expected undefined to be 'no-cache'"]
+
+[[mutation.edit]]
+file = "web/apps/portal/server/handler.ts"
+old = '''    "Cache-Control": NO_CACHE,
+    ETag: file.etag,'''
+new = '''    ETag: file.etag,'''
+
+[[mutation]]
+name = "정적 파일이 메서드를 보지 않으면 405 사례가 빨갛다"
+runner = "node"
+tests = ["apps/portal/server/handler.test.ts", "-t", "정적 경로와 루트의 다른 메서드는 405"]
+expect = "red"
+expect_output = ["AssertionError: /portal/: expected 200 to be 405"]
+
+[[mutation.edit]]
+file = "web/apps/portal/server/handler.ts"
+old = '''  if (request.method !== "GET") {
+    return methodNotAllowed("GET");
+  }
+  if (matches(request, file.etag)) {'''
+new = '''  if (matches(request, file.etag)) {'''
+
+# --- 처리기: 글꼴 ----------------------------------------------------------------------------------------------
+
+[[mutation]]
+name = "글꼴의 콘텐츠 타입이 바뀌면 타입 사례가 빨갛다"
+runner = "node"
+tests = ["apps/portal/server/handler.test.ts", "-t", "정적 파일의 콘텐츠 타입은 명세 표대로다"]
+expect = "red"
+expect_output = ['Received: "application/octet-stream"']
+
+[[mutation.edit]]
+file = "web/apps/portal/server/handler.ts"
+old = '''      "Content-Type": "font/woff2",'''
+new = '''      "Content-Type": "application/octet-stream",'''
+
+[[mutation]]
+name = "글꼴이 Content-Length 를 빼면 글꼴 사례가 빨갛다"
+runner = "node"
+tests = ["apps/portal/server/handler.test.ts", "-t", "글꼴 파일은 목록의 이름만"]
+expect = "red"
+expect_output = ["AssertionError: expected undefined to be '3'"]
+
+[[mutation.edit]]
+file = "web/apps/portal/server/handler.ts"
+old = '''      "Content-Length": String(font.size),
+'''
+new = ''''''
+
+[[mutation]]
+name = "글꼴이 메서드를 보지 않으면 405 사례가 빨갛다"
+runner = "node"
+tests = ["apps/portal/server/handler.test.ts", "-t", "정적 경로와 루트의 다른 메서드는 405"]
+expect = "red"
+expect_output = ["AssertionError: /portal/fonts/font-a.woff2: expected 200 to be 405"]
+
+[[mutation.edit]]
+file = "web/apps/portal/server/handler.ts"
+old = '''  if (request.method !== "GET") {
+    return methodNotAllowed("GET");
+  }
+  if (matches(request, font.etag)) {'''
+new = '''  if (matches(request, font.etag)) {'''
+
+# --- 페이지 HTML -----------------------------------------------------------------------------------------------
+
+[[mutation]]
+name = "JSON 의 꺾쇠를 글자 코드로 바꾸지 않으면 </script> 사례가 빨갛다"
+runner = "node"
+tests = ["apps/portal/server/page.test.ts", "-t", "</script> 가 든 고지 글을 이스케이프"]
+expect = "red"
+expect_output = ["to have a length of 3 but got 4"]
+
+[[mutation.edit]]
+file = "web/apps/portal/server/page.ts"
+old = '''  return JSON.stringify(value).replace(/</gu, "\\u003c");'''
+new = '''  return JSON.stringify(value);'''
+
+[[mutation]]
+name = "heading 의 앰퍼샌드를 이스케이프하지 않으면 이스케이프 사례가 빨갛다"
+runner = "node"
+tests = ["apps/portal/server/page.test.ts", "-t", "heading 의 꺾쇠와 앰퍼샌드와 따옴표는"]
+expect = "red"
+expect_output = ["&quot;A&quot; & &#39;B&#39;"]
+
+[[mutation.edit]]
+file = "web/apps/portal/server/page.ts"
+old = '''  "&": "&amp;",'''
+new = '''  "&": "&",'''
+
+[[mutation]]
+name = "h1 에 이스케이프하지 않은 heading 을 넣으면 이스케이프 사례가 빨갛다"
+runner = "node"
+tests = ["apps/portal/server/page.test.ts", "-t", "heading 의 꺾쇠와 앰퍼샌드와 따옴표는"]
+expect = "red"
+expect_output = ["not to contain '<b>'"]
+
+[[mutation.edit]]
+file = "web/apps/portal/server/page.ts"
+old = '''id="pp-heading">${heading}</h1>`,'''
+new = '''id="pp-heading">${first.heading}</h1>`,'''
+
+[[mutation]]
+name = "뿌리의 lang 이 바뀌면 뿌리 사례가 빨갛다"
+runner = "node"
+tests = ["apps/portal/server/page.test.ts", "-t", "뿌리에 한국어와 보통 밀도와"]
+expect = "red"
+expect_output = ['<html lang="en" data…']
+
+[[mutation.edit]]
+file = "web/apps/portal/server/page.ts"
+old = '''<html lang="ko" data-density="regular"'''
+new = '''<html lang="en" data-density="regular"'''
+
+[[mutation]]
+name = "모드가 없는 첫 사이트에도 data-mode 를 달면 빈 모드 사례가 빨갛다"
+runner = "node"
+tests = ["apps/portal/server/page.test.ts", "-t", "첫 사이트에 모드가 없으면"]
+expect = "red"
+expect_output = ['data-mode="">']
+
+[[mutation.edit]]
+file = "web/apps/portal/server/page.ts"
+old = '''  const mode = first.mode === undefined ? "" : ` data-mode="${first.mode}"`;'''
+new = '''  const mode = ` data-mode="${first.mode ?? ""}"`;'''
+
+[[mutation]]
+name = "위젯 번들이 페이지 스크립트보다 앞서 돌면 순서 사례가 빨갛다"
+runner = "node"
+tests = ["apps/portal/server/page.test.ts", "-t", "페이지 스크립트가 위젯 번들보다 앞서 돈다"]
+expect = "red"
+expect_output = ["AssertionError: expected false to be true"]
+
+[[mutation.edit]]
+file = "web/apps/portal/server/page.ts"
+old = '''    `<script defer src="${PAGE_SCRIPT}"></script>`,
+    `<script defer src="${WIDGET_BUNDLE}"></script>`,'''
+new = '''    `<script defer src="${WIDGET_BUNDLE}"></script>`,
+    `<script defer src="${PAGE_SCRIPT}"></script>`,'''
+
+[[mutation]]
+name = "noscript 를 빼면 스크립트를 끈 브라우저 사례가 빨갛다"
+runner = "node"
+tests = ["apps/portal/server/page.test.ts", "-t", "스크립트를 끈 브라우저에 보일 한 줄"]
+expect = "red"
+expect_output = ["to contain '<noscript>"]
+
+[[mutation.edit]]
+file = "web/apps/portal/server/page.ts"
+old = '''    `<noscript>${NOSCRIPT}</noscript>`,
+'''
+new = ''''''
+
+# --- 중계의 질문 페이지 상류 ------------------------------------------------------------------------------------
+
+[[mutation]]
+name = "/portal 을 끝 슬래시 없이도 넘기면 경계 사례가 빨갛다"
+runner = "node"
+tests = ["packages/e2e-stack/src/relay.test.ts", "-t", "/portal 은 끝 슬래시가 없으면"]
+expect = "red"
+expect_output = ["expected 'http://127.0.0.1:1003' to be null"]
+
+[[mutation.edit]]
+file = "web/packages/e2e-stack/src/relay.ts"
+old = '''path.startsWith("/portal/")'''
+new = '''path.startsWith("/portal")'''
+
+[[mutation]]
+name = "질문 페이지 상류가 없어도 루트를 넘기면 위젯 e2e 동작 사례가 빨갛다"
+runner = "node"
+tests = ["packages/e2e-stack/src/relay.test.ts", "-t", "질문 페이지 상류를 주지 않으면"]
+expect = "red"
+expect_output = ["expected 'http://127.0.0.1:1001' to be null"]
+
+[[mutation.edit]]
+file = "web/packages/e2e-stack/src/relay.ts"
+old = '''    return upstreams.portal ?? null;'''
+new = '''    return upstreams.portal ?? upstreams.serve;'''
+
+# --- ESLint: 페이지 스크립트 한 파일만 fetch 를 푼다 -------------------------------------------------------------
+
+[[mutation]]
+name = "예외 글롭을 앱 전체로 넓히면 페이지 스크립트가 아닌 파일의 fetch 사례가 빨갛다"
+runner = "node"
+tests = ["eslint.config.test.ts", "-t", "질문 페이지"]
+expect = "red"
+expect_output = ["expected [] to include 'no-restricted-globals'"]
+
+[[mutation.edit]]
+file = "web/eslint.config.mjs"
+old = '''const PORTAL_PAGE_SCRIPT = "**/apps/portal/browser/portal.ts";'''
+new = '''const PORTAL_PAGE_SCRIPT = "**/apps/portal/**/*.ts";'''

@@ -6,6 +6,7 @@ import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { stringify, type TomlValue } from "smol-toml";
+import { type Assets, staticText } from "../server/assets.ts";
 
 export const PUBLIC_ORIGIN = "http://portal.localhost:8080";
 export const ISSUER = "https://demo.example";
@@ -110,6 +111,27 @@ export function siteSpec(): SiteSpec {
     agents: ["calc"],
     allowedOrigins: [PUBLIC_ORIGIN],
     keys: [{ kid: KID, pem: rsaKey().spki }],
+  };
+}
+
+/**
+ * 처리기 시험이 쓰는 작은 정적 파일 묶음. 실제 페이지나 Tailwind 산출을 짓지 않고 글 몇 줄과 가짜 글꼴 하나(경로는 디스크에
+ * 없다. 처리기는 경로만 돌려준다)를 든다. 부를 때마다 같은 값이다.
+ */
+export function testAssets(): Assets {
+  const css = "text/css; charset=utf-8";
+  return {
+    page: staticText("<!doctype html><title>시험</title>", "text/html; charset=utf-8"),
+    pageScript: staticText("void 0;", "text/javascript; charset=utf-8"),
+    pageCss: staticText(".pp-body{}", css),
+    themeCss: staticText(":root{--bg:#fff}", css),
+    fontsCss: staticText("@font-face{}", css),
+    fonts: new Map([
+      [
+        "font-a.woff2",
+        { path: join(tmpdir(), "portal-test-font-a.woff2"), etag: `"${"a".repeat(32)}"`, size: 3 },
+      ],
+    ]),
   };
 }
 
