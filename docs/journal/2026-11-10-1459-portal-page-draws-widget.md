@@ -105,3 +105,8 @@
 - 위젯 e2e와 사진 비교 셋은 앞 세션이 중계·`packages/ui` 변경 때 쳤고(위 "확인한 것") 셀프 리뷰 반영은 그 파일을 건드리지 않았다. main에 들어온 티켓 03이 위젯과 `packages/ui`를 바꿨으므로 merge 뒤 CI의 `e2e-widget`·`visual`이 초록인지 본다.
 
 open-session을 부른다 2026-11-10T06:56Z
+
+## PR 직전 리뷰 (이어받은 세션)
+
+- `origin/main`(`686ae728`)을 직접 merge했고 충돌이 없었다. `sibling_overlap.py`는 번호 겹침 없음, 함께 고친 파일 없음이었다(헌법 판 3.0.82는 3.0.81 위).
+- `coderabbit-review` 서브에이전트가 `coderabbit review --agent --include-untracked --base origin/main`(CLI 0.7.5)을 끝까지 돌렸고 `review_completed`, `findings: 0`이다. `Seat: not assigned`였지만 리뷰는 거절되지 않았다. 지적이 없어 반영할 것도 없다. 서브에이전트는 지적이 없다는 이유로 서버 파일을 따로 열어 보지 않았다고 보고했다.
