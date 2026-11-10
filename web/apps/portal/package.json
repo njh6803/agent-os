@@ -1,0 +1,18 @@
+{
+  "name": "@agent-os/portal",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node tools/start.ts",
+    "make-key": "node tools/make-key.ts"
+  },
+  "dependencies": {
+    "@agent-os/site-file": "workspace:*",
+    "@agent-os/ui": "workspace:*",
+    "smol-toml": "1.9.1"
+  },
+  "devDependencies": {
+    "@types/node": "^24.19.0",
+    "typescript": "~5.9.3"
+  }
+}
