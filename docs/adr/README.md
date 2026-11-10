@@ -54,5 +54,8 @@
 | [0048](0048-document-search-server-lives-in-another-repository.md) | 문서 검색 서버는 agent-os 밖의 저장소이고, agent-os의 런타임은 그 서버를 모른다 | accepted | 2026-11-06 |
 | [0049](0049-mcp-server-has-a-transport-field-and-remote-servers-connect-per-run-by-manifest-url.md) | MCP 매니페스트의 `[server]`는 `transport` 칸으로 stdio와 http를 가르고, 원격 MCP 서버에는 매니페스트에 적은 주소로 실행마다 붙되 헤더 값은 환경에서 읽고 닫기는 취소에서 보호한다 | accepted | 2026-11-09 |
 | [0050](0050-portal-is-one-node-server-hosting-many-sites-and-signing-anonymous-site-tokens.md) | 질문 페이지는 `node:http` 서버 하나로 사이트 여럿을 담고, 고지를 확인한 브라우저의 익명 식별자로 사이트 토큰을 낸다 | accepted | 2026-11-09 |
+| [0051](0051-base-agent-is-task-agnostic-code-and-custom-agents-are-copies.md) | 기본 에이전트 `assistant`의 코드는 일에 묶이지 않고, 문서 검색은 스킬·연결 플러그인·규칙 파일에 둔다. 커스텀 에이전트는 그 폴더를 복사해 만든다 | accepted | 2026-11-10 |
+| [0052](0052-agent-manifest-lowers-the-turn-limit-and-caps-tool-calls.md) | 에이전트 매니페스트의 선택 칸 둘로 턴의 끝을 낮추고 도구 호출 횟수에 끝을 둔다 | accepted | 2026-11-10 |
+| [0053](0053-model-answers-are-drawn-as-markdown-by-one-shared-component.md) | 모델이 지은 답은 공유 부품 하나가 마크다운으로 그리고, 원시 HTML과 이미지는 그리지 않는다 | accepted | 2026-11-10 |
 
 ADR을 먼저 확인하는 상황 넷: 스택이나 라이브러리를 바꿀 때, 디렉터리나 층 경계를 바꿀 때, 디스크 형식(매니페스트, 이벤트)을 바꿀 때, 기존 코드가 왜 이렇게 되어 있는지 이해되지 않을 때.

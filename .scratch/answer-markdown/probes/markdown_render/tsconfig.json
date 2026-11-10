@@ -1,0 +1,14 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "target": "es2024",
+    "lib": ["es2024", "dom", "dom.iterable"],
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "jsx": "react-jsx",
+    "allowImportingTsExtensions": true,
+    "types": ["node"]
+  },
+  "include": ["apps/**/*.ts", "apps/**/*.tsx", "probe/**/*.ts", "probe/**/*.tsx"],
+  "exclude": ["node_modules", "out"]
+}
