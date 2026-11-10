@@ -23,7 +23,7 @@
 
 루프백 목록 주석 셋(`main.py`, 관리 화면 `loopback.ts`, 위젯 `start.ts`)의 "셋"을 넷으로 고쳤다. README 트리와 `tech.md` 웹 행에 앱을 더했고 헌법 판을 3.0.80으로 올렸다(형제 02가 3.0.79를 먼저 가져갔다).
 
-- `loadPortal`은 설정만이 아니라 시작 때 읽어 둔 개인 키(`privateKey`)와 사이트 파일(`siteFile`)도 낸다. 05 티켓이 "04가 시작 때 읽은 개인 키와 사이트 파일의 `audience`를 쓴다"고 전제해서다. 05 티켓에 그 사실을 메모로 넘겼다.
+- `loadPortal`은 설정만이 아니라 시작 때 읽어 둔 개인 키(`privateKey`)와 사이트 파일(`siteFile`)도 낸다. 05 티켓이 04가 시작 때 읽어 둔 개인 키와 사이트 파일의 `audience`를 쓴다고 전제해서다(05 티켓의 Blocked by 줄). 05 티켓에 그 사실을 메모로 넘겼다.
 - 순수 처리기에 시계와 UUID 만들기를 인자로 받는 자리는 두지 않았다. 쓰는 끝점이 없어 안 쓰는 인자가 되고, 린트의 `no-unused-vars`에 걸린다(`web/eslint.config.mjs`가 켠 `strictTypeChecked`의 규칙이고 설정을 읽은 것이며, 인자를 두고 돌려 보지는 않았다). 05 티켓이 `handle`의 인자로 더한다(05 티켓 메모). 요청 값에는 헤더와 쿠키(`parseCookieHeader`, 실린 차례의 열)를 넣었다.
 - 진단의 `sites[<i>]`는 사이트 파일의 진단과 같은 0부터다(명세의 `sites[1].agent`는 꼴의 예로 읽었다).
 
@@ -72,3 +72,22 @@
 - 05가 `config.ts`와 `start.ts`·`make-key.ts`를 더 고치기 전에 셀프 리뷰의 Minor 넷(출력 인자 변형, 실패 분기의 되풀이, 오류 코드 뽑기 세 벌, `_of`·`read` 이름)을 맞출지 정한다. 맞추면 이 앱 안의 정리이고 계약은 건드리지 않는다.
 - site-file 패키지의 보류 넷은 아직 안 고쳤다. (1) `siteFileInput`이 테스트만 부르는 export이고 `index.ts`의 `export *`로 공개 표면에 오른다. (2) `site-file.ts`가 약 600줄 한 파일이다. (3) `SiteEntry.origins`와 `site.allowedOrigins`가 같은 배열을 두 번 든다. (4) 위젯 전용 값(`buildInput`, `WIDGET_ORIGINS_ENV`, `WIDGET_REQUEST_CHARS_ENV`, `BuildInput`)이 공유 패키지에 있다. 질문 페이지가 그 패키지에 칸을 더하는 일이 생기면 그 전에 harness 티켓이나 고침 티켓으로 나눈다. 칸을 더하지 않으면 급하지 않다.
 - 변이 표 `site_file_mutations.toml`의 남은 표지 다섯(10~13, 16)은 앞 일지의 "다음"대로 그대로 남아 있다.
+
+## 인계 (커밋 뒤)
+
+컨텍스트가 인계 문턱을 넘은 채 `커밋 뒤` 경계에 와서 넘긴다. 이 세션의 제목은 `feature/04-portal-server-starts-after-checking-config`였다.
+
+- 커밋 `e18d6283`이 pre-commit을 모두 지났다(ruff 둘, 러너, 헌법 판, 커밋 메시지. 카나리아 모양은 해당 파일이 없어 `Skipped`). 그 뒤 이 일지만 고쳤다(인용 경고 한 줄 정리와 이 절). 이 변경은 커밋하지 않았다.
+- 남은 단계는 푸시, PR(본문에 실제 기동 명령과 출력), PR 직전 리뷰(`coderabbit-review`, CLI가 못 돌면 `bug-perf-review`), `ccd_pr`의 `get_status`와 `bind_pr`, `tools/wait_ci.py <PR번호>`, 병합(`next-session` `merge.md`의 "워크트리에서 병합할 때")이다.
+- PR 본문의 실제 기동 확인은 새 세션이 다시 친다. 이 일지의 "확인한 것"에 적은 동작(시작 로그 한 줄, `/portal/health` 200 `{"status":"ok"}`, `/portal/` 404, `agent`를 틀리게 한 설정의 `구성 오류:`와 종료 코드 1)을 `pnpm -C web/apps/portal start -- --config <설정> --site-file <사이트 파일>`로 임시 폴더의 파일로 다시 보고, 그 명령과 출력을 본문에 싣는다. 이 세션은 그 출력을 컨텍스트에 남기지 못했다.
+- 셀프 리뷰 결과는 위 "셀프 리뷰" 절이다. 반영 뒤 web 전체(`pnpm -C web verify`)는 커밋의 pre-commit이 돌려 통과했고, 관리 화면·위젯 e2e와 사진 비교는 돌리지 않았다(그 앱의 변경은 주석 한 줄씩이다).
+- PR 직전 리뷰에 밀 주장(셀프 리뷰 반영으로 새로 쓴 사실 문장): (1) 헌법 판 README의 3.0.79 문장("형제 브랜치(`feature/02-e2e-stack-package`)가 먼저 매겨 비워 두었다")은 `sibling_overlap.py`가 02 워크트리의 미커밋 README에서 읽은 값이다. (2) `handler.ts` 주석의 `cookie` 헤더가 `; `로 이어진다는 것. (3) 05 티켓 메모와 이 일지가 말하는 미사용 인자를 잡는 쪽이 린트(`no-unused-vars`)라는 것(설정을 읽은 것이고 돌려 보지 않았다). (4) `config.ts`의 `identityOf`가 사이트 전체의 유효 여부와 상관없이 `issuer`·`name`만 뽑는다는 것.
+- 제목을 `feature/04-portal-server-starts-after-checking-config (인계함)`으로 바꾸고 워크트리 잠금을 풀었다. 이 세션이 띄운 백그라운드 작업은 없었다.
+- open-session을 부른다 2026-11-10T01:43:31Z
+
+## 이어받은 세션 (PR 단계)
+
+세션 제목 `feature/04-portal-server-starts-after-checking-config`. 이 일지에서 PR 전까지의 몫을 이었다.
+
+- 이전 세션이 띄운 `start` 프로세스(포트 18765, 세션 `ff01fd7e`의 스크래치패드 설정)가 남아 있었다. 손으로 봤다: 처음 돌린 기동 확인에서 설정이 틀려 서버가 서지 못했는데도 `curl`이 그 포트의 `/portal/health`에 200을 받았고, PowerShell `Get-NetTCPConnection -LocalPort 18765 -State Listen`과 `Get-CimInstance Win32_Process`로 그 포트를 쥔 `node` 명령 줄이 `tools/start.ts`와 `ff01fd7e` 경로의 설정이었다. 위 "인계"의 "이 세션이 띄운 백그라운드 작업은 없었다"는 틀렸다. 명령 줄이 이 티켓의 시작 명령과 일치하는 그 PID만 `Stop-Process`로 끝냈고(그 뒤 같은 포트의 듣는 연결 0개), 기동 확인은 다른 포트(18799)에서 다시 쳤다.
+- 손으로 봤다: `make-key`는 개인 키 경로의 폴더가 없으면 만들지 않고 `개인 키를 쓰지 못했다(ENOENT)`로 끝난다(종료 코드 1, 폴더 없이 친 첫 실행의 출력). 명세는 폴더 만들기를 요구하지 않아 고치지 않았다. 운영자가 폴더를 먼저 둔다.
