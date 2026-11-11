@@ -456,3 +456,98 @@ open-session을 부른다 2026-11-11T09:55:09Z
 고르지 않은 선택지(라벨만): "고칠 것이 있다"(둘에 하나씩).
 
 승인받은 턴에 두 ADR의 머리말과 색인 행 둘을 `accepted`로 바꾸고, `.scratch/local-model/plan.md`의 `**Blocked by:**` 줄 뒤에 `**설계:** ADR 0057, ADR 0058`을 적었다.
+
+`uv run python tools/plan_table.py`는 출력 없이 끝났고 `.scratch/plan.md`는 바뀌지 않았다(`git status --porcelain`에 그 파일이 없었다. 설계 줄은 전체 계획표의 칸이 아니다).
+
+## 커밋
+
+커밋 `d6e2fdd42`(docs: 로컬 모델 서버에 붙는 방법과 로컬 모델 시험의 병합 규칙을 설계한다 (ADR 0057·0058)). 직전에 `git branch --show-current`는 `docs/local-model-design`이었고 `uv run python tools/sibling_overlap.py`는 번호 겹침이 없다고 냈다(이 브랜치의 새 번호 ADR 0057, ADR 0058, 헌법 3.0.85. 함께 고친 파일 후보는 워크트리 `release-image-design`의 셋 그대로이고 origin/main은 `768dee7` 그대로였다).
+
+pre-commit은 백그라운드로 돌렸고 종료 0이다. 묶음 검사(parallel-checks)는 620초가 걸렸고 열이 모두 Passed다(check-ticket, zizmor, lint-imports, check-instructions, check-type-escapes, pyright-linux, pyright, run-hooks, pytest 367.8초, web-verify 620.1초). markdown tables, line separators, mutation tables, constitution version, commit message도 Passed다. `Skipped`는 셋이다. canary specs는 해당 파일이 없어서이고, ruff check와 ruff format은 스테이지된 `.py`가 없어서다. ruff 둘은 커밋 뒤에 손으로 쳤다. `uv run ruff check .`는 "All checks passed!", `uv run ruff format --check .`는 "2053 files already formatted"를 냈다(손으로 봤다). 손으로 치는 다섯 가운데 테스트·타입체크·경계·web은 pre-commit의 결과로 갈음한다. 실제 모델 시험, e2e, 사진 비교는 문서만 바꾼 변경이라 계기가 없다.
+
+인용 대조(경고만, 막지 않는다)는 25건을 냈다. ADR의 셋(ADR 0057 20행의 제공사 값의 뜻, 62행의 구현 티켓 수락 문장, ADR 0058 27행의 범위를 외우는 한 줄)은 다른 글의 인용이 아니라 이 ADR이 새로 정한 문장이다. 일지의 스물둘은 선택 화면의 라벨과 설명, 받아 둔 바깥 문서의 원문, 리뷰 보고가 옮긴 초안의 옛 문장이다. 그 가운데 399·411행의 넷은 셀프 리뷰가 고치기 전의 초안 문장이라 지금의 ADR에 없는 것이 맞고, 342행의 ADR 0043 문구는 글자 그대로가 아니라 바꿔 쓴 말이다(표준 축도 그렇게 냈다). 일지는 기록이라 고치지 않는다.
+
+## 인계(커밋 뒤)
+
+커밋 뒤에 인계 계기(`hook_handoff`, 세션 컨텍스트 273,661 토큰)가 왔다. 인계하지 않는 때 다섯에 들지 않아 넘긴다. 계기를 낸 커밋은 종료 0으로 섰고, 요청 범위는 PR과 병합까지이며, 이 세션을 연 지시문의 "이어받을 상태"는 `인계: 셀프 리뷰 직전`이라 경계가 다르고, 이 세션이 쓴 `인계 못함` 줄이 없으며, `get_session`의 `self`에 `parentSessionId`가 없다. 이 세션의 지금 제목은 `docs/local-model-design`이다. 이 세션이 받은 사용자 프롬프트는 위 "인계(셀프 리뷰 직전)" 절의 지시문 하나이고, 그 밖의 사용자 입력은 위 "승인" 절의 답 둘이다.
+
+**이 세션이 번복하거나 고친 것.**
+
+- 두 ADR의 머리말을 승인 전까지 `proposed`로 내렸다가 승인받은 턴에 `accepted`로 올렸다.
+- ADR 0058의 30일 커밋 수를 날짜 기점의 338건에서 커밋 기점의 354건으로 고쳤다(범위의 30건과 1건은 그대로).
+- `.scratch/deploy-package/plan.md`에 넘긴 문단을 ADR을 가리키는 세 문장으로 줄였다.
+- `docs/constitution/tech.md`의 Terraform 프로바이더 판 묶음 "2.x"를 떼고 구현 티켓에 넘겼다.
+- ADR 0058 "띄우지 못할 때"의 "이 PC의 세션에 넘기거나"는 셀프 리뷰가 더한 말인데 합의 요약에 없어, 승인 화면의 아홉째 항목으로 드러내 승인받았다.
+
+**남은 순서.** PR 직전 리뷰(`coderabbit-review` 서브에이전트. CLI가 돌지 못하면 `bug-perf-review`와 `/security-review`) → 반영과 커밋 → 푸시와 PR → 봇 회차(`merge.md` "병합 전" 2) → 회고(`retro`) → 일지 "다음" → 병합(`merge.md` "워크트리에서 병합할 때") → 다음 지시문(명세 `/to-spec`, 새 세션).
+
+**새 세션이 알아야 할 것.**
+
+- 이 브랜치의 끝 커밋까지 셀프 리뷰 반영, 두 ADR의 승인, 기능 계획의 설계 줄이 들어 있다. 푸시하지 않았고 PR은 없다(`gh pr view docs/local-model-design --json state`가 PR이 없다고 냈다).
+- 이 일지의 "승인" 절 끝의 `plan_table` 문단, "커밋" 절, 이 절은 커밋하지 않았다. 이어 쓰고 다음 커밋에 싣는다.
+- 인터뷰는 다시 열지 않고 승인도 다시 묻지 않는다. PR 직전 리뷰나 봇 회차의 지적이 승인받은 결정을 바꾸는 것이면 고치기 전에 사용자에게 묻는다(`code-review` 6단계 3).
+- PR 직전 리뷰에 밀 주장은 위 "셀프 리뷰(code-review)" 절의 "고친 것" 목록이다. 셀프 리뷰를 반영하며 새로 쓴 사실 문장이 원문으로 있다. `bug-perf-review`로 갈 때는 그 문장들을 브리프에 나열한다.
+- 문서만 바꾼 PR이라 로컬 모델 시험의 병합 조건(ADR 0058)은 붙지 않는다. 그 조건은 어댑터를 처음 넣는 PR부터다.
+- 근거 원문(vLLM, Runpod, Terraform 레지스트리, 모델 카드)은 앞 세션의 스크래치패드에 있고 커밋하지 않았다. 경로는 위 "인계(셀프 리뷰 직전)" 절에 있다. 이 세션이 그 원문에서 발췌한 스크립트는 `C:\Users\User\AppData\Local\Temp\claude\9060abe0b92613e9\e6fbe587-6a9d-4b35-b0f2-f1b3b2971158\scratchpad\`의 `excerpts.sh`와 `excerpts2.sh`다. 다른 세션에서는 읽히지 않을 수 있다.
+- 병합 뒤 지시문과 최종 보고에 넣을 것(사용자가 미리 준비할 것 넷, 웹 출처 링크 넷)은 위 "인계(셀프 리뷰 직전)" 절의 "새 세션이 알아야 할 것"에 있다. 명세로 넘긴 갈래는 ADR 0057의 결정 항목들과 ADR 0058 "명세로 넘기는 것"이다.
+
+**지시문.**
+
+```
+다음 작업: 기능 local-model. 승인받은 ADR 0057·0058 설계 변경의 PR 직전 리뷰, PR, 봇 회차 반영, 회고, 병합
+다음 단계: 설계 인터뷰
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /grill-with-docs
+브랜치: docs/local-model-design
+모델: Fable 5.2 / xhigh. 2의 잇는 지시문(칸의 Fable 5.1 자리에 이 세션을 연 지시문과 같은 Fable 5.2를 적었다)
+읽을 것: docs/journal/2026-11-11-1534-local-model-design.md의 "인계(커밋 뒤)" 절, "셀프 리뷰(code-review)" 절의 "고친 것", "인계(셀프 리뷰 직전)" 절의 "새 세션이 알아야 할 것"
+이어받을 상태: 인계: 커밋 뒤. 이 브랜치의 끝 커밋까지 셀프 리뷰 반영, ADR 0057·0058의 승인(둘 다 accepted), 기능 계획의 설계 줄을 했다. 푸시하지 않았고 PR은 없다. 남은 단계는 PR 직전 리뷰, 푸시와 PR, 봇 회차, 회고, 병합, 다음 지시문이다. 일지는 docs/journal/2026-11-11-1534-local-model-design.md. 설계 인터뷰는 다시 열지 않고 승인도 다시 묻지 않는다. 일지 끝의 세 절("승인" 절 끝 문단, "커밋", "인계(커밋 뒤)")은 커밋하지 않았으므로 이어 쓰고 다음 커밋에 싣는다
+확인할 선행 조건: 형제 워크트리 release-image-design이 CONTEXT.md, docs/adr/README.md, .scratch/deploy-package/plan.md를 함께 고치고 있다. 그쪽이 먼저 병합되면 글자 충돌과 ADR 번호를 다시 본다
+이번 요청 범위: PR과 병합까지
+```
+
+제목을 `docs/local-model-design (인계함)`으로 바꿨다. 이 세션이 띄운 백그라운드 작업은 남아 있지 않다. `git worktree unlock`은 `is not locked`를 내어 넘어갔다.
+
+open-session을 부른다 2026-11-11T10:54:49Z
+
+## 이어받음(PR 직전 리뷰부터)
+
+새 세션(제목 `docs/local-model-design`, 모델 Fable 5.2 / xhigh)이 위 "인계(커밋 뒤)" 절의 지시문으로 열렸다. 이 세션을 연 프롬프트는 그 "지시문" 블록의 글 앞에 스킬 파일을 읽으라는 한 줄(`.claude/skills/grill-with-docs/SKILL.md 를 읽어 그대로 따른다. …`)이 붙은 것이다. 주 체크아웃에서 `git worktree list`로 이 워크트리를 찾아 `EnterWorktree(path)`로 들어왔고, 인터뷰는 다시 열지 않았으며 승인도 다시 묻지 않았다.
+
+**선행 조건.** `git fetch origin` 뒤 `uv run python tools/sibling_overlap.py`는 번호 겹침이 없다고 냈다(이 브랜치의 새 번호는 ADR 0057, ADR 0058, 헌법 3.0.85이고 형제가 쓴 가장 높은 헌법 판은 origin/main의 3.0.84다). 함께 고친 파일 후보는 워크트리 `release-image-design`과 그 브랜치의 PR #529가 든 셋(`.scratch/deploy-package/plan.md`, `CONTEXT.md`, `docs/adr/README.md`) 그대로다. `gh pr view 529 --json state,mergeable,mergeStateStatus`는 `OPEN`, `CONFLICTING`, `DIRTY`를 냈다. 그 PR은 아직 병합되지 않았고 main과 이미 충돌한다. `ListAgents`에는 제목이 `docs/release-image-design`인 세션이 idle로 보였다. 어느 쪽이 먼저 병합되든 늦는 쪽이 main을 다시 합쳐 그 셋의 글자 충돌을 푼다.
+
+**origin/main이 움직였다.** `768dee7`에서 `377675e`로 갔다(#528, base-agent의 명세와 티켓 일곱). `git diff --name-only HEAD...origin/main`이 낸 스물둘은 `.scratch/base-agent/`의 명세·계획·티켓·프로브, `.scratch/answer-eval/plan.md`, `.scratch/retro-queue/`의 넷, ADR 0051, 일지 셋이고 이 브랜치가 고친 열 파일과 겹치지 않는다(손으로 봤다). 이 브랜치가 이름으로 든 것 가운데 바뀐 것은 base-agent의 명세와 계획(ADR 0058의 "기본 에이전트의 사례"와 거부한 안 하나가 그 명세가 넘긴 일을 든다)과 answer-eval의 계획이다. main의 `.scratch/base-agent/spec.md` 376행에는 "local-model에 넘긴다"로 시작하는 줄(실제 모델 시험을 모델 하나로만 돌렸다는 것과, 그 사례를 로컬 모델로도 돌릴지는 그 설계 인터뷰가 정한다는 것)이 그대로 있다(`git grep`으로 봤다). ADR 0058이 그 사례를 줄여 적은 말이 지금의 명세와 맞는지는 아래 PR 직전 리뷰의 밀 주장 17로 넘겼다. 대기열의 넷은 열린 항목의 회차가 오르거나 새로 생긴 것이고(`cli-review-claims-path`와 `external-ref-moved-while-citing`이 2회차, 새 항목은 `plugins-outside-type-judges`와 `sibling-same-feature-folder-edit`), 이 브랜치가 따라야 할 새 규약은 없다(넷의 diff를 읽었다).
+
+`git merge origin/main --no-edit`은 충돌 없이 끝났다(병합 커밋 `1bf0bbf21`). 그 뒤 `git diff --name-only origin/main...HEAD`는 이 브랜치의 열 파일만 낸다.
+
+## PR 직전 리뷰
+
+CodeRabbit CLI가 도는 PR에는 밀 주장을 넘기는 길이 없어(`code-review` 6단계의 1, 대기열 `cli-review-claims-path`), 둘을 나란히 띄웠다. `coderabbit-review` 서브에이전트가 CLI를 돌리고, `bug-perf-review` 서브에이전트가 위 "셀프 리뷰(code-review)" 절의 "고친 것"에서 뽑은 밀 주장 스물을 근거와 대 본다(브리프에 "나열 밖도 잰다"를 붙였다). 대기열 `cli-review-claims-path`의 3회차다. 밀 주장의 브리프에는 근거 원문의 자리(첫 세션 스크래치패드의 `dl\`, `dl-gpu\`)와 일지의 절, 다시 셀 `git rev-list` 명령을 적었고, main을 합치며 생긴 주장 하나(17, base-agent 명세가 바뀐 뒤에도 ADR 0058의 사례 요약이 맞는가)를 더했다.
+
+**CodeRabbit CLI(`coderabbit-review`의 보고).** CLI 0.7.5이고 `auth status`는 `Plan: Free`, `Seat: not assigned`였다. `--base origin/main`을 붙여 돌렸고 리뷰는 `review_completed`로 끝났으며 열 파일을 모두 봤다고 보고했다(서브에이전트의 도구 호출 6번, 163초). CLI가 끝까지 돌았으므로 대체 둘 가운데 `/security-review`는 돌리지 않는다. 지적은 하나이고 오탐은 없다. CLI는 Critical로 냈고 서브에이전트가 Minor로 낮췄다(설계 문서이고 코드가 없으며, 비밀을 두는 정해진 자리가 `api_key_env`라는 까닭이다).
+
+- ADR 0057 결정 "모델 파일"과 "주소는 비밀이 아닌 것으로 본다". `base_url`의 `사용자:비밀번호@`는 읽는 단계에서 거부하는데, 쿼리 문자열(`?token=…`)은 거부한다는 말도 허용한다는 말도 없다. 쿼리에 실린 토큰도 관리 API의 매니페스트 응답과 실패 문구로 같은 길을 따라 샌다. 제안은 쿼리와 조각이 든 주소를 읽는 단계에서 거부하거나, 허용한다면 쿼리에 비밀을 적지 않는다고 밝히는 것이다. CLI가 제안한 가림은 이 ADR이 고르지 않은 길(주소를 그대로 보인다)이라 따르지 않는 편이 맞다고 냈다.
+
+이 세션이 대 본 것(읽었다). ADR 0049 Consequences "문구에 실리는 것과 실리지 않는 것"(44행)이 원격 MCP 서버의 주소에서 같은 문제를 이미 다뤘다. 그 항목은 운영자가 주소의 쿼리 문자열에 비밀을 적는 것을 막지 않고 알려진 한계로 둔다고 적으며, PR #499의 CodeRabbit이 같은 지적을 Critical로 냈다고 적는다. 같은 ADR의 2026-11-10 이력(77행)은 mcp-http 명세에서 사용자가 실패 문구에 주소 전체를 싣는 쪽을 골랐다고 적는다. ADR 0057은 주소를 "원격 MCP 서버의 주소와 같은 방식"으로 다룬다고 적으면서 이 한계는 옮기지 않았다. 지적이 맞다.
+
+판정: 고친다. 쿼리를 거부하는 규칙은 새로 두지 않는다. 두면 승인받은 결정에 규칙을 더하게 되고, ADR 0057이 같은 방식이라고 가리킨 ADR 0049의 판단과도 갈린다. ADR 0049가 받아들인 한계를 ADR 0057의 같은 자리에 옮겨 적는다. 편집은 밀 주장 리뷰가 ADR을 줄 번호로 읽는 중이라 그 보고를 받은 뒤에 한다.
+
+**밀 주장 대조(`bug-perf-review`의 보고).** 기준 `377675eef`, 범위 열 파일, 도구 호출 43번(서브에이전트가 적은 수다. 하네스의 집계는 42번, 225초다). 지적은 Minor 둘이고 오탐은 없다.
+
+- ADR 0058 Consequences "규약이 서는 때"(주장 14). `llm_portal`로 저장소를 Grep한 결과를 나열한 목록에 마커를 이름으로 드는 코드 넷이 빠졌다. `tests/test_calc_plugin.py` 11행과 `tests/test_main.py` 7행의 독스트링, `web/apps/portal/playwright.config.ts` 8행과 `web/packages/e2e-stack/src/plugins.ts` 121행의 주석이다. 구현 티켓이 그 문장을 grep이 낸 것 전부로 믿으면 `llm_local`을 더한 뒤에도 옛 마커만 나열한 주석과 독스트링이 남는다. 나열된 나머지는 모두 Grep에 나왔고, ADR 0058 밖의 `docs/adr/`와 `README.md`에는 적중이 없었다고 냈다.
+- ADR 0057 Consequences "계약 변경이 첫 티켓이다"와 ADR 0058 "명세로 넘기는 것"의 끝 문장(주장 12). "첫 티켓"이 두 ADR에서 다른 티켓을 가리킨다. 0057은 계약 티켓이 다른 티켓을 막는다고 적고, 0058은 합의 요약의 "구현의 첫 티켓"을 서버를 띄우는 파일을 들이는 티켓으로 풀면서 계약 티켓과의 순서를 티켓을 나눌 때 정한다고 적어, 두 문서만으로는 어느 쪽이 먼저인지 정해지지 않는다.
+- 대 보고 맞았다고 낸 것: 1, 2, 3, 5, 6, 9, 11, 15, 18, 19, 20과 13(오탐 줄에 적었다). 4는 소스까지, 7은 ADR 0040까지, 8은 `README.md`를 뺀 나머지까지, 17은 명세 376행까지 맞았다고 냈다. 9의 수 셋(354, 30, 1)은 `git rev-list --count`로 다시 세어 같았다고 냈다.
+- 대 보지 못했다고 낸 것: 4의 `_ask`, 7의 `sdk/manifest.py`, 10(Runpod 원문), 16(AWS 원문), 17의 사례 셋(티켓 05).
+
+이 세션이 대 본 것. 지적 둘은 맞다. 첫째는 glob 없는 Grep(`.gitignore`를 따른다)으로 `llm_portal`을 다시 쳐서 봤다(손으로 봤다). 일지와 `.scratch/` 밖에서 나온 파일은 스물이고, 그 마커의 시험 파일 `tests/test_portal_llm.py`와 ADR 0058을 빼면 ADR이 나열한 열넷에 위 넷을 더한 열여덟이다. 둘째는 두 ADR의 그 문장을 읽었다. 대 보지 못했다고 낸 주장은 다음과 같이 댔다(받아 둔 원문과 코드를 `grep -n`으로 읽었다). 10: `dl-gpu/runpod-pricing.txt` 374~384행에 A40과 `$0.59/hr`, 876행에 `Idle - $0.20/GB/mo`가 있고, `runpod-docs-pods-pricing.md` 43행의 표가 볼륨 디스크를 도는 동안 `$0.10/GB/month`, 멈춘 동안 `$0.20/GB/month`로 적는다. `runpod-tf-readme.md` 12행이 `required_version = ">= 1.6"`이고 22행이 `RUNPOD_API_KEY`를 읽는다고 적으며, `tf-registry-runpod.json`의 판은 `2.0.0`, 발행은 `2026-10-27T19:50:31Z`, 등급은 `community`다. 16: `aws-ec2-ondemand-quotas.md` 32행의 표가 "Running On-Demand G and VT instances"의 기본값을 0으로 적고, `aws-price-use1.json`에 `g6e.xlarge`와 `1.8610000000`이 있다. 처리 시간의 수치가 받아 둔 문서에 없다는 부재 주장은 대 보지 않았다. 7: `sdk/manifest.py` 269행이 `provider`, `model_id`, `max_tokens`, `temperature` 넷을 한 묶음으로 도는 줄이다(그 줄이 다른 종류의 매니페스트를 거부하는 자리인지는 앞뒤를 열어 보지 않았다. 앞 세션의 표준 축이 코드로 확인했다고 낸 일곱에 든다). 17: 티켓 05의 수락은 사례 (1)~(14)이고, 검색하고 출처를 다는 사례((1), (10), (11)), 검색한 뒤 정해진 문장으로 답하는 사례((2)~(4)), 도구 없이 답하는 사례((7), (8), (12))가 있어 ADR 0058의 줄인 말("요청을 셋으로 가르기, 검색한 뒤 답하기, 정해진 문장을 글자 그대로 내기")과 어긋나지 않는다(읽었다). 4의 `_ask`는 다시 열지 않았다(앞 세션의 명세 축이 573~575행을 글자 그대로 댔다고 냈다).
+
+고친 것(새로 쓴 사실 문장은 PR 봇 회차가 겨냥할 주장이다).
+
+- ADR 0057 결정 "주소는 비밀이 아닌 것으로 본다": "주소의 쿼리 문자열에 비밀을 적는 것은 막지 않고, 적으면 그 값이 주소와 함께 같은 자리에 실린다. 원격 MCP 서버의 주소에서 받아들인 것과 같은 알려진 한계이고(ADR 0049 Consequences "문구에 실리는 것과 실리지 않는 것"), 키를 두는 자리는 `api_key_env`다." 근거: ADR 0049 44행과 77행.
+- ADR 0057 Consequences "배포가 알아야 할 것"에 여섯째 항목: "**주소의 쿼리.** 주소는 관리 API의 매니페스트 응답과 실패 문구에 그대로 실리므로 주소의 쿼리 문자열에 비밀을 적지 않는다. 런타임은 모델 파일을 읽는 단계에서 그것을 막지 않는다(결정 "주소는 비밀이 아닌 것으로 본다")." 원격 MCP 서버의 주소에서 같은 안내를 배포 안내에 넘긴 선례가 `.scratch/deploy-package/plan.md`에 있다(mcp-http 명세가 넘긴 문단을 읽었다). 그에 맞춰 `.scratch/deploy-package/plan.md`의 "다섯(서버 옵션, 평문, 프록시, 상한, 기다림)"을 "여섯(서버 옵션, 평문, 프록시, 상한, 기다림, 주소의 쿼리)"으로 고쳤다.
+- ADR 0058 "명세로 넘기는 것"의 끝 괄호: "합의 요약의 "구현의 첫 티켓"이 가리키는 것이 이 티켓이다. ADR 0057 Consequences가 "첫 티켓"이라고 적은 계약 티켓과는 다른 티켓이고, 그 항목은 계약 티켓이 다른 티켓을 막는다고 적는다. 이 티켓이 계약 티켓 뒤에 서는지와 그 파일이 어느 PR에 드는지는 티켓을 나눌 때 정하고, 어댑터를 처음 넣는 PR보다 늦지 않아야 한다". 순서를 정하는 자리(티켓을 나눌 때)는 승인받은 글 그대로 두고, 두 "첫 티켓"이 다른 티켓이라는 것과 ADR 0057의 막는다는 문장을 그 자리에 나란히 적었다.
+- ADR 0058 Consequences "규약이 서는 때": 일반 조항에 "(주석과 독스트링도 든다)"를 더하고, 뺀 것을 "일지와 `.scratch/`의 기록, 그 마커의 시험 파일 `tests/test_portal_llm.py`, 이 ADR"로 풀었으며, 목록에 "`tests/test_main.py`와 `tests/test_calc_plugin.py`의 독스트링, `web/apps/portal/playwright.config.ts`와 `web/packages/e2e-stack/src/plugins.ts`의 주석"을 더했다.
+
+남긴 것은 없다. 셋 다 승인받은 결정을 바꾸지 않는 보탬으로 봤다. 쿼리를 거부하는 규칙을 새로 두지 않았고(ADR 0057이 같은 방식이라고 가리킨 ADR 0049의 한계를 옮겼다), 티켓의 순서를 정하는 자리를 옮기지 않았으며, 목록은 같은 grep의 빠진 결과를 채운 것이다. 최종 보고와 PR 본문에 이 셋을 드러낸다.
+
+다시 돌린 명령. 문서만 바뀌어 손으로 치는 다섯은 커밋의 pre-commit 결과로 갈음한다(결과는 아래 "둘째 커밋"에 적는다). 반영 뒤 `uv run python tools/check_adr_pointers.py`, `tools/check_md_tables.py`, `tools/check_line_separators.py`(뒤의 둘은 고친 네 파일을 인자로 줬다), `tools/plan_table.py`를 쳤고 넷 다 출력 없이 끝났다(손으로 봤다). `.scratch/plan.md`는 바뀌지 않았다.
