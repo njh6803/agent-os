@@ -88,4 +88,12 @@
 
 ## 다음
 
-- 이 일지가 닫는 일은 병합과 함께 끝난다. 이어서 할 일은 없다. 새 훅은 병합 뒤 주 체크아웃을 당긴 세션부터 돈다.
+- 커밋 `3e71c4a3e`까지 했다(pre-commit 전부 통과, 셀프 리뷰는 반영해 이 커밋에 실었다). 푸시와 PR과 병합이 남았다. 이 세션은 컨텍스트가 인계 문턱을 넘어 `커밋 뒤` 경계에서 넘겼다(`인계: 커밋 뒤`).
+- 커밋하지 않은 변경 둘이 작업 트리에 있다. 티켓 `.scratch/harness/issues/pyright-unchecked-path-hook.md` 5행의 따옴표 인용을 원문(대기열 431 항목)에 맞게 따옴표 없이 풀어 썼고(pre-commit의 인용 대조 경고 1건), 이 "다음" 절을 고쳤다. 다음 커밋에 싣는다.
+- `origin/main`을 합친다. main은 이 브랜치의 기준(`f64dfe41c`)에서 `5f7e39ed9`(PR #522, `open-session` 쪽)로 갔고, `.scratch/harness/probes/README.md`를 양쪽이 고쳐 글자 충돌 후보다(`sibling_overlap.py`가 "함께 고친 파일"로 짚었다). 나머지 main의 변경 파일은 이 브랜치와 겹치지 않는다. 합친 뒤 헌법 판 번호가 비켜야 하는지 `sibling_overlap.py`를 다시 친다(지금은 3.0.84가 겹치지 않는다).
+- 병합은 이 워크트리 사본의 next-session `merge.md`의 "워크트리에서 병합할 때"를 Read로 열어 따른다. 주 체크아웃은 `f64dfe41c`의 main이라 이 세션이 당기지 못했다.
+- 보류한 것은 위 "셀프 리뷰"의 "남긴 것"이다. 이 PR에는 대기열 `plan-table-unseen-claim`의 5회차 반영이 없다(`next-session` 결정표의 chore 배치 조건에 든다).
+- 새 훅은 병합 뒤 주 체크아웃을 당긴 세션부터 돈다.
+- 인계: 제목을 `chore/pyright-unchecked-path-hook (인계함)`으로 바꿨고, 워크트리는 이미 잠겨 있지 않았다(`git worktree unlock`이 `is not locked`).
+- open-session을 부른다 2026-11-11T02:44:00Z
+- 인계 못함 커밋 뒤: 주 체크아웃(`f64dfe41c`)의 `tools/open_session.ps1`이 `origin/main`(`5f7e39ed9`)의 판과 96줄 다르다(`git diff --stat f64dfe41c 5f7e39ed9 -- tools/open_session.ps1`을 쳤다). 스킬이 그 옛 판으로는 열지 말라고 하므로(폴더 검사가 없다) 세션을 열지 않았다. 제목을 `chore/pyright-unchecked-path-hook`으로 되돌리고 남은 단계(main 합치기, 푸시, PR, 병합)를 이 세션이 잇는다.
