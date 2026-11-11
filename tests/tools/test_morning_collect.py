@@ -25,6 +25,7 @@ from tools.hook_report import (
     main_checkout_folder,
 )
 from tools.morning_collect import (
+    TICKET_BRANCH,
     Collected,
     HookRow,
     HookScan,
@@ -401,6 +402,19 @@ def 티켓(n: int, criteria: int, handoffs: int = 0) -> TicketRow:
         sessions=1,
         handoffs=handoffs,
     )
+
+
+@pytest.mark.parametrize(
+    ("branch", "harness"),
+    [("chore/x", "x"), ("hotfix/x", "x"), ("hotfix/12-a.b", "12-a.b"), ("fix/x", None)],
+)
+def test_티켓_PR_의_브랜치는_chore_와_hotfix_를_harness_티켓으로_읽는다(
+    branch: str, harness: str | None
+) -> None:
+    """PR 봇 첫 회차의 Minor. 핫픽스 티켓도 `.scratch/harness/issues/` 에 있어 집계에서 빠지면 안
+    된다."""
+    m = TICKET_BRANCH.match(branch)
+    assert (m.group("harness") if m else None) == harness
 
 
 def test_티켓은_수락_조건_수로_세_무리로_나눈다() -> None:

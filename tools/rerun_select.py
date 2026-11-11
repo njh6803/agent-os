@@ -1092,7 +1092,11 @@ def _parser() -> argparse.ArgumentParser:
         p.add_argument("--revive", type=Path, help="되살릴 목록(과제 id → 까닭의 JSON)")
         p.add_argument("--table", type=Path, required=True, help="쓸 후보 표(마크다운)")
         p.add_argument("--repo", type=Path, default=Path("."), help="병합 기록을 읽을 저장소")
-        p.add_argument("--rev", default="origin/main", help="병합 기록의 끝(기본 origin/main)")
+        p.add_argument(
+            "--rev",
+            default="origin/main",
+            help="병합 기록의 끝(기본 origin/main. dev 를 딴 뒤 PR 단위 기록은 origin/dev 에 있다)",
+        )
         if name != "table":
             p.add_argument("--out", type=Path, required=True, help="쓸 과제 목록")
         if name == "main":

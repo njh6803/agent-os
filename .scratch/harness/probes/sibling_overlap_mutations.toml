@@ -184,10 +184,43 @@ new = '''        if is_ancestor(root, head, "HEAD"):'''
 name = "형제가 main 의 번호를 되풀이한다"
 tests = ["tests/tools/test_sibling_overlap.py"]
 expect = "red"
+expect_output = ["AssertionError: assert 2 == 1"]
 [[mutation.edit]]
 file = "tools/sibling_overlap.py"
 old = '''        new = fresh(numbers, base_numbers, main_numbers)'''
 new = '''        new = fresh(numbers, base_numbers)'''
+
+[[mutation]]
+name = "형제가 기준이 아닌 오래 사는 브랜치의 번호를 자기 새 번호로 센다"
+tests = ["tests/tools/test_sibling_overlap.py", "-k", "main에서_딴_열린_PR"]
+expect = "red"
+expect_output = ["AssertionError: assert 'PR #5 ADR 0003' not in"]
+[[mutation.edit]]
+file = "tools/sibling_overlap.py"
+old = '''            new = unshared(new, trunk)'''
+new = '''            new = new'''
+
+[[mutation]]
+name = "형제가 번호만 같은 다른 파일까지 기준이 아닌 브랜치의 것으로 보고 뺀다"
+tests = ["tests/tools/test_sibling_overlap.py", "-k", "dev가_쥔_번호에_다른_파일"]
+expect = "red"
+expect_output = ["그쪽 0003-pr.md' in '형제: origin/main "]
+[[mutation.edit]]
+file = "tools/sibling_overlap.py"
+old = '''            new = unshared(new, trunk)'''
+new = '''            new = fresh(new, trunk)'''
+
+[[mutation]]
+name = "물려받은 번호를 이 브랜치가 새로 매긴 것으로 센다"
+tests = ["tests/tools/test_sibling_overlap.py", "-k", "물려받은_ADR"]
+expect = "red"
+expect_output = ["assert '옮길 번호: ADR 0003"]
+[[mutation.edit]]
+file = "tools/sibling_overlap.py"
+old = '''    for numbers in inherited:
+        ours = unshared(ours, numbers)'''
+new = '''    for numbers in inherited:
+        pass'''
 
 [[mutation]]
 name = "이 작업 트리도 형제 워크트리로 본다"

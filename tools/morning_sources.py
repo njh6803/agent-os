@@ -5,9 +5,10 @@
 명령은 저장소 루트(`root`)에서 돌고 호출마다 `CALL_TIMEOUT`초 제한을 둔다(`.claude/rules/tools.md`).
 실패하거나 시간을 넘기면 대개 None을 돌려주고, 빈 값과 실패를 가르지 않는 함수는 빈 것을
 돌려준다(예: `worktree_list`, `ticket_paths`, `latest_journal`). 함수마다의 값은 그 반환형과
-독스트링이 원천이고, 그 값으로 무엇을 적는지는 수집 도구가 정한다. `origin/main`을 읽는 git은
-fetch하지 않는다. 예외는 `main_queue`다. 대기열 폴더는 `queue_open_rows.read_ref_folder`로 읽어
-git을 띄우는 시간 제한이 그 도구의 `GIT_TIMEOUT`이고, 작업 폴더를 `root`로 옮긴 동안 부른다.
+독스트링이 원천이고, 그 값으로 무엇을 적는지는 수집 도구가 정한다. 통합 브랜치(`integration_ref`)를
+읽는 git은 fetch하지 않는다. 예외는 `main_queue`다. 대기열 폴더는
+`queue_open_rows.read_ref_folder`로 읽어 git을 띄우는 시간 제한이 그 도구의 `GIT_TIMEOUT`이고, 작업
+폴더를 `root`로 옮긴 동안 부른다.
 
 못 보는 것.
 - 클라우드 세션에서 `gh pr list`는 실패했고 `gh pr view`는 요청한 필드에 따라 갈렸다. 이 도구가
@@ -34,7 +35,7 @@ from pathlib import Path
 from tools.morning_report import Json, json_int, json_list, json_obj, json_str, json_time
 from tools.sibling_overlap import journal_order
 
-from tools import queue_open_rows
+from tools import base_rule, queue_open_rows
 
 CALL_TIMEOUT = 60
 PR_LIMIT = 1000  # `gh pr list`의 기본 한도는 30이라 넘으면 조용히 잘린다
@@ -219,14 +220,21 @@ def pr_view(number: int, root: Path) -> PrView | None:
     )
 
 
+def integration_ref(root: Path) -> str:
+    """보고가 읽는 통합 브랜치의 원격 추적 ref. 브랜치가 없는 보고라 hotfix 가 아닌 쪽의 기준
+    브랜치다(`tools/base_rule.py`). 티켓 PR 이 병합되는 자리라 대기열과 티켓과 일지가 가장 먼저
+    오르고, `origin/dev` 가 없으면 `origin/main` 이다."""
+    return base_rule.base_ref(root, None)
+
+
 def ci_runs(root: Path) -> list[tuple[str, float]] | None:
-    """main의 최근 CI 열 번의 (결과, 걸린 초)."""
+    """통합 브랜치(`integration_ref`)의 최근 CI 열 번의 (결과, 걸린 초)."""
     j = _gh_json(
         [
             "run",
             "list",
             "--branch",
-            "main",
+            integration_ref(root).removeprefix(f"{base_rule.REMOTE}/"),
             "--limit",
             "10",
             "--json",
@@ -293,26 +301,28 @@ def worktree_list(root: Path) -> list[tuple[str, str | None]]:
 
 
 def main_text(root: Path, path: str) -> str | None:
-    """`origin/main`에 있는 파일 `path`의 글. 없거나 git이 실패하면 None이다."""
-    return _run(["git", "show", f"origin/main:{path}"], root)
+    """통합 브랜치(`integration_ref`)에 있는 파일 `path`의 글. 없거나 git이 실패하면 None이다."""
+    return _run(["git", "show", f"{integration_ref(root)}:{path}"], root)
 
 
 def main_queue(root: Path) -> dict[str, str] | None:
-    """`origin/main`의 회고 대기열 폴더(`queue_open_rows.QUEUE`)에 든 항목 파일의 이름→내용.
+    """통합 브랜치의 회고 대기열 폴더(`queue_open_rows.QUEUE`)에 든 항목 파일의 이름→내용.
     `README.md`는 뺀다. `queue_open_rows.read_ref_folder`의 읽기를 그대로 쓰며(목록 한 번, 내용
     한 번), 그 함수가 git을 띄우는 곳이 작업 폴더라 `root`로 옮겨 간 동안만 부른다. 폴더가
     없거나(이행 전 커밋. 옛 파일로 돌아가지 않는다) git이 실패하거나 UTF-8이 아니면 None이다."""
+    # 통합 ref 는 옮겨 가기 전에 정한다. 상대 `root` 는 옮겨 간 뒤에 다른 폴더를 가리킨다
+    ref = integration_ref(root)
     try:
         with contextlib.chdir(root):
-            return queue_open_rows.read_ref_folder("origin/main")
+            return queue_open_rows.read_ref_folder(ref)
     except (OSError, UnicodeDecodeError):
         return None
 
 
 def branch_subject(root: Path, branch: str) -> str | None:
-    """`origin/main`에 없는 `branch`의 커밋 가운데 마지막 것의 제목(줄바꿈이 붙는다). 그런 커밋이
+    """통합 브랜치에 없는 `branch`의 커밋 가운데 마지막 것의 제목(줄바꿈이 붙는다). 그런 커밋이
     없으면 빈 글, git이 실패하면 None이다."""
-    return _run(["git", "log", "-1", "--format=%s", f"origin/main..{branch}"], root)
+    return _run(["git", "log", "-1", "--format=%s", f"{integration_ref(root)}..{branch}"], root)
 
 
 def journal_next(text: str) -> str:
@@ -330,7 +340,7 @@ def journal_next(text: str) -> str:
 
 
 def latest_journal(root: Path) -> tuple[str, str]:
-    """`origin/main`에서 `## 다음`으로 시작하는 줄이 있는 가장 늦은 일지의 (경로, 그 일지의
+    """통합 브랜치에서 `## 다음`으로 시작하는 줄이 있는 가장 늦은 일지의 (경로, 그 일지의
     `## 다음` 절). 그런 일지가 없으면 빈 글 둘이다. 그 일지를 읽지 못하거나 그 줄이 `## 다음(…)`처럼
     덧붙은 것뿐이면 절은 빈 글이다(`journal_next`).
 
@@ -344,7 +354,8 @@ def latest_journal(root: Path) -> tuple[str, str]:
     얕은 클론은 경계 커밋이 그 시점의 파일을 모두 더한 것으로 보이므로, 그 일지들이 한 커밋의
     블록으로 들어가 시각순으로 가려진다(코드를 읽은 것이고 얕은 클론으로 돌려 보지는 않았다).
     """
-    out = _run(["git", "grep", "-n", "^## 다음", "origin/main", "--", "docs/journal/"], root)
+    ref = integration_ref(root)
+    out = _run(["git", "grep", "-n", "^## 다음", ref, "--", "docs/journal/"], root)
     wanted = {line.split(":", 2)[1] for line in (out or "").splitlines() if ":" in line}
     if not wanted:
         return "", ""
@@ -355,7 +366,7 @@ def latest_journal(root: Path) -> tuple[str, str]:
             "--diff-filter=A",
             "--name-only",
             "--format=%x00",
-            "origin/main",
+            ref,
             "--",
             "docs/journal/",
         ],
@@ -373,9 +384,10 @@ def latest_journal(root: Path) -> tuple[str, str]:
 
 
 def ticket_paths(root: Path) -> dict[str, str]:
-    """`origin/main`의 `.scratch` 아래에서 경로에 `/issues/`가 든 `.md` 파일을 이름(확장자를 뗀
+    """통합 브랜치의 `.scratch` 아래에서 경로에 `/issues/`가 든 `.md` 파일을 이름(확장자를 뗀
     것)마다. 같은 이름이 여럿이면 처음 것이다."""
-    out = _run(["git", "ls-tree", "-r", "--name-only", "origin/main", "--", ".scratch"], root)
+    ref = integration_ref(root)
+    out = _run(["git", "ls-tree", "-r", "--name-only", ref, "--", ".scratch"], root)
     found: dict[str, str] = {}
     for line in (out or "").splitlines():
         if "/issues/" in line and line.endswith(".md"):
