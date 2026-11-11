@@ -117,6 +117,10 @@ PR 직전 리뷰에 밀 새 주장(이번 반영으로 새로 쓴 사실 문장)
 - 인계 직전의 `run_checks.py`가 인계로 끊겨 결과를 못 받았다. **기각**: 일회성이고 일지가 "남은 일"로 넘겼으며 이 세션이 처음부터 다시 돌렸다.
 - 대기열 점검: `tools/queue_open_rows.py`를 이 체크아웃과 `--ref origin/main`으로 돌려 만료할 항목 21개(0242, 0381, 0411, 0491, 0503~0505, 0507~0513, 0521, 0522, 0524~0526, 0529, 0534. 모두 승인 줄의 가장 늦은 날짜가 2026-10-28)가 두 출력에 모두 든 것을 보고 상태 줄을 고쳤다가, 커밋 전 `tools/sibling_overlap.py`가 열린 PR #536(`dev-review-bot-off`)이 같은 21개를 이미 고친다고 알려 되돌렸다(`git restore`). 같은 파일을 두 PR이 고치면 늦게 병합하는 쪽이 충돌 후보이기 때문이다. 이 PR은 만료를 닫지 않는다. 회차 5 이상인 열한 개는 chore 배치의 대상 그대로다. 새 항목 하나(`ticket-box-checked-before-action`)를 썼다.
 
+## 인계: 커밋 뒤
+
+컨텍스트가 인계 문턱(20만 토큰)을 넘은 채 커밋 뒤 경계에 왔다. 셀프 리뷰 반영, 전체 검증, 회고, 커밋(`551f50c91`, pre-commit 통과)까지 마쳤고 푸시하지 않았으며 열린 PR이 없다. 새 세션이 할 일은 PR 직전 리뷰(`coderabbit-review`, 밀 주장은 위 "셀프 리뷰 반영"의 (a)~(d)), 푸시, PR 열기(`/git-pr`), 봇 회차, 병합(`merge.md`의 워크트리에서 병합할 때)이고, 병합 뒤 `tidy-checkouts`와 `next-session`이다. 그리고 병합 뒤 마무리 보고에 "주 체크아웃 미갱신: 루트는 main" 한 줄과 사용자 수준 스킬 네 개를 고칠지 묻는 질문(`wrap_up`)을 넣는다. PR을 열기 전에 `uv run python tools/sibling_overlap.py`를 다시 쳐 PR #536(`dev-review-bot-off`)과 겹치는 파일이 없는지 본다(이 브랜치는 그 PR이 닫는 대기열 항목을 건드리지 않는다). 커밋 메시지는 `Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>`, PR 본문 끝은 `🤖 Generated with [Claude Code](https://claude.com/claude-code)`로 끝낸다.
+
 ## 다음
 
 이 PR이 병합된 뒤의 일이다.
@@ -129,3 +133,4 @@ PR 직전 리뷰에 밀 새 주장(이번 반영으로 새로 쓴 사실 문장)
 6. **ADR 0043 33행("잊으면 다음 dev→main에서 hotfix가 사라진다")**: 임시 저장소 측정과 어긋난다(핫픽스가 다른 줄이면 출시 뒤에도 main에 남는다). 개정은 사용자 승인이 필요해 이 PR에서 고치지 않았다.
 
 open-session을 부른다 2026-11-11T19:10Z
+open-session을 부른다 2026-11-11T19:54Z
