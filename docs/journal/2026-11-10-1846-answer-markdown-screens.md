@@ -254,3 +254,56 @@ open-session을 부른다 2026-11-10T14:02:42Z
 그 스크립트는 첫 세 표본(40%, 14%, 49%, python 4~6개)에서 곧바로 끝났다. 셋째 시도를 쳤다.
 
 셋째 시도는 `test_interrupt.py`가 지났고, `tests/tools/test_rerun_runner.py::test_오염이_한_번이면_다시_돌고_두_번이면_그_과제를_모든_갈래에서_뺀다` 하나가 `assert 1 == 0`(러너의 종료 코드)으로 빨갰다(`1 failed, 6867 passed in 623.84s`). 이 시험도 일지 2026-10-26-03·2026-10-26-16에 부하에서 같은 꼴로 빨간 기록이 있는 같은 종류다. 그 시험만 따로 치니 `1 passed in 8.66s`였다. 회차를 더하지 않고 넷째 시도를 쳤다.
+
+넷째 시도가 `d9e44d16`으로 지났다(pytest 428.6초, web-verify 578.0초가 `Passed`, 커밋 출력을 Grep으로 봤다).
+
+## PR
+
+`git fetch origin main` 뒤 `origin/main`이 합친 그대로(`73b0ed0b`)라 다시 합치지 않고 푸시해 PR #521을 열었다. 본문은 템플릿을 채웠고, PR 직전 리뷰 줄에 CLI 리뷰의 결과를, "남긴 위험"에 위 일지 커밋이 시간 시험에 세 번 막힌 일을 적었다. 앱의 PR 연결은 `get_status`가 `bound: true`로 보였다(그때 검사는 통과 1, 대기 7).
+
+## 인계 (PR 연 뒤)
+
+PR을 연 뒤에 인계 계기가 왔다(세션 컨텍스트 304,620 토큰). `handoff.md`를 Read로 열어 따랐다. 앞의 `커밋 뒤` 계기 셋은 이 세션을 연 지시문의 "이어받을 상태"가 `인계: 커밋 뒤`라 인계하지 않는 때였고, 이번 경계는 다르다. 곁 세션이 아니고(`get_session`의 `self`에 `parentSessionId`가 없다) 이 세션이 쓴 `인계 못함` 줄도 없다. `@coderabbitai review` 코멘트는 남기지 않았다(새 세션이 남긴다). 이 세션의 제목은 `docs/answer-markdown-screens`였다. 이 절은 커밋하지 않았다.
+
+지시문:
+
+다음 작업: 기능 answer-markdown. PR #521(확정한 화면과 ADR 0053 이력)의 봇 회차를 돌고 병합한다
+다음 단계: PR 반영·병합
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /ui-design answer-markdown
+브랜치: docs/answer-markdown-screens
+모델: Sonnet 5.5 / high. 2의 잇는 지시문
+읽을 것: docs/journal/2026-11-10-1846-answer-markdown-screens.md
+이어받을 상태: 인계: PR 연 뒤. merge.md 2(봇 회차)부터 한다. 첫 @coderabbitai review 코멘트도 새 세션이 남긴다. PR 직전 리뷰(CodeRabbit CLI, 지적 0건)와 일지 커밋까지 마쳤고, 일지의 "인계 (PR 연 뒤)" 절은 커밋하지 않았다(docs/journal/2026-11-10-1846-answer-markdown-screens.md)
+확인할 선행 조건: 없음
+이번 요청 범위: PR과 병합까지
+
+제목을 `docs/answer-markdown-screens (인계함)`으로 바꿨다. 멈출 백그라운드 작업은 없었다. `git worktree unlock`은 `is not locked`로 끝나 넘어갔다.
+
+open-session을 부른다 2026-11-10T15:24:35Z
+
+`open_session.ps1 -Action send`가 `page=` 뒤에 폴더 오류로 멈췄다. 새 세션 화면의 폴더가 `C:\project\rag-engine`이라 보내지 않았고, 모델도 아직 고르지 않았다(스크립트의 오류 문구를 봤다). 앱의 마지막 폴더가 다른 저장소의 세션(그 시각 `list_sessions`에 rag-engine 세션이 가장 최근 활동으로 있었다)으로 옮겨 간 것으로 어림한다. `open-session` 3대로 같은 파일로 다시 돌리지 않고, 사람에게 새 세션 화면의 환경을 `C:\project\agent`로, 모델을 `Sonnet 5.5 / high`로 맞춰 보내 달라고 부탁했다.
+
+## 이어받은 세션 (봇 회차와 병합)
+
+모델 `claude-sonnet-5-5`. 제목을 `docs/answer-markdown-screens`로 바꾸고 `EnterWorktree(path)`로 이 워크트리에 들어왔다. 지시문이 `ui-design`의 `SKILL.md`를 읽으라고 했으나 이번 단계는 PR 반영과 병합이라 `merge.md`를 Read로 열어 2(봇 회차)부터 했다. 새 세션은 PR이 앱에 연결되어 있지 않아(`get_status`가 `bound: false`) `bind_pr`로 #521을 연결했다.
+
+- 대기: 시작 때 검사는 CodeRabbit만 `skipping`이고 나머지는 초록이었다. `@coderabbitai review` 코멘트를 남기자 `pending`이 되어 `tools/wait_ci.py 521`을 백그라운드로 띄웠고, 끝 줄이 `끝: 모두 통과. CodeRabbit: Finished`였다.
+- 코멘트: CodeRabbit은 "No actionable comments were generated"였고 claude-review는 "지적 없음"이었다(`gh pr view 521 --json comments`로 읽었다). 인라인 리뷰는 없었다. 고칠 것도 보류할 것도 없어 회차 세기에 올릴 지적이 없고 뒤로 넘긴 일도 없다.
+
+## 회고
+
+후보 셋, 승인 0, 기각 3, 넘김 0.
+
+1. 새 세션이 PR 연결 없이 시작해 `bind_pr`을 따로 불러야 했다. 기각. `get_status`가 그 자리에서 `bind_pr`을 안내했고 비용은 호출 하나다.
+2. pre-commit의 pytest가 시간 시험 셋에 세 번 막혔다(앞 세션의 일지 커밋). 기각. ADR 0036이 받아들여 닫은 결함 종류(대기열 306)의 새 사례이고, 위 "일지 커밋" 절이 이미 적었다. 항목에 잇지 않는다.
+3. `open_session.ps1`이 새 세션 화면의 폴더가 다른 저장소라 보내지 못했다. 기각. 스크립트가 그 자리에서 오류 문구로 알렸고 사람에게 부탁해 풀었다(이미 있는 검사가 알린 것).
+
+만료: 이 브랜치와 `origin/main`의 `queue_open_rows.py`가 같은 아홉(465·477·480·481·485·487·488·489·490, 모두 승인 줄의 가장 늦은 날짜가 2026-10-27)을 만료할 항목으로 냈고 상태 줄을 `만료 2026-11-11 (ADR 0036)`로 고쳤다.
+
+## 다음
+
+다음 작업: 기능 answer-markdown의 명세. 설계는 ADR 0053과 확정한 화면(`.scratch/answer-markdown/design/`)이 끝냈고, 명세(`spec.md`)가 아직 없다.
+
+- 명세가 정할 것: 기능 계획 `.scratch/answer-markdown/plan.md`의 "명세가 먼저 할 것"(프로브를 설치할 판으로 다시 돌리기, PR 봇이 지적한 `registry.mjs`의 fetch 제한 시간과 실패 처리), 문장 끝 `[숫자]`와 끝의 "출처" 줄을 알아볼 글의 범위, 숫자 사이 별표와 밑줄 강조를 글자로 두는 방법(프로브로 확인하고 ADR 0053 이력을 적는다).
+- 기본 에이전트 명세(`base-agent`)는 아직 main에 없어, 출처 줄의 글 모양(ADR 0051 "답의 모양")은 그 명세에 넘긴 채다.
