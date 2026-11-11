@@ -138,3 +138,53 @@ Critical 0, Major 2, Minor 4, Nit 1. ADR 0056·0043의 절 이름과 인용, `us
   - 그리고 일지의 "이 단계를 닫을 때 사용자에게 바로잡는다"가 아직 하지 않은 일이라고 짚었다.
 
 판정: 일곱 모두 고친다. 보류 둘도 고치는 값이 작아 고쳤다(`docs/constitution/operations.md` 리뷰 파이프라인 2). 1은 경고를 단락과 갈라 노트에 싣지 않는다고 적고, 2는 판 내기가 그 잡이 쓴 댓글만 읽는다고 적은 뒤 가르는 꼴과 표지를 명세에 넘겼다. 3은 병합 전에 단락을 보는 단계를 둘지를 명세에 넘겼다(ADR 0056 결정 "판 내기의 차례와 실패"가 병합한 세션이 판 내기를 기다리게 하는 자리가 후보다). 4는 "지난 판(정식 판은 지난 정식 판) 뒤의"로, 5는 "사람이 판마다 노트를 쓰지 않는다는 ADR 0056의 뜻"으로, 6은 "느낌표가 붙은 변경이 하나라도 있는 기능의 단락"으로 고쳤다. 7은 둘째 물음의 다른 버튼이 "지금은 안 함"이었다고 덧붙였다. 사용자에게 바로잡는 일은 이 단계를 닫는 답에서 한다.
+
+## 검증
+
+- `uv run ruff check .`: All checks passed!(셀프 리뷰를 반영한 뒤, PR 직전 리뷰 반영 전에 쳤다. 그 뒤에는 `.md` 두 파일만 고쳤다.)
+- `uv run ruff format --check .`: 2081 files already formatted(같은 때).
+- `uv run python tools/sibling_overlap.py`: 커밋 직전에 `git fetch origin` 뒤 다시 쳤다. 이 브랜치의 새 번호 없음, 번호 겹침 없음, 함께 고친 파일 없음. `git branch -r --list origin/dev*`도 아무것도 내지 않아 PR의 base는 main이다(dev 전환 PR은 아직 열려 있다).
+- 커밋의 pre-commit(커밋 명령의 출력 파일 끝을 `tail -40`으로 손으로 봤다): ruff 둘은 `.py`가 없어 Skipped(위에서 손으로 쳤다). `tools/run_checks.py`의 check-instructions, check-type-escapes, pyright-linux, pyright, run-hooks, pytest(468.4초), web-verify(636.0초)가 Passed. markdown tables, line separators, mutation tables, commit message가 Passed. canary specs와 constitution version은 대상 파일이 없어 Skipped. quotes는 경고 15건이고 막지 않는다. 모두 이 일지가 대화의 물음과 사용자에게 한 답, 셀프 리뷰가 짚은 고치기 전 문장을 따옴표로 옮긴 것이라 저장소에 원문이 없다. 커밋 명령이 600초를 넘겨 백그라운드로 넘어갔고 다시 치지 않고 끝 알림을 기다렸다(종료 0).
+
+## 인계
+
+커밋 뒤에 세션 컨텍스트가 인계 문턱을 넘어 `hook_handoff`의 계기가 왔다. `handoff.md` 1의 인계하지 않는 때 다섯에 들지 않는다(커밋은 성공했다, 요청 범위가 병합까지다, 지시문 없이 연 세션이다, `인계 못함` 줄이 없다, `get_session`의 `self`에 `parentSessionId`가 없다). 넘기기 전 이 세션의 제목은 `docs/release-notes-summary`다.
+
+사용자에게 한 답 가운데 바로잡을 것("출시 PR 하나에는 기능 하나가 들어 있습니다")은 이 세션이 인계 직전의 답에서 사용자에게 바로잡는다.
+
+낸 지시문(새 세션의 첫 메시지):
+
+```
+다음 작업: 기능 release-image. 릴리스 노트에 운영자용 요약 단락을 더하는 안을 기능 계획에 적은 docs 브랜치의 PR을 열어 병합한다
+다음 단계: PR 반영·병합
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: 사람의 요청 원문은 docs/journal/2026-11-12-0108-release-notes-summary.md 의 "사용자 프롬프트" 절에 있다(마지막 요청은 버튼 "기능 계획에 적기")
+브랜치: docs/release-notes-summary
+모델: Sonnet 5.5 / high. 2의 잇는 지시문
+읽을 것: docs/journal/2026-11-12-0108-release-notes-summary.md
+이어받을 상태: 인계: 커밋 뒤. 기능 계획 본문에 검토할 안을 적고 셀프 리뷰 두 축과 PR 직전 coderabbit-review의 지적을 모두 반영해 커밋 하나를 만들었다. 푸시하지 않았고 PR은 없다. 일지의 "검증"과 "인계" 절은 커밋 뒤에 더해 아직 커밋하지 않았다. 남은 단계는 일지에 회고와 "다음"을 더해 커밋하고, 푸시하고, PR을 열고, merge.md 2의 봇 회차를 반영해 병합하는 것이다. 일지 docs/journal/2026-11-12-0108-release-notes-summary.md
+확인할 선행 조건: PR을 열 때 origin에 dev 브랜치가 생겼는지 본다(chore/dev-branch-transition의 PR이 열려 있었다). 생겼으면 PR의 base를 ADR 0043 Consequences "전환"대로 정한다
+이번 요청 범위: PR과 병합까지
+```
+
+제목을 `docs/release-notes-summary (인계함)`으로 바꿨다. 멈출 백그라운드 작업은 없었다. `git worktree unlock C:/project/agent/.claude/worktrees/release-notes-summary`가 출력 없이 끝났다.
+
+open-session을 부른다 2026-11-11T16:42:03Z
+
+## 이어받기 (둘째 세션)
+
+위 지시문을 첫 메시지로 받았다. 훅대로 제목을 `docs/release-notes-summary`로 바꾸고, `git worktree list`에서 그 브랜치가 `.claude/worktrees/release-notes-summary`에 체크아웃된 것을 보고 `EnterWorktree(path)`로 들어갔다. 들어가 보니 HEAD가 `557c96de7`이고 미커밋 변경은 이 일지 하나였다(`git status --short`를 손으로 쳐서 봤다). `git ls-remote --heads origin dev main`은 main 한 줄만 내어 origin에 dev가 아직 없고, `gh pr list --state open`을 쳐서 보니 dev 전환 PR(#534 `chore/dev-branch-transition`)이 그대로 열려 있다. 그래서 이 PR의 base는 main이다(ADR 0043 Consequences "전환" 앞의 상태). 사용자에게 바로잡을 것("출시 PR 하나에는 기능 하나가 들어 있습니다")은 앞 세션이 인계 직전의 답에서 한다고 적었지만 이 세션이 그 답을 읽지 못했으므로, 이 세션의 마지막 답에서도 한 번 바로잡는다.
+
+## 회고
+
+`retro`를 돌렸다(`writing-for-agents`를 불렀고, 일지는 `uv run python tools/sibling_overlap.py --journal`이 찍은 이 파일이다). 후보 1, 승인 1, 기각 0, 넘김 0.
+
+1. **승인(대기열 `answer-estimate-before-reading-adr`, 1회차).** 사건: 앞 세션이 ADR 0043을 열기 전에 출시 PR의 크기를 어림으로 말했고 사용자가 바로잡았다("사용자 프롬프트"). 조건: 사건은 이 일지에 있다. 층은 지침이 사다리의 가장 높은 층인데, 채팅 답의 사실 주장은 훅과 검사가 읽지 못한다. 되돌림은 PR 하나다. 이 세션이 지침(`CLAUDE.md` 작업 규약 1의 "경로를 안다고 추측으로 대신하지 않는다")을 어겨 사용자가 잡은 사건이라 회차로 센다(retro 4단계의 회차로 세는 것). `--search 어림`과 `--search ADR.을.열기.전`으로 찾은 항목 가운데 열린 항목에 같은 처방이 없었다. 가장 가까운 101의 가족(설계 인터뷰 선택지의 대 보지 않은 사실, 394까지 닫힘)은 대상이 선택 화면이라 잇지 않고 새 항목으로 쓰며 곁에 둔다. 반영은 더하는 것의 문턱(다섯 번째)이 아니라 1회차라 대기열에 둔다.
+
+일지에만 남기는 것: 앞 세션이 사용자에게 한 둘째 답("출시 PR 하나에는 기능 하나")도 같은 어림이었고 셀프 리뷰 명세 축이 잡았다. 같은 사건의 일부라 따로 세지 않는다.
+
+## 다음
+
+- 병합 뒤 이 PR이 할 일은 없다. release-image는 dev 전환(#534와 그 뒤 티켓)이 닫힌 뒤에 명세를 시작한다(`.scratch/plan.md` 머리 문단, ADR 0056 Consequences "dev 전환이 먼저다"). 그 명세가 이 PR이 적은 "검토할 안"을 읽고 지난 제품 PR 몇 개에 돌려 본 뒤 고른다. 고르면 ADR 0056 이력과 사용자 승인이 필요하다.
+- 명세에 넘긴 물음은 기능 계획 본문에 있다(커밋을 기능으로 묶는 길, 끝나지 않은 기능의 단락, 열린 동안 커밋이 더해질 때, 맨 위 두 자리와의 차례, 모델 댓글과 경고를 가르는 꼴과 표지, 병합 전에 단락을 보는 단계).
+- 대기열: `answer-estimate-before-reading-adr`를 새로 썼다(1회차).
