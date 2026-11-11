@@ -58,19 +58,34 @@
 
 `coderabbit-review` 서브에이전트가 CLI를 끝까지 돌렸다(`review_completed`. `Plan: Free`, `Seat: not assigned`). 지적 둘이 모두 유효한 Minor였고 오탐은 없었다. 둘 다 고쳤다.
 
-- **변이 표지 둘.** `main_commit_hook_mutations.toml`의 "러너의 main 픽스처에 커밋을 두지 않는다"와 `push_behind_hook_mutations.toml`의 새 변이 셋이 `expect_output`으로 시험 함수 이름을 골랐다. 이름은 준비 단계가 깨져도 찍혀서 고른 단언이 실패했다는 표지가 못 된다. 해당 시험의 단언에 실제 값을 넣은 f-string 메시지를 달고(`hotfix 브랜치가 견준 기준: ('dev', 4)` 같은 꼴), 변이를 손으로 넣어 실패 출력의 `E` 줄에 그 문구가 나오는 것을 본 뒤 표지로 바꿨다. 같은 시험의 다른 변이(빈 main 픽스처) 하나가 `expect_output` 없이 있던 것도 같은 방식으로 채웠다. 소스 줄에는 `{result}` 꼴로만 있어서 다른 단언이 실패한 출력과 섞이지 않는다. 같은 표 앞쪽(64~114행)의 시험 이름 표지는 이 변경 전의 것이라 소급하지 않았다.
+- **변이 표지 둘.** `main_commit_hook_mutations.toml`의 "러너의 main 픽스처에 커밋을 두지 않는다"와 `push_behind_hook_mutations.toml`의 새 변이 셋이 `expect_output`으로 시험 함수 이름을 골랐다. 이름은 준비 단계가 깨져도 찍혀서 고른 단언이 실패했다는 표지가 못 된다. 해당 시험의 단언에 실제 값을 넣은 f-string 메시지를 달고(`hotfix 브랜치가 견준 기준: ('dev', 4)` 같은 꼴), 변이를 손으로 넣어 실패 출력의 `E` 줄에 그 문구가 나오는 것을 본 뒤 표지로 바꿨다. 같은 시험의 다른 변이(빈 main 픽스처) 하나가 `expect_output` 없이 있던 것도 같은 방식으로 채웠다. 소스 줄에는 `{result}` 꼴로만 있어서 다른 단언이 실패한 출력과 섞이지 않는다. 같은 표의 앞쪽 여섯도 이 PR이 더한 시험 이름 표지였다(`git diff origin/main`에서 이 PR이 더한 `expect_output`은 아홉이고 셋이 새 변이, 여섯이 앞쪽 변이였다). PR의 CodeRabbit 첫 회차가 짚어서야 알았다. 서브에이전트는 "옛 변이인지는 확인하지 못했다"고 보고했는데, 그 말을 이 세션이 확인하지 않고 옛 변이라서 소급하지 않았다고 적은 것이 틀렸다. 아래 "봇 첫 회차"가 고쳤다.
 - **사실 문장 3번이 부정확했다.** `origin/dev`가 없을 때 푸시 훅(`base_branch`)은 "main"을, 커밋 검사(`base_ref`)는 `origin/main`을 기준으로 삼는다. `hook_git_main_commit`은 기준 브랜치를 고르지 않고 현재 브랜치 이름이 `{main, dev}`에 드는지만 보므로 `origin/dev`를 읽지 않는다. 그래서 dev라는 이름의 브랜치가 없으면 사실상 main만 막는다. 코드는 그대로 맞고 문장만 고쳤다. 근거는 코드를 읽은 것이다(서브에이전트의 판정을 `tools/`에서 `PROTECTED|origin/dev`를 Grep해 `hook_git_main_commit.py:44·136`에 `origin/dev`를 읽는 줄이 없는 것으로 대 봤다).
 - **사실 문장 4번이 틀렸다.** `ci.yml`의 `jobs:`는 여덟이다(검사 잡 일곱과 그 결과를 모으는 `verify`). 새로 더한 주석의 "같은 잡 일곱"을 "같은 검사 잡 일곱과 그 결과를 모으는 verify"로 고쳤다. 잡 수는 `ci.yml`에서 `jobs:` 아래 키를 Grep으로 세어 확인했다(python, web, e2e, e2e-widget, e2e-portal, visual, ticket, verify). 1번(17초)과 2번(`hotfix/x` → None)은 서브에이전트가 코드를 읽어 맞다고 했고 이 세션은 다시 대지 않았다.
 
+## 봇 첫 회차
+
+CodeRabbit이 이 PR에 낸 첫 리뷰는 줄 코멘트 다섯이고 claude-review는 한 번 돌았다(둘 다 `gh api`로 읽었다). 첫 회차라 Minor까지 지적마다 판단했고 모두 고쳤다. 푸시 한 번에 실었다.
+
+- **[Major] dev를 따기 직전 원격 main을 갱신한다** (`dev-branch-create.md`). `git push origin origin/main:refs/heads/dev`가 로컬 추적 ref를 쓰므로 낡을 수 있다. 맞는 지적이라 3단계에 `git fetch origin`을 먼저 두고 딴 뒤 `git ls-remote`로 원격의 두 브랜치 커밋을 대게 했다. 수용 기준도 같은 말로 고쳤다.
+- **[Minor] LLM 테스트 잡의 구현** (`dev-branch-create.md`). `ci.yml`에 그 잡이 없어 시크릿만 넣어서는 돌지 않는다. 맞는 지적이다. 잡 구현(main을 base로 하는 PR과 main 푸시, `verify`에 잇기)을 사용자의 답에 따라 그 티켓이 하거나 후속 티켓 `ci-llm-job`으로 쓰게 했고 `dev-branch-transition.md`의 "하지 않는 것"에도 적었다.
+- **[Minor] 다른 클론은 `origin/dev`를 받아야 한다** (`dev-branch-transition.md`). 맞는 지적이다. 티켓 규칙에 "없다"가 이 클론의 추적 ref가 없다는 뜻임을 적고, `dev-branch-create`에 4단계와 수용 기준으로 더했다.
+- **[Minor] 변이 표지 여섯** (`push_behind_hook_mutations.toml`). 위 "PR 직전 리뷰"의 같은 지적이 더 있던 것이다. 해당 시험 다섯의 단언에 값을 넣은 메시지를 달고 표지를 바꿨다. 변이를 손으로 넣은 실패 출력의 `E` 줄에서 문구가 나오는 것을 본 뒤에 골랐다.
+- **[Minor] `origin/dev` 조회가 시간을 넘기거나 실패해도 dev가 없다고 읽는다** (`hook_push_behind_main.py`). 맞는 지적이다. 이 훅은 `deny`를 내므로 dev에는 최신이고 main에만 없는 브랜치를 잘못 막는다. `ref_state`("present"·"absent"·"unknown"의 `Literal`)를 두고 `base_branch`가 "unknown"이면 None을 내 `behind_count`가 재지 않게 했다. 처음에는 `ref_exists -> bool | None`으로 지었는데 저장소의 `optional_bool_annotations` 검사(`test_이_저장소에는_bool_None_주석이_없다`)가 pre-commit의 pytest에서 빨개져 첫 커밋 시도가 막혔고, `Literal`로 다시 지었다. 시험 둘(`ref_state` 세 갈래, 시간 제한을 0.0001초로 줄여 조회를 반드시 넘기게 한 `base_branch`)과 변이 22번을 더했다. 수동으로 변이를 넣어 출력을 본 일곱과 표 전체(`mutate.py` 22개)가 모두 기대대로 나왔다.
+- **claude-review [Minor] `reason_text`의 기본값 `base="main"`.** 맞다. 호출부가 항상 넘기고 시험만 기본값에 기댔으므로 필수 인자로 바꾸고 시험의 호출 둘을 고쳤다. **[Nit] `behind_count`의 반환 튜플**은 셀프 리뷰에서 남긴 것과 같은 지적이라 이번에도 남긴다. 고쳐도 동작이 같고 훅이 단독 스크립트라 이 파일 안에서만 정의해야 한다.
+- **CI 실패와 재실행.** 첫 실행에서 python, web, e2e, e2e-widget, e2e-portal이 모두 `apt`의 `Temporary failure resolving`(러너의 DNS)로 `apt-get` 종료 코드 100/1에서 멈췄다. `gh run view --log-failed`를 읽어 다섯 잡 모두 같은 원인임을 보았다. verify는 그 결과를 모아 빨갰다. 이 PR의 코드와 무관한 인프라 실패라 `gh run rerun --failed`로 다시 돌렸고, 새 푸시가 있어 그 재실행은 멈추고 새 헤드로 다시 기다린다.
+- **사고 하나.** 변이를 넣어 보려고 쓴 스크래치 스크립트가 `Path.write_text`로 훅 파일을 되돌리며 줄 끝을 CRLF로 바꿨다. 변이 표 실행이 "줄 끝이 다르다"로 알려서 알았고 바이트로 LF로 되돌려 `git diff --stat`이 정상 크기(훅 38줄)임을 확인한 뒤 표 전체를 다시 돌렸다.
+
 ## 회고
 
-낸 후보 다섯, 판정은 승인 0, 기각 5, 넘김 0이다.
+낸 후보 일곱, 판정은 승인 0, 기각 7, 넘김 0이다.
 
 - 변이 표 원문이 코드와 어긋나 있었다(이 변경 전부터 넷). **기각**: 이미 있는 검사가 잡는다(`tools/mutate.py --check`와 pre-commit의 `--staged`, 대기열 0092). 이 세션이 변이를 돌려서야 알았지만 표를 고치는 커밋에서 그 검사가 돈다.
 - 독스트링·주석의 낡은 수치와 `main`만 적은 문장. **기각**: `code-review` 두 브리프의 주장 검증 3번(계약 변경 grep)이 잡도록 둔 기준을 어겨 리뷰가 잡았다. 리뷰가 제 몫을 했으므로 회차에서 뺀다.
 - 일지에 패턴을 밝히지 않은 줄 수. **기각**: 주장 검증 7번(근거의 종류)이 잡았다. 같은 이유다.
 - `hotfix/*` 브랜치의 티켓 이음 빈칸. **기각**: 하네스 후보가 아니라 설계의 빈칸이고 `dev-base-tools` 티켓에 담았다.
 - 새 워크트리의 `.venv`가 만들어지는 동안 `rewrap_comments.py`가 120초 제한을 넘은 일. **기각**: 일회성이고 사건 하나도 환경의 첫 기동 비용이다.
+- 서브에이전트가 "확인하지 못했다"고 한 것을 이 세션이 확인 없이 "이 변경 전의 것"이라고 일지와 PR 본문에 옮겼다. **기각**: 근거의 종류를 밝히라는 기존 계기(`hook_journal_evidence`)와 주장 검증이 겨냥하는 모양이고, 봇이 잡았다. 사건 하나다.
+- 변이를 보려고 쓴 스크래치 스크립트가 추적 중인 소스의 줄 끝을 CRLF로 바꾼 일. **기각**: 변이 표 실행이 알렸고 바이트로 되돌려 확인했다. 첫 사건이고 손상이 없다.
 - 대기열 점검: 만료할 항목 없음, 회차 5 이상은 chore 배치의 대상 그대로(`420`, `probe-round-marked-measured-unconditionally` 등 열한 개). 새 항목은 쓰지 않았다.
 
 ## 인계: 커밋 뒤

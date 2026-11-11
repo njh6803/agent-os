@@ -43,7 +43,8 @@ hook_git_main_commit 과 같은 정규식과 인용 자리표시자 `_`)가 있�
 - 원격 이름이 origin 이 아니거나 기본 브랜치가 main 이 아닌 저장소. 재지 않는다.
 - dev 가 선 뒤 한 번도 fetch 하지 않아 `refs/remotes/origin/dev` 가 없는 클론. main 으로 잰다(원격에
   물어 보지 않는다. 푸시마다 fetch 가 하나 더 든다).
-- fetch 가 실패하거나(오프라인, 지워진 원격) 시간을 넘기는 것. 막지 않는다.
+- fetch 가 실패하거나(오프라인, 지워진 원격) 시간을 넘기는 것. 막지 않는다. `origin/dev` 가 있는지
+  조회하다 시간을 넘기거나 실패한 것도 같다. 기준을 정하지 못해 재지 않는다.
 - 판정 뒤에 main 이 움직이는 것. 푸시한 CI 가 도는 동안 형제가 병합하면 여전히 한 번 더 돈다.
 - 값을 먹는 긴 옵션을 줄인 이름(`--push-opt -h`). 줄이지 않은 이름만 값을 먹는다고 보아 그 값
   `-h` 를 도움말로 읽고 지나간다(거짓 음성). git 은 줄인 이름을 받아 `-h` 를 값으로 먹고 푸시한다.
@@ -59,7 +60,7 @@ import re
 import subprocess
 import sys
 from collections.abc import Callable
-from typing import TypedDict
+from typing import Literal, TypedDict
 
 _REPO_LOCATION_VARS = ("GIT_DIR", "GIT_WORK_TREE", "GIT_COMMON_DIR")
 # 로컬 git 호출 하나와 fetch 하나의 시간 제한(초). 로컬 호출이 셋(브랜치, dev 의 유무, 뒤처진 수)과
@@ -69,6 +70,8 @@ FETCH_TIMEOUT = 8.0
 BYPASS = "PUSH_BEHIND_OK"
 PROTECTED = frozenset({"main", "dev"})
 HOTFIX_PREFIX = "hotfix/"
+# ref 가 있는지 물은 답. 조회 자체가 실패한 것("unknown")을 없다("absent")와 가른다.
+RefState = Literal["present", "absent", "unknown"]
 
 # hook_git_main_commit 의 _GIT_COMMIT 과 같은 모양이다(PR #91 리뷰). `git push-x` 같은 이름은 뺀다.
 _GIT_PUSH = re.compile(r"git\s+(?:(?:-C|-c)\s+\S+\s+|--no-pager\s+)*push(?![\w-])")
@@ -216,17 +219,42 @@ def quiet_git(cwd: str, timeout: float, *args: str) -> bool:
     return result.returncode == 0
 
 
-def base_branch(cwd: str, branch: str) -> str:
-    """`branch` 가 견줄 기준 브랜치 이름(`main` 또는 `dev`). ADR 0043 의 규칙이다.
+def ref_state(cwd: str, timeout: float, ref: str) -> RefState:
+    """`ref` 가 있으면 "present", 없으면 "absent", 가르지 못하면 "unknown".
+
+    git 을 띄우지 못하거나 시간을 넘기거나 저장소가 아니면 "unknown" 이다. `rev-parse --verify
+    --quiet` 는 ref 가 없을 때 종료 코드 1 로 끝나므로, 있고 없고는 종료 코드 0 과 1 로만 가른다.
+    """
+    try:
+        result = subprocess.run(
+            ["git", "rev-parse", "--verify", "--quiet", ref],
+            cwd=cwd,
+            env=_environment(),
+            capture_output=True,
+            check=False,
+            timeout=timeout,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return "unknown"
+    if result.returncode == 0:
+        return "present"
+    return "absent" if result.returncode == 1 else "unknown"
+
+
+def base_branch(cwd: str, branch: str) -> str | None:
+    """`branch` 가 견줄 기준 브랜치(`main` 또는 `dev`). 정하지 못하면 None. ADR 0043.
 
     `hotfix/*` 는 main 이다. 그 밖은 `origin/dev` 의 추적 ref 가 이 클론에 있으면 dev, 없으면 main
     이다 (dev 가 서기 전에는 모두 main). ref 가 있는지만 로컬 git 으로 본다. 원격에 물어 보면
-    푸시마다 fetch 하나가 더 들어 등록의 20초를 넘길 수 있다.
+    푸시마다 fetch 하나가 더 들어 등록의 20초를 넘길 수 있다. 조회 자체가 시간을 넘기거나 실패하면
+    ref 가 없다고 읽지 않고 None 을 낸다. main 으로 재면 dev 에는 최신인 브랜치를 잘못 막는다.
     """
     if branch.startswith(HOTFIX_PREFIX):
         return "main"
-    found = run_git(cwd, GIT_TIMEOUT, "rev-parse", "--verify", "--quiet", "refs/remotes/origin/dev")
-    return "dev" if found else "main"
+    state = ref_state(cwd, GIT_TIMEOUT, "refs/remotes/origin/dev")
+    if state == "unknown":
+        return None
+    return "dev" if state == "present" else "main"
 
 
 def behind_count(cwd: str) -> tuple[str, int] | None:
@@ -239,13 +267,15 @@ def behind_count(cwd: str) -> tuple[str, int] | None:
     if branch is None or branch in PROTECTED:
         return None
     base = base_branch(cwd, branch)
+    if base is None:
+        return None
     if not quiet_git(cwd, FETCH_TIMEOUT, "fetch", "-q", "origin", base):
         return None
     count = run_git(cwd, GIT_TIMEOUT, "rev-list", "--count", f"HEAD..origin/{base}")
     return (base, int(count)) if count is not None and count.isdigit() else None
 
 
-def reason_text(count: int, base: str = "main") -> str:
+def reason_text(count: int, base: str) -> str:
     return (
         f"이 브랜치는 origin/{base} 보다 {count}커밋 뒤처졌다. strict 보호라 병합 전에 어차피 "
         f"{base} 를 합쳐야 해서, 지금 푸시하면 CI 가 한 번 더 돈다. `git merge origin/{base}` 으로 "

@@ -5,9 +5,10 @@
 순서는 이렇다.
 
 1. 앞의 네 티켓이 모두 done이고 main에 병합됐는지 본다(`.scratch/harness/issues/`의 `Status:`와 `git log origin/main`).
-2. **사람의 몫을 사용자에게 알리고 답을 받는다.** 아래는 GitHub 설정이라 사람이 하거나 사용자가 승인한 뒤에 한다. (가) `main`의 `required_linear_history`(`tools/protection.json`)가 dev→main의 merge 커밋을 막는다. 끌지, 관리자 우회(`enforce_admins: false`)에 기댈지 정한다. (나) `dev`를 보호 브랜치로 둘지와 필수 검사(`verify`), strict 여부. 정하면 `tools/protection.json`에 dev의 설정을 더한다. (다) LLM 호출 테스트를 main PR의 CI에서 돌리려면 API 키 시크릿이 필요하다(ADR 0043 Consequences "CI 분담"). 이 세션은 키를 다루지 않는다.
-3. 사용자가 승인한 뒤에 `git push origin origin/main:refs/heads/dev`로 dev를 딴다. 딴 뒤 `origin/dev`가 `origin/main`과 같은 커밋인지 본다.
-4. 딴 뒤에 새 브랜치에서 `uv run python tools/sibling_overlap.py`와 `uv run python tools/check_ticket.py`가 dev를 기준으로 도는지 실제로 본다. 티켓 PR 하나를 dev로 열어 CI의 `ticket` 잡이 지나는지도 본다.
+2. **사람의 몫을 사용자에게 알리고 답을 받는다.** 아래는 GitHub 설정이라 사람이 하거나 사용자가 승인한 뒤에 한다. (가) `main`의 `required_linear_history`(`tools/protection.json`)가 dev→main의 merge 커밋을 막는다. 끌지, 관리자 우회(`enforce_admins: false`)에 기댈지 정한다. (나) `dev`를 보호 브랜치로 둘지와 필수 검사(`verify`), strict 여부. 정하면 `tools/protection.json`에 dev의 설정을 더한다. (다) LLM 호출 테스트를 main PR의 CI에서 돌리려면 API 키 시크릿이 필요하다(ADR 0043 Consequences "CI 분담"). 이 세션은 키를 다루지 않는다. 시크릿만 넣어서는 돌지 않는다. `ci.yml`에 그 테스트를 돌리는 잡이 아직 없기 때문이다. 사용자가 시크릿을 넣겠다고 하면, main을 base로 하는 PR과 main 푸시에서 `-m llm`을 돌리고 그 잡을 `verify`의 `needs`에 잇는 잡 구현을 이 티켓의 일로 하거나 후속 티켓(`ci-llm-job`)으로 쓴다. 넣지 않겠다고 하면 답만 적고 잡은 만들지 않는다.
+3. 사용자가 승인한 뒤에 먼저 `git fetch origin`으로 `origin/main`을 갱신하고 `git push origin origin/main:refs/heads/dev`로 dev를 딴다. 로컬 추적 ref가 낡았으면 낡은 커밋에서 dev가 선다. 딴 뒤 `git ls-remote origin refs/heads/main refs/heads/dev`의 두 커밋이 같은지 원격에서 본다.
+4. dev를 딴 뒤 **다른 체크아웃**(주 체크아웃과 워크트리)은 `git fetch origin`을 쳐서 `origin/dev` 추적 ref를 받아야 한다. 받기 전에는 그 클론의 도구(`dev-branch-transition`이 정한 규칙)가 계속 main을 기준으로 쓴다. 딴 직후의 보고와 새 세션 지시문의 "확인할 선행 조건"에 이 한 줄을 싣는다.
+5. 딴 뒤에 새 브랜치에서 `uv run python tools/sibling_overlap.py`와 `uv run python tools/check_ticket.py`가 dev를 기준으로 도는지 실제로 본다. 티켓 PR 하나를 dev로 열어 CI의 `ticket` 잡이 지나는지도 본다.
 
 **닫을 때 할 일 넷.**
 
@@ -27,7 +28,9 @@
 ## 수용 기준
 
 - [ ] 사람의 몫 (가)~(다)를 사용자에게 알렸고 답을 티켓 끝에 적었다
-- [ ] `origin/dev`가 사용자 승인 뒤에 `origin/main`의 머리에서 섰고 같은 커밋이다
+- [ ] `origin/dev`가 사용자 승인 뒤에 `origin/main`의 머리에서 섰고, 원격에서 읽은(`git ls-remote`) 두 브랜치의 커밋이 같다
+- [ ] 다른 체크아웃이 `git fetch origin`으로 `origin/dev`를 받아야 한다는 한 줄을 보고와 새 세션 지시문에 실었다
+- [ ] LLM 테스트 잡: 사용자가 시크릿을 넣겠다고 했으면 잡 구현(또는 후속 티켓 `ci-llm-job`)이 있고, 넣지 않겠다고 했으면 그 답이 티켓 끝에 있다
 - [ ] dev를 기준으로 `sibling_overlap`·`check_ticket`이 돌고 dev로 연 티켓 PR의 CI가 지났다
 - [ ] `.scratch/plan-head.md`에서 release-image가 dev 전환을 기다린다고 적은 문장이 걷혔고 `uv run python tools/plan_table.py` 결과가 같은 커밋에 실렸다
 - [ ] 문서 검색 서버 저장소에 줄 지시문을 사용자에게 냈고, 얇은 ADR 한 장 요건이 들었으며, `rag-engine-port-by-hand`에 회차를 더했다

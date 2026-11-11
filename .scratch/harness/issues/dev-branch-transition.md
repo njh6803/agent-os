@@ -6,7 +6,7 @@
 
 - 브랜치 `main`과 `dev`는 보호 브랜치다. 그 위의 커밋은 훅이 막고, 커밋 검사는 그 브랜치를 지난다.
 - 기준 브랜치(PR의 base이고 워크트리를 딸 자리)는 브랜치 접두로 가른다. `hotfix/*`는 `main`이다. 그 밖(`feature/*`, `chore/*`, `docs/*`와 앱이 만든 이름)은 `dev`이다.
-- **`origin/dev`가 아직 없으면 그 밖의 기준도 `main`이다.** 전환의 티켓들이 main에 병합되는 동안과 dev를 따기 전까지 도구가 지금처럼 돌게 하는 값이다. dev를 따는 일은 마지막 티켓(`dev-branch-create`)이 하고, 그 순간부터 같은 도구가 dev를 기준으로 쓴다. 도구마다 따로 판정하지 않도록 판정 문장은 여기서 한 번 정한다. 훅은 단독 실행 스크립트라 서로 import하지 않으므로(`.claude/rules/tools.md`) 훅마다 같은 짧은 함수를 둔다.
+- **`origin/dev`가 아직 없으면 그 밖의 기준도 `main`이다.** 전환의 티켓들이 main에 병합되는 동안과 dev를 따기 전까지 도구가 지금처럼 돌게 하는 값이다. dev를 따는 일은 마지막 티켓(`dev-branch-create`)이 하고, 그 순간부터 같은 도구가 dev를 기준으로 쓴다. 여기서 "없다"는 이 클론에 `origin/dev`의 추적 ref가 없다는 뜻이다. 원격에 dev가 있어도 이 클론이 받은 적이 없으면 main을 기준으로 쓰므로, dev를 딴 뒤 각 체크아웃은 `git fetch origin`으로 그 ref를 받아야 한다(티켓 5가 이 한 줄을 보고와 지시문에 싣는다). 도구마다 따로 판정하지 않도록 판정 문장은 여기서 한 번 정한다. 훅은 단독 실행 스크립트라 서로 import하지 않으므로(`.claude/rules/tools.md`) 훅마다 같은 짧은 함수를 둔다.
 - dev→main PR(머리가 `dev`)과 main→dev 되돌려 합치기(머리가 `main`)는 티켓 하나를 가리키지 않으므로 커밋 검사의 CI 판정이 지난다(ADR 0043 Consequences "티켓 검사와 봇").
 
 **고치는 곳.**
@@ -25,7 +25,7 @@
 4. `dev-base-skills-docs`: 스킬(`next-session`, `tidy-checkouts`, `code-review`, `open-session`, `sync-design-system`, `retro`), `CLAUDE.md`, `operations.md`, `issue-tracker.md`, PR 서식, ADR 포인터(0005, 0037), 용어집을 규칙에 맞추고 핫픽스를 main에 합친 세션이 main을 dev에 되돌려 합치는 순서를 `next-session`의 merge.md에 적는다.
 5. `dev-branch-create`: dev를 main에서 따고 전환을 닫는다(사람의 몫과 문서 검색 서버 저장소의 지시문 포함).
 
-**하지 않는 것.** dev를 따지 않는다(티켓 5). 사용자 수준 스킬(`~/.claude/skills/git-pr`, `git-pr-merge`, `git-pr-feedback`, `git-branch`)은 저장소 밖이라 이 티켓들이 고치지 않고 티켓 4가 어떻게 하는지 정한다. 실제 이미지의 compose e2e 잡은 만들지 않는다(release-image의 첫 티켓이 Dockerfile·compose와 함께 더한다. ADR 0056 결정 "실제 이미지로 띄우는 시험"). LLM 호출 테스트를 CI의 main PR에 더하는 일은 API 키 시크릿을 사람이 넣어야 해서 티켓 5의 사람 몫에 둔다. 메인 보호의 `required_linear_history`가 merge 커밋을 막는 문제도 티켓 5의 사람 몫이다.
+**하지 않는 것.** dev를 따지 않는다(티켓 5). 사용자 수준 스킬(`~/.claude/skills/git-pr`, `git-pr-merge`, `git-pr-feedback`, `git-branch`)은 저장소 밖이라 이 티켓들이 고치지 않고 티켓 4가 어떻게 하는지 정한다. 실제 이미지의 compose e2e 잡은 만들지 않는다(release-image의 첫 티켓이 Dockerfile·compose와 함께 더한다. ADR 0056 결정 "실제 이미지로 띄우는 시험"). LLM 호출 테스트를 CI의 main PR에 더하는 일은 API 키 시크릿을 사람이 넣어야 해서 티켓 5의 사람 몫에 둔다. 시크릿만으로는 돌지 않으므로 그 테스트를 돌리는 잡의 구현도 티켓 5가 사용자의 답에 따라 하거나 후속 티켓으로 쓴다. 메인 보호의 `required_linear_history`가 merge 커밋을 막는 문제도 티켓 5의 사람 몫이다.
 
 **대기열:** 없음
 

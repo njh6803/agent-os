@@ -27,7 +27,7 @@ new = '''    joined = _QUOTED.sub("", "\n".join(_without_heredoc_bodies(command)
 name = "지우는 푸시도 잰다"
 tests = ["tests/tools/test_hook_push_behind_main.py", "-k", "지우는_푸시와"]
 expect = "red"
-expect_output = ["test_지우는_푸시와_탈출구와_데이터로_든_문구는_재지_않는다[git push origin --delete chore/ci-wait-background]"]
+expect_output = ["잴 푸시로 읽은 명령: git push origin --delete chore/ci-wait-background"]
 
 [[mutation.edit]]
 file = "tools/hook_push_behind_main.py"
@@ -50,7 +50,7 @@ new = '''    if False:
 name = "명령 위치가 아니라 명령 어디서든 git push 를 찾는다"
 tests = ["tests/tools/test_hook_push_behind_main.py", "-k", "지우는_푸시와"]
 expect = "red"
-expect_output = ["test_지우는_푸시와_탈출구와_데이터로_든_문구는_재지_않는다[echo git push 는 CI 가 끝난 뒤에]"]
+expect_output = ["잴 푸시로 읽은 명령: echo git push 는 CI 가 끝난 뒤에"]
 
 [[mutation.edit]]
 file = "tools/hook_push_behind_main.py"
@@ -61,7 +61,7 @@ new = '''        push = _GIT_PUSH.search(segment)'''
 name = "main 위에서도 잰다"
 tests = ["tests/tools/test_hook_push_behind_main.py", "-k", "main_위에서는"]
 expect = "red"
-expect_output = ["test_hook_push_behind_main.py::test_main_위에서는_재지_않는다"]
+expect_output = ["main 위에서 잰 결과: ('main', 1)"]
 
 [[mutation.edit]]
 file = "tools/hook_push_behind_main.py"
@@ -72,7 +72,7 @@ new = '''    if branch is None:'''
 name = "fetch 가 실패해도 옛 origin/main 으로 잰다"
 tests = ["tests/tools/test_hook_push_behind_main.py", "-k", "fetch가_실패하면"]
 expect = "red"
-expect_output = ["test_hook_push_behind_main.py::test_fetch가_실패하면_재지_않는다"]
+expect_output = ["fetch 가 실패한 뒤 잰 결과: ('main', 1)"]
 
 [[mutation.edit]]
 file = "tools/hook_push_behind_main.py"
@@ -100,7 +100,7 @@ new = '''            errors="replace",
 name = "뒤처지지 않아도 막는다"
 tests = ["tests/tools/test_hook_push_behind_main.py", "-k", "뒤처지지_않았거나"]
 expect = "red"
-expect_output = ["test_hook_push_behind_main.py::test_뒤처지지_않았거나_재지_못하면_지나간다[0]"]
+expect_output = ["뒤처짐 0 일 때 낸 이유: 이 브랜치는 origin/main 보다 0커밋"]
 
 [[mutation.edit]]
 file = "tools/hook_push_behind_main.py"
@@ -111,7 +111,7 @@ new = '''    if measured is None:'''
 name = "잴 푸시가 아니어도 git 을 부른다"
 tests = ["tests/tools/test_hook_push_behind_main.py", "-k", "git을_부르지_않는다"]
 expect = "red"
-expect_output = ["test_hook_push_behind_main.py::test_푸시가_아니면_git을_부르지_않는다"]
+expect_output = ["푸시가 아닌 명령에서 낸 이유: 이 브랜치는 origin/main 보다 3커밋"]
 
 [[mutation.edit]]
 file = "tools/hook_push_behind_main.py"
@@ -234,7 +234,7 @@ expect_output = ["작업 브랜치가 견준 기준: ('main', 1)"]
 
 [[mutation.edit]]
 file = "tools/hook_push_behind_main.py"
-old = '''    return "dev" if found else "main"'''
+old = '''    return "dev" if state == "present" else "main"'''
 new = '''    return "main"'''
 
 [[mutation]]
@@ -247,3 +247,16 @@ expect_output = ["dev 위에서 잰 결과: ('dev', 1)"]
 file = "tools/hook_push_behind_main.py"
 old = '''    if branch is None or branch in PROTECTED:'''
 new = '''    if branch is None or branch == "main":'''
+
+[[mutation]]
+name = "origin/dev 조회가 시간을 넘겨도 dev 가 없다고 읽는다"
+tests = ["tests/tools/test_hook_push_behind_main.py", "-k", "시간을_넘기면_재지"]
+expect = "red"
+expect_output = ["dev 조회가 시간을 넘긴 뒤 고른 기준: main"]
+
+[[mutation.edit]]
+file = "tools/hook_push_behind_main.py"
+old = '''    if state == "unknown":
+        return None
+    return "dev" if state == "present" else "main"'''
+new = '''    return "dev" if state == "present" else "main"'''
