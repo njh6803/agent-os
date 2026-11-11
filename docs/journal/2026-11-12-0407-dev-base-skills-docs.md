@@ -121,6 +121,14 @@ PR 직전 리뷰에 밀 새 주장(이번 반영으로 새로 쓴 사실 문장)
 
 컨텍스트가 인계 문턱(20만 토큰)을 넘은 채 커밋 뒤 경계에 왔다. 셀프 리뷰 반영, 전체 검증, 회고, 커밋(`551f50c91`, pre-commit 통과)까지 마쳤고 푸시하지 않았으며 열린 PR이 없다. 새 세션이 할 일은 PR 직전 리뷰(`coderabbit-review`, 밀 주장은 위 "셀프 리뷰 반영"의 (a)~(d)), 푸시, PR 열기(`/git-pr`), 봇 회차, 병합(`merge.md`의 워크트리에서 병합할 때)이고, 병합 뒤 `tidy-checkouts`와 `next-session`이다. 그리고 병합 뒤 마무리 보고에 "주 체크아웃 미갱신: 루트는 main" 한 줄과 사용자 수준 스킬 네 개를 고칠지 묻는 질문(`wrap_up`)을 넣는다. PR을 열기 전에 `uv run python tools/sibling_overlap.py`를 다시 쳐 PR #536(`dev-review-bot-off`)과 겹치는 파일이 없는지 본다(이 브랜치는 그 PR이 닫는 대기열 항목을 건드리지 않는다). 커밋 메시지는 `Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>`, PR 본문 끝은 `🤖 Generated with [Claude Code](https://claude.com/claude-code)`로 끝낸다.
 
+## PR 직전 리뷰 (인계받은 새 세션)
+
+푸시 전에 `git fetch origin`을 치고 `origin/main`(`dc616c58c`, PR 536 병합)을 이 브랜치에 합쳤다. 충돌은 없었고 `tools/sibling_overlap.py`는 번호 겹침 없음, 함께 고친 파일 없음으로 끝났다. 합치기 전 일지 인계 절은 따로 커밋했다(`114e4df15`, pre-commit 통과).
+
+`coderabbit-review` 서브에이전트가 CodeRabbit CLI 0.7.5로 파일 39개를 끝까지 돌렸고 지적은 0건이다(`Plan: Free`, `Seat: not assigned`였으나 리뷰는 끝까지 돌았고 150개 한도 안이라 좁히지 않았다). 밀었던 사실 주장 넷은 모두 맞다고 했다. (a) `tools/wait_ci.py`의 `--head`는 없으면 로컬 HEAD, `--expect`는 기본값 `EXPECTED`를 갈음한다(544·546·578행). (b) `git ls-remote --exit-code --heads origin refs/heads/dev`는 이 저장소에서 쳐 보니 종료 코드 2였다. (c) 사용자 수준 스킬 `git-pr-merge`의 본문이 `gh pr merge --squash --delete-branch`다. 앞 절에서 "본문을 다시 열지 않았다"던 주장이 이제 확인됐다. (d) `tools/protection.json`에 `required_linear_history: true`가 있다. 참고로 출시 PR과 되돌려 합치기 PR의 `--merge`는 (d)에 걸릴 수 있는데 `merge.md`가 이미 적었다. 고치거나 남길 지적이 없다.
+
+근거의 종류: 지적 0건과 (a)~(d)의 확인은 모두 서브에이전트가 파일을 읽고 명령을 쳐서 돌려준 보고를 옮긴 것이다. 이 세션이 그 줄 번호나 종료 코드를 다시 재지는 않았다. 합치기와 겹침 점검은 이 세션이 친 명령의 출력이다.
+
 ## 다음
 
 이 PR이 병합된 뒤의 일이다.
