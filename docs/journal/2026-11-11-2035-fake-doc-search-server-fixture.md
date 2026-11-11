@@ -42,6 +42,21 @@
 
 open-session을 부른다 2026-11-11T11:37:09Z
 
+### 두 번째 인계 (커밋 뒤)
+
+이어받은 세션(세션 제목 `feature/02-fake-doc-search-server-fixture`, 모델 `claude-sonnet-5-5` / high)은 위 지시문의 "인계: 셀프 리뷰 직전"으로 열렸다. 이 세션이 받은 지시는 다음과 같다.
+
+> 사용자: /implement .scratch/base-agent/issues/02-fake-doc-search-server-fixture.md … 이번 요청 범위: PR과 병합까지 (이어받을 상태: 인계: 셀프 리뷰 직전 …)
+
+이 세션이 한 일은 위 "셀프 리뷰"와 "PR 직전 리뷰" 두 절에 있다. 티켓을 `done`으로 바꾸고 `plan_table.py`를 돌렸으며, 커밋 둘을 만들었다(`380487ab5` 픽스처 본체와 티켓·계획·일지, `486ef80f5` PR 직전 리뷰가 짚은 독스트링과 주석 고침). 둘 다 pre-commit을 통과했다. 푸시하지 않았고 PR도 열지 않았다.
+
+- 첫 `380487ab5` 커밋 시도에서 pre-commit의 pytest가 `tests/tools/test_rerun_runner.py`의 `test_같은_갈래가_두_번_든_파일럿의_두_회차가_함께_돌아도_번호가_다르다` 한 건(7025개 중)을 놓쳤다(`max(running)`이 2가 아니라 1). 그 시험만 홀로 돌리면 통과했다(252초 걸렸다. 다른 세션과 겹친 부하로 본다). 이 변경은 `tools/`를 건드리지 않았다. 같은 커밋을 다시 시도하자 통과했다. 같은 시험이 또 실패하면 `diagnosing-bugs`로 간다. PR 본문 "남긴 위험"에 이 한 건을 적는다.
+- 병합은 `merge.md`의 "워크트리에서 병합할 때"를 따른다. 병합 뒤 주 체크아웃 정리는 다음 새 세션으로 넘긴다.
+
+경계 `커밋 뒤`. 세션 제목을 `feature/02-fake-doc-search-server-fixture (인계함)`으로 바꾸기 전 제목은 `feature/02-fake-doc-search-server-fixture`다.
+
+open-session을 부른다 2026-11-11T13:12:10Z
+
 ## 셀프 리뷰 (이어받은 세션, base `377675eef`, 변경 추적 파일 3개와 미추적 5개, 커밋 0)
 
 두 축 모두 Critical·Major는 없었다. 표준 축(sonnet·high)은 하드 위반 0이고 판단 항목 일곱, 명세 축은 Minor만 냈다.
