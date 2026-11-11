@@ -623,7 +623,7 @@ open-session을 부른다 2026-11-11T11:35:30Z
 
 PR의 마지막 푸시 뒤에 `@coderabbitai review` 코멘트를 남겼다(2026-11-11T11:37Z). `tools/wait_ci.py 530`을 백그라운드로 띄웠고 종료 0으로 끝났다. 헤드 `b1c11db`의 검사는 모두 SUCCESS이고 CodeRabbit만 NEUTRAL `Review rate limited`다(손으로 봤다).
 
-- **CodeRabbit.** 코멘트가 `You've used all free OSS reviews for now`와 `Next included review available in 32 minutes`를 냈고, 무료 리뷰 한도에 걸려 리뷰가 없다. 첫 회차로 세지 않는다(`merge.md` 2의 회차 세기). 이 PR의 CodeRabbit 축은 PR 직전의 CLI 리뷰가 맡았다(위 "PR 직전 리뷰", 지적 하나를 고쳤다). 한도가 풀리는 때는 코멘트 시각 11:37Z에 32분을 더한 12:09Z 무렵이다.
+- **CodeRabbit.** 코멘트가 `You've used all free OSS reviews for now`와 `Next included review available in 32 minutes`를 냈고, 무료 리뷰 한도에 걸려 리뷰가 없다. 첫 회차로 세지 않는다(`merge.md` 2의 회차 세기). 이 PR의 CodeRabbit 축은 PR 직전의 CLI 리뷰가 맡았다(위 "PR 직전 리뷰", 지적 하나를 고쳤다). 한도 코멘트의 작성 시각은 11:31Z이고(`gh pr view 530 --json comments`로 봤다) 거기에 32분을 더하면 12:03Z 무렵이다.
 - **claude-review.** 코멘트가 "지적 없음"이다. 유지보수성은 코드가 없는 문서 PR이라 걸리는 리뷰 관점이 없고 새 용어는 `CONTEXT.md`에 정의돼 있다고 적고, 경계는 ADR 0057이 core의 포트를 `ModelSource` 그대로 두며 `langchain-openai`와 `openai`를 어댑터 층 의존으로 선언해 import-linter 금지 목록에 더하도록 구현 티켓에 넘겼다고 짚었다. 계약 변경 자체는 구현의 계약 티켓이 `openapi.json`과 함께 한다는 점도 어긋남이 없다고 냈다.
 
 고칠 지적이 없어 이 회차에 코드나 ADR을 고친 것은 없다. 승인받은 결정을 바꾸는 지적도 없었다.
@@ -639,13 +639,26 @@ PR의 마지막 푸시 뒤에 `@coderabbitai review` 코멘트를 남겼다(2026
 - **기각. pre-commit의 web-verify가 949초 걸렸다.** 다른 세션 넷이 함께 도는 중이었고, `CLAUDE.md` 검증 명령이 이미 다른 세션이 함께 돌면 시간이 늘고 백그라운드로 넘기라고 적는다.
 - **기각. CodeRabbit이 첫 리뷰 요청에 무료 한도로 리뷰를 내지 않았다.** `merge.md` 2와 `operations.md` 리뷰 파이프라인 3이 이 모양을 이미 적고 `wait_ci.py`가 `Review rate limited`를 알려 냈다. 이 세션은 그 절차대로 처리했다.
 
-부하 아래의 시간 시험 사례(일지에만 적는다). 이 일지와 대기열을 싣는 첫 커밋의 pre-commit에서 pytest가 7010개 가운데 하나를 실패했다: `tests/tools/test_rerun_runner.py::test_오염이_한_번이면_다시_돌고_두_번이면_그_과제를_모든_갈래에서_뺀다`(`board.run()`이 0이 아니라 1, 996.90초, 다른 세션이 함께 돌았다). 이 커밋은 문서와 대기열만 바꿔 그 시험을 건드리지 않는다. 그 시험만 `uv run pytest -q tests/tools/test_rerun_runner.py -k 오염이_한_번이면`으로 따로 돌리니 1 passed(68.22초)였다(손으로 봤다). 대기열 0306이 이 종류(전체 스위트의 부하 아래에서만 빨간 시간 시험)를 받아들여 닫았고 새 사례는 회차를 더하지 않고 일지에만 적게 한다. 원인은 가르지 않았다(어림으로 부하 탓).
+부하 아래의 시간 시험 사례(일지에만 적는다). 이 일지와 대기열을 싣는 첫 커밋의 pre-commit에서 pytest가 7010개 가운데 하나를 실패했다: `tests/tools/test_rerun_runner.py::test_오염이_한_번이면_다시_돌고_두_번이면_그_과제를_모든_갈래에서_뺀다`(`board.run()`이 0이 아니라 1, 996.90초, 다른 세션이 함께 돌았다). 이 커밋은 문서와 대기열만 바꿔 그 시험을 건드리지 않는다. 그 시험만 `uv run pytest -q tests/tools/test_rerun_runner.py -k 오염이_한_번이면`으로 따로 돌리니 1 passed(68.22초)였다(손으로 봤다). 대기열 0306이 이 종류(전체 스위트의 부하 아래에서만 빨간 시간 시험)를 받아들여 닫았고 새 사례는 회차를 더하지 않고 일지에만 적게 한다. 원인은 가르지 않았다(어림으로 부하 탓). 같은 커밋을 다시 걸자 pytest 전체가 통과했다(618.9초). 둘째 봇 회차의 일지 커밋에서는 pytest가 1093.11초에 7010개 가운데 둘을 실패했다: 위 시험과 `tests/channel/cli/test_interrupt.py::test_서버를_닫기_시작한_뒤에_한_번_누르면_닫기를_마치고_중단으로_끝난다`(`Ctrl+C 를 누른 자식이 30초 안에 끝나지 않았다`). 이 커밋도 일지만 바꾼다. 같은 종류의 새 사례라 회차를 더하지 않고 여기에만 적는다.
 
 간 자리: 회차를 더한 `0577`(8회차)과 `cli-review-claims-path`(3회차). 이 세션에서 반영한 것은 없어 티켓에 회고 반영 줄을 더하지 않았다(이 PR은 `docs/<slug>` 면제 PR이다). 두 항목 모두 `**어디로:**`에 이미 처방이 있고 `0577`은 회차 5 이상이라 chore 계기다.
+
+## 봇 회차(둘째, 5cd98ba)
+
+푸시(`5cd98baee`) 뒤 `@coderabbitai review`를 다시 남겼고 `wait_ci.py 530`은 종료 0이다. 검사는 모두 SUCCESS이고 CodeRabbit은 이번에도 NEUTRAL `Review rate limited`다(코멘트 12:32Z, 해제 예고 시각 12:03Z 무렵을 29분 넘겼는데도 다시 한도였다. 원인은 모른다). CodeRabbit은 이 PR에서 아직 리뷰를 낸 적이 없어 회차 0이다.
+
+claude-review의 둘째 리뷰(12:33Z)는 Critical·Major 없이 Minor 셋과 Nit 둘을 냈다. 이 봇의 둘째 회차라서 Critical·Major만 고치고 나머지는 보류 이유를 PR 코멘트에 남긴다(`merge.md` 2의 회차 세기). 근거는 ADR 0057·0058을 `grep -n`과 `sed -n 53p`로 읽은 것이다.
+
+- Minor, 어댑터 밖으로 `openai` 예외 타입을 내보내지 않는다고 못 박기. 보류. ADR 0057이 실패를 이미 있는 원인 `model_call`로 끝낸다고 정했고(27행, 55행) 예외를 감싸는 자리는 명세로 넘겼다(23~27행). 결정을 바꾸는 지적이 아니다. 뒤로 넘기는 일이라 아래 "다음"에 적는다.
+- Minor, ADR 0058의 열여덟 파일 목록을 방법만 남기고 줄이기. 보류. 그 목록은 구현 티켓이 grep 결과 전부로 믿지 않게 하려고 앞 세션의 PR 직전 리뷰가 빠진 넷을 채운 것이다(위 "PR 직전 리뷰"). 목록을 빼면 같은 빠짐이 되돌아온다.
+- Minor, `.claude/rules/sdk.md`·`adapters.md`·`core.md`가 병합 직후 ADR과 어긋나는 시차를 수락 항목으로도 걸기. 보류. ADR 0057 "구현 티켓이 함께 고칠 자리"(53행)가 그 세 파일을 이미 들고 있다. 티켓을 나눌 때 수락 항목으로 옮기는 일이라 아래 "다음"에 적는다.
+- Nit, `tech.md` 런타임 의존성 행의 상태 서술을 의존을 들이는 티켓이 고치게 하기. 보류. `tech.md`는 이 PR이 고쳤고(헌법 판 3.0.85), 티켓이 의존을 들일 때 그 문장을 고치게 하는 일은 아래 "다음"에 적는다.
+- Nit, ADR 0058 끝 괄호의 중첩. 보류. 앞 세션이 PR 직전 리뷰의 반영으로 덧붙인 괄호이고(위 "PR 직전 리뷰"의 "고친 것") 쪼개는 것은 읽기 쉬움의 취향이라 이 회차에 고치지 않는다.
 
 ## 다음
 
 - 병합 뒤 다음 작업은 명세다. `/to-spec`을 새 세션에서 사용자가 부른다(스킬은 사용자만 부른다). 명세가 넘겨받을 갈래는 ADR 0057의 결정 항목들과 ADR 0058 "명세로 넘기는 것"이다. 지시문과 최종 보고에 사용자가 미리 준비할 것 넷을 적는다: Runpod 계정과 크레딧 충전, 주 체크아웃 `.env`의 `RUNPOD_API_KEY`, Terraform 1.6 이상, 자동 충전을 켜지 않기.
+- 봇 회차가 뒤로 넘긴 일 셋. (1) 명세가 `openai`·`langchain-openai`의 예외 타입과 문구를 어디서 감싸 core에 내보내는지 정한다(ADR 0057 23~27행이 명세로 넘긴 자리). (2) 티켓을 나눌 때 `.claude/rules/sdk.md`·`adapters.md`·`core.md`의 "제공사는 `anthropic` 하나" 문장을 고치는 일을 수락 항목에 건다(ADR 0057 53행). (3) 의존을 들이는 티켓이 `docs/constitution/tech.md` 런타임 의존성 행의 "구현 티켓이 선언하고 그때까지 저장소에 없다" 문장을 고치게 한다.
 - 기능 계획 `.scratch/local-model/plan.md` 4행에 `**설계:** ADR 0057, ADR 0058`이 있다(`grep -n 설계`로 봤다).
 - 회차 5 이상인 열린 대기열 항목(`0577` 8회차 포함)이 `next-session` 결정표의 chore 계기다. 다음 작업을 정하는 세션이 결정표를 읽고 정한다.
 - 형제 PR #529(`docs/release-image-design`)가 `CONTEXT.md`, `docs/adr/README.md`, `.scratch/deploy-package/plan.md`에 더해 이 회고가 회차를 더한 `.scratch/retro-queue/cli-review-claims-path.md`도 고친다(커밋 전 `tools/sibling_overlap.py`가 냈다). 늦게 병합되는 쪽이 main을 다시 합쳐 그 셋의 글자 충돌을 풀고 `uv run python tools/sibling_overlap.py`로 ADR 번호와 헌법 판을 다시 본다.
