@@ -34,7 +34,7 @@
 
 ### 프로브 (명세 Further Notes "스킬을 고칠 때")
 
-- [ ] `.scratch/base-agent/probes/skill_follow.py`가 저장소의 `plugins/`를 임시 루트에 옮겨 `doc-search`의 주소만 바꿔 쓰는 꼴(꾸러미 시험과 같은 꼴)로 돌고, 가짜 서버는 02의 픽스처를 띄운다. `probes/draft/`와 `probes/fake_doc_search.py`를 지운다
+- [ ] `.scratch/base-agent/probes/skill_follow.py`가 저장소의 `plugins/`를 임시 루트에 옮겨 `doc-search`의 주소만 바꿔 쓰는 꼴(꾸러미 시험과 같은 꼴)로 돌고, 가짜 서버는 02의 픽스처를 띄운다. 프로브도 꾸러미 시험처럼 환경 변수 `DOC_SEARCH_AUTHORIZATION`을 픽스처가 기대하는 값으로 준다. 주지 않으면 모든 실행이 원인 `tool_connection`으로 끝나 한 바퀴가 모두 측정 아님이 된다(명세 "연결 플러그인 doc-search"). `probes/draft/`와 `probes/fake_doc_search.py`를 지운다
 - [ ] 프로브가 쓰던 모드 넷(끝 넘음 흉내, 검색 실패, 빈 색인, 창의 상한)이 픽스처의 실패 모드 셋과 창의 상한으로 돈다(명세 "스킬을 고칠 때")
 - [ ] 고친 프로브가 서는지 사례 전체를 한 바퀴 돌려 본다(실제 모델 비용이 든다. 고친 꼴이 도는지는 돌려 봐야 안다, `CLAUDE.md` 작업 규약 3). 측정 아님이 0인지와 판정이 2026-11-11의 초안 7 결과와 같은지를 `.scratch/base-agent/probes/README.md`에 새 절로 적는다. 판정이 다른 사례가 있으면 스킬의 글자를 고치지 않고 그 차이를 적은 뒤 멈춰 보고한다. 글자는 초안과 같으므로, 다르면 프로브의 꼴을 바꾼 것이나 회차 사이의 흔들림이 판정을 바꾼 것이다
 - [ ] README의 표("다시 돌 때", "잰 판")가 새 꼴을 적는다
