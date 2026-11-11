@@ -473,9 +473,10 @@ async def test_띄운_쪽이_핸들로_끄면_포트가_닫힌다(tmp_path: Path
         port = fixture.port
         assert _listening(port)
         assert fixture.url == f"http://127.0.0.1:{port}/mcp"
-    # 윈도의 venv 파이썬은 실행기가 진짜 파이썬을 자식으로 띄우는 구조로 어림하고 있다(이 PC에서
-    # 끈 직후 포트가 열려 있는 것을 한 번 봤고, 실행기 구조는 확인하지 않았다). 그래서 끝나기를
-    # 한 번만 견주지 않고 기한까지 거듭 견준다.
+    # 윈도의 venv 파이썬은 실행기가 진짜 파이썬을 자식으로 띄운다. 리뷰 서브에이전트가 이 PC에서
+    # 프로세스 트리를 읽어 확인했고(2026-11-11, 실행기 아래에 진짜 인터프리터가 자식으로 있었고
+    # `terminate()` 뒤 3초 안에 사라졌다), 끈 직후 포트가 열려 있는 것은 이 PC에서 한 번 봤다.
+    # 그래서 끝나기를 한 번만 견주지 않고 기한까지 거듭 견준다.
     end = time.monotonic() + CLOSED_WITHIN_SECONDS
     while _listening(port) and time.monotonic() < end:
         time.sleep(0.1)
