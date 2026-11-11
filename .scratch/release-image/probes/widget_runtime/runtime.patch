@@ -1,0 +1,343 @@
+diff --git a/web/apps/widget/app/config/route.ts b/web/apps/widget/app/config/route.ts
+new file mode 100644
+index 000000000..998698df9
+--- /dev/null
++++ b/web/apps/widget/app/config/route.ts
+@@ -0,0 +1,15 @@
++// [프로브 판] release-image 설계 인터뷰의 widget_runtime 프로브가 실험으로 둔 파일이다. 반영할 코드가 아니다. 워크스페이스의
++// ESLint 는 이 이름의 파일을 막는다(ADR 0019 의 서버 파일 금지).
++//
++// 페이지 안 번들(element.js)이 실행 중의 요청 글자 수 상한을 위젯 출처에서 받아 오는 길의 서버 쪽 절반이다. 사이트
++// 문서에서 부르므로 자격 증명 없이 받는 공개 값으로 내고 Access-Control-Allow-Origin 을 * 로 단다. 허용 출처는 싣지
++// 않는다(페이지 안 방식은 postMessage 를 쓰지 않는다). 경로는 basePath 아래의 /widget/config 다.
++
++import { buildInput } from "@agent-os/site-file";
++import { connection } from "next/server";
++
++export async function GET(): Promise<Response> {
++  await connection();
++  const { requestChars } = buildInput(process.env);
++  return Response.json({ requestChars }, { headers: { "Access-Control-Allow-Origin": "*" } });
++}
+diff --git a/web/apps/widget/app/page.tsx b/web/apps/widget/app/page.tsx
+index 482b60cf6..c62c07383 100644
+--- a/web/apps/widget/app/page.tsx
++++ b/web/apps/widget/app/page.tsx
+@@ -1,5 +1,18 @@
++// [프로브 판] release-image 설계 인터뷰의 widget_runtime 프로브가 실험으로 고친 판이다. 반영할 코드가 아니다.
++//
++// 서버 컴포넌트가 요청을 받을 때 사이트 파일에서 두 값을 읽어 클라이언트 컴포넌트에 props 로 넘긴다. `connection()` 이
++// 빌드 때의 미리 그리기를 멈춘다(Next 16.3.6 설치본의 connection 문서와 self-hosting 문서의 "Environment Variables").
++// AGENT_OS_PROBE_STATIC_PAGE=1 로 빌드하면 `connection()` 을 부르지 않는다. 그러면 페이지가 빌드 때 미리 그려지는지
++// 보는 갈래다.
++
++import { buildInput } from "@agent-os/site-file";
++import { connection } from "next/server";
+ import { WidgetPage } from "../components/pages/WidgetPage";
+ 
+-export default function Page() {
+-  return <WidgetPage />;
++export default async function Page() {
++  if (process.env["AGENT_OS_PROBE_STATIC_PAGE"] !== "1") {
++    await connection();
++  }
++  const { allowedOrigins, requestChars } = buildInput(process.env);
++  return <WidgetPage allowedOrigins={allowedOrigins} requestChars={requestChars} />;
+ }
+diff --git a/web/apps/widget/components/pages/ConnectedWidget.tsx b/web/apps/widget/components/pages/ConnectedWidget.tsx
+index 229ce62db..806099045 100644
+--- a/web/apps/widget/components/pages/ConnectedWidget.tsx
++++ b/web/apps/widget/components/pages/ConnectedWidget.tsx
+@@ -6,7 +6,6 @@
+ //   때(페이지 안 방식이 번들의 기준 주소를 읽지 못했다, element/base.ts)다. 길이 없으면 토큰도 묻지 않는다.
+ // - 넘겨받은 문제는 하나마다 console.error 로 남긴다. 임베드가 다시 그려도 글이 같으면 다시 남기지 않는다.
+ import { useEffect, useRef, useState } from "react";
+-import { requestCharLimit } from "../../lib/build";
+ import type { Connection } from "../../lib/connection";
+ import { phaseOf, waitingApproval } from "../../lib/conversation";
+ import type { Embed } from "../../lib/embed";
+@@ -19,9 +18,16 @@ export interface ConnectedWidgetProps {
+   readonly problems: readonly string[];
+   /** 최종 사용자 경로에 닿는 길. null 이면 요청을 보낼 수 없는 설정이다. */
+   readonly connection: Connection | null;
++  /** [프로브 판] 요청 글자 수 상한. iframe 방식은 서버가 요청 때 읽은 값을, 페이지 안 방식은 번들에 박힌 값을 넘긴다. */
++  readonly requestChars: number;
+ }
+ 
+-export function ConnectedWidget({ embed, problems, connection }: ConnectedWidgetProps) {
++export function ConnectedWidget({
++  embed,
++  problems,
++  connection,
++  requestChars,
++}: ConnectedWidgetProps) {
+   const [draft, setDraft] = useState("");
+   // 되돌아온 요청(422, 429)은 입력창에 넣는다.
+   const { conversation, send, reset, decide, wait, invalid, restore, reconnect } = useConversation(
+@@ -74,7 +80,7 @@ export function ConnectedWidget({ embed, problems, connection }: ConnectedWidget
+       // 명세대로 입력창에 넣어, 쓰던 글을 덮는다(위 useConversation 의 onReturn).
+       onRetry={send}
+       onNewConversation={reset}
+-      requestChars={requestCharLimit()}
++      requestChars={requestChars}
+       restore={restore}
+       reconnect={reconnect}
+     />
+diff --git a/web/apps/widget/components/pages/WidgetPage.test.tsx b/web/apps/widget/components/pages/WidgetPage.test.tsx
+index 0f85b268c..18c11576a 100644
+--- a/web/apps/widget/components/pages/WidgetPage.test.tsx
++++ b/web/apps/widget/components/pages/WidgetPage.test.tsx
+@@ -3,6 +3,7 @@
+ 
+ import { render, screen } from "@testing-library/react";
+ import { expect, test, vi } from "vitest";
++import { allowedOrigins, requestCharLimit } from "../../lib/build";
+ import { WidgetPage } from "./WidgetPage";
+ 
+ /** 그 질의로 iframe 페이지를 연다. 위젯이 남긴 console.error 를 돌려준다. */
+@@ -12,7 +13,7 @@ function openWidget(query: string): string[] {
+   vi.spyOn(console, "error").mockImplementation((...args: unknown[]) => {
+     errors.push(args.map(String).join(" "));
+   });
+-  render(<WidgetPage />);
++  render(<WidgetPage allowedOrigins={allowedOrigins()} requestChars={requestCharLimit()} />);
+   return errors;
+ }
+ 
+@@ -106,7 +107,9 @@ test("목록 밖의 테마와 모드는 기본값으로 그리고, 위젯은 그
+ 
+ test("페이지를 걷으면 문서 뿌리에 단 속성도 걷어 다음 시험에 남지 않는다", () => {
+   window.history.replaceState(null, "", "/widget?agent=order-helper&theme=jacho&mode=dark");
+-  const { unmount } = render(<WidgetPage />);
++  const { unmount } = render(
++    <WidgetPage allowedOrigins={allowedOrigins()} requestChars={requestCharLimit()} />,
++  );
+   expect(rootAttributes()).toEqual({ theme: "jacho", mode: "dark", density: "regular" });
+ 
+   unmount();
+diff --git a/web/apps/widget/components/pages/WidgetPage.tsx b/web/apps/widget/components/pages/WidgetPage.tsx
+index 81845467b..dc071c3b3 100644
+--- a/web/apps/widget/components/pages/WidgetPage.tsx
++++ b/web/apps/widget/components/pages/WidgetPage.tsx
+@@ -12,7 +12,6 @@
+ import "@agent-os/ui/fonts.css";
+ import "../../styles/widget.css";
+ import { useLayoutEffect, useMemo, useSyncExternalStore } from "react";
+-import { allowedOrigins } from "../../lib/build";
+ import type { Connection } from "../../lib/connection";
+ import { readEmbed } from "../../lib/embed";
+ import { requestToken } from "../../lib/token";
+@@ -25,7 +24,15 @@ function subscribe(onChange: () => void): () => void {
+   };
+ }
+ 
+-export function WidgetPage() {
++// [프로브 판] 두 값을 번들(lib/build.ts)에서 읽지 않고 서버 컴포넌트(app/page.tsx)가 요청 때 읽어 넘긴 props 로 받는다.
++export interface WidgetPageProps {
++  /** 모든 사이트의 허용 출처를 합친 목록. 비면 postMessage 를 모두 버린다. */
++  readonly allowedOrigins: readonly string[];
++  /** 모든 사이트의 요청 글자 수 상한 가운데 가장 작은 값. */
++  readonly requestChars: number;
++}
++
++export function WidgetPage({ allowedOrigins, requestChars }: WidgetPageProps) {
+   const search = useSyncExternalStore(
+     subscribe,
+     () => window.location.search,
+@@ -49,10 +56,10 @@ export function WidgetPage() {
+       hydrated
+         ? {
+             baseUrl: new URL(window.location.origin),
+-            token: () => requestToken(allowedOrigins()),
++            token: () => requestToken(allowedOrigins),
+           }
+         : null,
+-    [hydrated],
++    [hydrated, allowedOrigins],
+   );
+ 
+   useLayoutEffect(() => {
+@@ -77,5 +84,12 @@ export function WidgetPage() {
+   if (read === null) {
+     return null;
+   }
+-  return <ConnectedWidget embed={read.embed} problems={read.problems} connection={connection} />;
++  return (
++    <ConnectedWidget
++      embed={read.embed}
++      problems={read.problems}
++      connection={connection}
++      requestChars={requestChars}
++    />
++  );
+ }
+diff --git a/web/apps/widget/element/WidgetElement.tsx b/web/apps/widget/element/WidgetElement.tsx
+index 0c585a1e8..59340bcab 100644
+--- a/web/apps/widget/element/WidgetElement.tsx
++++ b/web/apps/widget/element/WidgetElement.tsx
+@@ -23,6 +23,7 @@
+ import { UI_ROOT_ATTRIBUTE } from "@agent-os/ui";
+ import { createRoot, type Root } from "react-dom/client";
+ import { ConnectedWidget } from "../components/pages/ConnectedWidget";
++import { requestCharLimit } from "../lib/build";
+ import type { Connection } from "../lib/connection";
+ import { EMBED_NAMES, readEmbed } from "../lib/embed";
+ import { providerToken } from "./token";
+@@ -114,6 +115,7 @@ export function widgetElement(setup: ElementSetup): CustomElementConstructor {
+           embed={embed}
+           problems={messages}
+           connection={this.#connection}
++          requestChars={requestCharLimit()}
+         />,
+       );
+     }
+diff --git a/web/apps/widget/next.config.ts b/web/apps/widget/next.config.ts
+index 0bbf701ee..c8988309f 100644
+--- a/web/apps/widget/next.config.ts
++++ b/web/apps/widget/next.config.ts
+@@ -1,44 +1,44 @@
+-// 위젯의 Next 설정. iframe 페이지(/widget)와 위젯이 내주는 공개 파일(/widget/fonts/)을 낸다(ADR 0024).
++// [프로브 판] release-image 설계 인터뷰의 widget_runtime 프로브가 실험으로 고친 판이다(.scratch/release-image/probes/
++// widget_runtime/README.md). 반영할 코드가 아니다. 지금 코드와 다른 점:
+ //
+-// - basePath 는 /widget 이다(ADR 0024 의 2026-10-23 이력). nginx 가 그 접두사 하나를 Next 로 넘긴다. headers 의 source
+-//   에는 basePath 가 저절로 붙는다(Next 16.3.6 설치본의 headers 문서).
+-// - 빌드의 입력은 사이트 파일이다(web-widget 티켓 04, `@agent-os/site-file`). 이 파일이 읽힐 때 AGENT_OS_SITE_FILE 이
+-//   가리키는 파일을 읽고, 읽지 못하면 진단을 던져 next 가 종료 코드 1로 멈춘다. 변수가 없으면 사이트 없음이다. build 는
+-//   tools/start.spawn.test.ts 가 보고, dev·start 는 손으로 봤다(둘 다 next 의 Ready 를 찍은 뒤 멈췄다, 일지 2026-10-24-05).
+-// - frame-ancestors 는 모든 사이트의 허용 출처를 합친 목록이고, 목록이 비면 'none' 이다. 그래서 사이트 파일이 없거나
+-//   허용 출처가 없으면 어떤 사이트도 iframe 페이지를 품지 못한다(ADR 0024 의 fail-closed). 헤더는 빌드 산출물
+-//   (routes-manifest.json)에 박혀, 운영 모드의 start 는 빌드 때의 값을 낸다(관리 화면의 next.config.ts 가 rewrites 에
+-//   대해 적은 것과 같다).
+-// - env 에 합친 허용 출처(공백으로 이은 글)와 가장 작은 요청 글자 수 상한(십진수 글)을 싣는다. 번들에서 읽는 법은
+-//   티켓 05 의 머리에 적었다. Next 는 env 의 값을 빌드 때 번들에 박는다(Next 16.3.6 설치본의 env 문서).
+-// - 글꼴 파일(public/fonts/, `@agent-os/ui/fonts`)과 페이지 안 번들(public/element.js, tools/element.ts)은 시작 래퍼가 빌드
+-//   전에 짓는다. 둘 다 자격 증명 없이 받는 공개 파일이라 Access-Control-Allow-Origin 을 * 로 단다. 글꼴은 페이지 안
+-//   번들이 사이트 문서에서 FontFace 로 받고, 번들은 사이트가 script 에 crossorigin 을 붙이면 CORS 로 받는다. 그 헤더가
+-//   없으면 그때 번들이 실리지 않는다(web-widget 명세 "번들의 꼴").
+-// - rewrites 를 두지 않는다. API 는 nginx 가 파이썬에 바로 넘기므로, 처음 바깥에 열리는 Next 가 중계가 되지 않게
+-//   하기 위해서다(ADR 0024).
+-// - agentRules: false. next dev 가 에이전트를 감지하면 앱 폴더에 AGENTS.md 와 CLAUDE.md 를 만든다(ADR 0021).
++// - 사이트 파일의 값을 빌드 산출물에 싣지 않는다. `env` 를 두지 않고, `frame-ancestors` 에 허용 출처를 넣지 않는다.
++//   허용 출처는 proxy.ts 가 요청마다, 페이지의 두 값은 app/page.tsx 가 요청마다 사이트 파일에서 읽는다.
++// - headers 에는 사이트 파일과 무관한 `frame-ancestors 'none'` 만 남긴다. 빌드 산출물(routes-manifest.json)에 박히는
++//   바닥값이고, proxy 가 지나는 경로에서는 proxy 의 값이 이것을 덮는다.
++// - 이 파일은 `next start` 때도 읽힌다. 그때 사이트 파일을 읽을 수 있는지만 본다(읽지 못하면 던져 next 가 멈춘다).
++//
++// 프로브 전용 스위치(빌드 때의 환경 변수):
++// - AGENT_OS_PROBE_CONFIG_CSP=off  바닥값 헤더를 뺀다(proxy 만 헤더를 내는 갈래).
++// - AGENT_OS_PROBE_OUTPUT=standalone  `output: "standalone"` 으로 짓는다. 추적의 뿌리는 워크스페이스(web/)다.
+ 
++import { join } from "node:path";
+ import type { NextConfig } from "next";
+-import { buildInput, WIDGET_ORIGINS_ENV, WIDGET_REQUEST_CHARS_ENV } from "@agent-os/site-file";
++import { buildInput } from "@agent-os/site-file";
++
++buildInput(process.env);
++
++const floor =
++  process.env["AGENT_OS_PROBE_CONFIG_CSP"] === "off"
++    ? []
++    : [
++        {
++          source: "/:path*",
++          headers: [{ key: "Content-Security-Policy", value: "frame-ancestors 'none'" }],
++        },
++      ];
+ 
+-const input = buildInput(process.env);
+-const ancestors = input.allowedOrigins.length === 0 ? "'none'" : input.allowedOrigins.join(" ");
++const standalone: NextConfig =
++  process.env["AGENT_OS_PROBE_OUTPUT"] === "standalone"
++    ? { output: "standalone", outputFileTracingRoot: join(process.cwd(), "..", "..") }
++    : {};
+ 
+ const config: NextConfig = {
+   basePath: "/widget",
+   agentRules: false,
+-  env: {
+-    [WIDGET_ORIGINS_ENV]: input.allowedOrigins.join(" "),
+-    // String(n) 은 10^21 부터 지수 꼴(1e+21)이라 BigInt 로 십진수 글을 짓는다.
+-    [WIDGET_REQUEST_CHARS_ENV]: BigInt(input.requestChars).toString(),
+-  },
++  ...standalone,
+   headers() {
+     return Promise.resolve([
+-      {
+-        source: "/:path*",
+-        headers: [{ key: "Content-Security-Policy", value: `frame-ancestors ${ancestors}` }],
+-      },
++      ...floor,
+       {
+         source: "/fonts/:path*",
+         headers: [{ key: "Access-Control-Allow-Origin", value: "*" }],
+diff --git a/web/apps/widget/proxy.ts b/web/apps/widget/proxy.ts
+new file mode 100644
+index 000000000..5242c8bc1
+--- /dev/null
++++ b/web/apps/widget/proxy.ts
+@@ -0,0 +1,21 @@
++// [프로브 판] release-image 설계 인터뷰의 widget_runtime 프로브가 실험으로 둔 파일이다. 반영할 코드가 아니다. 워크스페이스의
++// ESLint 는 이 이름의 파일을 막는다(ADR 0019 의 서버 파일 금지).
++//
++// iframe 페이지(/widget)의 응답에 `frame-ancestors` 를 요청마다 사이트 파일에서 읽어 단다. 읽는 규칙은 빌드가 쓰던 것과
++// 같다(`@agent-os/site-file` 의 `buildInput`). 변수가 없으면 'none' 이고, 변수가 가리키는 파일을 읽지 못하면 던진다.
++// matcher 의 경로에는 basePath 가 저절로 붙는다(Next 16.3.6 의 build/analysis/get-page-static-info.js).
++
++import { buildInput } from "@agent-os/site-file";
++import { NextResponse } from "next/server";
++
++export function proxy(): NextResponse {
++  const { allowedOrigins } = buildInput(process.env);
++  const ancestors = allowedOrigins.length === 0 ? "'none'" : allowedOrigins.join(" ");
++  const response = NextResponse.next();
++  response.headers.set("Content-Security-Policy", `frame-ancestors ${ancestors}`);
++  return response;
++}
++
++export const config = {
++  matcher: ["/"],
++};
+diff --git a/web/apps/widget/testing/widget.tsx b/web/apps/widget/testing/widget.tsx
+index d8116042b..3a2b3a127 100644
+--- a/web/apps/widget/testing/widget.tsx
++++ b/web/apps/widget/testing/widget.tsx
+@@ -6,6 +6,7 @@ import userEvent, { type UserEvent } from "@testing-library/user-event";
+ import { http } from "msw";
+ import { vi } from "vitest";
+ import { WidgetPage } from "../components/pages/WidgetPage";
++import { allowedOrigins, requestCharLimit } from "../lib/build";
+ import { api, items, network } from "./network";
+ 
+ export const QUERY = new URLSearchParams({
+@@ -16,7 +17,8 @@ export const QUERY = new URLSearchParams({
+ export function openWidget(query = QUERY): UserEvent {
+   window.history.replaceState(null, "", `/widget?${query}`);
+   const user = userEvent.setup();
+-  render(<WidgetPage />);
++  // [프로브 판] 페이지가 props 로 받게 되어, 시험은 testing/setup.ts 가 둔 환경 변수의 값을 넘긴다.
++  render(<WidgetPage allowedOrigins={allowedOrigins()} requestChars={requestCharLimit()} />);
+   return user;
+ }
+ 
+diff --git a/web/apps/widget/tools/start.ts b/web/apps/widget/tools/start.ts
+index 8a19a5c91..08b35ff99 100644
+--- a/web/apps/widget/tools/start.ts
++++ b/web/apps/widget/tools/start.ts
+@@ -157,7 +157,15 @@ if (import.meta.main) {
+     if (siteFile !== undefined) {
+       process.env[SITE_FILE_ENV] = siteFile;
+     }
+-    launch(command).catch((error: unknown) => {
++    // [프로브 판] start 가 next 를 부르기 전에 페이지 안 번들만 그 자리의 사이트 파일로 다시 짓는다(글꼴은 복사하지
++    // 않는다). AGENT_OS_PROBE_START_ELEMENT=0 이면 다시 짓지 않는다. 다시 짓지 않으면 빌드 때의 값이 남는지 보는 갈래다.
++    const rebuilt =
++      command.args[0] === "start" && process.env["AGENT_OS_PROBE_START_ELEMENT"] !== "0"
++        ? buildElement(process.env)
++        : Promise.resolve();
++    rebuilt
++      .then(() => launch(command))
++      .catch((error: unknown) => {
+       console.error(error instanceof Error ? error.message : String(error));
+       process.exitCode = 1;
+     });

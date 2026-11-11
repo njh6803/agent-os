@@ -1,0 +1,28 @@
+# 위젯 실행 중 값 프로브의 셋째 사이트 파일(measure.mjs 의 element 단계). 요청 글자 수 상한이 자리표다. 이 값으로 지은
+# element.js 에서 자리표의 숫자를 다른 상한으로 바꿔 넣은 파일이, 그 상한으로 바로 지은 파일과 같은지 본다. 자리표는
+# 끝에 0 이 없어 압축기가 지수 꼴로 줄이지 않고, 번들의 다른 자리에 나오지 않을 수로 골랐다. 허용 출처와 공개 키는
+# sites_b.toml 과 같다(페이지 안 번들은 둘 다 읽지 않는다).
+schema_version = "1"
+
+[[sites]]
+issuer = "https://probe-b.example"
+audience = "agent-os"
+allowed_origins = ["https://probe-b.example", "https://www.probe-b.example:8443"]
+agents = ["echo"]
+
+[[sites.public_keys]]
+kid = "probe-b-1"
+pem = """
+-----BEGIN PUBLIC KEY-----
+MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAidz9jKWqEB8cbJnGvTDY
+ggiDwV8F3HbLynTn7l8/Nacy57lLFE7ntT9xIhRUcF6X83v5u577ywbiuFQDu0Fe
+2xAk2SkXzPTxuPoGJM0j1HA2pdmLbOMYnZGXYFysmQSETCE8HVvfDYfxWbZYEcIz
+YUmEyKFRkfKwv9AUK/3KHCKHCInseeAiPiaOVwJDsmD4yDwXZMSN8IZ9gXxDjacx
+hMzhdNJBO9tCvWe2YTC6r5Db8VrEqDMMHfmYRSdyG0yqxRnZ96GhdX9SUfgrFTq8
+ekx4FVGPtqwi5NY7TBrSF93yN9lbA+tHYKQPLhjFlJdD6s09lHpxjolQNAN0qtjz
+xwIDAQAB
+-----END PUBLIC KEY-----
+"""
+
+[sites.limits]
+request_chars = 918273645

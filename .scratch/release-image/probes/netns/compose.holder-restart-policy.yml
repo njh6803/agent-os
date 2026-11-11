@@ -1,0 +1,12 @@
+# release-image netns 프로브(항목 7)의 덧씌움: 재시작 정책. 프로세스가 끝나면 compose 가 아니라 Docker 데몬이
+# 그 컨테이너를 다시 띄운다. proxy 나 holder 가 그렇게 다시 뜰 때 나머지가 어떻게 되는지 보는 갈래가 쓴다.
+
+services:
+  holder:
+    restart: always
+  proxy:
+    restart: always
+  app:
+    restart: always
+  admin:
+    restart: always

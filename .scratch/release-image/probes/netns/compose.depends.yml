@@ -1,0 +1,6 @@
+# release-image netns 프로브(항목 3)의 덧씌움: app 에 depends_on 을 짧은 꼴로 둔다.
+
+services:
+  app:
+    depends_on:
+      - proxy
