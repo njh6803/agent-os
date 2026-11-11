@@ -655,11 +655,62 @@ claude-review의 둘째 리뷰(12:33Z)는 Critical·Major 없이 Minor 셋과 Ni
 - Nit, `tech.md` 런타임 의존성 행의 상태 서술을 의존을 들이는 티켓이 고치게 하기. 보류. `tech.md`는 이 PR이 고쳤고(헌법 판 3.0.85), 티켓이 의존을 들일 때 그 문장을 고치게 하는 일은 아래 "다음"에 적는다.
 - Nit, ADR 0058 끝 괄호의 중첩. 보류. 앞 세션이 PR 직전 리뷰의 반영으로 덧붙인 괄호이고(위 "PR 직전 리뷰"의 "고친 것") 쪼개는 것은 읽기 쉬움의 취향이라 이 회차에 고치지 않는다.
 
+## 인계(커밋 뒤, 둘째)
+
+푸시하지 않은 커밋 `5ef2ef6ef`(docs: local-model 설계 PR의 둘째 봇 회차 보류 이유와 뒤로 넘긴 일을 일지에 적는다) 뒤에 인계 계기(`hook_handoff`, 세션 컨텍스트 225,772 토큰, 경계 `커밋 뒤`)가 왔다. 인계하지 않는 때 다섯에 들지 않는다. 이 세션을 연 지시문의 "이어받을 상태"는 `인계: PR 연 뒤`로 경계가 다르고, 요청 범위는 PR과 병합까지이며, `get_session`의 `self`에 `parentSessionId`가 없고, 이 세션이 쓴 `인계 못함` 줄이 없다. 계기는 커밋이 끝나기 전에 한 번 더 왔는데 그때는 커밋이 pre-commit에 막혔고(부하 아래 시간 시험 둘, 위 "회고"), 다시 걸어 통과한 뒤에 이 인계를 시작했다. 이 세션의 지금 제목은 `docs/local-model-design`이다. 이 세션이 받은 사용자 프롬프트는 위 "인계(PR 연 뒤)" 절의 지시문 하나이고(그 지시문 앞에 `.claude/skills/grill-with-docs/SKILL.md`를 읽어 따르라는 줄이 붙은 것이다), 그 밖의 사용자 입력은 없다.
+
+**이 세션이 번복하거나 고친 것.**
+
+- 지시문 첫 줄의 스킬 파일(`grill-with-docs`)이 부르라는 `grilling`·`domain-modeling`은 부르지 않았다. 같은 지시문이 설계 인터뷰를 다시 열지 않는다고 적어서다(대기열 `0577`의 8회차로 셌다, 위 "회고").
+- 첫 `@coderabbitai review`를 남겼고(11:37Z) 푸시 뒤에 한 번 더 남겼다(12:32Z). 둘 다 무료 한도로 리뷰가 없다. 이 PR의 CodeRabbit 리뷰는 아직 한 번도 나오지 않았다.
+- 푸시한 커밋 `5cd98baee`(봇 회차와 회고)와 푸시하지 않은 커밋 `5ef2ef6ef`(둘째 봇 회차의 보류 이유)를 만들었다. claude-review의 둘째 리뷰(12:33Z)가 낸 Minor 셋과 Nit 둘은 보류했고 이유를 PR 코멘트(`issuecomment-6796183555`)에 남겼다.
+- 대기열 `0577`을 8회차로, `cli-review-claims-path`를 3회차로 올렸다.
+
+**남은 순서.** 형제 PR #529(`docs/release-image-design`)가 인계 중에 병합된 것을 `open-session` 1에서 알았다(`gh pr view 529`가 `MERGED`, 병합 커밋 `3a07ba979`, 2026-11-11T13:11:02Z). 그래서 먼저 `git fetch origin` 뒤 `git merge origin/main`으로 main을 합쳐, #529가 함께 고친 `CONTEXT.md`, `docs/adr/README.md`, `.scratch/deploy-package/plan.md`, `.scratch/retro-queue/cli-review-claims-path.md`의 글자 충돌을 풀고(`git diff --name-only HEAD...origin/main`에 앞의 셋이 들었다) `uv run python tools/sibling_overlap.py`로 ADR 번호(이 브랜치는 0057·0058)와 헌법 판(이 브랜치는 3.0.85)을 다시 본다. #529가 헌법 판을 올렸는지는 보지 않았다. 합친 병합 커밋은 pre-commit을 다시 지난다. 그 뒤 `5ef2ef6ef`와 함께 푸시한다. 이 푸시로 도는 claude-review가 셋째 회차이므로 Critical·Major만 고치고 나머지는 보류 이유를 PR 코멘트에 남긴다. 그 푸시 뒤에 이 절 이하의 커밋하지 않은 일지 변경이 남으면, 병합 전에 마지막 푸시에 싣는다(일지만 푸시하면 봇이 한 번 더 돌지만 그 회차도 Critical·Major만 고친다). 병합 직전에 `gh pr view 530 --json headRefOid`와 `git rev-parse HEAD`가 같은지 본다. 병합은 `merge.md`의 "워크트리에서 병합할 때" 1~5대로 하고 `--delete-branch`는 쓰지 않는다. 병합 뒤 다음 지시문은 일지 "다음"으로 짓는다.
+
+**새 세션이 알아야 할 것.**
+
+- 위 "봇 회차"·"봇 회차(둘째, 5cd98ba)"·"회고"·"다음"은 이미 커밋에 들어 있다. 이 인계 절만 커밋하지 않았다.
+- 푸시하는 pre-commit(`git commit`)은 15~20분 걸리고 다른 세션이 함께 돌면 `test_rerun_runner.py`나 `test_interrupt.py` 같은 시간 시험이 한 번씩 빨갛다(대기열 `0306`이 받아들인 종류, 위 "회고"). 따로 돌려 통과하면 같은 커밋을 다시 건다.
+- 봇 회차가 뒤로 넘긴 일 셋은 아래 "다음"에 있다. 승인받은 결정을 바꾸는 지적이 오면 고치기 전에 사용자에게 묻는다.
+- 최종 보고에는 PR 직전 리뷰로 고친 셋과 그것을 다시 묻지 않고 고쳤다는 것, 사용자가 미리 준비할 것 넷, 웹 출처 링크 넷을 넣는다(위 "인계(PR 연 뒤)"와 "인계(셀프 리뷰 직전)"의 "새 세션이 알아야 할 것"). 이 세션이 대기열 `0577`이 가리키는 시작 프롬프트 문제를 한 번 더 겪었으므로, 병합 뒤 다음 지시문은 "시작 프롬프트"를 `/to-spec` 한 줄로 쓰고 스킬 파일 읽기 줄이 붙어도 그 단계에 맞게 따른다.
+
+**지시문.**
+
+```
+다음 작업: 기능 local-model. PR #530(ADR 0057·0058 설계)의 봇 회차 반영, 병합, 다음 지시문
+다음 단계: PR 반영·병합
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /grill-with-docs
+브랜치: docs/local-model-design
+모델: Sonnet 5.5 / high. 2의 잇는 지시문
+읽을 것: docs/journal/2026-11-11-1534-local-model-design.md의 "인계(커밋 뒤, 둘째)" 절, "봇 회차(둘째, 5cd98ba)" 절, "다음" 절
+이어받을 상태: 인계: 커밋 뒤. 푸시하지 않은 커밋 5ef2ef6ef가 있다. 먼저 형제 PR #529가 병합됐으므로(병합 커밋 3a07ba979) origin/main을 합쳐 글자 충돌을 풀고 번호를 다시 본 뒤 푸시하고 merge.md 2(봇 회차)부터 한다. 일지는 docs/journal/2026-11-11-1534-local-model-design.md. 설계 인터뷰는 이미 끝났으니 다시 열지 않고 승인도 다시 묻지 않는다. 봇 회차 둘째까지와 회고와 일지 "다음"은 커밋에 들어 있고, 일지의 "인계(커밋 뒤, 둘째)" 절만 커밋하지 않았다. 병합 전 마지막 푸시에 싣는다. 이 푸시로 도는 claude-review는 셋째 회차라 Critical·Major만 고친다. CodeRabbit은 무료 한도로 두 번 리뷰를 내지 않았다
+확인할 선행 조건: 병합된 #529가 올린 헌법 판과 ADR 번호가 이 브랜치의 3.0.85와 ADR 0057·0058에 겹치는지는 보지 않았다. main을 합친 뒤 tools/sibling_overlap.py로 본다
+이번 요청 범위: PR과 병합까지
+```
+
+## 이어받음(main 합치기부터)
+
+새 세션(제목 `docs/local-model-design`, 모델 Sonnet 5.5 / high)이 위 "인계(커밋 뒤, 둘째)" 절의 지시문으로 열렸다. 첫 줄의 `grill-with-docs` 스킬 파일은 읽었고, 설계 인터뷰는 같은 지시문이 다시 열지 않는다고 적어서 `grilling`·`domain-modeling`을 부르지 않았다(대기열 `0577`의 9회차 후보. 아래 "다음"이 아니라 이 줄로만 적고 회차는 다음 회고가 센다). `git worktree list`에서 이 브랜치가 `.claude/worktrees/local-model-design`에 체크아웃된 것을 보고 `EnterWorktree(path)`로 들어왔다.
+
+**main 합침.** `git fetch origin` 뒤 `git merge origin/main`이 글자 충돌 셋을 냈다(`docs/adr/README.md`, `.scratch/deploy-package/plan.md`, `.scratch/retro-queue/cli-review-claims-path.md`. `CONTEXT.md`는 자동으로 합쳐졌다). 푼 방법은 이렇다.
+
+- ADR 색인: 두 쪽 행을 모두 두고 0056, 0057, 0058 순으로 놓았다. #529가 낸 ADR은 0056이라 이 브랜치의 0057·0058과 겹치지 않는다.
+- deploy-package 기능 계획: 한 줄이 두 쪽에서 길게 고쳐졌다. main의 줄(ADR 0056 문장과 admin-login 문장이 든 것)을 바탕으로 이 브랜치가 줄 끝에 더한 "local-model의 설계가 넘긴 것(2026-11-11)" 대목을 그대로 붙였다. 합친 줄이 main의 줄로 시작하는지와 이 브랜치의 꼬리로 끝나는지를 스크립트로 단언했다.
+- 대기열 `cli-review-claims-path`: 두 PR이 각각 2회차를 3회차로 올렸다. 합치면 사건이 둘이므로 4회차로 적고, 일지 둘(이 일지와 release-image 설계 일지)을 각각 한 줄 설명과 함께 두었다. 위 "회고"가 이 항목을 3회차로 적은 것은 병합 전의 셈이다.
+
+`uv run python tools/plan_table.py`를 돌린 뒤 `git status --short`에 `.scratch/plan.md`의 작업 트리 변경이 없었다(손으로 봤다). `uv run python tools/sibling_overlap.py`는 "번호 겹침 없음"을 냈다(손으로 봤다. 이 브랜치의 새 번호는 ADR 0057·0058, 헌법 3.0.85이고, 형제가 쓴 가장 높은 헌법 판은 3.0.84(origin/main)다. 열린 PR #531이 번호를 쓰는지는 그 도구의 출력에 번호가 없어 쓰지 않는다고 본 것이다). #529가 헌법 판을 올리지 않은 것은 `git diff --stat 377675eef origin/main`에 `docs/constitution/` 파일이 없는 것으로 봤다(손으로 봤다).
+
+**병합 커밋의 pre-commit(첫 시도).** 1419초에 실패했다. pytest가 7010개 가운데 둘을 실패했고 나머지 검사는 모두 통과했다(출력에서 읽었다). 실패는 `tests/tools/test_probe_kit.py::test_배출은_줄이_계속_와도_제한_시간에_끝난다`(`assert lines`가 빈 목록)와 `tests/tools/test_rerun_runner.py::test_같은_갈래가_두_번_든_파일럿의_두_회차가_함께_돌아도_번호가_다르다`(동시에 돈 수가 2가 아니라 1)다. 이 병합은 문서와 대기열만 바꾸고 두 시험은 도구 코드를 다룬다. 두 시험만 따로 돌리니 2 passed(101초)였다(손으로 봤다, `uv run pytest -q <두 시험> -p no:xdist`). 다른 세션이 함께 돌았는지는 확인하지 않았다(어림으로 부하 탓). 대기열 `0306`이 받아들인 종류(전체 스위트의 부하 아래에서만 빨간 시간 시험)라 회차를 더하지 않고 여기에만 적는다.
+
 ## 다음
 
 - 병합 뒤 다음 작업은 명세다. `/to-spec`을 새 세션에서 사용자가 부른다(스킬은 사용자만 부른다). 명세가 넘겨받을 갈래는 ADR 0057의 결정 항목들과 ADR 0058 "명세로 넘기는 것"이다. 지시문과 최종 보고에 사용자가 미리 준비할 것 넷을 적는다: Runpod 계정과 크레딧 충전, 주 체크아웃 `.env`의 `RUNPOD_API_KEY`, Terraform 1.6 이상, 자동 충전을 켜지 않기.
 - 봇 회차가 뒤로 넘긴 일 셋. (1) 명세가 `openai`·`langchain-openai`의 예외 타입과 문구를 어디서 감싸 core에 내보내는지 정한다(ADR 0057 23~27행이 명세로 넘긴 자리). (2) 티켓을 나눌 때 `.claude/rules/sdk.md`·`adapters.md`·`core.md`의 "제공사는 `anthropic` 하나" 문장을 고치는 일을 수락 항목에 건다(ADR 0057 53행). (3) 의존을 들이는 티켓이 `docs/constitution/tech.md` 런타임 의존성 행의 "구현 티켓이 선언하고 그때까지 저장소에 없다" 문장을 고치게 한다.
 - 기능 계획 `.scratch/local-model/plan.md` 4행에 `**설계:** ADR 0057, ADR 0058`이 있다(`grep -n 설계`로 봤다).
 - 회차 5 이상인 열린 대기열 항목(`0577` 8회차 포함)이 `next-session` 결정표의 chore 계기다. 다음 작업을 정하는 세션이 결정표를 읽고 정한다.
-- 형제 PR #529(`docs/release-image-design`)가 `CONTEXT.md`, `docs/adr/README.md`, `.scratch/deploy-package/plan.md`에 더해 이 회고가 회차를 더한 `.scratch/retro-queue/cli-review-claims-path.md`도 고친다(커밋 전 `tools/sibling_overlap.py`가 냈다). 늦게 병합되는 쪽이 main을 다시 합쳐 그 셋의 글자 충돌을 풀고 `uv run python tools/sibling_overlap.py`로 ADR 번호와 헌법 판을 다시 본다.
+- 형제 PR #529(`docs/release-image-design`)가 `CONTEXT.md`, `docs/adr/README.md`, `.scratch/deploy-package/plan.md`에 더해 이 회고가 회차를 더한 `.scratch/retro-queue/cli-review-claims-path.md`도 고쳤다(커밋 전 `tools/sibling_overlap.py`가 냈다). 그 PR은 인계 중에 병합됐으므로(2026-11-11T13:11:02Z, 병합 커밋 `3a07ba979`) 이 브랜치가 main을 합쳐 그 넷의 글자 충돌을 풀고 `uv run python tools/sibling_overlap.py`로 ADR 번호와 헌법 판을 다시 본다(위 "인계(커밋 뒤, 둘째)"의 남은 순서).
 - 저장소로 알 수 없는 것: ADR이 근거로 든 문서의 원문과 조사 스크립트는 첫 세션의 스크래치패드(`dl\`, `dl-gpu\`, `local-model-probe\`)에만 있다. 명세가 근거를 다시 대려면 그 자리가 읽혀야 하고, 읽히지 않으면 출처 링크로 다시 받는다.
+
+open-session을 부른다 2026-11-11T13:29:36Z
