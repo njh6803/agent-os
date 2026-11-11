@@ -2545,6 +2545,48 @@ def test_dev가_기준일_때_main에서_딴_열린_PR은_main이_쥔_번호를_
     assert "PR #5 ADR 0003" not in result.stdout
 
 
+def test_반박_hotfix_브랜치와_열린_PR이_dev가_쥔_번호에_다른_파일을_더하면_서로_겹친다(
+    저장소: tuple[Path, Path, Path],
+) -> None:
+    """PR 봇 첫 회차의 Major. 기준이 아닌 오래 사는 브랜치(dev)와 번호만 같은 PR 의 파일은 PR 이
+    새로 매긴 번호다. 번호만 보고 빼면 이 브랜치와 PR 의 겹침이 dev 줄에 가려져 사라진다."""
+    _, work, pusher = 저장소
+    _dev를_딴다(work, pusher, {"docs/adr/0003-dev.md": "dev\n"}, {"README.md": "m\n"})
+    pr = _PR을_민다(pusher, 5, {"docs/adr/0003-pr.md": "그쪽\n"})
+    _연다(pusher, 5, pr)
+    _git(work, "checkout", "-q", "-B", "hotfix/x", "origin/main")
+    _커밋한다(work, {"docs/adr/0003-ours.md": "이쪽\n"}, "이쪽")
+
+    result = _CLI를_부른다(work)
+
+    assert result.returncode == 1, result.stderr
+    assert "PR #5 ADR 0003: 이 브랜치 0003-ours.md, 그쪽 0003-pr.md" in result.stdout
+
+
+def test_반박_기준이_아닌_브랜치에서_물려받은_ADR은_옮길_번호에_들지_않는다(
+    저장소: tuple[Path, Path, Path],
+) -> None:
+    """PR 봇 첫 회차의 Major. dev 가 기준이고 main 이 이 브랜치의 조상이면 main 줄은 찍지 않는다.
+    그래도 main 에서 물려받은 0002 는 공유한 이력이라 `--move` 가 0003 과 함께 옮기지 않는다."""
+    _, work, pusher = 저장소
+    _git(pusher, "branch", "dev", "main")
+    _git(pusher, "push", "-q", "origin", "dev")
+    _커밋한다(pusher, {"docs/adr/0002-main.md": "main\n"}, "main 이 앞선다")
+    _git(pusher, "push", "-q", "origin", "main")
+    pr = _PR을_민다(pusher, 5, {"docs/adr/0003-pr.md": "그쪽\n"})
+    _연다(pusher, 5, pr)
+    _git(work, "fetch", "-q", "origin")
+    _git(work, "checkout", "-q", "-B", "topic", "origin/main")
+    _커밋한다(work, {"docs/adr/0003-ours.md": "이쪽\n"}, "이쪽")
+
+    result = _CLI를_부른다(work)
+
+    assert result.returncode == 1, result.stdout + result.stderr
+    assert "PR #5 ADR 0003: 이 브랜치 0003-ours.md, 그쪽 0003-pr.md" in result.stdout
+    assert "옮길 번호: ADR 0003 → 0004\n" in result.stdout
+    assert "0002 →" not in result.stdout
+
+
 def test_hotfix_브랜치는_dev가_있어도_main을_기준으로_하고_dev의_번호도_견준다(
     저장소: tuple[Path, Path, Path],
 ) -> None:

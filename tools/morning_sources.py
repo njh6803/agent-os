@@ -310,9 +310,11 @@ def main_queue(root: Path) -> dict[str, str] | None:
     `README.md`는 뺀다. `queue_open_rows.read_ref_folder`의 읽기를 그대로 쓰며(목록 한 번, 내용
     한 번), 그 함수가 git을 띄우는 곳이 작업 폴더라 `root`로 옮겨 간 동안만 부른다. 폴더가
     없거나(이행 전 커밋. 옛 파일로 돌아가지 않는다) git이 실패하거나 UTF-8이 아니면 None이다."""
+    # 통합 ref 는 옮겨 가기 전에 정한다. 상대 `root` 는 옮겨 간 뒤에 다른 폴더를 가리킨다
+    ref = integration_ref(root)
     try:
         with contextlib.chdir(root):
-            return queue_open_rows.read_ref_folder(integration_ref(root))
+            return queue_open_rows.read_ref_folder(ref)
     except (OSError, UnicodeDecodeError):
         return None
 

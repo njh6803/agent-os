@@ -2271,3 +2271,17 @@ expect_output = ["AssertionError: 지운다 "]
 file = "tools/tidy_checkouts.py"
 old = '''        if wt.branch.casefold() in PROTECTED_BRANCHES:'''
 new = '''        if wt.branch == "":'''
+
+# PR 봇 첫 회차(기점 dev-base-tools PR #538)의 Major: 짧은 `origin/dev` 는 git 이 같은 이름의 로컬
+# 브랜치를 먼저 풀어, 그 브랜치가 자기 자신과 그 커밋을 쥔 다른 브랜치를 지울 후보로 만든다
+
+[[mutation]]
+name = "오래 사는 브랜치의 ref 를 짧은 이름으로 적는다"
+tests = ["tests/tools/test_tidy_checkouts.py", "-k", "원격_추적_ref_없이"]
+expect = "red"
+expect_output = ["브랜치를 지운다 worktree-q (커밋이 모두"]
+
+[[mutation.edit]]
+file = "tools/tidy_checkouts.py"
+old = '''TRUNK_REFS = ("refs/remotes/origin/main", "refs/remotes/origin/dev")'''
+new = '''TRUNK_REFS = ("origin/main", "origin/dev")'''

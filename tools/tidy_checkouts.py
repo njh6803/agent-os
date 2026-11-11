@@ -390,8 +390,9 @@ DETACHED = ".detached"
 PROTECTED_BRANCHES = frozenset({"main", "master", "dev"})
 # 병합됐다고 보는 오래 사는 브랜치. 끝이 이 가운데 하나에서 닿으면 그 커밋은 이 브랜치를 지워도
 # 남는다. `origin/dev` 가 이 클론에 없으면 그 ref 는 읽히지 않아 `origin/main` 하나로
-# 돈다(`tools/base_rule.py`)
-TRUNK_REFS = ("origin/main", "origin/dev")
+# 돈다(`tools/base_rule.py`). 전체 이름으로 적는다. 짧은 `origin/dev` 는 git 이 같은 이름의 로컬
+# 브랜치(`refs/heads/origin/dev`)나 태그를 먼저 풀어, 그 브랜치가 자기 자신을 닿게 한다
+TRUNK_REFS = ("refs/remotes/origin/main", "refs/remotes/origin/dev")
 # 사람이 읽는 줄에서 오래 사는 브랜치를 가리키는 말
 TRUNK_WORDS = "origin/main 이나 origin/dev"
 MERGED_LIMIT = 1000

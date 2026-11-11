@@ -234,10 +234,11 @@ GH_SUB2 = frozenset(
 )
 # 티켓 PR의 브랜치. 기능 티켓은 `feature/NN-<slug>`, harness 티켓은 `chore/` 뒤의 글자가 그대로
 # 티켓 파일 이름의 stem인 `chore/<stem>`이다(ADR 0037, 0045). 옛 꼴 `chore/NNN-<slug>`와 새 꼴
-# `chore/<slug>`가 같은 규칙이다. 묶음 `stem`을 `ticket_paths`의 열쇠로 쓴다. 규약대로 지은
+# `chore/<slug>`가 같은 규칙이다. 핫픽스 `hotfix/<slug>`도 같은 harness 티켓 자리를 쓴다(ADR 0043,
+# `tools/check_ticket.py`). 묶음 `stem`을 `ticket_paths`의 열쇠로 쓴다. 규약대로 지은
 # 브랜치면 그 값이 티켓 파일 이름의 stem이고, 이름이 다르면 티켓 파일을 찾지 못한 행이 된다.
 TICKET_BRANCH = re.compile(
-    r"^(?:feature/(?=\d{2}-)(?P<feature>\d+-[\w.-]+)|chore/(?P<harness>[\w.-]+))$"
+    r"^(?:feature/(?=\d{2}-)(?P<feature>\d+-[\w.-]+)|(?:chore|hotfix)/(?P<harness>[\w.-]+))$"
 )
 _HARNESS_ISSUES = ".scratch/harness/issues/"
 WORK = re.compile(r"{{work:([^{}]+)}}")

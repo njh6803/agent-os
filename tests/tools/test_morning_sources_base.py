@@ -55,6 +55,24 @@ def test_dev_추적_ref_가_있으면_통합_브랜치는_origin_dev_이다(tmp_
     assert morning_sources.main_text(repo, "b.txt") == "dev\n"
 
 
+def test_반박_상대_경로의_root_로도_대기열을_통합_브랜치에서_읽는다(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """PR 봇 첫 회차의 Minor. 작업 폴더를 `root` 로 옮긴 뒤에 통합 ref 를 정하면 상대 `root` 가 한
+    번 더 겹쳐 git 이 실패하고, 규칙이 `origin/main` 으로 돌아가 dev 에만 있는 대기열 항목을
+    놓친다."""
+    repo = _repository(tmp_path, with_dev=True)
+    queue = repo / ".scratch" / "retro-queue"
+    queue.mkdir(parents=True)
+    (queue / "dev-only.md").write_text("dev 에만 있다\n", encoding="utf-8")
+    _git(repo, "add", "-f", ".scratch")
+    _git(repo, "commit", "-q", "-m", "dev 대기열")
+    _git(repo, "update-ref", "refs/remotes/origin/dev", "HEAD")
+    monkeypatch.chdir(tmp_path)
+
+    assert morning_sources.main_queue(Path("repo")) == {"dev-only.md": "dev 에만 있다\n"}
+
+
 @pytest.mark.parametrize(("with_dev", "expected"), [(False, "main"), (True, "dev")])
 def test_CI_는_통합_브랜치의_이름으로_gh_를_부른다(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, *, with_dev: bool, expected: str

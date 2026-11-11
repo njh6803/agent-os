@@ -3304,6 +3304,26 @@ def test_반박_origin_dev_를_지우면_dev_에만_있던_커밋은_다시_남�
     assert _git("branch", "--list", "worktree-d", cwd=repo) != ""
 
 
+def test_반박_원격_추적_ref_없이_이름이_origin_dev_인_로컬_브랜치는_오래_사는_브랜치가_아니다(
+    repo: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """PR 봇 첫 회차의 Major. git 은 `origin/dev` 를 `refs/remotes/origin/dev` 보다 같은
+    이름의 로컬 브랜치(`refs/heads/origin/dev`)로 먼저 푼다. ref 를 전체 이름으로 적지 않으면 그
+    브랜치가 자기 자신을 닿게 하고, 그 커밋을 쥔 마지막 브랜치를 지운다."""
+    tip = _dev만_앞선다(repo)
+    _git("update-ref", "-d", "refs/remotes/origin/dev", cwd=repo)
+    _git("branch", "origin/dev", tip, cwd=repo)
+    _git("branch", "worktree-q", tip, cwd=repo)
+    _git("reset", "-q", "--hard", "HEAD~1", cwd=repo)
+    assert main(["judge"], cwd=repo, ops=_ops({})) == 0
+    out = capsys.readouterr().out
+    assert _branch_line(out, "worktree-q").startswith("브랜치를 남긴다")
+    assert _branch_line(out, "origin/dev").startswith("브랜치를 남긴다")
+    for name in ("worktree-q", "origin/dev"):
+        assert main(["remove-branch", name, tip], cwd=repo, ops=_ops({})) == 1, name
+        assert _git("branch", "--list", name, cwd=repo) != "", name
+
+
 def _branch_line(out: str, name: str) -> str:
     return next(line for line in out.splitlines() if f" {name} " in line)
 

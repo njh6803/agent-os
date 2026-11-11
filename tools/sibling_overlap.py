@@ -1280,6 +1280,8 @@ def survey(root: Path, remote: Remote) -> Survey:
     # 기준이 아닌 오래 사는 브랜치(dev 가 기준이면 main)의 번호 전체. 그 브랜치를 base 로 연 PR
     # (dev 가 기준일 때 main 에서 딴 hotfix PR)의 head 는 이 번호를 품지만 PR 이 더한 것이 아니다
     trunk_numbers: list[Numbers] = []
+    # 이 브랜치가 이미 품은 기준이 아닌 오래 사는 브랜치의 번호
+    inherited: list[Numbers] = []
     branch = current_branch(root)
 
     def add(
@@ -1289,7 +1291,12 @@ def survey(root: Path, remote: Remote) -> Survey:
         changed: frozenset[str] | None,
         closed: int | None = None,
     ) -> None:
-        new = fresh(numbers, base_numbers, main_numbers, *trunk_numbers)
+        new = fresh(numbers, base_numbers, main_numbers)
+        for trunk in trunk_numbers:
+            # 번호만 같은 다른 파일은 그 형제가 새로 매긴 것이다. 같은 번호에 같은 파일일 때만 뺀다
+            new = unshared(new, trunk)
+            if new.version == trunk.version:
+                new = replace(new, version=None)
         others.append(
             Sibling(
                 label=label,
@@ -1307,11 +1314,16 @@ def survey(root: Path, remote: Remote) -> Survey:
         # 브랜치 안에 있어 형제가 아니다
         label = f"{REMOTE}/{name}"
         other = git(root, "rev-parse", label).strip()
+        other_numbers = numbers_of(Tree(root, other))
         if is_ancestor(root, other, "HEAD"):
+            # 형제로 알리지 않는다. 그래도 이 브랜치가 그쪽에서 물려받은 번호는 이 브랜치가 새로
+            # 매긴 것이 아니라 공유한 이력이다(`--move` 가 옮기지 않게 `ours` 에서 뺀다)
+            inherited.append(other_numbers)
+            trunk_numbers.append(other_numbers)
+            taken.append(other_numbers)
             continue
         since = merge_base(root, other, main_sha)
         changed = _lines(git(root, "diff", "--name-only", since, other)) if since else None
-        other_numbers = numbers_of(Tree(root, other))
         add(label, other, other_numbers, changed)
         trunk_numbers.append(other_numbers)
     for number, head in remote.pulls.items():
@@ -1335,6 +1347,8 @@ def survey(root: Path, remote: Remote) -> Survey:
         add(f"워크트리 {path}", head, numbers, changed)
     disk = numbers_of(Disk(root))
     ours = unshared(fresh(disk, base_numbers), main_numbers)
+    for numbers in inherited:
+        ours = unshared(ours, numbers)
     if heads := merge_heads(root):
         # 합치기를 커밋하기 전이다. 합칠 머리가 main 이 아니어도 그 번호는 이 브랜치 밖의 것이다
         merged = [Tree(root, head) for head in heads]
