@@ -800,6 +800,30 @@
             ],
             "title": "Max Tokens"
           },
+          "max_tool_calls": {
+            "anyOf": [
+              {
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Tool Calls"
+          },
+          "max_turns": {
+            "anyOf": [
+              {
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Turns"
+          },
           "mcp": {
             "default": [],
             "items": {
@@ -914,6 +938,8 @@
           "mcp",
           "requires_approval",
           "conversation_limit",
+          "max_turns",
+          "max_tool_calls",
           "model",
           "skills",
           "provider",

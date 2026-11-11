@@ -11,11 +11,14 @@ conversation_summarized 는 런타임이 이어 가기에서 원문 교환이 �
 하며 원인이 든 실패는 런타임만 낸다(ADR 0031). tool_called 와 run_paused 도 적용 규칙·서버 칸
 (rule, server)을 채우면 같은 길로 끝난다(ADR 0044). 이유는 `_reject_runtime_only`. 거부는 실행을
 끝내지 않는다. 거부된 도구 호출은 불리지 않고 tool_called(ok=false) 로 사유가 모델에게 돌아가며,
-에이전트가 정상적으로 끝맺는다(ADR 0009). 게이트는 도구를 부르는 한 자리(`_Context._call`)이고,
-운영자의 규칙 파일(rules.toml)이 그 자리에서 도구 호출마다 집행된다. deny 는 거부로 기록하고, 저자의
-requires_approval 과 ask 와 어디에도 맞지 않는 default 는 일시정지, allow 만 곧바로 부른다(ADR
-0044). 규칙이 도구를 묻게 둘 수 있는 도구에는 마스킹된 인자가 없어야 하고(실행 전), 에이전트 표가
-적은 줄은 연결에 실재해야 하며(연결 직후), 재개는 멈춘 도구를 낸 서버까지 대 본다(재개 뒤 첫 호출).
+에이전트가 정상적으로 끝맺는다(ADR 0009). 매니페스트의 두 끝(max_turns, max_tool_calls)도 여기서
+집행한다 — 턴의 끝은 루프가, 도구 호출의 끝은 도구를 부르는 자리가 지키고, 끝을 넘은 호출은 규칙이
+정한 것이 아니라 rule 을 비운 같은 거부다(ADR 0052). 게이트는 도구를 부르는 한
+자리(`_Context._call`)이고, 운영자의 규칙 파일(rules.toml)이 그 자리에서 도구 호출마다 집행된다.
+deny 는 거부로 기록하고, 저자의 requires_approval 과 ask 와 어디에도 맞지 않는 default 는 일시정지,
+allow 만 곧바로 부른다(ADR 0044). 규칙이 도구를 묻게 둘 수 있는 도구에는 마스킹된 인자가 없어야
+하고(실행 전), 에이전트 표가 적은 줄은 연결에 실재해야 하며(연결 직후), 재개는 멈춘 도구를 낸
+서버까지 대 본다(재개 뒤 첫 호출).
 
 이어 가기는 run() 의 키워드 인자 previous_run 이다(ADR 0022). 재개와 달리 입력이 run() 의 것에 앞
 실행 하나가 더해진 것이라 함수를 따로 두지 않는다. 없음(None)은 새 대화라는 뜻 하나뿐이고 고리를
@@ -131,7 +134,7 @@ from agent_os.core.continuation import (
     resumed_conversation,
     summarize,
 )
-from agent_os.core.loop import LoopLimitExceeded, ModelCaller, model_caller, run_loop
+from agent_os.core.loop import MAX_TURNS, LoopLimitExceeded, ModelCaller, model_caller, run_loop
 from agent_os.core.model import ModelReply, message_from, reply_from
 from agent_os.core.ports import (
     Absent,
@@ -343,6 +346,19 @@ class _Policy:
 
 
 @dataclass(frozen=True)
+class _Limits:
+    """이 실행에 걸린 두 끝(ADR 0052). 없음을 읽는 것은 core 의 몫이라 여기서 푼다.
+
+    `turns` 는 매니페스트의 `max_turns` 이고 없으면 core 의 `MAX_TURNS` 다. `tool_calls` 는
+    매니페스트의 `max_tool_calls` 이고 없으면 끝이 없다(없음). 재개도 준비를 다시 지나므로 멈춘 사이
+    고친 값으로 돈다.
+    """
+
+    turns: int
+    tool_calls: int | None
+
+
+@dataclass(frozen=True)
 class _Prepared:
     """실행 식별자가 생기기 전에 확정되는 것. run() 과 resume() 이 같은 준비를 거친다."""
 
@@ -351,6 +367,7 @@ class _Prepared:
     instance: BaseAgent
     model: ChatModel
     skills: tuple[Skill, ...]
+    limits: _Limits
 
 
 # 에이전트 태스크가 몸통에 울리는 초인종은 다음을 청하는 신호(`anyio.Event`) 하나다. 이벤트는 싣지
@@ -441,9 +458,14 @@ class _Context:
         conversation: Conversation,
         skills: tuple[Skill, ...],
         thrown: _Thrown,
+        limits: _Limits,
     ) -> None:
         self.run_id = started.run_id
         self._thrown = thrown
+        self._limits = limits
+        # 도구를 부르는 한 자리에 들어온 시도의 수. 실행 하나의 컨텍스트가 처음부터 다시 세므로
+        # 재개한 실행에서는 재생된 호출도 처음과 같은 번호로 센다(`_call`).
+        self._attempts = 0
         self.conversation = conversation
         self.skills = skills
         self._started_at = started.ts
@@ -525,7 +547,7 @@ class _Context:
             return await self._ask(invoke, messages, turn)
 
         try:
-            return await run_loop(ask, prompt, call=self._call)
+            return await run_loop(ask, prompt, call=self._call, max_turns=self._limits.turns)
         except LoopLimitExceeded as error:
             self._thrown.remember(error, "loop_limit")
             raise
@@ -586,7 +608,18 @@ class _Context:
         대조가 소비보다 앞이다. Mismatch 는 Exception 이라 에이전트가 삼키고 다시 부를 수 있는데,
         먼저 소비하면 그때 결정이 사라져 거부한 호출이 정책이 풀린 도구로 실행될 수 있다.
 
+        셈은 이 자리의 맨 앞, 실행이 이미 멈췄는지를 본 바로 뒤이자 재생된 기록을 찾기 전에 올린다.
+        그래서 결말이 무엇이든(성공, 도구의 실패, 연결에 없는 이름, 운영자의 deny, 승인자의 거부, 끝
+        넘음) 시도 하나가 한 번이고, 재생된 호출도 처음과 같은 번호로 다시 세어지며, 멈춘 호출은
+        재개 뒤 같은 번호로 한 번만 세어진다. 이미 멈춘 실행에서 더 부른 호출은 세지 않는다(ADR
+        0052).
+
         재생이 끝난 뒤의 차례는 다음과 같다(ADR 0044 "집행의 차례").
+        0. 도구 호출의 끝(`max_tool_calls`)을 넘은 번호면 이름도 규칙도 보지 않고 거부한다. 결정이
+           있었으면 이미 소비되어 버려졌고 승인이어도 부르지 않는다. 승인 대상이어도 멈추지 않아서
+           질문한 사람이 쓸모없는 승인을 하지 않는다. 재생된 호출은 이 판정을 지나지 않는다 —
+           재생은 기록을 되살리는 것이고 다시 판정하는 것이 아니다. `rule` 은 비운다(규칙이 정한
+           것이 아니다). 끝을 적지 않은 에이전트는 이 판정을 지나지 않는다.
         1. 연결 목록에 없는 이름이면 게이트에 들지 않고 거부한다(`rule` 없음). 결정이 있었으면 이미
            소비되어 버려졌다.
         2. 운영자의 deny 에 맞으면 부르지 않고 거부한다. 결정이 있어도 같다 — 승인자가 승인해도
@@ -598,6 +631,7 @@ class _Context:
         결정이 적용된 호출의 `rule` 은 그 호출을 멈춘 `run_paused.rule` 이다.
         """
         self._stay_paused()
+        self._attempts += 1
         masked = _mask(name, args, self._policy.secrets)
         with self._thrown.blamed("resume_mismatch"):
             replayed = self._replay.take_tool(name, masked)
@@ -609,6 +643,14 @@ class _Context:
                 _require_paused_call(self._verdict.paused, name, masked, spec)
         verdict = self._take_verdict()
         self._resume()
+        ceiling = self._limits.tool_calls
+        if ceiling is not None and self._attempts > ceiling:
+            return await self._refuse(
+                name,
+                masked,
+                f"도구 호출 횟수를 넘었다: 이 실행은 도구를 {ceiling}번까지 부른다",
+                rule=None,
+            )
         if spec is None:
             return await self._refuse(name, masked, f"도구가 없다: {name}", rule=None)
         rule = self._rule_of(spec)
@@ -674,7 +716,9 @@ class _Context:
         이미 있는 도구 실패 경로 그대로다. 루프는 사유를 모델에 되돌려 계속하고, 직접 부른
         에이전트는 ToolError 로 받아 이름으로 잡는다(ADR 0009). 기록이 남으므로 다음 재생에서도
         이 호출은 실패로 되살아나고 실제로 불리지 않는다. 뒤의 승인이 앞의 거부를 뒤집지 않는다.
-        거부의 주인은 셋이다 — 승인자, 운영자의 deny, 연결에 없는 이름. 문구와 `rule` 이 가른다.
+        거부의 주인은 넷이다 — 승인자, 운영자의 deny, 연결에 없는 이름, 도구 호출의 끝 넘음. 문구와
+        `rule` 이 가른다. 뒤의 둘은 `rule` 이 비어 있고 문구의 머리(`도구가 없다`, `도구 호출 횟수를
+        넘었다`)가 가른다.
         """
         result = ToolResult(ok=False, content=content)
         self._record_tool_call(name, masked, result, rule)
@@ -1138,6 +1182,7 @@ class _Body:
             conversation,
             prepared.skills,
             self._thrown,
+            prepared.limits,
         )
         try:
             # 중계를 이 자리에서 닫는다. 몸통이 안쪽 제너레이터를 닫는 까닭과 같다.
@@ -1346,10 +1391,11 @@ def _prepare(
     에이전트의 매니페스트는 부르는 쪽이 읽어 넘긴다. 없을 때의 뜻이 `run()` 과 `resume()` 에서
     다르기 때문이다(`_requested_manifest`, `_recorded_manifest`).
 
-    순서가 의도다. 깨짐(mcp 들, 마스킹과 승인의 충돌, 모델의 없음과 읽히지 않음, 스킬의 없음과
-    읽히지 않음, 운영자 파일의 손상. 규칙 파일을 꺼진 집합보다 먼저 읽는다. 마스킹과 묻는 규칙의
-    충돌은 규칙 파일을 읽은 뒤에 보므로 이 묶음에서 마지막이다)을 다 본 뒤에
-    꺼짐(에이전트, mcp, 모델, 스킬)을 보고, 진입점 import 는 꺼짐보다 뒤,
+    순서가 의도다. 깨짐(턴의 끝이 10을 넘음. 에이전트 매니페스트만으로 판정되어 맨 앞이다 — 부재
+    다음이고 mcp 의 깨짐보다 앞이며 꺼진 에이전트여도 먼저 난다(ADR 0052). mcp 들, 마스킹과 승인의
+    충돌, 모델의 없음과 읽히지 않음, 스킬의 없음과 읽히지 않음, 운영자 파일의 손상. 규칙 파일을 꺼진
+    집합보다 먼저 읽는다. 마스킹과 묻는 규칙의 충돌은 규칙 파일을 읽은 뒤에 보므로 이 묶음에서
+    마지막이다)을 다 본 뒤에 꺼짐(에이전트, mcp, 모델, 스킬)을 보고, 진입점 import 는 꺼짐보다 뒤,
     모델 만들기는 import 뒤다. 깨진 것이 먼저 보여야 운영자가 다시 켜기 전에
     고칠 것을 알고, import 실패를 판정하려면 플러그인 코드를 실행해야 하는데 꺼진 에이전트는 그
     코드를 돌리지 않는다(ADR 0017, plugin-toggle 명세의 "core — 준비 단계의 판정"). 깨짐과 꺼짐이
@@ -1364,6 +1410,7 @@ def _prepare(
     한 번에 매니페스트와 스킬 문서를 한 번씩 읽어 `ctx.skills` 로 넘기고 캐시하지 않는다. 읽기가
     동기라 재개의 첫 걸음에 `await` 가 없다는 불변식이 그대로다(ADR 0041).
     """
+    limits = _resolve_limits(manifest)
     servers = _resolve_servers(plugins, manifest)
     _reject_masked_approvals(manifest, servers)
     model_name = default_model if manifest.model is None else manifest.model
@@ -1385,6 +1432,27 @@ def _prepare(
         instance=instance,
         model=models.build(model_manifest),
         skills=skills,
+        limits=limits,
+    )
+
+
+def _resolve_limits(manifest: PluginManifest) -> _Limits:
+    """에이전트 매니페스트의 두 끝을 이 실행의 값으로 읽는다. 깨짐 묶음의 맨 앞이다(ADR 0052).
+
+    턴의 끝이 10을 넘으면 그 에이전트의 실행을 시작하지 않는다. 낮추기만 하고 올리지 않는 것이 이
+    끝의 뜻이라(ADR 0009가 올리는 것을 별도 결정으로 남겼다), 적은 값이 조용히 무시되지 않게
+    거부한다. 에이전트 매니페스트만으로 판정되어 다른 플러그인을 읽기 전에 서고, 꺼진 에이전트여도
+    깨짐이 먼저 라는 순서의 원칙대로 이 거부가 먼저 난다. 문구는 플러그인 이름 패턴을 지난 에이전트
+    이름과 core 의 10만 싣고 적힌 값은 되울리지 않는다. 없음은 턴의 10과 도구 호출의 끝 없음으로
+    읽는다.
+    """
+    if manifest.max_turns is not None and manifest.max_turns > MAX_TURNS:
+        raise PluginError(
+            f"에이전트 {manifest.name} 의 max_turns 가 루프 상한 {MAX_TURNS} 을 넘는다"
+        )
+    return _Limits(
+        turns=MAX_TURNS if manifest.max_turns is None else manifest.max_turns,
+        tool_calls=manifest.max_tool_calls,
     )
 
 

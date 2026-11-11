@@ -31,7 +31,7 @@ import pytest
 from langchain_core.callbacks import AsyncCallbackManagerForLLMRun, CallbackManagerForLLMRun
 from langchain_core.language_models import LanguageModelInput
 from langchain_core.language_models.fake_chat_models import GenericFakeChatModel
-from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage
+from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage, ToolMessage
 from langchain_core.messages.tool import ToolCall as LangchainToolCall
 from langchain_core.outputs import ChatResult
 from langchain_core.runnables import Runnable
@@ -132,10 +132,14 @@ def _agent_manifest(
     conversation_limit: int | None = None,
     model: str | None = None,
     skills: Sequence[str] = (),
+    max_turns: int | None = None,
+    max_tool_calls: int | None = None,
 ) -> PluginManifest:
     limit = "" if conversation_limit is None else f"conversation_limit = {conversation_limit}\n"
     chosen = "" if model is None else f'model = "{model}"\n'
     picked = f"skills = {_toml_list(skills)}\n" if skills else ""
+    turns = "" if max_turns is None else f"max_turns = {max_turns}\n"
+    calls = "" if max_tool_calls is None else f"max_tool_calls = {max_tool_calls}\n"
     return parse_manifest(
         f'schema_version = "1"\nkind = "agent"\nname = "{name}"\n'
         f'version = "0.1.0"\nentrypoint = "agent:Agent"\n'
@@ -143,6 +147,8 @@ def _agent_manifest(
         + limit
         + chosen
         + picked
+        + turns
+        + calls
     )
 
 
@@ -320,8 +326,12 @@ class FakePlugins:
         corrupt_rules: str | None = None,
         remote: str | None = None,
         remote_headers: Mapping[str, str] | None = None,
+        max_turns: int | None = None,
+        max_tool_calls: int | None = None,
     ) -> None:
         self._agents = agents
+        self.max_turns = max_turns
+        self.max_tool_calls = max_tool_calls
         self._remote = remote
         self._remote_headers = remote_headers
         self._mcp = tuple(mcp)
@@ -359,6 +369,8 @@ class FakePlugins:
                 self.conversation_limit,
                 self.agent_model,
                 self.agent_skills,
+                self.max_turns,
+                self.max_tool_calls,
             )
         if kind is PluginKind.MCP and name in self._servers:
             return _mcp_manifest(name, self._secret_args, self._remote, self._remote_headers)
@@ -8841,3 +8853,483 @@ async def test_서버_칸이_없는_쪽은_문구에_서버_없음으로_적는�
     ) in events[-1].error
     assert _cause(events) == "resume_mismatch"
     assert sendonly.connection.calls == []
+
+
+# --- 턴의 끝과 도구 호출의 끝(base-agent 01, ADR 0052) -------------------------------
+#
+# 매니페스트의 `max_turns` 와 `max_tool_calls` 를 런타임이 지키는지 잰다. 문구만 보는 단언은 도구가
+# 실제로 불렸는지를 보지 못한다. 그래서 끝 넘음의 문구가 아닌 `tool_called` 의 수와 가짜 연결의 호출
+# 기록(`FakeTools.connection.calls`)의 수로 단언한다.
+
+
+def _over(count: int) -> str:
+    """끝을 넘은 호출의 기록 문구. N 은 그 실행에 걸린 끝이다."""
+    return f"도구 호출 횟수를 넘었다: 이 실행은 도구를 {count}번까지 부른다"
+
+
+def _tool_records(events: Sequence[Event]) -> list[ToolCalled]:
+    return [e for e in events if isinstance(e, ToolCalled)]
+
+
+def _recorded_not_over(events: Sequence[Event]) -> list[ToolCalled]:
+    """런타임이 기록한 `tool_called` 가운데 끝 넘음의 문구가 아닌 것."""
+    return [e for e in _tool_records(events) if not e.content.startswith("도구 호출 횟수를 넘었다")]
+
+
+def _called(tools: FakeTools) -> list[str]:
+    """가짜 연결에 실제로 닿은 도구 이름의 열."""
+    return [name for name, _ in tools.connection.calls]
+
+
+class ThriceDirectAgent:
+    """도구를 직접 세 번 부르고 실패는 이름으로 잡아 출력에 싣는다."""
+
+    async def run(self, request: str, ctx: AgentContext) -> AsyncIterator[Event]:
+        outputs: list[str] = []
+        for _ in range(3):
+            try:
+                outputs.append(await ctx.tool("add", a=2, b=2))
+            except ToolError as error:
+                outputs.append(f"error:{error}")
+        yield RunFinished(run_id=ctx.run_id, ts=ctx.now(), output="|".join(outputs))
+
+
+class ThriceLeakyAgent:
+    """도구를 직접 세 번 부르고 실패를 흘린다."""
+
+    async def run(self, request: str, ctx: AgentContext) -> AsyncIterator[Event]:
+        for _ in range(3):
+            await ctx.tool("add", a=2, b=2)
+        yield RunFinished(run_id=ctx.run_id, ts=ctx.now(), output="done")
+
+
+class MixedAgent:
+    """도구를 직접 한 번, 루프로 한 번(모델이 도구를 낸다), 다시 직접 한 번 부른다."""
+
+    async def run(self, request: str, ctx: AgentContext) -> AsyncIterator[Event]:
+        first = await ctx.tool("add", a=2, b=2)
+        answer = await ctx.llm(request)
+        try:
+            await ctx.tool("add", a=2, b=2)
+        except ToolError as error:
+            answer = f"{answer}/{error}"
+        yield RunFinished(run_id=ctx.run_id, ts=ctx.now(), output=f"{first}/{answer}")
+
+
+# 턴의 끝
+
+
+async def test_턴의_끝이_3이면_세_턴_내내_도구를_내는_실행은_3턴에서_loop_limit으로_끝난다(
+    trace: FakeTrace, clock: FakeClock
+) -> None:
+    model = ToolAwareFakeModel(messages=itertools.repeat(_tool_request()))
+    tools = FakeTools({"add": "4"})
+    plugins = FakePlugins({"calc": OneShotAgent()}, max_turns=3)
+
+    events = await _run(OneShotAgent(), model, trace, clock, tools=tools, plugins=plugins)
+
+    assert sum(1 for e in events if e.type == "llm_called") == 3
+    assert isinstance(events[-1], RunFailed)
+    assert "루프가 3턴 안에 멈추지 않았다" in events[-1].error
+    assert _cause(events) == "loop_limit"
+    # 마지막 턴에 모델이 낸 도구 호출은 지금처럼 실행한 뒤에 던진다.
+    assert _called(tools) == ["add", "add", "add"]
+
+
+async def test_턴의_끝을_적지_않으면_10턴째에_loop_limit이고_문구가_10을_싣는다(
+    trace: FakeTrace, clock: FakeClock
+) -> None:
+    model = ToolAwareFakeModel(messages=itertools.repeat(_tool_request()))
+    plugins = FakePlugins({"calc": OneShotAgent()})
+
+    events = await _run(
+        OneShotAgent(), model, trace, clock, tools=FakeTools({"add": "4"}), plugins=plugins
+    )
+
+    assert isinstance(events[-1], RunFailed)
+    assert "루프가 10턴 안에 멈추지 않았다" in events[-1].error
+    assert sum(1 for e in events if e.type == "llm_called") == 10
+
+
+async def test_턴의_끝이_10이면_칸이_없을_때와_같이_돈다(
+    trace: FakeTrace, clock: FakeClock
+) -> None:
+    """10은 천장이고 적을 수 있는 값이다. 11부터 거부된다."""
+    model = ToolAwareFakeModel(messages=itertools.repeat(_tool_request()))
+    plugins = FakePlugins({"calc": OneShotAgent()}, max_turns=10)
+
+    events = await _run(
+        OneShotAgent(), model, trace, clock, tools=FakeTools({"add": "4"}), plugins=plugins
+    )
+
+    assert sum(1 for e in events if e.type == "llm_called") == 10
+    assert _cause(events) == "loop_limit"
+
+
+async def test_턴의_끝이_10을_넘으면_실행을_시작하기_전에_PluginError로_거부한다(
+    trace: FakeTrace, clock: FakeClock
+) -> None:
+    model = ToolAwareFakeModel(messages=iter([]))
+    tools = FakeTools({"add": "4"})
+    plugins = FakePlugins({"calc": OneShotAgent()}, max_turns=11)
+
+    with pytest.raises(PluginError) as caught:
+        await _run(OneShotAgent(), model, trace, clock, tools=tools, plugins=plugins)
+
+    assert type(caught.value) is PluginError
+    # 적힌 값을 되울리지 않는다. 에이전트 이름과 core 의 10만 싣는다.
+    assert str(caught.value) == "에이전트 calc 의 max_turns 가 루프 상한 10 을 넘는다"
+    assert "11" not in str(caught.value)
+    assert clock.ids_issued == 0
+    assert trace.events == []
+    assert tools.servers is None
+    assert plugins.loads == 0
+
+
+async def test_턴의_끝_거부는_mcp의_깨짐보다_먼저_난다(trace: FakeTrace, clock: FakeClock) -> None:
+    model = ToolAwareFakeModel(messages=iter([]))
+    plugins = FakePlugins({"calc": OneShotAgent()}, mcp=["ghost"], max_turns=11)
+
+    with pytest.raises(PluginError, match="max_turns") as caught:
+        await _run(OneShotAgent(), model, trace, clock, plugins=plugins)
+
+    assert type(caught.value) is PluginError
+
+
+async def test_턴의_끝_거부는_꺼진_에이전트여도_꺼짐보다_먼저_난다(
+    trace: FakeTrace, clock: FakeClock
+) -> None:
+    model = ToolAwareFakeModel(messages=iter([]))
+    plugins = FakePlugins({"calc": OneShotAgent()}, disabled=[_agent_key("calc")], max_turns=11)
+
+    with pytest.raises(PluginError, match="max_turns") as caught:
+        await _run(OneShotAgent(), model, trace, clock, plugins=plugins)
+
+    assert type(caught.value) is PluginError
+    assert plugins.loads == 0
+
+
+async def test_턴의_끝_거부는_없는_에이전트보다_뒤다(trace: FakeTrace, clock: FakeClock) -> None:
+    """부재가 앞이다. 매니페스트가 없으면 읽을 값이 없다."""
+    model = ToolAwareFakeModel(messages=iter([]))
+    plugins = FakePlugins({}, max_turns=11)
+
+    with pytest.raises(Absent):
+        await _run(OneShotAgent(), model, trace, clock, plugins=plugins)
+
+
+async def test_멈춘_사이_턴의_끝을_10_넘게_고치면_재개는_결정을_쓰기_전에_거부된다(
+    trace: FakeTrace, clock: FakeClock
+) -> None:
+    model = ToolAwareFakeModel(messages=iter([_tool_request("send"), _reply("끝")]))
+    tools = _two_tools()
+    plugins = _gated_plugins(OneShotAgent())
+    await _run(OneShotAgent(), model, trace, clock, tools=tools, plugins=plugins)
+    written = list(trace.events)
+    plugins.max_turns = 11
+
+    with pytest.raises(PluginError, match="max_turns") as caught:
+        await _resume(RunId("run-1"), model, trace, clock, tools=tools, plugins=plugins)
+
+    assert type(caught.value) is PluginError
+    assert trace.events == written
+    assert trace.events[-1].type == "run_paused"
+    assert _called(tools) == []
+
+
+async def test_멈춘_사이_턴의_끝을_낮추면_재생된_턴이_새_끝을_넘는_자리에서_loop_limit이다(
+    trace: FakeTrace, clock: FakeClock
+) -> None:
+    replies = [_tool_request("add"), _tool_request("add"), _tool_request("send"), _reply("끝")]
+    model = ToolAwareFakeModel(messages=iter(replies))
+    tools = _two_tools()
+    plugins = _gated_plugins(OneShotAgent())
+    await _run(OneShotAgent(), model, trace, clock, tools=tools, plugins=plugins)
+    plugins.max_turns = 2
+    calls_before = model.calls
+
+    events = await _resume(RunId("run-1"), model, trace, clock, tools=tools, plugins=plugins)
+
+    assert isinstance(events[-1], RunFailed)
+    assert "루프가 2턴 안에 멈추지 않았다" in events[-1].error
+    assert _cause(events) == "loop_limit"
+    assert model.calls == calls_before
+    # 멈춘 호출에 닿기 전에 끝났으므로 승인된 send 는 불리지 않는다.
+    assert "send" not in _called(tools)
+
+
+# 도구 호출의 끝
+
+
+async def test_끝이_2인_에이전트가_도구를_셋_내면_셋째는_불리지_않고_답으로_끝난다(
+    trace: FakeTrace, clock: FakeClock
+) -> None:
+    replies = [_tool_request(), _tool_request(), _tool_request(), _reply("답")]
+    model = ToolAwareFakeModel(messages=iter(replies))
+    tools = FakeTools({"add": "4"})
+    plugins = FakePlugins({"calc": OneShotAgent()}, max_tool_calls=2)
+
+    events = await _run(OneShotAgent(), model, trace, clock, tools=tools, plugins=plugins)
+
+    assert _called(tools) == ["add", "add"]
+    assert len(_recorded_not_over(events)) == 2
+    last = _tool_records(events)[-1]
+    assert last == ToolCalled(
+        run_id=RunId("run-1"),
+        ts=FIXED_NOW,
+        tool="add",
+        ok=False,
+        args={"a": 2, "b": 2},
+        content=_over(2),
+        rule=None,
+    )
+    assert isinstance(events[-1], RunFinished)
+    assert events[-1].output == "답"
+
+
+async def test_한_턴에_셋을_내도_같다(trace: FakeTrace, clock: FakeClock) -> None:
+    model = ToolAwareFakeModel(messages=iter([_tool_request("add", "add", "add"), _reply("답")]))
+    tools = FakeTools({"add": "4"})
+    plugins = FakePlugins({"calc": OneShotAgent()}, max_tool_calls=2)
+
+    events = await _run(OneShotAgent(), model, trace, clock, tools=tools, plugins=plugins)
+
+    assert _called(tools) == ["add", "add"]
+    assert [e.content for e in _tool_records(events)] == ["4", "4", _over(2)]
+    assert isinstance(events[-1], RunFinished)
+
+
+async def test_끝을_넘은_호출의_결과가_도구_결과로_모델에_돌아간다(
+    trace: FakeTrace, clock: FakeClock
+) -> None:
+    model = ToolAwareFakeModel(messages=iter([_tool_request("add", "add"), _reply("답")]))
+    plugins = FakePlugins({"calc": OneShotAgent()}, max_tool_calls=1)
+
+    await _run(OneShotAgent(), model, trace, clock, tools=FakeTools({"add": "4"}), plugins=plugins)
+
+    last_input = model.received[-1]
+    tool_messages = [m for m in last_input if m.type == "tool"]
+    assert [m.content for m in tool_messages] == ["4", _over(1)]
+    assert [m.status for m in tool_messages if isinstance(m, ToolMessage)] == ["success", "error"]
+
+
+@pytest.mark.parametrize(
+    "first", ["ghost", "send", "boom"], ids=["없는 이름", "운영자 deny", "도구 실패"]
+)
+async def test_결말이_무엇이든_도구를_부르는_시도_하나가_한_번으로_세어진다(
+    first: str, trace: FakeTrace, clock: FakeClock
+) -> None:
+    """연결에 없는 이름, 운영자의 deny, 도구의 실패가 모두 한 번이라 둘째 시도가 끝을 넘는다."""
+    replies = [_tool_request(first), _tool_request("add"), _reply("답")]
+    model = ToolAwareFakeModel(messages=iter(replies))
+    tools = FakeTools({"add": "4", "send": "sent", "boom": RuntimeError("터졌다")})
+    rules = _common(deny=["fake:send"], allow=["fake:*"])
+    plugins = FakePlugins({"calc": OneShotAgent()}, rules=rules, max_tool_calls=1)
+
+    events = await _run(OneShotAgent(), model, trace, clock, tools=tools, plugins=plugins)
+
+    assert "add" not in _called(tools)
+    assert len(_recorded_not_over(events)) == 1
+    assert _tool_records(events)[-1].content == _over(1)
+    assert isinstance(events[-1], RunFinished)
+
+
+async def test_끝을_넘은_호출의_기록은_마스킹을_지난_인자를_싣는다(
+    trace: FakeTrace, clock: FakeClock
+) -> None:
+    model = ToolAwareFakeModel(messages=iter([_tool_request("add", "add"), _reply("답")]))
+    tools = FakeTools({"add": "4"}, params={"add": ["a", "b"]})
+    plugins = FakePlugins(
+        {"calc": OneShotAgent()},
+        mcp=["srv"],
+        servers=["srv"],
+        # 준비 단계는 매니페스트의 서버(srv)로, 실행 중 도구는 가짜 소스의 서버(fake)로 규칙을
+        # 구한다.
+        rules=_common(allow=["srv:*", "fake:*"]),
+        max_tool_calls=1,
+        secret_args={"add": ["a"]},
+    )
+
+    events = await _run(OneShotAgent(), model, trace, clock, tools=tools, plugins=plugins)
+
+    over = _tool_records(events)[-1]
+    assert over.content == _over(1)
+    assert over.args == {"a": "***", "b": 2}
+    assert _called(tools) == ["add"]
+
+
+async def test_끝을_넘은_호출은_승인_대상이어도_묻지_않고_거부한다(
+    trace: FakeTrace, clock: FakeClock
+) -> None:
+    replies = [_tool_request("add"), _tool_request("send"), _reply("답")]
+    model = ToolAwareFakeModel(messages=iter(replies))
+    tools = _two_tools()
+    plugins = _gated_plugins(OneShotAgent())
+    plugins.max_tool_calls = 1
+
+    events = await _run(OneShotAgent(), model, trace, clock, tools=tools, plugins=plugins)
+
+    assert "run_paused" not in [e.type for e in events]
+    assert _called(tools) == ["add"]
+    assert _tool_records(events)[-1].content == _over(1)
+    assert _tool_records(events)[-1].rule is None
+    assert isinstance(events[-1], RunFinished)
+
+
+async def test_끝을_넘은_호출은_연결에_없는_이름이어도_deny인_도구여도_같은_문구로_거부된다(
+    trace: FakeTrace, clock: FakeClock
+) -> None:
+    replies = [_tool_request("add"), _tool_request("ghost", "send"), _reply("답")]
+    model = ToolAwareFakeModel(messages=iter(replies))
+    tools = FakeTools({"add": "4", "send": "sent"})
+    rules = _common(deny=["fake:send"], allow=["fake:*"])
+    plugins = FakePlugins({"calc": OneShotAgent()}, rules=rules, max_tool_calls=1)
+
+    events = await _run(OneShotAgent(), model, trace, clock, tools=tools, plugins=plugins)
+
+    assert _called(tools) == ["add"]
+    records = _tool_records(events)
+    assert [(e.tool, e.content, e.rule) for e in records[1:]] == [
+        ("ghost", _over(1), None),
+        ("send", _over(1), None),
+    ]
+
+
+async def test_직접_부른_에이전트는_같은_문구의_ToolError를_받는다(
+    trace: FakeTrace, clock: FakeClock
+) -> None:
+    tools = FakeTools({"add": "4"})
+    plugins = FakePlugins({"calc": ThriceDirectAgent()}, max_tool_calls=2)
+
+    events = await _run(
+        ThriceDirectAgent(),
+        GenericFakeChatModel(messages=iter([])),
+        trace,
+        clock,
+        tools=tools,
+        plugins=plugins,
+    )
+
+    assert _called(tools) == ["add", "add"]
+    assert isinstance(events[-1], RunFinished)
+    assert events[-1].output == f"4|4|error:{_over(2)}"
+
+
+async def test_직접_부른_에이전트가_ToolError를_흘리면_원인은_tool_failure다(
+    trace: FakeTrace, clock: FakeClock
+) -> None:
+    tools = FakeTools({"add": "4"})
+    plugins = FakePlugins({"calc": ThriceLeakyAgent()}, max_tool_calls=2)
+
+    events = await _run(
+        ThriceLeakyAgent(),
+        GenericFakeChatModel(messages=iter([])),
+        trace,
+        clock,
+        tools=tools,
+        plugins=plugins,
+    )
+
+    assert _called(tools) == ["add", "add"]
+    assert _cause(events) == "tool_failure"
+
+
+async def test_루프의_호출과_직접_호출은_실행_하나의_같은_셈에_든다(
+    trace: FakeTrace, clock: FakeClock
+) -> None:
+    model = ToolAwareFakeModel(messages=iter([_tool_request(), _reply("답")]))
+    tools = FakeTools({"add": "4"})
+    plugins = FakePlugins({"calc": MixedAgent()}, max_tool_calls=2)
+
+    events = await _run(MixedAgent(), model, trace, clock, tools=tools, plugins=plugins)
+
+    assert _called(tools) == ["add", "add"]
+    assert isinstance(events[-1], RunFinished)
+    assert events[-1].output == f"4/답/{_over(2)}"
+
+
+async def test_도구_호출의_끝을_적지_않은_에이전트는_도구를_몇_번이든_부른다(
+    trace: FakeTrace, clock: FakeClock
+) -> None:
+    model = ToolAwareFakeModel(messages=iter([_tool_request(*["add"] * 15), _reply("답")]))
+    tools = FakeTools({"add": "4"})
+    plugins = FakePlugins({"calc": OneShotAgent()})
+
+    events = await _run(OneShotAgent(), model, trace, clock, tools=tools, plugins=plugins)
+
+    assert _called(tools) == ["add"] * 15
+    assert len(_recorded_not_over(events)) == 15
+    assert isinstance(events[-1], RunFinished)
+
+
+async def test_재개한_실행에서_재생된_호출도_다시_세어져_승인_한_번이_횟수를_더_주지_않는다(
+    trace: FakeTrace, clock: FakeClock
+) -> None:
+    replies = [_tool_request("add"), _tool_request("send"), _tool_request("add"), _reply("답")]
+    model = ToolAwareFakeModel(messages=iter(replies))
+    tools = _two_tools()
+    plugins = _gated_plugins(OneShotAgent())
+    plugins.max_tool_calls = 2
+    paused = await _run(OneShotAgent(), model, trace, clock, tools=tools, plugins=plugins)
+
+    events = await _resume(RunId("run-1"), model, trace, clock, tools=tools, plugins=plugins)
+
+    assert paused[-1].type == "run_paused"
+    # 재생된 add 가 1, 멈춘 send 가 2 이고 셋째 add 가 끝을 넘는다.
+    assert _called(tools) == ["add", "send"]
+    assert _tool_records(events)[-1].content == _over(2)
+    assert len(_recorded_not_over(trace.events)) == 2
+    assert isinstance(events[-1], RunFinished)
+
+
+async def test_승인자의_거부도_한_번으로_세어진다(trace: FakeTrace, clock: FakeClock) -> None:
+    replies = [_tool_request("send"), _tool_request("add"), _tool_request("add"), _reply("답")]
+    model = ToolAwareFakeModel(messages=iter(replies))
+    tools = _two_tools()
+    plugins = _gated_plugins(OneShotAgent())
+    plugins.max_tool_calls = 2
+    await _run(OneShotAgent(), model, trace, clock, tools=tools, plugins=plugins)
+
+    events = await _resume(
+        RunId("run-1"),
+        model,
+        trace,
+        clock,
+        tools=tools,
+        plugins=plugins,
+        decision=Deny("싫다"),
+    )
+
+    # 거부된 send 가 1, 첫 add 가 2 이고 둘째 add 가 끝을 넘는다.
+    assert _called(tools) == ["add"]
+    assert [e.content for e in _tool_records(events)] == ["승인자가 거부했다: 싫다", "4", _over(2)]
+    assert isinstance(events[-1], RunFinished)
+
+
+async def test_멈춘_사이_끝을_낮추면_멈춘_호출은_승인이어도_끝_넘음으로_거부하고_재생은_그대로다(
+    trace: FakeTrace, clock: FakeClock
+) -> None:
+    replies = [_tool_request("add"), _tool_request("add"), _tool_request("send"), _reply("끝")]
+    model = ToolAwareFakeModel(messages=iter(replies))
+    tools = _two_tools()
+    plugins = _gated_plugins(OneShotAgent())
+    plugins.max_tool_calls = 5
+    await _run(OneShotAgent(), model, trace, clock, tools=tools, plugins=plugins)
+    before = len(trace.events)
+    plugins.max_tool_calls = 1
+
+    events = await _resume(RunId("run-1"), model, trace, clock, tools=tools, plugins=plugins)
+
+    assert [e.type for e in events] == [
+        "approval_granted",
+        "run_resumed",
+        "tool_called",
+        "llm_called",
+        "run_finished",
+    ]
+    assert _tool_records(events)[0].tool == "send"
+    assert _tool_records(events)[0].content == _over(1)
+    assert _tool_records(events)[0].rule is None
+    # 승인된 send 는 불리지 않고, 재생된 둘째 add 는 낮춘 끝을 넘는 번호여도 새로 쓰이지 않는다.
+    assert _called(tools) == ["add", "add"]
+    assert len(trace.events) == before + len(events)
