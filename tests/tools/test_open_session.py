@@ -1357,6 +1357,139 @@ def test_보이는_폴더가_Folder_가_아니면_보내지_않고_멈춘다(sho
     assert "보내지 않았다" in out
 
 
+# 화면의 폴더가 -Folder 가 아니면 환경 버튼으로 -Folder 를 고른다(harness 티켓
+# open-session-selects-repo-folder, 대기열 378·387). 환경 메뉴의 항목은 폴더 경로가 아니라 환경
+# 이름의 라디오 버튼이다(`agent , 환경 편집, 오른쪽 화살표`, composer_env_menu.ps1, 2026-11-10).
+_ENV_NAME = """
+Get-FolderEnvName $given.folder
+"""
+
+
+@pytest.mark.parametrize(
+    ("folder", "name"),
+    [
+        ("C:\\project\\agent", "agent"),
+        ("c:/project/rag-engine/", "rag-engine"),  # 슬래시와 끝의 구분자
+        ("C:\\project\\agent\\.claude\\worktrees\\x", "x"),  # 마지막 토막만
+        ("C:\\", ""),  # 드라이브 문자만 남은 경로는 환경 이름이 없다
+        ("C:", ""),
+        ("", ""),
+    ],
+)
+def test_폴더_경로의_마지막_토막이_환경_이름이다(folder: str, name: str) -> None:
+    completed = _call("Get-FolderEnvName", _ENV_NAME, {"folder": folder})
+
+    assert completed.returncode == 0, completed.stderr
+    assert completed.stdout.strip() == name
+
+
+_ENV_ITEMS = """
+(Select-FolderEnvNames @($given.items) $given.env) -join '|'
+"""
+
+_MENU = [
+    "agent , 환경 편집, 오른쪽 화살표",
+    "rag-engine , 환경 편집, 오른쪽 화살표",
+    "Default , 환경 설정, 오른쪽 화살표",
+    "agent2 , 환경 편집, 오른쪽 화살표",
+    "새 환경",
+    "agent",  # 이름 뒤에 쉼표가 없는 글은 항목이 아니다
+]
+
+
+@pytest.mark.parametrize(
+    ("env", "picked"),
+    [
+        ("agent", "agent , 환경 편집, 오른쪽 화살표"),
+        ("AGENT", "agent , 환경 편집, 오른쪽 화살표"),  # 윈도 경로라 대소문자는 가리지 않는다
+        ("rag-engine", "rag-engine , 환경 편집, 오른쪽 화살표"),
+        ("agent2", "agent2 , 환경 편집, 오른쪽 화살표"),  # 앞부분만 같은 이름은 다른 환경이다
+        ("age", ""),
+        ("", ""),  # 이름이 없으면 아무것도 고르지 않는다
+    ],
+)
+def test_환경_메뉴에서_이름이_정확히_같은_환경의_항목만_고른다(env: str, picked: str) -> None:
+    completed = _call("Select-FolderEnvNames", _ENV_ITEMS, {"items": _MENU, "env": env})
+
+    assert completed.returncode == 0, completed.stderr
+    assert completed.stdout.strip() == picked
+
+
+def test_같은_이름의_항목이_둘이면_둘_다_돌려준다() -> None:
+    """둘 이상이면 고르는 쪽이 멈춘다. 어느 것이 -Folder 인지 가를 수 없다."""
+    items = ["agent , 환경 편집", "Agent , 환경 편집"]
+
+    completed = _call("Select-FolderEnvNames", _ENV_ITEMS, {"items": items, "env": "agent"})
+
+    assert completed.returncode == 0, completed.stderr
+    assert completed.stdout.strip().split("|") == items
+
+
+def _function_text(name: str) -> str:
+    source = SCRIPT.read_text(encoding="utf-8")
+    start = source.index(f"\nfunction {name}")
+    return source[start : source.index("\nfunction ", start + 1)]
+
+
+def test_폴더를_고치는_길은_저장소_뿌리_검사_뒤_모델을_고르기_전에_있다() -> None:
+    text = _send_prompt_text()
+
+    repair = text.index("= Repair-ShownFolder $win $box $needle $Folder")  # 주석이 아니라 호출
+    assert text.index("Test-RepoFolder") < repair
+    assert text.index("Get-FolderMismatch $shown $Folder") < repair
+    assert repair < text.index("Set-ComposerModel")
+    # 화면에서 폴더를 읽었을 때만 고친다. 읽지 못했으면 무엇이 선택돼 있는지 모른다
+    assert "$mismatch -and $shown.Count -gt 0" in text
+    # 고쳤다고 치는 곳은 다시 읽은 폴더가 -Folder 와 같다고 확인한 반환 뒤뿐이다
+    assert text.index("$mismatch = $null") > repair
+    assert text.count("$mismatch = $null") == 1
+
+
+def test_환경을_고른_뒤에는_화면의_폴더를_다시_읽어_견준_뒤에만_돌려준다() -> None:
+    text = _function_text("Repair-ShownFolder")
+
+    assert text.index("Select-ComposerFolder $win $box $folder") < text.index("Read-ShownFolders")
+    # 견줌의 결과를 뒤집지 않는다: 같다는 확인(null)일 때만 돌려준다
+    assert "$shown.Count -gt 0 -and -not (Get-FolderMismatch $shown $folder)" in text
+    assert text.index("Get-FolderMismatch") < text.index("return [pscustomobject]")
+
+
+def test_읽은_경로_가운데_Folder_가_이미_있으면_환경을_고르지_않고_멈춘다() -> None:
+    text = _send_prompt_text()
+
+    # 낯선 글이 함께 읽혀 불일치로 나왔을 때는 환경을 골라도 견줌이 같아지지 않아 앱의 마지막 폴더만
+    # 헛되이 바뀐다
+    assert (
+        "@($shown | Where-Object { -not (Get-FolderMismatch @($_) $Folder) }).Count -eq 0" in text
+    )
+
+
+def test_골랐는데_폴더가_바뀌지_않으면_열린_채_남은_환경_메뉴를_접고_던진다() -> None:
+    text = _function_text("Repair-ShownFolder")
+
+    assert text.index("'collapse'") < text.index('throw "환경')
+    # 환경 버튼은 입력창 요소에서 위로 올라가며 찾는다(창이 아니다). 넘기는 값이 틀리면 catch 가
+    # 삼켜 접기가 조용히 빠진다
+    assert "Find-ComposerButton $lastBox '환경:'" in text
+
+
+def test_환경_항목은_Folder_에서_뽑은_이름_하나일_때만_고른다() -> None:
+    text = _function_text("Select-ComposerFolder")
+
+    assert "Get-FolderEnvName $folder" in text
+    assert "$items.Count -ne 1" in text
+    # 고르는 호출은 이름이 같은 항목 하나를 센 뒤에만 있다
+    assert text.index("$items.Count -ne 1") < text.index("'select'")
+    # 펼치기가 멈춤·오류로 돌아왔다고 던지는 줄도 접는 try 안이다(메뉴가 뒤늦게 열려도 던지기 전에
+    # 접는다)
+    assert (
+        text.index("try {")
+        < text.index("$opened -ne 'ok'")
+        < text.index("catch {")
+        < text.index("'collapse'")
+    )
+
+
 # 기계 전체의 열기 잠금(대기열 360, harness 티켓 014). 잠금을 쥔 쪽은 따로 띄운 pwsh 다. 같은
 # 프로세스의 다른 스레드도 막히지만, 실제로 겨루는 것은 다른 세션의 pwsh 라 프로세스로 잰다. 잠금
 # 이름은 사례마다 새로 지어 실제 열기와 겨루지 않고, `Global\` 머리는 실제 이름과 같게 둔다. 쥔 쪽은
