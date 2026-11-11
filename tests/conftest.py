@@ -3,7 +3,7 @@
 원칙 II: 환경 부재로 skip된 테스트는 초록이 아니다. 2026-09-28 까지 이 문장에 장치가 없었고
 `operations.md` 는 "CI에서는 에러로 만든다" 고 적어 다음 세션이 보호를 믿게 했다(하네스 감사).
 skip 이 하나라도 있으면 세션을 실패로 끝낸다. 기본 실행의 마커 제외(`pyproject.toml` 의 `addopts`
-의 `-m`, 두 LLM 마커를 뺀다)로 생기는 deselect 는 skip 이 아니다.
+의 `-m`, 세 LLM 마커를 뺀다)로 생기는 deselect 는 skip 이 아니다.
 
 pre-commit 이 워크트리에서 훅을 돌리면 git 이 `GIT_DIR` 같은 저장소 위치 변수를 자식에
 내보낸다. 그 값이 남으면 테스트의 `git init` 이 임시 디렉터리가 아니라 이 저장소를 재초기화한다
@@ -20,11 +20,12 @@ pre-commit 이 워크트리에서 훅을 돌리면 git 이 `GIT_DIR` 같은 저�
 걸린다.
 `uv run pytest` 는 그 체크아웃의 `.venv` 를 쓰므로 걸리지 않는다.
 
-실제 모델을 부르는 마커(`llm`, `llm_widget`)의 테스트가 돌았으면 실행 끝의 결과 요약 바로 위에, 그
-테스트들이 `tmp_path` 에 남긴 트레이스의 토큰 합계를 찍는다(대기열 113). `llm_widget` 의 시험은
-serve 의 트레이스 자리로 `tmp_path` 아래를 넘긴다(`tests/test_widget_llm.py`). 세는 법과 못 보는
-것은 `tools/llm_tokens.py` 가 원천이다. 그 테스트가 하나도 돌지 않은 실행(기본 실행)에서는 찍지
-않는다. 0 이 찍히면 LLM 테스트를 돌렸다고 읽힌다.
+실제 모델을 부르는 마커(`llm`, `llm_widget`, `llm_portal`)의 테스트가 돌았으면 실행 끝의 결과 요약
+바로 위에, 그 테스트들이 `tmp_path` 에 남긴 트레이스의 토큰 합계를 찍는다(대기열 113). `llm_widget`
+과 `llm_portal` 의 시험은 serve 의 트레이스 자리로 `tmp_path` 아래를
+넘긴다(`tests/test_widget_llm.py`, `tests/test_portal_llm.py`). 세는 법과 못 보는 것은
+`tools/llm_tokens.py` 가 원천이다. 그 테스트가 하나도 돌지 않은 실행(기본 실행)에서는 찍지 않는다. 0
+이 찍히면 LLM 테스트를 돌렸다고 읽힌다.
 
 매개변수 id 는 `pyproject.toml` 의 옵션이 이스케이프를 꺼 한국어를 그대로 둔다(대기열 56). 그 옵션은
 줄바꿈 같은 인쇄되지 않는 문자도 그대로 두어 그런 값의 id 가 출력 줄을 갈랐다(2026-10-11, 여섯 개).
@@ -45,10 +46,11 @@ from tools import llm_tokens, run_hooks
 
 CHECKOUT = Path(run_hooks.__file__).resolve().parents[1]
 
-# 실제 모델을 부르는 시험의 마커. `llm` 은 원칙 I 의 판정이고 `llm_widget` 은 위젯 e2e 를 감싼다.
-_LLM_MARKERS = ("llm", "llm_widget")
+# 실제 모델을 부르는 시험의 마커. `llm` 은 원칙 I 의 판정이고 `llm_widget` 과 `llm_portal` 은 위젯
+# e2e 와 질문 페이지 e2e 를 감싼다.
+_LLM_MARKERS = ("llm", "llm_widget", "llm_portal")
 
-# 두 마커의 테스트가 하나라도 돌았을 때만 값이 있다. 둘째 값은 트레이스를 남기지 않은 그 테스트의
+# 세 마커의 테스트가 하나라도 돌았을 때만 값이 있다. 둘째 값은 트레이스를 남기지 않은 그 테스트의
 # 수다.
 _LLM_TOKENS = pytest.StashKey[tuple[llm_tokens.Tokens, int]]()
 
