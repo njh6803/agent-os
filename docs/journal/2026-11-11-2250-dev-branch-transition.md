@@ -75,6 +75,10 @@ CodeRabbit이 이 PR에 낸 첫 리뷰는 줄 코멘트 다섯이고 claude-revi
 - **CI 실패와 재실행.** 첫 실행에서 python, web, e2e, e2e-widget, e2e-portal이 모두 `apt`의 `Temporary failure resolving`(러너의 DNS)로 `apt-get` 종료 코드 100/1에서 멈췄다. `gh run view --log-failed`를 읽어 다섯 잡 모두 같은 원인임을 보았다. verify는 그 결과를 모아 빨갰다. 이 PR의 코드와 무관한 인프라 실패라 `gh run rerun --failed`로 다시 돌렸고, 새 푸시가 있어 그 재실행은 멈추고 새 헤드로 다시 기다린다.
 - **사고 하나.** 변이를 넣어 보려고 쓴 스크래치 스크립트가 `Path.write_text`로 훅 파일을 되돌리며 줄 끝을 CRLF로 바꿨다. 변이 표 실행이 "줄 끝이 다르다"로 알려서 알았고 바이트로 LF로 되돌려 `git diff --stat`이 정상 크기(훅 38줄)임을 확인한 뒤 표 전체를 다시 돌렸다.
 
+- **CI 두 번째 실행의 같은 실패와 복구.** 반영 푸시의 실행에서도 같은 `apt` DNS 실패가 났다. 로그에서 확인했고, 마지막 성공(13:11Z) 뒤 다른 브랜치의 실행도 같은 문구로 모두 빨갛다는 것을 `gh run list`와 한 실행의 로그(문구 218번)로 보았다. 동료 세션(`docs/local-model-design`)이 보낸 알림이 Canonical 쪽 DNS 장애라고 알려 줬는데, 그 알림이 든 `actions/runner-images` 이슈 번호는 이 세션이 확인하지 않았다. `gh run rerun --failed`를 두 번 쳐서 e2e 셋, web, python, verify가 통과했다.
+- **main이 움직여 병합(`BEHIND`).** 검사가 모두 통과한 뒤 `mergeStateStatus`가 `BEHIND`였다. main에 들어온 것은 PR 530(문서 전용)이고 이 브랜치와 겹치는 파일이 없었다(`git diff --name-only HEAD...origin/main`). `git merge origin/main`을 쳤고 커밋 메시지의 타입이 `merge`라 커밋 검사가 막아 `chore`로 다시 했다. 푸시 뒤 CI가 다시 모두 통과했다.
+- **봇 둘째·셋째 회차.** claude-review의 둘째·셋째 리뷰와 CodeRabbit의 한도 걸린 회차(`Review rate limited`, 리뷰 없음)는 Critical·Major가 없었다. 둘째 회차 이후라 Minor·Nit은 반영하지 않았다. 보류한 것: `behind_count`의 반환 튜플(셀프 리뷰부터 남긴 Nit), `ref_state`가 `run_git`·`quiet_git`과 `subprocess.run` 호출 모양을 되풀이한 것(훅 안의 세 호출이고 각자 다른 결과를 읽어 나중에 묶어도 된다), `behind_count`의 이름(이 PR 이전부터의 이름). 뒤의 작업으로 넘긴 둘(`base_ref`와 `base_branch`의 규칙 중복, `hotfix/*`의 임시 우회)은 `dev-base-tools` 티켓과 위 "다음" 2에 적었다. 판정은 PR 코멘트에도 남겼다.
+
 ## 회고
 
 낸 후보 일곱, 판정은 승인 0, 기각 7, 넘김 0이다.
@@ -99,7 +103,7 @@ open-session을 부른다 2026-11-11T15:00:40Z
 이 PR이 병합된 뒤의 일이다. 앞의 세 티켓은 서로 파일이 겹치지 않아 나란히 돌 수 있고, 넷째는 앞의 셋이 병합된 뒤에 한다.
 
 1. **`dev-review-bot-off`**: 리뷰 봇 워크플로가 머리가 `dev`인 PR을 건너뛰게 한다. 자기 워크플로를 바꾼 PR은 봇이 건너뛰므로 이 티켓만 따로 낸다.
-2. **`dev-base-tools`**: 나머지 도구를 기준 브랜치 규칙(`dev-branch-transition`의 절)으로 바꾼다. `ticket_stem`의 hotfix 빈칸이 이 티켓의 몫으로 들어 있다.
+2. **`dev-base-tools`**: 나머지 도구를 기준 브랜치 규칙(`dev-branch-transition`의 절)으로 바꾼다. `ticket_stem`의 hotfix 빈칸이 이 티켓의 몫으로 들어 있다. 기준 브랜치 규칙의 두 구현(`base_ref`, `base_branch`)을 묶는 시험이나 통합도 이 티켓의 몫이다(PR의 claude-review 둘째 회차 이후 Minor를 이 티켓으로 넘겼다).
 3. **`dev-base-skills-docs`**: 스킬, `CLAUDE.md`, 운영 규약, 문서, ADR 포인터를 규칙에 맞추고 핫픽스 되돌려 합치기의 순서를 `next-session` `merge.md`에 적는다. 사용자 수준 스킬(`~/.claude/skills`)을 고칠지 사용자에게 묻는다.
 4. **`dev-branch-create`**: 위 셋이 병합된 뒤 `origin/dev`를 따고 전환을 닫는다. 사람의 몫(`required_linear_history`, dev 보호, API 키 시크릿)을 사용자에게 먼저 묻는다. 닫을 때 `.scratch/plan-head.md`의 dev 전환 문장을 걷고, rag-engine 지시문(얇은 ADR 한 장 요건 포함)을 사용자에게 낸 뒤 대기열 `rag-engine-port-by-hand`에 회차를 더한다. 지난 일지(2026-11-11-1532)의 "다음" 1과 4가 이 줄들을 걷는 시점은 그 지시문을 낸 뒤다.
 5. **전환 뒤의 후보**: 두 저장소의 공통 파일을 비교하는 점검 도구(대기열 `rag-engine-harness-drift`). 결과를 아침 보고에 싣는 것은 사용자가 확인하지 않았으니 그 티켓을 여는 세션이 사용자에게 묻는다. 지난 일지 "다음" 8은 이 전환의 몫이 아니다.
