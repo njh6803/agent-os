@@ -50,14 +50,14 @@ def _is_headers(value: object) -> TypeGuard[dict[str, str]]:
 class HttpFixture:
     """뜬 서버 하나. 주소와 기록 파일을 안다."""
 
-    def __init__(self, folder: Path, *options: str) -> None:
+    def __init__(self, folder: Path, *options: str, server: Path = SERVER) -> None:
         self.port = free_port()
         self.record = folder / "record.jsonl"
         self.slow_marker = Path(f"{self.record}.slow")
         self._stderr_path = folder / "server_stderr.txt"
         self._stderr = self._stderr_path.open("w", encoding="utf-8")
         self._process = subprocess.Popen(
-            [sys.executable, str(SERVER), str(self.port), str(self.record), *options],
+            [sys.executable, str(server), str(self.port), str(self.record), *options],
             stdout=subprocess.DEVNULL,
             stderr=self._stderr,
         )
