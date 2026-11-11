@@ -123,13 +123,21 @@ open-session을 부른다 2026-11-11T00:07Z
 
 ## PR 열기와 봇 회차(2026-11-11)
 
-PR #522를 열었다. 푸시 훅이 origin/main보다 1커밋 뒤처졌다고 막아 main을 합쳤고(겹친 파일 없음), 합친 뒤 `tests/tools/test_open_session.py` 149개가 통과했다. CI는 `python`(전체 pytest, 10분 53초)을 포함해 모두 초록이었다. 곧 pre-commit에서 건너뛴 전체 pytest는 CI가 이 변경에서 통과로 판정했고, 앞서 막은 시간 의존 시험은 이 변경의 것이 아니라 PC 부하의 것으로 갈렸다. CodeRabbit은 무료 한도(`Review rate limited`)로 리뷰가 없었다(계정 한도 표시이고 실패가 아니다). claude-review가 첫 회차에 Minor 넷과 Nit 하나를 냈고 Critical·Major는 없었다.
+PR #522를 열었다. 푸시 훅이 origin/main보다 1커밋 뒤처졌다고 막아 main을 합쳤고(겹친 파일 없음), 합친 뒤 `tests/tools/test_open_session.py` 149개가 통과했다. CI는 `python`(전체 pytest, 10분 53초)을 포함해 모두 초록이었다(`gh pr checks 522`와 `tools/wait_ci.py 522`의 출력을 읽었다). 곧 pre-commit에서 건너뛴 전체 pytest를 CI가 이 PR의 헤드(`c4d9149`)에서 통과로 판정했다. 앞서 막은 시간 의존 시험이 부하 때문이었다는 것은 CI에서 초록이라는 정황이고, 그 시험들을 부하 없는 곳에서 따로 돌려 가르지는 않았다(어림). CodeRabbit은 무료 한도(`Review rate limited`)로 리뷰가 없었다(계정 한도 표시이고 실패가 아니다). claude-review가 첫 회차에 Minor 넷과 Nit 하나를 냈고 Critical·Major는 없었다.
 
 보류한 지적과 이유(전부 PR 코멘트에 남겼다):
 
 - 정상 흐름이 `try` 안에 섞인 것, `Select-ComposerFolder`·`Repair-ShownFolder`가 명령이면서 값을 돌려주는 것: 기존 `Select-ComposerModelItem` 뼈대와 같은 모양이다. 고치려면 기존 모델 고르기까지 함께 손대야 하므로 뒤로 넘긴다(이 일지 "남긴 것과 이유"와 같은 판단).
-- `Repair-ShownFolder` 끝 `catch { }`가 접기 실패를 삼키는 것: 접기는 최선 노력이고 멈춤 문구는 이미 폴더 불일치의 까닭을 적는다. 열린 메뉴가 남는 실패는 다음 열기가 `Select-ComposerFolder` 앞에서 다시 펼치기를 시도하므로 보류한다.
-- 시험 다섯이 소스 글자의 있고 없음과 순서를 보는 것: UIA를 쓰는 코드라 순수 시험이 어렵다. 변이 열 열 개가 값을 뒤집어 빨강을 봤다. 순수 함수를 더 빼는 일은 뒤로 넘긴다.
+- `Repair-ShownFolder` 끝 `catch { }`가 접기 실패를 삼키는 것: 접기는 최선 노력이고 멈춤 문구는 이미 폴더 불일치의 까닭을 적는다. 접기가 실패해 메뉴가 열린 채 남는 갈래가 다음 열기에 어떻게 보이는지는 돌려 보지 않았다. 그래서 이 지적은 보류하되 확인하지 못한 자리로 남긴다.
+- 시험 다섯이 소스 글자의 있고 없음과 순서를 보는 것: UIA를 쓰는 코드라 순수 시험이 어렵다. 변이 열 열 개가 모두 빨강인 것은 앞 절들이 손으로 돌려 본 결과다. 순수 함수를 더 빼는 일은 뒤로 넘긴다.
 - Nit(`Send-Prompt` 위 주석이 한 줄에 길고 한 문장이 고치지 못한 경우에만 맞는 것): 문구만의 문제라 보류한다.
 
 뒤로 넘긴 일(다음에 `open_session.ps1`을 손댈 때): 위 첫째·셋째의 구조 정리(정상 흐름과 `try` 분리, `Send-Prompt`의 "읽은 경로 가운데 `-Folder`가 이미 있는지"를 이름 붙인 순수 함수로 빼서 값으로 시험)는 기존 `Select-ComposerModelItem`과 함께 한다.
+
+### 일지 수정 커밋의 pytest 건너뜀(2026-11-11)
+
+위 일지 수정을 커밋하려 하자 pre-commit의 pytest가 6884개 통과 2개 실패로 막았다(1076초, 훅 출력을 읽었다). 실패는 `tests/tools/test_rerun_runner.py`의 `test_오염이_한_번이면_다시_돌고_두_번이면_그_과제를_모든_갈래에서_뺀다`와 `test_같은_갈래가_두_번_든_파일럿의_두_회차가_함께_돌아도_번호가_다르다`이고, 앞의 "첫 커밋 시도"에서 막은 시험과 같은 파일이다. 이 커밋이 바꾼 파일은 이 일지 하나뿐이다. pytest 밖의 검사(타입, 경계, run-hooks, web-verify, 표·줄 구분 문자·변이 표 검사 등)는 같은 출력에서 통과였다. 부하 때문이라는 것은 어림이다.
+
+사용자에게 물었다(`AskUserQuestion`, 질문 「일지 문장 하나를 고치는 커밋이 시간 의존 시험 둘에서 또 막혔습니다. 이 커밋만 pytest 훅을 건너뛰고 올릴까요?」). 사용자 답: 「이 커밋만 건너뛰기」. 그 선택지의 설명(글자 그대로): 「pre-commit의 pytest 검사 하나만 `SKIP=pytest`로 빼고 커밋합니다. 바뀐 파일은 일지 마크다운 하나뿐이고, 이번 pre-commit에서 pytest 밖의 검사(타입, 린트 경계, run-hooks, web-verify 등)는 모두 통과했습니다. 막은 시험 둘(`tests/tools/test_rerun_runner.py`)은 이 변경과 닿지 않고, 앞 푸시의 CI에서는 전체 pytest가 통과했습니다. 올린 뒤의 CI가 다시 판정합니다.」
+
+그래서 이 커밋도 `SKIP=pytest`로 pytest 훅만 뺐다. 전체 pytest는 올린 뒤의 CI가 판정한다.
