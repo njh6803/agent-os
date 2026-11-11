@@ -12,6 +12,14 @@
 
 이어서 사용자가 "이어서 진행"이라고만 말했다(앱이 한 번 종료돼 이어 받았다). 같이 여는 둘째 세션(대기열 565)과 고칠 파일이 겹치지 않는다는 지시였다. 겹친 것은 `.scratch/harness/probes/README.md` 하나뿐이다(`sibling_overlap.py`가 PR #522와 한 워크트리를 함께 고친 파일로 찍었다).
 
+인계 계기가 두 번째로 왔을 때 사용자가 말했다.
+
+> 끝나면 지시문만 내고 새 세션으로 열지마
+
+지시문을 낸 뒤 사용자가 이어서 말했다.
+
+> 푸시·PR·병합까지는 해
+
 ## 결정
 
 - **판정을 항목의 전제보다 좁혔다.** 대기열 431은 "검사 범위 밖이거나 점 디렉터리 아래"라고 적었다. 이 브랜치에서 pyright 1.1.414로 `uv run pyright --outputjson <경로>`를 파일 하나씩 쳐서 `summary.filesAnalyzed`를 손으로 봤다. `.scratch` 아래 파일과 폴더 인자, `node_modules` 아래, `__pycache__` 아래는 0이었고, `include` 밖이지만 점 없는 폴더(`docs/`)의 파일과 폴더 인자, 저장소 밖 파일은 1이었다. 그래서 훅은 점 폴더, `node_modules`, `__pycache__` 아래만 짚고, `include` 밖은 짚지 않는다. `docs/constitution/operations.md`의 같은 문장도 고쳤다. 이 측정은 커밋한 프로브가 아니라서 쟀다고 적지 않았다(티켓, 훅 독스트링, operations.md에 손으로 봤다고 적었다).
@@ -100,7 +108,8 @@
 ## 다음
 
 - 커밋 `1809c01ec`까지 했고 `origin/chore/pyright-unchecked-path-hook`에 푸시했다(pre-commit 전부 통과). 그 커밋은 `origin/main`(`5f7e39ed9`)을 글자 충돌 없이 합치고(`.scratch/harness/probes/README.md`는 자동 병합, `sibling_overlap.py`는 번호 겹침 없음) 티켓 5행의 인용과 이 "다음" 절을 실었다.
-- PR 직전 리뷰의 유효 2건을 고쳐 작업 트리에 두었고 아직 커밋하지 않았다(위 "PR 직전 리뷰"). 다음 커밋에 싣고, 푸시한 뒤 PR을 연다. PR 본문의 체크리스트에는 CLI 축이 돌았다는 것(`Seat: not assigned`에서도 리뷰가 돌았다)을 적는다.
+- PR 직전 리뷰의 유효 2건은 커밋 `48f940445`(pre-commit 전부 통과)에 실었다(위 "PR 직전 리뷰"). 이 커밋은 아직 푸시하지 않았다. 푸시한 뒤 PR을 연다. PR 본문의 체크리스트에는 CLI 축이 돌았다는 것(`Seat: not assigned`에서도 리뷰가 돌았다)과 시간 시험 셋이 첫 pre-commit에서 부하로 빨갰다 홀로 통과한 것을 적는다.
+- 사용자가 새 세션을 열지 말고 지시문만 내라고 했다가, 이어서 푸시·PR·병합까지는 이 세션이 하라고 했다. 그래서 인계하지 않고 이 세션이 `merge.md`의 "워크트리에서 병합할 때"까지 잇는다.
 - 병합은 이 워크트리 사본의 next-session `merge.md`의 "워크트리에서 병합할 때"를 Read로 열어 따른다. 주 체크아웃은 `f64dfe41c`의 main이라 이 세션이 당기지 못했다.
 - 보류한 것은 위 "셀프 리뷰"의 "남긴 것"이다. 이 PR에는 대기열 `plan-table-unseen-claim`의 5회차 반영이 없다(`next-session` 결정표의 chore 배치 조건에 든다).
 - 새 훅은 병합 뒤 주 체크아웃을 당긴 세션부터 돈다.
