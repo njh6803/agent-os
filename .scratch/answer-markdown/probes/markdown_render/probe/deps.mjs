@@ -23,6 +23,10 @@ const CANDIDATES = [
   { name: "remark-gfm", roots: ["remark-gfm"] },
   { name: "markdown-to-jsx", roots: ["markdown-to-jsx"] },
   { name: "marked", roots: ["marked"] },
+  // 2026-11-11 에 더했다. 명세가 정할 (가)·(나)의 플러그인 후보다. `over` 가 있는 줄은 그 조합이 이미 설치하는 것 위에
+  // 새로 더하는 패키지(`addedOver`)도 낸다.
+  { name: "remark-breaks", roots: ["remark-breaks"], over: "react-markdown + remark-gfm" },
+  { name: "remark-cjk-friendly", roots: ["remark-cjk-friendly"], over: "react-markdown + remark-gfm" },
 ];
 
 const readJson = (path) => JSON.parse(readFileSync(path, "utf8"));
@@ -103,6 +107,18 @@ function main() {
       withInstallScripts: packages.filter((p) => p.hasInstallScript).map((p) => `${p.name}@${p.version}`),
       all: packages.map((p) => `${p.name}@${p.version} (${p.license})`).sort(),
     });
+  }
+  for (const candidate of CANDIDATES) {
+    if (candidate.over === undefined) continue;
+    const row = rows.find((r) => r.name === candidate.name);
+    const base = rows.find((r) => r.name === candidate.over);
+    if (row === undefined || base === undefined) {
+      notMeasured.push({ name: candidate.name, missing: [`견줄 조합 ${candidate.over}`] });
+      continue;
+    }
+    const already = new Set(base.all);
+    row.over = candidate.over;
+    row.addedOver = row.all.filter((entry) => !already.has(entry));
   }
   writeFileSync(
     join(OUT, "summary.json"),

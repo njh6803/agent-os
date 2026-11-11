@@ -21,18 +21,28 @@
     "react": "19.3.0",
     "react-dom": "19.3.0",
     "react-markdown": "10.1.0",
+    "remark-breaks": "4.0.0",
+    "remark-cjk-friendly": "2.3.4",
     "remark-gfm": "4.0.1"
   },
   "devDependencies": {
+    "@types/mdast": "4.0.4",
     "@types/node": "24.19.0",
     "@types/react": "19.3.0",
     "@types/react-dom": "19.3.0",
+    "axe-core": "4.14.0",
     "esbuild": "0.28.2",
     "eslint": "10.11.0",
     "eslint-plugin-boundaries": "7.2.0",
+    "hast-util-to-jsx-runtime": "2.3.7",
+    "micromark-util-types": "2.0.3",
     "parse5": "8.0.1",
+    "playwright": "1.63.0",
+    "remark-parse": "11.0.0",
+    "remark-rehype": "11.1.2",
     "typescript": "5.9.3",
     "typescript-eslint": "8.70.1",
+    "unified": "11.0.5",
     "vite": "8.3.1"
   }
 }
