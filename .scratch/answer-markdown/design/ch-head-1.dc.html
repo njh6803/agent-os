@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>갈래 1 안 1: 모든 제목이 본문 크기</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/agent-os/styles.css">
+<link rel="stylesheet" href="ds/agent-os/fonts/fonts.css">
+<link rel="stylesheet" href="ds/agent-os/_ds_bundle.css">
+<script src="ds/agent-os/_ds_bundle.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0}
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+.md{min-width:0;font-size:var(--body-size);line-height:var(--body-lh);color:var(--text);overflow-wrap:anywhere}
+.md>*{margin:0}
+.md>*+*{margin-top:var(--spacing-3)}
+.md h1,.md h2,.md h3,.md h4,.md h5,.md h6{font-size:var(--body-size);line-height:var(--body-lh);font-weight:var(--font-weight-semibold)}
+.md>:is(h1,h2,h3,h4,h5,h6)+*{margin-top:var(--spacing-1)}
+.md>*+:is(h1,h2,h3,h4,h5,h6){margin-top:var(--spacing-4)}
+.md strong{font-weight:var(--font-weight-semibold)}
+.md ul,.md ol{padding-left:var(--spacing-6)}
+.md ul{list-style:disc}
+.md ul ul{list-style:circle}
+.md li+li,.md li>ul,.md li>ol{margin-top:var(--spacing-1)}
+.md blockquote{padding-left:var(--spacing-3);border-left:2px solid var(--border-control)}
+.md blockquote>*{margin:0}
+.md code{font-family:var(--mono);font-size:var(--mono-size);background:var(--bg);border-radius:var(--radius-s);padding:0 var(--spacing-1)}
+.md pre{padding:var(--spacing-3);background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-s);font-family:var(--mono);font-size:var(--mono-size);line-height:var(--table-lh);overflow-x:auto}
+.md pre code{padding:0;background:none;border-radius:0}
+.md a{color:var(--accent);text-decoration:underline}
+.md hr{height:0;border:0;border-top:1px solid var(--border)}
+.md .tbl{overflow-x:auto}
+.md table{border-collapse:collapse;font-size:var(--table-size);line-height:var(--table-lh)}
+.md th{font-weight:var(--font-weight-semibold);text-align:left}
+.md th,.md td{padding:var(--spacing-2) var(--spacing-3);vertical-align:top;border-bottom:1px solid var(--border);min-width:96px;max-width:256px}
+.md tr>:first-child{padding-left:0}
+.md tbody tr:last-child>*{border-bottom:0}
+</style>
+</helmet>
+<div data-theme="nokcheong" data-mode="light" style="width: 416px; height: 920px; box-sizing: border-box; padding: 48px; background: var(--bg); color: var(--text); font-family: var(--sans);">
+<section class="flex flex-col gap-3" style="width: 320px;">
+<div class="flex flex-col gap-1">
+<p class="text-body font-semibold" style="margin: 0;">갈래 1 · 안 1 (추천) · 모든 제목이 본문 크기</p>
+<p class="text-small text-text-muted" style="margin: 0;">#, ##, ### 모두 본문 크기(15px)에 굵게만 준다. 단계 차이는 두지 않는다. 제목 위는 앞 블록과 16px, 아래 블록과는 4px다.</p>
+</div>
+<div data-theme="nokcheong" data-mode="light" data-density="regular" class="flex flex-col shadow-float" style="width: 320px; height: 720px; box-sizing: border-box; background: var(--bg-raised); color: var(--text); font-family: var(--sans); border: 1px solid var(--border); border-radius: var(--radius-l); overflow: hidden;">
+<header class="flex items-center justify-between gap-2 shrink-0" style="padding: var(--spacing-2) var(--spacing-2) var(--spacing-2) var(--spacing-4); border-bottom: 1px solid var(--border);">
+<span class="text-body font-semibold">사내 규정 도우미</span>
+<x-import component-from-global-scope="AgentOsUi.Button" variant="secondary">새 대화</x-import>
+</header>
+<ol aria-label="대화" class="flex flex-col gap-4" style="flex: 1; min-height: 0; overflow: hidden; margin: 0; padding: var(--spacing-4); list-style: none;">
+<li class="text-body" style="align-self: flex-end; max-width: 83.333%; padding: var(--spacing-2) var(--spacing-3); border-radius: var(--radius-l); background: var(--bg-selected); overflow-wrap: anywhere; white-space: pre-wrap;">육아휴직 신청 절차를 정리해 주세요.</li>
+<li class="flex flex-col gap-2">
+<button type="button" aria-expanded="false" class="flex items-center gap-2 text-small text-text-muted" style="align-self: flex-start; min-height: 24px; padding: 0; border: 0; background: transparent; font-family: inherit; cursor: pointer;"><x-import component-from-global-scope="AgentOsUi.Icon" name="wrench" size="14"></x-import><span>도구 2개를 불렀습니다</span></button>
+<span class="sr-only">출력: </span>
+<div class="md">
+<h1>육아휴직 신청 안내</h1>
+<h2>신청 절차</h2>
+<p>휴직 시작 <strong>30일 전</strong>까지 인사 시스템에서 신청서를 냅니다.<br>부서장이 승인하면 인사팀이 <em>3일 안에</em> 확정 문자를 보냅니다.</p>
+<ol>
+<li>인사 시스템에 로그인합니다.</li>
+<li><strong>휴가·휴직</strong> 메뉴에서 육아휴직을 고릅니다.
+<ul>
+<li>시작일과 끝나는 날을 적습니다.</li>
+<li>나눠 쓰려면 기간마다 따로 냅니다.</li>
+</ul>
+</li>
+<li>서류를 올리고 냅니다.</li>
+</ol>
+<h3>필요한 서류</h3>
+<div class="tbl" tabindex="0" role="region" aria-label="표">
+<table>
+<thead><tr><th>서류</th><th>내는 곳</th><th>기한</th><th>비고</th></tr></thead>
+<tbody>
+<tr><td>휴직 신청서</td><td>인사 시스템</td><td>시작 30일 전</td><td>부서장 승인 필요</td></tr>
+<tr><td>가족관계증명서</td><td>인사팀 메일</td><td>시작 7일 전</td><td>3개월 안에 뗀 것</td></tr>
+<tr><td>출생증명서 사본</td><td>인사팀 메일</td><td>시작 7일 전</td><td>출산 전이면 출산 뒤 30일 안</td></tr>
+</tbody>
+</table>
+</div>
+<blockquote><p>회사 규정과 법이 다르면 법이 우선합니다.</p></blockquote>
+</div>
+</li>
+</ol>
+<form class="flex gap-2 shrink-0" style="align-items: flex-end; margin: 0; padding: var(--spacing-3); border-top: 1px solid var(--border);">
+<div style="flex: 1; min-width: 0;"><textarea rows="1" aria-label="질문" placeholder="무엇을 도와드릴까요?" class="block w-full min-w-0 rounded-m border text-body resize-y px-3 py-2 border-border-control bg-bg-raised text-text placeholder:text-text-muted hover:border-text-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring" style="box-sizing: border-box; margin: 0; font-family: inherit;"></textarea></div>
+<x-import component-from-global-scope="AgentOsUi.IconButton" icon="send" label="보내기" variant="primary"></x-import>
+</form>
+</div>
+</section>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":416,"height":920}}'>
+class Component extends DCLogic {
+renderVals() {
+return {};
+}
+}
+</script>
+</body>
+</html>
