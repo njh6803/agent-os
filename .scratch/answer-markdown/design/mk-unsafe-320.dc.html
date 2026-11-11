@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>완성 4: 그리지 않는 것, 320px</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/agent-os/styles.css">
+<link rel="stylesheet" href="ds/agent-os/fonts/fonts.css">
+<link rel="stylesheet" href="ds/agent-os/_ds_bundle.css">
+<script src="ds/agent-os/_ds_bundle.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0}
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+.md{min-width:0;font-size:var(--body-size);line-height:var(--body-lh);color:var(--text);overflow-wrap:anywhere}
+.md>*{margin:0}
+.md>*+*{margin-top:var(--spacing-3)}
+.md a{color:var(--accent);text-decoration:underline}
+.md .img-alt{color:var(--text-muted)}
+</style>
+</helmet>
+<div data-theme="nokcheong" data-mode="light" style="width: 416px; height: 800px; box-sizing: border-box; padding: 48px; background: var(--bg); color: var(--text); font-family: var(--sans);">
+<section class="flex flex-col gap-3" style="width: 320px;">
+<div class="flex flex-col gap-1">
+<p class="text-body font-semibold" style="margin: 0;">완성 4 · 그리지 않는 것 · 320px</p>
+<p class="text-small text-text-muted" style="margin: 0;">원시 HTML은 글자 그대로 보이고 실행되지 않는다. 이미지는 그리지 않고 대체 글만 흐린 글자로 보인다(대체 글이 비면 "이미지"만). javascript: 주소의 링크는 글만 평범하게 남고, @ 앞에 사용자 정보가 든 주소는 링크가 되지 않는다. 밑줄이 그어진 것은 정상 링크 "주문 내역" 하나다.</p>
+</div>
+<div data-theme="nokcheong" data-mode="light" data-density="regular" class="flex flex-col shadow-float" style="width: 320px; height: 560px; box-sizing: border-box; background: var(--bg-raised); color: var(--text); font-family: var(--sans); border: 1px solid var(--border); border-radius: var(--radius-l); overflow: hidden;">
+<header class="flex items-center justify-between gap-2 shrink-0" style="padding: var(--spacing-2) var(--spacing-2) var(--spacing-2) var(--spacing-4); border-bottom: 1px solid var(--border);">
+<h1 class="text-body font-semibold" style="flex: 1; min-width: 0; margin: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">사내 규정 도우미</h1>
+<x-import component-from-global-scope="AgentOsUi.Button" variant="secondary">새 대화</x-import>
+</header>
+<ol aria-label="대화" class="flex flex-col gap-4" style="flex: 1; min-height: 0; overflow: hidden; justify-content: flex-end; margin: 0; padding: var(--spacing-4); list-style: none;">
+<li class="text-body" style="align-self: flex-end; max-width: 83.333%; padding: var(--spacing-2) var(--spacing-3); border-radius: var(--radius-l); background: var(--bg-selected); overflow-wrap: anywhere; white-space: pre-wrap;">영수증과 환불 안내를 보여 주세요.</li>
+<li class="flex flex-col gap-2">
+<span class="sr-only">출력: </span>
+<div class="md">
+<p>요청하신 영수증입니다.<br><span class="img-alt">이미지: 영수증 사진</span><br>&lt;b&gt;배송 지연&lt;/b&gt; 보상은 &lt;script&gt;alert(1)&lt;/script&gt; 결제한 수단으로 돌아갑니다.<br>환불 안내를 확인해 주세요.<br>정상 주소는 <a href="https://shop.example.com/orders" target="_blank" rel="noopener noreferrer">주문 내역<span class="sr-only">(새 탭에서 열림)</span></a>입니다.<br>https://shop.example.com@phish.example/refund 는 링크가 되지 않습니다.</p>
+</div>
+</li>
+</ol>
+<form class="flex gap-2 shrink-0" style="align-items: flex-end; margin: 0; padding: var(--spacing-3); border-top: 1px solid var(--border);">
+<div style="flex: 1; min-width: 0;"><textarea rows="1" aria-label="질문" placeholder="무엇을 도와드릴까요?" class="block w-full min-w-0 rounded-m border text-body resize-y px-3 py-2 border-border-control bg-bg-raised text-text placeholder:text-text-muted hover:border-text-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring" style="box-sizing: border-box; margin: 0; font-family: inherit;"></textarea></div>
+<x-import component-from-global-scope="AgentOsUi.IconButton" icon="send" label="보내기" variant="primary"></x-import>
+</form>
+</div>
+</section>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":416,"height":800}}'>
+class Component extends DCLogic {
+renderVals() {
+return {};
+}
+}
+</script>
+</body>
+</html>
