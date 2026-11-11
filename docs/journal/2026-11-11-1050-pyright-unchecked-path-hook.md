@@ -105,10 +105,18 @@
 - 밀 주장으로 남긴다(이 턴에 새로 쓴 사실 문장): (1) `_FD_DUP` 주석 "숫자 4만 자에서 막지 않은 판 13초, 막은 판 0.00초"(손으로 봤다, 위 스크래치 명령), (2) 시험 주석 "숫자 4만 자는 앞에 숫자를 막지 않은 … 정규식에서 13초가 걸렸다(손으로 봤다)", (3) 프로브 README의 변이 표 행(변이 21개와 대조군 하나, 처음 20개와 대조군을 돌려 모두 기대대로였고 21번만 따로 돌렸다는 문장).
 - 다시 돌린 것: `uv run pytest -q tests/tools/test_hook_pyright_unchecked_path.py` 120건 통과(기계 부하로 167초가 걸렸다. 새 시험은 홀로 0.07초). 이 수정을 싣는 커밋의 첫 pre-commit은 pytest의 시간 시험 셋에서 빨갰다(`tests/tools/test_probe_kit.py::test_배출은_줄이_계속_와도_제한_시간에_끝난다`, `tests/channel/cli/test_interrupt.py::test_서버를_닫기_시작한_뒤에_한_번_누르면_닫기를_마치고_중단으로_끝난다`, `tests/tools/test_rerun_runner.py::test_오염이_한_번이면_다시_돌고_두_번이면_그_과제를_모든_갈래에서_뺀다`. 7003건 통과, 3건 실패, 한 바퀴 1190초로 다른 세션이 함께 돌던 때다). 셋 모두 이 변경이 건드리지 않은 파일이고, 홀로 돌리니 3건 통과(23.76초)였다. 부하에서만 빨간 시간 시험이라 같은 종류의 새 사례로 일지에만 적는다(대기열 306·332의 꼴). 나머지 게이트는 둘째 커밋 시도의 pre-commit이 갈음한다.
 
+## PR 봇 첫 회차
+
+PR #525(헤드 `393c47e96`)에서 검사는 모두 통과했고 CodeRabbit이 인라인 1건, claude-review가 코멘트(Minor 둘, Nit 둘, Critical·Major 없음)를 냈다. 둘 다 첫 회차라 지적마다 판단했다.
+
+- CodeRabbit Minor, 따옴표 안의 글과 heredoc 본문의 `pyright` 줄이 거짓 양성을 내는데 못 보는 것에 없다. 손으로 봤다(스크래치 스크립트 `bot_claims.py`를 `PYTHONPATH=.`로 돌렸다). `cat <<EOF\nuv run pyright .scratch/x.py\nEOF`와 `git commit -m "a; uv run pyright .scratch/x.py"`가 `['.scratch/x.py']`를 냈고, 따옴표 안에 `;`가 없는 `git commit -m "uv run pyright .scratch/x.py"`는 `[]`였다. 유효라 고쳤다. 독스트링에 항목을 더하고 시험 셋(heredoc·따옴표 파라미터 둘, 제어 연산자 없는 따옴표)으로 고정했다.
+- claude-review Nit, `root_relative`가 리눅스에서도 `PureWindowsPath`로 대소문자를 구분하지 않는다. 손으로 봤다(같은 스크립트). 루트가 `/proj`일 때 `/PROJ/tests/x.py`가 `('tests', 'x.py')`로 읽혔다. 유효라 못 보는 것에 적고 시험 하나로 고정했다.
+- 보류(PR 코멘트에 이유를 남겼다): `_pyright_index`의 추상화 수준과 `_is_pyright`와 겹치는 이름 정규화(Minor), `main()`의 표지 위치·선점·출력 분리(Minor), `CONFIG_NAMES` 원소 하나짜리 튜플(Nit). 셋 모두 동작을 바꾸지 않는 모양 고침이고 120건이 넘는 시험이 그 동작을 고정하고 있어, 고쳐서 얻는 것보다 이번 PR에 판정 로직을 다시 만지는 위험이 크다고 봤다. 뒤의 작업으로 넘기는 것이 아니라 하지 않기로 한 것이다.
+- 다시 돌린 것: `uv run pytest -q tests/tools/test_hook_pyright_unchecked_path.py` 124건 통과, `ruff check`와 `ruff format --check` 통과. 나머지 게이트는 이 수정을 싣는 커밋의 pre-commit이 갈음한다.
+
 ## 다음
 
-- 커밋 `1809c01ec`까지 했고 `origin/chore/pyright-unchecked-path-hook`에 푸시했다(pre-commit 전부 통과). 그 커밋은 `origin/main`(`5f7e39ed9`)을 글자 충돌 없이 합치고(`.scratch/harness/probes/README.md`는 자동 병합, `sibling_overlap.py`는 번호 겹침 없음) 티켓 5행의 인용과 이 "다음" 절을 실었다.
-- PR 직전 리뷰의 유효 2건은 커밋 `48f940445`(pre-commit 전부 통과)에 실었다(위 "PR 직전 리뷰"). 이 커밋은 아직 푸시하지 않았다. 푸시한 뒤 PR을 연다. PR 본문의 체크리스트에는 CLI 축이 돌았다는 것(`Seat: not assigned`에서도 리뷰가 돌았다)과 시간 시험 셋이 첫 pre-commit에서 부하로 빨갰다 홀로 통과한 것을 적는다.
+- PR #525를 열었다(헤드는 위 봇 첫 회차의 수정을 싣는 커밋이 푸시되면 바뀐다). 푸시된 것은 `origin/main`(`5f7e39ed9`)을 글자 충돌 없이 합친 커밋 `1809c01ec`(`.scratch/harness/probes/README.md`는 자동 병합, `sibling_overlap.py`는 번호 겹침 없음)부터이고, PR 직전 리뷰의 유효 2건은 커밋 `48f940445`에 실었다(위 "PR 직전 리뷰"). PR 본문의 체크리스트에는 CLI 축이 돌았다는 것(`Seat: not assigned`에서도 리뷰가 돌았다)과 시간 시험 셋이 첫 pre-commit에서 부하로 빨갰다 홀로 통과한 것을 적었다.
 - 사용자가 새 세션을 열지 말고 지시문만 내라고 했다가, 이어서 푸시·PR·병합까지는 이 세션이 하라고 했다. 그래서 인계하지 않고 이 세션이 `merge.md`의 "워크트리에서 병합할 때"까지 잇는다.
 - 병합은 이 워크트리 사본의 next-session `merge.md`의 "워크트리에서 병합할 때"를 Read로 열어 따른다. 주 체크아웃은 `f64dfe41c`의 main이라 이 세션이 당기지 못했다.
 - 보류한 것은 위 "셀프 리뷰"의 "남긴 것"이다. 이 PR에는 대기열 `plan-table-unseen-claim`의 5회차 반영이 없다(`next-session` 결정표의 chore 배치 조건에 든다).

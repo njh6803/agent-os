@@ -203,6 +203,27 @@ def test_숫자만_이어진_긴_낱말도_제때_읽고_뒤의_경로를_짚는
     assert elapsed < 5.0, f"걸린 시간 {elapsed:.1f}초"
 
 
+@pytest.mark.parametrize(
+    "command",
+    [
+        "cat <<EOF\nuv run pyright .scratch/x.py\nEOF",
+        'git commit -m "a; uv run pyright .scratch/x.py"',
+    ],
+)
+def test_heredoc_본문과_따옴표_안의_pyright_줄도_명령으로_읽는다(command: str) -> None:
+    # 못 보는 것(거짓 양성): 글 가르기가 따옴표와 heredoc 을 따르지 않는다.
+    assert unchecked_paths(command, None) == [".scratch/x.py"]
+
+
+def test_따옴표_안에_제어_연산자가_없으면_한_낱말이라_알리지_않는다() -> None:
+    assert unchecked_paths('git commit -m "uv run pyright .scratch/x.py"', None) == []
+
+
+def test_대소문자만_다른_루트_밖_경로도_루트_안으로_읽는다() -> None:
+    # 못 보는 것: 윈도 경로로 비교해 리눅스에서도 대소문자를 구분하지 않는다.
+    assert root_relative("/PROJ/tests/x.py", None, Path("/proj")) == ("tests", "x.py")
+
+
 def test_이스케이프한_공백이_든_경로는_갈라져_읽는다() -> None:
     # 못 보는 것: 백슬래시를 슬래시로 바꾸는 글 가르기가 `a\ b.py` 를 `a/` 와 `b.py` 로 가른다.
     assert unchecked_paths(r"uv run pyright .scratch/a\ b.py", None) == [".scratch/a/"]
