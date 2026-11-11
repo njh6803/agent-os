@@ -68,7 +68,7 @@ web/                       슬라이스 3부터. pnpm 워크스페이스. 파이
 | 10 | [admin-answer-preview](admin-answer-preview/plan.md) | 관리 화면 실행 상세의 최종 출력 칸에서 원문과 마크다운으로 그린 모양을 오가며 보게 해, 운영자가 최종 사용자에게 보인 모양을 바로 확인한다. | answer-markdown, pilot-release | todo |
 | 10 | [audit-export](audit-export/plan.md) | 운영자가 트레이스를 주체와 기간과 에이전트와 도구별로 조회하고 파일로 내보낸다. | io-guardrail | todo |
 | 10 | [io-guardrail](io-guardrail/plan.md) | 최종 사용자의 입력과 에이전트의 출력에서 주민등록번호 같은 패턴을 규칙으로 막거나 가린다. | value-masking | todo |
-| 10 | [kb-selection](kb-selection/plan.md) | 기본 에이전트가 지식베이스 목록을 보고 질문에 맞는 지식베이스를 골라 검색한다. | base-agent, principal-propagation | todo |
+| 10 | [kb-selection](kb-selection/plan.md) | 기본 에이전트가 지식베이스 목록을 보고 질문에 맞는 지식베이스를 골라 검색한다. | base-agent, principal-propagation, rag-engine:doc-permission | todo |
 | 10 | [mcp-trust](mcp-trust/plan.md) | MCP 서버마다 믿는 정도와 도구 정의 해시를 정해, 믿지 않는 서버의 결과를 바깥 글로 다룬다. | approval-rules, pilot-release, mcp-http | todo |
 | 10 | [portal-admin](portal-admin/plan.md) | 질문 페이지 설정을 화면에서 고치는 관리 화면을 질문 페이지 쪽에 두어, 운영자가 파일을 열지 않고 사이트마다의 위젯 설정을 바꾼다. | pilot-portal | todo |
 | 10 | [principal-propagation](principal-propagation/plan.md) | 운영자가 켠 MCP 서버에만 실행의 주체를 넘겨, 사용자가 볼 수 있는 문서로만 답하게 한다. | mcp-trust | todo |
