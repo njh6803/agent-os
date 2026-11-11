@@ -246,8 +246,15 @@ async function runCapture(made) {
     }
   }
   for (const row of rows) {
+    const branch = `${row.browser}/${row.mode}/${row.handlers}`;
     if (row.steps[0].state !== "markdown") {
-      notMeasured.push({ part: "capture", branch: `${row.browser}/${row.mode}/${row.handlers}`, reason: "보통 글이 마크다운으로 그려지지 않았다" });
+      notMeasured.push({ part: "capture", branch, reason: "보통 글이 마크다운으로 그려지지 않았다" });
+    }
+    // 단계마다 호출이 끝나 상태를 돌려줬나. 못 돌려줬는데 크래시 이벤트도 없으면 그 단계는 본 것이 아니다.
+    for (const step of row.steps) {
+      if (step.problem !== null && !row.crashed) {
+        notMeasured.push({ part: "capture", branch, step: step.step, reason: "단계의 호출이 상태를 돌려주지 않았고 크래시 이벤트도 없다", problem: step.problem });
+      }
     }
   }
   return rows;
@@ -269,7 +276,11 @@ function nodeStages(name, nodeBundle) {
     timeout: 120_000,
     maxBuffer: 256 * 1024 * 1024,
   });
-  if (run.error !== undefined && run.error.code === "ETIMEDOUT") return { env: "node", name, timedOut: true };
+  if (run.error !== undefined && run.error.code === "ETIMEDOUT") {
+    // 제한 시간은 어느 단계에서 멈췄는지 알리는 표지가 없다. 결과 줄에는 "제한 시간"으로 적고 측정으로는 세지 않는다.
+    notMeasured.push({ part: "stages", env: "node", name, reason: "제한 시간 안에 끝나지 않았다", timeoutMs: 120_000 });
+    return { env: "node", name, timedOut: true };
+  }
   const parsed = parseLastLine(run);
   if (parsed === null || parsed.ok !== true) {
     notMeasured.push({ part: "stages", env: "node", name, status: run.status, stderr: (run.stderr ?? "").slice(0, 300) });
@@ -321,6 +332,10 @@ async function browserStages(target, name, made) {
     const { page, events } = await openPage(browser, pageHtml(), made.outfile);
     const settled = await settle(page.evaluate((value) => MdProbe.stages(value), text), 120_000);
     if (settled.value === undefined) {
+      // 크래시 이벤트가 있으면 죽은 것이 결과다. 이벤트 없이 제한 시간만 지났으면 무엇이 일어났는지 모르는 회차다.
+      if (settled.timedOut === true && !events.crashed) {
+        notMeasured.push({ part: "stages", env: target.name, name, reason: "제한 시간이 지났는데 크래시 이벤트가 없다", problem: settled });
+      }
       if (settled.timedOut === true || events.crashed) return { env: target.name, name, ...settled, crashed: events.crashed };
       notMeasured.push({ part: "stages", env: target.name, name, problem: settled });
       return { env: target.name, name, broken: true };
@@ -605,7 +620,20 @@ async function findCrashDepth(target, build, made) {
   }
   // 두 끝을 한 번씩 더 본다(죽는 깊이가 회차마다 움직이는지).
   const again = { lastAlive: await crashCheck(target, build, lastAlive, made), firstDead: await crashCheck(target, build, firstDead, made) };
-  return { build, checks, lastAlive, firstDead, again: { lastAliveDied: again.lastAlive.diedAt, firstDeadDied: again.firstDead.diedAt } };
+  // 다시 본 회차도 처음과 같은 판정이다. 답이 없는데 크래시 이벤트가 없으면 죽은 것으로 적지 않고 측정 아님으로 센다.
+  for (const [end, depth] of [["lastAlive", lastAlive], ["firstDead", firstDead]]) {
+    const check = again[end];
+    if (check.diedAt !== null && !check.crashed) {
+      notMeasured.push({ part: "crash", browser: target.name, build, depth, reason: "다시 본 회차에서 답이 없는데 crash 이벤트가 없다", end, check });
+    }
+  }
+  return {
+    build,
+    checks,
+    lastAlive,
+    firstDead,
+    again: { lastAliveDied: again.lastAlive.diedAt, firstDeadDied: again.firstDead.diedAt, lastAliveCrashed: again.lastAlive.crashed, firstDeadCrashed: again.firstDead.crashed },
+  };
 }
 
 async function runCrash(made) {

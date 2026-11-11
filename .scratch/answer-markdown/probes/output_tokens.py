@@ -170,8 +170,16 @@ def main() -> int:
                 measured=within(tokens, cap) and not within(over, cap),
                 result=f"경계 {low}겹",
             )
+    elif not inside and not outside:
+        # 들여쓴 목록의 깊이마다 토큰 세기가 예외로 끝나 자료가 하나도 없다. "모두 상한 밖"이 아니라
+        # 알 수 없는 것이다.
+        print("  들여쓴 목록의 깊이마다 토큰을 세지 못해 경계를 찾지 않았다")
+        label = "들여쓴 목록이 상한 안에 드는 가장 깊은 깊이"
+        rounds.record(label, measured=False, result="자료 없음")
     else:
         # 경계가 본 깊이 밖이다. 깊이마다의 회차가 이미 표지를 봤으므로 이 줄은 결과로 센다.
+        # (문맥 창을 넘어 세지 못한 깊이는 `tokens` 가 `None` 으로 `outside` 에 든다. 세지 못한 것도
+        # 상한 밖이라는 관찰이다.)
         where = "모두 상한 안" if inside else "모두 상한 밖"
         print(f"  들여쓴 목록의 본 깊이가 {where}이라 경계를 찾지 않았다")
         rounds.record("들여쓴 목록이 상한 안에 드는 가장 깊은 깊이", measured=True, result=where)

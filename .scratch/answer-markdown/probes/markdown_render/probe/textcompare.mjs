@@ -169,6 +169,7 @@ async function main() {
 
   const notMeasured = [];
   const rows = [];
+  const fallbackRows = [];
   for (const input of inputs) {
     const sourceChars = lettersAndDigits(input.text);
     let html = null;
@@ -185,8 +186,9 @@ async function main() {
       continue;
     }
     if (html === null) {
-      // 스택이 넘쳐 던졌다. 시제품은 원문을 그대로 보인다.
-      rows.push({ ...input, fallback: true, threw, sourceLength: sourceChars.length, screenLength: sourceChars.length, ratio: sourceChars.length === 0 ? null : 1, subsequence: true, reason: null, screenChars: sourceChars });
+      // 스택이 넘쳐 던졌다. 이 갈래(`View`)는 실패를 받지 않아 화면에 무엇이 그려지는지 이 프로브는 보지 못했다.
+      // 원문이 보인다고 가정해 부분열로 세지 않고, 던졌다는 것만 적어 집계(부분열의 수, 바꿔치기 짝)에서 뺀다.
+      fallbackRows.push({ group: input.group, id: input.id, threw });
       continue;
     }
     const box = findBox(html);
@@ -284,7 +286,9 @@ async function main() {
     byReason,
     // 이미지 자리도 뺀 변형 규칙에서 부분열이 아닌 입력(던져서 원문을 보인 입력은 세지 않는다).
     notSubsequenceWithoutImages: rows.filter((row) => !row.fallback && row.subsequenceWithoutImages === false).map((row) => `${row.group}/${row.id}`),
-    fallbacks: rows.filter((row) => row.fallback).map((row) => `${row.group}/${row.id}`),
+    // 스택이 넘쳐 던진 입력. 화면을 보지 못해 위의 모든 집계(inputs, subsequence, 짝)에서 빠진다.
+    fallbacks: fallbackRows.map((row) => `${row.group}/${row.id}`),
+    inputsTotal: rows.length + fallbackRows.length,
     ratio: { counted: ratios.length, min: ratios[0], median: ratios[Math.floor(ratios.length / 2)], max: ratios.at(-1), equalOne: ratios.filter((r) => r === 1).length, emptyScreen: withRatio.filter((row) => row.screenLength === 0).length },
     lowestFive: lowest.map(strip),
     failing: failing.map(strip),
