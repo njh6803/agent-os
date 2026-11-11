@@ -502,6 +502,48 @@ open-session을 부른다 2026-11-11T09:50:34Z
 - 두 항목은 회고의 후보가 아니라 사용자가 직접 정한 일이라 아래 회고 절의 셈에 넣지 않았다. 같은 일을 다룬 항목이 있는지는 `uv run python tools/queue_open_rows.py --search rag-engine`으로 찾았고, 맞은 둘(대기열 420, 581)은 다른 일이었다.
 - 아래 "다음"의 4를 고치고 6과 7을 더했다.
 
+### 기록분의 커밋과 PR
+
+위 기록을 넷째 커밋에 실었다(`35bfe1969`, `docs: 공통 저장소 없이 agent-os를 규약의 원천으로 둔다는 결정을 기록한다`, 파일 6개). pre-commit의 `checks`는 653.28초에 Passed였다(check-ticket 1.2초, zizmor 1.6초, lint-imports 2.5초, check-instructions 9.6초, check-type-escapes 10.2초, pyright 56.9초, pyright-linux 57.4초, run-hooks 121.5초, pytest 393.5초, web-verify 653.0초). 마크다운 표, 줄 구분 문자, 변이 표, 커밋 메시지 검사도 Passed였고 인용 대조는 경고 없음이었다. `Skipped`는 넷이다. `ruff check`와 `ruff format`은 `.py`가 없는 커밋이라 Skipped였고, 커밋 뒤에 `uv run ruff check .`(`All checks passed!`)와 `uv run ruff format --check .`(`2069 files already formatted`)를 따로 쳤다. 카나리아 명세와 헌법 판은 앞 커밋과 같은 "(no files to check)"였고, 헌법 판 검사를 손으로 친 뒤로 이 브랜치는 헌법 파일을 고치지 않았다. 이 커밋도 Bash의 600초 제한을 넘겨 백그라운드로 넘어갔고 끝 알림을 기다려 종료 코드 0을 봤다. 커밋 명령 직후의 인계 계기(299,407 토큰, 경계 `커밋 뒤`)는 위 "반영분의 커밋"과 같은 까닭으로 넘기지 않았다.
+
+`git push -u origin docs/release-image-design`으로 푸시하고 PR 529를 열었다(`gh pr create`, 제목 `docs: 이미지 배포와 판 내기를 설계한다 (ADR 0056)`, 머리 35bfe1969). 본문은 `.github/PULL_REQUEST_TEMPLATE.md`를 채웠다. 푸시는 한 번이다. 봇이 마지막 상태를 한 번에 보도록 넷째 커밋이 선 뒤에 밀었다. 앱의 `get_status`는 PR 529가 이 세션에 묶였다고 냈고(검사 통과 1, 대기 7, 건너뜀 1), `bind_pr`은 부르지 않았다.
+
+## 인계: PR 연 뒤
+
+PR을 여는 명령 직후 인계 계기(`hook_handoff`)가 왔다. 세션 컨텍스트가 312,081 토큰으로 문턱 200,000을 넘은 채 단계 경계 `PR 연 뒤`에 왔다는 문구였다. `.claude/skills/next-session/handoff.md`를 Read로 열어 "인계하지 않는 때" 다섯을 대 봤다. PR은 열렸고, 요청 범위는 PR과 병합까지이며, 이 세션의 지시문의 "이어받을 상태"는 `인계: 커밋 뒤`라 같은 경계가 아니고, 이 일지에 이 세션이 쓴 `인계 못함` 줄이 없고, `get_session`의 `self`에 `parentSessionId`가 없다. 다섯 가운데 어느 것도 아니어서 넘긴다. 함께 온 `hook_pr_next_session`의 계기는 `handoff.md` 머리대로 따르지 않았다.
+
+이 세션의 제목은 `docs/release-image-design`이었다. 넘기기 전에 `docs/release-image-design (인계함)`으로 바꾼다.
+
+이 세션이 한 것은 PR 직전 리뷰와 반영, 덧붙인 회고, main 합치기 하나, 커밋 둘(셋째와 넷째), 푸시, PR 529다. 하지 않은 것이다. `@coderabbitai review` 코멘트를 남기지 않았고, CI와 봇의 결과를 읽지 않았으며, 병합하지 않았다. 이 세션이 띄운 백그라운드 작업은 남아 있지 않다.
+
+새 세션이 이어받을 것이다.
+
+- **커밋하지 않은 변경.** 이 일지의 "기록분의 커밋과 PR" 절과 이 인계 절이 커밋되지 않은 채 워크트리에 있다. 봇 회차의 반영 커밋에 싣고, 반영할 것이 없으면 일지만 실은 커밋으로 민다.
+- **봇 회차.** `merge.md` 2부터 한다. PR 머리가 로컬 HEAD와 같은 것을 본 뒤 첫 `@coderabbitai review` 코멘트를 남긴다. 앱의 PR 감시는 이 세션에 묶여 있어 새 세션을 깨우지 않는 것으로 보고(`handoff.md` 6), `tools/wait_ci.py` 대기를 스스로 띄운다.
+- **리뷰를 덜 거친 곳.** 셋째 커밋의 반영분(netns 프로브 `bridge()`의 표지, 풀어 쓴 인용 셋)과 넷째 커밋의 기록은 PR 직전 리뷰를 다시 거치지 않았다. PR 본문의 "리뷰어 참고"에 적었다. 넷째 커밋이 적은 결정은 인계한 세션의 글에서 온 것이라, 봇이 그 글의 사실을 물으면 근거는 위 "인계한 세션에서 사용자가 정했다" 절과 대기열 항목 둘이 전부다.
+- **함께 고친 파일.** 열린 PR 528이 `.scratch/retro-queue/cli-review-claims-path.md`를 고친다. 먼저 병합되면 그 승인 줄을 양쪽 회차를 살려 푼다. `.scratch/plan.md`는 mcp-shutdown-spec 워크트리도 고치며, 충돌하면 `uv run python tools/plan_table.py`로 다시 만든다.
+- **병합 뒤.** `## 다음`의 1(dev 브랜치 전환의 harness 티켓)로 다음 작업 지시문을 낸다. "이어받을 상태"에 적을 것은 `## 다음`의 1과 6이 든다. 회고는 커밋 전과 PR 직전 리뷰 뒤에 돌렸고, 봇이 잡는 사건은 단계를 닫는 세션이 `## 회고 (PR 직전 리뷰 뒤)` 아래에 덧붙인다. 그때 볼 만한 것은 하나다. pre-commit이 세 커밋 모두 Bash의 600초 제한을 넘겼다(622초, 912초, 653초).
+- **하지 않을 것.** 설계 인터뷰(`grilling`), 셀프 리뷰(`/code-review`), PR 직전 리뷰(`coderabbit-review`)는 다시 돌리지 않는다. ADR 0056은 `accepted`다. 봇의 지적이 ADR 0056의 결정이나 PRD를 바꾸게 하면 사용자에게 묻는다.
+
+낸 지시문이다.
+
+```
+다음 작업: 기능 release-image. 연 PR 529(이미지 배포와 판 내기 설계, ADR 0056)의 봇 회차를 반영하고 병합한다
+다음 단계: PR 반영·병합
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /grill-with-docs release-image
+브랜치: docs/release-image-design
+모델: Sonnet 5.5 / high. 2의 잇는 지시문
+읽을 것: docs/journal/2026-11-11-1532-release-image-design-round3.md의 "인계: PR 연 뒤" 절
+이어받을 상태: 인계: PR 연 뒤. merge.md 2(봇 회차)부터 한다. 첫 @coderabbitai review 코멘트도 새 세션이 남긴다. docs/journal/2026-11-11-1532-release-image-design-round3.md. 설계 인터뷰, 셀프 리뷰, ADR 0056 승인, PR 직전 리뷰, 회고는 끝나 grilling과 /code-review와 coderabbit-review는 다시 돌리지 않는다. 일지의 끝 두 절(기록분의 커밋과 PR, 인계: PR 연 뒤)이 커밋되지 않은 채 워크트리에 있고 봇 회차의 커밋에 싣는다(무엇을 이어받는지는 그 인계 절)
+확인할 선행 조건: 없음
+이번 요청 범위: PR과 병합까지
+```
+
+제목을 `docs/release-image-design (인계함)`으로 바꿨다. 잠금 풀기(`git worktree unlock`)는 `is not locked`로 끝나 넘어갔다. `open-session`은 Skill 도구로 부르지 않고 워크트리 디스크의 `.claude/skills/open-session/SKILL.md`를 Read로 열어 따른다(앞 인계와 같은 까닭이다. `CLAUDE.md` 환경 함정의 마지막 항목). `list_sessions`에 같은 제목으로 도는 다른 세션은 없었고, 도는 세션은 둘이었다(`docs/base-agent-tickets`, `docs/answer-markdown-spec`).
+
+open-session을 부른다 2026-11-11T10:49:06Z
+
 ## 회고
 
 ADR 승인을 받고 커밋하기 전에 돌렸다. 원천은 이 일지 전체와 이어받은 세션이다. 앞 일지의 회고가 이미 센 셋(대기열 431, `glob-slash-pattern-narrowed-path`, `option-description-implied-omission`)은 다시 세지 않았다. 후보 여덟, 승인 여섯(모두 대기열에 두고 이 세션에서 반영한 것은 없다), 기각 둘, 넘김 0이다. 만료할 항목은 없었다(`uv run python tools/queue_open_rows.py`의 작업 트리 출력에 만료할 항목이 없어 `--ref origin/main`의 출력과 겹칠 것이 없다).
@@ -528,6 +570,20 @@ ADR 승인을 받고 커밋하기 전에 돌렸다. 원천은 이 일지 전체�
 5. **기각.** CodeRabbit CLI가 일지의 제목이 겹친다는 Major를 냈고 서브에이전트의 트리아지가 오탐으로 걸렀다. 이 세션의 `git show origin/main:.scratch/…`는 Git Bash의 경로 변환으로 실패했고 훅이 그 자리에서 까닭과 고친 꼴을 알려 다시 쳤다. 둘 다 이미 있는 장치가 그 자리에서 걸렀다.
 
 일지에만 남기는 것이다. 이 세션이 `tools/check_type_escapes.py`에 파일 경로를 넘겨 예외로 끝났다(그 도구는 루트 폴더를 받는다). 고친 줄에 우회 낱말이 없고 커밋의 pre-commit이 그 검사를 돌리므로 다시 치지 않았다.
+
+## 이어받은 세션: PR 529 봇 회차
+
+세션 제목은 `docs/release-image-design`이다. 인계 지시문으로 이 워크트리에 들어와 `merge.md` 2부터 했다. 설계 인터뷰, 셀프 리뷰, PR 직전 리뷰는 다시 돌리지 않았다.
+
+- **충돌.** PR 529는 `CONFLICTING`이었다. PR 528(base-agent 명세)이 먼저 병합되며 `.scratch/retro-queue/cli-review-claims-path.md`의 승인 줄을 고쳐, 이 브랜치의 같은 줄과 부딪혔다. origin/main을 합치고 양쪽 회차를 살려 3회차로 풀었다. `uv run python tools/plan_table.py`는 변화 없이 끝났고, `tools/sibling_overlap.py`는 번호 겹침 없음이었다. `.scratch/plan.md`는 충돌하지 않았다.
+- **검사.** 푸시 뒤 CodeRabbit은 저장소 별이 10개 미만이라 자동 리뷰를 건너뛴다고 답했다(`skipping`). claude-review는 통과했고 코멘트를 남겼다. 그 코멘트가 이 PR에 대한 claude-review의 첫 회차다.
+- **claude-review 첫 회차의 판단.** Minor 셋과 Nit 하나, 제안 하나였다. 첫 회차라 지적마다 고칠지를 판단했다.
+  - 제안(경계). 시작 검사 네 곳이 같은 설정 이름과 같은 판정 규칙을 쓰는지 잠그는 시험을 요구로 적자는 것이다. 고쳤다. `.scratch/release-image/plan.md`의 시작 검사를 고치는 문장에 그 시험을 그 티켓이 더한다고 적었다.
+  - Minor(ADR 0056 "결정" 절의 항목이 길다). 고치지 않았다. ADR 0056은 사용자가 승인한 글이고, 근거의 종류와 어림 표시는 `docs/agents/issue-tracker.md`의 "근거는 무엇으로 섰는지 밝힌다" 항목이 ADR 같은 글에 적으라고 한 것이라 덜어 내면 그 항목을 어기게 된다(그 문서 26줄을 Grep으로 읽었다). 항목을 쪼개거나 줄이면 승인받은 글을 다시 쓰게 된다. 읽기 어렵다는 사실 자체는 맞아서 PR 코멘트에 남긴다.
+  - Minor(PRD와 ADR 0056의 포트 문장, ADR 0048과 deploy-package 기능 계획에 남은 문장). 고치지 않았다. PR 본문이 이미 인정한 부채이고 deploy-package 기능 계획이 ADR 0056을 가리킨다(`.scratch/deploy-package/plan.md`를 `0056`으로 Grep해 1곳). 그 설계 인터뷰가 닫는다.
+  - Minor(ADR 0011의 "지금 PRD에 원격 배포 요구가 없어"가 낡았다). 고치지 않았다. `.claude/rules/adr.md` 13~15줄은 다른 ADR이 바꾼 문장에 `(바뀜: ADR NNNN)` 포인터를 달고 본문의 다른 글자는 고치지 않게 한다(Grep으로 읽었다). 낡은 문장이 어느 것인지는 포인터가 가리키는 ADR 0056이 밝힌다.
+  - Nit(프로브가 4천 줄). 고치지 않았다. 보관 기준 안이고 아무것도 틀리지 않는다.
+  - 이후 회차는 Critical·Major만 고친다(`merge.md` 2 "회차 세기").
 
 ## 다음
 
