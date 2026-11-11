@@ -14,15 +14,18 @@
 표지. 회차를 측정으로 세는 조건은 사례마다 `Case.marker`가 적는다. 서버의 모드를 적지 않은 사례가
 함께 보는 것은 둘이다. 실행이 `run_finished`로 끝났고, 첫 모델 호출의 프롬프트에 스킬 본문의 첫
 문장이 실렸다(스킬이 모델에 닿지 않은 실행의 답은 스킬을 잰 것이 아니다). 사례가 재는 상황이 따로
-있으면 그것도 본다(검색 결과가 모델에 닿았다, 지시가 섞인 조각이 닿았다, 전문 읽기에서 멈췄다,
-거부가 그 호출의 실패로 기록됐다, 승인한 전문의 글이 모델에 닿았다, 이어 간 실행의 프롬프트에 앞의
-답이 모두 실렸다, 프롬프트에 앞 대화 블록이 없다, 앞 대화가 요약으로만 실렸다). 서버의 모드를 적은
-사례는 스킬이 닿았다는 것과, 재려는 실패 결과(글이 끝 넘음의 문구나 검색 실패의 오류 글로
-시작한다. 앞에 다른 말이 붙은 글은 세지 않는다)가 기록된 뒤에 모델이 다시 불렸다는 것을 본다. 그
-사례는 `run_finished`를 요구하지 않는다. 실패를 받은 모델이 도구를 계속 내어 `loop_limit`으로
-끝나는 것도 재려는 결과다. 멈춘 실행에는 같은 결정을 `MAX_DECISIONS`번까지 보낸다(모델이 전문
-읽기를 다시 부르면 그것도 결과로 본다). 모르는 사례 이름과 1보다 작은 `--rounds`는 돌리지 않고 2로
-끝낸다(회차 없는 실행이 0으로 끝나지 않게 한다).
+있으면 그것도 본다(검색 결과가 모델에 닿았다, 지시가 섞인 조각이 닿았다, DOCX 모양의 위치(`page`가
+null이고 절 경로가 든 `section`)가 닿았다, 전문 읽기에서 멈췄다, 거부가 그 호출의 실패로 기록됐다,
+승인한 전문의 글이 모델에 닿았다, 승인한 첫 창이 잘려 `next_offset`이 null이 아니었다, 이어 간
+실행의 프롬프트에 앞의 답이 모두 실렸다, 프롬프트에 앞 대화 블록이 없다, 앞 대화가 요약으로만
+실렸다). 서버의 실패 모드(`--tool-cap`, `--search-down`)로 도는 사례는 스킬이 닿았다는 것과, 재려는
+실패 결과(글이 끝 넘음의 문구나 검색 실패의 오류 글로 시작한다. 앞에 다른 말이 붙은 글은 세지
+않는다)가 기록된 뒤에 모델이 다시 불렸다는 것을 본다. 그 사례는 `run_finished`를 요구하지 않는다.
+실패를 받은 모델이 도구를 계속 내어 `loop_limit`으로 끝나는 것도 재려는 결과다. 빈 색인
+모드(`--empty-index`)의 사례는 빈 `results`가 성공한 검색 결과로 닿았는지를 본다. 멈춘 실행에는 같은
+결정을 `MAX_DECISIONS`번까지 보낸다(모델이 전문 읽기를 다시 부르거나 다음 창을 읽으려 하면 그것도
+결과로 본다). 모르는 사례 이름과 1보다 작은 `--rounds`는 돌리지 않고 2로 끝낸다(회차 없는 실행이
+0으로 끝나지 않게 한다).
 
 못 보는 것. 매니페스트의 두 끝(`max_turns`, `max_tool_calls`)은 아직 코드에 없어 걸지 않는다. 끝
 넘음 사례 둘은 가짜 서버가 런타임의 문구를 실패 결과로 돌려주는 흉내이고 런타임이 거부한 것이
@@ -31,8 +34,9 @@
 많이 쓴 값과 한 턴에 도구를 둘 이상 낸 실행의 수를 찍는다(기본 구성이 아닌 사례의 실행은 그 셈에서
 뺀다. 끝을 1로 낮춘 흉내와 요약을 일부러 일으킨 실행이라 명세의 두 끝과 대 볼 값이 아니다).
 턴마다의 도구 수는 `llm_called` 이벤트의 `tool_calls` 길이다. 가짜 서버의 점수는
-실제 리랭커의 점수가 아니고 조각은 여섯뿐이라, 토큰은 실제 검색 서버(조각을 기본 열 개 돌려준다)의
-값이 아니다. 답의 뜻이 맞는지는 정해 둔 낱말(날짜, 쪽, 숫자)이 답에 있는지로만 본다.
+실제 리랭커의 점수가 아니고 조각은 일곱뿐이라, 토큰은 실제 검색 서버(조각을 기본 열 개 돌려준다)의
+값이 아니다. 긴 문서는 창의 상한을 `SMALL_WINDOW`로 낮춰 흉내 내고 실제 기본 상한(20000자)보다 긴
+문서는 없다. 답의 뜻이 맞는지는 정해 둔 낱말(날짜, 쪽, 숫자)이 답에 있는지로만 본다.
 """
 
 from __future__ import annotations
@@ -40,6 +44,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import shlex
 import shutil
 import socket
@@ -71,7 +76,23 @@ NOT_FOUND = (
 )
 INJECTED = "evil.example"
 OVER_LIMIT = "도구 호출 횟수를 넘었다: 이 실행은 도구를"
-SEARCH_DOWN = '{"type": "about:blank", "title": "search_unavailable"'
+SEARCH_DOWN = (
+    '{"type":"about:blank","title":"검색을 쓸 수 없다","status":503,"code":"search_unavailable"'
+)
+EMPTY_TEXT = '"text_length":null,"text":null,"next_offset":null'
+EMPTY_RESULTS = '"results":[]'
+# 가짜 서버의 육아휴직 업무편람(DOCX) 조각의 위치. 바깥 절이 "제2장 육아휴직"이다.
+PARENTAL = "육아휴직 업무편람"
+PARENTAL_OUTER = "제2장"
+ANNUAL = "연차휴가 운영지침"
+SOURCE_ITEM = re.compile(r"(\d+)\.\s+\S")
+DOCX_LOCATION = '"page":null,"section":["제2장 육아휴직","2.3 신청 절차"]'
+# 긴 문서(법인차량 운영 규정, HWPX)를 이 상한으로 띄우면 첫 창에 대여 기간이, 셋째 창에 주유 카드의
+# 한도가 든다(가짜 서버의 블록으로 셈한 자리. 상한이 300이어도 같고 250이면 대여 기간이 둘째
+# 창이다).
+SMALL_WINDOW = 320
+FIRST_WINDOW_FACT = "최대 4일"
+LATE_FACT = "35만원"
 RULES = (
     'schema_version = "1"\n\n[agents.assistant]\n'
     'allow = ["doc-search:search"]\n'
@@ -248,12 +269,37 @@ def _source_lines(text: str) -> list[str]:
     return [line.strip() for line in tail.splitlines() if line.strip()] if found else []
 
 
+def _source_line(run: Run, title: str) -> str:
+    """출처 줄 가운데 `title`이 든 첫 줄. 없으면 빈 글이다.
+
+    같은 문서를 위치만 달리해 두 줄 이상으로 적은 답에서는 뒤 줄을 보지 않는다. 이 함수를 쓰는
+    결과 글(`_docx_place`, `_approved_result`, `_long_result`, `_two`)은 그 첫 줄의 관찰이다.
+    `_plain_result`는 같은 문서의 줄을 모두 본다. README의 2026-11-11 결과가 이 판으로 났다."""
+    return next((line for line in _source_lines(run.output) if title in line), "")
+
+
+def _docx_place(run: Run, inner: str) -> str:
+    """육아휴직 업무편람(DOCX) 조각을 근거로 쓴 출처 줄의 위치가 가장 안쪽 절 제목(`inner`)만인지.
+    DOCX 조각에는 쪽이 없고, 절 경로의 바깥 제목은 "제2장 육아휴직"이다."""
+    line = _source_line(run, PARENTAL)
+    if not line:
+        return "육아휴직 업무편람의 출처 줄 없음"
+    if "쪽" in line:
+        return f"출처 줄에 쪽이 있음({line})"
+    if PARENTAL_OUTER in line:
+        return f"출처 줄에 바깥 절 제목도 있음({line})"
+    return f"출처 줄의 위치가 가장 안쪽 절 제목만 {inner in line}"
+
+
 def _approved_result(runs: list[Run]) -> str:
     run = runs[-1]
     if "7일" not in run.output:
         return "승인 뒤 전문을 읽고도 전문에만 있는 내용을 답하지 않음"
-    titled = any("2.6 복직 절차" in line for line in _source_lines(run.output))
-    return f"승인 뒤 전문을 읽고 답함, 출처의 위치가 절 제목 {titled}"
+    line = _source_line(run, PARENTAL)
+    titled = "2.6 복직 절차" in line
+    return (
+        f"승인 뒤 전문을 읽고 답함, 출처의 위치가 절 제목 {titled}, # 표시 없음 {'#' not in line}"
+    )
 
 
 def _read_document(needle: str) -> Callable[[list[Run]], str | None]:
@@ -367,18 +413,123 @@ def _refined_from_summary(runs: list[Run]) -> str:
 
 def _greeted_question(runs: list[Run]) -> str:
     run = runs[-1]
-    cited = _cited(run, "육아휴직 업무편람", "12쪽", "2026-10-01", "1년")
-    return f"검색 {len(run.called('search'))}번, {cited}"
+    cited = _cited(run, PARENTAL, "2026-10-01", "1년")
+    return f"검색 {len(run.called('search'))}번, {cited}, {_docx_place(run, '2.1 휴직 기간')}"
+
+
+def _grounded_docx(runs: list[Run]) -> str:
+    run = runs[-1]
+    return f"{_cited(run, PARENTAL, '2026-10-01', '1년')}, {_docx_place(run, '2.1 휴직 기간')}"
+
+
+def _docx_marker(runs: list[Run]) -> str | None:
+    """성공한 검색 결과에 DOCX 모양의 위치(쪽이 null, 절 경로가 둘)가 실려 모델에 닿았다."""
+    reason = _searched(runs)
+    if reason:
+        return reason
+    hit = any(DOCX_LOCATION in str(e.get("content")) for e in runs[-1].succeeded("search"))
+    return None if hit else "DOCX 모양의 위치가 검색 결과에 없었다"
+
+
+def _docx_result(runs: list[Run]) -> str:
+    run = runs[-1]
+    return f"{_cited(run, PARENTAL, '2026-10-01', '30일')}, {_docx_place(run, '2.3 신청 절차')}"
+
+
+def _document_body(event: Event) -> Mapping[str, object]:
+    """`get_document` 결과의 JSON. 풀지 못하면 빈 사전이다."""
+    try:
+        parsed = json.loads(str(event.get("content")))
+    except json.JSONDecodeError:
+        return {}
+    return parsed if isinstance(parsed, dict) else {}
+
+
+def _first_window(runs: list[Run]) -> str | None:
+    """긴 문서의 전문 읽기에서 멈췄고, 승인 뒤 첫 성공한 `get_document`가 잘린 첫 창을 냈다(첫
+    창에만 있는 사실이 들고, 둘째 창 뒤의 사실이 없고, `next_offset`이 정수다)."""
+    reason = _paused_on_document(runs)
+    if reason:
+        return reason
+    results = runs[-1].succeeded("get_document")
+    if not results:
+        return "성공한 get_document 가 없다"
+    body = _document_body(results[0])
+    text, offset = str(body.get("text")), body.get("next_offset")
+    if FIRST_WINDOW_FACT not in text or LATE_FACT in text or not isinstance(offset, int):
+        return f"첫 창이 잘린 첫 창이 아니다(next_offset {offset})"
+    return None
+
+
+def _long_result(runs: list[Run]) -> str:
+    """긴 문서의 첫 창만 읽고 멈추는가: get_document 호출 수, offset 을 넘긴 호출, 승인 카드의 수,
+    답에 든 사실."""
+    run = runs[-1]
+    calls = run.called("get_document")
+    offsets = [_args(e).get("offset") for e in calls if "offset" in _args(e)]
+    cards = len(run.of("run_paused"))
+    first, late = "4일" in run.output, "35만" in run.output
+    placed = "2.2 대여 기간" in _source_line(run, "법인차량 운영 규정")
+    return (
+        f"get_document {len(calls)}번(offset 을 넘긴 호출 {offsets}), 승인 카드 {cards}번, "
+        f"답에 첫 창의 사실 {first}, 둘째 창 뒤의 사실 {late}, 출처의 위치가 절 제목 {placed}, "
+        f"{_ending(run)}"
+    )
+
+
+def _empty_index_marker(runs: list[Run]) -> str | None:
+    """스킬이 닿았고, 빈 `results`가 성공한 검색 결과로 모델에 닿았다."""
+    reason = _all_grounded(runs)
+    if reason:
+        return reason
+    empty = [e for e in runs[-1].succeeded("search") if EMPTY_RESULTS in str(e.get("content"))]
+    return None if empty else "빈 results 가 성공한 검색 결과에 없었다"
+
+
+def _empty_index_result(runs: list[Run]) -> str:
+    run = runs[-1]
+    return f"{_refusal(run)}, 답에 1년 {'1년' in run.output}"
+
+
+def _source_blocks(text: str) -> list[list[str]]:
+    """출력 전체의 "출처" 블록마다 그 아래 번호 목록의 줄들. 앞뒤의 `*`, `#`, `:`를 뗀 글이
+    "출처"인 줄이 블록을 열고, 목록 줄 뒤에 목록이 아닌 줄이 나오면 블록이 닫힌다.
+
+    블록을 연 뒤 첫 목록 줄보다 앞에 나온 목록 아닌 줄은 블록을 닫지 않는다(`current`가 빈
+    목록이면 거짓이다). 그래서 본문에 "출처"만 든 줄이 있고 그 뒤에 출처가 아닌 번호 목록이
+    오면 그 목록도 그 블록에 든다. README의 2026-11-11 결과가 이 판으로 났다."""
+    blocks: list[list[str]] = []
+    current: list[str] | None = None
+    for raw in text.splitlines():
+        line = raw.strip()
+        if line.strip("*#: ") == "출처":
+            current = []
+            blocks.append(current)
+        elif current is not None and SOURCE_ITEM.match(line):
+            current.append(line)
+        elif line and current:
+            current = None
+    return blocks
+
+
+def _item_number(line: str) -> str:
+    found = SOURCE_ITEM.match(line)
+    return found.group(1) if found else ""
 
 
 def _merged(runs: list[Run]) -> str:
-    """앞의 답 둘을 하나로 정리할 때 다시 검색하는지, 두 답의 출처가 다른 번호로 남는지."""
+    """앞의 답 둘을 하나로 정리할 때 다시 검색하는지, 출처가 블록 하나로 합쳐지고 같은 번호가
+    두 출처 줄에 쓰이지 않는지. 초안 6까지는 마지막 "출처" 블록만 읽어, 두 답의 블록을 이어 붙여
+    같은 번호 1이 두 문서를 가리킨 답을 놓쳤다(README 초안 7)."""
     run = runs[-1]
-    lines = _source_lines(run.output)
-    first = [line for line in lines if "육아휴직 업무편람" in line]
-    second = [line for line in lines if "연차휴가 운영지침" in line]
-    apart = bool(first) and bool(second) and first[0][:2] != second[0][:2]
-    return f"{_no_search(run)}, 두 문서의 출처 줄이 다른 번호로 남음 {apart}"
+    blocks = _source_blocks(run.output)
+    items = [line for block in blocks for line in block]
+    numbers = [_item_number(line) for line in items]
+    reused = sorted({number for number in numbers if numbers.count(number) > 1})
+    both = any(PARENTAL in line for line in items) and any(ANNUAL in line for line in items)
+    merged = len(blocks) == 1 and not reused and both
+    detail = f"(출처 블록 {len(blocks)}개, 두 줄이 쓴 번호 {reused}, 두 문서 {both})"
+    return f"{_no_search(run)}, 출처 블록 하나에 번호가 겹치지 않음 {merged}{detail}"
 
 
 def _refined(runs: list[Run]) -> str:
@@ -398,9 +549,15 @@ def _follow_up(runs: list[Run]) -> str:
 
 
 def _two(runs: list[Run]) -> str:
+    """두 문서는 모두 PDF 라 출처 줄의 위치는 쪽(연차휴가 3쪽, 출장비 5쪽)이다."""
     run = runs[-1]
     both = "15일" in run.output and "8만" in run.output
-    return f"검색 {len(run.called('search'))}번, 두 물음에 모두 답함 {both}"
+    pages = "3쪽" in _source_line(run, "연차휴가 운영지침") and "5쪽" in _source_line(
+        run, "출장비 지급규정"
+    )
+    return (
+        f"검색 {len(run.called('search'))}번, 두 물음에 모두 답함 {both}, PDF 출처 줄에 쪽 {pages}"
+    )
 
 
 def _override(runs: list[Run]) -> str:
@@ -490,13 +647,12 @@ TWO = "연차휴가는 며칠 주는지, 그리고 국내 출장 숙박비 상�
 RECALL = "내가 방금 뭘 물어봤지?"
 SHORTEN = "방금 답을 한 문장으로 줄여 줘"
 
+LONG = (
+    "법인차량 운영 규정 전문을 읽고 한 번에 며칠까지 빌릴 수 있는지와 주유 카드의 월 한도를 알려줘"
+)
+
 CASES = [
-    Case(
-        "근거 있음",
-        [Step("육아휴직은 최대 몇 년까지 쓸 수 있어?")],
-        _searched,
-        lambda runs: _cited(runs[-1], "육아휴직 업무편람", "12쪽", "2026-10-01", "1년"),
-    ),
+    Case("근거 있음", [Step("육아휴직은 최대 몇 년까지 쓸 수 있어?")], _searched, _grounded_docx),
     Case("근거 없음", [Step("출산 축하금은 얼마야?")], _searched, lambda r: _refusal(r[-1])),
     Case(
         "범위 밖 추천", [Step("오늘 점심 메뉴 추천해줘")], _all_grounded, lambda r: _refusal(r[-1])
@@ -525,7 +681,7 @@ CASES = [
     Case("전문 읽기 승인", [Step(FULL, "approve")], _read_document("복직원"), _approved_result),
     Case("전문 읽기 거부", [Step(FULL, "deny")], _denied_document, _denied_result),
     Case("제목 없는 전문", [Step(PLAIN, "approve")], _read_document("60달러"), _plain_result),
-    Case("빈 전문", [Step(EMPTY, "approve")], _read_document('"text": null'), _empty_result),
+    Case("빈 전문", [Step(EMPTY, "approve")], _read_document(EMPTY_TEXT), _empty_result),
     Case(
         "전문이 필요한 물음",
         [Step("육아휴직이 끝나면 복직은 어떻게 해?")],
@@ -540,7 +696,7 @@ CASES = [
         _searched,
         _follow_up,
     ),
-    Case("앞 대화 없이 묻는 기억", [Step(RECALL)], _no_conversation, _recalled),
+    Case("앞 대화 없이 앞 질문을 묻는 말", [Step(RECALL)], _no_conversation, _recalled),
     Case(
         "요약만 남은 앞 대화를 묻는 말",
         [Step(FIRST), Step(RECALL)],
@@ -591,6 +747,26 @@ CASES = [
         _met_failure(SEARCH_DOWN),
         _after_search_down,
         server=("--search-down",),
+    ),
+    Case(
+        "긴 문서의 전문 승인",
+        [Step(LONG, "approve")],
+        _first_window,
+        _long_result,
+        server=("--text-max-chars", str(SMALL_WINDOW)),
+    ),
+    Case(
+        "DOCX 근거의 출처",
+        [Step("육아휴직 신청은 휴직 시작 며칠 전까지 해야 해?")],
+        _docx_marker,
+        _docx_result,
+    ),
+    Case(
+        "빈 색인",
+        [Step("육아휴직은 최대 몇 년까지 쓸 수 있어?")],
+        _empty_index_marker,
+        _empty_index_result,
+        server=("--empty-index",),
     ),
 ]
 
