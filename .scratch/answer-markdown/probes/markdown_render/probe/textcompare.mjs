@@ -8,14 +8,16 @@
 // 산출물: out/textcompare/summary.json, 표준 출력의 마지막 줄(JSON 한 줄)
 //
 // 입력: 기존 52가지(cases.mjs), 모양 프로브의 사례 전부(shape-cases.mjs 의 GROUPS)와 화면 파일의 입력 다섯(SCREEN_INPUTS),
-// 병적인 입력 열넷(inputs.mjs). 합친 시제품(shape-entry.tsx 의 `combined` 갈래)으로 그린다. 그리다 던진 입력은 시제품이
-// 원문을 그대로 보이는 것(실패 때의 모양)으로 치고 `fallback` 으로 적는다.
+// 병적인 입력 열넷(inputs.mjs). 합친 시제품(shape-entry.tsx 의 `combined` 갈래)으로 그린다. 그리다 스택이 넘쳐
+// (`RangeError`) 던진 입력은 시제품이 원문을 그대로 보이는 것(실패 때의 모양)으로 치고 `fallback` 으로 적는다.
 //
 // 내는 것: 입력마다 부분열인지, 길이 비율(화면 ÷ 원문, 걸러 낸 글자 수), 부분열이 아닌 입력과 그 까닭, 비율이 가장 낮은
 // 다섯. 그리고 다른 입력의 화면 글을 바꿔 넣었을 때 규칙이 거르는지(모든 짝).
 //
 // 측정이 아닌 회차(.claude/rules/probes.md). 하나라도 있으면 종료 코드 1.
 // - 그렸는데 답의 칸(`div[data-answer="markdown"]`)이 없는 입력.
+// - 그리다 `RangeError` 가 아닌 예외를 던진 입력. 깊은 겹침의 스택 넘침이 아니면 변환의 버그일 수 있어, 원문으로
+//   물러선 것(부분열)으로 세지 않는다(2026-11-11 PR 직전 리뷰가 짚어 더했다. 그 전 판은 예외의 종류를 가리지 않았다).
 // - 양성 대조: 화면 파일의 입력 다섯은 글이 길고 서로 다르다. 그 스무 짝(다른 입력의 화면 글을 넣은 것)이 모두
 //   "부분열이 아니다"여야 한다. 하나라도 부분열이면 규칙이 바꿔치기를 거르지 못한 것이라 위의 "부분열이다"가 뜻이 없다.
 // - 걸러 내기 자가 시험이 틀리면 종료 코드 2.
@@ -171,13 +173,19 @@ async function main() {
     const sourceChars = lettersAndDigits(input.text);
     let html = null;
     let threw = null;
+    let stackOverflow = false;
     try {
       html = entry.render("combined", input.id, input.text).html;
     } catch (error) {
       threw = String(error).slice(0, 80);
+      stackOverflow = error instanceof Error && error.name === "RangeError";
+    }
+    if (html === null && !stackOverflow) {
+      notMeasured.push({ group: input.group, id: input.id, reason: "그리다 스택 넘침(RangeError)이 아닌 예외를 던졌다", threw });
+      continue;
     }
     if (html === null) {
-      // 그리다 던졌다. 시제품은 원문을 그대로 보인다.
+      // 스택이 넘쳐 던졌다. 시제품은 원문을 그대로 보인다.
       rows.push({ ...input, fallback: true, threw, sourceLength: sourceChars.length, screenLength: sourceChars.length, ratio: sourceChars.length === 0 ? null : 1, subsequence: true, reason: null, screenChars: sourceChars });
       continue;
     }

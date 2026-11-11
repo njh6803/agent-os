@@ -5,6 +5,7 @@
 // 산출물: out/typecheck/summary.json, 표준 출력의 마지막 줄(JSON 한 줄)
 //
 // 측정이 아닌 회차(.claude/rules/probes.md): 종료 코드 0 만으로 맺지 않는다.
+// - 본 검사(`tsc --noEmit -p tsconfig.json`)가 0 이 아닌 코드로 끝나면 어긋난 것이다.
 // - tsc 가 실제로 본 파일 목록(--listFilesOnly)에 두 컴포넌트와 두 라이브러리의 타입 선언, 그리고 합친 시제품
 //   (`AnswerMarkdown.tsx` 와 `lib/answer-markdown/`, `lib/link-url.ts`)의 파일이 모두 있어야 한다.
 // - 양성 대조: 같은 옵션을 물려받은 무대(out/typecheck/control)에 심은 오류 둘이 실제로 걸려야 한다.
@@ -76,6 +77,8 @@ const controlOutput = `${control.stdout}${control.stderr}`;
 const controlCodes = [...new Set([...controlOutput.matchAll(/error (TS\d+)/g)].map((m) => m[1]))].sort();
 
 const problems = [];
+// 본 검사가 오류로 끝나면 종료 코드 1이다(2026-11-11 PR 직전 리뷰가 짚어 더했다. 그 전 판은 요약의 `exit` 를 사람이 읽어야 했다).
+if (main.status !== 0) problems.push(`tsc --noEmit 이 ${String(main.status)}로 끝났다(요약의 errors)`);
 if (notSeen.length > 0) problems.push(`tsc 가 보지 않은 파일: ${notSeen.join(", ")}`);
 if (!controlWritten) problems.push("대조 사본에서 갈래를 지우지 못했다(컴포넌트의 글이 바뀌었다)");
 if (!/indexed\.ts.*TS2322/.test(controlOutput)) problems.push("noUncheckedIndexedAccess 대조(TS2322)가 걸리지 않았다");

@@ -397,6 +397,310 @@ a*b*c               →  abc   (b가 기울어짐. 두 규칙 모두 같음)
 - "잇단 제목의 표지와 이어진 번호의 표지는 시제품에 없어 사례 파일에도 없다. 둘 다 DOM에 남지 않으므로 요소의 종류와 차례는 사례 파일과 같고, 표지가 달리는 자리의 사례는 티켓이 더한다"
 - ADR 0053 이력의 새 문단 "승인 때 사용자가 더 고른 둘" 전체와 README의 문단 "승인 뒤에 다시 돌린 것" 전체.
 
+### 커밋
+
+`git commit -F`로 53개 파일을 한 커밋(`46d645269`)에 올렸다. 손으로 치는 검증 다섯은 이 커밋의 pre-commit 결과로 갈음했다. ruff check와 ruff format이 지났고(스테이지에 `.py`가 있어 돌았다), 러너의 열 가지(check-ticket, zizmor, lint-imports, check-instructions, check-type-escapes, pyright, pyright-linux, run-hooks, pytest, web-verify)가 모두 지났다. 러너는 1,061.5초 걸렸고(pytest 902.9초, web-verify 1,061.0초) 600초 제한을 넘겨 백그라운드로 넘어가 끝 알림을 기다렸다. 표 모양, 줄 구분 문자, 변이 표, 커밋 메시지 검사도 지났다. `Skipped`는 둘이다(카나리아 명세와 헌법 판. 볼 파일이 없었다). 갈음되지 않는 `-m llm`·`-m llm_widget`·`-m llm_portal`·e2e·사진 비교는 돌리지 않았다. 이 변경은 명세, ADR, 프로브, 일지뿐이고 제품 코드와 `web/`을 고치지 않았다.
+
+인용 대조(경고만 내는 검사)가 28건을 냈다. 일지 24건은 사용자에게 올린 선택 화면의 문구, 그때 새로 쓴 명세 문장(뒤에 다시 고쳐져 지금의 명세와 글자가 다르다), 셀프 리뷰 보고의 인용이다. 프로브 README 3건과 ADR 0053 1건은 시제품 주석의 옛 전제와 비교 규칙의 문장이다. 하나씩 원문과 대 보지는 않았다. PR 직전 리뷰가 볼 것으로 넘긴다.
+
+### 인계 (커밋 뒤)
+
+커밋 직후 `hook_handoff`의 계기가 왔다(세션 컨텍스트 263,934토큰, 경계 `커밋 뒤`). `handoff.md` 1의 다섯에 들지 않아 넘긴다. 커밋은 성공했다. 요청 범위는 PR과 병합까지다. 이 세션을 연 지시문의 "이어받을 상태"는 `인계: 셀프 리뷰 직전`으로 시작해 경계가 다르다. 이 세션이 쓴 `인계 못함` 줄이 없다. 곁 세션이 아니다(`get_session`의 `self`에 `parentSessionId`가 없었다). 바꾸기 전 제목은 `docs/answer-markdown-spec`이다. 지시문:
+
+```
+다음 작업: 기능 answer-markdown. 커밋한 명세(spec.md)와 ADR 0053 이력을 PR 직전 리뷰부터 이어 PR, 봇 반영, 회고, 병합까지 간다
+다음 단계: 명세
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /to-spec answer-markdown
+브랜치: docs/answer-markdown-spec
+모델: Fable 5.2 / xhigh. 2의 잇는 지시문(이 세션을 연 지시문과 같은 값)
+읽을 것: docs/journal/2026-11-11-1057-answer-markdown-spec.md의 "승인 뒤에 반영한 것", "커밋", "인계 (커밋 뒤)" 절(뒤의 둘은 워크트리의 작업 트리에만 있다)
+이어받을 상태: 인계: 커밋 뒤. 명세, 사용자가 승인한 ADR 0053의 2026-11-11 이력, 프로브, 일지를 한 커밋으로 올렸고 푸시와 PR은 아직이다. 남은 단계는 PR 직전 리뷰, PR, 봇 회차, 회고, 병합이다 docs/journal/2026-11-11-1057-answer-markdown-spec.md. 일지의 "커밋"과 "인계 (커밋 뒤)" 절은 커밋하지 않은 채 워크트리에 있다
+확인할 선행 조건: 주 체크아웃이 main이고 깨끗한지는 보지 않았다. 병합은 이 워크트리 사본의 next-session merge.md의 "워크트리에서 병합할 때"를 Read로 열어 따른다
+이번 요청 범위: PR과 병합까지
+```
+
+지시문에 싣지 않고 여기에 두는 남은 차례다.
+
+- PR 직전 리뷰는 `coderabbit-review` 서브에이전트이고, 돌지 못하면 `/security-review`와 `bug-perf-review`다. 뒤의 것에는 위 "판정과 고친 것"의 따옴표 문장과 "새로 쓴 명세의 문장"을 밀 주장으로 넘긴다. 위 인용 대조 28건도 함께 본다.
+- PR을 연 뒤 `@coderabbitai review` 코멘트와 `tools/wait_ci.py` 대기, 봇 회차 반영이다. 이 일지의 "회고"와 "다음"은 첫 세션이 끊으며 쓴 것이라 단계를 닫을 때 다시 쓴다.
+- `.scratch/base-agent/plan.md`는 PR #528과 워크트리 둘이 함께 고쳐 병합 때 글자 충돌이 날 수 있다.
+- 승인 뒤에 ADR 0053 이력을 두 자리 고쳤다("판을 고정한다"의 크기 수 넷, 끝 문단 "승인 때 사용자가 더 고른 둘"). 인계하는 턴의 마무리 글에서 그 문단의 원문과 바꾼 수를 사용자에게 보였다. 단계를 닫는 세션의 최종 보고에서도 다음을 밝힌다. 인용 안의 블록 사이는 그림에 없어 12px으로 정했다. 이어진 번호의 틈은 그림에 없어 4px으로 정했다. 번호의 줄 높이 0을 화면 파일에서 새로 찾아 맞췄다. 새 토큰 넷은 디자인 시스템 아티팩트의 토큰 목록에 실리지 않는다(짓기를 돌려 보지는 않았다). 잇단 제목과 이어진 번호의 표지는 시제품에서 재지 않고 티켓에 넘겼다. 프로브 README의 린트 "오류 0"이 사실과 달랐고 시제품을 고쳤다. `browser.mjs`와 `callsites.mjs`는 넓힌 규칙으로 다시 돌리지 않았다.
+
+제목을 `docs/answer-markdown-spec (인계함)`으로 바꿨다. 멈출 백그라운드 작업은 없었다. 잠금 풀기는 `is not locked`로 끝났다(이미 풀려 있었다).
+
+open-session을 부른다 2026-11-11T10:28Z
+
+## PR 직전 리뷰부터 병합까지 (같은 날. 인계 지시문으로 이어 받은 넷째 세션)
+
+세션 제목 `docs/answer-markdown-spec`. 같은 브랜치와 워크트리, 모델 Fable 5.2 / xhigh. 위 "인계 (커밋 뒤)"의 지시문으로 열렸고 PR 직전 리뷰부터 이었다. 아래 "회고"와 "다음"은 이 세션이 단계를 닫으며 다시 쓴다.
+
+### 사용자 프롬프트
+
+> .claude/skills/to-spec/SKILL.md 를 읽어 그대로 따른다. 이 세션을 연 저장소는 `C:\project\agent`이고 작업 폴더가 그곳이 아니면 따르지 말고 알린다. 스킬의 인자는 이 줄의 '인자:' 뒤부터 메시지 끝까지다. 인자: answer-markdown
+>
+> 다음 작업: 기능 answer-markdown. 커밋한 명세(spec.md)와 ADR 0053 이력을 PR 직전 리뷰부터 이어 PR, 봇 반영, 회고, 병합까지 간다
+> 다음 단계: 명세
+> 어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+> 시작 프롬프트: /to-spec answer-markdown
+> 브랜치: docs/answer-markdown-spec
+> 모델: Fable 5.2 / xhigh. 2의 잇는 지시문(이 세션을 연 지시문과 같은 값)
+> 읽을 것: docs/journal/2026-11-11-1057-answer-markdown-spec.md의 "승인 뒤에 반영한 것", "커밋", "인계 (커밋 뒤)" 절(뒤의 둘은 워크트리의 작업 트리에만 있다)
+> 이어받을 상태: 인계: 커밋 뒤. 명세, 사용자가 승인한 ADR 0053의 2026-11-11 이력, 프로브, 일지를 한 커밋으로 올렸고 푸시와 PR은 아직이다. 남은 단계는 PR 직전 리뷰, PR, 봇 회차, 회고, 병합이다 docs/journal/2026-11-11-1057-answer-markdown-spec.md. 일지의 "커밋"과 "인계 (커밋 뒤)" 절은 커밋하지 않은 채 워크트리에 있다
+> 확인할 선행 조건: 주 체크아웃이 main이고 깨끗한지는 보지 않았다. 병합은 이 워크트리 사본의 next-session merge.md의 "워크트리에서 병합할 때"를 Read로 열어 따른다
+> 이번 요청 범위: PR과 병합까지
+
+### 시작할 때의 상태
+
+`git worktree list`에서 이 브랜치가 워크트리 `.claude/worktrees/answer-markdown-spec`에 체크아웃된 것을 보고 `EnterWorktree(path)`로 들어왔다. HEAD는 `46d645269`이고 `git fetch origin` 뒤 `git log HEAD..origin/main`의 출력이 없었다(`origin/main`은 `768dee7d9` 그대로다). 커밋하지 않은 변경은 이 일지의 끝 34줄뿐이었다. 브랜치는 아직 푸시하지 않았다.
+
+### PR 직전 리뷰: CodeRabbit CLI (돌지 못했다)
+
+`coderabbit-review` 서브에이전트가 CLI를 돌렸고 시간당 한도 초과로 리뷰가 시작되지 못했다. 보고 원문:
+
+> CodeRabbit CLI가 리뷰를 시작하지 못하고 한도 초과로 거절했습니다. findings는 없고 `review_completed`도 나오지 않았습니다. 트리아지할 지적이 없습니다.
+>
+> - 실행한 명령(글자 그대로): `coderabbit review --agent --committed --base origin/main`. 작업 폴더는 `C:\project\agent\.claude\worktrees\answer-markdown-spec`입니다. `--committed --base`는 `coderabbit review --help`에서 확인한 옵션입니다.
+> - 설치와 로그인: `coderabbit --version`은 0.7.5이고 로그인은 되어 있습니다(Provider GitHub, Region US).
+> - `coderabbit auth status` 출력: `Plan: Free`, `Seat: not assigned`. 이 `Seat:` 줄은 그대로 옮겼고 이것만으로 종료하지는 않았습니다.
+> - 실행 결과: 연결(`connecting_to_review_service`)과 준비(`setting_up`) 단계까지만 갔고, 아래 오류로 끝났습니다. 종료 코드는 0이었지만 오류 문구가 찍혔습니다.
+>   - `{"type":"error","errorType":"rate_limit","message":"Rate limit exceeded","recoverable":true,"metadata":{"isProUser":false,"waitTime":"40 seconds",...}}`
+>   - 안내문: "You've used all 3 included reviews currently available. Usage-based reviews are enabled, but this Git provider account isn't linked to an assigned seat for the selected organization. Link or assign the seat, or use an Agentic API key, then retry."
+>   - 이어서 `Error: Rate limit exceeded`가 나왔고, `onDemandReviewAvailable`은 false입니다.
+> - 재실행은 하지 않았습니다. 재실행은 한도를 하나 더 쓰고, 안내문대로 좌석이 연결되지 않아 다시 막힐 가능성이 큽니다. 시간당 3회 한도를 이미 다 썼다는 뜻으로 읽힙니다. 이 한도를 쓴 다른 실행은 확인하지 못했습니다.
+> - 직접 확인하지 못한 것: 변경 53개의 내용, 프로브 산출 폴더 `.scratch/answer-markdown/probes/markdown_render/out/`의 유무, 일지에 정리된 새 문장과의 대조. CLI 지적이 없어 열어 볼 대상이 없었습니다.
+
+끝의 두 줄(대체 둘을 돌린다는 줄과 일지로 옮기라는 줄)은 뺐다. CLI 축은 비었다. `operations.md` 리뷰 파이프라인 2의 대체 둘(`/security-review`, `bug-perf-review`)을 돌린다.
+
+### PR 직전 리뷰: 대체 둘 (버그 축 둘, 보안 축 하나)
+
+버그 축은 `bug-perf-review` 서브에이전트 둘로 갈랐다. A는 문서와 밀 주장(명세, ADR 0053, 프로브 README, 기능 계획 셋의 문장을 프로브의 산출과 대 본다), B는 프로브 스크립트와 시제품 코드의 본문이다. 보안 축은 `/security-review`이고 취약점을 찾는 몫을 서브에이전트 하나가 맡았다. 신뢰도 0.7을 넘는 지적이 없어 오탐을 거르는 서브에이전트는 띄우지 않았다. 셋 모두 파일을 고치지 않았다. 보고는 받은 턴에 옮기지 못했고 지적을 판정한 뒤 이 절을 쓰며 세션 기록에서 글자 그대로 꺼내 옮겼다(하네스가 줄마다 넣은 들여쓰기 두 칸만 뗐다).
+
+#### 버그 축 A: 문서와 밀 주장 (보고 원문)
+
+> 기준 768dee7d9, 범위 파일 14개(명세, ADR 0053, 프로브 README, 기능 계획 셋, 대기열 둘, 프로브 산출·시제품·일지), 마지막 [호출 40]
+>
+> 대조한 문장 가운데 틀린 수치나 모순은 없었습니다. 지적은 Minor 셋과 Nit 하나입니다. Critical·Major는 없습니다.
+>
+> ## 지적
+>
+> - [Minor] .scratch/answer-markdown/spec.md:275,278 — 입력 토큰 수를 기본 출력 상한(16,000토큰)에 대는 어림이 명세에서는 사실처럼 읽힙니다.
+>   - 시나리오: 구현 티켓이 "479겹 = 15,955토큰이라 상한 안의 최악"을 그대로 믿습니다. 그런데 output_tokens.py가 센 것은 입력 토큰이고 모델은 claude-opus-5 하나입니다. 모델이 같은 글을 출력으로 낼 때의 토큰 수와 같다고 보는 것은 같은 토크나이저에 기댄 어림입니다. 플러그인의 기본 모델이 다르면 토크나이저가 달라 깊이가 달라질 수 있습니다.
+>   - 근거: probes/README.md:67(마지막 줄)은 이 단서를 적었고, 명세 275·278줄은 "쟀다(output_tokens.py)"라고만 적어 단서가 빠졌습니다.
+>   - 제안: 명세 275줄에 README의 단서를 한 문장으로 옮깁니다. "입력 토큰으로 센 값이고 모델은 claude-opus-5 하나다."
+> - [Minor] spec.md:278 — "479겹은 3초에 못 미치는 멈춤"의 바탕이 된 500겹 시간 범위(2.5~2.9초)가 산출에서 더 넓습니다.
+>   - 시나리오: 같은 입력(들여쓴 목록 500겹)의 산출은 2.49초에서 3.32초까지 퍼져 있습니다. out/browser/report.txt의 stages는 2485(headless)·2604(chromium)·3237ms(node), sweep은 chromium 3324ms입니다. 가드를 켠 guard 절만 보면 2.83~2.89초입니다. 이 범위는 guard 절의 값만 쓴 것이라 "3초 미만"의 여유가 문장이 말하는 만큼 크지 않습니다.
+>   - 근거: 479겹(23.1만 자)은 500겹(25.1만 자)의 약 0.92배라 보간하면 약 2.5~2.9초이고 3초 안입니다. 다만 본문이 "어림"이라고 밝힌 보간이고, 범위를 guard 값만으로 잡았습니다.
+>   - 제안: 범위를 "2.5~3.3초(실행마다)"로 넓히거나 "3초 안팎"으로 낮춥니다. 결정에는 영향이 없습니다.
+> - [Minor] .scratch/answer-markdown/probes/README.md:60(shape.mjs 줄) — "링크 17가지 … 목표와 어긋난 것이 없고"는 명세보다 넓게 적혔습니다.
+>   - 시나리오: 링크 묶음 17가지 가운데 목표가 있는 것은 15가지이고(out/shape/summary.json의 links.combined.targetPass 15, rounds 17), 나머지 둘은 목표가 없습니다. 명세 246줄은 "목표를 적어 둔 15가지"로 맞게 적었습니다. README만 17가지 전체가 맞았다고 읽힙니다.
+>   - 제안: README를 "링크 17가지 중 목표가 있는 15가지"로 고칩니다.
+> - [Nit] spec.md:276 — "10겹이면 목록은 46px 남는다"는 산출에 그 값이 직접 찍혀 있지 않습니다.
+>   - 근거: 인용 10겹은 guard 절에 146px로 찍혀 있습니다. 목록 10겹은 깊이 1의 안쪽 폭 262px에서 한 겹마다 24px씩 줄어든다고 계산하면 46px입니다. 계산은 맞지만 측정값이 아니라 환산입니다.
+>   - 제안: "쟀다" 문장에 "목록은 환산"이라고 덧붙입니다.
+>
+> ## 대 본 것, 이상 없음
+>
+> 산출을 열어 대조한 것입니다.
+>
+> - 서두의 수.
+>   - "거부한 안: 마흔다섯": `거부한 안:` 표시를 줄마다 세어 45입니다(15줄의 서두 언급은 제외).
+>   - "스물여섯": 절 제목 괄호의 "명세가 정했다"가 26개입니다.
+>   - "열다섯 프로브(앞 일곱, 뒤 여덟)": README 표 15줄이고 앞 일곱은 typecheck에서 stress까지, 뒤 여덟은 shape에서 output_tokens까지입니다.
+>   - "여섯 커밋": git log f64dfe41c..768dee7d9가 6개입니다.
+> - 크기(out/size/summary.json). gzip 증분 50,964와 48,812, 55,480과 53,143, 차이 4,516과 4,331이 맞습니다. remark-breaks 갈래는 93과 140 적습니다(55,387과 53,003). remark-cjk-friendly 갈래는 8,160과 7,255 많습니다(63,640과 60,398). Vite 기준선 67,445가 맞습니다.
+> - 의존성(out/deps): 직접 14, 전이 98(타입만 든 것 8), MIT 99와 ISC 1이 맞습니다.
+> - textcompare: 348가지 중 333이 부분열, 15가 아님(이미지 13, 문자 참조 2)입니다. 대조 스무 짝이 모두 걸렸습니다. 넓은 대조는 120,036짝 중 114,492가 걸렸고 5,544가 지나갔습니다(빈 것 3,380, 1~5자 1,825, 6~20자 316, 21자 이상 23). 합이 5,544이고 비율은 4.6%입니다. 그룹별 입력 수의 합도 348입니다.
+> - plaintext: 356가지 모두 측정이고 어긋남 0, 갈림 0입니다. 가드 묶음은 367회차 중 357 그림, 9 AnswerTooDeepError, 1 RangeError입니다.
+> - shape, 묶음별 수. 한 줄 바꿈 30가지(고칠 15가지 모두 고침). 굵게 34가지(고칠 20가지 중 직접 짠 변환 19, 플러그인 20. n13과 n34도 맞음). 숫자 사이 별표 60가지(목표 49가지에서 세 후보 모두 맞음). 변환의 차례 11가지(2를 먼저 돌리면 11, 거꾸로면 5. 고른 규칙과 좁은 규칙 모두). 문장 끝 번호 48가지(목표 35가지에서 cite-d만 어긋남 없음, 목표 없는 것 13가지). 출처 덩이 32가지(목표 17가지에서 여섯 후보 모두 맞음, 목표 없는 15가지 중 9에서 범위가 다른 넷이 갈림). 링크 17가지(목표 15가지), 제목·이미지·표·코드·각주·할 일 21가지, 합친 사례 17가지(목표 17가지)가 맞습니다.
+> - 목표 없는 11가지 별표 사례를 하나씩 열어 대 봤습니다. 갈린 일곱은 d04, d36, d40, d54, d57, d58, d60이고 갈리지 않은 넷은 d35, d37, d47, d59입니다. 고른 규칙은 앞의 넷을 글자로, 뒤의 셋을 강조로 둡니다. 좁은 규칙은 일곱을 모두 강조로 남깁니다. 문법 확장은 d54와 뒤의 셋을 글자로 둡니다. 명세 194~196줄의 서술과 일치합니다.
+> - 브라우저(out/browser/report.txt). 던지기 시작하는 깊이는 인용 2,261(headless-shell은 2,585까지 간 회차도 있음), 한 줄 목록 1,155입니다. 죽는 첫 깊이는 Chromium에서 인용 1,624·맨 div 1,629, headless-shell에서 186·190이고 죽은 단계는 배치입니다. stages에서 headless-shell은 목록 50겹을 그리고 100겹에서, Chromium은 500겹을 그리고 1,000겹에서 죽었습니다(한 줄 목록과 들여쓴 목록이 같음). fine: 인용 20/22겹, 목록 12/13겹, 인용 10겹의 안쪽 폭 146px이 맞습니다. 가드 절의 시간은 200겹 0.25~0.26초, 1,000겹 20.9~25.4초이고, 500겹은 위 지적대로 2.8~2.9초입니다.
+> - 토큰(probes/README.md:67에 적힌 값, 산출은 열지 않음). 479겹은 230,877자, 15,955토큰이고 480겹은 16,018토큰입니다. 200·500·1,000겹의 "약 4만·25만·100만 자"와 맞습니다. 공백 2,000칸이 126토큰이라 열여섯 칸쯤이 한 토큰입니다.
+> - Tailwind와 토큰. 후보 클래스는 59개에서 토큰 유틸리티 넷을 빼면 55개입니다. 틈 산수가 맞습니다: 제목 바로 뒤의 제목은 12 + (-8) + 12 = 16, 일반 제목은 앞 문단과 12 + 4 = 16, 뒤 문단과 -8 + 12 = 4, 잇단 제목 사이 8px은 12 - 8 + 4입니다. 전제인 토큰 값(theme.css)이 맞습니다: --spacing-1/2/3/6은 4/8/12/24px, --spacing-0은 0px, --radius-s는 4px, --*: initial이라 Tailwind 기본값은 없습니다. leading-0은 line-height: var(--spacing-0)로 기대가 정해져 있고 -mb-2의 기대는 calc(var(--spacing-2) * -1)입니다. 짓기의 SPACING은 /^--(spacing-\d+)$/이고 RADIUS는 --radius-*라 새 이름 있는 토큰은 건너뜁니다. web-design.md:29의 치수 목록이 switch-*·progress·badge·badge-start로 명세 312줄의 서술과 같습니다.
+> - 명세 안의 모순. "변환의 차례" 번호(6 번호, 8 표지)를 가리키는 139·144·145줄이 157~168줄의 목록과 일치합니다. 요소 표(112~124줄)와 "모양은 요소마다의 클래스로 낸다"(137~146줄)의 값(16/4px, 틈 2px/4px, 인용 안 12px)도 일치합니다. 서두의 "고른 것 넷"은 5줄의 "물은 둘 + 물은 둘"과 같습니다.
+>
+> ## 대 보지 못한 것
+>
+> - ADR 0053의 2026-11-11 이력과 본문 포인터 네 자리. diff를 받았지만 출력이 커서(49.6KB) 해당 문단을 읽지 못했습니다. 크기 수 넷(53,143, 55,480, 4,331, 4,516)이 이력에 맞게 들어갔는지, 가지 수와 겹 수가 명세와 같은지는 확인하지 못했습니다.
+> - 기능 계획 셋의 넘기는 글. admin-answer-preview, answer-markdown, base-agent의 plan.md를 명세와 대 보지 못했습니다. 대기열 항목 둘과 일지 216~240줄의 따옴표 문장 중 별표와 무관한 것도 산출과 대 보지 못했습니다.
+> - 산출 폴더를 열지 않고 README와 명세가 서로 일치하는 것만 본 수치: 레지스트리 일수(613일, 638일, 1,145일, 9판)와 axe 줄(대조 14, 표 32, 코드 18, 화면 20), lint·typecheck의 파일 수(15, 314), callsites의 로케이터 수와 browser.mjs의 capture 절(콘솔 오류 0/1건), 사례 id의 개수(f01~f05, i01~i05 등).
+> - 코드를 읽어 판정한 것은 없습니다. 시제품(index.ts, citations.ts, sources.ts, AnswerMarkdown.tsx)의 본문은 다른 리뷰어 몫이라 열지 않았습니다. 위 "이상 없음"은 모두 산출 JSON·보고서를 열어 대 본 것이고, 환산(목록 46px, 479겹의 시간)만 산출의 값에서 계산했습니다.
+>
+> ## 요약
+>
+> - 총 4건(Minor 3, Nit 1). 유효 4, 오탐 0.
+> - 즉시 수정할 항목은 없습니다. 명세 275·278줄에 입력 토큰 단서와 시간 범위를 고치고, README 60줄의 "링크 17가지"를 "목표 있는 15가지"로 고치는 것을 권합니다.
+> - 서두의 수, 크기, 짝 수, 사례 수, 깊이·시간은 산출과 일치합니다. 틈 산수(12 - 8 + 12 = 16)와 그 전제인 토큰 값도 맞습니다.
+>
+> 예산에 닿아 따라가지 못한 파일은 위 "대 보지 못한 것"과 같습니다. 이 리뷰가 남긴 백그라운드 작업은 없습니다.
+
+끝의 한 줄(일지로 옮기라는 줄)은 뺐다.
+
+#### 보안 축 (보고 원문)
+
+> # 보안 리뷰: 커밋 `46d645269` (answer-markdown 명세와 프로브)
+>
+> **신뢰도 0.7 이상의 취약점은 없다.** 시제품의 네 제한(원시 HTML, 이미지, 링크, `dangerouslySetInnerHTML`)을 깨는 입력을 코드에서 찾지 못했고, 프로브 스크립트에도 신뢰할 수 없는 입력이 명령·경로·로그로 흐르는 길이 없다.
+>
+> 아무것도 실행하지 않았고 파일도 고치지 않았다. 아래는 모두 코드를 읽은 결과다. 경로는 `C:\project\agent\.claude\worktrees\answer-markdown-spec\` 아래다.
+>
+> ## 확인한 것
+>
+> 시제품 (`.scratch\answer-markdown\probes\markdown_render\apps\widget\`)
+>
+> - **원시 HTML이 요소가 되는가: 안 된다.** `components\molecules\AnswerMarkdown.tsx` 278~285줄은 `rehypePlugins`를 넘기지 않는다. react-markdown 10.1.0의 `lib/index.js` 360~368줄이 `raw` 노드를 글자 노드로 바꾼다(`skipHtml`이 없으므로 지우지 않고 글자로 남긴다).
+> - **허용 목록 밖의 요소가 나오는가: 안 나온다.** 같은 파일 29~67줄의 `ALLOWED_ELEMENTS`·`allowElement`와 `unwrapDisallowed`를 봤다. `sup`은 `dataCite`가, `div`는 `sources` 클래스가 있어야 남는다. 그 표지를 입력으로 위조할 길은 원시 HTML뿐이고 그것은 요소가 되지 않는다.
+> - **`<img>`가 나오는가: 안 나온다.** `img`는 `ImageAlt`(82~84줄)와 `ImageAltText`(147~149줄)로 바뀌어 `alt`만 글자로 쓴다. 글자만 내는 갈래의 `PLAIN_COMPONENTS`(169~198줄)도 허용 요소 전부를 덮는다.
+> - **`href`에 http·https 밖의 스킴이 실리는가: 안 실린다.** `lib\link-url.ts` 11~21줄은 기준 주소 없는 `new URL`로 풀고, `protocol`과 `username`·`password`를 본 뒤 정규화한 `url.href`를 낸다. 판정은 `urlTransform`(121~123줄)과 `Link`(69~80줄)에서 두 번 걸린다.
+>   - 대소문자, 앞 공백·제어 글자, 탭을 끼운 스킴, `data:`, `vbscript:`, `//host`, `https://trusted@evil`은 막힌다.
+>   - 역슬래시와 `https:host` 꼴은 정규화된 https 주소로 나가므로 판정한 글자와 브라우저가 여는 글자가 같다.
+>   - 이 갈래별 결과는 WHATWG URL 표준에 대한 지식으로 판단했고 돌려 보지 않았다.
+>   - IDN·punycode는 정규화될 뿐 막히지 않는다. 보이는 글과 주소가 다른 속임수 링크는 ADR 0053이 이미 받아들인 잔여 위험이다.
+> - **이벤트 속성이나 공격자가 정하는 `style`이 실리는가: 안 실린다.** `Link`는 `href`와 `children`만 꺼내 쓰고 `title`은 버린다. 입력에서 오는 속성은 셋뿐이다.
+>   - 코드 블록의 `language-<첫 낱말>` 클래스(mdast-util-to-hast 13.2.1 `handlers/code.js` 22~27줄). 접두사가 고정이라 임의 클래스가 되지 않는다.
+>   - 표 칸의 정렬. 값은 파서가 내는 left·center·right뿐이다. 이것이 `style`로 바뀌는 hast-util-to-jsx-runtime 쪽 코드는 읽지 않았다.
+>   - `ol`의 `start`. 숫자다.
+> - **직접 짠 변환이 제한을 우회하는가: 안 한다.** `lib\answer-markdown\`의 열 파일을 모두 읽었다. `data.hName`·`hProperties`를 다는 곳은 `citations.ts` 41줄과 `sources.ts` 96줄 둘이고 값이 모두 상수다. `html`·`raw` 노드를 만들거나 `url`을 건드리는 곳은 없다. 입력에서 온 글은 전부 글자 노드로만 들어간다.
+> - **새 탭이 `window.opener`에 닿는가: 안 닿는다.** `AnswerMarkdown.tsx` 75줄이 `target="_blank" rel="noopener noreferrer"`를 고정으로 쓴다.
+> - **실패 경로가 원문을 HTML로 넣는가: 안 넣는다.** `RawAnswer`(204~210줄)는 `{text}`를 React 글자 자식으로 넣고, `plain`(330~339줄)은 문자열을 그대로 돌려준다.
+>
+> 프로브 스크립트
+>
+> - **명령 주입: 없다.** `browser.mjs` 267·380줄, `lint.mjs` 114줄, `registry-selftest.mjs` 94줄, `typecheck.mjs` 24줄은 모두 `process.execPath`와 고정 인자 배열로 띄우고 셸을 쓰지 않는다.
+> - **비밀 노출: 없다.** `output_tokens.py`는 키를 SDK가 환경에서 읽게 두고 찍거나 쓰지 않는다. `registry.mjs`는 고정된 패키지 이름만 보낸다. 커밋된 파일에서 키·토큰 꼴을 Grep으로 찾았고 일치가 없었다. `out/`은 `.gitignore`에 있다.
+> - **`innerHTML`·`dangerouslySetInnerHTML`: 시험용뿐이다.** `axe.mjs` 191줄은 고정된 대조 HTML을 Playwright 페이지에 넣는다. `lint.mjs` 45줄은 판정자가 잡는지 보려고 `out/lint/`에 심는 위반이다.
+> - **읽지 않은 것:** `shape-cases.mjs`, `inputs.mjs`, `judge.mjs`, `shape.mjs`, `plaintext.mjs`, `textcompare.mjs`, `callsites.mjs`, `size.mjs`, `render.mjs`는 위험한 호출을 Grep으로만 봤다. `browser.mjs`는 255~404줄만 읽었다. `pnpm-lock.yaml`은 감사하지 않았다.
+>
+> ## 명세의 보안 결정에 대한 참고
+>
+> 명세(`.scratch\answer-markdown\spec.md`)를 글자대로 따랐을 때 시제품보다 약해지는 자리는 하나이고 영향이 작다. 나머지는 명세가 시제품과 같거나 더 엄하다.
+>
+> - **링크의 `title` (명세가 말하지 않는다).** 시제품의 `Link`는 `title`을 버린다. 명세 128줄 "넘기지 않는 속성"은 라이브러리 클래스와 인라인 `style`만 적고, 341줄의 "모든 입력에 거는 규칙"도 `title`을 보지 않는다. 구현이 props를 `<a>`에 펼치면 `[글](https://evil "https://믿는곳")`의 툴팁 글이 실리고 명세의 시험은 통과한다. 취약점은 아니지만 "`a`에는 `href`·`target`·`rel`만 낸다"를 한 줄 적고 단위 시험 규칙에 넣기를 권한다.
+> - **깊이 가드 (명세가 더 엄하고, 시제품의 기본 내보내기는 꺼져 있다).** 명세 273줄은 10겹을 넘으면 원문으로 물러선다고 정했다. 시제품의 `AnswerMarkdown`은 `ANSWER_PLUGINS = [remarkGfm, remarkAnswer]`(`AnswerMarkdown.tsx` 352줄)이라 `remarkAnswer`가 기본값(`index.ts` 75줄)으로 돌고 `maxContainerDepth`가 없다. "거의 그대로" 옮기면 가드가 빠진다. 가용성 문제라 취약점으로 세지 않았다. 명세의 단위 시험(343줄, 11겹은 원문)이 있으면 잡힌다.
+> - **클래스와 인라인 `style` (명세가 더 엄하다).** 시제품은 `language-*` 클래스와 표 칸의 `style`을 DOM에 넘기고, 명세 128줄과 341줄은 둘 다 넘기지 않는다.
+> - **규칙을 바꾸는 입구 (명세가 더 엄하다).** 시제품의 `createAnswerMarkdown(config)`은 플러그인 목록을 밖에서 받는다. 명세 89줄은 props를 `text` 하나로 두고 허용 요소·링크 규칙을 바꾸는 prop을 두지 않는다.
+> - **링크 규칙, 이미지, 원시 HTML, 읽기 영역, 번호·출처 표지 (같다).** 명세 240~245줄, 251~252줄, 290~295줄, 145줄이 시제품의 동작과 맞는다.
+> - **실패 시 원문 (같다).** 명세 264~266줄은 "React 글자 자식으로"라고 적지는 않지만, `web\eslint.config.mjs` 83줄의 `no-restricted-syntax`가 `dangerouslySetInnerHTML`을 막는다.
+
+#### 버그 축 B: 프로브와 시제품 코드 (보고 원문)
+
+보고 안의 표 하나는 이 일지의 표 검사에 걸리지 않게 목록으로 옮겼고 글자는 그대로다.
+
+> C:/project/agent/.claude/worktrees/answer-markdown-spec 기준 커밋 `768dee7d9`, 범위 파일 49개(`README.md`와 `pnpm-lock.yaml`은 뺐다), 마지막 `[호출 34]`
+>
+> 측정을 무효로 만드는 버그는 찾지 못했다. 시제품의 동작 버그 하나는 번들을 불러 재현했다. 번들을 불러 본 것과 코드를 읽어 판정한 것은 지적마다 구분했다. 프로브 스크립트는 다시 돌리지 않았다.
+>
+> ## 지적
+>
+> - [Major] `apps/widget/lib/answer-markdown/citations.ts:78-81`, `index.ts:84-90` — 같은 문단에 다른 변환이 글자 노드를 다시 만들면, 역슬래시로 쓴 `\[1\]`이 위첨자 번호가 된다.
+>   - 시나리오(번들을 불러 확인했다): `render("combined", …)`에 다음 입력을 넣었다. 마지막 입력은 어느 변환도 거치지 않은 대조다.
+>     - 입력 `**민법(1)**는 \[1\] 입니다 *a* b`, 결과 `…는<sup data-cite>1</sup> 입니다…` (`\[1\]`이 번호가 됨)
+>     - 입력 `*가*나 \[1\] **다(라)**마`, 결과 `…나<sup data-cite>1</sup> <strong>…` (번호가 됨)
+>     - 입력 `2*3 \[1\] 끝*4`, 결과 `2*3<sup data-cite>1</sup> 끝*4` (번호가 됨)
+>     - 입력 `가나 \[1\] 끝`, 결과 `가나 [1] 끝` (정상)
+>   - 근거: `escapedBracket`은 글자 노드의 `position`으로 원문을 들여다본다(citations.ts:78-81). 그런데 1단계(`cjk-emphasis.ts`의 `split`과 `build`)와 2단계(`literal-marks.ts`의 `mergeText`)가 글자 노드를 `text()`로 새로 만든다. `tree.ts:98-114`의 `mergeText`도 합친 노드에 위치를 주지 않는다. 그러면 `sourceRange`가 null이 되어 `escapedBracket`이 false를 돌려주고, 4단계 `citationsToSuperscript`가 이스케이프를 모른 채 번호로 바꾼다. 위치를 쓰는 변환 중 이 순서에서 깨지는 것은 citations뿐이다. `index.ts` 머리 주석은 "위치가 필요한 변환은 앞에 둔다"고 적었는데, citations가 그 약속에서 빠졌다. `cjk-emphasis.ts`의 `eligible`은 1단계라 안전하다.
+>   - 영향: 명세와 `citations.ts` 머리 주석의 "`\[1\]`은 번호로 보지 않는다"가 강조·숫자 별표가 같은 문단에 있을 때 거짓이다. 구현 티켓이 시제품을 그대로 옮기면 같은 결함이 제품으로 간다. 명세의 수치 인용이 이 입력을 재지 않았으면 수치는 안 바뀐다. `shape-cases.mjs`에 같은 문단 사례가 있는지는 읽지 못했다.
+>   - 제안: 이스케이프 여부를 변환 전에 한 번 원문에서 모아 둔다(예: 글자 노드의 `data`에 표지를 달거나, 위치 집합을 index.ts에서 만들어 넘긴다). 또는 `text()`와 `mergeText`가 위치를 이어받게 한다. 위의 입력 셋을 시험에 넣는다.
+>
+> - [Minor] `probe/textcompare.mjs:174-182` — 그리다 던진 입력을 오류 종류를 보지 않고 "원문을 그대로 보인 것"으로 센다.
+>   - 시나리오: 합친 시제품(`combined`, 깊이 가드 없음)이 변환 버그로 어떤 입력에서 `TypeError`를 던지면, 그 회차가 `fallback: true, subsequence: true, ratio: 1`로 들어간다. `notMeasured`에도 종료 코드에도 걸리지 않고 `fallbacks` 목록에만 남는다.
+>   - 근거(코드 읽기): `threw = String(error).slice(0, 80)`을 적기만 하고 `RangeError`(스택 넘침)인지 가르지 않는다. `plaintext.mjs`는 가드 절에서 `AnswerTooDeepError` 이름을 단언하지만(:415), `textcompare.mjs`에는 그 단언이 없다. `shape.mjs`는 던진 회차를 `notMeasured`로 센다(:121-124).
+>   - 영향: 명세가 이 프로브에서 "부분열이 아닌 입력 N"이나 "대체 규칙이 모두 통과"를 인용했다면, 변환 크래시가 통과로 섞였을 가능성이 있다. `summary.fallbacks`가 병적 입력의 기대된 몇 건뿐인지 확인해야 한다.
+>   - 제안: `fallback` 회차의 오류가 `RangeError`나 `AnswerTooDeepError`일 때만 통과로 세고, 그 밖은 `notMeasured`로 보낸다.
+>
+> - [Minor] `probe/typecheck.mjs:29,84-95` — 시제품 파일 전체를 `tsc --noEmit`에 건 결과(`main.status`)가 종료 코드에 반영되지 않는다.
+>   - 시나리오: 시제품에 타입 오류가 있어 `exit: 2`가 나도, 파일 목록 확인과 양성 대조 둘이 맞으면 프로브는 0으로 끝난다.
+>   - 근거(코드 읽기): `problems`에 `main.status !== 0`이 없다. 요약 JSON의 `exit`와 `errors`를 사람이 읽어야 한다.
+>   - 영향: 명세가 "타입 검사를 지난다"를 이 프로브의 0 종료로 근거 삼았다면 약하다. 출력의 `exit: 0`과 `errors: []`를 직접 확인해야 한다.
+>   - 제안: 이 판정을 `problems`에 넣거나 요약 문구에 "지났는지는 `exit`를 읽는다"를 적는다.
+>
+> - [Minor] `apps/widget/lib/answer-markdown/citations.ts:44-72` — 한 줄로 이어진 긴 글에서 번호 수에 대해 제곱 시간이 든다.
+>   - 시나리오(번들을 불러 쟀다): 개행 없는 문단에 `가나 [1] ` 반복. 18,000자(번호 2,000개) 318ms, 72,000자(번호 8,000개) 3,532ms(파싱 포함). 입력이 4배인데 시간은 11배다. 이 규모는 출력 상한(16,000토큰) 안에서 거의 나오지 않는다.
+>   - 근거(코드 읽기): 번호마다 `value.slice(end)`에 `LINE_END.test`와 `split`, `lastIndexOf`를 쓴다. 줄이 길수록 번호당 훑는 양이 는다.
+>   - 영향: 명세나 ADR 수치에는 영향이 없다(처리 시간 수치는 이 경로를 거치지 않았다). 제품이 옮기면 짧은 입력에서는 문제없다.
+>   - 제안: 줄 머리·줄 끝 판정을 노드당 한 번 앞에서 훑어 줄 경계 배열을 만들어 쓴다.
+>   - 덧붙임: 다중 줄 입력(`가 [1]\n`을 만 번)은 변환을 뺀 `base`도 3.7초에서 14.6초로 제곱으로 늘어 라이브러리 몫이 크다. 이 지적에서 뺐다. 시간이 노이즈가 커서 단정하지 않는다.
+>
+> - [Minor] `probe/browser.mjs:643` — 가드 한도를 넘는 회차에서 가드 없이 `RangeError`로 물러난 경우도 "기대대로"로 센다.
+>   - 근거: `failure === "AnswerTooDeepError" || failure === "RangeError"`를 모두 허용한다. 한도 바로 위의 `quote:11`과 `list-inline:11`에서 `RangeError`가 먼저 날 수는 없어, 이 두 회차는 가드가 걸렸는지를 실제로 가른다. 큰 깊이에서만 가드 대신 파서가 먼저 던지는 것을 받아 주는 설계다.
+>   - 영향: 실질 문제는 아니다. 명세가 "큰 깊이도 가드가 막는다"고 쓰면 그 문장은 `RangeError`가 섞여 있다는 단서를 달아야 한다. `plaintext.mjs`는 한도 근처 사례에서 `TOO_DEEP`만 받아서 더 엄격하다.
+>
+> ## 오탐(혐의가 닫힌 것)
+>
+> - 깊이 가드 경계: `tree.ts:84-95`의 `containerDepth`가 `blockquote`와 `list`를 각각 +1로 센다(리스트 안 리스트는 2, `> - ` 다섯 번은 10, 여섯 번째 `>`는 11). `index.ts:79-82`는 `depth > limit`일 때 던져 10겹은 그리고 11겹은 그리지 않는다. `plaintext.mjs`의 `GUARD_CASES`(`mixed:5+5` / `mixed:6+5` 등)도 같은 규칙이다(코드 읽기, 번들의 combined에는 가드가 없어 불러 보지 않았다). 출처 덩이 `div`가 가드 뒤에 한 겹 더하지만 한도(10)와 브라우저가 죽는 수백 겹 사이에 들어 영향이 없다.
+> - 나무를 걷는 중 자식 수정: `forEachPhrasingParent`는 방문 뒤에 현재 `children`을 스택에 넣으므로 바뀐 자식을 한 번씩 본다. `cjk-emphasis`가 만든 노드는 위치가 없어 이어지는 단계에서 다시 처리되지 않는다.
+> - `literal-marks.ts`의 `beyondRun` 경계: 여는 쪽은 `range.start`, 닫는 쪽은 `range.end-1`에서 읽어 경계가 맞다. `literalizeMarks`의 되풀이는 `changed`가 있을 때만 이어진다.
+> - 서로게이트 쌍과 한글: `😀**민법(1)**는 끝`은 `<strong>`으로 정상 변환되었다. 빈 글, `**`, `***`, `* * *`, 코드 스팬 안의 `**`와 `[1]`, 표 칸 안의 `**x(1)**y`와 `*z(2)*w`, `[1]`만 있는 글, `[12345]`(4자리 이상)도 의도대로 나왔다(번들을 불러 확인).
+> - `output_tokens.py`의 이분 탐색은 `low`가 상한 안, `high`가 상한 밖일 때 `high - low > 1`로 끝나고 마지막에 두 끝을 실제로 다시 세어 표지로 삼는다. 경계가 어긋나지 않았다. 두 양성 대조가 종료 코드에 연결되어 있다.
+> - `shape.mjs`: `problem` 사례의 대조 갈래 확인, BOM 갈림 표지(`bomExercised`), 던진 회차와 표지 없는 회차의 `notMeasured` 합산과 종료 코드 1이 모두 서 있다. `normalizeSelfTest`는 실제로 걸릴 수 있는 입력이다.
+> - `lint.mjs`: 심은 위반 네 규칙과 파일 목록(`COMPONENT_FILES`)을 단언하고 파싱 오류를 `notMeasured`로 센다. `size.mjs`(`expect`·`absent`·React 150KB 문턱)와 `axe.mjs`(대조가 기대와 다르면 `notMeasured`, axe 판 고정)도 표지가 있다. 다만 `size.mjs`의 `absent`는 패키지 이름이 정확히 같을 때만 걸린다.
+> - `tailwind_utilities.mjs`: 기준선 대조(`p-4`), 규칙이 없어야 하는 여섯, 토큰 추가 전 유틸리티 부재를 단언한다. 일부 기대(`space-y-1`)가 약하지만 `missing`/`different` 집계가 틀린 쪽으로 새지 않는다.
+> - `browser-kit.mjs`의 `settle`, 크래시 사다리(`findCrashDepth`), 임계 이분 탐색(`browserThreshold`)은 경계가 맞다.
+>
+> ## 요약
+>
+> - 건수: 유효 5(Major 1, Minor 4), 오탐 9묶음. 유효/오탐 약 5:9.
+> - 즉시 수정: citations의 이스케이프 판정이 위치 소실에 무너지는 것(Major). 구현 티켓이 시제품을 옮기기 전에 고친다. 그다음 `textcompare.mjs`의 던진 회차 구분(Minor)을 고치고 명세가 인용한 수치에 크래시가 섞였는지 `summary.fallbacks`를 확인한다.
+> - 따라가지 못한 파일(예산상): `probe/callsites.mjs`, `deps.mjs`, `registry.mjs`, `registry-selftest.mjs`, `render.mjs`, `report.mjs`, `stress.mjs`, `stress-child.mjs`, `stage-child.mjs`, `stage-run.tsx`, `stage-node-entry.tsx`, `inputs.mjs`, `cases.mjs`, `shape-cases.mjs`, `shape-entry.tsx`, `plain-entry.tsx`, `browser-entry.tsx`, `literal-marks-syntax.ts`(합친 변환에서 쓰지 않아 코드 읽기만), `browser.mjs`의 1-380줄. `link-url.ts`는 보안 축이라 읽기만 했다.
+
+끝의 한 줄(일지로 옮기라는 줄)은 뺐다.
+
+### PR 직전 리뷰의 판정과 고친 것
+
+지적마다 산출과 코드에서 근거를 확인한 뒤 판정했다. 축의 이름은 위 절의 A, 보안, B이고 번호는 보고에 적힌 차례다.
+
+- **A1(Minor, 고침).** 명세 "깊이 가드"의 토큰 문단에 단서를 더했다. 센 것이 입력 토큰이고 모델 id가 `claude-opus-5` 하나라는 것, 출력으로 낼 때의 토큰 수와 같다고 보는 것은 같은 토크나이저에 기댄 어림이라는 것, 토크나이저가 다른 모델에서는 깊이가 달라질 수 있다는 것이다. 프로브 README의 `output_tokens.py` 줄에는 이 단서가 이미 있었다.
+- **A3(Minor, 고침).** 프로브 README의 `shape.mjs` 줄을 "링크 17가지 가운데 목표를 적어 둔 15가지"로 고쳤다. 명세 "링크"의 서술과 같아졌다.
+- **A4(Nit, 일부 오탐).** 46px은 환산이 아니라 측정값이다. `out/browser/report.txt`의 `guard` 절이 10겹을 그린 회차에 `list-inline:10`의 폭 46px과 `quote:10`의 폭 146px을 찍었다(보고서 377줄과 375줄을 읽었다). 인용한 자리가 보이지 않았던 것은 맞아, 명세에 두 폭이 `guard`가 10겹을 그린 회차에 찍은 값이라는 괄호를 더했다.
+- **보안의 참고 하나(링크의 `title`, 고침).** 명세 "링크"에 항목 하나를 더했다. 링크의 속성은 `href`, `target`, `rel` 셋뿐이고 마크다운의 링크 제목은 요소에 넘기지 않는다. 라이브러리가 제목을 `title` 속성으로 넘기는 것은 설치한 판의 처리기에서 읽었다(`mdast-util-to-hast` 13.2.1의 `lib/handlers/link.js` 23~24줄이 `properties.title = node.title`이다). 시제품이 제목을 내지 않는 것은 아래 "손으로 본 것"에서 봤다. 단위 시험의 "모든 입력에 거는 규칙"에 링크의 속성 셋을, "그 밖"에 제목이 든 링크 사례를 더했다. 절 제목의 괄호와 서두의 목록도 "내는 주소와 속성"으로 맞췄다.
+- **보안의 참고 둘(시제품 기본 갈래의 가드, 고침).** 명세 "부품의 단위 시험"의 사례 파일 문단에, 시제품의 기본 갈래는 깊이 가드를 켜지 않고 프로브가 가드를 켠 갈래를 따로 쟀으며 부품은 가드를 늘 켠다는 것을 적었다(시제품 변환 `index.ts`의 머리 주석과 `AnswerSteps.maxContainerDepth`의 주석을 읽었다).
+- **B2(Minor, 고침).** `textcompare.mjs`가 그리다 던진 입력을 스택 넘침(`RangeError`)일 때만 원문으로 물러선 것으로 세고, 그 밖의 예외는 측정이 아닌 회차로 세게 고쳤다. 머리 주석의 측정 아님 조건에도 더했다.
+- **B3(Minor, 고침).** `typecheck.mjs`가 본 검사(`tsc --noEmit`)의 종료 코드가 0이 아니면 종료 코드 1로 끝나게 `problems`에 더했다. 머리 주석에도 적었다.
+- **B4(Minor, 명세에 넘겼다).** 같은 번들에 넣어 손으로 쟀고(아래 "손으로 본 것") 번호의 수보다 가파르게 느려지는 것을 봤다. 프로브의 시제품은 고치지 않고 명세 "문장 끝 번호"에 "구현에 넘기는 것" 항목을 더해, 부품은 글자 노드마다 줄의 경계를 한 번만 훑게 짓는다고 적었다. 그런 글이 기본 출력 상한 안에서 번호 몇 개까지 나오는지는 세지 않았다.
+- **인용 대조의 경고 넷(고침).** 앞 세션이 넘긴 28건 가운데 프로브 README의 셋(시제품 주석의 옛 전제를 옮긴 따옴표)과 ADR 0053 이력의 하나를 따옴표 없이 풀어 썼다. ADR의 것은 사용자가 승인한 이력의 한 문장이고 결정은 그대로다. 비교 규칙을 따옴표로 옮겼던 것을 "화면의 글에서 글자와 숫자만 남긴 것이 원문에서 같은 것만 남긴 것의 부분열인지 보는 것"으로 풀었다. 명세의 원문과 글자가 달라 경고가 났던 자리다. 일지의 24건은 선택 화면의 문구와 그때의 명세 문장, 보고의 인용이라 기록으로 두고 고치지 않았다.
+- 프로브 README에 "PR 직전 리뷰 뒤에 고친 것" 문단을 더해 B2와 B3, 다시 돌린 결과, 새 갈래를 돌려 보지 않았다는 것을 적었다.
+
+### PR 직전 리뷰에서 남긴 것과 이유
+
+- **A2(Minor, 남김).** 명세의 "500겹 2.5~2.9초"는 인용한 `guard` 절(가드를 켠 채 원문을 보이기까지)의 두 실행 범위다. 보고가 든 3.2~3.3초는 가드 없이 끝까지 그린 다른 길의 값이다(`stages`의 Node 갈래와 `sweep`). 저장된 보고서(둘째 실행)의 `guard` 값은 2,829.8ms와 2,888.6ms였다. 첫 실행의 사본은 저장소에 없어 하한 2.5초는 이 세션이 다시 확인하지 못했고, 위 "셀프 리뷰"의 표준 8과 "다시 돌린 명령과 결과"가 두 실행의 범위라고 적은 것에 기댄다. "3초에 못 미치는 멈춤"은 명세와 ADR 0053의 승인받은 이력이 모두 어림이라고 밝힌 문장이라 그대로 둔다.
+- **B1(Major로 보고됐다. 남김).** 보고가 재현한 것은 사실이다. 같은 입력 셋을 넣어 위첨자가 되는 것을 봤다(아래 "손으로 본 것"). 다만 명세가 이미 받아들이는 한계로 적은 것이다. 명세 "변환의 차례"가 번호 변환이 차례 2와 3 뒤에 돌아 두 변환이 새로 지은 글자 노드에서는 역슬래시를 알아보지 못한다고 적었고, "문장 끝 번호"의 받아들이는 한계와 단위 시험의 사례 목록에도 있다. 위 "셀프 리뷰"의 명세 7에서 판정했고 `k7`과 `k8`로 봤다. 리뷰어 B는 명세를 읽지 않는 몫이었다. 시제품 `index.ts`의 머리 주석이 이 한계를 적지 않았던 것은 맞아 주석 두 줄을 더했다(코드는 바꾸지 않았다). 고치려면 변환 전에 역슬래시의 위치를 원문에서 모아 넘기거나 새로 짓는 글자 노드가 위치를 이어받게 해야 하고, 그것은 명세가 정한 변환의 설계를 바꾸는 일이다. 드문 입력이라는 것은 명세 Further Notes가 어림으로 적었다.
+- **B5(Minor, 남김).** 명세 "깊이 가드"가 이미 단서를 적었다. 한 줄 목록 3,000겹에서는 가드보다 앞인 파싱에서 `RangeError`가 났고 같은 try/catch가 받아 원문을 보였다고 적혀 있다. 한도 바로 위의 두 회차(`quote:11`, `list-inline:11`)는 가드가 걸렸는지를 실제로 가른다는 것은 보고도 인정했다.
+- **두 축이 대 보지 못한 것 가운데 이 세션이 본 것.** ADR 0053 이력의 크기 수 넷(53,143, 55,480, 4,331, 4,516)은 이력의 "판을 고정한다" 문단을 읽어 A가 산출과 대 본 수와 같은 것을 확인했다. 기능 계획 셋의 넘기는 글은 기준 커밋과 견줘 이 브랜치가 바꾼 글만 뽑아(스크래치 스크립트, `difflib`) 명세와 하나씩 대 봤다. answer-markdown의 것(판 둘, 10겹, 글자로 남기는 `[x]`와 `[^1]`, 사용자가 고른 넷, 묶음 셋과 그 이름, 가리키는 절 이름 다섯)은 명세의 서두와 "새 의존성", "고칠 자리의 묶음"과 같았다. admin-answer-preview의 것(`h2`부터 그리고 단계를 받는 prop이 없다, 촘촘한 밀도, props는 글 하나, 10겹, 번들 증분과 e2e와 사진 비교)은 명세 "부품의 자리와 내보내는 것"과 Out of Scope의 첫 항목과 같았다. base-agent의 것(알아보는 기본 꼴과 사례 `s29`, 알아보지 않는 다섯 꼴)은 명세 "출처 덩이"와 Further Notes의 "ADR 0051, 기본 에이전트의 명세와의 관계"와 같았다.
+- **끝내 대 보지 못한 것.** A가 산출을 열지 않고 README와 명세가 서로 같은 것만 본 수(레지스트리의 일수, axe의 줄 수, callsites의 로케이터 수, `browser.mjs`의 capture 절, 사례 id의 개수)와 대기열 항목 둘은 이 세션도 산출과 대 보지 않았다. B가 따라가지 못한 프로브 파일(`callsites.mjs`, `deps.mjs`, `registry*.mjs`, `render.mjs`, `stress*.mjs`, `stage-*`, `inputs.mjs`, `cases.mjs`, `shape-cases.mjs`, 진입점 셋, `browser.mjs`의 1~380줄)의 본문은 버그 축이 보지 않았다. 보안 축은 `shape-cases.mjs` 등 아홉 파일을 위험한 호출의 Grep으로만 봤고 `pnpm-lock.yaml`을 감사하지 않았다. PR의 봇이 볼 것으로 넘긴다.
+
+### 손으로 본 것: 링크의 제목, 역슬래시로 쓴 번호, 한 줄에 번호가 많은 글
+
+명세 "링크"와 "문장 끝 번호"가 가리키는 기록이다. `shape.mjs`가 묶어 둔 번들의 `render(갈래, id, 입력)`을 부르는 스크립트를 세션 스크래치패드에 두고 워크트리 루트에서 `node <스크래치패드>/review-check.cjs .scratch/answer-markdown/probes/markdown_render/out/build/shape-entry.cjs`로 돌렸다. 커밋한 프로브가 아니라 손으로 본 것이다. 종료 코드는 0이었다. 스크립트는 시간을 잰 회차마다 낸 `<sup`의 수가 번호의 수와 같은지(번호 변환이 없는 갈래는 0인지) 보고, 다르면 측정이 아닌 회차로 세어 1로 끝난다. 줄은 id, 입력(JSON 문자열), 위첨자와 `title=`의 수, 낸 HTML이다.
+
+```
+== 링크의 title ==
+t1-title | "[글](https://example.com \"https://trusted.example\")" | sup=0 title=0 | <div data-probe="t1-title"><div class="md" data-answer="markdown"><p><a href="https://example.com/" target="_blank" rel="noopener noreferrer">글<span class="sr-only">(새 탭에서 열림)</span></a></p></div></div>
+t1-control-no-title | "[글](https://example.com)" | sup=0 title=0 | <div data-probe="t1-control-no-title"><div class="md" data-answer="markdown"><p><a href="https://example.com/" target="_blank" rel="noopener noreferrer">글<span class="sr-only">(새 탭에서 열림)</span></a></p></div></div>
+t1-base(대조) | title=0 | <div data-probe="t1-base"><div class="md" data-answer="markdown"><p><a href="https://example.com/" target="_blank" rel="noopener noreferrer">글<span class="sr-only">(새 탭에서 열림)</span></a></p></div></div>
+== 역슬래시로 쓴 번호 ==
+e1-cjk | "**민법(1)**는 \\[1\\] 입니다 *a* b" | sup=1 title=0 | <div data-probe="e1-cjk"><div class="md" data-answer="markdown"><p><strong>민법(1)</strong>는<sup data-cite="">1</sup> 입니다 <em>a</em> b</p></div></div>
+e2-em | "*가*나 \\[1\\] **다(라)**마" | sup=1 title=0 | <div data-probe="e2-em"><div class="md" data-answer="markdown"><p><em>가</em>나<sup data-cite="">1</sup> <strong>다(라)</strong>마</p></div></div>
+e3-digit | "2*3 \\[1\\] 끝*4" | sup=1 title=0 | <div data-probe="e3-digit"><div class="md" data-answer="markdown"><p>2*3<sup data-cite="">1</sup> 끝*4</p></div></div>
+e4-control | "가나 \\[1\\] 끝" | sup=0 title=0 | <div data-probe="e4-control"><div class="md" data-answer="markdown"><p>가나 [1] 끝</p></div></div>
+== 한 줄에 번호가 많은 글의 시간 ==
+n=500 chars=3500 base=22ms cite-d=57ms(sup 500) combined=51ms(sup 500)
+n=1000 chars=7000 base=20ms cite-d=111ms(sup 1000) combined=123ms(sup 1000)
+n=2000 chars=14000 base=36ms cite-d=273ms(sup 2000) combined=403ms(sup 2000)
+n=4000 chars=28000 base=85ms cite-d=589ms(sup 4000) combined=540ms(sup 4000)
+n=8000 chars=56000 base=195ms cite-d=3458ms(sup 8000) combined=1547ms(sup 8000)
+```
+
+- **링크의 제목.** 합친 시제품은 제목이 든 링크에서 `title`을 내지 않았다. 양성 대조로 둔 `base` 갈래(직접 짠 변환이 없는 갈래)도 `title`을 내지 않아 대조가 되지 못했다. 번들의 모든 갈래가 시제품의 같은 `Link` 컴포넌트를 쓰고, 그 컴포넌트가 `href`와 `children`만 꺼내 쓰기 때문이다(`AnswerMarkdown.tsx`를 읽었다). 그래서 라이브러리가 제목을 `title` 속성으로 넘긴다는 쪽은 돌려 본 것이 아니라 설치한 판의 처리기를 읽은 것이고, 명세에도 그렇게 갈라 적었다.
+- **역슬래시로 쓴 번호.** B1의 입력 셋(`e1`~`e3`)에서 `\[1\]`이 위첨자가 됐고 대조(`e4`)는 글자로 남았다. 명세가 적은 받아들이는 한계와 같은 모양이다.
+- **한 줄에 번호가 많은 글.** `가나 [1] `을 되풀이한 한 줄이다. 번호 변환만 켠 갈래(`cite-d`)와 합친 갈래(`combined`)는 번호가 4배(2,000개에서 8,000개)일 때 시간이 4~13배였고, 번호 변환이 없는 갈래(`base`)는 5배쯤이었다. 한 번 돌린 값이고 8,000개에서 두 갈래의 값이 두 배 넘게 벌어져 흔들림이 크다. 명세에는 두 갈래의 값을 범위로 적었다.
+
+### PR 직전 리뷰 뒤에 다시 돌린 명령과 결과
+
+- `typecheck.mjs`를 고친 뒤와 `index.ts`에 주석을 더한 뒤에 README의 명령대로 다시 돌렸다. 두 번 모두 종료 코드 0, 본 검사의 오류 0, 본 파일 314개, 대조의 코드 TS2322, 측정이 아닌 회차 0이었다.
+- `textcompare.mjs`를 고친 뒤 다시 돌렸다. 입력 348가지 가운데 부분열이 333, 아님이 15(이미지 표지 13, 문자 참조 2)이고, 그리다 던진 입력은 `병적인 입력/quote-3k` 하나이며 `RangeError`였다. 대조 스무 짝이 모두 걸렸고 넓은 대조는 120,036짝 가운데 114,492짝이 걸렸다(지나간 짝은 3,380, 1,825, 316, 23). 측정이 아닌 회차는 0이었다. 고치기 전의 수와 같다.
+- `lint.mjs`를 `index.ts`에 주석을 더한 뒤 다시 돌렸다. 15파일, 오류 0, 경고 0이고 설정의 해시(`2c5d34e3`으로 시작한다)가 README의 것과 같았다.
+- `textcompare.mjs`와 `typecheck.mjs`에 새로 더한 두 갈래(다른 예외를 던지는 글, 본 검사의 오류)가 실제로 걸리는지는 돌려 보지 않았다. 그 갈래에 드는 입력이 없다.
+
 ## 회고
 
 세션을 끊으며 돌았다(retro). 후보 여섯, 승인 둘(둘 다 대기열에 둔다), 기각 넷, 넘김 없음. 만료할 항목은 작업 트리와 `--ref origin/main` 두 출력 모두 없었다.
