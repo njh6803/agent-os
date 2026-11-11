@@ -1,0 +1,252 @@
+# tools/hook_pyright_unchecked_path.py(대기열 431)의 판정과 표지를 하나씩 깨는 변이.
+#   PYTHONUTF8=1 uv run python tools/mutate.py .scratch/harness/probes/pyright_unchecked_path_hook_mutations.toml
+# 표지는 파라미터 시험의 id(`[명령]`)이거나 그 시험만 내는 값이다. 끝의 하나는 대조군이다. 알림 끝
+# 낱말은 어느 시험도 보지 않는다.
+
+[[mutation]]
+name = "점으로 시작하는 토막을 보지 않는다"
+tests = ["tests/tools/test_hook_pyright_unchecked_path.py", "-k", "분석하지_않는_폴더"]
+expect = "red"
+expect_output = ['''_짚는다[uv run pyright .scratch/harness/probes/x.py]''']
+[[mutation.edit]]
+file = "tools/hook_pyright_unchecked_path.py"
+old = '''    return any(part.startswith(".") or part.lower() in UNCHECKED_NAMES for part in parts)'''
+new = '''    return any(part.lower() in UNCHECKED_NAMES for part in parts)'''
+
+[[mutation]]
+name = "node_modules 를 뺀다"
+tests = ["tests/tools/test_hook_pyright_unchecked_path.py", "-k", "분석하지_않는_폴더"]
+expect = "red"
+expect_output = ['''_짚는다[uv run pyright web/node_modules/x.py]''']
+[[mutation.edit]]
+file = "tools/hook_pyright_unchecked_path.py"
+old = '''UNCHECKED_NAMES = frozenset({"node_modules", "__pycache__"})'''
+new = '''UNCHECKED_NAMES = frozenset({"__pycache__"})'''
+
+[[mutation]]
+name = "__pycache__ 를 뺀다"
+tests = ["tests/tools/test_hook_pyright_unchecked_path.py", "-k", "분석하지_않는_폴더"]
+expect = "red"
+expect_output = ['''_짚는다[uv run pyright tools/__pycache__/x.py]''']
+[[mutation.edit]]
+file = "tools/hook_pyright_unchecked_path.py"
+old = '''UNCHECKED_NAMES = frozenset({"node_modules", "__pycache__"})'''
+new = '''UNCHECKED_NAMES = frozenset({"node_modules"})'''
+
+[[mutation]]
+name = "include 밖의 점 없는 폴더도 짚는다(대기열 431 이 적은 옛 판정)"
+tests = ["tests/tools/test_hook_pyright_unchecked_path.py", "-k", "분석되는_경로는"]
+expect = "red"
+expect_output = ['''_짚지_않는다[uv run pyright docs/x.py]''']
+[[mutation.edit]]
+file = "tools/hook_pyright_unchecked_path.py"
+old = '''    return any(part.startswith(".") or part.lower() in UNCHECKED_NAMES for part in parts)'''
+new = '''    return bool(parts) and (
+        parts[0] not in ("src", "tests", "tools")
+        or any(part.startswith(".") or part.lower() in UNCHECKED_NAMES for part in parts)
+    )'''
+
+[[mutation]]
+name = "명령 낱말 앞이 래퍼가 아니어도 pyright 로 본다"
+tests = ["tests/tools/test_hook_pyright_unchecked_path.py", "-k", "명령_낱말이_아니면"]
+expect = "red"
+expect_output = ['''_짚지_않는다[grep pyright .scratch/x.py]''']
+[[mutation.edit]]
+file = "tools/hook_pyright_unchecked_path.py"
+old = '''        else:
+            return None
+    return None
+
+
+def _path_arguments'''
+new = '''        else:
+            continue
+    return None
+
+
+def _path_arguments'''
+
+[[mutation]]
+name = "리다이렉트 대상을 경로 인자로 본다"
+tests = ["tests/tools/test_hook_pyright_unchecked_path.py", "-k", "리다이렉트_대상과_옵션_값"]
+expect = "red"
+expect_output = ['''_아니다[uv run pyright tests/x.py > .scratch/out.json]''']
+[[mutation.edit]]
+file = "tools/hook_pyright_unchecked_path.py"
+old = '''        tokens = _without_redirects(_tokens(segment))'''
+new = '''        tokens = _tokens(segment)'''
+
+[[mutation]]
+name = "값을 받는 옵션의 값을 경로 인자로 본다"
+tests = ["tests/tools/test_hook_pyright_unchecked_path.py", "-k", "리다이렉트_대상과_옵션_값"]
+expect = "red"
+expect_output = ['''_아니다[uv run pyright --pythonpath .venv/Scripts/python.exe tests/x.py]''']
+[[mutation.edit]]
+file = "tools/hook_pyright_unchecked_path.py"
+old = '''        elif token in _PYRIGHT_VALUE_OPTIONS:
+            skip_value = True
+'''
+new = ''''''
+
+[[mutation]]
+name = "--project 를 쓴 호출도 판정한다"
+tests = ["tests/tools/test_hook_pyright_unchecked_path.py", "-k", "프로젝트_옵션을"]
+expect = "red"
+expect_output = ['''건너뛴다[uv run pyright --project .scratch/p .scratch/x.py]''']
+[[mutation.edit]]
+file = "tools/hook_pyright_unchecked_path.py"
+old = '''        elif token in _PROJECT_OPTIONS or token.startswith(("--project=", "-p=")):
+            return []
+'''
+new = '''        elif token in _PROJECT_OPTIONS or token.startswith(("--project=", "-p=")):
+            skip_value = True
+'''
+
+[[mutation]]
+name = "절대 경로를 루트 기준으로 바꾸지 않고 앞쪽 토막을 그대로 본다"
+tests = ["tests/tools/test_hook_pyright_unchecked_path.py", "-k", "루트가_점_폴더_아래여도"]
+expect = "red"
+expect_output = ["/.claude/worktrees/w/tests/x.py'"]
+[[mutation.edit]]
+file = "tools/hook_pyright_unchecked_path.py"
+old = '''            return PureWindowsPath(path.anchor, *collapsed).relative_to(PureWindowsPath(root)).parts'''
+new = '''            return collapsed'''
+
+[[mutation]]
+name = "표지를 쓰지 않아 호출마다 알린다"
+tests = ["tests/tools/test_hook_pyright_unchecked_path.py", "-k", "표지는_세션과_에이전트마다"]
+expect = "red"
+expect_output = ['''assert not True''']
+[[mutation.edit]]
+file = "tools/hook_pyright_unchecked_path.py"
+old = '''        os.close(os.open(directory / name, os.O_CREAT | os.O_EXCL | os.O_WRONLY))
+    except FileExistsError:
+        return False'''
+new = '''        os.close(os.open(directory / name, os.O_CREAT | os.O_WRONLY))
+    except FileExistsError:
+        return False'''
+
+[[mutation]]
+name = "-v 를 값을 받는 옵션에서 뺀다"
+tests = ["tests/tools/test_hook_pyright_unchecked_path.py", "-k", "리다이렉트_대상과_옵션_값"]
+expect = "red"
+expect_output = ['''_아니다[uv run pyright -v .venvs tests/x.py]''']
+[[mutation.edit]]
+file = "tools/hook_pyright_unchecked_path.py"
+old = '''        "-v",
+        "--venvpath",'''
+new = '''        "--venvpath",'''
+
+[[mutation]]
+name = "--createstub 를 값을 받는 옵션에서 뺀다"
+tests = ["tests/tools/test_hook_pyright_unchecked_path.py", "-k", "리다이렉트_대상과_옵션_값"]
+expect = "red"
+expect_output = ['''_아니다[uv run pyright --createstub .scratch tests/x.py]''']
+[[mutation.edit]]
+file = "tools/hook_pyright_unchecked_path.py"
+old = '''        "--createstub",
+'''
+new = ''''''
+
+[[mutation]]
+name = "주석을 자르지 않는다"
+tests = ["tests/tools/test_hook_pyright_unchecked_path.py", "-k", "주석_뒤의"]
+expect = "red"
+expect_output = ['''_아니다[uv run pyright tests/x.py # .scratch/y.py]''']
+[[mutation.edit]]
+file = "tools/hook_pyright_unchecked_path.py"
+old = '''    for index, token in enumerate(tokens):
+        if token.startswith("#"):
+            return tokens[:index]
+    return tokens'''
+new = '''    return tokens'''
+
+[[mutation]]
+name = "셸 변수와 명령 치환이 든 낱말도 경로로 본다"
+tests = ["tests/tools/test_hook_pyright_unchecked_path.py", "-k", "셸_변수와"]
+expect = "red"
+expect_output = ['''않는다[uv run pyright $(ls .scratch)]''']
+[[mutation.edit]]
+file = "tools/hook_pyright_unchecked_path.py"
+old = '''            paths.extend(arg for arg in arguments if not _SHELL_SYNTAX.search(arg))'''
+new = '''            paths.extend(arguments)'''
+
+[[mutation]]
+name = "Git Bash 꼴 절대 경로를 드라이브 꼴로 바꾸지 않는다"
+tests = ["tests/tools/test_hook_pyright_unchecked_path.py", "-k", "Git_Bash"]
+expect = "red"
+expect_output = ['''읽는다[점-폴더]''']
+[[mutation.edit]]
+file = "tools/hook_pyright_unchecked_path.py"
+old = '''    drive = _GIT_BASH_DRIVE.match(arg)
+    if drive:
+        arg = f"{drive.group(1).upper()}:/{arg[drive.end() :]}"
+'''
+new = ''''''
+
+[[mutation]]
+name = "홈 아래 경로를 상대 경로로 읽는다"
+tests = ["tests/tools/test_hook_pyright_unchecked_path.py", "-k", "홈_아래"]
+expect = "red"
+expect_output = ['''않는다[uv run pyright ~/.scratch/x.py]''']
+[[mutation.edit]]
+file = "tools/hook_pyright_unchecked_path.py"
+old = '''    if arg.startswith("~"):
+        return None
+'''
+new = ''''''
+
+[[mutation]]
+name = "작업 폴더를 바꾸는 래퍼 옵션을 무시한다"
+tests = ["tests/tools/test_hook_pyright_unchecked_path.py", "-k", "작업_폴더를_바꾸는"]
+expect = "red"
+expect_output = ['''않는다[uv run --directory=sub pyright .scratch/x.py]''']
+[[mutation.edit]]
+file = "tools/hook_pyright_unchecked_path.py"
+old = '''        if token in _CWD_OPTIONS or token.startswith(_CWD_OPTION_PREFIXES):
+            return None
+'''
+new = ''''''
+
+[[mutation]]
+name = "셸 예약어를 명령 낱말 앞에서 건너뛰지 않는다"
+tests = ["tests/tools/test_hook_pyright_unchecked_path.py", "-k", "셸_예약어"]
+expect = "red"
+expect_output = ['''건너뛰고_짚는다[if true; then pyright .scratch/x.py; fi]''']
+[[mutation.edit]]
+file = "tools/hook_pyright_unchecked_path.py"
+old = '''        if not token or token in _SHELL_PREFIXES:
+            continue
+'''
+new = '''        if not token:
+            continue
+'''
+
+[[mutation]]
+name = "env -u 의 값을 건너뛰지 않는다"
+tests = ["tests/tools/test_hook_pyright_unchecked_path.py", "-k", "셸_예약어"]
+expect = "red"
+expect_output = ['''건너뛰고_짚는다[env -u FOO pyright .scratch/x.py]''']
+[[mutation.edit]]
+file = "tools/hook_pyright_unchecked_path.py"
+old = '''"--extra", "-p", "-u", "--unset"}'''
+new = '''"--extra", "-p"}'''
+
+[[mutation]]
+name = "uv tool run 의 tool 을 래퍼로 보지 않는다"
+tests = ["tests/tools/test_hook_pyright_unchecked_path.py", "-k", "셸_예약어"]
+expect = "red"
+expect_output = ['''건너뛰고_짚는다[uv tool run pyright .scratch/x.py]''']
+[[mutation.edit]]
+file = "tools/hook_pyright_unchecked_path.py"
+old = '''{"uv", "run", "tool", "uvx",'''
+new = '''{"uv", "run", "uvx",'''
+
+[[mutation]]
+name = "대조군: 알림 끝 낱말을 바꾼다"
+tests = ["tests/tools/test_hook_pyright_unchecked_path.py"]
+expect = "green"
+[[mutation.edit]]
+file = "tools/hook_pyright_unchecked_path.py"
+old = '''이 알림은 세션·에이전트마다 한 번이다."'''
+new = '''이 알림은 세션·에이전트마다 한 번뿐이다."'''

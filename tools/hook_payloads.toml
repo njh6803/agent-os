@@ -698,6 +698,21 @@ expect = "silent"
 note = "일지 끝의 다음 절을 읽기만 한다"
 payload = { tool_name = "Bash", tool_input = { command = "tail -20 docs/journal/2026-10-28-01-git-help-exit-code.md", description = "일지 끝을 읽는다" } }
 
+# --- hook_pyright_unchecked_path (PostToolUse Bash) ---
+# session_id 를 빼 표지를 쓰지 않는 길(호출마다 알린다)로 돈다. 한 번만 알리는 것은 tests/tools 가 임시 폴더로 본다.
+[[case]]
+hook = "hook_pyright_unchecked_path.py"
+expect = "context"
+note = "`.scratch` 아래 프로브를 uv run pyright 로 쳤다(대기열 431 의 사건 꼴. 그 아래는 분석되지 않아 filesAnalyzed 가 0)"
+contains = ["`.scratch/harness/probes/build_without_key.py`", "`0 errors`", "filesAnalyzed", "tests/"]
+payload = { tool_name = "Bash", tool_input = { command = "uv run pyright .scratch/harness/probes/build_without_key.py", description = "프로브를 타입 검사한다" } }
+
+[[case]]
+hook = "hook_pyright_unchecked_path.py"
+expect = "silent"
+note = "이 저장소가 늘 치는 꼴 — 검사 범위 안의 시험 파일(대기열 431 의 짝)"
+payload = { tool_name = "Bash", tool_input = { command = "uv run pyright --outputjson tests/tools/test_hook_journal_evidence.py", description = "시험 파일을 타입 검사한다" } }
+
 # --- hook_measure_word (PostToolUse Write|Edit) ---
 # 발동은 대기열 227 의 사건 꼴(ADR 이력에 손으로 돌린 시간 비교를 "재니"로 적었다)이고, 침묵은 이 저장소 ADR 0014 의 실제 줄이다.
 [[case]]
