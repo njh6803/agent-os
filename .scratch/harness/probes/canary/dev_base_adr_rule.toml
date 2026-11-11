@@ -1,0 +1,27 @@
+# `.claude/rules/adr.md` 가 ADR 번호를 바꿀 때 참조를 찾는 범위를 `origin/main` 이 아니라 기준 브랜치로 적은 문장이 ADR 파일을
+# Read 로 열 때 실리는지(dev-base-skills-docs 티켓, ADR 0043). 실험군은 paths 안의 ADR 하나를, 대조군은 같은 체크아웃의
+# paths 밖(pyproject.toml)을 읽는다. 카나리아는 바뀐 글이라 옛 판에는 없다.
+# 최신 결과: 통과 4, "없음" 섞임 0(2026-11-12, 이 PC, claude 2.1.322, 같은 체크아웃 `cd77e4096` 위의 커밋하지 않은 본문). 첫 판은 카나리아가
+#   `CLAUDE.md` 에도 있는 명령이라 대조군이 흘려 실패 1이었고, 괄호까지 카나리아로 건 판이 통과했다.
+# 돌리는 법: 워크트리 `.claude/worktrees/<이름>/` 루트에서
+#   uv run python tools/canary.py .scratch/harness/probes/canary/dev_base_adr_rule.toml <출력 디렉터리>
+kind = "rule"
+question = '''
+Read 도구로 `{target}` 파일 하나만 통째로 읽어라. 다른 파일은 읽지 않는다.
+그 뒤 이 세션에 실린 지시 가운데, ADR 규칙 파일에 있는 문장으로, 나란히 도는 브랜치와 번호가 겹쳐 ADR 번호를 바꿀 때 이 브랜치가 들인 참조를
+찾는 범위를 적은 문장이 있으면, 그 범위를 이루는 첫째 git 명령과 그 바로 뒤 괄호까지 글자 그대로 옮겨라. 읽은 파일에서 추측하지 않는다.
+실린 지시에 그런 문장이 없으면 "없음"이라고만 답하라.
+'''
+# CLAUDE.md 에도 같은 명령(`git diff --merge-base origin/<기준 브랜치>`)이 있어 명령만으로는 대조군이 흘렸다(첫 판). 괄호까지 카나리아로 건다.
+expect = ["git diff --merge-base origin/<기준 브랜치>(작업 트리까지)"]
+source = ".claude/rules/adr.md"
+
+[[arm]]
+name = "paths-안"
+role = "experiment"
+target = "docs/adr/0001-runtime-engine-behind-the-plugin-contract.md"
+
+[[arm]]
+name = "paths-밖"
+role = "control"
+target = "pyproject.toml"

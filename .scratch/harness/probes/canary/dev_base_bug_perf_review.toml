@@ -1,0 +1,29 @@
+# bug-perf-review 정의의 1단계(범위를 잡는다)가 기준을 받지 못했을 때 쓰는 merge-base의 ref를 `origin/main`이 아니라 기준 브랜치로
+# 적은 문장이 새 세션의 서브에이전트에 실리는지(dev-base-skills-docs 티켓, ADR 0043). 실험군은 이 워크트리, 대조군은 옛 판을 든
+# 주 체크아웃이다. 이 PR 이 병합되기 전의 주 체크아웃에는 옛 문장 `git merge-base origin/main HEAD` 가 있다. 병합 뒤에 다시
+# 돌리려면 병합 전 커밋을 `--control-commit` 으로 준다(README `canary/` 행).
+# agent_tools 는 실험군 정의의 tools 줄과 같은 집합이어야 한다(러너의 agent_problems).
+# 최신 결과: 통과 4, "없음" 섞임 0(2026-11-12, 이 PC, claude 2.1.322, 실험군은 `cd77e4096` 위의 커밋하지 않은 본문, 대조군은 주 체크아웃 `cd77e4096`, harness 티켓 dev-base-skills-docs).
+# 돌리는 법: 워크트리 `.claude/worktrees/<이름>/` 루트에서
+#   uv run python tools/canary.py .scratch/harness/probes/canary/dev_base_bug_perf_review.toml <출력 디렉터리>
+kind = "agent"
+agent = "bug-perf-review"
+agent_tools = ["Bash", "Read", "Grep", "Glob", "TaskStop"]
+question = '''
+bug-perf-review 서브에이전트를 Agent 도구로 한 번만 불러라. 서브에이전트에게 줄 프롬프트는 아래 단락 그대로다.
+
+도구를 하나도 쓰지 마라. 파일을 읽지 말고, 지금 네 지시문(시스템 프롬프트)에 적힌 것만 보고 답한다. 1단계 "범위를 잡는다"에서, 부르는 쪽이 기준을 주지 않았을 때 기준으로 쓰라고 한 명령과 그 바로 뒤 괄호 안의 문장을 글자 그대로 옮겨라. 그런 것이 없으면 '없음'이라고만 적어라.
+
+서브에이전트의 답을 고치거나 줄이지 말고 그대로 전하라.
+'''
+expect = ["git merge-base origin/<기준 브랜치> HEAD", "핫픽스는 main, 그 밖은 origin/dev가 있으면 dev, 없으면 main이다"]
+source = ".claude/agents/bug-perf-review.md"
+
+[[arm]]
+name = "워크트리"
+role = "experiment"
+
+[[arm]]
+name = "주-체크아웃"
+role = "control"
+checkout = "../../.."

@@ -4,10 +4,10 @@
 
 ## 1. 자리
 
-올리기는 그 입력을 바꾼 PR이 main에 병합된 뒤, `origin/main`을 분리 HEAD로 체크아웃한 깨끗한 작업 트리에서 한다. 병합 전에 올리면 squash로 사라질 브랜치 커밋이 남고, 옛 HEAD로 올리면 그사이 병합된 변경이 빠진다.
+올리기는 그 입력을 바꾼 PR이 기준 브랜치에 병합된 뒤, `origin/<기준 브랜치>`를 분리 HEAD로 체크아웃한 깨끗한 작업 트리에서 한다(티켓 PR은 dev로 병합되므로 `origin/dev`가 있으면 dev다. 규칙은 `docs/constitution/operations.md` 브랜치와 병합). 병합 전에 올리면 squash로 사라질 브랜치 커밋이 남고, 옛 HEAD로 올리면 그사이 병합된 변경이 빠진다.
 
-- 주 체크아웃이면 `EnterWorktree`로 새 워크트리에 들어가 [SKILL.md](SKILL.md) "명령과 작업 폴더"의 설치를 친 뒤 거기서 한다. 주 체크아웃의 main을 옮기지 않는다.
-- 워크트리면 `git status --porcelain`이 비었을 때만 한다. 비지 않았으면 멈추고 바뀐 파일을 사람에게 알린다. 지금 브랜치 이름(`git branch --show-current`)을 `<작업 폴더>/return-branch.txt`에 적고 `git fetch origin` 뒤 `git switch --no-overwrite-ignore --detach origin/main`. 이미 분리 HEAD이고 그 파일이 있으면(같은 올리기를 압축이나 멈춤 뒤에 1부터 다시 한다) 덮어쓰지 않는다. 분리 HEAD의 브랜치 이름은 비어, 덮어쓰면 돌아갈 브랜치를 잃는다.
+- 주 체크아웃이면 `EnterWorktree`로 새 워크트리에 들어가 [SKILL.md](SKILL.md) "명령과 작업 폴더"의 설치를 친 뒤 거기서 한다. 주 체크아웃의 루트 브랜치를 옮기지 않는다.
+- 워크트리면 `git status --porcelain`이 비었을 때만 한다. 비지 않았으면 멈추고 바뀐 파일을 사람에게 알린다. 지금 브랜치 이름(`git branch --show-current`)을 `<작업 폴더>/return-branch.txt`에 적고 `git fetch origin` 뒤 `git switch --no-overwrite-ignore --detach origin/<기준 브랜치>`. 이미 분리 HEAD이고 그 파일이 있으면(같은 올리기를 압축이나 멈춤 뒤에 1부터 다시 한다) 덮어쓰지 않는다. 분리 HEAD의 브랜치 이름은 비어, 덮어쓰면 돌아갈 브랜치를 잃는다.
 
 **돌아가기.** 올리기가 어디서 끝나든 다른 일을 하기 전에 이 자리로 돌아간다. 워크트리면 `return-branch.txt`의 브랜치로 `git switch`하고, 새로 든 워크트리면 `ExitWorktree`(`action: "keep"`)로 나온다. 2의 결정이 "먼저 들인다"·`wait`·`stop`으로 나갈 때, 4의 짓기가 실패할 때, 5에서 보낼 것이 없을 때, 6이 거부로 멈출 때, 다 보낸 뒤가 모두 그렇다. 5에서 보낼 것이 없을 때와 다 보낸 뒤에는 6의 6의 "목록 갱신과 돌아가기"가 돌아가기 전에 할 일을 정한다. 분리 HEAD에 남은 채 "먼저 들인다"의 지시문을 내거나 화면 작업을 이으면, [SKILL.md](SKILL.md)의 "먼저 들인다"가 바꾸지 않는다고 한 브랜치를 잃는다.
 
@@ -24,11 +24,11 @@
 | `rewriteRecord` | 없음. 계획은 `--artifact-sha256`로 맞댄다(아래 5) |
 | `handToUpload` | 들이기가 넘긴 것이다. 확인을 `--caller upload`로 다시 하고 그 결정을 따른다 |
 
-`--claim-merged`가 든 갈래는 보내기 전에 PR 상태 파일(`pr.json`)의 병합 커밋이 지금 HEAD의 조상인지 `git merge-base --is-ancestor <병합 커밋> HEAD`로 본다. 아니면 보내지 않고 `git fetch origin` 뒤 `origin/main`을 다시 체크아웃해 1부터 한다. 병합 전의 HEAD로 보내면 `claim`이 든 파일을 옛 값으로 보내고 `claim`까지 비운다.
+`--claim-merged`가 든 갈래는 보내기 전에 PR 상태 파일(`pr.json`)의 병합 커밋이 지금 HEAD의 조상인지 `git merge-base --is-ancestor <병합 커밋> HEAD`로 본다. 아니면 보내지 않고 `git fetch origin` 뒤 `origin/<기준 브랜치>`를 다시 체크아웃해 1부터 한다. 병합 전의 HEAD로 보내면 `claim`이 든 파일을 옛 값으로 보내고 `claim`까지 비운다.
 
 ## 3. 커밋 맞대기
 
-- **기준 커밋.** 받은 기록의 `commit`이다. 기록이 없거나 `commit`이 null이면(첫 올리기, 첫 올리기가 첫 호출 뒤에 멈춘 때, 편집이 꺼진 동안 기록을 잃은 때) 받은 색인 `lastChange`의 `via`가 든 커밋이다. `via`는 `agent-os main@<짧은 SHA>`이고, 옛 올리기가 남긴 부분 올리기의 꼴 `agent-os 부분 main@<짧은 SHA>`도 그 커밋으로 읽는다. 올리기는 늘 산출 전체를 지어, 부분 올리기가 빠뜨린 파일도 이번 계획이 맞춘다. `via`에 커밋이 없으면 멈추고 사람에게 묻는다.
+- **기준 커밋.** 받은 기록의 `commit`이다. 기록이 없거나 `commit`이 null이면(첫 올리기, 첫 올리기가 첫 호출 뒤에 멈춘 때, 편집이 꺼진 동안 기록을 잃은 때) 받은 색인 `lastChange`의 `via`가 든 커밋이다. `via`는 `agent-os main@<짧은 SHA>`이고(`main@`은 색인 형식의 고정된 표지이지 브랜치 이름이 아니다. 기준 브랜치가 dev여도 그대로 쓴다. 이미 올라간 색인이 이 꼴이다), 옛 올리기가 남긴 부분 올리기의 꼴 `agent-os 부분 main@<짧은 SHA>`도 그 커밋으로 읽는다. 올리기는 늘 산출 전체를 지어, 부분 올리기가 빠뜨린 파일도 이번 계획이 맞춘다. `via`에 커밋이 없으면 멈추고 사람에게 묻는다.
 - **조상.** `git merge-base --is-ancestor <기준 커밋> HEAD`가 실패하면 아티팩트가 지금 HEAD보다 새 코드를 든다. `git fetch origin` 뒤 다시 체크아웃해 1부터 하고, 그래도 실패하면 보내지 않고 멈춘다. 옛 코드로 되돌리지 않는다.
 
 ## 4. 산출
@@ -67,7 +67,7 @@
    - **카드.** `clean`이고 보낸 파일에 `project/components/` 아래 경로나 `project/_ds_bundle.*`가 들었으면, 앱 안 브라우저로 아티팩트의 Components 절을 한 번 열어 카드가 모두 그려지고 칸 아래가 잘리지 않았는지 본다. 페이지는 React 18.3.1을 싣고 패키지는 React 19로 짓고 시험하므로, React 19에만 있는 API를 쓴 컴포넌트도 여기서 깨진 카드로 드러난다. 카드 칸의 높이는 그려진 장면을 따르는데, 늦게 자라는 내용은 칸 아래가 잘릴 수 있다.
    - **옛 별칭.** 계획의 `firstCanonical`이 true였으면 파일 목록(`list`의 `scope: "files"`)을 다시 받아 옛 별칭이 남지 않았는지 본다.
    - 깨진 카드나 남은 옛 별칭을 보면 되돌리지 않고 사람에게 알리며, 고칠 일을 그 동작을 만든 기능 디렉터리의 다음 두 자리 번호 티켓으로 써서(`docs/agents/issue-tracker.md`의 기능 밖 제품 고침) 아래 "목록 갱신과 돌아가기"가 고르는 브랜치에 싣는다.
-   - **목록 갱신과 돌아가기.** `<작업 폴더>/output-paths.json`(4의 `--paths`가 쓴 목록)이 `web/tools/sync-design-system/previous-output.json`과 다르면 그 파일로 바꿔 커밋한다. 그 파일은 커밋 검사의 면제 모양이 아니라서(`tools/check_ticket.py`) 티켓을 가리키는 브랜치에만 실린다. 싣는 브랜치와 차례는 1의 자리로 가른다. 주 체크아웃의 main은 옮기지 않는다(1).
+   - **목록 갱신과 돌아가기.** `<작업 폴더>/output-paths.json`(4의 `--paths`가 쓴 목록)이 `web/tools/sync-design-system/previous-output.json`과 다르면 그 파일로 바꿔 커밋한다. 그 파일은 커밋 검사의 면제 모양이 아니라서(`tools/check_ticket.py`) 티켓을 가리키는 브랜치에만 실린다. 싣는 브랜치와 차례는 1의 자리로 가른다. 주 체크아웃의 루트 브랜치는 옮기지 않는다(1).
      - 돌아갈 브랜치(`return-branch.txt`)가 티켓 모양(`feature/<NN>-<slug>`, `chore/<slug>`)이면 1의 "돌아가기"대로 그 브랜치로 돌아간 뒤, 거기서 목록과 위 티켓을 그 브랜치의 일과 함께 커밋한다.
      - 돌아갈 브랜치가 명세 브랜치(`docs/<slug>`)이거나 1에서 새로 든 워크트리였으면, 돌아가기 전에 지금 자리에서 `docs/agents/issue-tracker.md`의 규약대로 harness 티켓을 쓰고 그 stem으로 `git switch -c chore/<slug>`를 친 뒤 목록과 위 티켓을 커밋한다. 그 브랜치는 따로 PR로 병합한다. 그 뒤 1의 "돌아가기"대로 돌아간다.
      - 목록이 같으면 1의 "돌아가기"대로 돌아가고 위 티켓은 돌아간 브랜치에 싣는다. 새로 든 워크트리였으면 `ExitWorktree` 전에 그 티켓만 싣는 `docs/<slug>` 브랜치를 딴다. 기능 디렉터리의 티켓은 커밋 검사의 면제 모양이라(`tools/check_ticket.py`) 그 PR이 지난다.

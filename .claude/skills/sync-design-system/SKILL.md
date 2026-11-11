@@ -50,7 +50,7 @@ description: "Claude 아티팩트의 디자인 시스템과 `web/packages/ui`를
 
 | `act` | 할 일 |
 |---|---|
-| `continue` | 화면 작업으로 돌아간다. `notes`가 병합 커밋을 들면 `git merge-base --is-ancestor <그 커밋> HEAD`를 보고, 품지 않았으면 main을 합친 뒤 잇는다. 사람이 "계속한다"를 골랐으면 아래 "멈춘 상태"대로 적고, 같은 세션의 화면 작업에서는 다시 묻지 않으며 그리기 전의 올리기도 부르지 않는다. 그 올리기는 자기 확인을 다시 돌려, 웹 편집이면 같은 것을 올리기의 선택지("먼저 들인다", "덮어쓴다")로 곧바로 다시 묻고 판단할 수 없음이면 다시 묻거나 멈춘다. "지금 코드 값으로 계속한다"의 설명은 웹 편집을 다음 확인이 다시 찾는다고 말한다 |
+| `continue` | 화면 작업으로 돌아간다. `notes`가 병합 커밋을 들면 `git merge-base --is-ancestor <그 커밋> HEAD`를 보고, 품지 않았으면 기준 브랜치를 합친 뒤 잇는다. 사람이 "계속한다"를 골랐으면 아래 "멈춘 상태"대로 적고, 같은 세션의 화면 작업에서는 다시 묻지 않으며 그리기 전의 올리기도 부르지 않는다. 그 올리기는 자기 확인을 다시 돌려, 웹 편집이면 같은 것을 올리기의 선택지("먼저 들인다", "덮어쓴다")로 곧바로 다시 묻고 판단할 수 없음이면 다시 묻거나 멈춘다. "지금 코드 값으로 계속한다"의 설명은 웹 편집을 다음 확인이 다시 찾는다고 말한다 |
 | `upload`, `overwrite`, `uploadClaimMerged`, `overwriteClaimMerged`, `rewriteRecord`, `handToUpload` | [upload.md](upload.md)의 올리기를 그 `act`로 잇는다 |
 | `import`, `inheritImport` | 부르는 쪽이 `import`면 [import.md](import.md)의 들이기. `screen`이나 `upload`면 아래 "먼저 들인다" |
 | `resumeImport` | [import.md](import.md)의 "이어 하기" |
@@ -58,7 +58,7 @@ description: "Claude 아티팩트의 디자인 시스템과 `web/packages/ui`를
 | `wait` | 그 브랜치를 사람에게 알리고 지금 일을 멈춘다. 화면 작업이면 아래 "멈춘 상태"의 병합을 기다림이다 |
 | `stop` | `notes`를 보이고 멈춘다 |
 
-**먼저 들인다.** 지금 세션은 브랜치를 바꾸지 않는다. 들이기를 새 세션에 넘긴다. 번호는 `git fetch origin` 뒤 `git ls-tree --name-only origin/main .scratch/design-reverse-sync/issues/`에서 가장 큰 번호의 다음이고, slug는 바뀐 것을 짧게 이른다(`teal-gray-50`). 지시문은 `next-session`의 `directive.md` 형식으로 짓는다. 다음 작업은 `.scratch/design-reverse-sync/issues/<NN>-web-edit-<slug>.md`(받는 세션이 쓴다)와 찾은 것의 한 줄, 다음 단계는 구현, 시작 프롬프트는 `/sync-design-system`, 브랜치는 `feature/<NN>-web-edit-<slug>`, 이번 요청 범위는 PR과 병합, 그 뒤 올리기까지다. 어디서의 워크트리 문장은 `next-session` `directive.md` 5가 정한다. Skill 도구로 `open-session`을 불러 그 세션을 연다. 새 세션은 자기 새 브랜치에서 확인부터 다시 한다. 지금 세션은 그 병합을 기다린다.
+**먼저 들인다.** 지금 세션은 브랜치를 바꾸지 않는다. 들이기를 새 세션에 넘긴다. 번호는 `git fetch origin` 뒤 `git ls-tree --name-only origin/<기준 브랜치> .scratch/design-reverse-sync/issues/`에서 가장 큰 번호의 다음이고, slug는 바뀐 것을 짧게 이른다(`teal-gray-50`). 지시문은 `next-session`의 `directive.md` 형식으로 짓는다. 다음 작업은 `.scratch/design-reverse-sync/issues/<NN>-web-edit-<slug>.md`(받는 세션이 쓴다)와 찾은 것의 한 줄, 다음 단계는 구현, 시작 프롬프트는 `/sync-design-system`, 브랜치는 `feature/<NN>-web-edit-<slug>`, 이번 요청 범위는 PR과 병합, 그 뒤 올리기까지다. 어디서의 워크트리 문장은 `next-session` `directive.md` 5가 정한다. Skill 도구로 `open-session`을 불러 그 세션을 연다. 새 세션은 자기 새 브랜치에서 확인부터 다시 한다. 지금 세션은 그 병합을 기다린다.
 
 **claim 지우기.** 기록을 다시 받아(`read`의 `paths`에 `project/sync-record.json`) `record claim --record <다시 받은 기록> --expect check-<n>/web/project/sync-record.json --out send-<n>/project/sync-record.json --clear`로 지운 기록을 짓고, 아래 "보내기"로 그 파일 하나를 보낸다.
 
@@ -76,7 +76,7 @@ description: "Claude 아티팩트의 디자인 시스템과 `web/packages/ui`를
 
 - **고를 때까지 기다림.** "웹 편집 확인: 고를 때까지 기다림"과 찾은 것의 요약. 이어받은 세션은 확인을 다시 돌려 다시 묻는다.
 - **올리기 중.** 올리기가 분리 HEAD에서 도는 동안 넘기면 그 단계와 돌아갈 브랜치([upload.md](upload.md) 1이 `<작업 폴더>/return-branch.txt`에 적은 값)를 적는다. 이어받은 세션은 그 브랜치로 돌아간 뒤 올리기를 1부터 다시 한다.
-- **병합을 기다림.** "먼저 들인다"를 고른 화면 세션은 일지와 "이어받을 상태"에 기다리는 들이기의 브랜치를 적고, 그 브랜치가 병합될 때까지 화면 작업을 잇지 않는다. 병합 뒤 main을 합쳐 잇는다.
+- **병합을 기다림.** "먼저 들인다"를 고른 화면 세션은 일지와 "이어받을 상태"에 기다리는 들이기의 브랜치를 적고, 그 브랜치가 병합될 때까지 화면 작업을 잇지 않는다. 병합 뒤 기준 브랜치를 합쳐 잇는다.
 - **계속한다.** 사람이 "지금 코드 값으로 계속한다"나 "확인 없이 계속한다"를 골랐으면 일지에 `> 사용자:` 인용으로, "이어받을 상태"에 그 선택을 적는다.
 
 `claim`은 아티팩트에 있어 어느 세션에서나 확인이 다시 읽는다. 적은 것을 잃어도 확인이 다시 묻는 것이 값의 전부다.

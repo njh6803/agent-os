@@ -1,0 +1,25 @@
+# next-session 결정표 맨 위에 더한 줄(origin/dev 가 있고 main 에만 있는 변경이 dev 에 들어가지 않았으면 main 을 dev 에 되돌려
+# 합친다)이 새 세션에 실리는지(dev-base-skills-docs 티켓, ADR 0043). 실험군은 이 워크트리, 대조군은 옛 판을 든 주 체크아웃이다.
+# 이 PR 이 병합되기 전의 주 체크아웃에는 그 줄이 없다. 병합 뒤에 다시 돌리려면 병합 전 커밋을 `--control-commit` 으로 준다
+# (README `canary/` 행).
+# 최신 결과: 통과 4, "없음" 섞임 0(2026-11-12, 이 PC, claude 2.1.322, 실험군은 `cd77e4096` 위의 커밋하지 않은 본문, 대조군은 주 체크아웃 `cd77e4096`). 첫 판은 질문이 "다음 단계" 칸을 물어 실패 3이었고(그 칸은 `되돌려 합치기` 한 마디다), "시작 프롬프트" 칸을 묻는 판이 통과했다.
+# 돌리는 법: 워크트리 `.claude/worktrees/<이름>/` 루트에서
+#   uv run python tools/canary.py .scratch/harness/probes/canary/dev_base_next_session_backmerge_row.toml <출력 디렉터리>
+kind = "skill"
+question = '''
+next-session 스킬을 Skill 도구로 불러 본문을 읽어라. 스킬이 시키는 일은 하지 않는다.
+본문의 "다음 작업 결정표"에서, 첫째 칸(지금)에 `git diff --quiet`로 끝나는 명령이 든 줄이 있으면 그 줄의 셋째 칸("시작 프롬프트")을 글자 그대로 옮기고,
+첫째 칸의 괄호 안에서 출시 PR의 병합 커밋이 어떻다고 적었는지 그 구절도 글자 그대로 옮겨라. 그런 줄이 없으면 "없음"이라고만 답하라.
+'''
+expect = ["main을 dev에 되돌려 합친다", "출시 PR의 merge 커밋은 내용이 없어 0이다"]
+source = ".claude/skills/next-session/SKILL.md"
+skill = "next-session"
+
+[[arm]]
+name = "워크트리"
+role = "experiment"
+
+[[arm]]
+name = "주-체크아웃"
+role = "control"
+checkout = "../../.."
