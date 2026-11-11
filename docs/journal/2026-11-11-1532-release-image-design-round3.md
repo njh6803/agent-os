@@ -591,6 +591,50 @@ ADR 승인을 받고 커밋하기 전에 돌렸다. 원천은 이 일지 전체�
   - 요구로 옮겼다(Major 1, ADR 0056). Docker Engine 28.0.0 이전에는 `127.0.0.1`에 발행한 포트가 같은 L2 구간의 다른 호스트에 닿는다는 지적이다. Docker 문서의 문장을 WebFetch로 확인했다(웹 요약이라 원문은 내려받아 대 보지 않았다). ADR 0056의 결정(리눅스 Docker Engine과 Compose만 보증)을 바꾸지 않고, `.scratch/release-image/plan.md`에 지원하는 Engine의 최소 판을 명세가 정한다고 적었다. ADR 본문은 고치지 않았다. 최소 판을 결정으로 박는 것은 ADR 0056의 개정이므로 명세가 정할 때 사용자에게 올린다.
   - 보류했다(Minor 3). `pilot-release` 기능 계획: 후보 검증 뒤에 핫픽스가 main에 병합돼 검증하지 않은 변경이 정식 판에 들 수 있다. ADR 0056은 pilot-release의 수락이 마지막 출시 후보로 프로브를 다시 돌리는 것이라고 정했고(64줄), 병합 사이에 핫픽스가 끼는 순서는 pilot-release의 명세가 정한다. 아래 "다음" 8에 적었다. `widget_build/measure.mjs`·`widget_runtime/measure.mjs`의 인자 검증과 출력 배출 제한, 실패한 `element` 빌드 보고(Minor 3건)는 이미 돌린 측정에 영향이 없는 견고성이라 고치지 않았다.
 
+## 인계: 커밋 뒤 (봇 회차)
+
+CodeRabbit 첫 회차를 반영한 커밋(`910e51944`, `docs: CodeRabbit 첫 회차를 반영한다 (release-image)`)의 pre-commit이 통과한 직후 인계 계기(`hook_handoff`)가 왔다. 세션 컨텍스트가 224,684 토큰으로 문턱 200,000을 넘은 채 단계 경계 `커밋 뒤`에 왔다는 문구였다. `.claude/skills/next-session/handoff.md`를 Read로 열어 "인계하지 않는 때" 다섯을 대 봤다. 커밋은 성공했고, 요청 범위는 PR과 병합까지이며, 이 세션의 지시문의 "이어받을 상태"는 `인계: PR 연 뒤`로 시작해 경계가 다르고, 이 일지에 이 세션이 쓴 `인계 못함` 줄이 없다. 곁 세션인지(`parentSessionId`)는 `get_session`을 부르지 않아 보지 않았다. 앞의 넷이 인계하지 않는 때가 아니어서 넘긴다.
+
+이 세션이 한 것이다. 인계 지시문으로 워크트리에 들어와 `merge.md` 2를 했다. PR 529는 PR 528이 먼저 병합돼 충돌 상태였다. origin/main을 합쳐 충돌을 풀고(09aa9b821) 푸시했다. claude-review의 첫 회차를 판단해 PR 코멘트로 남기고 `@coderabbitai review`를 요청했다. 위 "이어받은 세션: PR 529 봇 회차"가 두 봇의 지적과 판단이다. 푸시 뒤 `tools/wait_ci.py`는 모두 통과(CodeRabbit `Finished`)로 끝났고 claude-review 둘째 회차는 지적 없음이었다. CodeRabbit의 첫 회차 지적을 반영한 910e51944는 만들었지만 **푸시하지 않았다.** PR 본문은 반영 내용을 담아 이미 고쳤다. 이 세션이 띄운 백그라운드 작업은 남아 있지 않다.
+
+새 세션이 이어받을 것이다.
+
+- **푸시.** `git push origin docs/release-image-design`으로 910e51944를 푸시한다. 이 인계 절이 커밋되지 않은 채 워크트리에 있다. 푸시 전에 이 절과 함께 일지만 실은 커밋을 하나 더 만들거나(그 푸시로 도는 리뷰도 회차로 센다), 반영할 것이 없으면 그 커밋 하나로 민다.
+- **봇 회차.** 푸시한 뒤 PR 머리가 로컬 HEAD와 같은 것을 보고 `@coderabbitai review` 코멘트를 남기고 `tools/wait_ci.py 529`를 백그라운드로 띄운다. CodeRabbit은 이 PR에서 첫 회차를 이미 냈다(이 일지 "이어받은 세션: PR 529 봇 회차"). 둘째 회차부터는 Critical·Major만 고치고 나머지는 보류 이유를 PR 코멘트에 남긴다. claude-review는 첫 회차(Minor 셋, Nit, 제안 하나)와 둘째 회차(지적 없음)가 끝났다.
+- **판단은 이미 했다.** CodeRabbit 첫 회차의 열한 지적은 고침 셋, 한계로 문서에 적음 넷(Major, 프로브 표지), 요구로 옮김 하나(Major, Docker Engine 최소 판), 보류 셋이다. 같은 지적이 다시 오면 위 판단을 따르고 PR 코멘트에 사유만 남긴다. ADR 0056의 결정이나 PRD를 바꾸게 하는 지적은 사용자에게 묻는다.
+- **PR 코멘트.** CodeRabbit 첫 회차의 판단을 PR 코멘트로 아직 남기지 않았다. 푸시 뒤 `@coderabbitai review`와 함께 한 코멘트로 남긴다. 내용은 위 일지 "CodeRabbit 첫 회차" 절의 고침·한계·요구·보류 분류다.
+- **병합 뒤.** `## 다음`의 1(dev 브랜치 전환의 harness 티켓)로 다음 작업 지시문을 낸다. "이어받을 상태"에는 `## 다음`의 1·6·8이 든다. 회고는 이미 돌았다. 봇이 잡는 사건은 단계를 닫는 세션이 `## 회고 (PR 직전 리뷰 뒤)` 아래에 덧붙인다. 이번 회차에 볼 만한 것은 둘이다. 하나는 pre-commit이 이 브랜치 커밋 모두 Bash의 600초 제한을 넘겨 백그라운드로 갔다는 것(813초 등)이고, 하나는 인계 계기의 `PR 연 뒤`에 이어 이 세션에서도 `커밋 뒤`가 왔다는 것이다(일지를 읽느라 컨텍스트가 두 번 문턱을 넘었다).
+- **하지 않을 것.** 설계 인터뷰(`grilling`), 셀프 리뷰(`/code-review`), PR 직전 리뷰(`coderabbit-review`)는 다시 돌리지 않는다.
+
+낸 지시문이다.
+
+```
+다음 작업: 기능 release-image. 연 PR 529(이미지 배포와 판 내기 설계, ADR 0056)의 CodeRabbit 첫 회차를 반영한 커밋을 푸시하고 봇 회차를 이어 병합한다
+다음 단계: PR 반영·병합
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /grill-with-docs release-image
+브랜치: docs/release-image-design
+모델: Sonnet 5.5 / high. 2의 잇는 지시문
+읽을 것: docs/journal/2026-11-11-1532-release-image-design-round3.md의 "인계: 커밋 뒤 (봇 회차)" 절
+이어받을 상태: 인계: 커밋 뒤. docs/journal/2026-11-11-1532-release-image-design-round3.md. 커밋 910e51944를 아직 푸시하지 않았고 그 인계 절이 커밋되지 않은 채 워크트리에 있다. 푸시한 뒤 merge.md 2(봇 회차)부터 한다. CodeRabbit 첫 회차의 판단을 PR 코멘트로 남기고 @coderabbitai review 코멘트도 새 세션이 남긴다. 설계 인터뷰, 셀프 리뷰, ADR 0056 승인, PR 직전 리뷰, 회고는 끝나 grilling과 /code-review와 coderabbit-review는 다시 돌리지 않는다. 둘째 회차부터 Critical·Major만 고친다
+확인할 선행 조건: 없음
+이번 요청 범위: PR과 병합까지
+```
+
+제목을 `docs/release-image-design (인계함)`으로 바꿨다. 잠금 풀기(`git worktree unlock`)는 `is not locked`로 끝나 넘어갔다. `open-session`은 Skill 도구로 부르지 않고 워크트리 디스크의 `.claude/skills/open-session/SKILL.md`를 Read로 열어 따랐다.
+
+open-session을 부른다 2026-11-11T12:02:47Z
+
+## 이어받은 세션: 푸시와 병합
+
+세션 제목은 `docs/release-image-design`이다. 위 인계 지시문으로 이 워크트리에 들어와 `merge.md` 2의 봇 회차부터 했다. 설계 인터뷰(`grilling`), 셀프 리뷰, PR 직전 리뷰는 다시 돌리지 않았다. 지시문의 시작 프롬프트는 `/grill-with-docs release-image`였고 `grill-with-docs` 스킬 파일을 Read로 읽었다. 그 스킬의 산출물 단계(기능 계획의 `**설계:**` 줄)는 이 PR이 이미 실었고, 지시문의 "이어받을 상태"가 인터뷰를 다시 돌리지 않는다고 적어 그 지시문을 따랐다.
+
+- **푸시.** `git fetch origin` 뒤 로컬 HEAD가 910e51944이고 `origin/docs/release-image-design`은 09aa9b821이며 `origin/main`이 이미 합쳐진 것을 손으로 봤다(`git merge-base --is-ancestor`). 910e51944를 푸시했고 PR 머리가 로컬 HEAD와 같은 것을 `gh pr view 529 --json headRefOid`로 봤다.
+- **PR 코멘트.** CodeRabbit 첫 회차의 판단(고침 셋, 한계로 문서에 적음 넷, 요구로 옮김 하나, 보류 셋)을 한 코멘트로 남기면서 `@coderabbitai review`를 함께 요청했다. 내용은 위 "이어받은 세션: PR 529 봇 회차"의 CodeRabbit 절을 옮긴 것이다.
+- **봇 회차 결과.** `tools/wait_ci.py 529`의 끝 줄은 `모두 통과. CodeRabbit: Review rate limited`였다. CodeRabbit은 한도에 걸려 이 푸시에는 리뷰를 내지 않았고(`gh pr view`의 코멘트 목록에서 `Action not completed`와 `Review rate limited`를 읽었다) 그 푸시는 회차로 세지 않는다. 그래서 CodeRabbit이 이 PR에 낸 리뷰는 앞의 첫 회차 하나뿐이다. claude-review는 이 푸시에 지적 없음이었다(PR 코멘트를 읽었다). 이 회차에 새로 고칠 것도, 새로 뒤로 넘길 것도 없다.
+- **pre-commit의 첫 시도가 빨강이었다.** 일지만 고친 커밋인데 pytest 한 프로세스에서 `tests/tools/test_rerun_runner.py::test_과제는_실행_차례대로_돌고_한_과제를_마친_뒤_다음_과제로_간다`가 `assert 1 == 0`으로 실패했다(7010개 가운데 1개, 1066초, pre-commit 출력을 읽었다). 이 커밋은 문서 한 파일만 고쳐 그 테스트의 코드 경로에 닿지 않는다. 같은 테스트를 단독으로 다시 쳤더니 84초 걸려 통과했다(`uv run pytest -q tests/tools/test_rerun_runner.py -k 실행_차례대로`, 손으로 봤다). 테스트가 `hang=0.5`초 같은 시간에 기대는 것은 코드를 읽어 확인하지 않았고, 다른 세션이 여럿 돌아 이 PC가 느린 때라는 것도 어림이다. 같은 테스트가 두 번 연속 실패한 것이 아니어서 원인 진단은 열지 않았다. 다시 실패하면 `diagnosing-bugs`로 간다.
+- **이 커밋.** 위 인계 절과 이 절만 실은 일지 커밋이다. 이 푸시로 도는 리뷰도 `merge.md` 2의 회차 세기대로 센다.
+
 ## 다음
 
 이 PR이 병합된 뒤의 일이다.
