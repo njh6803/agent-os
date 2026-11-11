@@ -1,0 +1,17 @@
+# release-image netns 프로브(항목 4): proxy 의 이름공간을 빌린 서비스에 ports 를 직접 준 compose 파일.
+# compose 가 이 파일을 받아들이는지, 거부하면 어떤 문구로 거부하는지 run.py 가 `up -d` 로 본다.
+
+services:
+  proxy:
+    image: ${NETNS_NGINX_IMAGE:?}
+    pull_policy: never
+
+  app:
+    image: ${NETNS_PYTHON_IMAGE:?}
+    pull_policy: never
+    init: true
+    stop_grace_period: 2s
+    network_mode: "service:proxy"
+    ports:
+      - "127.0.0.1:${NETNS_PORTS_ON_APP_PORT:?}:8000"
+    command: ["python", "-m", "http.server", "--bind", "127.0.0.1", "8000"]

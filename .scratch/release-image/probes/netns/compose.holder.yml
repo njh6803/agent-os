@@ -1,0 +1,63 @@
+# release-image netns 프로브(항목 7): 네트워크 이름공간의 주인이 프록시가 아니라 아무 일도 하지 않는 holder 인 배치.
+# proxy(nginx)와 app 과 admin 이 모두 holder 의 이름공간을 빌린다. 호스트 포트는 holder 에 발행한다.
+# run.py 가 NETNS_* 환경 변수(이미지, 포트, 회차 토큰)를 채워 띄운다. depends_on 은 적지 않는다.
+#
+# - holder  sleep 하나만 도는 컨테이너. 호스트의 127.0.0.1 에만 포트 둘을 연다. 8080(공개 면), 8081(관리 면)
+# - proxy   nginx. 같은 이름공간의 루프백 상류로 넘긴다(nginx.holder.conf)
+# - app     루프백(127.0.0.1:8000)에만 묶인 서버
+# - admin   루프백(127.0.0.1:8001)에만 묶인 둘째 서버
+
+x-server: &server
+  image: ${NETNS_PYTHON_IMAGE:?}
+  pull_policy: never
+  init: true
+  stop_grace_period: 2s
+  command:
+    - sh
+    - -c
+    - >-
+      mkdir -p /tmp/site &&
+      printf '%s:%s' "$$PROBE_WHO" "$$PROBE_TOKEN" > /tmp/site/marker.txt &&
+      exec python -m http.server --bind "$$PROBE_BIND" --directory /tmp/site "$$PROBE_PORT"
+
+services:
+  holder:
+    image: ${NETNS_PYTHON_IMAGE:?}
+    pull_policy: never
+    # 1번 프로세스가 tini 다. TERM 을 받으면 sleep 에 넘기고 함께 끝난다(run.py 의 END_INIT 갈래)
+    init: true
+    stop_grace_period: 2s
+    command: ["sleep", "infinity"]
+    ports:
+      - "127.0.0.1:${NETNS_PUBLIC_PORT:?}:8080"
+      - "127.0.0.1:${NETNS_ADMIN_PORT:?}:8081"
+
+  proxy:
+    image: ${NETNS_NGINX_IMAGE:?}
+    pull_policy: never
+    network_mode: "service:holder"
+    environment:
+      # 값을 바꾸면 proxy 의 구성이 바뀐 것이 되어 `up -d` 가 proxy 를 다시 만든다(항목 7.2 의 갈래)
+      PROBE_REV: ${NETNS_PROXY_REV:-0}
+    volumes:
+      - ./nginx.holder.conf:/etc/nginx/nginx.conf:ro
+
+  app:
+    <<: *server
+    network_mode: "service:holder"
+    environment:
+      PROBE_WHO: app
+      PROBE_TOKEN: ${NETNS_TOKEN:?}
+      PROBE_BIND: 127.0.0.1
+      PROBE_PORT: "8000"
+      # 값을 바꾸면 app 의 구성이 바뀐 것이 되어 `up -d` 가 app 을 다시 만든다(항목 7.4 의 갈래)
+      PROBE_REV: ${NETNS_APP_REV:-0}
+
+  admin:
+    <<: *server
+    network_mode: "service:holder"
+    environment:
+      PROBE_WHO: admin
+      PROBE_TOKEN: ${NETNS_TOKEN:?}
+      PROBE_BIND: 127.0.0.1
+      PROBE_PORT: "8001"

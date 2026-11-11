@@ -1,0 +1,28 @@
+# 위젯 빌드 프로브의 두 번째 사이트 파일(measure.mjs 의 diff 단계). 첫 번째는 저장소의 픽스처
+# tests/fixtures/site_file/sites.toml 이다. 그 픽스처와 허용 출처, 요청 글자 수 상한이 다르다. 허용 출처와 상한은
+# 산출물에서 글자로 찾기 쉽게 다른 데 나오지 않을 값으로 골랐다. 공개 키는 픽스처의 첫 사이트 것을 그대로 옮겼다
+# (위젯 빌드는 공개 키를 읽지 않는다).
+schema_version = "1"
+
+[[sites]]
+issuer = "https://probe-b.example"
+audience = "agent-os"
+allowed_origins = ["https://probe-b.example", "https://www.probe-b.example:8443"]
+agents = ["echo"]
+
+[[sites.public_keys]]
+kid = "probe-b-1"
+pem = """
+-----BEGIN PUBLIC KEY-----
+MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAidz9jKWqEB8cbJnGvTDY
+ggiDwV8F3HbLynTn7l8/Nacy57lLFE7ntT9xIhRUcF6X83v5u577ywbiuFQDu0Fe
+2xAk2SkXzPTxuPoGJM0j1HA2pdmLbOMYnZGXYFysmQSETCE8HVvfDYfxWbZYEcIz
+YUmEyKFRkfKwv9AUK/3KHCKHCInseeAiPiaOVwJDsmD4yDwXZMSN8IZ9gXxDjacx
+hMzhdNJBO9tCvWe2YTC6r5Db8VrEqDMMHfmYRSdyG0yqxRnZ96GhdX9SUfgrFTq8
+ekx4FVGPtqwi5NY7TBrSF93yN9lbA+tHYKQPLhjFlJdD6s09lHpxjolQNAN0qtjz
+xwIDAQAB
+-----END PUBLIC KEY-----
+"""
+
+[sites.limits]
+request_chars = 583927
