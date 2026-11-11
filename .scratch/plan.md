@@ -5,6 +5,8 @@
 
 아래 기능 표와 프론티어는 도구가 기능 계획에서 만든다. 기능 계획 `.scratch/<slug>/plan.md`나 이 파일(`.scratch/plan-head.md`)을 고치고 `uv run python tools/plan_table.py`를 돈다. 기능의 상태는 손으로 적지 않고 기능 계획의 `끝` 줄과 티켓의 `Status:`에서 정해진다.
 
+프론티어에 오른 기능이라도 그 기능 계획 본문의 첫 문장이 먼저 끝낼 하네스 일을 적었으면 그 일이 끝난 뒤에 시작한다. 하네스 일은 `**Blocked by:**`에 적을 수 없어 프론티어가 그것을 보이지 못한다. 지금은 release-image가 dev 전환(ADR 0043 Consequences "전환"의 harness 티켓)을 기다린다(ADR 0056 Consequences "dev 전환이 먼저다"). 전환 티켓이 닫힐 때 release-image를 든 이 문장을 걷는다. 전환 티켓은 닫을 때, 같은 전환을 문서 검색 서버 저장소(rag-engine)에 하라고 그 저장소의 세션에 줄 지시문도 사용자에게 낸다(사용자가 청했다, 일지 2026-11-11-1532 "사용자가 정했다"). 지시문에는 그 저장소가 agent-os의 규약 ADR을 따른다고 적고 다른 점만 적는 얇은 ADR 한 장을 두라는 요건을 싣고, 지시문을 낼 때 대기열 `rag-engine-port-by-hand`에 회차를 더한다. 전환 티켓이 닫힌 뒤의 하네스 일은 두 저장소의 공통 파일을 비교하는 점검 도구다(대기열 `rag-engine-harness-drift`. 같은 일지 "인계한 세션에서 사용자가 정했다"). 이 문장들은 그 지시문을 낸 뒤에 함께 걷는다.
+
 ## 목표 배치
 
 슬라이스가 끝날 때마다 채워진다. 현재 트리는 `README.md`.
@@ -60,10 +62,11 @@ web/                       슬라이스 3부터. pnpm 워크스페이스. 파이
 | 8 | [base-agent](base-agent/plan.md) | 기본 에이전트 assistant와 문서 검색 스킬·연결·규칙을 함께 내, 요구가 없으면 그대로 쓰고 요구가 있으면 복사해 커스텀 에이전트를 만들게 한다. | mcp-http, approval-rules | todo |
 | 8 | [public-demo](public-demo/plan.md) | 공개 정부 문서를 넣은 클라우드 VM 한 대를 공개 주소에 열어, 누구나 로그인 없이 묻고 출처가 붙은 답을 받게 한다. | base-agent, release-image, answer-eval, answer-markdown, rag-engine:release-image, rag-engine:search-eval | todo |
 | 8 | [release-image](release-image/plan.md) | 판마다 서버와 관리 화면과 위젯과 질문 페이지의 컨테이너 이미지를 짓고 올리며 단독 배포 안내도 낸다. | pilot-portal | todo |
+| 9 | [admin-login](admin-login/plan.md) | 관리 화면에 계정과 비밀번호 로그인을 더하고, 그 뒤 관리 화면을 같은 서버의 다른 포트로 인터넷에 연다. | release-image | todo |
 | 9 | [deploy-package](deploy-package/plan.md) | agent-os와 문서 검색 서버를 Docker Compose로 한 번에 띄우는 참조 배포를 준다. | local-model, portal-login, base-agent, release-image, ops-backup-upgrade, diag-bundle, mcp-http, rag-engine:release-image, rag-engine:admin, rag-engine:backup-upgrade, rag-engine:diag-bundle | todo |
 | 9 | [diag-bundle](diag-bundle/plan.md) | 문제를 살필 때 판과 구성과 최근 실패 원인을 비밀 값 없이 파일 하나로 묶는 명령을 준다. | release-image, mcp-http | todo |
 | 9 | [ops-backup-upgrade](ops-backup-upgrade/plan.md) | agent-os 데이터를 백업하고 새 서버에 복원하며, 판을 올린 뒤에도 옛 트레이스를 읽게 한다. | release-image | todo |
-| 9 | [pilot-release](pilot-release/plan.md) | public-demo를 뺀 기준선의 기능이 모두 끝나면 제품 0.1 판을 내고 지원 범위와 고지를 문서로 남긴다. | answer-eval, deploy-package, answer-markdown | todo |
+| 9 | [pilot-release](pilot-release/plan.md) | public-demo를 뺀 기준선의 기능이 모두 끝나면 제품 0.1 판을 내고 지원 범위와 고지를 문서로 남긴다. | answer-eval, deploy-package, answer-markdown, admin-login | todo |
 | 9 | [portal-login](portal-login/plan.md) | 질문 페이지에 사내 로그인 모드를 더해, 배포 환경에서는 사내 사람만 질문하게 한다. | pilot-portal | todo |
 | 10 | [admin-answer-preview](admin-answer-preview/plan.md) | 관리 화면 실행 상세의 최종 출력 칸에서 원문과 마크다운으로 그린 모양을 오가며 보게 해, 운영자가 최종 사용자에게 보인 모양을 바로 확인한다. | answer-markdown, pilot-release | todo |
 | 10 | [audit-export](audit-export/plan.md) | 운영자가 트레이스를 주체와 기간과 에이전트와 도구별로 조회하고 파일로 내보낸다. | io-guardrail | todo |

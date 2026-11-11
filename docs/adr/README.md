@@ -59,5 +59,6 @@
 | [0053](0053-model-answers-are-drawn-as-markdown-by-one-shared-component.md) | 모델이 지은 답은 공유 부품 하나가 마크다운으로 그리고, 원시 HTML과 이미지는 그리지 않는다 | accepted | 2026-11-10 |
 | [0054](0054-per-user-memory-is-an-mcp-server-outside-the-runtime-and-saving-asks-by-default.md) | 최종 사용자마다의 기억은 런타임 밖의 MCP 서버가 맡는 커스텀 에이전트용 부품이고, 저장은 묻는 것이 기본이며 문서에서 찾은 내용은 담지 않는다 | accepted | 2026-11-10 |
 | [0055](0055-database-queries-ship-as-named-queries-and-text-to-sql-guarded-by-database-permissions.md) | 데이터베이스 조회는 정해 둔 조회와 조회문 직접 작성을 둘 다 커스텀 에이전트용 부품으로 내고, 실행 전에 묻지 않으며 안전은 데이터베이스 권한으로 지킨다 | accepted | 2026-11-10 |
+| [0056](0056-ci-cuts-a-release-whenever-main-moves-and-the-standalone-compose-joins-proxy-and-four-containers-on-a-docker-network.md) | 판은 main이 움직일 때 CI가 스스로 내어 이미지 넷을 Docker Hub에 올리고, 단독 compose는 프록시와 네 컨테이너를 보통의 Docker 네트워크로 묶는다 | accepted | 2026-11-11 |
 
 ADR을 먼저 확인하는 상황 넷: 스택이나 라이브러리를 바꿀 때, 디렉터리나 층 경계를 바꿀 때, 디스크 형식(매니페스트, 이벤트)을 바꿀 때, 기존 코드가 왜 이렇게 되어 있는지 이해되지 않을 때.
