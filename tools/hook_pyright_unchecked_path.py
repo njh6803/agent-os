@@ -99,8 +99,10 @@ UNCHECKED_NAMES = frozenset({"node_modules", "__pycache__"})
 CONFIG_NAMES = ("pyrightconfig.json",)
 
 _CONTINUATION = re.compile(r"\\\r?\n")
-# `2>&1`, `>&2` 의 `&` 는 제어 연산자가 아니다. 나누기 전에 지운다.
-_FD_DUP = re.compile(r"\d*[<>]&\d+")
+# `2>&1`, `>&2` 의 `&` 는 제어 연산자가 아니다. 나누기 전에 지운다. 앞에 숫자가 오지 않게
+# 막아 숫자만 이어진 긴 낱말에서 시작 자리마다 끝까지 되읽는 제곱 시간을 피한다(손으로 봤다:
+# 숫자 4만 자에서 막지 않은 판 13초, 막은 판 0.00초).
+_FD_DUP = re.compile(r"(?<!\d)\d*[<>]&\d+")
 _SEPARATOR = re.compile(r"\|\||&&|[|;&\n]")
 # 리다이렉트: 연산자만 있는 낱말(대상이 다음 낱말)과 대상이 붙은 낱말(`>out.txt`).
 _REDIRECT_ONLY = re.compile(r"^\d*[<>]{1,2}\|?$")

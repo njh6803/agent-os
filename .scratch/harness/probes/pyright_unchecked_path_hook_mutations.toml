@@ -243,6 +243,16 @@ old = '''{"uv", "run", "tool", "uvx",'''
 new = '''{"uv", "run", "uvx",'''
 
 [[mutation]]
+name = "파일 기술자 복제 정규식 앞의 숫자 막기를 뺀다"
+tests = ["tests/tools/test_hook_pyright_unchecked_path.py", "-k", "숫자만_이어진"]
+expect = "red"
+expect_output = ['''AssertionError: 걸린 시간''']
+[[mutation.edit]]
+file = "tools/hook_pyright_unchecked_path.py"
+old = '''_FD_DUP = re.compile(r"(?<!\d)\d*[<>]&\d+")'''
+new = '''_FD_DUP = re.compile(r"\d*[<>]&\d+")'''
+
+[[mutation]]
 name = "대조군: 알림 끝 낱말을 바꾼다"
 tests = ["tests/tools/test_hook_pyright_unchecked_path.py"]
 expect = "green"

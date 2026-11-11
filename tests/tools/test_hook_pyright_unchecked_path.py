@@ -13,6 +13,7 @@ import io
 import json
 import sys
 import tempfile
+import time
 from pathlib import Path
 
 import pytest
@@ -189,6 +190,17 @@ def test_주석_글_안의_제어_연산자는_명령을_갈라_그_뒤를_명�
     # 못 보는 것(거짓 양성): 글 가르기가 주석 안의 `;` 에서 명령을 가른다.
     command = "uv run pyright tests/x.py # 끝; pyright .scratch/y.py"
     assert unchecked_paths(command, None) == [".scratch/y.py"]
+
+
+def test_숫자만_이어진_긴_낱말도_제때_읽고_뒤의_경로를_짚는다() -> None:
+    # 숫자 4만 자는 앞에 숫자를 막지 않은 파일 기술자 복제 정규식에서 13초가 걸렸다(손으로 봤다).
+    # 상한 5초는 새 판이 밀리초라 넉넉한 배수다.
+    command = "uv run pyright " + "1" * 40000 + " .scratch/x.py"
+    start = time.perf_counter()
+    found = unchecked_paths(command, None)
+    elapsed = time.perf_counter() - start
+    assert found == [".scratch/x.py"]
+    assert elapsed < 5.0, f"걸린 시간 {elapsed:.1f}초"
 
 
 def test_이스케이프한_공백이_든_경로는_갈라져_읽는다() -> None:
