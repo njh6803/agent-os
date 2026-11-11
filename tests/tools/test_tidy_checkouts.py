@@ -3225,6 +3225,25 @@ def test_judge_는_dev_브랜치를_origin_dev_에_든_끝이어도_지우지_�
     assert "지우지 않는 브랜치다" in kept
 
 
+def test_반박_dev_를_체크아웃한_워크트리는_머리가_dev_인_병합된_PR_이_있어도_지우지_않는다(
+    repo: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """PR 직전 CodeRabbit 리뷰가 찾았다. dev→main 릴리스 PR 의 머리 브랜치는 `dev` 라 `merged` 에
+    `dev` 가 채워진다. 체크아웃되지 않은 브랜치만 보호 이름을 보면, `dev` 를 체크아웃한 깨끗한
+    워크트리는 머리와 끝이 같아 지울 것으로 나오고 `remove` 가 로컬 `dev` 이름까지 지운다."""
+    path = repo / ".claude" / "worktrees" / "devwt"
+    _git("worktree", "add", "-b", "dev", str(path), cwd=repo)
+    head = _git("rev-parse", "HEAD", cwd=path)
+    merged = {"dev": frozenset({head})}
+    assert main(["judge"], cwd=repo, ops=_ops(merged)) == 0
+    line = next(line for line in capsys.readouterr().out.splitlines() if "/devwt" in line)
+    assert line.startswith("남긴다"), line
+    assert "지우지 않는 브랜치다" in line
+    assert main(["remove", path.as_posix(), "dev", head], cwd=repo, ops=_ops(merged)) == 1
+    assert path.exists()
+    assert _git("branch", "--list", "dev", cwd=repo) != ""
+
+
 @pytest.mark.parametrize("name", ["dev", "Dev", "DEV", "main", "Main", "master"])
 def test_보호_브랜치는_이름의_대소문자와_상관없이_지우지_않는다(name: str) -> None:
     """반박: 윈도의 for-each-ref 는 이름의 대소문자를 바꿔 찍을 수 있어 `Dev` 로 올 수 있다."""

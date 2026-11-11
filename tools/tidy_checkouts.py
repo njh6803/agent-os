@@ -1462,6 +1462,10 @@ def judge(
         if not facts.contained:
             return verdict("human", f"분리 HEAD 이고 그 커밋이 {TRUNK_WORDS} 어디에도 없다")
     else:
+        # 보호 브랜치는 체크아웃되었어도 이름을 지우지 않는다. dev→main 릴리스 PR 은 머리 브랜치가
+        # `dev` 라 `merged` 에 채워지고, 지우면 `remove` 가 로컬 `dev` 이름까지 지운다(PR 직전 리뷰)
+        if wt.branch.casefold() in PROTECTED_BRANCHES:
+            return verdict("keep", "지우지 않는 브랜치다")
         heads = merged.get(wt.branch)
         if not heads:
             return verdict("keep", "병합된 PR 이 없다")

@@ -2257,3 +2257,17 @@ expect_output = ["AssertionError: assert [] == ['keep.txt', 'pkg/index.js']"]
 file = "tools/tidy_checkouts.py"
 old = '''        if not os.path.lexists(long_path(source)):'''
 new = '''        if not os.path.lexists(source):'''
+
+# PR 직전 CodeRabbit 리뷰(기점 cd77e4096 의 dev-base-tools): 보호 브랜치 검사가 체크아웃되지 않은
+# 브랜치에만 있어, dev 를 체크아웃한 깨끗한 워크트리가 머리가 dev 인 병합된 PR 로 지워졌다
+
+[[mutation]]
+name = "워크트리 판정이 보호 브랜치를 보지 않는다"
+tests = ["tests/tools/test_tidy_checkouts.py", "-k", "dev_를_체크아웃한_워크트리"]
+expect = "red"
+expect_output = ["AssertionError: 지운다 "]
+
+[[mutation.edit]]
+file = "tools/tidy_checkouts.py"
+old = '''        if wt.branch.casefold() in PROTECTED_BRANCHES:'''
+new = '''        if wt.branch == "":'''
