@@ -30,6 +30,36 @@ const TARGETS = [
   { name: "markdown-to-jsx", file: "markdown-to-jsx.tsx", expect: ["markdown-to-jsx"], vite: true },
   { name: "react-markdown-no-gfm", file: "react-markdown-no-gfm.tsx", expect: ["react-markdown", "micromark"], vite: true },
   { name: "marked-lexer", file: "marked-lexer.ts", expect: ["marked"], vite: false },
+  // 2026-11-11 에 더했다. 합친 시제품(직접 짠 변환만)과, 한 단계를 라이브러리 플러그인에 맡긴 것 둘이다. `absent` 는
+  // 묶이면 안 되는 패키지다(직접 짠 변환만 쓴 묶음에 플러그인이 섞이면 증분이 뜻이 없다).
+  {
+    name: "answer-combined",
+    file: "answer-combined.tsx",
+    expect: ["react-markdown", "remark-gfm", "micromark"],
+    absent: ["remark-breaks", "mdast-util-newline-to-break", "remark-cjk-friendly", "micromark-extension-cjk-friendly"],
+    vite: true,
+  },
+  {
+    name: "answer-breaks-plugin",
+    file: "answer-breaks-plugin.tsx",
+    expect: ["react-markdown", "remark-gfm", "micromark", "remark-breaks", "mdast-util-newline-to-break"],
+    absent: ["remark-cjk-friendly", "micromark-extension-cjk-friendly"],
+    vite: true,
+  },
+  {
+    name: "answer-cjk-plugin",
+    file: "answer-cjk-plugin.tsx",
+    expect: ["react-markdown", "remark-gfm", "micromark", "remark-cjk-friendly", "micromark-extension-cjk-friendly"],
+    absent: ["remark-breaks", "mdast-util-newline-to-break"],
+    vite: true,
+  },
+];
+
+// 더한 몫을 견줄 짝(뒤의 것 위에 앞의 것이 얼마나 느는가).
+const OVER = [
+  ["answer-combined", "react-markdown"],
+  ["answer-breaks-plugin", "answer-combined"],
+  ["answer-cjk-plugin", "answer-combined"],
 ];
 
 const sizeOf = (bytes) => ({ raw: bytes.length, gzip: gzipSync(bytes, { level: 9 }).length });
@@ -69,6 +99,14 @@ async function measureEsbuild(target) {
   for (const wanted of target.expect) {
     if (!packages.some((p) => p === wanted || p.startsWith(`${wanted}-`))) problems.push(`${wanted} 가 묶이지 않았다`);
   }
+  for (const unwanted of target.absent ?? []) {
+    if (packages.includes(unwanted)) problems.push(`${unwanted} 가 묶였다(이 묶음에는 없어야 한다)`);
+  }
+  // 프로브의 자기 코드(시제품과 직접 짠 변환)가 파일마다 묶음에서 차지하는 바이트(최소화 뒤, gzip 전).
+  const ownFiles = Object.entries(output.inputs)
+    .map(([path, info]) => ({ path: path.replaceAll("\\", "/"), bytes: info.bytesInOutput }))
+    .filter((entry) => !entry.path.includes("node_modules/") && entry.bytes > 0)
+    .map((entry) => ({ path: entry.path.slice(entry.path.indexOf("markdown_render/") + "markdown_render/".length), bytes: entry.bytes }));
   for (const banned of ["react", "react-dom", "scheduler"]) {
     if (packages.includes(banned)) problems.push(`${banned} 가 묶였다(밖에 두어야 한다)`);
   }
@@ -80,6 +118,8 @@ async function measureEsbuild(target) {
     ...sizeOf(readFileSync(outfile)),
     packages: packages.filter((p) => p !== "(own)").length,
     topPackages: top.slice(0, 8).map(([name, bytes]) => ({ name, bytes })),
+    packageBytes: byPackage,
+    ownFiles,
     problems,
   };
 }
@@ -150,8 +190,26 @@ async function main() {
           viteDelta: { raw: r.vite.raw - base.vite.raw, gzip: r.vite.gzip - base.vite.gzip },
         }),
   }));
-  writeFileSync(join(OUT, "summary.json"), JSON.stringify({ notMeasured, table, rows }, null, 2));
-  console.log(JSON.stringify({ probe: "size", notMeasured: notMeasured.length, table }));
+  // 짝마다 더한 몫: 크기의 차이와, 앞의 묶음에만 있는 패키지(최소화 뒤 바이트).
+  const over = OVER.map(([name, baseName]) => {
+    const row = rows.find((r) => r.name === name);
+    const baseRow = rows.find((r) => r.name === baseName);
+    const entry = table.find((r) => r.name === name);
+    const baseEntry = table.find((r) => r.name === baseName);
+    return {
+      name,
+      over: baseName,
+      esbuild: { raw: entry.esbuildExternalReact.raw - baseEntry.esbuildExternalReact.raw, gzip: entry.esbuildExternalReact.gzip - baseEntry.esbuildExternalReact.gzip },
+      vite: { raw: entry.viteIifeWithReact.raw - baseEntry.viteIifeWithReact.raw, gzip: entry.viteIifeWithReact.gzip - baseEntry.viteIifeWithReact.gzip },
+      addedPackages: Object.entries(row.esbuild.packageBytes)
+        .filter(([pkg]) => pkg !== "(own)" && baseRow.esbuild.packageBytes[pkg] === undefined)
+        .map(([pkg, bytes]) => ({ name: pkg, bytes })),
+      ownBytes: { this: row.esbuild.packageBytes["(own)"] ?? 0, base: baseRow.esbuild.packageBytes["(own)"] ?? 0 },
+    };
+  });
+  const ownFiles = rows.find((r) => r.name === "answer-combined").esbuild.ownFiles;
+  writeFileSync(join(OUT, "summary.json"), JSON.stringify({ notMeasured, table, over, ownFiles, rows }, null, 2));
+  console.log(JSON.stringify({ probe: "size", notMeasured: notMeasured.length, table, over, ownFilesOfAnswerCombined: ownFiles }));
   if (notMeasured.length > 0) {
     console.error("측정이 아닌 회차", JSON.stringify(notMeasured, null, 2));
     process.exit(1);

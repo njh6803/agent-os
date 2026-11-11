@@ -12,12 +12,14 @@
 //   out/lint/web/tsconfig.base.json             ← 저장소의 web/tsconfig.base.json (복사)
 //   out/lint/web/apps/widget/tsconfig.json      ← 위젯의 tsconfig 에서 Next 플러그인과 Next 산출물 include 만 뺀 것
 //   out/lint/web/apps/widget/components/molecules/{MarkdownReact,MarkdownJsx}.tsx, lib/safe-url.ts  ← 프로브의 컴포넌트 (복사)
+//   out/lint/web/apps/widget/components/molecules/AnswerMarkdown.tsx, lib/link-url.ts, lib/answer-markdown/*.ts
+//                                               ← 합친 시제품 (복사, 2026-11-11 에 더했다. 목록은 COMPONENT_FILES)
 //   out/lint/web/apps/widget/components/molecules/Planted.tsx  ← 일부러 심은 위반(양성 대조)
 // ESLint, typescript-eslint, eslint-plugin-boundaries 는 저장소 잠금 파일과 같은 판(10.11.0, 8.70.1, 7.2.0)을 프로브에
 // 설치한 것이고, 무대에서 위로 올라가며 이 프로브 폴더의 node_modules 로 풀린다.
 //
 // 측정이 아닌 회차(.claude/rules/probes.md)
-// - ESLint 의 결과에 네 파일이 모두 있어야 한다(판정자가 실제로 그 파일을 봤다).
+// - ESLint 의 결과에 부품 파일 전부(COMPONENT_FILES)와 심은 파일이 있어야 한다(판정자가 실제로 그 파일을 봤다).
 // - 어느 파일에도 파싱 오류(fatal)가 없어야 한다. 어느 tsconfig 에도 들지 않는 파일은 규칙이 아니라 파싱 오류로 빨개진다.
 // - 심은 위반에서 기대한 규칙 ID 넷이 모두 걸려야 한다. 걸리지 않으면 "0건"은 아무것도 재지 못한 것이다.
 // 하나라도 어긋나면 종료 코드 1. 컴포넌트에 걸린 규칙이 있으면 그것은 측정 결과이고 종료 코드는 0 이다.
@@ -80,12 +82,32 @@ function stage() {
   copyFileSync(join(REPO, "web", "eslint.config.mjs"), join(WEB, "eslint.config.mjs"));
   copyFileSync(join(REPO, "web", "tsconfig.base.json"), join(WEB, "tsconfig.base.json"));
   writeFileSync(join(WIDGET, "tsconfig.json"), `${JSON.stringify(WIDGET_TSCONFIG, null, 2)}\n`);
-  for (const name of ["MarkdownReact.tsx", "MarkdownJsx.tsx"]) {
-    copyFileSync(join(ROOT, "apps", "widget", "components", "molecules", name), join(WIDGET, "components", "molecules", name));
+  mkdirSync(join(WIDGET, "lib", "answer-markdown"), { recursive: true });
+  for (const path of COMPONENT_FILES) {
+    copyFileSync(join(ROOT, "apps", "widget", ...path.split("/")), join(WIDGET, ...path.split("/")));
   }
-  copyFileSync(join(ROOT, "apps", "widget", "lib", "safe-url.ts"), join(WIDGET, "lib", "safe-url.ts"));
   writeFileSync(join(WIDGET, "components", "molecules", "Planted.tsx"), PLANTED);
 }
+
+/** 판정자에게 보이는 프로브의 부품 파일(`apps/widget/` 아래의 경로). 뒤의 열은 2026-11-11 에 더한 합친 시제품이다. */
+const COMPONENT_FILES = [
+  "components/molecules/MarkdownReact.tsx",
+  "components/molecules/MarkdownJsx.tsx",
+  "lib/safe-url.ts",
+  "components/molecules/AnswerMarkdown.tsx",
+  "lib/link-url.ts",
+  "lib/answer-markdown/index.ts",
+  "lib/answer-markdown/tree.ts",
+  "lib/answer-markdown/soft-breaks.ts",
+  "lib/answer-markdown/literal-marks.ts",
+  "lib/answer-markdown/literal-marks-syntax.ts",
+  "lib/answer-markdown/cjk-emphasis.ts",
+  "lib/answer-markdown/citations.ts",
+  "lib/answer-markdown/sources.ts",
+  "lib/answer-markdown/footnotes.ts",
+  "lib/answer-markdown/task-marks.ts",
+];
+const PLANTED_FILE = "components/molecules/Planted.tsx";
 
 function main() {
   stage();
@@ -106,9 +128,11 @@ function main() {
   }
   writeFileSync(join(STAGE, "eslint.json"), JSON.stringify(results, null, 2));
 
-  const byName = new Map(results.map((r) => [r.filePath.replaceAll("\\", "/").split("/").pop(), r]));
+  // 결과는 `apps/widget/` 아래의 경로로 찾는다(같은 이름의 파일이 폴더마다 있을 수 있다).
+  const underWidget = (filePath) => filePath.replaceAll("\\", "/").split("/apps/widget/").pop();
+  const byName = new Map(results.map((r) => [underWidget(r.filePath), r]));
   const notMeasured = [];
-  for (const name of ["MarkdownReact.tsx", "MarkdownJsx.tsx", "safe-url.ts", "Planted.tsx"]) {
+  for (const name of [...COMPONENT_FILES, PLANTED_FILE]) {
     const result = byName.get(name);
     if (result === undefined) {
       notMeasured.push(`${name} 을 판정자가 보지 않았다`);
@@ -116,13 +140,13 @@ function main() {
       notMeasured.push(`${name} 에 파싱 오류가 있다: ${JSON.stringify(result.messages.filter((m) => m.ruleId === null))}`);
     }
   }
-  const plantedRules = [...new Set((byName.get("Planted.tsx")?.messages ?? []).map((m) => m.ruleId))].sort();
+  const plantedRules = [...new Set((byName.get(PLANTED_FILE)?.messages ?? []).map((m) => m.ruleId))].sort();
   for (const rule of EXPECTED_PLANTED_RULES) {
     if (!plantedRules.includes(rule)) notMeasured.push(`심은 위반에서 ${rule} 가 걸리지 않았다`);
   }
 
   const files = {};
-  for (const name of ["MarkdownReact.tsx", "MarkdownJsx.tsx", "safe-url.ts"]) {
+  for (const name of COMPONENT_FILES) {
     const result = byName.get(name);
     files[name] = {
       errors: result?.errorCount ?? null,
