@@ -6,13 +6,28 @@
 
 **대기열:** 없음
 
-**Status:** ready-for-agent
+**Status:** done
 
 **막는 티켓:** `dev-branch-transition`(기준 브랜치 규칙)이 병합된 뒤에 한다.
 
 ## 수용 기준
 
-- [ ] 머리 브랜치가 `dev`인 PR에서 `claude-code-review.yml`의 리뷰 잡이 건너뛰어지고, `hotfix/*`·`feature/*`·`chore/*`·`docs/*` PR에서는 그대로 돈다. 임시 PR이나 워크플로의 조건식을 읽은 근거로 어느 쪽을 확인했는지 티켓 끝에 적는다
-- [ ] 주석에 ADR 0043 Consequences "티켓 검사와 봇"을 근거로 적는다
-- [ ] 워크플로 감사(zizmor)와 검증 명령이 초록이다
-- [ ] PR 본문에 이 PR은 자기 워크플로 파일을 바꿔 봇이 건너뛴다는 것과 대신 돈 리뷰를 적는다
+- [x] 머리 브랜치가 `dev`인 PR에서 `claude-code-review.yml`의 리뷰 잡이 건너뛰어지고, `hotfix/*`·`feature/*`·`chore/*`·`docs/*` PR에서는 그대로 돈다. 임시 PR이나 워크플로의 조건식을 읽은 근거로 어느 쪽을 확인했는지 티켓 끝에 적는다
+- [x] 주석에 ADR 0043 Consequences "티켓 검사와 봇"을 근거로 적는다
+- [x] 워크플로 감사(zizmor)와 검증 명령이 초록이다
+- [x] PR 본문에 이 PR은 자기 워크플로 파일을 바꿔 봇이 건너뛴다는 것과 대신 돈 리뷰를 적는다
+
+## 확인한 근거 (2026-11-12)
+
+임시 PR이 아니라 조건식을 읽어 손으로 따졌다. 잡의 `if`는 `!draft && !(머리 저장소 == 이 저장소 && 머리 브랜치 == 'dev' && base == 'main')`이다. 아래 여섯 경우를 식에 넣어 읽었고, 같은 식을 `uv run python -c`의 한 줄로 옮겨 돌린 결과와 같았다. 그 한 줄은 커밋한 프로브가 아니다.
+
+| 머리 브랜치 → base | 머리 저장소 | 결과 |
+|---|---|---|
+| `dev` → `main` | 이 저장소 | 건너뛴다 |
+| `hotfix/x` → `main` | 이 저장소 | 돈다 |
+| `feature/01-a` → `dev` | 이 저장소 | 돈다 |
+| `chore/a` → `dev` | 이 저장소 | 돈다 |
+| `docs/a` → `dev` | 이 저장소 | 돈다 |
+| `dev` → `main` | 포크 | 돈다(포크의 `dev`는 건너뛰지 않는다) |
+
+코멘트 0개 가드는 같은 잡의 스텝이라 잡과 함께 건너뛴다. 건너뛴 잡은 필수 검사가 아니다(`tools/protection.json`의 필수 검사는 `verify` 하나). YAML이 파싱되는 것과 `zizmor`가 지적 없음인 것을 손으로 봤다. 린트 둘은 초록이고, `tools/run_checks.py`는 pytest만 빨갰다(7093 통과, 1 실패). 실패한 `tests/tools/test_rerun_runner.py::test_파일럿에서는_인계로_멈추지_않는다`는 이 변경과 무관한 파일을 시험하고, 단독으로 다시 돌리자 통과했다(66초). 러너 안에서는 다른 세션이 함께 돌아 부하가 컸고 이 시험이 실제 프로세스를 띄워 시간에 기댄 것으로 읽었으나 원인은 재지 않았다. 나머지 일곱 검사(`check-ticket`·`zizmor`·`lint-imports`·`check-instructions`·`check-type-escapes`·`pyright` 둘)와 `run-hooks`, `web-verify`는 통과했다. 실제 dev→main PR에서 건너뛰는 모습은 dev 브랜치가 서고 첫 dev→main PR이 열릴 때 처음 본다.
