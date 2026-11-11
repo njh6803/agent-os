@@ -37,7 +37,7 @@ paths:
     - `hook_pr_head_sync`는 리뷰를 부르는 명령(`gh pr ready`, CodeRabbit 요청 코멘트)에서만 git과 gh를 띄운다(2026-10-02 실측: 그 밖의 명령 226~231ms, 로컬 판정 310~337ms, gh 길 941~998ms, `.scratch/harness/probes/pr_head_sync/time_hook.sh`).
     - `hook_push_behind_main`은 명령 위치의 `git push`에서만 git을 띄운다(래퍼를 거쳐 그 밖의 명령 167~177ms, origin이 로컬 경로인 뒤처진 브랜치의 푸시 375~444ms, 2026-10-13 실측, `.scratch/harness/probes/push_behind_hook_time.py`. 네트워크를 거치는 fetch는 재지 않았다).
     - `hook_push_delete_open_pr`는 명령 위치의 지우는 `git push`에서만 git과 gh를 띄운다(래퍼를 거쳐 그 밖의 명령 194~198ms, origin이 로컬 경로인 열린 PR 머리의 지우기 315~335ms, 다섯 번씩, 2026-10-16 실측, `.scratch/harness/probes/guard_hooks_time.py`. gh와 네트워크의 길은 재지 않았다).
-    - Bash·PowerShell에는 PostToolUse 훅이 셋(`hook_pr_next_session`, `hook_handoff`, `hook_large_result`) 붙고, Bash에는 명령 글만 보고 일지를 쓰는 꼴일 때만 표지 파일 하나를 만드는 `hook_journal_evidence`가 더 붙어 넷이다(harness 티켓 019. 시간은 재지 않았고 다른 훅과 같은 약 0.2초로 어림한다).
+    - Bash·PowerShell에는 PostToolUse 훅이 셋(`hook_pr_next_session`, `hook_handoff`, `hook_large_result`) 붙고, Bash에는 명령 글만 보고 일지를 쓰는 꼴일 때만 표지 파일 하나를 만드는 `hook_journal_evidence`와, `pyright`에 분석하지 않는 경로를 준 명령일 때만 표지 파일 하나를 만드는 `hook_pyright_unchecked_path`가 더 붙어 다섯이다(harness 티켓 019와 `pyright-unchecked-path-hook`. 후자는 작업 폴더에서 위로 `pyproject.toml`을 찾아 읽는다. 시간은 재지 않았고 다른 훅과 같은 약 0.2초로 어림한다).
     - 인계 훅 둘(`hook_handoff`, `hook_handoff_notice`)의 시간은 아래 인계 훅 항목에 있다.
   - **Read·Grep**
     - Read 호출에는 PreToolUse `hook_user_settings_read`와 `hook_midturn_korean`과 PostToolUse `hook_large_result`가 붙는다.

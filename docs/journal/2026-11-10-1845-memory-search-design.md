@@ -869,6 +869,13 @@ claude-review의 첫 리뷰는 Minor 하나를 냈고 Critical과 Major는 없�
 
 질문은 "일지만 바뀐 넷째 커밋도 같은 파일의 다른 불안정한 시험에 막혔습니다. 어떻게 걸까요?"였고, 고르지 않은 선택지는 "한 번 더 다시 걸기"였다. 묻기 전에 스테이지에 일지 한 파일만 있는 것을 `git diff --cached --name-only`로 봤다. 넷째 커밋만 `SKIP=pytest`로 건다.
 
+### 넷째 커밋과 main 합침
+
+- 넷째 커밋 `9646c0718`이 섰다. 러너가 `Passed`(461.17초)이고 pytest만 `Skipped`였다(web-verify 460.7초, run-hooks 58.1초, pyright 40.8초). PR 본문의 체크리스트와 "남긴 위험"에 넷째 커밋도 `SKIP=pytest`로 건 것을 더해 푸시 전에 `gh pr edit`을 쳤다.
+- `git push`를 훅이 막았다. 이 브랜치가 origin/main보다 두 커밋 뒤처졌고, strict 보호라 병합 전에 어차피 main을 합쳐야 한다는 것이다. 새 커밋은 PR #524(`8a806a449`, 기본 에이전트의 명세)와 PR #525(`cdf84403e`, pyright 미분석 경로 훅)다.
+- `git merge --no-edit origin/main`이 ADR 0051에서 충돌했다. 두 곳이고 둘 다 양쪽이 서로 다른 것을 더한 충돌이라 둘 다 살렸다. 결정 절은 main이 "답의 모양"에 단 포인터와 이 브랜치가 "문서 속 지시"에 단 포인터를 모두 남겼다. 이력 절은 main의 이력 둘("인사와 앞 대화에 관한 요청에는 검색 없이 답한다", "전문에서 가져온 근거의 위치는 절의 제목이고 없으면 전문이라고 적는다")을 앞에, 이 브랜치의 이력("제품 1.0에서 기본 에이전트가 지식베이스를 고른다")을 뒤에 두었다. main의 첫 이력은 "어떤 문서가 있는지 묻는 말"을 검색 없이 답하는 갈래에 넣었고, 이 브랜치의 이력은 지식베이스 목록이 열린 뒤 그 물음에 목록으로 답할지를 `kb-selection`의 명세에 넘겼으므로 두 이력은 어긋나지 않는다.
+- 푼 뒤 `uv run python tools/check_adr_pointers.py`와 `uv run python tools/plan_table.py`가 출력 없이 끝났고 `.scratch/plan.md`는 바뀌지 않았다. main이 바꾼 규약(`docs/constitution/operations.md`의 pyright 프로브 줄, `.claude/rules/tools.md`)은 이 PR이 든 파일과 관계가 없다.
+
 ## 다음
 
 - 이 설계에서 바로 이어지는 구현 일은 없다. 새 기능 여섯(kb-selection, user-memory, named-query, system-lookup, text-to-sql, plan-tool)은 모두 기준선 뒤이고 `.scratch/plan.md`의 차례를 따른다.
