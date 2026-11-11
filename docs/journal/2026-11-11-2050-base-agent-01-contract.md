@@ -71,6 +71,40 @@
 
 open-session을 부른다 2026-11-11T11:53:36Z
 
+## 인계 (둘째)
+
+경계 `커밋 뒤`. 이어받은 세션(세션 제목 `feature/01-contract-agent-manifest-turn-and-tool-call-limits`, 모델 `claude-sonnet-5-5` high)이 위 절의 반영을 마치고 커밋 `d8b84bf28`(제목은 feat 형식으로 매니페스트의 두 칸과 런타임 집행을 더했다고 적었다)을 만들었다. pre-commit은 통과했다(종료 코드 0). 컨텍스트가 인계 문턱(20만 토큰)을 넘어(239,937) 두 번째 `hook_handoff`의 계기를 받았다. 이 절은 그 커밋에 실리지 않았다(앞 세션이 실렸다고 적은 것은 틀렸다. 이 절은 인계 뒤에 쓴 것이라 작업 폴더에만 있었고, 셋째 세션이 봇 회차의 커밋에 실었다). 사용자의 새 말은 없다.
+
+- 남은 단계: 푸시, `/git-pr`(PR 연 뒤 `get_status`와 필요하면 `bind_pr`), 봇 회차, 병합. 병합은 이 워크트리 사본의 `merge.md`의 "워크트리에서 병합할 때"를 Read로 열어 따른다. 티켓은 이미 `Status: done`이고 체크박스가 모두 찼다. 마지막 열린 티켓이 아니라 기능 계획의 `**끝:**` 줄은 적지 않는다.
+- PR 본문에 적을 것: (1) 관리 화면 e2e `decision.e2e.ts`의 첫 시험이 이 PC에서 5초 기대 시간에 걸려 실패한 것(앞 세션 일지의 e2e 줄, 원인은 시간으로 미룬 것이고 main 대조는 안 했다). CI의 `e2e` 잡이 판정한다. (2) 이 세션의 전체 러너에서 pytest 4건(`tests/channel/cli/test_interrupt.py` 둘, `tests/tools/test_rerun_gates.py`, `tests/tools/test_rerun_runner.py`)이 시간 단언으로 실패했고 홀로 다시 돌리자 통과했다. 이 변경이 닿지 않은 파일이다. CI의 pytest가 판정한다. (3) 카나리아 명세 둘의 통과 4(core 거부 문구, sdk 두 칸). 기존 sdk 카나리아 명세 둘은 다시 돌리지 않았다.
+- 리뷰 반영으로 새로 쓴 사실 문장(PR 직전 `bug-perf-review`가 밀 주장): `core.md`의 "끝은 `ctx.llm()` 한 번의 루프에 걸리고 재개해도 비워지지 않아 재생된 턴도 센다", `sdk.md`의 "에이전트는 `max_turns`를 낮출 수만 있고(10을 넘는 값은 거부된다), `max_tool_calls`는 올릴 수도 있다(ADR 0052)", `loop.py` 독스트링의 "끝(`max_turns`)은 `ctx.llm()` 한 번의 루프에 걸리고, 재개해도 비워지지 않아 재생된 턴도 센다". 근거는 `run.py`의 `_Context.llm`이 호출마다 `run_loop(..., max_turns=self._limits.turns)`를 새로 부르는 것과 ADR 0052의 "`ctx.llm()` 한 번의 루프"와 "올릴 수 있는 것은 `max_tool_calls`이고 `max_turns`는 10까지다"다. 앞의 것은 코드를 읽은 것이고 직접 두 번 부르는 에이전트로 돌려 본 것은 아니다.
+- 세션 제목은 인계로 `(인계함)`을 붙인다. 잠금은 이미 풀려 있었다(`git worktree unlock`이 `is not locked`).
+
+open-session을 부른다 2026-11-11T12:49:00Z
+
+## PR (셋째 세션)
+
+- 푸시 전에 훅이 main에 1커밋 뒤처졌다고 막아 `git merge origin/main`으로 합쳤다(충돌 없음, `uv run python tools/plan_table.py`를 다시 돌려도 `.scratch/plan.md`가 달라지지 않았다). 합친 결과 전체를 로컬에서 돌리지는 않았다.
+- 일지만 바꾼 커밋의 pre-commit이 두 번 pytest의 시간 민감 시험(`test_rerun_runner.py`, `test_probe_kit.py`)에서 실패했다. `test_rerun_runner.py`를 홀로 돌리면 63개가 통과했다(`uv run pytest tests/tools/test_rerun_runner.py -q`의 출력). 그래서 이 절과 티켓 57행의 예외는 이 커밋(봇 회차 커밋)에 싣는다.
+- PR 직전 `coderabbit-review` 서브에이전트: CLI 0.7.5, `Seat: not assigned`인데 `review_completed`까지 돌았다. 지적은 Minor 2와 Nit 1이다. (1) 티켓 57행 체크박스에 e2e 예외가 없었다: 유효, 티켓 줄에 예외를 적어 이 커밋에 실었다. (2) `max_turns=1`이면 마지막 턴의 도구를 실행한 뒤 `loop_limit`로 끝난다: 기존 의도(`loop.py` 독스트링)라 보류, 아래 "다음". (3) 끝에 닿은 뒤에도 도구 목록이 모델에 묶여 있다: Nit, 상한이 있어 고치지 않는다. 즉시 수정할 항목은 (1) 하나였다.
+- PR #532를 열고 `@coderabbitai review`를 남겼다. 헤드 `60b8e76`에서 CodeRabbit(`No actionable comments`)과 claude-review는 통과였다. claude-review는 Critical·Major 없음, Minor 하나(위 (2)와 같음)와 Nit 하나(`_call` 독스트링에 ADR 0044·0052의 차례가 겹쳐 길다, 다음에 만질 때 표로 뺀다)를 냈다. 둘 다 첫 회차라 지적마다 판단했고 둘은 보류다.
+- CI의 `python`·`web`·`e2e`·`e2e-widget`·`e2e-portal`은 시험에 닿기 전에 환경 설치(`apt-get`, ripgrep과 `playwright install-deps chromium`)가 종료 코드 100으로 실패했고 `verify`는 그 결과를 모아 빨갰다(`gh run view --log-failed`로 읽은 것). 코드 실패가 아니다. 푸시로 다시 돈다.
+
+## 회고
+
+후보 4, 승인 0, 기각 4, 넘김 0. 사용자에게 넘길 것이 없어 답을 기다리지 않았다. 대기열 조회는 `uv run python tools/queue_open_rows.py --search …`로 했고 만료할 항목은 없었다(출력의 "만료할 항목: (없음)"). 이 세션이 고친 것은 일지의 틀린 한 줄 하나다.
+
+1. **일지만 바꾼 커밋의 pre-commit이 부하성 시간 시험으로 두 번 빨갰다**(첫 시도 `test_rerun_runner.py`의 `test_오염이_한_번이면_다시_돌고_두_번이면_그_과제를_모든_갈래에서_뺀다`, 셋째 시도 `test_probe_kit.py`의 `test_배출은_줄이_계속_와도_제한_시간에_끝난다`와 `test_rerun_runner.py`의 `test_동시에_둘까지_돌고_셋째는_자리가_빌_때_연다`. 둘째 시도는 pytest까지 모두 통과했으나 메시지 파일이 없어 `git commit`이 128로 끝났다). 판정 **기각**. 조건: 대기열 0306이 이 종류를 받아들여 닫았고("부하에서 시간 시험이 빨개지면 그 커밋을 다시 치는 값을 받아들이고 사례를 더 고치지 않는다", 0306의 상태 줄) 새 사례는 회차를 더하지 않고 일지에만 적게 되어 있다. `test_rerun_runner.py`를 홀로 돌리자 63개가 통과했다.
+2. **앞 세션의 인계 절이 "이 일지는 그 커밋에 실렸다"고 적었으나 그 절은 커밋 뒤에 쓴 것이라 실려 있지 않았다.** 판정 **기각**(고침 하나). 조건: 인계 절을 새 세션이 봇 회차 커밋에 싣는 것은 `handoff.md`의 설계이고(같은 날 일지 2026-11-11-1555-base-agent-tickets.md의 "이 절은 커밋하지 않았다. 새 세션이 봇 회차의 커밋에 싣는다"가 같은 모양), 틀린 것은 한 줄의 서술뿐이라 이 일지의 해당 줄을 바로잡는 것으로 끝났다. 인계 절을 쓴 뒤 인계 세션이 일지를 다시 고치는 사건은 열린 0526이 다룬다(다른 모양이라 회차를 더하지 않았다).
+3. **워크트리 가드가 복합 git 명령(`git add … && git commit -F …`)을 거부해 메시지 파일을 만드는 앞 단계까지 막혔다.** 판정 **기각**. 조건: 앱 가드가 그 자리에서 거부했고 `CLAUDE.md` 환경 함정이 이미 "명령은 하나씩 치고 긴 입력은 파일로 쓴다"고 적고 있다(그 문장대로 나눠 쳐서 통과했다).
+4. **CI 러너 환경 설치(`apt-get`)가 모든 잡에서 종료 코드 100으로 실패했다.** 판정 **기각**. 조건: 실패한 줄이 `apt-get`/`playwright install-deps`의 설치 단계라 이 저장소 코드 밖의 문제로 보인다(어림이고 다시 돌려 확인하지 않았다). 고칠 대상이 저장소에 없다.
+
+## 다음
+
+- 병합 뒤 다음 티켓은 02(`02-fake-doc-search-server-fixture`, 다른 세션이 맡아 워크트리가 있다). 03은 01·02가 모두 병합된 뒤, 04~06은 03 뒤 나란히, 07은 05와 rag-engine의 공개 이미지 뒤다(`.scratch/base-agent/plan.md`와 티켓의 `Blocked by`).
+- **후속 후보: `max_turns`가 낮을 때 마지막 턴의 도구 실행.** `core/loop.py`의 `run_loop`가 마지막 턴에 모델이 낸 도구 호출을 실행한 뒤에 `LoopLimitExceeded`를 던진다. 이 변경으로 `max_turns`를 1~2로 낮출 수 있게 되어 부작용이 있는 도구가 실행된 직후 `loop_limit`로 끝나는 모양에 쉽게 닿는다. 두 봇이 같은 지적을 했다. 이 티켓의 체크박스 밖이라 미뤘고 아직 티켓이 없다. 기본 에이전트(티켓 03)가 `max_turns`를 낮게 두기 전에 정할 일이다(어림이 아니라 지적의 근거는 `loop.py` 독스트링과 두 봇의 읽기다).
+- 기존 sdk 카나리아 명세 둘과 core 규칙 카나리아 명세 다섯은 이 브랜치에서 다시 돌리지 않았다(`tools/sibling_overlap.py`의 알림이 가리킨 채 남는다).
+
 ## 알아 둘 것
 
 - 변이 표와 카나리아 출력은 스크래치패드에 있고 저장소에 없다(변이 표는 커밋하지 않는다고 정했다). 명세의 카나리아 TOML만 커밋 대상이다.
