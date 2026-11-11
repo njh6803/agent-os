@@ -704,7 +704,7 @@ def test_폴더가_없어도_잠긴_등록과_origin_main_에_없는_분리_HEAD
     detached = replace(_WT, branch=None)
     outside = judge(detached, missing, {}, (), _죽었다, ())
     assert outside.action == "human"
-    assert "origin/main 에 없다" in outside.reason
+    assert "origin/main 이나 origin/dev 어디에도 없다" in outside.reason
     inside = judge(detached, replace(missing, contained=True), {}, (), _죽었다, ())
     assert (inside.action, inside.branch) == ("delete", None)
     locked = judge(replace(_WT, locked="이동식 매체"), missing, _MERGED, (), _죽었다, ())
@@ -733,10 +733,10 @@ def test_분리_HEAD_는_그_커밋이_origin_main_에_있을_때만_지운다()
     detached = replace(_WT, branch=None)
     outside = judge(detached, _FACTS, _MERGED, (), _죽었다, ())
     assert outside.action == "human"
-    assert "origin/main 에 없다" in outside.reason
+    assert "origin/main 이나 origin/dev 어디에도 없다" in outside.reason
     inside = judge(detached, replace(_FACTS, contained=True), {}, (), _죽었다, ())
     assert (inside.action, inside.branch, inside.head) == ("delete", None, _HEAD)
-    assert "origin/main 에 있다" in inside.reason
+    assert "origin/main 이나 origin/dev 에 있다" in inside.reason
     dirty = judge(detached, replace(_FACTS, contained=True, status=" M a"), {}, (), _죽었다, ())
     assert dirty.action == "keep"
     held = judge(detached, replace(_FACTS, contained=True), {}, (), _죽었다, _CLAUDE)
@@ -3012,7 +3012,7 @@ def test_judge_는_분리_HEAD_가_origin_main_에_없으면_사람에게_넘긴
     assert main(["judge"], cwd=repo, ops=_ops({})) == 0
     line = next(line for line in capsys.readouterr().out.splitlines() if "/sweep" in line)
     assert line.startswith("넘긴다"), line
-    assert "origin/main 에 없다" in line
+    assert "origin/main 이나 origin/dev 어디에도 없다" in line
 
 
 def test_judge_는_폴더_없는_등록을_지울_후보로_찍고_remove_가_등록을_걷는다(
@@ -3092,14 +3092,14 @@ def test_judge_는_폴더_없는_분리_HEAD_등록을_origin_main_에_없으면
     out = capsys.readouterr().out.splitlines()
     kept = next(line for line in out if "/unique" in line)
     assert kept.startswith("넘긴다"), kept
-    assert "origin/main 에 없다" in kept
+    assert "origin/main 이나 origin/dev 어디에도 없다" in kept
     gone = next(line for line in out if "/plain" in line)
     assert gone.startswith("지운다"), gone
     held = next(line for line in out if "/locked" in line)
     assert held.startswith("넘긴다"), held
     assert "잠겨" in held
     assert main(["remove", unique.as_posix(), ".detached", head], cwd=repo, ops=_ops({})) == 1
-    assert "origin/main 에 없다" in capsys.readouterr().out
+    assert "origin/main 이나 origin/dev 어디에도 없다" in capsys.readouterr().out
     assert _registered(repo, unique)
     assert _git("cat-file", "-t", head, cwd=repo) == "commit"
     assert main(["remove", plain.as_posix(), ".detached", plain_head], cwd=repo, ops=_ops({})) == 0
@@ -3155,6 +3155,134 @@ def test_judge_는_PR_없이_origin_main_에_든_브랜치를_지울_후보로_�
     assert main(["remove-branch", "worktree-x", tip], cwd=repo, ops=_ops({})) == 0
     assert _git("branch", "--list", "worktree-x", cwd=repo) == ""
     assert _git("branch", "--list", "ahead", cwd=repo) != ""
+
+
+def _dev만_앞선다(root: Path) -> str:
+    """루트의 main 에 커밋을 하나 더하고 `origin/dev` 를 그 끝에 둔다. `origin/main` 은 그대로다.
+    돌려주는 것은 `origin/dev` 에만 있는 그 커밋이다."""
+    (root / "dev-only.txt").write_text("x", encoding="utf-8")
+    _git("add", "dev-only.txt", cwd=root)
+    _git(*_IDENTITY, "commit", "-m", "dev 만 쥔 커밋", cwd=root)
+    tip = _git("rev-parse", "HEAD", cwd=root)
+    _git("update-ref", "refs/remotes/origin/dev", tip, cwd=root)
+    return tip
+
+
+def test_judge_는_분리_HEAD_가_origin_dev_에만_있어도_지울_후보로_찍는다(
+    repo: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """dev 로 PR 이 병합되면 그 커밋은 아직 main 에 없다. 둘 다 보지 않으면 모두 넘겨진 채
+    쌓인다."""
+    _dev만_앞선다(repo)
+    path, head = _add_detached(repo, "sweep")
+    assert main(["judge"], cwd=repo, ops=_ops({})) == 0
+    line = next(line for line in capsys.readouterr().out.splitlines() if "/sweep" in line)
+    assert line.startswith("지운다"), line
+    assert f'remove "{path.as_posix()}" .detached {head}' in line
+    assert main(["remove", path.as_posix(), ".detached", head], cwd=repo, ops=_ops({})) == 0
+    assert not _registered(repo, path)
+
+
+def test_judge_는_분리_HEAD_가_origin_dev_에도_없으면_dev_가_있어도_넘긴다(
+    repo: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """dev 를 보태도 판정이 느슨해지지 않는다. 어느 쪽에도 없는 커밋은 여전히 사람이 본다."""
+    _dev만_앞선다(repo)
+    path, _ = _add_detached(repo, "sweep")
+    (path / "new.txt").write_text("x", encoding="utf-8")
+    _git("add", "new.txt", cwd=path)
+    _git(*_IDENTITY, "commit", "-m", "유일한 커밋", cwd=path)
+    assert main(["judge"], cwd=repo, ops=_ops({})) == 0
+    line = next(line for line in capsys.readouterr().out.splitlines() if "/sweep" in line)
+    assert line.startswith("넘긴다"), line
+    assert "origin/main 이나 origin/dev 어디에도 없다" in line
+
+
+def test_judge_는_PR_없이_origin_dev_에만_든_브랜치를_지울_후보로_찍고_지운다(
+    repo: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    tip = _dev만_앞선다(repo)
+    _git("branch", "worktree-y", tip, cwd=repo)
+    _git("reset", "-q", "--hard", "HEAD~1", cwd=repo)
+    assert main(["judge"], cwd=repo, ops=_ops({})) == 0
+    gone = _branch_line(capsys.readouterr().out, "worktree-y")
+    assert gone.startswith("브랜치를 지운다"), gone
+    assert "origin/main 이나 origin/dev" in gone
+    assert main(["remove-branch", "worktree-y", tip], cwd=repo, ops=_ops({})) == 0
+    assert _git("branch", "--list", "worktree-y", cwd=repo) == ""
+
+
+def test_judge_는_dev_브랜치를_origin_dev_에_든_끝이어도_지우지_않는다(
+    repo: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """루트가 다른 브랜치에 있으면 `dev` 는 체크아웃되지 않아 병합된 브랜치로 보인다."""
+    _git("branch", "dev", cwd=repo)
+    _git("update-ref", "refs/remotes/origin/dev", "HEAD", cwd=repo)
+    _git("switch", "-q", "-c", "chore/elsewhere", cwd=repo)
+    assert main(["judge"], cwd=repo, ops=_ops({})) == 0
+    kept = _branch_line(capsys.readouterr().out, "dev")
+    assert kept.startswith("브랜치를 남긴다"), kept
+    assert "지우지 않는 브랜치다" in kept
+
+
+@pytest.mark.parametrize("name", ["dev", "Dev", "DEV", "main", "Main", "master"])
+def test_보호_브랜치는_이름의_대소문자와_상관없이_지우지_않는다(name: str) -> None:
+    """반박: 윈도의 for-each-ref 는 이름의 대소문자를 바꿔 찍을 수 있어 `Dev` 로 올 수 있다."""
+    verdict = judge_branch(name, _HEAD, {}, (), contained=True)
+    assert verdict.action == "keep"
+    assert "지우지 않는 브랜치다" in verdict.reason
+
+
+def test_반박_로컬_dev_브랜치에만_있는_커밋은_origin_dev_에_든_것이_아니다(
+    repo: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """`dev` 라는 이름의 로컬 브랜치는 아직 밀지 않았을 수 있다. 이름이 dev 라고 지우는 쪽으로
+    읽으면 밀지 않은 커밋을 잃는다."""
+    _git("branch", "dev", cwd=repo)
+    _git("switch", "-q", "dev", cwd=repo)
+    (repo / "unpushed.txt").write_text("x", encoding="utf-8")
+    _git("add", "unpushed.txt", cwd=repo)
+    _git(*_IDENTITY, "commit", "-m", "밀지 않은 커밋", cwd=repo)
+    _git("branch", "worktree-z", "dev", cwd=repo)
+    _git("switch", "-q", "main", cwd=repo)
+    path, _ = _add_detached(repo, "sweep")
+    _git("checkout", "-q", "--detach", "dev", cwd=path)
+    assert main(["judge"], cwd=repo, ops=_ops({})) == 0
+    out = capsys.readouterr().out
+    assert _branch_line(out, "worktree-z").startswith("브랜치를 남긴다")
+    assert next(line for line in out.splitlines() if "/sweep" in line).startswith("넘긴다")
+
+
+def test_반박_다른_원격_ref_나_태그에만_있는_커밋은_오래_사는_브랜치에_든_것이_아니다(
+    repo: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    tip = _dev만_앞선다(repo)
+    _git("update-ref", "-d", "refs/remotes/origin/dev", cwd=repo)
+    _git("update-ref", "refs/remotes/origin/feature", tip, cwd=repo)
+    _git("tag", "v-only", tip, cwd=repo)
+    _git("branch", "worktree-t", tip, cwd=repo)
+    _git("reset", "-q", "--hard", "HEAD~1", cwd=repo)
+    assert main(["judge"], cwd=repo, ops=_ops({})) == 0
+    kept = _branch_line(capsys.readouterr().out, "worktree-t")
+    assert kept.startswith("브랜치를 남긴다"), kept
+    assert "origin/main 이나 origin/dev 어디에도 없는 커밋이 있다" in kept
+
+
+def test_반박_origin_dev_를_지우면_dev_에만_있던_커밋은_다시_남는다(
+    repo: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """dev 추적 ref 가 있다가 사라진 클론(prune, 원격 브랜치 삭제)은 dev 가 없던 때와 같게 돈다."""
+    tip = _dev만_앞선다(repo)
+    _git("branch", "worktree-d", tip, cwd=repo)
+    _git("reset", "-q", "--hard", "HEAD~1", cwd=repo)
+    assert main(["judge"], cwd=repo, ops=_ops({})) == 0
+    assert _branch_line(capsys.readouterr().out, "worktree-d").startswith("브랜치를 지운다")
+    _git("update-ref", "-d", "refs/remotes/origin/dev", cwd=repo)
+    assert main(["judge"], cwd=repo, ops=_ops({})) == 0
+    assert _branch_line(capsys.readouterr().out, "worktree-d").startswith("브랜치를 남긴다")
+    # 지우는 명령도 다시 판정해 dev 가 없어졌으면 지우지 않는다
+    assert main(["remove-branch", "worktree-d", tip], cwd=repo, ops=_ops({})) == 1
+    assert _git("branch", "--list", "worktree-d", cwd=repo) != ""
 
 
 def _branch_line(out: str, name: str) -> str:
@@ -3335,7 +3463,7 @@ def test_judge_는_git_없는_prunable_폴더의_분리_HEAD_가_origin_main_에
     assert main(["judge"], cwd=repo, ops=_ops({})) == 0
     line = next(line for line in capsys.readouterr().out.splitlines() if "/half" in line)
     assert line.startswith("넘긴다"), line
-    assert "origin/main 에 없다" in line
+    assert "origin/main 이나 origin/dev 어디에도 없다" in line
     assert main(["remove", path.as_posix(), ".detached", head], cwd=repo, ops=_ops({})) == 1
     assert _registered(repo, path)
     assert _git("cat-file", "-t", head, cwd=repo) == "commit"

@@ -37,8 +37,12 @@ pre-commit 에서 HEAD 는 아직 병합 전이라, HEAD 만으로 구하면 C �
 5. 티켓 모양 브랜치는 그 티켓이 C 에 있고 색인에 남아 있어야 지난다. `feature/NN-<slug>` 는
    `.scratch/<어느 slug>/issues/NN-<slug>.md` 다. `chore/` 뒤의 글자는 그대로 stem 이고 티켓은
    `.scratch/harness/issues/<stem>.md` 다. 새 꼴 `chore/<slug>` 와 옛 꼴
-   `chore/045-ci-python-runner-pin` 이 같은 규칙 하나로 맞는다. 지운 티켓은 가리키지 않은 것으로
-   본다.
+   `chore/045-ci-python-runner-pin` 이 같은 규칙 하나로 맞는다. 핫픽스 브랜치 `hotfix/<slug>` 도
+   `chore/` 와 같은 자리의 티켓 `.scratch/harness/issues/<slug>.md` 를 가리킨다(ADR 0043). 핫픽스는
+   기준 브랜치가 main 이라(`base_ref`) 접두를 `chore/` 로 바꾸지 못해 접두가 따로 선다. 핫픽스가
+   고치는 것이 기능의 동작이어도 티켓은 harness 폴더에 둔다(기능 폴더의 티켓 번호는 `to-tickets` 가
+   매기고, 기능 밖의 일은 harness 티켓이다. `docs/agents/issue-tracker.md`). 지운 티켓은 가리키지
+   않은 것으로 본다.
 6. `docs/<slug>` 브랜치는 C 에 harness 티켓(`.scratch/harness/issues/<slug>.md`, 옛 꼴
    `NNN-<slug>.md`)이 하나라도 있으면 지난다. slug 는 영어 소문자로 시작하는 이름(대기열 항목과
    같은 규칙)이다. 더한 것이든 고친 것이든 세고, 지운 것은 세지 않는다. 회고가 고침을 반영해 같은
@@ -217,6 +221,10 @@ _NOT_FEATURES = frozenset({"harness", _QUEUE_FOLDER})
 _STATUS_HEADS = ("Status:", "**Status:**")
 # 새 꼴은 대기열 항목의 slug 규칙(영어 소문자로 시작)이고, 옛 꼴은 세 자리 번호와 하이픈이다
 _HARNESS_STEM = re.compile(r"[a-z][a-z0-9-]*|\d{3}-.+")
+# 티켓이 `.scratch/harness/issues/<stem>.md` 인 브랜치 접두. `hotfix/<slug>` 는 기준 브랜치가 main
+# 이라 (`base_ref`) 접두를 `chore` 로 바꾸면 기준이 dev 로 바뀐다. 그래서 같은 티켓 자리를 쓰는
+# 별개의 갈래다
+_HARNESS_KINDS = ("chore", "hotfix")
 
 
 class GitError(Exception):
@@ -307,14 +315,14 @@ def exempt(path: str) -> bool:
 
 
 def ticket_stem(branch: str) -> tuple[str, str] | None:
-    """티켓 모양 브랜치면 (갈래, stem). 갈래는 `feature` 나 `chore` 다. `chore/` 뒤의 글자는 그대로
-    harness 티켓의 stem 이라 옛 꼴(`chore/045-ci-python-runner-pin`)과 새 꼴(`chore/<slug>`)이 같은
-    규칙이다. 그 규칙(`_HARNESS_STEM`)에 맞지 않는 이름(`chore/Foo`, `chore/09-x`)은 티켓 모양이
-    아니다."""
+    """티켓 모양 브랜치면 (갈래, stem). 갈래는 `feature`, `chore`, `hotfix` 다. `chore/` 와
+    `hotfix/` 뒤의 글자는 그대로 harness 티켓의 stem 이라 옛 꼴(`chore/045-ci-python-runner-pin`)과
+    새 꼴 (`chore/<slug>`, `hotfix/<slug>`)이 같은 규칙이다. 그 규칙(`_HARNESS_STEM`)에 맞지 않는
+    이름(`chore/Foo`, `chore/09-x`, `hotfix/Foo`)은 티켓 모양이 아니다."""
     kind, _, stem = branch.partition("/")
-    if kind not in ("feature", "chore") or not stem or "/" in stem:
+    if kind not in ("feature", *_HARNESS_KINDS) or not stem or "/" in stem:
         return None
-    if kind == "chore":
+    if kind in _HARNESS_KINDS:
         return (kind, stem) if _HARNESS_STEM.fullmatch(stem) else None
     number, dash, slug = stem.partition("-")
     if len(number) != 2 or not (number.isascii() and number.isdigit()) or not dash or not slug:
@@ -337,7 +345,7 @@ def is_harness_ticket(path: str) -> bool:
 
 def points_at(kind: str, stem: str, path: str) -> bool:
     """이 경로가 그 브랜치가 가리키는 티켓인가."""
-    if kind == "chore":
+    if kind in _HARNESS_KINDS:
         return path == f"{_HARNESS_ISSUES}{stem}.md"
     parts = path.split("/")
     return (
@@ -365,7 +373,7 @@ def tickets_on_disk(root: Path, branch: str) -> list[str]:
     if stem is None:
         return []
     kind, name = stem
-    pattern = f"harness/issues/{name}.md" if kind == "chore" else f"*/issues/{name}.md"
+    pattern = f"harness/issues/{name}.md" if kind in _HARNESS_KINDS else f"*/issues/{name}.md"
     found = sorted((root / ".scratch").glob(pattern))
     return [p.relative_to(root).as_posix() for p in found if p.is_file()]
 
@@ -494,6 +502,18 @@ PR_WORDING = Wording(
 )
 
 
+def _rename_choices(branch: str) -> str:
+    """판정 7 의 막는 글이 권하는 새 브랜치 이름의 꼴. `hotfix/*` 는 기준 브랜치가 main
+    이라(`base_ref`) 접두를 `feature/` 나 `chore/` 로 바꾸면 PR 의 base 가 dev 로 바뀐다. hotfix 는
+    접두를 지킨다."""
+    if branch.startswith(HOTFIX_PREFIX):
+        return (
+            "hotfix/<slug>. 접두를 바꾸면 origin/dev 가 있을 때"
+            " 기준 브랜치가 main 에서 dev 로 바뀐다"
+        )
+    return "feature/NN-<slug> 나 chore/<slug>"
+
+
 def _blocked(branch: str, outside: list[str], found: list[str], wording: Wording) -> str:
     """판정 7 의 막는 글. `found` 는 그 브랜치가 가리키는데 C 에 들지 않은 티켓이다."""
     lines = [f"브랜치 {branch} 의 변경이 티켓을 가리키지 않아 {wording.blocked}."]
@@ -506,18 +526,26 @@ def _blocked(branch: str, outside: list[str], found: list[str], wording: Wording
         kind, name = stem
         expected = (
             f"{_HARNESS_ISSUES}{name}.md"
-            if kind == "chore"
+            if kind in _HARNESS_KINDS
             else f".scratch/<slug>/issues/{name}.md"
         )
         lines.append(f"이 브랜치가 가리키는 티켓: {', '.join(found) or expected}")
         lines += [wording.unstaged.format(path=path) for path in found]
+    if branch.startswith(HOTFIX_PREFIX):
+        # hotfix 브랜치는 기능 폴더의 티켓을 가리키지 못한다(`ticket_stem`). 기능 코드를 고치는
+        # 핫픽스도 harness 자리를 쓴다
+        write_ticket = "티켓을 쓴다. 핫픽스의 티켓은 .scratch/harness/issues/<slug>.md 다."
+    else:
+        write_ticket = (
+            "티켓을 쓴다. 기능의 일이면 그 기능 폴더 .scratch/<slug>/issues/NN-<slug>.md, 그 밖의"
+            " 하네스 일과 작은 문서 고침이면 .scratch/harness/issues/<slug>.md 다."
+        )
     lines += [
         "할 일:",
-        "  1. 티켓을 쓴다. 기능의 일이면 그 기능 폴더 .scratch/<slug>/issues/NN-<slug>.md, 그 밖의"
-        " 하네스 일과 작은 문서 고침이면 .scratch/harness/issues/<slug>.md 다. 하네스 티켓의"
+        f"  1. {write_ticket} 하네스 티켓의"
         " <slug> 는 번호 없이 영어 소문자로 시작하고 소문자·숫자·하이픈만 쓰는 이름을 직접 짓는다.",
         "  2. 브랜치 이름을 티켓 파일 이름의 stem 에 맞춘다: `git branch -m <새 이름>`"
-        "(feature/NN-<slug> 나 chore/<slug>). 이미 푸시했으면 새 이름으로 푸시하고 옛 원격"
+        f"({_rename_choices(branch)}). 이미 푸시했으면 새 이름으로 푸시하고 옛 원격"
         " 브랜치를 지운다. 열린 PR 이 있으면 사람에게 묻는다.",
         CONVENTION,
     ]

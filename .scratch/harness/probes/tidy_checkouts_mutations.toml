@@ -48,11 +48,12 @@ new = '''    return left == right'''
 name = "판정 1: 분리 HEAD 를 남기기만 한다"
 tests = ["tests/tools/test_tidy_checkouts.py", "-k", "분리_HEAD"]
 expect = "red"
+expect_output = ["AssertionError: assert 'keep' == 'human'"]
 
 [[mutation.edit]]
 file = "tools/tidy_checkouts.py"
-old = '''            return verdict("human", "분리 HEAD 이고 그 커밋이 origin/main 에 없다")'''
-new = '''            return verdict("keep", "분리 HEAD 이고 그 커밋이 origin/main 에 없다")'''
+old = '''            return verdict("human", f"분리 HEAD 이고 그 커밋이 {TRUNK_WORDS} 어디에도 없다")'''
+new = '''            return verdict("keep", f"분리 HEAD 이고 그 커밋이 {TRUNK_WORDS} 어디에도 없다")'''
 
 [[mutation]]
 name = "판정 1: 병합된 PR 이 없어도 지운다"
@@ -1388,22 +1389,24 @@ new = '''    printable = len(data) - counted - data.count(b"\r") - data.count(b"
 name = "브랜치: origin/main 에 든 것을 지우지 않는다"
 tests = ["tests/tools/test_tidy_checkouts.py", "-k", "origin_main_에_있는_브랜치는 or PR_없이_origin_main"]
 expect = "red"
+expect_output = ["AssertionError: 브랜치를 남긴다 worktree-x"]
 
 [[mutation.edit]]
 file = "tools/tidy_checkouts.py"
 old = '''        if contained:
-            return Verdict("delete", branch, "커밋이 모두 origin/main 에 있다", branch, tip)'''
+            return Verdict("delete", branch, f"커밋이 모두 {TRUNK_WORDS} 에 있다", branch, tip)'''
 new = '''        if False:
-            return Verdict("delete", branch, "커밋이 모두 origin/main 에 있다", branch, tip)'''
+            return Verdict("delete", branch, f"커밋이 모두 {TRUNK_WORDS} 에 있다", branch, tip)'''
 
 [[mutation]]
 name = "브랜치: main 도 지운다"
 tests = ["tests/tools/test_tidy_checkouts.py", "-k", "origin_main_에_있는_브랜치는"]
 expect = "red"
+expect_output = ["AssertionError: assert 'delete' == 'keep'"]
 
 [[mutation.edit]]
 file = "tools/tidy_checkouts.py"
-old = '''    if branch in PROTECTED_BRANCHES:'''
+old = '''    if branch.casefold() in PROTECTED_BRANCHES:'''
 new = '''    if False:'''
 
 [[mutation]]
