@@ -120,7 +120,7 @@ new = '''
 name = "러너의 main 픽스처에 커밋을 두지 않는다"
 tests = ["tests/tools/test_run_hooks.py::test_main_저장소_둘은_커밋의_유무로_갈린다"]
 expect = "red"
-expect_output = ["test_run_hooks.py::test_main_저장소_둘은_커밋의_유무로_갈린다"]
+expect_output = ["커밋 있는 main 의 HEAD 조회 종료 코드: 128"]
 
 [[mutation.edit]]
 file = "tools/run_hooks.py"
@@ -135,6 +135,7 @@ new = '''
 name = "러너의 빈 main 픽스처가 커밋 있는 저장소를 가리킨다"
 tests = ["tests/tools/test_run_hooks.py::test_main_저장소_둘은_커밋의_유무로_갈린다"]
 expect = "red"
+expect_output = ["빈 main 의 HEAD 조회 종료 코드: 0"]
 
 [[mutation.edit]]
 file = "tools/run_hooks.py"

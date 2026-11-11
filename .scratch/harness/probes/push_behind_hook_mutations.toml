@@ -217,7 +217,7 @@ new = '''지금 푸시하면 CI 를 다시 돈다'''
 name = "hotfix 브랜치도 origin/dev 에 견준다"
 tests = ["tests/tools/test_hook_push_behind_main.py", "-k", "hotfix_브랜치는"]
 expect = "red"
-expect_output = ["test_hook_push_behind_main.py::test_hotfix_브랜치는_dev가_있어도_main에_견준다"]
+expect_output = ["hotfix 브랜치가 견준 기준: ('dev', 4)"]
 
 [[mutation.edit]]
 file = "tools/hook_push_behind_main.py"
@@ -230,7 +230,7 @@ new = '''    if False:
 name = "origin/dev 가 있어도 늘 main 에 견준다"
 tests = ["tests/tools/test_hook_push_behind_main.py", "-k", "dev가_있으면"]
 expect = "red"
-expect_output = ["test_hook_push_behind_main.py::test_origin에_dev가_있으면_작업_브랜치는_dev에_견준다"]
+expect_output = ["작업 브랜치가 견준 기준: ('main', 1)"]
 
 [[mutation.edit]]
 file = "tools/hook_push_behind_main.py"
@@ -241,7 +241,7 @@ new = '''    return "main"'''
 name = "dev 위에서도 뒤처짐을 잰다"
 tests = ["tests/tools/test_hook_push_behind_main.py", "-k", "dev_위에서는"]
 expect = "red"
-expect_output = ["test_hook_push_behind_main.py::test_dev_위에서는_재지_않는다"]
+expect_output = ["dev 위에서 잰 결과: ('dev', 1)"]
 
 [[mutation.edit]]
 file = "tools/hook_push_behind_main.py"

@@ -314,14 +314,17 @@ def test_origin에_dev가_있으면_작업_브랜치는_dev에_견준다(tmp_pat
     repo = behind_repository(tmp_path, ahead_on_main=1)
     add_dev(repo, ahead=3)
     # chore/x 는 첫 커밋에서 갈라져, main 의 앞선 1 과 dev 의 3 을 모두 뒤처진 것으로 센다.
-    assert behind_count(str(repo)) == ("dev", 4)
+    # 실패 메시지의 값은 변이 표가 이 단언의 실패만 가려내는 표지다.
+    result = behind_count(str(repo))
+    assert result == ("dev", 4), f"작업 브랜치가 견준 기준: {result}"
 
 
 def test_hotfix_브랜치는_dev가_있어도_main에_견준다(tmp_path: Path) -> None:
     repo = behind_repository(tmp_path, ahead_on_main=1)
     add_dev(repo, ahead=3)
     git("-C", str(repo), "switch", "-q", "-c", "hotfix/y")
-    assert behind_count(str(repo)) == ("main", 1)
+    result = behind_count(str(repo))
+    assert result == ("main", 1), f"hotfix 브랜치가 견준 기준: {result}"
 
 
 def test_dev_위에서는_재지_않는다(tmp_path: Path) -> None:
@@ -329,7 +332,8 @@ def test_dev_위에서는_재지_않는다(tmp_path: Path) -> None:
     add_dev(repo, ahead=1)
     git("-C", str(repo), "switch", "-q", "dev")
     git("-C", str(repo), "reset", "-q", "--hard", "HEAD~1")
-    assert behind_count(str(repo)) is None
+    result = behind_count(str(repo))
+    assert result is None, f"dev 위에서 잰 결과: {result}"
 
 
 def test_dev의_추적_ref가_없으면_main에_견준다(tmp_path: Path) -> None:

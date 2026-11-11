@@ -52,7 +52,15 @@
   - 티켓은 `check_ticket`의 "전환" 절의 `origin/main`을 고친다고 했으나 판정 2의 한 문장으로 갈음했다. 티켓 문구를 갈음한 대로 고쳤다.
   - `hotfix/*` 브랜치는 `ticket_stem`이 티켓 모양으로 알아보지 못해, 면제 모양 밖의 파일을 바꾸면 판정 7로 막힌다. ADR 0043은 hotfix→main이 티켓 PR이라 지난다고 적었으나 다섯 티켓 어느 것도 이 이음을 맡지 않았다. `dev-base-tools`에 항목과 수용 기준을 더했다.
   - `dev-branch-create`의 첫 문장(이 PR은 dev가 서기 전에 열렸으므로 main으로 간다는 대목)이 닫을 때 할 일의 편집이 dev를 딴 뒤에 오는 순서와 어긋났다. dev를 따는 일은 푸시 하나이고 닫기 편집 PR은 dev로 간다고 고쳤다. main의 plan-head가 다음 출시까지 옛 문장을 드는 시차를 PR 본문에 적게 했다.
-- 새로 쓴 사실 문장(PR 직전 리뷰에 밀 주장): 푸시 훅의 git 시간 제한 합이 17초(로컬 3초씩 셋과 fetch 8초)다. `ticket_stem('hotfix/x')`가 None이다. `origin/dev`가 없으면 바뀐 세 도구 모두 main 갈래로 돈다. ci.yml의 잡은 일곱이다.
+- 새로 쓴 사실 문장(PR 직전 리뷰에 밀 주장): 푸시 훅의 git 시간 제한 합이 17초(로컬 3초씩 셋과 fetch 8초)다. `ticket_stem('hotfix/x')`가 None이다. `origin/dev`가 없으면 바뀐 세 도구 모두 main 갈래로 돈다. ci.yml의 잡은 일곱이다. (뒤의 둘은 아래 "PR 직전 리뷰"가 바로잡았다.)
+
+## PR 직전 리뷰
+
+`coderabbit-review` 서브에이전트가 CLI를 끝까지 돌렸다(`review_completed`. `Plan: Free`, `Seat: not assigned`). 지적 둘이 모두 유효한 Minor였고 오탐은 없었다. 둘 다 고쳤다.
+
+- **변이 표지 둘.** `main_commit_hook_mutations.toml`의 "러너의 main 픽스처에 커밋을 두지 않는다"와 `push_behind_hook_mutations.toml`의 새 변이 셋이 `expect_output`으로 시험 함수 이름을 골랐다. 이름은 준비 단계가 깨져도 찍혀서 고른 단언이 실패했다는 표지가 못 된다. 해당 시험의 단언에 실제 값을 넣은 f-string 메시지를 달고(`hotfix 브랜치가 견준 기준: ('dev', 4)` 같은 꼴), 변이를 손으로 넣어 실패 출력의 `E` 줄에 그 문구가 나오는 것을 본 뒤 표지로 바꿨다. 같은 시험의 다른 변이(빈 main 픽스처) 하나가 `expect_output` 없이 있던 것도 같은 방식으로 채웠다. 소스 줄에는 `{result}` 꼴로만 있어서 다른 단언이 실패한 출력과 섞이지 않는다. 같은 표 앞쪽(64~114행)의 시험 이름 표지는 이 변경 전의 것이라 소급하지 않았다.
+- **사실 문장 3번이 부정확했다.** `origin/dev`가 없을 때 푸시 훅(`base_branch`)은 "main"을, 커밋 검사(`base_ref`)는 `origin/main`을 기준으로 삼는다. `hook_git_main_commit`은 기준 브랜치를 고르지 않고 현재 브랜치 이름이 `{main, dev}`에 드는지만 보므로 `origin/dev`를 읽지 않는다. 그래서 dev라는 이름의 브랜치가 없으면 사실상 main만 막는다. 코드는 그대로 맞고 문장만 고쳤다. 근거는 코드를 읽은 것이다(서브에이전트의 판정을 `tools/`에서 `PROTECTED|origin/dev`를 Grep해 `hook_git_main_commit.py:44·136`에 `origin/dev`를 읽는 줄이 없는 것으로 대 봤다).
+- **사실 문장 4번이 틀렸다.** `ci.yml`의 `jobs:`는 여덟이다(검사 잡 일곱과 그 결과를 모으는 `verify`). 새로 더한 주석의 "같은 잡 일곱"을 "같은 검사 잡 일곱과 그 결과를 모으는 verify"로 고쳤다. 잡 수는 `ci.yml`에서 `jobs:` 아래 키를 Grep으로 세어 확인했다(python, web, e2e, e2e-widget, e2e-portal, visual, ticket, verify). 1번(17초)과 2번(`hotfix/x` → None)은 서브에이전트가 코드를 읽어 맞다고 했고 이 세션은 다시 대지 않았다.
 
 ## 회고
 
