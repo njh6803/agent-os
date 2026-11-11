@@ -59,5 +59,7 @@
 | [0053](0053-model-answers-are-drawn-as-markdown-by-one-shared-component.md) | 모델이 지은 답은 공유 부품 하나가 마크다운으로 그리고, 원시 HTML과 이미지는 그리지 않는다 | accepted | 2026-11-10 |
 | [0054](0054-per-user-memory-is-an-mcp-server-outside-the-runtime-and-saving-asks-by-default.md) | 최종 사용자마다의 기억은 런타임 밖의 MCP 서버가 맡는 커스텀 에이전트용 부품이고, 저장은 묻는 것이 기본이며 문서에서 찾은 내용은 담지 않는다 | accepted | 2026-11-10 |
 | [0055](0055-database-queries-ship-as-named-queries-and-text-to-sql-guarded-by-database-permissions.md) | 데이터베이스 조회는 정해 둔 조회와 조회문 직접 작성을 둘 다 커스텀 에이전트용 부품으로 내고, 실행 전에 묻지 않으며 안전은 데이터베이스 권한으로 지킨다 | accepted | 2026-11-10 |
+| [0057](0057-openai-compatible-provider-reaches-a-model-server-by-manifest-url.md) | 모델 제공사에 `openai-compatible`을 더해 모델 파일에 적은 주소의 모델 서버에 붙고, 키는 환경 변수의 이름으로만 적으며 엔진마다 다른 설정은 서버를 띄우는 쪽이 맞춘다 | accepted | 2026-11-11 |
+| [0058](0058-local-model-tests-gate-merges-and-the-session-rents-a-gpu-server-with-terraform.md) | 로컬 모델 시험은 실행 코드를 고친 변경의 병합 조건이고, 그 시험의 모델 서버는 세션이 Runpod에 Terraform으로 띄웠다 지운다 | accepted | 2026-11-11 |
 
 ADR을 먼저 확인하는 상황 넷: 스택이나 라이브러리를 바꿀 때, 디렉터리나 층 경계를 바꿀 때, 디스크 형식(매니페스트, 이벤트)을 바꿀 때, 기존 코드가 왜 이렇게 되어 있는지 이해되지 않을 때.
