@@ -675,8 +675,11 @@ def bridge(ctx: Context) -> None:
     with case(
         ctx.rounds, "2 양성 대조: 0.0.0.0 에 묶은 app-open 을 호스트에서 발행 포트로"
     ) as current:
+        # 배치가 서지 않았으면 "닿지 않는다"가 묶는 주소의 관찰이 아니라 up 실패의 결과다.
+        opened = boxes().get("app-open")
+        stood = up.code == 0 and opened is not None and opened.running
         text = reach_text(open_host, open_seen, reached=reach_open(open_host))
-        current.mark(measured=True, result=text)
+        current.mark(measured=stood, result=text)
     with case(
         ctx.rounds, "2 양성 대조: 0.0.0.0 에 묶은 app-open 을 client 에서 서비스 이름으로"
     ) as current:

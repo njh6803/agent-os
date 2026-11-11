@@ -315,7 +315,7 @@ Major 3, Minor 10, Nit 한 묶음이다. 보고를 옮긴다. 일지는 `2026-11
 - **제품 변경과 문서(표준 Minor, 명세 Minor).** ADR 0056 "판이 나는 때"의 괄호를 "ADR·명세·일지 같은 저장소의 문서만 고친 기능"으로 좁히고, "제품 변경"에 "배포 안내는 문서이지만 배포 파일 묶음에 들어 판과 함께 나가므로 제품 변경으로 센다"를 더했다. `CONTEXT.md`의 제품 변경 항목은 "지난 제품 판 뒤에 새 제품 판을 내게 하는 변경"으로 고쳐 배포 안내와 출시 후보 단계를 알리는 설정을 품게 했다.
 - **프로브를 README보다 세게 읽은 곳(표준 Minor).** 응답 시간 문장을 "늘어난 몫이 proxy의 것인지 요청 때 그리기의 것인지는 가르지 않았고, 미리 그린 페이지에 proxy만 건 갈래의 중앙값은 3.1ms였다"로 고쳤다(`widget_runtime/README.md` 204줄과 243줄). ESLint 4건과 시험 5건은 "프로브가 다시 내는 값이 아니라 서브에이전트가 그 명령들을 손으로 돌려 본 것"이라고 적었다(같은 README 207~215줄). 빌드 시간은 "앞 빌드의 산출물 없이 짓는 빌드는 14.6~76.0초"로 범위를 밝히고 "앞 빌드의 산출물을 둔 빌드는 13.3초까지 내려갔고 이 범위에 넣지 않았다"를 더했다(`widget_build/README.md` 62~86줄, `widget_runtime/measure.mjs` 429~432줄이 산출물을 지우고 짓는다).
 - **출시 후보의 번호 표기(명세 Minor).** "출시 후보에서는 글자까지 같지는 않다. 파이썬의 판 표기는 `0.1.0-rc.1`을 `0.1.0rc1`로 읽으므로(`packaging` 26.3에 넣어 손으로 봤다…) 이미지 안에서는 `0.1.0rc1` 꼴로 보일 것이다. 빌드 백엔드 hatchling이 그 꼴로 적는지는 돌려 보지 않았다(어림)."
-- **밖으로 여는 포트의 셈(명세 Minor, 표준 Minor).** ADR 0056 결정 "밖으로 여는 포트"를 "밖으로 여는 포트, 곧 호스트의 모든 주소에 발행하는 포트는 프록시의 443과 80이다. 그 밖에 호스트에 발행하는 것은 서버 자신의 `127.0.0.1`에만 여는 관리 화면의 포트 하나다"로 고치고, 여는 문단과 release-image 기능 계획의 "443 하나이고 80은"도 같은 말로 맞췄다. ADR 0024 45줄의 평문 80 문장에 `(바뀜: ADR 0056)`을 달았다(단독 compose의 80은 ACME 확인 경로를 두지 않는다). 리뷰어는 "호스트에 포트를 내놓지 않는다"가 ADR 0048 25줄에 있다고 했으나 그 줄의 문장은 "참조 배포가 밖으로 여는 포트는 TLS를 끝내는 리버스 프록시 하나다. 나머지 컨테이너는 내부 네트워크에서만 통신한다"이고 참조 배포의 것이다. ADR 0056이 정하는 것은 단독 compose라 포인터를 달지 않고, ADR 0056 Consequences "PRD와 기준선"과 deploy-package 기능 계획에 어긋나는 문장 셋과 "따를지는 이 행의 설계 인터뷰가 정한다"를 적었다(받는 쪽은 deploy-package이고 그 Blocked by에 release-image가 있다).
+- **밖으로 여는 포트의 셈(명세 Minor, 표준 Minor).** ADR 0056 결정 "밖으로 여는 포트"를 "밖으로 여는 포트, 곧 호스트의 모든 주소에 발행하는 포트는 프록시의 443과 80이다. 그 밖에 호스트에 발행하는 것은 서버 자신의 `127.0.0.1`에만 여는 관리 화면의 포트 하나다"로 고치고, 여는 문단과 release-image 기능 계획의 "443 하나이고 80은"도 같은 말로 맞췄다. ADR 0024 45줄의 평문 80 문장에 `(바뀜: ADR 0056)`을 달았다(단독 compose의 80은 ACME 확인 경로를 두지 않는다). 리뷰어는 "호스트에 포트를 내놓지 않는다"가 ADR 0048 25줄에 있다고 했으나 그 줄의 문장은 "참조 배포가 밖으로 여는 포트는 TLS를 끝내는 리버스 프록시 하나다. 나머지 컨테이너는 내부 네트워크에서만 통신한다"이고 참조 배포의 것이다. ADR 0056이 정하는 것은 단독 compose라 포인터를 달지 않고, ADR 0056 Consequences "PRD와 기준선"과 deploy-package 기능 계획에 어긋나는 문장 셋과, 참조 배포가 그것을 따를지는 deploy-package의 설계 인터뷰가 정한다는 것을 적었다(받는 쪽은 deploy-package이고 그 Blocked by에 release-image가 있다).
 - **pilot-release의 "그 판"(명세 Minor).** 수락을 "마지막 출시 후보로 … 프로브를 다시 돌려"로 고치고 까닭을 본문에 적었다. 묻지 않고 정한 기본값이다.
 - **release-image 기능 계획의 미래형 둘(명세 Minor).** 공개 출처와 도메인의 "설계 인터뷰가 정한다"를 ADR 0056이 정한 말로 바꿨다.
 - **인용과 셈(Minor와 Nit).** ADR 0015 인용에 "(ADR 0011)"을 되살렸다. "기다리는 기능 넷"을 "인터뷰 때 그것을 기다리던 기능 넷…과 이 ADR이 세우는 admin-login"으로 고쳤다. ADR 0011 이력 2026-10-03의 "파이썬은 루프백에만 선다"를 "다른 ADR" 목록에 더했다. "9개가 하네스의 것"에는 제목을 읽은 가름이라는 것과 셀프 리뷰가 커밋 f64dfe41c에서 47과 38을 다시 봤다는 것을 적었다. Considered Options의 "사람이 쓴다"를 지우고, 일지에 남지 않은 추천 둘(라운드 1의 화면, ACME 선택지)은 "일지에 남지 않았다"로 고쳤다.
@@ -366,6 +366,112 @@ Major 3, Minor 10, Nit 한 묶음이다. 보고를 옮긴다. 일지는 `2026-11
 
 커밋 직전의 `uv run python tools/sibling_overlap.py`가 `origin/main`이 0c2c7cbd9에서 33dc5cd92로 움직였다고 알렸다(#526. kb-selection과 principal-propagation의 기능 계획, 대기열 항목 하나, 일지 하나). ADR 번호는 겹치지 않았다(0056). 이 브랜치와 겹친 파일은 생성 파일 `.scratch/plan.md` 하나라, `git restore`로 그 파일을 되돌린 뒤 `git merge --ff-only origin/main`을 치고 `uv run python tools/plan_table.py`를 다시 돌렸다. 아직 커밋이 없어 빨리 감기로 따라갔다. `uv run ruff check .`와 `uv run ruff format --check .`가 지났다.
 
+### 커밋
+
+아래 회고를 마친 뒤 작업 트리의 변경 전부를 한 커밋에 실었다(`docs: 이미지 배포와 판 내기를 설계한다 (ADR 0056)`, 파일 59개). pre-commit의 결과다. `ruff check`와 `ruff format`은 Passed였다(`.scratch/release-image/probes/netns/run.py`가 스테이지돼 Skipped가 아니다). `checks`(`tools/run_checks.py`의 CHECKS)는 622.52초에 Passed였다(check-ticket 0.7초, lint-imports 1.6초, zizmor 2.4초, check-instructions 9.5초, check-type-escapes 11.2초, pyright 43.2초, pyright-linux 43.3초, run-hooks 67.9초, pytest 386.5초, web-verify 622.2초). 마크다운 표, 줄 구분 문자, 변이 표, 커밋 메시지 검사도 Passed였다. 커밋은 Bash의 600초 제한을 넘겨 백그라운드로 넘어갔고, 다시 치지 않고 끝 알림을 기다려 종료 코드 0을 봤다. 커밋 뒤에 본 `list_sessions`에는 도는 다른 세션이 셋 있었다.
+
+`Skipped`는 둘이고 둘 다 "(no files to check)"였다. 헌법 판 검사는 `uv run python -m tools.check_constitution_version`을 손으로 쳐 "이 가지가 고친 헌법 파일이 없다"는 출력을 봤다(스크립트 경로로 치면 `No module named 'tools'`로 죽어 `-m`으로 쳤다). 카나리아 명세 모양 검사는 이 커밋에 명세 파일(`.scratch/**/probes/canary/*.toml`)이 없어 넘길 것이 없다. 이 커밋은 `.scratch/`, `docs/`, `CONTEXT.md`만 고쳐(`git diff --name-only origin/main HEAD`의 59줄을 봤다) `-m llm`류와 e2e, 사진 비교는 치지 않았다.
+
+인용 대조(`check-quotes`, 막지 않는 경고)는 45건을 냈다. 일지 둘에서 26건, 프로브 README 셋에서 15건, ADR 0056에서 4건이다. ADR 0056의 넷과, 일지에서 ADR을 든 다섯을 열어 봤다. ADR 0056 46줄이 따옴표에 넣은 헤더만 내는 Next proxy 예외라는 말은 ADR 0024 21줄의 문장을 줄인 것이었다. 그 줄의 원문은 헤더만 내는 Next proxy를 ADR 0019의 서버 파일 금지에서 예외로 두는 안은, 금지한 서버 파일이 생겨 거부했다는 것이다. 따옴표를 떼고 "ADR 0024가 앞서 거부한 안(헤더만 내는 Next proxy를 ADR 0019의 서버 파일 금지에서 예외로 두는 안)"으로 고쳤다. 셀프 리뷰 두 축은 이 인용을 내지 않았다. ADR 0056의 나머지 셋(42·54·59줄)은 이 ADR이 스스로 지은 말이다(계기의 조건, 넓어진 전제, `merge.md`에 더할 단계의 문장). 일지 270·271·275·289줄은 리뷰어의 보고가 고치기 전의 초안을 인용한 것이고, 69줄은 앞 세션이 옮겨 적을 말을 지은 것이다. 나머지 36건(일지의 선택 화면 라벨과 설명, 프로브 README)은 경고 줄만 읽었고 하나씩 열어 보지 않았다.
+
+### 사용자가 정했다: agent-os에서 먼저 짓고 돌려 본 뒤 옮긴다
+
+인계 절차를 밟는 도중에 사용자가 위 "사용자가 물었다"의 답에 결정을 줬다.
+
+> 사용자: 추천대로 진행할게. agent-os에서 워크플로를 실제로 지어 돌려 본 뒤에 rag-engine으로 옮기는 쪽으로 하자. agent-os에서 워크플로가 끝나면 나한테 rag-engine 저장소에 지시할 지시문을 알려주도록 해줘. dev 전환도 agent-os가 끝나면 나한테 rag-engine 저장소에 지시할 지시문을 알려주도록 해줘.
+
+두 일(dev 전환, 판 내기 워크플로) 모두 agent-os가 먼저 하고, 그 일을 끝낸 세션이 문서 검색 서버 저장소(rag-engine)의 세션에 줄 지시문을 사용자에게 낸다. 그 일을 할 세션이 읽는 자리 둘에 적었다. dev 전환은 `.scratch/plan-head.md`의 dev 전환 문단에 적었다(전환 티켓이 닫을 때 걷는 문단이라 그 세션이 반드시 연다). 판 내기 워크플로는 release-image 기능 계획의 본문에 적었다. `uv run python tools/plan_table.py`로 `.scratch/plan.md`를 다시 만들었다. 지시문에 실을 것은 위 "사용자가 물었다" 절이 적은 다섯이다(Docker Hub 계정을 함께 쓸지, 마이그레이션이 따라오는 판 올림의 할 일, 두 저장소의 번호 관계, 이미지 목록과 서버 배치, dev 전환이 고칠 그 저장소의 스킬과 도구). ADR 0056은 이 일로 고치지 않았다. 이 저장소의 결정이 아니라 두 저장소 사이의 일의 차례다.
+
+## 인계: 커밋 뒤
+
+커밋 명령 직후 인계 계기(`hook_handoff`)가 왔다. 세션 컨텍스트가 362,739 토큰으로 문턱 200,000을 넘은 채 단계 경계 `커밋 뒤`에 왔다는 문구였다. 커밋이 백그라운드에서 끝나기를 기다리는 사이 자동 압축이 한 번 왔고, 압축 뒤 요약으로 인계 중임을 알고 이었다(`handoff.md` 5). `.claude/skills/next-session/handoff.md`를 Read로 다시 열어 "인계하지 않는 때" 다섯을 대 봤다. 커밋은 종료 코드 0으로 끝났고, 요청 범위는 PR과 병합까지이며, 이 세션의 지시문의 "이어받을 상태"는 `인계: 셀프 리뷰 직전`이라 같은 경계가 아니고, 이 일지에 이 세션이 쓴 `인계 못함` 줄이 없고, `get_session`의 `self`에 `parentSessionId`가 없다. 다섯 가운데 어느 것도 아니어서 넘긴다. `gh pr view docs/release-image-design --json state`는 "no pull requests found"로 끝났다.
+
+이 세션의 제목은 `docs/release-image-design`이었다. 넘기기 전에 `docs/release-image-design (인계함)`으로 바꾼다.
+
+이 세션이 한 것은 셀프 리뷰와 반영, ADR 0056의 승인, 회고, 커밋 하나다(위 "커밋"). 하지 않은 것이다. 브랜치를 푸시하지 않았고, PR 직전 리뷰를 돌리지 않았으며, PR을 열지 않았다. 이 세션이 띄운 백그라운드 작업은 남아 있지 않다.
+
+새 세션이 이어받을 것이다.
+
+- **커밋하지 않은 변경.** 커밋 뒤에 고친 파일 다섯이 워크트리에 있다. ADR 0056(인용 한 곳), 이 일지, `.scratch/release-image/plan.md`와 `.scratch/plan-head.md`(사용자의 새 결정), 다시 만든 `.scratch/plan.md`다. 같은 PR의 다음 커밋에 싣는다.
+- **PR 직전 리뷰.** `docs/constitution/operations.md` 리뷰 파이프라인 2대로 한다. 브리프에 실을 밀 주장은 위 "반영" 절의 열(1~10)에 둘을 더한다. (11) ADR 0024 21줄은 헤더만 내는 Next proxy를 서버 파일 금지의 예외로 두는 안을 거부했다고 적는다. (12) 인용 대조 경고 가운데 열어 보지 않은 36건(위 "커밋")에 원문과 다른 인용이 없다.
+- **그 뒤.** 푸시, PR, 봇 회차(`merge.md` 2), 병합을 하고, `## 다음`의 1로 다음 작업 지시문을 낸다. 회고는 커밋 전에 돌렸다. 그 뒤의 사건(PR 직전 리뷰와 봇이 잡는 것)은 단계를 닫는 세션이 `## 회고`에 덧붙인다. 커밋 뒤에 본 것 가운데 회고가 볼 만한 것은 둘이다. 셀프 리뷰 두 축이 지나친 줄인 인용을 `check-quotes`의 경고가 알린 것과, pre-commit이 622초로 Bash의 600초 제한을 넘긴 것이다(`CLAUDE.md` 검증 명령 절이 581초로 적은 일이다).
+- **하지 않을 것.** 설계 인터뷰(`grilling`)와 셀프 리뷰(`/code-review`)는 다시 돌리지 않는다. ADR 0056은 `accepted`다.
+
+낸 지시문이다.
+
+```
+다음 작업: 기능 release-image. 커밋한 이미지 배포 설계 산출물(ADR 0056)을 PR 직전 리뷰에 올리고 PR을 열어 병합한다
+다음 단계: 설계 인터뷰
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /grill-with-docs release-image
+브랜치: docs/release-image-design
+모델: Fable 5.2 / xhigh. 2의 잇는 지시문(설계 인터뷰는 Fable 5.1 / xhigh)이고, 모델 메뉴에 Fable 5.1이 없어 넘기는 세션이 돈 Fable 5.2로 적었다(대기열 model-menu-name-fable-5-1-stale)
+읽을 것: docs/journal/2026-11-11-1532-release-image-design-round3.md의 "인계: 커밋 뒤" 절. PR 직전 리뷰에 밀 주장은 같은 일지의 "반영" 절에 있다
+이어받을 상태: 인계: 커밋 뒤. 설계 산출물을 한 커밋에 실었고 푸시하지 않았다. 남은 단계는 PR 직전 리뷰, 푸시, PR, 봇 회차, 병합이다. docs/journal/2026-11-11-1532-release-image-design-round3.md. 설계 인터뷰, 셀프 리뷰, ADR 0056 승인, 회고는 끝나 grilling과 /code-review는 다시 돌리지 않는다. 커밋 뒤에 고친 파일 다섯이 커밋되지 않은 채 워크트리에 있고 같은 PR의 다음 커밋에 싣는다(무엇인지는 일지의 그 절)
+확인할 선행 조건: 없음
+이번 요청 범위: PR과 병합까지
+```
+
+제목을 `docs/release-image-design (인계함)`으로 바꿨다. 잠금 풀기(`git worktree unlock`)는 `is not locked`로 끝나 넘어갔다. `open-session`은 Skill 도구로 부르지 않고 워크트리 디스크의 `.claude/skills/open-session/SKILL.md`를 Read로 열어 따른다(앞 인계와 같은 까닭이다. `CLAUDE.md` 환경 함정의 마지막 항목). `list_sessions`에 같은 제목으로 도는 다른 세션은 없었다. 지시문 파일을 URL로 옮긴 길이는 3,715자로 상한 8,000자 안이다(스크래치패드의 스크립트로 어림했다. 첫 줄을 스킬 파일 문장으로 옮기기 전의 길이다).
+
+open-session을 부른다 2026-11-11T09:50:34Z
+
+## 이어받은 세션: PR 직전 리뷰
+
+인계 지시문으로 연 새 세션이 잇는다(제목 `docs/release-image-design`, 모델 Fable 5.2). 세션을 연 주 체크아웃에서 `EnterWorktree`로 이 워크트리에 들어왔다. `grill-with-docs`의 `SKILL.md`는 Read로 열었고, 지시문의 "이어받을 상태"대로 `grilling`과 `domain-modeling`과 `/code-review`는 부르지 않았다. 기능 계획의 설계 줄은 이미 있다(`.scratch/release-image/plan.md` 4줄, Grep으로 봤다).
+
+> 사용자: 다음 작업: 기능 release-image. 커밋한 이미지 배포 설계 산출물(ADR 0056)을 PR 직전 리뷰에 올리고 PR을 열어 병합한다
+> 이번 요청 범위: PR과 병합까지
+
+리뷰 전에 본 것이다. `git fetch origin` 뒤 `origin/main`은 33dc5cd92 그대로였고 이 브랜치의 merge-base도 같았다(`git rev-parse --short origin/main`과 `git merge-base origin/main HEAD`, 손으로 봤다). `uv run python tools/sibling_overlap.py`는 번호 겹침 없음으로 끝났다. `ListAgents`에 같은 기능을 맡은 다른 세션은 넘긴 세션 둘(`docs/release-image-design (인계함)`)뿐이었다. 넘겨받은 미커밋 파일 다섯은 위 인계 절이 적은 그대로였다(`git status`와 `git diff`, 손으로 봤다).
+
+### 인용 대조의 남은 36건(밀 주장 12)
+
+새 문서 여섯(ADR 0056, 일지 둘, 프로브 README 셋)을 `uv run python tools/check_quotes.py --all-lines`에 넘겨 경고 44건을 다시 받았다. 커밋 때의 45건에서 앞 세션이 고친 ADR 0056 46줄이 빠진 수다. 앞 세션이 열어 보지 않은 36건을 하나씩 봤다.
+
+- **옛 기능 계획을 인용한 셋은 글자가 같았다.** 앞 일지 9줄과 이 일지 61·77줄의 인용은 `git show origin/main:./.scratch/release-image/plan.md`의 출력에 글자 그대로 있었다(손으로 봤다). 이 PR이 그 문장들을 고쳐 둘째 자리가 없어진 것이다.
+- **이 일지의 둘은 줄인 말에 따옴표를 붙인 것이어서 고쳤다.** 318줄이 따옴표에 넣었던 말은 ADR 0056 56줄의 "참조 배포가 그 둘을 따를지는 deploy-package의 설계 인터뷰가 정한다"와도, deploy-package 기능 계획의 "따를지와 그 문장들은 이 행의 설계 인터뷰가 정한다"와도 글자가 달랐다. 429줄의 말은 `.claude/rules/adr.md` 13줄의 두 문장을 하나로 이은 것이었다(둘 다 Bash의 `grep -o`로 앞뒤 글자와 함께 봤다). 두 곳 모두 따옴표를 떼고 풀어 썼다.
+- **나머지 31건은 원문이 저장소에 없는 말이다.** 선택 화면의 질문과 라벨과 고치기 전 설명(이 일지 32·145·166·180줄), 이 일지가 규칙이나 계기를 줄여 부른 말(59·75·363줄), 고치기 전의 초안을 가리킨 말(162·283·295줄), 줄임표로 줄인 인용(321줄. 앞 토막이 ADR 0056 42줄에 있다), 프로브 README가 스스로 지은 해석과 표지의 말(15건)이다. 프로브 README의 15건 가운데 Next 문서의 절 제목 `Environment Variables`(`widget_runtime/README.md` 222줄)는 원문이 `node_modules` 안에 있어 대 보지 못했다.
+
+### PR 직전 리뷰의 보고
+
+`coderabbit-review`(CodeRabbit CLI)와 `bug-perf-review`를 나란히 띄웠다. CLI에는 밀 주장을 넘기는 인자가 없어(`code-review` 6단계) 밀 주장 1~11을 `bug-perf-review`의 브리프에 싣고, CLI가 돌지 못할 때의 대체 가운데 하나를 미리 돌린 셈으로 삼았다. 밀 주장 12는 위 절에서 이 세션이 봤다.
+
+**`bug-perf-review`의 보고.** 기준 33dc5cd92, 범위는 파일 59개와 미커밋 수정 다섯, 보고가 적은 도구 호출은 29번이다(작업 알림의 집계는 33번이었다). 지적은 0건이고 밀 주장 열하나를 모두 맞다고 냈다. 주장마다 리뷰어가 든 근거다.
+
+1. 커밋 검사의 `TYPES`는 여덟이고 `PATTERN`은 범위 뒤에 `!`를 받는 차례다. 리뷰어가 함수를 불러 `feat(x)!: a`, `perf: a`, `feat!: a`는 지나고 `feat!(x): a`만 거부되는 것을 봤다.
+2. `Version('0.1.0-rc.1')`은 `0.1.0rc1`을 냈고 `packaging`의 판은 26.3이었다(리뷰어가 불러 봤다). ADR 0056 21줄의 hatchling 어림 표시는 남아 있다.
+3. `gh run rerun --help`의 첫 줄은 실행 전체, 실패한 잡만, 특정 잡 하나의 세 갈래를 적는다. ADR 0056 22줄은 앞의 둘만 적었고 어긋나지 않는다.
+4. ADR 0043의 6줄(제목)과 26·27·29줄이 hotfix를 main에서 따 main으로 낸다고 적는다.
+5. `widget_runtime/README.md` 결과 1번에 14.6초가, `widget_build/README.md` 결과 1번에 76.0초(85줄)와 산출물을 둔 13.3초(70줄)가 있다. `measure.mjs` 431~432줄은 `.next`와 `public/element.js`를 지우고 짓는다.
+6. `widget_runtime/README.md` 204줄이 proxy만 건 갈래의 중앙값 3.1을, 243줄이 가르지 않았다는 것을 적는다.
+7. `web/apps/admin/tools/start.ts` 75줄과 `web/apps/widget/tools/start.ts` 150줄이 모두 `PORT`가 없으면 3000을 쓴다.
+8. ADR 0048 25줄의 문장은 참조 배포의 것이고, 23줄이 단독 compose는 저장소마다 따로 둔다고 적는다.
+9. ADR 0011 82줄의 2026-10-03 이력 아래 87줄에 그 문장이 있다.
+10. `tools/plan_table.py` 171~176줄이 `PlanError`를 던지고 255~257줄이 그것을 받아 2를 돌려준다. 리뷰어는 코드를 읽었고 불러 보지는 않았다.
+11. ADR 0024 21줄의 문장과 ADR 0056 46줄이 따옴표 없이 풀어 쓴 말의 뜻이 같다.
+
+리뷰어가 그 밖에 본 것이다. 미커밋 수정이 더한 두 문장(`.scratch/plan-head.md`의 dev 전환 문단 끝, release-image 기능 계획의 지시문 문장)은 이 일지의 "사용자가 정했다"와 "사용자가 물었다" 절과 맞았다. ADR 0056의 결정 항목들과 기능 계획 다섯, `.scratch/plan-head.md`, `CONTEXT.md`, `docs/PRD.md` 사이에서 어긋나는 문장은 찾지 못했다(밖으로 여는 포트, 번호와 출시 후보, 실패한 판 내기를 다시 돌리는 길, dev 전환이 먼저라는 조건의 세 곳). 프로브 스크립트는 `measure.mjs` 420~440줄만 봤고 나머지는 보지 않았다.
+
+**`coderabbit-review`의 보고.** CodeRabbit CLI 0.7.5가 리뷰를 끝까지 마쳤다(`review_completed`, 종료 코드 0). `coderabbit auth status`는 `Plan: Free`, `Seat: not assigned`였다. 본 파일은 59개라 `--dir`로 좁히지 않았고, 지적은 둘이다. 서브에이전트의 트리아지는 유효 하나, 오탐 하나다.
+
+- **[Minor, 유효] `.scratch/release-image/probes/netns/run.py`의 `bridge()`.** 호스트에서 본 양성 대조 회차가 `current.mark(measured=True, …)`로 조건 없이 측정으로 세어진다. 같은 함수의 다른 회차는 표지를 `measured`에 걸고, `up`이 실패해도 종료 코드를 찍기만 하고 이어 가므로, app-open이 뜨지 않은 회차의 닿지 않는다는 결과가 측정으로 세어진다(`.claude/rules/probes.md` 첫 항목).
+- **[Major, 오탐] 이 일지.** CLI는 `## 회고`와 `## 다음`이 두 번 나오고 "인계: 커밋 뒤" 절과 "사용자가 정했다" 절이 없다고 냈다. 서브에이전트가 작업 트리의 제목을 열어 보니 넷이 하나씩이고 두 절도 있었다. CLI가 미커밋 수정을 얹기 전의 판을 본 것으로 읽었다(서브에이전트의 어림이다).
+
+**고친 것.**
+
+- **netns 프로브의 양성 대조 회차.** 이 세션이 `bridge()`를 열어 지적대로임을 봤다(Read). 그 회차를 `up`이 0으로 끝났고 `boxes()`가 낸 app-open이 돌고 있을 때만 측정으로 세게 고쳤다(같은 파일의 `loopback6()`이 `app6.running`과 `up.code`를 보는 것과 같은 꼴이다). 고친 뒤 `uv run python .scratch/release-image/probes/netns/run.py --sections 2`를 한 번 돌려 "측정 4회차, 측정 아님 0회차"를 봤고, 네 회차의 닿는지는 그 프로브 README 결과 2번의 표와 같았다(Docker Desktop 4.97.0, 서버 29.9.2). `up`이 실패하는 회차는 돌려 보지 않았다. `uv run ruff check`와 `uv run ruff format --check`를 그 파일에 쳤고, `uv run pyright -p .scratch/release-image/probes/netns`는 오류 0으로 끝났다. 프로브 README의 "결과를 본 뒤 바꾼 것"에 한 줄을 더했다.
+- **이 일지의 인용 둘.** 위 "인용 대조의 남은 36건" 절의 것이다.
+
+**남긴 것과 이유.**
+
+- **일지의 제목이 겹친다는 지적.** 오탐이다. 이 세션도 Grep으로 `## `과 `### ` 제목을 보아 `## 회고`와 `## 다음`이 하나씩인 것을 봤다.
+- **`bug-perf-review`의 보고.** 지적이 없어 고친 것이 없다. 밀 주장 10은 리뷰어도 코드를 읽은 것이고, ADR 0056 58줄이 적은 임시 트리의 실행을 이 세션이 다시 돌리지는 않았다.
+
+### 커밋 전에 main을 합쳤다
+
+반영분을 커밋하기 직전의 `uv run python tools/sibling_overlap.py`가 `origin/main`이 33dc5cd92에서 768dee7d9로 움직였다고 알렸다(#527. ADR 0051의 이력 하나와 일지 하나다). 번호는 겹치지 않았고, `git diff --name-only HEAD...origin/main`의 두 파일은 이 브랜치가 고치지 않은 것이다. 앞 커밋이 있어 빨리 감을 수 없으므로 `git merge --no-edit origin/main`으로 합쳤고(충돌 없음), 그 뒤에 반영분을 커밋해 pre-commit이 합친 트리를 보게 했다. 같은 출력이 열린 PR #528(base-agent-tickets)도 `.scratch/retro-queue/cli-review-claims-path.md`를 고친다고 알렸다. 이 브랜치도 그 항목의 승인 줄에 회차를 더했으므로, 늦게 병합하는 쪽에서 그 한 줄이 충돌할 수 있다.
+
 ## 회고
 
 ADR 승인을 받고 커밋하기 전에 돌렸다. 원천은 이 일지 전체와 이어받은 세션이다. 앞 일지의 회고가 이미 센 셋(대기열 431, `glob-slash-pattern-narrowed-path`, `option-description-implied-omission`)은 다시 세지 않았다. 후보 여덟, 승인 여섯(모두 대기열에 두고 이 세션에서 반영한 것은 없다), 기각 둘, 넘김 0이다. 만료할 항목은 없었다(`uv run python tools/queue_open_rows.py`의 작업 트리 출력에 만료할 항목이 없어 `--ref origin/main`의 출력과 겹칠 것이 없다).
@@ -376,17 +482,29 @@ ADR 승인을 받고 커밋하기 전에 돌렸다. 원천은 이 일지 전체�
 4. **승인(1회차).** release-image 기능 계획이 설계 인터뷰에 넘긴 물음 하나(질문 페이지의 도메인)를 인터뷰가 묻지 않았고, 설계 줄을 적은 뒤에도 "이 행의 설계 인터뷰가 정한다"는 문장 둘이 남아 셀프 리뷰의 명세 축이 잡았다. 같은 일을 다룬 항목이 없어(`인터뷰에 넘긴`, `설계 인터뷰가 정한다`, `넘긴 물음`으로 찾았다) 새 항목 `design-line-leaves-interview-questions`를 썼다. 처방은 설계 줄이 있는 기능 계획에 그 꼴의 문장이 남으면 알리는 검사다.
 5. **승인(회차).** 이 세션이 Grep 도구에 `/`와 중괄호가 섞인 glob을 줘 0건을 받고, 두 Next 서버의 기본 포트가 3000이라는 근거를 `path`를 좁힌 뒤에야 찾았다. 표준 축의 리뷰어도 같은 근거를 찾지 못해 Nit으로 냈다. 열린 `grep-glob-slash-pattern`에 회차를 더했다(2회차).
 6. **승인(1회차, 고침).** `tools/hook_report.py`가 `hook_session_web_deps.py`를 뺄 후보로 냈다. 그 훅은 클라우드 세션에서만 git 훅과 web 의존성을 깔고 성공하면 아무것도 내지 않아(그 독스트링을 읽었다), 알림과 막음만 세는 보고서에서는 늘 0건이다. 같은 날의 다른 회고(일지 2026-11-11-1050)도 같은 후보를 봤다. 보고서가 훅의 일을 세지 못해 뺄 후보로 낸 닫힌 `대기열 404`·`424`와 증상은 같고 까닭이 달라 새 항목 `hook-report-flags-silent-setup-hook`으로 썼다. 도구를 고치는 일은 이 문서 PR의 범위 밖이라 대기열에 둔다.
-7. **기각.** 확인받은 요약 8이 포인터를 달 ADR을 다섯으로 들었고 산출물 단계에서 둘(0010, 0015)이 늘었다. `.claude/rules/adr.md`의 "이름으로 들지 않은 ADR의 본문도 본다"를 따라 찾은 것이고, 요약은 고칠 문서의 어림이었다. 잃은 것이 없다.
+7. **기각.** 확인받은 요약 8이 포인터를 달 ADR을 다섯으로 들었고 산출물 단계에서 둘(0010, 0015)이 늘었다. `.claude/rules/adr.md`의 규칙(이름으로 들지 않은 ADR도 바뀔 수 있으니 grep해 나온 ADR의 본문도 본다)을 따라 찾은 것이고, 요약은 고칠 문서의 어림이었다. 잃은 것이 없다.
 8. **기각.** 리뷰를 반영하며 ADR 0056 결정 "밖으로 여는 포트"를 고친 뒤, 같은 사실을 든 두 자리(ADR의 여는 문단, release-image 기능 계획)에 "443 하나이고 80은"이 남아 있었다. 커밋 전에 문서들을 나란히 대 보다가 찾아 고쳤다. `CLAUDE.md` 작업 규약 4를 따르는 중에 찾았고 밖으로 나간 것이 없다.
 
 일지에만 남기는 것이다. 셀프 리뷰가 낸 나머지 지적(인용의 글자, 닫힌 셈, 사용자 답의 조건을 묻지 않은 것으로 적은 것)은 `code-review`의 두 브리프가 잡도록 둔 기준이고 리뷰가 제 몫을 했다. 인계는 358,290 토큰에서 "셀프 리뷰 직전"에 넘어왔고, 이어받은 세션도 리뷰를 반영하는 도중에 한 번 압축됐다. 압축 뒤의 요약이 ADR이 "달았다"고 적은 것 가운데 아직 고치지 않은 파일 넷을 적어 두어 빠뜨리지 않았다.
+
+## 회고 (PR 직전 리뷰 뒤)
+
+커밋 뒤의 사건을 이어받은 세션이 덧붙인다. 원천은 위 "인계: 커밋 뒤"와 "이어받은 세션: PR 직전 리뷰" 절이다. 후보 다섯, 승인 셋(모두 대기열에 두고 이 세션에서 반영한 것은 없다), 기각 둘, 넘김 0이다. 만료할 항목은 없었다(`uv run python tools/queue_open_rows.py`의 작업 트리 출력에 만료할 항목이 없어 `--ref origin/main`의 출력과 겹칠 것이 없다).
+
+1. **승인(회차).** netns 프로브의 `bridge()`가 호스트에서 본 양성 대조 회차를 조건 없이 측정으로 세었다. 프로브 파일을 열 때 실리는 `.claude/rules/probes.md` 첫 항목을 어긴 것이고, 셀프 리뷰 두 축은 놓쳤으며 PR 직전 CodeRabbit CLI가 Minor로 잡았다. 같은 일을 처방한 `대기열 430`(9회차)이 닫혀 있고 그것을 이은 열린 항목이 없어(`0430의`, `430의`, `339의`, `0339의`로 찾았다) 새 항목 `probe-round-marked-measured-unconditionally`를 `0430의 10회차`로 썼다. 그 프로브는 `Rounds`를 쓰고 있어 430이 더한 계기에는 걸리지 않는다. 처방은 같은 계기 훅이 조건도 단언도 거치지 않은 `mark(measured=True`를 짚는 것이다. 글자만 보는 검사로 올리지 않은 까닭은 저장소 프로브에 `measured=True`가 파일 20개에 71곳 있고(Grep의 count로 셌다) 표지를 본 갈래 안에서 부른 것이 섞여 있어서다. 처방이 훅을 넓히는 것이고 문턱을 지나므로 `uv run python tools/hook_report.py`를 돌렸다. 뺄 후보는 `hook_session_web_deps.py` 하나였고 위 회고의 6과 같은 까닭으로 넘기지 않았다. 회차 5 이상이라 chore 배치의 대상이다.
+2. **승인(회차).** 커밋한 세션이 인용 대조 경고 45건 가운데 36건을 열어 보지 않고 넘겼고, 이 세션이 그 안에서 줄인 말에 따옴표를 붙인 인용 둘(이 일지 318·429줄)을 찾아 고쳤다. 다시 받은 44건 가운데 일곱은 선택 화면의 질문·라벨·고치기 전 설명이었다(이 일지 32·145·166·180줄). 원문이 저장소에 없는 것이 맞는 경고가 많아 하나씩 열어 보는 값이 커진 것이고, 열린 `대기열 563`이 같은 일(설계 인터뷰 일지의 선택 화면 글을 대조에서 뺀다)을 처방해 회차를 더했다(4회차).
+3. **승인(회차).** 인계 지시문은 밀 주장을 PR 직전 리뷰의 브리프에 실으라고 적었는데 CLI가 도는 PR에는 그것을 넘기는 길이 없어, 이 세션이 `bug-perf-review`를 주장 검증 몫으로 따로 띄웠다(도구 호출 33번, 지적 0건). 열린 `cli-review-claims-path`가 같은 일을 처방해 회차를 더했다(2회차).
+4. **기각.** 커밋의 pre-commit이 622초로 Bash의 600초 제한을 넘겨 백그라운드로 넘어갔다. `CLAUDE.md` 검증 명령 절이 그때 할 일(다시 치지 않고 끝 알림을 기다린다)을 이미 적고 있고, 세션이 그대로 해 잃은 것이 없다.
+5. **기각.** CodeRabbit CLI가 일지의 제목이 겹친다는 Major를 냈고 서브에이전트의 트리아지가 오탐으로 걸렀다. 이 세션의 `git show origin/main:.scratch/…`는 Git Bash의 경로 변환으로 실패했고 훅이 그 자리에서 까닭과 고친 꼴을 알려 다시 쳤다. 둘 다 이미 있는 장치가 그 자리에서 걸렀다.
+
+일지에만 남기는 것이다. 이 세션이 `tools/check_type_escapes.py`에 파일 경로를 넘겨 예외로 끝났다(그 도구는 루트 폴더를 받는다). 고친 줄에 우회 낱말이 없고 커밋의 pre-commit이 그 검사를 돌리므로 다시 치지 않았다.
 
 ## 다음
 
 이 PR이 병합된 뒤의 일이다.
 
-1. **dev 브랜치 전환의 harness 티켓.** ADR 0043 Consequences "전환"의 일이고, release-image의 명세와 티켓보다 먼저다(ADR 0056 Consequences "dev 전환이 먼저다", `.scratch/plan-head.md`). 전환 티켓은 닫힐 때 `.scratch/plan-head.md`에서 release-image를 든 문장을 걷는다. 실제 이미지의 compose e2e 잡은 전환 티켓이 만들지 않고 release-image의 첫 티켓이 Dockerfile·compose와 함께 더한다(ADR 0056 결정 "실제 이미지로 띄우는 시험").
+1. **dev 브랜치 전환의 harness 티켓.** ADR 0043 Consequences "전환"의 일이고, release-image의 명세와 티켓보다 먼저다(ADR 0056 Consequences "dev 전환이 먼저다", `.scratch/plan-head.md`). 전환 티켓은 닫힐 때 `.scratch/plan-head.md`에서 release-image를 든 문장을 걷는다. 그때 같은 전환을 문서 검색 서버 저장소(rag-engine)에 하라고 그 저장소의 세션에 줄 지시문도 사용자에게 낸다(위 "사용자가 정했다"). 다음 작업 지시문의 "이어받을 상태"에 이 일을 적어, 받는 세션이 harness 티켓의 수용 기준에 넣게 한다. 실제 이미지의 compose e2e 잡은 전환 티켓이 만들지 않고 release-image의 첫 티켓이 Dockerfile·compose와 함께 더한다(ADR 0056 결정 "실제 이미지로 띄우는 시험").
 2. **사람 몫.** Docker Hub에 이 제품의 이름으로 계정을 만들고, 2단계 인증을 켜고, 접근 토큰을 발급해 GitHub 저장소의 비밀 값으로 넣는다. 이것이 없으면 첫 판 내기가 실패한다(ADR 0056 결정 "레지스트리와 계정"). release-image의 출시 PR 전까지 하면 된다.
 3. **서브에이전트 워크트리.** `.claude/worktrees/agent-a65f5d6e4055592b1`에 위젯 실험 판의 파일이 커밋 없이 남아 있다. 프로브 폴더는 이 PR이 실었으므로 주 체크아웃 세션의 `tidy-checkouts`가 걷는다.
-4. **문서 검색 서버 저장소.** 판 내기와 dev 브랜치를 그 저장소에 옮길지와 그 순서는 사용자가 아직 정하지 않았다(위 "사용자가 물었다").
-5. **chore 배치의 대상.** 이 회고로 `option-fact-from-doc-not-code`(9회차)와 `adr-evidence-stronger-than-journal`(5회차)이 회차 5 이상이 됐다.
+4. **문서 검색 서버 저장소.** 판 내기와 dev 브랜치는 agent-os가 먼저 짓고 돌려 본 뒤에 그 저장소로 옮긴다(위 "사용자가 정했다"). dev 전환 티켓과, 판 내기 워크플로를 지어 돌려 본 release-image의 티켓이 닫힐 때 그 세션이 사용자에게 그 저장소에 줄 지시문을 낸다. 받는 자리는 `.scratch/plan-head.md`의 dev 전환 문단과 release-image 기능 계획의 본문이다.
+5. **chore 배치의 대상.** 이 회고로 `option-fact-from-doc-not-code`(9회차)와 `adr-evidence-stronger-than-journal`(5회차)이 회차 5 이상이 됐다. 덧붙인 회고로 `probe-round-marked-measured-unconditionally`(10회차)가 더해졌다.
