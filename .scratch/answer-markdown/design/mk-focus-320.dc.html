@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>완성 3: 키보드 포커스, 320px</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/agent-os/styles.css">
+<link rel="stylesheet" href="ds/agent-os/fonts/fonts.css">
+<link rel="stylesheet" href="ds/agent-os/_ds_bundle.css">
+<script src="ds/agent-os/_ds_bundle.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0}
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+.md{min-width:0;font-size:var(--body-size);line-height:var(--body-lh);color:var(--text);overflow-wrap:anywhere}
+.md>*{margin:0}
+.md>*+*{margin-top:var(--spacing-3)}
+.md h1,.md h2,.md h3,.md h4,.md h5,.md h6{font-size:var(--body-size);line-height:var(--body-lh);font-weight:var(--font-weight-semibold)}
+.md>:is(h1,h2,h3,h4,h5,h6)+*{margin-top:var(--spacing-1)}
+.md>*+:is(h1,h2,h3,h4,h5,h6){margin-top:var(--spacing-4)}
+.md blockquote{padding-left:var(--spacing-3);border-left:2px solid var(--border-control)}
+.md blockquote>*{margin:0}
+.md code{font-family:var(--mono);font-size:var(--mono-size);background:var(--bg);border-radius:var(--radius-s);padding:0 var(--spacing-1)}
+.md pre{padding:var(--spacing-3);background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-s);font-family:var(--mono);font-size:var(--mono-size);line-height:var(--table-lh);overflow-x:auto}
+.md pre code{padding:0;background:none;border-radius:0}
+.md a{color:var(--accent);text-decoration:underline}
+.md hr{height:0;border:0;border-top:1px solid var(--border)}
+.md .tbl{overflow-x:auto}
+.md table{border-collapse:collapse;font-size:var(--table-size);line-height:var(--table-lh)}
+.md th{font-weight:var(--font-weight-semibold);text-align:left}
+.md th,.md td{padding:var(--spacing-2) var(--spacing-3);vertical-align:top;border-bottom:1px solid var(--border);min-width:96px;max-width:256px}
+.md tr>:first-child{padding-left:0}
+.md tbody tr:last-child>*{border-bottom:0}
+.focused{outline:2px solid var(--focus-ring);outline-offset:2px}
+</style>
+</helmet>
+<div data-theme="nokcheong" data-mode="light" style="display: flex; gap: 48px; align-items: flex-start; width: 1152px; height: 720px; box-sizing: border-box; padding: 48px; background: var(--bg); color: var(--text); font-family: var(--sans);">
+
+<section class="flex flex-col gap-3" style="width: 320px; flex-shrink: 0;">
+<div class="flex flex-col gap-1">
+<p class="text-body font-semibold" style="margin: 0;">완성 3 · 키보드 포커스 · 링크</p>
+<p class="text-small text-text-muted" style="margin: 0;">Tab으로 출력 안의 링크에 왔다. 포커스 링은 포커스 링 토큰(outline 2px, focus-ring, 2px 띄움)이다. 화면 읽기 프로그램은 링크 글 뒤에 "(새 탭에서 열림)"을 함께 읽는다. 출력의 끝부분을 스크롤해 본 모습이다.</p>
+</div>
+<div data-theme="nokcheong" data-mode="light" data-density="regular" class="flex flex-col shadow-float" style="width: 320px; box-sizing: border-box; background: var(--bg-raised); color: var(--text); font-family: var(--sans); border: 1px solid var(--border); border-radius: var(--radius-l); overflow: hidden;">
+<header class="flex items-center justify-between gap-2 shrink-0" style="padding: var(--spacing-2) var(--spacing-2) var(--spacing-2) var(--spacing-4); border-bottom: 1px solid var(--border);">
+<h1 class="text-body font-semibold" style="flex: 1; min-width: 0; margin: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">사내 규정 도우미</h1>
+<x-import component-from-global-scope="AgentOsUi.Button" variant="secondary">새 대화</x-import>
+</header>
+<ol aria-label="대화" class="flex flex-col gap-4" style="margin: 0; padding: var(--spacing-4); list-style: none;">
+<li class="flex flex-col gap-2">
+<div class="md">
+<p>신청서 번호는 <code>LV-2026-000184</code> 꼴로 옵니다. 시작일은 <del>11월 30일</del> 12월 1일로 바뀌었습니다. 자세한 안내는 <a class="focused" href="https://hr.example.com/help/leave" target="_blank" rel="noopener noreferrer">인사 시스템 도움말<span class="sr-only">(새 탭에서 열림)</span></a>에 있습니다.</p>
+<hr>
+<p>인사 시스템 API로 낼 때는 아래처럼 보냅니다.</p>
+<pre tabindex="0"><code>curl -X POST https://hr.example.com/api/v1/leave-requests -H "Content-Type: application/json" -d '&#123;"type":"parental","start":"2026-12-01","end":"2027-11-30"&#125;'</code></pre>
+</div>
+</li>
+</ol>
+<form class="flex gap-2 shrink-0" style="align-items: flex-end; margin: 0; padding: var(--spacing-3); border-top: 1px solid var(--border);">
+<div style="flex: 1; min-width: 0;"><textarea rows="1" aria-label="질문" placeholder="무엇을 도와드릴까요?" class="block w-full min-w-0 rounded-m border text-body resize-y px-3 py-2 border-border-control bg-bg-raised text-text placeholder:text-text-muted hover:border-text-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring" style="box-sizing: border-box; margin: 0; font-family: inherit;"></textarea></div>
+<x-import component-from-global-scope="AgentOsUi.IconButton" icon="send" label="보내기" variant="primary"></x-import>
+</form>
+</div>
+</section>
+
+<section class="flex flex-col gap-3" style="width: 320px; flex-shrink: 0;">
+<div class="flex flex-col gap-1">
+<p class="text-body font-semibold" style="margin: 0;">완성 3 · 키보드 포커스 · 표</p>
+<p class="text-small text-text-muted" style="margin: 0;">표의 스크롤 칸은 이름이 "표"인 영역이고 포커스를 받는다. 포커스가 오면 왼쪽·오른쪽 화살표 키로 표를 옆으로 민다. 포커스 링은 표 칸 둘레에 그린다. 출력의 가운데를 스크롤해 본 모습이다.</p>
+</div>
+<div data-theme="nokcheong" data-mode="light" data-density="regular" class="flex flex-col shadow-float" style="width: 320px; box-sizing: border-box; background: var(--bg-raised); color: var(--text); font-family: var(--sans); border: 1px solid var(--border); border-radius: var(--radius-l); overflow: hidden;">
+<header class="flex items-center justify-between gap-2 shrink-0" style="padding: var(--spacing-2) var(--spacing-2) var(--spacing-2) var(--spacing-4); border-bottom: 1px solid var(--border);">
+<h1 class="text-body font-semibold" style="flex: 1; min-width: 0; margin: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">사내 규정 도우미</h1>
+<x-import component-from-global-scope="AgentOsUi.Button" variant="secondary">새 대화</x-import>
+</header>
+<ol aria-label="대화" class="flex flex-col gap-4" style="margin: 0; padding: var(--spacing-4); list-style: none;">
+<li class="flex flex-col gap-2">
+<div class="md">
+<h4>필요한 서류</h4>
+<div class="tbl focused" tabindex="0" role="region" aria-label="표">
+<table>
+<thead><tr><th>서류</th><th>내는 곳</th><th>기한</th><th>비고</th></tr></thead>
+<tbody>
+<tr><td>휴직 신청서</td><td>인사 시스템</td><td>시작 30일 전</td><td>부서장 승인 필요</td></tr>
+<tr><td>가족관계증명서</td><td>인사팀 메일</td><td>시작 7일 전</td><td>3개월 안에 뗀 것</td></tr>
+<tr><td>출생증명서 사본</td><td>인사팀 메일</td><td>시작 7일 전</td><td>출산 전이면 출산 뒤 30일 안</td></tr>
+</tbody>
+</table>
+</div>
+<blockquote><p>회사 규정과 법이 다르면 법이 우선합니다.</p></blockquote>
+</div>
+</li>
+</ol>
+<form class="flex gap-2 shrink-0" style="align-items: flex-end; margin: 0; padding: var(--spacing-3); border-top: 1px solid var(--border);">
+<div style="flex: 1; min-width: 0;"><textarea rows="1" aria-label="질문" placeholder="무엇을 도와드릴까요?" class="block w-full min-w-0 rounded-m border text-body resize-y px-3 py-2 border-border-control bg-bg-raised text-text placeholder:text-text-muted hover:border-text-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring" style="box-sizing: border-box; margin: 0; font-family: inherit;"></textarea></div>
+<x-import component-from-global-scope="AgentOsUi.IconButton" icon="send" label="보내기" variant="primary"></x-import>
+</form>
+</div>
+</section>
+
+<section class="flex flex-col gap-3" style="width: 320px; flex-shrink: 0;">
+<div class="flex flex-col gap-1">
+<p class="text-body font-semibold" style="margin: 0;">완성 3 · 키보드 포커스 · 코드 블록</p>
+<p class="text-small text-text-muted" style="margin: 0;">코드 블록도 포커스를 받고, 화살표 키로 긴 줄을 옆으로 민다. 포커스 링은 코드 칸 둘레에 그린다. 표와 달리 따로 이름을 붙이지 않아 위젯이 쓰는 새 말이 늘지 않는다. 출력의 끝부분을 스크롤해 본 모습이다.</p>
+</div>
+<div data-theme="nokcheong" data-mode="light" data-density="regular" class="flex flex-col shadow-float" style="width: 320px; box-sizing: border-box; background: var(--bg-raised); color: var(--text); font-family: var(--sans); border: 1px solid var(--border); border-radius: var(--radius-l); overflow: hidden;">
+<header class="flex items-center justify-between gap-2 shrink-0" style="padding: var(--spacing-2) var(--spacing-2) var(--spacing-2) var(--spacing-4); border-bottom: 1px solid var(--border);">
+<h1 class="text-body font-semibold" style="flex: 1; min-width: 0; margin: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">사내 규정 도우미</h1>
+<x-import component-from-global-scope="AgentOsUi.Button" variant="secondary">새 대화</x-import>
+</header>
+<ol aria-label="대화" class="flex flex-col gap-4" style="margin: 0; padding: var(--spacing-4); list-style: none;">
+<li class="flex flex-col gap-2">
+<div class="md">
+<hr>
+<p>인사 시스템 API로 낼 때는 아래처럼 보냅니다.</p>
+<pre class="focused" tabindex="0"><code>curl -X POST https://hr.example.com/api/v1/leave-requests -H "Content-Type: application/json" -d '&#123;"type":"parental","start":"2026-12-01","end":"2027-11-30"&#125;'</code></pre>
+</div>
+</li>
+</ol>
+<form class="flex gap-2 shrink-0" style="align-items: flex-end; margin: 0; padding: var(--spacing-3); border-top: 1px solid var(--border);">
+<div style="flex: 1; min-width: 0;"><textarea rows="1" aria-label="질문" placeholder="무엇을 도와드릴까요?" class="block w-full min-w-0 rounded-m border text-body resize-y px-3 py-2 border-border-control bg-bg-raised text-text placeholder:text-text-muted hover:border-text-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring" style="box-sizing: border-box; margin: 0; font-family: inherit;"></textarea></div>
+<x-import component-from-global-scope="AgentOsUi.IconButton" icon="send" label="보내기" variant="primary"></x-import>
+</form>
+</div>
+</section>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1152,"height":720}}'>
+class Component extends DCLogic {
+renderVals() {
+return {};
+}
+}
+</script>
+</body>
+</html>
