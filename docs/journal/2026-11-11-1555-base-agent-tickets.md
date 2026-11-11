@@ -315,3 +315,48 @@ PR을 열기 직전의 rag-engine 재확인(대기열 `external-ref-moved-while-
 - 사용자가 승인한 대기열 항목 `plugins-outside-type-judges`(`plugins/`를 pyright strict와 우회 검사 범위에 넣고 ADR 0013 이력을 더한다)는 티켓 03보다 먼저 들어가면 기본 에이전트 코드가 첫 커밋부터 판정된다(어림). 대기열 항목이라 결정표의 chore 줄은 기능의 마지막 티켓 뒤에야 고른다. 그 전에 하려면 사용자가 순서를 올려야 한다.
 - 워크트리 `.claude/worktrees/base-agent-full-text-window`(브랜치 `docs/base-agent-full-text-window`, 커밋 없음)는 커밋하지 않은 변경을 지닌 채 잠겨 있다. 그 일지는 이 브랜치에 실었다. 그 워크트리를 지울지는 그 일지의 "다음"대로 사용자가 정한다.
 - 저장소로 알 수 없는 것: 2026-11-11 프로브의 원본 기록과 세는 스크립트(`summarize6.py` 등)는 앞 세션의 스크래치패드에만 있고, 프로브 README가 값을 옮겨 적었다.
+
+## PR (18:31 세션)
+
+- 셋째 커밋 `1ba12430f`(CodeRabbit 반영, 회고, 다른 세션의 일지, 이 일지의 "다음"). pre-commit이 모두 지났다(ruff 둘, `tools/run_checks.py`의 검사 가운데 pytest 393.4초와 web-verify 579.6초, 마크다운 표, 줄 구분 문자, 변이 표, 인용 대조, 커밋 메시지). 카나리아 명세와 헌법 판은 대상 파일이 없어 `Skipped`였다. 인용 대조의 막지 않는 경고 아홉은 모두 원문이 이 저장소의 커밋된 파일 밖에 있는 인용이다. 이 일지의 둘은 사용자 수준 메모리와 워크트리 `doc-permission-verdict`의 커밋하지 않은 ADR 이력을, 복사한 일지의 일곱은 그 세션이 커밋하지 않은 README와 명세를 옮긴 것이라 글자를 고치지 않았다.
+- 그 커밋 직후 인계 계기(`커밋 뒤`, 세션 컨텍스트 283,166 토큰)가 왔다. 이 세션의 지시문 "이어받을 상태"가 `인계: 커밋 뒤`로 시작해 `handoff.md` 1의 "같은 경계"라 넘기지 않고 이었다.
+- `git fetch origin` 뒤 `HEAD..origin/main`이 비어 있었다. `git push -u origin docs/base-agent-tickets`, `gh pr create`로 PR #528을 열었다(본문은 템플릿을 채웠다). 앱의 PR 묶음은 `get_status`가 `bound: true`로 보였다.
+- `@coderabbitai review` 코멘트는 남기지 않았다. 아래 인계에서 새 세션이 남긴다(`handoff.md` 3).
+
+## 인계 (PR 연 뒤)
+
+PR을 연 직후 인계 계기(`PR 연 뒤`, 세션 컨텍스트 302,499 토큰)가 와서 `handoff.md`대로 넘긴다. 인계하지 않는 다섯에 들지 않는다. PR이 열렸고, 요청 범위("티켓까지")는 병합까지라 이 경계에서 끝나지 않으며, 이어받을 상태가 `인계: 커밋 뒤`라 경계가 다르고, `인계 못함` 줄이 없고, `get_session`의 `self`에 `parentSessionId`가 없다. 이 세션의 지금 제목은 `docs/base-agent-tickets`다.
+
+이 절은 커밋하지 않았다. 새 세션이 봇 회차의 커밋에 싣는다. 회고와 "다음"은 셋째 커밋에 이미 실렸다.
+
+지시문:
+
+```
+다음 작업: 기능 base-agent. 명세·ADR 0051 이력·프로브와 티켓 일곱(.scratch/base-agent/issues/01~07)의 PR #528을 봇 회차부터 이어 병합한다
+다음 단계: PR 반영·병합
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /to-tickets .scratch/base-agent/spec.md
+브랜치: docs/base-agent-tickets
+모델: Sonnet 5.5 / high. 2의 잇는 지시문
+읽을 것: docs/journal/2026-11-11-1555-base-agent-tickets.md의 "이어받은 세션 (18:31)"부터 끝까지(회고, 다음, PR, 인계 절 포함), .claude/skills/next-session/merge.md
+이어받을 상태: 인계: PR 연 뒤. PR #528을 열었고 merge.md 2(봇 회차)부터 한다. 첫 @coderabbitai review 코멘트도 새 세션이 남긴다. 봇마다 첫 회차는 아직이다. 셀프 리뷰, ADR 0051 2026-11-11 이력의 사용자 승인, PR 직전 리뷰(bug-perf-review와 coderabbit-review)와 그 반영, 회고, 일지 "다음"은 커밋과 푸시까지 마쳤다. 워크트리에 커밋하지 않은 일지 변경(PR 절과 인계 절)이 있어 봇 회차의 커밋에 실어 병합 전에 푸시한다. 티켓은 다시 쪼개지 않는다. 병합 뒤 다음 지시문은 일지 "다음"으로 짓는다. 일지: docs/journal/2026-11-11-1555-base-agent-tickets.md
+확인할 선행 조건: 워크트리 doc-permission-verdict가 ADR 0051의 2026-11-10 이력 "제품 1.0에서 기본 에이전트가 지식베이스를 고른다" 뒤에 새 이력을 커밋하지 않은 채 더하고 있었다(이 세션이 diff로 읽었다). 이 브랜치의 2026-11-11 이력도 같은 자리라, 그 변경이 main에 먼저 들어가면 이 브랜치에서 글자 충돌을 푼다
+이번 요청 범위: 티켓까지
+```
+
+워크트리 잠금 풀기는 `is not locked`로 끝났다(이미 풀려 있었다). 제목을 `docs/base-agent-tickets (인계함)`으로 바꿨다. 멈출 백그라운드 작업은 없었다.
+
+open-session을 부른다 2026-11-11T10:00:52Z
+
+## 이어받은 세션 (19:24, 봇 회차)
+
+위 "인계 (PR 연 뒤)"의 지시문으로 연 새 세션이다. 제목을 `docs/base-agent-tickets`로 바꾸고 `git worktree list`에서 이 브랜치가 `.claude/worktrees/base-agent-tickets`에 있는 것을 보고 `EnterWorktree(path)`로 들어왔다.
+
+> 사용자: .claude/skills/to-tickets/SKILL.md 를 읽어 그대로 따른다. (…) 인자: .scratch/base-agent/spec.md
+> 다음 작업: 기능 base-agent. 명세·ADR 0051 이력·프로브와 티켓 일곱(.scratch/base-agent/issues/01~07)의 PR #528을 봇 회차부터 이어 병합한다
+
+(지시문의 나머지 줄은 위 "인계 (PR 연 뒤)"의 지시문과 같다.)
+
+### 충돌 해소
+
+`gh pr view 528`이 `mergeable: CONFLICTING`(`DIRTY`)이었다. `git fetch origin` 뒤 `HEAD..origin/main`이 `768dee7d9`(#527, ADR 0051에 문서 검색 서버의 답 이력) 하나였고, 지시문의 "확인할 선행 조건"이 말한 글자 충돌이 그대로 났다(ADR 0051의 같은 자리). 두 이력은 서로 독립이라 둘 다 남겼다. main의 이력(2026-11-11 "문서 검색 서버가 지식베이스 목록을 주체에 따라 거른다고 답해 kb-selection이 그 기능을 기다린다")을 2026-11-10 "제품 1.0에서 기본 에이전트가 지식베이스를 고른다" 바로 뒤에 두고, 이 브랜치의 이력("전문은 첫 창만 읽고…")을 그 뒤에 이었다. main의 이력이 "앞의 이력"이라고 부르는 것이 2026-11-10 이력이므로 그 둘이 붙어 있어야 해서다. 병합 커밋 `c12f67f81`의 pre-commit이 모두 지났다.
