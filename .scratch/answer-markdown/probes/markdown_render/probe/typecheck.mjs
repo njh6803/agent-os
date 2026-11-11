@@ -5,7 +5,8 @@
 // 산출물: out/typecheck/summary.json, 표준 출력의 마지막 줄(JSON 한 줄)
 //
 // 측정이 아닌 회차(.claude/rules/probes.md): 종료 코드 0 만으로 맺지 않는다.
-// - tsc 가 실제로 본 파일 목록(--listFilesOnly)에 두 컴포넌트와 두 라이브러리의 타입 선언이 있어야 한다.
+// - tsc 가 실제로 본 파일 목록(--listFilesOnly)에 두 컴포넌트와 두 라이브러리의 타입 선언, 그리고 합친 시제품
+//   (`AnswerMarkdown.tsx` 와 `lib/answer-markdown/`, `lib/link-url.ts`)의 파일이 모두 있어야 한다.
 // - 양성 대조: 같은 옵션을 물려받은 무대(out/typecheck/control)에 심은 오류 둘이 실제로 걸려야 한다.
 //   `noUncheckedIndexedAccess` 가 살아 있어야 나는 TS2322(indexed.ts)와, 허용 목록 switch 에서 갈래 하나를 지운
 //   컴포넌트 사본의 TS2322(never 대입. 라이브러리가 규칙 종류를 더했을 때 타입 검사가 멈춘다는 주장의 근거)다.
@@ -31,6 +32,19 @@ const mustSee = [
   "apps/widget/components/molecules/MarkdownReact.tsx",
   "apps/widget/components/molecules/MarkdownJsx.tsx",
   "apps/widget/lib/safe-url.ts",
+  // 합친 시제품(2026-11-11 에 더했다).
+  "apps/widget/components/molecules/AnswerMarkdown.tsx",
+  "apps/widget/lib/link-url.ts",
+  "apps/widget/lib/answer-markdown/index.ts",
+  "apps/widget/lib/answer-markdown/tree.ts",
+  "apps/widget/lib/answer-markdown/soft-breaks.ts",
+  "apps/widget/lib/answer-markdown/literal-marks.ts",
+  "apps/widget/lib/answer-markdown/literal-marks-syntax.ts",
+  "apps/widget/lib/answer-markdown/cjk-emphasis.ts",
+  "apps/widget/lib/answer-markdown/citations.ts",
+  "apps/widget/lib/answer-markdown/sources.ts",
+  "apps/widget/lib/answer-markdown/footnotes.ts",
+  "apps/widget/lib/answer-markdown/task-marks.ts",
   "node_modules/react-markdown/index.d.ts",
   "node_modules/remark-gfm/index.d.ts",
   "node_modules/markdown-to-jsx/dist/react.d.ts",
