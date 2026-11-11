@@ -1,0 +1,25 @@
+# `.claude/rules/sdk.md` 의 에이전트 매니페스트 선택 칸 항목에 더한 두 끝(`max_turns`, `max_tool_calls`)의 문장이
+# `paths` 에 맞는 파일을 Read 로 열 때 실리는지(base-agent 티켓 01).
+# 실험군은 규칙의 paths 안(src/agent_os/sdk/), 대조군은 밖(README.md)을 읽는다. 둘 다 이 체크아웃이다.
+# 최신 결과: 통과 4(2026-11-11, 이 PC의 base-agent 티켓 01 워크트리, claude 2.1.322, HEAD 377675eef 위의 커밋하지 않은 작업 트리). 실험군 셋이 두 문구를 글자 그대로 옮겼고 대조군은 "없음"이었다. "없음" 섞임 0.
+# 돌리는 법: uv run python tools/canary.py .scratch/base-agent/probes/canary/sdk_rule_two_limits.toml <출력 디렉터리>
+kind = "rule"
+question = '''
+Read 도구로 `{target}` 파일 하나만 통째로 읽어라. 다른 파일은 읽지 않는다.
+그 뒤 이 세션에 실린 지시 가운데, 에이전트 매니페스트의 선택 칸 `max_turns`와 `max_tool_calls`를 다루는 항목이 있으면
+두 가지를 글자 그대로 옮겨라. (1) 직렬화 스키마에 두 칸이 어떤 제한으로 실리는지 말하는 백틱 안의 글.
+(2) 두 칸 가운데 에이전트가 올릴 수도 있는 쪽을 말하는 문장 조각.
+읽은 파일의 코드에서 추측하지 않는다. 실린 지시에 그런 항목이 없으면 "없음"이라고만 답하라.
+'''
+expect = ["minimum: 1", "올릴 수도 있다"]
+source = ".claude/rules/sdk.md"
+
+[[arm]]
+name = "paths-안"
+role = "experiment"
+target = "src/agent_os/sdk/manifest.py"
+
+[[arm]]
+name = "paths-밖"
+role = "control"
+target = "README.md"

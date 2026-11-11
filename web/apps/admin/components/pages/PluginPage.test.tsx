@@ -27,6 +27,8 @@ const CALC: Plugin = {
     mcp: ["everything"],
     requires_approval: ["add"],
     conversation_limit: null,
+    max_turns: null,
+    max_tool_calls: null,
     model: null,
     skills: [],
     provider: null,
@@ -51,6 +53,8 @@ const CALC_MANIFEST = `{
     "add"
   ],
   "conversation_limit": null,
+  "max_turns": null,
+  "max_tool_calls": null,
   "model": null,
   "skills": [],
   "provider": null,
