@@ -2,9 +2,9 @@
  * 질문 페이지의 페이지 CSS(pilot-portal 명세 "모양"). 손으로 쓴 파일 하나이고 서버가 시작 때 읽어 `/portal/portal.css` 로 낸다.
  * 클래스 이름은 모두 `pp-` 접두이고, 색과 글꼴과 모서리와 밀도를 따르는 글자는 디자인 토큰을 `var(--…)` 로만 읽는다.
  * 토큰 CSS(`/portal/theme.css`) 산출의 유틸리티 클래스는 쓰지 않는다. 밀도는 뿌리의 `data-density="regular"` 가 정한다.
- * 이 파일이 그리는 것은 위쪽 띠의 자리, 위젯 자리와 그 안의 세 면(뼈대, 덮개, 위젯), 짧은 고지다. 위험 알림과 주 버튼은
- * 디자인 시스템 Alert·Button 의 마크업과 ARIA 를 옮긴 HTML 을 이 파일로 칠한 것이다(React 를 싣지 않는 페이지라 부품을 쓰지
- * 못한다). 위쪽 띠의 내용과 단추 줄은 뒤 티켓이 같은 접두로 더한다.
+ * 이 파일이 그리는 것은 위쪽 띠(사이트 셀렉트와 다크 모드 스위치), 둘 다 사이트의 단추 줄, 사이트를 바꾼 뒤의 정보 글, 위젯
+ * 자리와 그 안의 네 면(뼈대, 덮개, 로그인 안내, 위젯), 짧은 고지, 보고서 링크다. 알림과 버튼과 스위치는 디자인 시스템
+ * Alert·Button·Switch 의 마크업과 ARIA 를 옮긴 HTML 을 이 파일로 칠한 것이다(React 를 싣지 않는 페이지라 부품을 쓰지 못한다).
  */
 
 .pp-body {
@@ -19,11 +19,157 @@
   line-height: var(--body-lh);
 }
 
-/* 위쪽 띠. 내용은 08 이 채우고 여기서는 본문과 가르는 경계선 한 줄을 둔 자리다. */
+/*
+ * 위쪽 띠. 좁은 폭에서는 사이트 셀렉트와 다크 모드 스위치가 위아래로 쌓이고, 768px 이상에서는 한 줄이며 스위치가 오른쪽
+ * 끝에 붙는다(사이트가 하나면 셀렉트가 없어 스위치만 남는다). 본문과 가르는 경계선 한 줄이 아래에 있다.
+ */
 .pp-band {
   box-sizing: border-box;
-  min-height: 56px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-3);
+  padding: var(--spacing-3) var(--spacing-4);
   border-bottom: 1px solid var(--border);
+}
+
+.pp-site {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: var(--spacing-2);
+}
+
+.pp-site-label {
+  flex-shrink: 0;
+  color: var(--text-muted);
+  font-size: var(--text-small);
+  line-height: var(--text-small--line-height);
+}
+
+/* 셀렉트. 브라우저 기본 요소를 지우고 오른쪽에 아래 화살표 아이콘을 겹친다. 아이콘은 꾸밈이라 눌림을 받지 않는다. */
+.pp-select {
+  position: relative;
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  align-items: center;
+}
+
+.pp-select-control {
+  box-sizing: border-box;
+  display: block;
+  width: 100%;
+  height: var(--control-h);
+  margin: 0;
+  padding: 0 var(--spacing-8) 0 var(--spacing-3);
+  border: 1px solid var(--border-control);
+  border-radius: var(--radius-m);
+  appearance: none;
+  background: var(--bg-raised);
+  color: var(--text);
+  font-family: inherit;
+  font-size: var(--body-size);
+  line-height: var(--body-lh);
+  cursor: pointer;
+}
+
+.pp-select-control:hover {
+  background: var(--bg-hover);
+}
+
+.pp-select-control:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+.pp-select-icon {
+  position: absolute;
+  top: 50%;
+  right: var(--spacing-3);
+  transform: translateY(-50%);
+  color: var(--text-muted);
+  pointer-events: none;
+}
+
+/*
+ * 다크 모드 스위치. 디자인 시스템 Switch 의 해부도를 옮겼다: 트랙 40×24px, 손잡이 20px, 안쪽 띄움 2px, 글자와 트랙 사이
+ * 8px. 켜짐은 트랙이 강조색이고 손잡이가 오른쪽으로 간다. 올림은 라벨 전체의 상태라 라벨에서 받아 트랙 위 면을 칠한다.
+ */
+.pp-switch {
+  display: flex;
+  align-items: center;
+  align-self: flex-start;
+  justify-content: space-between;
+  gap: var(--spacing-2);
+  color: var(--text);
+  cursor: pointer;
+}
+
+.pp-switch-text {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+}
+
+.pp-switch-state {
+  color: var(--text-muted);
+  font-size: var(--text-small);
+  line-height: var(--text-small--line-height);
+}
+
+.pp-switch-control {
+  position: relative;
+  display: block;
+  flex-shrink: 0;
+}
+
+.pp-switch-input {
+  display: block;
+  width: var(--spacing-switch-w);
+  height: var(--spacing-switch-h);
+  margin: 0;
+  border-radius: var(--radius-full);
+  appearance: none;
+  background: var(--border-control);
+  cursor: pointer;
+}
+
+.pp-switch-input:checked {
+  background: var(--accent);
+}
+
+.pp-switch-input:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+.pp-switch-hover,
+.pp-switch-knob {
+  position: absolute;
+  border-radius: var(--radius-full);
+  pointer-events: none;
+}
+
+.pp-switch-hover {
+  inset: 0;
+}
+
+.pp-switch:hover .pp-switch-hover {
+  background: var(--bg-active);
+}
+
+.pp-switch-knob {
+  top: var(--spacing-switch-inset);
+  left: var(--spacing-switch-inset);
+  width: var(--spacing-switch-knob);
+  height: var(--spacing-switch-knob);
+  background: var(--bg-raised);
+}
+
+.pp-switch-input:checked ~ .pp-switch-knob {
+  right: var(--spacing-switch-inset);
+  left: auto;
+  background: var(--on-accent);
 }
 
 /* 위젯 자리 아래에 짧은 고지가 이어 놓이므로 위쪽에 붙인다. 가운데에 두면 전문을 펼칠 때 위젯 자리가 움직인다. */
@@ -33,7 +179,31 @@
   flex: 1;
   align-items: flex-start;
   justify-content: center;
-  padding: 24px 16px;
+  padding: var(--spacing-4);
+}
+
+@media (min-width: 768px) {
+  .pp-band {
+    height: 64px;
+    flex-direction: row;
+    align-items: center;
+    gap: var(--spacing-4);
+    padding: 0 var(--spacing-6);
+  }
+
+  .pp-select {
+    width: 260px;
+    flex: none;
+  }
+
+  .pp-switch {
+    align-self: auto;
+    margin-left: auto;
+  }
+
+  .pp-main {
+    padding: var(--spacing-8) var(--spacing-6);
+  }
 }
 
 /* 폭 400px. 좁은 폭에서는 좌우 16px 여백(위 padding)에 남은 폭을 쓴다. */
@@ -332,6 +502,124 @@
 }
 
 .pp-link:focus-visible {
+  border-radius: var(--radius-s);
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+/*
+ * 로그인 안내 상자. 로그인 사이트는 위젯 요소 없이 위젯 자리 크기(400×560px) 안에 정보 알림 하나를 가득 채워 보인다. 자리의
+ * 테두리와 모서리가 이미 있으므로 알림의 자기 테두리와 모서리는 지운다.
+ */
+.pp-widget > .pp-login {
+  display: flex;
+}
+
+.pp-login > .pp-alert {
+  flex: 1;
+  border: 0;
+  border-radius: 0;
+}
+
+.pp-alert-info .pp-alert-icon {
+  color: var(--info);
+}
+
+/*
+ * 둘 다 사이트의 줄. 쓸 수 없는 보조 버튼과 그 바로 뒤의 글이 위젯 자리 바로 위에 놓인다. 보조 버튼은 디자인 시스템 Button 의
+ * 보조 변형(바탕 없이 테두리)을 옮겼고, 쓸 수 없음은 `bg-disabled`·`text-disabled` 로 칠하고 올림을 두지 않는다.
+ */
+.pp-both {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-2);
+}
+
+.pp-secondary {
+  box-sizing: border-box;
+  display: flex;
+  width: 100%;
+  height: var(--control-h);
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+  padding: 0 var(--spacing-3);
+  border: 1px solid var(--border-control);
+  border-radius: var(--radius-m);
+  background: transparent;
+  color: var(--text);
+  font-family: inherit;
+  font-size: var(--body-size);
+  line-height: var(--body-lh);
+  font-weight: var(--font-weight-medium);
+  cursor: pointer;
+}
+
+.pp-secondary:disabled {
+  border-color: var(--border);
+  background: var(--bg-disabled);
+  color: var(--text-disabled);
+  cursor: not-allowed;
+}
+
+.pp-both-text {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: var(--text-small);
+  line-height: var(--text-small--line-height);
+}
+
+/* 넓은 창에서는 보조 버튼이 내용 폭이고 글이 그 옆에 놓인다. 좁은 창은 위의 세로 쌓기를 그대로 쓴다. */
+@media (min-width: 768px) {
+  .pp-both {
+    flex-direction: row;
+    align-items: center;
+    gap: var(--spacing-3);
+  }
+
+  .pp-secondary {
+    width: auto;
+    flex: none;
+  }
+}
+
+/* 사이트를 바꾼 뒤의 정보 글. 자리는 비어 있으면 높이가 없고 글이 들어오면 한 줄이 된다. 위젯 자리 위에 놓인다. */
+.pp-switched:empty {
+  display: none;
+}
+
+.pp-switched-line {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--spacing-2);
+  color: var(--text-muted);
+  font-size: var(--text-small);
+  line-height: var(--text-small--line-height);
+}
+
+.pp-switched-line p {
+  margin: 0;
+}
+
+.pp-switched-icon {
+  margin-top: 1px;
+  color: var(--info);
+}
+
+/* 보고서 링크. 새 탭으로 열리고 바깥 링크 아이콘이 글 뒤에 붙는다. */
+.pp-report {
+  display: inline-flex;
+  align-items: center;
+  align-self: flex-start;
+  min-height: 24px;
+  gap: var(--spacing-1);
+  color: var(--accent);
+  font-size: var(--text-small);
+  line-height: var(--text-small--line-height);
+  text-decoration: underline;
+}
+
+.pp-report:focus-visible {
   border-radius: var(--radius-s);
   outline: 2px solid var(--focus-ring);
   outline-offset: 2px;
