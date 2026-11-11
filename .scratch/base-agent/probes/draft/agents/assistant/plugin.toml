@@ -1,0 +1,7 @@
+schema_version = "1"
+kind = "agent"
+name = "assistant"
+version = "0.1.0"
+entrypoint = "agent:Assistant"
+mcp = ["doc-search"]
+skills = ["cite-sources"]
