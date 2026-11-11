@@ -2,4 +2,4 @@
 
 **상태:** 열림
 **어디로:** `.claude/skills/code-review/SKILL.md` 6단계의 1(CLI가 도는 PR의 밀 주장 처리를 한 줄로 정한다. 같은 단계를 만지는 열린 0347과 함께 본다)과 `.claude/skills/next-session/directive.md`·`handoff.md`의 지시문 문장
-**승인:** 자체 승인 2026-11-11, 2회차, 일지 2026-11-10-1906-base-agent-spec.md·2026-11-11-1555-base-agent-tickets.md. ADR 불필요
+**승인:** 자체 승인 2026-11-11, 3회차, 일지 2026-11-10-1906-base-agent-spec.md·2026-11-11-1555-base-agent-tickets.md·2026-11-11-1534-local-model-design.md. ADR 불필요
