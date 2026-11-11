@@ -104,3 +104,32 @@ CodeRabbit CLI 0.7.5가 끝까지 돌았고(`review_completed`, 파일 8개) 지
 3. `Select-ShownFolders` 주석: "2026-11-10 composer_env_menu.ps1 의 -Pick 이 양성으로 대 봤다(환경을 고르자 이 Text 가 C:\project\rag-engine 으로 바뀌었다, 손으로 돌렸다)".
 4. 프로브 머리(풀어 쓴 요지): 앞의 둘이 없으면 그 자리에서, expand 가 ok 가 아니거나 -Pick 항목을 찾지 못했거나 고르기가 ok 가 아닐 때는 끝에서 `측정 아님` 줄을 찍고 1로 끝난다.
 5. 티켓과 스킬의 "고른 뒤 멈췄으면 앱의 마지막 폴더는 이미 바뀌어 있다".
+
+## 커밋 뒤 인계(2026-11-11)
+
+커밋 `c3adc570d`(브랜치 `chore/open-session-selects-repo-folder`)까지 했다. 푸시하지 않았고 PR도 열지 않았다. 이 커밋은 사용자 승인으로 pre-commit의 `pytest` 훅만 `SKIP=pytest`로 뺐다(위 "첫 커밋 시도"). 린트·타입·web-verify·run-hooks 등 나머지 훅은 돌아 통과했다. 이 세션의 지금 제목은 `chore/open-session-selects-repo-folder`다.
+
+남은 일(새 세션이 이어서, 범위는 PR과 병합까지):
+
+1. 푸시, PR. PR 본문에 `pytest` 훅을 사용자 승인으로 건너뛴 사실과 까닭(부하로 시간 의존 시험이 세 번 막혔고 단독으로는 통과했다)을 적고, 전체 pytest는 CI가 판정한다고 적는다. 본문 끝에 `🤖 Generated with [Claude Code](https://claude.com/claude-code)`.
+2. 봇 회차(`merge.md` 2), 병합(워크트리에서 병합하는 길). CI의 pytest가 빨강이면 그것이 이 변경의 것인지 시간 의존 시험의 부하인지 가른다.
+3. 병합 뒤 마지막 보고에 rag-engine 세션에 붙여 넣을 글을 코드 블록으로 싣는다(위 "아직 안 한 것" 5의 내용 그대로. 쓰기 전에 그 저장소의 `tools/open_session.ps1`과 이 저장소의 병합된 판을 해시로 다시 대 본다. 이번 판은 해시가 달라졌다. rag-engine 저장소는 고치지 않는다).
+4. 병합 뒤 첫 인계 열기에서 새 세션의 `cwd`가 저장소 뿌리인지(`list_sessions`)와 `folder-fixed=`가 찍혔는지를 일지 "다음"이나 보고에 적는다.
+
+위 "아직 안 한 것"의 1~3(셀프 리뷰, 전체 검사 러너, 카나리아)은 이 세션이 했다. 카나리아는 통과 4, 전체 러너는 수정 도중 한 번 초록, 커밋 때 pytest 훅 밖 검사는 초록이었다.
+
+앱의 새 세션 화면에 첫 글자가 `／`인 시험용 글(`/no-such-skill-for-folder-test …`)이 보내지 않은 채 남아 있을 수 있다. 다음 열기가 딥링크로 덮는다. 앱의 마지막 폴더는 `C:\project\agent`다.
+open-session을 부른다 2026-11-11T00:07Z
+
+## PR 열기와 봇 회차(2026-11-11)
+
+PR #522를 열었다. 푸시 훅이 origin/main보다 1커밋 뒤처졌다고 막아 main을 합쳤고(겹친 파일 없음), 합친 뒤 `tests/tools/test_open_session.py` 149개가 통과했다. CI는 `python`(전체 pytest, 10분 53초)을 포함해 모두 초록이었다. 곧 pre-commit에서 건너뛴 전체 pytest는 CI가 이 변경에서 통과로 판정했고, 앞서 막은 시간 의존 시험은 이 변경의 것이 아니라 PC 부하의 것으로 갈렸다. CodeRabbit은 무료 한도(`Review rate limited`)로 리뷰가 없었다(계정 한도 표시이고 실패가 아니다). claude-review가 첫 회차에 Minor 넷과 Nit 하나를 냈고 Critical·Major는 없었다.
+
+보류한 지적과 이유(전부 PR 코멘트에 남겼다):
+
+- 정상 흐름이 `try` 안에 섞인 것, `Select-ComposerFolder`·`Repair-ShownFolder`가 명령이면서 값을 돌려주는 것: 기존 `Select-ComposerModelItem` 뼈대와 같은 모양이다. 고치려면 기존 모델 고르기까지 함께 손대야 하므로 뒤로 넘긴다(이 일지 "남긴 것과 이유"와 같은 판단).
+- `Repair-ShownFolder` 끝 `catch { }`가 접기 실패를 삼키는 것: 접기는 최선 노력이고 멈춤 문구는 이미 폴더 불일치의 까닭을 적는다. 열린 메뉴가 남는 실패는 다음 열기가 `Select-ComposerFolder` 앞에서 다시 펼치기를 시도하므로 보류한다.
+- 시험 다섯이 소스 글자의 있고 없음과 순서를 보는 것: UIA를 쓰는 코드라 순수 시험이 어렵다. 변이 열 열 개가 값을 뒤집어 빨강을 봤다. 순수 함수를 더 빼는 일은 뒤로 넘긴다.
+- Nit(`Send-Prompt` 위 주석이 한 줄에 길고 한 문장이 고치지 못한 경우에만 맞는 것): 문구만의 문제라 보류한다.
+
+뒤로 넘긴 일(다음에 `open_session.ps1`을 손댈 때): 위 첫째·셋째의 구조 정리(정상 흐름과 `try` 분리, `Send-Prompt`의 "읽은 경로 가운데 `-Folder`가 이미 있는지"를 이름 붙인 순수 함수로 빼서 값으로 시험)는 기존 `Select-ComposerModelItem`과 함께 한다.
