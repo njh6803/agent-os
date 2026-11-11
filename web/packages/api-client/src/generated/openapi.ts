@@ -601,6 +601,10 @@ export interface components {
       kind: components["schemas"]["PluginKind"];
       /** Max Tokens */
       max_tokens: number | null;
+      /** Max Tool Calls */
+      max_tool_calls: number | null;
+      /** Max Turns */
+      max_turns: number | null;
       /**
        * Mcp
        * @default []
