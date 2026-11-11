@@ -270,7 +270,11 @@ def _source_lines(text: str) -> list[str]:
 
 
 def _source_line(run: Run, title: str) -> str:
-    """출처 줄 가운데 `title`이 든 첫 줄. 없으면 빈 글이다."""
+    """출처 줄 가운데 `title`이 든 첫 줄. 없으면 빈 글이다.
+
+    같은 문서를 위치만 달리해 두 줄 이상으로 적은 답에서는 뒤 줄을 보지 않는다. 이 함수를 쓰는
+    결과 글(`_docx_place`, `_approved_result`, `_long_result`, `_two`)은 그 첫 줄의 관찰이다.
+    `_plain_result`는 같은 문서의 줄을 모두 본다. README의 2026-11-11 결과가 이 판으로 났다."""
     return next((line for line in _source_lines(run.output) if title in line), "")
 
 
@@ -489,7 +493,11 @@ def _empty_index_result(runs: list[Run]) -> str:
 
 def _source_blocks(text: str) -> list[list[str]]:
     """출력 전체의 "출처" 블록마다 그 아래 번호 목록의 줄들. 앞뒤의 `*`, `#`, `:`를 뗀 글이
-    "출처"인 줄이 블록을 열고, 목록 줄 뒤에 목록이 아닌 줄이 나오면 블록이 닫힌다."""
+    "출처"인 줄이 블록을 열고, 목록 줄 뒤에 목록이 아닌 줄이 나오면 블록이 닫힌다.
+
+    블록을 연 뒤 첫 목록 줄보다 앞에 나온 목록 아닌 줄은 블록을 닫지 않는다(`current`가 빈
+    목록이면 거짓이다). 그래서 본문에 "출처"만 든 줄이 있고 그 뒤에 출처가 아닌 번호 목록이
+    오면 그 목록도 그 블록에 든다. README의 2026-11-11 결과가 이 판으로 났다."""
     blocks: list[list[str]] = []
     current: list[str] | None = None
     for raw in text.splitlines():

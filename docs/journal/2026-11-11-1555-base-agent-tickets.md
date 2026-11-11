@@ -227,3 +227,91 @@ CodeRabbit CLI에는 밀 주장을 넘기는 길이 없어(대기열 `cli-review
 - **1 고쳤다.** 이 저장소 `docs/agents/issue-tracker.md` 41줄의 "끝 줄을 적는 때"(기능의 마지막 열린 티켓을 닫는 커밋이 적는다)를 읽었다. 티켓 07 머리의 문장을 "기능 계획은 이 티켓을 마지막에 두지만 04와 06은 이 티켓을 막지 않으므로, 기능 base-agent는 이 티켓과 04·06 가운데 마지막으로 닫히는 티켓이 닫는다(아래 "남길 것"의 끝 줄)"로, 끝 줄 항목을 "이 티켓을 닫은 뒤 이 기능의 다른 티켓(01~06)이 모두 done이나 wontfix이면, 같은 커밋에서 … 끝 줄을 적고 … 돌린다. 열린 티켓이 남았으면 적지 않는다. 그때는 남은 티켓 가운데 마지막을 닫는 커밋이 적는다"로 고쳤다. Blocked by에 04·06을 더하지 않은 것은 07이 그 둘의 결과를 쓰지 않아서다. 04·06에는 끝 줄 항목을 더하지 않았다. 그 규약은 모든 기능에 걸리고, 빠뜨리면 저장소 상태 시험이 막는다(같은 41줄).
 - **2 고쳤다.** 명세 174줄(변수가 없으면 원인 `tool_connection`)을 읽고, 티켓 03의 프로브 항목에 "프로브도 꾸러미 시험처럼 환경 변수 `DOC_SEARCH_AUTHORIZATION`을 픽스처가 기대하는 값으로 준다. 주지 않으면 모든 실행이 원인 `tool_connection`으로 끝나 한 바퀴가 모두 측정 아님이 된다(명세 "연결 플러그인 doc-search")"를 더했다.
 - **3 고쳤다.** 명세 340줄의 (14)(거부하면 그 내용이 출력에 없고, 정해진 문장이 출력에 들어 있으며, 실행이 `run_finished`로 끝난다)를 읽고, 명세 363줄과 티켓 07의 같은 자리를 "그것에 기대는 (14)의 두 단언인 그 내용이 출력에 없는 것과 정해진 문장이 들어 있는 것. … `run_finished`로 끝나는 것은 그대로 본다"로 좁혔다.
+
+### 둘째 커밋
+
+`fa2ac21c3`(위 반영 셋과 이 일지). pre-commit이 지났다. ruff 둘은 스테이지된 `.py`가 없어 `Skipped`였고 이 커밋은 `.py`도 ruff 설정도 바꾸지 않아 손으로 칠 것이 없다. `tools/run_checks.py`의 검사(pytest 329.6초, web-verify 546.0초 포함), 마크다운 표, 줄 구분 문자, 변이 표, 인용 대조, 커밋 메시지가 지났고 카나리아 명세와 헌법 판은 대상 파일이 없어 `Skipped`였다.
+
+## 인계 (커밋 뒤)
+
+둘째 커밋 뒤에 인계 계기(컨텍스트 약 23만 토큰, 경계 `커밋 뒤`)가 와서 `.claude/skills/next-session/handoff.md`대로 넘긴다. 인계하지 않는 다섯에 들지 않는다. 커밋은 성공했고, 요청 범위("티켓까지")는 병합까지라 이 경계에서 끝나지 않으며, 이어받을 상태는 `인계: 셀프 리뷰 직전`이라 경계가 다르고, `인계 못함` 줄이 없고, `get_session`의 `self`에 `parentSessionId`가 없다. 이 세션의 지금 제목은 `docs/base-agent-tickets`다.
+
+남은 단계는 이렇다. origin/main 들이기(#526이 들어왔고 이 브랜치의 파일과 겹치지 않는다, 위 "커밋 전에 본 것"), CodeRabbit CLI의 PR 직전 리뷰(`coderabbit-review`. 밀 주장 검증 몫의 `bug-perf-review`는 위에서 마쳤고 반영도 커밋했다), PR(`/git-pr`), 봇 회차, 이 워크트리 사본의 `next-session` `merge.md` "워크트리에서 병합할 때"대로 병합, 회고, 일지 "다음", 다음 지시문이다. 회고에서 판정할 것은 위 "회고 후보" 셋에 더해, 대기열 `cli-review-claims-path`의 회차(이번에도 CLI가 돌기 전에 밀 주장 몫의 서브에이전트를 따로 띄웠다)와 `external-ref-moved-while-citing`의 회차(rag-engine main이 근거를 적은 뒤 움직였다)다.
+
+지시문:
+
+```
+다음 작업: 기능 base-agent. 명세 검토 뒤 고친 명세·ADR 0051 이력·프로브와 티켓 일곱(.scratch/base-agent/issues/01~07)을 PR 하나로 병합한다
+다음 단계: 티켓
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /to-tickets .scratch/base-agent/spec.md
+브랜치: docs/base-agent-tickets
+모델: Opus 5.5 / xhigh. 2의 잇는 지시문
+읽을 것: docs/journal/2026-11-11-1555-base-agent-tickets.md의 "이어받은 세션 (17:30)"부터 끝까지(PR 직전 리뷰와 인계 절 포함)
+이어받을 상태: 인계: 커밋 뒤. 셀프 리뷰 반영, ADR 0051 2026-11-11 이력의 사용자 승인, 커밋, 밀 주장 검증 몫의 PR 직전 리뷰(bug-perf-review)와 그 반영 커밋까지 했다. PR은 아직 없고 푸시도 하지 않았다. 티켓은 다시 쪼개지 않는다. 남은 단계는 origin/main 들이기, CodeRabbit CLI의 PR 직전 리뷰(coderabbit-review), /git-pr, 봇 회차, 이 워크트리 사본의 next-session merge.md "워크트리에서 병합할 때"대로 병합, 회고(일지의 회고 후보 셋과 인계 절의 대기열 회차 둘), 일지 "다음", 다음 지시문이다. 일지: docs/journal/2026-11-11-1555-base-agent-tickets.md
+확인할 선행 조건: 없음
+이번 요청 범위: 티켓까지
+```
+
+워크트리 잠금 풀기는 `is not locked`로 끝났다(이미 풀려 있었다).
+
+open-session을 부른다 2026-11-11T09:28:53Z
+
+## 이어받은 세션 (18:31)
+
+위 "인계 (커밋 뒤)"의 지시문으로 연 새 세션이다(모델 `claude-opus-5-5`). 제목을 `docs/base-agent-tickets`로 바꾸고, `git worktree list`에서 이 브랜치가 `.claude/worktrees/base-agent-tickets`에 체크아웃된 것을 보고 `EnterWorktree(path)`로 들어왔다. 지시문의 첫 줄은 `.claude/skills/to-tickets/SKILL.md`를 읽어 따르라는 것이었고, "이어받을 상태"대로 티켓을 다시 쪼개지 않고 남은 단계부터 했다.
+
+> 사용자: .claude/skills/to-tickets/SKILL.md 를 읽어 그대로 따른다. (…) 인자: .scratch/base-agent/spec.md
+> 다음 작업: 기능 base-agent. 명세 검토 뒤 고친 명세·ADR 0051 이력·프로브와 티켓 일곱(.scratch/base-agent/issues/01~07)을 PR 하나로 병합한다
+
+(지시문의 나머지 줄은 위 "인계 (커밋 뒤)"의 지시문과 같다.)
+
+### origin/main 들이기
+
+`git fetch origin` 뒤 `HEAD..origin/main`은 `33dc5cd92`(#526) 하나였고, 그 커밋의 파일 다섯은 이 브랜치가 고친 파일 열여섯과 겹치지 않았다. `git merge --no-edit origin/main`이 충돌 없이 끝났고, `tools/plan_table.py`가 출력 없이 끝나 `.scratch/plan.md`에 차이가 없었다.
+
+### PR 직전 리뷰 (`coderabbit-review`)
+
+origin/main을 들인 뒤 `coderabbit-review` 서브에이전트를 백그라운드로 띄웠다. 비교 기준은 origin/main의 머리 `33dc5cd92`이고(`--base-commit 33dc5cd92`), 로컬 `main`(`0c2c7cbd9`)을 기준으로 두면 #526의 파일이 섞이기 때문이다.
+
+PR을 열기 직전의 rag-engine 재확인(대기열 `external-ref-moved-while-citing`의 처방): `git -C C:/project/rag-engine ls-remote origin refs/heads/main`이 `2e5db76`이었다(손으로 봤다). 위 "커밋 전에 본 것"에서 본 끝 커밋과 같아, 그 뒤로 움직이지 않았다.
+
+보고(받은 그대로 줄여 옮긴다): CLI 0.7.5, `Plan: Free`, `Seat: not assigned`였고 리뷰가 `review_completed`(종료 코드 0)로 끝났다. 리뷰한 파일은 열여섯이고 `--dir`로 좁히지 않았다. 지적은 둘이고 모두 Minor, 둘 다 `.scratch/base-agent/probes/skill_follow.py`다. 문서와 `fake_doc_search.py`, rag-engine 사실 문장에 대한 지적은 없었다.
+
+1. `_source_line`이 문서 제목이 든 첫 출처 줄만 돌려줘, 같은 문서를 위치만 달리해 두 줄로 적은 답에서는 뒤 줄을 보지 않는다. `_plain_result`는 같은 제목의 줄을 모두 본다.
+2. `_source_blocks`의 `elif line and current:`는 `current`가 빈 목록이면 거짓이라, "출처" 머리 뒤 첫 항목 전에 나온 목록 아닌 줄이 블록을 닫지 않는다. 그 뒤의 번호 목록이 그 블록에 든다.
+
+판정과 반영(둘 다 코드가 그렇게 동작하는 것은 맞다, 그 자리를 읽었다):
+
+- **둘 다 동작은 바꾸지 않고 독스트링에 한계를 적었다.** 프로브 README의 2026-11-11 결과가 이 판의 코드로 났으므로, 코드를 바꾸면 기록된 결과와 커밋된 코드가 갈린다. 다시 돌리면 실제 모델 비용이 든다. 명세가 근거로 든 DOCX 출처 줄의 셈(88줄 가운데 "쪽"이나 "제2장"이 든 줄 0)은 이 함수가 아니라 기록의 모든 출처 줄을 읽은 스크래치패드 스크립트로 했다고 README 88·203줄이 적는다(읽었다). 그래서 1의 한계가 그 셈을 바꾸지 않는다. 2는 독스트링의 "목록 줄 뒤에 목록이 아닌 줄이 나오면 블록이 닫힌다"와는 어긋나지 않고(첫 목록 줄 전의 줄은 그 문장이 다루지 않는다), 빈 블록의 동작을 독스트링에 더했다. 단위 시험은 더하지 않았다. 프로브에는 시험 모듈이 없고, 티켓 03이 이 프로브를 픽스처의 가짜 서버로 바꾼다.
+- 편집 뒤 IDE가 그 파일의 pyright strict 진단 아홉을 띄웠다. `.scratch/`는 `[tool.pyright]` `include` 밖이라 게이트가 보지 않는 곳이고, 진단의 자리(147·260·445줄 등)는 독스트링이 아니라 원래 있던 코드다(이 편집은 줄 번호만 밀었다).
+
+## 회고
+
+후보 여섯(위 "회고 후보" 셋과 인계 절의 대기열 회차 둘, 이 세션이 더한 하나). 판정은 승인 넷(그중 하나는 넘김에 사용자가 답한 것), 기각 하나, 회고 후보가 아닌 판정 하나다.
+
+- **넘김 → 사용자 승인. `plugins/`의 파이썬 코드가 원칙 III의 판정자 밖이다.** `pyproject.toml`의 `[tool.pyright]` `include`가 `["src", "tests", "tools"]`이고(86줄을 읽었다), `tools/check_type_escapes.py`의 `scanned_roots`가 그 `include`를 그대로 읽는다(62~79줄을 읽었다). ADR 0013 26줄이 "그래서 `plugins/`는 판정 밖이다"라고 적고 넓히는 것을 "필요가 증명되면 이 ADR의 이력에 쌓는다"고 적는다(읽었다). 그래서 ADR이 필요한 것이라 넘겼다. 필요의 근거는 티켓 03이 `plugins/agents/assistant`에 에이전트 코드를 새로 두고(티켓 03의 "플러그인 셋과 규칙 파일"), 명세 "안내 문서" (7)이 사본의 코드에 고정 단계를 넣으라고 적는 것이다. 지금 `plugins/`의 파이썬 파일은 `plugins/agents/calc/agent.py` 하나이고(`find plugins -name "*.py"`), `uv run pyright --outputjson plugins/agents/calc/agent.py`가 `filesAnalyzed` 1, `errorCount` 0이었고 `Any`·`cast(`·`type: ignore`·`pyright: ignore`를 찾는 grep이 1로 끝났다(손으로 봤다). 간 자리는 새 항목 `plugins-outside-type-judges`(1회차).
+
+> 사용자: (기본 에이전트 티켓 03이 plugins/agents/assistant/agent.py라는 파이썬 코드를 새로 만들고, 커스텀 에이전트는 그 폴더를 복사해 코드를 고칩니다. 그런데 지금 타입 검사(pyright strict: 함수의 입력·출력 타입이 맞는지 커밋 때 보는 검사)와 타입 우회 검사(Any·cast 같은 '검사 끄기'를 막는 검사)는 src·tests·tools만 보고 plugins/는 보지 않습니다. ADR 0013이 '필요가 생기면 넓힌다'며 일부러 뺐습니다. plugins/도 검사하게 할까요?) "대기열에 올린다 (Recommended)" — 설명: 승인된 회고 항목으로 대기열에 올리고, 반영은 ADR 0013에 이력을 더하는 하네스 작업 하나가 따로 합니다(pyproject.toml의 pyright 검사 범위 include에 plugins를 더하면 우회 검사도 같은 범위를 읽어 따라옵니다). 잡아 주는 것: 플러그인 코드의 타입 오류와 Any·cast 같은 우회를 커밋 때 막습니다. 지금 plugins/의 파이썬 파일은 calc의 agent.py 하나이고, pyright strict로 돌려 보니 오류 0이었으며 우회도 없었습니다. 티켓 03보다 먼저 반영되면 기본 에이전트 코드도 첫 커밋부터 검사됩니다(어림). 치르는 값: ADR 이력 승인이 한 번 더 들고, 커스텀 에이전트를 만드는 사람도 strict 타입을 지켜야 합니다. (질문의 'agent.py'라는 파일 이름은 명세의 초안 경로에서 짐작한 것이고, 티켓 03은 '에이전트 코드'라고만 적습니다. ADR 0013의 원문은 '필요가 증명되면 이 ADR의 이력에 쌓는다'입니다.)
+
+고르지 않은 선택지는 "지금처럼 둔다"(plugins/는 검사 밖에 두고 회고에는 기각으로 적는다)다. 선택 화면의 첫 호출은 사실 대보기 훅이 막았고, 티켓 03의 머리(에이전트 코드의 파일 이름을 적지 않는다)와 ADR 0013의 원문을 대 본 뒤 설명에 괄호를 더해 다시 물었다. 질문 문장의 "필요가 생기면 넓힌다"는 원문의 요지이고, 설명의 괄호가 원문을 적는다.
+
+- **승인(회차). 붙여 넣은 다른 저장소의 판정으로 시작한 세션이 같은 기능 폴더를 고치는 형제 세션을 대 보지 않았다.** 사건은 세션 `docs/base-agent-full-text-window`의 일지(아래 "다른 세션의 일지")의 "같은 일을 하는 다른 세션"과 "회고" 절이 적는다. 그 세션은 `.scratch/base-agent/`의 명세와 프로브를 고치고 실제 모델로 77회차를 돌린 뒤 커밋 직전의 `tools/sibling_overlap.py`로 이 세션과 같은 파일 넷을 고친다는 것을 알았고, 사용자는 그 브랜치를 병합하지 않기로 했다. 고치는 길은 더하는 것(시작할 때나 기능 폴더를 처음 고칠 때의 대조)이라 사건 하나로 반영하지 않는다. `uv run python tools/queue_open_rows.py --search 붙여.넣은 --search 같은.기능을.맡은 --search ListAgents`와 `--search sibling_overlap --search 나란히.도는 --search 겹친다`에 열린 같은 항목이 없었고, 닫힌 0393(만료, 형제 워크트리의 커밋하지 않은 `.scratch/<slug>/`를 다음 작업을 고르는 자리가 모른 것)이 같은 종류라 그 파일을 열어 처방까지 대 봤다. `--search 393의`는 맞은 항목이 없었다. 그래서 새 항목 `sibling-same-feature-folder-edit`에 0393의 2회차로 잇는다. 사용자 수준 메모리 `check-parallel-sessions-before-starting`이 그 세션의 같은 사건으로 이미 생겼고, 그 메모리가 "저장소 쪽 처방은 retro 대기열이 정한다"고 적는다(읽었다).
+- **승인(회차). `cli-review-claims-path`의 2회차.** 이 브랜치의 앞 세션이 CodeRabbit CLI를 돌리기 전에 밀 주장 검증 몫으로 `bug-perf-review`를 따로 띄웠다(위 "PR 직전 리뷰"). 그 항목이 처방한 사건이다.
+- **승인(회차). `external-ref-moved-while-citing`의 2회차.** 명세와 ADR 0051 이력이 근거의 판으로 rag-engine main `68aa7e0`을 적은 뒤 그 저장소 main이 `2e5db76`으로 움직였다(위 "커밋 전에 본 것"). 이번에는 앞 세션이 그 항목의 처방(커밋 직전과 PR 직전에 그 ref를 다시 읽어 댄다)을 손으로 따라, 근거로 든 파일이 바뀌지 않았음을 보고 낡은 문장이 생기지 않았다. 그 항목이 처방한 사건이라 회차로 센다.
+- **기각. 워크트리 가드가 다른 워크트리를 향한 `git -C … status`를 거부했다.** 이미 있는 앱 가드가 그 자리에서 막았고 `CLAUDE.md` 환경 함정이 그 모양을 적는다. 그 워크트리의 일지는 Glob과 Read로 읽었다.
+- **회고 후보가 아닌 판정. 다른 세션의 일지를 이 브랜치에 싣는다.** 그 세션의 일지 `docs/journal/2026-11-11-1537-base-agent-full-text-window.md`는 그 워크트리에 커밋하지 않은 채 있고, 그 일지의 "다음"이 그 워크트리를 지울지는 사용자가 정한다고 적는다. 그 세션의 사용자 프롬프트 원문과 사용자가 고른 것("병합하지 않고 결과만 넘긴다")이 그 파일에만 있어, 워크트리가 지워지면 기록이 남지 않는다. 그 일지의 "티켓 세션에 넘긴 것"이 이 일지를 이 브랜치에 실을지를 이 세션이 정해도 된다고 적는다. 글자는 고치지 않고 그대로 복사한다. 그 일지가 가리키는 프로브 README의 "2026-11-11 결과" 절과 명세의 고친 줄은 main에 없다고 그 일지가 스스로 적는다(그 일지의 "결말" 절).
+
+간 자리: 새 항목 `plugins-outside-type-judges`(사용자 승인, 1회차)와 `sibling-same-feature-folder-edit`(0393의 2회차), 회차를 더한 `cli-review-claims-path`(2회차)와 `external-ref-moved-while-citing`(2회차). 이 세션에서 반영한 것은 없어 티켓에 회고 반영 줄을 더하지 않았다. 만료는 `uv run python tools/queue_open_rows.py`의 "만료할 항목"이 없음이었다(이 브랜치는 방금 origin/main을 들여 `--ref origin/main`의 후보도 이 출력에 든다). 다른 세션의 일지는 `cp`로 복사했고 `cmp`가 0으로 끝났다(손으로 봤다).
+
+### 셋째 커밋 전에 본 것
+
+- `git branch --show-current`가 `docs/base-agent-tickets`였다.
+- `tools/sibling_overlap.py`: 새 번호 없음, 번호 겹침 없음. 함께 고친 파일에 위 둘(`answer-markdown-spec`, `base-agent-full-text-window`)에 더해 워크트리 `doc-permission-verdict`의 ADR 0051이 새로 나왔다. 그 워크트리의 파일을 origin/main의 판과 `diff`로 견주니(읽기만 했다), 2026-11-10 이력 "제품 1.0에서 기본 에이전트가 지식베이스를 고른다" 뒤에 이력 "2026-11-11 문서 검색 서버가 지식베이스 목록을 주체에 따라 거른다고 답해 kb-selection이 그 기능을 기다린다"를 커밋하지 않은 채 더하고 있었다. 이 브랜치의 2026-11-11 이력도 같은 자리에 들어가므로, 나중에 병합하는 쪽이 글자 충돌을 푼다.
+
+## 다음
+
+- 병합 뒤 다음 지시문은 결정표의 "같은 기능에 막힌 것이 없는 `ready-for-agent` 티켓이 둘 이상이다" 줄이다. 티켓 01(`Blocked by: None`)과 02(`Blocked by: None`)를 나란히 연다(티켓마다 새 세션과 워크트리, `/implement .scratch/base-agent/issues/<NN>-<slug>.md`, `Sonnet 5.5 / high`). 01은 계약(에이전트 매니페스트, `openapi.json`)에 닿아 03을 막는다. 03은 01·02 뒤, 04~06은 03 뒤 나란히, 07은 05와 rag-engine의 공개 이미지 뒤다.
+- 사용자가 승인한 대기열 항목 `plugins-outside-type-judges`(`plugins/`를 pyright strict와 우회 검사 범위에 넣고 ADR 0013 이력을 더한다)는 티켓 03보다 먼저 들어가면 기본 에이전트 코드가 첫 커밋부터 판정된다(어림). 대기열 항목이라 결정표의 chore 줄은 기능의 마지막 티켓 뒤에야 고른다. 그 전에 하려면 사용자가 순서를 올려야 한다.
+- 워크트리 `.claude/worktrees/base-agent-full-text-window`(브랜치 `docs/base-agent-full-text-window`, 커밋 없음)는 커밋하지 않은 변경을 지닌 채 잠겨 있다. 그 일지는 이 브랜치에 실었다. 그 워크트리를 지울지는 그 일지의 "다음"대로 사용자가 정한다.
+- 저장소로 알 수 없는 것: 2026-11-11 프로브의 원본 기록과 세는 스크립트(`summarize6.py` 등)는 앞 세션의 스크래치패드에만 있고, 프로브 README가 값을 옮겨 적었다.
