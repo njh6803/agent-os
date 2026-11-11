@@ -54,7 +54,7 @@ web/                       슬라이스 3부터. pnpm 워크스페이스. 파이
 | 7 | [approval-rules](approval-rules/plan.md) | 운영자가 승인 규칙 파일로 도구 호출을 거부하거나 승인을 요구하거나 허용하게 정한다. | skill-plugin | done |
 | 7 | [local-model](local-model/plan.md) | 바깥 API를 쓸 수 없는 환경에서도 OpenAI 호환 모델 서버로 에이전트를 돌릴 수 있게 한다. | 없음 | todo |
 | 7 | [mcp-http](mcp-http/plan.md) | 원격 MCP 서버에 주소로 접속해, 실행마다 서버를 새로 띄우는 시작 비용을 없앤다. | 없음 | done |
-| 7 | [pilot-portal](pilot-portal/plan.md) | 위젯을 담는 질문 페이지가 로그인 없이 온 사람에게 사이트 토큰을 내, 위젯을 붙일 사이트가 없는 공개 데모와 배포 환경을 돕는다. | 없음 | in-progress |
+| 7 | [pilot-portal](pilot-portal/plan.md) | 위젯을 담는 질문 페이지가 로그인 없이 온 사람에게 사이트 토큰을 내, 위젯을 붙일 사이트가 없는 공개 데모와 배포 환경을 돕는다. | 없음 | done |
 | 8 | [answer-eval](answer-eval/plan.md) | 고정 질문으로 에이전트를 돌려 검색 적중과 출처 적중을 재고 평가 보고서를 낸다. | base-agent, rag-engine:release-image | todo |
 | 8 | [answer-markdown](answer-markdown/plan.md) | 모델이 지은 답을 마크다운으로 그리는 공유 부품을 만들어 위젯에 적용해, 제목·목록·표·링크가 든 답이 기호 없이 읽히게 한다. | 없음 | todo |
 | 8 | [base-agent](base-agent/plan.md) | 기본 에이전트 assistant와 문서 검색 스킬·연결·규칙을 함께 내, 요구가 없으면 그대로 쓰고 요구가 있으면 복사해 커스텀 에이전트를 만들게 한다. | mcp-http, approval-rules | todo |
@@ -98,7 +98,7 @@ web/                       슬라이스 3부터. pnpm 워크스페이스. 파이
 
 ## 프론티어
 
-done 이 아니고, Blocked by 가 비었거나 이 저장소의 막는 기능이 모두 done 인 기능이다. `local-model`, `pilot-portal`, `answer-markdown`, `base-agent`
+done 이 아니고, Blocked by 가 비었거나 이 저장소의 막는 기능이 모두 done 인 기능이다. `local-model`, `answer-markdown`, `base-agent`, `release-image`, `portal-login`, `portal-admin`, `widget-appearance`
 
 ## 다른 저장소를 기다리는 기능
 

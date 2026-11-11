@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>완성 6: 그리다 실패한 출력, 320px</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/agent-os/styles.css">
+<link rel="stylesheet" href="ds/agent-os/fonts/fonts.css">
+<link rel="stylesheet" href="ds/agent-os/_ds_bundle.css">
+<script src="ds/agent-os/_ds_bundle.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0}
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+</style>
+</helmet>
+<div data-theme="nokcheong" data-mode="light" style="width: 416px; height: 800px; box-sizing: border-box; padding: 48px; background: var(--bg); color: var(--text); font-family: var(--sans);">
+<section class="flex flex-col gap-3" style="width: 320px;">
+<div class="flex flex-col gap-1">
+<p class="text-body font-semibold" style="margin: 0;">완성 6 · 그리다 실패한 출력 · 320px</p>
+<p class="text-small text-text-muted" style="margin: 0;">원문은 &gt;를 3,000겹 겹친 인용이고, 그리는 쪽이 예외를 던져 원문을 보인다. 지금의 위젯과 같은 모양이다(본문 글자, 줄바꿈을 지키고 긴 낱말은 줄 끝에서 꺾는다). 실패를 알리는 안내 글은 두지 않는다. 그림은 원문의 앞 몇 줄만 그리고 나머지를 "…"로 줄였다.</p>
+</div>
+<div data-theme="nokcheong" data-mode="light" data-density="regular" class="flex flex-col shadow-float" style="width: 320px; height: 560px; box-sizing: border-box; background: var(--bg-raised); color: var(--text); font-family: var(--sans); border: 1px solid var(--border); border-radius: var(--radius-l); overflow: hidden;">
+<header class="flex items-center justify-between gap-2 shrink-0" style="padding: var(--spacing-2) var(--spacing-2) var(--spacing-2) var(--spacing-4); border-bottom: 1px solid var(--border);">
+<h1 class="text-body font-semibold" style="flex: 1; min-width: 0; margin: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">사내 규정 도우미</h1>
+<x-import component-from-global-scope="AgentOsUi.Button" variant="secondary">새 대화</x-import>
+</header>
+<ol aria-label="대화" class="flex flex-col gap-4" style="flex: 1; min-height: 0; overflow: hidden; justify-content: flex-end; margin: 0; padding: var(--spacing-4); list-style: none;">
+<li class="text-body" style="align-self: flex-end; max-width: 83.333%; padding: var(--spacing-2) var(--spacing-3); border-radius: var(--radius-l); background: var(--bg-selected); overflow-wrap: anywhere; white-space: pre-wrap;">앞의 안내를 인용해서 다시 보여 주세요.</li>
+<li class="flex flex-col gap-2">
+<p class="text-body" style="margin: 0; min-width: 0; overflow-wrap: anywhere; white-space: pre-wrap;"><span class="sr-only">출력: </span>{{ raw }}</p>
+</li>
+</ol>
+<form class="flex gap-2 shrink-0" style="align-items: flex-end; margin: 0; padding: var(--spacing-3); border-top: 1px solid var(--border);">
+<div style="flex: 1; min-width: 0;"><textarea rows="1" aria-label="질문" placeholder="무엇을 도와드릴까요?" class="block w-full min-w-0 rounded-m border text-body resize-y px-3 py-2 border-border-control bg-bg-raised text-text placeholder:text-text-muted hover:border-text-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring" style="box-sizing: border-box; margin: 0; font-family: inherit;"></textarea></div>
+<x-import component-from-global-scope="AgentOsUi.IconButton" icon="send" label="보내기" variant="primary"></x-import>
+</form>
+</div>
+</section>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":416,"height":800}}'>
+class Component extends DCLogic {
+renderVals() {
+return { raw: '>'.repeat(200) + '\n…' };
+}
+}
+</script>
+</body>
+</html>

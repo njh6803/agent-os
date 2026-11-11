@@ -153,11 +153,11 @@ expect_output = ["Expect \"toBeFocused\" getByRole('button', { name: '새 대화
 [[mutation.edit]]
 file = "web/apps/portal/browser/portal.ts"
 old = '''
-    widget.setAttribute("agent", site.agent);
+    element.setAttribute("agent", site.agent);
 '''
 new = '''
-    widget.setAttribute("agent", site.agent);
-    widget.setAttribute("tabindex", "-1");
+    element.setAttribute("agent", site.agent);
+    element.setAttribute("tabindex", "-1");
 '''
 
 [[mutation]]
