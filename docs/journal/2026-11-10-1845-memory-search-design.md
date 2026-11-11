@@ -893,6 +893,22 @@ claude-review의 첫 리뷰는 Minor 하나를 냈고 Critical과 Major는 없�
 - **306 횟수.** CodeRabbit의 Minor대로 아래 "다음"의 횟수를 다섯 번으로 고치고 넷째 커밋을 따로 적었다. 틀린 사실을 바로잡는 고침이다.
 - **보류.** 나머지 넷은 Critical·Major가 아니라 보류하고 이유를 PR 코멘트로 남긴다. 767줄은 라운드 6의 답을 받은 때의 기록이고, 형식이 있는 값을 입력에서 막을지가 io-guardrail로 넘어간 상태는 ADR 0054와 그 기능 계획이 적는다(일지는 기록이다, `docs/constitution/operations.md` 문서 위치). claude-review의 (1)·(2)는 앞 회차에서 보류한 지적과 같은 꼴이고 같은 이유다. (3)은 Nit이고, 제목의 세 부분(런타임 밖의 MCP 서버, 묻는 것이 기본, 문서 내용을 담지 않음)이 모두 이 ADR이 정한 결정이라 줄이면 색인에서 빠지는 결정이 생긴다. 이 이유를 처음에는 "제목이 파일 이름과 인용에 묶여 있다"로 적었다가, 한국어 제목은 파일 이름(영어)과 따로이고 색인 한 줄에만 있는 것을 `docs/adr/README.md` 60줄에서 보고 바로잡았다.
 
+### 다섯째 커밋과 푸시
+
+- 커밋 직전 브랜치는 `docs/memory-search-design`이었고, `uv run python tools/sibling_overlap.py`가 origin/main cdf8440, "번호 겹침 없음"으로 끝났다. 인계 계기(`hook_handoff`, `커밋 뒤`)가 다시 왔으나 곁 세션이고 사용자가 이 세션에서 마치라고 해 넘기지 않았다.
+- 다섯째 커밋 `6f8f4b895`가 pytest까지 포함해 섰다. 러너가 `Passed`(495.2초)이고 pytest 308.3초, pyright 37.9초, pyright-linux 38.4초, run-hooks 55.7초, web-verify 495.0초였다. 이번에는 306의 사례가 나지 않았다. 인용 대조 경고 넷은 막지 않는 경고이고, 봇의 코멘트와 선택 화면처럼 저장소 밖의 글을 옮긴 것과 바로잡기 전의 내 문장이다. `.py`가 없어 건너뛴 ruff 둘을 손으로 쳤다(`All checks passed!`, `2048 files already formatted`).
+- PR 본문에 다섯째 커밋의 범위(변경사항의 한 문단, 비밀 값 절의 모델이 지어낸 값)와 검사 결과를 더해 푸시 전에 `gh pr edit`을 쳤다. `git push`가 `aa26475e3..6f8f4b895`로 끝났다.
+- Critical에 인라인 답글을 달고(`discussion_r4534445012`), 고친 것과 보류한 것의 이유를 PR 코멘트로 남겼다(`issuecomment-6788156432`). `@coderabbitai review`를 남기고(`issuecomment-6788157818`) `wait_ci.py 523`을 백그라운드로 띄웠다.
+
+### 봇 넷째 회차 (헤드 6f8f4b895)
+
+`wait_ci.py`가 "모두 통과. CodeRabbit: Review rate limited"로 끝났다. CI의 python 잡을 포함해 모두 `SUCCESS`다.
+
+- **CodeRabbit.** 이 푸시는 한도에 걸려 리뷰하지 않았으므로 회차로 세지 않는다. Critical 스레드의 답글(`discussion_r4534453776`)에서 ADR 0054와 기능 계획 둘의 반영을 확인했고, 기록 전에 가리지 않는 결정을 받아들인다고 했다. 모델이 지어낸 값이 `llm_called`에 남는다는 고지를 확인하되 가리는 장치를 선행 조건으로 요구하지 않는다는 학습을 이 저장소에 더했다.
+- **claude-review 넷째 회차**(`issuecomment-6788176917`). 경계 축은 지적 없음이고, ADR이 대는 줄 번호와 포인터와 조건의 개수가 맞다고 확인했다. 유지보수성 축은 Minor 셋과 Nit 하나다. (1) ADR 0054 "트레이스에 남는 것"이 사실과 결정과 출처를 한 덩이로 담아 길다. (2) 같은 문단의 "`secret_args`로 가릴 수 있는지는 명세가 본다"와 "따로 가리는 장치는 두지 않는다"가 모순처럼 읽힌다. (3) `기억 서버`와 `조회 서버`가 `CONTEXT.md`에 없다. (4) ADR 본문이 코드 줄 번호를 근거로 든다.
+- **판정.** Critical·Major가 없어 넷 모두 보류하고 이유를 PR 코멘트로 남겼다(`issuecomment-6788303709`). (1)과 (4)는 앞 회차에서 보류한 지적과 같다. (2)의 앞 문장은 운영자가 `allow`로 옮긴 환경에서 이미 있는 `secret_args`(인자 이름 단위로 그 인자 전체를 이벤트에서 가림)를 쓸 수 있는지이고, 뒤 문장은 저장 인자 안의 비밀 값을 찾아 가리는 새 장치를 두지 않는다는 결정이라 둘 다 선다. (3)의 두 말은 용어집에 있는 "기억"과 "MCP 서버"의 합성이고("기억"의 정의가 그것을 맡는 MCP 서버를 가리킨다), 서버를 만들지 가져다 쓸지는 user-memory와 named-query의 "명세가 먼저 할 것"이라 구현에서 쓸 이름은 그 명세 단계에서 정한다.
+- 이 일지를 싣는 커밋이 마지막 봇 회차의 커밋이다. 고친 것이 없는 회차라 일지만 싣는다(`merge.md` 3). 그 푸시로 도는 리뷰에서 보류하는 것은 일지에 다시 적지 않고 PR 코멘트에 둔다.
+
 ## 다음
 
 - 이 설계에서 바로 이어지는 구현 일은 없다. 새 기능 여섯(kb-selection, user-memory, named-query, system-lookup, text-to-sql, plan-tool)은 모두 기준선 뒤이고 `.scratch/plan.md`의 차례를 따른다.
