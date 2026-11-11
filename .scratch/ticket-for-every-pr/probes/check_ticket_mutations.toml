@@ -279,9 +279,9 @@ expect_output = ["AssertionError: CI 가 막아야 한다"]
 
 [[mutation.edit]]
 file = "tools/check_ticket.py"
-old = '''    if pr.branch == "main":
+old = '''    if pr.branch in PROTECTED_BRANCHES:
         return _PASS'''
-new = '''    if current_branch(cwd) is None or pr.branch == "main":
+new = '''    if current_branch(cwd) is None or pr.branch in PROTECTED_BRANCHES:
         return _PASS'''
 
 [[mutation]]

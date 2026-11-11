@@ -289,13 +289,55 @@ def test_멈춘_fetch는_손자_프로세스가_살아_있어도_시간_제한�
 
 def test_원격의_main이_앞서면_뒤처진_수를_낸다(tmp_path: Path) -> None:
     repo = behind_repository(tmp_path, ahead_on_main=2)
-    assert behind_count(str(repo)) == 2
+    assert behind_count(str(repo)) == ("main", 2)
 
 
 def test_main을_합친_뒤에는_0이다(tmp_path: Path) -> None:
     repo = behind_repository(tmp_path)
     git("-C", str(repo), *IDENTITY, "merge", "-q", "--no-edit", "origin/main")
-    assert behind_count(str(repo)) == 0
+    assert behind_count(str(repo)) == ("main", 0)
+
+
+def add_dev(repo: Path, *, ahead: int) -> None:
+    """origin 에 main 에서 딴 dev 를 `ahead` 커밋 앞서게 두고 그 추적 ref 를 받는다. 브랜치는
+    `behind_repository` 가 남긴 `chore/x` 로 돌아온다."""
+    branch = "chore/x"
+    git("-C", str(repo), "switch", "-q", "main")
+    git("-C", str(repo), "switch", "-q", "-c", "dev")
+    for index in range(ahead):
+        git("-C", str(repo), *IDENTITY, "commit", "-q", "--allow-empty", "-m", f"dev {index}")
+    git("-C", str(repo), "push", "-q", "origin", "dev")
+    git("-C", str(repo), "switch", "-q", branch)
+
+
+def test_origin에_dev가_있으면_작업_브랜치는_dev에_견준다(tmp_path: Path) -> None:
+    repo = behind_repository(tmp_path, ahead_on_main=1)
+    add_dev(repo, ahead=3)
+    # chore/x 는 첫 커밋에서 갈라져, main 의 앞선 1 과 dev 의 3 을 모두 뒤처진 것으로 센다.
+    assert behind_count(str(repo)) == ("dev", 4)
+
+
+def test_hotfix_브랜치는_dev가_있어도_main에_견준다(tmp_path: Path) -> None:
+    repo = behind_repository(tmp_path, ahead_on_main=1)
+    add_dev(repo, ahead=3)
+    git("-C", str(repo), "switch", "-q", "-c", "hotfix/y")
+    assert behind_count(str(repo)) == ("main", 1)
+
+
+def test_dev_위에서는_재지_않는다(tmp_path: Path) -> None:
+    repo = behind_repository(tmp_path)
+    add_dev(repo, ahead=1)
+    git("-C", str(repo), "switch", "-q", "dev")
+    git("-C", str(repo), "reset", "-q", "--hard", "HEAD~1")
+    assert behind_count(str(repo)) is None
+
+
+def test_dev의_추적_ref가_없으면_main에_견준다(tmp_path: Path) -> None:
+    # 못 보는 것: 원격에 dev 가 있어도 이 클론이 받은 적이 없으면 main 으로 잰다.
+    repo = behind_repository(tmp_path, ahead_on_main=1)
+    add_dev(repo, ahead=3)
+    git("-C", str(repo), "update-ref", "-d", "refs/remotes/origin/dev")
+    assert behind_count(str(repo)) == ("main", 1)
 
 
 def test_main_위에서는_재지_않는다(tmp_path: Path) -> None:
@@ -368,14 +410,26 @@ def test_저장소_밖에서는_재지_않는다(tmp_path: Path) -> None:
     assert behind_count(str(tmp_path)) is None
 
 
-def recording(count: int | None) -> tuple[Callable[[str], int | None], list[str]]:
+def recording(
+    count: int | None, base: str = "main"
+) -> tuple[Callable[[str], tuple[str, int] | None], list[str]]:
     seen: list[str] = []
 
-    def behind(cwd: str) -> int | None:
+    def behind(cwd: str) -> tuple[str, int] | None:
         seen.append(cwd)
-        return count
+        return None if count is None else (base, count)
 
     return behind, seen
+
+
+def test_뒤처진_푸시는_기준_브랜치의_이름을_든_이유로_막는다() -> None:
+    behind, _ = recording(2, "dev")
+    text = reason_for("git push", "C:/this", behind)
+    assert text == reason_text(2, "dev")
+    assert text is not None
+    assert "origin/dev 보다 2커밋" in text
+    assert "git merge origin/dev" in text
+    assert "origin/main" not in text
 
 
 def test_뒤처진_푸시는_합치는_길과_탈출구를_든_이유로_막는다() -> None:

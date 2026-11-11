@@ -27,11 +27,12 @@ new = '''    joined = _QUOTED.sub("", "\n".join(_without_heredoc_bodies(command)
 name = "지우는 푸시도 잰다"
 tests = ["tests/tools/test_hook_push_behind_main.py", "-k", "지우는_푸시와"]
 expect = "red"
+expect_output = ["test_지우는_푸시와_탈출구와_데이터로_든_문구는_재지_않는다[git push origin --delete chore/ci-wait-background]"]
 
 [[mutation.edit]]
 file = "tools/hook_push_behind_main.py"
-old = '''        if _GIT_PUSH.match(segment) and not _DELETION.search(segment):'''
-new = '''        if _GIT_PUSH.match(segment):'''
+old = '''        if push is None or _DELETION.search(segment):'''
+new = '''        if push is None:'''
 
 [[mutation]]
 name = "탈출구를 보지 않는다"
@@ -49,32 +50,35 @@ new = '''    if False:
 name = "명령 위치가 아니라 명령 어디서든 git push 를 찾는다"
 tests = ["tests/tools/test_hook_push_behind_main.py", "-k", "지우는_푸시와"]
 expect = "red"
+expect_output = ["test_지우는_푸시와_탈출구와_데이터로_든_문구는_재지_않는다[echo git push 는 CI 가 끝난 뒤에]"]
 
 [[mutation.edit]]
 file = "tools/hook_push_behind_main.py"
-old = '''        if _GIT_PUSH.match(segment) and not _DELETION.search(segment):'''
-new = '''        if _GIT_PUSH.search(segment) and not _DELETION.search(segment):'''
+old = '''        push = _GIT_PUSH.match(segment)'''
+new = '''        push = _GIT_PUSH.search(segment)'''
 
 [[mutation]]
 name = "main 위에서도 잰다"
 tests = ["tests/tools/test_hook_push_behind_main.py", "-k", "main_위에서는"]
 expect = "red"
+expect_output = ["test_hook_push_behind_main.py::test_main_위에서는_재지_않는다"]
 
 [[mutation.edit]]
 file = "tools/hook_push_behind_main.py"
-old = '''    if branch is None or branch == "main":'''
+old = '''    if branch is None or branch in PROTECTED:'''
 new = '''    if branch is None:'''
 
 [[mutation]]
 name = "fetch 가 실패해도 옛 origin/main 으로 잰다"
 tests = ["tests/tools/test_hook_push_behind_main.py", "-k", "fetch가_실패하면"]
 expect = "red"
+expect_output = ["test_hook_push_behind_main.py::test_fetch가_실패하면_재지_않는다"]
 
 [[mutation.edit]]
 file = "tools/hook_push_behind_main.py"
-old = '''    if not quiet_git(cwd, FETCH_TIMEOUT, "fetch", "-q", "origin", "main"):
+old = '''    if not quiet_git(cwd, FETCH_TIMEOUT, "fetch", "-q", "origin", base):
         return None'''
-new = '''    if not quiet_git(cwd, FETCH_TIMEOUT, "fetch", "-q", "origin", "main"):
+new = '''    if not quiet_git(cwd, FETCH_TIMEOUT, "fetch", "-q", "origin", base):
         pass'''
 
 [[mutation]]
@@ -96,24 +100,26 @@ new = '''            errors="replace",
 name = "뒤처지지 않아도 막는다"
 tests = ["tests/tools/test_hook_push_behind_main.py", "-k", "뒤처지지_않았거나"]
 expect = "red"
+expect_output = ["test_hook_push_behind_main.py::test_뒤처지지_않았거나_재지_못하면_지나간다[0]"]
 
 [[mutation.edit]]
 file = "tools/hook_push_behind_main.py"
-old = '''    return reason_text(count) if count else None'''
-new = '''    return reason_text(count) if count is not None else None'''
+old = '''    if measured is None or not measured[1]:'''
+new = '''    if measured is None:'''
 
 [[mutation]]
 name = "잴 푸시가 아니어도 git 을 부른다"
 tests = ["tests/tools/test_hook_push_behind_main.py", "-k", "git을_부르지_않는다"]
 expect = "red"
+expect_output = ["test_hook_push_behind_main.py::test_푸시가_아니면_git을_부르지_않는다"]
 
 [[mutation.edit]]
 file = "tools/hook_push_behind_main.py"
 old = '''    if not checks_push(command):
         return None
-    count'''
+    measured'''
 new = '''    checks_push(command)
-    count'''
+    measured'''
 
 [[mutation]]
 name = "막는 이유에서 탈출구를 뺀다"
@@ -204,3 +210,40 @@ expect = "green"
 file = "tools/hook_push_behind_main.py"
 old = '''지금 푸시하면 CI 가 한 번 더 돈다'''
 new = '''지금 푸시하면 CI 를 다시 돈다'''
+
+# --- dev-branch-transition (ADR 0043): 기준 브랜치 규칙 ---
+
+[[mutation]]
+name = "hotfix 브랜치도 origin/dev 에 견준다"
+tests = ["tests/tools/test_hook_push_behind_main.py", "-k", "hotfix_브랜치는"]
+expect = "red"
+expect_output = ["test_hook_push_behind_main.py::test_hotfix_브랜치는_dev가_있어도_main에_견준다"]
+
+[[mutation.edit]]
+file = "tools/hook_push_behind_main.py"
+old = '''    if branch.startswith(HOTFIX_PREFIX):
+        return "main"'''
+new = '''    if False:
+        return "main"'''
+
+[[mutation]]
+name = "origin/dev 가 있어도 늘 main 에 견준다"
+tests = ["tests/tools/test_hook_push_behind_main.py", "-k", "dev가_있으면"]
+expect = "red"
+expect_output = ["test_hook_push_behind_main.py::test_origin에_dev가_있으면_작업_브랜치는_dev에_견준다"]
+
+[[mutation.edit]]
+file = "tools/hook_push_behind_main.py"
+old = '''    return "dev" if found else "main"'''
+new = '''    return "main"'''
+
+[[mutation]]
+name = "dev 위에서도 뒤처짐을 잰다"
+tests = ["tests/tools/test_hook_push_behind_main.py", "-k", "dev_위에서는"]
+expect = "red"
+expect_output = ["test_hook_push_behind_main.py::test_dev_위에서는_재지_않는다"]
+
+[[mutation.edit]]
+file = "tools/hook_push_behind_main.py"
+old = '''    if branch is None or branch in PROTECTED:'''
+new = '''    if branch is None or branch == "main":'''
