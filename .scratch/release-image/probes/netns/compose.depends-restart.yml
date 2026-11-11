@@ -1,0 +1,9 @@
+# release-image netns 프로브(항목 3)의 덧씌움: app 에 depends_on 을 긴 꼴로 두고 restart: true 를 준다.
+# compose 가 proxy 를 다시 시작하거나 다시 만들 때 app 도 다시 시작하라는 뜻이다.
+
+services:
+  app:
+    depends_on:
+      proxy:
+        condition: service_started
+        restart: true

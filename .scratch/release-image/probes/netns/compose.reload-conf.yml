@@ -1,0 +1,8 @@
+# release-image netns 프로브(항목 7.5)의 덧씌움: 주인이 proxy 인 배치(compose.shared.yml)의 nginx 설정을
+# include 가 든 nginx.holder.conf 로 바꾼다. `nginx -s reload` 갈래가 쓴다. 같은 컨테이너 경로의 볼륨은
+# 덧씌움의 것이 이긴다.
+
+services:
+  proxy:
+    volumes:
+      - ./nginx.holder.conf:/etc/nginx/nginx.conf:ro

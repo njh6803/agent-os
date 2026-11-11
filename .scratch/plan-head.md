@@ -4,6 +4,8 @@
 
 아래 기능 표와 프론티어는 도구가 기능 계획에서 만든다. 기능 계획 `.scratch/<slug>/plan.md`나 이 파일(`.scratch/plan-head.md`)을 고치고 `uv run python tools/plan_table.py`를 돈다. 기능의 상태는 손으로 적지 않고 기능 계획의 `끝` 줄과 티켓의 `Status:`에서 정해진다.
 
+프론티어에 오른 기능이라도 그 기능 계획 본문의 첫 문장이 먼저 끝낼 하네스 일을 적었으면 그 일이 끝난 뒤에 시작한다. 하네스 일은 `**Blocked by:**`에 적을 수 없어 프론티어가 그것을 보이지 못한다. 지금은 release-image가 dev 전환(ADR 0043 Consequences "전환"의 harness 티켓)을 기다린다(ADR 0056 Consequences "dev 전환이 먼저다"). 전환 티켓이 닫힐 때 release-image를 든 이 문장을 걷는다.
+
 ## 목표 배치
 
 슬라이스가 끝날 때마다 채워진다. 현재 트리는 `README.md`.

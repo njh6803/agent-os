@@ -1,0 +1,48 @@
+# release-image netns 프로브의 대조군(항목 2): 이름공간을 함께 쓰지 않는 보통의 compose 네트워크(bridge).
+# run.py 가 NETNS_* 환경 변수를 채워 띄운다.
+#
+# - app       루프백(127.0.0.1:8000)에만 묶인 서버. 포트를 ports 로 호스트의 127.0.0.1 에 연다
+# - app-open  양성 대조. 같은 배치에서 0.0.0.0:8000 에 묶은 서버. 이것이 닿아야 app 이 닿지 않는 까닭이
+#             포트 발행이나 이름 풀이가 아니라 묶는 주소라고 읽을 수 있다
+# - client    서비스 이름(app, app-open)으로 요청하는 다른 컨테이너
+
+x-server: &server
+  image: ${NETNS_PYTHON_IMAGE:?}
+  pull_policy: never
+  init: true
+  stop_grace_period: 2s
+  command:
+    - sh
+    - -c
+    - >-
+      mkdir -p /tmp/site &&
+      printf '%s:%s' "$$PROBE_WHO" "$$PROBE_TOKEN" > /tmp/site/marker.txt &&
+      exec python -m http.server --bind "$$PROBE_BIND" --directory /tmp/site "$$PROBE_PORT"
+
+services:
+  app:
+    <<: *server
+    ports:
+      - "127.0.0.1:${NETNS_BRIDGE_LOOPBACK_PORT:?}:8000"
+    environment:
+      PROBE_WHO: app
+      PROBE_TOKEN: ${NETNS_TOKEN:?}
+      PROBE_BIND: 127.0.0.1
+      PROBE_PORT: "8000"
+
+  app-open:
+    <<: *server
+    ports:
+      - "127.0.0.1:${NETNS_BRIDGE_OPEN_PORT:?}:8000"
+    environment:
+      PROBE_WHO: open
+      PROBE_TOKEN: ${NETNS_TOKEN:?}
+      PROBE_BIND: 0.0.0.0
+      PROBE_PORT: "8000"
+
+  client:
+    image: ${NETNS_PYTHON_IMAGE:?}
+    pull_policy: never
+    init: true
+    stop_grace_period: 2s
+    command: ["sleep", "infinity"]
