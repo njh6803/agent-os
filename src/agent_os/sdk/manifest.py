@@ -214,6 +214,15 @@ class PluginManifest(BaseModel):
     # strict 인 이유는 lax 검증이 TOML 의 true 를 1 로, "300" 을 300 으로, 2.0 을 2 로 받기
     # 때문이다. 0 을 받으면 모든 이어 가기가 요약되고 원문이 남지 않는다.
     conversation_limit: int | None = Field(default=None, strict=True, ge=1)
+    # 에이전트만. `ctx.llm()` 한 번의 루프가 도는 턴의 끝과 실행 하나가 도구를 부르는 횟수의 끝(ADR
+    # 0052). 둘 다 `conversation_limit` 과 같은 모양이다 — 없음이 기본이고 숫자 기본값을 두지
+    # 않으며(두면 그 숫자가 직렬화 스키마와 관리 API 의 응답에 박힌다), strict 인 이유도 같다(`true`
+    # 를 1 로, `"3"` 을 3 으로, `2.0` 을 2 로 받는다). 없음을 턴의 10과 도구 호출의 끝 없음으로 읽는
+    # 것은 core 의 몫이다. 턴의 끝이 10을 넘는지도 sdk 가 보지 않는다 — 10이 sdk 와 core 두 곳에
+    # 적히고 `openapi.json` 에 최댓값으로 실려 상한을 올리는 결정이 계약 변경이 되기 때문이다. 두 칸
+    # 사이의 관계도 검사하지 않는다.
+    max_turns: int | None = Field(default=None, strict=True, ge=1)
+    max_tool_calls: int | None = Field(default=None, strict=True, ge=1)
     # 에이전트만. 쓸 모델 플러그인의 이름. 없음이 기본이고 없음은 기본 모델을 쓰겠다는 뜻이다
     # (ADR 0040). 패턴은 여기서 걸어 읽는 단계가 거부한다. 그 이름의 모델 플러그인이 실재하는지는
     # 매니페스트만으로 알 수 없어 sdk가 보지 않는다.
@@ -251,6 +260,10 @@ class PluginManifest(BaseModel):
             raise ValueError(f"{self.kind} 플러그인은 requires_approval 목록을 갖지 않는다")
         if self.kind is not PluginKind.AGENT and "conversation_limit" in self.model_fields_set:
             raise ValueError(f"{self.kind} 플러그인은 conversation_limit 을 갖지 않는다")
+        if self.kind is not PluginKind.AGENT and "max_turns" in self.model_fields_set:
+            raise ValueError(f"{self.kind} 플러그인은 max_turns 를 갖지 않는다")
+        if self.kind is not PluginKind.AGENT and "max_tool_calls" in self.model_fields_set:
+            raise ValueError(f"{self.kind} 플러그인은 max_tool_calls 를 갖지 않는다")
         if self.kind is not PluginKind.AGENT and "skills" in self.model_fields_set:
             raise ValueError(f"{self.kind} 플러그인은 skills 를 갖지 않는다")
         # 이 검증자는 필드 검증 뒤에 돌아 이름이 패턴을 지난 값이다. 어긴 값이 문구에 실리지 않는다.

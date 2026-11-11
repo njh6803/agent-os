@@ -8,8 +8,9 @@ LangGraph 대신 langchain-core 위에 직접 쓴다. 근거는 ADR 0001의 2026
 경로에 붙지 않는다). 재생이 실제 포트 대신 기록을 돌려주는 자리도 거기라 루프는 재개를 모른다.
 
 실패 정책(`.claude/rules/core.md`): 도구 에러는 호출 함수가 ok=false 로 돌려주고 루프는 그 내용을
-모델에 되돌려 계속한다. 상한 10턴을 넘으면 LoopLimitExceeded. 모델 API 에러는 SDK 재시도 뒤 그대로
-올린다.
+모델에 되돌려 계속한다. 끝(턴의 수)을 넘으면 LoopLimitExceeded. 끝은 에이전트 매니페스트의
+`max_turns` 이고 없으면 core 의 `MAX_TURNS`(10)다. 에이전트는 이 끝을 낮출 수만 있고(ADR 0052), 10을
+넘는 값은 실행을 준비할 때 거부된다(`core/run.py`). 모델 API 에러는 SDK 재시도 뒤 그대로 올린다.
 """
 
 from __future__ import annotations
@@ -34,24 +35,28 @@ type ModelCaller = Callable[[Sequence[BaseMessage]], Awaitable[AIMessage]]
 
 
 class LoopLimitExceeded(Exception):
-    """모델이 상한 안에 멈추지 않았다. 비용이 무한정 늘지 않게 한다."""
+    """모델이 끝 안에 멈추지 않았다. 비용이 무한정 늘지 않게 한다."""
 
 
-async def run_loop(ask: ModelCaller, prompt: str, *, call: ToolCaller) -> str:
+async def run_loop(
+    ask: ModelCaller, prompt: str, *, call: ToolCaller, max_turns: int = MAX_TURNS
+) -> str:
     """마지막 텍스트를 돌려준다.
 
-    상한은 실행 전체 기준이고 재생된 턴도 센다. 재생이 ask 안쪽에 있어 재개해도 이 for 가 처음부터
-    돌기 때문에 저절로 그렇다. 상한이 재개로 리셋되면 멈추고-재개를 반복해 무한히 돌 수 있다.
+    끝(`max_turns`)은 `ctx.llm()` 한 번의 루프에 걸리고, 재개해도 비워지지 않아 재생된 턴도 센다.
+    재생이 ask 안쪽에 있어 재개해도 이 for 가 처음부터 돌기 때문에 저절로 그렇다. 끝이 재개로
+    리셋되면 멈추고-재개를 반복해 무한히 돌 수 있다. 마지막 턴에 모델이 낸 도구 호출은 실행한 뒤에
+    던진다.
     """
     messages: list[BaseMessage] = [HumanMessage(prompt)]
-    for _ in range(MAX_TURNS):
+    for _ in range(max_turns):
         message = await ask(messages)
         if not message.tool_calls:
             return message.text
         messages.append(message)
         for tool_call in message.tool_calls:
             messages.append(await _execute(call, tool_call))
-    raise LoopLimitExceeded(f"루프가 {MAX_TURNS}턴 안에 멈추지 않았다")
+    raise LoopLimitExceeded(f"루프가 {max_turns}턴 안에 멈추지 않았다")
 
 
 def model_caller(model: ChatModel, specs: Sequence[ToolSpec]) -> ModelCaller:
