@@ -472,6 +472,36 @@ open-session을 부른다 2026-11-11T09:50:34Z
 
 반영분을 커밋하기 직전의 `uv run python tools/sibling_overlap.py`가 `origin/main`이 33dc5cd92에서 768dee7d9로 움직였다고 알렸다(#527. ADR 0051의 이력 하나와 일지 하나다). 번호는 겹치지 않았고, `git diff --name-only HEAD...origin/main`의 두 파일은 이 브랜치가 고치지 않은 것이다. 앞 커밋이 있어 빨리 감을 수 없으므로 `git merge --no-edit origin/main`으로 합쳤고(충돌 없음), 그 뒤에 반영분을 커밋해 pre-commit이 합친 트리를 보게 했다. 같은 출력이 열린 PR #528(base-agent-tickets)도 `.scratch/retro-queue/cli-review-claims-path.md`를 고친다고 알렸다. 이 브랜치도 그 항목의 승인 줄에 회차를 더했으므로, 늦게 병합하는 쪽에서 그 한 줄이 충돌할 수 있다.
 
+### 반영분의 커밋
+
+위 반영과 넘겨받은 미커밋 파일 다섯을 한 커밋에 실었다(`686aea036`, `docs: release-image 설계의 PR 직전 리뷰를 반영한다`, 파일 10개). pre-commit의 결과다. `ruff check`와 `ruff format`은 Passed였다(`.scratch/release-image/probes/netns/run.py`가 스테이지돼 Skipped가 아니다). `checks`(`tools/run_checks.py`의 CHECKS)는 911.86초에 Passed였다(check-ticket 3.3초, lint-imports 4.2초, zizmor 4.5초, check-type-escapes 13.6초, check-instructions 14.5초, pyright 69.8초, pyright-linux 79.4초, run-hooks 278.3초, pytest 630.5초, web-verify 910.9초). 마크다운 표, 줄 구분 문자, 변이 표, 커밋 메시지 검사도 Passed였고 인용 대조는 경고 없음이었다. `Skipped`는 앞 커밋과 같은 둘이고 둘 다 "(no files to check)"였다. 헌법 판 검사는 `uv run python -m tools.check_constitution_version`을 손으로 쳐 "이 가지가 고친 헌법 파일이 없다"는 출력을 봤고, 카나리아 명세 모양 검사는 이 커밋에 명세 파일이 없어 넘길 것이 없다. 커밋은 Bash의 600초 제한을 넘겨 백그라운드로 넘어갔고, 다시 치지 않고 끝 알림을 기다려 종료 코드 0을 봤다. 앞 커밋의 622.52초보다 289초 길었다. 그동안 함께 돈 다른 세션이 몇이었는지는 보지 않았다.
+
+커밋 명령 직후 인계 계기(`hook_handoff`)가 다시 왔다(세션 컨텍스트 362,423 토큰, 경계 `커밋 뒤`). `.claude/skills/next-session/handoff.md`를 Read로 열어 "인계하지 않는 때"를 대 봤고, 셋째(이 세션의 지시문의 "이어받을 상태"가 넘겨받은 것과 같은 경계로 시작한다)에 해당해 넘기지 않고 이었다. 커밋을 기다리는 사이 자동 압축이 한 번 왔다.
+
+### 인계한 세션에서 사용자가 정했다: 공통 저장소 없이 agent-os를 원천으로 둔다
+
+반영분의 커밋이 도는 사이, 사용자가 인계한 세션(제목 `docs/release-image-design (인계함)`)에서 결정을 하나 더 내렸다. 그 세션은 브랜치를 넘긴 뒤라 저장소에 적지 못해 결정을 글로 정리했고, 사용자가 그 글을 이 세션에 붙여 넣었다. 아래 인용은 그 글이 옮긴 사용자의 말이다. 이 세션은 그 대화를 직접 보지 못했고, 사용자의 첫 물음에 그 세션이 낸 답의 글도 넘어오지 않았다.
+
+> 사용자: 그 밖에도 공통으로 가져가야할 것들이 뭐가 있을까? 둘 다 내가 하는 프로젝트인데 브랜치 규칙 등이 다르지 않게 하고 싶은데. 공통으로 관리하는 ADR 저장소 같은게 필요하나? 다른 사람들은 어떻게 해? 훅이나 스킬 하네스들도 공통 저장소로 해야하나?
+
+> 사용자: 이 방향(공통 저장소 없이 agent-os를 원천으로 두고, dev 전환 뒤에 점검 도구를 만든다)으로 가자. 나중에. 세 번째 프로젝트가 생기거나 같은 변경을 손으로 옮기는 일이 여러 번 쌓이면, 저장소와 무관한 조각부터 공통 저장소나 플러그인으로 뽑자.
+
+넘어온 결정의 내용은 셋이다.
+
+1. **공통 저장소는 두지 않는다.** 공통 ADR 저장소도 공통 하네스 저장소도 두지 않는다. 일하는 방식(브랜치, 커밋 메시지, 판 번호와 릴리스 노트, 리뷰 순서, 문서의 자리, 지시문 형식)의 원천은 agent-os다. 규약 ADR은 agent-os에 두고, 문서 검색 서버 저장소(rag-engine)에는 agent-os의 해당 ADR을 따른다고 적고 다른 점만 적는 얇은 ADR 한 장을 둔다. 그 저장소의 세션에 줄 지시문 둘(dev 전환, 판 내기 워크플로)에 이 요건을 싣는다.
+2. **벌어진 곳을 알리는 점검 도구.** dev 전환 티켓이 닫힌 뒤의 하네스 일로, 두 저장소(`C:\project\agent`, `C:\project\rag-engine`)의 공통 파일을 비교해 벌어진 곳을 알리는 도구를 만든다. 결과를 아침 보고에 싣는 것은 인계한 세션의 제안이고 사용자가 따로 확인한 것이 아니다.
+3. **뽑는 조건.** 세 번째 프로젝트가 생기거나, 같은 하네스 변경을 rag-engine에 손으로 옮긴 일이 여러 번 쌓였을 때 공통 저장소나 플러그인으로 뽑는다. 저장소와 무관한 조각부터 뽑는다.
+
+인계한 세션이 본 사실로 넘겨 온 것은 두 저장소의 스킬 16개의 이름이 같고, rag-engine의 훅 24개가 모두 agent-os에 같은 이름으로 있으며, agent-os의 훅이 43개라는 것이다(이름만 대 봤고 내용은 비교하지 않았다고 적혀 있었다). 이 세션이 Glob으로 다시 셌다. 스킬(`.claude/skills` 아래의 `SKILL.md`)은 이 워크트리에 18개, rag-engine에 17개이고 이름이 같은 것이 16개다. rag-engine에만 있는 것은 `codebase-design`이고 agent-os에만 있는 것은 `sync-design-system`과 `ui-design`이다. `tools/hook_*.py`는 이 워크트리에 44개, rag-engine에 25개이고, 훅이 아닌 보고 도구 `hook_report.py`를 빼면 43개와 24개다. rag-engine의 24개는 이름이 모두 이 워크트리에도 있었다(두 목록을 눈으로 맞댔다). 이 세션도 파일의 내용은 비교하지 않았다.
+
+적은 자리다. ADR 0056과 코드는 고치지 않았다. 이 저장소의 결정이 아니라 두 저장소 사이에서 일하는 방식을 어디에 둘지의 결정이고, 넘어온 글도 일지와 "다음"과 대기열에 적으라고 했다.
+
+- **지시문을 내는 세션이 읽는 자리 둘.** `.scratch/plan-head.md`의 dev 전환 문단과 release-image 기능 계획의 본문에, 지시문이 얇은 ADR의 요건을 싣는다는 것과 지시문을 낼 때 대기열 `rag-engine-port-by-hand`에 회차를 더한다는 것을 적었다. 앞의 문단에는 전환 티켓이 닫힌 뒤의 하네스 일이 점검 도구라는 것도 적었다. `uv run python tools/plan_table.py`로 `.scratch/plan.md`를 다시 만들었다.
+- **대기열 `rag-engine-harness-drift`**(사용자 승인 2026-11-11). 점검 도구의 항목이다. 아침 보고에 싣는 것은 확인받지 않은 제안이라, 티켓을 여는 세션이 사용자에게 묻는다고 어디로 줄에 적었다.
+- **대기열 `rag-engine-port-by-hand`**(사용자 승인 2026-11-11, 0회차). 손으로 옮긴 일을 세는 항목이다. 아직 옮긴 일이 없어 0회차로 시작하고, 지시문 하나를 낼 때 회차 하나를 더한다고 본문에 적었다. "여러 번"이 몇 번인지는 사용자가 정하지 않았다. 이 저장소의 chore 배치가 회차 5 이상인 항목을 대상으로 삼으므로 그때 뽑을지를 사용자에게 묻게 되고, 그 전에 세 번째 프로젝트가 생기면 회차와 무관하게 묻는다(뒤의 풀이는 이 세션의 해석이다).
+- 두 항목은 회고의 후보가 아니라 사용자가 직접 정한 일이라 아래 회고 절의 셈에 넣지 않았다. 같은 일을 다룬 항목이 있는지는 `uv run python tools/queue_open_rows.py --search rag-engine`으로 찾았고, 맞은 둘(대기열 420, 581)은 다른 일이었다.
+- 아래 "다음"의 4를 고치고 6과 7을 더했다.
+
 ## 회고
 
 ADR 승인을 받고 커밋하기 전에 돌렸다. 원천은 이 일지 전체와 이어받은 세션이다. 앞 일지의 회고가 이미 센 셋(대기열 431, `glob-slash-pattern-narrowed-path`, `option-description-implied-omission`)은 다시 세지 않았다. 후보 여덟, 승인 여섯(모두 대기열에 두고 이 세션에서 반영한 것은 없다), 기각 둘, 넘김 0이다. 만료할 항목은 없었다(`uv run python tools/queue_open_rows.py`의 작업 트리 출력에 만료할 항목이 없어 `--ref origin/main`의 출력과 겹칠 것이 없다).
@@ -506,5 +536,7 @@ ADR 승인을 받고 커밋하기 전에 돌렸다. 원천은 이 일지 전체�
 1. **dev 브랜치 전환의 harness 티켓.** ADR 0043 Consequences "전환"의 일이고, release-image의 명세와 티켓보다 먼저다(ADR 0056 Consequences "dev 전환이 먼저다", `.scratch/plan-head.md`). 전환 티켓은 닫힐 때 `.scratch/plan-head.md`에서 release-image를 든 문장을 걷는다. 그때 같은 전환을 문서 검색 서버 저장소(rag-engine)에 하라고 그 저장소의 세션에 줄 지시문도 사용자에게 낸다(위 "사용자가 정했다"). 다음 작업 지시문의 "이어받을 상태"에 이 일을 적어, 받는 세션이 harness 티켓의 수용 기준에 넣게 한다. 실제 이미지의 compose e2e 잡은 전환 티켓이 만들지 않고 release-image의 첫 티켓이 Dockerfile·compose와 함께 더한다(ADR 0056 결정 "실제 이미지로 띄우는 시험").
 2. **사람 몫.** Docker Hub에 이 제품의 이름으로 계정을 만들고, 2단계 인증을 켜고, 접근 토큰을 발급해 GitHub 저장소의 비밀 값으로 넣는다. 이것이 없으면 첫 판 내기가 실패한다(ADR 0056 결정 "레지스트리와 계정"). release-image의 출시 PR 전까지 하면 된다.
 3. **서브에이전트 워크트리.** `.claude/worktrees/agent-a65f5d6e4055592b1`에 위젯 실험 판의 파일이 커밋 없이 남아 있다. 프로브 폴더는 이 PR이 실었으므로 주 체크아웃 세션의 `tidy-checkouts`가 걷는다.
-4. **문서 검색 서버 저장소.** 판 내기와 dev 브랜치는 agent-os가 먼저 짓고 돌려 본 뒤에 그 저장소로 옮긴다(위 "사용자가 정했다"). dev 전환 티켓과, 판 내기 워크플로를 지어 돌려 본 release-image의 티켓이 닫힐 때 그 세션이 사용자에게 그 저장소에 줄 지시문을 낸다. 받는 자리는 `.scratch/plan-head.md`의 dev 전환 문단과 release-image 기능 계획의 본문이다.
+4. **문서 검색 서버 저장소.** 판 내기와 dev 브랜치는 agent-os가 먼저 짓고 돌려 본 뒤에 그 저장소로 옮긴다(위 "사용자가 정했다"). dev 전환 티켓과, 판 내기 워크플로를 지어 돌려 본 release-image의 티켓이 닫힐 때 그 세션이 사용자에게 그 저장소에 줄 지시문을 낸다. 받는 자리는 `.scratch/plan-head.md`의 dev 전환 문단과 release-image 기능 계획의 본문이다. 공통 ADR 저장소와 공통 하네스 저장소는 두지 않고 일하는 방식의 원천은 agent-os이므로(위 "인계한 세션에서 사용자가 정했다"), 두 지시문에는 그 저장소가 agent-os의 규약 ADR을 따른다고 적고 다른 점만 적는 얇은 ADR 한 장을 두라는 요건을 싣는다. 지시문을 낼 때 대기열 `rag-engine-port-by-hand`에 회차를 더한다.
 5. **chore 배치의 대상.** 이 회고로 `option-fact-from-doc-not-code`(9회차)와 `adr-evidence-stronger-than-journal`(5회차)이 회차 5 이상이 됐다. 덧붙인 회고로 `probe-round-marked-measured-unconditionally`(10회차)가 더해졌다.
+6. **두 저장소의 공통 파일을 비교하는 점검 도구.** dev 전환 티켓이 닫힌 뒤의 하네스 일이다(대기열 `rag-engine-harness-drift`, 사용자 승인 2026-11-11). 이 PC의 `C:\project\agent`와 `C:\project\rag-engine`이 함께 가진 파일을 비교해 벌어진 곳을 알린다. 결과를 아침 보고에 싣는 것은 인계한 세션의 제안이고 사용자가 따로 확인하지 않았으므로, 그 티켓을 여는 세션이 사용자에게 묻는다. 다음 작업 지시문(dev 전환)의 "이어받을 상태"에 이 일이 전환 뒤의 후보라는 것을 적는다.
+7. **공통 저장소나 플러그인으로 뽑는 때.** 세 번째 프로젝트가 생기거나, 같은 하네스 변경을 rag-engine에 손으로 옮긴 일이 여러 번 쌓였을 때다. 저장소와 무관한 조각부터 뽑는다. 손으로 옮긴 일은 대기열 `rag-engine-port-by-hand`가 회차로 센다(지금 0회차).
