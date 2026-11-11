@@ -1,4 +1,4 @@
-# 위젯 빌드 프로브의 두 번째 사이트 파일(measure.mjs 의 diff 단계). 첫 번째는 저장소의 픽스처
+# 위젯 실행 중 값 프로브의 둘째 사이트 파일(measure.mjs 의 SITE_FILES.B. control·runtime·forks·startup·standalone·live·element·siteread 단계가 쓴다). 첫 번째는 저장소의 픽스처
 # tests/fixtures/site_file/sites.toml 이다. 그 픽스처와 허용 출처, 요청 글자 수 상한이 다르다. 허용 출처와 상한은
 # 산출물에서 글자로 찾기 쉽게 다른 데 나오지 않을 값으로 골랐다. 공개 키는 픽스처의 첫 사이트 것을 그대로 옮겼다
 # (위젯 빌드는 공개 키를 읽지 않는다).

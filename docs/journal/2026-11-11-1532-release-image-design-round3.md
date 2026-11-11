@@ -584,6 +584,12 @@ ADR 승인을 받고 커밋하기 전에 돌렸다. 원천은 이 일지 전체�
   - Minor(ADR 0011의 "지금 PRD에 원격 배포 요구가 없어"가 낡았다). 고치지 않았다. `.claude/rules/adr.md` 13~15줄은 다른 ADR이 바꾼 문장에 `(바뀜: ADR NNNN)` 포인터를 달고 본문의 다른 글자는 고치지 않게 한다(Grep으로 읽었다). 낡은 문장이 어느 것인지는 포인터가 가리키는 ADR 0056이 밝힌다.
   - Nit(프로브가 4천 줄). 고치지 않았다. 보관 기준 안이고 아무것도 틀리지 않는다.
   - 이후 회차는 Critical·Major만 고친다(`merge.md` 2 "회차 세기").
+- **claude-review 둘째 회차.** 푸시한 09aa9b8에 지적 없음이었다. 참고로 ADR 0048과 deploy-package 기능 계획의 어긋난 문장을 다시 짚었고, 그 인터뷰가 닫힐 때 ADR 0048에 포인터를 달아야 한다고 적었다(PR 코멘트를 읽었다).
+- **CodeRabbit 첫 회차.** `@coderabbitai review` 뒤 인라인 지적 열하나(Major 5, Minor 6)가 왔다(`gh api repos/njh6803/agent-os/pulls/529/comments`로 읽었다). 첫 회차라 지적마다 판단했다.
+  - 고쳤다(Minor 3). `widget_runtime/README.md`의 "산출물이 0개" 문장에 검사 범위(`.next`, 허용 출처만)를 붙였다. 같은 README의 "다시 지어야 따른다" 해석을 "다시 지으면 따른다"로 좁히고 자리표 바꿔 넣기가 파일까지는 같았다는 점을 적었다. `widget_runtime/sites_b.toml` 머리 주석이 다른 프로브의 단계를 가리키던 것을 이 프로브의 단계로 고쳤다.
+  - 문서에 한계로 적었다(Major 4, `netns/run.py` 표지 넷). `.claude/rules/probes.md` 첫 항목에 맞는 지적이다. `fetch_inside()`가 요청 중 오류에도 `asked`를 참으로 두는 것은 코드를 읽어 확인했다(337~348줄). 나머지 셋은 코드를 열어 확인하지 않았다. 고친 코드로 Docker 프로브를 다시 돌리지 않으면 README의 해당 결과가 그 코드의 것이 아니게 되므로 `run.py`는 고치지 않았다. 라운드 6이 버린 자리 지킴 배치의 측정이고, 리눅스에서 다시 재는 명세 단계의 프로브가 넷을 표지로 단언하게 짓는다. `netns/README.md`에 "알려진 한계" 절을 더했다.
+  - 요구로 옮겼다(Major 1, ADR 0056). Docker Engine 28.0.0 이전에는 `127.0.0.1`에 발행한 포트가 같은 L2 구간의 다른 호스트에 닿는다는 지적이다. Docker 문서의 문장을 WebFetch로 확인했다(웹 요약이라 원문은 내려받아 대 보지 않았다). ADR 0056의 결정(리눅스 Docker Engine과 Compose만 보증)을 바꾸지 않고, `.scratch/release-image/plan.md`에 지원하는 Engine의 최소 판을 명세가 정한다고 적었다. ADR 본문은 고치지 않았다. 최소 판을 결정으로 박는 것은 ADR 0056의 개정이므로 명세가 정할 때 사용자에게 올린다.
+  - 보류했다(Minor 3). `pilot-release` 기능 계획: 후보 검증 뒤에 핫픽스가 main에 병합돼 검증하지 않은 변경이 정식 판에 들 수 있다. ADR 0056은 pilot-release의 수락이 마지막 출시 후보로 프로브를 다시 돌리는 것이라고 정했고(64줄), 병합 사이에 핫픽스가 끼는 순서는 pilot-release의 명세가 정한다. 아래 "다음" 8에 적었다. `widget_build/measure.mjs`·`widget_runtime/measure.mjs`의 인자 검증과 출력 배출 제한, 실패한 `element` 빌드 보고(Minor 3건)는 이미 돌린 측정에 영향이 없는 견고성이라 고치지 않았다.
 
 ## 다음
 
@@ -596,3 +602,4 @@ ADR 승인을 받고 커밋하기 전에 돌렸다. 원천은 이 일지 전체�
 5. **chore 배치의 대상.** 이 회고로 `option-fact-from-doc-not-code`(9회차)와 `adr-evidence-stronger-than-journal`(5회차)이 회차 5 이상이 됐다. 덧붙인 회고로 `probe-round-marked-measured-unconditionally`(10회차)가 더해졌다.
 6. **두 저장소의 공통 파일을 비교하는 점검 도구.** dev 전환 티켓이 닫힌 뒤의 하네스 일이다(대기열 `rag-engine-harness-drift`, 사용자 승인 2026-11-11). 이 PC의 `C:\project\agent`와 `C:\project\rag-engine`이 함께 가진 파일을 비교해 벌어진 곳을 알린다. 결과를 아침 보고에 싣는 것은 인계한 세션의 제안이고 사용자가 따로 확인하지 않았으므로, 그 티켓을 여는 세션이 사용자에게 묻는다. 다음 작업 지시문(dev 전환)의 "이어받을 상태"에 이 일이 전환 뒤의 후보라는 것을 적는다.
 7. **공통 저장소나 플러그인으로 뽑는 때.** 세 번째 프로젝트가 생기거나, 같은 하네스 변경을 rag-engine에 손으로 옮긴 일이 여러 번 쌓였을 때다. 저장소와 무관한 조각부터 뽑는다. 손으로 옮긴 일은 대기열 `rag-engine-port-by-hand`가 회차로 센다(지금 0회차).
+8. **봇 회차에서 뒤로 넘긴 것.** (가) pilot-release의 명세: 정식 판 병합 전에 검증한 마지막 출시 후보와 정식 판의 제품 내용이 같음을 어떻게 보장하는지(핫픽스가 사이에 끼는 경우)를 정한다. (나) release-image의 명세: 리눅스에서 netns 계열을 다시 잴 때 표지 넷(정리 실패, peer 요청의 도착, IPv6 서버의 자기 응답, 회복 조작이 컨테이너에 닿았는지)을 단언하게 프로브를 짓는다. (다) release-image의 명세: 지원하는 Docker Engine의 최소 판(28.0.0 이전의 `127.0.0.1` 발행 문제)을 정하고, 정하는 것이 ADR 0056의 개정이면 사용자에게 올린다. (라) 어긋난 ADR 0048과 deploy-package 기능 계획의 문장은 deploy-package 설계 인터뷰가 닫을 때 ADR 0048에 포인터를 단다.
