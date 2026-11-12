@@ -6,7 +6,9 @@
 #   "4를 거쳤으면"을 더한 것은 사전 확인으로 갈음했다(2026-10-12, 일지 2026-10-12-35).
 # 2026-10-29 harness 027 이 본문을 `merge.md` 로 옮겨 하위 파일 갈래(`skill_body = "files"`)로 바꿨다.
 #   대조군은 옮기기 전 커밋 `37759ef2` 을 `--control-commit` 으로 준다.
-# 최신 결과: 통과 4, "없음" 섞임 0(2026-10-29, 이 PC, claude 2.1.312, 실험군은 이 워크트리의 커밋하지 않은 본문(러너가 찍은 커밋은 `37759ef2`), 대조군 `--control-commit 37759ef2`, 일지 2026-10-29-02).
+# 최신 결과: 통과 4, "없음" 섞임 0(2026-11-12, 이 PC, claude 2.1.322, 실험군은 이 워크트리의 커밋하지 않은 본문(러너가 찍은 커밋은 `4b02bbe29`), 대조군 `--control-commit 37759ef2`, 일지 2026-11-12-1353).
+#   project-pr-skills-dev 가 병합 길 항목의 `/git-pr-merge` 문장을 `/pr-merge` 로 바꿔 질문 2 와 그 기대 문구를 고쳤다.
+# 그 앞: 통과 4, "없음" 섞임 0(2026-10-29, 이 PC, claude 2.1.312, 실험군은 이 워크트리의 커밋하지 않은 본문(러너가 찍은 커밋은 `37759ef2`), 대조군 `--control-commit 37759ef2`, 일지 2026-10-29-02).
 # 돌리는 법: 워크트리 `.claude/worktrees/<이름>/` 루트에서
 #   uv run python tools/canary.py --control-commit 37759ef2 .scratch/harness/probes/canary/next_session_rate_limit_merge.toml <출력 디렉터리>
 kind = "skill"
@@ -17,12 +19,12 @@ Read로 열고, 아래를 그 파일에서만 찾는다. 스킬 본문(SKILL.md)
 본문이 그런 하위 파일을 가리키지 않거나 그 파일에 없으면 그 물음에 "없음"이라고만 답하라.
 1. "워크트리에서 병합할 때" 절의 1(확인)에서, `gh pr checks`의 실패에 붙은 예외를 적은
 구절을 글자 그대로 옮겨라.
-2. 병합 길 항목에서, 주 체크아웃의 병합 스킬(`/git-pr-merge`)이 멈추는 경우를 다룬 문장을
-글자 그대로 옮겨라.
+2. 병합 길 항목에서, 주 체크아웃의 병합 스킬(`/pr-merge`)이 claude-review의 계정 한도뿐인
+빨강을 어떻게 다루는지 적은 문장을 글자 그대로 옮겨라.
 3. 같은 항목에서, 병합하기 전에 사용자의 뜻을 물을지에 관해 적은 문장을 글자 그대로
 옮겨라.
 '''
-expect = ["claude-review가 계정의 주간 사용량 한도로만 빨가면 실패로 세지 않고", "실패가 claude-review의 계정 한도뿐이면", "병합할지는 사용자에게 묻지 않는다"]
+expect = ["claude-review가 계정의 주간 사용량 한도로만 빨가면 실패로 세지 않고", "claude-review의 계정 한도뿐인 빨강은 실패로 세지 않으며", "병합할지는 사용자에게 묻지 않는다"]
 source = ".claude/skills/next-session/merge.md"
 skill = "next-session"
 skill_body = "files"
