@@ -58,10 +58,26 @@
 - 변이 1~3(실제 모델): 도구가 기대대로로 판정했다. 첫 실행은 1과 3의 표지가 단위 시험 원문에 글자 그대로 있어 거부되어, 단위 시험의 가짜 통계를 `{'expected': 0, 'skipped': 2, …}`로, 계산 사례의 단언을 `startswith("calc")`와 `화면에 선 출력 ['…']`로 쪼개 표지가 실제 실행에서만 나오게 했다. 3의 실제 출력은 `calc: 화면에 선 출력 [] 이 …`였고 그 꼴로 표지를 바꿨다(결과를 본 뒤 바꾼 기준이다). 13·14(노드 러너)도 기대대로.
 - `uv run ruff check .`, `ruff format --check .`, `uv run python tools/run_checks.py`: 모두 초록(pytest 861.6초, web-verify 1052.8초).
 
+## 커밋 (이어받은 세션)
+
+- 커밋 `44830188e`(`test: 위젯 모델 e2e에 assistant 사례를 더한다 (06-widget-real-model-assistant-case)`)를 브랜치에 만들었다. 푸시하지 않았고 PR도 없다.
+- 첫 커밋 시도의 pre-commit에서 `tests/channel/cli/test_interrupt.py`의 도구 호출 도중 중단 시험과 `tests/tools/test_probe_kit.py`의 배출 시험이 빨갰다(둘 다 시간 단언). 같은 러너가 직전에는 초록이었고 그 둘만 따로 돌리면 87.78초에 통과했다(손으로 쳤다). 이 변경이 건드리지 않은 시험이라 부하의 흔들림으로 보고(어림, 부하는 재지 않았다) 같은 커밋을 다시 쳐 통과했다.
+
+- 푸시 훅이 `origin/dev`보다 2커밋 뒤처졌다고 막아 `git merge origin/dev`로 합쳤다(충돌 없음, `uv run python tools/plan_table.py --check`와 `sibling_overlap.py` 통과). 이 일지 수정 커밋이 합친 뒤의 전체 pre-commit을 겸한다. 같은 커밋의 앞 시도 둘은 커밋 메시지 제목이 72자를 넘어(83자) 한 번, 이 변경과 무관한 시간 단언 시험(`test_interrupt`·`test_probe_kit`·`test_rerun_runner`)이 빨개 한 번 막혔다. 그 셋만 따로 돌리면 한 사례(`test_rerun_runner`의 두 회차 동시 실행)가 다시 빨갰고 부하(이 PC에 세션이 여럿 돈다)로 어림하며 재지 않았다.
+
+## PR과 봇 회차 (PR 551)
+
+- PR `njh6803/agent-os#551`(머리 `4c27ff824`)을 열었다. 푸시 직전 `coderabbit-review` 서브에이전트(`coderabbit review --agent --include-untracked --base origin/dev`)가 `review_completed`로 끝났고 findings는 0건이었다(서브에이전트의 보고를 옮겼다. `Seat: not assigned`, `Plan: Free`, CLI 0.7.5).
+- CI: `gh pr checks`의 `wait_ci.py` 결과가 verify·python·web·e2e·e2e-widget·e2e-portal·visual·ticket 모두 SUCCESS이고 `llm`은 SKIPPED였다(`tools/wait_ci.py 551`의 출력을 읽었다).
+- CodeRabbit의 PR 리뷰는 `Review rate limited`(무료 한도)로 리뷰가 없었다. 보안·버그 축은 위 CLI 결과가 대신한다.
+- claude-review 첫 회차(코멘트를 읽었다): Critical·Major 없음, Minor 하나와 Nit 하나. 둘 다 고치지 않고 보류한다(보류 이유는 PR 코멘트에도 남겼다).
+  - [Minor] `_case_failures`가 `agent == CALC`가 아니면 모두 assistant 규칙으로 판정하므로, 세 번째 사례가 늘면 그 규칙이 조용히 따라붙는다. 사례가 둘뿐이고 새 사례는 answer-markdown 03이 짝짓기를 짓는 자리에서 들어오므로 그때 `elif agent == ASSISTANT`로 좁히고 나머지는 실패로 돌린다.
+  - [Nit] `assistant.llm.ts`가 문서 제목·갱신일·질문 문구를 상수로 갖는다. 주석이 표본을 고치면 함께 고치라고 적고 판정이 모델 e2e에서만 나므로, 현재 규모에서는 둔다.
+
 ## 이어받을 일
 
-1. 셀프 리뷰(`/code-review`)부터 한다. 범위는 `origin/dev`의 merge-base 이후의 변경과 미추적 파일 셋(`web/apps/widget/e2e/assistant.llm.ts`, `web/apps/widget/e2e/llm-ask.ts`, `web/packages/e2e-stack/src/plugins.test.ts`)이다. 명세는 `.scratch/base-agent/issues/06-widget-real-model-assistant-case.md`와 `.scratch/base-agent/spec.md`의 "위젯의 실제 모델 e2e"다.
-2. 위젯 e2e 전체(`pnpm -C web/apps/widget exec playwright test`)를 부하가 낮을 때 다시 쳐 초록을 본다. 위 "돌려서 본 것"의 흔들림(실행마다 다른 5초 대기 사례가 빨갛다)이 부하 탓인지 가르는 것이다. 계속 빨가면 `git worktree add`로 `origin/dev` 사본에서 같은 파일을 쳐 기준에서도 흔들리는지 본다(이 변경이 원인인지 가린다). 초록이 안 나오고 기준에서도 흔들리면 PR 본문에 그 사실을 적는다.
-3. 이어서 커밋, PR, 병합(`merge.md`)까지가 이번 요청 범위다.
+1. 병합까지가 이번 요청 범위였고, 병합 뒤에는 이 브랜치에서 남은 일이 없다.
+2. answer-markdown 03이 위젯 로케이터를 `llm-ask.ts`에서 고치는 것으로 티켓을 맞췄다. 그 티켓이 들어올 때 이 변경의 사례별 짝짓기(`tests/test_widget_llm.py`의 `_case_failures`)에 맞추고, 위 Minor(`else`를 `elif agent == ASSISTANT`로 좁힌다)도 그 자리에서 한다.
+3. `tests/fake_doc_search.py`를 05 워크트리의 세션(`05-real-model-assistant-answers-with-sources`)도 고치고 있어, 나중에 병합하는 쪽에서 글자 충돌이 날 수 있다(`sibling_overlap.py` 출력).
 
-open-session을 부른다 2026-11-12T14:42Z
+open-session을 부른다 2026-11-12T16:08Z
