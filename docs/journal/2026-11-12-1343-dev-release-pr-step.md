@@ -90,3 +90,13 @@
 인계: 커밋 뒤. 이 세션이 만 로컬 커밋 하나까지 했고 컨텍스트가 30만 토큰이라 새 세션에 넘긴다. 앞서 셀프 리뷰 직전 계기는 압축 직후라는 까닭으로 넘기지 않았다(회고의 넘김). 지시문 파일은 세션 스크래치패드의 handoff-directive.txt. 제목은 `chore/dev-release-pr-step (인계함)`.
 
 open-session을 부른다 2026-11-12T06:16:05Z
+
+## 인계받은 세션: PR 전
+
+새 세션이 워크트리를 이어 받아 PR 앞단계를 마쳤다. 시작 프롬프트는 `/implement .scratch/harness/issues/dev-release-pr-step.md`였고 범위는 PR과 병합까지다. 보호 설정은 바꾸지 않았다.
+
+- 일지의 인계 기록 6줄이 커밋되지 않고 남아 있어 먼저 커밋했다(`b469b3063`).
+- `origin/dev`에 형제 티켓 `project-pr-skills-dev`(PR #545)가 병합돼 있어 합쳤다. `docs/constitution/README.md`와 `operations.md`가 충돌했다. README는 이 브랜치의 판 3.0.91을 두고 비워 둔 판 3.0.88과 3.0.89를 알리던 문장은 지웠다(그 브랜치가 판을 가져갔다). `operations.md`의 병합 문장은 dev 쪽(`/pr-merge`와 프로젝트 사본 설명)에 이 브랜치의 출시 PR 병합 뒤 되돌려 합치기 문장을 이었고, 낡은 "`/git-pr-merge`를 쓰지 않는다" 괄호는 뺐다. `/pr-merge`가 이미 출시 PR을 `--merge`로 다루기 때문이다. 병합 커밋은 `3b1eb606a`다.
+- `/pr-merge` 4단계에 출시 PR 갈래를 더했다. 그 스킬은 핫픽스의 되돌려 합치기만 알고 있어(`SKILL.md` 4단계를 읽은 것이다), 주 체크아웃에서 출시 PR을 `/pr-merge`로 병합하면 되돌려 합치기가 빠질 것으로 본다(코드를 읽은 어림이고 그 스킬을 출시 PR에 돌려 보지 않았다). `merge.md` "출시 PR"의 병합 뒤 1~3을 가리킨다.
+- 그 변경이 `pr_merge_skill_kinds.toml`의 원천을 바꿔 새 `claude -p` 세션으로 카나리아를 다시 돌렸다. 러너(`tools/canary.py --control-commit 4b02bbe29`)가 통과 4, 실패 0, "없음" 섞임 0을 냈고(손으로 돌렸다) 결과 줄을 고쳤다.
+- `sibling_overlap`은 번호 겹침 없음이다(헌법 판 3.0.91. PR #544가 3.0.92를 쥐고 있어 #544가 먼저 병합되면 README 판 줄이 충돌한다. 그때 3.0.93으로 비킨다).
