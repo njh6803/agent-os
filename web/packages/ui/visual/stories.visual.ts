@@ -165,6 +165,23 @@ const INTERACTIONS: readonly Interaction[] = [
     target: (page) => page.getByRole("switch", { name: "주문 조회" }),
     states: NO_PRESS,
   },
+  // 마크다운 부품에서 키보드 포커스를 받는 것은 링크, 표의 스크롤 칸, 코드 블록이다. 올림과 누름의 모양은 없다.
+  {
+    story: "molecules-markdown--link-focus",
+    target: (page) => page.getByRole("link", { name: /인사 시스템 도움말/ }),
+    states: ["focus"],
+  },
+  {
+    story: "molecules-markdown--overflow-table",
+    target: (page) => page.getByRole("group", { name: "표" }),
+    states: ["focus"],
+  },
+  {
+    story: "molecules-markdown--code-focus",
+    // Storybook 의 오류 표시 칸(`pre.sb-errordisplay_code`)이 문서에 늘 있어 `pre` 만으로는 둘에 맞는다.
+    target: (page) => page.locator("pre[tabindex='0']"),
+    states: ["focus"],
+  },
   // 알림 자체는 상태가 없고 닫기 버튼(투명·작은 아이콘 버튼)이 상태를 따른다. 알림의 면 위에서 찍는다.
   {
     story: "molecules-alert--with-close",

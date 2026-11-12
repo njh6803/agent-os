@@ -60,7 +60,8 @@ web/               pnpm 워크스페이스(Node 24, TypeScript 5.9). 파이썬�
   packages/ui/     디자인 시스템(@agent-os/ui). src/styles/(디자인 토큰 CSS theme.css, 글꼴 CSS fonts.css, shadow 보정,
                    판정 스토리), src/themes.ts(`./themes`), node/(`./fonts`. 글꼴 파일을 고르고 복사하는 node 쪽
                    도우미와 FontFaceSource 타입), src/components/atoms/·molecules/(컴포넌트와 스토리, <Name>.md),
-                   src/testing/(판정 함수),
+                   src/markdown/(마크다운 부품의 변환과 주소 판정. 화면을 그리지 않고 패키지 밖으로 내보내지 않는다),
+                   src/testing/(판정 함수와 부품 시험의 격리 setup.ts, 부품 시험은 vitest 의 ui-pages 프로젝트가 jsdom 에서 돈다),
                    src/storybook/(앱도 나눠 쓰는 미리보기), .storybook/(Storybook 설정), visual/(사진 비교와 정답
                    사진 snapshots/, 앱도 나눠 쓰는 정적 빌드 열기 index.ts). 스토리 테스트는 뿌리 vitest.config.ts 의
                    storybook 프로젝트가 실제 chromium 에서 돈다(ADR 0026)
