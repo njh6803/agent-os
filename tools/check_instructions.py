@@ -59,6 +59,8 @@ PATCHED_SKILLS = (
     "grill-with-docs",
     "grilling",
     "implement",
+    "pr-feedback",
+    "pr-merge",
     "retro",
     "to-spec",
     "to-tickets",
