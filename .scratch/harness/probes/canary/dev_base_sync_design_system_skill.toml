@@ -1,0 +1,24 @@
+# sync-design-system 스킬 본문이 화면 작업을 잇기 전에 합칠 브랜치를 `main` 이 아니라 기준 브랜치로 적은 문장이 새 세션에 실리는지
+# (dev-base-skills-docs 티켓, ADR 0043). 실험군은 이 워크트리, 대조군은 옛 판을 든 주 체크아웃이다. 이 PR 이 병합되기 전의
+# 주 체크아웃에는 옛 문장이 있다. 병합 뒤에 다시 돌리려면 병합 전 커밋을 `--control-commit` 으로 준다(README `canary/` 행).
+# 최신 결과: 통과 4, "없음" 섞임 0(2026-11-12, 이 PC, claude 2.1.322, 실험군은 `cd77e4096` 위의 커밋하지 않은 본문, 대조군은 주 체크아웃 `cd77e4096`, harness 티켓 dev-base-skills-docs).
+# 돌리는 법: 워크트리 `.claude/worktrees/<이름>/` 루트에서
+#   uv run python tools/canary.py .scratch/harness/probes/canary/dev_base_sync_design_system_skill.toml <출력 디렉터리>
+kind = "skill"
+question = '''
+sync-design-system 스킬을 Skill 도구로 불러 본문을 읽어라. 스킬이 시키는 일은 하지 않는다.
+본문에서 `git merge-base --is-ancestor <그 커밋> HEAD`를 보고 그 커밋을 품지 않았을 때 무엇을 한 뒤 잇는다고 적었는지,
+그 문장의 해당 구절을 글자 그대로 옮겨라. 없으면 "없음"이라고만 답하라.
+'''
+expect = ["기준 브랜치를 합친 뒤 잇는다"]
+source = ".claude/skills/sync-design-system/SKILL.md"
+skill = "sync-design-system"
+
+[[arm]]
+name = "워크트리"
+role = "experiment"
+
+[[arm]]
+name = "주-체크아웃"
+role = "control"
+checkout = "../../.."

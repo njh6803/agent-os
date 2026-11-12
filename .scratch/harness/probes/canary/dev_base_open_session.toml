@@ -1,0 +1,26 @@
+# open-session 스킬 1의 워크트리 문장 조건이 주 체크아웃의 브랜치를 `[main]` 으로 못 박지 않고 루트 브랜치(`origin/dev` 가 있으면 dev,
+# 없으면 main)로 적은 문장이 새 세션에 실리는지(dev-base-skills-docs 티켓, ADR 0043). 실험군은 이 워크트리, 대조군은 옛 판을 든
+# 주 체크아웃이다. 이 PR 이 병합되기 전의 주 체크아웃에는 옛 문장 `[main]` 만 있다. 병합 뒤에 다시 돌리려면 병합 전 커밋을
+# `--control-commit` 으로 준다(README `canary/` 행).
+# 최신 결과: 통과 4, "없음" 섞임 2(2026-11-12, 이 PC, claude 2.1.322, 실험군은 `cd77e4096` 위의 커밋하지 않은 본문, 대조군은 주 체크아웃 `cd77e4096`, harness 티켓 dev-base-skills-docs). 섞인 둘은 질문의 "루트가 무엇이 아니라고"가 어색해 "없음"으로 시작했다가
+#   본문의 조건 문장을 옮기고 정정한 회차이고, 셋 모두 새 문구 `origin/dev가 있으면 [dev], 없으면 [main]`을 옮겼다(답을 손으로 읽었다).
+# 돌리는 법: 워크트리 `.claude/worktrees/<이름>/` 루트에서
+#   uv run python tools/canary.py .scratch/harness/probes/canary/dev_base_open_session.toml <출력 디렉터리>
+kind = "skill"
+question = '''
+open-session 스킬을 Skill 도구로 불러 본문을 읽어라. 스킬이 시키는 일은 하지 않는다.
+1단계 "이름"에서, "어디서" 줄에 워크트리 문장이 없으면 열지 않는 조건 셋 가운데 `git worktree list`의 첫 줄인 루트에 대한 조건이 있다.
+그 조건에서 루트가 무엇이 아니라고 했는지, 괄호 안의 설명까지 글자 그대로 옮겨라. 없으면 "없음"이라고만 답하라.
+'''
+expect = ["origin/dev가 있으면 [dev], 없으면 [main]"]
+source = ".claude/skills/open-session/SKILL.md"
+skill = "open-session"
+
+[[arm]]
+name = "워크트리"
+role = "experiment"
+
+[[arm]]
+name = "주-체크아웃"
+role = "control"
+checkout = "../../.."

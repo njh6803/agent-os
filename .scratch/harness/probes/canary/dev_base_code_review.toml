@@ -1,0 +1,24 @@
+# code-review 스킬이 커밋 전 셀프 리뷰의 고정점을 이 브랜치의 기준 브랜치로 적은 문장이 새 세션에 실리는지(dev-base-skills-docs
+# 티켓, ADR 0043). 실험군은 이 워크트리, 대조군은 옛 판을 든 주 체크아웃이다. 이 PR 이 병합되기 전의 주 체크아웃에는 그 문장이
+# 없다. 병합 뒤에 다시 돌리려면 병합 전 커밋을 `--control-commit` 으로 준다(README `canary/` 행).
+# 최신 결과: 통과 4, "없음" 섞임 0(2026-11-12, 이 PC, claude 2.1.322, 실험군은 `cd77e4096` 위의 커밋하지 않은 본문, 대조군은 주 체크아웃 `cd77e4096`, harness 티켓 dev-base-skills-docs).
+# 돌리는 법: 워크트리 `.claude/worktrees/<이름>/` 루트에서
+#   uv run python tools/canary.py .scratch/harness/probes/canary/dev_base_code_review.toml <출력 디렉터리>
+kind = "skill"
+question = '''
+code-review 스킬을 Skill 도구로 불러 본문을 읽어라. 스킬이 시키는 일은 하지 않는다.
+본문에서 사용자가 고정점을 주지 않으면 묻는다고 적은 문장 바로 뒤에, 커밋 전에 하는 셀프 리뷰의 고정점이 무엇이라고 적은 문장이 있으면
+그 문장 하나를 글자 그대로 옮겨라. 없으면 "없음"이라고만 답하라.
+'''
+expect = ["커밋 전 셀프 리뷰의 고정점은 이 브랜치의 기준 브랜치"]
+source = ".claude/skills/code-review/SKILL.md"
+skill = "code-review"
+
+[[arm]]
+name = "워크트리"
+role = "experiment"
+
+[[arm]]
+name = "주-체크아웃"
+role = "control"
+checkout = "../../.."

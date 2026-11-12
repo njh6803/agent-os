@@ -1,0 +1,29 @@
+# next-session directive.md 5가 워크트리 문장을 넣는 조건에서 주 체크아웃의 브랜치를 `main` 으로 못 박지 않고 루트 브랜치(`origin/dev`
+# 가 있으면 dev, 없으면 main)로 적은 문장이 새 세션에 실리는지(dev-base-skills-docs 티켓, ADR 0043). 실험군은 이 워크트리,
+# 대조군은 옛 판을 든 주 체크아웃이다. 이 PR 이 병합되기 전의 주 체크아웃에는 그 문장이 없다. 병합 뒤에 다시 돌리려면 병합 전
+# 커밋을 `--control-commit` 으로 준다(README `canary/` 행).
+# 최신 결과: 통과 4, "없음" 섞임 0(2026-11-12, 이 PC, claude 2.1.322, 실험군은 `cd77e4096` 위의 커밋하지 않은 본문, 대조군은 주 체크아웃 `cd77e4096`, harness 티켓 dev-base-skills-docs).
+# 돌리는 법: 워크트리 `.claude/worktrees/<이름>/` 루트에서
+#   uv run python tools/canary.py .scratch/harness/probes/canary/dev_base_next_session_root_branch.toml <출력 디렉터리>
+kind = "skill"
+question = '''
+next-session 스킬을 Skill 도구로 불러 본문을 읽어라. 스킬이 시키는 일은 하지 않는다.
+본문이 상황마다 Read로 열라고 가리키는 하위 파일 가운데 다음 작업의 지시문을 낼 때 여는 파일 하나를
+Read로 열고, 아래를 그 파일에서만 찾는다. 스킬 본문(SKILL.md)에 든 글은 옮기지 않는다.
+본문이 그런 하위 파일을 가리키지 않거나 그 파일에 없으면 그 물음에 "없음"이라고만 답하라.
+"어디서" 줄에 워크트리 문장을 넣어야 하는 조건 가운데 "주 체크아웃이 ... 가 아니거나 깨끗하지 않다"는 조건이 있다.
+그 조건에서 주 체크아웃이 무엇이 아니라고 했는지 괄호 안의 설명 전체를 글자 그대로 옮겨라.
+'''
+expect = ["tidy-checkouts 2의 기준과 같다"]
+source = ".claude/skills/next-session/directive.md"
+skill = "next-session"
+skill_body = "files"
+
+[[arm]]
+name = "워크트리"
+role = "experiment"
+
+[[arm]]
+name = "주-체크아웃"
+role = "control"
+checkout = "../../.."

@@ -2,15 +2,15 @@
 
 `/sync-design-system`의 들이기다. 아티팩트의 웹 편집을 디자인 토큰 CSS(`web/packages/ui/src/styles/theme.css`)와 저장소 파일에 옮기고, 티켓 하나와 PR 하나로 병합한 뒤 올리기로 아티팩트를 코드에 다시 맞춘다. 명령, 작업 폴더, "확인", "찾았을 때", "보내기"는 [SKILL.md](SKILL.md)의 그 절이다.
 
-들이기 하나에 티켓 하나다. 이름은 `NN-web-edit-<slug>`, 브랜치는 `feature/NN-web-edit-<slug>`이고, 번호는 `origin/main`의 `.scratch/design-reverse-sync/issues/`에서 가장 큰 번호의 다음이다(`git fetch origin` 뒤 `git ls-tree --name-only origin/main .scratch/design-reverse-sync/issues/`). 들이기끼리는 `claim`으로 한 번에 하나만 돈다.
+들이기 하나에 티켓 하나다. 이름은 `NN-web-edit-<slug>`, 브랜치는 `feature/NN-web-edit-<slug>`이고, 번호는 `origin/<기준 브랜치>`의 `.scratch/design-reverse-sync/issues/`에서 가장 큰 번호의 다음이다(`git fetch origin` 뒤 `git ls-tree --name-only origin/<기준 브랜치> .scratch/design-reverse-sync/issues/`). 들이기끼리는 `claim`으로 한 번에 하나만 돈다.
 
 ## 1. 자리
 
 확인(`--caller import`)부터 한다. 결정이 `import`나 `inheritImport`면 지금 자리를 가른다.
 
-- **이 들이기의 티켓 브랜치다**(지금 브랜치가 `feature/NN-web-edit-<slug>` 꼴이고, 그 이름의 티켓 파일 `NN-web-edit-<slug>.md`가 `origin/main`의 이 폴더에 없다). 번호와 slug는 그 이름의 것을 쓰고 2로 간다. "먼저 들인다"가 연 세션은 첫 턴에 지시문의 워크트리 문장대로 브랜치를 지시문의 이름으로 이미 바꿨으므로 여기다. 그 이름의 티켓이 `origin/main`에 있으면 병합된 앞 들이기의 브랜치라 아래 "다른 작업의 브랜치"다.
-- **주 체크아웃의 main이다**(`git rev-parse --show-toplevel`이 `git worktree list`의 첫 줄과 같고 `git branch --show-current`가 `main`이다). 번호와 slug를 정하고 `EnterWorktree`(name은 `NN-web-edit-<slug>`)로 새 워크트리에 들어가, [SKILL.md](SKILL.md) "명령과 작업 폴더"의 설치를 친 뒤 `git branch -m feature/NN-web-edit-<slug>`로 브랜치 이름을 바꾼다. 확인부터 다시 한다.
-- **새 워크트리다**(`git rev-list --count origin/main..HEAD`가 0이고 `git status --porcelain`이 비었다). 번호와 slug를 정하고, 설치를 아직 치지 않았으면 쳐서 `git branch -m feature/NN-web-edit-<slug>`. 확인부터 다시 한다.
+- **이 들이기의 티켓 브랜치다**(지금 브랜치가 `feature/NN-web-edit-<slug>` 꼴이고, 그 이름의 티켓 파일 `NN-web-edit-<slug>.md`가 `origin/<기준 브랜치>`의 이 폴더에 없다). 번호와 slug는 그 이름의 것을 쓰고 2로 간다. "먼저 들인다"가 연 세션은 첫 턴에 지시문의 워크트리 문장대로 브랜치를 지시문의 이름으로 이미 바꿨으므로 여기다. 그 이름의 티켓이 `origin/<기준 브랜치>`에 있으면 병합된 앞 들이기의 브랜치라 아래 "다른 작업의 브랜치"다.
+- **주 체크아웃의 루트 브랜치다**(`git rev-parse --show-toplevel`이 `git worktree list`의 첫 줄과 같고 `git branch --show-current`가 루트 브랜치, 곧 `origin/dev`가 있으면 `dev`, 없으면 `main`이다. `tidy-checkouts`). 번호와 slug를 정하고 `EnterWorktree`(name은 `NN-web-edit-<slug>`)로 새 워크트리에 들어가, [SKILL.md](SKILL.md) "명령과 작업 폴더"의 설치를 친 뒤 `git branch -m feature/NN-web-edit-<slug>`로 브랜치 이름을 바꾼다. 확인부터 다시 한다.
+- **새 워크트리다**(`git rev-list --count origin/<기준 브랜치>..HEAD`가 0이고 `git status --porcelain`이 비었다). 번호와 slug를 정하고, 설치를 아직 치지 않았으면 쳐서 `git branch -m feature/NN-web-edit-<slug>`. 확인부터 다시 한다.
 - **다른 작업의 브랜치다.** 브랜치를 바꾸지 않는다. [SKILL.md](SKILL.md)의 "먼저 들인다"로 새 세션을 열고, 지금 세션은 하던 일로 돌아간다.
 
 끝: 지금 브랜치가 이 들이기의 티켓 브랜치이고, 그 브랜치에서 돈 확인의 결정이 `import`나 `inheritImport`다. 새 들이기는 늘 자기 새 브랜치에서 확인부터 한다. 병합된 브랜치에서 이어받지 않는 것도 그래서다(결정표가 그 자리를 `stop`으로 낸다).
@@ -58,7 +58,7 @@
 
 ## 6. PR과 병합
 
-1. **PR을 열기 직전.** `git fetch origin` 뒤 번호를 다시 본다. 같은 번호가 `origin/main`에 먼저 들어왔으면 다음 번호로 옮긴다. 차례는 티켓 파일(`git mv`와 그 안의 번호), 브랜치 이름(`git branch -m`), `claim` 다시 쓰기다. 다시 쓰기는 확인의 `check judge`에 `--branch`로 새 이름이 아니라 `claim`이 든 옛 브랜치를 주고, 그 보고로 3의 `record claim`을 새 브랜치와 새 티켓 경로로 친다. 새 이름을 주면 확인이 자기 `claim`을 남의 것으로 본다. 그러면 더 고친 몫이 없을 때는 `record claim`이 이어받을 기준본을 요구하며 멈추지만, 있을 때는 멈추지 않고 남의 `claim` 이어받기로 가서 기준본이 바뀐다. 브랜치를 바꾼 뒤 `claim`을 다시 쓰기 전에 끊기면, 이어받은 세션의 확인은 옛 이름의 `claim`을 PR 없는 남의 `claim`으로 묻는다. `claim`의 브랜치가 지금 브랜치와 slug가 같고 번호만 다르면 그 틈이라고 함께 알린다. 명세 "자기 `claim`"의 2026-10-22 주석이 드문 틈이라 질문 하나로 받은 자리다.
+1. **PR을 열기 직전.** `git fetch origin` 뒤 번호를 다시 본다. 같은 번호가 `origin/<기준 브랜치>`에 먼저 들어왔으면 다음 번호로 옮긴다. 차례는 티켓 파일(`git mv`와 그 안의 번호), 브랜치 이름(`git branch -m`), `claim` 다시 쓰기다. 다시 쓰기는 확인의 `check judge`에 `--branch`로 새 이름이 아니라 `claim`이 든 옛 브랜치를 주고, 그 보고로 3의 `record claim`을 새 브랜치와 새 티켓 경로로 친다. 새 이름을 주면 확인이 자기 `claim`을 남의 것으로 본다. 그러면 더 고친 몫이 없을 때는 `record claim`이 이어받을 기준본을 요구하며 멈추지만, 있을 때는 멈추지 않고 남의 `claim` 이어받기로 가서 기준본이 바뀐다. 브랜치를 바꾼 뒤 `claim`을 다시 쓰기 전에 끊기면, 이어받은 세션의 확인은 옛 이름의 `claim`을 PR 없는 남의 `claim`으로 묻는다. `claim`의 브랜치가 지금 브랜치와 slug가 같고 번호만 다르면 그 틈이라고 함께 알린다. 명세 "자기 `claim`"의 2026-10-22 주석이 드문 틈이라 질문 하나로 받은 자리다.
 2. 확인을 다시 돌려 `claim.own`이 true인지 본다(옮기지 않았어도 친다). 아니면 PR을 열지 않고 멈춰 그 브랜치를 사람에게 알린다. 그 뒤 `/git-pr`로 연다.
 3. **병합 직전.** 같은 다시 읽기를 한 번 더 한다. 병합은 `next-session`의 병합 절차대로다.
 4. **병합 뒤.** 이어서 [upload.md](upload.md)의 올리기를 한다. 그 올리기가 `claim`을 비운다. 병합과 올리기 사이에도 `claim`이 남아, 병합 전의 코드를 든 다른 세션이 같은 편집을 새 웹 편집으로 보지 않는다.
