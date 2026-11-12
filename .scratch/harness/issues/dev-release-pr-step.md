@@ -33,7 +33,7 @@ CodeRabbit이 `dev-branch-create`의 PR #541 첫 회차에 같은 곳을 Major�
 
 ## 결과
 
-2026-11-12. 사용자에게 보호 설정이 걸린 선택 둘을 물었고(일지 `docs/journal/2026-11-12-1343-dev-release-pr-step.md` "사람의 몫 둘") 답은 (가) 병합 뒤 main을 dev에 되돌려 합친다, (나) 첫 출시를 지금 한 번 한다였다. GitHub 보호 설정은 바꾸지 않았다.
+2026-11-12. 사용자에게 보호 설정이 걸린 선택 둘을 물었고(일지 `docs/journal/2026-11-12-1623-dev-release-pr-step.md` "사람의 몫 둘") 답은 (가) 병합 뒤 main을 dev에 되돌려 합친다, (나) 첫 출시를 지금 한 번 한다였다. GitHub 보호 설정은 바꾸지 않았다.
 
 1. **계기.** `next-session` 결정표에 줄을 더했다. 기능 계획의 `**끝:**` 줄을 적은 커밋이 dev에만 있고(`git log origin/main..origin/dev -G'^\*\*끝:\*\*' -- '.scratch/*/plan.md'`) 열린 출시 PR이 없으면 그 줄을 고른다. 마지막 티켓을 병합한 세션이 보통 그 세션이고 잊어도 다음 병합 뒤의 세션이 같은 상태를 읽는다. 하네스 변경(끝 줄이 없는 harness 티켓)은 계기가 아니다. 명령의 `-G`와 pathspec은 이 저장소의 로그에서 끝 줄을 적은 커밋 넷을 찾았다(`git log origin/main~80..origin/main`, 손으로 봤다).
 2. **전제 확인.** main CI(`gh run list --branch main --workflow ci.yml --limit 1`의 `headSha`가 `origin/main`과 같고 `success`)와 dev가 main을 품었는지(`--is-ancestor`)다. 어긋나면 `출시 보류: <까닭>` 한 줄을 쓰고 원래 줄로 돌아간다. 진행 중인 다른 기능의 조각이 함께 오르는 것은 막지 않고 PR 본문에 알린다(dev의 티켓 PR은 dev CI를, 출시 PR은 거기에 main용 검사를 지난 머리이기 때문이다).
@@ -46,7 +46,7 @@ CodeRabbit이 `dev-branch-create`의 PR #541 첫 회차에 같은 곳을 Major�
 9. **ADR 0043 이력.** 2026-11-12 "출시 PR 뒤에도 main을 dev에 되돌려 합친다"를 더하고 "되돌려 합치기" 항목에 포인터를 달았다. 이 이력은 사용자 승인이 필요하다(`CLAUDE.md` 작업 규약 5). 승인은 병합 전에 받는다.
 10. **보호 JSON 값 시험.** `tests/tools/test_protection_json.py`가 두 파일의 `strict`·`required_linear_history`·삭제와 강제 푸시 금지·`verify`·관리자 우회를 단언한다(`dev-branch-create`의 claude-review Nit). 변이 여섯(`.scratch/harness/probes/protection_json_mutations.toml`: main strict 끄기, dev strict 켜기, main 선형 켜기, dev 삭제 금지 풀기, main·dev 관리자 우회 막기)이 모두 `expect_output` 표지가 있는 채 기대대로 빨강이었다. 변이가 없는 단언은 dev 선형 이력, `allow_force_pushes`, `contexts`다(표 머리에 적었다). GitHub에 적용된 값은 읽지 않는다.
 11. **카나리아.** 셀프 리뷰를 반영한 본문으로 넷을 돌렸다. 새 결정표 줄 `dev_release_pr_step_decision_row.toml` 통과 4(대조군 `4b02bbe29`), 새 출시 PR 절 `dev_release_pr_step_section.toml` 통과 4(대조군 `4b02bbe29`), 되돌려 합치기 줄 `dev_base_next_session_backmerge_row.toml` 통과 4(대조군 `82e7a38fb`), 병합 방법 절 `dev_branch_create_merge_protection.toml` 통과 4(대조군 `82297e614`). `"없음"` 섞임은 모두 0이었다(2026-11-12, 이 PC, claude 2.1.322). `merge.md`를 원천으로 든 기존 명세 열하나 가운데 돌린 것은 `dev_branch_create_merge_protection` 하나이고 나머지 열은 이 티켓이 바꾸지 않은 문단을 묻는 명세라 돌리지 않았다. 새 명세 `dev_release_pr_step_section`까지 돌려 결과 줄을 고친 뒤 `sibling_overlap`의 카나리아 알림은 사라졌다. 이것이 돌리지 않은 열 명세가 통과한다는 뜻은 아니다.
-12. **판 번호.** 헌법 판을 3.0.87에서 3.0.91로 올렸다(PR #544의 `ci-llm-job`이 3.0.88을, 형제 워크트리 하나가 3.0.90을 쓰고 있어 비켰다. `sibling_overlap`이 알렸다. 3.0.89와 3.0.91 사이는 비어 있다).
+12. **판 번호.** 헌법 판을 3.0.87에서 3.0.93으로 올렸다(`ci-llm-job`이 3.0.88과 3.0.92를, `project-pr-skills-dev`가 3.0.90을 쓰고 있어 비켰다. 3.0.89와 3.0.91은 비어 있다. 처음에 3.0.91로 올렸다가 PR #544가 3.0.92로 먼저 병합되어 dev를 합치며 3.0.93으로 비켰다).
 13. **셀프 리뷰 반영.** 두 축이 낸 Major를 고쳤다(일지 `## 셀프 리뷰`): 변이 표지, 전제 확인 1의 `--event push`(`gh run list --branch main --workflow ci.yml --limit 3`에서 #543의 `pull_request` 실행이 첫 줄, push 실행이 둘째 줄이었다), 열린 출시 PR 이어받기와 머리 이동 처리, `ci.yml`과 다른 근거 문장, 결정표 출시 줄의 조건. `merge.md` 출시 PR 절은 카나리아 `dev_release_pr_step_section.toml`이 묻는다.
 
 뒤로 넘기는 것: `tools/hook_push_behind_main.py`가 dev에서도 뒤처진 푸시를 막을지는 여전히 정하지 않았다. ADR 0043의 "잊으면 사라진다" 문장 개정은 사용자 승인으로 따로 한다.

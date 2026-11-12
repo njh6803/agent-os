@@ -100,3 +100,25 @@ open-session을 부른다 2026-11-12T06:16:05Z
 - `/pr-merge` 4단계에 출시 PR 갈래를 더했다. 그 스킬은 핫픽스의 되돌려 합치기만 알고 있어(`SKILL.md` 4단계를 읽은 것이다), 주 체크아웃에서 출시 PR을 `/pr-merge`로 병합하면 되돌려 합치기가 빠질 것으로 본다(코드를 읽은 어림이고 그 스킬을 출시 PR에 돌려 보지 않았다). `merge.md` "출시 PR"의 병합 뒤 1~3을 가리킨다.
 - 그 변경이 `pr_merge_skill_kinds.toml`의 원천을 바꿔 새 `claude -p` 세션으로 카나리아를 다시 돌렸다. 러너(`tools/canary.py --control-commit 4b02bbe29`)가 통과 4, 실패 0, "없음" 섞임 0을 냈고(손으로 돌렸다) 결과 줄을 고쳤다.
 - `sibling_overlap`은 번호 겹침 없음이다(헌법 판 3.0.91. PR #544가 3.0.92를 쥐고 있어 #544가 먼저 병합되면 README 판 줄이 충돌한다. 그때 3.0.93으로 비킨다).
+
+## 인계받은 세션: PR을 연 뒤와 둘째 인계
+
+- 푸시한 뒤 `gh pr create --base dev`로 PR #546을 열었다. 푸시한 머리는 `96ac06fb5af8f0205d16396a66f741d4537c2a66`이고 `gh pr view 546`의 `mergeStateStatus`는 연 직후 `BLOCKED`였다(검사가 아직 도는 중으로 본다. 어림이다). 첫 `@coderabbitai review` 코멘트는 아직 남기지 않았다.
+- 마지막 커밋의 pre-commit에서 pytest 하나(`tests/tools/test_hook_edit_during_commit.py`의 실제 프로세스 시험)가 한 번 실패했다. 실패 출력은 `images` 집합에 전체 경로가 아닌 `git.exe`가 섞였다는 단언이었다(러너 출력을 읽었다). 같은 파일을 단독으로 치면 52개 통과였고(손으로 봤다) 같은 커밋을 다시 시도하자 전체가 통과했다. 다른 세션이 띄운 `git.exe`가 그 순간 경로를 읽지 못한 경합이라는 것은 어림이고 재현하지 못했다. 첫 실패라 `diagnosing-bugs`는 쓰지 않았다. 또 나면 그때 센다.
+- 이 세션도 `PR 연 뒤` 경계에서 인계 계기(컨텍스트 213k)를 받았고 `handoff.md` 1의 다섯 예외에 들지 않아 둘째로 인계한다. 앞 세션의 이어받을 상태가 `인계: 커밋 뒤`로 경계가 달라 "같은 경계" 예외도 아니다.
+- 사용자에게 넘길 질문 하나가 최종 보고에 남아 있다. `handoff.md`에 여섯째 예외("계기를 받은 직후 압축이 일어나 문턱 아래로 내려갔다")를 더할지다(앞 회고의 넘김). 이 세션의 인계가 오히려 그 예외가 있었다면 막을 수 있던 인계인지는 판단하지 못했다.
+- 사용자 프롬프트 원문은 위 첫 메시지와 같다. 이 세션이 받은 첫 메시지도 `/implement .scratch/harness/issues/dev-release-pr-step.md`를 읽어 따르라는 지시문이었다.
+- 남은 일: 봇 회차(`merge.md` 2), ADR 0043 이력의 사용자 승인(병합 전, 승인 없이 병합하지 않는다), 병합(`merge.md` "워크트리에서 병합할 때" 1~5), 일지 "다음" 절 갱신과 회고. 일지의 이 절과 위 절은 커밋하지 않은 수정이다.
+
+인계: PR 연 뒤. 이 세션의 제목은 `chore/dev-release-pr-step (인계함)`으로 바꿨고 지시문 파일은 세션 스크래치패드의 handoff-directive2.txt다. 백그라운드 작업은 없다. 워크트리는 잠기지 않아 풀 것이 없었다(`git worktree list`에 `locked`가 없었다).
+
+open-session을 부른다 2026-11-12T07:08:30Z
+
+## 인계받은 세션: 봇 회차 전 충돌 해결
+
+시작 프롬프트는 `/implement .scratch/harness/issues/dev-release-pr-step.md`였고 범위는 PR과 병합까지다. 보호 설정은 바꾸지 않았다. 세션 제목을 `chore/dev-release-pr-step`으로 바꾸고 `EnterWorktree`로 이 워크트리에 들어왔다.
+
+- 첫 `@coderabbitai review` 코멘트를 남겼다(머리 `96ac06fb5`). `wait_ci`가 CodeRabbit `Review rate limited`와 충돌(`CONFLICTING`)로 끝났다. 한도에 걸려 리뷰가 없던 푸시라 회차로 세지 않는다.
+- 충돌 원인은 PR #544(`ci-llm-job`)가 먼저 병합되며 헌법 판 3.0.92를 가져간 것이다(앞 세션 일지가 예고한 일). `origin/dev`를 합쳐 `docs/constitution/README.md`의 판 줄만 충돌했고 3.0.93으로 비켰다. 이 브랜치가 비워 둔 판 3.0.88·3.0.89·3.0.91을 알리던 두 문장은 지웠다(앞 세션이 3.0.88·3.0.89 문장을 지운 선례를 따랐다). 티켓 결과 12도 3.0.93으로 고쳤다. `sibling_overlap`은 번호 겹침 없음이었다.
+- `e2e-portal`이 `EADDRINUSE 127.0.0.1:39493`로 빨갰다(잡 로그의 끝부분을 읽었다). 이 PR은 문서·도구·테스트만 바꾸므로 러너의 포트 충돌로 본다. 어림이고, 실행이 끝나면 `gh run rerun --failed`로 확인한다.
+- 일지 이름이 먼저 병합된 `ci-llm-job`의 일지와 같은 분(`2026-11-12-1343`)이라 `tests/test_journal_names.py`가 빨갰다(pre-commit의 pytest 출력을 읽었다). 늦게 병합되는 이쪽이 `2026-11-12-1623`으로 바꿨고 티켓의 인용 한 곳도 고쳤다. 시험은 단독으로 13개 통과했다(손으로 봤다).
