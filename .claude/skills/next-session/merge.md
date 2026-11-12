@@ -28,7 +28,7 @@ next-session `SKILL.md` 순서 1의 본문이다. PR을 연 세션과 인계로 
 
 티켓 PR과 핫픽스는 squash로 티켓 하나가 커밋 하나인 이력을 지킨다. 출시 PR과 되돌려 합치기 PR을 squash하면 두 브랜치에 같은 변경이 서로 다른 커밋으로 남아, 다음 합치기가 같은 변경을 다시 싣고 충돌한다. 그래서 둘은 merge 커밋이다.
 
-출시 PR과 되돌려 합치기 PR은 보호 설정에 걸릴 수 있어, 걸리면 병합하지 않고 사용자에게 넘긴다. main의 보호에 `required_linear_history`가 켜져 있어(`tools/protection.json`) 풀기 전에는 merge 커밋을 거절한다. 풀지, dev에 어떤 보호를 거는지는 `dev-branch-create`가 사용자와 정한다. 출시 PR과 되돌려 합치기 PR의 머리(dev, main)를 저장소의 자동 삭제(`delete_branch_on_merge`)가 지우는지는 dev가 보호되기 전에는 재 보지 않았다. 그 티켓이 보호를 세우기 전에는 이 두 PR을 병합하지 않는다.
+출시 PR과 되돌려 합치기 PR은 보호 설정에 걸리면 병합하지 않고 사용자에게 넘긴다. 보호 설정은 main이 `tools/protection.json`, dev가 `tools/protection-dev.json`이고 2026-11-12에 사용자가 정했다(`dev-branch-create`). 두 브랜치 모두 선형 이력을 강제하지 않아 merge 커밋을 받는다. dev는 strict가 아니라 머리가 main인 되돌려 합치기 PR이 뒤처진 것으로 막히지 않는다. main은 strict라 출시 PR은 dev가 main의 머리를 품어야 병합되는데, 앞 출시 PR의 merge 커밋은 dev에 없으므로 둘째 출시 PR부터 `BEHIND`가 날 것으로 본다(커밋 관계로 따진 어림이고 출시 PR로 재 보지 않았다. 다루는 길은 `dev-release-pr-step`이 정한다). 저장소의 자동 삭제(`delete_branch_on_merge`)가 머리(dev, main)를 지우지 않는다고 본다. GitHub 자동 삭제 문서(웹 요약)는 보호 규칙이 자동 삭제를 막을 수 있다고만 하고 어느 설정이 막는지는 말하지 않으며, 두 파일은 모두 삭제를 막는다(`allow_deletions: false`). 출시 PR로 재 보지 않았다.
 
 끝: PR이 병합됐고, 뒤로 넘긴 봇 지적의 일이 병합된 일지 "다음"이나 다음 지시문의 "이어받을 상태"에 있고, 뒷단계가 남아 있지 않다. 핫픽스였으면 "되돌려 합치기"의 끝 줄까지 찼다.
 
@@ -64,8 +64,8 @@ next-session `SKILL.md` 순서 1의 본문이다. PR을 연 세션과 인계로 
 3. **기다린다.** 위 "병합 전" 2의 대기대로 `tools/wait_ci.py`를 백그라운드로 띄우고 턴을 끝낸다. 이 PR은 봇 회차를 하지 않아 CodeRabbit을 요청하지 않으므로 기본 기대 이름으로는 기다릴 수 없다고 끝난다. 그래서 `uv run python tools/wait_ci.py <번호> --head <main의 SHA> --expect verify`로 띄운다. `--head`를 빼면 이 세션의 로컬 HEAD를 기다릴 헤드로 읽어 어긋난다. `<main의 SHA>`는 `git rev-parse origin/main`이다. 필수 검사 `verify`가 초록일 때 4로 간다.
 4. **병합한다.** `gh pr view <번호> --json mergeable,mergeStateStatus,headRefOid`로 보고 `gh pr merge <번호> --merge --match-head-commit <headRefOid>`를 친다. 그새 main이 앞서 이 명령이 머리 SHA 불일치로 거절되면 새 `headRefOid`로 3부터 다시 한다. `--delete-branch`는 쓰지 않는다. 머리가 main이다. 아래 세 경우에는 병합하지 않고 사용자에게 넘긴다. 셋째는 위 "병합 방법"이 적은 보호 설정이다.
    - `mergeable`이 `CONFLICTING`이다. 핫픽스와 dev의 변경이 같은 곳을 고쳤으니 어느 쪽을 남길지 사람이 정한다.
-   - `mergeStateStatus`가 `BEHIND`다. 보통 base(dev)에 "최신 브랜치만 병합"(strict) 보호가 걸렸을 때 나온다(이 저장소에서 본 적은 없다). 머리가 main이라 dev에 늘 뒤처져 보인다. `gh pr update-branch`나 웹의 "Update branch"를 누르지 않는다. 그 동작은 dev를 main에 합친다. 관리자 우회로 병합할지는 사용자가 정한다.
-   - `gh pr merge`가 보호 설정(`required_linear_history`로 merge 커밋을 거절, 필수 검사 미충족 등)에 거절된다. 풀지는 `dev-branch-create`가 사용자와 정한다.
+   - `mergeStateStatus`가 `BEHIND`다. base(dev)에 "최신 브랜치만 병합"(strict) 보호가 걸렸을 때 나온다(이 저장소에서 본 적은 없다). dev는 strict가 아니므로(`tools/protection-dev.json`) 나오면 보호 설정이 바뀐 것이다. 머리가 main이라 dev에 늘 뒤처져 보인다. `gh pr update-branch`나 웹의 "Update branch"를 누르지 않는다. 그 동작은 dev를 main에 합친다. 관리자 우회로 병합할지는 사용자가 정한다.
+   - `gh pr merge`가 보호 설정(필수 검사 미충족 등)에 거절된다. 거절 문구를 사용자에게 넘긴다.
 5. **확인한다.** `git fetch origin` 뒤 `git diff --quiet origin/dev...origin/main`이 0이다.
 
-끝: dev가 아직 없거나(1), 위 5의 판정이 0이거나, 사용자에게 넘긴 사유(`CONFLICTING`, `BEHIND`)를 보고와 일지에 적었다. 사용자에게 넘긴 채 끝났으면 열린 PR(`gh pr list --base dev --head main --state open`)이 남아 diff가 계속 1이다. 결정표 첫 줄은 이 열린 PR이 있으면 고르지 않는다.
+끝: dev가 아직 없거나(1), 위 5의 판정이 0이거나, 사용자에게 넘긴 사유(`CONFLICTING`, `BEHIND`, 보호 설정의 거절 문구)를 보고와 일지에 적었다. 사용자에게 넘긴 채 끝났으면 열린 PR(`gh pr list --base dev --head main --state open`)이 남아 diff가 계속 1이다. 결정표 첫 줄은 이 열린 PR이 있으면 고르지 않는다.

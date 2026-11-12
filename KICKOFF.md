@@ -368,7 +368,7 @@ git add -A && SKIP=check-constitution-version git commit -m "chore: 하네스 �
 gh repo create <owner>/<repo> --<공개 여부> --source=. --push
 ```
 
-main을 보호한다. 필수 상태 검사 `verify`(CI 잡 이름), strict, 선형 이력, 강제 푸시·삭제 금지. PR 필수는 두지 않는다 — main에 닿는 커밋을 거르는 것은 필수 검사다. 혼자면 관리자 우회를 허용해 두고 팀원이 생기면 끈다. 관리자 우회는 사람의 토큰으로 도는 에이전트에게도 열려 있고(`gh pr merge --admin`, main 직접 푸시), 로컬 훅은 커밋만 막는다(GitHub 문서상의 동작이고 agent-os는 재지 않았다). 그래서 병합은 체크를 먼저 보는 `/git-pr-merge`로만 한다(워크트리에서는 그 스킬이 main을 가로채므로, 같은 체크를 본 뒤 `--delete-branch` 없이 병합하는 next-session merge.md의 "워크트리에서 병합할 때" 길로). 팀이면 리뷰 승인 필수와 CODEOWNERS를 첫날에 더한다. 요청 본문은 7단계에서 복사한 `tools/protection.json`이다(agent-os의 실제 설정을 2026-09-28에 `gh api repos/<owner>/<repo>/branches/main/protection`으로 내보낸 것. 원격이 바뀌면 같은 명령으로 다시 뽑는다).
+main을 보호한다. 필수 상태 검사 `verify`(CI 잡 이름), strict, 강제 푸시·삭제 금지. 선형 이력은 강제하지 않는다. agent-os는 처음에 켰다가, dev 전환 뒤 출시 PR(dev→main)을 merge 커밋으로 받으려고 2026-11-12에 껐다(agent-os ADR 0043, harness 티켓 `dev-branch-create`). PR 필수는 두지 않는다 — main에 닿는 커밋을 거르는 것은 필수 검사다. 혼자면 관리자 우회를 허용해 두고 팀원이 생기면 끈다. 관리자 우회는 사람의 토큰으로 도는 에이전트에게도 열려 있고(`gh pr merge --admin`, main 직접 푸시), 로컬 훅은 커밋만 막는다(GitHub 문서상의 동작이고 agent-os는 재지 않았다). 그래서 병합은 체크를 먼저 보는 `/git-pr-merge`로만 한다(워크트리에서는 그 스킬이 main을 가로채므로, 같은 체크를 본 뒤 `--delete-branch` 없이 병합하는 next-session merge.md의 "워크트리에서 병합할 때" 길로). 팀이면 리뷰 승인 필수와 CODEOWNERS를 첫날에 더한다. 요청 본문은 7단계에서 복사한 `tools/protection.json`이다(agent-os의 실제 설정을 2026-09-28에 `gh api repos/<owner>/<repo>/branches/main/protection`으로 내보낸 것이고, 2026-11-12에 선형 이력을 껐다. 원격이 바뀌면 같은 명령으로 다시 뽑는다).
 
 사람 몫(결정): 혼자인지 팀인지. 팀이면 리뷰 승인 필수와 CODEOWNERS를 첫날에 더하고 관리자 우회를 끈다.
 
