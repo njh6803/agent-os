@@ -225,12 +225,12 @@ expect_output = ["AssertionError: 막히면 안 된다"]
 
 [[mutation.edit]]
 file = "tools/check_ticket.py"
-old = '''    if kind == "chore":
+old = '''    if kind in _HARNESS_KINDS:
         return (kind, stem) if _HARNESS_STEM.fullmatch(stem) else None
     number, dash, slug = stem.partition("-")
     if len(number) != 2 or'''
 new = '''    number, dash, slug = stem.partition("-")
-    if len(number) != {"feature": 2, "chore": 3}[kind] or'''
+    if len(number) != {"feature": 2, "chore": 3, "hotfix": 3}[kind] or'''
 
 [[mutation]]
 name = "symbolic-ref 의 git 실패를 분리 HEAD 로 읽는다"

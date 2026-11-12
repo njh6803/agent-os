@@ -324,6 +324,63 @@ def test_chore_브랜치의_slug가_티켓을_빠뜨리면_막고_번호_없는_
     assert CONVENTION in out
 
 
+@pytest.mark.parametrize(
+    ("브랜치", "기대"),
+    [
+        ("hotfix/login-crash", ("hotfix", "login-crash")),
+        ("chore/login-crash", ("chore", "login-crash")),
+        ("feature/02-thing", ("feature", "02-thing")),
+        ("hotfix/Foo", None),
+        ("hotfix/a_b", None),
+        ("hotfix/", None),
+        ("hotfix/a/b", None),
+        ("hotfixes/x", None),
+    ],
+)
+def test_ticket_stem은_hotfix_브랜치를_harness_티켓_모양으로_읽는다(
+    브랜치: str, 기대: tuple[str, str] | None
+) -> None:
+    assert check_ticket.ticket_stem(브랜치) == 기대
+
+
+def test_hotfix_브랜치가_그_harness_티켓을_실으면_지난다(저장소: Repo) -> None:
+    저장소.git("switch", "-q", "-c", "hotfix/login-crash")
+    _지났다(
+        저장소.stage_commit(
+            {".scratch/harness/issues/login-crash.md": "# login-crash\n", "tools/b.py": "B = 1\n"}
+        )
+    )
+
+
+def test_hotfix_브랜치가_티켓을_빠뜨리면_막고_접두를_지키라고_든다(저장소: Repo) -> None:
+    """접두를 `chore/` 로 바꾸면 기준 브랜치가 main 에서 dev 로 바뀐다. 안내는 hotfix 접두를
+    지킨다."""
+    저장소.git("switch", "-q", "-c", "hotfix/login-crash")
+    out = _막혔다(저장소.stage_commit({"tools/b.py": "B = 1\n"}))
+    assert ".scratch/harness/issues/login-crash.md" in out
+    assert "hotfix/<slug>" in out and "main 에서 dev 로" in out
+    assert "feature/NN-<slug>" not in out and "chore/<slug>" not in out
+    # hotfix 브랜치는 기능 폴더의 티켓을 가리키지 못한다. 기능 코드를 고치는 핫픽스도 harness 자리다
+    assert ".scratch/<slug>/issues/NN-<slug>.md" not in out
+    assert BRANCH_COMMAND in out
+
+
+def test_hotfix_브랜치가_다른_이름의_티켓을_실으면_막는다(저장소: Repo) -> None:
+    저장소.git("switch", "-q", "-c", "hotfix/login-crash")
+    _막혔다(
+        저장소.stage_commit(
+            {".scratch/harness/issues/other-thing.md": "# other\n", "tools/b.py": "B = 1\n"}
+        )
+    )
+
+
+def test_chore_브랜치의_안내는_hotfix를_권하지_않는다(저장소: Repo) -> None:
+    저장소.git("switch", "-q", "-c", "chore/ci-python-runner-pin")
+    out = _막혔다(저장소.stage_commit({"tools/b.py": "B = 1\n"}))
+    assert "feature/NN-<slug> 나 chore/<slug>" in out
+    assert "hotfix/<slug>" not in out
+
+
 @pytest.mark.parametrize("이름", ["Foo", "09-x", "a_b"])
 def test_이름_규칙에_맞지_않는_chore_브랜치는_같은_이름의_파일도_티켓으로_세지_않는다(
     저장소: Repo, 이름: str
