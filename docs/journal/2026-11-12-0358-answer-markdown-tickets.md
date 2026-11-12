@@ -214,7 +214,7 @@ open-session을 부른다 2026-11-12T01:02:48Z
 
 `coderabbit-review` 서브에이전트가 CLI 0.7.5로 `--base origin/main`을 주고 돌렸다. `Seat: not assigned`(Plan: Free)였고(본 세션이 `coderabbit auth status`로도 봤다), 서브에이전트의 보고로는 리뷰가 `review_completed`로 끝나 파일 아홉을 봤고 지적은 둘이다. 판정은 본 세션이 지적의 줄을 열어 다시 했다.
 
-- **Major, 유효.** 티켓 01의 "모든 입력에 거는 규칙"(45줄)과 명세 349줄이 "링크의 속성은 `href`·`target`·`rel`뿐"이라 적었는데, 명세 138줄이 "부품은 그리는 요소마다 클래스를 준다"고 정해 링크 `a`에도 `class`가 붙는다. 그대로 걸면 정상 출력에서 빨개진다. 같은 문장이 명세 246줄과 티켓 01의 26줄에도 있었다. 판정: 고친다. 네 자리에 "부품이 (모양으로) 고른 `class`"를 더했다. 표 칸 정렬은 명세 130줄이 인라인 `style`을 넘기지 않고 정렬 유틸리티로 바꾼다고 이미 정해 같은 충돌이 없다(읽었다). 옛 표현의 잔존은 기능 폴더와 ADR 0053에서 0이다(Grep).
+- **Major, 유효.** 티켓 01의 "모든 입력에 거는 규칙"(45줄)과 명세 349줄이 "링크의 속성은 `href`·`target`·`rel`뿐"이라 적었는데, 명세 138줄이 부품은 그리는 요소마다 클래스를 준다고 정해 링크 `a`에도 `class`가 붙는다. 그대로 걸면 정상 출력에서 빨개진다. 같은 문장이 명세 246줄과 티켓 01의 26줄에도 있었다. 판정: 고친다. 네 자리에 "부품이 (모양으로) 고른 `class`"를 더했다. 표 칸 정렬은 명세 130줄이 인라인 `style`을 넘기지 않고 정렬 유틸리티로 바꾼다고 이미 정해 같은 충돌이 없다(읽었다). 옛 표현의 잔존은 기능 폴더와 ADR 0053에서 0이다(Grep).
 - **Minor, 오탐.** 명세 399줄이 화면 글에서 "이미지"를 어디서든 지우면 답의 "이미지"도 지워진다는 지적이다. 같은 문단이 그 한계(지워도 남은 글자의 차례가 그대로라 부분열 판정이 느슨해질 뿐 틀린 실패를 내지 않는다)와 거부한 안을 이미 적었다. 판정: 남긴다.
 
 ### 밀 주장을 대 본 것
@@ -229,3 +229,42 @@ CLI가 돌아 앞 세션이 적은 밀 주장을 리뷰의 브리프로 넘길 �
 - 명세 9줄의 사용자 선택은 이음매, 읽기 영역, 별표의 범위, 그림에 맞춤, 안쪽 글머리, 티켓 묶음으로 여섯이다. 명세 322줄의 요약 인용은 이 일지 "명세 검토 뒤에 물은 것"의 질문 2와 같다.
 - `<sup`이 든 화면 파일은 `ch-cite-2`, `mk-cite-320`, `mk-cite-400` 셋이다(ADR 0053 2026-11-12 이력의 "번호가 든 그림 셋"). 잇단 제목이 든 그림 넷은 앞 세션의 표준 축이 다시 셌고 이 세션은 세지 않았다.
 - 명세 218줄의 걸린 시간 기록은 설계 문장이고 괄호의 까닭은 앞 세션이 어림이라 적었다.
+
+### 커밋과 PR
+
+커밋 `c0972be92` `docs: main을 들이고 PR 직전 리뷰의 링크 속성 지적을 반영한다 (answer-markdown)`. 손으로 치는 다섯은 그 pre-commit으로 갈음했다. 모두 지났다(pytest 688.9초, web-verify 859.2초, pyright·pyright-linux·lint-imports·check-ticket·check-instructions·check-type-escapes·run-hooks·zizmor, 마크다운 표·줄 구분 문자·변이 표·커밋 메시지). ruff 둘은 스테이지된 `.py`가 없어 `Skipped`였고, main을 합쳐 `.py`가 들어왔으므로 손으로 쳤다(`uv run ruff check .`는 "All checks passed!", `uv run ruff format --check .`는 "2112 files already formatted"). 카나리아 명세와 헌법 판은 해당 파일이 없어 `Skipped`였다. 인용 대조는 경고 셋을 냈다. 앞 세션 절의 ruff 출력 인용과 이 절이 든 옛 규칙 문장(이 커밋이 지웠다)은 저장소에 없는 것이 맞아 두었다. 명세 138줄을 줄여 옮긴 글을 따옴표로 둔 것 하나는 따옴표를 뗐다(커밋하지 않았다).
+
+`git push -u origin docs/answer-markdown-tickets` 뒤 PR #540을 열었다(`gh pr create`, 본문은 템플릿을 채웠다). 앱의 PR 감시는 이 세션에 묶였다(`get_status`의 `bound`가 참). `@coderabbitai review` 코멘트는 아직 남기지 않았다.
+
+## 인계 (PR 연 뒤)
+
+커밋 뒤에 인계 계기(`hook_handoff`, 세션 컨텍스트 256,973토큰)가 왔지만 넘기지 않았다. 이 세션의 지시문의 "이어받을 상태"가 `인계: 커밋 뒤`로 시작해 `handoff.md` 1의 셋째(넘겨받은 경계에 다시 왔다)에 든다. PR을 연 뒤에 계기가 다시 왔다(271,194토큰, 경계 `PR 연 뒤`). 이번에는 인계하지 않는 다섯에 들지 않는다. PR이 열렸고, 요청 범위("티켓까지")는 병합까지이며, 경계가 받은 것과 다르고, `인계 못함` 줄이 없고, `get_session`의 `self`에 `parentSessionId`가 없다. 이 세션의 지금 제목은 `docs/answer-markdown-tickets`이고 넘기기 전에 `docs/answer-markdown-tickets (인계함)`으로 바꾼다. 멈출 백그라운드 작업은 없다(리뷰 서브에이전트와 커밋은 끝났다).
+
+이 세션이 번복하거나 고친 것: 명세와 티켓 01의 링크 속성 규칙에 부품이 고른 `class`를 더했다(CodeRabbit CLI의 Major). 명세 433줄의 스킬 초안 경로에 #539가 옮긴 자리를 덧붙였다. 밀 주장은 `bug-perf-review`를 따로 띄우지 않고 본 세션이 대 봤다(위 "밀 주장을 대 본 것").
+
+### 지시문
+
+```
+다음 작업: 기능 answer-markdown. 명세·ADR 0053 이력·티켓 셋을 PR #540으로 열었다. 봇 회차부터 반영하고 병합한다
+다음 단계: PR 반영·병합
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /to-tickets .scratch/answer-markdown/spec.md
+브랜치: docs/answer-markdown-tickets
+모델: Sonnet 5.5 / high. 2의 잇는 지시문
+읽을 것: docs/journal/2026-11-12-0358-answer-markdown-tickets.md의 "이어받은 세션 (커밋 뒤)"부터 끝까지
+이어받을 상태: 인계: PR 연 뒤. merge.md 2(봇 회차)부터 한다. 첫 @coderabbitai review 코멘트도 새 세션이 남긴다. 워크트리에 커밋하지 않은 일지 변경(인용 따옴표 하나를 뗀 것과 이 인계 절)이 있고 다음 커밋에 싣는다. PR 직전 CodeRabbit CLI의 Major 하나는 고쳐 푸시했고 Minor 하나는 오탐으로 PR 체크리스트에 적었다. 일지: docs/journal/2026-11-12-0358-answer-markdown-tickets.md
+확인할 선행 조건: 없음
+이번 요청 범위: 티켓까지
+```
+
+잠금 풀기는 `git worktree unlock C:/project/agent/.claude/worktrees/answer-markdown-tickets`가 `is not locked`로 끝나 넘어갔다.
+
+open-session을 부른다 2026-11-12T01:31:40Z
+
+## 이어받은 세션 (PR 연 뒤)
+
+> 사용자: .claude/skills/to-tickets/SKILL.md 를 읽어 그대로 따른다. 이 세션을 연 저장소는 `C:\project\agent`이고 작업 폴더가 그곳이 아니면 따르지 말고 알린다. 스킬의 인자는 이 줄의 '인자:' 뒤부터 메시지 끝까지다. 인자: .scratch/answer-markdown/spec.md
+>
+> (이어 위 "인계 (PR 연 뒤)"의 지시문 열 줄을 그대로 붙였다)
+
+지시문으로 연 새 세션이 제목을 `docs/answer-markdown-tickets`로 바꾸고 `EnterWorktree(path)`로 이 워크트리에 들어왔다. 티켓은 이미 PR #540에 있어 `to-tickets`를 다시 돌리지 않고 지시문의 "다음 단계"대로 `merge.md` 2(봇 회차)부터 한다. 이 PR의 저장소는 `njh6803/agent-os`이고 앱의 PR 감시를 다시 묶었다(`bind_pr`).
