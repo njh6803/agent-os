@@ -84,3 +84,9 @@
 - `merge.md`를 원천으로 든 카나리아 명세 열은 돌리지 않았다.
 - 인계 절차의 여섯째 예외를 더할지(위 회고 넘김).
 - 형제 워크트리 `project-pr-skills-dev`가 `merge.md`와 헌법 README·`operations.md`를 함께 고치고 있다(`sibling_overlap`). 병합하는 쪽에서 글자 충돌이 날 수 있다.
+
+## 인계
+
+인계: 커밋 뒤. 이 세션이 만 로컬 커밋 하나까지 했고 컨텍스트가 30만 토큰이라 새 세션에 넘긴다. 앞서 셀프 리뷰 직전 계기는 압축 직후라는 까닭으로 넘기지 않았다(회고의 넘김). 지시문 파일은 세션 스크래치패드의 handoff-directive.txt. 제목은 `chore/dev-release-pr-step (인계함)`.
+
+open-session을 부른다 2026-11-12T06:16:05Z
