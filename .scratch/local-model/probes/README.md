@@ -24,7 +24,7 @@ uv run python .scratch/local-model/probes/check_adapter_types.py <환경 루트>
 
 - PR 봇 회차에서 표지 셋을 좁혔다(결과를 본 뒤가 아니라 봇의 지적 때문이다). `guard_candidate_key_rotation`은 지운 뒤의 호출이 요청 없이 변수 이름과 "가 없다"가 든 예외로 끝나야 측정이다. `guard_candidate_success`는 둘째 호출도 도구 호출 하나를 돌려받아야 측정이다. `candidate_connections_after_failures`는 401·500·JSON 아님 갈래의 실행이 그 갈래의 예외 글(`(HTTP 401)`, `(HTTP 500)`, `(ValueError)`와 "Unexpected response type")이 든 예외로 끝나야 기대한 대로 끝난 것으로 센다. 좁힌 뒤 108 사례 전체는 측정 108회차, 측정 아님 0회차였고 이 셋의 결과 문구는 좁히기 전과 같았다(쟀다, `.scratch/local-model/probes/openai_compat.py`).
 
-- 리눅스는 Docker의 컨테이너로 돈다. `linux_lifetime.sh`가 컨테이너 안에서 위 환경과 같은 판(저장소 락의 런타임 의존 위에 `langchain-openai==1.6.2`)을 깔고 `openai_compat.py`를 돈다. 저장소 루트(Git Bash)에서 출력 폴더를 만든 뒤 아래처럼 친다. 사례 이름을 빼면 108 사례 전부다. 출력 폴더에 화면 출력(`stdout.txt`), 사례마다의 JSON 줄(`lifetime.jsonl`), 프로브의 종료 코드(`exit.txt`)가 생긴다. 셀프 리뷰가 이 명령 그대로 수명 사례 아홉을 돌렸다(아래 12).
+- 리눅스는 Docker의 컨테이너로 돈다. `linux_lifetime.sh`가 컨테이너 안에서 위 환경과 같은 판(저장소 락의 런타임 의존 위에 `langchain-openai==1.6.2`)을 깔고 `openai_compat.py`를 돈다. 저장소 루트(Git Bash)에서 출력 폴더를 만든 뒤 아래처럼 친다. 사례 이름을 빼면 108 사례 전부다. 출력 폴더에 화면 출력(`stdout.txt`), 사례마다의 JSON 줄(`lifetime.jsonl`), 프로브의 종료 코드(`exit.txt`)가 생기고, 스크립트도 그 종료 코드로 끝나 `docker run`의 종료 코드가 같다. 셀프 리뷰와 PR 직전 리뷰가 이 명령으로 수명 사례 아홉을 돌렸다(아래 12).
 
 ```sh
 MSYS_NO_PATHCONV=1 docker run --rm -v "$(pwd -W):/repo:ro" -v "<출력 폴더>:/out" python:3.12.10-slim-bookworm sh /repo/.scratch/local-model/probes/linux_lifetime.sh runs_in_one_loop candidate_connections_after_failures calls_on_one_model candidate_released_after_loop_closed keepalive_released_after_loop_closed keepalive_released_inside_loop two_loops_same_url two_loops_own_client two_loops_candidate
@@ -175,7 +175,7 @@ core는 실행을 준비할 때마다 모델을 만들고 실행이 끝나면 �
 
 ### 12. 리눅스의 이벤트 루프 — `linux_lifetime.sh` (2026-11-12 명세 검토와 셀프 리뷰)
 
-위 10의 수명 사례 아홉을 Docker의 리눅스 컨테이너(이미지 `python:3.12.10-slim-bookworm`, WSL2 커널 6.18.58.1, glibc 2.36)에서 돌렸다. 판은 Windows의 실행과 같다(첫 줄의 판. langchain-openai 1.6.2, openai 3.49.0, langchain-core 1.6.3, httpx2 2.13.0). 명세 검토가 세션 스크래치패드의 같은 스크립트로 한 번 손으로 돌렸고, 셀프 리뷰가 그 스크립트를 이 폴더에 옮겨 "돌리는 법"의 명령으로 다시 돌려 사례마다 같은 결과 문구를 얻었다(쟀다, `probes/linux_lifetime.sh`. 측정 9회차, 측정 아님 0회차, 프로브의 종료 코드 0). 리눅스 컨테이너 하나에서 한 번씩 돈 값이고 CI의 ubuntu 러너에서는 돌리지 않았다.
+위 10의 수명 사례 아홉을 Docker의 리눅스 컨테이너(이미지 `python:3.12.10-slim-bookworm`, WSL2 커널 6.18.58.1, glibc 2.36)에서 돌렸다. 판은 Windows의 실행과 같다(첫 줄의 판. langchain-openai 1.6.2, openai 3.49.0, langchain-core 1.6.3, httpx2 2.13.0). 명세 검토가 세션 스크래치패드의 같은 스크립트로 한 번 손으로 돌렸고, 셀프 리뷰가 그 스크립트를 이 폴더에 옮겨 "돌리는 법"의 명령으로 다시 돌려 사례마다 같은 결과 문구를 얻었다(쟀다, `probes/linux_lifetime.sh`. 측정 9회차, 측정 아님 0회차, 프로브의 종료 코드 0). PR 직전 리뷰가 스크립트 끝을 프로브의 종료 코드로 끝나게 고친 뒤 같은 명령으로(저장소 자리에는 `$(pwd -W)`가 내는 것과 같은 절대 경로를 적었다) 한 번 더 돌려 사례마다 같은 결과 문구를 얻었다(측정 9회차, 측정 아님 0회차, `docker run`의 종료 코드 0). 같은 이미지의 컨테이너에서 세 번 돈 값이고 CI의 ubuntu 러너에서는 돌리지 않았다.
 
 - **후보는 Windows와 같다.** 놓인 모델 5개 중 5, 401 3개 중 3, 500 9개 중 9, JSON 아님 3개 중 3, 기한에 끊긴 호출 3개 중 3, 쥔 모델을 네 번 부른 뒤 놓기 전 4개 중 4가 닫혀 있었다. 루프가 닫힌 뒤에 놓아도 unraisable과 경고가 0건이고, 둘째 루프도 됐다.
 - **대조인 기본값 클라이언트는 Windows와 다르다.** 놓인 모델 5개 중 5가 닫혔고(Windows 0), 401로 끝난 호출은 3개 중 2가 닫혔고(Windows 0), 쥔 모델은 놓기 전 1개 중 0(Windows와 같다), 놓은 뒤 1개 중 1(Windows 0)이었다. 루프가 돌 때 놓으면 경고가 1건이었다(Windows 0건). 그래서 놓인 모델의 셈은 리눅스에서 후보와 기본값을 가르지 못하고, 401의 셈은 하나 차이(3개 중 3과 3개 중 2)로만 갈렸다. 두 실행에서 모두 크게 가른 것은 쥔 모델의 놓기 전 셈이다(후보 4개 중 4, 기본값 1개 중 0). 기본값이 리눅스에서 놓은 뒤 닫히는 까닭(루프의 종류인지 쓰레기 수거의 때인지)은 가르는 갈래를 넣지 않아 모른다.
