@@ -7,11 +7,15 @@
 // - `LLM_ENV` 가 `1` 이면 설정이 프로젝트 `llm` 을 세우고 준비가 저장소의 플러그인 루트를 함께 옮긴다.
 // - `TRACES_ENV` 를 주면 serve 가 트레이스를 거기 남긴다. 없으면 준비의 작업 폴더이고 끝에 지운다.
 // 어느 쪽이든 serve 가 트레이스를 남긴 폴더는 `TRACES_DIR_ENV` 로 시험에 넘어간다(`traces()`).
+// - `DOC_SEARCH_URL_ENV` 를 주면 준비가 옮긴 저장소 플러그인의 `doc-search` 연결 주소를 그 값으로 바꿔 쓴다. 파이썬 시험이
+//   가짜 문서 검색 서버를 띄워 그 주소를 준다(기본 에이전트 `assistant` 사례가 쓴다). `DOC_SEARCH_AUTHORIZATION` 은 그
+//   시험이 자식의 환경에 주고 serve 가 물려받는다.
 
 import { received } from "@agent-os/e2e-stack";
 
 export const LLM_ENV = "AGENT_OS_WIDGET_LLM";
 export const TRACES_ENV = "AGENT_OS_WIDGET_TRACES";
+export const DOC_SEARCH_URL_ENV = "AGENT_OS_WIDGET_DOC_SEARCH_URL";
 
 export const WIDGET_ORIGIN_ENV = "AGENT_OS_E2E_WIDGET_ORIGIN";
 export const SITE_ORIGIN_ENV = "AGENT_OS_E2E_SITE_ORIGIN";
