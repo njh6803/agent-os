@@ -733,3 +733,47 @@ ADR 0060
 - "셀프 리뷰" 절의 두 보고가 든 ADR 0060의 문구 다섯과 `CONTEXT.md` 로그인 요구의 옛 정의 하나는 고치기 전 초안의 것이라 지금 문서에 없는 것이 맞다.
 - `CONTEXT.md` 로그인 확인 표시의 따옴표는 인용이 아니라 주장의 뜻을 적은 것이다.
 - 나머지는 이 일지가 옮긴 대화의 질문과 선택지와 설명, 저장소 밖 문서의 원문이다.
+
+둘째 시도는 지났다. 커밋은 `fbd4007b5`(파일 50개)다. pre-commit의 검사는 pytest(638.7초)와 web-verify(787.1초)를 포함해 모두 `Passed`였고, 인용 대조 경고는 고친 한 건이 빠져 49건이었다. `ruff` 둘과 카나리아 명세 검사와 헌법 판 검사는 볼 파일이 없어 `Skipped`였다. `ruff` 둘은 커밋 뒤 손으로 쳤다. `uv run ruff check .`는 `All checks passed!`, `uv run ruff format --check .`는 `2134 files already formatted`였다. 카나리아 명세와 헌법 파일은 이 브랜치가 바꾸지 않았다. LLM 호출 테스트 셋(`-m llm`, `-m llm_widget`, `-m llm_portal`)과 e2e와 사진 비교는 코드를 바꾸지 않아 돌리지 않았다.
+
+## 인계
+
+커밋을 백그라운드로 띄운 직후에 인계 계기(`hook_handoff`)가 왔다. 세션 컨텍스트가 270,505 토큰으로 문턱 200,000을 넘었고 경계는 `커밋 뒤`다. 계기는 커밋이 끝나기 전에 왔고(백그라운드 명령은 띄운 때에 돌아온다) 끝 알림 뒤에는 다시 오지 않아, 이 세션이 끝 알림을 받은 뒤에 이 절차로 돌아왔다. 이 세션은 지시문 없이 사용자의 말("설계 인터뷰 진행할 것 있어?"에 이은 "사내 로그인부터 시작")로 열렸고, 승인 화면의 답이 커밋과 PR과 병합까지를 범위로 정했다. 곁 세션이 아니다(`get_session`의 `self`에 `parentSessionId`가 없다). 그래서 `handoff.md`의 인계하지 않는 때 다섯에 들지 않는다. 이 세션의 제목은 `docs/portal-login-design`이다.
+
+새 세션에 넘기는 것.
+
+- 남은 단계는 `origin/dev` 합치기, PR 직전 리뷰, PR 열기(base는 dev), 봇 회차, 회고와 "다음" 절, 병합, 다음 작업 지시문이다. 이 절과 위 "커밋" 절의 둘째 시도 문단은 커밋 `fbd4007b5`에 들지 않았다. 새 세션이 이어 쓰고 커밋한다.
+- `origin/dev`와 함께 고친 파일은 `.scratch/deploy-package/plan.md`와 `.scratch/plan.md`다(위 `sibling_overlap` 출력). 뒤의 것은 손으로 풀지 않고 `uv run python tools/plan_table.py`가 다시 만든다.
+- PR 직전 리뷰의 브리프에 밀 주장은 위 "셀프 리뷰"의 "반영" 절에 원문으로 옮겨 둔 새 사실 문장이다. 승인 뒤에 두 ADR의 Considered Options에 더한 문장 둘(만료를 알게 된 질문을 다시 적게 둔다, 돌거나 멈춘 익명 실행은 넘겨받지 않는다)도 함께 넘긴다. CodeRabbit CLI가 도는지는 이 세션이 보지 않았다.
+- PR 본문에 적을 것. 면제 PR이고 종류는 기능의 설계다. ADR 0060이 계약 다섯 자리를 바꾸기로 정했지만 이 PR은 문서만 바꿔 `sdk`와 `openapi.json`은 그대로다. 체크리스트의 `ruff`는 손으로 친 것이고 나머지 넷은 커밋 `fbd4007b5`의 pre-commit 결과다.
+- 회고가 볼 것. 첫 커밋 시도를 막은 시간 단언(`tests/tools/test_rerun_runner.py` 688행. `.claude/rules/tests.md` 시간 단언 항목의 새 사례인지), pre-commit이 두 번 모두 Bash의 600초를 넘긴 것(첫 시도 1089.88초), 인용 대조가 잡은 일지 인용의 누락 한 건, 위에 적은 인계 계기의 때(백그라운드로 띄운 커밋).
+- 병합 뒤의 다음 작업은 새 세션이 결정표로 정한다. portal-login의 기능 계획은 명세 전에 `/ui-design portal-login`으로 화면을 그린다고 적고, `**Blocked by:**`는 pilot-portal이다. pilot-portal이 끝났는지는 이 세션이 보지 않았다.
+
+낸 지시문. 모델 줄은 결정표의 칸(`Fable 5.1 / xhigh`) 대신 지금 메뉴의 이름을 적었다(대기열 `model-menu-name-fable-5-1-stale`).
+
+```
+다음 작업: 기능 portal-login. 승인된 설계(ADR 0059·0060)의 PR을 열어 병합까지 마친다
+다음 단계: 설계 인터뷰
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: 사내 로그인부터 시작
+브랜치: docs/portal-login-design
+모델: Fable 5.2 / xhigh. 2의 잇는 지시문. 칸의 Fable 5.1이 모델 메뉴에 없어 대기열 model-menu-name-fable-5-1-stale대로 지금 메뉴의 이름을 적었다
+읽을 것: 일지의 "커밋"·"인계" 절, .claude/skills/next-session/merge.md
+이어받을 상태: 인계: 커밋 뒤. 설계 인터뷰는 끝났고 다시 열지 않는다. 승인된 ADR 0059·0060과 셀프 리뷰 반영을 커밋했다. 남은 단계는 origin/dev 합치기, PR 직전 리뷰, PR 열기(base dev), 봇 회차, 회고와 일지 "다음", 병합, 다음 작업 지시문이다. 일지 끝의 두 곳(커밋 둘째 시도 문단, 인계 절)은 커밋하지 않은 채 워크트리에 있다. docs/journal/2026-11-12-1937-portal-login-design.md
+확인할 선행 조건: CodeRabbit CLI가 도는지 보지 않았다. origin/dev를 합칠 때 .scratch/deploy-package/plan.md가 충돌하는지 보지 않았다
+이번 요청 범위: PR과 병합까지
+```
+
+제목을 `docs/portal-login-design (인계함)`으로 바꿨고(바꾸기 전 제목은 `docs/portal-login-design`), 멈출 백그라운드 작업은 없었으며, `git worktree unlock C:/project/agent/.claude/worktrees/portal-login-design`이 출력 없이 끝났다.
+
+open-session을 부른다 2026-11-12T15:58:10Z
+
+## 인계받은 세션
+
+2026-11-13 01시(로컬)에 위 지시문으로 연 새 세션이 잇는다. 제목 `docs/portal-login-design`, 모델 Fable 5.2. 주 체크아웃(dev `b44c496f2`)에서 열려 `EnterWorktree(path)`로 이 워크트리에 들어왔다. 넘긴 세션은 `list_sessions`에서 `isRunning`이 false였다(`ListAgents`에는 몇 분 동안 busy로 보였다). 일지의 끝이 위 인계 절에서 바뀌지 않은 것을 보고 이어 썼다. 설계 인터뷰는 다시 열지 않았다.
+
+### origin/dev 합치기
+
+`git fetch origin` 뒤의 `origin/dev`는 `b44c496f2`다. 앞 세션이 본 `1a02ac6d5` 뒤에 #549(base-agent의 티켓 04)가 하나 더 들어왔다. 그 PR이 바꾼 파일 다섯(`README.md`, `plugins/README.md`, `tests/test_assistant_plugin.py`, 그 티켓 파일, 그 일지)은 이 브랜치가 바꾼 파일과 겹치지 않는다(`git diff --name-only 1a02ac6d5 b44c496f2`와 `git diff --name-only origin/dev...HEAD`를 대 봤다). `uv run python tools/sibling_overlap.py`는 번호 겹침이 없다고 냈고, 함께 고친 파일은 앞 세션이 본 것과 같았다.
+
+`git merge origin/dev`는 `.scratch/deploy-package/plan.md` 한 곳에서 충돌했다. 두 쪽이 본문 한 줄의 끝에 문장을 하나씩 덧붙였다(dev는 local-model 명세가 넘긴 것, 이 브랜치는 portal-login의 설계가 넘긴 것). 두 줄이 갈라지는 자리가 문장의 경계인 것을 세션 스크래치패드의 일회용 스크립트로 확인하고, dev가 덧붙인 문장 뒤에 이 브랜치가 덧붙인 문장을 이었다. 어느 쪽의 문장도 고치지 않았다. `.scratch/plan.md`는 git이 스스로 합쳤고, `uv run python tools/plan_table.py`를 다시 돌려도 바뀌는 것이 없었다.

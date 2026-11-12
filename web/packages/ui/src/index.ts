@@ -18,6 +18,7 @@ export {
   type StatusBadgeStatus,
 } from "./components/atoms/StatusBadge";
 export { Alert, type AlertProps, type AlertTone } from "./components/molecules/Alert";
+export { Markdown, MarkdownText, type MarkdownProps } from "./components/molecules/Markdown";
 export { Switch, type SwitchProps } from "./components/molecules/Switch";
 export {
   TextField,

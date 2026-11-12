@@ -58,7 +58,7 @@ web/                       슬라이스 3부터. pnpm 워크스페이스. 파이
 | 7 | [mcp-http](mcp-http/plan.md) | 원격 MCP 서버에 주소로 접속해, 실행마다 서버를 새로 띄우는 시작 비용을 없앤다. | 없음 | done |
 | 7 | [pilot-portal](pilot-portal/plan.md) | 위젯을 담는 질문 페이지가 로그인 없이 온 사람에게 사이트 토큰을 내, 위젯을 붙일 사이트가 없는 공개 데모와 배포 환경을 돕는다. | 없음 | done |
 | 8 | [answer-eval](answer-eval/plan.md) | 고정 질문으로 에이전트를 돌려 검색 적중과 출처 적중을 재고 평가 보고서를 낸다. | base-agent, rag-engine:release-image | todo |
-| 8 | [answer-markdown](answer-markdown/plan.md) | 모델이 지은 답을 마크다운으로 그리는 공유 부품을 만들어 위젯에 적용해, 제목·목록·표·링크가 든 답이 기호 없이 읽히게 한다. | 없음 | todo |
+| 8 | [answer-markdown](answer-markdown/plan.md) | 모델이 지은 답을 마크다운으로 그리는 공유 부품을 만들어 위젯에 적용해, 제목·목록·표·링크가 든 답이 기호 없이 읽히게 한다. | 없음 | in-progress |
 | 8 | [base-agent](base-agent/plan.md) | 기본 에이전트 assistant와 문서 검색 스킬·연결·규칙을 함께 내, 요구가 없으면 그대로 쓰고 요구가 있으면 복사해 커스텀 에이전트를 만들게 한다. | mcp-http, approval-rules | in-progress |
 | 8 | [public-demo](public-demo/plan.md) | 공개 정부 문서를 넣은 클라우드 VM 한 대를 공개 주소에 열어, 누구나 로그인 없이 묻고 출처가 붙은 답을 받게 한다. | base-agent, release-image, answer-eval, answer-markdown, rag-engine:release-image, rag-engine:search-eval | todo |
 | 8 | [release-image](release-image/plan.md) | 판마다 서버와 관리 화면과 위젯과 질문 페이지의 컨테이너 이미지를 짓고 올리며 단독 배포 안내도 낸다. | pilot-portal | todo |

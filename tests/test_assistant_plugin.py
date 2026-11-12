@@ -9,15 +9,20 @@
 요청이다. 에이전트 코드의 함수나 상수는 부르지 않는다. 가짜 서버는 모듈 안의 시험이 나눠 쓰는
 하나이고(띄우는 데 오래 걸린다), 시험은 자기가 시작하기 전의 기록 수를 재 두었다가 그 뒤의 기록만
 본다. 실제 모델로 도는 것은 티켓 05의 시험이다.
+
+실행 시험은 원본(`assistant`)과 이름만 바꾼 사본(`acme-assistant`) 둘로 돈다. 사본은 시험이 안내
+문서(`plugins/README.md`)의 순서대로 만든다. 에이전트 폴더를 새 이름으로 복사하고, 매니페스트의
+`name` 을 바꾸고, 규칙 파일에 안내 문서의 표를 더한다. 그 밖의 글자는 원본과 같다(티켓 04).
 """
 
 import itertools
+import re
 import shutil
 import tomllib
 from collections.abc import Generator, Mapping, Sequence
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import TypeGuard
+from typing import NamedTuple, TypeGuard
 
 import pytest
 from langchain_core.callbacks import CallbackManagerForLLMRun
@@ -55,6 +60,7 @@ from agent_os.sdk import (
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 PLUGINS = REPO_ROOT / "plugins"
+GUIDE = PLUGINS / "README.md"
 PRINCIPAL = Principal("alice")
 NOW = datetime(2026, 11, 12, 12, 0, tzinfo=UTC)
 DEFAULT_MODEL = PluginName("claude-opus-5")
@@ -67,6 +73,9 @@ NOT_FOUND = (
     "등록된 문서에서 관련 내용을 찾지 못했으니, 다른 표현이나 다른 질문으로 다시 물어봐 주세요."
 )
 SERVER_URL_LINE = 'url = "http://rag-engine:8000/mcp"'
+# 원본의 이름과, 안내 문서가 예로 드는 새 이름. 문서의 코드 블록이 이 이름으로 적혀 있다.
+ORIGINAL = "assistant"
+COPY = "acme-assistant"
 
 
 class ScriptedModel(GenericFakeChatModel):
@@ -152,12 +161,69 @@ def authorization(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv(VARIABLE, AUTHORIZATION)
 
 
-def _root(tmp_path: Path, server: DocSearchFixture) -> Path:
-    """저장소 `plugins/` 의 사본. `doc-search` 의 주소만 가짜 검색 서버의 것이다."""
+class Bundle(NamedTuple):
+    """실행 시험이 도는 플러그인 루트와 그 안에서 부를 에이전트의 이름."""
+
+    agent: str
+    root: Path
+
+
+@pytest.fixture(params=[ORIGINAL, COPY], ids=["원본", "사본"])
+def bundle(request: pytest.FixtureRequest, tmp_path: Path, fake_server: DocSearchFixture) -> Bundle:
+    """저장소 `plugins/` 의 사본. `doc-search` 의 주소만 가짜 검색 서버의 것이다.
+
+    사본이면 안내 문서의 순서대로 이름만 바꾼 에이전트를 더한다. 원본도 그대로 남는다.
+    """
+    root = _plugins_copy(tmp_path, fake_server)
+    name = str(request.param)
+    if name != ORIGINAL:
+        _copy_by_guide(root)
+    return Bundle(name, root)
+
+
+def _plugins_copy(tmp_path: Path, server: DocSearchFixture) -> Path:
     root = tmp_path / "plugins"
     shutil.copytree(PLUGINS, root, ignore=shutil.ignore_patterns("__pycache__"))
     _edit(root / "mcp" / "doc-search" / "plugin.toml", SERVER_URL_LINE, f'url = "{server.url}"')
     return root
+
+
+def _copy_by_guide(root: Path) -> None:
+    """안내 문서의 순서. 폴더를 복사하고, 고친 매니페스트를 받고, 규칙 파일에 표를 더한다.
+
+    매니페스트와 표는 문서의 코드 블록을 글자 그대로 쓴다. 문서의 글이 원본과 어긋나면 이 사본이
+    원본과 다르게 되어 아래 비교 시험이 빨개진다.
+    """
+    agents = root / "agents"
+    shutil.copytree(agents / ORIGINAL, agents / COPY, ignore=shutil.ignore_patterns("__pycache__"))
+    (agents / COPY / "plugin.toml").write_text(_guide_manifest(), encoding="utf-8")
+    rules = root / "rules.toml"
+    rules.write_text(rules.read_text(encoding="utf-8") + "\n" + _guide_rules_table(), "utf-8")
+
+
+def _guide() -> str:
+    return GUIDE.read_text(encoding="utf-8")
+
+
+def _guide_block(*, containing: str) -> str:
+    """안내 문서의 TOML 코드 블록 가운데 그 글을 든 하나. 하나가 아니면 실패한다."""
+    found = [
+        block
+        for block in re.findall(r"```toml\n(.*?)```", _guide(), re.DOTALL)
+        if containing in block
+    ]
+    assert len(found) == 1, f"안내 문서에 {containing!r} 을 든 TOML 블록이 {len(found)}개다"
+    return found[0]
+
+
+def _guide_manifest() -> str:
+    """안내 문서가 `name` 을 고친 결과로 보이는 사본의 매니페스트."""
+    return _guide_block(containing=f'name = "{COPY}"')
+
+
+def _guide_rules_table() -> str:
+    """안내 문서가 규칙 파일에 붙여 넣으라고 보이는 표."""
+    return _guide_block(containing=f"[agents.{COPY}]")
 
 
 def _edit(path: Path, old: str, new: str) -> None:
@@ -170,7 +236,7 @@ async def _run(
     request: str,
     *,
     model: ScriptedModel,
-    root: Path,
+    bundle: Bundle,
     trace: TraceStore,
     clock: CountingClock,
     previous_run: RunId | None = None,
@@ -178,12 +244,12 @@ async def _run(
     return [
         event
         async for event in run(
-            AgentName("assistant"),
+            AgentName(bundle.agent),
             request,
             PRINCIPAL,
             previous_run=previous_run,
             default_model=DEFAULT_MODEL,
-            plugins=FilesystemPlugins(root),
+            plugins=FilesystemPlugins(bundle.root),
             models=FakeModels(model),
             tools=McpTools(),
             trace=trace,
@@ -197,7 +263,7 @@ async def _resume(
     decision: Approve | Deny,
     *,
     model: ScriptedModel,
-    root: Path,
+    bundle: Bundle,
     trace: TraceStore,
     clock: CountingClock,
 ) -> list[Event]:
@@ -211,7 +277,7 @@ async def _resume(
             decision,
             PRINCIPAL,
             default_model=DEFAULT_MODEL,
-            plugins=FilesystemPlugins(root),
+            plugins=FilesystemPlugins(bundle.root),
             models=FakeModels(model),
             tools=McpTools(),
             trace=trace,
@@ -349,18 +415,104 @@ def _manifest(kind: PluginKind, name: str) -> PluginManifest:
     return manifest
 
 
+# --- 안내 문서와 이름만 바꾼 사본 ---
+
+
+def test_안내_문서는_플러그인_루트에_있고_플러그인으로_읽히지_않는다() -> None:
+    """로더는 종류 폴더 아래에서 `plugin.toml` 이 있는 폴더만 플러그인으로 읽는다."""
+    assert GUIDE.is_file()
+    plugins = FilesystemPlugins(PLUGINS)
+
+    names = {kind: {row.name for row in plugins.list_manifests(kind)} for kind in PluginKind}
+
+    assert ORIGINAL in names[PluginKind.AGENT]
+    assert all("README.md" not in kind_names for kind_names in names.values())
+
+
+def test_안내_문서의_규칙_표는_기본_에이전트의_표와_같은_규칙을_든다() -> None:
+    """문서가 붙여 넣으라고 보이는 표와 규칙 파일의 기본 에이전트 표는 규칙 하나도 다르지 않다."""
+    rules = tomllib.loads((PLUGINS / "rules.toml").read_text(encoding="utf-8"))
+
+    table = tomllib.loads(_guide_rules_table())
+
+    assert table["agents"][COPY] == rules["agents"][ORIGINAL]
+
+
+def test_안내_문서의_doc_search_블록은_실제_연결_매니페스트의_server_표와_같다() -> None:
+    actual = tomllib.loads(
+        (PLUGINS / "mcp" / "doc-search" / "plugin.toml").read_text(encoding="utf-8")
+    )
+
+    block = tomllib.loads(_guide_block(containing="[server.headers]"))
+
+    assert block["server"] == actual["server"]
+
+
+def test_안내_문서는_복사의_세_걸음과_두_끝과_열기와_붙이는_설정을_모두_적는다() -> None:
+    guide = _guide()
+
+    wanted = [
+        f"agents/{ORIGINAL}",  # 복사할 폴더
+        f'name = "{COPY}"',  # 바꾼 매니페스트의 줄
+        f"[agents.{COPY}]",  # 규칙 파일에 더할 표
+        "max_turns = max_tool_calls + 2",  # 턴의 끝은 도구 호출의 끝에 2를 더한다
+        "10을 넘",  # 턴의 끝의 상한
+        f'agents = ["{COPY}"]',  # 사이트 파일의 열 에이전트
+        f'<agent-os-widget agent="{COPY}">',  # 위젯의 속성
+        f'run {COPY} "',  # 확인하는 법
+        VARIABLE,
+        "Bearer <토큰>",
+        "RAG_ALLOWED_HOSTS",
+        "http://rag-engine:8000/mcp",
+    ]
+    assert [piece for piece in wanted if piece not in guide] == []
+
+
+@pytest.mark.parametrize(
+    "문장",
+    [
+        "원본을 따라가지 않는다",
+        "보장이 아니다",
+        "코드에 고정 단계",
+    ],
+)
+def test_안내_문서는_사본의_한계와_스킬의_한계를_밝힌다(문장: str) -> None:
+    assert 문장 in _guide()
+
+
+def test_안내_문서의_순서대로_만든_사본은_원본과_이름과_규칙_표만_다르다(
+    tmp_path: Path, fake_server: DocSearchFixture
+) -> None:
+    root = _plugins_copy(tmp_path, fake_server)
+    _copy_by_guide(root)
+    plugins = FilesystemPlugins(root)
+
+    original = plugins.read_manifest(PluginKind.AGENT, PluginName(ORIGINAL))
+    copy = plugins.read_manifest(PluginKind.AGENT, PluginName(COPY))
+    rules = plugins.read_rules()
+
+    assert original is not None
+    assert copy is not None
+    assert copy.name == COPY
+    assert copy == original.model_copy(update={"name": COPY})
+    assert rules.agents[PluginName(COPY)] == rules.agents[PluginName(ORIGINAL)]
+    assert (root / "agents" / COPY / "agent.py").read_bytes() == (
+        root / "agents" / ORIGINAL / "agent.py"
+    ).read_bytes()
+
+
 # --- 프롬프트 ---
 
 
 async def test_이어_가지_않은_실행의_프롬프트는_지침_블록과_요청_줄뿐이다(
-    tmp_path: Path, fake_server: DocSearchFixture
+    bundle: Bundle, tmp_path: Path
 ) -> None:
     model = _model("답")
 
     events = await _run(
         QUESTION,
         model=model,
-        root=_root(tmp_path, fake_server),
+        bundle=bundle,
         trace=JsonlTrace(tmp_path / "t"),
         clock=CountingClock(),
     )
@@ -371,16 +523,20 @@ async def test_이어_가지_않은_실행의_프롬프트는_지침_블록과_�
 
 
 async def test_이어_간_실행의_프롬프트는_지침_블록_다음에_앞_대화_블록이_든다(
-    tmp_path: Path, fake_server: DocSearchFixture
+    bundle: Bundle, tmp_path: Path
 ) -> None:
-    root = _root(tmp_path, fake_server)
     trace, clock = JsonlTrace(tmp_path / "t"), CountingClock()
-    first = await _run(QUESTION, model=_model("첫 답"), root=root, trace=trace, clock=clock)
+    first = await _run(QUESTION, model=_model("첫 답"), bundle=bundle, trace=trace, clock=clock)
     assert isinstance(first[-1], RunFinished)
     model = _model("둘째 답")
 
     events = await _run(
-        "줄여 줘", model=model, root=root, trace=trace, clock=clock, previous_run=first[-1].run_id
+        "줄여 줘",
+        model=model,
+        bundle=bundle,
+        trace=trace,
+        clock=clock,
+        previous_run=first[-1].run_id,
     )
 
     prompt = _first_prompt(model, events)
@@ -394,17 +550,16 @@ async def test_이어_간_실행의_프롬프트는_지침_블록_다음에_앞_
 
 
 async def test_skills_를_지운_사본의_프롬프트는_요청_한_줄이다(
-    tmp_path: Path, fake_server: DocSearchFixture
+    bundle: Bundle, tmp_path: Path
 ) -> None:
     """코드에 일의 이름이 없다는 것의 판정이다. 스킬이 없으면 어떤 지시도 프롬프트에 새지 않는다."""
-    root = _root(tmp_path, fake_server)
-    _edit(root / "agents" / "assistant" / "plugin.toml", 'skills = ["cite-sources"]\n', "")
+    _edit(bundle.root / "agents" / bundle.agent / "plugin.toml", 'skills = ["cite-sources"]\n', "")
     model = _model("답")
 
     events = await _run(
         QUESTION,
         model=model,
-        root=root,
+        bundle=bundle,
         trace=JsonlTrace(tmp_path / "t"),
         clock=CountingClock(),
     )
@@ -416,14 +571,14 @@ async def test_skills_를_지운_사본의_프롬프트는_요청_한_줄이다(
 
 
 async def test_검색은_묻지_않고_불리고_결과에_형식의_판과_표본_조각이_든다(
-    tmp_path: Path, fake_server: DocSearchFixture, since: _Since
+    bundle: Bundle, tmp_path: Path, since: _Since
 ) -> None:
     model = _model(_search(), "답")
 
     events = await _run(
         QUESTION,
         model=model,
-        root=_root(tmp_path, fake_server),
+        bundle=bundle,
         trace=JsonlTrace(tmp_path / "t"),
         clock=CountingClock(),
     )
@@ -443,13 +598,12 @@ async def test_검색은_묻지_않고_불리고_결과에_형식의_판과_표�
 
 
 async def test_전문_읽기는_일시정지하고_승인하면_include_text_가_참인_호출이_가서_첫_창이_온다(
-    tmp_path: Path, fake_server: DocSearchFixture, since: _Since
+    bundle: Bundle, tmp_path: Path, since: _Since
 ) -> None:
-    root = _root(tmp_path, fake_server)
     trace, clock = JsonlTrace(tmp_path / "t"), CountingClock()
 
     paused = await _run(
-        QUESTION, model=_model(_read_document()), root=root, trace=trace, clock=clock
+        QUESTION, model=_model(_read_document()), bundle=bundle, trace=trace, clock=clock
     )
 
     stop = paused[-1]
@@ -458,7 +612,7 @@ async def test_전문_읽기는_일시정지하고_승인하면_include_text_가
     assert since.tool_calls() == []
 
     resumed = await _resume(
-        stop.run_id, Approve(), model=_model("답"), root=root, trace=trace, clock=clock
+        stop.run_id, Approve(), model=_model("답"), bundle=bundle, trace=trace, clock=clock
     )
 
     (called,) = _tool_calls(resumed)
@@ -474,18 +628,22 @@ async def test_전문_읽기는_일시정지하고_승인하면_include_text_가
 
 
 async def test_전문_읽기를_거부하면_실패한_도구_결과가_모델에_돌아가고_실행은_답으로_끝난다(
-    tmp_path: Path, fake_server: DocSearchFixture, since: _Since
+    bundle: Bundle, tmp_path: Path, since: _Since
 ) -> None:
-    root = _root(tmp_path, fake_server)
     trace, clock = JsonlTrace(tmp_path / "t"), CountingClock()
     paused = await _run(
-        QUESTION, model=_model(_read_document()), root=root, trace=trace, clock=clock
+        QUESTION, model=_model(_read_document()), bundle=bundle, trace=trace, clock=clock
     )
     assert isinstance(paused[-1], RunPaused)
     after = _model("찾은 조각으로 답한다")
 
     resumed = await _resume(
-        paused[-1].run_id, Deny("읽지 않는다"), model=after, root=root, trace=trace, clock=clock
+        paused[-1].run_id,
+        Deny("읽지 않는다"),
+        model=after,
+        bundle=bundle,
+        trace=trace,
+        clock=clock,
     )
 
     (called,) = _tool_calls(resumed)
@@ -503,14 +661,14 @@ async def test_전문_읽기를_거부하면_실패한_도구_결과가_모델�
 
 
 async def test_지식베이스_목록_도구는_모델의_도구_목록에_없고_그_이름을_내면_거부로_돌아온다(
-    tmp_path: Path, fake_server: DocSearchFixture, since: _Since
+    bundle: Bundle, tmp_path: Path, since: _Since
 ) -> None:
     model = _model(_call("list_knowledge_bases"), "답")
 
     events = await _run(
         QUESTION,
         model=model,
-        root=_root(tmp_path, fake_server),
+        bundle=bundle,
         trace=JsonlTrace(tmp_path / "t"),
         clock=CountingClock(),
     )
@@ -527,14 +685,14 @@ async def test_지식베이스_목록_도구는_모델의_도구_목록에_없�
 
 
 async def test_검색을_다섯_번_내면_다섯째는_끝_넘음으로_돌아오고_실행은_답으로_끝난다(
-    tmp_path: Path, fake_server: DocSearchFixture, since: _Since
+    bundle: Bundle, tmp_path: Path, since: _Since
 ) -> None:
     model = _model(*[_search() for _ in range(5)], "그때까지 찾은 근거로 답한다")
 
     events = await _run(
         QUESTION,
         model=model,
-        root=_root(tmp_path, fake_server),
+        bundle=bundle,
         trace=JsonlTrace(tmp_path / "t"),
         clock=CountingClock(),
     )
@@ -549,14 +707,14 @@ async def test_검색을_다섯_번_내면_다섯째는_끝_넘음으로_돌아�
 
 
 async def test_여섯_턴_내내_도구를_내면_loop_limit_으로_끝난다(
-    tmp_path: Path, fake_server: DocSearchFixture
+    bundle: Bundle, tmp_path: Path
 ) -> None:
     model = _model(*[_search() for _ in range(6)])
 
     events = await _run(
         QUESTION,
         model=model,
-        root=_root(tmp_path, fake_server),
+        bundle=bundle,
         trace=JsonlTrace(tmp_path / "t"),
         clock=CountingClock(),
     )
@@ -571,14 +729,14 @@ async def test_여섯_턴_내내_도구를_내면_loop_limit_으로_끝난다(
 
 
 async def test_환경_변수가_없으면_실행이_tool_connection_으로_끝난다(
-    tmp_path: Path, fake_server: DocSearchFixture, monkeypatch: pytest.MonkeyPatch
+    bundle: Bundle, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.delenv(VARIABLE)
 
     events = await _run(
         QUESTION,
         model=_model(),
-        root=_root(tmp_path, fake_server),
+        bundle=bundle,
         trace=JsonlTrace(tmp_path / "t"),
         clock=CountingClock(),
     )
