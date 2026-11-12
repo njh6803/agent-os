@@ -5,15 +5,16 @@
 부르고, 나머지는 그 수집 JSON을 그대로 쓴다. 표마다 어느 보고로 가는지(`Table.report`)가 붙어
 보고 다섯이 한 수집을 나눠 그린다. 읽기만 하고, 쓰는 것은 `--reports` 폴더의 수집 JSON 하나다. 읽는
 것은 토큰 장부(`token_report`의 `.scratch/token-report/ledger/`), 이 저장소의 세션
-기록(`~/.claude/projects/`), `origin/main`의 대기열과 티켓과 일지, `gh`의 PR·CI,
-`git worktree list`, `tasklist`, 그리고 `--reports` 폴더의 주간 한도 기록(`morning_limit`의
-`limit.jsonl`)과 그날 앞의 가장 늦은 종합 메모(오늘 정할 것이 고른 확인할 수치의 열쇠,
-`morning_report.latest_checks`)다. 이 도구가 부르는 gh·git·tasklist는
-`morning_sources`에 있고, 다른 도구를 불러 쓰는 읽기는 그 도구의 명령을 그대로 쓴다(훅의 들인 날과
-주 체크아웃을 찾는 git은 `hook_report`의 것이라 시간 제한과 실패 갈래도 그 도구의 것이다).
-비용·장부·명령 이름은 `token_report`, 훅의 발동은 `hook_report`, 대기열 항목은 `queue_open_rows`를
-그대로 불러 쓴다(대기열은 항목마다 파일 하나인 폴더라 `morning_sources.main_queue`가 `origin/main`의
-폴더를 한 번에 읽고, 항목의 식별자는 파일 이름의 stem인 문자열이다. 숫자 ID는 앞의 0을 떼 찍는다).
+기록(`~/.claude/projects/`), 통합 브랜치(`morning_sources.integration_ref`, `origin/dev`가 없으면
+`origin/main`)의 대기열과 티켓과 일지, `gh`의 PR·CI, `git worktree list`, `tasklist`, 그리고
+`--reports` 폴더의 주간 한도 기록(`morning_limit`의 `limit.jsonl`)과 그날 앞의 가장 늦은 종합
+메모(오늘 정할 것이 고른 확인할 수치의 열쇠, `morning_report.latest_checks`)다. 이 도구가 부르는
+gh·git·tasklist는 `morning_sources`에 있고, 다른 도구를 불러 쓰는 읽기는 그 도구의 명령을 그대로
+쓴다(훅의 들인 날과 주 체크아웃을 찾는 git은 `hook_report`의 것이라 시간 제한과 실패 갈래도 그
+도구의 것이다). 비용·장부·명령 이름은 `token_report`, 훅의 발동은 `hook_report`, 대기열 항목은
+`queue_open_rows`를 그대로 불러 쓴다(대기열은 항목마다 파일 하나인 폴더라
+`morning_sources.main_queue`가 통합 브랜치의 폴더를 한 번에 읽고, 항목의 식별자는 파일 이름의 stem인
+문자열이다. 숫자 ID는 앞의 0을 떼 찍는다).
 
 짜임. 읽기와 짓기를 가른다. 파일과 명령을 읽는 것은 `main`(앞 날의 메모), `collect`, 그리고 그
 둘이 부르는 읽기 함수다. 읽기 함수의 예는 `morning_sources`, `token_report`·`hook_report`의 읽기,
@@ -96,7 +97,7 @@
   0으로 끝난다. 이 갈래는 코드를 읽은 것이고 클라우드에서 돌려 보지는 않았다.
 - `tasklist`가 없는 기계(윈도 밖)에서는 프로세스 수가 수집 안 됨이다.
 - 대기열 폴더에서 라벨 줄이 빠진 항목 파일은 세지 않고 알리지도 않는다(`queue_open_rows`는
-  1로 끝나며 알린다). 폴더가 없는 `origin/main`(이행 전)이나 git 실패는 대기열 절이
+  1로 끝나며 알린다). 폴더가 없는 통합 브랜치(이행 전)이나 git 실패는 대기열 절이
   `(수집 안 됨)` 한 줄이다.
 
 쓰임: `uv run python -m tools.morning_collect --reports <폴더> [--day YYYY-MM-DD]`(다른 도구를
@@ -150,6 +151,7 @@ from tools.morning_sources import (
     PrView,
     branch_subject,
     ci_runs,
+    integration_ref,
     latest_journal,
     main_queue,
     main_text,
@@ -232,10 +234,11 @@ GH_SUB2 = frozenset(
 )
 # 티켓 PR의 브랜치. 기능 티켓은 `feature/NN-<slug>`, harness 티켓은 `chore/` 뒤의 글자가 그대로
 # 티켓 파일 이름의 stem인 `chore/<stem>`이다(ADR 0037, 0045). 옛 꼴 `chore/NNN-<slug>`와 새 꼴
-# `chore/<slug>`가 같은 규칙이다. 묶음 `stem`을 `ticket_paths`의 열쇠로 쓴다. 규약대로 지은
+# `chore/<slug>`가 같은 규칙이다. 핫픽스 `hotfix/<slug>`도 같은 harness 티켓 자리를 쓴다(ADR 0043,
+# `tools/check_ticket.py`). 묶음 `stem`을 `ticket_paths`의 열쇠로 쓴다. 규약대로 지은
 # 브랜치면 그 값이 티켓 파일 이름의 stem이고, 이름이 다르면 티켓 파일을 찾지 못한 행이 된다.
 TICKET_BRANCH = re.compile(
-    r"^(?:feature/(?=\d{2}-)(?P<feature>\d+-[\w.-]+)|chore/(?P<harness>[\w.-]+))$"
+    r"^(?:feature/(?=\d{2}-)(?P<feature>\d+-[\w.-]+)|(?:chore|hotfix)/(?P<harness>[\w.-]+))$"
 )
 _HARNESS_ISSUES = ".scratch/harness/issues/"
 WORK = re.compile(r"{{work:([^{}]+)}}")
@@ -552,7 +555,7 @@ def _ticket_row(
     calls: Sequence[Call],
     handoff: Mapping[str, bool],
 ) -> TicketRow:
-    """병합된 티켓 PR 하나의 줄. `text`는 `origin/main`의 티켓 파일 글이고 찾지 못했으면 None이다.
+    """병합된 티켓 PR 하나의 줄. `text`는 통합 브랜치의 티켓 파일 글이고 찾지 못했으면 None이다.
     `calls`는 그 브랜치의 장부 전체 호출이다."""
     mains = {c.session for c in calls if c.agent is None}
     return TicketRow(
@@ -868,7 +871,7 @@ def branch_rows(
     rows: list[tuple[str, ...]] = []
     for branch, b in ranked[: token_report.TOP_BRANCHES]:
         cost = b.tally.cost
-        if branch == "main":
+        if branch in LONG_LIVED:
             before = "PR 없음"
         elif branch is not None and branch in pr_at:
             before = _share(b.before, cost)
@@ -997,6 +1000,7 @@ class Sources:
 
     ledger: str
     records: str
+    trunk: str = "origin/main"  # 통합 브랜치의 원격 추적 ref(`morning_sources.integration_ref`)
 
 
 @dataclass(frozen=True)
@@ -1256,6 +1260,15 @@ def _waste_piece(p: token_report.Period, main_checkout: Path, wanted: Collection
     return Piece((table,), (), got)
 
 
+# 세션 장부에서 PR 없이 일한 것으로 보는 오래 사는 브랜치의 이름
+LONG_LIVED = frozenset({"main", "dev"})
+
+
+def _trunk_name(src: Sources) -> str:
+    """`Sources.trunk` 에서 `origin/` 을 뗀 브랜치 이름."""
+    return src.trunk.removeprefix("origin/")
+
+
 def hook_section(
     hooks: HookScan | str, day: date, runs: Sequence[tuple[str, float]] | None, src: Sources
 ) -> Part:
@@ -1264,7 +1277,7 @@ def hook_section(
     got = Collected()
     source = (
         f"{src.records}(`tools/hook_report.py`와 같은 읽기), `.claude/settings.json`,"
-        " `gh run list --branch main`"
+        f" `gh run list --branch {_trunk_name(src)}`"
     )
     if isinstance(hooks, str):
         lines = (f"- 훅 표 {UNCOLLECTED}: {hooks}",)
@@ -1317,15 +1330,16 @@ def hook_section(
         *hook_legend(hooks.rows),
     ]
     if runs is None:
-        lines.append(f"- main의 CI {UNCOLLECTED}(gh 실패)")
+        lines.append(f"- {_trunk_name(src)}의 CI {UNCOLLECTED}(gh 실패)")
     elif runs:
         failures = sum(1 for c, _ in runs if c in FAILED or c.upper() in FAILED)
         median = statistics.median(s for _, s in runs)
         lines.append(
-            f"- main의 CI 최근 {len(runs)}회: 실패 {failures}회, 걸린 시간 중앙값 {median:.0f}초"
+            f"- {_trunk_name(src)}의 CI 최근 {len(runs)}회: 실패 {failures}회,"
+            f" 걸린 시간 중앙값 {median:.0f}초"
         )
-        got.value("ci:failures", "main CI 실패(최근 10회)", failures, "회")
-        got.value("ci:median_s", "main CI 걸린 시간 중앙값", median, "초")
+        got.value("ci:failures", f"{_trunk_name(src)} CI 실패(최근 10회)", failures, "회")
+        got.value("ci:median_s", f"{_trunk_name(src)} CI 걸린 시간 중앙값", median, "초")
     table = Table(
         "environment.hooks",
         "environment",
@@ -1722,12 +1736,12 @@ def _works_piece(
     return Piece(tuple(tables), tuple(lines), got)
 
 
-def queue_section(day: date, files: Mapping[str, str] | None, snapshot: str) -> Part:
-    """`files`는 `origin/main`의 대기열 폴더에 든 항목 파일의 이름→내용(`main_queue`)이고, 읽지
-    못했으면 None이다. `snapshot`은 모은 시각의 기간 글이다."""
-    source = (
-        f"`origin/main:{QUEUE_PATH}/`(`tools/queue_open_rows.py --ref origin/main`와 같은 읽기)"
-    )
+def queue_section(
+    day: date, files: Mapping[str, str] | None, snapshot: str, trunk: str = "origin/main"
+) -> Part:
+    """`files`는 통합 브랜치(`trunk`)의 대기열 폴더에 든 항목 파일의 이름→내용(`main_queue`)이고,
+    읽지 못했으면 None이다. `snapshot`은 모은 시각의 기간 글이다."""
+    source = f"`{trunk}:{QUEUE_PATH}/`(`tools/queue_open_rows.py --ref {trunk}`와 같은 읽기)"
     if files is None:
         lines = (f"- 대기열 {UNCOLLECTED}(git 실패)",)
         return Part(Section(5, "회고 대기열", "environment", (), lines, source), Collected())
@@ -1861,6 +1875,7 @@ def _yesterday_section(
     tz: timezone,
     journal: str,
     snapshot: str,
+    trunk: str = "origin/main",
 ) -> Part:
     """어제 병합한 PR, 열린 PR, 진행 중인 워크트리 세션(`active`). `merged`나 `opened`가 None이면
     gh가 실패한 것이라 그 표 대신 수집 안 됨 한 줄을 두고, 그 탓에 가를 수 없는 워크트리의 PR은
@@ -1956,7 +1971,7 @@ def _yesterday_section(
             lines.append(f"- PR이 병합됐는데 남은 워크트리 {leftover}개는 표에 넣지 않았다")
     source = (
         "`gh pr list`, `git worktree list`, 세션 기록의 수정 시각,"
-        f" 일지 `origin/main:{journal or '(없음)'}`"
+        f" 일지 `{trunk}:{journal or '(없음)'}`"
     )
     section = Section(6, "어제 작업", "work", tuple(tables), tuple(lines), source)
     return Part(section, got)
@@ -2058,7 +2073,7 @@ def _ticket_piece(
 
 def _ticket_section(tickets: Piece, src: Sources) -> Part:
     """실험 보고로 가는 절. 티켓 분할 조각 하나로 짓는다."""
-    source = f"{src.ledger}, `gh pr list`, `origin/main:.scratch/*/issues/*.md`"
+    source = f"{src.ledger}, `gh pr list`, `{src.trunk}:.scratch/*/issues/*.md`"
     section = Section(7, "티켓 분할", "experiment", tickets.tables, tickets.lines, source)
     return Part(section, tickets.got)
 
@@ -2218,7 +2233,7 @@ def gather_tickets(
     day: date,
     tz: timezone,
 ) -> list[TicketRow]:
-    """티켓 창(`first`부터 `day`까지)에 병합된 티켓 PR마다 `origin/main`의 티켓 파일을 읽어 짓는
+    """티켓 창(`first`부터 `day`까지)에 병합된 티켓 PR마다 통합 브랜치의 티켓 파일을 읽어 짓는
     줄."""
     paths = ticket_paths(root)
     rows: list[TicketRow] = []
@@ -2330,7 +2345,7 @@ def gather_works(
     for b in works:
         if b in numbers:
             refs.add(numbers[b])
-        elif b != "main" and (subject := branch_subject(root, b)):
+        elif b not in LONG_LIVED and (subject := branch_subject(root, b)):
             subjects[b] = subject.strip()
     return refs, subjects
 
@@ -2351,7 +2366,11 @@ def collect(
     main = token_report.main_checkout_of(root)
     ledger_dir = main / ".scratch" / "token-report" / "ledger"
     repo = token_report.folder_name_of(main)
-    src = Sources(f"토큰 장부 `{ledger_dir.as_posix()}`", f"세션 기록 `{projects.as_posix()}`")
+    src = Sources(
+        f"토큰 장부 `{ledger_dir.as_posix()}`",
+        f"세션 기록 `{projects.as_posix()}`",
+        integration_ref(root),
+    )
     ledger = _gather_ledger(ledger_dir)
     calls, handoff = ledger.calls, ledger.handoff
     series = _days(day, SERIES_DAYS)
@@ -2429,9 +2448,9 @@ def collect(
             span_period(week[0], day),
             rate,
         ),
-        queue_section(day, main_queue(root), snapshot),
+        queue_section(day, main_queue(root), snapshot, src.trunk),
         _yesterday_section(
-            day, merged_all, opened, active, leftover, now, tz, journal_path, snapshot
+            day, merged_all, opened, active, leftover, now, tz, journal_path, snapshot, src.trunk
         ),
         experiment,
     ]

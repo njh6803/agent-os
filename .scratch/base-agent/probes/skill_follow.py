@@ -1,15 +1,21 @@
-"""스킬 `cite-sources` 초안의 지시가 실제 모델에서 듣는지 잰다(base-agent 명세의 근거).
+"""저장소의 기본 에이전트 `assistant`와 스킬 `cite-sources`의 지시가 실제 모델에서 듣는지 잰다
+(base-agent 명세의 근거).
 
     uv run --env-file <.env 경로> python .scratch/base-agent/probes/skill_follow.py [--rounds N]
         [--only 사례,사례] [--out 폴더]
 
-하는 일. 같은 폴더의 `fake_doc_search.py`를 루프백의 빈 포트에 띄우고, `draft/`의 에이전트와 스킬
-초안, 그 서버를 주소로 가리키는 `doc-search` 매니페스트, `[agents.assistant]` 표를 임시 플러그인
-루트에 쓴 뒤, 사례마다 실제 CLI 프로세스(`python -m agent_os.main run assistant …`)로 실제 모델을
-부른다. 판정은 그 실행이 남긴 트레이스(JSONL)와 출력으로 한다. 기본 구성이 아닌 것으로 도는
-사례(서버의 모드 `Case.server`나 매니페스트의 `Case.conversation_limit`을 적은 사례)는 회차마다 제
-서버와 플러그인 루트를 따로 띄워 돈다. 끝 넘음을 흉내 내는 서버가 제가 받은 호출을 실행 하나의
-것으로 세게 하고, 매니페스트를 고친 사본이 다른 사례에 닿지 않게 하려는 것이다.
+하는 일. 시험 픽스처의 가짜 검색 서버(`tests/fake_doc_search.py`의 `serving`)를 루프백의 빈
+포트에 띄우고, 저장소의 `plugins/`를 임시 루트에 복사해 `doc-search`의 주소만 그 서버의 것으로
+바꿔 쓴 뒤(플러그인 꾸러미 시험 `tests/test_assistant_plugin.py`와 같은 꼴), 사례마다 실제 CLI
+프로세스(`python -m agent_os.main run assistant …`)로 실제 모델을 부른다. 에이전트와 스킬, 규칙
+파일의 표, 두 끝(`max_turns`, `max_tool_calls`)은 저장소의 것 그대로다. 서버는 기대한
+`Authorization`이 아닌 요청을 401로 막으므로, CLI 프로세스에 환경 변수
+`DOC_SEARCH_AUTHORIZATION`을 그 값으로 준다(주지 않으면 모든 실행이 원인 `tool_connection`으로
+끝나 한 바퀴가 모두 측정 아님이 된다). 판정은 그 실행이 남긴 트레이스(JSONL)와 출력으로 한다.
+기본 구성이 아닌 것으로 도는 사례(서버의 모드 `Case.server`나 매니페스트의
+`Case.conversation_limit`을 적은 사례)는 회차마다 제 서버와 플러그인 루트를 따로 띄워 돈다. 끝
+넘음을 흉내 내는 서버가 제가 받은 호출을 실행 하나의 것으로 세게 하고, 매니페스트를 고친 사본이 다른
+사례에 닿지 않게 하려는 것이다.
 
 표지. 회차를 측정으로 세는 조건은 사례마다 `Case.marker`가 적는다. 서버의 모드를 적지 않은 사례가
 함께 보는 것은 둘이다. 실행이 `run_finished`로 끝났고, 첫 모델 호출의 프롬프트에 스킬 본문의 첫
@@ -27,12 +33,15 @@ null이고 절 경로가 든 `section`)가 닿았다, 전문 읽기에서 멈췄
 결과로 본다). 모르는 사례 이름과 1보다 작은 `--rounds`는 돌리지 않고 2로 끝낸다(회차 없는 실행이
 0으로 끝나지 않게 한다).
 
-못 보는 것. 매니페스트의 두 끝(`max_turns`, `max_tool_calls`)은 아직 코드에 없어 걸지 않는다. 끝
-넘음 사례 둘은 가짜 서버가 런타임의 문구를 실패 결과로 돌려주는 흉내이고 런타임이 거부한 것이
-아니다(모델이 보는 것은 같고 트레이스가 다르다. `fake_doc_search.py`의 독스트링). 턴에는 core의 10이
-걸린다. 이 프로브는 모델이 부른 횟수와 토큰을 세기만 하고, 끝에 기본 구성으로 돈 실행 하나가 가장
-많이 쓴 값과 한 턴에 도구를 둘 이상 낸 실행의 수를 찍는다(기본 구성이 아닌 사례의 실행은 그 셈에서
-뺀다. 끝을 1로 낮춘 흉내와 요약을 일부러 일으킨 실행이라 명세의 두 끝과 대 볼 값이 아니다).
+못 보는 것. 끝 넘음 사례 둘은 가짜 서버가 런타임의 문구를 실패 결과로 돌려주는
+흉내(`--tool-cap 1`)이고 런타임이 거부한 것이 아니다(모델이 보는 것은 같고 트레이스가 다르다.
+`tests/fake_doc_search_server.py`의 독스트링). 저장소의 매니페스트가 두 끝(턴 6, 도구 호출 4)을
+걸므로 모든 실행에 그 끝이 걸려 있다. 끝에 닿은 실행은 판정 글이 아니라 다른 곳에 남는다. 턴의 끝
+(`loop_limit`)이면 `run_finished`가 없어 측정 아님 사유로 나오고, 도구 호출의 끝을 넘은 호출은 판정
+함수가 성공과 실패를 가르지 않고 세므로 단계별 출력의 `ok=False rule=None` 줄에만 남는다. 이
+프로브는 모델이 부른 횟수와 토큰을 세기만 하고, 끝에 기본 구성으로 돈 실행 하나가 가장 많이 쓴 값과
+한 턴에 도구를 둘 이상 낸 실행의 수를 찍는다(기본 구성이 아닌 사례의 실행은 그 셈에서 뺀다. 끝을 1로
+낮춘 흉내와 요약을 일부러 일으킨 실행이라 명세의 두 끝과 대 볼 값이 아니다).
 턴마다의 도구 수는 `llm_called` 이벤트의 `tool_calls` 길이다. 가짜 서버의 점수는
 실제 리랭커의 점수가 아니고 조각은 일곱뿐이라, 토큰은 실제 검색 서버(조각을 기본 열 개 돌려준다)의
 값이 아니다. 긴 문서는 창의 상한을 `SMALL_WINDOW`로 낮춰 흉내 내고 실제 기본 상한(20000자)보다 긴
@@ -47,13 +56,11 @@ import os
 import re
 import shlex
 import shutil
-import socket
 import subprocess
 import sys
 import tempfile
-import time
 from collections.abc import Callable, Generator, Mapping, Sequence
-from contextlib import contextmanager
+from contextlib import ExitStack, contextmanager
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -61,15 +68,19 @@ HERE = Path(__file__).resolve().parent
 REPO = HERE.parents[2]
 sys.path.insert(0, str(REPO))
 
-from tools.probe_kit import Rounds  # noqa: E402  저장소 루트를 경로에 넣은 뒤 가져온다
+from tests.fake_doc_search import serving  # noqa: E402  저장소 루트를 경로에 넣은 뒤 가져온다
+from tools.probe_kit import Rounds  # noqa: E402
 
-DRAFT = HERE / "draft"
-SERVER = HERE / "fake_doc_search.py"
+PLUGINS = REPO / "plugins"
+DOC_SEARCH_LINE = 'url = "http://rag-engine:8000/mcp"'
+# 서버가 기대하는 `Authorization` 값과 CLI 프로세스가 환경 변수로 받는 값. 서버의 기록 파일에 원문이
+# 실리므로 실제 비밀 값이 아니다(원칙 V).
+VARIABLE = "DOC_SEARCH_AUTHORIZATION"
+AUTHORIZATION = "Bearer skill-follow-probe-token"
 MODEL = "claude-opus-5"
 EXIT_PAUSED = 3
 MAX_DECISIONS = 3
 CALL_TIMEOUT = 600
-READY_WITHIN_SECONDS = 60.0
 SKILL_HEAD = "등록된 문서에서 찾은 내용으로만 답하는 도우미로 일한다."
 NOT_FOUND = (
     "등록된 문서에서 관련 내용을 찾지 못했으니, 다른 표현이나 다른 질문으로 다시 물어봐 주세요."
@@ -93,12 +104,6 @@ DOCX_LOCATION = '"page":null,"section":["제2장 육아휴직","2.3 신청 절�
 SMALL_WINDOW = 320
 FIRST_WINDOW_FACT = "최대 4일"
 LATE_FACT = "35만원"
-RULES = (
-    'schema_version = "1"\n\n[agents.assistant]\n'
-    'allow = ["doc-search:search"]\n'
-    'ask = ["doc-search:get_document"]\n'
-    'deny = ["doc-search:list_knowledge_bases"]\n'
-)
 
 Event = Mapping[str, object]
 
@@ -182,7 +187,7 @@ class Case:
 
     @property
     def dedicated(self) -> bool:
-        """기본 구성(기본 모드의 서버, 초안 그대로의 매니페스트)이 아닌 것으로 도는가. 그런 사례는
+        """기본 구성(기본 모드의 서버, 저장소 그대로의 매니페스트)이 아닌 것으로 도는가. 그런 사례는
         회차마다 서버와 플러그인 루트를 따로 띄운다."""
         return bool(self.server) or self.conversation_limit is not None
 
@@ -771,68 +776,41 @@ CASES = [
 ]
 
 
-def _free_port() -> int:
-    with socket.socket() as sock:
-        sock.bind(("127.0.0.1", 0))
-        return int(sock.getsockname()[1])
-
-
-def _listening(port: int) -> bool:
-    try:
-        with socket.create_connection(("127.0.0.1", port), timeout=0.5):
-            return True
-    except OSError:
-        return False
-
-
 class ServerNotReady(RuntimeError):
     """가짜 검색 서버가 기한 안에 뜨지 않았다."""
 
 
 @contextmanager
-def _serving(log: Path, mode: Sequence[str]) -> Generator[str]:
-    """가짜 검색 서버를 루프백의 빈 포트에 띄우고 그 MCP 주소를 낸다. 나갈 때 이 프로브가 쥔
-    핸들로만 끈다(`.claude/rules/probes.md`의 끄기 항목)."""
-    port = _free_port()
-    with log.open("w", encoding="utf-8") as stderr:
-        server = subprocess.Popen(
-            [sys.executable, str(SERVER), str(port), *mode],
-            stdout=subprocess.DEVNULL,
-            stderr=stderr,
-        )
+def _serving(folder: Path, mode: Sequence[str]) -> Generator[str]:
+    """시험 픽스처의 가짜 검색 서버를 띄우고 그 MCP 주소를 낸다. 기대한 `Authorization`이 아닌
+    요청은 서버가 401로 막는다. 나갈 때 픽스처가 쥔 핸들로만 끈다(`.claude/rules/probes.md`의 끄기
+    항목). 서버의 stderr와 요청 기록은 `folder`에 남는다."""
+    folder.mkdir(parents=True, exist_ok=True)
+    # RuntimeError를 서버가 뜨지 않은 경우로만 바꾸려고 띄우는 일만 try로 감싼다. yield 를 감싸면
+    # 회차 본문의 RuntimeError 도 이 오류로 잘못 바뀐다.
+    with ExitStack() as stack:
         try:
-            end = time.monotonic() + READY_WITHIN_SECONDS
-            while not _listening(port):
-                if server.poll() is not None or time.monotonic() > end:
-                    raise ServerNotReady(f"가짜 검색 서버가 뜨지 않았다({log.name})")
-                time.sleep(0.1)
-            yield f"http://127.0.0.1:{port}/mcp"
-        finally:
-            server.terminate()
-            try:
-                server.wait(timeout=10)
-            except subprocess.TimeoutExpired:
-                server.kill()
-                server.wait(timeout=10)
+            server = stack.enter_context(
+                serving(folder, "--expect-authorization", AUTHORIZATION, *mode)
+            )
+        except RuntimeError as error:
+            raise ServerNotReady(f"가짜 검색 서버가 뜨지 않았다({folder.name}): {error}") from error
+        yield server.url
 
 
 def _build_root(root: Path, url: str, *, conversation_limit: int | None = None) -> None:
-    shutil.copytree(DRAFT / "agents", root / "agents")
+    """저장소의 `plugins/` 사본. `doc-search`의 주소만 `url`로 바꾼다."""
+    shutil.copytree(PLUGINS, root, ignore=shutil.ignore_patterns("__pycache__"))
+    connection = root / "mcp" / "doc-search" / "plugin.toml"
+    text = connection.read_text(encoding="utf-8")
+    assert text.count(DOC_SEARCH_LINE) == 1, text
+    connection.write_text(text.replace(DOC_SEARCH_LINE, f'url = "{url}"'), encoding="utf-8")
     if conversation_limit is not None:
-        # 초안의 매니페스트는 표 없이 최상위 칸만 있어, 끝에 한 줄을 덧붙이면 그 칸이 된다.
+        # 저장소의 에이전트 매니페스트는 표 없이 최상위 칸만 있어, 끝에 한 줄을 덧붙이면 그 칸이
+        # 된다.
         manifest = root / "agents" / "assistant" / "plugin.toml"
         with manifest.open("a", encoding="utf-8") as stream:
             stream.write(f"conversation_limit = {conversation_limit}\n")
-    shutil.copytree(DRAFT / "skills", root / "skills")
-    shutil.copytree(REPO / "plugins" / "models", root / "models")
-    connection = root / "mcp" / "doc-search"
-    connection.mkdir(parents=True)
-    (connection / "plugin.toml").write_text(
-        'schema_version = "1"\nkind = "mcp"\nname = "doc-search"\nversion = "0.1.0"\n\n'
-        f'[server]\ntransport = "http"\nurl = "{url}"\n',
-        encoding="utf-8",
-    )
-    (root / "rules.toml").write_text(RULES, encoding="utf-8")
 
 
 def _cli(argv: list[str]) -> subprocess.CompletedProcess[str]:
@@ -842,7 +820,7 @@ def _cli(argv: list[str]) -> subprocess.CompletedProcess[str]:
         capture_output=True,
         text=True,
         encoding="utf-8",
-        env={**os.environ, "PYTHONUTF8": "1"},
+        env={**os.environ, "PYTHONUTF8": "1", VARIABLE: AUTHORIZATION},
         check=False,
         timeout=CALL_TIMEOUT,
     )
@@ -900,7 +878,7 @@ def _measure(case: Case, turn: int, *, work: Path, shared: Path) -> list[Run]:
     if not case.dedicated:
         return _run_case(case, root=shared, traces=traces)
     root = work / f"plugins-{tag}"
-    with _serving(work / f"server_stderr_{tag}.txt", case.server) as url:
+    with _serving(work / f"server_{tag}", case.server) as url:
         _build_root(root, url, conversation_limit=case.conversation_limit)
         return _run_case(case, root=root, traces=traces)
 
@@ -1001,7 +979,7 @@ def main() -> int:
     out = options.out or work
     out.mkdir(parents=True, exist_ok=True)
     try:
-        with _serving(work / "server_stderr.txt", ()) as url:
+        with _serving(work / "server", ()) as url:
             swept = _sweep(cases, options.rounds, work=work, url=url)
     except ServerNotReady as error:
         print(error, file=sys.stderr)

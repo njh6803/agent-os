@@ -194,14 +194,21 @@ def test_저장소의_answer_format_매니페스트는_공통_넷뿐이다() -> 
     }
 
 
-def test_저장소의_rules_toml_은_실제_어댑터로_읽혀_calc_의_표_하나가_된다() -> None:
+def test_저장소의_rules_toml_은_실제_어댑터로_읽혀_calc_와_assistant_의_표_둘이_된다() -> None:
     """저장소가 기본이 묻는다인 런타임에서 calc 가 자기 mcp 의 도구를 묻지 않고 부르는 규칙이다.
-    공통 표는 두지 않는다 — 예시가 배치 전체를 여는 모양을 보이지 않기 위해서다."""
+    공통 표는 두지 않는다 — 예시가 배치 전체를 여는 모양을 보이지 않기 위해서다. assistant 의
+    표(검색은 부르고, 전문 읽기는 묻고, 지식베이스 목록은 막는다)는 `tests/test_assistant_plugin.py`
+    가 같은 파일을 읽어 대 본다."""
     rules = FilesystemPlugins(REPO_ROOT / "plugins").read_rules()
 
     assert rules == Rules(
         agents={
-            PluginName("calc"): RuleSet(allow=frozenset({Rule(PluginName("everything"), None)}))
+            PluginName("calc"): RuleSet(allow=frozenset({Rule(PluginName("everything"), None)})),
+            PluginName("assistant"): RuleSet(
+                allow=frozenset({Rule(PluginName("doc-search"), "search")}),
+                ask=frozenset({Rule(PluginName("doc-search"), "get_document")}),
+                deny=frozenset({Rule(PluginName("doc-search"), "list_knowledge_bases")}),
+            ),
         }
     )
 

@@ -1,0 +1,97 @@
+# 티켓 02(가짜 검색 서버 픽스처)의 시험 `tests/test_fake_doc_search.py`가 서버 모듈
+# `tests/fake_doc_search_server.py`의 어디를 지키는지 변이로 본다. 시험은 서버 뒤에 쓴 것이라 빨강을
+# 본 적이 없다. 표지는 단언에 실은 메시지의 값이 끼는 앞머리다. 값이 끼는 꼴이라 시험 파일의 원문에는
+# 글자 그대로 없다.
+# 실행: PYTHONUTF8=1 uv run python tools/mutate.py .scratch/base-agent/probes/fake_doc_search_fixture_mutations.toml
+
+[[mutation]]
+name = "창이 블록 경계가 아니라 상한에서 잘린다"
+tests = ["tests/test_fake_doc_search.py::test_긴_전문은_블록_경계에서_잘린_창으로_이어_읽는다"]
+expect = "red"
+expect_output = ["창이 블록 경계에서 잘리지 않았다: ['"]
+
+[[mutation.edit]]
+file = "tests/fake_doc_search_server.py"
+old = '''
+            end = position
+'''
+new = '''
+            end = limit
+'''
+
+[[mutation]]
+name = "include_text가 거짓이어도 창을 싣는다"
+tests = ["tests/test_fake_doc_search.py::test_전문_창은_include_text가_참일_때만_오고_text_length는_늘_온다"]
+expect = "red"
+expect_output = ['include_text가 거짓인데 창이 왔다: "# 제2장']
+
+[[mutation.edit]]
+file = "tests/fake_doc_search_server.py"
+old = '''
+    if include_text and length is not None:
+'''
+new = '''
+    if length is not None:
+'''
+
+[[mutation]]
+name = "틀린 Authorization을 막지 않는다"
+tests = ["tests/test_fake_doc_search.py::test_기대한_Authorization이_아니면_401로_막고_맞으면_통과한다"]
+expect = "red"
+expect_output = ["틀린 Authorization을 막지 않았다: ("]
+
+[[mutation.edit]]
+file = "tests/fake_doc_search_server.py"
+old = '''
+        if self._expected is not None and headers.get("authorization") != self._expected:
+'''
+new = '''
+        if self._expected is not None and headers.get("authorization") == self._expected:
+'''
+
+[[mutation]]
+name = "끝 넘음 모드가 런타임의 문구 대신 내부 오류로 실패한다"
+tests = ["tests/test_fake_doc_search.py::test_끝_넘음_모드는_N번째_뒤의_호출을_런타임의_문구로_실패시킨다"]
+expect = "red"
+expect_output = ['끝 넘음 문구가 아니다: {"type":"about:blank"']
+
+[[mutation.edit]]
+file = "tests/fake_doc_search_server.py"
+old = '''
+        return _failure(OVER_LIMIT.format(limit=MODE.tool_cap))
+'''
+new = '''
+        return _tool_error(ErrorCode.INTERNAL_ERROR)
+'''
+
+[[mutation]]
+name = "조각의 쪽 번호를 싣지 않는다"
+tests = ["tests/test_fake_doc_search.py::test_조각의_위치는_형식마다_실제처럼_온다"]
+expect = "red"
+expect_output = ["PDF 조각의 쪽이 3과 5가 아니다: ['None', 'None']"]
+
+[[mutation.edit]]
+file = "tests/fake_doc_search_server.py"
+old = '''
+                page=chunk.block.page,
+'''
+new = '''
+                page=None,
+'''
+
+[[mutation]]
+name = "예상하지 못한 예외가 internal_error 결과가 되지 않고 새어 나온다"
+tests = ["tests/test_fake_doc_search.py::test_예상하지_못한_예외는_internal_error의_실패_결과가_된다"]
+expect = "red"
+expect_output = ["ValueError: 비밀 값이 든 메시지"]
+
+[[mutation.edit]]
+file = "tests/fake_doc_search_server.py"
+old = '''
+    except Exception:  # 어느 갈래에도 들지 않는 예외는 도구 오류 `internal_error`다
+        return _tool_error(ErrorCode.INTERNAL_ERROR)
+'''
+new = '''
+    except RuntimeError:  # 어느 갈래에도 들지 않는 예외는 도구 오류 `internal_error`다
+        return _tool_error(ErrorCode.INTERNAL_ERROR)
+'''

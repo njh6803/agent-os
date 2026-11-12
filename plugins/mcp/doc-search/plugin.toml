@@ -1,0 +1,11 @@
+schema_version = "1"
+kind = "mcp"
+name = "doc-search"
+version = "0.1.0"
+
+[server]
+transport = "http"
+url = "http://rag-engine:8000/mcp"
+
+[server.headers]
+Authorization = "DOC_SEARCH_AUTHORIZATION"

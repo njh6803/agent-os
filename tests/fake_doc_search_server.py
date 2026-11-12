@@ -1,11 +1,18 @@
-"""프로브용 가짜 문서 검색 서버. `skill_follow.py`가 `<파이썬> 이 파일 <포트> [모드]`로 띄운다.
+"""테스트용 가짜 문서 검색 서버. 문서 검색 서버(rag-engine)가 열 MCP 도구 셋을 그 서버와 같은
+모양으로 연다. `sys.executable 이 파일 <포트> <기록 파일> [선택 인자]`로 띄우고
+`tests/fake_doc_search.py`의 `serving`이 그 일을 맡는다. 플러그인 꾸러미 시험(티켓 03)과 실제 모델
+시험(티켓 05) 같은, 문서 검색 서버가 필요한 시험이 붙는 서버다. 꾸러미 시험과 프로브
+`skill_follow.py`가 지금 띄운다.
 
-문서 검색 서버(rag-engine)의 MCP 도구 셋을 그 저장소의 코드에서 옮겼다(main `68aa7e0`을 2026-11-11에
-읽었다). 원천은 `src/rag_engine/server/`의 `tool_models.py`(출력 모델과 칸 설명, `FORMAT_VERSION`),
+문서 검색 서버의 MCP 도구 셋을 그 저장소의 코드에서 옮겼다(main `68aa7e0`을 2026-11-11에 읽었다).
+원천은 `src/rag_engine/server/`의 `tool_models.py`(출력 모델과 칸 설명, `FORMAT_VERSION`),
 `search_tool.py`와 `read_tools.py`(도구 이름, 설명 글, 주석, 입력의 이름·타입·기본값과 검증),
 `tool_support.py`와 `problems.py`(오류 결과의 모양, 제목과 상태의 표), `app/document_text.py`(전문과
-창 자르기), `app/search.py`와 `app/read_documents.py`(검증의 차례, 빈 결과, 조각 수)다. 흉내 내는
-판은 `FORMAT_VERSION` 한 곳에 적는다.
+창 자르기), `app/search.py`와 `app/read_documents.py`(검증의 차례, 빈 결과, 조각 수)다. 이 모듈은
+프로브의 가짜 서버(`.scratch/base-agent/probes/fake_doc_search.py`)에서 옮겨 와 헤더 확인과 요청
+기록을 더했고, 프로브의 서버를 지운 뒤에는 이 독스트링이 위 옮김의 원천이다. 흉내 내는 검색 도구
+형식의 판은 `FORMAT_VERSION` 한 곳에 적는다. 시험은 그 상수를 읽고 판의 글자를 스스로 적지
+않는다(ADR 0048).
 
 실제 서버와 같게 둔 것.
 - 도구 셋의 이름, 설명 글, 주석, 입력. inputSchema는 같은 서명에서 mcp가 짓는다(`filter`의 모델과
@@ -16,7 +23,7 @@
   코드 다섯(`knowledge_base_not_found`, `document_not_found`, `invalid_argument`,
   `search_unavailable`, `internal_error`)의 제목과 상태는 그 표를 옮겼다. `ToolError`를 던지면 mcp가
   글 앞에 `Error executing tool <이름>: `을 붙이므로(`server/mcpserver/tools/base.py`) 실패 결과를
-  직접 돌려준다. 어느 갈래에도 들지 않는 예외는 `internal_error`다.
+  직접 돌려준다(`guarded`). 어느 갈래에도 들지 않는 예외는 `internal_error`다.
 - 검증의 차례. `search`는 `filter`의 시각, 빈 질의와 `top_k`의 범위, 지식베이스, 현재 색인 판의
   차례다. `get_document`는 식별자가 UUID인지, `max_chars`와 `offset`의 범위, 문서, `offset`이 전문의
   길이를 넘는지의 차례다.
@@ -27,42 +34,61 @@
   `section`이 절 경로(바깥에서 안쪽 순)다.
 
 다르게 둔 것. 점수는 검색어와 조각이 함께 가진 두 글자 토막의 비율로 지은 값이고 리랭커의 점수가
-아니다. 인증과 Host 확인이 없고, `request_id`는 UUIDv7이 아니라 호출마다 새 uuid4다. 실제 서버는
-블록 모두를 조각으로 나누지만, 여기서는 조각 하나가 블록 하나이고 일부 블록은 조각이 없이 전문에만
-있다(전문 읽기가 필요한 질문을 재려는 것이다). 문서의 지금 내용이 아직 파싱되지 않은 때(전문의 칸
-셋이 null)는 문서마다 `text_ready`로 흉내 낸다.
+아니다. Host와 Origin은 MCP SDK의 루프백 보호를 그대로 받아(허용은 `127.0.0.1`·`localhost`·`[::1]`)
+다른 `Host`는 421, 다른 `Origin`은 403으로 막힌다. `Authorization`은 기대한 값과 같은지만 본다
+(대소문자를 구분하고, 같은 헤더가 둘이면 마지막 값을 본다). `request_id`는
+UUIDv7이 아니라 호출마다 새 uuid4다. 실제 서버는 블록 모두를 조각으로 나누지만, 여기서는 조각 하나가
+블록 하나이고 일부 블록은 조각이 없이 전문에만 있다(전문 읽기가 필요한 질문을 재려는 것이다). 문서의
+지금 내용이 아직 파싱되지 않은 때(전문의 칸 셋이 null)는 문서마다 `text_ready`로 흉내 낸다. 글이
+하나도 없는 문서(스캔본)는 두지 않는다. 그런 문서는 조각이 없어 검색에 나오지 않으므로, 검색 결과의
+식별자로 전문을 읽는 스킬의 길이 닿지 않는다. 프로브의 서버에 없던 것: 헤더
+확인(`--expect-authorization`)과 받은 요청의 기록(아래), 시작할 때 `ready` 줄을 찍지 않는 것(띄우는
+쪽이 포트가 열리기를 TCP 접속으로 기다린다).
 
-표본 문서는 넷이다. 형식은 문서마다 다르다(`DOCUMENTS`).
+표본 문서는 넷이다. 형식은 문서마다 다르다(`DOCUMENTS`). 실제 모델 시험(티켓 05)의 단언(문서 제목,
+위치, 갱신일, 숫자)이 이 표본의 글자에 기댄다. 표본을 고치면 그 단언과 프로브(`skill_follow.py`)를
+함께 고친다.
 - 육아휴직 업무편람(DOCX). 조각 셋. 그 가운데 급여 조각에 도우미에게 내리는 지시를 섞었다. 전문은
-  `#` 제목 줄이 들고, 복직 절차는 조각에 없고 전문에만 있다.
+  `#` 제목 줄이 들고, 복직 절차의 "7일"은 조각에 없고 전문에만 있다.
 - 연차휴가 운영지침(PDF). 조각 둘. 전문의 칸 셋이 null이다.
-- 출장비 지급규정(PDF). 조각 하나. 전문에 제목 줄이 없고, 해외 출장 일비는 전문에만 있다.
-- 법인차량 운영 규정(HWPX). 조각 하나(목적). 한 창보다 길게 띄울 때 쓰는 긴 문서다. 대여 기간은
-  첫 창에만, 주유 카드의 한도는 둘째 창 뒤에만 있게 둔다(`skill_follow.py`의 창 상한과 함께 정한다).
+- 출장비 지급규정(PDF). 조각 하나. 전문에 제목 줄이 없고, 해외 출장 일비 "60달러"는 전문에만 있다.
+- 법인차량 운영 규정(HWPX). 조각 하나(목적). 전문이 785자라 한 창보다 길게 띄울 때 쓰는 긴
+  문서다. 창 상한을 320으로 주면 대여 기간 "최대 4일"은 첫 창에만, 주유 카드의 한도 "35만원"은
+  셋째 창에만 있다.
 
-모드. 띄울 때 켠다.
-- `--tool-cap N`: 이 프로세스가 받은 도구 호출 가운데 N번째 뒤의 것은 부르지 않고, 런타임이 도구
-  호출의 끝을 넘은 호출에 낼 문구(base-agent 명세 "끝을 넘은 호출의 기록")로 실패한다. 그 끝이 아직
-  코드에 없어, 그 문구를 받은 모델이 무엇을 하는지를 미리 재려는 것이다. 루프는 실패한 도구 결과를
-  어디서 왔든 같은 모양의 메시지로 모델에 돌려준다(`core/loop.py`와 `adapters/mcp.py`를 읽었다).
-  그래서 모델이 보는 것은 런타임의 거부와 같다. 다른 것은 트레이스다. 런타임의 거부는 `rule`이
-  비고 서버에 닿지 않는데, 이 흉내는 서버에 닿아 실패한 호출이라 `rule`이 `allow`로 남는다. 서버는
-  실행의 경계를 모르므로 프로브가 회차마다 이 모드의 서버를 따로 띄운다.
+선택 인자. 띄울 때 켠다.
+- `--expect-authorization <값>`: 그 값과 다른 `Authorization`의 요청을 401로 막는다.
+- `--tool-cap N`: 이 프로세스가 받은 도구 호출(입력 검증을 지나 도구 함수까지 들어온 것만 센다)
+  가운데 N번째 뒤의 것은 부르지 않고, 런타임이 도구
+  호출의 끝을 넘은 호출에 낼 문구(base-agent 명세 "끝을 넘은 호출의 기록")로 실패한다. 루프는 실패한
+  도구 결과를 어디서 왔든 같은 모양의 메시지로 모델에 돌려준다(`core/loop.py`와 `adapters/mcp.py`).
+  그래서 모델이 보는 것은 런타임의 거부와 같다. 다른 것은 트레이스다. 런타임의 거부는 `rule`이 비고
+  서버에 닿지 않는데, 이 흉내는 서버에 닿아 실패한 호출이라 `rule`이 `allow`로 남는다. 서버는
+  실행의 경계를 모르므로 회차마다 이 모드의 서버를 따로 띄운다.
 - `--search-down`: `search`가 입력과 지식베이스를 확인한 뒤 `search_unavailable`로 실패한다(실제
   서버는 임베딩·리랭크 실패와 시간 제한에서 낸다).
 - `--empty-index`: 지식베이스에 현재 색인 판이 없을 때처럼 `search`가 빈 `results`를 내고,
   `get_document`의 조각 수가 0이다.
 - `--text-max-chars N`: 전문 창의 상한이자 기본값(실제 서버의 `RAG_DOCUMENT_TEXT_MAX_CHARS`, 기본
   20000). 도구 설명 글의 수도 이 값으로 바뀐다.
+
+기록. 요청마다 메서드·경로·쿼리 문자열·요청 헤더 전부를 기록 파일에 JSON 한 줄로 남긴다. 헤더
+이름은 소문자다. 도구 호출(JSON-RPC `tools/call`)의 줄에는 `tool`(이름)과 `arguments`(받은 그대로)도
+든다. 401로 막은 요청도 남는다(헤더가 서버에 닿았는지 보려는 것이다). `Authorization` 원문이 기록에
+그대로 실리므로 실제 비밀 값을 주지 않는다(원칙 V). 서버가 도는 동안에는 마지막 줄이 쓰이는 중일 수
+있어, 기록은 클라이언트 세션을 닫아 요청이 멎은 뒤에 읽는다.
 """
 
 import argparse
+import json
+import time
 import uuid
-from collections.abc import Callable, Mapping, Sequence
+from collections.abc import Awaitable, Callable, Mapping, MutableMapping, Sequence
 from dataclasses import dataclass
 from datetime import UTC, date, datetime
 from enum import StrEnum
-from typing import Annotated, Final, Self
+from pathlib import Path
+from typing import Annotated, Final, Self, TypeGuard
 from uuid import UUID
 
 import uvicorn
@@ -618,7 +644,7 @@ def _tool_error(code: ErrorCode) -> CallToolResult:
     return _failure(problem.model_dump_json(exclude_none=True))
 
 
-def _guarded(call: Callable[[], CallToolResult]) -> CallToolResult:
+def guarded(call: Callable[[], CallToolResult]) -> CallToolResult:
     """도구 호출 하나를 세고, 흉내 내는 끝을 넘었으면 런타임이 낼 문구로 실패한다. 아니면 본문을
     돌리고, 요청을 거절하는 오류는 그 코드의 도구 오류로, 그 밖의 예외는 `internal_error`로 낸다."""
     MODE.calls += 1
@@ -797,7 +823,7 @@ def build_server() -> MCPServer:
         filter: SearchFilterInput | None = None,
     ) -> Annotated[CallToolResult, SearchOutput]:
         size = DEFAULT_TOP_K if top_k is None else top_k
-        return _guarded(lambda: _search(query, size, knowledge_base, filter))
+        return guarded(lambda: _search(query, size, knowledge_base, filter))
 
     @server.tool(
         name="get_document",
@@ -811,7 +837,7 @@ def build_server() -> MCPServer:
         offset: int = 0,
         max_chars: int | None = None,
     ) -> Annotated[CallToolResult, DocumentOutput]:
-        return _guarded(
+        return guarded(
             lambda: _get_document(
                 document_id, include_text=include_text, offset=offset, max_chars=max_chars
             )
@@ -826,14 +852,134 @@ def build_server() -> MCPServer:
         annotations=READ_ONLY,
     )
     async def list_knowledge_bases_tool() -> Annotated[CallToolResult, KnowledgeBasesOutput]:
-        return _guarded(_knowledge_bases)
+        return guarded(_knowledge_bases)
 
     return server
+
+
+# --- 요청 기록과 헤더 확인: 이 픽스처가 프로브의 서버에 더한 것 ---
+
+Scope = MutableMapping[str, object]
+Message = MutableMapping[str, object]
+Receive = Callable[[], Awaitable[Message]]
+Send = Callable[[Message], Awaitable[None]]
+App = Callable[[Scope, Receive, Send], Awaitable[None]]
+
+
+def _is_list(value: object) -> TypeGuard[list[object]]:
+    return isinstance(value, list)
+
+
+def _is_pair(value: object) -> TypeGuard[tuple[object, object]]:
+    # ASGI의 헤더는 (이름, 값) 쌍이다.
+    return isinstance(value, tuple)
+
+
+def _is_dict(value: object) -> TypeGuard[dict[str, object]]:
+    return isinstance(value, dict)
+
+
+def _headers(scope: Scope) -> dict[str, str]:
+    raw = scope.get("headers")
+    if not _is_list(raw):
+        return {}
+    pairs: dict[str, str] = {}
+    for item in raw:
+        if _is_pair(item):
+            name, value = item
+            if isinstance(name, bytes) and isinstance(value, bytes):
+                pairs[name.decode("latin-1").lower()] = value.decode("latin-1")
+    return pairs
+
+
+async def _body(receive: Receive) -> bytes:
+    chunks: list[bytes] = []
+    while True:
+        message = await receive()
+        chunk = message.get("body")
+        if isinstance(chunk, bytes):
+            chunks.append(chunk)
+        if not message.get("more_body"):
+            return b"".join(chunks)
+
+
+def _replay(body: bytes, receive: Receive) -> Receive:
+    """읽어 버린 본문을 앱에 한 번 다시 준다. 그 뒤의 요청 메시지(연결 끊김 등)는 원래 것이다."""
+    pending = [body]
+
+    async def replay() -> Message:
+        if pending:
+            return {"type": "http.request", "body": pending.pop(), "more_body": False}
+        return await receive()
+
+    return replay
+
+
+def _tool_call(body: bytes) -> tuple[str, object] | None:
+    """JSON-RPC `tools/call`이면 도구 이름과 받은 그대로의 인자. 아니면 `None`."""
+    try:
+        parsed = json.loads(body) if body else None
+    except ValueError:
+        return None
+    if not _is_dict(parsed) or parsed.get("method") != "tools/call":
+        return None
+    params = parsed.get("params")
+    if not _is_dict(params) or not isinstance(params.get("name"), str):
+        return None
+    return str(params["name"]), params.get("arguments", {})
+
+
+async def _unauthorized(send: Send) -> None:
+    await send(
+        {
+            "type": "http.response.start",
+            "status": 401,
+            "headers": [(b"content-type", b"text/plain; charset=utf-8")],
+        }
+    )
+    await send({"type": "http.response.body", "body": b"unauthorized"})
+
+
+class Recording:
+    """요청마다 기록 한 줄을 남기고, `--expect-authorization`이 켜져 있으면 다른 값을 401로 막는다.
+    막은 요청도 기록한다."""
+
+    def __init__(self, app: App, record: Path, expected_authorization: str | None) -> None:
+        self._app = app
+        self._record = record
+        self._expected = expected_authorization
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope.get("type") != "http":
+            await self._app(scope, receive, send)
+            return
+        headers = _headers(scope)
+        method = str(scope.get("method"))
+        query = scope.get("query_string")
+        body = await _body(receive) if method == "POST" else b""
+        line: dict[str, object] = {
+            "t": time.time(),
+            "method": method,
+            "path": str(scope.get("path")),
+            "query": query.decode("utf-8", "replace") if isinstance(query, bytes) else "",
+            "headers": headers,
+        }
+        call = _tool_call(body)
+        if call is not None:
+            line["tool"], line["arguments"] = call
+        with self._record.open("a", encoding="utf-8") as record:
+            record.write(json.dumps(line, ensure_ascii=False) + "\n")
+        if self._expected is not None and headers.get("authorization") != self._expected:
+            await _unauthorized(send)
+            return
+        await self._app(scope, _replay(body, receive), send)
 
 
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("port", type=int)
+    parser.add_argument("record", type=Path)
+    parser.add_argument("--expect-authorization")
     parser.add_argument("--tool-cap", type=int)
     parser.add_argument("--search-down", action="store_true")
     parser.add_argument("--empty-index", action="store_true")
@@ -844,9 +990,11 @@ def main() -> None:
     MODE.empty_index = options.empty_index
     MODE.text_max_chars = options.text_max_chars
     server = build_server()
-    print(f"ready {options.port}", flush=True)
     uvicorn.run(
-        server.streamable_http_app(), host="127.0.0.1", port=options.port, log_level="warning"
+        Recording(server.streamable_http_app(), options.record, options.expect_authorization),
+        host="127.0.0.1",
+        port=options.port,
+        log_level="warning",
     )
 
 
