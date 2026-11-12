@@ -47,11 +47,11 @@ open-session을 부른다 2026-11-12T05:04:25Z
 - `pr-merge` 1단계가 `state`를 읽지 않아 병합 뒤 끊겼다 다시 들어오면 4단계에 닿지 못했다(병합된 PR은 `mergeable`이 `UNKNOWN`이라 5번 재조회 뒤 중단한다. 표준 Major 1, 명세 c2). `state`를 읽고 `MERGED`면 2·3단계를 건너뛰어 4단계로 가고, `CLOSED`면 중단하게 했다. 큐·auto-merge로 올린 뒤에도 같은 갈래로 돌아온다(표준 9).
 - 3단계 머리 SHA 대조가 출시 PR·되돌려 합치기 PR에서 틀리게 멈췄다(머리가 dev·main이라 로컬 HEAD가 원격보다 뒤처질 수 있다. 표준 Major 2). 티켓 PR과 핫픽스만 로컬 HEAD와 대고, 둘째 종류는 `gh pr view`가 방금 준 값을 쓰게 했다. 값은 2단계 대기 뒤에 다시 읽는다(명세 c3).
 - 1단계의 충돌·차단이 출시 PR·되돌려 합치기 PR을 `pr-feedback`으로 보냈다. 그 스킬은 머리 브랜치에 base를 병합하므로 dev를 main에 합친다(표준 Major 3, 명세 c5). 이 두 종류는 사용자에게 넘기게 했고, `UNSTABLE`은 차단이 아니라고 적었다(`merge.md` 워크트리 1과 같다).
-- 티켓 PR의 머리 접두 목록이 `operations.md` 18보다 좁았다(표준 4, 명세 c4). "머리가 dev·main·`hotfix/*`가 아닌 브랜치"로 고쳤다.
+- 티켓 PR의 머리 접두 목록이 `operations.md` 18보다 좁았다(표준 4, 명세 c4). 머리가 dev, main, `hotfix/*`가 아닌 브랜치로 고쳤다.
 - 4단계가 출시 PR·되돌려 합치기 PR의 "3을 건너뛴다" 예외를 옮기지 않았고 원격 브랜치 정리도 하지 않았다(명세 a2, 표준 6). 티켓 PR·핫픽스만 `merge.md` 워크트리 3으로 원격 브랜치를 확인하게 했다.
 - `gh pr checks`·`gh pr view --comments`·`gh pr diff`에 번호가 없어 다른 브랜치에서 부르면 엉뚱한 PR을 본다(명세 c1). `pr-merge`와 `pr-feedback`의 명령에 번호를 줬다.
 - `pr-feedback` 4단계에 봇 둘째 회차부터 Critical·Major만 고치는 규칙의 포인터를 더했다(표준 8).
-- `merge.md` 워크트리 2의 끝 문장이 "대신 `/pr-merge`를 쓴다"로 직접 치는 명령과 겹쳤다(표준 7, 명세 c7). "1과 2를 `/pr-merge`가 대신 해도 되고, 3~5는 이 절이 정하며, 병합 명령은 한 번만 친다"로 고쳤다.
+- `merge.md` 워크트리 2의 끝 문장이 끝 문장이 `/pr-merge`를 대신 쓰라고 해서 직접 치는 명령과 겹쳤다(표준 7, 명세 c7). 1과 2를 `/pr-merge`가 대신 해도 되고 3~5는 이 절이 정하며 병합 명령은 한 번만 친다는 뜻으로 고쳤다.
 - 새 프로젝트가 복사할 글이 `/pr-merge`를 부르는데 복사 목록에 두 사본이 없었다(명세 a1). `KICKOFF.md` 복사 목록에 항목 한 줄을 더하고 티켓 결과 2에 이유를 적었다.
 
 **남긴 것**:
@@ -59,7 +59,7 @@ open-session을 부른다 2026-11-12T05:04:25Z
 - `pr-merge` 1단계가 `merge.md` "병합 방법"의 표를 다시 적었다(표준 5, Duplicated Code). 스킬이 혼자 읽혀야 하고 카나리아 명세가 그 문장을 스킬 본문에서 찾으므로 두되, 원천이 `merge.md`라고 적었다.
 - 런북 본문(`KICKOFF.md` 단계, `kickoff/`)이 사용자 수준 이름을 부르는 것은 새 프로젝트가 사본을 들이기 전까지 맞다. 불일치는 티켓 결과 2에 적었다.
 
-**새로 쓴 사실 문장** (PR 직전 리뷰에 밀 주장): `pr-merge` 1단계의 "병합된 PR은 `mergeable`이 `UNKNOWN`이다"(표준 축이 PR #541을 `gh pr view`로 읽어 `state:MERGED`와 `UNKNOWN` 둘을 보았다고 보고했다. 이 세션이 다시 재지는 않았다). `pr-feedback`이 머리 브랜치에 base를 병합해 출시 PR에서는 dev를 main에 합친다는 문장(`pr-feedback` 5단계의 코드와 `merge.md` 4의 금지 문장을 읽어 적었다). `KICKOFF.md` 새 항목의 "복사하지 않으면 새 프로젝트에서 `Unknown skill`이 난다"(카나리아 대조군이 같은 오류를 내서 본 것이고 새 프로젝트로 재 보지는 않았다).
+**새로 쓴 사실 문장** (PR 직전 리뷰에 밀 주장): `pr-merge` 1단계의 병합된 PR은 `mergeable`이 `UNKNOWN`이라는 문장(표준 축이 PR #541을 `gh pr view`로 읽어 `state:MERGED`와 `UNKNOWN` 둘을 보았다고 보고했다. 이 세션이 다시 재지는 않았다). `pr-feedback`이 머리 브랜치에 base를 병합해 출시 PR에서는 dev를 main에 합친다는 문장(`pr-feedback` 5단계의 코드와 `merge.md` 4의 금지 문장을 읽어 적었다). `KICKOFF.md` 새 항목의 "복사하지 않으면 새 프로젝트에서 `Unknown skill`이 난다"(카나리아 대조군이 같은 오류를 내서 본 것이고 새 프로젝트로 재 보지는 않았다).
 
 ## 검증
 
@@ -76,6 +76,21 @@ open-session을 부른다 2026-11-12T05:04:25Z
 5. **기각.** 주 체크아웃 경로의 `KICKOFF.md`를 Edit하려다 앱이 워크트리 사본을 쓰라고 거부했다. 이미 있는 앱 가드가 그 자리에서 막았다.
 6. **기각.** 파이프를 쓴 `pyright ... | tail`에 훅이 경고했고, 영어 중간 문장에도 경고가 붙었다. 이미 있는 훅이 알렸다.
 7. **기각.** 습관대로 `/git-pr-merge`를 쳐서 사용자 수준 원본이 도는 사건은 아직 난 적이 없다. 사건 없이 떠올린 것이다. 나면 회차를 세는 항목으로 둔다.
+
+## 커밋과 인계
+
+셀프 리뷰와 회고를 마치고 커밋했다(`e5f189ba4`, 18개 파일, pre-commit 통과). 커밋 뒤 이 세션의 컨텍스트가 인계 문턱을 넘어 `커밋 뒤` 경계에서 새 세션에 넘긴다. 세션 제목은 인계 직전 `chore/project-pr-skills-dev`였다.
+
+커밋 전에 `uv run python tools/sibling_overlap.py`가 둘을 알렸다.
+
+- 헌법 파일(`operations.md`)을 고치고 판을 올리지 않았다. `docs/constitution/README.md`를 3.0.90으로 올리고 3.0.88과 3.0.89가 형제 브랜치(`chore/dev-release-pr-step`)가 비운 판이라고 한 줄 적었다. 커밋 뒤 다시 친 출력은 형제의 가장 높은 판을 3.0.91이라 하고 이 브랜치의 새 번호를 3.0.90, 겹침 없음으로 냈다. 형제가 먼저 병합되면 README에서 글자 충돌이 난다.
+- `to-tickets/SKILL.md`를 고쳤는데 그 파일을 원천으로 든 카나리아 명세 셋(`to_tickets_stem_branch.toml`, `to_tickets_test_seam.toml`, `to_tickets_path_rule.toml`)을 새 세션에서 돌려 보지 않았다는 알림이었다. 셋을 돌렸다. 앞의 둘은 통과 4다. `to_tickets_path_rule.toml`은 첫 판이 통과 1·실패 3(실험군 셋이 "없음"만 답했다)이었고 같은 본문으로 다시 돌린 둘째 판은 실험군 셋 가운데 둘이 통과하고 하나가 "없음"이었다. 이 변경은 그 명세가 읽는 두 문장을 건드리지 않았고 두 문장은 본문에 글자 그대로 있어(grep으로 봤다) 모델의 실행 간 변동으로 읽는다. 어림이다. 세 명세의 `# 최신 결과:` 줄을 이 결과로 고쳤다.
+
+커밋의 pre-commit이 인용 대조 경고 셋을 냈다(막지 않는다). 위 셀프 리뷰 절 안의 따옴표 인용 셋이 저장소 다른 자리에 글자 그대로 없다는 것이다. 하나는 실제 문장이 `hotfix/*`라서 별표가 빠졌고, 나머지 둘은 원문을 줄여 옮겼다. 이 인계 뒤 세션이 셋의 따옴표를 떼어 고쳤다.
+
+인계: 이 세션의 제목을 `chore/project-pr-skills-dev (인계함)`으로 바꿨고(앱이 묻지 않고 바꿨다), 기다리는 백그라운드 작업은 없었으며, `git worktree unlock C:/project/agent/.claude/worktrees/project-pr-skills-dev`는 `is not locked`로 끝났다(이미 풀려 있었다).
+
+open-session을 부른다 2026-11-12T05:42:28Z
 
 ## 다음
 
