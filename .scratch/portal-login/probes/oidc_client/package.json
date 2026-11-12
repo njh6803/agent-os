@@ -1,0 +1,32 @@
+{
+  "name": "oidc-probe",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@11.24.0",
+  "engines": {
+    "node": ">=24 <25"
+  },
+  "scripts": {
+    "typecheck": "node probe/typecheck.mjs",
+    "lint": "node probe/lint.mjs",
+    "flow": "node probe/flow.mjs",
+    "deps": "node probe/deps.mjs",
+    "registry": "node probe/registry.mjs",
+    "loc": "node probe/loc.mjs",
+    "report": "node probe/report.mjs"
+  },
+  "dependencies": {
+    "jose": "6.2.17",
+    "oauth4webapi": "3.8.8",
+    "oidc-provider": "9.13.3",
+    "openid-client": "6.8.9"
+  },
+  "devDependencies": {
+    "@types/node": "24.19.0",
+    "@types/oidc-provider": "9.13.1",
+    "eslint": "10.11.0",
+    "eslint-plugin-boundaries": "7.2.0",
+    "typescript": "5.9.3",
+    "typescript-eslint": "8.70.1"
+  }
+}
