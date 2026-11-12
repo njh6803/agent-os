@@ -24,8 +24,15 @@ uv run python .scratch/local-model/probes/check_adapter_types.py <환경 루트>
 
 - PR 봇 회차에서 표지 셋을 좁혔다(결과를 본 뒤가 아니라 봇의 지적 때문이다). `guard_candidate_key_rotation`은 지운 뒤의 호출이 요청 없이 변수 이름과 "가 없다"가 든 예외로 끝나야 측정이다. `guard_candidate_success`는 둘째 호출도 도구 호출 하나를 돌려받아야 측정이다. `candidate_connections_after_failures`는 401·500·JSON 아님 갈래의 실행이 그 갈래의 예외 글(`(HTTP 401)`, `(HTTP 500)`, `(ValueError)`와 "Unexpected response type")이 든 예외로 끝나야 기대한 대로 끝난 것으로 센다. 좁힌 뒤 108 사례 전체는 측정 108회차, 측정 아님 0회차였고 이 셋의 결과 문구는 좁히기 전과 같았다(쟀다, `.scratch/local-model/probes/openai_compat.py`).
 
+- 리눅스는 Docker의 컨테이너로 돈다. `linux_lifetime.sh`가 컨테이너 안에서 위 환경과 같은 판(저장소 락의 런타임 의존 위에 `langchain-openai==1.6.2`)을 깔고 `openai_compat.py`를 돈다. 저장소 루트(Git Bash)에서 출력 폴더를 만든 뒤 아래처럼 친다. 사례 이름을 빼면 108 사례 전부다. 출력 폴더에 화면 출력(`stdout.txt`), 사례마다의 JSON 줄(`lifetime.jsonl`), 프로브의 종료 코드(`exit.txt`)가 생기고, 스크립트도 그 종료 코드로 끝나 `docker run`의 종료 코드가 같다. 셀프 리뷰와 PR 직전 리뷰가 이 명령으로 수명 사례 아홉을 돌렸다(아래 12).
+
+```sh
+MSYS_NO_PATHCONV=1 docker run --rm -v "$(pwd -W):/repo:ro" -v "<출력 폴더>:/out" python:3.12.10-slim-bookworm sh /repo/.scratch/local-model/probes/linux_lifetime.sh runs_in_one_loop candidate_connections_after_failures calls_on_one_model candidate_released_after_loop_closed keepalive_released_after_loop_closed keepalive_released_inside_loop two_loops_same_url two_loops_own_client two_loops_candidate
+```
+
 | 파일 | 재는 것 | 근거로 드는 자리 | 다시 돌 때 | 잰 판 |
 |---|---|---|---|---|
+| `linux_lifetime.sh` | `openai_compat.py`의 사례를 Docker의 리눅스 컨테이너에서 돈다. 저장소는 읽기 전용으로 붙이고 환경은 컨테이너 안에 새로 깐다 | 명세 "HTTP 클라이언트"의 2026-11-12 주석, 티켓 05의 수명 사례 | Docker, 이미지 `python:3.12.10-slim-bookworm`, 네트워크(uv 0.10.8과 패키지를 받는다). 위 "돌리는 법"의 명령 | `openai_compat.py`와 같다. Python 3.12.10, uv 0.10.8 |
 | `openai_compat.py`(사례 모듈 `cases_request.py`·`cases_key.py`·`cases_response.py`·`cases_failure.py`·`cases_guard.py`·`cases_logs.py`·`cases_lifetime.py`, 가짜 서버 `fake_server.py`, 공용 `support.py`, 판 `versions.py`) | `ChatOpenAI`를 가짜 서버에 붙여 core의 길(`core/loop.py`의 `model_caller`가 하는 `bind_tools` 뒤 `ainvoke`, `core/model.py`의 `reply_from`)로 부른 108 사례. 요청의 경로·본문·헤더, 환경 변수가 요청에 실리는지, 키 함수가 불리는 때와 횟수, 인증 헤더에 실을 수 없는 키, 깨진 도구 호출 인자, 실패가 닿는 예외의 종류·글·원인 사슬·재시도 횟수와 그 안의 키·주소, 후보 어댑터가 그 예외를 바꾸는지, 읽는 단계의 주소 검사(sdk의 `HttpServer`)를 지난 주소가 모델을 만들다 거부되는지, DEBUG 로그에 키·프롬프트·주소가 실리는지, `usage`와 `model`과 사고 글의 해석, 모델마다 준 HTTP 클라이언트의 연결이 모델을 놓은 뒤와 실패·취소한 호출 뒤에 닫히는지. 사례마다의 표지는 사례 모듈의 독스트링 | `.scratch/local-model/spec.md`의 Problem Statement, Implementation Decisions(매니페스트, 요청, HTTP 클라이언트, 키, 실패 문구와 되울린 키, 인자가 깨진 도구 호출, 로그, 의존)와 Testing Decisions, ADR 0057과 그 2026-11-12 이력 둘 | 위 명령. 환경이 먼저 있어야 한다. 닫힌 포트 사례 셋이 각 7.3~7.5초, 재시도가 드는 사례 일곱이 각 1.2~1.5초 걸렸다. 전부의 시간은 재지 않았다 | langchain-openai 1.6.2, openai 3.49.0, langchain-core 1.6.3, httpx2 2.13.0, httpcore2 2.13.0, h11 0.16.0, anyio 4.15.1, pydantic 2.13.5, Python 3.12.10. Windows 10(이 PC)만. 2026-11-12 |
 | `adapter_candidate.py`(검사 `check_adapter_types.py`, 양성 대조 `adapter_types_control.py`) | 후보 어댑터(`ChatOpenAI`를 상속해 `_generate`와 `_agenerate`를 감싼 모양)가 저장소의 pyright strict 설정을 진단 0개로 지나고 타입 우회(`Any`, `cast`, 억제 주석)가 없는지. 표지는 설정이 strict인 것, pyright가 두 파일을 분석한 것(`filesAnalyzed`), 일부러 넣은 타입 오류 여덟 쌍(줄과 규칙)이 모두 나고 기대 밖의 진단이 없는 것, 타입 우회 판정자(`tools/check_type_escapes.py`)가 심은 우회를 찾는 것. 후보의 동작은 윗줄의 `guard_candidate_*` 사례가 본다 | 같은 명세의 실패 문구와 되울린 키, ADR 0057 | 위 다섯째 명령. 환경이 먼저 있어야 한다. 시간은 재지 않았다 | pyright 1.1.414(저장소의 `[tool.pyright]`, `typeCheckingMode = "strict"`), 윗줄의 판. Windows 10(이 PC)만. 2026-11-12 |
 | `make_env.py` | 저장소 락의 판 위에 `langchain-openai==1.6.2`를 얹으면 새로 드는 패키지(`new`)와 락과 달라지는 판(`moved`). `moved`가 비지 않으면 1로 끝난다 | 같은 명세의 의존, ADR 0057 | 위 첫째 명령. 패키지를 받는다. 시간은 재지 않았다 | uv 0.10.8, Python 3.12.10, 저장소의 `uv.lock`(브랜치 `docs/local-model-spec`의 2026-11-12 판). Windows 10(이 PC)만. 2026-11-12 |
@@ -160,16 +167,24 @@ core는 실행을 준비할 때마다 모델을 만들고 실행이 끝나면 �
 - **놓일 때 나는 것.** 기본값 클라이언트의 모델을 루프가 아직 돌 때 놓으면 unraisable 예외와 경고가 0건이다(`keepalive_released_inside_loop`). 놓기 직전 그 풀에 열린 연결이 1이었으니 정리할 것이 있었는데 아무것도 나지 않았다. 루프가 닫힌 뒤에 놓으면 `ResourceWarning: unclosed transport <_ProactorSocketTransport …>`가 1건 난다(`keepalive_released_after_loop_closed`). 후보의 모델은 루프가 닫힌 뒤에 놓아도 0건이다(`candidate_released_after_loop_closed`. 놓기 전에 서버가 받은 연결 1개가 이미 닫혀 있었다). 탐지의 자기 시험(`__del__`에서 예외와 경고를 내는 객체)은 세 사례 모두에서 잡혔다. `ResourceWarning`은 파이썬의 기본 필터가 숨기고, 저장소의 `pyproject.toml`의 `filterwarnings`는 `RuntimeWarning`과 unraisable 경고만 오류로 올린다(읽었다).
 - **실패하거나 취소된 호출의 연결(`candidate_connections_after_failures`).** 후보의 모델을 세 번 새로 만들어 한 번씩 부르고 놓은 뒤 1초를 기다려 서버 쪽의 연결을 셌다. 401로 끝난 호출은 연결 3개 가운데 3개가, 500으로 끝난 호출은(재시도 두 번이 들어) 9개 가운데 9개가, 200에 JSON이 아닌 본문으로 끝난 호출은 3개 가운데 3개가, 1.5초 뒤에 답하는 서버를 0.5초 기한으로 끊은 호출은 3개 가운데 3개가 닫혔다. 대조로 기본값 클라이언트를 준 갈래의 401은 3개 가운데 닫힌 것이 0개였다(그 갈래에서 연결이 남는다는 것이 이 셈이 닫히지 않은 연결을 셀 수 있다는 표지다). 그래서 포트에 닫기를 두지 않아도 후보의 실패·취소한 호출이 연결을 남기지 않는다고 본다. 넣은 갈래 넷에서 본 것이다. 연결 도중에 끊기는 꼴(TLS 악수 중, 응답 본문을 읽는 중)은 넣지 않았다.
 - **한 모델을 여러 번 부를 때(`calls_on_one_model`).** 모델 하나를 놓지 않고 네 번 부르면 후보는 연결 4개를 맺고, 넷째 호출이 끝나고 1초를 기다린 시점(모델을 아직 쥐고 있을 때)에 4개가 모두 닫혀 있었다. 호출이 끝난 바로 그 순간의 값은 재지 않았다. 대조인 기본값 클라이언트는 연결 1개를 네 번 다시 썼고 놓기 전에도 놓은 뒤에도 닫힌 것이 0개였다. 그래서 도구 호출로 모델을 여러 번 부르는 실행에서 후보는 호출 수만큼 연결을 맺고 그때그때 닫는다. 대가는 호출마다의 연결 수립이다(위 "후보의 한계").
-- **재지 않은 것.** Linux의 이벤트 루프. 이 폴더의 값은 모두 Windows(Proactor 루프)의 것이다. 쉬는 연결을 두지 않는 것은 연결 풀의 설정이라 루프의 종류에 덜 기댈 것으로 본다(어림). 구현 티켓의 어댑터 시험이 CI의 리눅스에서 같은 연결 셈을 본다(명세의 Testing Decisions).
+- **재지 않은 것.** Linux의 이벤트 루프. 이 폴더의 값은 모두 Windows(Proactor 루프)의 것이다. 쉬는 연결을 두지 않는 것은 연결 풀의 설정이라 루프의 종류에 덜 기댈 것으로 본다(어림). 구현 티켓의 어댑터 시험이 CI의 리눅스에서 같은 연결 셈을 본다(명세의 Testing Decisions). (2026-11-12 셀프 리뷰: 이 절의 사례 아홉은 아래 12에서 리눅스 컨테이너로도 쟀다, `probes/linux_lifetime.sh`.)
 
 ### 11. 워크트리 밖 쓰기와 `.env` — `outside_worktree.py`
 
 워크트리 세션(이 세션)에서 두 명령을 쳤다(쟀다, `probes/outside_worktree.py`). 음성 대조를 더한 뒤 한 번씩, "작업 폴더 밖"의 판정을 고친 뒤(위 "결과를 본 뒤 바꾼 것") 한 번씩 다시 쳤고, 그때마다 명령마다 두 회차(워크트리 밖 쓰기, 환경) 모두 측정이었다. 홈 아래 이 프로브만 쓰는 이름의 폴더에 파일을 쓰고 읽고 지웠고, 그 자리는 작업 폴더 밖이었다. `--env-file` 없이 친 명령의 환경에는 `ANTHROPIC_API_KEY`가 없었고(음성 대조), `--env-file`로 주 체크아웃의 `.env`를 넘긴 명령의 환경에는 있었다. 그래서 그 변수는 `--env-file`이 넘긴 것이다. `RUNPOD_API_KEY`는 넘긴 환경에도 없었다. 이 결과는 명령이 그날 훅과 데스크톱 앱의 가드를 지났다는 것까지다. 가드는 같은 모양의 명령에도 결과가 갈린 적이 있다(`CLAUDE.md` 환경 함정).
 
+### 12. 리눅스의 이벤트 루프 — `linux_lifetime.sh` (2026-11-12 명세 검토와 셀프 리뷰)
+
+위 10의 수명 사례 아홉을 Docker의 리눅스 컨테이너(이미지 `python:3.12.10-slim-bookworm`, WSL2 커널 6.18.58.1, glibc 2.36)에서 돌렸다. 판은 Windows의 실행과 같다(첫 줄의 판. langchain-openai 1.6.2, openai 3.49.0, langchain-core 1.6.3, httpx2 2.13.0). 명세 검토가 세션 스크래치패드의 같은 스크립트로 한 번 손으로 돌렸고, 셀프 리뷰가 그 스크립트를 이 폴더에 옮겨 "돌리는 법"의 명령으로 다시 돌려 사례마다 같은 결과 문구를 얻었다(쟀다, `probes/linux_lifetime.sh`. 측정 9회차, 측정 아님 0회차, 프로브의 종료 코드 0). PR 직전 리뷰가 스크립트 끝을 프로브의 종료 코드로 끝나게 고친 뒤 같은 명령으로(저장소 자리에는 `$(pwd -W)`가 내는 것과 같은 절대 경로를 적었다) 한 번 더 돌려 사례마다 같은 결과 문구를 얻었다(측정 9회차, 측정 아님 0회차, `docker run`의 종료 코드 0). 같은 이미지의 컨테이너에서 세 번 돈 값이고 CI의 ubuntu 러너에서는 돌리지 않았다.
+
+- **후보는 Windows와 같다.** 놓인 모델 5개 중 5, 401 3개 중 3, 500 9개 중 9, JSON 아님 3개 중 3, 기한에 끊긴 호출 3개 중 3, 쥔 모델을 네 번 부른 뒤 놓기 전 4개 중 4가 닫혀 있었다. 루프가 닫힌 뒤에 놓아도 unraisable과 경고가 0건이고, 둘째 루프도 됐다.
+- **대조인 기본값 클라이언트는 Windows와 다르다.** 놓인 모델 5개 중 5가 닫혔고(Windows 0), 401로 끝난 호출은 3개 중 2가 닫혔고(Windows 0), 쥔 모델은 놓기 전 1개 중 0(Windows와 같다), 놓은 뒤 1개 중 1(Windows 0)이었다. 루프가 돌 때 놓으면 경고가 1건이었다(Windows 0건). 그래서 놓인 모델의 셈은 리눅스에서 후보와 기본값을 가르지 못하고, 401의 셈은 하나 차이(3개 중 3과 3개 중 2)로만 갈렸다. 두 실행에서 모두 크게 가른 것은 쥔 모델의 놓기 전 셈이다(후보 4개 중 4, 기본값 1개 중 0). 기본값이 리눅스에서 놓은 뒤 닫히는 까닭(루프의 종류인지 쓰레기 수거의 때인지)은 가르는 갈래를 넣지 않아 모른다.
+- **나눠 쓰는 클라이언트의 둘째 루프는 리눅스에서도 실패했다**(`two_loops_same_url`). 모델마다 클라이언트를 준 두 갈래는 둘째 루프도 됐다.
+
 ### 돌려 보지 못한 것
 
 - 실제 모델 서버와 클라우드(지시대로 쓰지 않았다). `max_completion_tokens`라는 이름, `developer` 역할, `x-stainless-*` 헤더를 실제 모델 서버가 받는지. 쿼리가 든 주소로 깨진 요청 줄(질문 1)을 실제 모델 서버가 어떻게 받는지.
-- Linux. 닫힌 포트의 시간, 둘째 루프의 실패, 연결의 셈(질문 10)은 모두 Windows의 값이다.
+- Linux. 닫힌 포트의 시간과 수명 사례 밖의 사례는 모두 Windows의 값이다. 둘째 루프의 실패와 연결의 셈(질문 10)은 12에서 리눅스 컨테이너로도 쟀다(2026-11-12 셀프 리뷰, `probes/linux_lifetime.sh`).
 - 만들기에서 난 예외를 어댑터가 바꾸는 것. 후보는 바꾸지 않고, 읽는 단계의 검사에 명세가 더하는 쿼리 거부도 여기서는 돌려 보지 않았다(sdk에 아직 없는 규칙이다).
 - 수백 초의 타임아웃(지시대로 하지 않았다).
 - 스트리밍 콜백이 붙은 `ainvoke`, `content` 안의 `<think>` 글, 서버가 키를 바꿔 되울리는 것, 호출 도중에 환경의 키 값이 바뀐 뒤 되울린 옛 키. 위에 어림이나 읽은 것으로 적었다.
