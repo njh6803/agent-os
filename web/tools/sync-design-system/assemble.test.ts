@@ -278,7 +278,9 @@ describe("짓기 명령의 산출", () => {
       expect(lines[1]).toBe(`<div id="root" data-ui-root></div>`);
       expect(lines[2]?.startsWith("<script>")).toBe(true);
       expect(text.endsWith("</script>\n")).toBe(true);
-      expect(text.split("<script>")).toHaveLength(2);
+      // 스크립트 요소가 하나라는 것은 닫는 태그가 하나라는 뜻이다. 장면 본문에는 스토리 원문의 `<script>` 글자(문자열 안)가
+      // 있을 수 있어 여는 태그의 수로는 셀 수 없고, 닫는 태그는 금지 문자열이라 본문에 있을 수 없다.
+      expect(text.split(/<\/script/i)).toHaveLength(2);
     }
   });
 

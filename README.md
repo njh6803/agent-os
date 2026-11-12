@@ -40,6 +40,8 @@ plugins/
                    손으로 고쳐도 같다. skill은 에이전트가 고르면 런타임이 실행을 준비할 때 켜짐을 본다
   rules.toml       선택. 운영자의 규칙 파일(ADR 0044). 도구 호출마다 막고(deny), 묻고(ask), 그냥 부른다(allow).
                    없으면 연결에 있는 도구의 모든 호출이 묻는다. 손으로 고치고 다음 실행과 다음 재개부터 듣는다
+  README.md        커스텀 에이전트를 만드는 안내(기본 에이전트 assistant를 복사하는 순서, 두 끝, 열기, 문서 검색 서버에
+                   붙이는 설정). 종류 폴더 밖이라 플러그인으로 읽히지 않는다
 tests/             src를 미러링. fixtures/site_file/ 은 서버와 위젯 빌드의 시험이 함께 읽는 사이트 파일 픽스처
 web/               pnpm 워크스페이스(Node 24, TypeScript 5.9). 파이썬과 루트를 나눈다. 앱은 apps/*, 공유 패키지는 packages/*
   eslint.config.mjs  원칙 III의 TS 판정자와 층 경계. 변이 테스트는 eslint.config.test.ts
@@ -60,7 +62,8 @@ web/               pnpm 워크스페이스(Node 24, TypeScript 5.9). 파이썬�
   packages/ui/     디자인 시스템(@agent-os/ui). src/styles/(디자인 토큰 CSS theme.css, 글꼴 CSS fonts.css, shadow 보정,
                    판정 스토리), src/themes.ts(`./themes`), node/(`./fonts`. 글꼴 파일을 고르고 복사하는 node 쪽
                    도우미와 FontFaceSource 타입), src/components/atoms/·molecules/(컴포넌트와 스토리, <Name>.md),
-                   src/testing/(판정 함수),
+                   src/markdown/(마크다운 부품의 변환과 주소 판정. 화면을 그리지 않고 패키지 밖으로 내보내지 않는다),
+                   src/testing/(판정 함수와 부품 시험의 격리 setup.ts, 부품 시험은 vitest 의 ui-pages 프로젝트가 jsdom 에서 돈다),
                    src/storybook/(앱도 나눠 쓰는 미리보기), .storybook/(Storybook 설정), visual/(사진 비교와 정답
                    사진 snapshots/, 앱도 나눠 쓰는 정적 빌드 열기 index.ts). 스토리 테스트는 뿌리 vitest.config.ts 의
                    storybook 프로젝트가 실제 chromium 에서 돈다(ADR 0026)
