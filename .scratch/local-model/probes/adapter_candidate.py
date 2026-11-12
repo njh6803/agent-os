@@ -10,9 +10,10 @@ core 는 어댑터가 만든 모델 객체에 `bind_tools`와 `ainvoke`를 바�
 - 키 변수가 없으면 요청을 만들기 전에 변수 이름만 든 내장 예외로 끝난다(`KeySource.__call__`).
 - 인증 헤더에 실을 수 없는 키 값(개행, 비ASCII)도 같은 자리에서 값 없이 끝난다. 라이브러리에 넘기면
   예외의 글이나 원인에 값이 실린다(`openai_compat.py`의 `bad_key_*` 사례).
-- 호출에서 올라온 예외는 종류를 가리지 않고 받아, 글에서 지금의 키 값을 가린 내장 예외로 바꾼다.
-  `openai.OpenAIError`만 받으면 200 응답의 `error` 칸이 내는 `ValueError`가 그대로 지나간다(같은
-  프로브의 `ok_status_error_body` 사례).
+- 호출에서 올라온 예외는 종류를 가리지 않고 받아, 글에서 키 값을 가린 내장 예외로 바꾼다. 가리는
+  값은 호출을 시작하며 읽어 둔 값과 예외를 바꾸는 때의 환경 값 둘이다(`KeySource.masked`. 호출
+  도중에 환경의 값이 바뀐 갈래는 이 프로브가 재지 않았다). `openai.OpenAIError`만 받으면 200 응답의
+  `error` 칸이 내는 `ValueError`가 그대로 지나간다(같은 프로브의 `ok_status_error_body` 사례).
 - pydantic 의 검증 예외(도구 호출의 인자가 JSON 이지만 객체가 아니거나, 글이 아닌 객체로 왔다)는
   글을 싣지 않고 틀린 자리만 싣는다. 그 글이 받은 인자를 되울린다(같은 프로브의
   `guard_candidate_args_*` 사례).
@@ -22,7 +23,7 @@ core 는 어댑터가 만든 모델 객체에 `bind_tools`와 `ainvoke`를 바�
   (`_address`. ADR 0057 결정 "주소는 비밀이 아닌 것으로 본다"와 MCP 어댑터의 `_where`가 같은
   방식이다). 사용자 정보와 쿼리를 떼지 않으므로 그 둘이 든 주소가 여기까지 오면 글에 그대로
   실린다. 사용자 정보가 있으면 키 대신 Basic 인증이 가고, 서버가 그것을 되울린 글도 가리지
-  못한다(같은 프로브의 `guard_candidate_userinfo_401` 사례). 가리는 것은 환경의 키 값뿐이다. 그래서
+  못한다(같은 프로브의 `guard_candidate_userinfo_401` 사례). 가리는 것은 키 값뿐이다. 그래서
   사용자 정보와 쿼리가 든 주소는 모델 파일을 읽는 단계가 거절해야 한다.
 - 취소(`CancelledError`)는 `Exception`이 아니라 받지 않는다. 실행 타임아웃이 그대로 듣는다(같은
   프로브의 `guard_candidate_cancelled` 사례).
@@ -81,12 +82,20 @@ class KeySource:
             )
         return value
 
-    def masked(self, text: str) -> str:
-        """글에서 지금 환경의 키 값을 글자 그대로 찾아 가린다. 값을 바꿔 되울린 것은 놓친다."""
+    def masked(self, text: str, started_with: str) -> str:
+        """글에서 키 값을 글자 그대로 찾아 가린다. 값을 바꿔 되울린 것은 놓친다.
+
+        찾는 값은 둘이다. 호출을 시작하며 읽어 둔 값(`started_with`)과 지금 환경의 값이다. 지금의
+        값만 찾으면, 요청이 나간 뒤 환경의 값이 바뀐 호출에서 서버가 되울린 옛 값이 글에 남는다.
+        호출 도중에 값이 한 번 바뀌면 보낸 값은 그 둘 가운데 하나다. 두 번 이상 바뀌면 가운데 값을
+        놓칠 수 있다.
+        """
         if self._variable is None:
             return text
-        value = self._env.get(self._variable)
-        return text.replace(value, MASK) if value else text
+        for value in (started_with, self._env.get(self._variable)):
+            if value:
+                text = text.replace(value, MASK)
+        return text
 
 
 class GuardedChatOpenAI(ChatOpenAI):
@@ -101,12 +110,12 @@ class GuardedChatOpenAI(ChatOpenAI):
         **kwargs: object,
     ) -> ChatResult:
         key = self._key_source()
-        key()
+        started_with = key()
         failure: Exception
         try:
             return super()._generate(messages, stop, run_manager, **kwargs)
         except Exception as error:
-            failure = _failure(error, key, self.openai_api_base)
+            failure = _failure(error, key, started_with, self.openai_api_base)
         raise failure
 
     @override
@@ -118,12 +127,12 @@ class GuardedChatOpenAI(ChatOpenAI):
         **kwargs: object,
     ) -> ChatResult:
         key = self._key_source()
-        key()
+        started_with = key()
         failure: Exception
         try:
             return await super()._agenerate(messages, stop, run_manager, **kwargs)
         except Exception as error:
-            failure = _failure(error, key, self.openai_api_base)
+            failure = _failure(error, key, started_with, self.openai_api_base)
         raise failure
 
     def _key_source(self) -> KeySource:
@@ -133,10 +142,12 @@ class GuardedChatOpenAI(ChatOpenAI):
         return key
 
 
-def _failure(error: Exception, key: KeySource, base_url: str | None) -> Exception:
+def _failure(
+    error: Exception, key: KeySource, started_with: str, base_url: str | None
+) -> Exception:
     """라이브러리의 예외를 내장 예외로 바꾼다. 원래 예외를 원인으로 잇지 않는다."""
     address = _address(base_url)
-    detail = key.masked(str(error))
+    detail = key.masked(str(error), started_with)
     if isinstance(error, openai.APIStatusError):
         return RuntimeError(
             f"모델 서버 {address} 가 요청을 거절했다 (HTTP {error.status_code}): {detail}"

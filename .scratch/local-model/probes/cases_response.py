@@ -40,10 +40,13 @@ def _raw_call(arguments: object, *, with_id: bool = True) -> dict[str, object]:
 def _read_the_reply(outcome: Outcome) -> bool:
     """결과가 그 응답을 읽다 난 것인지. 메시지가 돌아왔거나, 예외가 전송·상태 오류가 아니다.
 
-    전송이나 상태의 실패(`openai.OpenAIError` 계열)는 서버가 내준 응답을 읽은 결과가 아니라, 그런
-    회차는 측정으로 세지 않는다. 어떤 예외였는지는 결과 갈래가 종류 이름으로 적는다.
+    전송이나 상태의 실패(`openai.APIConnectionError`, `openai.APIStatusError`)는 서버가 내준 응답을
+    읽은 결과가 아니라, 그런 회차는 측정으로 세지 않는다. `openai.OpenAIError` 전체를 빼지 않는다.
+    그 계열 가운데 응답 본문을 읽다 나는 예외는 재려는 상황이다. 어떤 예외였는지는 결과 갈래가 종류
+    이름으로 적는다.
     """
-    return outcome.message is not None or not isinstance(outcome.error, openai.OpenAIError)
+    transport_or_status = (openai.APIConnectionError, openai.APIStatusError)
+    return outcome.message is not None or not isinstance(outcome.error, transport_or_status)
 
 
 async def _tool_case(calls: Sequence[Mapping[str, object]]) -> Report:

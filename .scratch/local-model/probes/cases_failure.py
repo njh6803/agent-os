@@ -1,7 +1,8 @@
 """실패가 호출한 쪽에 닿는 모양(질문 6)의 사례. 손대지 않은 `ChatOpenAI`를 루프와 같은 길로 부른다.
 
 표지: 상태 코드 사례는 요청이 닿았고 올라온 예외가 그 상태 코드를 들었다. 닫힌 포트 사례는 예외의
-원인 사슬에 전송 층의 접속 오류(`ConnectError`)가 있다. 200 인데 본문이 이상한 사례는 요청이 닿았다.
+원인 사슬에 전송 층의 접속 오류(`ConnectError`)가 있다. 200 인데 본문이 이상한 사례는 요청이 정확히
+1건 닿았다(응답을 받지 못한 전송 실패라면 SDK 가 다시 보내 1건을 넘는다).
 가짜 서버는 받은 키를 오류 글에 되울린다. 그래서 글에 키가 있는지가 곧 서버가 되울린 글이 예외에
 실리는지다.
 """
@@ -110,7 +111,7 @@ async def _odd_body(responder: Responder) -> Report:
     error = outcome.error
     kind = "예외 없음" if error is None else qualified(type(error))
     return Report(
-        measured=len(server.requests) >= 1,
+        measured=len(server.requests) == 1,
         result=f"{kind} 요청 {len(server.requests)}건 키 {leaked(error, KEY)}",
         data={
             "error": describe(error, key=KEY),

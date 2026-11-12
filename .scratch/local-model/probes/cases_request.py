@@ -325,9 +325,10 @@ async def env_gateway_used_when_omitted() -> Report:
                 return Report(measured=False, result="요청을 보내지 않았다", data={"aimed": aimed})
             await call(model, tools=False)
     sent = authorizations(decoy)
+    with_key = "게이트웨이 키로" if sent == [f"Bearer {GATEWAY_KEY}"] else f"다른 값으로 {sent}"
     return Report(
         measured=len(decoy.requests) >= 1,
-        result="게이트웨이 변수의 주소로 갔다 " + " | ".join(targets(decoy)),
+        result=f"게이트웨이 변수의 주소로 {with_key} 갔다 " + " | ".join(targets(decoy)),
         data={"requests": targets(decoy), "authorization": sent},
     )
 

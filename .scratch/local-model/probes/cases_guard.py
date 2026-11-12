@@ -316,14 +316,18 @@ async def guard_candidate_missing_key() -> Report:
         outcome = await call(candidate(server.base_url, key=None))
     text = "" if outcome.error is None else str(outcome.error)
     return Report(
-        measured=KEY_VARIABLE in text,
+        measured=f"{KEY_VARIABLE} 가 없다" in text,
         result=f"{_label(outcome)} 요청 {len(server.requests)}건",
         data=_view(server, outcome),
     )
 
 
 async def _candidate_bad_key(kind: str) -> Report:
-    """헤더에 실을 수 없는 키 값이 환경에 있다. 후보는 호출 전에 값 없이 끝낸다."""
+    """헤더에 실을 수 없는 키 값이 환경에 있다. 후보는 호출 전에 값 없이 끝낸다.
+
+    표지는 예외의 글이 그 변수의 이름과 "보낼 수 없는 글자"를 함께 든다는 것이다. 변수 이름만 보면
+    값이 환경에 닿지 않아 "변수가 없다"로 끝난 회차도 같은 표지가 된다.
+    """
     PASSES.clear()
     value, needle = BAD_KEYS[kind]
     with FakeServer() as server:
@@ -331,7 +335,7 @@ async def _candidate_bad_key(kind: str) -> Report:
     text = "" if outcome.error is None else str(outcome.error)
     kind_of = "예외 없음" if outcome.error is None else qualified(type(outcome.error))
     return Report(
-        measured=KEY_VARIABLE in text,
+        measured=KEY_VARIABLE in text and "보낼 수 없는 글자" in text,
         result=f"{kind_of} 키 {leaked(outcome.error, needle)} 요청 {len(server.requests)}건",
         data={
             "key": repr(value),
@@ -497,7 +501,11 @@ def _slow(_request: Received) -> Reply:
 
 
 async def guard_candidate_cancelled() -> Report:
-    """실행 타임아웃처럼 `move_on_after`로 감싼다. 후보가 취소를 삼키지 않는지 본다."""
+    """실행 타임아웃처럼 `move_on_after`로 감싼다. 후보가 취소를 삼키지 않는지 본다.
+
+    표지는 요청이 서버에 닿았고 기한이 실제로 호출을 끊으려 했다(`cancel_called`)는 것이다. 기한
+    전에 다른 까닭으로 끝난 호출은 취소를 재지 않은 회차다.
+    """
     PASSES.clear()
     outcome: Outcome | None = None
     with FakeServer(_slow) as server:
@@ -507,7 +515,7 @@ async def guard_candidate_cancelled() -> Report:
         reached = len(server.requests)
     passed = scope.cancelled_caught and outcome is None
     return Report(
-        measured=reached >= 1,
+        measured=reached >= 1 and scope.cancel_called,
         result="취소가 그대로 올라왔다" if passed else "취소가 그대로 올라오지 않았다",
         data={
             "cancelled_caught": scope.cancelled_caught,

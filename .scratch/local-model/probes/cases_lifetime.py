@@ -352,7 +352,8 @@ async def candidate_connections_after_failures() -> Report:
       뜻이 된다.
 
     표지는 모든 갈래의 실행이 기대한 대로(예외나 취소로) 끝났고, 요청이 실행 수만큼은 닿았으며,
-    대조 갈래에 닫히지 않은 연결이 남은 것이다.
+    대조 갈래에 닫히지 않은 연결이 남은 것이다. `status_500` 갈래는 요청이 실행 수보다 많아야 한다.
+    재시도가 실제로 들었다는 표지다.
     """
     branches = {
         "status_401": await _failing_runs(lambda url: candidate(url), echo(401), cancel=False),
@@ -362,9 +363,14 @@ async def candidate_connections_after_failures() -> Report:
         "keepalive_401": await _failing_runs(_keepalive_model, echo(401), cancel=False),
     }
     control = branches["keepalive_401"]
-    measured = control["closed"] < control["opened"] and all(
-        row["ended_as_expected"] == FAILED_RUNS and row["requests"] >= FAILED_RUNS
-        for row in branches.values()
+    retried = branches["status_500"]["requests"] > FAILED_RUNS
+    measured = (
+        control["closed"] < control["opened"]
+        and retried
+        and all(
+            row["ended_as_expected"] == FAILED_RUNS and row["requests"] >= FAILED_RUNS
+            for row in branches.values()
+        )
     )
     result = ", ".join(
         f"{name} 연결 {row['opened']}개 중 닫힘 {row['closed']}개" for name, row in branches.items()

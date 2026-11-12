@@ -52,7 +52,8 @@ def _writes_outside() -> tuple[bool, bool]:
     finally:
         state.unlink(missing_ok=True)
         folder.rmdir()
-    outside = not folder.is_relative_to(here) and not here.is_relative_to(home)
+    # 작업 폴더가 홈 아래에 있어도 그 폴더는 작업 폴더 밖이다. 홈이 작업 폴더 안일 때만 안이다.
+    outside = not folder.is_relative_to(here)
     return read_back and not folder.exists(), outside
 
 

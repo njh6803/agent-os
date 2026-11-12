@@ -6,6 +6,11 @@
 표지 셋. 찾는 방법이 듣는다(같은 수집기에 키와 프롬프트가 든 레코드를 일부러 하나 내고 그것을
 찾는다). 서버가 그 키가 든 인증 헤더를 받았다. 서버가 받은 본문에 프롬프트가 있다. 셋이 다 있어야
 "로그에 없다"가 "애초에 보내지 않았다"나 "찾지 못했다"와 갈린다.
+
+사례가 고른 갈래가 실제로 났다는 표지 둘을 더 본다. 호출이 그 갈래대로 끝났다(성공 갈래는 메시지가
+돌아왔고, 상태 코드 갈래는 예외의 글이 그 코드를 든다. 다른 까닭으로 끝난 호출의 로그를 그 갈래의
+로그로 세지 않는다). 쿼리 갈래는 서버가 받은 요청 줄에 그 쿼리가 있다(쿼리가 가지 않았으면 "로그에
+쿼리가 없다"가 "애초에 보내지 않았다"와 갈리지 않는다).
 """
 
 from __future__ import annotations
@@ -31,6 +36,7 @@ from support import (
     describe,
     echo,
     rendered,
+    targets,
 )
 
 SELF_TEST = "probe.selftest"
@@ -66,11 +72,18 @@ async def _logged(*, guarded: bool, status: int | None, query: bool = False) -> 
         PROMPT_MARK in json.dumps(body, ensure_ascii=False) for body in bodies(server)
     )
     found = {label: "있음" if names else "없음" for label, names in hits.items()}
+    if status is None:
+        ended_as_chosen = outcome.message is not None
+    else:
+        ended_as_chosen = f"Error code: {status}" in str(outcome.error)
+    sent_query = any(QUERY_SECRET in target for target in targets(server))
     return Report(
         measured=KEY in planted
         and PROMPT_MARK in planted
         and f"Bearer {KEY}" in authorizations(server)
-        and sent_prompt,
+        and sent_prompt
+        and ended_as_chosen
+        and (sent_query or not query),
         result=(
             f"로그 {len(library)}줄, 키 {found['key']}, Bearer {found['bearer']}, "
             f"프롬프트 {found['prompt']}, 주소 {found['origin']}"

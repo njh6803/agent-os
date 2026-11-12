@@ -230,3 +230,107 @@ open-session을 부른다 2026-11-11T20:06:52Z
 ## 인계 뒤의 open-session (위 세션이 적었다)
 
 첫 열기는 새 세션 화면을 열고 폴더(`C:\project\agent`)를 맞춘 뒤 "5초 안에 모델 메뉴의 'Fable 5.1' 을(를) 찾지 못했다."로 멈췄다(`restore=필요`, 원래 값은 Opus 5.5 / xhigh). 지시문은 보내지 않은 채 화면에 남았다. 사용자가 "다시 시도해줘"라고 했다. 다시 열기 전에 이 세션 트랜스크립트에서, 사용자가 이 세션을 Fable 5.2에서 Opus 5.5로 바꾸기 직전의 응답이 429(`model_requires_usage_credits`, `seven_day_overage_included`, 기업 단위로 초과 사용이 꺼져 있다)였던 것을 찾았다. 그래서 Fable 5.2로 고쳐도 새 세션의 첫 턴이 같은 429로 멈춘다고 보고, 모델 줄만 `모델: Opus 5.5 / xhigh`로 고친 지시문을 새 파일로 다시 쐈다(같은 파일로 두 번 돌리지 않는다는 open-session 규칙 때문이다). 그 밖의 줄은 위 지시문과 같다. `list_sessions`에 이 브랜치를 제목으로 한 다른 세션이 없는 것을 보고 쐈다. 2의 잇는 지시문 값(Fable 5.1)이 앱의 모델 메뉴와 어긋나는 것은 회고 후보로 넘긴다. 이 세션도 같은 값의 지시문으로 열렸는데 Fable 5.2로 돌았다(일지 머리 줄). 그때 연 쪽이 어떻게 그 값을 골랐는지는 보지 않았다.
+
+## 이어받은 세션의 인계 (커밋 뒤, 2026-11-12 19:38)
+
+"이어받은 세션" 절을 쓴 세션이 적는다. 승인 뒤 커밋했다. 커밋은 `cfa62b318`(파일 22개)이고 pre-commit이 787초 걸려 Bash의 600초 제한을 넘겨 백그라운드로 넘어갔다가 종료 코드 0으로 끝났다. 그 출력에서 ruff 둘, check-ticket, zizmor, lint-imports, check-instructions, check-type-escapes, pyright, pyright-linux, run-hooks, pytest(613.5초), web-verify(786.9초), 마크다운 표, 줄 구분 문자, 변이 표, 커밋 메시지 검사가 Passed였고 canary specs와 constitution version은 대상 파일이 없어 Skipped였다(손으로 봤다, 그 출력을 Read로). 커밋 전에 따로 친 `uv run ruff check .`, `uv run ruff format --check .`, `tools/check_adr_pointers.py`, `tools/check_md_tables.py`, `tools/check_line_separators.py`, `tools/plan_table.py --check`도 걸린 것이 없었고, `git branch --show-current`는 `docs/local-model-spec`, `tools/sibling_overlap.py`는 번호 겹침과 함께 고친 파일이 없다고 냈다.
+
+**인용 대조의 경고(막지 않는 검사).** 명세 83행의 ADR 0057 인용 "쿼리에 비밀을 적는 것은 막지 않는다"가 ADR에 글자 그대로 없다는 한 건을 커밋 뒤에 고쳤다. ADR 0057 22행의 글자 "주소의 쿼리 문자열에 비밀을 적는 것은 막지 않고"로 바꿨고 이 변경은 커밋하지 않았다. 이 일지의 인용 31건도 저장소에 글자 그대로 없다고 나왔다. 선택 화면의 질문과 설명, 바깥 문서의 문장, 리뷰 보고가 든 고치기 전의 문장, 프로브의 출력, 가운데를 줄인 명세 인용이라고 갈래로만 봤고 하나씩 원문과 대 보지는 않았다.
+
+**인계의 계기.** 커밋 명령이 백그라운드로 넘어간 직후 훅(`hook_handoff`)이 세션 컨텍스트 205,073 토큰으로 인계 계기(`커밋 뒤`)를 냈다. 커밋이 끝나기를 기다려 성공을 본 뒤에 `handoff.md`를 따랐다. 인계하지 않는 때 다섯에는 들지 않았다. 커밋이 성공했고, 요청 범위가 PR과 병합까지이고, 이 세션을 연 지시문의 이어받을 상태는 `인계: 셀프 리뷰 직전`이라 같은 경계가 아니고, 이 세션이 쓴 인계 실패 줄이 없고, `get_session`의 `self`에 `parentSessionId`가 없다. 넘기기 전 이 세션의 제목은 `docs/local-model-spec`이다. 이 브랜치에 열린 PR은 없다(`gh pr view docs/local-model-spec --json state`가 no pull requests found를 냈다).
+
+낸 지시문:
+
+```text
+다음 작업: 기능 local-model. ADR 0057·0058 설계를 바탕으로 명세 작성
+다음 단계: 명세
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /to-spec
+브랜치: docs/local-model-spec
+모델: Fable 5.2 / xhigh. 2의 잇는 지시문. 그 값 Fable 5.1은 앱의 모델 메뉴에 없어(일지 "인계 뒤의 open-session") 이 세션을 연 지시문의 값을 적는다
+읽을 것: docs/journal/2026-11-12-0248-local-model-spec.md 전체(앞의 두 세션이 쓰다 넘긴 일지. 새 세션이 이어 쓰고 커밋한다)
+이어받을 상태: 인계: 커밋 뒤. 일지는 docs/journal/2026-11-12-0248-local-model-spec.md. 셀프 리뷰 두 축의 반영, 명세 서두의 수 다섯 세기(26·3·25·2·32), ADR 0057 이력 둘의 사용자 승인까지 마치고 커밋 하나로 묶었다. 푸시하지 않았고 PR도 없다. 그 커밋 뒤에 고친 둘이 커밋하지 않은 변경으로 남아 있다. 일지의 마지막 절 "이어받은 세션의 인계 (커밋 뒤)"와, pre-commit의 인용 대조가 경고한 명세 "매니페스트" 절의 ADR 0057 인용 한 자리다. 남은 단계는 PR 직전 리뷰(일지 "리뷰 반영"의 "고치며 새로 쓴 사실 문장" 열둘을 bug-perf-review 브리프의 밀 주장으로 넘긴다), 푸시와 PR(base는 dev), 봇 회차 반영, 병합, 일지 "다음"과 회고다. 본문을 고치는 반영마다 명세 서두의 수를 다시 세고, 승인받은 ADR 0057 이력 둘의 결정을 바꾸는 반영은 사용자에게 다시 묻는다
+확인할 선행 조건: 없음
+이번 요청 범위: PR과 병합까지
+```
+
+모델 줄은 `directive.md` 2의 잇는 지시문(명세면 Fable 5.1 / xhigh)을 글자 그대로 따르지 않았다. 그 이름이 앱의 모델 메뉴에 없어 앞 세션의 첫 열기가 멈췄고(위 절), 이 세션은 `Fable 5.2 / xhigh.`로 적힌 지시문으로 열려 그 모델로 돌았다(`get_session`의 `self`가 `claude-fable-5-2`와 `xhigh`를 보였다). `directive.md`의 그 값을 고치는 것은 회고 후보로 넘긴다(위 절이 이미 넘겼다).
+
+제목을 `docs/local-model-spec (인계함)`으로 바꿨다. 이 세션이 띄운 백그라운드 작업은 남아 있지 않았다(커밋 명령 하나가 백그라운드로 넘어갔다가 끝났다). `git worktree unlock C:/project/agent/.claude/worktrees/local-model-spec`은 `is not locked`로 끝나 넘어갔다.
+
+open-session을 부른다 2026-11-12T10:39:11Z
+
+## 셋째 세션 (2026-11-12 19:47)
+
+위 "이어받은 세션의 인계 (커밋 뒤)"의 지시문을 받은 새 세션이 이 절부터 쓴다. 모델은 Fable 5.2 / xhigh다. 세션 제목을 `docs/local-model-spec`으로 바꾸고 `EnterWorktree(path)`로 이 워크트리에 들어왔다. `ListAgents`에서 이 브랜치의 이름을 쓰는 다른 세션은 넘긴 세션 `docs/local-model-spec (인계함)` 하나였고, `list_sessions`에서 그 세션은 `isRunning`이 false였다(손으로 봤다). 제목이 이 브랜치인 도는 세션은 없었다.
+
+> 사용자: `.claude/skills/to-spec/SKILL.md` 를 읽어 그대로 따른다. (…) 인자: 다음 작업: 기능 local-model. ADR 0057·0058 설계를 바탕으로 명세 작성 (…) 이어받을 상태: 인계: 커밋 뒤. (…) 이번 요청 범위: PR과 병합까지
+
+지시문의 나머지 줄은 위 절의 "낸 지시문"과 같다.
+
+### 시작할 때 본 것
+
+`git fetch origin` 뒤 `git rev-parse origin/dev`는 `fba36f78a`로 이 브랜치의 기준과 같았다. 워크트리에는 커밋 `cfa62b318` 위에 커밋하지 않은 변경 둘(명세 83행의 ADR 0057 인용, 이 일지의 위 절)이 있었다. `tools/sibling_overlap.py`는 "이 브랜치의 새 번호 없음", "번호 겹침 없음", "함께 고친 파일 없음"이었고, `tools/check_adr_pointers.py`와 `tools/plan_table.py --check`는 출력 없이 끝났다. 명세의 `거부한 안:` 표시는 33건이고 서두 자신의 언급 하나를 빼면 서두의 서른둘과 같았다(손으로 봤다, Grep).
+
+### 프로브를 새 환경에서 다시 돌렸다
+
+앞 세션의 환경은 그 세션의 스크래치패드에 있어 넘겨받지 못했다. README의 "돌리는 법"대로 이 세션의 스크래치패드에 환경을 새로 만들었다. `make_env.py`의 출력은 설치 61개, 새 패키지 넷(`langchain-openai` 1.6.2, `openai` 3.49.0, `regex` 2026.11.9, `tiktoken` 0.14.0), 락과 달라진 판 없음이었다(쟀다, `.scratch/local-model/probes/make_env.py`). `openai_compat.py` 전체는 측정 108회차, 측정 아님 0회차였다(쟀다, `.scratch/local-model/probes/openai_compat.py`. 커밋 `cfa62b318`의 판이다). 환경과 출력 파일은 스크래치패드에 있고 커밋하지 않는다.
+
+### PR 직전 리뷰
+
+`coderabbit auth status`는 `Plan: Free`, `Seat: not assigned`였다(손으로 봤다). 리뷰 파이프라인 2대로 `coderabbit-review` 서브에이전트를 띄웠고, 기준 브랜치가 dev로 바뀐 뒤라 브리프에 `--base origin/dev`를 붙이라고 적었다. 앞 세션이 넘긴 "고치며 새로 쓴 사실 문장" 열둘은 CLI에 넘길 길이 없어(`code-review` 6단계) `bug-perf-review` 서브에이전트를 함께 띄워 밀 주장으로 넘겼다. 커밋하지 않은 변경인 명세 83행의 인용을 열셋째로 더했다. 그 브리프에 위 환경의 인터프리터 경로와 108 사례 실행의 출력 파일 경로를 줬다.
+
+**`coderabbit-review`의 보고(받은 그대로 줄였다).** CLI 0.7.5, `Plan: Free`, `Seat: not assigned`. `coderabbit review --agent --include-untracked --base origin/dev`가 약 8분 뒤 종료 코드 0과 `review_completed`로 끝났고 파일 22개를 봤다고 보고했다. 지적 13건, 서브에이전트의 트리아지는 유효 5, 유효이나 이미 적힌 한계 1(두 자리), 보류 6, 오탐 0이다.
+
+- Major `cases_request.py:269`·`329`(보류). `env_key_used_when_omitted`와 `env_gateway_used_when_omitted`가 실제 Authorization 값을 보지 않는다.
+- Major `cases_logs.py:70`(유효). `query=True` 사례가 쿼리가 요청 경로에 실렸는지 보지 않는다.
+- Minor `cases_logs.py:70-73`(유효). `logs_401_*`가 401을, 성공 사례가 호출 결과를 표지로 보지 않는다.
+- Major `cases_response.py:46`(보류). `_read_the_reply`가 `openai.OpenAIError` 전체를 제외해, 응답 본문을 읽다 난 그 계열의 예외까지 측정 밖으로 뺀다.
+- Critical(서브에이전트는 Minor로 봤다) `adapter_candidate.py:88-89`, 명세 153행(유효, 이미 적힌 한계). `masked`가 지금 환경의 키 값만 가려, 요청 뒤 변수가 바뀌면 되울린 옛 키가 문구에 남는다.
+- Critical 명세 178행(보류). 응답 헤더 값이 DEBUG 로그에 찍힌다고 적으면서, 서버가 키를 응답 헤더로 되울리는 갈래가 수락 시험에 없다.
+- Major `make_env.py:72`(유효). 인자로 저장소 루트를 주면 저장소의 `.venv`에 설치한다.
+- Minor `outside_worktree.py:55`(유효). 체크아웃이 홈 아래에 있으면 `outside`가 거짓이 된다.
+- Minor `cases_failure.py:113`(보류). 가짜 서버가 응답을 보내지 못해도 측정으로 센다.
+- Minor `cases_guard.py:510`(보류). 요청이 닿은 뒤 기한 전에 다른 오류가 나도 측정으로 센다.
+- Minor `cases_guard.py:334`(보류). 잘못된 키 값의 거부와 "환경 변수 없음"의 거부를 가르지 않는다.
+- Minor 명세 238행(유효). 걸음 4가 죽은 잠금 아래 자원을 지운 뒤 걸음 5에서 `--yes` 없이 끝나는 길이 종료 코드 0~4 어디에도 맞지 않는다.
+
+**`bug-perf-review`의 보고(받은 그대로 줄였다).** 기준 `fba36f78a`, 범위 22개 파일, 도구 호출 26번이라고 보고했다(작업 알림의 `tool_uses`는 41이었다). 밀 주장 열셋 가운데 열하나는 근거와 맞았다고 했고 둘을 지적으로 냈다. Minor 2, 오탐 2다.
+
+- Minor 명세 238행(밀 주장 10, 유효). "4는 걸음 1·3·5에서 아무것도 띄우지도 지우지도 않고 끝난 때에만 낸다"가 걸음 4·5와 맞지 않는다. 죽은 잠금이 남은 채 `--yes` 없이 치면 걸음 4가 지우고 걸음 5에서 끝나, 0~4 어디에도 맞지 않는다(CodeRabbit의 마지막 지적과 같다). 같은 대목의 빈칸 둘도 짚었다. Ctrl-C로 끊긴 회차와, 걸음 9의 시험이 시간 제한에 걸린 회차의 종료 코드가 없다.
+- Minor 명세 132행(밀 주장 6, 유효). "넷째 호출이 끝난 시점에 연결 4개가 모두 닫혀 있었다"는 측정보다 세다. `calls_on_one_model`은 호출 넷 뒤 1초(`SETTLE_SECONDS`)를 기다리고 읽는다. 결론("포트에 닫기를 두지 않는다")은 놓은 뒤의 값과 대조 갈래가 받친다고 봤다.
+- 근거와 맞았다고 본 밀 주장: 1(`build_rejects_address`의 출력), 2(`channel/cli/main.py`가 `PluginError`를 받아 진단만 적는다), 3, 4(`_address`의 `isprintable` 판정과 `guard_candidate_odd_url_401`의 출력), 5, 7(`core/loop.py`와 `core/run.py`), 8(`tests/test_main.py`의 단언과 두 차이), 9(`model_name_quirks`의 출력), 11(`.scratch/answer-eval/plan.md`의 `**Blocked by:**`와 본문. pilot-release 쪽 기능 계획은 열지 않았다고 했다), 12(`.github/workflows/ci.yml`의 `ubuntu-24.04`), 13(ADR 0057 22행에 글자 그대로 있다).
+- 프로브 표지. `candidate_connections_after_failures`의 `status_500` 갈래에는 재시도가 실제로 들었다는 표지가 없다(`requests >= 3`만 본다. 이번 출력은 9건이다). `_read_the_reply`가 `OpenAIError`를 모두 빼는 것은 CodeRabbit이 올린 것과 같아 새 지적으로 세지 않았다.
+- 오탐 둘. `outside_worktree.py`의 음성 대조가 둘째 실행 안에 없다는 것(명세가 두 실행으로 갈라 적었다), 명세의 "CI의 리눅스 러너에서도 돈다"(시험이 들어오면 돈다는 서술이다).
+- 따라가지 못했다고 적은 파일: `cases_request.py`, `cases_logs.py`, `cases_failure.py`, `cases_key.py`, `fake_server.py`, `support.py`, `make_env.py`, `versions.py`, 프로브 `README.md`, `.scratch/deploy-package/plan.md`, 명세의 나머지 줄.
+
+CLI가 `review_completed`로 끝났으므로 대체 리뷰(`/security-review`)는 돌리지 않았다.
+
+**판정과 반영 (2026-11-12 20:09까지).** 판정은 근거를 먼저 본 뒤에 냈다. CodeRabbit CLI의 지적 13건(위 목록의 열두 줄이고 첫 줄이 두 자리다) 가운데 하나를 오탐으로 보고 남겼고 열둘을 고쳤다. `bug-perf-review`의 Minor 둘과 표지 하나도 고쳤다. 서브에이전트가 "보류"로 둔 여섯은 그 코드를 읽어 다시 판정했다.
+
+- `cases_request.py:269`(`env_key_used_when_omitted`). 오탐으로 봤다. 결과 갈래가 서버가 받은 인증 헤더를 심은 키와 견줘 "환경의 키가 갔다"와 "다른 값이 갔다"로 이미 가른다(그 함수를 읽었다). 고치지 않았다.
+- `cases_request.py:329`(`env_gateway_used_when_omitted`). 맞다. 결과 갈래가 주소만 실었고 간 키는 `data`에만 있었다. 간 인증 헤더가 게이트웨이 키인지를 결과에 싣게 고쳤다.
+- `cases_logs.py:70`과 `70-73`. 맞다. 측정 여부의 조건에 둘을 더했다. 호출이 고른 갈래대로 끝났다(성공 갈래는 메시지가 돌아왔고, 상태 코드 갈래는 예외의 글이 그 코드를 든다). 쿼리 갈래는 서버가 받은 요청 줄에 그 쿼리가 있다.
+- `cases_response.py:46`(`_read_the_reply`). 맞다. `openai` 계열의 예외 전체를 빼던 것을 전송·상태의 실패 둘(`openai.APIConnectionError`, `openai.APIStatusError`)만 빼게 고쳤다. 앞 세션의 셀프 리뷰가 좁힌 표지가 재려는 상황(응답 본문을 읽다 나는 그 계열의 예외)까지 측정 밖으로 뺐다.
+- `adapter_candidate.py:88-89`와 명세 "실패 문구와 되울린 키". 맞다. CLI는 Critical로, 서브에이전트는 이미 적힌 한계로 봤다. 명세가 한계로 적은 것은 "서버가 값을 바꿔 되울린다"였고 "호출 도중에 환경의 값이 바뀐다"는 아니어서 새 틈으로 봤다. 후보와 명세를 두 값을 찾아 가리게 고쳤다(호출을 시작하며 읽어 둔 값과 예외를 바꾸는 때의 환경 값). 앞의 안은 "거부한 안"으로 남겼다. ADR 0057 결정 "되울린 키"의 "환경에서 읽은 값을 글자 그대로 찾아 가린다"는 그대로 참이라 이력을 쓰지 않았고 사용자에게 묻지 않았다. 프로브 사례는 더하지 않았다. 요청을 받은 뒤 환경의 키 값을 바꾸고 받은 키를 되울리는 가짜 모델 서버의 사례를 D의 어댑터 시험에 뒀고(명세 "사례"의 실패), 명세와 README에 이 갈래를 재지 않았다고 적었다.
+- 명세 "로그"의 응답 헤더. 맞다. 다만 고칠 것은 수락 시험이 아니라 한계의 기록이라고 봤다. 응답 헤더의 값이 DEBUG 로그에 찍히는 것은 라이브러리(`httpcore2`)의 동작이고, 막는 장치를 두지 않기로 한 명세에서 "헤더로 되울린 키가 로그에 없다"는 통과할 수 없는 시험이 된다. 받아들인 한계로 적고 배포 안내에 넘겼다(명세 "다른 기능에 넘기는 것"의 deploy-package가 다섯에서 여섯이 됐고 `.scratch/deploy-package/plan.md`에 여섯째를 적었다). 그런 서버로 재지는 않았다. ADR 0057 Consequences "로그"가 수락에 건 문장은 그대로이고 그 시험의 가짜 모델 서버는 키를 본문으로 되울린다. 로그 필터를 두는 안의 거부 이유에 "어느 응답 헤더가 비밀인지 어댑터가 알지 못한다"를 더했다.
+- `make_env.py:72`. 맞다. 인자가 이 저장소 안이거나 `pyproject.toml`이 있는 디렉터리면 아무것도 깔지 않고 2로 끝나게 고쳤다. 가드를 다시 읽은 뒤 워크트리 루트 `.`과 주 체크아웃의 루트를 넣었고 둘 다 거부 문구와 종료 코드 2로 끝났다(손으로 봤다, `uv run python .scratch/local-model/probes/make_env.py .`과 같은 명령에 주 체크아웃의 경로).
+- `outside_worktree.py:55`. 맞다. "작업 폴더 밖"의 판정에서 "작업 폴더가 홈 아래에 있지 않다"는 조건을 뺐다. 체크아웃이 홈 아래에 있으면 밖에 쓰고도 거짓이었다. 이 PC의 체크아웃은 홈 밖이라 결과는 그대로다.
+- `cases_failure.py:113`(`_odd_body`), `cases_guard.py:334`(`_candidate_bad_key`와 `guard_candidate_missing_key`), `cases_guard.py:510`(`guard_candidate_cancelled`). 맞다. 표지를 좁혔다. 요청이 정확히 한 건이다, 예외의 글이 변수 이름만이 아니라 그 거부의 문구를 든다, 기한이 실제로 호출을 끊으려 했다(`cancel_called`).
+- `candidate_connections_after_failures`의 `status_500` 갈래(`bug-perf-review`). 맞다. 서버가 받은 요청이 호출 수보다 많다는 조건(재시도가 들었다)을 측정 여부에 더했다.
+- 명세 "HTTP 클라이언트"의 "넷째 호출이 끝난 시점"(`bug-perf-review`). 맞다. "넷째 호출이 끝나고 1초를 기다린 시점"으로 고치고, 두 사례의 셈이 호출 뒤 1초 이상을 기다린 값이며 호출이 끝난 그 순간의 값은 재지 않았다고 적었다. README의 같은 문장도 고쳤다.
+- 명세의 종료 코드 문단(두 리뷰가 같은 자리를 짚었다). 맞다. 넷을 정했다. 첫째, 4는 띄우기를 시작하기 전에 끝난 때다. 걸음 4가 앞 세션이 남긴 것을 지운 뒤 걸음 5에서 `--yes` 없이 끝난 때도 4이고 지운 것은 출력에 남긴다. 둘째, 걸음 9의 시험이 시간 제한에 걸리면 실패한 시험으로 보고 걸음 10의 확인을 거쳐 1이나 2다. 셋째, Ctrl-C로 끊긴 회차는 띄우기를 시작한 뒤면 지운 뒤 2이고(지우지 못하면 3) 그 전이면 4다. 넷째, 무효 회차가 둘에서 셋이 됐다(띄운 뒤 시험이 판정을 내기 전에 끊긴 회차). 걸음 4의 지우기를 `--yes` 뒤로 미루는 안은 거부했다(확인을 기다리는 동안 남은 서버의 요금이 나간다). C 묶음의 시험이 보는 것에 그 가름을 더했다. ADR 0058이 명세로 넘긴 자리(남은 서버를 먼저 지우는지, 서버 쪽 사정의 회차를 실패로 셀지)를 채운 것이라 ADR 본문은 그대로다.
+
+**다시 잰 것.** 고친 뒤 `openai_compat.py` 전체는 측정 108회차, 측정 아님 0회차였다(쟀다, `.scratch/local-model/probes/openai_compat.py`). 고치기 전의 실행(위 "프로브를 새 환경에서 다시 돌렸다")과 견주면 108 사례 가운데 결과 갈래가 달라진 것은 `env_gateway_used_when_omitted` 하나였다(스크래치패드의 견줌 스크립트로 손으로 봤다). `outside_worktree.py`의 두 명령은 명령마다 측정 2회차, 측정 아님 0회차였고 결과는 앞 세션과 같았다(쟀다, `.scratch/local-model/probes/outside_worktree.py`. 첫째는 "env-file 없이 환경에 ANTHROPIC_API_KEY: 없다", 둘째는 "환경에 ANTHROPIC_API_KEY: 있다"와 "환경에 RUNPOD_API_KEY: 없다"). 그 뒤 후보의 `masked` 독스트링 한 문장("두 번 넘게 바뀌면 놓친다"를 "두 번 이상 바뀌면 놓칠 수 있다"로. 두 번 바뀌어도 가운데 값이 생긴다)을 고쳤고, 그 판으로 `check_adapter_types.py`를 다시 돌려 측정 5회차, 측정 아님 0회차, 후보의 진단 0개와 타입 우회 0개를 봤다(쟀다, `.scratch/local-model/probes/check_adapter_types.py`). `openai_compat.py` 전체는 그 독스트링을 고친 뒤 다시 돌리지 않았다.
+
+**고치며 새로 쓴 사실 문장(PR 봇이 겨냥할 자리).** 명세의 원문이다.
+
+1. "모델 하나를 놓지 않고 네 번 불렀을 때도 넷째 호출이 끝나고 1초를 기다린 시점(모델을 아직 쥐고 있을 때)에 연결 4개가 모두 닫혀 있었다"
+2. "찾는 값은 둘이다. 감싼 메서드가 라이브러리를 부르기 전에 먼저 읽어 둔 값(위 "키")과, 예외를 바꾸는 때의 환경 값이다"
+3. "도중에 한 번 바뀌면 보낸 값은 그 둘 가운데 하나이고, 한 호출 안에서 두 번 이상 바뀌면 가운데 값을 놓칠 수 있다. 이 갈래는 프로브로 재지 않았다."
+4. "`httpcore2`의 DEBUG 줄이 응답 헤더의 값을 찍으므로(위 첫 항목), 모델 서버나 그 앞의 게이트웨이가 응답 헤더에 비밀을 실으면 그 값이 DEBUG 로그에 남는다."
+5. "4는 띄우기를 시작하기 전에 끝난 때에만 낸다. 걸음 1·3·5에서 끝난 때와 걸음 7 전에 Ctrl-C로 끊긴 때다."와 그 뒤의 시간 제한과 Ctrl-C의 문장들
+6. "무효 회차는 셋이다."
+
+**서두의 수 다섯(본문의 표시로 다시 셌다).** 넘겨받은 것 26(그대로), 사용자가 고른 것 3(그대로), 명세가 정한 것 25(그대로. 고친 것은 모두 이미 센 자리 안이다. 실패 문구의 모양과 감싸는 자리, 로그 시험의 모양, 걸음, 무효 회차), 이력 2(그대로), 거부한 안 32에서 34(예외를 바꾸는 때의 환경 값만 가린다, 걸음 4의 지우기를 `--yes` 뒤로 미룬다. Grep `거부한 안:`이 35건이고 서두 자신의 언급 하나를 뺀다). `uv run python tools/plan_table.py`는 `.scratch/plan.md`를 바꾸지 않았다.
+

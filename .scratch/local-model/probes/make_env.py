@@ -2,7 +2,9 @@
 
 저장소의 `.venv`, `pyproject.toml`, `uv.lock`은 건드리지 않는다. 환경은 인자로 받은 디렉터리 아래
 `.venv`에 둔다. pyright 의 `venv` 설정이 `.venv`라 `--venvpath <디렉터리>`로 넘기면 그 환경을
-읽는다(`check_adapter_types.py`). 이미 있는 환경은 지우지 않고 그 위에 다시 설치한다.
+읽는다(`check_adapter_types.py`). 이미 있는 환경은 지우지 않고 그 위에 다시 설치한다. 그래서 인자가
+이 저장소 안이거나 `pyproject.toml`이 있는 디렉터리(다른 체크아웃의 루트)면 아무것도 하지 않고 2 로
+끝난다. 그 자리의 `.venv`는 그 프로젝트의 환경이라 거기에 얹으면 약속과 달리 저장소의 환경이 바뀐다.
 
     uv run python .scratch/local-model/probes/make_env.py <환경 루트>
 
@@ -70,6 +72,10 @@ def main() -> int:
         print("인자: <환경 루트>", file=sys.stderr)
         return 2
     root = Path(sys.argv[1]).resolve()
+    if root.is_relative_to(ROOT) or (root / "pyproject.toml").exists():
+        # 그 자리의 `.venv`는 그 프로젝트의 환경이다. 거기에 얹으면 저장소의 환경이 바뀐다.
+        print("환경 루트는 저장소 밖이고 pyproject.toml 이 없는 디렉터리여야 한다", file=sys.stderr)
+        return 2
     root.mkdir(parents=True, exist_ok=True)
     runtime = root / "locked-runtime.txt"
     everything = root / "locked-all.txt"
