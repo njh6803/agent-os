@@ -8,3 +8,8 @@ schema_version = "1"
 
 [agents.calc]
 allow = ["everything:*"]
+
+[agents.assistant]
+allow = ["doc-search:search"]
+ask = ["doc-search:get_document"]
+deny = ["doc-search:list_knowledge_bases"]
