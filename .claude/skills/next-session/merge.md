@@ -62,9 +62,10 @@ next-session `SKILL.md` 순서 1의 본문이다. PR을 연 세션과 인계로 
 1. **필요한지 본다.** `git fetch origin` 뒤 `git ls-remote --exit-code --heads origin refs/heads/dev`가 2로 끝나면 dev가 아직 없다. 합칠 곳이 없으니 끝이다(핫픽스가 main에 오르는 것이 곧 기준 브랜치에 오르는 것이다). dev가 있고 `git diff --quiet origin/dev...origin/main`이 1이면 main에만 있는 변경이 있다. 0이면 합칠 것이 없으니 끝이다(출시 PR의 merge 커밋만 main에 더 있는 경우도 0이다. 장면 일곱을 임시 저장소로 쟀다, `.scratch/harness/probes/backmerge_diff_check.sh`). `gh pr list --base dev --head main --state open`에 PR이 이미 있으면 새로 열지 않고 그것으로 3으로 간다.
 2. **연다.** `gh pr create --base dev --head main --title "chore: main을 dev에 되돌려 합친다" --body "<main에만 있는 변경의 PR 번호들과 한 줄>"`. 번호는 `git log origin/dev..origin/main --oneline`에서 읽는다. 핫픽스를 방금 병합한 세션이 아니어도 이 명령으로 알 수 있다.
 3. **기다린다.** 위 "병합 전" 2의 대기대로 `tools/wait_ci.py`를 백그라운드로 띄우고 턴을 끝낸다. 이 PR은 봇 회차를 하지 않아 CodeRabbit을 요청하지 않으므로 기본 기대 이름으로는 기다릴 수 없다고 끝난다. 그래서 `uv run python tools/wait_ci.py <번호> --head <main의 SHA> --expect verify`로 띄운다. `--head`를 빼면 이 세션의 로컬 HEAD를 기다릴 헤드로 읽어 어긋난다. `<main의 SHA>`는 `git rev-parse origin/main`이다. 필수 검사 `verify`가 초록일 때 4로 간다.
-4. **병합한다.** `gh pr view <번호> --json mergeable,mergeStateStatus,headRefOid`로 보고 `gh pr merge <번호> --merge --match-head-commit <headRefOid>`를 친다. 그새 main이 앞서 이 명령이 머리 SHA 불일치로 거절되면 새 `headRefOid`로 3부터 다시 한다. `--delete-branch`는 쓰지 않는다. 머리가 main이다. 두 경우에는 병합하지 않고 사용자에게 넘긴다.
+4. **병합한다.** `gh pr view <번호> --json mergeable,mergeStateStatus,headRefOid`로 보고 `gh pr merge <번호> --merge --match-head-commit <headRefOid>`를 친다. 그새 main이 앞서 이 명령이 머리 SHA 불일치로 거절되면 새 `headRefOid`로 3부터 다시 한다. `--delete-branch`는 쓰지 않는다. 머리가 main이다. 아래 세 경우에는 병합하지 않고 사용자에게 넘긴다. 셋째는 위 "병합 방법"이 적은 보호 설정이다.
    - `mergeable`이 `CONFLICTING`이다. 핫픽스와 dev의 변경이 같은 곳을 고쳤으니 어느 쪽을 남길지 사람이 정한다.
    - `mergeStateStatus`가 `BEHIND`다. 보통 base(dev)에 "최신 브랜치만 병합"(strict) 보호가 걸렸을 때 나온다(이 저장소에서 본 적은 없다). 머리가 main이라 dev에 늘 뒤처져 보인다. `gh pr update-branch`나 웹의 "Update branch"를 누르지 않는다. 그 동작은 dev를 main에 합친다. 관리자 우회로 병합할지는 사용자가 정한다.
+   - `gh pr merge`가 보호 설정(`required_linear_history`로 merge 커밋을 거절, 필수 검사 미충족 등)에 거절된다. 풀지는 `dev-branch-create`가 사용자와 정한다.
 5. **확인한다.** `git fetch origin` 뒤 `git diff --quiet origin/dev...origin/main`이 0이다.
 
 끝: dev가 아직 없거나(1), 위 5의 판정이 0이거나, 사용자에게 넘긴 사유(`CONFLICTING`, `BEHIND`)를 보고와 일지에 적었다. 사용자에게 넘긴 채 끝났으면 열린 PR(`gh pr list --base dev --head main --state open`)이 남아 diff가 계속 1이다. 결정표 첫 줄은 이 열린 PR이 있으면 고르지 않는다.

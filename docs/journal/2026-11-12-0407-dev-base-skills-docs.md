@@ -129,12 +129,24 @@ PR 직전 리뷰에 밀 새 주장(이번 반영으로 새로 쓴 사실 문장)
 
 근거의 종류: 지적 0건과 (a)~(d)의 확인은 모두 서브에이전트가 파일을 읽고 명령을 쳐서 돌려준 보고를 옮긴 것이다. 이 세션이 그 줄 번호나 종료 코드를 다시 재지는 않았다. 합치기와 겹침 점검은 이 세션이 친 명령의 출력이다.
 
+## 봇 첫 회차 (PR 537)
+
+멈춘 CI 실행을 PR을 닫았다 다시 열어 되살렸다(앞 실행 둘은 `queued`로 남았고 새 실행이 떴다). `verify`와 나머지 검사는 모두 `pass`다(`gh pr checks 537`). CodeRabbit은 `Review rate limited`라 리뷰가 없고 회차로 세지 않는다. claude-review의 첫 리뷰는 Critical·Major 없이 Minor 셋과 Nit 둘이다. 첫 회차라 지적마다 판단했다.
+
+- Minor 1(`merge.md` "되돌려 합치기" 4의 넘김 목록이 보호 설정 거절을 빠뜨렸다): **반영**. 셋째로 더했다.
+- Minor 2(ADR 0043 개정을 걸어 둔 줄이 변경 안에 있는가): 이 일지 "다음" 6에 있다. 고칠 것이 없다.
+- Minor 3(`tidy-checkouts` 3의 병합처가 `origin/main`만 보는 것): 그 사이 PR 538(`dev-base-tools`)이 병합돼 도구가 `origin/main`과 `origin/dev`를 둘 다 본다(`tools/tidy_checkouts.py`의 `TRUNK_REFS`를 Grep으로 읽었다). 스킬 3의 "티켓이 정한다"는 문장을 사실로 고쳤다. **반영**.
+- Nit 4(`--expect verify`가 main 보호 이름을 하드코딩): 보류. `dev-branch-create`가 dev의 필수 검사 이름을 정할 때 그 티켓 결과에서 이 줄을 고친다.
+- Nit 5(기준 브랜치 규칙이 여러 스킬에 풀려 적힌 것): 보류. 대부분 원천을 가리키고 `bug-perf-review.md`는 괄호로 옮겼다. 규칙이 바뀔 때 같이 고친다.
+
+`origin/main`에 PR 538·539가 병합돼 한 번 더 합쳤다. 충돌은 없었다.
+
 ## 다음
 
 이 PR이 병합된 뒤의 일이다.
 
 1. **사용자 수준 스킬 네 개(`git-pr`, `git-pr-merge`, `git-pr-feedback`, `git-branch`)를 고칠지 사용자에게 묻는다.** 줄 번호 목록은 티켓 `dev-base-skills-docs`의 결과 5에 있다. 사용자가 승인하기 전에는 고치지 않는다. 원격의 기본 브랜치를 어디에 둘지(`dev-branch-create` (라))와 얽혀 있다.
-2. **`dev-base-tools`**와 **`dev-review-bot-off`**: 둘의 PR이 병합되는 대로 이어진다. 열린 PR #536(`dev-review-bot-off`)이 만료할 대기열 항목 21개를 이미 닫는다(이 PR은 닫지 않았다). 이 티켓이 넘긴 것은 티켓 결과 4에 있다(`tidy_checkouts`의 병합처, `hook_prompt_directive`의 안내 문구, `sibling_overlap`의 기준 브랜치 읽기, 되돌려 합치기 PR의 봇 회차).
+2. **`dev-base-tools`**(PR 538)와 **`dev-review-bot-off`**(PR 536)는 둘 다 병합됐다. 이 티켓이 넘긴 것(티켓 결과 4: `tidy_checkouts`의 병합처, `hook_prompt_directive`의 안내 문구, `sibling_overlap`의 기준 브랜치 읽기, 되돌려 합치기 PR의 봇 회차)을 두 PR이 실제로 채웠는지는 이 PR이 확인하지 않았다. `tidy_checkouts`의 병합처만 `TRUNK_REFS`로 채워진 것을 봤다. `dev-branch-create` 세션이 시작할 때 나머지를 확인한다.
 3. **`dev-release-pr-step`**(`ready-for-agent`): 출시 PR(dev→main)을 여는 계기와 순서. `merge.md`는 그 PR의 병합 방법과 보호 설정에 걸릴 때의 처리만 정했다.
 4. **`dev-branch-create`**: 위 티켓들이 병합된 뒤 `origin/dev`를 딴다. 사람의 몫(`required_linear_history`, dev 보호, 기본 브랜치)을 사용자에게 먼저 묻는다.
 5. **병합 직후**: 이 PR을 워크트리에서 병합하면 주 체크아웃은 갱신되지 않는다. 새 세션이 `tidy-checkouts`를 먼저 돈다(`merge.md`).
