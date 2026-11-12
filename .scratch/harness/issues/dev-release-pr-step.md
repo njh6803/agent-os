@@ -12,6 +12,8 @@
 
 **`dev-branch-create`가 넘긴 메모(2026-11-12).** 보호 설정이 섰다. main은 strict이고 선형 이력을 강제하지 않으며(`tools/protection.json`), dev는 strict가 아니다(`tools/protection-dev.json`). main이 strict라 출시 PR은 dev가 main의 머리를 품어야 병합되는데, 앞 출시 PR이 main에 남긴 merge 커밋은 dev에 없다. 그래서 둘째 출시 PR부터 `mergeStateStatus`가 `BEHIND`가 될 것으로 본다(커밋 관계로 따진 어림이고 출시 PR로 재 보지 않았다). `merge.md`의 "되돌려 합치기" 1은 diff가 0이면 합치지 않으므로 그 merge 커밋만으로는 dev에 오지 않는다. 후보는 출시 PR을 병합한 뒤 main을 dev에 합치는 단계를 더하는 것(`merge.md`는 PR과 `--merge`로만 합치므로 merge 커밋이 하나 더 생긴다), 출시 PR에서만 관리자 우회로 병합하는 것, main의 strict를 끄는 것이다. 마지막 둘은 보호 설정이라 사용자에게 묻는다. 이 티켓이 첫 출시 PR을 열 때 재 보고 정한다.
 
+CodeRabbit이 `dev-branch-create`의 PR #541 첫 회차에 같은 곳을 Major로 짚었다("출시 PR 병합 뒤 main을 dev에 되돌려 합치는 단계를 `operations.md`에 더하라"). 그 PR은 선택을 정하지 않고 이 티켓에 넘겼으므로, 이 티켓이 후보를 정하면 `operations.md`의 병합 규칙 문단과 `merge.md`를 함께 고친다.
+
 같은 메모의 둘째. 출시 PR 병합 뒤 dev가 원격에 남았는지 `git ls-remote --exit-code --heads origin refs/heads/dev`로 본다. 저장소의 자동 삭제(`delete_branch_on_merge`)가 보호 브랜치인 dev를 지우지 않는다는 것은 GitHub 문서의 웹 요약과 `allow_deletions: false`에서 끌어낸 어림이고 재 보지 않았다. 출시 PR은 `merge.md` "워크트리에서 병합할 때" 3(원격 정리의 `ls-remote`)을 건너뛰므로 다른 자리에서는 dev가 지워져도 알아채지 못하고, 그 뒤 `fetch --prune`이 `origin/dev`를 걷으면 기준 브랜치 규칙(`tools/base_rule.py`)이 조용히 main으로 돌아간다(셀프 리뷰 명세 축의 지적).
 
 **대기열:** 없음

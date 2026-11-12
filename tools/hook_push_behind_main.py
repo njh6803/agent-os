@@ -13,9 +13,9 @@
 더 돈다. main 은 `tools/protection.json` 의 strict 보호라 PR 이 최신 main 위에서 돈 CI 로만
 병합된다. dev 는 strict 가 아니지만(`tools/protection-dev.json`, 2026-11-12) 사용자 수준 `git-pr`
 2단계가 base 가 앞섰으면 푸시 전에 rebase 하게 하고, 이 훅도 기준 브랜치가 dev 인 브랜치에서 같은
-판정으로 막는다. dev 가 strict 가 아니게 된 뒤로 그 브랜치에서도 막을지는 다시 정하지 않았다. 먼저
-합치고 푸시하면 그 한 번이
-준다. 합친 뒤의 로컬 게이트는 어느 쪽이든 돈다. CI 실행의 갈래와 main 합치기의 수는
+판정으로 막는다. 현재 동작은 이것이다. dev 가 strict 가 아니게 된 뒤에도 그 브랜치에서 막을지는 다시
+정하지 않았다. 먼저 합치고 푸시하면 CI 가 한 번 덜 돈다. 합친 뒤의 로컬 게이트는 어느 쪽이든 돈다.
+CI 실행의 갈래와 main 합치기의 수는
 `.scratch/harness/probes/ci_wait/runs_per_pr.py` 가 낸다(일지 2026-10-13-38).
 
 왜 막는가. 계기(`additionalContext`)만 주는 PreToolUse 훅은 명령을 그대로 돌린다. 모델의 차례가

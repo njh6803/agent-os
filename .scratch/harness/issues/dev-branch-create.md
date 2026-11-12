@@ -29,13 +29,13 @@
 
 - [x] 사람의 몫 (가)~(다)를 사용자에게 알렸고 답을 티켓 끝에 적었다
 - [x] `origin/dev`가 사용자 승인 뒤에 `origin/main`의 머리에서 섰고, 원격에서 읽은(`git ls-remote`) 두 브랜치의 커밋이 같다
-- [ ] 다른 체크아웃이 `git fetch origin`으로 `origin/dev`를 받아야 한다는 한 줄을 보고와 새 세션 지시문에 실었다
+- [x] 다른 체크아웃이 `git fetch origin`으로 `origin/dev`를 받아야 한다는 한 줄을 보고와 새 세션 지시문에 실었다
 - [x] LLM 테스트 잡: 사용자가 시크릿을 넣겠다고 했으면 잡 구현(또는 후속 티켓 `ci-llm-job`)이 있고, 넣지 않겠다고 했으면 그 답이 티켓 끝에 있다
-- [ ] dev를 기준으로 `sibling_overlap`·`check_ticket`이 돌고 dev로 연 티켓 PR의 CI가 지났다
+- [x] dev를 기준으로 `sibling_overlap`·`check_ticket`이 돌고 dev로 연 티켓 PR의 CI가 지났다
 - [x] `.scratch/plan-head.md`에서 release-image가 dev 전환을 기다린다고 적은 문장이 걷혔고 `uv run python tools/plan_table.py` 결과가 같은 커밋에 실렸다
 - [x] 문서 검색 서버 저장소에 줄 지시문을 사용자에게 냈고, 얇은 ADR 한 장 요건이 들었으며, `rag-engine-port-by-hand`에 회차를 더했다
 - [x] 실제 이미지의 compose e2e 잡은 이 티켓이 만들지 않았다(release-image의 첫 티켓이 더한다)
-- [ ] 검증 명령이 모두 초록이다
+- [x] 검증 명령이 모두 초록이다
 
 ## 결과
 
@@ -63,7 +63,8 @@ dev 보호를 `tools/protection.json`에 키로 더하지 않고 파일을 따�
 - `uv run python tools/sibling_overlap.py`가 형제 줄을 `origin/dev 82297e6`로 시작했고 겹침 없음으로 끝났다. `--journal`은 이 브랜치의 일지를 찍었다.
 - `uv run python tools/check_ticket.py`가 종료 0이었다. `base_ref`를 직접 불러 보니 `chore/dev-branch-create`는 `refs/remotes/origin/dev`, `hotfix/01-x`는 `refs/remotes/origin/main`이었다(`uv run python -c`로 함수를 부른 출력).
 - `dev-base-skills-docs` 결과 4가 넘긴 것: `hook_prompt_directive`의 안내 문구는 "기준 브랜치(main 이나 dev)"로 바뀌어 있었고, `sibling_overlap`의 `--journal`과 `check_constitution_version`은 `tools/base_rule.py`의 규칙을 쓴다(Grep으로 읽었다). 머리가 main인 되돌려 합치기 PR에서 claude-review가 도는지는 `.github/workflows/claude-code-review.yml`이 dev→main만 건너뛰므로 돈다(31~32행을 읽었다). `merge.md`는 그 PR에서 봇 회차를 하지 않으므로 리뷰는 돌되 반영하지 않는다. 바꾸지 않았다.
-- dev로 연 이 티켓의 PR이 CI를 지났는지는 PR을 연 뒤에 본다.
+- dev로 연 이 티켓의 PR #541(base `dev`)이 머리 `bf761cfae`에서 CI를 지났다. `ticket` 잡이 9초에 통과했고, 필수 검사 `verify`와 `python`·`web`·`e2e`·`e2e-widget`·`e2e-portal`·`visual`이 모두 통과했으며, `tools/wait_ci.py`의 끝 줄이 `모두 통과. CodeRabbit: Finished`였다(명령의 출력).
+- CodeRabbit의 첫 회차 Major 하나("출시 PR 병합 뒤 main을 dev에 되돌려 합치는 단계를 `operations.md`에 더하라")는 이 PR에서 고치지 않고 `dev-release-pr-step`에 넘겼다. 그 단계를 더할지, 출시 PR에서만 관리자 우회로 병합할지, main의 strict를 끌지는 사용자가 정할 보호 설정이 걸려 있고, 그 티켓이 첫 출시 PR로 재 보고 정한다. 그 티켓의 메모가 이미 같은 후보를 든다.
 
 ### 4. 닫을 때 할 일
 

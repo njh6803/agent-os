@@ -162,6 +162,48 @@ open-session을 부른다 2026-11-12T03:43:44Z
 
 다시 돌린 명령: `uv run ruff check`·`uv run ruff format --check`(고친 훅 파일, 통과), `uv run pytest -q tests/tools/test_hook_push_behind_main.py`(80 passed). 손으로 치는 다섯은 이 반영 커밋의 pre-commit으로 갈음한다.
 
+## PR과 둘째 인계
+
+이 세션의 첫 메시지는 앞 세션이 낸 지시문(위 "커밋과 인계" 절의 글)이다.
+
+> 사용자: .claude/skills/implement/SKILL.md 를 읽어 그대로 따른다. 이 세션을 연 저장소는 `C:\project\agent`이고 작업 폴더가 그곳이 아니면 따르지 말고 알린다. 스킬의 인자는 이 줄의 '인자:' 뒤부터 메시지 끝까지다. 인자: .scratch/harness/issues/dev-branch-create.md
+> 다음 작업: .scratch/harness/issues/dev-branch-create.md. dev를 origin/main에서 따고 dev 전환을 닫는다 / 다음 단계: 구현 / 어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다 / 브랜치: chore/dev-branch-create / 이어받을 상태: 인계: 커밋 뒤. … / 이번 요청 범위: PR과 병합까지. 단 사람의 몫 (가)~(라)와 dev를 따는 푸시는 사용자의 답과 승인을 받은 뒤에 한다
+
+- 반영 커밋 `bf761cfae`의 pre-commit이 모두 Passed였다(parallel-checks 508.05초, 그 안에서 pytest 415.5초, web-verify 507.8초. 카나리아 명세 검사는 이 커밋에 든 명세가 없어 Skipped). 인용 대조는 경고가 없었다(명령의 출력).
+- 커밋 뒤 `hook_handoff`가 `커밋 뒤` 경계의 인계 계기를 넣었다. 이 세션의 지시문 "이어받을 상태"가 `인계: 커밋 뒤`로 시작해 `handoff.md` 1의 셋째(같은 경계)에 들어 넘기지 않았다.
+- `git push -u origin chore/dev-branch-create` 뒤 `gh pr create --base dev`로 PR #541을 열었다. 앱의 `get_status`가 그 PR을 이미 묶었다고 했다(`bound: true`, base `dev`).
+- PR을 연 뒤 `hook_handoff`가 `PR 연 뒤` 경계의 계기를 넣었다. 인계하지 않는 때 다섯에 들지 않아(경계가 지시문의 것과 다르고, `get_session`의 `self`에 `parentSessionId`가 없다) 넘긴다. 이 세션의 제목은 `chore/dev-branch-create`였다. 이 절은 커밋하지 않고 두며, 받는 세션이 다음 커밋에 싣는다. 낸 지시문은 아래와 같다.
+
+```
+다음 작업: .scratch/harness/issues/dev-branch-create.md. dev를 origin/main에서 따고 dev 전환을 닫는다
+다음 단계: PR 반영·병합
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: .claude/skills/implement/SKILL.md 를 읽어 그대로 따른다. 이 세션을 연 저장소는 `C:\project\agent`이고 작업 폴더가 그곳이 아니면 따르지 말고 알린다. 스킬의 인자는 이 줄의 '인자:' 뒤부터 메시지 끝까지다. 인자: .scratch/harness/issues/dev-branch-create.md
+브랜치: chore/dev-branch-create
+모델: Sonnet 5.5 / high. 2의 잇는 지시문
+읽을 것: docs/journal/2026-11-12-1148-dev-branch-create.md의 "PR 직전 리뷰"·"PR과 둘째 인계"·"다음" 절
+이어받을 상태: 인계: PR 연 뒤. PR #541(base dev)을 열었고 반영 커밋 bf761cfae까지 푸시했다. 남은 단계는 merge.md 2(봇 회차)이고, 첫 `@coderabbitai review` 코멘트부터 새 세션이 남긴다. CI가 지나면 티켓 결과 3의 끝 줄("dev로 연 이 티켓의 PR이 CI를 지났는지는 PR을 연 뒤에 본다")을 실제 결과로 바꾸고, 수용 기준의 빈 상자 셋 가운데 "dev로 연 티켓 PR의 CI가 지났다"와 "검증 명령이 모두 초록이다"를 채운다. 남은 하나("다른 체크아웃이 git fetch origin으로 origin/dev를 받아야 한다는 한 줄을 보고와 새 세션 지시문에 실었다")는 병합 뒤 next-session이 낼 지시문의 "확인할 선행 조건"과 마무리 보고에 그 줄을 싣는 것으로 채우고, 그 상자를 같은 커밋에서 체크한다. 일지의 "커밋과 인계"는 이미 커밋됐고 "PR과 둘째 인계" 절은 커밋하지 않은 채 남겼으니 봇 회차의 커밋에 싣는다. 병합은 base가 dev라 /git-pr-merge를 쓰지 않고 merge.md "워크트리에서 병합할 때" 1~5로 한다. 병합 뒤 next-session을 돈다. rag-engine 지시문(티켓 결과 5)은 이 PR이 dev에 병합된 뒤에 사용자에게 다시 보인다(사용자가 "rag-engine 저장소에 지금 지시해?"라고 물어 병합 뒤라고 답했다). 마무리 보고에서 그 지시문과 일지 "다음" 절의 사용자에게 다시 묻는 것(사용자 수준 스킬 넷을 고칠지)을 사용자에게 보인다. 일지 docs/journal/2026-11-12-1148-dev-branch-create.md
+확인할 선행 조건: 없음
+이번 요청 범위: PR과 병합까지. 단 사람의 몫 (가)~(라)와 dev를 따는 푸시는 사용자의 답과 승인을 받은 뒤에 한다
+```
+
+제목을 `chore/dev-branch-create (인계함)`으로 바꿨고, 멈출 백그라운드 작업은 없었으며, `git worktree unlock`은 `is not locked`로 끝났다(이미 풀린 상태라 넘어갔다).
+
+open-session을 부른다 2026-11-12T04:03:52Z
+
+## 봇 회차
+
+세션 제목은 `chore/dev-branch-create`로 바꿨고 워크트리에는 `EnterWorktree(path)`로 들어갔다. 머리 `bf761cfae`에 `@coderabbitai review`를 남겼고 `tools/wait_ci.py 541`의 끝 줄이 `모두 통과. CodeRabbit: Finished`였다(명령의 출력). 이 세션의 첫 푸시는 이 회차의 반영 커밋이다.
+
+- claude-review 첫 회차(Critical·Major 없음, Minor 둘, Nit 둘).
+  - Minor `tools/hook_push_behind_main.py` 독스트링이 현재 동작과 미정인 정책을 한 문단에 섞었다: 고쳤다("현재 동작은 이것이다. … 다시 정하지 않았다"로 나눴다). 같은 지적이 `reason_text`의 "dev 는 PR 전에 기준 브랜치에 맞추는 규약이다"도 짚었으나, 그 문장이 가리키는 규약은 사용자 수준 `git-pr` 2단계가 하는 일이라고 이 훅의 독스트링이 적었으므로 단정이 맞다고 보아 코드는 건드리지 않았다.
+  - Nit 독스트링 줄바꿈: 같은 곳에서 고쳤다.
+  - Minor 같은 사실(보호 설정, 둘째 출시 PR부터의 `BEHIND` 어림)이 여러 문서에 중복된다: 보류. 문서마다 자기 맥락에서 이유를 설명하는 자리이고 값은 `tools/protection*.json`이 원천이다. 값이 바뀔 때 옛 표현을 grep해 같이 고치는 것은 `CLAUDE.md` 작업 규약 4의 일이다. 줄이는 정리는 후보를 정하는 `dev-release-pr-step`이 문서를 고칠 때 같이 본다.
+  - Nit `tools/protection*.json`의 값을 단언하는 테스트가 없다: 뒤로 넘긴다(아래 "다음").
+- CodeRabbit 첫 회차(Major 하나): `docs/constitution/operations.md` 19행에 "출시 PR 병합 뒤 main을 dev에 되돌려 합치는 단계"를 더하라. 보류하고 `dev-release-pr-step`에 넘겼다. 그 단계를 더할지, 출시 PR에서만 관리자 우회로 병합할지, main의 strict를 끌지는 사용자가 정할 보호 설정이 걸려 있고, 그 티켓이 첫 출시 PR로 재 보고 정한다. 그 티켓의 메모에 이 지적을 덧붙였다(수용 기준은 그대로다).
+
+반영 커밋의 검증: `uv run ruff check`·`uv run ruff format --check`(고친 훅 파일, 통과), `uv run pytest -q tests/tools/test_hook_push_behind_main.py`(80 passed). 손으로 치는 다섯은 이 커밋의 pre-commit으로 갈음한다.
+
 ## 다음
 
 이 PR(base dev)을 병합한 뒤 `next-session`이 다음 지시문을 낸다. 이어받을 것:
@@ -171,5 +213,6 @@ open-session을 부른다 2026-11-12T03:43:44Z
 - **rag-engine 지시문.** 티켓 결과 5의 글을 이 PR이 dev에 병합된 뒤에 사용자가 그 저장소의 새 세션에 준다.
 - **사용자에게 다시 묻는 것.** 사용자 수준 스킬 넷(`git-pr`, `git-pr-merge`, `git-pr-feedback`, `git-branch`)을 고칠지. 기본 브랜치가 dev가 되어 `/git-pr`은 base를 dev로 감지하지만, `/git-pr-merge`는 squash와 `--delete-branch`로 병합한다. 일반적인 문장으로 고치는 길과 프로젝트 사본으로 덮는 길을 함께 보인다.
 - **사용자 승인이 필요한 것.** ADR 0043 33행("잊으면 다음 dev→main에서 hotfix가 사라진다")은 임시 저장소로 손으로 본 것과 어긋난다. 개정은 ADR 이력과 사용자 승인으로 한다.
+- **뒤로 넘긴 봇 지적.** (1) claude-review Nit: `tools/protection.json`·`tools/protection-dev.json`의 `required_linear_history`와 `strict` 값을 지키는 테스트가 없다. 문서가 이 값을 근거로 드는데 어긋나도 잡히지 않는다. 보호 설정을 다시 만지는 티켓(`dev-release-pr-step`이 후보다)이 함께 더한다. (2) CodeRabbit Major: 출시 PR 병합 뒤 main을 dev에 되돌려 합치는 단계. `dev-release-pr-step`이 맡는다.
 - **정하지 않은 것.** `tools/hook_push_behind_main.py`가 dev에서도 뒤처진 푸시를 막을지는 dev가 strict가 아니게 된 뒤 다시 정하지 않았다(그 독스트링).
 - **chore 계기.** 대기열 0420이 13회차다.
