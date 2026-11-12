@@ -14,6 +14,14 @@
 
 > 사용자: 스킬을 고친다
 
+커밋 직전 검사(pre-commit)의 pytest 단계가 네 번 모두 시간을 재는 시험(아래 "검증")에서 부하 탓으로 막혀, `SKIP=pytest`로 그 한 단계만 건너뛸지 물었고 사용자가 답했다.
+
+> 사용자: 건너뛰고 커밋
+
+이어받은 세션이 일지만 고친 둘째 커밋도 같은 단계에서 막혔다(pytest 7,200개 통과, `tests/channel/cli/test_interrupt.py`의 도구 호출 도중 시험 1개가 30초 제한에 걸렸다. 그 파일만 홀로 돌리니 6개가 모두 통과했다, 6분 45초, 손으로 봤다). 그 한 단계만 건너뛰어도 되는지 다시 물었고, 선택지는 "건너뛰고 커밋"(바뀐 파일은 일지 하나, 나머지 검사 단계는 모두 돈다, pytest 판정은 CI의 리눅스 실행이 본다)과 "한 번 더 돌린다"(약 20분 어림)였다.
+
+> 사용자: 건너뛰고 커밋(고른 라벨)
+
 ## 한 것
 
 - **시험 모듈 `tests/test_assistant_llm.py`(`-m llm`) 열네 사례.** CLI로 도는 열둘과 실제 `serve`에 HTTP로 보내는 둘이다. 저장소의 `plugins/`를 `doc-search`의 주소만 바꿔 복사한 루트로 돌고, 트레이스는 `tmp_path` 아래에 남겨 `JsonlTrace(...).read(RunId)`로 타입 이벤트(`ToolCalled`, `LlmCalled`, `RunPaused`, `RunFinished`, `RunFailed`)를 본다. 단언은 출력의 글자와 트레이스만 보고, 사례마다 재려는 상황의 표지(검색이 불렸다, 조각이 닿았다, 프롬프트에 앞 대화가 실렸다, 멈춘 호출의 인자)를 함께 본다. 정해진 문장은 (2)·(3)·(4)에서 다듬은 출력과 같은지, (14)에서 들어 있는지로 본다.
@@ -56,6 +64,7 @@
 
 - `uv run ruff check .`와 `uv run ruff format --check .`, `uv run pyright`(0 오류), `uv run lint-imports`: 통과.
 - `uv run python tools/run_checks.py`: pytest에서 시간·동시성을 재는 시험 셋이 실패했다. 그 시험만 홀로 돌리니 셋 모두 통과했고, 다른 세션이 함께 돌던 부하 탓으로 읽었다(`.claude/rules/tests.md`의 시간 단언 항목과 같은 모양이다). 다른 단계는 통과했다. 전체는 커밋의 pre-commit으로 갈음한다.
+- **커밋 직전 검사(pre-commit)에서 pytest 한 단계를 건너뛰고 커밋했다.** 네 번 시도했고 pytest 단계만 매번 실패했다. 나머지 아홉 단계(check-ticket, lint-imports, zizmor, check-instructions, check-type-escapes, pyright, pyright-linux, run-hooks, web-verify)와 다른 훅은 통과했다. 실패한 시험은 `tests/tools/test_rerun_runner.py`의 셋(오염이 한 번이면 다시 돈다, 동시에 둘까지 돈다, 같은 갈래가 두 번 든 파일럿)과 `tests/channel/cli/test_interrupt.py`의 둘(도구 호출 도중, 서버를 닫기 시작한 뒤)이고 시도마다 걸린 시험이 달랐다(3개, 3개, 3개, 2개가 실패했고 7,198~7,200개는 통과했다). 이 변경에는 `tools/`와 CLI 채널 파일이 없다. 그 파일만 홀로 돌리면 `test_rerun_runner.py`는 xdist `-n 8`로 63개가 모두 통과했다(7분 17초, 손으로 봤다). 같은 시간에 다른 세션 둘(`06-widget-real-model-assistant-case`, rag-engine의 `05-dev-release-pr-step`)이 `run_checks`를 돌려 기계가 느렸다. 그래서 부하 탓으로 읽었지만 부하가 없는 상태로 다시 돌려 본 것은 아니라 어림이다. 사용자가 `SKIP=pytest`로 그 한 단계만 건너뛰기를 승인했다(위 "사용자 프롬프트"). 커밋 `79304712f`. pytest의 판정은 CI가 리눅스에서 다시 본다(`CLAUDE.md`).
 - 이 변경은 위젯, 질문 페이지, 서버의 최종 사용자 경로를 건드리지 않았다. `-m llm_widget`·`-m llm_portal`과 e2e, 사진 비교는 돌리지 않았다.
 
 ## 셀프 리뷰 (base `9714908a0`, 변경 추적 파일 7개와 미추적 2개, 커밋 0)
@@ -72,10 +81,31 @@
   - Minor, 스킬의 마지막 문단이 "질문이 둘 이상을 묻는데"로 좁아져, 질문 하나에 근거가 일부만 있을 때의 지시가 스킬에 없다. (2)와 (10)에는 영향이 없었고 명세가 정한 글자다(명세에 사연을 적었다).
   - Nit, (13)의 "7일"은 출력 어디에든 있으면 통과하고 위치 단언은 제목이 든 첫 출처 줄만 본다. 티켓의 "그 내용의 출처 줄"보다 느슨하지만 티켓 문구대로다.
   - `.scratch/answer-eval/plan.md` 5줄은 평가가 기대할 답의 모양을 적은 문장("셋째, 일부에만 근거가 있으면 …")이다. 스킬의 글자를 인용한 것이 아니라 설계 입력이라 다른 기능의 계획을 건드리지 않았다.
-  - 티켓 체크박스 "검증 명령이 모두 초록이다"는 커밋의 pre-commit이 그 명령을 돌려 갈음한다(커밋이 막히면 쓰지 않은 것이 된다).
+  - 티켓 체크박스 "검증 명령이 모두 초록이다"는 커밋의 pre-commit이 그 명령을 돌려 갈음한다. 다만 pytest 단계는 사용자 승인으로 건너뛰었으므로(위 "검증") 그 한 단계는 갈음되지 않고 CI의 리눅스 실행이 본다. 이 체크박스는 그 한 단계를 빼고 초록이라는 뜻이다.
 
 ## 남은 일
 
 - base-agent의 04(설명 문서와 복사본 시험)·06·07은 열려 있어 기능 계획의 `**끝:**` 줄은 쓰지 않았다.
 - 07은 이 시험 모듈의 환경 변수 둘을 실제 문서 검색 서버의 주소와 값으로 채워 같은 열네 사례를 돌린다.
 - 스킬 고침의 효과는 8회차로 가르지 못했다. 사례가 다시 흔들리면 사전에 문턱을 정해 회차를 늘려 잰다.
+
+## 인계
+
+경계 `커밋 뒤`. 세션 제목은 `feature/05-real-model-assistant-answers-with-sources`였다. 컨텍스트가 인계 문턱을 넘어(커밋 직전 약 32만 토큰) 이 세션은 인계한다. 커밋 `79304712f`까지 했고, 이 일지의 건너뜀 기록과 인계 절은 아직 커밋하지 않았다(새 세션이 이어 쓰고 커밋한다). 뒤에 이 세션이 한 일은 없다.
+
+낸 지시문(받는 세션이 읽는 글):
+
+```
+다음 작업: .scratch/base-agent/issues/05-real-model-assistant-answers-with-sources.md. 실제 모델 시험으로 assistant가 출처를 달아 답하고, 모를 때 정해진 문장으로 답하며, 전문 읽기의 승인과 거부를 따르는지 본다(구현과 셀프 리뷰는 끝났고 커밋까지 했다. PR 직전 리뷰, 푸시, PR, 병합이 남았다)
+다음 단계: 구현
+어디서: 새 세션. 같은 브랜치를 잇는다. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /implement .scratch/base-agent/issues/05-real-model-assistant-answers-with-sources.md
+브랜치: feature/05-real-model-assistant-answers-with-sources
+모델: Sonnet 5.5 / high. 2의 잇는 지시문
+읽을 것: docs/journal/2026-11-12-2346-real-model-assistant-answers-with-sources.md
+이어받을 상태: 인계: 커밋 뒤 (일지 docs/journal/2026-11-12-2346-real-model-assistant-answers-with-sources.md). 커밋 `79304712f`까지 했고 셀프 리뷰(/code-review)는 일지의 "셀프 리뷰" 절대로 반영을 마쳤다. 그 커밋은 사용자가 승인해 pre-commit의 pytest 한 단계만 `SKIP=pytest`로 건너뛰었다(시간을 재는 시험 몇 개가 다른 세션들의 부하로 네 번 막혔다. 일지 "검증"). 그 승인은 그 커밋 하나에만 한 것이라, 다음 커밋도 같은 시험에 막히면 건너뛰기 전에 사용자에게 다시 묻는다(AskUserQuestion이나 wrap_up). 일지에 건너뜀 기록과 인계 절을 더한 수정이 아직 커밋되지 않았다. 남은 일: PR 직전 리뷰(coderabbit-review 서브에이전트, 못 돌면 bug-perf-review), origin/dev가 앞서 있으니 병합 전에 pr-feedback 규약대로 dev를 이 브랜치에 합치기, 푸시, 기준 dev로 PR, 봇 회차, 병합(merge.md의 "워크트리에서 병합할 때"). PR 본문에 적을 것은 둘이다. ci.yml의 llm 잡 timeout-minutes를 25에서 40으로 올렸다(어림이고 CI 러너로 재지 않았다). 다른 세션(docs/local-model-tickets, PR 550)이 요청한 "모델 차림 목록으로 열네 사례를 매개변수화"는 이 PR에 반영하지 않았다(local-model 06이 그 자리를 더한다고 그 티켓이 적는다). 그 PR 550이 같은 티켓 파일 05의 차림 줄을 고치므로 병합 때 글자 충돌이 날 수 있다. 06-widget 워크트리도 tests/fake_doc_search.py를 고치는 중이다. 뒤로 넘긴 일은 일지 "셀프 리뷰"의 남긴 것에 있다(test_main.py와 중복된 serve 도우미를 공용으로 뽑는 일 등)
+확인할 선행 조건: pytest 전체가 부하 없는 상태에서 초록인지 보지 못했다(건너뛴 한 단계는 CI의 리눅스 실행이 본다). 병합은 이 워크트리 사본의 next-session merge.md(없으면 SKILL.md)의 "워크트리에서 병합할 때"를 Read로 열어 따른다. -m llm 시험은 모델 키가 든 .env가 있어야 돈다(워크트리의 .env 경로는 docs/constitution/operations.md LLM 테스트). 이 시험 모듈은 PR 직전 변경이 없으면 다시 돌지 않아도 된다(14개 통과가 일지에 있다)
+이번 요청 범위: PR과 병합까지
+```
+
+open-session을 부른다 2026-11-12T17:48:29Z
