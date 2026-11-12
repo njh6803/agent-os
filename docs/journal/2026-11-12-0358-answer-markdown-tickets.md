@@ -168,3 +168,64 @@ open-session을 부른다 2026-11-11T19:32:04Z
 고르지 않은 선택지는 "02로 되돌린다"(설명: 확인하신 요약대로 02에 둡니다. 그러면 01의 기본 모양 카드는 한 줄 바꿈이 줄을 바꾸지 못하고 앞 줄과 한 줄로 이어지며, 잇단 제목 사이가 그림의 16px보다 좁은 8px인 채로(명세의 여백 계산이고 재지 않았다) 사진 정답을 만듭니다. 02가 그 정답을 다시 만들고, 01은 조금 작아집니다)다.
 
 이 화면으로 확인받은 것: ADR 0053의 2026-11-12 이력은 셀프 리뷰를 반영한 판(줄 높이 0을 지난 문단의 것으로 적지 않은 판)으로 확정됐다. 변환의 차례 7과 8은 01에 둔다. 명세 322줄의 "다시 확인받는다"를 확인받은 사실로 고쳤다. `mk-unsafe` 스토리는 알리기만 했고 사용자가 따로 답하지 않았다.
+
+### 커밋
+
+커밋 `docs: 마크다운 부품을 티켓 셋으로 쪼개고 ADR 0053에 안쪽 글머리 이력을 더한다 (answer-markdown)`. 손으로 치는 다섯은 그 pre-commit으로 갈음했다. 모두 지났다(pytest 594.8초, web-verify 663.5초, pyright·pyright-linux·lint-imports·check-ticket·check-instructions·check-type-escapes·run-hooks·zizmor, 마크다운 표·줄 구분 문자·변이 표·커밋 메시지). `Skipped`는 넷이었다. ruff 둘은 스테이지된 `.py`가 없어서이고 손으로 쳐 초록이었다(`uv run ruff check .`는 "All checks passed!", `uv run ruff format --check .`는 "2093 files already formatted"). 카나리아 명세와 헌법 판은 해당 파일이 없어서다. 인용 대조는 경고 여섯을 냈고 막지 않았다. 여섯 모두 이 브랜치가 고치기 전의 글(옛 명세의 문장, 명세 검토가 인용한 옛 문구, 고치기 전의 ADR 초안)을 따옴표로 든 것이라 저장소에 더는 없는 것이 맞아 두었다.
+
+## 인계 (커밋 뒤)
+
+커밋 뒤에 인계 계기(`hook_handoff`)가 왔다. 세션 컨텍스트가 278,777토큰으로 문턱 20만을 넘었다. `handoff.md`의 인계하지 않는 다섯에 들지 않는다. 커밋은 성공했고, 요청 범위("티켓까지")는 병합까지라 커밋에서 끝나지 않으며, 이 세션의 지시문은 `인계: 셀프 리뷰 직전`이라 경계가 다르고, `인계 못함` 줄이 없고, `get_session`의 `self`에 `parentSessionId`가 없다. 이 세션의 지금 제목은 `docs/answer-markdown-tickets`이고 넘기기 전에 `docs/answer-markdown-tickets (인계함)`으로 바꾼다. 푸시와 PR은 아직이다.
+
+이 세션이 번복하거나 고친 것: 앞 세션이 사용자에게 받은 묶음 요약(줄바꿈이 02)과 다르게 차례 7·8을 01에 둔 것을 명세 축이 Major로 짚어 다시 물었고, 사용자가 "01에 둔다"를 골랐다. 그 밖의 고침은 위 "판정"과 "고친 것과 PR 직전 리뷰에 밀 주장"에 있다.
+
+### 지시문
+
+```
+다음 작업: 기능 answer-markdown. 명세 검토와 셀프 리뷰를 반영해 명세·ADR 0053 이력·티켓 셋(.scratch/answer-markdown/issues/01~03)을 커밋했다. main을 들이고 PR 직전 리뷰부터 이어 PR·반영·병합한다
+다음 단계: 티켓
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /to-tickets .scratch/answer-markdown/spec.md
+브랜치: docs/answer-markdown-tickets
+모델: Opus 5.5 / xhigh. 2의 잇는 지시문
+읽을 것: docs/journal/2026-11-12-0358-answer-markdown-tickets.md의 "이어받은 세션"부터 끝까지
+이어받을 상태: 인계: 커밋 뒤. 셀프 리뷰를 반영하고 사용자 승인(ADR 0053의 2026-11-12 이력, 변환 차례 7·8을 01에 둠)을 받은 뒤 커밋했고 푸시·PR은 아직이다. 남은 것은 main 들이기, PR 직전 리뷰(밀 주장은 일지의 "고친 것과 PR 직전 리뷰에 밀 주장"), PR, 반영, 병합이다. pre-commit의 인용 대조 경고 여섯은 고치기 전의 글을 따옴표로 든 것이라 두었다. 일지: docs/journal/2026-11-12-0358-answer-markdown-tickets.md
+확인할 선행 조건: 없음
+이번 요청 범위: 티켓까지
+```
+
+open-session을 부른다 2026-11-12T01:02:48Z
+
+## 이어받은 세션 (커밋 뒤)
+
+> 사용자: .claude/skills/to-tickets/SKILL.md 를 읽어 그대로 따른다. 이 세션을 연 저장소는 `C:\project\agent`이고 작업 폴더가 그곳이 아니면 따르지 말고 알린다. 스킬의 인자는 이 줄의 '인자:' 뒤부터 메시지 끝까지다. 인자: .scratch/answer-markdown/spec.md
+>
+> (이어 위 "인계 (커밋 뒤)"의 지시문 열 줄을 그대로 붙였다)
+
+지시문으로 연 새 세션이 제목을 `docs/answer-markdown-tickets`로 바꾸고 `EnterWorktree(path)`로 이 워크트리에 들어왔다. 앞 세션이 병합하지 않고 넘겨 `tidy-checkouts`는 돌지 않았다. 앞 세션이 남긴 커밋하지 않은 변경은 이 일지의 "인계 (커밋 뒤)" 절 하나였다. `ListAgents`에서 이 브랜치 제목의 다른 세션은 `(인계함)`을 단 둘(넘긴 두 세션)뿐이었다.
+
+### main을 들인 것
+
+`git fetch` 뒤 `origin/main`은 `9d6295f`(#539)였고 이 브랜치의 기준보다 여섯 커밋 앞섰다. 두 쪽이 바꾼 파일은 겹치지 않았다(`git diff --name-only`를 양쪽으로). 원격에 `dev`가 없어(`git ls-remote --heads origin dev`의 출력이 비었다) `tools/base_rule.py`의 규칙대로 기준은 main이다. `git merge origin/main --no-edit`로 합쳤고 충돌은 없었다.
+
+들인 커밋 가운데 #539(base-agent 03)가 스킬 초안 `.scratch/base-agent/probes/draft/skills/cite-sources/SKILL.md`를 `plugins/skills/cite-sources/SKILL.md`로 옮기고 초안 폴더를 지웠다(병합 통계의 rename 100%). 명세 433줄이 옛 경로를 들어 그 자리에 옮긴 사실을 덧붙였다. 옮긴 스킬 글은 여전히 한 칸 띄운 `[1]`과 빈 줄 뒤의 "출처" 줄을 쓴다(읽었다). 그래서 명세 146줄의 "스킬 초안은 번호를 한 칸 띄워 쓰게 한다"는 그대로 맞다. 합친 뒤 `sibling_overlap`은 새 번호 없음, 번호 겹침 없음, 함께 고친 파일 없음이었다(종료 코드 0).
+
+### PR 직전 리뷰
+
+`coderabbit-review` 서브에이전트가 CLI 0.7.5로 `--base origin/main`을 주고 돌렸다. `Seat: not assigned`(Plan: Free)였고(본 세션이 `coderabbit auth status`로도 봤다), 서브에이전트의 보고로는 리뷰가 `review_completed`로 끝나 파일 아홉을 봤고 지적은 둘이다. 판정은 본 세션이 지적의 줄을 열어 다시 했다.
+
+- **Major, 유효.** 티켓 01의 "모든 입력에 거는 규칙"(45줄)과 명세 349줄이 "링크의 속성은 `href`·`target`·`rel`뿐"이라 적었는데, 명세 138줄이 "부품은 그리는 요소마다 클래스를 준다"고 정해 링크 `a`에도 `class`가 붙는다. 그대로 걸면 정상 출력에서 빨개진다. 같은 문장이 명세 246줄과 티켓 01의 26줄에도 있었다. 판정: 고친다. 네 자리에 "부품이 (모양으로) 고른 `class`"를 더했다. 표 칸 정렬은 명세 130줄이 인라인 `style`을 넘기지 않고 정렬 유틸리티로 바꾼다고 이미 정해 같은 충돌이 없다(읽었다). 옛 표현의 잔존은 기능 폴더와 ADR 0053에서 0이다(Grep).
+- **Minor, 오탐.** 명세 399줄이 화면 글에서 "이미지"를 어디서든 지우면 답의 "이미지"도 지워진다는 지적이다. 같은 문단이 그 한계(지워도 남은 글자의 차례가 그대로라 부분열 판정이 느슨해질 뿐 틀린 실패를 내지 않는다)와 거부한 안을 이미 적었다. 판정: 남긴다.
+
+### 밀 주장을 대 본 것
+
+CLI가 돌아 앞 세션이 적은 밀 주장을 리뷰의 브리프로 넘길 길이 없었다(code-review 6단계 1의 "CLI가 도는 PR에는 아직 넘기는 길이 없다"). 이번에는 `bug-perf-review`를 따로 띄우지 않고 본 세션이 아홉을 하나씩 대 봤다. 도구 호출 열둘쯤이었고 모두 맞았다. 대기열 `cli-review-claims-path`의 5회차다.
+
+- `SCREEN_INPUTS`의 키는 `mk-cite`, `mk-side-1`, `mk-side-2`, `mk-unsafe`, `mk-all` 다섯이다(`shape-cases.mjs` 664~680줄을 Grep). 디자인 `README.md` 38·39·52줄이 `ch-table-1`, `ch-code-1`, `mk-fallback-320`을 "표가 넘칠 때", "코드 블록의 긴 줄", "그리다 실패한 출력"으로 적는다. `<table`은 `ch-table-1`에, `<pre`는 `ch-code-1`에 하나씩이고 `mk-fallback-320`에는 둘 다 없다.
+- `expect.ts`의 `export`는 색(`semanticColor`, `colorsOf`, `hoverAwareColor`), 포커스 링(`focusRingOf`, `expectedFocusRing`), 선(`strokesOf`, `SCREEN_STROKE`), 아이콘 모양(`iconShape`)이고, 사이와 글머리를 재는 도우미는 없다. `Progress.stories.tsx` 91~94줄이 이름 자리를 `getBoundingClientRect`로 잰다. `web/`의 `.tsx`에 `listStyleType`은 없다.
+- `CLAUDE.md` 검증 명령의 web 괄호가 `packages/ui`를 건드리면 사진 비교 셋을 친다고 적는다.
+- `STRESS_INPUTS`(`inputs.mjs` 31~46줄)에 `stars-10k`, `brackets-10k`, `emphasis-mix-2k`가 있고, 명세 "변환의 차례"의 2는 닫히지 않은 굵게, 3은 글자로 두는 기호, 6은 문장 끝 번호다. 그래서 02의 "별표와 대괄호가 끝없이 이어지는 입력에 반응하는 변환(2, 3, 6)"이 맞다.
+- `Conversation.tsx` 4~5줄의 주석을 이으면 "마크다운으로 그리지 않고 HTML 조각은 글자로 보인다(ADR 0024)"다.
+- 명세 9줄의 사용자 선택은 이음매, 읽기 영역, 별표의 범위, 그림에 맞춤, 안쪽 글머리, 티켓 묶음으로 여섯이다. 명세 322줄의 요약 인용은 이 일지 "명세 검토 뒤에 물은 것"의 질문 2와 같다.
+- `<sup`이 든 화면 파일은 `ch-cite-2`, `mk-cite-320`, `mk-cite-400` 셋이다(ADR 0053 2026-11-12 이력의 "번호가 든 그림 셋"). 잇단 제목이 든 그림 넷은 앞 세션의 표준 축이 다시 셌고 이 세션은 세지 않았다.
+- 명세 218줄의 걸린 시간 기록은 설계 문장이고 괄호의 까닭은 앞 세션이 어림이라 적었다.
