@@ -20,7 +20,7 @@ name: ci
 
 # 개발 브랜치 dev 가 서면(ADR 0043) 티켓 PR 은 dev 로, 출시 PR(dev→main)과 핫픽스는 main 으로 간다. PR 은 base 를
 # 가리지 않고 같은 검사 잡 일곱과 그 결과를 모으는 verify 가 돈다. 푸시는 main 과 dev 둘이다. main 에서만 더 도는 검사(LLM 호출 테스트, 실제 이미지의
-# compose e2e)는 이 파일에 아직 없다. 앞의 것은 API 키 시크릿을 사람이 넣어야 하고(dev-branch-create 티켓), 뒤의 것은
+# compose e2e)는 이 파일에 아직 없다. 앞의 것은 API 키 시크릿을 사람이 넣은 뒤 ci-llm-job 티켓이 더하고, 뒤의 것은
 # release-image 의 첫 티켓이 Dockerfile·compose 와 함께 더한다(ADR 0056).
 on:
   push:
