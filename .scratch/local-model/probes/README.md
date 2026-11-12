@@ -16,11 +16,13 @@ uv run python .scratch/local-model/probes/make_env.py <환경 루트>
 uv run python .scratch/local-model/probes/check_adapter_types.py <환경 루트>
 ```
 
-- `make_env.py`는 `<환경 루트>`가 이 저장소 안이거나 `pyproject.toml`이 있는 디렉터리면 아무것도 깔지 않고 2로 끝난다(손으로 봤다, 인자 자리에 워크트리 루트 `.`과 주 체크아웃의 루트). 그런 자리의 `.venv`는 그 프로젝트의 환경이라 거기에 얹으면 저장소의 환경이 바뀐다.
+- `make_env.py`는 `<환경 루트>`가 이 저장소 안이거나 `pyproject.toml`이 있는 디렉터리면 아무것도 깔지 않고 2로 끝난다(손으로 봤다, 인자 자리에 워크트리 루트 `.`과 주 체크아웃의 루트). 그런 자리의 `.venv`는 그 프로젝트의 환경이라 거기에 얹으면 저장소의 환경이 바뀐다. 이미 있는 `.venv`에 이 프로브가 만들며 심은 표지 파일(`.agent-os-local-model-probe`)이 없어도 2로 끝난다(손으로 봤다. 표지 없이 만들어진 앞 환경에 다시 치니 "이 프로브가 만들지 않은 .venv 가 있다"와 2였고, 새 폴더에는 표지 파일이 심기고 0으로 끝났다). 표지가 생기기 전에 만든 환경은 지우고 다시 만든다.
 - `uv run --with`로 얹는 길은 이 PC에서 쓰지 못했다. `uv run --with langchain-openai==1.6.2 python .scratch/local-model/probes/versions.py`가 jsonpointer 3.1.1의 바퀴를 임시 환경에 깔다 `invalid entry (directory) in the scripts directory`로 끝났다(손으로 봤다, 그 명령. uv 0.10.8, Windows 10. 다시 쳐도 같은 오류였다). 까닭은 보지 않았다.
 - `openai_compat.py`는 사례 이름을 주면 그것만 돌고, 없으면 108 사례 전부를 돈다. `--out <파일>`을 주면 사례마다의 JSON 줄 전부는 그 파일에 쓰고 화면에는 `case`·`measured`·`result`만 찍는다. 모르는 사례 이름은 돌리지 않고 2로 끝난다(손으로 봤다, 위 셋째 명령의 사례 자리에 `bogus_case`). 표지가 없는 사례나 예외로 끝난 사례가 하나라도 있으면 1로 끝난다(`tools/probe_kit.py`의 `Rounds`).
 - 첫 줄은 돈 환경의 판(`versions.py`)과 프로브가 지운 환경 변수의 이름이다. 프로브는 시작할 때 `OPENAI_`·`LANGSMITH_`·`LANGCHAIN_`·`LC_OUTPUT_`으로 시작하는 변수와 프록시 변수 넷(`HTTP_PROXY`, `HTTPS_PROXY`, `ALL_PROXY`, `NO_PROXY`)을 지우고, 사례가 필요한 것만 그 사례 동안 심는다(`support.py`의 `scrub_environment`, `environment`). 이 PC에서는 지울 것이 없었다(첫 줄의 `scrubbed_variables`가 비었다).
-- `check_adapter_types.py`는 후보 어댑터와 양성 대조 파일을 `<환경 루트>/typecheck/`에 복사해 저장소 루트에서 `uv run pyright --outputjson --venvpath <환경 루트>`로 검사한다. 저장소 안의 점 폴더(`.scratch`)는 pyright가 분석하지 않아 저장소 밖의 사본을 쓴다. 저장소의 파일은 고치지 않는다.
+- `check_adapter_types.py`는 후보 어댑터와 양성 대조 파일을 `<환경 루트>/typecheck/`에 복사해 저장소 루트에서 `uv run pyright --outputjson --venvpath <환경 루트>`로 검사한다. 저장소 안의 점 폴더(`.scratch`)는 pyright가 분석하지 않아 저장소 밖의 사본을 쓴다. 저장소의 파일은 고치지 않는다. `<환경 루트>`가 저장소 안이거나 `pyproject.toml`이 있는 디렉터리면 `make_env.py`와 같이 아무것도 복사하지 않고 2로 끝난다(손으로 봤다, 인자 자리에 워크트리 루트 `.`).
+
+- PR 봇 회차에서 표지 셋을 좁혔다(결과를 본 뒤가 아니라 봇의 지적 때문이다). `guard_candidate_key_rotation`은 지운 뒤의 호출이 요청 없이 변수 이름과 "가 없다"가 든 예외로 끝나야 측정이다. `guard_candidate_success`는 둘째 호출도 도구 호출 하나를 돌려받아야 측정이다. `candidate_connections_after_failures`는 401·500·JSON 아님 갈래의 실행이 그 갈래의 예외 글(`(HTTP 401)`, `(HTTP 500)`, `(ValueError)`와 "Unexpected response type")이 든 예외로 끝나야 기대한 대로 끝난 것으로 센다. 좁힌 뒤 108 사례 전체는 측정 108회차, 측정 아님 0회차였고 이 셋의 결과 문구는 좁히기 전과 같았다(쟀다, `.scratch/local-model/probes/openai_compat.py`).
 
 | 파일 | 재는 것 | 근거로 드는 자리 | 다시 돌 때 | 잰 판 |
 |---|---|---|---|---|

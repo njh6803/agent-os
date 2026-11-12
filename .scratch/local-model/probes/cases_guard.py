@@ -365,8 +365,12 @@ async def guard_candidate_key_rotation() -> Report:
         removed = await call(model, tools=False)
     sent = authorizations(server)
     fresh = sent[:2] == ["Bearer probe-key-before-1111", "Bearer probe-key-after-2222"]
+    # 지운 뒤의 호출은 요청 없이 키가 없다는 거부로 끝나야 한다. 키를 계속 보냈다면 그 뒤의 결론
+    # ("변수를 지운 다음 호출은 키 없음 오류로 끝난다")을 내지 못한다.
+    text = "" if removed.error is None else str(removed.error)
+    refused = KEY_VARIABLE in text and "가 없다" in text
     return Report(
-        measured=len(sent) >= 2,
+        measured=len(sent) == 2 and refused,
         result=("호출 때 읽었다" if fresh else "호출 때 읽지 않았다") + f", 요청 {len(sent)}건",
         data={"authorization": sent, "after_removed": describe(removed.error)},
     )
@@ -391,14 +395,17 @@ async def guard_candidate_success() -> Report:
     reply = completion(content=None, tool_calls=[tool_call("add", '{"a": 2, "b": 3}')])
     with FakeServer(lambda _request: reply) as server:
         bare = await call(candidate(server.base_url))
-        await call(candidate(server.base_url, max_tokens=256, temperature=0.2))
+        given = await call(candidate(server.base_url, max_tokens=256, temperature=0.2))
     seen = bodies(server)
     first = seen[0] if seen else {}
     second = seen[1] if len(seen) > 1 else {}
     optional = ("max_tokens", "max_completion_tokens", "temperature")
     calls = [] if bare.message is None else bare.message.tool_calls
+    given_calls = [] if given.message is None else given.message.tool_calls
     return Report(
-        measured=len(seen) == 2 and len(calls) == 1 and "tools" in first,
+        # 두 호출 모두 응답을 읽는 데까지 가서 도구 호출 하나를 돌려받았다(요청이 닿은 것만으로는
+        # 성공한 호출이 아니다).
+        measured=len(seen) == 2 and len(calls) == 1 and len(given_calls) == 1 and "tools" in first,
         result=(
             f"주지 않으면 {[name for name in optional if name in first] or '없음'}, "
             f"주면 {[name for name in optional if name in second]}"

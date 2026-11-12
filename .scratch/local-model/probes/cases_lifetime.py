@@ -309,10 +309,17 @@ def _slow(_request: Received) -> Reply:
 
 
 async def _failing_runs(
-    make: Callable[[str], BaseChatModel], respond: Responder, *, cancel: bool
+    make: Callable[[str], BaseChatModel],
+    respond: Responder,
+    *,
+    cancel: bool,
+    cause: tuple[str, ...] = (),
 ) -> dict[str, int]:
     """한 루프에서 실패로 끝나는 실행 `FAILED_RUNS`번을 흉내 낸다. 실행마다 모델을 새로 만들어 한 번
     부르고 놓는다. `cancel`이면 답을 기다리는 호출을 `CANCEL_AFTER`초 기한으로 끊는다.
+
+    `cancel`이 아니면 `cause`의 글이 모두 든 예외로 끝난 실행만 기대한 대로 끝난 것으로 센다. 예외가
+    났다는 것만으로는 서버가 답을 보낸 뒤의 실패인지 알 수 없다(연결이 끊긴 실패도 예외다).
 
     다 놓은 뒤 기다려 서버가 받은 연결과 끝난 연결을 센다. 끊는 갈래는 서버의 응답 함수가 깨어나
     끊긴 연결을 알아챌 때까지(`SLOW_SECONDS`) 더 기다린다.
@@ -327,7 +334,8 @@ async def _failing_runs(
                 ended += scope.cancelled_caught
             else:
                 outcome = await call(model, tools=False)
-                ended += outcome.error is not None
+                text = "" if outcome.error is None else str(outcome.error)
+                ended += outcome.error is not None and all(part in text for part in cause)
             del model
             gc.collect()
             await asyncio.sleep(0)
@@ -351,16 +359,28 @@ async def candidate_connections_after_failures() -> Report:
       닫히지 않은 연결이 남아야, 다른 갈래에서 받은 연결과 끝난 연결의 수가 같은 것이 "닫혔다"는
       뜻이 된다.
 
-    표지는 모든 갈래의 실행이 기대한 대로(예외나 취소로) 끝났고, 요청이 실행 수만큼은 닿았으며,
-    대조 갈래에 닫히지 않은 연결이 남은 것이다. `status_500` 갈래는 요청이 실행 수보다 많아야 한다.
-    재시도가 실제로 들었다는 표지다.
+    표지는 모든 갈래의 실행이 기대한 대로 끝났고(401·500·JSON 아님 갈래는 그 갈래의 예외 글이 든
+    예외로, 취소 갈래는 기한이 끊어서. 서버가 답을 보낸 뒤의 실패라는 표지다), 요청이 실행 수만큼은
+    닿았으며, 대조 갈래에 닫히지 않은 연결이 남은 것이다. `status_500` 갈래는 요청이 실행 수보다
+    많아야 한다. 재시도가 실제로 들었다는 표지다.
     """
     branches = {
-        "status_401": await _failing_runs(lambda url: candidate(url), echo(401), cancel=False),
-        "status_500": await _failing_runs(lambda url: candidate(url), echo(500), cancel=False),
-        "not_json": await _failing_runs(lambda url: candidate(url), ok_not_json, cancel=False),
+        "status_401": await _failing_runs(
+            lambda url: candidate(url), echo(401), cancel=False, cause=("(HTTP 401)",)
+        ),
+        "status_500": await _failing_runs(
+            lambda url: candidate(url), echo(500), cancel=False, cause=("(HTTP 500)",)
+        ),
+        "not_json": await _failing_runs(
+            lambda url: candidate(url),
+            ok_not_json,
+            cancel=False,
+            cause=("(ValueError)", "Unexpected response type"),
+        ),
         "cancelled": await _failing_runs(lambda url: candidate(url), _slow, cancel=True),
-        "keepalive_401": await _failing_runs(_keepalive_model, echo(401), cancel=False),
+        "keepalive_401": await _failing_runs(
+            _keepalive_model, echo(401), cancel=False, cause=("(HTTP 401)",)
+        ),
     }
     control = branches["keepalive_401"]
     retried = branches["status_500"]["requests"] > FAILED_RUNS

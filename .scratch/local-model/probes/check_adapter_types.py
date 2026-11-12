@@ -9,15 +9,16 @@ pyright`(저장소 락의 판)이고, langchain-openai 가 깔린 환경은 `--v
 표지:
 - `config_strict`: `pyproject.toml`의 `[tool.pyright].typeCheckingMode`가 `strict`다.
 - `pyright_analyzed`: `summary.filesAnalyzed`가 넘긴 파일 수와 같다.
-- `control_caught`: 대조군의 `# 기대: <규칙>` 줄마다 그 규칙의 오류가 났고, 표시가 없는 줄에는
-  오류가 없다. strict 에서만 나는 규칙(`reportMissingParameterType`)이 strict 로 봤다는 표지이고,
-  langchain-openai 의 형식에 기대는 줄(`ChatOpenAI`에 대입, 생성자 인자)이 그 패키지의 형식을
-  읽었다는 표지다.
+- `control_caught`: 대조군의 `# 기대: <규칙>` 줄마다 그 규칙의 오류가 났고, 기대한 (줄, 규칙)
+  쌍이 아닌 오류는 하나도 없다(표시가 없는 줄은 물론 표시가 있는 줄의 다른 규칙도). strict 에서만
+  나는 규칙(`reportMissingParameterType`)이 strict 로 봤다는 표지이고, langchain-openai 의 형식에
+  기대는 줄(`ChatOpenAI`에 대입, 생성자 인자)이 그 패키지의 형식을 읽었다는 표지다.
 - `candidate_clean`: 앞의 둘이 섰을 때만 후보의 진단 수를 측정으로 센다.
 - `no_type_escapes`: `tools/check_type_escapes.py`의 `escapes_in`이 우회를 넣은 글에서 그것을 찾을
   때만 후보의 우회 수를 측정으로 센다.
 
-표지가 하나라도 없거나, 후보에 진단이나 우회가 있으면 1 로 끝난다.
+표지가 하나라도 없거나, 후보에 진단이나 우회가 있으면 1 로 끝난다. 환경 루트가 이 저장소 안이거나
+`pyproject.toml`이 있는 디렉터리면 아무것도 쓰지 않고 2 로 끝난다.
 
     uv run python .scratch/local-model/probes/check_adapter_types.py <환경 루트>
 """
@@ -98,6 +99,11 @@ def main() -> int:
     for stream in (sys.stdout, sys.stderr):
         stream.reconfigure(encoding="utf-8", errors="backslashreplace")
     env_root = Path(sys.argv[1]).resolve()
+    if env_root.is_relative_to(ROOT) or (env_root / "pyproject.toml").exists():
+        # 사본을 `<환경 루트>/typecheck/`에 쓴다. 저장소나 다른 프로젝트의 루트를 주면 거기의 파일을
+        # 덮어쓸 수 있다(`make_env.py`와 같은 가드).
+        print("환경 루트는 저장소 밖이고 pyproject.toml 이 없는 디렉터리여야 한다", file=sys.stderr)
+        return 2
     target = env_root / "typecheck"
     target.mkdir(parents=True, exist_ok=True)
     copies = [target / name for name in (CANDIDATE, CONTROL)]
@@ -128,7 +134,7 @@ def main() -> int:
         wanted = expected(HERE / CONTROL)
         errors = {(line, rule) for line, severity, rule, _ in diagnostics(report, CONTROL)}
         missing = sorted(wanted - errors)
-        stray = sorted(error for error in errors if error[0] not in {line for line, _ in wanted})
+        stray = sorted(errors - wanted)
         caught = analyzed and bool(wanted) and not missing and not stray
         emit("control_caught", expected=sorted(wanted), missing=missing, stray=stray)
         current.mark(measured=caught, result=f"기대한 오류 {len(wanted)}개가 모두 났다")

@@ -298,7 +298,7 @@ open-session을 부른다 2026-11-12T10:39:11Z
 **`bug-perf-review`의 보고(받은 그대로 줄였다).** 기준 `fba36f78a`, 범위 22개 파일, 도구 호출 26번이라고 보고했다(작업 알림의 `tool_uses`는 41이었다). 밀 주장 열셋 가운데 열하나는 근거와 맞았다고 했고 둘을 지적으로 냈다. Minor 2, 오탐 2다.
 
 - Minor 명세 238행(밀 주장 10, 유효). "4는 걸음 1·3·5에서 아무것도 띄우지도 지우지도 않고 끝난 때에만 낸다"가 걸음 4·5와 맞지 않는다. 죽은 잠금이 남은 채 `--yes` 없이 치면 걸음 4가 지우고 걸음 5에서 끝나, 0~4 어디에도 맞지 않는다(CodeRabbit의 마지막 지적과 같다). 같은 대목의 빈칸 둘도 짚었다. Ctrl-C로 끊긴 회차와, 걸음 9의 시험이 시간 제한에 걸린 회차의 종료 코드가 없다.
-- Minor 명세 132행(밀 주장 6, 유효). "넷째 호출이 끝난 시점에 연결 4개가 모두 닫혀 있었다"는 측정보다 세다. `calls_on_one_model`은 호출 넷 뒤 1초(`SETTLE_SECONDS`)를 기다리고 읽는다. 결론("포트에 닫기를 두지 않는다")은 놓은 뒤의 값과 대조 갈래가 받친다고 봤다.
+- Minor 명세 132행(밀 주장 6, 유효). 넷째 호출이 끝난 시점에 연결 4개가 닫혀 있었다는 고치기 전의 문장은 측정보다 세다. `calls_on_one_model`은 호출 넷 뒤 1초(`SETTLE_SECONDS`)를 기다리고 읽는다. 결론("포트에 닫기를 두지 않는다")은 놓은 뒤의 값과 대조 갈래가 받친다고 봤다.
 - 근거와 맞았다고 본 밀 주장: 1(`build_rejects_address`의 출력), 2(`channel/cli/main.py`가 `PluginError`를 받아 진단만 적는다), 3, 4(`_address`의 `isprintable` 판정과 `guard_candidate_odd_url_401`의 출력), 5, 7(`core/loop.py`와 `core/run.py`), 8(`tests/test_main.py`의 단언과 두 차이), 9(`model_name_quirks`의 출력), 11(`.scratch/answer-eval/plan.md`의 `**Blocked by:**`와 본문. pilot-release 쪽 기능 계획은 열지 않았다고 했다), 12(`.github/workflows/ci.yml`의 `ubuntu-24.04`), 13(ADR 0057 22행에 글자 그대로 있다).
 - 프로브 표지. `candidate_connections_after_failures`의 `status_500` 갈래에는 재시도가 실제로 들었다는 표지가 없다(`requests >= 3`만 본다. 이번 출력은 9건이다). `_read_the_reply`가 `OpenAIError`를 모두 빼는 것은 CodeRabbit이 올린 것과 같아 새 지적으로 세지 않았다.
 - 오탐 둘. `outside_worktree.py`의 음성 대조가 둘째 실행 안에 없다는 것(명세가 두 실행으로 갈라 적었다), 명세의 "CI의 리눅스 러너에서도 돈다"(시험이 들어오면 돈다는 서술이다).
@@ -313,7 +313,7 @@ CLI가 `review_completed`로 끝났으므로 대체 리뷰(`/security-review`)�
 - `cases_logs.py:70`과 `70-73`. 맞다. 측정 여부의 조건에 둘을 더했다. 호출이 고른 갈래대로 끝났다(성공 갈래는 메시지가 돌아왔고, 상태 코드 갈래는 예외의 글이 그 코드를 든다). 쿼리 갈래는 서버가 받은 요청 줄에 그 쿼리가 있다.
 - `cases_response.py:46`(`_read_the_reply`). 맞다. `openai` 계열의 예외 전체를 빼던 것을 전송·상태의 실패 둘(`openai.APIConnectionError`, `openai.APIStatusError`)만 빼게 고쳤다. 앞 세션의 셀프 리뷰가 좁힌 표지가 재려는 상황(응답 본문을 읽다 나는 그 계열의 예외)까지 측정 밖으로 뺐다.
 - `adapter_candidate.py:88-89`와 명세 "실패 문구와 되울린 키". 맞다. CLI는 Critical로, 서브에이전트는 이미 적힌 한계로 봤다. 명세가 한계로 적은 것은 "서버가 값을 바꿔 되울린다"였고 "호출 도중에 환경의 값이 바뀐다"는 아니어서 새 틈으로 봤다. 후보와 명세를 두 값을 찾아 가리게 고쳤다(호출을 시작하며 읽어 둔 값과 예외를 바꾸는 때의 환경 값). 앞의 안은 "거부한 안"으로 남겼다. ADR 0057 결정 "되울린 키"의 "환경에서 읽은 값을 글자 그대로 찾아 가린다"는 그대로 참이라 이력을 쓰지 않았고 사용자에게 묻지 않았다. 프로브 사례는 더하지 않았다. 요청을 받은 뒤 환경의 키 값을 바꾸고 받은 키를 되울리는 가짜 모델 서버의 사례를 D의 어댑터 시험에 뒀고(명세 "사례"의 실패), 명세와 README에 이 갈래를 재지 않았다고 적었다.
-- 명세 "로그"의 응답 헤더. 맞다. 다만 고칠 것은 수락 시험이 아니라 한계의 기록이라고 봤다. 응답 헤더의 값이 DEBUG 로그에 찍히는 것은 라이브러리(`httpcore2`)의 동작이고, 막는 장치를 두지 않기로 한 명세에서 "헤더로 되울린 키가 로그에 없다"는 통과할 수 없는 시험이 된다. 받아들인 한계로 적고 배포 안내에 넘겼다(명세 "다른 기능에 넘기는 것"의 deploy-package가 다섯에서 여섯이 됐고 `.scratch/deploy-package/plan.md`에 여섯째를 적었다). 그런 서버로 재지는 않았다. ADR 0057 Consequences "로그"가 수락에 건 문장은 그대로이고 그 시험의 가짜 모델 서버는 키를 본문으로 되울린다. 로그 필터를 두는 안의 거부 이유에 "어느 응답 헤더가 비밀인지 어댑터가 알지 못한다"를 더했다.
+- 명세 "로그"의 응답 헤더. 맞다. 다만 고칠 것은 수락 시험이 아니라 한계의 기록이라고 봤다. 응답 헤더의 값이 DEBUG 로그에 찍히는 것은 라이브러리(`httpcore2`)의 동작이고, 막는 장치를 두지 않기로 한 명세에서 "헤더로 되울린 키가 로그에 없다"는 통과할 수 없는 시험이 된다. 받아들인 한계로 적고 배포 안내에 넘겼다(명세 "다른 기능에 넘기는 것"의 deploy-package가 다섯에서 여섯이 됐고 `.scratch/deploy-package/plan.md`에 여섯째를 적었다). 그런 서버로 재지는 않았다. ADR 0057 Consequences "로그"가 수락에 건 문장은 그대로이고 그 시험의 가짜 모델 서버는 키를 본문으로 되울린다. 로그 필터를 두는 안의 거부 이유에는 응답 헤더의 값 가운데 어느 것이 비밀인지 어댑터가 알지 못한다는 것을 더했다.
 - `make_env.py:72`. 맞다. 인자가 이 저장소 안이거나 `pyproject.toml`이 있는 디렉터리면 아무것도 깔지 않고 2로 끝나게 고쳤다. 가드를 다시 읽은 뒤 워크트리 루트 `.`과 주 체크아웃의 루트를 넣었고 둘 다 거부 문구와 종료 코드 2로 끝났다(손으로 봤다, `uv run python .scratch/local-model/probes/make_env.py .`과 같은 명령에 주 체크아웃의 경로).
 - `outside_worktree.py:55`. 맞다. "작업 폴더 밖"의 판정에서 "작업 폴더가 홈 아래에 있지 않다"는 조건을 뺐다. 체크아웃이 홈 아래에 있으면 밖에 쓰고도 거짓이었다. 이 PC의 체크아웃은 홈 밖이라 결과는 그대로다.
 - `cases_failure.py:113`(`_odd_body`), `cases_guard.py:334`(`_candidate_bad_key`와 `guard_candidate_missing_key`), `cases_guard.py:510`(`guard_candidate_cancelled`). 맞다. 표지를 좁혔다. 요청이 정확히 한 건이다, 예외의 글이 변수 이름만이 아니라 그 거부의 문구를 든다, 기한이 실제로 호출을 끊으려 했다(`cancel_called`).
@@ -333,4 +333,78 @@ CLI가 `review_completed`로 끝났으므로 대체 리뷰(`/security-review`)�
 6. "무효 회차는 셋이다."
 
 **서두의 수 다섯(본문의 표시로 다시 셌다).** 넘겨받은 것 26(그대로), 사용자가 고른 것 3(그대로), 명세가 정한 것 25(그대로. 고친 것은 모두 이미 센 자리 안이다. 실패 문구의 모양과 감싸는 자리, 로그 시험의 모양, 걸음, 무효 회차), 이력 2(그대로), 거부한 안 32에서 34(예외를 바꾸는 때의 환경 값만 가린다, 걸음 4의 지우기를 `--yes` 뒤로 미룬다. Grep `거부한 안:`이 35건이고 서두 자신의 언급 하나를 뺀다). `uv run python tools/plan_table.py`는 `.scratch/plan.md`를 바꾸지 않았다.
+
+### 커밋과 PR (2026-11-12 20:28까지)
+
+리뷰 반영을 커밋 하나로 묶었다. 커밋은 `0c26ca6e3`(파일 13개)이고 pre-commit이 746초 걸려 백그라운드로 돌렸으며 종료 코드 0으로 끝났다. 그 출력에서 ruff 둘, check-ticket, zizmor, lint-imports, check-instructions, check-type-escapes, pyright, pyright-linux, run-hooks, pytest(591.6초), web-verify(745.9초), 마크다운 표, 줄 구분 문자, 변이 표, 커밋 메시지 검사가 Passed였고 canary specs와 constitution version은 대상 파일이 없어 Skipped였다(손으로 봤다, 그 출력을 Read로). 커밋 전에 따로 친 `uv run ruff check .`, `uv run ruff format --check .`, `tools/check_adr_pointers.py`, `tools/check_md_tables.py`, `tools/check_line_separators.py`, `tools/plan_table.py --check`도 걸린 것이 없었고, `git branch --show-current`는 `docs/local-model-spec`, `tools/sibling_overlap.py`는 번호 겹침과 함께 고친 파일이 없다고 냈다. `git fetch origin` 뒤의 `origin/dev`는 `fba36f78a` 그대로였다. 반영 커밋 앞에 `/code-review` 전체를 다시 돌리지는 않았다(그 스킬의 6단계가 고친 뒤에는 검증 명령만 다시 돌리라고 한다).
+
+**인용 대조의 경고(막지 않는 검사).** 이 일지에서 세 건이 났다. 앞 세션이 고치기 전의 인용을 일부러 적어 둔 한 건(위 "이어받은 세션의 인계"의 인용 대조 문단)은 그대로 뒀다. 이 세션이 쓴 두 건은 따옴표를 뗐다. 리뷰 보고가 든 고치기 전의 명세 문장과, 명세의 문장을 줄여 옮긴 것이다. 이 고침은 커밋하지 않았다.
+
+**커밋 뒤의 인계 계기.** 커밋 명령을 백그라운드로 띄운 직후 훅(`hook_handoff`)이 세션 컨텍스트 261,071 토큰으로 인계 계기(`커밋 뒤`)를 냈다. `handoff.md` 1의 셋째에 들어 넘기지 않았다. 이 세션을 연 지시문의 이어받을 상태가 `인계: 커밋 뒤`로 시작한다.
+
+**푸시와 PR.** `git push -u origin docs/local-model-spec` 뒤 `gh pr create --base dev`로 PR 547을 열었다(`https://github.com/njh6803/agent-os/pull/547`). 제목은 첫 커밋의 제목이고 본문은 `.github/PULL_REQUEST_TEMPLATE.md`를 채웠다. 체크리스트의 PR 직전 리뷰 줄에 CLI와 `bug-perf-review`의 결과, 둔 지적 하나(`env_key_used_when_omitted`, 오탐)의 판정을 적었다. `gh pr view 547 --json headRefOid`의 값은 로컬 HEAD(`0c26ca6e3`)와 같았다. `@coderabbitai review` 코멘트는 남기지 않았다(아래 인계).
+
+## 셋째 세션의 인계 (PR 연 뒤, 2026-11-12 20:28)
+
+**인계의 계기.** PR을 연 명령 직후 훅(`hook_handoff`)이 세션 컨텍스트 304,647 토큰으로 인계 계기(`PR 연 뒤`)를 냈다. 함께 온 `hook_pr_next_session`의 계기보다 이것을 따랐다. 인계하지 않는 때 다섯에는 들지 않았다. PR이 열렸고, 요청 범위가 PR과 병합까지이고, 이 세션을 연 지시문의 이어받을 상태는 `인계: 커밋 뒤`라 같은 경계가 아니고, 이 세션이 쓴 인계 실패 줄이 없고, `get_session`의 `self`에 `parentSessionId`가 없다. 넘기기 전 이 세션의 제목은 `docs/local-model-spec`이다.
+
+낸 지시문:
+
+```text
+다음 작업: 기능 local-model. 명세 PR 547의 봇 회차를 반영하고 병합
+다음 단계: PR 반영·병합
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /to-spec
+브랜치: docs/local-model-spec
+모델: Sonnet 5.5 / high. 2의 잇는 지시문
+읽을 것: docs/journal/2026-11-12-0248-local-model-spec.md 전체(앞의 세 세션이 쓰다 넘긴 일지. 새 세션이 이어 쓰고 커밋한다)
+이어받을 상태: 인계: PR 연 뒤. 일지는 docs/journal/2026-11-12-0248-local-model-spec.md. PR 직전 리뷰(CodeRabbit CLI와 bug-perf-review)의 반영을 둘째 커밋으로 묶어 푸시하고 PR 547(base는 dev)을 열었다. next-session merge.md 2(봇 회차)부터 한다. 첫 @coderabbitai review 코멘트도 새 세션이 남긴다. 커밋하지 않은 변경은 일지 하나다(절 "커밋과 PR"과 "셋째 세션의 인계", 인용의 따옴표 둘). 봇 회차의 커밋에 싣는다. 남은 단계는 봇 회차 반영, 일지 "다음"과 회고, 병합(merge.md "워크트리에서 병합할 때")이다. 봇이 겨냥할 자리는 일지 "고치며 새로 쓴 사실 문장(PR 봇이 겨냥할 자리)"의 여섯이고, PR 체크리스트에 둔 지적 하나(env_key_used_when_omitted, 오탐)의 판정은 일지 "판정과 반영"에 있다. 본문을 고치는 반영마다 명세 서두의 수 다섯(지금 26·3·25·2·34)을 다시 세고, 승인받은 ADR 0057 이력 둘의 결정을 바꾸는 반영은 사용자에게 다시 묻는다. 프로브를 다시 돌리려면 환경을 새로 만든다(프로브 README "돌리는 법". 앞 세션의 환경은 그 세션의 스크래치패드에 있다)
+확인할 선행 조건: 없음
+이번 요청 범위: PR과 병합까지
+```
+
+모델 줄은 `directive.md` 2의 잇는 지시문(`PR 반영·병합`이면 Sonnet 5.5 / high)을 그대로 따랐다. 이 세션은 막히지 않았다.
+
+제목을 `docs/local-model-spec (인계함)`으로 바꿨다. 이 세션이 띄운 백그라운드 작업은 남아 있지 않았다(커밋 명령 하나와 리뷰 서브에이전트 둘이 모두 끝났다). `git worktree unlock C:/project/agent/.claude/worktrees/local-model-spec`은 `is not locked`로 끝나 넘어갔다.
+
+open-session을 부른다 2026-11-12T11:29:00Z
+
+## 넷째 세션 (2026-11-12 20:40)
+
+위 "셋째 세션의 인계 (PR 연 뒤)"의 지시문을 받은 새 세션이 이 절부터 쓴다. 모델은 Sonnet 5.5 / high다(받은 지시문의 모델 줄 그대로). 세션 제목을 `docs/local-model-spec`으로 바꾸고 `EnterWorktree(path)`로 이 워크트리에 들어왔다.
+
+> 사용자: `.claude/skills/to-spec/SKILL.md` 를 읽어 그대로 따른다. (…) 인자: 다음 작업: 기능 local-model. 명세 PR 547의 봇 회차를 반영하고 병합 (…) 이어받을 상태: 인계: PR 연 뒤. (…) 이번 요청 범위: PR과 병합까지
+
+지시문의 나머지 줄은 위 "낸 지시문"과 같다. 첫 줄이 명세 스킬을 가리키지만 지시문의 다음 작업은 PR 반영·병합이라, 이 세션은 `to-spec`을 읽기만 하고(명세는 이미 썼다) `merge.md` 2(봇 회차)대로 했다.
+
+### 봇 회차
+
+PR 547의 머리는 `0c26ca6e3` 그대로였다(`gh pr view 547 --json headRefOid`). 첫 `@coderabbitai review` 코멘트를 남기고 `tools/wait_ci.py 547`을 백그라운드로 기다렸다. 결과는 CodeRabbit Finished, claude-review SUCCESS, 나머지 검사도 모두 SUCCESS(llm은 SKIPPED)였다. claude-review는 "지적 없음"이었다. CodeRabbit은 이 PR에 낸 첫 리뷰라 첫 회차이고, 지적 7건(Critical 1, Minor 6)을 지적마다 판단했다(Minor도 고칠지를 판단하는 회차다).
+
+**판정과 반영.**
+
+- `cases_guard.py` `guard_candidate_key_rotation`(Minor, 맞다). 지운 뒤의 세 번째 호출이 키를 계속 보내도 표지가 섰다. 표지를 요청이 정확히 2건이고 지운 뒤의 예외 글에 변수 이름과 키 없음 문구가 든 것으로 좁혔다.
+- `cases_guard.py` `guard_candidate_success`(Minor, 맞다). 둘째 호출의 결과를 버렸다. 둘째 호출도 도구 호출 하나를 돌려받은 것을 표지에 더했다.
+- `cases_lifetime.py` `_failing_runs`(Minor, 맞다). 예외가 났다는 것만 세어 연결이 끊긴 실패도 기대한 실패로 셌다. 갈래마다 예외 글에 들어야 할 원인(`(HTTP 401)`, `(HTTP 500)`, `(ValueError)`와 "Unexpected response type")을 정했고, 이 글은 갈래마다 예외를 한 번 찍어 보고 정했다(손으로 봤다, 스크래치패드의 한 번 쓴 스크립트). 봇이 함께 제안한 응답 전송 카운터(`FakeServer`에 두는 것)는 더하지 않았다. 상태 코드나 본문을 읽다 난 예외 글이 서버가 답을 보낸 뒤의 실패라는 표지를 이미 하기 때문이다.
+- `check_adapter_types.py` `stray`(Minor, 맞다). 줄 번호만 비교해 같은 줄의 다른 규칙 진단을 버렸다. (줄, 규칙) 쌍 전체를 비교하게 고쳤다.
+- `check_adapter_types.py` 환경 루트(Minor, 맞다). `make_env.py`와 같은 가드를 더했다. 인자로 워크트리 루트 `.`을 주니 거부 문구와 종료 코드 2로 끝났다(손으로 봤다).
+- `make_env.py` 표지 파일(Minor, 맞다). 앞 세션의 가드는 저장소 안과 `pyproject.toml`이 있는 자리만 막았다. 이 프로브가 만들며 심은 표지 파일이 없는 `.venv`에는 얹지 않고 2로 끝나게 했다. 표지가 없는 앞 환경에 다시 치니 거부 문구와 2였고, 새 폴더에는 표지가 심기고 설치가 0으로 끝났다(손으로 봤다).
+- `docs/journal`의 응답 헤더 DEBUG 로그(Critical 표시, 판정은 둔다). 아래 따로 적는다.
+
+**다시 잰 것.** 환경은 앞 세션의 것을 넘겨받지 못해 이 세션의 스크래치패드에 `make_env.py`로 새로 만들었다(설치 61개, 새 패키지 넷, 락과 달라진 판 없음). 고친 뒤 `openai_compat.py` 전체는 측정 108회차, 측정 아님 0회차였고 세 사례의 결과 문구는 좁히기 전과 같았다(쟀다, `.scratch/local-model/probes/openai_compat.py`). `check_adapter_types.py`는 측정 5회차, 측정 아님 0회차이고 기대한 오류 8개가 모두 났고 기대 밖 진단은 없었다(쟀다, `.scratch/local-model/probes/check_adapter_types.py`). 좁힌 표지 셋과 두 프로브 가드는 프로브 README에 적었다.
+
+**둔 Critical: 응답 헤더 값이 DEBUG 로그에 남는다.** 봇은 명세 스토리 18(루트 로거를 DEBUG로 켜도 키 값이 남지 않기를 바란다)과 어긋난다며, 어댑터가 `httpcore2`의 DEBUG 기록을 `mcp.py`처럼 필터로 버리고 수락 시험에 헤더 되울림 갈래를 넣으라고 했다. 앞 세션이 같은 지적을 CLI 리뷰에서 받아 이미 받아들인 한계로 판정했다(위 "셋째 세션"의 판정과 반영). 이번에 새로 확인한 것은 `adapters/mcp.py`를 읽은 것이다(읽었다). 그 필터는 `mcp.client.streamable_http`가 도구 호출의 인자를 DEBUG로 찍어 막을 것이 있었기 때문에 있고, 거기서는 헤더 값이 `mcp`·`httpx2`·`httpcore2`의 DEBUG에 실리지 않는다고 그 독스트링이 적는다. 여기서 `httpcore2`의 DEBUG를 통째로 버리면 응답 헤더와 함께 접속 단계의 기록도 사라진다(명세가 위 측정에서 적었다). 그래서 결정은 그대로 두고 명세 스토리 18에 한계를 덧붙이고(`받아들인 한계다(아래 "로그")`), 로그 절의 필터 거부 이유에 위 두 사실을 더했다. 새 `거부한 안:` 표시는 없고, 이 한계는 이미 deploy-package의 배포 안내로 넘어가 있다(명세 "다른 기능에 넘기는 것"). 이 판정은 사용자가 고른 것도 승인한 이력도 바꾸지 않는다. 사용자가 헤더 값까지 막기를 원하면 명세 "로그"의 결정 하나(필터를 둔다)를 바꾸는 일이라 그때 다시 묻는다.
+
+**서두의 수 다섯(본문의 표시로 다시 셌다).** 넘겨받은 것 26, 사용자가 고른 것 3, 명세가 정한 것 25, 이력 2, 거부한 안 34. 그대로다. 고친 것은 이미 센 자리 안의 문장 둘이다(스토리 18의 덧붙임, 필터 거부 이유의 보강). Grep `거부한 안:`이 35건이고 서두 자신의 언급 하나를 뺀다(손으로 봤다, `grep -o`).
+
+## 회고
+
+후보 하나, 승인 하나(회차로 세는 것), 기각과 넘김 0이다. 승인한 것은 이 세션에서 반영하지 않고 대기열의 열린 항목에 회차만 더했다.
+
+- **프로브 표지가 있었으나 재려는 상황을 다 보지 못했다(승인, 11회차).** 사건: 이 PR의 프로브에서 CodeRabbit이 Minor로 표지 셋을 짚었다. 키를 지운 뒤의 호출이 키 없음 거부로 끝났는지, 둘째 호출이 응답을 읽는 데까지 갔는지, 401·500·JSON 아님 갈래의 예외가 그 갈래의 원인인지를 보지 않았다. 셀프 리뷰 두 축과 PR 직전 리뷰(CLI와 `bug-perf-review`)가 같은 꼴을 이미 여럿 잡았는데도 이 셋이 남았다. `.claude/rules/probes.md` 첫 항목을 어긴 사건이고 그 규칙이 구현 때 실리는 규칙이라 회차로 센다. 간 자리: `.scratch/retro-queue/probe-round-marked-measured-unconditionally.md`에 11회차를 더했다(0430의 10회차). 층의 조건은 그 항목의 `어디로:`가 정했다. 그 처방(조건 없는 `mark(measured=True`를 짚는 계기 훅)은 이번 꼴, 곧 조건은 있으나 재려는 상황을 다 보지 못한 표지를 잡지 못하므로, 판단 기준을 가진 리뷰가 잡을 몫으로 남는다.
+- 본 것 가운데 기각한 후보는 없고 새 사건도 없다. 만료할 항목은 `tools/queue_open_rows.py`와 `--ref origin/dev` 둘 모두 없음이었다.
+
+## 다음
+
+병합 뒤 단계는 기능 local-model의 티켓 나누기다(`next-session` 결정표의 "`spec.md`는 있고 `issues/`가 없다" 줄). 사용자만 부르는 `/to-tickets`로 가기 전에 명세 검토(`spec-reviewer` 서브에이전트)가 먼저다. 이 일지에는 그 검토가 돈 기록이 없다. 명세 서두의 수 다섯은 26·3·25·2·34이고, 티켓을 나눌 때 묶음 여덟(명세 "고칠 자리의 묶음")과 그 사이 막힘을 명세 그대로 따른다. 사용자에게 미리 물을 일은 없다. 다만 명세 "로그"의 응답 헤더 한계(받아들인 한계)를 사용자가 막는 쪽으로 바꾸자고 하면, 필터를 둘지 정하는 그 결정을 다시 묻는다.
 

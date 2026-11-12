@@ -5,6 +5,8 @@
 읽는다(`check_adapter_types.py`). 이미 있는 환경은 지우지 않고 그 위에 다시 설치한다. 그래서 인자가
 이 저장소 안이거나 `pyproject.toml`이 있는 디렉터리(다른 체크아웃의 루트)면 아무것도 하지 않고 2 로
 끝난다. 그 자리의 `.venv`는 그 프로젝트의 환경이라 거기에 얹으면 약속과 달리 저장소의 환경이 바뀐다.
+같은 까닭으로, 이미 있는 `.venv`에 이 프로브가 만들며 심은 표지 파일(`MARKER`)이 없어도 2 로 끝난다
+(홈 디렉터리나 `requirements.txt`만 쓰는 프로젝트나 사용자가 따로 만든 `.venv`를 지나치지 않는다).
 
     uv run python .scratch/local-model/probes/make_env.py <환경 루트>
 
@@ -31,6 +33,7 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parents[2]
 TARGET = "langchain-openai==1.6.2"
+MARKER = ".agent-os-local-model-probe"  # 이 프로브가 만든 `.venv`에만 심는 빈 파일
 CALL_TIMEOUT = 600.0
 PINNED = re.compile(r"^(?P<name>[A-Za-z0-9][A-Za-z0-9._-]*)==(?P<version>[^\s;]+)")
 
@@ -82,8 +85,13 @@ def main() -> int:
     export(runtime, "--no-dev")
     locked = export(everything)
     env = root / ".venv"
+    if env.exists() and not (env / MARKER).exists():
+        # 이 프로브가 만들지 않은 환경이다. 거기에 락의 판을 얹으면 남의 환경이 바뀐다.
+        print("이 프로브가 만들지 않은 .venv 가 있다", file=sys.stderr)
+        return 2
     if not interpreter(env).exists():
         uv("venv", "-q", "--python", "3.12", str(env))
+        (env / MARKER).touch()
     python = str(interpreter(env))
     pins = ("-r", str(runtime), "-c", str(everything))
     uv("pip", "install", "-q", "--python", python, *pins, TARGET)
