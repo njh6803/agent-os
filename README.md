@@ -40,6 +40,8 @@ plugins/
                    손으로 고쳐도 같다. skill은 에이전트가 고르면 런타임이 실행을 준비할 때 켜짐을 본다
   rules.toml       선택. 운영자의 규칙 파일(ADR 0044). 도구 호출마다 막고(deny), 묻고(ask), 그냥 부른다(allow).
                    없으면 연결에 있는 도구의 모든 호출이 묻는다. 손으로 고치고 다음 실행과 다음 재개부터 듣는다
+  README.md        커스텀 에이전트를 만드는 안내(기본 에이전트 assistant를 복사하는 순서, 두 끝, 열기, 문서 검색 서버에
+                   붙이는 설정). 종류 폴더 밖이라 플러그인으로 읽히지 않는다
 tests/             src를 미러링. fixtures/site_file/ 은 서버와 위젯 빌드의 시험이 함께 읽는 사이트 파일 픽스처
 web/               pnpm 워크스페이스(Node 24, TypeScript 5.9). 파이썬과 루트를 나눈다. 앱은 apps/*, 공유 패키지는 packages/*
   eslint.config.mjs  원칙 III의 TS 판정자와 층 경계. 변이 테스트는 eslint.config.test.ts
