@@ -70,3 +70,16 @@ open-session을 부른다 2026-11-12T13:24:35Z
 다시 돌린 것: `uv run ruff check .`·`ruff format --check .` 통과, `pytest tests/test_assistant_plugin.py` 34개 초록, `pyright` 0 오류. 전체 `run_checks.py`는 처음부터 다시 돌았다(결과는 아래 "마무리").
 
 PR 직전 리뷰에 밀 주장(새로 쓴 사실 문장): (1) 6절 "스킬과 연결은 이름으로 가리키므로 사본이 같은 이름을 가리키는 동안 원본과 함께 쓴다", (2) 4절 "1만 더하면 … 루프가 5턴 안에 멈추지 않았다", (3) 8절 "`승인:` 줄은 `--approve`가 이미 붙어 있고 `거부:` 줄은 `--deny --reason`에서 끝난다", (4) 3절 "연결 이름을 바꾸고 표를 안 고치면 도구 연결 오류로 끝난다".
+
+## 마무리 (인계 직전, 커밋 뒤)
+
+- 전체 `uv run python tools/run_checks.py`를 처음부터 다시 돌아 열 단계가 모두 Passed였다(check-ticket, zizmor, lint-imports, check-instructions, check-type-escapes, pyright, pyright-linux, run-hooks, pytest 732.5초, web-verify 1120.4초. 도구가 찍은 로그, 백그라운드 실행). `uv run ruff check .`와 `ruff format --check .`도 통과(종료 코드 0, 손으로 침).
+- 커밋 `447b14fd4` "feat: 에이전트 안내 문서와 사본 시험 (04-custom-agent-guide-and-renamed-copy-test)". pre-commit을 거쳐 종료 코드 0으로 끝났다(로그 내용은 읽지 않았고 종료 코드만 봤다). 첫 시도는 제목이 72자를 넘어 PreToolUse 훅이 막았고, 제목을 줄여 다시 쳤다.
+- 커밋 앞 `uv run python tools/sibling_overlap.py`: 새 번호 없음, 번호 겹침 없음. `origin/dev`가 `1a02ac6d5`(#548, 웹 디자인 시스템의 마크다운 부품)로 앞서 있고 `README.md`를 함께 고쳤다. 그 PR은 `web/packages/ui` 쪽이라 이 브랜치와 내용은 겹치지 않지만, 병합 때 `README.md`에서 글자 충돌 후보다. 이 브랜치는 아직 `origin/dev`를 합치지 않았고 푸시도 하지 않았다.
+- 티켓 04는 `done`으로 이미 표시되어 커밋에 실렸다. 기능 계획의 `**끝:**` 줄은 티켓 05·06·07이 열려 있어 쓰지 않았다. `plan_table.py`는 앞 세션이 돌았고 `.scratch/plan.md`는 바뀌지 않았다. 이 세션에서는 티켓 상태와 계획 입력을 건드리지 않아 다시 돌지 않았다.
+- 남은 일: `origin/dev`를 이 브랜치에 합치고(충돌 후보 `README.md`) 푸시, `/git-pr`로 PR을 열고 병합(워크트리에서 병합하는 절차는 `merge.md`의 "워크트리에서 병합할 때"). PR 직전 리뷰(`bug-perf-review` 등, `operations.md` 리뷰 파이프라인)에는 위 "밀 주장" 넷을 넘긴다.
+- 이 티켓의 일이 아니라 마칠 때 보고에 남길 것: 앞 PR 546에서 보류한 셋(출시 PR의 dev 삭제 갈래는 밟은 적이 없다, 계기와 결정표의 같은 조건 중복, `test_protection_json.py`의 `enforce_admins` 설명 한 줄)과 사용자에게 넘길 질문 하나(`handoff.md`에 여섯째 "인계하지 않는 때"를 더할지).
+- 이 세션의 제목: `feature/04-custom-agent-guide-and-renamed-copy-test`. 인계 전 제목도 같다. 이 일지의 사용자 프롬프트는 위 "사용자 프롬프트" 절의 지시문 하나뿐이고 이 세션에서 사용자가 더한 말은 없다.
+
+open-session을 부른다 2026-11-12T14:20:12Z
+인계 못함 커밋 뒤: open-session의 send(open_session.ps1)가 자동 모드 분류기에 거부되어 새 세션을 열지 못했다. 제목을 인계 전으로 되돌렸고 이 세션에서 다음 단계(origin/dev 합치기, 푸시, PR, 병합)를 잇는다.
