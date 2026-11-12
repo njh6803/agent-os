@@ -83,3 +83,9 @@ PR 직전 리뷰에 밀 주장(새로 쓴 사실 문장): (1) 6절 "스킬과 �
 
 open-session을 부른다 2026-11-12T14:20:12Z
 인계 못함 커밋 뒤: open-session의 send(open_session.ps1)가 자동 모드 분류기에 거부되어 새 세션을 열지 못했다. 제목을 인계 전으로 되돌렸고 이 세션에서 다음 단계(origin/dev 합치기, 푸시, PR, 병합)를 잇는다.
+
+## PR 직전 리뷰
+
+`coderabbit-review` 서브에이전트가 `coderabbit review --agent --base origin/dev --committed`를 돌렸다(CLI 0.7.5, 서브에이전트가 보고한 값). `coderabbit auth status`의 `Seat:` 줄은 `not assigned`, Plan은 Free였지만 리뷰는 `review_completed`·종료 코드 0으로 끝까지 돌았고 findings는 0건이다(CLI 출력, 서브에이전트 보고). 리뷰한 파일은 다섯(티켓, `README.md`, 이 일지, `plugins/README.md`, `tests/test_assistant_plugin.py`)이고 `web/` 아래의 #548 내용은 `git diff --stat origin/dev...HEAD`에 없었다. 서브에이전트가 코드를 읽어 문서와 대 본 것(매니페스트 값, 규칙 표, `doc-search` 블록, `MAX_TURNS = 10`과 `core/run.py:1449`의 거부, 승인·거부 옵션의 자리)은 읽은 것이지 불러 돌려 본 것이 아니다. 8절의 `run_paused` 줄과 종료 코드 3, 시험 파일의 내용은 직접 대조하지 않았다고 밝혔다. 고친 것 없음, 남긴 것 없음.
+
+대체 리뷰(`bug-perf-review`, `/security-review`)는 CLI가 돌았으므로 돌리지 않았다.
