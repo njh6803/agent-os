@@ -48,7 +48,7 @@
 
 - [ ] 마커 `llm_local`을 `pyproject.toml`의 마커 선언과 기본 실행의 제외(`addopts`)에 더하고, `tests/conftest.py`의 실제 모델 마커 목록(`_LLM_MARKERS`)에 더해 실행 끝에 토큰 합계가 찍히게 한다
 - [ ] 시험은 시험 파일 하나에 모은다. calc를 CLI 프로세스로 돌리는 사례 하나를 두 모델로 매개변수화한 것이고 선례는 `tests/test_main.py`의 `test_calc_에이전트가_실제_모델로_답하고_트레이스에_모델_호출이_남는다`다. 저장소의 플러그인을 임시 루트에 복사하고 `openai-compatible` 모델 파일 하나(`base_url`과 `model_id`는 환경 변수에서, `temperature = 0`, `max_tokens`는 적지 않음, 키 변수가 환경에 있으면 `api_key_env`에 그 이름)를 적어 `--model`로 준다. calc의 MCP 서버는 저장소의 `everything` 그대로다. 시험은 키 값을 읽지 않는다
-- [ ] 환경 변수 여섯의 이름은 03의 `tools/llm_local.py` 상수를 import해 쓴다. 필수 넷(`_BASE_URL`, `_MODEL_ID`) 가운데 하나라도 없으면 skip이 아니라 실패하고 문구가 없는 변수의 이름을 든다. 그 환경 검사 함수를 마커 없이 부르는 사례를 기본 pytest에 둔다
+- [ ] 환경 변수 여섯의 이름은 03의 `tools/llm_local.py` 상수를 import해 쓴다. 필수 넷(두 모델 각각의 `_BASE_URL`과 `_MODEL_ID`) 가운데 하나라도 없으면 skip이 아니라 실패하고 문구가 없는 변수의 이름을 든다. 그 환경 검사 함수를 마커 없이 부르는 사례를 기본 pytest에 둔다
 - [ ] 단언은 `-m llm`의 calc 시험과 같고 두 군데만 다르다. `tool_called` 가운데 성공한 것(`ok`가 참)이 하나 이상 있어야 하고, `llm_called.model`은 `model_id`와 같은지가 아니라 비어 있지 않고 `unknown`이 아닌지를 본다. 시험 안에 다시 시도를 두지 않는다
 
 ### 규약 문서
