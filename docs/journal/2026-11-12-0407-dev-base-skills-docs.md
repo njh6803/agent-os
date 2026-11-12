@@ -141,6 +141,12 @@ PR 직전 리뷰에 밀 새 주장(이번 반영으로 새로 쓴 사실 문장)
 
 `origin/main`에 PR 538·539가 병합돼 한 번 더 합쳤다. 충돌은 없었다.
 
+## 봇 둘째 회차 (claude-review)와 CodeRabbit 첫 회차
+
+푸시 `3e1319810` 뒤 claude-review의 둘째 리뷰는 Critical·Major 없이 Minor 둘과 Nit 하나다. 둘째 회차부터는 Critical·Major만 고치므로 모두 보류한다. 보류 이유: (1) `tidy-checkouts` 3의 본문 낱말 `origin/main`을 곳마다 가려 바꾸지 않은 것은 문장 하나로 뜻을 밝혀 둔 상태이고 모양 문제다. (2) 스킬이 ADR 0043과 다르게 말하는 것은 "다음" 6이 ADR 개정 몫으로 이미 적고 있다. (3) `merge.md` 병합 길 4의 길이는 모양 문제다.
+
+CodeRabbit은 이 PR에서 첫 리뷰를 냈다(앞의 `Review rate limited`는 회차로 세지 않았다). Major 하나와 Minor 둘이고 모두 맞아서 고쳤다. 일지 "다음" 4가 `dev-branch-create`에게 `dev-release-pr-step`까지 기다리라고 해 둘이 서로를 기다리던 것을 앞의 네 티켓만 기다리게 고쳤다(Major). `dev-branch-create` 4에 기본 브랜치를 dev로 옮겼을 때만 `git remote set-head origin dev`를 치라고 더했다. `operations.md` 병합 규칙에 보호 설정이 merge 커밋을 거절하면 사용자에게 넘긴다는 문장을 더했다.
+
 ## 다음
 
 이 PR이 병합된 뒤의 일이다.
@@ -148,7 +154,7 @@ PR 직전 리뷰에 밀 새 주장(이번 반영으로 새로 쓴 사실 문장)
 1. **사용자 수준 스킬 네 개(`git-pr`, `git-pr-merge`, `git-pr-feedback`, `git-branch`)를 고칠지 사용자에게 묻는다.** 줄 번호 목록은 티켓 `dev-base-skills-docs`의 결과 5에 있다. 사용자가 승인하기 전에는 고치지 않는다. 원격의 기본 브랜치를 어디에 둘지(`dev-branch-create` (라))와 얽혀 있다.
 2. **`dev-base-tools`**(PR 538)와 **`dev-review-bot-off`**(PR 536)는 둘 다 병합됐다. 이 티켓이 넘긴 것(티켓 결과 4: `tidy_checkouts`의 병합처, `hook_prompt_directive`의 안내 문구, `sibling_overlap`의 기준 브랜치 읽기, 되돌려 합치기 PR의 봇 회차)을 두 PR이 실제로 채웠는지는 이 PR이 확인하지 않았다. `tidy_checkouts`의 병합처만 `TRUNK_REFS`로 채워진 것을 봤다. `dev-branch-create` 세션이 시작할 때 나머지를 확인한다.
 3. **`dev-release-pr-step`**(`ready-for-agent`): 출시 PR(dev→main)을 여는 계기와 순서. `merge.md`는 그 PR의 병합 방법과 보호 설정에 걸릴 때의 처리만 정했다.
-4. **`dev-branch-create`**: 위 티켓들이 병합된 뒤 `origin/dev`를 딴다. 사람의 몫(`required_linear_history`, dev 보호, 기본 브랜치)을 사용자에게 먼저 묻는다.
+4. **`dev-branch-create`**: 앞의 네 티켓(`dev-branch-transition`, `dev-review-bot-off`, `dev-base-tools`, `dev-base-skills-docs`)이 병합된 뒤 `origin/dev`를 딴다. 위 3의 `dev-release-pr-step`은 이 티켓이 병합된 뒤에 하므로 기다리지 않는다. 사람의 몫(`required_linear_history`, dev 보호, 기본 브랜치)을 사용자에게 먼저 묻는다.
 5. **병합 직후**: 이 PR을 워크트리에서 병합하면 주 체크아웃은 갱신되지 않는다. 새 세션이 `tidy-checkouts`를 먼저 돈다(`merge.md`).
 6. **ADR 0043 33행("잊으면 다음 dev→main에서 hotfix가 사라진다")**: 임시 저장소 측정과 어긋난다(핫픽스가 다른 줄이면 출시 뒤에도 main에 남는다). 개정은 사용자 승인이 필요해 이 PR에서 고치지 않았다.
 
