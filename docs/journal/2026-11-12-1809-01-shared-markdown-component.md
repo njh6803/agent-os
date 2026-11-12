@@ -73,7 +73,7 @@
 
 ## 회고
 
-후보 일곱을 냈고 판정은 승인 0, 넘김 0, 기각 7이다. 기각의 근거는 모두 4단계의 "이미 있는 검사·훅·앱 가드가 그 자리에서 막거나 알린 것, 또는 사건 없이 떠올린 것"이다. 승인된 것이 없어 대기열 항목은 쓰지 않았고, 대기열을 찾는 `queue_open_rows.py`는 후보 4·7에 쓴 낱말(`INTERACTIONS`, `first.Tab`, `dc.html`, `showcase.*script`)로 한 번 돌아 닫힌 0149(정적 빌드에서 play의 `userEvent`가 비는 것)만 맞았고, 이번 사건과 다른 일이다. 만료할 항목은 이 회고에서 보지 않았다.
+후보 일곱을 냈고 판정은 승인 0, 넘김 0, 기각 7이다. 기각의 근거는 모두 4단계가 기각에 두는 것, 곧 이미 있는 검사·훅·앱 가드가 그 자리에서 막거나 알린 것과 사건 없이 떠올린 것이다. 승인된 것이 없어 대기열 항목은 쓰지 않았고, 대기열을 찾는 `queue_open_rows.py`는 후보 4·7에 쓴 낱말(`INTERACTIONS`, `first.Tab`, `dc.html`, `showcase.*script`)로 한 번 돌아 닫힌 0149(정적 빌드에서 play의 `userEvent`가 비는 것)만 맞았고, 이번 사건과 다른 일이다. 만료할 항목은 이 회고에서 보지 않았다.
 
 | 후보 | 판정 | 근거 |
 |---|---|---|
@@ -87,8 +87,22 @@
 
 ## 인계 (셀프 리뷰 직전)
 
-컨텍스트가 인계 문턱(20만 토큰)을 넘은 채 셀프 리뷰 직전에 와서, 같은 브랜치·워크트리를 새 세션에 넘긴다(`next-session` `handoff.md`). 이 세션의 제목은 `feature/01-shared-markdown-component`였고 인계하며 `(인계함)`을 붙인다. 이 세션은 사람이 지시문을 붙여 넣어 열었고(위 첫 문단), 받은 요청은 지시문의 `/implement .scratch/answer-markdown/issues/01-shared-markdown-component.md`와 "이번 요청 범위: 구현·리뷰·커밋·PR·병합까지"다. 지시문 원문의 사용자 프롬프트는 이 세션의 첫 메시지다.
+컨텍스트가 인계 문턱(20만 토큰)을 넘은 채 셀프 리뷰 직전에 와서, 같은 브랜치·워크트리를 새 세션에 넘긴다(`next-session` `handoff.md`). 이 세션의 제목은 `feature/01-shared-markdown-component`였고 인계하며 `(인계함)`을 붙인다. 이 세션은 사람이 지시문을 붙여 넣어 열었고(위 첫 문단), 받은 요청은 지시문의 `/implement .scratch/answer-markdown/issues/01-shared-markdown-component.md`와 이번 요청 범위(구현·리뷰·커밋·PR·병합까지)다. 지시문 원문의 사용자 프롬프트는 이 세션의 첫 메시지다.
 
 여기까지의 상태다. 구현, 시험, 스토리, 사진 정답, 티켓(`Status: done`, 체크박스 전부)과 `.scratch/plan.md` 갱신, 이 일지와 `## 회고`가 끝났다. 검증은 `pnpm -C web verify`와 ruff 둘이 종료 코드 0이고, 전체 러너의 나머지 단계(check-ticket, zizmor, lint-imports, check-instructions, check-type-escapes, pyright 둘, run-hooks, pytest)는 처음 실행에서 통과했다. 아무것도 커밋하지 않았다. 남은 일은 셀프 리뷰(`/code-review`, 고정점은 `origin/dev`), Critical·Major 반영, `uv run python tools/sibling_overlap.py`와 브랜치 확인, 커밋, 푸시, PR(기준 브랜치 dev), `merge.md`의 봇 회차와 병합이다. PR 본문에는 화면 파일과 그림을 견주지 못한 한계(위 "사진")와 병합 뒤 `/sync-design-system 올리기`가 아티팩트에 카드를 올린다는 것을 적는다. 티켓 02(변환 2·3·5·6)와 03(위젯 연결)이 이 티켓에서 풀린다. 이 티켓은 기능의 마지막이 아니므로 기능 계획의 `**끝:**` 줄은 쓰지 않는다.
 
 open-session을 부른다 2026-11-12T10:43:23Z
+
+## 이어받은 세션 (셀프 리뷰에서 커밋까지)와 인계 (커밋 뒤)
+
+이 세션은 위 인계로 열렸다. 받은 요청은 지시문의 `/implement .scratch/answer-markdown/issues/01-shared-markdown-component.md`와 이번 요청 범위(구현·리뷰·커밋·PR·병합까지)다(첫 메시지가 지시문 원문이다). 워크트리 `01-shared-markdown-component`에 `EnterWorktree(path)`로 들어갔고(앞 세션은 `인계함`으로 쉬고 있었다), 웹 편집 확인(`/sync-design-system 확인`)은 `clean`이었다.
+
+한 일은 `## 셀프 리뷰` 절에 있다. 두 축 서브에이전트 보고를 판정해 고치고, 변이 스크립트를 두 번 돌리고, 전체 러너를 쳐 커밋했다. 커밋은 `3e365c718`(브랜치 `feature/01-shared-markdown-component`, `feat: 디자인 시스템에 마크다운 부품을 세운다`)이고 pre-commit이 pytest 포함 전체 통과였다. 커밋에서 일지의 인용 대조가 경고 둘을 냈다(막지 않는다). 하나는 회고 표의 기각 근거 인용이고 하나는 위 인계 절의 "이번 요청 범위: …" 인용이다. 원문과 다르게 옮겼는지 보고 따옴표를 떼거나 원문대로 고친다.
+
+이 세션이 번복하거나 고친 것: 티켓의 사진 견줌 칸을 "견주지 못했다"는 한계와 함께 두었고(체크는 유지), 마지막 칸의 "사람이 사진을 견준 결과"에서 "사람이"를 빼 한계를 포함한다고 고쳤다. 위 사진 절이 PR 본문에 적으라고 한 한계는 아직 PR이 없어 쓰지 못했다.
+
+컨텍스트가 인계 문턱(20만 토큰)을 넘은 채 커밋 뒤에 와서 같은 브랜치·워크트리를 새 세션에 넘긴다. 이 세션의 제목은 `feature/01-shared-markdown-component`였고 인계하며 `(인계함)`을 붙인다.
+
+남은 일: 푸시, PR(기준 브랜치 dev), `merge.md`의 봇 회차와 병합. PR 본문에 적을 것은 다섯이다. (1) 화면 파일과 그림을 견주지 못한 한계(위 사진 절)와 병합 뒤 `/sync-design-system 올리기`가 카드를 올린다는 것. (2) `assemble.test.ts`의 단언 변경(`<script>` 여는 태그 수 → `</script` 수)과 이유. (3) `@types/mdast` 개발 의존성이 티켓 본문에 없지만 변환 모듈이 타입을 직접 import하므로 든다는 것. (4) pytest 전체 실행에서 `test_hook_push_behind_main.py`의 시간 제한 시험이 한 번 흔들렸고 pre-commit의 전체 실행과 단독 실행은 통과했다는 것. (5) 카나리아 명세 셋(`web_design_colors.toml`, `web_design_props_icon_card.toml`, `web_design_artifact.toml`)이 이 변경 이전부터 낡아 있다는 것(`tools/canary.py --preflight`가 "원천에 카나리아가 없다"로 낸다. 이 티켓이 고치지 않았다). 이 티켓은 기능의 마지막이 아니므로 기능 계획의 `**끝:**` 줄은 쓰지 않는다. 티켓 02(변환 2·3·5·6)와 03(위젯 연결)이 이 티켓으로 풀린다. 병합 뒤 일지의 `## 다음`과 회고(`retro`)를 쓴다. 회고는 이 일지 전체를 읽고 돈다.
+
+open-session을 부른다 2026-11-12T11:38:47Z
