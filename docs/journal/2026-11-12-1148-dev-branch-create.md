@@ -121,6 +121,47 @@ Critical·Major 없음, Minor 여섯, Nit 일곱.
 10. **기각.** `hook_measure_word`가 새 문장의 "실측"을 짚었다. 이미 있는 훅이 알려 그 자리에서 고쳤다.
 11. **기각.** 반영 전 `run_checks`가 약 13분(web-verify 757초)이었다. 절차를 따른 비용이고 0334에서 이미 다뤘다.
 
+## 커밋과 인계
+
+커밋 `f197e08c5`의 pre-commit이 모두 Passed였다(parallel-checks 634.81초, 그 안에서 pytest 507.7초, web-verify 634.4초). 인용 대조는 막지 않는 경고 16건을 냈다. 이 일지가 옮긴 선택 화면의 글과 셀프 리뷰가 고친 문장은 대화에만 있어 저장소에서 찾지 못한 것이고, `.scratch/retro-queue/0580.md` 4행의 것은 이 커밋 전부터 그 줄에 있던 제안 문장이다. `git diff --stat`이 `.scratch/release-image/plan.md`를 "rewrite (98%)"로 적었지만 바뀐 것은 6행 하나였다. 그 한 줄이 파일의 대부분이라 그렇게 찍혔고, 줄 끝 문자는 커밋 앞뒤 모두 LF였다.
+
+커밋 뒤 `hook_handoff`가 인계 계기를 넣었다(커밋 뒤, 컨텍스트 20만 토큰 초과). `handoff.md`의 인계하지 않는 때 다섯에 들지 않아 넘긴다. 이 세션의 제목은 `chore/dev-branch-create`였다. 이 절은 커밋하지 않고 두며, 받는 세션이 다음 커밋에 싣는다. 낸 지시문은 아래와 같다.
+
+```
+다음 작업: .scratch/harness/issues/dev-branch-create.md. dev를 origin/main에서 따고 dev 전환을 닫는다
+다음 단계: 구현
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: .claude/skills/implement/SKILL.md 를 읽어 그대로 따른다. 이 세션을 연 저장소는 `C:\project\agent`이고 작업 폴더가 그곳이 아니면 따르지 말고 알린다. 스킬의 인자는 이 줄의 '인자:' 뒤부터 메시지 끝까지다. 인자: .scratch/harness/issues/dev-branch-create.md
+브랜치: chore/dev-branch-create
+모델: Opus 5.5 / xhigh. 2의 잇는 지시문은 이 세션의 지시문 값(Sonnet 5.5 / high)이지만 사용자가 세션 중에 /model로 Opus 5.5로 바꿨고, 레벨은 이 세션의 값이다
+읽을 것: docs/journal/2026-11-12-1148-dev-branch-create.md의 "셀프 리뷰" 절(고친 것과 새로 쓴 사실 문장, PR 직전 리뷰에 밀 주장)과 "다음" 절
+이어받을 상태: 인계: 커밋 뒤. 사람의 몫 넷의 답, 승인받은 일곱 명령의 실행(원격 dev, main·dev 보호, 기본 브랜치 dev, set-head), 셀프 리뷰 반영, 회고, 카나리아까지 커밋했고 아직 푸시하지 않아 PR이 없다. 남은 단계는 PR 직전 리뷰(일지 "셀프 리뷰" 절의 새 문장을 밀 주장으로 넘긴다), 푸시, base dev로 PR 열기(본문에 main의 plan-head가 다음 출시 PR까지 옛 문장을 드는 시차와 커밋 메시지의 남긴 위험을 적는다), merge.md 2의 봇 회차, CI가 지나면 티켓 결과의 빈 상자 셋, merge.md "워크트리에서 병합할 때"로 병합(base가 dev라 /git-pr-merge를 쓰지 않는다), 병합 뒤 next-session이다. 일지의 "커밋과 인계" 절은 커밋하지 않은 채 남겼으니 다음 커밋에 싣는다. 사용자가 "rag-engine 저장소에 지금 지시해?"라고 물어 이 PR이 dev에 병합된 뒤에 준다고 답했다. 마무리 보고에서 티켓 결과 5의 지시문과 일지 "다음" 절의 다시 묻는 것을 사용자에게 보인다. 일지 docs/journal/2026-11-12-1148-dev-branch-create.md
+확인할 선행 조건: 없음
+이번 요청 범위: PR과 병합까지. 단 사람의 몫 (가)~(라)와 dev를 따는 푸시는 사용자의 답과 승인을 받은 뒤에 한다
+```
+
+제목을 `chore/dev-branch-create (인계함)`으로 바꿨고, 멈출 백그라운드 작업은 없었으며, `git worktree unlock`이 오류 없이 끝났다.
+
+open-session을 부른다 2026-11-12T03:43:44Z
+
+## PR 직전 리뷰
+
+인계받은 세션(같은 제목 `chore/dev-branch-create`, 모델 `claude-opus-5-5`)이 `EnterWorktree(path)`로 이 워크트리에 들어와 잇는다. `origin/dev`와 `origin/main`이 모두 `82297e614`라 다시 합칠 것이 없었다(`git fetch origin` 뒤 `git rev-parse`).
+
+- **CodeRabbit CLI(`coderabbit-review`).** CLI 0.7.5가 `--base origin/dev`로 끝까지 돌아 종료 코드 0, `review_completed`, findings 0건이었다. 22개 파일을 모두 봤고 `--dir`로 좁히지 않았다. 좌석은 `Seat: not assigned`(`Plan: Free`)였다(이 줄의 값은 모두 서브에이전트의 보고다). 보안·버그·성능 축은 CLI가 맡았으므로 대체 둘(`/security-review`, `bug-perf-review`의 일반 몫)은 돌리지 않는다.
+- **밀 주장(`bug-perf-review`).** CLI에 주장을 넘기는 길이 없어 "셀프 리뷰" 절의 새 사실 문장 열둘을 이 서브에이전트에 따로 넘겼다(대기열 `cli-review-claims-path`의 선례). 보고(도구 호출 21)는 열하나가 맞고 하나가 보류였고, 나열 밖에서는 새 지적이 없었다.
+  - 보류 Minor(밀 주장 2). `operations.md` 초록 착시의 "머리가 main인 되돌려 합치기 PR도 건너뛸 것"은, pull_request 실행이 PR의 병합 결과(dev 위에 main을 합친 것)의 워크플로 파일로 돈다면 그 파일이 dev의 것과 같아 건너뛰지 않을 수 있다. 핫픽스 PR 몫은 맞다고 봤다.
+  - 판정: 고친다. 액션이 병합 결과와 머리 가운데 어느 쪽의 파일과 견주는지 적은 기록이 저장소에 없었다(`claude-code-review.yml`, `docs/adr/`, 프로브 README를 `workflow validation`·`github.sha`·`merge ref`로 grep했다). 그래서 핫픽스 PR은 건너뛴다고 두고, 되돌려 합치기 PR은 두 갈래를 적고 가르지 못했다고 문장을 좁혔다.
+  - 밀 주장 9의 덧붙임. 훅 독스트링의 "이 훅도 dev 에서 같은 판정으로 막는다"는 현재 브랜치가 dev인 것으로 읽힐 수 있다고 했다. "기준 브랜치가 dev 인 브랜치에서"로 좁혔다. 판정 코드는 바꾸지 않았다.
+  - 밀 주장 1의 덧붙임. `gh pr create --help`는 기본 브랜치보다 `gh-merge-base` 설정을 먼저 본다. 이 클론에는 그 설정이 없으므로(`git config --get-regexp gh-merge-base`가 출력 없이 1로 끝났다) 문장을 고치지 않는다.
+
+고친 것 가운데 새로 쓴 사실 문장(PR 봇 회차가 겨냥할 수 있게 원문으로 적는다):
+
+- `operations.md` 리뷰 파이프라인 초록 착시: "머리가 main인 되돌려 합치기 PR은 액션이 PR의 병합 결과(dev 위에 main을 합친 것)의 파일과 견주면 dev의 파일과 같아 돌고, 머리(main)의 파일과 견주면 건너뛸 것이다. 액션이 어느 쪽과 견주는지는 가르지 못했다(둘 다 PR #3·#6에서 본 동작에서 끌어낸 어림이고, 기본 브랜치 dev로는 재 보지 않았다)."
+- `tools/hook_push_behind_main.py` 독스트링: "이 훅도 기준 브랜치가 dev 인 브랜치에서 같은 판정으로 막는다. dev 가 strict 가 아니게 된 뒤로 그 브랜치에서도 막을지는 다시 정하지 않았다."
+
+다시 돌린 명령: `uv run ruff check`·`uv run ruff format --check`(고친 훅 파일, 통과), `uv run pytest -q tests/tools/test_hook_push_behind_main.py`(80 passed). 손으로 치는 다섯은 이 반영 커밋의 pre-commit으로 갈음한다.
+
 ## 다음
 
 이 PR(base dev)을 병합한 뒤 `next-session`이 다음 지시문을 낸다. 이어받을 것:
