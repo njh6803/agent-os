@@ -1,0 +1,75 @@
+# chore/dev-release-pr-step 의 보호 설정 값 시험 변이. 형식은 tools/mutate.py 의 독스트링.
+# 사용: PYTHONUTF8=1 uv run python tools/mutate.py .scratch/harness/probes/protection_json_mutations.toml
+# tests/tools/test_protection_json.py 가 지키는 두 JSON 의 값(main 은 strict, dev 는 strict 아님, 선형 이력 꺼짐,
+# 삭제·강제 푸시 금지, 관리자 우회 허용)을 하나씩 뒤집어 시험이 고른 단언에서 빨강이 되는지 잰다.
+# 체크아웃을 고치므로 도는 동안 그 체크아웃을 읽거나 고치지 않는다.
+# 표지는 pytest 가 단언 실패 머리에 찍는 "AssertionError: assert <실제> is <기대>" 줄(값만 든 줄)이다.
+# 다른 단언이 빨개져도 실리는 코드 조각이나 where 줄은 고르지 않았다.
+# 다루지 않은 것: dev 의 선형 이력(dev 의 strict 변이와 실패 줄이 같아 표지로 가를 수 없다),
+# allow_force_pushes 와 contexts(실패 줄이 allow_deletions 변이와 같거나 풀이 줄에만 값이 실린다).
+
+[[mutation]]
+name = "main 의 strict 를 끈다"
+tests = ["tests/tools/test_protection_json.py", "-k", "main은"]
+expect = "red"
+expect_output = ["AssertionError: assert False is True"]
+
+[[mutation.edit]]
+file = "tools/protection.json"
+old = '''"strict":true'''
+new = '''"strict":false'''
+
+[[mutation]]
+name = "dev 의 strict 를 켠다"
+tests = ["tests/tools/test_protection_json.py", "-k", "dev는"]
+expect = "red"
+expect_output = ["AssertionError: assert True is False"]
+
+[[mutation.edit]]
+file = "tools/protection-dev.json"
+old = '''"strict":false'''
+new = '''"strict":true'''
+
+[[mutation]]
+name = "main 의 선형 이력을 켠다"
+tests = ["tests/tools/test_protection_json.py", "-k", "main은"]
+expect = "red"
+expect_output = ["AssertionError: assert True is False"]
+
+[[mutation.edit]]
+file = "tools/protection.json"
+old = '''"required_linear_history":false'''
+new = '''"required_linear_history":true'''
+
+[[mutation]]
+name = "dev 의 삭제 금지를 푼다"
+tests = ["tests/tools/test_protection_json.py", "-k", "삭제와"]
+expect = "red"
+expect_output = ["AssertionError: protection-dev.json"]
+
+[[mutation.edit]]
+file = "tools/protection-dev.json"
+old = '''"allow_deletions":false'''
+new = '''"allow_deletions":true'''
+
+[[mutation]]
+name = "main 의 관리자 우회를 막는다"
+tests = ["tests/tools/test_protection_json.py", "-k", "관리자"]
+expect = "red"
+expect_output = ["AssertionError: protection.json"]
+
+[[mutation.edit]]
+file = "tools/protection.json"
+old = '''"enforce_admins":false'''
+new = '''"enforce_admins":true'''
+
+[[mutation]]
+name = "dev 의 관리자 우회를 막는다"
+tests = ["tests/tools/test_protection_json.py", "-k", "관리자"]
+expect = "red"
+expect_output = ["AssertionError: protection-dev.json"]
+
+[[mutation.edit]]
+file = "tools/protection-dev.json"
+old = '''"enforce_admins":false'''
+new = '''"enforce_admins":true'''
