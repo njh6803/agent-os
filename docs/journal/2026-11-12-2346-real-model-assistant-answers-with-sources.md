@@ -26,6 +26,10 @@ origin/dev(PR 548·549가 들어와 있었다)를 합치는 커밋에서도 같�
 
 > 사용자: 건너뛰고 커밋(고른 라벨)
 
+PR 직전 리뷰의 지적을 고친 셋째 커밋에서도 같은 단계가 막혔다(pytest 7,226개 통과, 첫 커밋에서도 막혔던 `tests/channel/cli/test_interrupt.py`의 도구 호출 도중 시험 1개가 30초 제한에 걸렸다. 그 파일만 홀로 돌릴 때 6개가 통과한 것은 앞서 손으로 봤다). 다시 물었고 선택지는 "건너뛰고 커밋"과 "한 번 더 돌린다"(약 21분 어림)였다.
+
+> 사용자: 건너뛰고 커밋(고른 라벨)
+
 합치기 충돌 둘은 이렇게 풀었다. 티켓 05의 차림은 이 브랜치의 체크한 세 줄을 두고, PR 550이 더한 넷째 줄(모델 차림의 목록)은 체크하지 않은 채 "(넘김)"을 달아 남겼다. 이 PR이 그 자리를 더하지 않았고 local-model 06의 첫 체크박스가 05가 그 자리 없이 닫혀 있으면 그 티켓이 더하거나 넓힌다고 적기 때문이다(그 티켓 파일을 읽었다). `tests/fake_doc_search.py` 독스트링은 이 브랜치의 시험과 위젯 시험을 둘 다 쓰는 쪽으로 합쳤다.
 
 ## 한 것
@@ -88,6 +92,13 @@ origin/dev(PR 548·549가 들어와 있었다)를 합치는 커밋에서도 같�
   - Nit, (13)의 "7일"은 출력 어디에든 있으면 통과하고 위치 단언은 제목이 든 첫 출처 줄만 본다. 티켓의 "그 내용의 출처 줄"보다 느슨하지만 티켓 문구대로다.
   - `.scratch/answer-eval/plan.md` 5줄은 평가가 기대할 답의 모양을 적은 문장("셋째, 일부에만 근거가 있으면 …")이다. 스킬의 글자를 인용한 것이 아니라 설계 입력이라 다른 기능의 계획을 건드리지 않았다.
   - 티켓 체크박스 "검증 명령이 모두 초록이다"는 커밋의 pre-commit이 그 명령을 돌려 갈음한다. 다만 pytest 단계는 사용자 승인으로 건너뛰었으므로(위 "검증") 그 한 단계는 갈음되지 않고 CI의 리눅스 실행이 본다. 이 체크박스는 그 한 단계를 빼고 초록이라는 뜻이다.
+
+## PR 직전 리뷰 (이어받은 세션, 기준 origin/dev)
+
+`coderabbit-review` 서브에이전트가 CLI 0.7.5로 `coderabbit review --agent --include-untracked --base origin/dev --dir tests`를 돌렸다. `Seat: not assigned`였지만 종료 코드 0과 `review_completed`가 나와 CLI 축은 돌았다(보고에서 옮겼다). **CLI가 본 범위는 `tests/`의 이 브랜치 몫(`test_assistant_llm.py`, `fake_doc_search.py`, `fake_doc_search_server.py`)뿐이다.** `plugins/skills/cite-sources/SKILL.md`(문장 두 곳)와 `ci.yml`의 `timeout-minutes` 변경, `.env.example`, `.scratch`·`docs`는 CLI에 맡기지 않았다. 서브에이전트가 diff를 직접 읽고 지적할 것이 없다고 보고했고(코드를 읽은 것이다), 대체 둘(`/security-review`, `bug-perf-review`)은 돌리지 않았다. 그 몫의 변경이 프롬프트 지시문, 빈 값뿐인 예시 파일, CI 제한 시간 숫자라 실행 코드가 아니기 때문이다.
+
+- **유효 Minor 1건, 고쳤다.** `model_key` 픽스처가 키 변수가 환경에 있는지만 봐서 `.env.example`을 복사해 빈 값이 든 환경이 사전 검사를 지나고, 사례는 CLI 서브프로세스의 인증 오류로 늦게 실패했다. `not os.environ.get(MODEL_KEY)`로 바꿔 빈 값도 "가 없다. .env 를 확인한다"로 바로 실패한다. `ANTHROPIC_API_KEY=`(빈 값)으로 `-m llm ... -k 인사`를 쳐 그 메시지로 셋업에서 실패하는 것을 손으로 봤다(30초). 키가 필요 없는 모델의 `MODEL_KEY = ""`는 `if MODEL_KEY and ...`로 그대로 지난다.
+- **오탐 1건.** `STREAM_TIMEOUT`의 `read=60.0`이 `STREAM_SECONDS=300`보다 먼저 만료된다는 지적이다. 서버 SSE 라우트가 keepalive 주석 프레임을 보내 모델을 기다리는 동안에도 60초 안에 바이트가 온다(`src/agent_os/http/routes.py`, `src/agent_os/channel/http/router.py`를 서브에이전트가 읽었고 같은 `Timeout(10.0, read=60.0)`를 `tests/test_main.py`가 이미 쓴다). 그리고 이 모듈의 `serve` 사례(13)·(14)는 14.82초·17.59초에 끝났다(위 시험 표).
 
 ## 남은 일
 

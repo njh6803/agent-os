@@ -133,7 +133,7 @@ def doc_search(tmp_path_factory: pytest.TempPathFactory) -> Generator[DocSearch]
 @pytest.fixture(autouse=True)
 def model_key() -> None:
     # assert 로 쓰면 실패 출력에 os.environ 전체가 실린다(대기열 463). 환경이 없으면 실패다.
-    if MODEL_KEY and MODEL_KEY not in os.environ:
+    if MODEL_KEY and not os.environ.get(MODEL_KEY):
         pytest.fail(f"{MODEL_KEY} 가 없다. .env 를 확인한다", pytrace=False)
 
 
