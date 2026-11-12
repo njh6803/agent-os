@@ -55,6 +55,8 @@
 
 `coderabbit-review` 서브에이전트가 `coderabbit review --agent --include-untracked --base origin/main`을 17개 파일 전체에 돌렸다(CLI 0.7.5, `Seat: not assigned`, `Plan: Free`). `review_completed`에 findings 0건, 종료 코드 0이었다. 유효·오탐·보류 모두 0건이라 고칠 것이 없다. 서브에이전트가 읽다가 본 참고 하나는 판정이 아니다. `doc-search`의 `url`이 평문 http라 `Authorization` 헤더가 http로 가는데, 컨테이너 내부 망을 전제한 주소이고 밖으로 열 때는 https여야 한다는 점이다(Minor 이하). 이 변경은 명세의 글자를 그대로 옮긴 것이라 지금 고치지 않았다. 주소의 선택은 rag-engine과 맞추는 일이고 이 티켓의 몫이 아니다.
 
+PR 템플릿의 체크리스트("새 환경 변수는 `.env.example`에 있다")를 따라 `.env.example`에 `DOC_SEARCH_AUTHORIZATION=`(값 없이 이름만)를 더했다. 매니페스트가 이 이름의 변수를 읽는다. 코드는 건드리지 않았다.
+
 ## 인계
 
 경계 `커밋 뒤`. 세션 제목은 `feature/03-assistant-cite-sources-doc-search-plugins`였다. 컨텍스트가 인계 문턱을 넘어 이 세션은 인계한다. 뒤에 이 세션이 한 일은 없다.
