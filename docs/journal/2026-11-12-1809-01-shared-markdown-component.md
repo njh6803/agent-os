@@ -117,7 +117,16 @@ open-session을 부른다 2026-11-12T11:38:47Z
 | 같은 스크립트가 `cp`와 복원의 성공을 확인하지 않고 복원이 실패해도 백업을 지운다 | 보류 | 가능성이 낮고 git으로 되살릴 수 있다 |
 | `footnotes.ts`가 각주 정의의 표지를 `label`로 다시 짓는데 파서가 풀어 둔 값이라 `[^a\*b]:`가 `a*b`가 되어 본문 참조와 모양이 어긋난다 | 보류 | 모양만 어긋나고 보안 문제가 아니다. 각주 변환은 티켓 02(변환 2·3·5·6)의 몫이므로 그 티켓에서 `sourceRange`로 원문을 자르는 고침을 본다 |
 
+## 봇 첫 회차 (PR 548)
+
+검사는 모두 통과했다(`wait_ci`의 출력). CodeRabbit은 무료 한도에 걸려 리뷰가 없었고(코멘트 `Review limit reached`) claude-review는 SUCCESS였다. claude-review는 Critical·Major 없이 Minor 둘과 Nit 하나를 냈다. 첫 회차라 지적마다 판단했다.
+
+- 고침(Minor): `try/catch`가 받는 범위는 파서와 변환 단계의 동기 예외뿐이고 반환된 요소 안의 컴포넌트가 그리다 던지는 것은 받지 못한다. 코드를 읽어 맞는 지적임을 확인했고, `Markdown.tsx`의 머리 주석과 두 TSDoc, `Markdown.md`의 문장을 "파서와 변환 단계에서 던지는"으로 한정했다. 동작은 바뀌지 않는다.
+- 고침(Nit): `HEADINGS`에서 `h5`와 `h6`이 둘 다 `h6`을 가리키는 이유를 한 줄 주석으로 더했다.
+- 보류(Minor): `unwrapBlocks`와 `unwrapRoot`의 중복은 아래 "다음"으로 넘겼다.
+
 ## 다음 (이 일지에서 뒤로 넘긴 일)
 
 - 티켓 02: 각주 정의 표지를 `label`이 아니라 원문 슬라이스(`sourceRange`)로 짓는다. 재현은 `[^a\*b]: 글`(역슬래시가 사라짐)과 `[^a&amp;b]: 글`(`a&b`)이다.
+- 티켓 02: `footnotes.ts`의 `unwrapBlocks`와 `unwrapRoot`가 타입 말고는 몸통이 같다(claude-review 첫 회차의 Minor). 정의 벗기기 규칙을 바꿀 때 두 곳을 같이 고쳐야 하므로, 각주 변환을 만지는 티켓 02에서 하나로 합친다.
 - 프로브 `mutate_unit_tests.sh`: `Tests` 집계 줄이 없는 회차를 측정 아님으로 세고, `cp`와 복원이 실패하면 백업 경로를 알리고 멈춘다. 이 스크립트를 다시 쓰는 때 같이 고친다.
