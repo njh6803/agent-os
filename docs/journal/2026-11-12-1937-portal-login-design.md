@@ -791,7 +791,7 @@ open-session을 부른다 2026-11-12T15:58:10Z
 `bug-perf-review`의 보고(기준 `b44c496f2`, 도구 호출 31번). 지적은 없다(유효 0, 보류 0). 밀 주장 열 문장이 모두 근거와 맞았다고 했다. 위젯 코드를 서술한 문장 넷은 TypeScript라 함수를 부르지 않고 코드와 주석을 읽어 판정했다고 했다. 이 세션이 그 판정을 다시 대 보지는 않았다.
 
 1. ADR 0060 "지금 위젯은 페이지가 다시 열리면 … 404가 두 번 오면 저장과 화면을 비운다": 맞음. `drivers.ts`의 `restore`(561~590행)가 `saved.reattach`가 있으면 구독하고, `rejection.ts`의 `subscriptionStep`(83행)이 둘째 404에 `vanished`를 내며, `conversation.ts` 219행이 화면을 비운다. "남의 실행이라 404"는 `core/continuation.py` 251행의 `DifferentPrincipal`과 ADR 0023에서 나온 서술이고 이 위젯 코드 줄에서 직접 확인한 것은 아니라고 했다.
-2. ADR 0060 "그 교환을 끝내지 못한 교환으로 닫는다(지금 위젯의 `unfinished` 결말)": 맞음. `conversation.ts` 45행과 430행에 그 결말이 있다. 지금의 `unfinished`는 서버가 보낸 끝내지 못함 항목에서만 생기고, 넘겨받은 뒤 위젯이 스스로 그 결말로 닫는 것은 새 동작이라고 덧붙였다. 문장은 지금의 결말을 가져다 쓴다고 적어 틀리지 않는다고 봤다.
+2. ADR 0060 "그 교환을 끝내지 못한 교환으로 닫는다"(지금 위젯의 `unfinished` 결말을 든 문장): 맞음. `conversation.ts` 45행과 430행에 그 결말이 있다. 지금의 `unfinished`는 서버가 보낸 끝내지 못함 항목에서만 생기고, 넘겨받은 뒤 위젯이 스스로 그 결말로 닫는 것은 새 동작이라고 덧붙였다. 문장은 지금의 결말을 가져다 쓴다고 적어 틀리지 않는다고 봤다.
 3. ADR 0060 "… 읽기 도구라고 ADR 0051이 적었다": 맞음(ADR 0051 19행).
 4. ADR 0060 "저장은 기본이 승인 카드로 묻는 것이라(ADR 0054)": 맞음(ADR 0054 19행).
 5. ADR 0060 "사이트가 서명한 토큰으로만 받고(ADR 0023)": 맞음. 제목과 73행으로 봤고 본문 8행은 길어서 열지 않았다고 했다.
@@ -849,11 +849,11 @@ PR 직전 리뷰를 반영한 변경(병합 커밋 `0052e9ddc` 뒤의 미커밋 
 표준 축의 보고(`general-purpose` 서브에이전트, sonnet·high. 도구 호출 40번). 문서가 정한 표준을 어긴 것은 없다고 했고 판단 사항 여섯을 냈다. 돌린 것은 `plan_table.py --check`, `flow.mjs --group nope`, `loc.mjs` 셋이라고 했다.
 
 1. Minor. 프로브 README에 더한 불릿의 "고친 뒤 전체를 다시 돌렸고 79회차 모두 측정이며"와 "손으로 봤다"는 서브에이전트가 한 일인데 README에는 주체가 없다. 일지는 이 세션이 57회차만 다시 돌렸다고 가렸다.
-2. Nit. 위 문단의 "이 수는 ADR과 이 일지에 인용되지 않았다고 했다"가 같은 문단에서 그 수를 인용한다. 표준 축이 `docs` 전체에서 `round.ts`의 줄 수 인용을 grep해 README와 그 문단 말고는 없음을 봤다고 했다.
+2. Nit. 위 문단이 그 수는 ADR과 이 일지에 인용되지 않았다고 적으면서 같은 문단에서 그 수를 인용한다. 표준 축이 `docs` 전체에서 `round.ts`의 줄 수 인용을 grep해 README와 그 문단 말고는 없음을 봤다고 했다.
 3. Nit. ADR 0059에 더한 항목의 괄호 "쿠키가 적는 것은 항목의 이름이라"가 부정확하다. 결정 "로그인 상태"의 쿠키는 식별자, 화면에 보일 이름, 끝나는 시각, 항목의 이름 넷을 적는다. 결론("가를 값이 쿠키에 없다")은 그 넷으로 맞다.
 4. Minor(판단). ADR 0059의 "한계"에는 이 틈이 없고 "명세가 짓는 것"에만 들었다. 같은 성격인 계정 정지의 지연은 "한계"에 있다.
 5. Nit(냄새, Duplicated Code). `flow.mjs`의 `FAULT_REASONS`에서 `alg_none`과 `alg_hs256`의 정규식이 같고 `hand.ts`의 문구 갈래가 고장마다 되풀이된다.
-6. Nit. 그 표의 머리 주석이 문구를 "oauth4webapi와 jose의 것"이라 적는데, jose의 문구는 `signature verification failed` 하나이고 `iss`·`aud`·`exp`·`nonce`·`alg`는 oauth4webapi의 문구다.
+6. Nit. 그 표의 머리 주석이 문구를 oauth4webapi와 jose의 것이라고 적는데, jose의 문구는 `signature verification failed` 하나이고 `iss`·`aud`·`exp`·`nonce`·`alg`는 oauth4webapi의 문구다.
 
 표준 축이 맞다고 본 주장(서브에이전트의 보고): ADR 0060의 20행이 넘겨받은 주체를 "이은 첫 실행의 시작 이벤트"에 적는다고 정해 새 항목의 괄호와 맞는다. ADR 0059의 15행에 "식별자와 사이트 토큰" 결정이, ADR 0023의 42행에 "사이트의 의무"가 있고 내용이 기능 계획의 문장과 맞는다. `--group nope`는 종료 코드 2로 끝나고 산출물을 지우기 전에 멈춘다(직접 돌렸다고 했다). `loc.mjs`가 `round.ts`를 전체 159줄, 코드 137줄로 센다(직접 돌렸다고 했다). `fake-idp.ts` 172~183행이 `state`·`nonce`·`code_challenge` 가운데 하나라도 없으면 400을 낸다(코드를 읽었다고 했다). 57은 6 + 3 + 48이고 46은 48에서 둘을 뺀 수다. `FAULT_REASONS`의 문구가 oauth4webapi 3.8.8과 `hand.ts`의 실제 문구와 맞는다(소스를 읽었다고 했다). 대 보지 못했다고 한 것: `registry.mjs`와 `report.mjs`의 실제 동작, 79회차 전체와 `callback`·`provider`·`transport`·`tls` 묶음, jose를 쓰는 변형이 어떤 문구로 거부되는지.
 
@@ -893,3 +893,85 @@ PR 직전 리뷰를 반영한 변경(병합 커밋 `0052e9ddc` 뒤의 미커밋 
 9. 고쳤다. 위 "고친 문장"의 인용을 지금의 글자로 바꾸고 처음의 구절을 옆에 적었다.
 
 다시 돌린 것. 위의 고침(주석 둘, `alg` 문구, README, 기능 계획의 한 낱말)을 마친 뒤 이 세션이 `node .scratch/portal-login/probes/oidc_client/probe/flow.mjs`를 묶음을 좁히지 않고 돌렸다. 끝 줄이 `{"probe":"flow","node":"v24.19.0","rounds":79,"notMeasured":[]}`였다(측정이 아닌 회차 0). 좁힌 `alg` 문구로도 그 고장의 열두 회차가 모두 측정이었다. 출력의 회차마다의 줄을 README의 표 일곱 행과 대 봤고 같았다. `good` 여섯이 통과하고 공개 키 요청과 전역 `fetch`의 수가 같았다. `fault`는 `bad_signature`를 가-기본과 나-기본만 받아들였다. `callback` 여섯은 `finish`에서 거부되고 토큰 요청이 0이었다. `provider` 셋은 통과했다. `insecure` 셋은 `begin`에서 거부되고 전역 `fetch`가 0이었다. `transport` 셋은 통과하고 전역 `fetch` 0에 바꿔 끼운 함수 호출이 4였다. `tls`는 인증 기관을 준 다섯이 통과하고 주지 않은 다섯이 `begin`에서 거부됐다. 보지 않은 것: `provider`의 stderr 경고 줄, `tls` 거부 회차 가운데 겉의 오류가 `fetch failed`나 `something went wrong`인 셋의 원인 사슬(그 회차가 측정으로 세어진 것으로 `flow.mjs`의 TLS 오류 코드 대조를 지났다고 본다). 다른 스크립트(`report.mjs`, `registry.mjs`, `typecheck.mjs`, `lint.mjs`, `loc.mjs`, `deps.mjs`)와 README의 변이 둘은 이 세션이 돌리지 않았다. 검증 명령은 커밋의 pre-commit으로 갈음하고 결과는 커밋 뒤에 적는다.
+
+### 반영 커밋과 PR
+
+반영 커밋은 `65eab10b0`(`docs: PR 직전 리뷰의 지적을 반영한다 (portal-login)`, 파일 아홉)이다. pre-commit은 한 번에 지났다. 함께 띄우는 검사가 1035.08초였고 그 안의 pytest가 561.4초, web-verify가 1034.3초였으며 도는 검사가 모두 `Passed`였다. `ruff` 둘과 카나리아 명세 검사와 헌법 판 검사는 볼 파일이 없어 `Skipped`였다. `ruff` 둘은 커밋 뒤 손으로 쳤다. `uv run ruff check .`는 `All checks passed!`, `uv run ruff format --check .`는 `2157 files already formatted`였다. 커밋 전에 `uv run python tools/check_adr_pointers.py`와 `uv run python tools/plan_table.py --check`가 출력 없이 끝났고, `uv run python tools/sibling_overlap.py`는 번호 겹침이 없다고 냈다.
+
+인용 대조는 이 일지에서 경고 셋을 냈다(막지 않는 경고다). 셋 다 커밋 뒤에 고쳤고 그 고침은 아직 커밋하지 않았다. 하나는 `bug-perf-review`의 둘째 항목이 ADR 0060의 문장을 괄호 중간에서 끊어 옮긴 것이라 따옴표를 문장의 앞부분에만 두었다. 둘은 표준 축의 2와 6을 옮기며 이미 고쳐 없어진 문장과 표준 축이 줄여 말한 구절에 따옴표를 쓴 것이라 따옴표를 뗐다.
+
+브랜치를 처음 푸시했고(`git push -u origin docs/portal-login-design`) PR #552를 열었다(base는 dev, `https://github.com/njh6803/agent-os/pull/552`). 본문은 세션 스크래치패드의 초안을 `--body-file`로 넘겼다. 연 직후 앱의 PR 상태는 검사 통과 1, 대기 7, 건너뜀 2였고 `mergeStateStatus`는 `BLOCKED`였다(`mcp__ccd_pr__get_status`로 봤다). `@coderabbitai review` 코멘트는 남기지 않았다(아래 인계).
+
+## 인계(PR 연 뒤)
+
+반영 커밋을 백그라운드로 띄운 직후에 인계 계기가 또 왔다(255,347 토큰, 경계 `커밋 뒤`). 이 세션의 지시문이 `인계: 커밋 뒤`로 시작하므로 앞의 것과 같이 넘기지 않고 이었다. PR을 연 명령 뒤에 계기가 한 번 더 왔다(262,063 토큰, 경계 `PR 연 뒤`). 이 경계는 지시문의 경계와 다르고, 요청 범위(PR과 병합까지)가 여기서 끝나지 않으며, `인계 못함` 줄이 없고, 곁 세션이 아니다(`get_session`의 `self`에 `parentSessionId`가 없다). `handoff.md`의 인계하지 않는 때 다섯에 들지 않아 넘긴다. 이 세션의 제목은 `docs/portal-login-design`이다.
+
+새 세션에 넘기는 것.
+
+- `merge.md` 2(봇 회차)부터 한다. 첫 `@coderabbitai review` 코멘트도 새 세션이 남긴다. 이 절과 위 "반영 커밋과 PR" 절, 그리고 인용 경고 셋을 고친 줄은 커밋 `65eab10b0`에 들지 않았다. 새 세션이 이어 쓰고 다음 커밋에 싣는다.
+- 승인받은 ADR 0059와 0060의 결정 문장은 이 브랜치의 어느 반영에서도 고치지 않았다. 봇의 지적이 결정 문장을 바꾸라고 하면 "명세가 짓는 것"이나 기능 계획의 넘김 문장으로 받을 수 있는지 먼저 보고, 결정을 바꿔야만 하면 병합 전에 사용자에게 확인받는다.
+- 남긴 지적과 이유는 PR 본문 체크리스트의 PR 직전 리뷰 줄과 위 "PR 직전 리뷰"·"반영분의 셀프 리뷰" 절에 있다. 봇이 같은 자리를 다시 짚으면 그 판정을 근거와 함께 다시 본다.
+- 커밋의 pre-commit은 이 브랜치에서 돌 때마다 Bash의 600초를 넘겼다(이 세션의 두 번은 web-verify가 669.7초와 1034.3초였다). 커밋은 백그라운드로 띄우고 끝 알림을 기다린다. `ruff` 둘은 `.py`가 스테이지되지 않으면 `Skipped`라 손으로 친다.
+- 회고가 볼 것. 앞 세션이 "인계" 절에 적은 넷(첫 커밋 시도를 막은 시간 단언, 600초를 넘긴 pre-commit, 인용 대조가 잡은 누락, 백그라운드 커밋 직후에 오는 인계 계기)에 이 세션의 것을 더한다.
+  - 인계로 연 세션이 첫 커밋 전에 문턱 200,000을 넘었다(위 "인계 계기가 다시 왔다").
+  - 인계 계기가 이 세션에서 세 번 왔다. 둘은 `커밋 뒤`(백그라운드로 띄운 커밋이 끝나기 전)였고 하나가 `PR 연 뒤`다. 이 세션은 그 사이 자동 압축을 한 번 지났는데도 그 뒤의 계기가 센 수가 255,347과 262,063이었다(계기가 무엇을 세는지는 보지 않았다).
+  - `coderabbit-review`가 프로브의 지적 대부분을 그 줄을 열지 않고 갈랐고, 보고의 수(17)와 나열한 항목(16)이 어긋났다. 오탐으로 가른 넷 가운데 하나는 유효였다(`insecure`의 표지).
+  - 이 세션이 그 보고의 오탐 셋을 일지에 옮기지 않았고, PR 본문 초안에는 `insecure`의 지적을 고친 것과 오탐 양쪽에 세어 수를 17에 맞췄다. 반영분의 셀프 리뷰의 명세 축이 판정이 빠졌다고 잡은 뒤에야 트랜스크립트에서 그 보고를 다시 꺼내 바로잡았다(압축 전에 일지로 옮기지 않은 보고의 절이었다).
+  - 프로브를 고친 서브에이전트가 README에 자기가 돌린 것을 주체 없이 "다시 돌렸고", "손으로 봤다"로 적어, 본 세션이 돌린 것과 가려지지 않았다(셀프 리뷰 두 축이 모두 짚었다).
+  - 반영 커밋의 인용 대조 경고 셋은 서브에이전트의 보고를 옮기며 줄여 말한 구절에 따옴표를 쓴 것이다.
+- 병합 뒤의 다음 작업은 새 세션이 결정표로 정한다. portal-login의 기능 계획은 명세 전에 `/ui-design portal-login`으로 화면을 그린다고 적고 `**Blocked by:**`는 pilot-portal이다. pilot-portal이 끝났는지는 이 세션도 보지 않았다.
+
+낸 지시문.
+
+```
+다음 작업: 기능 portal-login. 승인된 설계(ADR 0059·0060)의 PR #552에 봇 회차를 반영하고 병합까지 마친다
+다음 단계: PR 반영·병합
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: 사내 로그인부터 시작
+브랜치: docs/portal-login-design
+모델: Sonnet 5.5 / high. 2의 잇는 지시문
+읽을 것: 일지의 "반영 커밋과 PR"·"인계(PR 연 뒤)" 절, .claude/skills/next-session/merge.md
+이어받을 상태: 인계: PR 연 뒤. merge.md 2(봇 회차)부터 한다. 첫 @coderabbitai review 코멘트도 새 세션이 남긴다. 설계 인터뷰는 끝났고 다시 열지 않는다. 일지 끝의 두 절(반영 커밋과 PR, 인계)과 인용 경고 셋을 고친 줄은 커밋하지 않은 채 워크트리에 있다. 봇의 지적이 승인받은 ADR의 결정 문장을 바꾸라고 하면 병합 전에 사용자에게 확인받는다. docs/journal/2026-11-12-1937-portal-login-design.md
+확인할 선행 조건: PR의 검사가 끝났는지 보지 않았다(연 직후 대기 7). claude-review와 CodeRabbit 봇이 이 PR에서 도는지 보지 않았다. pilot-portal이 끝났는지 보지 않았다
+이번 요청 범위: PR과 병합까지
+```
+
+제목을 `docs/portal-login-design (인계함)`으로 바꿨고(바꾸기 전 제목은 `docs/portal-login-design`), 멈출 백그라운드 작업은 없었다(서브에이전트 둘과 커밋이 모두 끝났다). `git worktree unlock C:/project/agent/.claude/worktrees/portal-login-design`은 `is not locked`로 끝났다. 이 세션은 `EnterWorktree(path)`로 들어왔는데 잠겨 있지 않았다.
+
+open-session을 부른다 2026-11-12T18:05:25Z
+
+## 인계받은 세션(봇 회차와 마무리)
+
+2026-11-13 로컬, 위 지시문으로 연 셋째 세션이다. 제목 `docs/portal-login-design`, 모델 Sonnet 5.5. 주 체크아웃(dev `b44c496f2`)에서 열려 `EnterWorktree(path)`로 이 워크트리에 들어왔다. 설계 인터뷰는 다시 열지 않았다. 들어온 때 `git status`는 일지만 바뀐 상태였고(위 "반영 커밋과 PR"과 "인계(PR 연 뒤)" 절, 인용 경고 셋을 고친 줄), 로컬 HEAD와 `origin/docs/portal-login-design`이 모두 `65eab10b0`였다.
+
+### 봇 회차
+
+- 들어왔을 때 PR #552의 검사는 `python`과 `visual`이 도는 중이었고 claude-review는 이미 `SUCCESS`였다. 그 코멘트는 "지적 없음"이다. 유지보수성 축과 경계 축을 적었고 변경 파일 46개가 `docs/`, `CONTEXT.md`, `.scratch/`뿐이라고 봤다. 이 브랜치가 CodeRabbit CLI의 PR 직전 리뷰를 이미 돌렸으므로(위 "PR 직전 리뷰") 이 회차가 claude-review의 첫 회차이고 고칠 지적이 없다.
+- `@coderabbitai review` 코멘트를 남겼다(`#issuecomment-6831865650`). 답은 한도 안내였다(`Review rate limited`, "Next included review available in 10 minutes"). PR을 연 직후 자동 요약 코멘트도 같은 한도를 적었다(저장소의 별이 10개 미만이라 자동 리뷰가 없다는 문구가 이 코멘트에도 있었다). 그래서 CodeRabbit은 이 PR에 리뷰를 낸 적이 없고 회차를 세지 않는다. `docs/constitution/operations.md` 리뷰 파이프라인이 한도로 빈 PR 리뷰의 대체를 PR 직전 리뷰의 결과로 정하고 병합은 재리뷰를 기다리지 않는다고 적어, 그 결과가 든 PR 본문 체크리스트를 대체로 둔다.
+- `uv run python tools/wait_ci.py 552`(백그라운드)의 끝 줄은 `끝: 모두 통과. CodeRabbit: Review rate limited`였다(출력 파일을 읽었다). 검사는 `python`, `web`, `e2e`, `e2e-widget`, `e2e-portal`, `visual`, `ticket`, `verify`, `claude-review`가 `SUCCESS`, `llm`이 `SKIPPED`였다.
+- 반영할 봇 지적이 없다. 그래서 이 회차에 고친 코드와 문서는 없고, 일지와 회고의 대기열 항목만 이 세션의 커밋에 싣는다(아래). 뒤로 넘긴 봇 지적도 없다.
+
+## 회고
+
+`retro` 스킬을 이 세션이 돌렸다. 근거는 일지 "인계" 절 둘의 "회고가 볼 것"과 이 세션의 봇 회차다. 후보 아홉에 판정은 승인 넷(기존 항목에 회차 하나, 새 항목 셋), 기각 다섯, 넘김 0이다. 대기열 찾기는 `uv run python tools/queue_open_rows.py --search <낱말>`로 했다.
+
+1. 승인(회차로 센다). PR 직전 리뷰의 보고(오탐 셋)를 받은 턴에 일지로 옮기지 않아, 반영분의 셀프 리뷰가 판정이 빠졌다고 짚은 뒤에야 트랜스크립트에서 그 보고를 다시 꺼냈다. 일지 "인계(PR 연 뒤)"에 적혀 있다. 대기열 0536(244의 회차)의 7회차로 더했다(6에서 7). 승인 줄에 이 일지 이름을 적었다. 이미 회차 5 이상이라 chore 계기에 든 항목이다.
+2. 승인(새 항목). 인계 계기가 백그라운드로 띄운 커밋이 끝나기 전에 와서 이 브랜치의 두 세션에서 네 번 절차 판정을 다시 따졌다. 사건은 위 일지 "인계"와 "인계 계기가 다시 왔다"와 "인계(PR 연 뒤)"에 있고, 층은 훅이며, 반영은 PR 하나로 되돌릴 수 있다. 대기열 `handoff-trigger-before-background-commit-ends`(1회차). 같은 훅을 다루는 518과 서로 가리킨다(계기를 내는 때가 다르다). 손상은 없고 더하는 것이라 대기열에서 회차를 센다.
+3. 승인(새 항목). `coderabbit-review`가 지적 일부를 그 줄을 열지 않고 갈랐고 보고의 수(17)와 나열한 항목(16)이 어긋났으며 오탐 넷 가운데 하나가 유효였다. 대기열 `coderabbit-review-findings-judged-unopened`(1회차). 559가 같은 정의 파일의 다른 사건이라 반영할 때 묶는다고 적었다.
+4. 승인(새 항목). 프로브를 고친 서브에이전트가 README에 돌린 주체 없이 "다시 돌렸고", "손으로 봤다"를 적었다. 셀프 리뷰 두 축이 함께 짚었다. 대기열 `probe-readme-run-claim-without-actor`(1회차). 찾기에서 같은 일을 다룬 항목이 없었다.
+5. 기각. 첫 커밋 시도를 막은 시간 단언(`tests/tools/test_rerun_runner.py` 688행). 부하에서 시간 시험이 빨개지는 종류는 306이 받아들여 닫았고(ADR 0036), 새 사례는 일지에만 적는다. 이 일지 "커밋" 절이 그 사례다.
+6. 기각. pre-commit이 Bash의 600초를 넘긴 것(1089.88초, 1035.08초). `CLAUDE.md` 검증 명령 절이 이미 백그라운드로 띄우라고 적고, 이 브랜치의 세션들이 그대로 했다.
+7. 기각. 인용 대조가 일지 인용의 누락 하나와 줄여 말한 구절의 따옴표 셋을 알린 것. 이미 있는 검사가 그 자리에서 알렸고 고쳤다.
+8. 기각. 인계로 연 세션이 첫 커밋 전에 문턱 200,000을 넘은 것. 지시문이 가리킨 일지를 770줄 가까이 읽은 값이고 이 세션도 첫 읽기가 일지 앞쪽 275줄이었다. 큰 결과 알림 훅이 그 자리에서 알렸다(이미 있는 훅이 알린 것).
+9. 기각. 인계 계기가 자동 압축 뒤에도 센 수 255,347과 262,063. 계기가 무엇을 세는지 보지 않았고 사건 없이 떠올린 것이다.
+
+만료. `uv run python tools/queue_open_rows.py`와 `--ref origin/dev`를 모두 돌려 두 출력에 모두 든 일곱(0493, 0527, 0530, 0537, 0538, 0539, 0541)의 상태 줄을 `만료 2026-11-13 (ADR 0036)`으로 고쳤다. 두 출력의 "만료할 항목" 줄이 같았다(손으로 대 봤다). 그래서 다른 PR이 그 항목에 회차를 더한 것은 없다고 본다. 고친 뒤 `sed -n 3p`로 일곱 파일의 상태 줄을 찍어 봤다(손으로 봤다).
+
+## 다음
+
+다음 일은 기능 `portal-login`의 화면 디자인이다. 기능 계획(`.scratch/portal-login/plan.md`)이 명세 전에 `/ui-design portal-login`으로 화면을 그린다고 적는다. 선행 `pilot-portal`은 `.scratch/plan.md` 59행이 done이다(읽었다). 이 PR이 병합되면 `portal-login`은 프론티어에 들고, `step-up-login`은 이 행을 기다린다. 어느 일을 먼저 할지는 병합 뒤 `next-session` 결정표가 정한다. 그 밖에 병합 뒤 남는 것은 아래다.
+
+- 이 PR은 워크트리에서 병합한다. 병합한 뒤 주 체크아웃은 이 세션이 당기지 않는다(`merge.md` 워크트리에서 병합할 때 4). 보고에 `주 체크아웃 미갱신: 루트는 <브랜치>` 한 줄이 있고, 새 세션을 열면 그 세션이 워크트리에 들어가기 전에 `tidy-checkouts`를 돈다.
+- 새 대기열 항목 셋(`handoff-trigger-before-background-commit-ends`, `coderabbit-review-findings-judged-unopened`, `probe-readme-run-claim-without-actor`)은 1회차라 문턱(다섯 번째)에 닿지 않았다. 0536은 7회차라 chore 계기에 든다.
+- 남긴 일(PR 본문과 일지 "PR 직전 리뷰"·"반영분의 셀프 리뷰" 절에 있다): ADR 0060의 다시 보낸 실행이 도구를 한 번 더 부를 수 있다는 대가, `portal-admin`과 `deploy-package`의 `**Blocked by:**`에 로그인 행을 더하는 것(그 행의 설계 인터뷰가 정한다), 명세가 지을 것(ADR 0059 "명세가 짓는 것")이다.
+- 설계 인터뷰는 끝났고 다시 열지 않는다. 승인받은 ADR 0059·0060의 결정 문장은 이 브랜치의 어느 반영에서도 고치지 않았다.
