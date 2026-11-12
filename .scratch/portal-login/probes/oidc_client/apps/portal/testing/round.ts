@@ -83,6 +83,9 @@ async function main(): Promise<void> {
   }
   const idpName = oneOf("idp", ["hand", "oidc-provider"], "hand");
   const callback = oneOf("callback", ["none", "state_mismatch", "error"], "none");
+  // 이 둘은 서버를 띄우기 전에 본다. 띄운 뒤에 던지면 듣고 있는 서버가 프로세스를 붙잡아 끝나지 않는다.
+  const insecure = oneOf("insecure", ["allow", "deny"], "allow");
+  const transport = oneOf("transport", ["default", "node-http"], "default");
   const tlsFolder = argument("tls", "");
   const subject = `user-${randomBytes(6).toString("hex")}`;
   const idpOptions: FakeIdpOptions = {
@@ -108,9 +111,9 @@ async function main(): Promise<void> {
     clientId: idpOptions.clientId,
     clientSecret: idpOptions.clientSecret,
     redirectUri: REDIRECT_URI,
-    insecure: oneOf("insecure", ["allow", "deny"], "allow"),
+    insecure,
     signature: argument("signature", "verify"),
-    transport: oneOf("transport", ["default", "node-http"], "default"),
+    transport,
   };
 
   let stage = "begin";

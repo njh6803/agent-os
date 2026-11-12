@@ -6,8 +6,8 @@
 // 바깥에 보내는 것은 `https://registry.npmjs.org/<패키지 이름>` 읽기 요청 다섯이다. 패키지 이름 말고는 싣지 않는다.
 // 설치한 판은 node_modules 의 package.json 에서 읽는다(package.json 에 적은 판과 같은지도 본다).
 //
-// 측정이 아닌 회차: 응답이 200 이 아니거나, 문서의 `time` 에 설치한 판의 날짜가 없거나, 설치된 판이 package.json 에 적은
-// 판과 다르면 그 패키지는 센 것이 아니다. 종료 코드 1.
+// 측정이 아닌 회차: 응답이 200 이 아니거나, 문서의 `time` 에 설치한 판의 날짜가 없거나, 최신 판(`dist-tags.latest`)이나
+// 그 날짜가 없거나, 설치된 판이 package.json 에 적은 판과 다르면 그 패키지는 센 것이 아니다. 종료 코드 1.
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -33,7 +33,9 @@ async function main() {
     const document = await response.json();
     const published = document.time?.[installed];
     const latest = document["dist-tags"]?.latest;
+    const latestPublished = typeof latest === "string" ? document.time?.[latest] : undefined;
     if (typeof published !== "string") notMeasured.push({ name, problem: `time 에 ${installed} 가 없다` });
+    if (typeof latestPublished !== "string") notMeasured.push({ name, problem: `최신 판(${String(latest)})이나 그 날짜가 문서에 없다` });
     if (pinned[name] !== installed) notMeasured.push({ name, problem: `설치된 ${installed} 가 적은 ${String(pinned[name])} 와 다르다` });
     rows.push({
       name,
@@ -42,7 +44,7 @@ async function main() {
       license: document.versions?.[installed]?.license ?? null,
       unpackedSize: document.versions?.[installed]?.dist?.unpackedSize ?? null,
       latest,
-      latestPublished: document.time?.[latest] ?? null,
+      latestPublished: latestPublished ?? null,
       isLatest: latest === installed,
     });
   }

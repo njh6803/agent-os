@@ -17,7 +17,7 @@ node .scratch/portal-login/probes/oidc_client/probe/registry.mjs
 node .scratch/portal-login/probes/oidc_client/probe/loc.mjs
 ```
 
-`flow.mjs`는 `--group <묶음>`으로 묶음 하나만 돌 수 있다(`good`, `fault`, `callback`, `provider`, `insecure`, `transport`, `tls`. 여러 번 줄 수 있다). `report.mjs`는 재지 않고 `out/flow/summary.json`을 표로 찍기만 한다. 스크립트마다 측정이 아닌 회차가 하나라도 있으면 종료 코드 1이고, 무엇을 표지로 보는지는 각 파일 머리의 주석이 원천이다.
+`flow.mjs`는 `--group <묶음>`으로 묶음 하나만 돌 수 있다(`good`, `fault`, `callback`, `provider`, `insecure`, `transport`, `tls`. 여러 번 줄 수 있다. 모르는 이름이면 돌지 않고 종료 코드 2로 끝난다). `report.mjs`는 재지 않고 `out/flow/summary.json`을 표로 찍기만 한다. 스크립트마다 측정이 아닌 회차가 하나라도 있으면 종료 코드 1이고, 무엇을 표지로 보는지는 각 파일 머리의 주석이 원천이다.
 
 | 파일 | 재는 것 | 근거로 드는 자리 | 다시 돌 때 | 잰 판 |
 |---|---|---|---|---|
@@ -32,6 +32,8 @@ node .scratch/portal-login/probes/oidc_client/probe/loc.mjs
 - `tls` 묶음의 첫 실행은 인증 기관을 준 회차까지 모두 거부였다. 까닭은 프로브가 만든 인증 기관 인증서에 `basicConstraints`가 두 번 든 것이었다(openssl 기본 설정과 프로브의 `-addext`가 겹쳤다). 인증서를 프로브 자신의 설정 파일(`ca.cnf`, `server.cnf`, `server.ext`)로만 만들게 고치고, `openssl verify -CAfile ca.crt server.crt`가 `server.crt: OK`를 내지 않으면 그 묶음의 회차를 측정이 아닌 것으로 세는 조건을 더했다. 고친 뒤 인증 기관을 준 회차가 통과했다.
 - `typecheck.mjs`의 양성 대조 가운데 jose의 줄은 첫 판이 `decodeJwt`를 써서 걸리지 않았다(제네릭 반환이 기대 타입으로 추론돼 지나간다). `base64url.encode`로 바꾼 뒤 걸렸다.
 - 이 세션의 환경에 `NODE_USE_SYSTEM_CA=1`이 있었다(`node --help`의 "(currently set)"과 `printenv`로 손으로 봤다). 앞선 실행은 그것을 물려받았다. `flow.mjs`가 자식 환경에서 그 변수와 `NODE_EXTRA_CA_CERTS`·`NODE_TLS_REJECT_UNAUTHORIZED`·`NODE_OPTIONS`를 지우게 고치고, 회차의 JSON에 `extraCaGiven`·`systemCaGiven`을 실어 뜻한 환경이 아니면 측정이 아닌 것으로 세게 했다. 고친 뒤 전체를 다시 돌렸고 회차마다의 결과는 앞선 실행과 같았다.
+- 2026-11-13에 PR 직전 리뷰의 지적을 받아 `oidc_client/probe/flow.mjs`의 판정 둘을 좁혔다. 재는 것과 재는 방법은 그대로다. `fault` 묶음은 거부를 그대로 그 고장의 거부로 셌는데, 회차가 남긴 오류(원인 사슬 포함)에 그 고장의 문구가 있어야 세게 했다(`FAULT_REASONS`. 오류 코드는 여러 고장이 함께 써서 문구로 댄다. 문구는 `oauth4webapi` 3.8.8, `jose` 6.2.17, `hand.ts`의 것이다). `insecure` 묶음은 거부면 서버가 받은 설정 문서 요청이 0이어야 세게 했다(머리 주석은 처음부터 그렇게 적었는데 코드가 보지 않았다). 고친 뒤 전체를 다시 돌렸고 79회차 모두 측정이며 회차마다의 결과는 아래 표와 같았다(판정을 고친 서브에이전트가 돌렸다고 보고한 것이다). 그 뒤 본 세션이 `alg` 고장 둘의 문구를 `"alg" header parameter`에서 `unexpected JWT "alg" header parameter`로 좁혔다. `oauth4webapi` 3.8.8이 앞의 글자를 다른 까닭(`missing client or server configuration to verify used JWT "alg" header parameter`, `build/index.js` 2062행을 읽었다)에도 쓰기 때문이다. 좁힌 뒤 본 세션이 전체를 한 번 더 돌려 79회차 모두 측정이고 통과와 거부가 아래 표와 같은 것을 봤다(`provider` 묶음의 stderr 경고 줄은 다시 보지 않았다). 좁힌 판정이 실제로 거르는지는 서브에이전트가 손으로 봤다고 보고했고, 본 세션은 아래 두 변이를 다시 넣지 않았다. `FAULT_REASONS`의 `expired` 문구를 `iat`의 것으로 바꾸고 `node .scratch/portal-login/probes/oidc_client/probe/flow.mjs --group fault`를 돌리니 `expired` 여섯 회차와 그 고장의 양성 대조만 측정이 아닌 것으로 빠져 종료 코드 1이었다. `hand.ts`가 설정 문서 요청을 주소 검사 없이 먼저 보내게 바꾸고 같은 명령의 `--group insecure`를 돌리니 `insecure/다`가 앞과 같은 단계(`begin`)와 같은 문구로 거부됐는데 설정 문서 요청이 1이라 측정이 아닌 것으로 빠졌다. 바꾼 두 줄은 되돌렸다. `callback` 묶음의 판정은 그대로다. 거부의 단계(`finish`)만 보고 까닭의 문구는 대지 않는다(문구는 회차의 `error`에 남고 `report.mjs`가 찍는다). `insecure` 묶음도 까닭의 문구는 대지 않고, 거부면 서버가 받은 설정 문서 요청이 0인지만 본다.
+- 같은 날 `oidc_client/probe/registry.mjs`는 최신 판(`dist-tags.latest`)이나 그 날짜가 문서에 없는 패키지도 측정이 아닌 것으로 세게 했다. 다시 읽은 다섯 패키지의 값은 아래 표와 같았다(2026-11-12T16:45Z, 한국 시각 2026-11-13 01:45).
 
 ### 타입 검사와 린트
 
@@ -74,7 +76,7 @@ node .scratch/portal-login/probes/oidc_client/probe/loc.mjs
 | ㄴ의 타입 `@types/oidc-provider` | 19(`@types/node`와 `undici-types` 포함) | 3,177,785바이트 | MIT 19 | 9.13.1, 2026-10-29 |
 
 - 설치 스크립트를 가진 패키지는 없다. `oidc-provider`는 재던 때 최신(9.14.0)이 나온 지 하루가 안 돼 pnpm의 공급망 유예에 걸려 9.13.3을 적었다(`oidc_client/pnpm-workspace.yaml`의 주석).
-- 줄 수(전체/코드). 가 `openid-client.ts` 64/56, 나 `oauth4webapi.ts` 112/99, 다 `hand.ts` 319/273, 함께 쓰는 `contract.ts` 35/22, `node-fetch.ts` 92/80, ㄱ `fake-idp.ts` 305/274(고장 심기와 TLS 포함), ㄴ `fake-idp-provider.ts` 108/98, `browser.ts` 138/121(쿠키와 폼 제출은 ㄴ에만 필요하다), `round.ts` 156/135. 손으로 맞춘 줄바꿈이고 Prettier를 돌린 것이 아니다. 후보 파일에는 변형을 가르는 코드가 섞여 있다.
+- 줄 수(전체/코드). 가 `openid-client.ts` 64/56, 나 `oauth4webapi.ts` 112/99, 다 `hand.ts` 319/273, 함께 쓰는 `contract.ts` 35/22, `node-fetch.ts` 92/80, ㄱ `fake-idp.ts` 305/274(고장 심기와 TLS 포함), ㄴ `fake-idp-provider.ts` 108/98, `browser.ts` 138/121(쿠키와 폼 제출은 ㄴ에만 필요하다), `round.ts` 159/137(2026-11-13에 인자 검사 둘을 서버를 띄우기 전으로 올린 뒤의 값이고 그 전은 156/135였다). 손으로 맞춘 줄바꿈이고 Prettier를 돌린 것이 아니다. 후보 파일에는 변형을 가르는 코드가 섞여 있다.
 - 다가 한 검증과 하지 않은 검증의 목록은 `oidc_client/apps/portal/server/oidc/hand.ts` 머리의 주석이 원천이다.
 
 ### 돌려 보지 않은 것

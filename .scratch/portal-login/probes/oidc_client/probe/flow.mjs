@@ -2,6 +2,7 @@
 // 하나이고, node 가 `.ts` 를 타입만 벗겨 바로 돌린다(빌드 없음).
 //
 // 돌리기: node probe/flow.mjs [--group <묶음>]...   (묶음: good, fault, callback, provider, insecure, transport, tls)
+//   모르는 묶음 이름이나 값이 빠진 `--group` 은 돌지 않고 종료 코드 2 로 끝난다(산출물도 건드리지 않는다).
 // 산출물: out/flow/summary.json, out/flow/raw.json, 표준 출력의 마지막 줄(JSON 한 줄)
 //
 // 묶음
@@ -22,8 +23,10 @@
 //   good·provider  서버가 인가 요청을 PKCE·state·nonce 와 함께 한 번 받았고, 토큰 끝점이 code_verifier 를 맞춰 봤다.
 //                  결과(받아들임과 `sub` 가 서버가 정한 무작위 계정과 같은지)는 따로 적는다.
 //   fault          서버가 고장을 심은 토큰을 실제로 한 번 내줬다(`faultyTokens` 1). 그래야 그 뒤의 거부나 받아들임이
-//                  그 고장에 대한 것이다. 고장마다 적어도 한 변형이 거부해야 그 고장이 실제로 틀린 토큰이라는
-//                  양성 대조가 선다. 어느 변형도 거부하지 않은 고장이 있으면 그 고장의 회차는 측정이 아니다.
+//                  그 고장에 대한 것이다. 거부면 회차가 남긴 오류(원인 사슬 포함)에 그 고장의 문구가 있어야 한다
+//                  (`FAULT_REASONS`). 다른 까닭의 거부는 그 고장을 거부한 것이 아니라 측정이 아니다.
+//                  고장마다 적어도 한 변형이 그 까닭으로 거부해야 그 고장이 실제로 틀린 토큰이라는
+//                  양성 대조가 선다. 어느 변형도 그렇게 거부하지 않은 고장이 있으면 그 고장의 회차는 측정이 아니다.
 //   callback       브라우저 왕복이 끝나(인가 요청 한 번) 바꾼 주소가 `finish` 에 들어갔다(거부면 단계가 finish).
 //   insecure       발급자가 `http:` 이고 http 허용이 꺼진 채로 돌았다. 거부면 서버가 설정 문서 요청을 받지 않았어야
 //                  라이브러리가 보내기 전에 막은 것이다(받았다면 다른 까닭의 거부라 따로 적는다).
@@ -53,16 +56,22 @@ const VARIANTS = {
 };
 const ALL = Object.keys(VARIANTS);
 const PRIMARY = ["가-서명", "나-jose", "다"];
-const TOKEN_FAULTS = [
-  "bad_signature",
-  "wrong_issuer",
-  "wrong_audience",
-  "expired",
-  "wrong_nonce",
-  "missing_nonce",
-  "alg_none",
-  "alg_hs256",
-];
+const GROUPS = ["good", "fault", "callback", "provider", "insecure", "transport", "tls"];
+// 고장과, 그 고장 때문에 거부됐다면 회차가 남긴 오류(원인 사슬 포함)에 있어야 하는 문구. 갈래의 앞은 oauth4webapi 3.8.8 의
+// 메시지(가 는 oauth4webapi 의 오류를 원인으로 싣는다. 서명의 문구는 jose 6.2.17 도 같은 글자로 낸다), 뒤는 hand.ts 의 메시지다. 오류 코드로는 가르지
+// 못한다(OAUTH_INVALID_RESPONSE 를 서명·nonce 빠짐·alg 가, OAUTH_JWT_CLAIM_COMPARISON_FAILED 를 iss·aud·nonce 가 함께
+// 쓴다). 라이브러리가 문구를 바꾸면 그 회차가 측정이 아닌 것으로 빨개지고, 그때 이 표를 새 문구에 맞춘다.
+const FAULT_REASONS = {
+  bad_signature: /signature verification failed|ID 토큰의 서명이 맞지 않는다/,
+  wrong_issuer: /"iss" \(issuer\) claim value|ID 토큰의 iss 가 발급자와 다르다/,
+  wrong_audience: /"aud" \(audience\) claim value|ID 토큰의 aud 에 이 클라이언트가 없다/,
+  expired: /"exp" \(expiration time\) claim value|ID 토큰이 만료됐다/,
+  wrong_nonce: /"nonce" claim value|ID 토큰의 nonce 가 보낸 값과 다르다/,
+  missing_nonce: /"nonce" \(nonce\) claim missing|ID 토큰의 nonce 가 보낸 값과 다르다/,
+  alg_none: /unexpected JWT "alg" header parameter|ID 토큰의 alg 가 RS256 이 아니다/,
+  alg_hs256: /unexpected JWT "alg" header parameter|ID 토큰의 alg 가 RS256 이 아니다/,
+};
+const TOKEN_FAULTS = Object.keys(FAULT_REASONS);
 const TLS_ERROR_CODES = [
   "UNABLE_TO_VERIFY_LEAF_SIGNATURE",
   "SELF_SIGNED_CERT_IN_CHAIN",
@@ -141,6 +150,10 @@ function commonProblems(round) {
 
 const reachedTokenExchange = (log) => log.authorize === 1 && log.authorizeComplete === 1 && log.token === 1 && log.pkceVerified === 1;
 
+/** 고장 회차가 그 회차에 심은 고장을 까닭으로 거부됐는지. 그 회차의 `args` 는 `["--fault", <고장>]` 이다. */
+const rejectedForFault = (round) =>
+  round.result?.outcome === "rejected" && (FAULT_REASONS[round.args[1]]?.test(flatten(round.result.error).join(" <- ")) ?? false);
+
 function judge(round) {
   const problems = commonProblems(round);
   if (round.result === null) return problems;
@@ -153,6 +166,9 @@ function judge(round) {
       break;
     case "fault":
       if (log.faultyTokens !== 1) problems.push(`고장을 심은 토큰이 나가지 않았다: ${JSON.stringify(log)}`);
+      else if (result.outcome === "rejected" && !rejectedForFault(round)) {
+        problems.push(`거부의 까닭이 심은 고장(${String(round.args[1])})의 것이 아니다: ${flatten(result.error).join(" <- ")}`);
+      }
       break;
     case "callback":
       if (log.authorizeComplete !== 1) problems.push("브라우저 왕복이 끝나지 않았다");
@@ -160,6 +176,9 @@ function judge(round) {
       break;
     case "insecure":
       if (result.issuerScheme !== "http:" || result.insecure !== "deny") problems.push("http 발급자와 허용 끔의 조합이 아니다");
+      if (result.outcome === "rejected" && log.discovery !== 0) {
+        problems.push(`서버가 설정 문서 요청을 받은 뒤의 거부라 보내기 전에 막은 것이 아니다(설정 문서 요청 ${String(log.discovery)})`);
+      }
       break;
     case "transport":
       if (result.transport !== "node-http" || log.discovery < 1) problems.push("node-http 길로 서버에 닿지 않았다");
@@ -206,6 +225,12 @@ function makeCertificates() {
 }
 
 function main() {
+  // 모르는 묶음은 돌기 전에 거절한다. 거르지 않으면 회차 0 인 채 종료 코드 0 으로 끝나고 앞선 실행의 산출물도 지운다.
+  const unknownGroups = requested.filter((group) => !GROUPS.includes(group));
+  if (unknownGroups.length > 0) {
+    console.error(`모르는 묶음: ${unknownGroups.map(String).join(", ")}. 아는 묶음: ${GROUPS.join(", ")}`);
+    process.exit(2);
+  }
   rmSync(OUT, { recursive: true, force: true, maxRetries: 5 });
   mkdirSync(OUT, { recursive: true });
   const rounds = [];
@@ -248,11 +273,11 @@ function main() {
     if (typeof tls === "string" && round.group === "tls") problems.push(tls);
     if (problems.length > 0) notMeasured.push({ id: round.id, problems });
   }
-  // 고장의 양성 대조: 고장마다 적어도 한 변형이 거부해야 한다.
+  // 고장의 양성 대조: 고장마다 적어도 한 변형이 그 고장을 까닭으로 거부해야 한다.
   for (const fault of TOKEN_FAULTS) {
     const ofFault = rounds.filter((round) => round.group === "fault" && round.args[1] === fault && round.result !== null);
-    if (ofFault.length > 0 && !ofFault.some((round) => round.result.outcome === "rejected")) {
-      notMeasured.push({ id: `fault/${fault}`, problems: ["어느 변형도 거부하지 않아 이 고장이 틀린 토큰인지 서지 않았다"] });
+    if (ofFault.length > 0 && !ofFault.some(rejectedForFault)) {
+      notMeasured.push({ id: `fault/${fault}`, problems: ["어느 변형도 그 고장을 까닭으로 거부하지 않아 이 고장이 틀린 토큰인지 서지 않았다"] });
     }
   }
   // TLS 의 양성 대조: 인증 기관을 주지 않은 회차가 TLS 검증 오류로 거부돼야 한다.
