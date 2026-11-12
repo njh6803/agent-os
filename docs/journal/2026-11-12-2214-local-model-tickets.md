@@ -1,0 +1,176 @@
+# 2026-11-12 (22:14) local-model 티켓
+
+세션 제목 `docs/local-model-tickets`. 브랜치 `docs/local-model-tickets`, 워크트리 `.claude/worktrees/local-model-tickets`, 기준 커밋 `9714908a0`(origin/dev, 명세 PR 547의 병합 커밋). 모델 Opus 5.5 / xhigh. next-session 지시문으로 연 새 세션이고, 첫 턴에 제목을 바꾸고 `tidy-checkouts`를 돈 뒤 `EnterWorktree`로 들어와 `git switch -c`로 브랜치를 땄다. 파일 이름의 시각은 명세 검토 뒤의 물음에 답을 받은 때다.
+
+## 사용자 프롬프트
+
+> 사용자: .claude/skills/to-tickets/SKILL.md 를 읽어 그대로 따른다. 이 세션을 연 저장소는 `C:\project\agent`이고 작업 폴더가 그곳이 아니면 따르지 말고 알린다. 스킬의 인자는 이 줄의 '인자:' 뒤부터 메시지 끝까지다. 인자: .scratch/local-model/spec.md
+>
+> 다음 작업: 기능 local-model. 명세를 검토하고 티켓으로 나눈다
+> 다음 단계: 티켓
+> 어디서: 새 세션. 주 체크아웃 미갱신이라 Skill 도구로 tidy-checkouts를 먼저 돌고(그 스킬이 사람에게 넘기는 것은 보고만 하고 답을 기다리지 않는다) 그 뒤 주 체크아웃에서 브랜치를 따지 않고 EnterWorktree(name은 local-model-tickets)로 새 워크트리에 먼저 들어가 거기서 브랜치를 바꾼다
+> 시작 프롬프트: /to-tickets .scratch/local-model/spec.md
+> 브랜치: docs/local-model-tickets
+> 모델: Opus 5.5 / xhigh
+> 읽을 것: docs/journal/2026-11-12-0248-local-model-spec.md의 "다음" 절과 "둔 Critical" 절
+> 이어받을 상태: 명세 PR 547이 dev에 병합됐다(squash, 병합 커밋 9714908a0). 일지 "다음"대로 티켓을 나누기 전에 명세 검토(spec-reviewer 서브에이전트)를 먼저 돌린다. 이 일지에는 그 검토가 돈 기록이 없다. 명세 서두의 수 다섯은 26·3·25·2·34다. 봇 둘째 회차(CodeRabbit)는 새 지적이 없었다. 첫 회차의 Critical(응답 헤더 값이 DEBUG 로그에 남는다)은 받아들인 한계로 두었고 이유를 PR 코멘트로 남겼다. 사용자가 헤더 값까지 막자고 하면 명세 "로그"의 결정 하나를 바꾸는 일이라 그때 다시 묻는다. 승인받은 ADR 0057 이력 둘의 결정을 바꾸는 반영도 사용자에게 다시 묻는다. 티켓을 나눌 때 묶음 여덟(명세 "고칠 자리의 묶음")과 그 사이 막힘은 명세 그대로 따른다
+> 확인할 선행 조건: 주 체크아웃 미갱신: 루트는 dev. 병합은 이 워크트리 사본의 next-session merge.md(없으면 SKILL.md)의 "워크트리에서 병합할 때"를 Read로 열어 따른다
+> 이번 요청 범위: 티켓까지
+
+지시문의 "묶음 여덟"은 명세의 묶음 수와 다르다. 명세 "고칠 자리의 묶음"에는 A~E 다섯이 있다(Read로 읽었다. 명세 검토의 N8도 같은 것을 짚었다). 앞 일지 2026-11-12-0248의 "다음"이 적은 수를 지시문이 옮긴 것이고, 그 일지는 고치지 않는다(명세 세션이 아직 돌고 있었다).
+
+## 들어오기 전에 한 것
+
+- `tidy-checkouts`. 루트는 dev이고 깨끗했으며 로컬에만 있는 커밋이 없어 `fba36f78a`에서 `9714908a0`으로 당겼다(당긴 뒤 `HEAD`와 `origin/dev`가 같았다). 당긴 커밋은 그 스킬 파일을 바꾸지 않았다. `judge`는 `지운다`와 `끝낸다`를 하나도 내지 않았다. 남긴 까닭은 병합된 PR 없음(01-shared-markdown-component, admin-style-spec, admin-style-to-spec, agent-a65f5d6e4055592b1, mcp-shutdown-spec, portal-login-design, web-widget-spec), 바뀐 파일(03-default-model-plugin-and-explicit-flag, 06-round-drive-record, approval-rules-spec, approval-rules-tickets), 다시 만들 수 없는 무시된 항목(answer-markdown-spec, doc-qa-agent-design), 쥔 프로세스(local-model-design의 bash.exe·sleep.exe), 도는 세션(local-model-spec), 앱의 표지 둘이다.
+- `EnterWorktree`가 `worktree-local-model-tickets` 브랜치로 워크트리를 만들었고, `git switch -c docs/local-model-tickets`로 지시문의 브랜치를 땄다.
+
+## 명세 검토 (`spec-reviewer`)
+
+넘긴 자리는 여섯이다. 묶음 A~E와 그 사이의 막힘에 일부만 병합된 dev를 대는 것, C(띄우는 명령)를 한 티켓에 둘지, D 안에서 따로 초록이 되는 경계, base-agent의 지금 상태, 다음 단계로 넘긴 측정, "규약 문서"와 "모델 소스와 모듈"의 경로다. 보고는 blocker 1, should-fix 7, nit 8이다(받은 그대로 줄여 옮긴다).
+
+- **blocker B1.** 묶음 D의 "티켓을 더 쪼개더라도 PR은 하나다"가 "PR마다 티켓 하나"(`docs/agents/issue-tracker.md`, ADR 0037, `tools/check_ticket.py`)와 부딪친다. ADR 0058 결정 "첫 적용"이 한 PR에 묶는 것은 어댑터와 로컬 모델 시험뿐이고, 그보다 먼저 병합되는 변경에는 조건이 없다. 경계표: 모듈 나눔과 가짜 모델 서버 픽스처는 따로 초록이고 따로 병합할 수 있다. 어댑터와 로컬 모델 시험·규약 문서는 같은 PR이어야 한다.
+- **should-fix.** (S1) A의 임시 거부 갈래(`PluginError`와 문구)를 덮는 사례가 A의 시험 목록에 없다. (S2) C가 자식 프로세스에 넘기는 환경 변수 여섯의 이름과 D의 시험이 읽는 이름을 맞대는 시험이 없다. C가 먼저 병합되므로 어긋나면 D의 PR에서 클라우드를 한 번 띄운 뒤에야 드러난다. (S3) 기록 묶음의 "통과 수와 토큰 합계"를 어디서 얻는지가 비었다. 토큰 합계 줄은 `tests/conftest.py`의 `_LLM_MARKERS`에 든 마커에만 찍히고 `llm_local`은 D가 더한다. (S4) Terraform 자신의 출력(plan, apply, 오류 글)에 서버 키가 실리지 않게 하는 수단과 시험이 없다. (S5) E의 "그 사례를 고르는 명령"만으로는 서지 않는다. base-agent 05의 실제 모델 시험에 모델을 바꿀 이음매가 없다. (S6) 리눅스 연결 셈은 지금 잴 수 있었다. 검토가 커밋한 프로브를 리눅스 컨테이너에서 돌려 손으로 봤다(아래 "이 세션이 다시 본 것"). 결정은 그대로 서지만, 리눅스에서는 기본값 클라이언트도 놓으면 연결을 닫아 "놓인 모델" 사례가 퇴행을 가르지 못한다. 두 OS에서 가르는 것은 모델을 쥔 채 여러 번 부른 사례의 놓기 전 셈이다. (S7) A "다른 묶음을 막는다"와 B·C "나란히"가 서로 어긋난다.
+- **nit.** (N1) 관리 화면의 사진은 `PluginDetail` 스토리 둘(`Enabled`, `Disabled`)이 모두 바뀐다고 코드로 미리 말할 수 있다. (N2) `ChatAnthropic`은 비스트리밍 응답에서 `invalid_tool_calls`를 채우지 않는다(langchain-anthropic 1.7.2를 읽었다). (N3) 스토리 14의 관리 API 응답과 스토리 16을 덮는 시험을 짚지 않았다. (N4) "`asyncio.run`을 두 번"이 `.claude/rules/tests.md`와 글자로 부딪친다. (N5) Out of Scope의 "다섯"과 "다른 기능에 넘기는 것"의 "여섯"이 어긋난다. (N6) `docs/constitution/tech.md`의 시험용 모델 서버 행이 C 뒤에 반만 참이 된다. (N7) 카나리아 명세 셋이 D가 고칠 문장을 기대 글자로 든다. (N8) 앞 일지의 "묶음 여덟".
+- **판정한 것.** 계약 영향은 A에 모였다. 원칙 위반과 비목표 침범은 없다. 명세가 든 경로는 새로 만들 셋을 빼고 모두 있다. C는 한 티켓에 두는 것이 맞다(ADR 0058 결정 "명세로 넘기는 것"과 Consequences가 띄워 확인하는 일을 그 파일을 들이는 티켓에 묶는다). C가 띄워 확인하는 것은 사용자의 준비와 과금 확인이 먼저라 지금 잴 수 없다. base-agent는 in-progress이고 티켓 01~03이 done, 04~07이 ready-for-agent이며, 07은 다른 저장소의 `rag-engine:release-image`에 막혀 있다.
+
+이 세션이 다시 본 것. ADR 0037 21행, ADR 0057 52행, ADR 0058 31·39·40·65·69·70행을 `sed -n`으로 읽었다. ADR 0058 40행은 띄우는 명령의 티켓이 "계약 티켓 뒤에 서는지와 그 파일이 어느 PR에 드는지는 티켓을 나눌 때 정하고"라고 적는다. `tests/conftest.py` 45·51행, `docs/constitution/tech.md` 18행, `tools/llm_tokens.py`의 독스트링과 `count`·`summary`의 시그니처, base-agent 티켓 다섯의 `Status:` 줄과 05의 차림, 07의 차림을 읽었다. 리눅스 측정은 검토가 이 세션의 스크래치패드에 남긴 실행 스크립트(`linux/inner.sh`)와 출력(`exit=0`, `uname`, 표준 출력의 줄 아홉)을 읽어 대 봤다. 그 스크립트는 Docker의 python 3.12 컨테이너에 워크트리를 읽기 전용으로 붙이고, 락의 런타임 의존에 langchain-openai 1.6.2를 얹어 깐 뒤 커밋한 프로브 `.scratch/local-model/probes/openai_compat.py`를 돌린다. 출력은 측정 9회차, 측정 아님 0회차였고 판은 langchain-openai 1.6.2, openai 3.49.0, langchain-core 1.6.3, httpx2 2.13.0이었다. 모듈 나눔이 닿는 자리를 `grep -rn "AnthropicModels\|resolve_model_name\|MODEL_ENV"`로 다시 셌다(`main.py` 다섯 줄, `tests/adapters/test_anthropic.py`, `tests/core/test_model.py`, `tests/test_main.py`의 `MODEL_ENV` 다섯 자리와 `main_module.AnthropicModels`를 바꿔 끼우는 세 자리).
+
+## 명세 검토 뒤에 물은 것
+
+선택 화면의 첫 호출은 설명의 사실을 대 보라는 훅이 막았다. ADR 0058의 병합 조건, base-agent 티켓 04~07의 상태, 임시 거부 갈래가 옮겨 가는 것은 위에서 대 본 사실이었다. "05가 세션을 넘긴다"와 "PR을 한 번 덜 거친다"의 크기 판단은 재지 않은 것이라 설명에 어림으로 적어 같은 화면을 다시 띄웠다.
+
+> 사용자: (local-model을 티켓 몇 장으로 나눌까요? 명세의 묶음 D(어댑터와 로컬 모델 시험)는 'GPU 서버로 두 모델 시험을 통과해야 병합'이라는 조건 때문에 어댑터·시험·규약 문서를 PR 하나에 담아야 해서 매우 큽니다. 그래서 먼저 병합해도 되는 조각을 떼어 냅니다. 여기서 '가짜 모델 서버'는 시험이 이 PC 안에 띄우는 작은 HTTP 서버로, 진짜 모델 서버 흉내를 냅니다.) "여섯 장 (Recommended)" — 설명: 01 계약(모델 파일에 주소 칸이 생기고 관리 화면에 보임)과 모델 소스 파일 나누기 → 02 깨진 도구 호출을 실패로 처리 → 03 GPU 서버를 띄웠다 지우는 명령 → 04 가짜 모델 서버 → 05 어댑터와 로컬 모델 시험, 규약 문서 → 06 기본 에이전트 사례 기록. 02·03·04는 계약에 기대지 않아 01과 나란히 시작합니다. 05는 01~04가, 06은 05와 base-agent(티켓 04~07이 아직 열려 있음)가 끝나야 시작합니다. 05가 가장 크고 세션을 넘겨 이어 갈 것으로 봅니다(어림).
+
+고르지 않은 선택지는 둘이다. "다섯 장"(설명: 여섯 장에서 04(가짜 모델 서버)를 05에 합칩니다. PR을 한 번 덜 거치고, 아직 쓰는 곳이 없는 시험 도구만 따로 병합되는 일이 생기지 않습니다. 대신 05가 더 커져 세션을 여러 번 넘겨 이어 갈 가능성이 높아집니다(어림).)와 "일곱 장"(설명: 여섯 장에서 01의 모델 소스 파일 나누기를 따로 뗍니다. 01은 계약만 담아 리뷰가 쉬워집니다. 대신 01이 지금의 Anthropic 모델 파일(adapters/anthropic.py)에 넣은 임시 거부 갈래를 다음 티켓이 새 파일로 옮겨야 하고 PR을 한 번 더 거칩니다.)이다.
+
+이 화면으로 확인받은 것: 티켓은 여섯이다. 모델 소스 모듈 나눔(명세의 D에 있던 것)은 계약 티켓 01에 들어 임시 거부 갈래가 처음부터 새 모델 소스 모듈에 선다. 가짜 모델 서버는 04로 먼저 병합된다. 어댑터, 로컬 모델 시험, 규약 문서는 05 한 장, PR 하나다. 02·03·04는 01과 나란히 돈다. B1과 S7은 이 답으로 닫힌다. 나머지 should-fix 여섯과 nit 여덟은 사용자 판단이 필요 없어 이 세션이 명세와 티켓에서 정한다.
+
+## 명세를 고친 것
+
+옛 문장은 지우지 않고 각 절에 "(2026-11-12 명세 검토와 to-tickets: …)" 머리의 주석을 열한 곳에 달았다(선례 mcp-http). 서두의 수를 고쳤다. 사용자가 고른 것 넷, 명세가 정한 것 스물아홉, 이력 둘, 거부한 안 마흔이다. 새로 정한 넷은 로컬 모델 시험의 환경 변수 이름을 `tools/llm_local.py`의 상수 한 자리에 두는 것, 기록 묶음의 통과 수와 토큰 합계를 `PYTEST_ADDOPTS`의 JUnit XML과 basetemp를 `tools/llm_tokens.py`의 `count`로 세어 얻는 것, Terraform 출력에서 서버 키를 가리는 것(`sensitive = true`와 출력 가리기를 겹쳐 둔다), 06이 기대는 base-agent 05의 이음매다. 주석은 ADR 0057·0058 본문의 문장을 거짓으로 만들지 않아 이력을 쓰지 않았다. ADR 0058 결정 "명세로 넘기는 것"이 띄우는 명령의 티켓이 계약 티켓 뒤에 서는지를 티켓을 나눌 때 정하라고 넘겼고, ADR 0057의 "그 티켓이 다른 티켓을 막는다"는 01이 05·06을 막아 그대로 참이다.
+
+## 티켓
+
+`.scratch/local-model/issues/`에 여섯 장을 썼다. 막힘은 사용자가 고른 그대로다.
+
+- 01 `01-contract-openai-compatible-model-provider`: 계약(sdk의 제공사 값과 두 칸, `openapi.json`, 생성 TS 타입, 관리 화면)과 모델 소스의 모듈 나눔, 임시 거부 갈래. 막는 티켓 없음
+- 02 `02-broken-tool-call-arguments-fail-model-call`: `reply_from`이 `invalid_tool_calls`를 원인 `model_call`의 실패로 거절한다. 막는 티켓 없음
+- 03 `03-llm-local-command-rents-model-servers`: `tools/llm_local.py`와 Terraform 구성, 클라우드 없이 도는 시험, 실제로 띄워 확인하는 것. 막는 티켓 없음. 첫 수락이 사용자의 준비 넷이다
+- 04 `04-fake-model-server-fixture`: 가짜 모델 서버 픽스처. 막는 티켓 없음
+- 05 `05-openai-compatible-adapter-and-local-model-test`: 어댑터, 의존, 어댑터·CLI 시험, 로컬 모델 시험과 마커, 규약 문서. 01~04가 막는다. 03의 명령으로 두 모델을 통과해야 병합한다
+- 06 `06-base-agent-cases-on-local-models`: 기본 에이전트의 사례 기록. 05와 기능 base-agent가 막는다
+
+명세 검토의 고칠 것과 문구를 티켓의 수락으로 옮겼다. 01은 임시 갈래의 시험(모델 소스의 `PluginError`와 트레이스 없는 CLI `run`), 관리 API 응답의 시험(`tests/test_server.py`의 선례 둘, 대문자 호스트와 끝의 `/`), `PluginDetail`의 사진 둘을 든다. 03은 사용자의 준비, 이름 상수, 자식 환경, `PYTEST_ADDOPTS`, 출력 가리기, 기록 묶음의 칸 전부를 든다. 05는 임시 문구 0건, 쥔 모델의 연결 셈(두 OS에서 퇴행을 가른 사례), 동기 `def`에서 부르는 `asyncio.run`, 카나리아 명세 셋, `tech.md`의 두 번째 고침을 든다.
+
+검토의 문구를 뜻을 되짚지 않고 옮기지 않으려 05의 사례가 기대는 이음매를 코드로 대 봤다(to-tickets 5단계, 대기열 106). 프로브의 가짜 서버(`.scratch/local-model/probes/fake_server.py`)는 HTTP/1.1로 답하고 받은 요청으로 응답을 짓는 함수를 받는다. 04는 05와 다른 PR이라 05의 사례 넷(받은 키를 되울리는 401, 요청을 받은 뒤 환경의 키를 바꾸는 401, 기한에 끊기는 호출, JSON이 아닌 200)이 기대는 응답 함수·지연·날 글자 본문과, 연결 셈이 퇴행을 가르게 하는 HTTP/1.1을 04의 수락에 넣었다. 서버가 응답마다 연결을 닫으면 셈이 어느 클라이언트에서나 "모두 닫혔다"가 된다.
+
+06이 기대는 이음매는 받는 쪽인 base-agent 05의 "차림"에 한 항목으로 더했다(to-tickets 5단계의 받는 쪽 확인). 모델 플러그인의 이름과 그 모델의 키 검사가 시험 모듈의 한 자리에서 정해져 CLI의 `--model`과 `serve`의 기본 모델이 그 자리를 따른다. base-agent 05가 그 자리 없이 닫히면 06이 더한다고 06의 수락에 적었다. 06의 기록은 명세가 자리를 정하지 않아 `.scratch/local-model/probes/README.md`의 날짜 절로 정했고, 실패한 사례 가운데 모델 고르기의 입력은 answer-eval 기능 계획 본문으로, 스킬 문구의 일은 일지의 "다음"으로 넘기게 적었다.
+
+`uv run python tools/plan_table.py`를 돌렸다. 티켓이 모두 ready-for-agent라 local-model 행은 todo 그대로이고 `.scratch/plan.md`는 바뀌지 않았다.
+
+## 검사와 곁 세션
+
+검사 다섯(`tools/check_md_tables.py`, `tools/check_line_separators.py`, `tools/plan_table.py --check`, `tools/check_adr_pointers.py`, `tools/check_instructions.py`)이 모두 출력 없이 끝났다. `tools/sibling_overlap.py`는 번호 겹침과 함께 고친 파일이 없다고 냈다. 기준 브랜치 `origin/dev`는 PR 548(`1a02ac6d5`, answer-markdown 01)로 움직였고 이 브랜치가 이름으로 든 파일과 겹치는 것은 없다(`git diff --name-only HEAD...origin/dev`를 손으로 대 봤다). (이어받은 세션이 고쳤다: 이 문장은 틀렸다. PR 548은 티켓 03·05가 이름으로 드는 `docs/constitution/tech.md`와 `docs/constitution/operations.md`, 그리고 `README.md`와 `docs/constitution/README.md`를 고쳤다. 다만 티켓이 기대는 문장은 바뀌지 않았다. 아래 "셀프 리뷰를 반영한 것"을 본다.) 주 체크아웃은 `dev`의 `9714908a0`에 머물러 있다.
+
+base-agent 05를 맡은 세션(`feature/05-real-model-assistant-answers-with-sources`, 쉬는 중)이 있어, 그 티켓의 "차림"에 이음매 항목이 더해진다는 것을 SendMessage로 알렸다. 지금 구현 중이면 함께 반영하고, 반영하지 않고 닫아도 local-model 06이 그 자리를 더한다는 것과 답장이 필요 없다는 것을 적었다. 답은 아직 없다.
+
+## 인계
+
+셀프 리뷰(`/code-review`)를 부른 직후 컨텍스트가 인계 문턱을 넘어 계기(`셀프 리뷰 직전`)가 왔다. 셀프 리뷰는 밟지 않고 새 세션에 넘긴다. 이 세션의 제목은 `docs/local-model-tickets`이고 인계하며 `docs/local-model-tickets (인계함)`으로 바꾼다. 커밋하지 않은 변경은 명세(`.scratch/local-model/spec.md`)의 주석, 티켓 여섯(`.scratch/local-model/issues/`), base-agent 05 티켓의 "차림" 한 항목, 이 일지다.
+
+이 세션이 고친 것. 앞 지시문의 "묶음 여덟"은 명세의 묶음 A~E 다섯이 맞다(위 "사용자 프롬프트"). 명세의 주석에서 ADR 0058 결정의 이름을 "서버 키"로 잘못 적었다가 실제 제목 "모델 서버는 세션이 띄웠다 지운다"로 고쳤고, 프로브 인용 훅에 따라 "모든 갈래"를 "넣은 갈래의 연결을 모두"로 좁혔다. 일지의 S6 문장은 측정 낱말 훅에 따라 "손으로 봤다"로 고쳤다.
+
+지시문:
+
+다음 작업: 기능 local-model. 명세 검토와 주석, 티켓 여섯을 썼고 셀프 리뷰부터 커밋·PR·병합까지 잇는다
+다음 단계: 티켓
+어디서: 새 세션. 주 체크아웃 미갱신이라 Skill 도구로 tidy-checkouts를 먼저 돌고(그 스킬이 사람에게 넘기는 것은 보고만 하고 답을 기다리지 않는다) 그 뒤 git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /to-tickets .scratch/local-model/spec.md
+브랜치: docs/local-model-tickets
+모델: Opus 5.5 / xhigh. 2의 잇는 지시문
+읽을 것: docs/journal/2026-11-12-2214-local-model-tickets.md 전체(특히 "티켓"과 "검사와 곁 세션"), docs/journal/2026-11-12-0248-local-model-spec.md의 "다음"과 "둔 Critical"
+이어받을 상태: 인계: 셀프 리뷰 직전. 커밋하지 않은 변경이 워크트리에 있고 셀프 리뷰(/code-review)부터 한다. 고정점은 merge-base 9714908a0이고 범위는 커밋하지 않은 변경과 미추적 파일(.scratch/local-model/issues/ 여섯, 일지)이며 명세는 .scratch/local-model/spec.md, 절차의 원천은 .claude/skills/to-tickets/SKILL.md다. 셀프 리뷰를 반영한 뒤 커밋(pre-commit은 백그라운드로), PR 직전 리뷰, PR, 봇 회차, 병합으로 간다. 앞 명세 세션이 둔 Critical(응답 헤더 값이 DEBUG 로그에 남는다)은 받아들인 한계이고, 사용자가 헤더 값까지 막자고 하면 명세 "로그"의 결정을 바꾸는 일이라 그때 다시 묻는다. 승인받은 ADR 0057 이력 둘의 결정을 바꾸는 반영도 사용자에게 다시 묻는다. base-agent 05 세션에 이음매 항목을 알렸고 답은 기다리지 않는다. 일지 docs/journal/2026-11-12-2214-local-model-tickets.md
+확인할 선행 조건: 주 체크아웃 미갱신: 루트는 dev. 병합은 이 워크트리 사본의 next-session merge.md(없으면 SKILL.md)의 "워크트리에서 병합할 때"를 Read로 열어 따른다
+이번 요청 범위: 티켓까지
+
+open-session을 부른다 2026-11-12T13:39:42Z
+
+## 이어받은 세션 (2026-11-12 22:40)
+
+위 "인계"의 지시문을 받은 새 세션이 이 절부터 쓴다. 모델은 Opus 5.5 / xhigh다(받은 지시문의 모델 줄 그대로).
+
+> 사용자: .claude/skills/to-tickets/SKILL.md 를 읽어 그대로 따른다. (…) 인자: .scratch/local-model/spec.md
+>
+> 다음 작업: 기능 local-model. 명세 검토와 주석, 티켓 여섯을 썼고 셀프 리뷰부터 커밋·PR·병합까지 잇는다 (…) 이번 요청 범위: 티켓까지
+
+### 들어오기 전에 한 것
+
+- 세션 제목을 `docs/local-model-tickets`로 바꿨다.
+- `tidy-checkouts`. 루트는 dev이고 깨끗했으며 로컬에만 있는 커밋이 없어 `9714908a0`에서 `1a02ac6d5`로 당겼다(당긴 뒤 `HEAD`와 `origin/dev`가 같았다). 당긴 커밋은 그 스킬 파일을 바꾸지 않았다. `judge`는 `지운다`와 `끝낸다`를 하나도 내지 않았다. 남긴 까닭은 위 "들어오기 전에 한 것"과 거의 같고, 바뀐 것은 01-shared-markdown-component가 병합 PR 548을 얻었으나 쉬는 세션 셋과 셸 하나가 그 폴더를 쥐어 남았다는 것, local-model-spec이 쉬는 세션 넷과 셸 하나에 쥐여 남았다는 것이다. `worktree-local-model-tickets` 브랜치는 reflog의 마지막 기록이 60분 안이라 남겼다. 이 줄의 까닭은 모두 `judge`가 찍은 것이고, PR 548이 병합됐다는 것은 `list_sessions`의 `prState`로 봤다.
+- `git worktree list`에서 `docs/local-model-tickets`가 `.claude/worktrees/local-model-tickets`에 체크아웃되어 있어 `EnterWorktree(path)`로 들어왔다. 커밋하지 않은 변경은 인계 때 적은 넷 그대로였다.
+
+### 셀프 리뷰 (`/code-review`)
+
+범위: base `9714908a0`, 바뀐 파일 둘(명세, base-agent 05 티켓), 커밋 0, 미추적 일곱(티켓 여섯, 이 일지). 명세 축의 요구는 to-tickets 5단계, 명세, 사용자의 답(라벨과 설명을 글자 그대로), 명세 검토의 지적 열여섯, 받는 쪽이었다. 두 축 모두에 주장 검증 목록과 갈래 밟기 문단을 실었다(티켓은 구현 세션이 단계대로 따르는 지시라서).
+
+**표준 축**(sonnet·high). 지적 아홉, Critical 없음. 받은 그대로 줄여 옮긴다.
+
+1. Major. 03의 첫 수락이 사용자의 준비가 모자라면 "띄워 확인하는 것"을 멈추고 "그 확인 없이 PR을 병합하지 않는다"고 하지만, `docs/agents/issue-tracker.md`는 PR을 열기 전에 티켓을 done으로 바꾸고 CI는 done을 본다. done·CI 초록·빈 확인 칸인 PR을, 끊긴 뒤 이어받은 세션이 병합할 수 있다. 05의 `Blocked by 03`도 done만 기다린다.
+2. Minor. `tests/test_main.py`에서 `MODEL_ENV`를 쓰는 줄은 다섯이 아니라 여섯이다(411·441·870·875·1386·1424, 45행 import는 따로). 명세 주석과 01에 같은 수가 있다. `AnthropicModels` 셋과 `main.py`의 다섯 자리는 맞다.
+3. Minor. 05의 "저장소에서 그 문구가 0건"은 명세·티켓·일지에 그 문구가 남아 글자 그대로는 이룰 수 없다. 05의 옛 표현 "그때까지 저장소에 없다"는 `tech.md`의 실제 문장과 달라 grep이 잔존을 못 잡는다.
+4. Minor. 리눅스 측정 주석의 Docker 스크립트가 커밋되지 않아 다시 낼 수 없고, "잴 수 있었다"·"측정 9회차"가 손으로 돌린 일에 쓰는 말로 걸린다.
+5. Minor. 이 일지 "검사와 곁 세션"의 "이 브랜치가 이름으로 든 파일과 겹치는 것은 없다"가 거짓이다. `HEAD...origin/dev`에 `docs/constitution/tech.md`·`operations.md`·`README.md`·`docs/constitution/README.md`가 든다.
+6. Minor. 갈래: 무효 회차의 연달은 셈이 세션을 넘어 남지 않는다.
+7. Minor(판단). 05가 한 컨텍스트 창에 비해 크다. 사용자가 골랐으므로 판단 항목이다.
+8. Nit. 02의 `FakeModels`는 모델 소스이고 응답을 내는 것은 그 가짜 모델이다. 01이 모델 소스를 옮기면 미러링상 `tests/adapters/test_anthropic.py`의 몫이 어디로 가는지 말하지 않는다.
+9. Nit. local-model 기능 계획의 Blocked by가 없음인데 06은 base-agent에 막힌다. 03이 자식 프로세스에 `RUNPOD_API_KEY`를 넘기는지 말하지 않는다(명세에서 이어받은 틈).
+
+맞다고 확인한 것으로 서두의 수(거부한 안 표시 마흔), `PluginDetail.tsx` 43행, `tests/conftest.py` 45행, `count`의 `rglob`, langchain-anthropic 1.7.2의 `_format_output`과 `_compat.py`, 시험 이름 셋, 카나리아 명세 셋, base-agent 티켓의 상태, 검사 다섯(다시 돌려 출력 없음), 티켓의 경로 규칙을 들었다.
+
+**명세 축**(본 세션의 모델). 지적 열하나(Major 1, Minor 7, Nit 3), 범위 넘침 없음. 티켓 여섯과 막힘이 사용자의 답과 같고, 명세 검토의 열여섯이 모두 주석이나 수락에 들었으며, 넘긴 것이 deploy-package와 answer-eval의 기능 계획 본문에 이미 있고, 서두의 수가 맞고, "ADR 본문을 거짓으로 만들지 않는다"의 반례를 찾지 못했다고 했다.
+
+1. Major. 06이 기대는 이음매가 모자란다. 로컬 모델 파일은 `base_url`을 환경 변수에서 받아 복사한 플러그인 루트에 써야 하는데 그 자리가 이음매에 없다. 두 모델을 pytest 두 번으로 돌리면 pytest가 시작할 때 `--basetemp`를 지우고(`_pytest/tmpdir.py` 157행 `rm_rf`) JUnit XML도 덮어써 03의 통과 수와 토큰 합계가 둘째 모델 것만 남는다.
+2. Minor. 04가 "넷"으로 닫은 목록에 빠진 것이 있다. 어댑터 요청 사례의 "다른 서버가 받은 요청 0건"은 가짜 서버 둘을 함께 띄워야 하고, 기한에 끊긴 호출의 연결은 지연이 끝난 뒤에야 닫힌 것으로 센다(프로브 `cases_lifetime.py` 342행이 1초에 그 지연을 더해 기다렸다).
+3. Minor. 갈래: 03의 기록 묶음이 파일로 남지 않아, 돈을 내고 돌린 뒤 PR 코멘트에 옮기기 전에 끊기면 다시 빌려야 한다.
+4. Minor. 06이 실패 사례를 넘기는 `.scratch/answer-eval/plan.md`의 Blocked by에 local-model이 없다(받는 쪽 확인).
+5. Minor. 01의 `MODEL_ENV` 다섯은 여섯이다. 이름을 지키면 `main.py` 140행의 모델 이름을 푸는 줄은 바뀌지 않는다.
+6. Minor. 05의 "그 문구가 0건"은 살아 있는 명세와 티켓 01·05가 그 문구를 들어 이룰 수 없다.
+7. Minor. 05의 잔존 grep 말 "그때까지 저장소에 없다"가 원문에 없어 늘 0건이다.
+8. Minor. 리눅스 연결 셈이 05의 수락을 바꿨는데 Docker 환경 스크립트도 다시 돌릴 명령도 없다.
+9. Nit. 04의 인용 "놓인 모델과 실패한 호출이 연결을 남기지 않는다"가 원문과 글자가 다르다.
+10. Nit. 05·06의 기록 묶음 목록에 03이 더한 칸(가린 것이 있었는지)이 없다.
+11. Nit. Further Notes의 "묶음 C가 시작하기 전에 끝나 있어야 한다"가 바뀐 결정(첫 수락으로 미룬다)을 주석 없이 남겼다.
+
+두 축이 겹쳐 낸 것은 넷이다(`MODEL_ENV`의 수, 0건 grep과 잔존 말, 리눅스 측정의 재현, 끊긴 뒤 무효 회차와 기록 묶음이 남지 않는 것).
+
+### 셀프 리뷰를 반영한 것
+
+지적마다 근거를 먼저 대 봤다. 표준 축 1·2·3·4·5·6·8과 9의 둘째, 명세 축 1~11을 고쳤다. 사용자에게 물을 것은 없었다. 사용자가 고른 티켓 여섯과 막힘, ADR 0057·0058의 결정을 바꾸지 않는다.
+
+- **03의 멈춘 확인(표준 1, Major).** `tools/check_ticket.py`의 독스트링을 읽어 CI가 티켓의 `Status:`가 done인지만 보고 수락 칸은 보지 않는 것을 확인했다. 03의 첫 수락을 "확인을 마치기 전에는 상태를 `in-progress`로 두고 PR을 열지 않는다"로 좁히고 이어받은 세션이 할 일을 적었다. 명세 "모델 서버를 띄우는 명령"의 주석과 Further Notes(명세 축 11)에도 같은 것을 적었다.
+- **06의 이음매(명세 1, Major).** pytest 9.1.1의 `_pytest/tmpdir.py` `getbasetemp`가 주어진 basetemp를 지우고 다시 만드는 것과 `_pytest/junitxml.py`가 파일을 `"w"`로 여는 것을 읽었다. 이음매를 모델 차림(이름, 복사한 플러그인 루트에 더할 모델 파일, 키 검사)의 목록으로 넓히고 사례가 그 목록으로 매개변수화되게 했다. 06은 그 목록만 바꿔 pytest 한 번(대여 한 번)으로 두 모델을 돈다. base-agent 05의 차림 한 줄, 명세 "고칠 자리의 묶음"의 주석, 06을 함께 고쳤다.
+- **06의 받는 쪽(명세 4).** answer-eval의 Blocked by에 local-model이 없는 것은 명세 "다른 기능에 넘기는 것"이 이미 까닭과 함께 적었다(읽었다). 그래서 06이 넘기는 모델 고르기의 입력을 pilot-release의 기능 계획 본문으로 옮겼다. pilot-release는 deploy-package를 거쳐 local-model에 막힌다(두 기능 계획의 Blocked by 줄을 읽었다).
+- **`MODEL_ENV`의 수(표준 2, 명세 5).** `grep -n "MODEL_ENV\|AnthropicModels" tests/test_main.py`로 import 한 줄과 쓰는 자리 여섯을 손으로 봤다. 명세 주석과 01의 수를 고치고, 01에 이름을 지키면 바뀌는 자리와 그대로인 자리를 갈라 적었다. 모델 소스의 시험이 모듈을 따라 옮긴다는 것(표준 8의 둘째)도 01에 적었다.
+- **0건 grep과 잔존 말(표준 3, 명세 6·7).** 05의 0건 범위를 `src`·`tests`·`.claude/rules`로 좁히고, 잔존을 찾는 옛 표현을 `tech.md`와 `sdk.md`의 원문 글자로 고쳤다(`grep -n "그때까지" docs/constitution/tech.md`와 `grep -n "anthropic\` 하나" .claude/rules/sdk.md`로 원문을 봤다).
+- **리눅스 측정(표준 4, 명세 8).** 명세 검토가 남긴 스크래치패드의 스크립트(`linux/inner.sh`)를 `.scratch/local-model/probes/linux_lifetime.sh`로 옮겨 커밋하고, 프로브 `README.md`에 돌리는 법과 표의 줄과 결과 절 12를 더했다. 그 파일의 머리와 README에 적은 명령으로 다시 돌려 수명 사례 아홉이 명세 검토의 출력과 사례마다 같은 결과 문구를 냈다(쟀다, `probes/linux_lifetime.sh`. 측정 9회차, 측정 아님 0회차, 프로브 종료 코드 0, docker 종료 코드 0). 그래서 명세 주석과 05가 이 파일을 가리키게 고쳤다. 다시 돌린 출력을 보며 401의 셈이 리눅스에서 후보 3개 중 3, 기본값 3개 중 2로 하나 차이가 나는 것을 보고, 명세 주석의 "리눅스 러너에서 퇴행을 가르지 못한다"를 "가르지 못하거나(놓인 모델) 하나 차이로만 가른다"로 좁혔다.
+- **이 일지의 틀린 문장(표준 5).** `git diff --name-only HEAD...origin/dev`에 `docs/constitution/tech.md`·`operations.md`·`README.md`·`docs/constitution/README.md`가 든다. `git diff --word-diff=plain -U0 HEAD...origin/dev -- docs/constitution/operations.md docs/constitution/tech.md`로 본 바뀐 낱말은 operations.md의 "일곱이다"를 "여덟이다"로, vitest 프로젝트를 둘에서 셋으로 고친 것과 tech.md 웹 행의 마크다운 부품 문장이라, 티켓이 기대는 문장(tech.md의 런타임 의존성 행과 시험용 모델 서버 행)은 바뀌지 않았다. 위 "검사와 곁 세션"의 문장에 고친 말을 달았다.
+- **끊긴 뒤의 기록과 무효 회차(표준 6, 명세 3).** 03의 기록 묶음을 상태 폴더에 회차마다 파일로도 남기게 하고(종료 코드와 무효 회차의 까닭 포함), 03·05·06이 명령이 끝난 그 턴에 일지로 옮기고 이어받은 세션이 그 파일에서 옮기며 연달은 무효 회차를 센다고 적었다. 명세 "모델 서버를 띄우는 명령"의 주석에 다섯째로 적었다.
+- **자식 환경의 `RUNPOD_API_KEY`(표준 9의 둘째).** 03의 걸음 9와 시험, 명세 주석의 여섯째로 자식 프로세스의 환경에서 그 키를 빼게 했다. 이 둘로 명세 서두의 "명세가 정한 것"이 스물아홉에서 서른하나가 됐다.
+- **04의 닫힌 목록(명세 2, 명세 9).** 목록을 "명세의 어댑터·CLI 사례가 바라는 능력을 모두 갖춘다"는 일반 조항의 예로 바꾸고, 서버 둘을 함께 띄우는 것(프로브의 미끼 서버, `cases_request.py` 242행을 읽었다)과 기다린 응답의 연결 셈(프로브의 `SETTLE_SECONDS + SLOW_SECONDS`, `cases_lifetime.py` 342행을 읽었다)을 수락과 시험에 더했다. 명세 "HTTP 클라이언트"의 인용을 원문 글자로 고쳤다.
+- **기록 묶음의 칸(명세 10).** 05·06의 기록 묶음 목록에 "Terraform 출력에서 가린 것이 있었는지"를 더했다.
+- **02의 가짜 모델(표준 8의 첫째).** `tests/fake_models.py`를 읽어 `FakeModels`가 모델 소스이고 가짜 모델을 받아 돌려주는 것을 확인하고 문구를 고쳤다.
+
+남긴 것.
+
+- 표준 7(05가 크다). 사용자가 여섯 장을 골랐고(위 "명세 검토 뒤에 물은 것"), 05를 더 나누면 ADR 0058 결정 "첫 적용"이 한 PR에 묶은 어댑터와 로컬 모델 시험이 갈린다. 판단 항목이라 고치지 않는다.
+- 표준 9의 첫째(local-model 기능 계획의 Blocked by가 없음인데 06은 base-agent에 막힌다). 기능 계획의 Blocked by는 기능 단위의 프론티어를 정하고(`docs/agents/issue-tracker.md` 전체 계획 절), 06 하나 때문에 base-agent를 적으면 01~05까지 프론티어에서 빠진다. 06의 Blocked by가 base-agent를 들고, 같은 꼴의 선례가 base-agent 07이다(기능의 Blocked by에 적지 않고 티켓의 첫 수락으로 확인한다). 고치지 않는다.
+
+PR 직전 `bug-perf-review`에 밀 주장으로 넘길 새 문장(원문).
+
+1. 03과 명세: "CI의 커밋 검사는 티켓의 `Status:`가 done인지를 볼 뿐 수락 칸은 보지 않으므로(`tools/check_ticket.py`의 독스트링)"
+2. 06과 명세: "pytest를 모델마다 따로 부르면 둘째 실행이 시작할 때 03이 넣은 basetemp를 지우고 JUnit XML을 덮어써(pytest 9.1.1의 `_pytest/tmpdir.py` `getbasetemp`와, 파일을 `"w"`로 여는 `_pytest/junitxml.py`를 읽었다), 기록 묶음의 통과 수와 토큰 합계에 둘째 모델 것만 남는다"
+3. 06과 명세: "answer-eval의 Blocked by에는 local-model이 없어 이 티켓보다 먼저 닫힐 수 있고(…), pilot-release는 deploy-package를 거쳐 local-model에 막혀 이 티켓 뒤에 돈다"
+4. 01: "함수와 상수의 이름을 지키면 모델 이름을 푸는 줄과 `MODEL_ENV`를 쓰는 자리는 그대로이고 import만 바뀐다. 모델 소스의 타입 이름이 바뀌므로 조립 자리 셋과 바꿔 끼우는 세 자리는 바뀐다"
+5. 04: "기다릴 시간을 준 응답의 연결은 클라이언트가 먼저 끊어도 그 시간이 끝난 뒤에 처리를 마친 것으로 세어진다"(수락으로 적은 픽스처의 성질)
+6. 프로브 README 12와 명세 주석: "놓인 모델의 셈은 리눅스에서 후보와 기본값을 가르지 못하고, 401의 셈은 하나 차이(3개 중 3과 3개 중 2)로만 갈렸다", "리눅스 컨테이너 하나에서 한 번씩 돈 값이고 CI의 ubuntu 러너에서는 돌리지 않았다"
+7. 03: "자식의 환경에서는 `RUNPOD_API_KEY`를 뺀다. 시험은 그 키를 쓰지 않고"
