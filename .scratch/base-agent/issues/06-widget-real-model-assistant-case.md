@@ -21,6 +21,7 @@
 - [ ] 픽스처의 규칙 파일에 `assistant`의 세 줄을 더하고, 실제 모델 e2e의 사이트가 여는 에이전트에 `assistant`를 더한다
 - [ ] 픽스처의 `assistant` 세 줄 곁에, 그것이 저장소 `plugins/rules.toml`의 사본이라는 것과 원본의 경로를 주석으로 적는다. 저장소의 표가 바뀌면(kb-selection이 `list_knowledge_bases`를 allow로 옮긴다. ADR 0051의 2026-11-10 이력) 이 사본도 손으로 맞춘다
 - [ ] 감싸는 시험의 기준에서 통과한 사례의 수가 1에서 2가 된다(건너뜀 0은 그대로)
+- [ ] 감싸는 시험의 출력 판정은 지금 트레이스 전체에서 `run_finished`의 출력이 하나라고 본다(`tests/test_widget_llm.py`의 `_failures`가 `len(outputs) != 1`을 본다). 실행이 둘이 되면 깨지므로 사례마다의 짝으로 바꾼다. 화면 글은 그 사례가 연 에이전트의 이름과 함께 싣고, 트레이스에서는 그 에이전트로 시작한 실행(`run_started`의 `agent`)의 출력을 고른다. 글자를 견주는 것은 계산 사례 하나이고 `assistant` 사례는 정해 둔 낱말만 본다. answer-markdown 03(`.scratch/answer-markdown/issues/03-widget-renders-answers-as-markdown.md`)이 같은 짝짓기를 짓는다. 그 티켓이 먼저 들어와 있으면 그 짝짓기와 비교 규칙(화면 글이 원문의 글자와 숫자의 부분열인지 보는 것)을 그대로 쓴다(`.scratch/answer-markdown/spec.md`의 "위젯의 시험"과 "실제 모델 시험의 비교 규칙")
 
 ### 함께 치는 것
 
