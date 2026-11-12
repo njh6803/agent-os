@@ -9,10 +9,13 @@
 탈출구(`PUSH_BEHIND_OK`)로 지나가고, 래퍼(`bash -c "git push"`) 같은 우회는 막지 않고 아래 못 보는
 것에 든다.
 
-왜. `tools/protection.json` 의 strict 보호라 PR 은 최신 main 위에서 돈 CI 로만 병합된다. 푸시하는
-순간에 이미 뒤처졌으면 병합 전에 어차피 main 을 합쳐야 하므로, 그대로 푸시한 CI 는 한 번 더 돈다.
-먼저 합치고 푸시하면 그 한 번이 준다. 합친 뒤의 로컬 게이트는 어느 쪽이든 돈다. CI 실행의 갈래와
-main 합치기의 수는 `.scratch/harness/probes/ci_wait/runs_per_pr.py` 가 낸다(일지 2026-10-13-38).
+왜. 푸시하는 순간에 이미 뒤처졌으면 병합 전에 기준 브랜치를 합치게 되어, 그대로 푸시한 CI 는 한 번
+더 돈다. main 은 `tools/protection.json` 의 strict 보호라 PR 이 최신 main 위에서 돈 CI 로만
+병합된다. dev 는 strict 가 아니지만(`tools/protection-dev.json`, 2026-11-12) 사용자 수준 `git-pr`
+2단계가 base 가 앞섰으면 푸시 전에 rebase 하게 하고, 이 훅도 dev 에서 같은 판정으로 막는다. dev 가
+strict 가 아니게 된 뒤로 dev 에서도 막을지는 다시 정하지 않았다. 먼저 합치고 푸시하면 그 한 번이
+준다. 합친 뒤의 로컬 게이트는 어느 쪽이든 돈다. CI 실행의 갈래와 main 합치기의 수는
+`.scratch/harness/probes/ci_wait/runs_per_pr.py` 가 낸다(일지 2026-10-13-38).
 
 왜 막는가. 계기(`additionalContext`)만 주는 PreToolUse 훅은 명령을 그대로 돌린다. 모델의 차례가
 훅과 도구 실행 사이에 없어, 알림은 푸시가 나간 뒤에야 읽힌다(훅 실행 순서에서 끌어낸 판단이고 재지
@@ -277,8 +280,9 @@ def behind_count(cwd: str) -> tuple[str, int] | None:
 
 def reason_text(count: int, base: str) -> str:
     return (
-        f"이 브랜치는 origin/{base} 보다 {count}커밋 뒤처졌다. strict 보호라 병합 전에 어차피 "
-        f"{base} 를 합쳐야 해서, 지금 푸시하면 CI 가 한 번 더 돈다. `git merge origin/{base}` 으로 "
+        f"이 브랜치는 origin/{base} 보다 {count}커밋 뒤처졌다. 병합 전에 {base} 를 합치게 "
+        "되므로(main 은 strict 보호이고 dev 는 PR 전에 기준 브랜치에 맞추는 규약이다) "
+        f"지금 푸시하면 CI 가 한 번 더 돈다. `git merge origin/{base}` 으로 "
         "합치고(충돌이면 풀고) CLAUDE.md 의 검증 명령과 `uv run python tools/sibling_overlap.py` "
         "를 지난 뒤 다시 푸시한다. 충돌 없는 합치기에는 pre-commit 이 돌지 않는다. 일부러 뒤처진 "
         f"채 푸시하려면 Bash 에서 `{BYPASS}=1 git push …`, PowerShell 에서 "
