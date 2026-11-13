@@ -227,10 +227,11 @@ def test_기다릴_시간을_준_응답을_먼저_끊으면_처리를_마친_연
             _post(connection, CHAT_PATH, {})
         connection.close()
         # 클라이언트는 끊었지만 서버는 아직 그 요청을 처리하는 중이다. 부하로 이 줄이 기다릴 시간이
-        # 끝난 뒤에 돌 수 있으니, 아직 그 시간 안일 때만 셈이 0임을 단언한다.
+        # 끝난 뒤에 돌 수 있으니, 아직 그 시간 안일 때만 처리를 마친 연결이 0임을 단언한다. 받은
+        # 연결은 서버 스레드가 굶으면 아직 0일 수 있어 보지 않는다.
         counts_at_cut = (server.opened_connections, server.closed_connections)
         still_waiting = time.monotonic() - started < SLOW_SECONDS - 0.5
-        assert counts_at_cut == (1, 0) or not still_waiting, f"끊은 직후 셈 {counts_at_cut}"
+        assert counts_at_cut[1] == 0 or not still_waiting, f"끊은 직후 셈 {counts_at_cut}"
         assert server.connections_settled(PATIENCE_SECONDS)
         settled_after = time.monotonic() - started
         assert (server.opened_connections, server.closed_connections) == (1, 1)

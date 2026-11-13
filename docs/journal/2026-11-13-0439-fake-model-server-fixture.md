@@ -94,9 +94,11 @@ PR 직전 리뷰에 밀 주장(이번 반영으로 새로 쓴 사실 문장):
 - 시험 한 파일만: `uv run pytest tests/adapters/test_fake_model_server.py -q` → 18개 통과(5.90초). 시험이 하나 늘었다(`stop()` 두 번을 뗐다).
 - 린트 둘: `uv run ruff check .`(`All checks passed!`), `uv run ruff format --check .`(2160개 이미 서식 맞음).
 - 변이: 위와 같다.
-- 나머지는 커밋의 pre-commit 결과로 갈음하려 했으나 커밋이 두 번 막혔다(아래). 커밋은 아직 만들어지지 않았다.
+- 나머지는 커밋의 pre-commit 결과로 갈음했다. 커밋이 두 번 막힌 뒤 세 번째 시도에서 통과해 커밋 `4f4aeb041`(`test: 가짜 모델 서버 픽스처를 세운다 (04-fake-model-server-fixture)`)이 만들어졌다(아래).
 
-### pre-commit 결과 (커밋 시도 두 번, 둘 다 막힘)
+### pre-commit 결과 (커밋 시도 세 번, 앞의 둘은 막힘)
+
+셋째 시도(사용자가 "다시 커밋 시도"를 골랐다)는 코드를 바꾸지 않고 다시 쳤고 전부 통과했다. `ruff` 둘, `check-ticket`, `lint-imports`, `zizmor`, `check-instructions`, `check-type-escapes`, `pyright`, `pyright-linux`, `run-hooks`, `pytest`(658.0초), `web-verify`, 표·줄 구분 문자·변이 표·인용 검사, 커밋 메시지 검사가 `Passed`였고 `canary specs`와 `constitution version`은 `no files to check`로 `Skipped`였다(훅 출력). 갈음하지 못하는 것(`-m llm`, e2e, 사진 비교)은 이 티켓이 닿지 않는다. 앞의 두 시도의 실패는 아래와 같다.
 
 두 시도 모두 `check-ticket`, `lint-imports`, `zizmor`, `check-instructions`, `check-type-escapes`, `pyright`, `pyright-linux`, `run-hooks`, `web-verify`, 변이 표 원문 검사(`mutation tables`), 마크다운 표·줄 구분 문자·인용 검사는 통과했다(훅 출력). `pytest`만 실패했다.
 
@@ -104,3 +106,20 @@ PR 직전 리뷰에 밀 주장(이번 반영으로 새로 쓴 사실 문장):
 - 둘째 시도(972.5초): 7242개 통과, 3개 실패. `tests/channel/cli/test_interrupt.py`의 둘(`Ctrl+C 를 누른 자식이 30초 안에 끝나지 않았다`)과 위 `test_rerun_runner.py`의 같은 시험 하나.
 - 이 세션이 `tests/tools/test_probe_kit.py`와 `tests/tools/test_rerun_runner.py`만 홀로 돌리니 78개가 모두 통과했다(308초, 손으로 쳤다). `test_interrupt.py`는 이 세션이 홀로 돌려 보지 않았다. 앞 세션이 `test_interrupt.py`와 `test_rerun_runner.py` 둘만 홀로 돌려 69개 통과를 봤다(앞 절의 일지).
 - 이 변경은 `tools/`와 `channel/cli/`를 건드리지 않았다(`git diff` 범위는 `tests/adapters/`, `.scratch/`, `docs/journal/`). 실패 시험이 매번 조금씩 다르고(첫 시도 둘, 둘째 시도 셋, 앞 세션 셋) 홀로 돌리면 통과하는 것으로 보아 다른 세션과 함께 도는 부하에서 시간 단언이 흔들린 것으로 본다. 이 판단은 어림이다. 기준 브랜치(`origin/dev`)에서 같은 부하로 같은 시험이 빨개지는지는 재 보지 않았다.
+
+## PR 직전 리뷰 (CodeRabbit CLI)
+
+> 사용자: PR 열고 병합해줘
+
+`coderabbit-review` 서브에이전트가 `origin/dev` 기준 커밋 `4f4aeb041`을 CodeRabbit CLI 0.7.5로 봤다. `Seat: not assigned`(`Plan: Free`)였는데 리뷰는 끝까지 돌아 `review_completed`를 냈다(서브에이전트 보고). 지적은 2건이고 Critical·Major는 없었다. 지적마다 판정한다.
+
+1. `stop()`이 이미 맺어진 쉬는 연결을 닫지 않는다(Minor, 서브에이전트 판정 유효). 이 세션이 서브에이전트의 프로브(`probe_stop.py`, 저장소 밖 스크래치패드)를 `uv run python -I`로 다시 돌려 확인했다. 끈 뒤에도 쥔 연결로 200이 왔고(`after stop on kept-alive conn: (200, b'b')`) 핸들러 스레드는 클라이언트가 닫은 뒤에 줄었다(`threads before/after: 1 2`, `after client close: 1`). 티켓의 "끈 뒤 그 포트에 붙으면 연결이 거부된다"는 새 연결에 대한 것이라 충족한다. 05의 "꺼진 서버" 사례도 닫힌 포트에 새 연결로 붙으므로 닿지 않는다. 고쳤다. 모듈 독스트링에 한계를 적었다. 연결을 쥔 채 서버가 죽는 사례는 05가 필요해지면 05가 `stop()`의 연결 정리를 더한다.
+2. `still_waiting`이 늦게 본 관찰을 정상으로 허용한다(Minor, 서브에이전트 판정 부분 오탐). 거짓 통과는 뒤의 `connections_settled`와 `settled_after >= SLOW_SECONDS - 0.1`이 따로 잡으므로 성립하지 않는다. 다만 `(1, 0)` 단언은 서버 스레드가 0.2초 안에 `setup()`까지 돈다고 가정한다. 고쳤다. 끊은 직후에는 처리를 마친 연결이 0인지(`counts_at_cut[1] == 0`)만 보고 받은 연결 수는 보지 않는다. 서버 지연을 `threading.Event`로 제어하자는 제안은 따르지 않았다. 기다릴 시간(`Reply.delay_seconds`)이 티켓이 요구한 기능이라 그 길을 밟아야 변이 4가 그 길을 겨눈다. 고친 뒤 시험 18개와 변이 여섯(`변이 6 모두 기대대로`)을 다시 돌려 통과를 봤다.
+
+남긴 것(이유 한 줄씩, 모두 Minor 이하):
+
+- `_opened`는 accept 시점이 아니라 핸들러 스레드의 `setup()`에서 오른다. 요청 없이 연결만 맺었다 끊는 클라이언트가 둘 있으면 `connections_settled`가 일찍 참이 될 수 있다. 지금 시험에는 그 경로가 없고 05가 쓰는 방식에 달렸다. 05가 그 경로를 쓰면 05가 다룬다.
+- 응답 함수가 `OSError`를 던지면 `handle()`의 `except OSError`에 삼켜진다. 응답 함수를 잘못 쓴 경우이고 05가 그 경로를 쓰지 않는다.
+- `do_GET`과 `do_POST`만 정의되어 PUT 등은 `requests`에 적히지 않고 표준 라이브러리의 501 HTML이 간다. 청크 본문(`Transfer-Encoding: chunked`)은 읽지 않는다. Chat Completions 클라이언트는 `Content-Length`를 보내므로 05에서 문제가 되면 그때 다룬다.
+
+PR 직전 리뷰의 다음 층(PR 봇)에 밀 주장: 모듈 독스트링의 "끄면 듣는 소켓만 닫혀 새 연결은 거부되지만, 클라이언트가 쥐고 있는 쉬는 연결은 그 클라이언트가 닫을 때까지 계속 답한다"(위 프로브를 이 세션이 다시 돌려 봤다).
