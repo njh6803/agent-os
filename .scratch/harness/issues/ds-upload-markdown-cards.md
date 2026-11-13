@@ -8,7 +8,7 @@
 
 ## 수용 기준
 
-- [x] 올리기가 Artifact 도구에 거부되지 않고 끝났고, 보낸 뒤 확인이 `clean`이다. 결과를 본 뒤 이 기준의 거부를 이 티켓이 닫으려던 U+FFFD 거부로 좁혀 읽고 체크했다. 그 거부는 없었다. 다른 까닭의 거부가 두 번 있었다("You haven't viewed the latest version of this artifact"). 좁혀 읽은 까닭은 둘이다. 그 두 거부는 아티팩트 종류의 페이지 파일이 판을 올려 난 것이라 이 티켓의 고침과 상관이 없고, 같은 내용을 세 번째에 보내 받아들여졌다(아래 결과)
+- [x] 올리기가 Artifact 도구에 거부되지 않고 끝났고, 보낸 뒤 확인이 `clean`이다. 이 `clean`은 웹 편집을 가르는 확인 명령의 결과이고, 카드가 그려지는지는 다음 기준에서 따로 봤다. 결과를 본 뒤 이 기준의 거부를 이 티켓이 닫으려던 U+FFFD 거부로 좁혀 읽고 체크했다. 그 거부는 없었다. 다른 까닭의 거부가 두 번 있었다("You haven't viewed the latest version of this artifact"). 좁혀 읽은 까닭은 둘이다. 그 두 거부는 아티팩트 종류의 페이지 파일이 판을 올려 난 것이라 이 티켓의 고침과 상관이 없고, 같은 내용을 세 번째에 보내 받아들여졌다(아래 결과)
 - [x] 아티팩트의 Components 절에서 카드가 모두 그려지는지 앱 안 브라우저로 봤다(절차 6의 6의 "카드"). 아홉 개는 그려지고 Markdown 카드는 깨졌다. 고칠 일은 `.scratch/answer-markdown/issues/04-markdown-card-renders-on-react-18.md`다
 - [x] `previous-output.json`이 이번 산출의 경로 목록과 같다
 - [x] 대기열 항목 `ds-upload-replacement-char-rejected`를 `.scratch/retro-queue/README.md`의 닫힘 꼴로 닫았다

@@ -76,10 +76,32 @@ PR #560을 열고 `@coderabbitai review`를 남긴 뒤 `uv run python tools/wait
 - 고친 것(명세 Minor 1): harness 티켓의 수용 기준 1이 "거부되지 않고"인데 다른 까닭의 거부 둘을 두고 체크했다. 결과를 본 뒤 기준을 U+FFFD 거부로 좁혀 읽었다는 것과 그 까닭(종류의 페이지 파일이 판을 올려 난 거부라 이 티켓의 고침과 상관없고, 같은 내용이 세 번째에 받아들여졌다)을 적었다(`docs/agents/issue-tracker.md`의 "근거는 무엇으로 섰는지 밝힌다").
 - 고친 것(명세 Minor 2): `url`만 준 `read`가 SKILL.md "보내기"가 따르지 말라고 한 도구 안내의 "다시 읽기" 몫이라는 것을 harness 티켓에 적었다. 합치지는 않았고 넷째 확인이 첫 확인과 같았다. 확인이 깨끗한데도 도구가 거부하는 갈래가 절차에 없는 것은 회고 후보로 남긴다.
 - 고친 것(명세 Minor 3): `.scratch/answer-markdown/plan.md`의 "티켓은 셋이다"가 04를 더해 틀렸다. "티켓은 넷이다"로 고치고, 명세에서 쪼갠 셋과 04가 더해진 까닭을 갈라 적었다. `plan_table.py`를 다시 돌렸고 `.scratch/plan.md`는 바뀌지 않았다.
-- 고친 것(명세 Minor 4): 04의 수용 기준 2가 "18.3.1과 19에서 함께"인데 예로 든 "페이지를 React 19로" 길은 18.3.1 조건을 채우지 못한다. 그 길은 design-card-build가 정한 페이지의 판(명세 "색인의 `libraries`"·"보낸 뒤", `assemble.ts`의 `JSX_SHIM`·`FORBIDDEN`)을 바꾸는 일이라 이 티켓 밖이라고 적고, 위에서 더한 지침 인용과 UMD 절은 그 길을 정할 때 볼 것으로 옮겼다.
+- 고친 것(명세 Minor 4): 04의 수용 기준 2가 "18.3.1과 19에서 함께"인데 예로 든 "페이지가 React 19를 싣게 하는 길"은 18.3.1 조건을 채우지 못한다. 그 길은 design-card-build가 정한 페이지의 판(명세 "색인의 `libraries`"·"보낸 뒤", `assemble.ts`의 `JSX_SHIM`·`FORBIDDEN`)을 바꾸는 일이라 이 티켓 밖이라고 적고, 위에서 더한 지침 인용과 UMD 절은 그 길을 정할 때 볼 것으로 옮겼다.
 - 고친 것(명세 Nit 6): 04의 수용 기준 1에, 18.3.1 시험이 그려지면 원인 어림이 틀린 것이니 고치지 말고 카드가 실패하는 까닭부터 찾는다는 갈래를 더했다. 02가 같은 꼴을 더할 수 있으니 고칠 때 자리를 다시 grep하라는 말도 기준 2에 더했다.
 - 고친 것(명세 Nit 7): harness 티켓의 "최신 판을 보지 않았다" 따옴표는 번역이라 도구 문구 원문으로 바꿨다(이 세션의 트랜스크립트에서 grep으로 찾았다). 위 PR #560 몫의 "`wc -c`로 모두 잰 값"을 "손으로 본 값"으로 고쳤다. 사용자 답 인용은 표준 Nit 3에서 고쳤다.
 - 명세 Nit 5는 표준 Minor 1과 같은 지적이라 함께 고쳤다.
-- PR 직전 리뷰에 밀 주장: 04의 "페이지를 React 19로 올리는 길은 이 티켓 밖" 문단(design-card-build 명세의 두 절과 `JSX_SHIM`·`FORBIDDEN`을 맞게 가리키는지), harness 티켓의 기준 1을 좁혀 읽은 까닭, `.scratch/answer-markdown/plan.md`의 "티켓은 넷이다" 문장, 04의 "UMD builds removed" 절 인용.
+- PR 직전 리뷰에 밀 주장: 04의 "페이지가 React 19를 싣게 하는 길은 이 티켓 밖이다" 문단(design-card-build 명세의 두 절과 `JSX_SHIM`·`FORBIDDEN`을 맞게 가리키는지), harness 티켓의 기준 1을 좁혀 읽은 까닭, `.scratch/answer-markdown/plan.md`의 "티켓은 넷이다" 문장, 04의 "UMD builds removed" 절 인용.
 - 회고 후보: 추적 파일의 U+FFFD를 잡는 저장소 상태 시험(앞 셀프 리뷰에서 낸 것), 확인이 깨끗한데도 Artifact 도구가 최신 판을 보지 않았다고 거부하는 갈래가 `SKILL.md` "보내기"에 없는 것(`paths` 읽기는 본 것으로 치지 않는 것으로 보인다), 카드 시험이 패키지의 React 19로만 그려 페이지의 18.3.1과 갈리는 부품을 놓친 것(04가 시험을 더한다).
-- 다시 돌린 명령: 손으로 치는 다섯은 이 커밋의 pre-commit으로 갈음한다. 결과는 커밋 뒤 적는다.
+- 다시 돌린 명령: 손으로 치는 다섯은 커밋 `fa5505823`의 pre-commit으로 갈음했다. `check-ticket`, `lint-imports`, `zizmor`, `check-instructions`, `check-type-escapes`, `pyright-linux`, `pyright`, `run-hooks`, `pytest`(698.5초), `web-verify`(815.1초), 표·줄 구분 문자·변이 표 검사, 커밋 메시지 검사가 Passed였다. ruff 둘은 `.py`가 없어 손으로 쳐서 `All checks passed!`와 `2190 files already formatted`였다. 인용 대조(`check-quotes`)가 경고 셋을 냈다. 04의 아티팩트 지침 인용은 저장소 밖의 글이고, 일지의 "React 19 릴리스 노트에서 아는 것"은 고치기 전의 티켓 문구라 그대로 둔다. 일지의 밀 주장 줄의 04 인용은 티켓 문구와 달라 티켓 문구대로 고쳤고, 같은 꼴의 짧은 인용 하나(명세 Minor 4 줄)도 함께 고쳤다.
+- PR 직전 리뷰: `coderabbit-review` 서브에이전트가 CLI 0.7.5(`Plan: Free`, `Seat: not assigned`)를 base `ad7dff584`로 끝까지 돌려 `review_completed`, 지적 0건이었다(파일 여섯). 밀 주장 넷 가운데 셋(04의 "이 티켓 밖" 문단, 기준 1을 좁혀 읽은 까닭, "티켓은 넷이다")은 읽고 맞다고 했고, UMD 절은 이 세션이 손으로 본 것으로 남겼다. 서브에이전트가 따로 낸 Minor 하나(기준 1의 `clean`이 카드가 깨진 것과 엇갈려 읽힌다)는 `clean`이 웹 편집을 가르는 확인의 결과이고 카드는 다음 기준에서 따로 봤다는 구절을 더해 고쳤다. Nit 하나(React 18이 컨텍스트 객체를 소비자로 읽는다는 기억이 틀릴 수 있다)는 04가 기억이라고 밝히고 재현을 먼저 요구하므로 그대로 둔다.
+
+## 회고
+
+후보 여섯을 냈다. 승인 셋, 기각 셋, 넘김 0이다(물을 것이 없어 답을 기다리지 않았다).
+
+- 승인(검사, 2회차): 이스케이프 글을 적으려던 자리에 날것 U+FFFD가 들어 저장소 파일에 남았다. 앞 세션의 대기열 항목 어디로 줄(1회차)과, 이 세션이 도구 인자에 적은 6글자 이스케이프 글이 풀려 다섯 파일에 든 일(2회차)이다. 날것 문자를 잡는 `tools/check_line_separators.py`가 U+FFFD를 보지 않는다. 검사를 넓히는 더하는 것이라 다섯 번째 전이고, 새 항목 `raw-replacement-char-in-tracked-text`(2회차)에 두었다. 0022·0052·0160과 같은 종류의 틈이다.
+- 승인(고침, 0529의 4회차): 보내기가 "You haven't viewed the latest version of this artifact"로 두 번 거부되었고, `SKILL.md` "보내기"대로 확인부터 다시 해도 같은 거부가 났다. 0529가 같은 일을 3회차로 적고 2026-11-12에 만료됐다. 새 항목 `ds-send-stale-view-rejected`(4회차)에 잇고, 스킬의 틀린 사실을 고치는 고침이라고 적었다. 이 세션에서 반영하지 않은 것은 스킬을 고치면 새 세션에서 불러 봐야 하는데(`CLAUDE.md` 작업 규약 3), 이 PR은 올리기의 기록만 싣기 때문이다.
+- 승인(검사, 1회차): 일지가 손으로 `wc -c`를 쳐서 본 값을 "잰 값"으로 적었는데, `hook_measure_word`의 측정 낱말에 관형형이 없어 알리지 않았다(그 훅의 `MEASURE_WORDS`를 읽었다). 새 항목 `measure-word-misses-adnominal-form`(1회차).
+- 기각: 카드 시험이 패키지의 React 19로만 그려 페이지의 React 18.3.1에서 깨지는 Markdown 카드를 놓쳤다. design-card-build 명세 "보낸 뒤"가 그것을 자동 검사 밖의 눈 확인으로 정했고, 이번에 그 확인이 제 몫을 했다. 18.3.1 시험은 04가 더한다.
+- 기각: 근거의 종류와 인용(04가 React 18의 동작을 릴리스 노트에서 안다고 적은 것, 아티팩트 지침을 줄여 옮긴 것, 수용 기준을 좁혀 읽고 밝히지 않은 것). `code-review` 두 브리프의 주장 검증과 명세 축이 잡도록 둔 기준이라 회차에서 뺀다. 검사로 옮길 꼴도 없다.
+- 기각: 일지의 밀 주장 줄이 04를 티켓 문구와 다르게 인용했다. `check-quotes`가 커밋에서 알렸다.
+
+만료: `uv run python tools/queue_open_rows.py`의 "만료할 항목"이 없었다.
+
+## 다음
+
+이 harness 티켓의 주제는 닫혔다. 대기열 항목 `ds-upload-replacement-char-rejected`가 닫혔고, 남은 것은 다른 원인의 고침인 answer-markdown 04다.
+
+- answer-markdown 04는 02를 기다린다. 02는 md-02 세션(`local_674f789a-d640-4833-9e9f-a5b05bccd641`)이 하고 있다. 02가 병합되면 03과 04가 막힌 것 없는 티켓 둘이 된다. 04는 병합 뒤 디자인 시스템을 다시 올려 Markdown 카드를 본다(04의 수용 기준 3).
+- 이 PR은 harness 티켓의 PR이라 다음은 `.scratch/plan.md`의 프론티어에서 고른다(next-session 결정표). 이 세션은 다른 세션이 연 곁 세션이라 새 세션을 열지 않고, 고르는 일은 이 세션을 연 세션에 넘긴다. 그 세션이 지금 도는 세션들을 보고 겹치지 않게 고른다.
+- 이 회고가 더한 대기열 항목은 셋이다(`raw-replacement-char-in-tracked-text`, `ds-send-stale-view-rejected`, `measure-word-misses-adnominal-form`). 어느 것도 회차 5에 닿지 않았다.
