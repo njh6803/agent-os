@@ -54,6 +54,31 @@ dev 전환은 rag-engine으로 옮겨졌다(agent-os의 `dev-branch-create`·`de
 
 `uv run python tools/queue_open_rows.py`의 "만료할 항목"은 없음이었다.
 
+## 인계 (커밋 뒤)
+
+`SKIP=pytest`로 다시 친 커밋 `3d9588e39`가 성공했다(종료 0. 나머지 pre-commit 검사는 돌았다). 그 뒤 세션 컨텍스트가 인계 문턱을 넘어 `커밋 뒤` 경계에서 인계한다. 이 세션의 제목은 `docs/drop-rag-engine-harness-drift`였다. 남은 일은 푸시, PR, 병합이다. pytest를 건너뛴 사유(위 셀프 리뷰 절)와 CI의 pytest로 확인한다는 것을 PR 본문에 적는다. 이 절은 커밋하지 않았다. 새 세션이 이어 쓰고 커밋한다.
+
+지시문:
+
+```
+다음 작업: docs/drop-rag-engine-harness-drift 브랜치(티켓 없는 면제 PR). 두 저장소의 하네스 벌어짐 점검 도구를 접는 커밋을 푸시하고 PR을 열어 병합한다
+다음 단계: PR 반영·병합
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: 접자 (일지 docs/journal/2026-11-13-1830-drop-rag-engine-harness-drift.md)
+브랜치: docs/drop-rag-engine-harness-drift
+모델: Sonnet 5.5 / high. 2의 잇는 지시문
+읽을 것: 없음
+이어받을 상태: 인계: 커밋 뒤. 커밋 하나까지 했고 푸시·PR·병합이 남았다. 커밋은 사용자 승인으로 SKIP=pytest를 썼다(부하에서 흔들린 test_rerun_runner 시험 하나, 따로 돌리면 통과). PR 본문에 그 사유와 CI pytest로 확인한다는 것을 적는다. 일지의 "인계" 절은 커밋하지 않았다. 일지 docs/journal/2026-11-13-1830-drop-rag-engine-harness-drift.md
+확인할 선행 조건: 없음
+이번 요청 범위: PR과 병합까지
+```
+
+제목을 `docs/drop-rag-engine-harness-drift (인계함)`으로 바꿨고, 워크트리 잠금을 풀었다(`git worktree unlock`이 출력 없이 끝났다). 띄운 백그라운드 작업은 없다.
+
+open-session을 부른다 2026-11-13T10:24Z
+
+인계 못함 커밋 뒤. `tools/open_session.ps1 -Action send`가 `idle=256s`, `lock=` 뒤에 "Claude 창을 찾지 못했다"로 멈췄다. `fired=` 전이라 딥링크는 쏘지 않았다. 제목을 `docs/drop-rag-engine-harness-drift`로 되돌렸고, 이 세션이 푸시·PR·병합을 잇는다.
+
 ## 다음
 
 이 PR이 병합되면 rag-engine 쪽에 예정된 일은 판 내기 워크플로를 옮기는 지시문이다(훅의 버그 수정은 생길 때마다 지시문으로 옮긴다). 그 지시문은 `release-image`가 판 내기를 실제로 돌려 본 뒤에 낸다(`.scratch/release-image/plan.md` 본문). 지금 바로 이어서 할 수 있는 일은 `docs/widget-login-state-design` 세션의 설계 인터뷰와, 명세를 기다리는 `release-image`(`/to-spec release-image`)다.
