@@ -682,7 +682,8 @@
       "ModelProvider": {
         "description": "모델 플러그인의 제공사.",
         "enum": [
-          "anthropic"
+          "anthropic",
+          "openai-compatible"
         ],
         "title": "ModelProvider",
         "type": "string"
@@ -761,6 +762,31 @@
         "additionalProperties": false,
         "description": "플러그인 하나의 매니페스트. plugin.toml 하나를 옮긴 것이다.",
         "properties": {
+          "api_key_env": {
+            "anyOf": [
+              {
+                "pattern": "^[A-Za-z0-9_]+$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "키 값이 아니라 런타임이 호출 때 읽을 환경 변수의 이름.",
+            "title": "Api Key Env"
+          },
+          "base_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "모델 서버의 API 뿌리까지 적은 주소. vLLM이면 /v1 까지 적고 그 뒤에 chat/completions 가 붙으며 끝의 / 는 있어도 없어도 같다.",
+            "title": "Base Url"
+          },
           "conversation_limit": {
             "anyOf": [
               {
@@ -946,6 +972,8 @@
           "model_id",
           "max_tokens",
           "temperature",
+          "base_url",
+          "api_key_env",
           "server"
         ],
         "title": "PluginManifest",

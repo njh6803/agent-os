@@ -1,7 +1,8 @@
 # `.claude/rules/sdk.md` 의 에이전트 매니페스트 선택 칸 항목에 더한 두 끝(`max_turns`, `max_tool_calls`)의 문장이
 # `paths` 에 맞는 파일을 Read 로 열 때 실리는지(base-agent 티켓 01).
 # 실험군은 규칙의 paths 안(src/agent_os/sdk/), 대조군은 밖(README.md)을 읽는다. 둘 다 이 체크아웃이다.
-# 최신 결과: 통과 4(2026-11-11, 이 PC의 base-agent 티켓 01 워크트리, claude 2.1.322, HEAD 377675eef 위의 커밋하지 않은 작업 트리). 실험군 셋이 두 문구를 글자 그대로 옮겼고 대조군은 "없음"이었다. "없음" 섞임 0.
+# 최신 결과: 통과 4(2026-11-13, 이 PC의 local-model 티켓 01 워크트리, claude 2.1.322, HEAD a4eea81ff 위의 커밋하지 않은 작업 트리). 티켓 01 이 sdk.md 의 매니페스트 항목과 모델 항목을 고친 뒤 돌렸다. 실험군 셋이 두 문구를 글자 그대로 옮겼고 대조군은 "없음"이었다. "없음" 섞임 0.
+# 앞선 결과: 통과 4(2026-11-11, 이 PC의 base-agent 티켓 01 워크트리, claude 2.1.322, HEAD 377675eef 위의 커밋하지 않은 작업 트리). 실험군 셋이 두 문구를 글자 그대로 옮겼고 대조군은 "없음"이었다. "없음" 섞임 0.
 # 돌리는 법: uv run python tools/canary.py .scratch/base-agent/probes/canary/sdk_rule_two_limits.toml <출력 디렉터리>
 kind = "rule"
 question = '''

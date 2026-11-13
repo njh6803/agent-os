@@ -42,8 +42,8 @@ from tests.mcp_http import serving
 from tests.signing import AUDIENCE, bearer, claims, new_key, sign
 
 from agent_os import main as main_module
-from agent_os.adapters.anthropic import MODEL_ENV
 from agent_os.adapters.jsonl import JsonlTrace
+from agent_os.adapters.models import MODEL_ENV
 from agent_os.channel.cli.main import DEFAULT_HOST, EXIT_PAUSED
 from agent_os.channel.http.limits import DEFAULT_REQUEST_CHARS, check_request_chars
 from agent_os.core.ports import ChatModel, Trace, UnknownEvent
@@ -510,6 +510,33 @@ def test_꺼진_기본_모델은_시작_확인을_막지_않고_그_실행이_�
     assert out == ""
     assert f"꺼진 플러그인이다: model {MODEL_PLUGIN}" in err
     assert "기본 모델 플러그인이 없다" not in err
+
+
+OPENAI_COMPATIBLE_MODEL_MANIFEST = (
+    'schema_version = "1"\nkind = "model"\nname = "ax-4-light"\nversion = "0.1.0"\n'
+    'provider = "openai-compatible"\nmodel_id = "skt/A.X-4.0-Light"\n'
+    'base_url = "http://model-server:8000/v1"\n'
+)
+
+
+def test_붙는_어댑터가_아직_없는_제공사의_모델은_진단과_종료_코드_1이고_트레이스를_남기지_않는다(
+    workspace: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """계약 티켓만 병합된 개발 브랜치의 임시 갈래다. 읽히고 관리 API에 보이지만 아직 붙지 않는다.
+    어댑터 티켓이 이 시험과 문구를 지운다. `PluginError` 가 아닌 예외였다면 실행 전 구성 오류의
+    길을 비켜 가 트레이스 없이 진단만 적는 이 모양이 되지 않는다."""
+    directory = workspace / "plugins" / "models" / "ax-4-light"
+    directory.mkdir(parents=True)
+    (directory / "plugin.toml").write_text(OPENAI_COMPATIBLE_MODEL_MANIFEST, encoding="utf-8")
+
+    code = main(["run", "echo", "hi", "--traces", "t", "--model", "ax-4-light"])
+
+    out, err = capsys.readouterr()
+    assert code == 1
+    assert out == ""
+    assert "model 플러그인 ax-4-light 의 provider openai-compatible" in err
+    assert "에 붙는 어댑터가 아직 없다" in err
+    assert _trace_files(workspace / "t") == []
 
 
 def _cli(argv: list[str], *, cwd: Path) -> subprocess.CompletedProcess[str]:
@@ -1365,7 +1392,7 @@ class _RecordingModels:
 def model_names(monkeypatch: pytest.MonkeyPatch) -> list[str]:
     """`serve` 의 모델 소스가 어떤 이름의 매니페스트로 모델을 만들었는지 기록한다."""
     names: list[str] = []
-    monkeypatch.setattr(main_module, "AnthropicModels", lambda: _RecordingModels(names))
+    monkeypatch.setattr(main_module, "ManifestModels", lambda: _RecordingModels(names))
     return names
 
 
@@ -2208,7 +2235,7 @@ class _LateModels:
 @pytest.fixture
 def late_model(monkeypatch: pytest.MonkeyPatch) -> None:
     """`serve` 가 만드는 모델을 늦은 가짜로 바꾼다."""
-    monkeypatch.setattr(main_module, "AnthropicModels", _LateModels)
+    monkeypatch.setattr(main_module, "ManifestModels", _LateModels)
 
 
 @pytest.mark.parametrize(
@@ -2312,7 +2339,7 @@ async def test_serve_의_전역_동시_실행_상한이_세운_앱의_최종_사
         def build(self, manifest: PluginManifest) -> ChatModel:
             return _GatedModel(messages=iter([AIMessage(content="답")]), gate=gate)
 
-    monkeypatch.setattr(main_module, "AnthropicModels", _GatedModels)
+    monkeypatch.setattr(main_module, "ManifestModels", _GatedModels)
     _write_plugin(workspace, "asking", ASKING_SRC)
     sites = _site_file(_site(agents='["asking", "echo"]'))
     (workspace / "sites.toml").write_text(sites, encoding="utf-8")

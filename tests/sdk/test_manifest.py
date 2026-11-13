@@ -599,7 +599,14 @@ provider = "anthropic"
 model_id = "claude-opus-5"
 """
 
-_MODEL_FIELDS = ("provider", "model_id", "max_tokens", "temperature")
+_MODEL_FIELDS = (
+    "provider",
+    "model_id",
+    "max_tokens",
+    "temperature",
+    "base_url",
+    "api_key_env",
+)
 
 
 def _error_types(manifest: str) -> list[str]:
@@ -608,8 +615,8 @@ def _error_types(manifest: str) -> list[str]:
     return [str(error["type"]) for error in caught.value.errors()]
 
 
-def test_제공사는_닫힌_열거이고_값은_anthropic_하나다() -> None:
-    assert {provider.value for provider in ModelProvider} == {"anthropic"}
+def test_제공사는_닫힌_열거이고_값은_anthropic_과_openai_compatible_둘이다() -> None:
+    assert {provider.value for provider in ModelProvider} == {"anthropic", "openai-compatible"}
 
 
 def test_모델은_공통_넷에_제공사와_모델_id만_적어도_받는다() -> None:
@@ -722,6 +729,8 @@ _FIELD_VALUE = {
     "model_id": '"claude-opus-5"',
     "max_tokens": "10",
     "temperature": "0.5",
+    "base_url": '"http://model-server:8000/v1"',
+    "api_key_env": '"MODEL_SERVER_API_KEY"',
 }
 
 
@@ -833,8 +842,176 @@ def test_직렬화_스키마에서_새_다섯_칸은_모두_required이고_null�
 def test_제공사는_이름_있는_정의로_스키마에_선다() -> None:
     schema = PluginManifest.model_json_schema(mode="serialization")
 
-    assert schema["$defs"]["ModelProvider"]["enum"] == ["anthropic"]
+    assert schema["$defs"]["ModelProvider"]["enum"] == ["anthropic", "openai-compatible"]
     assert {"$ref": "#/$defs/ModelProvider"} in schema["properties"]["provider"]["anyOf"]
+
+
+# --- 제공사 openai-compatible 과 모델 서버의 주소·키 변수 칸(ADR 0057, local-model 티켓 01) ---
+
+OPENAI_COMPATIBLE = """
+schema_version = "1"
+kind = "model"
+name = "ax-4-light"
+version = "0.1.0"
+provider = "openai-compatible"
+model_id = "skt/A.X-4.0-Light"
+base_url = "http://model-server:8000/v1"
+"""
+
+
+def _messages(manifest: str) -> list[str]:
+    """거부된 입력의 pydantic `msg` 들. 문구가 적은 값을 되울리지 않는지 볼 때 쓴다."""
+    with pytest.raises(ValidationError) as caught:
+        parse_manifest(manifest)
+    return [str(error["msg"]) for error in caught.value.errors()]
+
+
+def _with_base_url(url: str) -> str:
+    return OPENAI_COMPATIBLE.replace("http://model-server:8000/v1", url)
+
+
+def test_지금의_anthropic_파일은_두_칸_없이_그대로_읽힌다() -> None:
+    manifest = parse_manifest(MODEL)
+
+    assert manifest.provider is ModelProvider.ANTHROPIC
+    assert manifest.base_url is None
+    assert manifest.api_key_env is None
+    assert manifest.schema_version == "1"
+
+
+def test_openai_compatible_은_주소만_적어도_받고_값은_글자_그대로다() -> None:
+    manifest = parse_manifest(OPENAI_COMPATIBLE)
+
+    assert manifest.provider is ModelProvider.OPENAI_COMPATIBLE
+    assert manifest.model_id == "skt/A.X-4.0-Light"
+    assert manifest.base_url == "http://model-server:8000/v1"
+    assert manifest.api_key_env is None
+    assert manifest.schema_version == "1"
+
+
+def test_openai_compatible_은_키_변수의_이름까지_적는다() -> None:
+    manifest = parse_manifest(OPENAI_COMPATIBLE + 'api_key_env = "MODEL_SERVER_API_KEY"\n')
+
+    assert manifest.base_url == "http://model-server:8000/v1"
+    assert manifest.api_key_env == "MODEL_SERVER_API_KEY"
+
+
+@pytest.mark.parametrize(
+    "url",
+    [
+        "http://Model-Server:8000/v1/",
+        "http://model-server",
+        "HTTP://model-server/v1",
+        "http://[::1]:8000/v1",
+        "https://model-server/v1#frag",
+        "https://model-server/v1#a?b",
+    ],
+    ids=["대문자 호스트와 끝의 /", "빈 경로", "대문자 scheme", "IPv6", "조각", "조각 안의 ?"],
+)
+def test_base_url_은_받아들이면_글자_그대로_보관한다(url: str) -> None:
+    """`AnyHttpUrl` 은 호스트를 소문자로 바꾸고 빈 경로에 `/` 를 붙인다. 조각은 네트워크로 나가지
+    않아 받고, 조각 안의 `?` 는 쿼리가 아니다."""
+    assert parse_manifest(_with_base_url(url)).base_url == url
+
+
+def test_openai_compatible_은_base_url_이_없으면_거부한다() -> None:
+    lines = [line for line in OPENAI_COMPATIBLE.splitlines() if not line.startswith("base_url")]
+
+    message = "provider 가 openai-compatible 인 model 플러그인은 base_url 이 필요하다"
+
+    with pytest.raises(ValidationError, match=message):
+        parse_manifest("\n".join(lines))
+
+
+@pytest.mark.parametrize(
+    ("url", "message"),
+    [
+        ("http://[::1", "base_url 이 주소 모양이 아니다"),
+        ("ftp://model-server/v1", "base_url 은 http 나 https 주소여야 한다"),
+        ("model-server:8000/v1", "base_url 은 http 나 https 주소여야 한다"),
+        ("//model-server:8000/v1", "base_url 은 http 나 https 주소여야 한다"),
+        ("/v1", "base_url 은 http 나 https 주소여야 한다"),
+        ("http://user:hunter2@model-server/v1", "base_url 에 사용자 정보를 적을 수 없다"),
+        ("https://hunter2@model-server/v1", "base_url 에 사용자 정보를 적을 수 없다"),
+        ("http:///v1", "base_url 에 호스트가 있어야 한다"),
+        ("http://:8000/v1", "base_url 에 호스트가 있어야 한다"),
+        ("http://model-server/v1?key=hunter2", "base_url 에 쿼리 문자열을 적을 수 없다"),
+        ("http://model-server/v1?", "base_url 에 쿼리 문자열을 적을 수 없다"),
+        ("http://model-server/v1?key=hunter2#frag", "base_url 에 쿼리 문자열을 적을 수 없다"),
+    ],
+    ids=[
+        "주소 모양 아님",
+        "ftp",
+        "scheme 없는 주소",
+        "scheme 없는 //",
+        "경로만",
+        "사용자 정보 둘",
+        "사용자 정보 하나",
+        "빈 호스트",
+        "포트만",
+        "쿼리",
+        "빈 쿼리",
+        "쿼리와 조각",
+    ],
+)
+def test_붙지_않을_주소는_base_url_자리에서_정해진_문구로_거부하고_적은_값을_되울리지_않는다(
+    url: str, message: str
+) -> None:
+    manifest = _with_base_url(url)
+
+    assert _errors(manifest) == [("base_url", "value_error")]
+    messages = _messages(manifest)
+    assert messages == [f"Value error, {message}"]
+    assert all("hunter2" not in text for text in messages)
+
+
+@pytest.mark.parametrize(
+    "variable",
+    ["MY KEY", "KEY-1", "sk-ant-hunter2", "토큰", "", "A=B"],
+    ids=["공백", "하이픈", "하이픈이 든 키 모양", "비ASCII", "빈 이름", "등호"],
+)
+def test_패턴_밖의_api_key_env_는_거부하고_적은_값을_되울리지_않는다(variable: str) -> None:
+    manifest = OPENAI_COMPATIBLE + f'api_key_env = "{variable}"\n'
+
+    assert _errors(manifest) == [("api_key_env", "string_pattern_mismatch")]
+    assert all("hunter2" not in text for text in _messages(manifest))
+
+
+def test_api_key_env_가_문자열이_아니면_거부한다() -> None:
+    assert _errors(OPENAI_COMPATIBLE + "api_key_env = 5\n") == [("api_key_env", "string_type")]
+
+
+@pytest.mark.parametrize("field", ["base_url", "api_key_env"])
+def test_anthropic_은_주소와_키_변수를_갖지_못한다(field: str) -> None:
+    with pytest.raises(
+        ValidationError, match=f"provider 가 anthropic 인 model 플러그인은 {field} 을 갖지 않는다"
+    ):
+        parse_manifest(MODEL + f"{field} = {_FIELD_VALUE[field]}\n")
+
+
+def test_직렬화_스키마에서_주소와_키_변수는_required이고_null을_허락한다() -> None:
+    """관리 API 의 응답 타입 그대로라 늘 실리는 칸이 required 로 나간다(ADR 0010 의 2026-09-23
+    이력). 모든 종류의 응답에 두 칸이 `null` 로 실린다."""
+    schema = PluginManifest.model_json_schema(mode="serialization")
+
+    for name in ("base_url", "api_key_env"):
+        assert name in schema["required"], name
+        assert {"type": "null"} in schema["properties"][name]["anyOf"], name
+
+
+def test_직렬화_스키마에서_키_변수의_패턴이_실리고_두_칸의_설명이_한_줄이다() -> None:
+    """패턴은 타입의 제약이라 계약이 드러낸다(ADR 0049 의 헤더 변수 이름과 같은 장치). 설명이
+    `openapi.json` 에 실려 운영자가 칸의 뜻을 계약에서 읽는다."""
+    schema = PluginManifest.model_json_schema(mode="serialization")
+    key_env = schema["properties"]["api_key_env"]
+    base_url = schema["properties"]["base_url"]
+
+    assert {"type": "string", "pattern": "^[A-Za-z0-9_]+$"} in key_env["anyOf"]
+    assert "/v1" in base_url["description"]
+    assert "chat/completions" in base_url["description"]
+    assert "환경 변수의 이름" in key_env["description"]
+    assert "\n" not in base_url["description"]
+    assert "\n" not in key_env["description"]
 
 
 def test_sdk_매니페스트를_불러와도_보호_이름_공간_경고가_없다() -> None:
