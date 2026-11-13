@@ -33,11 +33,11 @@ from cryptography.hazmat.primitives.asymmetric.rsa import RSAPublicKey
 from cryptography.hazmat.primitives.serialization import load_pem_public_key
 from pydantic import BaseModel, ConfigDict, Field, TypeAdapter, ValidationError
 
-from agent_os.adapters.anthropic import AnthropicModels, resolve_model_name
 from agent_os.adapters.clock import SystemClock
 from agent_os.adapters.filesystem import FilesystemPlugins
 from agent_os.adapters.jsonl import JsonlTrace
 from agent_os.adapters.mcp import McpTools
+from agent_os.adapters.models import ManifestModels, resolve_model_name
 from agent_os.channel.cli.interrupt import run_interruptibly
 from agent_os.channel.cli.main import (
     EXIT_FAILED,
@@ -181,7 +181,7 @@ def _serve(args: ServeArgs) -> int:
         create_app(
             plugins=FilesystemPlugins(args.plugins_root),
             trace=JsonlTrace(args.traces),
-            models=AnthropicModels(),
+            models=ManifestModels(),
             default_model=_default_model(args.model),
             tools=McpTools(),
             clock=SystemClock(),
@@ -705,7 +705,7 @@ async def _run(args: RunArgs, default_model: PluginName, principal: Principal) -
         previous_run=args.previous_run,
         default_model=default_model,
         plugins=FilesystemPlugins(args.plugins_root),
-        models=AnthropicModels(),
+        models=ManifestModels(),
         tools=McpTools(),
         trace=JsonlTrace(args.traces),
         clock=SystemClock(),
@@ -727,7 +727,7 @@ async def _resume(args: ResumeArgs, default_model: PluginName, approver: Princip
         approver,
         default_model=default_model,
         plugins=FilesystemPlugins(args.plugins_root),
-        models=AnthropicModels(),
+        models=ManifestModels(),
         tools=McpTools(),
         trace=JsonlTrace(args.traces),
         clock=SystemClock(),

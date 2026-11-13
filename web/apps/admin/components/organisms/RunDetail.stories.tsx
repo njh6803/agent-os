@@ -113,6 +113,8 @@ const AGENT_ROW: PluginRow = {
     model_id: null,
     max_tokens: null,
     temperature: null,
+    base_url: null,
+    api_key_env: null,
     server: null,
   },
 };
@@ -137,6 +139,8 @@ const MCP_ROW: PluginRow = {
     model_id: null,
     max_tokens: null,
     temperature: null,
+    base_url: null,
+    api_key_env: null,
     server: { transport: "stdio", command: "python", args: ["filesystem.py"], secret_args: {} },
   },
 };

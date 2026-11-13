@@ -16,6 +16,7 @@
 - [ ] `ChatOpenAI`의 하위 클래스로 모델을 만들고 생성자에 모두 이름으로 넘긴다. 매니페스트에서 `model`(`model_id`), `base_url`, `max_completion_tokens`(`max_tokens`, 없으면 없음), `temperature`(없으면 없음. 키를 빼지 않고 언제나 이름으로 넘긴다)이고, 어댑터가 짓는 `api_key`(아래 키 함수)와 `http_async_client`(아래 클라이언트)다. 고정하는 넷은 `use_responses_api=False`, `disable_streaming=True`, `openai_proxy=None`, `output_version=None`이다
 - [ ] 모델을 만들 때마다 그 모델만 쓰는 클라이언트를 새로 만들어 넘긴다. `openai.DefaultAsyncHttpxClient`에 `httpx2.Limits(max_connections=1000, max_keepalive_connections=0)`을 준 것이다. 포트에 닫기를 더하지 않는다
 - [ ] 모델 만들기는 키도 네트워크도 요구하지 않는다. 모델을 만드는 자리에서 난 예외는 종류를 가리지 않고 `PluginError("model 플러그인 <이름> 의 base_url 로 모델을 만들 수 없다 (<예외 종류의 이름>)")`로 바꾸고 라이브러리의 글은 싣지 않는다. 다른 실행 전 구성 오류처럼 트레이스가 남지 않는다
+- [ ] 01이 읽는 단계에서 받는 `base_url`의 틈 셋이 이 모듈의 첫 요청에서 어떻게 드러나는지 본다. 앞 공백(`" http://h/v1"`)·개행이 든 값·잘못된 포트(`:99999`, `:abc`)는 `urlsplit`이 앞 공백과 개행을 떼고 포트를 늦게 읽어 읽는 단계(`sdk/manifest.py`의 `_check_http_address`)를 지난다. 원격 MCP `url`과 나눠 쓰는 검사라 01이 `url`의 동작을 바꾸지 않으려고 고치지 않았다(01의 PR 직전 CodeRabbit 리뷰가 낸 Minor 둘, 손으로 입력을 대 보았다고 보고했다). 이 모듈이 모델을 만들 때의 `PluginError`(위 18)나 첫 호출의 실패로 어떤 문구가 나는지 시험에 한 사례로 두고, 읽는 단계에서 거부하는 편이 낫다고 판단하면 `url`의 동작이 바뀌는 계약 변경이라 사용자에게 먼저 묻는다. 경로·`;` 매개변수·조각에 실린 비밀은 막을 수 없고 ADR 0057의 "주소는 비밀이 아닌 것으로 본다"가 그 결정이다
 - [ ] 모듈 독스트링이 알려진 한계 넷(모델 이름의 머리가 요청을 바꾼다, 환경의 `OPENAI_ORG_ID`·`OPENAI_ORGANIZATION`·`OPENAI_PROJECT_ID`·`OPENAI_CUSTOM_HEADERS`가 서버로 간다, 잘라 내거나 인코딩해 되울린 키는 가리지 못한다, 응답 헤더의 값이 DEBUG 로그에 찍힌다)과 그 근거를 적는다
 
 ### 키와 실패 문구
@@ -58,9 +59,9 @@
 - [ ] `CLAUDE.md`의 검증 명령, `.claude/rules/tests.md`, `.claude/rules/http.md`, `.github/PULL_REQUEST_TEMPLATE.md`의 체크리스트, `.github/workflows/ci.yml`의 주석, `.coderabbit.yaml`, `tools/llm_tokens.py`와 그 시험, `tools/hook_env_read.py`의 문구, `tools/mutate.py`의 독스트링, `tests/test_main.py`와 `tests/test_calc_plugin.py`의 독스트링, `tests/test_conftest.py`, `web/apps/portal/playwright.config.ts`와 `web/packages/e2e-stack/src/plugins.ts`의 주석
 - [ ] 카나리아 명세 셋(`.scratch/web-widget/probes/canary/claude_md_llm_widget.toml`, `tests_rule_llm_widget.toml`, `http_rule_llm_widget.toml`)은 위에서 고친 `CLAUDE.md`·`.claude/rules/tests.md`·`.claude/rules/http.md`의 문장을 기대 글자로 든다. `tools/canary.py --shape`는 원천 문서를 보지 않아 어긋나도 조용하므로, 그 문장을 바꾸면 기대 글자도 함께 고친다(선례는 pilot-portal 09, 그 toml의 머리 주석)
 - [ ] `.claude/skills/next-session/merge.md`의 "병합 전". 범위에 드는 변경이면 로컬 모델 시험과 비용 확인의 단계를 밟고, 기록이 유효한지를 시험한 커밋과 브랜치 끝 사이의 차이로 가르며, "병합할지는 사용자에게 묻지 않는다"에 과금 확인의 예외를 적고, 병합 뒤 `sweep`을 친다
-- [ ] `.claude/rules/adapters.md`의 모델 소스 항목(01이 쓴 임시 갈래를 모델 서버 어댑터의 동작으로), `.claude/rules/core.md`의 모델 포트 행, `README.md`와 `.env.example`의 모델 설명
+- [ ] `.claude/rules/adapters.md`의 모델 소스 항목(01이 쓴 임시 갈래를 모델 서버 어댑터의 동작으로), `.claude/rules/core.md`의 모델 포트 행(구현 칸이 아직 "langchain-anthropic의 `ChatAnthropic`"이다. 01이 모델 소스를 `adapters/models.py`의 `ManifestModels`로 옮겼으므로 그 이름과 제공사 갈래로 고친다. 01은 이 파일을 원천으로 든 카나리아 여섯 명세와 02 워크트리의 같은 파일 수정을 피하려고 건드리지 않았다), `src/agent_os/core/ports.py`의 `ModelSource` 독스트링("첫 어댑터는 langchain-anthropic의 `ChatAnthropic`"), `README.md`와 `.env.example`의 모델 설명
 - [ ] `docs/constitution/tech.md`의 시험용 모델 서버 행을 마커와 로컬 모델 시험까지 든 사실로 다시 고친다(03이 도구만 든 사실로 고쳐 두었다). 위 의존 행과 함께 헌법 판을 한 번 올린다
-- [ ] 바꾼 결정이나 옛 표현을 저장소 전체에서 grep해 살아 있는 문서에 잔존이 0인지 본다(작업 규약 4). 옛 표현은 `.claude/rules/sdk.md`의 "값은 `anthropic` 하나"(01이 고친다), 임시 문구, `docs/constitution/tech.md`의 "그때까지 이 마커와 도구는 저장소에 없다"(03이 고친다)와 "그때까지 `pyproject.toml`에는 없다"다. grep은 원문 글자로 친다. 글자가 다른 말로 치면 늘 0건이라 잔존을 못 잡는다
+- [ ] 바꾼 결정이나 옛 표현을 저장소 전체에서 grep해 살아 있는 문서에 잔존이 0인지 본다(작업 규약 4). 옛 표현은 `.claude/rules/sdk.md`의 "값은 `anthropic` 하나"(01이 고친다), 임시 문구, 임시 문구와 글자가 달라 그 grep에 안 걸리는 01의 두 문장(`src/agent_os/sdk/manifest.py`의 "모델 서버에 붙는 동작은 아직 없다"와 `.claude/rules/sdk.md`의 모델 항목 "어댑터는 아직 없다". 05가 어댑터를 붙이면 둘 다 거짓이 되므로 `아직` 으로도 두 파일을 grep한다), `docs/constitution/tech.md`의 "그때까지 이 마커와 도구는 저장소에 없다"(03이 고친다)와 "그때까지 `pyproject.toml`에는 없다"다. grep은 원문 글자로 친다. 글자가 다른 말로 치면 늘 0건이라 잔존을 못 잡는다
 
 ### 병합 전
 
