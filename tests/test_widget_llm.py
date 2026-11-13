@@ -29,11 +29,12 @@
   보면 모두 건너뛴 실행이 초록이다). 사례마다 그 에이전트로 시작한 실행(`run_started` 의 `agent`)을
   짝지어, 그 실행의 트레이스에 `llm_called`(키가 serve 에 닿지 않으면 모델 호출이 없다). 화면의
   출력은 사례가 연 에이전트의 이름과 함께 리포트에 실리고, 계산 사례는 화면에 선 출력이 그 실행의
-  `run_finished` 의 `output` 과 같다. `assistant` 사례는 글자를 견주지 않고(낱말은 Playwright 사례가
-  본다) 그 실행에 성공한 `search` 가 있는지 본다. pnpm 을 찾지 못하면 깔라는 문구로 실패한다. 제한
-  시간을 넘기면 Playwright 가 띄운 프로세스까지 트리째 끝낸다. 앞의 셋은 실제 모델과 빌드를 쓰는 한
-  바퀴의 결과라, 기준마다 멈추지 않고 어긋난 것을 모두 모아 알린다. 뒤의 둘은 모델 없이 기본
-  실행에서 잰다.
+  `run_finished` 의 `output` 에서 온 글이다(마크다운 부품이 기호를 떼므로 글자 그대로가 아니라
+  기호를 뗀 글이 원문의 부분열인지 본다. 규칙은 `tests/screen_text.py`). `assistant` 사례는 글자를
+  견주지 않고(낱말은 Playwright 사례가 본다) 그 실행에 성공한 `search` 가 있는지 본다. pnpm 을 찾지
+  못하면 깔라는 문구로 실패한다. 제한 시간을 넘기면 Playwright 가 띄운 프로세스까지 트리째 끝낸다.
+  앞의 셋은 실제 모델과 빌드를 쓰는 한 바퀴의 결과라, 기준마다 멈추지 않고 어긋난 것을 모두 모아
+  알린다. 뒤의 둘은 모델 없이 기본 실행에서 잰다.
 
 못 보는 것: POSIX 에서 제 세션을 따로 연 손자는 프로세스 그룹으로 끝내지
 못한다(`tools/run_checks.py` 의 `kill_tree`). 제한 시간에 끊으면 준비(globalSetup)의 정리가 돌지
@@ -57,6 +58,7 @@ from pathlib import Path
 
 import pytest
 from tests.fake_doc_search import serving
+from tests.screen_text import screen_matches_output
 from tools.run_checks import kill_tree
 
 from agent_os.adapters.jsonl import JsonlTrace
@@ -263,11 +265,13 @@ def _case_failures(
         )
     outputs = [event.output for event in events if isinstance(event, RunFinished)]
     if agent == CALC:
-        # 글자를 견주는 것은 계산 사례 하나다.
-        if len(outputs) != 1 or shown != outputs:
+        # 글자를 견주는 것은 계산 사례 하나다. 화면은 마크다운 부품이 그린 글이라 글자 그대로가
+        # 아니라 기호를 뗀 글이 원문의 부분열인지를 본다(`tests/screen_text.py`).
+        if len(outputs) != 1 or len(shown) != 1 or not screen_matches_output(shown[0], outputs[0]):
             failures.append(
-                f"{agent}: 화면에 선 출력 {shown!r} 이 트레이스의 run_finished 출력 {outputs!r} 과"
-                " 같지 않다"
+                f"{agent}: 화면에 선 출력 {shown!r} 이 트레이스의 run_finished 출력"
+                f" {outputs!r} 에서 온 글로 보이지 않는다"
+                "(기호를 뗀 글이 원문의 부분열이 아니거나 화면 글이 비었다)"
             )
     else:
         # 화면의 낱말은 Playwright 사례가 보고, 여기서는 화면에 출력이 섰고 실행이 끝났는지만 본다.
@@ -466,6 +470,27 @@ def test_두_사례가_각자의_실행과_짝이_맞으면_어긋남이_없다(
     report = _report(calc=[CALC_OUTPUT], assistant=[ASSISTANT_OUTPUT])
 
     assert _failures(report, tmp_path, 0) == []
+
+
+def test_계산_사례는_기호가_빠지고_숨긴_접두가_붙은_화면_글도_그_출력에서_온_글로_본다(
+    tmp_path: Path,
+) -> None:
+    _write_run(tmp_path, "r-calc", CALC, "**2 더하기 3**은 5입니다.")
+    _write_run(tmp_path, "r-assistant", ASSISTANT, ASSISTANT_OUTPUT, searches=[True])
+    report = _report(calc=["출력: 2 더하기 3은 5입니다."], assistant=[ASSISTANT_OUTPUT])
+
+    assert _failures(report, tmp_path, 0) == []
+
+
+def test_계산_사례의_화면_글이_숨긴_접두뿐이면_알린다(tmp_path: Path) -> None:
+    _write_run(tmp_path, "r-calc", CALC, CALC_OUTPUT)
+    _write_run(tmp_path, "r-assistant", ASSISTANT, ASSISTANT_OUTPUT, searches=[True])
+    report = _report(calc=["출력: "], assistant=[ASSISTANT_OUTPUT])
+
+    failures = _failures(report, tmp_path, 0)
+
+    assert len(failures) == 1
+    assert failures[0].startswith("calc")
 
 
 def test_assistant_사례는_화면의_글을_트레이스의_출력과_글자로_견주지_않는다(

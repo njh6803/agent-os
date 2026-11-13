@@ -84,6 +84,20 @@ h2 {
   font-size: 2rem;
   margin: 30px;
 }
+table,
+th,
+td {
+  border: 4px solid rgb(255, 0, 0);
+}
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-size: 40px;
+  color: rgb(255, 0, 0);
+}
 `;
 
 function attribute(value: string): string {

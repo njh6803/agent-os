@@ -106,7 +106,7 @@ export const Finished: Story = {
   },
 };
 
-/** 출력은 글자 그대로이고 긴 낱말은 줄 끝에서 꺾인다. 상자를 넘지 않는다. */
+/** 출력은 마크다운으로 그려지지만 HTML 조각은 요소가 되지 않고, 긴 낱말은 줄 끝에서 꺾여 상자를 넘지 않는다. */
 export const LongWord: Story = {
   args: {
     exchanges: [
@@ -119,6 +119,50 @@ export const LongWord: Story = {
     const region = within(canvasElement).getByRole("region", { name: "대화" });
     await expect(region.scrollWidth).toBe(region.clientWidth);
     await expect(region.querySelector("b")).toBeNull();
+  },
+};
+
+const MARKDOWN_OUTPUT = [
+  "## 배송 안내",
+  "",
+  "**ORD-184** 우산은 오늘 저녁 6시 전에 도착합니다. [1]",
+  "",
+  "- 물류센터 출고: 오전 9시",
+  "- 배송 기사 인계: 오전 11시",
+  "",
+  "| 구간 | 상태 |",
+  "| --- | --- |",
+  "| 출고 | 완료 |",
+  "| 배송 | 진행 중 |",
+  "",
+  "[조회 페이지](https://example.com/track)에서 확인할 수 있습니다.",
+  "",
+  "출처",
+  "1. 배송 정책 문서 (2026-11-01 갱신)",
+].join("\n");
+
+/**
+ * 마크다운이 든 출력. 제목, 굵게, 목록, 표, 링크가 요소로 서고 기호는 보이지 않는다(ADR 0053). 제목은 위젯의 제목(`h1`)과
+ * 갈리게 한 단계 낮춰 `h3` 가 된다. 사진은 대화 영역이 접힌 첫 화면까지다.
+ */
+export const MarkdownOutput: Story = {
+  parameters: { width: 400 },
+  args: {
+    exchanges: [
+      exchange(0, "배송 어디쯤이에요?", { outcome: { kind: "finished", output: MARKDOWN_OUTPUT } }),
+    ],
+  },
+  play: async ({ canvasElement }) => {
+    const region = within(canvasElement).getByRole("region", { name: "대화" });
+    await expect(
+      within(region).getByRole("heading", { level: 3, name: "배송 안내" }),
+    ).toBeVisible();
+    await expect(within(region).getByRole("table")).toBeInTheDocument();
+    await expect(within(region).getByRole("link", { name: /조회 페이지/ })).toHaveAttribute(
+      "target",
+      "_blank",
+    );
+    await expect(region.textContent).not.toContain("**");
   },
 };
 
