@@ -10,7 +10,7 @@
 
 ## 한 일
 
-구현과 검증은 끝났고 커밋하지 않았다(작업 트리에 남아 있다).
+구현과 검증은 끝났고 커밋 `5d86ce5dd`로 남겼다.
 
 - 위젯 출력: `web/apps/widget/components/organisms/Conversation.tsx`가 숨긴 "출력: "과 `Markdown`을 `<div>` 하나에 둔다. 읽기 영역(`WidgetScreen.tsx`)은 알림 항목에 종류(`output`·`note`)를 두고 출력만 `MarkdownText`로 문단 안에 그린다(`lib/conversation.ts`의 `Announcement`).
 - 테스트: `WidgetMarkdown.test.tsx`(새 파일, 6건)와 `WidgetConversation.test.tsx`의 HTML 조각 사례 하나를 새 틀로 고쳤다.
@@ -36,11 +36,9 @@
 
 ## 남은 일
 
-1. `/code-review`로 셀프 리뷰(기준은 `origin/dev`)를 하고 Critical·Major를 고친다. 이 세션은 리뷰 직전에 인계했다.
-2. 티켓 03의 체크박스를 채우고 `Status:`를 `done`으로 바꾼다. 티켓 04가 열려 있으니 `**끝:**` 줄은 쓰지 않는다. `uv run python tools/plan_table.py`가 계획표를 바꾸면 같은 커밋에 싣는다.
-3. 루트 `README.md`의 트리와 원천 표를 점검한다. `tests/screen_text.py` 같은 파일이 표에 들어갈 자리인지 본다(`test_widget_llm.py`와 `fake_doc_search.py`는 `README.md`에 없었다).
-4. 커밋 전 `git branch --show-current`, `uv run python tools/sibling_overlap.py`(직전에 쳤을 때 겹침 없음).
-5. PR을 열고 봇 회차와 병합(`merge.md`, 워크트리 병합 절)을 마친다. PR 본문에 번들 크기와 "사람이 사진을 견줘야 한다"를 적는다.
+1. PR을 열고 봇 회차와 병합(`merge.md`, 워크트리 병합 절)을 마친다. PR 본문에 번들 크기와 사람이 사진을 견줘야 한다는 점을 적는다.
+
+앞서 남았던 셀프 리뷰, 티켓 `done`, 계획표 갱신(`plan_table.py`는 바꿀 것이 없었다), `README.md` 점검(그 파일은 `tests/` 아래 개별 시험 파일을 적지 않아 고칠 자리가 없었다), 커밋 전 브랜치와 `sibling_overlap.py`(겹침 없음)는 마쳤다.
 
 ## 인계
 
@@ -65,4 +63,33 @@ open-session을 부른다 2026-11-13T16:27:16Z
 - 티켓 "페이지 시험"의 "실패 안내" 사례(명세 축 경미): 실패 안내는 고정 문구고 `FailureAlert`가 `message`를 그리지 않아 별표를 넣을 입력이 없다(주석을 읽었다). 질문, 인사말, 승인 카드 인자, 알림은 시험이 있다.
 - 사진 견줌과 번들 크기는 PR 본문과 사용자 보고로 넘긴다.
 
-다시 돌린 명령: 이 반영(주석, 독스트링, 문서, 시험 한 건)은 `uv run pytest -q tests/test_screen_text.py`(9 passed), `uv run ruff check tests`·`ruff format --check tests`, `pnpm -C web exec prettier --check`까지 돌렸다. 나머지 검증 명령은 커밋의 pre-commit 결과로 갈음한다(커밋 뒤에 적는다).
+다시 돌린 명령: 이 반영(주석, 독스트링, 문서, 시험 한 건)은 `uv run pytest -q tests/test_screen_text.py`(9 passed), `uv run ruff check tests`·`ruff format --check tests`, `pnpm -C web exec prettier --check`까지 돌렸다. 나머지 검증 명령은 커밋의 pre-commit 결과로 갈음했다.
+
+## 회고
+
+낸 후보 넷: 승인 둘, 기각 둘, 넘김 없음. 사용자에게 묻지 않았다.
+
+- 후보 1, 승인: 변이 도구 실행 둘을 같은 체크아웃에서 나란히 띄웠다. 사건은 이 세션의 변이 표 수리다(e2e 표와 실제 모델 표를 함께 보내, e2e 기준선이 위젯 빌드가 겹쳤다는 오류로, 실제 모델 기준선이 217초를 쓰고 빨강으로 끝났다. 변이는 넣기 전이라 소스는 깨끗했다). 층은 도구다(`tools/mutate.py`가 둘째 시작을 거부한다. 편집 훅은 알리기만 한다). 되돌림은 PR 하나로 된다. 같은 사건의 앞 항목 381이 3회차로 만료됐고 그 처방이 구현되지 않았으므로 새 항목 `mutate-parallel-runs`에 4회차로 이었다. 문턱(다섯 번째)에는 이르지 않아 대기열에 둔다.
+- 후보 2, 승인: pre-commit이 몇 초짜리 변이 표 검사를 약 11분짜리 병렬 검사 뒤에 돈다. 사건은 이 세션의 첫 커밋 시도다(낡은 표 원문으로 멈췄다). 층은 훅 설정이다. 되돌림은 PR 하나다. 새 항목 `precommit-cheap-checks-after-slow`에 1회차로 두었다. 첫 시도의 걸린 시간은 재지 않았고 성공한 시도의 병렬 검사 688.8초와 설정의 순서로 어림했다.
+- 후보 3, 기각: 이 변경이 바꾼 소스를 가리키던 변이 표 원문 넷이 낡아졌다. pre-commit의 `tools/mutate.py --staged`가 그 자리에서 막았다(이미 있는 검사). 비용 문제는 후보 2가 다룬다.
+- 후보 4, 기각: open-session의 보내기 스크립트가 자동 모드 분류기에 거부됐다. 앱 가드가 막은 것이고, 돌아가지 않고 인계 못함 줄로 남겼다.
+
+만료: 승인 줄의 가장 늦은 날짜가 2026-10-31 전인 항목 열하나(280, 459, 494, 542, 544, 545, 547, 548, 549, 550, 551)를 상태 줄만 고쳐 닫았다. 주 체크아웃 기준 출력과 `--ref origin/dev` 기준 출력이 같은 열한 개를 냈다.
+
+## 다음
+
+answer-markdown 기능에 남은 티켓은 `04-markdown-card-renders-on-react-18`(상태 ready-for-agent) 하나다. 이 티켓은 03과 나란히 다른 세션이 맡고 있어(워크트리 `04-markdown-card-renders-on-react-18`) 이 세션은 건드리지 않았다. 03이 병합된 뒤 04가 아직 병합되지 않았다면 04를 마치는 세션이 기능 계획의 `**끝:**` 줄을 적고, 출시 PR 계기(`merge.md` 출시 PR)를 본다. 04가 03보다 먼저 병합됐다면 그 줄은 이 PR이 아니라 04 쪽 커밋이 이미 적었어야 하지만, 03이 아직 열려 있던 때라 적지 않았을 것이다. 그 경우 03을 병합한 세션이 done 티켓이 모두 찼는지 보고 `**끝:**` 줄을 적는다(`docs/agents/issue-tracker.md` 끝 줄을 적는 때).
+
+사용자가 봐야 할 것(위 절)은 새 사진 둘을 화면 파일과 견주는 일이다.
+
+## 커밋과 변이 표
+
+첫 커밋 시도는 `check-mutations`(`tools/mutate.py --staged`)에서 멈췄다. `.scratch/web-widget/probes/`의 변이 표 넷이 가리키던 원문이 이 변경으로 바뀌어서였다. 고친 것:
+
+- `conversation_mutations.toml`: 도구 줄 알림의 원문을 `announce(next, "note", …)`로 맞췄다.
+- `widget_e2e_mutations.toml`: HTML 조각 변이는 `Markdown` 대신 `dangerouslySetInnerHTML` 요소를 넣는 것으로 바꿨고, 승인 카드 변이는 원문과 실패 줄 자리(`widget.e2e.ts:243:22`)를 맞췄다.
+- `widget_llm_mutations.toml`: 끝 글자를 빼는 변이는 `Markdown`을 거친 뒤에는 부분열 규칙을 깨지 못한다. 그래서 출력에 없는 낱말(`zqxj`)을 덧붙여 그리는 변이로 바꾸고, 그 낱말이 든 화면 글의 repr이 실패 문구에 실렸는지를 표지로 삼았다.
+
+고친 변이를 하나씩 돌렸다. 변이 10번(conversation, 모델 없음), e2e 5·8번, `llm_widget` 3번이 모두 기준선 초록, 변이 빨강, 기대한 표지였다. e2e 변이와 LLM 변이를 같은 워크트리에서 동시에 돌리면 Next 빌드가 겹쳐 기준선이 빨개진다(손으로 봤다). 차례로 돌려야 한다.
+
+두 번째 커밋 시도는 통과했다(`5d86ce5dd`). pre-commit의 병렬 검사(lint-imports, zizmor, check-ticket, check-instructions, check-type-escapes, pyright 둘, run-hooks, pytest, web-verify)가 모두 통과했고(688.8초), 마크다운 표·줄 구분 문자·변이 표·인용 대조도 통과했다. 캐너리 명세와 헌법 판 검사는 대상 파일이 없어 `Skipped`다.
