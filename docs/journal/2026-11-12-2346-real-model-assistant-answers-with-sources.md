@@ -109,6 +109,7 @@ origin/dev를 한 번 더 합친 커밋(그 사이 PR 552가 들어왔다, 충�
 - base-agent의 04(설명 문서와 복사본 시험)·06·07은 열려 있어 기능 계획의 `**끝:**` 줄은 쓰지 않았다.
 - 07은 이 시험 모듈의 환경 변수 둘을 실제 문서 검색 서버의 주소와 값으로 채워 같은 열네 사례를 돌린다.
 - 스킬 고침의 효과는 8회차로 가르지 못했다. 사례가 다시 흔들리면 사전에 문턱을 정해 회차를 늘려 잰다.
+- PR 봇 첫 회차(claude-review)가 보류한 둘. 하나, `tests/test_assistant_llm.py`의 `_serving`·`_wait_for_address`·`_post_stream`·`_frames`와 상수 셋이 `tests/test_main.py`와 `tests/channel/http/`의 같은 이름 도우미와 따로 산다. 공용 모듈로 뽑는 일은 두 시험 파일을 함께 고치는 별도 일이라 티켓이 아직 없다(`.scratch`를 grep해 확인했다). 다음에 그 도우미를 건드리는 티켓이 이 일을 함께 맡거나 새 티켓으로 올린다. 둘, `cite-sources` 스킬의 마지막 문단이 "질문이 둘 이상을 묻는데"로 좁아 질문 하나에 근거가 일부만 있을 때의 지시가 없다. 실제 사례로 드러날 때 retro 대기열에 올린다.
 
 ## 인계
 
@@ -130,3 +131,24 @@ origin/dev를 한 번 더 합친 커밋(그 사이 PR 552가 들어왔다, 충�
 ```
 
 open-session을 부른다 2026-11-12T17:48:29Z
+
+## 인계 (PR 연 뒤)
+
+경계 `PR 연 뒤`. 이어받은 세션이 PR 직전 리뷰(위 "PR 직전 리뷰"), origin/dev 합치기 두 번(충돌 한 번, 위 "사용자 프롬프트"의 풀이), 푸시를 마치고 PR https://github.com/njh6803/agent-os/pull/553 (기준 dev)을 열었다. 마지막 푸시한 커밋은 `8af360d3c`(두 번째 dev 합치기)다. 앱의 PR 상태는 열림, 검사 8개가 도는 중, 병합 상태 `BLOCKED`였다(`get_status`로 봤다, 검사가 끝나기 전이다). 컨텍스트가 인계 문턱을 넘어 이 세션은 인계한다. 남은 일은 봇 회차(첫 `@coderabbitai review` 코멘트 포함)와 병합이다. 이 세션의 제목은 `feature/05-real-model-assistant-answers-with-sources`였다.
+
+낸 지시문(받는 세션이 읽는 글):
+
+```
+다음 작업: .scratch/base-agent/issues/05-real-model-assistant-answers-with-sources.md. 실제 모델 시험이 출처 단 답과 전문 읽기 승인·거부를 본다. PR 553이 열려 있고 봇 회차와 병합이 남았다
+다음 단계: PR 반영·병합
+어디서: 새 세션. 같은 브랜치를 잇는다. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /implement .scratch/base-agent/issues/05-real-model-assistant-answers-with-sources.md
+브랜치: feature/05-real-model-assistant-answers-with-sources
+모델: Sonnet 5.5 / high. 2의 잇는 지시문
+읽을 것: docs/journal/2026-11-12-2346-real-model-assistant-answers-with-sources.md의 "사용자 프롬프트"(pytest 한 단계를 건너뛴 승인 다섯)와 "PR 직전 리뷰"
+이어받을 상태: 인계: PR 연 뒤 (일지 docs/journal/2026-11-12-2346-real-model-assistant-answers-with-sources.md). PR 553(기준 dev)을 열었고 마지막 푸시 커밋은 8af360d3c다. 첫 `@coderabbitai review` 코멘트는 아직 남기지 않았으니 새 세션이 남긴다(푸시한 뒤에 남겨야 한다, 푸시하면 그 코멘트가 버려진다). 이 PR의 pre-commit은 pytest 한 단계를 사용자 승인으로 다섯 커밋에서 건너뛰었다. 새 커밋을 만들 때 같은 시험(시간을 재는 시험이 다른 세션 부하로 막힌다)에 막히면 건너뛰기 전에 사용자에게 다시 묻는다(승인은 커밋마다다). PR 본문에는 티켓 05의 넷째 차림 줄(모델 차림의 목록으로 매개변수화)을 반영하지 않고 "(넘김)"으로 남겼다는 것과 ci.yml의 llm 잡 제한 시간을 25분에서 40분으로 올린 것(어림, CI 러너로 재지 않음)을 적었다. 리뷰어가 그 매개변수화를 이 PR에서 하라고 하면 local-model 06이 맡는다는 근거(그 티켓의 첫 체크박스)로 보류 판정한다. dev가 더 앞서면 병합 전에 다시 합친다
+확인할 선행 조건: 병합은 이 워크트리 사본의 next-session merge.md(없으면 SKILL.md)의 "워크트리에서 병합할 때"를 Read로 열어 따른다. pytest 전체가 부하 없는 상태에서 초록인지 보지 못했다(건너뛴 한 단계는 CI의 리눅스 실행이 본다, CI의 pytest가 빨가면 그 실패가 이 브랜치의 것인지 먼저 가른다)
+이번 요청 범위: PR과 병합까지
+```
+
+open-session을 부른다 2026-11-13T02:59:30Z
