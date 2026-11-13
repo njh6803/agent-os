@@ -1,0 +1,101 @@
+# 가짜 모델 서버 픽스처(tests/adapters/fake_model_server.py)의 시험이 무엇을 재는지 변이로 본다.
+# 티켓 04(.scratch/local-model/issues/04-fake-model-server-fixture.md)가 시험을 쓴 뒤 구현이 이미
+# 초록이던 단언(연결의 셈, 기다림, 요청을 적는 차례, 끄기)에 구현을 되돌려 빨강을 본다.
+# 사용: PYTHONUTF8=1 uv run python tools/mutate.py .scratch/local-model/probes/fake_model_server_mutations.toml
+# 표지는 고른 단언의 메시지에 값을 끼워 넣어, 그 단언이 빨개질 때만 찍힌다(시험 파일의 원문에는 없다).
+
+[[mutation]]
+name = "서버가 응답마다 연결을 닫는다"
+tests = ["tests/adapters/test_fake_model_server.py::test_서버는_응답마다_연결을_닫지_않고_HTTP_1_1로_답한다"]
+expect = "red"
+expect_output = ["연결 유지: 버전 11, 닫음 True"]
+
+[[mutation.edit]]
+file = "tests/adapters/fake_model_server.py"
+old = '                self.send_header("Content-Length", str(len(reply.body)))'
+new = '''                self.send_header("Content-Length", str(len(reply.body)))
+                self.send_header("Connection", "close")'''
+
+[[mutation]]
+name = "기다릴 시간을 무시한다"
+tests = ["tests/adapters/test_fake_model_server.py::test_답하기_전에_기다릴_시간을_준_응답은_늦게_온다"]
+expect = "red"
+expect_output = ["기다린 시간 0.0"]
+
+[[mutation.edit]]
+file = "tests/adapters/fake_model_server.py"
+old = 'if reply.delay_seconds > 0:'
+new = 'if reply.delay_seconds > 1e9:'
+
+[[mutation]]
+name = "처리를 마친 연결을 세지 않는다"
+tests = ["tests/adapters/test_fake_model_server.py::test_연결을_닫고_다시_부르면_받은_연결과_처리를_마친_연결이_함께_는다"]
+expect = "red"
+timeout = 600
+expect_output = ["셈이 끝나지 않았다: 3/0"]
+
+[[mutation.edit]]
+file = "tests/adapters/fake_model_server.py"
+old = 'self._closed += 1'
+new = 'self._closed += 0'
+
+[[mutation]]
+name = "기다릴 시간 안에 처리를 마친 연결로 센다"
+tests = ["tests/adapters/test_fake_model_server.py::test_기다릴_시간을_준_응답을_먼저_끊으면_처리를_마친_연결은_그_시간이_끝난_뒤에_는다"]
+expect = "red"
+expect_output = ["끊은 직후 셈 (1, 1)"]
+
+# 처리를 마친 연결을 응답을 짓자마자 센다(기다리기 전). 끝의 셈은 하지 않아 연결 하나가 한 번만 센다.
+[[mutation.edit]]
+file = "tests/adapters/fake_model_server.py"
+old = '''                reply = owner._take(request)
+                if reply.delay_seconds > 0:'''
+new = '''                reply = owner._take(request)
+                owner._connection_closed()
+                if reply.delay_seconds > 0:'''
+
+[[mutation.edit]]
+file = "tests/adapters/fake_model_server.py"
+old = '''                finally:
+                    owner._connection_closed()'''
+new = '''                finally:
+                    pass'''
+
+[[mutation]]
+name = "요청을 응답한 뒤에 적는다"
+tests = ["tests/adapters/test_fake_model_server.py::test_응답_함수는_요청을_받은_뒤_그_자리에서_돈다"]
+expect = "red"
+expect_output = ["응답 함수가 본 요청 수 [0]"]
+
+[[mutation.edit]]
+file = "tests/adapters/fake_model_server.py"
+old = '''            self._requests.append(request)
+            entry = self._script.pop(0) if self._script else None'''
+new = '''            entry = self._script.pop(0) if self._script else None'''
+
+[[mutation.edit]]
+file = "tests/adapters/fake_model_server.py"
+old = '        return entry if isinstance(entry, Reply) else entry(request)'
+new = '''        reply = entry if isinstance(entry, Reply) else entry(request)
+        with self._lock:
+            self._requests.append(request)
+        return reply'''
+
+[[mutation]]
+name = "끌 때 듣는 소켓을 닫지 않는다"
+tests = ["tests/adapters/test_fake_model_server.py::test_핸들로_끈_뒤에는_그_포트에_붙으면_연결이_거부된다"]
+expect = "red"
+expect_output = ["DID NOT RAISE ConnectionRefusedError"]
+
+# `server_close()`만 뺀 첫 판은 시험이 초록이었다. 참조가 사라질 때 CPython이 소켓을 닫아 주어서라고
+# 본다(어림이고 소켓이 닫히는 순간은 재지 않았다). 그래서 핸들이 서버를 계속 쥐게 해서 듣는 소켓이
+# 실제로 열려 있게 한다.
+[[mutation.edit]]
+file = "tests/adapters/fake_model_server.py"
+old = '        httpd, self._httpd = self._httpd, None'
+new = '        httpd = self._httpd'
+
+[[mutation.edit]]
+file = "tests/adapters/fake_model_server.py"
+old = '            httpd.server_close()'
+new = '            pass'
