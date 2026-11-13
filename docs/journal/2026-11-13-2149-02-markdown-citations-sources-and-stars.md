@@ -176,6 +176,6 @@ n이 두 배가 될 때 시간이 서너 배로 느는 모양은 라이브러리
 
 ## 다음
 
-- 티켓 03(`.scratch/answer-markdown/issues/03-widget-renders-answers-as-markdown.md`)이 막힌 것 없이 남았다. 01과 02가 done이다.
-- 디자인 시스템 아티팩트에는 이 PR의 병합 뒤 `/sync-design-system 올리기`가 마크다운 부품의 카드(보여 주기용 스토리에 번호와 출처를 더한 것)를 올린다. 이 티켓의 일이 아니다. 그 올리기가 기다리던 U+FFFD 고침은 이미 dev에 병합됐다.
+- 이 PR의 병합으로 티켓 03(`.scratch/answer-markdown/issues/03-widget-renders-answers-as-markdown.md`, 위젯 적용)과 04(`.scratch/answer-markdown/issues/04-markdown-card-renders-on-react-18.md`, 디자인 시스템 페이지의 React 18.3.1에서 카드가 그려지게)가 함께 막힌 것이 없어진다. 04는 이 PR이 반영하던 중에 dev(PR #562)가 더했다.
+- 디자인 시스템 아티팩트에는 PR #562가 이 PR 이전의 카드를 올렸고, 페이지의 React 18.3.1에서 그려지지 않았다. 고친 뒤의 올리기는 04의 체크리스트에 있다. 04가 다시 grep하라고 한 컨텍스트 제공자 꼴을 이 PR도 하나 더했다(`Markdown.tsx`의 `SourcesBlock`이 쓰는 `<PlaceContext value="sources">`).
 - 회고가 대기열에 둔 고침 하나: `stale-web-design-canaries`(카나리아 명세 셋의 기대 글이 원천에 없다).
