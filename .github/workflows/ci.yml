@@ -340,12 +340,14 @@ jobs:
   # 저장소인 PR 만 돈다. 포크 PR 은 이 잡을 건너뛴다.
   # 모양은 e2e-widget 과 같다(위젯 시험이 pnpm 과 chromium 을 쓴다). 둘째 스텝은 첫째가 실패해도 돈다. 둘의 흔들림을
   # 따로 보기 위해서다. timeout-minutes 는 지난 실행이 없는 첫 값이다. 위젯 시험 하나의 제한이 10분(tests/test_widget_llm.py
-  # 의 TIMEOUT)이고 설치가 3분쯤 드는 것으로 본 어림이다(재지 않았다). 이 잡이 든 첫 실행으로 프로브를 다시 돌려 고친다
-  # (머리 주석). 프로브의 JOBS 에는 아직 이 잡이 없다.
+  # 의 TIMEOUT)이고 설치가 3분쯤 드는 것으로 본 어림이다(재지 않았다). tests/test_assistant_llm.py 가 들어온 뒤로 이 PC 에서
+  # -m llm 전체가 14분 46초였으므로(손으로 봤다, 일지 2026-11-12-2346) 그 시간에 위젯과 설치를 더해 25분에서 40분으로
+  # 올렸다(이것도 어림이다. CI 의 러너로는 재지 않았다). 이 잡이 든 첫 실행으로 프로브를 다시 돌려 고친다(머리 주석).
+  # 프로브의 JOBS 에는 아직 이 잡이 없다.
   llm:
     if: ${{ (github.event_name == 'push' && github.ref == 'refs/heads/main') || (github.event_name == 'pull_request' && github.base_ref == 'main' && github.event.pull_request.head.repo.full_name == github.repository) }}
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 40
     env:
       PYTHONUTF8: "1"
     steps:
