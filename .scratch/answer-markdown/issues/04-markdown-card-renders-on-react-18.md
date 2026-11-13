@@ -1,0 +1,14 @@
+# 04: 마크다운 카드가 디자인 시스템 페이지의 React 18.3.1에서 그려진다
+
+**What to build:** 디자인 시스템 아티팩트(https://claude.ai/artifact/8ttLDZQqchfD2ao1XG56GH)의 Components 절에서 Markdown 카드가 장면을 그린다. 지금은 그 칸에 "This preview could not run: a script it needs did not load, or threw while loading. Showing the static preview."만 뜨고, 다른 카드 아홉 개는 그려진다. 위젯과 관리 화면은 패키지와 같은 React 19로 돌아 이 고침과 상관없이 부품이 그려진다. 이 티켓은 페이지가 싣는 React 18.3.1에서도 부품이 그려지게 하는 일이다.
+
+근거: 2026-11-13 올리기(harness `ds-upload-markdown-cards`, 아티팩트 판 41 `1794576819-4601`) 뒤 앱 안 브라우저로 Components 절을 열어 손으로 봤다(일지 `docs/journal/2026-11-13-2106-ds-bundle-escape-replacement-char.md`의 올리기 절). 페이지는 색인 `libraries`의 React·ReactDOM 18.3.1을 싣는다(`web/tools/sync-design-system/upload.ts`의 `LIBRARIES`). 원인은 어림이다. `web/packages/ui/src/components/molecules/Markdown.tsx`(커밋 `ad7dff584`)가 컨텍스트를 `<PlaceContext value="flow">`처럼 컨텍스트 객체 그대로 제공자로 다섯 자리(112·155·177·195·203행)에서 쓴다. 이 꼴은 React 19에서 생겼다. React 18은 컨텍스트 객체를 요소로 두면 소비자로 읽어 자식을 함수로 부른다고 기억한다(React 18 소스에서 컨텍스트 객체가 곧 소비자였다는 기억이다. 이 세션은 그 원문을 받지 않았고 18.3.1에서 돌려 보지도 않았다). 패키지에서 컨텍스트를 쓰는 부품은 Markdown 하나이고(`web/packages/ui/src`를 `Context value`와 `.Provider`로 grep했다), 깨진 카드도 Markdown 하나다. 올린 묶음의 내보내기에는 `Markdown`과 `MarkdownText`가 있다(묶음 글을 읽었다). 카드 iframe은 다른 출처라 앱 안 브라우저의 콘솔에 카드 안의 오류가 실리지 않아, 오류 문구는 보지 못했다.
+
+**Blocked by:** 02 (마크다운 부품이 출력을 다듬는다). 둘 다 마크다운 부품을 고친다.
+
+**Status:** ready-for-agent
+
+- [ ] 고치기 전에, 페이지와 같은 React 18.3.1에서 Markdown 장면이 그려지지 않음을 보이는 시험을 쓰고 실패를 본다(원칙 II). 지금 카드를 그리는 시험(`web/tools/sync-design-system/assemble.test.ts`)은 패키지의 React 19로 그려 이 차이를 보지 못한다. React 18.3.1을 시험에 들이는 것은 의존성을 더하는 일이라 `docs/constitution/tech.md`와 그 영역의 ADR을 먼저 본다. 그 시험이 18.3.1에서도 그려지면 위의 원인 어림이 틀린 것이다. 그때는 고치지 말고 카드가 실패하는 까닭부터 찾는다(카드 문구는 스크립트를 싣지 못했거나 싣다가 던졌다는 뜻이라 다른 원인일 수 있다)
+- [ ] Markdown 부품이 React 18.3.1과 19에서 함께 그려진다. 길은 고치는 세션이 고른다. 예는 제공자를 `<PlaceContext.Provider value>`로 쓰는 길이다(두 판이 함께 받는다고 기억한다. 돌려 보지 않았다). 02가 같은 꼴을 더할 수 있으니 고칠 때 자리를 다시 grep한다. 페이지가 React 19를 싣게 하는 길은 이 티켓 밖이다. design-card-build가 페이지의 판을 18.3.1로 정했고(`.scratch/design-card-build/spec.md`의 "색인의 `libraries`"와 "보낸 뒤"), 짓기 명령이 그 판에 맞춰 JSX 런타임을 `createElement` 대체 모듈로 바꾸고 묶음에 React 19의 요소 표식(`react.transitional.element`)이 있으면 멈춘다(`web/tools/sync-design-system/assemble.ts`의 `JSX_SHIM`과 `FORBIDDEN`). 그 결정을 바꾸는 일이라 따로 정한다. 그 길을 정할 때 볼 것은 둘이다. 아티팩트 종류의 지침(저장소 밖, 2026-11-13에 이 세션이 읽었다)은 "Listed `react`, `react-dom` 18 load from jsDelivr unless in `components/lib/` (both or neither; to carry them, copy `artifact-type/demo.json`'s two `components/lib/` entries with a script)"라고 적는다. 색인에 18 아닌 판을 올리거나 `components/lib/`에 19를 두는 것이 받아들여지는지는 보지 않았다. 그리고 페이지는 `React`·`ReactDOM` 전역을 쓰는데(`upload.ts`의 `LIBRARIES`의 `global`), React 19 업그레이드 안내(https://react.dev/blog/2024/04/25/react-19-upgrade-guide)에는 "UMD builds removed" 절이 있다(페이지를 `curl`로 받아 grep으로 손으로 봤다)
+- [ ] 병합 뒤 `/sync-design-system 올리기`로 올리고, 앱 안 브라우저로 Components 절의 Markdown 카드가 그려지고 칸 아래가 잘리지 않는지 본다
+- [ ] 검증 명령이 모두 초록이다
