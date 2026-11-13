@@ -1,0 +1,25 @@
+# `.claude/rules/core.md` 의 실패 정책 항목에 더한 문장(모델이 낸 도구 호출의 인자가 올바른 JSON 이 아닐 때 응답 전체를
+# 거절하는 자리와 칸)이 `paths` 에 맞는 파일을 Read 로 열 때 실리는지(local-model 티켓 02).
+# 실험군은 규칙의 paths 안(src/agent_os/core/), 대조군은 밖(README.md)을 읽는다. 둘 다 이 체크아웃이다.
+# 최신 결과: 통과 4(2026-11-13, 이 PC의 local-model 티켓 02 워크트리, claude 2.1.322, HEAD a4eea81ff 위의 커밋하지 않은 작업 트리, 일지 2026-11-13-0445). 실험군 셋이 `invalid_tool_calls`와 `reply_from`을 옮겼고 대조군은 "없음"이었다.
+# 돌리는 법: uv run python tools/canary.py .scratch/local-model/probes/canary/core_rule_broken_tool_call.toml <출력 디렉터리>
+kind = "rule"
+question = '''
+Read 도구로 `{target}` 파일 하나만 통째로 읽어라. 다른 파일은 읽지 않는다.
+그 뒤 이 세션에 실린 지시 가운데, 모델이 낸 도구 호출의 인자가 올바른 JSON이 아닐 때 실행이 어떻게 끝나는지를
+다루는 문장이 있으면 두 가지를 글자 그대로 옮겨라. (1) 라이브러리가 그런 호출을 옮겨 담는 모델 응답 메시지의 칸
+이름(백틱 안의 글). (2) 그 응답 전체를 거절하는 함수의 이름(백틱 안의 글).
+읽은 파일의 코드에서 추측하지 않는다. 실린 지시에 그런 문장이 없으면 "없음"이라고만 답하라.
+'''
+expect = ["invalid_tool_calls", "reply_from"]
+source = ".claude/rules/core.md"
+
+[[arm]]
+name = "paths-안"
+role = "experiment"
+target = "src/agent_os/core/loop.py"
+
+[[arm]]
+name = "paths-밖"
+role = "control"
+target = "README.md"
