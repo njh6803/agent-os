@@ -10,6 +10,7 @@ import type {
   LinkReference,
   Nodes,
   Paragraph,
+  PhrasingContent,
   Strong,
   TableCell,
   Text,
@@ -35,10 +36,18 @@ export function isPhrasingParent(node: Nodes): node is PhrasingParent {
   }
 }
 
-/** 나무의 모든 노드를 앞에서부터 한 번씩 찾는다. `visit` 이 노드의 `children` 을 바꾸면 바뀐 자식을 이어서 찾는다. */
-export function forEachNode(root: Nodes, visit: (node: Nodes) => void): void {
+/**
+ * 나무의 모든 노드를 앞에서부터 한 번씩 찾는다. `visit` 이 노드의 `children` 을 바꾸면 바뀐 자식을 이어서 찾는다. `skip` 이
+ * 참인 노드는 그 아래까지 건너뛴다.
+ */
+export function forEachNode(
+  root: Nodes,
+  visit: (node: Nodes) => void,
+  skip: (node: Nodes) => boolean = () => false,
+): void {
   const stack: Nodes[] = [root];
   for (let node = stack.pop(); node !== undefined; node = stack.pop()) {
+    if (skip(node)) continue;
     visit(node);
     if ("children" in node) {
       for (let index = node.children.length - 1; index >= 0; index -= 1) {
@@ -47,6 +56,56 @@ export function forEachNode(root: Nodes, visit: (node: Nodes) => void): void {
       }
     }
   }
+}
+
+/** 줄 안 내용을 든 노드마다 `visit` 을 부른다. `skip` 이 참인 노드는 그 아래까지 건너뛴다. */
+export function forEachPhrasingParent(
+  root: Nodes,
+  visit: (parent: PhrasingParent) => void,
+  skip: (node: Nodes) => boolean = () => false,
+): void {
+  forEachNode(
+    root,
+    (node) => {
+      if (isPhrasingParent(node)) visit(node);
+    },
+    skip,
+  );
+}
+
+/** 변환이 노드에 얹은 hast 요소 이름(`data.hName`). 얹지 않았으면 undefined 다. */
+export function hastName(node: Nodes): unknown {
+  // `hName` 은 mdast-util-to-hast 가 `Data` 에 더하는 키인데 이 패키지의 타입에는 들지 않는다.
+  const data: Record<string, unknown> = { ...node.data };
+  return data["hName"];
+}
+
+export function isAsciiDigit(char: string | undefined): boolean {
+  return char !== undefined && char >= "0" && char <= "9";
+}
+
+/** 이웃한 글자 노드를 하나로 합치고 빈 글자 노드를 뺀다. 합친 노드에는 위치가 없다. */
+export function mergeText(children: readonly PhrasingContent[]): PhrasingContent[] {
+  const merged: PhrasingContent[] = [];
+  for (const child of children) {
+    if (child.type === "text" && child.value === "") continue;
+    const last = merged.at(-1);
+    if (child.type === "text" && last?.type === "text") {
+      merged[merged.length - 1] = text(last.value + child.value);
+    } else {
+      merged.push(child);
+    }
+  }
+  return merged;
+}
+
+/** 노드 아래의 글자 노드를 이어 붙인다(굵게·기울임 같은 껍데기는 벗긴다). 코드와 줄바꿈 노드는 글자로 세지 않는다. */
+export function plainText(root: Nodes): string {
+  let value = "";
+  forEachNode(root, (node) => {
+    if (node.type === "text") value += node.value;
+  });
+  return value;
 }
 
 /**

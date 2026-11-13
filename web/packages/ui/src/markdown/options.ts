@@ -4,12 +4,15 @@
 //
 // - 원시 HTML 을 그리는 플러그인(rehype-raw)을 두지 않으므로 HTML 은 글자로 보인다.
 // - 그리는 요소는 닫힌 목록이다(명세 "그리는 요소와 모양"). 목록 밖의 요소는 껍데기를 벗겨 안의 글만 남긴다.
+// - 위첨자(`sup`)와 묶음(`div`)은 변환이 표지를 단 것(문장 끝 번호와 출처 덩이)만 그린다. 다른 길로 들어온 것은 껍데기를 벗긴다.
 // - 이미지(`img`)는 목록에 들지만 부품이 요소가 아니라 "이미지: 대체 글" 글자로 바꾼다. 어느 쪽도 `img` 를 내지 않는다.
 // - 주소는 링크 정책(`link-url.ts`)을 지난 것만 남기고, 지나지 못하면 빈 글자로 바꾼다.
-import type { Options } from "react-markdown";
+import type { AllowElement, Options } from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { CITE_PROPERTY } from "./citations";
 import { linkHref } from "./link-url";
 import { remarkAnswer } from "./plugin";
+import { SOURCES_PROPERTY } from "./sources";
 
 const ALLOWED_ELEMENTS = [
   "a",
@@ -17,6 +20,7 @@ const ALLOWED_ELEMENTS = [
   "br",
   "code",
   "del",
+  "div",
   "em",
   "h1",
   "h2",
@@ -31,6 +35,7 @@ const ALLOWED_ELEMENTS = [
   "p",
   "pre",
   "strong",
+  "sup",
   "table",
   "tbody",
   "td",
@@ -48,8 +53,16 @@ export function normalizeLineEnds(text: string): string {
   return text.replace(/\r\n?/g, "\n");
 }
 
+/** 위첨자와 묶음은 변환이 단 표지가 있을 때만 남긴다. 표지의 이름은 `citations.ts` 와 `sources.ts` 가 정한다. */
+export const allowElement: AllowElement = (element) => {
+  if (element.tagName === "sup") return element.properties[CITE_PROPERTY] !== undefined;
+  if (element.tagName === "div") return element.properties[SOURCES_PROPERTY] !== undefined;
+  return true;
+};
+
 export const BASE_OPTIONS = {
   allowedElements: ALLOWED_ELEMENTS,
+  allowElement,
   unwrapDisallowed: true,
   remarkPlugins: [remarkGfm, remarkAnswer],
   urlTransform: (url: string): string => linkHref(url) ?? "",

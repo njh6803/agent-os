@@ -4,17 +4,23 @@
 // 본다. 클래스 이름의 글자와 안쪽 함수의 이름은 단언하지 않는다(라이브러리가 붙이는 클래스가 요소에 넘어가지 않았다는
 // 음성 단언은 예외다). 걸린 시간도 단언하지 않는다.
 //
-// 이 파일은 02(출력을 다듬는 변환)가 바꾸는 입력을 넣지 않는다. 번호, 출처, 숫자 사이의 기호, 닫히지 않은 굵게다.
+// 티켓 02(출력을 다듬는 변환)의 사례도 여기 건다. 닫히지 않은 굵게, 숫자 사이의 기호, 문장 끝 번호, 출처 덩이, 그 넷을
+// 합친 것이다. 변환은 모든 입력에 함께 걸리므로 01 의 사례(위험한 입력, 병적인 입력 포함)도 그 변환을 지난 결과를 본다.
 import { render, within } from "@testing-library/react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { BREAKS, type ShapeCase } from "../../markdown/cases/breaks";
+import { CITE, CITE_EDGES } from "../../markdown/cases/cite";
+import { COMBINED, SCREEN_INPUTS } from "../../markdown/cases/combined";
 import { DANGER_CASES } from "../../markdown/cases/danger";
+import { CJK, INTERPLAY, LITERAL } from "../../markdown/cases/emphasis";
+import { SOURCE_EDGES, SOURCES } from "../../markdown/cases/sources";
 import { analyze, violations } from "../../markdown/cases/rules";
 import { ALIGNED_TABLE, LINKS, SHAPE } from "../../markdown/cases/shape";
 import { skeletonOf } from "../../markdown/cases/skeleton";
 import { STRESS_FALLBACK_NAMES, STRESS_INPUTS } from "../../markdown/cases/stress";
+import { allowElement } from "../../markdown/options";
 import { Markdown, MarkdownText } from "./Markdown";
 
 afterEach(() => {
@@ -54,7 +60,10 @@ const SEPARATORS = new Set([
   "h6",
 ]);
 
-/** 화면의 갈래가 그린 글의 낱말. 블록과 표 칸의 경계는 공백으로 보고, 링크에 숨긴 문구는 뺀다. */
+/**
+ * 화면의 갈래가 그린 글의 낱말. 블록과 표 칸의 경계는 공백으로 보고, 링크에 숨긴 문구는 뺀다. 위첨자 번호는 화면에서 작은
+ * 글자로 앞말과 갈리므로 그 앞만 공백으로 본다(글자만 내는 갈래는 번호 앞에 공백을 두고 뒤에는 두지 않는다).
+ */
 function screenWords(root: Element): string[] {
   let out = "";
   const walk = (node: Node): void => {
@@ -65,7 +74,7 @@ function screenWords(root: Element): string[] {
     if (!(node instanceof Element)) return;
     if (node.localName === "span" && node.textContent === HIDDEN_NEW_TAB) return;
     const separate = SEPARATORS.has(node.localName);
-    if (separate) out += " ";
+    if (separate || node.localName === "sup") out += " ";
     for (const child of Array.from(node.childNodes)) walk(child);
     if (separate) out += " ";
   };
@@ -201,6 +210,99 @@ describe("제목·이미지·표·코드·각주·할 일 목록 21가지", () =
 
 describe("링크 17가지", () => {
   shapeTests(LINKS, 17);
+});
+
+// ── 출력을 다듬는 변환(티켓 02) ─────────────────────────────────────────────────────────────────────────────────
+describe("닫히지 않는 굵게 34가지", () => {
+  shapeTests(CJK, 34);
+});
+
+describe("글자로 두는 기호 60가지", () => {
+  shapeTests(LITERAL, 60);
+});
+
+describe("변환의 차례 11가지", () => {
+  shapeTests(INTERPLAY, 11);
+});
+
+describe("문장 끝 번호 48가지", () => {
+  shapeTests(CITE, 48);
+});
+
+describe("문장 끝 번호의 경계 입력 13가지", () => {
+  shapeTests(CITE_EDGES, 13);
+});
+
+describe("출처 덩이 32가지", () => {
+  shapeTests(SOURCES, 32);
+});
+
+describe("출처 덩이의 경계 입력 2가지", () => {
+  shapeTests(SOURCE_EDGES, 2);
+});
+
+describe("합친 사례 17가지", () => {
+  shapeTests(COMBINED, 17);
+});
+
+describe("문장 끝 번호와 출처 덩이의 그림", () => {
+  it("번호는 링크가 아니고 누를 수 없다", () => {
+    const { container } = render(<Markdown text={"그렇다 [1]"} />);
+    const cite = container.querySelector("sup");
+    expect(cite?.textContent).toBe("1");
+    expect(cite?.closest("a")).toBeNull();
+    expect(cite?.querySelector("a, button")).toBeNull();
+    expect(cite?.hasAttribute("tabindex")).toBe(false);
+  });
+
+  it("번호와 출처 덩이의 표지는 DOM 에 남지 않는다", () => {
+    const { container } = render(<Markdown text={SCREEN_INPUTS["mk-cite"]} />);
+    for (const element of container.querySelectorAll("sup, div")) {
+      const names = Array.from(element.attributes, (attr) => attr.name);
+      expect(names.filter((name) => name.startsWith("data-"))).toEqual([]);
+    }
+  });
+
+  it("출처 덩이는 최상위의 마지막 요소 하나로 감싸이고 본문은 그 밖에 남는다", () => {
+    const { container } = render(<Markdown text={SCREEN_INPUTS["mk-cite"]} />);
+    const root = container.firstElementChild;
+    const block = root?.lastElementChild;
+    expect(block?.localName).toBe("div");
+    expect(block?.querySelector("ol")).not.toBeNull();
+    expect(block?.textContent).toContain("출처");
+    expect(root?.firstElementChild?.querySelectorAll("sup")).toHaveLength(2);
+    expect(block?.querySelectorAll("sup")).toHaveLength(0);
+  });
+
+  it("마크다운 문법이 쓰지 않는 sup 과 div 는 원시 HTML 로 써도 그려지지 않는다", () => {
+    const { container } = render(
+      <Markdown text={'본문<sup>1</sup>\n\n<div class="sources">출처</div>'} />,
+    );
+    expect(container.querySelectorAll("sup")).toHaveLength(0);
+    expect(container.firstElementChild?.querySelectorAll("div")).toHaveLength(0);
+    expect(container.textContent).toContain("<sup>1</sup>");
+  });
+
+  it("각주 문법의 위첨자는 그려지지 않고 쓴 글자로 남는다", () => {
+    const { container } = render(<Markdown text={"본문입니다[^1].\n\n[^1]: 각주 글"} />);
+    expect(container.querySelectorAll("sup")).toHaveLength(0);
+    expect(container.textContent).toContain("[^1]");
+  });
+
+  // 위의 두 시험은 원시 HTML 과 각주가 다른 층에서 먼저 글자가 되어 허용 판정이 없어도 지난다. 그래서 판정을 직접 부른다.
+  it("허용 판정은 표지가 없는 sup 과 div 를 벗기고 표지가 있는 것과 다른 요소는 들인다", () => {
+    const element = (tagName: string, properties: Record<string, string>) => ({
+      type: "element" as const,
+      tagName,
+      properties,
+      children: [],
+    });
+    expect(allowElement(element("sup", {}), 0, undefined)).toBe(false);
+    expect(allowElement(element("sup", { dataCite: "first" }), 0, undefined)).toBe(true);
+    expect(allowElement(element("div", {}), 0, undefined)).toBe(false);
+    expect(allowElement(element("div", { dataSources: "true" }), 0, undefined)).toBe(true);
+    expect(allowElement(element("p", {}), 0, undefined)).toBe(true);
+  });
 });
 
 // ── 깊이 가드 ───────────────────────────────────────────────────────────────────────────────────────────────────
@@ -350,6 +452,9 @@ describe("MarkdownText", () => {
     "제목과 인용": "# 제목\n\n본문\n\n> 인용 첫 줄\n> 인용 둘째 줄",
     "물러서는 입력": quote(11),
     "원시 HTML": "<b>굵게</b> <script>alert(1)</script>",
+    "위첨자 번호": "휴직은 1년입니다. [1]\n신청은 30일 전입니다[2][3].",
+    "출처 덩이": "본문입니다. [1]\n\n**출처:**\n\n[1] 편람\n[2] 규정",
+    "숫자 사이 기호": "2*3*4 = 24이고 2*x*4 와 __init__.py",
   };
 
   it.each(Object.entries(SAME_WORDS))("%s 입력은 요소 없이 글자만 낸다", (_name, input) => {
@@ -440,6 +545,35 @@ describe("MarkdownText", () => {
     const { container } = render(<MarkdownText text={quote(11)} />);
     expect(container.textContent).toBe(quote(11));
   });
+
+  it("위첨자 번호 앞에 공백을 두어 앞 낱말과 붙지 않는다", () => {
+    const { container } = render(<MarkdownText text={"휴직은 1년입니다. [1]"} />);
+    expect(container.childElementCount).toBe(0);
+    expect(container.textContent).toBe("휴직은 1년입니다. 1");
+  });
+
+  it("이어진 위첨자 번호도 번호마다 공백으로 갈린다", () => {
+    const { container } = render(<MarkdownText text={"가능합니다[1][2]."} />);
+    expect(wordsOf(container.textContent)).toEqual(["가능합니다", "1", "2."]);
+  });
+
+  it("출처 덩이의 표지와 목록의 글이 남고 번호 목록의 번호가 되살아난다", () => {
+    const { container } = render(<MarkdownText text={SCREEN_INPUTS["mk-cite"]} />);
+    expect(container.childElementCount).toBe(0);
+    const text = container.textContent;
+    expect(text).toContain("출처");
+    expect(text).toContain("1. 육아휴직 업무편람, 12쪽 (갱신일 2026-10-01)");
+    expect(text).toContain("2. 인사 규정, 제3장 제14조 (갱신일 2026-08-15)");
+  });
+
+  it("숫자 사이의 별표와 밑줄과 되살린 굵게가 화면과 같은 글로 남는다", () => {
+    const input = SCREEN_INPUTS["mk-side-2"];
+    const plain = render(<MarkdownText text={input} />);
+    const screen = render(<Markdown text={input} />);
+    expect(wordsOf(plain.container.textContent)).toEqual(screenWords(screen.container));
+    expect(plain.container.textContent).toContain("__init__.py");
+    expect(plain.container.textContent).not.toContain("**");
+  });
 });
 
 // ── 그 밖 ───────────────────────────────────────────────────────────────────────────────────────────────────────
@@ -473,6 +607,15 @@ describe("그 밖", () => {
     expect(skeletonOf(container)).toBe(
       "<p>본문[^1]</p><p>[^1]: 가</p><p>[^2]: 나</p><p>[^3]: 다</p>",
     );
+    expect(violations(container)).toEqual([]);
+  });
+
+  it.each([
+    ["본문[^a\\*b]\n\n[^a\\*b]: 글", "<p>본문[^a\\*b]</p><p>[^a\\*b]: 글</p>"],
+    ["본문[^a&amp;b]\n\n[^a&amp;b]: 글", "<p>본문[^a&amp;amp;b]</p><p>[^a&amp;amp;b]: 글</p>"],
+  ])("각주 정의의 표지는 본문의 참조처럼 쓴 글자 그대로 남는다(%j)", (input, want) => {
+    const { container } = render(<Markdown text={input} />);
+    expect(skeletonOf(container)).toBe(want);
     expect(violations(container)).toEqual([]);
   });
 
