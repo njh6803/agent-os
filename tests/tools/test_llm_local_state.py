@@ -1,0 +1,383 @@
+"""`tools/llm_local.py`의 잠금, `sweep`, Terraform 구성, 실제 pytest 자식의 시험.
+
+`sweep`이 지우는 길은 판정을 깨려는 입력(표지 없는 폴더, 뿌리 밖을 가리키는 링크, 살아 있는 잠금,
+폴더 안의 링크)으로 반박한다(`.claude/rules/tools.md`). 링크는 윈도에서 junction, 리눅스에서
+심볼릭 링크로 만든다. 환경이 모자라 skip 하지 않는다(`.claude/rules/tests.md`).
+"""
+
+from __future__ import annotations
+
+import json
+import os
+import re
+import subprocess
+import sys
+import threading
+import time
+from pathlib import Path
+
+import pytest
+from tests.tools.llm_local_world import (
+    World,
+    leave_live_lock,
+    run_main,
+    terraform_calls,
+)
+
+from tools import llm_local
+
+CONFIG = Path(__file__).resolve().parents[2] / "tools" / "llm_local_server" / "main.tf"
+
+
+@pytest.fixture
+def world(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> World:
+    return World(tmp_path, monkeypatch)
+
+
+def make_link(link: Path, target: Path) -> None:
+    """`link`가 `target`을 가리키게 만든다. 윈도는 junction, 그 밖은 심볼릭 링크."""
+    if sys.platform == "win32":
+        done = subprocess.run(
+            ["cmd", "/c", "mklink", "/J", str(link), str(target)],
+            capture_output=True,
+            timeout=30,
+            check=False,
+        )
+        assert done.returncode == 0, done.stderr
+    else:
+        os.symlink(target, link, target_is_directory=True)
+
+
+def marked_folder(world: World, name: str, *, resources: bool) -> Path:
+    folder = world.root / name
+    folder.mkdir(parents=True)
+    (folder / llm_local.MARKER).write_text("llm_local\n", encoding="utf-8")
+    body: dict[str, object] = {"resources": [{"type": "runpod_pod"}] if resources else []}
+    (folder / "terraform.tfstate").write_text(json.dumps(body), encoding="utf-8")
+    return folder
+
+
+# --- 잠금 ---
+
+
+def test_같은_폴더에서_동시에_잠금을_얻으려_하면_하나만_얻는다(world: World) -> None:
+    world.root.mkdir(parents=True)
+    world.cmdlines[os.getpid()] = ("python", "tools/llm_local.py", "run")
+    name = llm_local.folder_name(world.branch)
+    barrier = threading.Barrier(8)
+    results: list[llm_local.Lock | None] = []
+
+    def attempt() -> None:
+        barrier.wait()
+        results.append(llm_local.acquire(world.root, name))
+
+    threads = [threading.Thread(target=attempt) for _ in range(8)]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join(timeout=60)
+    held = [r for r in results if r is not None]
+    assert len(results) == 8 and len(held) == 1
+    for lock in held:
+        lock.release()
+
+
+def test_판정_구간의_파일_잠금이_잡혀_있으면_기다리지_않고_산_잠금으로_본다(world: World) -> None:
+    world.root.mkdir(parents=True)
+    name = llm_local.folder_name(world.branch)
+    with llm_local.file_guard(world.root / (name + ".guard")) as held:
+        assert held
+        assert llm_local.acquire(world.root, name) is None
+    lock = llm_local.acquire(world.root, name)
+    assert lock is not None
+    lock.release()
+    assert not (world.root / (name + ".lock")).exists()
+
+
+def test_죽은_잠금을_치우고_새로_얻은_뒤에는_앞선_죽은_판정으로_그_잠금을_지울_수_없다(
+    world: World,
+) -> None:
+    world.root.mkdir(parents=True)
+    name = llm_local.folder_name(world.branch)
+    leave_live_lock(world, pid=77)
+    world.cmdlines.clear()  # 죽은 잠금
+    first = llm_local.acquire(world.root, name)
+    assert first is not None  # 죽은 것을 치우고 새로 얻었다
+    world.cmdlines[os.getpid()] = ("python", "tools/llm_local.py", "run")
+    # 같은 죽은 판정을 들고 온 둘째는 파일을 다시 읽어 산 잠금을 만난다
+    assert llm_local.acquire(world.root, name) is None
+    first.release()
+
+
+# --- sweep ---
+
+
+def test_sweep은_죽은_잠금의_폴더_자원을_destroy하고_폴더와_잠금을_지운다(world: World) -> None:
+    folder = marked_folder(world, "dead", resources=True)
+    key_file = folder / ".tfdata" / "x"
+    key_file.parent.mkdir()
+    key_file.write_text("k", encoding="utf-8")
+    assert run_main("sweep") == 0
+    assert len(terraform_calls(world, "destroy")) == 1
+    assert not folder.exists()
+    assert not (world.root / "dead.lock").exists()
+
+
+def test_sweep은_자원이_없는_폴더를_terraform_없이_지운다(world: World) -> None:
+    folder = marked_folder(world, "clean", resources=False)
+    assert run_main("sweep") == 0
+    assert terraform_calls(world, "destroy") == []
+    assert not folder.exists()
+
+
+def test_sweep은_지우지_못한_자원이_있으면_폴더를_두고_3이다(world: World) -> None:
+    folder = marked_folder(world, "stuck", resources=True)
+    world.destroy_results = [False]
+    world.refresh_results = [False]
+    assert run_main("sweep") == 3
+    assert folder.exists()
+
+
+def test_sweep은_표지_없는_폴더를_건드리지_않는다(world: World) -> None:
+    world.root.mkdir(parents=True)
+    other = world.root / "not-ours"
+    other.mkdir()
+    (other / "precious.txt").write_text("남의 파일", encoding="utf-8")
+    assert run_main("sweep") == 0
+    assert (other / "precious.txt").read_text(encoding="utf-8") == "남의 파일"
+
+
+def test_sweep은_살아_있는_잠금의_폴더를_건드리지_않는다(world: World) -> None:
+    folder = marked_folder(world, llm_local.folder_name(world.branch), resources=True)
+    leave_live_lock(world)
+    assert run_main("sweep") == 0
+    assert folder.exists() and terraform_calls(world, "destroy") == []
+
+
+def test_sweep은_뿌리_밖을_가리키는_링크를_따라가지_않는다(world: World, tmp_path: Path) -> None:
+    outside = tmp_path / "outside"
+    outside.mkdir()
+    (outside / llm_local.MARKER).write_text("표지처럼 보인다\n", encoding="utf-8")
+    (outside / "keep.txt").write_text("바깥", encoding="utf-8")
+    world.root.mkdir(parents=True)
+    make_link(world.root / "linked", outside)
+    assert run_main("sweep") == 0
+    assert (outside / "keep.txt").read_text(encoding="utf-8") == "바깥"
+    assert (outside / llm_local.MARKER).exists()
+
+
+def test_sweep이_지우는_폴더_안의_링크는_링크만_끊고_바깥을_지키다(
+    world: World, tmp_path: Path
+) -> None:
+    outside = tmp_path / "outside2"
+    outside.mkdir()
+    (outside / "keep.txt").write_text("바깥", encoding="utf-8")
+    folder = marked_folder(world, "inner-link", resources=False)
+    make_link(folder / "escape", outside)
+    assert run_main("sweep") == 0
+    assert not folder.exists()
+    assert (outside / "keep.txt").read_text(encoding="utf-8") == "바깥"
+
+
+def test_sweep이_폴더를_지우는_동안_run은_그_폴더에서_잠금을_얻지_못한다(
+    world: World, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    folder = marked_folder(world, "busy", resources=True)
+    world.cmdlines[os.getpid()] = ("python", "tools/llm_local.py", "sweep")
+    seen: list[llm_local.Lock | None] = []
+    inner = llm_local.destroy_folder
+
+    def spying(target: Path, key: str | None) -> bool:
+        seen.append(llm_local.acquire(world.root, "busy"))
+        return inner(target, key)
+
+    monkeypatch.setattr(llm_local, "destroy_folder", spying)
+    assert run_main("sweep") == 0
+    assert seen == [None]
+    assert not folder.exists()
+
+
+def test_sweep은_run이_먼저_잠금을_얻었으면_그_폴더를_건드리지_않는다(world: World) -> None:
+    folder = marked_folder(world, "raced", resources=True)
+    world.cmdlines[os.getpid()] = ("python", "tools/llm_local.py", "run")
+    lock = llm_local.acquire(world.root, "raced")
+    assert lock is not None
+    assert run_main("sweep") == 0
+    assert folder.exists() and terraform_calls(world, "destroy") == []
+    lock.release()
+
+
+def deep_folder(base: Path) -> Path:
+    """윈도의 260자 한계를 넘는 경로(400자 남짓)를 `\\\\?\\` 접두로 만든다. 리눅스는 그냥 만든다."""
+    target = base / "deep"
+    for _ in range(12):
+        target = target / ("d" * 30)
+    made = llm_local.long_path(target)
+    os.makedirs(made)
+    (made / "keep.txt").write_text("서버 키 sk-deep", encoding="utf-8")
+    return base / "deep"
+
+
+def test_sweep이_지우는_폴더가_260자를_넘는_경로를_품어도_지운다(world: World) -> None:
+    folder = marked_folder(world, "deep-folder", resources=False)
+    deep_folder(folder)
+    assert run_main("sweep") == 0
+    assert not folder.exists()
+
+
+def test_키_훑기는_260자를_넘는_경로_안의_키가_든_파일도_지운다(tmp_path: Path) -> None:
+    folder = tmp_path / "state"
+    folder.mkdir()
+    deep = deep_folder(folder)
+    llm_local.scrub_state(folder, "sk-deep")
+    assert deep.exists()
+    assert list(llm_local.long_path(deep).rglob("keep.txt")) == []
+
+
+def test_키를_모를_때도_상태_파일과_백업은_지운다(tmp_path: Path) -> None:
+    (tmp_path / "terraform.tfstate").write_text("{}", encoding="utf-8")
+    (tmp_path / "terraform.tfstate.backup").write_text("{}", encoding="utf-8")
+    (tmp_path / "keep.txt").write_text("남긴다", encoding="utf-8")
+    llm_local.scrub_state(tmp_path, None)
+    assert sorted(p.name for p in tmp_path.iterdir()) == ["keep.txt"]
+
+
+def test_긴_경로_접두는_윈도의_절대_경로에만_붙고_정규화하지_않는다(tmp_path: Path) -> None:
+    relative = Path("a") / "b."
+    assert llm_local.long_path(relative) == relative
+    absolute = tmp_path / "x" / "trail."
+    prefixed = llm_local.long_path(absolute)
+    if sys.platform == "win32":
+        assert str(prefixed) == "\\\\?\\" + str(absolute)
+        assert str(prefixed).endswith("trail.")
+    else:
+        assert prefixed == absolute
+
+
+# --- Terraform 구성 ---
+
+
+def test_구성의_파드_자원에는_계정_키를_싣는_변수가_없다() -> None:
+    text = CONFIG.read_text(encoding="utf-8")
+    variables = re.findall(r'^variable\s+"([^"]+)"', text, flags=re.MULTILINE)
+    assert variables, "변수를 읽지 못했다"
+    assert not [v for v in variables if "api_key" in v or "account" in v]
+    assert not re.search(r"RUNPOD_API_KEY\s*=", text)
+    assert not re.search(r"var\.(runpod|api|account)", text)
+    assert 'variable "server_key"' in text
+    block = text[text.index('variable "server_key"') :]
+    assert "sensitive" in block.split("}", 1)[0]
+
+
+def test_구성은_공식_이미지와_프로바이더_판을_글자_그대로_묶고_첫째_구성은_포트_하나만_연다() -> (
+    None
+):
+    text = CONFIG.read_text(encoding="utf-8")
+    assert 'version = "= 2.0.0"' in text
+    assert llm_local.VLLM_VERSION in text
+    # 첫째 구성(pods)은 8000/http 하나, 둘째 구성(shared)은 서버 둘이라 8001/http가 더 든다
+    assert 'local.shared ? ["8000/http", "8001/http"] : ["8000/http"]' in text
+    assert "volume_in_gb" in text and "= 0" in text.split("volume_in_gb", 1)[1][:20]
+    assert "--enable-auto-tool-choice" in text and "--api-key" in text
+
+
+def _default_of(text: str, variable: str) -> str:
+    block = text[text.index(f'variable "{variable}"') :].split("\n}", 1)[0]
+    match = re.search(r'default\s*=\s*"?([^"\n]+)"?', block)
+    assert match, f"{variable}의 기본값을 읽지 못했다"
+    return match.group(1).strip()
+
+
+def test_구성의_기본값과_서버_옵션은_스크립트의_상수와_어긋나지_않는다() -> None:
+    text = CONFIG.read_text(encoding="utf-8")
+    assert _default_of(text, "image") == llm_local.IMAGE
+    assert int(_default_of(text, "timer_minutes")) == llm_local.TIMER_MINUTES
+    assert float(_default_of(text, "shared_memory_utilization")) == llm_local.SHARED_UTILIZATION
+    for candidate in llm_local.candidates():
+        for option in llm_local.server_options(candidate):
+            for flag in re.findall(r"--[a-z-]+", option):
+                assert flag in text, f"{flag}가 main.tf에 없다"
+    shared = next(c for c in llm_local.candidates() if c.layout == "shared")
+    ports = [
+        int(m) for o in llm_local.server_options(shared) for m in re.findall(r"--port (\d+)", o)
+    ]
+    assert ports == [8000, 8001]
+    assert "8000 + i" in text
+
+
+def test_구성의_타이머는_파드를_멈추지_않고_지운다() -> None:
+    text = CONFIG.read_text(encoding="utf-8")
+    assert "sleep" in text and "runpodctl pod delete" in text
+    assert "-X DELETE" in text and "/pods/" in text
+    assert "pod stop" not in text
+
+
+# --- 실제 pytest 자식 ---
+
+
+def test_실제_pytest_자식이_PYTEST_ADDOPTS로_상태_폴더_안에_XML과_basetemp를_남기고_거기서_센다(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.delenv("PYTEST_ADDOPTS", raising=False)
+    folder = tmp_path / "state"
+    folder.mkdir()
+    project = tmp_path / "child-project"
+    project.mkdir()
+    (project / "test_child.py").write_text(
+        "import json\n"
+        "def test_a(tmp_path):\n"
+        "    (tmp_path / 'trace.jsonl').write_text(json.dumps(\n"
+        "        {'input_tokens': 7, 'output_tokens': 3}) + '\\n')\n"
+        "def test_b():\n"
+        "    assert True\n",
+        encoding="utf-8",
+    )
+    env = llm_local.child_env(dict(os.environ), folder, [("u", "m", "k")] * 2)
+    done = subprocess.run(
+        [sys.executable, "-m", "pytest", "-p", "no:cacheprovider", "-q"],
+        cwd=project,
+        env=env,
+        capture_output=True,
+        timeout=300,
+        check=False,
+    )
+    assert done.returncode == 0, done.stdout.decode(errors="replace")
+    assert (folder / "junit.xml").is_file()
+    assert (folder / "basetemp").is_dir()
+    results = llm_local.read_results(folder)
+    assert results.passed == 2
+    assert results.tokens is not None
+    assert (results.tokens.input_tokens, results.tokens.output_tokens) == (7, 3)
+
+
+def test_시간_제한에_걸린_명령은_손자_프로세스까지_끊는다(tmp_path: Path) -> None:
+    """`uv run pytest`는 pytest를 손자로 띄운다. 직계 자식만 죽이면 서버를 지운 뒤에도
+    시험이 돈다."""
+    pidfile = tmp_path / "grandchild.pid"
+    marker = "time.sleep(" + "321)"  # 한 덩어리로 적지 않아야 실패 출력의 표지로 쓸 수 있다
+    script = tmp_path / "child.py"
+    script.write_text(
+        "import pathlib, subprocess, sys, time\n"
+        f"grand = subprocess.Popen([sys.executable, '-c', 'import time; {marker}'])\n"
+        f"pathlib.Path({str(pidfile)!r}).write_text(str(grand.pid))\n"
+        "time.sleep(321)\n",
+        encoding="utf-8",
+    )
+    outcome = llm_local.execute(
+        (sys.executable, str(script)), env=dict(os.environ), cwd=tmp_path, timeout=10
+    )
+    assert outcome.timed_out
+    assert pidfile.is_file(), "손자를 띄우기 전에 제한이 걸렸다(제한이 짧다)"
+    pid = int(pidfile.read_text(encoding="utf-8"))
+    words: tuple[str, ...] | None = None
+    for _ in range(50):
+        words = llm_local.cmdline_of(pid)
+        if words is None or not any(marker in word for word in words):
+            return
+        time.sleep(0.2)
+    raise AssertionError(f"끊지 못한 손자 프로세스 {pid}의 명령 줄: {words}")
+
+
+def test_pytest가_아닌_자식이면_결과를_없음으로_읽는다(tmp_path: Path) -> None:
+    results = llm_local.read_results(tmp_path)
+    assert results.passed is None and results.tokens is None
