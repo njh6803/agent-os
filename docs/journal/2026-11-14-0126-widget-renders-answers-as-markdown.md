@@ -65,6 +65,16 @@ open-session을 부른다 2026-11-13T16:27:16Z
 
 다시 돌린 명령: 이 반영(주석, 독스트링, 문서, 시험 한 건)은 `uv run pytest -q tests/test_screen_text.py`(9 passed), `uv run ruff check tests`·`ruff format --check tests`, `pnpm -C web exec prettier --check`까지 돌렸다. 나머지 검증 명령은 커밋의 pre-commit 결과로 갈음했다.
 
+## PR 직전 리뷰
+
+`coderabbit-review` 서브에이전트가 CodeRabbit CLI 0.7.5로 돌았다(기준 `origin/dev`, 파일 43개, `Seat: not assigned`, 플랜 Free였지만 리뷰는 정상으로 끝났다). 겨냥으로 민 주장 넷(EMBED.md 새 절과 대화 저장 서술, `screen_text.py` 독스트링, `element.ts`의 `NODE_ENV` 주석, 변이 표 셋의 표지)은 코드와 맞는다고 확인됐다. 보안·버그 지적은 없었다. 지적과 판정:
+
+- 고친 것: `tests/screen_text.py` 독스트링이 지우는 말 둘만 적고 쓰임 문서의 셋째 문구(표의 묶음 이름)가 왜 빠졌는지 적지 않았다(Nit). 그 이름은 `aria-label`이라 화면 글에 실리지 않는다. 쓰임 문서 `Markdown.md`와 `Markdown.tsx`를 열어 확인하고 한 문장을 더했다.
+- 고친 것: CodeRabbit이 `mutate-parallel-runs.md`에서 `_running_marker`의 확인과 생성 사이의 경쟁 조건을 짚었다. 그 항목은 코드가 아니라 아직 구현하지 않은 처방을 적은 것이라 이 PR의 결함은 아니다. 조언(배타적 생성 `O_EXCL`과 동시 시작 시험)은 타당해 항목의 어디로 줄에 더했다.
+- 남긴 것(Minor): 입력창 글이 바뀔 때마다 이전 출력마다 마크다운 파서가 두 번(화면용, 읽기 영역용) 돈다. 메모이제이션이 없다. 재 보지 않았고, 긴 대화에서만 의미가 있어 병합을 막지 않는다. 일지 "다음"에 넘긴다.
+- 남긴 것(Nit): 모델 출력에 `출력:`만 든 줄이 있으면 두 로케이터(`llm-ask.ts`, 포털 `calc.llm.ts`)가 strict mode 위반을 낼 수 있다. 계산 질문에서는 거의 나지 않는 극단 사례라 필요해질 때 고친다.
+- 남긴 것(Nit): 계산 출력에 작은따옴표가 들면 `repr`이 큰따옴표를 써 변이 3의 표지(`zqxj']`)가 맞지 않을 수 있다. 같은 이유로 필요해질 때 `zqxj` 하나로 줄인다.
+
 ## 회고
 
 낸 후보 넷: 승인 둘, 기각 둘, 넘김 없음. 사용자에게 묻지 않았다.
@@ -81,6 +91,8 @@ open-session을 부른다 2026-11-13T16:27:16Z
 answer-markdown 기능에 남은 티켓은 `04-markdown-card-renders-on-react-18`(상태 ready-for-agent) 하나다. 이 티켓은 03과 나란히 다른 세션이 맡고 있어(워크트리 `04-markdown-card-renders-on-react-18`) 이 세션은 건드리지 않았다. 03이 병합된 뒤 04가 아직 병합되지 않았다면 04를 마치는 세션이 기능 계획의 `**끝:**` 줄을 적고, 출시 PR 계기(`merge.md` 출시 PR)를 본다. 04가 03보다 먼저 병합됐다면 그 줄은 이 PR이 아니라 04 쪽 커밋이 이미 적었어야 하지만, 03이 아직 열려 있던 때라 적지 않았을 것이다. 그 경우 03을 병합한 세션이 done 티켓이 모두 찼는지 보고 `**끝:**` 줄을 적는다(`docs/agents/issue-tracker.md` 끝 줄을 적는 때).
 
 사용자가 봐야 할 것(위 절)은 새 사진 둘을 화면 파일과 견주는 일이다.
+
+뒤로 넘긴 일(PR 직전 리뷰의 Minor): 위젯 화면이 입력 글자 하나마다 이전 출력의 마크다운을 다시 파싱한다. 긴 대화에서 느린지 먼저 재 보고, 느리면 출력 항목을 `memo`로 감싸거나 파싱 결과를 `text`로 캐시한다. 지금은 재지 않았다.
 
 ## 커밋과 변이 표
 
