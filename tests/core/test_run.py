@@ -31,7 +31,14 @@ import pytest
 from langchain_core.callbacks import AsyncCallbackManagerForLLMRun, CallbackManagerForLLMRun
 from langchain_core.language_models import LanguageModelInput
 from langchain_core.language_models.fake_chat_models import GenericFakeChatModel
-from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage, ToolMessage
+from langchain_core.messages import (
+    AIMessage,
+    BaseMessage,
+    HumanMessage,
+    InvalidToolCall,
+    SystemMessage,
+    ToolMessage,
+)
 from langchain_core.messages.tool import ToolCall as LangchainToolCall
 from langchain_core.outputs import ChatResult
 from langchain_core.runnables import Runnable
@@ -6490,6 +6497,81 @@ async def test_모델에_도구를_붙이다_예외가_나면_원인은_모델_�
 
     assert [e.type for e in events] == ["run_started", "run_failed"]
     assert _failure(events) == ("RuntimeError: 도구를 붙일 수 없다", "model_call")
+
+
+# 라이브러리가 깨진 인자를 `invalid_tool_calls`로 옮긴 응답. 인자 글에 비밀처럼 보이는 값을 넣어
+# 그 글이 실패 내용에 실리지 않는 것을 본다.
+BROKEN_ARGS = '{"a": 2, "secret": "sk-leak'
+BROKEN_ERROR = "Function add arguments:\n\n" + BROKEN_ARGS + "\n\nare not valid JSON."
+
+
+def _broken(name: str, call_id: str) -> InvalidToolCall:
+    return InvalidToolCall(
+        type="invalid_tool_call", name=name, args=BROKEN_ARGS, id=call_id, error=BROKEN_ERROR
+    )
+
+
+def _broken_request(*names: str) -> AIMessage:
+    """모델이 한 턴에 낸 깨진 도구 호출들. 이름은 `invalid_tool_calls` 에만 든다."""
+    calls = [_broken(name, f"b{i}") for i, name in enumerate(names, start=1)]
+    return AIMessage(content="", invalid_tool_calls=calls)
+
+
+@pytest.mark.parametrize(
+    ("reply", "named"),
+    [
+        (_broken_request("add"), "add"),
+        (_broken_request("add", "mul"), "add, mul"),
+        (_broken_request(""), "(이름 없음)"),
+        (_broken_request("add", ""), "add, (이름 없음)"),
+        (
+            AIMessage(
+                content="",
+                tool_calls=[LangchainToolCall(name="add", args={"a": 2, "b": 2}, id="c1")],
+                invalid_tool_calls=[_broken("mul", "b1")],
+            ),
+            "mul",
+        ),
+    ],
+    ids=["하나", "둘은_응답의_순서대로", "이름이_빔", "이름이_빈_것이_뒤", "멀쩡한_호출과_섞임"],
+)
+async def test_인자가_깨진_도구_호출은_원인_모델_호출의_실패로_끝난다(
+    trace: FakeTrace, clock: FakeClock, reply: AIMessage, named: str
+) -> None:
+    model = ToolAwareFakeModel(messages=iter([reply]))
+    tools = FakeTools({"add": "4", "mul": "4"})
+
+    events = await _run(OneShotAgent(), model, trace, clock, tools=tools)
+
+    assert [e.type for e in events] == ["run_started", "run_failed"]
+    error, cause = _failure(events)
+    assert error == f"ValueError: 모델이 낸 도구 호출의 인자가 올바른 JSON 이 아니다: {named}"
+    assert cause == "model_call"
+    assert "sk-leak" not in error
+    assert "not valid JSON" not in error
+    assert trace.events == events
+
+
+async def test_이름만_빈_멀쩡한_도구_호출은_깨진_호출이_아니라서_루프로_간다(
+    trace: FakeTrace, clock: FakeClock
+) -> None:
+    nameless = AIMessage(
+        content="", tool_calls=[LangchainToolCall(name="", args={"a": 2}, id="c1")]
+    )
+    model = ToolAwareFakeModel(messages=iter([nameless, _reply("끝")]))
+
+    events = await _run(OneShotAgent(), model, trace, clock, tools=FakeTools({"add": "4"}))
+
+    assert [e.type for e in events] == [
+        "run_started",
+        "llm_called",
+        "tool_called",
+        "llm_called",
+        "run_finished",
+    ]
+    called = events[2]
+    assert isinstance(called, ToolCalled)
+    assert called.ok is False
 
 
 @pytest.mark.parametrize(
