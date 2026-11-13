@@ -123,3 +123,23 @@ PR 직전 리뷰에 밀 주장(이번 반영으로 새로 쓴 사실 문장):
 - `do_GET`과 `do_POST`만 정의되어 PUT 등은 `requests`에 적히지 않고 표준 라이브러리의 501 HTML이 간다. 청크 본문(`Transfer-Encoding: chunked`)은 읽지 않는다. Chat Completions 클라이언트는 `Content-Length`를 보내므로 05에서 문제가 되면 그때 다룬다.
 
 PR 직전 리뷰의 다음 층(PR 봇)에 밀 주장: 모듈 독스트링의 "끄면 듣는 소켓만 닫혀 새 연결은 거부되지만, 클라이언트가 쥐고 있는 쉬는 연결은 그 클라이언트가 닫을 때까지 계속 답한다"(위 프로브를 이 세션이 다시 돌려 봤다).
+
+반영 커밋 `cd8f8cb97`의 pre-commit은 첫 시도에서 `tests/tools/test_rerun_runner.py::test_본_측정에서_첫_인계_뒤_멈추고_확인_인자를_주면_잇는다` 하나(7245개 중)가 빨개 막혔고, 같은 커밋을 다시 쳐 통과했다(훅 출력). 앞의 커밋 두 번의 실패와 같은 부하 의존 시간 단언의 흔들림으로 본다(어림).
+
+## 인계 (커밋 뒤)
+
+사용자의 둘째 요청 "PR 열고 병합해줘"를 이 세션이 받아 `merge.md`와 `operations.md` 리뷰 파이프라인을 읽고 PR 직전 리뷰까지 마친 뒤 커밋 `cd8f8cb97`에서 컨텍스트가 인계 문턱(20만 토큰)을 넘어 `커밋 뒤` 경계에 왔다. 이 세션이 한 것은 위와 같다. 커밋은 둘이다(`4f4aeb041` 픽스처와 시험, `cd8f8cb97` PR 직전 리뷰 반영). 푸시와 PR 열기, 봇 회차, 병합은 하지 않았다. 새 세션이 `merge.md` 2(봇 회차)와 "워크트리에서 병합할 때"를 이어 한다.
+
+세션 제목을 `feature/04-fake-model-server-fixture (인계함)`으로 바꾼다(바꾸기 전 제목 `feature/04-fake-model-server-fixture`). 새 세션이 같은 일지를 이어 쓰고 커밋한다.
+
+남은 일:
+
+- 이 일지의 수정은 이 인계 절을 빼고 모두 커밋되어 있다. 인계 절은 커밋하지 않았으니 새 세션이 다음 커밋에 싣는다.
+- `tidy-checkouts`에서 남긴 병합된 워크트리 `06-widget-real-model-assistant-case`는 그 워크트리를 쥔 쉬는 세션 셋의 프로세스를 끄는 명령이 자동 모드 분류기에 거부되어 그대로다(위 절). 사용자가 그 세션을 직접 끄거나 허용 규칙을 더해야 지워진다.
+- `.scratch/plan.md`는 `origin/dev`가 이 브랜치와 같은 줄을 고쳤다(`tools/sibling_overlap.py`). 병합 때 글자 충돌이 나면 `uv run python tools/plan_table.py`를 다시 돌려 맞춘다. 프로브 README는 형제 워크트리 `02-broken-tool-call-arguments-fail-model-call`도 고쳤다.
+
+open-session을 부른다 2026-11-13T04:02:00Z
+
+## 이어받은 세션: PR 열기와 병합 (2026-11-13)
+
+앞 세션의 인계 지시문으로 열린 새 세션이다. 첫 턴에 제목을 `feature/04-fake-model-server-fixture`로 바꾸고 이 워크트리에 들어왔다. 요청 범위는 PR 열기와 병합까지다(사용자의 앞 요청 "PR 열고 병합해줘"를 이어받는다). 위 인계 절만 커밋하지 않은 채였다. 이 절과 함께 싣는다.
