@@ -114,8 +114,8 @@ const restrictedProperties = (globals) =>
     globals.map(({ name, message }) => ({ object, property: name, message })),
   );
 
-// 질문 페이지의 페이지 스크립트 파일 하나. 이 파일만 전역 `fetch` 를 쓴다(pilot-portal 명세 "전역 `fetch` 금지의 예외").
-// 부르는 것이 Agent OS 의 API 가 아니라 질문 페이지 자신의 토큰 끝점이라 생성 클라이언트를 거치지 않는다.
+// 위젯 미리보기 페이지의 페이지 스크립트 파일 하나. 이 파일만 전역 `fetch` 를 쓴다(pilot-portal 명세 "전역 `fetch` 금지의 예외").
+// 부르는 것이 Agent OS 의 API 가 아니라 위젯 미리보기 페이지 자신의 토큰 끝점이라 생성 클라이언트를 거치지 않는다.
 const PORTAL_PAGE_SCRIPT = "**/apps/portal/browser/portal.ts";
 const HTTP_GLOBALS_WITHOUT_FETCH = HTTP_GLOBALS.filter(({ name }) => name !== "fetch");
 
@@ -304,7 +304,7 @@ export default defineConfig(
     },
   },
   {
-    // 질문 페이지의 페이지 스크립트 파일 하나만 전역 `fetch` 를 푼다. 규칙을 끄지 않고 `fetch` 를 뺀 목록으로 다시 건다.
+    // 위젯 미리보기 페이지의 페이지 스크립트 파일 하나만 전역 `fetch` 를 푼다. 규칙을 끄지 않고 `fetch` 를 뺀 목록으로 다시 건다.
     // 같은 앱의 다른 파일은 그대로 막히고, 이 파일에서도 EventSource 와 XMLHttpRequest 는 막힌다.
     files: [PORTAL_PAGE_SCRIPT],
     rules: {

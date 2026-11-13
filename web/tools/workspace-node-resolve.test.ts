@@ -1,4 +1,4 @@
-// 질문 페이지 서버가 패키지 이름으로 import 할 셋을 `web/tools` 의 스크립트처럼 Node 로 바로 띄워 푼다
+// 위젯 미리보기 페이지 서버가 패키지 이름으로 import 할 셋을 `web/tools` 의 스크립트처럼 Node 로 바로 띄워 푼다
 // (pilot-portal 명세 "띄우기와 타입 검사"). `@agent-os/ui/themes`, `@agent-os/ui/fonts`, `@agent-os/site-file` 이 빌드 없이,
 // `--preserve-symlinks` 없이 읽히는지 본다. vitest 는 Vite 의 해석으로 모듈을 풀어 확장자 없는 상대 import 와 링크 풀이의
 // 차이를 가리므로 Node 를 따로 띄우는 사례만 둔다. `@agent-os/site-file` 이 읽는 `smol-toml` 이 그 패키지 폴더의
@@ -9,7 +9,7 @@ import { dirname, join } from "node:path";
 import { describe, expect, test } from "vitest";
 
 const WEB = dirname(import.meta.dirname);
-// `@agent-os/site-file` 은 그것을 의존성으로 드는 앱(위젯, 뒤에 질문 페이지)에서만 풀린다. `web/` 뿌리는 들지 않는다.
+// `@agent-os/site-file` 은 그것을 의존성으로 드는 앱(위젯, 뒤에 위젯 미리보기 페이지)에서만 풀린다. `web/` 뿌리는 들지 않는다.
 const WIDGET = join(WEB, "apps", "widget");
 
 /** `cwd` 에서 Node 가 ESM 스크립트를 띄워 찍은 JSON. 실패하면 stderr 를 알린다. */
@@ -22,7 +22,7 @@ function run(script: string, cwd = WEB): unknown {
   return JSON.parse(result.stdout);
 }
 
-describe("패키지 이름으로 Node 가 바로 읽는 질문 페이지의 의존", () => {
+describe("패키지 이름으로 Node 가 바로 읽는 위젯 미리보기 페이지의 의존", () => {
   test("@agent-os/ui/themes 가 테마·기본 테마·모드·밀도를 낸다", () => {
     const loaded = run(
       [

@@ -46,3 +46,7 @@ date: 2026-11-06
 ### 2026-11-06 문서 검색 서버의 저장소 이름을 rag-engine으로 정한다
 
 같은 날 받은 계획 제안서의 둘째 판(일지 2026-11-06-11)이 문서 검색 서버 저장소의 이름을 `rag-engine`으로 정했다. 그래서 `.scratch/plan.md`는 그 저장소의 행을 `rag-engine:<slug>`로 가리킨다. 그 판은 그 저장소의 행도 다시 나눴다. ADR 0046 본문이 든 첫 판의 행 다섯(bootstrap, rag-mcp, rag-admin, search-eval, rag-ops)은 기준선의 행 일곱(core, source-sync, admin, search-eval, release-image, backup-upgrade, diag-bundle)이 됐다. rag-mcp는 core로, rag-admin은 source-sync와 admin으로, rag-ops는 release-image와 backup-upgrade와 diag-bundle로 나뉘었고, bootstrap은 빠졌다. 새 저장소는 agent-os의 킥오프 런북(`KICKOFF.md`)으로 시작하므로 뼈대를 만드는 행을 따로 두지 않는다. 1.0 열에는 db-source와 change-log가 더해졌다. 그에 따라 agent-os의 두 행이 기다리는 행이 바뀌었다. answer-eval은 `rag-engine:core`를, deploy-package는 `rag-engine:release-image`, `rag-engine:backup-upgrade`, `rag-engine:diag-bundle`을 기다린다. stale-warning이 기다리는 `rag-engine:doc-freshness`는 접두사만 바뀌었다. 이 행들은 그 저장소의 계획에만 있고, 이 저장소에는 만들지 않는다. 그 저장소는 아직 없다(2026-11-06에 이 PC의 `C:\project`를 `ls`로, GitHub의 njh6803 계정을 `gh repo view njh6803/rag-engine`과 `gh repo list njh6803`으로 봤다. 둘 다 없었다). 저장소 둘, 한 방향의 의존, 검색 도구 형식의 계약이라는 결정은 바뀌지 않았다.
+
+### 2026-11-13 용어 "질문 페이지"를 "위젯 미리보기 페이지"로 바꿨다
+
+사용자가 용어집(`CONTEXT.md`)의 "질문 페이지(Portal)"를 "위젯 미리보기 페이지"로 바꾸기로 했다(이름 바꾸기 chore `.scratch/harness/issues/rename-portal-to-widget-preview.md`). 이 ADR의 본문은 기록이라 옛 이름을 그대로 두므로, 본문의 "질문 페이지"는 "위젯 미리보기 페이지"로 읽는다. 결정은 바뀌지 않는다. 코드 이름 `portal`과 경로 `/portal/`도 그대로다.

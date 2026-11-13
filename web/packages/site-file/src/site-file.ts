@@ -1,7 +1,7 @@
 /**
  * 사이트 파일 읽기(`@agent-os/site-file`). 서버(`serve --site-file`)가 읽는 사이트 파일(ADR 0023)을 TypeScript 쪽도 같은
  * 규칙으로 읽는다. 읽은 결과는 사이트마다 발급자, `audience`, 열 에이전트, 허용 출처, 공개 키(`kid`, `pem`), 요청 글자 수
- * 상한을 든 모델(`parseSiteFile`, `readSiteFile`)이고, 위젯 빌드와 질문 페이지가 각자 필요한 칸을 쓴다(pilot-portal 명세
+ * 상한을 든 모델(`parseSiteFile`, `readSiteFile`)이고, 위젯 빌드와 위젯 미리보기 페이지가 각자 필요한 칸을 쓴다(pilot-portal 명세
  * "앱과 패키지").
  *
  * 위젯 빌드의 입력은 그 모델에서 끌어낸 두 값이다(web-widget 티켓 04). 하나는 모든 사이트의 허용 출처를 합친

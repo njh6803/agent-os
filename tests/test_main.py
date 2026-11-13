@@ -4,7 +4,7 @@
 픽스처 에이전트는 tmp_path 아래 plugins/ 에 쓰고 저장소의 plugins/ 에 두지 않는다.
 이 파일에서는 llm 마커가 붙은 것만 실제 모델을 부른다 — CLI 의 것들과 실제 serve 를 띄우는 둘. 바깥
 이음매다. 위젯 화면에서 실제 모델까지 가는 것은 llm_widget 마커의 `tests/test_widget_llm.py` 이고,
-질문 페이지에서 가는 것은 llm_portal 마커의 `tests/test_portal_llm.py` 다.
+위젯 미리보기 페이지에서 가는 것은 llm_portal 마커의 `tests/test_portal_llm.py` 다.
 """
 
 import asyncio

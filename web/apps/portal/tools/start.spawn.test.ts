@@ -1,4 +1,4 @@
-// 질문 페이지의 시작 래퍼를 실제 프로세스로 띄운다. 인자의 판정은 start.test.ts 가, 설정과 사이트 파일을 대 보는 판정은
+// 위젯 미리보기 페이지의 시작 래퍼를 실제 프로세스로 띄운다. 인자의 판정은 start.test.ts 가, 설정과 사이트 파일을 대 보는 판정은
 // server/load.test.ts 가 잰다. 여기서는 맞는 파일로 서버가 서서 시작 로그 한 줄을 찍고 `/portal/health` 에 답하는 것과,
 // 어긋난 파일로는 서지 않고 stderr 의 진단과 종료 코드 1로 끝나는 것을 본다. 서버를 부르는 쪽도 `fetch` 가 아니라
 // `node:http` 다(전역 `fetch` 금지). 운영체제별 명령에 기대지 않아 윈도우와 CI 의 ubuntu 에서 같이 돈다.
@@ -89,7 +89,7 @@ test("맞는 설정과 사이트 파일이면 시작 로그 한 줄을 찍고 he
     const line = await firstLine(child);
 
     expect(line).toBe(
-      `질문 페이지가 http://127.0.0.1:${String(port)}/portal/ 에 섰다. 사이트 1개.`,
+      `위젯 미리보기 페이지가 http://127.0.0.1:${String(port)}/portal/ 에 섰다. 사이트 1개.`,
     );
     const health = await get(port, "/portal/health");
     expect(health.status).toBe(200);
@@ -135,7 +135,7 @@ test("실험 기능 경고만 끄고 시작하면 stderr 는 비고 stdout 은 �
 
   expect(run.stderr).toBe("");
   expect(run.stdout.split("\n")).toEqual([
-    `질문 페이지가 http://127.0.0.1:${String(run.port)}/portal/ 에 섰다. 사이트 1개.`,
+    `위젯 미리보기 페이지가 http://127.0.0.1:${String(run.port)}/portal/ 에 섰다. 사이트 1개.`,
     "",
   ]);
   // 키 파일의 글과 쿠키 이름이 출력에 실리지 않는다.
@@ -217,7 +217,7 @@ test("포트를 이미 다른 프로세스가 쥐고 있으면 서지 못한다�
 
     expect(run.status).toBe(1);
     expect(run.stdout).toBe("");
-    expect(run.stderr).toContain("질문 페이지를 열지 못했다");
+    expect(run.stderr).toContain("위젯 미리보기 페이지를 열지 못했다");
   } finally {
     await close(taken);
   }

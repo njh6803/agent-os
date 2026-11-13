@@ -47,7 +47,7 @@ from tools import llm_tokens, run_hooks
 CHECKOUT = Path(run_hooks.__file__).resolve().parents[1]
 
 # 실제 모델을 부르는 시험의 마커. `llm` 은 원칙 I 의 판정이고 `llm_widget` 과 `llm_portal` 은 위젯
-# e2e 와 질문 페이지 e2e 를 감싼다.
+# e2e 와 위젯 미리보기 페이지 e2e 를 감싼다.
 _LLM_MARKERS = ("llm", "llm_widget", "llm_portal")
 
 # 세 마커의 테스트가 하나라도 돌았을 때만 값이 있다. 둘째 값은 트레이스를 남기지 않은 그 테스트의
