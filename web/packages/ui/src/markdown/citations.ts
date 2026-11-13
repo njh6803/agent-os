@@ -19,7 +19,7 @@
 // 번호마다 줄의 앞이나 나머지를 다시 훑지 않는다(명세 "구현에 넘기는 것").
 import type { Emphasis, Nodes, PhrasingContent, Root, Text } from "mdast";
 import { isSourcesBlock } from "./sources";
-import { forEachPhrasingParent, hastName, sourceRange, text } from "./tree";
+import { forEachPhrasingParent, hastData, hastName, sourceRange, text } from "./tree";
 
 /** 변환이 위첨자 번호에 단 표지의 속성 이름. 부품이 읽고 지운다. */
 export const CITE_MARK = "data-cite";
@@ -27,7 +27,7 @@ export const CITE_MARK = "data-cite";
 export const CITE_PROPERTY = "dataCite";
 /** 표지의 값. 바로 앞 형제가 위첨자 번호인 번호(이어진 번호)면 이 값이고, 아니면 `CITE_FIRST` 다. */
 export const CITE_ADJACENT = "adjacent";
-export const CITE_FIRST = "first";
+const CITE_FIRST = "first";
 
 const MARKER = /\[(\d+)\]/g;
 const MAX_DIGITS = 3;
@@ -47,12 +47,11 @@ function isLineEnd(char: string | undefined): boolean {
 }
 
 function citation(digits: string, mark: typeof CITE_FIRST | typeof CITE_ADJACENT): Emphasis {
-  // `hName`·`hProperties` 는 mdast-util-to-hast 가 `Data` 에 더하는 키인데 이 패키지의 타입에는 들지 않는다.
-  const data: Record<string, unknown> = {
-    hName: "sup",
-    hProperties: { [CITE_PROPERTY]: mark },
+  return {
+    type: "emphasis",
+    data: hastData("sup", { [CITE_PROPERTY]: mark }),
+    children: [text(digits)],
   };
-  return { type: "emphasis", data, children: [text(digits)] };
 }
 
 function isCitation(node: PhrasingContent | undefined): boolean {

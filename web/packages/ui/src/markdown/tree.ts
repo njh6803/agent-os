@@ -73,6 +73,15 @@ export function forEachPhrasingParent(
   );
 }
 
+/** 변환이 노드에 얹는 hast 요소 이름과 속성(`data.hName`, `data.hProperties`). 노드의 `data` 자리에 둔다. */
+export function hastData(
+  name: string,
+  properties: Readonly<Record<string, string>>,
+): Record<string, unknown> {
+  // `hName`·`hProperties` 는 mdast-util-to-hast 가 `Data` 에 더하는 키인데 이 패키지의 타입에는 들지 않는다.
+  return { hName: name, hProperties: properties };
+}
+
 /** 변환이 노드에 얹은 hast 요소 이름(`data.hName`). 얹지 않았으면 undefined 다. */
 export function hastName(node: Nodes): unknown {
   // `hName` 은 mdast-util-to-hast 가 `Data` 에 더하는 키인데 이 패키지의 타입에는 들지 않는다.

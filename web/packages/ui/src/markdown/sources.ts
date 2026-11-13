@@ -1,6 +1,7 @@
 // 출력 끝의 출처 덩이를 `div` 하나로 감싸는 변환(명세 "출처 덩이", 변환의 차례 5).
 //
-// 출처 덩이는 출력 최상위의 마지막 두 블록인 표지와 목록이다.
+// 출처 덩이는 출력 최상위의 마지막 두 블록인 표지와 목록이다. 참조형 링크 정의(`[r]: https://…`)는 화면에 그려지지 않아
+// 블록으로 세지 않는다. 출력 끝의 정의는 건너뛰고 그 앞의 두 블록을 보며, 정의는 감싼 덩이 뒤에 그대로 남는다.
 // - 표지는 글이 "출처"인 한 줄이다. 콜론이 붙은 `출처:`, 굵게나 기울임으로 두른 `**출처**`, 제목 `## 출처` 도 표지다.
 //   앞 문단의 마지막 줄로 붙은 `출처`(사이에 빈 줄이 없어 파서가 한 문단으로 읽었다)는 문단을 갈라 표지로 본다.
 // - 목록은 번호 목록이거나, 줄마다 `[숫자]` 로 시작하는 문단이다. 표지와 `[숫자]` 줄들이 한 문단으로 붙은 것도 갈라 본다.
@@ -23,7 +24,7 @@ import type {
   Root,
   Text,
 } from "mdast";
-import { hastName, mergeText, plainText, sourceRange, text } from "./tree";
+import { hastData, hastName, mergeText, plainText, sourceRange, text } from "./tree";
 
 /** 원문 위치의 한 점. `unist` 의 `Point` 를 직접 들이지 않고 mdast 노드의 위치에서 꺼낸다. */
 type Point = NonNullable<Text["position"]>["start"];
@@ -157,12 +158,11 @@ function paragraph(children: PhrasingContent[]): Paragraph {
 export const SOURCES_PROPERTY = "dataSources";
 
 function sourcesBlock(label: Heading | Paragraph, body: List | Paragraph): Blockquote {
-  // `hName`·`hProperties` 는 mdast-util-to-hast 가 `Data` 에 더하는 키인데 이 패키지의 타입에는 들지 않는다.
-  const data: Record<string, unknown> = {
-    hName: "div",
-    hProperties: { [SOURCES_PROPERTY]: "true" },
+  return {
+    type: "blockquote",
+    data: hastData("div", { [SOURCES_PROPERTY]: "true" }),
+    children: [label, body],
   };
-  return { type: "blockquote", data, children: [label, body] };
 }
 
 /** 이 변환이 감싼 출처 덩이인가. 문장 끝 번호의 변환이 그 아래를 건너뛸 때 쓴다. */
@@ -222,15 +222,17 @@ function bracketParagraph(
 }
 
 export function wrapSources(tree: Root, source: string): void {
-  const last = tree.children.at(-1);
-  const previous = tree.children.at(-2);
+  let end = tree.children.length;
+  while (end > 0 && tree.children[end - 1]?.type === "definition") end -= 1;
+  const last = tree.children[end - 1];
+  const previous = tree.children[end - 2];
   if (last?.type === "list") {
     const nodes = last.ordered === true ? labelBefore(previous, last, source) : null;
-    if (nodes !== null) tree.children.splice(-2, 2, ...nodes);
+    if (nodes !== null) tree.children.splice(end - 2, 2, ...nodes);
     return;
   }
   if (last?.type === "paragraph") {
     const found = bracketParagraph(previous, last, source);
-    if (found !== null) tree.children.splice(-found.replace, found.replace, ...found.nodes);
+    if (found !== null) tree.children.splice(end - found.replace, found.replace, ...found.nodes);
   }
 }

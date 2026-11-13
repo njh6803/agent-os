@@ -237,8 +237,8 @@ describe("출처 덩이 32가지", () => {
   shapeTests(SOURCES, 32);
 });
 
-describe("출처 덩이의 경계 입력 2가지", () => {
-  shapeTests(SOURCE_EDGES, 2);
+describe("출처 덩이의 경계 입력 3가지", () => {
+  shapeTests(SOURCE_EDGES, 3);
 });
 
 describe("합친 사례 17가지", () => {
