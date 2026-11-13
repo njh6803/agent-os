@@ -80,3 +80,25 @@ origin/dev(`f6e7cbb12`) 위로 rebase했다(충돌 없음, `tools/plan_table.py 
 제목을 `feature/01-contract-openai-compatible-model-provider (인계함)`으로 바꿨고 워크트리 잠금을 풀었다. 멈출 백그라운드 작업은 없었다.
 
 open-session을 부른다 2026-11-12T20:31:56Z
+
+## 두 번째 인계(셀프 리뷰·커밋·PR 직전 리뷰를 끝낸 세션)
+
+이어받은 세션이 셀프 리뷰 반영과 커밋(`27faa2135`, origin/dev `f6e7cbb12` 위로 rebase한 뒤 amend)과 PR 직전 CodeRabbit CLI까지 했고, 컨텍스트가 인계 문턱을 넘은 채 `커밋 뒤` 경계에 와서 다시 넘겼다. 이 세션의 제목은 `feature/01-contract-openai-compatible-model-provider`였고 `feature/01-contract-openai-compatible-model-provider (인계함)`으로 바꿨다. 모델 Sonnet 5.5 / high.
+
+사용자 프롬프트(이 세션이 받은 것):
+
+> 사용자: 끝났어?
+>
+> 사용자: PR열고 병합해줘
+
+앞 질문에는 구현·리뷰·커밋까지 끝났고 PR은 범위에 없어 열지 않았다고 답했다. 뒤 요청이 이 세션의 범위를 PR과 병합까지로 넓혔고, 그 요청을 따르던 중에 계기가 와서 푸시와 PR 열기와 병합은 새 세션이 한다.
+
+이 세션이 번복하거나 고친 것: 셀프 리뷰에서 `core.md` 포트 행을 고쳤다가 카나리아 여섯 명세와 02 워크트리의 같은 파일 수정이 걸려 되돌렸다(위 "셀프 리뷰"). PR을 열려고 rebase한 뒤 커밋을 amend해 일지와 05 티켓의 PR 직전 리뷰 반영을 한 커밋에 합쳤다(푸시 전이라 안전했다).
+
+open-session을 부른다 2026-11-13T03:47:45Z
+
+## 세 번째 세션(푸시·PR·병합)
+
+세션 제목 `feature/01-contract-openai-compatible-model-provider`, 모델 Sonnet 5.5 / high. 위 인계 지시문으로 열어 워크트리에 `EnterWorktree(path)`로 들어왔다(다른 세션이 그 워크트리나 브랜치를 쓰지 않는 것을 `git worktree list --porcelain`으로 봤다). origin/dev는 `f6e7cbb12` 그대로라 다시 rebase하지 않았다. 사용자 프롬프트는 앞 절의 "PR열고 병합해줘"가 이 세션의 요청이고 새로 받은 것은 없다.
+
+이 절과 앞 절의 인계 줄은 커밋하지 않은 채 남아 있던 것을 PR 전 따로 커밋했다(첫 커밋은 이미 만든 `27faa2135`라 amend로 pre-commit을 다시 돌리지 않았다).
