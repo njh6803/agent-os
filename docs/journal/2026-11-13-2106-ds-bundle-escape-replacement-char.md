@@ -41,4 +41,14 @@
 - 고친 것(명세 Nit): 카드 열 개가 12~28% 커진 것을 티켓에 적었다. 리뷰는 9~28%라 했으나 손으로 다시 재니 가장 작은 Icon이 3,734→4,174바이트(11.8%)였다.
 - 남긴 것: 표준 Nit 3(시험은 U+FFFD만 지키는데 설정은 ASCII 밖 전부를 이스케이프한다). 시험 이름이 U+FFFD로 한정되어 있고, Artifact 도구가 거부한 글자는 U+FFFD뿐이라 그대로 둔다. `build.minify: true`가 `output.minify`와 함께 남은 것도 vite가 CSS 압축과 주석 설정에 쓰므로 둔다(표준 축도 맞다고 했다).
 - PR 직전 리뷰에 밀 주장: 티켓의 "이 티켓 밖" 문단(병합 뒤 새 티켓의 브랜치를 먼저 따 돌아갈 브랜치로 삼는 순서가 `upload.md` 1·6의 6과 맞는지), 카드 크기 "12~28%", `MINIFY` 독스트링의 "태그된 템플릿의 글, JSX 의 이름·글·속성 문자열, hashbang, 보존 주석의 글자는 이스케이프하지 않는다".
+- 다시 돌린 명령: 손으로 치는 다섯은 커밋 `c0cd710c0`의 pre-commit으로 갈음했다. `check-ticket`, `zizmor`, `lint-imports`, `check-instructions`, `check-type-escapes`, `pyright`, `pyright-linux`, `run-hooks`, `pytest`(1018.6초), `web-verify`(1215.2초), 커밋 메시지 검사가 Passed였다. ruff 둘은 `.py`가 없어 Skipped라 `uv run ruff check .`과 `uv run ruff format --check .`을 손으로 쳐서 둘 다 0으로 끝났다. 앞서 커밋 메시지 훅이 제목 84자를 72자 넘김으로 막아 제목을 줄였다.
+- PR 직전 리뷰: `coderabbit-review` 서브에이전트가 CLI 0.7.5(`Plan: Free`, `Seat: not assigned`)로 `coderabbit review --agent --include-untracked --base-commit 0e06c9cf7…`를 끝까지 돌려 `review_completed`, 지적 0건이었다(본 파일 다섯). 밀 주장 셋 가운데 "이 티켓 밖" 문단과 `MINIFY` 독스트링은 맞다고 했고, "카드 12~28%"는 Markdown 하나만 대 보고 나머지는 판정하지 못했다고 했다. 그 열 개는 이 세션이 고치기 전과 뒤의 산출을 `wc -c`로 모두 잰 값이라(가장 작은 Icon 11.8%, 가장 큰 Markdown 27.6%) 그대로 둔다. 참고로 낸 정규식 `.source` 변화(`asciiOnly`가 높은 코드포인트를 서로게이트 쌍으로 쓴다)는 고칠 일이 아니라고 했다.
 - 회고 후보: 이스케이프 글을 적으려던 자리에 U+FFFD 글자가 그대로 드는 일이 이 사건 하나에서 세 번 났다(rolldown 압축, 앞 세션의 대기열 항목, 이 세션의 도구 인자). 추적 파일의 글에 U+FFFD가 없는지 보는 저장소 상태 시험이 잡을 수 있다.
+
+## PR #560 병합
+
+PR #560을 열고 `@coderabbitai review`를 남긴 뒤 `uv run python tools/wait_ci.py 560`을 기다렸다. 끝 줄은 `끝: 모두 통과. CodeRabbit: Finished`였다. CodeRabbit은 "No actionable comments were generated in the recent review."였고, claude-review는 "지적 없음."이었다(봇 첫 회차, 고친 것 없음). `headRefOid`와 `git rev-parse HEAD`가 `c0cd710c0…`로 같아 `gh pr merge 560 --squash --match-head-commit …`로 병합했다. dev의 병합 커밋은 `ad7dff584`다. `git fetch --prune origin` 뒤 `git ls-remote --exit-code --heads origin refs/heads/chore/ds-bundle-escape-replacement-char`가 2로 끝나, 원격 브랜치는 자동 삭제로 지워졌다. 주 체크아웃 미갱신: 루트는 `dev`이고 `0e06c9cf7`에 있다(`git worktree list`의 첫 줄).
+
+## 올리기
+
+병합 뒤 `git switch -c chore/ds-upload-markdown-cards origin/dev`로 후속 harness 티켓 `.scratch/harness/issues/ds-upload-markdown-cards.md`의 브랜치를 땄다. 브랜치가 `origin/dev`를 upstream으로 잡아, 맨 `git push`가 dev로 가지 않게 `git branch --unset-upstream`을 쳤다. 그 티켓과 이 일지를 먼저 커밋해 작업 트리를 비운 뒤, 이 브랜치를 돌아갈 브랜치로 삼아 올린다.
