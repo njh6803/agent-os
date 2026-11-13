@@ -1,0 +1,8 @@
+# 저장소 web/pnpm-workspace.yaml 과 같은 설치 정책이다. 설치 스크립트를 돌리지 않는다.
+# 공급망 유예(minimumReleaseAge)의 예외(minimumReleaseAgeExclude)를 두지 않는다(ADR 0024). 그래서 oidc-provider 는
+# 재던 때(2026-11-12T11:05Z) 나온 지 하루가 안 된 9.14.0(2026-11-11T18:25Z) 대신 9.13.3 을 적었다.
+packages:
+  - "."
+allowBuilds:
+  esbuild: false
+  "@parcel/watcher": false
