@@ -457,6 +457,18 @@ describe("짓기 명령의 산출", () => {
 
     expect(leaked).toEqual([]);
   });
+
+  test("산출의 글 파일에 U+FFFD 가 이스케이프 없이 들지 않고 묶음 JS 에는 이스케이프로 든다", () => {
+    // Artifact 도구가 U+FFFD(바꿈 문자)가 그대로 든 `_ds_bundle.js` 의 보내기를 거부했다(대기열
+    // ds-upload-replacement-char-rejected). 마크다운 해석 의존(micromark)의 원본은 `"\uFFFD"` 이스케이프인데 짓기의 압축이
+    // 글자 그대로 썼다. 묶음 JS 에 이스케이프가 있는지도 보아, 그 코드가 묶음에서 빠져 앞의 단언이 저절로 지나는 것을 가른다.
+    const raw = walk(out)
+      .filter((file) => !/\.woff2?$/.test(file))
+      .filter((file) => read(file).includes("\uFFFD"));
+
+    expect(raw).toEqual([]);
+    expect(read("components/bundle.js")).toMatch(/\\u(?:fffd|\{fffd\})/i);
+  });
 });
 
 describe("사용 규약: README 와 기초 카드가 드는 이름이 묶음에 있다", () => {
