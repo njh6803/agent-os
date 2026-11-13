@@ -1,0 +1,42 @@
+# 02 티켓(깨진 도구 호출)의 core 시험이 무엇을 재는지 보는 변이.
+# 사용: PYTHONUTF8=1 uv run python tools/mutate.py .scratch/local-model/probes/broken_tool_calls_mutations.toml
+# 대상: src/agent_os/core/model.py 의 reply_from, tests/core/test_run.py 의 "실패 원인" 절 끝에 있는
+# `인자가_깨진…`과 `이름만_빈_멀쩡한…` 시험.
+# 구현 전부터 초록이던 가드(이름만 빈 멀쩡한 호출)는 첫 변이가, 새 시험의 이빨은 둘째와 셋째가 본다.
+
+[[mutation]]
+name = "이름이 빈 멀쩡한 호출도 깨진 호출로 거절한다"
+tests = ["tests/core/test_run.py", "-k", "이름만_빈_멀쩡한"]
+expect = "red"
+expect_output = ["'run_failed' != 'llm_called'"]
+
+[[mutation.edit]]
+file = "src/agent_os/core/model.py"
+old = '''    if message.invalid_tool_calls:
+'''
+new = '''    if message.invalid_tool_calls or any(not call["name"] for call in message.tool_calls):
+'''
+
+[[mutation]]
+name = "빈 이름을 대체 글로 적지 않는다"
+tests = ["tests/core/test_run.py", "-k", "인자가_깨진"]
+expect = "red"
+expect_output = ["SON 이 아니다: (이름 없음)"]
+
+[[mutation.edit]]
+file = "src/agent_os/core/model.py"
+old = '''call["name"] or "(이름 없음)" for call'''
+new = '''call["name"] or "" for call'''
+
+[[mutation]]
+name = "멀쩡한 호출이 있으면 깨진 호출을 거절하지 않는다"
+tests = ["tests/core/test_run.py", "-k", "인자가_깨진"]
+expect = "red"
+expect_output = ["Left contains"]
+
+[[mutation.edit]]
+file = "src/agent_os/core/model.py"
+old = '''    if message.invalid_tool_calls:
+'''
+new = '''    if message.invalid_tool_calls and not message.tool_calls:
+'''

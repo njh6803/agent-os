@@ -24,6 +24,18 @@ class ModelReply:
 
 
 def reply_from(message: AIMessage) -> ModelReply:
+    """모델의 응답을 우리 타입으로 바꾼다. 바꾸지 못하는 응답은 여기서 거절한다.
+
+    인자가 올바른 JSON이 아닌 도구 호출은 라이브러리가 비스트리밍 응답에서 예외 없이 `tool_calls`
+    에서 빼 `invalid_tool_calls` 에 넣는다. 그대로 읽으면 루프가 그 응답을 빈 최종 답으로 받으므로,
+    멀쩡한 호출이 섞여 있어도 응답 전체를 거절한다. 문구는 도구 이름만 든다. 깨진 인자의 글과
+    라이브러리의 `error` 글은 서버가 보낸 글을 되울릴 수 있어 싣지 않는다. 도구 이름도 서버가 정한
+    값이지만 어느 도구였는지가 실패 내용의 쓸모라 싣는다. 이름에 키를 실어 보내는 서버는 가리지
+    않는다(`.scratch/local-model/spec.md`).
+    """
+    if message.invalid_tool_calls:
+        names = ", ".join(call["name"] or "(이름 없음)" for call in message.invalid_tool_calls)
+        raise ValueError(f"모델이 낸 도구 호출의 인자가 올바른 JSON 이 아니다: {names}")
     usage = message.usage_metadata
     return ModelReply(
         model=_model_name(message),
