@@ -1,4 +1,4 @@
-// 질문 페이지 e2e 의 사례(pilot-portal 티켓 06 의 몫). 준비가 띄운 실제 질문 페이지와 위젯을 실제 브라우저로 연다.
+// 위젯 미리보기 페이지 e2e 의 사례(pilot-portal 티켓 06 의 몫). 준비가 띄운 실제 위젯 미리보기 페이지와 위젯을 실제 브라우저로 연다.
 
 import { expect, test } from "@playwright/test";
 import { stack } from "./env.ts";
@@ -67,7 +67,7 @@ test("?site= 로 열면 그 사이트가 골라지고 페이지 제목이 그 �
   await expect(page.locator("html")).toHaveAttribute("data-theme", SECOND.theme);
 });
 
-test("루트로 들어오면 질의를 지킨 채 질문 페이지로 넘어간다", async ({ page }) => {
+test("루트로 들어오면 질의를 지킨 채 위젯 미리보기 페이지로 넘어간다", async ({ page }) => {
   await page.goto(`${stack().portalOrigin}/?site=${SECOND.name}`);
 
   await expect(page).toHaveURL(`${stack().portalOrigin}/portal/?site=${SECOND.name}`);

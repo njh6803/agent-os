@@ -1,5 +1,5 @@
-# pilot-portal 티켓 07(고지 확인 흐름)의 변이 표. 질문 페이지 e2e(web/apps/portal/e2e/acknowledge.e2e.ts)의 사례는 구현과 함께
-# 써서 처음부터 초록이었다. 사례마다 그 사례가 겨눈 판정을 되돌려 빨개지는지 본다(원칙 II). 준비가 위젯과 질문 페이지를 띄우므로
+# pilot-portal 티켓 07(고지 확인 흐름)의 변이 표. 위젯 미리보기 페이지 e2e(web/apps/portal/e2e/acknowledge.e2e.ts)의 사례는 구현과 함께
+# 써서 처음부터 초록이었다. 사례마다 그 사례가 겨눈 판정을 되돌려 빨개지는지 본다(원칙 II). 준비가 위젯과 위젯 미리보기 페이지를 띄우므로
 # 변이 하나가 30초 안팎 걸린다.
 #   PYTHONUTF8=1 uv run python tools/mutate.py .scratch/pilot-portal/probes/acknowledge_mutations.toml [번호 ...]
 # chromium 이 Playwright 의 브라우저 캐시에 있어야 하고 uv 의 가상 환경이 서 있어야 한다.

@@ -1,4 +1,4 @@
-// 질문 페이지 e2e 가 설정과 사이트 파일에 싣는 사이트 넷(pilot-portal 명세 "Playwright e2e"). 준비(`stack.ts`)가 설정과 사이트
+// 위젯 미리보기 페이지 e2e 가 설정과 사이트 파일에 싣는 사이트 넷(pilot-portal 명세 "Playwright e2e"). 준비(`stack.ts`)가 설정과 사이트
 // 파일을 짓는 데, 시험이 기대하는 값을 읽는 데 같은 목록을 쓴다.
 //
 // - 익명 사이트 둘. 기본 모드에서는 같은 픽스처 에이전트를 열고(실제 모델 모드에서는 첫 사이트만 계산 에이전트를 연다. `stack.ts`)
@@ -17,7 +17,7 @@ export interface E2eSite {
   readonly intro?: string;
   readonly theme: string;
   readonly mode?: string;
-  /** 사이트가 적은 고지 글. 없으면 질문 페이지의 기본 글이다. */
+  /** 사이트가 적은 고지 글. 없으면 위젯 미리보기 페이지의 기본 글이다. */
   readonly notice?: string;
   /** 평가 보고서 주소. 없으면 페이지가 보고서 링크를 그리지 않는다. */
   readonly reportUrl?: string;

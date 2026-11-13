@@ -1,12 +1,13 @@
-"""질문 페이지의 실제 모델 e2e(pilot-portal 티켓 09, 명세 "실제 모델 e2e 하나").
+"""위젯 미리보기 페이지의 실제 모델 e2e(pilot-portal 티켓 09, 명세 "실제 모델 e2e 하나").
 
-마커 `llm_portal` 의 시험 하나가 질문 페이지 e2e 의 Playwright 프로젝트 `llm` 을 자식 프로세스로
-돌린다. 그 프로젝트는 실제 serve·위젯 Next·질문 페이지와 같은 출처의 중계 위에서, `?site=` 없이 연
-첫 사이트(익명, 에이전트 `calc`)의 고지 덮개를 확인하고 요청 하나를 보내 출력이 서는 것과 실행
-주체의 `anon-` 접두까지 본다(주체는 Playwright 사례가 읽는다). 모델이 도구를 부를지는 단언하지
-않는다. 명령은 `uv run --env-file .env pytest -m llm_portal` 이고 원칙 I 의 판정(`-m llm`)과 위젯의
-것(`-m llm_widget`)과 따로다. 기본 실행과 `-m llm` 은 이것을 돌리지 않는다. 파이썬 시험이 감싸므로
-키가 없으면 실패하는 규칙과 실행 끝의 토큰 합계 줄(`tests/conftest.py`)이 다른 LLM 시험과 같다.
+마커 `llm_portal` 의 시험 하나가 위젯 미리보기 페이지 e2e 의 Playwright 프로젝트 `llm` 을 자식
+프로세스로 돌린다. 그 프로젝트는 실제 serve·위젯 Next·위젯 미리보기 페이지와 같은 출처의 중계
+위에서, `?site=` 없이 연 첫 사이트(익명, 에이전트 `calc`)의 고지 덮개를 확인하고 요청 하나를 보내
+출력이 서는 것과 실행 주체의 `anon-` 접두까지 본다(주체는 Playwright 사례가 읽는다). 모델이 도구를
+부를지는 단언하지 않는다. 명령은 `uv run --env-file .env pytest -m llm_portal` 이고 원칙 I 의
+판정(`-m llm`)과 위젯의 것(`-m llm_widget`)과 따로다. 기본 실행과 `-m llm` 은 이것을 돌리지 않는다.
+파이썬 시험이 감싸므로 키가 없으면 실패하는 규칙과 실행 끝의 토큰 합계 줄(`tests/conftest.py`)이
+다른 LLM 시험과 같다.
 
 위젯의 래퍼(`tests/test_widget_llm.py`)와 같은 모양이다. 뼈대(pnpm 경로, 트리째 끝내기, 기준)는 그
 파일이 원천이다. 여기는 같은 코드를 따로 두었다(그 파일의 변이 표가 그 파일의 글자를 겨눠 옮기지
@@ -190,13 +191,13 @@ def _read_trace(trace_file: Path) -> Trace:
 
 
 @pytest.mark.llm_portal
-def test_질문_페이지에서_고지를_확인하고_보낸_요청_하나에_계산_에이전트가_실제_모델로_답한다(
+def test_위젯_미리보기_페이지에서_고지를_확인하고_보낸_요청에_계산_에이전트가_실제_모델로_답한다(
     tmp_path: Path,
 ) -> None:
-    """바깥 이음매. 실제 브라우저, 실제 serve 와 위젯 Next 와 질문 페이지, 같은 출처의 중계, 사이트
-    파일과 질문 페이지가 서명한 토큰, 실제 모델이 한 길에 든다. 끝까지 돈 실행이면 준비가 띄운
-    프로세스의 출력이 `web/apps/portal/test-results/` 에 남는다(제한 시간에 끊긴 실행은 머리
-    독스트링의 못 보는 것)."""
+    """바깥 이음매. 실제 브라우저, 실제 serve 와 위젯 Next 와 위젯 미리보기 페이지, 같은 출처의
+    중계, 사이트 파일과 위젯 미리보기 페이지가 서명한 토큰, 실제 모델이 한 길에 든다. 끝까지 돈
+    실행이면 준비가 띄운 프로세스의 출력이 `web/apps/portal/test-results/` 에 남는다(제한 시간에
+    끊긴 실행은 머리 독스트링의 못 보는 것)."""
     if "ANTHROPIC_API_KEY" not in os.environ:
         # assert 로 두면 pytest 가 실패 출력에 os.environ 의 repr 을 싣는다(대기열 463).
         pytest.fail("ANTHROPIC_API_KEY 가 없다. .env 를 확인한다")

@@ -1,4 +1,4 @@
-// 질문 페이지의 HTML 을 짓는다(pilot-portal 명세 "페이지"). 서버는 질의와 쿠키를 보지 않고 늘 같은 글을 내고, 어느 사이트를
+// 위젯 미리보기 페이지의 HTML 을 짓는다(pilot-portal 명세 "페이지"). 서버는 질의와 쿠키를 보지 않고 늘 같은 글을 내고, 어느 사이트를
 // 그릴지는 페이지 스크립트가 `?site=` 를 읽어 정한다. 그래서 입력은 사이트 목록과 쿠키 수명 일수뿐이고 출력은 결정적이다.
 //
 // 인라인 스크립트와 인라인 스타일이 없다(CSP 가 `script-src 'self'` 와 `style-src 'self'` 이다). 사이트마다의 값은 JSON 데이터
@@ -31,7 +31,7 @@ const ACKNOWLEDGE = "확인하고 질문하기";
 const SKELETON_LABEL = "고지 확인 여부를 묻는 중";
 const FAILURE_TITLE = "고지 확인을 기록하지 못했습니다.";
 const FAILURE_BODY = "잠시 뒤 다시 눌러 주세요.";
-// 짧은 고지는 질문 페이지의 것이고 사이트가 바꾸지 못한다(명세 "질문 페이지 설정").
+// 짧은 고지는 위젯 미리보기 페이지의 것이고 사이트가 바꾸지 못한다(명세 "위젯 미리보기 페이지 설정").
 const SHORT_NOTICE = "질문과 출력은 기록되고 모델 API로 보내집니다. 개인정보를 넣지 마세요.";
 
 // 아이콘은 Lucide 모양의 인라인 SVG 이고 선은 크기와 상관없이 화면 1.5px 이다(명세 "모양"). 글자와 함께 놓이는 꾸밈이라 화면
@@ -214,7 +214,7 @@ function dataOf(sites: readonly PortalSite[], cookieDays: number): unknown {
 export function pageHtml(sites: readonly PortalSite[], cookieDays: number): string {
   const [first] = sites;
   if (first === undefined) {
-    throw new Error("질문 페이지에 사이트가 하나도 없다. 시작 검사가 어긋났다.");
+    throw new Error("위젯 미리보기 페이지에 사이트가 하나도 없다. 시작 검사가 어긋났다.");
   }
   const heading = escapeHtml(first.heading);
   const mode = first.mode === undefined ? "" : ` data-mode="${first.mode}"`;

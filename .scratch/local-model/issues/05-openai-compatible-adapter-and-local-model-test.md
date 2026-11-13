@@ -72,4 +72,4 @@
 ### 검증
 
 - [ ] **빨강을 먼저 본다**(헌법 원칙 II). 첫 빨강은 어댑터 시험, CLI 시험 둘, 로컬 모델 시험의 환경 검사 사례다. 지금은 `openai-compatible` 모델이 01의 임시 문구로 끝난다
-- [ ] **검증 명령이 모두 초록이다.** 손으로 치는 다섯에 더해 `-m llm`(모델 소스와 `tests/conftest.py`가 바뀐다)과 위 "병합 전"의 `-m llm_local`을 친다. `web/packages/e2e-stack`의 주석을 고치므로 질문 페이지 e2e(`pnpm -C web/apps/portal exec playwright test`)도 친다
+- [ ] **검증 명령이 모두 초록이다.** 손으로 치는 다섯에 더해 `-m llm`(모델 소스와 `tests/conftest.py`가 바뀐다)과 위 "병합 전"의 `-m llm_local`을 친다. `web/packages/e2e-stack`의 주석을 고치므로 위젯 미리보기 페이지 e2e(`pnpm -C web/apps/portal exec playwright test`)도 친다

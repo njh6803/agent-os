@@ -1,5 +1,5 @@
 # 로컬 pre-commit과 같은 검사. 훅은 각자 설치해야 하므로 CI가 최종 판정이다. 파이썬, web, 관리 화면 e2e(e2e), 위젯
-# e2e(e2e-widget), 질문 페이지 e2e(e2e-portal), 사진 비교(visual), 커밋 검사(ticket)가 잡 일곱으로 함께 돌고, 필수 검사는
+# e2e(e2e-widget), 위젯 미리보기 페이지 e2e(e2e-portal), 사진 비교(visual), 커밋 검사(ticket)가 잡 일곱으로 함께 돌고, 필수 검사는
 # 그 결과를 모으는 verify 하나다(ADR 0005, ADR 0021의 2026-10-01 이력 둘, ADR 0037, ADR 0024의 2026-10-24 이력, ADR 0050).
 # 잡을 더하면 verify 의 needs 에 넣는다. 빠뜨리면 verify 가 빨갛다(참고 모드인 llm 잡만 예외다). 세 e2e 와 사진 비교는
 # pre-commit 에 없고 CI 에만 있다(ADR 0026).
@@ -202,9 +202,9 @@ jobs:
         run: pnpm -C web/apps/widget exec playwright install-deps chromium
       - run: pnpm -C web/apps/widget exec playwright test
 
-  # 질문 페이지 e2e(pilot-portal 티켓 06). 실제 serve, 같은 사이트 파일로 빌드한 실제 위젯 Next, 실제 질문 페이지, 셋을 한
+  # 위젯 미리보기 페이지 e2e(pilot-portal 티켓 06). 실제 serve, 같은 사이트 파일로 빌드한 실제 위젯 Next, 실제 위젯 미리보기 페이지, 셋을 한
   # 출처 아래에 모으는 시험 안의 중계를 지난다(준비는 web/apps/portal/e2e/stack.ts). 모양은 e2e-widget 과 같다. 이 잡이
-  # ubuntu 에서 실제 질문 페이지를 띄우는 것이 Linux 확인이다(`stripTypeScriptTypes` 와 Tailwind CLI 자식 프로세스). timeout-
+  # ubuntu 에서 실제 위젯 미리보기 페이지를 띄우는 것이 Linux 확인이다(`stripTypeScriptTypes` 와 Tailwind CLI 자식 프로세스). timeout-
   # minutes 는 지난 실행이 없는 첫 값이라 e2e-widget 의 값을 그대로 둔 어림이다. 프로브의 `JOBS` 에는 아직 이 잡이 없다
   # (e2e-widget 도 없다). 이 잡이 든 실행이 생기면 `JOBS` 에 이 잡을 더하고 그 실행의 브랜치를 주어 프로브를 돌려 고친다
   # (머리 주석).
