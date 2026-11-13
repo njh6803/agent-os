@@ -63,4 +63,22 @@
   - 티켓의 수용 기준 둘째가 "잔존은 다섯과 `_Avoid_`뿐"이라고 닫은 주장은, 이 티켓 파일이 옛 이름을 적고 있어 커밋되면 거짓이 되고 갈라진 꼴과 밑줄 꼴도 잡지 못했다. 이 티켓을 grep 제외에 밝히고 갈라진 꼴과 밑줄 꼴을 찾은 방법을 적었다. 수치 "파이썬 줄 열네 곳"은 서브에이전트가 12~13곳으로 셌고 diff로 재현되지 않아 수를 뺐다. 일지의 "90개 파일"은 99개로 고쳤다.
 - 남긴 것: `docs/adr/README.md`의 색인 제목 둘에 옛 이름이 남은 것(티켓이 정한 바이고 ADR 제목과 같게 둔다). `.scratch/retro-queue/answer-estimate-before-reading-adr.md`의 시대착오(옛 세션이 새 이름을 말한 것처럼 읽힌다)는 티켓이 열린 항목이라 일부러 바꿨다고 적은 것이다. CONTEXT.md의 새 정의 둘째 문장이 앞 문장과 겹친다는 smell 지적은 판단 항목이라 두었다.
 - 헌법 판: `uv run python tools/sibling_overlap.py`가 종료 1로, 헌법 파일(`operations.md`, `tech.md`)을 고치고 판을 올리지 않았다고 알렸다(출력을 읽었다). 형제 워크트리 `03-llm-local-command-rents-model-servers`가 3.0.95를 쓰고 있어 3.0.96으로 올리고, `docs/constitution/README.md`에 3.0.95를 형제가 비워 둔 판이라는 문장을 달았다(3.0.61 문장의 선례를 따랐다). 다시 치니 "이 브랜치의 새 번호: 헌법 3.0.96, 번호 겹침 없음"이었다.
+- 커밋: `491b806b8`(pre-commit 통과. `checks` 러너 553초, pytest 363.3초, web-verify 552.7초, 헌법 판·변이 표·카나리아 명세 모양 검사 포함). 인용 대조(경고만 내는 검사)가 이 일지의 따옴표 인용 넷(앞 세션이 말을 줄여 따옴표를 붙인 것 둘, 도구 출력 둘)과 티켓·명세 인용 둘을 저장소에서 찾지 못했다고 알렸다. 막지 않는 경고이고 뜻을 바꾸지 않아 그대로 두었다.
+- PR 직전 CodeRabbit CLI(`coderabbit-review` 서브에이전트 보고를 받았다): `Seat: not assigned`(`Plan: Free`, CLI 0.7.5)에서도 `review_completed`로 끝났고 지적 0건, 종료 코드 0이다. 파일 103개로 150개 한도 안이었다. 서브에이전트가 직접 대 본 것은 보고에 있다. 치환을 되돌려 견준 차이가 줄바꿈 머리표와 시험 이름의 `_하나` 삭제뿐이었고, 화면 글과 시험의 맞댐이 같았으며, 변이 표 셋(14·23·23)의 `--check`와 카나리아 `--shape`·`--preflight`가 통과했고, 고친 시험 이름을 가리키는 곳이 없었다. 서브에이전트가 돌리지 않은 것은 e2e, `-m llm_portal`, 사진 비교, `web verify`이고 정적 대조만 했다.
 - 다시 돌린 명령: `uv run ruff check --output-format concise .`는 "All checks passed!", `uv run ruff format --check .`는 "2184 files already formatted"였다. 나머지 게이트는 커밋의 pre-commit 결과로 갈음한다(결과는 커밋 뒤에 적는다). 포털 e2e와 `web-verify`는 이번에 주석 둘과 파이썬 시험 이름·독스트링만 고쳐 다시 돌리지 않았다.
+
+## 회고
+
+후보 셋을 냈고 승인 하나, 기각 둘이다. 대기열을 `uv run python tools/queue_open_rows.py`로 세니 열린 항목 92개이고 만료할 항목은 없었다(출력을 읽었다). `--search 갈라진`, `줄.바뀌며`, `치환.chore`로 같은 일을 다룬 항목을 찾았으나 없었다.
+
+- 승인(1회차, 대기열 `rename-residual-grep-misses-split-and-underscore-forms`): 앞 세션이 치환 뒤 잔존을 `git grep -E`와 `-Pzc`로 0이라 닫았는데 줄바꿈으로 갈라진 꼴 둘과 밑줄 꼴 하나가 남아 있었다(셀프 리뷰 두 축이 짚고 이 세션이 파이썬 정규식으로 다시 훑어 확인했다). 사건은 있고, 처방은 지침 한 줄이라 층은 낮지만 바뀌는 말이 chore마다 달라 검사로 고정할 꼴이 없다. 더하는 것이라 다섯 번째 반복이나 손상 전에는 대기열에서 회차를 센다. 이 세션에서는 반영하지 않았다.
+- 기각: `tools/sibling_overlap.py`가 헌법 파일을 고치고 판을 올리지 않았다고 알린 것(종료 1). 이미 있는 검사가 막아 3.0.96으로 올려 풀었다.
+- 기각: 시험 함수 이름이 길어져 `hook_ruff_line_width`가 E501을 알린 것. 이미 있는 훅이 알려 그 자리에서 고쳤다.
+- 사용자에게 넘긴 것은 없다.
+
+## 다음
+
+이 chore가 병합되면 다음 일은 앞 일지 `docs/journal/2026-11-13-0426-portal-login-ui-design.md`의 "다음"이 정한 설계 인터뷰다. 위젯이 로그인 상태와 고지, 다크 모드를 직접 그리는 방향과 URL로 제공하는 방식을 한 인터뷰로 정한다. 정할 것과 넘길 입력은 그 일지에 있고 이 chore가 바꾼 것은 이름뿐이다. 그 일지와 ADR 0059·0060 본문은 기록이라 옛 이름 "질문 페이지"가 그대로 남는다. 새 인터뷰는 새 이름 "위젯 미리보기 페이지"로 쓴다.
+
+- 남은 일(앞 일지가 넘긴 것): 짓기 도구의 U+FFFD 고침(`ds-upload-replacement-char-rejected`), schema_version Minor, 프로브 README의 Nit.
+- 이 PR이 남긴 것: `docs/adr/README.md`의 색인 제목 둘에 옛 이름이 남는다(ADR 제목을 따른다). 인용 대조 경고 넷은 막지 않는 경고라 그대로 두었다.
