@@ -114,6 +114,15 @@ export interface Exchange {
   readonly outcome: Outcome | null;
 }
 
+/**
+ * 숨긴 읽기 영역이 한 번 읽을 글. 출력(`output`)은 마크다운 원문이라 읽기 영역이 기호를 뗀 글로 그리고(ADR 0053), 그 밖의
+ * 알림(`note`, 도구 줄의 결과와 승인 묻기)은 글자 그대로다. 저장하지 않는다.
+ */
+export interface Announcement {
+  readonly kind: "output" | "note";
+  readonly text: string;
+}
+
 export interface Conversation {
   readonly exchanges: readonly Exchange[];
   /** 다음 요청이 이어 갈 실행. 없으면 다음 요청은 시작이다. */
@@ -121,7 +130,7 @@ export interface Conversation {
   /** 다시 붙을 실행. 돌거나 멈춘 실행이고, 결말이 오면 빈다. */
   readonly reattach: string | null;
   /** 숨긴 읽기 영역이 차례로 읽을 글. */
-  readonly announcements: readonly string[];
+  readonly announcements: readonly Announcement[];
   readonly nextId: number;
   /** 처리하지 못한 거절(`error`)이 결말을 받은 요청 없이 거듭된 수. */
   readonly errorStreak: number;
@@ -387,7 +396,7 @@ function applyItem(state: Conversation, id: number, item: EndUserItem): Conversa
         calling: withoutFirst(exchange.calling, item.tool),
         tools: [...exchange.tools, { tool: item.tool, ok: item.ok }],
       }));
-      return announce(next, `${item.tool} ${item.ok ? "성공" : "실패"}`);
+      return announce(next, "note", `${item.tool} ${item.ok ? "성공" : "실패"}`);
     }
     // 결정 항목은 멈춘 교환에 온다(applyDecided). 도는 교환에 온 것은 아무것도 바꾸지 않는다.
     case "decided":
@@ -406,7 +415,7 @@ function applyItem(state: Conversation, id: number, item: EndUserItem): Conversa
         approvals: [...exchange.approvals, approval],
         outcome: { kind: "paused" },
       }));
-      return announce(next, `승인이 필요합니다: ${item.tool}`);
+      return announce(next, "note", `승인이 필요합니다: ${item.tool}`);
     }
     // 결말을 받은 요청이 오면 처리하지 못한 거절의 셈이 처음으로 돌아간다.
     case "finished": {
@@ -418,6 +427,7 @@ function applyItem(state: Conversation, id: number, item: EndUserItem): Conversa
           reattach: null,
           errorStreak: 0,
         },
+        "output",
         item.output,
       );
     }
@@ -441,6 +451,6 @@ function withoutFirst(names: readonly string[], name: string): readonly string[]
   return at === -1 ? names : [...names.slice(0, at), ...names.slice(at + 1)];
 }
 
-function announce(state: Conversation, text: string): Conversation {
-  return { ...state, announcements: [...state.announcements, text] };
+function announce(state: Conversation, kind: Announcement["kind"], text: string): Conversation {
+  return { ...state, announcements: [...state.announcements, { kind, text }] };
 }

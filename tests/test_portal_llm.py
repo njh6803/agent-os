@@ -20,8 +20,9 @@
   프로세스의 환경이 pnpm → Playwright → serve 로 물려 간다.
 - 기준 셋. Playwright 의 종료 코드 0 과 JSON 리포터의 통과 1, 건너뜀 0(종료 코드 0 만 보면 모두
   건너뛴 실행이 초록이다). 트레이스에 `llm_called`(키가 serve 에 닿지 않으면 모델 호출이 없다).
-  화면에 선 출력이 그 트레이스의 `run_finished` 의 `output` 과 같다. 기준마다 멈추지 않고 어긋난
-  것을 모두 모아 알린다.
+  화면에 선 출력이 그 트레이스의 `run_finished` 의 `output` 에서 온 글이다(화면은 마크다운 부품이
+  그린 글이라 글자 그대로가 아니라 기호를 뗀 글이 원문의 부분열인지 본다. 규칙은 위젯 래퍼와 함께
+  부르는 `tests/screen_text.py`). 기준마다 멈추지 않고 어긋난 것을 모두 모아 알린다.
 - pnpm 은 이름이 아니라 `shutil.which` 가 준 경로로 띄운다(윈도우의 `pnpm.CMD` 는 cmd.exe 가 명령
   줄을 다시 읽으므로 넘기는 인자는 고정 글자다. 이유는 위젯 래퍼의 독스트링).
 
@@ -39,6 +40,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 import pytest
+from tests.screen_text import screen_matches_output
 from tools.run_checks import kill_tree
 
 from agent_os.adapters.jsonl import JsonlTrace
@@ -176,9 +178,10 @@ def _failures(report: _Report | None, traces: Path, code: int) -> list[str]:
         )
     outputs = [event.output for event in events if isinstance(event, RunFinished)]
     shown = [] if report is None else report.shown
-    if len(outputs) != 1 or shown != outputs:
+    if len(outputs) != 1 or len(shown) != 1 or not screen_matches_output(shown[0], outputs[0]):
         failures.append(
-            f"화면에 선 출력 {shown!r} 이 트레이스의 run_finished 출력 {outputs!r} 과 같지 않다"
+            f"화면에 선 출력 {shown!r} 이 트레이스의 run_finished 출력 {outputs!r} 에서 온 글로"
+            " 보이지 않는다(기호를 뗀 글이 원문의 부분열이 아니거나 화면 글이 비었다)"
         )
     return failures
 

@@ -2,7 +2,12 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "nod
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, expect, test } from "vitest";
-import { copyRepoPlugins, pointDocSearchAt, writeFixturePlugins } from "./plugins.ts";
+import {
+  copyRepoPlugins,
+  markdownOutput,
+  pointDocSearchAt,
+  writeFixturePlugins,
+} from "./plugins.ts";
 import { REPO } from "./serve.ts";
 
 const REPO_URL = "http://rag-engine:8000/mcp";
@@ -74,4 +79,13 @@ test("픽스처의 규칙 파일은 저장소 규칙 파일의 assistant 표를 
   const fixture = readFileSync(join(root, "rules.toml"), "utf-8");
   const repo = readFileSync(join(REPO, "plugins", "rules.toml"), "utf-8");
   expect(agentTable(fixture, "assistant")).toBe(agentTable(repo, "assistant"));
+});
+
+test("마크다운 에이전트는 시험이 준 이미지 주소가 든 고정 출력을 낸다", () => {
+  const url = "http://site.test/pixel.png";
+  writeFixturePlugins(root, "python", "server.py", join(root, "gates"), url);
+
+  const agent = readFileSync(join(root, "agents", "markdown", "agent.py"), "utf-8");
+  expect(agent).toContain(JSON.stringify(markdownOutput(url)));
+  expect(markdownOutput(url)).toContain(`](${url})`);
 });
