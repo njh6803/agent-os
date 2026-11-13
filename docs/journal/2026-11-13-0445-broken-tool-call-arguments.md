@@ -52,6 +52,11 @@
 - pre-commit이 네 번째 시도에서 통과했다. 앞의 세 시도는 이 변경이 건드리지 않은 시간 단언 시험이 빨개 막혔다. 첫째는 `tests/channel/cli/test_interrupt.py`의 도구 호출 도중 중단 시험(30초 안에 끝나지 않았다), 둘째는 `tests/tools/test_probe_kit.py`의 배출 시험, 셋째는 `test_interrupt.py`의 셋과 `tests/tools/test_hook_push_behind_main.py`의 시간 제한 시험이었다. 앞의 둘은 따로 돌리면 통과했고(`test_interrupt.py` 6개 119초, `test_probe_kit.py` 15개 227초) 같은 PC의 부하(세 번째 실패 직후 `Win32_Processor`의 `LoadPercentage`가 100, python·node 프로세스 148개, 이 워크트리의 것은 없었다. 손으로 쟀다)로 어림한다. 부하의 출처는 재지 않았고 기준 브랜치에서 같은 흔들림이 나는지도 재지 않았다. 앞선 세션의 일지(2026-11-12-2327)에도 같은 두 시험의 부하 흔들림이 적혀 있다.
 - 첫 시도의 인용 대조가 이 일지의 따옴표 문구(저장소에 글자 그대로 없는 문장)를 경고해, 따옴표를 떼어 고쳤다.
 
+## PR 직전 리뷰
+
+- 기준 브랜치의 새 커밋 하나(`f6e7cbb12`, 질문 페이지 로그인 설계 문서)를 `git merge origin/dev`로 합쳤다. 충돌이 없었고 `uv run python tools/plan_table.py --check`와 `sibling_overlap.py`가 통과했다(합친 커밋의 commit-msg 훅도 통과).
+- `coderabbit-review` 서브에이전트(`coderabbit review --agent --committed --base origin/dev`, CLI 0.7.5)가 `review_completed`로 끝났고 findings는 0건이다. 본 파일은 9개다. `Seat: not assigned`, `Plan: Free`(서브에이전트의 보고를 옮겼다). 지적이 없어 유효·오탐 판정할 것이 없었다.
+
 ## 이어받을 일
 
 1. 이 티켓의 PR은 `core/model.py`를 고친다. ADR 0058의 로컬 모델 시험 병합 조건 범위에 들지만 돌릴 시험이 아직 없어 조건이 붙지 않는다. 05의 로컬 모델 시험이 이 변경까지 지난다(티켓 본문).
