@@ -1,6 +1,6 @@
 [project]
 name = "agent-os"
-version = "0.1.0"
+version = "0.0.0"
 description = "플러그인 기반 에이전트 런타임. an agent OS"
 readme = "README.md"
 requires-python = "==3.12.*"

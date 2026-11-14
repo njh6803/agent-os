@@ -18,6 +18,7 @@ import json
 import time
 from collections.abc import AsyncIterator, Iterable, Mapping, Sequence
 from datetime import UTC, datetime, timedelta, timezone
+from importlib.metadata import version as installed_version
 from pathlib import Path
 from typing import Literal, get_type_hints
 
@@ -540,6 +541,15 @@ async def test_헬스체크만_토큰_없이_답한다(client: AsyncClient) -> N
 def test_인증_없이_지나가는_경로의_목록은_헬스체크_하나다() -> None:
     """목록이 문서 없이 자라는 것이 fail-open 으로 돌아가는 길이다(ADR 0011)."""
     assert PUBLIC_PATHS == frozenset({"/health"})
+
+
+async def test_serve_의_API_문서_판_칸이_설치된_패키지의_판이다(client: AsyncClient) -> None:
+    """판의 원천은 설치된 패키지다. 번호를 글자로 박지 않아, 이미지를 지을 때 넣은 번호로도 같은
+    성질이 선다(release-image 07)."""
+    response = await client.get("/openapi.json", headers=BEARER)
+
+    assert response.status_code == 200
+    assert response.json()["info"]["version"] == installed_version("agent-os")
 
 
 async def test_헬스체크_응답이_내부_구성을_싣지_않는다(client: AsyncClient) -> None:

@@ -1,0 +1,37 @@
+# 저장소의 판 번호 시험(티켓 01)의 빨강을 본다. 판을 설치된 패키지에서 읽지 않고 글자로 박으면 두 시험이
+# 빨개진다. 두 시험은 구현 전부터 초록이던 가드라(`importlib.metadata` 로 읽는 코드는 이미 있었다) 빨강을
+# 본 적이 없다.
+#
+#   PYTHONUTF8=1 uv run python tools/mutate.py .scratch/release-image/probes/repo_version_mutations.toml
+#
+# 표지 `9.9.9` 는 박은 글자가 단언의 어긋남 출력에 드러난 것이다.
+
+[[mutation]]
+name = "serve 의 API 문서 판 칸을 글자로 박는다"
+tests = ["tests/test_server.py", "-k", "API_문서_판_칸"]
+expect = "red"
+expect_output = ["9.9.9"]
+
+[[mutation.edit]]
+file = "src/agent_os/server.py"
+old = '''
+        version=version("agent-os"),
+'''
+new = '''
+        version="9.9.9",
+'''
+
+[[mutation]]
+name = "CLI 의 version 옵션을 글자로 박는다"
+tests = ["tests/channel/cli/test_main.py", "-k", "version_옵션"]
+expect = "red"
+expect_output = ["9.9.9"]
+
+[[mutation.edit]]
+file = "src/agent_os/channel/cli/main.py"
+old = '''
+    parser.add_argument("--version", action="version", version=version("agent-os"))
+'''
+new = '''
+    parser.add_argument("--version", action="version", version="9.9.9")
+'''
