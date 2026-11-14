@@ -1,10 +1,11 @@
 # 로컬 모델 시험의 모델 서버를 Runpod에 띄우는 구성. `tools/llm_local.py`가 부른다(독스트링 참조).
 #
-# 이 구성은 클라우드에서 돌려 보지 않았다. 자원의 속성 이름(`image_name`, `gpu_type_ids`,
-# `container_disk_in_gb`, `cloud_type`, `cost_per_hr` 등)은 프로바이더 `runpod/runpod` 2.0.0의
-# 문서와 대조하지 않은 추정이다(명세는 `args`와 `/v2/pods` 경로만 적었다). 공식 이미지의 시작
-# 명령이 `args`를 삼키는지도 확인하지 않았다. 확인은 티켓 03의 "띄워 확인하는 것"이다.
-# `terraform fmt`로 문법만 봤다.
+# 자원의 속성 이름은 설치한 프로바이더 `runpod/runpod` 2.0.0의 스키마(`terraform providers
+# schema -json`, 2026-11-13)로 맞췄다. 첫 실제 실행이 추정한 이름(`image_name`, `gpu_type_ids`,
+# `container_disk_in_gb`, `cloud_type`, `volume_in_gb`, `cost_per_hr`)을 모두 거절해 파드를 만들지
+# 못했다. `args`가 문자열 하나이고 JSON 객체면 entrypoint와 cmd를 따로 정한다는 것은 Runpod
+# 플러그인의 create-pod 도구 설명에서 읽었다. 이 `args`로 공식 이미지가 `vllm serve`를 실행하는 것은
+# 2026-11-14에 파드 로그로 봤다(티켓 03의 "띄워 확인하는 것").
 #
 # 계정 키는 이 구성이 받지 않는다. 프로바이더는 호출한 프로세스의 환경에서 스스로 읽고, 파드의
 # 타이머는 Runpod가 파드에 주입한 키로 그 파드를 지운다. 서버 키만 받는 변수가 있고 그 값은 자원의
@@ -67,7 +68,13 @@ variable "image" {
 variable "shared_memory_utilization" {
   type        = number
   default     = 0.45
-  description = "shared 배치에서 서버마다 쓰는 GPU 메모리 비율."
+  description = "shared 배치에서 서버마다 쓰는 GPU 메모리 비율. 시작할 때 남은 메모리가 이 몫보다 작으면 서버가 뜨지 않는다."
+}
+
+variable "shared_kv_cache_bytes" {
+  type        = number
+  default     = 4294967296
+  description = "shared 배치에서 서버마다 고정하는 KV 캐시 크기(바이트). 비율만으로는 한 GPU에 서버 둘이 서지 않았다."
 }
 
 locals {
@@ -95,13 +102,25 @@ locals {
       "--enable-auto-tool-choice",
       "--tool-call-parser ${m.parser}",
       local.shared ? "--gpu-memory-utilization ${var.shared_memory_utilization}" : "",
+      local.shared ? "--kv-cache-memory=${var.shared_kv_cache_bytes}" : "",
+    ]))
+  }
+
+  # 한 GPU에 서버 둘이면 앞 서버가 응답한 뒤에 다음 서버를 시작한다. 동시에 시작하면 서로의 메모리를
+  # 자기 몫에서 빼서 시작이 실패했다. 서버가 하나인 파드는 기다릴 서버가 없어 줄이 늘지 않는다.
+  # 앞 서버가 죽으면 이 루프는 끝나지 않는다. 그때는 명령의 준비 상한(30분)이 파드를 지우고, 그 전에
+  # 명령이 죽어도 위 타이머가 90분 뒤 지운다.
+  start = {
+    for n, m in var.models : n => join("\n", compact([
+      "${local.serve[n]} &",
+      local.shared ? "until curl -fs localhost:${local.ports[n]}/health > /dev/null; do sleep 3; done" : "",
     ]))
   }
 
   script = {
     for pod, numbers in local.pods : pod => join("\n", concat(
       [local.timer],
-      [for n in numbers : "${local.serve[n]} &"],
+      [for n in numbers : local.start[n]],
       ["wait"],
     ))
   }
@@ -110,15 +129,16 @@ locals {
 resource "runpod_pod" "server" {
   for_each = local.pods
 
-  name                 = "agent-os-llm-local-${each.key}"
-  image_name           = var.image
-  gpu_type_ids         = [var.gpu_type_id]
-  gpu_count            = 1
-  cloud_type           = "SECURE"
-  container_disk_in_gb = 60
-  volume_in_gb         = 0
-  ports                = local.shared ? ["8000/http", "8001/http"] : ["8000/http"]
-  args                 = ["bash", "-c", local.script[each.key]]
+  name        = "agent-os-llm-local-${each.key}"
+  image       = var.image
+  gpu_type_id = var.gpu_type_id
+  gpu_count   = 1
+  cloud       = "SECURE"
+  disk        = 60
+  ports       = local.shared ? ["8000/http", "8001/http"] : ["8000/http"]
+  # 공식 이미지의 시작 명령(vllm serve)을 bash로 바꿔 타이머와 서버를 함께 띄운다. `args`는 문자열
+  # 하나이고, JSON 객체면 entrypoint와 cmd를 따로 정한다(Runpod 플러그인의 create-pod 도구 설명).
+  args = jsonencode({ entrypoint = ["/bin/bash", "-c"], cmd = [local.script[each.key]] })
 }
 
 output "servers" {
@@ -137,7 +157,7 @@ output "pods" {
   value = [
     for pod, numbers in local.pods : {
       id          = runpod_pod.server[pod].id
-      cost_per_hr = runpod_pod.server[pod].cost_per_hr
+      cost_per_hr = runpod_pod.server[pod].cost
     }
   ]
 }

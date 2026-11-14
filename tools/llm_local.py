@@ -60,9 +60,11 @@ destroy`로 지우고, 자원이 없음을 확인한 폴더를 지운다. 이 �
 그대로를 파일에 쓰지 않는다. 자식 프로세스의 환경에서는 `RUNPOD_API_KEY`를 뺀다. 기록 묶음에는
 서버 키와 주소를 넣지 않는다.
 
-못 보는 것. 이 스크립트는 클라우드에서 돌려 보지 않았다(티켓 03의 "띄워 확인하는 것"). 단가 표는
-Runpod 가격 페이지(Secure Cloud)를 `PRICE_TABLE_DATE`에 WebFetch로 받아 그 웹 요약에서 읽은
-값이다. 원문과 대조하지 않았고, 띄워 본 `cost`와 견주는 일이 남았다.
+못 보는 것. 이 스크립트가 시험 자식까지 돌린 회차는 아직 없다(티켓 03의 "띄워 확인하는 것").
+2026-11-14에 `shared` 구성의 서버 둘이 서고 두 모델이 `tool_calls`로 답하는 것은 손으로 봤지만,
+`pods` 구성과 90분 타이머는 보지 못했다. 단가 표는 Runpod 가격 페이지(Secure Cloud)를
+`PRICE_TABLE_DATE`에 WebFetch로 받아 그 웹 요약에서 읽은 값이다. 원문과 대조하지 않았다. 띄워 본
+Terraform `cost`는 A40(0.59)만 표와 같았다.
 프로세스의 명령 줄을 읽지 못하는 프로세스(다른 사용자의 것)는 죽은 것으로 읽어 그 잠금을 치운다.
 위 `sweep`과 `run`은 같은 사용자의 프로세스만 본다. 모델 목록을 읽는 요청은 시스템의 프록시
 설정을 따른다.
@@ -119,8 +121,13 @@ APPLY_TIMEOUT = 15 * 60.0
 DESTROY_TIMEOUT = 15 * 60.0
 OUTPUT_TAIL_LINES = 40
 SHARED_UTILIZATION = 0.45
+# shared 배치에서 서버마다 고정하는 KV 캐시 크기(바이트). 비율(`--gpu-memory-utilization`)만으로는
+# 한 GPU에 서버 둘이 서지 않았다. 근거는 2026-11-14에 파드 로그를 손으로 본 것이고, 시험
+# `tests/tools/test_llm_local_state.py`의 주석에 적었다.
+SHARED_KV_CACHE_BYTES = 4 * 1024**3
 DEFAULT_TEST_COMMAND = ("uv", "run", "pytest", "-m", "llm_local")
 MASK = "***"
+USER_AGENT = "agent-os-llm-local"
 
 # 종료 코드
 PASSED, TEST_FAILED, INVALID, DESTROY_FAILED, NOT_LAUNCHED = 0, 1, 2, 3, 4
@@ -271,8 +278,11 @@ def execute(
 
 def fetch_models(base_url: str, key: str) -> list[str] | None:
     """`GET <주소>/models`가 200으로 낸 모델 이름들. 답하지 않거나 200이 아니면 None."""
+    # Runpod 프록시는 urllib의 기본 User-Agent(`Python-urllib/…`)를 403(`error code: 1010`)으로
+    # 거절한다.
     request = urllib.request.Request(  # noqa: S310 - 주소는 Terraform 출력의 https 주소다
-        base_url.rstrip("/") + "/models", headers={"Authorization": f"Bearer {key}"}
+        base_url.rstrip("/") + "/models",
+        headers={"Authorization": f"Bearer {key}", "User-Agent": USER_AGENT},
     )
     try:
         with urllib.request.urlopen(request, timeout=15) as response:  # noqa: S310
@@ -777,6 +787,7 @@ def server_options(candidate: Candidate) -> list[str]:
         ]
         if candidate.layout == "shared":
             words.append(f"--gpu-memory-utilization {SHARED_UTILIZATION}")
+            words.append(f"--kv-cache-memory={SHARED_KV_CACHE_BYTES}")
         options.append(" ".join(words))
     return options
 

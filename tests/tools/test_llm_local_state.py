@@ -14,6 +14,7 @@ import subprocess
 import sys
 import threading
 import time
+from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
 
 import pytest
@@ -277,7 +278,10 @@ def test_구성은_공식_이미지와_프로바이더_판을_글자_그대로_�
     assert llm_local.VLLM_VERSION in text
     # 첫째 구성(pods)은 8000/http 하나, 둘째 구성(shared)은 서버 둘이라 8001/http가 더 든다
     assert 'local.shared ? ["8000/http", "8001/http"] : ["8000/http"]' in text
-    assert "volume_in_gb" in text and "= 0" in text.split("volume_in_gb", 1)[1][:20]
+    # 컨테이너 디스크만 쓰고 저장 볼륨은 붙이지 않는다. 시작 명령은 bash로 바꾼다
+    assert re.search(r"^\s*disk\s*=\s*60\s*$", text, flags=re.MULTILINE)
+    assert "persistent_volume" not in text and "network_volumes" not in text
+    assert 'entrypoint = ["/bin/bash", "-c"]' in text
     assert "--enable-auto-tool-choice" in text and "--api-key" in text
 
 
@@ -293,6 +297,7 @@ def test_구성의_기본값과_서버_옵션은_스크립트의_상수와_어�
     assert _default_of(text, "image") == llm_local.IMAGE
     assert int(_default_of(text, "timer_minutes")) == llm_local.TIMER_MINUTES
     assert float(_default_of(text, "shared_memory_utilization")) == llm_local.SHARED_UTILIZATION
+    assert int(_default_of(text, "shared_kv_cache_bytes")) == llm_local.SHARED_KV_CACHE_BYTES
     for candidate in llm_local.candidates():
         for option in llm_local.server_options(candidate):
             for flag in re.findall(r"--[a-z-]+", option):
@@ -303,6 +308,65 @@ def test_구성의_기본값과_서버_옵션은_스크립트의_상수와_어�
     ]
     assert ports == [8000, 8001]
     assert "8000 + i" in text
+
+
+def test_둘째_구성만_KV_캐시를_고정하고_서버_뒤에_health_대기_줄을_둔다() -> None:
+    # 2026-11-14 파드 로그로 손으로 봤다: 한 GPU에 서버 둘을 동시에 시작하면 A.X의 KV 캐시 메모리가
+    # -10.5 GiB로 잡혀 시작이 실패했다. gpt-oss가 먼저 자리를 잡은 뒤에 시작해도
+    # `--gpu-memory-utilization 0.45`만으로는 남은 메모리(10.56 GiB)가 요구(19.99 GiB)보다 작아
+    # 실패했다. KV 캐시를 고정하고 차례로 띄우면 섰다.
+    text = CONFIG.read_text(encoding="utf-8")
+    assert "--kv-cache-memory=${var.shared_kv_cache_bytes}" in text
+    assert "/health" in text and "until curl" in text
+    # 기다리는 줄과 KV 캐시 옵션은 둘 다 shared일 때만 든다(첫째 구성의 스크립트는 그대로다)
+    assert re.search(r'local\.shared \? "until curl[^"]*" : ""', text)
+    assert re.search(r'local\.shared \? "--kv-cache-memory=[^"]*" : ""', text)
+    shared = next(c for c in llm_local.candidates() if c.layout == "shared")
+    for option in llm_local.server_options(shared):
+        assert f"--kv-cache-memory={llm_local.SHARED_KV_CACHE_BYTES}" in option
+    pods = next(c for c in llm_local.candidates() if c.layout == "pods")
+    assert not any("--kv-cache-memory" in o for o in llm_local.server_options(pods))
+
+
+class _ProxyLikeHandler(BaseHTTPRequestHandler):
+    """Runpod 프록시처럼 파이썬 기본 `User-Agent`를 403(`error code: 1010`)으로 거절하는 서버."""
+
+    def do_GET(self) -> None:
+        agent = self.headers.get("User-Agent", "")
+        if agent.startswith("Python-urllib"):
+            self.send_response(403)
+            self.end_headers()
+            self.wfile.write(b"error code: 1010\n")
+            return
+        if self.headers.get("Authorization") != "Bearer secret-key":
+            self.send_response(401)
+            self.end_headers()
+            return
+        body = json.dumps({"data": [{"id": "skt/A.X-4.0-Light"}]}).encode()
+        self.send_response(200)
+        self.send_header("Content-Type", "application/json")
+        self.end_headers()
+        self.wfile.write(body)
+
+    def log_message(self, format: str, *args: object) -> None:
+        return
+
+
+def test_준비_확인은_프록시가_거절하는_파이썬_기본_사용자_에이전트를_쓰지_않는다() -> None:
+    # 2026-11-14 손으로 봤다: urllib의 기본 요청은 Runpod 프록시에서 403(`error code: 1010`)이었고
+    # 다른 `User-Agent`를 붙이면 200이었다. 그 거절 때문에 서버가 떠 있어도 준비 확인이 통과하지
+    # 않았다.
+    server = HTTPServer(("127.0.0.1", 0), _ProxyLikeHandler)
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    try:
+        base_url = f"http://127.0.0.1:{server.server_address[1]}/v1"
+        assert llm_local.fetch_models(base_url, "secret-key") == ["skt/A.X-4.0-Light"]
+        assert llm_local.fetch_models(base_url, "wrong-key") is None
+    finally:
+        server.shutdown()
+        server.server_close()
+        thread.join(timeout=10)
 
 
 def test_구성의_타이머는_파드를_멈추지_않고_지운다() -> None:
