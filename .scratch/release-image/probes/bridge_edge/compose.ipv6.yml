@@ -1,0 +1,11 @@
+# 측정 전용 덧씌움. 안쪽 네트워크에 IPv6 를 켠다. compose 는 덧씌울 때 ipam.config 목록을 잇지 않고
+# 바꾸므로(Compose v5.6.1 의 `docker compose config` 로 손으로 봤다) compose.probe.yml 의 IPv4 대역도
+# 다시 적는다.
+
+networks:
+  edge:
+    enable_ipv6: true
+    ipam:
+      config:
+        - subnet: 172.30.0.0/24
+        - subnet: fd00:30::/64

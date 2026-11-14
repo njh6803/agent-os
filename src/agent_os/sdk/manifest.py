@@ -44,6 +44,7 @@ class ModelProvider(StrEnum):
     """모델 플러그인의 제공사."""
 
     ANTHROPIC = "anthropic"
+    OPENAI_COMPATIBLE = "openai-compatible"
 
 
 _ENTRYPOINT = r"^[A-Za-z_][\w.]*:[A-Za-z_]\w*$"
@@ -94,6 +95,28 @@ _RESERVED_HEADERS = frozenset(
 )
 
 
+def _check_http_address(value: str, field: str) -> str:
+    """원격 MCP 서버의 `url` 과 모델 서버의 `base_url` 이 나눠 쓰는 주소 검사 넷.
+
+    문구는 칸 이름만 다르고 적은 값을 되울리지 않는다. 매니페스트를 읽지 못한 문구가 운영자 면에
+    나가기 때문이다(헌법 원칙 V). 파서의 오류 문구는 대괄호 안의 호스트를 되울리므로 예외를 이
+    함수 밖으로 잇지 않고 고정 문구로 바꾼다.
+    """
+    try:
+        parts = urlsplit(value)
+    except ValueError:
+        parts = None
+    if parts is None:
+        raise ValueError(f"{field} 이 주소 모양이 아니다")
+    if parts.scheme not in ("http", "https"):
+        raise ValueError(f"{field} 은 http 나 https 주소여야 한다")
+    if "@" in parts.netloc:
+        raise ValueError(f"{field} 에 사용자 정보를 적을 수 없다")
+    if not parts.hostname:
+        raise ValueError(f"{field} 에 호스트가 있어야 한다")
+    return value
+
+
 class StdioServer(BaseModel):
     """mcp 플러그인이 띄우는 stdio 서버의 실행 정보."""
 
@@ -127,25 +150,12 @@ class HttpServer(BaseModel):
 
     # 아래 두 검증자의 문구는 `url` 의 글자와 환경 변수 이름을 되울리지 않는다. 매니페스트를 읽지
     # 못한 문구가 운영자 면에 나가기 때문이다(헌법 원칙 V). 헤더 이름은 비밀이 아니라 문구에 싣는다.
-    # 검증자는 필드 검증 뒤에 돌아 헤더 이름이 패턴을 지난 값이다.
+    # 검증자는 필드 검증 뒤에 돌아 헤더 이름이 패턴을 지난 값이다. 주소 검사는 모델 서버의
+    # `base_url` 과 나눠 쓴다(`_check_http_address`).
     @field_validator("url")
     @classmethod
     def _url_is_plain_http(cls, value: str) -> str:
-        # 파서의 오류 문구는 대괄호 안의 호스트를 되울린다. 예외를 이 블록 밖으로 잇지 않고 고정
-        # 문구로 바꾼다.
-        try:
-            parts = urlsplit(value)
-        except ValueError:
-            parts = None
-        if parts is None:
-            raise ValueError("url 이 주소 모양이 아니다")
-        if parts.scheme not in ("http", "https"):
-            raise ValueError("url 은 http 나 https 주소여야 한다")
-        if "@" in parts.netloc:
-            raise ValueError("url 에 사용자 정보를 적을 수 없다")
-        if not parts.hostname:
-            raise ValueError("url 에 호스트가 있어야 한다")
-        return value
+        return _check_http_address(value, "url")
 
     @field_validator("headers")
     @classmethod
@@ -244,8 +254,39 @@ class PluginManifest(BaseModel):
     # strict 여도 TOML 의 정수 `0`·`1` 은 실수 `0.0`·`1.0` 으로 받아들여진다. 불린과 문자열은
     # 거부된다.
     temperature: float | None = Field(default=None, strict=True, ge=0, le=1)
+    # 모델만, 제공사가 openai-compatible 일 때만(ADR 0057). 모델 서버의 주소와 키를 읽을 환경 변수의
+    # 이름이다. 둘 다 선택이고 기본은 없음이라 `schema_version` 은 "1" 그대로다. 설명은 계약
+    # (`openapi.json`)에 실리므로 한 줄로 쓰고 논증은 여기 둔다. `base_url` 은 글자 그대로 보관한다
+    # (`AnyHttpUrl` 은 호스트를 소문자로 바꾸고 빈 경로에 `/` 를 붙여 관리 API 응답이 파일에 적은
+    # 글자와 달라진다). `api_key_env` 는 값이 아니라 이름이라 관리 API 응답에 실려도 비밀이 새지
+    # 않는다(원칙 V). 이 값의 모델은 읽히고 관리 API 에 보이지만 모델 서버에 붙는 동작은 아직
+    # 없다. 그 모델로 실행을 치면 실행 전 구성 오류로 끝난다(`adapters/models.py`).
+    base_url: str | None = Field(
+        default=None,
+        description=(
+            "모델 서버의 API 뿌리까지 적은 주소. vLLM이면 /v1 까지 적고 그 뒤에 "
+            "chat/completions 가 붙으며 끝의 / 는 있어도 없어도 같다."
+        ),
+    )
+    api_key_env: _EnvName | None = Field(
+        default=None,
+        description="키 값이 아니라 런타임이 호출 때 읽을 환경 변수의 이름.",
+    )
     # mcp만
     server: McpServer | None = None
+
+    @field_validator("base_url")
+    @classmethod
+    def _base_url_is_plain_http_without_query(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        _check_http_address(value, "base_url")
+        # 쿼리가 든 주소는 라이브러리가 쿼리 뒤에 경로를 붙여 요청 줄이 깨지고, 그 주소는 401의 원인
+        # 예외 글과 로거의 INFO 줄에 쿼리째 실린다(ADR 0057 의 2026-11-12 이력). 조각은 네트워크로
+        # 나가지 않아 받는다. 조각을 떼고 `?` 를 보는 것은 빈 쿼리(`…/v1?`)도 막기 위해서다.
+        if "?" in value.partition("#")[0]:
+            raise ValueError("base_url 에 쿼리 문자열을 적을 수 없다")
+        return value
 
     @model_validator(mode="after")
     def _fields_belong_to_their_kind(self) -> Self:
@@ -278,8 +319,26 @@ class PluginManifest(BaseModel):
                 raise ValueError("model 플러그인은 provider가 필요하다")
             if self.model_id is None:
                 raise ValueError("model 플러그인은 model_id가 필요하다")
+            # 제공사에 맞지 않는 칸은 "적었는가"로 판정한다. 문구가 싣는 것은 칸 이름과 닫힌 열거를
+            # 지난 제공사 값뿐이다.
+            subject = f"provider 가 {self.provider} 인 model 플러그인은"
+            match self.provider:
+                case ModelProvider.OPENAI_COMPATIBLE:
+                    if self.base_url is None:
+                        raise ValueError(f"{subject} base_url 이 필요하다")
+                case ModelProvider.ANTHROPIC:
+                    for field in ("base_url", "api_key_env"):
+                        if field in self.model_fields_set:
+                            raise ValueError(f"{subject} {field} 을 갖지 않는다")
         else:
-            for field in ("provider", "model_id", "max_tokens", "temperature"):
+            for field in (
+                "provider",
+                "model_id",
+                "max_tokens",
+                "temperature",
+                "base_url",
+                "api_key_env",
+            ):
                 if field in self.model_fields_set:
                     raise ValueError(f"{self.kind} 플러그인은 {field} 을 갖지 않는다")
         if self.kind is not PluginKind.AGENT and "model" in self.model_fields_set:

@@ -1,4 +1,4 @@
-// 타입 검사 프로브. 후보 셋과 가짜 서버 둘의 코드가 질문 페이지와 같은 tsconfig(`apps/portal/tsconfig.json` 은
+// 타입 검사 프로브. 후보 셋과 가짜 서버 둘의 코드가 위젯 미리보기 페이지와 같은 tsconfig(`apps/portal/tsconfig.json` 은
 // `web/apps/portal/tsconfig.json` 의 복사, `tsconfig.base.json` 은 `web/tsconfig.base.json` 의 복사)에서 `tsc --noEmit` 을
 // 지나는지 본다. 두 복사가 저장소의 것과 같은지도 여기서 견준다.
 //

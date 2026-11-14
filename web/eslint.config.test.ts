@@ -212,7 +212,7 @@ const SOURCES: Readonly<Record<string, string>> = {
   "apps/admin/app/settings/page.ts":
     'import { 종류 } from "../../lib/kinds";\n\nexport const 설정 = 종류;\n',
   "apps/widget/lib/widget.ts": "export const 위젯 = 1;\n",
-  // 질문 페이지의 페이지 스크립트 파일 하나만 전역 fetch 를 푼다. 같은 앱의 다른 파일은 그대로 막힌다.
+  // 위젯 미리보기 페이지의 페이지 스크립트 파일 하나만 전역 fetch 를 푼다. 같은 앱의 다른 파일은 그대로 막힌다.
   "apps/portal/browser/portal.ts":
     'export async function 부른다(): Promise<Response> {\n  return fetch("/portal/sites/demo/token", { method: "POST" });\n}\n',
   "apps/portal/server/fetch.ts":
@@ -442,7 +442,7 @@ const RED: readonly RedCase[] = [
     rule: "no-restricted-properties",
   },
   {
-    name: "질문 페이지 앱의 페이지 스크립트가 아닌 파일의 전역 fetch",
+    name: "위젯 미리보기 페이지 앱의 페이지 스크립트가 아닌 파일의 전역 fetch",
     path: "apps/portal/server/fetch.ts",
     rule: "no-restricted-globals",
   },
@@ -553,7 +553,7 @@ const GREEN: readonly { readonly name: string; readonly path: string }[] = [
     path: "packages/ui/src/components/atoms/Icon.tsx",
   },
   {
-    name: "질문 페이지 앱의 페이지 스크립트 파일의 전역 fetch",
+    name: "위젯 미리보기 페이지 앱의 페이지 스크립트 파일의 전역 fetch",
     path: "apps/portal/browser/portal.ts",
   },
 ];
@@ -694,7 +694,7 @@ describe("실제 생성 클라이언트 자리", () => {
 });
 
 // 페이지 스크립트 파일에서도 fetch 밖의 HTTP 전역은 막힌다. 임시 트리의 그 파일 자리에 XMLHttpRequest 를 넣어 잰다.
-describe("질문 페이지의 페이지 스크립트 자리", () => {
+describe("위젯 미리보기 페이지의 페이지 스크립트 자리", () => {
   test("그 파일에서도 XMLHttpRequest 는 빨갛다", async () => {
     const path = join(fixture, "apps/portal/browser/portal.ts");
     const source = "export const 요청 = new XMLHttpRequest();\n";

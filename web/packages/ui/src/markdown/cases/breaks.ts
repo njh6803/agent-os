@@ -5,7 +5,7 @@
 import { a, BR, bq, code, h, ol, p, pre, strong, table, txt, ul } from "./skeleton";
 
 const FENCE = "```";
-const tableMd = (head: readonly string[], ...rows: readonly (readonly string[])[]): string =>
+export const tableMd = (head: readonly string[], ...rows: readonly (readonly string[])[]): string =>
   [
     `| ${head.join(" | ")} |`,
     `| ${head.map(() => "---").join(" | ")} |`,

@@ -1,0 +1,11 @@
+# 시제품 Dockerfile 의 빌드 맥락(web/)에서 빼는 것. 깔린 의존성과 앞 빌드의 산출물이 이미지에 섞이면
+# "앞 빌드의 산출물 없이" 라는 조건이 깨진다. 사진 비교의 정답 PNG 는 빌드에 쓰이지 않아 크기에서 뺀다.
+**/node_modules
+**/.next
+**/next-env.d.ts
+**/visual/snapshots
+**/storybook-static
+**/test-results
+**/playwright-report
+apps/widget/public/element.js
+apps/widget/public/fonts

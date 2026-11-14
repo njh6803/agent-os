@@ -1,0 +1,12 @@
+# 덧씌움. 프록시가 뒷단 넷이 healthy 가 된 뒤에 뜬다(compose.health.yml 과 함께 쓴다).
+services:
+  proxy:
+    depends_on:
+      serve:
+        condition: service_healthy
+      admin:
+        condition: service_healthy
+      widget:
+        condition: service_healthy
+      portal:
+        condition: service_healthy

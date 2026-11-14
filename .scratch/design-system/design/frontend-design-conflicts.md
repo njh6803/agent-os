@@ -22,3 +22,6 @@
 | 2026-11-10 | answer-markdown 모든 화면 | 브리프에 맞춰 기본 팔레트를 이름 붙인 hex 4~6개로 새로 짓는다 | 색은 쓰임새 토큰만 쓰고 값은 디자인 토큰 CSS 한 자리에 있다(`.claude/rules/web-design.md` 9행과 23행) |
 | 2026-11-10 | answer-markdown 모든 화면 | 늘 쓰는 기본 글꼴 대신 이 브리프에 맞춰 고른 서체를 쓰고, 제목 글자를 디자인의 적극적인 요소로 쓴다 | 모든 테마가 Noto Sans KR과 Noto Sans Mono를 쓴다(ADR 0026 이력 2026-10-12 "테마는 넷이고 색만 바꾸며, 글꼴은 모든 테마가 Noto Sans KR과 Noto Sans Mono를 쓴다"). 출력 안 제목의 크기는 갈래 1로 사람이 고른다(`.scratch/answer-markdown/design/screens-prompt.md` "1. 고를 갈래") |
 | 2026-11-10 | answer-markdown 모든 화면 | 그리면서 화면을 찍어 보고 고친다 | 찍어 보거나 렌더해 확인하는 일은 사람이 청할 때만 한다(`.claude/skills/ui-design/SKILL.md` 23행, Design 형식 지침) |
+| 2026-11-13 | portal-login 모든 화면 | 브리프에 맞춰 기본 팔레트를 이름 붙인 hex 4~6개로 새로 짓는다 | 색은 쓰임새 토큰만 쓰고 값은 디자인 토큰 CSS 한 자리에 있다(`.claude/rules/web-design.md` 9행과 23행) |
+| 2026-11-13 | portal-login 모든 화면 | 늘 쓰는 기본 글꼴 대신 이 브리프에 맞춰 고른 서체를 쓴다 | 모든 테마가 Noto Sans KR과 Noto Sans Mono를 쓴다(ADR 0026 이력 2026-10-12 "테마는 넷이고 색만 바꾸며, 글꼴은 모든 테마가 Noto Sans KR과 Noto Sans Mono를 쓴다") |
+| 2026-11-13 | portal-login 모든 화면 | 그리면서 화면을 찍어 보고 고친다 | 찍어 보거나 렌더해 확인하는 일은 사람이 청할 때만 한다(`.claude/skills/ui-design/SKILL.md` 23행, Design 형식 지침) |

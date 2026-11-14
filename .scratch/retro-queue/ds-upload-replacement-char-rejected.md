@@ -1,0 +1,9 @@
+# ds-upload-replacement-char-rejected: 디자인 시스템 올리기가 묶음 파일에 이스케이프 없이 든 U+FFFD 두 자리 때문에 Artifact 도구에 거부되어, 웹의 디자인 시스템에 마크다운 부품이 빠진 채다
+
+**상태:** 닫힘 (.scratch/harness/issues/ds-upload-markdown-cards.md, 2026-11-13, PR #560의 이스케이프 고침 뒤 다시 올려 U+FFFD 거부 없이 마크다운 부품의 README와 카드를 웹에 실었다(판 41). 그 카드가 페이지의 React 18.3.1에서 그려지지 않는 것은 다른 원인이라 .scratch/answer-markdown/issues/04-markdown-card-renders-on-react-18.md가 잇는다)
+**어디로:** `web/tools/sync-design-system/assemble.ts`의 `libConfig`: 짓기 산출이 U+FFFD를 `\uFFFD` 이스케이프로 쓰게 하고, `assemble.test.ts`에 그 글자가 산출에 그대로 들지 않는다는 시험을 더한 뒤 `/sync-design-system 올리기`를 다시 한다. 원인은 압축된 산출을 읽은 어림이라(원본 패키지를 대 보지 않았다) 고치기 전에 재현부터 한다
+**승인:** 자체 승인 2026-11-13, 1회차, 일지 2026-11-13-0426-portal-login-ui-design.md. ADR 불필요
+
+사건: `/sync-design-system 올리기`의 보내기를 Artifact 도구가 `_ds_bundle.js`의 U+FFFD를 들어 거부했다. 그 글자는 `_ds_bundle.js`와 `components/bundle.js`의 같은 두 자리에 있었고, 마크다운 해석 코드가 잘못된 문자 참조를 바꿔 쓰는 정상 코드로 읽었다. 아무것도 보내지 않았고 웹의 디자인 시스템은 2026-11-10에 올린 상태다. 도구의 버그라 사건 하나로 고친다. 사건이 난 PR은 기록만 실어 거기서 고치지 않았다.
+
+반영한 몫(2026-11-13, `.scratch/harness/issues/ds-bundle-escape-replacement-char.md`): 재현해 보니 어림대로 micromark의 두 패키지에서 온 두 자리였다. 짓기 설정이 ASCII 밖의 글자를 이스케이프로 쓰게 고치고 시험을 더했다. 남은 몫은 그 PR이 병합된 뒤의 올리기이고, 그 올리기의 지난 산출 목록을 싣는 PR이 이 항목을 닫는다.

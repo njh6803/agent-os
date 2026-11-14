@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect } from "storybook/test";
+import { SCREEN_INPUTS } from "../../markdown/cases/combined";
 import { expectedFocusRing, focusRingOf, semanticColor } from "../../storybook/expect";
 import { Markdown } from "./Markdown";
 
@@ -23,8 +24,8 @@ const FENCE = "```";
 // ---- 입력 ----
 // 기본 모양과 그리지 않는 것의 입력은 answer-markdown 프로브의 사례 파일(`probes/markdown_render/probe/shape-cases.mjs`의
 // `SCREEN_INPUTS`의 `mk-all`, `mk-unsafe`)과 글자가 같다. 넘치는 표와 코드 블록은 화면 파일 `ch-table-1`, `ch-code-1`의
-// 출력 글이고 물러선 원문은 `mk-fallback-320`의 글이다(`SCREEN_INPUTS`에는 그 셋이 없다). 번호, 출처 덩이, 숫자 사이
-// 별표, 닫히지 않은 굵게는 이 티켓의 부품이 바꾸지 않는다. 그 변환은 02 가 끼운다.
+// 출력 글이고 물러선 원문은 `mk-fallback-320`의 글이다(`SCREEN_INPUTS`에는 그 셋이 없다). 번호와 출처, 부작용의 입력은
+// 사례 파일의 `SCREEN_INPUTS`(`mk-cite`, `mk-side-1`, `mk-side-2`)를 그대로 쓴다.
 
 const SIGNUP_TAIL = [
   "신청서 번호는 `LV-2026-000184` 꼴로 옵니다. 시작일은 ~~11월 30일~~ 12월 1일로 바뀌었습니다. 자세한 안내는 [인사 시스템 도움말](https://hr.example.com/help/leave)에 있습니다.",
@@ -266,10 +267,81 @@ export const Dark: Story = {
   },
 };
 
+/** 번호와 출처. 화면 파일 `mk-cite-320`·`mk-cite-400`이 그린 입력이다. */
+export const CitationsAndSources: Story = {
+  name: "문장 끝 번호는 대괄호 없는 작은 흐린 위첨자이고 끝의 출처는 선 아래 작은 흐린 글자로 그려진다",
+  args: { text: SCREEN_INPUTS["mk-cite"] },
+  play: async ({ canvas, canvasElement }) => {
+    const numbers = Array.from(canvasElement.querySelectorAll("sup"));
+    await expect(numbers.map((number) => number.textContent)).toEqual(["1", "2"]);
+    await expect(canvasElement.textContent).not.toContain("[1]");
+    const first = present(numbers[0], "첫 번호");
+    await expect({
+      link: first.closest("a"),
+      color: styleOf(first).color,
+      fontSize: styleOf(first).fontSize,
+      lineHeight: styleOf(first).lineHeight,
+      gap: styleOf(first).marginLeft,
+    }).toEqual({
+      link: null,
+      color: semanticColor(first, "text-muted"),
+      fontSize: "12px",
+      lineHeight: "0px",
+      gap: "2px",
+    });
+
+    // 출처 덩이는 출력의 마지막 요소다. 위 선 1px 과 선 아래 12px, 작은 흐린 글자이고 항목 사이는 0 이다.
+    const label = canvas.getByText("출처");
+    const block = present(label.parentElement, "출처 덩이");
+    await expect(block.nextElementSibling).toBeNull();
+    await expect({
+      line: styleOf(block).borderTopWidth,
+      lineColor: styleOf(block).borderTopColor,
+      below: styleOf(block).paddingTop,
+      color: styleOf(block).color,
+      fontSize: styleOf(block).fontSize,
+    }).toEqual({
+      line: "1px",
+      lineColor: semanticColor(block, "border"),
+      below: "12px",
+      color: semanticColor(block, "text-muted"),
+      fontSize: "12px",
+    });
+    const items = Array.from(block.querySelectorAll("li"));
+    const list = present(block.querySelector("ol"), "출처 목록");
+    await expect({
+      labelToList: gapBetween(label, list),
+      items: gapBetween(present(items[0], "첫 항목"), present(items[1], "둘째 항목")),
+      itemColor: styleOf(present(items[0], "첫 항목")).color,
+    }).toEqual({ labelToList: 4, items: 0, itemColor: semanticColor(block, "text-muted") });
+  },
+};
+
+/** 부작용. 화면 파일 `mk-side-320`이 그린 두 출력이다. */
+export const SideEffects: Story = {
+  name: "숫자 사이 별표와 밑줄은 글자 그대로이고 조사가 붙은 굵게는 닫히며 #으로 시작하는 줄은 제목으로 남는다",
+  render: () => (
+    <div style={{ width: 320, display: "flex", flexDirection: "column", gap: 24 }}>
+      <Markdown text={SCREEN_INPUTS["mk-side-1"]} />
+      <Markdown text={SCREEN_INPUTS["mk-side-2"]} />
+    </div>
+  ),
+  play: async ({ canvas, canvasElement }) => {
+    canvas.getByText("2*3*4 = 24입니다.");
+    await expect(canvasElement.querySelector("em")).toBeNull();
+    const bold = present(canvasElement.querySelector("strong"), "굵게");
+    await expect(bold.textContent).toBe("민법 제750조(불법행위)");
+    await expect(styleOf(bold).fontWeight).toBe("600");
+    await expect(canvasElement.textContent).not.toContain("**");
+    canvas.getByRole("heading", { level: 2, name: "1번 항목은 다음 쪽에 있습니다." });
+    canvas.getByText("설정 파일은 __init__.py 옆에 둡니다.");
+  },
+};
+
 // ---- 놓인 자리 스토리 ----
 // 화면 파일은 출력 칸의 스타일 한 벌(자손과 형제 선택자)로 그렸고 부품은 요소마다 클래스를 준다. 놓인 자리(뿌리, 인용,
-// 목록 항목)에 따라 클래스가 달라지는 모양과 변환이 단 표지로 고르는 모양은 위의 입력이 다 그리지 않는다. 그 모양을
-// 계산된 값으로 잰다(클래스 글자는 단언하지 않는다).
+// 목록 항목, 출처 덩이)에 따라 클래스가 달라지는 모양과 변환이 단 표지로 고르는 모양은 위의 입력이 다 그리지 않는다. 그
+// 모양을 계산된 값으로 잰다(클래스 글자는 단언하지 않는다).
 
 const HEADINGS_TEXT = [
   "# 첫째 제목",
@@ -431,15 +503,90 @@ export const OrderedStart: Story = {
   },
 };
 
+const CITATION_GAPS_TEXT = [
+  "가능합니다[1][2].",
+  "",
+  "그렇습니다 [1] [2].",
+  "",
+  "앞 근거 [1] 그리고 뒤 근거 [2].",
+  "",
+  "번호가 없는 줄입니다.",
+].join("\n");
+
+/** 이어진 번호(`[1][2]`, `[1] [2]`)와 사이에 글이 낀 번호(`[1] 글 [2]`). 이어진 번호의 둘째만 변환이 단 표지로 틈을 넓힌다. */
+export const CitationGaps: Story = {
+  name: "번호의 왼쪽 틈은 2px 이고 바로 앞이 번호인 번호만 4px 이며 번호가 든 줄과 없는 줄의 높이가 같다",
+  args: { text: CITATION_GAPS_TEXT },
+  play: async ({ canvas }) => {
+    const gaps = (text: RegExp): string[] =>
+      Array.from(canvas.getByText(text).querySelectorAll("sup")).map(
+        (number) => styleOf(number).marginLeft,
+      );
+    await expect({
+      joined: gaps(/^가능합니다/),
+      spaced: gaps(/^그렇습니다/),
+      apart: gaps(/^앞 근거/),
+    }).toEqual({
+      joined: ["2px", "4px"],
+      spaced: ["2px", "4px"],
+      apart: ["2px", "2px"],
+    });
+    const withNumber = canvas.getByText(/^가능합니다/).getBoundingClientRect().height;
+    const without = canvas.getByText("번호가 없는 줄입니다.").getBoundingClientRect().height;
+    await expect(withNumber).toBe(without);
+  },
+};
+
+const SOURCES_HEADING_TEXT = [
+  "본문입니다. [1]",
+  "",
+  "## 출처",
+  "1. 육아휴직 업무편람",
+  "2. 인사 규정",
+].join("\n");
+
+/** 출처 덩이 안의 제목. 표지를 제목으로 쓴 출력이다. */
+export const SourcesHeading: Story = {
+  name: "출처 덩이 안의 제목은 여백 없이 덩이의 작은 흐린 글자를 물려받고 굵기만 다르다",
+  args: { text: SOURCES_HEADING_TEXT },
+  play: async ({ canvas, canvasElement }) => {
+    const heading = canvas.getByRole("heading", { level: 3, name: "출처" });
+    const block = present(heading.parentElement, "출처 덩이");
+    const list = present(block.querySelector("ol"), "출처 목록");
+    await expect(block.nextElementSibling).toBeNull();
+    await expect(canvasElement.querySelectorAll("sup")).toHaveLength(1);
+    await expect({
+      marginTop: styleOf(heading).marginTop,
+      marginBottom: styleOf(heading).marginBottom,
+      fontSize: styleOf(heading).fontSize,
+      color: styleOf(heading).color,
+      fontWeight: styleOf(heading).fontWeight,
+      toList: gapBetween(heading, list),
+    }).toEqual({
+      marginTop: "0px",
+      marginBottom: "0px",
+      fontSize: styleOf(block).fontSize,
+      color: semanticColor(block, "text-muted"),
+      fontWeight: "600",
+      toList: 4,
+    });
+  },
+};
+
 // ---- 보여 주기용 ----
 
+// 기본 에이전트의 출력처럼 문장 끝 번호와 출처를 든다. 디자인 시스템 카드에는 보여 주기용 스토리만 오르므로, 번호의 위첨자와
+// 출처 덩이가 카드에 보이려면 이 글에 있어야 한다.
 const SHOWCASE_TEXT = [
-  "휴직 시작 **30일 전**까지 인사 시스템에서 신청서를 냅니다.",
+  "휴직 시작 **30일 전**까지 인사 시스템에서 신청서를 냅니다. [1]",
   "",
   "1. 인사 시스템에 로그인합니다.",
   "2. **휴가·휴직** 메뉴에서 육아휴직을 고릅니다.",
   "",
   "자세한 안내는 [인사 시스템 도움말](https://hr.example.com/help/leave)에 있습니다.",
+  "",
+  "출처",
+  "1. 육아휴직 업무편람, 12쪽 (갱신일 2026-10-01)",
 ].join("\n");
 
 /** 보여 주기용(`showcase`). 위젯의 대화에서 에이전트의 출력이 놓이는 자리다. 화면 읽기 프로그램만 읽는 "출력: "이 앞에 놓인다. */

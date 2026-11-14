@@ -1,0 +1,60 @@
+# 단독 compose 의 가장자리 시제품(bridge_edge 프로브). 컨테이너 다섯을 보통의 Docker 네트워크로 묶는다.
+# 뒷단 넷은 실제 이미지가 아니라 0.0.0.0 에 묶은 stub.py 다. 이름과 포트는 측정을 위해 넣은 값이다.
+# 호스트에 발행하는 포트는 셋이다. 프록시의 443 과 80(모든 주소), 관리 화면의 3000(127.0.0.1 에만).
+
+name: ri-edge
+
+x-stub: &stub
+  image: ${RI_EDGE_PYTHON_IMAGE:-ri-edge-python:pinned}
+  pull_policy: never
+  user: "10001:10001"
+  init: true
+  read_only: true
+  cap_drop: [ALL]
+  security_opt: ["no-new-privileges:true"]
+  volumes:
+    - ./stub.py:/stub.py:ro
+  networks: [edge]
+
+services:
+  proxy:
+    image: ${RI_EDGE_NGINX_IMAGE:-ri-edge-nginx:pinned}
+    pull_policy: never
+    # 공식 nginx 이미지의 nginx 사용자다. root 가 아니라서 컨테이너 안에서는 8443 과 8080 으로 듣는다.
+    user: "101:101"
+    init: true
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    tmpfs:
+      - /tmp
+    ports:
+      - "443:8443"
+      - "80:8080"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/edge.conf:/etc/nginx/conf.d/default.conf:ro
+      - ${RI_EDGE_TLS_DIR:?인증서(fullchain.pem)와 키(privkey.pem)를 둔 폴더}:/etc/nginx/tls:ro
+    depends_on: [serve, widget, portal]
+    networks: [edge]
+
+  serve:
+    <<: *stub
+    command: ["python", "/stub.py", "serve", "8000"]
+
+  admin:
+    <<: *stub
+    command: ["python", "/stub.py", "admin", "3000"]
+    ports:
+      - "127.0.0.1:3000:3000"
+
+  widget:
+    <<: *stub
+    command: ["python", "/stub.py", "widget", "3000"]
+
+  portal:
+    <<: *stub
+    command: ["python", "/stub.py", "portal", "3000"]
+
+networks:
+  edge: {}

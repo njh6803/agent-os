@@ -211,3 +211,29 @@ design-card-build의 설계 인터뷰(일지 2026-10-28-17)가 위 2026-10-21 �
 함께 고치는 것: 이 이력의 PR은 `.scratch/plan.md`(design-card-build 행, 프론티어 문단), `CONTEXT.md`(컴포넌트 카드, 컴포넌트 묶음), 이 ADR 본문과 ADR 0026 본문의 포인터를 고친다. 명세와 티켓은 `/to-spec`과 `/to-tickets`가 쓴다. 구현 티켓은 `/design-sync`·`.design-sync/`·빌린 빌드를 드는 살아 있는 문서·코드·시험을 모두 고친다(옛 이름으로 저장소를 grep해 찾는다). 이 이력을 쓸 때 `git grep`으로 찾은 자리는 `web/tools/sync-design-system/`(짓는 명령과 시험, `needsBuild`, `build.ts`의 `MODE_NAMES`, `record.ts`의 주석), `/sync-design-system` 스킬(`SKILL.md`와 `upload.md`의 사람에게 `/design-sync`를 부탁하는 단계), `.design-sync/`(옮기고 지운다), 뿌리 `.gitignore`의 두 주석(앞의 것은 패키지 빌드를 `/design-sync`만 쓴다는 괄호만 고치고 그 아래 무시 줄은 남긴다. Storybook 정적 빌드는 사진 비교의 입력이다. 뒤의 것과 그 아래 무시 줄은 새 빌드의 출력 자리가 정해진 뒤 명세가 가른다), `tools/tidy_checkouts.py`의 `.design-sync/` 아래 다시 만들 수 있는 항목과 그 시험 `tests/tools/test_tidy_checkouts.py`, `docs/agents/issue-tracker.md` 화면 디자인 절, `.claude/rules/web-design.md`의 머리 문장과 변형 스토리를 `.design-sync/config.json`의 skip에 넣으라는 줄, `README.md`의 `.design-sync/` 줄, 헌법 `tech.md`의 웹 행, `kickoff/prompting.md`, `web/packages/ui` 아래 `/design-sync`를 드는 주석이다. `/ui-design`은 README가 옛 이름을 그대로 들어 바꿀 것이 적고, 바꿀 것이 있으면 그 구현 티켓이 함께 고친다.
 
 이 이력은 2026-10-28에 사용자가 승인했다.
+
+### 2026-11-14 카드 시험이 페이지의 React 18.3.1로도 그리게 하고, 그 두 판은 시험 전용 패키지가 든다
+
+answer-markdown 티켓 04가 올리기 뒤 디자인 시스템 페이지의 Components 절에서 Markdown 카드만 그려지지 않은 일(일지 2026-11-13-2106)을 고치며, 위 2026-10-28 이력의 "시험" 항목이 놓친 틈을 메운다. 그 항목은 React를 적지 않았고, 명세(design-card-build의 "React." 항목)는 카드 그리기 시험을 패키지의 React 19로 돌리고 새 의존을 들이지 않기로 사용자가 골랐다고 적었다. 이 이력은 그 결정을 바꾼다(명세에 바꾼 사실을 적었다). 페이지는 색인 `libraries`의 React·ReactDOM 18.3.1을 싣는다(`upload.ts`의 `LIBRARIES`). 그래서 두 판이 다르게 읽는 코드는 시험을 지나 올라간 뒤에야 깨졌다. 찾은 사실은 아래다.
+
+- Markdown 부품이 컨텍스트 객체를 `<PlaceContext value="flow">`처럼 요소로 써서 제공자 역할을 맡겼다(여섯 자리). 이 꼴은 React 19에서만 제공자다. React 18.3.1은 그 객체를 소비자로 읽어 자식을 함수로 부른다. 임시 폴더에 18.3.1을 설치해 `renderToString`으로 돌리자 `render is not a function`을 던졌고 `<Context.Provider>`는 그려졌다(손으로 봤다). 카드를 18.3.1로 실어 chromium에 띄우자 Markdown 카드만 `i is not a function`으로 실패했고 나머지 아홉 카드는 그려졌다. 두 판에서 함께 되는 꼴은 `<Context.Provider value>`이고, 부품을 그 꼴로 바꾸자 열 카드 모두 두 판에서 그려졌다.
+- React 18.3.1을 `web/`의 다른 자리에 별칭(`"react-dom-18": "npm:react-dom@18.3.1"`)으로 두면 pnpm이 `react-dom`의 피어를 이름으로 짝지어 버린다. `web/package.json`에 두자 Storybook(`@storybook/react-vite` 등)의 `react-dom`이 18.3.1로 바뀌어 `react@19.3.0`과 짝이 어긋났다. `web/packages/ui/package.json`에 두자 18.3.1의 `react-dom`이 `react@19.3.0`과 짝지어졌다. 둘 다 `pnpm install`의 락 파일 차이를 읽어 손으로 봤다.
+
+**카드 시험은 패키지의 React 19와 함께 페이지가 싣는 React 18.3.1로도 모든 카드를 그린다. 그 두 판(`react`, `react-dom` 18.3.1, 판 고정)은 `web/packages/react-18/`에 둔 시험 전용 워크스페이스 패키지 `@agent-os/react-18`이 든다. 이 패키지는 판의 폴더 경로와 판 번호만 내보내고 코드가 없으며, 다른 패키지와 앱의 의존성에는 들지 않고 `web/` 뿌리의 devDependency로만 든다. 시험(`assemble.test.ts`)은 그 폴더에서 전역 React·ReactDOM을 지어 싣고, 설치된 판이 18.3.1인지도 본다. Markdown 부품은 컨텍스트를 `.Provider`로 제공한다.**
+
+- 새 의존은 시험에만 들고 런타임과 빌드에는 닿지 않는다. 락 파일은 `packages/react-18`의 몫(`react`, `react-dom`, 그리고 18의 `loose-envify`, `scheduler` 0.23)과 뿌리 importer의 링크 한 줄만 더하고, 다른 패키지의 해석은 바뀌지 않았다(차이를 읽었다). 위 재현에 쓴 임시 스크립트(18.3.1을 설치한 임시 폴더의 `renderToString` 호출)는 저장소에 남기지 않았다. 근거는 일지 2026-11-14-0041과 시험의 빨강(고치기 전 Markdown 카드만 빨갰다)이다.
+- 18.3.1과 19에 함께 있는 API만 쓰는 부품이 앞으로도 시험을 지나는지는 이 시험이 판정한다. 18에 없고 19에만 있는 API를 부품이 쓰면 이 시험이 빨개진다.
+- 올리기 도구가 묶음에 React 19의 요소 표식이 있으면 멈추는 규칙(`assemble.ts`의 `FORBIDDEN`)은 그대로다. 표식이 없다는 것과 18에서 그려진다는 것은 다르며, 앞의 것은 이번 시험이 뒤의 것을 더해 보완한다.
+- 재지 못한 것: 고친 카드가 실제 페이지(색인의 `libraries`로 18.3.1을 싣는 iframe)에서 그려지는지와 칸 아래가 잘리지 않는지는 병합 뒤 올리기로 확인한다. 시험은 페이지가 싣는 것과 같은 판의 전역 React로 그렸지만 페이지 자체는 아니다.
+
+거부한 안은 아래다.
+
+- **별칭으로 `web/package.json`이나 `packages/ui`에 둔다.** 위에서 본 대로 피어 짝이 어긋난다. 앞의 것은 Storybook의 React를 바꾸고, 뒤의 것은 18의 `react-dom`이 19의 `react`와 짝지어져 시험이 그릴 수 없다.
+- **시험이 jsDelivr에서 18.3.1을 내려받는다.** 시험이 네트워크와 외부 서비스의 상태에 기댄다. 오프라인과 CI의 재현성이 깨진다.
+- **페이지가 React 19를 싣게 한다.** 페이지의 판은 design-card-build가 정했고(`assemble.ts`의 `JSX_SHIM`과 `FORBIDDEN`이 그 판에 맞춘다), 색인에 18 아닌 판을 올리는 것이 받아들여지는지와 React 19에서 UMD가 빠진 문제(전역 `React`를 쓰는 페이지)가 따로 남는다. 이 결정을 바꾸는 일이라 이 이력에서 하지 않는다.
+- **시험 없이 Markdown 부품만 고친다.** 같은 꼴을 다음에 어느 부품이 쓰면 올린 뒤에야 안다. 이번에도 그랬다.
+- **React 18로 부품의 단위 시험만 돌린다.** 카드의 짓기(JSX 대체 모듈, 전역 React 읽기)까지 걸치는 길은 카드를 그리는 시험만 지난다.
+
+함께 고치는 것: `docs/constitution/tech.md`의 웹 행, 루트 `README.md`의 트리, `web/packages/react-18/`와 `web/pnpm-lock.yaml`, 카드 시험, Markdown 부품, 명세 `.scratch/design-card-build/spec.md`의 "React." 항목(바뀐 사실을 적었다)이다.
+
+이 이력은 2026-11-14에 사용자가 승인했다.

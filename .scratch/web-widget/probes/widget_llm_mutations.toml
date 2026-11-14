@@ -46,15 +46,20 @@ new = '''
 '''
 
 [[mutation]]
-name = "위젯이 출력의 끝 글자를 빼고 그리면 화면과 트레이스의 출력 기준이 빨갛다"
+name = "위젯이 출력에 없는 글을 덧붙여 그리면 화면과 트레이스의 출력 기준이 빨갛다"
 tests = ["tests/test_widget_llm.py", "-m", "llm_widget"]
 expect = "red"
-expect_output = ["calc: 화면에 선 출력 [] 이 트레이스의 run_finished 출력 ['"]
+# 덧붙인 낱말(zqxj)은 이 변이에서만 화면에 서므로, 그 낱말이 든 화면 글의 repr 이 실패 문구에 실렸는지를 본다.
+expect_output = ["zqxj'] 이 트레이스의 run_finished 출력 ['"]
 
 [[mutation.edit]]
 file = "web/apps/widget/components/organisms/Conversation.tsx"
-old = '''            {outcome.output}'''
-new = '''            {outcome.output.slice(0, -1)}'''
+old = '''
+            <Markdown text={outcome.output} />
+'''
+new = '''
+            <Markdown text={`${outcome.output} zqxj`} />
+'''
 
 # --- 모델 없이 기본 실행에서 재는 기준 둘 ------------------------------------------------------------------------
 

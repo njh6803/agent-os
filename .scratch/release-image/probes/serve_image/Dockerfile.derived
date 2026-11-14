@@ -1,0 +1,32 @@
+# syntax=docker/dockerfile:1
+# 측정용이다. 시제품 이미지(BASE) 위에 한 겹을 얹은 대조군 셋이다. 빌드 컨텍스트는 이 폴더이고
+# 컨텍스트의 파일은 쓰지 않는다. BASE 는 run.py 가 넘긴다.
+#
+#   rootowned   플러그인 폴더의 소유자를 root 로 되돌린 판(볼륨의 첫 채움이 소유자를 옮기는지의 대조)
+#   local-npm   예시 MCP 서버 패키지를 serve 의 작업 폴더(/app)에도 깐 판(/app/node_modules).
+#               npx 가 작업 폴더의 패키지를 레지스트리에 묻지 않고 쓰는지 보려는 것이다
+#   plugins-v2  플러그인 파일이 바뀐 "새 판"(mcp/everything 의 판을 0.2.0 으로, 새 파일 하나를 더한다)
+ARG BASE=ri-serve-proto
+
+FROM ${BASE} AS rootowned
+USER 0:0
+RUN chown -R 0:0 /app/plugins
+USER 10001:10001
+
+FROM ${BASE} AS local-npm
+ARG MCP_EVERYTHING_VERSION=2.3.0
+USER 0:0
+RUN cd /app \
+ && npm install --omit=dev --no-audit --no-fund --no-update-notifier \
+      "@modelcontextprotocol/server-everything@${MCP_EVERYTHING_VERSION}" \
+ && npm cache clean --force \
+ && ls /app/node_modules/.bin
+USER 10001:10001
+
+FROM ${BASE} AS plugins-v2
+USER 0:0
+RUN sed -i 's/^version = "0.1.0"$/version = "0.2.0"/' /app/plugins/mcp/everything/plugin.toml \
+ && grep -n '^version = "0.2.0"$' /app/plugins/mcp/everything/plugin.toml \
+ && printf 'new in v2\n' > /app/plugins/NEW_IN_V2.txt \
+ && chown -R 10001:10001 /app/plugins
+USER 10001:10001

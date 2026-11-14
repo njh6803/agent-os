@@ -26,6 +26,8 @@ const CALC: Plugin = {
     model_id: null,
     max_tokens: null,
     temperature: null,
+    base_url: null,
+    api_key_env: null,
     server: null,
   },
 };
@@ -51,6 +53,8 @@ const EVERYTHING: Plugin = {
     model_id: null,
     max_tokens: null,
     temperature: null,
+    base_url: null,
+    api_key_env: null,
     server: {
       transport: "stdio",
       command: "npx",

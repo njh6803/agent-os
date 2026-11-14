@@ -38,6 +38,7 @@ import {
   freePort,
   interpreter,
   LLM_AGENT,
+  MARKDOWN_IMAGE_PATH,
   MCP_FIXTURE_SERVER,
   pointDocSearchAt,
   publish,
@@ -88,7 +89,13 @@ export default async function globalSetup(): Promise<() => Promise<void>> {
         pointDocSearchAt(plugins, docSearch);
       }
     }
-    writeFixturePlugins(plugins, python, MCP_FIXTURE_SERVER, gates);
+    writeFixturePlugins(
+      plugins,
+      python,
+      MCP_FIXTURE_SERVER,
+      gates,
+      `${siteOrigin}${MARKDOWN_IMAGE_PATH}`,
+    );
     const key = siteKey();
     const siteFile = join(stack.work, "sites.toml");
     const agents: readonly string[] = llm ? [...AGENTS, LLM_AGENT, ASSISTANT_AGENT] : AGENTS;

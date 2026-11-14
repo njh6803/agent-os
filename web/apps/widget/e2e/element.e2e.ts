@@ -4,7 +4,7 @@
 //
 // Playwright 의 위치 지정자는 open shadow root 안까지 찾는다. 그래서 위젯의 화면을 페이지에서 바로 찾는다.
 
-import { expect, type Locator, type Page, test } from "@playwright/test";
+import { expect, type FrameLocator, type Locator, type Page, test } from "@playwright/test";
 import { elementCsp } from "./element-site";
 import { stack } from "./env";
 import { loopback, recordRequests, send } from "./helpers";
@@ -29,7 +29,7 @@ async function settled(page: Page, agent: string): Promise<void> {
 }
 
 function output(page: Page, text: string): Locator {
-  // 화면 읽기 알림(status)도 같은 글을 싣는다. 대화 목록의 출력 문단으로 좁힌다.
+  // 화면 읽기 알림(status)도 같은 글을 싣는다. 대화 영역 안으로 좁힌다.
   return page.getByRole("region", { name: "대화" }).getByText(`출력: ${text}`, { exact: true });
 }
 
@@ -245,6 +245,58 @@ test("사이트의 뿌리 글자 크기와 상속 속성이 위젯의 크기를 
   await page.goto(`${siteOrigin}/element?bare=1`);
   expect(await siteStyles(page)).toEqual(withWidget);
   expect(withWidget.adopted).toBe(0);
+});
+
+/** 마크다운 출력의 제목과 표의 계산된 스타일. iframe 방식과 페이지 안 방식을 같은 값으로 견준다. */
+async function markdownShape(scope: Page | FrameLocator) {
+  const conversation = scope.getByRole("region", { name: "대화" });
+  const heading = conversation.getByRole("heading", { level: 3, name: "배송 안내" });
+  const table = conversation.getByRole("table");
+  await expect(heading).toBeVisible();
+  await expect(table).toBeVisible();
+  await expect(conversation.getByRole("link", { name: /조회 페이지/ })).toBeVisible();
+  const edges = (element: Locator) =>
+    element.evaluate((node) => {
+      const style = getComputedStyle(node);
+      return {
+        top: style.borderTopWidth,
+        bottom: style.borderBottomWidth,
+        left: style.borderLeftWidth,
+      };
+    });
+  return {
+    heading: await heading.evaluate((node) => {
+      const style = getComputedStyle(node);
+      return { fontSize: style.fontSize, fontWeight: style.fontWeight, color: style.color };
+    }),
+    table: await edges(table),
+    head: await edges(conversation.getByRole("columnheader", { name: "구간" })),
+    cell: await edges(conversation.getByRole("cell", { name: "출고" })),
+  };
+}
+
+test("iframe 방식과 페이지 안 방식이 같은 마크다운 출력을 같은 모양으로 그리고, 사이트의 표와 제목 CSS 가 그 모양을 바꾸지 않는다", async ({
+  page,
+}) => {
+  const { siteOrigin } = stack();
+  await page.goto(`${siteOrigin}/?agent=markdown`);
+  const framed = page.frameLocator('iframe[title="위젯"]');
+  await send(framed, "markdown");
+  const inFrame = await markdownShape(framed);
+
+  await page.goto(`${siteOrigin}/element?agent=markdown&hostile=1`);
+  await settled(page, "markdown");
+  // 사이트의 표와 제목 CSS 가 실제로 실렸다(사이트 쪽 제목에 걸린다).
+  const siteHeading = page.getByRole("heading", { level: 1, name: "사이트", exact: true });
+  expect(await siteHeading.evaluate((node) => getComputedStyle(node).fontSize)).toBe("40px");
+  await send(page, "markdown");
+  const inPage = await markdownShape(page);
+
+  expect(inPage).toEqual(inFrame);
+  // 사이트의 값(제목 40px, 표 테두리 4px)이 새지 않았다.
+  expect(inPage.heading.fontSize).not.toBe("40px");
+  expect(inPage.table.top).not.toBe("4px");
+  expect(inPage.head.left).not.toBe("4px");
 });
 
 test("글꼴은 위젯 출처의 /widget/fonts/ 에서 Access-Control-Allow-Origin 과 함께 오고 위젯만 쓰는 이름으로 그린다", async ({

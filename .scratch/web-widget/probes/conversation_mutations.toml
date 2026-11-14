@@ -195,7 +195,7 @@ expect_output = ["expected [ '도착 예정입니다.' ] to deeply equal [ 'orde
 [[mutation.edit]]
 file = "web/apps/widget/lib/conversation.ts"
 old = '''
-      return announce(next, `${item.tool} ${item.ok ? "성공" : "실패"}`);
+      return announce(next, "note", `${item.tool} ${item.ok ? "성공" : "실패"}`);
 '''
 new = '''
       return next;

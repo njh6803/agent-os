@@ -11,11 +11,12 @@
 //   입력창에 돌아왔을 때) 대화 목록이다. 맨 위의 정보 알림을 남긴 채 보내기 때문이다(web-widget 명세 "요청이 거절될
 //   때"의 이어 가기 404).
 // - 숨긴 role="status" 영역 하나가 새 도구 줄, 승인 묻기, 끝난 출력을 생긴 차례로 한 번씩 읽는다. 글마다 문단 하나를 덧붙여,
-//   화면 읽기 프로그램은 더해진 문단만 읽는다. 영역은 처음부터 서 있어야 더해진 것을 읽으므로 늘 그린다.
+//   화면 읽기 프로그램은 더해진 문단만 읽는다. 영역은 처음부터 서 있어야 더해진 것을 읽으므로 늘 그린다. 끝난 출력만
+//   `MarkdownText` 로 기호를 뗀 글을 문단 안에 낸다(제목, 표, 링크 요소가 없어 화면의 것과 두 벌로 잡히지 않는다. ADR 0053).
 // - 포커스 차례는 문서의 차례 그대로다. 위쪽 띠의 "새 대화" → 대화 영역 → 대화 안의 버튼 → 입력창 → 보내기.
 //   대화 영역이 포커스를 받는 까닭은 organisms/Conversation 의 머리 주석이다.
-import { Alert, Progress } from "@agent-os/ui";
-import type { Exchange, Decision } from "../../lib/conversation";
+import { Alert, MarkdownText, Progress } from "@agent-os/ui";
+import type { Announcement, Exchange, Decision } from "../../lib/conversation";
 import type { LimitWait } from "../../lib/limit";
 import type { Reconnect } from "../../lib/reconnect";
 import { Welcome } from "../molecules/Welcome";
@@ -35,7 +36,7 @@ export interface WidgetScreenProps {
   /** 이어 갈 대화를 서버가 찾지 못해 새 대화로 다시 시작했다. */
   readonly restarted: boolean;
   /** 숨긴 읽기 영역이 읽을 글. 생긴 차례다. */
-  readonly announcements: readonly string[];
+  readonly announcements: readonly Announcement[];
   /** 실행이 돌거나 멈춰 있거나 상한의 기다림이 남아 보내지 못한다. 보내기와 "다시 보내기"를 막는다. */
   readonly sendBlocked: boolean;
   /** 상한(429)에 걸려 기다리는 중. 입력창 위 띠가 선다. */
@@ -150,9 +151,9 @@ export function WidgetScreen({
         <>
           {/* role="status" 의 aria-atomic 은 기본이 true 라 끄지 않으면 영역 전체를 다시 읽는다. */}
           <div role="status" aria-atomic="false" className="sr-only">
-            {announcements.map((text, index) => (
-              // 글은 뒤에만 붙고 새 대화가 통째로 비운다. 자리가 곧 글의 이름이다.
-              <p key={index}>{text}</p>
+            {announcements.map(({ kind, text }, index) => (
+              // 글은 뒤에만 붙고 새 대화가 통째로 비운다. 자리가 곧 글의 이름이다. 출력만 기호를 뗀 글로 읽는다.
+              <p key={index}>{kind === "output" ? <MarkdownText text={text} /> : text}</p>
             ))}
           </div>
           {conversation}

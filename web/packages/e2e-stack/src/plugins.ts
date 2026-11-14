@@ -5,6 +5,8 @@
 //   파일이 생기기를 기다린다. 그 사이에 첫 도구 줄이 화면에 서 있는지를 시험이 본다(도구 줄이 결말 전에 선다). 문이
 //   닫힌 동안 끝나지 않아, 새로 고친 뒤 도는 실행에 다시 붙는 사례도 쓴다.
 // - `html` 은 실행되면 흔적을 남기는 HTML 조각을 출력으로 낸다. 위젯이 그것을 글로 보이는지를 시험이 본다.
+// - `markdown` 은 고정된 마크다운 출력(`markdownOutput`)을 낸다. 위젯이 제목, 표, 링크를 요소로 그리고 이미지 주소로 요청을
+//   보내지 않는지를 시험이 본다.
 // - `echo` 는 받은 요청의 글자 수를 낸다. 서버에 직접 보내는 글자 수 상한의 사례가 쓴다.
 // - `approval` 은 add 를 승인 대상으로 두고 부른다. 결정을 기다리며 멈추므로, 새로 고친 뒤 멈춘 실행에 다시 붙는 사례가
 //   쓴다. 관리 화면 e2e 의 `gated` 와 같은 매니페스트다.
@@ -18,7 +20,7 @@
 import { cpSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { basename, dirname, join } from "node:path";
 
-export const AGENTS = ["tools", "html", "echo", "approval"] as const;
+export const AGENTS = ["tools", "html", "markdown", "echo", "approval"] as const;
 /** 저장소의 계산 에이전트(`plugins/agents/calc`). 실제 모델을 부른다. */
 export const LLM_AGENT = "calc";
 /** 저장소의 기본 에이전트(`plugins/agents/assistant`). 문서 검색 연결로 근거를 찾아 출처를 달아 답한다. */
@@ -56,11 +58,41 @@ export function pointDocSearchAt(root: string, url: string): void {
 export const HTML_OUTPUT =
   '<img src="x" onerror="window.__widgetE2ePwned = 1"><script>window.__widgetE2ePwned = 2</script>';
 
+/**
+ * `markdown` 에이전트의 출력이 든 이미지의 주소 경로. 사이트 서버가 이 경로로 작은 그림을 낸다. 위젯이 이미지를 그리지
+ * 않는다는 것을 시험이 이 경로에 닿은 요청의 수로 본다(ADR 0053).
+ */
+export const MARKDOWN_IMAGE_PATH = "/e2e-pixel.png";
+
+/**
+ * `markdown` 에이전트의 출력. 제목, 굵게, 링크, 이미지, 표, 문장 끝 번호, 출처 덩이를 한 번씩 든다. 이미지 주소는 시험이
+ * 요청을 세는 서버의 경로(`imageUrl`)다.
+ */
+export function markdownOutput(imageUrl: string): string {
+  return [
+    "## 배송 안내",
+    "",
+    "**도착** 예정은 [조회 페이지](https://example.com/track)에서 확인합니다.[1]",
+    "",
+    `![배송 지도](${imageUrl})`,
+    "",
+    "| 구간 | 상태 |",
+    "| --- | --- |",
+    "| 출고 | 완료 |",
+    "| 배송 | 진행 중 |",
+    "",
+    "출처",
+    "",
+    "1. 배송 정책 문서 (2026-11-01 갱신)",
+  ].join("\n");
+}
+
 export function writeFixturePlugins(
   root: string,
   python: string,
   mcpServer: string,
   gates: string,
+  imageUrl = `http://127.0.0.1:9${MARKDOWN_IMAGE_PATH}`,
 ): void {
   const write = (path: string, text: string): void => {
     mkdirSync(dirname(join(root, path)), { recursive: true });
@@ -113,6 +145,14 @@ export function writeFixturePlugins(
     "",
     [],
     [`yield RunFinished(run_id=ctx.run_id, ts=ctx.now(), output=${JSON.stringify(HTML_OUTPUT)})`],
+  );
+  agent(
+    "markdown",
+    "",
+    [],
+    [
+      `yield RunFinished(run_id=ctx.run_id, ts=ctx.now(), output=${JSON.stringify(markdownOutput(imageUrl))})`,
+    ],
   );
   agent(
     "echo",

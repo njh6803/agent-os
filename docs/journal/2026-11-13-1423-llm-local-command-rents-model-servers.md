@@ -355,6 +355,12 @@ PR 직전 `bug-perf-review`에 밀 주장(이 고침으로 새로 쓴 사실 문
 
 다시 돌린 명령(손으로): `check_md_tables.py`와 `check_line_separators.py`, `check_ticket.py`는 아래 커밋 직전에 친다. 나머지 게이트는 커밋이 부르는 pre-commit의 결과로 갈음한다.
 
+## `origin/dev`를 합친 것 (2026-11-14, PR 전)
+
+`git merge origin/dev`가 `docs/constitution/README.md`와 `docs/constitution/tech.md`에서 충돌했다(프로브 README는 자동으로 합쳐졌다). 앞의 일지가 3.0.95로 올렸다고 적은 헌법 판은 `origin/dev`가 3.0.97까지 가져가, 이 브랜치는 3.0.98로 올렸다(`sibling_overlap.py`가 "판을 올리면 이보다 높게 고른다"고 알린 대로다). `origin/dev`가 3.0.95를 이 브랜치가 비워 둔 판이라고 적은 문장은 3.0.61 문장의 꼴대로 "그 브랜치는 3.0.97 뒤에 병합되어 3.0.98로 올렸다"로 바꿨다. `tech.md`는 원격·CI 행을 `origin/dev`의 것(위젯 미리보기 이름)으로 두고 시험용 모델 서버 행은 이 브랜치의 것을 두었다. 앞의 일지가 "헌법 판 3.0.95"라고 적은 줄들은 그때의 기록이라 고치지 않았다.
+
+병합 커밋의 첫 pre-commit은 pytest 4건(`test_probe_kit.py`의 배출 시험, `test_interrupt.py` 둘, `test_rerun_runner.py` 하나)으로 막혔다(`7375 passed`, 1011초. 같은 때 web-verify가 1392초 걸렸다). 그 넷을 따로 다시 돌리니 70건에 403초가 걸리며 다른 `test_rerun_runner.py` 시험 하나가 빨갛게 나왔고, 그 둘만 따로 돌리자 통과했다(손으로 봤다). 앞서 이 일지가 적은 부하에서만 빨개지는 시간 시험과 같은 종류로 보고 코드를 고치지 않았다. `git diff --name-only HEAD...origin/dev`로 `tools/probe_kit.py`, `tools/rerun_runner.py`, `src/agent_os/channel/cli`, 그리고 그 넷 시험 파일 셋을 견주니 `origin/dev`가 바꾼 파일이 없었다(출력이 비었고 `tools/rerun_runner.py`가 실제로 있는 것도 봤다).
+
 ## 회고
 
 후보 일곱, 승인 하나, 기각 여섯, 사용자에게 넘긴 것 없음. 만료할 항목은 없었다(`uv run python tools/queue_open_rows.py`).

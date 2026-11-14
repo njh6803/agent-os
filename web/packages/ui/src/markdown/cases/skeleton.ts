@@ -115,7 +115,12 @@ export const BR = "<br>";
 export const txt = escText;
 export const p = (inner: string): string => el("p", {}, inner);
 export const strong = (inner: string): string => el("strong", {}, inner);
+export const em = (inner: string): string => el("em", {}, inner);
 export const code = (inner: string): string => el("code", {}, inner);
+/** 문장 끝 번호. 대괄호를 뗀 숫자만 위첨자에 든다. 이어진 번호의 표지는 DOM 에 남지 않아 뼈대에 들지 않는다. */
+export const sup = (n: number): string => el("sup", {}, String(n));
+/** 출력 끝의 출처 덩이. 표지와 목록을 감싼 `div` 하나다. */
+export const sources = (inner: string): string => el("div", {}, inner);
 /** 링크. 새 탭으로 열리고 글 뒤에 화면 읽기 프로그램만 읽는 문구가 붙는다. */
 export const a = (href: string, inner: string): string =>
   el(
@@ -127,7 +132,7 @@ export const a = (href: string, inner: string): string =>
 export const img = (alt: string): string =>
   el("span", {}, alt === "" ? "이미지" : `이미지: ${alt}`);
 export const pre = (inner: string): string => el("pre", { tabindex: "0" }, el("code", {}, inner));
-const li = (inner: string): string => el("li", {}, inner);
+export const li = (inner: string): string => el("li", {}, inner);
 export const ul = (...items: string[]): string => el("ul", {}, items.map(li).join(""));
 export const ol = (...items: string[]): string => el("ol", {}, items.map(li).join(""));
 export const bq = (inner: string): string => el("blockquote", {}, inner);

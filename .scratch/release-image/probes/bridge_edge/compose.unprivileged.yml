@@ -1,0 +1,9 @@
+# 측정 전용 덧씌움. 프록시를 nginxinc/nginx-unprivileged 이미지로 바꾼다. 그 이미지는 제 기본 nginx.conf 가
+# pid 와 임시 폴더를 /tmp 에 두므로 nginx.conf 를 얹지 않고 edge.conf 만 conf.d 에 얹는다.
+
+services:
+  proxy:
+    image: ${RI_EDGE_NGINX_UNPRIV_IMAGE:-ri-edge-nginx-unpriv:pinned}
+    volumes: !override
+      - ./nginx/edge.conf:/etc/nginx/conf.d/default.conf:ro
+      - ${RI_EDGE_TLS_DIR:?인증서(fullchain.pem)와 키(privkey.pem)를 둔 폴더}:/etc/nginx/tls:ro

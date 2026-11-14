@@ -1,6 +1,6 @@
 # 05: 사이트마다 고지 확인 끝점이 익명 식별자 쿠키를 주고, 토큰 끝점이 그 쿠키로 120초짜리 사이트 토큰을 낸다
 
-**What to build:** 질문 페이지가 사이트마다 `/portal/sites/<이름>/` 아래 끝점 셋을 낸다. `GET …/acknowledgement`는 그 사이트의 고지 확인 여부를 `{"acknowledged":true}` 또는 `{"acknowledged":false}`로 답한다. `POST …/acknowledgement`는 `Origin`이 공개 출처와 같을 때만 204와 함께 익명 식별자 쿠키 `portal_anon`(소문자 UUID v4, `HttpOnly; SameSite=Strict; Path=/portal/sites/<이름>; Max-Age=2592000`, 공개 출처가 https일 때만 `Secure`)을 주고, `Origin`이 없거나 다르면 쿠키 없이 403이다. `POST …/token`은 꼴이 맞는 쿠키가 있으면 RS256 사이트 토큰 하나를 `text/plain`으로 내며 쿠키의 만료를 다시 적고, 없으면 401 "고지 확인이 필요합니다."다. 토큰의 `sub`가 `anon-<쿠키 UUID의 해시>`라 운영자는 트레이스와 관리 화면에서 익명 주체를 바로 알아본다(스토리 1, 2, 12). 보증 모드가 `login`인 사이트의 세 끝점은 메서드와 쿠키와 상관없이 403 "이 사이트는 로그인이 필요합니다. 로그인은 아직 제공하지 않습니다."다(스토리 6).
+**What to build:** 위젯 미리보기 페이지가 사이트마다 `/portal/sites/<이름>/` 아래 끝점 셋을 낸다. `GET …/acknowledgement`는 그 사이트의 고지 확인 여부를 `{"acknowledged":true}` 또는 `{"acknowledged":false}`로 답한다. `POST …/acknowledgement`는 `Origin`이 공개 출처와 같을 때만 204와 함께 익명 식별자 쿠키 `portal_anon`(소문자 UUID v4, `HttpOnly; SameSite=Strict; Path=/portal/sites/<이름>; Max-Age=2592000`, 공개 출처가 https일 때만 `Secure`)을 주고, `Origin`이 없거나 다르면 쿠키 없이 403이다. `POST …/token`은 꼴이 맞는 쿠키가 있으면 RS256 사이트 토큰 하나를 `text/plain`으로 내며 쿠키의 만료를 다시 적고, 없으면 401 "고지 확인이 필요합니다."다. 토큰의 `sub`가 `anon-<쿠키 UUID의 해시>`라 운영자는 트레이스와 관리 화면에서 익명 주체를 바로 알아본다(스토리 1, 2, 12). 보증 모드가 `login`인 사이트의 세 끝점은 메서드와 쿠키와 상관없이 403 "이 사이트는 로그인이 필요합니다. 로그인은 아직 제공하지 않습니다."다(스토리 6).
 
 05는 04 뒤이고 06을 막는다. 04가 만든 순수 HTTP 요청 처리기에 경로를 더한다.
 
@@ -8,7 +8,7 @@
 
 근거는 `.scratch/pilot-portal/spec.md`의 "경로와 끝점"(표, 로그인 사이트, 캐시 헤더, 토큰 끝점이 `Origin`을 보지 않는 까닭), "익명 식별자 쿠키", "토큰", "HTTP 요청 처리기와 서버", Testing Decisions의 "Vitest"와 그 주석이다. 앞선 결정은 ADR 0050의 결정 "익명 식별자 쿠키"·"토큰"·"기록"과 Consequences(쿠키 꼴 검사만 두고 서명을 두지 않는다, 형제 도메인의 한계), ADR 0023(사이트 토큰), ADR 0024(최종 사용자 경로의 주체)다.
 
-**Blocked by:** 04 (질문 페이지 서버가 설정과 사이트 파일을 대 본 뒤에야 뜬다). 04의 순수 HTTP 요청 처리기, 설정 모델(사이트마다 `issuer`·`assurance`, 공통 `public_origin`·`kid`), 시작 때 읽은 개인 키와 사이트 파일의 `audience`를 쓴다
+**Blocked by:** 04 (위젯 미리보기 페이지 서버가 설정과 사이트 파일을 대 본 뒤에야 뜬다). 04의 순수 HTTP 요청 처리기, 설정 모델(사이트마다 `issuer`·`assurance`, 공통 `public_origin`·`kid`), 시작 때 읽은 개인 키와 사이트 파일의 `audience`를 쓴다
 
 **04가 넘긴 메모.** 04의 순수 처리기는 `handle(request)`이고 요청은 메서드, 경로, 헤더, 쿠키(실린 차례의 `{name, value}` 열)를 든다. 시계와 UUID 만들기를 인자로 받는 자리는 04에 쓰는 끝점이 없어 두지 않았다(안 쓰는 인자는 린트의 `no-unused-vars`에 걸린다. `web/eslint.config.mjs`가 켠 `strictTypeChecked`의 규칙이고 설정을 읽은 것이다). 이 티켓이 `handle`의 인자로 더한다. 시작 검사를 지난 결과 `loadPortal`은 `{config, privateKey, siteFile}`을 낸다(`server/load.ts`). 토큰의 서명 키는 `privateKey`이고 `audience`는 `siteFile.sites`에서 `issuer`로 찾는다. 진단과 시험의 `sites[<i>]`는 사이트 파일과 설정 모두 0부터다. 쿠키 수명 일수는 `server/cookie-policy.ts`의 `COOKIE_LIFETIME_DAYS`이고 `Max-Age=2592000`은 그 값에서 그린다.
 

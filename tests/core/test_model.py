@@ -9,8 +9,8 @@ from langchain_core.language_models.fake_chat_models import GenericFakeChatModel
 from langchain_core.messages import AIMessage, BaseMessage
 from langchain_core.messages.tool import ToolCall as LangchainToolCall
 
-from agent_os.adapters.anthropic import AnthropicModels
 from agent_os.adapters.filesystem import FilesystemPlugins
+from agent_os.adapters.models import ManifestModels
 from agent_os.core.loop import ModelCaller, model_caller, run_loop
 from agent_os.core.model import ModelReply, reply_from
 from agent_os.core.ports import ChatModel, ModelSource, PluginSource, ToolResult, ToolSpec
@@ -82,7 +82,7 @@ async def test_Anthropic_모델이_실제로_답한다() -> None:
     소스가 만든 모델로 부른다."""
     assert "ANTHROPIC_API_KEY" in os.environ, "ANTHROPIC_API_KEY 가 없다. .env 를 확인한다"
     plugins: PluginSource = FilesystemPlugins(REPO_ROOT / "plugins")
-    models: ModelSource = AnthropicModels()
+    models: ModelSource = ManifestModels()
     manifest = plugins.read_manifest(PluginKind.MODEL, DEFAULT_MODEL_PLUGIN)
     assert manifest is not None, "저장소의 기본 모델 플러그인이 없다"
     model = models.build(manifest)

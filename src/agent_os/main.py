@@ -33,11 +33,11 @@ from cryptography.hazmat.primitives.asymmetric.rsa import RSAPublicKey
 from cryptography.hazmat.primitives.serialization import load_pem_public_key
 from pydantic import BaseModel, ConfigDict, Field, TypeAdapter, ValidationError
 
-from agent_os.adapters.anthropic import AnthropicModels, resolve_model_name
 from agent_os.adapters.clock import SystemClock
 from agent_os.adapters.filesystem import FilesystemPlugins
 from agent_os.adapters.jsonl import JsonlTrace
 from agent_os.adapters.mcp import McpTools
+from agent_os.adapters.models import ManifestModels, resolve_model_name
 from agent_os.channel.cli.interrupt import run_interruptibly
 from agent_os.channel.cli.main import (
     EXIT_FAILED,
@@ -69,8 +69,8 @@ CHANNEL_TOKEN_ENV = "AGENT_OS_CHANNEL_TOKEN"
 # 바인딩을 허용하는 주소 전부. 자라면 ADR 0011 의 이력에 쌓는다. 집합이 아니라 열인 이유는
 # 진단에 그대로 실려서, 순서가 실행마다 달라지면 운영자가 읽는 문장이 달라지기 때문이다.
 # 관리 화면과 위젯의 시작 래퍼(`web/apps/admin/tools/loopback.ts`,
-# `web/apps/widget/tools/start.ts`)와 질문 페이지의 설정 읽기(`web/apps/portal/server/config.ts`)가
-# 같은 목록을 따로 든다. 바꾸면 넷을 함께 고친다.
+# `web/apps/widget/tools/start.ts`)와 위젯 미리보기 페이지의 설정
+# 읽기(`web/apps/portal/server/config.ts`)가 같은 목록을 따로 든다. 바꾸면 넷을 함께 고친다.
 LOOPBACK_HOSTS = ("127.0.0.1", "::1")
 # 서버를 멈출 때 연결이 남은 응답을 기다리는 상한(초). uvicorn 의 기본값은 연결이 전부 끝날
 # 때까지 앱의 수명을 닫지 않아, 멈추라는 명령이 실행 하나가 끝나기를 제한 없이 기다린다(ADR 0014
@@ -181,7 +181,7 @@ def _serve(args: ServeArgs) -> int:
         create_app(
             plugins=FilesystemPlugins(args.plugins_root),
             trace=JsonlTrace(args.traces),
-            models=AnthropicModels(),
+            models=ManifestModels(),
             default_model=_default_model(args.model),
             tools=McpTools(),
             clock=SystemClock(),
@@ -705,7 +705,7 @@ async def _run(args: RunArgs, default_model: PluginName, principal: Principal) -
         previous_run=args.previous_run,
         default_model=default_model,
         plugins=FilesystemPlugins(args.plugins_root),
-        models=AnthropicModels(),
+        models=ManifestModels(),
         tools=McpTools(),
         trace=JsonlTrace(args.traces),
         clock=SystemClock(),
@@ -727,7 +727,7 @@ async def _resume(args: ResumeArgs, default_model: PluginName, approver: Princip
         approver,
         default_model=default_model,
         plugins=FilesystemPlugins(args.plugins_root),
-        models=AnthropicModels(),
+        models=ManifestModels(),
         tools=McpTools(),
         trace=JsonlTrace(args.traces),
         clock=SystemClock(),

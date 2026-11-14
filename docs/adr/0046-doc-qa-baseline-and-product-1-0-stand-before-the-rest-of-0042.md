@@ -180,3 +180,7 @@ portal-login의 설계 인터뷰(ADR 0059, ADR 0060, 일지 2026-11-12-1937)에�
 - **`.scratch/plan.md`의 Blocked by.** step-up-login(슬라이스 9)은 portal-login을 기다린다. 로그인 흐름과 로그인 상태가 그 행의 것이기 때문이다. step-up-login이 기준선의 행이 됐으므로 pilot-release는 answer-eval, deploy-package, answer-markdown, admin-login에 더해 step-up-login을 기다린다(admin-login을 더한 2026-11-11 이력과 같은 꼴이다). 이 기다림은 인터뷰에서 따로 묻지 않고 "둘 다 0.1 판"에서 정한 것이다. deploy-package가 step-up-login을 기다리는지는 정하지 않았고 그 행의 설계 인터뷰가 정한다. 앞선 이력의 같은 이름 항목은 기록이라 고치지 않고 여기에 적는다.
 - **제품 1.0 묶음의 새 행 넷.** 같은 인터뷰가 뒤 판으로 미룬 것이 새 행이 된다. portal-ldap-login(아이디와 비밀번호를 직접 받는 로그인 방식), portal-login-recheck(refresh token으로 로그인 상태를 다시 확인하기), author-login-requirement(저자가 매니페스트에 적는 로그인 요구), server-login-requirement(도구 서버의 응답이 일으키는 로그인 요구)다. 넷 다 슬라이스 10이고 pilot-release를 기다린다. 앞의 둘은 portal-login을, 뒤의 둘은 step-up-login을 기다리며, server-login-requirement는 principal-propagation도 기다린다. 세운 까닭은 ADR 0059와 ADR 0060의 Consequences "다른 행"에 있고 기능 계획이 원천이다.
 - **계약.** portal-login은 Agent OS의 계약을 바꾸지 않고(ADR 0059), step-up-login은 계약을 다섯 자리에서 바꾼다(ADR 0060 Consequences "계약이 바뀌는 자리 다섯"). 본문 표가 local-model과 mcp-http의 줄에 "(sdk 계약)"을 붙인 것과 같은 뜻으로 위 줄에 붙였다.
+
+### 2026-11-13 용어 "질문 페이지"를 "위젯 미리보기 페이지"로 바꿨다
+
+사용자가 용어집(`CONTEXT.md`)의 "질문 페이지(Portal)"를 "위젯 미리보기 페이지"로 바꾸기로 했다(이름 바꾸기 chore `.scratch/harness/issues/rename-portal-to-widget-preview.md`). 이 ADR의 본문은 기록이라 옛 이름을 그대로 두므로, 본문의 "질문 페이지"는 "위젯 미리보기 페이지"로 읽는다. 결정은 바뀌지 않는다. 코드 이름 `portal`과 경로 `/portal/`도 그대로다.

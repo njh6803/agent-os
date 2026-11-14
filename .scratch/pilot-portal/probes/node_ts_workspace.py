@@ -1,11 +1,12 @@
-"""질문 페이지가 node 로 `.ts` 를 빌드 없이 돌릴 때, 워크스페이스 패키지와 디자인 시스템의 토큰
-CSS·글꼴을 그대로 읽을 수 있는지를 소비 지점(실행, 타입 검사, Next 설정 파일)까지 잰다. ADR 0050
-"띄우기"가 명세 전에 재라고 넘긴 조합이다.
+"""위젯 미리보기 페이지가 node 로 `.ts` 를 빌드 없이 돌릴 때, 워크스페이스 패키지와 디자인 시스템의
+토큰 CSS·글꼴을 그대로 읽을 수 있는지를 소비 지점(실행, 타입 검사, Next 설정 파일)까지 잰다. ADR
+0050 "띄우기"가 명세 전에 재라고 넘긴 조합이다.
 
 실행 자리. `web/apps/widget/` 안에 임시 폴더를 만들고 거기서 `.ts` 입구를 node 로 돌린다. 그
 자리에서 풀리는 `node_modules` 가 위젯의 것이라 `@agent-os/*` 는 pnpm 의 심볼릭
 링크(`../../../../packages/<이름>`)로, `smol-toml`·`openapi-fetch` 같은 의존성은 `.pnpm` 스토어로
-풀린다. 질문 페이지 앱도 `web/apps/` 아래 같은 깊이에 서므로 링크의 모양이 같다. 여섯 묶음을 잰다.
+풀린다. 위젯 미리보기 페이지 앱도 `web/apps/` 아래 같은 깊이에 서므로 링크의 모양이 같다. 여섯
+묶음을 잰다.
 
 1. 타입 벗기기(`strip_*`).
    - `strip_subpath`(양성): `@agent-os/ui/contrast` 를 패키지 이름으로 읽어 `MODES` 를 받는다.
@@ -35,23 +36,23 @@ CSS·글꼴을 그대로 읽을 수 있는지를 소비 지점(실행, 타입 �
    `moduleResolution` 두 갈래(`nodenext`, 위젯 tsconfig 와 같은 `bundler`)로 tsc `--noEmit` 에
    넣는다. 깨끗한 판은 종료 0 과 `error TS` 없음, 변이(`MODES[0]` 을 `number` 에 대입)는 `TS2322` 가
    표지다. 변이가 양성 대조다. `clients.ts` 의 입구는 넣지 않는다. 그 패키지는 제 tsconfig 로
-   검사하고, 질문 페이지가 그 파일을 import 하지 않는다. 확장자 없는 상대 import(`extensionless.ts`
-   가 `themes` 를 `.ts` 없이 든다)도 두 갈래에 넣는다. `nodenext` 는 `TS2835` 로 막고(표지는 그
-   파일 이름이 붙은 그 코드), `bundler` 는 지난다(표지는 종료 0 과 `--listFiles` 목록에 그 파일이 든
-   것. 파일이 프로그램에 들었는데도 오류가 없어야 "지난다"다). 명세가 `nodenext` 를 고른 까닭(node
-   가 실제로 푸는 규칙을 타입 검사가 같이 강제한다)의 근거이고, `nodenext` 회차가 양성 대조,
-   `bundler` 회차가 갈래다. 두 묶음이 함께 쓰는 양성 입구 둘은 `entry_subpath_file` 과
-   `entry_themes_file` 이 쓰므로 `--group tsc` 만 돌려도 선다(첫 판은 strip 묶음이 쓴 파일에 기대
-   `--group tsc` 만으로는 파일을 찾지 못했다).
+   검사하고, 위젯 미리보기 페이지가 그 파일을 import 하지 않는다. 확장자 없는 상대
+   import(`extensionless.ts` 가 `themes` 를 `.ts` 없이 든다)도 두 갈래에 넣는다. `nodenext` 는
+   `TS2835` 로 막고(표지는 그 파일 이름이 붙은 그 코드), `bundler` 는 지난다(표지는 종료 0 과
+   `--listFiles` 목록에 그 파일이 든 것. 파일이 프로그램에 들었는데도 오류가 없어야 "지난다"다).
+   명세가 `nodenext` 를 고른 까닭(node 가 실제로 푸는 규칙을 타입 검사가 같이 강제한다)의 근거이고,
+   `nodenext` 회차가 양성 대조, `bundler` 회차가 갈래다. 두 묶음이 함께 쓰는 양성 입구 둘은
+   `entry_subpath_file` 과 `entry_themes_file` 이 쓰므로 `--group tsc` 만 돌려도 선다(첫 판은 strip
+   묶음이 쓴 파일에 기대 `--group tsc` 만으로는 파일을 찾지 못했다).
 3. 디자인 토큰 CSS(`theme_css_build`). 패키지 `build` 의 둘째
    명령(`tailwindcss -i src/styles/theme.css -o …`)을 임시 폴더로 돌려, 산출에 Tailwind
    지시문(`@theme`·`@import`·`@source`·`@apply`)이 남는지, 화면 그림(`design/pp-page.dc.html`)이
    `var(--…)` 로 읽는 변수가 모두 선언되는지, 어떤 `@layer` 가 들고 클래스 선택자가 몇 개인지,
    크기와 걸린 시간을 적는다. 원본에 그 지시문이 있는 것이 양성 대조다. 같은 명령을 node 프로세스가
    `child_process.spawnSync` 로 자식으로 띄워 산출 파일을 메모리에 읽고 지우는
-   회차(`theme_css_build_child`)를 더 둔다. 질문 페이지 서버가 시작 때 하는 모양이다. 표지는 자식의
-   종료 0, 지운 뒤 파일이 없는 것, 읽은 글이 바로 돌린 회차와 같은 바이트이고 같은 변수 판정을
-   지나는 것이다.
+   회차(`theme_css_build_child`)를 더 둔다. 위젯 미리보기 페이지 서버가 시작 때 하는 모양이다.
+   표지는 자식의 종료 0, 지운 뒤 파일이 없는 것, 읽은 글이 바로 돌린 회차와 같은 바이트이고 같은
+   변수 판정을 지나는 것이다.
 4. 글꼴(`fonts_files`). 위젯의 `tools/fonts.ts` 를 그대로 읽어 글꼴 CSS 가 가리키는 woff2 파일 수와
    크기, `@font-face` 수를 받는다. 글꼴 CSS 원본의 `@import "@fontsource/…"` 수가 양성 대조다.
    옮겨 갈 자리의 자기 참조(`fonts_css_self_reference`)도 잰다. `web/packages/ui/` 안 임시 폴더의
@@ -95,11 +96,12 @@ CSS·글꼴을 그대로 읽을 수 있는지를 소비 지점(실행, 타입 �
 시간 있음). 끝나기 전에 출력을 이어 읽지 않으므로 `tools/probe_kit.py` 의 `LineReader` 는 쓰지
 않는다. stderr 는 표지(오류 코드)를 읽어야 해서 버리지 않고 받는다.
 
-못 보는 것. 이 PC(Windows)만 쟀다. 질문 페이지 앱 자체(제 `package.json` 과 의존성)는 만들지 않고
-위젯 폴더의 링크 모양으로 대신했다. Next 는 `next build` 전체가 아니라 설정을 읽는 함수만 돌렸다.
-CSS 짓기의 시간은 실행마다 회차 하나씩 잰 값이다(README 가 범위를 적는다). 자기 참조 회차는 임시
-폴더를 디자인 시스템 패키지 안에 만들었다 지울 뿐 그 패키지의 파일은 건드리지 않고, 글꼴 도우미를
-실제로 옮긴 파일이 도는지는 재지 않는다. e2e 준비 코드를 패키지로 옮기는 모양은 재지 않는다.
+못 보는 것. 이 PC(Windows)만 쟀다. 위젯 미리보기 페이지 앱 자체(제 `package.json` 과 의존성)는
+만들지 않고 위젯 폴더의 링크 모양으로 대신했다. Next 는 `next build` 전체가 아니라 설정을 읽는
+함수만 돌렸다. CSS 짓기의 시간은 실행마다 회차 하나씩 잰 값이다(README 가 범위를 적는다). 자기 참조
+회차는 임시 폴더를 디자인 시스템 패키지 안에 만들었다 지울 뿐 그 패키지의 파일은 건드리지 않고, 글꼴
+도우미를 실제로 옮긴 파일이 도는지는 재지 않는다. e2e 준비 코드를 패키지로 옮기는 모양은 재지
+않는다.
 
 돌리는 명령은 같은 폴더의 `README.md` 에 있다.
 """
@@ -643,9 +645,9 @@ def theme_css_direct_round(probe: Probe) -> DirectBuild | None:
 
 
 def theme_css_child_round(probe: Probe, direct: DirectBuild | None) -> None:
-    """node 프로세스가 Tailwind CLI 를 자식으로 띄워 산출을 메모리에 읽고 파일을 지운다. 질문 페이지
-    서버가 시작 때 하는 모양이다. 표지는 자식의 종료 0, 지운 뒤 파일 없음, 바로 돌린 회차와 같은
-    sha256(바이트 수만 같은 것은 표지가 아니다), 같은 변수 판정이다."""
+    """node 프로세스가 Tailwind CLI 를 자식으로 띄워 산출을 메모리에 읽고 파일을 지운다.
+    위젯 미리보기 페이지 서버가 시작 때 하는 모양이다. 표지는 자식의 종료 0, 지운 뒤 파일 없음,
+    바로 돌린 회차와 같은 sha256(바이트 수만 같은 것은 표지가 아니다), 같은 변수 판정이다."""
     label = "theme_css_build_child"
     script = probe.tmp / "css_child.mjs"
     out_css = probe.tmp / "theme-child.css"

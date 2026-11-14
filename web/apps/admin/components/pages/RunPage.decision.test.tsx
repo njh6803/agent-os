@@ -121,6 +121,8 @@ const CALC: Plugin = {
     model_id: null,
     max_tokens: null,
     temperature: null,
+    base_url: null,
+    api_key_env: null,
     server: null,
   },
 };
@@ -145,6 +147,8 @@ const FIXTURE: Plugin = {
     model_id: null,
     max_tokens: null,
     temperature: null,
+    base_url: null,
+    api_key_env: null,
     server: { transport: "stdio", command: "python", args: ["fixture.py"], secret_args: {} },
   },
 };
@@ -173,6 +177,8 @@ function modelPlugin(name: string, { enabled }: { readonly enabled: boolean }): 
       model_id: "claude-sonnet-5",
       max_tokens: 4096,
       temperature: null,
+      base_url: null,
+      api_key_env: null,
       server: null,
     },
   };
@@ -208,6 +214,8 @@ function skillPlugin(name: string, { enabled }: { readonly enabled: boolean }): 
       model_id: null,
       max_tokens: null,
       temperature: null,
+      base_url: null,
+      api_key_env: null,
       server: null,
     },
   };

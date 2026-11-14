@@ -21,8 +21,8 @@ export const TRACES_DIR_ENV = "AGENT_OS_PORTAL_E2E_TRACES";
 export const PORTAL_OUTPUT_ENV = "AGENT_OS_PORTAL_E2E_OUTPUT";
 
 /**
- * 질문 페이지의 출처(같은 출처 중계의 주소), 확인 끝점으로 폼을 보내는 다른 출처의 페이지, 설정에 사이트 하나만 적은 둘째
- * 질문 페이지의 루프백 출처(사이트 파일의 허용 출처에 들어 있다. 중계를 거치지 않는다).
+ * 위젯 미리보기 페이지의 출처(같은 출처 중계의 주소), 확인 끝점으로 폼을 보내는 다른 출처의 페이지, 설정에 사이트 하나만 적은 둘째
+ * 위젯 미리보기 페이지의 루프백 출처(사이트 파일의 허용 출처에 들어 있다. 중계를 거치지 않는다).
  */
 export function stack(): {
   readonly portalOrigin: string;
@@ -42,7 +42,7 @@ export function traces(): string {
 }
 
 /**
- * 지금까지 질문 페이지 프로세스가 stdout 과 stderr 에 낸 글. 준비가 프로세스의 출력을 받는 대로 파일에 이어 쓰므로 시험이 도는
+ * 지금까지 위젯 미리보기 페이지 프로세스가 stdout 과 stderr 에 낸 글. 준비가 프로세스의 출력을 받는 대로 파일에 이어 쓰므로 시험이 도는
  * 중에도 읽는다. 러너가 출력을 받아 쓰기까지 짧은 틈이 있어, 방금 한 동작의 출력은 조금 뒤에 실린다.
  */
 export function portalOutput(): string {

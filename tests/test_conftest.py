@@ -72,7 +72,7 @@ def test_skip_이_없으면_그대로_통과한다(pytester: pytest.Pytester) ->
 
 LLM_INI = (
     "[pytest]\nmarkers =\n    llm: 실제 호출\n    llm_widget: 위젯의 실제 호출\n"
-    "    llm_portal: 질문 페이지의 실제 호출\n"
+    "    llm_portal: 위젯 미리보기 페이지의 실제 호출\n"
 )
 
 
@@ -176,8 +176,8 @@ def test_llm_widget_시험이_tmp_path_에_남긴_트레이스도_합계에_든�
     )
 
 
-# `llm_portal` 마커의 시험은 질문 페이지 e2e 를 자식으로 돌리고 serve 의 트레이스 자리로 `tmp_path`
-# 아래를 준다 (`tests/test_portal_llm.py`).
+# `llm_portal` 마커의 시험은 위젯 미리보기 페이지 e2e 를 자식으로 돌리고 serve 의 트레이스 자리로
+# `tmp_path` 아래를 준다 (`tests/test_portal_llm.py`).
 PORTAL_TRACED = (
     "import json\n"
     "import pytest\n\n"

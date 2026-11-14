@@ -1,8 +1,10 @@
 // 대화 목록(화면 디자인 mk-conversation). 교환마다 오른쪽의 옅은 상자에 요청을, 그 아래에 응답을 쌓는다. 응답은 도는
 // 동안 도구 줄과 진행 표시이고, 결말이 오면 도구 줄이 "도구 N개를 불렀습니다" 한 줄로 접히고 출력이나 알림이 선다.
 //
-// - 출력은 글자 그대로, 줄바꿈을 지키고 긴 낱말은 줄 끝에서 꺾어 그린다. 마크다운으로 그리지 않고 HTML 조각은 글자로
-//   보인다(ADR 0024). React 가 글자를 글자로 넣는다.
+// - 출력은 디자인 시스템의 `Markdown` 부품이 마크다운으로 그린다(ADR 0053). 숨긴 "출력: " 과 부품을 문단이 아닌 감싸는
+//   요소 하나에 나란히 둔다(부품이 블록 요소를 내므로 문단 안에 둘 수 없다). 원시 HTML 은 글자로 보이고 이미지는 대체
+//   글만 보이며 링크는 새 탭으로 열린다. 글자만 든 출력은 지금과 같은 자리에 같은 글자가 놓인다. 질문, 실패 안내, 승인
+//   카드의 도구 인자는 글자 그대로다.
 // - 목록 자체에는 aria-live 나 role="log" 를 달지 않는다. 읽는 일은 화면의 숨긴 읽기 영역 하나가 맡는다(둘 다 읽히면
 //   같은 줄이 두 번 들린다).
 // - 이 부품이 스크롤하는 자리다. 새 내용이 오면, 최종 사용자가 대화의 끝을 보고 있었을 때만 끝으로 내린다. 스토리
@@ -17,7 +19,7 @@
 // - 연결이 끊겨 다시 잇는 동안 목록에는 받은 도구 줄만 남고 진행 표시는 입력창 위 띠가 맡는다(화면 디자인 mk-reconnect).
 // - 저장의 용량 때문에 요청 글을 빼고 되돌린 교환(lib/storage 의 `conversationOf`)은 요청 상자를 그리지 않고, 다시 보낼 글이
 //   없어 알림에 "다시 보내기"도 두지 않는다. 보낸 요청은 비어 있을 수 없다.
-import { Alert, Icon, Progress } from "@agent-os/ui";
+import { Alert, Icon, Markdown, Progress } from "@agent-os/ui";
 import { Fragment, useLayoutEffect, useRef, useState } from "react";
 import { progressLabel, type Exchange, type Decision } from "../../lib/conversation";
 import { ToolRow } from "../molecules/ToolRow";
@@ -210,10 +212,10 @@ function ExchangeTail({
           <ToolList tools={tools} running={outcome === null && !reconnecting ? exchange : null} />
         )}
         {outcome?.kind === "finished" ? (
-          <p className="text-body wrap-anywhere whitespace-pre-wrap">
+          <div>
             <span className="sr-only">출력: </span>
-            {outcome.output}
-          </p>
+            <Markdown text={outcome.output} />
+          </div>
         ) : null}
         {outcome === null ? null : (
           <FailureAlert

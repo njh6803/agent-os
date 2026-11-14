@@ -553,7 +553,7 @@ export interface components {
      * @description 모델 플러그인의 제공사.
      * @enum {string}
      */
-    ModelProvider: "anthropic";
+    ModelProvider: "anthropic" | "openai-compatible";
     /**
      * PausedItem
      * @description 승인을 기다리며 멈췄다. 멈춘 도구와 그 인자를 든다. 이 항목의 id 가 결정의 pause_index 다.
@@ -594,6 +594,16 @@ export interface components {
      * @description 플러그인 하나의 매니페스트. plugin.toml 하나를 옮긴 것이다.
      */
     PluginManifest: {
+      /**
+       * Api Key Env
+       * @description 키 값이 아니라 런타임이 호출 때 읽을 환경 변수의 이름.
+       */
+      api_key_env: string | null;
+      /**
+       * Base Url
+       * @description 모델 서버의 API 뿌리까지 적은 주소. vLLM이면 /v1 까지 적고 그 뒤에 chat/completions 가 붙으며 끝의 / 는 있어도 없어도 같다.
+       */
+      base_url: string | null;
       /** Conversation Limit */
       conversation_limit: number | null;
       /** Entrypoint */

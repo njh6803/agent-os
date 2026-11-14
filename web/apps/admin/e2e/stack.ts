@@ -1,7 +1,7 @@
 /**
  * e2e 의 준비(globalSetup). 실제 `serve` 와, 시작 래퍼로 띄운 실제 관리 화면을 띄운다(web-admin 명세 "e2e").
  * 이 e2e 는 모델을 부르지 않고 실제 `serve` 를 띄운다. 실제 `serve` 를 띄우는 것은 이것과 위젯 e2e
- * (`apps/widget/e2e/stack.ts`)와 질문 페이지 e2e(`apps/portal/e2e/stack.ts`)(둘의 몸통은 패키지 `@agent-os/e2e-stack`),
+ * (`apps/widget/e2e/stack.ts`)와 위젯 미리보기 페이지 e2e(`apps/portal/e2e/stack.ts`)(둘의 몸통은 패키지 `@agent-os/e2e-stack`),
  * `tests/test_main.py` 의 `-m llm` 테스트다.
  * 이 준비는 그 패키지를 쓰지 않고 따로 둔다(ADR 0050 의 결정 "함께 쓰는 코드").
  *

@@ -1,12 +1,12 @@
-# 04: 질문 페이지 서버가 설정과 사이트 파일을 대 본 뒤에야 뜨고, 키 만들기 명령이 공개 키 조각을 낸다
+# 04: 위젯 미리보기 페이지 서버가 설정과 사이트 파일을 대 본 뒤에야 뜨고, 키 만들기 명령이 공개 키 조각을 낸다
 
-**What to build:** 질문 페이지를 띄우는 운영자가 `pnpm -C web/apps/portal make-key -- --private-key <경로> --kid <kid>`를 치면 RSA 2048 개인 키가 그 경로에 PKCS#8 PEM으로 쓰이고, 사이트 파일에 붙일 `[[sites.public_keys]]` 조각(`kid`와 SPKI PEM `pem`)이 TOML 그대로 화면에 찍힌다. 이미 그 경로에 파일이 있으면 덮어쓰지 않고 종료 코드 1로 끝난다(스토리 10). 이어서 `pnpm -C web/apps/portal start -- --config <질문 페이지 설정> --site-file <사이트 파일>`을 치면, 두 파일과 키가 서로 맞을 때만 서버가 떠서 `질문 페이지가 http://127.0.0.1:<port>/portal/ 에 섰다. 사이트 <N>개.` 한 줄을 찍는다. 어긋나면 뜨지 않고 stderr에 `구성 오류:` 한 줄과 어긋난 자리마다 `sites[1].agent: <까닭>` 꼴의 줄을 모두 찍은 뒤 종료 코드 1로 끝난다(스토리 9). 뜬 서버는 `/portal/health`에 `{"status":"ok"}`로 답하고, 아직 그 밖의 경로는 404다.
+**What to build:** 위젯 미리보기 페이지를 띄우는 운영자가 `pnpm -C web/apps/portal make-key -- --private-key <경로> --kid <kid>`를 치면 RSA 2048 개인 키가 그 경로에 PKCS#8 PEM으로 쓰이고, 사이트 파일에 붙일 `[[sites.public_keys]]` 조각(`kid`와 SPKI PEM `pem`)이 TOML 그대로 화면에 찍힌다. 이미 그 경로에 파일이 있으면 덮어쓰지 않고 종료 코드 1로 끝난다(스토리 10). 이어서 `pnpm -C web/apps/portal start -- --config <위젯 미리보기 페이지 설정> --site-file <사이트 파일>`을 치면, 두 파일과 키가 서로 맞을 때만 서버가 떠서 `위젯 미리보기 페이지가 http://127.0.0.1:<port>/portal/ 에 섰다. 사이트 <N>개.` 한 줄을 찍는다. 어긋나면 뜨지 않고 stderr에 `구성 오류:` 한 줄과 어긋난 자리마다 `sites[1].agent: <까닭>` 꼴의 줄을 모두 찍은 뒤 종료 코드 1로 끝난다(스토리 9). 뜬 서버는 `/portal/health`에 `{"status":"ok"}`로 답하고, 아직 그 밖의 경로는 404다.
 
-04는 01 뒤이고 05를 막는다. 02와 나란히 돈다. 둘 다 README의 트리, `docs/constitution/tech.md` 웹 행, 헌법의 판, `web/pnpm-lock.yaml`을 고칠 수 있으니, 나중에 병합하는 쪽이 main을 받아 그 파일을 맞추고 헌법의 판은 먼저 병합된 판보다 높게 고른다. 질문 페이지 앱을 처음 만드는 티켓이라 앱의 뼈대와 tsconfig도 여기서 둔다(명세 "띄우기와 타입 검사"의 주석 첫째).
+04는 01 뒤이고 05를 막는다. 02와 나란히 돈다. 둘 다 README의 트리, `docs/constitution/tech.md` 웹 행, 헌법의 판, `web/pnpm-lock.yaml`을 고칠 수 있으니, 나중에 병합하는 쪽이 main을 받아 그 파일을 맞추고 헌법의 판은 먼저 병합된 판보다 높게 고른다. 위젯 미리보기 페이지 앱을 처음 만드는 티켓이라 앱의 뼈대와 tsconfig도 여기서 둔다(명세 "띄우기와 타입 검사"의 주석 첫째).
 
-**병합 뒤에 틈이 있다(to-tickets에서 사용자가 아홉 장 분할을 골랐다).** 이 티켓만 병합된 main에서는 질문 페이지가 시작 검사와 `/portal/health`만 내고, 페이지(`/portal/`)와 사이트 끝점은 404다. 아직 이 앱을 띄우는 배포나 CI 잡이 없으므로(CI 잡은 06) 바깥에 보이는 것은 바뀌지 않는다.
+**병합 뒤에 틈이 있다(to-tickets에서 사용자가 아홉 장 분할을 골랐다).** 이 티켓만 병합된 main에서는 위젯 미리보기 페이지가 시작 검사와 `/portal/health`만 내고, 페이지(`/portal/`)와 사이트 끝점은 404다. 아직 이 앱을 띄우는 배포나 CI 잡이 없으므로(CI 잡은 06) 바깥에 보이는 것은 바뀌지 않는다.
 
-근거는 `.scratch/pilot-portal/spec.md`의 "앱과 패키지"와 그 2026-11-10 명세 검토 주석 첫째(피할 폴더 이름), "띄우기와 타입 검사"(앱의 `start` 스크립트, tsconfig)와 그 주석 첫째, "질문 페이지 설정"과 그 주석, "시작 검사와 진단"과 그 주석, "경로와 끝점"(그 밖의 경로, 캐시 헤더, `nosniff`), "키 만들기 명령", "HTTP 요청 처리기와 서버", Testing Decisions의 "Vitest"와 그 주석이다. 앞선 결정은 ADR 0050의 결정 "앱과 서버", "시작 인자와 시작 검사", "키 만들기 명령", "기록"과 Consequences "전역 `fetch` 금지"다.
+근거는 `.scratch/pilot-portal/spec.md`의 "앱과 패키지"와 그 2026-11-10 명세 검토 주석 첫째(피할 폴더 이름), "띄우기와 타입 검사"(앱의 `start` 스크립트, tsconfig)와 그 주석 첫째, "위젯 미리보기 페이지 설정"과 그 주석, "시작 검사와 진단"과 그 주석, "경로와 끝점"(그 밖의 경로, 캐시 헤더, `nosniff`), "키 만들기 명령", "HTTP 요청 처리기와 서버", Testing Decisions의 "Vitest"와 그 주석이다. 앞선 결정은 ADR 0050의 결정 "앱과 서버", "시작 인자와 시작 검사", "키 만들기 명령", "기록"과 Consequences "전역 `fetch` 금지"다.
 
 **Blocked by:** 01 (사이트 파일 읽기와 디자인 시스템 서브패스를 패키지로 뽑는다). `@agent-os/site-file`의 넓힌 모델과 허용 출처 판정, `@agent-os/ui/themes`의 `THEMES`·`MODES`를 쓴다
 
@@ -14,19 +14,19 @@
 
 ### 앱의 뼈대
 
-- [x] **`web/apps/portal`(`@agent-os/portal`)을 만든다.** `start` 스크립트는 `node tools/start.ts --config <질문 페이지 설정> --site-file <사이트 파일>`이고 두 인자는 필수다. 빌드 단계와 `dist` 폴더가 없고 앱 폴더에 산출을 쓰지 않는다(명세 "띄우기와 타입 검사")
+- [x] **`web/apps/portal`(`@agent-os/portal`)을 만든다.** `start` 스크립트는 `node tools/start.ts --config <위젯 미리보기 페이지 설정> --site-file <사이트 파일>`이고 두 인자는 필수다. 빌드 단계와 `dist` 폴더가 없고 앱 폴더에 산출을 쓰지 않는다(명세 "띄우기와 타입 검사")
 - [x] **앱의 tsconfig는 `web/tsconfig.base.json`을 extends 하고 `module`·`moduleResolution`을 `nodenext`로, `allowImportingTsExtensions`와 `types: ["node"]`를 둔다.** 페이지 스크립트의 DOM 라이브러리는 06이 `lib`에 더한다. `web/tools/check-tsconfig.ts`가 이 tsconfig를 보는지 그 출력으로 확인한다. 확장자 없는 상대 import 하나를 일부러 넣어 `pnpm -C web verify`의 타입 검사가 `TS2835`로 빨개지는 것을 본 뒤 되돌린다
 - [x] **파일 이름은 `route`, `middleware`, `proxy`, `instrumentation`을 피하고, 폴더 이름은 ESLint 층 경계가 요소로 가르는 `app`, `components/*`, `api/*`, `hooks/queries/*`, `types/*`, `stores`를 피한다.** 서버 코드는 그 밖의 폴더(예: `server/`)에 둔다(명세 "앱과 패키지"의 주석 첫째)
 - [x] **README의 트리와 `docs/constitution/tech.md` 웹 행에 앱을 더한다.** 헌법을 고치면 판을 patch로 올린다
 
 ### 설정 읽기와 시작 검사
 
-- [x] **질문 페이지 설정을 smol-toml로 읽고 명세 "질문 페이지 설정"의 칸과 규칙을 그대로 판정한다.** `schema_version = "1"`이 필수이고 모르는 칸은 거부한다. `[portal]`의 `public_origin`(`@agent-os/site-file`의 허용 출처 표기 규칙), `private_key`(상대 경로는 설정 파일의 폴더 기준), `kid`, `host`(기본 `127.0.0.1`), `port`와 `[[sites]]`의 `name`(`^[a-z][a-z0-9-]{1,62}$`), `issuer`, `agent`, `heading`, `intro`, `theme`(`@agent-os/ui/themes`의 `THEMES`, 기본 `nokcheong`), `mode`(`MODES`), `assurance`(`anonymous`·`login`·`both`), `notice`(적었는데 비었거나 공백뿐이면 구성 오류), `report_url`(`http`·`https`)이다
-- [x] **고지 전문을 사이트마다 시작 때 짓는다.** `notice`를 적었으면 그 글 끝에, 적지 않았으면 기본 글 세 문단으로 짓되 둘째 문단(쿠키 문장)은 늘 끝에 붙고 그 안의 "30일"은 쿠키 수명 상수에서 그린다. 전문을 짓는 함수는 쿠키 수명 일수를 인자로 받고, 설정을 읽는 길이 그 인자로 쿠키 수명 상수를 넘긴다. 시험이 30이 아닌 값을 넘겨 볼 수 있게 하기 위해서다. 짧은 고지는 사이트가 바꾸지 못하는 상수다(명세 "질문 페이지 설정")
+- [x] **위젯 미리보기 페이지 설정을 smol-toml로 읽고 명세 "위젯 미리보기 페이지 설정"의 칸과 규칙을 그대로 판정한다.** `schema_version = "1"`이 필수이고 모르는 칸은 거부한다. `[portal]`의 `public_origin`(`@agent-os/site-file`의 허용 출처 표기 규칙), `private_key`(상대 경로는 설정 파일의 폴더 기준), `kid`, `host`(기본 `127.0.0.1`), `port`와 `[[sites]]`의 `name`(`^[a-z][a-z0-9-]{1,62}$`), `issuer`, `agent`, `heading`, `intro`, `theme`(`@agent-os/ui/themes`의 `THEMES`, 기본 `nokcheong`), `mode`(`MODES`), `assurance`(`anonymous`·`login`·`both`), `notice`(적었는데 비었거나 공백뿐이면 구성 오류), `report_url`(`http`·`https`)이다
+- [x] **고지 전문을 사이트마다 시작 때 짓는다.** `notice`를 적었으면 그 글 끝에, 적지 않았으면 기본 글 세 문단으로 짓되 둘째 문단(쿠키 문장)은 늘 끝에 붙고 그 안의 "30일"은 쿠키 수명 상수에서 그린다. 전문을 짓는 함수는 쿠키 수명 일수를 인자로 받고, 설정을 읽는 길이 그 인자로 쿠키 수명 상수를 넘긴다. 시험이 30이 아닌 값을 넘겨 볼 수 있게 하기 위해서다. 짧은 고지는 사이트가 바꾸지 못하는 상수다(명세 "위젯 미리보기 페이지 설정")
 - [x] **시작 검사는 명세 "시작 검사와 진단"의 항목을 모두 보고 어긋남을 모두 모아 알린다.** 사이트 파일 대조는 그 절의 주석이 이름을 든 여섯 갈래다. 사이트 파일이 `site-file` 패키지의 판정을 지나지 못한다, `issuer`가 사이트 파일에 없다, `agent`가 그 사이트의 열 에이전트 밖이다, `public_origin`이 그 사이트의 허용 출처 밖이다, `kid`가 그 사이트의 공개 키에 없다, `kid`로 고른 공개 키가 개인 키에서 난 공개 키와 다르다(SPKI DER 바이트로 견준다). 설정의 갈래(`issuer`·`name`의 겹침, 개인 키를 읽지 못하거나 RSA가 아님(PKCS#8과 PKCS#1 둘 다 받는다), 루프백 밖 `host`)는 따로 본다
 - [x] **진단은 stderr에 `구성 오류:` 한 줄 뒤에 `<자리>: <까닭>` 줄이고 종료 코드는 1이다.** 까닭에 값(키의 글, 경로의 내용)은 싣지 않는다. 예외는 `portal.host: 루프백만 받는다(127.0.0.1, ::1). 받은 값: <값>` 하나다(명세 "시작 검사와 진단"의 주석 둘째)
-- [x] **시작 로그는 stdout에 `질문 페이지가 http://<host>:<port>/portal/ 에 섰다. 사이트 <N>개.` 한 줄이고, `host`가 `::1`이면 호스트 자리는 `[::1]`이다.** 접근 로그는 남기지 않고, 어떤 출력에도 쿠키 값과 토큰을 싣지 않는다(ADR 0050 결정 "기록")
-- [x] **루프백 목록이 네 벌이 된다.** 질문 페이지의 목록에 다른 셋을 가리키는 주석을 달고, `src/agent_os/main.py`의 `LOOPBACK_HOSTS` 위 주석, 관리 화면 `tools/loopback.ts`와 위젯 `tools/start.ts`의 머리 주석이 든 "셋"을 넷으로 고쳐 질문 페이지를 함께 든다(명세 "시작 검사와 진단"의 주석 셋째)
+- [x] **시작 로그는 stdout에 `위젯 미리보기 페이지가 http://<host>:<port>/portal/ 에 섰다. 사이트 <N>개.` 한 줄이고, `host`가 `::1`이면 호스트 자리는 `[::1]`이다.** 접근 로그는 남기지 않고, 어떤 출력에도 쿠키 값과 토큰을 싣지 않는다(ADR 0050 결정 "기록")
+- [x] **루프백 목록이 네 벌이 된다.** 위젯 미리보기 페이지의 목록에 다른 셋을 가리키는 주석을 달고, `src/agent_os/main.py`의 `LOOPBACK_HOSTS` 위 주석, 관리 화면 `tools/loopback.ts`와 위젯 `tools/start.ts`의 머리 주석이 든 "셋"을 넷으로 고쳐 위젯 미리보기 페이지를 함께 든다(명세 "시작 검사와 진단"의 주석 셋째)
 
 ### HTTP 요청 처리기와 서버
 

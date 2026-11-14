@@ -15,10 +15,16 @@
 // iframe 페이지의 스크립트는 인라인이고 CSP 를 두지 않는다. CSP 를 다는 페이지는 페이지 안 방식의 한 판뿐이다.
 
 import { createServer, type Server } from "node:http";
-import { signToken, type SiteKey } from "@agent-os/e2e-stack";
+import { MARKDOWN_IMAGE_PATH, signToken, type SiteKey } from "@agent-os/e2e-stack";
 import { elementAnswer } from "./element-site";
 
 export const INTRUDER_TOKEN = "intruder-token";
+
+/** 한 점짜리 PNG. 이미지가 실제로 그려지면 불려 가는 그림이다. */
+const PIXEL = Buffer.from(
+  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==",
+  "base64",
+);
 
 /** 끼어드는 iframe 둘. 같은 허용 출처의 형제와 허용 밖 출처(`otherOrigin`)다. */
 function intruderFrames(otherOrigin: string): string {
@@ -115,6 +121,12 @@ export async function startSite(port: number, origins: SiteOrigins, key: SiteKey
         "Cache-Control": "no-store",
       });
       outgoing.end(signToken(key, url.searchParams.get("sub") ?? undefined));
+      return;
+    }
+    if (url.pathname === MARKDOWN_IMAGE_PATH) {
+      // `markdown` 에이전트의 출력에 든 이미지의 주소. 위젯이 이미지를 그리지 않는지를 시험이 이 경로에 닿은 요청의 수로 본다.
+      outgoing.writeHead(200, { "Content-Type": "image/png", "Cache-Control": "no-store" });
+      outgoing.end(PIXEL);
       return;
     }
     if (url.pathname === "/intruder") {

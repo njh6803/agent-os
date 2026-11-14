@@ -1,4 +1,4 @@
-// 시험이 쓰는 설정과 사이트 파일, 키의 도우미. 질문 페이지의 시험은 파일을 임시 폴더에 짓고 키 파일은 커밋하지 않는다.
+// 시험이 쓰는 설정과 사이트 파일, 키의 도우미. 위젯 미리보기 페이지의 시험은 파일을 임시 폴더에 짓고 키 파일은 커밋하지 않는다.
 // 키는 `node:crypto` 가 짓고 같은 시험 프로세스 안에서는 두 벌만 만든다(2048 비트 RSA 키 생성은 느려서 시험마다 새로 만들지 않는다).
 
 import { createPrivateKey, generateKeyPairSync } from "node:crypto";
@@ -78,7 +78,7 @@ export interface ConfigDoc {
   sites: Record<string, TomlValue>[];
 }
 
-/** 맞는 질문 페이지 설정. 시험이 한 칸씩 고쳐 stringify 한다. 부를 때마다 새 객체다. */
+/** 맞는 위젯 미리보기 페이지 설정. 시험이 한 칸씩 고쳐 stringify 한다. 부를 때마다 새 객체다. */
 export function configDoc(): ConfigDoc {
   return {
     schema_version: "1",

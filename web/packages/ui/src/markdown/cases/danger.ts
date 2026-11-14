@@ -2,8 +2,8 @@
 // (`.scratch/answer-markdown/probes/markdown_render/probe/cases.mjs`)이고 입력은 글자 그대로 옮겼다. `must` 는 규칙 하나(`rules.ts`
 // 의 `violations`) 말고 그 사례가 더 지켜야 하는 것이다. 어기면 어긴 것을 글로 돌려준다.
 //
-// 이 티켓(01)이 바꾸지 않는 것만 건다. 문장 끝 번호와 출처 덩이(`[1]` 을 위첨자로, 끝의 "출처" 줄을 작은 글자로)는 뒤의 티켓
-// (02)이 변환을 끼워 모양을 바꾸므로, 원천의 `[1]` 이 글에 있다는 단언(`r10`, `x14`)은 `[1]` 없이 건다.
+// 문장 끝 번호와 출처 덩이를 다듬는 변환(티켓 02)이 바꾸지 않는 것만 건다. 그 변환이 `[1]` 을 대괄호 없는 위첨자로 바꾸므로,
+// 원천의 `[1]` 이 글에 있다는 단언(`r10`, `x14`)은 `[1]` 없이 건다.
 import { exactly, includes, noAnchors, oneAnchor, type Analysis } from "./rules";
 
 export interface DangerCase {

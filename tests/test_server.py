@@ -1635,6 +1635,43 @@ async def test_http_모양의_mcp_매니페스트는_파일에_적은_글자_그
     assert [row["manifest"]["server"] for row in listed] == [expected]
 
 
+async def test_openai_compatible_모델의_주소와_키_변수는_파일에_적은_글자_그대로_내보낸다(
+    tmp_path: Path, stderr: io.StringIO, traces: FakeTrace
+) -> None:
+    """스토리 14. 파일을 읽는 어댑터를 지나 관리 API 응답까지 간다. `base_url` 은 대문자가 든
+    호스트와 끝의 `/` 로 적어, `AnyHttpUrl` 처럼 호스트를 소문자로 바꾸는 정규화가 끼면 빨개진다.
+    키는 값이 아니라 환경 변수의 이름만 실린다. `anthropic` 모델의 응답에는 두 칸이 `null` 이다."""
+    directory = tmp_path / "models" / "ax-4-light"
+    directory.mkdir(parents=True)
+    (directory / "plugin.toml").write_text(
+        'schema_version = "1"\nkind = "model"\nname = "ax-4-light"\nversion = "0.1.0"\n'
+        'provider = "openai-compatible"\nmodel_id = "skt/A.X-4.0-Light"\n'
+        'base_url = "http://Model-Server:8000/v1/"\napi_key_env = "MODEL_SERVER_API_KEY"\n',
+        encoding="utf-8",
+    )
+    claude = tmp_path / "models" / "claude"
+    claude.mkdir(parents=True)
+    (claude / "plugin.toml").write_text(
+        'schema_version = "1"\nkind = "model"\nname = "claude"\nversion = "0.1.0"\n'
+        'provider = "anthropic"\nmodel_id = "claude-opus-5"\n',
+        encoding="utf-8",
+    )
+    plugins: PluginSource = FilesystemPlugins(tmp_path)
+    transport = ASGITransport(app=_admin_app(plugins=plugins, trace=traces, stderr=stderr))
+
+    async with AsyncClient(transport=transport, base_url="http://admin.test") as client:
+        single = (await client.get("/plugins/model/ax-4-light", headers=BEARER)).json()
+        listed = (await client.get("/plugins", headers=BEARER)).json()
+
+    manifest = single["manifest"]
+    assert manifest["provider"] == "openai-compatible"
+    assert manifest["base_url"] == "http://Model-Server:8000/v1/"
+    assert manifest["api_key_env"] == "MODEL_SERVER_API_KEY"
+    by_name = {row["name"]: row["manifest"] for row in listed}
+    assert by_name["ax-4-light"] == manifest
+    assert (by_name["claude"]["base_url"], by_name["claude"]["api_key_env"]) == (None, None)
+
+
 async def test_읽을_수_없는_매니페스트가_있어도_나머지가_오고_그것은_켜짐과_이유를_든_표지다(
     client: AsyncClient,
 ) -> None:

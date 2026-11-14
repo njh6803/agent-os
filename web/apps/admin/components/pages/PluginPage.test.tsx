@@ -35,6 +35,8 @@ const CALC: Plugin = {
     model_id: null,
     max_tokens: null,
     temperature: null,
+    base_url: null,
+    api_key_env: null,
     server: null,
   },
 };
@@ -61,6 +63,8 @@ const CALC_MANIFEST = `{
   "model_id": null,
   "max_tokens": null,
   "temperature": null,
+  "base_url": null,
+  "api_key_env": null,
   "server": null
 }`;
 
@@ -106,6 +110,36 @@ describe("플러그인 하나", () => {
     expect(screen.getByRole("heading", { level: 2, name: "매니페스트" })).toBeTruthy();
     expect(screen.queryByRole("switch")).toBeNull();
     expect(authorizations).toEqual([`Bearer ${TOKEN}`]);
+  });
+
+  test("openai-compatible 모델을 열면 모델 서버의 주소와 키 변수의 이름이 파일에 적은 그대로 보인다", async () => {
+    // 주소는 대문자가 든 호스트와 끝의 / 로 적어, 화면이 글자를 고치지 않고 그대로 그리는지 본다.
+    const ax: Plugin = {
+      kind: "model",
+      name: "ax-4-light",
+      enabled: true,
+      manifest: {
+        ...CALC.manifest,
+        kind: "model",
+        name: "ax-4-light",
+        entrypoint: null,
+        mcp: [],
+        requires_approval: [],
+        provider: "openai-compatible",
+        model_id: "skt/A.X-4.0-Light",
+        base_url: "http://Model-Server:8000/v1/",
+        api_key_env: "MODEL_SERVER_API_KEY",
+      },
+    };
+    acceptTokens();
+    servePlugin("/plugins/model/ax-4-light", () => HttpResponse.json(ax));
+
+    await openPlugin("model", "ax-4-light");
+
+    const manifest = await screen.findByRole("region", { name: "매니페스트" });
+    expect(manifest.textContent).toContain('"provider": "openai-compatible"');
+    expect(manifest.textContent).toContain('"base_url": "http://Model-Server:8000/v1/"');
+    expect(manifest.textContent).toContain('"api_key_env": "MODEL_SERVER_API_KEY"');
   });
 
   test("꺼진 플러그인은 제목 옆에 꺼짐이 선다", async () => {
