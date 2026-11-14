@@ -120,3 +120,41 @@ open-session을 부른다 2026-11-14T19:03Z
 PR(`/git-pr`, base는 dev)을 열고, PR 체크리스트에 보안·버그·성능 축의 CLI 결과(지적 0건)와 보류한 지적을 적는다. PR을 연 뒤 `@coderabbitai review` 코멘트를 남기고 `merge.md` 2(봇 회차)와 "워크트리에서 병합할 때"로 병합한다. 병합 뒤 일지의 "다음" 절과 회고를 쓴다. 이 일지는 마지막 세션이 커밋한다(지금 이 절은 커밋되지 않았다).
 
 open-session을 부른다 2026-11-14T20:09Z
+
+## 셋째 세션이 한 것 (PR과 병합)
+
+### 사용자 프롬프트 원문
+
+이 세션의 첫 메시지도 앞 세션의 인계 지시문이었고, 사용자의 다른 말은 없었다. 지시문의 "다음 단계"는 구현, "이번 요청 범위"는 PR과 병합까지였다.
+
+> 사용자: .claude/skills/implement/SKILL.md 를 읽어 그대로 따른다. … 인자: .scratch/release-image/issues/02-example-mcp-server-runs-without-npx.md
+>
+> 이어받을 상태: 인계: 커밋 뒤. 커밋 둘(b7cccfa49, 8160f991b)이 워크트리에 있고 pre-commit이 통과했다. … 남은 일은 푸시와 PR 열기(base는 dev, PR 체크리스트에 CLI 결과와 보류한 지적을 적는다), 첫 코멘트 `@coderabbitai review`, merge.md 2(봇 회차)와 병합, 병합 뒤 일지의 다음 절과 회고다
+
+### 한 것
+
+- 세션 제목을 `feature/02-example-mcp-server-runs-without-npx`로 바꾸고 이미 있는 워크트리에 `EnterWorktree(path)`로 들어갔다.
+- `tools/sibling_overlap.py`: 번호 겹침은 없었다. 형제 `03-llm-local-command-rents-model-servers`가 헌법 판 3.0.98을 먼저 쓰고 있고 `docs/constitution/README.md`를 함께 고쳤다(병합 충돌 후보, 앞 절과 같다).
+- 일지의 앞 세션 절을 커밋했다(`754f9a6de`, pre-commit 통과. 병렬 검사 833.7초 가운데 pytest 562.0초, web-verify 833.4초). 푸시하고 PR [571](https://github.com/njh6803/agent-os/pull/571)을 dev로 열었다. 본문은 `.github/PULL_REQUEST_TEMPLATE.md`를 따랐고 CodeRabbit CLI 결과(지적 0건)와 보류한 지적(하위 의존성 판 흔들림)을 적었다.
+- `@coderabbitai review` 코멘트를 남기고 `tools/wait_ci.py 571`로 기다렸다. 헤드 `754f9a6`에서 `CodeRabbit`(Finished), `claude-review`, `e2e`, `e2e-portal`, `e2e-widget`, `python`, `ticket`, `verify`, `visual`, `web`이 모두 SUCCESS이고 `llm`만 SKIPPED였다. CodeRabbit은 이 PR의 첫 회차에서 `No actionable comments were generated in the recent review.`였고 인라인 코멘트가 없었다. `claude-review`는 `지적 없음 (유지보수성·경계 두 축)`이었고, 참고(차단 아님) 둘(형제와의 헌법 README 충돌 가능성, 전역 설치의 하위 의존성 판 흔들림)은 PR 본문과 이 일지가 이미 적은 것이었다. 반영할 코드 지적이 없어 코드 커밋을 더하지 않았다.
+- 회고(아래 `## 회고`)에서 만료할 대기열 항목 둘(`0552`, `0554`)을 닫았다(`git fetch origin` 뒤 `--ref origin/dev`로 돌린 출력에도 같이 들었다).
+
+## 회고
+
+후보 4개: 승인 0, 넘김 0, 기각 4. 대기열 항목을 새로 쓰거나 회차를 더하지 않았다.
+
+1. 기각. 부하에서 시간에 기대는 시험 셋(`tests/tools/test_check_md_tables.py::test_한_줄에_겹친_목록_표식이_선형이다`, `tests/channel/cli/test_interrupt.py::test_서버를_닫기_시작한_뒤에_한_번_누르면_닫기를_마치고_중단으로_끝난다`, `tests/tools/test_rerun_runner.py::test_같은_갈래가_두_번_든_파일럿의_두_회차가_함께_돌아도_번호가_다르다`)이 커밋의 pre-commit을 한 번 막았고 홀로 돌리면 지났다(`3 passed in 105.66s`. 앞 절). 이것은 306이 ADR 0036으로 받아들여 닫은 종류의 새 사례라 4단계가 정한 대로 회차를 더하지 않고 일지에만 적는다. 앞 절 "고친 것"은 첫 세션의 전체 러너 첫 바퀴에서도 `test_interrupt.py`의 같은 시험이 빨갰다고 적는다(그 일지를 읽은 것이고 이 세션이 다시 보지 않았다). 이 종류가 이 변경과 무관한 커밋을 막는 값은 계속 치르고 있다.
+2. 기각. `ci.yml`에 `npm install --global` 단계를 더한 뒤 zizmor의 `adhoc-packages`가 걸린다는 것을 편집 때가 아니라 전체 러너의 첫 바퀴(1043초, `tests/tools/test_zizmor_gate.py` 23건 빨강)에서 알았다. 이미 있는 검사(저장소 상태 시험과 pre-commit의 zizmor)가 그 자리에서 막았고 같은 모양의 사건은 처음이라 더하는 문장의 문턱(다섯 번째, 또는 손상)에 닿지 않는다.
+3. 기각. 일지에 옛 문장을 따옴표로 인용해 인용 대조 경고 둘이 났다. 경고만 하는 `check-quotes`가 알렸고 따옴표를 떼어 고쳤다.
+4. 기각. 이 세션에서 워크트리 가드가 `git add … && git commit`과 `$TEMP`가 든 heredoc을 한 줄에 쓴 명령을 거부했다. 단일 명령으로 나누고 메시지를 파일로 쓰자 지났다. 앱 가드가 그 자리에서 막았고 `CLAUDE.md` 환경 함정이 이미 적은 모양이다(닫힌 0122의 10회차 계열).
+
+만료: 대기열 `0552`와 `0554`를 `만료 2026-11-15 (ADR 0036)`로 닫았다(승인 줄의 가장 늦은 날짜 2026-10-31). 두 항목 모두 회차 1이었고 사람 몫이 아니다.
+
+## 다음
+
+PR 571을 `--squash`로 병합하면 티켓 02는 닫히고 이 기능에서 풀리는 것은 07의 둘 가운데 하나(02)다. 07의 `Blocked by`는 02와 03이라 03이 병합되기 전에는 07도 08도 열 수 없다. 지금 막힌 것이 없는 티켓은 03(`feature/03-processes-bind-container-network-in-image` 세션이 도는 중)과 04(PR 572가 열려 있다)이고 둘 다 앞 묶음이 이미 열었다. 그래서 이 병합 뒤에 새로 열 세션은 없다. 이 변경이 닫는 PR을 마친 세션은 다음을 알고 가야 한다.
+
+- 03이 병합되면 07(`Blocked by: 02, 03`)과 08(`Blocked by: 03`)이 풀린다. 둘은 서로 독립이라 나란히 여는 묶음이고, 병합하는 쪽이 `next-session` 결정표의 "구현(나란히)" 줄로 연다. 04가 병합되면 05가 풀린다.
+- 이 PR이 먼저 병합되면 `docs/constitution/README.md`의 판 줄(3.0.99)과 3.0.98 비움 문장이 03 형제(`feature/03-llm-local-command-rents-model-servers`)가 고친 같은 자리와 글자 충돌을 낼 수 있다. 충돌은 나중에 병합하는 쪽이 풀고, 03 형제가 3.0.98을 가져가면 이 PR의 비움 문장은 지운다. 이 PR이 나중에 병합되면 이 세션이 푼다.
+- 뒤로 넘긴 일: 전역 설치(`npm install --global @modelcontextprotocol/server-everything@2.3.0`)는 최상위 판만 고정하고 하위 의존성(`zod ^4.2.0`, `express ^5.3.0` 등 범위 의존성)은 날마다 달라질 수 있다. 잠금 파일이나 `--ignore-scripts`는 근거가 모자라 붙이지 않았다. 서버 이미지를 만드는 티켓 07이 같은 판을 이미지에 깔 때 고정 방식(잠금 파일, 이미지 레이어로 굳히기)을 함께 판단한다. 07 티켓 파일에 이 일을 적지는 않았다(07은 02·03을 막는 것으로만 이 PR에 묶여 있다). 07을 연 세션이 이 절을 읽도록 지시문의 "읽을 것"에 이 일지를 둔다.
+- 이 PC에 `npm install --global @modelcontextprotocol/server-everything@2.3.0`을 쳐 두었다(앞 절). 다른 PC에서 `-m llm`을 돌릴 때는 `docs/constitution/operations.md` LLM 테스트 절의 준비 한 줄을 먼저 한다.
