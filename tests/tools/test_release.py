@@ -606,6 +606,21 @@ def test_느낌표_커밋은_올릴_때_할_일에만_서고_새_기능에는_�
     )
 
 
+def test_지운_뒤_같은_경로에_다시_더한_조각은_각_커밋이_더한_글로_싣는다(repo: Repo) -> None:
+    path = "docs/release-notes/upgrade/change.md"
+    repo.product("feat: 첫 기능 (#1)")
+    repo.tag("v0.1.0")
+    repo.product("feat!: 처음 바꾼다 (#2)", {path: "A 에서 B 로\n"})
+    repo.git("rm", "-q", path)
+    repo.commit("docs: 안내를 지운다 (#3)", {})
+    repo.product("feat!: 다시 바꾼다 (#4)", {path: "B 에서 C 로\n"})
+    assert render_notes(repo.path, "0.2.0") == (
+        "## 올릴 때 할 일\n\n"
+        "### 처음 바꾼다 (#2)\n\nA 에서 B 로\n\n"
+        "### 다시 바꾼다 (#4)\n\nB 에서 C 로\n"
+    )
+
+
 def test_소개_글은_판을_내는_커밋에_있을_때만_싣는다(repo: Repo) -> None:
     repo.product("feat: 첫 기능 (#1)")
     repo.tag("v0.1.0")
@@ -752,6 +767,13 @@ def test_모르는_자리_표지가_남으면_묶음을_짓지_않는다(tmp_pat
     with pytest.raises(ReleaseError, match="@AGENT_OS_TYPO@"):
         build_bundle(source, tmp_path / "out", "0.1.0", "agentos")
     assert not (tmp_path / "out" / "agent-os-0.1.0.tar.gz").exists()
+
+
+def test_소문자가_든_모르는_자리_표지도_묶음을_짓지_않는다(tmp_path: Path) -> None:
+    source = _틀(tmp_path)
+    (source / "extra.txt").write_text("@AGENT_OS_version@\n", encoding="utf-8")
+    with pytest.raises(ReleaseError, match="@AGENT_OS_version@"):
+        build_bundle(source, tmp_path / "out", "0.1.0", "agentos")
 
 
 @pytest.mark.parametrize(

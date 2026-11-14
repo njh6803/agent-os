@@ -86,7 +86,7 @@ NAMESPACE_MARKER = "@AGENT_OS_NAMESPACE@"
 
 _VERSION = re.compile(r"(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(?:-rc\.([1-9][0-9]*))?")
 _NAMESPACE = re.compile(r"[a-z0-9]+(?:(?:[._]|__|-+)[a-z0-9]+)*")  # Docker 경로 한 토막의 꼴
-_MARKER = re.compile(r"@AGENT_OS_[A-Z0-9_]+@")
+_MARKER = re.compile(r"@AGENT_OS_[A-Za-z0-9_]+@")
 _DIGEST = re.compile(r"sha256:[0-9a-f]{64}")
 _DIGEST_LINE = re.compile(r"Digest:\s+(\S+)")
 _NOT_FOUND = ": not found"
@@ -512,7 +512,7 @@ def render_notes(
         prefix, breaking = classify(commit.subject)
         title = display_title(commit.subject)
         if breaking:
-            upgrade.append(_upgrade_entry(repo, commit, title, head))
+            upgrade.append(_upgrade_entry(repo, commit, title, since, head))
         elif prefix == "feat":
             new_features.append(f"- {title}")
         elif prefix == "fix":
@@ -533,14 +533,24 @@ def render_notes(
     return "\n\n".join(present) + "\n" if present else ""
 
 
-def _upgrade_entry(repo: Path, commit: Commit, title: str, head: str) -> str:
+def _last_adder(repo: Path, since: str | None, head: str, path: str) -> str | None:
+    """범위 안에서 `path` 를 마지막으로 더한 커밋. 지운 뒤 같은 경로에 다시 더하면 둘 이상이다."""
+    output = _log(repo, since, head, [path], "--no-renames", "--diff-filter=A", "--format=%H")
+    shas = [line for line in output.split("\n") if line]
+    return shas[-1] if shas else None
+
+
+def _upgrade_entry(repo: Path, commit: Commit, title: str, since: str | None, head: str) -> str:
     added = _git(
         repo, "diff-tree", "--root", "--no-commit-id", "--name-only", "--diff-filter=A", "-r",
         "--no-renames", commit.sha, "--", UPGRADE,
     )  # fmt: skip
     texts: list[str] = []
     for path in (line for line in added.split("\n") if line):
-        text = _read_at(repo, head, path)
+        # 머리의 글은 그 경로를 마지막으로 더한 커밋의 것이다. 앞서 더한 커밋은 그때의 글을 싣는다.
+        text = None
+        if _last_adder(repo, since, head, path) == commit.sha:
+            text = _read_at(repo, head, path)
         if text is None:
             text = _read_at(repo, commit.sha, path)
         if text is not None:

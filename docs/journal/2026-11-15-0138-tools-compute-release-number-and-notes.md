@@ -101,12 +101,20 @@ claude-review 가 Critical·Major 없이 Minor 셋과 Nit 하나를 냈다. 첫 
 - 고친 것: Nit 의 실패한 `git` 호출 stderr 풀기 두 줄을 `_stderr` 로 모았다. Minor 의 `build_bundle` 한 함수가 맡은 넷(검증, 파일 모으기, 자리 표지 채우기, tar·gzip 짓기)을 `build_bundle`(검증과 조립)·`_collect`(모으기와 채우기)·`_pack`(바이트 짓기)로 나눴다. 검사 순서와 오류 문구는 그대로 두었고(코드를 읽어 맞췄다), `uv run pytest tests/tools/test_release.py -p no:xdist -q` 로 손으로 쳐 92개가 48.71초에 통과했다. `uv run ruff check`와 `uv run pyright tools/release.py tests/tools/test_release.py` 도 통과했다(0건).
 - 뒤로 넘긴 것: `tools/release.py` 한 파일에 번호 계산·노트·묶음·태그 판정 넷이 든 Divergent Change 는 11 이 하위 명령을 더하기 전에 쪼갤지 정한다. `judge_number_tag` 는 부르는 곳이 시험뿐이라 11 이 워크플로에서 부르는 하위 명령을 더하지 않으면 그 함수와 시험을 지운다. 둘 다 티켓 11 의 04 메모에 적었다. `ensure_untaken` 은 `plan_release` 가 부르는 것을 코드에서 읽었으므로(`tools/release.py` 의 호출 한 곳) 죽은 코드가 아니고, 로컬 태그로는 닿을 길이 없다는 방어로 남긴다.
 
+## 봇 CodeRabbit 첫 회차(PR 572, 머리 04ec2605d)
+
+첫 요청(`f5cae16d6`)은 한도(`Review rate limited`)로 리뷰가 없었고, 한도가 풀린 뒤 다시 요청한 머리 `04ec2605d` 에서 처음으로 인라인 지적 넷(Major 하나, Minor 셋)이 나왔다. 첫 회차라 지적마다 판단했다.
+
+- 고친 것(Major): `_upgrade_entry` 가 느낌표 커밋마다 `head` 의 파일을 먼저 읽어, 지운 뒤 같은 경로에 다시 더한 안내를 앞 커밋의 제목 아래에도 실었다. 명세는 "그 커밋이 더한 `upgrade/` 파일의 글"을 그 아래에 두라고 한다(명세 "올릴 때 할 일"의 428행과 420행을 읽었다). `_last_adder` 를 더해 `head` 의 글은 그 경로를 마지막으로 더한 커밋만 읽고 앞서 더한 커밋은 그 커밋 시점의 글을 읽게 했다. 시험 `test_지운_뒤_같은_경로에_다시_더한_조각은_각_커밋이_더한_글로_싣는다` 를 더했고 고치기 전에 빨강인 것을 봤다(`uv run pytest tests/tools/test_release.py -p no:xdist -q -k "다시_더한 or 소문자가_든"` 로 두 시험이 실패한 출력을 읽었다). 고친 뒤 `uv run pytest tests/tools/test_release.py -p no:xdist -q` 로 94개가 26.91초에 통과했고 `uv run ruff check`, `uv run pyright tools/release.py tests/tools/test_release.py` 도 통과했다(0건).
+- 고친 것(Minor): 자리 표지 검사식이 대문자만 보아 `@AGENT_OS_version@` 는 치환도 거부도 되지 않았다. 티켓 09 의 메모는 `@AGENT_OS_` 로 시작하는 다른 표지가 남으면 실패한다고 적었으므로 검사식을 `[A-Za-z0-9_]` 로 넓혔다. 시험 `test_소문자가_든_모르는_자리_표지도_묶음을_짓지_않는다` 도 고치기 전에 빨강이었다(`DID NOT RAISE`). UTF-8 이 아닌 파일은 읽지 않고 그대로 담는 것도 티켓 09 메모에 적었다.
+- 고친 것(Minor): 티켓 11 메모가 "제품 변경이 없으면 빈 값들"이라 적었으나 `previous_tag=` 는 지난 판 태그가 있으면 제품 변경이 없어도 낸다(`test_번호_도구는_판을_내지_않아도_성공이고_…` 가 `previous_tag=v0.1.0` 을 단언한다). 메모를 고쳤다.
+- 남긴 것(Minor): `deploy/standalone/` 안에 Windows junction 이 있으면 `rglob` 이 따라 들어가 틀 밖의 파일이 묶음에 들 수 있다는 지적이다. 도구는 CI 의 리눅스에서만 돌고, 커밋에는 junction 이 들어올 수 없다(지적 본문도 로컬 작업 트리에만 성립한다고 적었다). junction 을 만드는 시험은 리눅스 CI 에서 돌 수 없어 두지 않았다. 뒤의 작업으로 넘기는 일이 아니라 이 PR 에서 고치지 않기로 한 것이다.
+
 ## 이어서 할 일
 
-PR #572(https://github.com/njh6803/agent-os/pull/572, base `dev`)를 열었다. 봇 첫 회차를 반영한 커밋 `d4d7e2890` 을 푸시했고 `@coderabbitai review` 코멘트도 남겼다. `tools/wait_ci.py` 가 `d4d7e2890` 에서 모두 통과로 끝났다(`wait_ci.py` 의 끝 줄 `끝: 모두 통과. CodeRabbit: Review rate limited` 를 읽었다).
+PR #572(https://github.com/njh6803/agent-os/pull/572, base `dev`)를 열었다. 봇 회차는 claude-review 가 세 회차(`f5cae16d6`, `d4d7e2890`, 합친 뒤 `04ec2605d`)를 돌았고 둘째·셋째 회차는 Minor·Nit 뿐이라 PR 코멘트에 보류 이유를 남겼다. CodeRabbit 은 `f5cae16d6` 에서 요청 전이었고 `d4d7e2890` 에서 `Review rate limited` 였으며 `04ec2605d` 에서 처음 리뷰를 냈다(위 "봇 CodeRabbit 첫 회차").
 
-- claude-review 의 둘째 회차(`d4d7e2890`)는 Minor 둘만 냈다. 하나는 `tools/release.py` 가 바뀌는 이유가 넷이라는 것으로 위 "뒤로 넘긴 것" 과 같고 티켓 11 메모에 적혀 있다. 다른 하나는 `tests/tools/test_release.py` 의 없는 리비전 시험 둘이 `release: ` 접두만 단언한다는 것이다. 둘째 회차는 Critical·Major 만 고치므로 둘 다 PR 코멘트에 보류 이유를 남기고 병합한다. 뒤의 것은 뒤의 작업으로 넘기는 일이 아니라 이 PR 에서 고치지 않기로 한 것이다.
-- CodeRabbit 은 `@coderabbitai review` 에 `Review rate limited` 로 답해 이 PR 에는 CodeRabbit 의 리뷰가 없다. 보안·버그 축은 PR 직전 `coderabbit-review`(CLI) 의 결과가 위 "PR 직전 리뷰" 에 있다.
+- CodeRabbit 첫 회차의 Major 와 Minor 둘을 고친 커밋이 이 일지와 함께 푸시된다. 그 푸시로 도는 claude-review 는 넷째 회차(Critical·Major 만 고친다)이고 CodeRabbit 은 증분 리뷰라 `@coderabbitai review` 를 다시 남길 필요가 없는지 `gh pr checks` 의 CodeRabbit 줄로 본다.
 - 새 세션 열기는 자동 모드 분류기가 거부해 인계하지 못했고 이 세션이 병합까지 잇는다. 병합은 워크트리 길이다(`--squash --match-head-commit <머리 SHA>`, `--delete-branch` 없음). 병합 뒤 05·09·11 티켓이 04 의 메모를 받아 쓴다. 이 일지의 `## 다음` 절과 회고(`retro`)는 단계를 닫는 마지막 세션이 이 일지까지 읽고 쓴다.
 
 open-session을 부른다 2026-11-14T16:41:02Z
