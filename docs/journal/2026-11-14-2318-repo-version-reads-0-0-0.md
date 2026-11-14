@@ -56,10 +56,24 @@
 - pre-commit 첫 시도는 `tests/tools/test_rerun_runner.py::test_오염이_한_번이면_다시_돌고_두_번이면_그_과제를_모든_갈래에서_뺀다` 하나가 빨개(`assert 1 == 0`) 막혔다(pytest 1 failed, 7313 passed, 837초). 이어받을 상태가 적은 시간 시험 계열이다. 그 시험을 홀로 `uv run pytest -q tests/tools/test_rerun_runner.py -k "오염이_한_번이면"`으로 돌리니 통과했다(1 passed, 75초). 같은 커밋의 둘째 시도는 전부 통과했다(pytest 719.6초, web-verify 1004.0초, 종료 코드 0). `SKIP`은 쓰지 않았다. 이 변경은 그 시험이 읽는 코드를 건드리지 않았다.
 - PR 직전 CodeRabbit CLI(`coderabbit-review` 서브에이전트, CLI 0.7.5, `coderabbit review --agent --committed --base origin/dev`): `review_completed`, 지적 0건(유효 0, 오탐 0, 보류 0), 본 파일 12개. `auth status`는 `Plan: Free`, `Seat: not assigned`였고 리뷰는 막히지 않았다. 도구가 낸 출력을 서브에이전트가 옮긴 값이다.
 
+## PR
+
+- 커밋 둘(`086d68ef2` 변경, `cb714dbd9` 이 일지의 갱신)을 푸시하고 PR [#570](https://github.com/njh6803/agent-os/pull/570)을 dev로 열었다(`gh pr create`가 그 주소를 냈다). 본문은 저장소의 PR 템플릿을 채웠다. 일지 갱신 커밋의 pre-commit도 통과했다.
+- 아직 하지 않은 것: `@coderabbitai review` 코멘트(마지막 푸시 뒤에 남긴다), 봇 회차 반영, 병합, 병합 뒤 일지의 "다음"과 회고.
+
 ## 남은 일
 
-- PR을 열고 봇 회차(CodeRabbit 요청, claude-review)를 반영한 뒤 병합한다. 이 요청의 범위가 병합까지다.
+- 봇 회차(CodeRabbit 요청, claude-review)를 반영한 뒤 병합한다. 이 요청의 범위가 병합까지다.
 - 이 티켓은 `openapi.json`에 닿는 계약 티켓이다. 계약의 값(판 칸) 하나만 바뀌고 모양은 그대로다.
+
+## 인계 (PR 연 뒤)
+
+컨텍스트가 인계 문턱(20만 토큰)을 넘은 채 `PR 연 뒤` 경계에 와서 새 세션에 넘긴다(`next-session handoff.md`). 제목을 `feature/01-repo-version-reads-0-0-0 (인계함)`으로 바꿨다(바뀌기 전 제목은 `feature/01-repo-version-reads-0-0-0`). 곁 세션이 아니다(`get_session`의 `self`에 `parentSessionId`가 없었다). 워크트리 잠금은 이미 풀려 있었다(`git worktree unlock`이 `is not locked`).
+open-session을 부른다 2026-11-14T15:35Z
+
+## 인계받은 세션 (2026-11-15)
+
+- 새 세션이 이 워크트리에 `EnterWorktree`로 들어와 이어받았다. 들어올 때 미커밋 변경은 이 일지 하나였고 PR [#570](https://github.com/njh6803/agent-os/pull/570)은 열린 채였다(claude-review SUCCESS, 지적 없음. CodeRabbit 검사는 SKIPPED로 자동 리뷰가 꺼져 있어 `@coderabbitai review` 코멘트가 첫 요청이다). 이 상태는 `gh pr view 570 --json statusCheckRollup,comments`의 출력을 손으로 읽은 것이다(그때 `python`, `web`, `visual`은 진행 중이었다).
 
 ## 인계
 
