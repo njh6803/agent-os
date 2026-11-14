@@ -8,13 +8,13 @@
 
 **Blocked by:** 01
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] 예시 매니페스트를 `command = "mcp-server-everything"`, `args = []`로 바꾼다. 실행 파일은 `@modelcontextprotocol/server-everything` 2.3.0이 전역 설치로 만드는 이름이다(07의 이미지도 같은 판을 쓴다)
-- [ ] ci.yml의 `llm` 잡에 setup-node 다음으로 같은 판을 전역에 까는 단계를 더한다. 그 잡의 `-m llm`과 `-m llm_widget` 단계가 그 뒤에 돈다. 워크플로 감사(zizmor)를 지난다
-- [ ] `docs/constitution/operations.md`의 LLM 테스트 절에 개발 PC에서 그 판을 전역에 까는 준비 한 줄을 더하고, 헌법 판을 올린다(`docs/constitution/README.md`의 판 줄. 올린 까닭은 일지에 적는다. 명세 검토 N4). 판을 매기기 전에 `tools/sibling_overlap.py`로 형제 브랜치가 먼저 가져간 판을 본다. 규약 문서를 고치는 일이라 이 티켓은 워크트리에서 한다(명세 "티켓을 나눌 때 함께 둘 것")
-- [ ] 위젯과 위젯 미리보기 페이지의 Playwright 설정(`web/apps/widget/playwright.config.ts`, `web/apps/portal/playwright.config.ts`)에서 실제 모델 프로젝트의 제한 시간을 설명하며 그 MCP 서버를 "npx"로 적은 주석을 고친다
-- [ ] 모델을 부르지 않는 시험은 저마다 적은 매니페스트를 쓰므로 바꾸지 않는다(명세가 든 `tests/test_server.py`의 `EVERYTHING` 픽스처, `tests/sdk/test_manifest.py`, `tests/adapters/test_filesystem.py`). 그 시험들이 그대로 초록인지 본다
-- [ ] Windows 개발 PC에서 npm이 만든 `.cmd`로 서버가 뜨는지 `-m llm`으로 본다. 명세는 mcp SDK의 코드를 읽고 뜰 것으로 보았고 띄워 보지는 않았다. 뜨지 않으면 멈추고 보고한다
-- [ ] `-m llm`, `-m llm_widget`, `-m llm_portal`을 이 PC에서 돌려 calc 예시가 초록인지 보고 결과를 일지에 적는다(워크트리의 `.env` 경로는 `docs/constitution/operations.md` LLM 테스트). 키를 쓰는 시험이라 PR 전에 한 번 돈다
-- [ ] 검증 명령이 모두 초록이다
+- [x] 예시 매니페스트를 `command = "mcp-server-everything"`, `args = []`로 바꾼다. 실행 파일은 `@modelcontextprotocol/server-everything` 2.3.0이 전역 설치로 만드는 이름이다(07의 이미지도 같은 판을 쓴다)
+- [x] ci.yml의 `llm` 잡에 setup-node 다음으로 같은 판을 전역에 까는 단계를 더한다. 그 잡의 `-m llm`과 `-m llm_widget` 단계가 그 뒤에 돈다. 워크플로 감사(zizmor)를 지난다
+- [x] `docs/constitution/operations.md`의 LLM 테스트 절에 개발 PC에서 그 판을 전역에 까는 준비 한 줄을 더하고, 헌법 판을 올린다(`docs/constitution/README.md`의 판 줄. 올린 까닭은 일지에 적는다. 명세 검토 N4). 판을 매기기 전에 `tools/sibling_overlap.py`로 형제 브랜치가 먼저 가져간 판을 본다. 규약 문서를 고치는 일이라 이 티켓은 워크트리에서 한다(명세 "티켓을 나눌 때 함께 둘 것")
+- [x] 위젯과 위젯 미리보기 페이지의 Playwright 설정(`web/apps/widget/playwright.config.ts`, `web/apps/portal/playwright.config.ts`)에서 실제 모델 프로젝트의 제한 시간을 설명하며 그 MCP 서버를 "npx"로 적은 주석을 고친다
+- [x] 모델을 부르지 않는 시험은 저마다 적은 매니페스트를 쓰므로 바꾸지 않는다(명세가 든 `tests/test_server.py`의 `EVERYTHING` 픽스처, `tests/sdk/test_manifest.py`, `tests/adapters/test_filesystem.py`). 그 시험들이 그대로 초록인지 본다
+- [x] Windows 개발 PC에서 npm이 만든 `.cmd`로 서버가 뜨는지 `-m llm`으로 본다. 명세는 mcp SDK의 코드를 읽고 뜰 것으로 보았고 띄워 보지는 않았다. 뜨지 않으면 멈추고 보고한다
+- [x] `-m llm`, `-m llm_widget`, `-m llm_portal`을 이 PC에서 돌려 calc 예시가 초록인지 보고 결과를 일지에 적는다(워크트리의 `.env` 경로는 `docs/constitution/operations.md` LLM 테스트). 키를 쓰는 시험이라 PR 전에 한 번 돈다
+- [x] 검증 명령이 모두 초록이다
