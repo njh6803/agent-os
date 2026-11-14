@@ -70,8 +70,10 @@ export function elementBuildConfig(
 }
 
 /**
- * 페이지 안 번들을 짓는다. Vite 의 `build` 는 `NODE_ENV` 가 비었으면 production 으로 채우고 되돌리지 않는다(vite 8.3.1 의
- * `resolveConfig`). 시작 래퍼가 같은 프로세스에서 이어 부르는 `next dev` 가 그 값을 받지 않게 빌드 전의 값으로 되돌린다.
+ * 페이지 안 번들을 짓는다. 빌드 동안 `NODE_ENV` 를 production 으로 둔다. Vite 의 `build` 는 비었을 때만 production 으로
+ * 채우고 되돌리지 않으며(vite 8.3.1 의 `resolveConfig`), `test` 나 `development` 가 남은 프로세스에서는 개발 조건으로 의존성을
+ * 푼다. 시작 래퍼가 같은 프로세스에서 이어 부르는 `next dev` 가 production 을 받지 않게 빌드 전의 값(비었으면 비움)으로
+ * 되돌린다. 이 고정이 빠지면 vitest(`NODE_ENV=test`)에서 도는 번들 시험의 `process.env` 단언이 빨개진다.
  */
 export async function buildElement(
   env: Readonly<Record<string, string | undefined>>,
@@ -80,6 +82,9 @@ export async function buildElement(
   // Next 의 타입은 NODE_ENV 를 늘 있는 값으로 적는다. 시작 래퍼가 부를 때는 비어 있을 수 있어 넓은 타입으로 받는다.
   const processEnv: Record<string, string | undefined> = process.env;
   const nodeEnv = processEnv["NODE_ENV"];
+  // 번들은 언제나 production 조건으로 푼다. `test` 나 `development` 가 남은 프로세스(vitest)에서 빌드하면 마크다운 파서(micromark)의
+  // 개발용 진입점이 실려 `debug` 패키지와 그 `process.env` 가 번들에 든다.
+  processEnv["NODE_ENV"] = "production";
   try {
     await build(elementBuildConfig(env, outDir));
   } finally {

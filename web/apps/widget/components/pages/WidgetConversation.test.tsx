@@ -389,7 +389,7 @@ test("실패와 끝내지 못함의 결말에서도 도구 줄이 접히고, 도
   expect(screen.getAllByRole("button", { name: /불렀습니다$/ })).toHaveLength(1);
 });
 
-test("출력은 글자 그대로 그리고 HTML 조각은 글자로 보인다", async () => {
+test("출력의 HTML 조각은 요소가 되지 않고 글자로 보인다", async () => {
   serveTokens();
   const output = "첫 줄\n<b>굵게</b> **별표**";
   onStart(() => items({ type: "started", run_id: "run_1" }, { type: "finished", output }));
@@ -397,10 +397,15 @@ test("출력은 글자 그대로 그리고 HTML 조각은 글자로 보인다", 
 
   await ask(user, "요청");
 
-  const paragraph = await screen.findByText(
-    (_, element) => element?.tagName === "P" && element.textContent === `출력: ${output}`,
+  // 마크다운 부품이 그리므로 `**별표**` 는 strong 이 되고 `<b>` 는 글자로 남는다. 출력을 감싸는 요소는 문단이 아니다.
+  const wrapper = await screen.findByText(
+    (_, element) =>
+      element?.tagName === "DIV" &&
+      element.textContent.startsWith("출력: 첫 줄") &&
+      element.textContent.includes("<b>굵게</b> 별표"),
   );
-  expect(paragraph.querySelector("b")).toBeNull();
+  expect(wrapper.querySelector("b")).toBeNull();
+  expect(wrapper.querySelector("strong")?.textContent).toBe("별표");
 });
 
 // --- 이어 가기와 새 대화 ---

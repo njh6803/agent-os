@@ -9,8 +9,9 @@
 // 요소 안의 컴포넌트는 React 가 나중에 그리므로 거기서 던지는 예외는 받지 못한다.
 //
 // 모양은 요소마다의 클래스로 낸다. 디자인 시스템에는 컴포넌트 CSS 가 없고 화면 파일은 자손·형제 선택자로 그렸으므로, 놓인
-// 자리(뿌리·인용 안의 흐름, 목록 항목 안)는 React 컨텍스트로 알고, 바로 앞 형제가 제목인 제목은 변환이 단 표지
-// (`data-after-heading`)로 안다. 표지와 라이브러리가 붙이는 속성(`node`, `style`, 클래스)은 DOM 에 넘기지 않는다.
+// 자리(뿌리·인용 안의 흐름, 목록 항목 안, 출처 덩이 안)는 React 컨텍스트로 알고, 바로 앞 형제가 무엇인지는 변환이 단 표지로
+// 안다. 제목 바로 뒤의 제목은 `data-after-heading`, 이어진 번호는 `data-cite` 의 값이다. 출처 덩이(`data-sources`)와 문장 끝
+// 번호(`data-cite`)도 표지로 알아본다. 표지와 라이브러리가 붙이는 속성(`node`, `style`, 클래스)은 DOM 에 넘기지 않는다.
 //
 // 실패는 라이브러리의 컴포넌트를 요소로 두지 않고 함수로 직접 불러 try/catch 로 받는다. 그 함수는 훅을 쓰지 않는 동기
 // 함수다(react-markdown 10.1.0 의 `Markdown`). 라이브러리가 훅을 쓰는 판으로 바뀌면 다시 그릴 때 깨질 수 있어 단위 시험이
@@ -24,9 +25,10 @@ import {
   useContext,
 } from "react";
 import ReactMarkdown, { type Components } from "react-markdown";
+import { CITE_ADJACENT, CITE_MARK } from "../../markdown/citations";
+import { AFTER_HEADING } from "../../markdown/heading-marks";
 import { linkHref } from "../../markdown/link-url";
 import { BASE_OPTIONS, normalizeLineEnds } from "../../markdown/options";
-import { AFTER_HEADING } from "../../markdown/heading-marks";
 
 export interface MarkdownProps {
   /** 마크다운으로 읽을 출력의 원문. */
@@ -35,8 +37,8 @@ export interface MarkdownProps {
 
 // ---- 놓인 자리 ----
 
-/** 블록 사이가 12px 인 자리(뿌리, 인용)는 `flow`, 목록 항목 안은 `item`(블록 사이 4px). */
-type Place = "flow" | "item";
+/** 블록 사이가 12px 인 자리(뿌리, 인용)는 `flow`, 목록 항목 안은 `item`, 출처 덩이 안은 `sources`(둘 다 블록 사이 4px). */
+type Place = "flow" | "item" | "sources";
 const PlaceContext = createContext<Place>("flow");
 /** 코드 블록(`pre`) 안의 `code` 는 줄 안 코드의 바탕과 여백을 갖지 않는다. */
 const InPreContext = createContext(false);
@@ -53,12 +55,12 @@ const RAW = "whitespace-pre-wrap text-body text-text wrap-anywhere";
 
 // 제목은 본문 크기에 굵기 600 이다. 흐름 안에서는 위 16px, 아래 4px 이고(틈 12px 에 위 여백 4px, 아래 여백 -8px) 그 자리의
 // 첫 요소일 때 위 여백을, 마지막 요소일 때 아래 여백을 0 으로 둔다. 제목 바로 뒤의 제목은 위 여백을 12px 로 두어 사이가
-// 16px 이 되게 한다. 목록 항목 안의 제목은 그 자리의 블록 사이를 따르고 따로 여백을 두지 않는다.
+// 16px 이 되게 한다. 목록 항목과 출처 덩이 안의 제목은 그 자리의 블록 사이를 따르고 따로 여백을 두지 않는다.
 const HEADING_CLASS = {
   flow: "mt-1 -mb-2 first:mt-0 last:mb-0",
   flowAfterHeading: "mt-3 -mb-2 first:mt-0 last:mb-0",
-  item: "",
-} satisfies Record<"flow" | "flowAfterHeading" | "item", string>;
+  tight: "",
+} satisfies Record<"flow" | "flowAfterHeading" | "tight", string>;
 
 type HeadingProps = ComponentProps<"h1"> & { readonly [AFTER_HEADING]?: string };
 
@@ -66,7 +68,7 @@ function heading(Tag: "h2" | "h3" | "h4" | "h5" | "h6") {
   return function Heading(props: HeadingProps) {
     const place = useContext(PlaceContext);
     const key =
-      place === "item" ? "item" : props[AFTER_HEADING] === undefined ? "flow" : "flowAfterHeading";
+      place !== "flow" ? "tight" : props[AFTER_HEADING] === undefined ? "flow" : "flowAfterHeading";
     return <Tag className={`font-semibold ${HEADING_CLASS[key]}`}>{props.children}</Tag>;
   };
 }
@@ -109,13 +111,14 @@ function imageText(alt: string | undefined): string {
 function Blockquote({ children }: ComponentProps<"blockquote">) {
   return (
     <blockquote className="flex flex-col gap-3 border-l-2 border-border-control pl-3">
-      <PlaceContext value="flow">{children}</PlaceContext>
+      <PlaceContext.Provider value="flow">{children}</PlaceContext.Provider>
     </blockquote>
   );
 }
 
 // 글머리는 어디에 놓여도 검은 점이고 안쪽 목록은 들여쓰기 24px 로 단계가 갈린다. 목록과 항목은 flex 로 만들지 않는다
-// (글머리 표시가 사라진다). 항목 사이와 항목 안의 블록 사이 4px 은 자식 사이 여백으로 낸다.
+// (글머리 표시가 사라진다). 항목 사이와 항목 안의 블록 사이 4px 은 자식 사이 여백으로 낸다. 출처 덩이 안의 목록은 항목 사이가
+// 0 이다.
 function List({
   children,
   ordered,
@@ -127,7 +130,8 @@ function List({
 }) {
   const place = useContext(PlaceContext);
   const nested = place === "item" ? "mt-1 " : "";
-  const className = `${nested}space-y-1 pl-6 ${ordered ? "list-decimal" : "list-disc"}`;
+  const between = place === "sources" ? "" : "space-y-1 ";
+  const className = `${nested}${between}pl-6 ${ordered ? "list-decimal" : "list-disc"}`;
   return ordered ? (
     <ol className={className} start={start}>
       {children}
@@ -152,7 +156,7 @@ function OrderedList({ children, start }: ComponentProps<"ol">) {
 function Item({ children }: ComponentProps<"li">) {
   return (
     <li className="space-y-1">
-      <PlaceContext value="item">{children}</PlaceContext>
+      <PlaceContext.Provider value="item">{children}</PlaceContext.Provider>
     </li>
   );
 }
@@ -174,7 +178,7 @@ function CodeBlock({ children }: ComponentProps<"pre">) {
       tabIndex={0}
       className={`overflow-x-auto rounded-s border border-border bg-bg p-3 ${FOCUS_RING}`}
     >
-      <InPreContext value>{children}</InPreContext>
+      <InPreContext.Provider value>{children}</InPreContext.Provider>
     </pre>
   );
 }
@@ -192,7 +196,7 @@ function Table({ children }: ComponentProps<"table">) {
 function TableHead({ children }: ComponentProps<"thead">) {
   return (
     <thead className="border-b border-border">
-      <TableSectionContext value="head">{children}</TableSectionContext>
+      <TableSectionContext.Provider value="head">{children}</TableSectionContext.Provider>
     </thead>
   );
 }
@@ -200,7 +204,7 @@ function TableHead({ children }: ComponentProps<"thead">) {
 function TableBody({ children }: ComponentProps<"tbody">) {
   return (
     <tbody>
-      <TableSectionContext value="body">{children}</TableSectionContext>
+      <TableSectionContext.Provider value="body">{children}</TableSectionContext.Provider>
     </tbody>
   );
 }
@@ -230,6 +234,24 @@ function alignClass(style: ComponentProps<"td">["style"]): string {
 
 const CELL = "min-w-cell-min max-w-cell-max px-3 py-2 align-top first:pl-0";
 
+// 문장 끝 번호는 작은 흐린 위첨자이고 줄 높이를 0 으로 두어 번호가 든 줄이 높아지지 않게 한다. 앞 글자와의 틈은 2px 이고,
+// 바로 앞이 번호인 번호(이어진 번호)는 두 번호가 한 수로 읽히지 않게 4px 이다. 누를 수 없고 포커스를 받지 않는다.
+type CiteProps = ComponentProps<"sup"> & { readonly [CITE_MARK]?: string };
+
+function Cite(props: CiteProps) {
+  const gap = props[CITE_MARK] === CITE_ADJACENT ? "ml-1" : "ml-cite-start";
+  return <sup className={`${gap} text-small leading-0 text-text-muted`}>{props.children}</sup>;
+}
+
+// 출처 덩이는 위 선 아래 12px 에 작은 흐린 글자로 그리고, 안의 블록 사이는 4px 이다. 안의 요소는 글자 크기와 색을 물려받는다.
+function SourcesBlock({ children }: ComponentProps<"div">) {
+  return (
+    <div className="flex flex-col gap-1 border-t border-border pt-3 text-small text-text-muted">
+      <PlaceContext.Provider value="sources">{children}</PlaceContext.Provider>
+    </div>
+  );
+}
+
 function HeaderCell({ children, style }: ComponentProps<"th">) {
   return (
     <th className={`${CELL} font-semibold ${alignClass(style) || ALIGN_CLASS.left}`}>{children}</th>
@@ -246,6 +268,7 @@ const SCREEN_COMPONENTS = {
   blockquote: Blockquote,
   code: InlineOrBlockCode,
   del: ({ children }: ComponentProps<"del">) => <del className="line-through">{children}</del>,
+  div: SourcesBlock,
   em: ({ children }: ComponentProps<"em">) => <em className="italic">{children}</em>,
   hr: () => <hr className="border-t border-border" />,
   img: ImagePlace,
@@ -255,6 +278,7 @@ const SCREEN_COMPONENTS = {
   strong: ({ children }: ComponentProps<"strong">) => (
     <strong className="font-semibold">{children}</strong>
   ),
+  sup: Cite,
   table: Table,
   tbody: TableBody,
   td: DataCell,
@@ -284,9 +308,14 @@ export function Markdown({ text }: MarkdownProps) {
 // 글자만 내는 갈래는 화면 읽기 프로그램에 새 출력을 알리는 숨긴 영역이 읽을 글이다. 같은 변환과 허용 목록을 지난 나무에서
 // 요소를 그리지 않고 글자만 남긴다. 블록과 목록 항목 사이는 라이브러리가 끼운 줄 끝 글자가 띄운다. 표는 그렇지 않다. JSX 로
 // 바꾸는 단계가 표 요소 바로 아래의 공백 글자를 걸러 내므로 칸 뒤에 공백을, 줄 뒤에 줄 끝 글자를 손수 둔다. 번호 목록의
-// 번호는 화면에서 CSS 가 그리므로 글자로 되살리고, 링크의 "(새 탭에서 열림)" 은 내지 않는다(누를 수 없는 글이다).
+// 번호는 화면에서 CSS 가 그리므로 글자로 되살리고, 링크의 "(새 탭에서 열림)" 은 내지 않는다(누를 수 없는 글이다). 문장 끝
+// 번호는 앞 글자에 붙어 그려지므로 앞에 공백을 두어 앞말과 한 낱말로 읽히지 않게 한다.
 function Bare({ children }: { readonly children?: ReactNode }) {
   return <>{children}</>;
+}
+
+function CiteText({ children }: { readonly children?: ReactNode }) {
+  return <> {children}</>;
 }
 
 function CellText({ children }: { readonly children?: ReactNode }) {
@@ -326,6 +355,7 @@ const TEXT_COMPONENTS = {
   br: Bare,
   code: Bare,
   del: Bare,
+  div: Bare,
   em: Bare,
   h1: Bare,
   h2: Bare,
@@ -340,6 +370,7 @@ const TEXT_COMPONENTS = {
   p: Bare,
   pre: Bare,
   strong: Bare,
+  sup: CiteText,
   table: Bare,
   tbody: Bare,
   td: CellText,

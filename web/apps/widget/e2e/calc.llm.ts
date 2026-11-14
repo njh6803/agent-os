@@ -3,7 +3,7 @@
 // 루트를 함께 옮겨 계산 에이전트가 실제 모델을 부른다.
 //
 // 모델이 도구를 부를지는 단언하지 않는다. 화면에 선 출력은 주석(`llm-ask.ts`)으로 JSON 리포트에 싣고, 그것이 serve 가 남긴
-// 트레이스의 `run_finished` 출력과 같은지는 감싸는 시험이 본다.
+// 트레이스의 `run_finished` 출력에서 온 글인지(기호를 뗀 글이 원문의 부분열인지)는 감싸는 시험이 본다.
 
 import { LLM_AGENT } from "@agent-os/e2e-stack";
 import { test } from "@playwright/test";

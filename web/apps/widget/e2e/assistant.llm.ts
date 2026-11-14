@@ -4,8 +4,8 @@
 // 트레이스에 `llm_called` 와 성공한 `search` 가 있는지는 감싸는 시험이 본다.
 //
 // 화면의 단언은 정해 둔 낱말이 보이는지로만 한다. 화면의 글이 `run_finished` 의 출력과 글자 그대로 같은지는 보지 않고,
-// `[1]` 같은 대괄호 번호도 넣지 않는다. 위젯이 답을 마크다운으로 그리는 기능(answer-markdown, ADR 0053)이 먼저 오든 나중에
-// 오든 깨지지 않게 하려는 것이다. 승인 카드를 실제 모델과 함께 누르는 장면은 두지 않는다.
+// `[1]` 같은 대괄호 번호도 넣지 않는다. 위젯이 답을 마크다운으로 그려(answer-markdown, ADR 0053) 기호가 빠지고 번호가
+// 위첨자가 되어도 깨지지 않게 하려는 것이다. 승인 카드를 실제 모델과 함께 누르는 장면은 두지 않는다.
 
 import { ASSISTANT_AGENT } from "@agent-os/e2e-stack";
 import { expect, test } from "@playwright/test";
