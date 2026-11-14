@@ -79,3 +79,17 @@ open-session을 부른다 2026-11-14T02:25:46Z
   - `tests/test_plan_status.py`의 끝 줄 시험: rebase로 03(PR 563)이 들어오며 `answer-markdown`의 티켓 네 장이 모두 done이 되어, 이 PR이 마지막 티켓을 닫는다. 그래서 `.scratch/answer-markdown/plan.md`에 `**끝:** 2026-11-14`를 더하고 `uv run python tools/plan_table.py`를 돌려 `.scratch/plan.md`까지 같은 커밋에 싣는다(규칙은 `docs/agents/issue-tracker.md`의 전체 계획 절, `implement` 스킬을 읽었다). 앞 세션이 끝 줄을 더하지 않은 것은 그때 03이 `ready-for-agent`였기 때문이다(위 "한 일").
   - `tests/tools/test_rerun_runner.py`의 "첫 인계 뒤 멈추고 확인 인자를 주면 잇는다": 단독으로 `uv run pytest -q tests/tools/test_rerun_runner.py -k 본_측정에서_첫_인계 -p no:xdist`를 치면 통과했다(손으로 쳤다, 1 passed). 이 PR이 건드린 파일(`web/`, 문서)과 이어지는 경로를 찾지 못했고 부하가 높은 병렬 실행에서만 빨간 것으로 어림한다. 원인은 가르지 못했다. 다시 돌린 pre-commit이 초록이면 그대로 두고, 또 빨가면 diagnosing-bugs로 간다.
 - 남은 것: 푸시, PR 열기, 봇 회차, 병합. 티켓 3번(올리기와 앱 안 브라우저 확인)은 이 PR 밖이다.
+
+## 봇 첫 회차(PR 564, 3차 세션)
+
+- 머리 6df8f15에서 `uv run python tools/wait_ci.py 564`가 `끝: 모두 통과. CodeRabbit: Finished`였다(출력을 읽었다. verify·python·web·e2e 셋·visual·ticket·claude-review SUCCESS, llm SKIPPED).
+- claude-review(코멘트를 읽었다): 지적 없음, Nit 1. `web/packages/react-18/src/index.ts` 독스트링이 "코드는 없다"는데 경로 계산과 상수를 내보낸다는 지적이었다. 맞아서 "시험이 읽을 값(자리와 판 문자열)만 내보낸다"로 고쳤다.
+- CodeRabbit(코멘트를 읽었다. 첫 회차): Minor 1과 병합 위험 요약의 같은 취지. `Status: done`인 티켓 04에 열린 체크박스(올리기)가 남아 추적되지 않는다는 지적이었다. 앞 티켓 01·02는 올리기를 "이 티켓의 일이 아니다"로 닫았으므로 04도 그 서식으로 맞췄고(티켓 13행), 남은 일은 아래 "다음"에 적었다. 새 티켓을 따로 쓰지 않은 까닭은, 올리기는 사용자 계정의 아티팩트에 보내는 일이라 올리기 세션(`sync-design-system`)이 harness 티켓으로 쓰는 것이 이 저장소의 길이기 때문이다(앞의 `ds-upload-markdown-cards`가 그랬다. 그 티켓 이름을 읽었다).
+- 푸시 하나에 위 둘과 이 일지를 함께 실었다. CodeRabbit은 이 PR의 시간당 포함 리뷰가 0 남았다고 적었으므로(코멘트를 읽었다) 둘째 회차는 한도로 비거나 지연될 수 있다. 둘째 회차부터는 Critical·Major만 고친다(`merge.md` 2).
+
+## 다음
+
+- 이 PR이 병합되면 디자인 시스템 아티팩트(https://claude.ai/artifact/8ttLDZQqchfD2ao1XG56GH)는 아직 옛 묶음이라 Markdown 카드가 그대로 깨져 있다. `/sync-design-system 올리기`로 고친 부품을 올리고, 앱 안 브라우저로 Components 절의 Markdown 카드가 그려지고 칸 아래가 잘리지 않는지 본다. 올리기는 사용자 계정의 아티팩트에 보내는 일이라 올리기 세션이 harness 티켓으로 쓰고 한다. 이 세션은 올리지 않았다.
+- `answer-markdown`의 네 티켓이 모두 닫혀 기능 계획에 `**끝:** 2026-11-14`를 적었다. 병합 뒤 결정표의 출시 PR 줄 조건(끝 줄을 적은 커밋이 dev에만 있다)이 찬다. 전제(main CI 초록)는 병합 뒤 `merge.md`의 "출시 PR"대로 확인한다.
+- pre-commit pytest의 `test_rerun_runner.py` 시험 하나가 병렬 실행에서 한 번 빨갰다(단독 실행은 초록). 같은 시험이 또 빨가면 diagnosing-bugs로 원인을 찾는다. 이 PR이 건드린 경로와 이어지는 곳은 못 찾았다.
+- 봇 회차 반영 커밋의 pre-commit pytest(622.8초, 7308 passed, 1 failed)에서는 다른 시험 `tests/tools/test_probe_kit.py::test_배출은_줄이_계속_와도_제한_시간에_끝난다`가 빨갰다(러너 출력을 읽었다. `reader.drain(0.5)`가 빈 목록을 돌려줬다). 단독으로 `uv run pytest -q tests/tools/test_probe_kit.py -p no:xdist`를 치면 15건이 통과했다(손으로 쳤다). 이 커밋은 티켓 문장, 독스트링 한 줄, 일지만 바꿨으므로 이어지는 경로가 없고, 자식 프로세스가 0.5초 안에 첫 줄을 내야 하는 시험이라 다른 세션이 함께 돌아 부하가 높은 때에 시작이 늦은 것으로 어림한다(원인은 가르지 못했다). 서로 다른 시간 민감 시험이 한 번씩 빨간 것이라 같은 시험이 두 번 연속 빨간 것은 아니다(`CLAUDE.md` 작업 규약 6의 조건 밖). 병렬 부하에서 시간 민감 시험이 흔들리는지는 retro가 대기열에서 회차를 센다.
