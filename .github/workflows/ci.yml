@@ -362,6 +362,10 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: 24
+      # 예시 MCP 서버(plugins/mcp/everything)가 실행 파일 이름으로 뜨므로 calc 예시를 실제 모델로 도는 두 스텝 앞에 전역으로 깐다.
+      # 판은 서버 이미지에 깔 판과 같은 2.3.0이다(.scratch/release-image/spec.md 이미지의 구성).
+      # zizmor 의 adhoc-packages 는 잠금 파일 밖의 설치를 가리킨다. 판을 정확히 고정했고, 이 저장소에는 이 패키지를 둘 잠금 파일이 없어 그 줄에서 무시한다.
+      - run: npm install --global @modelcontextprotocol/server-everything@2.3.0  # zizmor: ignore[adhoc-packages] 판을 고정했고 잠금 파일이 없다
       - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
         with:
           package_json_file: web/package.json
