@@ -73,9 +73,30 @@
 
 첫 커밋 시도는 pre-commit 의 pytest 에서 두 시험이 빨개 막혔다. `tests/channel/cli/test_interrupt.py::test_서버를_닫기_시작한_뒤에_한_번_누르면_닫기를_마치고_중단으로_끝난다`(자식이 30초 안에 끝나지 않았다)와 `tests/tools/test_rerun_runner.py::test_같은_갈래가_두_번_든_파일럿의_두_회차가_함께_돌아도_번호가_다르다`(동시에 도는 회차가 1이었다)다. 둘 다 이 브랜치가 건드리지 않은 시간에 기대는 시험이고, 세 세션이 함께 돌아 PC 부하가 높던 때다. 그 둘만 `uv run pytest <두 시험> -p no:xdist` 로 홀로 돌리니 39초에 통과했다(손으로 쳤다). 이어 pre-commit 의 인용 대조가 이 일지의 인용 하나를 경고해 따옴표를 뗐다.
 
+## 커밋
+
+`781d86ab0` 로 커밋했다. pre-commit 의 pytest 가 세 번 막힌 뒤(시험은 `test_interrupt.py`, `test_rerun_runner.py`, `test_rerun_gates.py` 의 시간에 기대는 것들이다) 다른 세션의 `git commit` 이 줄어든 때 모두 통과했다(pytest 397.6초, web-verify 683.3초). 이 브랜치가 건드리지 않은 시험이고 훅은 건너뛰지 않았다.
+
+## PR 직전 리뷰(coderabbit-review, CLI 0.7.5)
+
+`Plan: Free`, `Seat: not assigned` 인데 `coderabbit review --agent --committed --base origin/dev` 가 끝까지 돌아 `review_completed` 를 냈다(7개 파일). CLI 축이다. 서브에이전트가 낸 것은 CLI 원본 1건과 자기가 직접 읽고 잰 2건이다.
+
+고친 것(본 세션이 코드로 다시 확인한 뒤 판정했다. 새 시험 셋은 고치기 전에 빨강인 것을 봤다):
+
+- [Major, 서브에이전트가 직접 잰 것] `--head` 가 `-` 로 시작하면 git 옵션으로 읽힌다. `_log` 의 `span` 이 `--` 앞에 놓이고 `_ensure_ancestor` 와 `_read_at` 도 같다. 서브에이전트가 `--head=--output=<파일>` 로 로그가 그 파일에 쓰이고 도구가 `release=false`, 종료 0으로 끝나는 것을 재현했다. `_check_revision` 을 더해 `plan_release` 와 `render_notes` 입구에서 `ReleaseError` 로 거절한다. 시험 `test_머리가_빼기로_시작하면_git_옵션으로_읽히기_전에_거절한다` 가 두 함수와 명령줄을 모두 밟고 파일이 생기지 않는 것까지 본다.
+- [Minor, CLI 원본] 범위 밖에서 더해진 기능 조각을 범위 안에서 이름만 바꾸면 새 경로가 더해진 것으로 잡혀 다시 실렸다. 명세 "범위 밖에서 더해진 조각은 그 뒤에 고쳐졌어도 다시 싣지 않는다" 를 어겼다. `_moved_in` 이 지난 판 태그와 머리의 순 변경에서 이름 바꾸기(`diff -M --diff-filter=R`)의 새 경로를 골라 `_added` 에서 뺀다. 범위 안에서 더한 뒤 옮긴 조각은 옛 경로가 지난 판에 없어 계속 싣는다(앞의 `이름을_바꾼_기능_조각` 시험이 그대로 지킨다). 시험 `test_범위_밖에서_더해진_조각은_범위_안에서_이름을_바꿔도_다시_싣지_않는다` 를 더했다.
+- [Minor, 서브에이전트가 직접 읽은 것] `main` 이 `OSError` 를 잡지 않아 `build_bundle` 의 `mkdir` 이 `FileExistsError` 로 죽으면 접두 없이 traceback 이었다. `except (ReleaseError, OSError)` 로 묶었다. 시험 `test_묶음을_쓰지_못하면_접두를_붙여_종료_코드_1이다` 를 더했다.
+
+남긴 것과 이유:
+
+- 내용을 절반 넘게 고치며 옮긴 조각은 `git diff -M` 이 이름 바꾸기로 읽지 못해 다시 실린다. 조각 이름은 기능 계획의 slug 여야 해 옮길 일이 드물고, 고치려면 유사도 문턱을 낮춰 다른 오탐을 부른다. `_moved_in` 독스트링에 못 보는 것으로 적었다.
+- 서브에이전트가 오탐으로 본 것(심볼릭 링크와 경로 탈출, 정규식 `fullmatch`, 결정성, `$GITHUB_OUTPUT` 주입, grype JSON)은 본 세션이 앞 셀프 리뷰에서 같은 길을 이미 시험으로 고정했거나 입력이 CI 의 것이라 더 고치지 않았다. 마크다운에 이미지 이름과 CVE 번호를 이스케이프 없이 싣는 것은 입력이 CI 의 스캐너 출력이다.
+
+다시 돌린 명령: `uv run ruff check`(통과), `uv run pyright tools/release.py tests/tools/test_release.py`(0건), `uv run pytest tests/tools/test_release.py -p no:xdist`(92개 통과, 42초). 이 수정을 담은 두 번째 커밋의 pre-commit 결과는 PR 본문에 적는다.
+
 ## 이어서 할 일
 
-- 티켓 04 체크박스를 채우고 `Status` 를 `done` 으로 바꾼다. 기능의 마지막 열린 티켓이 아니므로 `**끝:**` 줄은 적지 않는다. `uv run python tools/plan_table.py` 를 돌려 `.scratch/plan.md` 를 같은 커밋에 싣는다.
-- `uv run python tools/sibling_overlap.py`, `uv run python tools/run_checks.py`(백그라운드) 를 치고 커밋한다. 이 티켓의 남은 일은 PR 과 병합까지다.
+- 이 수정을 커밋하고 푸시한 뒤 PR 을 연다(본문 초안은 세션 스크래치패드에 있고, 체크리스트의 `coderabbit-review` 줄에 위 판정을 적는다).
+- PR 을 연 직후 `@coderabbitai review` 를 남기고 `merge.md` 2(봇 회차)대로 기다린다. 병합은 워크트리 길(`--squash --match-head-commit`, `--delete-branch` 없음)이다. 05·09·11 티켓이 04 의 메모를 받아 쓴다.
 
 open-session을 부른다 2026-11-14T16:41:02Z

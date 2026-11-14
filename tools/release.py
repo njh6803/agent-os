@@ -243,6 +243,12 @@ def _largest(versions: Mapping[str, Version]) -> str | None:
     return max(versions, key=lambda tag: versions[tag].key, default=None)
 
 
+def _check_revision(head: str) -> None:
+    """`-` 로 시작하는 리비전은 git 이 옵션으로 읽는다(`--output=파일` 은 로그를 그 파일에 쓴다)."""
+    if head.startswith("-"):
+        raise ReleaseError(f"리비전은 - 로 시작할 수 없다: {head!r}")
+
+
 def _ensure_ancestor(repo: Path, tag: str, head: str) -> None:
     done = _run(repo, "merge-base", "--is-ancestor", f"refs/tags/{tag}", head)
     if done.returncode == 1:
@@ -296,11 +302,34 @@ def _added(repo: Path, since: str | None, head: str, folder: str) -> list[str]:
         "--name-only",
         "--format=%x01%H",
     )
+    moved: set[str] = set() if since is None else _moved_in(repo, since, head, folder)
     paths: list[str] = []
     for line in output.split("\n"):
-        if line and not line.startswith("\x01") and line not in paths:
+        if line and not line.startswith("\x01") and line not in moved and line not in paths:
             paths.append(line)
     return paths
+
+
+def _moved_in(repo: Path, since: str, head: str, folder: str) -> set[str]:
+    """지난 판에 이미 있던 파일을 범위 안에서 `folder` 아래로 옮긴 새 경로.
+
+    지난 판과 머리의 순 변경에서만 이름 바꾸기를 찾는다. 범위 안에서 더해진 뒤 옮긴 파일은 옛 경로가
+    지난 판에 없어 여기 들지 않는다. 내용을 절반 넘게 고치며 옮긴 파일은 이름 바꾸기로 읽히지 않아
+    놓친다.
+    """
+    output = _git(
+        repo,
+        "diff",
+        "-M",
+        "--name-status",
+        "--diff-filter=R",
+        f"refs/tags/{since}",
+        head,
+        "--",
+        folder,
+    )
+    columns = (line.split("\t") for line in output.split("\n") if line)
+    return {one[2] for one in columns if len(one) == 3}
 
 
 def _read_at(repo: Path, revision: str, path: str) -> str | None:
@@ -384,6 +413,7 @@ def _next_number(
 
 
 def plan_release(repo: Path, head: str = "HEAD") -> Plan:
+    _check_revision(head)
     tags = _tags(repo)
     versions = _version_tags(tags)
     candidate = read_candidate(repo)
@@ -452,6 +482,7 @@ def render_notes(
     grype: Mapping[str, str] | None = None,
     head: str = "HEAD",
 ) -> str:
+    _check_revision(head)
     version = parse_version(number)
     if version is None:
         raise ReleaseError(f"판 번호가 X.Y.Z 나 X.Y.Z-rc.N 꼴이 아니다: {number!r}")
@@ -662,7 +693,7 @@ def main(argv: Sequence[str]) -> int:
             return 0
         print(build_bundle(Path(args.source), Path(args.out), args.number, args.namespace))
         return 0
-    except ReleaseError as error:
+    except (ReleaseError, OSError) as error:  # OSError: 묶음을 쓰다 나는 파일 오류
         print(f"{PREFIX}{error}", file=sys.stderr)
         return 1
 

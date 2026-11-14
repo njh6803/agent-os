@@ -450,6 +450,21 @@ def test_머리를_고르면_그_시점의_번호와_노트를_낸다(
     assert capsys.readouterr().err.startswith("release: ")
 
 
+def test_머리가_빼기로_시작하면_git_옵션으로_읽히기_전에_거절한다(
+    repo: Repo, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    repo.product("feat: 첫 기능 (#1)")
+    leaked = tmp_path / "새어_나온_파일"
+    option = f"--output={leaked}"
+    with pytest.raises(ReleaseError, match="리비전"):
+        plan_release(repo.path, option)
+    with pytest.raises(ReleaseError, match="리비전"):
+        render_notes(repo.path, "0.1.0", None, option)
+    assert main(["number", "--repo", str(repo.path), f"--head={option}"]) == 1
+    assert capsys.readouterr().err.startswith("release: ")
+    assert not leaked.exists()
+
+
 def test_스크립트로_불러도_돌고_구성_오류는_종료_코드_1이다(repo: Repo) -> None:
     """CI 는 `python3 tools/release.py` 로 부른다. 저장소 루트가 import 경로에 없는 길이다."""
     script = Path(__file__).resolve().parents[2] / "tools" / "release.py"
@@ -555,6 +570,19 @@ def test_범위_안에서_이름을_바꾼_기능_조각은_바꾼_뒤의_이름
     repo.git("mv", "docs/release-notes/features/beta.md", "docs/release-notes/features/gamma.md")
     repo.commit("docs: 베타 조각의 이름을 바꾼다 (#3)")
     assert "## 기능 소개\n\n베타 단락이다.\n" in render_notes(repo.path, "0.2.0")
+
+
+def test_범위_밖에서_더해진_조각은_범위_안에서_이름을_바꿔도_다시_싣지_않는다(repo: Repo) -> None:
+    repo.product(
+        "feat: 알파를 더한다 (#1)", {"docs/release-notes/features/alpha.md": "알파 단락이다.\n"}
+    )
+    repo.tag("v0.1.0")
+    repo.git("mv", "docs/release-notes/features/alpha.md", "docs/release-notes/features/delta.md")
+    repo.commit("docs: 알파 조각의 이름을 바꾼다 (#2)")
+    repo.product("feat: 다음 기능 (#3)")
+    notes = render_notes(repo.path, "0.2.0")
+    assert "알파 단락" not in notes
+    assert "기능 소개" not in notes
 
 
 def test_빈_묶음은_머리째_뺀다(repo: Repo) -> None:
@@ -808,6 +836,28 @@ def test_묶음_도구는_만든_파일의_경로를_낸다(
     )
     assert code == 0
     assert capsys.readouterr().out.strip() == str(tmp_path / "out" / "agent-os-0.1.0.tar.gz")
+
+
+def test_묶음을_쓰지_못하면_접두를_붙여_종료_코드_1이다(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    not_a_folder = tmp_path / "파일"
+    not_a_folder.write_text("x", encoding="utf-8")
+    code = main(
+        [
+            "bundle",
+            "--number",
+            "0.1.0",
+            "--namespace",
+            "agentos",
+            "--source",
+            str(_틀(tmp_path)),
+            "--out",
+            str(not_a_folder),
+        ]
+    )
+    assert code == 1
+    assert capsys.readouterr().err.startswith("release: ")
 
 
 # ---------- 번호 태그 판정 ----------
