@@ -59,6 +59,8 @@ web/               pnpm 워크스페이스(Node 24, TypeScript 5.9). 파이썬�
   packages/e2e-stack/  e2e 준비(@agent-os/e2e-stack, 앱의 devDependency). 같은 출처 중계, 픽스처 플러그인(저장소 플러그인 복사
                    포함), 실제 serve 띄우기와 빈 포트·기다리기·끄기 도우미(Stack), 사이트 키와 토큰 서명, 준비가 시험에 넘긴
                    트레이스 폴더에서 실행의 주체를 읽는 것. 환경 변수 이름은 앱이 준다. 상대 import 에 확장자를 붙인다
+  packages/react-18/  React·ReactDOM 18.3.1 만 든 시험 전용 패키지(@agent-os/react-18, 판 고정). 디자인 시스템 카드 시험이
+                   페이지가 싣는 판으로도 카드를 그리려고 쓴다. 코드는 그 판의 폴더 경로와 판 번호뿐이다(ADR 0025 이력 2026-11-14)
   packages/ui/     디자인 시스템(@agent-os/ui). src/styles/(디자인 토큰 CSS theme.css, 글꼴 CSS fonts.css, shadow 보정,
                    판정 스토리), src/themes.ts(`./themes`), node/(`./fonts`. 글꼴 파일을 고르고 복사하는 node 쪽
                    도우미와 FontFaceSource 타입), src/components/atoms/·molecules/(컴포넌트와 스토리, <Name>.md),
