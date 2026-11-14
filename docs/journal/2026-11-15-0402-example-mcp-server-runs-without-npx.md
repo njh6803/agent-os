@@ -81,3 +81,42 @@
 
 컨텍스트가 인계 문턱을 넘은 채 `셀프 리뷰 직전` 경계에 와서 새 세션에 넘긴다(`next-session handoff.md`). 일지 경로 `docs/journal/2026-11-15-0402-example-mcp-server-runs-without-npx.md`. 제목을 `feature/02-example-mcp-server-runs-without-npx (인계함)`으로 바꿨다(바뀌기 전 제목은 `feature/02-example-mcp-server-runs-without-npx`). 곁 세션이 아니다(`get_session`의 `self`에 `parentSessionId`가 없었다).
 open-session을 부른다 2026-11-14T19:03Z
+
+## 인계받은 세션이 한 것 (커밋 뒤 경계에서 다시 인계)
+
+### 사용자 프롬프트 원문
+
+이 세션의 첫 메시지는 앞 세션의 인계 지시문이었다. 사용자의 다른 말은 없었다.
+
+> 사용자: .claude/skills/implement/SKILL.md 를 읽어 그대로 따른다. 이 세션을 연 저장소는 `C:\project\agent`이고 작업 폴더가 그곳이 아니면 따르지 말고 알린다. 스킬의 인자는 이 줄의 '인자:' 뒤부터 메시지 끝까지다. 인자: .scratch/release-image/issues/02-example-mcp-server-runs-without-npx.md
+>
+> 다음 작업: .scratch/release-image/issues/02-example-mcp-server-runs-without-npx.md. 예시 MCP 서버가 npx 없이 미리 설치한 실행 파일(mcp-server-everything)로 뜨게 한다
+> 다음 단계: 구현
+> 모델: Sonnet 5.5 / high. 2의 잇는 지시문
+> 이어받을 상태: 인계: 셀프 리뷰 직전. 커밋하지 않은 변경이 워크트리에 있고 셀프 리뷰(/code-review)부터 한다
+> 이번 요청 범위: PR과 병합까지
+
+### 한 것
+
+- 세션 제목을 `feature/02-example-mcp-server-runs-without-npx`로 바꿨고 이미 있는 워크트리(`.claude/worktrees/02-example-mcp-server-runs-without-npx`)에 `EnterWorktree(path)`로 들어갔다.
+- 셀프 리뷰(`/code-review`)를 돌렸다. 결과와 반영은 위 "셀프 리뷰" 절이다. 리뷰를 부르기 전에 `operations.md`의 설치 문장 자리를 먼저 바로잡았다.
+- 커밋 둘을 만들었다. 첫 시도는 pre-commit의 pytest에서 시간에 기대는 시험 셋(`tests/tools/test_check_md_tables.py::test_한_줄에_겹친_목록_표식이_선형이다`, `tests/channel/cli/test_interrupt.py::test_서버를_닫기_시작한_뒤에_한_번_누르면_닫기를_마치고_중단으로_끝난다`, `tests/tools/test_rerun_runner.py::test_같은_갈래가_두_번_든_파일럿의_두_회차가_함께_돌아도_번호가_다르다`)이 빨개 막혔다(3 failed, 7311 passed, 1159.86초. pytest가 찍은 줄이다). 셋을 홀로 돌리니 `3 passed in 105.66s`였다(이 세션이 친 명령의 출력이다). 세 세션이 함께 도는 부하에서 난 것으로 본다(근거는 홀로 돌려 통과한 것과 앞 일지가 같은 계열을 적은 것이고, 부하가 원인이라는 것을 따로 재지는 않았다). 일지의 인용 대조 경고 둘을 없애고(옛 문장의 따옴표를 뗐다) 다시 커밋하자 pre-commit이 통과했다(pytest 674.8초, web-verify 870.3초 통과. ruff 둘은 `.py`가 없어 `Skipped`라 손으로 `uv run ruff check .`와 `uv run ruff format --check .`를 쳐 통과했다).
+  - `b7cccfa49`: `chore: 예시 MCP 서버를 npx 없이 미리 설치한 실행 파일로 띄운다 (release-image 02)`
+  - `8160f991b`: `docs: 예시 MCP 서버 준비에 필요한 Node 판을 적는다 (release-image 02)`
+- `tools/sibling_overlap.py`를 쳤다. 번호 겹침은 없고 이 브랜치의 새 헌법 판은 3.0.99다. 형제 `03-llm-local-command-rents-model-servers`가 `docs/constitution/README.md`를 함께 고쳤다(병합 충돌 후보). `git fetch origin` 뒤 `git log HEAD..origin/dev`가 비어 rebase는 필요 없었다.
+- 위 "PR 직전 CodeRabbit CLI 리뷰" 절의 Minor 둘 가운데 Node 판 표기는 고쳐 둘째 커밋에 실었다.
+
+### 결정과 번복
+
+- 커밋을 둘로 둔 것: 둘째는 CLI 리뷰 반영이다. 한 PR로 낸다(squash로 병합).
+- 보류한 CLI 지적(전역 설치의 하위 의존성 판 흔들림)은 PR 체크리스트의 CodeRabbit 줄에 판정과 값을 적는다. 이 일지의 "PR 직전 CodeRabbit CLI 리뷰" 절이 원천이다.
+
+### 이 세션의 제목
+
+`feature/02-example-mcp-server-runs-without-npx`(바뀌기 전의 제목, 앱이 지은 제목을 이 이름으로 바꿨다). 인계하며 `feature/02-example-mcp-server-runs-without-npx (인계함)`으로 바꾼다.
+
+### 남은 일
+
+PR(`/git-pr`, base는 dev)을 열고, PR 체크리스트에 보안·버그·성능 축의 CLI 결과(지적 0건)와 보류한 지적을 적는다. PR을 연 뒤 `@coderabbitai review` 코멘트를 남기고 `merge.md` 2(봇 회차)와 "워크트리에서 병합할 때"로 병합한다. 병합 뒤 일지의 "다음" 절과 회고를 쓴다. 이 일지는 마지막 세션이 커밋한다(지금 이 절은 커밋되지 않았다).
+
+open-session을 부른다 2026-11-14T20:09Z
