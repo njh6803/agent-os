@@ -1,0 +1,89 @@
+# syntax=docker/dockerfile:1
+# 측정용이다. 최종 Dockerfile 이 아니다. 이미지에 판 번호를 넣는 길을 타깃 하나씩으로 견준다.
+# 빌드 컨텍스트는 저장소 루트이고 들일 파일은 Dockerfile.version.dockerignore 가 고른다. 저장소의
+# 파일은 고치지 않고 빌드 단계 안의 사본만 고친다. 타깃을 고르고 판을 넘기는 것은 run.py 다.
+#
+#   control          고치지 않은 파일에 `uv sync --locked` (잠금 검사가 이 uv 판에서 지나는 기준선)
+#   a1-locked        pyproject.toml 의 판만 고친 뒤 `uv sync --locked`
+#   a2-frozen        pyproject.toml 의 판만 고친 뒤 `uv sync --frozen`
+#   a3-lock-edited   pyproject.toml 과 uv.lock 의 자기 항목을 함께 고친 뒤 `uv sync --locked`
+#   b1-frozen        고치기 전에 `--locked --no-install-project` 로 의존성만, 고친 뒤 `--frozen`
+#   b2-pip           고치기 전에 같은 것, 고친 뒤 `uv pip install --no-deps .`
+#   c-dynamic        hatchling 의 동적 판(환경 변수)으로 바꾼 pyproject.toml 과 다시 쓴 잠금 파일
+#   c-dynamic-unset  같은 것에 환경 변수를 주지 않는다
+#
+# 바탕 이미지는 2026-11-13 에 받은 태그의 digest 다(python:3.12-slim-trixie, ghcr.io/astral-sh/uv:latest).
+ARG PYTHON_IMAGE=python@sha256:5e2bdb1b0d542d5039cffb8181c65930093949194a65c365dfb1b0fe13a4fa5b
+ARG UV_IMAGE=ghcr.io/astral-sh/uv@sha256:5cc1805e2426484abca4ad46ea783bab281fdb225fd82d8ce6d66a81254bac85
+
+FROM ${UV_IMAGE} AS uv
+
+FROM ${PYTHON_IMAGE} AS base
+COPY --from=uv /uv /usr/local/bin/uv
+ENV UV_PROJECT_ENVIRONMENT=/app/.venv \
+    UV_LINK_MODE=copy \
+    UV_PYTHON_DOWNLOADS=never \
+    UV_NO_CACHE=1 \
+    PATH=/app/.venv/bin:$PATH
+WORKDIR /build
+COPY pyproject.toml uv.lock README.md ./
+COPY src ./src
+COPY plugins /app/plugins
+
+FROM base AS control
+RUN uv sync --locked --no-dev --no-editable
+
+# pyproject.toml 의 [project] version 한 줄만 고친 사본. 고친 줄을 찍어 빌드 기록에 남긴다.
+FROM base AS edited
+ARG APP_VERSION
+RUN test -n "${APP_VERSION}" \
+ && sed -i "0,/^version = \"[^\"]*\"\$/s//version = \"${APP_VERSION}\"/" pyproject.toml \
+ && grep -n '^version = ' pyproject.toml
+
+FROM edited AS a1-locked
+RUN uv sync --locked --no-dev --no-editable
+
+FROM edited AS a2-frozen
+RUN uv sync --frozen --no-dev --no-editable
+
+FROM edited AS a3-lock-edited
+ARG LOCK_VERSION
+RUN test -n "${LOCK_VERSION}" \
+ && sed -i "/^name = \"agent-os\"\$/{n;s/^version = \"[^\"]*\"\$/version = \"${LOCK_VERSION}\"/}" uv.lock \
+ && grep -n -A1 '^name = "agent-os"$' uv.lock
+RUN uv sync --locked --no-dev --no-editable
+
+FROM base AS b-deps
+RUN uv sync --locked --no-dev --no-install-project
+
+FROM b-deps AS b1-frozen
+ARG APP_VERSION
+RUN test -n "${APP_VERSION}" \
+ && sed -i "0,/^version = \"[^\"]*\"\$/s//version = \"${APP_VERSION}\"/" pyproject.toml \
+ && grep -n '^version = ' pyproject.toml \
+ && uv sync --frozen --no-dev --no-editable
+
+FROM b-deps AS b2-pip
+ARG APP_VERSION
+RUN test -n "${APP_VERSION}" \
+ && sed -i "0,/^version = \"[^\"]*\"\$/s//version = \"${APP_VERSION}\"/" pyproject.toml \
+ && grep -n '^version = ' pyproject.toml \
+ && uv pip install --python /app/.venv/bin/python --no-deps .
+
+# 동적 판. 저장소가 이렇게 커밋했다면 가졌을 pyproject.toml 과 잠금 파일을 빌드 단계에서 만든다.
+# 잠금 파일은 `uv lock` 으로 다시 쓰고, 원본과의 차이를 빌드 기록에 찍는다.
+FROM base AS c-dynamic-src
+RUN sed -i '0,/^version = "[^"]*"$/s//dynamic = ["version"]/' pyproject.toml \
+ && printf '\n[tool.hatch.version]\nsource = "env"\nvariable = "AGENT_OS_VERSION"\n' >> pyproject.toml \
+ && cp uv.lock uv.lock.orig \
+ && AGENT_OS_VERSION=0.0.0 uv lock \
+ && (diff uv.lock.orig uv.lock || true) \
+ && grep -n -A2 '^name = "agent-os"$' uv.lock
+
+FROM c-dynamic-src AS c-dynamic
+ARG APP_VERSION
+RUN test -n "${APP_VERSION}" \
+ && AGENT_OS_VERSION="${APP_VERSION}" uv sync --locked --no-dev --no-editable
+
+FROM c-dynamic-src AS c-dynamic-unset
+RUN uv sync --locked --no-dev --no-editable

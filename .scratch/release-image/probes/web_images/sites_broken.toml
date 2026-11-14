@@ -1,0 +1,8 @@
+# web_images 프로브의 깨진 사이트 파일. TOML 로는 읽히지만 필수 칸(issuer)이 없고 모르는 칸이 있다.
+schema_version = "1"
+
+[[sites]]
+audience = "agent-os"
+allowed_origins = ["https://probe-broken.example"]
+agents = ["echo"]
+unknown_probe_key = true

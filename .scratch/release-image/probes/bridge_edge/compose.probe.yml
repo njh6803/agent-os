@@ -1,0 +1,15 @@
+# 측정 전용 덧씌움. 빈도 제한 조합을 재는 평문 포트 8081 을 더하고, 안쪽 네트워크의 대역을 고정한다.
+# 대역을 고정하는 것은 이웃 기기가 그 대역으로 가는 경로를 서버를 경유지로 삼아 더하는 갈래 때문이다.
+
+services:
+  proxy:
+    ports:
+      - "8081:8081"
+    volumes:
+      - ./nginx/probe-limits.conf:/etc/nginx/conf.d/probe-limits.conf:ro
+
+networks:
+  edge:
+    ipam:
+      config:
+        - subnet: 172.30.0.0/24

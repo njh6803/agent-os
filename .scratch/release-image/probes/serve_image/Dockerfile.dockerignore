@@ -1,0 +1,8 @@
+# 빌드 컨텍스트는 저장소 루트다. 들일 것만 연다(허용 목록).
+*
+!pyproject.toml
+!uv.lock
+!README.md
+!src
+!plugins
+**/__pycache__

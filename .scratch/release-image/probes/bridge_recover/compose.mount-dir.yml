@@ -1,0 +1,6 @@
+# 덧씌움(항목 8). 프록시의 설정을 호스트의 폴더(./live)로 얹는다. 프로브가 그 폴더의
+# default.conf 를 호스트에서 고친 뒤 `nginx -s reload` 를 친다.
+services:
+  proxy:
+    volumes: !override
+      - ./live:/etc/nginx/conf.d:ro

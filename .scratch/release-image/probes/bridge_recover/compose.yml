@@ -1,0 +1,68 @@
+# 단독 배포의 모양을 흉내 낸 배치. 프록시(nginx) 하나와 뒷단 넷을 compose 의 기본 네트워크
+# (보통의 bridge)에 두고, 프록시가 서비스 이름으로 접속한다. 뒷단은 실제 이미지가 아니라
+# backend/server.py 다. 포트 번호는 프로브가 고른 값이다(관리 화면과 위젯의 기본이 둘 다 3000
+# 이라는 ADR 0056 의 문장을 따라 셋을 3000 으로 두었다. 같은 포트면 옛 주소를 차지한 다른
+# 컨테이너가 대신 답할 수 있다).
+#
+# 프로브(run.py)가 dind 안쪽 엔진에서 환경 변수로 갈래를 고른다.
+#   NGINX_IMAGE     digest 로 고정한 nginx 이미지
+#   NGINX_VARIANT   nginx/<이름>/ 폴더(static, variable, variable-novalid, upstream)
+#   NGINX_MAIN      nginx/main/<이름>.conf 주 설정(auto, one-worker). 접근 기록에 상류 주소를 찍는다
+#   BACKEND_TAG     뒷단 이미지의 태그(v1, v2). 판 올림은 이 값을 바꾼 뒤의 `up -d` 다
+#   RESTART_POLICY  재시작 정책(unless-stopped, always, no)
+#   WIDGET_DELAY    위젯이 포트를 열기 전에 기다리는 초(뜰 때 빌드하는 위젯의 흉내)
+
+x-backend: &backend
+  image: ri-recover-backend:${BACKEND_TAG:-v1}
+  pull_policy: never
+  init: true
+  restart: ${RESTART_POLICY:-unless-stopped}
+  stop_grace_period: 2s
+
+services:
+  proxy:
+    image: ${NGINX_IMAGE:?NGINX_IMAGE 가 필요하다}
+    pull_policy: never
+    restart: ${RESTART_POLICY:-unless-stopped}
+    stop_grace_period: 2s
+    ports:
+      - "127.0.0.1:8080:8080"
+    volumes:
+      - ./nginx/main/${NGINX_MAIN:-auto}.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/${NGINX_VARIANT:-static}:/etc/nginx/conf.d:ro
+
+  serve:
+    <<: *backend
+    environment:
+      BACKEND_NAME: serve
+      BACKEND_PORT: "8000"
+
+  admin:
+    <<: *backend
+    environment:
+      BACKEND_NAME: admin
+      BACKEND_PORT: "3000"
+
+  widget:
+    <<: *backend
+    environment:
+      BACKEND_NAME: widget
+      BACKEND_PORT: "3000"
+      START_DELAY: "${WIDGET_DELAY:-0}"
+
+  portal:
+    <<: *backend
+    environment:
+      BACKEND_NAME: portal
+      BACKEND_PORT: "3000"
+
+  # 낮은 주소를 미리 차지해 두는 자리 채움. 프로브가 조작 직전에 지워, 다시 뜨는 컨테이너가 옛
+  # 주소가 아닌 주소를 받게 한다(주소가 실제로 바뀐 회차만 측정이다).
+  spare:
+    profiles: ["spare"]
+    image: ri-recover-backend:v1
+    pull_policy: never
+    init: true
+    restart: "no"
+    stop_grace_period: 1s
+    command: ["sleep", "infinity"]
