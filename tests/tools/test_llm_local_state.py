@@ -369,11 +369,14 @@ def test_준비_확인은_프록시가_거절하는_파이썬_기본_사용자_�
         thread.join(timeout=10)
 
 
-def test_구성의_타이머는_파드를_멈추지_않고_지운다() -> None:
+def test_구성의_타이머는_이미지의_runpodctl_명령으로_파드를_멈추지_않고_지운다() -> None:
+    # 2026-11-14 손으로 봤다: 이미지의 runpodctl 1.14.15는 `pod` 하위 명령이 없어 600초 뒤
+    # 타이머가 `unknown command "pod"`로 실패했고, 파드 안에서 친 `runpodctl remove pod`는 주입된
+    # 키로 파드를 지웠다. REST `/v2/pods/<id>`는 문서 페이지로 301이었다.
     text = CONFIG.read_text(encoding="utf-8")
-    assert "sleep" in text and "runpodctl pod delete" in text
-    assert "-X DELETE" in text and "/pods/" in text
-    assert "pod stop" not in text
+    assert "sleep" in text and "runpodctl remove pod" in text
+    assert "pod delete" not in text and "rest.runpod.io" not in text
+    assert "pod stop" not in text and "stop pod" not in text
 
 
 # --- 실제 pytest 자식 ---

@@ -87,10 +87,12 @@ locals {
   ports = { for i, n in sort(keys(var.models)) : n => local.shared ? 8000 + i : 8000 }
 
   # 파드가 시작하면 가장 먼저 건다. 멈추지 않고 지운다(멈춘 파드는 디스크 요금이 계속 나간다).
+  # 지우는 명령은 이미지의 runpodctl(1.14.15)이 아는 `remove pod`다. 첫 판은 `pod` 하위 명령을
+  # 썼는데 그 판에 없어 타이머가 실패했다(2026-11-14 파드 로그와 `exec-pod`로 봤다). 파드 안에서 친
+  # `runpodctl remove pod "$RUNPOD_POD_ID"`는 Runpod가 주입한 키로 파드를 지웠다.
   timer = join(" ", [
     "( sleep ${var.timer_minutes * 60};",
-    "if command -v runpodctl >/dev/null 2>&1; then runpodctl pod delete \"$RUNPOD_POD_ID\";",
-    "else curl -fsS -X DELETE -H \"Authorization: Bearer $RUNPOD_API_KEY\" \"https://rest.runpod.io/v2/pods/$RUNPOD_POD_ID\"; fi ) &",
+    "runpodctl remove pod \"$RUNPOD_POD_ID\" ) &",
   ])
 
   serve = {
