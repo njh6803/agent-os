@@ -103,11 +103,13 @@ claude-review 가 Critical·Major 없이 Minor 셋과 Nit 하나를 냈다. 첫 
 
 ## 이어서 할 일
 
-PR #572(https://github.com/njh6803/agent-os/pull/572, base `dev`)를 열었다. 머리는 `f5cae16d6`(수정 커밋)이고 앞 커밋은 `781d86ab0` 이다. 열 때 검사 여덟이 pending 이었고 `@coderabbitai review` 코멘트는 아직 남기지 않았다(새 세션이 남긴다). 이 세션의 앱 PR 연결(`get_status` 가 bound 로 읽었다)은 PR 을 연 세션에 묶여 있다.
+PR #572(https://github.com/njh6803/agent-os/pull/572, base `dev`)를 열었다. 봇 첫 회차를 반영한 커밋 `d4d7e2890` 을 푸시했고 `@coderabbitai review` 코멘트도 남겼다. `tools/wait_ci.py` 가 `d4d7e2890` 에서 모두 통과로 끝났다(`wait_ci.py` 의 끝 줄 `끝: 모두 통과. CodeRabbit: Review rate limited` 를 읽었다).
 
-- `merge.md` 2(봇 회차)부터 한다. 첫 `@coderabbitai review` 코멘트를 남기고 상태를 한 번 읽어 pending 이면 `tools/wait_ci.py 572` 를 백그라운드로 띄운다. 회차 세기와 뒤로 넘긴 일은 `merge.md` 2대로 한다.
-- 봇이 이 PR 에서 새 지적을 내면 위 "남긴 것과 이유" 와 겹치는지 먼저 본다(겹치면 보류 이유를 PR 코멘트에 남긴다).
-- 병합은 워크트리 길이다(`--squash --match-head-commit <머리 SHA>`, `--delete-branch` 없음). 병합 뒤 05·09·11 티켓이 04 의 메모를 받아 쓴다. 이 일지의 `## 다음` 절과 회고(`retro`)는 단계를 닫는 마지막 세션이 이 일지까지 읽고 쓴다.
+- claude-review 의 둘째 회차(`d4d7e2890`)는 Minor 둘만 냈다. 하나는 `tools/release.py` 가 바뀌는 이유가 넷이라는 것으로 위 "뒤로 넘긴 것" 과 같고 티켓 11 메모에 적혀 있다. 다른 하나는 `tests/tools/test_release.py` 의 없는 리비전 시험 둘이 `release: ` 접두만 단언한다는 것이다. 둘째 회차는 Critical·Major 만 고치므로 둘 다 PR 코멘트에 보류 이유를 남기고 병합한다. 뒤의 것은 뒤의 작업으로 넘기는 일이 아니라 이 PR 에서 고치지 않기로 한 것이다.
+- CodeRabbit 은 `@coderabbitai review` 에 `Review rate limited` 로 답해 이 PR 에는 CodeRabbit 의 리뷰가 없다. 보안·버그 축은 PR 직전 `coderabbit-review`(CLI) 의 결과가 위 "PR 직전 리뷰" 에 있다.
+- 새 세션 열기는 자동 모드 분류기가 거부해 인계하지 못했고 이 세션이 병합까지 잇는다. 병합은 워크트리 길이다(`--squash --match-head-commit <머리 SHA>`, `--delete-branch` 없음). 병합 뒤 05·09·11 티켓이 04 의 메모를 받아 쓴다. 이 일지의 `## 다음` 절과 회고(`retro`)는 단계를 닫는 마지막 세션이 이 일지까지 읽고 쓴다.
 
 open-session을 부른다 2026-11-14T16:41:02Z
 open-session을 부른다 2026-11-14T20:37:21Z
+open-session을 부른다 2026-11-14T21:00:58Z
+인계 못함 커밋 뒤 (open_session.ps1 호출이 자동 모드 분류기에 거부됐다: Unsanctioned Communication. 이 세션이 잇는다)
