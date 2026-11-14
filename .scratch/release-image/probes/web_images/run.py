@@ -170,8 +170,25 @@ def run(argv: Sequence[str], *, timeout: float = 300, quiet: bool = False) -> Do
             errors="replace",
             timeout=timeout,
         )
-    except subprocess.TimeoutExpired:
-        done = Done(-1, "", f"{timeout:.0f}초 안에 끝나지 않았다", time.monotonic() - started)
+    except subprocess.TimeoutExpired as expired:
+        # 예외의 출력은 bytes 일 수 있다.
+        # 시간을 넘기기 전에 모은 출력을 버리지 않고 안내문을 덧붙인다.
+        partial_out = (
+            expired.stdout.decode("utf-8", errors="replace")
+            if isinstance(expired.stdout, bytes)
+            else (expired.stdout or "")
+        )
+        partial_err = (
+            expired.stderr.decode("utf-8", errors="replace")
+            if isinstance(expired.stderr, bytes)
+            else (expired.stderr or "")
+        )
+        done = Done(
+            -1,
+            partial_out,
+            f"{partial_err}\n{timeout:.0f}초 안에 끝나지 않았다",
+            time.monotonic() - started,
+        )
     else:
         done = Done(
             completed.returncode, completed.stdout, completed.stderr, time.monotonic() - started

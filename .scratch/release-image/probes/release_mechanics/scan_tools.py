@@ -577,7 +577,13 @@ def main() -> int:
         "trivy": arguments.trivy_cache or OWN_CACHES["trivy"],
         "grype": arguments.grype_cache or OWN_CACHES["grype"],
     }
-    made = [IN_VOLUME, *(caches[tool] for tool in TOOLS if caches[tool] == OWN_CACHES[tool])]
+    # 소유는 이름이 아니라 인자를 생략했는지로 정한다.
+    # 인자로 받은 볼륨은 기본 이름과 같아도 지우지 않는다.
+    passed: dict[str, str | None] = {
+        "trivy": arguments.trivy_cache,
+        "grype": arguments.grype_cache,
+    }
+    made = [IN_VOLUME, *(caches[tool] for tool in TOOLS if not passed[tool])]
     print(f"원본 출력: {work / 'raw.log'}", flush=True)
     try:
         for volume in made:

@@ -996,6 +996,7 @@ def disturb(
             "주소가 바뀌었다": readdressed,
             "새 컨테이너가 스스로 답했다": answered_alone,
             "닿은 요청이 접근 기록에 있다": log_ok,
+            "요청이 모두 실제로 나갔다": sent(samples),
         }
         missing = [name for name, held in marks.items() if not held]
         if missing:
@@ -1054,7 +1055,13 @@ def recover(
         verdict = "회복됨" if not still else f"회복 안 됨({still})"
         said = "" if done.code == 0 else f"; 명령 종료 {done.code}({tail(done.err, 1)})"
         extra = f"; 그사이 뒷단이 바뀜 {moved}" if moved else ""
-        current.mark(measured=touched, result=f"{verdict}; {how}; 본 차례 {seen}{extra}{said}")
+        # 요청 도구가 돌지 못한 표본은 "묻지 못했다"이지 회복 실패가 아니다.
+        asked = sent(samples)
+        unasked = "" if asked else "; 표지 없음 [요청이 모두 실제로 나갔다]"
+        current.mark(
+            measured=touched and asked,
+            result=f"{verdict}; {how}; 본 차례 {seen}{extra}{said}{unasked}",
+        )
     return still
 
 
@@ -1945,7 +1952,13 @@ def main() -> int:
     parser.add_argument("--keep", action="store_true", help="끝나도 dind 컨테이너를 지우지 않는다")
     parser.add_argument("--long", action="store_true", help="3c 를 TTL 이 지날 때까지(11분) 본다")
     args = parser.parse_args()
-    chosen = [name for name in str(args.sections).split(",") if name in SECTIONS]
+    asked_names = [name for name in str(args.sections).split(",") if name]
+    unknown = [name for name in asked_names if name not in SECTIONS]
+    if unknown or not asked_names:
+        # 알 수 없는 항목이나 빈 선택은 Docker 자원을 만들기 전에 막는다. 재지 않고 정리만 한 회차가
+        # 측정으로 세어져 빈 실행이 성공한 프로브로 읽히지 않게 한다.
+        parser.error(f"알 수 없거나 빈 --sections {unknown}, 항목은 {list(SECTIONS)}")
+    chosen = asked_names
     work = Path(tempfile.mkdtemp(prefix="bridge-recover-", dir=args.work))
     _raw.append(work / "raw.log")
     ctx = Context(

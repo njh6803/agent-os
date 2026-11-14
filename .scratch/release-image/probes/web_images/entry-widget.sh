@@ -19,13 +19,16 @@ else
 fi
 
 sampler=""
+# sampler 의 명령줄에 이 회차만 쓰는 표지를 넣는다. 끄기 직전에 그 pid 의 명령줄에서 표지를 확인한다(pid 재사용 방지).
+sampler_mark="ri-sampler-$$-$(date +%s%N)"
 if [ "${RI_PROBE_MEMSAMPLE:-}" = 1 ]; then
-  (
+  # 서브셸은 명령줄이 이 스크립트와 같아 표지를 싣지 못한다. 그래서 따로 sh 를 띄우고 표지를 $0 으로 준다.
+  sh -c '
     while :; do
-      echo "RI_PROBE mem t=$(now) current=$(cg memory.current)$(awk '$1=="anon"||$1=="file"{printf "%s=%s ", $1, $2}' /sys/fs/cgroup/memory.stat)"
+      echo "RI_PROBE mem t=$(date +%s.%N) current=$(cat /sys/fs/cgroup/memory.current 2>/dev/null | tr "\n" " ")$(awk '"'"'$1=="anon"||$1=="file"{printf "%s=%s ", $1, $2}'"'"' /sys/fs/cgroup/memory.stat)"
       sleep 0.2
     done
-  ) &
+  ' "$sampler_mark" &
   sampler=$!
 fi
 
@@ -34,7 +37,10 @@ node tools/start.ts build
 code=$?
 echo "RI_PROBE build-exit code=$code t=$(now)"
 if [ -n "$sampler" ]; then
-  kill "$sampler" 2>/dev/null
+  case "$(tr '\0' ' ' <"/proc/$sampler/cmdline" 2>/dev/null)" in
+    *"$sampler_mark"*) kill "$sampler" 2>/dev/null ;;
+    *) echo "RI_PROBE sampler-gone-or-reused pid=$sampler (끄지 않았다)" ;;
+  esac
 fi
 echo "RI_PROBE memory.peak $(cg memory.peak)"
 echo "RI_PROBE memory.max $(cg memory.max)"

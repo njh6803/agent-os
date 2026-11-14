@@ -16,21 +16,32 @@ const started = Date.now();
 const deadline = started + Number(limit) * 1000;
 let attempts = 0;
 
+// 소켓 비활성 제한(timeout)은 서버가 본문 조각을 계속 보내며 응답을 끝내지 않으면 요청을 못 끊는다.
+// 그래서 남은 전체 시간에 별도 타이머를 걸어 요청을 중단한다.
 function once() {
   return new Promise((resolve) => {
+    let cap;
+    const finish = (status) => {
+      clearTimeout(cap);
+      resolve(status);
+    };
     const request = http.get(url, { agent: false, timeout: 2000 }, (response) => {
       response.resume();
-      response.on("end", () => resolve(response.statusCode ?? 0));
+      response.on("end", () => finish(response.statusCode ?? 0));
+      response.on("error", () => finish(0));
+      response.on("close", () => finish(0));
     });
+    cap = setTimeout(() => request.destroy(), Math.max(0, deadline - Date.now()));
     request.on("timeout", () => request.destroy());
-    request.on("error", () => resolve(0));
+    request.on("error", () => finish(0));
   });
 }
 
 for (;;) {
   attempts += 1;
   const status = await once();
-  if (status === 200) {
+  // 기한 뒤에 받은 200 은 성공이 아니다.
+  if (status === 200 && Date.now() <= deadline) {
     console.log(
       `RI_PROBE first-ok epoch_ms=${Date.now()} attempts=${attempts} waited_ms=${Date.now() - started} url=${url}`,
     );

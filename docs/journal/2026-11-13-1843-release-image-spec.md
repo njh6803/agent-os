@@ -462,3 +462,91 @@ open-session을 부른다 2026-11-14T04:27:07Z
 **검증 명령.** `uv run pyright -p`를 serve_image와 web_images 폴더에 다시 쳐 둘 다 `0 errors`였다. `uv run ruff check .`, `uv run ruff format --check .`, `tools/check_adr_pointers.py`, `tools/check_md_tables.py`, `tools/check_line_separators.py`, `tools/plan_table.py --check`도 걸린 것이 없었다. `git branch --show-current`는 `docs/release-image-spec`, `tools/sibling_overlap.py`는 번호 겹침과 함께 고친 파일이 없다고 냈다. `git fetch origin` 뒤 `origin/dev`는 `dce80e588`로 움직였지만 출시 PR과 그 되돌려 합치기 둘이라 `git diff --name-only HEAD...origin/dev`가 비었다. 반영 커밋 앞에 `/code-review` 전체를 다시 돌리지는 않았다(local-model 일지의 선례와 같다. 그 스킬의 6단계가 고친 뒤에는 검증 명령만 다시 돌리라고 한다).
 
 **첫 커밋 시도의 pytest 빨강(부하의 시간 시험).** 반영 커밋의 첫 시도는 pre-commit의 pytest가 4 failed, 7305 passed로 빨개 커밋되지 않았다. `tests/channel/cli/test_interrupt.py`의 셋(작업자 gw2, 모두 "Ctrl+C 를 누른 자식이 30초 안에 끝나지 않았다")과 `tests/tools/test_rerun_runner.py`의 `test_오염이_한_번이면_다시_돌고_두_번이면_그_과제를_모든_갈래에서_뺀다`(`assert 1 == 0`, 3초 매달리는 사례가 든다)다. pytest가 1,244.8초, web-verify가 1,368.3초로 앞 커밋(594.6초, 720.5초)의 두 배쯤 걸렸다. 이 커밋은 시험이 읽지 않는 `.md`와 `.scratch` 파일만 고쳤다. 두 시험 파일만 `uv run pytest -q`로 따로 돌리니 69 passed(291.66초)였다(손으로 봤다). 대기열 306이 이 꼴을 끝이 열린 결함 종류로 받아들여 닫았으므로(새 사례는 회차를 더하지 않고 일지에만 적는다) 커밋을 다시 쳤다.
+
+### 커밋과 PR(2026-11-14 14:51까지)
+
+다시 친 커밋은 `ccd40b7ad`이고 pre-commit이 모두 통과했다. ruff 둘, 검사 러너의 check-ticket·zizmor·lint-imports·check-instructions·check-type-escapes·pyright·pyright-linux·run-hooks(144.9초)·pytest(708.1초)·web-verify(875.2초), 마크다운 표, 줄 구분 문자, 변이 표, 인용 대조, 커밋 메시지가 Passed였고 카나리아 명세와 헌법 판은 대상 파일이 없어 Skipped였다(손으로 봤다, 그 출력을 grep으로). 인용 대조의 경고는 다섯이었다. `notes_summary` README 3행은 기준 커밋 기능 계획(`git show 1117a170f:.scratch/release-image/plan.md`)에 글자 그대로 한 번 있었다(Grep으로 셌다). 이 일지의 넷(360행의 커밋 제목, 367행의 앞 세션이 적은 옛 인용, 429행의 서브에이전트 보고, 456행의 pyright 출력)은 저장소 밖의 원문이라 그대로 뒀다.
+
+커밋을 다시 띄운 직후 훅(`hook_handoff`)이 세션 컨텍스트 252,462 토큰으로 인계 계기(`커밋 뒤`)를 냈다. `handoff.md` 1의 셋째에 들어 넘기지 않았다. 이 세션을 연 지시문의 이어받을 상태가 `인계: 커밋 뒤`로 시작한다.
+
+첫 푸시는 훅이 origin/dev보다 두 커밋 뒤처졌다며 막았다. 그 둘은 앞서 본 출시 PR(#565)과 되돌려 합치기(#566)이고, `git merge --no-edit origin/dev` 뒤 `git diff --stat HEAD~1 HEAD`가 비었다(합친 커밋 `1b46f53e8`이 파일을 바꾸지 않았다). `tools/sibling_overlap.py`를 다시 쳐 번호 겹침과 함께 고친 파일이 없는 것을 본 뒤 `git push -u origin docs/release-image-spec`로 푸시했다.
+
+`gh pr create --base dev`로 PR 567을 열었다(`https://github.com/njh6803/agent-os/pull/567`). 제목은 첫 커밋의 제목이고 본문은 `.github/PULL_REQUEST_TEMPLATE.md`를 채웠다. 체크리스트의 PR 직전 리뷰 줄에 CLI 지적 20건의 판정(프로브 17건은 16건 유효와 반만 맞은 1건으로 모두 고쳤고, 문서 셋은 둘이 유효, ADR 0056 110행은 반만 맞아 명세만 고쳤다), `bug-perf-review` 둘의 Minor 둘, 명세 5행의 잔존을 적었다. 확인 방법 절에 두 커밋의 pre-commit 결과와 첫 시도의 시간 시험 빨강을 적었다. 본문을 쓰며 `CONTEXT.md`의 변경("제품 변경" 정의 고침, "릴리스 노트"와 "노트 조각" 새로 더함)과 기능 계획 일곱의 변경 자리(본문 끝의 "release-image 명세가 넘긴 것" 문장)를 diff로 대 봤다. `gh pr view 567 --json headRefOid`의 값은 로컬 HEAD(`1b46f53e8`)와 같았다. 앱의 PR 감시는 이 세션에 이미 묶여 있었다(`get_status`의 `bound`가 참). `@coderabbitai review` 코멘트는 남기지 않았다(아래 인계).
+
+**회고 후보로 볼 사건(이 세션이 겪은 것).** 회고는 단계를 닫는 세션이 돈다. 이 세션이 본 것을 적어 둔다.
+
+1. 명세 5행의 수("이력의 다섯뿐")가 이력을 일곱으로 늘린 셀프 리뷰 반영에서 고쳐지지 않았고, 서두의 수를 다시 센 단계도 그 줄을 세지 않았다. 리뷰가 아니라 이 세션이 리뷰를 기다리며 읽다가 찾았다(위 "PR 직전 리뷰").
+2. `coderabbit-review` 서브에이전트가 프로브 지적 13건을 "이미 커밋한 실험 코드의 판정 엄밀화"라며 오탐으로 묶었다. CodeRabbit이 근거로 든 `.claude/rules/probes.md`는 이 저장소의 규칙이고, 다시 판정하니 프로브 지적 17건이 모두 고칠 것이었다.
+3. 밀 주장 1~11을 맡은 `bug-perf-review`가 6과 7을 "맡은 범위 밖"으로 보고 대 보지 않았다(브리프는 1~11을 맡겼다).
+4. 이 세션의 브리프가 `problems_for`의 자리를 `tools/check_ticket.py`로 잘못 적었다(실제는 `tools/check_commit_msg.py`).
+5. `tools/check_type_escapes.py`는 `.scratch`를 훑지 않고(인자 없이 돌리면 `src`, `tests`, `tools`만 본다), `uv run pyright`의 파일 인자도 점 폴더인 `.scratch`에서 "No source files found"였다. 프로브 서브에이전트들은 스크래치 스크립트로 갈음했다.
+
+### 인계(PR 연 뒤)
+
+PR을 연 명령 직후 훅(`hook_handoff`)이 세션 컨텍스트 266,440 토큰으로 인계 계기(`PR 연 뒤`)를 냈다. `handoff.md` 1의 다섯에 들지 않는다. 명령은 성공했고, 요청 범위는 병합까지이며, 지시문의 이어받을 상태는 다른 경계(`인계: 커밋 뒤`)로 시작하고, 이 일지에 `인계 못함` 줄이 없고, 이 세션은 곁 세션이 아니다(`get_session`의 `self`에 `parentSessionId`가 없었다). 넘기기 전 제목은 `docs/release-image-spec`이고, 넘기며 `docs/release-image-spec (인계함)`으로 바꾼다. 이 절과 위 "커밋과 PR" 절, 그 앞의 "첫 커밋 시도의 pytest 빨강" 뒤에 더한 것은 커밋하지 않았다(첫 시도의 빨강 문단은 `ccd40b7ad`에 실렸다).
+
+남은 단계는 새 세션이 한다. `merge.md` 2(봇 회차)부터다. 첫 `@coderabbitai review` 코멘트를 남기고 `tools/wait_ci.py 567`을 백그라운드로 띄운다. 봇 회차를 반영한 뒤 이 일지의 회고(`retro`)와 "다음"을 마쳐 병합 전에 푸시하고, `merge.md` "워크트리에서 병합할 때"로 병합한 뒤 `next-session`을 돈다.
+
+낸 지시문은 아래다.
+
+다음 작업: 기능 release-image. 명세 PR 567(`.scratch/release-image/spec.md`)의 봇 회차부터 이어 병합까지 마친다
+다음 단계: PR 반영·병합
+어디서: 새 세션. 인계라 같은 브랜치를 잇는다. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /to-spec release-image
+브랜치: docs/release-image-spec
+모델: Sonnet 5.5 / high. 2의 잇는 지시문
+읽을 것: 일지 `docs/journal/2026-11-13-1843-release-image-spec.md`의 "커밋과 PR(2026-11-14 14:51까지)"와 "인계(PR 연 뒤)" 절
+이어받을 상태: 인계: PR 연 뒤. PR 567을 열었고 머리는 `1b46f53e8`이다. `merge.md` 2(봇 회차)부터 한다. 첫 `@coderabbitai review` 코멘트도 새 세션이 남긴다. 작업 트리에는 일지의 "커밋과 PR"과 "인계(PR 연 뒤)" 절이 커밋되지 않은 채 있고, 첫 봇 회차의 반영 커밋에 함께 싣는다. 회고와 "다음"은 아직 쓰지 않았고 병합 전에 푸시해야 한다(`merge.md` 3). 회고 후보로 볼 사건 다섯을 같은 일지 "커밋과 PR" 절 끝에 적어 두었다. `docs/journal/2026-11-13-1843-release-image-spec.md`
+확인할 선행 조건: 없음
+이번 요청 범위: PR과 병합까지
+
+제목을 바꿨다. 워크트리는 잠겨 있지 않았다(`git worktree unlock`이 `is not locked`로 끝났다). 이 세션이 띄운 백그라운드 작업(커밋 두 번, 프로브 서브에이전트 넷과 리뷰 서브에이전트 셋)은 모두 끝나 있었다.
+
+open-session을 부른다 2026-11-14T05:52:01Z
+
+## 이어받은 세션 셋(2026-11-14, 봇 첫 회차부터)
+
+위 "인계(PR 연 뒤)"의 지시문으로 열린 세션이다. 제목을 `docs/release-image-spec`으로 바꾸고 `EnterWorktree(path)`로 이 브랜치의 워크트리에 들어갔다(잠금 문제는 없었다). 들어갔을 때 `gh pr view 567`의 머리는 `1b46f53e8`로 로컬 HEAD와 같았다.
+
+### 봇 첫 회차 (PR 567)
+
+머리 `1b46f53e8`에서 검사가 모두 초록이었고(CodeRabbit `Finished` 포함) claude-review는 지적이 없었다. 저장소가 별 열 개 미만이라 CodeRabbit의 자동 리뷰가 꺼져 있어 `@coderabbitai review` 코멘트를 남겨 돌렸고, 첫 회차에 인라인 Major 넷과 본문 Minor 열여덟이 나왔다. 아래 판정은 모두 현재 코드를 열어 대 본 것이다.
+
+Major 넷.
+- `bridge_recover/run.py`의 회복 회차(`recover`). 고쳤다. `measured`가 `touched`만 봐서, 요청 도구가 돌지 못한 표본도 "회복 안 됨"이라는 측정으로 세어졌다. `touched and sent(samples)`로 걸고 결과에 표지 없음을 적었다. `disturb`에도 같은 표지("요청이 모두 실제로 나갔다")를 더했다. 같은 느슨한 꼴이 다른 절(3a 이후)에 더 있는지는 훑지 않았다.
+- `web_images/strip-tests.sh`. 고쳤다. 앱 폴더 인자가 `package.json` 확인 하나뿐이라 저장소의 `web/apps/widget`을 주어도 지웠다. 절대 경로 검사와 `.git` 조상 검사를 더했다(`.claude/rules/probes.md`의 폴더 지우기 항목. 이미지 안의 사본은 `web/`만 복사하므로 `.git`이 없다). 임시 사본, 상대 경로, 저장소 앱 폴더를 손으로 돌려(스크래치패드의 `try_strip.sh`) 상대 경로와 저장소 폴더는 종료 2로 거부하고 임시 사본은 시험 파일만 지우고 `*.d.ts`를 남기는 것을 봤다. 드라이브 문자 경로(`C:/…`)는 절대 경로로 받지 않아 같은 거부가 났다. 저장소 파일은 그대로였다. 이미지 안의 실제 빌드(`Dockerfile`의 `RUN /probe/strip-tests.sh /app/web/apps/widget`)는 돌려 보지 않았다.
+- `spec.md` 134행(제품 변경에 `pyproject.toml`을 넣어야 한다는 지적). 고치지 않았다. 명세가 이 안을 "거부한 안"으로 이미 적었고(140행) 까닭도 이미 적혀 있다. 그 파일이 하네스 설정을 함께 담고, 런타임 의존성이 바뀌면 `uv.lock`이 따라 바뀐다. 진입점이나 빌드 설정만 바뀌는 변경은 어림으로 드물다고 적혀 있고 재지 않았다. 새 사실이 없어 그대로 두었다.
+- `spec.md` 380행(번호 태그를 일부 붙인 뒤 다시 돌릴 때 초안이 지워진다는 지적). 고쳤다. 앞 실행이 번호 태그를 일부 붙이고 남긴 초안을 사전 확인이 지우고 새로 만든 실행이 번호 태그 앞에서 실패하면, 정리 단계가 새 초안도 지워 수동 복구에 쓸 초안이 없어진다. 그 실행은 새 초안을 지우지 않고 남긴다는 문장을 378행에 더했다. 이 길은 돌려 본 적이 없다(명세가 같은 절에서 어림으로 적은 길이다). 명세의 표시와 이력은 늘지 않아 서두의 수는 그대로다.
+
+Minor 열여덟(첫 회차라 지적마다 판단했다). 열을 고쳤고 여덟을 보류했다.
+- 고친 열. `scan_tools.py` 580(인자로 받은 캐시 볼륨은 이름이 기본값과 같아도 지우지 않는다), `serve_image/run.py` 193과 `web_images/run.py` 173(`TimeoutExpired`가 든 부분 출력을 보존한다), `web_images/wait.mjs` 32(전체 기한 타이머. 응답을 끝내지 않고 0.5초마다 조각을 보내는 서버에 기한 3초를 걸어 3.3초에 `first-ok-timeout`, 종료 1로 끝나는 것을 서브에이전트가 손으로 봤다), `entry-widget.sh` 37(sampler를 `sh -c`로 띄워 회차 표지를 싣고 끄기 직전 `/proc/<pid>/cmdline`에서 확인한다), `supervise.sh` 19(`child` 비우기와 끄기 직전 표지 확인. 서브에이전트의 첫 판은 표지를 dockerd의 `--label`로 실었는데 측정 대상의 기동 인자를 바꾸고 돌려 보지 못해, 기동 인자는 그대로 두고 환경 변수 `RI_SUPERVISE_MARK`를 `/proc/<pid>/environ`에서 확인하게 바꿨다. 컨테이너 안에서 이 표지가 실제로 dockerd에 실리는지는 돌려 보지 못했다), `bridge_recover/run.py` 1948(알 수 없거나 빈 `--sections`는 Docker 자원을 만들기 전에 인자 오류), `bridge_edge/run.py` 2070(`--work`를 `.resolve()`), 같은 파일 1723(IPv6 항목을 재지 못한 회차와 `open_network_control6`의 네트워크 생성 실패를 측정 아님으로 기록해 종료 코드가 0이 되지 않게 했다), `serve_image/README.md` 185(`0777`은 측정에만 쓴 설정이고 운영은 `10001:10001`이라는 문장).
+- 보류한 여덟. 모두 측정 판정 기준을 바꾸는 지적이다. `scan_tools.py` 449(양성 대조가 실제 문턱 초과를 만들었는지), `registry_tags.py` 593(실패 원인 표지)과 583(캐시 표지를 실제 `RUN` 단계에 연결), `serve_image/run.py` 833(SILENT 판정에서 EOF와 마감 만료를 가르기), `web_images/run.py` 895(500 응답의 원인 표지), `proxy_config/run.py` 836(429가 `portal_token` 구역에서 났는지)과 679(DNS 실패 문구), `bridge_edge/run.py` 1227(양성 대조 대상이 응답하는지). 기준을 조이면 이미 기록한 결과가 그 기준으로 다시 서는지 재 봐야 하는데, 도커 프로브를 다시 도는 데 수십 분이 들고 이 PR은 명세다. 기록한 결과를 인용한 명세 문장의 근거 종류(쟀다)가 이 지적들로 약해질 수 있다는 점은 아래 "다음"의 뒤로 넘긴 일에 적었다.
+
+고친 파일의 검증. `uv run ruff format --check`와 `uv run ruff check`를 `.scratch/release-image/probes` 전체에 쳐 모두 통과했고, `uv run pyright -p`를 `bridge_edge`와 `bridge_recover`에 친 결과는 `0 errors`였다(서브에이전트가 `release_mechanics`, `serve_image`, `web_images`도 `0 errors`로 보고했다). `sh -n`은 `supervise.sh`와 `entry-widget.sh`에서, `node --check`는 `wait.mjs`에서 통과했다. 실제 Docker 빌드와 프로브 전체는 돌리지 않았다. `bridge_recover/README.md`에 요청 실행 표지를 회복 회차에도 건 것과 `--sections` 검사를 적었다(기록한 실행은 이 표지를 보지 않았고 다시 재지 않았다고 함께 적었다).
+
+반영 커밋의 첫 시도는 pre-commit의 pytest가 1 failed, 7308 passed로 빨개 커밋되지 않았다. 실패한 시험은 `tests/tools/test_rerun_runner.py`의 `test_같은_갈래가_두_번_든_파일럿의_두_회차가_함께_돌아도_번호가_다르다`(`assert 1 == 2`, 동시에 도는 회차 수의 최댓값을 기대했다)다. 이 커밋은 `.md`, `.scratch`의 프로브와 항목 파일만 고쳐 그 시험이 읽는 파일이 없고, 병렬 검사 pytest가 830.2초, web-verify가 1,106.4초 걸린 부하 아래의 실패다. 앞 반영 커밋 첫 시도에서 같은 파일의 다른 시험이 같은 꼴로 빨갰다(위 "첫 커밋 시도의 pytest 빨강"). 대기열 306이 이 꼴을 끝이 열린 결함 종류로 받아들여 닫았으므로 회차를 더하지 않고 일지에만 적고 커밋을 다시 쳤다. 그 시험을 `uv run pytest -q tests/tools/test_rerun_runner.py -k 같은_갈래가_두_번_든_파일럿 -p no:xdist`로 따로 돌리니 2 passed(145.32초)였다(손으로 봤다).
+
+## 회고
+
+낸 후보 여덟: 승인 다섯, 기각 셋, 넘김 없음. 사용자에게 묻지 않았다. 앞 세션이 "회고 후보로 볼 사건 다섯"으로 적어 둔 것(후보 1~5)에 이 세션의 CodeRabbit 사건(후보 6~8)을 더했다.
+
+- 후보 1, 승인: 명세 본문의 닫힌 수 주장("이력의 다섯뿐")이 이력이 일곱으로 늘어도 고쳐지지 않았고, 서두의 수를 다시 센 단계도 그 줄을 세지 않았다. 사건은 위 "PR 직전 리뷰"에 적은 것이다(리뷰가 아니라 앞 세션이 읽다가 찾았다). 층은 지침이다(기계가 세지 못한다). 되돌림은 PR 하나다. 닫힌 0207(3회차)을 이어 새 항목 `spec-body-count-claim-again`에 4회차로 두었다. 문턱(다섯 번째)에 이르지 않아 지금 반영하지 않는다.
+- 후보 2, 승인: `coderabbit-review` 서브에이전트가 프로브 지적 열세 건을 "이미 커밋한 실험 코드의 판정 엄밀화"라며 오탐으로 묶었는데 CodeRabbit이 근거로 든 `.claude/rules/probes.md`는 이 저장소의 규칙이었다. 층은 서브에이전트 정의다. 같은 정의 파일에 열린 항목 `coderabbit-review-findings-judged-unopened`(지적한 줄을 열지 않고 오탐으로 가른 사건, 1회차)가 같은 꼴이라 새 항목을 쓰지 않고 그 항목에 2회차를 더했다(처방에 "지적이 근거로 든 규칙 문서도 연다"를 함께 본다).
+- 후보 3, 기각: 밀 주장 1~11을 맡은 `bug-perf-review`가 6과 7을 "맡은 범위 밖"이라며 대 보지 않았다. 앞 세션이 그 보고를 받아 직접 대 보았다. 한 서브에이전트의 일회성 오독이고(브리프는 1~11을 맡겼다) 사다리에서 강제력이 더 높은 층이 없다.
+- 후보 4, 기각: 앞 세션의 브리프가 `problems_for`의 자리를 `tools/check_ticket.py`로 잘못 적었다(실제는 `tools/check_commit_msg.py`). 브리프를 쓴 세션의 일회성 오기이고 자동 검사로 잡을 꼴이 아니다.
+- 후보 5, 기각: `tools/check_type_escapes.py`는 `.scratch`를 훑지 않고 `uv run pyright`의 파일 인자도 점 폴더 `.scratch`에서 "No source files found"를 냈다. 프로브의 타입 우회가 실제로 들어간 사건이 아니라 도구의 범위 사실이고, 프로브는 폴더별 `pyrightconfig.json`과 `uv run pyright -p`로 판정된다(이 세션에서도 그렇게 쳤다). 범위를 넓히는 것은 ADR 0013이 "필요가 증명되면" 이력으로 쌓기로 한 별개의 결정이라 사건이 없는 지금은 기각한다.
+- 후보 6, 승인: 프로브 회차의 `measured`가 재려는 상황을 다 보지 않는다(CodeRabbit 첫 회차 Major 하나와 Minor 여덟. 실패한 도구가 "회복 안 됨"으로 세어졌고, 종료 코드만으로 측정을 셌고, `test failed` 한 문구가 DNS 실패와 설정 오류를 함께 받았다). 열린 `probe-round-marked-measured-unconditionally`(0430의 11회차)가 같은 꼴(조건이 있어도 느슨한 표지)이라 12회차로 더했다. 회차 5 이상이라 이미 chore 계기이고, 이 일의 처방(훅)은 그 항목이 든다.
+- 후보 7, 승인: 폴더를 지우는 프로브 셸 `strip-tests.sh`가 절대 경로와 표지 파일 검사 없이 지웠다(CodeRabbit Major). 층은 계기 훅이다(`probes.md`에 항목이 이미 실려 있다). 닫힌 0269(1회차)를 이어 새 항목 `probe-delete-arg-guard-again`에 2회차로 두었다.
+- 후보 8, 승인: 프로세스를 끄는 프로브 셸 둘(`entry-widget.sh`, `supervise.sh`)이 pid만 보고 `kill`을 쳤다(CodeRabbit Minor 둘). 닫힌 0307(1회차)을 이어 새 항목 `probe-pid-kill-guard-again`에 2회차로 두었다.
+
+만료: `uv run python tools/queue_open_rows.py`의 "만료할 항목"이 없음이라 닫은 것이 없다. 찾은 항목은 `queue_open_rows.py --search` 몇 가지(폴더 지우기, pid 종료, 명세 서두의 수, 표지 단언, `coderabbit-review`)로 대 보았고, 닫힌 항목의 이어 센 회차는 `--search <식별자>의`로 확인했다(0269·0307·0197·0323에 이은 항목이 없었다).
+
+## 다음
+
+기능 release-image는 명세(`.scratch/release-image/spec.md`)가 이 PR로 병합되면 `spec.md`는 있고 `issues/`가 없는 상태다. 다음 단계는 티켓이다. 명세 검토(`spec-reviewer`)는 이 일지 어디에도 돈 흔적이 없어(앞 세션들이 돌린 것은 CodeRabbit CLI와 `bug-perf-review`, `/code-review`다) 티켓 쪼개기 전에 한 번 돈다. 그 뒤 `/to-tickets .scratch/release-image/spec.md`다. 기능 계획 `.scratch/release-image/plan.md`의 `**Blocked by:**`는 `pilot-portal`이다.
+
+뒤로 넘긴 일(PR 567의 봇 첫 회차에서 보류한 Minor 여덟): `release_mechanics`, `serve_image`, `web_images`, `proxy_config`, `bridge_edge`의 프로브가 측정 판정 기준(표지)을 더 조여야 한다는 지적이다(위 "봇 첫 회차"의 보류 여덟, 파일과 줄 포함). 기준을 바꾸면 기록한 결과를 다시 재야 한다. 이 일은 명세 Further Notes의 "다시 잴 때"가 이미 정한 길에 얹혔다. 그 프로브에 기대는 절을 구현하는 티켓이 다시 돌리기 전에 이 여덟을 먼저 고친다(그 문단에 이 PR이 그 문장을 더했다). `to-tickets` 세션은 그 절을 구현하는 티켓의 수락 기준에 프로브의 표지를 고친 판을 먼저 다시 돌리는 일이 들게 한다. 이 일의 회차는 열린 `probe-round-marked-measured-unconditionally`가 센다.
+
+이 세션이 돌려 보지 못한 것: `supervise.sh`가 환경 변수 표지를 컨테이너 안 dockerd에 싣는지(`bridge_recover`를 다시 돌 때 첫 `docker info`와 `supervise: dockerd start 1`로 본다), `strip-tests.sh`의 `.git` 조상 검사가 이미지 빌드에서 `/app` 위로 `.git`을 만나지 않는지(`web_images`의 `widget-lean` 갈래를 다시 지을 때 본다).
+
+rag-engine에 줄 지시문은 이 일지의 앞 절들이 적은 대로 판 내기 워크플로를 실제로 돌려 본 마지막 티켓을 닫는 세션이 낸다(기능 계획의 해당 대목과 열린 `cross-repo-directive-before-merge`가 병합 뒤에 주라는 말을 함께 알리라고 한다).

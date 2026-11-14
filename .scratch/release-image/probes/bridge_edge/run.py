@@ -1721,9 +1721,10 @@ def section_transit6(ctx: Ctx, report: Report) -> None:
     """항목 7. 안쪽 네트워크에 IPv6 를 켜고 관리 화면과 serve 대역이 `::` 에도 듣게 한 배치. 끝나면
     IPv4 만의 배치로 되돌린다."""
     if not ctx.v6_path:
-        print(
-            f"[건너뜀] 7.{ctx.tag}: 이웃이 서버의 IPv6 에 닿지 않아(회차 0 의 대조) 항목 7 을 뺐다"
-        )
+        why = "이웃이 서버의 IPv6 에 닿지 않아(회차 0 의 대조) 항목 7 을 뺐다"
+        print(f"[건너뜀] 7.{ctx.tag}: {why}")
+        # 요청한 항목을 재지 못한 회차는 측정 아님으로 적어 종료 코드가 0이 되지 않게 한다.
+        report.rounds.record(f"7.{ctx.tag}.IPv6 경유", measured=False, result=why)
         return
     stack_down(BASE)
     ready = False
@@ -1830,7 +1831,9 @@ def open_network_control6(ctx: Ctx, report: Report, original: str) -> None:
     subnets = ("--subnet", OPEN6_V4_SUBNET, "--subnet", OPEN6_SUBNET)
     made = inner("network", "create", "--ipv6", *subnets, "-o", option, name)
     if made.code != 0:
-        print(f"[건너뜀] 7.{ctx.tag}.보호를 끈 네트워크: 만들지 못했다({tail(made.err, 1)})")
+        why = f"만들지 못했다({tail(made.err, 1)})"
+        print(f"[건너뜀] 7.{ctx.tag}.보호를 끈 네트워크: {why}")
+        report.rounds.record(f"7.{ctx.tag}.보호를 끈 네트워크", measured=False, result=why)
         return
     mount = "/probe/stub.py:/stub.py:ro"
     inner(
@@ -2067,7 +2070,9 @@ def main() -> int:
     sections = {int(item) for item in str(args.sections).split(",") if item}
     engines = [item for item in str(args.engines).split(",") if item in DIND]
     modes = [item for item in str(args.modes).split(",") if item in ("on", "off")]
-    work = Path(str(args.work)) if args.work else Path(tempfile.mkdtemp(prefix="ri-edge-"))
+    work = (
+        Path(str(args.work)).resolve() if args.work else Path(tempfile.mkdtemp(prefix="ri-edge-"))
+    )
     work.mkdir(parents=True, exist_ok=True)
     _raw.append(work / "raw.log")
     report = Report()
