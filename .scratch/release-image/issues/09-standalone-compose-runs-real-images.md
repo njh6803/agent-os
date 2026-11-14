@@ -62,3 +62,5 @@
 
 - [ ] `docs/constitution/operations.md`를 고쳤으므로 헌법 판을 올린다(`docs/constitution/README.md`. 올린 까닭은 일지에. 명세 검토 N4). 판을 매기기 전에 `tools/sibling_overlap.py`로 형제 브랜치가 먼저 가져간 판을 본다
 - [ ] 검증 명령이 모두 초록이다
+
+메모(04가 `tools/release.py`를 지은 뒤): 묶음을 짓는 도구는 `deploy/standalone/`의 파일에서 자리 표지 둘만 바꾼다. `@AGENT_OS_VERSION@`는 판 번호(`v` 없음, 출시 후보면 `0.1.0-rc.1`)로, `@AGENT_OS_NAMESPACE@`는 이미지 이름공간으로 바뀐다. 환경 변수 틀의 두 줄이 `AGENT_OS_VERSION=@AGENT_OS_VERSION@`와 `AGENT_OS_NAMESPACE=@AGENT_OS_NAMESPACE@` 꼴이면 된다. compose 파일은 이 표지를 쓰지 않고 `${AGENT_OS_VERSION}`·`${AGENT_OS_NAMESPACE}`로 읽는다. `@AGENT_OS_`로 시작하는 다른 표지가 남으면 도구가 묶음을 짓지 않고 실패한다. 풀면 `agent-os-<판 번호>/` 폴더 하나가 나오고 그 안에 틀의 파일이 바로 든다(`deploy/standalone/` 경로는 담지 않는다). 파일 권한은 0644라 실행 권한이 필요한 파일은 지원하지 않는다. 파일만 담으므로 틀의 빈 하위 폴더는 묶음에 들지 않는다. 호출은 `python3 tools/release.py bundle --number <판 번호> --namespace <이름공간> [--source deploy/standalone] [--out <폴더>]`이고 만든 파일의 경로를 낸다.
