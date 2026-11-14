@@ -1,28 +1,40 @@
 """위젯의 실제 모델 e2e(web-widget 티켓 11, 명세 Testing Decisions 6).
 
 마커 `llm_widget` 의 시험 하나가 위젯 e2e 의 Playwright 프로젝트 `llm` 을 자식 프로세스로 돌린다. 그
-프로젝트는 06 의 준비(실제 serve·Next 와 같은 출처의 중계)에서 저장소의 계산 에이전트로 iframe
-위젯에 요청 하나를 보내 출력이 서는 것까지 본다. 모델이 도구를 부를지는 단언하지 않는다. 명령은
-`uv run --env-file .env pytest -m llm_widget` 이고 원칙 I 의 판정(`-m llm`)과 따로다(ADR 0024 의
-2026-10-23 이력). 기본 실행과 `-m llm` 은 이것을 돌리지 않는다. 파이썬 시험이 감싸므로 키가 없으면
-실패하는 규칙과 실행 끝의 토큰 합계 줄(`tests/conftest.py`)이 다른 LLM 시험과 같다.
+프로젝트는 06 의 준비(실제 serve·Next 와 같은 출처의 중계)에서 iframe 위젯에 요청을 보내 출력이 서는
+것까지 본다. 사례는 둘이다. 저장소의 계산 에이전트(`calc`)에게 계산을 묻는 것과, 기본 에이전트
+`assistant` 에게 등록된 문서에 근거가 있는 질문을 보내 출처가 붙은 답이 서는 것이다(base-agent 티켓
+06). 모델이 도구를 부를지는 계산 사례에서 단언하지 않고, `assistant` 사례는 트레이스에 성공한
+`search` 가 있는지 본다. 명령은 `uv run --env-file .env pytest -m llm_widget` 이고 원칙 I 의 판정
+(`-m llm`)과 따로다(ADR 0024 의 2026-10-23 이력). 기본 실행과 `-m llm` 은 이것을 돌리지 않는다.
+파이썬 시험이 감싸므로 키가 없으면 실패하는 규칙과 실행 끝의 토큰 합계 줄(`tests/conftest.py`)이
+다른 LLM 시험과 같다.
 
 - 프로젝트 `llm` 은 이 시험이 자식의 환경에 준 `AGENT_OS_WIDGET_LLM=1` 이 있을 때만 서고
   (`web/apps/widget/playwright.config.ts`), serve 는 `AGENT_OS_WIDGET_TRACES` 가 준 `tmp_path`
   아래에 트레이스를 남긴다(`e2e/stack.ts` 가 패키지 `@agent-os/e2e-stack` 의 `startServe` 로
   띄운다). 두 이름은 `e2e/env.ts` 와 같은 글자다. 키는 이
   프로세스의 환경이 pnpm → Playwright → serve 로 물려 간다.
+- `assistant` 사례의 문서는 이 시험이 띄운 가짜 문서 검색 서버(`tests/fake_doc_search.py`)의
+  표본이다. 그 주소를 `AGENT_OS_WIDGET_DOC_SEARCH_URL` 로, 서버가 기대하는 `Authorization` 값을
+  `DOC_SEARCH_AUTHORIZATION` 으로 자식의 환경에 준다(준비가 `doc-search` 연결의 주소를 그 값으로
+  바꿔 쓴다. `e2e/env.ts`, `pointDocSearchAt`). 서버의 기록은 `tmp_path` 밖에 두어 토큰 합계가 그
+  기록을 트레이스로 세지 않게 한다.
 - pnpm 은 이름이 아니라 `shutil.which` 가 준 경로로 띄운다. 이 PC 의 Windows 에서
   `uv run --env-file` 아래의 pytest 는 `pnpm` 을 이름으로 띄우지 못했다(`FileNotFoundError`,
   `.scratch/web-widget/probes/pnpm_spawn.py`). 그 경로(`pnpm.CMD`)는 cmd.exe 가 명령 줄을 다시
   읽으므로 넘기는 인자는 고정 글자이고 cmd.exe 의 메타 문자(`&`, `^`, `%`)가 들지 않는다. 바뀌는
   값(앱 폴더, 트레이스와 리포트의 자리)은 작업 폴더와 환경으로 준다.
-- 기준 다섯. Playwright 의 종료 코드 0 과 JSON 리포터의 통과 1, 건너뜀 0(종료 코드 0 만 보면 모두
-  건너뛴 실행이 초록이다). 트레이스에 `llm_called`(키가 serve 에 닿지 않으면 모델 호출이 없다).
-  화면에 선 출력이 그 트레이스의 `run_finished` 의 `output` 과 같다. pnpm 을 찾지 못하면 깔라는
-  문구로 실패한다. 제한 시간을 넘기면 Playwright 가 띄운 프로세스까지 트리째 끝낸다. 앞의 셋은 실제
-  모델과 빌드를 쓰는 한 바퀴의 결과라, 기준마다 멈추지 않고 어긋난 것을 모두 모아 알린다. 뒤의 둘은
-  모델 없이 기본 실행에서 잰다.
+- 기준 다섯. Playwright 의 종료 코드 0 과 JSON 리포터의 통과 2(사례 수), 건너뜀 0(종료 코드 0 만
+  보면 모두 건너뛴 실행이 초록이다). 사례마다 그 에이전트로 시작한 실행(`run_started` 의 `agent`)을
+  짝지어, 그 실행의 트레이스에 `llm_called`(키가 serve 에 닿지 않으면 모델 호출이 없다). 화면의
+  출력은 사례가 연 에이전트의 이름과 함께 리포트에 실리고, 계산 사례는 화면에 선 출력이 그 실행의
+  `run_finished` 의 `output` 에서 온 글이다(마크다운 부품이 기호를 떼므로 글자 그대로가 아니라
+  기호를 뗀 글이 원문의 부분열인지 본다. 규칙은 `tests/screen_text.py`). `assistant` 사례는 글자를
+  견주지 않고(낱말은 Playwright 사례가 본다) 그 실행에 성공한 `search` 가 있는지 본다. pnpm 을 찾지
+  못하면 깔라는 문구로 실패한다. 제한 시간을 넘기면 Playwright 가 띄운 프로세스까지 트리째 끝낸다.
+  앞의 셋은 실제 모델과 빌드를 쓰는 한 바퀴의 결과라, 기준마다 멈추지 않고 어긋난 것을 모두 모아
+  알린다. 뒤의 둘은 모델 없이 기본 실행에서 잰다.
 
 못 보는 것: POSIX 에서 제 세션을 따로 연 손자는 프로세스 그룹으로 끝내지
 못한다(`tools/run_checks.py` 의 `kill_tree`). 제한 시간에 끊으면 준비(globalSetup)의 정리가 돌지
@@ -41,26 +53,48 @@ import sys
 import time
 from collections.abc import Iterator, Mapping, Sequence
 from dataclasses import dataclass
+from datetime import UTC, datetime
 from pathlib import Path
 
 import pytest
+from tests.fake_doc_search import serving
+from tests.screen_text import screen_matches_output
 from tools.run_checks import kill_tree
 
 from agent_os.adapters.jsonl import JsonlTrace
-from agent_os.core.ports import Trace
-from agent_os.sdk import Json, LlmCalled, RunFinished, RunId
+from agent_os.core.ports import Trace, UnknownEvent
+from agent_os.sdk import (
+    AgentName,
+    Event,
+    Json,
+    LlmCalled,
+    Principal,
+    RunFinished,
+    RunId,
+    RunStarted,
+    ToolCalled,
+)
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 WIDGET = REPO_ROOT / "web" / "apps" / "widget"
 LLM_ENV = "AGENT_OS_WIDGET_LLM"
 TRACES_ENV = "AGENT_OS_WIDGET_TRACES"
+DOC_SEARCH_URL_ENV = "AGENT_OS_WIDGET_DOC_SEARCH_URL"
+DOC_SEARCH_AUTHORIZATION_ENV = "DOC_SEARCH_AUTHORIZATION"
+# 가짜 검색 서버가 기대하는 값. 시험용이라 비밀이 아니다(원칙 V: 서버의 기록에 원문이 실린다).
+DOC_SEARCH_AUTHORIZATION = "Bearer widget-llm-test-token"
 REPORT_ENV = "PLAYWRIGHT_JSON_OUTPUT_FILE"
-# Playwright 의 llm 시험이 화면에 선 출력을 싣는 주석의 이름(`e2e/calc.llm.ts`).
+# Playwright 의 llm 사례가 화면에 선 출력을 싣는 주석의 이름(`e2e/llm-ask.ts`). 설명은 `agent` 와
+# `text` 를 든 JSON 글이다.
 SHOWN_ANNOTATION = "화면의 출력"
+# 사례가 여는 에이전트. 사례마다 하나다(`e2e/calc.llm.ts`, `e2e/assistant.llm.ts`).
+CALC = "calc"
+ASSISTANT = "assistant"
+CASES = (CALC, ASSISTANT)
 # 고정 글자만 둔다(위 독스트링의 cmd.exe).
 PLAYWRIGHT = ("exec", "playwright", "test", "--project", "llm", "--reporter", "json")
 TIMEOUT = 600
-PASSED_ONCE = {"expected": 1, "skipped": 0, "unexpected": 0, "flaky": 0}
+PASSED_ALL = {"expected": len(CASES), "skipped": 0, "unexpected": 0, "flaky": 0}
 
 
 def _pnpm() -> str:
@@ -108,7 +142,8 @@ class _Report:
 
     stats: Mapping[str, Json]
     errors: list[str]
-    shown: list[str]
+    # 에이전트 이름 → 그 사례가 화면에 선 출력들.
+    shown: Mapping[str, list[str]]
 
 
 def _read_report(path: Path) -> _Report | None:
@@ -122,8 +157,15 @@ def _read_report(path: Path) -> _Report | None:
     return _Report(
         stats=stats if isinstance(stats, dict) else {},
         errors=list(_error_messages(objects)),
-        shown=sorted(set(_annotations(objects))),
+        shown=_by_agent(set(_annotations(objects))),
     )
+
+
+def _by_agent(shown: set[tuple[str, str]]) -> dict[str, list[str]]:
+    grouped: dict[str, list[str]] = {}
+    for agent, text in sorted(shown):
+        grouped.setdefault(agent, []).append(text)
+    return grouped
 
 
 def _objects(value: Json) -> Iterator[dict[str, Json]]:
@@ -139,12 +181,24 @@ def _objects(value: Json) -> Iterator[dict[str, Json]]:
         yield from _objects(child)
 
 
-def _annotations(objects: Sequence[dict[str, Json]]) -> Iterator[str]:
-    """`SHOWN_ANNOTATION` 주석의 설명. 시험과 그 결과 양쪽에 실릴 수 있다."""
+def _annotations(objects: Sequence[dict[str, Json]]) -> Iterator[tuple[str, str]]:
+    """`SHOWN_ANNOTATION` 주석의 설명이 든 (에이전트, 화면의 출력). 시험과 그 결과 양쪽에 실릴 수
+    있어 같은 쌍이 거듭 나온다."""
     for item in objects:
         description = item.get("description")
-        if item.get("type") == SHOWN_ANNOTATION and isinstance(description, str):
-            yield description
+        if item.get("type") != SHOWN_ANNOTATION or not isinstance(description, str):
+            continue
+        try:
+            shown: Json = json.loads(description)
+        except json.JSONDecodeError:
+            # 읽지 못한 주석은 뺀다. 그 사례는 화면에 선 출력이 없는 것으로 보여 `_failures` 가
+            # 알린다.
+            continue
+        if not isinstance(shown, dict):
+            continue
+        agent, text = shown.get("agent"), shown.get("text")
+        if isinstance(agent, str) and isinstance(text, str):
+            yield agent, text
 
 
 def _error_messages(objects: Sequence[dict[str, Json]]) -> Iterator[str]:
@@ -160,32 +214,74 @@ def _error_messages(objects: Sequence[dict[str, Json]]) -> Iterator[str]:
 
 
 def _failures(report: _Report | None, traces: Path, code: int) -> list[str]:
-    """기준 다섯 가운데 한 바퀴의 결과인 앞의 셋(종료 0·통과 1·건너뜀 0, `llm_called`, 화면과
-    트레이스의 출력)에서 어긋난 것을 모두. 시험이 통과해도 정리(globalSetup 이 돌려준 함수)가 던지면
-    종료 코드만 0 이 아니다."""
+    """기준 다섯 가운데 한 바퀴의 결과인 앞의 셋(종료 0·통과 2·건너뜀 0, 사례마다의 `llm_called`,
+    사례마다의 화면과 트레이스)에서 어긋난 것을 모두. 시험이 통과해도 정리(globalSetup 이 돌려준
+    함수)가 던지면 종료 코드만 0 이 아니다."""
     failures: list[str] = []
     if code != 0:
         failures.append(f"Playwright 가 종료 코드 {code} 로 끝났다")
     if report is None:
         failures.append("Playwright 의 JSON 리포트가 없다")
     else:
-        played = {key: report.stats.get(key) for key in PASSED_ONCE}
-        if played != PASSED_ONCE:
-            failures.append(f"프로젝트 llm 이 통과 1, 건너뜀 0 이 아니다: {played}")
+        played = {key: report.stats.get(key) for key in PASSED_ALL}
+        if played != PASSED_ALL:
+            failures.append(f"프로젝트 llm 이 통과 {len(CASES)}, 건너뜀 0 이 아니다: {played}")
         if failures:
             failures.extend(f"  {message}" for message in report.errors)
+    runs = _runs(traces)
+    for agent in CASES:
+        mine = [events for name, events in runs if name == agent]
+        if len(mine) != 1:
+            failures.append(
+                f"에이전트 {agent} 로 시작한 실행이 {len(mine)}개다(트레이스 {len(runs)}개)."
+                " 사례마다 하나여야 한다"
+            )
+            continue
+        shown = [] if report is None else report.shown.get(agent, [])
+        failures.extend(_case_failures(agent, mine[0], shown))
+    return failures
+
+
+def _runs(traces: Path) -> list[tuple[str, Sequence[Event | UnknownEvent]]]:
+    """폴더의 트레이스마다 (시작한 에이전트, 이벤트). 시작 이벤트가 없는 트레이스는 뺀다."""
     files = sorted(traces.glob("*.jsonl")) if traces.is_dir() else []
-    events = [event for file in files for event in _read_trace(file).events]
+    runs: list[tuple[str, Sequence[Event | UnknownEvent]]] = []
+    for file in files:
+        events = _read_trace(file).events
+        started = next((event for event in events if isinstance(event, RunStarted)), None)
+        if started is not None:
+            runs.append((started.agent, events))
+    return runs
+
+
+def _case_failures(
+    agent: str, events: Sequence[Event | UnknownEvent], shown: list[str]
+) -> list[str]:
+    """사례 하나의 실행(`events`)과 그 사례가 화면에 선 출력(`shown`)에서 어긋난 것."""
+    failures: list[str] = []
     if not any(isinstance(event, LlmCalled) for event in events):
         failures.append(
-            f"트레이스 {len(files)}개에 llm_called 가 없다. 키가 serve 에 닿지 않았을 수 있다"
+            f"에이전트 {agent} 의 실행에 llm_called 가 없다. 키가 serve 에 닿지 않았을 수 있다"
         )
     outputs = [event.output for event in events if isinstance(event, RunFinished)]
-    shown = [] if report is None else report.shown
-    if len(outputs) != 1 or shown != outputs:
-        failures.append(
-            f"화면에 선 출력 {shown!r} 이 트레이스의 run_finished 출력 {outputs!r} 과 같지 않다"
-        )
+    if agent == CALC:
+        # 글자를 견주는 것은 계산 사례 하나다. 화면은 마크다운 부품이 그린 글이라 글자 그대로가
+        # 아니라 기호를 뗀 글이 원문의 부분열인지를 본다(`tests/screen_text.py`).
+        if len(outputs) != 1 or len(shown) != 1 or not screen_matches_output(shown[0], outputs[0]):
+            failures.append(
+                f"{agent}: 화면에 선 출력 {shown!r} 이 트레이스의 run_finished 출력"
+                f" {outputs!r} 에서 온 글로 보이지 않는다"
+                "(기호를 뗀 글이 원문의 부분열이 아니거나 화면 글이 비었다)"
+            )
+    else:
+        # 화면의 낱말은 Playwright 사례가 보고, 여기서는 화면에 출력이 섰고 실행이 끝났는지만 본다.
+        if len(shown) != 1 or len(outputs) != 1:
+            failures.append(
+                f"{agent}: 화면에 선 출력 {shown!r} 과 트레이스의 run_finished 출력 {outputs!r} 이"
+                " 하나씩이 아니다"
+            )
+        if not any(isinstance(e, ToolCalled) and e.tool == "search" and e.ok for e in events):
+            failures.append(f"에이전트 {agent} 의 실행에 성공한 search 호출이 없다")
     return failures
 
 
@@ -197,11 +293,13 @@ def _read_trace(trace_file: Path) -> Trace:
 
 
 @pytest.mark.llm_widget
-def test_위젯에서_보낸_요청_하나에_계산_에이전트가_실제_모델로_답한다(tmp_path: Path) -> None:
+def test_위젯에서_보낸_요청에_계산_에이전트와_기본_에이전트가_실제_모델로_답한다(
+    tmp_path: Path, tmp_path_factory: pytest.TempPathFactory
+) -> None:
     """바깥 이음매. 실제 브라우저, 실제 serve 와 Next, 같은 출처의 중계, 사이트 파일과 서명 토큰,
-    실제 모델이 한 길에 든다. 끝까지 돈 실행이면 준비가 띄운 프로세스의 출력이
-    `web/apps/widget/test-results/` 에 남는다(제한 시간에 끊긴 실행은 머리 독스트링의 못 보는
-    것)."""
+    가짜 문서 검색 서버, 실제 모델이 한 길에 든다. 끝까지 돈 실행이면 준비가 띄운 프로세스의
+    출력이 `web/apps/widget/test-results/` 에 남는다(제한 시간에 끊긴 실행은 머리 독스트링의 못
+    보는 것)."""
     if "ANTHROPIC_API_KEY" not in os.environ:
         # assert 로 두면 pytest 가 실패 출력에 os.environ 의 repr 을 싣는다(대기열 463).
         pytest.fail("ANTHROPIC_API_KEY 가 없다. .env 를 확인한다")
@@ -209,13 +307,26 @@ def test_위젯에서_보낸_요청_하나에_계산_에이전트가_실제_모�
     traces = tmp_path / "traces"
     report = tmp_path / "report.json"
     log = tmp_path / "playwright.log"
-    env = {**os.environ, LLM_ENV: "1", TRACES_ENV: str(traces), REPORT_ENV: str(report)}
+    # 서버의 기록(record.jsonl)이 토큰 합계에 트레이스로 세이지 않도록 tmp_path 밖에 둔다.
+    server_folder = tmp_path_factory.mktemp("widget_doc_search")
 
-    code = _run_tree([pnpm, *PLAYWRIGHT], cwd=WIDGET, env=env, log=log, timeout=TIMEOUT)
+    with serving(server_folder, "--expect-authorization", DOC_SEARCH_AUTHORIZATION) as doc_search:
+        env = {
+            **os.environ,
+            LLM_ENV: "1",
+            TRACES_ENV: str(traces),
+            REPORT_ENV: str(report),
+            DOC_SEARCH_URL_ENV: doc_search.url,
+            DOC_SEARCH_AUTHORIZATION_ENV: DOC_SEARCH_AUTHORIZATION,
+        }
+        code = _run_tree([pnpm, *PLAYWRIGHT], cwd=WIDGET, env=env, log=log, timeout=TIMEOUT)
+        served = [call["name"] for call in doc_search.tool_calls()]
 
     output = log.read_text(encoding="utf-8", errors="replace")
     assert code is not None, f"{TIMEOUT}초 안에 끝나지 않아 프로세스 트리를 끝냈다:\n{output}"
     failures = _failures(_read_report(report), traces, code)
+    if "search" not in served:
+        failures.append(f"가짜 문서 검색 서버가 받은 도구 호출 {served!r} 에 search 가 없다")
     assert not failures, "\n".join([*failures, f"Playwright 종료 {code}, 출력:", output])
 
 
@@ -309,3 +420,161 @@ def test_제한_시간을_넘기면_손자까지_끝내고_None_이다(tmp_path:
     assert code is None
     assert beat.exists(), "손자가 제한 시간 안에 뜨지 않아 끝내기를 재지 못했다"
     assert _stops_growing(beat, within=30), "제한 시간을 넘긴 뒤에도 손자가 살아 있다"
+
+
+# --- 사례별 짝짓기(`_failures`). 모델 없이 가짜 트레이스와 가짜 리포트로 본다
+# ---------------------------
+
+NOW = datetime(2026, 11, 12, 12, 0, tzinfo=UTC)
+CALC_OUTPUT = "2 더하기 3은 5입니다."
+ASSISTANT_OUTPUT = (
+    "육아휴직은 1년까지 쓸 수 있습니다. [1]\n\n출처\n1. 육아휴직 업무편람 (갱신일 2026-10-01)"
+)
+
+
+def _write_run(
+    traces: Path,
+    run_id: str,
+    agent: str,
+    output: str,
+    *,
+    llm_calls: int = 1,
+    searches: Sequence[bool] = (),
+) -> None:
+    """`agent` 로 시작해 모델을 `llm_calls` 번 부르고, `searches` 의 성공 여부대로 `search` 를 부른
+    뒤 `output` 으로 끝난 실행의 트레이스 하나를 `traces` 에 쓴다."""
+    trace = JsonlTrace(traces)
+    rid = RunId(run_id)
+    events: list[Event] = [
+        RunStarted(
+            run_id=rid, ts=NOW, agent=AgentName(agent), request="질문", principal=Principal("p")
+        )
+    ]
+    events.extend(
+        LlmCalled(run_id=rid, ts=NOW, model="m", input_tokens=1, output_tokens=1)
+        for _ in range(llm_calls)
+    )
+    events.extend(ToolCalled(run_id=rid, ts=NOW, tool="search", ok=ok) for ok in searches)
+    events.append(RunFinished(run_id=rid, ts=NOW, output=output))
+    for event in events:
+        trace.write(event)
+
+
+def _report(**shown: list[str]) -> _Report:
+    return _Report(stats=PASSED_ALL, errors=[], shown=shown)
+
+
+def test_두_사례가_각자의_실행과_짝이_맞으면_어긋남이_없다(tmp_path: Path) -> None:
+    _write_run(tmp_path, "r-calc", CALC, CALC_OUTPUT)
+    _write_run(tmp_path, "r-assistant", ASSISTANT, ASSISTANT_OUTPUT, searches=[True])
+    report = _report(calc=[CALC_OUTPUT], assistant=[ASSISTANT_OUTPUT])
+
+    assert _failures(report, tmp_path, 0) == []
+
+
+def test_계산_사례는_기호가_빠지고_숨긴_접두가_붙은_화면_글도_그_출력에서_온_글로_본다(
+    tmp_path: Path,
+) -> None:
+    _write_run(tmp_path, "r-calc", CALC, "**2 더하기 3**은 5입니다.")
+    _write_run(tmp_path, "r-assistant", ASSISTANT, ASSISTANT_OUTPUT, searches=[True])
+    report = _report(calc=["출력: 2 더하기 3은 5입니다."], assistant=[ASSISTANT_OUTPUT])
+
+    assert _failures(report, tmp_path, 0) == []
+
+
+def test_계산_사례의_화면_글이_숨긴_접두뿐이면_알린다(tmp_path: Path) -> None:
+    _write_run(tmp_path, "r-calc", CALC, CALC_OUTPUT)
+    _write_run(tmp_path, "r-assistant", ASSISTANT, ASSISTANT_OUTPUT, searches=[True])
+    report = _report(calc=["출력: "], assistant=[ASSISTANT_OUTPUT])
+
+    failures = _failures(report, tmp_path, 0)
+
+    assert len(failures) == 1
+    assert failures[0].startswith("calc")
+
+
+def test_assistant_사례는_화면의_글을_트레이스의_출력과_글자로_견주지_않는다(
+    tmp_path: Path,
+) -> None:
+    _write_run(tmp_path, "r-calc", CALC, CALC_OUTPUT)
+    _write_run(tmp_path, "r-assistant", ASSISTANT, ASSISTANT_OUTPUT, searches=[True])
+    report = _report(calc=[CALC_OUTPUT], assistant=["위첨자와 작은 글자로 그린 같은 답"])
+
+    assert _failures(report, tmp_path, 0) == []
+
+
+def test_계산_사례의_화면_글이_그_실행의_출력과_다르면_알린다(tmp_path: Path) -> None:
+    _write_run(tmp_path, "r-calc", CALC, CALC_OUTPUT)
+    _write_run(tmp_path, "r-assistant", ASSISTANT, ASSISTANT_OUTPUT, searches=[True])
+    report = _report(calc=["2 더하기 3은 6입니다."], assistant=[ASSISTANT_OUTPUT])
+
+    failures = _failures(report, tmp_path, 0)
+
+    assert len(failures) == 1
+    assert failures[0].startswith("calc")
+    assert "화면에 선 출력 ['2 더하기 3은 6입니다.']" in failures[0]
+
+
+def test_assistant_의_실행에_성공한_search_가_없으면_알린다(tmp_path: Path) -> None:
+    _write_run(tmp_path, "r-calc", CALC, CALC_OUTPUT)
+    _write_run(tmp_path, "r-assistant", ASSISTANT, ASSISTANT_OUTPUT, searches=[False])
+    report = _report(calc=[CALC_OUTPUT], assistant=[ASSISTANT_OUTPUT])
+
+    failures = _failures(report, tmp_path, 0)
+
+    assert len(failures) == 1
+    assert "assistant 의 실행에 성공한 search 호출이 없다" in failures[0]
+
+
+def test_사례의_실행에_llm_called_가_없으면_그_에이전트를_짚어_알린다(tmp_path: Path) -> None:
+    _write_run(tmp_path, "r-calc", CALC, CALC_OUTPUT)
+    _write_run(tmp_path, "r-assistant", ASSISTANT, ASSISTANT_OUTPUT, llm_calls=0, searches=[True])
+    report = _report(calc=[CALC_OUTPUT], assistant=[ASSISTANT_OUTPUT])
+
+    failures = _failures(report, tmp_path, 0)
+
+    assert failures == [
+        "에이전트 assistant 의 실행에 llm_called 가 없다. 키가 serve 에 닿지 않았을 수 있다"
+    ]
+
+
+def test_사례의_에이전트로_시작한_실행이_하나가_아니면_알린다(tmp_path: Path) -> None:
+    _write_run(tmp_path, "r-calc", CALC, CALC_OUTPUT)
+    report = _report(calc=[CALC_OUTPUT], assistant=[ASSISTANT_OUTPUT])
+
+    failures = _failures(report, tmp_path, 0)
+
+    assert len(failures) == 1
+    assert "assistant 로 시작한 실행이 0개다" in failures[0]
+
+
+def test_JSON_이_아닌_화면_주석은_뺀_채_그_사례를_화면이_빈_것으로_알린다(tmp_path: Path) -> None:
+    _write_run(tmp_path, "r-calc", CALC, CALC_OUTPUT)
+    _write_run(tmp_path, "r-assistant", ASSISTANT, ASSISTANT_OUTPUT, searches=[True])
+    notes: list[dict[str, Json]] = [
+        {"type": SHOWN_ANNOTATION, "description": "JSON 이 아닌 글"},
+        {"type": SHOWN_ANNOTATION, "description": json.dumps({"agent": CALC, "text": CALC_OUTPUT})},
+    ]
+    shown = _by_agent(set(_annotations(notes)))
+
+    failures = _failures(_Report(stats=PASSED_ALL, errors=[], shown=shown), tmp_path, 0)
+
+    assert len(failures) == 1
+    assert "assistant: 화면에 선 출력 []" in failures[0]
+
+
+def test_통과한_사례가_둘이_아니면_알린다(tmp_path: Path) -> None:
+    _write_run(tmp_path, "r-calc", CALC, CALC_OUTPUT)
+    _write_run(tmp_path, "r-assistant", ASSISTANT, ASSISTANT_OUTPUT, searches=[True])
+    report = _Report(
+        stats={"expected": 0, "skipped": 2, "unexpected": 0, "flaky": 0},
+        errors=[],
+        shown={CALC: [CALC_OUTPUT], ASSISTANT: [ASSISTANT_OUTPUT]},
+    )
+
+    failures = _failures(report, tmp_path, 0)
+
+    assert failures == [
+        "프로젝트 llm 이 통과 2, 건너뜀 0 이 아니다: "
+        "{'expected': 0, 'skipped': 2, 'unexpected': 0, 'flaky': 0}"
+    ]

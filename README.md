@@ -40,6 +40,8 @@ plugins/
                    손으로 고쳐도 같다. skill은 에이전트가 고르면 런타임이 실행을 준비할 때 켜짐을 본다
   rules.toml       선택. 운영자의 규칙 파일(ADR 0044). 도구 호출마다 막고(deny), 묻고(ask), 그냥 부른다(allow).
                    없으면 연결에 있는 도구의 모든 호출이 묻는다. 손으로 고치고 다음 실행과 다음 재개부터 듣는다
+  README.md        커스텀 에이전트를 만드는 안내(기본 에이전트 assistant를 복사하는 순서, 두 끝, 열기, 문서 검색 서버에
+                   붙이는 설정). 종류 폴더 밖이라 플러그인으로 읽히지 않는다
 tests/             src를 미러링. fixtures/site_file/ 은 서버와 위젯 빌드의 시험이 함께 읽는 사이트 파일 픽스처
 web/               pnpm 워크스페이스(Node 24, TypeScript 5.9). 파이썬과 루트를 나눈다. 앱은 apps/*, 공유 패키지는 packages/*
   eslint.config.mjs  원칙 III의 TS 판정자와 층 경계. 변이 테스트는 eslint.config.test.ts
@@ -57,10 +59,13 @@ web/               pnpm 워크스페이스(Node 24, TypeScript 5.9). 파이썬�
   packages/e2e-stack/  e2e 준비(@agent-os/e2e-stack, 앱의 devDependency). 같은 출처 중계, 픽스처 플러그인(저장소 플러그인 복사
                    포함), 실제 serve 띄우기와 빈 포트·기다리기·끄기 도우미(Stack), 사이트 키와 토큰 서명, 준비가 시험에 넘긴
                    트레이스 폴더에서 실행의 주체를 읽는 것. 환경 변수 이름은 앱이 준다. 상대 import 에 확장자를 붙인다
+  packages/react-18/  React·ReactDOM 18.3.1 만 든 시험 전용 패키지(@agent-os/react-18, 판 고정). 디자인 시스템 카드 시험이
+                   페이지가 싣는 판으로도 카드를 그리려고 쓴다. 코드는 그 판의 폴더 경로와 판 번호뿐이다(ADR 0025 이력 2026-11-14)
   packages/ui/     디자인 시스템(@agent-os/ui). src/styles/(디자인 토큰 CSS theme.css, 글꼴 CSS fonts.css, shadow 보정,
                    판정 스토리), src/themes.ts(`./themes`), node/(`./fonts`. 글꼴 파일을 고르고 복사하는 node 쪽
                    도우미와 FontFaceSource 타입), src/components/atoms/·molecules/(컴포넌트와 스토리, <Name>.md),
-                   src/testing/(판정 함수),
+                   src/markdown/(마크다운 부품의 변환과 주소 판정. 화면을 그리지 않고 패키지 밖으로 내보내지 않는다),
+                   src/testing/(판정 함수와 부품 시험의 격리 setup.ts, 부품 시험은 vitest 의 ui-pages 프로젝트가 jsdom 에서 돈다),
                    src/storybook/(앱도 나눠 쓰는 미리보기), .storybook/(Storybook 설정), visual/(사진 비교와 정답
                    사진 snapshots/, 앱도 나눠 쓰는 정적 빌드 열기 index.ts). 스토리 테스트는 뿌리 vitest.config.ts 의
                    storybook 프로젝트가 실제 chromium 에서 돈다(ADR 0026)
@@ -82,14 +87,14 @@ web/               pnpm 워크스페이스(Node 24, TypeScript 5.9). 파이썬�
                    e2e/·playwright.config.ts(실제 serve·Next 앞의 같은 출처 중계 뒤에서 두 방식의 위젯을 미는 e2e.
                    준비의 몸통은 packages/e2e-stack 이고 e2e/stack.ts 에는 위젯 빌드와 사이트 서버를 띄우는 일이 남는다),
                    EMBED.md(사이트 개발자가 읽는 임베드 안내)
-  apps/portal/     질문 페이지(@agent-os/portal. Next 가 아니라 node:http 서버 하나이고 빌드 없이 node 가 타입만 벗겨 .ts 를
+  apps/portal/     위젯 미리보기 페이지(@agent-os/portal. Next 가 아니라 node:http 서버 하나이고 빌드 없이 node 가 타입만 벗겨 .ts 를
                    바로 돌린다). server/(설정 읽기 config, 고지 전문 notice, 쿠키 수명 cookie-policy, 쿠키 머리글 읽기
                    cookies, 익명 식별자 쿠키 anonymous-cookie, 사이트 토큰 서명과 익명 주체 이름 token, 사이트 파일과
                    개인 키를 대는 시작 검사 site-check·load, 시작 검사 결과를 요청 처리기가 쓰는 값으로 잇는 context,
-                   진단 글 diagnostics, 서버가 쓰는 경로의 한 자리 paths, 질문 페이지 HTML을 짓는 page, 시작 때 짓는 정적 파일
-                   assets, 질문 페이지·정적 파일·고지 확인·토큰·health 끝점을 내는 요청 처리기 handler, node:http 에 거는
+                   진단 글 diagnostics, 서버가 쓰는 경로의 한 자리 paths, 위젯 미리보기 페이지 HTML을 짓는 page, 시작 때 짓는 정적 파일
+                   assets, 위젯 미리보기 페이지·정적 파일·고지 확인·토큰·health 끝점을 내는 요청 처리기 handler, node:http 에 거는
                    serve), browser/(브라우저가 받는 페이지 스크립트 portal.ts 와 페이지 CSS portal.css),
-                   e2e/·playwright.config.ts(실제 serve·위젯·질문 페이지를 한 출처로 모으는 중계 뒤에서 도는 e2e),
+                   e2e/·playwright.config.ts(실제 serve·위젯·위젯 미리보기 페이지를 한 출처로 모으는 중계 뒤에서 도는 e2e),
                    tools/start.ts(설정과 사이트 파일을 대 본 뒤, 정적 파일을 짓고서야 뜨는 시작 명령),
                    tools/make-key.ts(RSA 키 쌍과 사이트 파일에 붙일 공개 키 조각을 내는 명령), tools/args.ts(두 명령이
                    함께 쓰는 인자 도우미), testing/(시험이 임시 폴더에 짓는 설정·사이트 파일·키)

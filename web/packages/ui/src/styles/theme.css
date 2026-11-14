@@ -62,7 +62,7 @@
   --spacing-nav: 256px;
   --spacing-nav-item: 36px;
   --spacing-top-bar: 52px;
-  /* 부품 치수. 스위치의 트랙·손잡이·안쪽 띄움, 진행 막대, 상태 배지의 높이와 안쪽 왼쪽이다. */
+  /* 부품 치수. 스위치의 트랙·손잡이·안쪽 띄움, 진행 막대, 상태 배지의 높이와 안쪽 왼쪽, 마크다운 표 칸의 최소·최대 폭, 마크다운 문장 끝 번호(위첨자)의 왼쪽 틈이다. */
   --spacing-switch-w: 40px;
   --spacing-switch-h: 24px;
   --spacing-switch-knob: 20px;
@@ -70,6 +70,9 @@
   --spacing-progress: 4px;
   --spacing-badge: 22px;
   --spacing-badge-start: 6px;
+  --spacing-cell-min: 96px;
+  --spacing-cell-max: 256px;
+  --spacing-cite-start: 2px;
   --radius-s: 4px; /* 상태 배지, 위젯 승인 묻기의 인자 칸, 위젯에서 포커스 링을 두르는 글과 도구 펼치기 단추 */
   --radius-m: 8px; /* 버튼, 아이콘 버튼, 입력 칸, 위젯의 승인 묻기 */
   --radius-l: 12px; /* 카드, 알림, 위젯 창, 위젯 대화에서 보낸 요청의 말풍선 */

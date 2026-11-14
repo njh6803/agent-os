@@ -1,10 +1,12 @@
 # 로컬 pre-commit과 같은 검사. 훅은 각자 설치해야 하므로 CI가 최종 판정이다. 파이썬, web, 관리 화면 e2e(e2e), 위젯
-# e2e(e2e-widget), 질문 페이지 e2e(e2e-portal), 사진 비교(visual), 커밋 검사(ticket)가 잡 일곱으로 함께 돌고, 필수 검사는
+# e2e(e2e-widget), 위젯 미리보기 페이지 e2e(e2e-portal), 사진 비교(visual), 커밋 검사(ticket)가 잡 일곱으로 함께 돌고, 필수 검사는
 # 그 결과를 모으는 verify 하나다(ADR 0005, ADR 0021의 2026-10-01 이력 둘, ADR 0037, ADR 0024의 2026-10-24 이력, ADR 0050).
-# 잡을 더하면 verify 의 needs 에 넣는다. 빠뜨리면 verify 가 빨갛다. 세 e2e 와 사진 비교는 pre-commit 에 없고 CI 에만 있다
-# (ADR 0026).
-# LLM 호출 테스트(-m llm, -m llm_widget, -m llm_portal)는 돌리지 않는다. 비용과 키 때문이며 수동으로 돌린다. e2e-widget 은
-# AGENT_OS_WIDGET_LLM 을, e2e-portal 은 AGENT_OS_PORTAL_LLM 을 두지 않아 실제 모델을 부르는 Playwright 프로젝트 llm 이 서지 않는다.
+# 잡을 더하면 verify 의 needs 에 넣는다. 빠뜨리면 verify 가 빨갛다(참고 모드인 llm 잡만 예외다). 세 e2e 와 사진 비교는
+# pre-commit 에 없고 CI 에만 있다(ADR 0026).
+# LLM 호출 테스트는 base 가 main 인 PR 과 main 푸시의 llm 잡만 돌린다(-m llm, -m llm_widget. ADR 0043). dev 로 가는 티켓 PR
+# 에서는 비용과 키 때문에 돌리지 않고 손으로 돌린다. -m llm_portal 은 ADR 0043 이 꼽지 않아 이 잡에 싣지 않는다. 그 잡은 참고
+# 모드라 verify 의 needs 에 없고, 결과가 빨갛다고 병합을 막지 않는다(llm 잡 위의 주석). e2e-widget 은 AGENT_OS_WIDGET_LLM 을,
+# e2e-portal 은 AGENT_OS_PORTAL_LLM 을 두지 않아 실제 모델을 부르는 Playwright 프로젝트 llm 이 서지 않는다.
 # 체크아웃하는 잡은 모두 persist-credentials: false 다. 모두 PR 의 코드를 짓고 돌리는데 체크아웃 뒤에 github.com 을 상대로
 # 한 git 명령(push, 인증된 fetch)이 없어서, 체크아웃 토큰을 .git/config 에 남기지 않는다(PR #158 의 CodeRabbit, CWE-522).
 # 워크플로 하드닝은 zizmor 가 판정한다(ADR 0027, 설정은 .github/zizmor.yml). 빠뜨리면 artipacked 가, 서드파티 액션을 해시
@@ -19,8 +21,8 @@
 name: ci
 
 # 개발 브랜치 dev 가 서면(ADR 0043) 티켓 PR 은 dev 로, 출시 PR(dev→main)과 핫픽스는 main 으로 간다. PR 은 base 를
-# 가리지 않고 같은 검사 잡 일곱과 그 결과를 모으는 verify 가 돈다. 푸시는 main 과 dev 둘이다. main 에서만 더 도는 검사(LLM 호출 테스트, 실제 이미지의
-# compose e2e)는 이 파일에 아직 없다. 앞의 것은 API 키 시크릿을 사람이 넣은 뒤 ci-llm-job 티켓이 더하고, 뒤의 것은
+# 가리지 않고 같은 검사 잡 일곱과 그 결과를 모으는 verify 가 돈다. 푸시는 main 과 dev 둘이다. main 에서만 더 도는 검사 중
+# LLM 호출 테스트는 llm 잡이 돌고(ci-llm-job 티켓), 실제 이미지의 compose e2e 는 이 파일에 아직 없다. 뒤의 것은
 # release-image 의 첫 티켓이 Dockerfile·compose 와 함께 더한다(ADR 0056).
 on:
   push:
@@ -200,9 +202,9 @@ jobs:
         run: pnpm -C web/apps/widget exec playwright install-deps chromium
       - run: pnpm -C web/apps/widget exec playwright test
 
-  # 질문 페이지 e2e(pilot-portal 티켓 06). 실제 serve, 같은 사이트 파일로 빌드한 실제 위젯 Next, 실제 질문 페이지, 셋을 한
+  # 위젯 미리보기 페이지 e2e(pilot-portal 티켓 06). 실제 serve, 같은 사이트 파일로 빌드한 실제 위젯 Next, 실제 위젯 미리보기 페이지, 셋을 한
   # 출처 아래에 모으는 시험 안의 중계를 지난다(준비는 web/apps/portal/e2e/stack.ts). 모양은 e2e-widget 과 같다. 이 잡이
-  # ubuntu 에서 실제 질문 페이지를 띄우는 것이 Linux 확인이다(`stripTypeScriptTypes` 와 Tailwind CLI 자식 프로세스). timeout-
+  # ubuntu 에서 실제 위젯 미리보기 페이지를 띄우는 것이 Linux 확인이다(`stripTypeScriptTypes` 와 Tailwind CLI 자식 프로세스). timeout-
   # minutes 는 지난 실행이 없는 첫 값이라 e2e-widget 의 값을 그대로 둔 어림이다. 프로브의 `JOBS` 에는 아직 이 잡이 없다
   # (e2e-widget 도 없다). 이 잡이 든 실행이 생기면 `JOBS` 에 이 잡을 더하고 그 실행의 브랜치를 주어 프로브를 돌려 고친다
   # (머리 주석).
@@ -328,6 +330,63 @@ jobs:
           echo "::stop-commands::$marker"
           python3 tools/check_ticket.py --ci
 
+  # LLM 호출 테스트(-m llm, -m llm_widget). base 가 main 인 PR(dev→main, hotfix→main)과 main 푸시에서만 돌고, dev 로 가는
+  # 티켓 PR 과 dev 푸시에서는 잡 수준 if 로 건너뛴다(ADR 0043 의 "CI 분담").
+  # 참고 모드다. 이 잡은 verify 의 needs 에 없고 verify 의 차집합 예외에만 든다. 실제 모델의 답이 얼마나 흔들리는지 재기
+  # 전에는 병합을 막지 않는다. needs 에 이으면 dev 로 가는 PR 에서 건너뛴 이 잡을 verify 가 빨강으로 본다. 막는 게이트로
+  # 바꾸는 조건은 .scratch/harness/issues/ci-llm-job.md 끝에 적었다.
+  # 키는 시크릿 ANTHROPIC_API_KEY 하나이고 두 pytest 스텝에만 env 로 준다. 설치와 체크아웃 스텝에는 주지 않으며 워크플로
+  # 수준에도 두지 않는다. 포크 PR 에는 GitHub 이 시크릿을 보내지 않아 키 없이 돌면 시험이 실패하므로, 머리 저장소가 이
+  # 저장소인 PR 만 돈다. 포크 PR 은 이 잡을 건너뛴다.
+  # 모양은 e2e-widget 과 같다(위젯 시험이 pnpm 과 chromium 을 쓴다). 둘째 스텝은 첫째가 실패해도 돈다. 둘의 흔들림을
+  # 따로 보기 위해서다. timeout-minutes 는 지난 실행이 없는 첫 값이다. 위젯 시험 하나의 제한이 10분(tests/test_widget_llm.py
+  # 의 TIMEOUT)이고 설치가 3분쯤 드는 것으로 본 어림이다(재지 않았다). tests/test_assistant_llm.py 가 들어온 뒤로 이 PC 에서
+  # -m llm 전체가 14분 46초였으므로(손으로 봤다, 일지 2026-11-12-2346) 그 시간에 위젯과 설치를 더해 25분에서 40분으로
+  # 올렸다(이것도 어림이다. CI 의 러너로는 재지 않았다). 이 잡이 든 첫 실행으로 프로브를 다시 돌려 고친다(머리 주석).
+  # 프로브의 JOBS 에는 아직 이 잡이 없다.
+  llm:
+    if: ${{ (github.event_name == 'push' && github.ref == 'refs/heads/main') || (github.event_name == 'pull_request' && github.base_ref == 'main' && github.event.pull_request.head.repo.full_name == github.repository) }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      PYTHONUTF8: "1"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86 # v5.4.2
+        with:
+          enable-cache: true
+      - run: uv python install 3.12
+      - run: uv sync --frozen
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
+        with:
+          package_json_file: web/package.json
+          cache: true
+          cache_dependency_path: web/pnpm-lock.yaml
+      - run: pnpm -C web install --frozen-lockfile
+      - id: playwright
+        run: echo "version=$(pnpm -C web/apps/widget exec playwright --version | awk '{print $2}')" >> "$GITHUB_OUTPUT"
+      - id: browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.playwright.outputs.version }}
+      - if: steps.browsers.outputs.cache-hit != 'true'
+        run: pnpm -C web/apps/widget exec playwright install --with-deps --only-shell chromium
+      - if: steps.browsers.outputs.cache-hit == 'true'
+        run: pnpm -C web/apps/widget exec playwright install-deps chromium
+      - env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: uv run pytest -m llm -q
+      - if: ${{ !cancelled() }}
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: uv run pytest -m llm_widget -q
+
   # 필수 검사. 건너뛴 잡은 필수 검사여도 성공으로 보고되고(GitHub 문서), 앞 잡이 실패하면 needs 로 이은 잡은
   # 기본적으로 건너뛴다. 그래서 always() 로 언제나 돌고, needs 의 결과가 모두 success 일 때만 초록이다.
   # failure 뿐 아니라 cancelled 와 skipped 도 빨강이다.
@@ -335,9 +394,9 @@ jobs:
   # 밖의 잡이 needs 에 없으면 빨강이다. 지금 시도만 읽지 않는 것은, 실패한 잡만 다시 돌린 시도에서는 앞 시도의 잡이
   # 새 시도로 옮겨지는 중이라 목록에서 빠질 수 있기 때문이다. 잡에 name: 을 두지 않으므로 API 의 잡 이름이 잡 id 와
   # 같다. 읽은 목록에 verify 자신이 없으면(빈 목록이면) 비교할 것이 없어 조용히 초록이 되므로 그것도 빨강이다.
-  # 일부러 필수 검사 밖에 둘 잡이 생기면 아래 차집합에 그 이름을 예외로 더한다. verify 뒤에 도는 잡(needs: [verify])은
-  # 첫 시도에서는 verify 가 도는 동안 목록에 없어 이 검사가 보지 못하고, 순환이라 needs 에 넣을 수도 없다. 그런 잡은
-  # 필수 검사 밖이다(ADR 0021의 둘째 2026-10-01 이력, PR #119 실험).
+  # 일부러 필수 검사 밖에 둘 잡이 생기면 아래 차집합에 그 이름을 예외로 더한다. 지금 예외는 llm 하나다(참고 모드. 그 잡
+  # 위의 주석). verify 뒤에 도는 잡(needs: [verify])은 첫 시도에서는 verify 가 도는 동안 목록에 없어 이 검사가 보지
+  # 못하고, 순환이라 needs 에 넣을 수도 없다. 그런 잡은 필수 검사 밖이다(ADR 0021의 둘째 2026-10-01 이력, PR #119 실험).
   verify:
     if: always()
     needs: [python, web, e2e, e2e-widget, e2e-portal, visual, ticket]
@@ -358,7 +417,7 @@ jobs:
             echo "::error::잡 목록에 verify 가 없다. 목록을 읽지 못한 것이다."
             exit 1
           fi
-          outside=$(jq -c --argjson needs "$NEEDS" '. - ["verify"] - ($needs | keys)' <<< "$names")
+          outside=$(jq -c --argjson needs "$NEEDS" '. - ["verify", "llm"] - ($needs | keys)' <<< "$names")
           if [ "$outside" != "[]" ]; then
             echo "::error::verify 의 needs 에 없는 잡: $outside. 필수 검사 밖에서 돈다."
             exit 1

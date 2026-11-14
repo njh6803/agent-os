@@ -1,0 +1,26 @@
+# 프로젝트 사본 pr-feedback(project-pr-skills-dev)이 새 세션에 실리는지. 같은 이름의 사용자 수준 스킬이 가려서
+# 이름을 달리했다(티켓 결과 1). 실험군은 이 워크트리, 대조군은 사본을 들이기 전의 커밋이다.
+# 결과: 통과 4, "없음" 섞임 0(2026-11-12, 이 PC, claude 2.1.322, 실험군은 이 워크트리의 커밋하지 않은 본문(러너가 찍은 커밋은 `4b02bbe29`), 대조군 `--control-commit 4b02bbe29`, 일지 2026-11-12-1353).
+#   대조군은 `Unknown skill: pr-feedback` 으로 본문을 못 읽어 "없음" 대신 못 읽었다고 답했다.
+# 돌리는 법: 워크트리 `.claude/worktrees/<이름>/` 루트에서
+#   uv run python tools/canary.py --control-commit 4b02bbe29 .scratch/harness/probes/canary/pr_feedback_skill_base.toml <출력 디렉터리>
+kind = "skill"
+question = '''
+pr-feedback 스킬을 Skill 도구로 불러 본문을 읽어라. 스킬이 시키는 일은 하지 않고 본문만 읽는다.
+그 본문에서 두 구절을 각각 글자 그대로 옮겨라.
+1. 반영하는 동안 base 브랜치가 앞서 나갔을 때, rebase가 아닌 방법을 쓰는 까닭을 적은 구절.
+2. 반영 커밋을 푸시하기 전에 사용자에게 묻는지를 적은 구절.
+본문에 그런 것이 없으면 그 번호에 "없음"이라고만 답하라.
+'''
+expect = ["푸시한 PR의 이력을 다시 쓰지 않으려고", "푸시는 사용자에게 묻지 않는다"]
+source = ".claude/skills/pr-feedback/SKILL.md"
+skill = "pr-feedback"
+
+[[arm]]
+name = "워크트리"
+role = "experiment"
+
+[[arm]]
+name = "주-체크아웃"
+role = "control"
+checkout = "../../.."

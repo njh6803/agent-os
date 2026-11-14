@@ -24,6 +24,8 @@ function manifest(kind: PluginRow["kind"], name: string): Plugin["manifest"] {
     model_id: null,
     max_tokens: null,
     temperature: null,
+    base_url: null,
+    api_key_env: null,
     server: null,
   };
 }

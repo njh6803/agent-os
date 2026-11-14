@@ -5,6 +5,8 @@
 //   파일이 생기기를 기다린다. 그 사이에 첫 도구 줄이 화면에 서 있는지를 시험이 본다(도구 줄이 결말 전에 선다). 문이
 //   닫힌 동안 끝나지 않아, 새로 고친 뒤 도는 실행에 다시 붙는 사례도 쓴다.
 // - `html` 은 실행되면 흔적을 남기는 HTML 조각을 출력으로 낸다. 위젯이 그것을 글로 보이는지를 시험이 본다.
+// - `markdown` 은 고정된 마크다운 출력(`markdownOutput`)을 낸다. 위젯이 제목, 표, 링크를 요소로 그리고 이미지 주소로 요청을
+//   보내지 않는지를 시험이 본다.
 // - `echo` 는 받은 요청의 글자 수를 낸다. 서버에 직접 보내는 글자 수 상한의 사례가 쓴다.
 // - `approval` 은 add 를 승인 대상으로 두고 부른다. 결정을 기다리며 멈추므로, 새로 고친 뒤 멈춘 실행에 다시 붙는 사례가
 //   쓴다. 관리 화면 e2e 의 `gated` 와 같은 매니페스트다.
@@ -13,14 +15,16 @@
 // 경로의 역슬래시).
 //
 // 실제 모델 e2e(티켓 11)에서는 준비가 그 앞에 저장소의 플러그인 루트를 통째로 옮긴다(`copyRepoPlugins`). 저장소의 계산
-// 에이전트가 그것이 쓰는 MCP 서버와 함께 오고, 픽스처는 그 위에 쓴다.
+// 에이전트와 기본 에이전트(`assistant`)가 그것이 쓰는 MCP 서버와 함께 오고, 픽스처는 그 위에 쓴다.
 
-import { cpSync, mkdirSync, writeFileSync } from "node:fs";
+import { cpSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { basename, dirname, join } from "node:path";
 
-export const AGENTS = ["tools", "html", "echo", "approval"] as const;
+export const AGENTS = ["tools", "html", "markdown", "echo", "approval"] as const;
 /** 저장소의 계산 에이전트(`plugins/agents/calc`). 실제 모델을 부른다. */
 export const LLM_AGENT = "calc";
+/** 저장소의 기본 에이전트(`plugins/agents/assistant`). 문서 검색 연결로 근거를 찾아 출처를 달아 답한다. */
+export const ASSISTANT_AGENT = "assistant";
 /** 기본 모델 플러그인의 이름. 저장소의 `plugins/models/claude-opus-5` 와 같고 `serve` 에 `--model` 로 명시해 넘긴다. */
 export const DEFAULT_MODEL = "claude-opus-5";
 
@@ -31,15 +35,64 @@ export function copyRepoPlugins(repo: string, root: string): void {
     filter: (source) => basename(source) !== "__pycache__",
   });
 }
+
+/**
+ * `copyRepoPlugins` 로 옮긴 루트에서 문서 검색 연결(`mcp/doc-search`)의 주소를 `url` 로 바꿔 쓴다. 저장소의 매니페스트는
+ * 운영의 주소(`rag-engine`)를 들고 있어, 시험이 띄운 가짜 검색 서버를 가리키게 하려는 것이다. 주소 줄 하나만 바꾸고
+ * 헤더 표(`Authorization` 을 읽는 환경 변수의 이름)는 그대로 둔다. 주소 줄이 하나가 아니면 던진다.
+ */
+export function pointDocSearchAt(root: string, url: string): void {
+  const file = join(root, "mcp", "doc-search", "plugin.toml");
+  const lines = readFileSync(file, "utf-8").split("\n");
+  const index = lines.findIndex((line) => line.startsWith("url = "));
+  const another = lines.findIndex((line, at) => at > index && line.startsWith("url = "));
+  if (index === -1 || another !== -1) {
+    throw new Error(`doc-search 매니페스트에서 주소 줄 하나를 찾지 못했다(${file})`);
+  }
+  const ending = lines[index]?.endsWith("\r") === true ? "\r" : "";
+  lines[index] = `url = ${JSON.stringify(url)}${ending}`;
+  writeFileSync(file, lines.join("\n"));
+}
+
 /** `html` 에이전트의 출력. 실행되면 iframe 창의 `__widgetE2ePwned` 가 선다. */
 export const HTML_OUTPUT =
   '<img src="x" onerror="window.__widgetE2ePwned = 1"><script>window.__widgetE2ePwned = 2</script>';
+
+/**
+ * `markdown` 에이전트의 출력이 든 이미지의 주소 경로. 사이트 서버가 이 경로로 작은 그림을 낸다. 위젯이 이미지를 그리지
+ * 않는다는 것을 시험이 이 경로에 닿은 요청의 수로 본다(ADR 0053).
+ */
+export const MARKDOWN_IMAGE_PATH = "/e2e-pixel.png";
+
+/**
+ * `markdown` 에이전트의 출력. 제목, 굵게, 링크, 이미지, 표, 문장 끝 번호, 출처 덩이를 한 번씩 든다. 이미지 주소는 시험이
+ * 요청을 세는 서버의 경로(`imageUrl`)다.
+ */
+export function markdownOutput(imageUrl: string): string {
+  return [
+    "## 배송 안내",
+    "",
+    "**도착** 예정은 [조회 페이지](https://example.com/track)에서 확인합니다.[1]",
+    "",
+    `![배송 지도](${imageUrl})`,
+    "",
+    "| 구간 | 상태 |",
+    "| --- | --- |",
+    "| 출고 | 완료 |",
+    "| 배송 | 진행 중 |",
+    "",
+    "출처",
+    "",
+    "1. 배송 정책 문서 (2026-11-01 갱신)",
+  ].join("\n");
+}
 
 export function writeFixturePlugins(
   root: string,
   python: string,
   mcpServer: string,
   gates: string,
+  imageUrl = `http://127.0.0.1:9${MARKDOWN_IMAGE_PATH}`,
 ): void {
   const write = (path: string, text: string): void => {
     mkdirSync(dirname(join(root, path)), { recursive: true });
@@ -94,6 +147,14 @@ export function writeFixturePlugins(
     [`yield RunFinished(run_id=ctx.run_id, ts=ctx.now(), output=${JSON.stringify(HTML_OUTPUT)})`],
   );
   agent(
+    "markdown",
+    "",
+    [],
+    [
+      `yield RunFinished(run_id=ctx.run_id, ts=ctx.now(), output=${JSON.stringify(markdownOutput(imageUrl))})`,
+    ],
+  );
+  agent(
     "echo",
     "",
     [],
@@ -113,9 +174,28 @@ export function writeFixturePlugins(
   // 써서(`copyRepoPlugins` 뒤 `writeFixturePlugins`) 이 파일이 저장소의 것을 덮는다. 그래서 저장소의 파일이 든
   // calc 의 줄(`everything:*`)도 여기 다시 적는다. 에이전트 이름이 실재하는지는 보지 않으므로 calc 가 없는
   // 모드에서도 깨지지 않는다. 승인 요구가 든 `approval` 은 이 허락 뒤에도 저자의 승인 요구로 멈춘다.
+  //
+  // `[agents.assistant]` 의 세 줄도 같은 까닭으로 다시 적는다. 이것은 저장소 `plugins/rules.toml` 의 사본이다. 저장소의
+  // 표가 바뀌면(kb-selection 이 `list_knowledge_bases` 를 allow 로 옮긴다. ADR 0051 의 2026-11-10 이력) 이 사본도 손으로
+  // 맞춘다. `plugins.test.ts` 가 두 표가 글자 그대로 같은지 본다.
   write(
     "rules.toml",
-    'schema_version = "1"\n\n[agents.tools]\nallow = ["fixture:*"]\n\n[agents.calc]\nallow = ["everything:*"]\n',
+    [
+      'schema_version = "1"',
+      "",
+      "[agents.tools]",
+      'allow = ["fixture:*"]',
+      "",
+      "[agents.calc]",
+      'allow = ["everything:*"]',
+      "",
+      "# 저장소 plugins/rules.toml 의 [agents.assistant] 사본(위의 주석).",
+      "[agents.assistant]",
+      'allow = ["doc-search:search"]',
+      'ask = ["doc-search:get_document"]',
+      'deny = ["doc-search:list_knowledge_bases"]',
+      "",
+    ].join("\n"),
   );
   // 실제 모델 모드에서는 복사해 온 저장소의 파일이 이 자리에 이미 있다. `model_id` 를 다르게 적으면 그 파일이
   // 가짜 id 로 덮여 `-m llm_widget` 과 `-m llm_portal` 이 제공사에 가짜 id 를 보낸다. 그래서 저장소의 파일과 같은 값을 쓴다.

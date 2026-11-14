@@ -1,6 +1,7 @@
 """`tests/fake_doc_search_server.py`(가짜 문서 검색 서버)를 별도 프로세스로 띄우는 도우미. 플러그인
 꾸러미 시험과 실제 모델 시험 같은, 문서 검색 서버가 필요한 시험이 붙는 도우미다
-(`from tests.fake_doc_search import serving`). 꾸러미 시험과 프로브가 지금 쓴다.
+(`from tests.fake_doc_search import serving`). 꾸러미 시험과 프로브, 실제 모델
+시험(`tests/test_assistant_llm.py`), 위젯의 실제 모델 시험(`tests/test_widget_llm.py`)이 지금 쓴다.
 
 띄우고 끄는 일은 원격 MCP 서버 픽스처(`tests/mcp_http.py`)의 `HttpFixture`가 한다. 서버는 루프백의
 빈 포트에 뜨고, 프로세스는 이 도우미가 쥔 핸들로만 끈다. 이 모듈은 서버만 바꾸고, 도구 호출의 기록을

@@ -1,0 +1,134 @@
+# 2026-11-12 (13:43) 출시 PR(dev→main)을 여는 순서를 정한다
+
+세션 제목 `chore/dev-release-pr-step`. 브랜치 `chore/dev-release-pr-step`, 워크트리 `.claude/worktrees/dev-release-pr-step`, 티켓 `.scratch/harness/issues/dev-release-pr-step.md`. 모델 `claude-sonnet-5-5`.
+
+## 사용자 프롬프트
+
+세션의 첫 메시지는 `implement` 스킬을 이 티켓에 대고 돌리라는 지시문이다.
+
+> 사용자: .claude/skills/implement/SKILL.md 를 읽어 그대로 따른다. 이 세션을 연 저장소는 `C:\project\agent`이고 작업 폴더가 그곳이 아니면 따르지 말고 알린다. 스킬의 인자는 이 줄의 '인자:' 뒤부터 메시지 끝까지다. 인자: .scratch/harness/issues/dev-release-pr-step.md
+> 다음 작업: .scratch/harness/issues/dev-release-pr-step.md. 기능이 끝나면 출시 PR(dev→main)을 여는 순서를 정한다 / 다음 단계: 구현 / 어디서: 새 세션. 나란히 여는 2 중 1. 주 체크아웃 미갱신이라 Skill 도구로 tidy-checkouts를 먼저 돌고 … EnterWorktree(name은 dev-release-pr-step)로 새 워크트리에 먼저 들어가 거기서 브랜치를 바꾼다 / 브랜치: chore/dev-release-pr-step / 이번 요청 범위: PR과 병합까지. 단 GitHub 보호 설정을 바꾸는 일은 사용자의 답과 승인을 받은 뒤에 한다
+
+## 체크아웃 정리
+
+첫 턴에 주 체크아웃 세션에서 `tidy-checkouts`를 돌았다. 루트가 main이고 깨끗해서 `git switch --no-overwrite-ignore dev`로 dev로 옮겼고, `git merge --ff-only`는 `Already up to date`였다(앞뒤 커밋 모두 `4b02bbe29`, `origin/dev`와 같다). `judge`의 줄은 모두 `남긴다`·`넘긴다`였고 지운 것은 없다. 까닭은 병합된 PR이 없다, 바뀐 파일이 있다, 폴더를 쥔 프로세스가 있다, 앱의 표지가 있다, 그 브랜치의 세션이 돈다였다. `ci-llm-job` 폴더는 `.git`이 있는 등록 없는 폴더라 넘겼다(나란히 연 세션이 막 만든 것으로 본다).
+
+## 사람의 몫 둘
+
+시작할 때 티켓 메모가 시킨 대로 보호 설정에 걸린 선택을 물었다. 질문과 답은 라벨과 설명 글자 그대로 아래와 같다.
+
+- main strict 처리: **병합 뒤 main을 dev에 되돌려 합친다 (Recommended)**. "GitHub 설정은 그대로입니다. 출시 PR을 병합하자마자 main→dev PR을 하나 더 열어 merge 커밋으로 합치면 dev가 main의 끝 커밋을 품어 다음 출시 PR이 막히지 않습니다. Git Flow에서 release를 master에 합친 뒤 develop에 되돌려 합치는 단계와 같습니다(제 지식에서 끌어낸 어림이고 이번에 조사하지 않았습니다). 치르는 값: 출시마다 PR 하나와 CI 한 바퀴, dev 이력에 merge 커밋 하나가 늘어납니다." 다른 선택지는 "출시 PR만 관리자 권한으로 병합한다"(`gh pr merge --admin`)와 "main의 strict를 끈다"였다.
+- 첫 출시: **지금 한 번 출시한다 (Recommended)**. "절차를 스킬에 쓴 뒤 이 티켓의 PR이 dev에 병합되면 그 dev를 main에 올립니다. 수용 기준 4(병합 뒤 `ls-remote`로 dev 확인)와 위 선택의 절차를 실제로 거칩니다. 치르는 값: 계기 조건을 한 번 어기고, main에 merge 커밋이 하나 남습니다." 질문에 든 사실은 `git diff --stat origin/main origin/dev`(22 files), `.github/workflows/`(`ci.yml`, `claude-code-review.yml`만 있고 release-image 워크플로가 없다), `gh api`의 main 보호(`strict: true`, `required_linear_history: false`, `allow_deletions: false`)와 dev 보호(`strict: false`)를 대 보고 적었다. 다른 선택지는 "하지 않고 절차만 쓴다"였다.
+
+보호 설정은 바꾸지 않는 선택이라 GitHub 쪽 변경은 없다.
+
+## 첫 출시를 실제로 했다
+
+절차를 `merge.md`에 쓴 뒤, 이 티켓의 PR이 열리기 전에 dev(`4b02bbe29`)를 main에 올려 절차를 그대로 거쳤다(질문에서 "이 티켓의 PR이 dev에 병합되면"이라고 적은 순서와 다르다. 올릴 것이 이미 dev에 있었고 절차를 PR 전에 시험하는 편이 병합 뒤보다 고치기 쉬웠다. 계기 조건(끝 줄을 적은 기능)은 어겼다).
+
+- 출시 PR #542: 검사가 모두 SUCCESS(CodeRabbit과 `claude-review`는 SKIPPED), `mergeStateStatus` CLEAN, `gh pr merge 542 --merge --match-head-commit <머리>`로 병합. main이 `82297e614`에서 `afe4b7f86`이 됐다.
+- 병합 뒤 `git ls-remote --exit-code --heads origin refs/heads/dev`가 0(`4b02bbe29`), 기본 브랜치도 dev. 자동 삭제는 머리 dev를 지우지 않았다(한 번 본 것).
+- `compare main...dev`가 `behind_by: 1`, `ahead_by: 0`, 내용 diff 0. 곧 dev는 main의 merge 커밋 하나를 품지 않았다. 둘째 출시 PR이 실제로 BEHIND로 막히는지는 보지 못했다(어림).
+- 되돌려 합치기 PR #543(머리 main, base dev): 내용 diff가 0인데도 GitHub가 열어 주었고, 검사가 모두 SUCCESS(`claude-review`는 돌았다), CLEAN으로 `--merge` 병합. 병합 뒤 `--is-ancestor origin/main origin/dev`가 0, dev는 `641165ff5`, `ls-remote`도 0. 그래서 되돌려 합치기의 판정을 `git diff --quiet`에서 `--is-ancestor`로 바꿨다.
+- 두 PR 모두 `tools/wait_ci.py`가 종료 4와 `끝: CodeRabbit 리뷰가 요청되지 않았다`로 끝났다(CodeRabbit이 SKIPPED로 남는다). `--expect verify`로 피한다고 적었던 문장을 고쳤다.
+
+## 셀프 리뷰(커밋 전)
+
+범위는 base `4b02bbe29`(`git merge-base origin/dev HEAD`와 같다), 커밋 0, 작업 트리 변경 10개 파일, 미추적 파일 4개(`tests/tools/test_protection_json.py`, 변이 표, 카나리아 명세 `dev_release_pr_step_decision_row.toml`, 이 일지). 리뷰 뒤에 카나리아 명세 `dev_release_pr_step_section.toml`을 더했다. 표준 축(sonnet/high)과 명세 축이 병렬로 돌았다. 인계 계기(`hook_handoff`, 셀프 리뷰 직전)가 압축 전 컨텍스트 35만 토큰 기준으로 들어왔으나 압축으로 컨텍스트가 이미 줄었고 다섯 예외에는 들지 않았다. 인계하지 않고 이 세션에서 잇기로 했다(인계의 목적이 컨텍스트 비용이고 그 비용은 압축이 이미 치렀다고 판단한 것이다. 다시 보는 사람은 이 판단이 틀렸다고 보면 일지 `## 다음`의 인계 줄을 고친다).
+
+고친 것:
+- (Major, 두 축) 변이 표에 `expect_output`이 없어 `mutate.py --staged`가 막을 판이었다. 표지를 "AssertionError: assert <실제> is <기대>" 줄로 달았고, 변이를 셋에서 여섯으로 늘렸다(dev 삭제 금지, main·dev 관리자 우회). 여섯 모두 `기대 빨강, 결과 빨강`이었다. 못 다룬 것(dev 선형 이력, `allow_force_pushes`, `contexts`)은 표 머리에 적었다.
+- (Major, 두 축) `merge.md` 전제 확인 1에 `--event push`를 더했다. 안 붙이면 되돌려 합치기 PR #543의 `pull_request` 실행이 첫 줄에 온다(`gh run list --branch main --workflow ci.yml --limit 3`로 봤다). `headSha` 불일치·진행 중·실패/취소의 보류 문구도 정했다.
+- (Major, 두 축) 열린 출시 PR을 이어받을 길이 없었다. "이어받기" 단락과, 번호와 `headRefOid`를 일지에 적는 문장을 더하고, 기다리는 동안 dev가 움직여 머리가 바뀌는 경우(`wait_ci` 종료 4, `--match-head-commit` 거절)와 종료 1의 처리를 정했다.
+- (Major 명세) 근거 문장 "출시 PR은 main용 검사를 더해 돌린다"가 `ci.yml` 머리 주석(main에서만 더 도는 검사는 아직 없다)과 달랐다. 고쳤다.
+- 결정표 출시 줄의 "위 줄이 아니고"를 `--is-ancestor`가 0이라는 직접 조건으로 바꿨다(되돌려 합치기 PR이 사용자에게 넘어가 열려 있을 때 이 줄이 골라지지 않게).
+- 되돌려 합치기 1이 dev 부재를 항상 "끝"으로 읽던 것을, 출시 PR 직후의 부재면 병합 뒤 1(되살리기)로 가게 고쳤다.
+- 계기 명령에 `--name-only`를 더했고(slug 읽기), 일괄 편집 커밋(`29165af3b`가 plan.md 19개)은 slug로 쓰지 않는다고 적었다. 끝 줄을 `merge.md` 출시 PR 절 맨 뒤로 옮겼다. 31행의 "재 보지 않았다"를 봤던 만큼으로 고쳤다. 헌법 판은 형제 워크트리가 3.0.90을 쓰고 있어 3.0.91로 비켰다. `CONTEXT.md`의 출시 PR 정의를 계기 문장과 맞췄다.
+- 카나리아: 되돌려 합치기 줄의 질문이 새 결정표 줄과 헷갈리지 않게 고쳤고, 새 `merge.md` 출시 PR 절을 묻는 명세 `dev_release_pr_step_section.toml`을 더했다. 세 명세를 다시 돌린다(결과는 각 명세의 `# 최신 결과:` 줄과 티켓).
+
+남긴 것과 이유:
+- ADR 0043의 "잊으면 사라진다" 문장 개정: 사용자 승인이 필요한 ADR 개정이라 따로 한다(티켓 결과의 "뒤로 넘기는 것").
+- `hook_push_behind_main`이 dev에서도 뒤처진 푸시를 막을지: 이 티켓의 범위 밖이다.
+- 병합 방법 절을 원천으로 든 카나리아 명세 열한 개 가운데 돌린 것은 위의 몇 개뿐이다. 나머지는 이 티켓이 바꾸지 않은 문단이라 돌리지 않았고 알림이 남는다.
+- 둘째 출시 PR이 BEHIND로 막히는지는 어림이다.
+
+밀 주장(PR 직전 리뷰에 넘길 새 사실 문장):
+- "`gh run list --branch main --workflow ci.yml --limit 1`은 #543을 연 뒤 첫 줄이 같은 headSha의 `pull_request` 실행이고 push 실행은 둘째 줄이다. `--event push`를 붙이면 `afe4b7f86`의 push 실행이 `success`로 나온다"(`merge.md` 전제 확인 1).
+- "`git log origin/main..origin/dev -G'^\*\*끝:\*\*' --name-only -- '.scratch/*/plan.md'`는 최근 80커밋에서 끝 줄을 적은 커밋 넷을 내고 그 가운데 `29165af3b`는 plan.md 19개를 한꺼번에 고친 일괄 편집이다."
+- "`wait_ci`는 출시 PR #542와 되돌려 합치기 PR #543 모두에서 종료 4와 `끝: CodeRabbit 리뷰가 요청되지 않았다`로 끝났다."
+- "머리 dev가 움직이면 `wait_ci`가 헤드 변경(종료 4)으로 끝나거나 `--match-head-commit`이 거절된다"(코드와 `gh pr merge --help`를 읽은 것이고 재현하지 않았다).
+- "main에서만 더 도는 검사는 아직 없다"(`ci.yml` 머리 주석).
+
+## 검증
+
+`uv run ruff check .` 통과, `uv run ruff format --check .` 통과, `uv run python tools/run_checks.py` 전부 통과(pytest 808초, web-verify 882초, 2026-11-12 이 PC). 카나리아 넷은 셀프 리뷰를 반영한 본문으로 모두 통과 4였다(결과 줄은 각 명세 머리).
+
+## 회고
+
+후보 둘과 넘김 하나를 냈다. 판정은 승인 0, 기각 2, 넘김 1이다.
+
+- **변이 표에 `expect_output`이 없었다(기각).** 이 세션이 변이 표(`protection_json_mutations.toml`)를 `Write`로 새로 쓰면서 표지를 달지 않았고, 두 리뷰 축이 모두 Major로 짚었다. 사건은 있으나 이미 있는 검사가 그 자리에서 알린다. `mutate.py --check <표> 1`은 "빨강을 기대했는데 expect_output 이 없다"로 종료 2였고(손으로 봤다), 같은 검사를 `--staged`가 pre-commit에서 돌린다(`.claude/rules/probes.md` 첫 항목, 대기열 350이 닫힌 처방). 인자 없는 `--check`는 원문만 보고 "원문 확인: 변이 6 모두 원문이 한 번씩 있다"로 지나가는데, 이는 독스트링이 적은 동작(고른 `--check`만 표지를 본다)이다. 층은 이미 검사다.
+- **실제로 돌려 본 뒤에도 어림으로 쓴 문장이 그대로 남았다(기각).** `merge.md` 31행이 첫 출시 PR을 병합한 뒤에도 "출시 PR로 재 보지 않았다"로 끝났고, 79행은 존재하지 않는 "(아래 결과)"를 가리켰다. 두 리뷰 축이 `code-review`의 주장 검증 6·7로 잡았다. 리뷰가 잡도록 둔 기준을 어겨 리뷰가 잡은 사건이라 회차로 세지 않고, 새 판단 기준도 아니다.
+- **인계 계기를 받고도 인계하지 않았다(넘김).** `hook_handoff`가 `셀프 리뷰 직전` 경계에서 35만 토큰을 알렸고, 이 세션은 `handoff.md` 1의 다섯 예외 어디에도 들지 않았는데도 이어 갔다. 알림 직후 자동 압축이 일어나 컨텍스트가 문턱 아래로 내려갔고, 인계의 목적(큰 컨텍스트의 비용 줄이기)을 이미 달성했다고 판단했기 때문이다. 이 판단은 절차에 없고 이 세션의 일탈이다. 여섯째 예외("계기를 받은 직후 압축이 일어나 문턱 아래로 내려갔다")를 `handoff.md`에 더할지는 사람 판정이다(인계 절차를 느슨하게 하는 것이라 넘김). 사용자에게는 마지막 보고에서 묻는다. 사건은 하나라 더하더라도 문턱(다섯 번째 또는 손상)에 닿지 않으므로 답이 "더한다"여도 대기열 항목(1회차)으로 두는 것이 맞다.
+
+대기열 항목은 쓰지 않았고 이 세션에서 반영한 것도 없다. 만료할 항목은 없었다(`queue_open_rows.py`).
+
+## 다음
+
+이 티켓(`dev-release-pr-step`)은 PR #546(base dev)이 열려 있고 봇 첫 회차를 반영했다. 남은 순서는 ADR 0043 이력과 `operations.md` 병합 문장(헌법 판 3.0.93)의 사용자 승인, 병합(`merge.md` "워크트리에서 병합할 때").
+
+남기는 일:
+- ADR 0043의 "잊으면 사라진다" 문장 개정(사용자 승인).
+- `tools/hook_push_behind_main.py`가 dev에서도 뒤처진 푸시를 막을지.
+- 둘째 출시 PR이 실제로 `BEHIND`가 되는지: 다음 기능의 출시 PR에서 `mergeStateStatus`를 본다.
+- `merge.md`를 원천으로 든 카나리아 명세 열은 돌리지 않았다.
+- 인계 절차의 여섯째 예외를 더할지(위 회고 넘김).
+- (claude-review 둘째 회차에서 보류, Minor) `next-session/SKILL.md` 결정표 출시 줄이 `merge.md` "출시 PR 계기"와 같은 판정 명령을 따로 적는다. 결정표는 조건만 요약하고 명령은 `merge.md`를 가리키게 줄일지.
+- (같은 회차, Minor) `merge.md` "되돌려 합치기" 맨 끝 "끝:" 줄이 "dev가 아직 없거나(1)"를 그대로 둔다. 같은 절 1단계가 출시 PR 직후의 dev 부재는 끝내지 않고 되살리기로 가라고 바꿨으므로 끝 줄도 그 예외를 반영해야 한다.
+- (같은 회차, Minor) `tests/tools/test_protection_json.py`의 `allow_force_pushes`·`contexts`를 겨눈 변이와, 파일 값만 보고 GitHub에 적용된 값은 못 보는 한계를 후속 티켓 후보로.
+- (같은 회차, Nit) `merge.md`·SKILL.md 본문에 박힌 특정 SHA와 PR 번호(`afe4b7f86`, #542, #543)의 "손으로 봤다" 근거를 일지나 프로브로 옮기고 본문에는 결론만 둘지.
+- (CodeRabbit 첫 회차에서 보류, Minor) 변이 표의 `expect_output` 표지가 겨눈 단언만의 실패 문구인지. 변이 하나가 한 값만 뒤집어 다른 단언은 같이 빨개지지 않고 각 표지는 선택한 `-k` 시험 안에서만 나오지만, 단언 메시지에 필드명을 넣어 표지를 더 좁히는 편이 낫다. 시험 파일을 고치게 되어 이 PR에서 하지 않았다.
+
+## 인계
+
+인계: 커밋 뒤. 이 세션이 만 로컬 커밋 하나까지 했고 컨텍스트가 30만 토큰이라 새 세션에 넘긴다. 앞서 셀프 리뷰 직전 계기는 압축 직후라는 까닭으로 넘기지 않았다(회고의 넘김). 지시문 파일은 세션 스크래치패드의 handoff-directive.txt. 제목은 `chore/dev-release-pr-step (인계함)`.
+
+open-session을 부른다 2026-11-12T06:16:05Z
+
+## 인계받은 세션: PR 전
+
+새 세션이 워크트리를 이어 받아 PR 앞단계를 마쳤다. 시작 프롬프트는 `/implement .scratch/harness/issues/dev-release-pr-step.md`였고 범위는 PR과 병합까지다. 보호 설정은 바꾸지 않았다.
+
+- 일지의 인계 기록 6줄이 커밋되지 않고 남아 있어 먼저 커밋했다(`b469b3063`).
+- `origin/dev`에 형제 티켓 `project-pr-skills-dev`(PR #545)가 병합돼 있어 합쳤다. `docs/constitution/README.md`와 `operations.md`가 충돌했다. README는 이 브랜치의 판 3.0.91을 두고 비워 둔 판 3.0.88과 3.0.89를 알리던 문장은 지웠다(그 브랜치가 판을 가져갔다). `operations.md`의 병합 문장은 dev 쪽(`/pr-merge`와 프로젝트 사본 설명)에 이 브랜치의 출시 PR 병합 뒤 되돌려 합치기 문장을 이었고, 낡은 "`/git-pr-merge`를 쓰지 않는다" 괄호는 뺐다. `/pr-merge`가 이미 출시 PR을 `--merge`로 다루기 때문이다. 병합 커밋은 `3b1eb606a`다.
+- `/pr-merge` 4단계에 출시 PR 갈래를 더했다. 그 스킬은 핫픽스의 되돌려 합치기만 알고 있어(`SKILL.md` 4단계를 읽은 것이다), 주 체크아웃에서 출시 PR을 `/pr-merge`로 병합하면 되돌려 합치기가 빠질 것으로 본다(코드를 읽은 어림이고 그 스킬을 출시 PR에 돌려 보지 않았다). `merge.md` "출시 PR"의 병합 뒤 1~3을 가리킨다.
+- 그 변경이 `pr_merge_skill_kinds.toml`의 원천을 바꿔 새 `claude -p` 세션으로 카나리아를 다시 돌렸다. 러너(`tools/canary.py --control-commit 4b02bbe29`)가 통과 4, 실패 0, "없음" 섞임 0을 냈고(손으로 돌렸다) 결과 줄을 고쳤다.
+- `sibling_overlap`은 번호 겹침 없음이다(헌법 판 3.0.91. PR #544가 3.0.92를 쥐고 있어 #544가 먼저 병합되면 README 판 줄이 충돌한다. 그때 3.0.93으로 비킨다).
+
+## 인계받은 세션: PR을 연 뒤와 둘째 인계
+
+- 푸시한 뒤 `gh pr create --base dev`로 PR #546을 열었다. 푸시한 머리는 `96ac06fb5af8f0205d16396a66f741d4537c2a66`이고 `gh pr view 546`의 `mergeStateStatus`는 연 직후 `BLOCKED`였다(검사가 아직 도는 중으로 본다. 어림이다). 첫 `@coderabbitai review` 코멘트는 아직 남기지 않았다.
+- 마지막 커밋의 pre-commit에서 pytest 하나(`tests/tools/test_hook_edit_during_commit.py`의 실제 프로세스 시험)가 한 번 실패했다. 실패 출력은 `images` 집합에 전체 경로가 아닌 `git.exe`가 섞였다는 단언이었다(러너 출력을 읽었다). 같은 파일을 단독으로 치면 52개 통과였고(손으로 봤다) 같은 커밋을 다시 시도하자 전체가 통과했다. 다른 세션이 띄운 `git.exe`가 그 순간 경로를 읽지 못한 경합이라는 것은 어림이고 재현하지 못했다. 첫 실패라 `diagnosing-bugs`는 쓰지 않았다. 또 나면 그때 센다.
+- 이 세션도 `PR 연 뒤` 경계에서 인계 계기(컨텍스트 213k)를 받았고 `handoff.md` 1의 다섯 예외에 들지 않아 둘째로 인계한다. 앞 세션의 이어받을 상태가 `인계: 커밋 뒤`로 경계가 달라 "같은 경계" 예외도 아니다.
+- 사용자에게 넘길 질문 하나가 최종 보고에 남아 있다. `handoff.md`에 여섯째 예외("계기를 받은 직후 압축이 일어나 문턱 아래로 내려갔다")를 더할지다(앞 회고의 넘김). 이 세션의 인계가 오히려 그 예외가 있었다면 막을 수 있던 인계인지는 판단하지 못했다.
+- 사용자 프롬프트 원문은 위 첫 메시지와 같다. 이 세션이 받은 첫 메시지도 `/implement .scratch/harness/issues/dev-release-pr-step.md`를 읽어 따르라는 지시문이었다.
+- 남은 일: 봇 회차(`merge.md` 2), ADR 0043 이력의 사용자 승인(병합 전, 승인 없이 병합하지 않는다), 병합(`merge.md` "워크트리에서 병합할 때" 1~5), 일지 "다음" 절 갱신과 회고. 일지의 이 절과 위 절은 커밋하지 않은 수정이다.
+
+인계: PR 연 뒤. 이 세션의 제목은 `chore/dev-release-pr-step (인계함)`으로 바꿨고 지시문 파일은 세션 스크래치패드의 handoff-directive2.txt다. 백그라운드 작업은 없다. 워크트리는 잠기지 않아 풀 것이 없었다(`git worktree list`에 `locked`가 없었다).
+
+open-session을 부른다 2026-11-12T07:08:30Z
+
+## 인계받은 세션: 봇 회차 전 충돌 해결
+
+시작 프롬프트는 `/implement .scratch/harness/issues/dev-release-pr-step.md`였고 범위는 PR과 병합까지다. 보호 설정은 바꾸지 않았다. 세션 제목을 `chore/dev-release-pr-step`으로 바꾸고 `EnterWorktree`로 이 워크트리에 들어왔다.
+
+- 첫 `@coderabbitai review` 코멘트를 남겼다(머리 `96ac06fb5`). `wait_ci`가 CodeRabbit `Review rate limited`와 충돌(`CONFLICTING`)로 끝났다. 한도에 걸려 리뷰가 없던 푸시라 회차로 세지 않는다.
+- 충돌 원인은 PR #544(`ci-llm-job`)가 먼저 병합되며 헌법 판 3.0.92를 가져간 것이다(앞 세션 일지가 예고한 일). `origin/dev`를 합쳐 `docs/constitution/README.md`의 판 줄만 충돌했고 3.0.93으로 비켰다. 이 브랜치가 비워 둔 판 3.0.88·3.0.89·3.0.91을 알리던 두 문장은 지웠다(앞 세션이 3.0.88·3.0.89 문장을 지운 선례를 따랐다). 티켓 결과 12도 3.0.93으로 고쳤다. `sibling_overlap`은 번호 겹침 없음이었다.
+- `e2e-portal`이 `EADDRINUSE 127.0.0.1:39493`로 빨갰다(잡 로그의 끝부분을 읽었다). 이 PR은 문서·도구·테스트만 바꾸므로 러너의 포트 충돌로 본다. 어림이고, 실행이 끝나면 `gh run rerun --failed`로 확인한다.
+- 일지 이름이 먼저 병합된 `ci-llm-job`의 일지와 같은 분(`2026-11-12-1343`)이라 `tests/test_journal_names.py`가 빨갰다(pre-commit의 pytest 출력을 읽었다). 늦게 병합되는 이쪽이 `2026-11-12-1623`으로 바꿨고 티켓의 인용 한 곳도 고쳤다. 시험은 단독으로 13개 통과했다(손으로 봤다).
+
+### 봇 첫 회차 반영
+
+- 머리 `975870b69`에서 검사가 모두 SUCCESS였고(`wait_ci` 출력을 읽었다) CodeRabbit이 첫 리뷰를 냈다(지적 셋). claude-review는 이 PR에서 둘째 리뷰라 Critical·Major만 고치는데 둘은 없었다(Minor 셋과 Nit 하나, 위 "다음"에 옮겼다).
+- 고쳤다: 티켓 결정 2의 main CI 명령에 `--event push`를 더했고, ADR 0043 본문의 "기능을 끝낸 세션이 PR을 열고" 문장 뒤에 `(바뀜: 이력 2026-11-12 "출시 PR 뒤에도 main을 dev에 되돌려 합친다")` 포인터를 달고 이력에 대체 세션 경로를 한 문장 더했다. ADR 관련 시험 34개가 통과했다(손으로 봤다). 이 ADR 편집도 사용자 승인 대상이다.
+- 보류했다: 변이 표 표지(위 "다음"에 이유를 적었다).

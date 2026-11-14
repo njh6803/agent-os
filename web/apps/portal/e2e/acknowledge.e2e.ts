@@ -1,4 +1,4 @@
-// 질문 페이지 e2e 의 고지 확인 흐름 사례(pilot-portal 티켓 07 의 몫). 처음 온 브라우저가 덮개에서 확인한 뒤 로그인 없이 질문하는
+// 위젯 미리보기 페이지 e2e 의 고지 확인 흐름 사례(pilot-portal 티켓 07 의 몫). 처음 온 브라우저가 덮개에서 확인한 뒤 로그인 없이 질문하는
 // 길을 실제 브라우저로 지난다. 토큰 끝점을 실제로 부르는 사례가 여기서 처음이라, 페이지 스크립트(`browser/portal.ts`)와 서버
 // (`server/paths.ts`)에 따로 적힌 끝점 경로가 어긋나면 질문에 답이 서지 않아 이 파일이 빨개진다.
 
@@ -323,7 +323,7 @@ test("기록하는 동안 단추를 다시 눌러도 확인 요청은 한 번만
   expect(posts).toBe(1);
 });
 
-test("질문 페이지 프로세스의 출력에 쿠키 값과 토큰이 없다", async ({ page }) => {
+test("위젯 미리보기 페이지 프로세스의 출력에 쿠키 값과 토큰이 없다", async ({ page }) => {
   const request = "output-check";
   const issued = page.waitForResponse(
     (response) =>

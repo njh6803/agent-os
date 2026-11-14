@@ -1,13 +1,13 @@
 # web-widget 티켓 11 의 변이 표. 실제 모델 e2e 를 감싸는 시험(tests/test_widget_llm.py)의 기준 다섯과, 프로젝트 llm 을
 # 세우는 조건(web/apps/widget/playwright.config.ts), 토큰 합계와 기본 실행의 제외(tests/conftest.py, pyproject.toml)를
-# 되돌려 빨개지는지 본다(원칙 II). 앞의 셋과 9 는 실제 모델과 위젯 빌드를 지나 변이 하나가 1~3분이고 모델을 부른다(2 는
-# 키를 빼서 부르지 못한다).
+# 되돌려 빨개지는지 본다(원칙 II). 1~3 과 9~12 는 실제 모델과 위젯 빌드를 지나 변이 하나가 1~3분이고 모델을 부른다(2 는
+# 키를 빼서 부르지 못한다). 13 과 14 는 모델 없이 노드 러너로 본다.
 #   PYTHONUTF8=1 uv run --env-file ../../../.env python tools/mutate.py .scratch/web-widget/probes/widget_llm_mutations.toml [번호 ...]
 # 워크트리(.claude/worktrees/<이름>/)에서 친다. 주 체크아웃이면 --env-file .env 다. chromium 이 Playwright 의 브라우저
 # 캐시에 있어야 한다.
 #
 # 표지는 고른 단언이 실패할 때만 나오는 문구다. pytest 는 실패한 시험 함수의 원문을 통째로 찍어, 그 원문에 글자 그대로
-# 있는 문구는 고르지 않는다. 앞의 셋은 `_failures` 가 값을 넣어 지은 글(사전의 repr, 트레이스의 수, 목록의 repr)이다.
+# 있는 문구는 고르지 않는다. 1~3 은 `_failures` 가 값을 넣어 지은 글(사전의 repr, 에이전트 이름, 목록의 repr)이다.
 
 [runner.node]
 command = ["pnpm", "exec", "vitest", "run", "--project", "node"]
@@ -17,10 +17,10 @@ judge = "vitest"
 # --- 실제 모델 e2e 의 기준 셋(한 바퀴에서 모아 알린다) ---------------------------------------------------------
 
 [[mutation]]
-name = "Playwright 의 llm 시험을 건너뛰면 통과 1 건너뜀 0 기준이 빨갛다"
+name = "Playwright 의 계산 사례를 건너뛰면 통과 2 건너뜀 0 기준이 빨갛다"
 tests = ["tests/test_widget_llm.py", "-m", "llm_widget"]
 expect = "red"
-expect_output = ["{'expected': 0, 'skipped': 1"]
+expect_output = ["{'expected': 1, 'skipped': 1"]
 
 [[mutation.edit]]
 file = "web/apps/widget/e2e/calc.llm.ts"
@@ -31,7 +31,7 @@ new = '''test.skip("계산 에이전트가 위젯에서 보낸 요청 하나에'
 name = "serve 의 환경에서 키를 빼면 llm_called 기준이 빨갛다"
 tests = ["tests/test_widget_llm.py", "-m", "llm_widget"]
 expect = "red"
-expect_output = ["트레이스 1개에 llm_called 가 없다"]
+expect_output = ["에이전트 calc 의 실행에 llm_called 가 없다"]
 
 [[mutation.edit]]
 file = "web/packages/e2e-stack/src/serve.ts"
@@ -46,15 +46,20 @@ new = '''
 '''
 
 [[mutation]]
-name = "위젯이 출력의 끝 글자를 빼고 그리면 화면과 트레이스의 출력 기준이 빨갛다"
+name = "위젯이 출력에 없는 글을 덧붙여 그리면 화면과 트레이스의 출력 기준이 빨갛다"
 tests = ["tests/test_widget_llm.py", "-m", "llm_widget"]
 expect = "red"
-expect_output = ["이 트레이스의 run_finished 출력 ['"]
+# 덧붙인 낱말(zqxj)은 이 변이에서만 화면에 서므로, 그 낱말이 든 화면 글의 repr 이 실패 문구에 실렸는지를 본다.
+expect_output = ["zqxj'] 이 트레이스의 run_finished 출력 ['"]
 
 [[mutation.edit]]
 file = "web/apps/widget/components/organisms/Conversation.tsx"
-old = '''            {outcome.output}'''
-new = '''            {outcome.output.slice(0, -1)}'''
+old = '''
+            <Markdown text={outcome.output} />
+'''
+new = '''
+            <Markdown text={`${outcome.output} zqxj`} />
+'''
 
 # --- 모델 없이 기본 실행에서 재는 기준 둘 ------------------------------------------------------------------------
 
@@ -139,3 +144,66 @@ new = '''
       throw new Error("정리 뒤에 던지는 변이");
     },
 '''
+
+# --- 기본 에이전트 assistant 사례(base-agent 티켓 06). 앞의 번호를 옮기지 않으려 끝에 둔다 ---------------------
+# 앞의 셋(10~12)은 실제 모델과 위젯 빌드를 지나 변이 하나가 1~3분이고 모델을 부른다. 마지막 둘(13·14)은 모델 없이 노드 러너로 본다.
+
+[[mutation]]
+name = "화면의 답에 갱신일이 없으면 assistant 사례의 낱말 단언이 빨갛다"
+tests = ["tests/test_widget_llm.py", "-m", "llm_widget"]
+expect = "red"
+expect_output = ['Error: 화면의 답에 "2026-10-02" 가 없다']
+
+[[mutation.edit]]
+file = "web/apps/widget/e2e/assistant.llm.ts"
+old = '''const UPDATED = "2026-10-01";'''
+new = '''const UPDATED = "2026-10-02";'''
+
+[[mutation]]
+name = "준비가 문서 검색 주소를 바꿔 쓰지 않으면 가짜 서버에 search 가 닿지 않아 빨갛다"
+tests = ["tests/test_widget_llm.py", "-m", "llm_widget"]
+expect = "red"
+expect_output = ["받은 도구 호출 [] 에 search 가 없다"]
+
+[[mutation.edit]]
+file = "web/apps/widget/e2e/stack.ts"
+old = '''        pointDocSearchAt(plugins, docSearch);'''
+new = '''        // 변이: 주소를 바꿔 쓰지 않는다'''
+
+[[mutation]]
+name = "감싸는 시험이 assistant 의 search 성공을 거꾸로 보면 그 기준이 빨갛다"
+tests = ["tests/test_widget_llm.py", "-m", "llm_widget"]
+expect = "red"
+expect_output = ["에이전트 assistant 의 실행에 성공한 search 호출이 없다"]
+
+[[mutation.edit]]
+file = "tests/test_widget_llm.py"
+old = '''e.tool == "search" and e.ok for e in events'''
+new = '''e.tool == "search" and not e.ok for e in events'''
+
+[[mutation]]
+name = "픽스처의 규칙 파일에서 assistant 의 search 허락을 빼면 저장소 표와의 대조가 빨갛다"
+runner = "node"
+tests = ["packages/e2e-stack/src/plugins.test.ts"]
+expect = "red"
+expect_output = ['- allow = ["doc-search:search"]']
+
+[[mutation.edit]]
+file = "web/packages/e2e-stack/src/plugins.ts"
+old = '''      'allow = ["doc-search:search"]',
+'''
+new = ''''''
+
+[[mutation]]
+name = "주소 줄을 찾는 글자가 틀리면 문서 검색 연결을 고치지 못해 빨갛다"
+runner = "node"
+tests = ["packages/e2e-stack/src/plugins.test.ts"]
+expect = "red"
+expect_output = ["주소 줄 하나를 찾지 못했다("]
+
+[[mutation.edit]]
+file = "web/packages/e2e-stack/src/plugins.ts"
+old = '''lines.findIndex((line) => line.startsWith("url = "));
+  const another'''
+new = '''lines.findIndex((line) => line.startsWith("uri = "));
+  const another'''

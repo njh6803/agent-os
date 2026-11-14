@@ -9,6 +9,9 @@ import type { ViewportKey } from "./apps/admin/.storybook/viewports.ts";
 // .test.tsx 다. 위젯의 커스텀 요소(element/)도 DOM 이 있어야 해 .test.tsx 를 jsdom 에서 돌린다.
 const PAGES = "apps/admin/components/**/*.test.tsx";
 const WIDGET_PAGES = ["apps/widget/components/**/*.test.tsx", "apps/widget/element/**/*.test.tsx"];
+// 디자인 시스템 패키지의 부품 시험(answer-markdown 명세 "부품의 단위 시험")도 jsdom 에서 돈다. DOM 이 필요 없는 순수 함수의
+// 시험은 .test.ts 라 node 프로젝트에 남는다.
+const UI_PAGES = "packages/ui/src/**/*.test.tsx";
 // 디자인 시스템, 위젯, 관리 화면의 스토리 테스트(design-system·web-widget·admin-style 명세의 주 이음매). 스토리마다 실제
 // chromium 에서 그리고 play, 미리보기의 afterEach(클래스 판정), axe(addon-a11y)를 돈다. 브라우저는 Playwright 의 브라우저
 // 캐시에 깔린 것을 쓴다. 프로젝트의 이름이 겹치면 Vitest 가 거부한다.
@@ -47,7 +50,19 @@ export default defineConfig({
     projects: [
       {
         extends: true,
-        test: { name: "node", exclude: [...configDefaults.exclude, PAGES, ...WIDGET_PAGES] },
+        test: {
+          name: "node",
+          exclude: [...configDefaults.exclude, PAGES, ...WIDGET_PAGES, UI_PAGES],
+        },
+      },
+      {
+        extends: true,
+        test: {
+          name: "ui-pages",
+          include: [UI_PAGES],
+          environment: "jsdom",
+          setupFiles: ["packages/ui/src/testing/setup.ts"],
+        },
       },
       {
         extends: true,

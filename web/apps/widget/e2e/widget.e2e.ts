@@ -8,7 +8,7 @@
 
 import { writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { HTML_OUTPUT, principalOf, startedRuns } from "@agent-os/e2e-stack";
+import { HTML_OUTPUT, MARKDOWN_IMAGE_PATH, principalOf, startedRuns } from "@agent-os/e2e-stack";
 import { expect, type FrameLocator, type Page, type Request, test } from "@playwright/test";
 import { stack, traces } from "./env";
 import { loopback, recordRequests, send } from "./helpers";
@@ -46,7 +46,10 @@ test("허용 출처의 페이지에서 iframe 위젯이 첫 도구 줄을 결말
   await expect(frame.getByText("5/9", { exact: true })).toHaveCount(0);
 
   openGate("tool-row");
-  await expect(frame.getByText("5/9", { exact: true })).toBeVisible();
+  // 숨긴 읽기 영역(status)도 같은 글을 싣는다. 대화 영역 안으로 좁힌다.
+  await expect(
+    frame.getByRole("region", { name: "대화" }).getByText("5/9", { exact: true }),
+  ).toBeVisible();
   await expect(frame.getByRole("button", { name: "도구 2개를 불렀습니다" })).toBeVisible();
 
   const endUser = requests.filter((request) =>
@@ -91,7 +94,9 @@ test("부모가 아닌 프레임이 보낸 토큰 메시지는 버려지고 부�
 
   // 끼어드는 프레임 둘이 그 회차에 실제로 가짜 토큰을 보냈다.
   await expect(page.locator("body")).toHaveAttribute("data-intruded", "2");
-  await expect(frame.getByText("5/9", { exact: true })).toBeVisible();
+  await expect(
+    frame.getByRole("region", { name: "대화" }).getByText("5/9", { exact: true }),
+  ).toBeVisible();
   await expect(frame.getByText("로그인 정보를 받지 못했습니다.")).toHaveCount(0);
 });
 
@@ -121,11 +126,69 @@ test("출력의 HTML 조각은 글로 보이고 실행되지 않는다", async (
 
   await send(frame, "html");
 
-  // 화면 읽기 알림(status)도 같은 글을 싣는다. 대화 목록의 출력 문단으로 좁힌다.
+  // 화면 읽기 알림(status)도 같은 글을 싣는다. 대화 영역 안으로 좁힌다.
   const conversation = frame.getByRole("region", { name: "대화" });
   await expect(conversation.getByText(`출력: ${HTML_OUTPUT}`, { exact: true })).toBeVisible();
   const pwned = await frame.locator("body").evaluate(() => "__widgetE2ePwned" in window);
   expect(pwned).toBe(false);
+});
+
+test("출력의 이미지는 그려지지 않고 그 주소로 요청이 나가지 않는다", async ({ page }) => {
+  const { siteOrigin } = stack();
+  const imageUrl = `${siteOrigin}${MARKDOWN_IMAGE_PATH}`;
+  const requests = recordRequests(page);
+  const toImage = (): number =>
+    requests.filter((request) => new URL(request.url()).pathname === MARKDOWN_IMAGE_PATH).length;
+  await page.goto(`${siteOrigin}/?agent=markdown`);
+  const frame = widget(page);
+
+  // 양성 대조. 같은 페이지가 그 경로를 이미지로 직접 불러 요청이 세어지는지 먼저 본다(세는 길이 죽어 있으면 0이 늘 참이다).
+  await page.evaluate((url) => {
+    const probe = new Image();
+    probe.src = url;
+  }, imageUrl);
+  await expect.poll(toImage).toBe(1);
+
+  await send(frame, "markdown");
+
+  const conversation = frame.getByRole("region", { name: "대화" });
+  // 이미지 자리는 "이미지: 대체 글" 이고, 읽기 영역(status)에도 같은 글이 있어 대화 영역 안으로 좁힌다.
+  await expect(conversation.getByText("이미지: 배송 지도")).toBeVisible();
+  await expect(conversation.locator("img")).toHaveCount(0);
+  expect(toImage()).toBe(1);
+});
+
+test("출력의 링크를 누르면 새 탭이 열리고 위젯이 든 페이지는 그대로다", async ({ page }) => {
+  const { siteOrigin } = stack();
+  // 새 탭이 실제 외부 사이트로 가지 않게 그 주소를 막아 가짜 응답을 낸다.
+  await page.context().route("https://example.com/**", (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "text/html; charset=utf-8",
+      body: "<title>조회</title>",
+    }),
+  );
+  const pageUrl = `${siteOrigin}/?agent=markdown`;
+  await page.goto(pageUrl);
+  const frame = widget(page);
+  await send(frame, "markdown");
+  const link = frame
+    .getByRole("region", { name: "대화" })
+    .getByRole("link", { name: /조회 페이지/ });
+  await expect(link).toHaveAttribute("href", "https://example.com/track");
+  await expect(link).toHaveAttribute("target", "_blank");
+
+  const opened = page.waitForEvent("popup");
+  await link.click();
+
+  const popup = await opened;
+  await popup.waitForLoadState();
+  expect(popup.url()).toBe("https://example.com/track");
+  expect(page.url()).toBe(pageUrl);
+  // 위젯의 대화도 그대로다.
+  await expect(
+    frame.getByRole("region", { name: "대화" }).getByRole("heading", { name: "배송 안내" }),
+  ).toBeVisible();
 });
 
 /** 위젯이 보낸 구독 요청. */

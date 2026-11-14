@@ -1,12 +1,13 @@
-"""질문 페이지의 실제 모델 e2e(pilot-portal 티켓 09, 명세 "실제 모델 e2e 하나").
+"""위젯 미리보기 페이지의 실제 모델 e2e(pilot-portal 티켓 09, 명세 "실제 모델 e2e 하나").
 
-마커 `llm_portal` 의 시험 하나가 질문 페이지 e2e 의 Playwright 프로젝트 `llm` 을 자식 프로세스로
-돌린다. 그 프로젝트는 실제 serve·위젯 Next·질문 페이지와 같은 출처의 중계 위에서, `?site=` 없이 연
-첫 사이트(익명, 에이전트 `calc`)의 고지 덮개를 확인하고 요청 하나를 보내 출력이 서는 것과 실행
-주체의 `anon-` 접두까지 본다(주체는 Playwright 사례가 읽는다). 모델이 도구를 부를지는 단언하지
-않는다. 명령은 `uv run --env-file .env pytest -m llm_portal` 이고 원칙 I 의 판정(`-m llm`)과 위젯의
-것(`-m llm_widget`)과 따로다. 기본 실행과 `-m llm` 은 이것을 돌리지 않는다. 파이썬 시험이 감싸므로
-키가 없으면 실패하는 규칙과 실행 끝의 토큰 합계 줄(`tests/conftest.py`)이 다른 LLM 시험과 같다.
+마커 `llm_portal` 의 시험 하나가 위젯 미리보기 페이지 e2e 의 Playwright 프로젝트 `llm` 을 자식
+프로세스로 돌린다. 그 프로젝트는 실제 serve·위젯 Next·위젯 미리보기 페이지와 같은 출처의 중계
+위에서, `?site=` 없이 연 첫 사이트(익명, 에이전트 `calc`)의 고지 덮개를 확인하고 요청 하나를 보내
+출력이 서는 것과 실행 주체의 `anon-` 접두까지 본다(주체는 Playwright 사례가 읽는다). 모델이 도구를
+부를지는 단언하지 않는다. 명령은 `uv run --env-file .env pytest -m llm_portal` 이고 원칙 I 의
+판정(`-m llm`)과 위젯의 것(`-m llm_widget`)과 따로다. 기본 실행과 `-m llm` 은 이것을 돌리지 않는다.
+파이썬 시험이 감싸므로 키가 없으면 실패하는 규칙과 실행 끝의 토큰 합계 줄(`tests/conftest.py`)이
+다른 LLM 시험과 같다.
 
 위젯의 래퍼(`tests/test_widget_llm.py`)와 같은 모양이다. 뼈대(pnpm 경로, 트리째 끝내기, 기준)는 그
 파일이 원천이다. 여기는 같은 코드를 따로 두었다(그 파일의 변이 표가 그 파일의 글자를 겨눠 옮기지
@@ -19,8 +20,9 @@
   프로세스의 환경이 pnpm → Playwright → serve 로 물려 간다.
 - 기준 셋. Playwright 의 종료 코드 0 과 JSON 리포터의 통과 1, 건너뜀 0(종료 코드 0 만 보면 모두
   건너뛴 실행이 초록이다). 트레이스에 `llm_called`(키가 serve 에 닿지 않으면 모델 호출이 없다).
-  화면에 선 출력이 그 트레이스의 `run_finished` 의 `output` 과 같다. 기준마다 멈추지 않고 어긋난
-  것을 모두 모아 알린다.
+  화면에 선 출력이 그 트레이스의 `run_finished` 의 `output` 에서 온 글이다(화면은 마크다운 부품이
+  그린 글이라 글자 그대로가 아니라 기호를 뗀 글이 원문의 부분열인지 본다. 규칙은 위젯 래퍼와 함께
+  부르는 `tests/screen_text.py`). 기준마다 멈추지 않고 어긋난 것을 모두 모아 알린다.
 - pnpm 은 이름이 아니라 `shutil.which` 가 준 경로로 띄운다(윈도우의 `pnpm.CMD` 는 cmd.exe 가 명령
   줄을 다시 읽으므로 넘기는 인자는 고정 글자다. 이유는 위젯 래퍼의 독스트링).
 
@@ -38,6 +40,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 import pytest
+from tests.screen_text import screen_matches_output
 from tools.run_checks import kill_tree
 
 from agent_os.adapters.jsonl import JsonlTrace
@@ -175,9 +178,10 @@ def _failures(report: _Report | None, traces: Path, code: int) -> list[str]:
         )
     outputs = [event.output for event in events if isinstance(event, RunFinished)]
     shown = [] if report is None else report.shown
-    if len(outputs) != 1 or shown != outputs:
+    if len(outputs) != 1 or len(shown) != 1 or not screen_matches_output(shown[0], outputs[0]):
         failures.append(
-            f"화면에 선 출력 {shown!r} 이 트레이스의 run_finished 출력 {outputs!r} 과 같지 않다"
+            f"화면에 선 출력 {shown!r} 이 트레이스의 run_finished 출력 {outputs!r} 에서 온 글로"
+            " 보이지 않는다(기호를 뗀 글이 원문의 부분열이 아니거나 화면 글이 비었다)"
         )
     return failures
 
@@ -190,13 +194,13 @@ def _read_trace(trace_file: Path) -> Trace:
 
 
 @pytest.mark.llm_portal
-def test_질문_페이지에서_고지를_확인하고_보낸_요청_하나에_계산_에이전트가_실제_모델로_답한다(
+def test_위젯_미리보기_페이지에서_고지를_확인하고_보낸_요청에_계산_에이전트가_실제_모델로_답한다(
     tmp_path: Path,
 ) -> None:
-    """바깥 이음매. 실제 브라우저, 실제 serve 와 위젯 Next 와 질문 페이지, 같은 출처의 중계, 사이트
-    파일과 질문 페이지가 서명한 토큰, 실제 모델이 한 길에 든다. 끝까지 돈 실행이면 준비가 띄운
-    프로세스의 출력이 `web/apps/portal/test-results/` 에 남는다(제한 시간에 끊긴 실행은 머리
-    독스트링의 못 보는 것)."""
+    """바깥 이음매. 실제 브라우저, 실제 serve 와 위젯 Next 와 위젯 미리보기 페이지, 같은 출처의
+    중계, 사이트 파일과 위젯 미리보기 페이지가 서명한 토큰, 실제 모델이 한 길에 든다. 끝까지 돈
+    실행이면 준비가 띄운 프로세스의 출력이 `web/apps/portal/test-results/` 에 남는다(제한 시간에
+    끊긴 실행은 머리 독스트링의 못 보는 것)."""
     if "ANTHROPIC_API_KEY" not in os.environ:
         # assert 로 두면 pytest 가 실패 출력에 os.environ 의 repr 을 싣는다(대기열 463).
         pytest.fail("ANTHROPIC_API_KEY 가 없다. .env 를 확인한다")

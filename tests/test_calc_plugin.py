@@ -8,7 +8,8 @@ calc 는 컨텍스트 멤버(자기 대화 요약과 그 뒤 교환)를 "앞 대
 는 `answer-format` 을 골라 그 본문이 든 글(`FRESH_PROMPT`)을 낸다. 도구 포트는 가짜라 도구가 없고,
 calc 의 매니페스트가 가리키는 mcp(`everything`)는 실물 루트에서 읽힌다. 실제 모델과 실제 서버로
 도는 것은 `tests/test_main.py` 의 `-m llm` 사례와, 위젯 화면에서 도는 `-m llm_widget` 의
-`tests/test_widget_llm.py`, 질문 페이지에서 도는 `-m llm_portal` 의 `tests/test_portal_llm.py` 다.
+`tests/test_widget_llm.py`, 위젯 미리보기 페이지에서 도는 `-m llm_portal` 의
+`tests/test_portal_llm.py` 다.
 """
 
 import shutil

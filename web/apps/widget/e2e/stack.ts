@@ -6,8 +6,9 @@
  * 선례는 관리 화면 e2e 의 준비(`apps/admin/e2e/stack.ts`)다.
  *
  * 실제 모델 e2e(티켓 11)를 감싸는 파이썬 시험이 `LLM_ENV` 를 `1` 로 주면 둘이 더해진다. 임시 플러그인 루트에 저장소의
- * 플러그인 루트를 먼저 옮기고(`copyRepoPlugins`), 사이트 파일의 에이전트에 계산 에이전트를 넣는다. 그 에이전트만 모델을
- * 부르고, 키는 serve 환경이 물려준다. 그 시험이 `TRACES_ENV` 로 준 자리에 serve 가 트레이스를 남기고, 주지 않으면 작업
+ * 플러그인 루트를 먼저 옮기고(`copyRepoPlugins`), 사이트 파일의 에이전트에 계산 에이전트와 기본 에이전트 `assistant` 를
+ * 넣는다. `DOC_SEARCH_URL_ENV` 가 있으면 `assistant` 의 문서 검색 연결이 그 주소(파이썬 시험이 띄운 가짜 검색 서버)를
+ * 가리키게 바꿔 쓴다. 이 에이전트들만 모델을 부르고, 키는 serve 환경이 물려준다. 그 시험이 `TRACES_ENV` 로 준 자리에 serve 가 트레이스를 남기고, 주지 않으면 작업
  * 폴더에 남겨 끝에 지운다. 어느 쪽이든 그 폴더는 시험에 넘어간다(`env.ts` 의 `traces()`).
  *
  * - 출처는 모두 `*.localhost` 호스트 이름이다. 위젯은 `widget.localhost`, 허용 출처의 사이트는 `site.localhost`, 허용 밖
@@ -31,12 +32,15 @@ import { dirname, join } from "node:path";
 import {
   accepts,
   AGENTS,
+  ASSISTANT_AGENT,
   copyRepoPlugins,
   createStack,
   freePort,
   interpreter,
   LLM_AGENT,
+  MARKDOWN_IMAGE_PATH,
   MCP_FIXTURE_SERVER,
+  pointDocSearchAt,
   publish,
   REPO,
   siteFileToml,
@@ -48,6 +52,7 @@ import {
   type Stack,
 } from "@agent-os/e2e-stack";
 import {
+  DOC_SEARCH_URL_ENV,
   GATES_ENV,
   LLM_ENV,
   OTHER_ORIGIN_ENV,
@@ -79,11 +84,21 @@ export default async function globalSetup(): Promise<() => Promise<void>> {
     mkdirSync(gates);
     if (llm) {
       copyRepoPlugins(REPO, plugins);
+      const docSearch = process.env[DOC_SEARCH_URL_ENV];
+      if (docSearch !== undefined && docSearch !== "") {
+        pointDocSearchAt(plugins, docSearch);
+      }
     }
-    writeFixturePlugins(plugins, python, MCP_FIXTURE_SERVER, gates);
+    writeFixturePlugins(
+      plugins,
+      python,
+      MCP_FIXTURE_SERVER,
+      gates,
+      `${siteOrigin}${MARKDOWN_IMAGE_PATH}`,
+    );
     const key = siteKey();
     const siteFile = join(stack.work, "sites.toml");
-    const agents: readonly string[] = llm ? [...AGENTS, LLM_AGENT] : AGENTS;
+    const agents: readonly string[] = llm ? [...AGENTS, LLM_AGENT, ASSISTANT_AGENT] : AGENTS;
     writeFileSync(siteFile, siteFileToml(siteOrigin, key.publicPem, agents));
     const traces = process.env[TRACES_ENV] ?? join(stack.work, "traces");
 

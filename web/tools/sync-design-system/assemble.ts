@@ -8,7 +8,8 @@
  *   `@ds-bundle` 머리(format 4)이고 컴포넌트 목록은 카드가 있는 컴포넌트를 층의 차례(`LAYERS`), 같은 층 안에서는 이름
  *   차례로 든다. React·ReactDOM 은 묶지 않고 전역으로 읽고, JSX 런타임은 `createElement` 로 다시 짓는 대체 모듈로
  *   바꾼다. 패키지의 React 19 가 JSX 로 내는 요소 표식을 페이지의 React 18.3.1 이 그리지 않는다고 보기 때문이다(두 판의
- *   표식이 다르다는 지식에서 낸 명세의 어림이다. React 18.3.1 에 그 표식을 넣어 그려 보지는 않았다).
+ *   표식이 다르다는 지식에서 낸 명세의 어림이다. React 18.3.1 에 그 표식을 넣어 그려 보지는 않았다). 묶음과 장면의
+ *   코드 생성은 ASCII 밖의 글자를 이스케이프로 쓴다. 이스케이프하지 않는 자리는 `MINIFY` 에 적는다.
  * - `components/bundle.css`: 패키지의 Tailwind 빌드(`src/styles/theme.css`, `--minify`) 뒤에 글꼴의 `@font-face` 를
  *   붙인 것이다. 디자인 토큰은 Tailwind 가 둔 대로 `@layer theme` 안에 남아, 층 없는 페이지 토큰 CSS 가 이긴다.
  * - `components/<이름>/preview.html`: 층 폴더(`LAYERS`)의 스토리 파일 가운데 태그 `showcase` 가 든 스토리를 가진 파일마다
@@ -255,6 +256,15 @@ function uiGlobalPlugin(): string {
   }`;
 }
 
+/**
+ * IIFE 의 압축 설정. vite 가 정하는 압축(`build.minify`)을 덮어, 압축과 이름 줄이기는 그대로 두고 코드 생성이 ASCII 밖의
+ * 글자를 이스케이프로 쓰게 한다. Artifact 도구가 U+FFFD(바꿈 문자)가 그대로 든 묶음 JS 의 보내기를 거부했는데, 그 글자는
+ * 마크다운 해석 의존(micromark)의 원본에서는 `"\uFFFD"` 이스케이프였고 압축이 글자 그대로 썼다(대기열
+ * ds-upload-replacement-char-rejected). 태그된 템플릿의 글, JSX 의 이름·글·속성 문자열, hashbang, 보존 주석의 글자는
+ * 이스케이프하지 않는다(rolldown 1.2.11 의 `CodegenOptions.asciiOnly` 설명). 그 자리에 든 U+FFFD 는 시험이 잡는다.
+ */
+const MINIFY = { compress: true, mangle: true, codegen: { asciiOnly: true } } as const;
+
 interface LibBuild {
   readonly entry: string;
   readonly name: string;
@@ -288,7 +298,7 @@ function libConfig({ entry, name, outDir, kind }: LibBuild): string {
     lib: { entry: ${JSON.stringify(posix(entry))}, formats: ["iife"], name: ${JSON.stringify(name)}, fileName: () => "out.js" },
     rolldownOptions: {
       external: ${JSON.stringify(Object.keys(GLOBALS))},
-      output: { globals: ${JSON.stringify(GLOBALS)} },
+      output: { globals: ${JSON.stringify(GLOBALS)}, minify: ${JSON.stringify(MINIFY)} },
     },
   },
 };
