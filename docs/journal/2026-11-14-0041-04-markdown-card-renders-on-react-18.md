@@ -68,3 +68,14 @@ open-session을 부른다 2026-11-13T15:42:55Z
 커밋 `e2451faa5`(`fix: 마크다운 카드가 React 18에서 그려진다 (04-markdown-card-renders-on-react-18)`)까지 했고 pre-commit이 통과했다. 남은 것은 푸시, PR 열기, 봇 회차, 병합이다(요청 범위 "PR과 병합까지"). 티켓 3번(올리기와 앱 안 브라우저 확인)은 이 PR 밖이라 `[ ]`로 둔다. origin/dev가 앞서 있어(581903f, 03 위젯 마크다운 병합) 병합 전에 `docs/constitution/operations.md`의 브랜치와 병합 규약대로 기준 브랜치를 맞춘다. 앞서 있는 변경에 이 브랜치가 고친 파일은 없었다(`git diff --name-only HEAD...origin/dev`로 봤다).
 
 open-session을 부른다 2026-11-14T02:25:46Z
+
+## PR 직전 리뷰와 PR(3차 세션, 2026-11-14)
+
+사용자 프롬프트 원문은 첫 세션과 같다(위 "사용자 프롬프트(원문)"). 세션 제목은 인계 전 `마크다운 카드 React 18 렌더링`이었다가 `feature/04-markdown-card-renders-on-react-18`로 바꿨다.
+
+- 일지 커밋(2차 인계)을 한 뒤 `git rebase origin/dev`를 했다. origin/dev가 581903f(03 위젯 마크다운, PR 563)로 앞서 있었고 rebase 출력이 `Successfully rebased`였다(손으로 봤다). `git diff --name-only HEAD...origin/dev`는 출력이 비었다(손으로 쳤다). 합친 상태에서 `pnpm -C web exec vitest run tools/sync-design-system/assemble.test.ts`가 56건 초록, 29초였다(손으로 쳤다). `uv run python tools/sibling_overlap.py`는 종료 코드 0, 번호 겹침 없음(헌법 3.0.97)이었다(손으로 쳤다).
+- PR 직전 `coderabbit-review` 서브에이전트의 보고(이 세션이 CLI를 다시 돌리지 않았고 보고를 옮긴 것이다): CLI 0.7.5가 종료 코드 0으로 `review_completed`, findings 0건이었다(`Seat: not assigned`, `Plan: Free`. 좌석이 없어도 리뷰가 끝까지 돌았다고 보고했다). 대상은 변경 14개 파일 전부(150개 한도 안)였다. 트리아지할 지적이 없어 유효·오탐·보류가 모두 0건이다. 서브에이전트가 diff를 읽고 낸 소견은 문제 없음이었다(`.Provider` 여섯 곳이 모두 바뀌었고 웹 전체에 `<XContext value>` 꼴이 남지 않았다. 락 파일의 추가는 react·react-dom 18.3.1, scheduler 0.23.2, loose-envify 1.4.0뿐이라고 했다. 이 소견은 읽은 것이고 재지 않았다).
+- 일지 커밋의 pre-commit(러너, 610.7초)에서 pytest 둘이 빨갰다(러너 출력을 읽었다. 7307 passed, 2 failed).
+  - `tests/test_plan_status.py`의 끝 줄 시험: rebase로 03(PR 563)이 들어오며 `answer-markdown`의 티켓 네 장이 모두 done이 되어, 이 PR이 마지막 티켓을 닫는다. 그래서 `.scratch/answer-markdown/plan.md`에 `**끝:** 2026-11-14`를 더하고 `uv run python tools/plan_table.py`를 돌려 `.scratch/plan.md`까지 같은 커밋에 싣는다(규칙은 `docs/agents/issue-tracker.md`의 전체 계획 절, `implement` 스킬을 읽었다). 앞 세션이 끝 줄을 더하지 않은 것은 그때 03이 `ready-for-agent`였기 때문이다(위 "한 일").
+  - `tests/tools/test_rerun_runner.py`의 "첫 인계 뒤 멈추고 확인 인자를 주면 잇는다": 단독으로 `uv run pytest -q tests/tools/test_rerun_runner.py -k 본_측정에서_첫_인계 -p no:xdist`를 치면 통과했다(손으로 쳤다, 1 passed). 이 PR이 건드린 파일(`web/`, 문서)과 이어지는 경로를 찾지 못했고 부하가 높은 병렬 실행에서만 빨간 것으로 어림한다. 원인은 가르지 못했다. 다시 돌린 pre-commit이 초록이면 그대로 두고, 또 빨가면 diagnosing-bugs로 간다.
+- 남은 것: 푸시, PR 열기, 봇 회차, 병합. 티켓 3번(올리기와 앱 안 브라우저 확인)은 이 PR 밖이다.
