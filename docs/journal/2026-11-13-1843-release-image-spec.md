@@ -550,3 +550,27 @@ Minor 열여덟(첫 회차라 지적마다 판단했다). 열을 고쳤고 여�
 이 세션이 돌려 보지 못한 것: `supervise.sh`가 환경 변수 표지를 컨테이너 안 dockerd에 싣는지(`bridge_recover`를 다시 돌 때 첫 `docker info`와 `supervise: dockerd start 1`로 본다), `strip-tests.sh`의 `.git` 조상 검사가 이미지 빌드에서 `/app` 위로 `.git`을 만나지 않는지(`web_images`의 `widget-lean` 갈래를 다시 지을 때 본다).
 
 rag-engine에 줄 지시문은 이 일지의 앞 절들이 적은 대로 판 내기 워크플로를 실제로 돌려 본 마지막 티켓을 닫는 세션이 낸다(기능 계획의 해당 대목과 열린 `cross-repo-directive-before-merge`가 병합 뒤에 주라는 말을 함께 알리라고 한다).
+
+
+## 인계(커밋 뒤)
+
+반영 커밋 `5c26ea3e3`(봇 첫 회차 반영, 회고, 다음)를 만든 직후 훅(`hook_handoff`)이 세션 컨텍스트 342,438 토큰으로 인계 계기(`커밋 뒤`)를 냈다. `handoff.md` 1의 다섯에 들지 않는다. 명령은 세 번째 시도에서 성공했고(앞 두 번은 부하 아래의 시간 시험으로 pytest가 빨갰다), 요청 범위는 병합까지이며, 이 세션의 지시문의 이어받을 상태는 다른 경계(`인계: PR 연 뒤`)로 시작하고, 이 일지에 `인계 못함` 줄이 없고, 이 세션은 곁 세션이 아니다(`get_session`의 `self`에 `parentSessionId`가 없었다). 넘기기 전 제목은 `docs/release-image-spec`이고 넘기며 `docs/release-image-spec (인계함)`으로 바꾼다. 이 세션이 띄운 백그라운드 작업(커밋 셋, 서브에이전트 하나, CI 대기)은 모두 끝나 있었다.
+
+남은 단계는 새 세션이 한다. 푸시와 `merge.md` 2(봇 회차)다. PR 567에는 CodeRabbit 첫 회차와 claude-review의 결과가 이미 있고, 이 커밋이 둘째 푸시다.
+
+낸 지시문은 아래다.
+
+다음 작업: 기능 release-image. 명세 PR 567(`.scratch/release-image/spec.md`)의 봇 첫 회차 반영 커밋을 푸시하고 봇 회차를 이어 병합까지 마친다
+다음 단계: PR 반영·병합
+어디서: 새 세션. 인계라 같은 브랜치를 잇는다. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /to-spec release-image
+브랜치: docs/release-image-spec
+모델: Sonnet 5.5 / high. 2의 잇는 지시문
+읽을 것: 일지 `docs/journal/2026-11-13-1843-release-image-spec.md`의 "이어받은 세션 셋"과 "회고"와 "다음" 절
+이어받을 상태: 인계: 커밋 뒤. `docs/journal/2026-11-13-1843-release-image-spec.md`. 반영 커밋 `5c26ea3e3`을 만들었고 푸시하지 않았다. 푸시 전에 `git fetch origin`으로 origin/dev와 대고(훅이 뒤처짐을 막는다), 푸시한 뒤 `merge.md` 2(봇 회차)대로 `@coderabbitai review` 코멘트와 `tools/wait_ci.py 567`을 띄운다. CodeRabbit 둘째 회차부터는 Critical·Major만 고치고 나머지는 지적마다 보류 이유를 PR 코멘트에 남긴다. 첫 회차에서 `spec.md` 134행(`pyproject.toml`을 제품 변경에 넣으라는 Major)은 이미 거부한 안이라 고치지 않았고, 그 이유와 보류한 Minor 여덟의 이유(일지 "봇 첫 회차")를 PR 코멘트에 아직 남기지 않았다. 병합 전에 한 번 남긴다. 일지의 "회고"와 "다음"은 이미 썼고 커밋에 들어 있다. 병합 뒤 `merge.md`의 "워크트리에서 병합할 때"를 밟고, 일지 "다음"대로 티켓 단계(명세 검토 `spec-reviewer` 먼저, 그 뒤 `/to-tickets .scratch/release-image/spec.md`, 브랜치 `docs/release-image-tickets`, 모델 `Opus 5.5 / xhigh`)의 지시문을 낸다. 이 커밋의 pre-commit pytest가 부하의 시간 시험(`tests/tools/test_rerun_runner.py`)으로 두 번 빨갰으니 푸시 뒤 CI가 같은 시험으로 빨가면 그 시험만 다시 돌려 본다.
+확인할 선행 조건: 없음
+이번 요청 범위: PR과 병합까지
+
+제목을 바꿨다. 워크트리는 잠겨 있지 않았다(잠금 풀기 명령이 is not locked 로 끝났다).
+
+open-session을 부른다 2026-11-14T07:24:39Z
