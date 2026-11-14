@@ -50,10 +50,15 @@
   - 표준 축이 낸 smell 둘(Duplicated Code, Primitive Obsession)은 판단 항목이고 문제가 작아 남겼다.
 - 대 보지 못한 것: 일지의 `run_checks.py` 시간(pytest 618초, web-verify 1049초)과 "Updated agent-os v0.1.0 -> v0.0.0" 출력은 앞 세션이 낸 값이고 이 세션이 다시 재지 않았다(서브에이전트도 로그가 없어 대 보지 못했다).
 
+## 커밋과 PR 직전 리뷰
+
+- 커밋 `086d68ef2`. 커밋 전에 `git branch --show-current`가 `feature/01-repo-version-reads-0-0-0`이었고 `uv run python tools/sibling_overlap.py`는 번호 겹침 없음이었다(둘 다 손으로 쳤다).
+- pre-commit 첫 시도는 `tests/tools/test_rerun_runner.py::test_오염이_한_번이면_다시_돌고_두_번이면_그_과제를_모든_갈래에서_뺀다` 하나가 빨개(`assert 1 == 0`) 막혔다(pytest 1 failed, 7313 passed, 837초). 이어받을 상태가 적은 시간 시험 계열이다. 그 시험을 홀로 `uv run pytest -q tests/tools/test_rerun_runner.py -k "오염이_한_번이면"`으로 돌리니 통과했다(1 passed, 75초). 같은 커밋의 둘째 시도는 전부 통과했다(pytest 719.6초, web-verify 1004.0초, 종료 코드 0). `SKIP`은 쓰지 않았다. 이 변경은 그 시험이 읽는 코드를 건드리지 않았다.
+- PR 직전 CodeRabbit CLI(`coderabbit-review` 서브에이전트, CLI 0.7.5, `coderabbit review --agent --committed --base origin/dev`): `review_completed`, 지적 0건(유효 0, 오탐 0, 보류 0), 본 파일 12개. `auth status`는 `Plan: Free`, `Seat: not assigned`였고 리뷰는 막히지 않았다. 도구가 낸 출력을 서브에이전트가 옮긴 값이다.
+
 ## 남은 일
 
-- 독스트링과 일지, 티켓 07 메모를 고친 뒤 커밋(pre-commit이 손으로 치는 다섯을 갈음한다), PR, 봇 회차, 병합까지가 이 요청의 범위다.
-- 커밋 전에 `git branch --show-current`와 `uv run python tools/sibling_overlap.py`를 다시 친다.
+- PR을 열고 봇 회차(CodeRabbit 요청, claude-review)를 반영한 뒤 병합한다. 이 요청의 범위가 병합까지다.
 - 이 티켓은 `openapi.json`에 닿는 계약 티켓이다. 계약의 값(판 칸) 하나만 바뀌고 모양은 그대로다.
 
 ## 인계
