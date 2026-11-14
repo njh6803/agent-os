@@ -353,4 +353,112 @@ ADR 0056에 쌓은 이력 일곱
 
 고르지 않은 하나는 "고칠 것이 있다"이고 그 설명은 "고칠 판단의 번호와 바꿀 내용을 적어 주시면, 명세(필요하면 ADR 이력까지)를 고친 뒤 다시 여쭙니다."였다.
 
-답을 옮긴 자리는 셋이다. ADR 0056의 이력 일곱 끝에 "이 이력은 2026-11-14에 사용자가 승인했다"를 달았다(ADR 0025·0029의 이력 끝 줄과 같은 꼴). 명세 서두의 미래형 둘("승인은 셀프 리뷰를 반영한 뒤에 받는다", "승인을 물을 때 함께 보인다")은 받은 것으로 고쳤다(admin-style 명세 서두의 "셀프 리뷰를 반영한 뒤 사용자가 그 초안을 승인했다"와 같은 꼴).
+답은 이 일지 밖의 두 자리에도 옮겼다. ADR 0056의 이력 일곱 끝에 "이 이력은 2026-11-14에 사용자가 승인했다"를 달았다(ADR 0025·0029의 이력 끝 줄과 같은 꼴). 명세 서두의 미래형 둘("승인은 셀프 리뷰를 반영한 뒤에 받는다", "승인을 물을 때 함께 보인다")은 받은 것으로 고쳤다(admin-style 명세 서두의 "셀프 리뷰를 반영한 뒤 사용자가 그 초안을 승인했다"와 같은 꼴).
+
+## 인계(커밋 뒤)
+
+커밋 `0fa1f33ae`(제목 "docs: 판 내기와 단독 배포를 명세한다 (release-image, harness ci-compose-e2e-comment)")를 친 자리에서 세션 컨텍스트가 308,448 토큰으로 인계 문턱(20만)을 넘어 `hook_handoff`가 왔다. 남은 일은 새 세션이 한다. 이 세션은 곁 세션이 아니다(`get_session`의 `self`에 `parentSessionId`가 없었다). 넘기기 전 제목은 `docs/release-image-spec`이고, 넘기며 `docs/release-image-spec (인계함)`으로 바꾼다.
+
+승인 뒤에 이 세션이 한 것이다.
+
+- 커밋 검사(`tools/check_ticket.py`)의 독스트링을 읽으니 면제 모양에 `.github/workflows/ci.yml`이 없어, ci.yml 주석을 고친 `docs/` 브랜치는 판정 6의 harness 티켓이 없으면 판정 7에 막힌다. 선례(일지 2026-10-23-27의 harness 009)대로 그 주석 고침만 맡는 harness 티켓 `.scratch/harness/issues/ci-compose-e2e-comment.md`(done)를 써서 같은 커밋에 실었고, 커밋 제목의 꼬리도 선례의 `(admin-style, harness 009)` 꼴로 달았다. 옛 표현의 잔존을 `git grep --untracked`로 보니 살아 있는 문서에는 없었다. 같은 말이 든 done인 harness 티켓 둘(`dev-branch-create`, `dev-branch-transition`)은 기록이다(`docs/constitution/operations.md` 문서 위치).
+- 커밋 직전 `git branch --show-current`는 `docs/release-image-spec`이었다. `uv run python tools/sibling_overlap.py`는 새 번호, 번호 겹침, 함께 고친 파일이 모두 없다고 냈고, 기준 브랜치는 셀프 리뷰 때 본 `581903f` 그대로였다.
+- 커밋의 pre-commit은 모두 통과했다. ruff check와 ruff format, 검사 러너(720.72s)의 check-ticket·zizmor·lint-imports·check-instructions·check-type-escapes·pyright-linux·pyright·run-hooks(106.9s)·pytest(594.6s)·web-verify(720.5s), 마크다운 표, 줄 구분 문자, 변이 표, 인용 대조, 커밋 메시지가 Passed였다. 카나리아 명세와 헌법 판은 대상 파일이 없어 `Skipped`였다. 손으로 치는 다섯은 이 결과로 갈음한다. 이 PR은 코드를 고치지 않아 `-m llm` 계열, e2e, 사진 비교는 치지 않았다.
+- 인용 대조는 막지 않는 경고 111건을 냈다. 파일별로 `release_mechanics` README 69, 이 일지 34, `proxy_config` README 3이고, ADR 0056, 명세, `notes_summary` README, `bridge_recover` README, harness 티켓이 하나씩이다. README 69는 공식 문서 원문의 영어 발췌이고 일지 34는 사용자 답과 고치기 전 문구의 인용일 것으로 본다(어림. 경고 줄을 하나씩 열어 보지 않았다). 살아 있는 문서의 8건 가운데 harness 티켓의 것은 이 커밋이 고친 ci.yml 옛 주석의 인용이다. ADR 0056 54행의 "같은 compose 네트워크의 컨테이너"는 기준 커밋 `1117a170f`의 본문에 이미 있던 인용이고(`git show`로 셌다), 이 브랜치는 그 줄에 포인터만 달았다. 나머지 여섯은 원문과 대 보지 않았다. 명세 538행 "release-image 명세가 넘긴 것(2026-11-13)", `notes_summary` README 3행, `bridge_recover` README 127행, `proxy_config` README 147·156·263행이다. 명세 538행은 기능 계획의 실제 머리("release-image 명세가 넘긴 것(2026-11-13, `.scratch/release-image/spec.md`의 Out of Scope)")를 줄여 옮긴 것으로 보인다(어림).
+
+남은 단계는 아래이고 새 세션이 한다.
+
+1. PR 직전 리뷰(`docs/constitution/operations.md` 리뷰 파이프라인 2). CodeRabbit CLI가 돌지 못하면 내장 `/security-review`와 `bug-perf-review`를 나란히 돈다. 밀 주장은 위 "판정과 반영"의 1~19와 아래 20~23이고, 나열 밖도 잰다.
+2. 반영하면 명세 서두의 수를 다시 센다(to-spec의 "명세를 쓴 뒤의 차례").
+3. 푸시와 PR(기준 dev, `.github/PULL_REQUEST_TEMPLATE.md`). 위 pre-commit 결과를 PR 본문에 적는다.
+4. 봇 회차, 병합, 이 일지의 회고와 "다음", `next-session`.
+
+승인과 커밋을 하며 새로 쓴 사실 문장이다(PR 직전 리뷰에 밀 주장으로 넘긴다).
+
+20. 명세 서두 45행 "셀프 리뷰를 반영한 뒤 2026-11-14에 사용자가 일곱 모두 승인했다"와 55행 "사용자는 이력을 쌓지 않은 이 네 판단을 모두 그대로 두기로 했다".
+21. ADR 0056 이력 일곱 끝의 "이 이력은 2026-11-14에 사용자가 승인했다(사용자 말과 선택 화면은 일지 2026-11-13-1843의 "ADR 0056 이력의 승인"에 있다)."
+22. harness 티켓 `ci-compose-e2e-comment`의 What to build와 수용 기준(살아 있는 문서의 잔존이 0이라는 문장 포함).
+23. 위 인용 경고 여섯.
+
+낸 지시문은 아래다.
+
+다음 작업: 기능 release-image. 명세(`.scratch/release-image/spec.md`)를 PR 직전 리뷰부터 이어 병합까지 마친다
+다음 단계: 명세
+어디서: 새 세션. 인계라 같은 브랜치를 잇는다. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /to-spec release-image
+브랜치: docs/release-image-spec
+모델: Opus 5.5 / xhigh. 2의 잇는 지시문(명세는 Fable 5.1 / xhigh)이되 모델은 사용자가 말한 값이다. 사용자가 이 명세 세션에서 Fable 5.2를 Opus 5.5로 바꿨다(일지 머리)
+읽을 것: 일지 `docs/journal/2026-11-13-1843-release-image-spec.md`의 "인계(커밋 뒤)" 절
+이어받을 상태: 인계: 커밋 뒤. 셀프 리뷰 반영과 ADR 0056 이력 일곱의 승인까지 마치고 한 커밋에 실었다. 푸시하지 않았고 PR은 없다. 남은 단계는 PR 직전 리뷰(`docs/constitution/operations.md` 리뷰 파이프라인 2)와 그 반영, 푸시와 PR(기준 dev), 봇 회차, 병합, 일지의 회고와 "다음", `next-session`이다. `docs/journal/2026-11-13-1843-release-image-spec.md`. 그 일지의 "인계(커밋 뒤)" 절은 커밋 뒤에 써서 아직 커밋하지 않았다. PR 직전 리뷰에 밀 주장은 같은 일지의 "판정과 반영" 1~19와 "인계(커밋 뒤)"가 든 문장이다
+확인할 선행 조건: 없음
+이번 요청 범위: PR과 병합까지
+
+제목을 바꿨다. 워크트리는 잠겨 있지 않았다(`git worktree unlock`이 `is not locked`로 끝났다). 이 세션이 띄운 백그라운드 작업(커밋)은 끝나 있었다.
+
+open-session을 부른다 2026-11-14T04:27:07Z
+
+## 이어받은 세션 둘(2026-11-14, 이 절은 13:32부터 적었다)
+
+세션 제목 `docs/release-image-spec`. 모델 Opus 5.5. 인계 지시문으로 열려 `git worktree list`에서 `docs/release-image-spec`이 체크아웃된 `.claude/worktrees/release-image-spec`을 찾아 `EnterWorktree`(path)로 들어왔다. 머리는 `0fa1f33ae`, 작업 트리에는 이 일지의 "인계(커밋 뒤)" 절만 고친 채였다.
+
+> 사용자: (인계 지시문) 다음 작업: 기능 release-image. 명세(`.scratch/release-image/spec.md`)를 PR 직전 리뷰부터 이어 병합까지 마친다
+
+### 기준 브랜치 합치기
+
+`git fetch origin` 뒤 `origin/dev`가 `db2c888d1`(#564, 04-markdown-card-renders-on-react-18)로 앞서 있었다. `git diff --name-only HEAD...origin/dev`와 `git diff --name-only origin/dev...HEAD`를 대 보니 겹치는 파일이 없었다(손으로 봤다). #564가 더한 `web/packages/react-18`은 `web/` 뿌리의 devDependency로만 연결되는 시험 전용 패키지라(`git show db2c888d1 -- web/package.json`을 읽었다), 명세 221행의 "운영 의존성과 `apps/portal`, `packages/site-file`, `packages/ui`의 소스를 담고"를 바꾸지 않는다. `git merge --no-edit origin/dev`로 합쳤고 충돌은 없었다(그 명령의 출력을 손으로 봤다). 설치된 git 훅은 `commit-msg`와 `pre-commit` 둘이고(`.git/hooks`를 `ls`로 봤다), 병합 커밋에서는 커밋 메시지 검사 한 줄만 `Passed`로 찍혔다(같은 출력).
+
+### PR 직전 리뷰
+
+리뷰 파이프라인 2와 선례(일지 2026-11-12-0248의 "PR 직전 리뷰")대로 `coderabbit-review`를 `--base origin/dev`로 띄우고, 밀 주장 스물셋은 CLI에 넘길 길이 없어 `bug-perf-review` 둘에 1~11과 12~23으로 나눠 넘겼다. 하나에 스물셋을 다 넘기면 그 정의의 도구 호출 예산(40번)을 넘을 것으로 봤다(어림). 기준 커밋은 합친 뒤의 merge-base `db2c888d1`이다.
+
+리뷰를 기다리며 명세 서두를 읽다가 5행의 `결정을 바꾼 것은 아래 "이력"의 다섯뿐이다`를 봤다. 45행은 "이력은 일곱이고"라 적으므로, 셀프 리뷰 반영이 이력을 다섯에서 일곱으로 늘릴 때 5행을 고치지 못한 잔존이다. 명세, ADR 0056, `CONTEXT.md`, 기능 계획에서 같은 말(`다섯뿐`, `이력의 다섯`, `이력 다섯`)을 Grep으로 찾으니 그 한 줄뿐이었다(손으로 봤다).
+
+**`bug-perf-review`(밀 주장 1~11)의 보고(받은 그대로 줄였다).** 기준 `db2c888d1`, 마지막 `[호출 14]`라고 적었고 작업 알림의 `tool_uses`는 30이었다. 지적 0건이다. 1~5와 8~11이 근거와 맞는다고 했다. 3은 `tools/check_commit_msg.py`의 `problems_for`를 불러 `Revert "x"`, `Merge branch x`, `fixup! x`가 `[]`로 지나가고 `build: x`, `Feat: x`가 "형식이 아니다"로 걸리는 것을 봤다고 했다. 이 세션의 브리프가 그 함수를 `tools/check_ticket.py`에 있다고 잘못 적었고, 명세 433행은 `check_commit_msg.py`로 맞게 적었다고 짚었다. 4는 `drafts.md` 단락의 글자 수를 473·542·725·379자, 문장 수를 7·9·10·6, 문장 하나의 평균을 67.6·60.2·72.5·63.2자, 미리보기를 145자 3문장으로 다시 셌다고 했다. 11은 "같은 6절"이 `bridge_edge` README 6절이라 일지에서도 이름을 밝히면 낫다고 했다(틀린 문장은 아니라고 했다). 6과 7은 "맡은 범위 밖"으로 보지 않았다. 브리프는 1~11을 맡겼으므로 그 리뷰가 잘못 읽은 것이다.
+
+6과 7은 이 세션이 대 봤다. 6(명세 382행)은 `release_mechanics` README 8번 172~176행과 같은 말이다. 실행 번호와 `actions/download-artifact`의 기본값은 원문이고, 다시 돈 둘째 잡이 실제로 받는지는 그 README 176행도 어림으로 적는다(두 파일을 읽었다). 7(명세 467행)의 `GITHUB_SHA` 문장은 같은 README 166행의 원문 "The workflow will also use the same `GITHUB_SHA` (commit SHA) and `GITHUB_REF` (git ref) of the original event"와 맞는다(읽었다).
+
+**`bug-perf-review`(밀 주장 12~23)의 보고(받은 그대로 줄였다).** 기준 `db2c888d1`, 범위 92개 파일, 마지막 `[호출 n]`은 25라고 적었고 작업 알림의 `tool_uses`는 35였다. 유효 Minor 2, 오탐 0이다.
+
+- Minor 명세 213행(밀 주장 12). "같은 1절의 잰 회차에서 1,476~1,567MiB"가 1절의 잰 값을 다 담지 못한다. `web_images` README 74행(1절. 그 README가 `.scratch/release-image/probes/web_images/run.py`의 `widget-network` 섹션으로 쟀다고 적는다)의 세 회차가 1,452~1,518MiB다.
+- Minor `notes_summary` README 3행(밀 주장 23). 따옴표 안의 문장이 기준 커밋 기능 계획의 원문("… 정하고, 지금은 돌려 보지 않았다")과 어미가 다르다.
+- 23의 인용 경고 여섯은 `uv run python tools/check_quotes.py <파일들> --all-lines`로 다시 돌려 판정했다고 했다. 명세 538행은 기능 계획의 머리를 줄여 옮긴 것이 맞고(앞 세션의 어림대로) 원문대로 옮기라고 했다. `bridge_recover` README 127행은 같은 README 115행의 해석을 줄인 이름이라 따옴표를 떼라고 했다. `proxy_config` README 147·263행은 그 README가 세운 해석의 이름이라 거짓 양성, 156행은 손으로 본 기록의 줄이라 문제 없다고 했다.
+- 13~18, 20~22는 맞다고 했다. 14는 ci.yml의 `push` 트리거(main과 dev)와 브랜치 규칙에 비추어, 18은 ADR 본문 22·32·54행의 포인터와 `tools/check_adr_pointers.py`의 무출력으로, 22는 `git grep`으로 옛 표현이 기록(done 티켓 둘)과 포인터가 달린 ADR 본문에만 남은 것으로 봤다고 했다. 19는 도구 호출 예산 때문에 열어 보지 못했다고 했다.
+
+19는 이 세션이 갈음했다. `release_mechanics` README 172~175행에 원문 셋이 주소와 함께 있고(읽었다), `notes_summary` README 11행의 글자 수 473·542·725·379는 1~11을 맡은 리뷰가 `drafts.md`에서 다시 센 값과 같다. 원문 셋이 웹의 원문과 글자까지 같은지는 이 세션이 다시 받아 보지 않았다.
+
+**`coderabbit-review`의 보고(받은 그대로 줄였다).** CLI 0.7.5, `Plan: Free`, `Seat: not assigned`, `Review access: njh6803/njh6803`. `coderabbit review --agent --include-untracked --base origin/dev`가 종료 코드 0과 `review_completed`로 끝났고 지적은 20건이다. 서브에이전트의 트리아지는 유효 1(명세 151행, Minor), 보류 1(`serve_image/run.py:894`, Minor), 오탐 18이다. 오탐 18 가운데 13은 프로브의 측정 조건을 좁히라는 지적인데, "이미 커밋한 실험 코드의 판정 엄밀화"라 고칠 까닭이 없다고 묶었다.
+
+`coderabbit review findings --agent`로 지적 원문을 스크래치에 받아 읽었다(파일 20,188바이트). CodeRabbit은 20건 모두를 `major`로 냈다. 프로브 13건 가운데 열은 근거로 `.claude/rules/probes.md`의 문장(표지까지 단언한다, 실패의 까닭을 본다, 양성 대조)을 인용한다. 그 규칙은 이 저장소의 규칙이라 "엄밀화일 뿐"이라는 오탐 판정은 맞지 않는다고 봤다. 프로브 폴더 넷(`bridge_edge`, `bridge_recover`, `serve_image`, `web_images`와 `release_mechanics/scan_tools.py`)을 서로 겹치지 않게 나눠 general-purpose 서브에이전트 넷에 맡겼다. 지적마다 코드로 판정하고, 기록한 회차가 그 표지를 다른 관찰로 이미 보였는지 README에서 찾고, 맞으면 측정 조건만 좁히며, README 끝에 "PR 직전 리뷰가 좁힌 측정 조건(2026-11-14)" 절을 더하게 했다. 좁힌 판은 다시 돌리지 않기로 했다. 다섯 폴더를 다시 돌리면 README의 표대로 합쳐 두 시간 남짓이고(어림), 좁힌 조건이 틀려도 결과는 "측정 아님"으로 기우는 쪽이기 때문이다.
+
+명세와 ADR에 닿은 셋은 이 세션이 판정했다.
+
+- 명세 151행(번호 규칙 2). 맞다. 지난 정식 판 `v0.1.0`, 지난 판 `v0.2.0-rc.1`에서 칸을 `0.1.1`로 바꾸면 지금 규칙은 `0.1.1-rc.1`을 낸다. 규칙 2에 "계산한 `T-rc.<k+1>`이 지난 판보다 유의적 버전의 차례로 크지 않아도 구성 오류"와 그 예를 더했고, Testing Decisions 셋째의 구성 오류 사례를 넷에서 다섯으로 늘렸다.
+- 명세 439행(제목만 고친 PR). 맞다. 명세가 든 까닭(`edited`를 ci.yml에 더하면 CI 전체가 다시 돈다)은 (가)만 도는 작은 워크플로로 비용 없이 비켜 갈 수 있다. 같은 도구를 (가)만 보게 부르는 워크플로를 `edited`에만 돌리고, 필수 검사에는 넣지 않으며(제목을 고치지 않은 PR에서는 결과가 오지 않아 병합이 막힌다), 그 빨강은 병합하는 세션이 `gh pr checks`의 실패를 보는 단계(next-session `merge.md` "워크트리에서 병합할 때" 1)가 멈춘다고 적었다. 노트 검사 도구를 짓는 티켓이 함께 싣는다. "검사가 못 보는 것"은 사람이 그 빨강을 두고 웹에서 병합하는 경우로 좁혔다. 431행에도 그 워크플로를 한 마디 더했다. ADR 0056 74행의 "단락의 빠뜨림과 조각의 모양은 병합 전의 노트 검사가 막는다"는 그대로 참이라 이력을 쌓지 않았다(읽었다).
+- ADR 0056 110행(번호 태그가 일부만 붙은 실패). 반은 맞다. 명세 378행이 "그 단계부터 뒤에서 실패하면 초안을 남긴다"로, 467행이 일부만 붙은 경우를 이미 다룬다. 다만 467행의 "사람이 남은 이미지에"는 어느 이미지가 남았는지 사람이 가려내야 하는 것처럼 읽혔다. 지키는 차례가 같은 digest면 그대로 두므로(명세 386행), "지키는 차례와 같은 명령을 네 이미지 모두에 친 뒤 공개한다"로 고치고, 실패한 잡을 다시 돌리는 길도 같은 차례로 네 이미지를 모두 본다고 더했다. ADR 본문은 고치지 않았다.
+
+리뷰가 짚은 Minor와 이 세션이 찾은 것도 고쳤다.
+
+- 명세 213행. 범위를 "1,452~1,567MiB였다(표의 회차와 네트워크 없이 지은 세 회차. …)"로 고쳤다.
+- `notes_summary` README 3행. 기준 커밋 기능 계획의 원문을 글자 그대로 옮기고, 그 판이 명세를 쓰기 전의 판(`1117a170f`)이라고 밝혔다.
+- 명세 538행. 기능 계획의 머리를 원문 그대로("release-image 명세가 넘긴 것(2026-11-13, `.scratch/release-image/spec.md`의 Out of Scope)") 옮겼다.
+- 명세 5행. "다섯뿐"을 "일곱뿐"으로 고쳤다.
+- `bridge_recover` README 127행은 남겼다. 따옴표 안은 원문 인용이 아니라 그 README가 세운 해석의 이름이고, 같은 꼴인 `proxy_config` README 147·263행을 리뷰가 거짓 양성으로 본 것과 같다. 그 폴더는 프로브 서브에이전트가 고치는 중이기도 하다.
+
+서두의 수는 바뀌지 않는다. 고친 문장에 "명세가 정했다", "사용자가 골랐다", "거부한 안:"을 새로 단 자리가 없다.
+
+#### 프로브 지적의 판정과 반영
+
+프로브 서브에이전트 넷의 보고를 받은 그대로 줄였다. 넷 모두 고친 판을 다시 돌리지 않았고, `tools/check_type_escapes.py`가 `.scratch`를 훑지 않아(인자 없이 돌리면 `[tool.pyright] include`의 `src`, `tests`, `tools`만 보고, 파일 인자는 검사 루트로 읽어 `FileNotFoundError`로 끝난다고 둘이 보고했다) 그 도구의 `escapes_in`을 스크래치 스크립트로 직접 걸거나 Grep으로 갈음했다고 했다.
+
+- `bridge_edge`(지적 둘, 둘 다 유효). `who`의 "닿지 않음"은 HTTP 응답도 그 rid의 접근 기록 줄도 없을 때만 세고, 프록시가 낸 502 같은 응답은 "프록시에 닿았으나 serve 의 답이 아님"으로 측정 아님이 되게 했다. `attack`은 공격 전에 서버 자신에서 대상 주소와 포트로 거는 양성 대조를 더하고 그 대조가 선 회차만 센다(`attack6`과 같은 꼴). 기록으로는 1절과 8절의 닿지 않은 칸이 `refused`·`timeout`이라 HTTP 응답이 없었음이 보이고, 3절과 9절의 막힌 칸은 늘어난 DROP 규칙으로 패킷이 대상 앞에서 버려졌음이 보인다고 했다. 가를 수 없는 것은 1절 이중 스택의 서버 자신 → `[::1]:443` `timeout`, 3절의 회차마다의 DROP 증가, 28.3.3의 serve가 답했는지(그 실행은 항목 1을 돌지 않았다)다. 명세 262·265·316·318·319·321행이 그 결과에 기댄다. 보고는 pyright 0 errors라 했고, 편집기 진단이 `routed` 미정의를 띄워 이 세션이 `uv run pyright -p .scratch/release-image/probes/bridge_edge/pyrightconfig.json`을 다시 쳐 `0 errors`를 봤다(낡은 진단이었다).
+- `bridge_recover`(지적 넷, 넷 다 유효). `natural`의 주소가 바뀐 갈래에 `recreated`를, `slow_up`의 `waited`에 `asked`를, `boot`와 `unresolved`에 "요청이 모두 실제로 나갔다"를, `broken_round`에 reload가 그 설정 때문에 거부됐다는 표지(reload 출력이나 프록시 기록의 `no_such_directive`)를 더했고, `dind_up`은 새로 만든 dind 컨테이너를 시작하게 고쳤다(측정 조건이 아니라 다시 실행하는 흐름). 기록으로는 3b의 여섯 회차 가운데 넷, 7절, 8절(raw.log를 손으로 본 줄)이 표지를 보였고, 3b의 나머지 둘에서 주소가 그대로인 뒷단이 다시 만들어졌는지와 4~7절 표본의 요청이 빠짐없이 나갔는지는 가를 수 없다고 했다. 명세 331행의 6.3초는 가를 수 없는 회차(실행 5의 (다))에서 왔지만 그 값을 낸 widget 자신은 다시 만들어진 경로라고 했다. 이 세션이 `uv run pyright -p .scratch/release-image/probes/bridge_recover`를 다시 쳐 `0 errors`를 봤다.
+- `serve_image`(지적 다섯, 다섯 다 유효). `handshake_result`에 갈래마다 기대한 끝(`EAI_AGAIN`, `only-if-cached`, 창이 차서 끔, `serverInfo`가 든 답)을, `mcp_serve`에 실패 원인과 그 실행 동안의 MCP 시작 줄 수의 변화를, `upgrade`에 다음 판의 매니페스트 줄과 파일 목록이 읽혔는지(목록이 잘리면 측정 아님)를, `init_round`에 고아 도우미와 좀비 목록 조회의 성공을 더했다. 항목 5만 돌릴 때 쓰는 이미지 `ri-serve-ver-b1-rc`는 항목 5의 준비 단계가 짓게 했다(다시 돌리는 길). 기록으로는 4번 표의 오류 문구와 원인, 7번의 고아 부모 1이 표지를 보였고, 시작 줄이 그 실행에서 나왔는지, 다음 판의 파일 목록 조회가 성공했는지(명세 201행의 "새 파일"이 이 몫이다), "좀비 0"이 목록을 읽은 0인지는 가를 수 없다고 했다. 가짜 응답 11가지를 넣는 스크래치 스크립트로 새 판정을 봤다고 했다. 지적 밖에서 같은 꼴 셋(`diff_flow`, `readonly_flow`, `init_round`의 `all(outcome.failed …)`)을 찾아 결정을 넘겼다. 명세 189행과 README 206행이 원인 `model_call`에 기대는 둘은 같은 서브에이전트에게 이어서 좁히게 했고, `readonly_flow`는 원인이 표지가 아니라 재는 값이라 그대로 뒀다. 이어서 고친 보고는 `diff_flow`와 `init_round`가 원인 `model_call`인 회차만 세게 했고, 기록으로는 5번 (가) 표의 두 갈래("실행 `model_call`")와 7번 본문("넷 모두 MCP를 지나 `model_call`에서 끝났다")이 표지를 보였다고 했다. README 절의 첫 문장은 "CodeRabbit CLI가 짚은 것과 그와 같은 꼴을 함께 좁혔다"로 고쳤다고 했다.
+- `web_images`와 `release_mechanics/scan_tools.py`(지적 여섯, 유효 다섯과 반만 맞은 하나). `sweep`은 라벨 값에 실행 토큰을 넣어 끝 정리가 자기 자원만 지우게 하고, 시작의 정리는 지우지 않고 남은 자원을 세어 알리는 `leftovers`로 바꿨다(앞 실행이 끊겨 남긴 것인지 함께 도는 실행의 것인지 가를 길이 없어서라고 했다). 중계 응답은 `built`와 `startenv` 가운데 정확히 하나가 실렸을 때만, 빌드 중인 위젯의 stop은 같은 기록 글에서 `build-start`가 있고 `build-exit`이 없을 때만, 좀비 대조 갈래는 부모가 pid 1인 좀비를 실제로 찾았을 때만 센다. `fetch.mjs`는 호출자의 60초 제한이 있어 끝나지 않는 일은 없지만 그 제한에 걸리면 본 것을 잃으므로, `--deadline`(기본 40초)에 닿으면 그때까지 본 것을 `partial`로 찍고 끊게 했다. `scan_tools.py`의 `save_target`은 `with subprocess.Popen` 안의 두 시간 초과가 문맥을 빠져나갈 때 다시 무제한으로 기다리므로, 시간 초과에서 `docker save`를 kill하고 30초 안에 거둔 뒤 예외를 넘기게 했다. 기록으로는 4절(`built`에서 온 `/api/ping`), 6절 셋째 항목(대조 넷 모두 좀비 1)이 표지를 보였고, 빌드 중인 위젯의 stop이 빌드 시작 뒤였는지는 가를 수 없다고 했다(명세 179행이 그 결과에 기댄다). `fetch.mjs`와 `save_target`은 가짜 서버와 120초 자는 프로세스로 고치기 전과 뒤를 견줬다고 했다(고친 판은 1.5초 기한에서 `partial`, 1초 제한에서 약 1.0~1.1초에 거둠, 고치기 전 판은 끌 때까지나 바깥 20초 제한까지 돌아오지 않음). `mid_build`의 같은 꼴(빈 기록 읽기 하나가 남는다)은 지적 밖이라 뒀다고 했다. `release_mechanics`에는 pyrightconfig가 없어 `uv run pyright` 파일 인자가 "No source files found"였고(`.scratch`가 점 폴더라 빠진다), strict 설정을 둔 스크래치 사본으로 0 errors를 봤다고 했다.
+
+**명세에 남긴 것.** 프로브의 측정 조건을 좁혔으니, 앞선 실행의 기록으로 표지를 가를 수 없는 회차에 명세의 몇 자리가 기댄다. 명세 Further Notes "다시 잴 때"에 그 사실과 기대는 자리("이미지의 구성"의 빌드 중인 위젯과 다음 판의 새 파일, "발행하는 포트와 지원하는 최소 판", "프록시 설정"의 IPv6, "프록시가 뒷단을 다시 찾는 길"의 걸린 시간), 그 절을 구현하는 티켓이 고친 판을 먼저 다시 돌린다는 문장을 더했다. 자리는 서브에이전트들이 든 명세 행(179, 201, 262, 265, 316~321, 331)을 이 세션이 Read로 열어 절 이름으로 옮겼다. 프로브를 지금 다시 돌리지 않은 것은 네 폴더를 합쳐 Docker로 두 시간 넘게 걸리고(앞선 실행의 걸린 시간에서 어림), 다시 돌린 결과가 결정을 바꾸면 그 절의 티켓이 고칠 수 있기 때문이다.
+
+**서두의 수(본문의 표시로 다시 셌다).** 넘겨받은 것 29(표의 `| ` 줄 30에서 머리 행 하나를 뺀다), 사용자가 고른 것 5(Grep 7건에서 서두 두 문단의 언급 둘을 뺀다), 명세가 정한 것 24(Grep 25건에서 서두 자신의 언급 하나를 뺀다), 이력 7(ADR 0056의 `### 2026-11-13`·`### 2026-11-14` 줄 8에서 다른 PR이 쌓은 용어 이력 하나를 뺀다), 거부한 안 20문단. 모두 그대로다.
+
+**검증 명령.** `uv run pyright -p`를 serve_image와 web_images 폴더에 다시 쳐 둘 다 `0 errors`였다. `uv run ruff check .`, `uv run ruff format --check .`, `tools/check_adr_pointers.py`, `tools/check_md_tables.py`, `tools/check_line_separators.py`, `tools/plan_table.py --check`도 걸린 것이 없었다. `git branch --show-current`는 `docs/release-image-spec`, `tools/sibling_overlap.py`는 번호 겹침과 함께 고친 파일이 없다고 냈다. `git fetch origin` 뒤 `origin/dev`는 `dce80e588`로 움직였지만 출시 PR과 그 되돌려 합치기 둘이라 `git diff --name-only HEAD...origin/dev`가 비었다. 반영 커밋 앞에 `/code-review` 전체를 다시 돌리지는 않았다(local-model 일지의 선례와 같다. 그 스킬의 6단계가 고친 뒤에는 검증 명령만 다시 돌리라고 한다).
+
+**첫 커밋 시도의 pytest 빨강(부하의 시간 시험).** 반영 커밋의 첫 시도는 pre-commit의 pytest가 4 failed, 7305 passed로 빨개 커밋되지 않았다. `tests/channel/cli/test_interrupt.py`의 셋(작업자 gw2, 모두 "Ctrl+C 를 누른 자식이 30초 안에 끝나지 않았다")과 `tests/tools/test_rerun_runner.py`의 `test_오염이_한_번이면_다시_돌고_두_번이면_그_과제를_모든_갈래에서_뺀다`(`assert 1 == 0`, 3초 매달리는 사례가 든다)다. pytest가 1,244.8초, web-verify가 1,368.3초로 앞 커밋(594.6초, 720.5초)의 두 배쯤 걸렸다. 이 커밋은 시험이 읽지 않는 `.md`와 `.scratch` 파일만 고쳤다. 두 시험 파일만 `uv run pytest -q`로 따로 돌리니 69 passed(291.66초)였다(손으로 봤다). 대기열 306이 이 꼴을 끝이 열린 결함 종류로 받아들여 닫았으므로(새 사례는 회차를 더하지 않고 일지에만 적는다) 커밋을 다시 쳤다.

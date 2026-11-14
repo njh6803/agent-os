@@ -10,8 +10,9 @@
 필요한 것. 도는 Docker 데몬(리눅스 컨테이너, BuildKit), build 단계에는 Docker Hub 와 npm
 레지스트리에 닿는 네트워크. build 밖의 단계는 build 가 지어 둔 이미지(ri-web-img:<단계>)만 쓴다.
 호스트 포트는 열지 않는다. 세 프로세스가 컨테이너 안의 루프백에만 묶이므로 요청은 모두 docker exec
-로 컨테이너 안에서 건다(fetch.mjs). 띄운 컨테이너, 볼륨, 네트워크에는 라벨 ri-web-probe 를 달고,
-시작할 때와 끝날 때 그 라벨이 붙은 것만 지운다. 이미지는 남긴다. 모든 명령의 원본 출력은
+로 컨테이너 안에서 건다(fetch.mjs). 띄운 컨테이너, 볼륨, 네트워크에는 라벨 ri-web-probe=<실행 토큰>
+을 달고, 끝날 때 이 실행의 토큰이 붙은 것만 지운다. 시작할 때는 다른 토큰이 붙은 것(끊긴 앞 실행이나
+함께 도는 다른 실행의 것)을 세어 알리기만 한다. 이미지는 남긴다. 모든 명령의 원본 출력은
 --work(없으면 시스템 임시 폴더) 아래 raw.log 에, 회차의 값은 results.jsonl 에 남는다.
 
 표지. 회차마다 "재려는 상황이 실제로 났다"는 관찰을 본 뒤에만 측정으로 센다. 성공을 기대하는 회차는
@@ -88,6 +89,9 @@ TARGETS = (
 
 _work: list[Path] = []
 _token = secrets.token_hex(3)
+# 만드는 것마다 라벨 키는 같고 값은 이 실행의 토큰이다. 지우기는 값까지 맞는 것만 고른다. 같은
+# 프로브를 다른 세션이 함께 돌려도 그 실행의 자원을 지우지 않는다.
+TAG = f"{LABEL}={_token}"
 _serial = [0]
 
 type Json = dict[str, Json] | list[Json] | str | int | float | bool | None
@@ -191,18 +195,38 @@ def fresh(kind: str) -> str:
     return f"ri-web-p-{_token}-{kind}-{_serial[0]}"
 
 
+KINDS = (
+    ("container", ("ps", "-aq"), ("rm", "-f", "-v")),
+    ("volume", ("volume", "ls", "-q"), ("volume", "rm", "-f")),
+    ("network", ("network", "ls", "-q"), ("network", "rm")),
+)
+
+
 def sweep() -> None:
-    """라벨이 붙은 컨테이너, 볼륨, 네트워크만 지운다. 다른 세션의 것은 건드리지 않는다."""
-    for kind, lister, remover in (
-        ("container", ("ps", "-aq"), ("rm", "-f", "-v")),
-        ("volume", ("volume", "ls", "-q"), ("volume", "rm", "-f")),
-        ("network", ("network", "ls", "-q"), ("network", "rm")),
-    ):
-        listed = docker(*lister, "--filter", f"label={LABEL}", timeout=60)
+    """이 실행의 토큰을 라벨 값으로 단(TAG) 컨테이너, 볼륨, 네트워크만 지운다. 같은 프로브의 다른
+    실행과 다른 세션의 것은 건드리지 않는다."""
+    for kind, lister, remover in KINDS:
+        listed = docker(*lister, "--filter", f"label={TAG}", timeout=60)
         ids = listed.out.split()
         if listed.code == 0 and ids:
             removed = docker(*remover, *ids, timeout=180)
             raw(f"sweep {kind}", f"{len(ids)}개, exit={removed.code}")
+
+
+def leftovers() -> None:
+    """시작할 때 라벨 키는 같고 값이 다른 자원(앞선 실행이 끊겨 남긴 것이나 함께 도는 다른 실행의
+    것)을 세어 알린다. 둘을 가르지 못해 지우지 않는다. 도는 실행이 없으면 사람이 지운다."""
+    found: list[str] = []
+    for kind, lister, _ in KINDS:
+        listed = docker(*lister, "--filter", f"label={LABEL}", timeout=60)
+        if listed.code == 0 and listed.out.split():
+            found.append(f"{kind} {len(listed.out.split())}")
+    if found:
+        print(
+            f"라벨 {LABEL} 가 붙은 다른 실행의 자원이 있다({', '.join(found)}). 지우지 않았다. "
+            f"도는 실행이 없으면 --filter label={LABEL} 로 골라 손으로 지운다.",
+            flush=True,
+        )
 
 
 # ---------------------------------------------------------------------------------------------
@@ -220,7 +244,7 @@ def start(
     name = fresh(kind)
     envs = [item for key, value in (env or {}).items() for item in ("-e", f"{key}={value}")]
     done = docker(
-        "run", "-d", "--name", name, "--label", LABEL, *envs, *options, image(target), *command
+        "run", "-d", "--name", name, "--label", TAG, *envs, *options, image(target), *command
     )
     if done.code != 0:
         raise RuntimeError(f"docker run 실패: {tail(done.text)}")
@@ -635,7 +659,7 @@ def admin_up(page: dict[str, Json]) -> bool:
 def baked(target: str) -> str:
     """이미지의 빌드 산출물(routes-manifest.json)에 든 중계 대상. 서버를 띄우지 않고 읽는다."""
     done = docker(
-        "run", "--rm", "--label", LABEL, "--entrypoint", "node", image(target), "-p", MANIFEST
+        "run", "--rm", "--label", TAG, "--entrypoint", "node", image(target), "-p", MANIFEST
     )
     return done.out.strip()
 
@@ -783,7 +807,7 @@ def section_admin_upstream(rounds: Rounds, _repeat: int) -> None:
     - 굳은 값: admin-full 과 admin-exception 의 routes-manifest.json 에 든 중계 대상.
     - 시작 때 환경 변수: admin-full 을 AGENT_OS_UPSTREAM=http://127.0.0.1:9999 로 띄우고 컨테이너
       안에 8000(built)과 9999(startenv) 두 가짜 상류를 둔다. 9999 가 직접은 답한다는 것이 양성
-      대조다.
+      대조다. 중계 응답이 두 토큰 가운데 정확히 하나를 실은 회차만 측정이다.
     - 예외 판: 사용자 정의 네트워크에 별칭 serve 의 가짜 상류 컨테이너를 두고 admin-exception 으로
       /api/ping(토큰과 Authorization)과 /api/sse(이벤트 넷이 생기는 대로 오는지)를 건다. 같은
       네트워크의 admin-full 은 닿지 않는 것(500)이 대조다.
@@ -811,15 +835,17 @@ def section_admin_upstream(rounds: Rounds, _repeat: int) -> None:
             },
         )
         answered = admin_up(page) and dig(direct, "needles", "startenv") is True
+        built = dig(relayed, "needles", "built") is True
+        startenv = dig(relayed, "needles", "startenv") is True
+        # 두 가짜 상류의 토큰 가운데 정확히 하나를 본 회차만 측정이다. 둘 다 없거나 둘 다 있으면
+        # 어느 상류가 답했는지 가를 수 없다.
         current.mark(
-            measured=answered and relayed.get("status") == 200,
-            result="빌드 때 값으로 중계했다"
-            if dig(relayed, "needles", "built") is True
-            else "시작 때 값으로 중계했다",
+            measured=answered and relayed.get("status") == 200 and built != startenv,
+            result="빌드 때 값으로 중계했다" if built else "시작 때 값으로 중계했다",
         )
         docker("rm", "-f", name, timeout=60)
     network = fresh("net")
-    docker("network", "create", "--label", LABEL, network, timeout=60)
+    docker("network", "create", "--label", TAG, network, timeout=60)
     start(
         "admin-src",
         "--network",
@@ -1011,8 +1037,8 @@ def section_common_stop(rounds: Rounds, repeat: int) -> None:
     """docker stop -t 10 의 걸린 시간과 종료 코드, --init 유무. 표지는 멈추기 전에 돌고 있었고(pid 1
     이 보였다) 멈춘 뒤 돌지 않는 것이다. 관리 화면 둘(next start, standalone 의 server.js)과 빌드
     중인 위젯을 본다. 서비스 중인 위젯은 widget-time, portal 은 portal 섹션이 본다. 빌드 중인 위젯은
-    빌드가 시작되고 5초 뒤에 멈추고, 그때 아직 빌드가 끝나지 않았다는 것(build-exit 줄이 없다)을 더
-    본다."""
+    빌드가 시작되고 5초 뒤에 멈추고, 그때 같은 기록 읽기에서 빌드가 시작됐고(build-start 줄이 있다)
+    아직 끝나지 않았다는 것(build-exit 줄이 없다)을 더 본다."""
     count = min(repeat, 2)
     for target, env in (("admin-full", {}), ("admin-standalone", {"HOSTNAME": "127.0.0.1"})):
         for init in ((), ("--init",)):
@@ -1032,7 +1058,10 @@ def section_common_stop(rounds: Rounds, repeat: int) -> None:
             name = start(WIDGET, "--user", NODE_USER, *init, env=widget_env(), kind="w")
             until(name, ["RI_PROBE build-start"], timeout=60)
             time.sleep(5)
-            building = "RI_PROBE build-exit" not in logs(name)
+            # until 은 제한 시간에 닿아도 돌아오고, 기록 읽기가 비어도 build-exit 은 없다. 같은
+            # 읽기에서 빌드가 시작됐다는 줄까지 본다.
+            text = logs(name)
+            building = "RI_PROBE build-start" in text and "RI_PROBE build-exit" not in text
             values = stop(name)
             note(label, {**values, "building": building})
             current.mark(
@@ -1058,9 +1087,9 @@ def section_portal(rounds: Rounds, repeat: int) -> None:
     - uid 1000 이 빈 새 볼륨에 tools/make-key.ts 로 키를 만든다: 표지는
       `개인 키를 쓰지 못했다(EACCES)`."""
     volume = fresh("v")
-    docker("volume", "create", "--label", LABEL, volume, timeout=60)
+    docker("volume", "create", "--label", TAG, volume, timeout=60)
     made = docker(
-        "run", "--rm", "--label", LABEL, "-v", f"{volume}:/cfg", "--entrypoint", "node",
+        "run", "--rm", "--label", TAG, "-v", f"{volume}:/cfg", "--entrypoint", "node",
         image("portal-prod"), "/probe/portal-fixture.mjs", "/cfg", "3100",
     )  # fmt: skip
     with rounds.round("portal root 가 만든 키를 uid 1000 이 읽는다") as current:
@@ -1078,7 +1107,7 @@ def section_portal(rounds: Rounds, repeat: int) -> None:
             result="읽지 못해 멈췄다",
         )
     docker(
-        "run", "--rm", "--label", LABEL, "-v", f"{volume}:/cfg", "--entrypoint", "chown",
+        "run", "--rm", "--label", TAG, "-v", f"{volume}:/cfg", "--entrypoint", "chown",
         image("portal-prod"), "1000:1000", "/cfg/keys/portal.pem",
     )  # fmt: skip
     for index in range(min(repeat, 3)):
@@ -1135,9 +1164,9 @@ def section_portal(rounds: Rounds, repeat: int) -> None:
             )
     with rounds.round("portal uid 1000 이 새 볼륨에 키를 만든다") as current:
         keys = fresh("v")
-        docker("volume", "create", "--label", LABEL, keys, timeout=60)
+        docker("volume", "create", "--label", TAG, keys, timeout=60)
         done = docker(
-            "run", "--rm", "--label", LABEL, "--user", NODE_USER, "-v", f"{keys}:/keys",
+            "run", "--rm", "--label", TAG, "--user", NODE_USER, "-v", f"{keys}:/keys",
             "--entrypoint", "node", image("portal-prod"), "--disable-warning=ExperimentalWarning",
             "tools/make-key.ts", "--private-key", "/keys/portal.pem", "--kid", "probe-1",
         )  # fmt: skip
@@ -1482,9 +1511,9 @@ def section_widget_sitefile(rounds: Rounds, _repeat: int) -> None:
     변수를 주지 않은 회차는 실패하지 않고 서는지를 보며, 표지는 CSP 가 frame-ancestors 'none' 인
     것이다."""
     volume = fresh("v")
-    docker("volume", "create", "--label", LABEL, volume, timeout=60)
+    docker("volume", "create", "--label", TAG, volume, timeout=60)
     docker(
-        "run", "--rm", "--label", LABEL, "-v", f"{volume}:/cfg", "--entrypoint", "sh",
+        "run", "--rm", "--label", TAG, "-v", f"{volume}:/cfg", "--entrypoint", "sh",
         image(WIDGET), "-c", "cp /probe/sites_a.toml /cfg/sites.toml && chmod 0600 /cfg/sites.toml",
     )  # fmt: skip
     cases: tuple[tuple[str, str, tuple[str, ...], tuple[str, ...]], ...] = (
@@ -1544,7 +1573,8 @@ def section_zombie(rounds: Rounds, repeat: int) -> None:
     자식이라, 진입이 exec 로 서비스로 갈아탄 뒤 wait.mjs 가 끝나면 그 서비스의 자식 좀비가 된다(그
     섹션들의 좀비 수에 든다). 그래서 이 섹션은 wait.mjs 없이 띄우고 바깥에서 docker exec 로 첫 200
     을 기다린다. 관리 화면을 wait.mjs 와 함께 띄운 갈래가 양성 대조다(센 값이 좀비 하나를 잡아야
-    한다). 갈래마다 repeat 번. 표지는 서비스의 200 과 /proc 목록에서 pid 1 을 본 것이다."""
+    한다). 갈래마다 repeat 번. 표지는 서비스의 200 과 /proc 목록에서 pid 1 을 본 것이고, 대조
+    갈래는 부모가 pid 1 인 좀비를 하나 이상 찾은 것을 더 본다."""
     branches = (
         ("관리 화면 wait.mjs 와 함께(대조)", "admin", (), True),
         ("관리 화면", "admin", (), False),
@@ -1577,7 +1607,10 @@ def zombie_round(
             f"zombie {label}",
             {"pid1": pid1, "zombies": len(zombies), "zombie_list": zombie_list(found)},
         )
-        current.mark(measured=up and pid1 != "", result=f"좀비 {len(zombies)}")
+        # 대조 갈래(wait.mjs 와 함께)는 부모가 pid 1 인 좀비를 찾아야 측정이다. 못 찾으면 /proc
+        # 수집이나 해석이 좀비를 놓친 것일 수 있어 다른 갈래의 0 을 받치지 못한다.
+        caught = not waiter or any(ppid == 1 for _, ppid, _, _ in zombies)
+        current.mark(measured=up and pid1 != "" and caught, result=f"좀비 {len(zombies)}")
         docker("rm", "-f", name, timeout=60)
 
 
@@ -1588,8 +1621,8 @@ def section_widget_reflect(rounds: Rounds, _repeat: int) -> None:
     않는 것이다. 다시 띄울 때 앞 빌드 산출물이 남았는지(prior-build present)와 두 번째 빌드 시간을
     적는다."""
     volume = fresh("v")
-    docker("volume", "create", "--label", LABEL, volume, timeout=60)
-    copy = ("run", "--rm", "--label", LABEL, "-v", f"{volume}:/cfg", "--entrypoint", "sh")
+    docker("volume", "create", "--label", TAG, volume, timeout=60)
+    copy = ("run", "--rm", "--label", TAG, "-v", f"{volume}:/cfg", "--entrypoint", "sh")
     script = "cp /probe/{0} /cfg/sites.toml && chmod 0644 /cfg/sites.toml"
     docker(*copy, image(WIDGET), "-c", script.format("sites_a.toml"))
     # 회차가 예외로 끝나면 Rounds 가 삼켜 kept 가 비고, 다시 띄우는 회차를 잇지 않는다.
@@ -1664,7 +1697,7 @@ def main() -> int:
     work.mkdir(parents=True, exist_ok=True)
     _work.append(work)
     print(f"원본 출력: {work}", flush=True)
-    sweep()
+    leftovers()
     rounds = Rounds()
     try:
         for name in names:

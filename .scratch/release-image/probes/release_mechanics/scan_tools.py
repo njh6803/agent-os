@@ -42,6 +42,7 @@ README.md 에 있다.
 from __future__ import annotations
 
 import argparse
+import contextlib
 import json
 import re
 import secrets
@@ -319,15 +320,27 @@ def save_target(probe: Probe, target: Target) -> bool:
         "docker", "run", "--rm", "-i", "--name", probe.name(), "-v", f"{IN_VOLUME}:/in",
         HELPER, "sh", "-c", f"cat > /in/{tar}",
     ]  # fmt: skip
-    with subprocess.Popen(
+    # Popen 의 with 문은 빠져나갈 때 제한 없이 기다려, 데몬이 멈추면 아래 두 제한 시간이 무제한
+    # 대기를 막지 못한다. 그래서 with 를 쓰지 않고, 시간을 넘기면 docker save 를 끄고 제한된
+    # 시간만 거둔 뒤 예외를 넘긴다. kill 은 pid 가 아니라 거두지 않은 Popen 이 쥔 프로세스에 간다.
+    save = subprocess.Popen(
         ["docker", "save", target.reference], stdout=subprocess.PIPE, stderr=subprocess.DEVNULL
-    ) as save:
+    )
+    try:
         loaded = subprocess.run(
             load_into, stdin=save.stdout, capture_output=True, timeout=900, check=False
         )
         if save.stdout is not None:
             save.stdout.close()
         saved = save.wait(timeout=120)
+    except subprocess.TimeoutExpired:
+        save.kill()
+        with contextlib.suppress(subprocess.TimeoutExpired):
+            save.wait(timeout=30)
+        raise
+    finally:
+        if save.stdout is not None:
+            save.stdout.close()
     size = helper(probe, IN_VOLUME, "stat", "-c", "%s", f"/c/{tar}").out.strip()
     with (probe.work / "raw.log").open("a", encoding="utf-8", newline="\n") as log:
         log.write(f"$ docker save {target.reference} > {tar}: save {saved}, ")

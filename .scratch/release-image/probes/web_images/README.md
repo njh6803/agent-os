@@ -17,7 +17,7 @@ uv run python .scratch/release-image/probes/web_images/run.py --sections <이름
 - 섹션: `build`, `admin-time`, `admin-reject`, `admin-upstream`, `admin-standalone`, `common-env`, `common-health`, `common-readonly`, `common-stop`, `portal`, `widget-time`, `widget-memory`, `widget-network`, `widget-user`, `widget-sitefile`, `widget-reflect`, `zombie`. 섹션마다 무엇을 표지로 보는지는 그 함수의 독스트링이 원천이다.
 - 걸린 시간(이 PC, 2026-11-13): `build`는 바탕 이미지와 pnpm 캐시가 차 있을 때 약 4분(관리 화면 `next build` 셋을 다시 지은 셋째 실행), 관리 화면·portal·공통 섹션 아홉을 `--rounds 2`로 약 8분, 위젯 섹션 여섯과 `zombie`를 `--rounds 3`으로 약 14분(위젯 빌드가 스무 번 남짓 돈다).
 - 호스트 포트는 열지 않는다. 세 프로세스가 컨테이너 안의 루프백에만 묶이므로 요청은 `docker exec`로 컨테이너 안에서 건다(`fetch.mjs`).
-- 띄운 컨테이너·볼륨·네트워크에는 라벨 `ri-web-probe`를 달고, 시작할 때와 끝날 때 그 라벨이 붙은 것만 지운다. 이미지와 BuildKit 캐시 마운트(`ri-web-pnpm-store`, `ri-web-pnpm-meta`)는 남는다.
+- 띄운 컨테이너·볼륨·네트워크에는 라벨 `ri-web-probe=<실행 토큰>`을 달고, 끝날 때 그 실행의 토큰이 붙은 것만 지운다. 시작할 때는 다른 토큰이 붙은 것(끊긴 앞 실행이나 함께 도는 다른 실행의 것)을 세어 알리기만 하고, 도는 실행이 없으면 `--filter label=ri-web-probe`로 골라 손으로 지운다. 이미지와 BuildKit 캐시 마운트(`ri-web-pnpm-store`, `ri-web-pnpm-meta`)는 남는다. 2026-11-13의 실행은 라벨 값 없이 시작과 끝에 라벨 키가 붙은 것을 모두 지우던 판이다(맨 끝 절).
 - 원본 출력은 `--work`(없으면 시스템 임시 폴더) 아래 `raw.log`, 회차의 값은 `results.jsonl`에 남는다. 표지를 보지 못한 회차가 하나라도 있으면 종료 코드가 1이다(`tools/probe_kit.py`의 `Rounds`).
 - 타입 검사: `uv run pyright -p .scratch/release-image/probes/web_images`(이 폴더의 `pyrightconfig.json`, strict).
 
@@ -217,3 +217,13 @@ uv run python .scratch/release-image/probes/web_images/run.py --sections <이름
 - init 없는 위젯에 남는 좀비가 어느 프로세스였는지(6절). 좀비는 명령줄이 비어 `comm`(`MainThread`)과 부모만 남는다.
 - portal 상태 확인 한 번이 14,784ms로 기록된 까닭(5절).
 - standalone 이미지에 시작 래퍼의 루프백 검사를 다시 얹는 길(4절).
+
+## PR 직전 리뷰가 좁힌 측정 조건(2026-11-14)
+
+위 결과를 낸 실행 뒤에 CodeRabbit CLI가 짚어 측정 조건을 좁혔다. 좁힌 판은 다시 돌리지 않았다.
+
+- `section_admin_upstream`의 "시작 때 환경 변수" 회차: 중계 응답이 두 가짜 상류의 토큰(`built`, `startenv`) 가운데 정확히 하나를 실었을 때만 측정으로 센다. 기록한 회차는 4절 둘째 항목의 "`/api/ping`은 `built`에서 왔다"가 `built` 토큰을 이미 보였다. `startenv`가 없었다고는 적지 않았지만, 가짜 상류는 본문에 자기 토큰 하나만 싣는다(`upstream-stub.mjs`).
+- `section_common_stop`의 빌드 중인 위젯 회차: 같은 기록 읽기에서 `build-start` 줄이 있고 `build-exit` 줄이 없을 때만 빌드 중으로 센다. 기록한 회차는 기록으로는 가를 수 없다. 6절 표는 멈출 때 pid 1이 `entry-widget.sh`였다고 적어 서비스로 갈아탄 뒤가 아니었다는 것만 보이고, 빌드 시작 시각은 적지 않았다(진입 스크립트의 `build-start` 줄 앞에는 기다리는 명령이 없다).
+- `zombie_round`의 대조 갈래(관리 화면을 `wait.mjs`와 함께): 부모가 pid 1인 좀비를 하나 이상 찾았을 때만 측정으로 센다. 기록한 회차는 6절 셋째 항목의 "대조는 넷 모두 좀비 1(`10<-1:MainThread`, 부모가 pid 1인 node)"이 이미 그 표지를 보였다.
+- `sweep`과 시작 때의 정리(정리 흐름): 만드는 자원의 라벨을 `ri-web-probe=<실행 토큰>`으로 바꾸고 끝날 때 그 토큰의 것만 지운다. 시작할 때 라벨 키가 붙은 것을 모두 지우던 판은 같은 프로브를 함께 돌리는 다른 실행의 컨테이너·볼륨·네트워크를 지울 수 있어, 그런 자원을 세어 알리기만 하게 바꿨다. 끊긴 앞 실행이 남긴 자원을 저절로 치우던 몫은 잃었다(손으로 지운다). 기록한 실행에는 측정 아닌 회차가 없어(근거의 종류) 다른 실행에 자원을 잃은 회차는 없었다.
+- `fetch.mjs`(시간 제한): `--timeout`은 소켓의 비활성 기한이라 조각이 계속 오는 응답을 끊지 못한다. 요청 전체의 기한 `--deadline`(기본 40초, 부르는 `docker exec`의 60초 제한보다 짧다)을 더해, 닿으면 그때까지 본 것을 `partial`에 담아 찍고 그 회차는 측정이 아니게 했다. 전에도 `run.py`의 60초 제한으로 프로브는 끝났지만 그때까지 본 것은 잃었다(가짜 서버로 손으로 봤다, 세션 스크래치의 `fetch_deadline_check.mjs`·`fetch_old_control.mjs`. 0.2초마다 조각을 보내는 응답에 고친 판은 1.5초 기한에 `partial`을 찍었고, 고치기 전 판은 8초 뒤 끌 때까지 아무것도 찍지 않았다). 기록한 SSE는 마지막 이벤트가 1.62초에 왔다(4절).

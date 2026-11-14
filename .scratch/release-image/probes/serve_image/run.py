@@ -17,20 +17,24 @@
   3 사용자. 이미지의 사용자, passwd 항목이 없는 uid, 그 uid 에 USER 를 준 것으로 serve 를 띄운다.
     표지는 섰으면 실행의 `run_started.principal`, 서지 못했으면 로그의 `getpwuid()` 줄이다.
   4 예시 MCP 서버. `--network none` 에서 npx 의 꼴들과 실행 파일 이름으로 `initialize` 를 보낸다.
-    네트워크가 없다는 표지는 레지스트리에 TCP 로 닿지 않는 것, 답의 표지는 serverInfo 다. 네트워크가
-    있을 때 npm 의 http 기록에 패키지 조회가 찍히는지와, 실제 serve 에서 지금 매니페스트와 실행 파일
-    이름의 매니페스트로 실행 하나씩을 본다.
+    네트워크가 없다는 표지는 레지스트리에 TCP 로 닿지 않는 것, 답의 표지는 serverInfo 다. 답하지
+    않을 갈래는 갈래마다 기대한 끝(stderr 의 `EAI_AGAIN`·`only-if-cached`, 또는 창이 다 차도록
+    끝나지 않음)을 표지로 본다. 네트워크가 있을 때 npm 의 http 기록에 패키지 조회가 찍히는지와,
+    실제 serve 에서 지금 매니페스트와 실행 파일 이름의 매니페스트로 실행 하나씩을 본다. 그 표지는
+    실패 원인(`timeout`, `model_call`)과 그 실행 동안 serve 로그에 서버의 시작 줄이 늘었는지다.
   5 쓰는 자리. 호스트 엔진에서 흐름 하나를 돈 뒤 `docker diff` 로 이미지 밖에 쓴 자리를 모으고, 같은
-    흐름을 `--read-only` 로 다시 돈다. 바이트코드를 미리 만들지 않은 이미지와 시제품(uid 10001,
-    root)에서 `agent-os --version` 이 새로 쓰는 `__pycache__` 를 센다. Docker-in-Docker(리눅스
+    흐름을 `--read-only` 로 다시 돈다. 바이트코드를 미리 만들지 않은 이미지(항목 1 의
+    `ri-serve-ver-b1-rc`, 준비 단계도 캐시로 짓는다)와 시제품(uid 10001, root)에서
+    `agent-os --version` 이 새로 쓰는 `__pycache__` 를 센다. Docker-in-Docker(리눅스
     엔진)에서 다른 uid 가 가진 폴더의 바인드 마운트와 그 대조군으로 끄기(`disabled.toml`)와
     실행(트레이스)을 해 본다.
   6 첫 채움(Docker-in-Docker). 빈 이름 있는 볼륨과 root 소유로 바꾼 이미지의 대조군, 빈 바인드
     마운트, 내용이 있는 볼륨에 다음 판 이미지와 그 양성 대조(빈 볼륨에 다음 판 이미지).
   7 init 과 종료. tini, `docker run --init`, init 없음, 셸 감싸기(대조군)를 견준다. 표지는 pid 1 의
-    명령줄이다. MCP 실행 뒤의 좀비 수, 고아 프로세스가 거둬지는지, `docker stop` 의 시간과 종료
-    코드. 끝으로 SIGTERM 처리기가 없는 pid 1 에 `docker stop`(`-t` 없음과 `-t 10`)을 걸어 엔진이
-    SIGKILL 까지 기다리는 시간을 본다.
+    명령줄과, MCP 실행 넷이 모두 원인 `model_call` 로 끝난 것과, 프로세스 목록 조회가 읽힌 것과,
+    고아의 부모와 상태가 찍힌 것이다. MCP 실행 뒤의 좀비
+    수, 고아 프로세스가 거둬지는지, `docker stop` 의 시간과 종료 코드. 끝으로 SIGTERM 처리기가 없는
+    pid 1 에 `docker stop`(`-t` 없음과 `-t 10`)을 걸어 엔진이 SIGKILL 까지 기다리는 시간을 본다.
   8 상태 확인. serve 가 127.0.0.1 에 묶인 채 한 줄 명령이 정상(포트 8000)과 비정상(8001)을
     가르는지와 `--health-cmd` 가 healthy·unhealthy 에 닿는 시간.
 
@@ -85,6 +89,8 @@ LOCAL = "ri-serve-proto-local"
 ROOTOWNED = "ri-serve-proto-rootowned"
 V2 = "ri-serve-proto-v2"
 DERIVED = {LOCAL: "local-npm", ROOTOWNED: "rootowned", V2: "plugins-v2"}
+# 항목 1 의 b1-rc 갈래가 짓는 이미지다. 항목 5 의 바이트코드 대조군으로도 쓰므로 준비에서도 짓는다.
+VER_B1 = "ri-serve-ver-b1-rc"
 MANIFEST = "/app/plugins/mcp/everything/plugin.toml"
 SERVE = (
     "agent-os",
@@ -407,19 +413,25 @@ def needed_images(items: set[str]) -> list[str]:
     wanted = [PROTO]
     if items & {"4", "7"}:
         wanted.append(LOCAL)
+    if "5" in items:
+        wanted.append(VER_B1)
     if "6" in items:
         wanted += [ROOTOWNED, V2]
     return wanted
 
 
 def ensure(ctx: Context, images: Sequence[str]) -> bool:
-    """시제품과 그 위의 대조군을 캐시로 짓는다. 측정이 아니라 실패만 측정 아님 회차로 적는다."""
+    """시제품과 그 위의 대조군, 항목 5 가 쓰는 판 실험 이미지 하나를 캐시로 짓는다. 측정이 아니라
+    실패만 측정 아님 회차로 적는다."""
     ready = True
     for image in images:
         if image == PROTO:
             done = build(
                 HERE / "Dockerfile", "deb-py", PROTO, ROOT, "--build-arg", f"APP_VERSION={RC}"
             )
+        elif image == VER_B1:
+            version = ("--build-arg", f"APP_VERSION={RC}")
+            done = build(HERE / "Dockerfile.version", "b1-frozen", VER_B1, ROOT, *version)
         else:
             base = ("--build-arg", f"BASE={PROTO}")
             done = build(HERE / "Dockerfile.derived", DERIVED[image], image, HERE, *base)
@@ -605,7 +617,7 @@ def smoke(ctx: Context, target: str, tag: str) -> None:
     with case(ctx, f"2 {target} 실행 파일 이름으로 MCP") as slot:
         shake = ("handshake", "30", "-", "mcp-server-everything")
         measured, result = handshake_result(
-            helper_once(HOST, ctx.name("hs"), tag, offline, *shake), offline=True
+            helper_once(HOST, ctx.name("hs"), tag, offline, *shake), offline=True, expect=ANSWERS
         )
         slot.mark(measured=measured, result=result)
     with case(ctx, f"2 {target} sed 의 `0,/정규식/` 주소") as slot:
@@ -670,9 +682,15 @@ def users_item(ctx: Context) -> None:
 # ---------------------------------------------------------------- 4 예시 MCP 서버
 
 
+# Shake.expect 의 두 값. 그 밖의 글은 답 없이 스스로 끝난 서버의 stderr 끝에 들 오류 문구다.
+ANSWERS = "<답한다>"
+SILENT = "<창이 다 차도록 답도 끝남도 없다>"
+
+
 @dataclass(frozen=True)
 class Shake:
-    """stdio MCP 서버 띄우기 하나. extra 는 서버에 더 넘길 환경 변수의 이름이다."""
+    """stdio MCP 서버 띄우기 하나. extra 는 서버에 더 넘길 환경 변수의 이름이다. expect 는 그
+    갈래가 끝나는 모양의 표지다(ANSWERS, SILENT, 또는 stderr 의 오류 문구)."""
 
     label: str
     image: str
@@ -682,13 +700,33 @@ class Shake:
     offline: bool
     rounds: int
     extra: str = "-"
+    expect: str = ANSWERS
 
 
 NONE = ("--network", "none")
 HTTP_LOG = ("-e", "npm_config_loglevel=http")
+NAME_LOOKUP = "EAI_AGAIN"
 SHAKES = (
-    Shake("npx -y 패키지@2.3.0", PROTO, NONE, ("npx", "-y", PINNED), 100, offline=True, rounds=2),
-    Shake("npx -y 패키지", PROTO, NONE, ("npx", "-y", PACKAGE), 100, offline=True, rounds=2),
+    Shake(
+        "npx -y 패키지@2.3.0",
+        PROTO,
+        NONE,
+        ("npx", "-y", PINNED),
+        100,
+        offline=True,
+        rounds=2,
+        expect=NAME_LOOKUP,
+    ),
+    Shake(
+        "npx -y 패키지",
+        PROTO,
+        NONE,
+        ("npx", "-y", PACKAGE),
+        100,
+        offline=True,
+        rounds=2,
+        expect=NAME_LOOKUP,
+    ),
     Shake("실행 파일 이름", PROTO, NONE, ("mcp-server-everything",), 30, offline=True, rounds=3),
     Shake(
         "npx --offline -y 패키지@2.3.0",
@@ -698,6 +736,7 @@ SHAKES = (
         30,
         offline=True,
         rounds=1,
+        expect="only-if-cached",
     ),
     Shake(
         "네트워크 있음, npx -y 패키지@2.3.0",
@@ -745,6 +784,7 @@ SHAKES = (
         30,
         offline=True,
         rounds=1,
+        expect=SILENT,
     ),
 )
 
@@ -766,25 +806,36 @@ def last_error(reply: Json) -> str:
     return " / ".join(errors[-2:])[:220]
 
 
-def handshake_result(reply: Json, *, offline: bool) -> tuple[bool, str]:
-    """표지: 서버를 띄웠고, 레지스트리에 닿는지가 기대한 네트워크 상태와 같다."""
+def handshake_result(reply: Json, *, offline: bool, expect: str) -> tuple[bool, str]:
+    """표지: 서버를 띄웠고, 레지스트리에 닿는지가 기대한 네트워크 상태와 같고, 끝난 모양이 그
+    갈래의 expect 와 같다. ANSWERS 는 serverInfo 가 든 답, SILENT 는 창이 다 차고 입력을 닫은 뒤에도
+    끝나지 않아 그룹을 끈 것, 그 밖의 글은 답 없이 스스로 끝났고 stderr 끝에 그 문구가 든 것이다.
+    다른 까닭으로 끝난 회차(패키지를 싣다 바로 끝남 등)는 측정 아님이다."""
     reachable = dig(reply, "registry_reachable")
     if dig(reply, "spawned") is not True or reachable != (not offline):
         reason = as_text(dig(reply, "error"))
         return False, f"표지 없음: spawned={dig(reply, 'spawned')} 닿음={reachable} {reason}"
     network = "네트워크 없음" if offline else "네트워크 있음"
     seconds = dig(reply, "initialize_seconds")
+    exited = dig(reply, "exit_code") is not None
     if dig(reply, "answered") is True:
         text = (
             f"{network}, 답함 {seconds}초, {dig(reply, 'server_name')} "
             f"{dig(reply, 'server_version')}, 도구 {dig(reply, 'tools')}개, 입력을 닫고 "
             f"{dig(reply, 'exit_seconds_after_stdin_close')}초 뒤 끝남"
         )
+        seen = expect == ANSWERS
     else:
-        ended = "스스로 끝남" if dig(reply, "exit_code") is not None else "창이 다 차 그룹을 끔"
+        ended = "스스로 끝남" if exited else "창이 다 차 그룹을 끔"
         text = f"{network}, 답 없음, {seconds}초에 {ended}, stderr `{last_error(reply)}`"
+        stderr = "\n".join(as_text(line) for line in as_list(dig(reply, "stderr_tail")))
+        if expect == SILENT:
+            seen = not exited
+        else:
+            seen = exited and expect != ANSWERS and expect in stderr
     found = fetched(reply)
-    return True, text + (f", 레지스트리 조회 {found}" if found or not offline else "")
+    text += f", 레지스트리 조회 {found}" if found or not offline else ""
+    return seen, text if seen else f"표지 없음(기대 {expect}): {text}"
 
 
 def mcp_item(ctx: Context) -> None:
@@ -807,27 +858,53 @@ def mcp_item(ctx: Context) -> None:
     for shake, index, name in jobs:
         concurrent = " (오래 걸리는 갈래 넷을 함께 띄움)" if shake.window >= 100 else ""
         with case(ctx, f"4 {shake.label} {index + 1}{concurrent}") as slot:
-            measured, result = handshake_result(replies.get(name), offline=shake.offline)
+            measured, result = handshake_result(
+                replies.get(name), offline=shake.offline, expect=shake.expect
+            )
             slot.mark(measured=measured, result=result)
     mcp_serve(ctx)
 
 
+START_LINE = "Starting default (STDIO) server"
+
+
+def starts_in_logs(docker: Docker, name: str) -> int | None:
+    """serve 로그 전체에 찍힌 예시 MCP 서버의 시작 줄 수. 로그를 읽지 못하면 None 이다.
+    실행 하나의 앞뒤로 세어 그 실행이 서버를 띄웠는지 본다(연결은 실행마다 새로 연다)."""
+    done = docker("logs", name)
+    return f"{done.out}\n{done.err}".count(START_LINE) if done.code == 0 else None
+
+
 def mcp_serve(ctx: Context) -> None:
+    """표지: 지금 매니페스트는 실행 제한(timeout)으로 끝나고 그 실행에서 서버의 시작 줄이 늘지
+    않은 것, 실행 파일 이름 매니페스트는 모델 호출(model_call)까지 가고 그 실행에서 시작 줄이 는
+    것이다. 두 갈래를 견주려면 둘 다 의도한 자리에서 끝났어야 한다."""
     plugins, traces = ctx.name("mcp-plugins"), ctx.name("mcp-traces")
     volumes = ["-v", f"{plugins}:/app/plugins", "-v", f"{traces}:/data/traces"]
     options = ["--network", "none", "--read-only", *volumes]
     started = serve(ctx, HOST, "mcp", PROTO, options, (*SERVE, "--run-timeout", "30"))
     with case(ctx, "4 serve(--network none --read-only), 지금 매니페스트") as slot:
+        before = starts_in_logs(HOST, started.name)
         outcome = run_agent(HOST, started.name, seconds=90)
-        slot.mark(measured=outcome.failed, result=f"{outcome.brief()}, `{outcome.error}`")
+        after = starts_in_logs(HOST, started.name)
+        slot.mark(
+            measured=outcome.cause == "timeout" and before is not None and after == before,
+            result=f"{outcome.brief()}, `{outcome.error}`, 서버의 시작 줄 {before}→{after}",
+        )
     for index in range(2):
         with case(ctx, f"4 serve(같은 컨테이너), 실행 파일 이름 매니페스트 {index + 1}") as slot:
             changed = helper(HOST, started.name, "setserver", MANIFEST, *DIRECT)
+            before = starts_in_logs(HOST, started.name)
             outcome = run_agent(HOST, started.name, seconds=90)
-            line = line_with(logs_of(HOST, started.name), "Starting default (STDIO) server")
+            after = starts_in_logs(HOST, started.name)
+            line = line_with(logs_of(HOST, started.name), START_LINE)
+            grew = before is not None and after is not None and after > before
             slot.mark(
-                measured=dig(changed, "changed") is True and outcome.failed,
-                result=f"{outcome.brief()}, `{outcome.error}`, 서버의 시작 줄 `{line}`",
+                measured=dig(changed, "changed") is True and outcome.cause == "model_call" and grew,
+                result=(
+                    f"{outcome.brief()}, `{outcome.error}`, 서버의 시작 줄 `{line}` "
+                    f"{before}→{after}"
+                ),
             )
     remove(HOST, started.name)
     HOST("volume", "rm", plugins, traces)
@@ -879,7 +956,7 @@ def diff_flow(ctx: Context, label: str, options: list[str], *, direct: bool) -> 
         _, off, on, outcome = flow(HOST, started.name, direct=direct)
         paths = diff_lines(HOST, started.name)
         slot.mark(
-            measured="A /app/plugins/disabled.toml" in paths and outcome.failed,
+            measured="A /app/plugins/disabled.toml" in paths and outcome.cause == "model_call",
             result=(
                 f"끄기 {status_brief(off)}, 켜기 {status_brief(on)}, 실행 {outcome.brief()}, "
                 f"이미지 밖에 쓴 자리 {summarize(paths)}"
@@ -891,7 +968,7 @@ def diff_flow(ctx: Context, label: str, options: list[str], *, direct: bool) -> 
 def bytecode(ctx: Context) -> None:
     """ver 이미지는 root 로 돈다. 시제품도 root 로 띄운 갈래가 있어야 쓸 권한의 차이와 가른다."""
     images: tuple[tuple[str, str, tuple[str, ...]], ...] = (
-        ("UV_COMPILE_BYTECODE 없이 지은 ri-serve-ver-b1-rc(root)", "ri-serve-ver-b1-rc", ()),
+        (f"UV_COMPILE_BYTECODE 없이 지은 {VER_B1}(root)", VER_B1, ()),
         ("시제품(UV_COMPILE_BYTECODE=1, 10001)", PROTO, ()),
         ("시제품(UV_COMPILE_BYTECODE=1)을 root 로", PROTO, ("--user", "0:0")),
     )
@@ -1141,17 +1218,24 @@ def upgrade(ctx: Context, inner: Docker) -> None:
     used, fresh = ctx.name("used"), ctx.name("fresh")
 
     def look(image: str, volume: str) -> tuple[Json, Json]:
+        """매니페스트의 판 줄과 파일 목록. 조회가 실패했거나 목록이 잘렸으면(`tree` 는 80개까지
+        싣는다) 그 자리가 None 이다."""
         mount = [*offline, "-v", f"{volume}:/app/plugins"]
         version = helper_once(inner, ctx.name("look"), image, mount, "lines", MANIFEST, "version")
         listed = helper_once(inner, ctx.name("look"), image, mount, "tree", "/app/plugins")
-        return dig(version, "lines"), dig(listed, "paths")
+        paths = dig(listed, "paths")
+        whole = isinstance(paths, list) and dig(listed, "count") == len(paths)
+        return dig(version, "lines"), paths if whole else None
 
     first, _ = look(PROTO, used)
     second, second_paths = look(V2, used)
     control, control_paths = look(V2, fresh)
     with case(ctx, "6 앞 판이 채운 볼륨에 다음 판 이미지") as slot:
+        # 다음 판을 붙인 뒤의 두 조회(매니페스트 줄, 파일 목록)가 읽혀야 한다. 조회가 실패하면
+        # None 이라 `NEW_IN_V2.txt False` 가 파일이 없다는 관찰과 같은 꼴로 찍히기 때문이다.
+        read = isinstance(second, list) and isinstance(second_paths, list)
         slot.mark(
-            measured=first == ['version = "0.1.0"'],
+            measured=first == ['version = "0.1.0"'] and read,
             result=(
                 f"앞 판이 채운 뒤 {first}, 다음 판을 붙인 뒤 {second}, NEW_IN_V2.txt "
                 f"{'NEW_IN_V2.txt' in as_list(second_paths)}"
@@ -1216,25 +1300,44 @@ def stop_wait(ctx: Context, *, repeat: int) -> None:
 
 
 def init_round(started: Serve, marker: str) -> tuple[bool, str]:
-    """MCP 실행 넷(npx 둘, 실행 파일 이름 둘) 뒤 좀비, 고아 거두기, docker stop 을 본다."""
+    """MCP 실행 넷(npx 둘, 실행 파일 이름 둘) 뒤 좀비, 고아 거두기, docker stop 을 본다.
+
+    실행 넷은 모두 원인 `model_call` 로 끝나야 한다. MCP 서버를 띄우고 닫는 길을 지났다는
+    표지다. 두 도우미의 조회도 표지로 본다. 프로세스 목록은 읽혀야 하고(실패하면 빈 목록이
+    좀비 0 처럼 찍힌다), 고아는 부모를 잃은 뒤 살아 있는 동안의 부모와 상태가 찍히고 끝난 뒤의
+    상태가 있어야 한다(도우미가 실패하면 셋이 None 이라 거둬짐과 가를 수 없다)."""
     name = started.name
     pid1 = as_text(dig(helper(HOST, name, "procs"), "pid1"))
     outcomes = [run_agent(HOST, name, seconds=60) for _ in range(2)]
     helper(HOST, name, "setserver", MANIFEST, *DIRECT)
     outcomes += [run_agent(HOST, name, seconds=60) for _ in range(2)]
-    zombies = as_list(dig(helper(HOST, name, "procs"), "zombies"))
+    listing = dig(helper(HOST, name, "procs"), "zombies")
+    listed = isinstance(listing, list)
+    zombies = as_list(listing)
     orphan = helper(HOST, name, "orphan")
+    orphaned = (
+        isinstance(dig(orphan, "parent_after_orphaned"), int)
+        and isinstance(dig(orphan, "state_while_alive"), str)
+        and isinstance(dig(orphan, "state_after_exit"), str)
+    )
     stop = HOST("stop", name, timeout=90)
     code = exit_code_of(HOST, name)
     graceful = "Finished server process" in logs_of(HOST, name)
     causes = [outcome.cause or outcome.brief() for outcome in outcomes]
     comms = [f"{dig(z, 'comm')}(부모 {dig(z, 'ppid')})" for z in zombies]
     result = (
-        f"pid 1 `{pid1[:70]}`, 실행 넷 {causes} 뒤 좀비 {len(zombies)} {comms}, 고아의 끝 "
+        f"pid 1 `{pid1[:70]}`, 실행 넷 {causes} 뒤 좀비 "
+        f"{len(zombies) if listed else '조회 실패'} {comms}, 고아의 끝 "
         f"{dig(orphan, 'state_after_exit')}(부모 {dig(orphan, 'parent_after_orphaned')}), "
         f"stop {stop.seconds}초, 종료 코드 {code}, uvicorn 종료 줄 {graceful}"
     )
-    measured = marker in pid1 and stop.code == 0 and all(outcome.failed for outcome in outcomes)
+    measured = (
+        marker in pid1
+        and stop.code == 0
+        and all(outcome.cause == "model_call" for outcome in outcomes)
+        and listed
+        and orphaned
+    )
     return measured, result
 
 

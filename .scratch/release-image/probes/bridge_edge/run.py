@@ -36,8 +36,11 @@ PYTHON_IMAGE 의 digest 참조. 이 스크립트는 받지 않는다). 호스트
 0. 서버와 배치가 떴다. 안쪽 엔진의 판이 고른 판과 같고, docker-proxy 프로세스가 있는지가 고른
    userland-proxy 와 맞고, 서버 자신에서 프록시를 거쳐 뒷단의 답이 온다.
 1. 접속 주소. 뒷단이 받은 X-Forwarded-For(프록시가 $remote_addr 로 덮어쓴 값)와 프록시 접근 기록의
-   $remote_addr 가 같은 요청(rid)에서 같다. 닿지 않은 회차는 같은 길의 대조(IPv4 는 n1 이 서버의 443
-   에 TCP 로 닿는다, IPv6 는 n1 이 서버 호스트의 [::] 대조 포트에 닿는다)가 섰을 때만 측정이다.
+   $remote_addr 가 같은 요청(rid)에서 같다. 닿지 않은 회차는 HTTP 응답이 없고 접근 기록에 그 rid
+   의 줄이 없으며, 같은 길의 대조(IPv4 는 n1 이 서버의 443 에 TCP 로 닿는다, IPv6 는 n1 이 서버
+   호스트의 [::] 대조 포트에 닿는다)가 섰을 때만 측정이다. 응답이나 그 줄이 있는데 serve 의 답이
+   아니면(프록시가 낸 502 등) 프록시까지는 닿은 것이고, 주소를 견줄 표지(뒷단이 받은
+   X-Forwarded-For)가 없어 측정 아님이다. 그 회차는 접근 기록의 $remote_addr 를 함께 적는다.
 2. 빈도 제한. 보낸 요청마다 접근 기록의 줄이 있고(프록시에 닿았다), 거부된 요청마다 오류 기록에 그
    구역의 `limiting requests` 줄이 있다(거부가 빈도 제한의 것이다). 주소별로 따로 세는지는 n1 과 n2
    가 동시에 한도를 넘기게 해서 각자 `1+burst` 개를 받는지로 본다. 한 통에서 세면 둘의 합이
@@ -46,9 +49,11 @@ PYTHON_IMAGE 의 digest 참조. 이 스크립트는 받지 않는다). 호스트
 3. 127.0.0.1 발행. 서버 자신에서 127.0.0.1:3000 이 관리 화면 대역의 답을 낸다(양성 대조). 경유
    공격은 둘이다. A 는 n1 이 안쪽 대역(컨테이너 주소)으로 가는 경로를 서버로 잡고 컨테이너 주소로
    건다. B 는 n3 이 목적지 127.0.0.1 을 서버로 보내 서버의 127.0.0.1:3000 에 건다. 회차의 표지는
-   이웃의 경로가 실제로 서버를 경유하고(`ip route get`), 공격 패킷이 서버의 eth0 에 닿았다(이
-   스크립트가 raw PREROUTING 맨 앞에 넣은 셈 전용 규칙의 패킷 수가 늘었다)는 것이다. 막힌 회차에는
-   그 사이 패킷 수가 늘어난 DROP 규칙을 함께 적어, 누가 막았는지를 가른다.
+   이웃의 경로가 실제로 서버를 경유하고(`ip route get`), 공격 패킷이 서버의 eth0 에 닿았고(이
+   스크립트가 raw PREROUTING 맨 앞에 넣은 셈 전용 규칙의 패킷 수가 늘었다), 그 대상이 답한다는
+   양성 대조가 섰다는 것이다. A 의 대조는 서버 자신에서 그 컨테이너 주소와 포트로 걸어 기대한
+   대역이 답하는 것이고, B 의 대조는 위 서버 자신의 127.0.0.1:3000 이다. 막힌 회차에는 그 사이
+   패킷 수가 늘어난 DROP 규칙을 함께 적어, 누가 막았는지를 가른다.
 4. 잘못 발행. 덧씌움 전에는 이웃에서 서버의 8000 이 닿지 않고, 덧씌운 뒤 `docker port` 가
    0.0.0.0:8000 을 보인다.
 5. TLS 와 경로. 이웃이 받은 인증서의 지문이 서버에서 만든 인증서의 지문과 같다. 404 와 308 과 400 은
@@ -704,13 +709,28 @@ def who(ctx: Ctx, report: Report, label: str, where: str, host: str) -> None:
                 f"안쪽 게이트웨이 {sorted(ctx.gateways)}",
             )
             return
-        # 닿지 않았다. 같은 길의 대조가 섰을 때만 "닿지 않는다"가 측정이다.
+        # serve 의 답이 아니다. HTTP 응답이나 접근 기록의 그 rid 줄이 있으면 프록시까지는
+        # 닿은 것이고(프록시가 낸 502 등), 주소를 견줄 표지(뒷단이 받은 X-Forwarded-For)가
+        # 없어 세지 않는다.
+        log = proxy_log()
+        entry = access_of(log, rid)
+        if reply.status or entry:
+            report.close(
+                slot,
+                measured=False,
+                result=f"프록시에 닿았으나 serve 의 답이 아님({reply.brief()})",
+                detail=f"$remote_addr={entry.addr if entry else '기록 없음'}, "
+                f"답한 쪽 {reply.stub_name or 'nginx'}",
+            )
+            return
+        # 닿지 않았다. 접근 기록을 읽었고(줄이 하나라도 있다) 같은 길의 대조가 섰을 때만 측정이다.
+        read = any(ACCESS.match(line) for line in log.splitlines())
         path_up = ctx.v4_path
         if ":" in host:
             path_up = ctx.self6_path if where == SELF else ctx.v6_path
         report.close(
             slot,
-            measured=reply.asked and path_up,
+            measured=reply.asked and read and path_up,
             result=f"닿지 않음({reply.brief()})",
             detail=reply.error[:120],
         )
@@ -1077,11 +1097,13 @@ def attack(
     op: dict[str, Json],
     subnet: str,
     *,
-    routed: bool,
+    ready: bool,
     where: str = N1,
 ) -> None:
     """이웃이 서버를 경유지로 삼아 서버의 바깥 주소가 아닌 목적지(컨테이너 주소나 127.0.0.1)로 바로
-    건다. 표지는 그 목적지로 가는 패킷이 서버의 eth0 에 닿은 것이다(셈 전용 규칙의 패킷 수)."""
+    건다. 표지는 그 목적지로 가는 패킷이 서버의 eth0 에 닿은 것(셈 전용 규칙의 패킷 수)과, 경로와
+    대상의 양성 대조가 섰다는 것(ready)이다. 대상이 답하지 않는 회차의 "막힌다"를 막은 것으로
+    세지 않으려는 것이다(`attack6` 와 같다)."""
     with report.rounds.round(f"3.{ctx.tag}.{label}") as slot:
         before = counters()
         reply = one(where, op)
@@ -1095,7 +1117,7 @@ def attack(
             result = f"막힌다({reply.brief()})"
         report.close(
             slot,
-            measured=routed and arrived and reply.asked,
+            measured=ready and arrived and reply.asked,
             result=result,
             detail="패킷 수가 늘어난 DROP: " + (" ; ".join(drops) if drops else "없음"),
         )
@@ -1138,25 +1160,42 @@ def section_loopback(ctx: Ctx, report: Report) -> None:
     server("iptables", "-t", "raw", "-I", "PREROUTING", "1", "-i", "eth0", "-d", LOOPBACK)
     original = forward_policy()
     targets_inside = [
-        ("관리 화면 컨테이너:3000(127.0.0.1 에만 발행)", admin, 3000, "http"),
-        ("serve 컨테이너:8000(발행 안 함)", serve, 8000, "http"),
-        ("프록시 컨테이너:8443(모든 주소에 발행)", proxy, 8443, "https"),
+        # (표에 적을 말, 컨테이너 주소, 포트, 방식, 답할 대역)
+        ("관리 화면 컨테이너:3000(127.0.0.1 에만 발행)", admin, 3000, "http", "admin"),
+        ("serve 컨테이너:8000(발행 안 함)", serve, 8000, "http", "serve"),
+        ("프록시 컨테이너:8443(모든 주소에 발행)", proxy, 8443, "https", "portal"),
     ]
+    # 대상의 양성 대조. 서버 자신에서 컨테이너 주소로 걸면 그 대역이 답한다(`transit6_rounds`
+    # 와 같다).
+    answered: dict[str, bool] = {}
+    for label, host, port, scheme, stub in targets_inside:
+        with report.rounds.round(f"3.{ctx.tag}.서버 자신→{label}(양성 대조)") as slot:
+            op = get(host, "/portal/health", port=port, scheme=scheme, timeout=3.0, verify=False)
+            reply = one(SELF, op)
+            answered[label] = bool(host) and reply.status == 200 and reply.stub_name == stub
+            report.close(
+                slot,
+                measured=reply.asked,
+                result="닿는다" if answered[label] else f"닿지 않음({reply.brief()})",
+                detail=f"컨테이너 주소 {host}, 답한 쪽 {reply.stub_name}",
+            )
     for policy in (original, "DROP" if original == "ACCEPT" else "ACCEPT"):
         server("iptables", "-P", "FORWARD", policy)
         note = f"FORWARD 정책 {forward_policy()}"
         for attempt in range(1, ctx.repeat + 1):
-            for label, host, port, scheme in targets_inside:
+            for label, host, port, scheme, _ in targets_inside:
                 # 컨테이너 주소는 시험용 인증서의 이름에 없어 검증을 끈다(client.py 의 그 갈래).
                 op = get(
                     host, "/portal/health", port=port, scheme=scheme, timeout=3.0, verify=False
                 )
                 name = f"경유.n1→{label}.{note}#{attempt}"
-                attack(ctx, report, name, op, INNER4_SUBNET, routed=routed)
+                ready = routed and answered.get(label, False)
+                attack(ctx, report, name, op, INNER4_SUBNET, ready=ready)
             # 경유 공격 B. 목적지 자체가 127.0.0.1 이다(관리 화면을 발행한 주소).
             op = get("127.0.0.1", "/attack-b", port=3000, scheme="http", timeout=3.0)
             name = f"경유.n3→127.0.0.1:3000(목적지를 루프백으로).{note}#{attempt}"
-            attack(ctx, report, name, op, LOOPBACK, routed=ctx.loop_routed, where=N3)
+            ready = ctx.loop_routed and self_ok
+            attack(ctx, report, name, op, LOOPBACK, ready=ready, where=N3)
     server("iptables", "-P", "FORWARD", original)
     server("iptables", "-t", "raw", "-D", "PREROUTING", "-i", "eth0", "-d", LOOPBACK)
     server("iptables", "-t", "raw", "-D", "PREROUTING", "-i", "eth0", "-d", INNER4_SUBNET)
@@ -1185,7 +1224,7 @@ def open_network_control(ctx: Ctx, report: Report) -> None:
     time.sleep(1)
     attack(
         ctx, report, "경유.n1→보호를 끈 네트워크의 컨테이너:8000(양성 대조)",
-        get(address, "/", port=8000, scheme="http", timeout=3.0), OPEN4_SUBNET, routed=routed,
+        get(address, "/", port=8000, scheme="http", timeout=3.0), OPEN4_SUBNET, ready=routed,
     )  # fmt: skip
     server("iptables", "-t", "raw", "-D", "PREROUTING", "-i", "eth0", "-d", OPEN4_SUBNET)
     helper(N1, "route", "del", OPEN4_SUBNET)

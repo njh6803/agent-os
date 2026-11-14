@@ -175,3 +175,9 @@ compose 파일 참조(https://raw.githubusercontent.com/docker/docs/main/content
   - 올리기. `actions/upload-artifact`의 README는 "Artifacts are retained for 90 days by default."라 적고 `retention-days`로 줄일 수 있게 하며, "Artifacts created by upload-artifact@v4 are immutable."이라 같은 이름을 다시 올리려면 `overwrite: true`를 준다(https://raw.githubusercontent.com/actions/upload-artifact/main/README.md).
   - 그래서 첫째 작업이 올린 아티팩트를 `--failed`로 다시 돈 둘째 작업이 같은 실행에서 받는다고 읽는다(어림. 다시 돌리기 문서는 다시 돌지 않는 작업의 출력만 적고 아티팩트는 적지 않으며, 돌려 보지 않았다).
 - 판 내기에 주는 뜻(어림): 번호 태그를 붙인 뒤 공개가 실패한 런을 처음부터 다시 돌리면, 같은 커밋을 다시 지어 해시 태그가 새 digest로 바뀌고 지키는 차례가 번호 태그를 거부해 끝나지 못한다. 짓기·시험·점검·해시 태그 올리기를 한 작업(job)으로, 번호 태그 붙이기와 공개를 그 뒤의 작업으로 나누고 `gh run rerun --failed`(앞 작업의 출력인 digest를 그대로 쓴다)로 다시 돌리면 같은 digest를 보고 이어 간다. 아니면 지키는 차례가 digest 대신 이미지의 커밋 표시(`org.opencontainers.image.revision`)를 견주게 해야 하는데, 그러면 같은 커밋의 다른 digest로 번호 태그를 옮기게 된다.
+
+## PR 직전 리뷰가 고친 것(2026-11-14)
+
+위 결과를 낸 실행 뒤에 CodeRabbit CLI가 짚어 프로브를 고쳤다. 고친 판은 다시 돌리지 않았다.
+
+- `scan_tools.py`의 `save_target`(시간 제한과 정리 흐름): `docker save`를 `with subprocess.Popen(...)`으로 띄워, 싣기의 900초 제한이나 `save.wait`의 120초 제한이 지나 예외가 나도 `with`를 빠져나갈 때 제한 없이 다시 기다렸다. 데몬이 멈추면 두 제한이 무제한 대기를 막지 못한다. `with`를 빼고, 시간을 넘기면 `docker save`를 끄고 30초까지만 거둔 뒤 예외를 넘기게 했다. 측정 조건과 3번의 건수에는 닿지 않는다(그 실행에서 이 길을 지나지 않았다). 고친 판과 고치기 전 판을 `docker save` 자리에 120초 자는 파이썬을 둔 가짜로 돌려, 두 시간 초과 길 모두 고친 판은 약 1초에 예외를 넘기며 그 프로세스를 거뒀고 고치기 전 판은 바깥의 20초 제한까지 돌아오지 않았다(손으로 봤다, 세션 스크래치의 `save_timeout_check.py`. 제한 시간은 1초로 줄였다).

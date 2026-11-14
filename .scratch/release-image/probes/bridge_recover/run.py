@@ -556,6 +556,16 @@ def first_at(samples: Sequence[Sample], hit: Callable[[Sample], bool]) -> float 
     return next((current.at for current in samples if hit(current)), None)
 
 
+def sent(samples: Sequence[Sample]) -> bool:
+    """표본의 요청(네 경로와 /proxy-alive)이 모두 실제로 나갔는가. 나가지 못한 요청(asked
+    거짓)도 good 이 아니라 '닿지 않았다'로 읽히므로, 닿지 않음을 결과로 내는 회차는 이것을
+    표지로 본다. good 인 응답은 늘 나간 요청의 것이라, 이것은 good 이 아닌 응답이 모두 나간
+    요청의 것인지와 같다."""
+    return all(
+        reply.asked for current in samples for reply in (*current.via.values(), current.alive)
+    )
+
+
 def seconds_text(value: float | None) -> str:
     return "끝까지 없음" if value is None else f"{value:.1f}초"
 
@@ -1267,7 +1277,11 @@ def natural(ctx: Context, label: str, stack: Stack, tries: int) -> None:
         )
         if lost:
             result += f"; nginx 오류 기록: {upstream_errors(after)}"
-        current.mark(measured=alone and log_ok, result=result)
+        # 주소가 바뀐 갈래도 올림마다 뒷단 넷이 모두 다시 만들어진 회차만 판 올림을 잰 것이다.
+        # 일부만 다시 만들어지면 바뀐 경로가 닿아도 측정이 아니다.
+        if not recreated:
+            result = f"표지 없음 ['올림마다 뒷단 넷이 다시 만들어졌다']; {result}"
+        current.mark(measured=recreated and alone and log_ok, result=result)
 
 
 def section_3b(ctx: Context, *, tries: int = 6) -> None:
@@ -1440,6 +1454,7 @@ def boot(
         )
         marks = {"사건이 실제로 났다": happened, "멈춰 둔 뒷단이 멈춰 있었다": held}
         marks["닿은 요청이 접근 기록에 있다"] = log_ok
+        marks["요청이 모두 실제로 나갔다"] = sent(samples)
         missing = [name for name, held_mark in marks.items() if not held_mark]
         if missing:
             result = f"표지 없음 {missing}; {result}"
@@ -1541,6 +1556,7 @@ def unresolved(ctx: Context, label: str, stack: Stack, outage: float) -> None:
             "프록시가 다시 시작됐다": restarted,
             "위젯이 다시 떴다": is_running(final, "widget"),
             "닿은 요청이 접근 기록에 있다": at is None or in_log,
+            "요청이 모두 실제로 나갔다": sent(during) and sent(later),
         }
         missing = [name for name, held in marks.items() if not held]
         if missing:
@@ -1591,8 +1607,10 @@ def slow_up(ctx: Context, label: str, stack: Stack) -> None:
         }
         alive_at = first_at(samples, lambda s: s.alive.status == 200)
         widget_at = firsts["widget"]
+        # 보내지 못한 요청(asked 거짓)도 good 이 아니다. 실제로 보낸 요청이 닿지 않은 것만
+        # 기다림이다.
         waited = any(
-            not good(s.via["widget"], "widget", widget)
+            s.via["widget"].asked and not good(s.via["widget"], "widget", widget)
             for s in samples
             if widget_at is None or s.at < widget_at
         )
@@ -1792,7 +1810,15 @@ def broken_round(ctx: Context, stack: Stack) -> None:
             f"그 뒤 네 경로는 {'옛 설정으로 계속 답한다' if still else '답하지 않는다'}; "
             f"proxy {change(proxy, after)}; nginx 기록: {refused[-160:] or '없음'}"
         )
-        current.mark(measured=test.code != 0 and "no_such_directive" in test.text, result=result)
+        # reload 가 깨진 설정 때문에 거부됐다는 표지. reload 명령 자신이 설정을 읽다 그 줄로
+        # 끝났거나(신호를 보내지 않은 길), 신호를 받은 nginx 가 기록에 그 줄을 남겼다(신호를 보낸
+        # 길). docker compose exec 가 실행 오류로 끝나도 옛 프록시는 계속 답하므로 종료 코드로는
+        # 가르지 못한다.
+        rejected = (reload.code != 0 and "no_such_directive" in reload.text) or bool(refused)
+        if not rejected:
+            result = f"표지 없음 ['reload 가 깨진 설정 때문에 거부됐다']; {result}"
+        tested = test.code != 0 and "no_such_directive" in test.text
+        current.mark(measured=tested and rejected, result=result)
 
 
 # ---------- dind 의 삶 ----------
@@ -1848,6 +1874,9 @@ def dind_up(ctx: Context, *, reuse: bool) -> bool:
         if made.code != 0:
             print(f"! dind 컨테이너를 만들지 못했다: {tail(made.err)}", flush=True)
             return False
+        # 새로 만든 컨테이너는 멈춰 있다. 지우기 전에 읽은 값이 "true" 여도(--keep 으로 남긴 것을
+        # --reuse 없이 다시 돌린 때) 아래에서 시작해야 한다.
+        running = "false"
     copied = outer("cp", f"{HERE}/.", f"{DIND}:{REMOTE}", timeout=120)
     if copied.code != 0:
         print(f"! 프로브 파일을 dind 에 넣지 못했다: {tail(copied.err)}", flush=True)

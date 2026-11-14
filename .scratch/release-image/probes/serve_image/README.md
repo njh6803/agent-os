@@ -40,7 +40,7 @@ uv run python .scratch/release-image/probes/serve_image/run.py --items 1,2,3,4,5
 ```
 
 - 필요한 것: 도는 Docker 데몬(리눅스 엔진, BuildKit), 위 "환경"의 바탕 이미지 넷과 uv 이미지(Dockerfile이 digest로 고정한다), Docker-in-Docker 이미지 `docker:29.9.2-dind`(항목 5·6, 로컬에 있어야 한다), 바탕 이미지를 짓는 동안의 네트워크(apt·apk, PyPI, npm, 항목 2의 deb-node는 python-build-standalone 내려받기). 항목 4의 "네트워크 있음" 갈래와 항목 5의 npx 갈래는 npm 레지스트리에 실제로 닿는다. LLM은 부르지 않는다(실행은 API 키가 없어 모델 호출에서 끝난다).
-- 하는 일: 시제품 이미지(`ri-serve-proto`)와 그 위의 대조군(`ri-serve-proto-local`, `-rootowned`, `-v2`)을 캐시로 짓고, 항목마다 이미지를 짓거나 컨테이너를 띄운다. 컨테이너와 볼륨은 이름이 `ri-serve-<실행 토큰>-`으로 시작하고 끝에서 그 접두로 찾아 지운다. Docker-in-Docker는 `--privileged`로 띄우고 끝에서 익명 볼륨과 함께 지운다. 이미지는 남긴다. 호스트 포트는 쓰지 않는다. 모든 명령의 원본 출력은 `--work`(없으면 시스템 임시 폴더) 아래 `raw.log`에 남는다.
+- 하는 일: 시제품 이미지(`ri-serve-proto`)와 그 위의 대조군(`ri-serve-proto-local`, `-rootowned`, `-v2`)을 캐시로 짓고(항목 5를 고르면 바이트코드 대조군 `ri-serve-ver-b1-rc`도), 항목마다 이미지를 짓거나 컨테이너를 띄운다. 컨테이너와 볼륨은 이름이 `ri-serve-<실행 토큰>-`으로 시작하고 끝에서 그 접두로 찾아 지운다. Docker-in-Docker는 `--privileged`로 띄우고 끝에서 익명 볼륨과 함께 지운다. 이미지는 남긴다. 호스트 포트는 쓰지 않는다. 모든 명령의 원본 출력은 `--work`(없으면 시스템 임시 폴더) 아래 `raw.log`에 남는다.
 - `--items`로 항목을 고른다. `--builds`(항목 2의 후보마다 짓는 횟수, 기본 2. 0이면 짓지 않고 지어 둔 이미지만 본다), `--repeat`(항목 7의 갈래마다 회차, 기본 2), `--no-dind`(항목 5의 Docker-in-Docker를 뺀다). 측정이 아닌 회차가 하나라도 있으면 종료 코드가 1이다.
 - 이 결과는 항목을 나눠 돌린 것이다. 실행마다 걸린 시간은 1이 5~14분, 2가 6분(`--builds 0`이면 2분), 3이 3분, 4가 3~4분, 5·6이 7~15분, 7이 5~8분, 8이 1분 남짓이었다(손으로 봤다. `raw.log`를 만든 시각과 마지막으로 쓴 시각이고, 다른 실행과 겹쳤다). 5·6은 Docker-in-Docker에 이미지를 싣는 데만 72~353초가 들었다. 항목 7의 리눅스 엔진 기본 기다림(11초 남짓)은 프로브에 없고 스크래치 스크립트로 손으로 봤다.
 - 타입 검사: `uv run pyright -p .scratch/release-image/probes/serve_image`. 린트: `uv run ruff check .scratch/release-image/probes/serve_image`, `uv run ruff format --check .scratch/release-image/probes/serve_image`.
@@ -263,3 +263,15 @@ serve는 `127.0.0.1`과 `::1`에만 묶이므로(코드를 읽었다, `src/agent
 - 손으로 본 탐색: `ri-serve-explore-deb-py`, `ri-serve-explore-deb-node`, `ri-serve-explore-alpine`, `ri-serve-explore-local`
 
 컨테이너와 볼륨은 프로브와 탐색 스크립트가 끝에서 지웠고, 남은 것이 없는지 `name=ri-serve-`로 걸러 손으로 봤다. Docker-in-Docker는 익명 볼륨과 함께 지웠다. 바탕 이미지 넷과 uv 이미지는 받은 채로 두었고, `docker:29.9.2-dind`는 측정 전부터 있던 것이다.
+
+## PR 직전 리뷰가 좁힌 측정 조건(2026-11-14)
+
+위 결과를 낸 실행 뒤에 CodeRabbit CLI가 짚은 것과 그와 같은 꼴을 함께 좁혔다. 좁힌 판은 다시 돌리지 않았다.
+
+- `handshake_result`(항목 4의 MCP 서버 띄우기, 항목 2의 실행 파일 이름 회차): 서버를 띄웠다는 것만으로 답하지 않은 회차를 세지 않고, 갈래마다 기대한 끝을 보게 했다. 네트워크 없는 `npx -y` 둘은 스스로 끝나고 stderr 끝에 `EAI_AGAIN`이 든 것, `npx --offline`은 `only-if-cached`가 든 것, 작업 폴더를 `/tmp`로 바꾼 갈래는 창이 다 차도록 끝나지 않아 그룹을 끈 것, 나머지는 `serverInfo`가 든 답이다. 기록한 회차는 위 4번 표가 그 표지를 이미 보였다(`getaddrinfo EAI_AGAIN registry.npmjs.org`로 스스로 끝났다, `cache mode is 'only-if-cached' but no cached response is available`로 끝났다, 창이 다 차 프로세스 그룹을 껐다, 나머지는 답한 서버의 이름과 판).
+- `mcp_serve`(항목 4의 실제 serve 두 갈래): 지금 매니페스트는 실패 원인이 `timeout`이고 그 실행 동안 serve 로그에 서버의 시작 줄(`Starting default (STDIO) server`)이 늘지 않은 것을, 실행 파일 이름 매니페스트는 원인이 `model_call`이고 그 실행 동안 시작 줄이 는 것을 보게 했다. 기록한 회차는 원인을 위 4번 표가 보였다(원인 `timeout`, 원인 `model_call`). 시작 줄은 로그에 찍혔다는 것만 적었으므로, 그 줄이 회차마다 그 실행에서 나왔는지와 지금 매니페스트의 실행에서 줄이 없었는지는 기록으로는 가를 수 없다.
+- `upgrade`(항목 6의 "앞 판이 채운 볼륨에 다음 판 이미지"): 다음 판을 붙인 뒤의 매니페스트 줄과 파일 목록이 모두 읽혔고 목록이 잘리지 않았을 때만 세게 했다. 조회가 실패하면 `NEW_IN_V2.txt False`가 파일이 없다는 관찰과 같은 꼴로 찍히기 때문이다. 기록한 회차는 매니페스트 줄이 읽혔다는 것을 위 6번 표가 보였다(`version = "0.1.0"` 그대로). 파일 목록의 조회가 성공했는지는 기록으로는 가를 수 없다.
+- `init_round`(항목 7의 init 네 갈래): 좀비를 센 프로세스 목록이 읽혔고, 고아의 부모와 살아 있는 동안의 상태와 끝난 뒤의 상태가 찍혔을 때만 세게 했다. 조회 실패가 "좀비 0"이나 "거둬졌다"로 찍히지 않게 하려는 것이다. 기록한 회차는 고아의 표지를 위 7번 표가 보였다(네 갈래 모두 "부모 1"과 "거둬졌다" 또는 "좀비(`Z`)". 도우미가 실패했으면 둘 다 `None`으로 찍혔을 자리다). "MCP 실행 넷 뒤 좀비 0"이 목록을 읽은 0인지는 기록으로는 가를 수 없다.
+- `diff_flow`(항목 5 (가)의 `docker diff` 두 갈래): CodeRabbit이 짚은 것이 아니라 `mcp_serve`와 같은 꼴을 리뷰를 반영하며 함께 고쳤다. 실행이 실패하기만 하면 세던 것을, 원인이 `model_call`인 회차만 세게 했다. 그 실행이 MCP 연결을 지났다는 표지다. 기록한 회차는 위 5번 (가) 표가 그 표지를 보였다(두 갈래 모두 "실행 `model_call`").
+- `init_round`(항목 7의 MCP 실행 넷): 같은 꼴을 리뷰를 반영하며 함께 고쳤다(CodeRabbit이 짚은 것이 아니다). 넷이 실패하기만 하면 서던 조건을, 넷 모두 원인이 `model_call`일 때만 서게 했다. 기록한 회차는 위 7번이 그 표지를 보였다("넷 모두 MCP를 지나 `model_call`에서 끝났다").
+- `needed_images`·`ensure`: 항목 5를 고르면 준비 단계가 바이트코드 대조군 `ri-serve-ver-b1-rc`(항목 1의 `b1-frozen`)도 캐시로 짓게 했다. 전에는 항목 1이 지어 둔 이미지에 기대어, 새 환경에서 `--items 5`만 돌리면 그 회차가 측정 아님으로 끝났다. 측정 조건이 아니라 다시 돌리는 길을 고친 것이다.
