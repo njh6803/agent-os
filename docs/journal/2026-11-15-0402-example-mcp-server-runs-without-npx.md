@@ -62,6 +62,14 @@
 - 명세 축이 `tests/test_main.py:589`의 `tool_called` 단언이 `-m llm` 통과로 `.cmd` 서버가 떴음을 증명한다고 확인했다. 위 "실제 모델 시험"의 "시험 코드로 대 보지 않았다"는 이 단언으로 닫힌다(두 서브에이전트가 읽은 것이고 이 세션이 단언을 열어 대 보지는 않았다).
 - 서브에이전트가 보고서에서 "미커밋 변경 일곱"이 여덟이라 한 것은 07번 티켓 한 줄을 고친 때문이다(추적 파일 여덟).
 
+## PR 직전 CodeRabbit CLI 리뷰
+
+`coderabbit-review` 서브에이전트가 CLI 0.7.5로 `--agent --include-untracked`를 끝까지 돌렸다(`review_completed`, 종료 코드 0, 9개 파일, CLI 지적 0건. `Plan: Free`, `Seat: not assigned`는 서브에이전트가 `auth status`에서 본 줄을 옮긴 것이다). 서브에이전트가 직접 트리아지한 Minor 둘:
+
+- 유효(고쳤다): 개발 PC에 필요한 Node 판이 `plugin.toml` 주석과 `operations.md`에 없었다. 패키지의 `engines`가 `node >=24`이다(이 세션이 `npm view @modelcontextprotocol/server-everything@2.3.0 engines bin`을 쳐서 `engines = { node: '>=24' }`와 `bin = { 'mcp-server-everything': 'dist/index.js' }`를 봤다). 두 곳에 "Node 24 이상"을 적었다.
+- 보류: 전역 설치가 최상위 판 2.3.0만 고정하고 하위 의존성(`zod ^4.2.0`, `express ^5.3.0` 등 범위 의존성)은 날마다 달라질 수 있다. 서브에이전트가 `npm view`로 본 것이고 이 세션이 다시 재지는 않았다. 판을 적지 않던 `npx -y`보다 낫고, 이 단계는 시크릿 없는 설치 단계다(`ANTHROPIC_API_KEY`는 뒤의 pytest 두 스텝에만 env로 간다). 고치려면 잠금 파일을 두거나 `--ignore-scripts`를 붙이는데, 뒤의 것은 이 패키지의 설치 스크립트 키(`scripts.*` 넷 가운데 `npm run build`가 어느 키인지)를 서브에이전트가 가르지 못해 지금은 붙이지 않았다. 고치는 값이 크고 근거가 모자라 PR 체크리스트에 판정과 값을 적는다.
+- 오탐으로 가른 것: 71~74초와 프로브의 71.5~73.8초는 둥글림 차이다. 형제 브랜치와의 3.0.98 비움 문장 충돌은 위 "남긴 것"에 이미 있다.
+
 ## 남은 일
 
 - 셀프 리뷰는 위에서 마쳤다. 다시 돌리지 않는다.
