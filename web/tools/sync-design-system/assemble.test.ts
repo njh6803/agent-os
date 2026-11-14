@@ -22,6 +22,7 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, relative, sep } from "node:path";
+import { REACT_18_MODULES, REACT_18_VERSION } from "@agent-os/react-18";
 import { chromium, type Browser } from "playwright";
 import { afterAll, beforeAll, describe, expect, test, vi } from "vitest";
 import {
@@ -35,6 +36,7 @@ import { buildTokensJson, DEFAULT_CSS } from "./build.ts";
 import { CommandError, type ErrorKind } from "./command.ts";
 import { byPath, isRecord } from "./io.ts";
 import { run } from "./main.ts";
+import { withLibraries } from "./upload.ts";
 
 const WEB = dirname(dirname(import.meta.dirname));
 const REPO = dirname(WEB);
@@ -787,13 +789,15 @@ const PAGE_TOKENS = readFileSync(join(import.meta.dirname, "fixtures", "page-tok
 /** 시험 문서의 출처. 요청 가로채기(`route`)가 산출 폴더를 이 출처로 내준다. */
 const ORIGIN = "http://card.test";
 
-/** 패키지의 React 19 에서 전역 React·ReactDOM 을 내는 IIFE. 패키지에 그런 파일(UMD)이 없어 시험이 짓는다. */
-function reactGlobals(work: string): string {
+/**
+ * `modules` 폴더의 React·ReactDOM 에서 전역 React·ReactDOM 을 내는 IIFE. 그런 파일(UMD)이 없어 시험이 짓는다. 기본은
+ * 패키지의 React 19 이고, 페이지가 싣는 React 18.3.1 은 `REACT_18_MODULES` 로 준다.
+ */
+function reactGlobals(work: string, modules: string = join(UI_PACKAGE, "node_modules")): string {
   const posix = (path: string): string => path.split(sep).join("/");
   mkdirSync(work, { recursive: true });
   const entry = join(work, "react-globals.mjs");
   const outDir = join(work, "react-globals");
-  const modules = join(UI_PACKAGE, "node_modules");
   writeFileSync(
     entry,
     `import * as React from "react";
@@ -873,9 +877,12 @@ function count(seen: unknown, key: string): number {
 describe("chromium 그리기", () => {
   let browser: Browser | undefined;
   let react = "";
+  /** 페이지가 색인의 `libraries` 로 싣는 React·ReactDOM 18.3.1. 카드 시험이 패키지의 19 로만 그리면 두 판이 갈리는 부품을 놓친다. */
+  let react18 = "";
 
   beforeAll(async () => {
     react = reactGlobals(join(scratch, "react"));
+    react18 = reactGlobals(join(scratch, "react-18"), REACT_18_MODULES);
     browser = await chromium.launch();
   }, 300_000);
 
@@ -884,15 +891,15 @@ describe("chromium 그리기", () => {
   });
 
   /** 페이지와 같은 차례(토큰 CSS, 묶음 CSS, React 전역, 묶음 JS, 카드)로 실은 카드 문서. 테마는 페이지 id 의 꼴이다. */
-  function cardDocument(name: string, tokens: string): string {
+  function cardDocument(name: string, tokens: string, globals: string): string {
     return `<!doctype html><html data-theme="nokcheong-light" data-mode="light" style="color-scheme:light" class="nokcheong-light light"><head><meta charset="utf-8"></head><body>
 <style>${tokens}</style><style>${read("components/bundle.css")}</style>
-<script>${react}</script><script>${read("components/bundle.js")}</script>
+<script>${globals}</script><script>${read("components/bundle.js")}</script>
 ${read(`components/${name}/preview.html`)}</body></html>`;
   }
 
   /** 카드 문서를 산출 폴더의 `components/<이름>/preview.html` 자리에서 띄워 본 것. */
-  async function show(name: string, tokens: string): Promise<Seen> {
+  async function show(name: string, tokens: string, globals: string = react): Promise<Seen> {
     if (browser === undefined) {
       throw new Error("브라우저가 뜨지 않았다");
     }
@@ -909,7 +916,7 @@ ${read(`components/${name}/preview.html`)}</body></html>`;
       if (pathname === `/components/${name}/preview.html`) {
         await route.fulfill({
           contentType: "text/html; charset=utf-8",
-          body: cardDocument(name, tokens),
+          body: cardDocument(name, tokens, globals),
         });
         return;
       }
@@ -950,6 +957,41 @@ ${read(`components/${name}/preview.html`)}</body></html>`;
         fontErrors: seen.fontErrors,
       }).toEqual({ errors: [], sections: card.scenes, filled: card.scenes, fontErrors: 0 });
       expect(seen.korean).toBeGreaterThan(0);
+    },
+  );
+
+  test("시험이 싣는 React 는 페이지가 싣는 18.3.1 이다", async () => {
+    if (browser === undefined) {
+      throw new Error("브라우저가 뜨지 않았다");
+    }
+    const page = await browser.newPage();
+    try {
+      await page.setContent(
+        `<!doctype html><html><head><meta charset="utf-8"></head><body><script>${react18}</script></body></html>`,
+      );
+      expect(await page.evaluate("window.React.version")).toBe(REACT_18_VERSION);
+      // 올리기 도구가 색인에 적어 페이지가 싣는 판과 같다. 한쪽만 올리면 이 시험이 빨개진다.
+      expect(withLibraries({}).libraries).toEqual([
+        { name: "react", version: REACT_18_VERSION, global: "React" },
+        { name: "react-dom", version: REACT_18_VERSION, global: "ReactDOM" },
+      ]);
+    } finally {
+      await page.close();
+    }
+  });
+
+  // 패키지는 React 19 로 돌고 페이지는 18.3.1 을 싣는다. 컨텍스트 객체를 요소로 쓰는 꼴(`<Context value>`)은 19 에서만
+  // 제공자이고 18 에서는 소비자로 읽혀 카드가 그려지지 않았다(Markdown 카드, 2026-11-13 올리기).
+  test.each(expectedCards())(
+    "$name 카드는 페이지의 React 18.3.1 에서도 showcase 스토리 수만큼 장면이 그려지고 오류가 없다",
+    async (card) => {
+      const seen = await show(card.name, PAGE_TOKENS, react18);
+
+      expect({ errors: seen.errors, sections: seen.sections, filled: seen.filled }).toEqual({
+        errors: [],
+        sections: card.scenes,
+        filled: card.scenes,
+      });
     },
   );
 

@@ -111,7 +111,7 @@ function imageText(alt: string | undefined): string {
 function Blockquote({ children }: ComponentProps<"blockquote">) {
   return (
     <blockquote className="flex flex-col gap-3 border-l-2 border-border-control pl-3">
-      <PlaceContext value="flow">{children}</PlaceContext>
+      <PlaceContext.Provider value="flow">{children}</PlaceContext.Provider>
     </blockquote>
   );
 }
@@ -156,7 +156,7 @@ function OrderedList({ children, start }: ComponentProps<"ol">) {
 function Item({ children }: ComponentProps<"li">) {
   return (
     <li className="space-y-1">
-      <PlaceContext value="item">{children}</PlaceContext>
+      <PlaceContext.Provider value="item">{children}</PlaceContext.Provider>
     </li>
   );
 }
@@ -178,7 +178,7 @@ function CodeBlock({ children }: ComponentProps<"pre">) {
       tabIndex={0}
       className={`overflow-x-auto rounded-s border border-border bg-bg p-3 ${FOCUS_RING}`}
     >
-      <InPreContext value>{children}</InPreContext>
+      <InPreContext.Provider value>{children}</InPreContext.Provider>
     </pre>
   );
 }
@@ -196,7 +196,7 @@ function Table({ children }: ComponentProps<"table">) {
 function TableHead({ children }: ComponentProps<"thead">) {
   return (
     <thead className="border-b border-border">
-      <TableSectionContext value="head">{children}</TableSectionContext>
+      <TableSectionContext.Provider value="head">{children}</TableSectionContext.Provider>
     </thead>
   );
 }
@@ -204,7 +204,7 @@ function TableHead({ children }: ComponentProps<"thead">) {
 function TableBody({ children }: ComponentProps<"tbody">) {
   return (
     <tbody>
-      <TableSectionContext value="body">{children}</TableSectionContext>
+      <TableSectionContext.Provider value="body">{children}</TableSectionContext.Provider>
     </tbody>
   );
 }
@@ -247,7 +247,7 @@ function Cite(props: CiteProps) {
 function SourcesBlock({ children }: ComponentProps<"div">) {
   return (
     <div className="flex flex-col gap-1 border-t border-border pt-3 text-small text-text-muted">
-      <PlaceContext value="sources">{children}</PlaceContext>
+      <PlaceContext.Provider value="sources">{children}</PlaceContext.Provider>
     </div>
   );
 }
