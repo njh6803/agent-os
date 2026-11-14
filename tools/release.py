@@ -218,11 +218,14 @@ def _run(repo: Path, *args: str) -> subprocess.CompletedProcess[bytes]:
         raise ReleaseError(message) from error
 
 
+def _stderr(done: subprocess.CompletedProcess[bytes]) -> str:
+    return done.stderr.decode("utf-8", errors="replace").strip()
+
+
 def _git(repo: Path, *args: str) -> str:
     done = _run(repo, *args)
     if done.returncode != 0:
-        detail = done.stderr.decode("utf-8", errors="replace").strip()
-        raise ReleaseError(f"git {args[0]} 이 {done.returncode} 로 끝났다: {detail}")
+        raise ReleaseError(f"git {args[0]} 이 {done.returncode} 로 끝났다: {_stderr(done)}")
     return done.stdout.decode("utf-8", errors="replace")
 
 
@@ -254,8 +257,7 @@ def _ensure_ancestor(repo: Path, tag: str, head: str) -> None:
     if done.returncode == 1:
         raise ReleaseError(f"지난 판 {tag} 가 {head} 의 조상이 아니다. 판 태그가 다른 가지에 있다")
     if done.returncode != 0:
-        detail = done.stderr.decode("utf-8", errors="replace").strip()
-        raise ReleaseError(f"{tag} 와 {head} 의 조상 관계를 보지 못했다: {detail}")
+        raise ReleaseError(f"{tag} 와 {head} 의 조상 관계를 보지 못했다: {_stderr(done)}")
 
 
 def _log(repo: Path, since: str | None, head: str, paths: Sequence[str], *options: str) -> str:
@@ -562,20 +564,15 @@ def _fill(data: bytes, replacements: Mapping[str, str], where: str) -> bytes:
     return text.encode("utf-8")
 
 
-def build_bundle(source: Path, out_dir: Path, number: str, namespace: str) -> Path:
-    if parse_version(number) is None:
-        raise ReleaseError(f"판 번호가 X.Y.Z 나 X.Y.Z-rc.N 꼴이 아니다: {number!r}")
-    if _NAMESPACE.fullmatch(namespace) is None:
-        raise ReleaseError(
-            f"이미지 이름공간이 소문자·숫자·`._-` 로 된 이름 하나가 아니다: {namespace!r}"
-        )
+def _collect(
+    source: Path, root: str, replacements: Mapping[str, str]
+) -> tuple[set[str], dict[str, bytes]]:
+    """틀 폴더의 파일을 자리 표지를 채워 읽고, 묶음 안의 폴더 이름과 파일 내용을 낸다."""
     if not source.is_dir():
         raise ReleaseError(f"배포 파일의 틀 폴더가 없다: {source}")
     paths = sorted(path for path in source.rglob("*") if path.is_file() or path.is_symlink())
     if not paths:
         raise ReleaseError(f"배포 파일의 틀 폴더가 비었다: {source}")
-    replacements = {VERSION_MARKER: number, NAMESPACE_MARKER: namespace}
-    root = f"agent-os-{number}"
     names = {root}
     contents: dict[str, bytes] = {}
     for path in paths:
@@ -587,6 +584,11 @@ def build_bundle(source: Path, out_dir: Path, number: str, namespace: str) -> Pa
         while parent:
             names.add(f"{root}/{parent}")
             parent = parent.rpartition("/")[0]
+    return names, contents
+
+
+def _pack(names: set[str], contents: Mapping[str, bytes]) -> bytes:
+    """이름순으로, 시각과 소유자 없이 묶어 같은 입력이 같은 바이트가 되게 한다."""
     raw = io.BytesIO()
     with gzip.GzipFile(filename="", mode="wb", fileobj=raw, compresslevel=9, mtime=0) as zipped:
         with tarfile.open(fileobj=zipped, mode="w", format=tarfile.PAX_FORMAT) as archive:
@@ -601,9 +603,22 @@ def build_bundle(source: Path, out_dir: Path, number: str, namespace: str) -> Pa
                     info.type = tarfile.DIRTYPE
                     info.mode = 0o755
                     archive.addfile(info)
+    return raw.getvalue()
+
+
+def build_bundle(source: Path, out_dir: Path, number: str, namespace: str) -> Path:
+    if parse_version(number) is None:
+        raise ReleaseError(f"판 번호가 X.Y.Z 나 X.Y.Z-rc.N 꼴이 아니다: {number!r}")
+    if _NAMESPACE.fullmatch(namespace) is None:
+        raise ReleaseError(
+            f"이미지 이름공간이 소문자·숫자·`._-` 로 된 이름 하나가 아니다: {namespace!r}"
+        )
+    root = f"agent-os-{number}"
+    names, contents = _collect(source, root, {VERSION_MARKER: number, NAMESPACE_MARKER: namespace})
+    packed = _pack(names, contents)
     out_dir.mkdir(parents=True, exist_ok=True)
     target = out_dir / f"{root}.tar.gz"
-    target.write_bytes(raw.getvalue())
+    target.write_bytes(packed)
     return target
 
 
