@@ -1,0 +1,5 @@
+# password_hash 프로브가 재는 후보. 2026-11-15 에 `uv pip compile` 이 고른 PyPI 최신 안정판으로 고정했다.
+# 전이 의존(argon2-cffi-bindings, cffi, pycparser)은 적지 않는다. 저장소의 pyproject.toml 과 uv.lock
+# 사본에 `uv add -r` 로 더해 저장소의 잠금과 함께 푼다(README 의 다시 돌리기). 다른 후보인
+# hashlib.scrypt 는 표준 라이브러리라 여기 줄이 없다.
+argon2-cffi==25.1.0
