@@ -2,4 +2,4 @@
 
 **상태:** 열림
 **어디로:** `tools/check_quotes.py`(또는 그 옆의 새 검사): `ADR <네 자리> <절 이름> "<글>"` 꼴(절 이름은 결정, Considered Options, Consequences, 이력)의 인용이 그 ADR 파일의 그 절 안에 있는지 본다. 같은 실수를 밀 주장 목록으로 잡는 길은 열린 0347이 센다
-**승인:** 자체 승인 2026-11-15, 1회차, 일지 2026-11-15-1319-widget-login-state-screens.md. ADR 불필요
+**승인:** 자체 승인 2026-11-15, 2회차, 일지 2026-11-15-1319-widget-login-state-screens.md·2026-11-15-1312-portal-admin-design.md. ADR 불필요

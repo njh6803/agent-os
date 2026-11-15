@@ -67,5 +67,6 @@
 | [0061](0061-widget-draws-login-state-notice-and-dark-mode-switch-and-reads-per-site-widget-settings-from-a-widget-side-server.md) | 위젯이 로그인 상태와 고지와 다크 모드 스위치를 직접 그리고, 사이트마다의 위젯 설정을 위젯 쪽 서버에서 받아 오며, 주소 하나를 창으로 여는 URL 방식을 더한다 | accepted | 2026-11-14 |
 | [0062](0062-admin-ui-signs-in-with-accounts-kept-in-postgres-and-the-two-shared-tokens-go-away.md) | 관리 화면은 PostgreSQL에 둔 운영자 계정으로 로그인하고, 운영자 로그인 상태를 쿠키의 짧은 JWT와 갱신용 번호에 두며, 관리 토큰과 채널 토큰을 없앤다 | accepted | 2026-11-15 |
 | [0063](0063-admin-ui-starts-runs-from-a-chat-screen-and-the-trace-records-the-requesting-and-deciding-accounts.md) | 관리 화면은 대화 화면에서 채널로 실행을 일으키고, 트레이스는 요청한 계정과 결정한 계정을 주체와 따로 남긴다 | accepted | 2026-11-15 |
+| [0064](0064-widget-admin-server-keeps-widget-settings-in-its-own-postgres-and-operators-register-them-on-a-widget-admin-ui-with-agent-os-accounts.md) | 위젯 관리 서버가 위젯 설정을 자기 PostgreSQL에 들고, 운영자는 다른 포트의 위젯 관리 화면에 Agent OS의 운영자 계정으로 들어와 등록하며, 위젯은 허용 출처와 요청 글자 수 상한을 컨테이너가 뜰 때 받는다 | accepted | 2026-11-15 |
 
 ADR을 먼저 확인하는 상황 넷: 스택이나 라이브러리를 바꿀 때, 디렉터리나 층 경계를 바꿀 때, 디스크 형식(매니페스트, 이벤트)을 바꿀 때, 기존 코드가 왜 이렇게 되어 있는지 이해되지 않을 때.
