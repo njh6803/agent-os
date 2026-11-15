@@ -11,11 +11,18 @@
 //   만들어지면 tools/check_instructions.py 의 중첩 지침 파일 검사가 빨갛다. 블록의 요지는 .claude/rules/web-admin.md 에 있다.
 
 import type { NextConfig } from "next";
-import { DEFAULT_UPSTREAM, UPSTREAM_ENV, upstreamProblem } from "./tools/loopback.ts";
+import {
+  currentNetwork,
+  DEFAULT_UPSTREAM,
+  UPSTREAM_ENV,
+  upstreamProblem,
+} from "./tools/loopback.ts";
 
 const given = process.env[UPSTREAM_ENV];
 const upstream = given === undefined || given === "" ? DEFAULT_UPSTREAM : given;
-const problem = upstreamProblem(upstream);
+// 컨테이너 네트워크 예외가 켜지면(표지 파일과 환경 변수) 호스트로 serve 도 받는다. 이미지는 지을 때 이 판정을 지난 상류를
+// 산출물에 굳힌다(빌드 때도 시작 때도 같은 판정이다).
+const problem = upstreamProblem(upstream, currentNetwork());
 if (problem !== null) {
   throw new Error(problem);
 }

@@ -4,6 +4,7 @@
 import { resolve } from "node:path";
 import type { TomlValue } from "smol-toml";
 import { expect, test } from "vitest";
+import { CASES, expectSignals, nameOf, OUTSIDE } from "../testing/container-network.ts";
 import { type ConfigDoc, configDoc, configToml, PUBLIC_ORIGIN } from "../testing/fixtures.ts";
 import { type PortalConfig, parseConfig } from "./config.ts";
 import { COOKIE_LIFETIME_DAYS } from "./cookie-policy.ts";
@@ -13,7 +14,7 @@ const DIR = resolve("some", "operator", "dir");
 const SENTINEL = "SENTINEL-값";
 
 function read(doc: ConfigDoc, cookieDays = COOKIE_LIFETIME_DAYS) {
-  return parseConfig(configToml(doc), DIR, cookieDays);
+  return parseConfig(configToml(doc), DIR, cookieDays, OUTSIDE);
 }
 
 function accepted(doc: ConfigDoc, cookieDays = COOKIE_LIFETIME_DAYS): PortalConfig {
@@ -261,6 +262,45 @@ test("localhost 는 루프백이라는 보장이 없어 받지 않는다", () =>
   );
 });
 
+// 사례 표(tests/fixtures/container_network/cases.json)의 듣는 주소. 파이썬의 tests/test_main.py 와 관리 화면, 위젯의 시험이
+// 같은 표를 읽는다. 표지 파일을 실제로 읽는 길(`load.ts` 의 `currentNetwork`)은 이미지를 띄우는 시험(release-image 07·08·09)이 본다.
+test("표가 판정의 종류를 모두 갖고 있다", () => {
+  expect(new Set(CASES.binding.map(({ verdict }) => verdict))).toEqual(
+    new Set(["ok", ...Object.keys(CASES.bindingSignals)]),
+  );
+});
+
+for (const item of CASES.binding) {
+  test(`컨테이너 네트워크 예외의 사례 표: ${nameOf(item)}`, () => {
+    const doc = configDoc();
+    doc.portal["host"] = item.host;
+
+    const result = parseConfig(configToml(doc), DIR, COOKIE_LIFETIME_DAYS, {
+      imageMarker: item.marker,
+      env: item.env,
+    });
+
+    if (item.verdict === "ok") {
+      expect(result).toMatchObject({ host: item.host });
+    } else if ("problems" in result) {
+      expectSignals(result.problems.join("\n"), CASES.bindingSignals, item);
+    } else {
+      throw new Error("거부되지 않았다");
+    }
+  });
+}
+
+test("호스트를 적지 않아도 환경 변수의 오타는 구성 오류다", () => {
+  const result = parseConfig(configToml(configDoc()), DIR, COOKIE_LIFETIME_DAYS, {
+    imageMarker: true,
+    env: "true",
+  });
+
+  expect(result).toEqual({
+    problems: [expect.stringContaining("AGENT_OS_CONTAINER_NETWORK")],
+  });
+});
+
 test("발급자가 겹치면 겹친 사이트의 자리에 진단이 선다", () => {
   const doc = configDoc();
   doc.sites.push({ ...firstSite(doc), name: "other" });
@@ -303,7 +343,7 @@ test("어긋남은 첫 것에서 멈추지 않고 모두 모아 알린다", () =
 });
 
 test("TOML 이 아닌 글은 줄과 열만 싣고 글의 내용은 싣지 않는다", () => {
-  const result = parseConfig(`schema_version = "1"\n[portal\n${SENTINEL}`, DIR, 30);
+  const result = parseConfig(`schema_version = "1"\n[portal\n${SENTINEL}`, DIR, 30, OUTSIDE);
 
   expect("problems" in result && result.problems).toEqual([
     expect.stringMatching(/^설정 파일: TOML 이 아니다: .*\(\d+행 \d+열\)$/u),

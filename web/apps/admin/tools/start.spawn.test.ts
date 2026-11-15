@@ -6,6 +6,7 @@ import { spawnSync } from "node:child_process";
 import { connect, createServer } from "node:net";
 import { join } from "node:path";
 import { expect, test } from "vitest";
+import { CASES, expectSignals, nameOf } from "../testing/container-network.ts";
 
 const START = join(import.meta.dirname, "start.ts");
 
@@ -58,6 +59,25 @@ test("루프백이 아닌 호스트로 띄우면 포트를 열지 않고 실패 
   expect(run.stdout).toBe("");
   expect(await listening(port)).toBe(false);
 });
+
+// 사례 표(tests/fixtures/container_network/cases.json)의 거부 사례 가운데 표지 파일이 없는 것. 환경에서 온 값이 진입점까지
+// 닿는지를 본다. 표지 파일은 `/etc` 에 있어 시험이 만들지 못하므로 있는 쪽은 loopback.test.ts 의 순수 함수가 본다. 받는 사례는
+// next 가 떠서 스스로 끝나지 않으므로 띄우지 않는다.
+for (const item of CASES.binding.filter(
+  ({ marker, env, verdict }) => !marker && env !== undefined && verdict !== "ok",
+)) {
+  test(`환경에서 온 값이 진입점에서 거부된다: ${nameOf(item)}`, () => {
+    const run = spawnSync(process.execPath, [START, "dev", "--hostname", item.host], {
+      encoding: "utf-8",
+      timeout: 30_000,
+      env: { ...process.env, [CASES.envName]: item.env },
+    });
+
+    expect(run.status).toBe(1);
+    expectSignals(run.stderr, CASES.bindingSignals, item);
+    expect(run.stdout).toBe("");
+  });
+}
 
 test("포트를 주지 않으면 SSH 포트 포워딩 안내는 next 가 쓸 PORT 를 싣는다", () => {
   const run = spawnSync(process.execPath, [START, "dev", "--hostname", "0.0.0.0"], {
