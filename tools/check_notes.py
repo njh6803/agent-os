@@ -85,7 +85,7 @@ import sys
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TextIO
+from typing import Literal, TextIO
 
 if __package__ in (None, ""):  # 스크립트로 부르면 저장소 루트가 import 경로에 없다
     sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
@@ -464,8 +464,8 @@ def _pr_scene(cwd: Path, branch_head: str, base: str) -> Scene:
     return Scene(root, _changes(root, start, head), head, start, head)
 
 
-def judge_pr(cwd: Path, environ: Mapping[str, str], *, title_only: bool) -> Verdict:
-    """CI 의 판정. 제목만 고친 실행(`title_only`)은 (가)만 본다."""
+def _pr_input(cwd: Path, environ: Mapping[str, str]) -> tuple[str, Scene] | Verdict:
+    """CI 실행이 판정할 PR 의 제목과 변경. 판정하지 않고 지나갈 실행이면 그 평결이다."""
     pr = pull_request(environ)
     if pr is None:
         return Verdict(0, "PR 이 아닌 실행(main·dev 의 push)이라 판정하지 않고 지난다.")
@@ -476,10 +476,27 @@ def judge_pr(cwd: Path, environ: Mapping[str, str], *, title_only: bool) -> Verd
         raise GitError(
             f"PR 실행인데 {PR_TITLE} 가 비었다. 워크플로가 PR 제목을 env 로 넘기는지 본다."
         )
-    scene = _pr_scene(cwd, pr.head, pr.base)
+    return title, _pr_scene(cwd, pr.head, pr.base)
+
+
+def judge_title(cwd: Path, environ: Mapping[str, str]) -> Verdict:
+    """제목을 고친 실행의 판정. (가)만 본다."""
+    received = _pr_input(cwd, environ)
+    if isinstance(received, Verdict):
+        return received
+    title, scene = received
     problems = title_problems(title, scene.changes)
-    if not title_only:
-        problems += shape_problems(scene) + feature_problems(scene)
+    return Verdict(1, blocked_text(problems, PR_WORDING)) if problems else _PASS
+
+
+def judge_pr(cwd: Path, environ: Mapping[str, str]) -> Verdict:
+    """CI 의 판정. (가), (나), (다)를 모두 본다."""
+    received = _pr_input(cwd, environ)
+    if isinstance(received, Verdict):
+        return received
+    title, scene = received
+    problems = title_problems(title, scene.changes)
+    problems += shape_problems(scene) + feature_problems(scene)
     return Verdict(1, blocked_text(problems, PR_WORDING)) if problems else _PASS
 
 
@@ -510,17 +527,26 @@ def _parser() -> argparse.ArgumentParser:
     return parser
 
 
+Mode = Literal["commit", "ci", "title"]
+
+
+def _judge(cwd: Path, mode: Mode) -> Verdict:
+    if mode == "title":
+        return judge_title(cwd, os.environ)
+    if mode == "ci":
+        return judge_pr(cwd, os.environ)
+    return judge_staged(cwd)
+
+
 def main(argv: list[str]) -> int:
     args = _parser().parse_args(argv[1:])
     ci: bool = args.ci
     title_only: bool = args.title_only
     where: Path | None = args.cwd
     cwd = Path.cwd() if where is None else where
+    mode: Mode = "title" if title_only else "ci" if ci else "commit"
     try:
-        if ci or title_only:
-            verdict = judge_pr(cwd, os.environ, title_only=title_only)
-        else:
-            verdict = judge_staged(cwd)
+        verdict = _judge(cwd, mode)
     except GitError as error:
         _write(sys.stderr, str(error))
         return 2
