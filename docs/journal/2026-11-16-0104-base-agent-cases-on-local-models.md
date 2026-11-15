@@ -56,3 +56,28 @@
   - 고침: 독스트링의 예시 명령에서 `--yes`를 빼고, 먼저 `--yes` 없이 쳐 비용을 확인한 뒤 붙이라는 설명을 더했다.
   - `ASSISTANT_LLM_MODELS`는 경미한 범위 넘침이나 수용했다. 같은 기록을 커밋된 코드로 다시 내려는 요구(티켓 "기록")에 기여하고, 잘못된 값은 수집 때 `ValueError`로 막힌다.
 - 근거의 종류: Anthropic `14 passed`·토큰 합계는 pytest가 로그에 찍은 줄이고 내가 로그를 읽었다. pyright 0 오류·수집 14/28건·`model_manifest` 출력 일치·`check_type_escapes.py` 0은 리뷰 서브에이전트 둘이 각자 불러 본 보고이며 내가 다시 치지 않았다(커밋의 pre-commit이 pyright·타입 우회 검사를 다시 돈다). 이 세션이 직접 친 것은 수정한 파일의 `ruff check`·`ruff format --check` 통과뿐이다.
+
+### 이음매 커밋과 게이트
+
+- 이음매는 `05e1999ce`(`test: 기본 에이전트 시험의 모델 차림을 목록으로`)로 커밋했다. 첫 시도는 pre-commit의 `pytest`에서 `tests/tools/test_rerun_runner.py`의 사례 하나가 빨개 막혔고(7731건 통과, 1건 실패), 둘째 시도는 커밋 메시지 훅 사전 점검이 제목 87자를 짚었으며, 제목을 67자로 줄여 다시 쳤더니 `tests/channel/cli/test_interrupt.py`의 Ctrl+C 30초 한도 사례 하나가 빨개 막혔다. 둘 다 이 변경과 겹치지 않는 시간 의존 사례이고, 각각 단독으로 다시 돌리면 통과했다(손으로 봤다: `uv run pytest tests/tools/test_rerun_runner.py -k 두_회차가_함께` 1 passed in 276s, `uv run pytest tests/channel/cli/test_interrupt.py -k 닫기를_마치고_중단으로` 종료 코드 0). 셋째 시도에서 게이트 열일곱이 모두 통과했다. 같은 시험이 두 번 연속 실패한 것이 아니라 서로 다른 시험이 한 번씩 빨갰으므로 작업 규약 6의 진단은 부르지 않았다. 다른 세션의 `pytest -n 8`이 함께 돌아 부하가 컸다는 것은 어림이다(프로세스 목록에서 같은 시각의 다른 워크트리 pytest를 봤을 뿐 부하를 재지 않았다).
+
+### 로컬 모델 회차 (`run --yes`, 회차 1)
+
+기록 묶음과 사례 결과의 원천은 `.scratch/local-model/probes/README.md`의 2026-11-16 절이다. 값은 거기를 우선한다.
+
+- 시험한 커밋 `05e1999ce484161bf87207a3830e0fbbfdaac2da`. 모델 `GotoAI-Inc/gemma-4-26B-A4B-it-W4A16`, `openai/gpt-oss-20b`. 엔진 vLLM 0.33.0(`vllm/vllm-openai:v0.33.0`). GPU 공유 A40 한 장, 시간당 $0.59. 통과 18/28. 토큰 입력 186,529, 출력 8,522, 호출 67건. 걸린 시간 1719.2초. Terraform 출력에서 가린 것 있음.
+- 띄우기: A5000 두 장, RTX 3090 두 장은 재고 없음(HTTP 400), A40 두 장은 파드 하나가 선 뒤 둘째가 재고 없음으로 실패, 공유 A40 한 장에서 섰다. 끝난 뒤 `list-pods`가 `pods: []`(손으로 봤다).
+- 무효 회차 0. 연달은 무효 회차 세기: 회차 파일은 `round-0001-20261115T183149Z.json` 하나다.
+- 결과: Gemma 7건 통과(6, 7, 9, 10, 12, 13, 14), gpt-oss 11건 통과(9, 13, 14를 뺀 열한 사례). Gemma의 실패는 검색을 부르지 않고 정해진 문장으로 바로 답한 것(1, 3, 4, 5), 정해진 문장 앞에 `<|channel>thought`가 붙은 것(2), 둘째 실행에서 검색어가 없는 것(11), 앞의 답을 다듬을 때 `[1]`이 없는 것(8)이다. gpt-oss의 실패는 전문 읽기에서 멈추지 않고 끝난 것(13, 14)과 끝 넘음을 재지 못한 것(9)이다. 원인은 가르지 않았다.
+- 스킬 문구(`cite-sources`)를 고칠지는 사용자가 고른다. 이 세션은 문구를 고치지 않았다. 입력은 `.scratch/pilot-release/plan.md` 본문 끝에 적었다.
+
+### 이 티켓을 닫는 변경
+
+- 티켓 06을 `done`으로, `.scratch/local-model/plan.md`에 `**끝:** 2026-11-16`, `docs/release-notes/features/local-model.md`(기능 단락. 티켓 05가 `src/`와 `uv.lock`을 고쳐 제품 변경을 담았다), `uv run python tools/plan_table.py`로 `.scratch/plan.md`를 갱신했다.
+- 기능 단락의 마지막 문장(모델 서버가 올바른 JSON이 아닌 인자를 돌려주면 빈 답이 아니라 모델 호출의 실패로 끝나고 그 도구는 불리지 않는다)은 티켓 02의 서술을 읽고 옮긴 것이고 이 세션이 돌려 보지 않았다. PR 직전 리뷰에 밀 주장이다.
+- 셀프 리뷰 반영의 고친 문장(PR 직전 리뷰에 밀 주장): 시험 모듈 독스트링의 "사례마다 복사한 루트에 그 차림의 `openai-compatible` 모델 파일 하나를 적는다. 키 변수는 요구하지 않는다", `model_env`의 실패 메시지 "`.env` 나 `llm_local.py run` 이 채우는 환경을 확인한다".
+
+### 다음
+
+- 이 기능의 티켓은 모두 닫혔다. PR을 연 뒤 병합하고 `sweep`한다.
+- 사용자가 고를 것: `plugins/skills/cite-sources/SKILL.md`의 문구를 Gemma의 실패(검색을 부르지 않고 정해진 문장으로 바로 답함)를 줄이는 쪽으로 고칠지. 이 한 번의 결과로는 고치지 않았다. 고르는 자리는 base-agent의 후속 티켓이거나 answer-eval(오픈 모델로 다시 돌릴 때)이다.
