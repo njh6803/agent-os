@@ -251,7 +251,7 @@ ASSISTANT_LLM_MODELS=local uv run --env-file ../../../.env python tools/llm_loca
 
 실패 단언은 JUnit XML의 실패 줄에서 옮겼다. 왜 그렇게 답했는지의 원인은 가르지 않았고, 아래는 단언이 본 것까지다.
 
-- Gemma (1)(3)(4)(5): `assert done.searches(), done.output`이 빨갛다. 검색 도구를 한 번도 부르지 않았고 출력이 정해진 문장(`등록된 문서에서 관련 내용을 찾지 못했으니, …`)이었다. (1)은 근거가 있는 질문인데도 그랬다.
+- Gemma (1)(3)(4)(5): `assert done.searches(), done.output`이 빨갛다. 성공한 검색 호출이 없었고(`searches()`는 `ok`인 `search` 호출만 센다. `searches()`의 정의는 `tests/test_assistant_llm.py`를 읽었다. 실패한 호출이 있었는지는 원본 트레이스를 다시 열어 대 보지 않았다) 출력이 정해진 문장(`등록된 문서에서 관련 내용을 찾지 못했으니, …`)이었다. (1)은 근거가 있는 질문인데도 그랬다.
 - Gemma (2): 검색은 했고 `assert done.output.strip() == NOT_FOUND`가 빨갛다. 출력 앞에 `<|channel>thought`와 태국어 한 줄이 붙고 그 뒤에 정해진 문장이 있었다.
 - Gemma (8): `assert '[1]' in output`이 빨갛다. 둘째 출력이 `방금 답을 등록된 문서에서 관련 내용을 찾지 못했으니, …`였다.
 - Gemma (11): `assert any("육아휴직" in query for query in queries)`가 빨갛다. 둘째 실행의 검색어 목록이 비어 있었다.

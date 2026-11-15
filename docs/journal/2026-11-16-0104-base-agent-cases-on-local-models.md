@@ -68,7 +68,7 @@
 - 시험한 커밋 `05e1999ce484161bf87207a3830e0fbbfdaac2da`. 모델 `GotoAI-Inc/gemma-4-26B-A4B-it-W4A16`, `openai/gpt-oss-20b`. 엔진 vLLM 0.33.0(`vllm/vllm-openai:v0.33.0`). GPU 공유 A40 한 장, 시간당 $0.59. 통과 18/28. 토큰 입력 186,529, 출력 8,522, 호출 67건. 걸린 시간 1719.2초. Terraform 출력에서 가린 것 있음.
 - 띄우기: A5000 두 장, RTX 3090 두 장은 재고 없음(HTTP 400), A40 두 장은 파드 하나가 선 뒤 둘째가 재고 없음으로 실패, 공유 A40 한 장에서 섰다. 끝난 뒤 `list-pods`가 `pods: []`(손으로 봤다).
 - 무효 회차 0. 연달은 무효 회차 세기: 회차 파일은 `round-0001-20261115T183149Z.json` 하나다.
-- 결과: Gemma 7건 통과(6, 7, 9, 10, 12, 13, 14), gpt-oss 11건 통과(9, 13, 14를 뺀 열한 사례). Gemma의 실패는 검색을 부르지 않고 정해진 문장으로 바로 답한 것(1, 3, 4, 5), 정해진 문장 앞에 `<|channel>thought`가 붙은 것(2), 둘째 실행에서 검색어가 없는 것(11), 앞의 답을 다듬을 때 `[1]`이 없는 것(8)이다. gpt-oss의 실패는 전문 읽기에서 멈추지 않고 끝난 것(13, 14)과 끝 넘음을 재지 못한 것(9)이다. 원인은 가르지 않았다.
+- 결과: Gemma 7건 통과(6, 7, 9, 10, 12, 13, 14), gpt-oss 11건 통과(9, 13, 14를 뺀 열한 사례). Gemma의 실패는 성공한 검색 호출 없이 정해진 문장으로 바로 답한 것(1, 3, 4, 5), 정해진 문장 앞에 `<|channel>thought`가 붙은 것(2), 둘째 실행에서 검색어가 없는 것(11), 앞의 답을 다듬을 때 `[1]`이 없는 것(8)이다. gpt-oss의 실패는 전문 읽기에서 멈추지 않고 끝난 것(13, 14)과 끝 넘음을 재지 못한 것(9)이다. 원인은 가르지 않았다.
 - 스킬 문구(`cite-sources`)를 고칠지는 사용자가 고른다. 이 세션은 문구를 고치지 않았다. 입력은 `.scratch/pilot-release/plan.md` 본문 끝에 적었다.
 
 ### 이 티켓을 닫는 변경
@@ -94,6 +94,12 @@
   - Nit, `claude-opus-5` 문자열이 독스트링 예와 이중이다. Nit, `모델 차림`이 `CONTEXT.md`에 없다: 보류. 시험 안에서만 쓰는 말이다.
   - claude-review가 작성자 몫으로 남겼다고 한 기능 단락 마지막 문장은 이 세션이 티켓 02의 체크박스("실행이 원인 `model_call`의 `run_failed`로 끝나고, 그 호출의 `llm_called`와 `tool_called`가 트레이스에 없다")와 대 보았다. 돌려 본 것은 아니다.
 
+### 봇 회차 2 (헤드 `12da09e`)
+
+- 푸시 전에 `origin/dev`(PR #584, #583)를 합쳤다. 충돌은 대기열 항목 `docs-only-commit-precommit-slow-again`의 승인 줄 하나였고 6회차로 풀었다. 병합 커밋도 pre-commit을 돌았다. 검사 일곱 잡과 `verify`와 `title`이 SUCCESS, CodeRabbit은 "Finished"(첫 리뷰)다.
+- claude-review 2회차(Critical·Major 없음): 앞 회차와 같은 두 Minor(시험 모듈 간 import, 잘못된 환경 변수 값을 확인하는 시험 없음)에 Nit 둘(`env_names`의 반환값 하나를 `_`로 버림, 기능 단락의 마지막 문장). 2회차이므로 Critical·Major만 고친다. 앞 둘은 회차 1의 보류 이유대로이고 Nit의 첫째는 보류한다(반환 튜플을 이름 붙은 반환으로 바꾸는 일은 `tools/llm_local.py`의 05 코드를 건드린다). 기능 단락은 티켓 02와 이미 대 보았다.
+- CodeRabbit 1회차의 인라인 Minor 하나: 프로브 README의 Gemma (1)(3)(4)(5)가 "검색 도구를 한 번도 부르지 않았다"고 적었으나 `done.searches()`는 `ok`인 `search`만 센다(`tests/test_assistant_llm.py:220`을 읽었다). 유효하다. 그 문장은 같은 절이 스스로 적은 "단언이 본 것까지"를 넘었다. 원본 트레이스를 다시 열어 실패한 호출을 대 보지는 않았다. 그래서 README, pilot-release 계획, 이 일지의 같은 분류를 "성공한 검색 호출이 없었다"로 고쳤다. CodeRabbit의 지시도 이 길이었다("실패 호출이 있으면 고친다"를 확인 없이 고쳤고, 없어도 더 좁은 문장이라 틀리지 않는다).
+
 ## 회고
 
 - 낸 후보 셋: 승인 1, 기각 2, 넘김 0.
@@ -106,7 +112,7 @@
 - 이 PR은 봇 회차 1을 거쳤다. 이 일지를 푸시한 뒤 CI와 CodeRabbit(한도에 걸렸으면 PR 코멘트로 남긴다)을 마저 보고 병합한다. 병합한 뒤 `uv run --env-file ../../../.env python tools/llm_local.py sweep`으로 남은 서버와 상태 폴더를 치운다(주 체크아웃 아님).
 - 뒤로 넘긴 일(봇 회차 1에서 보류한 것): `tests/test_assistant_llm.py`가 다른 시험 모듈에서 `model_manifest`·`model_name`을 가져온다. 세 번째 쓰는 자리가 생기면 `tests/` 아래 시험이 아닌 공용 모듈로 올린다. `ModelSetup`의 갈래(저장소 플러그인이냐 복사 때 생성이냐)는 세 번째 모델 종류가 생기면 열거로 드러낸다.
 - 이 기능의 티켓은 모두 닫혔다. 병합 뒤 결정표: 기능의 마지막 티켓이고 열린 항목 `docs-only-commit-precommit-slow-again`이 회차 6이라 하네스 chore 배치(`queue_open_rows.py`로 다시 센다)이며, `**끝:**` 줄이 dev에만 있으므로 출시 PR 계기도 함께 본다(`git log origin/main..origin/dev -G'^\*\*끝:\*\*'`).
-- 사용자가 고를 것: `plugins/skills/cite-sources/SKILL.md`의 문구를 Gemma의 실패(검색을 부르지 않고 정해진 문장으로 바로 답함)를 줄이는 쪽으로 고칠지. 이 한 번의 결과로는 고치지 않았다. 고르는 자리는 base-agent의 후속 티켓이거나 answer-eval(오픈 모델로 다시 돌릴 때)이다.
+- 사용자가 고를 것: `plugins/skills/cite-sources/SKILL.md`의 문구를 Gemma의 실패(성공한 검색 호출 없이 정해진 문장으로 바로 답함)를 줄이는 쪽으로 고칠지. 이 한 번의 결과로는 고치지 않았다. 고르는 자리는 base-agent의 후속 티켓이거나 answer-eval(오픈 모델로 다시 돌릴 때)이다.
 
 ## 인계 시점의 상태 (커밋 뒤, 두 번째 인계)
 
