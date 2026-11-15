@@ -4,7 +4,8 @@
 # 잡을 더하면 verify 의 needs 에 넣는다. 빠뜨리면 verify 가 빨갛다(참고 모드인 llm 잡만 예외다). 세 e2e 와 사진 비교는
 # pre-commit 에 없고 CI 에만 있다(ADR 0026).
 # LLM 호출 테스트는 base 가 main 인 PR 과 main 푸시의 llm 잡만 돌린다(-m llm, -m llm_widget. ADR 0043). dev 로 가는 티켓 PR
-# 에서는 비용과 키 때문에 돌리지 않고 손으로 돌린다. -m llm_portal 은 ADR 0043 이 꼽지 않아 이 잡에 싣지 않는다. 그 잡은 참고
+# 에서는 비용과 키 때문에 돌리지 않고 손으로 돌린다. -m llm_portal 은 ADR 0043 이 꼽지 않아 이 잡에 싣지 않는다. -m llm_local 도
+# 싣지 않는다. 모델 서버를 Runpod 에서 빌려야 해서 병합 전에 세션이 tools/llm_local.py 로 돌린다(ADR 0058). 그 잡은 참고
 # 모드라 verify 의 needs 에 없고, 결과가 빨갛다고 병합을 막지 않는다(llm 잡 위의 주석). e2e-widget 은 AGENT_OS_WIDGET_LLM 을,
 # e2e-portal 은 AGENT_OS_PORTAL_LLM 을 두지 않아 실제 모델을 부르는 Playwright 프로젝트 llm 이 서지 않는다.
 # 체크아웃하는 잡은 모두 persist-credentials: false 다. 모두 PR 의 코드를 짓고 돌리는데 체크아웃 뒤에 github.com 을 상대로

@@ -476,7 +476,11 @@ class PluginSource(Protocol):
 
 
 class ModelSource(Protocol):
-    """모델 매니페스트로 모델을 만든다. 첫 어댑터는 langchain-anthropic의 `ChatAnthropic`(ADR 0040).
+    """모델 매니페스트로 모델을 만든다.
+
+    어댑터(`adapters/models.py`의 `ManifestModels`)가 제공사로 갈라 `anthropic`이면 langchain-
+    anthropic의 `ChatAnthropic`(ADR 0040)을, `openai-compatible`이면 langchain-openai의
+    `ChatOpenAI`(ADR 0057)를 만든다.
 
     메서드는 하나이고 **동기다.** 준비 단계는 `resume()` 의 첫 걸음 안이고 그 첫 걸음에 `await` 가
     없다는 것이 동시 재개의 불변식이다(ADR 0014). 실행마다 새 객체를 만들고 캐시하지 않는다 —
