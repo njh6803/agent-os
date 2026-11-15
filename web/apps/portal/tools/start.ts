@@ -22,7 +22,7 @@ import { buildAssets } from "../server/assets.ts";
 import { portalContext } from "../server/context.ts";
 import { configErrorText, listenLine } from "../server/diagnostics.ts";
 import { handle } from "../server/handler.ts";
-import { loadPortal } from "../server/load.ts";
+import { currentNetwork, loadPortal } from "../server/load.ts";
 import { listen } from "../server/serve.ts";
 import { withoutSeparator } from "./args.ts";
 
@@ -74,7 +74,7 @@ async function main(argv: readonly string[]): Promise<void> {
     process.exitCode = 1;
     return;
   }
-  const loaded = loadPortal(resolve(args.config), resolve(args.siteFile));
+  const loaded = loadPortal(resolve(args.config), resolve(args.siteFile), currentNetwork());
   if ("problems" in loaded) {
     console.error(configErrorText(loaded.problems));
     process.exitCode = 1;

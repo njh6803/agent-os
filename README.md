@@ -42,7 +42,7 @@ plugins/
                    없으면 연결에 있는 도구의 모든 호출이 묻는다. 손으로 고치고 다음 실행과 다음 재개부터 듣는다
   README.md        커스텀 에이전트를 만드는 안내(기본 에이전트 assistant를 복사하는 순서, 두 끝, 열기, 문서 검색 서버에
                    붙이는 설정). 종류 폴더 밖이라 플러그인으로 읽히지 않는다
-tests/             src를 미러링. fixtures/site_file/ 은 서버와 위젯 빌드의 시험이 함께 읽는 사이트 파일 픽스처
+tests/             src를 미러링. fixtures/site_file/ 은 서버와 위젯 빌드의 시험이 함께 읽는 사이트 파일 픽스처, fixtures/container_network/ 는 네 프로세스의 시험이 함께 읽는 루프백 예외의 사례 표
 web/               pnpm 워크스페이스(Node 24, TypeScript 5.9). 파이썬과 루트를 나눈다. 앱은 apps/*, 공유 패키지는 packages/*
   eslint.config.mjs  원칙 III의 TS 판정자와 층 경계. 변이 테스트는 eslint.config.test.ts
   tsconfig.base.json 기준 tsconfig. 다른 tsconfig는 이것을 extends 한다
@@ -72,14 +72,14 @@ web/               pnpm 워크스페이스(Node 24, TypeScript 5.9). 파이썬�
   apps/admin/      관리 화면(Next). app/(라우팅과 레이아웃), components/(아토믹 층, pages/가 화면), api/·hooks/queries/
                    (요청 함수와 SWR 훅), stores/(토큰과 테마), public/(첫 그림 전에 테마를 다는 스크립트),
                    styles/(관리 화면 CSS), next.config.ts(/api 중계),
-                   tools/start.ts(루프백에만 띄우는 시작 래퍼), testing/(페이지 테스트의 가짜 네트워크와 격리),
+                   tools/start.ts(루프백에만 띄우는 시작 래퍼. 이미지 안의 예외는 아래), testing/(페이지 테스트의 가짜 네트워크와 격리),
                    .storybook/·visual/(관리 화면의 Storybook 과 사진 비교. 스토리 테스트는 창 폭 둘의
                    admin-storybook-wide·admin-storybook-narrow 프로젝트), e2e/(실제 serve 를 지나는 Playwright)
   apps/widget/     위젯(Next, basePath /widget). 사이트가 iframe 으로 여는 페이지와 사이트 페이지 안에 서는 커스텀
                    요소의 번들(/widget/element.js). app/(라우팅과 레이아웃), components/(아토믹 층, pages/가 화면),
                    lib/(사이트가 준 질의를 읽는 embed, 두 방식이 나눠 쓰는 connection), element/(페이지 안 방식의
                    `<agent-os-widget>` 과 번들 입구), styles/(위젯 CSS),
-                   tools/start.ts(루프백에만 띄우고 빌드 전에 글꼴을 public/fonts/ 에 복사하고 번들을 짓는 시작 래퍼),
+                   tools/start.ts(루프백에만 띄우고(이미지 안의 예외는 아래) 빌드 전에 글꼴을 public/fonts/ 에 복사하고 번들을 짓는 시작 래퍼),
                    tools/element.ts(번들을 Vite 라이브러리 빌드로 public/element.js 에 내는 설정),
                    빌드 입력(packages/site-file 의 buildInput. AGENT_OS_SITE_FILE 의 사이트 파일에서 합친 허용 출처와
                    가장 작은 요청 글자 수 상한을 끌어내고, next.config.ts 가 frame-ancestors 와 env 에, 번들이 상한을 싣는다),
@@ -117,7 +117,7 @@ openapi.json       관리 API와 HTTP 채널(운영자와 최종 사용자)의 �
 
 ## 관리 화면
 
-관리 화면(`web/apps/admin`)은 루프백에만 서고, 같은 출처의 `/api/*`를 파이썬 `serve`로 넘기는 중계다(ADR 0019).
+관리 화면(`web/apps/admin`)은 루프백에만 서고(컨테이너 이미지 안의 예외는 아래), 같은 출처의 `/api/*`를 파이썬 `serve`로 넘기는 중계다(ADR 0019).
 
 ```bash
 # 공유 토큰 둘(AGENT_OS_ADMIN_TOKEN, AGENT_OS_CHANNEL_TOKEN)이 환경에 있어야 서고, 기본 모델도 반드시 골라야 선다.
@@ -132,7 +132,8 @@ pnpm -C web/apps/admin start       # http://127.0.0.1:3000
 - **채널 토큰은 선택이다.** 관리 토큰을 넣은 뒤 탐색의 "설정"(`/settings`)에서 넣는다. `serve`에 준 `AGENT_OS_CHANNEL_TOKEN`의 값을 넣으면 멈춘 실행에 결정 자리(사유를 적는 "거부"와 "승인")가 선다. 넣지 않으면 그 자리에 설정에서 채널 토큰을 넣으라는 한 줄과 "설정 열기"가 서고, 나머지는 모두 쓴다. 채널 토큰은 넣을 때 확인하지 않는다. 틀렸으면 첫 결정이 "채널 토큰이 거부됐다"를 보이고 채널 토큰만 지운다. 설정 화면의 "토큰 지우기"는 두 토큰을 모두 지운다. 결정의 승인자는 화면이 고르지 않고 `serve`를 띄운 OS 사용자로 기록된다(ADR 0015).
 - **`serve`와 상류를 맞춘다.** 관리 화면이 넘기는 곳(상류)은 `AGENT_OS_UPSTREAM`이고, 기본은 `serve`의 기본 주소 `http://127.0.0.1:8000`이다. `serve`를 다른 포트로 띄우면 같은 주소를 `AGENT_OS_UPSTREAM`에 두고 빌드한다.
 - **상류 포트를 바꾸면 다시 빌드한다.** 상류는 빌드 산출물에 박힌다. `start` 때 준 값은 판정만 하고 넘기는 곳을 바꾸지 않는다. `dev`(`pnpm -C web/apps/admin dev`)는 설정에서 바로 읽는다.
-- **루프백에만 선다.** 관리 화면은 `127.0.0.1`(기본)이나 `::1`에만 서고, 받는 인자는 `--hostname`과 `--port` 둘이다. 상류는 `127.0.0.1`만 받는다. Next가 IPv6 주소로 넘기지 못한다(ADR 0011의 2026-09-30 이력). 원격에서 보려면 SSH 포트 포워딩을 쓴다: `ssh -L 3000:127.0.0.1:3000 <서버>`.
+- **루프백에만 선다.** 관리 화면은 `127.0.0.1`(기본)이나 `::1`에만 서고, 받는 인자는 `--hostname`과 `--port` 둘이다. 상류는 `127.0.0.1`만 받는다(이미지 안의 예외는 아래). Next가 IPv6 주소로 넘기지 못한다(ADR 0011의 2026-09-30 이력). 원격에서 보려면 SSH 포트 포워딩을 쓴다: `ssh -L 3000:127.0.0.1:3000 <서버>`.
+- **컨테이너 이미지 안에서만 예외가 있다.** 이미지를 지을 때 root 소유로 굽는 표지 파일 `/etc/agent-os/image`와 compose가 주는 환경 변수 `AGENT_OS_CONTAINER_NETWORK=1`이 둘 다 있을 때만, `serve`(`--host`)와 관리 화면·위젯(`--hostname`)과 위젯 미리보기 페이지(`portal.host`)가 `0.0.0.0` 하나를 더 받고, 관리 화면의 상류는 `serve` 하나를 더 받는다. 표지 파일 없이 환경 변수만 있으면(개발 PC에서 내보냈을 때) 켜지지 않고, 환경 변수 없이 표지 파일만 있어도(이미지를 `docker run`으로 띄웠을 때) 켜지지 않으며, `1`이 아닌 값은 구성 오류다(ADR 0056 결정 "루프백 규칙의 예외"). 네 프로세스의 판정은 `tests/fixtures/container_network/cases.json`의 사례 표 하나가 잠근다.
 - **컨테이너의 첫 프로세스로 띄우면 init을 둔다.** `serve`를 컨테이너의 첫 프로세스로 띄우려면 `docker run --init`처럼 고아 프로세스를 거두는 init을 함께 둔다. 상류는 PID 1인 클라이언트가 고아를 거두지 않으면 그룹이 사라지기를 기다리는 시간이 상한(2초)을 다 채운다고 적었다(ADR 0034, mcp 2.3.0 `terminate_posix_process_tree`의 독스트링). 그룹은 모든 구성원이 죽어 거두어져야 사라진다. 윈도우가 아닌 OS에서 `serve`의 직접 자식은 MCP 서버마다 선 런처이고 서버는 그 아래에 있다(`.claude/rules/adapters.md`의 런처 항목). 그래서 상류나 런처가 서버의 그룹을 끄면 런처 말고는 모두 고아가 되어 PID 1에 맡겨진다. asyncio의 기본 자식 감시자는 제가 띄운 자식(런처)의 번호만 `waitpid`하므로 맡겨진 고아는 거두지 않고, init이 없으면 그것들이 좀비로 남는다. 입력이 닫혀도 2초 안에 끝나지 않아 상류가 그룹째 끄는 서버는 상류가 그 기다림의 상한을 다 채우고, 입력이 닫혀 스스로 끝나며 자식을 남긴 서버는 런처가 끈 그 자식이 좀비로 남는다(Python 3.12 `asyncio/unix_events.py`와 상류 코드를 읽은 어림. init 없이는 재지 않았다).
 
 ## 원천 표
