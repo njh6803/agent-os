@@ -209,3 +209,15 @@ PR 578을 연 뒤 첫 회차(CodeRabbit, claude-review)의 지적을 건별로 �
 - PR 직전 `bug-perf-review`(커밋 `b17873e04`, 범위 파일 10개). Critical·Major 없음. `main.tf`의 낱말 순서(`--tool-call-parser`, `join(" ", m.server_args)`, `--gpu-memory-utilization`)와 빈 `server_args`에서 빈 낱말이 없음을 임시 Terraform 구성으로 재현했고 `terraform fmt -check`는 통과했다(`validate`는 프로바이더가 필요해 못 돌렸다). `TF_VAR_models`의 모양, 해시가 코드와 일지에서 같음, 114초·541.9초·6,328 토큰이 ADR과 일지에서 같음, 비밀이 새지 않음을 확인했다. 확인하지 못한 것: vLLM이 `--revision`을 토크나이저에도 적용하는지(첫 실제 시험이 검증), 시험 파일 두 개의 변경은 읽지 않았다.
   - [Minor] ADR 0057의 84행(2026-11-12 이력 항목)이 시험의 두 모델 이름으로 `skt/A.X-4.0-Light`를 적는다. 그 시점의 기록이라 고치지 않는다(`.claude/rules/adr.md`의 "앞의 이력" 갈래). 대신 새 이름이 같은 두 조건(이름이 `^o\d`에 맞는가, 소문자 이름이 `gpt-5`로 시작하고 `chat`이 없는가)에 걸리지 않음을 그 조건으로 대 봤다(`GotoAI-Inc/gemma-4-26B-A4B-it-W4A16`은 둘 다 아니다. 대조로 `o1-local`과 `gpt-5-local`은 걸렸다). 조건 자체는 라이브러리 원문이 아니라 ADR이 옮겨 적은 것을 정규식으로 옮긴 어림이다.
   - [Nit] ADR 0058의 16행(배경 목록)과 일지의 옛 이름은 그 시점의 기록이라 둔다. 해시가 ADR에는 없다는 지적은 맞다(ADR은 `<40자 해시>`만 적고 원천은 코드와 일지). 코드 주석의 "원문은 일지의 '정식 반영'"을 일지의 실제 절 이름 "가중치 판의 근거(원문)"으로 고쳤다.
+
+### 병합 기록: 정식 설정의 실제 로컬 모델 시험 (2026-11-16, 시험한 커밋 `22b19c634`)
+
+세션이 `llm_local.py run`을 `--yes` 없이 쳐서 예상 비용을 보여 주었고(공유 A40 한 장 시간당 $0.59, 최악 90분 $0.88. 단가는 2026-11-13에 웹 요약에서 읽은 값이라 원문과 대조하지 않았다), 사용자가 "돌린다 (Recommended)"를 골랐다. 그 뒤 `--yes`로 돌렸다.
+
+- 결과: 통과 2, 종료 코드 0(`uv run pytest -m llm_local`, 81.57초). 모델 `GotoAI-Inc/gemma-4-26B-A4B-it-W4A16`(`gemma4` 파서, `--revision fdb4e380603cf157783227bd790bfbe921b64610`)과 `openai/gpt-oss-20b`(`openai` 파서)가 모두 통과했다. `--revision`으로 가중치 판을 고정한 정식 설정으로는 이것이 처음이고, 앞의 통과(임시 설정)는 병합 기록이 아니었다.
+- 기록 묶음: 시험한 커밋 `22b19c6349107e3f45a0eb8a26330e94a1510c27`, 서빙 엔진 vLLM 0.33.0(이미지 `vllm/vllm-openai:v0.33.0`), 서버 옵션은 Gemma 쪽 `--enable-auto-tool-choice --tool-call-parser gemma4 --max-model-len 32768 --revision <해시> --gpu-memory-utilization 0.45 --kv-cache-memory=4294967296`, gpt-oss 쪽 `--enable-auto-tool-choice --tool-call-parser openai --gpu-memory-utilization 0.45 --kv-cache-memory=4294967296`. GPU는 공유 A40 한 장(시간당 $0.59), 경과 447.2초라 어림 비용 약 $0.07(`447.2 ÷ 3600 × 0.59`. 실제 청구는 확인하지 않았다). LLM 토큰 합계 6,328(입력 6,191, 출력 137), 트레이스 2개, 모델 호출 4건. Terraform 출력에서 가린 것이 있었다(`terraform_output_masked: true`). 서버 키와 주소는 적지 않는다.
+- 무효 회차: 없다. 다만 띄우는 단계에서 앞 후보가 재고 부족으로 물러났다. RTX A5000 둘과 RTX 3090 둘은 "no longer any instances available"(HTTP 400)로 실패했고, A40 둘은 파드 하나가 만들어진 뒤 다른 하나가 같은 까닭으로 실패했다. 네 번째 후보인 공유 A40 한 장이 떴다. 이 실패는 시험 실패가 아니라 띄우기 실패이고 시험은 한 번만 돌았다.
+- 남은 서버: `sweep`이 "치웠다"를 찍었고 Runpod `list-pods`가 빈 목록이었다. 병합 뒤에도 `sweep`을 한 번 더 친다.
+- 근거의 종류: 위 수치와 서버 옵션, 통과 수, 단가, 경과는 `llm_local.py run --yes`가 찍은 기록 묶음의 값이다(탐침이 찍은 것). 약 $0.07은 그 경과와 단가로 내가 계산한 어림이다. 파드 재고 실패의 문구는 같은 명령의 Terraform 출력에서 읽었다. `list-pods`의 빈 목록은 Runpod MCP 도구로 손으로 본 것이다.
+- 확인하지 못한 것: 서버 옵션에 `--revision <해시>`가 들어갔고 서버가 떠서 시험이 통과했다는 것까지는 기록에 있다. 그 해시의 가중치가 실제로 올라왔는지, 토크나이저에도 같은 판이 쓰였는지는 서버 로그를 읽지 않아 재지 않았다.
+- 회차 파일: `round-0001-20261115T151829Z.json`(상태 폴더 `records/`).
