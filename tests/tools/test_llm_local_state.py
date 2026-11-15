@@ -298,16 +298,35 @@ def test_구성의_기본값과_서버_옵션은_스크립트의_상수와_어�
     assert int(_default_of(text, "timer_minutes")) == llm_local.TIMER_MINUTES
     assert float(_default_of(text, "shared_memory_utilization")) == llm_local.SHARED_UTILIZATION
     assert int(_default_of(text, "shared_kv_cache_bytes")) == llm_local.SHARED_KV_CACHE_BYTES
+    # 모델마다 덧붙인 옵션(`Model.server_args`)은 변수로 들어가므로 구성의 글에는 없다.
+    carried = {
+        flag
+        for model in llm_local.MODELS
+        for flag in re.findall(r"--[a-z-]+", " ".join(model.server_args))
+    }
     for candidate in llm_local.candidates():
         for option in llm_local.server_options(candidate):
             for flag in re.findall(r"--[a-z-]+", option):
-                assert flag in text, f"{flag}가 main.tf에 없다"
+                assert flag in text or flag in carried, f"{flag}가 main.tf에 없다"
     shared = next(c for c in llm_local.candidates() if c.layout == "shared")
     ports = [
         int(m) for o in llm_local.server_options(shared) for m in re.findall(r"--port (\d+)", o)
     ]
     assert ports == [8000, 8001]
     assert "8000 + i" in text
+
+
+def test_모델마다_덧붙인_서버_옵션은_변수로_넘어가고_파서_바로_뒤에_붙는다() -> None:
+    text = CONFIG.read_text(encoding="utf-8")
+    assert "server_args = list(string)" in text
+    parser_at = text.index('"--tool-call-parser ${m.parser}"')
+    args_at = text.index('join(" ", m.server_args)')
+    gpu_at = text.index('"--gpu-memory-utilization')
+    assert parser_at < args_at < gpu_at
+    env = llm_local.terraform_env(Path("state"), "key")
+    models = json.loads(env["TF_VAR_models"])
+    for model in llm_local.MODELS:
+        assert models[str(model.number)]["server_args"] == list(model.server_args)
 
 
 def test_둘째_구성만_KV_캐시를_고정하고_서버_뒤에_health_대기_줄을_둔다() -> None:

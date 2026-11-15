@@ -1,0 +1,30 @@
+# local-model 05 가 `next-session/merge.md` 의 "병합 전" 에 더한 로컬 모델 시험 단계(3)의 문장 둘이 새 세션에 실리는지.
+# 첫 문단 끝의 "비용을 묻는 것이지 병합을 묻는 것이 아니다" 와 첫 불릿의 "--yes 를 붙여 ... run_in_background 로 띄우고" 가 카나리아다.
+# 실험군은 이 명세를 부른 체크아웃, 대조군은 바뀌기 전 판(`8f891430`, 이 PR 의 기준 커밋)이다. 옛 판에는 그 단계가 없다.
+# 병합 뒤에는 주 체크아웃이 새 사본이라 옛 판의 커밋을 `--control-commit` 으로 준다(README `canary/` 행).
+# 최신 결과: 통과 4, "없음" 섞임 0(2026-11-15, 이 PC, claude 2.1.322, 실험군은 이 워크트리의 커밋하지 않은 본문(러너가 찍은 커밋은
+#   `8f891430b`), 대조군 `--control-commit 8f891430` 은 "없음", 일지 2026-11-15-1637-openai-compatible-adapter-and-local-model-test).
+# 돌리는 법: 워크트리 `.claude/worktrees/<이름>/` 루트에서
+#   uv run python tools/canary.py --control-commit 8f891430 .scratch/local-model/probes/canary/next_session_local_model_test.toml <출력 디렉터리>
+kind = "skill"
+question = '''
+next-session 스킬을 Skill 도구로 불러 본문을 읽어라. 스킬이 시키는 일은 하지 않는다.
+본문이 상황마다 Read로 열라고 가리키는 하위 파일 가운데 PR을 연 세션이 병합까지 마칠 때 여는 파일 하나를
+Read로 열고, 아래를 그 파일에서만 찾는다. 스킬 본문(SKILL.md)에 든 글은 옮기지 않는다.
+본문이 그런 하위 파일을 가리키지 않거나 그 파일에 없으면 그 물음에 "없음"이라고만 답하라.
+"병합 전"에서 모델 서버를 빌려 시험을 돌리는 단계를 찾아, 그 단계의 첫 문단 마지막 문장을 글자 그대로 옮기고,
+그 단계의 첫 불릿에서 사용자의 확인을 받은 뒤 같은 명령을 어떻게 띄우라고 적었는지 그 구절을 글자 그대로 옮겨라.
+'''
+expect = ["비용을 묻는 것이지 병합을 묻는 것이 아니다", "붙여 Bash의 `run_in_background`로 띄우고"]
+source = ".claude/skills/next-session/merge.md"
+skill = "next-session"
+skill_body = "files"
+
+[[arm]]
+name = "워크트리"
+role = "experiment"
+
+[[arm]]
+name = "옛-판"
+role = "control"
+checkout = "../../../../agent-canary-8f89143"

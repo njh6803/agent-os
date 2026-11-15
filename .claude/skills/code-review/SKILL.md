@@ -128,7 +128,7 @@ End with a one-line summary: total findings per axis, and the worst issue _withi
 
 보고 끝에 세 줄을 더한다. 고친 것, 남긴 것과 이유, 다시 돌린 명령과 결과(pre-commit으로 갈음하면 그렇게 적고, 결과는 커밋 뒤 일지와 PR 본문에 적는다).
 
-자기 작업을 리뷰해 일지를 쓰는 세션이면, 보고는 받은 턴에 일지에 옮긴다. 세 줄 가운데 고친 것과 남긴 것은 지적마다 판정한 턴에, 다시 돌린 명령의 결과는 그 명령이 끝난 턴에 옮긴다(pre-commit으로 갈음하면 위 괄호대로 커밋 뒤에). PR 직전 리뷰(`docs/constitution/operations.md` 리뷰 파이프라인 2)의 보고와 반영도 같다. 일지 파일이 아직 없으면 `docs/journal/<날짜>-<HHMM>-<슬러그>.md`를 머리 한 줄 파일로 먼저 만든다. 앞부분은 Bash의 `date +%Y-%m-%d-%H%M`이나 PowerShell의 `Get-Date -Format yyyy-MM-dd-HHmm`으로 짓는다(`next-session` `merge.md` 3의 이름 규칙과 같은 길이다). 옮기기를 미룬 세션은 컨텍스트 압축 뒤 요약에 요지만 남아, PR 직전 리뷰 절을 쓰느라 서브에이전트 보고를 트랜스크립트에서 스크립트 둘로 네 번 뒤졌다(대기열 244).
+자기 작업을 리뷰해 일지를 쓰는 세션이면, 보고는 받은 턴에 일지에 옮긴다. 세 줄 가운데 고친 것과 남긴 것은 지적마다 판정한 턴에, 다시 돌린 명령의 결과는 그 명령이 끝난 턴에 옮긴다(pre-commit으로 갈음하면 위 괄호대로 커밋 뒤에). PR 직전 리뷰(`docs/constitution/operations.md` 리뷰 파이프라인 2)의 보고와 반영도 같다. 일지 파일이 아직 없으면 `docs/journal/<날짜>-<HHMM>-<슬러그>.md`를 머리 한 줄 파일로 먼저 만든다. 앞부분은 Bash의 `date +%Y-%m-%d-%H%M`이나 PowerShell의 `Get-Date -Format yyyy-MM-dd-HHmm`으로 짓는다(`next-session` `merge.md` 4의 이름 규칙과 같은 길이다). 옮기기를 미룬 세션은 컨텍스트 압축 뒤 요약에 요지만 남아, PR 직전 리뷰 절을 쓰느라 서브에이전트 보고를 트랜스크립트에서 스크립트 둘로 네 번 뒤졌다(대기열 244).
 
 ## Why two axes
 

@@ -47,10 +47,11 @@ variable "layout" {
 
 variable "models" {
   type = map(object({
-    model_id = string
-    parser   = string
+    model_id    = string
+    parser      = string
+    server_args = list(string)
   }))
-  description = "키는 모델 번호(1, 2). 서버가 띄울 모델과 도구 호출 파서."
+  description = "키는 모델 번호(1, 2). 서버가 띄울 모델, 도구 호출 파서, 그 모델의 명령에만 덧붙는 옵션(낱말마다 한 원소)."
 }
 
 variable "timer_minutes" {
@@ -103,6 +104,7 @@ locals {
       "--api-key=${var.server_key}",
       "--enable-auto-tool-choice",
       "--tool-call-parser ${m.parser}",
+      join(" ", m.server_args),
       local.shared ? "--gpu-memory-utilization ${var.shared_memory_utilization}" : "",
       local.shared ? "--kv-cache-memory=${var.shared_kv_cache_bytes}" : "",
     ]))
