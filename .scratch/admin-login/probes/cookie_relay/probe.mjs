@@ -147,7 +147,12 @@ function launchAdmin(mode, port, upstream) {
   return { child, port, commandTail: tail.join(" "), output: () => output };
 }
 
-/** 트리째 내린다. 윈도우에서는 끄기 직전에 그 pid 의 명령줄에 이 회차의 인자(포트)가 있는지 본다. */
+/**
+ * 트리째 내린다. 윈도우에서는 끄기 직전에 그 pid 의 명령줄에 이 회차의 인자(포트)가 있는지 본다.
+ * POSIX 갈래는 명령줄을 보지 않는다. `exitCode` 와 `signalCode` 가 null 인 직접 자식은 node 가 아직
+ * 거두지 않은 프로세스라, 그 pid 와 프로세스 그룹 번호가 다른 프로세스로 넘어가지 않는다고 봤다
+ * (POSIX 의 pid 재사용 규칙과 node 의 동작에서 끌어낸 어림이고 재지 않았다).
+ */
 async function stopAdmin(admin) {
   const { child } = admin;
   if (child.exitCode === null && child.signalCode === null) {

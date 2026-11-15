@@ -988,6 +988,69 @@ open-session을 부른다 2026-11-15T03:59:06Z
 - **첫 커밋.** `0176971e8`(승인받은 설계 문서 전부, 파일 103개). 커밋의 pre-commit이 Bash의 600초 제한을 넘겨 백그라운드로 넘어갔고, 다시 치지 않고 끝 알림을 기다렸다. 출력은 다음과 같다(끝난 뒤 출력 파일을 읽었다). ruff check와 ruff format은 Passed였다. 러너(`parallel-checks`)는 855.17초에 Passed였고 그 안의 열 줄(check-ticket, zizmor, lint-imports, check-instructions, check-type-escapes, pyright, pyright-linux, run-hooks, pytest 548.4초, web-verify 854.9초)이 모두 Passed였다. markdown tables, line separators, mutation tables, commit message는 Passed였다. canary specs와 constitution version은 대 볼 파일이 없어 Skipped였다(이 브랜치는 카나리아 명세와 헌법 파일을 고치지 않았다). quotes는 막지 않는 경고 86건을 냈다. 하나씩 보니 일지에 옮긴 선택지 라벨과 설명, 이력의 "A는 B가 된다" 꼴로 새로 쓴 문장, 셀프 리뷰가 고친 옛 문구의 기록, 도구 출력의 인용, 그리고 포인터만 더한 줄에 원래 있던 인용이었고 원문과 어긋난 인용은 없었다. 커밋 직전의 `ListAgents`에는 busy인 세션이 셋이었다.
 - **dev 합치기.** `git merge origin/dev --no-commit`이 충돌 셋을 냈다(`docs/adr/README.md`, ADR 0046, `.scratch/plan.md`). `CONTEXT.md`는 저절로 합쳐졌다. 색인은 0061, 0062, 0063의 순서로, ADR 0046의 이력은 날짜 순(dev의 2026-11-14, 이 브랜치의 2026-11-15)으로 이어 붙였고, 계획표는 `uv run python tools/plan_table.py`로 다시 만들었다. 그 뒤 `tools/plan_table.py --check`와 `tools/check_adr_pointers.py`는 출력 없이 끝났다(손으로 쳤다). 이 브랜치는 헌법 파일을 고치지 않아 판을 올리지 않는다(dev의 판은 3.0.99다. `docs/constitution/README.md`의 diff를 읽었다).
 - **portal-admin 계획에 넘긴 문장.** 합쳐 들어온 `.scratch/portal-admin/plan.md`의 "데이터베이스의 종류" 항목 끝에 적었다. 새 문장은 다음과 같다. "agent-os 쪽에는 admin-login의 설계가 0.1 판부터 PostgreSQL을 들이기로 했고(ADR 0062 결정 "저장", 2026-11-15 승인) 새 행 postgres-foundation이 그 데이터베이스와 거기 닿는 길을 세운다. 0.1 판에 데이터베이스가 둘 들므로, 이 행과 postgres-foundation 가운데 먼저 도는 설계 인터뷰가 다른 쪽의 기능 계획을 읽고 종류와 도구를 맞출지, 컨테이너를 함께 쓸지 따로 띄울지, 백업을 어떻게 묶을지를 정한다". 그 계획의 "이 저장소에는 지금 데이터베이스가 없어"는 코드의 사실로 여전히 참이라 고치지 않았다. 함께 도는 portal-admin 설계 세션이 같은 파일을 고쳤으면 늦게 병합하는 쪽에서 그 줄이 충돌한다. 병합 뒤 그 세션에 알린다.
+- **둘째 커밋.** `03b39c007`(dev 합치기, portal-admin 계획의 문장, 회고와 대기열 항목 셋, 일지의 회고와 다음 절). 커밋의 pre-commit 출력은 다음과 같다(끝난 뒤 출력 파일에서 결과 줄을 읽었다). 러너는 776.17초에 Passed였고 그 안의 열 줄이 모두 Passed였다(pytest 513.9초, web-verify 774.9초). markdown tables, line separators, mutation tables, quotes, commit message는 Passed였다. canary specs와 constitution version은 대 볼 파일이 없어 Skipped였다. ruff check와 ruff format도 Skipped였다(스테이지된 `.py`가 없었다). 그 둘은 손으로 쳤고 `uv run ruff check .`는 "All checks passed!"를, `uv run ruff format --check .`는 "2325 files already formatted"를 냈다.
+- **회고 3의 원인 확인.** 합치기를 커밋한 뒤 `uv run python tools/sibling_overlap.py --journal`은 이 일지의 경로를 찍었다(손으로 쳤다). 커밋하기 전에는 다른 브랜치의 일지를 찍었으므로, 차이는 합치기가 커밋됐는지에 있다.
+
+## 인계 시점의 상태 (커밋 뒤)
+
+이 세션의 제목은 `docs/admin-login-design`이다. 둘째 커밋을 띄운 직후 인계 계기가 왔다(세션 컨텍스트 333,655 토큰, 경계 `커밋 뒤`. 훅의 문구를 읽었다). 커밋이 성공한 것을 본 뒤에 넘긴다. 인계하지 않는 때 다섯에는 들지 않는다. 이 세션을 연 지시문의 경계는 `셀프 리뷰 직전`이라 같은 경계가 아니고, `get_session`의 `self`에 `parentSessionId`가 없다(도구 출력을 봤다). 커밋 둘은 푸시하지 않았고 PR은 없다. 위 "닫기"의 둘째 커밋 줄과 회고 3의 원인 확인 줄, 그리고 이 절은 커밋하지 않은 채 워크트리에 있다.
+
+남은 차례는 다음과 같다.
+
+1. **PR 직전 리뷰.** `coderabbit-review` 서브에이전트를 돌린다. CLI가 돌지 못하면 `/security-review`와 `bug-perf-review`를 돌린다(`docs/constitution/operations.md` 리뷰 파이프라인 2). `bug-perf-review`에 밀 주장으로 넘길 새 문장은 이 일지의 "고친 것", "승인 뒤에 고친 글자", "닫기"의 portal-admin 계획에 넘긴 문장이다.
+2. **PR.** 일지의 커밋하지 않은 줄과 리뷰 반영을 한 커밋에 싣고 푸시한 뒤 PR을 연다(base는 dev, 면제 PR의 종류는 기능의 설계). ADR 0062와 ADR 0063, PRD 전제의 문장은 사용자가 승인했으므로 병합 전에 다시 묻지 않는다.
+3. **봇 회차와 병합.** `next-session` `merge.md`의 "병합 전" 2와 "워크트리에서 병합할 때"를 따른다.
+4. **병합 뒤 알리기.** 함께 도는 `docs/portal-admin-design` 세션에, 이 PR이 dev에 들어갔다는 것과 `.scratch/portal-admin/plan.md`의 "데이터베이스의 종류" 항목에 한 문장이 더해졌다는 것, agent-os의 PostgreSQL 결정(ADR 0062)과 postgres-foundation의 기능 계획을 알린다.
+5. **다음 작업 지시문.** `next-session`.
+
+인계 지시문은 아래와 같다.
+
+```
+다음 작업: 기능 admin-login. 설계는 승인됐고 커밋했다. PR 직전 리뷰와 PR과 병합이 남았다
+다음 단계: 설계 인터뷰
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: admin-login부터 (지시문 없이 연 세션이고, 그 앞의 첫 요청은 "설계 인터뷰 할 거 있어?"였다)
+브랜치: docs/admin-login-design
+모델: Fable 5.2 / xhigh. 2의 잇는 지시문의 값 Fable 5.1은 모델 메뉴에 없어(대기열 model-menu-name-fable-5-1-stale) 지금 메뉴에 있는 이름으로 낸다
+읽을 것: docs/journal/2026-11-14-2152-admin-login-design.md의 "인계 시점의 상태 (커밋 뒤)"와 그 앞의 "닫기", "승인 뒤에 고친 글자"
+이어받을 상태: 인계: 커밋 뒤. 승인받은 설계 문서와 dev 합치기와 회고까지 커밋했고(커밋 둘) 푸시하지 않았으며 PR은 없다. 남은 단계는 PR 직전 리뷰(coderabbit-review, 돌지 못하면 대체 둘), 일지의 커밋하지 않은 줄을 실은 커밋, 푸시와 PR(base dev), 봇 회차, 병합, 병합 뒤 docs/portal-admin-design 세션에 알리기, 다음 작업 지시문이다. ADR 0062·0063과 PRD 전제의 문장은 사용자가 승인했으므로 다시 묻지 않는다. 설계 인터뷰와 회고는 다시 열지 않는다. 일지는 docs/journal/2026-11-14-2152-admin-login-design.md다
+확인할 선행 조건: 없음
+이번 요청 범위: PR과 병합까지
+```
+
+제목을 `docs/admin-login-design (인계함)`으로 바꿨다(바꾸기 전 제목은 `docs/admin-login-design`). 이 세션이 띄운 백그라운드 작업은 남아 있지 않다(커밋 둘이 모두 끝났다). 워크트리는 잠겨 있지 않았다(`git worktree unlock`이 `is not locked`를 냈다).
+
+open-session을 부른다 2026-11-15T05:48:18Z
+
+## 이어받은 세션: PR 직전 리뷰와 PR (2026-11-15)
+
+이 세션의 사용자 메시지는 위 인계 지시문 하나다(지시문 앞에 "admin-login부터 (지시문 없이 연 세션이고, 그 앞의 첫 요청은 "설계 인터뷰 할 거 있어?"였다)"가 붙었다). 모델은 Fable 5.2다(시스템 알림을 읽었다). 세션 제목을 `docs/admin-login-design`으로 바꿨고(바꾸기 전 제목은 앱이 지은 "Admin-login PR 검토 및 병합"이다), `git worktree list`에서 이 브랜치의 워크트리를 찾아 `EnterWorktree(path)`로 들어왔다. 설계 인터뷰와 회고는 다시 열지 않는다.
+
+- **나란히 도는 세션.** `ListAgents`는 다른 세션 열둘을 냈다(도구 출력을 봤다). `docs/portal-admin-design`은 waiting이고, 이 세션에 넘긴 `docs/admin-login-design (인계함)`은 busy였다(출력이 "4분 전까지 `docs/admin-login-design`이었다"고 적었다). admin-login을 맡은 다른 세션은 그 둘째 것과 17시간 전에 연 첫 인계 세션(idle)뿐이다. `git fetch origin` 뒤 `git log --oneline HEAD..origin/dev`는 출력이 없었다(`origin/dev`는 합친 `f6590c7` 그대로다). `uv run python tools/sibling_overlap.py`는 오류 없이 끝났고 출력의 줄은 "이 브랜치의 새 번호: ADR 0062, ADR 0063", "번호 겹침 없음", "형제가 쓴 가장 높은 헌법 판: 3.0.100"이며, 함께 고친 파일은 워크트리 `mcp-shutdown-spec`과의 `.scratch/plan.md` 하나다(손으로 쳤다). 형제 줄에 열린 PR #575(`bd3a87a`)가 새로 들어 있다.
+- **두 ADR이 단 포인터의 수.** PR 본문에 적으려고 `docs/adr`에서 ADR 0062나 ADR 0063을 든 포인터와 이력 2026-11-15를 가리키는 포인터를 Grep으로 세니 41개였다. ADR 0019의 한 자리가 두 ADR의 포인터를 이어 달아 자리로는 40이고, 위 "기존 ADR 대조와 층 배치"의 셈과 같다.
+- **PR 직전 리뷰를 둘 띄웠다.** `coderabbit-review` 서브에이전트(보안·버그·성능 축, CLI)와 `bug-perf-review` 서브에이전트를 백그라운드로 나란히 띄웠다. 뒤의 것은 CLI의 대체가 아니라, 위 "고친 것"과 "승인 뒤에 고친 글자"가 PR 직전 리뷰에 넘기기로 한 밀 주장을 근거와 대 보게 하려는 것이다(CLI에는 밀 주장을 넘길 자리가 없다. 앞의 설계 PR #574도 같은 까닭으로 둘을 함께 돌렸다고 그 PR의 체크리스트가 적는다. `gh pr view 574 --json title,body`로 읽었다). 브리프에 밀 주장으로 넘긴 것은 일지의 세 자리("고친 것", "승인 뒤에 고친 글자", "닫기"의 portal-admin 계획에 넘긴 문장)이고, 프로브 스크립트는 제품에 실리지 않는 측정 스크립트라 버그·성능 관점으로 따라가지 말라고 적었다.
+
+### PR 직전 리뷰의 보고와 판정
+
+**CodeRabbit CLI(`coderabbit-review` 서브에이전트의 보고를 옮긴다).** 명령은 `coderabbit review --agent --include-untracked --base origin/dev`이고 종료 코드 0, `review_completed`였다. CLI 0.7.5, `Plan: Free`, `Seat: not assigned`이고 리뷰한 파일은 107개다. 지적은 9건이고 보고의 트리아지는 유효 4(모두 Minor), 보류 1, 오탐 4다. Critical과 Major는 없다. 비밀 점검은 CLI의 지적이 없었고, 서브에이전트가 `.scratch/admin-login`을 정규식으로 따로 훑어 걸린 셋(`password_hash/rows.py` 20줄의 측정용 가짜 비밀번호, `pg_stack/exercise.py` 7줄의 설명 문장, `pg_stack/run.py` 227줄의 DSN을 짓는 코드와 245줄의 `secrets.token_hex(16)`으로 회차마다 만드는 임시 비밀번호)이 모두 실제 비밀이 아니라고 적었다. 아래는 지적마다 이 세션이 그 자리를 열어 내린 판정이다.
+
+1. [Minor] `cookie_relay/probe.mjs`의 POSIX 갈래가 명령줄 표지를 보지 않고 프로세스 그룹을 끈다(보고는 165줄이라 적었고 그 갈래는 168줄이다. 파일을 읽었다). 판정: 코드는 그대로 두고 주석을 더했다. 그 갈래는 `exitCode`와 `signalCode`가 null일 때만 돌고, 그런 직접 자식은 node가 아직 거두지 않은 프로세스라 pid와 그룹 번호가 다른 프로세스로 넘어가지 않는다고 봤다(POSIX의 pid 재사용 규칙과 node의 동작에서 끌어낸 어림이고 재지 않았다). 윈도 갈래에는 그런 보장이 없어 명령줄을 본다. POSIX 갈래에 확인을 더하면 이 PC에서 돌려 볼 수 없는 코드가 프로브에 든다. 그 판단을 `stopAdmin`의 주석에 적었다.
+2. [Minor, 보고는 보류] `pg_stack/run.py`의 `outcome_text`가 실패한 조합의 회차를 오류 문구가 비어 있지 않으면 측정으로 센다(451~452줄). 보고는 이 갈래가 의도한 데이터베이스 중단만 부르는지 따라가지 못했다고 적었다. 호출부를 읽으니 중단 갈래가 아니라 조합마다의 결과(성공이나 실패)를 회차로 옮기는 관찰 갈래다(`exercise_rounds`가 474·508·522·526·581줄에서 부른다. Grep과 Read로 봤다). 판정: 유효(Minor)이고 코드는 고치지 않는다. `.claude/rules/probes.md` 첫 항목대로면 실패의 까닭까지 봐야 하는데, 고치려면 조합마다 기대하는 오류 문구를 정하고 Docker로 프로브를 다시 돌려야 한다. README의 "조합별 표"는 거부 칸에 오류 문구를 함께 적는다(103·104·107줄. Grep으로 봤다). 그 프로브 README의 "재지 못한 것"에 한 항목으로 적었고, 그 프로브를 쓰는 postgres-foundation의 설계 세션이 다시 돌릴 때 고친다(아래 "다음").
+3. [Minor] ADR 0062 결정 "유지 시간"이 짧은 JWT의 수명(1~15분)과 쉬는 시간(5분~24시간)을 따로 범위만 본다. 판정: 유효. 보고는 유휴 만료가 늦어진다고 읽었는데, 결정 "로그인 상태"(화면은 401을 받은 뒤에 갱신한다)와 맞대 읽으면 수명이 쉬는 시간 이상인 값에서는 처음 갱신하려는 때에 이미 쉬는 시간이 지나 있어 쓰고 있는 사람의 로그인도 끝난다(두 결정을 읽은 추론이고 재지 않았다). 사용자가 확정한 범위(합의 요약 13번)는 고치지 않고, ADR 0062 Consequences "명세가 정하고 재는 것"에 항목으로 더했다.
+4. [Minor] ADR 0062 결정 "로그인 상태"의 늦게 듣는 것 넷(로그아웃, '쓰지 않음', 잠금, 단계 변경)에 비밀번호 바꾸기와 링크로 다시 정하기가 없다. 판정: 유효. 결정 "비밀번호 링크"와 "자기 비밀번호와 '쓰지 않음'"은 다른 로그인이 모두 끊긴다고만 적고 듣기까지의 시간을 적지 않는다(18~20줄을 읽었다). 같은 "명세가 정하고 재는 것"에 항목으로 더했다.
+5. [Minor] 이 일지 737줄(합의 요약 올린 판의 22번)의 "로그인하지 않은 채 어느 화면을 열어도 로그인 화면으로 간다"가 비밀번호를 정하는 화면을 예외로 두지 않는다. 판정: 유효이고 일지는 기록이라 고치지 않는다. 같은 문장이 ADR 0062 결정 "화면"에 있어(29줄을 읽었다) 거기에 예외를 적었다. 결정 "자격"이 링크로 비밀번호 정하기를 로그인 없이 열리는 경로로 든다(24줄을 Grep으로 봤다).
+- 오탐 넷(`CONTEXT.md` 108줄의 승인자 정의, `docs/PRD.md` 34줄의 전제 문장, ADR 0015 64줄의 주체와 승인자 문단, ADR 0011 113줄의 `Sec-Fetch-Site` 문장)은 보고의 근거대로 받아들였다. ADR 0011에 한 구절을 더하면 읽기 쉽다는 선택 제안은 반영하지 않았다(그 문장은 ADR 0062의 요약이고 전문은 ADR 0062 결정 "요청 출처 검사"에 있다는 보고의 근거대로다).
+
+새로 쓴 문장은 아래와 같다. 승인된 결정은 바꾸지 않았고, 결정 하나에 이미 다른 결정이 정한 예외를 적고 명세가 정할 것 둘을 더했다.
+
+- ADR 0062 결정 "화면": "예외는 링크로 여는 비밀번호를 정하는 화면 하나다. 그 화면은 아직 로그인할 수 없는 사람이 열고, 그 화면이 부르는 경로(링크로 비밀번호 정하기)는 로그인 없이 열린다(결정 "자격")."
+- ADR 0062 Consequences "명세가 정하고 재는 것": "짧은 JWT의 수명이 쉬는 시간 이상인 설정을 받을지(결정 "유지 시간"은 세 값의 범위와 총 시간이 쉬는 시간 이상인 것만 보므로 수명 15분에 쉬는 시간 5분 같은 값을 고를 수 있다. 결정 "로그인 상태"대로 화면이 401을 받은 뒤에야 갱신하면, 그 값에서는 쓰고 있는 사람도 처음 갱신하려는 때에 이미 쉬는 시간이 지나 있어 로그인이 끝난다. 두 결정을 맞대 읽은 추론이고 재지 않았다)"와 "비밀번호를 바꾸거나 링크로 다시 정해 그 계정의 다른 로그인을 끊는 것이 듣기까지의 시간(결정 "로그인 상태"가 늦게 듣는 것으로 든 넷에 이 둘이 없다. 갱신용 번호를 지워 끊는 길이면 다른 로그인이 이미 받은 짧은 JWT는 그 수명이 끝날 때까지 통한다)".
+- `.scratch/admin-login/probes/pg_stack/README.md` "재지 못한 것"의 새 항목(실패로 끝난 조합이 재려던 까닭으로 실패했는지)과 `cookie_relay/probe.mjs`의 `stopAdmin` 주석.
+
+**밀 주장 대조(`bug-perf-review` 서브에이전트의 보고를 옮긴다).** 기준 커밋 `f6590c74c`, 범위의 파일 약 100개, 보고의 마지막 `[호출 34]`다(끝 알림의 사용량은 도구 호출 37번이었다). 어긋난 밀 주장은 없다고 적었다. 보고가 대 봤다고 적은 것은 실행 제한 시간 600초(`src/agent_os/core/run.py` 204줄), 승인 뒤에 고친 글자 여섯 군데의 사용자 답 라벨("그 실행이 끝날 때까지 둠", "그대로 두고 한계로 적음", "로그인 코드 옆에 둠"이 이 일지의 `> 사용자:` 인용과 글자 그대로이고 그 질문의 답이다), `.claude/rules/core.md` 인용 넷(8·8·20·26줄), ADR 0012 15줄의 거부한 안, `src/agent_os` 아래 `Protocol` 선언이 `core/ports.py`와 `sdk/agent.py`뿐인 것, import-linter 계약 이름(`pyproject.toml` 136줄), ADR 0044 72줄과 ADR 0031 22줄의 인용, 이 일지 246·322줄의 설명, `.scratch/portal-admin/plan.md` 12줄의 넘긴 문장, `CONTEXT.md` 409~415줄의 정의다. ADR 0062와 ADR 0063의 결정이 서로 어긋나는 자리는 읽은 범위에서 없다고 적었다.
+
+- [Minor] ADR 0062 8줄의 "탭의 저장소에 든다"가 "둔다"의 오타로 보인다는 지적. 판정: 오탐. ADR 0019의 제목이 "관리 화면은 브라우저가 토큰을 들고 Next는 무상태 중계다"이고(Grep으로 제목 줄을 읽었다) 같은 낱말이다.
+- 보고가 따라가지 못했다고 적은 넷은 이 세션이 대 봤다(모두 Grep과 Read로 그 줄을 읽었다). ADR 0049 45줄은 Consequences(40줄부터) 안의 "매니페스트 저자와 운영자"이고 예로 `AGENT_OS_ADMIN_TOKEN`을 든다. ADR 0026 267줄은 "설정 화면을 하나 더해 테마 고르기, 채널 토큰, 토큰 지우기를 모은다"이고 ADR 0021 205줄은 그 이력의 제목이다. ADR 0011 14줄은 Considered Options(10~15줄)의 "OIDC나 사용자별 자격 증명" 항목이고 "필요가 증명되면 이 ADR의 이력에 쌓는다"가 그 줄에 있다. ADR 0061은 8줄이 데이터베이스의 자리와 종류를 '위젯 설정 관리' 행의 설계 인터뷰에 넘기고 28줄에 "데이터베이스는 이 저장소에 처음이다"가 있다. 기능 계획 넷(`admin-roles`, `admin-2fa`, `admin-approval`, `postgres-foundation`)이 인용한 질문 제목 여섯과 사용자의 말 둘은 이 일지에 글자 그대로 있고(53·133·203·209·255·260·317·322·331·383·388줄), 선택지 라벨 가운데 넷은 일지의 라벨에서 끝의 " (Recommended)"를 뗀 글자다(53·260·322·388줄). ADR 0056 24줄에 "컨테이너는 다섯이다"와 "받을 바깥 이미지는 nginx 하나다"가 있다.
 
 ## 회고
 
@@ -1008,5 +1071,7 @@ open-session을 부른다 2026-11-15T03:59:06Z
 
 - **admin-login의 설계는 닫혔다.** ADR 0062와 ADR 0063이 승인됐고 기능 계획에 `**설계:**` 줄이 있다. 이 기능의 다음 단계는 화면 목업과 명세다. 두 ADR이 화면의 모양(로그인 화면, 계정 관리, 대화 화면)을 명세 전에 목업으로 그려 사용자에게 확인받기로 했다(`ui-design`). 명세는 사용자가 부른다(`/to-spec`).
 - **admin-login은 release-image와 postgres-foundation을 기다린다.** postgres-foundation에는 설계가 없어 그 행의 설계 인터뷰가 먼저다(그 기능 계획 본문이 먼저 볼 것을 적었다). portal-admin의 설계 세션이 함께 돌고 있고, 두 인터뷰 가운데 먼저 도는 쪽이 다른 쪽의 기능 계획을 읽어 데이터베이스의 종류와 도구를 맞춘다.
+- **admin-login의 명세가 정할 것 둘이 PR 직전 리뷰에서 더해졌다.** 짧은 JWT의 수명이 쉬는 시간 이상인 설정을 받을지와, 비밀번호를 바꾸거나 링크로 다시 정했을 때 다른 로그인이 끊기기까지의 시간이다(ADR 0062 Consequences "명세가 정하고 재는 것", 위 "PR 직전 리뷰의 보고와 판정" 3과 4).
+- **postgres-foundation의 설계 세션이 `pg_stack/` 프로브를 다시 돌릴 때** 실패로 끝난 조합의 회차를 기대하는 오류 문구가 있을 때만 측정으로 세게 고친다(같은 절의 2, 그 프로브 README "재지 못한 것").
 - **0.1 판 뒤의 새 행 셋**(admin-roles, admin-2fa, admin-approval)은 기능 계획만 있고 설계가 없다.
 - **대기열.** 새 항목 `choice-screen-worded-in-code-names`(2회차)와 `journal-path-tool-during-uncommitted-merge`(1회차, 고침), 회차를 더한 `model-menu-name-fable-5-1-stale`(2회차. 설계 인터뷰나 명세 지시문의 "모델" 줄은 그 항목이 닫힐 때까지 지금 메뉴에 있는 이름으로 적는다).
