@@ -40,6 +40,14 @@
 - 남긴 것: git 보조 함수가 도구마다 복사된 것(도구는 서로 import하지 않는 단독 스크립트라는 결정의 비용), `Scene.after`의 표지값과 `Wording` 중간 전달자(Minor), `pr-title.yml`의 `edited` 필터(명세 문구대로), 두 워크플로 스텝의 `GITHUB_EVENT_NAME` 중복(도구가 읽으므로 그대로), 슬라이스 줄에 대한 스킬과 도구의 표현 차이(무해).
 - 다시 돌린 것: 두 파일 `pyright` 0건, `ruff check`·`ruff format`, `check_instructions`, `check_type_escapes`, 카나리아 `--preflight`(대조군 `caaa062b`)와 `--shape`. 스킬 문구는 카나리아 실행 뒤 다시 고쳤으나 카나리아 문구가 묻는 두 줄은 그대로라 사전 점검으로 갈음했다. 전체 러너는 커밋의 pre-commit 결과로 갈음한다.
 
+## PR 직전 리뷰 (`coderabbit-review`, CodeRabbit CLI 0.7.5, 기준 `origin/dev`)
+
+Critical·Major 없음. 겨냥한 주장 넷(`upgrade/` 아래 경로 세기가 `_upgrade_entry`와 같은 기준, 앞쪽 빈 줄 규칙, 이름 바꾸기를 삭제와 추가로 세기, 워크플로의 제목 전달과 `pr-title.yml`의 트리거·권한)은 코드를 읽고 임시 입력으로 재 보아 맞았다. 지적은 Minor 여섯이다.
+
+- 고친 것: 조각이 아닌 파일까지 `git show`로 읽던 것을 읽기 전에 거른다(`_fragment_folder`). `upgrade/` 아래에 하위 폴더나 `.md`가 아닌 파일을 새로 더하면 (가)는 세지만 (다)가 모양을 보지 않아 빈 항목이 노트에 실릴 수 있었으므로, 그런 파일을 "할 일 조각이 아니다"로 막는다(`_stray_upgrade`). 이 구멍은 셀프 리뷰에서 (가)를 판 내기와 맞춘 뒤에 생긴 것이고, 시험(`test_할_일_폴더_아래의_…`)이 두 갈래로 고정한다.
+- 남긴 것: `ci.yml`의 `ticket` 잡이 제목을 고쳐도 다시 돌지 않는 한계(`operations.md`에 적었고 푸시 한 번으로 풀린다), `_delivered`가 slug마다 이력을 다시 읽는 비용(지금 크기에서 문제가 아니다), `#` 머리 검사가 앞 공백과 BOM을 못 보는 것(독스트링과 맞는다), 머리 브랜치 이름이 `main`·`dev`면 포크 PR도 건너뛰는 것(이 저장소는 외부 기여를 받지 않고 `check_ticket`의 기존 판정과 같다).
+- 다시 돌린 것: 고친 파일 `pyright`·`ruff`, 시험 파일 전체. 전체 러너는 두 번째 커밋의 pre-commit 결과로 갈음한다.
+
 ## 인계 (셀프 리뷰 직전)
 
 컨텍스트가 인계 문턱을 넘은 채 `셀프 리뷰 직전` 경계에 와서 새 세션에 넘긴다(`next-session handoff.md`). 이 세션의 제목은 `feature/05-notes-check-guards-release-note-fragments`였고 인계하며 `feature/05-notes-check-guards-release-note-fragments (인계함)`으로 바꾼다. 곁 세션이 아니다(`get_session`의 `self`에 `parentSessionId`가 없었다).

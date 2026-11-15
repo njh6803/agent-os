@@ -47,7 +47,8 @@ CI 에서는 PR 의 변경 전체다.
 기능 단락은 빈 줄(공백만 있는 줄과 앞쪽의 빈 줄도)이 없는 한 단락이고 줄바꿈을 뺀 글자 수가 400자
 이하다. 소개 글의 이름은 `X.Y.Z.md` 다(출시 후보 `X.Y.Z-rc.N.md` 는 아니다). 할 일과 소개 글에는
 길이 상한이 없다. 조각은 세 폴더 바로 아래의 `.md` 파일이다. 하위 폴더나 `.md` 가 아닌 파일은
-조각으로 읽지 않는다. 400자는 지난 기능 넷의 초안으로 정한
+조각으로 읽지 않고 모양을 보지 않지만, `upgrade/` 에 그런 파일을 새로 더하면 판 내기가 그대로
+노트에 싣기 때문에 조각이 아니라며 막는다. 400자는 지난 기능 넷의 초안으로 정한
 값이다(`.scratch/release-image/probes/notes_summary/README.md` 1번).
 
 막는 글(stderr)은 첫 줄이 `check-notes: ` 로 시작하고, 어긴 판정마다 한 항목을 싣고 규약 원천을
@@ -226,6 +227,17 @@ def _under(path: str, folder: str) -> bool:
     return head == folder and name.endswith(".md") and len(name) > len(".md")
 
 
+def _fragment_folder(path: str) -> str | None:
+    """조각으로 읽는 경로의 폴더. 조각이 아닌 경로는 None."""
+    folder = path.rpartition("/")[0]
+    return folder if folder in (FEATURES, UPGRADE, INTRO) and _under(path, folder) else None
+
+
+def _stray_upgrade(path: str) -> bool:
+    """`upgrade/` 아래인데 조각으로 읽히지 않는 경로(하위 폴더, `.md`가 아닌 파일)인가."""
+    return path.startswith(f"{UPGRADE}/") and _fragment_folder(path) is None
+
+
 def _is_product(path: str) -> bool:
     return any(path == product or path.startswith(f"{product}/") for product in PRODUCT_PATHS)
 
@@ -268,8 +280,8 @@ def title_problems(title: str, changes: Sequence[Change]) -> list[str]:
 
 def fragment_problems(path: str, text: str) -> list[str]:
     """(다). 조각 하나의 모양. 조각이 아닌 경로는 빈 목록이다."""
-    folder = path.rpartition("/")[0]
-    if folder not in (FEATURES, UPGRADE, INTRO) or not _under(path, folder):
+    folder = _fragment_folder(path)
+    if folder is None:
         return []
     problems: list[str] = []
     if not text.strip():
@@ -392,6 +404,13 @@ def shape_problems(scene: Scene) -> list[str]:
     problems: list[str] = []
     for change in scene.changes:
         if change.status == "D":
+            continue
+        if change.status == "A" and _stray_upgrade(change.path):
+            problems.append(
+                f"(다) `{change.path}` 는 할 일 조각이 아니다. `{UPGRADE}/` 에는 `<이름>.md`"
+                " 파일만 둔다. 판 내기는 그 폴더에 더한 파일을 모두 노트에 싣는다."
+            )
+        if _fragment_folder(change.path) is None:
             continue
         text = _read(scene.root, scene.after, change.path)
         if text is not None:
