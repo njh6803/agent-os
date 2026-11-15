@@ -10,8 +10,6 @@
 
 **Version**: 3.0.99 | **Ratified**: 2026-09-19 | **Last Amended**: 2026-11-15
 
-3.0.98은 함께 돌던 형제 브랜치(`feature/03-llm-local-command-rents-model-servers`)가 먼저 매겨 비워 두었다. 그 브랜치가 판을 가져가면 이 문장을 지운다.
-
-3.0.95는 함께 돌던 형제 브랜치(`feature/03-llm-local-command-rents-model-servers`)가 먼저 매겨 비워 두었다. 그 브랜치가 판을 가져가면 이 문장을 지운다.
-
 3.0.61은 함께 돌던 형제 브랜치(`feature/09-admin-settings-theme`)가 먼저 매겨 비워 두었다. 그 브랜치는 3.0.62 뒤에 병합되어 3.0.63으로 올렸다.
+
+3.0.95는 함께 돌던 형제 브랜치(`feature/03-llm-local-command-rents-model-servers`)가 먼저 매겨 비워 두었다. 그 브랜치는 3.0.97 뒤에 병합되어 3.0.98로 올렸다.
