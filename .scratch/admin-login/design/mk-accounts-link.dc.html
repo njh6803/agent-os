@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>비밀번호 링크 창</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/agent-os/styles.css">
+<link rel="stylesheet" href="ds/agent-os/fonts/fonts.css">
+<link rel="stylesheet" href="ds/agent-os/_ds_bundle.css">
+<script src="ds/agent-os/_ds_bundle.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0}
+a{color:var(--accent)}a:hover{color:var(--text)}
+</style>
+</helmet>
+<div data-theme="nokcheong" data-mode="light" style="position: relative; min-height: 100vh; background: var(--bg); color: var(--text); font-family: var(--sans);">
+<dc-import name="mk-accounts" menu-open="{{no}}" hint-size="100%,860px"></dc-import>
+<div aria-hidden="true" style="position: absolute; inset: 0; background: var(--text); opacity: 0.32;"></div>
+<dialog open aria-labelledby="link-title" class="shadow-float" style="position: absolute; top: 96px; left: 0; right: 0; margin: 0 auto; box-sizing: border-box; width: calc(100% - 32px); max-width: 520px; padding: var(--spacing-6); background: var(--bg-raised); color: var(--text); border: 1px solid var(--border); border-radius: var(--radius-l);">
+<div class="flex flex-col gap-4">
+<div class="flex flex-col gap-2">
+<h2 id="link-title" style="margin: 0; font-size: var(--text-title); line-height: var(--text-title--line-height); font-weight: var(--text-title--font-weight);"><span class="font-mono">lee.qa</span>의 비밀번호 링크</h2>
+<p class="text-body text-text-muted" style="margin: 0;">이 링크를 lee.qa에게 직접 전한다. 메일은 보내지 않는다.</p>
+</div>
+<div class="flex items-start gap-2" style="padding: var(--spacing-2) var(--spacing-2) var(--spacing-2) var(--spacing-3); background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-m);">
+<code class="font-mono text-mono flex-1 min-w-0" style="padding: var(--spacing-1) 0; line-height: var(--table-lh); overflow-wrap: anywhere;">https://agent.example.com:8443/set-password#t=7Hq2…</code>
+<x-import component-from-global-scope="AgentOsUi.Button" variant="secondary">복사</x-import>
+</div>
+<ul class="flex flex-col gap-1 text-body text-text-muted" style="margin: 0; padding: 0; list-style: none;">
+<li>한 번만 쓰인다.</li>
+<li><span class="font-mono text-mono">2026-11-16 15:18</span>에 끝난다(만든 뒤 24시간).</li>
+<li>다시 만들면 이 링크는 쓸 수 없다.</li>
+</ul>
+<x-import component-from-global-scope="AgentOsUi.Alert" tone="info" title="이 창을 닫으면 링크를 다시 볼 수 없다">서버는 링크를 기억하지 않는다. 잃으면 새로 만든다.</x-import>
+<div class="flex justify-end">
+<x-import component-from-global-scope="AgentOsUi.Button" variant="secondary">닫기</x-import>
+</div>
+</div>
+</dialog>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":860}}'>
+class Component extends DCLogic {
+renderVals() {
+return { no: false };
+}
+}
+</script>
+</body>
+</html>
