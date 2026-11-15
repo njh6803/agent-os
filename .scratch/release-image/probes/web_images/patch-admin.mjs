@@ -1,10 +1,12 @@
-// 이미지 안의 관리 화면 사본을 고친다(저장소의 파일은 그대로다). 측정용 갈래 둘이 쓴다.
+// 이미지 안의 관리 화면 사본을 고친다(저장소의 파일은 그대로다). 측정용 갈래 하나가 쓴다.
 //
-// 사용: node patch-admin.mjs <exception|standalone>   (작업 폴더가 apps/admin 의 사본)
+// 사용: node patch-admin.mjs standalone   (작업 폴더가 apps/admin 의 사본)
 //
-// - exception: 상류 판정(tools/loopback.ts 의 upstreamProblem)이 환경 변수 RI_PROBE_UPSTREAM_HOST 가 든 호스트 하나를
-//   더 받게 한다. 루프백 규칙의 예외를 티켓이 어떻게 짓든, 호스트 이름인 상류가 빌드와 중계를 지나는지 보려는 것이다.
 // - standalone: next.config.ts 에 output: "standalone" 과 추적의 뿌리(web/)를 더한다. 크기와 HOSTNAME 을 보려는 것이다.
+//
+// 옛 판에는 exception 갈래가 있었다. 상류 판정이 호스트 하나를 더 받게 하는 측정용 예외였다. 티켓 03 이 같은 예외를 코드에
+// 들이자(표지 파일 + AGENT_OS_CONTAINER_NETWORK=1) 그 줄이 없어져 갈래가 맞지 않게 됐고, 시제품 Dockerfile 의
+// admin-exception 단계가 코드의 예외를 그대로 켜게 바꾸고 이 갈래를 뺐다(티켓 08).
 //
 // 바꿀 자리를 정확히 한 번 찾지 못하면 던진다. 조용히 지나가면 고치지 않은 판을 고친 판으로 잰다.
 
@@ -21,13 +23,7 @@ function replaceOnce(path, from, to) {
 }
 
 const [mode] = process.argv.slice(2);
-if (mode === "exception") {
-  replaceOnce(
-    "tools/loopback.ts",
-    "  if (host === UPSTREAM_HOST) {\n    return null;\n  }",
-    '  if (host === UPSTREAM_HOST || host === process.env["RI_PROBE_UPSTREAM_HOST"]) {\n    return null;\n  }',
-  );
-} else if (mode === "standalone") {
+if (mode === "standalone") {
   replaceOnce(
     "next.config.ts",
     "  compress: false,\n",
@@ -39,5 +35,5 @@ if (mode === "exception") {
     'import type { NextConfig } from "next";\nimport { join } from "node:path";\n',
   );
 } else {
-  throw new Error("사용: node patch-admin.mjs <exception|standalone>");
+  throw new Error("사용: node patch-admin.mjs standalone");
 }

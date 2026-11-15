@@ -6,14 +6,17 @@
 # widget-lean 계열). pnpm 스토어와 메타데이터 캐시는 캐시 마운트라 이미지에 들지 않는다. 사용자(USER)는 정하지 않는다.
 # 회차마다 docker run 의 --user 로 준다(root 로 돌려 쓰는 자리를 찾는 회차가 있다).
 
-ARG NODE_IMAGE=node@sha256:dc26ae92c9fb15cf6b1d63e20f0944b2efe0f115b20e00be48fb23fceb061c54
+ARG NODE_IMAGE=node@sha256:af02d57b57719b9657a45199a79264a9437940cd55b3c7b3fc99615654f124a0
 
 # ---------------------------------------------------------------------------------------------------------------------
-# 바탕: node 와 pnpm(web/package.json 의 packageManager 와 같은 판).
+# 바탕: node 와 pnpm(web/package.json 의 packageManager 와 같은 판), uid·gid 10001 의 agentos 사용자(명세가 고른 꼴).
+# tini 는 깔지 않는다. 회차마다 docker run 의 --init 으로 init 의 효과를 잰다(6절).
 FROM ${NODE_IMAGE} AS base
 ENV COREPACK_HOME=/opt/corepack \
     COREPACK_ENABLE_DOWNLOAD_PROMPT=0 \
     CI=1
+RUN groupadd --gid 10001 agentos \
+    && useradd --uid 10001 --gid 10001 --create-home --home-dir /home/agentos --shell /usr/sbin/nologin agentos
 RUN corepack enable pnpm && corepack prepare pnpm@11.24.0 --activate && pnpm --version
 WORKDIR /app/web
 
@@ -89,14 +92,14 @@ COPY --from=probe-files /probe /probe
 WORKDIR /app/web/apps/widget
 ENTRYPOINT ["/probe/entry-widget.sh"]
 
-# 위와 같되 uid 1000(node)이 쓸 자리를 미리 만든다. 쓰는 자리는 root 로 돌린 회차의 docker diff 에서 찾았다.
+# 위와 같되 uid 10001(agentos)이 쓸 자리를 미리 만든다. 쓰는 자리는 root 로 돌린 회차의 docker diff 에서 찾았다.
 FROM widget-full AS widget-full-nonroot
-RUN mkdir -p .next public && touch next-env.d.ts && chown -R node:node .next public next-env.d.ts
+RUN mkdir -p .next public && touch next-env.d.ts && chown -R agentos:agentos .next public next-env.d.ts
 
-# next typegen 으로 next-env.d.ts 를 미리 지어 두고(root 소유 그대로) .next 와 public 만 uid 1000 의 것으로 둔다.
+# next typegen 으로 next-env.d.ts 를 미리 지어 두고(root 소유 그대로) .next 와 public 만 uid 10001 의 것으로 둔다.
 FROM widget-full AS widget-full-typegen
 RUN node node_modules/next/dist/bin/next typegen \
-    && rm -rf .next && mkdir -p .next public && chown node:node .next public
+    && rm -rf .next && mkdir -p .next public && chown agentos:agentos .next public
 
 FROM deps-widget-filter AS widget-filter
 COPY . .
@@ -120,11 +123,11 @@ ENTRYPOINT ["/probe/entry-widget.sh"]
 FROM widget-lean-withtests AS widget-lean
 RUN /probe/strip-tests.sh /app/web/apps/widget
 
-# lean 에 next typegen 으로 next-env.d.ts 를 미리 지어 두고(root 소유 그대로) .next 와 public 만 uid 1000 의 것으로 둔다.
+# lean 에 next typegen 으로 next-env.d.ts 를 미리 지어 두고(root 소유 그대로) .next 와 public 만 uid 10001 의 것으로 둔다.
 # 읽기 전용 루트 파일 시스템에서 그 둘만 쓰기 가능한 자리로 붙여 빌드가 되는지 본다.
 FROM widget-lean AS widget-lean-typegen
 RUN node node_modules/next/dist/bin/next typegen \
-    && rm -rf .next && mkdir -p .next public && chown node:node .next public
+    && rm -rf .next && mkdir -p .next public && chown agentos:agentos .next public
 
 # 위와 같되 next build 의 타입 검사를 건너뛴다(patch-widget.mjs). 타입 검사가 시간과 메모리의 얼마인지의 대조다.
 FROM widget-lean-typegen AS widget-lean-notc
@@ -160,10 +163,12 @@ ENV NEXT_TELEMETRY_DISABLED=1
 ENTRYPOINT ["/probe/entry.sh"]
 CMD ["node", "tools/start.ts", "start", "--hostname", "127.0.0.1", "--port", "3000"]
 
-# 상류 판정에 측정용 예외를 둔 판. 호스트 이름인 상류(http://serve:8000)로 빌드해 중계가 닿는지 본다.
+# 티켓 03 이 들인 루프백 규칙의 예외(표지 파일 + AGENT_OS_CONTAINER_NETWORK=1)를 그대로 켠 판. 호스트 이름인 상류
+# (http://serve:8000)로 빌드해 중계가 닿는지 본다. 앞 판은 이미지 안의 사본에 측정용 예외를 넣었다(patch-admin.mjs 의
+# exception 갈래). 03 이후에는 그 사본의 줄이 없어져 코드의 예외로 바꿨다. ENV 는 이미지 설정에 남아 시작 때 다시 도는 검사도 지난다.
 FROM admin-src AS admin-exception
-RUN node /probe/patch-admin.mjs exception
-ENV RI_PROBE_UPSTREAM_HOST=serve \
+RUN mkdir -p /etc/agent-os && echo "agent-os image" > /etc/agent-os/image
+ENV AGENT_OS_CONTAINER_NETWORK=1 \
     AGENT_OS_UPSTREAM=http://serve:8000
 RUN node node_modules/next/dist/bin/next build
 

@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>갈래 6 안 1. 입력창 아래 줄의 오른쪽 끝</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/agent-os/styles.css">
+<link rel="stylesheet" href="ds/agent-os/fonts/fonts.css">
+<link rel="stylesheet" href="ds/agent-os/_ds_bundle.css">
+<script src="ds/agent-os/_ds_bundle.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0}
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+.ellipsis{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.textlink{display:inline;padding:0;border:0;background:transparent;font-family:inherit;font-size:inherit;line-height:inherit;color:var(--accent);text-decoration:underline;cursor:pointer;border-radius:var(--radius-s)}
+.contact{display:inline-flex;align-items:center;min-height:24px;flex-shrink:0;white-space:nowrap;margin-top:-2px}
+.textlink:focus-visible{outline:2px solid var(--focus-ring);outline-offset:2px}
+</style>
+</helmet>
+<div data-theme="nokcheong" data-mode="light" style="width: 768px; height: 960px; box-sizing: border-box; padding: 48px; background: var(--bg); color: var(--text); font-family: var(--sans);">
+<div class="flex flex-col gap-4">
+<div class="flex flex-col gap-1" style="max-width: 672px;">
+<p class="text-body font-semibold" style="margin: 0;">갈래 6 안 1(추천): 입력창 아래 줄의 오른쪽 끝</p>
+<p class="text-small text-text-muted" style="margin: 0;">고지 줄이 있는 사이트는 그 줄을 둘로 가른다. 왼쪽은 고지 글과 '고지 전문'이고 남는 폭을 채우며 감긴다. 오른쪽은 줄어들지 않는 '문의하기'다. 고지가 없는 사이트는 입력창 아래에 얇은 줄을 하나 두고 오른쪽 끝에 '문의하기'만 세운다. 그래서 문의 링크는 어느 사이트에서나 위젯의 오른쪽 아래 구석에 있다. 누르면 운영자가 위젯 설정에 적은 주소가 새 탭에서 열린다.</p>
+</div>
+<div class="flex" style="gap: 32px; align-items: flex-start;">
+<section class="flex flex-col gap-2" style="width: 320px;">
+<p class="text-small text-text-muted" style="margin: 0;">고지와 문의 링크가 있는 사이트</p>
+<div data-theme="nokcheong" data-mode="light" data-density="regular" class="flex flex-col shadow-float" style="position: relative; width: 320px; height: 560px; box-sizing: border-box; background: var(--bg-raised); color: var(--text); font-family: var(--sans); border: 1px solid var(--border); border-radius: var(--radius-l); overflow: hidden;">
+<header class="flex items-center justify-between gap-2 shrink-0" style="padding: var(--spacing-2) var(--spacing-2) var(--spacing-2) var(--spacing-4); border-bottom: 1px solid var(--border);">
+<h1 class="text-body font-semibold ellipsis" style="flex: 1; margin: 0;">계산 도우미</h1>
+<x-import component-from-global-scope="AgentOsUi.IconButton" icon="settings" label="설정" variant="ghost"></x-import>
+<x-import component-from-global-scope="AgentOsUi.Button" variant="secondary">새 대화</x-import>
+</header>
+<ol aria-label="대화" class="flex flex-col gap-4" style="flex: 1; min-height: 0; overflow: hidden; justify-content: flex-end; margin: 0; padding: var(--spacing-4); list-style: none;">
+<li class="text-body" style="align-self: flex-end; max-width: 83.333%; padding: var(--spacing-2) var(--spacing-3); border-radius: var(--radius-l); background: var(--bg-selected); overflow-wrap: anywhere;">1,284 더하기 3,716은 얼마예요?</li>
+<li class="flex flex-col gap-2">
+<button type="button" aria-expanded="false" class="flex items-center gap-2 text-small text-text-muted" style="align-self: flex-start; min-height: 24px; padding: 0; border: 0; background: transparent; font-family: inherit; cursor: pointer;"><x-import component-from-global-scope="AgentOsUi.Icon" name="wrench" size="14"></x-import><span>도구 1개를 불렀습니다</span></button>
+<span class="sr-only">출력: </span>
+<p class="text-body" style="margin: 0;">5,000입니다.</p>
+</li>
+</ol>
+<form class="flex gap-2 shrink-0" style="align-items: flex-end; margin: 0; padding: var(--spacing-3); border-top: 1px solid var(--border);">
+<div style="flex: 1; min-width: 0;"><textarea rows="1" aria-label="질문" placeholder="무엇을 도와드릴까요?" class="block w-full min-w-0 rounded-m border text-body px-3 py-2 border-border-control bg-bg-raised text-text" style="box-sizing: border-box; margin: 0; font-family: inherit; resize: none;"></textarea></div>
+<x-import component-from-global-scope="AgentOsUi.IconButton" icon="send" label="보내기" variant="primary"></x-import>
+</form>
+<div class="flex shrink-0 text-small text-text-muted" style="align-items: flex-start; gap: 12px; padding: var(--spacing-2) var(--spacing-4); border-top: 1px solid var(--border);">
+<div role="group" aria-label="고지" style="flex: 1; min-width: 0;">
+<p style="margin: 0;">질문과 출력은 기록되고 모델 API로 보내집니다. 개인정보를 넣지 마세요. <button type="button" class="textlink" aria-expanded="false">고지 전문</button></p>
+</div>
+<a class="textlink contact" href="https://example.com/contact" target="_blank" rel="noopener">문의하기<span class="sr-only"> (새 탭에서 열림)</span></a>
+</div>
+</div>
+</section>
+<section class="flex flex-col gap-2" style="width: 320px;">
+<p class="text-small text-text-muted" style="margin: 0;">고지가 없고 다크 모드 스위치를 숨긴 사이트</p>
+<div data-theme="nokcheong" data-mode="light" data-density="regular" class="flex flex-col shadow-float" style="position: relative; width: 320px; height: 560px; box-sizing: border-box; background: var(--bg-raised); color: var(--text); font-family: var(--sans); border: 1px solid var(--border); border-radius: var(--radius-l); overflow: hidden;">
+<header class="flex items-center justify-between gap-2 shrink-0" style="padding: var(--spacing-2) var(--spacing-2) var(--spacing-2) var(--spacing-4); border-bottom: 1px solid var(--border);">
+<h1 class="text-body font-semibold ellipsis" style="flex: 1; margin: 0;">주문 계산 도우미</h1>
+<x-import component-from-global-scope="AgentOsUi.Button" variant="secondary">새 대화</x-import>
+</header>
+<ol aria-label="대화" class="flex flex-col gap-4" style="flex: 1; min-height: 0; overflow: hidden; justify-content: flex-end; margin: 0; padding: var(--spacing-4); list-style: none;">
+<li class="text-body" style="align-self: flex-end; max-width: 83.333%; padding: var(--spacing-2) var(--spacing-3); border-radius: var(--radius-l); background: var(--bg-selected); overflow-wrap: anywhere;">8,900원짜리 3개를 사면 합계는요?</li>
+<li class="flex flex-col gap-2">
+<button type="button" aria-expanded="false" class="flex items-center gap-2 text-small text-text-muted" style="align-self: flex-start; min-height: 24px; padding: 0; border: 0; background: transparent; font-family: inherit; cursor: pointer;"><x-import component-from-global-scope="AgentOsUi.Icon" name="wrench" size="14"></x-import><span>도구 1개를 불렀습니다</span></button>
+<span class="sr-only">출력: </span>
+<p class="text-body" style="margin: 0;">26,700원입니다.</p>
+</li>
+</ol>
+<form class="flex gap-2 shrink-0" style="align-items: flex-end; margin: 0; padding: var(--spacing-3); border-top: 1px solid var(--border);">
+<div style="flex: 1; min-width: 0;"><textarea rows="1" aria-label="질문" placeholder="무엇을 도와드릴까요?" class="block w-full min-w-0 rounded-m border text-body px-3 py-2 border-border-control bg-bg-raised text-text" style="box-sizing: border-box; margin: 0; font-family: inherit; resize: none;"></textarea></div>
+<x-import component-from-global-scope="AgentOsUi.IconButton" icon="send" label="보내기" variant="primary"></x-import>
+</form>
+<div class="flex shrink-0 text-small" style="justify-content: flex-end; padding: var(--spacing-2) var(--spacing-4); border-top: 1px solid var(--border);">
+<a class="textlink contact" href="https://example.com/contact" target="_blank" rel="noopener" style="margin-top: 0;">문의하기<span class="sr-only"> (새 탭에서 열림)</span></a>
+</div>
+</div>
+</section>
+</div>
+<ul class="flex flex-col gap-1 text-small text-text-muted" style="max-width: 672px; margin: 0; padding-left: 20px;">
+<li>오른쪽 위젯은 운영자가 다크 모드 스위치를 숨겨 메뉴에 남는 것이 없다. 그래서 설정 단추도 그리지 않고, 위쪽 띠에는 '새 대화'만 남는다.</li>
+<li>문의하기는 고지 전문과 같은 밑줄 글 링크이고, 화면 읽기 프로그램에는 '새 탭에서 열림'이 함께 읽힌다. 고지 글이 감겨도 문의하기는 그 줄의 첫 줄 높이에 붙어 있다.</li>
+<li>320px에서 고지 글의 폭이 문의하기만큼(약 60px) 줄어, 고지가 한 줄쯤 더 감긴다(어림, 찍어 보지 않았다).</li>
+</ul>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":768,"height":960}}'>
+class Component extends DCLogic {
+renderVals() {
+return { yes: true, no: false };
+}
+}
+</script>
+</body>
+</html>
