@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>완성 화면 6. 다크 모드 스위치를 숨긴 위젯</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/agent-os/styles.css">
+<link rel="stylesheet" href="ds/agent-os/fonts/fonts.css">
+<link rel="stylesheet" href="ds/agent-os/_ds_bundle.css">
+<script src="ds/agent-os/_ds_bundle.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0}
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+.dot{width:8px;height:8px;border-radius:9999px;background:#1fe05a;box-shadow:0 0 4px #1fe05a;flex-shrink:0}
+[data-mode="dark"] .dot{background:#4dff85;box-shadow:0 0 4px #4dff85}
+.ellipsis{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fill button{width:100%}
+.textlink{display:inline;padding:0;border:0;background:transparent;font-family:inherit;font-size:inherit;line-height:inherit;color:var(--accent);text-decoration:underline;cursor:pointer;border-radius:var(--radius-s)}
+.contact{display:inline-flex;align-items:center;min-height:24px;flex-shrink:0;white-space:nowrap}
+.notice-row .contact{margin-top:-2px}
+.contact:hover,.contact.hover{text-decoration-thickness:2px}
+.exq{display:block;width:100%;box-sizing:border-box;margin:0;padding:var(--spacing-2) var(--spacing-3);border:1px solid var(--border);border-radius:var(--radius-m);background:transparent;color:var(--text);font-family:inherit;font-size:var(--body-size);line-height:var(--body-lh);text-align:left;cursor:pointer;overflow-wrap:anywhere}
+.exq:hover{background:var(--bg-hover)}
+.textlink:focus-visible,.exq:focus-visible{outline:2px solid var(--focus-ring);outline-offset:2px}
+.focus-self{outline:2px solid var(--focus-ring);outline-offset:2px}
+</style>
+</helmet>
+
+<div data-theme="nokcheong" data-mode="light" style="width: 1120px; height: 960px; box-sizing: border-box; padding: 48px; background: var(--bg); color: var(--text); font-family: var(--sans);">
+<div class="flex flex-col gap-4">
+<div class="flex flex-col gap-1" style="max-width: 672px;">
+<p class="text-body font-semibold" style="margin: 0;">완성 화면 6: 다크 모드 스위치를 숨긴 위젯</p>
+<p class="text-small text-text-muted" style="margin: 0;">스위치를 숨기고 처음 밝기를 다크로 정한 익명 사이트 '주문 계산 도우미'(고지 없음)다. 문의 링크를 설정 메뉴 밖에 두었으므로, 스위치를 숨기면 설정 메뉴에 남는 것이 없어 위쪽 띠에 설정 단추가 없다. 위젯은 사이트 페이지가 밝아도 다크로 고정된다.</p>
+</div>
+<div class="flex" style="gap: 32px; align-items: flex-start;">
+<section class="flex flex-col gap-2" style="width: 320px;">
+<p class="text-small text-text-muted" style="margin: 0;">문의 링크를 등록한 첫 화면(다크 고정)</p>
+<div data-theme="nokcheong" data-mode="dark" data-density="regular" class="flex flex-col shadow-float" style="position: relative; width: 320px; height: 560px; box-sizing: border-box; background: var(--bg-raised); color: var(--text); font-family: var(--sans); border: 1px solid var(--border); border-radius: var(--radius-l); overflow: hidden;">
+<header class="flex items-center justify-between gap-2 shrink-0" style="padding: var(--spacing-2) var(--spacing-2) var(--spacing-2) var(--spacing-4); border-bottom: 1px solid var(--border);">
+<h1 class="text-body font-semibold ellipsis" style="flex: 1; margin: 0;">주문 계산 도우미</h1>
+<x-import component-from-global-scope="AgentOsUi.Button" variant="secondary">새 대화</x-import>
+</header>
+<div aria-label="대화" class="flex flex-col" style="flex: 1; min-height: 0; overflow-y: auto; padding: var(--spacing-6);">
+<div class="flex flex-col gap-4" style="margin: auto 0;">
+<div class="flex flex-col items-center gap-2 text-center">
+<p class="text-body" style="margin: 0;">주문 합계와 할인가를 물어보세요.</p>
+<p class="text-small text-text-muted" style="margin: 0;">아래 입력창에 적어 보내 주세요.</p>
+</div>
+<div role="group" aria-label="예시 질문" class="flex flex-col gap-2">
+<button type="button" class="exq">8,900원짜리 3개를 사면 합계는요?</button>
+<button type="button" class="exq">할인 쿠폰 15%와 적립금 2,000원을 함께 쓰면 49,800원짜리 상품은 얼마에 살 수 있나요?</button>
+</div>
+</div>
+</div>
+<form class="flex gap-2 shrink-0" style="align-items: flex-end; margin: 0; padding: var(--spacing-3); border-top: 1px solid var(--border);">
+<div style="flex: 1; min-width: 0;"><textarea rows="1" aria-label="질문" placeholder="무엇을 도와드릴까요?" class="block w-full min-w-0 rounded-m border text-body px-3 py-2 border-border-control bg-bg-raised text-text" style="box-sizing: border-box; margin: 0; font-family: inherit; resize: none;"></textarea></div>
+<x-import component-from-global-scope="AgentOsUi.IconButton" icon="send" label="보내기" variant="primary"></x-import>
+</form>
+<div class="flex shrink-0 text-small" style="justify-content: flex-end; padding: var(--spacing-2) var(--spacing-4); border-top: 1px solid var(--border);">
+<a class="textlink contact" href="https://example.com/contact" target="_blank" rel="noopener">문의하기<span class="sr-only"> (새 탭에서 열림)</span></a>
+</div>
+</div>
+</section>
+<section class="flex flex-col gap-2" style="width: 320px;">
+<p class="text-small text-text-muted" style="margin: 0;">문의 링크가 없는 첫 화면(다크 고정)</p>
+<div data-theme="nokcheong" data-mode="dark" data-density="regular" class="flex flex-col shadow-float" style="position: relative; width: 320px; height: 560px; box-sizing: border-box; background: var(--bg-raised); color: var(--text); font-family: var(--sans); border: 1px solid var(--border); border-radius: var(--radius-l); overflow: hidden;">
+<header class="flex items-center justify-between gap-2 shrink-0" style="padding: var(--spacing-2) var(--spacing-2) var(--spacing-2) var(--spacing-4); border-bottom: 1px solid var(--border);">
+<h1 class="text-body font-semibold ellipsis" style="flex: 1; margin: 0;">주문 계산 도우미</h1>
+<x-import component-from-global-scope="AgentOsUi.Button" variant="secondary">새 대화</x-import>
+</header>
+<div aria-label="대화" class="flex flex-col" style="flex: 1; min-height: 0; overflow-y: auto; padding: var(--spacing-6);">
+<div class="flex flex-col gap-4" style="margin: auto 0;">
+<div class="flex flex-col items-center gap-2 text-center">
+<p class="text-body" style="margin: 0;">주문 합계와 할인가를 물어보세요.</p>
+<p class="text-small text-text-muted" style="margin: 0;">아래 입력창에 적어 보내 주세요.</p>
+</div>
+<div role="group" aria-label="예시 질문" class="flex flex-col gap-2">
+<button type="button" class="exq">8,900원짜리 3개를 사면 합계는요?</button>
+<button type="button" class="exq">할인 쿠폰 15%와 적립금 2,000원을 함께 쓰면 49,800원짜리 상품은 얼마에 살 수 있나요?</button>
+</div>
+</div>
+</div>
+<form class="flex gap-2 shrink-0" style="align-items: flex-end; margin: 0; padding: var(--spacing-3); border-top: 1px solid var(--border);">
+<div style="flex: 1; min-width: 0;"><textarea rows="1" aria-label="질문" placeholder="무엇을 도와드릴까요?" class="block w-full min-w-0 rounded-m border text-body px-3 py-2 border-border-control bg-bg-raised text-text" style="box-sizing: border-box; margin: 0; font-family: inherit; resize: none;"></textarea></div>
+<x-import component-from-global-scope="AgentOsUi.IconButton" icon="send" label="보내기" variant="primary"></x-import>
+</form>
+</div>
+</section>
+<section class="flex flex-col gap-2" style="width: 320px;">
+<p class="text-small text-text-muted" style="margin: 0;">처음 밝기를 정하지 않아 기기를 따르는 모습(기기가 라이트)</p>
+<div data-theme="nokcheong" data-mode="light" data-density="regular" class="flex flex-col shadow-float" style="position: relative; width: 320px; height: 560px; box-sizing: border-box; background: var(--bg-raised); color: var(--text); font-family: var(--sans); border: 1px solid var(--border); border-radius: var(--radius-l); overflow: hidden;">
+<header class="flex items-center justify-between gap-2 shrink-0" style="padding: var(--spacing-2) var(--spacing-2) var(--spacing-2) var(--spacing-4); border-bottom: 1px solid var(--border);">
+<h1 class="text-body font-semibold ellipsis" style="flex: 1; margin: 0;">주문 계산 도우미</h1>
+<x-import component-from-global-scope="AgentOsUi.Button" variant="secondary">새 대화</x-import>
+</header>
+<div aria-label="대화" class="flex flex-col" style="flex: 1; min-height: 0; overflow-y: auto; padding: var(--spacing-6);">
+<div class="flex flex-col gap-4" style="margin: auto 0;">
+<div class="flex flex-col items-center gap-2 text-center">
+<p class="text-body" style="margin: 0;">주문 합계와 할인가를 물어보세요.</p>
+<p class="text-small text-text-muted" style="margin: 0;">아래 입력창에 적어 보내 주세요.</p>
+</div>
+<div role="group" aria-label="예시 질문" class="flex flex-col gap-2">
+<button type="button" class="exq">8,900원짜리 3개를 사면 합계는요?</button>
+<button type="button" class="exq">할인 쿠폰 15%와 적립금 2,000원을 함께 쓰면 49,800원짜리 상품은 얼마에 살 수 있나요?</button>
+</div>
+</div>
+</div>
+<form class="flex gap-2 shrink-0" style="align-items: flex-end; margin: 0; padding: var(--spacing-3); border-top: 1px solid var(--border);">
+<div style="flex: 1; min-width: 0;"><textarea rows="1" aria-label="질문" placeholder="무엇을 도와드릴까요?" class="block w-full min-w-0 rounded-m border text-body px-3 py-2 border-border-control bg-bg-raised text-text" style="box-sizing: border-box; margin: 0; font-family: inherit; resize: none;"></textarea></div>
+<x-import component-from-global-scope="AgentOsUi.IconButton" icon="send" label="보내기" variant="primary"></x-import>
+</form>
+<div class="flex shrink-0 text-small" style="justify-content: flex-end; padding: var(--spacing-2) var(--spacing-4); border-top: 1px solid var(--border);">
+<a class="textlink contact" href="https://example.com/contact" target="_blank" rel="noopener">문의하기<span class="sr-only"> (새 탭에서 열림)</span></a>
+</div>
+</div>
+</section>
+</div>
+<ul class="flex flex-col gap-1 text-small text-text-muted" style="max-width: 672px; margin: 0; padding-left: 20px;">
+<li>문의 링크가 없고 고지도 없으면 입력창 아래 줄이 통째로 없어진다. 빈 줄을 남기지 않는다.</li>
+<li>처음 밝기를 정하지 않으면 기기의 밝기 설정을 따른다. 최종 사용자가 바꿀 수단은 없다.</li>
+<li>설정 단추가 없으니 위쪽 띠의 포커스는 '새 대화' 하나다.</li>
+</ul>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1120,"height":960}}'>
+class Component extends DCLogic {
+renderVals() {
+return { yes: true, no: false };
+}
+}
+</script>
+</body>
+</html>
