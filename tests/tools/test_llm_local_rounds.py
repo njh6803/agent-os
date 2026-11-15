@@ -15,6 +15,7 @@ from tests.tools.llm_local_world import (
     URL_2,
     World,
     launch_calls,
+    leave_resources,
     printed,
     record_files,
     run_main,
@@ -395,13 +396,39 @@ def test_기본_시험_선택을_확인하지_못하면_그_출력의_끝을_보
     assert "not found in `markers`" in printed(capsys)
 
 
-def test_비용_표만_보는_회차에서도_기본_시험_선택이_비어_있으면_먼저_알린다(
+def test_비용_표를_찍은_뒤_기본_시험_선택이_비어_있으면_yes가_없어도_그_까닭을_알린다(
     world: World, capsys: pytest.CaptureFixture[str]
 ) -> None:
+    # 사용자가 비용을 확인하고 `--yes`를 붙여 다시 쳤다가 멈추는 헛걸음을 막는다.
     world.collect_result = Outcome(5, "no tests collected", "")
     assert run_main("run") == 4
     text = printed(capsys)
-    assert "llm_local" in text and "예상 비용" not in text
+    assert "예상 비용" in text and "고르는 시험이 없다" in text
+    assert text.index("예상 비용") < text.index("고르는 시험이 없다")
+
+
+def test_기본_시험_선택이_비어_있어도_앞_세션이_남긴_자원은_먼저_지운다(
+    world: World, capsys: pytest.CaptureFixture[str]
+) -> None:
+    # 수집 확인이 남은 자원 지우기보다 앞서면, 선택이 빈 동안(티켓 05 전) `--` 없는 `run`이 앞
+    # 회차의 유료 파드를 지우지 못하고 멈춘다.
+    world.collect_result = Outcome(5, "no tests collected", "")
+    leave_resources(world)
+    assert run_main("run", "--yes") == 4
+    assert len(terraform_calls(world, "destroy")) == 1
+    assert launch_calls(world) == []
+    text = printed(capsys)
+    assert "지웠다" in text and "고르는 시험이 없다" in text
+
+
+def test_기본_시험_선택이_비어_있어도_남은_자원을_지우지_못하면_3으로_끝난다(
+    world: World,
+) -> None:
+    world.collect_result = Outcome(5, "no tests collected", "")
+    leave_resources(world)
+    world.destroy_results = [False, False]
+    assert run_main("run", "--yes") == 3
+    assert launch_calls(world) == []
 
 
 def test_사용자가_명령을_주면_기본_시험_선택을_확인하지_않는다(world: World) -> None:

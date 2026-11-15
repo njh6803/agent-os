@@ -441,6 +441,14 @@ claude-review는 Critical·Major 없이 Minor 다섯이다(CQS, `except` 안의 
 
 **첫 pre-commit은 둘이 빨개 커밋되지 않았다**(990초). (1) 변이 표 검사(`tools/mutate.py --staged`): `.scratch/local-model/probes/llm_local_mutations.toml`의 "계정 키를 시험 자식에게 넘긴다"가 가리키던 원문 `env = {k: v ... != "RUNPOD_API_KEY"}`가 `child_env`를 고치며 사라져 `tools/llm_local.py`에 0번이었다. 원문을 `env = without_dropped(base)`로 바꾸고 그 변이만 돌려 기준선 초록, 변이 빨강을 봤다. `UV_ENV_FILE` 제거도 같은 표에 변이("UV_ENV_FILE을 시험 자식에게 넘긴다")로 걸었다. 첫 표지(`'UV_ENV_FILE': 'account.env'`)는 변이 출력에 실리지 않았고, 시험 파일에 글자 그대로 있는 문구는 `mutate.py`가 거부했다. 시험이 `f"자식 환경에 {name}이 넘어갔다"`로 조립한 메시지를 표지로 골라 기준선 초록, 변이 빨강을 봤다. (2) `tests/tools/test_probe_kit.py::test_배출은_줄이_계속_와도_제한_시간에_끝난다`: `LineReader.drain(0.5)`가 빈 목록을 냈다. 이 브랜치는 `tools/probe_kit.py`와 그 시험을 바꾸지 않았고, 그 파일을 홀로 돌리면 15건이 1.26초에 통과했다. 같은 러너가 웹 검증(990초)과 7561건을 함께 돌던 부하에서 자식 파이썬이 0.5초 안에 첫 줄을 내지 못한 것으로 본다(`.claude/rules/tests.md`가 말하는 시간 단언의 부하 실패. 대기열 332·306의 종류). 이 PR에서 시험을 고치지 않고 이 사실만 남긴다.
 
+**둘째 회차**(푸시 `285bb9005` 뒤, 앱의 Auto-fix가 깨웠다). 두 봇의 글은 모델이 쓴 것이라 코드로 확인했다.
+- CodeRabbit이 "기본 시험 선택 확인"의 스레드에 답을 달아 스레드를 다시 열었다(회차 둘째이고 Critical·Major만 고치는 차례다). 지적은 맞았다. `_run`에서 `default_selection_runs_tests`가 남은 자원 지우기(`state_has_resources` 갈래)와 비용표보다 앞에 있어, 선택이 빈 동안(티켓 05 전에는 늘 그렇다) `--` 없는 `run`이 앞 회차의 유료 파드를 지우지 못하고 종료 코드 4로 멈췄다. 비용이 새는 자리를 지키는 도구라 Major로 보고 고쳤다. 확인을 남은 자원 지우기와 비용표 뒤, `--yes` 확인 앞으로 옮겼다. 시험을 먼저 써서 셋이 빨간 것을 보았다(`test_기본_시험_선택이_비어_있어도_앞_세션이_남긴_자원은_먼저_지운다`, `…_지우지_못하면_3으로_끝난다`, 그리고 비용표 뒤에 까닭을 알리는 것으로 바꾼 `test_비용_표를_찍은_뒤_…`). 고친 뒤 시험 네 파일이 89건 통과했다(25초). 독스트링의 걸음 번호도 같이 고쳤다. 선택이 비면 `--yes`가 없어도 비용표 뒤에서 멈추므로, 비용을 확인하고 `--yes`를 붙여 다시 쳤다가 멈추는 헛걸음이 없다.
+- CodeRabbit이 "시험 명령의 인증 인자" 스레드에 짧은 토큰(`--token example-secret-123`)이 `SAFE_COMMAND_WORD`를 지나 남는다고 답했다. 이 PR에서 고치지 않았다. 그 한계는 독스트링의 "못 보는 것"에 이미 적혀 있고, 허용 목록은 `.claude/rules/tools.md`가 선례(`program_of`)로 드는 글자 꼴 기준이다. 이 도구는 사용자가 친 시험 명령을 기록하는 것이어서 도구가 아는 비밀(계정 키, 서버 키)은 `Reporter`가 가리고, 사용자가 명령에 직접 적은 다른 서비스의 비밀은 꼴만으로 가를 수 없다. 고정 명령 목록으로 좁히면 `-k` 식이나 경로 같은 평범한 인자가 모두 가려져 기록이 쓸모없어진다. 이 판단을 PR 코멘트로 남겼다.
+- CodeRabbit이 `UV_ENV_FILE` 스레드에 우리 판단(`UV_NO_ENV_FILE=1`이 명시적 `--env-file`까지 끈다)이 맞다고 확인했다. 조치 없음.
+- claude-review는 둘째 회차에 Critical·Major 없이 Minor 여섯과 Nit 하나를 냈다. 첫 회차의 다섯과 같은 구조 정리이고, 새로 더해진 것은 `except Exception` 안의 지우기 반환값을 버린다는 주장과 `state.destroy_failed = not destroy_folder(...) or state.destroy_failed`가 읽기 어렵다는 Nit이다. 앞의 것은 `destroy_folder`가 실패하면 terraform 출력과 안내를 스스로 찍어(`terraform_step`, `OUT.say`) 표시가 아주 없지는 않고, 구조 정리에 든다. 모두 같은 이유로 보류했고 받는 쪽은 "다음" 6이다.
+
+**이 회차로 새로 쓴 사실 문장**(PR 직전 리뷰가 밀 주장): 수집 확인은 남은 자원 지우기와 비용표 뒤에 선다(`_run`과 독스트링 걸음 5). 선택이 비어도 남은 자원은 지워진다(시험 둘이 본다).
+
 ## 회고
 
 후보 일곱, 승인 하나, 기각 여섯, 사용자에게 넘긴 것 없음. 만료할 항목은 없었다(`uv run python tools/queue_open_rows.py`).

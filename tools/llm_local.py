@@ -19,11 +19,12 @@ Terraform(`tools/llm_local_server/`)으로 모델 서버 둘 (A.X 4.0 Light, gpt
 pytest -m llm_local`)을 자식 프로세스로 돌리고, 시험이 어떻게 끝났든 (Ctrl-C로 끊겨도) 서버를
 지운 뒤 기록 묶음을 찍는다.
 
-걸음(명세의 번호): 1 환경(`RUNPOD_API_KEY` 이름, Terraform 1.6 이상, 분리 HEAD가 아닌 브랜치. `--`
-뒤의 명령을 주지 않았으면 기본 시험 명령이 시험을 고르는지도 `--collect-only`로 본다) 2
-상태 폴더(링크면 거부한다) 3 잠금 4 남은 자원 지우기 5 예상 비용(`--yes` 없으면 여기서 끝) 6
-서버 키 7 띄우기(재고가 없으면 다음 후보) 8 준비 기다리기(상한 `READY_LIMIT_SECONDS`) 9 시험 10
-실패했으면 서버가 살아 있는지 확인 11 지우기 12 기록 묶음.
+걸음(명세의 번호): 1 환경(`RUNPOD_API_KEY` 이름, Terraform 1.6 이상, 분리 HEAD가 아닌 브랜치) 2
+상태 폴더(링크면 거부한다) 3 잠금 4 남은 자원 지우기 5 예상 비용(그 뒤 `--`로 시험 명령을 주지
+않았으면 기본 시험 명령이 시험을 고르는지 `--collect-only`로 보고, `--yes` 없으면 여기서 끝.
+확인을 지우기 뒤에 두는 것은 선택이 비어 멈출 때도 앞 회차의 유료 파드를 먼저 지우기 위해서다)
+6 서버 키 7 띄우기(재고가 없으면 다음 후보) 8 준비 기다리기(상한 `READY_LIMIT_SECONDS`) 9 시험
+10 실패했으면 서버가 살아 있는지 확인 11 지우기 12 기록 묶음.
 
 종료 코드. 0 시험 통과. 1 서버가 살아 있던 회차의 시험 실패. 2 무효 회차(시험이 실패했는데
 서버가 답하지 않는다, 띄운 뒤 Ctrl-C로 끊겼다, 값이 예상보다 커서 지웠다, 준비 상한을 넘겼다,
@@ -959,8 +960,6 @@ def _run(*, yes: bool, command: tuple[str, ...]) -> int:
         OUT.say("띄우지 않고 끝난다. 모자란 것:\n" + "\n".join(f"  - {p}" for p in problems))
         return NOT_LAUNCHED
     OUT.add_secret(os.environ.get("RUNPOD_API_KEY", ""))  # 어느 글에 섞여 들어도 가린다
-    if not default_selection_runs_tests(command):
-        return NOT_LAUNCHED
     root = state_root()
     name = folder_name(branch)
     lock = acquire(root, name)
@@ -986,6 +985,10 @@ def _run(*, yes: bool, command: tuple[str, ...]) -> int:
                 return DESTROY_FAILED
             OUT.say("남은 자원을 지웠다.")
         OUT.say(cost_table())
+        # 남은 자원을 지운 뒤에 본다. 이 확인이 지우기보다 앞서면 선택이 빈 동안 앞 회차의 유료
+        # 파드가 그대로 남는다. `--yes`가 없어도 본다(비용을 확인하고 다시 쳤다가 멈추는 헛걸음).
+        if not default_selection_runs_tests(command):
+            return NOT_LAUNCHED
         if not yes:
             OUT.say(
                 "아무것도 띄우지 않았다. 사용자에게 이 비용을 보여 확인을 받은 뒤 "
