@@ -123,3 +123,50 @@
 - open-session을 부른다 2026-11-15T17:56Z
 - 정리: 이 세션이 만든 도커 이미지(`ri08-admin`, `ri08-widget`, `ri08-portal`, `ri08-widget-bw`)와 볼륨(`ri08-siteA` 등)이 남아 있다. 병합 전에 `docker rmi`와 `docker volume rm`으로 지운다. 프로브의 `ri-web-img:*` 이미지와 BuildKit 캐시 마운트는 프로브 README대로 남겨도 된다.
 - 밀 주장(이전 세션이 넘긴 것. 셀프 리뷰가 겨냥했고 1절의 둘과 2절의 하나는 위 "셀프 리뷰"에서 다시 썼다): 프로브 README 1절의 다른 세션 빌드 탓으로 돌린 문장과 trixie가 느리다는 표지가 없다는 문장, 2절의 크기 증가를 바탕 몫으로 본 문장, 4절의 03이 들인 예외가 표지 파일과 환경 변수가 함께 있어야 켜진다는 문장(코드를 읽었다), 맨 끝 절의 바탕과 사용자를 바꿔도 명세의 문장과 다른 결과가 없었다는 문장.
+
+## 인계 (커밋 뒤, 2026-11-16)
+
+- 인계 경계: 커밋 뒤. 컨텍스트가 문턱을 넘어 `handoff.md`대로 넘긴다. 인계하기 전 제목은 `feature/08-web-images-run-as-non-root`였고 `feature/08-web-images-run-as-non-root (인계함)`으로 바꾼다.
+- 한 것: 위 "셀프 리뷰"를 반영해 커밋 `28f945c6e`(제목 `feat: 웹 이미지 셋이 root가 아닌 사용자로 뜬다 (08-web-images-run-as-non-root)`)를 만들었다. pre-commit 둘째 시도가 통과했다. 첫 시도는 전체 pytest의 시간 경합 실패 넷(`tests/channel/cli/test_interrupt.py` 셋, `tests/tools/test_probe_kit.py` 하나)으로 막혔고 그 둘 파일을 단독으로 다시 치자 통과했다(손으로 봤다). 러너의 첫 판에서 실패한 `test_rerun_runner.py` 하나도 단독으로 통과했다. 원인 코드는 읽지 않았고 다른 세션이 PC를 쓰는 부하로 본다(어림). 이 일지의 "검증" 절은 이미 채웠다.
+- 새 세션이 할 것: 푸시 전에 `git merge origin/dev`(이 브랜치의 기준 `d80690da1`이 `origin/dev`의 `6cc6784`보다 뒤다), 푸시, PR(제목 접두 `feat`, 이 티켓은 올릴 때 손댈 것이 없어 느낌표가 없다. 티켓 08이 `release-image`의 마지막 열린 티켓이 아니라 기능 계획 `끝` 줄과 기능 단락도 없다), 봇 회차, 병합, 일지 "다음", 회고. 이 일지의 "다음" 절은 아직 없다.
+- 이 세션이 띄운 백그라운드 작업은 모두 끝났다. 워크트리 잠금은 풀고 넘긴다. 일지의 이 인계 절은 커밋하지 않았다.
+- 정리: `ri08-*` 도커 이미지와 볼륨은 이미 지웠다(위 검증). 프로브의 `ri-web-img:*` 이미지와 BuildKit 캐시 마운트는 남겨도 된다.
+- open-session을 부른다 2026-11-15T19:47Z
+
+## PR 직전 리뷰와 봇 회차 (2026-11-16, PR 584)
+
+PR 직전 `coderabbit-review` 서브에이전트를 돌렸다. CLI 0.7.5가 `Seat: not assigned`(Plan: Free)에서도 `--base origin/dev`로 종료 0, `review_completed`, 지적 0건을 냈다. 서브에이전트가 Dockerfile 셋과 `.dockerignore` 셋, 프로브 diff를 직접 읽어 유효 0건, 오탐 9건, 보류 Minor 2건으로 가렸다(서브에이전트의 보고를 옮겼고 이 세션이 CLI나 그 읽기를 다시 하지는 않았다). 보류는 PR 본문 체크리스트에 판정과 이유를 적었다.
+
+- 보류 1(위젯 `COPY . .`의 비밀 제외 범위): 추적 파일에 `.env*`·`.pem`·`.key`·`.npmrc`가 없다는 점만 근거다(서브에이전트가 `git ls-files web`으로 찾은 결과의 보고이고 이 세션이 다시 치지는 않았다). 개발자 PC의 미추적 파일은 `.dockerignore`가 막지 못한다. 고칠 길 둘 가운데 `**/.npmrc` 제외는 pnpm 설정이 생기면 빌드를 깨므로 더하지 않았고, `**/*.key`는 더하는 값이 작지만 이미지가 바뀌는 일이 아니라 두었다.
+- 보류 2(`apt-get install tini` 판 미고정): 바탕은 digest로 고정했으나 apt 판은 빌드 시점마다 달라질 수 있다. 비트 단위 재현을 요구하지 않는 이미지라 두었다.
+
+첫 회차(커밋 `75c097f6f`): CodeRabbit은 "Review rate limited"(다음 무료 리뷰까지 53분)로 이 PR의 리뷰가 없었다. `tools/wait_ci.py 584`의 출력은 claude-review를 포함한 아홉 검사가 SUCCESS, `llm`이 SKIPPED, 끝 줄이 `모두 통과`였다. claude-review가 단 코멘트(`gh api`로 읽었다)의 지적은 Minor 2, Nit 1이고 Critical·Major는 없다.
+
+- Minor(위젯만 `tini -g`인 까닭이 주석에 없다): 맞아서 `widget.Dockerfile`에 주석 두 줄을 더했다. 이미지 내용은 같다.
+- Minor(`base`·`manifests` 중복): 받지 않았다. 아래 "다음"과 09 티켓의 시험 항목이 맡는다.
+- Nit(`CMD`의 `sh -c`): 받지 않았다. 사이트 파일 경로를 환경 변수로 읽는 계약은 web-widget 티켓 04가 정했다(`web/apps/widget/next.config.ts`와 `tools/start.ts`의 주석을 읽었다).
+
+세 건의 판단 이유는 PR 코멘트에 적었다. 처음 쓴 코멘트가 그 계약을 03이 정했다고 잘못 적어, 코드(`web/apps/widget/next.config.ts`, `tools/start.ts`)를 읽고 web-widget 티켓 04로 고쳤다.
+
+로컬 모델 시험은 건너뛴다. 이 PR이 바꾼 경로(`deploy/images/`, `.scratch/release-image/`, `docs/`)는 `operations.md` LLM 테스트의 병합 조건 범위에 들지 않는다. 병합으로 들어온 `adapters/openai_compatible.py`는 PR 578이 이미 시험했고 기준(`origin/dev`) 쪽 변경이다.
+
+## 회고
+
+이 브랜치 일지 한 편과 두 세션(구현·인계받은 마무리)을 보았다. 후보 셋, 승인 1·기각 2·넘김 0.
+
+- 승인: pre-commit 한 바퀴가 20분을 넘는 일(`run_checks.py` 21분 53초, 다른 세션이 함께 돌았다). 열린 `docs-only-commit-precommit-slow-again`이 이미 처방한 사건이라 그 항목에 5회차를 더했다(승인 줄에 회차와 이 일지 파일명만). 같은 항목을 `queue_open_rows.py --search`로 찾아 처방을 대 보았다. 이번 커밋은 문서만 바꾼 것이 아니라 Dockerfile과 프로브 `.py`가 든 커밋이라 항목의 제목과 꼴이 완전히 같지는 않다. 다른 세션이 함께 돌 때 전체 게이트가 20분을 넘긴 점이 같아 같은 사건으로 센다(어림. 한 바퀴의 시간은 이전 세션이 이 일지 "검증"에 적은 값이고 부하의 양은 재지 않았다). 5회차라 chore 계기의 문턱에 닿는다. 기능의 마지막 티켓 뒤에 `queue_open_rows.py`가 센다.
+- 기각: 첫 pre-commit 시도가 전체 pytest의 시간 경합 실패 넷(`tests/channel/cli/test_interrupt.py` 셋, `tests/tools/test_probe_kit.py` 하나)으로 막힌 일. 닫힌 `0306`(끝이 열린 결함 종류, 11회차)이 받아들이기로 한 종류의 새 사례라 회차를 더하지 않고 여기에만 적는다. 러너 첫 판의 `test_rerun_runner.py` 실패 하나도 같다. 이 일지를 싣는 커밋의 첫 pre-commit도 pytest 2건(`tests/tools/test_probe_kit.py::test_배출은_줄이_계속_와도_제한_시간에_끝난다`, `tests/tools/test_rerun_runner.py::test_오염이_한_번이면_다시_돌고_두_번이면_그_과제를_모든_갈래에서_뺀다`)이 실패해 막혔다(전체 pytest 1644.6초, web-verify 2119.6초, 다른 세션이 함께 돌았다). 그 둘을 단독으로 돌리자 통과했다(540.2초, 손으로 봤다). 둘째 시도(pytest 1503.7초)는 `tests/tools/test_rerun_runner.py`의 `test_같은_갈래가_두_번_든_파일럿의_두_회차가_함께_돌아도_번호가_다르다`(`running`의 최대가 2여야 하는데 1)와 `test_오염이_한_번이면_다시_돌고_두_번이면_그_과제를_모든_갈래에서_뺀다`(`board.run()`이 0이어야 하는데 1)로 막혔다. 두 시험 모두 짧은 `hang` 시간 동안 회차가 겹쳐 돌기를 기대하는 단언이라 부하에서 흔들린 것으로 읽지만(어림) 시험 코드와 러너 코드는 읽지 않았다. 둘째 시도의 실패 둘은 단독으로 다시 돌려 보지 않았다. 닫힌 `0306`이 받아들인 대로 커밋을 다시 쳤다.
+- 기각: 이 세션이 `cd .scratch/...`를 Bash로 쳐 `PreToolUse` 훅이 거부한 일. 훅이 그 자리에서 막고 이유를 알렸다(대기열 225·252). 훅이 제 몫을 했다.
+
+만료: `queue_open_rows.py`를 이 체크아웃과 `--ref origin/dev` 둘로 돌려 두 출력에 모두 든 0348, 0555, 0556을 `만료 2026-11-16 (ADR 0036)`으로 닫았다.
+
+## 다음
+
+다음 작업은 새로 열 것이 없다. 이 기능(`release-image`)의 `ready-for-agent` 티켓 가운데 막힌 것이 없는 06과 07은 각자 형제 세션(`feature/06-review-bot-checks-upgrade-bang`, `feature/07-serve-image-runs-as-non-root-without-network`)이 맡고 있다(`list_sessions`로 봤을 때 두 세션 모두 `isRunning`이 false이고 PR이 없었다. 멈춰 있을 수 있으나 그 몫을 새로 열지는 않았다). 09는 07의 병합을 기다린다. 07이 병합되면 09(`09-standalone-compose-runs-real-images.md`, Blocked by 04·07·08)가 풀리고, 10이 그 뒤, 11이 마지막이다. 기능 계획의 `끝` 줄과 기능 단락은 마지막 티켓 11이 적는다.
+
+09가 받을 것(이 일지의 "남긴 것"과 아래에서 옮겼다):
+
+- 위젯 이미지의 `CMD`는 빌드가 끝난 뒤에야 `0.0.0.0` 판정이 나온다. compose가 `AGENT_OS_CONTAINER_NETWORK=1`을 늘 주면 운영에서는 닿지 않는다.
+- 세 Dockerfile의 `base`·`manifests` 단계와 `.dockerignore`의 중복, pnpm 판 11.24.0의 이중 관리를 잡는 저장소 상태 시험은 09의 시험 패키지 항목이다(이미 09 티켓에 적었다).
+- 레지스트리에 올리는 이미지는 깨끗한 체크아웃이나 CI에서만 짓는다는 한 줄을 10의 배포 안내(또는 11의 CI)에 적는다. 위젯 이미지는 `COPY . .`로 `web/` 전체를 담고 `.dockerignore`는 거부 목록(`**/.env*`, `**/*.pem`)뿐이라, 개발자 PC의 미추적 파일은 막지 못한다(PR 직전 리뷰의 보류 1).
+- 위젯 시작 시간과 이미지 크기, uid 서술이 명세(`.scratch/release-image/spec.md`)와 다르다(이 일지 "셀프 리뷰"의 "남긴 것"). 07·09·10이 이 수치를 다시 쓸 때 이번 값(위젯 시작 최대 71.3초, 크기 690.6·885.0·356.9MiB)을 같이 본다.

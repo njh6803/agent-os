@@ -68,6 +68,8 @@ RUN node node_modules/next/dist/bin/next typegen \
     && chown -R agentos:agentos .next public
 USER agentos
 EXPOSE 3000
+# 관리 화면·위젯 미리보기 페이지와 달리 -g 를 준다. 위젯은 뜰 때 sh 아래에서 빌드 자식 여럿이 도므로, 빌드 중에 docker stop 이
+# 오면 tini 가 시그널을 프로세스 그룹 전체에 보내 묶음 전체에 닿게 한다.
 ENTRYPOINT ["/usr/bin/tini", "-g", "--"]
 # 사이트 파일의 경로를 늘 넘긴다(환경 변수를 주지 않으면 위젯이 어느 사이트에도 끼워 넣을 수 없는 채로 조용히 뜬다).
 # 빌드가 실패하면 서비스를 시작하지 않고 그 종료 코드로 끝난다. 서비스로는 exec 로 갈아타 tini 의 자식이 서비스가 된다.
