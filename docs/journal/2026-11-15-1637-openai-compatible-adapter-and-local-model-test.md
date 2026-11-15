@@ -200,3 +200,12 @@ PR 578을 연 뒤 첫 회차(CodeRabbit, claude-review)의 지적을 건별로 �
 > 사용자: "승인"
 
 - 따라서 초안은 확정이다. 진단 탐침 다섯은 커밋하지 않고, ADR의 "스크래치패드에서 돌렸고 커밋하지 않았다" 문장을 그대로 둔다(프로브 규칙과의 틈은 위 셀프 리뷰의 "남긴 것"에 적었다. PR 본문에도 적는다).
+
+### 정식 반영 뒤 봇 회차와 PR 직전 리뷰 (2026-11-15, 푸시한 머리 bff63961e)
+
+- CI. `python`, `web`, `e2e`, `e2e-widget`, `e2e-portal`, `visual`, `ticket`, `verify`, `claude-review` 초록, `llm`은 건너뜀. 첫 푸시 뒤 PR이 충돌(`origin/dev`가 헌법 판 3.0.102를 가져감)이라 dev를 다시 합치고 판을 3.0.103으로 올렸다(`docs/constitution/README.md`의 비워 둔 판 문장에 병합 순서를 덧붙였다. `uv run python -m tools.check_constitution_version`이 통과했다).
+- CodeRabbit. `@coderabbitai review`에 "Review rate limited"로 답해 이번 머리는 리뷰를 받지 못했다. 앞선 회차(위 "봇 회차")의 결과는 그대로이고, 이번 변경은 아래 PR 직전 리뷰로 갈음했다.
+- claude-review(두 코멘트, 이번 변경이 아닌 어댑터 코드에 대한 것). Minor 둘(`_generate`·`_agenerate`의 중복 두 줄을 묶기, `_KeySource`의 가리기 책임 분리), Nit 둘(`ports.py` 독스트링의 구체 이름, 모듈 독스트링 길이)과 한쪽만 고치는 실수를 막는 시험이 두 경로를 덮는지 확인하라는 Nit. 이번 PR의 정식 반영과 무관하고 판단 항목이라 커밋을 막지 않는다. 남긴다: 동기·비동기 중복은 라이브러리 시그니처 때문에 불가피하다고 리뷰 자신이 적었고, 가리기 분리와 독스트링 길이는 모듈 독스트링이 원천이라 의도한 설계다(`.claude/rules/adapters.md`). 후속 후보로 둔다.
+- PR 직전 `bug-perf-review`(커밋 `b17873e04`, 범위 파일 10개). Critical·Major 없음. `main.tf`의 낱말 순서(`--tool-call-parser`, `join(" ", m.server_args)`, `--gpu-memory-utilization`)와 빈 `server_args`에서 빈 낱말이 없음을 임시 Terraform 구성으로 재현했고 `terraform fmt -check`는 통과했다(`validate`는 프로바이더가 필요해 못 돌렸다). `TF_VAR_models`의 모양, 해시가 코드와 일지에서 같음, 114초·541.9초·6,328 토큰이 ADR과 일지에서 같음, 비밀이 새지 않음을 확인했다. 확인하지 못한 것: vLLM이 `--revision`을 토크나이저에도 적용하는지(첫 실제 시험이 검증), 시험 파일 두 개의 변경은 읽지 않았다.
+  - [Minor] ADR 0057의 84행(2026-11-12 이력 항목)이 시험의 두 모델 이름으로 `skt/A.X-4.0-Light`를 적는다. 그 시점의 기록이라 고치지 않는다(`.claude/rules/adr.md`의 "앞의 이력" 갈래). 대신 새 이름이 같은 두 조건(이름이 `^o\d`에 맞는가, 소문자 이름이 `gpt-5`로 시작하고 `chat`이 없는가)에 걸리지 않음을 그 조건으로 대 봤다(`GotoAI-Inc/gemma-4-26B-A4B-it-W4A16`은 둘 다 아니다. 대조로 `o1-local`과 `gpt-5-local`은 걸렸다). 조건 자체는 라이브러리 원문이 아니라 ADR이 옮겨 적은 것을 정규식으로 옮긴 어림이다.
+  - [Nit] ADR 0058의 16행(배경 목록)과 일지의 옛 이름은 그 시점의 기록이라 둔다. 해시가 ADR에는 없다는 지적은 맞다(ADR은 `<40자 해시>`만 적고 원천은 코드와 일지). 코드 주석의 "원문은 일지의 '정식 반영'"을 일지의 실제 절 이름 "가중치 판의 근거(원문)"으로 고쳤다.
