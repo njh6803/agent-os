@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>갈래 4 안 2: 위젯을 덮는 상자</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/agent-os/styles.css">
+<link rel="stylesheet" href="ds/agent-os/fonts/fonts.css">
+<link rel="stylesheet" href="ds/agent-os/_ds_bundle.css">
+<script src="ds/agent-os/_ds_bundle.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0}
+.dot{width:8px;height:8px;border-radius:9999px;background:#1fe05a;box-shadow:0 0 4px #1fe05a;flex-shrink:0}
+[data-mode="dark"] .dot{background:#4dff85;box-shadow:0 0 4px #4dff85}
+.ellipsis{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fill button{width:100%}
+</style>
+</helmet>
+<div data-theme="nokcheong" data-mode="light" style="width: 416px; height: 820px; box-sizing: border-box; padding: 48px; background: var(--bg); color: var(--text); font-family: var(--sans);">
+<div class="flex flex-col gap-4">
+<div class="flex flex-col gap-1">
+<p class="text-body font-semibold" style="margin: 0;">갈래 4 안 2: 위젯을 덮는 상자</p>
+<p class="text-small text-text-muted" style="margin: 0;">앞선 탐색에서 고른 모양을 위젯 안으로 옮겼다. 고지 확인 덮개와 같은 부품이고 할 일이 가장 또렷하지만, 덮인 동안 지난 대화와 적어 둔 질문이 보이지 않는다.</p>
+</div>
+<div data-theme="nokcheong" data-mode="light" data-density="regular" class="flex flex-col shadow-float" style="width: 320px; height: 560px; box-sizing: border-box; background: var(--bg-raised); color: var(--text); font-family: var(--sans); border: 1px solid var(--border); border-radius: var(--radius-l); overflow: hidden;">
+<header class="flex items-center justify-between gap-2 shrink-0" style="padding: var(--spacing-2) var(--spacing-2) var(--spacing-2) var(--spacing-4); border-bottom: 1px solid var(--border);">
+<h1 class="text-body font-semibold ellipsis" style="flex: 1; margin: 0;">매장 계산 도우미</h1>
+<x-import component-from-global-scope="AgentOsUi.Switch" label="다크 모드" checked="{{no}}"></x-import>
+<x-import component-from-global-scope="AgentOsUi.Button" variant="secondary">새 대화</x-import>
+</header>
+<div role="group" aria-label="로그인 상태" class="flex items-center justify-between gap-2 shrink-0" style="padding: var(--spacing-2) var(--spacing-2) var(--spacing-2) var(--spacing-4); border-bottom: 1px solid var(--border);">
+<span class="flex items-center gap-2" style="flex: 1; min-width: 0;"><span class="dot" aria-hidden="true"></span><span class="text-body font-medium ellipsis">김하늘</span></span>
+<x-import component-from-global-scope="AgentOsUi.Button" variant="secondary">로그아웃</x-import>
+</div>
+<div role="dialog" aria-labelledby="expiry-title" class="flex flex-col gap-3" style="flex: 1; min-height: 0; justify-content: center; padding: var(--spacing-6) var(--spacing-4); background: var(--bg-raised);">
+<span class="flex" style="color: var(--warning);"><x-import component-from-global-scope="AgentOsUi.Icon" name="triangle-alert" size="20"></x-import></span>
+<h2 id="expiry-title" class="text-title font-semibold" style="margin: 0;">로그인 시간이 끝났습니다</h2>
+<p class="text-body" style="margin: 0;">다시 로그인하면 이 대화를 이어 갈 수 있습니다. 적어 둔 질문은 입력창에 남아 있습니다.</p>
+<div class="grid gap-2 fill" style="margin-top: var(--spacing-2);">
+<x-import component-from-global-scope="AgentOsUi.Button" variant="primary">다시 로그인</x-import>
+<x-import component-from-global-scope="AgentOsUi.Button" variant="secondary">로그인 없이 계속</x-import>
+</div>
+<p class="text-small text-text-muted" style="margin: 0;">로그인 없이 계속하면 새 대화로 시작합니다.</p>
+</div>
+</div>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":416,"height":820}}'>
+class Component extends DCLogic {
+renderVals() {
+return { yes: true, no: false };
+}
+}
+</script>
+</body>
+</html>

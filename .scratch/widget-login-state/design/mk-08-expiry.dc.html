@@ -1,0 +1,223 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>완성 8. 만료</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/agent-os/styles.css">
+<link rel="stylesheet" href="ds/agent-os/fonts/fonts.css">
+<link rel="stylesheet" href="ds/agent-os/_ds_bundle.css">
+<script src="ds/agent-os/_ds_bundle.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0}
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+.dot{width:8px;height:8px;border-radius:9999px;background:#1fe05a;box-shadow:0 0 4px #1fe05a;flex-shrink:0}
+[data-mode="dark"] .dot{background:#4dff85;box-shadow:0 0 4px #4dff85}
+.ellipsis{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fill button{width:100%}
+.textlink{display:inline;min-height:24px;padding:0;border:0;background:transparent;font-family:inherit;font-size:inherit;line-height:inherit;color:var(--accent);text-decoration:underline;cursor:pointer;border-radius:var(--radius-s)}
+.focus-shown button{outline:2px solid var(--focus-ring);outline-offset:2px}
+.focus-self{outline:2px solid var(--focus-ring);outline-offset:2px}
+</style>
+</helmet>
+<div data-theme="nokcheong" data-mode="light" style="width: 1824px; height: 860px; box-sizing: border-box; padding: 48px; background: var(--bg); color: var(--text); font-family: var(--sans);">
+<div class="flex flex-col gap-4">
+<div class="flex flex-col gap-1" style="max-width: 672px;">
+<p class="text-body font-semibold" style="margin: 0;">완성 화면 8. 로그인 시간 만료: 기본은 대화 안의 카드</p>
+<p class="text-small text-text-muted" style="margin: 0;">로그인 시간이 끝난 뒤 새 질문을 보내려는 순간이다. 적은 질문은 입력창에 남고 보내기는 막힌다. 만료 알림의 모양은 위젯 설정의 값이고 셋 모두 고를 수 있으며 기본은 대화 안의 카드다. 오른쪽 둘은 다른 모양을 둘 다인 사이트로 그렸다.</p>
+</div>
+<div class="flex" style="gap: 32px; align-items: flex-start;">
+<section class="flex flex-col gap-2" style="width: 320px;">
+<p class="text-small text-text-muted" style="margin: 0;">로그인 모드, 기본(카드)</p>
+<div data-theme="nokcheong" data-mode="light" data-density="regular" class="flex flex-col shadow-float" style="width: 320px; height: 560px; box-sizing: border-box; background: var(--bg-raised); color: var(--text); font-family: var(--sans); border: 1px solid var(--border); border-radius: var(--radius-l); overflow: hidden;">
+<header class="flex items-center justify-between gap-2 shrink-0" style="padding: var(--spacing-2) var(--spacing-2) var(--spacing-2) var(--spacing-4); border-bottom: 1px solid var(--border);">
+<h1 class="text-body font-semibold ellipsis" style="flex: 1; margin: 0;">직원 계산 도우미</h1>
+<x-import component-from-global-scope="AgentOsUi.IconButton" icon="settings" label="설정" variant="ghost"></x-import>
+<x-import component-from-global-scope="AgentOsUi.Button" variant="secondary">새 대화</x-import>
+</header>
+<div role="group" aria-label="로그인 상태" class="flex items-center justify-between gap-2 shrink-0" style="padding: var(--spacing-2) var(--spacing-2) var(--spacing-2) var(--spacing-4); border-bottom: 1px solid var(--border);">
+<span class="flex items-center gap-2" style="flex: 1; min-width: 0;"><span class="dot" aria-hidden="true"></span><span class="text-body font-medium ellipsis">김하늘</span></span>
+<x-import component-from-global-scope="AgentOsUi.Button" variant="secondary">로그아웃</x-import>
+</div>
+<ol aria-label="대화" class="flex flex-col gap-4" style="flex: 1; min-height: 0; overflow: hidden; justify-content: flex-end; margin: 0; padding: var(--spacing-4); list-style: none;">
+<li class="text-body" style="align-self: flex-end; max-width: 83.333%; padding: var(--spacing-2) var(--spacing-3); border-radius: var(--radius-l); background: var(--bg-selected); overflow-wrap: anywhere;">1,284 더하기 3,716은 얼마예요?</li>
+<li class="flex flex-col gap-2">
+<button type="button" aria-expanded="false" class="flex items-center gap-2 text-small text-text-muted" style="align-self: flex-start; min-height: 24px; padding: 0; border: 0; background: transparent; font-family: inherit; cursor: pointer;"><x-import component-from-global-scope="AgentOsUi.Icon" name="wrench" size="14"></x-import><span>도구 1개를 불렀습니다</span></button>
+<span class="sr-only">출력: </span>
+<p class="text-body" style="margin: 0;">5,000입니다.</p>
+</li>
+<li role="group" aria-label="로그인 시간 만료" class="flex flex-col gap-3 rounded-m border border-border p-4">
+<div class="flex items-center gap-2">
+<span class="flex" style="color: var(--warning);"><x-import component-from-global-scope="AgentOsUi.Icon" name="triangle-alert" size="16"></x-import></span>
+<span class="text-body font-semibold">로그인 시간이 끝났습니다</span>
+</div>
+<p class="text-body" style="margin: 0;">다시 로그인하면 이 대화를 이어 갈 수 있습니다. 적어 둔 질문은 입력창에 남아 있습니다.</p>
+<div class="grid fill">
+<x-import component-from-global-scope="AgentOsUi.Button" variant="primary">다시 로그인</x-import>
+</div>
+</li>
+</ol>
+<form class="flex gap-2 shrink-0" style="align-items: flex-end; margin: 0; padding: var(--spacing-3); border-top: 1px solid var(--border);">
+<div style="flex: 1; min-width: 0;"><textarea rows="1" aria-label="질문" placeholder="무엇을 도와드릴까요?" class="block w-full min-w-0 rounded-m border text-body px-3 py-2 border-border-control bg-bg-raised text-text" style="box-sizing: border-box; margin: 0; font-family: inherit; resize: none;">여기서 10% 할인하면요?</textarea></div>
+<x-import component-from-global-scope="AgentOsUi.IconButton" icon="send" label="보내기" variant="primary" disabled="{{yes}}"></x-import>
+</form>
+<div role="group" aria-label="고지" class="shrink-0 text-small text-text-muted" style="padding: var(--spacing-2) var(--spacing-4); border-top: 1px solid var(--border);">
+<p style="margin: 0;">질문과 출력은 기록되고 모델 API로 보내집니다. 개인정보를 넣지 마세요. <button type="button" class="textlink" aria-expanded="false" aria-controls="n-e">고지 전문</button></p>
+</div>
+</div>
+</section>
+<section class="flex flex-col gap-2" style="width: 320px;">
+<p class="text-small text-text-muted" style="margin: 0;">둘 다, 기본(카드)</p>
+<div data-theme="nokcheong" data-mode="light" data-density="regular" class="flex flex-col shadow-float" style="width: 320px; height: 560px; box-sizing: border-box; background: var(--bg-raised); color: var(--text); font-family: var(--sans); border: 1px solid var(--border); border-radius: var(--radius-l); overflow: hidden;">
+<header class="flex items-center justify-between gap-2 shrink-0" style="padding: var(--spacing-2) var(--spacing-2) var(--spacing-2) var(--spacing-4); border-bottom: 1px solid var(--border);">
+<h1 class="text-body font-semibold ellipsis" style="flex: 1; margin: 0;">매장 계산 도우미</h1>
+<x-import component-from-global-scope="AgentOsUi.IconButton" icon="settings" label="설정" variant="ghost"></x-import>
+<x-import component-from-global-scope="AgentOsUi.Button" variant="secondary">새 대화</x-import>
+</header>
+<div role="group" aria-label="로그인 상태" class="flex items-center justify-between gap-2 shrink-0" style="padding: var(--spacing-2) var(--spacing-2) var(--spacing-2) var(--spacing-4); border-bottom: 1px solid var(--border);">
+<span class="flex items-center gap-2" style="flex: 1; min-width: 0;"><span class="dot" aria-hidden="true"></span><span class="text-body font-medium ellipsis">김하늘</span></span>
+<x-import component-from-global-scope="AgentOsUi.Button" variant="secondary">로그아웃</x-import>
+</div>
+<ol aria-label="대화" class="flex flex-col gap-4" style="flex: 1; min-height: 0; overflow: hidden; justify-content: flex-end; margin: 0; padding: var(--spacing-4); list-style: none;">
+<li class="text-body" style="align-self: flex-end; max-width: 83.333%; padding: var(--spacing-2) var(--spacing-3); border-radius: var(--radius-l); background: var(--bg-selected); overflow-wrap: anywhere;">1,284 더하기 3,716은 얼마예요?</li>
+<li class="flex flex-col gap-2">
+<button type="button" aria-expanded="false" class="flex items-center gap-2 text-small text-text-muted" style="align-self: flex-start; min-height: 24px; padding: 0; border: 0; background: transparent; font-family: inherit; cursor: pointer;"><x-import component-from-global-scope="AgentOsUi.Icon" name="wrench" size="14"></x-import><span>도구 1개를 불렀습니다</span></button>
+<span class="sr-only">출력: </span>
+<p class="text-body" style="margin: 0;">5,000입니다.</p>
+</li>
+<li role="group" aria-label="로그인 시간 만료" class="flex flex-col gap-3 rounded-m border border-border p-4">
+<div class="flex items-center gap-2">
+<span class="flex" style="color: var(--warning);"><x-import component-from-global-scope="AgentOsUi.Icon" name="triangle-alert" size="16"></x-import></span>
+<span class="text-body font-semibold">로그인 시간이 끝났습니다</span>
+</div>
+<p class="text-body" style="margin: 0;">다시 로그인하면 이 대화를 이어 갈 수 있습니다. 적어 둔 질문은 입력창에 남아 있습니다.</p>
+<div class="grid gap-2 fill">
+<x-import component-from-global-scope="AgentOsUi.Button" variant="secondary">로그인 없이 계속</x-import>
+<x-import component-from-global-scope="AgentOsUi.Button" variant="primary">다시 로그인</x-import>
+</div>
+<p class="text-small text-text-muted" style="margin: 0;">로그인 없이 계속하면 새 대화로 시작합니다.</p>
+</li>
+</ol>
+<form class="flex gap-2 shrink-0" style="align-items: flex-end; margin: 0; padding: var(--spacing-3); border-top: 1px solid var(--border);">
+<div style="flex: 1; min-width: 0;"><textarea rows="1" aria-label="질문" placeholder="무엇을 도와드릴까요?" class="block w-full min-w-0 rounded-m border text-body px-3 py-2 border-border-control bg-bg-raised text-text" style="box-sizing: border-box; margin: 0; font-family: inherit; resize: none;">여기서 10% 할인하면요?</textarea></div>
+<x-import component-from-global-scope="AgentOsUi.IconButton" icon="send" label="보내기" variant="primary" disabled="{{yes}}"></x-import>
+</form>
+</div>
+</section>
+<section class="flex flex-col gap-2" style="width: 320px;">
+<p class="text-small text-text-muted" style="margin: 0;">둘 다, '다시 로그인'을 누른 뒤</p>
+<div data-theme="nokcheong" data-mode="light" data-density="regular" class="flex flex-col shadow-float" style="width: 320px; height: 560px; box-sizing: border-box; background: var(--bg-raised); color: var(--text); font-family: var(--sans); border: 1px solid var(--border); border-radius: var(--radius-l); overflow: hidden;">
+<header class="flex items-center justify-between gap-2 shrink-0" style="padding: var(--spacing-2) var(--spacing-2) var(--spacing-2) var(--spacing-4); border-bottom: 1px solid var(--border);">
+<h1 class="text-body font-semibold ellipsis" style="flex: 1; margin: 0;">매장 계산 도우미</h1>
+<x-import component-from-global-scope="AgentOsUi.IconButton" icon="settings" label="설정" variant="ghost"></x-import>
+<x-import component-from-global-scope="AgentOsUi.Button" variant="secondary">새 대화</x-import>
+</header>
+<div role="group" aria-label="로그인 상태" class="flex items-center justify-between gap-2 shrink-0" style="padding: var(--spacing-2) var(--spacing-2) var(--spacing-2) var(--spacing-4); border-bottom: 1px solid var(--border);">
+<span class="flex items-center gap-2" style="flex: 1; min-width: 0;"><span class="dot" aria-hidden="true"></span><span class="text-body font-medium ellipsis">김하늘</span></span>
+<x-import component-from-global-scope="AgentOsUi.Button" variant="secondary">로그아웃</x-import>
+</div>
+<ol aria-label="대화" class="flex flex-col gap-4" style="flex: 1; min-height: 0; overflow: hidden; justify-content: flex-end; margin: 0; padding: var(--spacing-4); list-style: none;">
+<li class="text-body" style="align-self: flex-end; max-width: 83.333%; padding: var(--spacing-2) var(--spacing-3); border-radius: var(--radius-l); background: var(--bg-selected); overflow-wrap: anywhere;">1,284 더하기 3,716은 얼마예요?</li>
+<li class="flex flex-col gap-2">
+<button type="button" aria-expanded="false" class="flex items-center gap-2 text-small text-text-muted" style="align-self: flex-start; min-height: 24px; padding: 0; border: 0; background: transparent; font-family: inherit; cursor: pointer;"><x-import component-from-global-scope="AgentOsUi.Icon" name="wrench" size="14"></x-import><span>도구 1개를 불렀습니다</span></button>
+<span class="sr-only">출력: </span>
+<p class="text-body" style="margin: 0;">5,000입니다.</p>
+</li>
+<li role="group" aria-label="로그인 시간 만료" class="flex flex-col gap-3 rounded-m border border-border p-4">
+<div class="flex items-center gap-2">
+<span class="flex" style="color: var(--warning);"><x-import component-from-global-scope="AgentOsUi.Icon" name="triangle-alert" size="16"></x-import></span>
+<span class="text-body font-semibold">로그인 시간이 끝났습니다</span>
+</div>
+<p class="text-body" style="margin: 0;">다시 로그인하면 이 대화를 이어 갈 수 있습니다. 적어 둔 질문은 입력창에 남아 있습니다.</p>
+<p role="status" class="text-small text-text-muted" style="margin: 0;">새 창에서 로그인한 뒤 이 창으로 돌아와 주세요.</p>
+<div class="grid gap-2 fill">
+<x-import component-from-global-scope="AgentOsUi.Button" variant="secondary">로그인 없이 계속</x-import>
+<x-import component-from-global-scope="AgentOsUi.Button" variant="primary">다시 로그인</x-import>
+</div>
+<p class="text-small text-text-muted" style="margin: 0;">로그인 없이 계속하면 새 대화로 시작합니다.</p>
+</li>
+</ol>
+<form class="flex gap-2 shrink-0" style="align-items: flex-end; margin: 0; padding: var(--spacing-3); border-top: 1px solid var(--border);">
+<div style="flex: 1; min-width: 0;"><textarea rows="1" aria-label="질문" placeholder="무엇을 도와드릴까요?" class="block w-full min-w-0 rounded-m border text-body px-3 py-2 border-border-control bg-bg-raised text-text" style="box-sizing: border-box; margin: 0; font-family: inherit; resize: none;">여기서 10% 할인하면요?</textarea></div>
+<x-import component-from-global-scope="AgentOsUi.IconButton" icon="send" label="보내기" variant="primary" disabled="{{yes}}"></x-import>
+</form>
+</div>
+</section>
+<section class="flex flex-col gap-2" style="width: 320px;">
+<p class="text-small text-text-muted" style="margin: 0;">다른 모양: 위젯을 덮는 상자</p>
+<div data-theme="nokcheong" data-mode="light" data-density="regular" class="flex flex-col shadow-float" style="width: 320px; height: 560px; box-sizing: border-box; background: var(--bg-raised); color: var(--text); font-family: var(--sans); border: 1px solid var(--border); border-radius: var(--radius-l); overflow: hidden;">
+<header class="flex items-center justify-between gap-2 shrink-0" style="padding: var(--spacing-2) var(--spacing-2) var(--spacing-2) var(--spacing-4); border-bottom: 1px solid var(--border);">
+<h1 class="text-body font-semibold ellipsis" style="flex: 1; margin: 0;">매장 계산 도우미</h1>
+<x-import component-from-global-scope="AgentOsUi.IconButton" icon="settings" label="설정" variant="ghost"></x-import>
+<x-import component-from-global-scope="AgentOsUi.Button" variant="secondary">새 대화</x-import>
+</header>
+<div role="group" aria-label="로그인 상태" class="flex items-center justify-between gap-2 shrink-0" style="padding: var(--spacing-2) var(--spacing-2) var(--spacing-2) var(--spacing-4); border-bottom: 1px solid var(--border);">
+<span class="flex items-center gap-2" style="flex: 1; min-width: 0;"><span class="dot" aria-hidden="true"></span><span class="text-body font-medium ellipsis">김하늘</span></span>
+<x-import component-from-global-scope="AgentOsUi.Button" variant="secondary">로그아웃</x-import>
+</div>
+<div role="dialog" aria-labelledby="ex-o" class="flex flex-col gap-3" style="flex: 1; min-height: 0; justify-content: center; padding: var(--spacing-6) var(--spacing-4); background: var(--bg-raised);">
+<span class="flex" style="color: var(--warning);"><x-import component-from-global-scope="AgentOsUi.Icon" name="triangle-alert" size="20"></x-import></span>
+<h2 id="ex-o" class="text-title font-semibold" style="margin: 0;">로그인 시간이 끝났습니다</h2>
+<p class="text-body" style="margin: 0;">다시 로그인하면 이 대화를 이어 갈 수 있습니다. 적어 둔 질문은 입력창에 남아 있습니다.</p>
+<div class="grid gap-2 fill" style="margin-top: var(--spacing-2);">
+<x-import component-from-global-scope="AgentOsUi.Button" variant="primary">다시 로그인</x-import>
+<x-import component-from-global-scope="AgentOsUi.Button" variant="secondary">로그인 없이 계속</x-import>
+</div>
+<p class="text-small text-text-muted" style="margin: 0;">로그인 없이 계속하면 새 대화로 시작합니다.</p>
+</div>
+</div>
+</section>
+<section class="flex flex-col gap-2" style="width: 320px;">
+<p class="text-small text-text-muted" style="margin: 0;">다른 모양: 입력창 위 띠</p>
+<div data-theme="nokcheong" data-mode="light" data-density="regular" class="flex flex-col shadow-float" style="width: 320px; height: 560px; box-sizing: border-box; background: var(--bg-raised); color: var(--text); font-family: var(--sans); border: 1px solid var(--border); border-radius: var(--radius-l); overflow: hidden;">
+<header class="flex items-center justify-between gap-2 shrink-0" style="padding: var(--spacing-2) var(--spacing-2) var(--spacing-2) var(--spacing-4); border-bottom: 1px solid var(--border);">
+<h1 class="text-body font-semibold ellipsis" style="flex: 1; margin: 0;">매장 계산 도우미</h1>
+<x-import component-from-global-scope="AgentOsUi.IconButton" icon="settings" label="설정" variant="ghost"></x-import>
+<x-import component-from-global-scope="AgentOsUi.Button" variant="secondary">새 대화</x-import>
+</header>
+<div role="group" aria-label="로그인 상태" class="flex items-center justify-between gap-2 shrink-0" style="padding: var(--spacing-2) var(--spacing-2) var(--spacing-2) var(--spacing-4); border-bottom: 1px solid var(--border);">
+<span class="flex items-center gap-2" style="flex: 1; min-width: 0;"><span class="dot" aria-hidden="true"></span><span class="text-body font-medium ellipsis">김하늘</span></span>
+<x-import component-from-global-scope="AgentOsUi.Button" variant="secondary">로그아웃</x-import>
+</div>
+<ol aria-label="대화" class="flex flex-col gap-4" style="flex: 1; min-height: 0; overflow: hidden; justify-content: flex-end; margin: 0; padding: var(--spacing-4); list-style: none;">
+<li class="text-body" style="align-self: flex-end; max-width: 83.333%; padding: var(--spacing-2) var(--spacing-3); border-radius: var(--radius-l); background: var(--bg-selected); overflow-wrap: anywhere;">1,284 더하기 3,716은 얼마예요?</li>
+<li class="flex flex-col gap-2">
+<button type="button" aria-expanded="false" class="flex items-center gap-2 text-small text-text-muted" style="align-self: flex-start; min-height: 24px; padding: 0; border: 0; background: transparent; font-family: inherit; cursor: pointer;"><x-import component-from-global-scope="AgentOsUi.Icon" name="wrench" size="14"></x-import><span>도구 1개를 불렀습니다</span></button>
+<span class="sr-only">출력: </span>
+<p class="text-body" style="margin: 0;">5,000입니다.</p>
+</li>
+</ol>
+<div role="status" class="flex flex-col gap-2 shrink-0" style="padding: var(--spacing-2) var(--spacing-4); border-top: 1px solid var(--border);">
+<div class="flex items-center gap-2">
+<span class="flex" style="color: var(--warning);"><x-import component-from-global-scope="AgentOsUi.Icon" name="triangle-alert" size="16"></x-import></span>
+<span class="text-small font-semibold">로그인 시간이 끝났습니다.</span>
+</div>
+<p class="text-small text-text-muted" style="margin: 0;">다시 로그인하면 이 대화를 이어 갑니다.</p>
+<div class="flex gap-2" style="justify-content: flex-end;">
+<x-import component-from-global-scope="AgentOsUi.Button" variant="secondary">로그인 없이 계속</x-import>
+<x-import component-from-global-scope="AgentOsUi.Button" variant="primary">다시 로그인</x-import>
+</div>
+</div>
+<form class="flex gap-2 shrink-0" style="align-items: flex-end; margin: 0; padding: 0 var(--spacing-3) var(--spacing-3);">
+<div style="flex: 1; min-width: 0;"><textarea rows="1" aria-label="질문" placeholder="무엇을 도와드릴까요?" class="block w-full min-w-0 rounded-m border text-body px-3 py-2 border-border-control bg-bg-raised text-text" style="box-sizing: border-box; margin: 0; font-family: inherit; resize: none;">여기서 10% 할인하면요?</textarea></div>
+<x-import component-from-global-scope="AgentOsUi.IconButton" icon="send" label="보내기" variant="primary" disabled="{{yes}}"></x-import>
+</form>
+</div>
+</section>
+</div>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1824,"height":860}}'>
+class Component extends DCLogic {
+renderVals() {
+return { yes: true, no: false };
+}
+}
+</script>
+</body>
+</html>
