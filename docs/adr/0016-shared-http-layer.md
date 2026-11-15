@@ -17,7 +17,7 @@ HTTP 표면을 받치는 것이 전부 `admin/`에 있다. 에러 봉투(`ErrorE
 
 - **헌법 원칙 IV의 문언이 바뀐다.** 의존 방향 열거가 느는 것이라 minor다. 원칙 IV의 문언, `CLAUDE.md`의 레이어 목록(`src/agent_os/http/` 줄)과 의존 방향 줄, import-linter 계약, 헌법 버전은 코드를 옮기는 `http-channel`의 계약 티켓에서 함께 바꾼다. 판정자와 문언과 코드가 한 PR에서 움직여야 어긋난 순간이 없고, 층이 실재하기 전에는 규칙을 바꿔도 판정할 대상이 없다. 이 ADR이 승인한 것은 개정의 내용(열거에 `http`가 는다)이고, 바뀐 문언은 그 티켓의 PR에서 사용자가 본다.
 - **import-linter는 층 하나와 금지 하나로 판정한다.** `http`를 `{channel | admin | adapters}` 아래, core 위의 층으로 두고, 어댑터가 `http`를 import하지 못하게 따로 막는다. 어댑터는 HTTP 표면이 아니다.
-- **옮기는 것과 남는 것.** 에러 봉투 셋, `failure_for`와 그 표, `install_error_handlers`, `AssignRequestId`, `error_envelope`·`remember_failure`·`request_id_of`, `_documented_errors`, `_Verbatim`, 인증 미들웨어가 간다. 인증 미들웨어는 접두사→토큰 표를 받는 일반형이 되고 표는 `server`가 넘긴다(ADR 0015). 관리 라우터와 관리의 응답 모델(`Health`, 목록과 상세의 행, 커서)은 `admin`에 남는다.
+- **옮기는 것과 남는 것.** 에러 봉투 셋, `failure_for`와 그 표, `install_error_handlers`, `AssignRequestId`, `error_envelope`·`remember_failure`·`request_id_of`, `_documented_errors`, `_Verbatim`, 인증 미들웨어가 간다. 인증 미들웨어는 접두사→토큰 표를 받는 일반형이 되고 표는 `server`가 넘긴다(ADR 0015). (바뀜: ADR 0062) 관리 라우터와 관리의 응답 모델(`Health`, 목록과 상세의 행, 커서)은 `admin`에 남는다.
 - **`.claude/rules/admin.md`의 HTTP 표면 공통 규칙이 새 층의 rules 파일로 간다.** 봉투와 어휘, 상태 코드 표, 에러 문서, `verbatim`, `operation_id`, 한 줄 독스트링, 테스트 이음매가 그것이다. `paths`는 새 층과 채널과 관리와 `server.py`를 덮는다. 관리에만 걸리는 것(목록과 상세의 모양, 커서)은 `admin.md`에 남는다.
 - **채널과 관리는 여전히 서로를 import하지 않는다.** `main`과 `server`가 조립한다는 문장도 그대로다.
 - **이름은 `agent_os.http`다.** 들어 있는 것 그대로의 이름이다. 표준 라이브러리 `http`와는 절대 import라 부딪치지 않고, `admin.http`와 `channel.http`는 앞의 접두어가 가른다. (바뀜: 이력 2026-09-25 "표준 라이브러리와 부딪치지 않는 것은 모듈 실행에서만 참이다")

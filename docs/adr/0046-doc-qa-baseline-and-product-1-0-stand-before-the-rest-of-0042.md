@@ -64,7 +64,7 @@ skill-plugin이 2026-11-05에 닫혀 ADR 0042의 열일곱 가운데 첫 행 app
 - **기준선 판의 강제.** 저자의 `requires_approval`, 꺼진 플러그인, 운영자의 규칙 파일까지다. MCP 서버의 신뢰 수준과 값 기반 마스킹이 없으므로, 제품 0.1의 지원 범위 문서(pilot-release)에 알려진 한계로 적는다.
 - **규칙 파일의 기본값.** 규칙 파일에 적지 않은 도구는 묻는 것이 기본이고, 최종 사용자가 주체인 실행에서 그 물음은 운영자의 검토가 아니라 최종 사용자 자신의 확인이다(ADR 0044). 그래서 doc-qa와 참조 배포는 검색 도구를 허락하는 규칙 파일을 함께 낸다. (바뀜: 이력 2026-11-10 "기본 에이전트 assistant가 참조 에이전트 doc-qa를 대신하고 공개 데모가 answer-markdown을 기다린다") 그러지 않으면 질문마다 검색 도구를 부르기 전에 실행이 멈추고, 위젯에서 질문한 사람이 그 호출을 직접 승인해야 답이 나온다.
 - **같은 파일을 고치는 두 행.** approval-rules와 mcp-http가 둘 다 `adapters/mcp.py`를 고친다. 나중에 병합하는 쪽이 충돌을 풀고, approval-rules가 도구마다 싣는 서버 이름이 원격 MCP 서버의 도구에도 실리는지를 시험으로 본다.
-- **단일 인스턴스와 JSONL.** 기준선과 제품 1.0은 `serve` 한 프로세스와 파일 트레이스다. 1.0에 드는 value-masking은 프로세스를 늘리지 않는다. PRD의 프로세스 넷은 trace-postgres가 PostgreSQL과 Redis를 더하고 retention-worker가 worker를 더해 선다(ADR 0042 묶음 ②의 표). 그래서 audit-export의 조회는 JSONL 위에서 먼저 돌고, 트레이스 저장소 포트의 읽기로 지어 trace-postgres 뒤에도 남게 한다.
+- **단일 인스턴스와 JSONL.** 기준선과 제품 1.0은 `serve` 한 프로세스와 파일 트레이스다. (바뀜: 이력 2026-11-15 "PostgreSQL이 기준선의 postgres-foundation부터 든다") 1.0에 드는 value-masking은 프로세스를 늘리지 않는다. PRD의 프로세스 넷은 trace-postgres가 PostgreSQL과 Redis를 더하고 retention-worker가 worker를 더해 선다(ADR 0042 묶음 ②의 표). (바뀜: 이력 2026-11-15 "PostgreSQL이 기준선의 postgres-foundation부터 든다") 그래서 audit-export의 조회는 JSONL 위에서 먼저 돌고, 트레이스 저장소 포트의 읽기로 지어 trace-postgres 뒤에도 남게 한다.
 - **원격 MCP 서버의 수명.** agent-os 밖(배포)이 관리한다. 서버가 꺼져 있으면 실행이 원인 `tool_connection`으로 끝난다. 실행마다 따로 뜨던 stdio 서버와 달리 여러 실행의 요청을 한 프로세스가 받으므로, 서버가 동시 요청을 안전하게 다뤄야 한다.
 - **문서 속 지시.** mcp-trust 전에는 런타임이 검색 결과를 바깥 글로 감싸지 않는다. 그때까지는 doc-qa의 프롬프트가 검색 결과를 데이터로 엮는 것에 기댄다. (바뀜: 이력 2026-11-10 "기본 에이전트 assistant가 참조 에이전트 doc-qa를 대신하고 공개 데모가 answer-markdown을 기다린다")
 - **늦어지는 것.** 나머지 열셋의 차례가 기준선과 1.0만큼(어림 대여섯 달) 늦어진다.
@@ -184,3 +184,18 @@ portal-login의 설계 인터뷰(ADR 0059, ADR 0060, 일지 2026-11-12-1937)에�
 ### 2026-11-13 용어 "질문 페이지"를 "위젯 미리보기 페이지"로 바꿨다
 
 사용자가 용어집(`CONTEXT.md`)의 "질문 페이지(Portal)"를 "위젯 미리보기 페이지"로 바꾸기로 했다(이름 바꾸기 chore `.scratch/harness/issues/rename-portal-to-widget-preview.md`). 이 ADR의 본문은 기록이라 옛 이름을 그대로 두므로, 본문의 "질문 페이지"는 "위젯 미리보기 페이지"로 읽는다. 결정은 바뀌지 않는다. 코드 이름 `portal`과 경로 `/portal/`도 그대로다.
+
+### 2026-11-15 PostgreSQL이 기준선의 postgres-foundation부터 든다
+
+admin-login의 설계 인터뷰(ADR 0062, 일지 2026-11-14-2152)에서 사용자가 운영자 계정과 운영자 로그인 상태를 0.1 판부터 PostgreSQL에 두기를 골랐다("0.1 판부터 PostgreSQL을 들임". 추천은 0.1 판에서는 파일에 두고 PostgreSQL이 들어올 때 옮기는 것이었다). PostgreSQL을 들이는 일을 어디서 할지에는 "새 기능으로 따로 세워 admin-login 앞에 둠"을 골랐다. 기준선의 기한(2027-03-05)은 바꾸지 않았고, 그 안에 기능 하나가 더해진다.
+
+- **기준선 표.** 본문 "agent-os의 기준선" 표에 한 줄이 는다.
+
+  | 기능 | 한 줄 |
+  |---|---|
+  | postgres-foundation | agent-os 배포에 PostgreSQL을 들이고, 서버와 테스트와 CI가 그 데이터베이스에 닿는 길을 세운다 |
+
+- **`.scratch/plan.md`의 Blocked by.** postgres-foundation(슬라이스 9)은 release-image를 기다리고, admin-login은 release-image에 더해 postgres-foundation을 기다린다. pilot-release가 기다리는 행의 목록은 그대로이고, 그 가운데 admin-login을 거쳐 postgres-foundation이 pilot-release 앞에 선다.
+- **단일 인스턴스와 JSONL.** 본문 Consequences의 "기준선과 제품 1.0은 `serve` 한 프로세스와 파일 트레이스다"는 "기준선과 제품 1.0은 `serve` 한 프로세스와 PostgreSQL이고 트레이스는 파일이다"가 된다. 그 PostgreSQL이 담는 것은 운영자 계정, 갱신용 번호, 틀린 횟수, 서명 키, 비밀번호 링크, 로그인 기록이다(ADR 0062 결정 "저장"). "PRD의 프로세스 넷은 trace-postgres가 PostgreSQL과 Redis를 더하고"는 "postgres-foundation이 PostgreSQL을, trace-postgres가 Redis를 더하고"가 된다. 트레이스를 PostgreSQL로 옮기는 것은 여전히 trace-postgres다. PRD 전제의 같은 문장을 같은 PR에서 사용자 승인으로 고쳤다.
+- **성공 조건의 포트 문장.** 위 2026-11-11 이력은 admin-login의 설계가 세부(여는 포트 번호, 운영자가 열지 않고 둘 수 있는지)를 정하면 "(밖으로 여는 포트는 방문자용 하나와, 로그인으로 지키는 관리 화면용 하나다)"를 다시 본다고 적었다. 다시 본 결과 문장은 그대로 둔다. 관리 화면용 포트는 하나이고 호스트에 여는 기본 번호는 8443이며, 배포 파일의 기본 상태는 그 포트가 열린 것이고 운영자가 배포 설정으로 번호를 바꾸거나 닫을 수 있다(ADR 0062 결정 "포트와 TLS").
+- **0.1 판 뒤의 새 행 셋.** admin-2fa(2단계 인증), admin-roles(권한을 골라 역할을 만든다), admin-approval(관리자가 다른 사람의 실행을 승인한다)을 슬라이스 10에 세웠다. 셋 다 admin-login과 pilot-release를 기다리고 기준선의 행이 아니다(ADR 0062, ADR 0063).

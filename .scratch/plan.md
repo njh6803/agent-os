@@ -62,14 +62,18 @@ web/                       슬라이스 3부터. pnpm 워크스페이스. 파이
 | 8 | [base-agent](base-agent/plan.md) | 기본 에이전트 assistant와 문서 검색 스킬·연결·규칙을 함께 내, 요구가 없으면 그대로 쓰고 요구가 있으면 복사해 커스텀 에이전트를 만들게 한다. | mcp-http, approval-rules | in-progress |
 | 8 | [public-demo](public-demo/plan.md) | 공개 정부 문서를 넣은 클라우드 VM 한 대를 공개 주소에 열어, 누구나 로그인 없이 묻고 출처가 붙은 답을 받게 한다. | base-agent, release-image, answer-eval, answer-markdown, rag-engine:release-image, rag-engine:search-eval | todo |
 | 8 | [release-image](release-image/plan.md) | 판마다 서버와 관리 화면과 위젯과 위젯 미리보기 페이지의 컨테이너 이미지를 짓고 올리며 단독 배포 안내도 낸다. | pilot-portal | todo |
-| 9 | [admin-login](admin-login/plan.md) | 관리 화면에 계정과 비밀번호 로그인을 더하고, 그 뒤 관리 화면을 같은 서버의 다른 포트로 인터넷에 연다. | release-image | todo |
+| 9 | [admin-login](admin-login/plan.md) | 관리 화면에 운영자 계정 로그인과 대화 화면을 더하고, 관리 화면을 같은 서버의 다른 포트로 인터넷에 연다. | release-image, postgres-foundation | todo |
 | 9 | [deploy-package](deploy-package/plan.md) | agent-os와 문서 검색 서버를 Docker Compose로 한 번에 띄우는 참조 배포를 준다. | local-model, portal-login, base-agent, release-image, ops-backup-upgrade, diag-bundle, mcp-http, rag-engine:release-image, rag-engine:admin, rag-engine:backup-upgrade, rag-engine:diag-bundle | todo |
 | 9 | [diag-bundle](diag-bundle/plan.md) | 문제를 살필 때 판과 구성과 최근 실패 원인을 비밀 값 없이 파일 하나로 묶는 명령을 준다. | release-image, mcp-http | todo |
 | 9 | [ops-backup-upgrade](ops-backup-upgrade/plan.md) | agent-os 데이터를 백업하고 새 서버에 복원하며, 판을 올린 뒤에도 옛 트레이스를 읽게 한다. | release-image | todo |
 | 9 | [pilot-release](pilot-release/plan.md) | public-demo를 뺀 기준선의 기능이 모두 끝나면 제품 0.1 판을 내고 지원 범위와 고지를 문서로 남긴다. | answer-eval, deploy-package, answer-markdown, admin-login, step-up-login | todo |
 | 9 | [portal-login](portal-login/plan.md) | 위젯 미리보기 페이지에 사내 로그인 모드를 더해, 배포 환경에서는 사내 사람만 질문하게 한다. | pilot-portal | todo |
+| 9 | [postgres-foundation](postgres-foundation/plan.md) | agent-os 배포에 PostgreSQL을 들이고, 서버와 테스트와 CI가 그 데이터베이스에 닿는 길을 세운다. | release-image | todo |
 | 9 | [step-up-login](step-up-login/plan.md) | 익명으로 질문하다가 로그인한 사람만 쓰는 도구에 닿으면 로그인을 안내하고, 로그인한 뒤 같은 대화에 이어 답한다. | portal-login | todo |
+| 10 | [admin-2fa](admin-2fa/plan.md) | 관리 화면의 로그인에 2단계 인증을 더해, 비밀번호가 새도 그것만으로는 들어오지 못하게 한다. | admin-login, pilot-release | todo |
 | 10 | [admin-answer-preview](admin-answer-preview/plan.md) | 관리 화면 실행 상세의 최종 출력 칸에서 원문과 마크다운으로 그린 모양을 오가며 보게 해, 운영자가 최종 사용자에게 보인 모양을 바로 확인한다. | answer-markdown, pilot-release | todo |
+| 10 | [admin-approval](admin-approval/plan.md) | 승인 규칙이 승인할 사람을 정해, 관리 화면의 운영자가 다른 사람이 일으킨 일시정지한 실행을 승인하거나 거부한다. | admin-login, pilot-release | todo |
+| 10 | [admin-roles](admin-roles/plan.md) | 권한을 골라 역할을 만들고 운영자 계정에 붙여, 보기만 하는 사람이나 승인만 하는 사람을 둔다. | admin-login, pilot-release | todo |
 | 10 | [audit-export](audit-export/plan.md) | 운영자가 트레이스를 주체와 기간과 에이전트와 도구별로 조회하고 파일로 내보낸다. | io-guardrail | todo |
 | 10 | [author-login-requirement](author-login-requirement/plan.md) | 저자가 에이전트 매니페스트에 로그인한 사람만 쓰는 도구를 적어, 운영자가 따로 적지 않아도 로그인 요구가 걸리게 한다. | step-up-login, pilot-release | todo |
 | 10 | [io-guardrail](io-guardrail/plan.md) | 최종 사용자의 입력과 에이전트의 출력에서 주민등록번호 같은 패턴을 규칙으로 막거나 가린다. | value-masking | todo |
