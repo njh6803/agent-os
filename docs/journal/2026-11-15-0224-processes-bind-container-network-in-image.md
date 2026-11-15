@@ -78,5 +78,38 @@ pre-commit의 검사 러너(`parallel-checks`)로 같은 변경을 네 번 커�
 
 ## 남은 것
 
-- 셀프 리뷰(`/code-review`)와 Critical·Major 반영, `uv run python tools/sibling_overlap.py`, 커밋 직전 `git branch --show-current`, 커밋, 푸시, PR, 봇 회차, 병합(`merge.md`), 일지 "다음", 회고(`retro`).
-- 리뷰의 명세 출처는 티켓과 `.scratch/release-image/spec.md`의 "루프백 규칙의 예외"·"관리 화면의 상류", ADR 0056 결정 "루프백 규칙의 예외"다. 기준은 `origin/dev`다.
+- 셀프 리뷰와 반영, `sibling_overlap`, 커밋까지 마쳤다(위 두 절). 커밋은 `335ad51d5`이고 푸시하지 않았다. 남은 것은 푸시, PR(`/git-pr`), 봇 회차, 병합(`merge.md`), 일지 "다음", 회고(`retro`)다.
+- 커밋은 사용자가 승인해 `SKIP=parallel-checks`로 올렸으므로 pytest와 나머지 아홉 검사는 로컬 pre-commit이 아니라 PR의 CI가 판정한다. CI의 pytest가 빨가면 그 시험이 이 변경과 무관한 시간 제한 시험인지 단독으로 다시 돌려 가린다.
+- 같은 PC에서 다른 세션 넷이 돌고 있었다. 시간에 기대는 시험이 번갈아 빨갈 수 있다는 점은 처음 인계 때와 같다.
+
+## 인계 (커밋 뒤, 2026-11-15)
+
+- 인계 경계: 커밋 뒤. 컨텍스트가 문턱을 넘어 `handoff.md`대로 넘긴다. 인계하기 전 제목은 `feature/03-processes-bind-container-network-in-image`(브랜치 이름 그대로)였고, 제목을 `feature/03-processes-bind-container-network-in-image (인계함)`으로 바꾼다. 이 세션이 띄운 백그라운드 작업은 끝났고 남은 것이 없다. 워크트리 잠금은 이미 풀려 있었다(`git worktree unlock`이 `is not locked`로 답했다).
+- open-session을 부른다 2026-11-15T02:53Z
+
+## 셋째 세션이 한 것 (PR과 병합)
+
+인계받은 세션이 `merge.md`대로 이어 갔다. 사용자의 새 말은 없었고 시작 지시문의 "이번 요청 범위: PR과 병합까지"가 PR과 병합의 승인이다.
+
+- 푸시 훅이 이 브랜치가 `origin/dev`보다 두 커밋(PR 571·572) 뒤처졌다고 막아 `git merge origin/dev`로 합친 뒤 푸시했다. 충돌은 없었고 합친 파일 가운데 이 변경의 파일은 없었다. 합친 뒤 `uv run ruff check . && uv run ruff format --check .`가 통과했고 `uv run python tools/sibling_overlap.py`는 번호 겹침 없음이었다(출력의 마지막 줄만 파이프로 줄여 종료 코드는 보지 못했다). 합친 상태의 `tools/run_checks.py`는 돌리지 않았고 CI가 판정했다.
+- PR 직전 CodeRabbit CLI(0.7.5, `Seat: not assigned`, `Plan: Free`)가 `--base origin/dev`로 끝까지 돌아 `review_completed`, 지적 3건(모두 Major 표기)을 냈다. 트리아지는 유효 0, 오탐 3, 보류 0이다. 관리 화면 `next.config.ts` 지적(start가 빌드에 박힌 목적지를 다시 검사하라)은 목적지 `serve`가 빌드 때 같은 판정을 지나야만 박히고 그 한계가 이 변경 전부터의 설계라서, `start.ts`와 미리보기 페이지 `start.ts` 지적은 요구한 동작이 `bindingProblem`·`hostOf`에 이미 있고 시험이 다뤄서 오탐이다(트리아지를 맡은 서브에이전트가 코드를 읽어 낸 판정이고 이 세션이 그 코드를 다시 열지는 않았다).
+- PR 573을 열었다(제목은 커밋 제목과 같다). 본문은 템플릿대로 채웠고, 위 리뷰 결과와 "pre-commit의 `parallel-checks`를 승인받아 건너뛴 커밋이며 pytest는 CI가 판정한다"를 체크리스트에 적었다. `@coderabbitai review`를 남기고 `tools/wait_ci.py 573`을 돌렸다.
+- CI 결과(머리 `07a1f06`): CodeRabbit SUCCESS(Finished), claude-review SUCCESS, e2e·e2e-portal·e2e-widget·python·ticket·verify·visual·web 모두 SUCCESS, llm SKIPPED. 커밋 때 부하로 네 번 빨갰던 pytest가 CI의 `python` 잡에서는 지났다. 그 빨강이 이 변경과 무관한 부하 탓이라는 어림이 CI와 맞는 쪽으로 기운 것이지, 부하를 재서 확정한 것은 아니다.
+- 봇 코멘트: CodeRabbit은 "No actionable comments", claude-review는 "지적 없음"이다. 인라인 코멘트는 없다. 첫 회차였고 반영할 것이 없었다.
+
+## 회고
+
+후보 2개: 승인 0, 넘김 0, 기각 2. 대기열 항목을 새로 쓰거나 회차를 더하지 않았다.
+
+1. 기각. 부하에서 시간에 기대는 시험(`test_interrupt` 매번 1~3건, `test_rerun_runner`·`test_rerun_gates`·`test_probe_kit`)이 이 변경과 무관한 커밋의 pre-commit을 네 번 막았고 사용자가 승인해 `SKIP=parallel-checks`로 올렸다(위 "커밋 전 pytest가 부하로 빨갰던 일과 사용자의 결정"). 306이 ADR 0036으로 받아들여 닫은 종류의 새 사례라 4단계대로 회차를 더하지 않고 일지에만 적는다. 이 세션이 `queue_open_rows.py --search`로 308·309·332를 포함한 시간 시험 항목을 대 보았고 닫힌 항목뿐이었다. 이 PR의 CI는 같은 pytest를 지나 이 변경이 그 빨강의 원인이 아니라는 쪽을 뒷받침한다.
+2. 기각. 셀프 리뷰가 "표지 파일을 읽는 자리는 둘뿐"이라는 일지 문장이 틀렸다(이름이 같은 함수를 하나로 셌다)고 잡아 그 자리에서 고쳤다. 리뷰가 제 몫을 한 사건이라 4단계의 회차 셈에서 뺀다. 검사로 옮길 수 있는 꼴(일지 산문의 개수 주장)이 아니다.
+
+만료: `queue_open_rows.py`를 저장소 루트의 기준과 `--ref origin/dev`로 두 번 돌렸고 둘 다 "만료할 항목 (없음)"이었다. chore 계기(회차 5 이상, 사람 몫 제외)는 이 기능의 마지막 티켓이 아니라 이번에 고르지 않는다.
+
+## 다음
+
+PR 573이 병합되면 티켓 03이 닫힌다. 이 기능에서 03이 풀던 것은 07(`Blocked by: 02, 03`)과 08(`Blocked by: 03`)이고, 04가 병합되어 05(`Blocked by: 04`)도 막힌 것이 없다. 05·07·08은 `ready-for-agent`이고 `list_sessions`에 제목이 그 브랜치인 도는 세션이 없다(2026-11-15, 이 세션이 봤다). 06은 05를, 09는 07·08을, 11은 05·06·10을 기다린다. 그래서 병합 뒤 `next-session` 결정표의 "구현(나란히)" 줄로 05·07·08을 나란히 연다(묶음의 첫 세션이 `tidy-checkouts`를 돈다). 세 티켓의 대상은 05가 하네스(PR 서식, `operations.md`, `implement`, `issue-tracker.md`, 노트 검사 도구)이고 07이 `deploy/images/`의 serve 이미지, 08이 같은 폴더의 web 이미지 셋이라 서로 다른 파일을 고칠 것으로 읽었다(티켓의 "What to build"를 읽은 어림이고 파일 목록을 대 보지 않았다).
+
+- 07·08이 이 변경에서 알아야 할 것: 판정은 표지 파일 `/etc/agent-os/image`(이미지를 지을 때 root 소유로 굽는다)와 환경 변수 `AGENT_OS_CONTAINER_NETWORK=1`이 함께 있을 때만 켜지고, 켜지면 `0.0.0.0`과 관리 화면 상류 `serve`가 늘 뿐이다. 이미지를 짓는 단계에 표지 파일과 환경 변수를 두는 일, 관리 화면을 지을 때 상류를 `http://serve:8000`으로 넣는 일은 이 PR이 하지 않았고 07·08의 몫이다(티켓 03 "판정"의 마지막 항목). 표지 파일을 실제로 읽는 길은 07·08이 띄운 컨테이너와 09의 시험이 본다.
+- 07을 연 세션은 일지 `docs/journal/2026-11-15-0402-example-mcp-server-runs-without-npx.md`의 "다음"도 읽는다. 전역 설치한 서버 판의 하위 의존성 고정 방식을 07이 판단하라고 넘긴 일이 거기 있다.
+- 이 PR의 pytest는 로컬 pre-commit에서 부하로 건너뛰었고(`SKIP=parallel-checks`) CI가 판정해 초록이었다. 같은 PC에서 세션이 여럿 돌면 시간에 기대는 시험이 번갈아 빨갈 수 있다(306이 받아들여 닫은 종류).
