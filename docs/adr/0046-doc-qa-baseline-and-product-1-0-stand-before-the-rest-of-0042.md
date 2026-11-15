@@ -185,6 +185,20 @@ portal-login의 설계 인터뷰(ADR 0059, ADR 0060, 일지 2026-11-12-1937)에�
 
 사용자가 용어집(`CONTEXT.md`)의 "질문 페이지(Portal)"를 "위젯 미리보기 페이지"로 바꾸기로 했다(이름 바꾸기 chore `.scratch/harness/issues/rename-portal-to-widget-preview.md`). 이 ADR의 본문은 기록이라 옛 이름을 그대로 두므로, 본문의 "질문 페이지"는 "위젯 미리보기 페이지"로 읽는다. 결정은 바뀌지 않는다. 코드 이름 `portal`과 경로 `/portal/`도 그대로다.
 
+### 2026-11-14 위젯 설정 관리와 위젯이 그리는 로그인 상태가 기준선의 행이 된다
+
+portal-login의 화면을 그리던 탐색(일지 2026-11-13-0426)에서 사용자가 방향을 바꿨다. 로그인 단추와 이름 줄과 고지를 위젯이 직접 그리고, 위젯을 주소 하나로도 내자는 것이다. 그 방향을 정한 설계 인터뷰(ADR 0061, 일지 2026-11-13-1813)에서 사용자는 사이트마다 달라지지 않는 값을 운영자가 위젯 쪽의 화면(ADR 0061의 위젯 설정 관리 화면. `CONTEXT.md`의 관리 화면과 다른 것이다)에서 등록하게 하자고 했고, 그 저장소와 화면을 언제 짓는지 묻는 질문에 추천("0.1 판 뒤, 그때까지 파일")과 달리 "0.1 판에 넣기"를 골랐다. 계획표의 줄을 묻는 질문에는 "위젯 행을 새로 세우기"를 골랐다. 기준선의 기한(2027-03-05)은 그 인터뷰에서 다루지 않았고 바꾸지 않는다. 그 안에 기능 둘이 더해진다. 인터뷰는 그 크기를 재지 않았다.
+
+- **기준선 표.** 본문 "agent-os의 기준선" 표에 두 줄이 는다.
+
+  | 기능 | 한 줄 |
+  |---|---|
+  | portal-admin | 사이트마다의 위젯 설정을 위젯 쪽 서버의 데이터베이스에 두고 운영자가 위젯 설정 관리 화면에서 등록한다(스택에 데이터베이스가 는다) |
+  | widget-login-state | 위젯이 로그인 상태와 고지와 다크 모드 스위치를 직접 그리고 위젯 설정을 받아 오며, 주소 하나를 창으로 여는 URL 방식을 더한다(위젯의 공개 표면) |
+
+- **`.scratch/plan.md`의 Blocked by.** portal-admin은 제품 1.0 묶음(슬라이스 10)에서 슬라이스 9로 옮기고 지금처럼 pilot-portal을 기다린다. widget-login-state(슬라이스 9)는 portal-admin을 기다린다. 위젯이 위젯 설정을 받아 오는 주소와 답의 모양이 그 행의 설계에서 정해지기 때문이다. portal-login은 pilot-portal에 더해 widget-login-state를 기다린다. 위젯 안의 로그인 화면과 새 창 로그인, 위젯 미리보기 페이지를 새 약속으로 옮기는 일이 그 행의 것이기 때문이다. portal-admin이 기준선의 행이 됐으므로 pilot-release는 answer-eval, deploy-package, answer-markdown, admin-login, step-up-login에 더해 portal-admin을 기다린다(step-up-login을 더한 2026-11-12 이력과 같은 꼴이다). widget-login-state는 portal-login과 step-up-login을 거쳐 pilot-release를 막으므로 따로 더하지 않는다. widget-appearance는 슬라이스 10 그대로이고 pilot-portal 대신 portal-admin, widget-login-state, pilot-release를 기다린다. 사용자가 0.1 판에서 등록할 범위를 묻는 질문에 "글과 고르는 값 먼저"를 골라, 그 행이 맡는 그림 올리기와 자유 색이 0.1 판 뒤가 됐기 때문이다. deploy-package는 portal-login과 widget-login-state를 거쳐 portal-admin을 이미 기다린다. release-image와 ops-backup-upgrade가 portal-admin을 기다리는지, deploy-package가 직접 기다리는지는 정하지 않았고 portal-admin의 설계 인터뷰가 정한다. 앞선 이력의 같은 이름 항목은 기록이라 고치지 않고 여기에 적는다.
+- **계약.** widget-login-state는 위젯의 공개 표면(`web/apps/widget/EMBED.md`)을 바꾸고 Agent OS의 계약(`sdk`, `openapi.json`, 사이트 파일의 형식, 사이트 토큰의 주장)은 바꾸지 않는다(ADR 0061). portal-admin에는 스택에 데이터베이스를 더하는 결정이 들고, 그 결정의 ADR은 그 행의 설계 인터뷰가 쓴다. step-up-login이 계약을 바꾸는 자리 가운데 위젯의 공개 표면에 로그인 통로를 더하는 일은 빠진다(ADR 0061 Consequences "ADR 0059의 공개 표면과 ADR 0060의 로그인 통로").
+
 ### 2026-11-15 PostgreSQL이 기준선의 postgres-foundation부터 든다
 
 admin-login의 설계 인터뷰(ADR 0062, 일지 2026-11-14-2152)에서 사용자가 운영자 계정과 운영자 로그인 상태를 0.1 판부터 PostgreSQL에 두기를 골랐다("0.1 판부터 PostgreSQL을 들임". 추천은 0.1 판에서는 파일에 두고 PostgreSQL이 들어올 때 옮기는 것이었다). PostgreSQL을 들이는 일을 어디서 할지에는 "새 기능으로 따로 세워 admin-login 앞에 둠"을 골랐다. 기준선의 기한(2027-03-05)은 바꾸지 않았고, 그 안에 기능 하나가 더해진다.

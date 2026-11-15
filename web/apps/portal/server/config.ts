@@ -18,11 +18,16 @@ import { resolve } from "node:path";
 import { parse, TomlError, type TomlTable, type TomlValue } from "smol-toml";
 import { noticeText } from "./notice.ts";
 
-// 바인딩을 허용하는 주소 전부. 순서가 진단의 문장이 된다. 같은 목록을 `serve`(`src/agent_os/main.py` 의
+// 바인딩을 허용하는 주소 전부. 순서가 진단의 문장이 된다. 같은 목록과 같은 예외를 `serve`(`src/agent_os/main.py` 의
 // `LOOPBACK_HOSTS`), 관리 화면(`web/apps/admin/tools/loopback.ts`), 위젯(`web/apps/widget/tools/start.ts`)이 따로 든다.
-// 앱 사이 import 는 층 경계가 막아, 바꾸면 넷을 함께 고친다.
+// 앱 사이 import 는 층 경계가 막아, 바꾸면 넷을 함께 고치고 같은 판정을 내는지는 사례 표
+// (`tests/fixtures/container_network/cases.json`)가 잠근다.
 const LOOPBACK_HOSTS: readonly string[] = ["127.0.0.1", "::1"];
 const DEFAULT_HOST = "127.0.0.1";
+// 루프백 규칙의 예외(ADR 0056 결정 "루프백 규칙의 예외"). 둘이 함께 있을 때만 켜지고, 켜지면 `0.0.0.0` 하나가 늘 뿐이다.
+export const IMAGE_MARKER = "/etc/agent-os/image";
+export const CONTAINER_NETWORK_ENV = "AGENT_OS_CONTAINER_NETWORK";
+const CONTAINER_HOST = "0.0.0.0";
 const MAX_PORT = 65_535;
 const NAME_SHAPE = /^[a-z][a-z0-9-]{1,62}$/u;
 
@@ -60,6 +65,22 @@ export interface Problems {
   readonly problems: readonly string[];
 }
 
+/**
+ * 루프백 규칙의 예외를 켜는 두 입력. 판정은 이 값만 보고 파일도 환경도 읽지 않는다(그 둘은 `load.ts` 의 `currentNetwork`).
+ * `env` 가 undefined 이면 환경 변수가 없다.
+ */
+export interface ContainerNetwork {
+  readonly imageMarker: boolean;
+  readonly env: string | undefined;
+}
+
+/** 환경 변수의 값이 `1` 도 빈 값도 아니면 그 구성 오류. 오타가 조용히 꺼짐으로 읽히지 않게 한다. */
+function envProblems({ env }: ContainerNetwork): readonly string[] {
+  return env === undefined || env === "" || env === "1"
+    ? []
+    : [`${CONTAINER_NETWORK_ENV}: 비우거나 1 만 받는다. 받은 값: ${env}`];
+}
+
 const FILE_KEYS: readonly string[] = ["schema_version", "portal", "sites"];
 const PORTAL_KEYS: readonly string[] = ["public_origin", "private_key", "kid", "host", "port"];
 const SITE_KEYS: readonly string[] = [
@@ -77,12 +98,13 @@ const SITE_KEYS: readonly string[] = [
 
 /**
  * 설정의 글에서 설정을, 또는 받아들일 수 없는 이유들을 읽는다. `configDir` 은 개인 키의 상대 경로를 푸는 기준이고
- * `cookieDays` 는 고지 전문의 쿠키 문장이 그리는 일수다.
+ * `cookieDays` 는 고지 전문의 쿠키 문장이 그리는 일수다. `network` 는 `portal.host` 에서 `0.0.0.0` 을 받을지 정한다.
  */
 export function parseConfig(
   text: string,
   configDir: string,
   cookieDays: number,
+  network: ContainerNetwork,
 ): PortalConfig | Problems {
   let document: TomlTable;
   try {
@@ -91,10 +113,11 @@ export function parseConfig(
     return { problems: [`설정 파일: TOML 이 아니다: ${parseFailure(error)}`] };
   }
   const problems: string[] = [
+    ...envProblems(network),
     ...unknownKeys(document, FILE_KEYS, ""),
     ...versionProblems(document["schema_version"]),
   ];
-  const portal = portalOf(document["portal"], configDir, problems);
+  const portal = portalOf(document["portal"], configDir, network, problems);
   const sites = sitesOf(document["sites"], cookieDays, problems);
   if (problems.length > 0 || portal === undefined || sites === undefined) {
     return { problems };
@@ -168,7 +191,12 @@ function optionalText(
   return value;
 }
 
-function portalOf(value: TomlValue | undefined, configDir: string, problems: string[]) {
+function portalOf(
+  value: TomlValue | undefined,
+  configDir: string,
+  network: ContainerNetwork,
+  problems: string[],
+) {
   if (value === undefined) {
     problems.push("portal: 빠졌다");
     return undefined;
@@ -182,7 +210,7 @@ function portalOf(value: TomlValue | undefined, configDir: string, problems: str
   const publicOrigin = publicOriginOf(value, problems);
   const privateKey = requiredText(value, "private_key", "portal.private_key", problems);
   const kid = requiredText(value, "kid", "portal.kid", problems);
-  const host = hostOf(value, problems);
+  const host = hostOf(value, network, problems);
   const port = portOf(value, problems);
   if (
     problems.length > before ||
@@ -212,20 +240,54 @@ function publicOriginOf(portal: TomlTable, problems: string[]): string | undefin
   return origin;
 }
 
-function hostOf(portal: TomlTable, problems: string[]): string | undefined {
+/**
+ * 듣는 호스트. 루프백 둘은 늘 받고, `0.0.0.0` 하나는 표지 파일이 있고 환경 변수가 `1` 일 때만 더 받는다. 환경 변수의 값이
+ * 어긋났으면 그 진단이 이미 있어(`parseConfig`) 호스트는 판정하지 않는다. 진단은 경우마다 다르다. 환경 변수만 있고 표지 파일이
+ * 없으면 이미지 밖에서는 켜지지 않는다고 말하고, 표지 파일만 있고 환경 변수가 없으면 그 환경 변수를 알린다.
+ */
+function hostOf(
+  portal: TomlTable,
+  network: ContainerNetwork,
+  problems: string[],
+): string | undefined {
   const value = portal["host"];
   if (value === undefined) {
-    return DEFAULT_HOST;
+    return envProblems(network).length > 0 ? undefined : DEFAULT_HOST;
   }
   if (typeof value !== "string") {
     problems.push("portal.host: 글자여야 한다");
     return undefined;
   }
-  if (!LOOPBACK_HOSTS.includes(value)) {
-    problems.push(`portal.host: 루프백만 받는다(${LOOPBACK_HOSTS.join(", ")}). 받은 값: ${value}`);
+  if (envProblems(network).length > 0) {
     return undefined;
   }
-  return value;
+  if (LOOPBACK_HOSTS.includes(value)) {
+    return value;
+  }
+  const enabled = network.imageMarker && network.env === "1";
+  if (enabled && value === CONTAINER_HOST) {
+    return value;
+  }
+  if (enabled) {
+    problems.push(
+      `portal.host: 루프백이나 컨테이너 네트워크 주소만 받는다(${[...LOOPBACK_HOSTS, CONTAINER_HOST].join(", ")}). 받은 값: ${value}`,
+    );
+    return undefined;
+  }
+  const base = `portal.host: 루프백만 받는다(${LOOPBACK_HOSTS.join(", ")}). 받은 값: ${value}`;
+  problems.push(value === CONTAINER_HOST ? `${base}${exceptionHint(network)}` : base);
+  return undefined;
+}
+
+/** 예외로 열리는 주소를 받았는데 켜지지 않았을 때 진단에 더할 문장. 더할 것이 없으면 빈 글이다. */
+function exceptionHint({ imageMarker, env }: ContainerNetwork): string {
+  if (imageMarker) {
+    return `. 이미지 안에서 ${CONTAINER_HOST} 에 묶으려면 환경 변수 ${CONTAINER_NETWORK_ENV}=1 도 준다`;
+  }
+  if (env === "1") {
+    return `. ${CONTAINER_NETWORK_ENV} 는 이미지 밖에서는 켜지지 않는다(표지 파일 ${IMAGE_MARKER} 가 없다)`;
+  }
+  return "";
 }
 
 function portOf(portal: TomlTable, problems: string[]): number | undefined {

@@ -22,7 +22,7 @@ src/agent_os/
   admin/http/              슬라이스 2. GET 넷과 /health. plugin-toggle 이 첫 쓰기 경로 PUT /plugins/{kind}/{name}/enabled 를 더한다. 승인은 여기가 아니라 채널이다
 openapi.json               슬라이스 2. 커밋된 계약. tools/export_openapi.py 가 만들고 테스트가 최신성을 본다
 web/                       슬라이스 3부터. pnpm 워크스페이스. 파이썬과 루트 분리
-  apps/admin/              Next.js 관리 화면. 브라우저가 토큰을 들고 Next 는 rewrites 중계, 루프백만(ADR 0019)
+  apps/admin/              Next.js 관리 화면. 브라우저가 토큰을 들고 Next 는 rewrites 중계, 루프백만(ADR 0019. 이미지 안의 예외는 ADR 0056)
   apps/widget/             슬라이스 4. 채팅 위젯. React 19 컴포넌트로 Next 16 iframe 페이지와 Vite element 번들을 낸다(ADR 0024)
   packages/api-client/     openapi.json에서 openapi-typescript 로 생성해 커밋한다(ADR 0021). 위젯 클라이언트가 는다
   packages/ui/             슬라이스 4. 디자인 시스템. 디자인 토큰과 atoms·molecules, Storybook. 두 앱이 소스를 import 한다(ADR 0026)
@@ -61,15 +61,17 @@ web/                       슬라이스 3부터. pnpm 워크스페이스. 파이
 | 8 | [answer-markdown](answer-markdown/plan.md) | 모델이 지은 답을 마크다운으로 그리는 공유 부품을 만들어 위젯에 적용해, 제목·목록·표·링크가 든 답이 기호 없이 읽히게 한다. | 없음 | done |
 | 8 | [base-agent](base-agent/plan.md) | 기본 에이전트 assistant와 문서 검색 스킬·연결·규칙을 함께 내, 요구가 없으면 그대로 쓰고 요구가 있으면 복사해 커스텀 에이전트를 만들게 한다. | mcp-http, approval-rules | in-progress |
 | 8 | [public-demo](public-demo/plan.md) | 공개 정부 문서를 넣은 클라우드 VM 한 대를 공개 주소에 열어, 누구나 로그인 없이 묻고 출처가 붙은 답을 받게 한다. | base-agent, release-image, answer-eval, answer-markdown, rag-engine:release-image, rag-engine:search-eval | todo |
-| 8 | [release-image](release-image/plan.md) | 판마다 서버와 관리 화면과 위젯과 위젯 미리보기 페이지의 컨테이너 이미지를 짓고 올리며 단독 배포 안내도 낸다. | pilot-portal | todo |
+| 8 | [release-image](release-image/plan.md) | 판마다 서버와 관리 화면과 위젯과 위젯 미리보기 페이지의 컨테이너 이미지를 짓고 올리며 단독 배포 안내도 낸다. | pilot-portal | in-progress |
 | 9 | [admin-login](admin-login/plan.md) | 관리 화면에 운영자 계정 로그인과 대화 화면을 더하고, 관리 화면을 같은 서버의 다른 포트로 인터넷에 연다. | release-image, postgres-foundation | todo |
 | 9 | [deploy-package](deploy-package/plan.md) | agent-os와 문서 검색 서버를 Docker Compose로 한 번에 띄우는 참조 배포를 준다. | local-model, portal-login, base-agent, release-image, ops-backup-upgrade, diag-bundle, mcp-http, rag-engine:release-image, rag-engine:admin, rag-engine:backup-upgrade, rag-engine:diag-bundle | todo |
 | 9 | [diag-bundle](diag-bundle/plan.md) | 문제를 살필 때 판과 구성과 최근 실패 원인을 비밀 값 없이 파일 하나로 묶는 명령을 준다. | release-image, mcp-http | todo |
 | 9 | [ops-backup-upgrade](ops-backup-upgrade/plan.md) | agent-os 데이터를 백업하고 새 서버에 복원하며, 판을 올린 뒤에도 옛 트레이스를 읽게 한다. | release-image | todo |
-| 9 | [pilot-release](pilot-release/plan.md) | public-demo를 뺀 기준선의 기능이 모두 끝나면 제품 0.1 판을 내고 지원 범위와 고지를 문서로 남긴다. | answer-eval, deploy-package, answer-markdown, admin-login, step-up-login | todo |
-| 9 | [portal-login](portal-login/plan.md) | 위젯 미리보기 페이지에 사내 로그인 모드를 더해, 배포 환경에서는 사내 사람만 질문하게 한다. | pilot-portal | todo |
+| 9 | [pilot-release](pilot-release/plan.md) | public-demo를 뺀 기준선의 기능이 모두 끝나면 제품 0.1 판을 내고 지원 범위와 고지를 문서로 남긴다. | answer-eval, deploy-package, answer-markdown, admin-login, step-up-login, portal-admin | todo |
+| 9 | [portal-admin](portal-admin/plan.md) | 사이트마다의 위젯 설정을 위젯 쪽 서버의 데이터베이스에 두고 운영자가 위젯 설정 관리 화면에서 등록해, 파일을 열지 않고 위젯이 보일 것을 바꾼다. | pilot-portal | todo |
+| 9 | [portal-login](portal-login/plan.md) | 위젯 미리보기 페이지에 사내 로그인 모드를 더해, 배포 환경에서는 사내 사람만 질문하게 한다. | pilot-portal, widget-login-state | todo |
 | 9 | [postgres-foundation](postgres-foundation/plan.md) | agent-os 배포에 PostgreSQL을 들이고, 서버와 테스트와 CI가 그 데이터베이스에 닿는 길을 세운다. | release-image | todo |
 | 9 | [step-up-login](step-up-login/plan.md) | 익명으로 질문하다가 로그인한 사람만 쓰는 도구에 닿으면 로그인을 안내하고, 로그인한 뒤 같은 대화에 이어 답한다. | portal-login | todo |
+| 9 | [widget-login-state](widget-login-state/plan.md) | 위젯이 로그인 상태와 고지와 다크 모드 스위치를 직접 그리고 사이트마다의 위젯 설정을 받아 오며, 주소 하나를 창으로 여는 URL 방식을 더한다. | portal-admin | todo |
 | 10 | [admin-2fa](admin-2fa/plan.md) | 관리 화면의 로그인에 2단계 인증을 더해, 비밀번호가 새도 그것만으로는 들어오지 못하게 한다. | admin-login, pilot-release | todo |
 | 10 | [admin-answer-preview](admin-answer-preview/plan.md) | 관리 화면 실행 상세의 최종 출력 칸에서 원문과 마크다운으로 그린 모양을 오가며 보게 해, 운영자가 최종 사용자에게 보인 모양을 바로 확인한다. | answer-markdown, pilot-release | todo |
 | 10 | [admin-approval](admin-approval/plan.md) | 승인 규칙이 승인할 사람을 정해, 관리 화면의 운영자가 다른 사람이 일으킨 일시정지한 실행을 승인하거나 거부한다. | admin-login, pilot-release | todo |
@@ -79,7 +81,6 @@ web/                       슬라이스 3부터. pnpm 워크스페이스. 파이
 | 10 | [io-guardrail](io-guardrail/plan.md) | 최종 사용자의 입력과 에이전트의 출력에서 주민등록번호 같은 패턴을 규칙으로 막거나 가린다. | value-masking | todo |
 | 10 | [kb-selection](kb-selection/plan.md) | 기본 에이전트가 지식베이스 목록을 보고 질문에 맞는 지식베이스를 골라 검색한다. | base-agent, principal-propagation, rag-engine:doc-permission | todo |
 | 10 | [mcp-trust](mcp-trust/plan.md) | MCP 서버마다 믿는 정도와 도구 정의 해시를 정해, 믿지 않는 서버의 결과를 바깥 글로 다룬다. | approval-rules, pilot-release, mcp-http | todo |
-| 10 | [portal-admin](portal-admin/plan.md) | 위젯 미리보기 페이지 설정을 화면에서 고치는 관리 화면을 위젯 미리보기 페이지 쪽에 두어, 운영자가 파일을 열지 않고 사이트마다의 위젯 설정을 바꾼다. | pilot-portal | todo |
 | 10 | [portal-ldap-login](portal-ldap-login/plan.md) | 위젯 미리보기 페이지가 아이디와 비밀번호를 직접 받아 조직의 계정 디렉터리에 확인하는 로그인 방식을 더한다. | portal-login, pilot-release | todo |
 | 10 | [portal-login-recheck](portal-login-recheck/plan.md) | 위젯 미리보기 페이지가 refresh token으로 로그인 상태를 주기적으로 다시 확인해, 정지된 계정이 유지 시간보다 빨리 막히게 한다. | portal-login, pilot-release | todo |
 | 10 | [principal-propagation](principal-propagation/plan.md) | 운영자가 켠 MCP 서버에만 실행의 주체를 넘겨, 사용자가 볼 수 있는 문서로만 답하게 한다. | mcp-trust | todo |
@@ -88,7 +89,7 @@ web/                       슬라이스 3부터. pnpm 워크스페이스. 파이
 | 10 | [stale-warning](stale-warning/plan.md) | 검색 결과의 근거 문서가 오래됐다고 표시돼 있으면 답에 경고를 붙여, 낡은 근거로 답했음을 알린다. | pilot-release, rag-engine:doc-freshness | todo |
 | 10 | [usage-report](usage-report/plan.md) | 기간별 질문 수와 사용자 수와 오류 신고 비율을 이용 보고로 내보내 운영 상황을 한눈에 알게 한다. | audit-export, run-feedback | todo |
 | 10 | [value-masking](value-masking/plan.md) | 런타임이 아는 비밀 값을 트레이스에 쓰기 직전에 모든 글 칸에서 찾아 가려, 기록에 새지 않게 한다. | principal-propagation | todo |
-| 10 | [widget-appearance](widget-appearance/plan.md) | 레이아웃과 아이콘 같은 새 모양 칸을 위젯의 임베드 속성과 위젯 미리보기 페이지 설정에 더해, 사이트마다 위젯의 생김새를 더 넓게 고른다. | pilot-portal | todo |
+| 10 | [widget-appearance](widget-appearance/plan.md) | 그림 올리기와 자유 색, 레이아웃 같은 새 모양 값을 위젯 설정에 더해, 사이트마다 위젯의 생김새를 더 넓게 고른다. | portal-admin, widget-login-state, pilot-release | todo |
 | 11 | [orphan-recovery](orphan-recovery/plan.md) | 서버가 죽거나 멈춰 결말 없이 남은 고아 실행을 임대 만료로 찾아내 worker가 실패로 닫는다. | retention-worker | todo |
 | 11 | [retention-worker](retention-worker/plan.md) | 별도 worker 명령이 승인 만료 닫기와 보존 기간이 지난 기록 지우기를 주기로 돌린다. | token-limit | todo |
 | 11 | [run-cost](run-cost/plan.md) | 모델과 도구 호출에 걸린 시간을 남기고, 모델 단가로 실행 비용을 읽을 때 셈한다. | trace-postgres | todo |
@@ -110,7 +111,7 @@ web/                       슬라이스 3부터. pnpm 워크스페이스. 파이
 
 ## 프론티어
 
-done 이 아니고, Blocked by 가 비었거나 이 저장소의 막는 기능이 모두 done 인 기능이다. `local-model`, `base-agent`, `release-image`, `portal-login`, `portal-admin`, `widget-appearance`
+done 이 아니고, Blocked by 가 비었거나 이 저장소의 막는 기능이 모두 done 인 기능이다. `local-model`, `base-agent`, `release-image`, `portal-admin`
 
 ## 다른 저장소를 기다리는 기능
 

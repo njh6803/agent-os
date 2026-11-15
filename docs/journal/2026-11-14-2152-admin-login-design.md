@@ -985,3 +985,28 @@ open-session을 부른다 2026-11-15T03:59:06Z
 
 - **브랜치와 나란히 도는 세션.** 첫 커밋 전에 `git branch --show-current`가 `docs/admin-login-design`을 냈다(손으로 쳤다). `uv run python tools/sibling_overlap.py`는 종료 코드 0으로 끝났고 출력의 줄은 다음과 같다(손으로 쳤다). "이 브랜치의 새 번호: ADR 0062, ADR 0063", "번호 겹침 없음", "형제가 쓴 가장 높은 헌법 판: 3.0.100". 함께 고친 파일은 `origin/dev`와의 넷(`.scratch/plan.md`, `CONTEXT.md`, ADR 0046, `docs/adr/README.md`)과 워크트리 `mcp-shutdown-spec`과의 하나(`.scratch/plan.md`)다. `git fetch origin` 뒤 `git log --oneline HEAD..origin/dev`는 여섯 줄을 냈고 맨 위는 `f6590c74c`(#574, ADR 0061의 PR)다. 시작할 때 본 `00d024a`에서 한 커밋 더 움직였다.
 - **portal-admin의 설계 세션이 함께 돈다.** `ListAgents`에 `docs/portal-admin-design` 세션이 busy로 떠 있고(1시간 전에 시작) `sibling_overlap.py`의 형제 줄에 워크트리 `portal-admin-design`이 `f6590c7`로 들어 있다(둘 다 출력을 봤다). 그 세션이 무엇을 고쳤는지는 보지 못했다(워크트리 가드가 `git -C`로 다른 워크트리를 읽는 명령을 거부했다). 이 브랜치가 세운 postgres-foundation의 기능 계획은 아직 dev에 없어 그 세션이 읽을 수 없다.
+- **첫 커밋.** `0176971e8`(승인받은 설계 문서 전부, 파일 103개). 커밋의 pre-commit이 Bash의 600초 제한을 넘겨 백그라운드로 넘어갔고, 다시 치지 않고 끝 알림을 기다렸다. 출력은 다음과 같다(끝난 뒤 출력 파일을 읽었다). ruff check와 ruff format은 Passed였다. 러너(`parallel-checks`)는 855.17초에 Passed였고 그 안의 열 줄(check-ticket, zizmor, lint-imports, check-instructions, check-type-escapes, pyright, pyright-linux, run-hooks, pytest 548.4초, web-verify 854.9초)이 모두 Passed였다. markdown tables, line separators, mutation tables, commit message는 Passed였다. canary specs와 constitution version은 대 볼 파일이 없어 Skipped였다(이 브랜치는 카나리아 명세와 헌법 파일을 고치지 않았다). quotes는 막지 않는 경고 86건을 냈다. 하나씩 보니 일지에 옮긴 선택지 라벨과 설명, 이력의 "A는 B가 된다" 꼴로 새로 쓴 문장, 셀프 리뷰가 고친 옛 문구의 기록, 도구 출력의 인용, 그리고 포인터만 더한 줄에 원래 있던 인용이었고 원문과 어긋난 인용은 없었다. 커밋 직전의 `ListAgents`에는 busy인 세션이 셋이었다.
+- **dev 합치기.** `git merge origin/dev --no-commit`이 충돌 셋을 냈다(`docs/adr/README.md`, ADR 0046, `.scratch/plan.md`). `CONTEXT.md`는 저절로 합쳐졌다. 색인은 0061, 0062, 0063의 순서로, ADR 0046의 이력은 날짜 순(dev의 2026-11-14, 이 브랜치의 2026-11-15)으로 이어 붙였고, 계획표는 `uv run python tools/plan_table.py`로 다시 만들었다. 그 뒤 `tools/plan_table.py --check`와 `tools/check_adr_pointers.py`는 출력 없이 끝났다(손으로 쳤다). 이 브랜치는 헌법 파일을 고치지 않아 판을 올리지 않는다(dev의 판은 3.0.99다. `docs/constitution/README.md`의 diff를 읽었다).
+- **portal-admin 계획에 넘긴 문장.** 합쳐 들어온 `.scratch/portal-admin/plan.md`의 "데이터베이스의 종류" 항목 끝에 적었다. 새 문장은 다음과 같다. "agent-os 쪽에는 admin-login의 설계가 0.1 판부터 PostgreSQL을 들이기로 했고(ADR 0062 결정 "저장", 2026-11-15 승인) 새 행 postgres-foundation이 그 데이터베이스와 거기 닿는 길을 세운다. 0.1 판에 데이터베이스가 둘 들므로, 이 행과 postgres-foundation 가운데 먼저 도는 설계 인터뷰가 다른 쪽의 기능 계획을 읽고 종류와 도구를 맞출지, 컨테이너를 함께 쓸지 따로 띄울지, 백업을 어떻게 묶을지를 정한다". 그 계획의 "이 저장소에는 지금 데이터베이스가 없어"는 코드의 사실로 여전히 참이라 고치지 않았다. 함께 도는 portal-admin 설계 세션이 같은 파일을 고쳤으면 늦게 병합하는 쪽에서 그 줄이 충돌한다. 병합 뒤 그 세션에 알린다.
+
+## 회고
+
+후보는 여덟이고 판정은 승인 셋, 기각 다섯, 넘김 없음이다. 만료할 항목은 없었다(`uv run python tools/queue_open_rows.py`의 "만료할 항목"이 "(없음)"이었다. 손으로 쳤다).
+
+1. **선택 질문을 코드 이름과 설계 용어로 썼다.** 승인(회차로 세는 것). 사건: 승인 화면 첫 회의 층 배치 질문에 사용자가 "쉽게 설명해줘. 질문이 뭔지 모르겠어."라고 답했다. 본문에 말 풀이를 먼저 실었는데도(대기열 114의 처방) 질문 문장과 라벨이 층, 포트, 어댑터 같은 말 그대로였다. `CLAUDE.md` 원칙의 선택지 라벨 줄(일지 2026-10-15-17의 사건에서 나왔다)을 어긴 것이고, 그 줄을 낸 대기열 항목은 찾지 못했다(`tools/queue_open_rows.py --search`로 낱말 열을 쳤다). 더하는 것은 다섯 번째에 반영하므로 새 항목 `choice-screen-worded-in-code-names`에 2회차로 둔다. 층은 훅이다(처음인 선택 화면을 막는 `tools/hook_choice_facts.py`가 질문 문장과 라벨에 든 코드 이름을 함께 찍는 후보).
+2. **지시문의 모델 이름 `Fable 5.1`이 모델 메뉴에 없다.** 승인(열린 항목이 이미 처방한 사건). 사건: 앞 세션이 설계 인터뷰를 넘기며 부른 `open-session`이 모델을 고르는 자리에서 멈췄고, 사용자가 모델을 지정하고 "다시 시도해줘"라고 한 뒤에야 열렸다(이 일지 "인계 시점의 상태"). 열린 항목 `model-menu-name-fable-5-1-stale`에 회차를 더해 2회차다. 그 항목은 이름을 무엇으로 바꿀지가 사용자 몫이고 ADR이 든다고 적고 있어 이 회고가 반영하지 않는다.
+3. **합치기를 커밋하기 전의 `tools/sibling_overlap.py --journal`이 다른 브랜치의 일지를 찍었다.** 승인(고침). 사건: `origin/dev`를 합치고 커밋하기 전에 이 회고를 돌리자 그 명령이 `docs/journal/2026-11-15-0402-example-mcp-server-runs-without-npx.md`를 찍었다(손으로 쳤다). `branch_journals`가 작업 트리와 옛 merge-base의 차이에서 더해진 일지를 고르는데, 합쳐 들어온 일지가 그 차이에 든다(그 함수를 읽었다). 이 세션은 알아보고 이 일지에 적었다. 도구를 고치는 일이라 이 면제 PR에 싣지 않고 새 항목 `journal-path-tool-during-uncommitted-merge`에 1회차로 둔다.
+4. **Bash heredoc의 40줄 상한으로 리뷰 보고를 받은 턴에 일지에 옮기지 못했다.** 기각. 훅이 그 자리에서 막았고 Edit 도구로 옮겼다(이 사건의 세부는 컨텍스트 압축 뒤의 요약에서 읽었다).
+5. **`tools/check_adr_pointers.py`가 ADR 본문에 적은 grep 명령의 글자를 포인터로 잡았다.** 기각. 검사가 그 자리에서 알렸고 문장을 풀어 써서 고쳤다(이 일지 "다시 돌린 명령").
+6. **스크래치 스크립트 훅이 측정이 아닌 스크립트를 두 번 막았다.** 기각. 훅이 정한 동작이다(두 번 막은 뒤 지나간다). 그 Write와 한 메시지에 묶어 보낸 Bash 둘이 헛돈 것은 이 세션의 묶음 실수다.
+7. **커밋의 pre-commit이 855초 걸렸다.** 기각. `CLAUDE.md` 검증 명령 절이 적은 대로 백그라운드의 끝 알림을 기다렸고 잃은 것이 없다. 그 절이 든 수(581초)보다 긴 855초를 봤다는 것만 여기 남긴다.
+8. **나란히 돈 설계 세션 둘이 0.1 판의 데이터베이스를 서로 모른 채 정했다(ADR 0061과 ADR 0062).** 기각. `CLAUDE.md` 환경 함정의 줄(기준 브랜치가 움직였으면 이 브랜치가 이름으로 든 파일과 대조한다, 대기열 48)이 이 세션의 시작에서 그것을 찾게 했고, 넘기는 문장을 받는 쪽 넷(ADR 0062 "다른 행", postgres-foundation과 portal-admin의 기능 계획, 이 일지)에 적었다.
+
+일지에만 남기는 것: 셀프 리뷰의 Major 넷(명세 축 둘, 표준 축 둘)은 리뷰가 제 몫을 한 것이라 회차로 세지 않는다. 이 세션의 시작에 친 `ListAgents`와 `sibling_overlap.py`의 출력은 일지에 옮기기 전에 컨텍스트가 압축되어 남지 않았고, 커밋 전에 다시 쳐 "닫기"에 적었다.
+
+## 다음
+
+- **admin-login의 설계는 닫혔다.** ADR 0062와 ADR 0063이 승인됐고 기능 계획에 `**설계:**` 줄이 있다. 이 기능의 다음 단계는 화면 목업과 명세다. 두 ADR이 화면의 모양(로그인 화면, 계정 관리, 대화 화면)을 명세 전에 목업으로 그려 사용자에게 확인받기로 했다(`ui-design`). 명세는 사용자가 부른다(`/to-spec`).
+- **admin-login은 release-image와 postgres-foundation을 기다린다.** postgres-foundation에는 설계가 없어 그 행의 설계 인터뷰가 먼저다(그 기능 계획 본문이 먼저 볼 것을 적었다). portal-admin의 설계 세션이 함께 돌고 있고, 두 인터뷰 가운데 먼저 도는 쪽이 다른 쪽의 기능 계획을 읽어 데이터베이스의 종류와 도구를 맞춘다.
+- **0.1 판 뒤의 새 행 셋**(admin-roles, admin-2fa, admin-approval)은 기능 계획만 있고 설계가 없다.
+- **대기열.** 새 항목 `choice-screen-worded-in-code-names`(2회차)와 `journal-path-tool-during-uncommitted-merge`(1회차, 고침), 회차를 더한 `model-menu-name-fable-5-1-stale`(2회차. 설계 인터뷰나 명세 지시문의 "모델" 줄은 그 항목이 닫힐 때까지 지금 메뉴에 있는 이름으로 적는다).
