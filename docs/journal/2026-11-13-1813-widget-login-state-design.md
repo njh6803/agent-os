@@ -708,3 +708,44 @@ open-session을 부른다 2026-11-15T03:14Z
 ## 다음
 
 PR #574(`docs/widget-login-state-design`)를 병합한 뒤 다음 작업은 둘이고 나란히 열 수 있다. 하나는 `portal-admin`('위젯 설정 관리') 행의 설계 인터뷰(`/grill-with-docs portal-admin`)다. `.scratch/portal-admin/plan.md`에 명세도 `**설계:**` 줄도 없고 ADR 0061이 이 행의 인터뷰에 넘긴 목록이 본문에 있다. 이 행이 `widget-login-state`와 `portal-login`을 막고 있어 그 둘보다 먼저다. 다른 하나는 `widget-login-state`의 화면 그리기(`/ui-design widget-login-state`)다. 그 행의 계획 본문이 명세 전에 화면을 그린다고 적었고 `design/`에는 아직 파일이 없으며 portal-admin을 기다리지 않는다. 둘이 서로의 파일을 고치지 않는다(앞은 `.scratch/portal-admin/`과 ADR, 뒤는 `.scratch/widget-login-state/design/`). 지시문을 낼 때 확인할 것: 형제 워크트리 `admin-login-design`이 `.scratch/plan.md`와 `CONTEXT.md`와 ADR 0046, ADR 색인을 함께 고치는 중이라(`sibling_overlap`) 그 세션이 portal-admin의 "위젯 설정 관리 화면에 누가 들어오는지"나 `CONTEXT.md`의 관리 화면 용어를 같이 다루는지 `ListAgents`로 먼저 본다. 병합 전의 결정표 앞 두 줄(되돌려 합치기, 출시 PR)은 병합한 뒤 `git merge-base --is-ancestor origin/main origin/dev`와 끝 줄 커밋 유무로 다시 본다. 이 PR은 기능의 끝 줄을 적지 않아 출시 계기가 아니다. 워크트리에서 병합하므로 주 체크아웃은 이 세션이 당기지 않고, 새 세션이 워크트리에 들어가기 전에 `tidy-checkouts`를 돈다.
+
+## 인계 (커밋 뒤, 2026-11-15 12:36)
+
+경계는 `커밋 뒤`다. 회고 커밋(`14843efe9`)을 백그라운드로 띄운 호출에 인계 계기(`hook_handoff`. 세션 컨텍스트 254,774 토큰)가 왔고, 커밋이 끝난 뒤에 보니 성공해 실제 경계였다(pre-commit 432.77초, pytest만 Skipped이고 나머지는 Passed, 인용 대조 경고 한 건은 앱이 지은 옛 세션 제목이라 그대로 둔다). 넘기지 않는 때 다섯을 봤다. 커밋이 성공했고, 요청 범위는 PR과 병합까지이며, 이 세션의 지시문의 "이어받을 상태"는 `인계: PR 연 뒤`로 시작해 경계가 다르고, 이 세션이 쓴 인계 실패 줄은 없으며, `get_session`의 `self`에 `parentSessionId`가 없다. 그래서 넘긴다. 이 세션의 바꾸기 전 제목은 `docs/widget-login-state-design`이다. 이 세션이 띄운 백그라운드 작업은 모두 끝났다(`tools/wait_ci.py` 대기 하나, 커밋 하나).
+
+새 세션이 알아야 하는 것.
+
+- **지금 상태.** 로컬 브랜치가 `origin/docs/widget-login-state-design`(PR #574의 머리 `6fcadc184`)보다 커밋 하나(`14843efe9`) 앞서 있고 푸시하지 않았다. 이 일지의 "인계 (커밋 뒤, 2026-11-15 12:36)" 절은 그 커밋 뒤에 쓴 것이라 커밋되지 않은 채 워크트리에 있다. 푸시하기 전에 이 절을 커밋한다.
+- **이 세션이 마친 것.** `merge.md` 2의 봇 회차 첫 번째와 회고다. 위 "봇 회차"와 "회고"에 있다. 회고는 돌았으므로(`## 회고` 절이 있다) 다시 돌지 않는다. PR 본문은 회고 커밋이 대기열 항목을 더하는 것까지 넓혀 이미 고쳤다.
+- **남은 단계.** 이 일지 절의 커밋, 푸시(그 전에 `git fetch origin`으로 기준 브랜치가 움직였는지 본다. 뒤처졌으면 `tools/hook_push_behind_main.py`가 막는다), 푸시 뒤 `@coderabbitai review` 코멘트와 `tools/wait_ci.py 574` 백그라운드 대기, 봇 둘째 회차, 병합 전 `headRefOid` 대조, 병합, 주 체크아웃 미갱신 한 줄, 다음 지시문이다.
+- **봇 둘째 회차.** 이 PR에서 claude-review는 첫 회차를 마쳤다(Minor 하나, 해당 없음으로 판정해 PR 코멘트 `issuecomment-6888519481`에 이유를 남겼다). 이 푸시로 도는 claude-review가 둘째 회차라 Critical·Major만 고치고, 나머지는 지적마다 보류 이유를 PR 코멘트에 남긴 뒤 병합한다. CodeRabbit은 한도에 걸려 첫 회차가 아직 없다. 이 푸시가 한도에 걸리지 않고 리뷰하면 그 리뷰가 CodeRabbit의 첫 회차다.
+- **사용자의 건너뛰기 결정.** 이 PR에서 파이썬 코드를 바꾸지 않는 커밋은 `SKIP=pytest`로 치고 같은 일로 다시 묻지 않는다. 일지 절 커밋도 파이썬 코드를 바꾸지 않아 같다. 전체 pytest의 초록은 PR의 CI로 이미 한 번 확인했고(머리 `6fcadc184`에서 `python`과 `verify` SUCCESS), 이번 푸시의 CI에서도 `verify`가 초록인지 본 뒤에만 병합한다.
+- **다시 하지 않는 것.** 설계 인터뷰는 닫혔고 ADR 0061은 승인됐다. 인터뷰도 승인도 다시 열지 않는다.
+- **마지막 보고에서 알릴 것.** 승인 뒤에 PR 직전 리뷰를 반영해 ADR 0061을 고친 네 군데를 사용자에게 다시 알린다. 결정 "로그아웃"의 조건 문장 하나(같은 문단의 위젯 미리보기 페이지 문장에 까닭을 더한 것 포함)와 Consequences "명세가 짓는 것"에 더한 항목 셋이고, 이 일지 "반영 (PR 직전 리뷰)"에 원문이 있다.
+- **다음 지시문을 지을 때.** 이 일지의 "다음"이 둘을 정했다(portal-admin 설계 인터뷰, widget-login-state 화면 그리기). 지시문을 내기 전에 `ListAgents`와 `list_sessions`로 형제 워크트리 `admin-login-design`의 세션이 portal-admin의 "위젯 설정 관리 화면에 누가 들어오는지"나 `CONTEXT.md`의 관리 화면 용어를 같이 다루는지 본다.
+
+새 세션에 낸 지시문은 아래다.
+
+```
+다음 작업: 기능 portal-login. 위젯이 로그인 상태와 고지, 다크 모드를 직접 그리는 방향과 URL로 제공하는 방식을 정한 설계 인터뷰의 문서(승인된 ADR 0061과 기능 계획)의 PR #574를 열었고, 봇 회차를 거쳐 병합한다
+다음 단계: PR 반영·병합
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /grill-with-docs portal-login
+브랜치: docs/widget-login-state-design
+모델: Sonnet 5.5 / high. 2의 잇는 지시문
+읽을 것: 일지 docs/journal/2026-11-13-1813-widget-login-state-design.md의 "인계 (커밋 뒤, 2026-11-15 12:36)"와 "봇 회차"와 "회고"와 "다음"
+이어받을 상태: 인계: 커밋 뒤. 봇 첫 회차와 회고를 마쳐 커밋했다(14843efe9). 푸시하지 않았고 PR #574의 머리는 6fcadc184다. 일지 docs/journal/2026-11-13-1813-widget-login-state-design.md. 그 커밋 뒤에 쓴 일지의 인계 절이 커밋되지 않은 채 워크트리에 있다. 남은 단계는 그 절의 커밋, 푸시, 푸시 뒤 @coderabbitai review 코멘트와 tools/wait_ci.py 대기, 봇 둘째 회차(Critical·Major만), 병합, 다음 지시문이다. 사용자가 고른 대로 이 PR에서 파이썬 코드를 바꾸지 않는 커밋은 pre-commit에서 pytest만 건너뛰고(SKIP=pytest) 같은 일로 다시 묻지 않는다. 이번 푸시의 CI에서 verify가 초록인 것을 본 뒤에만 병합한다. 설계 인터뷰는 닫혔고 ADR 0061은 승인됐으므로 인터뷰를 다시 열지 않고 승인도 다시 묻지 않는다. 회고는 돌았으므로 다시 돌지 않는다. 승인 뒤에 PR 직전 리뷰를 반영해 ADR 0061을 고친 네 군데는 마지막 보고에서 사용자에게 다시 알린다
+확인할 선행 조건: 병합은 이 워크트리 사본의 next-session merge.md(없으면 SKILL.md)의 "워크트리에서 병합할 때"를 Read로 열어 따른다. 푸시로 도는 PR #574의 CI와 봇의 결과는 이 세션이 보지 못했다
+이번 요청 범위: PR과 병합까지
+```
+
+open-session을 부른다 2026-11-15T03:37Z
+
+제목을 `docs/widget-login-state-design (인계함)`으로 바꿨다(앱이 묻지 않고 바꿨다). `git worktree unlock`은 `is not locked`로 끝나 넘어갔다(이미 풀려 있었다).
+
+## 인계받은 세션 (2026-11-15 12:38)
+
+위 "인계 (커밋 뒤, 2026-11-15 12:36)"의 지시문으로 연 새 세션이 이 일지를 이어 쓴다. 모델 Sonnet 5.5. 사용자 프롬프트는 그 지시문 그대로이고, 첫 줄만 `open-session`이 시작 프롬프트를 스킬 파일을 읽으라는 한 줄로 옮긴 것이다(`.claude/skills/grill-with-docs/SKILL.md 를 읽어 그대로 따른다. … 인자: portal-login`).
+
+- 제목을 `docs/widget-login-state-design`으로 바꿨다(앱이 지은 제목이었고 묻지 않고 바뀌었다). `git worktree list`에서 이 브랜치의 워크트리를 찾아 `EnterWorktree(path)`로 들어왔다. 머리는 `14843efe9`이고 `origin/docs/widget-login-state-design`(PR #574의 머리 `6fcadc184`)보다 커밋 하나 앞서며, 커밋하지 않은 변경은 이 일지 하나였다. `origin/dev`(`5b9a4f49`)는 이 브랜치가 이미 품고 있어 푸시를 `hook_push_behind_main`이 막지 않는다고 본다(`git fetch origin` 뒤 `git merge-base --is-ancestor origin/dev HEAD`가 참이었고 `git rev-parse origin/dev`가 위 값이었다. 손으로 봤다. 훅은 푸시할 때 실제로 어떻게 나오는지 아직 보지 못했다).
+- 첫 줄이 `grill-with-docs`를 따르라고 했지만 설계 인터뷰는 닫혔고 `**설계:** ADR 0061` 줄이 기능 계획에 이미 있어 그 스킬의 `grilling`과 `domain-modeling`을 부르지 않았고 승인도 다시 묻지 않았다. 이 세션은 일지만 고쳐 ADR을 건드리지 않았다.
