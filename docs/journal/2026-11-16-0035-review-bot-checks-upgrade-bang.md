@@ -48,6 +48,11 @@
 - 만료: `uv run python tools/queue_open_rows.py`와 `--ref origin/dev` 두 출력에 모두 든 `0348`·`0555`·`0556`을 만료로 닫았다(상태 줄을 `만료 2026-11-16 (ADR 0036)`로 고쳤다. 닫은 뒤 첫 명령이 만료할 항목 `(없음)`을 찍었다).
 - 이 세션에서 반영한 것은 없다.
 
+## 인계 (커밋 뒤)
+
+컨텍스트가 인계 문턱을 넘은 채 `커밋 뒤` 경계에 와서 새 세션에 넘긴다(`next-session handoff.md`). 이 세션의 제목은 `feature/06-review-bot-checks-upgrade-bang`이었고 `feature/06-review-bot-checks-upgrade-bang (인계함)`으로 바꿨다. 곁 세션이 아니다(`get_session`의 `self`에 `parentSessionId`가 없었다). 커밋 `f2db3eb37`까지 했다. pre-commit의 전체 러너가 통과했다(손으로 봤다. 종료 0). 아직 푸시하지 않았고 PR도 없다. 남은 일: `origin/dev`를 합치기(이 세션이 본 `origin/dev`는 `6cc6784`로 앞서 있었다), 푸시, PR(`dev`로), `@coderabbitai review`, 봇 회차, 병합(`merge.md`의 "워크트리에서 병합할 때"). 이 PR은 `claude-code-review.yml`을 고쳐 claude-review가 건너뛰므로 봇 회차는 CodeRabbit만 돈다. 티켓 06은 `done`이고 체크박스는 모두 채웠다.
+open-session을 부른다 2026-11-15T16:32Z
+
 ## 다음
 
 이 PR은 동작을 서술하는 문서를 고치지 못한다(PR 서식이 허용 경로 밖의 문서는 병합 뒤 따로 고치라고 정했다). 병합 뒤 따로 고칠 자리는 `docs/constitution/operations.md` 리뷰 파이프라인 3(claude-review 담당을 "유지보수성과 경계"로만 적었다)과 `CODING_STANDARDS.md` 32행("이 넷과 경계는 PR의 Claude Code Review가 본다")이다. 느낌표 맞춤을 한 구절씩 더한다. 작은 문서 고침이라 병합한 세션이 다음 티켓 PR에 싣지 않고 따로 chore로 연다.
