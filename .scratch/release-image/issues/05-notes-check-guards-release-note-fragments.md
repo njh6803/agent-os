@@ -30,3 +30,5 @@
 - [ ] 끝 줄을 적으라고 지시하는 다른 하네스 문서도 같이 고친다. 적어도 `.claude/skills/implement/SKILL.md`의 끝 줄 문장이다. `**끝:**`을 하네스 전체(`.claude/`, `docs/agents/`, `CLAUDE.md`)에서 grep해 빠진 자리가 없는지 본다(작업 규약 4). 스킬을 고치기 전에 Skill 도구로 `writing-for-agents`를 부른다(`.claude/rules/agent-docs.md`)
 - [ ] 고친 `implement` 스킬을 새 세션에서 불러, 기능의 마지막 티켓을 닫을 때 기능 단락을 싣는다는 지시가 실리는지 본다(`docs/constitution/operations.md` 환경 규약 상세)
 - [ ] 검증 명령이 모두 초록이다
+
+메모(04가 `tools/release.py`를 지은 뒤): 제품 변경의 경로 목록은 그 파일의 `PRODUCT_PATHS`(튜플 다섯)가 원천이다. 노트 검사는 `from tools.release import PRODUCT_PATHS, classify`로 가져온다. 스크립트로 부를 때 저장소 루트가 import 경로에 없으면 `tools/plan_table.py`처럼 `__package__`가 비었을 때 루트를 `sys.path`에 넣는다. `classify(제목)`은 `(접두 또는 None, 느낌표인지)`를 낸다. 길이와 끝 마침표를 보지 않고 커밋 검사의 `PATTERN`만 쓴다. 다만 `Revert "…"`(받아야 하는 제목)와 꼴에 맞지 않는 제목을 둘 다 `(None, False)`로 내므로 (가)가 둘을 가를 때는 `classify`로 가르지 못한다. 그때는 `tools.check_commit_msg`의 `PATTERN`과 `PASS_PREFIXES`를 직접 쓴다.
