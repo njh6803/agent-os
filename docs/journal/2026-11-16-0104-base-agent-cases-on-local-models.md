@@ -77,7 +77,43 @@
 - 기능 단락의 마지막 문장(모델 서버가 올바른 JSON이 아닌 인자를 돌려주면 빈 답이 아니라 모델 호출의 실패로 끝나고 그 도구는 불리지 않는다)은 티켓 02의 서술을 읽고 옮긴 것이고 이 세션이 돌려 보지 않았다. PR 직전 리뷰에 밀 주장이다.
 - 셀프 리뷰 반영의 고친 문장(PR 직전 리뷰에 밀 주장): 시험 모듈 독스트링의 "사례마다 복사한 루트에 그 차림의 `openai-compatible` 모델 파일 하나를 적는다. 키 변수는 요구하지 않는다", `model_env`의 실패 메시지 "`.env` 나 `llm_local.py run` 이 채우는 환경을 확인한다".
 
+## 푸시와 PR (세 번째 세션, 워크트리 재진입)
+
+- 제목을 `feature/06-base-agent-cases-on-local-models`로 바꾸고 워크트리에 들어갔다. `sibling_overlap.py`: 번호 겹침 없음. 이전 인계가 남긴 이 일지의 인계 절은 커밋하지 않은 변경이었다.
+- 그 절을 커밋하려 했으나 pre-commit의 `pytest`가 두 시도 모두 시간 의존 시험으로 막았다. 첫 시도(1727.67초)는 `tests/channel/cli/test_interrupt.py`의 `test_서버를_닫기_시작한_뒤에_한_번_누르면_닫기를_마치고_중단으로_끝난다`가 "30초 안에 끝나지 않았다"로, 둘째 시도(2102.8초, `web-verify`는 1749.0초)는 `tests/tools/test_rerun_runner.py`의 `test_오염이_한_번이면_다시_돌고_두_번이면_그_과제를_모든_갈래에서_뺀다`가 `assert 1 == 0`으로 빨갰다. 앞의 것은 단독으로 다시 돌려 통과했다(손으로 봤다, 종료 코드 0). 이때 `pytest`를 포함한 파이썬 프로세스 가운데 pytest 명령줄을 가진 것이 14개였고 둘째 시도 직전에 6개였다(PowerShell로 한 번씩 셌다). 일지만 바뀐 커밋이라 이 변경과 겹치지 않는 빨강이고 훅은 건너뛰지 않았다. 이 세션은 일지를 이 PR의 마지막 커밋에 싣기로 하고 이미 커밋된 둘을 먼저 푸시했다.
+- PR 직전 `coderabbit-review`: CLI 0.7.5가 `--committed --base origin/dev`로 끝까지 돌아 `review_completed`, `findings: 0`(이 PR의 커밋 파일 8개). `Seat: not assigned`, `Plan: Free`. 유효·오탐·보류 0건이고 미추적·스테이지 파일은 범위 밖이었다. 서브에이전트가 `tests/test_assistant_llm.py`의 diff도 직접 읽었으나 보안·버그·성능 문제를 찾지 못했다는 보고다(내가 다시 읽지는 않았다).
+- 푸시했고 PR [#586](https://github.com/njh6803/agent-os/pull/586)을 `dev` 기준으로 열었다. 본문은 PR 서식을 채웠고 기록 묶음과 사례별 표를 실었다. PR 코멘트에도 기록 묶음을 올렸다. 마지막 푸시 뒤에 `@coderabbitai review`를 남겼다.
+- 로컬 모델 시험은 다시 돌지 않았다. 시험한 커밋 `05e1999ce` 뒤의 변경은 `.scratch/`·`docs/`뿐이라 병합 조건 범위의 경로가 없다(`git diff --name-only 05e1999ce HEAD`를 쳐 보니 `.scratch/` 다섯 파일, 이 일지, `docs/release-notes/features/local-model.md`뿐이었다. 손으로 봤다).
+
+### 봇 회차 1
+
+- 헤드 `65662bb`. 검사 일곱 잡과 `verify`가 모두 SUCCESS(`llm`은 SKIPPED). CodeRabbit은 "Review rate limited"로 리뷰가 없어 회차로 세지 않는다("다음 포함 리뷰는 18분 뒤"라고 적었다). claude-review는 코멘트를 남겼다(Critical·Major 없음, Minor 셋과 Nit 둘). 첫 회차이므로 지적마다 판단했다.
+  - Minor, 다른 시험 모듈에서 `model_manifest`·`model_name`을 import한다: 보류. 티켓 05가 이 모양을 그대로 쓰라고 했고, 이 파일이 두 번째 쓰는 자리다. 공용으로 올리는 일은 세 번째 쓰는 자리가 생길 때 한다(일지 "다음"에 적었다).
+  - Minor, 잘못된 `ASSISTANT_LLM_MODELS`를 확인하는 자동 시험이 없다: 보류. 분기가 `_models()`의 마지막 `raise` 한 줄이고 메시지가 변수 이름과 받은 값을 함께 적어 수집 때 바로 알린다(`tests/test_assistant_llm.py:121`을 읽었다). 시험을 더하면 새 커밋과 30분 넘는 게이트와 봇 한 바퀴가 든다.
+  - Minor, `ModelSetup`의 갈래를 열거로 드러내라: 보류. 모델 종류가 둘뿐이다. 세 번째 종류가 생기면 한다(일지 "다음"에 적었다).
+  - Nit, `claude-opus-5` 문자열이 독스트링 예와 이중이다. Nit, `모델 차림`이 `CONTEXT.md`에 없다: 보류. 시험 안에서만 쓰는 말이다.
+  - claude-review가 작성자 몫으로 남겼다고 한 기능 단락 마지막 문장은 이 세션이 티켓 02의 체크박스("실행이 원인 `model_call`의 `run_failed`로 끝나고, 그 호출의 `llm_called`와 `tool_called`가 트레이스에 없다")와 대 보았다. 돌려 본 것은 아니다.
+
+## 회고
+
+- 낸 후보 셋: 승인 1, 기각 2, 넘김 0.
+- 승인: 문서만 바꾼 커밋의 pre-commit 한 바퀴가 길다. 사건은 위 두 시도다(1727.67초와 2102.8초, `web-verify` 1749.0초). 층은 이미 정해진 재기 chore이고 열린 항목 `docs-only-commit-precommit-slow-again`(0309의 4회차)에 5회차로 이었다. 새 항목을 쓰지 않았다. 같은 처방(안쪽을 재어 줄일 길을 고른다)이고 검사를 건너뛰는 길은 넣지 않는다. 이 세션의 한 바퀴는 나란히 돈 pytest가 14개였을 때 나왔다. 부하 때문인지 러너가 느려진 것인지는 이번에도 가르지 못했다. 이 항목이 회차 5가 되어 `next-session` 결정표의 하네스 chore 배치 조건이 찬다.
+- 기각, 부하에서 서로 다른 시간 의존 시험이 번갈아 빨갰다(`test_interrupt.py`, `test_rerun_runner.py`): 대기열 306이 ADR 0036으로 닫은 종류(부하에서 시간 시험이 빨개지면 그 커밋을 다시 치는 값을 받아들인다)이고 새 사례는 회차를 더하지 않고 일지에만 적는다(retro 5단계). 위가 그 기록이다.
+- 기각, 워크트리 가드가 `&&`로 이은 Bash 호출과 Monitor의 긴 `until` 명령을 거부했다: `CLAUDE.md` 환경 함정이 이미 알리고, 단일 명령 둘로 나눠 치는 것으로 지났다.
+
 ### 다음
 
-- 이 기능의 티켓은 모두 닫혔다. PR을 연 뒤 병합하고 `sweep`한다.
+- 이 PR은 봇 회차 1을 거쳤다. 이 일지를 푸시한 뒤 CI와 CodeRabbit(한도에 걸렸으면 PR 코멘트로 남긴다)을 마저 보고 병합한다. 병합한 뒤 `uv run --env-file ../../../.env python tools/llm_local.py sweep`으로 남은 서버와 상태 폴더를 치운다(주 체크아웃 아님).
+- 뒤로 넘긴 일(봇 회차 1에서 보류한 것): `tests/test_assistant_llm.py`가 다른 시험 모듈에서 `model_manifest`·`model_name`을 가져온다. 세 번째 쓰는 자리가 생기면 `tests/` 아래 시험이 아닌 공용 모듈로 올린다. `ModelSetup`의 갈래(저장소 플러그인이냐 복사 때 생성이냐)는 세 번째 모델 종류가 생기면 열거로 드러낸다.
+- 이 기능의 티켓은 모두 닫혔다. 병합 뒤 결정표: 기능의 마지막 티켓이고 열린 항목 `docs-only-commit-precommit-slow-again`이 회차 5라 하네스 chore 배치(`queue_open_rows.py`로 다시 센다)이며, `**끝:**` 줄이 dev에만 있으므로 출시 PR 계기도 함께 본다(`git log origin/main..origin/dev -G'^\*\*끝:\*\*'`).
 - 사용자가 고를 것: `plugins/skills/cite-sources/SKILL.md`의 문구를 Gemma의 실패(검색을 부르지 않고 정해진 문장으로 바로 답함)를 줄이는 쪽으로 고칠지. 이 한 번의 결과로는 고치지 않았다. 고르는 자리는 base-agent의 후속 티켓이거나 answer-eval(오픈 모델로 다시 돌릴 때)이다.
+
+## 인계 시점의 상태 (커밋 뒤, 두 번째 인계)
+
+- 이 브랜치에 커밋 둘이 있고 푸시하지 않았다. `05e1999ce`(이음매), `65662bb24`(티켓 06 done, `**끝:**` 줄, 기능 단락 `docs/release-notes/features/local-model.md`, 프로브 README의 2026-11-16 절, pilot-release 계획의 넘김 문단, 이 일지). 작업 트리는 이 절을 빼면 깨끗하다.
+- 로컬 모델 회차는 끝났다(회차 1, 18/28 통과). 다시 돌지 않는다. 결과와 기록 묶음은 프로브 README의 2026-11-16 절과 위 "로컬 모델 회차" 절에 있다.
+- 남은 일: ① 푸시와 PR(`/git-pr`. 제목은 커밋 제목과 같은 꼴, 본문에 기록 묶음을 옮긴다), ② 봇 회차와 병합(`merge.md`), ③ 병합 뒤 `sweep`과 회고. 기록 묶음은 PR 코멘트에도 옮긴다(티켓 "기록"의 마지막 항목).
+- 커밋 게이트의 `pytest`가 부하 때문에 서로 다른 시간 의존 시험에서 다섯 번 시도 가운데 넷을 막았다(`test_rerun_runner.py` 사례, `test_interrupt.py` 사례들, `test_hook_push_behind_main.py`, `test_probe_kit.py` 사례). 모두 단독으로는 통과했다(손으로 봤다). 형제 세션의 pytest가 14~24개 돌 때 막혔고 6개로 내려간 뒤 통과했다. 훅은 건너뛰지 않았다. 다음 세션이 푸시 전에 다시 커밋할 일은 없지만, 병합 전 CI의 `python` 잡이 같은 시험으로 빨개지면 단독으로 돌려 보고 다시 돌린다. 이 반복은 `.claude/rules/tests.md`의 시간 단언 항목과 같은 유형이라 회고 후보다(대기열 332·306의 다음 회차).
+- 이 세션이 번복하거나 고친 것: 없다. 셀프 리뷰 반영은 위 "셀프 리뷰" 절에 있다.
+- 이 세션의 제목: `feature/06-base-agent-cases-on-local-models` (인계하면 `(인계함)`이 붙는다).
+- open-session을 부른다 2026-11-15T20:23:14Z (커밋 뒤 인계)
