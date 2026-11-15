@@ -561,7 +561,7 @@ Docker Hub 계정 만들기, 2단계 인증, 접근 토큰 발급, GitHub 저장
 - **관리 화면의 로그인과 관리 화면을 인터넷에 여는 일**은 admin-login의 것이다. `**Blocked by:**`에 release-image가 있다.
 - **공개 데모의 배포와 그 규칙 파일**은 public-demo의 것이다. `**Blocked by:**`에 release-image가 있다. 이미지에 든 파일을 덮는지 플러그인 루트를 따로 두는지는 그 행의 설계 인터뷰가 이 명세의 이미지 구성(위 "이미지의 구성"의 serve 문단과 플러그인 폴더)을 보고 정한다.
 - **판 설정 파일의 출시 후보 줄을 지우는 일과 정식 판 0.1.0**은 pilot-release의 것이다. 그 행은 admin-login과 deploy-package를 거쳐 release-image 뒤에 온다.
-- **위젯이 사이트 파일을 요청 때마다 읽는 일, 허용 출처와 요청 글자 수 상한을 화면에서 바꾸는 일**은 portal-admin의 것이다(ADR 0056 Considered Options). 그 행의 `**Blocked by:**`는 pilot-portal뿐이라 release-image보다 먼저 돌 수 있다. 그때 위젯 컨테이너가 뜰 때 빌드하는 것을 바꾸게 되므로 그 행의 기능 계획에 그 사실을 적었다.
+- **위젯이 사이트 파일의 값을 실행 중에 받는 일, 허용 출처와 요청 글자 수 상한을 화면에서 바꾸는 일**은 이 명세를 쓸 때 portal-admin의 것이었고(ADR 0056 Considered Options), 그 행의 설계(ADR 0064, 2026-11-15)가 둘로 나눴다. 위젯이 두 값을 컨테이너가 뜰 때 받게 하는 일은 widget-runtime-values의 것이고, 화면에서 바꾸는 일은 0.1 판 뒤의 site-limits-admin의 것이다. widget-runtime-values는 `**Blocked by:**`에 release-image가 있어 이 행 뒤에 돌고, 그때 위젯 컨테이너가 뜰 때 빌드하는 것을 바꾸므로 그 행의 기능 계획에 그 사실을 적었다.
 - **판 내기 워크플로와 규칙을 rag-engine에 옮기는 일**은 그 저장소의 것이고, 이 명세는 지시문을 내는 데까지 한다(위 "rag-engine에 줄 지시문").
 - **0.1 판의 범위 밖**: Podman, RHEL 계열 전용 바탕 이미지, ARM 서버(ADR 0056 결정 "보증하는 환경"), 인증서를 프록시가 스스로 발급받는 것(ACME), 인증서 갱신의 자동화, 늘 최신을 가리키는 이미지 태그, 이미지 서명. 이미지 서명은 ADR 0056이 다루지 않았고 받는 기능이 없다. 필요해지면 새 행이다.
 - **판 내기를 미리 연습하는 모드**는 사용자가 고르지 않았다(Testing Decisions의 넷째).

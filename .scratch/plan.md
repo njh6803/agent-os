@@ -63,15 +63,18 @@ web/                       슬라이스 3부터. pnpm 워크스페이스. 파이
 | 8 | [public-demo](public-demo/plan.md) | 공개 정부 문서를 넣은 클라우드 VM 한 대를 공개 주소에 열어, 누구나 로그인 없이 묻고 출처가 붙은 답을 받게 한다. | base-agent, release-image, answer-eval, answer-markdown, rag-engine:release-image, rag-engine:search-eval | todo |
 | 8 | [release-image](release-image/plan.md) | 판마다 서버와 관리 화면과 위젯과 위젯 미리보기 페이지의 컨테이너 이미지를 짓고 올리며 단독 배포 안내도 낸다. | pilot-portal | in-progress |
 | 9 | [admin-login](admin-login/plan.md) | 관리 화면에 운영자 계정 로그인과 대화 화면을 더하고, 관리 화면을 같은 서버의 다른 포트로 인터넷에 연다. | release-image, postgres-foundation | todo |
-| 9 | [deploy-package](deploy-package/plan.md) | agent-os와 문서 검색 서버를 Docker Compose로 한 번에 띄우는 참조 배포를 준다. | local-model, portal-login, base-agent, release-image, ops-backup-upgrade, diag-bundle, mcp-http, rag-engine:release-image, rag-engine:admin, rag-engine:backup-upgrade, rag-engine:diag-bundle | todo |
+| 9 | [deploy-package](deploy-package/plan.md) | agent-os와 문서 검색 서버를 Docker Compose로 한 번에 띄우는 참조 배포를 준다. | local-model, portal-login, portal-admin, base-agent, release-image, ops-backup-upgrade, diag-bundle, mcp-http, rag-engine:release-image, rag-engine:admin, rag-engine:backup-upgrade, rag-engine:diag-bundle | todo |
 | 9 | [diag-bundle](diag-bundle/plan.md) | 문제를 살필 때 판과 구성과 최근 실패 원인을 비밀 값 없이 파일 하나로 묶는 명령을 준다. | release-image, mcp-http | todo |
 | 9 | [ops-backup-upgrade](ops-backup-upgrade/plan.md) | agent-os 데이터를 백업하고 새 서버에 복원하며, 판을 올린 뒤에도 옛 트레이스를 읽게 한다. | release-image | todo |
-| 9 | [pilot-release](pilot-release/plan.md) | public-demo를 뺀 기준선의 기능이 모두 끝나면 제품 0.1 판을 내고 지원 범위와 고지를 문서로 남긴다. | answer-eval, deploy-package, answer-markdown, admin-login, step-up-login, portal-admin | todo |
-| 9 | [portal-admin](portal-admin/plan.md) | 사이트마다의 위젯 설정을 위젯 쪽 서버의 데이터베이스에 두고 운영자가 위젯 설정 관리 화면에서 등록해, 파일을 열지 않고 위젯이 보일 것을 바꾼다. | pilot-portal | todo |
+| 9 | [pilot-release](pilot-release/plan.md) | public-demo를 뺀 기준선의 기능이 모두 끝나면 제품 0.1 판을 내고 지원 범위와 고지를 문서로 남긴다. | answer-eval, deploy-package, answer-markdown, admin-login, step-up-login, portal-admin, widget-admin-server, widget-runtime-values, portal-login-admin | todo |
+| 9 | [portal-admin](portal-admin/plan.md) | 운영자가 위젯 관리 화면에 Agent OS의 운영자 계정으로 들어와 사이트마다의 위젯 설정과 위젯 미리보기 페이지 설정을 등록해, 파일을 열지 않고 위젯이 보일 것을 바꾼다. | widget-admin-server, admin-login, widget-login-state | todo |
 | 9 | [portal-login](portal-login/plan.md) | 위젯 미리보기 페이지에 사내 로그인 모드를 더해, 배포 환경에서는 사내 사람만 질문하게 한다. | pilot-portal, widget-login-state | todo |
+| 9 | [portal-login-admin](portal-login-admin/plan.md) | 회사 로그인 서버 항목과 사이트가 쓰는 항목을 위젯 관리 화면에서 고쳐, 설정 파일을 열지 않고 사이트의 로그인을 바꾼다. | portal-login, portal-admin | todo |
 | 9 | [postgres-foundation](postgres-foundation/plan.md) | agent-os 배포에 PostgreSQL을 들이고, 서버와 테스트와 CI가 그 데이터베이스에 닿는 길을 세운다. | release-image | todo |
 | 9 | [step-up-login](step-up-login/plan.md) | 익명으로 질문하다가 로그인한 사람만 쓰는 도구에 닿으면 로그인을 안내하고, 로그인한 뒤 같은 대화에 이어 답한다. | portal-login | todo |
-| 9 | [widget-login-state](widget-login-state/plan.md) | 위젯이 로그인 상태와 고지와 다크 모드 스위치를 직접 그리고 사이트마다의 위젯 설정을 받아 오며, 주소 하나를 창으로 여는 URL 방식을 더한다. | portal-admin | todo |
+| 9 | [widget-admin-server](widget-admin-server/plan.md) | 위젯 관리 서버를 세워 사이트마다의 위젯 설정을 위젯 쪽의 PostgreSQL에 들고, 위젯이 사이트의 이름으로 그 설정을 받아 가는 주소를 낸다. | postgres-foundation | todo |
+| 9 | [widget-login-state](widget-login-state/plan.md) | 위젯이 로그인 상태와 고지와 다크 모드 스위치를 직접 그리고 사이트마다의 위젯 설정을 받아 오며, 주소 하나를 창으로 여는 URL 방식을 더한다. | widget-admin-server | todo |
+| 9 | [widget-runtime-values](widget-runtime-values/plan.md) | 위젯 이미지를 미리 지어 두고 컨테이너가 뜰 때 사이트 파일의 허용 출처와 요청 글자 수 상한만 받게 해, 뜰 때마다 하던 빌드를 없앤다. | release-image | todo |
 | 10 | [admin-2fa](admin-2fa/plan.md) | 관리 화면의 로그인에 2단계 인증을 더해, 비밀번호가 새도 그것만으로는 들어오지 못하게 한다. | admin-login, pilot-release | todo |
 | 10 | [admin-answer-preview](admin-answer-preview/plan.md) | 관리 화면 실행 상세의 최종 출력 칸에서 원문과 마크다운으로 그린 모양을 오가며 보게 해, 운영자가 최종 사용자에게 보인 모양을 바로 확인한다. | answer-markdown, pilot-release | todo |
 | 10 | [admin-approval](admin-approval/plan.md) | 승인 규칙이 승인할 사람을 정해, 관리 화면의 운영자가 다른 사람이 일으킨 일시정지한 실행을 승인하거나 거부한다. | admin-login, pilot-release | todo |
@@ -86,6 +89,7 @@ web/                       슬라이스 3부터. pnpm 워크스페이스. 파이
 | 10 | [principal-propagation](principal-propagation/plan.md) | 운영자가 켠 MCP 서버에만 실행의 주체를 넘겨, 사용자가 볼 수 있는 문서로만 답하게 한다. | mcp-trust | todo |
 | 10 | [run-feedback](run-feedback/plan.md) | 최종 사용자가 틀린 답을 신고하고, 운영자가 신고된 실행을 관리 화면에서 볼 수 있게 한다. | pilot-release | todo |
 | 10 | [server-login-requirement](server-login-requirement/plan.md) | 도구 서버가 로그인이 필요하다고 응답하면 그것을 로그인 요구로 받아, 익명인 사람에게 로그인 안내를 보인다. | step-up-login, principal-propagation, pilot-release | todo |
+| 10 | [site-limits-admin](site-limits-admin/plan.md) | 사이트 파일의 허용 출처와 요청 글자 수 상한을 화면에서 고쳐, 아무것도 다시 띄우지 않고 바꾼 값이 듣게 한다. | widget-runtime-values, pilot-release | todo |
 | 10 | [stale-warning](stale-warning/plan.md) | 검색 결과의 근거 문서가 오래됐다고 표시돼 있으면 답에 경고를 붙여, 낡은 근거로 답했음을 알린다. | pilot-release, rag-engine:doc-freshness | todo |
 | 10 | [usage-report](usage-report/plan.md) | 기간별 질문 수와 사용자 수와 오류 신고 비율을 이용 보고로 내보내 운영 상황을 한눈에 알게 한다. | audit-export, run-feedback | todo |
 | 10 | [value-masking](value-masking/plan.md) | 런타임이 아는 비밀 값을 트레이스에 쓰기 직전에 모든 글 칸에서 찾아 가려, 기록에 새지 않게 한다. | principal-propagation | todo |
@@ -111,7 +115,7 @@ web/                       슬라이스 3부터. pnpm 워크스페이스. 파이
 
 ## 프론티어
 
-done 이 아니고, Blocked by 가 비었거나 이 저장소의 막는 기능이 모두 done 인 기능이다. `local-model`, `base-agent`, `release-image`, `portal-admin`
+done 이 아니고, Blocked by 가 비었거나 이 저장소의 막는 기능이 모두 done 인 기능이다. `local-model`, `base-agent`, `release-image`
 
 ## 다른 저장소를 기다리는 기능
 

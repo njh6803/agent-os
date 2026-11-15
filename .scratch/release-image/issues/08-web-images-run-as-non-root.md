@@ -12,7 +12,7 @@ web 셋의 측정은 `node:24-bookworm-slim`과 uid 1000에서 했고, 명세가
 
 ### 시작하기 전에
 
-- [ ] portal-admin 기능이 위젯이 사이트 파일을 요청 때마다 읽게 바꿨는지 본다(명세 Out of Scope, `.scratch/portal-admin/plan.md`의 "release-image 명세가 넘긴 것"). 바꿨으면 위젯이 뜰 때 빌드하는 꼴이 달라지므로 위젯 이미지를 짓기 전에 멈추고 명세로 돌아간다
+- [ ] 위젯이 사이트 파일의 값을 받는 방식이 바뀌었는지 본다(명세 Out of Scope). 그 일은 widget-runtime-values 기능의 것이고(ADR 0064. `.scratch/widget-runtime-values/plan.md`) 그 기능은 release-image를 기다리므로, 이 티켓을 시작할 때는 바뀌지 않은 것이 정상이다. 그런데도 바뀌어 있으면 위젯이 뜰 때 빌드하는 꼴이 달라지므로 위젯 이미지를 짓기 전에 멈추고 명세로 돌아간다
 
 ### 셋에 공통
 
