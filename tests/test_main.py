@@ -48,7 +48,15 @@ from agent_os.channel.cli.main import DEFAULT_HOST, EXIT_PAUSED
 from agent_os.channel.http.limits import DEFAULT_REQUEST_CHARS, check_request_chars
 from agent_os.core.ports import ChatModel, Trace, UnknownEvent
 from agent_os.http.sites import Site, SiteKey, SiteLimits, Sites
-from agent_os.main import ADMIN_TOKEN_ENV, CHANNEL_TOKEN_ENV, main
+from agent_os.main import (
+    ADMIN_TOKEN_ENV,
+    CHANNEL_TOKEN_ENV,
+    CONTAINER_NETWORK_ENV,
+    IMAGE_MARKER,
+    ContainerNetwork,
+    binding_problem,
+    main,
+)
 from agent_os.sdk import (
     AgentName,
     ApprovalDenied,
@@ -1294,6 +1302,147 @@ def test_허용되는_루프백_주소_둘이_진단에_그대로_적혀_있다(
     # 기댓값을 리터럴로 적는다. LOOPBACK_HOSTS 로 도는 단언은 그 열이 비는 날 조용히 통과한다.
     assert "127.0.0.1" in err
     assert "::1" in err
+
+
+class _Signal(BaseModel):
+    contains: list[str]
+    excludes: list[str]
+
+
+class _Row(BaseModel):
+    marker: bool
+    env: str | None
+    verdicts: dict[str, str]
+
+
+class _NetworkCases(BaseModel):
+    """`tests/fixtures/container_network/cases.json`. 파이썬은 듣는 주소(`binding`)만 읽는다."""
+
+    env_name: str
+    marker_path: str
+    binding: list[_Row]
+    binding_signals: dict[str, _Signal]
+
+
+NETWORK_CASES = _NetworkCases.model_validate_json(
+    (REPO_ROOT / "tests" / "fixtures" / "container_network" / "cases.json").read_text(
+        encoding="utf-8"
+    )
+)
+# (표지 파일, 환경 변수, 호스트, 판정의 종류). 표의 칸 하나가 사례 하나다.
+BINDING_CASES = [
+    (row.marker, row.env, host, verdict)
+    for row in NETWORK_CASES.binding
+    for host, verdict in row.verdicts.items()
+]
+
+
+def test_사례_표는_판정의_종류를_모두_갖고_있다() -> None:
+    """표가 비거나 한 종류가 빠지면 아래 사례 시험이 그 칸 없이 초록이 된다."""
+    assert {verdict for *_, verdict in BINDING_CASES} == set(NETWORK_CASES.binding_signals) | {"ok"}
+    assert NETWORK_CASES.env_name == CONTAINER_NETWORK_ENV
+    assert NETWORK_CASES.marker_path == IMAGE_MARKER.as_posix()
+
+
+@pytest.mark.parametrize(
+    ("marker", "env", "host", "verdict"),
+    BINDING_CASES,
+    ids=[f"표지{int(m)}-{e!r}-{h}-{v}" for m, e, h, v in BINDING_CASES],
+)
+def test_듣는_주소의_판정이_사례_표와_같다(
+    *, marker: bool, env: str | None, host: str, verdict: str
+) -> None:
+    """네 프로세스가 같은 규칙을 따로 들어서, 이 표를 TS 시험도 읽는다(release-image 티켓 03)."""
+    found = binding_problem(host, "8000", ContainerNetwork(image_marker=marker, env=env))
+
+    if verdict == "ok":
+        assert found is None
+        return
+    assert found is not None
+    signal = NETWORK_CASES.binding_signals[verdict]
+    for text in signal.contains:
+        assert text.format(host=host, env=env) in found
+    for text in signal.excludes:
+        assert text not in found
+
+
+@pytest.fixture
+def image_marker(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> Path:
+    """표지 파일의 자리를 임시 경로로 바꾼다. `/etc` 에 파일을 만들지 않는다."""
+    path = tmp_path / "agent-os-image"
+    monkeypatch.setattr(main_module, "IMAGE_MARKER", path)
+    return path
+
+
+@pytest.mark.usefixtures("workspace", "tokens")
+def test_표지_파일과_환경_변수가_함께_있으면_serve_가_0_0_0_0_에_선다(
+    monkeypatch: pytest.MonkeyPatch,
+    image_marker: Path,
+    uvicorn_calls: list[dict[str, object]],
+) -> None:
+    """판정은 순수 함수지만 진입점이 실제 표지 파일과 환경 변수를 거기에 이어야 켜진다."""
+    image_marker.write_text("", encoding="utf-8")
+    monkeypatch.setenv(CONTAINER_NETWORK_ENV, "1")
+
+    code = _main(["serve", "--host", "0.0.0.0", "--port", "9999"])
+
+    assert code == 0
+    assert [(call["host"], call["port"]) for call in uvicorn_calls] == [("0.0.0.0", 9999)]
+
+
+@pytest.mark.parametrize(
+    ("marker", "env", "signal"),
+    [
+        (False, "1", "이미지 밖에서는 켜지지 않는다"),
+        (True, None, "AGENT_OS_CONTAINER_NETWORK=1"),
+        (True, "true", "받은 값: true"),
+        (False, None, "루프백만 받는다"),
+    ],
+    ids=["환경 변수만", "표지 파일만", "환경 변수 오타", "둘 다 없음"],
+)
+@pytest.mark.usefixtures("workspace", "tokens")
+def test_둘이_함께_있지_않으면_serve_는_0_0_0_0_에_서지_않고_경우에_맞는_진단을_낸다(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    image_marker: Path,
+    uvicorn_calls: list[dict[str, object]],
+    *,
+    marker: bool,
+    env: str | None,
+    signal: str,
+) -> None:
+    if marker:
+        image_marker.write_text("", encoding="utf-8")
+    if env is None:
+        monkeypatch.delenv(CONTAINER_NETWORK_ENV, raising=False)
+    else:
+        monkeypatch.setenv(CONTAINER_NETWORK_ENV, env)
+
+    code = _main(["serve", "--host", "0.0.0.0"])
+
+    _, err = capsys.readouterr()
+    assert code == 1
+    assert signal in err
+    assert uvicorn_calls == []
+
+
+@pytest.mark.usefixtures("workspace", "tokens")
+def test_환경_변수의_오타는_루프백_호스트에서도_구성_오류다(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    image_marker: Path,
+    uvicorn_calls: list[dict[str, object]],
+) -> None:
+    """오타가 조용히 꺼짐으로 읽히면 운영자는 켰다고 믿는다."""
+    image_marker.write_text("", encoding="utf-8")
+    monkeypatch.setenv(CONTAINER_NETWORK_ENV, "true")
+
+    code = _main(["serve"])
+
+    _, err = capsys.readouterr()
+    assert code == 1
+    assert "받은 값: true" in err
+    assert uvicorn_calls == []
 
 
 def test_구성_오류_셋은_한꺼번에_나온다(

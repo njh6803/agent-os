@@ -67,7 +67,8 @@ from agent_os.sdk import (
 
 DEFAULT_TRACES = Path("traces")
 DEFAULT_PLUGINS_ROOT = Path("plugins")
-# 루프백만 받는 규칙은 main.py 가 판정한다(ADR 0011). 여기는 그 규칙 안의 기본값 하나다.
+# 루프백만 받는 규칙과 컨테이너 이미지 안의 예외(ADR 0056)는 main.py 가 판정한다(ADR 0011).
+# 여기는 그 규칙 안의 기본값 하나다.
 DEFAULT_HOST = "127.0.0.1"
 # uvicorn 자신의 기본값이라 직접 띄울 때와 같은 포트다(ADR 0010 의 2026-09-23 이력).
 DEFAULT_PORT = 8000
@@ -158,9 +159,16 @@ def build_parser() -> argparse.ArgumentParser:
         "--reason", help="거부 사유. 실패한 도구 결과로 모델에게 돌아가고 트레이스에 남는다"
     )
     _add_shared(resume_parser)
-    serve_parser = commands.add_parser("serve", help="관리 API 와 HTTP 채널을 루프백에 세운다")
+    serve_parser = commands.add_parser(
+        "serve", help="관리 API 와 HTTP 채널을 루프백에 세운다(컨테이너 이미지 안의 예외는 --host)"
+    )
     serve_parser.add_argument(
-        "--host", default=DEFAULT_HOST, help=f"바인딩 주소. 루프백만 (기본 {DEFAULT_HOST})"
+        "--host",
+        default=DEFAULT_HOST,
+        help=(
+            f"바인딩 주소. 루프백만(기본 {DEFAULT_HOST}). 컨테이너 이미지 안에서 "
+            "AGENT_OS_CONTAINER_NETWORK=1 이 있으면 0.0.0.0 도 받는다"
+        ),
     )
     serve_parser.add_argument(
         "--port", type=_port, default=DEFAULT_PORT, help=f"바인딩 포트 (기본 {DEFAULT_PORT})"

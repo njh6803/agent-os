@@ -21,7 +21,7 @@ src/agent_os/
   admin/http/              슬라이스 2. GET 넷과 /health. plugin-toggle 이 첫 쓰기 경로 PUT /plugins/{kind}/{name}/enabled 를 더한다. 승인은 여기가 아니라 채널이다
 openapi.json               슬라이스 2. 커밋된 계약. tools/export_openapi.py 가 만들고 테스트가 최신성을 본다
 web/                       슬라이스 3부터. pnpm 워크스페이스. 파이썬과 루트 분리
-  apps/admin/              Next.js 관리 화면. 브라우저가 토큰을 들고 Next 는 rewrites 중계, 루프백만(ADR 0019)
+  apps/admin/              Next.js 관리 화면. 브라우저가 토큰을 들고 Next 는 rewrites 중계, 루프백만(ADR 0019. 이미지 안의 예외는 ADR 0056)
   apps/widget/             슬라이스 4. 채팅 위젯. React 19 컴포넌트로 Next 16 iframe 페이지와 Vite element 번들을 낸다(ADR 0024)
   packages/api-client/     openapi.json에서 openapi-typescript 로 생성해 커밋한다(ADR 0021). 위젯 클라이언트가 는다
   packages/ui/             슬라이스 4. 디자인 시스템. 디자인 토큰과 atoms·molecules, Storybook. 두 앱이 소스를 import 한다(ADR 0026)

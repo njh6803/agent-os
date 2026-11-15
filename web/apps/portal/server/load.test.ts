@@ -3,6 +3,7 @@
 import { writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { expect, test } from "vitest";
+import { OUTSIDE } from "../testing/container-network.ts";
 import {
   type ConfigDoc,
   ecPrivateKeyPem,
@@ -22,7 +23,7 @@ const SECRET = "SECRET-KEY-TEXT";
 
 function load(edits: SetupEdits = {}) {
   const setup = writeSetup(edits);
-  return loadPortal(setup.configPath, setup.siteFilePath);
+  return loadPortal(setup.configPath, setup.siteFilePath, OUTSIDE);
 }
 
 function problemsOf(edits: SetupEdits): readonly string[] {
@@ -84,7 +85,7 @@ test("읽어 낸 고지 전문에 쿠키 수명 상수의 일수가 선다", () 
 test("사이트 파일이 없으면 사이트 파일 자리로 알린다", () => {
   const setup = writeSetup();
 
-  const result = loadPortal(setup.configPath, join(setup.dir, "missing.toml"));
+  const result = loadPortal(setup.configPath, join(setup.dir, "missing.toml"), OUTSIDE);
 
   expect("problems" in result && result.problems).toEqual(["사이트 파일: 파일이 없다"]);
 });
@@ -93,7 +94,7 @@ test("사이트 파일이 site-file 패키지의 판정을 지나지 못하면 �
   const setup = writeSetup();
   writeFileSync(setup.siteFilePath, 'schema_version = "2"\n', "utf-8");
 
-  const result = loadPortal(setup.configPath, setup.siteFilePath);
+  const result = loadPortal(setup.configPath, setup.siteFilePath, OUTSIDE);
 
   expect("problems" in result && result.problems).toEqual([
     '사이트 파일: schema_version: 글자 "1" 이어야 한다',
@@ -104,7 +105,7 @@ test("사이트 파일이 TOML 이 아니면 줄과 열만 싣고 파일 내용�
   const setup = writeSetup();
   writeFileSync(setup.siteFilePath, `schema_version = "1"\n[[sites]\n${SECRET}`, "utf-8");
 
-  const result = loadPortal(setup.configPath, setup.siteFilePath);
+  const result = loadPortal(setup.configPath, setup.siteFilePath, OUTSIDE);
 
   expect("problems" in result && result.problems).toEqual([
     expect.stringMatching(/^사이트 파일: TOML 이 아니다: .*\(\d+행 \d+열\)$/u),
@@ -196,7 +197,7 @@ test("개인 키를 읽지 못해도 사이트 파일 대조는 계속해 어긋
 test("설정의 어긋남은 사이트 파일의 어긋남과 함께 모두 알린다", () => {
   const setup = writeSetup({ config: (doc) => void (doc.portal["port"] = 0) });
 
-  const result = loadPortal(setup.configPath, join(setup.dir, "missing.toml"));
+  const result = loadPortal(setup.configPath, join(setup.dir, "missing.toml"), OUTSIDE);
 
   expect("problems" in result && result.problems).toEqual([
     "portal.port: 1 이상 65535 이하의 정수여야 한다",
@@ -227,7 +228,7 @@ test("사이트마다 어긋난 곳을 모두 모아 알린다", () => {
 test("설정 파일이 없으면 설정 파일 자리로 알린다", () => {
   const setup = writeSetup();
 
-  const result = loadPortal(join(setup.dir, "missing.toml"), setup.siteFilePath);
+  const result = loadPortal(join(setup.dir, "missing.toml"), setup.siteFilePath, OUTSIDE);
 
   expect("problems" in result && result.problems).toEqual(["설정 파일: 파일이 없다"]);
 });
