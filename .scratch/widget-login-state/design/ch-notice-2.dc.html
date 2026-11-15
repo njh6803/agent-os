@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>갈래 3 안 2: 덮개로 보이기</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/agent-os/styles.css">
+<link rel="stylesheet" href="ds/agent-os/fonts/fonts.css">
+<link rel="stylesheet" href="ds/agent-os/_ds_bundle.css">
+<script src="ds/agent-os/_ds_bundle.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0}
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+.ellipsis{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.textlink{display:inline;min-height:24px;padding:0;border:0;background:transparent;font-family:inherit;font-size:inherit;line-height:inherit;color:var(--accent);text-decoration:underline;cursor:pointer;border-radius:var(--radius-s)}
+.fill button{width:100%}
+</style>
+</helmet>
+<div data-theme="nokcheong" data-mode="light" style="width: 768px; height: 820px; box-sizing: border-box; padding: 48px; background: var(--bg); color: var(--text); font-family: var(--sans);">
+<div class="flex flex-col gap-4">
+<div class="flex flex-col gap-1" style="max-width: 672px;">
+<p class="text-body font-semibold" style="margin: 0;">갈래 3 안 2: 덮개로 보이기</p>
+<p class="text-small text-text-muted" style="margin: 0;">'고지 전문'을 누르면 고지 확인 덮개와 같은 상자가 위쪽 띠 아래를 덮고 전문을 보인다. 전문이 넓게 보이고 부품 하나를 나눠 쓰지만, 고른 방향에서 덮개를 고지 확인 하나로 두기로 한 규칙이 넓어진다. 덮인 동안 대화와 입력창은 보이지 않는다.</p>
+</div>
+<div class="flex" style="gap: 32px; align-items: flex-start;">
+<section class="flex flex-col gap-2" style="width: 320px;">
+<p class="text-small text-text-muted" style="margin: 0;">접힌 모습</p>
+<div data-theme="nokcheong" data-mode="light" data-density="regular" class="flex flex-col shadow-float" style="width: 320px; height: 560px; box-sizing: border-box; background: var(--bg-raised); color: var(--text); font-family: var(--sans); border: 1px solid var(--border); border-radius: var(--radius-l); overflow: hidden;">
+<header class="flex items-center justify-between gap-2 shrink-0" style="padding: var(--spacing-2) var(--spacing-2) var(--spacing-2) var(--spacing-4); border-bottom: 1px solid var(--border);">
+<h1 class="text-body font-semibold ellipsis" style="flex: 1; margin: 0;">계산 도우미</h1>
+<x-import component-from-global-scope="AgentOsUi.Switch" label="다크 모드" checked="{{no}}"></x-import>
+<x-import component-from-global-scope="AgentOsUi.Button" variant="secondary">새 대화</x-import>
+</header>
+<ol aria-label="대화" class="flex flex-col gap-4" style="flex: 1; min-height: 0; overflow: hidden; justify-content: flex-end; margin: 0; padding: var(--spacing-4); list-style: none;">
+<li class="text-body" style="align-self: flex-end; max-width: 83.333%; padding: var(--spacing-2) var(--spacing-3); border-radius: var(--radius-l); background: var(--bg-selected); overflow-wrap: anywhere;">12,000원 내고 8,700원이면 거스름돈은요?</li>
+<li class="flex flex-col gap-2">
+<button type="button" aria-expanded="false" class="flex items-center gap-2 text-small text-text-muted" style="align-self: flex-start; min-height: 24px; padding: 0; border: 0; background: transparent; font-family: inherit; cursor: pointer;"><x-import component-from-global-scope="AgentOsUi.Icon" name="wrench" size="14"></x-import><span>도구 1개를 불렀습니다</span></button>
+<span class="sr-only">출력: </span>
+<p class="text-body" style="margin: 0;">거스름돈은 3,300원입니다.</p>
+</li>
+</ol>
+<form class="flex gap-2 shrink-0" style="align-items: flex-end; margin: 0; padding: var(--spacing-3); border-top: 1px solid var(--border);">
+<div style="flex: 1; min-width: 0;"><textarea rows="1" aria-label="질문" placeholder="무엇을 도와드릴까요?" class="block w-full min-w-0 rounded-m border text-body px-3 py-2 border-border-control bg-bg-raised text-text" style="box-sizing: border-box; margin: 0; font-family: inherit; resize: none;"></textarea></div>
+<x-import component-from-global-scope="AgentOsUi.IconButton" icon="send" label="보내기" variant="primary"></x-import>
+</form>
+<div role="group" aria-label="고지" class="shrink-0 text-small text-text-muted" style="padding: var(--spacing-2) var(--spacing-4); border-top: 1px solid var(--border);">
+<p style="margin: 0;">질문과 출력은 기록되고 모델 API로 보내집니다. 개인정보를 넣지 마세요. <button type="button" class="textlink">고지 전문</button></p>
+</div>
+</div>
+</section>
+<section class="flex flex-col gap-2" style="width: 320px;">
+<p class="text-small text-text-muted" style="margin: 0;">'고지 전문'을 누른 뒤</p>
+<div data-theme="nokcheong" data-mode="light" data-density="regular" class="flex flex-col shadow-float" style="width: 320px; height: 560px; box-sizing: border-box; background: var(--bg-raised); color: var(--text); font-family: var(--sans); border: 1px solid var(--border); border-radius: var(--radius-l); overflow: hidden;">
+<header class="flex items-center justify-between gap-2 shrink-0" style="padding: var(--spacing-2) var(--spacing-2) var(--spacing-2) var(--spacing-4); border-bottom: 1px solid var(--border);">
+<h1 class="text-body font-semibold ellipsis" style="flex: 1; margin: 0;">계산 도우미</h1>
+<x-import component-from-global-scope="AgentOsUi.Switch" label="다크 모드" checked="{{no}}"></x-import>
+<x-import component-from-global-scope="AgentOsUi.Button" variant="secondary">새 대화</x-import>
+</header>
+<div role="dialog" aria-labelledby="full-notice-title" class="flex flex-col gap-4" style="flex: 1; min-height: 0; padding: var(--spacing-6) var(--spacing-4) var(--spacing-4); background: var(--bg-raised);">
+<h2 id="full-notice-title" class="text-title font-semibold" style="margin: 0;">고지 전문</h2>
+<div class="flex flex-col gap-2 text-body" style="flex: 1; min-height: 0; overflow-y: auto;">
+<p style="margin: 0;">이 위젯에서 보낸 질문과 받은 출력은 기록되고, 출력을 만들기 위해 모델 API로 보내집니다.</p>
+<p style="margin: 0;">이 브라우저를 알아보기 위해 익명 식별자를 쿠키로 둡니다. 쿠키는 마지막으로 질문한 뒤 30일 동안 남습니다.</p>
+<p style="margin: 0;">이름, 연락처, 주민등록번호 같은 개인정보를 질문에 넣지 마세요.</p>
+</div>
+<div class="grid fill">
+<x-import component-from-global-scope="AgentOsUi.Button" variant="secondary">닫기</x-import>
+</div>
+</div>
+</div>
+</section>
+</div>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":768,"height":820}}'>
+class Component extends DCLogic {
+renderVals() {
+return { yes: true, no: false };
+}
+}
+</script>
+</body>
+</html>
