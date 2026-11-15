@@ -233,3 +233,62 @@ PR 직전 리뷰에 밀 주장(반영으로 새로 쓴 사실 문장).
 - 새 위젯 설정 값 둘을 '위젯 설정 관리' 행에 넘기는 일. 받는 쪽은 그 행의 기능 계획(`.scratch/portal-admin/plan.md`)이지만, 지시문이 나란히 도는 portal-admin 설계 인터뷰의 파일을 고치지 말라고 해 쓰지 않았다. README에 적었고, 이 일지의 "다음"과 끝 보고로 넘긴다.
 - 그리지 않은 경우 둘을 새로 그리는 일. 그리면 사람의 완성 화면 확정을 다시 받아야 해, README에 적어 명세에 넘겼다.
 - 옮긴 아티팩트 파일(`canvas.json`의 메모 `ch-picked-r2`·`mk-how`, `ch-notice-1.dc.html`의 설명 글)의 틀린 문장. 고치면 아티팩트와 sha256이 달라져 웹 편집 확인이 어긋나므로 두고, README가 이긴다고 적었다.
+
+### 커밋
+
+커밋 직전 `git branch --show-current`가 `docs/widget-login-state-screens`였고 `uv run python tools/sibling_overlap.py`가 "이 브랜치의 새 번호 없음", "번호 겹침 없음", "함께 고친 파일 없음"을 냈다. 기준 브랜치가 `f6590c74c`에서 `0c25ea79c`(#575~#577)로 움직여 `git diff --name-only HEAD...origin/dev`를 이 브랜치가 이름으로 든 파일과 대 보았다. ADR 0059·0061과 이 기능의 계획은 바뀌지 않았고, `.scratch/portal-admin/plan.md`는 데이터베이스 줄 하나, `CONTEXT.md`는 운영자 계정 쪽 용어만 더했다. 겹치는 파일이 없어 `git merge --ff-only origin/dev`로 빨리 감은 뒤 `uv run python tools/plan_table.py`를 다시 돌렸고 `.scratch/plan.md`는 그대로였다.
+
+커밋 `d9ede678a`. pre-commit은 통과 17이고, ruff 둘은 `.py`가 없어 `Skipped`라 앞서 손으로 친 `uv run ruff check .`(All checks passed!)와 `uv run ruff format --check .`(2259 files already formatted)로 갈음했다. 카나리아 명세와 헌법 판 검사는 해당 파일이 없어 `Skipped`였다. 인용 대조 경고 아홉은 아티팩트 사본 안의 문장, 앞 세션의 기록, 앱이 낸 제목처럼 원문이 사본 안이나 저장소 밖에 있는 인용이라 고치지 않았다.
+
+### 인계 (커밋 뒤)
+
+커밋 뒤에 인계 계기가 왔다(세션 컨텍스트 345,198 토큰, 경계 `커밋 뒤`). `next-session/handoff.md` 1의 인계하지 않는 때 다섯에 들지 않는다. 커밋이 성공했고, 요청 범위(PR과 병합까지)가 이 경계에서 끝나지 않으며, 지시문의 "이어받을 상태"는 다른 경계(`셀프 리뷰 직전`)로 시작하고, 이 일지에 `인계 못함` 줄이 없으며, `get_session`의 `self`에 `parentSessionId`가 없다. 바꾸기 전 제목은 `docs/widget-login-state-screens`다. 커밋하지 않은 변경은 이 일지의 "커밋"과 이 절뿐이다.
+
+지시문:
+
+```
+다음 작업: 기능 widget-login-state. 위젯이 로그인 상태와 고지, 다크 모드 스위치, 로그아웃 단추를 직접 그리는 화면을 명세 전에 그렸고 셀프 리뷰를 반영해 커밋했다. PR 직전 리뷰, 푸시와 PR, 병합이 남았다
+다음 단계: 화면 디자인
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /ui-design widget-login-state
+브랜치: docs/widget-login-state-screens
+모델: Opus 5.5 / xhigh. 2의 잇는 지시문
+읽을 것: 일지 docs/journal/2026-11-15-1319-widget-login-state-screens.md의 "이어받은 세션"부터 끝까지(특히 "셀프 리뷰"의 "반영"과 "인계 (커밋 뒤)"). 나란히 도는 portal-admin(.scratch/portal-admin/)의 파일은 고치지 않는다
+이어받을 상태: 인계: 커밋 뒤. 셀프 리뷰를 반영한 커밋까지 했고(origin/dev로 빨리 감은 뒤 커밋, pre-commit 통과), /ui-design 재진입의 1, 2, 웹 편집 확인도 끝났다. 커밋하지 않은 변경은 일지의 "커밋"과 "인계 (커밋 뒤)" 절이다. 남은 단계는 PR 직전 리뷰(docs/constitution/operations.md 리뷰 파이프라인 2. 밀 주장은 일지 "반영"의 목록), 푸시와 PR, merge.md 2(봇 회차), retro와 일지 "다음", 병합(merge.md "워크트리에서 병합할 때"), next-session이다. 끝 보고에 사람에게 알릴 것 넷: (1) 완성 화면 확정 질문의 문장에 아티팩트에만 남는 것(갈래 1의 안 1, 2, 3, 5, 6)을 적지 않아 확정 메모 mk-confirmed와 README에 적었다. (2) 새 위젯 설정 값 둘(로그인 전, 고지 전문)의 받는 쪽은 '위젯 설정 관리' 행(.scratch/portal-admin/plan.md)인데 지시문대로 그 파일을 고치지 않았다. 일지 "다음"과 다음 지시문으로 넘긴다. (3) ADR 0061 이력(만료 기본 모양이 대화 안의 카드로 바뀜)은 ADR 승인 절차라 명세 세션에 넘겼다(README "명세가 정할 것"). (4) /ui-design 2의 올리기는 돌리지 않았다(까닭은 일지 "이어받은 세션"). 일지 docs/journal/2026-11-15-1319-widget-login-state-screens.md
+확인할 선행 조건: 없음
+이번 요청 범위: PR과 병합까지
+```
+
+제목을 `docs/widget-login-state-screens (인계함)`으로 바꿨고, 띄워 둔 백그라운드 작업은 없었으며, 워크트리 잠금 풀기는 `is not locked`로 끝났다(이미 풀려 있었다).
+
+open-session을 부른다 2026-11-15T09:41:40Z
+
+## 이어받은 세션 (커밋 뒤)
+
+2026-11-15 18:45 기준. 위 "인계 (커밋 뒤)"의 지시문으로 연 새 세션이다. 모델 Opus 5.5. 첫 메시지는 그 지시문과 같고, 첫 줄만 `open-session`이 시작 프롬프트를 옮긴 한 줄이다(앞 "이어받은 세션"의 인용과 같은 줄). 제목을 `docs/widget-login-state-screens`로 바꿨고(앱이 지은 제목 "widget-login-state PR 및 병합"이라 묻지 않고 바뀌었다), `git worktree list`에서 이 브랜치가 `.claude/worktrees/widget-login-state-screens`에 있어 `EnterWorktree(path)`로 들어왔다. 커밋하지 않은 변경은 인계 때 적은 그대로(이 일지 하나)였고, `origin/dev`는 이 브랜치의 머리 뒤로 움직이지 않았다.
+
+### `/ui-design` 재진입
+
+- 1: `claude plugin list`에서 `frontend-design@claude-plugins-official`이 `enabled`였다.
+- 2: 디자인 시스템 아티팩트를 `paths` 없이 읽은 머리가 지금 계정을 "shared with you from another organization (writer; …)"로 적었다. `/sync-design-system 확인`은 다시 밟지 않았다. 지시문의 "이어받을 상태"가 끝났다고 적었고, 이 세션은 더 그리지 않는다.
+- 웹 편집 확인: 이제 `design/`이 HEAD(`d9ede678a`)에 있어 스킬대로 맞댔다. 아티팩트의 판 `1794733000-328b`(앞 세션이 본 판과 같다)에서 `canvas.json`과 화면 스물넷을 받아, 받은 파일의 sha256을 `design/`의 파일과 맞댄 스크립트가 `checked=25 diff=0`을 냈고, `git status --short -- .scratch/widget-login-state/design`이 비어 작업 트리의 그 파일이 HEAD와 같다. 확정 뒤 웹에서 고친 것은 없다.
+
+### PR 직전 리뷰
+
+`coderabbit-review` 서브에이전트가 `coderabbit review --agent --base origin/dev --include-untracked`를 끝까지 돌렸다(`review_completed`, 종료 코드 0, 파일 29개, CLI 0.7.5, `Seat: not assigned`, `Plan: Free`). 지적 1건, 유효 0, 오탐 0, 보류 1.
+
+- [Minor, 보류] `mk-12-dark.dc.html:94`의 대화 목록이 `overflow: hidden`에 `justify-content: flex-end`라 내용이 길면 첫 항목이 잘린다. 서브에이전트는 README "명세가 정할 것"에 한 줄을 더하는 것을 제안했다.
+- 판정: 오탐으로 닫았다. 지금 위젯은 대화 영역을 `overflow-y-auto`로 스크롤하고, 사람이 맨 아래에 있었으면 다시 그릴 때마다 맨 아래로 붙인다(`web/apps/widget/components/organisms/Conversation.tsx` 65~88행의 `useLayoutEffect`와 `onScroll`을 읽었다). 아트보드의 `overflow: hidden`은 정지 그림을 그리는 방식이고, 이 기능은 대화 목록의 스크롤을 바꾸지 않는다. README에 더하지 않았다.
+
+CLI에는 밀 주장을 넘기는 길이 없어(`code-review` 6단계 1), "셀프 리뷰"의 "반영"이 적은 밀 주장 열넷을 이 세션이 원문과 대 보았다. 열은 맞았고 넷이 어긋났다.
+
+- README의 "ADR 0061 결정 "화면""은 ADR 0061의 결정 절이 아니라 Consequences 절(64행)이다. 내용("위젯 상자를 덮는 상자"를 기본으로 넘겼다)은 맞다.
+- README의 "ADR 0059 결정 "다시 적게 두기""는 결정의 이름이 아니다. 결정은 결정 "화면"(18행)의 "질문한 사람이 다시 적는다"이고, "다시 적게 두기"는 Considered Options(44행)에 남은 사용자의 답이다. "그 결정은 위젯이 아직 보내지 못한 글을 저장하지 않아 …"의 내용은 18행과 맞다.
+- README와 시작 프롬프트 143행의 "ADR 0059 결정 "기본 로그인만 든 동안의 대화""는 Consequences 절(55행)이다. 내용은 맞다.
+- 시작 프롬프트의 "셋 이상의 제품이 받친 것은 없다"가 같은 절 끝 문단의 "넷(kapa, 채널톡, Crisp, Inkeep)은 밝기를 사이트가 정하거나 …"와 어긋난다. 따를 규칙 가운데서 센 것이라 그렇게 적고, 넷이 받친 것은 ADR 0061이 반대쪽을 골라 따르지 않는다고 덧붙였다.
+
+맞은 열: ADR 0061 결정 "0.1 판에서 등록하는 것"(26행)의 만료 알림 모양, "이 ADR이 정하지 않는 것"(28행)의 맞춤 항목 목록, 결정 "로그아웃"(22행)과 "토큰 답"(15행)의 그리지 않는 경우, 결정 "고지"(18행)의 덮개, `web/apps/portal`의 `max-height` 0건(Grep), 만료 상자 위 24px와 고지 확인 덮개 16px(`mk-08` 162행 `var(--spacing-6) var(--spacing-4)`, `mk-02` 42행 `var(--spacing-4)`, `theme.css`의 `--spacing-6: 24px`), ADR 0060 넘겨받기, 시작 프롬프트 15·20행의 고르기, 기능 계획 10행.
+
+고친 것: README 16·17·27행과 시작 프롬프트 35·143행(위 넷). 이 일지의 "셀프 리뷰" 절은 그때의 기록이라 두었다. 고친 뒤 `0059 결정 "다시 적게 두기"|0059 결정 "기본 로그인만|0061 결정 "화면"`을 `.scratch/**/*.md`, `docs/adr/*.md`, `CONTEXT.md`에서 찾아 0건이었다.
+
+회고 후보: `coderabbit review --help`에 `-c, --config <files...>`("Additional instructions for CodeRabbit AI")가 있다. 밀 주장을 파일로 써서 넘기면 CLI가 도는 PR에도 넘기는 길이 생길 수 있다(돌려 보지 않았다).
