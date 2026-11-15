@@ -8,7 +8,7 @@
 
 **Blocked by:** 05(모델 서버 어댑터와 로컬 모델 시험. 이 티켓이 두 로컬 모델에 붙는 길이다). 그리고 기능 base-agent(그 티켓 05의 실제 모델 시험과 이음매가 서야 돌릴 사례가 있다. 2026-11-12에 base-agent의 티켓 04~07은 ready-for-agent다)
 
-**Status:** ready-for-agent
+**Status:** in-progress
 
 ### 차림
 
