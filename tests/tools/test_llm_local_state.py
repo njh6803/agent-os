@@ -369,6 +369,56 @@ def test_준비_확인은_프록시가_거절하는_파이썬_기본_사용자_�
         thread.join(timeout=10)
 
 
+def test_terraform_자식은_사용자_환경의_TF_LOG_계열을_물려받지_않는다(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # `TF_LOG_PATH`를 켜면 terraform의 로그가 비밀 가리기를 거치지 않고 상태 폴더 밖 파일에 써진다.
+    # 프로바이더의 TRACE 로그에는 요청 내용이 실릴 수 있다(원칙 V).
+    for name in ("TF_LOG", "TF_LOG_PATH", "TF_LOG_CORE", "TF_LOG_PROVIDER"):
+        monkeypatch.setenv(name, "TRACE")
+    env = llm_local.terraform_env(tmp_path, "sk-local-key")
+    assert [name for name in env if name.startswith("TF_LOG")] == []
+
+
+def test_앞_세션이_남긴_자원을_지우는_출력에서도_서버_키_꼴은_가린다() -> None:
+    # 그 길은 앞 세션의 키를 모른 채(`key=None`) 돈다. 등록된 비밀만 찾으면 상태에 평문으로 남은
+    # 앞 세션의 서버 키가 terraform의 실패 출력을 타고 화면에 나갈 수 있다.
+    reporter = llm_local.Reporter()
+    old_key = "sk-local-AbC_123-xyz"
+    cleaned = reporter.clean(f"Error: destroy 실패 --api-key {old_key} 끝")
+    assert old_key not in cleaned
+    assert llm_local.MASK in cleaned
+
+
+class _TruncatedBodyHandler(BaseHTTPRequestHandler):
+    """`Content-Length`보다 짧은 본문을 보내고 연결을 닫는 서버(프록시가 응답 중간에 끊긴 꼴)."""
+
+    def do_GET(self) -> None:
+        self.send_response(200)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Length", "1000")
+        self.end_headers()
+        self.wfile.write(b'{"data": [')
+
+    def log_message(self, format: str, *args: object) -> None:
+        return
+
+
+def test_본문이_중간에_끊겨_들어온_응답은_예외가_아니라_답하지_않은_것으로_본다() -> None:
+    # 준비 확인이 예외로 터지면 `run`이 서버를 지우지 못한 채 끝날 수 있다. 끊긴 본문은
+    # `http.client.IncompleteRead`로 올라오고, 그 예외는 `OSError`도 `ValueError`도 아니다.
+    server = HTTPServer(("127.0.0.1", 0), _TruncatedBodyHandler)
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    try:
+        base_url = f"http://127.0.0.1:{server.server_address[1]}/v1"
+        assert llm_local.fetch_models(base_url, "secret-key") is None
+    finally:
+        server.shutdown()
+        server.server_close()
+        thread.join(timeout=10)
+
+
 def test_구성의_타이머는_이미지의_runpodctl_명령으로_파드를_멈추지_않고_지운다() -> None:
     # 2026-11-14 손으로 봤다: 이미지의 runpodctl 1.14.15는 `pod` 하위 명령이 없어 600초 뒤
     # 타이머가 `unknown command "pod"`로 실패했고, 파드 안에서 친 `runpodctl remove pod`는 주입된

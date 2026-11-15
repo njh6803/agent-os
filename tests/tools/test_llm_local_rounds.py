@@ -88,6 +88,16 @@ def test_시험이_Ctrl_C로_끊기면_지운_뒤_2다(world: World) -> None:
     assert "끊겼" in str(last_record(world)["reason"])
 
 
+def test_시험을_돌리다_뜻밖의_예외가_나도_서버를_지운_뒤_그_예외를_올린다(world: World) -> None:
+    # 서버가 뜬 뒤에는 어떤 예외로 끝나도 지우기를 지나야 한다. 건너뛰면 파드가 타이머가 지울
+    # 때까지(최대 90분) 청구된다.
+    world.child_error = RuntimeError("뜻밖의 예외")
+    with pytest.raises(RuntimeError, match="뜻밖의 예외"):
+        run_main("run", "--yes")
+    assert len(terraform_calls(world, "destroy")) == 1
+    assert not llm_local.state_has_resources(world.folder)
+
+
 def test_지우기가_실패하면_상태_폴더의_경로와_함께_3이고_시험이_실패했어도_3이다(
     world: World, capsys: pytest.CaptureFixture[str]
 ) -> None:
@@ -329,6 +339,19 @@ def test_apply가_시간_제한에_걸려_상태가_없으면_다음_후보로_�
     assert len(launch_calls(world)) == 1
     assert world.child_envs == []
     assert "Runpod" in printed(capsys)
+
+
+def test_apply_도중_Ctrl_C로_끊겨_상태에_자원이_없으면_3이고_콘솔_확인을_알린다(
+    world: World, capsys: pytest.CaptureFixture[str]
+) -> None:
+    # 죽은 apply는 상태 파일을 쓰지 못했을 수 있다. 시간 제한 갈래와 같이 파드가 떠 있을 수
+    # 있다고 알리고 멈춘다. 아무것도 띄우지 않았다(4)고 읽히면 안 된다.
+    world.interrupt_on_apply = True
+    code = run_main("run", "--yes")
+    assert code == 3, f"종료 코드가 {code}다(3이어야 한다)"
+    assert world.child_envs == []
+    assert "Runpod" in printed(capsys)
+    assert "끊겼" in str(last_record(world)["reason"])
 
 
 def test_무효_회차가_연달으면_그_수를_찍고_둘_이상이면_멈춰_보고하라고_알린다(

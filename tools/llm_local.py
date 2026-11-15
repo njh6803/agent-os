@@ -27,7 +27,8 @@ pytest -m llm_local`)을 자식 프로세스로 돌리고, 시험이 어떻게 �
 종료 코드. 0 시험 통과. 1 서버가 살아 있던 회차의 시험 실패. 2 무효 회차(시험이 실패했는데
 서버가 답하지 않는다, 띄운 뒤 Ctrl-C로 끊겼다, 값이 예상보다 커서 지웠다, 준비 상한을 넘겼다,
 GPU 후보를 모두 띄우지 못했다). 3 지우기 실패(상태 폴더의 경로를 크게 알린다. 타이머가 뒤를
-받친다. apply가 시간 제한에 걸려 상태 파일에 자원이 없는 회차도 지울 방법이 없어 3이다).
+받친다. apply가 시간 제한에 걸리거나 Ctrl-C로 끊겨 상태 파일에 자원이 없는 회차도 지울 방법이
+없어 3이다).
 4 아무것도 띄우지 않고 끝났다 (환경이 모자라다, 앞 세션이 쓰고 있다, `--yes`가 없다, 첫 `apply`
 앞에서 끊겼다). 겹치면 3, 2, 1의 차례다. `sweep`은 0(지우지 못한 것이 없다. 산 잠금이나 표지
 없는 폴더를 건드리지 않은 것은 지우지 못한 것이 아니다)과 3(지우지 못한 것이 있다)이다. 무효
@@ -57,8 +58,9 @@ destroy`로 지우고, 자원이 없음을 확인한 폴더를 지운다. 이 �
 
 비밀. 서버 키는 화면, 로그, 기록 묶음, 파일 어디에도 찍지 않는다. Terraform과 자식 프로세스의
 출력은 받아 두었다가 `Reporter`가 서버 키를 글자 그대로 찾아 `***`로 바꾼 뒤에만 보이고, 받은
-그대로를 파일에 쓰지 않는다. 자식 프로세스의 환경에서는 `RUNPOD_API_KEY`를 뺀다. 기록 묶음에는
-서버 키와 주소를 넣지 않는다.
+그대로를 파일에 쓰지 않는다. 자식 프로세스의 환경에서는 `RUNPOD_API_KEY`를 빼고, Terraform의
+환경에서는 `TF_LOG`로 시작하는 변수를 뺀다(`TF_LOG_PATH`의 로그는 `Reporter`를 거치지 않고
+파일로 가서 서버 키가 실릴 수 있다). 기록 묶음에는 서버 키와 주소를 넣지 않는다.
 
 못 보는 것. 2026-11-14에 이 스크립트로 `pods` 구성(RTX 3090 두 장)이 서고 두 모델이 `tool_calls`로
 답하는 것과, `shared` 구성의 서버 둘이 서서 준비 확인을 통과하고 두 모델이 `tool_calls`로 답하는
@@ -76,6 +78,7 @@ from __future__ import annotations
 
 import argparse
 import contextlib
+import http.client
 import json
 import os
 import re
@@ -129,6 +132,10 @@ SHARED_UTILIZATION = 0.45
 SHARED_KV_CACHE_BYTES = 4 * 1024**3
 DEFAULT_TEST_COMMAND = ("uv", "run", "pytest", "-m", "llm_local")
 MASK = "***"
+SERVER_KEY_PREFIX = "sk-local-"
+# 앞 세션이 남긴 자원을 지우는 길은 그 세션의 키를 모른다. 키의 꼴(`token_urlsafe`의
+# 글자)로도 가린다.
+SERVER_KEY_SHAPE = re.compile(re.escape(SERVER_KEY_PREFIX) + r"[A-Za-z0-9_-]+")
 USER_AGENT = "agent-os-llm-local"
 
 # 종료 코드
@@ -291,7 +298,9 @@ def fetch_models(base_url: str, key: str) -> list[str] | None:
             if response.status != 200:
                 return None
             body: Json = json.load(response)
-    except (OSError, ValueError):
+    except (OSError, ValueError, http.client.HTTPException):
+        # 본문이 중간에 끊기면 `http.client.IncompleteRead`가 올라온다. 이 예외는 `OSError`도
+        # `ValueError`도 아니다.
         return None
     data = _members(body, "data")
     ids: list[str] = []
@@ -352,7 +361,10 @@ class Reporter:
             if secret in text:
                 self.masked = True
                 text = text.replace(secret, MASK)
-        return text
+        shaped = SERVER_KEY_SHAPE.sub(MASK, text)
+        if shaped != text:
+            self.masked = True
+        return shaped
 
     def say(self, text: str) -> None:
         print(self.clean(text), flush=True)
@@ -372,8 +384,9 @@ OUT = Reporter()
 
 def folder_name(branch: str) -> str:
     """브랜치 이름을 폴더 이름으로. `/`와 `.`를 포함해 쓸 수 없는 글자는 `%XX`로 바꾸고 `%`도
-    바꾸므로 다른 브랜치가 같은 폴더가 되지 않는다. `.`가 없으므로 `<이름>.lock`, `<이름>.guard`와
-    겹치지 않는다."""
+    바꾸므로 다른 브랜치는 다른 이름이 된다. 다만 대소문자만 다른 브랜치(`Feature/x`와 `feature/x`)
+    는 대소문자를 가리지 않는 파일 시스템(윈도 NTFS)에서 같은 폴더와 같은 잠금이 된다(이 PC에서
+    손으로 봤다). `.`가 없으므로 `<이름>.lock`, `<이름>.guard`와 겹치지 않는다."""
     return quote(branch, safe="").replace(".", "%2E")
 
 
@@ -572,7 +585,7 @@ def scrub_state(folder: Path, key: str | None) -> None:
 def terraform_env(
     folder: Path, key: str, *, layout: str = "pods", gpu_type_id: str = GPUS[0].type_id
 ) -> dict[str, str]:
-    env = dict(os.environ)
+    env = {name: value for name, value in os.environ.items() if not name.startswith("TF_LOG")}
     env["TF_DATA_DIR"] = str(folder / ".tfdata")
     env["TF_IN_AUTOMATION"] = "1"
     env["TF_INPUT"] = "0"
@@ -839,6 +852,7 @@ class Round:
     servers: list[Server] = field(default_factory=list[Server])
     hourly: float | None = None
     launched: bool = False
+    applying: bool = False  # terraform apply가 도는 동안. 이때 끊기면 상태에 자원이 없을 수 있다
     invalid_reason: str | None = None
     interrupted: bool = False
     child: Outcome | None = None
@@ -911,7 +925,7 @@ def _run(*, yes: bool, command: tuple[str, ...]) -> int:
                 "--yes를 붙여 다시 친다."
             )
             return NOT_LAUNCHED
-        key = "sk-local-" + secrets.token_urlsafe(24)
+        key = SERVER_KEY_PREFIX + secrets.token_urlsafe(24)
         OUT.add_secret(key)
         state = Round(folder, key, command, commit, clock())
         return _launch_and_test(state)
@@ -926,10 +940,23 @@ def _launch_and_test(state: Round) -> int:
             _test(state)
     except KeyboardInterrupt:
         state.interrupted = True
-        if state.launched:
+        if state.applying and not state_has_resources(state.folder):
+            # 끊긴 apply는 상태 파일을 쓰지 못했을 수 있다(시간 제한 갈래와 같다). 지울 방법이
+            # 없으니 파드가 떠 있을 수 있다고 알리고 멈춘다.
+            state.destroy_failed = True
+            state.invalid_reason = (
+                "무효 회차: apply가 Ctrl-C로 끊겼고 상태 파일에 자원이 없다. 파드가 떠 있을 수 "
+                "있다. Runpod 콘솔에서 이 계정의 파드를 확인한다(타이머가 90분 뒤 지운다)"
+            )
+        elif state.launched:
             state.invalid_reason = "무효 회차: 띄운 뒤 시험이 판정을 내기 전에 Ctrl-C로 끊겼다"
         else:
             OUT.say("띄우기 전에 끊겼다. 아무것도 띄우지 않았다.")
+    except Exception:
+        # 뜻밖의 예외로 끝나도 서버는 지운다. 건너뛰면 파드가 타이머가 지울 때까지 청구된다.
+        if state_has_resources(state.folder):
+            destroy_folder(state.folder, state.key)
+        raise
     if state_has_resources(state.folder):
         state.destroy_failed = not destroy_folder(state.folder, state.key) or state.destroy_failed
     if state.interrupted and not state.launched and not state.destroy_failed:
@@ -950,7 +977,9 @@ def _bring_up(state: Round) -> None:
         if terraform_init(env):
             # 이 apply부터가 띄우기다. 이 앞에서 끊기면 아무것도 띄우지 않았다(종료 코드 4).
             state.launched = True
+            state.applying = True
             applied = terraform_step(env, "apply", apply, APPLY_TIMEOUT)
+            state.applying = False
         if applied is not None and applied.returncode == 0:
             outcome = execute(
                 terraform_argv("output", "-json", _state_arg(state.folder)),

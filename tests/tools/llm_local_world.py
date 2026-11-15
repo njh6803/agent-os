@@ -45,6 +45,7 @@ class World:
         self.echo_key = False
         self.child = Outcome(0, "2 passed", "")
         self.child_raises = False
+        self.child_error: Exception | None = None  # 시험 자식을 돌리다 난 뜻밖의 예외
         self.child_writes_pytest_files = True
         self.passed = 2
         self.alive = True
@@ -54,6 +55,7 @@ class World:
         self.cmdlines: dict[int, tuple[str, ...]] = {}
         self.interrupt_on_git = False
         self.interrupt_on_init = False
+        self.interrupt_on_apply = False  # apply가 상태 파일을 쓰기 전에 Ctrl-C로 끊긴다
         self.apply_times_out = False
         self.child_echoes_key = False
         monkeypatch.setattr(llm_local, "execute", self.execute)
@@ -127,6 +129,8 @@ class World:
         if sub == "apply" and "-refresh-only" in argv:
             ok = self.refresh_results.pop(0) if self.refresh_results else True
             return Outcome(0 if ok else 1, echo, echo)
+        if sub == "apply" and self.interrupt_on_apply:
+            raise KeyboardInterrupt
         if sub == "apply" and self.apply_times_out:  # 시간 제한으로 죽어 상태 파일을 쓰지 못했다
             return Outcome(-1, "", "", timed_out=True)
         if sub == "apply":
@@ -182,6 +186,8 @@ class World:
         self.child_envs.append(dict(env))
         if self.child_raises:
             raise KeyboardInterrupt
+        if self.child_error is not None:
+            raise self.child_error
         if self.child_writes_pytest_files:
             options = shlex.split(env.get("PYTEST_ADDOPTS", ""))
             junit = next(
