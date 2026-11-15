@@ -721,3 +721,88 @@ dev가 함께 들인 것 가운데 이 세션의 회고에 닿는 대기열 항�
 판정. 대기열 306이 받아들여 닫은 종류(부하에서만 빨간 시간 시험)의 사례다. 그 방침대로 시험은 고치지 않는다. 고치는 길(첫 줄을 넉넉한 제한 시간으로 먼저 받은 뒤에 0.5초 배출을 잰다)이 있다는 것과, 이 시험이 이 세션의 pre-commit 다섯 번 가운데 세 번 빨갰다는 것(첫 커밋의 첫 시도, 합치기 커밋의 두 시도)은 보고에 적어 그 종류를 다시 열지 사용자가 정하게 한다. 커밋은 PC의 부하가 내려간 뒤에 다시 친다.
 
 셋째 시도는 CPU 사용률이 세 번 연속 45% 아래인 것을 본 뒤에 쳤고(치기 직전 15%) 다른 시험 하나로 멈췄다. `tests/tools/test_rerun_runner.py::test_파일럿에서는_인계로_멈추지_않는다`가 `assert board.run() == 0`에서 1을 받았다(`1 failed, 7670 passed, 7 warnings in 553.04s`, web-verify 586.5초, 나머지는 앞의 시도와 같다). 러너가 멈춘 까닭은 시험이 찍지 않아 출력에 없다. 진단한 배출 시험은 이번에 통과했다. 같은 시험의 연속 실패가 아니고, 이 브랜치는 그 시험 파일도 `tools/rerun_runner.py`도 고치지 않았다(첫 커밋 때 이 파일을 포함한 세 파일만 따로 돌려 `127 passed`였다). 이 시험이 부하 때문에 멈췄는지는 재지 않았다(어림이다). 대기열 306의 방침대로 다시 치고, 그동안의 CPU 사용률을 15초마다 스크래치패드에 적어 둔다. 같은 시험이 또 실패하면 진단한다.
+
+넷째 시도에서 커밋됐다(`6e1ecf8f1`). pre-commit의 결과는 이렇다.
+
+- ruff check, ruff format: `(no files to check)Skipped`. "커밋" 절에 손으로 친 결과로 갈음한다(그 뒤로 `.py`를 고치지 않았다).
+- checks의 묶음: check-notes, check-ticket, zizmor, lint-imports, check-instructions, check-type-escapes, pyright, pyright-linux, run-hooks, web-verify(781.8초), pytest(855.3초)가 모두 Passed였다. 앞의 세 시도에서 실패한 시험 둘은 고치지 않았고 이번에는 실패하지 않았다.
+- markdown tables, line separators, mutation tables, quotes, commit message: Passed. canary specs와 constitution version: `(no files to check)Skipped`.
+
+그 시도 동안 스크래치패드의 샘플러가 약 16초마다 CPU 사용률을 적었다(커밋하지 않은 스크립트이고 한 번 돌려 손으로 본 것이다). 57번 가운데 처음 45번(21:59~22:11)은 한 번(68%)을 빼고 85~100%였고, 그 뒤 12번은 32~83%였다. 같은 동안 python 프로세스는 6~72개, node 프로세스는 68~78개였다. 검사가 통과한 이 시도에서도 CPU가 거의 찬 채였으므로, CPU 사용률만으로는 앞의 실패를 설명하지 못한다(같은 때 다른 세션의 검사가 겹쳤는지는 가르지 않았다).
+
+이 세션의 pre-commit은 일곱 번이고 네 번 실패했다(첫 커밋의 첫 시도, 합치기 커밋의 첫 세 시도). 실패한 시험은 모두 `tests/tools`의 실제 프로세스를 띄우는 시험이다. 배출 시험이 세 번, `tests/tools/test_rerun_runner.py`의 서로 다른 시험 둘이 한 번씩, `tests/tools/test_rerun_gates.py`의 시간 초과 시험이 한 번이었다. 러너가 찍은 걸린 시간은 일곱 번에 걸쳐 pytest 557.9~1229.0초, web-verify 586.5~1282.6초였다(이 세션의 pre-commit 출력 일곱을 Grep으로 모았다. 앞 절들이 적은 pytest의 초는 pytest가 스스로 찍은 요약 줄의 것이라 러너의 것과 몇 초 다르다).
+
+## PR 580 (2026-11-15)
+
+`git push`로 올렸고 `git rev-list --count HEAD..origin/dev`는 0이었다. PR은 `gh pr create --base dev --fill-first --body-file <본문 파일>`로 열었다(njh6803/agent-os의 580번, base는 `dev`). 본문의 "리뷰어 참고"에 승인 뒤 ADR 0064를 두 번 고쳤다는 것(둘째 커밋의 "명세가 짓는 것", 합치기 커밋의 "화면")과 결정 절은 그대로라는 것을 적었다.
+
+PR을 연 직후 인계 계기(`PR 연 뒤`)가 왔다. 이 일지에 `인계 못함` 줄이 있어 `next-session` `handoff.md`의 표대로 넘기지 않았고, `merge.md`를 Read로 열어 이 세션이 병합까지 잇는다.
+
+봇 회차 1. `@coderabbitai review` 코멘트를 남기고 `gh pr checks 580`을 한 번 읽었다. CodeRabbit, python, web, visual이 pending이었고 claude-review, e2e, e2e-portal, e2e-widget, ticket이 pass, llm은 skipping이었다. `uv run python tools/wait_ci.py 580`을 백그라운드로 띄웠다.
+
+대기는 종료 코드 0으로 끝났다. 헤드 `6e1ecf8`에서 CodeRabbit, claude-review, e2e, e2e-portal, e2e-widget, python, ticket, title, verify, visual, web이 SUCCESS였고 llm은 SKIPPED였다. 끝 줄은 "끝: 모두 통과. CodeRabbit: Finished"였다. 두 봇 모두 이 PR의 첫 리뷰라 첫 회차다. 코멘트는 `gh pr view 580 --comments`와 `gh api repos/njh6803/agent-os/pulls/580/comments`로 읽었다.
+
+CodeRabbit의 지적 둘(둘 다 Major, 인라인)과 이 세션의 판정.
+
+1. `.scratch/admin-roles/plan.md` 5행. 수락이 플러그인과 실행만 검사해, 보기만 하는 계정이 위젯 설정을 고쳐도 수락을 지난다는 지적. 판정: 유효, 고쳤다. ADR 0064 결정 "고칠 수 있는 계정"이 그 계정이 위젯 설정을 고치지 못하게 권한을 더하는 일을 admin-roles에 넘겼고 그 계획의 본문에는 적혀 있었는데 수락 문장에는 없었다. 수락에 한 문장을 더했다(아래).
+2. ADR 0064 결정 "주소의 검사"(20행). 로그인 주소와 로그아웃 주소의 쿼리와 사용자 정보 자리를 어떻게 다룰지를 명세에 미루지 말고 이 ADR에서 정하라는 지적. 판정: 보류하고 portal-admin의 명세로 넘긴다. PR 직전 리뷰가 같은 자리를 냈고 그때 Consequences "명세가 짓는 것"에 넘겼다(70행이 주소에 비밀이 실리면 위젯 설정에 비밀을 두지 않는다는 전제가 깨진다고 적는다). 넘기는 근거는 둘이다. 승인받은 결정은 검사의 종류(형식만 보고 도메인은 가리지 않는다)이고 받는 형식의 세부는 그 ADR이 명세에 맡긴 몫이며 받는 쪽(`.scratch/portal-admin/plan.md` 20행)에 적혀 있다. 그리고 결정 절에 규칙을 새로 적는 것은 승인된 ADR의 개정이라 사용자가 정한다(`CLAUDE.md` 작업 규약 5). 저장 경로는 그 명세 뒤에야 지어진다. CodeRabbit의 요약도 이 둘을 위젯 관리 화면을 짓기 전에 정할 것으로 적고, 추적되면 병합할 수 있다고 적었다. 병합 뒤 보고에 적어 사용자가 지금 정할지 고르게 한다.
+
+claude-review의 지적 셋(Critical과 Major는 없다고 적었다)과 이 세션의 판정.
+
+1. [Minor] ADR 0064의 결정 "승인 때 함께 확인받는 세부"와 Consequences "명세가 짓는 것", "다른 행"이 한 문단에 수천 자이고, 뒤의 둘이 기능 계획이 든 것을 다시 나열한다는 지적. 판정: 보류. 넘기는 쪽(ADR)과 받는 쪽(기능 계획) 둘에 적는 것은 `code-review` 6단계 4의 받는 쪽 확인이 시키는 꼴이고, 기능 계획은 ADR을 원천으로 가리키며 자기 몫만 든다. 앞선 ADR(0059, 0061, 0062)도 같은 절을 둔다. 승인된 ADR의 절을 크게 다시 짜는 일은 이 PR에서 하지 않는다.
+2. [Minor] `agent_os`와 위젯 관리 서버 사이의 import-linter 계약이 widget-admin-server의 명세로 미뤄져, 그 티켓 전에 구현이 계약보다 먼저 설 수 있다는 지적. 판정: 유효(작다), 고쳤다. 계획의 수락에는 경계 검사가 이미 있었고, 언제 넣는지를 한 문장으로 더했다(아래).
+3. [Nit] `docs/constitution/README.md` 17행이 3.0.101을 비운 까닭으로 형제 브랜치의 이름을 적는데 병합 뒤에는 브랜치가 사라진다는 지적. 판정: 보류. 바로 위 15행(3.0.95)이 같은 꼴로 브랜치 이름을 적은 선례이고, PR 578은 아직 열려 있다(`gh pr view 578 --json state`가 `OPEN`이었다).
+
+고친 것. 새로 쓴 문장은 아래와 같다.
+
+- `.scratch/admin-roles/plan.md`의 수락: "그 계정이 위젯 관리 화면에서 위젯 설정이나 위젯 미리보기 페이지 설정을 저장하려 하면 위젯 관리 서버도 그 요청을 거절한다(ADR 0064 결정 "고칠 수 있는 계정"이 이 행에 넘긴 대가다. 그 권한을 어떤 이름으로 두고 위젯 관리 서버가 어떻게 아는지는 위에 적은 대로 설계 인터뷰가 정한다)"
+- `.scratch/widget-admin-server/plan.md`의 "서버의 뼈대": "import-linter의 그 계약은 패키지를 처음 들이는 티켓이 함께 넣어, 경계 검사 없이 패키지가 서 있는 때가 없게 한다."
+
+남긴 것과 이유는 위 판정에 적었고 PR 코멘트에도 남겼다. ADR 0064는 이 회차에서 고치지 않았다.
+
+이 회차의 반영과 아래 "회고", "다음"을 셋째 커밋에 싣는다. 푸시 전에 `gh pr edit 580 --body-file`로 PR 본문을 넓어진 범위(봇 반영, 회고 대기열의 항목)에 맞춰 먼저 고쳤다. 커밋 전의 `git branch --show-current`는 `docs/portal-admin-design`이었고, `uv run python tools/sibling_overlap.py`는 번호 겹침을 내지 않았다(ADR 0064, 헌법 3.0.102). 함께 고친 파일로는 PR 578의 `docs/constitution/README.md`와 `docs/constitution/tech.md`, 워크트리 `mcp-shutdown-spec`의 `.scratch/plan.md`, 그리고 새로 열린 PR 581의 `.scratch/retro-queue/open-session-send-denied-despite-allow-rule.md`를 들었다. `uv run python tools/plan_table.py`를 다시 돌린 뒤 `.scratch/plan.md`는 바뀌지 않았다. 그 커밋의 pre-commit 결과는 이 일지에 다시 적지 않고 PR 코멘트에 남긴다. 일지만 다시 푸시하면 봇이 한 번 더 돈다(`next-session` `merge.md` 2의 "뒤로 넘긴 일").
+
+셋째 커밋 직전에 dev를 한 번 더 합쳤다. `git fetch origin` 뒤 `git rev-list --count HEAD..origin/dev`가 1을 냈고, 그 커밋은 PR 581의 squash 병합(`d9d2250ed`)이었다. 그 커밋이 바꾼 파일 여덟 가운데 이 세션의 커밋하지 않은 변경과 겹치는 것은 둘이었다(`.scratch/retro-queue/open-session-send-denied-despite-allow-rule.md`, 그리고 이 세션이 미추적으로 쓴 `.scratch/retro-queue/docs-only-commit-precommit-slow-again.md`). 앞의 것은 `git restore`로 HEAD의 판으로 되돌리고 뒤의 것은 스크래치패드로 옮긴 뒤 `git merge --no-edit origin/dev`를 쳤고, 충돌 없이 합쳐졌다(`ccd47cbf5`). 충돌 없는 합치기라 pre-commit의 검사 한 바퀴는 돌지 않았고 커밋 메시지 검사만 돌았다. 그 뒤 두 항목을 합친 판으로 다시 고쳤다(아래 "회고"의 2와 8). 합친 커밋이 들인 나머지는 그 세션의 일지, `.scratch/widget-login-state/design/README.md`의 "명세가 정할 것" 두 항목, 대기열 항목 넷의 회차다. 그 일지의 "다음"은 widget-login-state의 다음 단계를 명세가 아니라 화면 셋을 더 그리는 것으로 적어(사용자가 그 세션에서 그렇게 골랐다) 이 일지의 "다음"과 맞는다. 합친 뒤의 `uv run python tools/sibling_overlap.py`는 번호 겹침을 내지 않았고, 함께 고친 파일에서 PR 581이 빠졌다(PR 578의 `docs/constitution/README.md`와 `docs/constitution/tech.md`, 워크트리 `mcp-shutdown-spec`의 `.scratch/plan.md`가 남았다). `uv run python tools/plan_table.py`를 다시 돌린 뒤에도 `.scratch/plan.md`는 바뀌지 않았다.
+
+## 회고 (2026-11-15)
+
+`retro` 스킬은 디스크 사본을 Read로 열어 따랐다. dev를 합친 뒤이지만 합친 커밋이 `.claude`와 `tools`를 바꾸지 않았다(`git diff --name-only e02fda6a9...origin/dev -- .claude tools`의 출력이 비었다). 낸 후보는 열여섯이다. 승인 여덟(열린 항목에 회차를 더한 것 일곱, 새 항목 하나. 그 새 항목은 커밋 전에 dev에 먼저 든 같은 이름의 항목에 합쳐 회차가 됐다, 아래 8), 기각 일곱, 일지에만 남기는 것 하나이고 넘김은 없다. 넘긴 것이 없어 사용자에게 묻지 않았다.
+
+### 승인
+
+1. **승인 화면의 질문을 용어집의 말 그대로 썼다.** 질문 3이 "사이트 파일"과 "발급자"를 풀지 않고 써서 사용자가 "Agent OS의 사이트 파일이 뭐야?"라고 되물었고, 출입 명부 파일로 풀어 다시 묻고서야 답을 받았다(위 "질문 3을 다시 물었다"). 지침(`CLAUDE.md` 원칙의 선택지 라벨 줄)을 어긴 사건이고 열린 항목이 이미 처방했다(4단계의 회차로 세는 것). 대기열 `choice-screen-worded-in-code-names`에 회차를 더했다(3회차).
+2. **인계 열기가 권한 분류기에 거부됐다.** 셀프 리뷰 직전의 인계에서 `open-session` 3의 `open_session.ps1 -Action send` 호출이 거부되어 새 세션을 열지 못했고, 이 세션이 압축을 여러 번 넘기며 병합까지 이었다(위 "인계 (셀프 리뷰 직전, 2026-11-15)"의 `인계 못함` 줄). 도구 결과가 든 사유는 "Unsanctioned Communication"이었다. 이 호출의 `-Folder`와 `-PromptFile` 인자가 허용 규칙과 글자까지 맞았는지는 대 보지 않았다. 열린 항목이 이미 처방한 사건이다. 대기열 `open-session-send-denied-despite-allow-rule`에 회차를 더했다(10회차. 처음에는 9회차로 적었는데, 먼저 병합된 PR 581이 같은 줄을 9회차로 올려 dev를 합치며 10회차로 고쳤다. 아래 8).
+3. **옛 기능 계획이 인터뷰에 넘긴 물음 하나를 인터뷰가 묻지 않았다.** 옛 portal-admin 계획이 넘긴 물음(위젯 미리보기 페이지가 담는 사이트의 로그인 주소와 로그아웃 주소를 운영자가 손으로 등록하는지)이 답도 넘김도 없이 사라진 것을 셀프 리뷰의 명세 축이 잡았다(위 "명세 축의 보고"). 열린 항목이 이미 처방한 사건이다. 대기열 `design-line-leaves-interview-questions`에 회차를 더했다(2회차).
+4. **다른 기능의 문서가 이미 닫힌 인터뷰에 물음을 넘겼다.** 나란히 돌던 화면 작업(PR 579)의 `.scratch/widget-login-state/design/README.md`가 위젯 설정의 고르는 값 둘을 portal-admin의 설계 인터뷰에 넘겼는데, 그 인터뷰는 이미 닫혔고 ADR 0064가 승인된 뒤였다. dev를 합치다 그 README를 읽어 알았고, 받는 쪽(`.scratch/portal-admin/plan.md`, ADR 0064 Consequences "화면")에 사용자에게 물을 것으로 적었다(위 "dev를 다시 합쳤다"). README의 그 문장은 고치지 않았다. 3과 같은 항목의 처방(설계 줄이 선 행의 인터뷰를 가리키는 문장을 찍어 알리는 검사)을 다른 기능의 문서까지 넓히면 잡는 사건이라, 같은 항목에 회차를 더하고(3회차) 본문에 그 범위를 적었다.
+5. **ADR이 다른 ADR의 결정 이름을 틀리게 들었다.** ADR 0064 결정 "고칠 수 있는 계정"이 든 ADR 0062의 결정 이름이 그 ADR에 없는 이름이었고 셀프 리뷰의 표준 축이 잡았다(위 "표준 축의 보고"). 리뷰가 잡도록 둔 기준을 리뷰가 잡은 것이지만 검사로 옮길 수 있고, 열린 항목이 그 검사(ADR의 절 이름과 함께 든 인용이 그 ADR의 그 절 안에 있는지)를 이미 처방했다. 대기열 `adr-section-citation-check`에 회차를 더했다(2회차).
+6. **승인받은 ADR을 승인 뒤의 리뷰와 합치기가 고쳤다.** 사용자가 ADR 0064를 승인한 뒤에 PR 직전 리뷰의 반영이 Consequences "명세가 짓는 것"에, dev 합치기가 Consequences "화면"에 문장을 더했다. 결정 절은 고치지 않았고, 더한 것은 모두 명세가 정할 물음이며, 고친 문단마다 승인 뒤에 더했다고 적었다. 앞선 두 회차와 달리 사용자에게 다시 묻지 않았고 병합 뒤 보고로 알린다. 열린 항목이 처방한 사건(승인, 커밋, PR 직전 리뷰의 차례)이다. 대기열 `0568`에 회차를 더했다(3회차).
+7. **셀프 리뷰가 새로 쓴 문장을 PR 직전 리뷰에 넘기지 못했다.** 위 "명세 축의 보고"가 PR 직전 리뷰에 밀 주장으로 넘긴다고 적은 새 문장들을, CLI가 도는 PR 직전 리뷰에 넘길 길이 없어 넘기지 않았다. `coderabbit-review` 서브에이전트의 브리프에는 보안 관점 다섯만 넣었고(이 세션의 트랜스크립트에서 그 호출 줄을 Grep으로 봤다. 그 줄에 "밀 주장"이 없다), 서브에이전트를 따로 띄우지도 본 세션이 원문과 대 보지도 않았다. 그 문장들은 PR 봇의 회차만 본다. 열린 항목이 이미 처방한 사건이다. 대기열 `cli-review-claims-path`에 회차를 더했다(6회차).
+8. **문서만 바뀐 커밋의 pre-commit이 다시 10분 안팎이다.** 이 세션의 커밋은 모두 문서만 바꿨는데, 일곱 번의 pre-commit에서 러너가 찍은 시간이 pytest 557.9~1229.0초, web-verify 586.5~1282.6초였다(위 "dev를 다시 합쳤다"의 끝에 모은 수다. 같은 때 다른 세션이 함께 돌았고 그 수는 세지 않았다). 닫힌 대기열 309가 pytest를 나눠 돌려 한 바퀴를 213.5~332.8초로 줄였는데, 지금은 web-verify가 pytest만큼 긴 막대다. 사건이 있고, 처방은 도구 층이며(부하의 몫과 늘어난 검사의 몫을 먼저 가르고 web-verify의 단계마다 걸린 시간을 재어 줄인다), PR 하나로 되돌릴 수 있다. 검사를 건너뛰는 길은 가드레일을 느슨하게 하는 것이라 처방에 넣지 않았다(309의 어디로 줄과 같다). 항목 찾기(`uv run python tools/queue_open_rows.py --search web-verify --search 309의 --search pre-commit.*분`)에 같은 처방을 든 열린 항목은 없었고, 순서만 바꾸는 열린 `precommit-cheap-checks-after-slow`가 걸려 새 항목이 그것을 가리킨다. 새 항목 `docs-only-commit-precommit-slow-again`을 썼다(309의 3회차). 처음 지은 이름은 `docs-only-precommit-web-verify-bar`였는데 커밋 전에 바꿨다. 커밋 직전의 `uv run python tools/sibling_overlap.py`가 그사이 열린 PR 581(형제 세션 `docs/widget-login-state-spec`)을 냈고, 그 PR이 같은 일을 `docs-only-commit-precommit-slow-again`이라는 새 항목으로 따로 쓴 것을 `git show`로 읽었다(309의 3회차, 처방도 같다). 그 항목은 그때 아직 dev에 없어 회차를 더할 수 없었으므로 같은 이름으로 써 두었다. 두 PR 가운데 뒤에 병합하는 쪽이 한 항목으로 합치게 하려는 것이었다. 셋째 커밋 직전에 PR 581이 먼저 dev에 병합됐고(`d9d2250ed`), 이 브랜치가 뒤에 병합하는 쪽이 되어 dev를 합치며 두 글을 합쳤다(위 "PR 580"의 끝 문단). 합친 항목은 회차를 4로 세고(0309의 4회차) 승인 줄에 일지 둘을 적으며, 본문에 3회차와 4회차의 사건을 따로 적는다. 그 PR의 항목은 어디로 줄을 처방의 대상을 정하지 않고 회차를 지켜보는 것으로 두었는데, 같은 날 두 세션에서 같은 막대가 길게 나왔으므로 이 회고의 판정대로 재는 chore로 올렸고 그 사실을 항목의 본문에 적었다. 그 PR은 2의 `open-session-send-denied-despite-allow-rule`도 9회차로 올렸으므로, 이 세션의 사건은 그 줄의 10회차가 됐다.
+
+### 기각
+
+- Bash heredoc의 40줄 상한에 걸린 것(62줄). 훅이 그 자리에서 막았다.
+- `hook_choice_facts`가 승인 화면을 두 번 막은 것. 훅이 막아 설명의 셈("22가지 결정")과 틀린 문장 하나를 올리기 전에 고쳤다.
+- quotes 훅의 경고에서 ADR 인용 둘이 원문과 달랐던 것. 훅이 알렸고 커밋 전에 고쳤다.
+- 포인터의 수를 잘못 센 것(44곳이라 적었다가 39곳으로 고쳤다). 리뷰 전에 Grep으로 다시 세어 고쳤고, 수로 닫은 주장은 `code-review` 두 브리프의 주장 검증이 맡는다.
+- 일지에 pre-commit의 횟수를 잘못 센 것(다섯 번이라 적었다가 네 번으로 고쳤다). 커밋 전에 트랜스크립트의 커밋 명령을 Grep으로 세어 고쳤다. 위와 같은 종류다.
+- PR 직전 리뷰 서브에이전트의 틀린 주장(ops-backup-upgrade 계획이 위젯 쪽 데이터베이스를 적지 않았다). `code-review` 6단계 2(근거를 먼저 본다)대로 원문을 열어 오탐으로 갈랐다.
+- 진단용 스크래치 스크립트를 쓰려다 훅에 막힌 것. 훅이 `.claude/rules/probes.md`를 먼저 열게 했고, 그 규칙대로 `Rounds`와 양성 대조를 넣어 다시 썼다.
+
+### 일지에만 남기는 것
+
+- 부하에서 빨개진 시간 시험. 일곱 번의 pre-commit 가운데 네 번이 `tests/tools`의 실제 프로세스를 띄우는 시험으로 멈췄다. 배출 제한 시간 시험(`tests/tools/test_probe_kit.py`)이 세 번이고, 합치기 커밋의 첫 두 시도에서 연달아 실패해 `diagnosing-bugs`로 원인을 갈랐다(위 "진단"). 부하에서 자식 파이썬이 0.5초 안에 뜨지 못하면 빨개지는 시험이고 이 브랜치의 변경과 무관하다. 셋째 시도에서는 다른 시험(`tests/tools/test_rerun_runner.py`의 파일럿 시험)이 한 번 실패했고 원인은 가르지 않았다. 넷째 시도에서 고친 것 없이 통과했다. 대기열 306이 받아들여 닫은 종류라 회차를 더하지 않고 새 항목도 쓰지 않는다(retro 5단계의 끝이 열린 결함 종류). 그 종류를 다시 열지는 사용자가 정하므로 보고에 이 시험의 실패 횟수와 고치는 길을 적는다.
+
+### 만료
+
+`uv run python tools/queue_open_rows.py`와, `git fetch origin` 뒤 `--ref origin/dev`를 붙인 것을 한 번씩 돌렸다. 둘 다 "만료할 항목"이 없었다. 닫은 항목은 없다.
+
+## 다음
+
+- **주 체크아웃.** 이 세션은 워크트리에서 병합하므로 주 체크아웃을 당기지 않는다. 새 세션이 첫 턴에 `tidy-checkouts`를 돈다.
+- **다음 작업은 portal-admin의 화면 디자인이다**(`/ui-design portal-admin`). 설계 줄이 있고 명세가 없으며, 기능 계획이 명세 전에 화면을 그린다고 적었다. 그리기 전에 사용자에게 물을 것이 하나 있다. widget-login-state의 화면 작업이 넘긴 고르는 값 둘(로그인 모드 사이트의 로그인 전 모양, 고지 전문을 보이는 법)을 0.1 판의 등록 목록에 넣을지다. 넣으면 위젯 관리 화면에 고르는 칸이 둘 늘고, ADR 0064의 이력에 쌓는다(ADR의 개정이라 사용자 승인을 받는다).
+- **widget-login-state는 명세 전에 화면 작업을 한 번 더 연다.** 그린 화면에 ADR 0064가 더한 화면 요소 셋(첫 화면의 예시 질문, 문의 링크, 밝기 스위치를 숨긴 위젯)이 없고, 스위치를 숨긴 사이트에서 위쪽 띠의 설정 단추를 어떻게 할지도 그때 정한다(`.scratch/widget-login-state/plan.md`). 이 PR이 열려 있는 동안 형제 세션 `docs/widget-login-state-spec`이 돌았고, 그 세션의 PR 581이 이 PR보다 먼저 dev에 병합됐다. 그 세션은 이 브랜치의 ADR 0064와 기능 계획을 `git show`로 읽어 화면 요소 셋을 알았고, 사용자에게 물어 명세를 쓰지 않고 화면 셋을 먼저 그리기로 했다(그 세션의 일지 `docs/journal/2026-11-15-2058-widget-login-state-spec.md`의 "사용자에게 물은 것"과 "다음"). 그 일지는 ADR 0064가 dev에 병합된 뒤 `/ui-design widget-login-state`로 그 화면을 그린다고 적고, 그 세션이 지시문을 낼 때 ADR 0064가 병합 전이면 새 세션을 열지 않고 지시문을 사람에게 보인다고 적었다. 그 세션이 지시문을 실제로 보였는지는 이 세션이 확인하지 않았다. 이 PR이 병합되면 그 화면 작업의 선행 조건(ADR 0064가 dev에 있다)이 채워지므로 병합 뒤 보고에 적는다. 그 행의 Blocked by가 widget-admin-server로 바뀐 것과, 위젯 설정을 받아 오는 주소와 답의 모양을 widget-admin-server의 명세가 정한다는 것도 그 세션이 이미 읽었다. 두 PR은 회고 대기열의 파일 둘에서 겹쳤고, 뒤에 병합하는 이 브랜치가 합쳤다(위 "회고"의 2와 8).
+- **나머지 행.** widget-admin-server와 widget-runtime-values는 설계 줄이 있고 명세가 없다. widget-admin-server의 명세는 postgres-foundation이 고르는 것(드라이버, 표를 만들고 올리는 도구, 테스트와 CI가 데이터베이스를 띄우는 방법)을 그대로 쓰는데, postgres-foundation에는 아직 설계 줄이 없다. portal-login-admin과 site-limits-admin은 설계 인터뷰를 따로 한다(ADR 0064 결정 "기능 행").
+- **사용자가 정할 것.** 부하에서 빨개지는 시간 시험(대기열 306이 받아들여 닫은 종류)을 다시 열지다. 이 세션의 pre-commit 일곱 번 가운데 네 번이 그 종류로 멈췄고, 세 번은 같은 시험(`tests/tools/test_probe_kit.py`의 배출 제한 시간 시험)이었다. 그 시험은 고치는 길이 있다(자식의 첫 줄을 넉넉한 제한 시간으로 먼저 받은 뒤에 0.5초 배출을 잰다).
+- **봇 회차에서 뒤로 넘긴 일.** 로그인 주소와 로그아웃 주소의 쿼리와 사용자 정보 자리(`user:pw@`)를 받을지를 CodeRabbit이 Major로 내며 ADR에서 정하라고 했고, portal-admin의 명세로 넘긴 채 병합한다(위 "PR 580"의 판정 2). 그 명세는 저장 경로를 적기 전에 이 물음을 사용자에게 먼저 묻고, 정한 규칙이 ADR 0064 결정 "주소의 검사"의 글과 어긋나면 그 ADR의 이력에 쌓는다. 받는 쪽은 `.scratch/portal-admin/plan.md`의 명세가 정할 넷 가운데 첫째다.
+- **병합 뒤 보고에 적을 것.** 사용자가 ADR 0064를 승인한 뒤에 Consequences의 두 문단("명세가 짓는 것", "화면")에 명세가 정할 물음을 더했고 결정 절은 그대로라는 것. 그리고 위의 주소 물음을 사용자가 지금 정할 수도 있다는 것.
