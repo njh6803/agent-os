@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>계정 만들기 창</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/agent-os/styles.css">
+<link rel="stylesheet" href="ds/agent-os/fonts/fonts.css">
+<link rel="stylesheet" href="ds/agent-os/_ds_bundle.css">
+<script src="ds/agent-os/_ds_bundle.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0}
+a{color:var(--accent)}a:hover{color:var(--text)}
+</style>
+</helmet>
+<div data-theme="nokcheong" data-mode="light" style="position: relative; min-height: 100vh; background: var(--bg); color: var(--text); font-family: var(--sans);">
+<dc-import name="mk-accounts" menu-open="{{no}}" hint-size="100%,860px"></dc-import>
+<div aria-hidden="true" style="position: absolute; inset: 0; background: var(--text); opacity: 0.32;"></div>
+<dialog open aria-labelledby="create-title" class="shadow-float" style="position: absolute; top: 120px; left: 0; right: 0; margin: 0 auto; box-sizing: border-box; width: calc(100% - 32px); max-width: 480px; padding: var(--spacing-6); background: var(--bg-raised); color: var(--text); border: 1px solid var(--border); border-radius: var(--radius-l);">
+<form method="dialog" class="flex flex-col gap-4" style="margin: 0;">
+<h2 id="create-title" style="margin: 0; font-size: var(--text-title); line-height: var(--text-title--line-height); font-weight: var(--text-title--font-weight);">계정 만들기</h2>
+<x-import component-from-global-scope="AgentOsUi.TextField" label="계정 이름" value="kim.dev" help="영문 소문자, 숫자, . _ - 로 3~32자. 영문자나 숫자로 시작한다. 한 번 쓴 이름은 다시 쓰지 못한다." error="이미 있는 이름이다. 쓰지 않는 계정의 이름도 다시 쓰지 못한다."></x-import>
+<p class="text-body text-text-muted" style="margin: 0;">단계: 관리자</p>
+<div class="flex justify-end gap-2">
+<x-import component-from-global-scope="AgentOsUi.Button" variant="secondary">취소</x-import>
+<x-import component-from-global-scope="AgentOsUi.Button" variant="primary" type="submit">만들기</x-import>
+</div>
+</form>
+</dialog>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":860}}'>
+class Component extends DCLogic {
+renderVals() {
+return { no: false };
+}
+}
+</script>
+</body>
+</html>

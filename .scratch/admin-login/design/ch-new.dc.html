@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>새 대화</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/agent-os/styles.css">
+<link rel="stylesheet" href="ds/agent-os/fonts/fonts.css">
+<link rel="stylesheet" href="ds/agent-os/_ds_bundle.css">
+<script src="ds/agent-os/_ds_bundle.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0}
+a{color:var(--accent)}a:hover{color:var(--text)}
+.pick{height:var(--control-h);min-width:200px;box-sizing:border-box;padding:0 var(--spacing-3);border:1px solid var(--border-control);border-radius:var(--radius-m);background:var(--bg);color:var(--text);font:inherit;font-family:var(--mono);font-size:var(--mono-size)}
+.pick:focus-visible{outline:2px solid var(--focus-ring);outline-offset:2px}
+</style>
+</helmet>
+<div data-theme="nokcheong" data-mode="light" style="min-height: 100vh; display: flex; background: var(--bg); color: var(--text); font-family: var(--sans);">
+<nav aria-label="관리 화면" style="width: var(--spacing-nav); flex-shrink: 0; box-sizing: border-box; padding: var(--spacing-4) var(--spacing-3); display: flex; flex-direction: column; gap: var(--spacing-1); background: var(--bg-raised); border-right: 1px solid var(--border);">
+<div class="font-semibold text-body" style="height: var(--spacing-nav-item); display: flex; align-items: center; padding: 0 var(--spacing-3); margin-bottom: var(--spacing-3);">Agent OS</div>
+<a href="#" class="flex items-center gap-2 text-body" style="height: var(--spacing-nav-item); padding: 0 var(--spacing-3); border-radius: var(--radius-m); color: var(--text-muted); text-decoration: none;"><x-import component-from-global-scope="AgentOsUi.Icon" name="plug" size="16"></x-import>플러그인</a>
+<a href="#" aria-current="page" class="flex items-center gap-2 text-body font-medium" style="height: var(--spacing-nav-item); padding: 0 var(--spacing-3); border-radius: var(--radius-m); background: var(--bg-selected); color: var(--text); text-decoration: none;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path vector-effect="non-scaling-stroke" d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>대화</a>
+<a href="#" class="flex items-center gap-2 text-body" style="height: var(--spacing-nav-item); padding: 0 var(--spacing-3); border-radius: var(--radius-m); color: var(--text-muted); text-decoration: none;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path vector-effect="non-scaling-stroke" d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle vector-effect="non-scaling-stroke" cx="9" cy="7" r="4"></circle><path vector-effect="non-scaling-stroke" d="M22 21v-2a4 4 0 0 0-3-3.87"></path><path vector-effect="non-scaling-stroke" d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>계정</a>
+<a href="#" class="flex items-center gap-2 text-body" style="height: var(--spacing-nav-item); padding: 0 var(--spacing-3); border-radius: var(--radius-m); color: var(--text-muted); text-decoration: none;"><x-import component-from-global-scope="AgentOsUi.Icon" name="settings" size="16"></x-import>설정</a>
+<div style="margin-top: auto; padding-top: var(--spacing-3); border-top: 1px solid var(--border);">
+<button type="button" aria-haspopup="menu" aria-expanded="false" class="flex items-center gap-2 w-full" style="min-height: 48px; padding: var(--spacing-2) var(--spacing-3); border: 0; border-radius: var(--radius-m); background: transparent; color: var(--text); font: inherit; text-align: left; cursor: pointer;">
+<span class="flex flex-col flex-1 min-w-0"><span class="font-mono text-mono font-medium">ops-lead</span><span class="text-small text-text-muted">시스템 관리자</span></span>
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex-shrink: 0; color: var(--text-muted);"><path vector-effect="non-scaling-stroke" d="m7 15 5 5 5-5"></path><path vector-effect="non-scaling-stroke" d="m7 9 5-5 5 5"></path></svg>
+</button>
+</div>
+</nav>
+<main style="flex: 1; min-width: 0; display: flex; flex-direction: column;">
+<div style="flex: 1; box-sizing: border-box; padding: var(--spacing-8) var(--spacing-8) var(--spacing-6);">
+<div style="max-width: 760px; margin: 0 auto; display: flex; flex-direction: column; gap: var(--spacing-4);">
+<a href="#" class="text-body" style="align-self: flex-start;">대화 목록</a>
+<header class="flex flex-col gap-3">
+<h1 style="margin: 0; font-size: var(--text-title); line-height: var(--text-title--line-height); font-weight: var(--text-title--font-weight);">새 대화</h1>
+<sc-if value="{{hasAgents}}" hint-placeholder-val="{{ true }}">
+<div class="flex flex-wrap items-center gap-3">
+<label for="agent" class="text-small text-text-muted">에이전트</label>
+<select id="agent" class="pick"><option selected>support-bot</option><option>calc</option></select>
+</div>
+<p class="text-body text-text-muted" style="margin: 0;">에이전트를 고르고 요청을 보낸다. 한 대화에서는 처음 고른 에이전트로 이어 간다.</p>
+</sc-if>
+<sc-if value="{{noAgents}}" hint-placeholder-val="{{ false }}">
+<p class="flex flex-wrap items-center gap-2 text-body text-text-muted" style="margin: 0;"><x-import component-from-global-scope="AgentOsUi.Icon" name="plug" size="16"></x-import>켜진 에이전트가 없다. <a href="#">플러그인 목록</a></p>
+</sc-if>
+</header>
+</div>
+</div>
+<sc-if value="{{hasAgents}}" hint-placeholder-val="{{ true }}">
+<div style="box-sizing: border-box; padding: var(--spacing-4) var(--spacing-8) var(--spacing-6); border-top: 1px solid var(--border); background: var(--bg);">
+<div style="max-width: 760px; margin: 0 auto;" class="flex items-end gap-2">
+<div class="flex-1 min-w-0"><x-import component-from-global-scope="AgentOsUi.TextField" variant="multi" rows="2" label="요청" placeholder="support-bot에게 보낼 요청을 적는다"></x-import></div>
+<x-import component-from-global-scope="AgentOsUi.IconButton" icon="send" label="보내기" variant="primary"></x-import>
+</div>
+</div>
+</sc-if>
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"noAgents":{"editor":"boolean","default":false},"$preview":{"width":1280,"height":760}}'>
+class Component extends DCLogic {
+renderVals() {
+const none = this.props.noAgents ?? false;
+return { noAgents: none, hasAgents: !none };
+}
+}
+</script>
+</body>
+</html>
