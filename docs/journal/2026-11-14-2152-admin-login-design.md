@@ -1059,6 +1059,52 @@ open-session을 부른다 2026-11-15T05:48:18Z
 - **같은 커밋을 다시 쳐서 지났다(`80e9752a0`).** 시험은 고치지 않았고 `SKIP`도 쓰지 않았다. 러너의 열 줄이 Passed였고(pytest 705.6초, web-verify 1231.9초), markdown tables, line separators, mutation tables, quotes, commit message도 Passed였다. canary specs와 constitution version은 볼 파일이 없어 Skipped였다(출력 파일을 Grep으로 읽었다). ruff 둘은 스테이지된 `.py`가 없어 Skipped라 손으로 쳤다(`uv run ruff check .`은 `All checks passed!`, `uv run ruff format --check .`은 2325개가 이미 포맷되어 있다는 한 줄).
 - **기준 브랜치가 움직여 한 번 더 합쳤다.** 푸시 전에 `git fetch origin`을 치니 `origin/dev`에 PR #575의 커밋 `8f891430b`가 와 있었다(`git log --oneline HEAD..origin/dev`가 그 한 줄을 냈다. 손으로 쳤다). 그 커밋이 바꾼 파일 열여덟(`git diff --name-only HEAD...origin/dev`)은 이 브랜치가 바꾼 파일(`git diff --name-only origin/dev...HEAD`)과 겹치지 않는다(두 목록을 눈으로 맞댔다). 이 브랜치가 이름으로 든 파일 가운데 #575가 고친 것은 `docs/constitution/tech.md`이고, 바뀐 줄은 시험용 모델 서버 행 하나라 ADR 0062가 든 의존성 표의 문장과 닿지 않는다(그 diff를 읽었다). `uv run python tools/sibling_overlap.py`는 "번호 겹침 없음"을 냈다(손으로 쳤다). 뒤처진 브랜치의 푸시는 `tools/hook_push_behind_main.py`가 막으므로(그 독스트링을 읽었다) `git merge --no-commit --no-ff origin/dev`로 합쳤고 충돌이 없었다. 합친 뒤 `uv run python tools/plan_table.py --check`와 `uv run python tools/check_adr_pointers.py`가 출력 없이 끝났다(손으로 쳤다). 이 절은 그 합치는 커밋에 함께 싣는다.
 
+### 넷째 커밋과 PR, 인계 시점의 상태 (PR 연 뒤)
+
+이 세션의 제목은 `docs/admin-login-design`이다(`get_session`의 `self`를 봤다).
+
+- **넷째 커밋(`4607539a2`)이 지났다.** `origin/dev`를 `8f891430b`까지 합치고 위 절을 실은 커밋이다. 러너의 열 줄이 Passed였고(pytest 613.8초, web-verify 909.0초), markdown tables, line separators, mutation tables, quotes, commit message도 Passed였다. canary specs와 constitution version은 Skipped였다(백그라운드 커밋의 출력 파일을 Grep으로 읽었다). ruff 둘은 Skipped라 손으로 쳤다(`uv run ruff check .`은 `All checks passed!`, `uv run ruff format --check .`은 2334개가 이미 포맷되어 있다는 한 줄).
+- **그 커밋을 띄운 직후의 인계 계기는 넘기지 않았다.** 계기의 경계가 `커밋 뒤`였고(세션 컨텍스트 229,897 토큰. 훅의 문구를 읽었다) 이 세션의 지시문의 "이어받을 상태"가 `인계: 커밋 뒤`로 시작해, 위 절의 첫 항목과 같은 판정이다.
+- **푸시하고 PR #577을 열었다.** 푸시 전에 `git fetch origin` 뒤 `git log --oneline HEAD..origin/dev`가 출력이 없었다(손으로 쳤다). `git push -u origin docs/admin-login-design` 뒤 `gh pr create --base dev`로 열었고, 제목은 첫 커밋의 제목과 같다. `gh pr view 577 --json headRefOid,state,baseRefName`은 base `dev`, 상태 `OPEN`, `headRefOid` `4607539a2968c0c9c7db01286eb00460cc24d41f`를 냈고 `git rev-parse HEAD`와 같다(손으로 쳤다). 앱의 PR 묶음은 이 세션에 #577로 붙었다(`get_status`가 `bound: true`를 냈다. 도구 출력을 봤다). `@coderabbitai review` 코멘트는 아직 남기지 않았고 `tools/wait_ci.py`도 띄우지 않았다.
+- **PR을 연 직후 인계 계기가 왔고 넘긴다.** 세션 컨텍스트 242,580 토큰, 경계 `PR 연 뒤`다(훅의 문구를 읽었다). 인계하지 않는 때 다섯에 들지 않는다. PR이 열렸고, 이 세션이 받은 범위는 병합까지이고, 이 세션을 연 지시문의 경계는 `커밋 뒤`라 같은 경계가 아니고, 이 일지에 `인계 못함` 줄이 없고(Grep으로 봤다), `get_session`의 `self`에 `parentSessionId`가 없다(도구 출력을 봤다). 이 절은 커밋하지 않은 채 워크트리에 있다.
+
+남은 차례는 다음과 같다.
+
+1. **봇 회차.** `next-session` `merge.md`의 "병합 전" 2부터 한다. 첫 `@coderabbitai review` 코멘트를 남기고 대기를 띄운다. 봇 지적을 반영할 때 사용자가 승인한 ADR 0062·0063의 결정과 PRD 전제의 문장은 바꾸지 않는다(바꿔야 한다는 지적이면 고치지 않고 사용자에게 넘긴다). 이 절은 봇 회차의 커밋에 싣고, 고친 것이 없는 회차면 일지만 실은 커밋으로 푸시한다.
+2. **병합.** 같은 파일의 "워크트리에서 병합할 때"를 따른다.
+3. **병합 뒤 알리기.** 함께 도는 `docs/portal-admin-design` 세션에, 이 PR이 dev에 들어갔다는 것과 `.scratch/portal-admin/plan.md`의 "데이터베이스의 종류" 항목에 한 문장이 더해졌다는 것, agent-os의 PostgreSQL 결정(ADR 0062)과 postgres-foundation의 기능 계획을 알린다.
+4. **다음 작업 지시문.** `next-session`.
+
+인계 지시문은 아래와 같다.
+
+```
+다음 작업: 기능 admin-login. 설계 PR #577을 열었다. 봇 회차와 병합이 남았다
+다음 단계: PR 반영·병합
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: admin-login부터 (지시문 없이 연 세션이고, 그 앞의 첫 요청은 "설계 인터뷰 할 거 있어?"였다)
+브랜치: docs/admin-login-design
+모델: Sonnet 5.5 / high. 2의 잇는 지시문
+읽을 것: docs/journal/2026-11-14-2152-admin-login-design.md의 "넷째 커밋과 PR, 인계 시점의 상태 (PR 연 뒤)"와 그 앞의 "PR 직전 리뷰의 보고와 판정", "셋째 커밋과 기준 브랜치 합치기"
+이어받을 상태: 인계: PR 연 뒤. 설계 PR #577(base dev)을 열었고 next-session merge.md 2(봇 회차)부터 한다. 첫 @coderabbitai review 코멘트도 새 세션이 남긴다. 일지는 docs/journal/2026-11-14-2152-admin-login-design.md다. 그 일지의 "넷째 커밋과 PR, 인계 시점의 상태 (PR 연 뒤)" 절은 커밋하지 않은 채 워크트리에 있고 봇 회차의 커밋에 싣는다(고친 것이 없는 회차면 일지만 실은 커밋). 병합 뒤 docs/portal-admin-design 세션에 알리고(알릴 것은 그 절의 남은 차례 3) 다음 작업 지시문을 낸다. ADR 0062·0063과 PRD 전제의 문장은 사용자가 승인했으므로 병합 전에 다시 묻지 않고, 봇 지적을 반영할 때도 승인된 결정은 바꾸지 않는다. 설계 인터뷰와 회고는 다시 열지 않는다. pre-commit의 pytest에서 tests/tools/test_rerun_runner.py의 시험 하나가 부하 속에 한 번 실패했고 따로 돌리면 지났다(일지 "셋째 커밋과 기준 브랜치 합치기")
+확인할 선행 조건: 없음
+이번 요청 범위: PR과 병합까지
+```
+
+제목을 `docs/admin-login-design (인계함)`으로 바꿨다(바꾸기 전 제목은 `docs/admin-login-design`). 이 세션이 띄운 백그라운드 작업은 남아 있지 않다(커밋 둘이 모두 끝났고 대기는 띄우지 않았다). 워크트리는 잠겨 있지 않았다(`git worktree unlock`이 `is not locked`를 냈다).
+
+open-session을 부른다 2026-11-15T07:15:26Z
+
+### 이어받은 세션: 봇 회차 (2026-11-15)
+
+이 세션의 사용자 메시지는 위 인계 지시문 하나다. 모델은 Sonnet 5.5다(시스템 알림을 읽었다). 세션 제목을 `docs/admin-login-design`으로 바꿨고, `git worktree list`에서 이 브랜치의 워크트리를 찾아 `EnterWorktree(path)`로 들어왔다. 설계 인터뷰와 회고는 다시 열지 않았다.
+
+- **상태.** `gh pr view 577 --json state,headRefOid`는 `OPEN`, `headRefOid` `4607539a2968c0c9c7db01286eb00460cc24d41f`였고 `git rev-parse HEAD`와 같다. `git fetch origin` 뒤 `git log --oneline HEAD..origin/dev`는 출력이 없었다(손으로 쳤다).
+- **CodeRabbit.** `@coderabbitai review` 코멘트를 남겼다. CodeRabbit이 "Review rate limited"라고 답했고(PR 코멘트를 읽었다) `tools/wait_ci.py 577`의 끝 줄은 `끝: 모두 통과. CodeRabbit: Review rate limited`였다. 검사 열 줄은 `llm`만 SKIPPED이고 나머지는 SUCCESS였다. CodeRabbit은 이 PR에 리뷰를 내지 않았으므로 회차로 세지 않는다(merge.md 2의 회차 세기).
+- **claude-review 첫 회차.** Critical과 Major는 없고 Minor 하나와 Nit 둘이다. 첫 회차라 지적마다 판단했고 셋 모두 이번 PR에서 고치지 않는다. PR 코멘트에 이유를 남겼다.
+  1. [Minor] `.claude/rules/core.md`의 "포트는 다섯이고 닫힌 목록이다"와 "도메인별 포트는 두지 않는다"가 ADR 0062와 어긋난 채 남는다. 보류. ADR 0062 64줄의 "티켓이 고치는 것"이 이 두 줄을 이름으로 들어 구현 티켓에 넘겼고(Grep으로 그 줄을 읽었다) 사용자가 승인한 결정이다. 뒤의 구현 티켓으로 넘기는 일이라 아래 "다음"에도 적는다.
+  2. [Nit] ADR 0062의 "경로와 층"과 Consequences "다른 ADR"이 한 불릿에 길다. 보류. 승인된 글이다. 포인터를 이어 다는 모양은 `.claude/rules/adr.md` 12~14줄이 정한다(Grep으로 읽었다). 열거를 줄일지는 이 PR이 아니라 그 규약의 문제다.
+  3. [Nit] 어댑터가 포트를 만족하는지 `server`의 실제 호출에 타입 검사를 걸어 `port_shape/` 프로브가 보인 `reportArgumentType` 잡힘을 재현하는 테스트를 권했다. 보류. 구현 티켓이 할 일이고 아래 "다음"에 적는다.
+
 ## 회고
 
 후보는 여덟이고 판정은 승인 셋, 기각 다섯, 넘김 없음이다. 만료할 항목은 없었다(`uv run python tools/queue_open_rows.py`의 "만료할 항목"이 "(없음)"이었다. 손으로 쳤다).
@@ -1080,5 +1126,6 @@ open-session을 부른다 2026-11-15T05:48:18Z
 - **admin-login은 release-image와 postgres-foundation을 기다린다.** postgres-foundation에는 설계가 없어 그 행의 설계 인터뷰가 먼저다(그 기능 계획 본문이 먼저 볼 것을 적었다). portal-admin의 설계 세션이 함께 돌고 있고, 두 인터뷰 가운데 먼저 도는 쪽이 다른 쪽의 기능 계획을 읽어 데이터베이스의 종류와 도구를 맞춘다.
 - **admin-login의 명세가 정할 것 둘이 PR 직전 리뷰에서 더해졌다.** 짧은 JWT의 수명이 쉬는 시간 이상인 설정을 받을지와, 비밀번호를 바꾸거나 링크로 다시 정했을 때 다른 로그인이 끊기기까지의 시간이다(ADR 0062 Consequences "명세가 정하고 재는 것", 위 "PR 직전 리뷰의 보고와 판정" 3과 4).
 - **postgres-foundation의 설계 세션이 `pg_stack/` 프로브를 다시 돌릴 때** 실패로 끝난 조합의 회차를 기대하는 오류 문구가 있을 때만 측정으로 세게 고친다(같은 절의 2, 그 프로브 README "재지 못한 것").
+- **PR 봇이 넘긴 일 둘은 admin-login의 첫 구현 티켓이 맡는다**(claude-review 첫 회차의 Minor와 Nit, 위 "이어받은 세션: 봇 회차"). 하나는 `.claude/rules/core.md`의 "포트는 다섯이고 닫힌 목록이다"와 "도메인별 포트는 두지 않는다"를 ADR 0062의 `agent_os.http` 포트에 맞게 고치는 것이고(`adapters.md`의 어긋난 줄도 같이), 티켓의 완료 조건에 넣는다. 다른 하나는 포트를 만족하지 않는 어댑터를 `server`의 조립에서 실제로 넘기는 호출에 타입 검사를 걸어 `port_shape/` 프로브가 보인 `reportArgumentType` 잡힘을 재현하는 테스트를 같이 두는 것이다.
 - **0.1 판 뒤의 새 행 셋**(admin-roles, admin-2fa, admin-approval)은 기능 계획만 있고 설계가 없다.
 - **대기열.** 새 항목 `choice-screen-worded-in-code-names`(2회차)와 `journal-path-tool-during-uncommitted-merge`(1회차, 고침), 회차를 더한 `model-menu-name-fable-5-1-stale`(2회차. 설계 인터뷰나 명세 지시문의 "모델" 줄은 그 항목이 닫힐 때까지 지금 메뉴에 있는 이름으로 적는다).
