@@ -271,3 +271,64 @@ PR 직전 리뷰에 밀 주장(반영으로 새로 쓴 문장):
 - 일지: "`--accent`와 단계 열하나(50, 100~900, 950), 모두 열둘뿐이었다."
 
 다시 돌린 명령: 손으로 치는 다섯은 커밋의 pre-commit으로 갈음한다. 결과는 커밋 뒤에 적는다.
+
+### 커밋
+
+- 커밋 직전 `git branch --show-current`가 `docs/widget-login-state-screens-2`였다. `uv run python tools/sibling_overlap.py`는 "이 브랜치의 새 번호 없음", "번호 겹침 없음"을 냈고, 함께 고친 파일로 `portal-admin-screens` 워크트리의 `.scratch/design-system/design/frontend-design-conflicts.md`를 들었다(그 워크트리는 아직 커밋하지 않은 변경이다). 둘 다 표 끝에 행을 더하므로 나중에 병합하는 쪽이 행을 합친다.
+- 처음 친 커밋은 PreToolUse 훅이 "제목 76자 > 72자"로 막아 돌지 않았다. 제목을 줄여 다시 쳤다.
+- 커밋 `8bb451b68`. 백그라운드로 띄운 pre-commit은 모두 Passed였다(출력 파일에서 봤다). 오래 걸린 것은 pytest 1342.1s, web-verify 1784.6s, run-hooks 283.6s다. Skipped는 ruff check와 ruff format(`.py`가 없다), canary specs와 constitution version(대상 파일이 없다)이다. ruff는 바꾼 `.py`와 ruff 설정이 없어 손으로 치지 않는다.
+- 커밋을 백그라운드로 띄운 직후, 커밋이 끝나기 전에 "커밋 뒤" 인계 계기가 왔다(세션 컨텍스트 291,936 토큰). 대기열 `handoff-trigger-before-background-commit-ends`의 사례다. 커밋이 끝나기를 기다려 성공을 본 뒤에 `handoff.md` 1을 판정했다.
+
+### 인계
+
+`커밋 뒤`는 이 세션이 넘겨받은 경계(`셀프 리뷰 직전`)와 달라 `handoff.md` 1의 인계하지 않는 때 다섯에 들지 않았다. 커밋은 성공했고, 요청 범위는 PR과 병합까지이며, 일지에 이 세션이 쓴 `인계 못함` 줄이 없고, `get_session`의 `self`에 `parentSessionId`가 없다. 감아올리기로 `handoff.md`가 바뀌어 `git diff d80690da1 HEAD`로 보니 절 번호 참조 하나(`merge.md` 3 → 4)뿐이었다. 이 세션의 지금 제목은 `docs/widget-login-state-screens-2`이다.
+
+낸 지시문:
+
+```
+다음 작업: 기능 widget-login-state. 위젯 관리 설계(ADR 0064)가 더한 화면 셋(첫 화면의 예시 질문, 문의 링크, 밝기 스위치를 숨긴 위젯)을 그려 확정받아 옮긴 커밋을 PR 직전 리뷰하고 PR을 열어 병합한다
+다음 단계: 화면 디자인
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /ui-design widget-login-state
+브랜치: docs/widget-login-state-screens-2
+모델: Opus 5.5 / xhigh. 2의 잇는 지시문
+읽을 것: 일지 docs/journal/2026-11-16-0013-widget-login-state-screens-2.md의 "이어받은 세션" 절부터 끝까지
+이어받을 상태: 인계: 커밋 뒤. 셀프 리뷰와 그 반영까지 한 커밋에 들었고 아직 푸시하지 않아 PR이 없다. 남은 것은 PR 직전 리뷰(일지 "셀프 리뷰"의 "PR 직전 리뷰에 밀 주장" 다섯을 브리프에 넣는다), 푸시와 PR, 봇 회차, 병합, 일지 "다음"과 회고, 다음 지시문이다. 회고는 대기열 handoff-trigger-before-background-commit-ends에 두 회차를 더한다: 앞 세션(일지 2026-11-15-2058)의 사례와 이 일지 "커밋"의 사례. 일지 "다음"에는 후속 둘을 적는다: 앞 화면 작업의 아티팩트 일곱이 이 계정에서 열리지 않는 일(일지 "앞 화면 작업의 아티팩트를 찾지 못한 까닭", "계정 질문의 답"), portal-admin의 명세 전에 예시 질문의 모양(위젯 설정의 고르는 값 셋째)을 사용자에게 묻는 일(이 브랜치는 .scratch/portal-admin/을 고치지 않았다). 일지 docs/journal/2026-11-16-0013-widget-login-state-screens-2.md
+확인할 선행 조건: docs/portal-admin-screens 세션이 아직 돌면 .scratch/portal-admin/의 파일을 고치지 않는다. 그 워크트리도 .scratch/design-system/design/frontend-design-conflicts.md의 표 끝에 행을 더하고 있어 나중에 병합하는 쪽이 행을 합친다. 병합은 이 워크트리 사본의 next-session merge.md(없으면 SKILL.md)의 "워크트리에서 병합할 때"를 Read로 열어 따른다
+이번 요청 범위: PR과 병합까지
+```
+
+제목을 `docs/widget-login-state-screens-2 (인계함)`으로 바꿨다(앱이 묻지 않고 바꿨다). 띄운 백그라운드 작업은 남은 것이 없었다(커밋과 리뷰 서브에이전트 둘은 끝났다). 워크트리 잠금 풀기(`handoff.md` 4)는 `is not locked`로 끝나 넘어갔다. 일지에 이 줄을 셸로 덧붙이려던 첫 명령은 글 안의 git 명령 글자 때문에 워크트리 가드가 "too complex to verify"로 거부해 돌지 않았고, 파일로 써서 붙였다.
+
+open-session을 부른다 2026-11-15T18:25:48Z
+
+## 이어받은 세션 2 (커밋 뒤, 03:30 무렵~)
+
+위 "인계"의 지시문으로 연 새 세션이다. 모델 Opus 5.5. 첫 메시지는 앞 세션과 같은 꼴(스킬 파일을 읽으라는 한 줄과 지시문)이었다. 제목은 앱이 지은 "Widget login state 화면 설계 PR"이었고, 훅의 안내대로 `docs/widget-login-state-screens-2`로 바꿨다(묻지 않고 바뀌었다). `git worktree list`에서 이 브랜치가 `.claude/worktrees/widget-login-state-screens-2`에 있어 `EnterWorktree(path)`로 들어왔다. 들어왔을 때 작업 트리에는 앞 세션이 커밋 뒤에 덧붙인 일지의 "인계" 절만 커밋하지 않은 채 있었다.
+
+### 사용자 프롬프트
+
+위 "인계"(커밋 뒤)의 지시문 그대로이고, 앞에 앞 세션과 같은 한 줄(`.claude/skills/ui-design/SKILL.md 를 읽어 그대로 따른다. … 인자: widget-login-state`)이 붙었다.
+
+### 나란히 도는 세션과 기준 브랜치
+
+- `ListAgents`에서 `docs/portal-admin-screens`가 `waiting`이었다. 선행 조건대로 `.scratch/portal-admin/`은 고치지 않는다. 앞 세션 둘(`docs/widget-login-state-screens-2 (인계함)`)은 하나가 `busy`(이 세션을 연 `open-session`이 돌아오기를 기다리는 중으로 본다, 어림), 하나가 `idle`이었다.
+- `git fetch origin` 뒤 `origin/dev`는 앞 세션이 감아올린 `6cc678448` 그대로이고, 이 브랜치는 그 위에 커밋 하나(`8bb451b68`)다. `uv run python tools/sibling_overlap.py`는 "이 브랜치의 새 번호 없음", "번호 겹침 없음"을 냈고, 함께 고친 파일로 `portal-admin-screens` 워크트리의 `.scratch/design-system/design/frontend-design-conflicts.md`를 들었다. 나중에 병합하는 쪽이 행을 합친다.
+
+### ui-design 다시 들어오기
+
+README에 이 기능의 화면 줄이 있어 `/ui-design`의 1~2와 "웹 편집 확인"을 다시 했다. 그릴 화면은 없다.
+
+- 1: `claude plugin list`에서 `frontend-design@claude-plugins-official`이 `Status: ✔ enabled`였다.
+- 2: 디자인 시스템 아티팩트의 `read` 머리가 "owned by you"였고, `project/tokens.json`이 있었다(sha256 `c8a34360…`). `/sync-design-system 확인`은 두 번 받아(색인·기록·`tokens.json` 셋, 문서 열다섯) `check judge`가 `"result":"clean"`, `decide --caller screen`이 `"act":"continue"`를 냈다. 올리기는 `git log dce80e58..origin/dev -- web/packages/ui web/tools/sync-design-system .claude/rules/web-design.md`가 빈 출력이라 부르지 않았다.
+- 웹 편집 확인: 앞 절의 스물넷(`94Gw…`)은 앞 세션들이 적은 대로 이 계정에서 "artifact not found"라 확인하지 못한다. 새 절의 열셋과 색인(`U366…`)은 이제 HEAD에 있어 맞댈 수 있다. 받은 내용이 대화에 그대로 실리면 컨텍스트를 많이 써서(열넷 합계 139,155바이트) 받기와 맞대기를 서브에이전트에 맡겼다. 그 서브에이전트의 보고: 받은 판은 옮길 때와 같은 `1794762646-5d0f`이고, 열넷 모두 머리의 sha256이 `git show HEAD:<경로>`로 꺼낸 사본의 `sha256sum`과 같아 줄바꿈 대조로 가지 않았으며, 읽지 못한 경로는 없었다. 본 세션은 서브에이전트가 남긴 두 폴더(받은 것, HEAD 사본)를 `sha256sum`으로 다시 맞대 열넷이 짝마다 같은 것을 봤다. HEAD 사본이 정말 HEAD의 것인지는 둘(`canvas.json`, `sa-05-contact.dc.html`)만 `git hash-object --no-filters`로 받은 파일의 블롭 id를 내어 `git rev-parse HEAD:<경로>`와 같은 것을 봤다(손으로 봤다). 웹 편집은 없다.
+- ruff 둘: 앞 커밋의 pre-commit에서 `Skipped`였으므로 손으로 쳤다. `uv run ruff check .`는 `All checks passed!`, `uv run ruff format --check .`는 `2359 files already formatted`였다.
+
+### PR 직전 리뷰
+
+`coderabbit-review` 서브에이전트를 base `origin/dev`로 띄웠고, 브리프에 앞 세션이 넘긴 "PR 직전 리뷰에 밀 주장" 다섯을 넣어 근거와 대 보게 했다. CLI에는 그 문장을 넘기는 길이 없어서다. 아래는 그 서브에이전트의 보고이고 본 세션은 다시 돌리지 않았다.
+
+- CLI: `coderabbit review --agent --include-untracked --base origin/dev`가 `review_completed`로 끝났다. 닿은 파일 열아홉(README, 시작 프롬프트, 기능 계획, 충돌 목록, 일지, 색인, 화면 열셋), 지적 0건이다. `coderabbit auth status`는 `Seat: not assigned`, `Plan: Free`였다.
+- 주장 다섯은 모두 "맞음"이었다. README의 제안 여덟은 시작 프롬프트 머리 문단의 여섯, 본문 키보드 메모의 하나, 일지 165행이 적은 이 브랜치의 하나와 맞고, `mk-confirmed`와 일지 "완성 화면 확정"의 질문이 든 것은 일곱째·셋째·여덟째다. 설정 단추는 시작 프롬프트의 제안이고 `ch-picked`가 갈래 6 안 1과 같은 문단에 적었다. ADR 0064 Consequences "화면"(69행)은 고르는 값 둘을 portal-admin의 명세 전에 묻는다고 적었다. 시작 프롬프트 참고 목록의 Inkeep 줄에는 문의 단추의 글자 설정이 없고 Intercom 줄의 글자 설정은 대화 시작 단추의 것이다. `theme.css`의 `--accent` 계열은 `grep -o -- '--accent[a-z0-9-]*'`로 열둘이었다.
+
+고친 것과 남긴 것: 없다(지적 0건, 주장 다섯 모두 맞음).
