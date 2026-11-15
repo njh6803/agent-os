@@ -14,10 +14,10 @@
 `run`은 `--yes` 없이 치면 예상 비용(GPU 후보마다 단가, 파드 수, 어림 30분과 타이머까지 간 최악
 90분의 값)만 찍고 아무것도 띄우지 않은 채 끝난다. 세션은 그 출력을 사용자에게 보여 확인을 받은
 뒤에만 `--yes`를 붙여 다시 친다. `--yes`가 붙으면 서버 키를 만들고,
-Terraform(`tools/llm_local_server/`)으로 모델 서버 둘 (A.X 4.0 Light, gpt-oss-20b)을 90분 뒤
-스스로 지워지게 걸린 채로 띄우고, 두 서버가 준비되기를 기다리고, `--` 뒤의 명령(기본 `uv run
-pytest -m llm_local`)을 자식 프로세스로 돌리고, 시험이 어떻게 끝났든 (Ctrl-C로 끊겨도) 서버를
-지운 뒤 기록 묶음을 찍는다.
+Terraform(`tools/llm_local_server/`)으로 모델 서버 둘 (Gemma 4 26B-A4B-it의 양자화 판,
+gpt-oss-20b)을 90분 뒤 스스로 지워지게 걸린 채로 띄우고, 두 서버가 준비되기를 기다리고, `--` 뒤의
+명령(기본 `uv run pytest -m llm_local`)을 자식 프로세스로 돌리고, 시험이 어떻게 끝났든 (Ctrl-C로
+끊겨도) 서버를 지운 뒤 기록 묶음을 찍는다.
 
 걸음(명세의 번호): 1 환경(`RUNPOD_API_KEY` 이름, Terraform 1.6 이상, 분리 HEAD가 아닌 브랜치) 2
 상태 폴더(링크면 거부한다) 3 잠금 4 남은 자원 지우기 5 예상 비용(그 뒤 `--`로 시험 명령을 주지
@@ -164,10 +164,22 @@ class Model:
     number: int
     model_id: str
     parser: str
+    # 이 모델의 서버 명령에만 파서 뒤에 덧붙는 옵션(낱말마다 한 원소). Terraform에는 변수로
+    # 넘어간다.
+    server_args: tuple[str, ...] = ()
 
 
+# 1번은 남의 저장소의 양자화 판이라 `--revision`으로 가중치의 판을 고정한다. 그 해시는 2026-11-15에
+# Hugging Face API에서 읽은 그 저장소의 최신 판이다(원문은 일지의 "정식 반영"). `--max-model-len`은
+# 모델 카드의 메모리 계산이 32k 컨텍스트 기준이어서 고른 어림이고, 기본 컨텍스트가 shared 배치의
+# KV 캐시 예산(4GiB)에 맞는지는 재지 않았다. 둘의 근거는 ADR 0058의 2026-11-15 이력이다.
 MODELS = (
-    Model(1, "skt/A.X-4.0-Light", "hermes"),
+    Model(
+        1,
+        "GotoAI-Inc/gemma-4-26B-A4B-it-W4A16",
+        "gemma4",
+        ("--max-model-len", "32768", "--revision", "fdb4e380603cf157783227bd790bfbe921b64610"),
+    ),
     Model(2, "openai/gpt-oss-20b", "openai"),
 )
 
@@ -611,7 +623,14 @@ def terraform_env(
     env["TF_VAR_gpu_type_id"] = gpu_type_id
     env["TF_VAR_timer_minutes"] = str(TIMER_MINUTES)
     env["TF_VAR_models"] = json.dumps(
-        {str(m.number): {"model_id": m.model_id, "parser": m.parser} for m in MODELS}
+        {
+            str(m.number): {
+                "model_id": m.model_id,
+                "parser": m.parser,
+                "server_args": list(m.server_args),
+            }
+            for m in MODELS
+        }
     )
     return env
 
@@ -859,6 +878,7 @@ def server_options(candidate: Candidate) -> list[str]:
             f"--port {port}",
             "--enable-auto-tool-choice",
             f"--tool-call-parser {model.parser}",
+            *model.server_args,
         ]
         if candidate.layout == "shared":
             words.append(f"--gpu-memory-utilization {SHARED_UTILIZATION}")
