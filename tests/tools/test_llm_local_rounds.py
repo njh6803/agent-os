@@ -6,6 +6,7 @@
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 
 import pytest
@@ -250,8 +251,29 @@ def test_기록_묶음은_칸을_모두_갖추고_서버_키와_주소를_싣지
 def test_서버_옵션은_파서를_모델마다_다르게_싣는다(world: World) -> None:
     assert run_main("run", "--yes") == 0
     options = " ".join(server_options(last_record(world)))
-    assert "--tool-call-parser hermes" in options
+    assert "--tool-call-parser gemma4" in options
     assert "--tool-call-parser openai" in options
+
+
+def test_모델에_덧붙인_서버_옵션은_그_모델의_명령에만_실린다(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    models = (
+        llm_local.Model(1, "a/b", "gemma4", ("--max-model-len", "32768")),
+        llm_local.Model(2, "c/d", "openai"),
+    )
+    monkeypatch.setattr(llm_local, "MODELS", models)
+    shared = next(c for c in llm_local.candidates() if c.layout == "shared")
+    first, second = llm_local.server_options(shared)
+    assert "--tool-call-parser gemma4 --max-model-len 32768" in first
+    assert "--max-model-len" not in second
+    assert second.count("--tool-call-parser") == 1
+
+
+def test_병합_조건의_1번_모델은_가중치_판을_고정해_띄운다() -> None:
+    # 시험이 남의 저장소의 최신 가중치를 읽으면 같은 커밋의 시험이 날마다 다른 모델을 볼 수 있다.
+    args = " ".join(llm_local.MODELS[0].server_args)
+    assert re.search(r"--revision [0-9a-f]{40}\b", args)
 
 
 def test_자식이_pytest가_아니어서_XML이_없으면_통과_수와_토큰은_없음이고_판정은_종료_코드다(

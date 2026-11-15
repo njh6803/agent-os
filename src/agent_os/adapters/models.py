@@ -5,9 +5,9 @@
 같고, 만들기는 어느 제공사도 키도 네트워크도 요구하지 않는다. 기본 모델의 이름을 정하는
 `resolve_model_name` 과 `MODEL_ENV` 도 제공사와 무관해 여기 산다.
 
-`openai-compatible` 은 매니페스트로 읽히고 관리 API 에 보이지만 모델 서버에 붙는 어댑터가 아직
-없어, 그 모델을 만들려 하면 실행 전 구성 오류(`PluginError`)다(ADR 0057). 실행은 `run_started`
-전에 끝나 트레이스가 남지 않는다.
+`openai-compatible` 은 모델 서버 모듈(`adapters/openai_compatible.py`)이 만든다(ADR 0057). 주소를
+라이브러리가 받지 않아 모델을 만들지 못하면 실행 전 구성 오류(`PluginError`)이고, 실행은
+`run_started` 전에 끝나 트레이스가 남지 않는다.
 """
 
 from __future__ import annotations
@@ -17,6 +17,7 @@ from collections.abc import Mapping
 from langchain_core.language_models import BaseChatModel
 
 from agent_os.adapters.anthropic import chat_anthropic
+from agent_os.adapters.openai_compatible import chat_openai_compatible
 from agent_os.core.ports import PluginError
 from agent_os.sdk import ModelProvider, PluginManifest
 
@@ -66,10 +67,17 @@ class ManifestModels:
             case ModelProvider.ANTHROPIC:
                 return chat_anthropic(model_id, manifest.max_tokens, manifest.temperature)
             case ModelProvider.OPENAI_COMPATIBLE:
-                # 계약 티켓만 병합된 개발 브랜치의 임시 갈래다. 어댑터 티켓이 이 갈래를 모델 서버
-                # 모듈로 바꾸며 이 문구를 지운다. pyright 는 갈래가 있는지만 보고 무엇을 던지는지는
-                # 보지 않아 `tests/adapters/test_models.py` 가 그 자리를 덮는다.
-                raise PluginError(
-                    f"model 플러그인 {manifest.name} 의 provider {provider} "
-                    "에 붙는 어댑터가 아직 없다"
+                # 모델 종류에서 `base_url` 이 있음을 sdk 의 검증자가 보장한다. 위 두 칸과 같은
+                # 까닭으로 pyright strict 가 이 좁힘을 요구한다.
+                if manifest.base_url is None:
+                    raise PluginError(
+                        f"{manifest.name} 은 base_url 이 없어 모델 서버에 붙을 수 없다"
+                    )
+                return chat_openai_compatible(
+                    plugin_name=manifest.name,
+                    model_id=model_id,
+                    base_url=manifest.base_url,
+                    api_key_env=manifest.api_key_env,
+                    max_tokens=manifest.max_tokens,
+                    temperature=manifest.temperature,
                 )

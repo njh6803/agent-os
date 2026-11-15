@@ -259,8 +259,8 @@ class PluginManifest(BaseModel):
     # (`openapi.json`)에 실리므로 한 줄로 쓰고 논증은 여기 둔다. `base_url` 은 글자 그대로 보관한다
     # (`AnyHttpUrl` 은 호스트를 소문자로 바꾸고 빈 경로에 `/` 를 붙여 관리 API 응답이 파일에 적은
     # 글자와 달라진다). `api_key_env` 는 값이 아니라 이름이라 관리 API 응답에 실려도 비밀이 새지
-    # 않는다(원칙 V). 이 값의 모델은 읽히고 관리 API 에 보이지만 모델 서버에 붙는 동작은 아직
-    # 없다. 그 모델로 실행을 치면 실행 전 구성 오류로 끝난다(`adapters/models.py`).
+    # 않는다(원칙 V). 이 값의 모델은 `base_url` 의 모델 서버에 붙어 만들어진다
+    # (`adapters/openai_compatible.py`).
     base_url: str | None = Field(
         default=None,
         description=(

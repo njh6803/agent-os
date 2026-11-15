@@ -4,7 +4,9 @@
 픽스처 에이전트는 tmp_path 아래 plugins/ 에 쓰고 저장소의 plugins/ 에 두지 않는다.
 이 파일에서는 llm 마커가 붙은 것만 실제 모델을 부른다 — CLI 의 것들과 실제 serve 를 띄우는 둘. 바깥
 이음매다. 위젯 화면에서 실제 모델까지 가는 것은 llm_widget 마커의 `tests/test_widget_llm.py` 이고,
-위젯 미리보기 페이지에서 가는 것은 llm_portal 마커의 `tests/test_portal_llm.py` 다.
+위젯 미리보기 페이지에서 가는 것은 llm_portal 마커의 `tests/test_portal_llm.py` 이고, 빌린 모델
+서버로 calc 를 돌리는 것은 llm_local 마커의 `tests/test_local_model_llm.py` 다. 가짜 모델 서버로
+같은 줄을 도는 두 시험(`_local_model_plugins` 를 쓰는 것)은 마커 없이 기본 실행에서 돈다.
 """
 
 import asyncio
@@ -38,6 +40,7 @@ from langchain_core.language_models.fake_chat_models import GenericFakeChatModel
 from langchain_core.messages import AIMessage, BaseMessage
 from langchain_core.outputs import ChatResult
 from pydantic import BaseModel, ConfigDict, Field
+from tests.adapters.fake_model_server import FakeModelServer, completion, tool_call
 from tests.mcp_http import serving
 from tests.signing import AUDIENCE, bearer, claims, new_key, sign
 
@@ -67,6 +70,7 @@ from agent_os.sdk import (
     LlmCalled,
     PluginManifest,
     Principal,
+    RunFailed,
     RunFinished,
     RunId,
     RunPaused,
@@ -520,33 +524,6 @@ def test_꺼진_기본_모델은_시작_확인을_막지_않고_그_실행이_�
     assert "기본 모델 플러그인이 없다" not in err
 
 
-OPENAI_COMPATIBLE_MODEL_MANIFEST = (
-    'schema_version = "1"\nkind = "model"\nname = "ax-4-light"\nversion = "0.1.0"\n'
-    'provider = "openai-compatible"\nmodel_id = "skt/A.X-4.0-Light"\n'
-    'base_url = "http://model-server:8000/v1"\n'
-)
-
-
-def test_붙는_어댑터가_아직_없는_제공사의_모델은_진단과_종료_코드_1이고_트레이스를_남기지_않는다(
-    workspace: Path, capsys: pytest.CaptureFixture[str]
-) -> None:
-    """계약 티켓만 병합된 개발 브랜치의 임시 갈래다. 읽히고 관리 API에 보이지만 아직 붙지 않는다.
-    어댑터 티켓이 이 시험과 문구를 지운다. `PluginError` 가 아닌 예외였다면 실행 전 구성 오류의
-    길을 비켜 가 트레이스 없이 진단만 적는 이 모양이 되지 않는다."""
-    directory = workspace / "plugins" / "models" / "ax-4-light"
-    directory.mkdir(parents=True)
-    (directory / "plugin.toml").write_text(OPENAI_COMPATIBLE_MODEL_MANIFEST, encoding="utf-8")
-
-    code = main(["run", "echo", "hi", "--traces", "t", "--model", "ax-4-light"])
-
-    out, err = capsys.readouterr()
-    assert code == 1
-    assert out == ""
-    assert "model 플러그인 ax-4-light 의 provider openai-compatible" in err
-    assert "에 붙는 어댑터가 아직 없다" in err
-    assert _trace_files(workspace / "t") == []
-
-
 def _cli(argv: list[str], *, cwd: Path) -> subprocess.CompletedProcess[str]:
     """실제 CLI 프로세스 하나를 띄우고 끝날 때까지 기다린다. 돌아오면 그 프로세스는 죽어 있다."""
     return _python(["-m", "agent_os.main", *argv], cwd=cwd)
@@ -719,6 +696,123 @@ def _replace_in(path: Path, old: str, new: str) -> None:
     text = path.read_text(encoding="utf-8")
     assert text.count(old) == 1, f"{path} 에 {old!r} 가 정확히 한 번 있어야 한다"
     path.write_text(text.replace(old, new), encoding="utf-8")
+
+
+LOCAL_MODEL_PLUGIN = "fake-local"
+LOCAL_MODEL_ID = "fake-model-id"
+# 깨진 인자 안에 둔 글자. 실패 문구와 트레이스 어디에도 되울려 나오지 않아야 한다.
+BROKEN_ARGUMENT_MARK = "비밀조각"
+
+
+def _local_model_plugins(root: Path, base_url: str) -> Path:
+    """저장소의 calc 를 복사한 임시 루트를 짓고 `--plugins-root` 에 줄 폴더를 돌려준다.
+
+    calc 의 MCP 서버는 `_replace_in` 으로 npm 의 실행 파일에서 이 파일이 다른 시험에 쓰는 stdio
+    픽스처로 바꾸고, `openai-compatible` 모델 파일 하나를 가짜 모델 서버의 주소로 적는다.
+    """
+    _copy_repo_plugins(root)
+    everything = root / "plugins" / "mcp" / "everything" / "plugin.toml"
+    _replace_in(everything, 'command = "mcp-server-everything"', f'command = "{_PYTHON}"')
+    _replace_in(everything, "args = []", f'args = ["{MCP_FIXTURE_SERVER.as_posix()}"]')
+    directory = root / "plugins" / "models" / LOCAL_MODEL_PLUGIN
+    directory.mkdir(parents=True)
+    (directory / "plugin.toml").write_text(
+        'schema_version = "1"\nkind = "model"\n'
+        f'name = "{LOCAL_MODEL_PLUGIN}"\nversion = "0.1.0"\n'
+        f'provider = "openai-compatible"\nmodel_id = "{LOCAL_MODEL_ID}"\n'
+        f'base_url = "{base_url}"\n',
+        encoding="utf-8",
+    )
+    return root / "plugins"
+
+
+_PYTHON = Path(sys.executable).as_posix()
+
+
+def _run_calc_on_local_model(
+    request: str, *, plugins: Path, traces: Path
+) -> subprocess.CompletedProcess[str]:
+    return _cli(
+        [
+            "run",
+            "calc",
+            request,
+            "--traces",
+            str(traces),
+            "--plugins-root",
+            str(plugins),
+            "--model",
+            LOCAL_MODEL_PLUGIN,
+        ],
+        cwd=REPO_ROOT,
+    )
+
+
+def test_calc_가_가짜_모델_서버로_도구를_불러_계산하고_트레이스에_모델_호출_둘과_도구_호출이_남는다(
+    tmp_path: Path,
+) -> None:
+    """바깥 이음매의 모델 없는 짝. 실제 CLI 프로세스, 실제 stdio 서버, 가짜 모델 서버(local-model
+    명세). 첫 응답이 `add` 를 부르고 둘째 응답이 그 결과를 든 글로 답한다. `-m llm_local` 이 같은
+    줄을 실제 모델 서버로 돈다."""
+    traces = tmp_path / "traces"
+    call = tool_call("add", '{"a": 17, "b": 25}')
+    with FakeModelServer(
+        completion(content=None, tool_calls=[call], finish_reason="tool_calls"),
+        completion(content="17 더하기 25는 42다"),
+    ) as server:
+        plugins = _local_model_plugins(tmp_path, server.base_url)
+
+        result = _run_calc_on_local_model("17 더하기 25는?", plugins=plugins, traces=traces)
+
+        received = server.requests
+
+    assert result.returncode == 0, result.stderr
+    assert "42" in result.stdout
+    (trace_file,) = _trace_files(traces)
+    events = _trace_events(trace_file)
+    assert events[-1].type == "run_finished"
+    llm_calls = [e for e in events if isinstance(e, LlmCalled)]
+    assert len(llm_calls) == 2
+    # 모델의 이름은 매니페스트의 `model_id` 가 아니라 서버가 응답에 적은 이름이다.
+    assert {e.model for e in llm_calls} == {"served-model-name"}
+    (tool_event,) = [e for e in events if isinstance(e, ToolCalled)]
+    assert (tool_event.tool, tool_event.ok, dict(tool_event.args)) == (
+        "add",
+        True,
+        {"a": 17, "b": 25},
+    )
+    assert tool_event.content == "42"
+    assert len(received) == 2
+    first_body = received[0].json()
+    assert first_body is not None
+    assert first_body["tools"]
+    assert first_body["model"] == LOCAL_MODEL_ID
+
+
+def test_모델이_인자가_깨진_도구_호출을_내면_calc_는_도구를_부르지_않고_원인_model_call_로_끝난다(
+    tmp_path: Path,
+) -> None:
+    """위 시험과 같은 모양에서 첫 응답의 `add` 인자만 깨진 JSON 이다. 문구는 도구 이름을 들고 깨진
+    인자의 글자는 싣지 않는다(local-model 티켓 02). 서버가 보낸 글이 트레이스에 남지 않는다."""
+    traces = tmp_path / "traces"
+    broken = tool_call("add", '{"a": 17, ' + BROKEN_ARGUMENT_MARK)
+    with FakeModelServer(
+        completion(content=None, tool_calls=[broken], finish_reason="tool_calls")
+    ) as server:
+        plugins = _local_model_plugins(tmp_path, server.base_url)
+
+        result = _run_calc_on_local_model("17 더하기 25는?", plugins=plugins, traces=traces)
+
+    assert result.returncode != 0
+    (trace_file,) = _trace_files(traces)
+    events = _trace_events(trace_file)
+    failed = events[-1]
+    assert isinstance(failed, RunFailed)
+    assert failed.cause == "model_call"
+    assert "add" in failed.error
+    assert not any(isinstance(e, ToolCalled) for e in events)
+    for text in (failed.error, result.stdout, result.stderr, trace_file.read_text("utf-8")):
+        assert BROKEN_ARGUMENT_MARK not in text
 
 
 def test_승인_대상에서_멈추면_실행_식별자와_승인_요청이_표준_출력에_찍히고_전용_종료_코드다(
