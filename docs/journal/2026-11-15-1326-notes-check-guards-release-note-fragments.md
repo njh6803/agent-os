@@ -52,7 +52,7 @@ Critical·Major 없음. 겨냥한 주장 넷(`upgrade/` 아래 경로 세기가 
 
 CodeRabbit은 무료 리뷰 한도에 걸려 리뷰가 없었다(`Review rate limited`, 요청 코멘트에도 같은 답). 검사 줄(`e2e`·`e2e-portal`·`e2e-widget`·`python`·`ticket`·`verify`·`visual`·`web`)은 모두 SUCCESS, `llm`은 SKIPPED였다. claude-review는 코멘트 하나에 Minor 둘과 Nit 하나를 냈다.
 
-- 고친 것(Minor): `judge_pr`의 키워드 전용 불리언 `title_only`는 `CODING_STANDARDS.md`가 "키워드 전용으로 옮겨 지나간 플래그는 함수가 두 가지 일을 한다는 신호라 쪼갠다"고 정한 대상이었다. `judge_title`과 `judge_pr`로 쪼개고 공통부를 `_pr_input`으로 모았으며, 입구는 `Mode` 문자열 유니온으로 가른다.
+- 고친 것(Minor): `judge_pr`의 키워드 전용 불리언 `title_only`는 `CODING_STANDARDS.md`의 불리언 플래그 항목이 함수가 두 가지 일을 한다는 신호로 보아 쪼개라고 정한 대상이었다. `judge_title`과 `judge_pr`로 쪼개고 공통부를 `_pr_input`으로 모았으며, 입구는 `Mode` 문자열 유니온으로 가른다.
 - 남긴 것: `Wording`이 필드 하나뿐인 데이터클래스라는 Minor(셀프 리뷰에서 이미 판단해 둔 것과 같다. 두 상수의 이름과 필드가 커밋 검사와 PR 검사의 막는 말을 한곳에서 읽히게 하고, 문자열 두 개를 바로 넘기면 `blocked_text`의 인자가 의미 없는 문자열이 된다. 쪼개는 이득이 작아 보류), `title_problems`를 작은 함수로 나누자는 Nit(읽는 순서가 어렵다는 취향 지적이라 보류).
 - 뒤로 넘긴 일: 없음. 위 둘은 다른 작업으로 넘기는 일이 아니라 이 도구 안의 취향 판단이다.
 
