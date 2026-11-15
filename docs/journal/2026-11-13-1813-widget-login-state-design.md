@@ -509,3 +509,112 @@ Skipped였던 ruff 둘을 손으로 쳤다. `uv run ruff check .`가 `All checks
 고른 선택지의 설명: "커밋 검사에서 pytest 하나만 건너뛰고 나머지 검사는 그대로 돌려 커밋합니다. 전체 pytest는 PR을 연 뒤 GitHub의 CI가 돌리고, 그 초록을 확인한 뒤에만 병합합니다. 규약은 건너뛴 검사를 손으로 치라고 하지만, 손으로 치는 전체 pytest도 같은 PC에서 돌아 같은 실패가 날 수 있어(어림) CI 결과로 대신합니다. 건너뛰는 명령을 앱의 가드가 받아 주는지는 쳐 봐야 압니다." 고르지 않은 선택지는 "건너뛰지 않고 다시 시도"와 "불안정한 테스트부터 진단"이었다.
 
 그래서 이 커밋은 `SKIP=pytest`로 치고, 전체 pytest의 초록은 PR의 CI(`verify`)로 확인한 뒤에만 병합한다. 이 PC에서 전체 pytest가 지난 기록은 이 커밋에 없다. 따로 돌려 지난 것은 `tests/channel/cli/test_interrupt.py`(6개)와 `tests/tools/test_rerun_runner.py`(63개)뿐이다. 다른 검사와 함께 돌 때만 실패한 다섯 테스트는 회고(`retro`)의 후보로 넘긴다.
+
+**셋째 커밋이 지났다.** `SKIP=pytest git commit -F <메시지 파일>`을 앱의 가드가 받았고 종료 코드 0으로 끝났다. 커밋은 `9213295b9`이고 `17 files changed, 682 insertions(+), 46 deletions(-)`다. pre-commit의 결과는 아래다.
+
+- Passed: lint-imports, check-ticket, zizmor, check-instructions, check-type-escapes, pyright-linux, pyright, run-hooks(363.7초), web-verify(1700.5초), markdown tables, line separators, mutation tables, quotes(경고만), commit message
+- Skipped: pytest(사용자가 고른 `SKIP`), ruff check와 ruff format(스테이지된 `.py`가 없다. 손으로 쳐 지났다, 위), canary specs와 constitution version(볼 파일이 없다)
+
+커밋 뒤 `git status --porcelain`은 비었다. 푸시하지 않았고 PR은 없다. 이 절부터 아래는 그 커밋 뒤에 쓴 것이라 아직 커밋되지 않았다.
+
+## 인계 (커밋 뒤, 2026-11-15)
+
+셋째 커밋의 호출에 인계 계기(`커밋 뒤`, 312,174 토큰)가 왔고 이번에는 커밋이 성공했다. `handoff.md`의 넘기지 않는 때 다섯을 봤다. 계기를 낸 명령은 성공했고, 요청 범위는 PR과 병합까지이며, 이 세션의 지시문의 "이어받을 상태"는 `인계: 셀프 리뷰 직전`으로 시작해 경계가 다르고, 이 세션이 쓴 인계 실패 줄은 없으며, `get_session`의 `self`에 `parentSessionId`가 없다. 그래서 넘긴다. 이 세션의 바꾸기 전 제목은 `docs/widget-login-state-design`이다. 이 세션이 띄운 백그라운드 작업은 모두 끝났다(커밋 셋, 대기 스크립트 셋).
+
+새 세션이 알아야 하는 것.
+
+- **사용자의 건너뛰기 결정은 그 커밋 하나의 것이다.** 일지를 커밋할 때는 건너뛰지 않고 먼저 친다. 같은 꼴로 막히면(다른 세션의 검사와 함께 돌 때 시간에 민감한 테스트가 실패하고 그 파일만 따로 돌리면 지난다) 사용자에게 다시 묻는다. 한 번에 24~29분이 걸렸으니 백그라운드로 돌린다.
+- **병합 조건.** 전체 pytest의 초록을 PR의 CI(`verify`)로 확인한 뒤에만 병합한다. 사용자가 고른 선택지의 설명에 있다(위 "커밋").
+- **PR 직전 리뷰의 밀 주장.** "셀프 리뷰"의 "반영"에 원문으로 옮긴 새로 쓴 사실 문장 열하나다.
+- **PR 본문에 적을 것.** pre-commit에서 pytest를 건너뛴 것과 그 까닭, 따로 돌려 지난 두 파일, 손으로 친 ruff 둘.
+- **회고의 후보.** 다른 세션의 검사와 함께 돌 때만 실패한 테스트 다섯(위 "커밋"의 두 목록), 조용한 때를 기다린 40분이 소용없던 것, 대기 스크립트를 쓰는 Write를 측정 스크립트 훅이 두 번 막은 것.
+- **다시 하지 않는 것.** 설계 인터뷰는 닫혔고 ADR 0061은 승인됐다(위 "ADR 0061 승인"). 인터뷰를 다시 열지 않고 승인도 다시 묻지 않는다.
+
+새 세션에 낸 지시문은 아래다.
+
+```
+다음 작업: 기능 portal-login. 위젯이 로그인 상태와 고지, 다크 모드를 직접 그리는 방향과 URL로 제공하는 방식을 정한 설계 인터뷰의 문서(승인된 ADR 0061과 기능 계획)를 커밋했고, PR을 열어 병합한다
+다음 단계: 설계 인터뷰
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /grill-with-docs portal-login
+브랜치: docs/widget-login-state-design
+모델: Fable 5.2 / xhigh. 2의 잇는 지시문. 그 값의 Fable 5.1이 지금 모델 메뉴에 없어 Fable 5.2로 적었다(대기열 model-menu-name-fable-5-1-stale)
+읽을 것: 일지 docs/journal/2026-11-13-1813-widget-login-state-design.md의 "인계 (커밋 뒤, 2026-11-15)"와 "커밋"과 "ADR 0061 승인"과 "셀프 리뷰"의 "반영"
+이어받을 상태: 인계: 커밋 뒤. 셀프 리뷰를 반영하고 ADR 0061을 사용자에게 승인받아 설계 문서를 커밋했다. 푸시하지 않았고 PR은 없다. 일지 docs/journal/2026-11-13-1813-widget-login-state-design.md. 그 커밋 뒤에 쓴 일지의 변경이 커밋되지 않은 채 워크트리에 있다. 남은 단계는 일지 커밋, PR 직전 리뷰(일지 "반영"의 새로 쓴 사실 문장 열하나를 밀 주장으로), 푸시와 PR, 봇 회차, 회고, 병합, 다음 지시문이다. 그 커밋은 사용자가 고른 대로 pre-commit에서 pytest를 건너뛰었다(다른 세션의 검사와 함께 돌 때 시간에 민감한 테스트가 두 번 실패했고 그 파일만 따로 돌리면 지났다). 전체 pytest의 초록을 PR의 CI로 확인한 뒤에만 병합한다. 그 결정은 그 커밋 하나의 것이라 일지 커밋은 건너뛰지 않고 먼저 치고, 같은 꼴로 막히면 사용자에게 다시 묻는다. 설계 인터뷰는 닫혔고 ADR 0061은 승인됐으므로 인터뷰를 다시 열지 않고 승인도 다시 묻지 않는다
+확인할 선행 조건: 병합은 이 워크트리 사본의 next-session merge.md(없으면 SKILL.md)의 "워크트리에서 병합할 때"를 Read로 열어 따른다
+이번 요청 범위: PR과 병합까지
+```
+
+제목을 `docs/widget-login-state-design (인계함)`으로 바꿨다(앱이 묻지 않고 바꿨다). `git worktree unlock C:/project/agent/.claude/worktrees/widget-login-state-design`은 `is not locked`로 끝나 넘어갔다(이미 풀려 있었다).
+
+open-session을 부른다 2026-11-14T18:54Z
+
+## 인계받은 세션 (2026-11-15 03:58)
+
+위 "인계 (커밋 뒤, 2026-11-15)"의 지시문으로 연 새 세션이 이 일지를 이어 쓴다. 모델 Fable 5.2. 사용자 프롬프트는 그 지시문 그대로이고, 첫 줄만 `open-session`이 시작 프롬프트를 스킬 파일을 읽으라는 한 줄로 옮긴 것이다(`.claude/skills/grill-with-docs/SKILL.md 를 읽어 그대로 따른다. … 인자: portal-login`).
+
+- 제목을 `docs/widget-login-state-design`으로 바꿨다(앱이 지은 제목 "Portal-login 위젯 설계 PR 및 병합"이었고 묻지 않고 바뀌었다). `git worktree list`에서 이 브랜치의 워크트리를 찾아 `EnterWorktree(path)`로 들어왔다.
+- `ListAgents`에서 같은 브랜치를 제목으로 한 세션은 넘긴 세션 둘(`docs/widget-login-state-design (인계함)`)이었다. `uv run python tools/sibling_overlap.py`는 "이 브랜치의 새 번호: ADR 0061", "번호 겹침 없음"을 냈다. 함께 고친 파일로는 `.scratch/plan.md`가 `origin/dev`와 워크트리 둘(`03-processes-bind-container-network-in-image`, `mcp-shutdown-spec`)에, `.scratch/plan.md`·`CONTEXT.md`·`docs/adr/README.md`가 워크트리 `admin-login-design`에 나왔다.
+- 설계 인터뷰는 닫혀 있고 ADR 0061은 승인됐으므로 `grilling`과 `domain-modeling`을 부르지 않았고 승인도 다시 묻지 않았다.
+- 기준 브랜치가 움직여 `origin/dev`를 합쳤다(`4e3752592`에서 `9a68c2bb9`로, PR #570 하나). 먼저 `git merge --no-commit --no-ff origin/dev`로 시험했다. `.scratch/plan.md`가 충돌 없이 합쳐졌고, 그 상태에서 `uv run python tools/plan_table.py`를 돌린 뒤 `git status --short`의 그 파일이 스테이지된 변경(`M `)뿐이라 도구가 만든 것과 합친 것이 같았다. `git merge --abort`로 되돌린 뒤 `git merge --no-edit origin/dev`로 병합 커밋 `1742b2603`을 만들었다. 그 명령의 출력에 pre-commit은 commit message 줄 하나만 Passed로 나왔다(충돌 없이 끝난 `git merge`는 pre-commit 단계의 검사를 돌리지 않았다). 커밋하지 않은 이 일지의 변경은 되돌리기와 병합을 지나 그대로 남았다(`git status --short`로 봤다).
+- 순서를 하나 바꿨다. 지시문은 일지 커밋 다음에 PR 직전 리뷰를 두었는데, 리뷰를 먼저 띄웠다. 커밋의 pre-commit이 한 번에 24~29분 걸렸고(위 "커밋") 그동안 `hook_edit_during_commit`이 이 체크아웃의 편집을 막는데, 리뷰 보고는 받은 턴에 일지로 옮겨야 한다. 리뷰가 고칠 것을 내면 그것과 일지를 한 커밋에 실어 전체 검사를 한 번만 돌린다.
+
+## PR 직전 리뷰 (2026-11-15)
+
+`coderabbit-review`(CLI 축)와 `bug-perf-review`를 나란히 띄웠다. CLI가 도는 PR에는 밀 주장을 넘기는 길이 없어(`code-review` 스킬 6단계가 "CLI가 도는 PR에는 아직 넘기는 길이 없다"고 적는다) 위 "반영"의 새로 쓴 사실 문장 열하나는 `bug-perf-review`의 브리프에 밀 주장으로 실었다. 기준은 둘 다 `9a68c2bb9`(합친 `origin/dev`의 끝)이다. 아래 보고는 서브에이전트가 낸 것을 줄여 옮긴 것이고, "반영"의 판정은 본 세션이 원문을 다시 열어 대 본 것이다.
+
+### `coderabbit-review`의 보고
+
+- CLI 0.7.5, `Plan: Free`, `Seat: not assigned`. 실행한 명령은 `coderabbit review --agent --include-untracked --base origin/dev`이고, 컨텍스트 줄에 `baseBranch: origin/dev`가 찍혔다고 보고했다. 파일 17개를 봤고 `review_completed`까지 갔으며 종료 코드 0, findings 1건이다.
+- **Minor(유효로 트리아지). ADR 0061 22행.** "직접 부르기는 페이지 안 방식에서 늘 통한다"가 과하다. 그 까닭으로 든 문장("요청이 그 페이지의 것이기 때문")은 로그아웃 주소가 페이지와 같은 출처일 때만 맞고, 로그아웃 주소는 운영자가 적는 값이라 다른 출처(따로 둔 인증 서버나 API 도메인)일 수 있다. 같은 문단이 iframe 방식과 URL 방식에만 조건을 달아, 페이지 안 방식은 조건 없이 통한다고 읽힌다.
+
+### `bug-perf-review`의 보고
+
+첫 줄은 기준 커밋 `9a68c2bb9`, 범위 파일 17개, `[호출 15]`였다(작업 알림의 `tool_uses`는 33이었다). 함수를 부르지 않고 코드를 읽어 대 봤다고 적었다.
+
+- **밀 주장 열하나는 모두 "맞음"이었다.** 보고가 든 대조한 자리는 아래다. 1은 ADR 0059 15·18행, 2는 ADR 0026 106·361행의 이력 제목, 3은 ADR 0024 31행과 ADR 0019 24행, 4는 ADR 0061 24·55행과 widget-login-state 계획, 5는 `EMBED.md` 49행과 95~99행과 `web/apps/widget/lib/connection.ts` 13행과 `web/apps/widget/element/token.ts` 2행, 6은 ADR 0056 46행과 Blocked by 사슬, 7은 `web/apps/widget/lib/token.ts` 32행과 ADR 0024 30행, 8은 `EMBED.md` 95·53행과 `WidgetScreen.tsx` 99행, 9는 `.scratch/plan.md` 70·71·73행과 ADR 0046 199행, 10은 `9a68c2bb9`의 portal-admin 계획(슬라이스 10)과 `src/`·`web/apps/`에서 `oidc`·`openid`·`login_server`·`loginServer` 0건, 11은 `CONTEXT.md` 183~192행이다.
+- 수 표본(600초, 10초, 120초, 여덟 벌, 포인터 스물넷), 위젯 소스의 0건 서술, 기능 계획 여섯의 Blocked by 사슬(순환 없음)도 맞다고 보고했다.
+- 지적은 Minor 셋이고 모두 `보류`(설계 문서의 침묵)였다.
+  1. ADR 0061 24·65행. 위젯 설정에 `agent`를 등록할 수 있다면서, 임베드 속성 `agent`가 필수인 지금의 규칙을 어떻게 할지가 "명세가 짓는 것"에 없다.
+  2. 같은 ADR 20·65행. 토큰을 다시 쓰는 동안 토큰 묻기가 겹칠 때와 만료 직전의 요청이 "명세가 짓는 것"에 없다.
+  3. 같은 ADR 21·65행. 새 창을 열지 못했을 때(`window.open`이 막혔을 때)의 화면이 "명세가 짓는 것"에 없다.
+
+### 반영 (PR 직전 리뷰)
+
+지적 넷을 모두 고쳤다. 넷 다 결정을 바꾸지 않는다. 어림 문단의 조건 문장 하나와 명세로 넘기는 목록의 항목 셋이다. ADR 0061은 승인 뒤의 글이므로 고친 것을 마지막 보고에서 사용자에게 알린다. 이 세션이 ADR을 고치게 되어 `.claude/rules/adr.md`대로 Skill 도구로 `domain-modeling`을 한 번 불렀다.
+
+- **CLI의 Minor, 로그아웃이 통하는 조건.** 이 일지 라운드 5의 고른 설명(230행)을 다시 읽었다. 사용자가 고른 것은 "직접 부르기가 통하지 않는 사이트 … 는 운영자가 '새 창으로 열기'를 고르고"이고, 지적은 통하지 않는 사이트의 갈래를 하나 더하는 것이라 고른 결정과 부딪히지 않는다. ADR 0061 결정 "로그아웃"의 그 문장을 로그아웃 주소가 위젯이 든 페이지와 같은 출처일 때로 좁히고, 다른 출처일 때의 조건을 더했으며, 새 창으로 열기를 고르는 사이트에 "위 조건이 맞지 않는 사이트"를 더했다. 위젯 미리보기 페이지 문장에는 로그아웃 끝점이 그 페이지의 것이라는 까닭을 더했다(ADR 0059 19행과 ADR 0061 결정 "위젯 미리보기 페이지"를 읽었다). 옛 표현 "늘 통한다"는 저장소의 `.md`에서 Grep 0건이다.
+- **`bug-perf-review`의 1~3, 명세로 넘기는 빈칸.** `web/apps/widget/EMBED.md` 95행과 `web/apps/widget/lib/embed.ts`의 `readEmbed`(58~69행)를 읽어 `agent`가 필수인 것을 확인했다. ADR 0061 Consequences "명세가 짓는 것"에 항목 셋(`agent` 속성이 없는 위젯이 뜨는 차례와 어느 쪽에도 에이전트가 없을 때의 화면, 토큰을 새로 묻는 때가 겹칠 때와 끝나기 직전에 보낸 요청, 새 창을 열지 못했을 때의 화면)을 더했다. widget-login-state 계획은 그 목록을 다시 적지 않고 ADR의 그 자리를 가리키므로 고치지 않았다.
+
+고치며 새로 쓴 사실 문장은 셋이다.
+
+1. ADR 0061 결정 "로그아웃": "직접 부르기는 페이지 안 방식에서 로그아웃 주소가 위젯이 든 페이지와 같은 출처이면 통한다. … 로그아웃 주소가 그 페이지와 다른 출처이면(로그인 서버나 API를 다른 주소에 둔 사이트) 페이지 안 방식에서도 두 출처가 같은 등록 도메인 아래에 있고 그 로그아웃 끝점이 페이지의 출처를 허용할 때만 통한다." 같은 문단 끝의 "(어림)"이 이 문장에도 걸린다. 재 보지 않았다.
+2. 같은 문단: "위젯 미리보기 페이지는 페이지 안 방식이고 … 로그아웃 끝점도 그 페이지의 것이라(결정 "위젯 미리보기 페이지")"
+3. ADR 0061 Consequences "명세가 짓는 것": "지금은 `agent`가 필수이고 없으면 위젯이 알림 "위젯 설정이 올바르지 않습니다."를 보이고 입력창을 막는다고 `web/apps/widget/EMBED.md`의 속성 표가 적으며, `web/apps/widget/lib/embed.ts`의 `readEmbed`가 그 속성이 없으면 문제로 올린다"
+
+남긴 지적은 없다. CLI가 `review_completed`까지 돌아 CLI 축이 찼으므로 대체 `/security-review`는 돌리지 않았다.
+
+## 커밋 (리뷰 반영과 일지)
+
+커밋 전에 `git branch --show-current`가 `docs/widget-login-state-design`을 냈고 `uv run python tools/sibling_overlap.py`가 "번호 겹침 없음"을 냈다. 손으로 친 문서 검사 셋(`uv run python tools/check_adr_pointers.py`, 고친 두 파일을 넘긴 `tools/check_md_tables.py`와 `tools/check_line_separators.py`)은 출력 없이 끝났다.
+
+**첫 시도는 pre-commit에 막혔다.** `git commit -F <메시지 파일>`을 백그라운드로 돌렸고 종료 코드 1로 끝났다. pytest만 실패했다(`2 failed, 7312 passed, 7 warnings in 1076.31s`). 실패한 둘은 앞 세션의 둘째 시도(위 "커밋")에서 실패한 것과 같은 시험이고 같은 단언이다.
+
+- `tests/tools/test_rerun_runner.py::test_같은_갈래가_두_번_든_파일럿의_두_회차가_함께_돌아도_번호가_다르다`: 688행에서 `assert 1 == 2`
+- `tests/tools/test_rerun_runner.py::test_오염이_한_번이면_다시_돌고_두_번이면_그_과제를_모든_갈래에서_뺀다`: 787행에서 `assert 1 == 0`
+
+나머지 검사는 지났다. check-ticket, zizmor, lint-imports, check-instructions, check-type-escapes, pyright, pyright-linux, run-hooks(99.4초), web-verify(1395.0초), markdown tables, line separators, mutation tables, quotes가 Passed였다. ruff 둘과 canary specs, constitution version은 볼 파일이 없어 Skipped였다. 이 커밋은 `.py`를 바꾸지 않는다(스테이지된 것은 ADR 0061과 이 일지다). 테스트는 고치지 않았다(원칙 II). 부하에서 시간 시험이 빨개지는 것은 대기열 0306이 닫으며 받아들인 꼴이다("그 커밋을 다시 치는 값을 받아들이고 사례를 더 고치지 않는다"). 다만 이 세션의 지시문이 같은 꼴로 막히면 사용자에게 다시 물으라고 했으므로 다시 치기 전에 묻는다.
+
+인계 계기(`커밋 뒤`, 323,954 토큰)가 그 호출에 왔다. 이 세션의 지시문의 "이어받을 상태"가 `인계: 커밋 뒤`로 시작해 같은 경계이고(`handoff.md` 1의 셋째) 커밋도 실패해(첫째) 넘기지 않았다.
+
+그 파일만 따로 돌리니 `uv run pytest tests/tools/test_rerun_runner.py -q`가 `63 passed in 184.67s`였다. 앞 세션의 두 번과 같은 꼴이다. 따로 돌리면 지나는 시험이 전체 검사 안에서만 실패했다. 실패한 때 이 PC의 부하는 보지 않았다(`ListAgents`에는 세션 시작 때 다른 세션 넷이 busy였다. 부하가 원인이라는 것은 어림이다). 이 브랜치에서 pytest를 건너뛰지 않은 커밋 시도는 셋이고 셋 다 pytest에서 막혔다(앞 세션의 둘과 이 시도).
+
+지시문대로 사용자에게 다시 물었다. 선택 화면 앞의 글로는 실패한 검사가 pytest 하나이고 시험 둘이라는 것, 그 파일만 따로 돌리면 63개가 지난다는 것, 이 커밋이 문서 둘만 바꾼다는 것, 건너뛰지 않은 시도 셋이 모두 막혔다는 것, 푸시하면 CI가 전체 pytest를 다시 돌리고 그 초록을 본 뒤에만 병합한다는 것을 보였다. 훅이 화면을 한 번 막아 설명의 수를 원문에 댔다. 한 번에 걸린 시간을 "25~30분"으로 적었던 것을 세 시도의 값(1435.94초, 1713.44초, 이번 web-verify 1395.0초)에 맞춰 "23~29분"으로 고쳤고, CI가 PR에서 도는 것은 `.github/workflows/ci.yml`의 `on:`(`pull_request:`)과 72행 `uv run pytest -q`로, `SKIP=pytest`가 그 검사 하나만 빼는 것은 `tools/run_checks.py`의 독스트링 24행으로 봤다(Grep).
+
+질문: "문서만 바꾼 커밋이 이번에도 시간에 민감한 테스트 2개 때문에 커밋 검사에서 막혔습니다(그 파일만 따로 돌리면 63개 모두 통과). 어떻게 진행할까요?"
+
+> 사용자: 남은 문서 커밋은 pytest 제외 (Recommended)
+
+고른 선택지의 설명: "이 PR에서 파이썬 코드를 바꾸지 않는 커밋(이번 커밋과, 뒤에 올 리뷰 봇 반영·회고 일지 커밋)은 커밋 검사에서 pytest 하나만 건너뛰고 나머지 검사는 그대로 돌립니다. 전체 pytest는 PR을 연 뒤 푸시할 때마다 GitHub의 CI가 돌리고, 그 초록을 확인한 뒤에만 병합합니다. 같은 일로 다시 묻지 않습니다. 치르는 값은 이 PC에서 전체 pytest가 통과한 기록이 이 PR의 커밋에 남지 않는다는 것입니다." 고르지 않은 선택지는 "이번 커밋만 pytest 제외"(다음 커밋은 건너뛰지 않고 먼저 시도하고 막히면 다시 묻는다)와 "건너뛰지 않고 다시 시도"였다.
+
+그래서 이 PR에서 `.py`를 바꾸지 않는 커밋은 `SKIP=pytest`로 치고, 전체 pytest의 초록은 PR의 CI(`verify`)로 확인한 뒤에만 병합한다. 이 결정은 이 PR의 문서 커밋에만 걸린다. 파이썬 코드를 바꾸는 커밋이 생기면 건너뛰지 않는다.
