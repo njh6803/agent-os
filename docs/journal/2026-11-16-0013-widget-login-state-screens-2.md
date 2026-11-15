@@ -389,7 +389,7 @@ open-session을 부른다 2026-11-15T19:46:46Z
 
 `retro` 스킬을 이 브랜치의 일지(`uv run python tools/sibling_overlap.py --journal`이 이 파일을 냈다)로 돌렸다. 낸 후보는 일곱이고 승인 둘, 기각 다섯, 넘김 없음이다.
 
-1. **인계 계기가 백그라운드로 띄운 커밋이 끝나기 전에 왔다.** 승인. 열린 항목 `handoff-trigger-before-background-commit-ends`가 이미 처방한 사건이라 회차로 센다(지시문이 이름으로 가리킨 항목 파일을 Read로 열어 처방과 승인 줄을 대 봤다). 사건은 이 일지의 세 번이다. 앞 세션의 일지 없는 커밋 뒤 한 번(291,936 토큰, 위 "이어받은 세션 (02:20~)"의 "커밋"), 이 세션의 앞 세션이 일지만 실은 커밋을 띄운 뒤 두 번(312,536·325,984 토큰, "이어받은 세션 2"의 "일지 커밋"). 모두 커밋이 끝나기 전에 와서 첫 번째는 성공을 본 뒤에 판정했고 뒤의 둘은 지시문이 `인계: 커밋 뒤`로 시작해 넘겨받은 경계에 다시 온 것으로 판정했다. 항목의 승인 줄에 **4회차**로 더했다(3회차였다).
+1. **인계 계기가 백그라운드로 띄운 커밋이 끝나기 전에 왔다.** 승인. 열린 항목 `handoff-trigger-before-background-commit-ends`가 이미 처방한 사건이라 회차로 센다(지시문이 이름으로 가리킨 항목 파일을 Read로 열어 처방과 승인 줄을 대 봤다). 사건은 이 일지의 세 번이다. 앞 세션의 일지 없는 커밋 뒤 한 번(291,936 토큰, 위 "이어받은 세션 (02:20~)"의 "커밋"), 이 세션의 앞 세션이 일지만 실은 커밋을 띄운 뒤 두 번(312,536·325,984 토큰, "이어받은 세션 2"의 "일지 커밋"). 모두 커밋이 끝나기 전에 와서 첫 번째는 성공을 본 뒤에 판정했고 뒤의 둘은 지시문이 `인계: 커밋 뒤`로 시작해 넘겨받은 경계에 다시 온 것으로 판정했다. 이 회고를 쓴 세션에서도 같은 사건이 한 번 더 왔다(아래 "인계 (커밋 뒤)"). 같은 일지의 사례라 회차는 그대로이고 항목의 승인 줄에 그 한 번도 적었다. 항목의 승인 줄에 **4회차**로 더했다(3회차였다).
    - **세지 않은 것:** 지시문은 일지 `2026-11-15-2058-widget-login-state-spec.md`의 사례도 더해 5회차로 만들라고 적었다. 세지 않았다. 그 일지의 회고는 첫 커밋이 백그라운드로 넘어갔고 `커밋 뒤` 계기도 왔지만 계기가 커밋이 끝나기 전에 왔는지는 압축 뒤라 확인하지 못해 세지 않는다고 적었다. 지시문이 든 "둘째 커밋" 사례는 그 일지에 없고, 이 일지 "앞 세션에서 이어받은 것" 3이 지시문의 글로 옮긴 것이며 거기에 "이 세션은 대 보지 않았다"고 적혀 있다. 대 보지 않은 글로 회차를 올리지 않는다. 5회차(`next-session`의 chore 배치 조건)는 다음 사례가 채운다.
 2. **웹 편집 확인에서 `read`가 받는 화면 파일이 결과로 대화에 그대로 실린다.** 승인. 사건은 위 "ui-design 다시 들어오기"다. 이 세션이 받을 열네 파일의 합계가 139,155바이트라 받기와 맞대기를 서브에이전트에 맡겼고, 본 세션은 서브에이전트가 남긴 두 폴더를 `sha256sum`으로 다시 맞댔다. 손상은 없고 화면이 많은 기능을 다시 들어올 때마다 같은 판단을 새로 한 값이 든다. 층은 지침이다. 받은 내용이 대화에 실리는 것은 `read`의 동작이라 도구나 훅으로 막을 수 없다. 되돌림은 PR 하나다. 같은 파일(`.claude/skills/ui-design/SKILL.md`)의 열린 항목 `ui-design-web-edit-read-path-prefix`는 읽는 경로를 다루는 다른 사건이다. 새 항목 `ui-design-web-edit-receive-flood`를 1회차로 썼고, 문장을 더하는 항목이라 다섯 번째에 반영한다(retro 4단계).
 3. **pre-commit에서 부하 때문에 느린 시험 둘이 실패했다**(앞 "일지 커밋"의 `tests/adapters/test_filesystem.py`와 `tests/tools/test_rerun_runner.py`). 기각. 0306이 이 종류를 받아들이고 닫았고 새 사례는 회차를 더하지 않는다(retro 5단계). 위 "일지 커밋"에 이미 적었다.
@@ -412,3 +412,48 @@ open-session을 부른다 2026-11-15T19:46:46Z
 2. **예시 질문의 모양(갈래 5의 세 모양)은 위젯 설정의 고르는 값 셋째다.** ADR 0064 Consequences "화면"(69행)은 고르는 값 둘을 portal-admin의 명세 전에 사용자에게 묻는다고 적었고, 이번 그리기가 셋째를 더했다. 이 브랜치는 `.scratch/portal-admin/`을 고치지 않았다(`docs/portal-admin-screens` 세션이 `waiting`이었다). portal-admin의 명세 전에 사용자에게 이 값을 위젯 설정의 고르는 값으로 둘지 묻는다.
 
 병합 뒤 `주 체크아웃 미갱신: 루트는 dev`(병합 전 `git worktree list`의 첫 줄)를 보고에 남기고, 새 세션을 열면 지시문의 "확인할 선행 조건"에 적어 그 세션이 워크트리에 들어가기 전에 `tidy-checkouts`를 돌게 한다. 이 PR이 `frontend-design-conflicts.md`에 행을 더했고 `docs/portal-admin-screens` 워크트리도 같은 표 끝에 행을 더하고 있어, 나중에 병합하는 쪽이 행을 합친다.
+
+## 인계 (커밋 뒤, 이어받은 세션 3)
+
+위 "이어받은 세션 3"의 일지·대기열 변경을 커밋했다. 커밋 `c02a0132c`(파일 여섯, 91줄 추가). 백그라운드로 띄운 직후 커밋이 끝나기 전에 "커밋 뒤" 인계 계기가 왔다(세션 컨텍스트 247,935 토큰, 문턱 200,000). 대기열 `handoff-trigger-before-background-commit-ends`의 사례다. 끝 알림을 기다렸고 종료 코드는 0이었다. pre-commit은 모두 Passed였다(pyright 58.1s, pyright-linux 67.4s, run-hooks 123.8s, pytest 1247.3s, web-verify 1771.3s). Skipped는 ruff 둘(`.py`가 없다)과 canary specs, constitution version(대상 파일이 없다)이다. ruff는 앞 세션이 손으로 친 `All checks passed!`와 `2359 files already formatted` 뒤로 `.py`와 ruff 설정을 바꾸지 않아 다시 치지 않았다. 인용 대조 경고 한 건은 앞 세션이 쓴 340행의 0306 인용이고 막지 않는다.
+
+`handoff.md` 1의 인계하지 않는 때 다섯에 들지 않았다. 커밋은 성공했고, 이 세션의 지시문 "이어받을 상태"는 `인계: PR 연 뒤`로 이 경계(`커밋 뒤`)와 다르며, 요청 범위는 병합까지라 이 경계에서 끝나지 않고, 일지에 이 세션이 쓴 `인계 못함` 줄이 없고, `get_session`의 `self`에 `parentSessionId`가 없어 곁 세션이 아니다. 그래서 넘긴다.
+
+낸 지시문:
+
+```
+다음 작업: 기능 widget-login-state. 위젯 관리 설계(ADR 0064)가 더한 화면 셋(첫 화면의 예시 질문, 문의 링크, 밝기 스위치를 숨긴 위젯)을 그려 옮긴 PR #583의 푸시와 둘째 봇 회차를 돌리고 병합한다
+다음 단계: PR 반영·병합
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /ui-design widget-login-state
+브랜치: docs/widget-login-state-screens-2
+모델: Sonnet 5.5 / high. 2의 잇는 지시문
+읽을 것: 일지 docs/journal/2026-11-16-0013-widget-login-state-screens-2.md의 "이어받은 세션 3" 절부터 끝까지
+이어받을 상태: 인계: 커밋 뒤. 일지 docs/journal/2026-11-16-0013-widget-login-state-screens-2.md. 봇 첫 회차는 끝났다(CodeRabbit과 claude-review 모두 지적 0건, 고친 것 없음). 회고와 일지 "다음"도 일지에 썼고 커밋 c02a0132c(pre-commit 모두 통과)에 실렸으나 아직 푸시하지 않았다. 작업 트리에는 커밋하지 않은 변경이 둘 있다. 일지의 이 "인계 (커밋 뒤, 이어받은 세션 3)" 절과 대기열 handoff-trigger-before-background-commit-ends의 승인 줄 한 구절이다. 남은 것은 이 변경과 새 세션의 일지 절("이어받은 세션 4")을 한 커밋에 실어 c02a0132c와 함께 한 번에 푸시하고, merge.md 2대로 푸시 뒤 @coderabbitai review 코멘트를 남겨 기다리며 둘째 회차는 Critical·Major만 고치고, 병합(워크트리 길)하는 것이다. 로컬 모델 시험은 범위 밖이라 건너뛴다(일지 "봇 회차"). 병합 뒤 지시문은 일지 "다음"으로 짓는다: 다음 단계는 명세(/to-spec widget-login-state)이고 후속 둘(아티팩트 94Gw… 공유, 예시 질문의 모양을 portal-admin 명세 전에 사용자에게 묻는 일)도 그 지시문의 이어받을 상태에 옮긴다
+확인할 선행 조건: docs/portal-admin-screens 세션이 아직 돌면 .scratch/portal-admin/의 파일을 고치지 않는다. 그 워크트리가 .scratch/design-system/design/frontend-design-conflicts.md의 표 끝에, 06-review-bot-checks-upgrade-bang 워크트리가 .scratch/retro-queue/0348.md·0555.md·0556.md에 커밋하지 않은 변경이 있어 나중에 병합하는 쪽이 글자 충돌을 푼다. 병합은 이 워크트리 사본의 next-session merge.md(없으면 SKILL.md)의 "워크트리에서 병합할 때"를 Read로 열어 따른다
+이번 요청 범위: PR과 병합까지
+```
+
+(다음 단계는 `handoff.md` 인계 줄대로 열린 PR이 있어 `PR 반영·병합`이고, 모델은 `directive.md` 2의 잇는 지시문이다. 막히지 않았다.)
+
+제목을 `docs/widget-login-state-screens-2 (인계함)`으로 바꿨다(앱이 묻지 않고 바꿨다). 띄운 백그라운드 작업은 남은 것이 없었다(대기와 커밋 모두 끝났다). 워크트리 잠금 풀기(`handoff.md` 4)는 `is not locked`로 끝나 넘어갔다.
+
+open-session을 부른다 2026-11-15T20:43:30Z
+
+## 이어받은 세션 4 (커밋 뒤, 05:40 무렵~)
+
+위 "인계 (커밋 뒤, 이어받은 세션 3)"의 지시문으로 연 새 세션이다. 모델 Sonnet 5.5. 제목을 `docs/widget-login-state-screens-2`로 바꿨고(묻지 않고 바뀌었다), `git worktree list`에서 이 브랜치가 `.claude/worktrees/widget-login-state-screens-2`에 있어 `EnterWorktree(path)`로 들어왔다. 들어왔을 때 로컬은 `origin/docs/widget-login-state-screens-2`보다 커밋 하나(`c02a0132c`) 앞섰고(`git status -sb`의 `ahead 1`을 손으로 봤다) 작업 트리에는 앞 세션이 말한 변경 둘(위 "인계" 절과 대기열 `handoff-trigger-before-background-commit-ends`의 승인 줄)이 커밋하지 않은 채 있었다(`git status --short`와 `git diff`를 손으로 봤다). PR #583의 `headRefOid`는 `99f0be72…`로 아직 `c02a0132c`가 오르지 않은 상태였다(`gh pr view 583 --json headRefOid`를 `git fetch origin` 뒤에 손으로 봤다). 사용자의 새 말은 없었다.
+
+### 사용자 프롬프트
+
+위 "인계 (커밋 뒤, 이어받은 세션 3)"의 지시문 그대로이고, 앞에 앞 세션들과 같은 한 줄(`.claude/skills/ui-design/SKILL.md 를 읽어 그대로 따른다. … 인자: widget-login-state`)이 붙었다.
+
+### 선행 조건
+
+`uv run python tools/sibling_overlap.py`는 번호 겹침 없음, 새 번호 없음으로 종료 코드 0이었다(출력과 `exit=0`을 손으로 봤다). 함께 고친 파일은 그 출력이 알린 그대로다. `06-review-bot-checks-upgrade-bang`과 `08-web-images-run-as-non-root` 워크트리가 `.scratch/retro-queue/0348.md`·`0555.md`·`0556.md`를, `portal-admin-screens` 워크트리가 `.scratch/design-system/design/frontend-design-conflicts.md`를 커밋하지 않은 채 고치고 있다. 나중에 병합하는 쪽이 글자 충돌을 푼다. 이 세션은 `.scratch/portal-admin/`을 고치지 않았다.
+
+### 이 세션이 한 것
+
+- 위 "인계" 절과 대기열 승인 줄의 한 구절, 이 절을 한 커밋에 실어 `c02a0132c`와 함께 푸시한다. 그림, 코드, 화면은 고치지 않았다.
+- 푸시 뒤 `@coderabbitai review` 코멘트를 남겨 `tools/wait_ci.py`로 기다리고, 둘째 회차는 Critical·Major만 고친다. 로컬 모델 시험은 앞 세션의 판단대로 범위 밖이라 건너뛴다.
+- 병합은 `merge.md`의 "워크트리에서 병합할 때"대로 `--squash --match-head-commit`으로 하고 `--delete-branch`는 쓰지 않는다.
