@@ -50,7 +50,7 @@ from tools.probe_kit import Rounds  # noqa: E402
 WEB = ROOT / "web"
 LABEL = "ri-web-probe"
 REPO = "ri-web-img"
-NODE_USER = "1000:1000"
+NODE_USER = "10001:10001"
 ORIGIN_A = "https://probe-a.example"
 ORIGIN_B = "https://probe-b.example"
 CHARS_A = "771133"
@@ -646,7 +646,7 @@ def admin(
     command: Sequence[str] = (),
     waiter: bool = True,
 ) -> tuple[str, str, dict[str, Json]]:
-    """관리 화면 컨테이너를 uid 1000 으로 띄워 url 의 첫 200 을 기다린다. (이름, 기록, url 의
+    """관리 화면 컨테이너를 uid 10001 으로 띄워 url 의 첫 200 을 기다린다. (이름, 기록, url 의
     응답). waiter 면 컨테이너 안의 wait.mjs 가 첫 200 의 시각을 찍고, 아니면 바깥에서 docker exec
     로 기다린다(wait.mjs 가 서비스의 자식 좀비로 남지 않게. zombie 섹션)."""
     name = start(
@@ -698,7 +698,7 @@ def section_admin_time(rounds: Rounds, repeat: int) -> None:
     """관리 화면의 빌드 시간과 시작 시간. 빌드는 admin-src(빌드 전의 나무, root)에서 next build 를
     돌려 빌드의 처음과 끝 시각과 cgroup 의 memory.peak 를 읽는다. 표지는 next build 가 0 으로 끝나고
     경로 표(Route (app))를 찍은 것이다. 시작은 세 갈래(admin-full, admin-prod, admin-standalone)를
-    uid 1000 으로 띄워 컨테이너 시작에서 첫 200 까지를 잰다. 표지는 첫 화면의 상태 200 과 제목이다.
+    uid 10001 으로 띄워 컨테이너 시작에서 첫 200 까지를 잰다. 표지는 첫 화면의 상태 200 과 제목이다.
     standalone 은 HOSTNAME=127.0.0.1 을 준다(주지 않으면 컨테이너 주소에 묶인다, admin-standalone
     섹션)."""
     count = min(repeat, 2)
@@ -825,9 +825,11 @@ def section_admin_upstream(rounds: Rounds, _repeat: int) -> None:
     - 시작 때 환경 변수: admin-full 을 AGENT_OS_UPSTREAM=http://127.0.0.1:9999 로 띄우고 컨테이너
       안에 8000(built)과 9999(startenv) 두 가짜 상류를 둔다. 9999 가 직접은 답한다는 것이 양성
       대조다. 중계 응답이 두 토큰 가운데 정확히 하나를 실은 회차만 측정이다.
-    - 예외 판: 사용자 정의 네트워크에 별칭 serve 의 가짜 상류 컨테이너를 두고 admin-exception 으로
-      /api/ping(토큰과 Authorization)과 /api/sse(이벤트 넷이 생기는 대로 오는지)를 건다. 같은
-      네트워크의 admin-full 은 닿지 않는 것(500)이 대조다.
+    - 예외 판: 사용자 정의 네트워크에 별칭 serve 의 가짜 상류 컨테이너를 두고 admin-exception(티켓
+      03 이 코드에 들인 예외, 곧 표지 파일과 AGENT_OS_CONTAINER_NETWORK=1 을 켠 판)으로 /api/ping
+      (토큰과 Authorization)과 /api/sse(이벤트 넷이 생기는 대로 오는지)를 건다. 같은 네트워크의
+      admin-full 은 닿지 않는 것(500)이 대조다. 대조의 표지는 500 이 아니라 그 까닭이다(Next 의 연결
+      거부 기록과, 별칭 서버가 대조의 요청을 받지 않고 예외 판의 요청은 받았다는 것).
     - 시작 때 바꿔 넣기: 그 admin-full 의 routes-manifest.json 을 root 로 바꿔 쓰고 다시 띄운다."""
     with rounds.round("admin-upstream 빌드 산출물에 굳은 값") as current:
         found = {target: baked(target) for target in ("admin-full", "admin-exception")}
@@ -878,7 +880,7 @@ def section_admin_upstream(rounds: Rounds, _repeat: int) -> None:
         name, _, page = admin("admin-exception", "--network", network)
         ping = fetch(
             name,
-            "http://127.0.0.1:3000/api/ping",
+            "http://127.0.0.1:3000/api/ping?marker=exception",
             needles=["other-container", "probe-token-1"],
             headers=["Authorization: Bearer probe-token-1"],
         )
@@ -907,13 +909,38 @@ def section_admin_upstream(rounds: Rounds, _repeat: int) -> None:
         docker("rm", "-f", name, timeout=60)
     with rounds.round("admin-upstream 기본 판은 다른 컨테이너에 닿지 않는다(대조)") as current:
         name, _, page = admin("admin-full", "--network", network)
-        ping = fetch(name, "http://127.0.0.1:3000/api/ping", needles=["other-container"])
-        note("admin-upstream 대조", {"ping": ping.get("status")})
+        ping = fetch(
+            name, "http://127.0.0.1:3000/api/ping?marker=control", needles=["other-container"]
+        )
+        # 500 이 기대한 까닭에서 났다는 표지 둘. (가) 이 판은 빌드 때 굳은 중계 대상(루프백
+        # 8000)으로 걸었다가 연결을 거부당했다고 Next 가 기록에 남긴다. (나) 같은 네트워크의 별칭
+        # serve 서버가 이 요청의 표지(marker=control)를 받은 적이 없고, 예외 판의
+        # 요청(marker=exception)은 받았다. 별칭에 닿는 길 자체는 열려 있었다는 양성 대조다. 둘
+        # 가운데 하나라도 없으면 500 이 다른 까닭(예: 별칭을 풀지 못했다, 앱이 죽었다)에서 났을 수
+        # 있어 측정이 아니다.
+        text = logs(name)
+        raw(f"logs {name}", text)
+        hits = fetch(name, "http://serve:8000/hits", needles=["marker=exception", "marker=control"])
+        note(
+            "admin-upstream 대조",
+            {
+                "ping": ping.get("status"),
+                "proxy_refused": "Failed to proxy http://127.0.0.1:8000" in text
+                and "ECONNREFUSED" in text,
+                "stub_saw_exception": dig(hits, "needles", "marker=exception"),
+                "stub_saw_control": dig(hits, "needles", "marker=control"),
+            },
+        )
         current.mark(
             measured=admin_up(page)
             and ping.get("status") == 500
-            and dig(ping, "needles", "other-container") is False,
-            result="500",
+            and dig(ping, "needles", "other-container") is False
+            and "Failed to proxy http://127.0.0.1:8000" in text
+            and "ECONNREFUSED" in text
+            and hits.get("status") == 200
+            and dig(hits, "needles", "marker=exception") is True
+            and dig(hits, "needles", "marker=control") is False,
+            result="500, 빌드 때 굳은 루프백 목적지의 연결 거부, 별칭 서버는 요청을 받지 않았다",
         )
     with rounds.round("admin-upstream 시작 때 산출물을 바꿔 넣기") as current:
         sed = docker(
@@ -1096,12 +1123,12 @@ PORTAL_HEALTH = "http://127.0.0.1:3100/portal/health"
 def section_portal(rounds: Rounds, repeat: int) -> None:
     """portal 을 띄우는 요건. portal-fixture.mjs 가 root 로 이름 붙은 볼륨에 설정·사이트 파일·개인
     키를 만든다(키는 0600, root 소유).
-    - root 의 키를 uid 1000 이 읽는다: 표지는 `portal.private_key: 읽지 못한다` 와 0 아닌 종료.
-    - 키를 uid 1000 소유로 바꾼 뒤 --network none, --read-only, 볼륨 :ro, -e PORT=4555 -e
+    - root 의 키를 uid 10001 이 읽는다: 표지는 `portal.private_key: 읽지 못한다` 와 0 아닌 종료.
+    - 키를 uid 10001 소유로 바꾼 뒤 --network none, --read-only, 볼륨 :ro, -e PORT=4555 -e
       HOSTNAME=0.0.0.0 으로 띄운다: 표지는 시작 줄(`에 섰다. 사이트 1개.`), /portal/health 의 200 과
       `"status":"ok"`, 네트워크 장치가 lo 뿐인 것, 쓰기가 `Read-only file system` 으로 실패하는 것.
       듣는 소켓(설정의 127.0.0.1:3100 인지)과 시작 시간, 상태 확인, docker stop 을 함께 적는다.
-    - uid 1000 이 빈 새 볼륨에 tools/make-key.ts 로 키를 만든다: 표지는
+    - uid 10001 이 빈 새 볼륨에 tools/make-key.ts 로 키를 만든다: 표지는
       `개인 키를 쓰지 못했다(EACCES)`."""
     volume = fresh("v")
     docker("volume", "create", "--label", TAG, volume, timeout=60)
@@ -1109,7 +1136,7 @@ def section_portal(rounds: Rounds, repeat: int) -> None:
         "run", "--rm", "--label", TAG, "-v", f"{volume}:/cfg", "--entrypoint", "node",
         image("portal-prod"), "/probe/portal-fixture.mjs", "/cfg", "3100",
     )  # fmt: skip
-    with rounds.round("portal root 가 만든 키를 uid 1000 이 읽는다") as current:
+    with rounds.round("portal root 가 만든 키를 uid 10001 이 읽는다") as current:
         name = start("portal-prod", "--user", NODE_USER, "-v", f"{volume}:/cfg:ro", kind="p")
         found = finished(name, timeout=120)
         text = logs(name)
@@ -1125,7 +1152,7 @@ def section_portal(rounds: Rounds, repeat: int) -> None:
         )
     docker(
         "run", "--rm", "--label", TAG, "-v", f"{volume}:/cfg", "--entrypoint", "chown",
-        image("portal-prod"), "1000:1000", "/cfg/keys/portal.pem",
+        image("portal-prod"), "10001:10001", "/cfg/keys/portal.pem",
     )  # fmt: skip
     for index in range(min(repeat, 3)):
         label = f"portal 선다 #{index + 1}"
@@ -1179,7 +1206,7 @@ def section_portal(rounds: Rounds, repeat: int) -> None:
             current.mark(
                 measured=stopped_cleanly(values), result=f"종료 코드 {values['exit_code']}"
             )
-    with rounds.round("portal uid 1000 이 새 볼륨에 키를 만든다") as current:
+    with rounds.round("portal uid 10001 이 새 볼륨에 키를 만든다") as current:
         keys = fresh("v")
         docker("volume", "create", "--label", TAG, keys, timeout=60)
         done = docker(
@@ -1187,7 +1214,7 @@ def section_portal(rounds: Rounds, repeat: int) -> None:
             "--entrypoint", "node", image("portal-prod"), "--disable-warning=ExperimentalWarning",
             "tools/make-key.ts", "--private-key", "/keys/portal.pem", "--kid", "probe-1",
         )  # fmt: skip
-        note("portal make-key uid 1000", {"exit": done.code, "tail": tail(done.text, 2)})
+        note("portal make-key uid 10001", {"exit": done.code, "tail": tail(done.text, 2)})
         current.mark(
             measured="개인 키를 쓰지 못했다(EACCES)" in done.text and done.code != 0,
             result="EACCES 로 멈췄다",
@@ -1342,7 +1369,7 @@ def widget_round(
 
 
 def section_widget_time(rounds: Rounds, repeat: int) -> None:
-    """위젯 컨테이너가 뜰 때 하는 빌드의 시간과 메모리(widget-lean-typegen, uid 1000). 표지는 앞
+    """위젯 컨테이너가 뜰 때 하는 빌드의 시간과 메모리(widget-lean-typegen, uid 10001). 표지는 앞
     빌드 산출물 없이(prior-build absent) 빌드가 0 으로 끝나고, 첫 200 을 받고, 응답의 CSP 에 사이트
     파일 A 의 허용 출처가, element.js 에 A 의 request_chars(771133)가 실린 것이다. 같은 컨테이너로
     상태 확인 명령(빌드 중에는 1, 선 뒤에는 0 인지)과 docker stop(좀비 수 포함)을 잇는다. --init 한
@@ -1468,11 +1495,12 @@ def section_widget_user(rounds: Rounds, _repeat: int) -> None:
     """root 아닌 사용자로 빌드할 때 쓰는 자리.
     - root 로 띄워 docker diff 로 쓰는 자리를 모은다. 표지는 widget-time 과 같은 응답의 표지와, 바뀐
       자리에 .next 와 public/element.js 가 든 것이다.
-    - 쓰는 자리를 만들지 않은 root 소유 나무(widget-full)를 uid 1000 으로: 표지는 public/fonts 를
+    - 쓰는 자리를 만들지 않은 root 소유 나무(widget-full)를 uid 10001 으로: 표지는 public/fonts 를
       만들지 못한 EACCES 문구.
-    - widget-lean-typegen(.next 와 public 이 uid 1000 소유)을 다른 uid(12345)로: 표지는 EACCES 문구.
-    - widget-lean-typegen 을 uid 1000, --read-only 로, .next 와 public 만 uid 1000 의 tmpfs 로 준다.
-      표지는 쓰기 시도가 `Read-only file system` 으로 실패하는 것과 widget-time 과 같은 응답의
+    - widget-lean-typegen(.next 와 public 이 uid 10001 소유)을 다른 uid(12345)로: 표지는 EACCES
+      문구.
+    - widget-lean-typegen 을 uid 10001, --read-only 로, .next 와 public 만 uid 10001 의 tmpfs 로
+      준다. 표지는 쓰기 시도가 `Read-only file system` 으로 실패하는 것과 widget-time 과 같은 응답의
       표지다."""
     with rounds.round("widget-user root 가 쓰는 자리") as current:
         seen = widget(WIDGET, "--user", "0:0", env=widget_env())
@@ -1488,8 +1516,8 @@ def section_widget_user(rounds: Rounds, _repeat: int) -> None:
         docker("rm", "-f", seen.name, timeout=60)
     denied = "EACCES: permission denied, mkdir '/app/web/apps/widget/public/fonts'"
     for label, target, user, needle in (
-        ("root 소유 나무를 uid 1000 으로", "widget-full", NODE_USER, denied),
-        ("uid 1000 소유 자리를 uid 12345 로", WIDGET, "12345:12345", "EACCES: permission denied"),
+        ("root 소유 나무를 uid 10001 으로", "widget-full", NODE_USER, denied),
+        ("uid 10001 소유 자리를 uid 12345 로", WIDGET, "12345:12345", "EACCES: permission denied"),
     ):
         with rounds.round(f"widget-user {label}") as current:
             text, found = exits(target, "--user", user, env=widget_env())
@@ -1509,8 +1537,8 @@ def section_widget_user(rounds: Rounds, _repeat: int) -> None:
     with rounds.round("widget-user --read-only 와 .next·public tmpfs") as current:
         seen = widget(
             WIDGET, "--user", NODE_USER, "--read-only",
-            "--tmpfs", f"{APP}/.next:uid=1000,gid=1000",
-            "--tmpfs", f"{APP}/public:uid=1000,gid=1000",
+            "--tmpfs", f"{APP}/.next:uid=10001,gid=10001",
+            "--tmpfs", f"{APP}/public:uid=10001,gid=10001",
             env=widget_env(),
         )  # fmt: skip
         locked = read_only(seen.name)
@@ -1523,7 +1551,7 @@ def section_widget_user(rounds: Rounds, _repeat: int) -> None:
 
 
 def section_widget_sitefile(rounds: Rounds, _repeat: int) -> None:
-    """사이트 파일이 없거나 깨졌을 때(uid 1000). 실패를 기대하는 회차의 표지는 그 경우에서만 나오는
+    """사이트 파일이 없거나 깨졌을 때(uid 10001). 실패를 기대하는 회차의 표지는 그 경우에서만 나오는
     진단 문구와 0 아닌 종료다. 읽을 수 없는 파일은 root 소유 0600 사본을 이름 붙은 볼륨에 둔다.
     변수를 주지 않은 회차는 실패하지 않고 서는지를 보며, 표지는 CSP 가 frame-ancestors 'none' 인
     것이다."""
