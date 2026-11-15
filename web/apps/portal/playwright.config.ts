@@ -14,7 +14,7 @@
 import { defineConfig, devices, type Project } from "@playwright/test";
 import { LLM_ENV } from "./e2e/env.ts";
 
-// 실제 모델의 답과 계산 에이전트가 쓰는 MCP 서버(npx)를 띄우는 시간까지 든다.
+// 실제 모델의 답과 계산 에이전트가 쓰는 MCP 서버(실행 파일 mcp-server-everything)를 띄우는 시간까지 든다.
 const LLM_TIMEOUT_MS = 180_000;
 
 const desktopChrome = { ...devices["Desktop Chrome"] };

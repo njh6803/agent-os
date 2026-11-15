@@ -25,7 +25,7 @@ import tomllib
 from collections.abc import Sequence
 from ipaddress import IPv6Address
 from pathlib import Path
-from typing import Literal, TextIO
+from typing import Literal, NamedTuple, TextIO
 
 import uvicorn
 from cryptography.exceptions import UnsupportedAlgorithm
@@ -70,8 +70,15 @@ CHANNEL_TOKEN_ENV = "AGENT_OS_CHANNEL_TOKEN"
 # 진단에 그대로 실려서, 순서가 실행마다 달라지면 운영자가 읽는 문장이 달라지기 때문이다.
 # 관리 화면과 위젯의 시작 래퍼(`web/apps/admin/tools/loopback.ts`,
 # `web/apps/widget/tools/start.ts`)와 위젯 미리보기 페이지의 설정
-# 읽기(`web/apps/portal/server/config.ts`)가 같은 목록을 따로 든다. 바꾸면 넷을 함께 고친다.
+# 읽기(`web/apps/portal/server/config.ts`)가 같은 목록과 같은 예외를 따로 든다. 바꾸면 넷을 함께
+# 고치고, 같은 판정을 내는지는 `tests/fixtures/container_network/cases.json` 이 잠근다.
 LOOPBACK_HOSTS = ("127.0.0.1", "::1")
+# 루프백 규칙의 예외(ADR 0056 결정 "루프백 규칙의 예외"). 둘이 함께 있을 때만 `0.0.0.0` 하나가
+# 더 허용된다. 표지 파일은 이미지를 지을 때 root 소유로 굽고(앱 사용자는 만들 수 없고 개발 PC 에는
+# 그 경로가 없다) "이미지 안에서만"을, compose 가 주는 환경 변수가 "명시적"을 맡는다.
+IMAGE_MARKER = Path("/etc/agent-os/image")
+CONTAINER_NETWORK_ENV = "AGENT_OS_CONTAINER_NETWORK"
+CONTAINER_NETWORK_HOST = "0.0.0.0"
 # 서버를 멈출 때 연결이 남은 응답을 기다리는 상한(초). uvicorn 의 기본값은 연결이 전부 끝날
 # 때까지 앱의 수명을 닫지 않아, 멈추라는 명령이 실행 하나가 끝나기를 제한 없이 기다린다(ADR 0014
 # 의 2026-09-24 이력). 유예가 지나면 남은 연결이 끊기고 앱의 수명이 닫히며 남은 실행은 전부
@@ -98,6 +105,23 @@ _NOT_LOOPBACK_DIAGNOSTIC = (
     "--host 는 루프백만 받는다({allowed}). 받은 값: {host}\n"
     "  벗어나면 토큰이 헤더에 평문으로 실리고 마스킹되지 않은 트레이스도 평문으로 나간다.\n"
     "  원격에서 보려면 SSH 포트 포워딩을 쓴다: ssh -L {port}:127.0.0.1:{port} <서버>"
+)
+_ENV_HINT_DIAGNOSTIC = (
+    "  이미지 안에서 컨테이너 네트워크 주소({container})에 묶으려면"
+    f" 환경 변수 {CONTAINER_NETWORK_ENV}=1 도 준다."
+)
+_OUTSIDE_IMAGE_DIAGNOSTIC = (
+    f"  {CONTAINER_NETWORK_ENV} 는 이미지 밖에서는 켜지지 않는다"
+    f"(표지 파일 {IMAGE_MARKER.as_posix()} 가 없다)."
+)
+_CONTAINER_NETWORK_DIAGNOSTIC = (
+    "--host 는 루프백이나 컨테이너 네트워크 주소만 받는다({allowed}). 받은 값: {host}\n"
+    "  컨테이너 네트워크 주소는 {container} 하나다. 다른 주소와 이름은 받지 않는다.\n"
+    "  원격에서 보려면 SSH 포트 포워딩을 쓴다: ssh -L {port}:127.0.0.1:{port} <서버>"
+)
+_NOT_ONE_ENV_DIAGNOSTIC = (
+    f"{CONTAINER_NETWORK_ENV} 는 비우거나 1 만 받는다. 받은 값: {{value}}\n"
+    "  오타가 조용히 꺼짐으로 읽히지 않게 시작 자리에서 끝낸다."
 )
 _NOT_POSITIVE_TIMEOUT_DIAGNOSTIC = (
     "--run-timeout 은 1 이상의 정수(초)다. 받은 값: {value}\n"
@@ -173,7 +197,9 @@ def _serve(args: ServeArgs) -> int:
     channel_token = os.environ.get(CHANNEL_TOKEN_ENV, "")
     user = getpass.getuser()
     sites = _read_sites(args.site_file)
-    problems = _configuration_problems(args, admin_token, channel_token, user, sites)
+    problems = _configuration_problems(
+        args, admin_token, channel_token, user, sites, _container_network()
+    )
     if problems or not isinstance(sites, Sites):
         sys.stderr.write("".join(f"{problem}\n" for problem in problems))
         return EXIT_FAILED
@@ -200,12 +226,67 @@ def _serve(args: ServeArgs) -> int:
     return EXIT_FINISHED
 
 
+class ContainerNetwork(NamedTuple):
+    """루프백 규칙의 예외를 켜는 두 입력. 판정은 이 값만 보고 파일도 환경도 읽지 않는다.
+
+    `image_marker` 는 표지 파일(`IMAGE_MARKER`)이 있는가(파일인지는 가리지 않는다. TS 셋의
+    `existsSync` 와 같다), `env` 는 환경 변수의 값(없으면 `None`)이다.
+    """
+
+    image_marker: bool
+    env: str | None
+
+
+def _container_network() -> ContainerNetwork:
+    """지금 프로세스의 두 입력. 판정(`binding_problem`)과 달리 파일과 환경을 읽는 자리다."""
+    return ContainerNetwork(
+        image_marker=IMAGE_MARKER.exists(), env=os.environ.get(CONTAINER_NETWORK_ENV)
+    )
+
+
+def binding_problem(host: str, port: str, network: ContainerNetwork) -> str | None:
+    """듣는 주소의 구성 오류. 받으면 `None`. `port` 는 SSH 안내에 싣는다.
+
+    루프백 둘은 늘 받는다. `0.0.0.0` 하나는 표지 파일이 있고 환경 변수가 `1` 일 때만 더 받는다.
+    다른 IPv4 주소, `::`, 이름은 예외가 켜져도 거부한다. 컨테이너 네트워크의 주소는 뜰 때마다
+    바뀌고 프록시는 뒷단에 IPv4 로만 걸기 때문이다. 환경 변수가 없거나 비었으면 꺼진 것이고, `1` 이
+    아닌 값은 호스트와 상관없이 구성 오류다.
+
+    진단은 경우마다 다르다. 환경 변수만 있고 표지 파일이 없으면 이미지 밖에서는 켜지지 않는다고
+    말하고, 표지 파일만 있고 환경 변수가 없으면 지금의 진단에 그 환경 변수를 알린다. 사례는
+    `tests/fixtures/container_network/cases.json` 이다.
+    """
+    if network.env not in (None, "", "1"):
+        return _NOT_ONE_ENV_DIAGNOSTIC.format(value=network.env)
+    if host in LOOPBACK_HOSTS:
+        return None
+    enabled = network.image_marker and network.env == "1"
+    if enabled and host == CONTAINER_NETWORK_HOST:
+        return None
+    if enabled:
+        return _CONTAINER_NETWORK_DIAGNOSTIC.format(
+            allowed=", ".join((*LOOPBACK_HOSTS, CONTAINER_NETWORK_HOST)),
+            host=host,
+            container=CONTAINER_NETWORK_HOST,
+            port=port,
+        )
+    base = _NOT_LOOPBACK_DIAGNOSTIC.format(allowed=", ".join(LOOPBACK_HOSTS), host=host, port=port)
+    if host != CONTAINER_NETWORK_HOST:
+        return base
+    if network.image_marker:
+        return f"{base}\n{_ENV_HINT_DIAGNOSTIC.format(container=CONTAINER_NETWORK_HOST)}"
+    if network.env == "1":
+        return f"{base}\n{_OUTSIDE_IMAGE_DIAGNOSTIC}"
+    return base
+
+
 def _configuration_problems(
     args: ServeArgs,
     admin_token: str,
     channel_token: str,
     user: str,
     sites: Sites | Sequence[str],
+    network: ContainerNetwork,
 ) -> list[str]:
     """서버가 서지 못하는 이유 전부. 비어 있으면 선다.
 
@@ -231,12 +312,9 @@ def _configuration_problems(
         problems.append(_NO_CHANNEL_TOKEN_DIAGNOSTIC)
     elif channel_token == admin_token:
         problems.append(_SAME_TOKENS_DIAGNOSTIC)
-    if args.host not in LOOPBACK_HOSTS:
-        problems.append(
-            _NOT_LOOPBACK_DIAGNOSTIC.format(
-                allowed=", ".join(LOOPBACK_HOSTS), host=args.host, port=args.port
-            )
-        )
+    host = binding_problem(args.host, str(args.port), network)
+    if host is not None:
+        problems.append(host)
     if args.run_timeout_seconds is not None and args.run_timeout_seconds <= 0:
         problems.append(
             _NOT_POSITIVE_TIMEOUT_DIAGNOSTIC.format(

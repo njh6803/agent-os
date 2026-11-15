@@ -3,11 +3,12 @@
 import { expect, test } from "vitest";
 import { portalContext } from "./context.ts";
 import { loadPortal } from "./load.ts";
+import { OUTSIDE } from "../testing/container-network.ts";
 import { rsaKey, siteSpec, testAssets, writeSetup } from "../testing/fixtures.ts";
 
 function loaded(edits: Parameters<typeof writeSetup>[0] = {}) {
   const setup = writeSetup(edits);
-  const result = loadPortal(setup.configPath, setup.siteFilePath);
+  const result = loadPortal(setup.configPath, setup.siteFilePath, OUTSIDE);
   if ("problems" in result) {
     throw new Error(result.problems.join("\n"));
   }

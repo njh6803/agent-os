@@ -1,0 +1,320 @@
+{
+  "env_name": "AGENT_OS_CONTAINER_NETWORK",
+  "marker_path": "/etc/agent-os/image",
+  "binding": [
+    {
+      "marker": false,
+      "env": null,
+      "verdicts": {
+        "127.0.0.1": "ok",
+        "::1": "ok",
+        "0.0.0.0": "loopback",
+        "192.168.0.10": "loopback",
+        "::": "loopback",
+        "localhost": "loopback"
+      }
+    },
+    {
+      "marker": false,
+      "env": "",
+      "verdicts": {
+        "127.0.0.1": "ok",
+        "::1": "ok",
+        "0.0.0.0": "loopback",
+        "192.168.0.10": "loopback",
+        "::": "loopback",
+        "localhost": "loopback"
+      }
+    },
+    {
+      "marker": false,
+      "env": "1",
+      "verdicts": {
+        "127.0.0.1": "ok",
+        "::1": "ok",
+        "0.0.0.0": "outside-image",
+        "192.168.0.10": "loopback",
+        "::": "loopback",
+        "localhost": "loopback"
+      }
+    },
+    {
+      "marker": false,
+      "env": "true",
+      "verdicts": {
+        "127.0.0.1": "invalid-env",
+        "::1": "invalid-env",
+        "0.0.0.0": "invalid-env",
+        "192.168.0.10": "invalid-env",
+        "::": "invalid-env",
+        "localhost": "invalid-env"
+      }
+    },
+    {
+      "marker": false,
+      "env": "0",
+      "verdicts": {
+        "127.0.0.1": "invalid-env",
+        "::1": "invalid-env",
+        "0.0.0.0": "invalid-env",
+        "192.168.0.10": "invalid-env",
+        "::": "invalid-env",
+        "localhost": "invalid-env"
+      }
+    },
+    {
+      "marker": true,
+      "env": null,
+      "verdicts": {
+        "127.0.0.1": "ok",
+        "::1": "ok",
+        "0.0.0.0": "env-hint",
+        "192.168.0.10": "loopback",
+        "::": "loopback",
+        "localhost": "loopback"
+      }
+    },
+    {
+      "marker": true,
+      "env": "",
+      "verdicts": {
+        "127.0.0.1": "ok",
+        "::1": "ok",
+        "0.0.0.0": "env-hint",
+        "192.168.0.10": "loopback",
+        "::": "loopback",
+        "localhost": "loopback"
+      }
+    },
+    {
+      "marker": true,
+      "env": "1",
+      "verdicts": {
+        "127.0.0.1": "ok",
+        "::1": "ok",
+        "0.0.0.0": "ok",
+        "192.168.0.10": "container",
+        "::": "container",
+        "localhost": "container"
+      }
+    },
+    {
+      "marker": true,
+      "env": "true",
+      "verdicts": {
+        "127.0.0.1": "invalid-env",
+        "::1": "invalid-env",
+        "0.0.0.0": "invalid-env",
+        "192.168.0.10": "invalid-env",
+        "::": "invalid-env",
+        "localhost": "invalid-env"
+      }
+    },
+    {
+      "marker": true,
+      "env": "0",
+      "verdicts": {
+        "127.0.0.1": "invalid-env",
+        "::1": "invalid-env",
+        "0.0.0.0": "invalid-env",
+        "192.168.0.10": "invalid-env",
+        "::": "invalid-env",
+        "localhost": "invalid-env"
+      }
+    }
+  ],
+  "upstream": [
+    {
+      "marker": false,
+      "env": null,
+      "verdicts": {
+        "127.0.0.1": "ok",
+        "serve": "loopback",
+        "other.example": "loopback"
+      }
+    },
+    {
+      "marker": false,
+      "env": "",
+      "verdicts": {
+        "127.0.0.1": "ok",
+        "serve": "loopback",
+        "other.example": "loopback"
+      }
+    },
+    {
+      "marker": false,
+      "env": "1",
+      "verdicts": {
+        "127.0.0.1": "ok",
+        "serve": "outside-image",
+        "other.example": "loopback"
+      }
+    },
+    {
+      "marker": false,
+      "env": "true",
+      "verdicts": {
+        "127.0.0.1": "invalid-env",
+        "serve": "invalid-env",
+        "other.example": "invalid-env"
+      }
+    },
+    {
+      "marker": false,
+      "env": "0",
+      "verdicts": {
+        "127.0.0.1": "invalid-env",
+        "serve": "invalid-env",
+        "other.example": "invalid-env"
+      }
+    },
+    {
+      "marker": true,
+      "env": null,
+      "verdicts": {
+        "127.0.0.1": "ok",
+        "serve": "env-hint",
+        "other.example": "loopback"
+      }
+    },
+    {
+      "marker": true,
+      "env": "",
+      "verdicts": {
+        "127.0.0.1": "ok",
+        "serve": "env-hint",
+        "other.example": "loopback"
+      }
+    },
+    {
+      "marker": true,
+      "env": "1",
+      "verdicts": {
+        "127.0.0.1": "ok",
+        "serve": "ok",
+        "other.example": "container"
+      }
+    },
+    {
+      "marker": true,
+      "env": "true",
+      "verdicts": {
+        "127.0.0.1": "invalid-env",
+        "serve": "invalid-env",
+        "other.example": "invalid-env"
+      }
+    },
+    {
+      "marker": true,
+      "env": "0",
+      "verdicts": {
+        "127.0.0.1": "invalid-env",
+        "serve": "invalid-env",
+        "other.example": "invalid-env"
+      }
+    }
+  ],
+  "binding_signals": {
+    "loopback": {
+      "contains": [
+        "루프백만 받는다(127.0.0.1, ::1)",
+        "받은 값: {host}"
+      ],
+      "excludes": [
+        "AGENT_OS_CONTAINER_NETWORK",
+        "이미지 밖에서는"
+      ]
+    },
+    "env-hint": {
+      "contains": [
+        "루프백만 받는다(127.0.0.1, ::1)",
+        "받은 값: {host}",
+        "AGENT_OS_CONTAINER_NETWORK=1"
+      ],
+      "excludes": [
+        "이미지 밖에서는"
+      ]
+    },
+    "outside-image": {
+      "contains": [
+        "루프백만 받는다(127.0.0.1, ::1)",
+        "받은 값: {host}",
+        "AGENT_OS_CONTAINER_NETWORK",
+        "이미지 밖에서는 켜지지 않는다"
+      ],
+      "excludes": []
+    },
+    "container": {
+      "contains": [
+        "127.0.0.1, ::1, 0.0.0.0",
+        "받은 값: {host}"
+      ],
+      "excludes": [
+        "이미지 밖에서는",
+        "루프백만 받는다"
+      ]
+    },
+    "invalid-env": {
+      "contains": [
+        "AGENT_OS_CONTAINER_NETWORK",
+        "받은 값: {env}"
+      ],
+      "excludes": [
+        "루프백만 받는다",
+        "이미지 밖에서는"
+      ]
+    }
+  },
+  "upstream_signals": {
+    "loopback": {
+      "contains": [
+        "호스트는 루프백 127.0.0.1 만 받는다",
+        "받은 값: {host}"
+      ],
+      "excludes": [
+        "AGENT_OS_CONTAINER_NETWORK",
+        "이미지 밖에서는"
+      ]
+    },
+    "env-hint": {
+      "contains": [
+        "호스트는 루프백 127.0.0.1 만 받는다",
+        "받은 값: {host}",
+        "AGENT_OS_CONTAINER_NETWORK=1"
+      ],
+      "excludes": [
+        "이미지 밖에서는"
+      ]
+    },
+    "outside-image": {
+      "contains": [
+        "호스트는 루프백 127.0.0.1 만 받는다",
+        "받은 값: {host}",
+        "AGENT_OS_CONTAINER_NETWORK",
+        "이미지 밖에서는 켜지지 않는다"
+      ],
+      "excludes": []
+    },
+    "container": {
+      "contains": [
+        "호스트는 127.0.0.1 과 serve 만 받는다",
+        "받은 값: {host}"
+      ],
+      "excludes": [
+        "이미지 밖에서는",
+        "루프백 127.0.0.1 만"
+      ]
+    },
+    "invalid-env": {
+      "contains": [
+        "AGENT_OS_CONTAINER_NETWORK",
+        "받은 값: {env}"
+      ],
+      "excludes": [
+        "호스트는",
+        "이미지 밖에서는"
+      ]
+    }
+  }
+}
