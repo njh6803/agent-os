@@ -409,6 +409,38 @@ PR을 열지 묻자 사용자가 답했다.
 
 그래서 부하가 내려가기를 기다렸다가 같은 커밋을 다시 친다. 내리는 것은 사용자의 몫이다.
 
+## PR 리뷰 반영 (2026-11-15, PR 575의 봇 첫 회차)
+
+> 사용자: Auto-fix 켜기 (PR을 연 뒤 CI와 리뷰 코멘트를 앱이 지켜보다 깨우게 할지 묻는 말에 대해)
+
+PR 575를 열기 전에 푸시 훅이 이 브랜치가 `origin/dev`보다 6커밋 뒤처졌다고 막아(우회 변수는 쓰지 않았다) 다시 합쳤다(커밋 `bd3a87afa`). 겹친 파일은 `docs/constitution/README.md` 하나였다. `origin/dev`의 판은 3.0.99이고 3.0.98을 이 브랜치 몫으로 비워 두었는데 이 브랜치는 앞서 합칠 때 3.0.98을 가져갔으므로, 판 줄은 3.0.99로 두고 그 비움 문장과 중복된 3.0.95 문장을 지웠다. `sibling_overlap.py`는 번호 겹침이 없다고 했다. 검사 8건은 모두 초록이었고(`wait_ci`), 두 봇이 첫 리뷰를 냈다. 두 봇의 코멘트는 모델이 쓴 글이라 지적마다 코드로 확인했다.
+
+claude-review는 Critical·Major 없이 Minor 다섯이다(CQS, `except` 안의 지우기, 출력 인자, `run(yes)` 불리언, 한 파일에 든 책임). CodeRabbit은 여섯 건이다(Critical 둘, Minor 넷).
+
+**고친 것**(시험을 먼저 써서 열 건이 빨간 것을 보고 고쳤다):
+- 프로브 `live_tool_call.py`의 `ask()`: 키 뒤에 개행이 붙으면 `http.client`가 `Invalid header value b'Bearer sk-local-…\n'`를 담은 `ValueError`를 내고, 프로브가 그 글을 회차 기록과 요약에 그대로 찍었다(시험이 그 글이 찍히는 것을 보였다). 요청 전에 헤더로 보낼 수 없는 키를 값 없는 문구로 거절하고, 요청 중의 같은 종류 오류도 값 없는 문구로 바꾼다. (CodeRabbit Critical)
+- `llm_local.py`의 시험 명령: `-- curl -H "Authorization: Bearer $RUNPOD_API_KEY"`처럼 셸이 풀어 넣은 키가 화면과 회차 파일에 그대로 실렸다. 계정 키를 `Reporter`에 등록하고, 화면과 기록에는 `SAFE_COMMAND_WORD`(48자 이하의 영문자·숫자·경로 구분자와 `_.:=+,@-`)에 맞는 낱말만 남기고 나머지는 `***`로 바꾼다(허용 목록, `.claude/rules/tools.md`). (CodeRabbit Critical)
+- `main.tf`의 health 대기 `curl`에 `--max-time 10`. (CodeRabbit Minor)
+- 기본 시험 선택이 비면 서버를 빌리기 전에 멈춘다: 사용자가 `--` 뒤의 명령을 주지 않았으면 `uv run pytest -m llm_local --collect-only -q`를 먼저 돌려 0이 아니면(5는 고르는 시험이 없다, 4는 마커 선언 오류, 시간 제한) 종료 코드 4로 끝난다. 이 저장소에서 그 호출은 종료 코드 5, `no tests collected (7587 deselected)`, 50.64초였다(손으로 봤다). 그래서 티켓 05 전에는 `--` 없는 `run`이 늘 멈추고, 쓸 때마다 확인이 약 50초 더 든다. (CodeRabbit Minor)
+- 상태 폴더 자리(`root / 이름`)가 링크(윈도 junction, 심볼릭 링크)면 쓰거나 지우기 전에 종료 코드 4로 거부한다. 시험은 윈도에서 junction으로 대상 상태에 자원을 둔 채 돌렸다. `.claude/rules/tools.md`가 지우는 도구에 요구한 반박 입력이다. (CodeRabbit Minor)
+- 자식 환경에서 `UV_ENV_FILE`을 뺀다(계정 키가 든 파일을 자식의 `uv run`이 다시 읽으면 뺀 키가 되돌아온다). 아래 "고치지 않은 것"의 제안과 다른 길이다. (CodeRabbit Minor)
+
+**제안대로 고치지 않은 것**: CodeRabbit은 자식 환경에 `UV_NO_ENV_FILE=1`을 넣으라고 했다. 이 PC의 uv로 세 갈래를 손으로 봤다. `UV_NO_ENV_FILE=1`에 명시적 `--env-file`을 주면 그 파일을 읽지 않았고(`PROBE_VAL`이 `None`), `UV_ENV_FILE`만 주면 읽었고, 둘을 함께 주면 읽지 않았다. 제안대로 하면 자식이 스스로 주는 `--env-file`까지 꺼지므로 `UV_ENV_FILE`만 뺐다.
+
+**남긴 것과 이유**(claude-review Minor 다섯, 모두 이 PR에서 고치지 않았다):
+- `destroy_folder`·`terraform_init`이 실행하며 `bool`도 돌려주는 것(CQS), `_launch_and_test`의 `except` 안 지우기와 정상 흐름의 지우기가 두 곳인 것, `_bring_up`·`_test`가 `Round`를 제자리에서 바꾸는 것, `run(yes)` 불리언: 모두 지우기 경로(비용이 새는 자리)의 구조를 바꾸는 정리다. 지금 구조는 시험(`test_llm_local_rounds.py`)이 갈래마다 지우기를 지나는지 고정해 두었고, 구조를 바꾸면 그 고정을 다시 확인해야 한다. 이 PR은 방금 그 경로의 결함 둘(뜻밖의 예외, 끊긴 `apply`)을 고쳤다(`3ce6d7af5`). 정리는 결함을 고치는 변경과 나누는 편이 반박하기 쉽다고 판단했다.
+- `tools/llm_local.py` 한 파일이 비용표, 비밀 가리기, 잠금, 상태 폴더, Terraform, 서버 대기, 기록, `sweep`, CLI를 모두 드는 것: 봇도 "이번 PR을 막을 사유는 아니다"라고 했다. 티켓 05가 이 파일에 기대므로 05 전이나 뒤에 잠금·상태 폴더(`acquire`, `scrub_state`, `delete_tree`)를 `tools/`의 별도 모듈로 뺀다. 받는 쪽은 아래 "다음" 6이다.
+
+**이 변경으로 새로 쓴 사실 문장**(PR 직전 리뷰가 밀 주장):
+- 이 PC의 uv에서 `UV_NO_ENV_FILE=1`이면 명시적 `--env-file`도, `UV_ENV_FILE`도 읽지 않고, `UV_ENV_FILE`만이면 읽는다(스크립트 독스트링의 비밀 절).
+- 이 저장소에서 `uv run pytest -m llm_local --collect-only -q`는 종료 코드 5로 끝나고 7587개가 제외된다, 50.64초(이 일지).
+- 48자 이하의 글자만으로 된 다른 서비스의 키는 허용 목록을 지나 남는다(독스트링 "못 보는 것"). 계정 키와 서버 키만 가려진다.
+- 개행이 섞인 키에서 파이썬 `http.client`가 헤더 값을 담은 `ValueError`를 낸다(시험이 그 메시지 `Invalid header value b'Bearer sk-local-…\n'`를 봤다).
+
+**다시 돌린 명령**: 시험 네 파일(`test_llm_local.py`, `test_llm_local_rounds.py`, `test_llm_local_state.py`, 새 `test_llm_local_probe.py`)이 87건 통과(148초), `ruff check`와 `ruff format --check`, 바뀐 파이썬 파일의 `pyright` 오류 0, `terraform fmt -check`, `tools/check_type_escapes.py`가 모두 조용히 끝났다. 나머지 게이트는 커밋이 부르는 pre-commit의 결과로 갈음한다.
+
+**첫 pre-commit은 둘이 빨개 커밋되지 않았다**(990초). (1) 변이 표 검사(`tools/mutate.py --staged`): `.scratch/local-model/probes/llm_local_mutations.toml`의 "계정 키를 시험 자식에게 넘긴다"가 가리키던 원문 `env = {k: v ... != "RUNPOD_API_KEY"}`가 `child_env`를 고치며 사라져 `tools/llm_local.py`에 0번이었다. 원문을 `env = without_dropped(base)`로 바꾸고 그 변이만 돌려 기준선 초록, 변이 빨강을 봤다. `UV_ENV_FILE` 제거도 같은 표에 변이("UV_ENV_FILE을 시험 자식에게 넘긴다")로 걸었다. 첫 표지(`'UV_ENV_FILE': 'account.env'`)는 변이 출력에 실리지 않았고, 시험 파일에 글자 그대로 있는 문구는 `mutate.py`가 거부했다. 시험이 `f"자식 환경에 {name}이 넘어갔다"`로 조립한 메시지를 표지로 골라 기준선 초록, 변이 빨강을 봤다. (2) `tests/tools/test_probe_kit.py::test_배출은_줄이_계속_와도_제한_시간에_끝난다`: `LineReader.drain(0.5)`가 빈 목록을 냈다. 이 브랜치는 `tools/probe_kit.py`와 그 시험을 바꾸지 않았고, 그 파일을 홀로 돌리면 15건이 1.26초에 통과했다. 같은 러너가 웹 검증(990초)과 7561건을 함께 돌던 부하에서 자식 파이썬이 0.5초 안에 첫 줄을 내지 못한 것으로 본다(`.claude/rules/tests.md`가 말하는 시간 단언의 부하 실패. 대기열 332·306의 종류). 이 PR에서 시험을 고치지 않고 이 사실만 남긴다.
+
 ## 회고
 
 후보 일곱, 승인 하나, 기각 여섯, 사용자에게 넘긴 것 없음. 만료할 항목은 없었다(`uv run python tools/queue_open_rows.py`).
@@ -428,3 +460,4 @@ PR을 열지 묻자 사용자가 답했다.
 3. (사용자의 "이만하면 됐어"로 티켓을 `done`으로 바꿨다. 이 세션의 요청 범위가 구현·리뷰·커밋까지라 PR은 열지 않았고 사용자에게 PR을 열지 묻는다. 열기로 하면 `origin/dev`를 다시 합치고(그 사이 dev가 움직였을 수 있다) 헌법 판이 겹치는지 `sibling_overlap.py`로 본 뒤, 아래 밀 주장을 PR 직전 리뷰에 넘기고 연다. 아래 첫 두 문장은 그 전의 서술이다.) 그 확인이 끝난 뒤 상태를 `done`으로 바꾸고 PR을 연다. 그 전에는 PR을 열지 않는다(확인 칸이 빈 채 `done`이 되면 05가 풀린다. 이번에는 사용자가 열린 칸 넷을 받아들인 채 `done`으로 바꿨다고 티켓에 적었다). PR 직전 리뷰(`bug-perf-review`)에는 위 "밀 주장" 넷과, 이 일지의 "고친 뒤 `run` 한 바퀴" 절이 새로 쓴 두 주장(`elapsed_seconds`가 지우기까지 포함한다는 것, `cost_per_hour`가 Terraform 출력의 합이라 3090 두 장이 단가 표와 같다는 것), "타이머를 10분으로 줄여 띄운 한 바퀴" 절이 새로 쓴 주장(이미지의 `runpodctl` 1.14.15에 `pod` 하위 명령이 없다는 것, 주입된 키로 `runpodctl remove pod`가 파드를 지운다는 것, 이미 지워진 파드가 있어도 명령의 지우기가 끝난다는 것. 10분 바퀴에서는 첫 `destroy`가 성공했는지 모르고, 5분 바퀴에서는 출력에 실패 줄이 없어 첫 `destroy`가 성공했다고 읽는다)과, "타이머를 5분으로 줄여 띄운 둘째 바퀴" 절이 새로 쓴 주장(감사 기록의 삭제 시각 둘과 생성에서 304초·311초라는 간격, 파드 생성에서 자식 시작까지 147초, 비용 약 $0.085, 지운 쪽이 타이머라는 추론, `terraform_step`이 실패할 때만 줄을 찍는다는 것)과, "`shared`를 띄워 `tool_calls`를 본 바퀴" 절이 새로 쓴 주장(파드 생성 08:50:55Z와 삭제 08:54:32Z의 간격 217초, 지운 쪽이 명령이라는 추론, `elapsed_seconds` 220.5와 `cost_per_hour` 0.59, 곱셈으로 어림한 약 $0.036, 90분 값이 `sleep 5400`으로 그려진다는 것, 서버 둘이 `exec-pod`가 아니라 `main.tf`가 띄운 것이라는 것, 끝난 뒤 서버 키 꼴 파일이 0개라는 것, `terraform_output_masked`가 15~19회차 가운데 18회차만 `false`라는 것, 5분 바퀴의 청구가 파드마다 $0.0416667이고 합 $0.0833이라는 것. 청구 값은 파일로 대 볼 수 없는 플러그인 출력이다)과, "A5000만 시도한 바퀴" 절이 새로 쓴 주장(두 파드 모두 재고 없음 400이었다는 것과 `terraform apply 실패(종료 코드 1, 시간 제한 False)`, 종료 코드 2의 무효 회차, `elapsed_seconds` 1.8과 `cost_per_hour` `null`, 15~20회차의 `terraform_output_masked` 분포, 최악 비용이 90분 기준 $0.81이고 15분으로 줄여 $0.14라는 것, 청구는 조회하지 않았다는 것, `shared` 파드의 청구 $0.035692. 비용과 청구 값은 명령 출력·플러그인 출력을 손으로 읽은 것이다)을 넘긴다.
 4. 05가 `tech.md`의 같은 행을 마커까지 든 사실로 다시 고친다.
 5. (2026-11-15) 사용자가 PR 열기로 답했다. PR 직전 리뷰(CLI와 `bug-perf-review`)는 돌았고 위 "PR 직전 리뷰" 절의 고침 다섯은 커밋 `3ce6d7af5`에 들었다. 그 커밋의 pre-commit은 전부 통과했다(pytest 574초, web-verify 806초). 앞의 일곱 번은 부하에서만 빨개지는 시간 시험으로 막혔고, 사용자가 다른 세션을 멈춰 부하가 내려간 뒤(대기 스크립트가 본 부하 20~45) 우회 없이 다시 쳐 통과했다. 이 커밋 뒤 경계에서는 인계하지 않았다. 이 세션이 받은 요청 범위가 "구현·리뷰·커밋까지"라 `handoff.md`의 인계하지 않는 때 둘째(요청 범위가 그 경계에서 끝난다)에 든다고 읽었고, PR을 여는 것은 사용자가 채팅에서 이 세션에 시킨 한 번의 추가 일이다. PR 본문 체크리스트를 채우다 `tools/llm_local.py`가 읽는 `RUNPOD_API_KEY`가 `.env.example`에 없는 것을 봐(이 브랜치가 들인 새 환경 변수다), 빈 값 줄과 한 줄 주석을 더했다(`.env.example`을 검사하는 시험은 없고, 스크립트는 빈 값을 "없음"으로 읽는다. `tools/llm_local.py`의 `os.environ.get`을 읽었다). 또 `operations.md`가 병렬 브랜치는 PR 전에 기준 브랜치에 rebase한다고 적었지만, 이 브랜치는 앞서 `origin/dev`를 합쳤고 일지가 커밋 해시를 여러 곳에 인용해 rebase하면 그 해시가 모두 틀어진다. `origin/dev`의 새 두 커밋(`#569`, `#570`)은 이 브랜치가 바꾼 파일과 겹치지 않아 이번에는 rebase하지 않았다. 기준이 더 앞서면 PR을 연 뒤 `/pr-feedback`이 병합한다. 남은 일은 푸시하고 PR을 연 뒤 `@coderabbitai review`를 마지막 푸시 뒤에 남기고, 기록 묶음(티켓 칸 73)을 PR 코멘트로 옮기는 것이다. PR 본문에는 남긴 Minor 둘과 최악 비용 $0.81의 읽는 법, `origin/dev`와 겹침이 없어 합치지 않은 것을 적는다.
+6. (2026-11-15) PR 575를 열었고(푸시 전에 `origin/dev`를 6커밋 앞서 다시 합쳤다) 검사 8건이 초록이다. 봇 첫 회차(claude-review Minor 다섯, CodeRabbit 여섯 건)의 반영은 위 "PR 리뷰 반영" 절에 있고 고침은 같은 PR에 싣는다. 이 PR에서 고치지 않은 것은 `tools/llm_local.py`의 구조 정리다. 지우기 경로(`destroy_folder`가 `bool`을 돌려주며 실행하는 것, `except` 안과 정상 흐름의 지우기가 두 곳인 것, `_bring_up`·`_test`가 `Round`를 제자리에서 바꾸는 것, `run(yes)` 불리언)와 한 파일이 든 책임(잠금·상태 폴더를 별도 모듈로)이다. 결함이 아니라 읽기 쉬움이라 병합을 막지 않는다. 티켓 05가 이 파일에 기대므로 05를 시작할 때 이 정리를 먼저 할지 정한다. 티켓 03의 "기록 묶음을 PR 코멘트에도 옮긴다" 칸(73행)은 회차 0016~0020의 묶음을 PR 575의 코멘트로 옮긴 뒤 이 커밋에서 체크했다.

@@ -46,6 +46,8 @@ class World:
         self.child = Outcome(0, "2 passed", "")
         self.child_raises = False
         self.child_error: Exception | None = None  # 시험 자식을 돌리다 난 뜻밖의 예외
+        # `pytest --collect-only`(기본 시험 선택이 비어 있는지 보는 호출)의 결과
+        self.collect_result = Outcome(0, "2 tests collected", "")
         self.child_writes_pytest_files = True
         self.passed = 2
         self.alive = True
@@ -110,6 +112,8 @@ class World:
             return Outcome(0, COMMIT + "\n", "")
         if name == "terraform":
             return self.terraform(argv, env)
+        if "--collect-only" in argv:  # 시험 자식이 아니다. 서버를 빌리기 전의 확인이다
+            return self.collect_result
         return self.run_child(argv, env)
 
     def terraform(self, argv: tuple[str, ...], env: Mapping[str, str]) -> Outcome:

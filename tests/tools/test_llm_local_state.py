@@ -328,6 +328,31 @@ def test_둘째_구성만_KV_캐시를_고정하고_서버_뒤에_health_대기_
     assert not any("--kv-cache-memory" in o for o in llm_local.server_options(pods))
 
 
+def test_health_대기_줄의_curl은_호출마다_요청_전체_시간_제한이_있다() -> None:
+    # 첫 서버가 연결만 받고 응답을 끝내지 않으면 제한 없는 curl이 돌아오지 않아 둘째 서버를
+    # 시작하지 못한다. 기다리는 도구가 부르는 외부 명령에는 호출마다 시간 제한을 둔다.
+    text = CONFIG.read_text(encoding="utf-8")
+    line = next(row for row in text.splitlines() if "until curl" in row)
+    assert re.search(r"until curl[^\"]*--max-time \d+", line), line
+
+
+def test_상태_폴더_자리가_링크면_아무것도_쓰거나_지우지_않고_4다(
+    world: World, capsys: pytest.CaptureFixture[str]
+) -> None:
+    # `root / 이름`이 다른 폴더를 가리키는 링크(윈도의 junction, 그 밖의 심볼릭 링크)면 `mkdir`이
+    # 그 대상에서 성공하고, 대상 상태에 자원이 있으면 확인 전에 `terraform destroy`가 그 자원을
+    # 지운다. 이 도구는 폴더를 링크로 만들지 않으므로 링크는 밖에서 온 것이다.
+    target = marked_folder(world, "elsewhere", resources=True)
+    before = sorted(path.name for path in target.iterdir())
+    make_link(world.folder, target)
+    assert run_main("run", "--yes") == 4
+    assert terraform_calls(world, "destroy") == []
+    assert terraform_calls(world, "apply") == []
+    assert sorted(path.name for path in target.iterdir()) == before
+    assert llm_local.state_has_resources(target)
+    assert "링크" in capsys.readouterr().out
+
+
 class _ProxyLikeHandler(BaseHTTPRequestHandler):
     """Runpod 프록시처럼 파이썬 기본 `User-Agent`를 403(`error code: 1010`)으로 거절하는 서버."""
 

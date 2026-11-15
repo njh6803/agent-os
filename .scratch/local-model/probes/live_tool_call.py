@@ -54,6 +54,7 @@ TOOL = {
     },
 }
 PROMPT = "서울의 지금 날씨를 알려 줘. 도구를 써서 확인해."
+SAFE_KEY = re.compile(r"[\x21-\x7e]+")  # 헤더 값으로 보낼 수 있는 글자(공백과 개행이 없다)
 
 
 def names(number: int) -> tuple[str, str, str]:
@@ -69,6 +70,11 @@ def address_shape(base_url: str) -> str:
 
 
 def ask(base_url: str, model_id: str, key: str) -> tuple[int, Mapping[str, object]]:
+    # 키 뒤에 개행이 붙으면(`$(cat 파일)`로 넘긴 독립 실행) 파이썬 `http.client`가 헤더 값 전체를
+    # 담은 `ValueError`를 낸다. 그 글이 회차 기록과 요약에 그대로 찍히므로 요청 전에 값 없이
+    # 거절하고, 요청 중에 난 같은 종류의 오류도 값 없는 문구로 바꾼다.
+    if SAFE_KEY.fullmatch(key) is None:
+        raise ValueError("키가 헤더 값으로 보낼 수 없는 꼴이다(공백, 개행, 비ASCII 글자)")
     body = json.dumps(
         {
             "model": model_id,
@@ -96,6 +102,8 @@ def ask(base_url: str, model_id: str, key: str) -> tuple[int, Mapping[str, objec
             payload: object = json.loads(response.read())
     except urllib.error.HTTPError as error:
         return error.code, {}
+    except ValueError:
+        raise ValueError("요청의 헤더 값이 맞지 않아 보내지 못했다(값은 싣지 않는다)") from None
     return status, payload if is_dict(payload) else {}
 
 

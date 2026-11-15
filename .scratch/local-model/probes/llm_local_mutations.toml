@@ -103,8 +103,19 @@ expect = "red"
 
 [[mutation.edit]]
 file = "tools/llm_local.py"
-old = '''    env = {k: v for k, v in base.items() if k != "RUNPOD_API_KEY"}'''
+old = '''    env = without_dropped(base)'''
 new = '''    env = dict(base)'''
+
+[[mutation]]
+name = "UV_ENV_FILE을 시험 자식에게 넘긴다"
+expect_output = ["자식 환경에 UV_ENV_FILE이 넘어갔다"]
+tests = ["tests/tools/test_llm_local_rounds.py", "-k", "UV_ENV_FILE"]
+expect = "red"
+
+[[mutation.edit]]
+file = "tools/llm_local.py"
+old = '''CHILD_ENV_DROPPED = ("RUNPOD_API_KEY", "UV_ENV_FILE")'''
+new = '''CHILD_ENV_DROPPED = ("RUNPOD_API_KEY",)'''
 
 [[mutation]]
 name = "서버 키를 가리지 않는다"

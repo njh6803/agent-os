@@ -111,11 +111,12 @@ locals {
   # 한 GPU에 서버 둘이면 앞 서버가 응답한 뒤에 다음 서버를 시작한다. 동시에 시작하면 서로의 메모리를
   # 자기 몫에서 빼서 시작이 실패했다. 서버가 하나인 파드는 기다릴 서버가 없어 줄이 늘지 않는다.
   # 앞 서버가 죽으면 이 루프는 끝나지 않는다. 그때는 명령의 준비 상한(30분)이 파드를 지우고, 그 전에
-  # 명령이 죽어도 위 타이머가 90분 뒤 지운다.
+  # 명령이 죽어도 위 타이머가 90분 뒤 지운다. 서버가 연결만 받고 응답을 끝내지 않아도 호출 하나가
+  # 멈춰 루프가 돌지 못하는 일이 없게 curl에 요청 전체 시간 제한(`--max-time`)을 둔다.
   start = {
     for n, m in var.models : n => join("\n", compact([
       "${local.serve[n]} &",
-      local.shared ? "until curl -fs localhost:${local.ports[n]}/health > /dev/null; do sleep 3; done" : "",
+      local.shared ? "until curl -fs --max-time 10 localhost:${local.ports[n]}/health > /dev/null; do sleep 3; done" : "",
     ]))
   }
 

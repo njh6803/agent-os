@@ -366,3 +366,95 @@ def test_무효_회차가_연달으면_그_수를_찍고_둘_이상이면_멈춰
     assert run_main("run", "--yes") == 2
     second = printed(capsys)
     assert "연달은 무효 회차 2" in second and "멈춰" in second
+
+
+# --- PR 리뷰(CodeRabbit)가 낸 지적 ---
+
+
+def test_기본_시험_선택이_비어_있으면_서버를_빌리기_전에_멈추고_4다(
+    world: World, capsys: pytest.CaptureFixture[str]
+) -> None:
+    # 티켓 05가 `llm_local` 마커의 시험을 더하기 전에는 기본 명령의 선택이 비어, pytest가 종료
+    # 코드 5로 끝난다. 서버를 먼저 띄우면 시험 하나 없는 회차에 비용만 든다.
+    world.collect_result = Outcome(5, "no tests collected (2 deselected)", "")
+    assert run_main("run", "--yes") == 4
+    assert terraform_calls(world, "apply") == []
+    assert world.child_envs == []
+    text = printed(capsys)
+    assert "llm_local" in text and "--" in text
+
+
+def test_기본_시험_선택을_확인하지_못하면_그_출력의_끝을_보이고_서버를_빌리지_않는다(
+    world: World, capsys: pytest.CaptureFixture[str]
+) -> None:
+    # 마커가 선언되지 않았으면 pytest가 종료 코드 4(사용법 오류)로 끝난다. 0이 아니면 모두
+    # "선택이 시험을 고른다고 확인하지 못했다"이다.
+    world.collect_result = Outcome(4, "", "ERROR: 'llm_local' not found in `markers` configuration")
+    assert run_main("run", "--yes") == 4
+    assert terraform_calls(world, "apply") == []
+    assert "not found in `markers`" in printed(capsys)
+
+
+def test_비용_표만_보는_회차에서도_기본_시험_선택이_비어_있으면_먼저_알린다(
+    world: World, capsys: pytest.CaptureFixture[str]
+) -> None:
+    world.collect_result = Outcome(5, "no tests collected", "")
+    assert run_main("run") == 4
+    text = printed(capsys)
+    assert "llm_local" in text and "예상 비용" not in text
+
+
+def test_사용자가_명령을_주면_기본_시험_선택을_확인하지_않는다(world: World) -> None:
+    world.collect_result = Outcome(5, "no tests collected", "")  # 줬다면 쓰이지 않는다
+    assert run_main("run", "--yes", "--", "python", "probe.py") == 0
+    assert not [c for c in world.calls if "--collect-only" in c]
+    assert len(terraform_calls(world, "apply")) == 1
+
+
+def test_기본_시험_선택을_확인하는_호출에도_시간_제한이_있다(world: World) -> None:
+    assert run_main("run", "--yes") == 0
+    assert any("--collect-only" in c for c in world.calls)
+    assert not world.timeouts_missing, f"시간 제한 없는 호출: {world.timeouts_missing}"
+
+
+def test_명령에_섞여_든_계정_키와_긴_비밀_꼴은_출력과_기록에_남지_않고_나머지_명령은_남는다(
+    world: World, capsys: pytest.CaptureFixture[str]
+) -> None:
+    # `-- curl -H "Authorization: Bearer $RUNPOD_API_KEY"`처럼 셸이 키를 풀어 넣은 명령은 그 값이
+    # 화면과 회차 파일(영구 저장)에 그대로 실렸다. 기록에는 알아볼 수 있는 꼴(짧은 낱말, 옵션,
+    # 경로)만 남기고 나머지는 가린다.
+    other = "sk-ant-api03-" + "x" * 60
+    command = (
+        "python",
+        "probe.py",
+        "--flag",
+        f"Authorization: Bearer {ACCOUNT_KEY}",
+        ACCOUNT_KEY,
+        other,
+        ".scratch/local-model/probes/live_tool_call.py",
+    )
+    assert run_main("run", "--yes", "--", *command) == 0
+    text = record_files(world)[-1].read_text(encoding="utf-8") + printed(capsys)
+    assert ACCOUNT_KEY not in text and other not in text
+    recorded = last_record(world)["test_command"]
+    assert isinstance(recorded, list)
+    assert recorded[:3] == ["python", "probe.py", "--flag"]
+    assert recorded[-1] == ".scratch/local-model/probes/live_tool_call.py"
+    assert recorded[3:6] == [llm_local.MASK] * 3
+
+
+def test_기본_명령은_기록에_그대로_남는다(world: World) -> None:
+    assert run_main("run", "--yes") == 0
+    assert last_record(world)["test_command"] == list(llm_local.DEFAULT_TEST_COMMAND)
+
+
+def test_시험_자식의_환경에는_UV_ENV_FILE도_넘기지_않는다(
+    world: World, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # 자식의 `uv run`이 같은 파일을 다시 읽으면 환경에서 뺀 계정 키가 되돌아온다. 값이 이미 든
+    # 부모 환경은 그대로 넘어가므로 변수만 뺀다. `UV_NO_ENV_FILE=1`은 자식이 스스로 주는
+    # `--env-file`까지 끄므로 쓰지 않는다(2026-11-15 uv로 손으로 봤다).
+    monkeypatch.setenv("UV_ENV_FILE", "account.env")
+    assert run_main("run", "--yes") == 0
+    for name in ("UV_ENV_FILE", "UV_NO_ENV_FILE"):
+        assert name not in world.child_envs[0], f"자식 환경에 {name}이 넘어갔다"

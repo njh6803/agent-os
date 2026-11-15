@@ -19,17 +19,19 @@ Terraform(`tools/llm_local_server/`)으로 모델 서버 둘 (A.X 4.0 Light, gpt
 pytest -m llm_local`)을 자식 프로세스로 돌리고, 시험이 어떻게 끝났든 (Ctrl-C로 끊겨도) 서버를
 지운 뒤 기록 묶음을 찍는다.
 
-걸음(명세의 번호): 1 환경(`RUNPOD_API_KEY` 이름, Terraform 1.6 이상, 분리 HEAD가 아닌 브랜치) 2
-상태 폴더 3 잠금 4 남은 자원 지우기 5 예상 비용(`--yes` 없으면 여기서 끝) 6 서버 키 7
-띄우기(재고가 없으면 다음 후보) 8 준비 기다리기(상한 `READY_LIMIT_SECONDS`) 9 시험 10 실패했으면
-서버가 살아 있는지 확인 11 지우기 12 기록 묶음.
+걸음(명세의 번호): 1 환경(`RUNPOD_API_KEY` 이름, Terraform 1.6 이상, 분리 HEAD가 아닌 브랜치. `--`
+뒤의 명령을 주지 않았으면 기본 시험 명령이 시험을 고르는지도 `--collect-only`로 본다) 2
+상태 폴더(링크면 거부한다) 3 잠금 4 남은 자원 지우기 5 예상 비용(`--yes` 없으면 여기서 끝) 6
+서버 키 7 띄우기(재고가 없으면 다음 후보) 8 준비 기다리기(상한 `READY_LIMIT_SECONDS`) 9 시험 10
+실패했으면 서버가 살아 있는지 확인 11 지우기 12 기록 묶음.
 
 종료 코드. 0 시험 통과. 1 서버가 살아 있던 회차의 시험 실패. 2 무효 회차(시험이 실패했는데
 서버가 답하지 않는다, 띄운 뒤 Ctrl-C로 끊겼다, 값이 예상보다 커서 지웠다, 준비 상한을 넘겼다,
 GPU 후보를 모두 띄우지 못했다). 3 지우기 실패(상태 폴더의 경로를 크게 알린다. 타이머가 뒤를
 받친다. apply가 시간 제한에 걸리거나 Ctrl-C로 끊겨 상태 파일에 자원이 없는 회차도 지울 방법이
 없어 3이다).
-4 아무것도 띄우지 않고 끝났다 (환경이 모자라다, 앞 세션이 쓰고 있다, `--yes`가 없다, 첫 `apply`
+4 아무것도 띄우지 않고 끝났다 (환경이 모자라다, 기본 시험 명령이 고르는 시험이 없다, 앞 세션이
+쓰고 있다, 상태 폴더 자리가 링크다, `--yes`가 없다, 첫 `apply`
 앞에서 끊겼다). 겹치면 3, 2, 1의 차례다. `sweep`은 0(지우지 못한 것이 없다. 산 잠금이나 표지
 없는 폴더를 건드리지 않은 것은 지우지 못한 것이 아니다)과 3(지우지 못한 것이 있다)이다. 무효
 회차는 실패로 세지 않고 다시 돌릴 수 있고, 다시 띄울 때도 비용 확인을 받는다. 무효 회차로
@@ -58,9 +60,13 @@ destroy`로 지우고, 자원이 없음을 확인한 폴더를 지운다. 이 �
 
 비밀. 서버 키는 화면, 로그, 기록 묶음, 파일 어디에도 찍지 않는다. Terraform과 자식 프로세스의
 출력은 받아 두었다가 `Reporter`가 서버 키를 글자 그대로 찾아 `***`로 바꾼 뒤에만 보이고, 받은
-그대로를 파일에 쓰지 않는다. 자식 프로세스의 환경에서는 `RUNPOD_API_KEY`를 빼고, Terraform의
-환경에서는 `TF_LOG`로 시작하는 변수를 뺀다(`TF_LOG_PATH`의 로그는 `Reporter`를 거치지 않고
-파일로 가서 서버 키가 실릴 수 있다). 기록 묶음에는 서버 키와 주소를 넣지 않는다.
+그대로를 파일에 쓰지 않는다. 자식 프로세스의 환경에서는 `RUNPOD_API_KEY`와 `UV_ENV_FILE`을
+빼고(자식의 `uv run`이 그 파일을 다시 읽으면 뺀 계정 키가 되돌아온다. `UV_NO_ENV_FILE`은 자식이
+스스로 주는 `--env-file`까지 꺼서 쓰지 않는다), Terraform의 환경에서는 `TF_LOG`로 시작하는 변수를
+뺀다(`TF_LOG_PATH`의 로그는 `Reporter`를 거치지 않고 파일로 가서 서버 키가 실릴 수 있다). 계정
+키는 `Reporter`에 등록해 화면의 어느 글에서든 가린다. 기록 묶음에는 서버 키와 주소를 넣지 않고,
+시험 명령(`--` 뒤)은 알아볼 수 있는 꼴(`SAFE_COMMAND_WORD`: 48자 이하의 영문자, 숫자, 경로 구분자
+와 `_.:=+,@-`)의 낱말만 화면과 회차 파일에 남기고 나머지는 `***`로 바꾼다(허용 목록).
 
 못 보는 것. 2026-11-14에 이 스크립트로 `pods` 구성(RTX 3090 두 장)이 서고 두 모델이 `tool_calls`로
 답하는 것과, `shared` 구성의 서버 둘이 서서 준비 확인을 통과하고 두 모델이 `tool_calls`로 답하는
@@ -69,6 +75,9 @@ destroy`로 지우고, 자원이 없음을 확인한 폴더를 지운다. 이 �
 지우는 것은 봤다. 90분 값은 띄워 보지 않았다. 단가 표는 Runpod 가격 페이지(Secure Cloud)를
 `PRICE_TABLE_DATE`에 WebFetch로 받아 그 웹 요약에서 읽은 값이다. 원문과 대조하지 않았다. 띄워 본
 Terraform `cost`는 A40(0.59)과 RTX 3090 두 장(1.0)만 표와 같았다.
+시험 명령에 섞여 든 다른 서비스의 키 가운데 48자 이하의 글자만으로 된 것은 위 꼴을 지나 그대로
+남는다(그래서 명령 줄에 키를 풀어 넣지 않는다. 계정 키만 등록해 가린다). 자식이 스스로 주는
+`uv run --env-file`이 계정 키가 든 파일을 읽는 길도 막지 않는다.
 프로세스의 명령 줄을 읽지 못하는 프로세스(다른 사용자의 것)는 죽은 것으로 읽어 그 잠금을 치운다.
 위 `sweep`과 `run`은 같은 사용자의 프로세스만 본다. 모델 목록을 읽는 요청은 시스템의 프록시
 설정을 따른다.
@@ -131,6 +140,13 @@ SHARED_UTILIZATION = 0.45
 # `tests/tools/test_llm_local_state.py`의 주석에 적었다.
 SHARED_KV_CACHE_BYTES = 4 * 1024**3
 DEFAULT_TEST_COMMAND = ("uv", "run", "pytest", "-m", "llm_local")
+COLLECT_TIMEOUT_SECONDS = 10 * 60.0
+# 시험 명령을 화면과 회차 파일에 남길 때 그대로 두는 낱말의 꼴(허용 목록). 짧은 낱말, 옵션, 경로다.
+# 공백이 들었거나 48자를 넘는 낱말(`Authorization: Bearer <키>`, 긴 키)은 가린다.
+SAFE_COMMAND_WORD = re.compile(r"[A-Za-z0-9_./\\:=+,@-]{1,48}")
+# 자식에게 넘기지 않는 환경 변수. 계정 키와, 그 키가 든 파일을 자식의 `uv run`이 다시 읽게 하는
+# 변수다.
+CHILD_ENV_DROPPED = ("RUNPOD_API_KEY", "UV_ENV_FILE")
 MASK = "***"
 SERVER_KEY_PREFIX = "sk-local-"
 # 앞 세션이 남긴 자원을 지우는 길은 그 세션의 키를 모른다. 키의 꼴(`token_urlsafe`의
@@ -671,12 +687,55 @@ def destroy_folder(folder: Path, key: str | None) -> bool:
 # --- 시험 자식 ---
 
 
+def without_dropped(base: Mapping[str, str]) -> dict[str, str]:
+    """자식에게 넘기지 않는 환경 변수(`CHILD_ENV_DROPPED`)를 뺀 환경."""
+    return {k: v for k, v in base.items() if k not in CHILD_ENV_DROPPED}
+
+
+def recorded_command(command: Sequence[str]) -> list[str]:
+    """화면과 회차 파일(영구 저장)에 남기는 시험 명령. 알아볼 수 있는 꼴(`SAFE_COMMAND_WORD`)의
+    낱말만 남기고 나머지는 가린다. 남기면 안 되는 꼴을 하나씩 거르지 않고 남길 꼴을 좁힌다
+    (`.claude/rules/tools.md`의 허용 목록). 남긴 낱말도 `Reporter`를 거치므로 등록된 계정 키와
+    서버 키는 짧은 낱말로 섞여 들어도 가려진다."""
+    return [OUT.clean(w) if SAFE_COMMAND_WORD.fullmatch(w) else MASK for w in command]
+
+
+def default_selection_runs_tests(command: Sequence[str]) -> bool:
+    """사용자가 시험 명령을 주지 않아 기본 명령(`uv run pytest -m llm_local`)이면, 그 선택이 시험을
+    고르는지 서버를 빌리기 전에 `--collect-only`로 본다. 고르는 시험이 없으면 pytest는 종료
+    코드 5로 끝나는데, 서버를 먼저 띄우면 시험 하나 없는 회차에 비용만 든다(티켓 05가
+    `llm_local` 마커의 시험을 더하기 전에는 늘 그렇다). 시험이 고르는 길을 확인하지 못해도
+    (종료 코드 4의 마커 선언 오류, 시간 제한) 띄우지 않는다."""
+    if tuple(command) != DEFAULT_TEST_COMMAND:
+        return True
+    outcome = execute(
+        (*DEFAULT_TEST_COMMAND, "--collect-only", "-q"),
+        env=without_dropped(os.environ),
+        cwd=REPO_ROOT,
+        timeout=COLLECT_TIMEOUT_SECONDS,
+    )
+    if outcome.returncode == 0:
+        return True
+    OUT.tail("시험 선택 확인", outcome)
+    problem = (
+        "고르는 시험이 없다(종료 코드 5)"
+        if outcome.returncode == 5
+        else f"시험이 고른다고 확인하지 못했다(종료 코드 {outcome.returncode})"
+    )
+    OUT.say(
+        f"띄우지 않고 끝난다. 기본 시험 명령(`{' '.join(DEFAULT_TEST_COMMAND)}`)이 {problem}. "
+        "`--` 뒤에 시험 명령을 주어 다시 친다(`-- <명령>`)."
+    )
+    return False
+
+
 def child_env(
     base: Mapping[str, str], folder: Path, servers: Sequence[tuple[str, str, str]]
 ) -> dict[str, str]:
-    """시험 자식의 환경. 환경 변수 여섯을 채우고 `RUNPOD_API_KEY`를 뺀다. `PYTEST_ADDOPTS`로 JUnit
-    XML과 basetemp를 상태 폴더 안에 두게 한다(자식이 pytest가 아니면 그 변수는 쓰이지 않는다)."""
-    env = {k: v for k, v in base.items() if k != "RUNPOD_API_KEY"}
+    """시험 자식의 환경. 환경 변수 여섯을 채우고 `CHILD_ENV_DROPPED`(계정 키와 `UV_ENV_FILE`)를
+    뺀다. `PYTEST_ADDOPTS`로 JUnit XML과 basetemp를 상태 폴더 안에 두게 한다(자식이 pytest가
+    아니면 그 변수는 쓰이지 않는다)."""
+    env = without_dropped(base)
     for model, (url, model_id, key) in zip(MODELS, servers, strict=True):
         url_name, id_name, key_name = env_names(model.number)
         env[url_name], env[id_name], env[key_name] = url, model_id, key
@@ -899,6 +958,9 @@ def _run(*, yes: bool, command: tuple[str, ...]) -> int:
     if problems:
         OUT.say("띄우지 않고 끝난다. 모자란 것:\n" + "\n".join(f"  - {p}" for p in problems))
         return NOT_LAUNCHED
+    OUT.add_secret(os.environ.get("RUNPOD_API_KEY", ""))  # 어느 글에 섞여 들어도 가린다
+    if not default_selection_runs_tests(command):
+        return NOT_LAUNCHED
     root = state_root()
     name = folder_name(branch)
     lock = acquire(root, name)
@@ -910,6 +972,11 @@ def _run(*, yes: bool, command: tuple[str, ...]) -> int:
         return NOT_LAUNCHED
     try:
         folder = root / name
+        if is_link(folder):
+            # 링크를 따라가면 `mkdir`이 다른 폴더에서 성공하고, 그 폴더의 상태에 자원이 있으면
+            # 확인 전에 그 자원을 지운다. 이 명령은 폴더를 링크로 만들지 않으므로 밖에서 온 것이다.
+            OUT.say(f"상태 폴더 자리가 링크라 따라가지 않고 띄우지 않는다: {folder}")
+            return NOT_LAUNCHED
         folder.mkdir(parents=True, exist_ok=True)
         (folder / MARKER).write_text("agent-os llm_local\n", encoding="utf-8")
         if state_has_resources(folder):
@@ -1037,7 +1104,7 @@ def _test(state: Round) -> None:
     triples = [(s.base_url, s.model.model_id, state.key) for s in state.servers]
     clear_results(state.folder)  # 앞 회차의 XML과 basetemp가 이번 기록에 실리지 않게 한다
     env = child_env(dict(os.environ), state.folder, triples)
-    OUT.say("시험을 돌린다: " + " ".join(state.command))
+    OUT.say("시험을 돌린다: " + " ".join(recorded_command(state.command)))
     state.child = execute(state.command, env=env, cwd=REPO_ROOT, timeout=CHILD_TIMEOUT_SECONDS)
     OUT.tail("시험 출력", state.child)
     state.results = read_results(state.folder)
@@ -1101,7 +1168,7 @@ def _record(state: Round, code: int) -> dict[str, object]:
         "cost_per_hour": state.hourly,
         "price_table_date": PRICE_TABLE_DATE,
         "terraform_output_masked": OUT.terraform_masked,
-        "test_command": list(state.command),
+        "test_command": recorded_command(state.command),
         "test_exit_code": state.child.returncode if state.child else None,
         "reason": state.invalid_reason
         or ("지우기 실패" if state.destroy_failed else "시험이 끝났다"),
