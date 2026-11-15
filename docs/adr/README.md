@@ -65,5 +65,7 @@
 | [0059](0059-portal-login-mode-signs-in-through-named-oidc-login-servers-and-keeps-login-state-in-a-signed-cookie.md) | 질문 페이지의 로그인 모드는 설정에 이름 붙여 적은 로그인 서버의 OIDC로 사람을 확인하고, 로그인 상태를 서명된 쿠키에 두며 Agent OS의 계약은 바꾸지 않는다 | accepted | 2026-11-12 |
 | [0060](0060-login-requirement-ends-an-unverified-run-and-the-login-principal-takes-over-the-anonymous-conversation.md) | 로그인 확인 표시가 없는 최종 사용자의 실행이 로그인 요구에 닿으면 실행이 끝나고, 로그인한 뒤에는 익명 주체의 대화를 넘겨받아 같은 질문을 다시 보낸다 | accepted | 2026-11-12 |
 | [0061](0061-widget-draws-login-state-notice-and-dark-mode-switch-and-reads-per-site-widget-settings-from-a-widget-side-server.md) | 위젯이 로그인 상태와 고지와 다크 모드 스위치를 직접 그리고, 사이트마다의 위젯 설정을 위젯 쪽 서버에서 받아 오며, 주소 하나를 창으로 여는 URL 방식을 더한다 | accepted | 2026-11-14 |
+| [0062](0062-admin-ui-signs-in-with-accounts-kept-in-postgres-and-the-two-shared-tokens-go-away.md) | 관리 화면은 PostgreSQL에 둔 운영자 계정으로 로그인하고, 운영자 로그인 상태를 쿠키의 짧은 JWT와 갱신용 번호에 두며, 관리 토큰과 채널 토큰을 없앤다 | accepted | 2026-11-15 |
+| [0063](0063-admin-ui-starts-runs-from-a-chat-screen-and-the-trace-records-the-requesting-and-deciding-accounts.md) | 관리 화면은 대화 화면에서 채널로 실행을 일으키고, 트레이스는 요청한 계정과 결정한 계정을 주체와 따로 남긴다 | accepted | 2026-11-15 |
 
 ADR을 먼저 확인하는 상황 넷: 스택이나 라이브러리를 바꿀 때, 디렉터리나 층 경계를 바꿀 때, 디스크 형식(매니페스트, 이벤트)을 바꿀 때, 기존 코드가 왜 이렇게 되어 있는지 이해되지 않을 때.

@@ -1,0 +1,10 @@
+# pg_stack 프로브가 재는 후보. 2026-11-14 에 `uv pip compile` 이 고른 PyPI 최신 안정판으로 고정했다.
+# 전이 의존은 적지 않는다. 저장소의 pyproject.toml 과 uv.lock 사본에 `uv add -r` 로 더해 저장소의
+# 잠금과 함께 푼다(README 의 다시 돌리기).
+psycopg[binary,pool]==3.3.9
+asyncpg==0.32.0
+asyncpg-stubs==0.32.0
+sqlalchemy[asyncio]==2.1.8
+alembic==1.20.1
+yoyo-migrations==9.0.0
+testcontainers[postgres]==4.15.0
