@@ -1,0 +1,10 @@
+# 빌드 컨텍스트는 저장소 루트다. 들일 것만 연다(허용 목록).
+*
+!pyproject.toml
+!uv.lock
+!README.md
+!src
+!plugins
+**/__pycache__
+# 개발 PC에서 serve 를 돌리다 남은 운영자 파일이 이미지에 구워지지 않게 한다
+plugins/disabled.toml
