@@ -33,6 +33,19 @@
 - `/sync-design-system 확인`은 부르지 않았다. 웹 편집이 주석 한 줄(`web/apps/portal/playwright.config.ts`, `web/packages/e2e-stack/src/plugins.ts`)이라 화면 코드가 바뀌지 않았다.
 - `uv run pyright`는 0 오류다. 도구가 낸 힌트 하나(`tests/test_main.py`의 `_missing(directory)`의 안 쓰는 인자)는 이 브랜치의 변경에 들지 않은 기존 코드이고(`git diff 8f891430 -- tests/test_main.py`에 그 함수가 없다) 같은 꼴의 호출 자리(`_other_principal(directory)`)와 서명을 맞춘 것이라 두었다.
 
+## 인계 (커밋 뒤)
+
+컨텍스트가 문턱을 넘은 채 커밋 뒤 경계에 와서 인계한다. 이 세션의 제목은 `feature/05-openai-compatible-adapter-and-local-model-test (인계함)`으로 바뀐다.
+
+- 커밋 `1b9f7b192`(pre-commit 통과)까지 했고 푸시도 PR도 아직 없다. 첫 시도는 변이 표 검사(`check-mutations`)에서 막혀 위 "돌려서 본 것"의 둘째 줄대로 고쳤다.
+- 남은 일: ① `origin/dev`(PR #576, `ee01b0574`)를 이 브랜치에 합친다. 이 브랜치와 같이 고친 파일은 `.github/PULL_REQUEST_TEMPLATE.md`, `.github/workflows/ci.yml`, `CLAUDE.md`, `docs/constitution/README.md`, `docs/constitution/operations.md`(글자 충돌 후보)이고 dev의 헌법 판은 3.0.100이라 이 브랜치의 3.0.101을 그대로 둔다. 합친 뒤 게이트와 `sibling_overlap.py`를 다시 본다. ② 푸시하고 PR을 연다(티켓은 done). ③ `merge.md` 2의 봇 회차. ④ `merge.md` 3의 로컬 모델 시험: `uv run --env-file ../../../.env python tools/llm_local.py run`을 `--yes` 없이 먼저 쳐 예상 비용을 사용자에게 보이고 확인을 받은 뒤 `--yes`로 백그라운드에 띄운다. 두 모델 모두 통과해야 하고, 시험한 커밋 뒤에 범위에 드는 변경을 더 커밋하면 기록은 무효다. 합치는 일과 봇 회차의 고침은 시험 전에 끝낸다. 결과를 이 일지와 PR 코멘트에 옮기고 티켓 "병합 전"의 상자 셋과 "검증"의 마지막 상자를 그때 체크한다. ⑤ 병합과 `sweep`.
+- 이 세션이 어림한 비용(웹 요약의 단가, 2026-11-13자이고 원문으로 확인하지 않았다): 구성 하나당 30분이면 약 $0.27~0.59, 90분 상한이면 $0.81~1.77. 파드는 A5000 둘이 시간당 $0.54로 먼저 시도하고 못 구하면 RTX 3090 $1.00, A40 $1.18, 공유 A40 $0.59 순이며 타이머가 90분 뒤 지운다. 실제 값은 `--yes` 없는 `run`이 찍는 예상 비용으로 다시 본다.
+- 저장소 루트에 내 명령이 깨진 경로로 만든 임시물 셋(추적하지 않는다)이 남았다: `UsersUserAppDataLocalTempclaude9060abe0b92613e974a416ce-0986-4c38-a94e-784e4e22d04cscratchpadcanary-claude-md/`, 같은 접두의 `...canary-tests-rule/`, `C` 뒤 깨진 글자로 시작하는 `...scratchpadpreflight_all.txt`. `rm`을 안전 검사가 막아 지우지 못했다. 커밋에 싣지 않는다(경로를 지정해 스테이지한다). 지울 수 있으면 지우고, 지우지 못하면 PR 뒤 정리를 사용자에게 알린다.
+- 티켓 03 일지 "다음" 6의 구조 정리와 PR 575 회고 확인은 아래 "셀프 리뷰"의 판단대로 병합 뒤 "다음"으로 넘긴다(06이 남아 단계를 닫는 회고는 아직 아니다).
+- `check-quotes`의 경고 하나(위 "한 것"의 잔존 grep 줄의 따옴표 글자들이 저장소에 이제 없다)는 막지 않는 경고이고 그 글자들이 지운 원문의 기록이라 두었다.
+- open-session을 부른다 2026-11-15T08:38Z
+- 인계 못함 커밋 뒤 (open_session.ps1 호출을 자동 모드 분류기가 거부했다. 제목은 되돌렸고 이 세션이 잇는다. 워크트리 잠금은 이미 풀렸고 다시 잠그지 않는다)
+
 ## 셀프 리뷰
 
 `/code-review`(표준·명세 두 축)와 PR 직전 버그·성능 축을 돌렸다.
@@ -42,3 +55,12 @@
 - 티켓 03 일지 "다음" 6의 구조 정리(지우기 경로의 CQS, `Round` 제자리 변경, `except` 안에서 지우기, `run(yes)` 불리언, `tools/llm_local.py` 분리, `_bring_up`의 `OUT.say(state.invalid_reason)` 반복)는 05가 `tools/llm_local.py`를 고치지 않고(환경 변수 이름 상수를 import만 한다) 이 PR의 병합 전에 그 명령을 그대로 쓰므로, 명령의 모양을 바꾸지 않으려고 05 전에도 중에도 하지 않았다. 병합 뒤 "다음"에 이어 둔다.
 - 03의 PR 575 봇 회차 회고(승인할 후보 없음)는 PR 코멘트에만 있어 이 일지의 "## 회고"로 옮기지 않았다. 단계를 닫는 회고 때 확인한다.
 - 기본 `run`(`--` 없음)이 `--collect-only`에서 종료 코드 4로 멈추던 것은 이 티켓이 `llm_local` 시험을 더해 풀린다. 병합 전 실제 시험의 첫 호출에서 확인한다.
+
+## 봇 회차
+
+PR 578을 연 뒤 첫 회차(CodeRabbit, claude-review)의 지적을 건별로 판단했다. 첫 회차라 Minor와 Nit도 건별로 본다.
+
+- Minor(PR 템플릿): 체크리스트의 `llm_local` 안내가 `--yes`를 먼저 붙여 치는 것처럼 읽혔다. 비용을 확인받은 뒤에 `--yes`를 붙인다는 순서가 `CLAUDE.md`와 어긋났으므로 고쳤다(`.github/PULL_REQUEST_TEMPLATE.md`).
+- Critical(어댑터): 환경 변수 `OPENAI_CUSTOM_HEADERS`에 `Authorization`이 들어 있으면, 서버가 그 값을 오류 문구에 되울릴 때 어댑터가 가리지 못한다는 지적이다. 가짜 서버로 재 보니 라이브러리는 환경의 `Authorization`을 키에서 만든 헤더보다 앞서 보낸다(열기에서 `Bearer <환경 값>`을 서버가 받는 것을 표지로 확인했다). 그 헤더만 떼어 내려면 `default_headers`를 직접 주어야 하는데, 그러면 키 함수까지 대체되므로 깨끗하게 막을 길이 없다. 그래서 막지 않고, 서버가 되울린 그 값(전체와 스킴을 뗀 자격 증명 부분)을 키처럼 `***`로 가린다(`_ambient_authorizations`). 다른 이름의 헤더에 실은 비밀은 가리지 않으며, 이 한계는 모듈 독스트링의 알려진 한계 둘째에 적었다. 시험은 실패하는 것을 먼저 보고(키 변수 있음과 없음 두 갈래) 고쳐 통과시켰다.
+- Nit(claude-review): 문구 갈래를 둘로 줄이자는 제안이다. 갈래 넷은 서버가 무엇을 되울릴 수 있는지(상태 오류, 연결 오류, 응답 검증 오류, 그 밖)에 따라 가리는 내용이 달라서 나눈 것이므로 받지 않았다. 그 이유를 PR 코멘트에 적었다.
+- 손으로 본 것: 가짜 서버로 헤더 우선순위를 잰 스크래치 스크립트(`PYTHONPATH=. uv run python <스크래치>/env_auth_header_check.py`)를 돌려 위 사실을 확인했다. 스크립트는 저장소에 싣지 않았다. 근거 문장은 이 일지가 원천이다.

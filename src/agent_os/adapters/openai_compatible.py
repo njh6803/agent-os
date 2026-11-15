@@ -64,7 +64,10 @@
    요청을 거절할 수 있다.
 2. 환경의 `OPENAI_ORG_ID`, `OPENAI_ORGANIZATION`, `OPENAI_PROJECT_ID`, `OPENAI_CUSTOM_HEADERS` 가
    키와 주소를 명시해도 모델 서버로 간다(두 라이브러리가 값이 없으면 환경에서 채운다). `serve` 의
-   환경을 정하는 운영자의 변수이고 모델 서버의 키가 아니라 막지 않는다.
+   환경을 정하는 운영자의 변수이고 모델 서버의 키가 아니라 막지 않는다. `OPENAI_CUSTOM_HEADERS` 에
+   `Authorization` 이 있으면 그 값이 `api_key_env` 로 만든 헤더보다 앞서 가고(재 보았다)
+   라이브러리에 그 하나만 떼어 내는 길이 없다. 서버가 그 값을 되울려도 문구에 남지 않게 키처럼
+   가린다(`_ambient_authorizations`). 다른 이름의 헤더(`X-Api-Key` 등)에 실은 비밀은 가리지 않는다.
 3. 서버가 키를 잘라 내거나 인코딩해 되울리면 가리지 못한다. 한 호출 안에서 환경의 값이 두 번 이상
    바뀌면 가운데 값을 놓칠 수 있다.
 4. 라이브러리가 `httpcore2` 의 DEBUG 로그에 응답 헤더의 값을 찍는다. 헤더에 비밀을 싣는 서버나
@@ -117,19 +120,41 @@ class _KeySource:
         return value
 
     def masked(self, text: str, started_with: str) -> str:
-        """글에서 키 값을 글자 그대로 찾아 가린다. 값을 바꿔 되울린 것은 놓친다.
+        """글에서 키 값과 환경의 `Authorization` 헤더 값을 글자 그대로 찾아 가린다. 값을 바꿔 되울린
+        것은 놓친다.
 
         찾는 값은 둘이다. 호출을 시작하며 읽어 둔 값(`started_with`)과 지금 환경의 값이다. 지금의
         값만 찾으면 요청이 나간 뒤 환경의 값이 바뀐 호출에서 서버가 되울린 옛 값이 글에 남는다. 호출
         도중에 값이 한 번 바뀌면 보낸 값은 그 둘 가운데 하나다. 두 번 이상 바뀌면 가운데 값을 놓칠
         수 있다.
         """
-        if self._variable is None:
-            return text
-        for value in (started_with, self._env.get(self._variable)):
+        secrets = _ambient_authorizations(self._env)
+        if self._variable is not None:
+            secrets = [started_with, self._env.get(self._variable) or "", *secrets]
+        for value in secrets:
             if value:
                 text = text.replace(value, MASK)
         return text
+
+
+def _ambient_authorizations(env: Mapping[str, str]) -> list[str]:
+    """환경의 `OPENAI_CUSTOM_HEADERS` 에 적힌 `Authorization` 의 값과 그 자격 증명 조각.
+
+    라이브러리가 읽는 꼴을 따른다. 줄마다 첫 `:` 앞이 이름이고 뒤가 값이다. 이 헤더는 키로 만든
+    헤더보다 앞서 서버로 가므로(모듈 독스트링의 알려진 한계) 서버가 되울리는 것은 이 값이다. 값
+    전체(`Bearer abc`)와 그 뒤의 조각(`abc`)을 함께 돌려준다. 서버가 어느 쪽을 되울릴지 모른다.
+    """
+    found: list[str] = []
+    for line in env.get("OPENAI_CUSTOM_HEADERS", "").split("\n"):
+        name, colon, value = line.partition(":")
+        if not colon or name.strip().lower() != "authorization":
+            continue
+        value = value.strip()
+        found.append(value)
+        scheme_and_credentials = value.split(None, 1)
+        if len(scheme_and_credentials) == 2:
+            found.append(scheme_and_credentials[1])
+    return found
 
 
 class _ModelServerChat(ChatOpenAI):

@@ -442,6 +442,29 @@ async def test_요청을_받은_뒤_환경의_키가_바뀌어도_옛_키도_새
     assert new_key not in message
 
 
+@pytest.mark.parametrize("with_key_variable", [True, False], ids=["키_변수_있음", "키_변수_없음"])
+async def test_환경의_Authorization_헤더가_키_설정을_앞서도_되울린_그_값은_문구에_없다(
+    monkeypatch: pytest.MonkeyPatch, *, with_key_variable: bool
+) -> None:
+    """`OPENAI_CUSTOM_HEADERS` 의 `Authorization` 은 라이브러리가 키로 만든 헤더보다 앞서 서버로
+    간다(막는 길이 없다. 모듈 독스트링의 알려진 한계). 서버로 가는 것은 막지 못해도 서버가 되울린 그
+    값이 `run_failed` 의 문구로 트레이스에 남지 않게 한다. 다른 헤더의 값(`X-Trace: 1`)은 가리지
+    않아 글을 망가뜨리지 않는다."""
+    env_token = "sk-env-header-token-77c1"
+    monkeypatch.setenv(KEY_VARIABLE, KEY)
+    monkeypatch.setenv("OPENAI_CUSTOM_HEADERS", f"X-Trace: 1\nAuthorization: Bearer {env_token}")
+    fields = {"api_key_env": KEY_VARIABLE} if with_key_variable else {}
+    with FakeModelServer(_echo_key) as server:
+        failure = await _failure_of(_model(server.base_url, **fields))
+
+    # 재려는 상황이 났다는 표지: 서버가 환경의 헤더를 실제로 받았다.
+    assert server.requests[0].header("authorization") == [f"Bearer {env_token}"]
+    message = str(failure)
+    assert "Incorrect API key provided: ***." in message
+    assert env_token not in message
+    assert KEY not in message
+
+
 async def test_문구의_주소는_모델_파일에_적은_글자_그대로_경로까지_실린다(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
