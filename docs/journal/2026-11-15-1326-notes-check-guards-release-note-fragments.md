@@ -63,3 +63,24 @@ CodeRabbit은 무료 리뷰 한도에 걸려 리뷰가 없었다(`Review rate li
 남은 일: 셀프 리뷰(`/code-review`)와 반영, 커밋(pre-commit이 전체 러너를 돌린다. 이 세션은 아직 `uv run python tools/run_checks.py`를 돌리지 않았다), `origin/dev`를 합치기, PR(`dev`로), 봇 회차, 병합(`merge.md`의 "워크트리에서 병합할 때"). 티켓 체크박스는 모두 채웠고 `Status`는 `done`이다(마지막 "검증 명령이 모두 초록이다"는 커밋의 pre-commit이 확인하기 전까지 닫힌 것이 아니다. 초록이 아니면 되돌린다). `.scratch/plan.md`는 `tools/plan_table.py`를 돌렸고 바뀌지 않았다.
 open-session을 부른다 2026-11-15T04:52Z
 인계 못함 셀프 리뷰 직전: open_session.ps1 의 실행을 자동 모드 판정기가 거부했다(PowerShell 도구, 사유 없음). 제목은 되돌렸고 이 세션이 셀프 리뷰부터 잇는다.
+
+## 회고
+
+후보 셋, 판정은 승인 둘(회차로 셈), 기각 하나, 넘김 없음.
+
+- 승인 1(회차): 인계에 실패해 `인계 못함`을 적은 뒤에도 `hook_handoff`가 계기를 다시 넣었다. 이 세션에서 커밋 뒤 셋과 PR 연 뒤 하나가 왔고, 그때마다 `handoff.md`를 읽고 "인계하지 않는 때"에 든다고 판정해 잇는 데 컨텍스트가 들었다. 대기열 `0518`의 5회차로 더했다(처방은 그 항목의 `tools/hook_handoff.py`가 `인계 못함` 편집을 읽고 침묵하는 것이다). 이 항목이 회차 5에 닿아 하네스 chore 배치의 조건이 찼다. 반영은 이 PR이 아니라 그 chore가 한다.
+- 승인 2(회차): 인계 열기(`open_session.ps1`)를 자동 모드 판정기가 사유 없이 거부해 인계를 못 했다. 대기열 `open-session-send-denied-despite-allow-rule`의 7회차로 더했다. 그 호출이 허용 규칙과 글자까지 맞았는지는 이 세션에서 재 보지 않았다.
+- 기각: 제목을 고쳐도 `ci.yml`의 `ticket` 잡이 다시 돌지 않아 푸시 전까지 `verify`가 빨강인 것은 사건이 아니라 이 PR이 `operations.md`에 적은 설계 한계다.
+- 만료: `tools/queue_open_rows.py --ref origin/dev`의 만료할 항목은 없었다.
+- 이 세션에서 반영한 것은 없다(위 둘은 대기열 회차만 더했다).
+
+## 다음
+
+티켓 05는 이 PR로 닫힌다. 같은 기능(`release-image`)에서 막는 것이 모두 done인 `ready-for-agent` 티켓이 셋이다.
+
+- 06 `.scratch/release-image/issues/06-review-bot-checks-upgrade-bang.md` (05가 막았고 이제 풀렸다)
+- 07 `.scratch/release-image/issues/07-serve-image-runs-as-non-root-without-network.md` (02·03 done)
+- 08 `.scratch/release-image/issues/08-web-images-run-as-non-root.md` (03 done)
+
+셋은 나란히 도는 묶음이다(결정표의 "구현(나란히)" 줄). 09는 07·08을, 10은 09를, 11은 05·06·10을 기다린다. 대상 파일이 겹치는지는 지시문을 내는 세션이 `directive.md`대로 본다. 하네스 chore 배치는 그 기능의 마지막 티켓(11) 뒤에 연다(결정표). 대기열 `0518`이 회차 5에 닿아 그때 chore 조건에 든다.
+
