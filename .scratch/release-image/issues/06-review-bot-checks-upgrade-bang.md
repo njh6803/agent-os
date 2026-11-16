@@ -8,10 +8,10 @@ claude-review의 워크플로(`.github/workflows/claude-code-review.yml`)를 고
 
 **Blocked by:** 05
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] claude-review의 프롬프트에, 변경과 PR 제목 접두의 느낌표가 맞는지 `docs/constitution/operations.md`의 느낌표의 기준으로 보라는 줄을 더한다. 기준을 프롬프트에 다시 적지 않고 그 문서를 가리킨다(같은 사실은 한 곳에만 둔다)
-- [ ] 이 PR은 그 워크플로 파일, 이 티켓 파일, 일지만 싣는다. 티켓의 상태를 바꿔도 전체 계획 표(`.scratch/plan.md`)가 바뀌지 않는지 `uv run python tools/plan_table.py` 뒤의 diff로 본다. 바뀌면 가드가 거부하므로 멈추고 보고한다
-- [ ] 워크플로 감사(zizmor)를 지난다
-- [ ] 이 PR에서는 리뷰가 건너뛰므로, 셀프 리뷰와 PR 직전 리뷰가 이 변경의 유일한 리뷰다. 병합한 세션은 다음으로 열리는 티켓 PR에서 claude-review가 느낌표를 판정하는 줄을 내는지 그 PR의 세션이 일지에 적도록 다음 지시문에 넘긴다
-- [ ] 검증 명령이 모두 초록이다
+- [x] claude-review의 프롬프트에, 변경과 PR 제목 접두의 느낌표가 맞는지 `docs/constitution/operations.md`의 느낌표의 기준으로 보라는 줄을 더한다. 기준을 프롬프트에 다시 적지 않고 그 문서를 가리킨다(같은 사실은 한 곳에만 둔다)
+- [x] 이 PR은 그 워크플로 파일, 이 티켓 파일, 일지만 싣는다. 티켓의 상태를 바꿔도 전체 계획 표(`.scratch/plan.md`)가 바뀌지 않는지 `uv run python tools/plan_table.py` 뒤의 diff로 본다. 바뀌면 가드가 거부하므로 멈추고 보고한다
+- [x] 워크플로 감사(zizmor)를 지난다
+- [x] 이 PR에서는 리뷰가 건너뛰므로, 셀프 리뷰와 PR 직전 리뷰가 이 변경의 유일한 리뷰다. 병합한 세션은 다음으로 열리는 티켓 PR에서 claude-review가 느낌표를 판정하는 줄을 내는지 그 PR의 세션이 일지에 적도록 다음 지시문에 넘긴다
+- [x] 검증 명령이 모두 초록이다
