@@ -89,5 +89,6 @@ USER 10001:10001
 EXPOSE 8000
 ENTRYPOINT ["/usr/bin/tini", "--"]
 # 기본 모델은 CMD 에 박지 않는다. 플래그가 환경 변수 AGENT_OS_MODEL 을 이기므로(resolve_model_name),
-# 박으면 운영자가 환경 변수로 고른 모델이 조용히 무시된다(ADR 0040). 운영자가 환경 변수나 --model 로 준다.
+# 박으면 운영자가 환경 변수로 고른 모델이 조용히 무시된다(ADR 0040). 운영자는 환경 변수로 준다.
+# docker run <이미지> --model X 는 CMD 를 통째로 바꿔 tini 가 --model 을 실행하려다 실패하므로, 플래그를 쓰려면 CMD 전체를 다시 적는다.
 CMD ["agent-os", "serve", "--plugins-root", "/app/plugins", "--traces", "/data/traces"]
