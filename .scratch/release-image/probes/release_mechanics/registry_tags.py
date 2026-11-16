@@ -35,7 +35,9 @@ imagetools inspect`, `docker manifest inspect`)의 종료 코드와 글은 그 �
   갈래가 기대한 대로 캐시에서 왔거나(CACHED) 실제로 돈 것(DONE)이다.
 - load(build-push-action 의 `load: true` 에 해당하는 `--load`). 러너에 실은 이미지와 뒤이어 캐시로
   다시 지어 올린 이미지가 같은가, 증명을 켠 채 `--load` 하면 어떻게 되는가. 표지는 데몬의 이미지
-  저장 방식(스냅샷 저장소냐 아니냐)과 빌드 기록의 내보내기 줄이다.
+  저장 방식(스냅샷 저장소냐 아니냐)과 빌드 기록의 내보내기 줄이다. 캐시 갈래의 표지는 올리기 빌드의
+  `RUN` 단계가 CACHED 인 것이고, 증명을 켠 `--load` 갈래의 표지는 내보내기가 색인을 못 싣는다는
+  거절 문구(실패)나 증명 생성 줄(성공)이다. 아무 실패나 세지 않는다.
 
 못 보는 것. Docker Hub 자체(로그인, 받는 횟수 제한, 태그 불변 설정), 두 실행이 동시에 조회하고
 붙이는 경합, GitHub 러너의 Docker(이미지 저장 방식이 이 PC 와 다를 수 있다), 여러 플랫폼 이미지.
@@ -580,7 +582,9 @@ def section_load(probe: Probe, context: Path) -> None:
         config_digest = str(config.get("digest")) if config is not None else ""
         probe.note(
             slot,
-            measured=loaded.code == 0 and pushed.code == 0 and "CACHED" in pushed.err + pushed.out,
+            measured=loaded.code == 0
+            and pushed.code == 0
+            and run_step(pushed.err + pushed.out) == "CACHED",
             result=f"실은 이미지의 Id 와 올린 이미지의 config digest 가 "
             f"{'같다' if image_id and image_id == config_digest else '다르다'} ({store})",
         )
@@ -588,9 +592,14 @@ def section_load(probe: Probe, context: Path) -> None:
         attested = probe.run(*common, "--provenance=mode=max", "--sbom=true", "--load",
                              "-t", f"{local}-attested", str(context), timeout=600)  # fmt: skip
         probe.tagged.append(f"{local}-attested")
+        # 재려는 상황은 증명을 켠 채 --load 한 빌드가 실제로 증명 단계까지 갔거나(성공),
+        # 내보내기가 색인을 못 싣는다고 거절한 것(실패)이다. 아무 실패나 세지 않는다.
+        log = attested.err + attested.out
+        refused = attested.code != 0 and "docker exporter does not currently support" in log
+        generated = attested.code == 0 and "generating sbom" in log
         probe.note(
             slot,
-            measured="generating sbom" in attested.err + attested.out or attested.code != 0,
+            measured=refused or generated,
             result=f"종료 {attested.code}"
             + (f" '{attested.tail[:120]}'" if attested.code != 0 else "")
             + f" ({store})",

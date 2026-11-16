@@ -61,7 +61,7 @@ web/                       슬라이스 3부터. pnpm 워크스페이스. 파이
 | 8 | [answer-markdown](answer-markdown/plan.md) | 모델이 지은 답을 마크다운으로 그리는 공유 부품을 만들어 위젯에 적용해, 제목·목록·표·링크가 든 답이 기호 없이 읽히게 한다. | 없음 | done |
 | 8 | [base-agent](base-agent/plan.md) | 기본 에이전트 assistant와 문서 검색 스킬·연결·규칙을 함께 내, 요구가 없으면 그대로 쓰고 요구가 있으면 복사해 커스텀 에이전트를 만들게 한다. | mcp-http, approval-rules | in-progress |
 | 8 | [public-demo](public-demo/plan.md) | 공개 정부 문서를 넣은 클라우드 VM 한 대를 실제 운영할 배포와 따로 공개 주소에 열어, 누구나 공개 계정으로 로그인해 제품을 써 보고 출처가 붙은 답을 받게 한다. | base-agent, release-image, answer-eval, answer-markdown, rag-engine:release-image, rag-engine:search-eval, admin-login, portal-admin | todo |
-| 8 | [release-image](release-image/plan.md) | 판마다 서버와 관리 화면과 위젯과 위젯 미리보기 페이지의 컨테이너 이미지를 짓고 올리며 단독 배포 안내도 낸다. | pilot-portal | in-progress |
+| 8 | [release-image](release-image/plan.md) | 판마다 서버와 관리 화면과 위젯과 위젯 미리보기 페이지의 컨테이너 이미지를 짓고 올리며 단독 배포 안내도 낸다. | pilot-portal | done |
 | 9 | [admin-login](admin-login/plan.md) | 관리 화면에 운영자 계정 로그인과 대화 화면을 더하고, 관리 화면을 같은 서버의 다른 포트로 인터넷에 연다. | release-image, postgres-foundation | todo |
 | 9 | [deploy-package](deploy-package/plan.md) | agent-os와 문서 검색 서버를 Docker Compose로 한 번에 띄우는 참조 배포를 준다. | local-model, portal-login, portal-admin, base-agent, release-image, ops-backup-upgrade, diag-bundle, mcp-http, rag-engine:release-image, rag-engine:admin, rag-engine:backup-upgrade, rag-engine:diag-bundle | todo |
 | 9 | [diag-bundle](diag-bundle/plan.md) | 문제를 살필 때 판과 구성과 최근 실패 원인을 비밀 값 없이 파일 하나로 묶는 명령을 준다. | release-image, mcp-http | todo |
@@ -115,7 +115,7 @@ web/                       슬라이스 3부터. pnpm 워크스페이스. 파이
 
 ## 프론티어
 
-done 이 아니고, Blocked by 가 비었거나 이 저장소의 막는 기능이 모두 done 인 기능이다. `base-agent`, `release-image`
+done 이 아니고, Blocked by 가 비었거나 이 저장소의 막는 기능이 모두 done 인 기능이다. `base-agent`, `diag-bundle`, `ops-backup-upgrade`, `postgres-foundation`, `widget-runtime-values`
 
 ## 다른 저장소를 기다리는 기능
 

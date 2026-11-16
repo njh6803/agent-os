@@ -16,7 +16,7 @@
 - `bundle --number N --namespace NS [--source DIR] [--out DIR]`: `agent-os-<N>.tar.gz` 를 짓고
   그 경로를 낸다.
 - `judge_number_tag(종료 코드, 출력, digest)`: 번호 태그 조회의 결과로 붙인다·그대로 둔다·거부한다·
-  붙이지 않는다를 가른다. 워크플로가 부를 명령줄은 판 내기 워크플로 티켓이 더한다.
+  붙이지 않는다를 가른다. 워크플로는 `tools/release_ci.py judge` 를 거쳐 부른다.
 
 `PRODUCT_PATHS` 가 제품 변경의 경로 목록의 원천이다. 노트 검사(`tools/check_notes.py`)가 같은 것을
 가져다 쓴다.

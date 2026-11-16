@@ -28,7 +28,8 @@ CVE 가 있으면 그 CVE 로 바꿔 센다.
   Critical·High 건수. 표지는 JSON 이 풀리고 그 안의 OS 가 대상의 OS(debian 과 주 판)인 것이다.
 - gate. 문턱 플래그(Critical 만, Critical 과 High)의 종료 코드와 출력 건수가 거르지 않은 JSON 에서
   따로 센 건수와 맞는가. 표지는 scan 의 표지에 더해 종료 코드가 0 이나 그 도구의 문턱 코드(Trivy 는
-  `--exit-code` 로 준 10, Grype 는 2)인 것이다.
+  `--exit-code` 로 준 10, Grype 는 2)인 것이다. 양성 대조 대상은 거르지 않은 JSON 에 그 문턱의
+  고칠 수 있는 취약점이 실제로 있는 회차만 센다(문턱을 넘는 결과를 만들지 못했으면 측정 아님).
 - error. 없는 입력을 줬을 때의 종료 코드가 문턱 코드와 갈리는가. 표지는 없는 입력을 탓하는 문구다.
 - compare. 같은 대상에서 두 도구가 고칠 수 있는 Critical·High 로 센 CVE 가 어떻게 겹치는가. 표지는
   두 도구의 첫 scan 회차가 측정인 것이다.
@@ -449,9 +450,16 @@ def section_gate(
                     want = GATE_CODES[tool] if expected > 0 else 0
                     agrees = report.done.code == want and shown == expected
                     allowed = report.done.code in (0, GATE_CODES[tool])
+                    # 양성 대조는 문턱을 실제로 넘는 결과(거르지 않은 JSON 에 고칠 수 있는 해당
+                    # 심각도가 있다)를 만든 회차만 센다. 없으면 "0 으로 끝났다"가 문턱이 안 걸린
+                    # 것인지 문턱이 걸러 내지 못한 것인지 가르지 못한다.
+                    crossed = target is not TARGETS[0] or expected > 0
                     probe.note(
                         slot,
-                        measured=base is not None and report.matches(target) and allowed,
+                        measured=base is not None
+                        and report.matches(target)
+                        and allowed
+                        and crossed,
                         result=f"`{' '.join(flags)}` 종료 {report.done.code}, "
                         f"거르지 않은 JSON 으로 센 것 {expected}건, 문턱 출력 {shown}건, "
                         f"{'맞다' if agrees else '어긋난다'}",
@@ -563,6 +571,21 @@ def cleanup(probe: Probe, volumes: list[str]) -> None:
         probe.run(["docker", "volume", "rm", volume], timeout=120)
 
 
+def volumes_to_remove(trivy_cache: str | None, grype_cache: str | None) -> list[str]:
+    """끝에 지울 볼륨. 프로브가 만든 것만이다.
+
+    인자로 명시해 넘긴 이름은 사용자의 것이다. 그 이름이 다른 도구의 기본 이름이나 IN_VOLUME 과
+    같아도 지울 목록에 넣지 않는다(이름이 아니라 "인자로 받았는가"가 소유를 정한다).
+    """
+    explicit = {name for name in (trivy_cache, grype_cache) if name}
+    made = [IN_VOLUME]
+    if not trivy_cache:
+        made.append(OWN_CACHES["trivy"])
+    if not grype_cache:
+        made.append(OWN_CACHES["grype"])
+    return [name for name in dict.fromkeys(made) if name not in explicit]
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=(__doc__ or "").split("\n")[0])
     parser.add_argument("--trivy-cache", help="이미 받은 Trivy DB 볼륨(지우지 않는다)")
@@ -577,13 +600,7 @@ def main() -> int:
         "trivy": arguments.trivy_cache or OWN_CACHES["trivy"],
         "grype": arguments.grype_cache or OWN_CACHES["grype"],
     }
-    # 소유는 이름이 아니라 인자를 생략했는지로 정한다.
-    # 인자로 받은 볼륨은 기본 이름과 같아도 지우지 않는다.
-    passed: dict[str, str | None] = {
-        "trivy": arguments.trivy_cache,
-        "grype": arguments.grype_cache,
-    }
-    made = [IN_VOLUME, *(caches[tool] for tool in TOOLS if not passed[tool])]
+    made = volumes_to_remove(arguments.trivy_cache, arguments.grype_cache)
     print(f"원본 출력: {work / 'raw.log'}", flush=True)
     try:
         for volume in made:

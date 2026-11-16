@@ -55,7 +55,7 @@ release-image 명세가 ADR 0056에서 넘겨받은 세부(판 내기의 차례,
 
 ## 2. 번호 태그를 덮지 않는 방법
 
-쟀다(probes/release_mechanics/registry_tags.py, 로컬 `registry:3`). 첫 실행은 `tags`·`lookup`·`overwrite`·`guard`·`load` 19회차가 모두 측정이고 측정 아님 0이었다. 뒤에 더한 `rebuild` 갈래(8번)는 `--sections rebuild`로 따로 돌려 2회차가 모두 측정이었다. 그 뒤 JSON을 푸는 도움 함수의 타입 표기만 고치고(pyright strict에 맞추려고) 모든 갈래를 다시 돌려 21회차가 모두 측정이고 측정 아님 0이었으며, 회차마다 결과가 앞의 두 실행과 같았다. 같은 날 손으로 출력 모양을 본 뒤 프로브를 지었고, 돌린 뒤 판정 기준을 바꾸지 않았다.
+쟀다(probes/release_mechanics/registry_tags.py, 로컬 `registry:3`). 첫 실행은 `tags`·`lookup`·`overwrite`·`guard`·`load` 19회차가 모두 측정이고 측정 아님 0이었다. 뒤에 더한 `rebuild` 갈래(8번)는 `--sections rebuild`로 따로 돌려 2회차가 모두 측정이었다. 그 뒤 JSON을 푸는 도움 함수의 타입 표기만 고치고(pyright strict에 맞추려고) 모든 갈래를 다시 돌려 21회차가 모두 측정이고 측정 아님 0이었으며, 회차마다 결과가 앞의 두 실행과 같았다. 같은 날 손으로 출력 모양을 본 뒤 프로브를 지었고, 돌린 뒤 판정 기준을 바꾸지 않았다. 2026-11-16에 표지를 고친 판(맨 아래 "보류했던 지적을 고치고 다시 잰 것")으로 모든 갈래를 다시 돌려 21회차가 모두 측정이고 측정 아님 0, 종료 코드 0이었으며 회차마다 결과가 아래와 같았다(쟀다).
 
 - 가. 해시 태그로 올린 뒤 `docker buildx imagetools create -t <번호 태그> <해시 태그>`로 번호를 붙인다.
   - 원본이 한 플랫폼 매니페스트일 때(`docker push`로 올린 증명 없는 이미지) 기본값은 번호 태그에 새 매니페스트 목록을 만들어 digest가 달라진다. 목록 안의 digest는 원본과 같다. `--prefer-index=false`를 주면 digest가 같다.
@@ -72,6 +72,27 @@ release-image 명세가 ADR 0056에서 넘겨받은 세부(판 내기의 차례,
 | 401·429·500만 내는 가짜 서버 | 1 | `ERROR: unexpected status from HEAD request to …: 401 Unauthorized`(429 Too Many Requests, 500 Internal Server Error도 같은 꼴) |
 
   마지막 실행에서 `imagetools inspect` 한 번에 가짜 서버가 받은 요청은 401과 429에서 5건, 500에서 2건이었다. 프로브가 요청의 수만 적어 어떤 요청을 왜 되풀이했는지는 모른다. `docker manifest inspect --insecure`도 없음과 실패가 모두 종료 1이다(`no such manifest: <참조>`, `failed to configure transport: error pinging v2 registry: …`). 종료 코드만으로는 "없다"와 "모른다"를 가를 수 없다. 마지막 줄이 `: not found`로 끝날 때만 없다고 읽어야 한다. 레지스트리의 HTTP `HEAD /v2/<저장소>/manifests/<태그>`는 200과 404로 가른다.
+  - 있는 태그의 출력 꼴(2026-11-16, 손으로 봤다. 프로브의 `start_registry`·`ensure_builder`·`push_index`·`create_tag`를 불러 쓴 세션 스크래치의 `plain_inspect.py`가 로컬 `registry:3`에 출처 증명과 SBOM을 붙인 색인을 올리고 `docker buildx imagetools inspect <참조>`를 쳤다. 종료 0, stderr 비어 있음, buildx v0.38.1. 해시 태그와 `imagetools create -t 0.9.0`으로 붙인 번호 태그 둘 다 같은 꼴이었고 첫 `Digest:` 줄의 값이 같았다). `tools/release.py`의 `judge_number_tag`가 읽는 줄은 맨 앞 칸에서 시작하는 첫 `Digest:` 줄이다.
+
+    ```
+    Name:      127.0.0.1:39460/ri-rel/app:0.9.0
+    MediaType: application/vnd.oci.image.index.v1+json
+    Digest:    sha256:289913c3f3d0e1c3fa6d145ed2e5bef45bbb0538436f5ee5b1dba3db19058445
+               
+    Manifests: 
+      Name:        127.0.0.1:39460/ri-rel/app:0.9.0@sha256:694a5c99f5f7ec91ca017048d686b1de960275eecd142922f3c84f9c382bf3e3
+      MediaType:   application/vnd.oci.image.manifest.v1+json
+      Platform:    linux/amd64
+                   
+      Name:        127.0.0.1:39460/ri-rel/app:0.9.0@sha256:aa585408f344a8220038132eb65cb1581ad631509f8923f8c8f07bb5ed9bc0af
+      MediaType:   application/vnd.oci.image.manifest.v1+json
+      Platform:    unknown/unknown
+      Annotations: 
+        vnd.docker.reference.digest: sha256:694a5c99f5f7ec91ca017048d686b1de960275eecd142922f3c84f9c382bf3e3
+        vnd.docker.reference.type:   attestation-manifest
+    ```
+
+    첫 `Digest:` 줄은 `Digest:` 다음 공백 넷과 `sha256:<64자>`다. 그 줄은 `Manifests:` 위에 하나뿐이고, 아래의 digest는 `Name:` 줄 끝과 `Annotations` 아래의 들여쓴 줄에 있어 맨 앞 칸에서 시작하지 않는다. 증명 없는 한 플랫폼 매니페스트는 `Name:`·`MediaType:`·`Digest:` 세 줄뿐이었다(같은 날 `lookup` 갈래의 원본 출력, 쟀다). 빈 칸만 있는 줄(`           `)이 `Digest:` 뒤와 항목 사이에 낀다.
 - 지키는 차례(가와 나를 함께). 조회해 없으면 `--prefer-index=false`로 붙이고, 같은 digest면 그대로 두고, 다른 digest면 거부하고, 조회가 실패하면 붙이지 않는다. 네 갈래 모두 기대대로 났고 뒤의 태그는 처음 붙인 digest를 가리켰다.
 - Docker Hub에서. 로그인하지 않고(이 PC에 저장된 자격을 보내지 않게 빈 `DOCKER_CONFIG`로) 물었다. 있는 태그 `docker.io/library/alpine:3.22`는 종료 0, 있는 저장소의 없는 태그 `docker.io/library/alpine:ri-rel-absent-tag`는 종료 1과 `ERROR: docker.io/library/alpine:ri-rel-absent-tag: not found`로 로컬 레지스트리와 같았다. 없는 저장소 둘(`library/` 아래와 없는 이름공간 아래)은 종료 1과 `ERROR: pull access denied, repository does not exist or may require authorization: server message: insufficient_scope: authorization failed`로, 로컬 레지스트리의 없는 저장소(`not found`)와 달랐다(손으로 봤다, `DOCKER_CONFIG=<빈 폴더> docker buildx imagetools inspect <참조>`, buildx v0.38.1). 그래서 번호 태그 조회는 해시 태그를 올려 저장소가 생긴 뒤에 해야 "없다"가 `not found`로 나온다. 로그인한 토큰으로 자기 저장소의 없는 태그를 물을 때의 문구는 로그인이 금지라 보지 못했다.
 - 못 본 것. 두 실행이 동시에 조회하고 붙이는 경합(동시 실행 묶음으로 막을 자리), 여러 플랫폼 이미지.
@@ -79,7 +100,7 @@ release-image 명세가 ADR 0056에서 넘겨받은 세부(판 내기의 차례,
 
 ## 3. 취약점 점검 도구
 
-쟀다(probes/release_mechanics/scan_tools.py, 35회차가 모두 측정이고 측정 아님 0). 이번 실행은 DB를 다시 받지 않으려고 손 실행에서 채운 DB 볼륨을 `--trivy-cache`·`--grype-cache`로 줬다(Trivy DB 갱신 2026-11-13 07:00 UTC, Grype DB 지은 때 2026-11-13T06:20:21Z). 손 실행에서 출력 모양을 본 뒤 프로브를 지었고, 돌린 뒤 판정 기준을 바꾸지 않았다. 대상은 `docker save`로 받은 tar다. 그 실행 뒤 JSON을 푸는 도움 함수의 타입 표기만 고쳤다(pyright strict에 맞추려고). 고친 판의 해석 함수를 그 실행이 남긴 점검 JSON 열두 개에 다시 걸어 아래 표와 같은 건수를 봤다(손으로 봤다, 세션 스크래치의 `parse_check.py`). 고친 판으로 Docker 실행 전체를 다시 돌리지는 않았다(DB를 다시 받아야 해서).
+쟀다(probes/release_mechanics/scan_tools.py, 35회차가 모두 측정이고 측정 아님 0). 이번 실행은 DB를 다시 받지 않으려고 손 실행에서 채운 DB 볼륨을 `--trivy-cache`·`--grype-cache`로 줬다(Trivy DB 갱신 2026-11-13 07:00 UTC, Grype DB 지은 때 2026-11-13T06:20:21Z). 손 실행에서 출력 모양을 본 뒤 프로브를 지었고, 돌린 뒤 판정 기준을 바꾸지 않았다. 대상은 `docker save`로 받은 tar다. 그 실행 뒤 JSON을 푸는 도움 함수의 타입 표기만 고쳤다(pyright strict에 맞추려고). 고친 판의 해석 함수를 그 실행이 남긴 점검 JSON 열두 개에 다시 걸어 아래 표와 같은 건수를 봤다(손으로 봤다, 세션 스크래치의 `parse_check.py`). 그때는 고친 판으로 Docker 실행 전체를 다시 돌리지 못했다(DB를 다시 받아야 해서). 2026-11-16에 표지를 고친 판으로 DB를 새로 받아 전체를 다시 돌렸고, 그 결과는 아래 표 다음의 "2026-11-16에 다시 쟀다"에 있다.
 
 | 대상 | 도구 | 고칠 수 있는 Critical | 고칠 수 있는 High | 전체 | 점검 시간(이 PC, 두 번) |
 |---|---|---|---|---|---|
@@ -94,6 +115,7 @@ release-image 명세가 ADR 0056에서 넘겨받은 세부(판 내기의 차례,
 - 두 후보에서 두 도구가 고칠 수 있는 Critical·High로 센 CVE는 같았다(겹침 2와 8, 한쪽만 0). 두 후보 모두 High는 `zlib1g` 1:1.3.dfsg+really1.3.1-1+b1의 CVE-2026-76844·CVE-2026-85091이고 Debian이 `+deb13u1`에서 고쳤다(Grype가 처음 본 날 2026-11-07). node는 그 밖에 npm 꾸러미 `brace-expansion` 5.0.9와 `undici` 6.28.0의 여섯이다(손으로 봤다, 프로브가 남긴 점검 JSON을 세션 스크래치의 `look_high.py`로 늘어놓았다). 바탕 이미지가 다시 지어지기 전에는 Critical·High 문턱이면 두 후보 모두 판 내기를 멈추고, Critical만이면 둘 다 지난다.
 - 양성 대조(Debian 12)에서는 Grype가 Trivy를 다 품고 더 냈다. Critical·High의 CVE가 둘 다 35, Grype만 47, Trivy만 0이었다. Grype만인 47을 Trivy는 LOW 9, MEDIUM 19로 매겼거나 19는 내지 않았고, 그 행의 꾸러미 종류는 deb 47행과 binary 19행(`/usr/local`의 CPython을 NVD CPE로 맞춘 것)이다.
 - 문턱의 종료 코드. 여섯 대상·도구 짝마다 문턱 둘(Critical만, Critical·High)을 걸어 열둘 모두 종료 코드와 출력 건수가 거르지 않은 JSON에서 따로 센 건수와 맞았다. 찾으면 Trivy는 `--exit-code`로 준 10, Grype는 2이고 없으면 0이다. 없는 입력은 두 도구 모두 1이라 문턱 코드와 갈린다. 쓴 플래그는 Trivy `--ignore-unfixed --severity CRITICAL[,HIGH] --exit-code 10`, Grype `--only-fixed --fail-on critical|high`다. Grype 도움말은 "set the return code to 2 if a vulnerability is found with a severity >= the given severity"다(손으로 봤다, `docker run --rm <grype 이미지> --help`).
+- 2026-11-16에 다시 쟀다(쟀다, scan_tools.py, DB를 새로 받아 35회차가 모두 측정이고 측정 아님 0, 종료 코드 0. Trivy DB 갱신 2026-11-16 13:03 UTC로 87.6초, Grype DB 지은 때 2026-11-16T06:30:54Z로 180.2초, 볼륨 1.65 GiB와 3.21 GiB). DB가 3일 뒤의 것이라 건수는 위 표와 조금 다르다. 같았던 것: 두 후보에서 고칠 수 있는 Critical은 두 도구 모두 0이고 High는 python 2건·node 8건이며 두 도구의 CVE가 겹쳤다(Critical·High 겹침 2와 8, 한쪽만 0). 여섯 대상·도구 짝에 문턱 둘을 건 열둘이 모두 출력 건수가 거르지 않은 JSON에서 센 건수와 맞았다. 두 후보는 Critical 문턱에서 종료 0, Critical·High 문턱에서 Trivy 10, Grype 2였고, 양성 대조(Debian 12)는 두 문턱 모두 Trivy 10, Grype 2였다(고칠 수 있는 Critical이 거르지 않은 JSON에 Trivy 7행, Grype 20행 있었다). 없는 입력은 두 도구 모두 종료 1이었고 문턱 코드와 갈렸다. 달랐던 것: 후보 전체 건수 python Trivy 218(위 214)·Grype 221(217), node Trivy 224(220)·Grype 219(215). 양성 대조 Trivy는 Critical 7행(CVE 6)·High 43행(CVE 28)·전체 536(위 7·47행(CVE 29)·532), Grype는 Critical 20행(CVE 15)·High 96행(CVE 66)·전체 581(위 20·100행(CVE 67)·577). 양성 대조에서 Critical·High의 CVE는 둘 다 34(위 35), Grype만 47, Trivy만 0이다. Grype DB 크기는 3.21 GiB(위 3.20). 이번에는 양성 대조의 gate 회차가 거르지 않은 JSON에 고칠 수 있는 해당 심각도가 있어야만 측정으로 센다(맨 아래). 두 후보 High가 아직 `zlib1g`와 npm 꾸러미 여섯인지는 이번에 다시 늘어놓지 않았다.
 - SBOM(`python:3.12-slim-trixie`). Syft SPDX 2.3 JSON 2,307,094 바이트(꾸러미 96, 파일 2,738, 7.8초), Syft CycloneDX 1.7 JSON 949,680 바이트(구성 요소 2,755), Trivy SPDX 2.3 JSON 193,876 바이트(꾸러미 90, 파일 0, 4.1초), Trivy CycloneDX 1.7 JSON 179,727 바이트(구성 요소 89). Syft는 파일 하나하나를 담아 열 배쯤 크다.
 - DB. 볼륨 크기 Trivy 1.65 GiB, Grype 3.20 GiB. 새 판인지 보는 데 2.1초, 2.8초였다(받지는 않았다).
 - Trivy는 기본으로 익명 사용 자료를 보낸다. 도움말에 `--disable-telemetry`가 "disable sending anonymous usage data to Aqua"로 있다(손으로 봤다, `docker run --rm <trivy 이미지> image --help`). 프로브는 이것과 `--skip-version-check`를 켜고 돈다.
@@ -127,7 +149,7 @@ release-image 명세가 ADR 0056에서 넘겨받은 세부(판 내기의 차례,
 
 - 최신 판과 커밋(손으로 봤다, `gh api repos/<저장소>/releases/latest`와 `gh api repos/<저장소>/git/ref/tags/<태그>`, 모두 가벼운 태그가 커밋을 가리킨다): `docker/login-action` v4.8.0 `8aa5831fb8d48d8f76594c7ddde61ae58019f550`, `docker/setup-buildx-action` v4.4.1 `f87e5991a6d7451dcb8d9637bfbc97413f497069`, `docker/build-push-action` v7.4.0 `c3c9e263c25d99ce0380d002d59b67737d91b0dc`, `docker/metadata-action` v6.2.0 `dc802804100637a589fabce1cb79ff13a1411302`. 같은 때 `aquasecurity/trivy-action` v0.36.0 `ed142fd0673e97e23eac54620cfb913e5ce36c25`, `anchore/scan-action` v7.4.2 `27805bf3b4e84b4a5c980df22ed233c00390a439`, `anchore/sbom-action` v0.24.3 `66cbf4bc1f1c0d2edc94016e65bc221b6bb0ad6c`.
 - `load: true`와 증명. "If you're using the `docker` exporter, or you're loading the build results to the runner with `load: true`, no attestations are added to the image. These output formats don't support attestations." 공개 저장소는 출처 증명이 `mode=max`가 기본이고 SBOM은 `sbom: true`를 줘야 붙는다. 원문을 받아 대 봤다(https://raw.githubusercontent.com/docker/docs/main/content/manuals/build/ci/github-actions/attestations.md). 시험 뒤 올리기는 `load: true`로 지어 시험하고 둘째 build-push-action이 `push: true`로 내부 캐시를 쓰는 꼴을 권한다(https://raw.githubusercontent.com/docker/docs/main/content/manuals/build/ci/github-actions/test-before-push.md).
-- 쟀다(probes/release_mechanics/registry_tags.py의 `load` 갈래, 이 PC의 옛 저장 방식). 증명을 끈 `--load`로 실은 이미지의 Id는, 뒤이어 같은 빌더가 캐시로 다시 지어 증명과 함께 올린 이미지의 플랫폼 매니페스트 config digest와 같았다. 증명을 켠 채 `--load`하면 종료 1, `ERROR: failed to build: docker exporter does not currently support exporting manifest lists`. GitHub 러너의 이미지 저장 방식은 보지 못했다.
+- 쟀다(probes/release_mechanics/registry_tags.py의 `load` 갈래, 이 PC의 옛 저장 방식). 증명을 끈 `--load`로 실은 이미지의 Id는, 뒤이어 같은 빌더가 캐시로 다시 지어 증명과 함께 올린 이미지의 플랫폼 매니페스트 config digest와 같았다. 증명을 켠 채 `--load`하면 종료 1, `ERROR: failed to build: docker exporter does not currently support exporting manifest lists`. GitHub 러너의 이미지 저장 방식은 보지 못했다. 2026-11-16에 표지를 고친 판으로 다시 재서 같은 결과를 봤다. 실은 이미지의 Id와 올린 이미지의 config digest가 같았고(올리기 빌드의 `RUN` 단계가 CACHED인 회차만 측정으로 센다), 증명을 켠 `--load`는 같은 `docker exporter does not currently support exporting manifest lists` 오류로 종료 1이었다(쟀다, 맨 아래 절).
 - `type=gha` 캐시. `scope`의 기본값은 `buildkit`이고 "If you build multiple images, each build will overwrite the cache of the previous, leaving only the final cache." 네 이미지는 저마다 `scope`를 줘야 한다. "Only the cache for the current branch, the base branch and the default branch is accessible by a workflow." 원문을 받아 대 봤다(https://raw.githubusercontent.com/docker/docs/main/content/manuals/build/cache/backends/gha.md, https://raw.githubusercontent.com/docker/docs/main/content/manuals/build/ci/github-actions/cache.md). main에서 도는 판 내기는 기본 브랜치 `dev`의 캐시도 읽을 수 있다고 읽힌다(어림).
 
 ## 6. compose 기능과 Engine·Compose 최소 판
@@ -168,7 +190,7 @@ compose 파일 참조(https://raw.githubusercontent.com/docker/docs/main/content
   - "When you re-run failed jobs or a specific job, GitHub also re-runs the jobs that depend on them. Jobs that aren't included keep their outputs from the previous attempt, which the newly run jobs can use."
   - 워크플로가 꺼져 있으면 다시 돌릴 수 없다.
 - gh 2.98.0의 `gh run rerun`(`pkg/cmd/run/rerun/rerun.go`, 읽었다): 인자 없이 런 전체, `--failed`는 "Rerun only failed jobs, including dependencies", `--job`은 한 작업과 그 의존, `--debug`는 디버그 기록. 런 전체는 REST `POST …/actions/runs/{id}/rerun`, `--failed`는 `…/rerun-failed-jobs`, `--job`은 `…/actions/jobs/{id}/rerun`을 부른다.
-- 쟀다(probes/release_mechanics/registry_tags.py의 `rebuild` 갈래). 같은 Dockerfile과 같은 빌드 인자를 증명(출처 증명 `mode=max`, SBOM)과 함께 다시 지어 올리면, 캐시를 다 써도(RUN 단계가 CACHED) 플랫폼 매니페스트 digest는 같았지만 색인 digest는 달랐다. `--no-cache`로 RUN을 다시 돌리면 플랫폼 매니페스트 digest도 달랐다. 두 갈래 모두 2번의 지키는 차례가 "다른 digest 라 거부했다"를 냈다. 색인이 다른 것은 증명 매니페스트가 달라진 것으로 풀이한다(어림. 색인에는 플랫폼 매니페스트와 증명 매니페스트만 든다).
+- 쟀다(probes/release_mechanics/registry_tags.py의 `rebuild` 갈래). 같은 Dockerfile과 같은 빌드 인자를 증명(출처 증명 `mode=max`, SBOM)과 함께 다시 지어 올리면, 캐시를 다 써도(RUN 단계가 CACHED) 플랫폼 매니페스트 digest는 같았지만 색인 digest는 달랐다. `--no-cache`로 RUN을 다시 돌리면 플랫폼 매니페스트 digest도 달랐다. 두 갈래 모두 2번의 지키는 차례가 "다른 digest 라 거부했다"를 냈다. 색인이 다른 것은 증명 매니페스트가 달라진 것으로 풀이한다(어림. 색인에는 플랫폼 매니페스트와 증명 매니페스트만 든다). 2026-11-16에 표지를 고친 판으로 다시 재서 두 갈래 모두 같았다(쟀다. 캐시 갈래는 `RUN`이 CACHED, `--no-cache` 갈래는 `RUN`이 DONE인 회차만 측정으로 센다. 색인 digest는 둘 다 달랐고, 플랫폼 매니페스트 digest는 캐시 갈래에서 같고 `--no-cache` 갈래에서 달랐으며, 둘 다 지키는 차례가 "다른 digest 라 거부했다"를 냈다).
 - 둘째 작업만 다시 돌릴 때의 아티팩트(2026-11-14 셀프 리뷰를 반영하며 더했다, 원문을 받아 대 봤다).
   - 실행 번호. "A unique number for each workflow run within a repository. This number does not change if you re-run the workflow run."(`github.run_id`, https://docs.github.com/en/actions/reference/workflows-and-actions/contexts)
   - 받기. `actions/download-artifact`의 README는 받을 실행을 적지 않았을 때를 "If unspecified, the action will download artifacts from the current repo and the current workflow run."로, `run-id`의 기본값을 "Default is ${{ github.run_id }}"로 적는다(https://raw.githubusercontent.com/actions/download-artifact/main/README.md).
@@ -178,6 +200,31 @@ compose 파일 참조(https://raw.githubusercontent.com/docker/docs/main/content
 
 ## PR 직전 리뷰가 고친 것(2026-11-14)
 
-위 결과를 낸 실행 뒤에 CodeRabbit CLI가 짚어 프로브를 고쳤다. 고친 판은 다시 돌리지 않았다.
+위 결과를 낸 실행 뒤에 CodeRabbit CLI가 짚어 프로브를 고쳤다. 이때 고친 판은 다시 돌리지 않았고, 2026-11-16에 아래 절의 고침과 함께 다시 돌렸다.
 
 - `scan_tools.py`의 `save_target`(시간 제한과 정리 흐름): `docker save`를 `with subprocess.Popen(...)`으로 띄워, 싣기의 900초 제한이나 `save.wait`의 120초 제한이 지나 예외가 나도 `with`를 빠져나갈 때 제한 없이 다시 기다렸다. 데몬이 멈추면 두 제한이 무제한 대기를 막지 못한다. `with`를 빼고, 시간을 넘기면 `docker save`를 끄고 30초까지만 거둔 뒤 예외를 넘기게 했다. 측정 조건과 3번의 건수에는 닿지 않는다(그 실행에서 이 길을 지나지 않았다). 고친 판과 고치기 전 판을 `docker save` 자리에 120초 자는 파이썬을 둔 가짜로 돌려, 두 시간 초과 길 모두 고친 판은 약 1초에 예외를 넘기며 그 프로세스를 거뒀고 고치기 전 판은 바깥의 20초 제한까지 돌아오지 않았다(손으로 봤다, 세션 스크래치의 `save_timeout_check.py`. 제한 시간은 1초로 줄였다).
+
+## 보류했던 지적을 고치고 다시 잰 것(2026-11-16)
+
+PR 567의 봇이 첫째·둘째 회차에서 짚고 보류했던 셋을 고쳤다(티켓 `11-ci-publishes-release-from-main`의 프로브 절).
+
+- `scan_tools.py` gate 갈래의 양성 대조. 고치기 전에는 양성 대조(Debian 12) 회차가 "종료 코드가 0이거나 문턱 코드"이기만 하면 측정이었다. 거르지 않은 JSON에 고칠 수 있는 해당 심각도가 하나도 없어도(문턱을 넘는 결과를 만들지 못해도) 종료 0이 맞다고 세어졌다. 지금은 양성 대조 대상이면 거르지 않은 JSON의 해당 심각도 행이 1건 이상일 때만 측정으로 센다. 다시 돌린 열두 gate 회차가 모두 측정이었고, 양성 대조 네 회차는 그 행이 7·50(Trivy), 20·116(Grype)이었다.
+- `registry_tags.py` load 갈래의 표지 둘. 캐시 표지는 `"CACHED" in 로그`였다. 빌드 기록 어느 단계든 CACHED이면 셌다. 지금은 `run_step`이 `RUN` 단계의 상태를 읽어 `CACHED`일 때만 센다. 증명을 켠 `--load` 갈래의 표지는 `"generating sbom"이 있거나 종료 코드가 0이 아니다`였다. 어떤 실패든 셌다. 지금은 실패(종료 코드가 0이 아님)는 로그에 `docker exporter does not currently support`가 있을 때, 성공은 `generating sbom`이 있을 때만 센다.
+  - 손으로 반박했다(세션 스크래치의 `refute_run_step.py`, 프로브의 `run_step`을 불러 합성 빌드 기록에 걸었다). `RUN`은 `DONE`인데 `FROM` 단계가 `CACHED`인 기록은 옛 표지(`"CACHED" in 로그`)가 참, 새 표지는 `DONE`이었다. `RUN`이 `CACHED`인 기록은 새 표지가 `CACHED`, `RUN` 줄이 없는 기록은 옛 표지 거짓, 새 표지 빈 문자열이었다. 증명을 켠 `--load`의 표지는 함수로 떼지 않고 인라인이라 이 방식으로 반박하지 못했다. 실제 실행의 회차는 종료 1과 위의 거절 문구로 측정이었다.
+- `scan_tools.py` 끝의 볼륨 지우기. 고치기 전 판(`passed`로 인자를 생략했는지를 보는 판)도 `IN_VOLUME`은 늘 지울 목록에 넣었고, 인자로 준 이름이 다른 도구의 기본 이름과 같으면 그 다른 도구의 몫으로 지웠다. 지금은 `volumes_to_remove(trivy_cache, grype_cache)`가 목록을 정한다. 프로브가 만드는 이름(`IN_VOLUME`, 인자를 생략한 도구의 기본 이름)에서 인자로 명시한 이름을 모두 뺀다.
+  - 손으로 반박했다(세션 스크래치의 `refute_volumes.py`로 `volumes_to_remove`에 입력을 넣고, 고치기 전 판의 식은 같은 줄을 그대로 옮겨 견줬다. Docker는 부르지 않았다). 입력 `(trivy, grype)`와 나온 목록은 이렇다.
+    - `(없음, 없음)` -> `ri-rel-scan-in`, `ri-rel-scan-trivy`, `ri-rel-scan-grype`
+    - `('mine', 없음)` -> `ri-rel-scan-in`, `ri-rel-scan-grype`
+    - `('mine', 'yours')` -> `ri-rel-scan-in`
+    - 명시한 이름이 다른 도구의 기본 이름과 같을 때. `('ri-rel-scan-grype', 없음)` -> `ri-rel-scan-in`(고치기 전 판은 `ri-rel-scan-in`, `ri-rel-scan-grype`), `(없음, 'ri-rel-scan-trivy')` -> `ri-rel-scan-in`, `('ri-rel-scan-grype', 'ri-rel-scan-trivy')` -> `ri-rel-scan-in`
+    - 명시한 이름이 자기 도구의 기본 이름과 같을 때. `('ri-rel-scan-trivy', 없음)` -> `ri-rel-scan-in`, `ri-rel-scan-grype`
+    - 명시한 이름이 `IN_VOLUME`일 때. `('ri-rel-scan-in', 없음)` -> `ri-rel-scan-grype`(고치기 전 판은 `ri-rel-scan-in`, `ri-rel-scan-grype`), `('ri-rel-scan-in', 'ri-rel-scan-in')` -> 빈 목록
+    - 빈 문자열 `('', 없음)` -> 인자를 안 준 것으로 읽어 셋 모두. 이 판정은 `if not 인자`다.
+  - 못 막는 것. 명시한 이름이 다른 도구의 기본 이름이나 `IN_VOLUME`과 같으면 지우지는 않지만 두 도구의 DB나 입력 tar가 한 볼륨에 섞인다. 그 입력을 거절하지는 않는다. 실제 `scan_tools.py` 실행으로는 반박하지 않았고, 아래 다시 돌림은 인자 없이 돌았다(기본 볼륨을 만들고 지우는 길만 지났다).
+
+### 다시 돌린 결과
+
+- `registry_tags.py`(쟀다). 모든 갈래 21회차가 측정이고 측정 아님 0, 종료 코드 0. 결과는 2번의 표·문장과 같았다. 가(길 가): 한 플랫폼 매니페스트는 기본값에서 digest가 다르고(목록 안의 digest는 원본과 같다) `--prefer-index=false`에서 같다. 증명이 붙은 색인은 같은 저장소와 다른 저장소 이름 모두 같다. 나(조회): 있는 태그 종료 0, 없는 태그와 없는 저장소 종료 1과 `ERROR: <참조>: not found`, 듣지 않는 포트 종료 1, 401·429·500은 종료 1(가짜 서버가 받은 요청 5·5·2건). 양성 대조: `docker push`와 `imagetools create` 모두 거부 없이 덮었다(종료 0, digest 바뀜). 지키는 차례 네 갈래는 기대대로 붙였다·그대로 뒀다·거부했다·붙이지 않았다. rebuild 두 갈래와 load 두 갈래는 위 8번·5번 줄과 같다.
+- `scan_tools.py`(쟀다). 35회차가 모두 측정이고 측정 아님 0, 종료 코드 0. 결과는 3번의 "2026-11-16에 다시 쟀다"에 있다.
+- 다시 돌린 `registry_tags.py`가 만든 컨테이너(`ri-rel-registry`)와 빌더(`ri-rel-builder`), `scan_tools.py`가 만든 볼륨 셋(`ri-rel-scan-in`·`-trivy`·`-grype`)은 끝에 지워졌다(손으로 봤다, `docker ps -a`·`docker volume ls`·`docker buildx ls`에 `ri-rel`이 없었다). 2번의 출력 꼴을 보려고 `plain_inspect.py`로 한 번 더 띄운 레지스트리와 빌더도 같은 `cleanup`이 지웠다.
+- 걸린 시간은 재지 않았다. 위 3번의 시간 칸은 이전 실행의 것이고 이번 실행의 시간(점검 1초 안팎, DB 받기 87.6초와 180.2초)은 이 PC의 한 번이다.

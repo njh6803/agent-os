@@ -886,10 +886,11 @@ def test_묶음을_쓰지_못하면_접두를_붙여_종료_코드_1이다(
 
 NOT_FOUND = "ERROR: registry.example/agentos/serve:0.1.0: not found"
 UNEXPECTED = "ERROR: unexpected status from HEAD request to http://r/v2/x/manifests/1: "
-# 2026-11-15 에 `docker buildx imagetools inspect docker.io/library/alpine:3.22` 가 낸 출력의 머리를
-# 손으로 본 꼴이다(빈 `DOCKER_CONFIG`, 종료 0. 커밋한 프로브는 없고 일지
-# `2026-11-15-0138-tools-compute-release-number-and-notes.md` 의 "확인한 것"에 적었다).
-# 아래 `Manifests:` 쪽 줄은 들여쓴다.
+# 2026-11-16 에 로컬 `registry:3` 에 출처 증명과 SBOM 을 붙여 올린 이미지 색인(판 내기가 올리는
+# 꼴)을 `docker buildx imagetools inspect <참조>` 로 조회한 출력이다(종료 0, buildx v0.38.1).
+# `.scratch/release-image/probes/release_mechanics/README.md` 2번에 같은 꼴을 옮겼다. 맨 앞 칸에서
+# 시작하는 첫 `Digest:` 줄은 하나이고, `Manifests:` 아래는 들여쓰며(증명 매니페스트의 `Annotations`
+# 아래 줄은 더 들여쓴다) 그 안의 digest 는 맨 앞 칸에서 시작하지 않는다.
 EXISTING = (
     "Name:      registry.example/agentos/serve:0.1.0\n"
     "MediaType: application/vnd.oci.image.index.v1+json\n"
@@ -899,6 +900,13 @@ EXISTING = (
     "  Name:        registry.example/agentos/serve:0.1.0@sha256:" + "c" * 64 + "\n"
     "  MediaType:   application/vnd.oci.image.manifest.v1+json\n"
     "  Platform:    linux/amd64\n"
+    "               \n"
+    "  Name:        registry.example/agentos/serve:0.1.0@sha256:" + "d" * 64 + "\n"
+    "  MediaType:   application/vnd.oci.image.manifest.v1+json\n"
+    "  Platform:    unknown/unknown\n"
+    "  Annotations: \n"
+    "    vnd.docker.reference.digest: sha256:" + "c" * 64 + "\n"
+    "    vnd.docker.reference.type:   attestation-manifest\n"
 )
 
 
