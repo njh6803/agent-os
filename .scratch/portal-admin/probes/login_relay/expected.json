@@ -1,0 +1,1547 @@
+{
+  "versions": {
+    "next": "16.3.6",
+    "playwright": "1.63.0",
+    "node": "v24.19.0",
+    "platform": "win32",
+    "python": "3.12.10",
+    "fastapi": "0.141.1",
+    "starlette": "1.6.0",
+    "uvicorn": "0.53.0",
+    "httpx": "0.28.1",
+    "httpx2": "2.13.0",
+    "openapiFetch": "0.17.0",
+    "chromium": "153.0.8010.12",
+    "chromiumChannel": "기본(headless shell)"
+  },
+  "settings": {
+    "rounds": 5,
+    "ttlSeconds": 2,
+    "graceSeconds": 1
+  },
+  "stable": {
+    "대조 유예 0: 이미 바꾼 옛 번호가 다시 오면 그 로그인을 끊는다": {
+      "statuses": [
+        200,
+        200,
+        401,
+        401
+      ],
+      "loginLines": [
+        "__Host-aos_at=<at0>; HttpOnly; Path=/; SameSite=strict; Secure",
+        "__Host-aos_rt=<rt0>; HttpOnly; Max-Age=1800; Path=/; SameSite=strict; Secure"
+      ],
+      "refusedLines": [
+        "__Host-aos_at=\"\"; expires=<그때의 시각>; HttpOnly; Max-Age=0; Path=/; SameSite=strict; Secure",
+        "__Host-aos_rt=\"\"; expires=<그때의 시각>; HttpOnly; Max-Age=0; Path=/; SameSite=strict; Secure"
+      ]
+    },
+    "대조 유예 chain: 유예 안의 옛 번호는 받고 앞서 낸 번호를 옛 번호로 돌린다": {
+      "statuses": [
+        200,
+        200,
+        200,
+        401
+      ],
+      "validAfterGrace": [
+        "rt2"
+      ]
+    },
+    "대조 유예 family: 유예 안의 옛 번호는 받고 앞서 낸 번호도 그대로 통한다": {
+      "statuses": [
+        200,
+        200,
+        200,
+        200,
+        401
+      ],
+      "validAfterGrace": [
+        "rt1",
+        "rt2"
+      ]
+    },
+    "대조 요청 출처 검사: 대역이 ADR 0062 의 규칙대로 가른다": {
+      "verdicts": {
+        "머리 없음": "pass -> 401",
+        "Sec-Fetch-Site: same-origin": "pass -> 401",
+        "Sec-Fetch-Site: same-site": "reject: sec-fetch-site=same-site -> 403",
+        "Sec-Fetch-Site: cross-site": "reject: sec-fetch-site=cross-site -> 403",
+        "Sec-Fetch-Site: none": "reject: sec-fetch-site=none -> 403",
+        "Origin 만": "reject: origin without sec-fetch-site -> 403",
+        "Sec-Fetch-Site: same-origin 과 Origin": "pass -> 401",
+        "Sec-Fetch-Mode: cors 만": "pass -> 401"
+      }
+    },
+    "대조 만료: JWT 는 수명이 지나면 401 access_expired 다": {
+      "statuses": [
+        200,
+        401
+      ],
+      "staleLines": []
+    },
+    "1. 서버 사이 요청이 스스로 붙이는 머리와 요청 출처 검사": {
+      "포트 B, httpx": {
+        "me": {
+          "statusAtPage": 200,
+          "check": "pass",
+          "statusAtAgentOs": 200,
+          "headersAtAgentOs": [
+            "host: 127.0.0.1:<A>",
+            "accept: */*",
+            "accept-encoding: gzip, deflate, zstd",
+            "connection: keep-alive",
+            "user-agent: python-httpx/0.28.1",
+            "cookie: __Host-aos_at=<at0>; __Host-aos_rt=<rt0>"
+          ],
+          "browserHeadersAtRelay": {
+            "sec-fetch-site": "same-origin",
+            "sec-fetch-mode": "cors",
+            "sec-fetch-dest": "empty",
+            "origin": null,
+            "referer": "http://localhost:<B>/api/page",
+            "cookieNames": [
+              "__Host-aos_at",
+              "__Host-aos_rt"
+            ]
+          }
+        },
+        "refresh": {
+          "statusAtPage": 200,
+          "check": "pass",
+          "statusAtAgentOs": 200,
+          "headersAtAgentOs": [
+            "host: 127.0.0.1:<A>",
+            "content-length: 0",
+            "accept: */*",
+            "accept-encoding: gzip, deflate, zstd",
+            "connection: keep-alive",
+            "user-agent: python-httpx/0.28.1",
+            "cookie: __Host-aos_at=<at0>; __Host-aos_rt=<rt0>"
+          ],
+          "browserHeadersAtRelay": {
+            "sec-fetch-site": "same-origin",
+            "sec-fetch-mode": "cors",
+            "sec-fetch-dest": "empty",
+            "origin": "http://localhost:<B>",
+            "referer": "http://localhost:<B>/api/page",
+            "cookieNames": [
+              "__Host-aos_at",
+              "__Host-aos_rt"
+            ]
+          }
+        }
+      },
+      "포트 C, Node fetch": {
+        "me": {
+          "statusAtPage": 200,
+          "check": "pass",
+          "statusAtAgentOs": 200,
+          "headersAtAgentOs": [
+            "host: 127.0.0.1:<A>",
+            "connection: keep-alive",
+            "cookie: __Host-aos_at=<at0>; __Host-aos_rt=<rt0>",
+            "accept: */*",
+            "accept-language: *",
+            "sec-fetch-mode: cors",
+            "user-agent: node",
+            "accept-encoding: gzip, deflate"
+          ],
+          "browserHeadersAtRelay": {
+            "sec-fetch-site": "same-origin",
+            "sec-fetch-mode": "cors",
+            "sec-fetch-dest": "empty",
+            "origin": null,
+            "referer": "http://localhost:<C>/fetch/page",
+            "cookieNames": [
+              "__Host-aos_at",
+              "__Host-aos_rt"
+            ]
+          }
+        },
+        "refresh": {
+          "statusAtPage": 200,
+          "check": "pass",
+          "statusAtAgentOs": 200,
+          "headersAtAgentOs": [
+            "host: 127.0.0.1:<A>",
+            "connection: keep-alive",
+            "cookie: __Host-aos_at=<at1>; __Host-aos_rt=<rt1>",
+            "accept: */*",
+            "accept-language: *",
+            "sec-fetch-mode: cors",
+            "user-agent: node",
+            "accept-encoding: gzip, deflate",
+            "content-length: 0"
+          ],
+          "browserHeadersAtRelay": {
+            "sec-fetch-site": "same-origin",
+            "sec-fetch-mode": "cors",
+            "sec-fetch-dest": "empty",
+            "origin": "http://localhost:<C>",
+            "referer": "http://localhost:<C>/fetch/page",
+            "cookieNames": [
+              "__Host-aos_at",
+              "__Host-aos_rt"
+            ]
+          }
+        }
+      },
+      "포트 C, node:http": {
+        "me": {
+          "statusAtPage": 200,
+          "check": "pass",
+          "statusAtAgentOs": 200,
+          "headersAtAgentOs": [
+            "cookie: __Host-aos_at=<at0>; __Host-aos_rt=<rt0>",
+            "host: 127.0.0.1:<A>",
+            "connection: keep-alive"
+          ],
+          "browserHeadersAtRelay": {
+            "sec-fetch-site": "same-origin",
+            "sec-fetch-mode": "cors",
+            "sec-fetch-dest": "empty",
+            "origin": null,
+            "referer": "http://localhost:<C>/http/page",
+            "cookieNames": [
+              "__Host-aos_at",
+              "__Host-aos_rt"
+            ]
+          }
+        },
+        "refresh": {
+          "statusAtPage": 200,
+          "check": "pass",
+          "statusAtAgentOs": 200,
+          "headersAtAgentOs": [
+            "cookie: __Host-aos_at=<at2>; __Host-aos_rt=<rt2>",
+            "host: 127.0.0.1:<A>",
+            "connection: keep-alive",
+            "content-length: 0"
+          ],
+          "browserHeadersAtRelay": {
+            "sec-fetch-site": "same-origin",
+            "sec-fetch-mode": "cors",
+            "sec-fetch-dest": "empty",
+            "origin": "http://localhost:<C>",
+            "referer": "http://localhost:<C>/http/page",
+            "cookieNames": [
+              "__Host-aos_at",
+              "__Host-aos_rt"
+            ]
+          }
+        }
+      },
+      "포트 B, httpx2": {
+        "me": {
+          "statusAtPage": 200,
+          "check": "pass",
+          "statusAtAgentOs": 200,
+          "headersAtAgentOs": [
+            "host: 127.0.0.1:<A>",
+            "accept: */*",
+            "accept-encoding: gzip, deflate",
+            "connection: keep-alive",
+            "user-agent: python-httpx2/2.13.0",
+            "cookie: __Host-aos_at=<at0>; __Host-aos_rt=<rt0>"
+          ],
+          "browserHeadersAtRelay": {
+            "sec-fetch-site": "same-origin",
+            "sec-fetch-mode": "cors",
+            "sec-fetch-dest": "empty",
+            "origin": null,
+            "referer": "http://localhost:<B>/api/x2/page",
+            "cookieNames": [
+              "__Host-aos_at",
+              "__Host-aos_rt"
+            ]
+          }
+        },
+        "refresh": {
+          "statusAtPage": 200,
+          "check": "pass",
+          "statusAtAgentOs": 200,
+          "headersAtAgentOs": [
+            "host: 127.0.0.1:<A>",
+            "content-length: 0",
+            "accept: */*",
+            "accept-encoding: gzip, deflate",
+            "connection: keep-alive",
+            "user-agent: python-httpx2/2.13.0",
+            "cookie: __Host-aos_at=<at3>; __Host-aos_rt=<rt3>"
+          ],
+          "browserHeadersAtRelay": {
+            "sec-fetch-site": "same-origin",
+            "sec-fetch-mode": "cors",
+            "sec-fetch-dest": "empty",
+            "origin": "http://localhost:<B>",
+            "referer": "http://localhost:<B>/api/x2/page",
+            "cookieNames": [
+              "__Host-aos_at",
+              "__Host-aos_rt"
+            ]
+          }
+        }
+      },
+      "포트 C, openapi-fetch": {
+        "me": {
+          "statusAtPage": 200,
+          "check": "pass",
+          "statusAtAgentOs": 200,
+          "headersAtAgentOs": [
+            "host: 127.0.0.1:<A>",
+            "connection: keep-alive",
+            "cookie: __Host-aos_at=<at0>; __Host-aos_rt=<rt0>",
+            "accept: */*",
+            "accept-language: *",
+            "sec-fetch-mode: cors",
+            "user-agent: node",
+            "accept-encoding: gzip, deflate"
+          ],
+          "browserHeadersAtRelay": {
+            "sec-fetch-site": "same-origin",
+            "sec-fetch-mode": "cors",
+            "sec-fetch-dest": "empty",
+            "origin": null,
+            "referer": "http://localhost:<C>/oaf/page",
+            "cookieNames": [
+              "__Host-aos_at",
+              "__Host-aos_rt"
+            ]
+          }
+        },
+        "refresh": {
+          "statusAtPage": 200,
+          "check": "pass",
+          "statusAtAgentOs": 200,
+          "headersAtAgentOs": [
+            "host: 127.0.0.1:<A>",
+            "connection: keep-alive",
+            "cookie: __Host-aos_at=<at4>; __Host-aos_rt=<rt4>",
+            "accept: */*",
+            "accept-language: *",
+            "sec-fetch-mode: cors",
+            "user-agent: node",
+            "accept-encoding: gzip, deflate",
+            "content-length: 0"
+          ],
+          "browserHeadersAtRelay": {
+            "sec-fetch-site": "same-origin",
+            "sec-fetch-mode": "cors",
+            "sec-fetch-dest": "empty",
+            "origin": "http://localhost:<C>",
+            "referer": "http://localhost:<C>/oaf/page",
+            "cookieNames": [
+              "__Host-aos_at",
+              "__Host-aos_rt"
+            ]
+          }
+        }
+      }
+    },
+    "2. 갱신의 Set-Cookie 가 중계를 지나 브라우저에 닿는 모양 (포트 B, httpx)": {
+      "refreshed": {
+        "statusAtPage": 200,
+        "emittedByAgentOs": [
+          "__Host-aos_at=<at1>; HttpOnly; Path=/; SameSite=strict; Secure",
+          "__Host-aos_rt=<rt1>; HttpOnly; Max-Age=1800; Path=/; SameSite=strict; Secure"
+        ],
+        "receivedByBrowser": [
+          "__Host-aos_at=<at1>; HttpOnly; Path=/; SameSite=strict; Secure",
+          "__Host-aos_rt=<rt1>; HttpOnly; Max-Age=1800; Path=/; SameSite=strict; Secure"
+        ],
+        "identical": true,
+        "blockedByBrowser": [],
+        "jarBefore": [
+          "__Host-aos_at=<at0>; domain=localhost; path=/; httpOnly=true; secure=true; sameSite=Strict; session",
+          "__Host-aos_rt=<rt0>; domain=localhost; path=/; httpOnly=true; secure=true; sameSite=Strict; expires"
+        ],
+        "jarAfter": [
+          "__Host-aos_at=<at1>; domain=localhost; path=/; httpOnly=true; secure=true; sameSite=Strict; session",
+          "__Host-aos_rt=<rt1>; domain=localhost; path=/; httpOnly=true; secure=true; sameSite=Strict; expires"
+        ],
+        "refreshExpiryFollowsMaxAge": true
+      },
+      "refused": {
+        "statusAtPage": 401,
+        "emittedByAgentOs": [
+          "__Host-aos_at=\"\"; expires=<그때의 시각>; HttpOnly; Max-Age=0; Path=/; SameSite=strict; Secure",
+          "__Host-aos_rt=\"\"; expires=<그때의 시각>; HttpOnly; Max-Age=0; Path=/; SameSite=strict; Secure"
+        ],
+        "receivedByBrowser": [
+          "__Host-aos_at=\"\"; expires=<그때의 시각>; HttpOnly; Max-Age=0; Path=/; SameSite=strict; Secure",
+          "__Host-aos_rt=\"\"; expires=<그때의 시각>; HttpOnly; Max-Age=0; Path=/; SameSite=strict; Secure"
+        ],
+        "identical": true,
+        "jarAfter": []
+      }
+    },
+    "2. 갱신의 Set-Cookie 가 중계를 지나 브라우저에 닿는 모양 (포트 C, Node fetch)": {
+      "refreshed": {
+        "statusAtPage": 200,
+        "emittedByAgentOs": [
+          "__Host-aos_at=<at1>; HttpOnly; Path=/; SameSite=strict; Secure",
+          "__Host-aos_rt=<rt1>; HttpOnly; Max-Age=1800; Path=/; SameSite=strict; Secure"
+        ],
+        "receivedByBrowser": [
+          "__Host-aos_at=<at1>; HttpOnly; Path=/; SameSite=strict; Secure",
+          "__Host-aos_rt=<rt1>; HttpOnly; Max-Age=1800; Path=/; SameSite=strict; Secure"
+        ],
+        "identical": true,
+        "blockedByBrowser": [],
+        "jarBefore": [
+          "__Host-aos_at=<at0>; domain=localhost; path=/; httpOnly=true; secure=true; sameSite=Strict; session",
+          "__Host-aos_rt=<rt0>; domain=localhost; path=/; httpOnly=true; secure=true; sameSite=Strict; expires"
+        ],
+        "jarAfter": [
+          "__Host-aos_at=<at1>; domain=localhost; path=/; httpOnly=true; secure=true; sameSite=Strict; session",
+          "__Host-aos_rt=<rt1>; domain=localhost; path=/; httpOnly=true; secure=true; sameSite=Strict; expires"
+        ],
+        "refreshExpiryFollowsMaxAge": true
+      },
+      "refused": {
+        "statusAtPage": 401,
+        "emittedByAgentOs": [
+          "__Host-aos_at=\"\"; expires=<그때의 시각>; HttpOnly; Max-Age=0; Path=/; SameSite=strict; Secure",
+          "__Host-aos_rt=\"\"; expires=<그때의 시각>; HttpOnly; Max-Age=0; Path=/; SameSite=strict; Secure"
+        ],
+        "receivedByBrowser": [
+          "__Host-aos_at=\"\"; expires=<그때의 시각>; HttpOnly; Max-Age=0; Path=/; SameSite=strict; Secure",
+          "__Host-aos_rt=\"\"; expires=<그때의 시각>; HttpOnly; Max-Age=0; Path=/; SameSite=strict; Secure"
+        ],
+        "identical": true,
+        "jarAfter": []
+      }
+    },
+    "2. 갱신의 Set-Cookie 가 중계를 지나 브라우저에 닿는 모양 (포트 C, node:http)": {
+      "refreshed": {
+        "statusAtPage": 200,
+        "emittedByAgentOs": [
+          "__Host-aos_at=<at1>; HttpOnly; Path=/; SameSite=strict; Secure",
+          "__Host-aos_rt=<rt1>; HttpOnly; Max-Age=1800; Path=/; SameSite=strict; Secure"
+        ],
+        "receivedByBrowser": [
+          "__Host-aos_at=<at1>; HttpOnly; Path=/; SameSite=strict; Secure",
+          "__Host-aos_rt=<rt1>; HttpOnly; Max-Age=1800; Path=/; SameSite=strict; Secure"
+        ],
+        "identical": true,
+        "blockedByBrowser": [],
+        "jarBefore": [
+          "__Host-aos_at=<at0>; domain=localhost; path=/; httpOnly=true; secure=true; sameSite=Strict; session",
+          "__Host-aos_rt=<rt0>; domain=localhost; path=/; httpOnly=true; secure=true; sameSite=Strict; expires"
+        ],
+        "jarAfter": [
+          "__Host-aos_at=<at1>; domain=localhost; path=/; httpOnly=true; secure=true; sameSite=Strict; session",
+          "__Host-aos_rt=<rt1>; domain=localhost; path=/; httpOnly=true; secure=true; sameSite=Strict; expires"
+        ],
+        "refreshExpiryFollowsMaxAge": true
+      },
+      "refused": {
+        "statusAtPage": 401,
+        "emittedByAgentOs": [
+          "__Host-aos_at=\"\"; expires=<그때의 시각>; HttpOnly; Max-Age=0; Path=/; SameSite=strict; Secure",
+          "__Host-aos_rt=\"\"; expires=<그때의 시각>; HttpOnly; Max-Age=0; Path=/; SameSite=strict; Secure"
+        ],
+        "receivedByBrowser": [
+          "__Host-aos_at=\"\"; expires=<그때의 시각>; HttpOnly; Max-Age=0; Path=/; SameSite=strict; Secure",
+          "__Host-aos_rt=\"\"; expires=<그때의 시각>; HttpOnly; Max-Age=0; Path=/; SameSite=strict; Secure"
+        ],
+        "identical": true,
+        "jarAfter": []
+      }
+    },
+    "2. 갱신의 Set-Cookie 가 중계를 지나 브라우저에 닿는 모양 (포트 B, httpx2)": {
+      "refreshed": {
+        "statusAtPage": 200,
+        "emittedByAgentOs": [
+          "__Host-aos_at=<at1>; HttpOnly; Path=/; SameSite=strict; Secure",
+          "__Host-aos_rt=<rt1>; HttpOnly; Max-Age=1800; Path=/; SameSite=strict; Secure"
+        ],
+        "receivedByBrowser": [
+          "__Host-aos_at=<at1>; HttpOnly; Path=/; SameSite=strict; Secure",
+          "__Host-aos_rt=<rt1>; HttpOnly; Max-Age=1800; Path=/; SameSite=strict; Secure"
+        ],
+        "identical": true,
+        "blockedByBrowser": [],
+        "jarBefore": [
+          "__Host-aos_at=<at0>; domain=localhost; path=/; httpOnly=true; secure=true; sameSite=Strict; session",
+          "__Host-aos_rt=<rt0>; domain=localhost; path=/; httpOnly=true; secure=true; sameSite=Strict; expires"
+        ],
+        "jarAfter": [
+          "__Host-aos_at=<at1>; domain=localhost; path=/; httpOnly=true; secure=true; sameSite=Strict; session",
+          "__Host-aos_rt=<rt1>; domain=localhost; path=/; httpOnly=true; secure=true; sameSite=Strict; expires"
+        ],
+        "refreshExpiryFollowsMaxAge": true
+      },
+      "refused": {
+        "statusAtPage": 401,
+        "emittedByAgentOs": [
+          "__Host-aos_at=\"\"; expires=<그때의 시각>; HttpOnly; Max-Age=0; Path=/; SameSite=strict; Secure",
+          "__Host-aos_rt=\"\"; expires=<그때의 시각>; HttpOnly; Max-Age=0; Path=/; SameSite=strict; Secure"
+        ],
+        "receivedByBrowser": [
+          "__Host-aos_at=\"\"; expires=<그때의 시각>; HttpOnly; Max-Age=0; Path=/; SameSite=strict; Secure",
+          "__Host-aos_rt=\"\"; expires=<그때의 시각>; HttpOnly; Max-Age=0; Path=/; SameSite=strict; Secure"
+        ],
+        "identical": true,
+        "jarAfter": []
+      }
+    },
+    "2. 갱신의 Set-Cookie 가 중계를 지나 브라우저에 닿는 모양 (포트 C, openapi-fetch)": {
+      "refreshed": {
+        "statusAtPage": 200,
+        "emittedByAgentOs": [
+          "__Host-aos_at=<at1>; HttpOnly; Path=/; SameSite=strict; Secure",
+          "__Host-aos_rt=<rt1>; HttpOnly; Max-Age=1800; Path=/; SameSite=strict; Secure"
+        ],
+        "receivedByBrowser": [
+          "__Host-aos_at=<at1>; HttpOnly; Path=/; SameSite=strict; Secure",
+          "__Host-aos_rt=<rt1>; HttpOnly; Max-Age=1800; Path=/; SameSite=strict; Secure"
+        ],
+        "identical": true,
+        "blockedByBrowser": [],
+        "jarBefore": [
+          "__Host-aos_at=<at0>; domain=localhost; path=/; httpOnly=true; secure=true; sameSite=Strict; session",
+          "__Host-aos_rt=<rt0>; domain=localhost; path=/; httpOnly=true; secure=true; sameSite=Strict; expires"
+        ],
+        "jarAfter": [
+          "__Host-aos_at=<at1>; domain=localhost; path=/; httpOnly=true; secure=true; sameSite=Strict; session",
+          "__Host-aos_rt=<rt1>; domain=localhost; path=/; httpOnly=true; secure=true; sameSite=Strict; expires"
+        ],
+        "refreshExpiryFollowsMaxAge": true
+      },
+      "refused": {
+        "statusAtPage": 401,
+        "emittedByAgentOs": [
+          "__Host-aos_at=\"\"; expires=<그때의 시각>; HttpOnly; Max-Age=0; Path=/; SameSite=strict; Secure",
+          "__Host-aos_rt=\"\"; expires=<그때의 시각>; HttpOnly; Max-Age=0; Path=/; SameSite=strict; Secure"
+        ],
+        "receivedByBrowser": [
+          "__Host-aos_at=\"\"; expires=<그때의 시각>; HttpOnly; Max-Age=0; Path=/; SameSite=strict; Secure",
+          "__Host-aos_rt=\"\"; expires=<그때의 시각>; HttpOnly; Max-Age=0; Path=/; SameSite=strict; Secure"
+        ],
+        "identical": true,
+        "jarAfter": []
+      }
+    },
+    "2. 대조: Set-Cookie 를 한 값으로 합쳐 옮기는 중계 (포트 B, httpx)": {
+      "statusAtPage": 200,
+      "emittedByAgentOs": [
+        "__Host-aos_at=<at1>; HttpOnly; Path=/; SameSite=strict; Secure",
+        "__Host-aos_rt=<rt1>; HttpOnly; Max-Age=1800; Path=/; SameSite=strict; Secure"
+      ],
+      "receivedByBrowser": [
+        "__Host-aos_at=<at1>; HttpOnly; Path=/; SameSite=strict; Secure, __Host-aos_rt=<rt1>; HttpOnly; Max-Age=1800; Path=/; SameSite=strict; Secure"
+      ],
+      "identical": false,
+      "blockedByBrowser": [],
+      "jarAfter": [
+        "__Host-aos_at=<at1>; domain=localhost; path=/; httpOnly=true; secure=true; sameSite=Strict; expires",
+        "__Host-aos_rt=<rt0>; domain=localhost; path=/; httpOnly=true; secure=true; sameSite=Strict; expires"
+      ],
+      "browserHolds": {
+        "at": "at1",
+        "rt": "rt0"
+      },
+      "serverLastIssued": "rt1"
+    },
+    "3. 흐름 전체: 포트 B, httpx, 설계 1(중계가 스스로 갱신)": {
+      "statuses": {
+        "login": 200,
+        "relayBeforeExpiry": 200,
+        "relayAfterExpiry": 200,
+        "portAWithRelayedCookie": 200,
+        "portAExpired": 401,
+        "portARefresh": 200,
+        "portAAfterOwnRefresh": 200,
+        "relayWithPortACookie": 200
+      },
+      "refreshOutcomes": {
+        "viaRelay": [
+          "rotated"
+        ],
+        "fromPortA": "rotated"
+      },
+      "setCookieIdentical": true,
+      "blockedByBrowser": [],
+      "loginRevoked": null
+    },
+    "3. 흐름 전체: 포트 B, httpx, 설계 2(화면이 갱신을 부름)": {
+      "statuses": {
+        "login": 200,
+        "relayBeforeExpiry": 200,
+        "relayAfterExpiry": 200,
+        "portAWithRelayedCookie": 200,
+        "portAExpired": 401,
+        "portARefresh": 200,
+        "portAAfterOwnRefresh": 200,
+        "relayWithPortACookie": 200
+      },
+      "refreshOutcomes": {
+        "viaRelay": [
+          "rotated"
+        ],
+        "fromPortA": "rotated"
+      },
+      "setCookieIdentical": true,
+      "blockedByBrowser": [],
+      "loginRevoked": null
+    },
+    "3. 흐름 전체: 포트 C, Node fetch, 설계 1": {
+      "statuses": {
+        "login": 200,
+        "relayBeforeExpiry": 200,
+        "relayAfterExpiry": 200,
+        "portAWithRelayedCookie": 200,
+        "portAExpired": 401,
+        "portARefresh": 200,
+        "portAAfterOwnRefresh": 200,
+        "relayWithPortACookie": 200
+      },
+      "refreshOutcomes": {
+        "viaRelay": [
+          "rotated"
+        ],
+        "fromPortA": "rotated"
+      },
+      "setCookieIdentical": true,
+      "blockedByBrowser": [],
+      "loginRevoked": null
+    },
+    "3. 흐름 전체: 포트 C, node:http, 설계 1": {
+      "statuses": {
+        "login": 200,
+        "relayBeforeExpiry": 200,
+        "relayAfterExpiry": 200,
+        "portAWithRelayedCookie": 200,
+        "portAExpired": 401,
+        "portARefresh": 200,
+        "portAAfterOwnRefresh": 200,
+        "relayWithPortACookie": 200
+      },
+      "refreshOutcomes": {
+        "viaRelay": [
+          "rotated"
+        ],
+        "fromPortA": "rotated"
+      },
+      "setCookieIdentical": true,
+      "blockedByBrowser": [],
+      "loginRevoked": null
+    },
+    "3. 흐름 전체: 포트 C, Node fetch, 주소로 문서 열기": {
+      "statuses": {
+        "login": 200,
+        "relayBeforeExpiry": 200,
+        "relayAfterExpiry": 200,
+        "portAWithRelayedCookie": 200,
+        "portAExpired": 401,
+        "portARefresh": 200,
+        "portAAfterOwnRefresh": 200,
+        "relayWithPortACookie": 200
+      },
+      "refreshOutcomes": {
+        "viaRelay": [
+          "rotated"
+        ],
+        "fromPortA": "rotated"
+      },
+      "setCookieIdentical": true,
+      "blockedByBrowser": [],
+      "loginRevoked": null
+    },
+    "3. 흐름 전체: 포트 C, node:http, 주소로 문서 열기": {
+      "statuses": {
+        "login": 200,
+        "relayBeforeExpiry": 200,
+        "relayAfterExpiry": 200,
+        "portAWithRelayedCookie": 200,
+        "portAExpired": 401,
+        "portARefresh": 200,
+        "portAAfterOwnRefresh": 200,
+        "relayWithPortACookie": 200
+      },
+      "refreshOutcomes": {
+        "viaRelay": [
+          "rotated"
+        ],
+        "fromPortA": "rotated"
+      },
+      "setCookieIdentical": true,
+      "blockedByBrowser": [],
+      "loginRevoked": null
+    },
+    "4. 요청 넷 동시, 설계 1(중계가 스스로 갱신), 유예 0": {
+      "refreshRequestsAtAgentOs": 4,
+      "refreshOutcomesInArrivalOrder": [
+        "rotated",
+        "reuse_revoked",
+        "session_revoked",
+        "session_revoked"
+      ],
+      "numbersPresented": [
+        "rt0",
+        "rt0",
+        "rt0",
+        "rt0"
+      ],
+      "refreshOutcomeKinds": [
+        "reuse_revoked",
+        "rotated",
+        "session_revoked"
+      ],
+      "sameNumberPresentedTwice": true,
+      "statusesAtPageSorted": [
+        200,
+        401,
+        401,
+        401
+      ],
+      "pageRefreshCalls": null,
+      "revokedAfterBurst": "refresh_reuse",
+      "validNumbersAfterBurst": [],
+      "serverLastIssued": "rt1",
+      "browserHoldsValidNumber": false,
+      "followStatusAtPage": 401,
+      "revokedAtEnd": "refresh_reuse",
+      "aliveAfterNextExpiry": false
+    },
+    "4. 요청 넷 동시, 설계 1, 유예 chain, 응답의 차례를 건드리지 않음 1/5": {
+      "refreshRequestsAtAgentOs": 4,
+      "refreshOutcomesInArrivalOrder": [
+        "rotated",
+        "grace",
+        "grace",
+        "grace"
+      ],
+      "numbersPresented": [
+        "rt0",
+        "rt0",
+        "rt0",
+        "rt0"
+      ],
+      "refreshOutcomeKinds": [
+        "grace",
+        "rotated"
+      ],
+      "sameNumberPresentedTwice": true,
+      "statusesAtPageSorted": [
+        200,
+        200,
+        200,
+        200
+      ],
+      "pageRefreshCalls": null,
+      "revokedAfterBurst": null,
+      "validNumbersAfterBurst": [
+        "rt4"
+      ],
+      "serverLastIssued": "rt4"
+    },
+    "4. 요청 넷 동시, 설계 1, 유예 chain, 응답의 차례를 건드리지 않음 2/5": {
+      "refreshRequestsAtAgentOs": 4,
+      "refreshOutcomesInArrivalOrder": [
+        "rotated",
+        "grace",
+        "grace",
+        "grace"
+      ],
+      "numbersPresented": [
+        "rt0",
+        "rt0",
+        "rt0",
+        "rt0"
+      ],
+      "refreshOutcomeKinds": [
+        "grace",
+        "rotated"
+      ],
+      "sameNumberPresentedTwice": true,
+      "statusesAtPageSorted": [
+        200,
+        200,
+        200,
+        200
+      ],
+      "pageRefreshCalls": null,
+      "revokedAfterBurst": null,
+      "validNumbersAfterBurst": [
+        "rt4"
+      ],
+      "serverLastIssued": "rt4"
+    },
+    "4. 요청 넷 동시, 설계 1, 유예 chain, 응답의 차례를 건드리지 않음 3/5": {
+      "refreshRequestsAtAgentOs": 4,
+      "refreshOutcomesInArrivalOrder": [
+        "rotated",
+        "grace",
+        "grace",
+        "grace"
+      ],
+      "numbersPresented": [
+        "rt0",
+        "rt0",
+        "rt0",
+        "rt0"
+      ],
+      "refreshOutcomeKinds": [
+        "grace",
+        "rotated"
+      ],
+      "sameNumberPresentedTwice": true,
+      "statusesAtPageSorted": [
+        200,
+        200,
+        200,
+        200
+      ],
+      "pageRefreshCalls": null,
+      "revokedAfterBurst": null,
+      "validNumbersAfterBurst": [
+        "rt4"
+      ],
+      "serverLastIssued": "rt4"
+    },
+    "4. 요청 넷 동시, 설계 1, 유예 chain, 응답의 차례를 건드리지 않음 4/5": {
+      "refreshRequestsAtAgentOs": 4,
+      "refreshOutcomesInArrivalOrder": [
+        "rotated",
+        "grace",
+        "grace",
+        "grace"
+      ],
+      "numbersPresented": [
+        "rt0",
+        "rt0",
+        "rt0",
+        "rt0"
+      ],
+      "refreshOutcomeKinds": [
+        "grace",
+        "rotated"
+      ],
+      "sameNumberPresentedTwice": true,
+      "statusesAtPageSorted": [
+        200,
+        200,
+        200,
+        200
+      ],
+      "pageRefreshCalls": null,
+      "revokedAfterBurst": null,
+      "validNumbersAfterBurst": [
+        "rt4"
+      ],
+      "serverLastIssued": "rt4"
+    },
+    "4. 요청 넷 동시, 설계 1, 유예 chain, 응답의 차례를 건드리지 않음 5/5": {
+      "refreshRequestsAtAgentOs": 4,
+      "refreshOutcomesInArrivalOrder": [
+        "rotated",
+        "grace",
+        "grace",
+        "grace"
+      ],
+      "numbersPresented": [
+        "rt0",
+        "rt0",
+        "rt0",
+        "rt0"
+      ],
+      "refreshOutcomeKinds": [
+        "grace",
+        "rotated"
+      ],
+      "sameNumberPresentedTwice": true,
+      "statusesAtPageSorted": [
+        200,
+        200,
+        200,
+        200
+      ],
+      "pageRefreshCalls": null,
+      "revokedAfterBurst": null,
+      "validNumbersAfterBurst": [
+        "rt4"
+      ],
+      "serverLastIssued": "rt4"
+    },
+    "4. 요청 넷 동시, 설계 1, 유예 chain, 응답의 차례를 뒤집음": {
+      "refreshRequestsAtAgentOs": 4,
+      "refreshOutcomesInArrivalOrder": [
+        "rotated",
+        "grace",
+        "grace",
+        "grace"
+      ],
+      "numbersPresented": [
+        "rt0",
+        "rt0",
+        "rt0",
+        "rt0"
+      ],
+      "refreshOutcomeKinds": [
+        "grace",
+        "rotated"
+      ],
+      "sameNumberPresentedTwice": true,
+      "statusesAtPageSorted": [
+        200,
+        200,
+        200,
+        200
+      ],
+      "pageRefreshCalls": null,
+      "revokedAfterBurst": null,
+      "validNumbersAfterBurst": [
+        "rt4"
+      ],
+      "serverLastIssued": "rt4",
+      "setCookieLandedInOrder": [
+        "rt4",
+        "rt3",
+        "rt2",
+        "rt1"
+      ],
+      "browserHoldsAfterBurst": {
+        "at": "at1",
+        "rt": "rt1"
+      },
+      "browserHoldsValidNumber": false,
+      "browserHoldsLastIssued": false,
+      "followStatusAtPage": 401,
+      "followRefreshOutcome": "reuse_revoked",
+      "revokedAtEnd": "refresh_reuse",
+      "aliveAfterNextExpiry": false
+    },
+    "4. 요청 넷 동시, 설계 1, 유예 family, 응답의 차례를 건드리지 않음": {
+      "refreshRequestsAtAgentOs": 4,
+      "refreshOutcomesInArrivalOrder": [
+        "rotated",
+        "grace",
+        "grace",
+        "grace"
+      ],
+      "numbersPresented": [
+        "rt0",
+        "rt0",
+        "rt0",
+        "rt0"
+      ],
+      "refreshOutcomeKinds": [
+        "grace",
+        "rotated"
+      ],
+      "sameNumberPresentedTwice": true,
+      "statusesAtPageSorted": [
+        200,
+        200,
+        200,
+        200
+      ],
+      "pageRefreshCalls": null,
+      "revokedAfterBurst": null,
+      "validNumbersAfterBurst": [
+        "rt1",
+        "rt2",
+        "rt3",
+        "rt4"
+      ],
+      "serverLastIssued": "rt4",
+      "browserHoldsValidNumber": true,
+      "followStatusAtPage": 200,
+      "followRefreshOutcome": "rotated",
+      "revokedAtEnd": null,
+      "aliveAfterNextExpiry": true
+    },
+    "4. 요청 넷 동시, 설계 1, 유예 family, 응답의 차례를 뒤집음": {
+      "refreshRequestsAtAgentOs": 4,
+      "refreshOutcomesInArrivalOrder": [
+        "rotated",
+        "grace",
+        "grace",
+        "grace"
+      ],
+      "numbersPresented": [
+        "rt0",
+        "rt0",
+        "rt0",
+        "rt0"
+      ],
+      "refreshOutcomeKinds": [
+        "grace",
+        "rotated"
+      ],
+      "sameNumberPresentedTwice": true,
+      "statusesAtPageSorted": [
+        200,
+        200,
+        200,
+        200
+      ],
+      "pageRefreshCalls": null,
+      "revokedAfterBurst": null,
+      "validNumbersAfterBurst": [
+        "rt1",
+        "rt2",
+        "rt3",
+        "rt4"
+      ],
+      "serverLastIssued": "rt4",
+      "setCookieLandedInOrder": [
+        "rt4",
+        "rt3",
+        "rt2",
+        "rt1"
+      ],
+      "browserHoldsAfterBurst": {
+        "at": "at1",
+        "rt": "rt1"
+      },
+      "browserHoldsValidNumber": true,
+      "browserHoldsLastIssued": false,
+      "followStatusAtPage": 200,
+      "followRefreshOutcome": "rotated",
+      "revokedAtEnd": null,
+      "aliveAfterNextExpiry": true
+    },
+    "4. 요청 넷 동시, 설계 2(화면이 갱신을 한 번 부름), 유예 0": {
+      "refreshOutcomeKinds": [
+        "rotated"
+      ],
+      "sameNumberPresentedTwice": false,
+      "statusesAtPageSorted": [
+        200,
+        200,
+        200,
+        200
+      ],
+      "revokedAfterBurst": null,
+      "statusesAtPageByIndex": [
+        200,
+        200,
+        200,
+        200
+      ],
+      "browserHoldsValidNumber": true,
+      "browserHoldsLastIssued": true,
+      "followStatusAtPage": 200,
+      "followRefreshOutcome": "rotated",
+      "revokedAtEnd": null,
+      "aliveAfterNextExpiry": true
+    },
+    "4. 요청 넷 동시, 설계 2(화면이 갱신을 한 번 부름), 유예 chain": {
+      "refreshOutcomeKinds": [
+        "rotated"
+      ],
+      "sameNumberPresentedTwice": false,
+      "statusesAtPageSorted": [
+        200,
+        200,
+        200,
+        200
+      ],
+      "revokedAfterBurst": null,
+      "statusesAtPageByIndex": [
+        200,
+        200,
+        200,
+        200
+      ],
+      "browserHoldsValidNumber": true,
+      "browserHoldsLastIssued": true,
+      "followStatusAtPage": 200,
+      "followRefreshOutcome": "rotated",
+      "revokedAtEnd": null,
+      "aliveAfterNextExpiry": true
+    },
+    "4. 요청 넷 동시, 설계 2(화면이 갱신을 한 번 부름), 유예 family": {
+      "refreshOutcomeKinds": [
+        "rotated"
+      ],
+      "sameNumberPresentedTwice": false,
+      "statusesAtPageSorted": [
+        200,
+        200,
+        200,
+        200
+      ],
+      "revokedAfterBurst": null,
+      "statusesAtPageByIndex": [
+        200,
+        200,
+        200,
+        200
+      ],
+      "browserHoldsValidNumber": true,
+      "browserHoldsLastIssued": true,
+      "followStatusAtPage": 200,
+      "followRefreshOutcome": "rotated",
+      "revokedAtEnd": null,
+      "aliveAfterNextExpiry": true
+    },
+    "4. 요청 넷 동시, 설계 2, 유예 0, 401 하나가 갱신이 끝난 뒤에 닿음": {
+      "refreshRequestsAtAgentOs": 2,
+      "refreshOutcomesInArrivalOrder": [
+        "rotated",
+        "rotated"
+      ],
+      "numbersPresented": [
+        "rt0",
+        "rt1"
+      ],
+      "refreshOutcomeKinds": [
+        "rotated"
+      ],
+      "sameNumberPresentedTwice": false,
+      "statusesAtPageSorted": [
+        200,
+        200,
+        200,
+        200
+      ],
+      "pageRefreshCalls": 2,
+      "revokedAfterBurst": null,
+      "validNumbersAfterBurst": [
+        "rt2"
+      ],
+      "serverLastIssued": "rt2",
+      "statusesAtPageByIndex": [
+        200,
+        200,
+        200,
+        200
+      ],
+      "setCookieLandedInOrder": [
+        "rt1",
+        "rt2"
+      ],
+      "browserHoldsAfterBurst": {
+        "at": "at2",
+        "rt": "rt2"
+      },
+      "browserHoldsValidNumber": true,
+      "browserHoldsLastIssued": true,
+      "followStatusAtPage": 200,
+      "followRefreshOutcome": "rotated",
+      "revokedAtEnd": null,
+      "aliveAfterNextExpiry": true
+    },
+    "4. 요청 넷 동시, 설계 2(화면이 갱신을 한 번 부름), 유예 0 (포트 C, Node fetch)": {
+      "refreshOutcomeKinds": [
+        "rotated"
+      ],
+      "sameNumberPresentedTwice": false,
+      "statusesAtPageSorted": [
+        200,
+        200,
+        200,
+        200
+      ],
+      "revokedAfterBurst": null,
+      "statusesAtPageByIndex": [
+        200,
+        200,
+        200,
+        200
+      ],
+      "browserHoldsValidNumber": true,
+      "browserHoldsLastIssued": true,
+      "followStatusAtPage": 200,
+      "followRefreshOutcome": "rotated",
+      "revokedAtEnd": null,
+      "aliveAfterNextExpiry": true
+    },
+    "4. 요청 넷 동시, 설계 2(화면이 갱신을 한 번 부름), 유예 0 (포트 C, node:http)": {
+      "refreshOutcomeKinds": [
+        "rotated"
+      ],
+      "sameNumberPresentedTwice": false,
+      "statusesAtPageSorted": [
+        200,
+        200,
+        200,
+        200
+      ],
+      "revokedAfterBurst": null,
+      "statusesAtPageByIndex": [
+        200,
+        200,
+        200,
+        200
+      ],
+      "browserHoldsValidNumber": true,
+      "browserHoldsLastIssued": true,
+      "followStatusAtPage": 200,
+      "followRefreshOutcome": "rotated",
+      "revokedAtEnd": null,
+      "aliveAfterNextExpiry": true
+    },
+    "4. 요청 넷 동시, 설계 2(화면이 갱신을 한 번 부름), 유예 0 (포트 B, httpx2)": {
+      "refreshOutcomeKinds": [
+        "rotated"
+      ],
+      "sameNumberPresentedTwice": false,
+      "statusesAtPageSorted": [
+        200,
+        200,
+        200,
+        200
+      ],
+      "revokedAfterBurst": null,
+      "statusesAtPageByIndex": [
+        200,
+        200,
+        200,
+        200
+      ],
+      "browserHoldsValidNumber": true,
+      "browserHoldsLastIssued": true,
+      "followStatusAtPage": 200,
+      "followRefreshOutcome": "rotated",
+      "revokedAtEnd": null,
+      "aliveAfterNextExpiry": true
+    },
+    "4. 탭 둘이 동시에 갱신(포트 A 직접, 포트 B 중계), 유예 0": {
+      "refreshOutcomesInArrivalOrder": [
+        "rotated",
+        "reuse_revoked"
+      ],
+      "revokedAfterBurst": "refresh_reuse",
+      "validNumbersAfterBurst": [],
+      "serverLastIssued": "rt1",
+      "browserHoldsValidNumber": false,
+      "followStatuses": {
+        "portARefresh": 401,
+        "portBData": 401
+      },
+      "revokedAtEnd": "refresh_reuse",
+      "aliveAfterNextExpiry": false
+    },
+    "4. 탭 둘이 동시에 갱신, 유예 chain, 응답을 같은 시간만큼 잡아 둠": {
+      "refreshOutcomesInArrivalOrder": [
+        "rotated",
+        "grace"
+      ],
+      "revokedAfterBurst": null,
+      "validNumbersAfterBurst": [
+        "rt2"
+      ],
+      "serverLastIssued": "rt2"
+    },
+    "4. 탭 둘이 동시에 갱신, 유예 chain, 응답의 차례를 뒤집음": {
+      "refreshOutcomesInArrivalOrder": [
+        "rotated",
+        "grace"
+      ],
+      "revokedAfterBurst": null,
+      "validNumbersAfterBurst": [
+        "rt2"
+      ],
+      "serverLastIssued": "rt2",
+      "browserHoldsAfterBurst": {
+        "at": "at1",
+        "rt": "rt1"
+      },
+      "browserHoldsValidNumber": false,
+      "browserHoldsLastIssued": false,
+      "followStatuses": {
+        "portARefresh": 401,
+        "portBData": 401
+      },
+      "followRefreshOutcome": "reuse_revoked",
+      "revokedAtEnd": "refresh_reuse",
+      "aliveAfterNextExpiry": false
+    },
+    "4. 탭 둘이 동시에 갱신, 유예 family, 응답을 같은 시간만큼 잡아 둠": {
+      "refreshOutcomesInArrivalOrder": [
+        "rotated",
+        "grace"
+      ],
+      "revokedAfterBurst": null,
+      "validNumbersAfterBurst": [
+        "rt1",
+        "rt2"
+      ],
+      "serverLastIssued": "rt2",
+      "browserHoldsValidNumber": true,
+      "followStatuses": {
+        "portARefresh": 200,
+        "portBData": 200
+      },
+      "followRefreshOutcome": "rotated",
+      "revokedAtEnd": null,
+      "aliveAfterNextExpiry": true
+    },
+    "4. 탭 둘이 동시에 갱신, 유예 family, 응답의 차례를 뒤집음": {
+      "refreshOutcomesInArrivalOrder": [
+        "rotated",
+        "grace"
+      ],
+      "revokedAfterBurst": null,
+      "validNumbersAfterBurst": [
+        "rt1",
+        "rt2"
+      ],
+      "serverLastIssued": "rt2",
+      "browserHoldsAfterBurst": {
+        "at": "at1",
+        "rt": "rt1"
+      },
+      "browserHoldsValidNumber": true,
+      "browserHoldsLastIssued": false,
+      "followStatuses": {
+        "portARefresh": 200,
+        "portBData": 200
+      },
+      "followRefreshOutcome": "rotated",
+      "revokedAtEnd": null,
+      "aliveAfterNextExpiry": true
+    },
+    "5. 대조: 브라우저가 보낸 머리를 그대로 전하는 중계와 Cookie 만 전하는 중계": {
+      "주소창으로 포트 B 의 경로 열기, Cookie 만": {
+        "browserHeadersAtRelay": {
+          "sec-fetch-site": "none",
+          "sec-fetch-mode": "navigate",
+          "sec-fetch-dest": "document",
+          "origin": null,
+          "referer": null,
+          "cookieNames": [
+            "__Host-aos_at",
+            "__Host-aos_rt"
+          ]
+        },
+        "headersAtAgentOs": {
+          "sec-fetch-site": null,
+          "sec-fetch-mode": null,
+          "sec-fetch-dest": null,
+          "origin": null,
+          "referer": null,
+          "cookieNames": [
+            "__Host-aos_at",
+            "__Host-aos_rt"
+          ]
+        },
+        "check": "pass",
+        "statusAtAgentOs": 200
+      },
+      "주소창으로 포트 B 의 경로 열기, 그대로": {
+        "browserHeadersAtRelay": {
+          "sec-fetch-site": "none",
+          "sec-fetch-mode": "navigate",
+          "sec-fetch-dest": "document",
+          "origin": null,
+          "referer": null,
+          "cookieNames": [
+            "__Host-aos_at",
+            "__Host-aos_rt"
+          ]
+        },
+        "headersAtAgentOs": {
+          "sec-fetch-site": "none",
+          "sec-fetch-mode": "navigate",
+          "sec-fetch-dest": "document",
+          "origin": null,
+          "referer": null,
+          "cookieNames": [
+            "__Host-aos_at",
+            "__Host-aos_rt"
+          ]
+        },
+        "check": "reject: sec-fetch-site=none",
+        "statusAtAgentOs": 403
+      },
+      "포트 B 페이지의 fetch GET, 그대로": {
+        "browserHeadersAtRelay": {
+          "sec-fetch-site": "same-origin",
+          "sec-fetch-mode": "cors",
+          "sec-fetch-dest": "empty",
+          "origin": null,
+          "referer": "http://localhost:<B>/api/page",
+          "cookieNames": [
+            "__Host-aos_at",
+            "__Host-aos_rt"
+          ]
+        },
+        "headersAtAgentOs": {
+          "sec-fetch-site": "same-origin",
+          "sec-fetch-mode": "cors",
+          "sec-fetch-dest": "empty",
+          "origin": null,
+          "referer": "http://localhost:<B>/api/page",
+          "cookieNames": [
+            "__Host-aos_at",
+            "__Host-aos_rt"
+          ]
+        },
+        "check": "pass",
+        "statusAtAgentOs": 200
+      },
+      "포트 B 페이지의 fetch POST, 그대로": {
+        "browserHeadersAtRelay": {
+          "sec-fetch-site": "same-origin",
+          "sec-fetch-mode": "cors",
+          "sec-fetch-dest": "empty",
+          "origin": "http://localhost:<B>",
+          "referer": "http://localhost:<B>/api/page",
+          "cookieNames": [
+            "__Host-aos_at",
+            "__Host-aos_rt"
+          ]
+        },
+        "headersAtAgentOs": {
+          "sec-fetch-site": "same-origin",
+          "sec-fetch-mode": "cors",
+          "sec-fetch-dest": "empty",
+          "origin": "http://localhost:<B>",
+          "referer": "http://localhost:<B>/api/page",
+          "cookieNames": [
+            "__Host-aos_at",
+            "__Host-aos_rt"
+          ]
+        },
+        "check": "pass",
+        "statusAtAgentOs": 200
+      },
+      "포트 B 의 링크로 포트 C 의 문서 열기, Cookie 만": {
+        "browserHeadersAtRelay": {
+          "sec-fetch-site": "same-site",
+          "sec-fetch-mode": "navigate",
+          "sec-fetch-dest": "document",
+          "origin": null,
+          "referer": "http://localhost:<B>/",
+          "cookieNames": [
+            "__Host-aos_at",
+            "__Host-aos_rt"
+          ]
+        },
+        "headersAtAgentOs": {
+          "sec-fetch-site": null,
+          "sec-fetch-mode": null,
+          "sec-fetch-dest": null,
+          "origin": null,
+          "referer": null,
+          "cookieNames": [
+            "__Host-aos_at",
+            "__Host-aos_rt"
+          ]
+        },
+        "check": "pass",
+        "statusAtAgentOs": 200
+      },
+      "포트 B 의 링크로 포트 C 의 문서 열기, 그대로": {
+        "browserHeadersAtRelay": {
+          "sec-fetch-site": "same-site",
+          "sec-fetch-mode": "navigate",
+          "sec-fetch-dest": "document",
+          "origin": null,
+          "referer": "http://localhost:<B>/",
+          "cookieNames": [
+            "__Host-aos_at",
+            "__Host-aos_rt"
+          ]
+        },
+        "headersAtAgentOs": {
+          "sec-fetch-site": "same-site",
+          "sec-fetch-mode": "navigate",
+          "sec-fetch-dest": "document",
+          "origin": null,
+          "referer": "http://localhost:<B>/",
+          "cookieNames": [
+            "__Host-aos_at",
+            "__Host-aos_rt"
+          ]
+        },
+        "check": "reject: sec-fetch-site=same-site",
+        "statusAtAgentOs": 403
+      }
+    },
+    "덤: httpx 의 함께 쓰는 클라이언트가 Set-Cookie 로 받은 쿠키를 들고 있는가": {
+      "clientJarAfterRefresh": [
+        "__Host-aos_at; domain=127.0.0.1; path=/; secure=true",
+        "__Host-aos_rt; domain=127.0.0.1; path=/; secure=true"
+      ],
+      "cookieSentForBareRequest": null,
+      "statusForBareRequest": 401,
+      "clientJarAfterPlain": [
+        "__Host-aos_at; secure=true",
+        "__Host-aos_rt; secure=true",
+        "probe_plain; secure=false"
+      ],
+      "cookieSentForBareRequestAfterPlain": "probe_plain=kept-by-client",
+      "cookieNamesSentForRequestWithOwnCookieAfterPlain": [
+        "__Host-aos_at",
+        "__Host-aos_rt"
+      ]
+    },
+    "덤: httpx2 의 함께 쓰는 클라이언트가 Set-Cookie 로 받은 쿠키를 들고 있는가": {
+      "clientJarAfterRefresh": [
+        "__Host-aos_at; domain=127.0.0.1; path=/; secure=true",
+        "__Host-aos_rt; domain=127.0.0.1; path=/; secure=true"
+      ],
+      "cookieSentForBareRequest": null,
+      "statusForBareRequest": 401,
+      "clientJarAfterPlain": [
+        "__Host-aos_at; secure=true",
+        "__Host-aos_rt; secure=true",
+        "probe_plain; secure=false"
+      ],
+      "cookieSentForBareRequestAfterPlain": "probe_plain=kept-by-client",
+      "cookieNamesSentForRequestWithOwnCookieAfterPlain": [
+        "__Host-aos_at",
+        "__Host-aos_rt"
+      ]
+    },
+    "덤 대조: 쿠키를 받지 않는 통을 준 httpx2 클라이언트는 쿠키를 들지도 싣지도 않는다": {
+      "clientJarAfterRefresh": [],
+      "cookieSentForBareRequest": null,
+      "statusForBareRequest": 401,
+      "clientJarAfterPlain": [],
+      "cookieSentForBareRequestAfterPlain": null,
+      "cookieNamesSentForRequestWithOwnCookieAfterPlain": [
+        "__Host-aos_at",
+        "__Host-aos_rt"
+      ]
+    },
+    "6. openapi-fetch 의 함께 쓰는 클라이언트는 받은 쿠키를 다음 요청에 싣지 않는다": {
+      "cookieSentForBareRequest": null,
+      "statusForBareRequest": 401,
+      "cookieSentForBareRequestAfterPlain": null
+    },
+    "6. openapi-fetch 호출에 AbortSignal.timeout 을 넘겼을 때": {
+      "포트 C, openapi-fetch": {
+        "longTimeout": {
+          "statusAtRelay": 200,
+          "threw": false
+        },
+        "shortTimeout": {
+          "threw": true,
+          "thrown": {
+            "name": "TimeoutError",
+            "constructorName": "DOMException",
+            "message": "The operation was aborted due to timeout",
+            "code": 23,
+            "isDomException": true,
+            "causeName": null
+          }
+        }
+      },
+      "포트 C, Node fetch": {
+        "longTimeout": {
+          "statusAtRelay": 200,
+          "threw": false
+        },
+        "shortTimeout": {
+          "threw": true,
+          "thrown": {
+            "name": "TimeoutError",
+            "constructorName": "DOMException",
+            "message": "The operation was aborted due to timeout",
+            "code": 23,
+            "isDomException": true,
+            "causeName": null
+          }
+        }
+      }
+    }
+  }
+}
