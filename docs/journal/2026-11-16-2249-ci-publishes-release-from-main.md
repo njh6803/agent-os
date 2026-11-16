@@ -88,7 +88,9 @@
 
 ## 다음
 
-- 이 PR을 병합한 세션은 출시 PR을 열기 전에 사용자에게 위 사람 몫 여섯이 끝났는지 묻는다(`merge.md` "출시 PR").
+- 이 PR을 병합한 세션은 출시 PR을 열기 전에 사용자에게 위 사람 몫 여섯이 끝났는지 묻는다(`merge.md` "출시 PR"). 사용자는 "사람 몫 여섯 끝났다"고 답했지만, 6번(저장소 넷)은 그 뒤 이름이 바뀌었다(`agent-os-runtime`, `agent-os-admin`, `agent-os-widget`, `agent-os-widget-test-page`). 새 이름으로 공개 저장소를 만들었는지 다시 확인한다.
+- 사용자에게 물을 설계 판단 셋(첫 판 뒤 또는 병합 직후): `build` 잡이 `DOCKERHUB_TOKEN`을 쥔 채 의존성 코드를 도는 것을 잡으로 가를지, 출시 후보를 `prerelease`로 표시할지, `앞 실행의 초안 지우기`의 순서를 바꿀지. 개인 계정을 쓰면 토큰이 닿는 범위가 그 계정의 모든 저장소라는 점은 ADR 0056 이력 2026-11-17이 적었고, 전용 계정을 만드는 길은 닫지 않았다.
+- 대기열에 남긴 후속 셋: `widget-test-page-term-leftovers`, `code-names-follow-runtime-and-widget-test-page`, `e2e-stack-interpreter-timeout`.
 - 출시 PR을 병합한 세션은 `merge.md`의 "판 내기를 기다린다"대로 첫 판 `0.1.0-rc.1`을 끝까지 보고 아래를 일지에 적는다. 잡마다 걸린 시간, 초안 단계에서 git 태그가 없었는지, 로그인 없이 이미지가 받아지는지, 압축 크기, 러너에서 시험한 이미지와 올린 이미지의 설정 해시가 같았는지(`시험한 이미지와 올린 이미지 대조` 단계), gha 캐시가 두 번째 짓기에서 맞았는지. 이 PC에서 받은 이미지와 묶음으로 단독 e2e를 실제 모델 묶음까지 켜서 돌린다. `timeout-minutes`(`release.yml` 90·30, `ci.yml`의 `e2e-standalone` 45)를 잰 값으로 맞춘다.
 - rag-engine에 줄 지시문은 첫 판이 실제로 돈 뒤 그 세션이 사용자에게 낸다(기능 계획 본문과 명세 "rag-engine에 줄 지시문"). 대기열 `rag-engine-port-by-hand`에 회차를 더한다.
 
@@ -193,5 +195,10 @@ CodeRabbit(5건)과 claude-review가 헤드 `a7651c4`를 리뷰했고 검사는 
 - 후속 항목 둘을 대기열에 적었다. `widget-test-page-term-leftovers`(옛 용어가 남은 파일 157개를 `git grep -l "위젯 미리보기 페이지" -- . ':!docs/journal'`로 셌다)와 `code-names-follow-runtime-and-widget-test-page`(제안만, ADR 필요).
 
 **확인한 것.** `git grep`으로 옛 저장소 이름(`agent-os-serve`, `agent-os-portal`, 이름공간 뒤의 `serve` 등)을 찾았고 살아 있는 문서에 남은 것이 없었다(ADR 0056 본문의 기록 문장과 일지는 제외). `uv run pytest tests/tools/test_release_ci.py tests/tools/test_release.py`가 146개 통과, `uv run ruff check .`와 `ruff format --check`와 `uv run pyright`가 통과, `pnpm -C web/packages/e2e-standalone exec playwright test`가 12개 통과(1.6분)했다. `uv run python tools/run_checks.py`에서는 pytest와 pyright와 경계와 훅 러너가 초록이었고 web-verify만 `stack.ts`의 `repositories.get(image)`가 `string | undefined`라는 `restrict-template-expressions` 오류로 빨갰다. 저장소 이름 넷을 구조 분해로 받게 고치고 Prettier로 맞춘 뒤 `pnpm -C web verify`가 초록이 되었고, 단독 배포 e2e도 고친 코드로 다시 쳐서 12개 통과(1.5분)했다.
+
+**봇 둘째 회차(헤드 `650ef91`).** 검사는 모두 초록이었고(`wait_ci`가 낸 줄), CodeRabbit이 인라인 코멘트 넷을 냈다. 둘째 회차라 Critical·Major만 고친다.
+- 고친 것(Minor지만 저장소 규칙 위반): `docs/adr/0056-…`의 8·12·14번 줄을 원문으로 되돌리고 포인터(`(바뀜: 이력 2026-11-17 "…")`)만 남겼다. `.claude/rules/adr.md`가 "본문의 다른 글자는 고치지 않는다. 포인터는 결정을 바꾸지 않는 표시다"라고 적는데, 승인받은 초안이 본문 문장을 다시 쓰는 모양이라 제가 그대로 적용했다. 승인받은 몫은 이력 문단과 `tech.md`의 갱신이고 본문 문장의 새 표현은 이 규칙에 어긋나므로, 내용은 이력 문단이 맡는다. `uv run python tools/check_adr_pointers.py`는 이 위반을 잡지 못했다(본문이 바뀌었는지는 보지 않고 포인터의 모양만 본다).
+- 보류(첫 회차와 같은 지적): `release.yml`의 `앞 실행의 초안 지우기` 순서(Major)와 `prerelease` 표시(Major). 이유는 위 "PR 봇 첫 회차"의 보류와 같고 병합 뒤 사용자에게 묻는다.
+- 보류(Minor): `web/packages/e2e-standalone/e2e/docker.ts`의 `repositoryName()`이 `interpreter()`(`@agent-os/e2e-stack`의 `spawnSync("uv", …)`, 제한 시간 없음)를 부른 뒤에야 60초 제한이 시작된다. 정상 실행에는 영향이 없고 `uv`가 멈출 때만 문제다. 같은 도우미를 이미 `stack.ts`가 시험 준비마다 쓰고 있어 이 PR이 고치면 영향이 e2e-stack 패키지 밖으로 번진다. 병합 뒤 별도 항목으로 다룬다(대기열 `e2e-stack-interpreter-timeout`).
 
 **사람 몫 6번이 바뀌었다.** 저장소 넷을 새 이름(`agent-os-runtime`, `agent-os-admin`, `agent-os-widget`, `agent-os-widget-test-page`)으로 공개로 만들어야 한다. 옛 이름으로 만들어 두었다면 새 이름으로 다시 만든다.
