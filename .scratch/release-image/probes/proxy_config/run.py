@@ -678,10 +678,14 @@ def nginx_test(ctx: Ctx, report: Report, label: str, conf: str, *, expect_ok: bo
         passed = "test is successful" in done.both and done.code == 0
         failed = "test failed" in done.both and done.code != 0
         emerg = next((line.strip() for line in done.both.splitlines() if "[emerg]" in line), "")
+        # 대조군(direct.conf)은 뒷단 이름이 풀리지 않아서 실패해야 한다. 인증서나 문법 같은 다른
+        # 이유의 실패는 같은 "실패한다"를 내지만 이 회차가 재려는 상황이
+        # 아니다(.claude/rules/probes.md 첫 항목).
+        dns_failure = "host not found in upstream" in emerg
         verdict = "지난다" if passed else "실패한다"
         report.close(
             slot,
-            measured=passed or failed,
+            measured=passed or (failed and dns_failure),
             result=verdict + ("" if passed == expect_ok else " (기대와 다르다)"),
             detail=emerg[-220:],
         )
@@ -831,9 +835,19 @@ def empty_key_round(ctx: Ctx, report: Report, attempt: int) -> None:
         token_ok = sum(reply.status == 200 for reply in token_replies)
         rejected = [index + 1 for index, reply in enumerate(token_replies) if reply.status == 429]
         refill = int(span(token_replies) * TOKEN_RATE / 60)
+        # 429 는 portal_token 구역이 낸 것이어야 측정이다. 오류 기록에 그 구역의 거부 줄이 없는 429
+        # 는 다른 곳(뒷단, 다른 구역)이 낸 것이라 이 회차가 재려는 상황이
+        # 아니다(.claude/rules/probes.md 첫 항목).
+        attributed = all(
+            reply.status != 429 or bool(limited(log, f"{rid}-t{index}"))
+            for index, reply in enumerate(token_replies)
+        )
         report.close(
             slot,
-            measured=reached and len(ack_replies) == acks and len(token_replies) == tokens,
+            measured=reached
+            and attributed
+            and len(ack_replies) == acks
+            and len(token_replies) == tokens,
             result=f"확인 경로 200 {ack_ok}/{acks}(limit 칸 {ack_limits}), 그 뒤 토큰 경로 200 "
             f"{token_ok}번·첫 429 는 {rejected[0] if rejected else '없음'}번째"
             f"(기대 200 {1 + TOKEN_BURST}~{1 + TOKEN_BURST + refill}번)",

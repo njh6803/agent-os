@@ -1,0 +1,19 @@
+# 시험만 쓰는 compose 덧씌움. IPv6 가 없는 환경을 흉내 낸다(release-image 명세 "프록시 설정"의 IPv6, 명세 검토 N2).
+# 환경 변수 AGENT_OS_STANDALONE_NO_IPV6=1 일 때 준비(e2e/stack.ts)가 배포 파일 묶음의 compose.yaml 뒤에 얹는다.
+# 컨테이너마다 커널의 IPv6 를 끈다. 프록시의 listen 이 IPv4 뿐이고 resolver 가 ipv6=off 라서 이 환경에서도 떠야 한다.
+services:
+  proxy:
+    sysctls:
+      net.ipv6.conf.all.disable_ipv6: "1"
+  serve:
+    sysctls:
+      net.ipv6.conf.all.disable_ipv6: "1"
+  admin:
+    sysctls:
+      net.ipv6.conf.all.disable_ipv6: "1"
+  widget:
+    sysctls:
+      net.ipv6.conf.all.disable_ipv6: "1"
+  portal:
+    sysctls:
+      net.ipv6.conf.all.disable_ipv6: "1"
