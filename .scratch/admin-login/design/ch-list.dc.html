@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>대화 목록</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/agent-os/styles.css">
+<link rel="stylesheet" href="ds/agent-os/fonts/fonts.css">
+<link rel="stylesheet" href="ds/agent-os/_ds_bundle.css">
+<script src="ds/agent-os/_ds_bundle.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0}
+a{color:var(--accent)}a:hover{color:var(--text)}
+.cl th{text-align:left;height:var(--row-h);padding:0 var(--spacing-3);border-bottom:1px solid var(--border)}
+.cl td{height:var(--row-h);padding:0 var(--spacing-3);border-bottom:1px solid var(--border)}
+.cl .req{max-width:0;width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cl .num{text-align:right;font-variant-numeric:tabular-nums}
+.cl .when{white-space:nowrap}
+</style>
+</helmet>
+<div data-theme="nokcheong" data-mode="light" style="min-height: 100vh; display: flex; background: var(--bg); color: var(--text); font-family: var(--sans);">
+<nav aria-label="관리 화면" style="width: var(--spacing-nav); flex-shrink: 0; box-sizing: border-box; padding: var(--spacing-4) var(--spacing-3); display: flex; flex-direction: column; gap: var(--spacing-1); background: var(--bg-raised); border-right: 1px solid var(--border);">
+<div class="font-semibold text-body" style="height: var(--spacing-nav-item); display: flex; align-items: center; padding: 0 var(--spacing-3); margin-bottom: var(--spacing-3);">Agent OS</div>
+<a href="#" class="flex items-center gap-2 text-body" style="height: var(--spacing-nav-item); padding: 0 var(--spacing-3); border-radius: var(--radius-m); color: var(--text-muted); text-decoration: none;"><x-import component-from-global-scope="AgentOsUi.Icon" name="plug" size="16"></x-import>플러그인</a>
+<a href="#" aria-current="page" class="flex items-center gap-2 text-body font-medium" style="height: var(--spacing-nav-item); padding: 0 var(--spacing-3); border-radius: var(--radius-m); background: var(--bg-selected); color: var(--text); text-decoration: none;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path vector-effect="non-scaling-stroke" d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>대화</a>
+<a href="#" class="flex items-center gap-2 text-body" style="height: var(--spacing-nav-item); padding: 0 var(--spacing-3); border-radius: var(--radius-m); color: var(--text-muted); text-decoration: none;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path vector-effect="non-scaling-stroke" d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle vector-effect="non-scaling-stroke" cx="9" cy="7" r="4"></circle><path vector-effect="non-scaling-stroke" d="M22 21v-2a4 4 0 0 0-3-3.87"></path><path vector-effect="non-scaling-stroke" d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>계정</a>
+<a href="#" class="flex items-center gap-2 text-body" style="height: var(--spacing-nav-item); padding: 0 var(--spacing-3); border-radius: var(--radius-m); color: var(--text-muted); text-decoration: none;"><x-import component-from-global-scope="AgentOsUi.Icon" name="settings" size="16"></x-import>설정</a>
+<div style="margin-top: auto; padding-top: var(--spacing-3); border-top: 1px solid var(--border);">
+<button type="button" aria-haspopup="menu" aria-expanded="false" class="flex items-center gap-2 w-full" style="min-height: 48px; padding: var(--spacing-2) var(--spacing-3); border: 0; border-radius: var(--radius-m); background: transparent; color: var(--text); font: inherit; text-align: left; cursor: pointer;">
+<span class="flex flex-col flex-1 min-w-0"><span class="font-mono text-mono font-medium">ops-lead</span><span class="text-small text-text-muted">시스템 관리자</span></span>
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex-shrink: 0; color: var(--text-muted);"><path vector-effect="non-scaling-stroke" d="m7 15 5 5 5-5"></path><path vector-effect="non-scaling-stroke" d="m7 9 5-5 5 5"></path></svg>
+</button>
+</div>
+</nav>
+<main style="flex: 1; min-width: 0; box-sizing: border-box; padding: var(--spacing-8);">
+<div style="display: flex; flex-direction: column; gap: var(--spacing-6);">
+<header class="flex items-start justify-between gap-4">
+<div class="flex flex-col gap-1 min-w-0">
+<div class="flex items-center gap-2"><h1 style="margin: 0; font-size: var(--text-title); line-height: var(--text-title--line-height); font-weight: var(--text-title--font-weight);">대화</h1><span class="text-body text-text-muted">31</span></div>
+<p class="text-body text-text-muted" style="margin: 0;">이어 간 실행을 한 줄로 묶었다. 최근에 움직인 대화가 위에 온다.</p>
+</div>
+<div class="flex items-center gap-2" style="flex-shrink: 0;">
+<x-import component-from-global-scope="AgentOsUi.Button" variant="secondary">새로 고침</x-import>
+<x-import component-from-global-scope="AgentOsUi.Button" variant="primary">새 대화</x-import>
+</div>
+</header>
+<fieldset class="flex flex-wrap items-center gap-2" style="margin: 0; padding: 0; border: 0;">
+<legend class="text-small text-text-muted" style="float: left; margin-right: var(--spacing-2); padding: 0;">상태</legend>
+<label class="flex items-center gap-2 text-body font-medium" style="height: var(--control-h); padding: 0 var(--spacing-3); border: 1px solid var(--text); border-radius: var(--radius-full); background: var(--bg-selected);"><input type="radio" name="status" checked="{{yes}}">전부</label>
+<label class="flex items-center gap-2 text-body" style="height: var(--control-h); padding: 0 var(--spacing-3); border: 1px solid var(--border-control); border-radius: var(--radius-full);"><input type="radio" name="status">일시정지</label>
+<label class="flex items-center gap-2 text-body" style="height: var(--control-h); padding: 0 var(--spacing-3); border: 1px solid var(--border-control); border-radius: var(--radius-full);"><input type="radio" name="status">끝남</label>
+<label class="flex items-center gap-2 text-body" style="height: var(--control-h); padding: 0 var(--spacing-3); border: 1px solid var(--border-control); border-radius: var(--radius-full);"><input type="radio" name="status">실패</label>
+<label class="flex items-center gap-2 text-body" style="height: var(--control-h); padding: 0 var(--spacing-3); border: 1px solid var(--border-control); border-radius: var(--radius-full);"><input type="radio" name="status">결말 없음</label>
+</fieldset>
+<div style="overflow-x: auto;">
+<table class="cl" style="width: 100%; border-collapse: collapse; table-layout: auto;">
+<thead>
+<tr>
+<th scope="col" class="text-small font-medium text-text-muted" style="width: 120px;">상태</th>
+<th scope="col" class="text-small font-medium text-text-muted">첫 요청</th>
+<th scope="col" class="text-small font-medium text-text-muted">에이전트</th>
+<th scope="col" class="text-small font-medium text-text-muted">요청한 계정</th>
+<th scope="col" class="text-small font-medium text-text-muted num">실행</th>
+<th scope="col" class="text-small font-medium text-text-muted" style="width: 168px;">마지막</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><x-import component-from-global-scope="AgentOsUi.StatusBadge" status="no-outcome"></x-import></td>
+<td class="text-table req"><a href="#">11월 정산 합계를 주문 상태별로 셈해 줘</a></td>
+<td class="font-mono text-mono">calc</td>
+<td class="font-mono text-mono">kim.dev</td>
+<td class="font-mono text-mono num">1</td>
+<td class="font-mono text-mono text-text-muted when">2026-11-15 16:04:10</td>
+</tr>
+<tr>
+<td><x-import component-from-global-scope="AgentOsUi.StatusBadge" status="paused"></x-import></td>
+<td class="text-table req"><a href="#">지난주 환불 요청 가운데 아직 처리하지 않은 것을 찾아 줘</a></td>
+<td class="font-mono text-mono">support-bot</td>
+<td class="font-mono text-mono">ops-lead</td>
+<td class="font-mono text-mono num">2</td>
+<td class="font-mono text-mono text-text-muted when">2026-11-15 16:02:44</td>
+</tr>
+<tr>
+<td><x-import component-from-global-scope="AgentOsUi.StatusBadge" status="failed"></x-import></td>
+<td class="text-table req"><a href="#">지난달 환불 금액을 카드사별로 나눠 줘</a></td>
+<td class="font-mono text-mono">calc</td>
+<td class="font-mono text-mono">ops-lead</td>
+<td class="font-mono text-mono num">2</td>
+<td class="font-mono text-mono text-text-muted when">2026-11-15 14:37:19</td>
+</tr>
+<tr>
+<td><x-import component-from-global-scope="AgentOsUi.StatusBadge" status="done"></x-import></td>
+<td class="text-table req"><a href="#">주문한 운동화가 언제 도착하나요</a></td>
+<td class="font-mono text-mono">support-bot</td>
+<td class="text-table text-text-muted" style="white-space: nowrap;">최종 사용자 <span class="font-mono text-mono">https://shop.example|user-17</span></td>
+<td class="font-mono text-mono num">2</td>
+<td class="font-mono text-mono text-text-muted when">2026-11-15 13:12:05</td>
+</tr>
+<tr>
+<td colspan="6"><span class="flex items-center gap-2 text-table text-warning"><x-import component-from-global-scope="AgentOsUi.Icon" name="triangle-alert" size="16"></x-import><span>읽을 수 없는 트레이스: <span class="font-mono text-mono">traces/9a0c6e12.jsonl</span> 첫 줄의 형식 버전이 없다</span></span></td>
+</tr>
+<tr>
+<td><x-import component-from-global-scope="AgentOsUi.StatusBadge" status="done"></x-import></td>
+<td class="text-table req"><a href="#"><span class="font-mono text-mono">ORD-2026-11-10-000377</span> 환불 사유를 확인해 줘</a></td>
+<td class="font-mono text-mono">support-bot</td>
+<td class="font-mono text-mono">kim.dev</td>
+<td class="font-mono text-mono num">3</td>
+<td class="font-mono text-mono text-text-muted when">2026-11-15 11:48:30</td>
+</tr>
+<tr>
+<td><x-import component-from-global-scope="AgentOsUi.StatusBadge" status="done"></x-import></td>
+<td class="text-table req"><a href="#">12,800원의 부가세를 셈해 줘</a></td>
+<td class="font-mono text-mono">calc</td>
+<td class="text-table text-text-muted" style="white-space: nowrap;">명령줄 <span class="font-mono text-mono">operator</span></td>
+<td class="font-mono text-mono num">1</td>
+<td class="font-mono text-mono text-text-muted when">2026-11-15 09:20:03</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="flex justify-center">
+<x-import component-from-global-scope="AgentOsUi.Button" variant="secondary">더 보기</x-import>
+</div>
+</div>
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":800}}'>
+class Component extends DCLogic {
+renderVals() {
+return { yes: true, no: false };
+}
+}
+</script>
+</body>
+</html>
