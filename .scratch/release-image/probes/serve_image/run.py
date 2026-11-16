@@ -20,7 +20,9 @@
     네트워크가 없다는 표지는 레지스트리에 TCP 로 닿지 않는 것, 답의 표지는 serverInfo 다. 답하지
     않을 갈래는 갈래마다 기대한 끝(stderr 의 `EAI_AGAIN`·`only-if-cached`, 또는 창이 다 차도록
     끝나지 않음)을 표지로 본다. 네트워크가 있을 때 npm 의 http 기록에 패키지 조회가 찍히는지와,
-    실제 serve 에서 지금 매니페스트와 실행 파일 이름의 매니페스트로 실행 하나씩을 본다. 그 표지는
+    실제 serve 에서 npx 매니페스트와 실행 파일 이름의 매니페스트로 실행 하나씩을 본다(저장소의
+    매니페스트는 티켓 02 부터 실행 파일 이름이라 npx 쪽은 `setserver` 로 바꿔 쓰고, 바꿔 쓴 줄이
+    그 명령인 것을 표지로 본다). 그 표지는
     실패 원인(`timeout`, `model_call`)과 그 실행 동안 serve 로그에 서버의 시작 줄이 늘었는지다.
   5 쓰는 자리. 호스트 엔진에서 흐름 하나를 돈 뒤 `docker diff` 로 이미지 밖에 쓴 자리를 모으고, 같은
     흐름을 `--read-only` 로 다시 돈다. 바이트코드를 미리 만들지 않은 이미지(항목 1 의
@@ -103,6 +105,10 @@ SERVE = (
     "claude-opus-5",
 )
 DIRECT = ("mcp-server-everything", "[]")
+# 저장소의 예시 매니페스트는 티켓 02 부터 실행 파일 이름이다. npx 갈래는 매니페스트를 이것으로
+# 직접 바꾸고, 바꿔 쓴 줄이 이 명령이라는 것을 표지로 본다(바꾸지 않으면 npx 갈래가 실행 파일
+# 이름으로 돈다).
+NPX = ("npx", json.dumps(["-y", PACKAGE]))
 LOCK_ERROR = "needs to be updated, but `--locked` was provided"
 UNSET_ERROR = "environment variable `AGENT_OS_VERSION` is not set"
 EDIT_LINE = re.compile(r'\d+:version = "([^"]*)"')
@@ -358,6 +364,19 @@ def run_agent(docker: Docker, name: str, *, seconds: float = 60) -> Outcome:
         as_text(dig(failed, "error"))[:200],
         dig(reply, "seconds"),
     )
+
+
+def set_manifest(docker: Docker, name: str, server: tuple[str, str]) -> Json:
+    """예시 매니페스트의 실행 명령을 server(DIRECT 나 NPX)로 바꿔 쓴다."""
+    return helper(docker, name, "setserver", MANIFEST, *server)
+
+
+def manifest_is(reply: Json, server: tuple[str, str]) -> bool:
+    """표지: 쓰기가 성공했고 쓴 `command` 줄이 그 명령이다. 저장소 기본 매니페스트가 이미 그
+    명령이어도 쓰기를 한 번 해서 이 표지를 본다. 쓰기가 실패하면 기대한 명령으로 돈 회차가
+    아니다."""
+    lines = [as_text(line) for line in as_list(dig(reply, "lines"))]
+    return dig(reply, "changed") is True and lines[:1] == [f"command = {json.dumps(server[0])}"]
 
 
 def put_enabled(docker: Docker, name: str, *, enabled: bool) -> Json:
@@ -823,9 +842,10 @@ def last_error(reply: Json) -> str:
 
 def handshake_result(reply: Json, *, offline: bool, expect: str) -> tuple[bool, str]:
     """표지: 서버를 띄웠고, 레지스트리에 닿는지가 기대한 네트워크 상태와 같고, 끝난 모양이 그
-    갈래의 expect 와 같다. ANSWERS 는 serverInfo 가 든 답, SILENT 는 창이 다 차고 입력을 닫은 뒤에도
-    끝나지 않아 그룹을 끈 것, 그 밖의 글은 답 없이 스스로 끝났고 stderr 끝에 그 문구가 든 것이다.
-    다른 까닭으로 끝난 회차(패키지를 싣다 바로 끝남 등)는 측정 아님이다."""
+    갈래의 expect 와 같다. ANSWERS 는 serverInfo 가 든 답, SILENT 는 마감까지 답도 EOF 도 없었고
+    (`first_ended` 가 deadline) 입력을 닫은 뒤에도 끝나지 않아 그룹을 끈 것, 그 밖의 글은 서버가
+    표준 출력을 닫았고(`first_ended` 가 eof) 입력을 닫자 스스로 끝났으며 stderr 끝에 그 문구가 든
+    것이다. 다른 까닭으로 끝난 회차(패키지를 싣다 바로 끝남 등)는 측정 아님이다."""
     reachable = dig(reply, "registry_reachable")
     if dig(reply, "spawned") is not True or reachable != (not offline):
         reason = as_text(dig(reply, "error"))
@@ -841,13 +861,22 @@ def handshake_result(reply: Json, *, offline: bool, expect: str) -> tuple[bool, 
         )
         seen = expect == ANSWERS
     else:
-        ended = "스스로 끝남" if exited else "창이 다 차 그룹을 끔"
-        text = f"{network}, 답 없음, {seconds}초에 {ended}, stderr `{last_error(reply)}`"
+        # 답이 없는 끝은 둘이다. 서버가 표준 출력을 닫았거나(eof) 마감까지 답도 EOF 도
+        # 없었다(deadline). 입력을 닫은 뒤 스스로 끝났는지(exited)만으로는 둘을 가르지 못한다(EOF
+        # 인데 입력을 닫은 뒤에도 안 끝난 서버, 마감이 지났는데 입력을 닫자 끝난 서버가 모두 같은
+        # 꼴로 읽힌다).
+        first_ended = as_text(dig(reply, "first_ended"))
+        ended = {
+            "eof": "서버가 표준 출력을 닫음(EOF)",
+            "deadline": "창이 다 차도록 답도 EOF 도 없음",
+        }.get(first_ended, f"끝난 까닭 알 수 없음({first_ended or '없음'})")
+        after = "입력을 닫자 스스로 끝남" if exited else "입력을 닫은 뒤에도 끝나지 않아 그룹을 끔"
+        text = f"{network}, 답 없음, {seconds}초에 {ended}, {after}, stderr `{last_error(reply)}`"
         stderr = "\n".join(as_text(line) for line in as_list(dig(reply, "stderr_tail")))
         if expect == SILENT:
-            seen = not exited
+            seen = first_ended == "deadline" and not exited
         else:
-            seen = exited and expect != ANSWERS and expect in stderr
+            seen = first_ended == "eof" and exited and expect != ANSWERS and expect in stderr
     found = fetched(reply)
     text += f", 레지스트리 조회 {found}" if found or not offline else ""
     return seen, text if seen else f"표지 없음(기대 {expect}): {text}"
@@ -891,31 +920,35 @@ def starts_in_logs(docker: Docker, name: str) -> int | None:
 
 
 def mcp_serve(ctx: Context) -> None:
-    """표지: 지금 매니페스트는 실행 제한(timeout)으로 끝나고 그 실행에서 서버의 시작 줄이 늘지
+    """표지: npx 매니페스트는 실행 제한(timeout)으로 끝나고 그 실행에서 서버의 시작 줄이 늘지
     않은 것, 실행 파일 이름 매니페스트는 모델 호출(model_call)까지 가고 그 실행에서 시작 줄이 는
     것이다. 두 갈래를 견주려면 둘 다 의도한 자리에서 끝났어야 한다."""
     plugins, traces = ctx.name("mcp-plugins"), ctx.name("mcp-traces")
     volumes = ["-v", f"{plugins}:/app/plugins", "-v", f"{traces}:/data/traces"]
     options = ["--network", "none", "--read-only", *volumes]
     started = serve(ctx, HOST, "mcp", PROTO, options, (*SERVE, "--run-timeout", "30"))
-    with case(ctx, "4 serve(--network none --read-only), 지금 매니페스트") as slot:
+    with case(ctx, "4 serve(--network none --read-only), npx 매니페스트") as slot:
+        npx = set_manifest(HOST, started.name, NPX)
         before = starts_in_logs(HOST, started.name)
         outcome = run_agent(HOST, started.name, seconds=90)
         after = starts_in_logs(HOST, started.name)
         slot.mark(
-            measured=outcome.cause == "timeout" and before is not None and after == before,
+            measured=manifest_is(npx, NPX)
+            and outcome.cause == "timeout"
+            and before is not None
+            and after == before,
             result=f"{outcome.brief()}, `{outcome.error}`, 서버의 시작 줄 {before}→{after}",
         )
     for index in range(2):
         with case(ctx, f"4 serve(같은 컨테이너), 실행 파일 이름 매니페스트 {index + 1}") as slot:
-            changed = helper(HOST, started.name, "setserver", MANIFEST, *DIRECT)
+            changed = set_manifest(HOST, started.name, DIRECT)
             before = starts_in_logs(HOST, started.name)
             outcome = run_agent(HOST, started.name, seconds=90)
             after = starts_in_logs(HOST, started.name)
             line = line_with(logs_of(HOST, started.name), START_LINE)
             grew = before is not None and after is not None and after > before
             slot.mark(
-                measured=dig(changed, "changed") is True and outcome.cause == "model_call" and grew,
+                measured=manifest_is(changed, DIRECT) and outcome.cause == "model_call" and grew,
                 result=(
                     f"{outcome.brief()}, `{outcome.error}`, 서버의 시작 줄 `{line}` "
                     f"{before}→{after}"
@@ -931,15 +964,13 @@ def mcp_serve(ctx: Context) -> None:
 def writes_item(ctx: Context) -> None:
     """항목 5 의 호스트 엔진 몫. Docker-in-Docker 몫은 `linux_items` 가 항목 6 과 함께 돈다."""
     print("\n## 5 쓰는 자리와 소유권(호스트 엔진)", flush=True)
-    diff_flow(ctx, "실행 파일 이름 매니페스트, 네트워크 없음", ["--network", "none"], direct=True)
-    diff_flow(ctx, "지금 매니페스트(npx -y), 네트워크 있음", [], direct=False)
+    diff_flow(ctx, "실행 파일 이름 매니페스트, 네트워크 없음", ["--network", "none"], DIRECT)
+    diff_flow(ctx, "npx 매니페스트(npx -y), 네트워크 있음", [], NPX)
     bytecode(ctx)
-    readonly_flow(
-        ctx, "실행 파일 이름 매니페스트, 네트워크 없음", ["--network", "none"], direct=True
-    )
-    readonly_flow(ctx, "지금 매니페스트(npx -y), 네트워크 있음", [], direct=False)
+    readonly_flow(ctx, "실행 파일 이름 매니페스트, 네트워크 없음", ["--network", "none"], DIRECT)
+    readonly_flow(ctx, "npx 매니페스트(npx -y), 네트워크 있음", [], NPX)
     tmpfs = ["--tmpfs", "/home/agentos:uid=10001,gid=10001,mode=0700"]
-    readonly_flow(ctx, "지금 매니페스트(npx -y), 네트워크 있음, HOME 에 tmpfs", tmpfs, direct=False)
+    readonly_flow(ctx, "npx 매니페스트(npx -y), 네트워크 있음, HOME 에 tmpfs", tmpfs, NPX)
 
 
 def linux_items(ctx: Context, items: set[str]) -> None:
@@ -957,21 +988,23 @@ def linux_items(ctx: Context, items: set[str]) -> None:
             fill_item(ctx, inner, name)
 
 
-def flow(docker: Docker, name: str, *, direct: bool) -> tuple[Json, Json, Json, Outcome]:
-    """끄기·켜기와 실행 하나. direct 면 먼저 매니페스트를 실행 파일 이름으로 바꾼다."""
-    changed = helper(docker, name, "setserver", MANIFEST, *DIRECT) if direct else None
+def flow(docker: Docker, name: str, server: tuple[str, str]) -> tuple[Json, Json, Json, Outcome]:
+    """끄기·켜기와 실행 하나. 먼저 매니페스트를 server(DIRECT 나 NPX)로 바꿔 쓴다."""
+    changed = set_manifest(docker, name, server)
     off = put_enabled(docker, name, enabled=False)
     on = put_enabled(docker, name, enabled=True)
     return changed, off, on, run_agent(docker, name, seconds=90)
 
 
-def diff_flow(ctx: Context, label: str, options: list[str], *, direct: bool) -> None:
+def diff_flow(ctx: Context, label: str, options: list[str], server: tuple[str, str]) -> None:
     started = serve(ctx, HOST, "diff", PROTO, options, (*SERVE, "--run-timeout", "40"))
     with case(ctx, f"5 docker diff, {label}") as slot:
-        _, off, on, outcome = flow(HOST, started.name, direct=direct)
+        changed, off, on, outcome = flow(HOST, started.name, server)
         paths = diff_lines(HOST, started.name)
         slot.mark(
-            measured="A /app/plugins/disabled.toml" in paths and outcome.cause == "model_call",
+            measured=manifest_is(changed, server)
+            and "A /app/plugins/disabled.toml" in paths
+            and outcome.cause == "model_call",
             result=(
                 f"끄기 {status_brief(off)}, 켜기 {status_brief(on)}, 실행 {outcome.brief()}, "
                 f"이미지 밖에 쓴 자리 {summarize(paths)}"
@@ -1000,19 +1033,19 @@ def bytecode(ctx: Context) -> None:
         remove(HOST, name)
 
 
-def readonly_flow(ctx: Context, label: str, options: list[str], *, direct: bool) -> None:
+def readonly_flow(ctx: Context, label: str, options: list[str], server: tuple[str, str]) -> None:
     plugins, traces = ctx.name("ro-plugins"), ctx.name("ro-traces")
     volumes = ["-v", f"{plugins}:/app/plugins", "-v", f"{traces}:/data/traces"]
     command = (*SERVE, "--run-timeout", "40")
     started = serve(ctx, HOST, "ro", PROTO, ["--read-only", *volumes, *options], command)
     with case(ctx, f"5 --read-only, {label}") as slot:
-        changed, off, on, outcome = flow(HOST, started.name, direct=direct)
+        changed, off, on, outcome = flow(HOST, started.name, server)
         logs = logs_of(HOST, started.name)
         problems = [
             line_with(logs, word) for word in ("EROFS", "EACCES", "npm error") if word in logs
         ]
         slot.mark(
-            measured=started.state == "ready" and outcome.failed,
+            measured=manifest_is(changed, server) and started.state == "ready" and outcome.failed,
             result=(
                 f"바꿈 {dig(changed, 'changed')}, 끄기 {status_brief(off)}, 켜기 "
                 f"{status_brief(on)}, 실행 {outcome.brief()} `{outcome.error}`, 로그 {problems}"
@@ -1323,8 +1356,9 @@ def init_round(started: Serve, marker: str) -> tuple[bool, str]:
     상태가 있어야 한다(도우미가 실패하면 셋이 None 이라 거둬짐과 가를 수 없다)."""
     name = started.name
     pid1 = as_text(dig(helper(HOST, name, "procs"), "pid1"))
+    npx = set_manifest(HOST, name, NPX)
     outcomes = [run_agent(HOST, name, seconds=60) for _ in range(2)]
-    helper(HOST, name, "setserver", MANIFEST, *DIRECT)
+    direct = set_manifest(HOST, name, DIRECT)
     outcomes += [run_agent(HOST, name, seconds=60) for _ in range(2)]
     listing = dig(helper(HOST, name, "procs"), "zombies")
     listed = isinstance(listing, list)
@@ -1347,7 +1381,9 @@ def init_round(started: Serve, marker: str) -> tuple[bool, str]:
         f"stop {stop.seconds}초, 종료 코드 {code}, uvicorn 종료 줄 {graceful}"
     )
     measured = (
-        marker in pid1
+        manifest_is(npx, NPX)
+        and manifest_is(direct, DIRECT)
+        and marker in pid1
         and stop.code == 0
         and all(outcome.cause == "model_call" for outcome in outcomes)
         and listed
