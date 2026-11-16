@@ -1,0 +1,7 @@
+# spec-uniqueness-check-without-concurrency-guard: 명세가 다른 줄을 읽어 보고 쓰는 검사(이름 중복, 발급자 겹침)를 적으면서 동시에 온 요청에서 무엇이 그 검사를 지키는지 적지 않았고 PR 직전 리뷰가 Major로 잡았다
+
+**상태:** 열림
+**어디로:** `.claude/agents/spec-reviewer.md`의 체크리스트나 `CODING_STANDARDS.md`(다섯 번째 반복에서 retro가 더할 때): 읽고 나서 쓰는 검사를 적는 명세는 동시 요청에서 그 검사를 지키는 것(데이터베이스의 제약, 잠금, 줄 세우기)을 함께 적는다
+**승인:** 자체 승인 2026-11-16, 1회차, 일지 2026-11-16-1705-portal-admin-spec.md. ADR 불필요
+
+셀프 리뷰 두 축은 이 자리를 내지 않았다. 고친 자리는 `.scratch/portal-admin/spec.md`의 "저장할 때의 검사"다.

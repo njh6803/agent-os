@@ -665,7 +665,7 @@ portal-login과 이 기능 가운데 뒤에 끝나는 쪽의 명세가 정하기
 - `CLAUDE.md`의 검증 명령과 게이트의 수, `docs/constitution/operations.md`의 CI 잡과 LLM 테스트 절: 새 e2e와 사진 비교가 는다(Testing Decisions). CI 잡의 수를 적은 자리가 둘 더 있어 잡을 더하는 티켓이 함께 고친다. `docs/constitution/tech.md`의 원격·CI 행과 next-session `merge.md`의 "함께 오르는 진행 중 조각"이고, 둘 다 지금 여덟으로 센다(읽었다). 뒤의 구절은 카나리아 명세 `.scratch/harness/probes/canary/next_session_ci_job_count.toml`이 기대 값으로 든다.
 - `tests/fixtures/container_network/cases.json`을 읽는 자리에 위젯 관리 화면이 는다. 그 표를 든 문서는 루트 `README.md`의 두 자리이고(구조의 `fixtures/container_network/` 줄과, "네 프로세스의 판정은 … 사례 표 하나가 잠근다"는 문장) 둘 다 프로세스를 넷으로 세므로 함께 고친다. ADR 0056 결정 "루프백 규칙의 예외"가 "네 프로세스"로 센 자리에는 포인터 "(바뀜: ADR 0064)"가 이미 있고, `.claude/rules/` 아래에는 그 표를 든 규칙이 없다(기준 커밋에서 `container_network`를 grep으로 봤다).
 - 위젯 테스트 페이지의 설정 파일 예시와 그 파일을 설명하는 문서: 사이트의 목록을 빼고 시작 값 둘을 더한다.
-- 배포 안내: 위젯 관리 화면용 포트와 여닫는 법, 관리 화면과 같은 이름으로 열어야 한다는 것, 첫 사이트를 위젯 관리 화면에서 등록하는 단계, 사이트 파일을 고친 뒤 무엇을 다시 띄우는지의 절차("닫힌 사이트를 알리는 길"), 고지를 고쳐도 다시 확인받지 않는다는 것. 단독 배포의 안내는 release-image의 티켓 10이 `deploy/standalone/`에 짓기로 되어 있고(그 티켓 파일을 읽었다. 이 명세를 쓸 때 그 안내는 아직 없다), 그 안내가 선 뒤에 도는 티켓은 그 문서를 고친다. 고칠 안내가 아직 없으면 deploy-package의 기능 계획에 적는다(이 명세가 넘긴 것은 `.scratch/deploy-package/plan.md`에 적어 두었다).
+- 배포 안내: 위젯 관리 화면용 포트와 여닫는 법, 관리 화면과 같은 이름으로 열어야 한다는 것, 첫 사이트를 위젯 관리 화면에서 등록하는 단계, 사이트 파일을 고친 뒤 무엇을 다시 띄우는지의 절차("닫힌 사이트를 알리는 길"), 고지를 고쳐도 다시 확인받지 않는다는 것. 단독 배포의 안내는 release-image의 티켓 10이 `deploy/standalone/README.md`로 지었고 이 명세를 쓰는 동안 dev에 들어왔다(PR 594. 그 문서의 "5. 설정을 고친 뒤"가 사이트 파일을 고친 뒤 다시 띄우는 절차를 든다). 이 기능의 티켓은 그 문서를 고친다. deploy-package의 안내에 넘긴 것은 `.scratch/deploy-package/plan.md`에 적어 두었다.
 - `CONTEXT.md`: 이 기능이 새로 쓰는 말이 용어집에 들 만한지는 그 말을 처음 코드에 들이는 티켓이 `domain-modeling`으로 가른다. 후보는 바꾼 기록이다.
 
 ## Testing Decisions

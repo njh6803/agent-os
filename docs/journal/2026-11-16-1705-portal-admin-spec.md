@@ -429,4 +429,60 @@ open-session을 부른다 2026-11-16T10:47:39Z
 
 ## 대기열에 더한 회차
 
-`.scratch/retro-queue/open-session-send-denied-despite-allow-rule.md`의 승인 줄에 두 회차를 더하고 일지 목록에 이 일지를 더했다. 이 세션을 연 지시문은 "12회차"를 더하라고 했는데, 그 번호는 `origin/dev`에서 release-image 티켓 09 세션의 열기가 이미 썼다. 그래서 지시문이 말한 열기(portal-admin 화면 세션이 PR 590을 병합한 뒤의 열기, 사유 "Undermining Oversight")를 13회차로, 이 세션의 셀프 리뷰 직전 인계 열기(위 "인계", 사유 "Destructive or Unwanted Actions")를 14회차로 적었다. 14회차의 호출은 허용 규칙과 글자가 맞았고(트랜스크립트와 워크트리 사본 `.claude/settings.json` 25행을 grep으로 손으로 봤다), 13회차의 호출이 맞았는지는 재 보지 않았다.
+`.scratch/retro-queue/open-session-send-denied-despite-allow-rule.md`의 승인 줄에 두 회차를 더하고 일지 목록에 이 일지를 더했다. 이 세션을 연 지시문은 "12회차"를 더하라고 했는데, 그 번호는 `origin/dev`에서 release-image 티켓 09 세션의 열기가 이미 썼다. 그래서 지시문이 말한 열기(portal-admin 화면 세션이 PR 590을 병합한 뒤의 열기, 사유 "Undermining Oversight")를 13회차로, 이 세션의 셀프 리뷰 직전 인계 열기(위 "인계", 사유 "Destructive or Unwanted Actions")를 14회차로 적었다. 14회차의 호출은 허용 규칙과 글자가 맞았고(트랜스크립트와 워크트리 사본 `.claude/settings.json` 25행을 grep으로 손으로 봤다), 13회차의 호출이 맞았는지는 재 보지 않았다. 이 번호는 PR 594가 병합되며 하나씩 밀렸다(아래 "origin/dev 다시 합치기"). 지금 파일에서는 앞의 것이 14회차, 뒤의 것이 15회차다.
+
+## 반영 커밋과 PR 595
+
+- 커밋 `4046afdb2`(`docs: PR 직전 리뷰의 지적을 명세와 프로브에 반영한다 (portal-admin)`). pre-commit은 모두 Passed였다. ruff check, ruff format, checks(check-notes, check-ticket, lint-imports, zizmor, check-instructions, check-type-escapes, pyright, pyright-linux, run-hooks, pytest 524.8초, web-verify 602.9초), markdown tables, line separators, mutation tables, quotes, commit message다. canary specs와 constitution version은 Skipped(no files to check)였고, 이 커밋은 카나리아 명세도 헌법 문서도 고치지 않았다.
+- 커밋 전에 `uv run python tools/sibling_overlap.py`를 쳤다. `origin/dev`는 `28c7e4b`로 합친 때와 같았고 번호 겹침이 없었다. 함께 고친 파일로 나온 것은 실험용 워크트리 `agent-a6f8a3e38a870fe3f`의 `shared_widget_parts` 파일들이고, 그 워크트리가 이 프로브의 원본이라 그대로 두었다.
+- `uv run python tools/plan_table.py`를 돌렸고 `.scratch/plan.md`는 바뀌지 않았다.
+- 푸시한 뒤 PR 595를 `dev` 기준으로 열었다. 제목에 느낌표는 없다(운영자가 손댈 것이 없다). 앱의 PR 상태는 bound, `MERGEABLE`, `BLOCKED`(검사가 아직 올라오지 않았다)였다.
+- 인계의 계기가 두 번 왔다(`커밋 뒤`, `PR 연 뒤`. 컨텍스트 227,916과 243,669 토큰). `handoff.md` 1의 "일지에 이 세션이 쓴 `인계 못함` 줄이 있다"에 들어 넘기지 않고 이었다.
+- 봇 회차를 열었다. `gh pr comment 595 --body "@coderabbitai review"`를 남기고 `uv run python tools/wait_ci.py 595`를 백그라운드로 띄웠다.
+
+## 봇 첫 회차 (헤드 4046afd)
+
+`wait_ci.py`는 종료 코드 1로 끝났고 끝줄이 `끝: 충돌. PR 의 기준 브랜치를 합치고 푸시한 뒤 다시 띄운다`였다. 그때의 검사는 claude-review, e2e, e2e-portal, e2e-standalone, e2e-widget, ticket, visual, web이 SUCCESS, llm이 SKIPPED, python이 진행 중, CodeRabbit이 NEUTRAL(Review rate limited)이었다.
+
+- **claude-review.** 코멘트는 "지적 없음"이다. 변경이 `.scratch/`, ADR 0064·0065의 이력, 일지뿐이라 경계와 계약 관점의 대상이 없고, 제목의 느낌표가 맞다고 적었다. 이 봇의 첫 회차다.
+- **CodeRabbit.** 요약 코멘트와 `@coderabbitai review`의 답이 모두 한도였다(`Review limit reached`, 다음 리뷰는 27분 뒤). 인라인 코멘트는 없다(`gh api repos/<저장소>/pulls/595/comments`가 빈 배열). 한도에 걸린 푸시는 회차로 세지 않는다(`merge.md` 병합 전 2 "회차 세기"). 이 PR의 보안·버그 축은 PR 직전에 돈 CLI 리뷰가 대신하고, 그 결과는 PR 체크리스트의 "PR 직전 리뷰" 줄에 적혀 있다(`docs/constitution/operations.md` 리뷰 파이프라인의 초록 착시 목록).
+
+## origin/dev 다시 합치기 (PR 594)
+
+PR을 연 뒤 PR 594(`feat: 단독 배포 안내를 쓴다`, `11e41115a`)가 dev에 병합돼 충돌이 났다. `git merge origin/dev`의 충돌은 한 파일이다.
+
+- `.scratch/retro-queue/open-session-send-denied-despite-allow-rule.md`의 승인 줄. PR 594가 release-image 티켓 10 세션의 인계 열기를 13회차로 더했고, 이 브랜치는 같은 번호를 다른 열기에 썼다. 그쪽의 13회차를 그대로 두고 이 브랜치의 둘을 14회차(portal-admin 화면 세션이 PR 590을 병합한 뒤의 열기)와 15회차(이 세션의 인계 열기)로 밀었다. 머리의 수는 15회차가 됐고, 일지 목록은 그쪽의 일지 뒤에 이 일지를 두었다. 두 쪽이 다른 줄은 그 한 줄뿐이었다(`git diff --numstat HEAD origin/dev`가 1과 1).
+- 뜻이 낡은 문장 하나를 고쳤다. 명세 "티켓이 코드와 같은 티켓에서 고치는 문서"의 "배포 안내" 항목이 단독 배포의 안내가 아직 없다고 적고 있었는데, PR 594가 `deploy/standalone/README.md`를 들였다. 새로 쓴 문장이다.
+
+  > 단독 배포의 안내는 release-image의 티켓 10이 `deploy/standalone/README.md`로 지었고 이 명세를 쓰는 동안 dev에 들어왔다(PR 594. 그 문서의 "5. 설정을 고친 뒤"가 사이트 파일을 고친 뒤 다시 띄우는 절차를 든다). 이 기능의 티켓은 그 문서를 고친다. deploy-package의 안내에 넘긴 것은 `.scratch/deploy-package/plan.md`에 적어 두었다.
+
+  근거는 그 문서의 제목(`# agent-os 단독 배포 안내`)과 163~167행의 절(`## 5. 설정을 고친 뒤`, `### 사이트 파일이나 위젯 미리보기 페이지 설정을 고쳤을 때`)을 Grep으로 읽은 것이다. 명세의 다른 자리(`티켓 10`, `아직 없다`, `배포 안내`)를 Grep으로 훑었고 낡은 문장은 그 하나였다.
+- PR 594가 바꾼 나머지 파일(release-image의 티켓과 프로브, `deploy/standalone/README.md`, 그 세션의 일지, `tests/tools/test_deploy_guide.py`)은 이 브랜치가 고치지 않은 파일이다. 스킬과 훅과 규칙은 바뀌지 않았다.
+- 절 제목의 표시는 건드리지 않아 서두의 수는 그대로다(열여덟, 여섯, 스물셋).
+
+## 회고
+
+병합 전에 retro를 돌았다. 후보는 아홉이고 승인 여덟, 기각 하나, 넘김은 없다. 승인 여덟 가운데 넷은 있던 항목에 회차를 더했고 넷은 새 항목이다. 이 세션에서 반영한 것은 없다(문서 PR이고, 고침 둘은 도구와 그 시험을 고치는 일이라 대기열에 두었다). `uv run python tools/sibling_overlap.py --journal`은 병합을 커밋하기 전이라 PR 594의 일지를 찍었고(아래 2), 이 일지에 적었다.
+
+1. **인계 열기를 자동 모드 분류기가 거부했다.** 승인(회차로 세는 것. 열린 항목이 이미 처방한 사건). 사건은 위 "인계"와 이 세션을 연 지시문의 "이어받을 상태"다. `open-session-send-denied-despite-allow-rule`에 두 회차를 더해 15회차다.
+2. **병합을 커밋하기 전의 `sibling_overlap.py --journal`이 합쳐 들어온 다른 브랜치의 일지를 찍었다.** 승인(회차, 고침). 이 회고의 2단계에서 출력이 `docs/journal/2026-11-16-2048-deploy-guide-walks-operator-through-standalone.md`였다. `journal-path-tool-during-uncommitted-merge` 2회차다.
+3. **훅 보고서가 성공하면 침묵하는 설치 훅을 뺄 후보로 냈다.** 승인(회차, 고침). 5의 문턱 때문에 `uv run python tools/hook_report.py`를 돌렸고 뺄 후보가 `hook_push_delete_open_pr.py`와 `hook_session_web_deps.py`였다. 앞의 것은 손상을 막는 훅이라(닫힌 0262의 사건) 넘기지 않았고, 뒤의 것은 `hook-report-flags-silent-setup-hook`이 이미 보고서의 오판으로 적은 것이라 넘기지 않고 2회차를 더했다.
+4. **나란히 도는 두 PR이 같은 대기열 항목의 승인 줄을 고쳐 충돌했고 회차 번호가 겹쳤다.** 승인(새 항목. 사건은 위 "origin/dev 다시 합치기"와 "대기열에 더한 회차", 층은 파일 모양이나 병합 방식, PR 하나로 되돌린다). 값은 병합 커밋 하나와 pre-commit 한 바퀴, 봇 회차 한 번이다. 닫힌 0236을 이어 `queue-item-approval-line-conflicts`를 0236의 2회차로 썼다. 더하는 것이라 문턱(다섯 번째) 전이다.
+5. **Node로 지은 프로브 둘이 `.claude/rules/probes.md`의 두 항목을 어겼고 PR 직전 리뷰가 잡았다.** 승인(회차로 세는 것. 구현 때 실리는 지침을 어겨 리뷰가 잡았다). 사건은 위 "PR 직전 리뷰"의 `fetch_idle_timer.mjs`와 `preview_shield.mjs`다. 그 지침을 낸 0339가 닫혀 있어 `node-probes-miss-probe-rules`를 0339의 7회차로 썼다. 0339가 둔 길(`tools/probe_kit.py`와 알림 훅)은 파이썬 프로브만 덮는다. 회차가 다섯을 넘어 chore 배치 조건이다.
+6. **명세가 읽고 나서 쓰는 검사를 적으며 동시 요청에서 그것을 지키는 것을 적지 않았다.** 승인(새 판단 기준, 1회차). 셀프 리뷰 두 축이 내지 않았고 PR 직전 리뷰가 Major로 잡았다. `spec-uniqueness-check-without-concurrency-guard`를 썼다. 다섯 번째 반복에서 명세 검토의 체크리스트나 표준에 더한다.
+7. **Grep이 생략한 긴 줄을 Read로 열어 줄 전체가 실렸다.** 승인(새 항목, 1회차). `.scratch/deploy-package/plan.md`의 본문 한 줄을 열었는데 필요한 것은 그 안의 한 문단이었다. `omitted-long-line-read-costs-whole-line`을 썼다.
+8. **문서와 프로브만 바꾼 커밋의 pre-commit이 한 바퀴에 11분을 넘었다.** 승인(회차). 병합 커밋의 checks가 708.3초, 리뷰 반영 커밋에서 pytest 524.8초와 web-verify 602.9초였다. `docs-only-commit-precommit-slow-again` 10회차다.
+9. **훅과 도구가 그 자리에서 막거나 알린 것.** 기각(이미 있는 검사가 잡았다). 선택 화면의 사실 확인 훅이 두 번, 스크래치 프로브 훅이 한 번 막았고, `wait_ci.py`가 충돌을 알렸으며, CodeRabbit의 한도는 `docs/constitution/operations.md`가 대체 길을 적어 두었다.
+
+일지에만 남기는 것은 둘이다. 인계의 계기 훅은 일지에 `인계 못함` 줄이 있는 뒤에도 경계마다 다시 왔다(이번 구간에 두 번). 그때마다 `handoff.md`의 "인계하지 않는 때"를 다시 확인했고 값은 작았다. 훅이 서는 때를 좁히는 것은 넘김의 몫이라 후보로 올리지 않았다. 그리고 만료할 대기열 항목은 작업 트리와 `origin/dev` 두 쪽 모두 없었다.
+
+## 다음
+
+- **다음 단계는 명세 검토와 티켓이다.** `spec-reviewer` 서브에이전트로 `.scratch/portal-admin/spec.md`를 검토하고 `/to-tickets`로 간다. 다만 이 기능은 선행 기능 둘(widget-admin-server, admin-login)을 기다린다. 두 기능의 명세가 선 뒤에 이 명세를 다시 대 본다(명세 Further Notes와 "선행 기능에 기대는 것"). widget-login-state의 명세도 함께 연다.
+- **사이트 이름의 유일 제약.** PR 직전 리뷰로 더한 "저장할 때의 검사"의 제약 가운데 사이트 이름의 것은 widget-admin-server의 표에 있다고 보고 썼다. 그 기능의 명세가 서면 실제로 있는지 대 보고, 없으면 portal-admin의 티켓이 더한다(`.scratch/widget-admin-server/plan.md`에도 적었다).
+- **이름 바꾸기 chore는 아직 열리지 않았다.** `docs/journal/2026-11-16-0025-portal-admin-screens.md`의 "다음" 첫 항목이다. PR 594가 들인 `deploy/standalone/README.md`는 옛 이름(위젯 미리보기 페이지)을 쓰고 이 명세는 새 이름(위젯 테스트 페이지)을 쓴다.
+- **관리 화면 앱의 중계가 500을 낸 일.** 명세 Further Notes에 적었고 이 기능의 범위 밖이다.
+- **프로브의 돌려 보지 못한 길.** PR 직전 리뷰 뒤에 고친 길(자리를 읽지 못하는 길, 제한 시간에 걸리는 길, 끄다 실패하는 길)과 리눅스 컨테이너에서의 `fetch_idle_timer.mjs` 고친 판은 돌려 보지 못했다(프로브마다의 `README.md`).
+- **대기열.** 회차가 다섯을 넘은 열린 항목에 이 세션이 닿은 것은 셋이다. `open-session-send-denied-despite-allow-rule`(15회차), `docs-only-commit-precommit-slow-again`(10회차), `node-probes-miss-probe-rules`(0339의 7회차).
+- **격리 워크트리.** `.claude/worktrees/agent-a6f8a3e38a870fe3f`는 공유 패키지 실험의 것이고 커밋하지 않은 실험 변경이 있다. 이 세션은 지우지 않았다. 주 체크아웃 세션의 `/tidy-checkouts`가 판정한다.
+- **봇 회차에서 뒤로 넘긴 일은 없다.** claude-review의 첫 회차는 지적이 없었고 CodeRabbit은 한도로 리뷰하지 못했다.
