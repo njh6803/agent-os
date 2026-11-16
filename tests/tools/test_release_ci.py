@@ -90,19 +90,25 @@ def test_ENV만_다른_두_이미지는_설정_해시가_다르다(tmp_path: Pat
 
 
 @pytest.mark.parametrize(
-    "members",
+    ("members", "reason"),
     [
-        {},  # 매니페스트가 없다
-        {"manifest.json": b"[]"},  # 이미지가 없다
-        {"manifest.json": json.dumps([{"Config": "a"}, {"Config": "b"}]).encode()},  # 이미지가 둘
-        {"manifest.json": json.dumps([{"Config": "없는.json"}]).encode()},  # 설정 파일이 없다
-        {"manifest.json": b"not json"},
+        ({}, "저장 파일에 manifest.json 이 없다"),  # 매니페스트가 없다
+        ({"manifest.json": b"[]"}, "이미지 하나를 가리키지"),  # 이미지가 없다
+        (
+            {"manifest.json": json.dumps([{"Config": "a"}, {"Config": "b"}]).encode()},
+            "이미지 하나를 가리키지",  # 이미지가 둘
+        ),
+        (
+            {"manifest.json": json.dumps([{"Config": "없는.json"}]).encode()},
+            "저장 파일에 없는.json 이 없다",  # 설정 파일이 없다
+        ),
+        ({"manifest.json": b"not json"}, "JSON 이 아니다"),
     ],
 )
 def test_저장_파일에서_설정을_하나로_고르지_못하면_실패한다(
-    tmp_path: Path, members: dict[str, bytes]
+    tmp_path: Path, members: dict[str, bytes], reason: str
 ) -> None:
-    with pytest.raises(ReleaseError):
+    with pytest.raises(ReleaseError, match=reason):
         image_config_digest(_tar(tmp_path / "bad.tar", members))
 
 
@@ -130,17 +136,26 @@ def test_올린_색인에서_증명이_아닌_리눅스_amd64_매니페스트를
 
 
 @pytest.mark.parametrize(
-    "text",
+    ("text", "reason"),
     [
-        _index(_entry(DIGEST_A, "linux", "arm64")),  # 플랫폼이 맞지 않는다
-        _index(_entry(DIGEST_A, "linux", "amd64"), _entry(DIGEST_B, "linux", "amd64")),  # 둘이다
-        _index(_entry(DIGEST_A, "linux", "amd64", attestation=True)),  # 증명뿐이다
-        json.dumps({"schemaVersion": 2, "config": {"digest": DIGEST_A}}),  # 색인이 아니다
-        "not json",
+        (_index(_entry(DIGEST_A, "linux", "arm64")), "하나가 아니다"),  # 플랫폼이 맞지 않는다
+        (
+            _index(_entry(DIGEST_A, "linux", "amd64"), _entry(DIGEST_B, "linux", "amd64")),
+            "하나가 아니다",  # 둘이다
+        ),
+        (
+            _index(_entry(DIGEST_A, "linux", "amd64", attestation=True)),
+            "하나가 아니다",  # 증명뿐이다
+        ),
+        (
+            json.dumps({"schemaVersion": 2, "config": {"digest": DIGEST_A}}),
+            "manifests 가 없다",  # 색인이 아니다
+        ),
+        ("not json", "JSON 이 아니다"),
     ],
 )
-def test_색인에서_매니페스트를_하나로_고르지_못하면_실패한다(text: str) -> None:
-    with pytest.raises(ReleaseError):
+def test_색인에서_매니페스트를_하나로_고르지_못하면_실패한다(text: str, reason: str) -> None:
+    with pytest.raises(ReleaseError, match=reason):
         platform_manifest_digest(text)
 
 
@@ -151,7 +166,7 @@ def test_매니페스트의_설정_해시를_읽는다() -> None:
 
 @pytest.mark.parametrize("text", ["{}", '{"config": {}}', '{"config": {"digest": "sha256:x"}}'])
 def test_매니페스트에_설정_해시가_없거나_꼴이_틀리면_실패한다(text: str) -> None:
-    with pytest.raises(ReleaseError):
+    with pytest.raises(ReleaseError, match="config.digest"):
         manifest_config_digest(text)
 
 
@@ -167,7 +182,7 @@ def test_공개_릴리스가_다른_커밋을_가리키면_실패한다() -> Non
 
 
 def test_공개_릴리스의_태그를_찾지_못해도_실패한다() -> None:
-    with pytest.raises(ReleaseError):
+    with pytest.raises(ReleaseError, match="찾지 못한 커밋"):
         precheck(published=True, tag_commit="", drafts=[], sha=SHA)
 
 

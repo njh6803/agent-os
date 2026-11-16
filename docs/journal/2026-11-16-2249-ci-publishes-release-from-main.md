@@ -155,3 +155,24 @@ open-session을 부른다 2026-11-16T14:38Z
 - [Nit] 로그인 `username`에 `vars.DOCKERHUB_NAMESPACE`를 쓴다. 이름공간이 조직 이름이면 로그인 사용자와 달라 실패한다. 사람 몫 1이 개인 계정이라는 전제로 쓴 것이다. 조직으로 바꾸게 되면 계정 이름 변수를 따로 둔다.
 - 오탐으로 내린 것: CodeRabbit이 `-rc.`면 `prerelease=true`로 표시하라고 했다. 근거가 명세·ADR에 없어(`grep` 0건) 위 셀프 리뷰에서 일부러 지운 것이다. 첫 판 `0.1.0-rc.1`이 최신 릴리스로 올라가는 것은 설계 결과다.
 - 서브에이전트의 Minor 가운데 `operations.md` 한 줄은 위에서 고쳤다. 네 이미지 전부의 설정 해시 일치는 첫 실제 판에서 처음 본다(이미 "다음"에 있다).
+
+## PR 봇 첫 회차 (PR 596)
+
+CodeRabbit(5건)과 claude-review가 헤드 `a7651c4`를 리뷰했고 검사는 모두 초록이었다(`wait_ci`가 낸 줄). 아래는 지적마다 코드와 문서를 읽고 정한 판정이다. 고친 것은 한 번에 푸시한다.
+
+**고친 것**
+- claude-review Minor: `tests/tools/test_release_ci.py`의 실패 기대 시험 넷이 까닭을 단언하지 않았다. `match=`를 걸었다(`image_config_digest` 다섯 갈래, `platform_manifest_digest` 다섯 갈래, `manifest_config_digest`, `precheck`의 태그 없음). 고친 뒤 40개가 통과했다(`uv run pytest tests/tools/test_release_ci.py`). 빨강은 손으로 변이를 넣어 보지 않았다.
+- CodeRabbit Major(`operations.md` 67행): `지난 판의 공개 릴리스 확인`이 404로 실패하면 안내가 곧바로 초안과 태그를 지우고 전체를 다시 돌리라고 했다. 이미지 번호 태그가 이미 붙었다면 다시 지은 digest가 번호 태그와 달라 거부되므로, 지우기 전에 번호 태그부터 보고 있으면 "남긴 초안으로 끝낸다"를 따르게 고쳤다.
+- CodeRabbit Minor(`operations.md` 81행): `imagetools inspect`의 오류는 stderr로 나오므로 `2>&1`로 모으고 종료 코드를 따로 적게 고쳤다.
+- CodeRabbit Minor(`operations.md` 73행): `초안 직후 태그 대조`가 조회 일시 장애로 실패한 경우와 태그를 찾은 경우를 가르게 고쳤다(로그의 "git 태그가 원격에 있다" 문구 유무).
+
+**보류한 것(이유)**
+- **[Major, 사용자 판단] `release.yml`의 `prerelease`.** 출시 후보(`0.1.0-rc.1`)를 GitHub 릴리스에서 정식으로 표시할지 정하는 일이다. 명세와 ADR에 근거가 없어(`grep` 0건) 앞에서 지웠고, CodeRabbit 두 길(CLI와 PR 봇)이 같은 지적을 냈다. 제품이 정할 표시 방식이라 이 PR에서 바꾸지 않고 사용자에게 묻는다. 첫 판 전에 정하면 한 줄(`-F prerelease=true`와 번호가 `-rc.` 꼴일 때의 조건)이다.
+- **[Major, 설계 판단] `앞 실행의 초안 지우기`가 새 초안을 만들기 전에 앞 초안을 지운다.** 지운 뒤 POST가 실패하거나 실행이 취소되면 그 번호와 커밋의 연결이 사라진다는 지적이다. 조건은 앞 실행이 같은 커밋의 초안을 남기고 다시 돌았을 때뿐이고, 그 뒤 다른 커밋이 같은 번호를 받으면 번호 태그가 붙은 이미지와 digest가 달라 `번호 태그 붙이기`에서 시끄럽게 실패한다(조용한 손상은 아니다). 고치려면 초안을 먼저 만들고 지우는 순서로 바꾸며 `replaced`와 `정리`의 조건이 함께 바뀌는데, 워크플로의 자동 시험이 없어 이 PR에서 시험하지 못한다. 첫 판을 지켜본 뒤 정한다.
+- claude-review Minor `_is_object`·`_is_list`가 `tools/release.py`와 같다: 두 도구의 합치기는 이 티켓의 몫이 아니라고 위에서 정했다(Nit으로 이미 남김).
+- claude-review Nit 둘(`_run`의 하위 명령 가르기를 함수로 나누기, `precheck`의 `published` 플래그)과 위 CLI Nit 둘(Grype 두 번 실행, 로그인 이름공간)은 첫 판의 실측을 보고 정한다.
+
+**병합 뒤에 사용자에게 물을 것(이어받을 상태)**
+1. `build` 잡의 비밀 값 노출 길(위 "PR 직전 리뷰"의 Major). 두 잡 구조를 바꿀지.
+2. `prerelease` 표시를 할지.
+3. `앞 실행의 초안 지우기`의 순서를 바꿀지(첫 판 뒤).
