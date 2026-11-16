@@ -114,3 +114,30 @@ Critical은 없었고 Major가 셋이었다. 고친 것:
 - open-session을 부른다 2026-11-16T05:48Z
 
 - 인계 못함 셀프 리뷰 직전: open-session의 send 호출(tools/open_session.ps1)을 자동 모드 분류기가 거부했다(이유 없음). 제목은 되돌렸고 이 세션이 셀프 리뷰부터 잇는다. 워크트리 잠금은 이미 풀었고 다시 잠그지 않는다. 멈춘 run_checks는 다시 띄운다.
+
+## 봇 회차 (PR #592, 헤드 `de1e6e5`)
+
+- 검사: `e2e`·`e2e-portal`·`e2e-standalone`·`e2e-widget`·`python`·`ticket`·`verify`·`visual`·`web` 모두 SUCCESS, `llm`은 SKIPPED(`tools/wait_ci.py 592`). `e2e-standalone`은 `gate`가 닫혀 시험을 건너뛰고 지나갔다(이 PR이 dev로 가기 때문이다. 잡 문법만 `verify`와 zizmor가 읽었다).
+- claude-review: 첫 회차에 "지적 없음". 경계, 유지보수성, 느낌표 맞춤(`feat:`에 느낌표 없음, 운영자가 손댈 것을 만들지 않음)을 모두 맞다고 적었다.
+- CodeRabbit: 첫 회차부터 "Review limit reached"(무료 OSS 리뷰 한도, 다음 리뷰는 17분 뒤라고 적었다)로 리뷰가 없다. `@coderabbitai review` 요청에도 `Review rate limited`로 답했다. 회차로 세지 않는다(`merge.md` 2). 보안·버그 축은 PR 직전 `coderabbit-review`(CLI 0.7.5, 11건 판정)가 대신하고, 그 판정은 위 "PR 직전 리뷰"와 PR 본문에 있다(`operations.md` 리뷰 파이프라인 3의 CodeRabbit 한도 항목). 병합은 재리뷰를 기다리지 않는다.
+- 이 회차에 고친 코드는 없다. 일지와 대기열만 푸시한다.
+
+## 회고
+
+후보 여섯을 냈고 승인 3, 기각 3, 넘김 0이다. 만료할 항목은 `uv run python tools/queue_open_rows.py`와 `--ref origin/dev` 둘 다 "(없음)"이었다(손으로 쳐서 봤다).
+
+1. **승인(회차로 센다)**: 인계 열기(`open_session.ps1 -Action send`)를 자동 모드 분류기가 사유 없이 거부해 `인계 못함`을 적고 이 세션이 이어 갔다. 열린 `open-session-send-denied-despite-allow-rule`의 승인 줄에 12회차를 더했다(그 호출이 허용 규칙과 글자까지 맞았는지는 이 회차에서도 재 보지 않았다). 처방은 그 항목의 하네스 chore다.
+2. **승인(회차로 센다)**: `http.md`를 고쳐 카나리아 명세 셋을 돌릴 때 명세 위치를 `.scratch/harness/probes/canary/`로 잘못 짚었고(종료 2), 이어 명세의 "돌리는 법"에 없는 `--control-commit`을 주어 도구가 거절했다. 열린 `canary-notice-spec-paths`가 같은 사건(명세의 경로와 돌리는 명령을 알림이 주지 않는 것)을 처방하고 있어 그 항목에 2회차를 더했다. 5회차에 닿지 않아 처방은 반영하지 않는다.
+3. **승인(회차로 센다)**: 전체 검사 한 바퀴(`run_checks.py`)가 18분 39초 걸리고 시간 제한 시험 둘(`test_interrupt`, `test_rerun_runner`)이 빨개 첫 커밋이 막혔다. 홀로 치면 통과했다. 열린 `docs-only-commit-precommit-slow-again`에 9회차를 더했다(이 커밋은 문서만 바꾼 것이 아니라 항목 제목과 다르다는 점을 승인 줄에 적었다. 원인이 부하인지 러너인지는 이 항목의 처방이 재는 일이다). 닫힌 306의 "새 사례는 일지에만"은 시간 시험의 사례 쪽이고, 이 사건은 한 바퀴가 길어지는 쪽이라 열린 항목이 맡는다.
+4. **기각**: 커밋 제목이 95칸이라 `check_commit_msg.py`가 막았다. 이미 있는 검사가 그 자리에서 막았다.
+5. **기각**: `[...document.fonts]`를 ESLint `no-unsafe-member-access`가, 서식을 prettier 경고가 잡았다. 원칙 III의 판정자가 그 자리에서 막았다.
+6. **기각**: 헌법 판 3.0.104를 비워 둔 채 형제가 3.0.105를 먼저 병합해 `docs/constitution/README.md`에서 충돌했고, 3.0.106으로 비켰다. `sibling_overlap.py`와 README의 "먼저 매겨 비워 둔 판" 문장이 정한 길 그대로 처리했다(앞 선례 3.0.61·3.0.95·3.0.101). 이 PC에서 새 손해가 없었다.
+
+## 다음
+
+- 이 PR(592)의 병합은 이 세션이 마친다(`merge.md` "워크트리에서 병합할 때"). 푸시한 일지와 대기열 편집으로 도는 봇 회차를 보고, 병합 직전에 `headRefOid`와 `git rev-parse HEAD`를 대 본다.
+- 주 체크아웃 미갱신: 루트는 dev(`git worktree list`의 첫 줄, HEAD `02dcfe9`가 `origin/dev`의 `aae33d2`보다 뒤다). 다음 세션이 워크트리에 들어가기 전에 Skill 도구로 `tidy-checkouts`를 돈다.
+- release-image에서 열린 티켓은 10과 11이다. 10(배포 안내)은 09만 기다렸으므로 09가 병합되면 바로 할 수 있다. 11은 05·06·10을 기다리고 release-image의 마지막 티켓이다.
+- 10이 받을 것: 위 "남은 일"의 셋(`nginx -t`·`nginx -s reload`의 `-c /etc/agent-os/proxy/nginx.conf`, 호스트 포트 443·80·3000 고정이라 한 PC에서 두 배치를 동시에 띄울 수 없다는 것, 모델 호출 사례의 `ANTHROPIC_API_KEY` 이름)와, 플러그인 볼륨이 처음 붙을 때만 채워져 업그레이드로 새 이미지가 담은 플러그인이 기존 볼륨에 오지 않는다는 취급(10의 수용 기준에 한 줄 더했다).
+- 이 PR의 CI에서 `e2e-standalone` 잡은 건너뛰었으므로 리눅스 러너의 첫 증거는 출시 PR(dev → main)이다. `timeout-minutes: 45`는 그 결과로 맞춘다. 이미지를 처음부터 짓는 시간도 그때 처음 잰다.
+- 뒤로 넘긴 일은 위 둘(10의 안내 항목, 출시 PR에서의 첫 실행)이다. 대기열은 12회차·2회차·9회차를 더한 열린 항목 셋이고 새로 쓴 항목은 없다.
