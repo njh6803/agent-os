@@ -1,0 +1,397 @@
+{
+  "versions": {
+    "playwright": "1.63.0",
+    "node": "v24.19.0",
+    "platform": "win32",
+    "chromium": "153.0.8010.12"
+  },
+  "facts": {
+    "chromium": {
+      "open": {
+        "sameOrigin": {
+          "handle": "window",
+          "handleClosed": false,
+          "opener": "open",
+          "asked": true,
+          "askOrigin": "https://app.site.test:<port>",
+          "askFromChild": true,
+          "answered": true,
+          "answerOrigin": "https://app.site.test:<port>",
+          "answerFromOpener": true
+        },
+        "sameSite": {
+          "handle": "window",
+          "handleClosed": false,
+          "opener": "open",
+          "asked": true,
+          "askOrigin": "https://widget.site.test:<port>",
+          "askFromChild": true,
+          "answered": true,
+          "answerOrigin": "https://app.site.test:<port>",
+          "answerFromOpener": true
+        },
+        "crossSite": {
+          "handle": "window",
+          "handleClosed": false,
+          "opener": "open",
+          "asked": true,
+          "askOrigin": "https://widget.other.test:<port>",
+          "askFromChild": true,
+          "answered": true,
+          "answerOrigin": "https://app.site.test:<port>",
+          "answerFromOpener": true
+        }
+      },
+      "openSized": {
+        "sameOrigin": {
+          "handle": "window",
+          "handleClosed": false,
+          "opener": "open",
+          "asked": true,
+          "askOrigin": "https://app.site.test:<port>",
+          "askFromChild": true,
+          "answered": true,
+          "answerOrigin": "https://app.site.test:<port>",
+          "answerFromOpener": true
+        },
+        "sameSite": {
+          "handle": "window",
+          "handleClosed": false,
+          "opener": "open",
+          "asked": true,
+          "askOrigin": "https://widget.site.test:<port>",
+          "askFromChild": true,
+          "answered": true,
+          "answerOrigin": "https://app.site.test:<port>",
+          "answerFromOpener": true
+        },
+        "crossSite": {
+          "handle": "window",
+          "handleClosed": false,
+          "opener": "open",
+          "asked": true,
+          "askOrigin": "https://widget.other.test:<port>",
+          "askFromChild": true,
+          "answered": true,
+          "answerOrigin": "https://app.site.test:<port>",
+          "answerFromOpener": true
+        }
+      },
+      "openNoopener": {
+        "sameOrigin": {
+          "handle": "null",
+          "handleClosed": null,
+          "opener": "null",
+          "asked": false,
+          "askOrigin": null,
+          "askFromChild": null,
+          "answered": false,
+          "answerOrigin": null,
+          "answerFromOpener": null
+        },
+        "sameSite": {
+          "handle": "null",
+          "handleClosed": null,
+          "opener": "null",
+          "asked": false,
+          "askOrigin": null,
+          "askFromChild": null,
+          "answered": false,
+          "answerOrigin": null,
+          "answerFromOpener": null
+        },
+        "crossSite": {
+          "handle": "null",
+          "handleClosed": null,
+          "opener": "null",
+          "asked": false,
+          "askOrigin": null,
+          "askFromChild": null,
+          "answered": false,
+          "answerOrigin": null,
+          "answerFromOpener": null
+        }
+      },
+      "anchorBlank": {
+        "sameOrigin": {
+          "handle": "none",
+          "handleClosed": null,
+          "opener": "null",
+          "asked": false,
+          "askOrigin": null,
+          "askFromChild": null,
+          "answered": false,
+          "answerOrigin": null,
+          "answerFromOpener": null
+        },
+        "sameSite": {
+          "handle": "none",
+          "handleClosed": null,
+          "opener": "null",
+          "asked": false,
+          "askOrigin": null,
+          "askFromChild": null,
+          "answered": false,
+          "answerOrigin": null,
+          "answerFromOpener": null
+        },
+        "crossSite": {
+          "handle": "none",
+          "handleClosed": null,
+          "opener": "null",
+          "asked": false,
+          "askOrigin": null,
+          "askFromChild": null,
+          "answered": false,
+          "answerOrigin": null,
+          "answerFromOpener": null
+        }
+      },
+      "anchorOpener": {
+        "sameOrigin": {
+          "handle": "none",
+          "handleClosed": null,
+          "opener": "open",
+          "asked": true,
+          "askOrigin": "https://app.site.test:<port>",
+          "askFromChild": null,
+          "answered": true,
+          "answerOrigin": "https://app.site.test:<port>",
+          "answerFromOpener": true
+        },
+        "sameSite": {
+          "handle": "none",
+          "handleClosed": null,
+          "opener": "open",
+          "asked": true,
+          "askOrigin": "https://widget.site.test:<port>",
+          "askFromChild": null,
+          "answered": true,
+          "answerOrigin": "https://app.site.test:<port>",
+          "answerFromOpener": true
+        },
+        "crossSite": {
+          "handle": "none",
+          "handleClosed": null,
+          "opener": "open",
+          "asked": true,
+          "askOrigin": "https://widget.other.test:<port>",
+          "askFromChild": null,
+          "answered": true,
+          "answerOrigin": "https://app.site.test:<port>",
+          "answerFromOpener": true
+        }
+      },
+      "widgetCoop": {
+        "sameOrigin": {
+          "handle": "window",
+          "handleClosed": true,
+          "opener": "null",
+          "asked": false,
+          "askOrigin": null,
+          "askFromChild": null,
+          "answered": false,
+          "answerOrigin": null,
+          "answerFromOpener": null
+        },
+        "sameSite": {
+          "handle": "window",
+          "handleClosed": true,
+          "opener": "null",
+          "asked": false,
+          "askOrigin": null,
+          "askFromChild": null,
+          "answered": false,
+          "answerOrigin": null,
+          "answerFromOpener": null
+        },
+        "crossSite": {
+          "handle": "window",
+          "handleClosed": true,
+          "opener": "null",
+          "asked": false,
+          "askOrigin": null,
+          "askFromChild": null,
+          "answered": false,
+          "answerOrigin": null,
+          "answerFromOpener": null
+        }
+      },
+      "siteCoop": {
+        "sameOrigin": {
+          "handle": "window",
+          "handleClosed": true,
+          "opener": "null",
+          "asked": false,
+          "askOrigin": null,
+          "askFromChild": null,
+          "answered": false,
+          "answerOrigin": null,
+          "answerFromOpener": null
+        },
+        "sameSite": {
+          "handle": "window",
+          "handleClosed": true,
+          "opener": "null",
+          "asked": false,
+          "askOrigin": null,
+          "askFromChild": null,
+          "answered": false,
+          "answerOrigin": null,
+          "answerFromOpener": null
+        },
+        "crossSite": {
+          "handle": "window",
+          "handleClosed": true,
+          "opener": "null",
+          "asked": false,
+          "askOrigin": null,
+          "askFromChild": null,
+          "answered": false,
+          "answerOrigin": null,
+          "answerFromOpener": null
+        }
+      },
+      "siteCoopAllowPopups": {
+        "sameOrigin": {
+          "handle": "window",
+          "handleClosed": false,
+          "opener": "open",
+          "asked": true,
+          "askOrigin": "https://app.site.test:<port>",
+          "askFromChild": true,
+          "answered": true,
+          "answerOrigin": "https://app.site.test:<port>",
+          "answerFromOpener": true
+        },
+        "sameSite": {
+          "handle": "window",
+          "handleClosed": false,
+          "opener": "open",
+          "asked": true,
+          "askOrigin": "https://widget.site.test:<port>",
+          "askFromChild": true,
+          "answered": true,
+          "answerOrigin": "https://app.site.test:<port>",
+          "answerFromOpener": true
+        },
+        "crossSite": {
+          "handle": "window",
+          "handleClosed": false,
+          "opener": "open",
+          "asked": true,
+          "askOrigin": "https://widget.other.test:<port>",
+          "askFromChild": true,
+          "answered": true,
+          "answerOrigin": "https://app.site.test:<port>",
+          "answerFromOpener": true
+        }
+      },
+      "widgetReloaded": {
+        "sameOrigin": {
+          "handle": "window",
+          "handleClosed": false,
+          "opener": "open",
+          "asked": true,
+          "askOrigin": "https://app.site.test:<port>",
+          "askFromChild": true,
+          "answered": true,
+          "answerOrigin": "https://app.site.test:<port>",
+          "answerFromOpener": true
+        },
+        "sameSite": {
+          "handle": "window",
+          "handleClosed": false,
+          "opener": "open",
+          "asked": true,
+          "askOrigin": "https://widget.site.test:<port>",
+          "askFromChild": true,
+          "answered": true,
+          "answerOrigin": "https://app.site.test:<port>",
+          "answerFromOpener": true
+        },
+        "crossSite": {
+          "handle": "window",
+          "handleClosed": false,
+          "opener": "open",
+          "asked": true,
+          "askOrigin": "https://widget.other.test:<port>",
+          "askFromChild": true,
+          "answered": true,
+          "answerOrigin": "https://app.site.test:<port>",
+          "answerFromOpener": true
+        }
+      },
+      "siteNavigated": {
+        "sameOrigin": {
+          "handle": "window",
+          "handleClosed": null,
+          "opener": "open",
+          "asked": null,
+          "askOrigin": null,
+          "askFromChild": null,
+          "answered": false,
+          "answerOrigin": null,
+          "answerFromOpener": null
+        },
+        "sameSite": {
+          "handle": "window",
+          "handleClosed": null,
+          "opener": "open",
+          "asked": null,
+          "askOrigin": null,
+          "askFromChild": null,
+          "answered": false,
+          "answerOrigin": null,
+          "answerFromOpener": null
+        },
+        "crossSite": {
+          "handle": "window",
+          "handleClosed": null,
+          "opener": "open",
+          "asked": null,
+          "askOrigin": null,
+          "askFromChild": null,
+          "answered": false,
+          "answerOrigin": null,
+          "answerFromOpener": null
+        }
+      },
+      "siteClosed": {
+        "sameOrigin": {
+          "handle": "window",
+          "handleClosed": null,
+          "opener": "null",
+          "asked": null,
+          "askOrigin": null,
+          "askFromChild": null,
+          "answered": false,
+          "answerOrigin": null,
+          "answerFromOpener": null
+        },
+        "sameSite": {
+          "handle": "window",
+          "handleClosed": null,
+          "opener": "null",
+          "asked": null,
+          "askOrigin": null,
+          "askFromChild": null,
+          "answered": false,
+          "answerOrigin": null,
+          "answerFromOpener": null
+        },
+        "crossSite": {
+          "handle": "window",
+          "handleClosed": null,
+          "opener": "null",
+          "asked": null,
+          "askOrigin": null,
+          "askFromChild": null,
+          "answered": false,
+          "answerOrigin": null,
+          "answerFromOpener": null
+        }
+      }
+    }
+  }
+}

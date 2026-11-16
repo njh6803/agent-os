@@ -87,6 +87,59 @@ export function markdownOutput(imageUrl: string): string {
   ].join("\n");
 }
 
+function writeIn(root: string, path: string, text: string): void {
+  mkdirSync(dirname(join(root, path)), { recursive: true });
+  writeFileSync(join(root, path), text);
+}
+
+function manifestOf(kind: string, name: string, extra = ""): string {
+  return `schema_version = "1"\nkind = "${kind}"\nname = "${name}"\nversion = "0.1.0"\n${extra}`;
+}
+
+function writeAgent(
+  root: string,
+  name: string,
+  extra: string,
+  imports: readonly string[],
+  body: readonly string[],
+): void {
+  writeIn(
+    root,
+    `agents/${name}/plugin.toml`,
+    manifestOf("agent", name, `entrypoint = "agent:Agent"\n${extra}`),
+  );
+  writeIn(
+    root,
+    `agents/${name}/agent.py`,
+    [
+      ...imports,
+      "from collections.abc import AsyncIterator",
+      "",
+      "from agent_os.sdk import AgentContext, Event, RunFinished",
+      "",
+      "",
+      "class Agent:",
+      "    async def run(self, request: str, ctx: AgentContext) -> AsyncIterator[Event]:",
+      ...body.map((line) => `        ${line}`),
+      "",
+    ].join("\n"),
+  );
+}
+
+/**
+ * `echo` 에이전트 하나만 `root` 에 쓴다. 받은 요청의 글자 수를 `chars:<수>` 로 낸다. 호스트의 파이썬 경로나 MCP 서버를
+ * 쓰지 않아 이미지 안의 플러그인 루트에도 넣을 수 있다(`@agent-os/e2e-standalone` 이 컨테이너에 넣는다).
+ */
+export function writeEchoAgent(root: string): void {
+  writeAgent(
+    root,
+    "echo",
+    "",
+    [],
+    ['yield RunFinished(run_id=ctx.run_id, ts=ctx.now(), output=f"chars:{len(request)}")'],
+  );
+}
+
 export function writeFixturePlugins(
   root: string,
   python: string,
@@ -95,36 +148,16 @@ export function writeFixturePlugins(
   imageUrl = `http://127.0.0.1:9${MARKDOWN_IMAGE_PATH}`,
 ): void {
   const write = (path: string, text: string): void => {
-    mkdirSync(dirname(join(root, path)), { recursive: true });
-    writeFileSync(join(root, path), text);
+    writeIn(root, path, text);
   };
-  const manifest = (kind: string, name: string, extra = ""): string =>
-    `schema_version = "1"\nkind = "${kind}"\nname = "${name}"\nversion = "0.1.0"\n${extra}`;
+  const manifest = manifestOf;
   const agent = (
     name: string,
     extra: string,
     imports: readonly string[],
     body: readonly string[],
-  ) => {
-    write(
-      `agents/${name}/plugin.toml`,
-      manifest("agent", name, `entrypoint = "agent:Agent"\n${extra}`),
-    );
-    write(
-      `agents/${name}/agent.py`,
-      [
-        ...imports,
-        "from collections.abc import AsyncIterator",
-        "",
-        "from agent_os.sdk import AgentContext, Event, RunFinished",
-        "",
-        "",
-        "class Agent:",
-        "    async def run(self, request: str, ctx: AgentContext) -> AsyncIterator[Event]:",
-        ...body.map((line) => `        ${line}`),
-        "",
-      ].join("\n"),
-    );
+  ): void => {
+    writeAgent(root, name, extra, imports, body);
   };
 
   agent(
@@ -154,12 +187,7 @@ export function writeFixturePlugins(
       `yield RunFinished(run_id=ctx.run_id, ts=ctx.now(), output=${JSON.stringify(markdownOutput(imageUrl))})`,
     ],
   );
-  agent(
-    "echo",
-    "",
-    [],
-    ['yield RunFinished(run_id=ctx.run_id, ts=ctx.now(), output=f"chars:{len(request)}")'],
-  );
+  writeEchoAgent(root);
   agent(
     "approval",
     'mcp = ["fixture"]\nrequires_approval = ["add"]\n',

@@ -214,7 +214,7 @@ open-session을 부른다 2026-11-16T10:47:39Z
 - Major 1. `login_relay/probe.mjs`의 `stop()`. 프로세스를 끄는 길에 표지 검사가 없는 갈래가 있다. 윈도 쪽은 명령줄 꼬리를 확인하지만 표지 없는 폴백 `child.kill()`과 POSIX의 `process.kill(-pid, "SIGKILL")`은 명령줄 확인 없이 pid만 보고 끈다(`.claude/rules/probes.md`의 프로세스를 끄는 탐침 항목). `settings_fetch`의 `stop()`은 표지를 확인한다.
 - Major 2. ADR 0065 본문 16행(운영자 계정 문장). 이력 "위젯 테스트 페이지의 서버도 화면이 부른 갱신만 전하고…"가 같은 흐름을 바꾸는데 그 문장에 포인터가 없다(`.claude/rules/adr.md`). 새로 단 포인터 열(0064에 여덟, 0065에 둘)의 제목은 `###` 줄과 글자가 같다.
 - Minor 3. 프로브 색인(`probes/README.md`)의 "잰 판" 열이 판을 적지 않고 프로브 README의 "환경 표"를 가리키는데, `login_relay`의 README에는 "환경 표"가 없다.
-- Minor 4. 근거 문장에서 잰 범위가 빠진다. ADR 0064 넷째 이력의 "3.3~4.8 ms"와 명세 464행의 "0.5~0.8ms 느릴 뿐"은 `node:http`로 잰 값이고, 출시 길인 `openapi-fetch`(fetch)는 같은 PC에서 +8.7~16.3 ms였는데 그 값이 이력에 없다.
+- Minor 4. 근거 문장에서 잰 범위가 빠진다. ADR 0064 넷째 이력의 "3.3~4.8ms"와 명세 464행의 "0.5~0.8ms 느릴 뿐"은 `node:http`로 잰 값이고, 출시 길인 `openapi-fetch`(fetch)는 같은 PC에서 +8.7~16.3ms였는데 그 값이 이력에 없다.
 - Minor 5. 명세 659행. `container_network/cases.json`의 표를 "ADR 0056 … `.claude/rules/`의 해당 규칙"이 든다고 적었는데 저장소에서 그 근거를 찾지 못했다.
 - Nit 6. 이 일지 114행의 "패치 둘과 보조 스크립트 둘"은 낡았다. 폴더에는 패치 셋과 스크립트 셋이 있다.
 - Nit 7. `login_relay/probe.mjs`는 1615행 한 파일이고 대역의 도우미가 언어마다 겹친다(냄새, 판단 사항).
@@ -301,3 +301,46 @@ open-session을 부른다 2026-11-16T10:47:39Z
    > 사용자: "테스트 페이지 로그인과 미리보기 가리기" — 설명: ADR 0065의 이력입니다. 위젯 테스트 페이지도 위와 같은 로그인 규칙을 씁니다. 미리보기는 위젯 부품을 고치지 않고, 조작할 수 없게 표시한 요소로 감싸 가립니다. 부품을 공유 패키지로 옮겨 본 실험에서 옮긴 20파일 가운데 17파일이 한 글자도 바뀌지 않았습니다(손으로 본 실험입니다). 치르는 값: 화면 읽기 프로그램에는 미리보기가 그림 한 줄로만 읽혀, 화면을 보지 못하는 운영자는 미리보기로 글을 확인하지 못합니다. 긴 글을 다루는 문단은 첫 질문의 답대로 고칩니다.
 
    이력 넷은 승인됐다(ADR 0064의 "위젯 설정에 예시 질문의 모양을 고르는 값으로 더한다", "등록하는 주소 넷에 같은 검사를 걸어 사용자 정보 자리를 받지 않고, 위젯 테스트 페이지의 설정 파일에 시작 값 둘을 더한다", "로그인 시간이 끝났을 때의 갱신은 화면이 부르고, 위젯 테스트 페이지의 서버는 설정을 요청마다 받아 와 기억하지 않는다", ADR 0065의 "위젯 테스트 페이지의 서버도 화면이 부른 갱신만 전하고, 미리보기는 옮긴 부품을 고치지 않고 감싼 요소로 가린다"). 승인 뒤에 이력의 글을 고친 것은 ADR 0065 이력에 사용자가 골랐다는 문장 둘을 더한 것뿐이고, 승인 화면의 넷째 설명이 미리 알린 고침이다.
+
+## 첫 커밋과 pre-commit
+
+커밋 `fd5beccec`(파일 서른, 더한 줄 11,209, 뺀 줄 10)이다. 커밋 전에 `git branch --show-current`가 `docs/portal-admin-spec`이었고 `uv run python tools/sibling_overlap.py`는 번호 겹침이 없다고 냈다. pre-commit은 600초 제한을 넘겨 백그라운드로 넘어갔고, 다시 치지 않고 끝 알림을 기다렸다(종료 코드 0).
+
+- ruff check, ruff format: Passed.
+- checks: Passed, 672.69초. check-notes 1.0초, check-ticket 1.1초, lint-imports 1.9초, zizmor 2.8초, check-instructions 10.0초, check-type-escapes 11.9초, pyright-linux 47.8초, pyright 48.0초, run-hooks 66.6초, pytest 543.2초, web-verify 672.4초.
+- markdown tables, line separators, mutation tables, commit message: Passed.
+- canary specs, constitution version: Skipped(no files to check). 이 커밋은 카나리아 명세도 헌법 문서도 건드리지 않아 손으로 칠 것이 없다.
+- quotes: Passed. 경고만 내는 검사이고 두 묶음(9건과 35건)을 냈다.
+
+셀프 리뷰 "판정"이 pre-commit으로 갈음한다고 적은 손으로 치는 검증 다섯의 결과가 위다.
+
+인용 대조의 경고 가운데 다른 문서를 인용한 자리 넷을 고쳤다. 명세의 미리보기 절과 ADR 0065 이력이 ADR 0065 본문에서 옮긴 문장은 원문("미리보기와 실제 위젯이 다른 것이 입력(저장 전 값, 미리 정한 예시 대화)뿐이도록 지켜야 한다")과 글자를 맞췄다. ADR 0064 이력이 결정 "시작 검사가 가는 자리"를 줄여 옮긴 자리는 따옴표를 떼고 풀어 썼다. 이 일지의 측정 값 인용은 띄어쓰기를 원문과 맞췄다. 나머지 경고는 프로브 README의 가설 문장, 도구 출력의 발췌, 이 일지의 요약 인용이라 다른 문서의 인용이 아니어서 그대로 두었다.
+
+## origin/dev 합치기
+
+커밋 뒤 `git fetch origin`으로 보니 `origin/dev`가 `28c7e4b56`이었다. 이 브랜치의 기준 `02dcfe97d` 뒤에 PR 셋이 들어왔다(PR 591 리뷰 문서, PR 593 widget-login-state 명세, PR 592 단독 compose와 그 e2e). `git merge origin/dev`는 세 파일에서 충돌했다.
+
+- ADR 0064. 결정 "주소의 검사"의 포인터는 PR 593의 것 뒤에 이 브랜치의 것을 이어 달았다(한 문장을 여럿이 바꿨으면 포인터를 이어 단다, `.claude/rules/adr.md`). 이력은 PR 593의 것("시험할 때 받는 http 주소를 호스트 이름이 .localhost로 끝나는 것까지 넓힌다")을 앞에, 이 브랜치의 셋을 뒤에 두었다. 이 브랜치의 둘째 이력이 그 이력 위에 얹힌다고 적었기 때문이다.
+- `.scratch/portal-login/plan.md`. 한 문단이 한 줄인 파일이라 줄 전체가 충돌했다. 두 쪽이 더한 문장(widget-login-state의 명세가 넘긴 셋, 이 명세가 넘긴 것)을 모두 남겼다.
+- `.scratch/widget-admin-server/plan.md`. 두 쪽이 더한 문단을 모두 남기고, 이 브랜치의 끝 항목("그 명세를 쓰며 본 빈 자리가 하나 있다")은 뺐다. 고르는 값 둘(로그인 전 모양, 고지 전문을 보이는 법)을 답에 싣는 쪽이 widget-admin-server라는 것을 PR 593의 문단이 정했기 때문이다.
+
+충돌은 스크래치패드의 한 번 쓰는 스크립트로 풀었다. 충돌 표지의 자리와 두 쪽의 줄 머리를 단언으로 확인한 뒤에만 쓰게 했고, 세 파일에 표지가 남지 않은 것을 Grep으로 봤다. `uv run python tools/check_adr_pointers.py`는 출력 없이 끝났고, `uv run python tools/plan_table.py`는 `.scratch/plan.md`를 바꾸지 않았으며, `uv run python tools/sibling_overlap.py`는 번호 겹침이 없다고 냈다.
+
+### 합친 뒤 고친 것
+
+글자 충돌이 없는 자리에서 뜻이 낡은 문장을 고쳤다. 근거는 합쳐진 `deploy/standalone/compose.yaml`, `deploy/standalone/proxy/site.conf`, `web/packages/e2e-standalone/e2e/deployment.e2e.ts`, `.github/workflows/ci.yml`의 `e2e-standalone` 잡, `docs/constitution/tech.md`와 next-session `merge.md`의 바뀐 줄, release-image 티켓 10의 파일이고 모두 이 세션이 열어 읽었다. 아래는 명세에 새로 쓴 문장의 원문이고 PR 직전 리뷰의 브리프에 밀 주장으로 넘긴다.
+
+- "포트와 compose"의 첫 항목 끝: 여기의 번호는 호스트에 여는 번호다. 지금의 프록시는 컨테이너 안에서 8443(방문자용 TLS)과 8080을 듣고 compose가 그 둘을 호스트의 443과 80으로 발행하므로(`deploy/standalone/proxy/site.conf`와 `deploy/standalone/compose.yaml`을 읽었다), 프록시가 컨테이너 안에서 듣는 번호는 포트를 더하는 티켓이 그 둘과 겹치지 않게 고른다.
+- 같은 절에서 compose가 아직 없다고 적은 항목을 고쳤다: 그 파일들은 이 명세를 쓰는 동안 dev에 들어왔다(PR 592, `deploy/standalone/`). 서비스는 프록시, `serve`, 관리 화면, 위젯, 위젯 테스트 페이지 다섯이고, 호스트에 여는 포트는 프록시의 443과 80, 관리 화면의 `127.0.0.1:3000` 셋이며, 프록시는 허용 목록의 경로만 넘기고 나머지에는 404로 답한다(`compose.yaml`과 `proxy/site.conf`를 읽었다). 프록시가 관리 화면용 포트를 듣게 하는 일은 admin-login이(ADR 0062 결정 "포트와 TLS"), 위젯 관리 서버와 그 데이터베이스의 컨테이너는 widget-admin-server가 그 위에 더한다. 그래서 배포에 닿는 티켓은 그 두 기능의 것이 든 뒤에 돈다.
+- "티켓이 코드와 같은 티켓에서 고치는 문서"의 CI 항목 끝: CI 잡의 수를 적은 자리가 둘 더 있어 잡을 더하는 티켓이 함께 고친다. `docs/constitution/tech.md`의 원격·CI 행과 next-session `merge.md`의 "함께 오르는 진행 중 조각"이고, 둘 다 지금 여덟으로 센다(읽었다). 뒤의 구절은 카나리아 명세 `.scratch/harness/probes/canary/next_session_ci_job_count.toml`이 기대 값으로 든다.
+- 같은 절의 배포 안내 항목 끝: 단독 배포의 안내는 release-image의 티켓 10이 `deploy/standalone/`에 짓기로 되어 있고(그 티켓 파일을 읽었다. 이 명세를 쓸 때 그 안내는 아직 없다), 그 안내가 선 뒤에 도는 티켓은 그 문서를 고친다. 고칠 안내가 아직 없으면 deploy-package의 기능 계획에 적는다(이 명세가 넘긴 것은 `.scratch/deploy-package/plan.md`에 적어 두었다).
+- Testing Decisions의 프록시와 compose 항목 끝: 자리는 단독 배포 e2e다(`web/packages/e2e-standalone`. release-image 명세 Testing Decisions의 첫째 이음매이고, 지은 이미지와 `deploy/standalone/`의 compose와 프록시를 실제로 띄운다). 그 시험에는 호스트에 연 포트가 80, 443, 3000 셋뿐이라는 사례와 허용 목록 밖의 경로가 404라는 사례가 이미 있어(`e2e/deployment.e2e.ts`, 코드를 읽었다), 포트와 컨테이너를 더하는 티켓이 그 목록을 고치고 위의 사례를 더한다. CI의 그 잡은 main으로 가는 PR과 main 푸시에서만 실제로 시험하므로(`.github/workflows/ci.yml`의 `e2e-standalone` 잡을 읽었다), 그 티켓은 이 PC의 Docker로 돌린 결과를 일지에 적는다(`CLAUDE.md` 검증 명령의 단독 배포 e2e).
+
+이 명세의 결정으로 낡게 되는 다른 기능의 글 세 자리도 같은 변경에서 고쳤다(`CLAUDE.md` 작업 규약 4). ADR 0064의 첫째 이력이 예시 질문의 모양을 0.1 판의 등록 목록에 넣었는데, PR 593이 들인 글은 그 값이 등록 목록에 아직 없다고 적었기 때문이다.
+
+- `.scratch/widget-admin-server/plan.md`의 widget-login-state 문단: 그 하나는 그 명세를 쓸 때 0.1 판의 등록 목록에 없었고, 그 뒤 ADR 0064 이력 2026-11-16 "위젯 설정에 예시 질문의 모양을 고르는 값으로 더한다"가 목록에 넣었다. 표와 답에 그 칸을 더하는 일은 portal-admin이 맡으므로(아래 문단의 끝 항목) 이 행의 답에 실리는 것은 그대로 열아홉이다.
+- `.scratch/widget-login-state/spec.md`의 "모양 값 넷이 닿는 길"과 Out of Scope의 "예시 질문의 모양을 위젯 설정에 등록하는 일": 등록할지를 묻는다는 현재형을, 물어서 등록하기로 정해졌다는 것과 그 근거(ADR 0064 이력의 제목, 이 명세의 "예시 질문의 모양을 답에 싣는다")로 고쳤다. 그 기능에서 값이 답에 실리지 않고 모형의 기본값으로만 선다는 것과 답에 실리는 항목이 열아홉이라는 것은 그대로다. 그 명세의 서두가 세는 표시는 바꾸지 않았다.
+
+고치지 않은 것: `.scratch/widget-login-state/plan.md`의 화면 작업 문단이 예시 질문의 모양을 명세 전에 묻는다고 적은 문장은 그대로 두었다. 그 문단은 화면 작업의 경위를 적은 기록이고, 그 기능 계획을 새 이름과 함께 고치는 일은 ADR 0065 결정 "이름"의 chore가 맡는다(ADR 0064 이력 "위젯 설정에 로그인 전 모양과 고지 전문을 보이는 법을 고르는 값으로 더한다"의 끝).
+
+서두의 수는 그대로다. 절 제목의 괄호를 늘리거나 줄이지 않았다(넘겨받은 것 열여덟, 사용자가 고른 것 여섯, 명세가 정한 것 스물셋, 포인터 열하나, 이력 넷). 포인터 열하나는 이 명세가 단 것만 센 수이고, ADR 0064 결정 "주소의 검사"에는 PR 593의 포인터가 하나 더 있다.

@@ -66,7 +66,10 @@ uv run python .scratch/release-image/probes/bridge_edge/run.py --sections 1 --en
 uv run python .scratch/release-image/probes/bridge_edge/run.py --sections 3,7 --engines 28.3.3
 uv run python .scratch/release-image/probes/bridge_edge/run.py --sections 7 --engines 29.9.2,28.0.0,27.5.1
 uv run python .scratch/release-image/probes/bridge_edge/run.py --sections 8 --engines 29.9.2,28.3.3
+uv run python .scratch/release-image/probes/bridge_edge/run.py --sections 1,3,8 --engines 28.3.3 --work <절대 경로의 폴더>
 ```
+
+여섯째 줄은 2026-11-16 에 "PR 직전 리뷰가 좁힌 측정 조건" 절을 다시 잰 명령이다(측정 134회차, 측정 아님 0회차).
 
 항목 7·8 과 엔진 28.3.3 은 기본값에 들지 않아 위 셋째부터 다섯째 줄처럼 고른다(`--engines` 에 28.3.3 도
 줄 수 있다). 결과 7절은 셋째·넷째 줄, 8절은 다섯째 줄, 9절은 셋째 줄로 잰 것이다.
@@ -152,6 +155,7 @@ Docker Desktop 의 포트 발행은 리눅스 서버와 길이 달라, 공식 `d
 | 안쪽 Engine(28.0.0) | Engine 28.0.0, Compose 2.33.1, iptables v1.8.11(nf_tables), OpenSSL 3.3.3, 저장 드라이버 overlay2, `ip_forward=1`, filter FORWARD 정책 `ACCEPT`(프로브가 적는다) |
 | dind 이미지(7·8·9절에서 더함) | `docker:28.3.3-dind`(2026-11-13 에 받았다. digest 는 위 `docker pull`) |
 | 안쪽 Engine(28.3.3) | Engine 28.3.3, Compose 2.39.2, iptables v1.8.11(nf_tables), OpenSSL 3.5.2, 저장 드라이버 overlay2, `ip_forward=1`, filter FORWARD 정책 `ACCEPT`(프로브가 적는다) |
+| 다시 잰 판(2026-11-16, release-image 티켓 09) | 바깥 Docker Desktop, Engine 29.9.2(`docker version`). 안쪽은 `docker:28.3.3-dind`, 회차 0 이 적은 Engine 28.3.3, Compose 2.39.2, iptables v1.8.11(nf_tables), OpenSSL 3.5.2, WSL2 커널 6.18.58.1-microsoft-standard-WSL2. 항목 1·3·8 만 돌았다 |
 | 서버의 IPv6(항목 7 의 회차 0, 네 엔진) | ip6tables v1.8.13(29.9.2)·v1.8.11(그 밖의 셋), nf_tables. 안쪽 IPv6 배치를 띄운 뒤 `/proc/sys/net/ipv6/conf/all/forwarding` 이 1, ip6tables filter FORWARD 정책 `DROP`(프로브가 적는다) |
 | nginx | 1.30.6(`nginx:1.30.6-alpine`, `nginxinc/nginx-unprivileged:1.30.6-alpine`) |
 | 파이썬 | 3.12.10(`python:3.12.10-slim-bookworm`) |
@@ -208,6 +212,13 @@ edge-run5 가 같은 값을 안쪽 게이트웨이로 갈랐다). 요청마다 �
   `172.18.0.1` 로 보였다. compose 는 덧씌울 때 `ipam.config` 목록을 잇지 않고 바꾼다(Compose v5.6.1 의
   `docker compose ... config` 로 손으로 봤다). `compose.ipv6.yml` 에 IPv4 대역을 다시 적은 뒤의 위
   표에서는 `172.30.0.1` 이다.
+
+**Engine 28.3.3 에서 다시 쟀다(2026-11-16, release-image 티켓 09, edge-run10)**. 위 표를 낸 세 엔진에 28.3.3
+을 더했다. 안쪽 네트워크가 IPv4 뿐인 배치의 여섯 갈래를 두 모드에서 갈래마다 2회차 돌았고, 값이 위 표의 세 엔진과
+같았다(**쟀다**). 이웃 n1·n2 의 IPv4 는 이웃 주소, userland-proxy 를 켠 때 이웃 n1·n2 의 IPv6 `:443` 과 서버 자신의
+`[::1]`·바깥 IPv6 는 게이트웨이 `172.30.0.1`, 끈 때는 그 넷이 refused 였다. 서버 자신의 바깥 IPv4 는 켠 때 자기 주소
+`10.77.0.10`, 끈 때 게이트웨이였다. "닿지 않음" 회차는 모두 HTTP 응답이 없고 프록시 접근 기록에 그 `rid` 의 줄이
+없었다(아래 "PR 직전 리뷰가 좁힌 측정 조건"의 판). IPv6 를 켠 안쪽 네트워크 배치는 이번에 돌지 않았다.
 
 ### 2. 접속 주소별 빈도 제한
 
@@ -519,6 +530,9 @@ compose.v4-publish.yml config --format json` 을 쳐 프록시의 `ports` 가 `0
   IPv6 쪽에 443·80 이 없어(위 표) 1절과 같이 refused 다. IPv4 갈래의 값은 1절과 같다.
 - 80 의 회차 이름은 `8.<시나리오>.ri-edge-n1→서버의 IPv6:80#n` 처럼 이웃의 컨테이너 이름을 쓴다.
 - 회차 수. 시나리오마다 27회차, 넷 합 108회차가 모두 측정이었다(edge-run9).
+- Engine 28.3.3 을 2026-11-16 에 다시 쟀다(edge-run10, 위 항목 1·3 과 한 실행). 두 모드 모두 `docker port` 가 위의
+  두 줄뿐이었고, 위 두 표의 28.3.3 값이 그대로 나왔다. userland-proxy 를 켠 시제품 배치는 듣는 소켓에 `:::443` 이
+  있었고 IPv4 에만 발행한 배치에는 없었다(**쟀다**. 모드마다 갈래마다 2회차).
 
 ### 9. 항목 3 을 Engine 28.3.3 에서 다시
 
@@ -542,6 +556,13 @@ compose.v4-publish.yml config --format json` 을 쳐 프록시의 `ports` 가 `0
   바꾼 회차도 그 raw 규칙만 늘었고 정책의 패킷 수는 늘지 않았다(raw 가 먼저 버렸다).
 - 막은 규칙의 꼴은 29.9.2 와 같다(컨테이너 주소마다 포트를 가리지 않는 raw DROP). 28.0.0 의 꼴(관리 화면은
   `--dport 3000` 이 붙은 raw, serve 는 filter `DOCKER` 의 DROP)과 다르다.
+- 2026-11-16 에 같은 방법으로 다시 쟀다(edge-run10, 고친 `run.py`). 위 표와 같았다. 막힌 회차 32/32 가 모두 그 목적지의
+  raw DROP 이 3 늘었고, 양성 대조 2/2 는 닿았다. 이번에 새로 더한 검사는 하나다. 보호를 끈 네트워크의 대조용
+  컨테이너가 자기 안에서 먼저 답하는지(`answers`)를 보고, 답하고 경로가 잡혔을 때만 그 양성 대조 회차를 센다.
+  관리 화면(`127.0.0.1` 에만 발행)·serve·프록시 컨테이너가 기대한 대역(admin, serve, portal)으로 답하는지 공격 전에
+  걸어 보는 검사는 이전 판에서 이미 있었고 이번 재측정에서도 세 대상이 모두 답했다. 측정 134회차(항목 1·3·8),
+  측정 아님 0회차를 `Rounds` 가 셌다(**쟀다**). 새 검사가 옛 판의 헛된 통과를 걸러 낸다는 효과는 옛 판으로 비교하지
+  않았으므로 **어림**이다.
 
 ## ADR 0024 가 프록시에 요구하는 규칙(재지 않고 적은 목록)
 
@@ -577,7 +598,7 @@ compose.v4-publish.yml config --format json` 을 쳐 프록시의 `ports` 가 `0
 - firewalld·ufw 가 있는 서버. 28.3.3 이 고친 CVE-2025-54388(firewalld 를 다시 읽으면 루프백에만
   발행한 포트가 열리던 문제)은 원문으로만 봤다.
 - `DOCKER_INSECURE_NO_IPTABLES_RAW=1` 을 준 28.0.2 이후, nftables 방화벽 뒷단, 데몬을 다시 켠 뒤.
-- 잰 네 판(27.5.1, 28.0.0, 28.3.3, 29.9.2) 밖의 판. 28.3.3 은 항목 3·7·8 만(9·7·8절) 쟀고, 항목 8 은
+- 잰 네 판(27.5.1, 28.0.0, 28.3.3, 29.9.2) 밖의 판. 28.3.3 은 항목 1·3·7·8 만(1·9·7·8절) 쟀고, 항목 8 은
   28.3.3 과 29.9.2 만 쟀다. 28.0.0 과 28.3.3 사이, 28.3.3 과 29.9.2 사이의 판과 27.5.1 보다 오래된 판은
   재지 않았다.
 - 실제 뒷단 이미지(serve, 관리 화면, 위젯, 위젯 미리보기 페이지). 뒷단은 `stub.py` 다. 실제 뒷단이
@@ -607,7 +628,11 @@ compose.v4-publish.yml config --format json` 을 쳐 프록시의 `ports` 가 `0
 
 ## PR 직전 리뷰가 좁힌 측정 조건(2026-11-14)
 
-위 결과를 낸 실행 뒤에 CodeRabbit CLI가 짚어 측정 조건을 좁혔다. 좁힌 판은 다시 돌리지 않았다.
+위 결과를 낸 실행 뒤에 CodeRabbit CLI가 짚어 측정 조건을 좁혔다. 좁힌 판은 2026-11-16 에 Engine 28.3.3 으로
+다시 돌았다(release-image 티켓 09, 항목 1·3·8. 명령은 위 "다시 돌리기"의 `--sections 1,3,8 --engines 28.3.3`).
+측정 134회차, 측정 아님 0회차, 종료 코드 0이었고 1절·8절·9절의 값이 모두 그대로였다(**쟀다**). 아래 조건은 이 판에서 섰다.
+항목 7 과 엔진 27.5.1·28.0.0·29.9.2 는 이번에 돌지 않았다. 아래 `attack` 의 막은 쪽 서술 가운데 27.5.1 의 B 에서 닿지
+않은 두 회차는 27.5.1 을 돌지 않았으므로 그대로다.
 
 - `who`(1절의 갈래와 8절이 다시 돈 그 갈래): "닿지 않음" 회차는 HTTP 응답이 없고 프록시 접근 기록에 그
   rid 의 줄이 없을 때만(기록을 읽었다는 것은 줄이 하나라도 있는 것으로 본다) 세고, 응답이나 그 줄이
@@ -627,4 +652,6 @@ compose.v4-publish.yml config --format json` 을 쳐 프록시의 `ports` 가 `0
   적었을 뿐 회차마다 늘었다고는 적지 않았다. 27.5.1 의 B 에서 닿지 않은 두 회차는 늘어난 DROP 이 없었고
   (3절) 막은 쪽을 적지 않은 채다. 대상이 답한다는 것 자체는 관리 화면이 3절·9절의 서버 자신 →
   `127.0.0.1:3000` 대조로, serve 가 1절 표의 이웃 → IPv4 `:443` 회차로(27.5.1·28.0.0·29.9.2) 따로
-  보였고, 28.3.3(9절, 항목 1 을 돌지 않은 실행)의 serve 는 기록으로는 가를 수 없다.
+  보였고, 28.3.3 의 serve 는 2026-11-16 의 다시 잰 판이 공격 전의 서버 자신 → serve 컨테이너 `:8000` 대조로
+  답한 쪽이 serve 임을 보였다(두 모드. **쟀다**). 그 전의 28.3.3 실행(9절의 edge-run7)에는 그 대조가 없었다.
+  막은 쪽을 적지 않은 27.5.1 의 B 두 회차는 이번에 다시 돌지 않았다.

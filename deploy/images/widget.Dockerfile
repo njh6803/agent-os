@@ -37,6 +37,7 @@ COPY apps/portal/package.json apps/portal/package.json
 COPY apps/widget/package.json apps/widget/package.json
 COPY packages/api-client/package.json packages/api-client/package.json
 COPY packages/e2e-stack/package.json packages/e2e-stack/package.json
+COPY packages/e2e-standalone/package.json packages/e2e-standalone/package.json
 COPY packages/react-18/package.json packages/react-18/package.json
 COPY packages/site-file/package.json packages/site-file/package.json
 COPY packages/ui/package.json packages/ui/package.json
