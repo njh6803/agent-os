@@ -1,6 +1,6 @@
 # agent-os 단독 배포 안내
 
-이 문서는 서버 한 대에 agent-os를 올리는 운영자를 위한 안내입니다. 묶음을 푼 폴더 안에서 아래 순서대로 따라 하면 인증서와 키, 사이트 파일, 위젯 미리보기 페이지 설정, 환경 변수 파일을 채워 띄우고, 떴는지 확인하고, 관리 화면에 닿을 수 있습니다.
+이 문서는 서버 한 대에 agent-os를 올리는 운영자를 위한 안내입니다. 묶음을 푼 폴더 안에서 아래 순서대로 따라 하면 인증서와 키, 사이트 파일, 위젯 테스트 페이지 설정, 환경 변수 파일을 채워 띄우고, 떴는지 확인하고, 관리 화면에 닿을 수 있습니다.
 
 ## 1. 시작하기 전에
 
@@ -12,7 +12,7 @@
 - 경고 하나. `DOCKER_INSECURE_NO_IPTABLES_RAW=1`을 준 데몬에서는 `127.0.0.1`에 발행한 포트에 같은 로컬 네트워크의 다른 호스트가 닿을 수 있다고 Docker 28.0.2의 릴리스 노트가 적습니다. 그 변수를 주지 마십시오.
 - 경고 둘. Docker 28.0.0보다 오래된 판에서는 같은 네트워크 구간의 다른 호스트가 localhost에 발행한 포트에 닿는다고 Docker 문서가 적습니다. 28.3.3의 릴리스 노트는 firewalld를 다시 읽은 뒤 루프백에만 발행한 포트가 로컬 네트워크에서 닿던 문제(CVE-2025-54388)를 고쳤다고 적습니다. 그래서 최소 판이 28.3.3입니다.
 - rootless 모드의 Docker와, firewalld나 ufw를 쓰는 서버에서는 관리 화면을 `127.0.0.1`에만 열어 두는 보호를 확인하지 못했습니다. 그런 서버에서는 올린 뒤 다른 호스트에서 서버 주소의 3000번 포트가 닫혀 있는지 직접 확인하십시오.
-- rootless 모드와 사용자 네임스페이스 재매핑(`userns-remap`)에서는 컨테이너의 GID가 호스트의 같은 번호와 대응하지 않습니다. 3-2와 3-3이 정한 키 파일의 그룹(101, 10001)이 컨테이너 안에서 읽히지 않아 프록시나 위젯 미리보기 페이지가 시작에서 끝날 수 있습니다. 이 두 모드는 보증하는 환경이 아닙니다.
+- rootless 모드와 사용자 네임스페이스 재매핑(`userns-remap`)에서는 컨테이너의 GID가 호스트의 같은 번호와 대응하지 않습니다. 3-2와 3-3이 정한 키 파일의 그룹(101, 10001)이 컨테이너 안에서 읽히지 않아 프록시나 위젯 테스트 페이지가 시작에서 끝날 수 있습니다. 이 두 모드는 보증하는 환경이 아닙니다.
 
 ### 서버의 메모리
 
@@ -20,7 +20,7 @@
 
 ### 공개 출처를 둘 도메인
 
-방문자가 위젯과 위젯 미리보기 페이지에 닿을 도메인(이 안내는 `agent.example.com`으로 적습니다)이 필요합니다.
+방문자가 위젯과 위젯 테스트 페이지에 닿을 도메인(이 안내는 `agent.example.com`으로 적습니다)이 필요합니다.
 
 - 그 도메인이 속한 등록 도메인 아래의 모든 호스트(형제 도메인 포함)를 같은 운영자가 믿을 수 있게 쥐고 있어야 합니다. agent-os는 도메인을 검사하지 않습니다.
 - 도메인에는 IPv4 주소(A 레코드)만 등록하십시오. 이 배포는 443과 80을 서버의 IPv4 주소에만 열기 때문에, IPv6 주소(AAAA 레코드)를 함께 등록하면 IPv6로만 접속하는 방문자가 닿지 못합니다.
@@ -42,7 +42,7 @@ cd agent-os-<판 번호>
 - `.env.example`: 환경 변수 파일의 틀입니다. 판 번호와 이미지 이름공간은 채워져 있습니다.
 - `tls/`: 인증서와 키를 두는 폴더입니다.
 - `site/sites.toml`: 사이트 파일의 틀입니다.
-- `portal/portal.toml`, `portal/keys/`: 위젯 미리보기 페이지 설정의 틀과 개인 키를 두는 폴더입니다.
+- `portal/portal.toml`, `portal/keys/`: 위젯 테스트 페이지 설정의 틀과 개인 키를 두는 폴더입니다.
 - `proxy/`: 프록시 설정입니다. 처음에는 고치지 않습니다.
 - `README.md`: 이 문서입니다.
 
@@ -92,9 +92,9 @@ sudo chmod 640 tls/privkey.pem
 
 인증서는 시간이 지나면 만료됩니다. 갱신은 운영자가 합니다. 새 파일을 같은 이름으로 `tls/`에 둔 뒤, 새 키 파일에도 위의 `chown`과 `chmod`를 다시 치고 6절의 차례대로 프록시 설정을 다시 읽게 하십시오. 새 키가 `root`만 읽는 파일이면 프록시가 읽지 못합니다.
 
-### 3-3. 위젯 미리보기 페이지의 개인 키
+### 3-3. 위젯 테스트 페이지의 개인 키
 
-위젯 미리보기 페이지는 방문자에게 줄 토큰에 이 키로 서명합니다. 서명을 확인하는 공개 키는 사이트 파일(3-4)에 들어갑니다.
+위젯 테스트 페이지는 방문자에게 줄 토큰에 이 키로 서명합니다. 서명을 확인하는 공개 키는 사이트 파일(3-4)에 들어갑니다.
 
 ```bash
 openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:2048 -out portal/keys/portal.pem
@@ -102,20 +102,20 @@ sudo chown root:10001 portal/keys/portal.pem
 sudo chmod 640 portal/keys/portal.pem
 ```
 
-위젯 미리보기 페이지는 uid·gid 10001로 돕니다. 위의 소유(주인 root, 그룹 10001)와 권한(640)으로 두어야 그 컨테이너가 키를 읽습니다. root만 읽는 0600의 키는 위젯 미리보기 페이지가 시작에서 끝납니다. 공개 키는 아래 명령이 출력합니다. 이 명령도 키를 읽으므로 `sudo`가 필요합니다.
+위젯 테스트 페이지는 uid·gid 10001로 돕니다. 위의 소유(주인 root, 그룹 10001)와 권한(640)으로 두어야 그 컨테이너가 키를 읽습니다. root만 읽는 0600의 키는 위젯 테스트 페이지가 시작에서 끝납니다. 공개 키는 아래 명령이 출력합니다. 이 명령도 키를 읽으므로 `sudo`가 필요합니다.
 
 ```bash
 sudo openssl pkey -in portal/keys/portal.pem -pubout
 ```
 
-### 3-4. 사이트 파일과 위젯 미리보기 페이지 설정
+### 3-4. 사이트 파일과 위젯 테스트 페이지 설정
 
 두 파일의 값은 서로 맞아야 합니다.
 
 `site/sites.toml`에서 고칠 칸입니다.
 
 - `issuer`: 사이트를 가리키는 이름입니다. 주소 꼴(`https://www.example.com`)로 적고, `portal/portal.toml`의 `issuer`와 같은 값으로 둡니다.
-- `allowed_origins`: 위젯을 끼워 넣을 수 있는 출처입니다. 위젯 미리보기 페이지의 공개 출처(`https://agent.example.com`)도 여기 들어야 합니다.
+- `allowed_origins`: 위젯을 끼워 넣을 수 있는 출처입니다. 위젯 테스트 페이지의 공개 출처(`https://agent.example.com`)도 여기 들어야 합니다.
 - `agents`: 이 사이트의 방문자가 열 수 있는 에이전트입니다. 틀의 `calc`는 이미지에 든 예시 에이전트입니다. 운영자가 자기 에이전트로 바꾸십시오. 에이전트는 플러그인 폴더(8절)에 둔 것의 이름입니다. 틀에 쓰지 않은 `assistant`는 문서 검색 서버가 이 묶음 밖에 따로 있어야 답합니다.
 - `[[sites.public_keys]]`의 `pem`: 3-3에서 출력한 공개 키를 `-----BEGIN PUBLIC KEY-----`부터 `-----END PUBLIC KEY-----`까지 붙여 넣습니다. `kid`는 `portal/portal.toml`의 `kid`와 같은 값입니다.
 - 선택 `[sites.limits]`의 `request_chars`: 한 번에 받는 요청의 글자 수 상한입니다. 적지 않으면 기본 상한 20,000자를 씁니다. 17만 자 남짓보다 크게 올리면 프록시의 본문 크기 상한(1MiB)이 먼저 413으로 답할 수 있습니다.
@@ -135,20 +135,29 @@ docker compose up -d --wait --wait-timeout 600
 
 처음에는 이미지 넷과 프록시 이미지를 받고, 위젯이 뜰 때 사이트 파일로 빌드하므로 몇 분이 걸립니다. 위젯은 빌드하는 동안 확인이 실패한 채 `starting`이다가 서고 나서 `healthy`가 됩니다.
 
+`compose.yaml`의 서비스 이름과 Docker Hub의 저장소 이름은 다릅니다. 이미지를 직접 받거나 옮길 때는 아래 표로 찾으십시오. `<이름공간>`은 `.env`의 `AGENT_OS_NAMESPACE`이고, 태그는 `.env`의 `AGENT_OS_VERSION`입니다.
+
+| 서비스 이름 | 하는 일 | Docker Hub 이미지 |
+|---|---|---|
+| `serve` | 런타임. 에이전트를 실행합니다 | `<이름공간>/agent-os-runtime` |
+| `admin` | 관리 화면 | `<이름공간>/agent-os-admin` |
+| `widget` | 위젯 | `<이름공간>/agent-os-widget` |
+| `portal` | 위젯 테스트 페이지 | `<이름공간>/agent-os-widget-test-page` |
+
 ```bash
 docker compose ps
 ```
 
-이미지 넷(`serve`, `admin`, `widget`, `portal`)이 모두 `healthy`이고 프록시가 `Up`이면 떴습니다. 프록시는 상태 확인이 없어 `Up`만 보이고 `healthy`가 붙지 않습니다. 떴는지는 컨테이너 기록의 `Ready` 줄이 아니라 이 상태로 보십시오. 관리 화면은 `Ready` 줄을 찍은 뒤에 서버로 가는 연결을 확인하다 실패할 수 있습니다.
+컨테이너 넷(`serve`, `admin`, `widget`, `portal`. 아래 표의 서비스 이름)이 모두 `healthy`이고 프록시가 `Up`이면 떴습니다. 프록시는 상태 확인이 없어 `Up`만 보이고 `healthy`가 붙지 않습니다. 떴는지는 컨테이너 기록의 `Ready` 줄이 아니라 이 상태로 보십시오. 관리 화면은 `Ready` 줄을 찍은 뒤에 서버로 가는 연결을 확인하다 실패할 수 있습니다.
 
-방문자가 닿는 쪽은 브라우저로 `https://agent.example.com/`을 열어 봅니다. 위젯 미리보기 페이지가 뜨고 질문에 답이 오면 됩니다. 명령으로 보려면 아래를 칩니다. 이 명령은 인증서를 검증하므로, 만료됐거나 도메인이 다른 인증서면 응답을 받기 전에 실패합니다. 스스로 서명한 인증서를 시험 삼아 쓸 때만 `curl`에 `-k`를 덧붙여 검증을 끕니다.
+방문자가 닿는 쪽은 브라우저로 `https://agent.example.com/`을 열어 봅니다. 위젯 테스트 페이지가 뜨고 질문에 답이 오면 됩니다. 명령으로 보려면 아래를 칩니다. 이 명령은 인증서를 검증하므로, 만료됐거나 도메인이 다른 인증서면 응답을 받기 전에 실패합니다. 스스로 서명한 인증서를 시험 삼아 쓸 때만 `curl`에 `-k`를 덧붙여 검증을 끕니다.
 
 ```bash
 curl -sS -L -o /dev/null -w '%{http_code}\n' https://agent.example.com/
 curl -sS -o /dev/null -w '%{http_code} %{redirect_url}\n' http://agent.example.com/
 ```
 
-첫 줄은 200이고(`/`는 위젯 미리보기 페이지로 넘겨지므로 `-L`로 따라갑니다), 둘째 줄은 308과 `https://` 주소입니다.
+첫 줄은 200이고(`/`는 위젯 테스트 페이지로 넘겨지므로 `-L`로 따라갑니다), 둘째 줄은 308과 `https://` 주소입니다.
 
 ### 관리 화면에 닿기
 
@@ -162,9 +171,9 @@ ssh -L 3000:127.0.0.1:3000 <사용자>@<서버 주소>
 
 ## 5. 설정을 고친 뒤
 
-### 사이트 파일이나 위젯 미리보기 페이지 설정을 고쳤을 때
+### 사이트 파일이나 위젯 테스트 페이지 설정을 고쳤을 때
 
-위젯은 뜰 때 사이트 파일로 빌드하고, `serve`와 위젯 미리보기 페이지도 그 파일을 읽습니다. 고친 뒤에는 세 컨테이너를 다시 띄웁니다.
+위젯은 뜰 때 사이트 파일로 빌드하고, `serve`와 위젯 테스트 페이지도 그 파일을 읽습니다. 고친 뒤에는 세 컨테이너를 다시 띄웁니다.
 
 ```bash
 docker compose restart serve widget portal
@@ -217,7 +226,7 @@ docker compose exec proxy nginx -c /etc/agent-os/proxy/nginx.conf -s reload
 NS=$(grep '^AGENT_OS_NAMESPACE=' .env | cut -d= -f2)
 VER=$(grep '^AGENT_OS_VERSION=' .env | cut -d= -f2)
 mkdir -p data/plugins data/traces
-docker run --rm --user 0 --entrypoint cp -v "$PWD/data/plugins:/dest" "$NS/serve:$VER" -a /app/plugins/. /dest/
+docker run --rm --user 0 --entrypoint cp -v "$PWD/data/plugins:/dest" "$NS/agent-os-runtime:$VER" -a /app/plugins/. /dest/
 sudo chown -R 10001:10001 data/plugins data/traces
 ```
 

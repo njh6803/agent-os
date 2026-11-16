@@ -1,6 +1,6 @@
 /**
  * 단독 배포 e2e 의 준비(globalSetup, release-image 티켓 09). 지은 이미지 넷과 배포 파일 묶음(`deploy/standalone/`)을 04 의
- * 도구(`tools/release.py bundle`)로 묶어 임시 폴더에 풀고, 운영자가 채울 것(인증서와 키, 사이트 파일, 위젯 미리보기 페이지
+ * 도구(`tools/release.py bundle`)로 묶어 임시 폴더에 풀고, 운영자가 채울 것(인증서와 키, 사이트 파일, 위젯 테스트 페이지
  * 설정과 개인 키, 환경 변수 파일)을 시험 값으로 채워 `docker compose up` 으로 띄운다. 시험이 끝나면 그 실행이 만든 컨테이너,
  * 볼륨, 네트워크를 지운다.
  *
@@ -29,7 +29,7 @@ import {
   siteKey,
   writeEchoAgent,
 } from "@agent-os/e2e-stack";
-import { Compose, succeed } from "./docker.ts";
+import { Compose, repositoryName, succeed } from "./docker.ts";
 import {
   ADMIN_TOKEN_ENV,
   API_KEY_ENV,
@@ -60,7 +60,7 @@ const MINUTE_MS = 60_000;
 const BUILD_MS = 15 * MINUTE_MS;
 const UP_WAIT_SECONDS = 420;
 
-// 위젯 미리보기 페이지가 그리는 사이트 둘. 둘째는 저장소의 계산 에이전트(이미지에 든 예시 MCP 서버를 쓴다)를 연다.
+// 위젯 테스트 페이지가 그리는 사이트 둘. 둘째는 저장소의 계산 에이전트(이미지에 든 예시 MCP 서버를 쓴다)를 연다.
 const PREVIEW: E2eSite = {
   name: "preview",
   issuer: "https://preview.standalone.e2e.example",
@@ -75,7 +75,7 @@ const CALC: E2eSite = {
   heading: "계산 에이전트",
   theme: "guncheong",
 };
-// 시험이 e2e-stack 의 토큰 서명(`signToken`)으로 최종 사용자 경로를 직접 부를 때 쓰는 사이트. 위젯 미리보기 페이지 설정에는
+// 시험이 e2e-stack 의 토큰 서명(`signToken`)으로 최종 사용자 경로를 직접 부를 때 쓰는 사이트. 위젯 테스트 페이지 설정에는
 // 들지 않는다.
 const DIRECT: E2eSite = {
   name: "direct",
@@ -216,13 +216,19 @@ async function imagesToRun(): Promise<{ namespace: string; version: string }> {
   const revision = (
     await succeed("git", ["rev-parse", "HEAD"], { cwd: REPO, timeoutMs: MINUTE_MS })
   ).trim();
-  const name = (image: string): string => `${LOCAL_NAMESPACE}/${image}:${LOCAL_VERSION}`;
+  const [serveRepository, adminRepository, widgetRepository, portalRepository] = await Promise.all([
+    repositoryName("serve"),
+    repositoryName("admin"),
+    repositoryName("widget"),
+    repositoryName("portal"),
+  ]);
+  const name = (repository: string): string => `${LOCAL_NAMESPACE}/${repository}:${LOCAL_VERSION}`;
   const label = [
     ["--build-arg", `IMAGE_VERSION=${LOCAL_VERSION}`],
     ["--build-arg", `IMAGE_REVISION=${revision}`],
     ["--build-arg", `IMAGE_SOURCE=${SOURCE_LABEL}`],
   ].flat();
-  const web = (image: string): Promise<string> =>
+  const web = (image: string, repository: string): Promise<string> =>
     succeed(
       "docker",
       [
@@ -231,7 +237,7 @@ async function imagesToRun(): Promise<{ namespace: string; version: string }> {
         `deploy/images/${image}.Dockerfile`,
         ...label,
         "--tag",
-        name(image),
+        name(repository),
         "web",
       ],
       { cwd: REPO, timeoutMs: BUILD_MS },
@@ -249,12 +255,17 @@ async function imagesToRun(): Promise<{ namespace: string; version: string }> {
       "--build-arg",
       `SOURCE=${SOURCE_LABEL}`,
       "--tag",
-      name("serve"),
+      name(serveRepository),
       ".",
     ],
     { cwd: REPO, timeoutMs: BUILD_MS },
   );
-  await Promise.all([serve, web("admin"), web("widget"), web("portal")]);
+  await Promise.all([
+    serve,
+    web("admin", adminRepository),
+    web("widget", widgetRepository),
+    web("portal", portalRepository),
+  ]);
   return { namespace: LOCAL_NAMESPACE, version: LOCAL_VERSION };
 }
 

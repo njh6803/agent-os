@@ -1,0 +1,30 @@
+# next-session `merge.md` 의 새 절 "판 내기를 기다린다"(release-image 티켓 11)가 새 세션에 실리는지.
+# 실험군은 이 워크트리(커밋하지 않은 본문), 대조군은 이 절을 더하기 전 커밋 `11e41115a` 를 `--control-commit` 으로 준다.
+# 옛 판에는 이 절이 없어 세 카나리아가 모두 없다.
+# 최신 결과: 통과 4, "없음" 섞임 0(2026-11-16, 이 PC, 실험군은 이 워크트리의 커밋하지 않은 본문(러너가 찍은 커밋은 `11e41115a`), 대조군 `--control-commit 11e41115a`, 일지 2026-11-16-2249).
+# 돌리는 법: 워크트리 `.claude/worktrees/<이름>/` 루트에서
+#   uv run python tools/canary.py --control-commit 11e41115a .scratch/release-image/probes/canary/next_session_release_wait.toml <출력 디렉터리>
+kind = "skill"
+question = '''
+next-session 스킬을 Skill 도구로 불러 본문을 읽어라. 스킬이 시키는 일은 하지 않는다.
+본문이 상황마다 Read로 열라고 가리키는 하위 파일 가운데 PR을 연 세션이 병합까지 마칠 때 여는 파일 하나를
+Read로 열고, 아래를 그 파일에서만 찾는다. 스킬 본문(SKILL.md)에 든 글은 옮기지 않는다.
+본문이 그런 하위 파일을 가리키지 않거나 그 파일에 없으면 그 물음에 "없음"이라고만 답하라.
+그 파일에서 main에 병합한 핫픽스나 출시 PR 뒤에 실행이 끝날 때까지 보는 절의 세 가지를 각각 글자 그대로 옮겨라.
+1. 그 절에서 병합 커밋의 해시를 읽는 명령.
+2. 그 절이 실행을 끝까지 보려고 백그라운드로 띄우라는 명령.
+3. 실행이 취소됐고 이 커밋보다 나중 커밋의 실행이 있을 때 하라는 일을 적은 문장.
+'''
+expect = ["--json mergeCommit --jq .mergeCommit.oid", "--exit-status --interval 30", "일지의 `판 내기:` 줄을 고쳐 1~3을 다시 한다"]
+source = ".claude/skills/next-session/merge.md"
+skill = "next-session"
+skill_body = "files"
+
+[[arm]]
+name = "워크트리"
+role = "experiment"
+
+[[arm]]
+name = "주-체크아웃"
+role = "control"
+checkout = "../../.."

@@ -9,7 +9,7 @@ import { request as httpsRequest } from "node:https";
 import { join } from "node:path";
 import { expect, test } from "@playwright/test";
 import { signedDirectToken } from "./direct.ts";
-import { Compose, run } from "./docker.ts";
+import { Compose, repositoryName, run } from "./docker.ts";
 import { ADMIN_ORIGIN, CALC_AGENT, deployment, LLM_ENV, ORIGIN, PREVIEW_SITE } from "./env.ts";
 
 const SERVICES = ["proxy", "serve", "admin", "widget", "portal"] as const;
@@ -54,7 +54,7 @@ function echoed(request: string): string {
   return `출력: chars:${String(request.length)}`;
 }
 
-test("위젯 미리보기 페이지가 프록시 뒤에서 CSP 위반 없이 그려지고 토큰 CSS 와 글꼴이 풀린다", async ({
+test("위젯 테스트 페이지가 프록시 뒤에서 CSP 위반 없이 그려지고 토큰 CSS 와 글꼴이 풀린다", async ({
   page,
 }) => {
   const messages: string[] = [];
@@ -293,7 +293,8 @@ test("루프백이 아닌 주소에 묶으려는 serve 는 예외 환경 변수 
 
 async function serveImage(): Promise<string> {
   const printed = await compose().call(["config", "--images"], 60_000);
-  const image = printed.stdout.split("\n").find((line) => line.trim().includes("/serve:"));
+  const marker = `/${await repositoryName("serve")}:`;
+  const image = printed.stdout.split("\n").find((line) => line.trim().includes(marker));
   if (image === undefined) {
     throw new Error(`compose config --images 에 serve 이미지가 없다:\n${printed.stdout}`);
   }
