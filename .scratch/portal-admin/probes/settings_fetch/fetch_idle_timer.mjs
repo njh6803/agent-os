@@ -154,7 +154,9 @@ function firstLine(child, what) {
       timers.clearTimeout(limit);
       resolve(line);
     });
-    child.once("exit", () => {
+    // `exit` 가 아니라 `close` 에서 판정한다. `exit` 는 자식이 낸 출력을 다 읽기 전에 올 수 있어, 한 줄을 내고 바로
+    // 끝나는 추적 자식의 줄을 버릴 수 있다. `close` 는 출력의 흐름이 닫힌 뒤에 온다. 줄을 이미 받았으면 아래는 아무 일도 않는다.
+    child.once("close", () => {
       timers.clearTimeout(limit);
       reject(new Error(`${what}이 줄을 내기 전에 끝났다`));
     });
@@ -194,8 +196,20 @@ function traceSummary(traced, problems) {
   };
 }
 
+// 재는 실행 전체의 한도. 기본값(--count 200)의 실행은 몇 초에 끝난다.
+const RUN_LIMIT_MS = 300_000;
+
 async function runMeasure() {
   const count = Number(args.count);
+  // 재는 요청(`viaFetch`, `viaHttp`)에는 요청마다 제한 시간을 걸지 않는다. 걸면 호출마다 타이머가 하나 더 걸려,
+  // 타이머 하나의 기다림을 가르려는 이 프로브의 재는 길이 달라진다. 대신 실행 전체에 한도를 둔다.
+  // 서버 자식이 답을 멈춰 요청이 끝나지 않으면 여기서 끝나고, 종료 코드는 측정이 아닌 실행의 1 이다.
+  timers
+    .setTimeout(() => {
+      console.error(`재는 실행이 ${RUN_LIMIT_MS}ms 안에 끝나지 않았다. 측정이 아니다`);
+      process.exit(1);
+    }, RUN_LIMIT_MS)
+    .unref();
   const server = spawn(process.execPath, [SELF, "--server"], { stdio: ["pipe", "pipe", "inherit"] });
   const problems = [];
   let output = null;

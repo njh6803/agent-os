@@ -236,6 +236,11 @@ function rawRequest(method, url, headers = {}, body) {
         }
         resolve({ status: answer.statusCode, setCookie: answer.headers["set-cookie"] ?? [], text, json });
       });
+      // 응답이 끝나기 전에 연결이 닫히면 `end` 가 오지 않는다. 그때 끝없이 기다리지 않게 던진다.
+      answer.on("error", reject);
+      answer.on("close", () => {
+        if (!answer.complete) reject(new Error(`${url} 의 응답이 끝나기 전에 연결이 닫혔다`));
+      });
     });
     request.on("timeout", () => request.destroy(new Error(`${url} 시간 초과`)));
     request.on("error", reject);

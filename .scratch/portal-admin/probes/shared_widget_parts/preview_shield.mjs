@@ -60,6 +60,10 @@ const VIEWPORTS = [
 // 위젯 밖에서 포커스를 받는 것은 "저장" 단추 하나, 위젯 안에서 받는 것은 가리지 않았을 때 넷이다. 한 바퀴가 여섯 번을
 // 넘지 않으므로 열네 번이면 두 바퀴를 돈다.
 const PRESSES = 14;
+// 스토리가 다 그려지기를 기다리는 한도. 기본값에 기대지 않게 적어 둔다. 설치본(Playwright 1.63.0)의 타입 문서는
+// `waitForFunction` 의 기본값을 0(제한 없음)이라 적는데, 제한을 주지 않은 호출은 30초쯤에 TimeoutError 를 던졌다
+// (손으로 한 번 봤다. README 의 "결과").
+const RENDER_LIMIT_MS = 30_000;
 
 /**
  * 갈래마다의 기대. `inside` 는 Tab 이 위젯 안에 드는지, `images` 는 이름 붙은 그림의 수다. `before` 와 `after` 는 위젯이
@@ -326,7 +330,7 @@ try {
         await page.goto(
           `${ORIGIN}/iframe.html?id=pages-widgetpreviewprobe--${branch.id}&viewMode=story`,
         );
-        await page.waitForFunction(renderFinished);
+        await page.waitForFunction(renderFinished, undefined, { timeout: RENDER_LIMIT_MS });
         await page.evaluate(async () => {
           await document.fonts.ready;
         });
@@ -387,6 +391,11 @@ try {
           `  뒤 트리(${inside > 0 ? "포커스가 위젯 안에 처음 든 때" : "Tab 을 다 누른 뒤"}): ${describe(after)}`,
         );
         console.log(`  aria-hidden 콘솔 경고 ${warnings.length}건${warnings[0] ? `: ${warnings[0]}` : ""}`);
+      } catch (error) {
+        // 그려지기를 기다리다 한도(RENDER_LIMIT_MS)에 걸리는 등 회차가 던지면 측정이 아니라고 세고 다음 회차로 간다.
+        // 잡지 않으면 종료 코드가 1 이 되어 "측정했는데 기대와 다르다"와 섞인다.
+        unmeasured += 1;
+        console.log(`${round}: 측정이 아니다(${String(error?.message ?? error).split("\n")[0]})`);
       } finally {
         await page.close();
       }
@@ -404,7 +413,7 @@ try {
         await page.goto(
           `${ORIGIN}/iframe.html?id=pages-widgetpreviewprobe--${target.id}&viewMode=story`,
         );
-        await page.waitForFunction(renderFinished);
+        await page.waitForFunction(renderFinished, undefined, { timeout: RENDER_LIMIT_MS });
         await page.evaluate(async () => {
           await document.fonts.ready;
         });
@@ -498,6 +507,10 @@ try {
           `  휠 ${delta}px: 마우스 아래에서 맞히는 요소 "${before.hit}", 넘친 자리의 scrollTop ${before.scrollTop} → ${after.scrollTop}, 페이지의 scrollTop ${before.pageTop} → ${after.pageTop}`,
         );
         console.log(`  문서가 받은 이벤트: ${after.events.join(", ")}`);
+      } catch (error) {
+        // 위의 Tab 회차와 같다. 던진 회차는 측정이 아니다.
+        unmeasured += 1;
+        console.log(`${round}: 측정이 아니다(${String(error?.message ?? error).split("\n")[0]})`);
       } finally {
         await page.close();
       }

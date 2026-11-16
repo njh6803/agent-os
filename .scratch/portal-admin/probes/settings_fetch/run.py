@@ -621,6 +621,20 @@ def error_label(call: dict) -> str:
     return "/".join(str(part) for part in parts if part is not None)
 
 
+def ended_by_limit(record: dict) -> bool:
+    """답하지 않는 대역에 보낸 요청을 끝낸 것이 제한 시간인가.
+
+    둘 가운데 하나다. 대역의 `fetch` 가 헤더를 기다리다 스스로 끊었다(`UND_ERR_HEADERS_TIMEOUT`).
+    보내는 쪽이 건 한도가 끊었다(`PROBE_CLIENT_TIMEOUT`. 대역의 호출은 그때까지 끝나지 않았다).
+    """
+    client = record.get("client_error")
+    if client:
+        return client.get("code") == "PROBE_CLIENT_TIMEOUT"
+    calls = calls_of(record)
+    error = (calls[0].get("error") or {}) if calls else {}
+    return "UND_ERR_HEADERS_TIMEOUT" in (error.get("code"), error.get("cause_code"))
+
+
 def is_refused(call: dict) -> bool:
     error = call.get("error") or {}
     return "ECONNREFUSED" in (error.get("code"), error.get("cause_code"))
@@ -1091,15 +1105,23 @@ def collect_hang(
                 seen = f"보내는 쪽 {record['client_error'].get('code')}"
             else:
                 seen = error_label(calls[0]) if calls else "호출 없음"
-            row = Row(0, "hang", branch.name, held == len(HANG), [], {"seen": seen, "held": held})
+            # 표지는 둘이다. 요청이 답하지 않는 소켓에 닿았다, 그 요청을 끝낸 것이 제한 시간이다.
+            # 닿았어도 다른 연결 오류로 끝난 회차는 "답을 기다리다 끝났다"를 본 것이 아니라
+            # 측정으로 세지 않는다.
+            reached = held == len(HANG)
+            limited = ended_by_limit(record)
+            seconds = f"{record['ms'] / 1000:.1f}초"
+            if not reached:
+                result = f"답하지 않는 소켓이 받은 요청 줄이 {held}개다"
+            elif not limited:
+                result = f"요청을 끝낸 것이 제한 시간이 아니다({seen}, {seconds})"
+            else:
+                result = f"{seen}, {seconds}"
+            measured = reached and limited
+            row = Row(0, "hang", branch.name, measured, [], {"seen": seen, "held": held})
             row.client = stats_of([record["ms"]])
             ctx.rows.append(row)
-            current.mark(
-                measured=held == len(HANG),
-                result=f"{seen}, {record['ms'] / 1000:.1f}초"
-                if held == len(HANG)
-                else f"답하지 않는 소켓이 받은 요청 줄이 {held}개다",
-            )
+            current.mark(measured=measured, result=result)
 
 
 # ---------------------------------------------------------------------------------------------
