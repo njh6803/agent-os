@@ -208,7 +208,11 @@ test("컨테이너는 모두 root 가 아닌 사용자로 돌고 serve 의 판�
     expect(uid, `${service} 의 사용자`).toMatch(/^[1-9][0-9]*$/u);
   }
   const printed = await compose().inService("serve", ["agent-os", "--version"]);
-  expect(printed).toContain(version);
+  // 부분 문자열이면 `0.1.0-rc.10` 이 `0.1.0-rc.1` 을 통과시킨다. 판 번호의 앞뒤가 판 번호 문자가 아닌 자리에서만 맞춘다.
+  const escaped = version.replace(/[.*+?^${}()|[\]\\]/gu, "\\$&");
+  expect(printed).toMatch(
+    new RegExp(`(?<![0-9A-Za-z.+-])${escaped}(?![0-9A-Za-z+-]|\\.[0-9])`, "u"),
+  );
 });
 
 test("관리 화면의 중계가 관리 토큰으로 플러그인을 켜고 토큰 없이는 401 이다", async ({
@@ -235,6 +239,15 @@ test("네트워크 없는 MCP 실행: 계산 에이전트의 실행이 도구 �
     process.env[LLM_ENV] === "1",
     "실제 모델 모드에서는 calc.llm.ts 가 같은 길을 실제 모델로 지난다",
   );
+  // 이 배치의 serve 는 네트워크에 붙어 있어(프록시가 닿아야 한다) 인터넷이 있는 CI 에서는 npx 로 내려받는 서버도 떴을 것이다.
+  // 그래서 "네트워크가 필요 없다"는 것을 실행 결과가 아니라 구성으로 본다. 예시 MCP 서버는 이미지에 든 실행 파일이고 npx 가
+  // 아니다. 네트워크 없이 `docker run` 으로 같은 길을 지나는 것은 티켓 07 이 손으로 봤다.
+  const manifest = await compose().inService("serve", [
+    "sh",
+    "-c",
+    "command -v mcp-server-everything && cat /app/plugins/mcp/everything/plugin.toml",
+  ]);
+  expect(manifest).toContain('command = "mcp-server-everything"');
   const response = await request.post(`${ORIGIN}/end-user/runs`, {
     headers: { Authorization: `Bearer ${signedDirectToken(deployment().dir)}` },
     data: { agent: CALC_AGENT, request: "2 더하기 3은?" },

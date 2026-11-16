@@ -89,18 +89,30 @@ export default async function globalSetup(): Promise<() => Promise<void>> {
   const stack = createStack({ prefix: "agent-os-standalone-e2e-", logs: LOGS });
   let compose: Compose | undefined;
   const cleanup = async (): Promise<void> => {
+    let downFailure: string | undefined;
     try {
       if (compose !== undefined) {
-        const logs = await compose.call(["logs", "--no-color", "--timestamps"], MINUTE_MS);
-        mkdirSync(LOGS, { recursive: true });
-        writeFileSync(join(LOGS, "compose.log"), `${logs.stdout}\n${logs.stderr}`);
-        await compose.call(
+        // 로그를 못 남겨도 배치는 내려야 한다. 남은 컨테이너가 443·80·3000 을 쥐면 다음 실행이 포트 확인에서 막힌다.
+        try {
+          const logs = await compose.call(["logs", "--no-color", "--timestamps"], MINUTE_MS);
+          mkdirSync(LOGS, { recursive: true });
+          writeFileSync(join(LOGS, "compose.log"), `${logs.stdout}\n${logs.stderr}`);
+        } catch (error) {
+          console.error(`compose 로그를 남기지 못했다: ${String(error)}`);
+        }
+        const down = await compose.call(
           ["down", "--volumes", "--remove-orphans", "--timeout", "10"],
           2 * MINUTE_MS,
         );
+        if (down.code !== 0) {
+          downFailure = `compose down 이 ${down.timedOut ? "제한 시간을 넘겼다" : `종료 ${String(down.code)}`}:\n${down.stderr}`;
+        }
       }
     } finally {
       await stack.teardown();
+    }
+    if (downFailure !== undefined) {
+      throw new Error(`배치가 남았을 수 있다. ${downFailure}`);
     }
   };
 

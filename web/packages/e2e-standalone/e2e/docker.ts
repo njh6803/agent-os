@@ -17,6 +17,9 @@ export interface RunOptions {
   readonly timeoutMs: number;
 }
 
+// 제한 시간에 죽이고 나서 `close` 를 더 기다리는 상한.
+const KILL_GRACE_MS = 10_000;
+
 export function run(
   command: string,
   args: readonly string[],
@@ -34,16 +37,25 @@ export function run(
     let timedOut = false;
     child.stdout.on("data", (chunk: Buffer) => (stdout += chunk.toString("utf-8")));
     child.stderr.on("data", (chunk: Buffer) => (stderr += chunk.toString("utf-8")));
+    let hardStop: NodeJS.Timeout | undefined;
     const timer = setTimeout(() => {
       timedOut = true;
       child.kill();
+      // docker CLI 가 띄운 하위 프로세스가 파이프를 쥔 채 남으면 `close` 가 오지 않는다. 죽인 뒤 얼마 기다려도 안 오면
+      // 강제로 죽이고 그 시점의 출력으로 끝낸다.
+      hardStop = setTimeout(() => {
+        child.kill("SIGKILL");
+        resolve({ code: null, stdout, stderr, timedOut });
+      }, KILL_GRACE_MS);
     }, options.timeoutMs);
     child.on("error", (error: Error) => {
       clearTimeout(timer);
+      clearTimeout(hardStop);
       resolve({ code: null, stdout, stderr: `${stderr}\n[spawn 오류] ${error.message}`, timedOut });
     });
     child.on("close", (code) => {
       clearTimeout(timer);
+      clearTimeout(hardStop);
       resolve({ code, stdout, stderr, timedOut });
     });
   });

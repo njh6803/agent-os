@@ -72,12 +72,34 @@ Critical은 없었고 Major가 셋이었다. 고친 것:
 - `Compose` 생성과 포트 상수의 중복, `ensure`의 이름: 동작과 무관한 정리라 이 티켓에서 건드리지 않았다. 10이 같은 파일을 만지면 그때 합친다.
 - serve의 `env_file`이 판과 이름공간 값을 함께 넘기는 것을 문서에 더 적자는 제안: `.env.example`의 주석이 이미 설명한다.
 
+## PR 직전 리뷰 (`coderabbit-review`, CodeRabbit CLI 0.7.5)
+
+`Plan: Free`, `Seat: not assigned`인데 리뷰가 끝까지 돌아 `review_completed`를 냈다(종료 0, 47개 파일, `--base origin/dev`). 11건: 유효 5, 보류 3, 오탐 3. Critical·Major로 확정된 것은 없다.
+
+고친 것(유효 5, 모두 시험 하네스의 작은 수정):
+
+- `stack.ts` 정리: 로그 수집·저장이 던져도 `compose down`은 항상 부른다. `down`이 0이 아니면 `teardown` 뒤에 던진다(남은 컨테이너가 다음 실행의 포트 확인을 막으므로).
+- `docker.ts` 제한 시간: 죽인 뒤 10초 안에 `close`가 오지 않으면 `SIGKILL`을 보내고 그 시점의 출력으로 끝낸다. 재현은 해 보지 않았다(어림).
+- `playwright.config.ts`: 추적(`trace.zip`)이 관리 토큰을 `Authorization` 머리로 남기므로 `trace: "off"`(원칙 V). 실패 진단은 `test-results/compose.log`가 맡는다.
+- `deployment.e2e.ts`: 판 비교를 부분 문자열에서 앞뒤 경계가 있는 정규식으로 바꿨다(`0.1.0-rc.10`이 `0.1.0-rc.1`을 통과시키지 않게).
+
+닫은 것(근거를 열어 보고 판정):
+
+- 보류 → 오탐, `/end-user/`에 `proxy_read_timeout`이 없어 60초에 끊긴다는 지적: serve의 SSE는 FastAPI가 15초마다 keepalive 주석을 보낸다(`fastapi/sse.py`의 `_PING_INTERVAL = 15.0`, `routing.py`의 `_keepalive_inserter`를 읽었다. 60초 넘게 조용한 실행으로 재 보지는 않았다). nginx의 읽기 제한은 바이트가 오면 새로 센다.
+- 오탐 셋: 복구 대기 루프의 요청 제한 시간(시험 전체 90초와 루프 15초 상한이 있다), SSE 버퍼링(`.scratch/release-image/spec.md`에 이미 적혀 있다), `actions/*` 태그 고정(저장소 관행, zizmor가 CI에서 본다).
+
+남긴 것과 이유:
+
+- `plugins` 볼륨이 처음 붙을 때만 이미지 내용으로 채워진다: 운영자가 켜고 끈 상태와 설치한 플러그인을 보존하려는 설계다. 업그레이드 때의 취급을 문서에 적는 일은 공개 배포 문서를 다루는 티켓 10(또는 11)의 몫이라 넘긴다. 받는 쪽 티켓에 적었다.
+- 고침(보류였다가): "네트워크 없는 MCP 실행" 사례가 `--network none`을 재현하지 않는다는 지적은 맞다. compose의 serve는 프록시가 닿아야 해서 네트워크에 붙어 있고, 인터넷이 있는 CI에서는 npx로 내려받는 서버도 떴을 것이다. 그래서 사례가 "네트워크가 필요 없다"를 구성으로 본다: 예시 MCP 서버의 명령이 이미지에 든 실행 파일(`mcp-server-everything`)이고 `npx`가 아닌 것을 컨테이너 안에서 확인한 뒤 실행 결과를 본다. 네트워크 없이 `docker run`으로 같은 길을 지나는 것은 티켓 07이 손으로 봤다(자동 시험이 아니다).
+
 ## 검증
 
 - `uv run ruff check . && uv run ruff format --check .`: 통과.
 - `uv run pyright`(바뀐 시험 파일): 0 errors.
 - `pnpm -C web verify`: 렌더 사례를 고친 뒤 통과(ESLint 한 건을 고친 다음).
 - 단독 e2e: 셀프 리뷰 반영 뒤 두 번 12 passed(4.0분, 5.6분. 이미지는 캐시, 다른 세션이 함께 돌아 시간이 흔들렸다). 이미지를 처음부터 짓는 시간은 이 세션에서 재지 않았다(위 결과 절의 이유).
+- PR 직전 리뷰를 반영한 뒤 `pnpm -C web verify`와 단독 e2e를 다시 쳤다: 12 passed(2.7분). 첫 시도는 MCP 사례의 `not.toContain("npx")`가 빨갰다. 이유는 `plugins/mcp/everything/plugin.toml`의 주석이 `npx`라는 낱말을 쓰기 때문이고, 명령 줄이 `mcp-server-everything`인지 보는 단언이 같은 사실을 더 정확히 가리켜 그 단언을 지웠다.
 - `uv run python tools/run_checks.py`: 7740개 가운데 2개 실패(`tests/channel/cli/test_interrupt.py`의 닫는 도중 Ctrl+C 사례, `tests/tools/test_rerun_runner.py`의 오염 두 번 사례), web-verify 통과. 한 바퀴가 18분 39초로 평소보다 길었고 이 PC에 다른 세션이 함께 돌았다. 두 시험은 실제 프로세스·기한을 재는 것이고 이 브랜치가 건드린 파일이 아니다. 둘만 홀로 다시 치니 2 passed(103초). `.claude/rules/tests.md`가 말한 부하 아래의 시간 단언 흔들림으로 보지만, 원인을 부하로 가려내는 비교는 하지 않았다(어림). 같은 시험이 병합 전에 CI에서도 빨개지면 diagnosing-bugs로 간다.
 - `.claude/rules/http.md`를 고쳐서 그 규칙을 원천으로 든 카나리아 셋(`http_rule_continuation_422`, `http_rule_pre_owner_damage`, `http_rule_llm_widget`)을 새 `claude -p` 세션에서 다시 돌렸다: 셋 모두 통과 4 · 실패 0 · "없음" 섞인 통과 0. 세 명세의 "최신 결과" 줄을 고쳤다. 처음에는 `.scratch/harness/probes/canary/` 아래에 있다고 잘못 적어 명세를 읽지 못했고(종료 2, 아무것도 돌지 않았다), 이어 명세의 "돌리는 법"에 없는 `--control-commit`을 주어 도구가 거절했다. `Glob`으로 실제 위치를 찾고 "돌리는 법" 그대로 쳤다.
 - 사진 비교와 `-m llm` 계열은 이 변경의 범위 밖이라 치지 않았다. 실제 모델 단독 e2e는 위 결과 절의 한 번이 전부다.

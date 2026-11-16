@@ -41,7 +41,9 @@ export default defineConfig({
   timeout: DEFAULT_TIMEOUT_MS,
   use: {
     ignoreHTTPSErrors: true,
-    trace: "retain-on-failure",
+    // 추적 파일(trace.zip)은 요청 머리를 그대로 남긴다. 관리 화면 사례가 관리 토큰을 Authorization 머리로 보내므로
+    // 추적을 켜지 않는다(원칙 V: 토큰을 저장물에 싣지 않는다). 실패 진단은 compose 로그(test-results)로 한다.
+    trace: "off",
   },
   projects,
 });
