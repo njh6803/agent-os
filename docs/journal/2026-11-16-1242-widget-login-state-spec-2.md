@@ -502,6 +502,42 @@ open-session을 부른다 2026-11-16T09:11Z
 - 로컬 모델 시험(`merge.md` 3)은 건너뛴다. 이 PR의 바뀐 경로는 `docs/`, `.scratch/widget-login-state/`, `.scratch/portal-login/`, `.scratch/widget-admin-server/`뿐이고 `operations.md` LLM 테스트의 병합 조건 범위에 드는 경로가 없다.
 - 이 일지와 대기열 두 항목만 새로 커밋하고 푸시한다(아래 "회고"). 그 푸시로 claude-review가 한 번 더 돌고, 그것이 둘째 회차라 Critical·Major만 고친다.
 
+## 넷째 인계
+
+회고 커밋을 만든 자리에서 인계 계기(`hook_handoff`, 경계 `커밋 뒤`, 세션 컨텍스트 202,671 토큰)가 왔다. `handoff.md`를 Read로 열어 "인계하지 않는 때" 다섯을 대 봤다. 계기를 낸 amend는 성공했고(종료 코드 0), 요청 범위는 "PR과 병합까지"라 이 경계에서 끝나지 않으며, 이 세션의 지시문의 "이어받을 상태"는 `인계: PR 연 뒤`로 이번 경계(`커밋 뒤`)와 다르고, 이 일지에 `인계 못함` 줄이 없으며, 앞 세션의 기록상 곁 세션이 아니다. 다섯 모두 해당하지 않아 인계한다.
+
+이 세션의 제목은 `docs/widget-login-state-spec-2`였다.
+
+넘기는 때의 상태다.
+
+- 커밋 `fb9a75671`(`docs: widget-login-state 봇 회차와 회고를 일지에 적는다`)을 만들었고 푸시하지 않았다. 일지의 "넷째로 이어받은 세션"·"회고"·"다음" 절과 대기열 `0214`(6회차)·`cli-review-claims-path`(7회차)가 그 커밋에 있다. pre-commit은 통과했다(amend까지 두 번 돌았고 둘 다 종료 코드 0이다). 이 "넷째 인계" 절만 커밋하지 않았고 다음 커밋에 싣는다.
+- PR 593의 머리는 아직 `cf3463eff`다. 그 머리에서 `python` 포함 모든 검사가 SUCCESS였고 claude-review는 지적 없음, CodeRabbit은 한도(`Review rate limited`)로 리뷰가 없었다. `@coderabbitai review` 코멘트는 `cf3463eff` 때 한 번 남겼다.
+- 푸시하면 claude-review가 한 번 더 돈다. 그 리뷰가 이 PR의 둘째 회차라 Critical·Major만 고치고 나머지는 보류 이유를 PR 코멘트에 남긴 뒤 병합한다(`merge.md` 2의 회차 세기). CodeRabbit은 한도에 걸려 리뷰가 없던 푸시를 회차로 세지 않는다. 푸시 뒤에 `@coderabbitai review`를 다시 남기고 상태를 한 번 읽는다.
+- 로컬 모델 시험(`merge.md` 3)은 이 PR의 변경이 모두 `docs/`와 `.scratch/` 아래라 건너뛴다(위 "넷째로 이어받은 세션"에 근거가 있다. `git diff --merge-base --name-only origin/dev`를 디렉터리별로 센 것이다). 회고는 마쳤다. 병합 전 일지 마무리는 "다음" 절 갱신까지 끝났으니, 남은 일지 변경은 이 절과 병합 결과를 대신하는 끝 보고뿐이다.
+- 병합은 `merge.md`의 "워크트리에서 병합할 때"를 Read로 열어 따른다. `--delete-branch`는 쓰지 않고 `--match-head-commit`을 붙인다. 병합 뒤 주 체크아웃은 새 세션에 넘긴다. 이 PR 병합 뒤 다음 작업을 정하는 일(`SKILL.md` 순서 2)이 남으면 그것도 병합한 세션의 일이다.
+- 사용자에게 받은 답은 없다. 승인받은 ADR 이력 넷의 글과 명세 본문은 고치지 않았다.
+- 끝 보고에서 사용자에게 알릴 것 다섯은 위 "셋째 인계" 절 목록의 마지막 항목에 그대로 있다. 이 세션이 더한 것이 하나 있다. 이 PR의 봇 회차에서 반영한 지적이 없다는 것이다.
+- 곁다리: `uv run python tools/sibling_overlap.py`의 "함께 고친 파일"에 portal-admin의 명세 워크트리(`docs/portal-admin-spec`)가 올랐다. 겹친 파일은 `.scratch/portal-login/plan.md`, `.scratch/widget-admin-server/plan.md`, ADR 0064다. 그쪽이 나중에 병합하면 글자 충돌 후보다.
+
+낸 지시문이다.
+
+```
+다음 작업: 기능 widget-login-state. 명세의 PR #593을 열었고 봇 회차(반영할 지적 없음)와 회고를 마쳤다. 회고 커밋을 푸시하고 둘째 봇 회차를 본 뒤 병합까지 마친다
+다음 단계: PR 반영·병합
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /to-spec widget-login-state
+브랜치: docs/widget-login-state-spec-2
+모델: Sonnet 5.5 / high. 2의 잇는 지시문
+읽을 것: 일지 docs/journal/2026-11-16-1242-widget-login-state-spec-2.md의 "넷째로 이어받은 세션" 절부터 끝까지("넷째 인계" 절이 남은 차례다)
+이어받을 상태: 인계: 커밋 뒤. 일지는 docs/journal/2026-11-16-1242-widget-login-state-spec-2.md다. 커밋 fb9a75671(일지의 회고와 대기열 두 항목)을 만들었고 푸시하지 않았다. 푸시하고 @coderabbitai review를 다시 남긴 뒤 merge.md 2(봇 회차)의 대기부터 한다. 이 PR의 둘째 회차라 Critical·Major만 고치고 CodeRabbit이 한도로 리뷰가 없으면 회차로 세지 않는다. 명세를 새로 쓰지 않고 PR 직전 리뷰도 다시 돌지 않으며 회고와 로컬 모델 시험도 하지 않는다. 일지의 "넷째 인계" 절은 커밋하지 않았고 다음 커밋에 싣는다. 끝 보고에서 사용자에게 알릴 것은 일지 "셋째 인계" 절 목록 마지막 항목의 다섯과 "넷째 인계" 절이 더한 하나다
+확인할 선행 조건: portal-admin의 명세 세션(docs/portal-admin-spec)이 끝났는지 보지 못했다. 그 세션이 도는 동안에는 .scratch/portal-admin/의 파일을 고치지 않는다. 병합은 이 워크트리 사본의 next-session merge.md의 "워크트리에서 병합할 때"를 Read로 열어 따른다
+이번 요청 범위: PR과 병합까지
+```
+
+제목을 `docs/widget-login-state-spec-2 (인계함)`으로 바꿨고, 띄워 둔 백그라운드 작업은 없었으며, `git worktree unlock`은 이미 풀려 있다는 오류(`is not locked`)로 끝나 넘어갔다.
+
+open-session을 부른다 2026-11-16T09:58Z
+
 ## 회고 후보
 
 단계를 닫는 세션이 retro로 판정한다.
