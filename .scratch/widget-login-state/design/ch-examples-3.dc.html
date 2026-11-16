@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>갈래 5 안 3. 입력창 위 띠</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/agent-os/styles.css">
+<link rel="stylesheet" href="ds/agent-os/fonts/fonts.css">
+<link rel="stylesheet" href="ds/agent-os/_ds_bundle.css">
+<script src="ds/agent-os/_ds_bundle.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0}
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+.ellipsis{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.textlink{display:inline;padding:0;border:0;background:transparent;font-family:inherit;font-size:inherit;line-height:inherit;color:var(--accent);text-decoration:underline;cursor:pointer;border-radius:var(--radius-s)}
+.pill{display:inline-block;max-width:100%;box-sizing:border-box;margin:0;min-height:24px;padding:var(--spacing-1) var(--spacing-3);border:1px solid var(--border);border-radius:var(--radius-full);background:transparent;color:var(--text);font-family:inherit;font-size:var(--text-small);line-height:var(--text-small--line-height);text-align:left;cursor:pointer;overflow-wrap:anywhere}
+.pill:hover{background:var(--bg-hover)}
+.textlink:focus-visible,.pill:focus-visible{outline:2px solid var(--focus-ring);outline-offset:2px}
+</style>
+</helmet>
+<div data-theme="nokcheong" data-mode="light" style="width: 768px; height: 960px; box-sizing: border-box; padding: 48px; background: var(--bg); color: var(--text); font-family: var(--sans);">
+<div class="flex flex-col gap-4">
+<div class="flex flex-col gap-1" style="max-width: 672px;">
+<p class="text-body font-semibold" style="margin: 0;">갈래 5 안 3: 입력창 위 띠</p>
+<p class="text-small text-text-muted" style="margin: 0;">첫 화면 안내는 대화 자리 가운데에 지금 그대로 남는다. 예시 질문은 입력창 바로 위의 띠에 안 2와 같은 알약으로 왼쪽부터 감겨 선다. 손이 가는 입력창 바로 위라 누르기 쉽다. 첫 질문을 보내면 띠가 비고 위 테두리만 남는다.</p>
+</div>
+<div class="flex" style="gap: 32px; align-items: flex-start;">
+<section class="flex flex-col gap-2" style="width: 320px;">
+<p class="text-small text-text-muted" style="margin: 0;">예시 질문 셋</p>
+<div data-theme="nokcheong" data-mode="light" data-density="regular" class="flex flex-col shadow-float" style="position: relative; width: 320px; height: 560px; box-sizing: border-box; background: var(--bg-raised); color: var(--text); font-family: var(--sans); border: 1px solid var(--border); border-radius: var(--radius-l); overflow: hidden;">
+<header class="flex items-center justify-between gap-2 shrink-0" style="padding: var(--spacing-2) var(--spacing-2) var(--spacing-2) var(--spacing-4); border-bottom: 1px solid var(--border);">
+<h1 class="text-body font-semibold ellipsis" style="flex: 1; margin: 0;">계산 도우미</h1>
+<x-import component-from-global-scope="AgentOsUi.IconButton" icon="settings" label="설정" variant="ghost"></x-import>
+<x-import component-from-global-scope="AgentOsUi.Button" variant="secondary">새 대화</x-import>
+</header>
+<div aria-label="대화" class="flex flex-col" style="flex: 1; min-height: 0; overflow-y: auto; padding: var(--spacing-6);">
+<div class="flex flex-col items-center gap-2" style="margin: auto 0; text-align: center;">
+<p class="text-body" style="margin: 0;">가격 합계와 거스름돈을 물어보세요.</p>
+<p class="text-small text-text-muted" style="margin: 0;">아래 입력창에 적어 보내 주세요.</p>
+</div>
+</div>
+<div role="group" aria-label="예시 질문" class="flex flex-wrap gap-2 shrink-0" style="padding: var(--spacing-2) var(--spacing-4); border-top: 1px solid var(--border);">
+<button type="button" class="pill">1,284 더하기 3,716은 얼마예요?</button>
+<button type="button" class="pill">3만 원을 내고 12,500원어치를 사면 거스름돈은요?</button>
+<button type="button" class="pill">8,900원짜리 3개를 사면 합계는요?</button>
+</div>
+<form class="flex gap-2 shrink-0" style="align-items: flex-end; margin: 0; padding: var(--spacing-3);">
+<div style="flex: 1; min-width: 0;"><textarea rows="1" aria-label="질문" placeholder="무엇을 도와드릴까요?" class="block w-full min-w-0 rounded-m border text-body px-3 py-2 border-border-control bg-bg-raised text-text" style="box-sizing: border-box; margin: 0; font-family: inherit; resize: none;"></textarea></div>
+<x-import component-from-global-scope="AgentOsUi.IconButton" icon="send" label="보내기" variant="primary"></x-import>
+</form>
+<div role="group" aria-label="고지" class="shrink-0 text-small text-text-muted" style="padding: var(--spacing-2) var(--spacing-4); border-top: 1px solid var(--border);">
+<p style="margin: 0;">질문과 출력은 기록되고 모델 API로 보내집니다. 개인정보를 넣지 마세요. <button type="button" class="textlink" aria-expanded="false">고지 전문</button></p>
+</div>
+</div>
+</section>
+<section class="flex flex-col gap-2" style="width: 320px;">
+<p class="text-small text-text-muted" style="margin: 0;">예시 질문 넷(긴 질문 하나)</p>
+<div data-theme="nokcheong" data-mode="light" data-density="regular" class="flex flex-col shadow-float" style="position: relative; width: 320px; height: 560px; box-sizing: border-box; background: var(--bg-raised); color: var(--text); font-family: var(--sans); border: 1px solid var(--border); border-radius: var(--radius-l); overflow: hidden;">
+<header class="flex items-center justify-between gap-2 shrink-0" style="padding: var(--spacing-2) var(--spacing-2) var(--spacing-2) var(--spacing-4); border-bottom: 1px solid var(--border);">
+<h1 class="text-body font-semibold ellipsis" style="flex: 1; margin: 0;">계산 도우미</h1>
+<x-import component-from-global-scope="AgentOsUi.IconButton" icon="settings" label="설정" variant="ghost"></x-import>
+<x-import component-from-global-scope="AgentOsUi.Button" variant="secondary">새 대화</x-import>
+</header>
+<div aria-label="대화" class="flex flex-col" style="flex: 1; min-height: 0; overflow-y: auto; padding: var(--spacing-6);">
+<div class="flex flex-col items-center gap-2" style="margin: auto 0; text-align: center;">
+<p class="text-body" style="margin: 0;">가격 합계와 거스름돈을 물어보세요.</p>
+<p class="text-small text-text-muted" style="margin: 0;">아래 입력창에 적어 보내 주세요.</p>
+</div>
+</div>
+<div role="group" aria-label="예시 질문" class="flex flex-wrap gap-2 shrink-0" style="padding: var(--spacing-2) var(--spacing-4); border-top: 1px solid var(--border);">
+<button type="button" class="pill">1,284 더하기 3,716은 얼마예요?</button>
+<button type="button" class="pill">3만 원을 내고 12,500원어치를 사면 거스름돈은요?</button>
+<button type="button" class="pill">8,900원짜리 3개를 사면 합계는요?</button>
+<button type="button" class="pill">할인 쿠폰 15%와 적립금 2,000원을 함께 쓰면 49,800원짜리 상품은 얼마에 살 수 있나요?</button>
+</div>
+<form class="flex gap-2 shrink-0" style="align-items: flex-end; margin: 0; padding: var(--spacing-3);">
+<div style="flex: 1; min-width: 0;"><textarea rows="1" aria-label="질문" placeholder="무엇을 도와드릴까요?" class="block w-full min-w-0 rounded-m border text-body px-3 py-2 border-border-control bg-bg-raised text-text" style="box-sizing: border-box; margin: 0; font-family: inherit; resize: none;"></textarea></div>
+<x-import component-from-global-scope="AgentOsUi.IconButton" icon="send" label="보내기" variant="primary"></x-import>
+</form>
+<div role="group" aria-label="고지" class="shrink-0 text-small text-text-muted" style="padding: var(--spacing-2) var(--spacing-4); border-top: 1px solid var(--border);">
+<p style="margin: 0;">질문과 출력은 기록되고 모델 API로 보내집니다. 개인정보를 넣지 마세요. <button type="button" class="textlink" aria-expanded="false">고지 전문</button></p>
+</div>
+</div>
+</section>
+</div>
+<ul class="flex flex-col gap-1 text-small text-text-muted" style="max-width: 672px; margin: 0; padding-left: 20px;">
+<li>질문이 넷이고 길면 띠가 여러 줄로 높아져 대화 자리가 준다(오른쪽). 첫 화면 안내는 줄어든 자리의 가운데에 선다.</li>
+<li>지금 입력창 위 띠(ComposerBand)는 재접속, 상한, 승인 기다림의 안내를 하나만 세우는 role="status" 자리다. 단추를 그 안에 둘 수 없어 예시 질문은 그 바로 위에 따로 선다. 첫 화면에서 그 안내가 함께 뜨면 어느 쪽이 위인지 정해야 한다.</li>
+<li>대화 자리 가운데의 안내와 아래 끝의 예시 질문이 떨어져 있어, 둘이 한 묶음으로 읽히지 않을 수 있다.</li>
+</ul>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":768,"height":960}}'>
+class Component extends DCLogic {
+renderVals() {
+return { yes: true, no: false };
+}
+}
+</script>
+</body>
+</html>
