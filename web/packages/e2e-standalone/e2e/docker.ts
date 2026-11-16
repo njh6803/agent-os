@@ -3,6 +3,7 @@
 
 import { spawn } from "node:child_process";
 import { join } from "node:path";
+import { interpreter, REPO } from "@agent-os/e2e-stack";
 
 export interface Outcome {
   readonly code: number | null;
@@ -78,6 +79,18 @@ export async function succeed(
     );
   }
   return outcome.stdout;
+}
+
+/**
+ * 짓기 대상 이름(`serve` 등)에 대응하는 Docker Hub 저장소 이름을 읽는다. 대응은 `deploy/images/docker-bake.hcl` 한 곳이
+ * 정하고 판 내기 워크플로도 같은 도구(`tools/release_ci.py repository`)로 읽는다.
+ */
+export async function repositoryName(target: string): Promise<string> {
+  const printed = await succeed(interpreter(), ["tools/release_ci.py", "repository", target], {
+    cwd: REPO,
+    timeoutMs: 60_000,
+  });
+  return printed.trim();
 }
 
 /** 한 번 띄운 배치를 가리키는 compose 명령 묶음. 프로젝트 이름이 그 실행의 것이라 다른 실행의 것을 건드리지 않는다. */

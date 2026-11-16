@@ -37,7 +37,7 @@ services:
       - ./tls:/etc/nginx/tls:ro
 
   serve:
-    image: ${AGENT_OS_NAMESPACE:?.env 에 AGENT_OS_NAMESPACE 가 없다}/serve:${AGENT_OS_VERSION:?.env 에 AGENT_OS_VERSION 이 없다}
+    image: ${AGENT_OS_NAMESPACE:?.env 에 AGENT_OS_NAMESPACE 가 없다}/agent-os-runtime:${AGENT_OS_VERSION:?.env 에 AGENT_OS_VERSION 이 없다}
     # 이미지의 기본 명령에는 --site-file 과 --host 가 없다. 명령을 바꾸면 전체를 적어야 한다.
     command:
       - agent-os
@@ -71,7 +71,7 @@ services:
         - import sys, urllib.request; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=4).status == 200 else 1)
 
   admin:
-    image: ${AGENT_OS_NAMESPACE}/admin:${AGENT_OS_VERSION}
+    image: ${AGENT_OS_NAMESPACE}/agent-os-admin:${AGENT_OS_VERSION}
     environment:
       AGENT_OS_CONTAINER_NETWORK: "1"
     read_only: true
@@ -88,7 +88,7 @@ services:
         - fetch('http://127.0.0.1:3000/').then(r=>process.exit(r.ok?0:1),()=>process.exit(1))
 
   widget:
-    image: ${AGENT_OS_NAMESPACE}/widget:${AGENT_OS_VERSION}
+    image: ${AGENT_OS_NAMESPACE}/agent-os-widget:${AGENT_OS_VERSION}
     environment:
       AGENT_OS_CONTAINER_NETWORK: "1"
     # 위젯은 뜰 때 사이트 파일로 빌드하므로 루트를 읽기 전용으로 두지 않고 메모리 제한도 두지 않는다.
@@ -105,7 +105,7 @@ services:
         - fetch('http://127.0.0.1:3000/widget').then(r=>process.exit(r.ok?0:1),()=>process.exit(1))
 
   portal:
-    image: ${AGENT_OS_NAMESPACE}/portal:${AGENT_OS_VERSION}
+    image: ${AGENT_OS_NAMESPACE}/agent-os-widget-test-page:${AGENT_OS_VERSION}
     environment:
       AGENT_OS_CONTAINER_NETWORK: "1"
     read_only: true

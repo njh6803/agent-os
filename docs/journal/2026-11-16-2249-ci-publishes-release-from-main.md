@@ -176,3 +176,22 @@ CodeRabbit(5건)과 claude-review가 헤드 `a7651c4`를 리뷰했고 검사는 
 1. `build` 잡의 비밀 값 노출 길(위 "PR 직전 리뷰"의 Major). 두 잡 구조를 바꿀지.
 2. `prerelease` 표시를 할지.
 3. `앞 실행의 초안 지우기`의 순서를 바꿀지(첫 판 뒤).
+
+## 저장소 이름 바꾸기 (푸시 전, 사용자 요청)
+
+사용자가 봇 첫 회차를 반영한 뒤 푸시 전에 이미지 저장소 이름을 바꾸라고 했다. 처음 요청은 `agent-os-<이름>` 꼴이었고, 곧 아래 말로 바뀌었다.
+
+> 사용자: Docker Hub 계정이 njh6803(개인 계정)이라 명세의 "계정이 이 제품 전용이라 이름에 제품 이름을 다시 붙이지 않는다" 전제가 맞지 않다. … serve는 agent-os-runtime, admin은 agent-os-admin, widget은 agent-os-widget, portal은 agent-os-widget-test-page. 이름은 CONTEXT.md의 용어를 따른 것이다. … 범위는 이번 PR에서 Docker Hub에 올라가는 이름과 compose의 image 줄까지다. 코드의 빌드 대상 이름과 폴더 이름(serve, admin, widget, portal)은 그대로 둔다. 둘의 대응은 코드 한 곳에서만 정하고, 배포 안내에 대응표를 싣는다. 코드 이름을 runtime과 widget-test-page로 맞추는 일은 첫 릴리스 뒤의 별도 티켓으로 제안만 해 줘. … ADR 개정은 초안을 먼저 보여 주고 내 승인을 받아.
+
+초안을 보인 뒤 사용자가 "승인, 적용"이라고 답했다. 개인 계정을 그대로 쓰고 토큰 범위가 넓어지는 것을 감수하는 쪽의 초안이었다.
+
+**한 것.**
+- 대응은 `deploy/images/docker-bake.hcl`의 `tags` 한 곳이 정한다. `tools/release_ci.py`에 `repository` 하위 명령(`bake_repositories`, `bake_repository`)을 더했고, 워크플로의 네 군데와 단독 배포 e2e(`docker.ts`의 `repositoryName`, `stack.ts`, `deployment.e2e.ts`)가 같은 길로 읽는다.
+- 사람이 쓴 사본인 `compose.yaml`, `compose.fixtures.yaml`의 `image:` 줄과 `deploy/standalone/README.md`의 대응표는 `tests/tools/test_release_ci.py`가 bake 파일과 같은지 본다(시험 열한 개를 더했다).
+- 명세 "이미지의 이름과 태그"와 "사람 몫" 6번, `operations.md`의 번호 태그 절차, `tech.md`, `release-image/plan.md`, ADR 0056(결정 두 줄과 맥락 한 줄, 이력 2026-11-17)을 새 이름에 맞췄다.
+- 이 PR이 고치는 파일(배포 안내, 명세, `operations.md`, `tech.md`, e2e의 `deployment.e2e.ts`와 `stack.ts`)에서 "위젯 미리보기 페이지"를 "위젯 테스트 페이지"로 바꿨다. CLAUDE.md와 ADR 0050은 사용자가 이번에 고치지 말라고 해서 두었다.
+- 후속 항목 둘을 대기열에 적었다. `widget-test-page-term-leftovers`(옛 용어가 남은 파일 157개를 `git grep -l "위젯 미리보기 페이지" -- . ':!docs/journal'`로 셌다)와 `code-names-follow-runtime-and-widget-test-page`(제안만, ADR 필요).
+
+**확인한 것.** `git grep`으로 옛 저장소 이름(`agent-os-serve`, `agent-os-portal`, 이름공간 뒤의 `serve` 등)을 찾았고 살아 있는 문서에 남은 것이 없었다(ADR 0056 본문의 기록 문장과 일지는 제외). `uv run pytest tests/tools/test_release_ci.py tests/tools/test_release.py`가 146개 통과, `uv run ruff check .`와 `ruff format --check`와 `uv run pyright`가 통과, `pnpm -C web/packages/e2e-standalone exec playwright test`가 12개 통과(1.6분)했다. `uv run python tools/run_checks.py`에서는 pytest와 pyright와 경계와 훅 러너가 초록이었고 web-verify만 `stack.ts`의 `repositories.get(image)`가 `string | undefined`라는 `restrict-template-expressions` 오류로 빨갰다. 저장소 이름 넷을 구조 분해로 받게 고치고 Prettier로 맞춘 뒤 `pnpm -C web verify`가 초록이 되었고, 단독 배포 e2e도 고친 코드로 다시 쳐서 12개 통과(1.5분)했다.
+
+**사람 몫 6번이 바뀌었다.** 저장소 넷을 새 이름(`agent-os-runtime`, `agent-os-admin`, `agent-os-widget`, `agent-os-widget-test-page`)으로 공개로 만들어야 한다. 옛 이름으로 만들어 두었다면 새 이름으로 다시 만든다.

@@ -11,14 +11,18 @@ from __future__ import annotations
 import hashlib
 import io
 import json
+import re
 import tarfile
 from pathlib import Path
 
 import pytest
 from tools.release import ReleaseError
 from tools.release_ci import (
+    BAKE_FILE,
     IMAGES,
     PrecheckAction,
+    bake_repositories,
+    bake_repository,
     image_config_digest,
     main,
     manifest_config_digest,
@@ -364,3 +368,109 @@ def test_첫째_잡이_이미지_해시를_하나도_넘기지_않으면_실패�
     (tmp_path / "release.json").write_text(json.dumps(manifest), "utf-8")
     with pytest.raises(ReleaseError, match="해시가 없다"):
         verify_files(tmp_path, "0.1.0-rc.1", SHA, {})
+
+
+# ---------- Docker Hub 저장소 이름 ----------
+
+ROOT = Path(__file__).resolve().parents[2]
+BAKE = ROOT / BAKE_FILE
+COMPOSE = ROOT / "deploy" / "standalone" / "compose.yaml"
+FIXTURE_COMPOSE = ROOT / "web" / "packages" / "e2e-standalone" / "compose.fixtures.yaml"
+STANDALONE_README = ROOT / "deploy" / "standalone" / "README.md"
+
+_BAKE_SAMPLE = """\
+target "_web" {
+  context = "web"
+}
+
+target "one" {
+  inherits = ["_web"]
+  tags     = ["${NAMESPACE}/agent-os-one:${TAG}"]
+}
+"""
+
+
+def _repositories() -> dict[str, str]:
+    return bake_repositories(BAKE.read_text("utf-8"))
+
+
+def test_짓기_목록은_이미지_넷마다_저장소_이름_하나를_정한다() -> None:
+    repositories = _repositories()
+    assert set(repositories) == set(IMAGES)
+    assert len(set(repositories.values())) == len(IMAGES)
+
+
+def test_짓기_목록의_태그가_없는_바탕_대상은_건너뛴다() -> None:
+    assert bake_repositories(_BAKE_SAMPLE) == {"one": "agent-os-one"}
+
+
+@pytest.mark.parametrize(
+    "tags",
+    [
+        '["${NAMESPACE}/a:${TAG}", "${NAMESPACE}/b:${TAG}"]',
+        '["${NAMESPACE}/a:latest"]',
+        '["docker.io/a:${TAG}"]',
+        "[]",
+    ],
+)
+def test_태그가_이름공간_저장소_태그_한_줄이_아니면_실패한다(tags: str) -> None:
+    text = f'target "one" {{\n  tags = {tags}\n}}\n'
+    with pytest.raises(ReleaseError, match="한 줄이 아니다"):
+        bake_repositories(text)
+
+
+def test_짓기_목록에_없는_대상의_저장소를_물으면_있는_대상을_알리며_실패한다() -> None:
+    with pytest.raises(ReleaseError, match="저장소 이름이") as raised:
+        bake_repository(_BAKE_SAMPLE, "none")
+    assert "'none'" in str(raised.value)
+    assert "['one']" in str(raised.value)
+
+
+def test_명령줄은_짓기_대상의_저장소_이름을_낸다(capsys: pytest.CaptureFixture[str]) -> None:
+    for target, repository in _repositories().items():
+        assert main(["repository", target, "--bake", str(BAKE)]) == 0
+        assert capsys.readouterr().out.strip() == repository
+
+
+def test_명령줄은_다른_짓기_파일과_없는_대상을_다룬다(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    bake = tmp_path / "bake.hcl"
+    bake.write_text(_BAKE_SAMPLE, "utf-8")
+    assert main(["repository", "one", "--bake", str(bake)]) == 0
+    assert capsys.readouterr().out.strip() == "agent-os-one"
+    assert main(["repository", "portal", "--bake", str(bake)]) == 1
+    assert "저장소 이름이" in capsys.readouterr().err
+    assert main(["repository", "one", "--bake", str(tmp_path / "없다.hcl")]) == 1
+    assert "읽지 못했다" in capsys.readouterr().err
+
+
+def _compose_images(path: Path) -> dict[str, str]:
+    """compose 파일의 서비스마다 `image:` 줄에서 `<이름공간>/<저장소>:<태그>` 의 저장소를 읽는다."""
+    found: dict[str, str] = {}
+    service = ""
+    for line in path.read_text("utf-8").splitlines():
+        header = re.fullmatch(r"  ([a-z][a-z0-9-]*):\s*", line)
+        if header is not None:
+            service = header.group(1)
+        image = re.fullmatch(r"    image: \$\{AGENT_OS_NAMESPACE[^}]*\}/([a-z0-9-]+):\$\{.*", line)
+        if image is not None:
+            found[service] = image.group(1)
+    return found
+
+
+def test_배포_compose의_이미지_줄은_짓기_목록의_저장소_이름과_같다() -> None:
+    assert _compose_images(COMPOSE) == _repositories()
+
+
+def test_단독_배포_시험_픽스처의_이미지_줄은_serve의_저장소_이름과_같다() -> None:
+    assert _compose_images(FIXTURE_COMPOSE) == {"fixtures": _repositories()["serve"]}
+
+
+def test_배포_안내의_대응표는_짓기_목록의_저장소_이름과_같다() -> None:
+    rows = re.findall(
+        r"^\| `([a-z]+)` \|[^|]*\| `<이름공간>/([a-z0-9-]+)` \|$",
+        STANDALONE_README.read_text("utf-8"),
+        flags=re.M,
+    )
+    assert dict(rows) == _repositories()

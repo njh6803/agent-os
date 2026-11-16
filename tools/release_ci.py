@@ -13,6 +13,9 @@ Decisions 넷째). 표준 라이브러리만 쓴다.
 - `platform-manifest FILE`: 올린 이미지 색인(`docker buildx imagetools inspect --raw` 의 출력)에서
   증명이 아닌 linux/amd64 매니페스트의 해시를 낸다.
 - `manifest-config FILE`: 매니페스트의 설정 해시를 낸다.
+- `repository TARGET [--bake FILE]`: 짓기 대상 이름(`serve` 등)에 대응하는 Docker Hub 저장소
+  이름(이름공간 뒤 토막. `agent-os-runtime` 등)을 `docker-bake.hcl` 의 `tags` 에서 읽어 낸다. 둘의
+  대응을 정하는 유일한 곳이 그 파일이고, 워크플로와 e2e 가 이 명령으로 읽는다.
 - `judge --exit-code N --digest D`: 번호 태그 조회의 출력(표준 입력)으로
   `attach`·`keep`·`reject`·`hold` 를 낸다.
 - `precheck --published true|false [--tag-commit SHA] [--draft ID=SHA]... --sha SHA`: 둘째 잡의 사전
@@ -53,12 +56,20 @@ if __package__ in (None, ""):  # 스크립트로 부르면 저장소 루트가 i
 
 from tools.release import PREFIX, ReleaseError, judge_number_tag  # noqa: E402
 
+# 짓기 대상 이름(`deploy/images/docker-bake.hcl` 의 `target`)이다. 이미지 파일과 점검 결과 파일의
+# 이름이 이 이름을 따른다. Docker Hub 의 저장소 이름은 다르다. 둘의 대응은 `docker-bake.hcl` 의
+# `tags` 한 곳이 정하고 `repository` 가 읽는다.
 IMAGES = ("serve", "admin", "widget", "portal")
+BAKE_FILE = "deploy/images/docker-bake.hcl"
 PLATFORM_OS = "linux"
 PLATFORM_ARCH = "amd64"
 ATTESTATION_KEY = "vnd.docker.reference.type"
 _DIGEST = re.compile(r"sha256:[0-9a-f]{64}")
 _SHA = re.compile(r"[0-9a-f]{40}")
+# `target "<대상>" { … }` 한 덩어리. 닫는 중괄호는 줄 맨 앞에 있다(안쪽 블록은 들여 쓴다).
+_BAKE_TARGET = re.compile(r'^target\s+"(?P<target>[^"]+)"\s*\{(?P<body>.*?)^\}', re.M | re.S)
+_BAKE_TAGS = re.compile(r"^\s*tags\s*=\s*\[(?P<tags>[^\]]*)\]", re.M)
+_BAKE_REPOSITORY = re.compile(r'"\$\{NAMESPACE\}/(?P<name>[a-z0-9]+(?:-[a-z0-9]+)*):\$\{TAG\}"')
 
 
 def _is_object(value: object) -> TypeGuard[dict[str, object]]:
@@ -158,6 +169,43 @@ def manifest_config_digest(manifest_text: str) -> str:
     return digest
 
 
+# ---------- 저장소 이름 ----------
+
+
+def bake_repositories(text: str) -> dict[str, str]:
+    """`docker-bake.hcl` 에서 짓기 대상 이름마다 Docker Hub 저장소 이름(이름공간 뒤 토막)을 읽는다.
+
+    `tags = ["${NAMESPACE}/<저장소>:${TAG}"]` 꼴 한 줄을 가진 대상만 센다(`_web` 처럼 태그가 없는
+    바탕 대상은 건너뛴다). 태그가 둘 이상이거나 다른 꼴이면 실패한다. 이 파일이 대응을 정하는 유일한
+    곳이다.
+    """
+    found: dict[str, str] = {}
+    for block in _BAKE_TARGET.finditer(text):
+        target = block.group("target")
+        tags = _BAKE_TAGS.search(block.group("body"))
+        if tags is None:
+            continue
+        names = _BAKE_REPOSITORY.findall(tags.group("tags"))
+        if len(names) != 1 or tags.group("tags").count('"') != 2:
+            raise ReleaseError(
+                f"{target} 의 tags 가 `${{NAMESPACE}}/<저장소>:${{TAG}}` 한 줄이 아니다: "
+                f"{tags.group('tags').strip()!r}"
+            )
+        found[target] = names[0]
+    return found
+
+
+def bake_repository(text: str, target: str) -> str:
+    repositories = bake_repositories(text)
+    try:
+        return repositories[target]
+    except KeyError:
+        raise ReleaseError(
+            f"짓기 대상 {target!r} 의 저장소 이름이 {BAKE_FILE} 에 없다"
+            f"(있는 것: {sorted(repositories)})"
+        ) from None
+
+
 # ---------- 둘째 잡의 사전 확인 ----------
 
 
@@ -253,6 +301,9 @@ def _parser() -> argparse.ArgumentParser:
     for name in ("platform-manifest", "manifest-config"):
         sub = commands.add_parser(name)
         sub.add_argument("file")
+    repository = commands.add_parser("repository")
+    repository.add_argument("target")
+    repository.add_argument("--bake", default=BAKE_FILE, help="docker-bake.hcl 의 경로")
     judge = commands.add_parser("judge")
     judge.add_argument("--exit-code", type=int, required=True)
     judge.add_argument("--digest", required=True)
@@ -295,6 +346,8 @@ def _run(args: argparse.Namespace) -> None:
         print(platform_manifest_digest(_read_file(args.file)))
     elif args.command == "manifest-config":
         print(manifest_config_digest(_read_file(args.file)))
+    elif args.command == "repository":
+        print(bake_repository(_read_file(args.bake), args.target))
     elif args.command == "judge":
         print(judge_number_tag(args.exit_code, sys.stdin.read(), args.digest).value)
     elif args.command == "precheck":

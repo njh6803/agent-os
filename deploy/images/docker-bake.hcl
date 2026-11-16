@@ -7,6 +7,12 @@
 # 같은 폴더의 `<이름>.Dockerfile.dockerignore` 는 각 Dockerfile 머리 주석이 원천이다. 로컬에서 같은 이미지를
 # 짓는 길은 web/packages/e2e-standalone/e2e/stack.ts 의 `imagesToRun` 이다(같은 인자를 준다).
 #
+# 이름은 둘이다. 짓기 대상 이름(`serve`, `admin`, `widget`, `portal`)은 코드의 이름이고 Dockerfile 과 compose 서비스와
+# 점검 결과 파일이 따른다. Docker Hub 저장소 이름(`agent-os-runtime`, `agent-os-admin`, `agent-os-widget`,
+# `agent-os-widget-test-page`)은 아래 `tags` 의 `${NAMESPACE}/<저장소>:${TAG}` 가 정한다. 둘의 대응은 이 파일이 유일하게 정하고,
+# 워크플로와 e2e 는 `python3 tools/release_ci.py repository <대상>` 으로 읽는다. compose 의 `image:` 줄과 배포 안내의 대응표는
+# 사람이 쓴 사본이라 tests/tools/test_release_ci.py 가 이 파일과 같은지 본다.
+#
 # 빌드 캐시는 GitHub Actions 캐시에 이미지마다 다른 범위(scope)로 둔다. 범위를 같게 두면 마지막 이미지의 캐시만
 # 남는다(.scratch/release-image/probes/release_mechanics/README.md 5번).
 
@@ -45,7 +51,7 @@ target "serve" {
     REVISION    = REVISION
     SOURCE      = SOURCE
   }
-  tags       = ["${NAMESPACE}/serve:${TAG}"]
+  tags       = ["${NAMESPACE}/agent-os-runtime:${TAG}"]
   cache-from = ["type=gha,scope=serve"]
   cache-to   = ["type=gha,scope=serve,mode=max"]
 }
@@ -62,7 +68,7 @@ target "_web" {
 target "admin" {
   inherits   = ["_web"]
   dockerfile = "../deploy/images/admin.Dockerfile"
-  tags       = ["${NAMESPACE}/admin:${TAG}"]
+  tags       = ["${NAMESPACE}/agent-os-admin:${TAG}"]
   cache-from = ["type=gha,scope=admin"]
   cache-to   = ["type=gha,scope=admin,mode=max"]
 }
@@ -70,7 +76,7 @@ target "admin" {
 target "widget" {
   inherits   = ["_web"]
   dockerfile = "../deploy/images/widget.Dockerfile"
-  tags       = ["${NAMESPACE}/widget:${TAG}"]
+  tags       = ["${NAMESPACE}/agent-os-widget:${TAG}"]
   cache-from = ["type=gha,scope=widget"]
   cache-to   = ["type=gha,scope=widget,mode=max"]
 }
@@ -78,7 +84,7 @@ target "widget" {
 target "portal" {
   inherits   = ["_web"]
   dockerfile = "../deploy/images/portal.Dockerfile"
-  tags       = ["${NAMESPACE}/portal:${TAG}"]
+  tags       = ["${NAMESPACE}/agent-os-widget-test-page:${TAG}"]
   cache-from = ["type=gha,scope=portal"]
   cache-to   = ["type=gha,scope=portal,mode=max"]
 }

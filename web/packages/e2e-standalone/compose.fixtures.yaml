@@ -10,7 +10,7 @@
 # ./fixtures 는 준비가 배포 폴더 안에 쓴다. 경로는 첫 compose 파일(배포 폴더의 compose.yaml)의 폴더 기준이다.
 services:
   fixtures:
-    image: ${AGENT_OS_NAMESPACE}/serve:${AGENT_OS_VERSION}
+    image: ${AGENT_OS_NAMESPACE}/agent-os-runtime:${AGENT_OS_VERSION}
     command: ["cp", "-r", "/fixtures/.", "/app/plugins/"]
     restart: "no"
     volumes:

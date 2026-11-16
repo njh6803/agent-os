@@ -189,7 +189,8 @@ jobs:
           }
           warn=false
           for image in serve admin widget portal; do
-            docker save "$LOCAL_NAMESPACE/$image:$NUMBER" -o "scan/$image.tar"
+            repo=$(python3 tools/release_ci.py repository "$image")
+            docker save "$LOCAL_NAMESPACE/$repo:$NUMBER" -o "scan/$image.tar"
             tested=$(python3 tools/release_ci.py image-id "scan/$image.tar")
             echo "$image=$tested" >> "$RUNNER_TEMP/tested.txt"
             grype "docker-archive:/in/$image.tar" -o json > "out/grype-$image.json"
@@ -264,9 +265,10 @@ jobs:
             digest=$(jq -r --arg i "$image" '.[$i]["containerimage.digest"]' <<< "$METADATA")
             case "$digest" in sha256:????????????????????????????????????????????????????????????????) ;; *)
               echo "::error::$image 의 올린 digest 를 읽지 못했다: $digest"; exit 1 ;; esac
-            docker buildx imagetools inspect "$NAMESPACE/$image@$digest" --raw > "$RUNNER_TEMP/index.json"
+            repo=$(python3 tools/release_ci.py repository "$image")
+            docker buildx imagetools inspect "$NAMESPACE/$repo@$digest" --raw > "$RUNNER_TEMP/index.json"
             platform=$(python3 tools/release_ci.py platform-manifest "$RUNNER_TEMP/index.json")
-            docker buildx imagetools inspect "$NAMESPACE/$image@$platform" --raw > "$RUNNER_TEMP/manifest.json"
+            docker buildx imagetools inspect "$NAMESPACE/$repo@$platform" --raw > "$RUNNER_TEMP/manifest.json"
             pushed=$(python3 tools/release_ci.py manifest-config "$RUNNER_TEMP/manifest.json")
             tested=$(grep "^$image=" "$RUNNER_TEMP/tested.txt" | cut -d= -f2)
             if [ "$tested" != "$pushed" ]; then
@@ -428,7 +430,7 @@ jobs:
           for image in serve admin widget portal; do
             var="DIGEST_$(echo "$image" | tr '[:lower:]' '[:upper:]')"
             digest=${!var}
-            ref="$NAMESPACE/$image"
+            ref="$NAMESPACE/$(python3 tools/release_ci.py repository "$image")"
             code=0
             output=$(docker buildx imagetools inspect "$ref:$NUMBER" 2>&1) || code=$?
             verdict=$(python3 tools/release_ci.py judge --exit-code "$code" --digest "$digest" <<< "$output")
