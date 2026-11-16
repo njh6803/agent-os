@@ -102,6 +102,15 @@ Grype(스크래치 `grype_scan.sh`, 이미지 `ghcr.io/anchore/grype@sha256:1311
 - Git Bash의 경로 변환(`/app/plugins`가 `C:/Program Files/Git/app/plugins`가 되는 것)이 `docker run` 인자를 깨뜨렸다. 확인 스크립트 첫머리에 `MSYS_NO_PATHCONV=1`을 두었다.
 - 지키지 못한 것: 부하 없는 데몬에서의 시간 재기. 형제 08이 같은 PC에서 계속 빌드해 조용한 때를 만들지 못했다.
 
+## 회고 (PR 585을 연 인계 세션)
+
+후보 1, 승인 1(회차로 셈), 기각 0, 넘김 0. 근거는 이 일지의 "리뷰 반영"에 적은 pre-commit 시도들이다.
+
+- 후보: 부하(CPU 98~100%, 다른 세션의 pytest와 Docker Desktop이 함께 돌았다) 아래에서 문서만 바꾼 커밋의 pre-commit이 네 번 시도에서 매번 시간 제한 시험(`test_interrupt`, `test_probe_kit`) 하나나 둘로 막혔고 한 바퀴가 pytest 16~37분이었다. 막힌 시험은 단독으로 통과하거나(`test_probe_kit` 15개 3.25초, `test_interrupt`는 한 번 실패하고 한 번 통과) 이 PR이 `src/`와 `tests/`를 건드리지 않는다.
+- 판정: 승인(회차로 셈). 사건은 위 네 번이고, 같은 일을 다룬 열린 항목 `docs-only-commit-precommit-slow-again`(회차 6)의 처방(한 바퀴를 재고 `web-verify`의 안쪽을 줄이는 하네스 chore)이 이미 있어 새 항목을 쓰지 않고 그 항목의 승인 줄에 7회차를 더했다. 이 PR에서 반영하는 것은 없다.
+- 이 항목은 회차 5 이상이라 `next-session`의 chore 배치 조건에 이미 들어 있다. 시간 제한 시험이 부하에서 흔들리는 일은 `tests.md`에 적힌 알려진 종류(대기열 306·332)이고, 이번에는 사용자에게 물어 "기다렸다 다시 시도"로 답을 받아 훅을 건너뛰지 않았다.
+- 일지에만 남기는 것: 인계로 연 세션이 인계 문턱을 두 번 넘겼지만 "인계: 커밋 뒤" 줄 때문에 둘 다 인계하지 않는 때(같은 경계)로 판정해 이었다. `hook_handoff` 계기 문장은 이 경우에도 매번 같은 문장을 낸다(사건은 아니고 관찰이다).
+
 ## 리뷰 반영 (인계를 받은 세션, 기준 `d80690da1`)
 
 셀프 리뷰 두 축(표준은 sonnet·high, 명세는 세션 모델)이 낸 것과 판정이다.
@@ -148,3 +157,22 @@ Grype(스크래치 `grype_scan.sh`, 이미지 `ghcr.io/anchore/grype@sha256:1311
 open-session을 부른다 2026-11-15T16:48:36Z
 
 open-session을 부른다 2026-11-15T19:00:27Z
+
+## 다음
+
+다음 작업은 09(`.scratch/release-image/issues/09-standalone-compose-runs-real-images.md`)다. Blocked by 04·07·08이 모두 `done`이 되므로 이 PR(585)을 병합하면 풀린다. 06(`06-review-bot-checks-upgrade-bang`)은 07과 무관하게 `ready-for-agent`로 남아 있고 형제 세션 몫이다. 10은 09 뒤, 11은 마지막이며 기능 계획의 `끝` 줄과 기능 단락은 11이 적는다.
+
+09가 07에서 받을 것:
+
+- serve 이미지의 기본 `CMD`에는 `--model`과 `--host`가 없다. 모델은 환경 변수 `AGENT_OS_MODEL`로 주고, 밖에 열려면 `AGENT_OS_CONTAINER_NETWORK=1`과 `--host 0.0.0.0`을 함께 준다. compose의 `command:`로 `--model`만 덧붙이면 `CMD` 전체가 바뀌어 tini가 `--model`을 실행하려다 실패하므로(PR 직전 리뷰가 `docker run`으로 봤다고 보고한 것이며 내가 다시 돌리지는 않았다) `command:`를 쓰면 `agent-os serve --plugins-root /app/plugins --traces /data/traces`까지 모두 적는다.
+- 이 일지의 "이 PC에서 띄워 본 결과" 표가 09의 compose가 같은 뜻으로 옮길 띄우기 옵션이다(네트워크 없음, 읽기 전용 루트, 이름 있는 볼륨 둘, 홈의 tmpfs).
+- 상태 확인이 `healthy`가 되기까지 53초가 걸린 실행이 있었다(부하 어림). compose의 시작 유예는 09가 정한다.
+
+뒤로 넘긴 일(이 PR의 봇 회차와 PR 직전 리뷰에서 나왔다. 위 "리뷰 반영"에 이유가 있다):
+
+- 프로브 `serve_image/run.py`의 `readonly_flow`가 갈래별 기대 원인을 단언하지 않는다(CodeRabbit). 고치면 5번 항목을 다시 돌린다.
+- 명세 574행(Further Notes)의 낡은 문장 갱신. 명세는 승인 문서라 명세를 고치는 세션이 한다.
+- `uv.lock`의 certifi를 2026.10.18 이상으로 올리는 일(Grype Critical 1건).
+- 시간 값이 명세와 달랐고 멈추지 않은 판단은 사용자가 확인한 것이 아니다. 병합 뒤에도 사용자가 정할 일로 남는다.
+
+이어받을 상태: 병합 뒤 주 체크아웃이 갱신되지 않았다. 다음 세션은 워크트리에 들어가기 전에 `tidy-checkouts`를 돈다.
