@@ -1,0 +1,3211 @@
+{
+  "versions": {
+    "playwright": "1.63.0",
+    "node": "v24.19.0",
+    "platform": "win32",
+    "chromium": "153.0.8010.12"
+  },
+  "facts": {
+    "chromium": {
+      "control": {
+        "Lax": true,
+        "Strict": true,
+        "None": true
+      },
+      "cells": {
+        "inPageSameOrigin": {
+          "Lax": {
+            "corsModeNoHeaders": {
+              "secFetchSite": "same-origin",
+              "originSeen": "https://app.site.test:<port>",
+              "cookieSent": true,
+              "preflight": false,
+              "fetch": {
+                "settled": "resolved",
+                "type": "basic",
+                "status": 204
+              },
+              "loggedOut": true
+            },
+            "corsModeAllowed": {
+              "secFetchSite": "same-origin",
+              "originSeen": "https://app.site.test:<port>",
+              "cookieSent": true,
+              "preflight": false,
+              "fetch": {
+                "settled": "resolved",
+                "type": "basic",
+                "status": 204
+              },
+              "loggedOut": true
+            },
+            "noCorsMode": {
+              "secFetchSite": "same-origin",
+              "originSeen": "https://app.site.test:<port>",
+              "cookieSent": true,
+              "preflight": false,
+              "fetch": {
+                "settled": "resolved",
+                "type": "basic",
+                "status": 204
+              },
+              "loggedOut": true
+            },
+            "corsManualNoHeaders": {
+              "secFetchSite": "same-origin",
+              "originSeen": "https://app.site.test:<port>",
+              "cookieSent": true,
+              "preflight": false,
+              "fetch": {
+                "settled": "resolved",
+                "type": "basic",
+                "status": 204
+              },
+              "loggedOut": true
+            },
+            "corsManualAllowed": {
+              "secFetchSite": "same-origin",
+              "originSeen": "https://app.site.test:<port>",
+              "cookieSent": true,
+              "preflight": false,
+              "fetch": {
+                "settled": "resolved",
+                "type": "basic",
+                "status": 204
+              },
+              "loggedOut": true
+            }
+          },
+          "Strict": {
+            "corsModeNoHeaders": {
+              "secFetchSite": "same-origin",
+              "originSeen": "https://app.site.test:<port>",
+              "cookieSent": true,
+              "preflight": false,
+              "fetch": {
+                "settled": "resolved",
+                "type": "basic",
+                "status": 204
+              },
+              "loggedOut": true
+            },
+            "corsModeAllowed": {
+              "secFetchSite": "same-origin",
+              "originSeen": "https://app.site.test:<port>",
+              "cookieSent": true,
+              "preflight": false,
+              "fetch": {
+                "settled": "resolved",
+                "type": "basic",
+                "status": 204
+              },
+              "loggedOut": true
+            },
+            "noCorsMode": {
+              "secFetchSite": "same-origin",
+              "originSeen": "https://app.site.test:<port>",
+              "cookieSent": true,
+              "preflight": false,
+              "fetch": {
+                "settled": "resolved",
+                "type": "basic",
+                "status": 204
+              },
+              "loggedOut": true
+            },
+            "corsManualNoHeaders": {
+              "secFetchSite": "same-origin",
+              "originSeen": "https://app.site.test:<port>",
+              "cookieSent": true,
+              "preflight": false,
+              "fetch": {
+                "settled": "resolved",
+                "type": "basic",
+                "status": 204
+              },
+              "loggedOut": true
+            },
+            "corsManualAllowed": {
+              "secFetchSite": "same-origin",
+              "originSeen": "https://app.site.test:<port>",
+              "cookieSent": true,
+              "preflight": false,
+              "fetch": {
+                "settled": "resolved",
+                "type": "basic",
+                "status": 204
+              },
+              "loggedOut": true
+            }
+          },
+          "None": {
+            "corsModeNoHeaders": {
+              "secFetchSite": "same-origin",
+              "originSeen": "https://app.site.test:<port>",
+              "cookieSent": true,
+              "preflight": false,
+              "fetch": {
+                "settled": "resolved",
+                "type": "basic",
+                "status": 204
+              },
+              "loggedOut": true
+            },
+            "corsModeAllowed": {
+              "secFetchSite": "same-origin",
+              "originSeen": "https://app.site.test:<port>",
+              "cookieSent": true,
+              "preflight": false,
+              "fetch": {
+                "settled": "resolved",
+                "type": "basic",
+                "status": 204
+              },
+              "loggedOut": true
+            },
+            "noCorsMode": {
+              "secFetchSite": "same-origin",
+              "originSeen": "https://app.site.test:<port>",
+              "cookieSent": true,
+              "preflight": false,
+              "fetch": {
+                "settled": "resolved",
+                "type": "basic",
+                "status": 204
+              },
+              "loggedOut": true
+            },
+            "corsManualNoHeaders": {
+              "secFetchSite": "same-origin",
+              "originSeen": "https://app.site.test:<port>",
+              "cookieSent": true,
+              "preflight": false,
+              "fetch": {
+                "settled": "resolved",
+                "type": "basic",
+                "status": 204
+              },
+              "loggedOut": true
+            },
+            "corsManualAllowed": {
+              "secFetchSite": "same-origin",
+              "originSeen": "https://app.site.test:<port>",
+              "cookieSent": true,
+              "preflight": false,
+              "fetch": {
+                "settled": "resolved",
+                "type": "basic",
+                "status": 204
+              },
+              "loggedOut": true
+            }
+          }
+        },
+        "inPageOtherOriginSameSite": {
+          "Lax": {
+            "corsModeNoHeaders": {
+              "secFetchSite": "same-site",
+              "originSeen": "https://app.site.test:<port>",
+              "cookieSent": true,
+              "preflight": false,
+              "fetch": {
+                "settled": "rejected",
+                "name": "TypeError"
+              },
+              "loggedOut": true
+            },
+            "corsModeAllowed": {
+              "secFetchSite": "same-site",
+              "originSeen": "https://app.site.test:<port>",
+              "cookieSent": true,
+              "preflight": false,
+              "fetch": {
+                "settled": "resolved",
+                "type": "cors",
+                "status": 204
+              },
+              "loggedOut": true
+            },
+            "noCorsMode": {
+              "secFetchSite": "same-site",
+              "originSeen": "https://app.site.test:<port>",
+              "cookieSent": true,
+              "preflight": false,
+              "fetch": {
+                "settled": "resolved",
+                "type": "opaque",
+                "status": 0
+              },
+              "loggedOut": true
+            },
+            "corsManualNoHeaders": {
+              "secFetchSite": "same-site",
+              "originSeen": "https://app.site.test:<port>",
+              "cookieSent": true,
+              "preflight": false,
+              "fetch": {
+                "settled": "rejected",
+                "name": "TypeError"
+              },
+              "loggedOut": true
+            },
+            "corsManualAllowed": {
+              "secFetchSite": "same-site",
+              "originSeen": "https://app.site.test:<port>",
+              "cookieSent": true,
+              "preflight": false,
+              "fetch": {
+                "settled": "resolved",
+                "type": "cors",
+                "status": 204
+              },
+              "loggedOut": true
+            }
+          },
+          "Strict": {
+            "corsModeNoHeaders": {
+              "secFetchSite": "same-site",
+              "originSeen": "https://app.site.test:<port>",
+              "cookieSent": true,
+              "preflight": false,
+              "fetch": {
+                "settled": "rejected",
+                "name": "TypeError"
+              },
+              "loggedOut": true
+            },
+            "corsModeAllowed": {
+              "secFetchSite": "same-site",
+              "originSeen": "https://app.site.test:<port>",
+              "cookieSent": true,
+              "preflight": false,
+              "fetch": {
+                "settled": "resolved",
+                "type": "cors",
+                "status": 204
+              },
+              "loggedOut": true
+            },
+            "noCorsMode": {
+              "secFetchSite": "same-site",
+              "originSeen": "https://app.site.test:<port>",
+              "cookieSent": true,
+              "preflight": false,
+              "fetch": {
+                "settled": "resolved",
+                "type": "opaque",
+                "status": 0
+              },
+              "loggedOut": true
+            },
+            "corsManualNoHeaders": {
+              "secFetchSite": "same-site",
+              "originSeen": "https://app.site.test:<port>",
+              "cookieSent": true,
+              "preflight": false,
+              "fetch": {
+                "settled": "rejected",
+                "name": "TypeError"
+              },
+              "loggedOut": true
+            },
+            "corsManualAllowed": {
+              "secFetchSite": "same-site",
+              "originSeen": "https://app.site.test:<port>",
+              "cookieSent": true,
+              "preflight": false,
+              "fetch": {
+                "settled": "resolved",
+                "type": "cors",
+                "status": 204
+              },
+              "loggedOut": true
+            }
+          },
+          "None": {
+            "corsModeNoHeaders": {
+              "secFetchSite": "same-site",
+              "originSeen": "https://app.site.test:<port>",
+              "cookieSent": true,
+              "preflight": false,
+              "fetch": {
+                "settled": "rejected",
+                "name": "TypeError"
+              },
+              "loggedOut": true
+            },
+            "corsModeAllowed": {
+              "secFetchSite": "same-site",
+              "originSeen": "https://app.site.test:<port>",
+              "cookieSent": true,
+              "preflight": false,
+              "fetch": {
+                "settled": "resolved",
+                "type": "cors",
+                "status": 204
+              },
+              "loggedOut": true
+            },
+            "noCorsMode": {
+              "secFetchSite": "same-site",
+              "originSeen": "https://app.site.test:<port>",
+              "cookieSent": true,
+              "preflight": false,
+              "fetch": {
+                "settled": "resolved",
+                "type": "opaque",
+                "status": 0
+              },
+              "loggedOut": true
+            },
+            "corsManualNoHeaders": {
+              "secFetchSite": "same-site",
+              "originSeen": "https://app.site.test:<port>",
+              "cookieSent": true,
+              "preflight": false,
+              "fetch": {
+                "settled": "rejected",
+                "name": "TypeError"
+              },
+              "loggedOut": true
+            },
+            "corsManualAllowed": {
+              "secFetchSite": "same-site",
+              "originSeen": "https://app.site.test:<port>",
+              "cookieSent": true,
+              "preflight": false,
+              "fetch": {
+                "settled": "resolved",
+                "type": "cors",
+                "status": 204
+              },
+              "loggedOut": true
+            }
+          }
+        },
+        "inPageCrossSite": {
+          "Lax": {
+            "corsModeNoHeaders": {
+              "secFetchSite": "cross-site",
+              "originSeen": "https://app.site.test:<port>",
+              "cookieSent": false,
+              "preflight": false,
+              "fetch": {
+                "settled": "rejected",
+                "name": "TypeError"
+              },
+              "loggedOut": false
+            },
+            "corsModeAllowed": {
+              "secFetchSite": "cross-site",
+              "originSeen": "https://app.site.test:<port>",
+              "cookieSent": false,
+              "preflight": false,
+              "fetch": {
+                "settled": "resolved",
+                "type": "cors",
+                "status": 204
+              },
+              "loggedOut": false
+            },
+            "noCorsMode": {
+              "secFetchSite": "cross-site",
+              "originSeen": "https://app.site.test:<port>",
+              "cookieSent": false,
+              "preflight": false,
+              "fetch": {
+                "settled": "resolved",
+                "type": "opaque",
+                "status": 0
+              },
+              "loggedOut": false
+            },
+            "corsManualNoHeaders": {
+              "secFetchSite": "cross-site",
+              "originSeen": "https://app.site.test:<port>",
+              "cookieSent": false,
+              "preflight": false,
+              "fetch": {
+                "settled": "rejected",
+                "name": "TypeError"
+              },
+              "loggedOut": false
+            },
+            "corsManualAllowed": {
+              "secFetchSite": "cross-site",
+              "originSeen": "https://app.site.test:<port>",
+              "cookieSent": false,
+              "preflight": false,
+              "fetch": {
+                "settled": "resolved",
+                "type": "cors",
+                "status": 204
+              },
+              "loggedOut": false
+            }
+          },
+          "Strict": {
+            "corsModeNoHeaders": {
+              "secFetchSite": "cross-site",
+              "originSeen": "https://app.site.test:<port>",
+              "cookieSent": false,
+              "preflight": false,
+              "fetch": {
+                "settled": "rejected",
+                "name": "TypeError"
+              },
+              "loggedOut": false
+            },
+            "corsModeAllowed": {
+              "secFetchSite": "cross-site",
+              "originSeen": "https://app.site.test:<port>",
+              "cookieSent": false,
+              "preflight": false,
+              "fetch": {
+                "settled": "resolved",
+                "type": "cors",
+                "status": 204
+              },
+              "loggedOut": false
+            },
+            "noCorsMode": {
+              "secFetchSite": "cross-site",
+              "originSeen": "https://app.site.test:<port>",
+              "cookieSent": false,
+              "preflight": false,
+              "fetch": {
+                "settled": "resolved",
+                "type": "opaque",
+                "status": 0
+              },
+              "loggedOut": false
+            },
+            "corsManualNoHeaders": {
+              "secFetchSite": "cross-site",
+              "originSeen": "https://app.site.test:<port>",
+              "cookieSent": false,
+              "preflight": false,
+              "fetch": {
+                "settled": "rejected",
+                "name": "TypeError"
+              },
+              "loggedOut": false
+            },
+            "corsManualAllowed": {
+              "secFetchSite": "cross-site",
+              "originSeen": "https://app.site.test:<port>",
+              "cookieSent": false,
+              "preflight": false,
+              "fetch": {
+                "settled": "resolved",
+                "type": "cors",
+                "status": 204
+              },
+              "loggedOut": false
+            }
+          },
+          "None": {
+            "corsModeNoHeaders": {
+              "secFetchSite": "cross-site",
+              "originSeen": "https://app.site.test:<port>",
+              "cookieSent": true,
+              "preflight": false,
+              "fetch": {
+                "settled": "rejected",
+                "name": "TypeError"
+              },
+              "loggedOut": true
+            },
+            "corsModeAllowed": {
+              "secFetchSite": "cross-site",
+              "originSeen": "https://app.site.test:<port>",
+              "cookieSent": true,
+              "preflight": false,
+              "fetch": {
+                "settled": "resolved",
+                "type": "cors",
+                "status": 204
+              },
+              "loggedOut": true
+            },
+            "noCorsMode": {
+              "secFetchSite": "cross-site",
+              "originSeen": "https://app.site.test:<port>",
+              "cookieSent": true,
+              "preflight": false,
+              "fetch": {
+                "settled": "resolved",
+                "type": "opaque",
+                "status": 0
+              },
+              "loggedOut": true
+            },
+            "corsManualNoHeaders": {
+              "secFetchSite": "cross-site",
+              "originSeen": "https://app.site.test:<port>",
+              "cookieSent": true,
+              "preflight": false,
+              "fetch": {
+                "settled": "rejected",
+                "name": "TypeError"
+              },
+              "loggedOut": true
+            },
+            "corsManualAllowed": {
+              "secFetchSite": "cross-site",
+              "originSeen": "https://app.site.test:<port>",
+              "cookieSent": true,
+              "preflight": false,
+              "fetch": {
+                "settled": "resolved",
+                "type": "cors",
+                "status": 204
+              },
+              "loggedOut": true
+            }
+          }
+        },
+        "iframeSameSite": {
+          "Lax": {
+            "corsModeNoHeaders": {
+              "secFetchSite": "same-site",
+              "originSeen": "https://widget.site.test:<port>",
+              "cookieSent": true,
+              "preflight": false,
+              "fetch": {
+                "settled": "rejected",
+                "name": "TypeError"
+              },
+              "loggedOut": true
+            },
+            "corsModeAllowed": {
+              "secFetchSite": "same-site",
+              "originSeen": "https://widget.site.test:<port>",
+              "cookieSent": true,
+              "preflight": false,
+              "fetch": {
+                "settled": "resolved",
+                "type": "cors",
+                "status": 204
+              },
+              "loggedOut": true
+            },
+            "noCorsMode": {
+              "secFetchSite": "same-site",
+              "originSeen": "https://widget.site.test:<port>",
+              "cookieSent": true,
+              "preflight": false,
+              "fetch": {
+                "settled": "resolved",
+                "type": "opaque",
+                "status": 0
+              },
+              "loggedOut": true
+            },
+            "corsManualNoHeaders": {
+              "secFetchSite": "same-site",
+              "originSeen": "https://widget.site.test:<port>",
+              "cookieSent": true,
+              "preflight": false,
+              "fetch": {
+                "settled": "rejected",
+                "name": "TypeError"
+              },
+              "loggedOut": true
+            },
+            "corsManualAllowed": {
+              "secFetchSite": "same-site",
+              "originSeen": "https://widget.site.test:<port>",
+              "cookieSent": true,
+              "preflight": false,
+              "fetch": {
+                "settled": "resolved",
+                "type": "cors",
+                "status": 204
+              },
+              "loggedOut": true
+            }
+          },
+          "Strict": {
+            "corsModeNoHeaders": {
+              "secFetchSite": "same-site",
+              "originSeen": "https://widget.site.test:<port>",
+              "cookieSent": true,
+              "preflight": false,
+              "fetch": {
+                "settled": "rejected",
+                "name": "TypeError"
+              },
+              "loggedOut": true
+            },
+            "corsModeAllowed": {
+              "secFetchSite": "same-site",
+              "originSeen": "https://widget.site.test:<port>",
+              "cookieSent": true,
+              "preflight": false,
+              "fetch": {
+                "settled": "resolved",
+                "type": "cors",
+                "status": 204
+              },
+              "loggedOut": true
+            },
+            "noCorsMode": {
+              "secFetchSite": "same-site",
+              "originSeen": "https://widget.site.test:<port>",
+              "cookieSent": true,
+              "preflight": false,
+              "fetch": {
+                "settled": "resolved",
+                "type": "opaque",
+                "status": 0
+              },
+              "loggedOut": true
+            },
+            "corsManualNoHeaders": {
+              "secFetchSite": "same-site",
+              "originSeen": "https://widget.site.test:<port>",
+              "cookieSent": true,
+              "preflight": false,
+              "fetch": {
+                "settled": "rejected",
+                "name": "TypeError"
+              },
+              "loggedOut": true
+            },
+            "corsManualAllowed": {
+              "secFetchSite": "same-site",
+              "originSeen": "https://widget.site.test:<port>",
+              "cookieSent": true,
+              "preflight": false,
+              "fetch": {
+                "settled": "resolved",
+                "type": "cors",
+                "status": 204
+              },
+              "loggedOut": true
+            }
+          },
+          "None": {
+            "corsModeNoHeaders": {
+              "secFetchSite": "same-site",
+              "originSeen": "https://widget.site.test:<port>",
+              "cookieSent": true,
+              "preflight": false,
+              "fetch": {
+                "settled": "rejected",
+                "name": "TypeError"
+              },
+              "loggedOut": true
+            },
+            "corsModeAllowed": {
+              "secFetchSite": "same-site",
+              "originSeen": "https://widget.site.test:<port>",
+              "cookieSent": true,
+              "preflight": false,
+              "fetch": {
+                "settled": "resolved",
+                "type": "cors",
+                "status": 204
+              },
+              "loggedOut": true
+            },
+            "noCorsMode": {
+              "secFetchSite": "same-site",
+              "originSeen": "https://widget.site.test:<port>",
+              "cookieSent": true,
+              "preflight": false,
+              "fetch": {
+                "settled": "resolved",
+                "type": "opaque",
+                "status": 0
+              },
+              "loggedOut": true
+            },
+            "corsManualNoHeaders": {
+              "secFetchSite": "same-site",
+              "originSeen": "https://widget.site.test:<port>",
+              "cookieSent": true,
+              "preflight": false,
+              "fetch": {
+                "settled": "rejected",
+                "name": "TypeError"
+              },
+              "loggedOut": true
+            },
+            "corsManualAllowed": {
+              "secFetchSite": "same-site",
+              "originSeen": "https://widget.site.test:<port>",
+              "cookieSent": true,
+              "preflight": false,
+              "fetch": {
+                "settled": "resolved",
+                "type": "cors",
+                "status": 204
+              },
+              "loggedOut": true
+            }
+          }
+        },
+        "iframeCrossSite": {
+          "Lax": {
+            "corsModeNoHeaders": {
+              "secFetchSite": "cross-site",
+              "originSeen": "https://widget.other.test:<port>",
+              "cookieSent": false,
+              "preflight": false,
+              "fetch": {
+                "settled": "rejected",
+                "name": "TypeError"
+              },
+              "loggedOut": false
+            },
+            "corsModeAllowed": {
+              "secFetchSite": "cross-site",
+              "originSeen": "https://widget.other.test:<port>",
+              "cookieSent": false,
+              "preflight": false,
+              "fetch": {
+                "settled": "resolved",
+                "type": "cors",
+                "status": 204
+              },
+              "loggedOut": false
+            },
+            "noCorsMode": {
+              "secFetchSite": "cross-site",
+              "originSeen": "https://widget.other.test:<port>",
+              "cookieSent": false,
+              "preflight": false,
+              "fetch": {
+                "settled": "resolved",
+                "type": "opaque",
+                "status": 0
+              },
+              "loggedOut": false
+            },
+            "corsManualNoHeaders": {
+              "secFetchSite": "cross-site",
+              "originSeen": "https://widget.other.test:<port>",
+              "cookieSent": false,
+              "preflight": false,
+              "fetch": {
+                "settled": "rejected",
+                "name": "TypeError"
+              },
+              "loggedOut": false
+            },
+            "corsManualAllowed": {
+              "secFetchSite": "cross-site",
+              "originSeen": "https://widget.other.test:<port>",
+              "cookieSent": false,
+              "preflight": false,
+              "fetch": {
+                "settled": "resolved",
+                "type": "cors",
+                "status": 204
+              },
+              "loggedOut": false
+            }
+          },
+          "Strict": {
+            "corsModeNoHeaders": {
+              "secFetchSite": "cross-site",
+              "originSeen": "https://widget.other.test:<port>",
+              "cookieSent": false,
+              "preflight": false,
+              "fetch": {
+                "settled": "rejected",
+                "name": "TypeError"
+              },
+              "loggedOut": false
+            },
+            "corsModeAllowed": {
+              "secFetchSite": "cross-site",
+              "originSeen": "https://widget.other.test:<port>",
+              "cookieSent": false,
+              "preflight": false,
+              "fetch": {
+                "settled": "resolved",
+                "type": "cors",
+                "status": 204
+              },
+              "loggedOut": false
+            },
+            "noCorsMode": {
+              "secFetchSite": "cross-site",
+              "originSeen": "https://widget.other.test:<port>",
+              "cookieSent": false,
+              "preflight": false,
+              "fetch": {
+                "settled": "resolved",
+                "type": "opaque",
+                "status": 0
+              },
+              "loggedOut": false
+            },
+            "corsManualNoHeaders": {
+              "secFetchSite": "cross-site",
+              "originSeen": "https://widget.other.test:<port>",
+              "cookieSent": false,
+              "preflight": false,
+              "fetch": {
+                "settled": "rejected",
+                "name": "TypeError"
+              },
+              "loggedOut": false
+            },
+            "corsManualAllowed": {
+              "secFetchSite": "cross-site",
+              "originSeen": "https://widget.other.test:<port>",
+              "cookieSent": false,
+              "preflight": false,
+              "fetch": {
+                "settled": "resolved",
+                "type": "cors",
+                "status": 204
+              },
+              "loggedOut": false
+            }
+          },
+          "None": {
+            "corsModeNoHeaders": {
+              "secFetchSite": "cross-site",
+              "originSeen": "https://widget.other.test:<port>",
+              "cookieSent": true,
+              "preflight": false,
+              "fetch": {
+                "settled": "rejected",
+                "name": "TypeError"
+              },
+              "loggedOut": true
+            },
+            "corsModeAllowed": {
+              "secFetchSite": "cross-site",
+              "originSeen": "https://widget.other.test:<port>",
+              "cookieSent": true,
+              "preflight": false,
+              "fetch": {
+                "settled": "resolved",
+                "type": "cors",
+                "status": 204
+              },
+              "loggedOut": true
+            },
+            "noCorsMode": {
+              "secFetchSite": "cross-site",
+              "originSeen": "https://widget.other.test:<port>",
+              "cookieSent": true,
+              "preflight": false,
+              "fetch": {
+                "settled": "resolved",
+                "type": "opaque",
+                "status": 0
+              },
+              "loggedOut": true
+            },
+            "corsManualNoHeaders": {
+              "secFetchSite": "cross-site",
+              "originSeen": "https://widget.other.test:<port>",
+              "cookieSent": true,
+              "preflight": false,
+              "fetch": {
+                "settled": "rejected",
+                "name": "TypeError"
+              },
+              "loggedOut": true
+            },
+            "corsManualAllowed": {
+              "secFetchSite": "cross-site",
+              "originSeen": "https://widget.other.test:<port>",
+              "cookieSent": true,
+              "preflight": false,
+              "fetch": {
+                "settled": "resolved",
+                "type": "cors",
+                "status": 204
+              },
+              "loggedOut": true
+            }
+          }
+        },
+        "windowSameSite": {
+          "Lax": {
+            "corsModeNoHeaders": {
+              "secFetchSite": "same-site",
+              "originSeen": "https://widget.site.test:<port>",
+              "cookieSent": true,
+              "preflight": false,
+              "fetch": {
+                "settled": "rejected",
+                "name": "TypeError"
+              },
+              "loggedOut": true
+            },
+            "corsModeAllowed": {
+              "secFetchSite": "same-site",
+              "originSeen": "https://widget.site.test:<port>",
+              "cookieSent": true,
+              "preflight": false,
+              "fetch": {
+                "settled": "resolved",
+                "type": "cors",
+                "status": 204
+              },
+              "loggedOut": true
+            },
+            "noCorsMode": {
+              "secFetchSite": "same-site",
+              "originSeen": "https://widget.site.test:<port>",
+              "cookieSent": true,
+              "preflight": false,
+              "fetch": {
+                "settled": "resolved",
+                "type": "opaque",
+                "status": 0
+              },
+              "loggedOut": true
+            },
+            "corsManualNoHeaders": {
+              "secFetchSite": "same-site",
+              "originSeen": "https://widget.site.test:<port>",
+              "cookieSent": true,
+              "preflight": false,
+              "fetch": {
+                "settled": "rejected",
+                "name": "TypeError"
+              },
+              "loggedOut": true
+            },
+            "corsManualAllowed": {
+              "secFetchSite": "same-site",
+              "originSeen": "https://widget.site.test:<port>",
+              "cookieSent": true,
+              "preflight": false,
+              "fetch": {
+                "settled": "resolved",
+                "type": "cors",
+                "status": 204
+              },
+              "loggedOut": true
+            }
+          },
+          "Strict": {
+            "corsModeNoHeaders": {
+              "secFetchSite": "same-site",
+              "originSeen": "https://widget.site.test:<port>",
+              "cookieSent": true,
+              "preflight": false,
+              "fetch": {
+                "settled": "rejected",
+                "name": "TypeError"
+              },
+              "loggedOut": true
+            },
+            "corsModeAllowed": {
+              "secFetchSite": "same-site",
+              "originSeen": "https://widget.site.test:<port>",
+              "cookieSent": true,
+              "preflight": false,
+              "fetch": {
+                "settled": "resolved",
+                "type": "cors",
+                "status": 204
+              },
+              "loggedOut": true
+            },
+            "noCorsMode": {
+              "secFetchSite": "same-site",
+              "originSeen": "https://widget.site.test:<port>",
+              "cookieSent": true,
+              "preflight": false,
+              "fetch": {
+                "settled": "resolved",
+                "type": "opaque",
+                "status": 0
+              },
+              "loggedOut": true
+            },
+            "corsManualNoHeaders": {
+              "secFetchSite": "same-site",
+              "originSeen": "https://widget.site.test:<port>",
+              "cookieSent": true,
+              "preflight": false,
+              "fetch": {
+                "settled": "rejected",
+                "name": "TypeError"
+              },
+              "loggedOut": true
+            },
+            "corsManualAllowed": {
+              "secFetchSite": "same-site",
+              "originSeen": "https://widget.site.test:<port>",
+              "cookieSent": true,
+              "preflight": false,
+              "fetch": {
+                "settled": "resolved",
+                "type": "cors",
+                "status": 204
+              },
+              "loggedOut": true
+            }
+          },
+          "None": {
+            "corsModeNoHeaders": {
+              "secFetchSite": "same-site",
+              "originSeen": "https://widget.site.test:<port>",
+              "cookieSent": true,
+              "preflight": false,
+              "fetch": {
+                "settled": "rejected",
+                "name": "TypeError"
+              },
+              "loggedOut": true
+            },
+            "corsModeAllowed": {
+              "secFetchSite": "same-site",
+              "originSeen": "https://widget.site.test:<port>",
+              "cookieSent": true,
+              "preflight": false,
+              "fetch": {
+                "settled": "resolved",
+                "type": "cors",
+                "status": 204
+              },
+              "loggedOut": true
+            },
+            "noCorsMode": {
+              "secFetchSite": "same-site",
+              "originSeen": "https://widget.site.test:<port>",
+              "cookieSent": true,
+              "preflight": false,
+              "fetch": {
+                "settled": "resolved",
+                "type": "opaque",
+                "status": 0
+              },
+              "loggedOut": true
+            },
+            "corsManualNoHeaders": {
+              "secFetchSite": "same-site",
+              "originSeen": "https://widget.site.test:<port>",
+              "cookieSent": true,
+              "preflight": false,
+              "fetch": {
+                "settled": "rejected",
+                "name": "TypeError"
+              },
+              "loggedOut": true
+            },
+            "corsManualAllowed": {
+              "secFetchSite": "same-site",
+              "originSeen": "https://widget.site.test:<port>",
+              "cookieSent": true,
+              "preflight": false,
+              "fetch": {
+                "settled": "resolved",
+                "type": "cors",
+                "status": 204
+              },
+              "loggedOut": true
+            }
+          }
+        },
+        "windowCrossSite": {
+          "Lax": {
+            "corsModeNoHeaders": {
+              "secFetchSite": "cross-site",
+              "originSeen": "https://widget.other.test:<port>",
+              "cookieSent": false,
+              "preflight": false,
+              "fetch": {
+                "settled": "rejected",
+                "name": "TypeError"
+              },
+              "loggedOut": false
+            },
+            "corsModeAllowed": {
+              "secFetchSite": "cross-site",
+              "originSeen": "https://widget.other.test:<port>",
+              "cookieSent": false,
+              "preflight": false,
+              "fetch": {
+                "settled": "resolved",
+                "type": "cors",
+                "status": 204
+              },
+              "loggedOut": false
+            },
+            "noCorsMode": {
+              "secFetchSite": "cross-site",
+              "originSeen": "https://widget.other.test:<port>",
+              "cookieSent": false,
+              "preflight": false,
+              "fetch": {
+                "settled": "resolved",
+                "type": "opaque",
+                "status": 0
+              },
+              "loggedOut": false
+            },
+            "corsManualNoHeaders": {
+              "secFetchSite": "cross-site",
+              "originSeen": "https://widget.other.test:<port>",
+              "cookieSent": false,
+              "preflight": false,
+              "fetch": {
+                "settled": "rejected",
+                "name": "TypeError"
+              },
+              "loggedOut": false
+            },
+            "corsManualAllowed": {
+              "secFetchSite": "cross-site",
+              "originSeen": "https://widget.other.test:<port>",
+              "cookieSent": false,
+              "preflight": false,
+              "fetch": {
+                "settled": "resolved",
+                "type": "cors",
+                "status": 204
+              },
+              "loggedOut": false
+            }
+          },
+          "Strict": {
+            "corsModeNoHeaders": {
+              "secFetchSite": "cross-site",
+              "originSeen": "https://widget.other.test:<port>",
+              "cookieSent": false,
+              "preflight": false,
+              "fetch": {
+                "settled": "rejected",
+                "name": "TypeError"
+              },
+              "loggedOut": false
+            },
+            "corsModeAllowed": {
+              "secFetchSite": "cross-site",
+              "originSeen": "https://widget.other.test:<port>",
+              "cookieSent": false,
+              "preflight": false,
+              "fetch": {
+                "settled": "resolved",
+                "type": "cors",
+                "status": 204
+              },
+              "loggedOut": false
+            },
+            "noCorsMode": {
+              "secFetchSite": "cross-site",
+              "originSeen": "https://widget.other.test:<port>",
+              "cookieSent": false,
+              "preflight": false,
+              "fetch": {
+                "settled": "resolved",
+                "type": "opaque",
+                "status": 0
+              },
+              "loggedOut": false
+            },
+            "corsManualNoHeaders": {
+              "secFetchSite": "cross-site",
+              "originSeen": "https://widget.other.test:<port>",
+              "cookieSent": false,
+              "preflight": false,
+              "fetch": {
+                "settled": "rejected",
+                "name": "TypeError"
+              },
+              "loggedOut": false
+            },
+            "corsManualAllowed": {
+              "secFetchSite": "cross-site",
+              "originSeen": "https://widget.other.test:<port>",
+              "cookieSent": false,
+              "preflight": false,
+              "fetch": {
+                "settled": "resolved",
+                "type": "cors",
+                "status": 204
+              },
+              "loggedOut": false
+            }
+          },
+          "None": {
+            "corsModeNoHeaders": {
+              "secFetchSite": "cross-site",
+              "originSeen": "https://widget.other.test:<port>",
+              "cookieSent": true,
+              "preflight": false,
+              "fetch": {
+                "settled": "rejected",
+                "name": "TypeError"
+              },
+              "loggedOut": true
+            },
+            "corsModeAllowed": {
+              "secFetchSite": "cross-site",
+              "originSeen": "https://widget.other.test:<port>",
+              "cookieSent": true,
+              "preflight": false,
+              "fetch": {
+                "settled": "resolved",
+                "type": "cors",
+                "status": 204
+              },
+              "loggedOut": true
+            },
+            "noCorsMode": {
+              "secFetchSite": "cross-site",
+              "originSeen": "https://widget.other.test:<port>",
+              "cookieSent": true,
+              "preflight": false,
+              "fetch": {
+                "settled": "resolved",
+                "type": "opaque",
+                "status": 0
+              },
+              "loggedOut": true
+            },
+            "corsManualNoHeaders": {
+              "secFetchSite": "cross-site",
+              "originSeen": "https://widget.other.test:<port>",
+              "cookieSent": true,
+              "preflight": false,
+              "fetch": {
+                "settled": "rejected",
+                "name": "TypeError"
+              },
+              "loggedOut": true
+            },
+            "corsManualAllowed": {
+              "secFetchSite": "cross-site",
+              "originSeen": "https://widget.other.test:<port>",
+              "cookieSent": true,
+              "preflight": false,
+              "fetch": {
+                "settled": "resolved",
+                "type": "cors",
+                "status": 204
+              },
+              "loggedOut": true
+            }
+          }
+        }
+      },
+      "redirect": {
+        "inPageSameOrigin": {
+          "Lax": {
+            "noCorsMode": {
+              "follow": {
+                "secFetchSite": "same-origin",
+                "originSeen": "https://app.site.test:<port>",
+                "cookieSent": true,
+                "preflight": false,
+                "fetch": {
+                  "settled": "resolved",
+                  "type": "basic",
+                  "status": 200
+                },
+                "loggedOut": true,
+                "sent": true,
+                "afterRequested": true,
+                "afterCookieSent": false
+              },
+              "manual": {
+                "secFetchSite": "same-origin",
+                "originSeen": "https://app.site.test:<port>",
+                "cookieSent": true,
+                "preflight": false,
+                "fetch": {
+                  "settled": "resolved",
+                  "type": "opaqueredirect",
+                  "status": 0
+                },
+                "loggedOut": true,
+                "sent": true,
+                "afterRequested": false,
+                "afterCookieSent": null
+              }
+            },
+            "corsModeNoHeaders": {
+              "follow": {
+                "secFetchSite": "same-origin",
+                "originSeen": "https://app.site.test:<port>",
+                "cookieSent": true,
+                "preflight": false,
+                "fetch": {
+                  "settled": "resolved",
+                  "type": "basic",
+                  "status": 200
+                },
+                "loggedOut": true,
+                "sent": true,
+                "afterRequested": true,
+                "afterCookieSent": false
+              },
+              "manual": {
+                "secFetchSite": "same-origin",
+                "originSeen": "https://app.site.test:<port>",
+                "cookieSent": true,
+                "preflight": false,
+                "fetch": {
+                  "settled": "resolved",
+                  "type": "opaqueredirect",
+                  "status": 0
+                },
+                "loggedOut": true,
+                "sent": true,
+                "afterRequested": false,
+                "afterCookieSent": null
+              }
+            },
+            "corsModeAllowed": {
+              "follow": {
+                "secFetchSite": "same-origin",
+                "originSeen": "https://app.site.test:<port>",
+                "cookieSent": true,
+                "preflight": false,
+                "fetch": {
+                  "settled": "resolved",
+                  "type": "basic",
+                  "status": 200
+                },
+                "loggedOut": true,
+                "sent": true,
+                "afterRequested": true,
+                "afterCookieSent": false
+              },
+              "manual": {
+                "secFetchSite": "same-origin",
+                "originSeen": "https://app.site.test:<port>",
+                "cookieSent": true,
+                "preflight": false,
+                "fetch": {
+                  "settled": "resolved",
+                  "type": "opaqueredirect",
+                  "status": 0
+                },
+                "loggedOut": true,
+                "sent": true,
+                "afterRequested": false,
+                "afterCookieSent": null
+              }
+            }
+          },
+          "Strict": {
+            "noCorsMode": {
+              "follow": {
+                "secFetchSite": "same-origin",
+                "originSeen": "https://app.site.test:<port>",
+                "cookieSent": true,
+                "preflight": false,
+                "fetch": {
+                  "settled": "resolved",
+                  "type": "basic",
+                  "status": 200
+                },
+                "loggedOut": true,
+                "sent": true,
+                "afterRequested": true,
+                "afterCookieSent": false
+              },
+              "manual": {
+                "secFetchSite": "same-origin",
+                "originSeen": "https://app.site.test:<port>",
+                "cookieSent": true,
+                "preflight": false,
+                "fetch": {
+                  "settled": "resolved",
+                  "type": "opaqueredirect",
+                  "status": 0
+                },
+                "loggedOut": true,
+                "sent": true,
+                "afterRequested": false,
+                "afterCookieSent": null
+              }
+            },
+            "corsModeNoHeaders": {
+              "follow": {
+                "secFetchSite": "same-origin",
+                "originSeen": "https://app.site.test:<port>",
+                "cookieSent": true,
+                "preflight": false,
+                "fetch": {
+                  "settled": "resolved",
+                  "type": "basic",
+                  "status": 200
+                },
+                "loggedOut": true,
+                "sent": true,
+                "afterRequested": true,
+                "afterCookieSent": false
+              },
+              "manual": {
+                "secFetchSite": "same-origin",
+                "originSeen": "https://app.site.test:<port>",
+                "cookieSent": true,
+                "preflight": false,
+                "fetch": {
+                  "settled": "resolved",
+                  "type": "opaqueredirect",
+                  "status": 0
+                },
+                "loggedOut": true,
+                "sent": true,
+                "afterRequested": false,
+                "afterCookieSent": null
+              }
+            },
+            "corsModeAllowed": {
+              "follow": {
+                "secFetchSite": "same-origin",
+                "originSeen": "https://app.site.test:<port>",
+                "cookieSent": true,
+                "preflight": false,
+                "fetch": {
+                  "settled": "resolved",
+                  "type": "basic",
+                  "status": 200
+                },
+                "loggedOut": true,
+                "sent": true,
+                "afterRequested": true,
+                "afterCookieSent": false
+              },
+              "manual": {
+                "secFetchSite": "same-origin",
+                "originSeen": "https://app.site.test:<port>",
+                "cookieSent": true,
+                "preflight": false,
+                "fetch": {
+                  "settled": "resolved",
+                  "type": "opaqueredirect",
+                  "status": 0
+                },
+                "loggedOut": true,
+                "sent": true,
+                "afterRequested": false,
+                "afterCookieSent": null
+              }
+            }
+          },
+          "None": {
+            "noCorsMode": {
+              "follow": {
+                "secFetchSite": "same-origin",
+                "originSeen": "https://app.site.test:<port>",
+                "cookieSent": true,
+                "preflight": false,
+                "fetch": {
+                  "settled": "resolved",
+                  "type": "basic",
+                  "status": 200
+                },
+                "loggedOut": true,
+                "sent": true,
+                "afterRequested": true,
+                "afterCookieSent": false
+              },
+              "manual": {
+                "secFetchSite": "same-origin",
+                "originSeen": "https://app.site.test:<port>",
+                "cookieSent": true,
+                "preflight": false,
+                "fetch": {
+                  "settled": "resolved",
+                  "type": "opaqueredirect",
+                  "status": 0
+                },
+                "loggedOut": true,
+                "sent": true,
+                "afterRequested": false,
+                "afterCookieSent": null
+              }
+            },
+            "corsModeNoHeaders": {
+              "follow": {
+                "secFetchSite": "same-origin",
+                "originSeen": "https://app.site.test:<port>",
+                "cookieSent": true,
+                "preflight": false,
+                "fetch": {
+                  "settled": "resolved",
+                  "type": "basic",
+                  "status": 200
+                },
+                "loggedOut": true,
+                "sent": true,
+                "afterRequested": true,
+                "afterCookieSent": false
+              },
+              "manual": {
+                "secFetchSite": "same-origin",
+                "originSeen": "https://app.site.test:<port>",
+                "cookieSent": true,
+                "preflight": false,
+                "fetch": {
+                  "settled": "resolved",
+                  "type": "opaqueredirect",
+                  "status": 0
+                },
+                "loggedOut": true,
+                "sent": true,
+                "afterRequested": false,
+                "afterCookieSent": null
+              }
+            },
+            "corsModeAllowed": {
+              "follow": {
+                "secFetchSite": "same-origin",
+                "originSeen": "https://app.site.test:<port>",
+                "cookieSent": true,
+                "preflight": false,
+                "fetch": {
+                  "settled": "resolved",
+                  "type": "basic",
+                  "status": 200
+                },
+                "loggedOut": true,
+                "sent": true,
+                "afterRequested": true,
+                "afterCookieSent": false
+              },
+              "manual": {
+                "secFetchSite": "same-origin",
+                "originSeen": "https://app.site.test:<port>",
+                "cookieSent": true,
+                "preflight": false,
+                "fetch": {
+                  "settled": "resolved",
+                  "type": "opaqueredirect",
+                  "status": 0
+                },
+                "loggedOut": true,
+                "sent": true,
+                "afterRequested": false,
+                "afterCookieSent": null
+              }
+            }
+          }
+        },
+        "inPageOtherOriginSameSite": {
+          "Lax": {
+            "noCorsMode": {
+              "follow": {
+                "secFetchSite": "same-site",
+                "originSeen": "https://app.site.test:<port>",
+                "cookieSent": true,
+                "preflight": false,
+                "fetch": {
+                  "settled": "resolved",
+                  "type": "opaque",
+                  "status": 0
+                },
+                "loggedOut": true,
+                "sent": true,
+                "afterRequested": true,
+                "afterCookieSent": false
+              },
+              "manual": {
+                "sent": false,
+                "fetch": {
+                  "settled": "rejected",
+                  "name": "TypeError"
+                },
+                "loggedOut": false,
+                "afterRequested": false
+              }
+            },
+            "corsModeNoHeaders": {
+              "follow": {
+                "secFetchSite": "same-site",
+                "originSeen": "https://app.site.test:<port>",
+                "cookieSent": true,
+                "preflight": false,
+                "fetch": {
+                  "settled": "rejected",
+                  "name": "TypeError"
+                },
+                "loggedOut": true,
+                "sent": true,
+                "afterRequested": false,
+                "afterCookieSent": null
+              },
+              "manual": {
+                "secFetchSite": "same-site",
+                "originSeen": "https://app.site.test:<port>",
+                "cookieSent": true,
+                "preflight": false,
+                "fetch": {
+                  "settled": "rejected",
+                  "name": "TypeError"
+                },
+                "loggedOut": true,
+                "sent": true,
+                "afterRequested": false,
+                "afterCookieSent": null
+              }
+            },
+            "corsModeAllowed": {
+              "follow": {
+                "secFetchSite": "same-site",
+                "originSeen": "https://app.site.test:<port>",
+                "cookieSent": true,
+                "preflight": false,
+                "fetch": {
+                  "settled": "rejected",
+                  "name": "TypeError"
+                },
+                "loggedOut": true,
+                "sent": true,
+                "afterRequested": true,
+                "afterCookieSent": false
+              },
+              "manual": {
+                "secFetchSite": "same-site",
+                "originSeen": "https://app.site.test:<port>",
+                "cookieSent": true,
+                "preflight": false,
+                "fetch": {
+                  "settled": "resolved",
+                  "type": "opaqueredirect",
+                  "status": 0
+                },
+                "loggedOut": true,
+                "sent": true,
+                "afterRequested": false,
+                "afterCookieSent": null
+              }
+            }
+          },
+          "Strict": {
+            "noCorsMode": {
+              "follow": {
+                "secFetchSite": "same-site",
+                "originSeen": "https://app.site.test:<port>",
+                "cookieSent": true,
+                "preflight": false,
+                "fetch": {
+                  "settled": "resolved",
+                  "type": "opaque",
+                  "status": 0
+                },
+                "loggedOut": true,
+                "sent": true,
+                "afterRequested": true,
+                "afterCookieSent": false
+              },
+              "manual": {
+                "sent": false,
+                "fetch": {
+                  "settled": "rejected",
+                  "name": "TypeError"
+                },
+                "loggedOut": false,
+                "afterRequested": false
+              }
+            },
+            "corsModeNoHeaders": {
+              "follow": {
+                "secFetchSite": "same-site",
+                "originSeen": "https://app.site.test:<port>",
+                "cookieSent": true,
+                "preflight": false,
+                "fetch": {
+                  "settled": "rejected",
+                  "name": "TypeError"
+                },
+                "loggedOut": true,
+                "sent": true,
+                "afterRequested": false,
+                "afterCookieSent": null
+              },
+              "manual": {
+                "secFetchSite": "same-site",
+                "originSeen": "https://app.site.test:<port>",
+                "cookieSent": true,
+                "preflight": false,
+                "fetch": {
+                  "settled": "rejected",
+                  "name": "TypeError"
+                },
+                "loggedOut": true,
+                "sent": true,
+                "afterRequested": false,
+                "afterCookieSent": null
+              }
+            },
+            "corsModeAllowed": {
+              "follow": {
+                "secFetchSite": "same-site",
+                "originSeen": "https://app.site.test:<port>",
+                "cookieSent": true,
+                "preflight": false,
+                "fetch": {
+                  "settled": "rejected",
+                  "name": "TypeError"
+                },
+                "loggedOut": true,
+                "sent": true,
+                "afterRequested": true,
+                "afterCookieSent": false
+              },
+              "manual": {
+                "secFetchSite": "same-site",
+                "originSeen": "https://app.site.test:<port>",
+                "cookieSent": true,
+                "preflight": false,
+                "fetch": {
+                  "settled": "resolved",
+                  "type": "opaqueredirect",
+                  "status": 0
+                },
+                "loggedOut": true,
+                "sent": true,
+                "afterRequested": false,
+                "afterCookieSent": null
+              }
+            }
+          },
+          "None": {
+            "noCorsMode": {
+              "follow": {
+                "secFetchSite": "same-site",
+                "originSeen": "https://app.site.test:<port>",
+                "cookieSent": true,
+                "preflight": false,
+                "fetch": {
+                  "settled": "resolved",
+                  "type": "opaque",
+                  "status": 0
+                },
+                "loggedOut": true,
+                "sent": true,
+                "afterRequested": true,
+                "afterCookieSent": false
+              },
+              "manual": {
+                "sent": false,
+                "fetch": {
+                  "settled": "rejected",
+                  "name": "TypeError"
+                },
+                "loggedOut": false,
+                "afterRequested": false
+              }
+            },
+            "corsModeNoHeaders": {
+              "follow": {
+                "secFetchSite": "same-site",
+                "originSeen": "https://app.site.test:<port>",
+                "cookieSent": true,
+                "preflight": false,
+                "fetch": {
+                  "settled": "rejected",
+                  "name": "TypeError"
+                },
+                "loggedOut": true,
+                "sent": true,
+                "afterRequested": false,
+                "afterCookieSent": null
+              },
+              "manual": {
+                "secFetchSite": "same-site",
+                "originSeen": "https://app.site.test:<port>",
+                "cookieSent": true,
+                "preflight": false,
+                "fetch": {
+                  "settled": "rejected",
+                  "name": "TypeError"
+                },
+                "loggedOut": true,
+                "sent": true,
+                "afterRequested": false,
+                "afterCookieSent": null
+              }
+            },
+            "corsModeAllowed": {
+              "follow": {
+                "secFetchSite": "same-site",
+                "originSeen": "https://app.site.test:<port>",
+                "cookieSent": true,
+                "preflight": false,
+                "fetch": {
+                  "settled": "rejected",
+                  "name": "TypeError"
+                },
+                "loggedOut": true,
+                "sent": true,
+                "afterRequested": true,
+                "afterCookieSent": false
+              },
+              "manual": {
+                "secFetchSite": "same-site",
+                "originSeen": "https://app.site.test:<port>",
+                "cookieSent": true,
+                "preflight": false,
+                "fetch": {
+                  "settled": "resolved",
+                  "type": "opaqueredirect",
+                  "status": 0
+                },
+                "loggedOut": true,
+                "sent": true,
+                "afterRequested": false,
+                "afterCookieSent": null
+              }
+            }
+          }
+        },
+        "inPageCrossSite": {
+          "Lax": {
+            "noCorsMode": {
+              "follow": {
+                "secFetchSite": "cross-site",
+                "originSeen": "https://app.site.test:<port>",
+                "cookieSent": false,
+                "preflight": false,
+                "fetch": {
+                  "settled": "resolved",
+                  "type": "opaque",
+                  "status": 0
+                },
+                "loggedOut": false,
+                "sent": true,
+                "afterRequested": true,
+                "afterCookieSent": false
+              },
+              "manual": {
+                "sent": false,
+                "fetch": {
+                  "settled": "rejected",
+                  "name": "TypeError"
+                },
+                "loggedOut": false,
+                "afterRequested": false
+              }
+            },
+            "corsModeNoHeaders": {
+              "follow": {
+                "secFetchSite": "cross-site",
+                "originSeen": "https://app.site.test:<port>",
+                "cookieSent": false,
+                "preflight": false,
+                "fetch": {
+                  "settled": "rejected",
+                  "name": "TypeError"
+                },
+                "loggedOut": false,
+                "sent": true,
+                "afterRequested": false,
+                "afterCookieSent": null
+              },
+              "manual": {
+                "secFetchSite": "cross-site",
+                "originSeen": "https://app.site.test:<port>",
+                "cookieSent": false,
+                "preflight": false,
+                "fetch": {
+                  "settled": "rejected",
+                  "name": "TypeError"
+                },
+                "loggedOut": false,
+                "sent": true,
+                "afterRequested": false,
+                "afterCookieSent": null
+              }
+            },
+            "corsModeAllowed": {
+              "follow": {
+                "secFetchSite": "cross-site",
+                "originSeen": "https://app.site.test:<port>",
+                "cookieSent": false,
+                "preflight": false,
+                "fetch": {
+                  "settled": "rejected",
+                  "name": "TypeError"
+                },
+                "loggedOut": false,
+                "sent": true,
+                "afterRequested": true,
+                "afterCookieSent": false
+              },
+              "manual": {
+                "secFetchSite": "cross-site",
+                "originSeen": "https://app.site.test:<port>",
+                "cookieSent": false,
+                "preflight": false,
+                "fetch": {
+                  "settled": "resolved",
+                  "type": "opaqueredirect",
+                  "status": 0
+                },
+                "loggedOut": false,
+                "sent": true,
+                "afterRequested": false,
+                "afterCookieSent": null
+              }
+            }
+          },
+          "Strict": {
+            "noCorsMode": {
+              "follow": {
+                "secFetchSite": "cross-site",
+                "originSeen": "https://app.site.test:<port>",
+                "cookieSent": false,
+                "preflight": false,
+                "fetch": {
+                  "settled": "resolved",
+                  "type": "opaque",
+                  "status": 0
+                },
+                "loggedOut": false,
+                "sent": true,
+                "afterRequested": true,
+                "afterCookieSent": false
+              },
+              "manual": {
+                "sent": false,
+                "fetch": {
+                  "settled": "rejected",
+                  "name": "TypeError"
+                },
+                "loggedOut": false,
+                "afterRequested": false
+              }
+            },
+            "corsModeNoHeaders": {
+              "follow": {
+                "secFetchSite": "cross-site",
+                "originSeen": "https://app.site.test:<port>",
+                "cookieSent": false,
+                "preflight": false,
+                "fetch": {
+                  "settled": "rejected",
+                  "name": "TypeError"
+                },
+                "loggedOut": false,
+                "sent": true,
+                "afterRequested": false,
+                "afterCookieSent": null
+              },
+              "manual": {
+                "secFetchSite": "cross-site",
+                "originSeen": "https://app.site.test:<port>",
+                "cookieSent": false,
+                "preflight": false,
+                "fetch": {
+                  "settled": "rejected",
+                  "name": "TypeError"
+                },
+                "loggedOut": false,
+                "sent": true,
+                "afterRequested": false,
+                "afterCookieSent": null
+              }
+            },
+            "corsModeAllowed": {
+              "follow": {
+                "secFetchSite": "cross-site",
+                "originSeen": "https://app.site.test:<port>",
+                "cookieSent": false,
+                "preflight": false,
+                "fetch": {
+                  "settled": "rejected",
+                  "name": "TypeError"
+                },
+                "loggedOut": false,
+                "sent": true,
+                "afterRequested": true,
+                "afterCookieSent": false
+              },
+              "manual": {
+                "secFetchSite": "cross-site",
+                "originSeen": "https://app.site.test:<port>",
+                "cookieSent": false,
+                "preflight": false,
+                "fetch": {
+                  "settled": "resolved",
+                  "type": "opaqueredirect",
+                  "status": 0
+                },
+                "loggedOut": false,
+                "sent": true,
+                "afterRequested": false,
+                "afterCookieSent": null
+              }
+            }
+          },
+          "None": {
+            "noCorsMode": {
+              "follow": {
+                "secFetchSite": "cross-site",
+                "originSeen": "https://app.site.test:<port>",
+                "cookieSent": true,
+                "preflight": false,
+                "fetch": {
+                  "settled": "resolved",
+                  "type": "opaque",
+                  "status": 0
+                },
+                "loggedOut": true,
+                "sent": true,
+                "afterRequested": true,
+                "afterCookieSent": false
+              },
+              "manual": {
+                "sent": false,
+                "fetch": {
+                  "settled": "rejected",
+                  "name": "TypeError"
+                },
+                "loggedOut": false,
+                "afterRequested": false
+              }
+            },
+            "corsModeNoHeaders": {
+              "follow": {
+                "secFetchSite": "cross-site",
+                "originSeen": "https://app.site.test:<port>",
+                "cookieSent": true,
+                "preflight": false,
+                "fetch": {
+                  "settled": "rejected",
+                  "name": "TypeError"
+                },
+                "loggedOut": true,
+                "sent": true,
+                "afterRequested": false,
+                "afterCookieSent": null
+              },
+              "manual": {
+                "secFetchSite": "cross-site",
+                "originSeen": "https://app.site.test:<port>",
+                "cookieSent": true,
+                "preflight": false,
+                "fetch": {
+                  "settled": "rejected",
+                  "name": "TypeError"
+                },
+                "loggedOut": true,
+                "sent": true,
+                "afterRequested": false,
+                "afterCookieSent": null
+              }
+            },
+            "corsModeAllowed": {
+              "follow": {
+                "secFetchSite": "cross-site",
+                "originSeen": "https://app.site.test:<port>",
+                "cookieSent": true,
+                "preflight": false,
+                "fetch": {
+                  "settled": "rejected",
+                  "name": "TypeError"
+                },
+                "loggedOut": true,
+                "sent": true,
+                "afterRequested": true,
+                "afterCookieSent": false
+              },
+              "manual": {
+                "secFetchSite": "cross-site",
+                "originSeen": "https://app.site.test:<port>",
+                "cookieSent": true,
+                "preflight": false,
+                "fetch": {
+                  "settled": "resolved",
+                  "type": "opaqueredirect",
+                  "status": 0
+                },
+                "loggedOut": true,
+                "sent": true,
+                "afterRequested": false,
+                "afterCookieSent": null
+              }
+            }
+          }
+        },
+        "iframeSameSite": {
+          "Lax": {
+            "noCorsMode": {
+              "follow": {
+                "secFetchSite": "same-site",
+                "originSeen": "https://widget.site.test:<port>",
+                "cookieSent": true,
+                "preflight": false,
+                "fetch": {
+                  "settled": "resolved",
+                  "type": "opaque",
+                  "status": 0
+                },
+                "loggedOut": true,
+                "sent": true,
+                "afterRequested": true,
+                "afterCookieSent": false
+              },
+              "manual": {
+                "sent": false,
+                "fetch": {
+                  "settled": "rejected",
+                  "name": "TypeError"
+                },
+                "loggedOut": false,
+                "afterRequested": false
+              }
+            },
+            "corsModeNoHeaders": {
+              "follow": {
+                "secFetchSite": "same-site",
+                "originSeen": "https://widget.site.test:<port>",
+                "cookieSent": true,
+                "preflight": false,
+                "fetch": {
+                  "settled": "rejected",
+                  "name": "TypeError"
+                },
+                "loggedOut": true,
+                "sent": true,
+                "afterRequested": false,
+                "afterCookieSent": null
+              },
+              "manual": {
+                "secFetchSite": "same-site",
+                "originSeen": "https://widget.site.test:<port>",
+                "cookieSent": true,
+                "preflight": false,
+                "fetch": {
+                  "settled": "rejected",
+                  "name": "TypeError"
+                },
+                "loggedOut": true,
+                "sent": true,
+                "afterRequested": false,
+                "afterCookieSent": null
+              }
+            },
+            "corsModeAllowed": {
+              "follow": {
+                "secFetchSite": "same-site",
+                "originSeen": "https://widget.site.test:<port>",
+                "cookieSent": true,
+                "preflight": false,
+                "fetch": {
+                  "settled": "rejected",
+                  "name": "TypeError"
+                },
+                "loggedOut": true,
+                "sent": true,
+                "afterRequested": true,
+                "afterCookieSent": false
+              },
+              "manual": {
+                "secFetchSite": "same-site",
+                "originSeen": "https://widget.site.test:<port>",
+                "cookieSent": true,
+                "preflight": false,
+                "fetch": {
+                  "settled": "resolved",
+                  "type": "opaqueredirect",
+                  "status": 0
+                },
+                "loggedOut": true,
+                "sent": true,
+                "afterRequested": false,
+                "afterCookieSent": null
+              }
+            }
+          },
+          "Strict": {
+            "noCorsMode": {
+              "follow": {
+                "secFetchSite": "same-site",
+                "originSeen": "https://widget.site.test:<port>",
+                "cookieSent": true,
+                "preflight": false,
+                "fetch": {
+                  "settled": "resolved",
+                  "type": "opaque",
+                  "status": 0
+                },
+                "loggedOut": true,
+                "sent": true,
+                "afterRequested": true,
+                "afterCookieSent": false
+              },
+              "manual": {
+                "sent": false,
+                "fetch": {
+                  "settled": "rejected",
+                  "name": "TypeError"
+                },
+                "loggedOut": false,
+                "afterRequested": false
+              }
+            },
+            "corsModeNoHeaders": {
+              "follow": {
+                "secFetchSite": "same-site",
+                "originSeen": "https://widget.site.test:<port>",
+                "cookieSent": true,
+                "preflight": false,
+                "fetch": {
+                  "settled": "rejected",
+                  "name": "TypeError"
+                },
+                "loggedOut": true,
+                "sent": true,
+                "afterRequested": false,
+                "afterCookieSent": null
+              },
+              "manual": {
+                "secFetchSite": "same-site",
+                "originSeen": "https://widget.site.test:<port>",
+                "cookieSent": true,
+                "preflight": false,
+                "fetch": {
+                  "settled": "rejected",
+                  "name": "TypeError"
+                },
+                "loggedOut": true,
+                "sent": true,
+                "afterRequested": false,
+                "afterCookieSent": null
+              }
+            },
+            "corsModeAllowed": {
+              "follow": {
+                "secFetchSite": "same-site",
+                "originSeen": "https://widget.site.test:<port>",
+                "cookieSent": true,
+                "preflight": false,
+                "fetch": {
+                  "settled": "rejected",
+                  "name": "TypeError"
+                },
+                "loggedOut": true,
+                "sent": true,
+                "afterRequested": true,
+                "afterCookieSent": false
+              },
+              "manual": {
+                "secFetchSite": "same-site",
+                "originSeen": "https://widget.site.test:<port>",
+                "cookieSent": true,
+                "preflight": false,
+                "fetch": {
+                  "settled": "resolved",
+                  "type": "opaqueredirect",
+                  "status": 0
+                },
+                "loggedOut": true,
+                "sent": true,
+                "afterRequested": false,
+                "afterCookieSent": null
+              }
+            }
+          },
+          "None": {
+            "noCorsMode": {
+              "follow": {
+                "secFetchSite": "same-site",
+                "originSeen": "https://widget.site.test:<port>",
+                "cookieSent": true,
+                "preflight": false,
+                "fetch": {
+                  "settled": "resolved",
+                  "type": "opaque",
+                  "status": 0
+                },
+                "loggedOut": true,
+                "sent": true,
+                "afterRequested": true,
+                "afterCookieSent": false
+              },
+              "manual": {
+                "sent": false,
+                "fetch": {
+                  "settled": "rejected",
+                  "name": "TypeError"
+                },
+                "loggedOut": false,
+                "afterRequested": false
+              }
+            },
+            "corsModeNoHeaders": {
+              "follow": {
+                "secFetchSite": "same-site",
+                "originSeen": "https://widget.site.test:<port>",
+                "cookieSent": true,
+                "preflight": false,
+                "fetch": {
+                  "settled": "rejected",
+                  "name": "TypeError"
+                },
+                "loggedOut": true,
+                "sent": true,
+                "afterRequested": false,
+                "afterCookieSent": null
+              },
+              "manual": {
+                "secFetchSite": "same-site",
+                "originSeen": "https://widget.site.test:<port>",
+                "cookieSent": true,
+                "preflight": false,
+                "fetch": {
+                  "settled": "rejected",
+                  "name": "TypeError"
+                },
+                "loggedOut": true,
+                "sent": true,
+                "afterRequested": false,
+                "afterCookieSent": null
+              }
+            },
+            "corsModeAllowed": {
+              "follow": {
+                "secFetchSite": "same-site",
+                "originSeen": "https://widget.site.test:<port>",
+                "cookieSent": true,
+                "preflight": false,
+                "fetch": {
+                  "settled": "rejected",
+                  "name": "TypeError"
+                },
+                "loggedOut": true,
+                "sent": true,
+                "afterRequested": true,
+                "afterCookieSent": false
+              },
+              "manual": {
+                "secFetchSite": "same-site",
+                "originSeen": "https://widget.site.test:<port>",
+                "cookieSent": true,
+                "preflight": false,
+                "fetch": {
+                  "settled": "resolved",
+                  "type": "opaqueredirect",
+                  "status": 0
+                },
+                "loggedOut": true,
+                "sent": true,
+                "afterRequested": false,
+                "afterCookieSent": null
+              }
+            }
+          }
+        },
+        "iframeCrossSite": {
+          "Lax": {
+            "noCorsMode": {
+              "follow": {
+                "secFetchSite": "cross-site",
+                "originSeen": "https://widget.other.test:<port>",
+                "cookieSent": false,
+                "preflight": false,
+                "fetch": {
+                  "settled": "resolved",
+                  "type": "opaque",
+                  "status": 0
+                },
+                "loggedOut": false,
+                "sent": true,
+                "afterRequested": true,
+                "afterCookieSent": false
+              },
+              "manual": {
+                "sent": false,
+                "fetch": {
+                  "settled": "rejected",
+                  "name": "TypeError"
+                },
+                "loggedOut": false,
+                "afterRequested": false
+              }
+            },
+            "corsModeNoHeaders": {
+              "follow": {
+                "secFetchSite": "cross-site",
+                "originSeen": "https://widget.other.test:<port>",
+                "cookieSent": false,
+                "preflight": false,
+                "fetch": {
+                  "settled": "rejected",
+                  "name": "TypeError"
+                },
+                "loggedOut": false,
+                "sent": true,
+                "afterRequested": false,
+                "afterCookieSent": null
+              },
+              "manual": {
+                "secFetchSite": "cross-site",
+                "originSeen": "https://widget.other.test:<port>",
+                "cookieSent": false,
+                "preflight": false,
+                "fetch": {
+                  "settled": "rejected",
+                  "name": "TypeError"
+                },
+                "loggedOut": false,
+                "sent": true,
+                "afterRequested": false,
+                "afterCookieSent": null
+              }
+            },
+            "corsModeAllowed": {
+              "follow": {
+                "secFetchSite": "cross-site",
+                "originSeen": "https://widget.other.test:<port>",
+                "cookieSent": false,
+                "preflight": false,
+                "fetch": {
+                  "settled": "rejected",
+                  "name": "TypeError"
+                },
+                "loggedOut": false,
+                "sent": true,
+                "afterRequested": true,
+                "afterCookieSent": false
+              },
+              "manual": {
+                "secFetchSite": "cross-site",
+                "originSeen": "https://widget.other.test:<port>",
+                "cookieSent": false,
+                "preflight": false,
+                "fetch": {
+                  "settled": "resolved",
+                  "type": "opaqueredirect",
+                  "status": 0
+                },
+                "loggedOut": false,
+                "sent": true,
+                "afterRequested": false,
+                "afterCookieSent": null
+              }
+            }
+          },
+          "Strict": {
+            "noCorsMode": {
+              "follow": {
+                "secFetchSite": "cross-site",
+                "originSeen": "https://widget.other.test:<port>",
+                "cookieSent": false,
+                "preflight": false,
+                "fetch": {
+                  "settled": "resolved",
+                  "type": "opaque",
+                  "status": 0
+                },
+                "loggedOut": false,
+                "sent": true,
+                "afterRequested": true,
+                "afterCookieSent": false
+              },
+              "manual": {
+                "sent": false,
+                "fetch": {
+                  "settled": "rejected",
+                  "name": "TypeError"
+                },
+                "loggedOut": false,
+                "afterRequested": false
+              }
+            },
+            "corsModeNoHeaders": {
+              "follow": {
+                "secFetchSite": "cross-site",
+                "originSeen": "https://widget.other.test:<port>",
+                "cookieSent": false,
+                "preflight": false,
+                "fetch": {
+                  "settled": "rejected",
+                  "name": "TypeError"
+                },
+                "loggedOut": false,
+                "sent": true,
+                "afterRequested": false,
+                "afterCookieSent": null
+              },
+              "manual": {
+                "secFetchSite": "cross-site",
+                "originSeen": "https://widget.other.test:<port>",
+                "cookieSent": false,
+                "preflight": false,
+                "fetch": {
+                  "settled": "rejected",
+                  "name": "TypeError"
+                },
+                "loggedOut": false,
+                "sent": true,
+                "afterRequested": false,
+                "afterCookieSent": null
+              }
+            },
+            "corsModeAllowed": {
+              "follow": {
+                "secFetchSite": "cross-site",
+                "originSeen": "https://widget.other.test:<port>",
+                "cookieSent": false,
+                "preflight": false,
+                "fetch": {
+                  "settled": "rejected",
+                  "name": "TypeError"
+                },
+                "loggedOut": false,
+                "sent": true,
+                "afterRequested": true,
+                "afterCookieSent": false
+              },
+              "manual": {
+                "secFetchSite": "cross-site",
+                "originSeen": "https://widget.other.test:<port>",
+                "cookieSent": false,
+                "preflight": false,
+                "fetch": {
+                  "settled": "resolved",
+                  "type": "opaqueredirect",
+                  "status": 0
+                },
+                "loggedOut": false,
+                "sent": true,
+                "afterRequested": false,
+                "afterCookieSent": null
+              }
+            }
+          },
+          "None": {
+            "noCorsMode": {
+              "follow": {
+                "secFetchSite": "cross-site",
+                "originSeen": "https://widget.other.test:<port>",
+                "cookieSent": true,
+                "preflight": false,
+                "fetch": {
+                  "settled": "resolved",
+                  "type": "opaque",
+                  "status": 0
+                },
+                "loggedOut": true,
+                "sent": true,
+                "afterRequested": true,
+                "afterCookieSent": false
+              },
+              "manual": {
+                "sent": false,
+                "fetch": {
+                  "settled": "rejected",
+                  "name": "TypeError"
+                },
+                "loggedOut": false,
+                "afterRequested": false
+              }
+            },
+            "corsModeNoHeaders": {
+              "follow": {
+                "secFetchSite": "cross-site",
+                "originSeen": "https://widget.other.test:<port>",
+                "cookieSent": true,
+                "preflight": false,
+                "fetch": {
+                  "settled": "rejected",
+                  "name": "TypeError"
+                },
+                "loggedOut": true,
+                "sent": true,
+                "afterRequested": false,
+                "afterCookieSent": null
+              },
+              "manual": {
+                "secFetchSite": "cross-site",
+                "originSeen": "https://widget.other.test:<port>",
+                "cookieSent": true,
+                "preflight": false,
+                "fetch": {
+                  "settled": "rejected",
+                  "name": "TypeError"
+                },
+                "loggedOut": true,
+                "sent": true,
+                "afterRequested": false,
+                "afterCookieSent": null
+              }
+            },
+            "corsModeAllowed": {
+              "follow": {
+                "secFetchSite": "cross-site",
+                "originSeen": "https://widget.other.test:<port>",
+                "cookieSent": true,
+                "preflight": false,
+                "fetch": {
+                  "settled": "rejected",
+                  "name": "TypeError"
+                },
+                "loggedOut": true,
+                "sent": true,
+                "afterRequested": true,
+                "afterCookieSent": false
+              },
+              "manual": {
+                "secFetchSite": "cross-site",
+                "originSeen": "https://widget.other.test:<port>",
+                "cookieSent": true,
+                "preflight": false,
+                "fetch": {
+                  "settled": "resolved",
+                  "type": "opaqueredirect",
+                  "status": 0
+                },
+                "loggedOut": true,
+                "sent": true,
+                "afterRequested": false,
+                "afterCookieSent": null
+              }
+            }
+          }
+        },
+        "windowSameSite": {
+          "Lax": {
+            "noCorsMode": {
+              "follow": {
+                "secFetchSite": "same-site",
+                "originSeen": "https://widget.site.test:<port>",
+                "cookieSent": true,
+                "preflight": false,
+                "fetch": {
+                  "settled": "resolved",
+                  "type": "opaque",
+                  "status": 0
+                },
+                "loggedOut": true,
+                "sent": true,
+                "afterRequested": true,
+                "afterCookieSent": false
+              },
+              "manual": {
+                "sent": false,
+                "fetch": {
+                  "settled": "rejected",
+                  "name": "TypeError"
+                },
+                "loggedOut": false,
+                "afterRequested": false
+              }
+            },
+            "corsModeNoHeaders": {
+              "follow": {
+                "secFetchSite": "same-site",
+                "originSeen": "https://widget.site.test:<port>",
+                "cookieSent": true,
+                "preflight": false,
+                "fetch": {
+                  "settled": "rejected",
+                  "name": "TypeError"
+                },
+                "loggedOut": true,
+                "sent": true,
+                "afterRequested": false,
+                "afterCookieSent": null
+              },
+              "manual": {
+                "secFetchSite": "same-site",
+                "originSeen": "https://widget.site.test:<port>",
+                "cookieSent": true,
+                "preflight": false,
+                "fetch": {
+                  "settled": "rejected",
+                  "name": "TypeError"
+                },
+                "loggedOut": true,
+                "sent": true,
+                "afterRequested": false,
+                "afterCookieSent": null
+              }
+            },
+            "corsModeAllowed": {
+              "follow": {
+                "secFetchSite": "same-site",
+                "originSeen": "https://widget.site.test:<port>",
+                "cookieSent": true,
+                "preflight": false,
+                "fetch": {
+                  "settled": "rejected",
+                  "name": "TypeError"
+                },
+                "loggedOut": true,
+                "sent": true,
+                "afterRequested": true,
+                "afterCookieSent": false
+              },
+              "manual": {
+                "secFetchSite": "same-site",
+                "originSeen": "https://widget.site.test:<port>",
+                "cookieSent": true,
+                "preflight": false,
+                "fetch": {
+                  "settled": "resolved",
+                  "type": "opaqueredirect",
+                  "status": 0
+                },
+                "loggedOut": true,
+                "sent": true,
+                "afterRequested": false,
+                "afterCookieSent": null
+              }
+            }
+          },
+          "Strict": {
+            "noCorsMode": {
+              "follow": {
+                "secFetchSite": "same-site",
+                "originSeen": "https://widget.site.test:<port>",
+                "cookieSent": true,
+                "preflight": false,
+                "fetch": {
+                  "settled": "resolved",
+                  "type": "opaque",
+                  "status": 0
+                },
+                "loggedOut": true,
+                "sent": true,
+                "afterRequested": true,
+                "afterCookieSent": false
+              },
+              "manual": {
+                "sent": false,
+                "fetch": {
+                  "settled": "rejected",
+                  "name": "TypeError"
+                },
+                "loggedOut": false,
+                "afterRequested": false
+              }
+            },
+            "corsModeNoHeaders": {
+              "follow": {
+                "secFetchSite": "same-site",
+                "originSeen": "https://widget.site.test:<port>",
+                "cookieSent": true,
+                "preflight": false,
+                "fetch": {
+                  "settled": "rejected",
+                  "name": "TypeError"
+                },
+                "loggedOut": true,
+                "sent": true,
+                "afterRequested": false,
+                "afterCookieSent": null
+              },
+              "manual": {
+                "secFetchSite": "same-site",
+                "originSeen": "https://widget.site.test:<port>",
+                "cookieSent": true,
+                "preflight": false,
+                "fetch": {
+                  "settled": "rejected",
+                  "name": "TypeError"
+                },
+                "loggedOut": true,
+                "sent": true,
+                "afterRequested": false,
+                "afterCookieSent": null
+              }
+            },
+            "corsModeAllowed": {
+              "follow": {
+                "secFetchSite": "same-site",
+                "originSeen": "https://widget.site.test:<port>",
+                "cookieSent": true,
+                "preflight": false,
+                "fetch": {
+                  "settled": "rejected",
+                  "name": "TypeError"
+                },
+                "loggedOut": true,
+                "sent": true,
+                "afterRequested": true,
+                "afterCookieSent": false
+              },
+              "manual": {
+                "secFetchSite": "same-site",
+                "originSeen": "https://widget.site.test:<port>",
+                "cookieSent": true,
+                "preflight": false,
+                "fetch": {
+                  "settled": "resolved",
+                  "type": "opaqueredirect",
+                  "status": 0
+                },
+                "loggedOut": true,
+                "sent": true,
+                "afterRequested": false,
+                "afterCookieSent": null
+              }
+            }
+          },
+          "None": {
+            "noCorsMode": {
+              "follow": {
+                "secFetchSite": "same-site",
+                "originSeen": "https://widget.site.test:<port>",
+                "cookieSent": true,
+                "preflight": false,
+                "fetch": {
+                  "settled": "resolved",
+                  "type": "opaque",
+                  "status": 0
+                },
+                "loggedOut": true,
+                "sent": true,
+                "afterRequested": true,
+                "afterCookieSent": false
+              },
+              "manual": {
+                "sent": false,
+                "fetch": {
+                  "settled": "rejected",
+                  "name": "TypeError"
+                },
+                "loggedOut": false,
+                "afterRequested": false
+              }
+            },
+            "corsModeNoHeaders": {
+              "follow": {
+                "secFetchSite": "same-site",
+                "originSeen": "https://widget.site.test:<port>",
+                "cookieSent": true,
+                "preflight": false,
+                "fetch": {
+                  "settled": "rejected",
+                  "name": "TypeError"
+                },
+                "loggedOut": true,
+                "sent": true,
+                "afterRequested": false,
+                "afterCookieSent": null
+              },
+              "manual": {
+                "secFetchSite": "same-site",
+                "originSeen": "https://widget.site.test:<port>",
+                "cookieSent": true,
+                "preflight": false,
+                "fetch": {
+                  "settled": "rejected",
+                  "name": "TypeError"
+                },
+                "loggedOut": true,
+                "sent": true,
+                "afterRequested": false,
+                "afterCookieSent": null
+              }
+            },
+            "corsModeAllowed": {
+              "follow": {
+                "secFetchSite": "same-site",
+                "originSeen": "https://widget.site.test:<port>",
+                "cookieSent": true,
+                "preflight": false,
+                "fetch": {
+                  "settled": "rejected",
+                  "name": "TypeError"
+                },
+                "loggedOut": true,
+                "sent": true,
+                "afterRequested": true,
+                "afterCookieSent": false
+              },
+              "manual": {
+                "secFetchSite": "same-site",
+                "originSeen": "https://widget.site.test:<port>",
+                "cookieSent": true,
+                "preflight": false,
+                "fetch": {
+                  "settled": "resolved",
+                  "type": "opaqueredirect",
+                  "status": 0
+                },
+                "loggedOut": true,
+                "sent": true,
+                "afterRequested": false,
+                "afterCookieSent": null
+              }
+            }
+          }
+        },
+        "windowCrossSite": {
+          "Lax": {
+            "noCorsMode": {
+              "follow": {
+                "secFetchSite": "cross-site",
+                "originSeen": "https://widget.other.test:<port>",
+                "cookieSent": false,
+                "preflight": false,
+                "fetch": {
+                  "settled": "resolved",
+                  "type": "opaque",
+                  "status": 0
+                },
+                "loggedOut": false,
+                "sent": true,
+                "afterRequested": true,
+                "afterCookieSent": false
+              },
+              "manual": {
+                "sent": false,
+                "fetch": {
+                  "settled": "rejected",
+                  "name": "TypeError"
+                },
+                "loggedOut": false,
+                "afterRequested": false
+              }
+            },
+            "corsModeNoHeaders": {
+              "follow": {
+                "secFetchSite": "cross-site",
+                "originSeen": "https://widget.other.test:<port>",
+                "cookieSent": false,
+                "preflight": false,
+                "fetch": {
+                  "settled": "rejected",
+                  "name": "TypeError"
+                },
+                "loggedOut": false,
+                "sent": true,
+                "afterRequested": false,
+                "afterCookieSent": null
+              },
+              "manual": {
+                "secFetchSite": "cross-site",
+                "originSeen": "https://widget.other.test:<port>",
+                "cookieSent": false,
+                "preflight": false,
+                "fetch": {
+                  "settled": "rejected",
+                  "name": "TypeError"
+                },
+                "loggedOut": false,
+                "sent": true,
+                "afterRequested": false,
+                "afterCookieSent": null
+              }
+            },
+            "corsModeAllowed": {
+              "follow": {
+                "secFetchSite": "cross-site",
+                "originSeen": "https://widget.other.test:<port>",
+                "cookieSent": false,
+                "preflight": false,
+                "fetch": {
+                  "settled": "rejected",
+                  "name": "TypeError"
+                },
+                "loggedOut": false,
+                "sent": true,
+                "afterRequested": true,
+                "afterCookieSent": false
+              },
+              "manual": {
+                "secFetchSite": "cross-site",
+                "originSeen": "https://widget.other.test:<port>",
+                "cookieSent": false,
+                "preflight": false,
+                "fetch": {
+                  "settled": "resolved",
+                  "type": "opaqueredirect",
+                  "status": 0
+                },
+                "loggedOut": false,
+                "sent": true,
+                "afterRequested": false,
+                "afterCookieSent": null
+              }
+            }
+          },
+          "Strict": {
+            "noCorsMode": {
+              "follow": {
+                "secFetchSite": "cross-site",
+                "originSeen": "https://widget.other.test:<port>",
+                "cookieSent": false,
+                "preflight": false,
+                "fetch": {
+                  "settled": "resolved",
+                  "type": "opaque",
+                  "status": 0
+                },
+                "loggedOut": false,
+                "sent": true,
+                "afterRequested": true,
+                "afterCookieSent": false
+              },
+              "manual": {
+                "sent": false,
+                "fetch": {
+                  "settled": "rejected",
+                  "name": "TypeError"
+                },
+                "loggedOut": false,
+                "afterRequested": false
+              }
+            },
+            "corsModeNoHeaders": {
+              "follow": {
+                "secFetchSite": "cross-site",
+                "originSeen": "https://widget.other.test:<port>",
+                "cookieSent": false,
+                "preflight": false,
+                "fetch": {
+                  "settled": "rejected",
+                  "name": "TypeError"
+                },
+                "loggedOut": false,
+                "sent": true,
+                "afterRequested": false,
+                "afterCookieSent": null
+              },
+              "manual": {
+                "secFetchSite": "cross-site",
+                "originSeen": "https://widget.other.test:<port>",
+                "cookieSent": false,
+                "preflight": false,
+                "fetch": {
+                  "settled": "rejected",
+                  "name": "TypeError"
+                },
+                "loggedOut": false,
+                "sent": true,
+                "afterRequested": false,
+                "afterCookieSent": null
+              }
+            },
+            "corsModeAllowed": {
+              "follow": {
+                "secFetchSite": "cross-site",
+                "originSeen": "https://widget.other.test:<port>",
+                "cookieSent": false,
+                "preflight": false,
+                "fetch": {
+                  "settled": "rejected",
+                  "name": "TypeError"
+                },
+                "loggedOut": false,
+                "sent": true,
+                "afterRequested": true,
+                "afterCookieSent": false
+              },
+              "manual": {
+                "secFetchSite": "cross-site",
+                "originSeen": "https://widget.other.test:<port>",
+                "cookieSent": false,
+                "preflight": false,
+                "fetch": {
+                  "settled": "resolved",
+                  "type": "opaqueredirect",
+                  "status": 0
+                },
+                "loggedOut": false,
+                "sent": true,
+                "afterRequested": false,
+                "afterCookieSent": null
+              }
+            }
+          },
+          "None": {
+            "noCorsMode": {
+              "follow": {
+                "secFetchSite": "cross-site",
+                "originSeen": "https://widget.other.test:<port>",
+                "cookieSent": true,
+                "preflight": false,
+                "fetch": {
+                  "settled": "resolved",
+                  "type": "opaque",
+                  "status": 0
+                },
+                "loggedOut": true,
+                "sent": true,
+                "afterRequested": true,
+                "afterCookieSent": false
+              },
+              "manual": {
+                "sent": false,
+                "fetch": {
+                  "settled": "rejected",
+                  "name": "TypeError"
+                },
+                "loggedOut": false,
+                "afterRequested": false
+              }
+            },
+            "corsModeNoHeaders": {
+              "follow": {
+                "secFetchSite": "cross-site",
+                "originSeen": "https://widget.other.test:<port>",
+                "cookieSent": true,
+                "preflight": false,
+                "fetch": {
+                  "settled": "rejected",
+                  "name": "TypeError"
+                },
+                "loggedOut": true,
+                "sent": true,
+                "afterRequested": false,
+                "afterCookieSent": null
+              },
+              "manual": {
+                "secFetchSite": "cross-site",
+                "originSeen": "https://widget.other.test:<port>",
+                "cookieSent": true,
+                "preflight": false,
+                "fetch": {
+                  "settled": "rejected",
+                  "name": "TypeError"
+                },
+                "loggedOut": true,
+                "sent": true,
+                "afterRequested": false,
+                "afterCookieSent": null
+              }
+            },
+            "corsModeAllowed": {
+              "follow": {
+                "secFetchSite": "cross-site",
+                "originSeen": "https://widget.other.test:<port>",
+                "cookieSent": true,
+                "preflight": false,
+                "fetch": {
+                  "settled": "rejected",
+                  "name": "TypeError"
+                },
+                "loggedOut": true,
+                "sent": true,
+                "afterRequested": true,
+                "afterCookieSent": false
+              },
+              "manual": {
+                "secFetchSite": "cross-site",
+                "originSeen": "https://widget.other.test:<port>",
+                "cookieSent": true,
+                "preflight": false,
+                "fetch": {
+                  "settled": "resolved",
+                  "type": "opaqueredirect",
+                  "status": 0
+                },
+                "loggedOut": true,
+                "sent": true,
+                "afterRequested": false,
+                "afterCookieSent": null
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
