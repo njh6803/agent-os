@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>사이트 목록 · 모바일</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/agent-os/styles.css">
+<link rel="stylesheet" href="ds/agent-os/fonts/fonts.css">
+<link rel="stylesheet" href="ds/agent-os/_ds_bundle.css">
+<script src="ds/agent-os/_ds_bundle.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0}
+a{color:var(--accent)}a:hover{color:var(--text)}
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+.topnav{display:flex;align-items:center;gap:var(--spacing-1);height:var(--control-h);padding:0 var(--spacing-2);border-radius:var(--radius-m);color:var(--text-muted);text-decoration:none;font-size:var(--body-size);line-height:var(--body-lh)}
+.topnav[aria-current="page"]{background:var(--bg-selected);color:var(--text);font-weight:var(--font-weight-medium)}
+.meta{display:grid;grid-template-columns:auto minmax(0,1fr);column-gap:var(--spacing-3);row-gap:var(--spacing-1);margin:0}
+.meta dt{font-size:var(--text-small);line-height:var(--text-small--line-height);color:var(--text-muted)}
+.meta dd{margin:0;font-size:var(--table-size);line-height:var(--table-lh);overflow-wrap:anywhere}
+</style>
+</helmet>
+<div data-theme="nokcheong" data-mode="light" style="min-height: 100vh; background: var(--bg); color: var(--text); font-family: var(--sans);">
+<header style="box-sizing: border-box; padding: var(--spacing-2) var(--spacing-4); display: flex; flex-direction: column; gap: var(--spacing-1); background: var(--bg-raised); border-bottom: 1px solid var(--border);">
+<div class="flex items-center justify-between gap-2" style="min-height: var(--control-h);">
+<span class="font-semibold text-body">위젯 관리 화면</span>
+<button type="button" aria-haspopup="menu" aria-expanded="false" class="flex items-center gap-1" style="height: var(--control-h); padding: 0 var(--spacing-2); border: 0; border-radius: var(--radius-m); background: transparent; color: var(--text); font: inherit; cursor: pointer;"><span class="font-mono text-mono font-medium">ops-lead</span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="color: var(--text-muted);"><path vector-effect="non-scaling-stroke" d="m7 15 5 5 5-5"></path><path vector-effect="non-scaling-stroke" d="m7 9 5-5 5 5"></path></svg></button>
+</div>
+<nav aria-label="위젯 관리 화면" class="flex flex-wrap items-center gap-1">
+<a href="#" aria-current="page" class="topnav">사이트</a>
+<a href="https://agent.example.com/portal/" target="_blank" rel="noopener" class="topnav">테스트<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path vector-effect="non-scaling-stroke" d="M15 3h6v6"></path><path vector-effect="non-scaling-stroke" d="M10 14 21 3"></path><path vector-effect="non-scaling-stroke" d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path></svg><span class="sr-only">(새 탭에서 열림)</span></a>
+</nav>
+</header>
+<main style="box-sizing: border-box; padding: var(--spacing-6) var(--spacing-4) var(--spacing-8); display: flex; flex-direction: column; gap: var(--spacing-4);">
+<header class="flex flex-col gap-3">
+<div class="flex flex-col gap-1 min-w-0">
+<div class="flex items-center gap-2"><h1 style="margin: 0; font-size: var(--text-title); line-height: var(--text-title--line-height); font-weight: var(--text-title--font-weight);">사이트</h1><span class="text-body text-text-muted">5</span></div>
+<p class="text-body text-text-muted" style="margin: 0;">위젯을 붙이는 사이트마다 위젯 설정을 둔다. 위젯 테스트 페이지에 담는 사이트는 위젯 테스트 페이지 설정도 둔다.</p>
+</div>
+<div class="flex flex-wrap items-center gap-2">
+<x-import component-from-global-scope="AgentOsUi.Button" variant="secondary">새로 고침</x-import>
+<x-import component-from-global-scope="AgentOsUi.Button" variant="primary">사이트 등록</x-import>
+</div>
+</header>
+<x-import component-from-global-scope="AgentOsUi.Alert" tone="warning" title="위젯 테스트 페이지가 열지 않는 사이트가 있다"><span class="font-mono text-mono">partner-trial</span>: 발급자 <span class="font-mono text-mono" style="overflow-wrap: anywhere;">https://partner.example</span>이 사이트 파일에 없다. 사이트 파일에 그 발급자를 더하고 위젯 테스트 페이지를 다시 띄우거나, 이 사이트의 발급자를 고친다. 다른 사이트는 그대로 열린다.</x-import>
+<ul aria-label="사이트" class="flex flex-col gap-3" style="margin: 0; padding: 0; list-style: none;">
+<li><x-import component-from-global-scope="AgentOsUi.Card" as="article" padding="3"><div class="flex flex-col gap-2">
+<div class="flex flex-col"><a href="#" class="font-mono text-mono font-medium">help-center</a><span class="text-body">고객센터 도우미</span></div>
+<dl class="meta"><dt>에이전트</dt><dd class="font-mono">support-bot</dd><dt>위젯 테스트 페이지</dt><dd>둘 다</dd><dt>마지막으로 바꾼 때</dt><dd class="font-mono">2026-11-16 10:42 <span class="text-text-muted">ops-lead</span></dd></dl>
+</div></x-import></li>
+<li><x-import component-from-global-scope="AgentOsUi.Card" as="article" padding="3"><div class="flex flex-col gap-2">
+<div class="flex flex-col"><a href="#" class="font-mono text-mono font-medium">partner-trial</a><span class="text-body">파트너 체험</span></div>
+<dl class="meta"><dt>에이전트</dt><dd class="font-mono">calc</dd><dt>위젯 테스트 페이지</dt><dd><span class="flex items-center gap-2"><span class="text-warning" style="display: inline-flex;"><x-import component-from-global-scope="AgentOsUi.Icon" name="triangle-alert" size="16"></x-import></span>열리지 않음</span></dd><dt>마지막으로 바꾼 때</dt><dd class="font-mono">2026-11-16 09:15 <span class="text-text-muted">kim.dev</span></dd></dl>
+</div></x-import></li>
+<li><x-import component-from-global-scope="AgentOsUi.Card" as="article" padding="3"><div class="flex flex-col gap-2">
+<div class="flex flex-col"><a href="#" class="font-mono text-mono font-medium">demo</a><span class="text-body">Agent OS 데모</span></div>
+<dl class="meta"><dt>에이전트</dt><dd class="font-mono">support-bot</dd><dt>위젯 테스트 페이지</dt><dd>익명</dd><dt>마지막으로 바꾼 때</dt><dd class="font-mono">2026-11-15 18:20 <span class="text-text-muted">ops-lead</span></dd></dl>
+</div></x-import></li>
+<li><x-import component-from-global-scope="AgentOsUi.Card" as="article" padding="3"><div class="flex flex-col gap-2">
+<div class="flex flex-col"><a href="#" class="font-mono text-mono font-medium">intranet</a><span class="text-body">사내 도우미</span></div>
+<dl class="meta"><dt>에이전트</dt><dd class="font-mono">helpdesk</dd><dt>위젯 테스트 페이지</dt><dd>로그인</dd><dt>마지막으로 바꾼 때</dt><dd class="font-mono">2026-11-15 17:03 <span class="text-text-muted">kim.dev</span></dd></dl>
+</div></x-import></li>
+<li><x-import component-from-global-scope="AgentOsUi.Card" as="article" padding="3"><div class="flex flex-col gap-2">
+<div class="flex flex-col"><a href="#" class="font-mono text-mono font-medium">shop</a><span class="text-body">쇼핑 도우미</span></div>
+<dl class="meta"><dt>에이전트</dt><dd class="font-mono">support-bot</dd><dt>위젯 테스트 페이지</dt><dd class="text-text-muted">담지 않음</dd><dt>마지막으로 바꾼 때</dt><dd class="font-mono">2026-11-14 11:30 <span class="text-text-muted">ops-lead</span></dd></dl>
+</div></x-import></li>
+</ul>
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":375,"height":1480}}'>
+class Component extends DCLogic {
+renderVals() {
+return { yes: true, no: false };
+}
+}
+</script>
+</body>
+</html>
