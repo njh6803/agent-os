@@ -1,0 +1,10 @@
+{
+  "include": ["."],
+  "exclude": ["**/__pycache__"],
+  "pythonVersion": "3.12",
+  "pythonPlatform": "Linux",
+  "typeCheckingMode": "strict",
+  "venvPath": "../../../..",
+  "venv": ".venv",
+  "extraPaths": ["../../../.."]
+}

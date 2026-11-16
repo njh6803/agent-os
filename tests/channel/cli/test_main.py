@@ -1,5 +1,6 @@
 """CLI 인자. 하위 명령 셋, run 과 resume 과 serve."""
 
+from importlib.metadata import version as installed_version
 from pathlib import Path
 
 import pytest
@@ -36,6 +37,15 @@ def test_옵션_셋은_모델_진행_표시_트레이스_디렉터리다() -> No
     assert args.model == "m"
     assert args.verbose is True
     assert args.traces == Path("out")
+
+
+def test_version_옵션은_설치된_패키지의_판을_찍는다(capsys: pytest.CaptureFixture[str]) -> None:
+    """번호를 글자로 박지 않는다. 이미지를 지을 때 넣은 번호도 같은 길로 읽힌다."""
+    with pytest.raises(SystemExit) as stopped:
+        parse_args(["--version"])
+
+    assert stopped.value.code == 0
+    assert capsys.readouterr().out.strip() == installed_version("agent-os")
 
 
 def test_하위_명령이_없으면_거부한다() -> None:

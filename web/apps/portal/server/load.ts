@@ -10,11 +10,18 @@
  * 두 파일과 키는 시작 때 한 번 읽는다. 운영 중에 바꾸면 다시 띄워야 한다(ADR 0050).
  */
 
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import type { KeyObject } from "node:crypto";
 import { readSiteFile, type SiteFile } from "@agent-os/site-file";
-import { type PortalConfig, type Problems, parseConfig } from "./config.ts";
+import {
+  CONTAINER_NETWORK_ENV,
+  type ContainerNetwork,
+  IMAGE_MARKER,
+  type PortalConfig,
+  type Problems,
+  parseConfig,
+} from "./config.ts";
 import { COOKIE_LIFETIME_DAYS } from "./cookie-policy.ts";
 import { readPrivateKey, siteProblems } from "./site-check.ts";
 
@@ -25,12 +32,24 @@ export interface LoadedPortal {
   readonly siteFile: SiteFile;
 }
 
-/** 두 파일의 경로에서 서로 맞는 설정을, 또는 어긋난 곳들을 읽는다. */
-export function loadPortal(configPath: string, siteFilePath: string): LoadedPortal | Problems {
+/**
+ * 지금 프로세스의 루프백 규칙의 예외를 켜는 두 입력(`config.ts` 의 `ContainerNetwork`). 판정(`parseConfig`)과 달리 파일과 환경을
+ * 읽는 자리다. 표지 파일은 이미지를 지을 때 root 소유로 굽고, 환경 변수는 compose 가 준다.
+ */
+export function currentNetwork(): ContainerNetwork {
+  return { imageMarker: existsSync(IMAGE_MARKER), env: process.env[CONTAINER_NETWORK_ENV] };
+}
+
+/** 두 파일의 경로에서 서로 맞는 설정을, 또는 어긋난 곳들을 읽는다. `network` 는 `portal.host` 의 예외를 켜는 입력이다. */
+export function loadPortal(
+  configPath: string,
+  siteFilePath: string,
+  network: ContainerNetwork,
+): LoadedPortal | Problems {
   const text = textOf(configPath);
   const parsed =
     typeof text === "string"
-      ? parseConfig(text, dirname(resolve(configPath)), COOKIE_LIFETIME_DAYS)
+      ? parseConfig(text, dirname(resolve(configPath)), COOKIE_LIFETIME_DAYS, network)
       : { problems: [`설정 파일: ${text.problem}`] };
   const siteFile = readSiteFile(siteFilePath);
   const first = [

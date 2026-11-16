@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>완성 13. 형광 점의 테마 넷</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/agent-os/styles.css">
+<link rel="stylesheet" href="ds/agent-os/fonts/fonts.css">
+<link rel="stylesheet" href="ds/agent-os/_ds_bundle.css">
+<script src="ds/agent-os/_ds_bundle.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0}
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+.dot{width:8px;height:8px;border-radius:9999px;background:#1fe05a;box-shadow:0 0 4px #1fe05a;flex-shrink:0}
+[data-mode="dark"] .dot{background:#4dff85;box-shadow:0 0 4px #4dff85}
+.ellipsis{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fill button{width:100%}
+.textlink{display:inline;min-height:24px;padding:0;border:0;background:transparent;font-family:inherit;font-size:inherit;line-height:inherit;color:var(--accent);text-decoration:underline;cursor:pointer;border-radius:var(--radius-s)}
+.focus-shown button{outline:2px solid var(--focus-ring);outline-offset:2px}
+.focus-self{outline:2px solid var(--focus-ring);outline-offset:2px}
+</style>
+</helmet>
+<div data-theme="nokcheong" data-mode="light" style="width: 1552px; height: 640px; box-sizing: border-box; padding: 48px; background: var(--bg); color: var(--text); font-family: var(--sans);">
+<div class="flex flex-col gap-4">
+<div class="flex flex-col gap-1" style="max-width: 672px;">
+<p class="text-body font-semibold" style="margin: 0;">완성 화면 13. 형광 점의 테마 넷</p>
+<p class="text-small text-text-muted" style="margin: 0;">군청, 녹청, 자초, 쪽빛의 라이트와 다크에 이름 줄을 하나씩 두었다. 테마는 색만 바꾸므로 글꼴과 크기는 여덟이 같다. 형광 점의 색은 테마와 상관없이 라이트 #1fe05a, 다크 #4dff85 두 값이다.</p>
+</div>
+<div class="grid" style="grid-template-columns: repeat(4, 352px); gap: 16px;">
+<div data-theme="guncheong" data-mode="light" class="flex flex-col gap-2" style="padding: var(--spacing-4); background: var(--bg); color: var(--text); font-family: var(--sans); border-radius: var(--radius-m);">
+<p class="text-small text-text-muted" style="margin: 0;">군청 라이트</p>
+<div data-density="regular" class="flex flex-col" style="width: 320px; box-sizing: border-box; background: var(--bg-raised); border: 1px solid var(--border); border-radius: var(--radius-l); overflow: hidden;">
+<header class="flex items-center justify-between gap-2 shrink-0" style="padding: var(--spacing-2) var(--spacing-2) var(--spacing-2) var(--spacing-4); border-bottom: 1px solid var(--border);">
+<h1 class="text-body font-semibold ellipsis" style="flex: 1; margin: 0;">매장 계산 도우미</h1>
+<x-import component-from-global-scope="AgentOsUi.IconButton" icon="settings" label="설정" variant="ghost"></x-import>
+<x-import component-from-global-scope="AgentOsUi.Button" variant="secondary">새 대화</x-import>
+</header>
+<div role="group" aria-label="로그인 상태" class="flex items-center justify-between gap-2 shrink-0" style="padding: var(--spacing-2) var(--spacing-2) var(--spacing-2) var(--spacing-4); border-bottom: 1px solid var(--border);">
+<span class="flex items-center gap-2" style="flex: 1; min-width: 0;"><span class="dot" aria-hidden="true"></span><span class="text-body font-medium ellipsis">김하늘</span></span>
+<x-import component-from-global-scope="AgentOsUi.Button" variant="secondary">로그아웃</x-import>
+</div>
+</div>
+</div>
+<div data-theme="nokcheong" data-mode="light" class="flex flex-col gap-2" style="padding: var(--spacing-4); background: var(--bg); color: var(--text); font-family: var(--sans); border-radius: var(--radius-m);">
+<p class="text-small text-text-muted" style="margin: 0;">녹청 라이트</p>
+<div data-density="regular" class="flex flex-col" style="width: 320px; box-sizing: border-box; background: var(--bg-raised); border: 1px solid var(--border); border-radius: var(--radius-l); overflow: hidden;">
+<header class="flex items-center justify-between gap-2 shrink-0" style="padding: var(--spacing-2) var(--spacing-2) var(--spacing-2) var(--spacing-4); border-bottom: 1px solid var(--border);">
+<h1 class="text-body font-semibold ellipsis" style="flex: 1; margin: 0;">매장 계산 도우미</h1>
+<x-import component-from-global-scope="AgentOsUi.IconButton" icon="settings" label="설정" variant="ghost"></x-import>
+<x-import component-from-global-scope="AgentOsUi.Button" variant="secondary">새 대화</x-import>
+</header>
+<div role="group" aria-label="로그인 상태" class="flex items-center justify-between gap-2 shrink-0" style="padding: var(--spacing-2) var(--spacing-2) var(--spacing-2) var(--spacing-4); border-bottom: 1px solid var(--border);">
+<span class="flex items-center gap-2" style="flex: 1; min-width: 0;"><span class="dot" aria-hidden="true"></span><span class="text-body font-medium ellipsis">김하늘</span></span>
+<x-import component-from-global-scope="AgentOsUi.Button" variant="secondary">로그아웃</x-import>
+</div>
+</div>
+</div>
+<div data-theme="jacho" data-mode="light" class="flex flex-col gap-2" style="padding: var(--spacing-4); background: var(--bg); color: var(--text); font-family: var(--sans); border-radius: var(--radius-m);">
+<p class="text-small text-text-muted" style="margin: 0;">자초 라이트</p>
+<div data-density="regular" class="flex flex-col" style="width: 320px; box-sizing: border-box; background: var(--bg-raised); border: 1px solid var(--border); border-radius: var(--radius-l); overflow: hidden;">
+<header class="flex items-center justify-between gap-2 shrink-0" style="padding: var(--spacing-2) var(--spacing-2) var(--spacing-2) var(--spacing-4); border-bottom: 1px solid var(--border);">
+<h1 class="text-body font-semibold ellipsis" style="flex: 1; margin: 0;">매장 계산 도우미</h1>
+<x-import component-from-global-scope="AgentOsUi.IconButton" icon="settings" label="설정" variant="ghost"></x-import>
+<x-import component-from-global-scope="AgentOsUi.Button" variant="secondary">새 대화</x-import>
+</header>
+<div role="group" aria-label="로그인 상태" class="flex items-center justify-between gap-2 shrink-0" style="padding: var(--spacing-2) var(--spacing-2) var(--spacing-2) var(--spacing-4); border-bottom: 1px solid var(--border);">
+<span class="flex items-center gap-2" style="flex: 1; min-width: 0;"><span class="dot" aria-hidden="true"></span><span class="text-body font-medium ellipsis">김하늘</span></span>
+<x-import component-from-global-scope="AgentOsUi.Button" variant="secondary">로그아웃</x-import>
+</div>
+</div>
+</div>
+<div data-theme="jjokbit" data-mode="light" class="flex flex-col gap-2" style="padding: var(--spacing-4); background: var(--bg); color: var(--text); font-family: var(--sans); border-radius: var(--radius-m);">
+<p class="text-small text-text-muted" style="margin: 0;">쪽빛 라이트</p>
+<div data-density="regular" class="flex flex-col" style="width: 320px; box-sizing: border-box; background: var(--bg-raised); border: 1px solid var(--border); border-radius: var(--radius-l); overflow: hidden;">
+<header class="flex items-center justify-between gap-2 shrink-0" style="padding: var(--spacing-2) var(--spacing-2) var(--spacing-2) var(--spacing-4); border-bottom: 1px solid var(--border);">
+<h1 class="text-body font-semibold ellipsis" style="flex: 1; margin: 0;">매장 계산 도우미</h1>
+<x-import component-from-global-scope="AgentOsUi.IconButton" icon="settings" label="설정" variant="ghost"></x-import>
+<x-import component-from-global-scope="AgentOsUi.Button" variant="secondary">새 대화</x-import>
+</header>
+<div role="group" aria-label="로그인 상태" class="flex items-center justify-between gap-2 shrink-0" style="padding: var(--spacing-2) var(--spacing-2) var(--spacing-2) var(--spacing-4); border-bottom: 1px solid var(--border);">
+<span class="flex items-center gap-2" style="flex: 1; min-width: 0;"><span class="dot" aria-hidden="true"></span><span class="text-body font-medium ellipsis">김하늘</span></span>
+<x-import component-from-global-scope="AgentOsUi.Button" variant="secondary">로그아웃</x-import>
+</div>
+</div>
+</div>
+<div data-theme="guncheong" data-mode="dark" class="flex flex-col gap-2" style="padding: var(--spacing-4); background: var(--bg); color: var(--text); font-family: var(--sans); border-radius: var(--radius-m);">
+<p class="text-small text-text-muted" style="margin: 0;">군청 다크</p>
+<div data-density="regular" class="flex flex-col" style="width: 320px; box-sizing: border-box; background: var(--bg-raised); border: 1px solid var(--border); border-radius: var(--radius-l); overflow: hidden;">
+<header class="flex items-center justify-between gap-2 shrink-0" style="padding: var(--spacing-2) var(--spacing-2) var(--spacing-2) var(--spacing-4); border-bottom: 1px solid var(--border);">
+<h1 class="text-body font-semibold ellipsis" style="flex: 1; margin: 0;">매장 계산 도우미</h1>
+<x-import component-from-global-scope="AgentOsUi.IconButton" icon="settings" label="설정" variant="ghost"></x-import>
+<x-import component-from-global-scope="AgentOsUi.Button" variant="secondary">새 대화</x-import>
+</header>
+<div role="group" aria-label="로그인 상태" class="flex items-center justify-between gap-2 shrink-0" style="padding: var(--spacing-2) var(--spacing-2) var(--spacing-2) var(--spacing-4); border-bottom: 1px solid var(--border);">
+<span class="flex items-center gap-2" style="flex: 1; min-width: 0;"><span class="dot" aria-hidden="true"></span><span class="text-body font-medium ellipsis">김하늘</span></span>
+<x-import component-from-global-scope="AgentOsUi.Button" variant="secondary">로그아웃</x-import>
+</div>
+</div>
+</div>
+<div data-theme="nokcheong" data-mode="dark" class="flex flex-col gap-2" style="padding: var(--spacing-4); background: var(--bg); color: var(--text); font-family: var(--sans); border-radius: var(--radius-m);">
+<p class="text-small text-text-muted" style="margin: 0;">녹청 다크</p>
+<div data-density="regular" class="flex flex-col" style="width: 320px; box-sizing: border-box; background: var(--bg-raised); border: 1px solid var(--border); border-radius: var(--radius-l); overflow: hidden;">
+<header class="flex items-center justify-between gap-2 shrink-0" style="padding: var(--spacing-2) var(--spacing-2) var(--spacing-2) var(--spacing-4); border-bottom: 1px solid var(--border);">
+<h1 class="text-body font-semibold ellipsis" style="flex: 1; margin: 0;">매장 계산 도우미</h1>
+<x-import component-from-global-scope="AgentOsUi.IconButton" icon="settings" label="설정" variant="ghost"></x-import>
+<x-import component-from-global-scope="AgentOsUi.Button" variant="secondary">새 대화</x-import>
+</header>
+<div role="group" aria-label="로그인 상태" class="flex items-center justify-between gap-2 shrink-0" style="padding: var(--spacing-2) var(--spacing-2) var(--spacing-2) var(--spacing-4); border-bottom: 1px solid var(--border);">
+<span class="flex items-center gap-2" style="flex: 1; min-width: 0;"><span class="dot" aria-hidden="true"></span><span class="text-body font-medium ellipsis">김하늘</span></span>
+<x-import component-from-global-scope="AgentOsUi.Button" variant="secondary">로그아웃</x-import>
+</div>
+</div>
+</div>
+<div data-theme="jacho" data-mode="dark" class="flex flex-col gap-2" style="padding: var(--spacing-4); background: var(--bg); color: var(--text); font-family: var(--sans); border-radius: var(--radius-m);">
+<p class="text-small text-text-muted" style="margin: 0;">자초 다크</p>
+<div data-density="regular" class="flex flex-col" style="width: 320px; box-sizing: border-box; background: var(--bg-raised); border: 1px solid var(--border); border-radius: var(--radius-l); overflow: hidden;">
+<header class="flex items-center justify-between gap-2 shrink-0" style="padding: var(--spacing-2) var(--spacing-2) var(--spacing-2) var(--spacing-4); border-bottom: 1px solid var(--border);">
+<h1 class="text-body font-semibold ellipsis" style="flex: 1; margin: 0;">매장 계산 도우미</h1>
+<x-import component-from-global-scope="AgentOsUi.IconButton" icon="settings" label="설정" variant="ghost"></x-import>
+<x-import component-from-global-scope="AgentOsUi.Button" variant="secondary">새 대화</x-import>
+</header>
+<div role="group" aria-label="로그인 상태" class="flex items-center justify-between gap-2 shrink-0" style="padding: var(--spacing-2) var(--spacing-2) var(--spacing-2) var(--spacing-4); border-bottom: 1px solid var(--border);">
+<span class="flex items-center gap-2" style="flex: 1; min-width: 0;"><span class="dot" aria-hidden="true"></span><span class="text-body font-medium ellipsis">김하늘</span></span>
+<x-import component-from-global-scope="AgentOsUi.Button" variant="secondary">로그아웃</x-import>
+</div>
+</div>
+</div>
+<div data-theme="jjokbit" data-mode="dark" class="flex flex-col gap-2" style="padding: var(--spacing-4); background: var(--bg); color: var(--text); font-family: var(--sans); border-radius: var(--radius-m);">
+<p class="text-small text-text-muted" style="margin: 0;">쪽빛 다크</p>
+<div data-density="regular" class="flex flex-col" style="width: 320px; box-sizing: border-box; background: var(--bg-raised); border: 1px solid var(--border); border-radius: var(--radius-l); overflow: hidden;">
+<header class="flex items-center justify-between gap-2 shrink-0" style="padding: var(--spacing-2) var(--spacing-2) var(--spacing-2) var(--spacing-4); border-bottom: 1px solid var(--border);">
+<h1 class="text-body font-semibold ellipsis" style="flex: 1; margin: 0;">매장 계산 도우미</h1>
+<x-import component-from-global-scope="AgentOsUi.IconButton" icon="settings" label="설정" variant="ghost"></x-import>
+<x-import component-from-global-scope="AgentOsUi.Button" variant="secondary">새 대화</x-import>
+</header>
+<div role="group" aria-label="로그인 상태" class="flex items-center justify-between gap-2 shrink-0" style="padding: var(--spacing-2) var(--spacing-2) var(--spacing-2) var(--spacing-4); border-bottom: 1px solid var(--border);">
+<span class="flex items-center gap-2" style="flex: 1; min-width: 0;"><span class="dot" aria-hidden="true"></span><span class="text-body font-medium ellipsis">김하늘</span></span>
+<x-import component-from-global-scope="AgentOsUi.Button" variant="secondary">로그아웃</x-import>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1552,"height":640}}'>
+class Component extends DCLogic {
+renderVals() {
+return { yes: true, no: false };
+}
+}
+</script>
+</body>
+</html>

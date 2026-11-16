@@ -8,7 +8,8 @@ ADR 0005 의 2026-10-07 이력). 그래서
 그때 병목이던 pytest 에 1.5~6.7초를 더한다(손으로 봤다). 함께 띄운 벽시계 시간은 다시 재지 않았다.
 그 뒤에 커밋 검사(`tools/check_ticket.py`, ADR 0037)가 더해져 아홉이다. 그 검사가 지금 색인을 보므로
 일부 파일만 커밋할 때 git 이 훅에 준 임시 색인(`GIT_INDEX_FILE`)이 자식까지 그대로 가야 한다.
-리눅스가 아닌 곳에서는 pyright 를 리눅스 플랫폼으로 한 번 더 돌아 열이다(`pyright_checks`, 대기열
+노트 검사(`tools/check_notes.py`)도 같은 색인을 봐 열이다.
+리눅스가 아닌 곳에서는 pyright 를 리눅스 플랫폼으로 한 번 더 돌아 열하나다(`pyright_checks`, 대기열
 403).
 파일을 고치는 ruff 둘은 이 훅 앞에 따로 있어, 러너는 고친 뒤의 파일을 본다. 검사 목록의 원천은 여기
 하나다. CI 는 잡마다 명령을 직접 돈다(`.github/workflows/ci.yml`).
@@ -124,6 +125,7 @@ CHECKS: tuple[Check, ...] = (
     Check("check-type-escapes", ("uv", "run", "python", "tools/check_type_escapes.py")),
     Check("run-hooks", ("uv", "run", "python", "tools/run_hooks.py")),
     Check("check-ticket", ("uv", "run", "python", "tools/check_ticket.py")),
+    Check("check-notes", ("uv", "run", "python", "tools/check_notes.py")),
     Check(
         "zizmor",
         ("uv", "run", "zizmor", "--offline", "--strict-collection")

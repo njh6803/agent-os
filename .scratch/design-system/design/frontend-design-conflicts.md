@@ -25,3 +25,15 @@
 | 2026-11-13 | portal-login 모든 화면 | 브리프에 맞춰 기본 팔레트를 이름 붙인 hex 4~6개로 새로 짓는다 | 색은 쓰임새 토큰만 쓰고 값은 디자인 토큰 CSS 한 자리에 있다(`.claude/rules/web-design.md` 9행과 23행) |
 | 2026-11-13 | portal-login 모든 화면 | 늘 쓰는 기본 글꼴 대신 이 브리프에 맞춰 고른 서체를 쓴다 | 모든 테마가 Noto Sans KR과 Noto Sans Mono를 쓴다(ADR 0026 이력 2026-10-12 "테마는 넷이고 색만 바꾸며, 글꼴은 모든 테마가 Noto Sans KR과 Noto Sans Mono를 쓴다") |
 | 2026-11-13 | portal-login 모든 화면 | 그리면서 화면을 찍어 보고 고친다 | 찍어 보거나 렌더해 확인하는 일은 사람이 청할 때만 한다(`.claude/skills/ui-design/SKILL.md` 23행, Design 형식 지침) |
+| 2026-11-15 | widget-login-state 모든 화면 | 브리프에 맞춰 기본 팔레트를 이름 붙인 hex 4~6개로 새로 짓는다 | 색은 쓰임새 토큰만 쓰고 값은 디자인 토큰 CSS 한 자리에 있다(`.claude/rules/web-design.md` 9행과 23행). 형광 점만 앞선 탐색에서 사람이 고른 예외이고 명세가 정한다(`.scratch/widget-login-state/design/screens-prompt.md` "1. 고를 갈래") |
+| 2026-11-15 | widget-login-state 모든 화면 | 늘 쓰는 기본 글꼴 대신 이 브리프에 맞춰 고른 서체를 쓴다 | 모든 테마가 Noto Sans KR과 Noto Sans Mono를 쓴다(ADR 0026 이력 2026-10-12 "테마는 넷이고 색만 바꾸며, 글꼴은 모든 테마가 Noto Sans KR과 Noto Sans Mono를 쓴다") |
+| 2026-11-15 | widget-login-state 고지 전문의 펼침, 덮개 | 사람의 동작에 답하는 움직임(펼침, 확인)은 무엇이 바뀌었는지 보여 주니 쓴다 | 움직임은 디자인 시스템의 도는 표시 하나이고 움직임 줄이기에서 멈춘다(`.claude/rules/web-design.md` 28행, `.scratch/widget-login-state/design/screens-prompt.md` "2. 완성 화면"의 시각 방향) |
+| 2026-11-15 | widget-login-state 모든 화면 | 그리면서 화면을 찍어 보고 고친다 | 찍어 보거나 렌더해 확인하는 일은 사람이 청할 때만 한다(`.claude/skills/ui-design/SKILL.md` 23행, Design 형식 지침) |
+| 2026-11-15 | admin-login 모든 화면 | 브리프에 맞춰 기본 팔레트를 이름 붙인 hex 4~6개로 새로 짓는다 | 색은 쓰임새 토큰만 쓰고 값은 디자인 토큰 CSS 한 자리에 있다(`.claude/rules/web-design.md` 9행과 23행) |
+| 2026-11-15 | admin-login 모든 화면 | 늘 쓰는 기본 글꼴 대신 이 브리프에 맞춰 고른 서체를 쓴다 | 모든 테마가 Noto Sans KR과 Noto Sans Mono를 쓴다(ADR 0026 이력 2026-10-12 "테마는 넷이고 색만 바꾸며, 글꼴은 모든 테마가 Noto Sans KR과 Noto Sans Mono를 쓴다") |
+| 2026-11-15 | admin-login 계정 관리, 대화 화면 | 작은 데이터 라벨에 고정폭을 쓰는 것은 생성물의 흔한 표지이니 고른 뒤에만 쓴다 | 계정 이름, 실행 ID, 시각은 고정폭 칸이고(`.scratch/admin-login/design/screens-prompt.md` 47행) 도구 이름과 인자는 글자 그대로 고정폭이다(`.claude/rules/web-design.md` 50행) |
+| 2026-11-15 | admin-login 모든 화면 | 그리면서 화면을 찍어 보고 고친다 | 찍어 보거나 렌더해 확인하는 일은 사람이 청할 때만 한다(`.claude/skills/ui-design/SKILL.md` 23행, Design 형식 지침) |
+| 2026-11-16 | widget-login-state 예시 질문, 문의 링크, 스위치를 숨긴 위젯 | 브리프에 맞춰 기본 팔레트를 이름 붙인 hex 4~6개로 새로 짓는다 | 색은 쓰임새 토큰만 쓰고 값은 디자인 토큰 CSS 한 자리에 있다(`.claude/rules/web-design.md` 9행과 23행). 형광 점만 앞선 탐색에서 사람이 고른 예외다(`.scratch/widget-login-state/design/settings-additions-prompt.md` "1. 고를 갈래") |
+| 2026-11-16 | widget-login-state 예시 질문, 문의 링크, 스위치를 숨긴 위젯 | 늘 쓰는 기본 글꼴 대신 이 브리프에 맞춰 고른 서체를 쓴다 | 모든 테마가 Noto Sans KR과 Noto Sans Mono를 쓴다(ADR 0026 이력 2026-10-12 "테마는 넷이고 색만 바꾸며, 글꼴은 모든 테마가 Noto Sans KR과 Noto Sans Mono를 쓴다") |
+| 2026-11-16 | widget-login-state 예시 질문을 누른 뒤 | 사람의 동작에 답하는 움직임(누른 질문이 대화로 옮겨 가는 것)은 무엇이 바뀌었는지 보여 주니 쓴다 | 움직임은 디자인 시스템의 도는 표시 하나이고 움직임 줄이기에서 멈춘다(`.claude/rules/web-design.md` 28행, `.scratch/widget-login-state/design/settings-additions-prompt.md` "2. 완성 화면"의 시각 방향) |
+| 2026-11-16 | widget-login-state 예시 질문, 문의 링크, 스위치를 숨긴 위젯 | 그리면서 화면을 찍어 보고 고친다 | 찍어 보거나 렌더해 확인하는 일은 사람이 청할 때만 한다(`.claude/skills/ui-design/SKILL.md` 23행, Design 형식 지침) |

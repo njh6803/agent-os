@@ -11,7 +11,7 @@ skill-plugin이 2026-11-05에 닫혀 ADR 0042의 열일곱 가운데 첫 행 app
 
 ## 결정
 
-- **다음 기능은 기준선(슬라이스 7~9)이다.** 기준선은 PRD 성공의 정의의 "기준선, 제품 0.1" 줄이 적은 상태다. 폐쇄망 서버 한 대에 안내 문서만 보고 1시간 안에 배포되고(밖으로 여는 포트는 하나다), 바깥 API 없이 배포 환경의 모델로 문서에 근거한 답을 출처와 함께 내며, 검색 적중률과 사람이 판정한 정답률을 보고서로 낸다. (바뀜: 이력 2026-11-11 "관리 화면 로그인이 기준선의 행이 된다") 이 상태의 제품 판을 0.1이라 부르고 기한은 2027-02-19다. (바뀜: 이력 2026-11-06 "기준선 열 안에서 공개 데모를 먼저 연다")
+- **다음 기능은 기준선(슬라이스 7~9)이다.** 기준선은 PRD 성공의 정의의 "기준선, 제품 0.1" 줄이 적은 상태다. 폐쇄망 서버 한 대에 안내 문서만 보고 1시간 안에 배포되고(밖으로 여는 포트는 하나다), 바깥 API 없이 배포 환경의 모델로 문서에 근거한 답을 출처와 함께 내며, 검색 적중률과 사람이 판정한 정답률을 보고서로 낸다. (바뀜: 이력 2026-11-11 "관리 화면 로그인이 기준선의 행이 된다") (바뀜: 이력 2026-11-15 "위젯 설정 관리가 행 넷으로 나뉘고 셋이 기준선의 행으로 더해진다") 이 상태의 제품 판을 0.1이라 부르고 기한은 2027-02-19다. (바뀜: 이력 2026-11-06 "기준선 열 안에서 공개 데모를 먼저 연다")
 - **approval-rules는 지금 자리(슬라이스 7)에 남아 기준선 행과 나란히 간다.** 설계와 명세가 섰고 티켓을 쓰는 중이라서다(사용자가 골랐다, 일지 2026-11-06-02). 그래서 기준선 판의 강제에는 운영자의 규칙 파일이 든다.
 - **기준선 다음은 제품 1.0의 agent-os 몫(슬라이스 10)이다.** 묶음 ①의 나머지 둘(mcp-trust, principal-propagation)이 차례 그대로 들어가고, 묶음 ②에서는 value-masking 하나만 앞으로 당겨 그 둘 바로 뒤에 두며, 새 행 io-guardrail, audit-export, run-feedback, stale-warning, usage-report를 더한다. 1.0은 여러 부서가 한 배포 환경을 나눠 쓸 때 사용자가 자기가 볼 수 있는 문서로만 답을 받고, 입출력에서 민감한 값의 패턴을 막으며, 운영자가 누가 무엇을 물었고 어떤 근거로 답을 받았는지 조회하고 내보내며, 최종 사용자가 틀린 답을 신고할 수 있는 상태다. (바뀜: 이력 2026-11-10 "제품 1.0에 지식베이스 고르기가 들고 커스텀 에이전트의 부품 다섯이 새 묶음으로 선다")
 - **ADR 0042의 나머지 열셋은 버리지 않고 차례만 뒤로 민다(슬라이스 11~14).** 보장(중재, 강제, 기록)은 그대로이고, 묶음 안의 차례도 value-masking이 빠진 것 말고는 그대로다.
@@ -64,7 +64,7 @@ skill-plugin이 2026-11-05에 닫혀 ADR 0042의 열일곱 가운데 첫 행 app
 - **기준선 판의 강제.** 저자의 `requires_approval`, 꺼진 플러그인, 운영자의 규칙 파일까지다. MCP 서버의 신뢰 수준과 값 기반 마스킹이 없으므로, 제품 0.1의 지원 범위 문서(pilot-release)에 알려진 한계로 적는다.
 - **규칙 파일의 기본값.** 규칙 파일에 적지 않은 도구는 묻는 것이 기본이고, 최종 사용자가 주체인 실행에서 그 물음은 운영자의 검토가 아니라 최종 사용자 자신의 확인이다(ADR 0044). 그래서 doc-qa와 참조 배포는 검색 도구를 허락하는 규칙 파일을 함께 낸다. (바뀜: 이력 2026-11-10 "기본 에이전트 assistant가 참조 에이전트 doc-qa를 대신하고 공개 데모가 answer-markdown을 기다린다") 그러지 않으면 질문마다 검색 도구를 부르기 전에 실행이 멈추고, 위젯에서 질문한 사람이 그 호출을 직접 승인해야 답이 나온다.
 - **같은 파일을 고치는 두 행.** approval-rules와 mcp-http가 둘 다 `adapters/mcp.py`를 고친다. 나중에 병합하는 쪽이 충돌을 풀고, approval-rules가 도구마다 싣는 서버 이름이 원격 MCP 서버의 도구에도 실리는지를 시험으로 본다.
-- **단일 인스턴스와 JSONL.** 기준선과 제품 1.0은 `serve` 한 프로세스와 파일 트레이스다. 1.0에 드는 value-masking은 프로세스를 늘리지 않는다. PRD의 프로세스 넷은 trace-postgres가 PostgreSQL과 Redis를 더하고 retention-worker가 worker를 더해 선다(ADR 0042 묶음 ②의 표). 그래서 audit-export의 조회는 JSONL 위에서 먼저 돌고, 트레이스 저장소 포트의 읽기로 지어 trace-postgres 뒤에도 남게 한다.
+- **단일 인스턴스와 JSONL.** 기준선과 제품 1.0은 `serve` 한 프로세스와 파일 트레이스다. (바뀜: 이력 2026-11-15 "PostgreSQL이 기준선의 postgres-foundation부터 든다") 1.0에 드는 value-masking은 프로세스를 늘리지 않는다. PRD의 프로세스 넷은 trace-postgres가 PostgreSQL과 Redis를 더하고 retention-worker가 worker를 더해 선다(ADR 0042 묶음 ②의 표). (바뀜: 이력 2026-11-15 "PostgreSQL이 기준선의 postgres-foundation부터 든다") 그래서 audit-export의 조회는 JSONL 위에서 먼저 돌고, 트레이스 저장소 포트의 읽기로 지어 trace-postgres 뒤에도 남게 한다.
 - **원격 MCP 서버의 수명.** agent-os 밖(배포)이 관리한다. 서버가 꺼져 있으면 실행이 원인 `tool_connection`으로 끝난다. 실행마다 따로 뜨던 stdio 서버와 달리 여러 실행의 요청을 한 프로세스가 받으므로, 서버가 동시 요청을 안전하게 다뤄야 한다.
 - **문서 속 지시.** mcp-trust 전에는 런타임이 검색 결과를 바깥 글로 감싸지 않는다. 그때까지는 doc-qa의 프롬프트가 검색 결과를 데이터로 엮는 것에 기댄다. (바뀜: 이력 2026-11-10 "기본 에이전트 assistant가 참조 에이전트 doc-qa를 대신하고 공개 데모가 answer-markdown을 기다린다")
 - **늦어지는 것.** 나머지 열셋의 차례가 기준선과 1.0만큼(어림 대여섯 달) 늦어진다.
@@ -184,3 +184,51 @@ portal-login의 설계 인터뷰(ADR 0059, ADR 0060, 일지 2026-11-12-1937)에�
 ### 2026-11-13 용어 "질문 페이지"를 "위젯 미리보기 페이지"로 바꿨다
 
 사용자가 용어집(`CONTEXT.md`)의 "질문 페이지(Portal)"를 "위젯 미리보기 페이지"로 바꾸기로 했다(이름 바꾸기 chore `.scratch/harness/issues/rename-portal-to-widget-preview.md`). 이 ADR의 본문은 기록이라 옛 이름을 그대로 두므로, 본문의 "질문 페이지"는 "위젯 미리보기 페이지"로 읽는다. 결정은 바뀌지 않는다. 코드 이름 `portal`과 경로 `/portal/`도 그대로다.
+
+### 2026-11-14 위젯 설정 관리와 위젯이 그리는 로그인 상태가 기준선의 행이 된다
+
+portal-login의 화면을 그리던 탐색(일지 2026-11-13-0426)에서 사용자가 방향을 바꿨다. 로그인 단추와 이름 줄과 고지를 위젯이 직접 그리고, 위젯을 주소 하나로도 내자는 것이다. 그 방향을 정한 설계 인터뷰(ADR 0061, 일지 2026-11-13-1813)에서 사용자는 사이트마다 달라지지 않는 값을 운영자가 위젯 쪽의 화면(ADR 0061의 위젯 설정 관리 화면. `CONTEXT.md`의 관리 화면과 다른 것이다)에서 등록하게 하자고 했고, 그 저장소와 화면을 언제 짓는지 묻는 질문에 추천("0.1 판 뒤, 그때까지 파일")과 달리 "0.1 판에 넣기"를 골랐다. 계획표의 줄을 묻는 질문에는 "위젯 행을 새로 세우기"를 골랐다. 기준선의 기한(2027-03-05)은 그 인터뷰에서 다루지 않았고 바꾸지 않는다. 그 안에 기능 둘이 더해진다. 인터뷰는 그 크기를 재지 않았다.
+
+- **기준선 표.** 본문 "agent-os의 기준선" 표에 두 줄이 는다.
+
+  | 기능 | 한 줄 |
+  |---|---|
+  | portal-admin | 사이트마다의 위젯 설정을 위젯 쪽 서버의 데이터베이스에 두고 운영자가 위젯 설정 관리 화면에서 등록한다(스택에 데이터베이스가 는다) |
+  | widget-login-state | 위젯이 로그인 상태와 고지와 다크 모드 스위치를 직접 그리고 위젯 설정을 받아 오며, 주소 하나를 창으로 여는 URL 방식을 더한다(위젯의 공개 표면) |
+
+- **`.scratch/plan.md`의 Blocked by.** portal-admin은 제품 1.0 묶음(슬라이스 10)에서 슬라이스 9로 옮기고 지금처럼 pilot-portal을 기다린다. widget-login-state(슬라이스 9)는 portal-admin을 기다린다. 위젯이 위젯 설정을 받아 오는 주소와 답의 모양이 그 행의 설계에서 정해지기 때문이다. portal-login은 pilot-portal에 더해 widget-login-state를 기다린다. 위젯 안의 로그인 화면과 새 창 로그인, 위젯 미리보기 페이지를 새 약속으로 옮기는 일이 그 행의 것이기 때문이다. portal-admin이 기준선의 행이 됐으므로 pilot-release는 answer-eval, deploy-package, answer-markdown, admin-login, step-up-login에 더해 portal-admin을 기다린다(step-up-login을 더한 2026-11-12 이력과 같은 꼴이다). widget-login-state는 portal-login과 step-up-login을 거쳐 pilot-release를 막으므로 따로 더하지 않는다. widget-appearance는 슬라이스 10 그대로이고 pilot-portal 대신 portal-admin, widget-login-state, pilot-release를 기다린다. 사용자가 0.1 판에서 등록할 범위를 묻는 질문에 "글과 고르는 값 먼저"를 골라, 그 행이 맡는 그림 올리기와 자유 색이 0.1 판 뒤가 됐기 때문이다. deploy-package는 portal-login과 widget-login-state를 거쳐 portal-admin을 이미 기다린다. release-image와 ops-backup-upgrade가 portal-admin을 기다리는지, deploy-package가 직접 기다리는지는 정하지 않았고 portal-admin의 설계 인터뷰가 정한다. 앞선 이력의 같은 이름 항목은 기록이라 고치지 않고 여기에 적는다.
+- **계약.** widget-login-state는 위젯의 공개 표면(`web/apps/widget/EMBED.md`)을 바꾸고 Agent OS의 계약(`sdk`, `openapi.json`, 사이트 파일의 형식, 사이트 토큰의 주장)은 바꾸지 않는다(ADR 0061). portal-admin에는 스택에 데이터베이스를 더하는 결정이 들고, 그 결정의 ADR은 그 행의 설계 인터뷰가 쓴다. step-up-login이 계약을 바꾸는 자리 가운데 위젯의 공개 표면에 로그인 통로를 더하는 일은 빠진다(ADR 0061 Consequences "ADR 0059의 공개 표면과 ADR 0060의 로그인 통로").
+
+### 2026-11-15 PostgreSQL이 기준선의 postgres-foundation부터 든다
+
+admin-login의 설계 인터뷰(ADR 0062, 일지 2026-11-14-2152)에서 사용자가 운영자 계정과 운영자 로그인 상태를 0.1 판부터 PostgreSQL에 두기를 골랐다("0.1 판부터 PostgreSQL을 들임". 추천은 0.1 판에서는 파일에 두고 PostgreSQL이 들어올 때 옮기는 것이었다). PostgreSQL을 들이는 일을 어디서 할지에는 "새 기능으로 따로 세워 admin-login 앞에 둠"을 골랐다. 기준선의 기한(2027-03-05)은 바꾸지 않았고, 그 안에 기능 하나가 더해진다.
+
+- **기준선 표.** 본문 "agent-os의 기준선" 표에 한 줄이 는다.
+
+  | 기능 | 한 줄 |
+  |---|---|
+  | postgres-foundation | agent-os 배포에 PostgreSQL을 들이고, 서버와 테스트와 CI가 그 데이터베이스에 닿는 길을 세운다 |
+
+- **`.scratch/plan.md`의 Blocked by.** postgres-foundation(슬라이스 9)은 release-image를 기다리고, admin-login은 release-image에 더해 postgres-foundation을 기다린다. pilot-release가 기다리는 행의 목록은 그대로이고, 그 가운데 admin-login을 거쳐 postgres-foundation이 pilot-release 앞에 선다.
+- **단일 인스턴스와 JSONL.** 본문 Consequences의 "기준선과 제품 1.0은 `serve` 한 프로세스와 파일 트레이스다"는 "기준선과 제품 1.0은 `serve` 한 프로세스와 PostgreSQL이고 트레이스는 파일이다"가 된다. 그 PostgreSQL이 담는 것은 운영자 계정, 갱신용 번호, 틀린 횟수, 서명 키, 비밀번호 링크, 로그인 기록이다(ADR 0062 결정 "저장"). "PRD의 프로세스 넷은 trace-postgres가 PostgreSQL과 Redis를 더하고"는 "postgres-foundation이 PostgreSQL을, trace-postgres가 Redis를 더하고"가 된다. 트레이스를 PostgreSQL로 옮기는 것은 여전히 trace-postgres다. PRD 전제의 같은 문장을 같은 PR에서 사용자 승인으로 고쳤다.
+- **성공 조건의 포트 문장.** 위 2026-11-11 이력은 admin-login의 설계가 세부(여는 포트 번호, 운영자가 열지 않고 둘 수 있는지)를 정하면 "(밖으로 여는 포트는 방문자용 하나와, 로그인으로 지키는 관리 화면용 하나다)"를 다시 본다고 적었다. 다시 본 결과 문장은 그대로 둔다. 관리 화면용 포트는 하나이고 호스트에 여는 기본 번호는 8443이며, 배포 파일의 기본 상태는 그 포트가 열린 것이고 운영자가 배포 설정으로 번호를 바꾸거나 닫을 수 있다(ADR 0062 결정 "포트와 TLS").
+- **0.1 판 뒤의 새 행 셋.** admin-2fa(2단계 인증), admin-roles(권한을 골라 역할을 만든다), admin-approval(관리자가 다른 사람의 실행을 승인한다)을 슬라이스 10에 세웠다. 셋 다 admin-login과 pilot-release를 기다리고 기준선의 행이 아니다(ADR 0062, ADR 0063).
+
+### 2026-11-15 위젯 설정 관리가 행 넷으로 나뉘고 셋이 기준선의 행으로 더해진다
+
+portal-admin의 설계 인터뷰(ADR 0064, 일지 2026-11-15-1312)에서 사용자가 위젯 설정 관리의 일을 나누는 방법으로 "저장과 읽기를 먼저 떼어 넷으로"를 골랐다. 위젯 미리보기 페이지 설정에 남는 값과 로그인 서버 항목을 화면에서 고치는 일에는 "모두 0.1 판에"를, 사이트 파일의 허용 출처와 요청 글자 수 상한에는 "위젯이 실행 중에 받게만"을 골랐다. 기준선의 기한(2027-03-05)은 그 인터뷰에서 다루지 않았고 바꾸지 않는다. 그 안에 기능 셋이 더해진다. 인터뷰는 그 크기를 재지 않았다.
+
+- **기준선 표.** 본문 "agent-os의 기준선" 표에 세 줄이 늘고, 위 2026-11-14 이력이 더한 portal-admin의 한 줄이 바뀐다. 위젯 설정 관리 화면은 위젯 관리 화면으로, 위젯 쪽 서버는 위젯 관리 서버로 이름을 정했다(`CONTEXT.md`).
+
+  | 기능 | 한 줄 |
+  |---|---|
+  | widget-admin-server | 위젯 관리 서버를 세워 사이트마다의 위젯 설정을 위젯 쪽의 PostgreSQL에 들고, 위젯이 그 설정을 받아 가는 주소를 낸다(스택에 둘째 파이썬 패키지와 위젯 쪽의 데이터베이스가 는다) |
+  | portal-admin | 운영자가 위젯 관리 화면에 Agent OS의 운영자 계정으로 들어와 사이트마다의 위젯 설정과 위젯 미리보기 페이지 설정을 등록한다 |
+  | widget-runtime-values | 위젯 이미지를 미리 지어 두고 컨테이너가 뜰 때 사이트 파일의 허용 출처와 요청 글자 수 상한만 받는다 |
+  | portal-login-admin | 회사 로그인 서버 항목과 사이트가 쓰는 항목을 위젯 관리 화면에서 고친다 |
+
+- **`.scratch/plan.md`의 Blocked by.** widget-admin-server(슬라이스 9)는 postgres-foundation을 기다린다. portal-admin은 pilot-portal 대신 widget-admin-server, admin-login, widget-login-state를 기다린다. widget-login-state는 portal-admin 대신 widget-admin-server를 기다린다. 위젯이 위젯 설정을 받아 오는 주소가 그 행의 것이 됐기 때문이고, 그래서 widget-login-state와 그 뒤의 portal-login은 운영자 로그인(admin-login)을 기다리지 않는다. widget-runtime-values(슬라이스 9)는 release-image를 기다린다. portal-login-admin(슬라이스 9)은 portal-login과 portal-admin을 기다린다. pilot-release는 portal-admin에 더해 widget-admin-server, widget-runtime-values, portal-login-admin을 기다린다. 위 2026-11-14 이력이 portal-admin의 설계 인터뷰에 맡긴 물음(release-image와 ops-backup-upgrade가 portal-admin을 기다리는지, deploy-package가 직접 기다리는지)은 이렇게 정했다. release-image와 ops-backup-upgrade에는 Blocked by를 더하지 않는다. 위젯 쪽의 컨테이너를 단독 compose와 배포 파일 묶음에 더하는 일은 widget-admin-server와 portal-admin의 명세가 release-image의 것 위에 더한다. deploy-package에는 portal-admin을 더한다. 그 이력은 deploy-package가 portal-login과 widget-login-state를 거쳐 portal-admin을 이미 기다린다고 적었는데, widget-login-state가 portal-admin을 기다리지 않게 되어 그 길이 끊겼다. 그리고 처음 배포한 직후에는 등록된 사이트가 없어, 그 행의 수락(안내 문서만 보고 배포해 질문한다)이 위젯 관리 화면에서 첫 사이트를 등록하는 단계를 지난다. 세 행의 기능 계획에는 넘기는 문장을 적었다(ADR 0064 Consequences "운영"과 "다른 행"). 앞선 이력의 같은 이름 항목은 기록이라 고치지 않고 여기에 적는다.
+- **0.1 판 뒤의 새 행.** site-limits-admin(허용 출처와 요청 글자 수 상한을 화면에서 고친다)을 슬라이스 10에 세웠다. widget-runtime-values와 pilot-release를 기다리고 기준선의 행이 아니다.
+- **계약.** 네 행 모두 Agent OS의 계약(`sdk`, `openapi.json`, 사이트 파일의 형식, 사이트 토큰의 주장)을 바꾸지 않는다. 위젯 관리 서버의 계약 파일은 Agent OS의 것과 따로 서고 widget-admin-server가 세운다(ADR 0064 결정 "위젯 관리 서버"). 위 2026-11-14 이력이 이 인터뷰에 넘긴 스택의 결정(데이터베이스)은 ADR 0064가 썼다.
+- **성공 조건의 포트 문장.** 위젯 관리 화면이 관리 화면과 같은 이름의 다른 포트에 서므로(ADR 0064 결정 "주소") PRD의 "(밖으로 여는 포트는 방문자용 하나와, 로그인으로 지키는 관리 화면용 하나다)"는 "(밖으로 여는 포트는 방문자용 하나와, 로그인으로 지키는 관리 화면용 하나와 위젯 관리 화면용 하나다)"가 된다. PRD의 그 문장을 같은 PR에서 사용자 승인으로 고쳤다.
+- **단일 인스턴스와 JSONL.** 위 "PostgreSQL이 기준선의 postgres-foundation부터 든다" 이력이 적은 "`serve` 한 프로세스와 PostgreSQL"은 Agent OS의 프로세스를 센 것이라 그대로다. 위젯 관리 서버와 위젯 쪽의 데이터베이스는 위젯 쪽의 것이고 그 셈에 들지 않는다.

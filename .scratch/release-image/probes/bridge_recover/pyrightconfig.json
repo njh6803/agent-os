@@ -1,0 +1,9 @@
+{
+  "include": ["."],
+  "exclude": ["**/__pycache__", "live", "stage"],
+  "pythonVersion": "3.12",
+  "typeCheckingMode": "strict",
+  "venvPath": "../../../..",
+  "venv": ".venv",
+  "extraPaths": ["../../../.."]
+}

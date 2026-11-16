@@ -1,0 +1,445 @@
+{
+  "v": 3,
+  "createdOnFiles": {
+    "v": 1,
+    "at": "2026-11-15T09:37:27Z"
+  },
+  "title": "admin-login 화면 · screens-prompt.md",
+  "launch": {
+    "view": "canvas",
+    "page": "choices"
+  },
+  "pages": [
+    {
+      "id": "choices",
+      "name": "1. 대화 화면 네 안과 정해진 화면"
+    },
+    {
+      "id": "mockups",
+      "name": "2. 고른 대화 화면의 완성 화면"
+    }
+  ],
+  "boards": {
+    "Main.dc.html": {
+      "x": 0,
+      "y": 0,
+      "w": 1280,
+      "h": 800,
+      "title": "1 로그인 · 실패 · 데스크톱",
+      "page": "choices",
+      "expand": "fill"
+    },
+    "mk-login-empty.dc.html": {
+      "x": 1360,
+      "y": 0,
+      "w": 1280,
+      "h": 800,
+      "title": "2 로그인 · 운영자 계정이 없음 · 데스크톱",
+      "page": "choices",
+      "expand": "fill"
+    },
+    "mk-login-m.dc.html": {
+      "x": 2720,
+      "y": 0,
+      "w": 375,
+      "h": 812,
+      "title": "4 로그인 · 모바일",
+      "page": "choices",
+      "expand": "fill"
+    },
+    "mk-login-notices.dc.html": {
+      "x": 0,
+      "y": 932,
+      "w": 1680,
+      "h": 600,
+      "title": "3 로그인 · 알림 넷",
+      "page": "choices",
+      "expand": "fill"
+    },
+    "mk-set-password.dc.html": {
+      "x": 0,
+      "y": 1652,
+      "w": 1280,
+      "h": 900,
+      "title": "5 비밀번호 정하기 · 데스크톱",
+      "page": "choices",
+      "expand": "fill"
+    },
+    "mk-set-password-states.dc.html": {
+      "x": 1360,
+      "y": 1652,
+      "w": 1280,
+      "h": 820,
+      "title": "6 비밀번호 정하기 · 상태 셋",
+      "page": "choices",
+      "expand": "fill"
+    },
+    "mk-accounts.dc.html": {
+      "x": 0,
+      "y": 2672,
+      "w": 1280,
+      "h": 860,
+      "title": "7 운영자 계정 · 줄 끝 메뉴 · 데스크톱",
+      "page": "choices",
+      "expand": "fill"
+    },
+    "mk-accounts-create.dc.html": {
+      "x": 1360,
+      "y": 2672,
+      "w": 1280,
+      "h": 860,
+      "title": "8 계정 만들기 창",
+      "page": "choices",
+      "expand": "fill"
+    },
+    "mk-accounts-m.dc.html": {
+      "x": 2720,
+      "y": 2672,
+      "w": 375,
+      "h": 1240,
+      "title": "11 운영자 계정 · 모바일",
+      "page": "choices",
+      "expand": "fill"
+    },
+    "mk-accounts-link.dc.html": {
+      "x": 0,
+      "y": 3992,
+      "w": 1280,
+      "h": 860,
+      "title": "9 비밀번호 링크 창",
+      "page": "choices",
+      "expand": "fill"
+    },
+    "mk-accounts-disable.dc.html": {
+      "x": 1360,
+      "y": 3992,
+      "w": 1280,
+      "h": 860,
+      "title": "10 쓰지 않음 확인 창",
+      "page": "choices",
+      "expand": "fill"
+    },
+    "mk-account-menu.dc.html": {
+      "x": 0,
+      "y": 4972,
+      "w": 1280,
+      "h": 900,
+      "title": "12 계정 메뉴 · 데스크톱",
+      "page": "choices",
+      "expand": "fill"
+    },
+    "mk-account-menu-m.dc.html": {
+      "x": 1360,
+      "y": 4972,
+      "w": 375,
+      "h": 812,
+      "title": "13 계정 메뉴 · 모바일",
+      "page": "choices",
+      "expand": "fill"
+    },
+    "mk-my-password.dc.html": {
+      "x": 1815,
+      "y": 4972,
+      "w": 1280,
+      "h": 960,
+      "title": "14 비밀번호 바꾸기 · 데스크톱",
+      "page": "choices",
+      "expand": "fill"
+    },
+    "mk-settings.dc.html": {
+      "x": 0,
+      "y": 6052,
+      "w": 1280,
+      "h": 760,
+      "title": "15 설정 · 데스크톱",
+      "page": "choices",
+      "expand": "fill"
+    },
+    "ch-a.dc.html": {
+      "x": 0,
+      "y": 7200,
+      "w": 1280,
+      "h": 1180,
+      "title": "대화 A 위젯과 같은 결",
+      "page": "choices",
+      "expand": "fill"
+    },
+    "ch-b.dc.html": {
+      "x": 1360,
+      "y": 7200,
+      "w": 1280,
+      "h": 1180,
+      "title": "대화 B 플레이그라운드형",
+      "page": "choices",
+      "expand": "fill"
+    },
+    "ch-c.dc.html": {
+      "x": 2720,
+      "y": 7200,
+      "w": 1280,
+      "h": 1180,
+      "title": "대화 C 입력 칸 위 승인 패널",
+      "page": "choices",
+      "expand": "fill"
+    },
+    "ch-d.dc.html": {
+      "x": 4080,
+      "y": 7200,
+      "w": 1280,
+      "h": 1180,
+      "title": "대화 D 작업 기록형",
+      "page": "choices",
+      "expand": "fill"
+    },
+    "ch-list.dc.html": {
+      "x": 0,
+      "y": 0,
+      "w": 1280,
+      "h": 800,
+      "title": "2-1 대화 목록 · 데스크톱",
+      "page": "mockups",
+      "expand": "fill"
+    },
+    "ch-list-m.dc.html": {
+      "x": 1360,
+      "y": 0,
+      "w": 375,
+      "h": 1560,
+      "title": "2-2 대화 목록 · 모바일",
+      "page": "mockups",
+      "expand": "fill"
+    },
+    "ch-new.dc.html": {
+      "x": 0,
+      "y": 1700,
+      "w": 1280,
+      "h": 760,
+      "title": "2-3 새 대화",
+      "page": "mockups",
+      "expand": "fill"
+    },
+    "ch-new-none.dc.html": {
+      "x": 1360,
+      "y": 1700,
+      "w": 1280,
+      "h": 760,
+      "title": "2-4 켜진 에이전트가 없음",
+      "page": "mockups",
+      "expand": "fill"
+    },
+    "ch-running.dc.html": {
+      "x": 0,
+      "y": 2600,
+      "w": 1280,
+      "h": 900,
+      "title": "2-5 실행이 도는 중",
+      "page": "mockups",
+      "expand": "fill"
+    },
+    "ch-approved.dc.html": {
+      "x": 1360,
+      "y": 2600,
+      "w": 1280,
+      "h": 1100,
+      "title": "2-6 승인한 뒤",
+      "page": "mockups",
+      "expand": "fill"
+    },
+    "ch-denied.dc.html": {
+      "x": 2720,
+      "y": 2600,
+      "w": 1280,
+      "h": 1100,
+      "title": "2-6 거부한 뒤",
+      "page": "mockups",
+      "expand": "fill"
+    },
+    "ch-failed.dc.html": {
+      "x": 0,
+      "y": 3840,
+      "w": 1280,
+      "h": 980,
+      "title": "2-7 실패",
+      "page": "mockups",
+      "expand": "fill"
+    },
+    "ch-polling.dc.html": {
+      "x": 1360,
+      "y": 3840,
+      "w": 1280,
+      "h": 760,
+      "title": "2-8 결말 없는 대화를 연 화면 · 다시 확인하는 중",
+      "page": "mockups",
+      "expand": "fill"
+    },
+    "ch-stale.dc.html": {
+      "x": 2720,
+      "y": 3840,
+      "w": 1280,
+      "h": 760,
+      "title": "2-9 끝맺지 못한 실행",
+      "page": "mockups",
+      "expand": "fill"
+    },
+    "ch-enduser.dc.html": {
+      "x": 0,
+      "y": 4960,
+      "w": 1280,
+      "h": 860,
+      "title": "2-10 최종 사용자의 대화",
+      "page": "mockups",
+      "expand": "fill"
+    },
+    "ch-m.dc.html": {
+      "x": 1360,
+      "y": 4960,
+      "w": 375,
+      "h": 1900,
+      "title": "2-11 대화 · 모바일",
+      "page": "mockups",
+      "expand": "fill"
+    },
+    "ch-dark.dc.html": {
+      "x": 1815,
+      "y": 4960,
+      "w": 1280,
+      "h": 1180,
+      "title": "2-12 대화 · 다크",
+      "page": "mockups",
+      "expand": "fill"
+    },
+    "ch-run.dc.html": {
+      "x": 0,
+      "y": 7000,
+      "w": 1280,
+      "h": 1700,
+      "title": "2-13 실행 패널 · 요청한 계정과 결정한 계정",
+      "page": "mockups",
+      "expand": "fill"
+    }
+  },
+  "order": [
+    "Main.dc.html",
+    "mk-login-empty.dc.html",
+    "mk-login-m.dc.html",
+    "mk-login-notices.dc.html",
+    "mk-set-password.dc.html",
+    "mk-set-password-states.dc.html",
+    "mk-accounts.dc.html",
+    "mk-accounts-create.dc.html",
+    "mk-accounts-m.dc.html",
+    "mk-accounts-link.dc.html",
+    "mk-accounts-disable.dc.html",
+    "mk-account-menu.dc.html",
+    "mk-account-menu-m.dc.html",
+    "mk-my-password.dc.html",
+    "mk-settings.dc.html",
+    "ch-a.dc.html",
+    "ch-b.dc.html",
+    "ch-c.dc.html",
+    "ch-d.dc.html",
+    "ch-list.dc.html",
+    "ch-list-m.dc.html",
+    "ch-new.dc.html",
+    "ch-new-none.dc.html",
+    "ch-running.dc.html",
+    "ch-approved.dc.html",
+    "ch-denied.dc.html",
+    "ch-failed.dc.html",
+    "ch-polling.dc.html",
+    "ch-stale.dc.html",
+    "ch-enduser.dc.html",
+    "ch-m.dc.html",
+    "ch-dark.dc.html",
+    "ch-run.dc.html"
+  ],
+  "notes": {
+    "fixed-title": {
+      "x": 0,
+      "y": -300,
+      "text": "정해진 화면",
+      "kind": "title1",
+      "maxW": 3095,
+      "page": "choices"
+    },
+    "fixed-how": {
+      "x": 3200,
+      "y": 0,
+      "w": 400,
+      "maxH": 900,
+      "page": "choices",
+      "fill": "gray",
+      "text": "정해진 화면 열다섯은 사람이 고른 방향대로 한 안씩 그렸다. 로그인은 입력 칸 위에 남는 경고와 첫 계정 명령 안내, 비밀번호는 처음부터 보이는 규칙 목록, 계정 관리는 줄 끝 메뉴, 지금 계정은 옆 탐색 맨 아래 자리다. 아래 대화 화면만 네 안이다.\n\n디자인 시스템에 없는 아이콘은 같은 크기와 선의 Lucide 모양으로 직접 그렸다: message-square(대화), users(계정), chevrons-up-down(계정 자리), log-out(로그아웃), copy(복사), lock(잠김), circle(아직 맞추지 않은 규칙, 비밀번호를 정하기 전).\n\n메뉴와 창은 디자인 시스템에 없는 부품이라 브라우저 기본 요소에 쓰임새 토큰을 칠했고, 떠 있는 것이라 shadow-float를 썼다.\n\n탐색용 가정: 첫 계정 명령 agent-os operator create-system-admin은 자리표시다. 비밀번호를 정하는 화면은 계정 이름을 보이지 않는다. 계정 상태는 상태 배지 대신 글자와 아이콘으로 보인다."
+    },
+    "fixed-decided": {
+      "x": 3200,
+      "y": 960,
+      "w": 400,
+      "maxH": 300,
+      "page": "choices",
+      "fill": "gray",
+      "text": "확정(2026-11-15): 정해진 화면 열다섯을 지금 모양 그대로 확정했다. 사람이 고른 답은 '그대로 확정'이다."
+    },
+    "chat-title": {
+      "x": 0,
+      "y": 6900,
+      "text": "대화 화면의 네 안",
+      "kind": "title1",
+      "maxW": 5360,
+      "page": "choices"
+    },
+    "chat-how": {
+      "x": 5440,
+      "y": 7200,
+      "w": 400,
+      "maxH": 900,
+      "page": "choices",
+      "fill": "gray",
+      "text": "네 안은 같은 대화를 그렸다. support-bot과의 대화에 실행이 둘이고, 둘째 실행이 payments.refund의 승인 묻기를 기다린다.\n\nA: 위젯이 고른 조용한 기록형과 같은 가운데 한 열.\nB: 왼쪽 열에 에이전트와 지금 실행을 둔 플레이그라운드형.\nC: 결정 자리를 입력 칸 바로 위에 고정한 승인 패널.\nD: 모든 항목에 종류와 시각을 붙인 작업 기록형.\n\n고른 안은 이 옆에 적는다."
+    },
+    "chat-decided": {
+      "x": 5440,
+      "y": 8160,
+      "w": 400,
+      "maxH": 900,
+      "page": "choices",
+      "fill": "gray",
+      "text": "고름(2026-11-15): 대화 화면은 A(위젯과 같은 결)다. 사람은 처음에 '목록 표 + 상세 팝업'을 제안했고, 조사 뒤 실행과 대화를 탐색의 한 메뉴로 합치기로 골랐다. 대화마다 한 행인 목록 표에서 행을 누르면 A 모양의 대화 페이지가 열린다(팝업이 아니라 페이지다). 메뉴 이름은 조사 뒤 '대화'로 골랐다.\n\n그래서 탐색은 플러그인, 대화, 계정, 설정 넷이고, 정해진 화면과 A의 탐색에서 '실행'을 뺐다. 실행 하나 화면은 대화 페이지의 '자세히'가 연다.\n\n이 모양은 ADR 0063의 '대화의 목록을 주는 경로는 만들지 않는다'와 확정된 실행 목록 화면을 바꾼다. 명세 전에 ADR 0063의 개정과 서버 계약의 경로를 사람이 승인해야 한다."
+    },
+    "mock-title": {
+      "x": 0,
+      "y": -300,
+      "text": "고른 대화 화면의 완성 화면",
+      "kind": "title1",
+      "maxW": 4000,
+      "page": "mockups"
+    },
+    "mock-how": {
+      "x": 4080,
+      "y": 0,
+      "w": 420,
+      "maxH": 1600,
+      "page": "mockups",
+      "fill": "gray",
+      "text": "첫 차례의 고름대로 실행과 대화를 '대화' 메뉴 하나로 합쳤다. 대화 목록은 확정된 실행 목록(admin-style mk-runs)의 틀과 상태 거르기, '더 보기', 읽을 수 없는 트레이스 행을 이어받는다. 열은 상태(끝 실행의 상태), 첫 요청, 에이전트, 요청한 계정, 실행 수, 마지막이다. 요청한 계정이 빈 행(최종 사용자, 명령줄)은 흐린 글자로 까닭과 주체를 보인다. 대화 페이지는 A이고, 모든 상태에서 머리 위에 '대화 목록' 링크가 선다.\n\n탐색용 가정: 주소는 /chat(목록), /chat/new(새 대화), /chat/<마지막 실행>(대화 하나)다. 목록의 열과 거르기는 서버가 대화를 묶어 줄 경로를 전제한다. 실패한 실행과 결말 없는 실행은 이어 가지 못한다(continuation.py가 run_finished로 끝난 실행만 받는다). 그래서 실패 뒤의 다음 요청과 '다시 보내기'는 그 앞의 끝난 실행에서 잇고, 결말 없는 실행 뒤에는 입력 칸이 막힌다. 실행 패널의 requested_by, decided_by는 자리표시 계약 이름이다. 실행 패널의 승인자 칸은 ADR 0063대로 주체와 같은 operator로 맞췄다(확정 화면에는 주체와 다른 ops가 적혀 있었다). 실행 하나의 따로 된 페이지는 없어지고 대화 화면 위에 뜨는 패널이 그 자리를 맡는다. 패널이 열린 상태는 주소의 질의(/chat/<마지막 실행>?run=<실행>)에 남는다. 패널은 대화를 막지 않아 덮개가 없고, 닫기와 Esc로 닫으며, 가려지지 않은 쪽의 다른 실행의 '자세히'를 누르면 패널 내용만 바뀐다. 앞 실행 칸의 실행 ID를 누르면 그 실행을 패널에 연다. 375에서는 패널이 화면 전체를 덮는다. 패널의 시각은 트레이스의 UTC 값이고 대화의 시각은 브라우저 시간대(한국 표준시)다.\n\n속성으로 그린 판: 2-4는 2-3(ch-new)을, 2-6 거부는 2-6 승인(ch-approved)을, 2-9는 2-8(ch-polling)을 속성만 바꿔 불러 쓴다.\n\n디자인 시스템에 없는 부품: 에이전트 고르는 칸은 브라우저 기본 select에 쓰임새 토큰을 칠했다.\n\n불러오기 문구: 대화를 처음 열어 아직 아무것도 그리지 못한 동안은 머리 아래 진행 표시 '대화를 불러오는 중'이 선다(확정 화면의 '…을 불러오는 중'과 같은 꼴). 보인 대화를 남긴 채 다시 읽는 동안은 '다시 확인하는 중'이다(2-8)."
+    },
+    "mock-round2": {
+      "x": 4080,
+      "y": 1700,
+      "w": 420,
+      "maxH": 700,
+      "page": "mockups",
+      "fill": "gray",
+      "text": "둘째 차례 확정 질문의 답(일지 2026-11-15-1755 \"ui-design 6: 둘째 차례 확정 질문\"). 사람이 판 28의 둘째 차례 14장을 그대로 확정했다(같은 일지의 \"ui-design 6: 둘째 차례 확정\"). 2-8의 진행 표시는 '다시 확인하는 중' 그대로 두고 판 제목만 '결말 없는 대화를 연 화면'으로 바꿨다. 실행 하나(2-13)는 대화를 밀어내지 않고 대화 위 오른쪽에 뜨는 패널(폭 480px, 떠 있는 것의 그림자)로 다시 그렸다. 치르는 값: 패널이 열린 동안 가려진 대화와 보내기 버튼을 쓰려면 패널을 닫는다."
+    }
+  },
+  "designSystems": [
+    {
+      "title": "Agent OS 디자인 시스템",
+      "namespace": "agent-os",
+      "artifact": "https://claude.ai/artifact/8ttLDZQqchfD2ao1XG56GH",
+      "version": "1794636666-d3b5",
+      "copiedAt": "2026-11-15T09:37:27Z"
+    }
+  ]
+}

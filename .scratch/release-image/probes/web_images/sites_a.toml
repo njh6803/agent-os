@@ -1,0 +1,27 @@
+# web_images 프로브의 첫째 사이트 파일. 허용 출처와 요청 글자 수 상한은 산출물과 응답에서 글자로 찾기 쉽게 다른 데
+# 나오지 않을 값으로 골랐다(상한 771133 은 압축기가 지수 꼴로 줄이지 않는 수다). 공개 키는 저장소 픽스처
+# tests/fixtures/site_file/sites.toml 의 첫 사이트 것을 그대로 옮겼다(위젯 빌드는 공개 키를 읽지 않는다).
+schema_version = "1"
+
+[[sites]]
+issuer = "https://probe-a.example"
+audience = "agent-os"
+allowed_origins = ["https://probe-a.example"]
+agents = ["echo"]
+
+[[sites.public_keys]]
+kid = "probe-a-1"
+pem = """
+-----BEGIN PUBLIC KEY-----
+MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAidz9jKWqEB8cbJnGvTDY
+ggiDwV8F3HbLynTn7l8/Nacy57lLFE7ntT9xIhRUcF6X83v5u577ywbiuFQDu0Fe
+2xAk2SkXzPTxuPoGJM0j1HA2pdmLbOMYnZGXYFysmQSETCE8HVvfDYfxWbZYEcIz
+YUmEyKFRkfKwv9AUK/3KHCKHCInseeAiPiaOVwJDsmD4yDwXZMSN8IZ9gXxDjacx
+hMzhdNJBO9tCvWe2YTC6r5Db8VrEqDMMHfmYRSdyG0yqxRnZ96GhdX9SUfgrFTq8
+ekx4FVGPtqwi5NY7TBrSF93yN9lbA+tHYKQPLhjFlJdD6s09lHpxjolQNAN0qtjz
+xwIDAQAB
+-----END PUBLIC KEY-----
+"""
+
+[sites.limits]
+request_chars = 771133

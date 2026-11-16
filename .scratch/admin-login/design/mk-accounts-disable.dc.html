@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>쓰지 않음 확인 창</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/agent-os/styles.css">
+<link rel="stylesheet" href="ds/agent-os/fonts/fonts.css">
+<link rel="stylesheet" href="ds/agent-os/_ds_bundle.css">
+<script src="ds/agent-os/_ds_bundle.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0}
+a{color:var(--accent)}a:hover{color:var(--text)}
+</style>
+</helmet>
+<div data-theme="nokcheong" data-mode="light" style="position: relative; min-height: 100vh; background: var(--bg); color: var(--text); font-family: var(--sans);">
+<dc-import name="mk-accounts" menu-open="{{no}}" hint-size="100%,860px"></dc-import>
+<div aria-hidden="true" style="position: absolute; inset: 0; background: var(--text); opacity: 0.32;"></div>
+<dialog open aria-labelledby="disable-title" class="shadow-float" style="position: absolute; top: 120px; left: 0; right: 0; margin: 0 auto; box-sizing: border-box; width: calc(100% - 32px); max-width: 480px; padding: var(--spacing-6); background: var(--bg-raised); color: var(--text); border: 1px solid var(--border); border-radius: var(--radius-l);">
+<form method="dialog" class="flex flex-col gap-4" style="margin: 0;">
+<h2 id="disable-title" style="margin: 0; font-size: var(--text-title); line-height: var(--text-title--line-height); font-weight: var(--text-title--font-weight);"><span class="font-mono">choi.ml</span>을 쓰지 않음으로 돌린다</h2>
+<ul class="flex flex-col gap-2 text-body" style="margin: 0; padding-left: var(--spacing-4);">
+<li>로그인이 막히고 지금의 로그인도 길어야 5분 안에 끊긴다. 도는 실행은 끝까지 간다.</li>
+<li>이 이름으로 새 계정을 만들 수 없다.</li>
+<li>실행 기록에 남은 이름은 그대로다.</li>
+<li>언제든 되돌릴 수 있다.</li>
+</ul>
+<div class="flex justify-end gap-2">
+<x-import component-from-global-scope="AgentOsUi.Button" variant="secondary">취소</x-import>
+<x-import component-from-global-scope="AgentOsUi.Button" variant="primary" type="submit">쓰지 않음으로 돌리기</x-import>
+</div>
+</form>
+</dialog>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":860}}'>
+class Component extends DCLogic {
+renderVals() {
+return { no: false };
+}
+}
+</script>
+</body>
+</html>

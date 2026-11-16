@@ -2,6 +2,7 @@
 
 import pytest
 from langchain_anthropic import ChatAnthropic
+from langchain_openai import ChatOpenAI
 
 from agent_os.adapters.models import MODEL_ENV, ManifestModels, resolve_model_name
 from agent_os.core.ports import ModelSource, PluginError
@@ -108,14 +109,22 @@ def test_공백만_있는_model_id_는_제공사를_가르기_전에_실행_전_
         models.build(manifest)
 
 
-def test_openai_compatible_은_붙는_어댑터가_아직_없다는_실행_전_구성_오류다() -> None:
-    """계약 티켓만 병합된 개발 브랜치의 임시 갈래다. pyright 는 갈래가 있는지만 보고 무엇을
-    던지는지는 보지 않아 이 시험이 그 자리를 덮는다. 어댑터 티켓이 이 시험과 문구를 지운다."""
+def test_openai_compatible_은_ChatOpenAI_를_만들고_제공사로_갈린다() -> None:
+    """같은 모델 소스가 `provider` 로 가른다. 키도 네트워크도 요구하지 않아 서버가 없는 주소도
+    만들어진다. 요청과 실패의 동작은 `test_openai_compatible.py` 가 본다."""
     models: ModelSource = ManifestModels()
 
-    with pytest.raises(PluginError) as error:
-        models.build(_openai_compatible())
+    model = models.build(_openai_compatible())
 
-    assert str(error.value) == (
-        "model 플러그인 ax-4-light 의 provider openai-compatible 에 붙는 어댑터가 아직 없다"
-    )
+    assert isinstance(model, ChatOpenAI)
+    assert not isinstance(model, ChatAnthropic)
+    assert model.model_name == "skt/A.X-4.0-Light"
+    assert model.openai_api_base == "http://model-server:8000/v1"
+    assert not isinstance(models.build(_anthropic()), ChatOpenAI)
+
+
+def test_openai_compatible_도_부를_때마다_새_모델을_만든다() -> None:
+    models: ModelSource = ManifestModels()
+    manifest = _openai_compatible()
+
+    assert models.build(manifest) is not models.build(manifest)

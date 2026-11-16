@@ -1,0 +1,17 @@
+# 덧씌움. compose.depends.yml 에 restart: true 를 더한 판. compose 가 뒷단을 다시 만들거나 다시
+# 시작하면 프록시도 다시 시작한다고 compose 문서가 적는 꼴이다(compose.health.yml 과 함께 쓴다).
+services:
+  proxy:
+    depends_on:
+      serve:
+        condition: service_healthy
+        restart: true
+      admin:
+        condition: service_healthy
+        restart: true
+      widget:
+        condition: service_healthy
+        restart: true
+      portal:
+        condition: service_healthy
+        restart: true

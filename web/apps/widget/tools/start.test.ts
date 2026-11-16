@@ -5,10 +5,14 @@
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { describe, expect, test } from "vitest";
-import { absoluteSiteFile, launch, nextCommand } from "./start.ts";
+import { CASES, expectSignals, nameOf } from "../testing/container-network.ts";
+import { absoluteSiteFile, type ContainerNetwork, launch, nextCommand } from "./start.ts";
+
+// 예외가 꺼진 입력. 표지 파일도 환경 변수도 없다.
+const OUTSIDE: ContainerNetwork = { imageMarker: false, env: undefined };
 
 function refusal(argv: readonly string[]): string {
-  const command = nextCommand(argv, "3000");
+  const command = nextCommand(argv, "3000", OUTSIDE);
   if (!("problem" in command)) {
     throw new Error(`${argv.join(" ")} 가 거부되지 않았다`);
   }
@@ -17,18 +21,18 @@ function refusal(argv: readonly string[]): string {
 
 describe("래퍼가 받는 인자", () => {
   test("호스트를 주지 않으면 127.0.0.1 에 선다. next 의 기본값은 0.0.0.0 이다", () => {
-    expect(nextCommand(["dev"], "3000")).toEqual({
+    expect(nextCommand(["dev"], "3000", OUTSIDE)).toEqual({
       args: ["dev", "--hostname", "127.0.0.1"],
       prepare: true,
     });
-    expect(nextCommand(["start"], "3000")).toEqual({
+    expect(nextCommand(["start"], "3000", OUTSIDE)).toEqual({
       args: ["start", "--hostname", "127.0.0.1"],
       prepare: false,
     });
   });
 
   test("루프백 호스트와 포트는 판정을 지나 그대로 next 에 넘어간다", () => {
-    expect(nextCommand(["start", "-H", "::1", "-p", "3100"], "3000")).toEqual({
+    expect(nextCommand(["start", "-H", "::1", "-p", "3100"], "3000", OUTSIDE)).toEqual({
       args: ["start", "--hostname", "::1", "--port", "3100"],
       prepare: false,
     });
@@ -45,7 +49,7 @@ describe("래퍼가 받는 인자", () => {
   }
 
   test("빌드는 입력을 준비한 뒤 next build 를 부르고, 서지 않으므로 호스트와 포트를 받지 않는다", () => {
-    expect(nextCommand(["build"], "3000")).toEqual({ args: ["build"], prepare: true });
+    expect(nextCommand(["build"], "3000", OUTSIDE)).toEqual({ args: ["build"], prepare: true });
     expect(refusal(["build", "--port", "3100"])).toContain("build");
   });
 
@@ -64,7 +68,7 @@ describe("판정을 지난 명령을 따르기", () => {
     ["start", ["next start"]],
   ] as const) {
     test(`${command} 는 ${expected.join(" 뒤에 ")} 를 부른다`, async () => {
-      const judged = nextCommand([command], "3000");
+      const judged = nextCommand([command], "3000", OUTSIDE);
       if ("problem" in judged) {
         throw new Error(`${command} 가 거부됐다: ${judged.problem}`);
       }
@@ -82,7 +86,7 @@ describe("판정을 지난 명령을 따르기", () => {
   }
 
   test("준비가 실패하면 next 를 부르지 않는다", async () => {
-    const judged = nextCommand(["build"], "3000");
+    const judged = nextCommand(["build"], "3000", OUTSIDE);
     if ("problem" in judged) {
       throw new Error(`build 가 거부됐다: ${judged.problem}`);
     }
@@ -112,5 +116,38 @@ describe("사이트 파일의 경로", () => {
     expect(absoluteSiteFile(absolute, join(tmpdir(), "operator"))).toBe(absolute);
     expect(absoluteSiteFile("", join(tmpdir(), "operator"))).toBe("");
     expect(absoluteSiteFile(undefined, join(tmpdir(), "operator"))).toBeUndefined();
+  });
+});
+
+// 사례 표(tests/fixtures/container_network/cases.json)의 듣는 주소. 파이썬의 tests/test_main.py 와 관리 화면, 위젯 미리보기
+// 페이지의 시험이 같은 표를 읽는다. 표지 파일을 실제로 읽는 길은 이미지를 띄우는 시험(release-image 07·08·09)이 본다.
+describe("컨테이너 네트워크 예외의 사례 표", () => {
+  test("표가 판정의 종류를 모두 갖고 있다", () => {
+    expect(new Set(CASES.binding.map(({ verdict }) => verdict))).toEqual(
+      new Set(["ok", ...Object.keys(CASES.bindingSignals)]),
+    );
+  });
+
+  for (const item of CASES.binding) {
+    test(nameOf(item), () => {
+      const command = nextCommand(["start", "--hostname", item.host], "3000", {
+        imageMarker: item.marker,
+        env: item.env,
+      });
+
+      if (item.verdict === "ok") {
+        expect(command).toEqual({ args: ["start", "--hostname", item.host], prepare: false });
+      } else if ("problem" in command) {
+        expectSignals(command.problem, CASES.bindingSignals, item);
+      } else {
+        throw new Error("거부되지 않았다");
+      }
+    });
+  }
+
+  test("빌드는 서지 않아 환경 변수의 오타도 보지 않는다", () => {
+    const command = nextCommand(["build"], "3000", { imageMarker: false, env: "true" });
+
+    expect(command).toEqual({ args: ["build"], prepare: true });
   });
 });

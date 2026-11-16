@@ -1,0 +1,10 @@
+# 측정 전용 덧씌움(항목 7). compose.ipv6.yml 과 함께 쓴다. 관리 화면과 serve 대역이 `::` 에도 듣게
+# 해서(stub.py 의 셋째 인자), 이웃이 컨테이너의 IPv6 주소로 건 요청이 그 컨테이너에 닿으면 그 대역이
+# 답하게 한다. 실제 뒷단 이미지가 `::` 에도 묶는지는 재지 않았다(README 의 "재지 못한 것").
+
+services:
+  serve:
+    command: ["python", "/stub.py", "serve", "8000", "::"]
+
+  admin:
+    command: ["python", "/stub.py", "admin", "3000", "::"]

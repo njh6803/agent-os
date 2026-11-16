@@ -8,6 +8,7 @@ import { mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { expect, test } from "vitest";
+import { CASES, expectSignals, nameOf } from "../testing/container-network.ts";
 
 const START = join(import.meta.dirname, "start.ts");
 
@@ -24,6 +25,25 @@ test("루프백이 아닌 호스트로 띄우면 next 를 부르지 않고 실�
   // next 의 첫 줄(판과 주소)이 없다. next 를 부르기 전에 끝났다.
   expect(run.stdout).toBe("");
 });
+
+// 사례 표(tests/fixtures/container_network/cases.json)의 거부 사례 가운데 표지 파일이 없는 것. 환경에서 온 값이 진입점까지
+// 닿는지를 본다. 표지 파일은 `/etc` 에 있어 시험이 만들지 못하므로 있는 쪽은 start.test.ts 의 순수 판정이 본다. 받는 사례는
+// next 가 떠서 스스로 끝나지 않으므로 띄우지 않는다.
+for (const item of CASES.binding.filter(
+  ({ marker, env, verdict }) => !marker && env !== undefined && verdict !== "ok",
+)) {
+  test(`환경에서 온 값이 진입점에서 거부된다: ${nameOf(item)}`, () => {
+    const run = spawnSync(process.execPath, [START, "dev", "--hostname", item.host], {
+      encoding: "utf-8",
+      timeout: 30_000,
+      env: { ...process.env, [CASES.envName]: item.env },
+    });
+
+    expect(run.status).toBe(1);
+    expectSignals(run.stderr, CASES.bindingSignals, item);
+    expect(run.stdout).toBe("");
+  });
+}
 
 test("상대 경로로 준 사이트 파일을 래퍼를 부른 자리에서 찾고, 읽지 못하면 빌드가 그 진단으로 실패한다", () => {
   // 번들 빌드가 사이트 파일을 읽다 멈추기까지 이 PC에서 이 시험만 돌려 1.4초였다(2026-10-24, vitest 가 보고한 시험

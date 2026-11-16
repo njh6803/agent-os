@@ -3,7 +3,8 @@
  *
  * - `dev`·`start` 는 관리 화면의 래퍼와 같은 모양이다. 바인딩 호스트가 루프백이 아니면 next 를 부르기 전에 구성
  *   오류로 끝나고 SSH 포트 포워딩을 안내한다. 호스트를 주지 않으면 `127.0.0.1` 이다. `next dev`·`next start` 는 인자
- *   없이 `0.0.0.0` 과 `[::]` 에 서서, 위젯이 nginx 와 TLS 를 거치지 않고 LAN 에 평문으로 열린다.
+ *   없이 `0.0.0.0` 과 `[::]` 에 서서, 위젯이 nginx 와 TLS 를 거치지 않고 LAN 에 평문으로 열린다. 컨테이너 이미지 안에서는
+ *   예외 하나로 `0.0.0.0` 도 받는다(표지 파일과 환경 변수가 함께 있을 때만, 아래 `ContainerNetwork`).
  * - `dev`·`build` 는 next 를 부르기 전에 빌드의 입력을 준비한다. 글꼴 파일을 `public/fonts/` 에 복사하고(`@agent-os/ui/fonts`),
  *   페이지 안 번들을 `public/element.js` 로 짓는다(`element.ts`). `start` 는 빌드 산출물과 그 `public/` 을 그대로 낸다.
  *   `dev` 도 번들을 한 번 지을 뿐 고칠 때마다 다시 짓지 않는다.
@@ -20,13 +21,15 @@
  * 공유 자리로 옮기지 않고 위젯이 자기 래퍼를 둔다(web-widget 티켓 03 이 정했다). 관리 화면의 래퍼(apps/admin/tools)를
  * 옮기면 관리 화면의 e2e 와 시험까지 고치게 되고, 위젯의 래퍼는 빌드도 맡아 하는 일이 다르다. 대가로 루프백 목록이
  * 네 벌이 된다(`serve` 의 `src/agent_os/main.py` 의 `LOOPBACK_HOSTS`, 관리 화면의 `tools/loopback.ts`, 이 파일,
- * 위젯 미리보기 페이지의 `web/apps/portal/server/config.ts`). 앱 사이 import 는 층 경계가 막는다. 목록을 바꾸면 넷을 함께 고친다.
+ * 위젯 미리보기 페이지의 `web/apps/portal/server/config.ts`). 앱 사이 import 는 층 경계가 막는다. 목록과 이미지 안의 예외(아래 `ContainerNetwork`)를 바꾸면
+ * 넷을 함께 고치고, 예외의 판정은 사례 표 `tests/fixtures/container_network/cases.json` 이 넷을 잠근다.
  *
  * 판정을 지나면 next CLI 를 이 프로세스에서 부른다. 신호와 종료 코드가 next 의 것 그대로다(관리 화면의 래퍼와 같다).
  *
  * 사용: node tools/start.ts <dev|build|start> [--hostname <호스트>] [--port <포트>]
  */
 
+import { existsSync } from "node:fs";
 import { createRequire } from "node:module";
 import { dirname, join, resolve } from "node:path";
 import { parseArgs } from "node:util";
@@ -38,6 +41,10 @@ const APP = dirname(import.meta.dirname);
 // 순서가 진단의 문장이 된다. serve 의 진단과 같은 순서다.
 const LOOPBACK_HOSTS: readonly string[] = ["127.0.0.1", "::1"];
 const DEFAULT_HOST = "127.0.0.1";
+// 루프백 규칙의 예외. 아래 `ContainerNetwork` 가 설명한다.
+const IMAGE_MARKER = "/etc/agent-os/image";
+const CONTAINER_NETWORK_ENV = "AGENT_OS_CONTAINER_NETWORK";
+const CONTAINER_HOST = "0.0.0.0";
 const SERVING: readonly string[] = ["dev", "start"];
 const USAGE =
   "위젯의 시작 래퍼는 dev·build·start 하나를 받고, dev 와 start 만 --hostname(-H), --port(-p)를 받는다.";
@@ -46,8 +53,15 @@ const USAGE =
 export type NextCommand =
   { readonly args: readonly string[]; readonly prepare: boolean } | { readonly problem: string };
 
-/** 래퍼가 받은 인자를 판정한다. `defaultPort` 는 포트를 주지 않았을 때 next 가 쓸 포트이고 SSH 안내에만 싣는다. */
-export function nextCommand(argv: readonly string[], defaultPort: string): NextCommand {
+/**
+ * 래퍼가 받은 인자를 판정한다. `defaultPort` 는 포트를 주지 않았을 때 next 가 쓸 포트이고 SSH 안내에만 싣는다. `network` 는
+ * 루프백 규칙의 예외를 켜는 두 입력이다(`ContainerNetwork`). `build` 는 서지 않아 보지 않는다.
+ */
+export function nextCommand(
+  argv: readonly string[],
+  defaultPort: string,
+  network: ContainerNetwork,
+): NextCommand {
   const parsed = parse(argv);
   if ("problem" in parsed) {
     return parsed;
@@ -67,7 +81,7 @@ export function nextCommand(argv: readonly string[], defaultPort: string): NextC
     return { problem: `${USAGE} 받은 명령: ${command}` };
   }
   const host = values.hostname ?? DEFAULT_HOST;
-  const problem = bindingProblem(host, values.port ?? defaultPort);
+  const problem = bindingProblem(host, values.port ?? defaultPort, network);
   if (problem !== null) {
     return { problem };
   }
@@ -75,15 +89,74 @@ export function nextCommand(argv: readonly string[], defaultPort: string): NextC
   return { args: [command, "--hostname", host, ...port], prepare: command === "dev" };
 }
 
-/** 위젯이 설 호스트의 구성 오류. 루프백이면 null. `port` 는 SSH 안내에 싣는다. */
-function bindingProblem(host: string, port: string): string | null {
+/**
+ * 루프백 규칙의 예외를 켜는 두 입력(ADR 0056 결정 "루프백 규칙의 예외"). 둘이 함께 있을 때만 켜지고, 켜지면 듣는 주소로
+ * `0.0.0.0` 하나가 늘 뿐이다. 판정은 이 값만 보고 파일도 환경도 읽지 않는다. `env` 가 undefined 이면 환경 변수가 없다.
+ * 같은 규칙을 `serve`, 관리 화면, 위젯 미리보기 페이지가 따로 들고, 사례 표(`tests/fixtures/container_network/cases.json`)가
+ * 넷이 같은 판정을 내는지 잠근다. 환경 변수 `HOSTNAME` 으로는 받지 않는다(Docker 가 그 변수에 컨테이너 ID 를 넣는다).
+ */
+export interface ContainerNetwork {
+  readonly imageMarker: boolean;
+  readonly env: string | undefined;
+}
+
+/** 지금 프로세스의 두 입력. 판정과 달리 파일과 환경을 읽는 자리다. */
+export function currentNetwork(): ContainerNetwork {
+  return { imageMarker: existsSync(IMAGE_MARKER), env: process.env[CONTAINER_NETWORK_ENV] };
+}
+
+/** 환경 변수의 값이 `1` 도 빈 값도 아니면 그 구성 오류. 오타가 조용히 꺼짐으로 읽히지 않게 한다. */
+function envProblem({ env }: ContainerNetwork): string | null {
+  if (env === undefined || env === "" || env === "1") {
+    return null;
+  }
+  return [
+    `${CONTAINER_NETWORK_ENV} 는 비우거나 1 만 받는다. 받은 값: ${env}`,
+    "  오타가 조용히 꺼짐으로 읽히지 않게 시작 자리에서 끝낸다.",
+  ].join("\n");
+}
+
+/** 예외로 열리는 주소를 받았는데 켜지지 않았을 때 진단에 더할 한 줄. 더할 것이 없으면 빈 열이다. */
+function exceptionHint({ imageMarker, env }: ContainerNetwork): readonly string[] {
+  if (imageMarker) {
+    return [
+      `  이미지 안에서 ${CONTAINER_HOST} 에 묶으려면 환경 변수 ${CONTAINER_NETWORK_ENV}=1 도 준다.`,
+    ];
+  }
+  if (env === "1") {
+    return [
+      `  ${CONTAINER_NETWORK_ENV} 는 이미지 밖에서는 켜지지 않는다(표지 파일 ${IMAGE_MARKER} 가 없다).`,
+    ];
+  }
+  return [];
+}
+
+/** 위젯이 설 호스트의 구성 오류. 받으면 null. `port` 는 SSH 안내에 싣는다. */
+function bindingProblem(host: string, port: string, network: ContainerNetwork): string | null {
+  const invalid = envProblem(network);
+  if (invalid !== null) {
+    return invalid;
+  }
   if (LOOPBACK_HOSTS.includes(host)) {
     return null;
+  }
+  const enabled = network.imageMarker && network.env === "1";
+  if (enabled && host === CONTAINER_HOST) {
+    return null;
+  }
+  const ssh = `  원격에서 보려면 SSH 포트 포워딩을 쓴다: ssh -L ${port}:127.0.0.1:${port} <서버>`;
+  if (enabled) {
+    return [
+      `--hostname 은 루프백이나 컨테이너 네트워크 주소만 받는다(${[...LOOPBACK_HOSTS, CONTAINER_HOST].join(", ")}). 받은 값: ${host}`,
+      `  컨테이너 네트워크 주소는 ${CONTAINER_HOST} 하나다. 다른 주소와 이름은 받지 않는다.`,
+      ssh,
+    ].join("\n");
   }
   return [
     `--hostname 은 루프백만 받는다(${LOOPBACK_HOSTS.join(", ")}). 받은 값: ${host}`,
     "  벗어나면 위젯이 nginx 와 TLS 를 거치지 않고 LAN 에 평문으로 열린다.",
-    `  원격에서 보려면 SSH 포트 포워딩을 쓴다: ssh -L ${port}:127.0.0.1:${port} <서버>`,
+    ssh,
+    ...(host === CONTAINER_HOST ? exceptionHint(network) : []),
   ].join("\n");
 }
 
@@ -147,7 +220,11 @@ export async function launch(
 }
 
 if (import.meta.main) {
-  const command = nextCommand(process.argv.slice(2), process.env["PORT"] ?? "3000");
+  const command = nextCommand(
+    process.argv.slice(2),
+    process.env["PORT"] ?? "3000",
+    currentNetwork(),
+  );
   if ("problem" in command) {
     console.error(command.problem);
     process.exitCode = 1;

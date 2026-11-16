@@ -5,7 +5,7 @@ date: 2026-09-22
 
 # HTTP 표면은 FastAPI로 서고 `server.py` 하나가 조립한다
 
-관리 API가 슬라이스 2의 첫 HTTP 표면이고 곧 HTTP 채널이 같은 프로세스에 붙으므로, 앱을 조립하는 자리를 지금 정한다. **FastAPI와 uvicorn을 런타임 의존성으로 더하고, `server.py`가 `create_app(*, plugins, trace, token, ...)` 하나만 내보낸다. 전역 `app` 객체를 두지 않는다.** FastAPI를 고른 이유는 `openapi.json`이 이 저장소에서 계약이기 때문이다 — 슬라이스 3의 `packages/api-client`가 그 파일에서 생성되고, `sdk`의 디스크 형식이 이미 pydantic이라 이름 있는 `$defs`가 공짜로 나온다(ADR 0008이 `StrEnum`을 고른 이유가 그것이다). 전역 `app`을 두지 않는 이유는 어댑터 주입이다. 어댑터를 만들어 넘기는 자리는 `main.py`와 `server.py`뿐이고(원칙 IV의 의존 방향), 어댑터는 자기를 스스로 조립하지 않는다(`.claude/rules/adapters.md`). 모듈 수준에서 앱을 만들면 import 시점에 `plugins/` 경로와 트레이스 디렉터리가 고정되어, 테스트가 가짜 포트 대신 진짜 파일시스템을 쓰게 된다.
+관리 API가 슬라이스 2의 첫 HTTP 표면이고 곧 HTTP 채널이 같은 프로세스에 붙으므로, 앱을 조립하는 자리를 지금 정한다. **FastAPI와 uvicorn을 런타임 의존성으로 더하고, `server.py`가 `create_app(*, plugins, trace, token, ...)` 하나만 내보낸다. (바뀜: ADR 0062) 전역 `app` 객체를 두지 않는다.** FastAPI를 고른 이유는 `openapi.json`이 이 저장소에서 계약이기 때문이다 — 슬라이스 3의 `packages/api-client`가 그 파일에서 생성되고, `sdk`의 디스크 형식이 이미 pydantic이라 이름 있는 `$defs`가 공짜로 나온다(ADR 0008이 `StrEnum`을 고른 이유가 그것이다). 전역 `app`을 두지 않는 이유는 어댑터 주입이다. 어댑터를 만들어 넘기는 자리는 `main.py`와 `server.py`뿐이고(원칙 IV의 의존 방향), 어댑터는 자기를 스스로 조립하지 않는다(`.claude/rules/adapters.md`). 모듈 수준에서 앱을 만들면 import 시점에 `plugins/` 경로와 트레이스 디렉터리가 고정되어, 테스트가 가짜 포트 대신 진짜 파일시스템을 쓰게 된다.
 
 ## Considered Options
 
