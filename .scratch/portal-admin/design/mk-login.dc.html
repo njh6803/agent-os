@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>로그인이 필요한 화면</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/agent-os/styles.css">
+<link rel="stylesheet" href="ds/agent-os/fonts/fonts.css">
+<link rel="stylesheet" href="ds/agent-os/_ds_bundle.css">
+<script src="ds/agent-os/_ds_bundle.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0}
+a{color:var(--accent)}a:hover{color:var(--text)}
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+.btnlink{display:inline-flex;align-items:center;justify-content:center;gap:var(--spacing-2);height:var(--control-h);box-sizing:border-box;padding:0 var(--spacing-3);border:1px solid var(--border);border-radius:var(--radius-m);font-family:inherit;font-size:var(--body-size);line-height:var(--body-lh);font-weight:var(--font-weight-medium);white-space:nowrap;text-decoration:none;color:var(--text);background:transparent}
+.btnlink:hover{color:var(--text);background:var(--bg-hover)}
+.btnlink.primary{border-color:transparent;background:var(--primary);color:var(--on-primary)}
+.btnlink.primary:hover{background:var(--primary-hover);color:var(--on-primary)}
+</style>
+</helmet>
+<div data-theme="nokcheong" data-mode="light" style="min-height: 100vh; box-sizing: border-box; padding: 96px var(--spacing-4) var(--spacing-8); display: flex; justify-content: center; background: var(--bg); color: var(--text); font-family: var(--sans);">
+<main style="width: 100%; max-width: 440px; display: flex; flex-direction: column; gap: var(--spacing-6);">
+<div class="font-semibold text-body">위젯 관리 화면</div>
+<div class="flex flex-col gap-2">
+<h1 style="margin: 0; font-size: var(--text-title); line-height: var(--text-title--line-height); font-weight: var(--text-title--font-weight);">로그인이 필요하다</h1>
+<p class="text-body text-text-muted" style="margin: 0;">위젯 관리 화면은 Agent OS 관리 화면에 로그인한 운영자 계정으로 들어온다. 관리 화면에서 로그인한 뒤 이 탭으로 돌아온다.</p>
+</div>
+<x-import component-from-global-scope="AgentOsUi.Card" padding="4">
+<div class="flex flex-col gap-3">
+<div class="flex flex-wrap items-center justify-end gap-2">
+<x-import component-from-global-scope="AgentOsUi.Button" variant="secondary">다시 확인</x-import>
+<a href="https://agent.example.com/admin/login" target="_blank" rel="noopener" class="btnlink primary">관리 화면에서 로그인<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path vector-effect="non-scaling-stroke" d="M15 3h6v6"></path><path vector-effect="non-scaling-stroke" d="M10 14 21 3"></path><path vector-effect="non-scaling-stroke" d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path></svg><span class="sr-only">(새 탭에서 열림)</span></a>
+</div>
+<p class="text-small text-text-muted" style="margin: 0;">이 탭으로 돌아오면 로그인을 다시 확인한다.</p>
+</div>
+</x-import>
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":800}}'>
+class Component extends DCLogic {
+renderVals() {
+return {};
+}
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>완성 10. 들어오는 문, 모바일 375px</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/agent-os/styles.css">
+<link rel="stylesheet" href="ds/agent-os/fonts/fonts.css">
+<link rel="stylesheet" href="ds/agent-os/_ds_bundle.css">
+<script src="ds/agent-os/_ds_bundle.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0}
+a{color:var(--accent)}a:hover{color:var(--text)}
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+.navlink{display:flex;align-items:center;gap:var(--spacing-2);height:var(--spacing-nav-item);padding:0 var(--spacing-3);border-radius:var(--radius-m);color:var(--text-muted);text-decoration:none;font-size:var(--body-size);line-height:var(--body-lh)}
+.navlink:hover{color:var(--text);background:var(--bg-hover)}
+.navlink[aria-current="page"]{background:var(--bg-selected);color:var(--text);font-weight:var(--font-weight-medium)}
+.btnlink{display:inline-flex;align-items:center;justify-content:center;gap:var(--spacing-2);height:var(--control-h);box-sizing:border-box;padding:0 var(--spacing-3);border:1px solid var(--border);border-radius:var(--radius-m);font-family:inherit;font-size:var(--body-size);line-height:var(--body-lh);font-weight:var(--font-weight-medium);white-space:nowrap;text-decoration:none;color:var(--text);background:transparent}
+.btnlink:hover{color:var(--text);background:var(--bg-hover)}
+.ellipsis{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.textlink{display:inline;min-height:24px;padding:0;border:0;background:none;color:var(--accent);text-decoration:underline;font:inherit;cursor:pointer}
+.group{display:flex;flex-direction:column;gap:var(--spacing-4)}
+.ghead{display:flex;flex-direction:column;gap:var(--spacing-1)}
+.fields{display:flex;flex-direction:column;gap:var(--spacing-6);min-width:0}
+.changed label::after{content:"바뀜";margin-left:var(--spacing-2);font-weight:var(--font-weight-regular);color:var(--text-muted)}
+.chg{margin-left:var(--spacing-2);font-weight:var(--font-weight-regular);color:var(--text-muted)}
+.mono-field input,.mono-field textarea{font-family:var(--mono);font-size:var(--mono-size)}
+.fs{border:0;margin:0;padding:0;min-width:0}
+.lg{display:block;padding:0;margin:0 0 var(--spacing-2);font-size:var(--text-small);line-height:var(--text-small--line-height);font-weight:var(--font-weight-medium);color:var(--text)}
+.fsbody{display:flex;flex-direction:column;gap:var(--spacing-2)}
+.help{margin:0;font-size:var(--text-small);line-height:var(--text-small--line-height);color:var(--text-muted)}
+.choices{display:flex;flex-wrap:wrap;column-gap:var(--spacing-6)}
+.choice{display:inline-flex;align-items:center;gap:var(--spacing-2);min-height:var(--control-h);font-size:var(--body-size);line-height:var(--body-lh);cursor:pointer}
+.choice input,.choice2 input{width:16px;height:16px;margin:0;flex-shrink:0;accent-color:var(--primary)}
+.choice2{display:flex;align-items:flex-start;gap:var(--spacing-2);padding:var(--spacing-1) 0;font-size:var(--body-size);line-height:var(--body-lh);cursor:pointer}
+.choice2 input{margin-top:3px}
+.swatch{display:inline-block;width:16px;height:16px;border-radius:var(--radius-s);background:var(--primary)}
+.ctl{display:block;flex:1;width:100%;min-width:0;box-sizing:border-box;height:var(--control-h);padding:0 var(--spacing-3);border:1px solid var(--border-control);border-radius:var(--radius-m);background:var(--bg-raised);color:var(--text);font:inherit;font-size:var(--body-size);line-height:var(--body-lh)}
+.qrow{display:flex;align-items:center;gap:var(--spacing-2)}
+.pair{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:var(--spacing-4)}
+.picker{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:var(--spacing-3)}
+.pick{position:relative;display:flex;flex-direction:column;gap:var(--spacing-1);padding:var(--spacing-3);border:1px solid var(--border);border-radius:var(--radius-m);background:var(--bg-raised);cursor:pointer}
+.pick:hover{background:var(--bg-hover)}
+.pick:has(input:checked){border:2px solid var(--accent);padding:calc(var(--spacing-3) - 1px)}
+.pick:has(input:focus-visible){outline:2px solid var(--focus-ring);outline-offset:2px}
+.pick .mark{position:absolute;top:var(--spacing-2);right:var(--spacing-2);display:none;color:var(--accent)}
+.pick:has(input:checked) .mark{display:inline-flex}
+.sketch{display:flex;justify-content:center;padding:var(--spacing-2) 0;margin-bottom:var(--spacing-1);border-radius:var(--radius-s);background:var(--bg)}
+.pname{font-size:var(--body-size);line-height:var(--body-lh);font-weight:var(--font-weight-medium)}
+.dflt{font-weight:var(--font-weight-regular);color:var(--text-muted)}
+.select{display:block;width:100%;box-sizing:border-box;height:var(--control-h);padding:0 var(--spacing-3);border:1px solid var(--border-control);border-radius:var(--radius-m);background:var(--bg-raised);color:var(--text);font:inherit;font-size:var(--body-size)}
+.toggle{display:inline-flex;align-items:center;gap:var(--spacing-1);height:var(--control-h);box-sizing:border-box;padding:0 var(--spacing-3);border:1px solid var(--border);border-radius:var(--radius-m);background:transparent;color:var(--text);font:inherit;font-size:var(--body-size);font-weight:var(--font-weight-medium);cursor:pointer}
+.toggle:hover{background:var(--bg-hover)}
+.toggle[aria-pressed="true"]{background:var(--bg-selected)}
+.stage{display:flex;justify-content:center;padding:var(--spacing-6) 0;border:1px solid var(--border);border-radius:var(--radius-l);background:var(--bg)}
+.fill button{width:100%}
+.count{font-size:var(--text-small);line-height:var(--text-small--line-height);font-weight:var(--font-weight-regular);color:var(--text-muted)}
+.savebar{position:sticky;bottom:0;box-sizing:border-box;padding:var(--spacing-3) var(--spacing-8);background:var(--bg-raised);border-top:1px solid var(--border)}
+.toclink{display:flex;align-items:center;justify-content:space-between;gap:var(--spacing-2);min-height:var(--control-h);padding:0 var(--spacing-3);border-radius:var(--radius-m);color:var(--text-muted);text-decoration:none;font-size:var(--body-size);line-height:var(--body-lh)}
+.toclink:hover{color:var(--text);background:var(--bg-hover)}
+.toclink[aria-current="location"]{background:var(--bg-selected);color:var(--text);font-weight:var(--font-weight-medium)}
+.group2{display:grid;grid-template-columns:176px minmax(0,1fr);column-gap:var(--spacing-6)}
+.group2+.group2{border-top:1px solid var(--border);padding-top:var(--spacing-6)}
+.tabs{display:flex;overflow-x:auto;border-bottom:1px solid var(--border)}
+.tab{display:inline-flex;align-items:center;gap:var(--spacing-1);height:var(--control-h);padding:0 var(--spacing-2);margin-bottom:-1px;border:0;border-bottom:2px solid transparent;background:none;color:var(--text-muted);font:inherit;font-size:var(--body-size);line-height:var(--body-lh);white-space:nowrap;cursor:pointer}
+.tab:hover{color:var(--text)}
+.tab[aria-selected="true"]{border-bottom-color:var(--accent);color:var(--text)}
+.dot{width:8px;height:8px;border-radius:9999px;background:#1fe05a;box-shadow:0 0 4px #1fe05a;flex-shrink:0}
+[data-mode="dark"] .dot{background:#4dff85;box-shadow:0 0 4px #4dff85}
+.tab-err{display:inline-flex;align-items:center;gap:2px;margin-left:var(--spacing-1);font-size:var(--text-small);line-height:var(--text-small--line-height);color:var(--danger)}
+.focus-shown input{outline:2px solid var(--focus-ring);outline-offset:2px}
+</style>
+</helmet>
+<div data-theme="nokcheong" data-mode="light" style="width: 455px; min-height: 900px; box-sizing: border-box; padding: 40px; display: flex; gap: 40px; align-items: flex-start; background: var(--bg-raised); color: var(--text); font-family: var(--sans);"><section class="flex flex-col gap-3" style="width: 375px; flex-shrink: 0;"><p class="text-small text-text-muted" style="margin: 0;">모바일 375px</p><div data-theme="nokcheong" data-mode="light" data-density="regular" style="position: relative; width: 375px; height: 812px; box-sizing: border-box; overflow: hidden; border: 1px solid var(--border); border-radius: var(--radius-l); background: var(--bg); color: var(--text); font-family: var(--sans);"><div class="flex flex-col" style="height: 100%;"><header class="flex items-center justify-between gap-4 shrink-0" style=" box-sizing: border-box; padding: var(--spacing-3) var(--spacing-4); border-bottom: 1px solid var(--border);"><span class="text-body font-semibold">위젯 테스트 페이지</span><x-import component-from-global-scope="AgentOsUi.Switch" label="다크 모드" checked="{{no}}" onChange="{{noop}}"></x-import></header><main style="flex: 1; box-sizing: border-box; padding: var(--spacing-8) var(--spacing-4); display: flex; justify-content: center;"><div style="width: 100%; max-width: 440px; display: flex; flex-direction: column; gap: var(--spacing-6);"><div class="flex flex-col gap-2"><h1 style="margin: 0; font-size: var(--text-title); line-height: var(--text-title--line-height); font-weight: var(--text-title--font-weight);">위젯 테스트 페이지</h1><p class="text-body text-text-muted" style="margin: 0;">위젯을 시험하거나 질문하려면 로그인한다.</p></div><section aria-labelledby="door-company" class="flex flex-col gap-3"><div class="flex flex-col gap-1"><h2 id="door-company" class="text-body font-semibold" style="margin: 0;">회사 계정</h2><p class="text-body text-text-muted" style="margin: 0;">직원은 회사 계정으로 로그인해 질문한다.</p></div><div class="fill"><x-import component-from-global-scope="AgentOsUi.Button" variant="primary">회사 계정으로 로그인</x-import></div></section><div role="separator" aria-label="또는" class="flex items-center gap-3"><span style="flex: 1; height: 1px; background: var(--border);"></span><span class="text-small text-text-muted" aria-hidden="true">또는</span><span style="flex: 1; height: 1px; background: var(--border);"></span></div><section aria-labelledby="door-operator" class="flex flex-col gap-3"><div class="flex flex-col gap-1"><h2 id="door-operator" class="text-body font-semibold" style="margin: 0;">운영자 계정</h2><p class="text-body text-text-muted" style="margin: 0;">Agent OS 관리 화면에 로그인한 운영자 계정으로 들어와 모든 사이트를 시험한다.</p></div><div class="flex flex-col gap-2"><a href="https://agent.example.com/admin/login" target="_blank" rel="noopener" class="btnlink" style="width: 100%;">관리 화면에서 로그인<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path vector-effect="non-scaling-stroke" d="M15 3h6v6"></path><path vector-effect="non-scaling-stroke" d="M10 14 21 3"></path><path vector-effect="non-scaling-stroke" d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path></svg><span class="sr-only">(새 탭에서 열림)</span></a><div class="fill"><x-import component-from-global-scope="AgentOsUi.Button" variant="secondary">다시 확인</x-import></div></div><p class="text-small text-text-muted" style="margin: 0;">관리 화면에서 로그인한 뒤 이 탭으로 돌아오면 다시 확인한다.</p></section></div></main></div></div></section></div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":455,"height":900}}'>
+class Component extends DCLogic {
+renderVals() {
+return { yes: true, no: false, noop: () => {} };
+}
+}
+</script>
+</body>
+</html>
