@@ -344,3 +344,89 @@ open-session을 부른다 2026-11-16T10:47:39Z
 고치지 않은 것: `.scratch/widget-login-state/plan.md`의 화면 작업 문단이 예시 질문의 모양을 명세 전에 묻는다고 적은 문장은 그대로 두었다. 그 문단은 화면 작업의 경위를 적은 기록이고, 그 기능 계획을 새 이름과 함께 고치는 일은 ADR 0065 결정 "이름"의 chore가 맡는다(ADR 0064 이력 "위젯 설정에 로그인 전 모양과 고지 전문을 보이는 법을 고르는 값으로 더한다"의 끝).
 
 서두의 수는 그대로다. 절 제목의 괄호를 늘리거나 줄이지 않았다(넘겨받은 것 열여덟, 사용자가 고른 것 여섯, 명세가 정한 것 스물셋, 포인터 열하나, 이력 넷). 포인터 열하나는 이 명세가 단 것만 센 수이고, ADR 0064 결정 "주소의 검사"에는 PR 593의 포인터가 하나 더 있다.
+
+### 병합 커밋과 pre-commit
+
+병합 커밋 `9960590d6`이다(`git commit --no-edit`). pre-commit은 600초 제한을 넘겨 백그라운드로 돌았고 종료 코드 0으로 끝났다.
+
+- checks: Passed, 708.3초. check-ticket 1.7초, check-notes 2.7초, lint-imports 3.1초, zizmor 4.4초, check-instructions 20.1초, check-type-escapes 20.5초, pyright-linux 56.3초, pyright 69.1초, run-hooks 131.1초, pytest 596.7초, web-verify 707.6초.
+- markdown tables, line separators, mutation tables, commit message: Passed.
+- quotes: Passed. 두 묶음(인용 69건과 20건) 모두 경고가 없었다.
+- ruff check, ruff format: Skipped(no files to check). 병합 커밋이라 pre-commit이 충돌한 파일만 보았다(출력의 첫 줄이 `[INFO] Checking merge-conflict files only.`다). 그래서 손으로 쳤다. `uv run ruff check .`는 `All checks passed!`, `uv run ruff format --check .`는 `2389 files already formatted`였다.
+- canary specs, constitution version: Skipped(no files to check). 이 브랜치는 카나리아 명세도 헌법 문서도 고치지 않았다. 병합으로 들어온 `docs/constitution/operations.md`의 변경은 PR 591과 PR 592의 것이라 이 브랜치가 판을 올릴 몫이 아니다.
+
+## PR 직전 리뷰 (CodeRabbit CLI)
+
+`coderabbit-review` 서브에이전트를 한 번 돌렸다(`docs/constitution/operations.md` 리뷰 파이프라인 2). 브리프에는 기준 커밋 `28c7e4b56`(`origin/dev`의 끝이자 이 브랜치와의 갈래점), 바뀐 것의 성격(문서, 프로브, 패치 파일), 트리아지의 기준을 적었다. CLI가 도는 길에는 주장을 넘기는 인자가 없어, 위 "새로 쓴 문장"들은 밀 주장으로 넘기지 못했다(code-review 6단계 1).
+
+### 보고
+
+서브에이전트의 보고를 가볍게 다듬어 옮긴다(모델의 출력이고, 아래 "판정"에서 지적마다 원문에 대 본다).
+
+- 실행한 명령은 `coderabbit review --agent --include-untracked --base-commit 28c7e4b5660da27c8e0932b48ccf29ff94887301`이다. CLI의 `review_context`가 baseBranch `origin/dev`와 그 커밋을 찍었고, 본 파일은 32개(`reviewedFiles`), 종료 코드 0, `review_completed`, 지적 9건이다. `Seat : not assigned`(`Plan: Free`, CLI 0.7.5)였는데 리뷰는 끝까지 돌았다.
+- Major. `.scratch/portal-admin/spec.md`의 "저장할 때의 검사"(발급자의 겹침, 이름 중복), "저장 경로"의 저장 번호, "바꾼 기록"의 데이터베이스에 더하는 넷. 발급자 겹침과 이름 중복을 어디서 어떻게 막는지 적혀 있지 않아, 서로 다른 두 사이트를 동시에 저장하면 같은 발급자가 겹쳐 들어갈 수 있다. 저장 번호는 사이트마다 따로 올라 두 사이트의 저장을 줄 세우지 못하고, 데이터베이스에 더하는 넷에 고유 제약이 없다. 격리 수준이 READ COMMITTED라는 가정은 CodeRabbit의 것이고 서브에이전트는 확인하지 못했다고 적었다. 제안은 데이터베이스 제약(부분 유일 인덱스)과 동시 저장 둘의 시험 사례다.
+- Minor. `shared_widget_parts/compare_index.mjs` 47~50행. 측정이 아닌 경우와 측정했는데 다른 경우가 같은 종료 코드 1이다. 같은 폴더의 `css_rules.mjs`는 측정이 아닌 경우를 2로 낸다.
+- Minor. `shared_widget_parts/preview_shield.mjs` 289행. `settledState`의 `next`가 `pointerState`의 반환값(null일 수 있다)인데 검사 없이 `next.scrollTop`을 읽는다. 그러면 그 회차가 측정이 아닌 회차로 세어지지 않은 채 프로브가 예외로 끝난다.
+- Minor. `settings_fetch/run.py` 1377~1381행. 정리 루프에서 `stop(child)`가 예외를 던지면 `remove_postgres(container)`가 돌지 않아 컨테이너가 남을 수 있다. `stop`이 실제로 예외를 던지는지는 열어 보지 않았다고 적었다.
+- Minor(보류). `settings_fetch/fetch_idle_timer.mjs` 142행. 자식의 첫 줄을 기다리는 `lines.once("line", …)`에 제한 시간이 없다. 서브에이전트는 그 파일을 열어 보지 않았다고 적었다.
+- 오탐으로 가른 넷. `.scratch/portal-login-admin/plan.md` 15행(CLI는 critical로 냈다. 화면이 비밀 값을 받을지는 그 행의 설계 인터뷰가 정할 일로 이미 적혀 있다), `login_relay/probe.mjs` 228~229행(`rawRequest`에 `timeout: 30_000`이 있다), 같은 파일 1512~1513행(SIGINT·SIGTERM 처리는 이 프로브의 범위 밖이다), `shared_widget_parts/css_rules.mjs` 45~46행(파일시스템 예외가 종료 코드 1로 나오는 것은 취향이다).
+- 요약: 총 9건, 유효 4(Major 1, Minor 3), 보류 1, 오탐 4.
+
+### 판정
+
+지적마다 원문을 열어 대 본 뒤 정했다. 유효 넷과 보류 하나를 모두 고쳤고, 오탐 넷 가운데 하나는 같은 폴더의 가름을 맞추려고 함께 고쳤다.
+
+**Major. 동시에 온 저장에서 이름과 발급자의 겹침.** 유효다. 명세의 "저장할 때의 검사"는 다른 사이트의 줄을 읽어 보는 검사 둘(이름, 발급자)을 적었지만 그 둘을 어디에 거는지는 적지 않았다. 저장 번호는 사이트마다 따로 오르므로 서로 다른 사이트의 저장 둘을 줄 세우지 못한다(명세 "저장 경로"). 읽어 보는 검사만으로는 두 저장이 서로의 아직 끝나지 않은 줄을 보지 못한 채 함께 지날 수 있다. 격리 수준이 무엇인지는 이 명세가 정하지 않았고, 어느 수준이든 제약으로 걸면 닫히므로 그 가정에 기대지 않고 고쳤다. ADR 0064의 결정(저장할 때 겹침을 보고 어긋나면 거절한다)을 지키는 방법을 채운 것이라 ADR의 본문과 이력은 고치지 않았다. 고친 자리는 다섯이다.
+
+- 명세 서두의 "명세가 정했다" 목록과 그 절의 제목에 "동시에 온 저장에서 겹침을 막는 법"을 더했다. 절 제목의 표시는 수가 그대로다(아래 "서두의 수").
+- 명세 "저장할 때의 검사"에 새 항목을 더했다. 새로 쓴 문장이다.
+
+  > 이름과 발급자의 두 검사는 다른 사이트의 줄을 보는 검사다. 서로 다른 사이트의 저장 둘이 같은 때에 오면, 각자 아직 저장이 끝나지 않은 상대의 줄을 보지 못한 채 둘 다 검사를 지날 수 있다. 저장 번호는 사이트마다 따로 올라 그 둘을 줄 세우지 못한다("저장 경로"). 그래서 이 둘은 서버가 쓰기 전에 읽어 보는 검사에만 맡기지 않고 데이터베이스의 제약으로도 건다. 사이트 이름은 표 전체에서 하나뿐이어야 하고, 발급자는 위젯 테스트 페이지에 담는 사이트들 사이에서 하나뿐이어야 한다. 담지 않는 사이트의 발급자는 견주지 않는다. 제약에 걸린 저장은 아무것도 쓰지 않고, 읽어 보는 검사가 거절했을 때와 같은 까닭("이름이 이미 있다", "발급자가 겹친다")과 같은 꼴(발급자면 겹친 사이트의 이름을 싣는다)로 답한다. 제약을 거는 꼴(조건이 붙은 유일 인덱스 등)과, 사이트 이름의 제약이 widget-admin-server의 표에 이미 있는지는 표를 더하는 티켓이 그 기능이 세운 표에 맞춰 정한다.
+
+- 명세 "바꾼 기록"의 데이터베이스에 더하는 넷을 적은 문장 끝에 한 문장을 더했다. 새로 쓴 문장이다.
+
+  > 발급자가 겹치지 않게 하는 제약은 위젯 테스트 페이지 설정의 칸과 함께 더한다("저장할 때의 검사").
+
+- 명세 Testing Decisions의 서버 사례에 동시 저장의 사례를 더했다. 새로 쓴 문장이다.
+
+  > 서로 다른 두 사이트를 같은 발급자로, 둘 다 위젯 테스트 페이지에 담아 같은 때에 저장하면 하나만 저장되고 다른 하나는 "발급자가 겹친다"로 거절된다. 같은 이름의 사이트 둘을 같은 때에 등록해도 하나만 선다. 한쪽의 쓰기가 끝나기 전에 다른 쪽이 읽어 보는 검사를 지나도록 맞물린 사례이고, 데이터베이스의 제약이 막는 것을 본다("저장할 때의 검사").
+
+- 받는 쪽인 `.scratch/widget-admin-server/plan.md`의 portal-admin 항목 끝에 두 문장을 더했다. 새로 쓴 문장이다.
+
+  > 위젯 테스트 페이지에 담는 사이트들 사이에서 발급자가 하나뿐이게 하는 제약도 그 칸과 함께 더한다. 사이트 이름이 표에서 하나뿐이라는 제약은 이 행의 표에 있다고 보고 썼고, 없으면 portal-admin이 더한다(그 명세의 "저장할 때의 검사").
+
+  사이트 이름의 제약이 widget-admin-server의 표에 실제로 있는지는 그 기능의 명세가 아직 없어 확인하지 못했다. 그래서 "있다고 보고 썼다"로 적고 없을 때의 몫을 정해 두었다.
+
+**Minor. `compare_index.mjs`의 종료 코드.** 유효다. 고치기 전 판(커밋 `fd5beccec`)은 측정이 아닌 끝도, 측정했는데 다른 끝도 1이었다(코드를 읽었다). 측정이 아닌 끝을 2로 바꾸고, 파일을 `index.json`으로 읽지 못하면 까닭을 찍고 2로 끝나게 했다. 머리 주석에 종료 코드의 뜻을 적었다.
+
+**Minor. `preview_shield.mjs`의 `settledState`.** 유효다. `pointerState`가 null을 돌려줄 수 있는데 검사 없이 읽었다. `settledState`가 null을 그대로 돌려주게 하고, 마우스 회차는 누른 뒤나 휠 뒤에 넘친 자리를 읽지 못하면 그 회차를 측정이 아니라고 세고 다음 회차로 가게 했다.
+
+**Minor. `run.py`의 정리 루프.** 유효다. `stop`은 윈도에서 `taskkill`을 60초 제한으로 부르고 그 앞에 그 pid의 명령줄을 읽는다(코드를 읽었다, `run.py`의 `stop`). 그 호출이 제한 시간에 걸리거나 실행 파일을 찾지 못하면 예외가 정리 루프 밖으로 나가 `remove_postgres`가 돌지 않는다. 자식 하나를 끄다 `OSError`나 `subprocess.SubprocessError`가 나면 한 줄을 남기고 다음 자식으로 가게 했고, 컨테이너를 지우는 줄은 안쪽 `finally`로 옮겨 자식 정리가 어떻게 끝나든 돌게 했다. 종료 코드의 뜻은 바꾸지 않았다.
+
+**Minor(보류였던 것). `fetch_idle_timer.mjs`의 첫 줄 기다리기.** 파일을 열어 보니 유효였다. 서버 자식과 추적 자식의 첫 줄을 제한 없이 기다렸다. 첫 줄을 30초까지만 기다리게 하고(`firstLine`), 추적 자식이 실패해도 그때까지 모은 값을 `problems`에 까닭을 실어 내게 했으며, 추적 자식은 30초가 지나도록 끝나지 않으면 스스로 끝나게 했다. 재는 부분은 고치지 않았다.
+
+**오탐 넷.**
+
+- `.scratch/portal-login-admin/plan.md` 15행(CLI는 critical). 그 행은 로그인 서버 항목을 같은 길로 저장하면 값이 기록에 그대로 남는다는 것을 이미 적고, 그 판정을 같은 파일 9행의 첫 물음(비밀 값을 화면이 받을지)에 묶어 두었다. ADR 0064는 그 인터뷰가 정할 때까지 위젯 관리 서버의 데이터베이스에 비밀 값을 두지 않는다고 정했다. 이 명세가 정할 몫이 아니라 고치지 않았다.
+- `login_relay/probe.mjs`의 `rawRequest`(222~244행). `http.request`에 `timeout: 30_000`이 있고 `timeout` 이벤트에서 요청을 끊으며 `error`를 reject로 넘긴다(코드를 읽었다). 고치지 않았다.
+- 같은 파일의 SIGINT·SIGTERM 처리. 그 폴더에 두 신호를 다루는 코드가 없다(Grep으로 봤다). 사람이 도중에 끊는 길은 이 프로브가 재는 범위 밖이라 고치지 않았다. 도중에 끊긴 실행이 자식 프로세스를 남기는지는 보지 않았고 그 README에도 적혀 있지 않다.
+- `shared_widget_parts/css_rules.mjs`의 파일시스템 예외. 서브에이전트는 취향으로 갈랐지만, 같은 폴더의 `compare_index.mjs`를 "측정이 아니면 2"로 맞추는 김에 준 경로를 읽지 못한 끝도 2로 맞췄다. 폴더 안의 스크립트 셋이 같은 가름을 쓰게 하려는 것이다.
+
+**프로브 README.** 고친 판과 다시 돌린 결과를 두 README에 적었다. `shared_widget_parts/README.md`에는 종료 코드의 가름과 아홉 사례, `preview_shield.mjs`를 고친 판으로 한 번 더 돌린 것을 적었고, `settings_fetch/README.md`에는 `fetch_idle_timer.mjs`를 고친 판으로 호스트에서 돌린 값과 `run.py`의 정리 수정 뒤 짧은 실행을 적었다. 돌려 보지 못한 길(읽지 못하는 길, 제한 시간에 걸리는 길, 끄다 실패하는 길, 리눅스 컨테이너의 고친 판)은 그렇게 적었다.
+
+### 다시 돌린 것
+
+- `compare_index.mjs`와 `css_rules.mjs`: 세션 스크래치패드의 스크립트로 지어낸 입력 아홉 사례를 돌렸다(손으로 봤다). 아홉 모두 그 갈래에서만 나오는 문구가 있었고 종료 코드가 기대와 같았다(0 둘, 1 둘, 2 다섯). 집계는 측정 9회차, 측정 아님 0회차였다.
+- `preview_shield.mjs`: `node .scratch/portal-admin/probes/shared_widget_parts/preview_shield.mjs <실험용 워크트리의 web 절대 경로>`. chromium 153.0.8010.12, 열여섯 회차가 모두 기대와 같았고 끝줄이 `회차 16, 측정이 아닌 회차 0, 기대와 다른 회차 0`이었다(손으로 봤다). 실험용 워크트리의 빌드는 읽기만 했다. null 갈래는 나지 않았다.
+- `fetch_idle_timer.mjs`: 호스트에서 한 번(손으로 봤다, Node 24.19.0, undici 7.29.0). `fetch` 이어 쓰기의 중앙값 13.495ms와 p95 14.885ms, `node:http` 이어 쓰기 0.36ms와 0.536ms, 새 연결의 `fetch` 1.003ms와 1.303ms, 새 연결의 `node:http` 0.621ms와 0.833ms, 맨 `setTimeout(0)` 15.63ms와 16.073ms였다. 추적한 서른 요청이 모두 쓰기 전에 타이머를 기다렸고 `problems`가 비었다.
+- `run.py`: README의 짧은 실행을 글자 그대로 한 번 돌렸다(실행 표지 `7e1658`). 측정 33회차, 측정 아님 0회차, `결과: 표지 맞음 33`, 종료 코드 0, 52초였다. 끝에서 `위젯 테스트 페이지 서버 대역: 껐다`, `위젯 관리 서버 대역: 껐다`, `정리: 컨테이너 portal-admin-settings-fetch-7e1658 지웠다`를 찍었다. 끄다 실패하는 길은 나지 않았다.
+- `uv run ruff check .`는 `All checks passed!`, `uv run ruff format --check .`는 `2389 files already formatted`였다. `uv run python tools/check_adr_pointers.py`는 출력 없이 끝났다.
+- 나머지 검증 명령은 이 반영을 싣는 커밋의 pre-commit으로 갈음한다.
+
+### 서두의 수
+
+반영 뒤 절 제목의 표시를 다시 셌다. "넘겨받았다" 열여덟, "사용자가 골랐다" 여섯, "명세가 정했다" 스물셋으로 서두의 수와 같다. "저장할 때의 검사"는 제목의 "명세가 정했다" 뒤 설명만 길어졌고 표시의 수는 늘지 않았다.
+
+## 대기열에 더한 회차
+
+`.scratch/retro-queue/open-session-send-denied-despite-allow-rule.md`의 승인 줄에 두 회차를 더하고 일지 목록에 이 일지를 더했다. 이 세션을 연 지시문은 "12회차"를 더하라고 했는데, 그 번호는 `origin/dev`에서 release-image 티켓 09 세션의 열기가 이미 썼다. 그래서 지시문이 말한 열기(portal-admin 화면 세션이 PR 590을 병합한 뒤의 열기, 사유 "Undermining Oversight")를 13회차로, 이 세션의 셀프 리뷰 직전 인계 열기(위 "인계", 사유 "Destructive or Unwanted Actions")를 14회차로 적었다. 14회차의 호출은 허용 규칙과 글자가 맞았고(트랜스크립트와 워크트리 사본 `.claude/settings.json` 25행을 grep으로 손으로 봤다), 13회차의 호출이 맞았는지는 재 보지 않았다.

@@ -279,13 +279,19 @@ function pointerState(selector) {
   };
 }
 
-/** 스크롤이 멎을 때까지(두 번 이어 같은 값) 기다려 상태를 읽는다. 휠은 부드럽게 굴러 바로 읽으면 중간 값이다. */
+/**
+ * 스크롤이 멎을 때까지(두 번 이어 같은 값) 기다려 상태를 읽는다. 휠은 부드럽게 굴러 바로 읽으면 중간 값이다. 읽는 사이에
+ * 넘친 자리가 사라져 `pointerState` 가 null 을 내면 null 을 돌려주고, 부르는 쪽이 그 회차를 측정이 아니라고 센다.
+ */
 async function settledState(page, selector) {
   await page.waitForTimeout(400);
   let last = await page.evaluate(pointerState, selector);
-  for (let read = 0; read < 12; read += 1) {
+  for (let read = 0; read < 12 && last !== null; read += 1) {
     await page.waitForTimeout(250);
     const next = await page.evaluate(pointerState, selector);
+    if (next === null) {
+      return null;
+    }
     if (next.scrollTop === last.scrollTop && next.pageTop === last.pageTop) {
       return next;
     }
@@ -438,11 +444,21 @@ try {
           window.scrollTo(0, top);
         }, PAGE_START);
         const before = await settledState(page, target.scroller);
+        if (clicked === null || before === null) {
+          unmeasured += 1;
+          console.log(`${round}: 측정이 아니다(누른 뒤 넘치는 자리를 읽지 못했다)`);
+          continue;
+        }
         const roomDown = before.scrollHeight - before.clientHeight - before.scrollTop;
         const delta = roomDown >= WHEEL / 2 ? WHEEL : -WHEEL;
         await page.mouse.move(before.x, before.y);
         await page.mouse.wheel(0, delta);
         const after = await settledState(page, target.scroller);
+        if (after === null) {
+          unmeasured += 1;
+          console.log(`${round}: 측정이 아니다(휠 뒤 넘치는 자리를 읽지 못했다)`);
+          continue;
+        }
 
         const gotClick = after.events.some((event) => event.startsWith("click→"));
         const gotWheel = after.events.some((event) => event.startsWith("wheel→"));

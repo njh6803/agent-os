@@ -72,6 +72,9 @@ async function runServer() {
 
 // ---- 추적 역할: 타이머와 소켓 쓰기를 감싼 뒤 이어 쓰는 fetch 를 부른다. 감싸기는 첫 fetch 앞에 한다.
 async function runTrace(url) {
+  // 부모는 첫 줄을 FIRST_LINE_MS 까지만 기다리고 떠난다. 요청이 멎어도 이 프로세스가 남지 않게 같은 한도에서 스스로 끝낸다.
+  // 타이머를 감싸기 전에 걸어 추적에 섞이지 않게 한다.
+  timers.setTimeout(() => process.exit(3), FIRST_LINE_MS).unref();
   let tracing = null;
   const wrapTimer = (target, kind) => {
     const original = target[kind];
@@ -136,12 +139,59 @@ async function viaFetch(url, close) {
   return await response.json();
 }
 
-function firstLine(child) {
+// 자식의 첫 줄을 기다리는 한도. 추적 자식은 요청 서른다섯을 20ms 씩 쉬며 보낸 뒤에 한 줄을 낸다.
+const FIRST_LINE_MS = 30_000;
+
+/** 자식의 첫 줄. 줄을 내기 전에 끝나거나 한도 안에 줄을 내지 않으면 던진다. 끝없이 기다리지 않는다. */
+function firstLine(child, what) {
   return new Promise((resolve, reject) => {
     const lines = createInterface({ input: child.stdout });
-    lines.once("line", (line) => resolve(line));
-    child.once("exit", () => reject(new Error("자식 프로세스가 줄을 내기 전에 끝났다")));
+    const limit = timers.setTimeout(() => {
+      lines.close();
+      reject(new Error(`${what}이 ${FIRST_LINE_MS}ms 안에 줄을 내지 않았다`));
+    }, FIRST_LINE_MS);
+    lines.once("line", (line) => {
+      timers.clearTimeout(limit);
+      resolve(line);
+    });
+    child.once("exit", () => {
+      timers.clearTimeout(limit);
+      reject(new Error(`${what}이 줄을 내기 전에 끝났다`));
+    });
   });
+}
+
+/** 추적 자식이 낸 요청들의 요약. 어긋난 표지는 `problems` 에 더한다. */
+function traceSummary(traced, problems) {
+  const withWrite = traced.filter((request) => request.writes.length === 1);
+  if (withWrite.length !== traced.length) problems.push(`추적: 소켓 쓰기를 한 번 본 요청이 ${withWrite.length}/${traced.length}`);
+  if (new Set(traced.map((request) => request.port)).size !== 1) problems.push("추적: 연결을 이어 쓰지 않았다");
+  // fetch 호출과 소켓 쓰기 사이에 걸리고 쓰기 전에 불린 `setTimeout`. `setImmediate` 는 기다림이 없어 따로 센다.
+  const label = (timer) => `${timer.kind} delay=${timer.delay} ${timer.top}`;
+  const tally = (lists) => {
+    const counts = {};
+    for (const list of lists) for (const timer of list) counts[label(timer)] = (counts[label(timer)] ?? 0) + 1;
+    return counts;
+  };
+  const setBefore = withWrite.map((request) => request.timers.filter((timer) => timer.set_ms <= request.writes[0]));
+  const before = withWrite.map((request) =>
+    request.timers.filter(
+      (timer) => timer.kind === "setTimeout" && timer.fired_ms !== null && timer.fired_ms <= request.writes[0],
+    ),
+  );
+  const gated = before.filter((list) => list.length > 0);
+  return {
+    requests: traced.length,
+    requests_with_timer_before_write: gated.length,
+    timer_wait_ms: gated.length === 0 ? null : summarize(gated.map((list) => list[0].fired_ms - list[0].set_ms)),
+    write_after_fetch_ms: withWrite.length === 0 ? null : summarize(withWrite.map((request) => request.writes[0])),
+    write_after_timer_ms: gated.length === 0 ? null : summarize(
+      withWrite.filter((_, index) => before[index].length > 0).map((request, index) => request.writes[0] - gated[index][0].fired_ms),
+    ),
+    timer_set_by: tally(gated),
+    // 쓰기 전에 걸린 것 전부(불렸든 아니든). 위가 비었을 때 타이머가 아예 걸리지 않았는지를 가른다.
+    set_before_write_by: tally(setBefore),
+  };
 }
 
 async function runMeasure() {
@@ -150,7 +200,7 @@ async function runMeasure() {
   const problems = [];
   let output = null;
   try {
-    const { ports } = JSON.parse(await firstLine(server));
+    const { ports } = JSON.parse(await firstLine(server, "서버 자식"));
     const main = `http://127.0.0.1:${ports[0]}/`;
     const alt = `http://127.0.0.1:${ports[1]}/`;
     const keepAgent = new Agent({ keepAlive: true });
@@ -194,26 +244,7 @@ async function runMeasure() {
       bare.push(now() - started);
     }
 
-    const tracer = spawn(process.execPath, [SELF, "--trace", main], { stdio: ["ignore", "pipe", "inherit"] });
-    const traced = JSON.parse(await firstLine(tracer));
-    const withWrite = traced.filter((request) => request.writes.length === 1);
-    if (withWrite.length !== traced.length) problems.push(`추적: 소켓 쓰기를 한 번 본 요청이 ${withWrite.length}/${traced.length}`);
-    if (new Set(traced.map((request) => request.port)).size !== 1) problems.push("추적: 연결을 이어 쓰지 않았다");
-    // fetch 호출과 소켓 쓰기 사이에 걸리고 쓰기 전에 불린 `setTimeout`. `setImmediate` 는 기다림이 없어 따로 센다.
-    const label = (timer) => `${timer.kind} delay=${timer.delay} ${timer.top}`;
-    const tally = (lists) => {
-      const counts = {};
-      for (const list of lists) for (const timer of list) counts[label(timer)] = (counts[label(timer)] ?? 0) + 1;
-      return counts;
-    };
-    const setBefore = withWrite.map((request) => request.timers.filter((timer) => timer.set_ms <= request.writes[0]));
-    const before = withWrite.map((request) =>
-      request.timers.filter(
-        (timer) => timer.kind === "setTimeout" && timer.fired_ms !== null && timer.fired_ms <= request.writes[0],
-      ),
-    );
-    const gated = before.filter((list) => list.length > 0);
-    const tops = tally(gated);
+    // 추적이 실패해도 위에서 모은 값은 낸다. 아래에서 추적 자리만 채운다.
     output = {
       platform: `${process.platform} ${process.arch}`,
       node: process.versions.node,
@@ -223,20 +254,17 @@ async function runMeasure() {
       keep_fetch_minus_http_median: Number((results["fetch-keep"].median - results["http-keep"].median).toFixed(3)),
       close_fetch_minus_http_median: Number((results["fetch-close"].median - results["http-close"].median).toFixed(3)),
       bare_set_timeout_0: summarize(bare),
-      trace: {
-        requests: traced.length,
-        requests_with_timer_before_write: gated.length,
-        timer_wait_ms: gated.length === 0 ? null : summarize(gated.map((list) => list[0].fired_ms - list[0].set_ms)),
-        write_after_fetch_ms: withWrite.length === 0 ? null : summarize(withWrite.map((request) => request.writes[0])),
-        write_after_timer_ms: gated.length === 0 ? null : summarize(
-          withWrite.filter((_, index) => before[index].length > 0).map((request, index) => request.writes[0] - gated[index][0].fired_ms),
-        ),
-        timer_set_by: tops,
-        // 쓰기 전에 걸린 것 전부(불렸든 아니든). 위가 비었을 때 타이머가 아예 걸리지 않았는지를 가른다.
-        set_before_write_by: tally(setBefore),
-      },
+      trace: null,
       problems,
     };
+
+    const tracer = spawn(process.execPath, [SELF, "--trace", main], { stdio: ["ignore", "pipe", "inherit"] });
+    try {
+      const traced = JSON.parse(await firstLine(tracer, "추적 자식"));
+      output.trace = traceSummary(traced, problems);
+    } catch (error) {
+      problems.push(`추적: ${error.message}`);
+    }
   } finally {
     server.stdin.end();
   }

@@ -1373,12 +1373,20 @@ def main() -> int:
         exit_code = ctx.rounds.exit_code()
     finally:
         hole.close()
-        if ctx is not None:
-            for child in ctx.children:
-                outcome = stop(child)
-                if outcome != "이미 끝나 있었다":
-                    log(f"정리: {child.name} {outcome}")
-        log(f"정리: 컨테이너 {container} {remove_postgres(container)}")
+        # 자식 하나를 끄다 실패해도(명령줄 읽기나 taskkill 의 제한 시간) 나머지 자식과 컨테이너는
+        # 정리한다.
+        try:
+            if ctx is not None:
+                for child in ctx.children:
+                    try:
+                        outcome = stop(child)
+                    except (OSError, subprocess.SubprocessError) as error:
+                        log(f"정리: {child.name} 끄다가 실패했다({error})")
+                        continue
+                    if outcome != "이미 끝나 있었다":
+                        log(f"정리: {child.name} {outcome}")
+        finally:
+            log(f"정리: 컨테이너 {container} {remove_postgres(container)}")
         log(f"걸린 시간 {time.monotonic() - began:.0f}초, 원본 기록 {work}")
     print(f"종료 코드 {exit_code}")
     return exit_code
