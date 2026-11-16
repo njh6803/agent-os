@@ -1,0 +1,326 @@
+// 단독 배포 e2e 의 사례(release-image 티켓 09). 준비(stack.ts)가 실제 이미지 넷과 프록시로 띄운 배치를 실제 브라우저와 HTTP 로
+// 지난다. 배치가 약속한 것(공개 면의 모양, 발행 포트, 컨테이너의 사용자, 재생성 뒤의 길, 네트워크 없는 MCP 실행)을 잠근다.
+//
+// 429 사례는 마지막에 둔다. 토큰 끝점의 요청 상한은 IP 하나에 걸려 있어 먼저 돌면 뒤의 사례가 429 를 받는다. 파일 안의 사례는
+// 차례로 돈다(playwright.config.ts 의 workers 1).
+
+import { readFileSync } from "node:fs";
+import { request as httpsRequest } from "node:https";
+import { join } from "node:path";
+import { expect, test } from "@playwright/test";
+import { signedDirectToken } from "./direct.ts";
+import { Compose, run } from "./docker.ts";
+import { ADMIN_ORIGIN, CALC_AGENT, deployment, LLM_ENV, ORIGIN, PREVIEW_SITE } from "./env.ts";
+
+const SERVICES = ["proxy", "serve", "admin", "widget", "portal"] as const;
+const COVER_TITLE = "질문하기 전에 읽어 주세요";
+const ACKNOWLEDGE = "확인하고 질문하기";
+const PUBLISHED = [80, 443, 3000];
+// 재생성한 뒤 프록시가 새 주소를 따라 다시 200 을 내기까지 기다리는 상한(명세 사용자 이야기 20).
+const RECOVER_MS = 15_000;
+
+function compose(): Compose {
+  const { project, dir, files } = deployment();
+  return new Compose(project, dir, files);
+}
+
+/**
+ * 경로를 다듬지 않고 그대로 보낸다. Playwright 의 요청과 `fetch` 는 URL 을 만들며 `..` 를 접어 버려 우회 시도가 프록시에
+ * 닿기 전에 사라진다.
+ */
+function rawGet(path: string): Promise<{ status: number; body: string }> {
+  // 인증서 검증은 끄지 않는다. 준비가 지은 자체 서명 인증서를 신뢰 목록으로 주고 이름은 localhost 로 맞춘다.
+  const ca = readFileSync(join(deployment().dir, "tls", "fullchain.pem"));
+  return new Promise((resolve, reject) => {
+    const req = httpsRequest(
+      { host: "127.0.0.1", port: 443, path, method: "GET", ca, servername: "localhost" },
+      (response) => {
+        const chunks: Buffer[] = [];
+        response.on("data", (chunk: Buffer) => chunks.push(chunk));
+        response.on("end", () => {
+          resolve({
+            status: response.statusCode ?? 0,
+            body: Buffer.concat(chunks).toString("utf-8"),
+          });
+        });
+      },
+    );
+    req.on("error", reject);
+    req.end();
+  });
+}
+
+function echoed(request: string): string {
+  return `출력: chars:${String(request.length)}`;
+}
+
+test("위젯 미리보기 페이지가 프록시 뒤에서 CSP 위반 없이 그려지고 토큰 CSS 와 글꼴이 풀린다", async ({
+  page,
+}) => {
+  const messages: string[] = [];
+  page.on("console", (message) => {
+    messages.push(message.text());
+  });
+  const failures: string[] = [];
+  page.on("requestfailed", (request) => {
+    failures.push(request.url());
+  });
+  // 연결은 됐는데 404 나 5xx 로 돌아온 자원(프록시 허용 목록에서 빠진 글꼴, 스크립트)도 실패로 센다.
+  const statuses: string[] = [];
+  page.on("response", (response) => {
+    if (response.status() >= 400) {
+      statuses.push(`${String(response.status())} ${response.url()}`);
+    }
+  });
+
+  await page.goto(`${ORIGIN}/portal/`);
+  await page.evaluate(() => document.fonts.ready);
+
+  expect(messages.filter((text) => text.includes("Content Security Policy"))).toEqual([]);
+  expect(failures).toEqual([]);
+  expect(statuses).toEqual([]);
+  // 글꼴이 실제로 풀렸는지: 불러온 글꼴 면이 하나 이상 있어야 한다.
+  const loadedFaces = await page.evaluate(() => {
+    let loaded = 0;
+    document.fonts.forEach((face) => {
+      if (face.status === "loaded") {
+        loaded += 1;
+      }
+    });
+    return loaded;
+  });
+  expect(loadedFaces).toBeGreaterThan(0);
+  const sans = await page.evaluate(() =>
+    getComputedStyle(document.documentElement).getPropertyValue("--sans").trim(),
+  );
+  expect(sans).toContain("Noto Sans KR");
+});
+
+test("고지를 확인한 최종 사용자의 질문에 모델 없는 에이전트가 프록시, 위젯, serve 를 지나 답한다", async ({
+  page,
+}) => {
+  const request = "standalone-e2e";
+  await page.goto(`${ORIGIN}/portal/`);
+  await page
+    .getByRole("region", { name: COVER_TITLE })
+    .getByRole("button", { name: ACKNOWLEDGE })
+    .click();
+  await page.getByRole("textbox", { name: "질문" }).fill(request);
+  await page.getByRole("button", { name: "보내기" }).click();
+
+  await expect(page.getByText(echoed(request))).toBeVisible();
+});
+
+test("80 포트는 308 로 443 의 같은 주소로 넘기고 443 의 응답은 HSTS 머리를 단다", async ({
+  request,
+}) => {
+  const moved = await request.get("http://127.0.0.1/portal/?site=preview", { maxRedirects: 0 });
+  expect(moved.status()).toBe(308);
+  expect(moved.headers()["location"]).toBe("https://127.0.0.1/portal/?site=preview");
+
+  const served = await request.get(`${ORIGIN}/portal/health`);
+  expect(served.status()).toBe(200);
+  expect(served.headers()["strict-transport-security"]).toContain("max-age=");
+});
+
+test("프록시는 관리 면과 허용 목록 밖의 경로를 404 로 막고, 우회 시도도 같은 404 다", async () => {
+  // 양성 대조. 같은 길로 허용된 경로는 열려 있어야 거절이 프록시의 것임을 읽는다.
+  expect((await rawGet("/portal/health")).status).toBe(200);
+
+  const blocked = [
+    "/api/plugins",
+    "/health",
+    "/runs",
+    "/plugins",
+    "/end-user/../runs",
+    "/end-user/%2e%2e/runs",
+    "/widget/../health",
+    "/portal/../health",
+  ];
+  const statuses = await Promise.all(
+    blocked.map(async (path) => [path, (await rawGet(path)).status]),
+  );
+  expect(statuses).toEqual(blocked.map((path) => [path, 404]));
+});
+
+test("관리 화면은 서버의 루프백 3000 에서만 열리고 프록시를 거치지 않는다", async ({ request }) => {
+  const admin = await request.get(ADMIN_ORIGIN);
+  expect(admin.status()).toBe(200);
+  // 프록시의 공개 출처에서 관리 화면의 경로(/api 중계)는 404 다. 위 사례가 경로별로 이미 본다.
+  const relayed = await request.get(`${ORIGIN}/api/plugins`);
+  expect(relayed.status()).toBe(404);
+});
+
+test("발행된 호스트 포트는 80, 443, 3000 셋뿐이고 3000 은 루프백에만 묶인다", async () => {
+  const outcome = await compose().call(["ps", "--all", "--format", "json"], 60_000);
+  expect(outcome.code).toBe(0);
+  const publishers = new Map<number, Set<string>>();
+  for (const line of outcome.stdout.split("\n")) {
+    if (line.trim() === "") {
+      continue;
+    }
+    const parsed: unknown = JSON.parse(line);
+    for (const [port, address] of publishedOf(parsed)) {
+      publishers.set(port, (publishers.get(port) ?? new Set<string>()).add(address));
+    }
+  }
+  expect([...publishers.keys()].toSorted((a, b) => a - b)).toEqual(PUBLISHED);
+  // 3000 은 루프백에만 묶이고, 공개 면인 80 과 443 은 모든 IPv4 주소(0.0.0.0)에 묶이며 루프백에 갇히지 않는다.
+  expect([...(publishers.get(3000) ?? [])]).toEqual(["127.0.0.1"]);
+  for (const port of [80, 443]) {
+    const addresses = publishers.get(port) ?? new Set<string>();
+    expect(addresses.has("0.0.0.0"), `${String(port)} 의 묶은 주소`).toBe(true);
+    expect(addresses.has("127.0.0.1"), `${String(port)} 가 루프백에 갇히지 않는다`).toBe(false);
+  }
+});
+
+/** `docker compose ps --format json` 한 줄에서 (발행 포트, 묶은 주소) 쌍을 뽑는다. */
+function publishedOf(entry: unknown): [number, string][] {
+  if (typeof entry !== "object" || entry === null || !("Publishers" in entry)) {
+    return [];
+  }
+  const list: unknown = entry.Publishers;
+  if (!Array.isArray(list)) {
+    return [];
+  }
+  const items: readonly unknown[] = list;
+  const found: [number, string][] = [];
+  for (const item of items) {
+    if (
+      typeof item === "object" &&
+      item !== null &&
+      "PublishedPort" in item &&
+      "URL" in item &&
+      typeof item.PublishedPort === "number" &&
+      typeof item.URL === "string" &&
+      item.PublishedPort > 0
+    ) {
+      found.push([item.PublishedPort, item.URL]);
+    }
+  }
+  return found;
+}
+
+test("컨테이너는 모두 root 가 아닌 사용자로 돌고 serve 의 판은 묶음의 판과 같다", async () => {
+  const { version } = deployment();
+  for (const service of SERVICES) {
+    const uid = (await compose().inService(service, ["id", "-u"])).trim();
+    expect(uid, `${service} 의 사용자`).toMatch(/^[1-9][0-9]*$/u);
+  }
+  const printed = await compose().inService("serve", ["agent-os", "--version"]);
+  expect(printed).toContain(version);
+});
+
+test("관리 화면의 중계가 관리 토큰으로 플러그인을 켜고 토큰 없이는 401 이다", async ({
+  request,
+}) => {
+  const { adminToken } = deployment();
+  const url = `${ADMIN_ORIGIN}/api/plugins/skill/cite-sources/enabled`;
+
+  const headers = { Authorization: `Bearer ${adminToken}` };
+
+  const without = await request.put(url, { data: { enabled: false } });
+  expect(without.status()).toBe(401);
+  // 이미 켜진 플러그인을 켜는 요청은 쓰기 없이 204 라 볼륨 쓰기를 지나지 않는다. 끈 뒤 다시 켜서 두 번 모두 쓰기를 거치게 한다.
+  const disabled = await request.put(url, { headers, data: { enabled: false } });
+  expect(disabled.status()).toBe(204);
+  const enabled = await request.put(url, { headers, data: { enabled: true } });
+  expect(enabled.status()).toBe(204);
+});
+
+test("네트워크 없는 MCP 실행: 계산 에이전트의 실행이 도구 연결이 아니라 모델 호출에서 끝난다", async ({
+  request,
+}) => {
+  test.skip(
+    process.env[LLM_ENV] === "1",
+    "실제 모델 모드에서는 calc.llm.ts 가 같은 길을 실제 모델로 지난다",
+  );
+  const response = await request.post(`${ORIGIN}/end-user/runs`, {
+    headers: { Authorization: `Bearer ${signedDirectToken(deployment().dir)}` },
+    data: { agent: CALC_AGENT, request: "2 더하기 3은?" },
+    timeout: 90_000,
+  });
+  expect(response.status()).toBe(200);
+  const body = await response.text();
+  // 모델 키가 없어 모델 호출에서 실패한다. MCP 서버가 네트워크 없이 뜨지 못했다면 원인이 tool_connection 이다.
+  expect(body).toContain('"type":"failed"');
+  expect(body).toContain('"cause":"model_call"');
+  expect(body).not.toContain("tool_connection");
+});
+
+test("루프백이 아닌 주소에 묶으려는 serve 는 예외 환경 변수 없이는 시작하지 않는다", async () => {
+  const image = await serveImage();
+  const outcome = await run(
+    "docker",
+    [
+      "run",
+      "--rm",
+      "--network",
+      "none",
+      "--env",
+      "AGENT_OS_ADMIN_TOKEN=distinct-admin-token",
+      "--env",
+      "AGENT_OS_CHANNEL_TOKEN=distinct-channel-token",
+      image,
+      "agent-os",
+      "serve",
+      "--plugins-root",
+      "/app/plugins",
+      "--traces",
+      "/tmp/traces",
+      "--host",
+      "0.0.0.0",
+    ],
+    { timeoutMs: 120_000 },
+  );
+  expect(outcome.code).not.toBe(0);
+  expect(outcome.code).not.toBeNull();
+  expect(outcome.stderr).toContain("--host");
+});
+
+async function serveImage(): Promise<string> {
+  const printed = await compose().call(["config", "--images"], 60_000);
+  const image = printed.stdout.split("\n").find((line) => line.trim().includes("/serve:"));
+  if (image === undefined) {
+    throw new Error(`compose config --images 에 serve 이미지가 없다:\n${printed.stdout}`);
+  }
+  return image.trim();
+}
+
+test("백엔드 하나를 다시 만들어도 프록시가 새 주소를 따라 15초 안에 다시 200 을 낸다", async ({
+  request,
+}) => {
+  const before = await request.get(`${ORIGIN}/portal/health`);
+  expect(before.status()).toBe(200);
+
+  await compose().ensure(["up", "--detach", "--force-recreate", "--no-deps", "portal"], 120_000);
+
+  const started = Date.now();
+  let status = 0;
+  while (Date.now() - started < RECOVER_MS) {
+    try {
+      status = (await request.get(`${ORIGIN}/portal/health`)).status();
+    } catch {
+      status = 0;
+    }
+    if (status === 200) {
+      break;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 500));
+  }
+  expect(status, `${String(RECOVER_MS)}ms 안에 200 으로 돌아오지 않았다`).toBe(200);
+});
+
+test("토큰 끝점은 짧은 시간에 요청이 몰리면 429 를 내고 앞선 요청은 막지 않는다", async ({
+  request,
+}) => {
+  const url = `${ORIGIN}/portal/sites/${PREVIEW_SITE}/token`;
+  const statuses: number[] = [];
+  for (let sent = 0; sent < 60; sent += 1) {
+    const response = await request.post(url);
+    statuses.push(response.status());
+  }
+  // 확인 전의 요청이라 막히지 않은 쪽은 401 이다. 앞쪽은 상한 안이라 429 가 아니고 뒤쪽은 상한을 넘어 429 다.
+  expect(statuses[0]).toBe(401);
+  expect(statuses).toContain(429);
+});

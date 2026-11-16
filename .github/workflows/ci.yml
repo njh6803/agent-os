@@ -1,8 +1,8 @@
 # 로컬 pre-commit과 같은 검사. 훅은 각자 설치해야 하므로 CI가 최종 판정이다. 파이썬, web, 관리 화면 e2e(e2e), 위젯
-# e2e(e2e-widget), 위젯 미리보기 페이지 e2e(e2e-portal), 사진 비교(visual), 커밋·노트 검사(ticket)가 잡 일곱으로 함께 돌고, 필수 검사는
-# 그 결과를 모으는 verify 하나다(ADR 0005, ADR 0021의 2026-10-01 이력 둘, ADR 0037, ADR 0024의 2026-10-24 이력, ADR 0050).
-# 잡을 더하면 verify 의 needs 에 넣는다. 빠뜨리면 verify 가 빨갛다(참고 모드인 llm 잡만 예외다). 세 e2e 와 사진 비교는
-# pre-commit 에 없고 CI 에만 있다(ADR 0026).
+# e2e(e2e-widget), 위젯 미리보기 페이지 e2e(e2e-portal), 단독 배포 e2e(e2e-standalone), 사진 비교(visual), 커밋·노트
+# 검사(ticket)가 잡 여덟으로 함께 돌고, 필수 검사는 그 결과를 모으는 verify 하나다(ADR 0005, ADR 0021의 2026-10-01 이력 둘,
+# ADR 0037, ADR 0024의 2026-10-24 이력, ADR 0050). 잡을 더하면 verify 의 needs 에 넣는다. 빠뜨리면 verify 가 빨갛다
+# (참고 모드인 llm 잡만 예외다). 네 e2e 와 사진 비교는 pre-commit 에 없고 CI 에만 있다(ADR 0026).
 # LLM 호출 테스트는 base 가 main 인 PR 과 main 푸시의 llm 잡만 돌린다(-m llm, -m llm_widget. ADR 0043). dev 로 가는 티켓 PR
 # 에서는 비용과 키 때문에 돌리지 않고 손으로 돌린다. -m llm_portal 은 ADR 0043 이 꼽지 않아 이 잡에 싣지 않는다. -m llm_local 도
 # 싣지 않는다. 모델 서버를 Runpod 에서 빌려야 해서 병합 전에 세션이 tools/llm_local.py 로 돌린다(ADR 0058). 그 잡은 참고
@@ -22,9 +22,10 @@
 name: ci
 
 # 개발 브랜치 dev 가 서면(ADR 0043) 티켓 PR 은 dev 로, 출시 PR(dev→main)과 핫픽스는 main 으로 간다. PR 은 base 를
-# 가리지 않고 같은 검사 잡 일곱과 그 결과를 모으는 verify 가 돈다. 푸시는 main 과 dev 둘이다. main 에서만 더 도는 검사 중
-# LLM 호출 테스트는 llm 잡이 돌고(ci-llm-job 티켓), 실제 이미지의 compose e2e 는 이 파일에 아직 없다. 뒤의 것은
-# Dockerfile·compose 를 갖추는 release-image 의 티켓이 함께 더한다(ADR 0056 이력 2026-11-14).
+# 가리지 않고 같은 검사 잡 여덟과 그 결과를 모으는 verify 가 돈다. 푸시는 main 과 dev 둘이다. base 가 main 인 PR 과 main
+# 푸시에서만 실제로 더 도는 검사는 둘이다. LLM 호출 테스트의 llm 잡(ci-llm-job 티켓)과, 실제 이미지로 띄우는 compose e2e 인
+# e2e-standalone 잡의 시험(release-image 티켓 09, ADR 0043 CI 분담)이다. e2e-standalone 은 그 밖의 PR 과 푸시에서도 잡 안에서
+# 곧바로 성공으로 끝난다.
 on:
   push:
     branches: [main, dev]
@@ -245,6 +246,75 @@ jobs:
         run: pnpm -C web/apps/portal exec playwright install-deps chromium
       - run: pnpm -C web/apps/portal exec playwright test
 
+  # 단독 배포 e2e(release-image 티켓 09). 저장소에서 이미지 넷(serve, admin, widget, portal)을 짓고, 배포 파일 묶음
+  # (tools/release.py bundle)을 풀어 compose 로 프록시와 함께 띄운 배치를 실제 브라우저로 지난다(준비는
+  # web/packages/e2e-standalone/e2e/stack.ts). 이 잡이 ubuntu 에서 443, 80 에 발행하는 것이 실제 배치 확인이다.
+  # ADR 0043 CI 분담에 따라 base 가 main 인 PR 과 main 푸시에서만 시험하고(dev 로 가는 티켓 PR 과 dev 푸시에서는 이미지
+  # 넷을 짓는 시간을 쓰지 않는다), 그 밖에서는 첫 스텝(gate)이 판정하고 나머지 스텝을 건너뛰어 잡은 안에서 곧바로 성공으로
+  # 끝난다. 잡 자체를 if: 로 건너뛰지 않는 것은 건너뛴 잡을 verify 가 빨강으로 읽기 때문이다. 판정에 쓰는 값은 env 로 넘겨
+  # run 에 식으로 펼치지 않는다(zizmor 의 템플릿 주입 판정, ADR 0027). 실제 모델 프로젝트 llm 은 AGENT_OS_STANDALONE_LLM 을
+  # 두지 않아 서지 않는다(실제 모델 시험은 손으로 돌린다. docs/constitution/operations.md LLM 테스트). timeout-minutes 는
+  # 지난 실행이 없는 첫 값이다. 어림의 근거는 이 PC 에서 이미지를 캐시해 둔 단독 e2e 한 바퀴가 4.8분이었다는 것이고
+  # (일지 2026-11-16), 빈 러너에서 이미지 넷을 짓는 시간은 재지 못했다. 이 잡이 시험까지 든 실행이 생기면 프로브 `JOBS` 에
+  # 더해 고친다(머리 주석).
+  e2e-standalone:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      PYTHONUTF8: "1"
+    steps:
+      - id: gate
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          REF: ${{ github.ref }}
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          if { [ "$EVENT_NAME" = push ] && [ "$REF" = refs/heads/main ]; } || { [ "$EVENT_NAME" = pull_request ] && [ "$BASE_REF" = main ]; }; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "run=false" >> "$GITHUB_OUTPUT"
+            echo "main 으로 가는 PR 과 main 푸시가 아니라 시험하지 않는다."
+          fi
+      - if: steps.gate.outputs.run == 'true'
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - if: steps.gate.outputs.run == 'true'
+        uses: astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86 # v5.4.2
+        with:
+          enable-cache: true
+      - if: steps.gate.outputs.run == 'true'
+        run: uv python install 3.12
+      - if: steps.gate.outputs.run == 'true'
+        run: uv sync --frozen
+      - if: steps.gate.outputs.run == 'true'
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+      - if: steps.gate.outputs.run == 'true'
+        uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
+        with:
+          package_json_file: web/package.json
+          cache: true
+          cache_dependency_path: web/pnpm-lock.yaml
+      - if: steps.gate.outputs.run == 'true'
+        run: pnpm -C web install --frozen-lockfile
+      - id: playwright
+        if: steps.gate.outputs.run == 'true'
+        run: echo "version=$(pnpm -C web/packages/e2e-standalone exec playwright --version | awk '{print $2}')" >> "$GITHUB_OUTPUT"
+      - id: browsers
+        if: steps.gate.outputs.run == 'true'
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.playwright.outputs.version }}
+      - if: steps.gate.outputs.run == 'true' && steps.browsers.outputs.cache-hit != 'true'
+        run: pnpm -C web/packages/e2e-standalone exec playwright install --with-deps --only-shell chromium
+      - if: steps.gate.outputs.run == 'true' && steps.browsers.outputs.cache-hit == 'true'
+        run: pnpm -C web/packages/e2e-standalone exec playwright install-deps chromium
+      - if: steps.gate.outputs.run == 'true'
+        run: pnpm -C web/packages/e2e-standalone exec playwright test
+
   # 사진 비교(ADR 0026). 판을 고정한 Playwright 이미지를 잡의 컨테이너로 쓰고, 그 안에서 설치하고 Storybook 정적 빌드를
   # 지은 뒤 커밋한 정답 사진(web/packages/ui/visual/snapshots/)과 비교한다. 위젯과 관리 화면도 같은 컨테이너에서 자기 정적
   # 빌드를 짓고 자기 정답 사진(web/apps/widget/visual/snapshots/, web/apps/admin/visual/snapshots/)과 비교한다(web-widget
@@ -419,7 +489,7 @@ jobs:
   # 못하고, 순환이라 needs 에 넣을 수도 없다. 그런 잡은 필수 검사 밖이다(ADR 0021의 둘째 2026-10-01 이력, PR #119 실험).
   verify:
     if: always()
-    needs: [python, web, e2e, e2e-widget, e2e-portal, visual, ticket]
+    needs: [python, web, e2e, e2e-widget, e2e-portal, e2e-standalone, visual, ticket]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:

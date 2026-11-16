@@ -1220,11 +1220,19 @@ def open_network_control(ctx: Ctx, report: Report) -> None:
     address = inner("inspect", f"{name}-stub", "--format", template).out.strip()
     helper(N1, "route", "replace", OPEN4_SUBNET, "via", SERVER4)
     routed = f"via {SERVER4}" in helper(N1, "route", "get", address or "172.31.0.2").out
+    # 양성 대조의 대상이 실제로 답하는지 그 컨테이너 안에서 먼저 본다. 대상이 죽어 있으면 경유가
+    # 통해도 닿지 않아, 통한다는 대조가 되지 못한다(.claude/rules/probes.md 첫 항목).
+    own = (
+        "import urllib.request as u; "
+        "print(u.urlopen('http://127.0.0.1:8000/', timeout=3).read().decode())"
+    )
+    answers = '"stub": "open"' in inner("exec", f"{name}-stub", "python", "-c", own).out
     server("iptables", "-t", "raw", "-I", "PREROUTING", "1", "-i", "eth0", "-d", OPEN4_SUBNET)
     time.sleep(1)
     attack(
         ctx, report, "경유.n1→보호를 끈 네트워크의 컨테이너:8000(양성 대조)",
-        get(address, "/", port=8000, scheme="http", timeout=3.0), OPEN4_SUBNET, ready=routed,
+        get(address, "/", port=8000, scheme="http", timeout=3.0), OPEN4_SUBNET,
+        ready=routed and answers,
     )  # fmt: skip
     server("iptables", "-t", "raw", "-D", "PREROUTING", "-i", "eth0", "-d", OPEN4_SUBNET)
     helper(N1, "route", "del", OPEN4_SUBNET)

@@ -71,7 +71,7 @@ dev의 머리를 main에 올린다. 병합 방법은 위 "병합 방법"의 표,
 
 **열기.** 제목은 `chore: <끝낸 기능 slug들>을 main에 출시한다`이고(slug는 계기 명령에 `--name-only`를 더해 읽은 `.scratch/<slug>/plan.md`의 `<slug>`다. 한 커밋이 여러 plan.md의 끝 줄을 한꺼번에 채운 일괄 편집이면 그 커밋의 slug는 쓰지 않고 마지막 티켓 PR의 제목을 읽는다), 본문은 `.github/PULL_REQUEST_TEMPLATE.md`가 아니라 아래 넷이다. 그 서식은 티켓 PR의 "왜"와 "남긴 위험"과 체크리스트를 묻는데, 출시 PR은 새 변경 없이 dev의 커밋을 그대로 올리고 리뷰 봇도 돌지 않는다(머리가 dev이면 claude-review는 건너뛰고 CodeRabbit은 요청하지 않는다. `dev-review-bot-off`).
 - `## 올리는 기능`: 끝 줄을 적은 기능의 slug와 그 마지막 티켓 PR 번호.
-- `## 함께 오르는 진행 중 조각`: `.scratch/plan.md`에서 상태가 in-progress인 기능의 slug. 없으면 "없음". dev의 티켓 PR은 모두 dev의 CI를 지났고 출시 PR도 같은 검사 일곱 잡과 `verify`를 다시 지나며(main에서만 더 도는 검사는 아직 없다, `ci.yml` 머리 주석), 끝나지 않은 기능의 조각이 올라도 머리는 그 검사를 지난 상태다. 그래서 막지 않고 알리기만 한다.
+- `## 함께 오르는 진행 중 조각`: `.scratch/plan.md`에서 상태가 in-progress인 기능의 slug. 없으면 "없음". dev의 티켓 PR은 모두 dev의 CI를 지났고 출시 PR도 같은 검사 여덟 잡(단독 배포 e2e `e2e-standalone` 포함)과 `verify`를 다시 지나며(main으로 가는 PR과 main 푸시에서만 실제로 도는 검사는 `llm` 잡과 단독 배포 e2e 잡의 시험이다. `llm` 잡은 참고 모드다, `ci.yml` 머리 주석), 끝나지 않은 기능의 조각이 올라도 머리는 그 검사를 지난 상태다. 그래서 막지 않고 알리기만 한다.
 - `## 전제`: 전제 확인 1의 실행 주소와 `headSha`, 2의 `--is-ancestor`가 0이라는 것.
 - `## 병합`: `merge 커밋, 사용자 승인 없음(ADR 0043), 병합 뒤 main을 dev에 되돌려 합친다`.
 

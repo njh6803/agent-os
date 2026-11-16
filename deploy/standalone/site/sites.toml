@@ -1,0 +1,22 @@
+# 사이트 파일 틀. 운영자가 사이트마다 항목 하나를 채운다. serve, 위젯, 위젯 미리보기 페이지가 이 파일을 읽는다.
+# 위젯은 뜰 때 이 파일로 빌드하므로, 고친 뒤에는 위젯과 serve 를 다시 띄운다
+# (`docker compose restart widget serve portal`).
+schema_version = "1"
+
+[[sites]]
+# 사이트의 발급자. 위젯 미리보기 페이지 설정의 사이트 항목이 같은 값으로 이 항목을 고른다.
+issuer = "https://www.example.com"
+audience = "agent-os"
+# 위젯을 끼워 넣을 수 있는 출처. 위젯 미리보기 페이지 설정의 public_origin 도 여기 든다.
+allowed_origins = ["https://agent.example.com"]
+# 이 사이트의 방문자가 열 수 있는 에이전트.
+agents = ["assistant"]
+
+# 토큰의 서명을 확인하는 공개 키. 개인 키는 portal/keys/portal.pem 에 둔다.
+[[sites.public_keys]]
+kid = "portal-1"
+pem = """
+-----BEGIN PUBLIC KEY-----
+(공개 키로 바꾼다)
+-----END PUBLIC KEY-----
+"""
