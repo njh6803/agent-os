@@ -184,21 +184,24 @@ def pump(stream: object, lines: queue.Queue[str | None]) -> None:
         lines.put(None)
 
 
-def next_reply(lines: queue.Queue[str | None], wanted: int, deadline: float) -> Json:
-    """id 가 wanted 인 JSON-RPC 응답이 올 때까지 줄을 읽는다. 마감이나 EOF 면 None 이다."""
+def next_reply(lines: queue.Queue[str | None], wanted: int, deadline: float) -> tuple[Json, str]:
+    """id 가 wanted 인 JSON-RPC 응답이 올 때까지 줄을 읽는다. (응답, 끝난 까닭)을 낸다. 까닭은
+    `reply`(응답을 받았다), `eof`(응답 없이 서버가 표준 출력을 닫았다), `deadline`(마감까지 응답도
+    EOF 도 없었다) 가운데 하나다. 응답이 없는 둘을 가르지 않으면 서버가 스스로 끝낸 회차와 마감이
+    지난 회차를 같은 "답 없음"으로 읽는다."""
     while True:
         remaining = deadline - time.monotonic()
         if remaining <= 0:
-            return None
+            return None, "deadline"
         try:
             line = lines.get(timeout=remaining)
         except queue.Empty:
-            return None
+            return None, "deadline"
         if line is None:
-            return None
+            return None, "eof"
         message = parse(line)
         if isinstance(message, dict) and message.get("id") == wanted:
-            return message
+            return message, "reply"
 
 
 def drain(lines: queue.Queue[str | None], seconds: float) -> list[str]:
@@ -257,13 +260,13 @@ def handshake(seconds: float, extra: str, argv: list[str]) -> Json:
     threading.Thread(target=pump, args=(process.stderr, err), daemon=True).start()
     deadline = started + seconds
     send(process, INITIALIZE)
-    first = next_reply(out, 1, deadline)
+    first, first_ended = next_reply(out, 1, deadline)
     answered_at = round(time.monotonic() - started, 3)
     tools: Json = None
     if first is not None:
         send(process, INITIALIZED)
         send(process, TOOLS_LIST)
-        tools = next_reply(out, 2, deadline)
+        tools, _ = next_reply(out, 2, deadline)
     closed_at = time.monotonic()
     if process.stdin is not None:
         try:
@@ -290,6 +293,7 @@ def handshake(seconds: float, extra: str, argv: list[str]) -> Json:
         "registry_reachable": reachable,
         "answered": first is not None and dig(first, "result", "serverInfo") is not None,
         "initialize_seconds": answered_at,
+        "first_ended": first_ended,
         "server_name": dig(first, "result", "serverInfo", "name"),
         "server_version": dig(first, "result", "serverInfo", "version"),
         "protocol": dig(first, "result", "protocolVersion"),
