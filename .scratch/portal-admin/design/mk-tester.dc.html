@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>완성 12. 운영자로 들어온 뒤</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/agent-os/styles.css">
+<link rel="stylesheet" href="ds/agent-os/fonts/fonts.css">
+<link rel="stylesheet" href="ds/agent-os/_ds_bundle.css">
+<script src="ds/agent-os/_ds_bundle.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0}
+a{color:var(--accent)}a:hover{color:var(--text)}
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+.navlink{display:flex;align-items:center;gap:var(--spacing-2);height:var(--spacing-nav-item);padding:0 var(--spacing-3);border-radius:var(--radius-m);color:var(--text-muted);text-decoration:none;font-size:var(--body-size);line-height:var(--body-lh)}
+.navlink:hover{color:var(--text);background:var(--bg-hover)}
+.navlink[aria-current="page"]{background:var(--bg-selected);color:var(--text);font-weight:var(--font-weight-medium)}
+.btnlink{display:inline-flex;align-items:center;justify-content:center;gap:var(--spacing-2);height:var(--control-h);box-sizing:border-box;padding:0 var(--spacing-3);border:1px solid var(--border);border-radius:var(--radius-m);font-family:inherit;font-size:var(--body-size);line-height:var(--body-lh);font-weight:var(--font-weight-medium);white-space:nowrap;text-decoration:none;color:var(--text);background:transparent}
+.btnlink:hover{color:var(--text);background:var(--bg-hover)}
+.ellipsis{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.textlink{display:inline;min-height:24px;padding:0;border:0;background:none;color:var(--accent);text-decoration:underline;font:inherit;cursor:pointer}
+.group{display:flex;flex-direction:column;gap:var(--spacing-4)}
+.ghead{display:flex;flex-direction:column;gap:var(--spacing-1)}
+.fields{display:flex;flex-direction:column;gap:var(--spacing-6);min-width:0}
+.changed label::after{content:"바뀜";margin-left:var(--spacing-2);font-weight:var(--font-weight-regular);color:var(--text-muted)}
+.chg{margin-left:var(--spacing-2);font-weight:var(--font-weight-regular);color:var(--text-muted)}
+.mono-field input,.mono-field textarea{font-family:var(--mono);font-size:var(--mono-size)}
+.fs{border:0;margin:0;padding:0;min-width:0}
+.lg{display:block;padding:0;margin:0 0 var(--spacing-2);font-size:var(--text-small);line-height:var(--text-small--line-height);font-weight:var(--font-weight-medium);color:var(--text)}
+.fsbody{display:flex;flex-direction:column;gap:var(--spacing-2)}
+.help{margin:0;font-size:var(--text-small);line-height:var(--text-small--line-height);color:var(--text-muted)}
+.choices{display:flex;flex-wrap:wrap;column-gap:var(--spacing-6)}
+.choice{display:inline-flex;align-items:center;gap:var(--spacing-2);min-height:var(--control-h);font-size:var(--body-size);line-height:var(--body-lh);cursor:pointer}
+.choice input,.choice2 input{width:16px;height:16px;margin:0;flex-shrink:0;accent-color:var(--primary)}
+.choice2{display:flex;align-items:flex-start;gap:var(--spacing-2);padding:var(--spacing-1) 0;font-size:var(--body-size);line-height:var(--body-lh);cursor:pointer}
+.choice2 input{margin-top:3px}
+.swatch{display:inline-block;width:16px;height:16px;border-radius:var(--radius-s);background:var(--primary)}
+.ctl{display:block;flex:1;width:100%;min-width:0;box-sizing:border-box;height:var(--control-h);padding:0 var(--spacing-3);border:1px solid var(--border-control);border-radius:var(--radius-m);background:var(--bg-raised);color:var(--text);font:inherit;font-size:var(--body-size);line-height:var(--body-lh)}
+.qrow{display:flex;align-items:center;gap:var(--spacing-2)}
+.pair{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:var(--spacing-4)}
+.picker{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:var(--spacing-3)}
+.pick{position:relative;display:flex;flex-direction:column;gap:var(--spacing-1);padding:var(--spacing-3);border:1px solid var(--border);border-radius:var(--radius-m);background:var(--bg-raised);cursor:pointer}
+.pick:hover{background:var(--bg-hover)}
+.pick:has(input:checked){border:2px solid var(--accent);padding:calc(var(--spacing-3) - 1px)}
+.pick:has(input:focus-visible){outline:2px solid var(--focus-ring);outline-offset:2px}
+.pick .mark{position:absolute;top:var(--spacing-2);right:var(--spacing-2);display:none;color:var(--accent)}
+.pick:has(input:checked) .mark{display:inline-flex}
+.sketch{display:flex;justify-content:center;padding:var(--spacing-2) 0;margin-bottom:var(--spacing-1);border-radius:var(--radius-s);background:var(--bg)}
+.pname{font-size:var(--body-size);line-height:var(--body-lh);font-weight:var(--font-weight-medium)}
+.dflt{font-weight:var(--font-weight-regular);color:var(--text-muted)}
+.select{display:block;width:100%;box-sizing:border-box;height:var(--control-h);padding:0 var(--spacing-3);border:1px solid var(--border-control);border-radius:var(--radius-m);background:var(--bg-raised);color:var(--text);font:inherit;font-size:var(--body-size)}
+.toggle{display:inline-flex;align-items:center;gap:var(--spacing-1);height:var(--control-h);box-sizing:border-box;padding:0 var(--spacing-3);border:1px solid var(--border);border-radius:var(--radius-m);background:transparent;color:var(--text);font:inherit;font-size:var(--body-size);font-weight:var(--font-weight-medium);cursor:pointer}
+.toggle:hover{background:var(--bg-hover)}
+.toggle[aria-pressed="true"]{background:var(--bg-selected)}
+.stage{display:flex;justify-content:center;padding:var(--spacing-6) 0;border:1px solid var(--border);border-radius:var(--radius-l);background:var(--bg)}
+.fill button{width:100%}
+.count{font-size:var(--text-small);line-height:var(--text-small--line-height);font-weight:var(--font-weight-regular);color:var(--text-muted)}
+.savebar{position:sticky;bottom:0;box-sizing:border-box;padding:var(--spacing-3) var(--spacing-8);background:var(--bg-raised);border-top:1px solid var(--border)}
+.toclink{display:flex;align-items:center;justify-content:space-between;gap:var(--spacing-2);min-height:var(--control-h);padding:0 var(--spacing-3);border-radius:var(--radius-m);color:var(--text-muted);text-decoration:none;font-size:var(--body-size);line-height:var(--body-lh)}
+.toclink:hover{color:var(--text);background:var(--bg-hover)}
+.toclink[aria-current="location"]{background:var(--bg-selected);color:var(--text);font-weight:var(--font-weight-medium)}
+.group2{display:grid;grid-template-columns:176px minmax(0,1fr);column-gap:var(--spacing-6)}
+.group2+.group2{border-top:1px solid var(--border);padding-top:var(--spacing-6)}
+.tabs{display:flex;overflow-x:auto;border-bottom:1px solid var(--border)}
+.tab{display:inline-flex;align-items:center;gap:var(--spacing-1);height:var(--control-h);padding:0 var(--spacing-2);margin-bottom:-1px;border:0;border-bottom:2px solid transparent;background:none;color:var(--text-muted);font:inherit;font-size:var(--body-size);line-height:var(--body-lh);white-space:nowrap;cursor:pointer}
+.tab:hover{color:var(--text)}
+.tab[aria-selected="true"]{border-bottom-color:var(--accent);color:var(--text)}
+.dot{width:8px;height:8px;border-radius:9999px;background:#1fe05a;box-shadow:0 0 4px #1fe05a;flex-shrink:0}
+[data-mode="dark"] .dot{background:#4dff85;box-shadow:0 0 4px #4dff85}
+.tab-err{display:inline-flex;align-items:center;gap:2px;margin-left:var(--spacing-1);font-size:var(--text-small);line-height:var(--text-small--line-height);color:var(--danger)}
+.focus-shown input{outline:2px solid var(--focus-ring);outline-offset:2px}
+</style>
+</helmet>
+<div data-theme="nokcheong" data-mode="light" class="flex flex-col" style="min-height: 100vh; background: var(--bg); color: var(--text); font-family: var(--sans);"><header class="flex items-center justify-between gap-4 shrink-0" style="height: 64px; box-sizing: border-box; padding: 0 var(--spacing-6); border-bottom: 1px solid var(--border);"><div class="flex items-center gap-2"><label for="pp-site" class="text-small text-text-muted shrink-0">사이트</label><span style="position: relative; display: flex; align-items: center; width: 260px;"><select id="pp-site" class="text-body" style="appearance: none; -webkit-appearance: none; width: 100%; height: var(--control-h); box-sizing: border-box; margin: 0; padding: 0 var(--spacing-8) 0 var(--spacing-3); border: 1px solid var(--border-control); border-radius: var(--radius-m); background: var(--bg-raised); color: var(--text); font-family: var(--sans); text-overflow: ellipsis;"><option selected>고객센터 도우미 (help-center)</option><option>Agent OS 데모 (demo)</option><option>사내 도우미 (intranet)</option></select><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" style="position: absolute; right: 12px; pointer-events: none; color: var(--text-muted);"><path d="m6 9 6 6 6-6" stroke-width="1.5" vector-effect="non-scaling-stroke"></path></svg></span></div><span class="text-small text-text-muted">운영자 <span class="font-mono text-mono">ops-lead</span></span></header><main class="flex flex-col items-center" style="flex: 1; padding: var(--spacing-8) var(--spacing-6);"><div class="flex flex-col gap-3" style="width: 400px; max-width: 100%;"><div data-theme="guncheong" data-mode="light" data-density="regular" class="flex flex-col shadow-float" style="width: 100%; height: 560px; box-sizing: border-box; background: var(--bg-raised); color: var(--text); font-family: var(--sans); border: 1px solid var(--border); border-radius: var(--radius-l); overflow: hidden;"><header class="flex items-center justify-between gap-2 shrink-0" style="padding: var(--spacing-2) var(--spacing-2) var(--spacing-2) var(--spacing-4); border-bottom: 1px solid var(--border);"><h2 class="text-body font-semibold ellipsis" style="flex: 1; margin: 0;">고객센터 도우미</h2><x-import component-from-global-scope="AgentOsUi.IconButton" icon="settings" label="설정" variant="ghost"></x-import><x-import component-from-global-scope="AgentOsUi.Button" variant="secondary" disabled="{{yes}}">새 대화</x-import></header><div role="group" aria-label="로그인 상태" class="flex items-center justify-between gap-2 shrink-0" style="padding: var(--spacing-2) var(--spacing-2) var(--spacing-2) var(--spacing-4); border-bottom: 1px solid var(--border);"><span class="text-small text-text-muted ellipsis" style="flex: 1;">로그인하지 않음</span><x-import component-from-global-scope="AgentOsUi.Button" variant="secondary">로그인하고 질문하기</x-import></div><div class="flex flex-col items-center justify-center gap-3" style="flex: 1; min-height: 0; padding: var(--spacing-4); text-align: center;"><p class="text-body" style="margin: 0;">주문, 배송, 환불을 물어보세요. 밤에도 답합니다.</p><div class="flex flex-wrap justify-center gap-2"><x-import component-from-global-scope="AgentOsUi.Button" variant="secondary">주문한 상품은 언제 오나요?</x-import><x-import component-from-global-scope="AgentOsUi.Button" variant="secondary">환불은 어떻게 신청하나요?</x-import><x-import component-from-global-scope="AgentOsUi.Button" variant="secondary">배송지를 바꿀 수 있나요?</x-import></div></div><form class="flex gap-2 shrink-0" style="align-items: flex-end; margin: 0; padding: var(--spacing-3); border-top: 1px solid var(--border);"><div style="flex: 1; min-width: 0;"><textarea rows="1" aria-label="질문" placeholder="무엇을 도와드릴까요?" class="block w-full min-w-0 rounded-m border text-body px-3 py-2 border-border-control bg-bg-raised text-text" style="box-sizing: border-box; margin: 0; font-family: inherit; resize: none;"></textarea></div><x-import component-from-global-scope="AgentOsUi.IconButton" icon="send" label="보내기" variant="primary"></x-import></form><div role="group" aria-label="고지" class="shrink-0 text-small text-text-muted" style="padding: var(--spacing-2) var(--spacing-4); border-top: 1px solid var(--border);"><p style="margin: 0;">질문과 답은 기록되고, 답을 만들기 위해 모델 API로 보내집니다. <button type="button" class="textlink" aria-expanded="false" aria-controls="ppw-n">고지 전문</button></p></div></div><a href="https://agent.example.com/reports/help-center.html" target="_blank" rel="noopener" class="text-small" style="display: inline-flex; align-items: center; gap: var(--spacing-1); align-self: flex-start; min-height: 24px;">이 에이전트의 평가 보고서<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path vector-effect="non-scaling-stroke" d="M15 3h6v6"></path><path vector-effect="non-scaling-stroke" d="M10 14 21 3"></path><path vector-effect="non-scaling-stroke" d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path></svg><span class="sr-only">(새 탭에서 열림)</span></a></div></main></div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":760}}'>
+class Component extends DCLogic {
+renderVals() {
+return { yes: true, no: false, noop: () => {} };
+}
+}
+</script>
+</body>
+</html>

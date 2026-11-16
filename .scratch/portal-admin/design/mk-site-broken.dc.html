@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>완성 7. 열리지 않는 사이트</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/agent-os/styles.css">
+<link rel="stylesheet" href="ds/agent-os/fonts/fonts.css">
+<link rel="stylesheet" href="ds/agent-os/_ds_bundle.css">
+<script src="ds/agent-os/_ds_bundle.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0}
+a{color:var(--accent)}a:hover{color:var(--text)}
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+.navlink{display:flex;align-items:center;gap:var(--spacing-2);height:var(--spacing-nav-item);padding:0 var(--spacing-3);border-radius:var(--radius-m);color:var(--text-muted);text-decoration:none;font-size:var(--body-size);line-height:var(--body-lh)}
+.navlink:hover{color:var(--text);background:var(--bg-hover)}
+.navlink[aria-current="page"]{background:var(--bg-selected);color:var(--text);font-weight:var(--font-weight-medium)}
+.btnlink{display:inline-flex;align-items:center;justify-content:center;gap:var(--spacing-2);height:var(--control-h);box-sizing:border-box;padding:0 var(--spacing-3);border:1px solid var(--border);border-radius:var(--radius-m);font-family:inherit;font-size:var(--body-size);line-height:var(--body-lh);font-weight:var(--font-weight-medium);white-space:nowrap;text-decoration:none;color:var(--text);background:transparent}
+.btnlink:hover{color:var(--text);background:var(--bg-hover)}
+.ellipsis{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.textlink{display:inline;min-height:24px;padding:0;border:0;background:none;color:var(--accent);text-decoration:underline;font:inherit;cursor:pointer}
+.group{display:flex;flex-direction:column;gap:var(--spacing-4)}
+.ghead{display:flex;flex-direction:column;gap:var(--spacing-1)}
+.fields{display:flex;flex-direction:column;gap:var(--spacing-6);min-width:0}
+.changed label::after{content:"바뀜";margin-left:var(--spacing-2);font-weight:var(--font-weight-regular);color:var(--text-muted)}
+.chg{margin-left:var(--spacing-2);font-weight:var(--font-weight-regular);color:var(--text-muted)}
+.mono-field input,.mono-field textarea{font-family:var(--mono);font-size:var(--mono-size)}
+.fs{border:0;margin:0;padding:0;min-width:0}
+.lg{display:block;padding:0;margin:0 0 var(--spacing-2);font-size:var(--text-small);line-height:var(--text-small--line-height);font-weight:var(--font-weight-medium);color:var(--text)}
+.fsbody{display:flex;flex-direction:column;gap:var(--spacing-2)}
+.help{margin:0;font-size:var(--text-small);line-height:var(--text-small--line-height);color:var(--text-muted)}
+.choices{display:flex;flex-wrap:wrap;column-gap:var(--spacing-6)}
+.choice{display:inline-flex;align-items:center;gap:var(--spacing-2);min-height:var(--control-h);font-size:var(--body-size);line-height:var(--body-lh);cursor:pointer}
+.choice input,.choice2 input{width:16px;height:16px;margin:0;flex-shrink:0;accent-color:var(--primary)}
+.choice2{display:flex;align-items:flex-start;gap:var(--spacing-2);padding:var(--spacing-1) 0;font-size:var(--body-size);line-height:var(--body-lh);cursor:pointer}
+.choice2 input{margin-top:3px}
+.swatch{display:inline-block;width:16px;height:16px;border-radius:var(--radius-s);background:var(--primary)}
+.ctl{display:block;flex:1;width:100%;min-width:0;box-sizing:border-box;height:var(--control-h);padding:0 var(--spacing-3);border:1px solid var(--border-control);border-radius:var(--radius-m);background:var(--bg-raised);color:var(--text);font:inherit;font-size:var(--body-size);line-height:var(--body-lh)}
+.qrow{display:flex;align-items:center;gap:var(--spacing-2)}
+.pair{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:var(--spacing-4)}
+.picker{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:var(--spacing-3)}
+.pick{position:relative;display:flex;flex-direction:column;gap:var(--spacing-1);padding:var(--spacing-3);border:1px solid var(--border);border-radius:var(--radius-m);background:var(--bg-raised);cursor:pointer}
+.pick:hover{background:var(--bg-hover)}
+.pick:has(input:checked){border:2px solid var(--accent);padding:calc(var(--spacing-3) - 1px)}
+.pick:has(input:focus-visible){outline:2px solid var(--focus-ring);outline-offset:2px}
+.pick .mark{position:absolute;top:var(--spacing-2);right:var(--spacing-2);display:none;color:var(--accent)}
+.pick:has(input:checked) .mark{display:inline-flex}
+.sketch{display:flex;justify-content:center;padding:var(--spacing-2) 0;margin-bottom:var(--spacing-1);border-radius:var(--radius-s);background:var(--bg)}
+.pname{font-size:var(--body-size);line-height:var(--body-lh);font-weight:var(--font-weight-medium)}
+.dflt{font-weight:var(--font-weight-regular);color:var(--text-muted)}
+.select{display:block;width:100%;box-sizing:border-box;height:var(--control-h);padding:0 var(--spacing-3);border:1px solid var(--border-control);border-radius:var(--radius-m);background:var(--bg-raised);color:var(--text);font:inherit;font-size:var(--body-size)}
+.toggle{display:inline-flex;align-items:center;gap:var(--spacing-1);height:var(--control-h);box-sizing:border-box;padding:0 var(--spacing-3);border:1px solid var(--border);border-radius:var(--radius-m);background:transparent;color:var(--text);font:inherit;font-size:var(--body-size);font-weight:var(--font-weight-medium);cursor:pointer}
+.toggle:hover{background:var(--bg-hover)}
+.toggle[aria-pressed="true"]{background:var(--bg-selected)}
+.stage{display:flex;justify-content:center;padding:var(--spacing-6) 0;border:1px solid var(--border);border-radius:var(--radius-l);background:var(--bg)}
+.fill button{width:100%}
+.count{font-size:var(--text-small);line-height:var(--text-small--line-height);font-weight:var(--font-weight-regular);color:var(--text-muted)}
+.savebar{position:sticky;bottom:0;box-sizing:border-box;padding:var(--spacing-3) var(--spacing-8);background:var(--bg-raised);border-top:1px solid var(--border)}
+.toclink{display:flex;align-items:center;justify-content:space-between;gap:var(--spacing-2);min-height:var(--control-h);padding:0 var(--spacing-3);border-radius:var(--radius-m);color:var(--text-muted);text-decoration:none;font-size:var(--body-size);line-height:var(--body-lh)}
+.toclink:hover{color:var(--text);background:var(--bg-hover)}
+.toclink[aria-current="location"]{background:var(--bg-selected);color:var(--text);font-weight:var(--font-weight-medium)}
+.group2{display:grid;grid-template-columns:176px minmax(0,1fr);column-gap:var(--spacing-6)}
+.group2+.group2{border-top:1px solid var(--border);padding-top:var(--spacing-6)}
+.tabs{display:flex;overflow-x:auto;border-bottom:1px solid var(--border)}
+.tab{display:inline-flex;align-items:center;gap:var(--spacing-1);height:var(--control-h);padding:0 var(--spacing-2);margin-bottom:-1px;border:0;border-bottom:2px solid transparent;background:none;color:var(--text-muted);font:inherit;font-size:var(--body-size);line-height:var(--body-lh);white-space:nowrap;cursor:pointer}
+.tab:hover{color:var(--text)}
+.tab[aria-selected="true"]{border-bottom-color:var(--accent);color:var(--text)}
+.dot{width:8px;height:8px;border-radius:9999px;background:#1fe05a;box-shadow:0 0 4px #1fe05a;flex-shrink:0}
+[data-mode="dark"] .dot{background:#4dff85;box-shadow:0 0 4px #4dff85}
+.tab-err{display:inline-flex;align-items:center;gap:2px;margin-left:var(--spacing-1);font-size:var(--text-small);line-height:var(--text-small--line-height);color:var(--danger)}
+.focus-shown input{outline:2px solid var(--focus-ring);outline-offset:2px}
+</style>
+</helmet>
+<div data-theme="nokcheong" data-mode="light" style="position: relative; min-height: 100vh; display: flex; background: var(--bg); color: var(--text); font-family: var(--sans);"><nav aria-label="위젯 관리 화면" style="width: var(--spacing-nav); flex-shrink: 0; box-sizing: border-box; padding: var(--spacing-4) var(--spacing-3); display: flex; flex-direction: column; gap: var(--spacing-1); background: var(--bg-raised); border-right: 1px solid var(--border);"><div class="font-semibold text-body" style="height: var(--spacing-nav-item); display: flex; align-items: center; padding: 0 var(--spacing-3); margin-bottom: var(--spacing-3);">위젯 관리 화면</div><a href="#" aria-current="page" class="navlink"><x-import component-from-global-scope="AgentOsUi.Icon" name="list" size="16"></x-import>사이트</a><a href="https://agent.example.com/portal/" target="_blank" rel="noopener" class="navlink"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path vector-effect="non-scaling-stroke" d="M15 3h6v6"></path><path vector-effect="non-scaling-stroke" d="M10 14 21 3"></path><path vector-effect="non-scaling-stroke" d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path></svg>테스트<span class="sr-only">(새 탭에서 열림)</span></a><div style="margin-top: auto; padding-top: var(--spacing-3); border-top: 1px solid var(--border);"><button type="button" aria-haspopup="menu" aria-expanded="false" class="flex items-center gap-2 w-full" style="min-height: 48px; padding: var(--spacing-2) var(--spacing-3); border: 0; border-radius: var(--radius-m); background: transparent; color: var(--text); font: inherit; text-align: left; cursor: pointer;"><span class="flex flex-col flex-1 min-w-0"><span class="font-mono text-mono font-medium">ops-lead</span><span class="text-small text-text-muted">Agent OS 운영자 계정</span></span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex-shrink: 0; color: var(--text-muted);"><path vector-effect="non-scaling-stroke" d="m7 15 5 5 5-5"></path><path vector-effect="non-scaling-stroke" d="m7 9 5-5 5 5"></path></svg></button></div></nav><main style="flex: 1; min-width: 0; display: flex; flex-direction: column;"><div style="flex: 1; box-sizing: border-box; padding: var(--spacing-8);"><div style="max-width: 960px; display: flex; flex-direction: column; gap: var(--spacing-6);"><div class="flex flex-col gap-3"><a href="#" class="text-small" style="align-self: flex-start;">사이트 목록</a><header class="flex items-start justify-between gap-4"><div class="flex flex-col gap-1 min-w-0"><h1 class="font-mono ellipsis" style="margin: 0; font-size: var(--text-title); line-height: var(--text-title--line-height); font-weight: var(--text-title--font-weight);">partner-trial</h1><p class="flex flex-wrap items-center text-body text-text-muted" style="margin: 0; column-gap: var(--spacing-4);"><span>파트너 체험</span><span>마지막으로 바꾼 때 <span class="font-mono text-mono">2026-11-16 09:15</span> <span class="font-mono text-mono">kim.dev</span></span></p></div><div class="flex items-center gap-2 shrink-0"><x-import component-from-global-scope="AgentOsUi.IconButton" icon="ellipsis" label="더 보기" variant="secondary"></x-import></div></header></div><x-import component-from-global-scope="AgentOsUi.Alert" tone="warning" title="위젯 테스트 페이지가 이 사이트를 열지 않는다">발급자 <span class="font-mono text-mono">https://partner.example</span>이 사이트 파일에 없다. 사이트 파일에 그 발급자를 더하고 위젯 테스트 페이지를 다시 띄우거나, 아래 발급자를 고친다. 위젯 설정은 그대로 쓰인다.</x-import><div class="flex items-start" style="gap: var(--spacing-6);"><div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: var(--spacing-6);"><div role="tablist" aria-label="위젯 설정 묶음" class="tabs"><button type="button" role="tab" id="tab-basic" aria-selected="false" tabindex="-1" class="tab">기본</button><button type="button" role="tab" id="tab-text" aria-selected="false" tabindex="-1" class="tab">글</button><button type="button" role="tab" id="tab-look" aria-selected="false" tabindex="-1" class="tab">모양</button><button type="button" role="tab" id="tab-login" aria-selected="false" tabindex="-1" class="tab">로그인과 로그아웃</button><button type="button" role="tab" id="tab-notice" aria-selected="false" tabindex="-1" class="tab">고지</button><button type="button" role="tab" id="tab-window" aria-selected="false" tabindex="-1" class="tab">창으로 열 때</button><button type="button" role="tab" id="tab-test" aria-selected="true" aria-controls="panel-test" class="tab font-semibold">위젯 테스트 페이지</button></div><div role="tabpanel" id="panel-test" aria-labelledby="tab-test" class="group"><p class="text-body text-text-muted" style="margin: 0;">위젯 테스트 페이지에서 이 사이트를 고를 수 있게 할지와 그때 쓸 값을 정한다.</p><div class="fields"><label class="choice"><input type="checkbox" checked>위젯 테스트 페이지에 담는다</label><div class="fld mono-field"><x-import component-from-global-scope="AgentOsUi.TextField" label="발급자" value="https://partner.example" help="사이트 파일에 있는 발급자여야 하고, 사이트마다 달라야 한다."></x-import></div><fieldset class="fs"><legend class="lg">보증 모드</legend><div class="fsbody"><label class="choice2"><input type="radio" name="assurance" value="anonymous" checked><span class="flex flex-col"><span>익명</span><span class="help">로그인 없이 질문한다.</span></span></label><label class="choice2"><input type="radio" name="assurance" value="login"><span class="flex flex-col"><span>로그인</span><span class="help">회사 로그인을 한 사람만 질문한다.</span></span></label><label class="choice2"><input type="radio" name="assurance" value="both"><span class="flex flex-col"><span>둘 다</span><span class="help">익명으로 질문하다가 로그인할 수 있다.</span></span></label></div></fieldset><div class="fld mono-field"><x-import component-from-global-scope="AgentOsUi.TextField" label="보고서 링크" value="https://agent.example.com/reports/partner-trial.html"></x-import></div></div></div></div><aside aria-labelledby="pv-title" style="width: 360px; flex-shrink: 0; position: sticky; top: var(--spacing-8); align-self: flex-start; display: flex; flex-direction: column; gap: var(--spacing-3);"><div class="flex flex-col gap-1"><h2 id="pv-title" class="text-body font-semibold" style="margin: 0;">미리보기</h2><p class="text-small text-text-muted" style="margin: 0;">저장하지 않은 값으로 그린다. 질문은 보내지 않는다.</p></div><div class="flex items-end gap-2"><div class="flex flex-col gap-2 flex-1 min-w-0"><label for="pv-state" class="text-small font-medium">보는 상태</label><select id="pv-state" class="select"><option selected>첫 화면</option><option>대화가 한 번 오간 뒤</option><option>로그인 전</option><option>로그인한 뒤</option><option>고지 확인 전</option><option>고지 전문을 연 뒤</option><option>로그인 시간이 끝남</option></select></div><div role="group" aria-label="미리보기 밝기" class="flex gap-1"><button type="button" class="toggle" aria-pressed="true"><x-import component-from-global-scope="AgentOsUi.Icon" name="check" size="16"></x-import>밝게</button><button type="button" class="toggle" aria-pressed="false">어둡게</button></div></div><div class="stage" role="img" aria-label="미리보기, 저장하지 않은 값으로 그린 위젯"><div aria-hidden="true" inert><div data-theme="nokcheong" data-mode="light" data-density="regular" class="flex flex-col shadow-float" style="width: 320px; height: 520px; box-sizing: border-box; background: var(--bg-raised); color: var(--text); font-family: var(--sans); border: 1px solid var(--border); border-radius: var(--radius-l); overflow: hidden;"><header class="flex items-center justify-between gap-2 shrink-0" style="padding: var(--spacing-2) var(--spacing-2) var(--spacing-2) var(--spacing-4); border-bottom: 1px solid var(--border);"><h3 class="text-body font-semibold ellipsis" style="flex: 1; margin: 0;">파트너 체험</h3><x-import component-from-global-scope="AgentOsUi.IconButton" icon="settings" label="설정" variant="ghost"></x-import><x-import component-from-global-scope="AgentOsUi.Button" variant="secondary" disabled="{{yes}}">새 대화</x-import></header><div class="flex flex-col items-center justify-center gap-3" style="flex: 1; min-height: 0; padding: var(--spacing-4); text-align: center;"><p class="text-body" style="margin: 0;">가격 합계와 거스름돈을 물어보세요.</p><p class="text-small text-text-muted" style="margin: 0;">아래 입력창에 적어 보내 주세요.</p></div><form class="flex gap-2 shrink-0" style="align-items: flex-end; margin: 0; padding: var(--spacing-3); border-top: 1px solid var(--border);"><div style="flex: 1; min-width: 0;"><textarea rows="1" aria-label="질문" placeholder="무엇을 도와드릴까요?" class="block w-full min-w-0 rounded-m border text-body px-3 py-2 border-border-control bg-bg-raised text-text" style="box-sizing: border-box; margin: 0; font-family: inherit; resize: none;"></textarea></div><x-import component-from-global-scope="AgentOsUi.IconButton" icon="send" label="보내기" variant="primary"></x-import></form><div role="group" aria-label="고지" class="shrink-0 text-small text-text-muted" style="padding: var(--spacing-2) var(--spacing-4); border-top: 1px solid var(--border);"><p style="margin: 0;">질문과 답은 기록되고, 답을 만들기 위해 모델 API로 보내집니다. <button type="button" class="textlink" aria-expanded="false" aria-controls="pvw-n">고지 전문</button></p></div></div></div></div></aside></div></div></div></main></div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":1140}}'>
+class Component extends DCLogic {
+renderVals() {
+return { yes: true, no: false, noop: () => {} };
+}
+}
+</script>
+</body>
+</html>
