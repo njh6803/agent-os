@@ -1,0 +1,448 @@
+diff --git a/web/apps/widget/.storybook/main.ts b/web/apps/widget/.storybook/main.ts
+index 08ef2fd57..658c17d23 100644
+--- a/web/apps/widget/.storybook/main.ts
++++ b/web/apps/widget/.storybook/main.ts
+@@ -9,7 +9,8 @@ import type { StorybookConfig } from "@storybook/react-vite";
+ 
+ const config = {
+   framework: "@storybook/react-vite",
+-  stories: ["../components/**/*.stories.tsx"],
++  // 화면 부품의 스토리는 부품과 함께 패키지(`@agent-os/widget-ui`)에 있다. 위젯의 Storybook 이 그 스토리를 싣는다.
++  stories: ["../components/**/*.stories.tsx", "../../../packages/widget-ui/src/**/*.stories.tsx"],
+   addons: ["@storybook/addon-a11y", "@storybook/addon-vitest"],
+   core: { disableTelemetry: true },
+   viteFinal: (viteConfig) => ({
+diff --git a/web/apps/widget/components/pages/ConnectedWidget.tsx b/web/apps/widget/components/pages/ConnectedWidget.tsx
+index 229ce62db..330d82cdb 100644
+--- a/web/apps/widget/components/pages/ConnectedWidget.tsx
++++ b/web/apps/widget/components/pages/ConnectedWidget.tsx
+@@ -5,13 +5,12 @@
+ // - 설정이 잘못됐으면 대화 자리에 위험 알림을 보이고 입력 자리를 막는다. 에이전트가 없거나 패턴 밖인 때와, 길이 없는
+ //   때(페이지 안 방식이 번들의 기준 주소를 읽지 못했다, element/base.ts)다. 길이 없으면 토큰도 묻지 않는다.
+ // - 넘겨받은 문제는 하나마다 console.error 로 남긴다. 임베드가 다시 그려도 글이 같으면 다시 남기지 않는다.
++import { phaseOf, waitingApproval, WidgetScreen } from "@agent-os/widget-ui";
+ import { useEffect, useRef, useState } from "react";
+ import { requestCharLimit } from "../../lib/build";
+ import type { Connection } from "../../lib/connection";
+-import { phaseOf, waitingApproval } from "../../lib/conversation";
+ import type { Embed } from "../../lib/embed";
+ import { useConversation } from "./useConversation";
+-import { WidgetScreen } from "./WidgetScreen";
+ 
+ export interface ConnectedWidgetProps {
+   readonly embed: Embed;
+diff --git a/web/apps/widget/components/pages/drivers.ts b/web/apps/widget/components/pages/drivers.ts
+index dfc05668e..5a0b7984e 100644
+--- a/web/apps/widget/components/pages/drivers.ts
++++ b/web/apps/widget/components/pages/drivers.ts
+@@ -10,6 +10,14 @@
+ // 일 하나는 `Session` 하나를 받는다. 새 요청, 새 대화, 위젯이 걷히는 것이 그 신호를 끊고, 끊은 뒤에 온 결과는 부르는
+ // 쪽(useConversation)이 버린다.
+ 
++import {
++  endingOf,
++  reconnectDelay,
++  SILENCE_MS,
++  startWait,
++  type Action,
++  type Reconnect,
++} from "@agent-os/widget-ui";
+ import {
+   RunRejected,
+   sendDecision,
+@@ -20,9 +28,6 @@ import {
+   type EndUserItem,
+ } from "../../api/runs";
+ import type { Connection } from "../../lib/connection";
+-import type { Action } from "../../lib/conversation";
+-import { startWait } from "../../lib/limit";
+-import { endingOf, reconnectDelay, SILENCE_MS, type Reconnect } from "../../lib/reconnect";
+ import {
+   decisionStep,
+   ERRORS_UNTIL_LOST,
+diff --git a/web/apps/widget/components/pages/useConversation.ts b/web/apps/widget/components/pages/useConversation.ts
+index 6f634ef49..629310fa0 100644
+--- a/web/apps/widget/components/pages/useConversation.ts
++++ b/web/apps/widget/components/pages/useConversation.ts
+@@ -12,18 +12,22 @@
+ // 저장(lib/storage). 처음 그릴 때 저장한 대화가 있으면 토큰을 받아 묶음을 견주기 전에는 진행 표시만 보인다(`restore`).
+ // 그 뒤로는 대화가 바뀔 때마다 저장한다. 토큰을 받지 못해 그리지 못한 동안에는 저장을 건드리지 않는다.
+ 
+-import { useCallback, useEffect, useLayoutEffect, useReducer, useRef, useState } from "react";
+-import type { DecisionBody } from "../../api/runs";
+-import type { Connection } from "../../lib/connection";
+ import {
+   INITIAL,
+   reduce,
++  remainingAt,
++  startWait,
++  untilNextTick,
+   waitingApproval,
+   type Conversation,
+   type Decision,
+-} from "../../lib/conversation";
+-import { remainingAt, startWait, untilNextTick, type LimitWait } from "../../lib/limit";
+-import type { Reconnect } from "../../lib/reconnect";
++  type LimitWait,
++  type Reconnect,
++  type Restore,
++} from "@agent-os/widget-ui";
++import { useCallback, useEffect, useLayoutEffect, useReducer, useRef, useState } from "react";
++import type { DecisionBody } from "../../api/runs";
++import type { Connection } from "../../lib/connection";
+ import {
+   load,
+   remove,
+@@ -34,19 +38,7 @@ import {
+   storageKey,
+   type Bundle,
+ } from "../../lib/storage";
+-import {
+-  decide as runDecision,
+-  restore as restoreSaved,
+-  run,
+-  type Restored,
+-  type Session,
+-} from "./drivers";
+-
+-/**
+- * 저장한 대화를 되돌린 자리. `loading` 은 토큰을 받아 묶음을 견주는 중이라 진행 표시만 보인다. 되돌린 뒤의 자리는
+- * drivers 의 `Restored` 다.
+- */
+-export type Restore = "loading" | Restored;
++import { decide as runDecision, restore as restoreSaved, run, type Session } from "./drivers";
+ 
+ export interface ConversationControls {
+   readonly conversation: Conversation;
+diff --git a/web/apps/widget/lib/rejection.ts b/web/apps/widget/lib/rejection.ts
+index 6d0070c5b..6f64b095c 100644
+--- a/web/apps/widget/lib/rejection.ts
++++ b/web/apps/widget/lib/rejection.ts
+@@ -1,7 +1,7 @@
+ // 요청이 거절될 때의 다음 걸음(web-widget 명세 "요청이 거절될 때"). 경로마다 상태 코드를 위젯이 할 일로 옮긴다. 응답 전의
+ // 네트워크 실패는 상태 코드가 null 이다. 걸음을 밟는 것(기다리기, 다시 보내기, 대화에 넘기기)은 부르는 쪽이다.
+ 
+-import type { DecisionNotice } from "./conversation";
++import type { DecisionNotice } from "@agent-os/widget-ui";
+ 
+ /** 시작과 이어 가기의 거절. 결말은 대화의 규칙(lib/conversation 의 `rejected`)이 상태 코드로 고른다. */
+ export type RunStep =
+diff --git a/web/apps/widget/lib/storage.ts b/web/apps/widget/lib/storage.ts
+index 762e96b2a..fb3b23951 100644
+--- a/web/apps/widget/lib/storage.ts
++++ b/web/apps/widget/lib/storage.ts
+@@ -24,7 +24,7 @@ import type {
+   FailureCause,
+   Outcome,
+   ToolCall,
+-} from "./conversation";
++} from "@agent-os/widget-ui";
+ 
+ /** 토큰의 발급자와 주체. 같은 탭에서 사이트 계정이 바뀐 것을 이것으로 안다. */
+ export interface Bundle {
+diff --git a/web/apps/widget/package.json b/web/apps/widget/package.json
+index a5d21844a..be472c50c 100644
+--- a/web/apps/widget/package.json
++++ b/web/apps/widget/package.json
+@@ -13,6 +13,7 @@
+     "@agent-os/api-client": "workspace:*",
+     "@agent-os/site-file": "workspace:*",
+     "@agent-os/ui": "workspace:*",
++    "@agent-os/widget-ui": "workspace:*",
+     "next": "16.3.6",
+     "react": "19.3.0",
+     "react-dom": "19.3.0"
+diff --git a/web/apps/widget/styles/widget.css b/web/apps/widget/styles/widget.css
+index 49e22d0cd..545e3425b 100644
+--- a/web/apps/widget/styles/widget.css
++++ b/web/apps/widget/styles/widget.css
+@@ -10,5 +10,7 @@
+  * 주석). 번들 시험(tools/element.test.ts)이 번들에 글꼴의 data URL 이 없는 것을 본다.
+  */
+ @import "@agent-os/ui/theme.css";
++/* 위젯 화면 부품(`@agent-os/widget-ui`)의 소스를 덮는다. 그 패키지의 `@source` 가 든 조각이다. */
++@import "@agent-os/widget-ui/source.css";
+ @source "../app";
+ @source "../components";
+diff --git a/web/packages/widget-ui/package.json b/web/packages/widget-ui/package.json
+new file mode 100644
+index 000000000..9b0ce5dfa
+--- /dev/null
++++ b/web/packages/widget-ui/package.json
+@@ -0,0 +1,24 @@
++{
++  "name": "@agent-os/widget-ui",
++  "private": true,
++  "type": "module",
++  "exports": {
++    ".": "./src/index.ts",
++    "./source.css": "./src/styles/source.css"
++  },
++  "peerDependencies": {
++    "react": "^19.3.0",
++    "react-dom": "^19.3.0"
++  },
++  "dependencies": {
++    "@agent-os/api-client": "workspace:*",
++    "@agent-os/ui": "workspace:*"
++  },
++  "devDependencies": {
++    "@types/react": "19.3.0",
++    "@types/react-dom": "19.3.0",
++    "react": "19.3.0",
++    "react-dom": "19.3.0",
++    "typescript": "~5.9.3"
++  }
++}
+diff --git a/web/apps/widget/components/molecules/ComposerBand.stories.tsx b/web/packages/widget-ui/src/components/molecules/ComposerBand.stories.tsx
+similarity index 100%
+rename from web/apps/widget/components/molecules/ComposerBand.stories.tsx
+rename to web/packages/widget-ui/src/components/molecules/ComposerBand.stories.tsx
+diff --git a/web/apps/widget/components/molecules/ComposerBand.tsx b/web/packages/widget-ui/src/components/molecules/ComposerBand.tsx
+similarity index 100%
+rename from web/apps/widget/components/molecules/ComposerBand.tsx
+rename to web/packages/widget-ui/src/components/molecules/ComposerBand.tsx
+diff --git a/web/apps/widget/components/molecules/ToolRow.tsx b/web/packages/widget-ui/src/components/molecules/ToolRow.tsx
+similarity index 100%
+rename from web/apps/widget/components/molecules/ToolRow.tsx
+rename to web/packages/widget-ui/src/components/molecules/ToolRow.tsx
+diff --git a/web/apps/widget/components/molecules/Welcome.tsx b/web/packages/widget-ui/src/components/molecules/Welcome.tsx
+similarity index 100%
+rename from web/apps/widget/components/molecules/Welcome.tsx
+rename to web/packages/widget-ui/src/components/molecules/Welcome.tsx
+diff --git a/web/apps/widget/components/organisms/ApprovalCard.stories.tsx b/web/packages/widget-ui/src/components/organisms/ApprovalCard.stories.tsx
+similarity index 100%
+rename from web/apps/widget/components/organisms/ApprovalCard.stories.tsx
+rename to web/packages/widget-ui/src/components/organisms/ApprovalCard.stories.tsx
+diff --git a/web/apps/widget/components/organisms/ApprovalCard.tsx b/web/packages/widget-ui/src/components/organisms/ApprovalCard.tsx
+similarity index 100%
+rename from web/apps/widget/components/organisms/ApprovalCard.tsx
+rename to web/packages/widget-ui/src/components/organisms/ApprovalCard.tsx
+diff --git a/web/apps/widget/components/organisms/Composer.tsx b/web/packages/widget-ui/src/components/organisms/Composer.tsx
+similarity index 100%
+rename from web/apps/widget/components/organisms/Composer.tsx
+rename to web/packages/widget-ui/src/components/organisms/Composer.tsx
+diff --git a/web/apps/widget/components/organisms/Conversation.stories.tsx b/web/packages/widget-ui/src/components/organisms/Conversation.stories.tsx
+similarity index 100%
+rename from web/apps/widget/components/organisms/Conversation.stories.tsx
+rename to web/packages/widget-ui/src/components/organisms/Conversation.stories.tsx
+diff --git a/web/apps/widget/components/organisms/Conversation.tsx b/web/packages/widget-ui/src/components/organisms/Conversation.tsx
+similarity index 100%
+rename from web/apps/widget/components/organisms/Conversation.tsx
+rename to web/packages/widget-ui/src/components/organisms/Conversation.tsx
+diff --git a/web/apps/widget/components/organisms/FailureAlert.stories.tsx b/web/packages/widget-ui/src/components/organisms/FailureAlert.stories.tsx
+similarity index 100%
+rename from web/apps/widget/components/organisms/FailureAlert.stories.tsx
+rename to web/packages/widget-ui/src/components/organisms/FailureAlert.stories.tsx
+diff --git a/web/apps/widget/components/organisms/FailureAlert.tsx b/web/packages/widget-ui/src/components/organisms/FailureAlert.tsx
+similarity index 100%
+rename from web/apps/widget/components/organisms/FailureAlert.tsx
+rename to web/packages/widget-ui/src/components/organisms/FailureAlert.tsx
+diff --git a/web/apps/widget/components/organisms/TopBar.tsx b/web/packages/widget-ui/src/components/organisms/TopBar.tsx
+similarity index 100%
+rename from web/apps/widget/components/organisms/TopBar.tsx
+rename to web/packages/widget-ui/src/components/organisms/TopBar.tsx
+diff --git a/web/apps/widget/components/pages/WidgetScreen.stories.tsx b/web/packages/widget-ui/src/components/pages/WidgetScreen.stories.tsx
+similarity index 100%
+rename from web/apps/widget/components/pages/WidgetScreen.stories.tsx
+rename to web/packages/widget-ui/src/components/pages/WidgetScreen.stories.tsx
+diff --git a/web/apps/widget/components/pages/WidgetScreen.tsx b/web/packages/widget-ui/src/components/pages/WidgetScreen.tsx
+similarity index 95%
+rename from web/apps/widget/components/pages/WidgetScreen.tsx
+rename to web/packages/widget-ui/src/components/pages/WidgetScreen.tsx
+index 9a88260c1..7e0b307bb 100644
+--- a/web/apps/widget/components/pages/WidgetScreen.tsx
++++ b/web/packages/widget-ui/src/components/pages/WidgetScreen.tsx
+@@ -25,7 +25,12 @@ import { Conversation } from "../organisms/Conversation";
+ import { FailureAlert } from "../organisms/FailureAlert";
+ import { TopBar } from "../organisms/TopBar";
+ import { WidgetFrame } from "../templates/WidgetFrame";
+-import type { Restore } from "./useConversation";
++
++/**
++ * 저장한 대화를 되돌린 자리. `loading` 은 토큰을 받아 묶음을 견주는 중이라 진행 표시만 보인다. `unauthorized` 는 토큰을 받지
++ * 못해 그리지 못한 것이고 `ready` 는 그린 것이다(위젯 앱의 drivers 의 `Restored`).
++ */
++export type Restore = "loading" | "unauthorized" | "ready";
+ 
+ export interface WidgetScreenProps {
+   readonly heading: string;
+diff --git a/web/apps/widget/components/templates/WidgetFrame.tsx b/web/packages/widget-ui/src/components/templates/WidgetFrame.tsx
+similarity index 100%
+rename from web/apps/widget/components/templates/WidgetFrame.tsx
+rename to web/packages/widget-ui/src/components/templates/WidgetFrame.tsx
+diff --git a/web/packages/widget-ui/src/index.ts b/web/packages/widget-ui/src/index.ts
+new file mode 100644
+index 000000000..38e6d08e2
+--- /dev/null
++++ b/web/packages/widget-ui/src/index.ts
+@@ -0,0 +1,28 @@
++// `@agent-os/widget-ui` 의 진입점(portal-admin 의 프로브 shared_widget_parts 가 옮겨 본 것). 위젯 화면(`WidgetScreen`)과
++// 그것이 받는 값의 모양, 그리고 위젯 앱의 대화를 돌리는 쪽(useConversation, drivers, lib/storage, lib/rejection)이 같은
++// 모듈에서 쓰던 규칙을 낸다. 화면 부품이 대화의 모양(lib/conversation)과 상한·재접속의 글(lib/limit, lib/reconnect)을
++// 타입과 함수로 읽어, 그 모듈들이 부품과 함께 왔다. 쓰는 앱은 이 파일과 `./source.css` 를 패키지 이름으로 import 한다.
++export {
++  WidgetScreen,
++  type Restore,
++  type WidgetScreenProps,
++} from "./components/pages/WidgetScreen";
++export {
++  INITIAL,
++  phaseOf,
++  reduce,
++  waitingApproval,
++  type Action,
++  type Announcement,
++  type Approval,
++  type ApprovalState,
++  type Conversation,
++  type Decision,
++  type DecisionNotice,
++  type Exchange,
++  type FailureCause,
++  type Outcome,
++  type ToolCall,
++} from "./lib/conversation";
++export { remainingAt, startWait, untilNextTick, type LimitWait } from "./lib/limit";
++export { endingOf, reconnectDelay, SILENCE_MS, type Reconnect } from "./lib/reconnect";
+diff --git a/web/apps/widget/lib/approval.ts b/web/packages/widget-ui/src/lib/approval.ts
+similarity index 100%
+rename from web/apps/widget/lib/approval.ts
+rename to web/packages/widget-ui/src/lib/approval.ts
+diff --git a/web/apps/widget/lib/chars.ts b/web/packages/widget-ui/src/lib/chars.ts
+similarity index 100%
+rename from web/apps/widget/lib/chars.ts
+rename to web/packages/widget-ui/src/lib/chars.ts
+diff --git a/web/apps/widget/lib/conversation.ts b/web/packages/widget-ui/src/lib/conversation.ts
+similarity index 99%
+rename from web/apps/widget/lib/conversation.ts
+rename to web/packages/widget-ui/src/lib/conversation.ts
+index 789665d29..1dc49ef77 100644
+--- a/web/apps/widget/lib/conversation.ts
++++ b/web/packages/widget-ui/src/lib/conversation.ts
+@@ -25,7 +25,7 @@
+ //   준다. 401 은 로그인 정보를 받지 못한 것이고, 처리하지 못한 거절이 거듭되면 다시 잇기를 멈춘 것(`lost`)이다. 둘 다
+ //   다시 붙을 실행을 비우지 않아, 새로 고치면 다시 붙는다.
+ 
+-import type { EndUserItem } from "../api/runs";
++import type { EndUserItem } from "@agent-os/api-client";
+ import { argsText } from "./approval";
+ 
+ /** 실패 항목의 원인(ADR 0031). */
+diff --git a/web/apps/widget/lib/limit.ts b/web/packages/widget-ui/src/lib/limit.ts
+similarity index 100%
+rename from web/apps/widget/lib/limit.ts
+rename to web/packages/widget-ui/src/lib/limit.ts
+diff --git a/web/apps/widget/lib/reconnect.ts b/web/packages/widget-ui/src/lib/reconnect.ts
+similarity index 97%
+rename from web/apps/widget/lib/reconnect.ts
+rename to web/packages/widget-ui/src/lib/reconnect.ts
+index c6cc7174b..2fe00e1d7 100644
+--- a/web/apps/widget/lib/reconnect.ts
++++ b/web/packages/widget-ui/src/lib/reconnect.ts
+@@ -10,7 +10,7 @@
+ // - 서버는 15초마다 keepalive 를 보내므로 45초는 그것을 셋 놓친 것이다.
+ // - 다시 잇는 간격은 1, 2, 4, 8, 16초이고 그 뒤로는 30초마다이며 끝이 없다. 새 항목을 받으면 처음으로 돌아간다.
+ 
+-import type { EndUserItem } from "../api/runs";
++import type { EndUserItem } from "@agent-os/api-client";
+ import type { LimitWait } from "./limit";
+ 
+ /** 이만큼 아무것도 오지 않으면 끊긴 것으로 본다. */
+diff --git a/web/packages/widget-ui/src/styles/source.css b/web/packages/widget-ui/src/styles/source.css
+new file mode 100644
+index 000000000..3814ac367
+--- /dev/null
++++ b/web/packages/widget-ui/src/styles/source.css
+@@ -0,0 +1,7 @@
++/*
++ * 위젯 화면 부품의 소스를 Tailwind 가 훑게 하는 조각(`@agent-os/widget-ui/source.css`). 규칙은 하나도 내지 않는다.
++ * 디자인 토큰 CSS(`@agent-os/ui/theme.css`)는 `source(none)` 이고 디자인 시스템 패키지의 소스만 덮으므로, 이 패키지의
++ * 부품이 쓰는 클래스는 쓰는 앱의 CSS 가 디자인 토큰 CSS 뒤에 이 파일을 `@import` 해야 CSS 를 만든다. `@source` 의 경로는
++ * 이 파일의 자리에서 풀린다(디자인 토큰 CSS 의 `@source ".."` 와 같다).
++ */
++@source "..";
+diff --git a/web/packages/widget-ui/tsconfig.json b/web/packages/widget-ui/tsconfig.json
+new file mode 100644
+index 000000000..1126e89aa
+--- /dev/null
++++ b/web/packages/widget-ui/tsconfig.json
+@@ -0,0 +1,13 @@
++{
++  "extends": "../../tsconfig.base.json",
++  "compilerOptions": {
++    "target": "es2024",
++    "lib": ["es2024", "dom", "dom.iterable"],
++    "module": "preserve",
++    "moduleResolution": "bundler",
++    "jsx": "react-jsx",
++    "allowImportingTsExtensions": true,
++    "types": []
++  },
++  "include": ["src/**/*"]
++}
+diff --git a/web/pnpm-lock.yaml b/web/pnpm-lock.yaml
+index 4449012e8..a070839f5 100644
+--- a/web/pnpm-lock.yaml
++++ b/web/pnpm-lock.yaml
+@@ -163,6 +163,9 @@ importers:
+       '@agent-os/ui':
+         specifier: workspace:*
+         version: link:../../packages/ui
++      '@agent-os/widget-ui':
++        specifier: workspace:*
++        version: link:../../packages/widget-ui
+       next:
+         specifier: 16.3.6
+         version: 16.3.6(@babel/core@7.29.7(supports-color@10.2.2))(@playwright/test@1.63.0)(@types/node@24.19.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
+@@ -297,6 +300,31 @@ importers:
+         specifier: ^8.3.1
+         version: 8.3.1(@types/node@24.19.0)(esbuild@0.28.2)(jiti@2.7.0)
+ 
++  packages/widget-ui:
++    dependencies:
++      '@agent-os/api-client':
++        specifier: workspace:*
++        version: link:../api-client
++      '@agent-os/ui':
++        specifier: workspace:*
++        version: link:../ui
++    devDependencies:
++      '@types/react':
++        specifier: 19.3.0
++        version: 19.3.0
++      '@types/react-dom':
++        specifier: 19.3.0
++        version: 19.3.0(@types/react@19.3.0)
++      react:
++        specifier: 19.3.0
++        version: 19.3.0
++      react-dom:
++        specifier: 19.3.0
++        version: 19.3.0(react@19.3.0)
++      typescript:
++        specifier: ~5.9.3
++        version: 5.9.3
++
+ packages:
+ 
+   '@adobe/css-tools@4.5.0':
+diff --git a/web/tools/visual.test.ts b/web/tools/visual.test.ts
+index b28041864..0c7691ec3 100644
+--- a/web/tools/visual.test.ts
++++ b/web/tools/visual.test.ts
+@@ -48,12 +48,13 @@ describe("사진 비교의 이미지", () => {
+ });
+ 
+ describe("컨테이너 안의 워크스페이스 패키지", () => {
+-  test("위젯이 기대는 워크스페이스 패키지(생성 클라이언트, e2e 준비, 사이트 파일, 디자인 시스템)를 컨테이너 안의 web/ 자리로 잇는다", () => {
++  test("위젯이 기대는 워크스페이스 패키지(생성 클라이언트, e2e 준비, 사이트 파일, 디자인 시스템, 위젯 화면 부품)를 컨테이너 안의 web/ 자리로 잇는다", () => {
+     expect(workspaceLinks(join(WEB, "apps", "widget"))).toEqual({
+       "@agent-os/api-client": "/web/packages/api-client",
+       "@agent-os/e2e-stack": "/web/packages/e2e-stack",
+       "@agent-os/site-file": "/web/packages/site-file",
+       "@agent-os/ui": "/web/packages/ui",
++      "@agent-os/widget-ui": "/web/packages/widget-ui",
+     });
+   });
+ 

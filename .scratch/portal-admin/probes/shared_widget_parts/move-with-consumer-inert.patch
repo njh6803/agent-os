@@ -1,0 +1,902 @@
+diff --git a/web/apps/admin/app/widget-preview-probe/page.tsx b/web/apps/admin/app/widget-preview-probe/page.tsx
+new file mode 100644
+index 000000000..47b42363d
+--- /dev/null
++++ b/web/apps/admin/app/widget-preview-probe/page.tsx
+@@ -0,0 +1,5 @@
++import { WidgetPreviewProbe } from "../../components/pages/WidgetPreviewProbe";
++
++export default function Page() {
++  return <WidgetPreviewProbe />;
++}
+diff --git a/web/apps/admin/components/pages/WidgetPreviewProbe.stories.tsx b/web/apps/admin/components/pages/WidgetPreviewProbe.stories.tsx
+new file mode 100644
+index 000000000..3d9713b3e
+--- /dev/null
++++ b/web/apps/admin/components/pages/WidgetPreviewProbe.stories.tsx
+@@ -0,0 +1,256 @@
++// (portal-admin 의 프로브 shared_widget_parts 가 둔 임시 파일. 병합하지 않는다.) 관리 화면의 Storybook 에서 위젯 화면 부품이
++// 서는지 본다. 미리보기의 afterEach 가 그린 클래스마다 관리 화면의 CSS 에 규칙이 있는지 판정하고, addon-a11y 가 관리 화면의
++// 설정(target-size 포함)으로 axe 를 돈다. 사진 비교에는 들지 않게 `judgment` 를 단다(관리 화면의 정답 사진을 더하지 않는다).
++import { Button } from "@agent-os/ui";
++import type { Meta, StoryObj } from "@storybook/react-vite";
++import { expect, userEvent, within } from "storybook/test";
++import { AdminFrame } from "../templates/AdminFrame";
++import {
++  PREVIEW_LABEL,
++  WidgetPreviewProbe,
++  type WidgetPreviewProbeProps,
++} from "./WidgetPreviewProbe";
++
++const meta = {
++  title: "pages/WidgetPreviewProbe",
++  component: WidgetPreviewProbe,
++  tags: ["judgment"],
++} satisfies Meta<typeof WidgetPreviewProbe>;
++
++export default meta;
++type Story = StoryObj<typeof meta>;
++
++/** 틀 없이 그린 위젯 화면. */
++export const Standalone: Story = {
++  play: async ({ canvasElement }) => {
++    const canvas = within(canvasElement);
++    const heading = canvas.getByRole("heading", { name: "주문 도우미" });
++    // `overflow-y-auto` 는 관리 화면과 디자인 시스템의 소스에 없고 위젯 화면 부품의 소스에만 있는 클래스다. 관리 화면의
++    // CSS 가 그 패키지의 소스를 덮어야 규칙이 선다(덮지 않으면 미리보기의 클래스 판정이 이 클래스를 포함해 열을 든다).
++    await expect(getComputedStyle(canvas.getByRole("main")).overflowY).toBe("auto");
++    // 감싼 요소의 보통 밀도(15px)가 창 폭이 고른 밀도를 이긴다. 넓은 창의 문서 뿌리는 촘촘(14px)이다.
++    await expect(getComputedStyle(heading).fontSize).toBe("15px");
++    await expect(canvas.getByText("배송 중")).toBeVisible();
++  },
++};
++
++/** 문서는 밝은데 감싼 요소만 어둡다. 위젯 창의 바탕이 감싼 요소의 밝기를 따른다. */
++export const Dark: Story = {
++  args: { mode: "dark" },
++  play: async ({ canvasElement }) => {
++    const canvas = within(canvasElement);
++    const wrapper = canvas.getByRole("heading", { name: "주문 도우미" }).closest("[data-mode]");
++    if (!(wrapper instanceof HTMLElement) || !(wrapper.firstElementChild instanceof HTMLElement)) {
++      throw new Error("감싼 요소와 위젯 창을 찾지 못했다");
++    }
++    const frame = wrapper.firstElementChild;
++    // 문서 뿌리는 모드를 달지 않아 브라우저의 설정(시험 브라우저는 밝음)을 따른다.
++    await expect(getComputedStyle(document.documentElement).colorScheme).toBe("light");
++    await expect(getComputedStyle(wrapper).colorScheme).toBe("dark");
++    const dark = getComputedStyle(frame).backgroundColor;
++    wrapper.dataset.mode = "light";
++    const light = getComputedStyle(frame).backgroundColor;
++    wrapper.dataset.mode = "dark";
++    await expect(dark).not.toBe(light);
++  },
++};
++
++// 아래 넷은 관리 화면의 틀 안, 화면의 `h1` 과 양식을 대신하는 단추 사이에 위젯 화면을 둔 모양이다. 가리는 방법만 다르다.
++
++const FOCUSABLE = "button, textarea, input, select, a[href], [tabindex]";
++
++function framed(args: WidgetPreviewProbeProps) {
++  return (
++    <AdminFrame nav={null}>
++      <h1 className="text-title">사이트 고치기</h1>
++      <WidgetPreviewProbe {...args} />
++      <Button variant="secondary">저장</Button>
++    </AdminFrame>
++  );
++}
++
++/**
++ * 가렸든 아니든 위젯이 눈에 그려졌다는 표지를 보고 감싼 요소를 돌려준다. 가린 갈래는 역할로 찾지 못하므로 DOM 에서 바로
++ * 찾는다. 빈 화면이 axe 를 지난 것과 가르는 단언이다.
++ */
++async function drawnWidget(canvasElement: HTMLElement): Promise<HTMLElement> {
++  const wrapper = canvasElement.querySelector("[data-density]");
++  const main = wrapper?.querySelector("main");
++  const heading = wrapper?.querySelector("h1");
++  if (
++    !(wrapper instanceof HTMLElement) ||
++    !(main instanceof HTMLElement) ||
++    !(heading instanceof HTMLElement)
++  ) {
++    throw new Error("위젯의 감싼 요소와 main 과 제목을 찾지 못했다");
++  }
++  const box = main.getBoundingClientRect();
++  await expect(getComputedStyle(main).overflowY).toBe("auto");
++  await expect(box.width).toBeGreaterThan(0);
++  await expect(box.height).toBeGreaterThan(0);
++  await expect(heading.textContent).toBe("주문 도우미");
++  await expect(getComputedStyle(heading).fontSize).toBe("15px");
++  return wrapper;
++}
++
++/**
++ * Tab 을 위젯 안의 포커스 가능한 요소 수보다 셋 더 누르고, 포커스가 위젯 안에 든 횟수와 "저장" 단추에 닿았는지를 낸다.
++ *
++ * `userEvent.tab()` 은 브라우저의 Tab 이 아니라 흉내다. 다음 요소를 스스로 고르는데 `inert` 를 보지 않는다(Storybook
++ * 10.6.1 의 `dist/test/index.js` 14623~14659줄의 `getTabDestination` 을 읽었다). `inert` 인 요소를 고르면 브라우저가 그
++ * `focus()` 를 받지 않아 포커스가 body 에 머문다. 그래서 `inert` 갈래에서 "저장"에 닿는지는 이 흉내로 보지 못하고, 실제 Tab
++ * 은 프로브 `preview_shield.mjs` 가 누른다.
++ */
++async function tabThrough(wrapper: HTMLElement): Promise<{ inside: number; reachedSave: boolean }> {
++  const focusable = wrapper.querySelectorAll(FOCUSABLE).length;
++  await expect(focusable).toBeGreaterThan(0);
++  let inside = 0;
++  let reachedSave = false;
++  for (let press = 0; press < focusable + 3; press += 1) {
++    await userEvent.tab();
++    const active = document.activeElement;
++    if (wrapper.contains(active)) {
++      inside += 1;
++    }
++    if (active instanceof HTMLButtonElement && active.textContent === "저장") {
++      reachedSave = true;
++    }
++  }
++  return { inside, reachedSave };
++}
++
++/**
++ * 가리지 않았다(양성 대조). 틀의 `main` 과 화면의 `h1` 안쪽에 위젯의 `main` 과 `h1` 이 들어 axe 의 landmark 규칙 셋에
++ * 걸린다. 포커스가 위젯 안에 들고 위젯의 단추가 역할로 잡혀야, 아래 갈래의 "들지 않는다"와 "잡히지 않는다"가 실제로
++ * 포커스와 역할을 본 것이다.
++ */
++export const InAdminFrame: Story = {
++  render: framed,
++  play: async ({ canvasElement }) => {
++    const canvas = within(canvasElement);
++    const wrapper = await drawnWidget(canvasElement);
++    const { inside, reachedSave } = await tabThrough(wrapper);
++    await expect(inside).toBeGreaterThan(0);
++    await expect(reachedSave).toBe(true);
++    await expect(canvas.queryByRole("img", { name: PREVIEW_LABEL })).toBeNull();
++    await expect(within(wrapper).getByRole("button", { name: "새 대화" })).toBeVisible();
++    await expect(canvas.getAllByRole("main")).toHaveLength(2);
++  },
++};
++
++/** 갈래 A: 바깥은 이름 붙은 그림이고, 안쪽은 `aria-hidden` 과 `inert` 다. */
++export const ShieldedBoth: Story = {
++  args: { shield: "both" },
++  render: framed,
++  play: async ({ canvasElement }) => {
++    const canvas = within(canvasElement);
++    const wrapper = await drawnWidget(canvasElement);
++    const { inside } = await tabThrough(wrapper);
++    await expect(inside).toBe(0);
++    await expect(canvas.getByRole("img", { name: PREVIEW_LABEL })).toBe(wrapper);
++    await expect(within(wrapper).queryAllByRole("button")).toHaveLength(0);
++    await expect(canvas.getAllByRole("main")).toHaveLength(1);
++  },
++};
++
++/**
++ * 갈래 B: 안쪽이 `inert` 뿐이다.
++ *
++ * 역할로 찾는 testing-library 는 `inert` 를 보지 않아(`@testing-library/dom` 10.4.2 의 `dist/role-helpers.js` 33~78줄을
++ * 읽었다. `hidden`, `aria-hidden="true"`, `display: none`, `visibility: hidden` 만 본다) 위젯의 단추와 `main` 을 그대로
++ * 찾는다. 브라우저의 접근성 트리가 그것을 내는지는 프로브 `preview_shield.mjs` 가 본다.
++ */
++export const ShieldedInert: Story = {
++  args: { shield: "inert" },
++  render: framed,
++  play: async ({ canvasElement }) => {
++    const canvas = within(canvasElement);
++    const wrapper = await drawnWidget(canvasElement);
++    const { inside } = await tabThrough(wrapper);
++    await expect(inside).toBe(0);
++    await expect(canvas.getByRole("img", { name: PREVIEW_LABEL })).toBe(wrapper);
++    await expect(within(wrapper).queryAllByRole("button")).toHaveLength(3);
++    await expect(canvas.getAllByRole("main")).toHaveLength(2);
++  },
++};
++
++/**
++ * 갈래 C: 안쪽이 `aria-hidden` 뿐이다(포커스의 대조). 포커스가 위젯 안에 들어야 위 두 갈래의 "들지 않는다"가 `inert`
++ * 때문이다.
++ */
++export const ShieldedHidden: Story = {
++  args: { shield: "hidden" },
++  render: framed,
++  play: async ({ canvasElement }) => {
++    const canvas = within(canvasElement);
++    const wrapper = await drawnWidget(canvasElement);
++    const { inside, reachedSave } = await tabThrough(wrapper);
++    await expect(inside).toBeGreaterThan(0);
++    await expect(reachedSave).toBe(true);
++    await expect(canvas.getByRole("img", { name: PREVIEW_LABEL })).toBe(wrapper);
++    await expect(within(wrapper).queryAllByRole("button")).toHaveLength(0);
++    await expect(canvas.getAllByRole("main")).toHaveLength(1);
++  },
++};
++
++// 아래 넷은 미리보기의 높이를 넘는 내용이다. 가리지 않은 것(대조)과 갈래 A 를 긴 안내와 긴 대화로 그린다. 휠과 클릭은
++// 프로브 `preview_shield.mjs` 가 실제 마우스로 본다. 여기서는 그려졌다는 것과 넘쳤다는 것만 단언한다. 틀의 끝에 빈 높이를
++// 둬 페이지도 스크롤되게 한다. 위젯이 받지 않은 휠이 페이지로 넘어가는지를 그 프로브가 본다.
++
++function framedTall(args: WidgetPreviewProbeProps) {
++  return (
++    <AdminFrame nav={null}>
++      <h1 className="text-title">사이트 고치기</h1>
++      <WidgetPreviewProbe {...args} />
++      <Button variant="secondary">저장</Button>
++      <div style={{ height: 1200 }} />
++    </AdminFrame>
++  );
++}
++
++/** 위젯이 그려졌고 그 안의 `selector` 자리가 넘쳤다(`scrollHeight` 가 `clientHeight` 보다 크다)는 표지를 본다. */
++async function overflowing(canvasElement: HTMLElement, selector: string): Promise<HTMLElement> {
++  const wrapper = await drawnWidget(canvasElement);
++  const scroller = wrapper.querySelector(selector);
++  if (!(scroller instanceof HTMLElement)) {
++    throw new Error(`스크롤하는 자리 ${selector} 를 찾지 못했다`);
++  }
++  await expect(scroller.scrollHeight).toBeGreaterThan(scroller.clientHeight);
++  return scroller;
++}
++
++/** 대조: 가리지 않았고 첫 화면의 안내가 길다. 위젯의 `main` 이 넘친다. */
++export const LongIntroInAdminFrame: Story = {
++  args: { long: "intro" },
++  render: framedTall,
++  play: async ({ canvasElement }) => {
++    await overflowing(canvasElement, "main");
++  },
++};
++
++/** 갈래 A 에 긴 안내. */
++export const LongIntroShielded: Story = {
++  args: { long: "intro", shield: "both" },
++  render: framedTall,
++  play: async ({ canvasElement }) => {
++    await overflowing(canvasElement, "main");
++  },
++};
++
++/** 대조: 가리지 않았고 대화가 길다. `main` 안의 대화 영역이 넘친다. */
++export const LongTalkInAdminFrame: Story = {
++  args: { long: "talk" },
++  render: framedTall,
++  play: async ({ canvasElement }) => {
++    await overflowing(canvasElement, '[aria-label="대화"]');
++  },
++};
++
++/** 갈래 A 에 긴 대화. */
++export const LongTalkShielded: Story = {
++  args: { long: "talk", shield: "both" },
++  render: framedTall,
++  play: async ({ canvasElement }) => {
++    await overflowing(canvasElement, '[aria-label="대화"]');
++  },
++};
+diff --git a/web/apps/admin/components/pages/WidgetPreviewProbe.tsx b/web/apps/admin/components/pages/WidgetPreviewProbe.tsx
+new file mode 100644
+index 000000000..7c8fe8fa4
+--- /dev/null
++++ b/web/apps/admin/components/pages/WidgetPreviewProbe.tsx
+@@ -0,0 +1,133 @@
++"use client";
++
++// (portal-admin 의 프로브 shared_widget_parts 가 둔 임시 파일. 병합하지 않는다.) 다른 앱이 `@agent-os/widget-ui` 의
++// `WidgetScreen` 을 값만 주어 그릴 수 있는지 본다. 서버에 묻지 않는다. 처리기는 "새 대화"만 불린 횟수를 세고 나머지는
++// 아무것도 하지 않는다. 위젯이 문서 뿌리나 shadow 호스트에 다는 테마·모드·보통 밀도를 여기서는 감싼 요소에 단다. 관리
++// 화면의 문서 뿌리는 밀도를 달지 않아 창 폭이 고른다.
++//
++// 앱의 전역 CSS 와 글꼴 CSS 는 AdminScreen 처럼 여기서 싣는다. 이 화면은 AdminScreen 을 지나지 않는다.
++import "@agent-os/ui/fonts.css";
++import "../../styles/admin.css";
++import { WidgetScreen, type Exchange } from "@agent-os/widget-ui";
++import { useState } from "react";
++
++const EXCHANGES: readonly Exchange[] = [
++  {
++    id: 0,
++    request: "주문 1234 는 어디쯤인가요?",
++    runId: "run-preview",
++    calling: [],
++    tools: [{ tool: "orders.find", ok: true }],
++    approvals: [],
++    outcome: { kind: "finished", output: "**배송 중**입니다. 내일 도착합니다." },
++  },
++];
++
++const INTRO = "주문, 배송, 환불을 물어볼 수 있습니다.";
++
++// 긴 내용 둘. 첫 화면의 긴 안내는 위젯의 `main` 을 넘치게 하고, 긴 대화는 그 안의 대화 영역을 넘치게 한다(그 영역이
++// 스크롤하는 자리다. `@agent-os/widget-ui` 의 organisms/Conversation).
++const LONG_INTRO = Array.from(
++  { length: 40 },
++  (_, line) => `안내 ${String(line + 1)}번째 줄입니다. 주문, 배송, 환불을 물어볼 수 있습니다.`,
++).join(" ");
++
++function longExchange(id: number): Exchange {
++  return {
++    id,
++    request: `주문 ${String(1000 + id)} 은 어디쯤인가요?`,
++    runId: `run-preview-${String(id)}`,
++    calling: [],
++    tools: [],
++    approvals: [],
++    outcome: {
++      kind: "finished",
++      output: `주문 ${String(1000 + id)} 은 배송 중입니다. 내일 도착합니다.`,
++    },
++  };
++}
++
++const LONG_TALK: readonly Exchange[] = Array.from({ length: 12 }, (_, id) => longExchange(id));
++
++const ignore = () => {};
++
++const SIZE = { maxWidth: 320, height: 560 };
++
++/** 가린 미리보기가 화면 읽기 프로그램에 읽히는 한 줄(portal-admin 명세 "미리보기"). */
++export const PREVIEW_LABEL = "미리보기, 저장하지 않은 값으로 그린 위젯";
++
++export interface WidgetPreviewProbeProps {
++  /** 감싼 요소에 다는 밝기. 문서 뿌리의 밝기와 달라도 위젯만 이 밝기로 칠해지는지 본다. */
++  readonly mode?: "light" | "dark";
++  /**
++   * 미리보기를 보기만 하는 그림으로 가리는 방법. 없으면 가리지 않는다. 가리면 바깥 요소가 이름 붙은 그림(`role="img"`)이
++   * 되고, 위젯을 감싼 안쪽 요소가 `both` 는 `aria-hidden` 과 `inert` 를, `inert` 와 `hidden` 은 그 하나만 갖는다. 옮긴
++   * 부품(`@agent-os/widget-ui`)은 고치지 않는다.
++   */
++  readonly shield?: "both" | "inert" | "hidden";
++  /** 미리보기의 높이를 넘는 내용. `intro` 는 첫 화면의 긴 안내, `talk` 는 긴 대화다. 없으면 교환 하나다. */
++  readonly long?: "intro" | "talk";
++}
++
++export function WidgetPreviewProbe({ mode = "light", shield, long }: WidgetPreviewProbeProps) {
++  // "새 대화"의 처리기가 불린 횟수. 감싼 바깥 요소의 `data-new-conversation-calls` 로 낸다(프로브가 읽는다).
++  const [calls, setCalls] = useState(0);
++  const screen = (
++    <WidgetScreen
++      heading="주문 도우미"
++      intro={long === "intro" ? LONG_INTRO : INTRO}
++      misconfigured={false}
++      exchanges={long === "intro" ? [] : long === "talk" ? LONG_TALK : EXCHANGES}
++      restarted={false}
++      announcements={[]}
++      sendBlocked={false}
++      wait={null}
++      invalid={false}
++      paused={false}
++      onDecide={ignore}
++      newConversationDisabled={false}
++      draft=""
++      onDraftChange={ignore}
++      onSend={ignore}
++      onRetry={ignore}
++      onNewConversation={() => {
++        setCalls((count) => count + 1);
++      }}
++      requestChars={20_000}
++      restore="ready"
++      reconnect={null}
++    />
++  );
++  if (shield === undefined) {
++    return (
++      <div
++        data-theme="nokcheong"
++        data-mode={mode}
++        data-density="regular"
++        data-new-conversation-calls={calls}
++        style={SIZE}
++      >
++        {screen}
++      </div>
++    );
++  }
++  return (
++    <div
++      role="img"
++      aria-label={PREVIEW_LABEL}
++      data-theme="nokcheong"
++      data-mode={mode}
++      data-density="regular"
++      data-new-conversation-calls={calls}
++      style={SIZE}
++    >
++      <div
++        aria-hidden={shield === "inert" ? undefined : true}
++        inert={shield !== "hidden"}
++        style={{ height: "100%" }}
++      >
++        {screen}
++      </div>
++    </div>
++  );
++}
+diff --git a/web/apps/admin/package.json b/web/apps/admin/package.json
+index 3086d05e3..8f6d81d72 100644
+--- a/web/apps/admin/package.json
++++ b/web/apps/admin/package.json
+@@ -12,6 +12,7 @@
+   "dependencies": {
+     "@agent-os/api-client": "workspace:*",
+     "@agent-os/ui": "workspace:*",
++    "@agent-os/widget-ui": "workspace:*",
+     "next": "16.3.6",
+     "react": "19.3.0",
+     "react-dom": "19.3.0",
+diff --git a/web/apps/admin/styles/admin.css b/web/apps/admin/styles/admin.css
+index 5babc7e2f..4491aa7f1 100644
+--- a/web/apps/admin/styles/admin.css
++++ b/web/apps/admin/styles/admin.css
+@@ -11,5 +11,7 @@
+  * shadow 틀에 넘기는 `?inline` 글자에도 글꼴이 섞이지 않는다.
+  */
+ @import "@agent-os/ui/theme.css";
++/* (프로브 shared_widget_parts 의 임시 줄) 위젯 화면 부품(`@agent-os/widget-ui`)의 소스를 덮는다. */
++@import "@agent-os/widget-ui/source.css";
+ @source "../app";
+ @source "../components";
+diff --git a/web/apps/widget/.storybook/main.ts b/web/apps/widget/.storybook/main.ts
+index 08ef2fd57..658c17d23 100644
+--- a/web/apps/widget/.storybook/main.ts
++++ b/web/apps/widget/.storybook/main.ts
+@@ -9,7 +9,8 @@ import type { StorybookConfig } from "@storybook/react-vite";
+ 
+ const config = {
+   framework: "@storybook/react-vite",
+-  stories: ["../components/**/*.stories.tsx"],
++  // 화면 부품의 스토리는 부품과 함께 패키지(`@agent-os/widget-ui`)에 있다. 위젯의 Storybook 이 그 스토리를 싣는다.
++  stories: ["../components/**/*.stories.tsx", "../../../packages/widget-ui/src/**/*.stories.tsx"],
+   addons: ["@storybook/addon-a11y", "@storybook/addon-vitest"],
+   core: { disableTelemetry: true },
+   viteFinal: (viteConfig) => ({
+diff --git a/web/apps/widget/components/pages/ConnectedWidget.tsx b/web/apps/widget/components/pages/ConnectedWidget.tsx
+index 229ce62db..330d82cdb 100644
+--- a/web/apps/widget/components/pages/ConnectedWidget.tsx
++++ b/web/apps/widget/components/pages/ConnectedWidget.tsx
+@@ -5,13 +5,12 @@
+ // - 설정이 잘못됐으면 대화 자리에 위험 알림을 보이고 입력 자리를 막는다. 에이전트가 없거나 패턴 밖인 때와, 길이 없는
+ //   때(페이지 안 방식이 번들의 기준 주소를 읽지 못했다, element/base.ts)다. 길이 없으면 토큰도 묻지 않는다.
+ // - 넘겨받은 문제는 하나마다 console.error 로 남긴다. 임베드가 다시 그려도 글이 같으면 다시 남기지 않는다.
++import { phaseOf, waitingApproval, WidgetScreen } from "@agent-os/widget-ui";
+ import { useEffect, useRef, useState } from "react";
+ import { requestCharLimit } from "../../lib/build";
+ import type { Connection } from "../../lib/connection";
+-import { phaseOf, waitingApproval } from "../../lib/conversation";
+ import type { Embed } from "../../lib/embed";
+ import { useConversation } from "./useConversation";
+-import { WidgetScreen } from "./WidgetScreen";
+ 
+ export interface ConnectedWidgetProps {
+   readonly embed: Embed;
+diff --git a/web/apps/widget/components/pages/drivers.ts b/web/apps/widget/components/pages/drivers.ts
+index dfc05668e..5a0b7984e 100644
+--- a/web/apps/widget/components/pages/drivers.ts
++++ b/web/apps/widget/components/pages/drivers.ts
+@@ -10,6 +10,14 @@
+ // 일 하나는 `Session` 하나를 받는다. 새 요청, 새 대화, 위젯이 걷히는 것이 그 신호를 끊고, 끊은 뒤에 온 결과는 부르는
+ // 쪽(useConversation)이 버린다.
+ 
++import {
++  endingOf,
++  reconnectDelay,
++  SILENCE_MS,
++  startWait,
++  type Action,
++  type Reconnect,
++} from "@agent-os/widget-ui";
+ import {
+   RunRejected,
+   sendDecision,
+@@ -20,9 +28,6 @@ import {
+   type EndUserItem,
+ } from "../../api/runs";
+ import type { Connection } from "../../lib/connection";
+-import type { Action } from "../../lib/conversation";
+-import { startWait } from "../../lib/limit";
+-import { endingOf, reconnectDelay, SILENCE_MS, type Reconnect } from "../../lib/reconnect";
+ import {
+   decisionStep,
+   ERRORS_UNTIL_LOST,
+diff --git a/web/apps/widget/components/pages/useConversation.ts b/web/apps/widget/components/pages/useConversation.ts
+index 6f634ef49..629310fa0 100644
+--- a/web/apps/widget/components/pages/useConversation.ts
++++ b/web/apps/widget/components/pages/useConversation.ts
+@@ -12,18 +12,22 @@
+ // 저장(lib/storage). 처음 그릴 때 저장한 대화가 있으면 토큰을 받아 묶음을 견주기 전에는 진행 표시만 보인다(`restore`).
+ // 그 뒤로는 대화가 바뀔 때마다 저장한다. 토큰을 받지 못해 그리지 못한 동안에는 저장을 건드리지 않는다.
+ 
+-import { useCallback, useEffect, useLayoutEffect, useReducer, useRef, useState } from "react";
+-import type { DecisionBody } from "../../api/runs";
+-import type { Connection } from "../../lib/connection";
+ import {
+   INITIAL,
+   reduce,
++  remainingAt,
++  startWait,
++  untilNextTick,
+   waitingApproval,
+   type Conversation,
+   type Decision,
+-} from "../../lib/conversation";
+-import { remainingAt, startWait, untilNextTick, type LimitWait } from "../../lib/limit";
+-import type { Reconnect } from "../../lib/reconnect";
++  type LimitWait,
++  type Reconnect,
++  type Restore,
++} from "@agent-os/widget-ui";
++import { useCallback, useEffect, useLayoutEffect, useReducer, useRef, useState } from "react";
++import type { DecisionBody } from "../../api/runs";
++import type { Connection } from "../../lib/connection";
+ import {
+   load,
+   remove,
+@@ -34,19 +38,7 @@ import {
+   storageKey,
+   type Bundle,
+ } from "../../lib/storage";
+-import {
+-  decide as runDecision,
+-  restore as restoreSaved,
+-  run,
+-  type Restored,
+-  type Session,
+-} from "./drivers";
+-
+-/**
+- * 저장한 대화를 되돌린 자리. `loading` 은 토큰을 받아 묶음을 견주는 중이라 진행 표시만 보인다. 되돌린 뒤의 자리는
+- * drivers 의 `Restored` 다.
+- */
+-export type Restore = "loading" | Restored;
++import { decide as runDecision, restore as restoreSaved, run, type Session } from "./drivers";
+ 
+ export interface ConversationControls {
+   readonly conversation: Conversation;
+diff --git a/web/apps/widget/lib/rejection.ts b/web/apps/widget/lib/rejection.ts
+index 6d0070c5b..6f64b095c 100644
+--- a/web/apps/widget/lib/rejection.ts
++++ b/web/apps/widget/lib/rejection.ts
+@@ -1,7 +1,7 @@
+ // 요청이 거절될 때의 다음 걸음(web-widget 명세 "요청이 거절될 때"). 경로마다 상태 코드를 위젯이 할 일로 옮긴다. 응답 전의
+ // 네트워크 실패는 상태 코드가 null 이다. 걸음을 밟는 것(기다리기, 다시 보내기, 대화에 넘기기)은 부르는 쪽이다.
+ 
+-import type { DecisionNotice } from "./conversation";
++import type { DecisionNotice } from "@agent-os/widget-ui";
+ 
+ /** 시작과 이어 가기의 거절. 결말은 대화의 규칙(lib/conversation 의 `rejected`)이 상태 코드로 고른다. */
+ export type RunStep =
+diff --git a/web/apps/widget/lib/storage.ts b/web/apps/widget/lib/storage.ts
+index 762e96b2a..fb3b23951 100644
+--- a/web/apps/widget/lib/storage.ts
++++ b/web/apps/widget/lib/storage.ts
+@@ -24,7 +24,7 @@ import type {
+   FailureCause,
+   Outcome,
+   ToolCall,
+-} from "./conversation";
++} from "@agent-os/widget-ui";
+ 
+ /** 토큰의 발급자와 주체. 같은 탭에서 사이트 계정이 바뀐 것을 이것으로 안다. */
+ export interface Bundle {
+diff --git a/web/apps/widget/package.json b/web/apps/widget/package.json
+index a5d21844a..be472c50c 100644
+--- a/web/apps/widget/package.json
++++ b/web/apps/widget/package.json
+@@ -13,6 +13,7 @@
+     "@agent-os/api-client": "workspace:*",
+     "@agent-os/site-file": "workspace:*",
+     "@agent-os/ui": "workspace:*",
++    "@agent-os/widget-ui": "workspace:*",
+     "next": "16.3.6",
+     "react": "19.3.0",
+     "react-dom": "19.3.0"
+diff --git a/web/apps/widget/styles/widget.css b/web/apps/widget/styles/widget.css
+index 49e22d0cd..545e3425b 100644
+--- a/web/apps/widget/styles/widget.css
++++ b/web/apps/widget/styles/widget.css
+@@ -10,5 +10,7 @@
+  * 주석). 번들 시험(tools/element.test.ts)이 번들에 글꼴의 data URL 이 없는 것을 본다.
+  */
+ @import "@agent-os/ui/theme.css";
++/* 위젯 화면 부품(`@agent-os/widget-ui`)의 소스를 덮는다. 그 패키지의 `@source` 가 든 조각이다. */
++@import "@agent-os/widget-ui/source.css";
+ @source "../app";
+ @source "../components";
+diff --git a/web/packages/widget-ui/package.json b/web/packages/widget-ui/package.json
+new file mode 100644
+index 000000000..9b0ce5dfa
+--- /dev/null
++++ b/web/packages/widget-ui/package.json
+@@ -0,0 +1,24 @@
++{
++  "name": "@agent-os/widget-ui",
++  "private": true,
++  "type": "module",
++  "exports": {
++    ".": "./src/index.ts",
++    "./source.css": "./src/styles/source.css"
++  },
++  "peerDependencies": {
++    "react": "^19.3.0",
++    "react-dom": "^19.3.0"
++  },
++  "dependencies": {
++    "@agent-os/api-client": "workspace:*",
++    "@agent-os/ui": "workspace:*"
++  },
++  "devDependencies": {
++    "@types/react": "19.3.0",
++    "@types/react-dom": "19.3.0",
++    "react": "19.3.0",
++    "react-dom": "19.3.0",
++    "typescript": "~5.9.3"
++  }
++}
+diff --git a/web/apps/widget/components/molecules/ComposerBand.stories.tsx b/web/packages/widget-ui/src/components/molecules/ComposerBand.stories.tsx
+similarity index 100%
+rename from web/apps/widget/components/molecules/ComposerBand.stories.tsx
+rename to web/packages/widget-ui/src/components/molecules/ComposerBand.stories.tsx
+diff --git a/web/apps/widget/components/molecules/ComposerBand.tsx b/web/packages/widget-ui/src/components/molecules/ComposerBand.tsx
+similarity index 100%
+rename from web/apps/widget/components/molecules/ComposerBand.tsx
+rename to web/packages/widget-ui/src/components/molecules/ComposerBand.tsx
+diff --git a/web/apps/widget/components/molecules/ToolRow.tsx b/web/packages/widget-ui/src/components/molecules/ToolRow.tsx
+similarity index 100%
+rename from web/apps/widget/components/molecules/ToolRow.tsx
+rename to web/packages/widget-ui/src/components/molecules/ToolRow.tsx
+diff --git a/web/apps/widget/components/molecules/Welcome.tsx b/web/packages/widget-ui/src/components/molecules/Welcome.tsx
+similarity index 100%
+rename from web/apps/widget/components/molecules/Welcome.tsx
+rename to web/packages/widget-ui/src/components/molecules/Welcome.tsx
+diff --git a/web/apps/widget/components/organisms/ApprovalCard.stories.tsx b/web/packages/widget-ui/src/components/organisms/ApprovalCard.stories.tsx
+similarity index 100%
+rename from web/apps/widget/components/organisms/ApprovalCard.stories.tsx
+rename to web/packages/widget-ui/src/components/organisms/ApprovalCard.stories.tsx
+diff --git a/web/apps/widget/components/organisms/ApprovalCard.tsx b/web/packages/widget-ui/src/components/organisms/ApprovalCard.tsx
+similarity index 100%
+rename from web/apps/widget/components/organisms/ApprovalCard.tsx
+rename to web/packages/widget-ui/src/components/organisms/ApprovalCard.tsx
+diff --git a/web/apps/widget/components/organisms/Composer.tsx b/web/packages/widget-ui/src/components/organisms/Composer.tsx
+similarity index 100%
+rename from web/apps/widget/components/organisms/Composer.tsx
+rename to web/packages/widget-ui/src/components/organisms/Composer.tsx
+diff --git a/web/apps/widget/components/organisms/Conversation.stories.tsx b/web/packages/widget-ui/src/components/organisms/Conversation.stories.tsx
+similarity index 100%
+rename from web/apps/widget/components/organisms/Conversation.stories.tsx
+rename to web/packages/widget-ui/src/components/organisms/Conversation.stories.tsx
+diff --git a/web/apps/widget/components/organisms/Conversation.tsx b/web/packages/widget-ui/src/components/organisms/Conversation.tsx
+similarity index 100%
+rename from web/apps/widget/components/organisms/Conversation.tsx
+rename to web/packages/widget-ui/src/components/organisms/Conversation.tsx
+diff --git a/web/apps/widget/components/organisms/FailureAlert.stories.tsx b/web/packages/widget-ui/src/components/organisms/FailureAlert.stories.tsx
+similarity index 100%
+rename from web/apps/widget/components/organisms/FailureAlert.stories.tsx
+rename to web/packages/widget-ui/src/components/organisms/FailureAlert.stories.tsx
+diff --git a/web/apps/widget/components/organisms/FailureAlert.tsx b/web/packages/widget-ui/src/components/organisms/FailureAlert.tsx
+similarity index 100%
+rename from web/apps/widget/components/organisms/FailureAlert.tsx
+rename to web/packages/widget-ui/src/components/organisms/FailureAlert.tsx
+diff --git a/web/apps/widget/components/organisms/TopBar.tsx b/web/packages/widget-ui/src/components/organisms/TopBar.tsx
+similarity index 100%
+rename from web/apps/widget/components/organisms/TopBar.tsx
+rename to web/packages/widget-ui/src/components/organisms/TopBar.tsx
+diff --git a/web/apps/widget/components/pages/WidgetScreen.stories.tsx b/web/packages/widget-ui/src/components/pages/WidgetScreen.stories.tsx
+similarity index 100%
+rename from web/apps/widget/components/pages/WidgetScreen.stories.tsx
+rename to web/packages/widget-ui/src/components/pages/WidgetScreen.stories.tsx
+diff --git a/web/apps/widget/components/pages/WidgetScreen.tsx b/web/packages/widget-ui/src/components/pages/WidgetScreen.tsx
+similarity index 95%
+rename from web/apps/widget/components/pages/WidgetScreen.tsx
+rename to web/packages/widget-ui/src/components/pages/WidgetScreen.tsx
+index 9a88260c1..7e0b307bb 100644
+--- a/web/apps/widget/components/pages/WidgetScreen.tsx
++++ b/web/packages/widget-ui/src/components/pages/WidgetScreen.tsx
+@@ -25,7 +25,12 @@ import { Conversation } from "../organisms/Conversation";
+ import { FailureAlert } from "../organisms/FailureAlert";
+ import { TopBar } from "../organisms/TopBar";
+ import { WidgetFrame } from "../templates/WidgetFrame";
+-import type { Restore } from "./useConversation";
++
++/**
++ * 저장한 대화를 되돌린 자리. `loading` 은 토큰을 받아 묶음을 견주는 중이라 진행 표시만 보인다. `unauthorized` 는 토큰을 받지
++ * 못해 그리지 못한 것이고 `ready` 는 그린 것이다(위젯 앱의 drivers 의 `Restored`).
++ */
++export type Restore = "loading" | "unauthorized" | "ready";
+ 
+ export interface WidgetScreenProps {
+   readonly heading: string;
+diff --git a/web/apps/widget/components/templates/WidgetFrame.tsx b/web/packages/widget-ui/src/components/templates/WidgetFrame.tsx
+similarity index 100%
+rename from web/apps/widget/components/templates/WidgetFrame.tsx
+rename to web/packages/widget-ui/src/components/templates/WidgetFrame.tsx
+diff --git a/web/packages/widget-ui/src/index.ts b/web/packages/widget-ui/src/index.ts
+new file mode 100644
+index 000000000..38e6d08e2
+--- /dev/null
++++ b/web/packages/widget-ui/src/index.ts
+@@ -0,0 +1,28 @@
++// `@agent-os/widget-ui` 의 진입점(portal-admin 의 프로브 shared_widget_parts 가 옮겨 본 것). 위젯 화면(`WidgetScreen`)과
++// 그것이 받는 값의 모양, 그리고 위젯 앱의 대화를 돌리는 쪽(useConversation, drivers, lib/storage, lib/rejection)이 같은
++// 모듈에서 쓰던 규칙을 낸다. 화면 부품이 대화의 모양(lib/conversation)과 상한·재접속의 글(lib/limit, lib/reconnect)을
++// 타입과 함수로 읽어, 그 모듈들이 부품과 함께 왔다. 쓰는 앱은 이 파일과 `./source.css` 를 패키지 이름으로 import 한다.
++export {
++  WidgetScreen,
++  type Restore,
++  type WidgetScreenProps,
++} from "./components/pages/WidgetScreen";
++export {
++  INITIAL,
++  phaseOf,
++  reduce,
++  waitingApproval,
++  type Action,
++  type Announcement,
++  type Approval,
++  type ApprovalState,
++  type Conversation,
++  type Decision,
++  type DecisionNotice,
++  type Exchange,
++  type FailureCause,
++  type Outcome,
++  type ToolCall,
++} from "./lib/conversation";
++export { remainingAt, startWait, untilNextTick, type LimitWait } from "./lib/limit";
++export { endingOf, reconnectDelay, SILENCE_MS, type Reconnect } from "./lib/reconnect";
+diff --git a/web/apps/widget/lib/approval.ts b/web/packages/widget-ui/src/lib/approval.ts
+similarity index 100%
+rename from web/apps/widget/lib/approval.ts
+rename to web/packages/widget-ui/src/lib/approval.ts
+diff --git a/web/apps/widget/lib/chars.ts b/web/packages/widget-ui/src/lib/chars.ts
+similarity index 100%
+rename from web/apps/widget/lib/chars.ts
+rename to web/packages/widget-ui/src/lib/chars.ts
+diff --git a/web/apps/widget/lib/conversation.ts b/web/packages/widget-ui/src/lib/conversation.ts
+similarity index 99%
+rename from web/apps/widget/lib/conversation.ts
+rename to web/packages/widget-ui/src/lib/conversation.ts
+index 789665d29..1dc49ef77 100644
+--- a/web/apps/widget/lib/conversation.ts
++++ b/web/packages/widget-ui/src/lib/conversation.ts
+@@ -25,7 +25,7 @@
+ //   준다. 401 은 로그인 정보를 받지 못한 것이고, 처리하지 못한 거절이 거듭되면 다시 잇기를 멈춘 것(`lost`)이다. 둘 다
+ //   다시 붙을 실행을 비우지 않아, 새로 고치면 다시 붙는다.
+ 
+-import type { EndUserItem } from "../api/runs";
++import type { EndUserItem } from "@agent-os/api-client";
+ import { argsText } from "./approval";
+ 
+ /** 실패 항목의 원인(ADR 0031). */
+diff --git a/web/apps/widget/lib/limit.ts b/web/packages/widget-ui/src/lib/limit.ts
+similarity index 100%
+rename from web/apps/widget/lib/limit.ts
+rename to web/packages/widget-ui/src/lib/limit.ts
+diff --git a/web/apps/widget/lib/reconnect.ts b/web/packages/widget-ui/src/lib/reconnect.ts
+similarity index 97%
+rename from web/apps/widget/lib/reconnect.ts
+rename to web/packages/widget-ui/src/lib/reconnect.ts
+index c6cc7174b..2fe00e1d7 100644
+--- a/web/apps/widget/lib/reconnect.ts
++++ b/web/packages/widget-ui/src/lib/reconnect.ts
+@@ -10,7 +10,7 @@
+ // - 서버는 15초마다 keepalive 를 보내므로 45초는 그것을 셋 놓친 것이다.
+ // - 다시 잇는 간격은 1, 2, 4, 8, 16초이고 그 뒤로는 30초마다이며 끝이 없다. 새 항목을 받으면 처음으로 돌아간다.
+ 
+-import type { EndUserItem } from "../api/runs";
++import type { EndUserItem } from "@agent-os/api-client";
+ import type { LimitWait } from "./limit";
+ 
+ /** 이만큼 아무것도 오지 않으면 끊긴 것으로 본다. */
+diff --git a/web/packages/widget-ui/src/styles/source.css b/web/packages/widget-ui/src/styles/source.css
+new file mode 100644
+index 000000000..3814ac367
+--- /dev/null
++++ b/web/packages/widget-ui/src/styles/source.css
+@@ -0,0 +1,7 @@
++/*
++ * 위젯 화면 부품의 소스를 Tailwind 가 훑게 하는 조각(`@agent-os/widget-ui/source.css`). 규칙은 하나도 내지 않는다.
++ * 디자인 토큰 CSS(`@agent-os/ui/theme.css`)는 `source(none)` 이고 디자인 시스템 패키지의 소스만 덮으므로, 이 패키지의
++ * 부품이 쓰는 클래스는 쓰는 앱의 CSS 가 디자인 토큰 CSS 뒤에 이 파일을 `@import` 해야 CSS 를 만든다. `@source` 의 경로는
++ * 이 파일의 자리에서 풀린다(디자인 토큰 CSS 의 `@source ".."` 와 같다).
++ */
++@source "..";
+diff --git a/web/packages/widget-ui/tsconfig.json b/web/packages/widget-ui/tsconfig.json
+new file mode 100644
+index 000000000..1126e89aa
+--- /dev/null
++++ b/web/packages/widget-ui/tsconfig.json
+@@ -0,0 +1,13 @@
++{
++  "extends": "../../tsconfig.base.json",
++  "compilerOptions": {
++    "target": "es2024",
++    "lib": ["es2024", "dom", "dom.iterable"],
++    "module": "preserve",
++    "moduleResolution": "bundler",
++    "jsx": "react-jsx",
++    "allowImportingTsExtensions": true,
++    "types": []
++  },
++  "include": ["src/**/*"]
++}
+diff --git a/web/pnpm-lock.yaml b/web/pnpm-lock.yaml
+index 4449012e8..4c73adde6 100644
+--- a/web/pnpm-lock.yaml
++++ b/web/pnpm-lock.yaml
+@@ -68,6 +68,9 @@ importers:
+       '@agent-os/ui':
+         specifier: workspace:*
+         version: link:../../packages/ui
++      '@agent-os/widget-ui':
++        specifier: workspace:*
++        version: link:../../packages/widget-ui
+       next:
+         specifier: 16.3.6
+         version: 16.3.6(@babel/core@7.29.7(supports-color@10.2.2))(@playwright/test@1.63.0)(@types/node@24.19.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
+@@ -163,6 +166,9 @@ importers:
+       '@agent-os/ui':
+         specifier: workspace:*
+         version: link:../../packages/ui
++      '@agent-os/widget-ui':
++        specifier: workspace:*
++        version: link:../../packages/widget-ui
+       next:
+         specifier: 16.3.6
+         version: 16.3.6(@babel/core@7.29.7(supports-color@10.2.2))(@playwright/test@1.63.0)(@types/node@24.19.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
+@@ -297,6 +303,31 @@ importers:
+         specifier: ^8.3.1
+         version: 8.3.1(@types/node@24.19.0)(esbuild@0.28.2)(jiti@2.7.0)
+ 
++  packages/widget-ui:
++    dependencies:
++      '@agent-os/api-client':
++        specifier: workspace:*
++        version: link:../api-client
++      '@agent-os/ui':
++        specifier: workspace:*
++        version: link:../ui
++    devDependencies:
++      '@types/react':
++        specifier: 19.3.0
++        version: 19.3.0
++      '@types/react-dom':
++        specifier: 19.3.0
++        version: 19.3.0(@types/react@19.3.0)
++      react:
++        specifier: 19.3.0
++        version: 19.3.0
++      react-dom:
++        specifier: 19.3.0
++        version: 19.3.0(react@19.3.0)
++      typescript:
++        specifier: ~5.9.3
++        version: 5.9.3
++
+ packages:
+ 
+   '@adobe/css-tools@4.5.0':
+diff --git a/web/tools/visual.test.ts b/web/tools/visual.test.ts
+index b28041864..66fa1c39e 100644
+--- a/web/tools/visual.test.ts
++++ b/web/tools/visual.test.ts
+@@ -48,12 +48,13 @@ describe("사진 비교의 이미지", () => {
+ });
+ 
+ describe("컨테이너 안의 워크스페이스 패키지", () => {
+-  test("위젯이 기대는 워크스페이스 패키지(생성 클라이언트, e2e 준비, 사이트 파일, 디자인 시스템)를 컨테이너 안의 web/ 자리로 잇는다", () => {
++  test("위젯이 기대는 워크스페이스 패키지(생성 클라이언트, e2e 준비, 사이트 파일, 디자인 시스템, 위젯 화면 부품)를 컨테이너 안의 web/ 자리로 잇는다", () => {
+     expect(workspaceLinks(join(WEB, "apps", "widget"))).toEqual({
+       "@agent-os/api-client": "/web/packages/api-client",
+       "@agent-os/e2e-stack": "/web/packages/e2e-stack",
+       "@agent-os/site-file": "/web/packages/site-file",
+       "@agent-os/ui": "/web/packages/ui",
++      "@agent-os/widget-ui": "/web/packages/widget-ui",
+     });
+   });
+ 
+@@ -61,6 +62,7 @@ describe("컨테이너 안의 워크스페이스 패키지", () => {
+     expect(workspaceLinks(join(WEB, "apps", "admin"))).toEqual({
+       "@agent-os/api-client": "/web/packages/api-client",
+       "@agent-os/ui": "/web/packages/ui",
++      "@agent-os/widget-ui": "/web/packages/widget-ui",
+     });
+   });
+ 
