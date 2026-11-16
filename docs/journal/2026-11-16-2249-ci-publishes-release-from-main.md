@@ -107,7 +107,7 @@
 - `정리`가 `tagcheck.outcome == 'failure'`를 봐서 `gh api`의 일시 오류에도 새로 만든 초안을 지웠다. `초안 직후 태그 대조`가 태그를 찾았을 때만 `found=true` 출력을 쓰고 `정리`는 그것을 보게 했다.
 - `tools/release_ci.py`: `--sha ""`가 `precheck`를 `done`으로 통과시켰고, `verify-files`는 아티팩트와 인자의 해시가 모두 없으면 `None == None`으로 지났다(`uv run python`으로 두 입력을 직접 넣어 본 서브에이전트의 보고를 코드로 다시 읽어 확인했다). `--sha` 형식 검사와 "첫째 잡이 해시를 넘기지 않았다" 실패를 더했다. 시험 여섯을 더했다(하위 명령 `image-id`, `platform-manifest`, `manifest-config`의 `main` 길과 위 두 입력). 고친 뒤에 시험을 써서 빨강을 직접 보지는 못했다(손으로 변이를 넣어 보지 않았다).
 - 일지의 "이 PC는 containerd 저장소" 두 문장이 틀렸다. `docker info --format '{{.Driver}}'`가 `overlay2`를 낸다(이 PC에서 쳤다). 일지와 `release_ci.py` 독스트링을 고쳤다. containerd 방식의 실제 `docker save`는 이 PC에서도 러너에서도 본 적이 없다.
-- `tools/release.py` 독스트링의 "워크플로가 부를 명령줄은 … 티켓이 더한다"를 현재형으로 고쳤다(`release_ci.py judge`).
+- `tools/release.py` 독스트링이 워크플로가 부를 명령줄을 이 티켓이 더한다고 미래형으로 적은 문장을 현재형으로 고쳤다(`release_ci.py judge`).
 - 카나리아 명세의 "네 카나리아"를 셋으로, 취소 갈래의 기대 문장을 새 글에 맞게 고쳐 다시 돌렸다. 통과 4(실험군 3/3, 대조군 1/1 "없음"), 섞임 0(`tools/canary.py`가 단언한 결과). 그 뒤 `merge.md`에서 제한 시간 문장 하나만 더 고쳤고 기대 문장과는 겹치지 않아 다시 돌리지 않았다. 프로브 색인과 루트 `README.md`의 `deploy/` 줄에 새 파일을 올렸다.
 
 **남긴 것**
@@ -125,3 +125,16 @@
 - 시험용 임시 브랜치 `probe/release-image-ci`는 원격에서 지웠다.
 
 open-session을 부른다 2026-11-16T13:55Z
+
+## 인계 (커밋 뒤)
+
+이 세션(앞 인계를 이어받은 세션)은 컨텍스트가 문턱을 넘어 `커밋 뒤`에서 인계한다. 제목은 인계 전 `feature/11-ci-publishes-release-from-main`이었고 인계하며 `feature/11-ci-publishes-release-from-main (인계함)`으로 바꾼다. 커밋은 `ef9b7507f`까지 했고 푸시하지 않았다. PR은 아직 열지 않았다. 이 일지의 이 절과 회고 절 고침은 커밋하지 않았다.
+
+한 것(이 세션): 티켓 `done`과 `plan_table`, 셀프 리뷰(표준 축 Sonnet·high, 명세 축 본 모델)와 반영, 회고(`0420` 14회차), 전체 검증, 카나리아 둘(next-session `merge.md` 통과 4, `pr-merge` 통과 4), 커밋. 전체 검증은 `uv run ruff check . && uv run ruff format --check .`와 `uv run python tools/run_checks.py`가 모두 초록이고 pre-commit도 초록이었다. 단독 e2e는 앞 세션이 `deploy/`를 고친 뒤 쳤고(12 passed) 이 세션은 `deploy/`를 고치지 않았다.
+
+- 남은 일: 푸시한다. PR 제목은 `feat: main에서 CI가 이미지와 릴리스를 낸다 (11-ci-publishes-release-from-main)`이고 느낌표는 붙이지 않는다(올릴 때 손댈 것이 없다고 앞 세션이 정했고 `docs/release-notes/upgrade/` 파일도 없다). PR 본문은 `.github/PULL_REQUEST_TEMPLATE.md`를 채운다. `merge.md` 2(봇 회차)부터 병합까지 한다. 일지의 이 절과 회고 절 고침을 병합 전에 같은 푸시에 싣는다(마지막 봇 회차의 커밋).
+- 병합한 세션은 `merge.md` "출시 PR"의 계기대로 출시 PR을 연다. 그 전에 사용자에게 위 "사람 몫 여섯"이 끝났는지 묻는다. 끝나지 않았으면 출시 PR을 열지 않고 `출시 보류: 사람 몫 미완` 한 줄을 보고에 쓴다.
+- 이 PR을 병합할 때 판 내기 워크플로는 아직 main에 없으므로 돌지 않는다(`dev`로 병합한다). 첫 실행은 출시 PR을 `main`에 병합할 때다.
+- 이 세션에서 한 번에 못 닫은 것: 새로 쓴 시험 여섯의 빨강을 직접 보지 못했다(고친 뒤에 썼다). 병합 전에 변이 하나로 빨강을 보고 싶으면 `tools/mutate.py` 독스트링대로 한다.
+
+open-session을 부른다 2026-11-16T14:38Z
