@@ -12,6 +12,7 @@
 - 경고 하나. `DOCKER_INSECURE_NO_IPTABLES_RAW=1`을 준 데몬에서는 `127.0.0.1`에 발행한 포트에 같은 로컬 네트워크의 다른 호스트가 닿을 수 있다고 Docker 28.0.2의 릴리스 노트가 적습니다. 그 변수를 주지 마십시오.
 - 경고 둘. Docker 28.0.0보다 오래된 판에서는 같은 네트워크 구간의 다른 호스트가 localhost에 발행한 포트에 닿는다고 Docker 문서가 적습니다. 28.3.3의 릴리스 노트는 firewalld를 다시 읽은 뒤 루프백에만 발행한 포트가 로컬 네트워크에서 닿던 문제(CVE-2025-54388)를 고쳤다고 적습니다. 그래서 최소 판이 28.3.3입니다.
 - rootless 모드의 Docker와, firewalld나 ufw를 쓰는 서버에서는 관리 화면을 `127.0.0.1`에만 열어 두는 보호를 확인하지 못했습니다. 그런 서버에서는 올린 뒤 다른 호스트에서 서버 주소의 3000번 포트가 닫혀 있는지 직접 확인하십시오.
+- rootless 모드와 사용자 네임스페이스 재매핑(`userns-remap`)에서는 컨테이너의 GID가 호스트의 같은 번호와 대응하지 않습니다. 3-2와 3-3이 정한 키 파일의 그룹(101, 10001)이 컨테이너 안에서 읽히지 않아 프록시나 위젯 미리보기 페이지가 시작에서 끝날 수 있습니다. 이 두 모드는 보증하는 환경이 아닙니다.
 
 ### 서버의 메모리
 
@@ -140,10 +141,10 @@ docker compose ps
 
 이미지 넷(`serve`, `admin`, `widget`, `portal`)이 모두 `healthy`이고 프록시가 `Up`이면 떴습니다. 프록시는 상태 확인이 없어 `Up`만 보이고 `healthy`가 붙지 않습니다. 떴는지는 컨테이너 기록의 `Ready` 줄이 아니라 이 상태로 보십시오. 관리 화면은 `Ready` 줄을 찍은 뒤에 서버로 가는 연결을 확인하다 실패할 수 있습니다.
 
-방문자가 닿는 쪽은 브라우저로 `https://agent.example.com/`을 열어 봅니다. 위젯 미리보기 페이지가 뜨고 질문에 답이 오면 됩니다. 명령으로 보려면 아래를 칩니다. 스스로 서명한 인증서면 `-k`를 붙입니다.
+방문자가 닿는 쪽은 브라우저로 `https://agent.example.com/`을 열어 봅니다. 위젯 미리보기 페이지가 뜨고 질문에 답이 오면 됩니다. 명령으로 보려면 아래를 칩니다. 이 명령은 인증서를 검증하므로, 만료됐거나 도메인이 다른 인증서면 응답을 받기 전에 실패합니다. 스스로 서명한 인증서를 시험 삼아 쓸 때만 `curl`에 `-k`를 덧붙여 검증을 끕니다.
 
 ```bash
-curl -k -sS -L -o /dev/null -w '%{http_code}\n' https://agent.example.com/
+curl -sS -L -o /dev/null -w '%{http_code}\n' https://agent.example.com/
 curl -sS -o /dev/null -w '%{http_code} %{redirect_url}\n' http://agent.example.com/
 ```
 
@@ -206,7 +207,7 @@ docker compose exec proxy nginx -c /etc/agent-os/proxy/nginx.conf -s reload
 
 ### 이름 있는 볼륨 대신 호스트 폴더를 쓰려면
 
-백업 같은 이유로 두 자리를 호스트의 폴더로 바꾸려면 `compose.yaml`을 고치지 않고 같은 폴더에 `compose.override.yaml`을 둡니다. 띄우기 전에 아래 세 가지를 먼저 해야 합니다. 빠뜨리면 상태 확인은 `healthy`인데 플러그인을 끄고 켜는 요청과 실행이 500으로 끝납니다.
+백업 같은 이유로 두 자리를 호스트의 폴더로 바꾸려면 `compose.yaml`을 고치지 않고 같은 폴더에 `compose.override.yaml`을 둡니다. 이 절차는 처음 띄우기 전용입니다. 이미 띄워 쓰던 배포에서 바꾸면 이름 있는 볼륨에 든 설치한 플러그인과 기록이 서비스에서 보이지 않게 되고, 이 안내는 그 내용을 호스트 폴더로 옮기는 절차를 다루지 않습니다. 쓰던 배포에서는 바꾸지 마십시오. 띄우기 전에 아래 세 가지를 먼저 해야 합니다. 빠뜨리면 상태 확인은 `healthy`인데 플러그인을 끄고 켜는 요청과 실행이 500으로 끝납니다.
 
 1. 이미지의 예시 플러그인을 호스트 폴더로 옮깁니다. 빈 폴더를 붙이면 기본 모델 플러그인이 없다며 `serve`가 시작에서 끝납니다.
 2. 두 폴더의 소유를 `10001:10001`로 넘깁니다.
@@ -237,8 +238,10 @@ services:
 
 인터넷이 되는 PC에서:
 
+이미 설정한 `.env`가 있는 폴더에서는 이 명령이 그 값을 지우지 않도록, `.env`가 없을 때만 복사합니다.
+
 ```bash
-cp .env.example .env
+[ -f .env ] || cp .env.example .env
 docker compose pull
 docker compose config --images | sort -u > images.txt
 docker tag "$(grep '^nginx@' images.txt)" agent-os-proxy:local
