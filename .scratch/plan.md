@@ -60,15 +60,15 @@ web/                       슬라이스 3부터. pnpm 워크스페이스. 파이
 | 8 | [answer-eval](answer-eval/plan.md) | 고정 질문으로 에이전트를 돌려 검색 적중과 출처 적중을 재고 평가 보고서를 낸다. | base-agent, rag-engine:release-image | todo |
 | 8 | [answer-markdown](answer-markdown/plan.md) | 모델이 지은 답을 마크다운으로 그리는 공유 부품을 만들어 위젯에 적용해, 제목·목록·표·링크가 든 답이 기호 없이 읽히게 한다. | 없음 | done |
 | 8 | [base-agent](base-agent/plan.md) | 기본 에이전트 assistant와 문서 검색 스킬·연결·규칙을 함께 내, 요구가 없으면 그대로 쓰고 요구가 있으면 복사해 커스텀 에이전트를 만들게 한다. | mcp-http, approval-rules | in-progress |
-| 8 | [public-demo](public-demo/plan.md) | 공개 정부 문서를 넣은 클라우드 VM 한 대를 공개 주소에 열어, 누구나 로그인 없이 묻고 출처가 붙은 답을 받게 한다. | base-agent, release-image, answer-eval, answer-markdown, rag-engine:release-image, rag-engine:search-eval | todo |
+| 8 | [public-demo](public-demo/plan.md) | 공개 정부 문서를 넣은 클라우드 VM 한 대를 실제 운영할 배포와 따로 공개 주소에 열어, 누구나 공개 계정으로 로그인해 제품을 써 보고 출처가 붙은 답을 받게 한다. | base-agent, release-image, answer-eval, answer-markdown, rag-engine:release-image, rag-engine:search-eval, admin-login, portal-admin | todo |
 | 8 | [release-image](release-image/plan.md) | 판마다 서버와 관리 화면과 위젯과 위젯 미리보기 페이지의 컨테이너 이미지를 짓고 올리며 단독 배포 안내도 낸다. | pilot-portal | in-progress |
 | 9 | [admin-login](admin-login/plan.md) | 관리 화면에 운영자 계정 로그인과 대화 화면을 더하고, 관리 화면을 같은 서버의 다른 포트로 인터넷에 연다. | release-image, postgres-foundation | todo |
 | 9 | [deploy-package](deploy-package/plan.md) | agent-os와 문서 검색 서버를 Docker Compose로 한 번에 띄우는 참조 배포를 준다. | local-model, portal-login, portal-admin, base-agent, release-image, ops-backup-upgrade, diag-bundle, mcp-http, rag-engine:release-image, rag-engine:admin, rag-engine:backup-upgrade, rag-engine:diag-bundle | todo |
 | 9 | [diag-bundle](diag-bundle/plan.md) | 문제를 살필 때 판과 구성과 최근 실패 원인을 비밀 값 없이 파일 하나로 묶는 명령을 준다. | release-image, mcp-http | todo |
 | 9 | [ops-backup-upgrade](ops-backup-upgrade/plan.md) | agent-os 데이터를 백업하고 새 서버에 복원하며, 판을 올린 뒤에도 옛 트레이스를 읽게 한다. | release-image | todo |
 | 9 | [pilot-release](pilot-release/plan.md) | public-demo를 뺀 기준선의 기능이 모두 끝나면 제품 0.1 판을 내고 지원 범위와 고지를 문서로 남긴다. | answer-eval, deploy-package, answer-markdown, admin-login, step-up-login, portal-admin, widget-admin-server, widget-runtime-values, portal-login-admin | todo |
-| 9 | [portal-admin](portal-admin/plan.md) | 운영자가 위젯 관리 화면에 Agent OS의 운영자 계정으로 들어와 사이트마다의 위젯 설정과 위젯 미리보기 페이지 설정을 등록해, 파일을 열지 않고 위젯이 보일 것을 바꾼다. | widget-admin-server, admin-login, widget-login-state | todo |
-| 9 | [portal-login](portal-login/plan.md) | 위젯 미리보기 페이지에 사내 로그인 모드를 더해, 배포 환경에서는 사내 사람만 질문하게 한다. | pilot-portal, widget-login-state | todo |
+| 9 | [portal-admin](portal-admin/plan.md) | 운영자가 위젯 관리 화면에 Agent OS의 운영자 계정으로 들어와 사이트마다의 위젯 설정과 위젯 테스트 페이지 설정을 등록해, 파일을 열지 않고 위젯이 보일 것을 바꾼다. | widget-admin-server, admin-login, widget-login-state | todo |
+| 9 | [portal-login](portal-login/plan.md) | 위젯 테스트 페이지에 사내 로그인 모드를 더해, 배포 환경에서는 사내 사람만 질문하게 한다. | pilot-portal, widget-login-state | todo |
 | 9 | [portal-login-admin](portal-login-admin/plan.md) | 회사 로그인 서버 항목과 사이트가 쓰는 항목을 위젯 관리 화면에서 고쳐, 설정 파일을 열지 않고 사이트의 로그인을 바꾼다. | portal-login, portal-admin | todo |
 | 9 | [postgres-foundation](postgres-foundation/plan.md) | agent-os 배포에 PostgreSQL을 들이고, 서버와 테스트와 CI가 그 데이터베이스에 닿는 길을 세운다. | release-image | todo |
 | 9 | [step-up-login](step-up-login/plan.md) | 익명으로 질문하다가 로그인한 사람만 쓰는 도구에 닿으면 로그인을 안내하고, 로그인한 뒤 같은 대화에 이어 답한다. | portal-login | todo |

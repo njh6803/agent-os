@@ -37,3 +37,8 @@
 | 2026-11-16 | widget-login-state 예시 질문, 문의 링크, 스위치를 숨긴 위젯 | 늘 쓰는 기본 글꼴 대신 이 브리프에 맞춰 고른 서체를 쓴다 | 모든 테마가 Noto Sans KR과 Noto Sans Mono를 쓴다(ADR 0026 이력 2026-10-12 "테마는 넷이고 색만 바꾸며, 글꼴은 모든 테마가 Noto Sans KR과 Noto Sans Mono를 쓴다") |
 | 2026-11-16 | widget-login-state 예시 질문을 누른 뒤 | 사람의 동작에 답하는 움직임(누른 질문이 대화로 옮겨 가는 것)은 무엇이 바뀌었는지 보여 주니 쓴다 | 움직임은 디자인 시스템의 도는 표시 하나이고 움직임 줄이기에서 멈춘다(`.claude/rules/web-design.md` 28행, `.scratch/widget-login-state/design/settings-additions-prompt.md` "2. 완성 화면"의 시각 방향) |
 | 2026-11-16 | widget-login-state 예시 질문, 문의 링크, 스위치를 숨긴 위젯 | 그리면서 화면을 찍어 보고 고친다 | 찍어 보거나 렌더해 확인하는 일은 사람이 청할 때만 한다(`.claude/skills/ui-design/SKILL.md` 23행, Design 형식 지침) |
+| 2026-11-16 | portal-admin 모든 화면 | 브리프에 맞춰 기본 팔레트를 이름 붙인 hex 4~6개로 새로 짓는다 | 색은 쓰임새 토큰만 쓰고 값은 디자인 토큰 CSS 한 자리에 있다(`.claude/rules/web-design.md` 9행과 23행) |
+| 2026-11-16 | portal-admin 모든 화면 | 늘 쓰는 기본 글꼴 대신 이 브리프에 맞춰 고른 서체를 쓴다 | 모든 테마가 Noto Sans KR과 Noto Sans Mono를 쓴다(ADR 0026 이력 2026-10-12 "테마는 넷이고 색만 바꾸며, 글꼴은 모든 테마가 Noto Sans KR과 Noto Sans Mono를 쓴다") |
+| 2026-11-16 | portal-admin 사이트 목록, 사이트 하나, 계정 메뉴, 운영자로 들어온 뒤 | 작은 데이터 라벨에 고정폭을 쓰는 것은 생성물의 흔한 표지이니 고른 뒤에만 쓴다 | 사이트 이름, 에이전트 이름, 발급자, 주소, 계정 이름, 시각은 고정폭이고(`.scratch/portal-admin/design/screens-prompt.md` 54행) 도구 이름과 인자는 글자 그대로 고정폭이다(`.claude/rules/web-design.md` 50행) |
+| 2026-11-16 | portal-admin 모든 화면 | 한 곳에 대담하게 힘을 주고 이 브리프만의 겉모습을 짓는다 | 위젯 관리 화면은 디자인 시스템 패키지의 부품을 쓴다(ADR 0064 결정 "위젯 관리 화면"). 틀과 겉모습은 확정한 관리 화면과 같다(`.scratch/portal-admin/design/screens-prompt.md` 9행) |
+| 2026-11-16 | portal-admin 모든 화면 | 그리면서 화면을 찍어 보고 고친다 | 찍어 보거나 렌더해 확인하는 일은 사람이 청할 때만 한다(`.claude/skills/ui-design/SKILL.md` 23행, Design 형식 지침) |
