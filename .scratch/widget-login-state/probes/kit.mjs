@@ -5,11 +5,14 @@
 //                 맞춘다. hosts 파일은 건드리지 않고, 그 밖의 이름(브라우저가 스스로 여는 연결)은 바깥으로 잇지 않는다
 //   listen        서버를 127.0.0.1 의 빈 포트에 띄우고 그 포트를 돌려준다
 //   differences   두 값이 다른 자리를 경로와 함께 낸다. expected.json 과 견줄 때 쓴다
+//   writeExpected --update 가 expected.json 을 쓸 때 부른다. 표지가 모두 선 엔진의 결과만 쓰고, 표지가 하나라도 빠진
+//                 엔진의 결과는 쓰지 않아 앞서 적힌 값이 남는다. 표지 없는 회차는 측정이 아니어서다. 표지의 이름이
+//                 "<엔진>: " 으로 시작한다는 것에 기댄다(두 프로브의 mark 가 그렇게 짓는다)
 //
 // 쓰는 프로브: logout_fetch/probe.mjs, opener_message/probe.mjs
 
 import { spawnSync } from "node:child_process";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import http from "node:http";
 import { connect } from "node:net";
 import { join } from "node:path";
@@ -82,4 +85,19 @@ export function differences(left, right, path = "") {
   if (!bothObjects) return [`${path || "(뿌리)"}: ${JSON.stringify(left)} != ${JSON.stringify(right)}`];
   const keys = new Set([...Object.keys(left), ...Object.keys(right)]);
   return [...keys].flatMap((key) => differences(left[key], right[key], path === "" ? key : `${path}.${key}`));
+}
+
+export function writeExpected(path, previous, versions, facts, markers) {
+  const engines = Object.keys(facts);
+  const skipped = engines.filter((name) => markers.some((marker) => !marker.ok && marker.name.startsWith(`${name}: `)));
+  const written = engines.filter((name) => !skipped.includes(name));
+  if (written.length > 0) {
+    const only = (record) => Object.fromEntries(written.map((name) => [name, record[name]]));
+    const next = {
+      versions: { ...previous.versions, ...only(versions) },
+      facts: { ...previous.facts, ...only(facts) },
+    };
+    writeFileSync(path, `${JSON.stringify(next, null, 2)}\n`);
+  }
+  return { written, skipped };
 }

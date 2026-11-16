@@ -302,3 +302,135 @@ Major 가운데 둘(V1, A4)은 글을 고쳐서는 닫히지 않아 프로브를
 고르지 않은 선택지는 "위젯 설정의 처음 밝기에 맞추기"(페이지가 위젯 설정을 한 번 더 받아 와 바탕을 처음 밝기에 맞춘다)였다.
 
 답을 받은 뒤 고친 것이다. 명세 서두의 "사용자가 고른 것"을 열둘에서 열여섯으로 고치고 네 절(주소의 검사, 새 창 로그인과 돌아온 신호, 만료 알림과 되돌려 놓는 질문, 위젯 미리보기 페이지)에 사용자가 고른 것과 고르지 않은 안을 적었다. ADR 0061 이력의 셋째 문단에는 바탕을 사용자가 골랐다는 한 문장을 더했다. 승인받은 초안의 다른 글자는 고치지 않았다.
+
+## 커밋
+
+커밋 전에 `git branch --show-current`(이 브랜치), `git fetch origin dev`, `uv run python tools/sibling_overlap.py`를 쳤다. 번호 겹침은 없었고, 함께 고친 파일로 열린 PR #590(`portal-admin-screens`)의 셋(`.scratch/portal-login/plan.md`, ADR 0059, ADR 0064)이 나왔다. 나중에 병합하는 쪽이 글자 충돌을 푼다. `origin/dev`는 `aa215fa`이고 `git diff --name-only HEAD...origin/dev`의 열 파일에 이 브랜치가 이름으로 든 파일이 없었다. pre-commit에서 `Skipped`로 나올 ruff 둘은 손으로 쳤다(`uv run ruff check .`는 "All checks passed!", `uv run ruff format --check .`는 "2368 files already formatted").
+
+커밋 `db82ac3b5`(`docs: 위젯의 로그인 상태와 고지와 URL 방식의 명세를 쓴다 (widget-login-state)`)다. pre-commit의 검사는 모두 통과했고 `parallel-checks`가 1229초 걸렸다(pytest 928초, web-verify 1229초. 다른 워크트리의 세션들이 함께 돌았다). `Skipped`는 ruff 둘(위에서 손으로 쳤다), canary specs, constitution version(둘 다 해당 파일이 없다)이다. 인용 대조는 경고 열하나를 냈고 막지 않았다. 그 가운데 둘은 인용이 아니라 내 문장에 따옴표를 친 것이라 커밋 뒤에 따옴표를 뗐다(명세 "공개 표면에서 바뀌는 것"의 `agent` 문장, `logout_fetch/README.md`의 첫 판 표지). 나머지 아홉은 이 일지가 리뷰 보고와 선택지를 줄여 옮긴 글이라 그대로 둔다. 따옴표를 뗀 두 파일과 이 절부터의 일지는 커밋하지 않았고 다음 커밋에 싣는다.
+
+## 둘째 인계
+
+커밋이 끝난 자리에서 인계 계기(`hook_handoff`, 경계 `커밋 뒤`, 세션 컨텍스트 324,560 토큰)가 왔다. `next-session`의 `handoff.md`를 Read로 열어 따랐다. 인계하지 않는 때 다섯에 들지 않았다(커밋은 성공했고, 요청 범위는 병합까지이며, 이 세션의 지시문의 "이어받을 상태"는 `인계: 셀프 리뷰 직전`이라 경계가 다르고, `인계 못함` 줄이 없고, `get_session`의 `self`에 `parentSessionId`가 없다).
+
+이 세션의 제목은 `docs/widget-login-state-spec-2`였다.
+
+넘기는 때의 상태다.
+
+- 커밋 하나(`db82ac3b5`)가 있고 푸시하지 않았다. 열린 PR이 없다.
+- 커밋하지 않은 변경은 셋이다. 이 일지(위 "커밋" 절부터), 명세의 따옴표 한 곳, `logout_fetch/README.md`의 따옴표 한 곳이다.
+- 사용자에게 받은 답은 "사용자에게 물은 것"의 둘과 "ADR 이력 승인"의 넷이다. ADR 0059·0061·0064의 이력 넷은 승인받았다.
+- 남은 차례는 PR 직전 리뷰와 그 반영, 푸시, PR 열기, PR 봇 회차, 병합, 회고, 일지 "다음"이다. 반영으로 명세 본문을 고치면 서두의 수를 다시 세고, 승인받은 이력의 글을 고치게 되면 사용자에게 다시 보인다.
+- 일지 "다음"에 적을 것이다. portal-admin의 명세 세션 몫으로, 이 명세의 Out of Scope가 portal-admin에 넘긴 다섯을 그 기능 계획에 적는 일과 모양 값 셋(로그인 전의 모양, 고지 전문을 보이는 법, 예시 질문의 모양)을 위젯 설정에 등록할지 사용자에게 묻는 일이다. PR #590이 병합되기 전에는 `.scratch/portal-admin/`의 파일을 고치지 않는다.
+- 끝 보고에서 사용자에게 알릴 것은 셋이다. 앞 화면 작업의 아티팩트가 이 계정에서 열리지 않아 앞 절의 화면 스물넷은 웹 편집 확인을 하지 못했다는 것, Firefox와 WebKit은 두 프로브가 재지 못했고 재려면 내려받기 승인이 필요하다는 것, 앞 세션의 `tidy-checkouts`가 쉬는 세션 둘의 프로세스를 끝냈고 휴지통에 `web/node_modules` 아홉이 남았다는 것이다.
+
+낸 지시문이다.
+
+```
+다음 작업: 기능 widget-login-state. 명세와 프로브 둘과 ADR 이력 넷을 커밋했고 푸시 전이다. PR 직전 리뷰부터 이어 PR과 병합까지 마친다
+다음 단계: 명세
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /to-spec widget-login-state
+브랜치: docs/widget-login-state-spec-2
+모델: Fable 5.2 / xhigh. 2의 잇는 지시문(명세). 모델 메뉴의 이름은 이 세션을 연 지시문의 값과 이 세션이 도는 모델(claude-fable-5-2)을 따랐다
+읽을 것: 일지 docs/journal/2026-11-16-1242-widget-login-state-spec-2.md 전체(끝의 "둘째 인계" 절이 남은 차례다). 이어 .claude/skills/to-spec/SKILL.md의 명세를 쓴 뒤의 차례
+이어받을 상태: 인계: 커밋 뒤. 셀프 리뷰 반영, 명세 서두의 수 세기, ADR 0059·0061·0064 이력 넷의 사용자 승인, 커밋 하나까지 했고 푸시하지 않았다. 일지는 docs/journal/2026-11-16-1242-widget-login-state-spec-2.md다. 명세를 새로 쓰지 않고 셀프 리뷰도 다시 돌지 않는다. 남은 차례는 PR 직전 리뷰와 그 반영(반영으로 명세 본문을 고치면 서두의 수를 다시 센다. ADR 이력의 승인받은 글을 고치게 되면 사용자에게 다시 보인다), 푸시, PR 열기, PR 봇 회차, 병합, 회고, 일지 "다음"이다. 워크트리에 커밋하지 않은 변경 셋(일지의 "커밋" 절부터, 명세의 따옴표 한 곳, logout_fetch/README.md의 따옴표 한 곳)이 있어 다음 커밋에 싣는다. 열린 PR #590(portal-admin-screens)이 .scratch/portal-login/plan.md와 ADR 0059와 ADR 0064를 함께 고쳐, 나중에 병합하는 쪽이 글자 충돌을 푼다. 끝 보고에서 사용자에게 알릴 것 셋(아티팩트 미확인, Firefox·WebKit 미측정과 내려받기 승인 필요, tidy-checkouts가 끝낸 프로세스와 휴지통)은 일지 "둘째 인계" 절의 목록 마지막 항목에 적혀 있다
+확인할 선행 조건: PR #590(docs/portal-admin-screens)이 병합됐는지 보지 못했다. 그 일이 병합되기 전에는 .scratch/portal-admin/의 파일을 고치지 않고, 명세의 Out of Scope가 portal-admin에 넘긴 다섯과 모양 값 셋의 등록 여부를 묻는 일을 일지 "다음"에 그 명세 세션 몫으로 적는다. 병합은 이 워크트리 사본의 next-session merge.md의 "워크트리에서 병합할 때"를 Read로 열어 따른다
+이번 요청 범위: PR과 병합까지
+```
+
+제목을 `docs/widget-login-state-spec-2 (인계함)`으로 바꿨고, 띄운 백그라운드 작업은 모두 끝나 있었으며, `git worktree unlock`은 이미 풀려 있다는 오류(`is not locked`)로 끝나 넘어갔다.
+
+open-session을 부른다 2026-11-16T06:19Z
+
+그 줄을 적은 직후 자동 압축이 와서 스킬은 압축 뒤에 불렀다. 첫 호출은 딥링크의 URL이 8140자(상한 8000)라 `tools/open_session.ps1`이 쏘기 전에 거부했고 세션은 생기지 않았다. 위 지시문의 "이어받을 상태"에서 끝 보고의 세 문장을 이 절의 목록 마지막 항목을 가리키는 한 문장으로 줄였고(위 블록은 줄인 뒤의 글이다), 같은 프롬프트 파일로 다시 돌린다.
+
+open-session을 부른다 2026-11-16T06:24Z
+
+## 둘째로 이어받은 세션
+
+위 "둘째 인계"가 낸 지시문으로 연 새 세션이 같은 일지를 잇는다. 세션 제목 `docs/widget-login-state-spec-2`, 모델 Fable 5.2. 지시문은 위 "둘째 인계"의 "낸 지시문이다" 블록과 글자 그대로 같고, 그 앞에 `open-session`이 스킬 명령을 스킬 파일을 읽으라는 한 줄로 옮겨 붙였다(이 일지 "사용자 프롬프트"의 첫 줄과 같은 꼴이다).
+
+- 작업 폴더가 `C:\project\agent`인 것을 보고 제목을 브랜치 이름으로 바꿨다. `git worktree list`에서 이 브랜치의 자리를 찾아 `EnterWorktree`(path)로 들어왔다. 커밋은 `db82ac3b5` 하나였고 커밋하지 않은 변경은 "둘째 인계"가 적은 셋 그대로였다.
+- `ListAgents`에서 앞 세션(`docs/widget-login-state-spec-2 (인계함)`)이 처음에는 busy였고 몇 분 뒤 idle이 됐다. widget-login-state의 명세를 맡은 다른 세션은 없었다. `gh pr view 590`은 `OPEN`이었고 `docs/portal-admin-screens` 세션이 돌고 있어, `.scratch/portal-admin/`의 파일은 고치지 않는다.
+- `git fetch origin dev` 뒤 `origin/dev`는 `716e51d25`였다(앞 세션이 본 `aa215fa3b`에서 한 커밋 앞, PR #589). `git diff --name-only HEAD...origin/dev`의 열세 파일은 `.github/workflows/claude-code-review.yml`, release-image의 티켓 둘과 프로브, `deploy/images/`의 둘, 루트 `README.md`, 대기열 항목 하나, 일지 둘이고, 이 브랜치가 고친 파일이 없었다.
+- `uv run python tools/sibling_overlap.py`는 번호 겹침 없이 끝났고, 함께 고친 파일로 PR #590의 셋(`.scratch/portal-login/plan.md`, ADR 0059, ADR 0064)을 냈다. 나중에 병합하는 쪽이 글자 충돌을 푼다.
+- `git merge origin/dev --no-edit`로 기준 브랜치를 합쳤다(병합 커밋 `1747032ef`, 충돌 없음). 합친 까닭은 둘이다. PR #589가 `claude-code-review.yml`을 고쳤고, claude-review는 그 파일이 기본 브랜치의 것과 다르면 리뷰를 건너뛰면서 초록이 된다(`docs/constitution/operations.md` 리뷰 파이프라인). 그리고 PR 직전 리뷰가 보는 범위를 `origin/dev`와의 차이인 이 브랜치의 열다섯 파일로 맞추기 위해서다.
+
+## PR 직전 리뷰
+
+기준 브랜치를 합친 뒤 서브에이전트 둘을 나란히 띄웠다. `coderabbit-review`가 CLI 축(보안·버그·성능)을 보고, `bug-perf-review`는 셀프 리뷰를 반영하며 새로 쓴 사실 문장(밀 주장)만 근거와 대 보게 했다. CLI가 도는 PR에는 밀 주장을 넘기는 인자가 없어 따로 띄운 것이다(대기열 `cli-review-claims-path`). 두 브리프 모두 프로브를 돌리지 말라고 적었다. 아래 두 절은 서브에이전트의 보고를 줄여 옮긴 것이고, 본 세션이 다시 본 것은 "반영" 절에 따로 적는다.
+
+### CLI 축의 보고 (`coderabbit-review`)
+
+`coderabbit review --agent --base origin/dev --include-untracked`가 종료 코드 0과 `review_completed`로 끝났다(파일 15개, CLI 0.7.5, `Seat: not assigned`, `Plan: Free`). 끝까지 돌았으므로 CLI 축이 돌았고 대체 둘(`/security-review`, `bug-perf-review`의 버그·성능 몫)은 돌리지 않았다. CLI의 지적은 다섯이고 서브에이전트가 모두 유효로 갈랐다. 서브에이전트가 명세와 프로브를 직접 읽어 더한 것이 일곱이다. 오탐은 0건이라고 했다.
+
+CLI의 지적이다.
+
+1. Major, 명세 "로그아웃"의 "판정". 새 답이 로그인한 사람의 토큰이 아니면 모두 로그아웃된 것으로 본다. 그 밖의 답에는 `expired`, `denied`, `notice-required`와 토큰을 받지 못한 때가 든다. 로그아웃되지 않았는데 토큰 물음만 실패해도 로그아웃된 것처럼 그리고 글을 지운다.
+2. Major, 명세 "묻는 때가 겹칠 때와 401". 401 뒤에 새로 받은 토큰의 주체가 앞의 것과 달라도 같은 요청을 그대로 다시 보낸다. 주체를 견주어 비우는 규칙이 다시 보내는 길에 이어져 있지 않다.
+3. Major, 명세 "주체가 바뀌면 입력창도 비운다"와 "열린 응답 스트림은 토큰이 끝나도 끊지 않는다". 주체가 바뀌거나 `signed-out`을 받아 대화를 비울 때 열린 스트림을 끊는다는 말이 없어, 앞 사람의 실행이 낸 늦은 이벤트가 비운 화면을 다시 채울 수 있다.
+4. Minor, 두 프로브의 `--update`. 표지가 빠졌거나 측정 아님 칸이 있는 회차에도 `expected.json`을 덮어쓴다(`opener_message/probe.mjs` 420~423행, `logout_fetch/probe.mjs` 609~611행).
+5. Minor, `logout_fetch/probe.mjs` 333~335행. 요청이 끝점에 닿지 않은 칸을 `fetch`의 거절과 앞 칸이 닿았다는 것만으로 측정으로 센다. 거절의 까닭이 그 조합(`no-cors`와 `manual`)인지 일시적인 연결 오류인지를 가르는 표지가 없다.
+
+서브에이전트가 직접 읽어 더한 것이다.
+
+6. Major, 명세 "위젯 설정을 받아 오기"와 Out of Scope의 widget-admin-server에 바라는 것. 페이지 안 방식의 위젯은 사이트의 페이지에서 돌므로 위젯 설정을 받는 요청이 다른 출처로 나간다. 응답의 CORS 머리와 사이트 CSP의 `connect-src`가 명세에 없다.
+7. Minor, 명세 "토큰 답의 꼴"과 "로그인 상태의 화면". 거절 알림은 다음 답이 `denied`가 아니면 사라지는데, 사이트는 거절을 한 번만 답하고 위젯은 돌아온 신호와 위젯 안을 누른 때에 다시 묻는다. 사람이 읽기 전에 알림이 사라질 수 있다.
+8. Minor, 명세 "돌아온 신호". 신호마다 토큰을 새로 묻는데 간격의 제한이 없고, 위젯이 사라질 때 1초마다 보는 일과 이벤트 리스너를 치운다는 말이 없다.
+9. Minor, 명세 "URL 방식". 위젯이 자기를 연 창에 물음을 보낼 때의 대상 출처가 정해져 있지 않다.
+10. Minor, 명세 "임베드 속성 `site`". 값을 URL 인코딩만 해서 경로에 넣으면 `.`과 `..`이 경로 이동으로 풀린다.
+11. Minor, 명세 "토큰을 다시 쓰는 규칙"의 "읽지 못하는 토큰". `iss`와 `sub`를 읽지 못하는 토큰의 주체를 앞의 것과 같다고 볼지 다르다고 볼지가 비어 있다.
+12. Minor, 명세 "열지 못했을 때"의 두 링크. `rel`이 정해져 있지 않다(문의 링크에는 `rel="noopener"`를 적었다).
+
+프로브를 직접 읽은 결과로는 끝나지 않는 프로세스나 서버가 없고 포트는 `listen(0)`으로 받아 겹치지 않는다고 했다. `openssl`이 PATH에 있어야 하고 `import.meta.dirname` 때문에 Node 20.11 이상이어야 한다는 전제를 README에 적는 편이 좋다고 했다(Minor, 보류).
+
+### 밀 주장 검증의 보고 (`bug-perf-review`)
+
+기준 `716e51d`, 범위 15파일이다. 보고는 마지막 호출 수를 33으로 적었는데 작업 알림의 도구 사용 수는 59였다. 지적은 Minor 하나다.
+
+- Minor, 명세 "만료 알림과 되돌려 놓는 질문". "그림은 둘째 문장을 늘 그렸다"가 그림과 다르다. 둘째 문장 "적어 둔 질문은 입력창에 남아 있습니다."는 카드와 덮는 상자 그림에만 있고 띠 그림(`ch-expiry-3`, `mk-08`의 띠)에는 없다. 같은 띠 그림의 제목은 "로그인 시간이 끝났습니다."로 마침표가 있는데 명세는 마침표 없이 적었다.
+
+맞다고 본 것은 아홉 묶음이다. 로그아웃 프로브의 수와 칸(본 갈래 105칸, 덤 갈래 126칸, `Sec-Fetch-Site`가 `cross-site`인 세 자리의 `Lax`·`Strict`만 통하지 않은 것, 고른 부르는 법의 칸 어디에서도 다음 주소를 부르지 않은 것), URL 방식 프로브의 33칸, e2e의 주소 이름, "코드를 읽었다"는 문장 다섯 자리, 화면 문구(위 지적만 예외), 서두의 수(넘겨받은 것 스물, 사용자가 고른 것 열여섯, "명세가 정했다" 괄호를 단 절 제목 스물셋과 그 가운데 한 절이 항목 둘이어서 스물넷, 포인터 아홉이 여덟 자리, 이력 넷), 받는 쪽 기능 계획의 `Blocked by`와 넘긴 문단, ADR 이력 넷의 사실 문장, 모양 값의 갈래다. 확인하지 못했다고 한 것은 `useConversation.ts`의 `restoreSaved` 안에서 토큰을 묻는지와, 범위 밖이라 보지 않은 그림의 나머지 문구다.
+
+### 반영
+
+본 세션이 지적 열셋을 근거와 대 보고 열둘을 고쳤고 하나를 남겼다. 고친 것은 모두 명세가 스스로 정한 절 안의 세부이고, 승인받은 ADR 이력 넷의 글은 고치지 않았다. 번호는 위 두 보고의 것이다.
+
+명세(`.scratch/widget-login-state/spec.md`)에서 고친 것이다.
+
+1. 로그아웃의 "판정"을 셋으로 갈랐다. 답이 로그인한 사람의 것이면(로그인한 사람의 토큰, 또는 `signedIn`이나 `name`을 실은 `notice-required`) "로그아웃하지 못했습니다."다. 로그인한 사람의 것이 아니면(`signed-out`, 로그인한 사람의 것이 아닌 토큰, `expired`, `denied`, `signedIn`과 `name`이 없는 `notice-required`) 로그아웃된 것이고 대화와 입력창의 글을 비운 뒤 답대로 그린다. 답을 받지 못했으면 판정하지 않고 다음 물음이 답을 받은 때에 같은 판정을 한다. 처음에는 이때의 `expired`를 `signed-out`과 같은 화면으로 그린다고 적었다가 고쳤다. `anonymous: true`인 `expired`에서 "로그인 없이 계속"이 사라지고, 뒤의 물음이 같은 답을 다시 받으면 화면이 만료 알림으로 바뀌기 때문이다. 지금 문장은 "대화가 없는 채 뜬 위젯이 그 답을 받은 때와 같다"다. 절 제목의 괄호를 "부르는 법과 판정은 명세가 정했다"로, 서두의 목록을 "로그아웃을 부르는 법과 판정"으로 맞췄다. 근거는 같은 명세의 "토큰 답의 꼴"(여섯 꼴)과 사용자 이야기 12·13이고, 새로 쓴 사실 문장은 없다.
+2. "묻는 때가 겹칠 때와 401"에 줄을 더했다. 401 뒤에 새로 받은 토큰의 주체가 버린 토큰의 주체와 다르면 같은 요청을 그대로 다시 보내지 않고, 질문이면 앞 대화를 비운 새 대화의 첫 질문으로 보내며, 승인 결정이나 실행에 다시 붙는 요청이면 보내지 않고 대화를 비운다. 새 사실 문장은 "지금 위젯이 요청을 보내기 전에 받은 토큰의 주체가 바뀐 것을 안 때와 같게 한다"이고 근거는 코드 읽기다. `web/apps/widget/components/pages/drivers.ts`의 `run()`이 받은 토큰의 묶음이 바뀌면 `switched`를 내보내고 이어 갈 대화의 자리를 비운 뒤 그 질문을 시작으로 보내고, 승인 결정(`sendDecision`)과 다시 붙기(`subscribeRun`)는 바뀌었으면 `session.forget()` 뒤 보내지 않는다.
+3. 같은 절의 "열린 응답 스트림은 토큰이 끝나도 끊지 않는다" 뒤에 끊는 때를 더했다. 주체가 바뀌었거나 `signed-out`을 받았거나 로그아웃된 것으로 판정해 대화를 비울 때 열린 응답 스트림과 답을 기다리던 요청을 먼저 끊고, 끊긴 뒤에 온 이벤트는 그리지 않는다. 새 사실 문장은 끊는 길이 지금 위젯이 새 대화와 주체가 바뀐 때에 쓰는 길이라는 문장이고 근거는 코드 읽기다(`useConversation.ts`의 `reset`이 `open.current?.abort()`로 열린 일을 끊고 대화를 비우며, 주체가 바뀐 때에 `drivers.ts`가 부르는 `Session.forget`이 그 `reset`이다. 같은 파일의 `begin`이 지은 길은 끊긴 뒤에 온 것을 화면에 넣지 않는다).
+6. "위젯 설정을 받아 오기"에 문장을 더했다. 페이지 안 방식에서는 이 요청이 다른 출처 요청이고, 답을 읽게 여는 응답 머리는 widget-admin-server의 명세가 짓는다. 지적의 절반은 이미 맡긴 일이었다. ADR 0064 Consequences "명세가 짓는 것"과 그 기능 계획 13행("다른 출처의 페이지에서도 읽을 수 있게 연다")이 그 머리를 그 명세의 몫으로 적어 두었으므로 "바라는 것 넷"은 늘리지 않았다. `connect-src`는 `EMBED.md` "사이트의 CSP"가 최종 사용자 경로 때문에 이미 위젯 출처를 적는 자리다(162행을 읽었다). e2e가 재는 것에 "`site`를 적은 위젯이 CSP를 건 사이트의 페이지에서 위젯 설정을 받아 온다"를 더해 "더한 하나"가 "더한 둘"이 됐고, "고칠 문서"의 `EMBED.md` 항목에도 그 자리를 적었다.
+7. 거절 알림의 수명을 바꿨다. 사람이 로그인 단추를 누르거나 질문을 보내거나 "새 대화"를 누른 때와 로그인한 사람의 토큰을 받은 때에 사라지고, 돌아온 신호와 위젯 안을 누른 것으로 한 물음의 답으로는 지우지 않는다. 사이트가 거절을 한 번만 답한다는 같은 명세의 문장("토큰 답의 꼴")이 근거다.
+8. "돌아온 신호"에 간격 제한을 두지 않는다는 것과 까닭(로그인 창에서 곧바로 돌아온 사람의 물음을 늦추지 않는다), 대가(창을 오갈 때마다 서명이 한 번 는다), 1초마다 보는 일과 신호를 듣는 일을 그치는 때를 적었다.
+9. "URL 방식"에 "묻는 메시지의 대상 출처"를 더했다. iframe 방식처럼 `"*"`로 보낸다. 새 사실 문장은 "지금 iframe 방식이 같은 까닭으로 그렇게 보낸다"이고 근거는 코드 읽기다(`web/apps/widget/lib/token.ts`의 머리 주석. 물음에는 `type`과 `id`와 까닭뿐이고 답은 허용 출처의 것만 받는다).
+10. "임베드 속성 `site`"에 예외 하나를 더했다. 값이 `.`이나 `..`이면 요청을 보내지 않고 등록되지 않은 사이트의 답을 받은 것과 같게 다룬다. 근거는 손으로 본 것이다. `node -e "console.log(JSON.stringify([encodeURIComponent('..'), encodeURIComponent('.'), new URL('https://widget.example/settings/../x').pathname, new URL('https://widget.example/settings/.').pathname]))"`가 `["..",".","/x","/settings/"]`를 냈다(Node v24.19.0). 브라우저의 `URL`로는 재지 않았다. 받는 쪽 기능 계획(`.scratch/widget-admin-server/plan.md` 18행)의 "위젯은 이름의 꼴을 스스로 검사하지 않고" 문장에도 이 예외를 괄호로 적었다. `uv run python tools/plan_table.py`를 돌렸고 `.scratch/plan.md`는 바뀌지 않았다.
+11. "읽지 못하는 토큰"에 `iss`나 `sub`를 읽지 못하는 토큰은 지금처럼 토큰을 받지 못한 것으로 친다고 적었다. 근거는 코드 읽기다(`drivers.ts`의 `authorize`가 `bundleOf(token)`이 `null`이면 `no-token`으로 돌려준다).
+12. "로그인 페이지 열기"와 "로그아웃 페이지 열기" 링크를 연 창과의 연결을 끊어 연다고 적었다(`rel="noopener"`).
+- 밀 주장의 Minor. "그림은 둘째 문장을 늘 그렸다"를 "카드와 덮는 상자의 그림은 둘째 문장을 늘 그렸다"로 고치고, 띠 모양은 그림대로 제목에 마침표를 붙이며 둘째 문장을 보이지 않는다고 적었다. 근거는 그림 파일을 읽은 것이다(`design/ch-expiry-3.dc.html` 50·52행과 `design/mk-08-expiry.dc.html` 197·199행의 띠에 제목 "로그인 시간이 끝났습니다."와 "이어 갑니다" 문장만 있고, `design/screens-prompt.md` 88행이 띠의 본문을 그 한 문장으로 줄인다고 적는다).
+
+"높이마다 보는 것"의 위젯 전체(jsdom) 칸에 위 1, 2, 3, 7의 사례를 더했다.
+
+프로브에서 고친 것이다.
+
+4. `kit.mjs`에 `writeExpected`를 더하고 두 프로브의 `--update`가 그것을 부르게 했다. 표지가 하나라도 빠진 엔진의 결과는 `expected.json`에 쓰지 않는다. 확인은 `opener_message`로 했다. 그냥 돌린 회차는 "expected.json 과 모두 같다"로 끝났다. `--update`로 돌린 회차는 `expected.json 에 표지가 모두 선 엔진의 결과를 썼다: chromium`을 찍었고 `git status`에 `expected.json`이 나오지 않았다(쓴 내용이 커밋된 것과 같다). 양성 대조 표지의 조건 앞에 `false &&`를 넣은 변이를 `--update`로 돌린 회차는 `expected.json 에 쓴 것이 없다`와 `표지가 빠져 expected.json 에 쓰지 않은 엔진: chromium`을 찍고 1로 끝났으며, `stat -c "%Y %s"`가 돌리기 전과 같은 값(`1794812231 11420`)을 냈다. 고치기 전 판이라면 그 회차에도 파일을 썼다. 변이는 되돌렸다(손으로 봤다. 변이는 커밋하지 않았다).
+5. `logout_fetch/probe.mjs`가 "요청이 끝점에 닿지 않았다"를 측정으로 세는 조건을 좁혔다. 덤 갈래의 `manual` 칸이고, 다른 출처로 가는 `mode: "no-cors"`이며, `fetch`가 `TypeError`로 거절됐고, 같은 자리의 `follow` 칸이 끝점에 닿았을 때만 센다. 머리 주석과 README "결과를 본 뒤 바꾼 판정 기준"에 적었다.
+
+남긴 것은 하나다. 프로브 README에 Node의 최소 판(`import.meta.dirname`)을 적으라는 Minor는 반영하지 않았다. README "잰 판"이 돌린 판(Node v24.19.0)을, "다시 돌리기"가 `openssl`을 이미 적고, 최소 판은 재지 않아 적으면 어림이 된다.
+
+서두의 수를 다시 셌다. "명세가 정했다" 괄호를 단 절 제목은 그대로 스물셋이고(`^### ` 줄을 Grep으로 뽑아 셌다) 한 절이 항목 둘이어서 스물넷이다. 넘겨받은 것 스물, 사용자가 고른 것 열여섯, 이력 넷, 프로브 둘, 포인터 여덟 자리는 이번 반영이 건드리지 않았다.
+
+`logout_fetch`를 두 번 다시 돌려 5의 조건을 확인했다(각각 약 4분, 손으로 봤다. 변이는 커밋하지 않았다).
+
+- 변이 판. 조건의 `variant.mode === "no-cors"`를 `variant.mode === "cors"`로 바꿔 `node .scratch/widget-login-state/probes/logout_fetch/probe.mjs --engine chromium`을 돌렸다. `측정 아님` 줄이 열여덟이었고 모두 다른 출처로 가는 `noCorsMode manual` 칸이었다(`POST /logout 이 0번 닿았다(fetch {"settled":"rejected","name":"TypeError"})`). "표지가 빠진 칸이 없다" 표지가 서지 않았고(`측정 아님 18칸`) 1로 끝났다. 고치기 전 판은 부르는 법을 보지 않아 그 열여덟을 측정으로 셌으므로, 이 열여덟 줄은 좁힌 조건이 조합이 맞지 않는 닿지 않은 칸을 측정에서 빼는 때에만 난다. 이 회차에서 `mode: "cors"`인 `manual` 칸은 모두 끝점에 닿아, 바꾼 조건으로 "닿지 않았다"고 센 칸은 없었다.
+- 원래 판. 변이를 되돌리고 같은 명령을 돌렸다. `표지 있음` 여섯, `표지 없음`과 `측정 아님` 0, "expected.json 과 모두 같다", 종료 코드 0이었다. 출력에서 `끝점에 닿았다=아니오`인 줄은 열여덟이고 모두 `noCorsMode manual`이었다(`grep -c`로 셌다). `expected.json`의 `"sent": false`도 열여덟이다.
+
+프로브 색인(`probes/README.md`)의 `kit.mjs` 설명에 `--update`가 기대값 파일을 쓰는 법을 더했다. `uv run ruff check .`와 `uv run ruff format --check .`는 손으로 쳤고 둘 다 통과했다(`All checks passed!`, `2370 files already formatted`).
+
+### 반영 커밋
+
+- 첫 `git commit`은 pre-commit의 pytest에서 막혔다. `tests/channel/cli/test_interrupt.py`의 `test_서버를_닫기_시작한_뒤에_한_번_누르면_닫기를_마치고_중단으로_끝난다`가 `Ctrl+C 를 누른 자식이 30초 안에 끝나지 않았다`로 빨갰다(1 failed, 7731 passed). 이 브랜치는 그 시험과 CLI를 건드리지 않았다. 그 회차의 pytest는 1554초, web-verify는 1604초가 걸렸다(다른 워크트리의 세션들이 함께 돌고 있었다). 부하에서 흔들리는 시간 단언의 새 사례로 보고(대기열 306과 332, ADR 0036) 회차를 더하지 않고 여기에만 적으며, 커밋을 다시 친다. 나머지 검사(check-notes, check-ticket, lint-imports, zizmor, check-instructions, check-type-escapes, pyright, pyright-linux, run-hooks, web-verify, 마크다운 표, 줄 구분 문자, 변이 표)는 그 회차에 통과했다. 그 시험 파일만 홀로 돌린 `uv run pytest -q tests/channel/cli/test_interrupt.py`는 6 passed였고 385초가 걸렸다. 그때 CPU 사용률은 100%였고(`Get-CimInstance Win32_Processor`), 프로세스의 명령줄에서 다른 워크트리 셋(`review-pipeline-docs-name-bang-check`, `15-full-gate-ci`, `09-standalone-compose-runs-real-images`)의 `tools/run_checks.py`가 16:35, 16:37, 16:43에 시작해 돌고 있었다. 이 워크트리의 프로세스는 남아 있지 않았다. 넷이 함께 돌면 같은 단언에서 다시 막힐 수 있어, 그 러너들이 끝난 뒤에 커밋을 다시 친다.
+- 그 커밋 명령 뒤에 인계 계기(`커밋 뒤`, 세션 컨텍스트 278,181 토큰)가 왔다. 이 세션의 지시문의 "이어받을 상태"가 `인계: 커밋 뒤`로 시작하므로 `next-session/handoff.md`의 "인계하지 않는 때" 셋째에 들어 넘기지 않고 잇는다. 계기를 낸 커밋도 실패했으므로 첫째에도 든다.
+- 인용 대조의 경고 넷 가운데 이 세션이 쓴 셋(명세 문장을 작은따옴표로 바꿔 옮긴 하나, 프로브 출력 둘)은 따옴표를 떼거나 코드 표기로 바꿨다. 남은 하나(`2368 files already formatted`)는 앞 세션이 옮긴 도구 출력이다.

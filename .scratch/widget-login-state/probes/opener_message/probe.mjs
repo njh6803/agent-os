@@ -69,7 +69,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { parseArgs } from "node:util";
 
-import { createProxy, differences, listen, makeCert } from "../kit.mjs";
+import { createProxy, differences, listen, makeCert, writeExpected } from "../kit.mjs";
 
 const HERE = import.meta.dirname;
 const ROOT = join(HERE, "..", "..", "..", "..");
@@ -418,9 +418,13 @@ let expectedOk = true;
 if (failure === null) {
   const previous = existsSync(EXPECTED) ? JSON.parse(readFileSync(EXPECTED, "utf-8")) : { versions: {}, facts: {} };
   if (args.update) {
-    const next = { versions: { ...previous.versions, ...versions }, facts: { ...previous.facts, ...facts } };
-    writeFileSync(EXPECTED, `${JSON.stringify(next, null, 2)}\n`);
-    console.log("expected.json 에 이 회차의 결과를 썼다");
+    const { written, skipped } = writeExpected(EXPECTED, previous, versions, facts, markers);
+    console.log(
+      written.length > 0
+        ? `expected.json 에 표지가 모두 선 엔진의 결과를 썼다: ${written.join(", ")}`
+        : "expected.json 에 쓴 것이 없다",
+    );
+    if (skipped.length > 0) console.log(`표지가 빠져 expected.json 에 쓰지 않은 엔진: ${skipped.join(", ")}`);
   } else if (existsSync(EXPECTED)) {
     const drift = ENGINES.flatMap((name) => differences(previous.facts[name], facts[name], `facts.${name}`));
     expectedOk = drift.length === 0;

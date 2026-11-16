@@ -43,9 +43,10 @@
 //   일 때 각각 쿠키가 지워지는지와 다음 주소(/after)를 브라우저가 부르는지. 본 갈래와 같은 자리 일곱과 SameSite 셋에서
 //   부르는 법 셋(mode 와 끝점의 CORS 응답 머리의 짝: noCorsMode, corsModeNoHeaders, corsModeAllowed)을 redirect 두 값으로
 //   본다. 이 갈래의 칸은 sent(요청이 끝점에 닿았는가)도 적는다. 브라우저가 요청을 아예 보내지 않는 조합이 있어서다(첫
-//   실행에서 다른 출처로 가는 mode "no-cors" 와 redirect "manual" 이 그랬다). 닿지 않은 칸은 같은 자리와 SameSite 와
-//   부르는 법의 "follow" 칸이 끝점에 닿았고 fetch 가 거절로 끝났을 때만 측정으로 센다. 주소가 틀렸거나 서버가 죽어 닿지
-//   않은 것이라면 "follow" 칸도 닿지 않기 때문이다
+//   실행에서 다른 출처로 가는 mode "no-cors" 와 redirect "manual" 이 그랬다). 닿지 않은 칸은 그 조합(다른 출처, mode
+//   "no-cors", redirect "manual")이고, 같은 자리와 SameSite 와 부르는 법의 "follow" 칸이 끝점에 닿았고, fetch 가 TypeError 로
+//   거절됐을 때만 측정으로 센다. 주소가 틀렸거나 서버가 죽어 닿지 않은 것이라면 "follow" 칸도 닿지 않기 때문이다. 그 밖의
+//   조합이 닿지 않으면 측정이 아니라고 센다. 그 밖의 조합이 닿지 않은 것은 아직 본 적이 없어, 나면 사람이 원본 기록을 보고 가른다
 //
 // 표지(측정이 재려던 상황에서 났는지). 하나라도 없으면 종료 코드가 0 이 아니다.
 //   칸마다
@@ -78,7 +79,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { parseArgs } from "node:util";
 
-import { createProxy, differences, listen, makeCert } from "../kit.mjs";
+import { createProxy, differences, listen, makeCert, writeExpected } from "../kit.mjs";
 
 const HERE = import.meta.dirname;
 const ROOT = join(HERE, "..", "..", "..", "..");
@@ -330,7 +331,10 @@ async function runCell(browser, env, spec, sameSite, variant, redirect, siblingA
 
     const problems = [];
     if (before !== run) problems.push(`쿠키가 심기지 않았다(부르기 전 요청의 쿠키 ${JSON.stringify(before)})`);
-    if (problems.length === 0 && posts.length === 0 && siblingArrived && fetched.settled === "rejected") {
+    // 닿지 않은 것을 측정으로 세는 조합은 첫 실행에서 본 하나다. 그 밖의 조합이 닿지 않으면 아래에서 측정이 아니라고 센다.
+    const unsentCombination = redirect === "manual" && variant.mode === "no-cors" && spec.relation !== "same-origin";
+    const refused = fetched.settled === "rejected" && fetched.name === "TypeError";
+    if (problems.length === 0 && posts.length === 0 && siblingArrived && unsentCombination && refused) {
       return { run, fact: { sent: false, fetch: fetched, loggedOut: after === null, afterRequested: follow.length > 0 } };
     }
     if (posts.length !== 1) problems.push(`POST /logout 이 ${posts.length}번 닿았다(fetch ${JSON.stringify(fetched)})`);
@@ -607,9 +611,13 @@ let expectedOk = true;
 if (failure === null) {
   const previous = existsSync(EXPECTED) ? JSON.parse(readFileSync(EXPECTED, "utf-8")) : { versions: {}, facts: {} };
   if (args.update) {
-    const next = { versions: { ...previous.versions, ...versions }, facts: { ...previous.facts, ...facts } };
-    writeFileSync(EXPECTED, `${JSON.stringify(next, null, 2)}\n`);
-    console.log("expected.json 에 이 회차의 결과를 썼다");
+    const { written, skipped } = writeExpected(EXPECTED, previous, versions, facts, markers);
+    console.log(
+      written.length > 0
+        ? `expected.json 에 표지가 모두 선 엔진의 결과를 썼다: ${written.join(", ")}`
+        : "expected.json 에 쓴 것이 없다",
+    );
+    if (skipped.length > 0) console.log(`표지가 빠져 expected.json 에 쓰지 않은 엔진: ${skipped.join(", ")}`);
   } else if (existsSync(EXPECTED)) {
     const drift = ENGINES.flatMap((name) => differences(previous.facts[name], facts[name], `facts.${name}`));
     expectedOk = drift.length === 0;

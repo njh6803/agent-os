@@ -1,6 +1,6 @@
 # widget-login-state 프로브
 
-widget-login-state의 명세(`.scratch/widget-login-state/spec.md`)가 근거로 든 측정 스크립트의 색인이다. 규약은 `docs/agents/issue-tracker.md`의 "프로브와 근거", 짓는 규칙은 `.claude/rules/probes.md`다. 이 폴더의 코드는 프로브의 것이고 제품 코드가 아니다. 프로브의 폴더에 든 `README.md`가 돌리는 법, 판, 결과, 재지 못한 것의 원천이고, 아래 표는 한 줄씩의 길잡이다. `kit.mjs`는 두 프로브가 함께 쓰는 것(자체 서명 인증서, 이름을 127.0.0.1에 맞추는 프록시, `expected.json`과의 견줌)이고 스스로 재는 것이 없다.
+widget-login-state의 명세(`.scratch/widget-login-state/spec.md`)가 근거로 든 측정 스크립트의 색인이다. 규약은 `docs/agents/issue-tracker.md`의 "프로브와 근거", 짓는 규칙은 `.claude/rules/probes.md`다. 이 폴더의 코드는 프로브의 것이고 제품 코드가 아니다. 프로브의 폴더에 든 `README.md`가 돌리는 법, 판, 결과, 재지 못한 것의 원천이고, 아래 표는 한 줄씩의 길잡이다. `kit.mjs`는 두 프로브가 함께 쓰는 것(자체 서명 인증서, 이름을 127.0.0.1에 맞추는 프록시, `expected.json`과의 견줌과 `--update`가 그 파일을 쓰는 법)이고 스스로 재는 것이 없다.
 
 | 파일 | 재는 것 | 근거로 드는 자리 | 다시 돌 때 | 잰 판 |
 |---|---|---|---|---|
