@@ -14,7 +14,8 @@ port = 3000
 [[sites]]
 name = "main"
 issuer = "https://www.example.com"
-agent = "assistant"
+# 사이트 파일(site/sites.toml)의 agents 에 든 에이전트 하나. 틀의 `calc`는 이미지에 든 예시 에이전트다.
+agent = "calc"
 heading = "질문하기"
 theme = "jacho"
 assurance = "anonymous"

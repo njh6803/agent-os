@@ -122,6 +122,15 @@ Critical은 없었고 Major가 셋이었다. 고친 것:
 - CodeRabbit: 첫 회차부터 "Review limit reached"(무료 OSS 리뷰 한도, 다음 리뷰는 17분 뒤라고 적었다)로 리뷰가 없다. `@coderabbitai review` 요청에도 `Review rate limited`로 답했다. 회차로 세지 않는다(`merge.md` 2). 보안·버그 축은 PR 직전 `coderabbit-review`(CLI 0.7.5, 11건 판정)가 대신하고, 그 판정은 위 "PR 직전 리뷰"와 PR 본문에 있다(`operations.md` 리뷰 파이프라인 3의 CodeRabbit 한도 항목). 병합은 재리뷰를 기다리지 않는다.
 - 이 회차에 고친 코드는 없다. 일지와 대기열만 푸시한다.
 
+## 봇 회차 2 (헤드 `714db77`, CodeRabbit의 첫 회차)
+
+일지와 대기열만 푸시한 뒤 `@coderabbitai review`를 다시 요청하니 한도가 풀려 리뷰가 끝났다(`Review finished`, 4건). claude-review는 이 푸시에도 "지적 없음"이었다. 검사는 모두 초록이다.
+
+- **Major, 기본 에이전트 `assistant`가 단독 배포에서 답하지 못한다** — 유효. `assistant`는 `mcp = ["doc-search"]`를 요구하고(`plugins/agents/assistant/plugin.toml`) doc-search의 주소가 `http://rag-engine:8000/mcp`인데(`plugins/mcp/doc-search/plugin.toml`) 묶음의 compose에는 `rag-engine`이 없다. 틀 두 파일(`site/sites.toml`, `portal/portal.toml`)은 이 PR의 첫 커밋이 만든 것이라 이 PR의 몫이다. e2e가 사이트를 `echo`·`calc`로 바꿔 띄워 잡히지 않았다. 고침: 틀의 에이전트를 이미지에 든 예시 `calc`로 바꾸고 주석으로 이유와 두 파일의 값이 같아야 한다는 것을 적었다. 안내에 싣는 일은 티켓 10 수용 기준에 한 줄 더했다.
+- **Minor, 복구 시험이 200 응답의 도착 시간을 보지 않는다** — 유효. 요청을 시작할 때만 경과 시간을 재서, 요청이 기한 뒤에 200으로 끝나면 통과했다. 고침: 요청마다 남은 시간을 시간 제한으로 주고 루프 뒤에 총 경과가 기한 안인지 단언한다.
+- **Minor, 강제 완료 경로가 출력 파이프를 닫지 않는다** — 유효하나 영향은 작다. 고침: `SIGKILL` 뒤 `resolve` 전에 `child.stdout.destroy()`와 `child.stderr.destroy()`를 부른다. 손자 프로세스가 파이프를 쥐는 경우의 재현은 하지 않았다(어림이다).
+- **Minor, `bridge_edge` 양성 대조의 응답을 재시도하지 않는다** — 보류. 대조 서버 시작이 늦으면 `answers`가 거짓이 되어 그 회차가 측정 아님으로 세어지고 종료 코드가 1이 되는 쪽으로 틀린다(거짓 양성은 없다). 이 PR 안의 재측정은 134회차에 측정 아님 0이었다(위 "이 PC에서 돌린 결과"). 프로브 코드를 고치면 도커 엔진 넷을 다시 돌려야 하는데 이 지적은 그 비용에 못 미친다. 이유를 PR 코멘트에 남긴다.
+
 ## 회고
 
 후보 여섯을 냈고 승인 3, 기각 3, 넘김 0이다. 만료할 항목은 `uv run python tools/queue_open_rows.py`와 `--ref origin/dev` 둘 다 "(없음)"이었다(손으로 쳐서 봤다).
@@ -138,6 +147,6 @@ Critical은 없었고 Major가 셋이었다. 고친 것:
 - 이 PR(592)의 병합은 이 세션이 마친다(`merge.md` "워크트리에서 병합할 때"). 푸시한 일지와 대기열 편집으로 도는 봇 회차를 보고, 병합 직전에 `headRefOid`와 `git rev-parse HEAD`를 대 본다.
 - 주 체크아웃 미갱신: 루트는 dev(`git worktree list`의 첫 줄, HEAD `02dcfe9`가 `origin/dev`의 `aae33d2`보다 뒤다). 다음 세션이 워크트리에 들어가기 전에 Skill 도구로 `tidy-checkouts`를 돈다.
 - release-image에서 열린 티켓은 10과 11이다. 10(배포 안내)은 09만 기다렸으므로 09가 병합되면 바로 할 수 있다. 11은 05·06·10을 기다리고 release-image의 마지막 티켓이다.
-- 10이 받을 것: 위 "남은 일"의 셋(`nginx -t`·`nginx -s reload`의 `-c /etc/agent-os/proxy/nginx.conf`, 호스트 포트 443·80·3000 고정이라 한 PC에서 두 배치를 동시에 띄울 수 없다는 것, 모델 호출 사례의 `ANTHROPIC_API_KEY` 이름)와, 플러그인 볼륨이 처음 붙을 때만 채워져 업그레이드로 새 이미지가 담은 플러그인이 기존 볼륨에 오지 않는다는 취급(10의 수용 기준에 한 줄 더했다).
+- 10이 받을 것: 위 "남은 일"의 셋(`nginx -t`·`nginx -s reload`의 `-c /etc/agent-os/proxy/nginx.conf`, 호스트 포트 443·80·3000 고정이라 한 PC에서 두 배치를 동시에 띄울 수 없다는 것, 모델 호출 사례의 `ANTHROPIC_API_KEY` 이름)와, 플러그인 볼륨이 처음 붙을 때만 채워져 업그레이드로 새 이미지가 담은 플러그인이 기존 볼륨에 오지 않는다는 취급(10의 수용 기준에 한 줄 더했다), 사이트 파일 틀의 에이전트가 예시 `calc`이니 운영자가 자기 에이전트로 바꾸고 두 파일의 값을 맞추게 하는 안내(봇 회차 2에서 더한 수용 기준).
 - 이 PR의 CI에서 `e2e-standalone` 잡은 건너뛰었으므로 리눅스 러너의 첫 증거는 출시 PR(dev → main)이다. `timeout-minutes: 45`는 그 결과로 맞춘다. 이미지를 처음부터 짓는 시간도 그때 처음 잰다.
 - 뒤로 넘긴 일은 위 둘(10의 안내 항목, 출시 PR에서의 첫 실행)이다. 대기열은 12회차·2회차·9회차를 더한 열린 항목 셋이고 새로 쓴 항목은 없다.

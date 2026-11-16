@@ -45,6 +45,9 @@ export function run(
       // 강제로 죽이고 그 시점의 출력으로 끝낸다.
       hardStop = setTimeout(() => {
         child.kill("SIGKILL");
+        // 하위 프로세스가 파이프를 쥔 채면 열린 파이프가 이 프로세스의 이벤트 루프를 붙잡으므로 부모 쪽 끝을 닫는다.
+        child.stdout.destroy();
+        child.stderr.destroy();
         resolve({ code: null, stdout, stderr, timedOut });
       }, KILL_GRACE_MS);
     }, options.timeoutMs);

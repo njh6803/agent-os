@@ -310,9 +310,11 @@ test("백엔드 하나를 다시 만들어도 프록시가 새 주소를 따라 
 
   const started = Date.now();
   let status = 0;
+  // 요청마다 남은 시간만큼만 기다려, 느리게 온 200 이 기한을 넘겨 통과하지 못하게 한다.
   while (Date.now() - started < RECOVER_MS) {
     try {
-      status = (await request.get(`${ORIGIN}/portal/health`)).status();
+      const remaining = Math.max(1_000, RECOVER_MS - (Date.now() - started));
+      status = (await request.get(`${ORIGIN}/portal/health`, { timeout: remaining })).status();
     } catch {
       status = 0;
     }
@@ -322,6 +324,9 @@ test("백엔드 하나를 다시 만들어도 프록시가 새 주소를 따라 
     await new Promise((resolve) => setTimeout(resolve, 500));
   }
   expect(status, `${String(RECOVER_MS)}ms 안에 200 으로 돌아오지 않았다`).toBe(200);
+  expect(Date.now() - started, `200 이 ${String(RECOVER_MS)}ms 를 넘겨 도착했다`).toBeLessThan(
+    RECOVER_MS + 1_000,
+  );
 });
 
 test("토큰 끝점은 짧은 시간에 요청이 몰리면 429 를 내고 앞선 요청은 막지 않는다", async ({

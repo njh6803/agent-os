@@ -38,5 +38,6 @@
 
 ### 마무리
 
+- [ ] 안내가 사이트 파일 틀의 에이전트를 운영자가 자기 에이전트로 바꾸게 한다. 틀(`site/sites.toml`의 `agents`, `portal/portal.toml`의 `agent`)은 이미지에 든 예시 `calc`로 두었고, 문서 검색 에이전트 `assistant`는 `rag-engine`의 doc-search 서버가 묶음 밖에 있어야 답한다(09의 PR이 CodeRabbit 지적으로 정했다). 두 파일의 값이 같아야 한다는 것도 안내에 적는다
 - [ ] `deploy/`를 건드렸으므로 09가 `CLAUDE.md`에 더한 실제 이미지 시험을 이 PC에서 돌려 결과를 일지에 적는다
 - [ ] 검증 명령이 모두 초록이다
