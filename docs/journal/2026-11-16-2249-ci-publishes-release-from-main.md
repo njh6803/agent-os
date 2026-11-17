@@ -280,3 +280,72 @@ open-session을 부른다 2026-11-17T02:00Z
   - 티켓의 "해시 태그는 이 실행이 바로 앞 단계에서 올린 것"이라는 단정을, 태그가 가변이라 덮어쓰기 창이 있고 뒤의 설정 대조가 막는다는 문장으로 낮췄다.
 - 남긴 것: `id: push`가 쓰는 곳 없이 남았고 `TAG`가 두 단계에 중복이다(Nit, 위 셀프 리뷰에서 이미 남김). `fromJSON(steps.push.outputs.metadata).serve['containerimage.digest']`로 필요한 필드만 env에 싣는 대안은 레지스트리 왕복과 가변 태그 창을 없애지만, 이번에는 이미 실제 데이터로 확인한 태그 읽기를 유지한다(시험의 정규식을 같이 고쳐야 한다). `아티팩트 올리기`와 잡 `publish`는 아직 돌지 않았다.
 - 다시 돌린 명령: `uv run pytest tests/tools/test_release_workflow.py -q` 초록, `uv run ruff check tests/tools/test_release_workflow.py` 초록, 추출한 단계 본문의 `bash -n` 구문 검사 통과. 나머지 게이트는 이 변경을 싣는 커밋의 pre-commit 결과로 갈음한다.
+
+## 핫픽스 병합과 첫 판 내기 성공 (이 세션)
+
+- 핫픽스 [#599](https://github.com/njh6803/agent-os/pull/599)(base main)를 squash로 병합했다(`--match-head-commit 914aafc1d04b98449d8ccd56eb70f591fed93e67`, 병합 커밋 `b9cb23f4a`). 검사 열세 개가 모두 SUCCESS였고 CodeRabbit은 "실행 가능한 지적 없음", claude-review는 Minor 하나와 Nit 셋을 냈다. Minor는 `docs/constitution/operations.md` 실패 표의 해당 줄이 이제 부정확하다는 것이고(앞 절 "셀프 리뷰"에서 남긴 그 항목이다), 문서 한 줄을 고치려고 전체 게이트와 CI를 한 바퀴 더 돌리면 판 내기만 늦어져 병합 뒤로 넘겼다. Nit 셋(`TAG` 중복, 시험 문자열이 계약이라는 한 줄 설명, 모듈 독스트링의 `)` 뒤 공백)은 두었다.
+- 판 내기: 병합 커밋 b9cb23f4a6feac2e7926a90049b37868aa604939 실행 44012310177 결과: 성공, 잡 `build`와 `publish`가 모두 통과했고 릴리스 `v0.1.0-rc.1`이 공개되었다(https://github.com/njh6803/agent-os/actions/runs/44012310177).
+- 되돌려 합치기 [#598](https://github.com/njh6803/agent-os/pull/598)(main→dev)을 새 머리 `b9cb23f4a`로 `wait_ci`(`--expect verify`)가 기다렸고 `build`·`publish`를 포함해 모두 SUCCESS였다(CodeRabbit은 SKIPPED, 정상). claude-review는 지적 없음. merge 커밋으로 병합했다(`--match-head-commit b9cb23f4a6feac2e7926a90049b37868aa604939`, 병합 커밋 `1f4071209`).
+
+**첫 판(`0.1.0-rc.1`)에서 잰 것.** 아래는 `gh run view 44012310177`·`gh release view`·`git ls-remote --tags`·레지스트리 요청으로 손으로 읽은 값이다.
+
+- 소요 시간: 잡 `build` 03:44:40~03:50:03(5분 23초), 잡 `publish` 03:50:10~03:51:10(1분 0초), 실행 전체 03:44:33~03:51:11(약 6분 38초). 첫 실행(실패)의 `build`는 8분 17초였다. 단계별(20초 넘는 것): 이미지 짓기(시험용) 46초(첫 실행 약 3분 10초), 점검 119초(약 2분 29초), 이미지 올리기 27초(약 39초), 브라우저 시스템 의존성 28초, 단독 배포 시험 26초(약 33초).
+- 둘째 빌드의 캐시: 잡 로그에 `CACHED` 줄이 138개 있고 시험용 이미지 짓기가 3분 10초에서 46초로 줄었다. 이 `CACHED`가 gha 캐시 백엔드에서 온 것인지 줄을 갈라 보지는 않았다.
+- 시험한 이미지와 올린 이미지의 구성 해시: 단계 `시험한 이미지와 올린 이미지 대조`가 통과했다. 이 단계는 넷 중 하나라도 다르면 `exit 1`이므로 네 이미지 모두 같았다는 뜻이다(단계의 성공 표시로 읽었고 해시 값 자체는 로그에서 열어 보지 않았다).
+- 태그와 초안 동작: 잡 `publish`의 단계가 `사전 확인` → `초안 만들기` → `초안 직후 태그 대조` → `자산 올리기` → `번호 태그 붙이기` → `공개` 순으로 성공했고 `앞 실행의 초안 지우기`(앞 실행의 초안이 없어)·`이미 공개된 판`·`정리`는 건너뛰었다. 릴리스 `v0.1.0-rc.1`은 `isDraft: false`로 03:51:06Z에 공개되었고 `git ls-remote --tags origin`이 `refs/tags/v0.1.0-rc.1`을 병합 커밋 `b9cb23f4a`로 가리킨다.
+- 로그인 없는 당기기: 익명 토큰(`auth.docker.io`, 로그인 없음)으로 네 저장소(`njh6803/agent-os-runtime`, `-admin`, `-widget`, `-widget-test-page`)의 `0.1.0-rc.1` 매니페스트를 요청해 모두 HTTP 200이었다. 층(layer)까지 받아 본 것은 아니다.
+- 릴리스 자산(바이트): 배포 파일 묶음 `agent-os-0.1.0-rc.1.tar.gz` 11,856, 점검 결과 `grype-{admin,portal,serve,widget}.json` 1,091,331~1,247,220, 소프트웨어 목록 `sbom-{admin,portal,serve,widget}.spdx.json` 3,037,467~4,626,262.
+- **알아 둘 것 둘.** 릴리스 노트 맨 위의 "경고" 절에 고칠 수 있는 취약점 아홉 건이 실렸다(admin의 next 16.3.6 둘, serve의 certifi 2026.7.22 하나, widget의 handlebars 4.7.9 둘·storybook 계열 둘·next 16.3.6 둘. 고친 판은 각각 next 16.4.1, certifi 2026.10.18, handlebars 4.7.10, storybook 10.6.2). 그리고 릴리스가 `isPrerelease: false`이고 "Latest"로 표시되었다. 노트의 소개 문단은 "0.1.0 전의 판은 출시 후보"라고 쓰지만 GitHub의 표시는 후보가 아니다. 이것이 보류한 설계 결정 둘째(`prerelease` 표시)의 실제 모양이다.
+
+**올라간 이미지로 단독 배포 e2e를 실제 모델까지 켜서 다시 쳤다.** 티켓 11이 이 일을 첫 판을 지켜보는 세션에 넘겼다. 이 PC의 Docker(29.9.2)에서 80·443·3000 포트가 비어 있음을 확인한 뒤 `AGENT_OS_STANDALONE_NAMESPACE=njh6803 AGENT_OS_STANDALONE_VERSION=0.1.0-rc.1 AGENT_OS_STANDALONE_LLM=1 uv run --env-file ../../../.env -- pnpm.cmd -C web/packages/e2e-standalone exec playwright test`를 쳤다(`pnpm`만 쓰면 `uv run`이 윈도에서 찾지 못해 `pnpm.cmd`로 쳤다). 12개 통과, 1개 건너뜀(실제 모델 모드에서는 `deployment.e2e.ts`의 "네트워크 없는 MCP 실행"이 `test.skip`으로 빠지고 `calc.llm.ts`가 같은 길을 실제 모델로 지난다), 종료 0이었다. 실제 모델 시험은 6.0초였다. 시작 04:01:01Z, 끝 04:04:16Z(3분 15초, Playwright 보고 3.2분). 이미지 넷을 레지스트리의 이름(`njh6803/agent-os-*:0.1.0-rc.1`)으로 띄운 시간이 이 안에 들고 받는 시간을 따로 재지는 않았다. 모델 호출 비용(요청 하나, "2 더하기 3은?")은 재지 않았다.
+
+**`timeout-minutes` 정하기.** 위 시험과 실제 CI에서 얻은 값을 남긴다.
+
+| 자리 | 지금 값 | 잰 시간 |
+|---|---|---|
+| `release.yml` 잡 `build` | 90분 | 5.4분(첫 실행, 캐시 없음 8.3분) |
+| `release.yml` 잡 `publish` | 30분 | 1.0분 |
+| `ci.yml` 잡 `e2e-standalone` | 45분 | 2.5분(PR 599의 실행 44010835544. 시험까지 돈 다른 완주 실행은 2.5~3.0분이었다) |
+
+`build`와 `e2e-standalone`은 잰 시간의 17~18배, `publish`는 30배다. 줄일 값은 이 일지가 정하지 않고 후속 티켓이 정한다(`ci.yml` 주석이 이 잡이 시험까지 든 실행이 생기면 프로브 `JOBS`에 더해 고친다고 적는다).
+
+## 다음
+
+1. 사람 몫 여섯과 보류한 설계 결정 셋과 대기열 후속 셋은 "인계 (PR 연 뒤)"가 적은 그대로다. 여기에 이번에 드러난 것이 더해진다: 릴리스 노트 경고의 취약점 아홉 건(의존성 올림이 필요하다), 릴리스의 `prerelease` 표시(위).
+2. 후속 harness 티켓 후보: ① `docs/constitution/operations.md` 실패 표의 `시험한 이미지와 올린 이미지 대조` 줄에 "올린 색인의 digest를 읽지 못할 때"를 더한다. ② `timeout-minutes` 세 값을 위 표에 맞춰 줄인다(프로브 `JOBS`도 더한다). ③ `id: push`와 `TAG` 중복 정리.
+3. rag-engine용 지시문은 아래 절에 있고 대기열 `rag-engine-port-by-hand`에 2회차로 더했다. 사용자가 rag-engine의 세션에 붙여 넣는 일이 남았다.
+
+## rag-engine에 줄 지시문 (사용자에게 냈다)
+
+첫 실제 판 내기(실행 44012310177)가 성공했으므로 명세 "rag-engine에 줄 지시문"과 기능 계획 본문이 정한 대로 낸다. 대기열 `rag-engine-port-by-hand`에 2회차를 더했다. 지시문은 rag-engine의 세션 첫 메시지로 붙여 넣을 글이다. 사용자가 rag-engine에 넘기기 전에는 아무것도 옮겨지지 않았다.
+
+```
+agent-os가 dev 브랜치 전환과 판 내기 워크플로를 끝냈고 첫 판(0.1.0-rc.1)을 실제로 냈다. 그 두 가지 가운데 판 내기 워크플로를 이 저장소(rag-engine)에 옮길 수 있는지 짧은 설계 인터뷰부터 연다. 먼저 Skill 도구로 `grill-with-docs`를 불러 인터뷰를 진행하고, 인터뷰가 끝나 사용자가 승인하기 전에는 워크플로나 도구를 옮기지 않는다.
+
+입력으로 읽을 것(모두 agent-os 저장소, 이 PC에서는 C:\project\agent, GitHub는 njh6803/agent-os):
+- docs/adr/0043-dev-integrates-and-main-releases.md : dev 브랜치와 main 브랜치의 역할
+- docs/adr/0056-ci-cuts-a-release-whenever-main-moves-and-the-standalone-compose-joins-proxy-and-four-containers-on-a-docker-network.md : 판이 나는 때, 번호, 출시 후보, 노트, 태그의 차례, 실패 처리. 이력까지 읽는다. 뒤 절반(이미지 목록과 서버 배치)은 agent-os의 것이다.
+- docs/constitution/operations.md 의 "판이 나는 차례와 실패한 판을 다시 돌리는 절차"
+- .github/workflows/release.yml, tools/release_ci.py
+- docs/journal/2026-11-16-2249-ci-publishes-release-from-main.md 의 마지막 절들 : 첫 판을 낸 기록과 그때 난 실패
+
+옮길 수 있는 것은 브랜치 규칙(ADR 0043)과 판을 내는 방식(ADR 0056의 앞 절반)이다. 이 저장소에서 따로 정해야 하는 것은 다섯이다.
+1. Docker Hub 계정을 agent-os와 함께 쓸지(토큰이 계정 전체에 걸린다)
+2. 데이터베이스 마이그레이션이 따라오는 판 올림에서 운영자가 할 일
+3. agent-os의 판이 고정하는 rag-engine 판과의 번호 관계
+4. 이 저장소의 이미지 목록과 서버 배치
+5. dev 전환이 고쳐야 하는 이 저장소의 스킬과 도구
+
+agent-os에서 첫 실행에 난 일은 옮기기 전에 알아 둔다. 판 내기 워크플로가 이미지를 올리는 액션의 `metadata` 출력(출처 증명에 든 GitHub 컨텍스트까지 실어 약 185KB)을 환경 변수로 받다가 리눅스의 환경 변수 하나의 상한(128KiB로 본다) 때문에 `bash`를 띄우지 못하고 죽었다. 지금은 올린 색인의 digest를 방금 올린 커밋 해시 태그에서 `docker buildx imagetools inspect --format '{{.Manifest.Digest}}'`로 읽는다. 같은 모양의 출력을 환경 변수에 싣지 않는다. 그 밖에 agent-os가 결정을 미룬 것 셋도 인터뷰에서 이 저장소의 답을 정한다: `build` 잡에 Docker Hub 토큰을 노출하는 범위, 출시 후보 릴리스를 GitHub의 `prerelease`로 표시할지(agent-os의 첫 판은 표시되지 않고 "Latest"가 되었다), 앞 실행의 초안을 지우는 일과 새 초안을 만드는 일의 순서.
+
+산출물 요건: 이 저장소의 ADR이 agent-os의 ADR 0043과 0056을 따른다고 적고 다른 점만 적는 얇은 ADR 한 장을 둔다. ADR은 초안을 쓴 뒤 사용자에게 보이고 승인을 받아야 확정한다.
+```
+
+## 셀프 리뷰 (기록 PR, 이 세션)
+
+범위는 기준 `1f4071209`, 변경 파일 2개, 미추적 0개, 커밋 0개였다. 기록만 바꾸는 변경이라 명세 축은 없고 표준 축(sonnet·high) 하나를 돌렸다. 서브에이전트가 `gh`·`git`·레지스트리로 수치를 다시 쟀고(소요 시간, 릴리스 표시와 자산 크기, 경고 아홉 건의 이미지별 나열, PR과 병합 커밋, 익명 매니페스트 네 곳 HTTP 200, 지시문이 가리킨 경로와 대기열 이름) 모두 맞았다. 단독 e2e의 12개 통과와 3분 15초는 이 PC에서 돌린 값이라 다시 재지 못했다. Critical은 없고 Major 1, Minor 2, Nit 1이었다.
+
+- 고친 것(Major): 대기열 `rag-engine-port-by-hand`의 2회차를 본문에만 적어 `tools/queue_open_rows.py --rows`가 계속 1회차로 읽었다. 도구가 회차를 승인 줄에서 먼저 찾기 때문이다. 승인 줄 끝에 `2회차 2026-11-17, 일지 2026-11-16-2249-ci-publishes-release-from-main.md`를 더했다.
+- 고친 것(Minor): "세 값 모두 17배 안팎"이 틀렸다(`build` 17배, `e2e-standalone` 18배, `publish` 30배). "e2e-standalone의 시험까지 돈 첫 실행"도 틀렸다. 같은 잡이 시험까지 돈 다른 실행이 있고(43994723170은 3.0분, 43997051389는 2.5분, 44012310193은 3.0분) 나머지 몇 건은 3~8초로 건너뛴 것이다. 두 문장을 고쳤다.
+- 고친 것(Nit): 따옴표 안의 `ci.yml` 주석이 원문과 글자 그대로가 아니어서(`JOBS` 뒤의 공백과 줄바꿈) 따옴표를 풀어 쓴 문장으로 바꿨다.
+- 다시 돌린 명령: 아래 결과는 커밋 뒤에 적는다. 이 변경에는 코드가 없고 나머지 게이트는 커밋의 pre-commit 결과로 갈음한다.
