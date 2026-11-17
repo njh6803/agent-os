@@ -39,7 +39,16 @@ def test_이_저장소의_판_내기_워크플로는_bake_메타데이터_출력
 def test_이_저장소의_판_내기_워크플로는_올린_digest를_해시_태그에서_읽는다() -> None:
     # 옛 모양을 막는 위 시험은 해시 태그 읽기를 지워도 초록이다. 새 모양이 있음을 따로 본다.
     text = WORKFLOW.read_text(encoding="utf-8")
-    assert 'imagetools inspect "$NAMESPACE/$repo:$TAG"' in text
+    assert 'imagetools inspect "$NAMESPACE/$repo:$HASH_TAG"' in text
+
+
+def test_이_저장소의_판_내기_워크플로는_올리는_태그와_읽는_태그를_한_변수에서_받는다() -> None:
+    # 읽는 쪽 단언만으로는 잡의 HASH_TAG 정의를 지우거나 올리기 단계의 TAG 를 틀리게 해도 초록이다.
+    # 올린 태그와 읽는 태그가 갈라지는 회귀를 막으려고 정의와 올리는 쪽을 따로 본다.
+    text = WORKFLOW.read_text(encoding="utf-8")
+    assert "HASH_TAG: sha-${{ github.sha }}" in text
+    assert "TAG: ${{ env.HASH_TAG }}" in text
+    assert text.count("sha-${{ github.sha }}") == 1
 
 
 def test_bake_메타데이터를_환경_변수로_받는_줄을_잡는다() -> None:
