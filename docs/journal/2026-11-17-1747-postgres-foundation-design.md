@@ -432,7 +432,7 @@ open-session을 부른다 2026-11-17T11:23:55Z
   - 3·4. `.scratch/release-image/spec.md` 336줄과 `bridge_recover/README.md` 25줄 결론 9가 ADR의 서술과 같다.
   - 5. `**Blocked by:**` 줄을 따라가니 deploy-package는 portal-admin을 거쳐 그 둘을 이미 기다리고, ops-backup-upgrade의 새 선행 조건에서 거슬러 올라가도 deploy-package가 나오지 않아 순환이 없다.
   - 6. ADR 0038 22줄에 자리 넷과 "헌법 버전은 patch다"가 있다.
-  - 7. `(바뀜: ADR 0066)`은 ADR 0042에 둘(51·94줄), 0043에 하나(17줄), 0048에 하나(24줄), 0056에 셋(8줄과 24줄의 두 곳)으로 일곱이다. 인용한 본문 글자와 "ADR 0062·0064의 포인터 뒤에 잇는다"는 서술도 맞다.
+  - 7. `(바뀜: ADR 0066)`은 ADR 0042에 둘(51·94줄), 0043에 하나(17줄), 0048에 하나(24줄), 0056에 셋(8줄과 24줄의 두 곳)으로 일곱이다. 인용한 본문 글자와, ADR 0062와 ADR 0064의 포인터 뒤에 잇는다는 서술도 맞다.
   - 8. `port_shape/README.md` 3줄이 "그 모양 하나를 작은 모듈 둘로 흉내 내 잰다"고 적는다.
   - 9. 배포 안내 9절의 서술은 맞다. 11절은 끝자리만 오른 판에 `.env`의 `AGENT_OS_VERSION` 한 줄만 바꾸라고 하고 가운데 자리가 오른 판은 노트에 맡긴다. 그래서 "`.env`의 판 번호 한 줄만 말한다"는 엄밀히는 끝자리 판에 대한 서술이다(Minor). 그 절에 `compose.yaml`을 바꾸라는 안내가 없다는 결론은 그대로다.
   - 10·11. `docker compose version`은 v5.6.1이었고, `${DB_URL#postgresql://}`와 `${DB_URL%@*}`는 둘 다 `invalid interpolation format`으로 거부됐다. `DB_PASSWORD=p@s:s/w`를 `--env-file`로 주니 `postgresql://agent_os:p@s:s/w@postgres:5432/agent_os`가 그대로 나왔다.
@@ -475,13 +475,48 @@ open-session을 부른다 2026-11-17T11:23:55Z
 
 `git branch --show-current`는 `docs/postgres-foundation-design`이었다. `uv run python tools/sibling_overlap.py`는 "번호 겹침 없음"으로 끝났다(이 브랜치의 새 번호는 ADR 0066이고 `origin/dev`는 `21e7d8d` 그대로다). 함께 고친 파일로는 `mcp-shutdown-spec` 워크트리의 `.scratch/plan.md`가 나왔다. 나중에 병합하는 쪽의 글자 충돌 후보다. `tools/check_adr_pointers.py`, `tools/check_md_tables.py`, `tools/check_line_separators.py`, `tools/check_instructions.py`는 출력 없이 끝났고, `tools/plan_table.py`를 돌린 뒤 `.scratch/plan.md`는 바뀌지 않았다(손으로 봤다, 이 세션).
 
+### 커밋 (리뷰 반영과 회고)
+
+커밋 `5abd933d6`. pre-commit의 `checks`가 558.08초에 통과했다(Bash의 600초 제한 안이었다). 막대는 `web-verify` 557.9초, `pytest` 506.5초, `run-hooks` 50.4초, `pyright` 38.8초, `pyright-linux` 38.5초였고 나머지는 10초 아래였다. 나란히 돈 다른 세션의 부하는 재지 않았다. ruff 둘은 스테이지된 `.py`가 없어 `Skipped`였으므로 손으로 쳤다. `uv run ruff check .`은 `All checks passed!`, `uv run ruff format --check .`은 `2411 files already formatted`였다.
+
+인용 대조가 경고 다섯을 냈다(막지 않는다). 이 세션이 쓴 둘(`bug-perf-review` 보고의 포인터 서술, 회고 3의 조사 보고 인용)은 원문과 글자가 달라 따옴표를 떼거나 원문 글자로 고쳤다. 나머지 셋은 둔다. 둘은 앞 세션이 git의 커밋 제목과 ruff의 출력을 옮긴 것이라 저장소 파일에 없고, 하나는 이 세션이 고치기 전의 기능 계획 문장을 옮긴 것이다. 이 고침과 이 절은 봇 회차의 커밋에 싣는다.
+
+## PR과 인계 (PR 연 뒤)
+
+### PR
+
+`git push -u origin docs/postgres-foundation-design` 뒤 PR 602를 열었다(base `dev`). 제목은 첫 커밋의 제목이고 본문은 PR 서식을 채웠다. "남긴 위험"의 첫 항목과 체크리스트의 `coderabbit-review` 줄에 CodeRabbit CLI의 보류 둘을 판정(둔다)과 고치는 값과 함께 적었고, `bug-perf-review`가 본 것도 그 줄에 적었다. `@coderabbitai review` 코멘트는 아직 남기지 않았다. `get_status`가 PR 602를 이 세션에 묶인 것으로 냈다(검사 통과 2, 진행 중 7, 건너뜀 2).
+
+### 인계
+
+PR을 연 명령 직후 인계 계기(`PR 연 뒤`, 세션 컨텍스트 210,915 토큰)가 왔다. `handoff.md`를 Read로 열어 인계하지 않는 때 다섯을 봤다. PR은 열렸다. 이 세션이 받은 요청 범위는 PR과 병합까지라 PR을 연 데서 끝나지 않는다. 이 세션의 지시문은 `인계: 커밋 뒤`로 시작해 경계가 다르다. 이 세션이 쓴 `인계 못함` 줄이 없다. `get_session`의 `self`에 `parentSessionId`가 없다. 그래서 넘긴다. 이 세션의 제목은 `docs/postgres-foundation-design`이었다.
+
+커밋하지 않은 채 워크트리에 있는 것은 이 일지의 변경뿐이다. 위 "커밋 (리뷰 반영과 회고)" 절, 인용 고침 둘, 이 절이다. 회고와 "다음"은 커밋 `5abd933d6`에 이미 실렸으므로 새 세션은 회고를 다시 돌리지 않는다.
+
+낸 지시문:
+
+다음 작업: 기능 postgres-foundation. ADR 0066을 실은 PR 602의 봇 회차를 거쳐 병합하고 다음 작업 지시문을 낸다
+다음 단계: PR 반영·병합
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: postgres-foundation 설계 인터뷰
+브랜치: docs/postgres-foundation-design
+모델: Sonnet 5.5 / high. 2의 잇는 지시문
+읽을 것: 일지 docs/journal/2026-11-17-1747-postgres-foundation-design.md의 "PR 직전 리뷰"의 "반영 (coderabbit-review)", "PR과 인계 (PR 연 뒤)", "다음" 절
+이어받을 상태: 인계: PR 연 뒤. `merge.md` 2(봇 회차)부터 한다. 첫 `@coderabbitai review` 코멘트도 새 세션이 남긴다. ADR 0066의 사용자 승인을 받았으므로 병합은 묻지 않는다. 회고와 일지 "다음"은 끝나 커밋에 실렸으니 다시 돌리지 않는다. 커밋하지 않은 일지 변경(커밋 기록 절, 인용 고침 둘, 인계 절)이 워크트리에 있고 봇 회차의 커밋에 싣는다. 그 회차에 고친 것이 없으면 일지만 실은 커밋으로 푸시한다. CodeRabbit CLI가 Major 둘로 짚은 데이터베이스 비밀번호의 노출은 두기로 했고 판정과 고치는 값이 PR 본문에 있으므로, 봇이 같은 것을 짚으면 그 판정으로 답한다. 병합 뒤 낼 지시문의 다음 단계는 사용자가 부르는 to-spec이다. 사용자 승인 항목인 대기열 `model-menu-name-fable-5-1-stale`이 4회차가 됐고 이름을 정하는 것은 사용자의 몫이라는 것을 마지막 보고에서 알린다. 일지 docs/journal/2026-11-17-1747-postgres-foundation-design.md
+확인할 선행 조건: 없음
+이번 요청 범위: PR과 병합까지
+
+제목을 `docs/postgres-foundation-design (인계함)`으로 바꿨다. 멈출 백그라운드 작업은 없었다. `git worktree unlock`은 `is not locked`로 끝나 넘어갔다.
+
+open-session을 부른다 2026-11-17T11:56:34Z
+
 ## 회고
 
 단계(설계 인터뷰)를 닫으며 돌렸다. 원천은 이 일지 전체(설계 세션, 셀프 리뷰 세션, 이 세션)다. `writing-for-agents`를 불렀다. 낸 후보는 아홉이고 승인 여섯(모두 회차로 세는 것이거나 대기열의 새 항목), 기각 셋, 넘김 0이다. 이 세션에서 반영한 것은 없어 harness 티켓을 쓰지 않았다.
 
 1. **승인(회차).** 셀프 리뷰를 넘기던 `open-session`이 "5초 안에 모델 메뉴의 'Fable 5.1' 을(를) 찾지 못했다."로 멈췄고(위 "인계"), 사용자가 다시 보내 달라고 해 `Fable 5.2`로 보냈다. 열린 항목 `model-menu-name-fable-5-1-stale`이 처방한 사건이라 그 항목에 더했다. 4회차다. 앞 세션이 "인계" 절에 남긴 모델 결정표 후보가 이것이다. 이름을 무엇으로 바꿀지는 그 항목이 적은 대로 사용자의 몫이고 ADR 0029의 이력이 든다.
 2. **승인(회차).** ADR 0066 초안이 바꾸는 다른 ADR의 본문 문장(ADR 0042의 두 자리, ADR 0043, ADR 0048, ADR 0056의 머리 문단과 root 문장)에 포인터를 달지 않아 셀프 리뷰 두 축이 잡았다(위 "셀프 리뷰"의 표준 Major 1·Minor 6, 명세 Major 2). 구현 때 실리는 지침(`.claude/rules/adr.md`)을 어겨 리뷰가 잡은 사건이다. 열린 항목 `adr-pointer-missed-on-uncited-sentence`에 더했다. 7회차다.
-3. **승인(회차).** ADR 초안이 조사 보고의 "8개 가운데 공식 문서로 확인한 것은 6개"를 빼고 옮겼고, Nextcloud를 저장한 원문과 다른 선례 묶음에 넣었으며, 프로브 README에 `postgres --version`만 있는 Debian 판을 프로브가 더 본 것처럼 적어 셀프 리뷰 두 축이 잡았다(표준 Minor 2·4, 명세 Minor 11). 열린 항목 `adr-evidence-stronger-than-journal`이 처방한 사건이라 그 항목에 더했다. 6회차다.
+3. **승인(회차).** ADR 초안이 조사 보고의 "공식 문서로 확인한 것은 6개"(선례 여덟 가운데)를 빼고 옮겼고, Nextcloud를 저장한 원문과 다른 선례 묶음에 넣었으며, 프로브 README에 `postgres --version`만 있는 Debian 판을 프로브가 더 본 것처럼 적어 셀프 리뷰 두 축이 잡았다(표준 Minor 2·4, 명세 Minor 11). 열린 항목 `adr-evidence-stronger-than-journal`이 처방한 사건이라 그 항목에 더했다. 6회차다.
 4. **승인(회차).** 문서만 바꾼 커밋 `4830b7ef8`의 pre-commit이 Bash의 600초 제한을 넘겨 백그라운드로 넘어갔다(위 "커밋"). 열린 항목 `docs-only-commit-precommit-slow-again`에 더했다. 11회차다.
 5. **승인(회차).** 일지의 "조사" 절이 웹 원문을 저장한 폴더를 `…/scratchpad/web/`로 줄여 적어, 이 세션이 `bug-perf-review`의 브리프에 넣을 경로를 찾느라 임시 폴더를 두 번 훑었다(`ls` 출력 둘, 약 32,000자). 열린 항목 0528(인계 일지에 저장소 밖 근거 사본의 절대 경로를 적는다)이 처방한 사건이라 그 항목에 더했다. 3회차다.
 6. **승인(새 항목).** `coderabbit-review`가 CLI를 백그라운드로 띄운 채 리뷰가 끝나기 전에 중간 보고로 턴을 끝내, 본 세션이 두 번 다시 불러서야 트리아지를 받았다(위 "coderabbit-review"). 사건이 있고, 고칠 자리가 서브에이전트 정의의 문장이라 검사로는 옮길 수 없으며, PR 하나로 되돌릴 수 있다. 더하는 것이라 다섯 번째까지 회차를 센다. 같은 일을 다룬 항목을 `queue_open_rows.py --search`로 찾았고(낱말 `coderabbit-review`, `SubagentHandback`, `review_completed`, `백그라운드로.넘`), 턴 한도에서 보고 없이 멈춘 0559는 같은 정의의 다른 사건이라 새 항목 `coderabbit-review-hands-back-before-cli-finishes`를 썼다. 1회차다.
@@ -497,3 +532,11 @@ open-session을 부른다 2026-11-17T11:23:55Z
 - **이 기능을 기다리는 행은 셋이다.** admin-login, widget-admin-server, ops-backup-upgrade다(`.scratch/plan.md`). widget-admin-server의 명세는 이 행이 짓는 테스트 도우미를 그 패키지의 시험이 쓰는 방법과 그 서버의 표를 올리는 때를 정하고(ADR 0066 결정 "위젯 관리 서버"), ops-backup-upgrade는 데이터베이스의 백업과 복원, 옛 판으로 돌아가는 길을 받았다(그 기능 계획의 넘김 문단. PR 직전 리뷰에서 한 문장을 고쳤다).
 - **0.1 판에는 데이터베이스 비밀번호의 노출이 남는다.** 비밀번호가 `.env`를 거쳐 `serve`의 환경 변수에 놓이므로 http 모양의 MCP 매니페스트가 그 값을 밖으로 보낼 수 있고(ADR 0049의 길), 그것을 막는 mcp-trust는 슬라이스 10이다. CodeRabbit CLI가 이것을 두 번 짚었고 두었다(위 "반영 (coderabbit-review)"). 사용자가 라운드 3에서 대가를 보고 고른 값이라, 바꾸려면 ADR 0066의 이력에 쌓는다.
 - **대기열.** 새 항목 `coderabbit-review-hands-back-before-cli-finishes`(1회차). 회차를 더한 다섯은 `model-menu-name-fable-5-1-stale`(4회차), `adr-pointer-missed-on-uncited-sentence`(7회차), `adr-evidence-stronger-than-journal`(6회차), `docs-only-commit-precommit-slow-again`(11회차), 0528(3회차)이다. `model-menu-name-fable-5-1-stale`은 사용자가 이름을 정해야 닫히고, 그때까지 설계 인터뷰나 명세 지시문의 "모델" 줄은 지금 메뉴에 있는 이름(`Fable 5.2`)으로 적는다. 회차 5 이상인 열린 항목은 스물하나다(`uv run python tools/queue_open_rows.py`의 "회차 5 이상").
+
+## 이어받음 (봇 회차부터)
+
+위 "PR과 인계"의 지시문으로 연 새 세션이다(2026-11-17 저녁). 세션 제목 `docs/postgres-foundation-design`, 모델 Sonnet 5.5. 주 체크아웃에서 시작해 `EnterWorktree(path)`로 이 워크트리에 들어왔다.
+
+> 사용자: postgres-foundation 설계 인터뷰
+
+첫 메시지는 위 "PR과 인계"의 지시문 그대로이다. PR 602는 열려 있고 `headRefOid`는 커밋 `5abd933d6`, 병합 상태는 `BLOCKED`였다(손으로 봤다, `gh pr view 602 --json headRefOid,mergeStateStatus`. 까닭은 읽지 않았고 앞 세션이 적은 진행 중 검사로 어림한다). 세션에 PR 602를 `bind_pr`로 다시 묶었다. `sibling_overlap.py`는 "번호 겹침 없음"으로 끝났다.
