@@ -29,7 +29,7 @@
 - `operations.md` 실패 표의 대조 줄에 "올린 색인의 digest를 읽지 못할 때"를 더했다.
 - 프로브 `.scratch/harness/probes/ci_job_durations.py`: 조건부 잡 `e2e-standalone`(시험 스텝이 성공한 실행만 측정으로 센다)과 `--release`(release 워크플로의 `build`·`publish`, 표지 스텝 `아티팩트 올리기`·`공개`)를 더하고 gh 호출을 세 번까지 다시 치게 했다. 첫 판의 120개 실행 측정이 HTTP 502 하나로 죽어 다시 치기를 더했고, 판정 기준은 바꾸지 않았다.
 - 프로브 결과(프로브 출력): ci 성공한 실행 120개 모두 측정이었고 `e2e-standalone`은 시험이 든 실행 넷이 2.5·3.0·3.0분, release는 `build` 5.4분과 `publish` 1.0분(n=1)이다. 전체 표는 프로브 README 행.
-- `timeout-minutes`: `e2e-standalone` 45→15, `build` 90→30, `publish` 30→10. 근거(배수)는 `ci.yml`과 `release.yml`의 주석과 티켓.
+- `timeout-minutes`: `e2e-standalone` 45→20, `build` 90→30, `publish` 30→10. 근거(배수)는 `ci.yml`과 `release.yml`의 주석과 티켓.
 - 헌법 판 3.1.0 → 3.1.1(`operations.md`를 고쳤다). `uv run python tools/sibling_overlap.py`는 번호 겹침 없음.
 
 ## 검증
@@ -57,3 +57,14 @@ base `327b8e413`, 파일 7개 수정, 미추적 2개, 커밋 0개. 표준 축(so
 남긴 것: `TAG: ${{ env.HASH_TAG }}`의 한 겹 간접은 두었다(bake 액션이 `TAG`라는 이름으로 읽고, 대조 단계는 `HASH_TAG`를 쓰는 두 이름을 한 정의가 이어 준다). `measure_ci`·`measure_release`의 집계 중복(냄새, 판단 항목)은 프로브가 두 번 돌 일이 드물어 합치지 않았다. 대조 단계가 `imagetools inspect --raw`나 `release_ci.py` 실패로 `::error::` 없이 죽을 수 있는 불완전은 이 변경 이전부터이고 범위 밖이다.
 
 다시 돌린 명령: `uv run pytest -q tests/tools/test_release_workflow.py`(5개 통과), 프로브의 `ruff check`·`ruff format`. 전체 게이트는 커밋의 pre-commit으로 갈음하고 결과는 PR 본문에 적는다.
+
+## PR 직전 리뷰 (CodeRabbit CLI, 이 세션)
+
+`coderabbit-review` 서브에이전트가 CodeRabbit CLI 0.7.5로 `--base origin/dev`를 대고 끝까지 돌았다(`review_completed`, 종료 0, 지적 2건, `Seat: not assigned`에서도 리뷰가 돌았다). Critical·Major는 없었다.
+
+고친 것(코드를 읽은 지적이라 `release.yml`의 스텝 이름을 대조했다):
+- 프로브의 release 표지 `공개`가 부분 일치라 publish 잡의 `이미 공개된 판` 스텝(`action == 'done'`일 때 성공)에도 맞아 새로 내지 않은 실행이 섞인다. release 쪽 표지는 스텝 이름 전체 일치로 바꾸고(`ran_marker(..., exact=True)`) 독스트링의 "하나뿐이다"를 고쳤다. 지금의 `--release 40` 결과(판을 낸 실행 1개, build 5.4분, publish 1.0분)는 그대로다(프로브 출력).
+- `gh()`가 `TimeoutExpired`를 잡지 않았다. 시간 초과도 같은 재시도에 넣고 세 번을 한 루프로 합쳤다.
+- `e2e-standalone` 15분은 캐시가 빈 실행의 어림 8분 대비 여유가 약 1.9배뿐이라 20분으로 올렸다(최대 3.0분의 6배 남짓, 어림 8분의 2.5배). 티켓, README, `ci.yml` 주석을 맞췄다.
+
+남긴 것: 프로브의 `Rounds` 전환(선택, 실행 하나가 조회 실패로 죽어도 앞 집계를 잃지 않게 하려면 필요하지만 프로브가 한 번 돌고 끝나는 도구라 두었다). `publish` 10분은 잰 1.0분의 10배이고 번호 태그를 붙인 뒤에 시간 초과가 나면 "남긴 초안으로 끝낸다"로 가야 하는 값을 치른다는 지적이 있었다. 사용자 판단 자리라 값을 두고 PR 본문 "리뷰어 참고"에 적는다. zizmor는 리뷰 에이전트의 PC에 없어 읽기로 판단했고, 이 세션의 `run_checks.py`가 zizmor를 Passed로 돌렸다(앞 절).

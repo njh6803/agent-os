@@ -30,10 +30,12 @@ release 워크플로(`--release`): `build` 와 `publish` 를 잰다(`RELEASE_JOB
 센다. 두 잡이 모두 표지를 가진 실행만 측정이고, 그렇지 않은 성공 실행은 "판 안 낸 실행"으로 센다.
 `--release` 에서는 실행 수(성공한 실행 가운데 판을 낸 것)가 적어 N 을 크게 줄 필요가 없다.
 
-못 보는 것: 표지는 스텝 이름의 부분 문자열로 가른다. `e2e-standalone` 의 시험 스텝은 이름이 없어
+못 보는 것: `e2e-standalone` 의 표지는 스텝 이름의 부분 문자열로 가른다. 그 시험 스텝은 이름이 없어
 자동 이름(`Run pnpm … exec playwright test`)에 기대므로 스텝에 이름을 붙이면 표지가 맞지 않아 그
-잡의 측정이 0이 되고 종료 코드가 1이다. release 의 `공개` 는 `공개 전 …` 같은 스텝이 생기면
-헛맞는다(지금 스텝 이름 중 `공개` 를 담은 것은 하나다).
+잡의 측정이 0이 되고 종료 코드가 1이다. release 의 표지는 스텝 이름 전체 일치로 가른다. release.yml
+의 publish 잡에는 이름에 `공개` 를 담은 스텝이 둘(`공개`, `이미 공개된 판`)이라 부분 일치로 가르면
+새로 내지 않은 실행이 섞인다(PR 직전 리뷰가 release.yml 을 읽어 짚었다. 부분 일치 판의 결과는 돌려
+보지 않았다). 표지 스텝의 이름을 바꾸면 release 쪽 측정이 0이 되고 종료 코드가 1이다.
 
 돌리는 법: 저장소 루트에서 `uv run python .scratch/harness/probes/ci_job_durations.py [N] [브랜치]`
 (ci), `uv run python .scratch/harness/probes/ci_job_durations.py --release [N]` (release).
@@ -54,21 +56,23 @@ RELEASE_JOBS = {"build": "아티팩트 올리기", "publish": "공개"}
 
 
 def gh(*args: str) -> str:
-    # 일시 장애(HTTP 502 를 한 번 봤다, 2026-11-17)로 백 번 가까운 호출 중 하나에서 죽지 않게 세
-    # 번까지 다시 친다
-    for _ in range(2):
-        done = subprocess.run(
-            ["gh", *args], capture_output=True, text=True, encoding="utf-8", timeout=120
-        )
+    # 일시 장애(HTTP 502 를 한 번 봤다, 2026-11-17)나 호출 하나의 멈춤으로 백 번 가까운 호출
+    # 전체가 죽지 않게 세 번까지 다시 친다
+    problem = ""
+    for attempt in range(3):
+        if attempt:
+            time.sleep(3)
+        try:
+            done = subprocess.run(
+                ["gh", *args], capture_output=True, text=True, encoding="utf-8", timeout=120
+            )
+        except subprocess.TimeoutExpired:
+            problem = "120초 안에 끝나지 않았다"
+            continue
         if done.returncode == 0:
             return done.stdout
-        time.sleep(3)
-    done = subprocess.run(
-        ["gh", *args], capture_output=True, text=True, encoding="utf-8", timeout=120
-    )
-    if done.returncode != 0:
-        sys.exit(f"gh {' '.join(args)} 가 {done.returncode} 로 끝났다: {done.stderr.strip()}")
-    return done.stdout
+        problem = f"{done.returncode} 로 끝났다: {done.stderr.strip()}"
+    sys.exit(f"gh {' '.join(args)} 가 {problem}")
 
 
 def ts(s: str) -> datetime:
@@ -84,10 +88,14 @@ def minutes(job: dict[str, object]) -> float | None:
     return (ts(completed) - ts(started)).total_seconds() / 60
 
 
-def ran_marker(job: dict[str, object], marker: str) -> bool:
+def ran_marker(job: dict[str, object], marker: str, *, exact: bool = False) -> bool:
     steps = job["steps"]
     assert isinstance(steps, list)
-    return any(marker in step["name"] and step["conclusion"] == "success" for step in steps)
+    return any(
+        (step["name"] == marker if exact else marker in step["name"])
+        and step["conclusion"] == "success"
+        for step in steps
+    )
 
 
 def report(title: str, durations: dict[str, list[float]]) -> None:
@@ -205,7 +213,7 @@ def measure_release(limit: str) -> int:
         for job in data["jobs"]:
             mins = minutes(job)
             marker = RELEASE_JOBS.get(job["name"])
-            if marker is not None and mins is not None and ran_marker(job, marker):
+            if marker is not None and mins is not None and ran_marker(job, marker, exact=True):
                 got[job["name"]] = mins
         if set(got) != set(RELEASE_JOBS):
             skipped.append(rid)
