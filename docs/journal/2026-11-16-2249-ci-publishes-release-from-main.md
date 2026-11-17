@@ -202,3 +202,68 @@ CodeRabbit(5건)과 claude-review가 헤드 `a7651c4`를 리뷰했고 검사는 
 - 보류(Minor): `web/packages/e2e-standalone/e2e/docker.ts`의 `repositoryName()`이 `interpreter()`(`@agent-os/e2e-stack`의 `spawnSync("uv", …)`, 제한 시간 없음)를 부른 뒤에야 60초 제한이 시작된다. 정상 실행에는 영향이 없고 `uv`가 멈출 때만 문제다. 같은 도우미를 이미 `stack.ts`가 시험 준비마다 쓰고 있어 이 PR이 고치면 영향이 e2e-stack 패키지 밖으로 번진다. 병합 뒤 별도 항목으로 다룬다(대기열 `e2e-stack-interpreter-timeout`).
 
 **사람 몫 6번이 바뀌었다.** 저장소 넷을 새 이름(`agent-os-runtime`, `agent-os-admin`, `agent-os-widget`, `agent-os-widget-test-page`)으로 공개로 만들어야 한다. 옛 이름으로 만들어 두었다면 새 이름으로 다시 만든다.
+
+## 티켓 PR 병합과 출시 PR (이 세션)
+
+- PR 596(티켓 11)을 squash로 병합했다(병합 커밋 `28ed5be12`). 원격 브랜치는 자동으로 지워졌다.
+- 사용자가 사람 몫 여섯을 끝냈다고 확인하고 출시 PR을 열라고 했다(2026-11-17). main 머리 `dc0bdd50e`에는 push 실행이 없고 같은 SHA에 되돌려 합치기 PR이 건 `ci` 실행(성공)만 있다. 사용자가 이 사실을 알고도 열라고 했고 PR 본문에 적었다.
+- 출시 PR은 [#597](https://github.com/njh6803/agent-os/pull/597)(dev→main)이고 열 때 머리는 `28ed5be12`다. 병합은 새 세션이 한다.
+
+## 인계 (PR 연 뒤)
+
+컨텍스트가 문턱을 넘은 채 출시 PR을 연 경계라 새 세션에 넘긴다. 남은 일은 `merge.md` "출시 PR"의 대기와 병합, 되돌려 합치기, "판 내기를 기다린다"다. 첫 판(`0.1.0-rc.1`)의 소요 시간, 태그와 초안 동작, 로그인 없는 당기기, 묶음 크기, 시험한 이미지와 올린 이미지의 구성 해시 일치, 둘째 빌드의 gha 캐시 적중을 기록하고, 단독 e2e를 올라간 이미지로 다시 쳐 `timeout-minutes`(`release.yml` 90·30, `ci.yml` e2e-standalone 45)를 정한다.
+
+사용자에게 보일 것: 사람 몫 여섯(6번은 새 저장소 이름), 보류한 설계 결정 셋(`build` 잡의 `DOCKERHUB_TOKEN` 노출 범위, 출시 후보의 `prerelease` 표시, 앞 실행 초안 지우기와 새 초안 만들기의 순서), 대기열 후속 셋(`widget-test-page-term-leftovers`, `code-names-follow-runtime-and-widget-test-page`, `e2e-stack-interpreter-timeout`). 개인 계정이라 토큰 범위가 넓은 점은 ADR 0056 이력에 있다. rag-engine용 지시문은 첫 실제 판이 나온 뒤에 낸다(대기열 `rag-engine-port-by-hand`에 한 회차를 더한다).
+
+제목은 `feature/11-ci-publishes-release-from-main (인계함)`으로 바꿨고, 워크트리는 이미 잠겨 있지 않았다(`is not locked`).
+
+open-session을 부른다 2026-11-17T01:24Z
+
+## 출시 PR 597 병합 (이 세션)
+
+- PR 597(dev→main)을 merge 커밋으로 병합했다. 검사 열 개가 SUCCESS였고 CodeRabbit과 claude-review는 SKIPPED였다(`wait_ci` 종료 4, 정상). dev는 원격에 남았다.
+- 판 내기: 병합 커밋 a1a25bd25064b7e0edbc915f5169526356b81f5c 실행 43997051472 결과: 실패, 잡 `build`의 단계 `시험한 이미지와 올린 이미지 대조`가 `Argument list too long`으로 죽었다(https://github.com/njh6803/agent-os/actions/runs/43997051472). 핫픽스 `hotfix/release-digest-compare-reads-registry-tag`로 간다. 그 병합의 판 내기는 새 `판 내기:` 줄로 적는다.
+
+> 사용자(이 세션의 지시문): 티켓 PR 596은 병합되었고 출시 PR 597(dev→main)이 열려 있다. 병합하고 첫 판(0.1.0-rc.1)을 끝까지 지켜본다. 이번 요청 범위: PR과 병합까지.
+
+**첫 판 내기 실행 43997051472.** 아래는 `gh run view 43997051472 --json jobs`가 준 단계별 시각을 읽은 것이다(손으로 읽었다).
+
+- 잡 `build` 전체는 01:38:08에서 01:46:25까지 약 8분 17초였다. 잡 `publish`는 `build` 실패로 건너뛰었다.
+- 이미지 짓기(시험용) 01:38:24~01:41:34(약 3분 10초), 단독 배포 시험 01:42:06~01:42:39(약 33초), 점검 01:42:39~01:45:08(약 2분 29초), 이미지 올리기 01:45:09~01:45:48(약 39초). Docker Hub 로그인과 올리기는 성공했다.
+- 실패한 단계는 `시험한 이미지와 올린 이미지 대조`다. 아티팩트 올리기는 건너뛰었다. 첫 빌드라 gha 캐시가 비어 있었을 것으로 본다(캐시 적중은 보지 않았다).
+
+**원인.** 실패 로그(`gh run view 43997051472 --log-failed`, 289,756바이트)의 마지막 오류는 `An error occurred trying to start process '/usr/bin/bash' … Argument list too long`이다. 그 단계는 bake 액션의 출력 `metadata`를 환경 변수 `METADATA`로 받았고, 이 값은 이미지 넷의 digest와 출처 증명(`provenance: mode=max`)에 든 GitHub 컨텍스트 전체를 담아 로그의 대부분을 차지했다. 리눅스가 환경 변수 하나를 128KiB까지만 받아 `bash`를 띄우지 못했다고 읽는다(커널 상한에서 끌어낸 어림이다. 러너에서 재지 않았다). 운영 문서의 실패 표(`docs/constitution/operations.md`)는 이 단계의 저장소 안 원인을 핫픽스로 정한다.
+
+**레지스트리 상태.** 번호 태그를 붙이기 전의 실패라 해시 태그만 올라가 있다. `docker buildx imagetools inspect njh6803/agent-os-widget:sha-a1a25bd25064b7e0edbc915f5169526356b81f5c`가 색인 digest `sha256:3d6f6404…`를 냈고 이는 실패 로그 메타데이터의 `containerimage.digest`와 같았다(손으로 쳤다). 로컬 Docker 29.9.2로 로그인 없이 조회가 됐다. 이 PC가 Docker Hub에 로그인되어 있는지는 확인하지 않았으므로 "로그인 없는 당기기"의 근거로 삼지 않는다.
+
+**핫픽스(커밋 전).** 브랜치 `hotfix/release-digest-compare-reads-registry-tag`(워크트리 폴더는 옛 이름 `11-ci-publishes-release-from-main`)를 `origin/main`에서 땄다.
+- `.github/workflows/release.yml`: 대조 단계가 `steps.push.outputs.metadata` 대신 `docker buildx imagetools inspect "$NAMESPACE/$repo:$TAG" --format '{{.Manifest.Digest}}'`로 색인 digest를 읽는다(`TAG`는 `sha-${{ github.sha }}`).
+- `tests/tools/test_release_workflow.py`(새 파일): 워크플로에 `${{ steps.<id>.outputs.metadata }}`가 없음을 재는 시험과 변이 시험 둘. 고치기 전 1 failed, 2 passed였다(빨강을 봤다).
+- `.scratch/harness/issues/release-digest-compare-reads-registry-tag.md`(새 파일, `Status: done`, 대기열 없음).
+- 이 PC에서 고친 단계 본문을 올라간 이미지 넷으로 돌렸다(`bash`로, `python3`는 `uv run`으로 대신하고 `tested.txt`는 올린 쪽 값으로 미리 채웠다. 구문과 부속 명령과 출력 모양만 증명하고 시험한 이미지와 올린 이미지가 같은지 가르는 판정은 증명하지 못한다). 종료 0이었고 `out/release.json`에 이미지 넷의 색인 digest가 들었다. 그 폴더 `out/`은 지웠다.
+- `uv run ruff check .`와 `uv run ruff format --check .`는 종료 0, `uv run pytest tests/tools/test_release_workflow.py tests/tools/test_release_ci.py`는 종료 0이었다. 전체 러너(`tools/run_checks.py`)는 커밋의 pre-commit이 돌린다. `/code-review`는 아직 돌지 않았다.
+
+**되돌려 합치기 PR 598.** [#598](https://github.com/njh6803/agent-os/pull/598)(main→dev, 머리 `a1a25bd25`)을 열어 두었고 병합하지 않았다. `wait_ci`가 종료 1로 끝났고 검사 줄에서 `build FAILURE`와 `publish SKIPPED`가 났다. 이 둘은 598 자신의 검사가 아니라 같은 SHA에서 돈 실패한 판 내기 실행의 잡이 붙은 것이다(나머지 열 검사는 SUCCESS, CodeRabbit은 "manual review required"로 SKIPPED). 규약("하나라도 SUCCESS가 아니면 병합하지 않는다")대로 두고, 핫픽스가 main에 들어가면 598의 머리가 움직이므로 두 main 커밋을 한 번에 합친다. 판 내기가 성공해 `build`·`publish`가 초록이 되면 새 머리로 기다림부터 다시 하고 병합한다.
+
+**세션 경위.** 시작할 때 `tidy-checkouts`를 돌아 주 체크아웃을 `28ed5be12`로 당겼고 병합된 워크트리 셋(06·07·10)과 임시 브랜치 하나를 지웠다. 이 세션이 쓰는 워크트리는 `바뀐 파일이 있다`로 남겼다. 제목은 `feature/11-ci-publishes-release-from-main`이었고 인계하며 `hotfix/release-digest-compare-reads-registry-tag (인계함)`으로 바꾼다.
+
+## 인계 (셀프 리뷰 직전, 이 세션)
+
+컨텍스트가 문턱을 넘은 채 핫픽스의 `/code-review` 직전 경계에 와서 새 세션에 넘긴다. 남은 일은 셀프 리뷰, 커밋, 푸시, 핫픽스 PR(base main)과 봇 회차, 병합, 새 판 내기를 끝까지 보기, 되돌려 합치기 PR 598의 병합이다. 이 판 내기에서 처음 돌아 보는 단계(`아티팩트 올리기`, 잡 `publish` 전체)가 또 실패할 수 있다. 실패하면 운영 문서의 표대로 다시 핫픽스다.
+
+원래 지시문(앞 절 "인계 (PR 연 뒤)")에서 이어받는 남은 일은 이렇다. 첫 판의 소요 시간, 태그와 초안 동작, 시험한 이미지와 올린 이미지의 구성 해시 일치, 둘째 빌드의 gha 캐시 적중을 기록한다. 올라간 이미지로 단독 e2e를 다시 쳐서 `timeout-minutes`(`release.yml` 90·30, `ci.yml` e2e-standalone 45)를 정한다. 최종 보고에는 "인계 (PR 연 뒤)"가 적은 사람 몫 여섯(6번은 새 저장소 이름 넷 `agent-os-runtime`, `agent-os-admin`, `agent-os-widget`, `agent-os-widget-test-page`), 보류한 설계 결정 셋, 대기열 후속 셋을 다시 보인다. rag-engine용 지시문은 첫 판이 난 뒤에 낸다.
+
+핫픽스를 main에 병합한 뒤에는 열려 있는 PR 598(main→dev)을 새 머리로 기다려 병합한다. 598의 `build`·`publish` 빨강은 실패한 판 내기 실행의 잡이 같은 SHA에 붙은 것이라 새 판이 초록이어야 598이 병합된다. 이 판에서 처음 돌아 보는 단계(`아티팩트 올리기`, 잡 `publish` 전체)가 또 실패하면 운영 문서 표대로 다시 핫픽스다.
+
+open-session을 부른다 2026-11-17T02:00Z
+
+인계 못함 셀프 리뷰 직전: `open_session.ps1`의 첫 시도는 URL이 8687자(상한 8000)라 보내기 전에 멈췄고, 지시문을 줄인 둘째 시도는 자동 모드 분류기가 "Unsanctioned Communication"으로 거부했다. 우회하지 않고 이 세션이 다음 단계(핫픽스 셀프 리뷰)를 잇는다. 제목은 `hotfix/release-digest-compare-reads-registry-tag`로 되돌렸다.
+
+## 셀프 리뷰 (핫픽스, 이 세션)
+
+범위는 기준 `a1a25bd25`, 변경 파일 2개, 미추적 2개, 커밋 0개였다. 표준 축(sonnet·high)은 Critical 없음, Major 하나, Minor 몇 개를 냈고 명세 축은 Critical·Major 없음, Minor 셋, Nit 하나를 냈다. 명세 축은 digest의 출처를 정한 명세·ADR이 없다는 것(`.scratch/release-image/spec.md`의 대조 값을 "워크플로를 짓는 티켓이" 정한다는 줄)과 출력 형식·뒤따르는 단계의 입력이 그대로라는 것을 확인했다(서브에이전트 보고, 코드를 읽었다).
+
+- 고친 것(Major): 티켓의 검증 칸이 pre-commit 결과보다 앞서 체크되어 있던 것을, 손으로 친 몫과 pre-commit으로 갈음하는 몫을 가른 문장으로 고쳤다.
+- 고친 것(Minor): 티켓이 운영 문서를 따옴표로 인용한 문구가 원문과 달라 풀어 썼다. `repo=` 줄은 중복을 고친 것이 아니라 옮긴 것이라 문장을 고쳤다. 128KiB와 "약 290KB"를 단정하던 워크플로 주석·시험 독스트링·티켓을 어림으로 고치고, `METADATA` 값의 크기를 줄 접두를 떼고 다시 쟀다(`gh run view 43997051472 --log-failed`를 `awk`·`sed`로 걸러 185,618바이트, 손으로 쟀다). 시험 이름이 판정 범위(줄 안 어디든)보다 좁아 `…_표현식으로_쓰지_않는다`로 고치고, YAML 주석 안의 표현식도 잡는 거짓 양성을 독스트링에 적었다.
+- 남긴 것: `docs/constitution/operations.md` 실패 표의 `시험한 이미지와 올린 이미지 대조` 줄이 "두 이미지의 설정 해시가 다를 때 실패한다"고만 적는다. 실제로는 올린 색인의 digest를 읽지 못해도 실패한다(이번 실행이 그렇게 죽었다). 헌법 문서라 이 핫픽스에서 건드리지 않고, 다음 문서 고침이 이 줄에 "digest를 읽지 못할 때"를 더한다. `TAG: sha-${{ github.sha }}`가 두 단계에 중복이라는 smell(약함)과 `id: push`가 남은 것은 두었다(`id: push`는 쓰는 곳이 없어도 무해하고 시험 예시가 이름을 쓴다).
+- 다시 돌린 명령: 고친 뒤 ruff 둘과 시험 두 파일을 다시 치고 커밋의 pre-commit이 나머지를 돌린다(결과는 커밋 뒤에 적는다).
