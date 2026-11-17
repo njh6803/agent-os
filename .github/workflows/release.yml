@@ -252,20 +252,24 @@ jobs:
       # 설정은 레이어 목록(rootfs.diff_ids)을 담아 설정과 레이어를 함께 가리킨다(ENV 만 다른 이미지도 갈린다). 시험한 쪽은
       # 위에서 받은 저장 파일의 설정 파일을, 올린 쪽은 올린 색인의 linux/amd64 매니페스트의 config.digest 를 읽는다.
       # 다르면 번호 태그와 릴리스 앞에서 실패한다.
+      # 올린 색인의 digest 는 bake 액션의 metadata 출력이 아니라 방금 올린 커밋 해시 태그에서 레지스트리에 물어 읽는다.
+      # 그 출력은 출처 증명에 든 GitHub 컨텍스트까지 실어 첫 실행 로그에서 약 185KB 였다. 환경 변수로 받으면 리눅스의
+      # 한 변수 상한(커널의 MAX_ARG_STRLEN, 128KiB 로 본다)을 넘어 bash 를 띄우지 못했다(2026-11-17 첫 실행).
       - name: 시험한 이미지와 올린 이미지 대조
         id: digests
         if: steps.plan.outputs.release == 'true'
         env:
           NUMBER: ${{ steps.plan.outputs.number }}
           NAMESPACE: ${{ vars.DOCKERHUB_NAMESPACE }}
-          METADATA: ${{ steps.push.outputs.metadata }}
+          TAG: sha-${{ github.sha }}
         run: |
           images='{}'
           for image in serve admin widget portal; do
-            digest=$(jq -r --arg i "$image" '.[$i]["containerimage.digest"]' <<< "$METADATA")
+            repo=$(python3 tools/release_ci.py repository "$image")
+            digest=$(docker buildx imagetools inspect "$NAMESPACE/$repo:$TAG" --format '{{.Manifest.Digest}}') || {
+              echo "::error::$image 의 해시 태그 $TAG 를 레지스트리에서 조회하지 못했다."; exit 1; }
             case "$digest" in sha256:????????????????????????????????????????????????????????????????) ;; *)
               echo "::error::$image 의 올린 digest 를 읽지 못했다: $digest"; exit 1 ;; esac
-            repo=$(python3 tools/release_ci.py repository "$image")
             docker buildx imagetools inspect "$NAMESPACE/$repo@$digest" --raw > "$RUNNER_TEMP/index.json"
             platform=$(python3 tools/release_ci.py platform-manifest "$RUNNER_TEMP/index.json")
             docker buildx imagetools inspect "$NAMESPACE/$repo@$platform" --raw > "$RUNNER_TEMP/manifest.json"
