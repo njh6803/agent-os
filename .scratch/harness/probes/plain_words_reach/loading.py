@@ -131,7 +131,9 @@ def clean_env() -> dict[str, str]:
 
 
 def run(arm: Arm, cwd: Path) -> str:
-    """회차 하나의 stream-json. 제한 시간을 넘기면 그때까지의 출력이라 결과가 없어 측정이 아니다."""
+    """회차 하나의 stream-json. 제한 시간을 넘기면 그때까지의 출력이고, 세션을 띄우지 못하면 그
+    까닭 한 줄이다. 둘 다 결과 이벤트가 없어 측정이 아니다. 예외를 밖으로 던지지 않아야 함께 띄운
+    다른 회차의 원본이 남는다."""
     executable = shutil.which(BASE[0]) or BASE[0]
     try:
         done = subprocess.run(
@@ -146,6 +148,8 @@ def run(arm: Arm, cwd: Path) -> str:
         )
     except subprocess.TimeoutExpired as expired:
         return (expired.stdout or b"").decode("utf-8", errors="replace")
+    except OSError as error:
+        return f"세션을 띄우지 못했다: {error}\n"
     return done.stdout.decode("utf-8", errors="replace")
 
 
@@ -286,17 +290,17 @@ def preflight(cwd: Path) -> list[str]:
     try:
         style = STYLE_FILE.read_text(encoding="utf-8")
     except OSError as error:
-        style = ""
         problems.append(f"출력 스타일 파일을 읽지 못했다: {error}")
-    if style and STYLE_CANARY not in style:
-        problems.append(f"출력 스타일 파일에 카나리아가 없다: {STYLE_CANARY}")
+    else:
+        if STYLE_CANARY not in style:  # 빈 파일도 여기서 걸린다
+            problems.append(f"출력 스타일 파일에 카나리아가 없다: {STYLE_CANARY}")
     try:
         project = (cwd / "CLAUDE.md").read_text(encoding="utf-8")
     except OSError as error:
-        project = ""
         problems.append(f"CLAUDE.md 를 읽지 못했다: {error}")
-    if project and PROJECT_CANARY not in project:
-        problems.append(f"CLAUDE.md 에 카나리아가 없다: {PROJECT_CANARY}")
+    else:
+        if PROJECT_CANARY not in project:  # 빈 파일도 여기서 걸린다
+            problems.append(f"CLAUDE.md 에 카나리아가 없다: {PROJECT_CANARY}")
     return problems
 
 

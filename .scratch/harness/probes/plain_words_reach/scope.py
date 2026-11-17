@@ -133,7 +133,9 @@ def prepare(folder: Path, arm: str) -> None:
 
 
 def run(cwd: Path) -> str:
-    """회차 하나의 stream-json. 제한 시간을 넘기면 그때까지의 출력이라 결과가 없어 측정이 아니다."""
+    """회차 하나의 stream-json. 제한 시간을 넘기면 그때까지의 출력이고, 세션을 띄우지 못하면 그
+    까닭 한 줄이다. 둘 다 결과 이벤트가 없어 측정이 아니다. 예외를 밖으로 던지지 않아야 함께 띄운
+    다른 회차의 원본이 남는다."""
     executable = shutil.which(COMMAND[0]) or COMMAND[0]
     try:
         done = subprocess.run(
@@ -148,6 +150,8 @@ def run(cwd: Path) -> str:
         )
     except subprocess.TimeoutExpired as expired:
         return (expired.stdout or b"").decode("utf-8", errors="replace")
+    except OSError as error:
+        return f"세션을 띄우지 못했다: {error}\n"
     return done.stdout.decode("utf-8", errors="replace")
 
 

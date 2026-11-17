@@ -429,7 +429,14 @@ Critical과 Major는 없고 Minor 3, Nit 6이다. 요구하지 않은 동작은 
 - 손으로 치는 다섯(pytest, 린트, 타입체크, 경계, web)은 커밋 `386e7788e`의 pre-commit 결과로 갈음했다. `ruff check`와 `ruff format`이 Passed였고, 함께 띄우는 검사 열하나(check-ticket, check-notes, lint-imports, zizmor, check-instructions, check-type-escapes, pyright-linux, pyright, run-hooks, pytest 540.2초, web-verify 559.5초)가 모두 Passed였다(559.69초). 마크다운 표, 줄 구분 문자, 변이 표, 카나리아 명세 모양, 커밋 메시지 검사도 Passed였다. 헌법 판 검사는 헌법 파일을 고치지 않아 Skipped였고, 이 변경에는 해당하지 않는다.
 - 같은 pre-commit의 인용 대조(막지 않는 경고)가 따옴표 인용 열셋을 알렸다. 하나씩 봤다. 일지의 열하나와 용어집의 하나는 원문 인용이 아니다(고치기 전의 글을 옮긴 것 아홉, 도구 출력 하나, 이 세션이 쓴 질문 문장 하나, 용어집 176행에서 사이트가 토큰에 적는 뜻을 따옴표로 적은 것 하나). 나머지 하나는 대기열 README 42행을 옮기며 "(`5회차`)"를 빠뜨린 것이라 원문대로 고쳤다.
 - `pnpm -C web visual:admin`(관리 화면 사진 비교, Docker 29.9.2): "72 passed (2.0m)". 관리 화면의 라벨 하나를 바꿔서 돌렸다. 셀프 리뷰 때는 CI에 맡긴다고 적었으나 Docker가 켜져 있어 로컬에서 봤다. 사진 기준은 바뀌지 않았다.
-- 돌리지 않은 것: e2e 넷과 `-m llm` 계열. 서버와 위젯의 코드에서 바뀐 것은 주석, 독스트링, 오류 문구, 시험 이름이고 동작은 그대로다(셀프 리뷰 명세 축이 독스트링을 뺀 AST로 기준 커밋과 맞댔다). e2e는 CI가 돈다.
+- 돌리지 않은 것: e2e 넷. 서버와 위젯의 코드에서 바뀐 것은 주석, 독스트링, 오류 문구, 시험 이름이고 동작은 그대로다(셀프 리뷰 명세 축이 독스트링을 뺀 AST로 기준 커밋과 맞댔다). e2e는 CI가 돈다.
+- 실제 모델 시험. 처음에는 동작이 그대로라 돌리지 않는다고 적었다. 둘째 커밋 `9ebad858a` 뒤에 `docs/constitution/operations.md` LLM 테스트를 다시 읽으니 계기가 경로로 정해져 있었다(`core/run.py`, `channel/`을 건드렸을 때). 이 PR은 그 파일들의 주석과 독스트링을 고쳤으므로 계기에 든다. 그래서 돌렸다.
+  - `uv run --env-file ../../../.env pytest -m llm`(커밋 `9ebad858a`): "23 passed, 7822 deselected in 331.11s". "LLM 토큰 합계 273,880(입력 268,321, 출력 5,559). 트레이스 30개, 모델 호출 64건. 트레이스를 남기지 않은 LLM 테스트 1개는 세지 못했다."
+  - `uv run --env-file ../../../.env pytest -m llm_widget`: 첫 실행은 실패했다("1 failed", 토큰 합계 0). Playwright가 띄운 `serve`가 서지 않았다. 역추적의 끝은 `asyncio`가 `import inspect`를 할 때 표준 라이브러리가 아니라 `C:\Users\User\AppData\Local\Temp\inspect.py`를 읽은 것이다. 그 파일은 2026-11-17 10:26에 쓰인 244바이트 스크립트이고(`.scratch/search-eval/probes/experiments/reranker/report-rerank-100.json`을 읽는다) 이 세션이 쓴 것이 아니다. `python -m`은 작업 폴더를 모듈 찾는 길 맨 앞에 두고, e2e는 `serve`를 시스템 임시 폴더에서 띄운다(`web/packages/e2e-stack/src/serve.ts` 75행이 작업 폴더로 `tmpdir()`를 준다). 그래서 그 폴더에 표준 라이브러리와 이름이 같은 `.py`가 하나라도 있으면 `serve`가 서지 않는다. 남의 파일이라 지우지 않았다.
+  - 원인을 가리려고 같은 명령 앞에 `PYTHONSAFEPATH=1`(작업 폴더를 모듈 찾는 길에 넣지 않는다)을 붙여 다시 돌렸다: "1 passed, 7844 deselected in 112.89s". "LLM 토큰 합계 17,066(입력 16,793, 출력 273). 트레이스 2개, 모델 호출 4건." 시험도 코드도 고치지 않았고 환경 변수 하나만 달랐으므로, 첫 실패는 그 파일 탓이다. 이 통과는 그 변수를 붙인 실행의 것이다.
+  - `PYTHONSAFEPATH=1 uv run --env-file ../../../.env pytest -m llm_portal`: "1 passed, 7844 deselected in 44.04s". "LLM 토큰 합계 6,997(입력 6,925, 출력 72). 트레이스 1개, 모델 호출 2건." 같은 `serve`를 띄우는 시험이라 처음부터 그 변수를 붙였다. 변수 없이는 돌려 보지 않았다.
+  - 이 사건은 회고 뒤에 났다. 대기열에 새 항목 `e2e-serve-cwd-is-system-temp-dir`을 썼다(1회차. `tmpdir|inspect\.py|PYTHONSAFEPATH`로 대기열을 찾아 이은 항목이 없음을 봤다). 고침이라 사건 하나로 반영할 수 있지만 이 티켓의 범위가 아니라 남긴다.
+- 로컬 모델 시험(`llm_local`). 같은 까닭으로 병합 조건의 범위에 든다(범위에 `core/run.py`와 `channel/`이 있다). `uv run --env-file ../../../.env python tools/llm_local.py run`을 `--yes` 없이 쳐 예상 비용을 뽑았다(종료 코드 4, 아무것도 띄우지 않았다). 후보는 차례로 RTX A5000 파드 둘(시간당 0.54달러, 어림 30분 0.27달러, 최악 90분 0.81달러), RTX 3090 파드 둘(1.00, 0.50, 1.50), A40 파드 둘(1.18, 0.59, 1.77), A40 파드 하나를 나눠 쓰기(0.59, 0.29, 0.88)다. 이 비용을 사용자에게 보이고 확인을 기다린다.
 
 ## PR 직전 리뷰
 
@@ -463,6 +470,38 @@ Critical과 Major는 없고 Minor 3, Nit 6이다. 요구하지 않은 동작은 
 - 서브에이전트가 확인하지 못했다고 한 것(바뀐 오류 문구를 기대하는 곳). `*.py`, `*.ts`, `*.tsx`, `*.toml`, `*.json`에서 "덮는 끝"을 Grep으로 찾으니 끝난 기능의 변이 표 둘과 프로브의 결과 자료 셋뿐이었다. 모두 기록이다.
 
 **다시 돌린 명령.** `loading.py`만 고쳤으므로 그 파일의 `ruff check`와 `ruff format --check`를 쳤고, 나머지는 다음 커밋의 pre-commit 결과로 갈음한다.
+
+## PR 봇 리뷰 (첫 회차)
+
+PR 603을 열고 `@coderabbitai review`를 남긴 뒤 `uv run python tools/wait_ci.py 603`을 백그라운드로 띄웠다. 헤드 `9ebad85`에서 "끝: 모두 통과. CodeRabbit: Finished"로 끝났다(종료 코드 0). `llm` 잡은 SKIPPED였다.
+
+**claude-review.** "지적 없음." 코드 변경이 주석, 독스트링, 오류 문구뿐이고 식별자와 반환 타입과 예외 종류가 그대로라는 것, 이름 바꾸기가 시험 이름과 오류 문구를 단언하는 부분 문자열과 관리 화면 라벨까지 함께 갔다는 것을 본 범위로 적었다.
+
+**CodeRabbit.** 지적 다섯(Minor 넷, Trivial 하나)이다. 이 봇의 첫 회차라 지적마다 판단했다.
+
+1. Minor. `loading.py`의 `preflight`: 원천 파일이 비어 있으면 카나리아 검사를 건너뛴다. 빈 `CLAUDE.md`로 돌리면 답에 그 줄이 없는 것이 "실리지 않았다"로 읽힌다. 판정은 유효. 고쳤다.
+2. Minor. `loading.py`의 `pool.map`(`scope.py`도 같다): 한 회차가 프로세스를 띄우지 못해 `OSError`가 나면 `list(pool.map(...))`이 예외로 끝나, 이미 끝난 다른 회차의 원본도 저장되지 않는다. 판정은 유효. 고쳤다.
+3. Minor. `tests/core/test_run.py`의 시험 이름을 바꿨는데 끝난 기능의 변이 표 셋(`walk_cap_mutations.toml`, `continuation_mutations.toml`, `shortcuts_mutations.toml`)의 `-k`가 옛 이름을 가리킨다. 판정은 보류. PR 직전 리뷰의 지적 1과 같은 것이다.
+4. Minor(diff 밖). `.scratch/end-user-channel/probes/contract_mutations.toml` 364행의 `등록부에_없고`가 바뀐 시험을 고르지 못하고, 다른 조건이 시험 하나를 골라 알림 없이 돈다. 판정은 보류. 3과 같은 것이다.
+5. Trivial. `CONTEXT.md` 236행 "마지막 정상본"의 풀이에서 요청마다 변경 시각을 보고 다시 읽는 절차를 빼라(용어집에는 구현 세부를 두지 않는다). 판정은 보류.
+
+### 반영
+
+**고친 것.**
+
+- 지적 1. `preflight`가 파일을 읽은 뒤에는 비었든 아니든 카나리아가 있는지 본다(`try`의 `else`로 옮겼다). 읽지 못한 때는 전처럼 읽지 못했다는 줄 하나만 낸다.
+- 지적 2. 두 프로브의 `run`이 `OSError`를 받아 "세션을 띄우지 못했다: …" 한 줄을 돌려준다. 그 줄은 JSON이 아니라 이벤트로 읽히지 않고, 그 회차는 "성공한 결과 이벤트가 없다"로 측정이 아니다. 원본 파일에는 그 까닭이 남는다. 예외가 `pool.map` 밖으로 나가지 않으므로 다른 회차의 원본은 그대로 저장된다. 독스트링과 프로브 README의 행을 맞췄다.
+- 확인. 고친 판과 고치기 전 판(HEAD의 두 파일)을 같은 입력에 넣었다(세션 스크래치의 `check_bot_fixes.py`, 손으로 봤다). 카나리아가 든 파일 둘은 두 판 모두 걸지 않았다. 빈 `CLAUDE.md`와 빈 출력 스타일 파일은 고친 판이 "… 에 카나리아가 없다"로 걸었고 고치기 전 판은 지나갔다. 없는 실행 파일 이름을 넣으면 고친 판의 두 `run`은 "세션을 띄우지 못했다: [WinError 2] …"를 돌려주고 판정은 "성공한 결과 이벤트가 없다"였으며, 고치기 전 판의 두 `run`은 `FileNotFoundError`로 끝났다. 이 고침 뒤에 두 프로브를 실제 세션으로 다시 돌리지는 않았다.
+- 이 꼴(회차를 한꺼번에 띄우는 프로브가 띄우기를 `Rounds.round` 밖에서 한다)은 셀프 리뷰 두 축과 PR 직전 리뷰를 지나 PR 봇이 잡았다. 대기열에 새 항목 `probe-parallel-launch-outside-round`를 썼다(닫힌 0339의 9회차. `pool\.map`, `회차를 잃`, `원본을 잃`으로 대기열을 찾아 같은 꼴의 열린 항목이 없음을 봤다. 0339를 8회차까지 이은 `node-probes-miss-probe-rules`는 Node 프로브의 것이라 처방이 다르다).
+
+**남긴 것과 이유.**
+
+- 지적 3·4(변이 표의 `-k`). PR 직전 리뷰의 지적 1에서 남긴 까닭 그대로다. 그 표를 고치면 그 커밋에서 표의 옛 변이 전부에 표지 품질 검사가 걸려, 옛 변이마다 `expect_output`을 새로 골라야 한다. 이 티켓의 범위를 넘는다. 어긋난 곳은 티켓 28행과 대기열 `mutation-table-test-filter-stale-after-rename`에 있고 "다음"에도 이미 적혀 있다. PR 코멘트에 이 까닭을 남겼다.
+- 지적 5("마지막 정상본"의 풀이). 이 티켓은 이름과 풀이를 쉬운 말로 바꾸는 일이고, 풀이의 사실은 빼거나 더하지 않기로 했다(셀프 리뷰 명세 축이 용어마다 대조한 기준이다). 그 절차는 기준 커밋의 옛 풀이에도 있었고, ADR 0023의 이력 2026-11-04가 정한 동작이다. 용어집에서 절차를 걷어 내는 것은 이 용어 하나의 일이 아니라 용어집 전체의 기준을 정하는 일이라 여기서 고치지 않는다. PR 코멘트에 이 까닭을 남겼다.
+
+**다시 돌린 명령.** 프로브 폴더의 `ruff check`("All checks passed!")와 `ruff format --check`("2 files already formatted")를 쳤고, 나머지는 이 커밋의 pre-commit 결과로 갈음한다.
+
+**세션 카드.** e2e의 `serve` 문제(위 "검증")를 고치는 일을 새 세션 카드로 제안하려 했으나 `hook_session_card`가 막았다(모델이 스스로 내는 카드는 이 저장소에서 막는다, ADR 0037). 그 일은 대기열 항목과 "다음"에 이미 있다.
 
 ## rag-engine에 줄 지시문
 
@@ -576,7 +615,7 @@ CLAUDE.md의 줄과 스킬의 문장이 고쳐지고 새 세션에서 실리는 
 
 ## 회고
 
-원천은 이 일지와 이 세션이다. 낸 후보는 열넷이다. 승인이 다섯(모두 대기열 항목에 회차를 더했다), 기각이 아홉, 넘김은 없다. 이 세션에서 회고로 반영한 것은 없다. 만료할 항목도 없다(`tools/queue_open_rows.py`를 작업 트리와 `--ref origin/dev`로 돌려 둘 다 "(없음)"이었다).
+원천은 이 일지와 이 세션이다. 낸 후보는 열넷이다. 승인이 다섯(모두 대기열 항목에 회차를 더했다), 기각이 아홉, 넘김은 없다. 이 세션에서 회고로 반영한 것은 없다. 이 회고 뒤에 난 사건은 둘이다. 실제 모델 시험에서 `serve`가 서지 않은 것은 위 "검증"에 적고 새 항목 `e2e-serve-cwd-is-system-temp-dir`로 올렸다. PR 봇이 프로브의 띄우기 예외를 잡은 것은 위 "PR 봇 리뷰"에 적고 새 항목 `probe-parallel-launch-outside-round`로 올렸다. 만료할 항목도 없다(`tools/queue_open_rows.py`를 작업 트리와 `--ref origin/dev`로 돌려 둘 다 "(없음)"이었다).
 
 **승인(회차를 더한 것).**
 
@@ -607,5 +646,7 @@ CLAUDE.md의 줄과 스킬의 문장이 고쳐지고 새 세션에서 실리는 
 - **용어집이 지금 코드를 그대로 적은 풀이 둘.** "설정 화면"의 토큰 입력 칸은 admin-login이 그 칸을 없앨 때(ADR 0062), "적용 규칙"의 값은 로그인 요구를 만드는 기능이 새 값을 더할 때(ADR 0060) 그 티켓이 용어집과 함께 고친다.
 - **끝난 기능의 변이 표에 남은 `-k` 여섯**(대기열 `mutation-table-test-filter-stale-after-rename`). 그 표를 다시 돌릴 일이 생기면 조건부터 새 시험 이름으로 고친다.
 - **`CLAUDE.md` 밖에 남은 "위젯 미리보기 페이지"**(`.claude/rules/http.md` 등). 대기열 `widget-test-page-term-leftovers`가 맡는다.
+- **e2e가 `serve`를 시스템 임시 폴더에서 띄운다**(대기열 `e2e-serve-cwd-is-system-temp-dir`). 그 폴더에 표준 라이브러리와 이름이 같은 `.py`가 있으면 e2e와 `llm_widget`·`llm_portal`의 `serve`가 서지 않는다. `web/packages/e2e-stack/src/serve.ts`가 작업 폴더로 새로 만든 빈 폴더를 주게 고치는 chore가 맡는다. 그때까지 이 PC에서는 `C:\Users\User\AppData\Local\Temp\inspect.py`(다른 작업이 남긴 파일이다)를 사용자가 지우거나, 명령 앞에 `PYTHONSAFEPATH=1`을 붙인다.
+- **회차를 한꺼번에 띄우는 프로브의 띄우기 예외**(대기열 `probe-parallel-launch-outside-round`). 이 PR의 두 프로브는 고쳤다. 같은 꼴이 다른 프로브에 더 있는지 세고 도우미나 규칙의 한 문장으로 옮기는 일은 하네스 chore가 맡는다.
 - **출력 스타일의 "한자어를 적극 활용" 조항.** 저장소 밖의 사용자 파일이라 고치지 않았다. "흔히 쓰는 한자어"로 좁힐지는 사용자가 정한다.
 - **rag-engine.** 같은 규약을 rag-engine에도 맞추는 지시문은 위 "rag-engine에 줄 지시문" 절에 있고, 이 세션이 병합 뒤에 사용자에게 낸다. 대기열 `rag-engine-port-by-hand`는 이 지시문으로 3회차가 됐다(회고의 승인 다섯과는 따로 센 것이다. 그 항목은 지시문을 낼 때마다 회차를 더한다).
