@@ -2,6 +2,6 @@
 
 **상태:** 열림
 **어디로:** `docs/adr/0029-session-model-is-picked-before-send.md`의 새 이력(결정표의 `Fable 5.1 / xhigh`를 지금 메뉴의 이름으로 바꾸는 사용자 결정)과, 그 값을 적은 `.claude/skills/next-session/SKILL.md`·`directive.md`, `docs/model-selection.md`, 카나리아 명세 넷(`.scratch/harness/probes/canary/`), `tools/rerun_cost.py`, `tools/token_report.py`, `tests/tools/test_rerun_cost.py`. 이름을 무엇으로 바꿀지는 사용자 몫이다(ADR 0029의 2026-10-31 이력이 사용자의 결정으로 적은 값이라 retro가 바꾸지 못한다)
-**승인:** 사용자 승인 2026-11-10(선택 화면에서 "병합 뒤 따로 고침"을 골랐다), 1회차, 일지 2026-11-10-1345-doc-qa-agent-design.md. 2회차 2026-11-15(설계 인터뷰를 넘기던 `open-session`이 같은 오류로 멈춰 사용자가 모델을 지정하고 다시 시키고서야 열렸다), 일지 2026-11-14-2152-admin-login-design.md. 3회차 2026-11-15, 일지 2026-11-15-2058-widget-login-state-spec.md. ADR 필요
+**승인:** 사용자 승인 2026-11-10(선택 화면에서 "병합 뒤 따로 고침"을 골랐다), 1회차, 일지 2026-11-10-1345-doc-qa-agent-design.md. 2회차 2026-11-15(설계 인터뷰를 넘기던 `open-session`이 같은 오류로 멈춰 사용자가 모델을 지정하고 다시 시키고서야 열렸다), 일지 2026-11-14-2152-admin-login-design.md. 3회차 2026-11-15, 일지 2026-11-15-2058-widget-login-state-spec.md. 4회차 2026-11-17(셀프 리뷰를 넘기던 `open-session`이 같은 오류로 멈췄고, 사용자가 다시 보내 달라고 해 `Fable 5.2`로 보냈다), 일지 2026-11-17-1747-postgres-foundation-design.md. ADR 필요
 
 앞 세션의 `open_session.ps1 -Action send`가 "5초 안에 모델 메뉴의 'Fable 5.1' 을(를) 찾지 못했다."로 끝났고, 그 세션이 원래 쓰던 모델은 `Fable 5.2`였다(일지 293줄). 이름이 적힌 자리는 `Fable 5.1`을 Grep한 결과 42개 파일, 139곳이고 대부분은 일지와 기록이다. 이 항목이 열려 있는 동안 설계 인터뷰나 명세 지시문의 "모델" 줄은 열 때 사람이 지금 메뉴에서 고를 수 있는 이름으로 임시로 적는다.

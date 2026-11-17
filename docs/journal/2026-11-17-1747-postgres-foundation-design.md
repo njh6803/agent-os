@@ -172,7 +172,7 @@ ADR 0066을 `proposed`로 썼다(번호는 `tools/sibling_overlap.py`로 겹침�
 - 배포 안내 9절(`deploy/standalone/README.md`)은 digest로 고정한 nginx 이미지가 `docker save`·`docker load`를 지나며 digest를 잃어 태그를 붙여 옮긴다(읽었다). postgres도 digest로 고정하므로 같은 처지다. compose에 PostgreSQL을 더하는 티켓이 그 절의 명령을 고친다고 Consequences "운영"에 적었다.
 - 공식 이미지 `postgres:18`의 설정은 `PGDATA=/var/lib/postgresql/18/docker`, `VOLUME /var/lib/postgresql`, 사용자 빈칸이다(손으로 봤다, `docker image inspect`). 진입 스크립트는 58줄에서 데이터 폴더의 소유를 `postgres`로 맞추고 343줄에서 `exec gosu postgres`로 내려간다(손으로 봤다, 컨테이너 안에서 grep). 이 PC가 받아 둔 이미지의 digest는 `sha256:b9f6b8ff03b62f3cfd9d9ba3fe56226a9991c79d3fb46fd46536263bf02be553`이다(손으로 봤다).
 - 릴리스 노트의 "올릴 때 할 일"은 느낌표 PR이 `docs/release-notes/upgrade/`에 싣는 조각뿐이다(`docs/constitution/operations.md`, `tools/release.py`를 읽었다). ADR 0056 결정 "번호"는 운영자가 손댈 것이 있는 변경에 느낌표를 붙이고 가운데 자리를 올린다. 그래서 합의 요약 4("릴리스 노트의 '올릴 때 할 일'에 올리기 전 백업을 적습니다")를 따르면 마이그레이션을 더하는 PR은 느낌표 PR이 되고 그 판은 가운데 자리가 오른다. 합의 요약에 없던 갈래라 ADR 결정 "승인 때 함께 확인받는 세부"의 첫째로 올렸다.
-- 합의 요약 12는 "`main`이 연결 문자열로 엔진을 만들어 `create_app`에 넘긴다"고 적었다. 엔진을 그대로 넘기면 `server.py`가 SQLAlchemy를 import하게 되어 같은 항목의 "데이터베이스 코드는 `agent_os.adapters` 안 한 곳"과 어긋난다. 포트를 넘기고 import 금지에 `agent_os.server`를 넣는 것으로 채워 같은 절의 둘째로 올렸다.
+- 합의 요약 12는 "`main`이 연결 문자열로 엔진을 만들어 `create_app`에 넘기고"라고 적었다. 엔진을 그대로 넘기면 `server.py`가 SQLAlchemy를 import하게 되어 같은 항목의 "데이터베이스 코드는 `agent_os.adapters` 안 한 곳"과 어긋난다. 포트를 넘기고 import 금지에 `agent_os.server`를 넣는 것으로 채워 같은 절의 둘째로 올렸다.
 - Considered Options에는 화면에 올린 선택지의 설명을 대화 기록에서 꺼내 옮겼다. psycopg 동기와 yoyo-migrations는 선택지에 올리지 않았다고 적었다.
 
 기능 계획을 고쳤다. ops-backup-upgrade(백업·복원·주 판 올림과 올리기 전 백업), mcp-trust(데이터베이스 비밀번호의 변수도 허락 목록의 대상), widget-admin-server(고른 도구와 그 명세가 정할 셋), trace-postgres(testcontainers와 "CLI run도 DB"를 다시 볼 자리), deploy-package(반입 명령과 외부 PostgreSQL 문장), postgres-foundation(답의 원천이 ADR 0066)이다. `.scratch/admin-login/probes/README.md`의 `pg_stack/` 줄이 근거로 드는 자리를 ADR 0066으로 고쳤다. `uv run python tools/plan_table.py`는 0으로 끝났고 `.scratch/plan.md`는 바뀌지 않았다.
@@ -355,3 +355,145 @@ ADR 0066 결정 "승인 때 함께 확인받는 세부"의 첫째부터 넷째�
 승인 화면 앞의 글로 함께 알린 것은 셋이다. 테스트 컨테이너 선택이 ADR 0042와 ADR 0043의 예전 결정을 PostgreSQL에 한해 뒤집는다는 것, "동봉한 것만 지원"이 ADR 0048의 문장을 agent-os의 데이터베이스에서는 지원하지 않는 길로 만든다는 것, 조사 근거에서 Nextcloud를 시작을 거부하는 선례에서 빼 따로 적었다는 것이다.
 
 승인 뒤에 고친 것은 넷이다. ADR 0066의 `status`를 `accepted`로, `docs/adr/README.md`의 0066 행을 `accepted`로 바꿨다. ADR 결정 "승인 때 함께 확인받는 세부"의 머리에 다섯을 확인받았다는 문장을 더했다. `.scratch/postgres-foundation/plan.md`의 `**Blocked by:**` 줄 뒤에 `**설계:** ADR 0066`을 적었다.
+
+`uv run python tools/plan_table.py`를 다시 돌렸고 `.scratch/plan.md`는 바뀌지 않았다(표에는 설계 줄의 칸이 없다). 커밋 전에 `git branch --show-current`는 `docs/postgres-foundation-design`이었고, `uv run python tools/sibling_overlap.py`는 "번호 겹침 없음"과 함께 고친 파일 하나(`mcp-shutdown-spec` 워크트리의 `.scratch/plan.md`)를 냈다. 그 파일은 도구가 만드는 파일이라, 그 브랜치가 먼저 병합되어 충돌하면 기준 브랜치를 합친 뒤 `plan_table.py`로 다시 만든다.
+
+## 커밋과 인계 (커밋 뒤)
+
+### 커밋
+
+`4830b7ef8` "docs: PostgreSQL을 들이는 설계를 ADR 0066으로 남긴다 (postgres-foundation)". 파일 17개다. 커밋은 Bash의 600초 제한을 넘겨 백그라운드로 넘어간 뒤 종료 0으로 끝났다. pre-commit의 결과는 다음과 같다.
+
+- `checks`(`tools/run_checks.py`의 CHECKS), markdown tables, line separators, mutation tables, quotes, commit message: Passed.
+- ruff check, ruff format: 스테이지된 `.py`가 없어 Skipped. 손으로 쳤다. `uv run ruff check .`는 "All checks passed!", `uv run ruff format --check .`는 "2410 files already formatted"였다.
+- canary specs, constitution version: 해당 파일이 없어 Skipped.
+
+손으로 치는 검증 명령 다섯은 이 pre-commit 결과와 위의 ruff 둘로 갈음했다. LLM 시험과 e2e와 사진 비교는 이 변경(문서만)의 범위가 아니라 치지 않았다.
+
+quotes 검사는 경고 25건을 냈고(막지 않는다) 하나씩 봤다.
+
+- 일지 23건. 승인 화면의 질문과 설명을 옮긴 것이 12건(원문은 이 세션의 선택 화면이다), 인터뷰의 라벨이 2건, 저장소 밖 원문(Forgejo, Flyway 등)의 인용이 3건, 리뷰 보고가 그때의 초안을 줄여 옮긴 것이 5건이다. 남은 1건은 "ADR 초안" 절이 합의 요약 12를 "넘긴다"로 옮긴 것이고 원문은 "넘기고"라서 고쳤다(커밋 뒤의 수정이라 아직 커밋하지 않았다).
+- ADR 0066의 2건. `serve`가 찍을 문구와 노트에 실을 문구로, 이 ADR이 새로 정하는 문장이라 저장소에 원문이 없다.
+
+### PR 직전 리뷰에 더 밀 주장
+
+"반영"의 목록에 더해, 승인 화면의 사실을 대 보며 ADR에 새로 쓴 문장 넷이다.
+
+- "이 PC의 Docker Compose v5.6.1은 `${DB_URL#postgresql://}`와 `${DB_URL%@*}`를 `invalid interpolation format`으로 거부했다"
+- "compose는 값을 바꾸지 않고 그대로 끼워 넣는다. 비밀번호 `p@s:s/w`로 지은 값이 `postgresql://agent_os:p@s:s/w@postgres:5432/agent_os`였다"
+- "설계 세션도 2026-11-17에 그 함수를 손으로 불러 같은 값을 봤다. `fix!` 커밋도 정식 판 뒤에서 `0.2.0`이었다"
+- "승인 화면에서 다섯을 하나씩 물어 확인받았다"로 시작하는 문장(고른 라벨 다섯과 "승인한다")
+
+### 인계
+
+커밋 명령 직후 인계 계기(`커밋 뒤`, 세션 컨텍스트 301,453 토큰)가 왔다. `handoff.md`의 인계하지 않는 때 다섯을 봤다. 커밋은 종료 0으로 성공했다. 이 세션이 받은 요청 범위는 PR과 병합까지라 커밋에서 끝나지 않는다. 이 세션의 지시문은 `인계: 셀프 리뷰 직전`으로 시작해 경계가 다르다. 이 세션이 쓴 `인계 못함` 줄이 없다. `get_session`의 `self`에 `parentSessionId`가 없다. 그래서 넘긴다. 이 세션의 제목은 `docs/postgres-foundation-design`이었다. 이 절과 175줄의 인용 고침은 커밋하지 않은 채 워크트리에 있다.
+
+회고 후보는 앞 세션이 "인계" 절에 남긴 하나(결정표의 `Fable 5.1`이 앱 모델 메뉴의 첫 층에 없다)이고, 단계를 닫는 세션이 판정한다. 이 세션에서 더한 후보는 없다.
+
+낸 지시문:
+
+다음 작업: 기능 postgres-foundation. 승인된 ADR 0066의 커밋을 PR 직전 리뷰하고 회고한 뒤 PR을 열어 병합한다
+다음 단계: 설계 인터뷰
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: postgres-foundation 설계 인터뷰
+브랜치: docs/postgres-foundation-design
+모델: Fable 5.2 / xhigh. 2의 잇는 지시문. 칸의 Fable 5.1은 앱 모델 메뉴의 첫 층에 없어 앞 인계의 open-session이 멈췄고, 그때 사용자가 다시 보내 달라고 해 5.2로 보냈으므로 같은 값을 쓴다
+읽을 것: 일지 docs/journal/2026-11-17-1747-postgres-foundation-design.md의 "셀프 리뷰"의 "반영", "승인", "커밋과 인계 (커밋 뒤)" 절
+이어받을 상태: 인계: 커밋 뒤. 이 브랜치에 커밋 하나가 있고 푸시하지 않았으며 PR은 없다. 그 커밋까지 한 것은 셀프 리뷰와 반영, ADR 0066의 사용자 승인(확인 세부 다섯 포함), ADR과 색인의 accepted, 기능 계획의 설계 줄이다. ADR 승인을 받았으므로 병합은 묻지 않는다. 일지의 "커밋과 인계 (커밋 뒤)" 절과 "ADR 초안" 절의 인용 고침 한 줄은 커밋하지 않은 채 워크트리에 있다. 남은 단계는 PR 직전 리뷰(`docs/constitution/operations.md` 리뷰 파이프라인 2. 밀 주장은 일지 "반영"의 목록과 "PR 직전 리뷰에 더 밀 주장"의 넷)와 그 반영, 회고(retro. 일지 "인계" 절이 남긴 모델 결정표 후보를 함께 판정한다)와 일지 "다음"(다음 단계는 사용자가 부르는 to-spec), 푸시와 PR, `merge.md`의 봇 회차와 병합, 다음 지시문이다. 일지 docs/journal/2026-11-17-1747-postgres-foundation-design.md
+확인할 선행 조건: 없음
+이번 요청 범위: PR과 병합까지
+
+제목을 `docs/postgres-foundation-design (인계함)`으로 바꿨다. 멈출 백그라운드 작업은 없었다. `git worktree unlock`은 `is not locked`로 끝나 넘어갔다.
+
+open-session을 부른다 2026-11-17T11:23:55Z
+
+## 이어받음 (PR 직전 리뷰부터)
+
+위 "커밋과 인계 (커밋 뒤)"의 지시문으로 연 새 세션이다(2026-11-17 20시대). 세션 제목 `docs/postgres-foundation-design`, 모델 Fable 5.2. 주 체크아웃(`dev`)에서 시작해 `EnterWorktree(path)`로 이 워크트리에 들어왔다.
+
+> 사용자: postgres-foundation 설계 인터뷰
+
+첫 메시지는 위 "인계"의 지시문 그대로다.
+
+- 시작 전 확인: `ListAgents`에 이 기능을 맡은 세션은 같은 제목의 앞 세션(인계함) 하나였다. `git status`는 인계가 적은 대로 이 일지 하나만 고쳐져 있었다. `git rev-parse --short origin/dev`는 `21e7d8d63`으로 이 브랜치의 기준과 같아 합칠 것이 없었다. `uv run python tools/sibling_overlap.py`는 "번호 겹침 없음"과 함께 고친 파일 하나(`mcp-shutdown-spec` 워크트리의 `.scratch/plan.md`)를 냈다.
+- 스킬 사본: 이 세션이 시작한 주 체크아웃(`327b8e413`)과 이 브랜치의 기준(`21e7d8d63`) 사이에 `.claude/` 아래 파일은 바뀌지 않았다(`git diff --name-only`로 봤다). 그래서 Skill 도구가 싣는 사본과 디스크의 스킬이 같다.
+
+## PR 직전 리뷰
+
+`docs/constitution/operations.md` 리뷰 파이프라인 2다. 서브에이전트 둘을 나란히 띄웠다. `coderabbit-review`에는 기준 브랜치가 `origin/dev`라는 것을 일러 `--base origin/dev`를 붙이게 했다. CLI에는 주장을 넘기는 인자가 없으므로(`code-review` 6단계 1) 밀 주장 열셋(위 "반영"의 아홉과 "PR 직전 리뷰에 더 밀 주장"의 넷)은 `bug-perf-review`의 브리프에 자리와 근거를 붙여 넣었고 "나열 밖도 잰다"를 붙였다. 저장소 밖 근거로는 앞 세션이 저장한 웹 원문의 폴더(`…\352fc545-0015-4a24-a0d5-927f9bb450ce\scratchpad\web\`)와 rag-engine ADR 0011의 경로를 일렀다.
+
+### bug-perf-review
+
+아래는 보고를 줄여 옮긴 것이다(서브에이전트가 쓴 글이다). 기준 `21e7d8d63`, 범위는 파일 17개와 커밋하지 않은 일지 하나, 마지막 `[호출 36]`.
+
+- 밀 주장 열셋은 모두 맞다고 했다.
+  - 1·12. `tools/release.py`의 `_next_number`를 불렀다. 출시 후보 칸이 `0.1.0`이고 지난 판이 `v0.1.0-rc.1`이면 `feat!`·`fix!`·`fix` 모두 `0.1.0-rc.2`였고, 칸이 없고 지난 판이 `v0.1.0`이면 `feat!`와 `fix!`가 `0.2.0`, 보통 `fix`가 `0.1.1`이었다.
+  - 2. 저장한 `nextcloud_updater.html` 210~215줄의 `doUpgrade`가 `isUpgradePossible`이 거짓이면 그 문장으로 예외를 던진다.
+  - 3·4. `.scratch/release-image/spec.md` 336줄과 `bridge_recover/README.md` 25줄 결론 9가 ADR의 서술과 같다.
+  - 5. `**Blocked by:**` 줄을 따라가니 deploy-package는 portal-admin을 거쳐 그 둘을 이미 기다리고, ops-backup-upgrade의 새 선행 조건에서 거슬러 올라가도 deploy-package가 나오지 않아 순환이 없다.
+  - 6. ADR 0038 22줄에 자리 넷과 "헌법 버전은 patch다"가 있다.
+  - 7. `(바뀜: ADR 0066)`은 ADR 0042에 둘(51·94줄), 0043에 하나(17줄), 0048에 하나(24줄), 0056에 셋(8줄과 24줄의 두 곳)으로 일곱이다. 인용한 본문 글자와 "ADR 0062·0064의 포인터 뒤에 잇는다"는 서술도 맞다.
+  - 8. `port_shape/README.md` 3줄이 "그 모양 하나를 작은 모듈 둘로 흉내 내 잰다"고 적는다.
+  - 9. 배포 안내 9절의 서술은 맞다. 11절은 끝자리만 오른 판에 `.env`의 `AGENT_OS_VERSION` 한 줄만 바꾸라고 하고 가운데 자리가 오른 판은 노트에 맡긴다. 그래서 "`.env`의 판 번호 한 줄만 말한다"는 엄밀히는 끝자리 판에 대한 서술이다(Minor). 그 절에 `compose.yaml`을 바꾸라는 안내가 없다는 결론은 그대로다.
+  - 10·11. `docker compose version`은 v5.6.1이었고, `${DB_URL#postgresql://}`와 `${DB_URL%@*}`는 둘 다 `invalid interpolation format`으로 거부됐다. `DB_PASSWORD=p@s:s/w`를 `--env-file`로 주니 `postgresql://agent_os:p@s:s/w@postgres:5432/agent_os`가 그대로 나왔다.
+  - 13. 일지 "승인" 절의 `> 사용자:` 줄 여섯이 ADR의 라벨 다섯과 "승인한다"에 글자가 같다(일지의 `(Recommended)`는 ADR이 뺐다).
+- 나열 밖에서 대 본 것: pg_stack README의 수치(판 셋, 168.5MB·474MB, 120.2MB·304MB, 27.39~30.45초, 65.36~82.8초, 9.44~12.27초, 39줄, 2030-11-14), 코드 인용 다섯(`main.py`의 `_configuration_problems`, `adapters/mcp.py`의 `_http_session`, `pyproject.toml`의 주석, `run_checks.py` 17~18·123줄, `release.yml` 125줄), 기능 계획 여섯의 diff가 ADR "다른 행"의 서술과 맞았다.
+- 유효 지적 0, Minor 서술 정밀도 하나(위 9), 보류 한 묶음. 보류는 예산 때문에 열지 못한 것이다. deploy-package·ops-backup-upgrade·trace-postgres 계획의 긴 변경 줄, ADR 0042 94줄이 Consequences 절 안인지, mcp-trust가 슬라이스 10인지다.
+
+### 보류를 본 세션이 대 봤다
+
+- 계획 셋의 변경 줄은 `git diff --word-diff=porcelain 21e7d8d63 HEAD`의 더한 줄을 읽었다(손으로 봤다). deploy-package에는 배포 안내 9절의 반입 명령이 postgres에도 태그를 붙여 옮기게 바뀐다는 것, "배포 환경에 이미 PostgreSQL이 있으면 연결 문자열만 바꿔 그쪽에 붙인다"가 agent-os의 데이터베이스에는 맞지 않는다는 것, "`depends_on`은 두지 않는다"가 프록시와 뒷단 사이에만 맞는다는 것이 있다. ops-backup-upgrade에는 두 데이터베이스의 백업과 복원, 주 판 올림, 올리기 전 백업, 선행 조건을 더한 까닭이 있다. trace-postgres에는 testcontainers를 거부하고 미리 띄운 컨테이너를 고른 것과 `agent-os run`이 데이터베이스와 무관하다는 것이 있다. 셋 다 ADR 0066 Consequences "다른 행"의 서술과 맞는다.
+- ADR 0042의 94줄은 90줄 `## Consequences` 아래 항목이다(파일을 읽었다). `.scratch/mcp-trust/plan.md` 2줄은 `**슬라이스:** 10`이다(파일을 읽었다).
+
+### 반영 (bug-perf-review)
+
+고친 것은 둘이다.
+
+- Minor 9. `deploy/standalone/README.md` 289줄(11절의 본문 한 문단)을 읽고 ADR 0066 Consequences "운영"의 문장을 고쳤다. "그 절은 `.env`의 판 번호 한 줄만 말하므로"를 "그 절은 끝자리만 오른 판에 `.env`의 판 번호 한 줄만 바꾸라고 하고 가운데 자리가 오른 판은 노트에 맡길 뿐 `compose.yaml`을 바꾸라는 말이 없으므로"로 바꿨다. ADR을 고치기 전에 `domain-modeling`을 불렀다(`.claude/rules/adr.md`).
+- 보류를 대 보다 본 것. ops-backup-upgrade 계획의 넘김 문단이 "옛 판의 `serve`는 더 새 표를 만나면 백업을 복원하라고 찍고 멈춘다"고만 적었다. 셀프 리뷰 반영(명세 Major 4)으로 ADR 결정 "표를 올리는 때"는 단독 compose에서 먼저 도는 `migrate`가 그 문구를 찍고 `serve`는 뜨지 않는다고 정했으므로, 그 문장을 "`agent-os migrate`와 `serve`는 … (단독 compose에서는 먼저 도는 `migrate`가 그 문구를 찍고 `serve`는 뜨지 않는다)"로 맞췄다.
+
+남긴 것은 없다.
+
+### coderabbit-review
+
+아래는 보고를 줄여 옮긴 것이다(서브에이전트가 쓴 글이다). CLI 0.7.5, `Plan: Free`, `Seat: not assigned`. `coderabbit review --agent --include-untracked --base origin/dev`가 끝까지 돌아 `review_completed`를 냈고(`--base`는 거부되지 않았고 `review_context`의 baseBranch가 `origin/dev`였다) 지적은 셋이다. 유효 0, 보류 2, 오탐 1.
+
+- [Major, 보류] ADR 0066 20줄. 데이터베이스 비밀번호가 `serve`의 환경 변수에 놓이면 http 모양의 MCP 매니페스트가 `[server.headers]`로 그 값을 바깥 주소로 보낼 수 있다. 위험은 실재하지만 ADR 결정 "비밀번호와 계정"과 Consequences "신뢰와 노출"이 같은 노출을 이미 적었고, 사용자가 추천(비밀 파일) 대신 ".env에 둠"을 골랐다. 문서의 결함이 아니라 결정에 대한 이의다.
+- [Major, 보류] `.scratch/mcp-trust/plan.md` 5줄. 같은 쟁점이다. 0.1 판의 연결 경로에 보호를 넣고 슬라이스 10의 허락 목록에 기대지 말라는 요구다. 그 문단은 "0.1 판에는 이 노출이 그대로 있다"고 적는다. 앞당길지는 계획의 순서와 범위를 바꾸는 판단이다.
+- [오탐] ADR 0048 24줄. 그 문장과 ADR 0066 포인터를 지우라는 지적이다. `.claude/rules/adr.md`는 다른 ADR이 본문의 결정을 바꾸면 그 문장 뒤에 포인터를 달고 본문의 글자는 고치지 않게 한다.
+
+이 서브에이전트는 CLI를 백그라운드로 띄운 채 리뷰가 끝나기 전에 중간 보고로 턴을 끝냈다. 본 세션이 출력 파일의 이벤트 종류를 `grep -o`로 보고(`finding` 셋과 `review_completed`. 손으로 봤다) 서브에이전트를 다시 불러 트리아지를 시켰다. 다시 부른 턴의 보고는 "결과마다 보고 하나"로 거부되어 오지 않았고, 한 번 더 불러서 받았다.
+
+### 반영 (coderabbit-review)
+
+고친 것은 없다. 남긴 것은 보류 둘이고 같은 쟁점이다.
+
+- 판정: 둔다. 사용자가 라운드 3에서 대가(ADR 0049의 길에 놓인다, 지금의 API 키도 같은 처지다)를 적은 설명을 보고 ".env에 둠"을 골랐고, ADR 0066이 거부한 안("비밀번호를 비밀 파일로 넘긴다")과 대가를 적었으며, 승인 화면의 셋째에서 같은 자리를 다시 확인받았다.
+- 고치는 데 드는 값: 작지 않다. 비밀 파일로 바꾸는 것은 승인된 ADR의 결정을 뒤집는 일이고, mcp-trust의 허락 목록 가운데 이 변수의 몫만 앞당기는 것은 기능 계획의 순서를 바꾸는 일이라 둘 다 사용자의 판단이다. PR 본문의 "남긴 위험"과 체크리스트의 그 줄에 적는다.
+
+### 커밋 전 확인
+
+`git branch --show-current`는 `docs/postgres-foundation-design`이었다. `uv run python tools/sibling_overlap.py`는 "번호 겹침 없음"으로 끝났다(이 브랜치의 새 번호는 ADR 0066이고 `origin/dev`는 `21e7d8d` 그대로다). 함께 고친 파일로는 `mcp-shutdown-spec` 워크트리의 `.scratch/plan.md`가 나왔다. 나중에 병합하는 쪽의 글자 충돌 후보다. `tools/check_adr_pointers.py`, `tools/check_md_tables.py`, `tools/check_line_separators.py`, `tools/check_instructions.py`는 출력 없이 끝났고, `tools/plan_table.py`를 돌린 뒤 `.scratch/plan.md`는 바뀌지 않았다(손으로 봤다, 이 세션).
+
+## 회고
+
+단계(설계 인터뷰)를 닫으며 돌렸다. 원천은 이 일지 전체(설계 세션, 셀프 리뷰 세션, 이 세션)다. `writing-for-agents`를 불렀다. 낸 후보는 아홉이고 승인 여섯(모두 회차로 세는 것이거나 대기열의 새 항목), 기각 셋, 넘김 0이다. 이 세션에서 반영한 것은 없어 harness 티켓을 쓰지 않았다.
+
+1. **승인(회차).** 셀프 리뷰를 넘기던 `open-session`이 "5초 안에 모델 메뉴의 'Fable 5.1' 을(를) 찾지 못했다."로 멈췄고(위 "인계"), 사용자가 다시 보내 달라고 해 `Fable 5.2`로 보냈다. 열린 항목 `model-menu-name-fable-5-1-stale`이 처방한 사건이라 그 항목에 더했다. 4회차다. 앞 세션이 "인계" 절에 남긴 모델 결정표 후보가 이것이다. 이름을 무엇으로 바꿀지는 그 항목이 적은 대로 사용자의 몫이고 ADR 0029의 이력이 든다.
+2. **승인(회차).** ADR 0066 초안이 바꾸는 다른 ADR의 본문 문장(ADR 0042의 두 자리, ADR 0043, ADR 0048, ADR 0056의 머리 문단과 root 문장)에 포인터를 달지 않아 셀프 리뷰 두 축이 잡았다(위 "셀프 리뷰"의 표준 Major 1·Minor 6, 명세 Major 2). 구현 때 실리는 지침(`.claude/rules/adr.md`)을 어겨 리뷰가 잡은 사건이다. 열린 항목 `adr-pointer-missed-on-uncited-sentence`에 더했다. 7회차다.
+3. **승인(회차).** ADR 초안이 조사 보고의 "8개 가운데 공식 문서로 확인한 것은 6개"를 빼고 옮겼고, Nextcloud를 저장한 원문과 다른 선례 묶음에 넣었으며, 프로브 README에 `postgres --version`만 있는 Debian 판을 프로브가 더 본 것처럼 적어 셀프 리뷰 두 축이 잡았다(표준 Minor 2·4, 명세 Minor 11). 열린 항목 `adr-evidence-stronger-than-journal`이 처방한 사건이라 그 항목에 더했다. 6회차다.
+4. **승인(회차).** 문서만 바꾼 커밋 `4830b7ef8`의 pre-commit이 Bash의 600초 제한을 넘겨 백그라운드로 넘어갔다(위 "커밋"). 열린 항목 `docs-only-commit-precommit-slow-again`에 더했다. 11회차다.
+5. **승인(회차).** 일지의 "조사" 절이 웹 원문을 저장한 폴더를 `…/scratchpad/web/`로 줄여 적어, 이 세션이 `bug-perf-review`의 브리프에 넣을 경로를 찾느라 임시 폴더를 두 번 훑었다(`ls` 출력 둘, 약 32,000자). 열린 항목 0528(인계 일지에 저장소 밖 근거 사본의 절대 경로를 적는다)이 처방한 사건이라 그 항목에 더했다. 3회차다.
+6. **승인(새 항목).** `coderabbit-review`가 CLI를 백그라운드로 띄운 채 리뷰가 끝나기 전에 중간 보고로 턴을 끝내, 본 세션이 두 번 다시 불러서야 트리아지를 받았다(위 "coderabbit-review"). 사건이 있고, 고칠 자리가 서브에이전트 정의의 문장이라 검사로는 옮길 수 없으며, PR 하나로 되돌릴 수 있다. 더하는 것이라 다섯 번째까지 회차를 센다. 같은 일을 다룬 항목을 `queue_open_rows.py --search`로 찾았고(낱말 `coderabbit-review`, `SubagentHandback`, `review_completed`, `백그라운드로.넘`), 턴 한도에서 보고 없이 멈춘 0559는 같은 정의의 다른 사건이라 새 항목 `coderabbit-review-hands-back-before-cli-finishes`를 썼다. 1회차다.
+7. **기각.** 셀프 리뷰 명세 축이 잡은 설계의 빈 곳 넷(받는 행의 선행 조건, 옛 판의 `migrate`가 먼저 도는 갈래, `depends_on`, `.env`의 한 줄)과 출시 후보 단계의 번호. 리뷰가 잡도록 둔 기준(`code-review` 두 브리프의 명세 대조와 주장 검증)이 잡은 것이라 회차로 세지 않고, 검사로 옮길 수 없으며 표준에 더할 새 기준도 아니다.
+8. **기각.** 이 세션의 큰 도구 출력 둘. 큰 결과 알림 훅이 그 자리에서 알렸고, 원인은 5로 셌다.
+9. **기각.** ADR 0066의 파일 이름을 추측해 Read가 한 번 실패한 것. 도구가 바로 오류로 알렸고 Glob 한 번으로 찾았다.
+
+만료: `uv run python tools/queue_open_rows.py`의 "만료할 항목"은 없었다.
+
+## 다음
+
+- **postgres-foundation의 설계는 닫혔다.** ADR 0066이 승인됐고 기능 계획에 `**설계:**` 줄이 있다. 이 기능을 막던 release-image는 done이라(`.scratch/plan.md`) 이 기능의 다음 단계는 명세다. 명세는 사용자가 부른다(`/to-spec`). 명세가 정할 것은 ADR 0066 Consequences "명세가 짓는 것"이 목록으로 들고, 결정 절이 명세에 넘긴 어림 둘(표를 만들지 않는 첫 마이그레이션으로 판 기록 표에 줄이 남는지, `tests/` 안의 테스트 도우미 하나를 두 패키지의 시험이 함께 쓸 수 있는지)은 명세가 잰다.
+- **이 기능을 기다리는 행은 셋이다.** admin-login, widget-admin-server, ops-backup-upgrade다(`.scratch/plan.md`). widget-admin-server의 명세는 이 행이 짓는 테스트 도우미를 그 패키지의 시험이 쓰는 방법과 그 서버의 표를 올리는 때를 정하고(ADR 0066 결정 "위젯 관리 서버"), ops-backup-upgrade는 데이터베이스의 백업과 복원, 옛 판으로 돌아가는 길을 받았다(그 기능 계획의 넘김 문단. PR 직전 리뷰에서 한 문장을 고쳤다).
+- **0.1 판에는 데이터베이스 비밀번호의 노출이 남는다.** 비밀번호가 `.env`를 거쳐 `serve`의 환경 변수에 놓이므로 http 모양의 MCP 매니페스트가 그 값을 밖으로 보낼 수 있고(ADR 0049의 길), 그것을 막는 mcp-trust는 슬라이스 10이다. CodeRabbit CLI가 이것을 두 번 짚었고 두었다(위 "반영 (coderabbit-review)"). 사용자가 라운드 3에서 대가를 보고 고른 값이라, 바꾸려면 ADR 0066의 이력에 쌓는다.
+- **대기열.** 새 항목 `coderabbit-review-hands-back-before-cli-finishes`(1회차). 회차를 더한 다섯은 `model-menu-name-fable-5-1-stale`(4회차), `adr-pointer-missed-on-uncited-sentence`(7회차), `adr-evidence-stronger-than-journal`(6회차), `docs-only-commit-precommit-slow-again`(11회차), 0528(3회차)이다. `model-menu-name-fable-5-1-stale`은 사용자가 이름을 정해야 닫히고, 그때까지 설계 인터뷰나 명세 지시문의 "모델" 줄은 지금 메뉴에 있는 이름(`Fable 5.2`)으로 적는다. 회차 5 이상인 열린 항목은 스물하나다(`uv run python tools/queue_open_rows.py`의 "회차 5 이상").
