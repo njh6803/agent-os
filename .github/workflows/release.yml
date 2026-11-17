@@ -16,10 +16,11 @@
 # 할 일은 사람 몫이고 목록은 티켓 11 의 일지에 있다.
 #
 # 쓰는 액션은 2026-11-16 에 다시 고른 최신이고 커밋 해시로 고정했다(판은 주석). ci.yml 의 액션 가운데 uv 와 pnpm 의 판은 같고,
-# 체크아웃·node·캐시는 ci.yml 이 태그(v4, v7)로 부르는 것을 여기서는 해시로 고정했다. 두 잡의 제한 시간은 지난 실행이 없는
-# 첫 값이다(ci.yml 머리 주석의 규약). build 는 e2e-standalone 잡(45분)이
-# 이미지 넷을 짓고 시험하는 몫에 점검과 올리기를 더한 어림이고, publish 는 올린 이미지 넷에 번호 태그를 붙이고 자산을 올리는 몫의
-# 어림이다. 첫 실행으로 걸린 시간을 재어 고친다.
+# 체크아웃·node·캐시는 ci.yml 이 태그(v4, v7)로 부르는 것을 여기서는 해시로 고정했다. 두 잡의 제한 시간은 첫 판 내기(실행
+# 44012310177, 2026-11-17)의 소요 시간으로 정했다. 잰 값은 `.scratch/harness/probes/ci_job_durations.py --release` 가 내고
+# 결과는 그 폴더 README 의 그 프로브 행에 있다. build 는 5.4분(캐시가 빈 앞 실행은 8.3분. 실패한 실행이라 아티팩트 올리기 전까지의
+# 시간이다), publish 는 1.0분이었다. 제한은 build 30분(캐시가 빈 실행의 3.6배), publish 10분(1.0분의 10배. 잰 실행이 하나뿐이고
+# 자산 올리기가 네트워크에 기대어 배수를 넉넉히 둔다)이다. 판이 자라 제한에 닿으면 프로브를 다시 돌려 고친다.
 name: release
 
 on:
@@ -46,12 +47,14 @@ jobs:
   # digest 다. 둘째 잡이 릴리스에 올릴 파일은 같은 이름의 아티팩트로 올린다.
   build:
     runs-on: ubuntu-24.04
-    timeout-minutes: 90
+    timeout-minutes: 30
     environment: release
     env:
       PYTHONUTF8: "1"
       # 시험은 올릴 이름이 아니라 이 이름으로 러너에 실은 이미지를 띄운다.
       LOCAL_NAMESPACE: agent-os-release-test
+      # 올리는 커밋 해시 태그. 이미지 올리기가 이 태그로 올리고 대조 단계가 같은 태그를 레지스트리에서 읽는다.
+      HASH_TAG: sha-${{ github.sha }}
     outputs:
       release: ${{ steps.plan.outputs.release }}
       number: ${{ steps.plan.outputs.number }}
@@ -233,12 +236,11 @@ jobs:
       # 같은 빌더가 캐시로 다시 지어 증명(출처 증명 mode=max, 소프트웨어 목록)과 함께 커밋 해시 태그로만 올린다. 번호 태그는
       # 둘째 잡이 붙인다.
       - name: 이미지 올리기
-        id: push
         if: steps.plan.outputs.release == 'true'
         uses: docker/bake-action@59cb1203cd42bcefd40a1b6d73b589e48c86040e # v7.5.0
         env:
           NAMESPACE: ${{ vars.DOCKERHUB_NAMESPACE }}
-          TAG: sha-${{ github.sha }}
+          TAG: ${{ env.HASH_TAG }}
           VERSION: ${{ steps.plan.outputs.number }}
           REVISION: ${{ github.sha }}
           SOURCE: ${{ github.server_url }}/${{ github.repository }}
@@ -261,13 +263,12 @@ jobs:
         env:
           NUMBER: ${{ steps.plan.outputs.number }}
           NAMESPACE: ${{ vars.DOCKERHUB_NAMESPACE }}
-          TAG: sha-${{ github.sha }}
         run: |
           images='{}'
           for image in serve admin widget portal; do
             repo=$(python3 tools/release_ci.py repository "$image")
-            digest=$(docker buildx imagetools inspect "$NAMESPACE/$repo:$TAG" --format '{{.Manifest.Digest}}') || {
-              echo "::error::$image 의 해시 태그 $TAG 를 레지스트리에서 조회하지 못했다."; exit 1; }
+            digest=$(docker buildx imagetools inspect "$NAMESPACE/$repo:$HASH_TAG" --format '{{.Manifest.Digest}}') || {
+              echo "::error::$image 의 해시 태그 $HASH_TAG 를 레지스트리에서 조회하지 못했다."; exit 1; }
             case "$digest" in sha256:????????????????????????????????????????????????????????????????) ;; *)
               echo "::error::$image 의 올린 digest 를 읽지 못했다: $digest"; exit 1 ;; esac
             docker buildx imagetools inspect "$NAMESPACE/$repo@$digest" --raw > "$RUNNER_TEMP/index.json"
@@ -305,7 +306,7 @@ jobs:
     needs: build
     if: needs.build.outputs.release == 'true'
     runs-on: ubuntu-24.04
-    timeout-minutes: 30
+    timeout-minutes: 10
     environment: release
     env:
       PYTHONUTF8: "1"
