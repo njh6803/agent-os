@@ -125,3 +125,7 @@ release-image 티켓 11(`.scratch/release-image/issues/11-ci-publishes-release-f
 사람 몫의 저장소 넷(`.scratch/release-image/spec.md` "사람 몫" 6번)은 새 이름으로 만들어야 한다.
 
 이 이력은 2026-11-17에 사용자가 승인했다(사용자 말과 초안은 일지 2026-11-16-2249-ci-publishes-release-from-main.md의 "저장소 이름 바꾸기"에 있다).
+
+### 2026-11-17 용어집의 이름을 쉬운 말로 바꿨다
+
+사용자가 용어집(`CONTEXT.md`)의 낯선 이름을 사람이 흔히 쓰는 말로 바꾸기로 했다(harness 티켓 `.scratch/harness/issues/plain-words-in-written-artifacts.md`, 일지 2026-11-17-2031). 이 ADR의 본문은 글자를 고치지 않으므로 옛 이름이 그대로 있다. 본문의 "참조 배포"는 "통합 배포"로 읽는다. 결정은 바뀌지 않고 코드의 이름도 그대로다.

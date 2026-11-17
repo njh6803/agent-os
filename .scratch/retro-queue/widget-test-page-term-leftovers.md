@@ -7,3 +7,5 @@
 `CONTEXT.md`의 "위젯 테스트 페이지(Portal)"는 Avoid에 "위젯 미리보기 페이지"와 "질문 페이지"를 든다. 그런데 2026-11-17에 `git grep -l "위젯 미리보기 페이지" -- . ':!docs/journal'`가 157개 파일을 냈다. 판 내기 PR(release-image 티켓 11)은 그 PR이 고치는 파일 안에서만 새 이름으로 바꿨다(배포 안내, 명세, `docs/constitution/operations.md`, `docs/constitution/tech.md`, 단독 배포 e2e의 두 파일). CLAUDE.md와 ADR 0050은 사용자가 이번 PR에서 고치지 말라고 해서 두었다.
 
 바꾸는 길은 `.scratch/harness/issues/rename-portal-to-widget-preview.md`가 지난번에 간 길과 같다. 조사가 붙는 자리는 끝 글자가 같아 그대로 맞고, 시험 이름과 화면에 찍히는 글, 그것을 맞대는 시험도 함께 바뀐다. 코드 이름 `portal`, 경로 `/portal/`, 마커 `llm_portal`, CI 잡 `e2e-portal`은 그대로다.
+
+반영한 몫: `CLAUDE.md`의 검증 명령 세 줄(다섯 곳)은 `.scratch/harness/issues/plain-words-in-written-artifacts.md`가 2026-11-17에 "위젯 테스트 페이지"로 고쳤다(사용자가 그 일의 선택 화면에서 "이번에 맞춘다"를 골랐다. 일지 2026-11-17-2031-plain-words-in-written-artifacts.md). 나머지 파일은 그대로 남아 있다.

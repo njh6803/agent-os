@@ -1,7 +1,8 @@
 # `.claude/rules/core.md` 의 실패 정책 항목에 더한 문장(모델이 낸 도구 호출의 인자가 올바른 JSON 이 아닐 때 응답 전체를
 # 거절하는 자리와 칸)이 `paths` 에 맞는 파일을 Read 로 열 때 실리는지(local-model 티켓 02).
 # 실험군은 규칙의 paths 안(src/agent_os/core/), 대조군은 밖(README.md)을 읽는다. 둘 다 이 체크아웃이다.
-# 최신 결과: 통과 4(2026-11-13, 이 PC의 local-model 티켓 02 워크트리, claude 2.1.322, HEAD a4eea81ff 위의 커밋하지 않은 작업 트리, 일지 2026-11-13-0445). 실험군 셋이 `invalid_tool_calls`와 `reply_from`을 옮겼고 대조군은 "없음"이었다.
+# 최신 결과: 통과 4(2026-11-17, 이 PC, claude 2.1.325, 실험군은 `ac2e65f62` 위의 커밋 전 작업 트리 셋, 대조군은 같은 체크아웃의 `paths` 밖 파일 하나, 일지 2026-11-17-2031). 용어집의 이름을 바꾸며 원천의 낱말만 고친 뒤 다시 돌렸다(harness 티켓 plain-words-in-written-artifacts).
+# 그 전 결과: 통과 4(2026-11-13, 이 PC의 local-model 티켓 02 워크트리, claude 2.1.322, HEAD a4eea81ff 위의 커밋하지 않은 작업 트리, 일지 2026-11-13-0445). 실험군 셋이 `invalid_tool_calls`와 `reply_from`을 옮겼고 대조군은 "없음"이었다.
 # 돌리는 법: uv run python tools/canary.py .scratch/local-model/probes/canary/core_rule_broken_tool_call.toml <출력 디렉터리>
 kind = "rule"
 question = '''

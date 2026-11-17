@@ -237,7 +237,7 @@ def test_시작_이벤트의_앞_실행은_선택이고_기본이_없음이라_�
     assert _round_trip(continued) == continued
 
 
-def test_앞_실행과_덮는_끝에는_sdk_의_패턴을_걸지_않는다() -> None:
+def test_앞_실행과_요약에_든_마지막_실행에는_sdk_의_패턴을_걸지_않는다() -> None:
     """패턴 위반은 거슬러 읽기가 기록의 손상으로 판정한다. 모델에 걸면 그 판정이 단건 읽기의
     손상으로 옮고 손편집 사례를 타입 있는 가짜로 만들 수 없다(명세 검토)."""
     started = _as_event(
@@ -266,7 +266,7 @@ def test_앞_실행과_덮는_끝에는_sdk_의_패턴을_걸지_않는다() -> 
     assert summarized.last_covered_run == "a/b"
 
 
-def test_대화_요약_이벤트는_글과_덮는_끝과_모델과_토큰_수를_담고_왕복한다() -> None:
+def test_대화_요약_이벤트는_글과_요약에_든_마지막_실행과_모델과_토큰_수를_담고_왕복한다() -> None:
     event = ConversationSummarized(
         run_id=RunId("r2"),
         ts=TS,

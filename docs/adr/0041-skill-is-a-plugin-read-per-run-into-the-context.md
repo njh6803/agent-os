@@ -66,3 +66,7 @@ skill-plugin 명세 검토와 to-tickets(일지 2026-11-04-02)가 본문과 2026
 - **첫 티켓은 둘로 갈렸고 관리 화면은 런타임 뒤다.** 01(매니페스트의 `skills`와 `openapi.json`)과 02(`Skill`, `parse_skill`, `read_skill`, `AgentContext.skills`)가 나란히 돌고 둘 다 03(런타임)을 막으며, 04(관리 화면)와 05(예시)가 03을 기다린다. 나눈 까닭은 머리말 규칙의 시험과 계약 칸을 한 세션과 한 리뷰에 섞지 않으려는 것이고 사용자가 이 분할을 골랐다. 관리 화면을 런타임 뒤에 둔 까닭은 먼저 들어가면 결정 칸이 런타임이 받아 줄 재개를 막기 때문이다.
 - **`yaml`을 막는 계약은 직접 import를 막는다.** 2026-11-03 이력의 "sdk 밖의 모든 층에 `yaml`을 막는 import-linter 계약"은 선례처럼 `forbidden`만 쓰면 서지 못한다. 기본이 간접 import까지 막아 일곱 층 모두 `agent_os.sdk → agent_os.sdk.skill → yaml` 사슬로 깨진다. 그래서 `allow_indirect_imports = true`를 둔다. 세션 스크래치패드의 사본에 `lint-imports --config`를 쳐서 손으로 봤다. 그 키가 없으면 일곱 층 모두 BROKEN, 있으면 KEPT, 있어도 어댑터에 직접 `import yaml`을 더하면 BROKEN이다.
 - **`read_skill`도 예외를 잇지 않는다.** 2026-11-03 이력은 `parse_skill`의 사슬만 끊었다. 어댑터가 `_parse`의 `from error` 모양을 따르면 `description: [비밀]`의 `ValidationError`가 `__cause__`에 남아 `traceback.format_exception`의 출력에 값이 실린다(같은 모양의 잇기를 `.scratch/skill-plugin/probes/frontmatter_values.py`의 잇기 회차가 쟀고, 어댑터가 아직 없어 그 자리는 재지 않았다). 그래서 `except`에서 이유 문구만 만들고 `PluginError`는 그 블록 밖에서 던진다. 매니페스트 `_parse`의 같은 사슬은 이 기능이 고치지 않는다.
+
+### 2026-11-17 용어집의 이름을 쉬운 말로 바꿨다
+
+사용자가 용어집(`CONTEXT.md`)의 낯선 이름을 사람이 흔히 쓰는 말로 바꾸기로 했다(harness 티켓 `.scratch/harness/issues/plain-words-in-written-artifacts.md`, 일지 2026-11-17-2031). 이 ADR의 본문은 글자를 고치지 않으므로 옛 이름이 그대로 있다. 본문의 "값 기반 마스킹"은 "비밀 값 가리기"로 읽는다. 결정은 바뀌지 않고 코드의 이름도 그대로다.

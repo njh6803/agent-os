@@ -3894,11 +3894,11 @@ async def test_멤버의_값은_실행_안에서_바뀌지_않는다(trace: Fake
 # 거슬러 읽기가 멈추는 자리
 
 
-async def test_가장_가까운_요약을_만나면_덮는_끝까지만_거슬러_가고_그_실행은_읽지_않는다(
+async def test_가장_가까운_요약을_만나면_요약에_든_마지막_실행까지만_가고_그_실행은_읽지_않는다(
     clock: FakeClock,
 ) -> None:
-    """요약은 그 실행의 에이전트의 것이고 요약 뒤 교환은 원문으로 남은 것이라 모은다(ADR 0022). 덮는
-    끝에서 멈추는 것은 읽힌 실행 식별자로 본다."""
+    """요약은 그 실행의 에이전트의 것이고 요약 뒤 교환은 원문으로 남은 것이라 모은다(ADR 0022).
+    요약에 든 마지막 실행에서 멈추는 것은 읽힌 실행 식별자로 본다."""
     trace = FakeTrace()
     _write_finished(trace, "r0", request="q0", output="a0")
     _write_finished(trace, "r1", request="q1", output="a1", previous="r0")
@@ -4120,7 +4120,8 @@ async def _cycle(trace: FakeTrace, clock: FakeClock) -> None:
 
 
 async def _cycle_at_covered_end(trace: FakeTrace, clock: FakeClock) -> None:
-    """되돌아가는 간선의 목적지가 요약이 덮는 끝과 같다. 멈춤 조건이 먼저면 순환이 조용히 선다."""
+    """되돌아가는 간선의 목적지가 요약에 든 마지막 실행과 같다. 멈춤 조건이 먼저면 순환이 조용히
+    선다."""
     _write_finished(trace, "r2", previous="r1")
     _write_finished(trace, "r1", previous="r2", between=[_summarized("r1", covers="r2")])
     await _continue("r2", trace, clock)
@@ -4195,10 +4196,16 @@ async def _own_misplaced_summary(trace: FakeTrace, clock: FakeClock) -> None:
         pytest.param(_foreign_link, "r1", "주체", id="중간 실행의 주체가 다름"),
         pytest.param(_unfinished_link, "r1", "failed", id="중간 실행이 끝나지 않음"),
         pytest.param(_cycle, "r1", "순환", id="순환"),
-        pytest.param(_cycle_at_covered_end, "r2", "순환", id="덮는 끝으로 되돌아가는 순환"),
-        pytest.param(_uncovered_end, "ghost", "덮는 끝", id="덮는 끝을 못 만남"),
+        pytest.param(
+            _cycle_at_covered_end, "r2", "순환", id="요약에 든 마지막 실행으로 되돌아가는 순환"
+        ),
+        pytest.param(
+            _uncovered_end, "ghost", "요약에 든 마지막 실행", id="요약에 든 마지막 실행을 못 만남"
+        ),
         pytest.param(_escaping_previous_field, "r1", "패턴", id="앞 실행 필드의 패턴 위반"),
-        pytest.param(_escaping_covered_field, "r2", "패턴", id="덮는 끝 필드의 패턴 위반"),
+        pytest.param(
+            _escaping_covered_field, "r2", "패턴", id="요약에 든 마지막 실행 필드의 패턴 위반"
+        ),
         pytest.param(_misplaced_summary, "r2", "자리", id="요약이 시작 바로 뒤가 아님"),
         pytest.param(_two_summaries, "r2", "둘", id="요약이 둘"),
         pytest.param(
@@ -4427,11 +4434,11 @@ async def test_멈춘_사이_앞_실행을_어댑터가_읽지_못하게_되면_
     assert tools.connection.calls == []
 
 
-async def test_멈춘_사이_덮는_끝_앞의_트레이스를_지워도_재개는_그대로_선다(
+async def test_멈춘_사이_요약에_든_마지막_실행_앞의_트레이스를_지워도_재개는_그대로_선다(
     trace: FakeTrace, clock: FakeClock
 ) -> None:
-    """거슬러 읽는 범위 밖(가장 가까운 요약이 덮는 끝과 그 앞)은 읽지 않으므로 지워도 이어 간다
-    (스토리 45)."""
+    """거슬러 읽는 범위 밖(가장 가까운 요약에 든 마지막 실행과 그 앞)은 읽지 않으므로 지워도 이어
+    간다 (스토리 45)."""
     _write_finished(trace, "old", request="오래된 질문", output="오래된 답")
     _write_finished(trace, "r0", request="q0", output="a0", previous="old")
     _write_finished(
@@ -4573,10 +4580,10 @@ async def test_다른_에이전트로_몇_번을_이어_갔든_돌아온_에이�
     )
 
 
-async def test_바로가기를_따라가다_가장_가까운_요약을_만나면_덮는_끝에서_멈춘다(
+async def test_바로가기를_따라가다_가장_가까운_요약을_만나면_요약에_든_마지막_실행에서_멈춘다(
     clock: FakeClock,
 ) -> None:
-    """멈추는 자리는 옛 대화의 규칙 그대로다. 덮는 끝은 읽지 않는다."""
+    """멈추는 자리는 옛 대화의 규칙 그대로다. 요약에 든 마지막 실행은 읽지 않는다."""
     trace = FakeTrace()
     _write_finished(trace, "r0", request="q0", output="a0", shortcuts={})
     _write_finished(trace, "r1", request="q1", output="a1", previous="r0", shortcuts={"calc": "r0"})
@@ -4720,7 +4727,12 @@ async def _shortcut_without_previous_run(trace: FakeTrace, clock: FakeClock) -> 
         pytest.param(_shortcut_cycle, "r1", "순환", id="순환"),
         pytest.param(_shortcut_escaping_key, "r2", "패턴", id="키의 패턴 위반"),
         pytest.param(_shortcut_escaping_value, "r1", "패턴", id="값의 패턴 위반"),
-        pytest.param(_shortcut_uncovered_end, "ghost", "덮는 끝", id="덮는 끝을 못 만남"),
+        pytest.param(
+            _shortcut_uncovered_end,
+            "ghost",
+            "요약에 든 마지막 실행",
+            id="요약에 든 마지막 실행을 못 만남",
+        ),
         pytest.param(
             _shortcut_nonempty_without_previous, "r1", "비어", id="앞 실행이 없는데 지도가 참"
         ),
@@ -5166,8 +5178,9 @@ async def test_요약_글은_글자_수에_세지_않는다(clock: FakeClock) ->
 async def test_원문_꼬리는_가장_최근부터_합이_한도의_절반_이하이고_나머지와_앞_요약이_접힌다(
     clock: FakeClock,
 ) -> None:
-    """한도 10, 교환 3·3·2·3. 뒤에서부터 3+2 가 절반 안이고 그다음 3 은 넘는다. 덮는 끝은 접힌 것
-    가운데 가장 최근 실행 r2 다. 앞 요약은 데이터의 previous_summary 로 접힌다(스토리 10·11)."""
+    """한도 10, 교환 3·3·2·3. 뒤에서부터 3+2 가 절반 안이고 그다음 3 은 넘는다. 요약에 든 마지막
+    실행은 접힌 것 가운데 가장 최근 실행 r2 다. 앞 요약은 데이터의 previous_summary 로 접힌다(스토리
+    10·11)."""
     trace = FakeTrace()
     _write_finished(trace, "old", request="옛", output="것")
     _write_finished(
@@ -5201,7 +5214,8 @@ async def test_원문_꼬리는_가장_최근부터_합이_한도의_절반_이�
 async def test_가장_최근_교환_하나가_절반보다_길면_그것도_접히고_꼬리는_비어_있다(
     clock: FakeClock,
 ) -> None:
-    """한도 10, 교환 2·9. 가장 최근 9 가 절반 5 를 넘어 접힌다. 덮는 끝은 앞 실행 자신이다."""
+    """한도 10, 교환 2·9. 가장 최근 9 가 절반 5 를 넘어 접힌다. 요약에 든 마지막 실행은 앞 실행
+    자신이다."""
     trace = FakeTrace()
     last = _chain(trace, 2, 9)
     model = _summarizing_model()
@@ -5246,7 +5260,8 @@ async def test_짧은_교환이_교환_수_기준_50개와_같으면_요약하�
 async def test_교환_수로_접히면_꼬리는_기준의_절반인_25개이고_목표는_그대로_한도의_4분의_1이다(
     clock: FakeClock,
 ) -> None:
-    """짧은 교환 51개. 가장 최근 25개(r27~r51)가 원문으로 남고 r1~r26 이 접혀 덮는 끝은 r26 이다."""
+    """짧은 교환 51개. 가장 최근 25개(r27~r51)가 원문으로 남고 r1~r26 이 접혀 요약에 든 마지막
+    실행은 r26 이다."""
     trace = FakeTrace()
     last = _chain(trace, *[2] * 51)
     model = _summarizing_model()
@@ -5397,7 +5412,7 @@ async def test_요약_호출의_시스템_메시지는_요소마다_서고_목�
 # 요약 이벤트
 
 
-async def test_요약_이벤트는_시작_바로_뒤이고_글과_덮는_끝과_모델과_토큰_수를_든다(
+async def test_요약_이벤트는_시작_바로_뒤이고_글과_요약에_든_마지막_실행과_모델과_토큰_수를_든다(
     clock: FakeClock,
 ) -> None:
     trace = FakeTrace()
@@ -5421,7 +5436,7 @@ async def test_요약_이벤트는_시작_바로_뒤이고_글과_덮는_끝과_
     assert _unwoven(_output_of(events)) == ("r1 까지의 요약", [["요요", "답답답"]])
 
 
-async def test_다음_이어_가기는_런타임이_쓴_요약과_그_뒤의_교환만_받고_덮는_끝에서_멈춘다(
+async def test_다음_이어_가기는_런타임의_요약과_뒤의_교환만_받고_요약에_든_마지막_실행에서_멈춘다(
     clock: FakeClock,
 ) -> None:
     """01 이 손으로 쓴 요약으로 잰 사례가 런타임이 쓴 요약으로도 선다(스토리 12)."""
@@ -5569,7 +5584,7 @@ async def test_이어_가기_사이에_한도를_내린_뒤의_재개는_자기_
 ) -> None:
     """r2 가 앞선 요약을 들고 꼬리 안에 선다(한도를 내렸을 때만 생긴다). 재개가 일반 규칙(처음 만난
     요약에서 멈춤)으로 읽으면 r2 의 요약을 집어 r1 까지 읽어 처음과 다른 멤버가 된다(명세 검토).
-    자기 요약의 덮는 끝 r1 은 읽지 않는다."""
+    자기 요약에 든 마지막 실행 r1 은 읽지 않는다."""
     _write_finished(trace, "r0", request="q0", output="a0")
     _write_finished(trace, "r1", request="요요", output="답답", previous="r0")
     _write_finished(
@@ -5597,11 +5612,11 @@ async def test_이어_가기_사이에_한도를_내린_뒤의_재개는_자기_
     assert _unwoven(recorded.prompt.split("\n")[0]) == ("r1 까지의 요약", [["요", "답"]])
 
 
-async def test_자기_요약의_덮는_끝이_앞_실행_자신이면_재개는_앞_실행을_읽지_않는다(
+async def test_자기_요약에_든_마지막_실행이_앞_실행_자신이면_재개는_앞_실행을_읽지_않는다(
     trace: FakeTrace, clock: FakeClock
 ) -> None:
-    """가장 최근 교환이 접혔으면 덮는 끝이 앞 실행이고 꼬리가 비어 있다. 멈춘 사이 그 트레이스를
-    지워도 재개가 선다(스토리 45 와 같은 규칙)."""
+    """가장 최근 교환이 접혔으면 요약에 든 마지막 실행이 앞 실행이고 꼬리가 비어 있다. 멈춘 사이 그
+    트레이스를 지워도 재개가 선다(스토리 45 와 같은 규칙)."""
     model, tools, plugins = await _paused_summarized_continuation(
         trace, clock, limit=10, sizes=(2, 9)
     )
@@ -5615,11 +5630,11 @@ async def test_자기_요약의_덮는_끝이_앞_실행_자신이면_재개는_
     assert set(trace.reads) == {_RUN_1}
 
 
-async def test_자기_요약의_덮는_끝이_지도의_그_에이전트_칸이면_재개는_아무것도_읽지_않는다(
+async def test_자기_요약에_든_마지막_실행이_지도의_그_에이전트_칸이면_재개는_아무것도_읽지_않는다(
     trace: FakeTrace, clock: FakeClock
 ) -> None:
-    """바로가기가 있는 실행에서 "덮는 끝이 앞 실행 자신이면"의 일반화다. 앞 실행은 다른 에이전트의
-    실행이고 덮는 끝은 지도의 calc 칸이다."""
+    """바로가기가 있는 실행에서 "요약에 든 마지막 실행이 앞 실행 자신이면"의 일반화다. 앞 실행은
+    다른 에이전트의 실행이고 요약에 든 마지막 실행은 지도의 calc 칸이다."""
     _write_finished(trace, "r1", request="요", output="답", shortcuts={})
     _write_finished(
         trace,
@@ -5772,11 +5787,11 @@ async def test_상한에서_멈춘_이어_간_실행의_재개는_같은_실행�
     assert RunId("r0") not in walked
 
 
-async def test_상한에서_모은_것이_계기를_넘으면_접히고_다음_이어_가기는_그_덮는_끝에서_멈춘다(
+async def test_상한에서_모은_것이_계기를_넘으면_접히고_다음에는_그_요약에_든_마지막_실행에서_멈춘다(
     clock: FakeClock,
 ) -> None:
-    """옛 대화의 짧은 교환 120개. 100개(r21~r120)를 모아 75개를 접고 25개를 남겨 덮는 끝이 r95 다.
-    다음 이어 가기는 그 요약에서 r96 까지 읽고 멈춘다."""
+    """옛 대화의 짧은 교환 120개. 100개(r21~r120)를 모아 75개를 접고 25개를 남겨 요약에 든 마지막
+    실행이 r95 다. 다음 이어 가기는 그 요약에서 r96 까지 읽고 멈춘다."""
     trace = FakeTrace()
     last = _chain(trace, *[2] * 120)
     model = _summarizing_model()
@@ -5814,11 +5829,12 @@ async def test_바로가기를_따라가는_읽기도_앞_실행을_세어_100�
     assert _summary_event(events).last_covered_run == "r75"
 
 
-async def test_상한에_닿는_자리에서도_덮는_끝을_못_만난_채_처음에_닿으면_깨진_고리다(
+async def test_상한에_닿는_자리에서도_요약에_든_마지막_실행을_못_만난_채_처음에_닿으면_깨진_고리다(
     clock: FakeClock,
 ) -> None:
-    """상한은 읽지 않고 가를 수 있는 판정(처음, 순환, 덮는 끝) 뒤, 읽기 바로 앞이다. 고리 100개의
-    처음 r0 을 100번째로 읽은 뒤 처음에 닿았는데 r99 의 요약이 덮는 끝을 아직 만나지 못했다."""
+    """상한은 읽지 않고 가를 수 있는 판정(처음, 순환, 요약에 든 마지막 실행) 뒤, 읽기 바로 앞이다.
+    고리 100개의 처음 r0 을 100번째로 읽은 뒤 처음에 닿았는데 r99 의 요약에 든 마지막 실행을 아직
+    만나지 못했다."""
     trace = FakeTrace()
     previous = _detour_chain(trace, 98)
     _write_finished(trace, "r99", previous=previous, between=[_summarized("r99", covers="gone")])

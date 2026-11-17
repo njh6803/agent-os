@@ -1,0 +1,27 @@
+# to-tickets Process 2단계(저장소 탐색) 문단에 더한 쉬운 말 문장(일지 2026-11-17-2031)이 새 세션에 실리는지.
+# 규칙의 원천은 CLAUDE.md 원칙이고 그것은 `claude_md_plain_explanations.toml` 이 본다.
+# to-tickets 는 모델이 부르지 못하는 스킬이라 질문 머리에 슬래시 명령으로 넣는다.
+# 실험군은 이 명세를 부른 체크아웃, 대조군은 바뀌기 전 판(ac2e65f)이다. 옛 판에는 카나리아가 없다.
+# 병합 뒤에는 주 체크아웃이 새 사본이라 옛 판의 커밋을 `--control-commit` 으로 준다(README `canary/` 행).
+# 최신 결과: 통과 4(2026-11-17, 이 PC, claude 2.1.325, 실험군은 `ac2e65f62` 위의 커밋 전 작업 트리 셋, 대조군 `--control-commit ac2e65f` 하나는 "없음", 일지 2026-11-17-2031).
+# 그 전: 통과 2·실패 2(같은 날, 같은 조건). 물음이 문장의 자리를 짚지 않아("본문에서, …") 실험군 셋 가운데 둘이 "없음"이라 답했다. 물음을 "Process 의 2단계(Explore the codebase) 첫 문단에서"로 좁힌 뒤가 위 결과다.
+# 돌리는 법: 워크트리 `.claude/worktrees/<이름>/` 루트에서
+#   uv run python tools/canary.py --control-commit ac2e65f .scratch/harness/probes/canary/to_tickets_plain_words.toml <출력 디렉터리>
+kind = "skill"
+question = '''
+/to-tickets
+위에 실린 스킬 본문이 시키는 일(맥락 모으기, 저장소 탐색, 티켓 쓰기, 질문)은 하지 않는다. 본문만 보고 답한다.
+Process 의 2단계(Explore the codebase) 첫 문단에서, 티켓이 누구에게 보이는 글인지와 용어집의 이름을 처음 쓸 때 무엇을 붙이는지 적은 문장을 글자 그대로 옮겨라.
+본문에 그런 문장이 없으면 "없음"이라고만 답하라.
+'''
+expect = ["write it in plain words, and give a glossary name its plain explanation at first use"]
+source = ".claude/skills/to-tickets/SKILL.md"
+
+[[arm]]
+name = "워크트리"
+role = "experiment"
+
+[[arm]]
+name = "옛-판"
+role = "control"
+checkout = "../../../../agent-canary-ac2e65f"

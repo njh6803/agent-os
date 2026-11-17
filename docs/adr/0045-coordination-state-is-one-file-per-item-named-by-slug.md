@@ -138,3 +138,6 @@ date: 2026-11-06
 - **스킬과 런북이 같은 글을 가리킨다.** next-session 지시문의 "칸마다" 첫 항목은 "티켓 번호"가 "티켓 이름"이 되어 하네스 chore 배치의 티켓은 번호를 받지 않고 받는 세션이 이름을 짓는다. `implement`·`retro`·`code-review`·`sync-design-system`의 브랜치와 티켓 경로 문장, `docs/agents/issue-tracker.md`, `.github/PULL_REQUEST_TEMPLATE.md`, `KICKOFF.md`의 번호 대조 서술이 같이 바뀌었다. 커밋과 PR 제목의 꼬리는 `(harness <slug>)`이고 옛 티켓은 `(harness <NNN>)`을 지킨다.
 - **헌법 판은 3.0.71이다.** `operations.md`의 브랜치와 병합 절에서 harness 티켓의 브랜치와 이름 문장이 바뀌어 올렸다.
 
+### 2026-11-17 용어집의 이름을 쉬운 말로 바꿨다
+
+사용자가 용어집(`CONTEXT.md`)의 낯선 이름을 사람이 흔히 쓰는 말로 바꾸기로 했다(harness 티켓 `.scratch/harness/issues/plain-words-in-written-artifacts.md`, 일지 2026-11-17-2031). 이 ADR의 본문은 글자를 고치지 않으므로 옛 이름이 그대로 있다. 본문의 "끝이 열린 결함 종류"는 "여러 곳에서 나는 같은 결함"으로, "더하는 문턱"은 "추가 기준 횟수"로 읽는다. 결정은 바뀌지 않고 코드의 이름도 그대로다.

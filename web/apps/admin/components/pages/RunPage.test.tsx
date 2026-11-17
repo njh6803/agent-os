@@ -71,7 +71,7 @@ const TRACE: Trace = {
   ],
 };
 
-// 이어 간 실행. 앞 실행과 요약이 덮는 끝의 식별자에 띄어쓰기·빗금·한글을 두어 링크의 주소가 인코딩되는 것을 잰다.
+// 이어 간 실행. 앞 실행과 요약에 든 마지막 실행의 식별자에 띄어쓰기·빗금·한글을 두어 링크의 주소가 인코딩되는 것을 잰다.
 const CONTINUED = "r-calc-3";
 const PREVIOUS = "r calc/둘";
 const COVERED = "r calc/하나";
@@ -316,7 +316,7 @@ describe("실행 하나", () => {
     expect(names(4)).toEqual(["원문 raw"]);
   });
 
-  test("앞 실행과 요약이 덮는 끝은 그 실행의 상세로 가는 링크이고 주소는 인코딩한 식별자다", async () => {
+  test("앞 실행과 요약에 든 마지막 실행은 그 실행의 상세로 가는 링크이고 주소는 인코딩한 식별자다", async () => {
     serveTrace(`/traces/${CONTINUED}`, () => HttpResponse.json(CONTINUED_TRACE));
 
     await openRun(CONTINUED);
@@ -559,7 +559,7 @@ describe("실행 하나", () => {
     ).toEqual([
       "시각 ts",
       "요약 글 summary",
-      "덮는 끝 last_covered_run",
+      "요약에 든 마지막 실행 last_covered_run",
       "모델 model",
       "입력 토큰 수 input_tokens",
       "응답 토큰 수 output_tokens",
