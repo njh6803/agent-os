@@ -69,5 +69,6 @@
 | [0063](0063-admin-ui-starts-runs-from-a-chat-screen-and-the-trace-records-the-requesting-and-deciding-accounts.md) | 관리 화면은 대화 화면에서 채널로 실행을 일으키고, 트레이스는 요청한 계정과 결정한 계정을 주체와 따로 남긴다 | accepted | 2026-11-15 |
 | [0064](0064-widget-admin-server-keeps-widget-settings-in-its-own-postgres-and-operators-register-them-on-a-widget-admin-ui-with-agent-os-accounts.md) | 위젯 관리 서버가 위젯 설정을 자기 PostgreSQL에 들고, 운영자는 다른 포트의 위젯 관리 화면에 Agent OS의 운영자 계정으로 들어와 등록하며, 위젯은 허용 출처와 요청 글자 수 상한을 컨테이너가 뜰 때 받는다 | accepted | 2026-11-15 |
 | [0065](0065-widget-preview-page-becomes-a-login-only-test-page-and-the-public-demo-moves-to-a-separate-deployment-with-a-public-account.md) | 위젯 미리보기 페이지는 로그인해야 여는 위젯 테스트 페이지가 되고, 공개 데모는 공개 계정을 둔 따로 띄운 배포로 옮기며, 위젯 관리 화면은 양식 옆에 저장 전 위젯을 그린다 | accepted | 2026-11-16 |
+| [0066](0066-agent-os-reaches-postgres-through-sqlalchemy-core-and-asyncpg-and-migrates-forward-only-before-serve.md) | agent-os는 SQLAlchemy Core 비동기와 asyncpg로 PostgreSQL 18에 닿고, 표는 serve 앞에 한 번 도는 migrate가 앞으로만 올리며, 데이터베이스를 쓰는 시험은 미리 띄운 테스트 컨테이너 하나를 함께 쓴다 | accepted | 2026-11-17 |
 
 ADR을 먼저 확인하는 상황 넷: 스택이나 라이브러리를 바꿀 때, 디렉터리나 층 경계를 바꿀 때, 디스크 형식(매니페스트, 이벤트)을 바꿀 때, 기존 코드가 왜 이렇게 되어 있는지 이해되지 않을 때.
