@@ -4,7 +4,7 @@
 
 고침은 둘이다.
 
-- 단계가 올린 색인의 digest를 `steps.push.outputs.metadata`가 아니라 방금 올린 커밋 해시 태그(`<이름공간>/<저장소>:sha-<커밋 해시>`)에서 `docker buildx imagetools inspect --format '{{.Manifest.Digest}}'`로 읽는다. 해시 태그는 이 실행이 바로 앞 단계에서 올린 것이고 동시 실행 묶음이 한 번에 하나만 돌게 한다. 뒤의 대조(색인 → linux/amd64 매니페스트 → 설정 해시)와 출력 형식(`out/release.json`, 단계 출력)은 그대로다.
+- 단계가 올린 색인의 digest를 `steps.push.outputs.metadata`가 아니라 방금 올린 커밋 해시 태그(`<이름공간>/<저장소>:sha-<커밋 해시>`)에서 `docker buildx imagetools inspect --format '{{.Manifest.Digest}}'`로 읽는다. 해시 태그는 이 실행이 바로 앞 단계에서 올린 이름이고 동시 실행 묶음이 한 번에 하나만 돌게 한다. 다만 태그는 가변이라 올린 직후 읽기까지 Docker Hub 쓰기 권한자가 덮어쓸 수 있는 창이 있고, 그 경우는 뒤의 설정 해시 대조가 막는다. 조회 자체가 실패하면 `::error::`로 닫힌 채 실패한다. 뒤의 대조(색인 → linux/amd64 매니페스트 → 설정 해시)와 출력 형식(`out/release.json`, 단계 출력)은 그대로다.
 - 같은 모양(단계 출력을 통째로 환경 변수에 싣기)이 다시 들지 않게 `tests/tools/test_release_workflow.py`가 워크플로에서 `${{ steps.<id>.outputs.metadata }}`를 쓰는 줄을 막는다. 이 이름 하나만 막고, 다른 큰 출력이나 `toJSON`으로 감싼 길은 못 본다(시험 독스트링에 적었다).
 
 이 PR은 판을 다시 내는 길이다. 번호 태그를 붙이기 전의 실패라 레지스트리에는 해시 태그만 남았고(`docker buildx imagetools inspect`로 네 저장소 모두 해시 태그가 있음을 손으로 봤다), 이 핫픽스의 병합이 같은 번호(`0.1.0-rc.1`)로 판을 낸다.

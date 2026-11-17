@@ -266,7 +266,8 @@ jobs:
           images='{}'
           for image in serve admin widget portal; do
             repo=$(python3 tools/release_ci.py repository "$image")
-            digest=$(docker buildx imagetools inspect "$NAMESPACE/$repo:$TAG" --format '{{.Manifest.Digest}}')
+            digest=$(docker buildx imagetools inspect "$NAMESPACE/$repo:$TAG" --format '{{.Manifest.Digest}}') || {
+              echo "::error::$image 의 해시 태그 $TAG 를 레지스트리에서 조회하지 못했다."; exit 1; }
             case "$digest" in sha256:????????????????????????????????????????????????????????????????) ;; *)
               echo "::error::$image 의 올린 digest 를 읽지 못했다: $digest"; exit 1 ;; esac
             docker buildx imagetools inspect "$NAMESPACE/$repo@$digest" --raw > "$RUNNER_TEMP/index.json"

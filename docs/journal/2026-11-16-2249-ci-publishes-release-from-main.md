@@ -267,3 +267,16 @@ open-session을 부른다 2026-11-17T02:00Z
 - 고친 것(Minor): 티켓이 운영 문서를 따옴표로 인용한 문구가 원문과 달라 풀어 썼다. `repo=` 줄은 중복을 고친 것이 아니라 옮긴 것이라 문장을 고쳤다. 128KiB와 "약 290KB"를 단정하던 워크플로 주석·시험 독스트링·티켓을 어림으로 고치고, `METADATA` 값의 크기를 줄 접두를 떼고 다시 쟀다(`gh run view 43997051472 --log-failed`를 `awk`·`sed`로 걸러 185,618바이트, 손으로 쟀다). 시험 이름이 판정 범위(줄 안 어디든)보다 좁아 `…_표현식으로_쓰지_않는다`로 고치고, YAML 주석 안의 표현식도 잡는 거짓 양성을 독스트링에 적었다.
 - 남긴 것: `docs/constitution/operations.md` 실패 표의 `시험한 이미지와 올린 이미지 대조` 줄이 "두 이미지의 설정 해시가 다를 때 실패한다"고만 적는다. 실제로는 올린 색인의 digest를 읽지 못해도 실패한다(이번 실행이 그렇게 죽었다). 헌법 문서라 이 핫픽스에서 건드리지 않고, 다음 문서 고침이 이 줄에 "digest를 읽지 못할 때"를 더한다. `TAG: sha-${{ github.sha }}`가 두 단계에 중복이라는 smell(약함)과 `id: push`가 남은 것은 두었다(`id: push`는 쓰는 곳이 없어도 무해하고 시험 예시가 이름을 쓴다).
 - 다시 돌린 명령: 고친 뒤 ruff 둘과 시험 두 파일을 다시 치고 커밋의 pre-commit이 나머지를 돌린다(결과는 커밋 뒤에 적는다).
+
+## PR 직전 리뷰 (핫픽스, 이 세션)
+
+`coderabbit-review` 서브에이전트가 `coderabbit review --agent --committed --base origin/main --dir .github`를 돌렸다(CLI 0.7.5, `Seat: not assigned`, `Plan: Free`에서도 `review_completed`로 끝났고 종료 0). CLI가 본 범위는 `.github/workflows/release.yml` 하나이고, 시험 파일·티켓·일지는 서브에이전트가 직접 읽었다.
+
+- CodeRabbit 지적 1건: 해시 태그 조회의 `--format '{{.Manifest.Digest}}'`가 여러 줄을 낼 수 있다는 것. 오탐으로 판정했다. 서브에이전트가 올라간 위젯 이미지 태그에 같은 명령을 쳐 한 줄을 받았고(`MediaType`은 `application/vnd.oci.image.index.v1+json`), 뒤의 `case ... sha256:<64자>` 검사가 여러 줄·빈 값·오류 문구를 이미 걸러 `::error::`로 닫는다. 러너의 buildx 판은 재지 않았다.
+- 서브에이전트가 직접 민 주장: ① 해시 태그 digest가 이 실행이 올린 이미지라는 보증(같은 SHA 재실행은 같은 `concurrency` 묶음 안에서 직렬이고, 올린 직후 읽기까지 몇 초의 덮어쓰기 창은 뒤의 설정 해시 대조가 막는다), ② 보안(`run:` 본문에 `${{ }}` 없음, 새 단계에 `DOCKERHUB_TOKEN` 없음), ③ 색인이 아닌 태그와 조회 실패의 `set -e`, ④ 사실 주장(실패 로그 289,756바이트와 `Argument list too long`의 1906행은 일치하고, `METADATA` 값은 줄 접두를 떼고 awk로 문자 수 기준 185,354를 얻어 티켓의 185,618바이트와 달랐다. 바이트와 문자 수 차이일 수 있고 어느 쪽이든 128KiB를 넘으니 "약 185KB"로 쓴 문장은 그대로 둔다).
+- 고친 것(반영 뒤 같은 PR에 실었다):
+  - 조회 실패 때 `::error::` 없이 docker의 stderr만 남던 것을 `digest=$(...) || { echo "::error::…"; exit 1; }`로 고쳤다. 이 PC에서 존재하지 않는 저장소로 단계 본문을 돌려 `::error::` 한 줄과 종료 1을 봤다.
+  - 새 모양이 있음을 고정하는 시험 `test_이_저장소의_판_내기_워크플로는_올린_digest를_해시_태그에서_읽는다`를 더했다(옛 모양을 막는 시험은 해시 태그 읽기를 지워도 초록이었다).
+  - 티켓의 "해시 태그는 이 실행이 바로 앞 단계에서 올린 것"이라는 단정을, 태그가 가변이라 덮어쓰기 창이 있고 뒤의 설정 대조가 막는다는 문장으로 낮췄다.
+- 남긴 것: `id: push`가 쓰는 곳 없이 남았고 `TAG`가 두 단계에 중복이다(Nit, 위 셀프 리뷰에서 이미 남김). `fromJSON(steps.push.outputs.metadata).serve['containerimage.digest']`로 필요한 필드만 env에 싣는 대안은 레지스트리 왕복과 가변 태그 창을 없애지만, 이번에는 이미 실제 데이터로 확인한 태그 읽기를 유지한다(시험의 정규식을 같이 고쳐야 한다). `아티팩트 올리기`와 잡 `publish`는 아직 돌지 않았다.
+- 다시 돌린 명령: `uv run pytest tests/tools/test_release_workflow.py -q` 초록, `uv run ruff check tests/tools/test_release_workflow.py` 초록, 추출한 단계 본문의 `bash -n` 구문 검사 통과. 나머지 게이트는 이 변경을 싣는 커밋의 pre-commit 결과로 갈음한다.

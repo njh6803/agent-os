@@ -36,6 +36,12 @@ def test_이_저장소의_판_내기_워크플로는_bake_메타데이터_출력
     assert metadata_expression_lines(text) == []
 
 
+def test_이_저장소의_판_내기_워크플로는_올린_digest를_해시_태그에서_읽는다() -> None:
+    # 옛 모양을 막는 위 시험은 해시 태그 읽기를 지워도 초록이다. 새 모양이 있음을 따로 본다.
+    text = WORKFLOW.read_text(encoding="utf-8")
+    assert 'imagetools inspect "$NAMESPACE/$repo:$TAG"' in text
+
+
 def test_bake_메타데이터를_환경_변수로_받는_줄을_잡는다() -> None:
     text = "\n".join(
         [
