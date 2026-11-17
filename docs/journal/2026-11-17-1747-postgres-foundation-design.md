@@ -540,3 +540,12 @@ open-session을 부른다 2026-11-17T11:56:34Z
 > 사용자: postgres-foundation 설계 인터뷰
 
 첫 메시지는 위 "PR과 인계"의 지시문 그대로이다. PR 602는 열려 있고 `headRefOid`는 커밋 `5abd933d6`, 병합 상태는 `BLOCKED`였다(손으로 봤다, `gh pr view 602 --json headRefOid,mergeStateStatus`. 까닭은 읽지 않았고 앞 세션이 적은 진행 중 검사로 어림한다). 세션에 PR 602를 `bind_pr`로 다시 묶었다. `sibling_overlap.py`는 "번호 겹침 없음"으로 끝났다.
+
+### 봇 회차 (CodeRabbit 첫 회차)
+
+일지 커밋 `41dec2bb2`를 푸시하고 `@coderabbitai review`를 남겼다. `uv run python tools/wait_ci.py 602`가 모두 통과로 끝났다(검사 열한 줄이 SUCCESS, `llm`은 SKIPPED. 손으로 봤다, 출력의 끝 줄 "모두 통과. CodeRabbit: Finished"). claude-review는 지적 없음이었다(PR 코멘트 둘을 읽었다). CodeRabbit은 Minor 둘을 냈다. 이 PR에 낸 첫 리뷰라 첫 회차이고, 지적마다 판단한다.
+
+- ADR 0048 24줄, Minor: "기존 본문에 추가한 PostgreSQL 연결 문장을 지우라". 오탐이다. `git diff origin/dev`로 그 줄의 변경을 보니 더한 것은 `(바뀜: ADR 0066)` 포인터 하나이고 연결 문장은 원래 있던 것이다(손으로 봤다). `.claude/rules/adr.md`는 다른 ADR이 본문의 결정을 바꾸면 그 문장 뒤에 포인터를 달게 한다. CLI 회차의 같은 지적과 같은 판정이다.
+- ADR 0066 20줄, Minor: 이미 데이터가 있는 볼륨에서 비밀번호를 바꾸는 절차가 빠졌다. 유효하다. `postgres:18`의 `docker-entrypoint.sh`에서 비밀번호가 `initdb --pwfile`로 처음 만들 때만 쓰이는 것을 읽었다(92·104줄을 grep했다). 결정 "비밀번호와 계정"을 고치지 않고 Consequences "명세가 짓는 것"에 이 길과 배포 안내에 절차를 적는 일을 한 항목으로 더했다. 실제로 비밀번호를 바꾼 볼륨으로 띄워 보지는 않았다.
+
+고친 것은 ADR 0066 한 줄이고 일지의 이 절과 같은 커밋으로 푸시한다. 뒤로 넘긴 일은 없다(고친 항목이 명세가 짓는 것으로 넘어가고, "다음"의 둘째 줄이 그 목록을 가리킨다).
