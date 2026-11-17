@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>사이트 목록 · 처음 배포한 직후</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/agent-os/styles.css">
+<link rel="stylesheet" href="ds/agent-os/fonts/fonts.css">
+<link rel="stylesheet" href="ds/agent-os/_ds_bundle.css">
+<script src="ds/agent-os/_ds_bundle.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0}
+a{color:var(--accent)}a:hover{color:var(--text)}
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+.navlink{display:flex;align-items:center;gap:var(--spacing-2);height:var(--spacing-nav-item);padding:0 var(--spacing-3);border-radius:var(--radius-m);color:var(--text-muted);text-decoration:none;font-size:var(--body-size);line-height:var(--body-lh)}
+.navlink:hover{color:var(--text);background:var(--bg-hover)}
+.navlink[aria-current="page"]{background:var(--bg-selected);color:var(--text);font-weight:var(--font-weight-medium)}
+</style>
+</helmet>
+<div data-theme="nokcheong" data-mode="light" style="min-height: 100vh; display: flex; background: var(--bg); color: var(--text); font-family: var(--sans);">
+<nav aria-label="위젯 관리 화면" style="width: var(--spacing-nav); flex-shrink: 0; box-sizing: border-box; padding: var(--spacing-4) var(--spacing-3); display: flex; flex-direction: column; gap: var(--spacing-1); background: var(--bg-raised); border-right: 1px solid var(--border);">
+<div class="font-semibold text-body" style="height: var(--spacing-nav-item); display: flex; align-items: center; padding: 0 var(--spacing-3); margin-bottom: var(--spacing-3);">위젯 관리 화면</div>
+<a href="#" aria-current="page" class="navlink"><x-import component-from-global-scope="AgentOsUi.Icon" name="list" size="16"></x-import>사이트</a>
+<a href="https://agent.example.com/portal/" target="_blank" rel="noopener" class="navlink"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path vector-effect="non-scaling-stroke" d="M15 3h6v6"></path><path vector-effect="non-scaling-stroke" d="M10 14 21 3"></path><path vector-effect="non-scaling-stroke" d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path></svg>테스트<span class="sr-only">(새 탭에서 열림)</span></a>
+<div style="margin-top: auto; padding-top: var(--spacing-3); border-top: 1px solid var(--border);">
+<button type="button" aria-haspopup="menu" aria-expanded="false" class="flex items-center gap-2 w-full" style="min-height: 48px; padding: var(--spacing-2) var(--spacing-3); border: 0; border-radius: var(--radius-m); background: transparent; color: var(--text); font: inherit; text-align: left; cursor: pointer;">
+<span class="flex flex-col flex-1 min-w-0"><span class="font-mono text-mono font-medium">ops-lead</span><span class="text-small text-text-muted">Agent OS 운영자 계정</span></span>
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex-shrink: 0; color: var(--text-muted);"><path vector-effect="non-scaling-stroke" d="m7 15 5 5 5-5"></path><path vector-effect="non-scaling-stroke" d="m7 9 5-5 5 5"></path></svg>
+</button>
+</div>
+</nav>
+<main style="flex: 1; min-width: 0; box-sizing: border-box; padding: var(--spacing-8);">
+<div style="max-width: 960px; display: flex; flex-direction: column; gap: var(--spacing-6);">
+<header class="flex items-start justify-between gap-4">
+<div class="flex flex-col gap-1 min-w-0">
+<div class="flex items-center gap-2"><h1 style="margin: 0; font-size: var(--text-title); line-height: var(--text-title--line-height); font-weight: var(--text-title--font-weight);">사이트</h1><span class="text-body text-text-muted">0</span></div>
+<p class="text-body text-text-muted" style="margin: 0;">위젯을 붙이는 사이트마다 위젯 설정을 둔다. 위젯 테스트 페이지에 담는 사이트는 위젯 테스트 페이지 설정도 둔다.</p>
+</div>
+<div class="flex items-center gap-2 shrink-0">
+<x-import component-from-global-scope="AgentOsUi.Button" variant="secondary">새로 고침</x-import>
+<x-import component-from-global-scope="AgentOsUi.Button" variant="primary">사이트 등록</x-import>
+</div>
+</header>
+<section aria-labelledby="empty-title" class="flex flex-col items-center gap-3" style="padding: 96px var(--spacing-6); text-align: center; border-top: 1px solid var(--border);">
+<span class="text-text-muted" style="display: inline-flex;"><x-import component-from-global-scope="AgentOsUi.Icon" name="list" size="20"></x-import></span>
+<h2 id="empty-title" class="text-body font-semibold" style="margin: 0;">등록된 사이트가 없다</h2>
+<p class="text-body text-text-muted" style="margin: 0; max-width: 480px;">사이트를 등록하면 그 사이트 이름을 적은 위젯이 위젯 설정을 받아 간다. 위젯 테스트 페이지도 사이트를 담기 전에는 '등록된 사이트가 없습니다'만 보인다.</p>
+<div style="margin-top: var(--spacing-2);"><x-import component-from-global-scope="AgentOsUi.Button" variant="primary">사이트 등록</x-import></div>
+</section>
+</div>
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":860}}'>
+class Component extends DCLogic {
+renderVals() {
+return { yes: true, no: false };
+}
+}
+</script>
+</body>
+</html>

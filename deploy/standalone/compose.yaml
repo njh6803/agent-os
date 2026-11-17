@@ -1,0 +1,131 @@
+# agent-os 단독 배포. 프록시 하나와 이미지 넷을 보통의 Docker 네트워크로 묶는다.
+# 운영자가 고치는 것은 .env, site/, portal/, tls/ 의 파일이고 이 파일은 고치지 않는다.
+# 특히 아래 세 가지는 바꾸지 않는다.
+# - ports: 밖에 열리는 것은 프록시의 443과 80, 서버의 127.0.0.1에만 열리는 관리 화면의 3000 셋뿐이다.
+#   관리 화면을 다른 주소에 열면 로그인 없는 관리 API가 인터넷에 열린다.
+# - user: 이미지가 정한 사용자(uid 10001)로 돈다. 우리 이미지 넷에는 user 를 더하지 않는다.
+# - 안쪽 네트워크의 IPv6: 켜지 않는다. 443과 80이 IPv4에만 열려야 접속 주소별 요청 한도가 맞게 선다.
+
+name: agent-os
+
+x-health: &health
+  interval: 30s
+  timeout: 10s
+  retries: 3
+  start_period: 30s
+  start_interval: 2s
+
+services:
+  proxy:
+    # 공식 nginx 안정판(1.30.6 alpine)을 digest 로 고정했다.
+    image: nginx@sha256:583b7f2fce1cdb8da5ad5c39ebd3c33b98b87d493190e548bdee1fa8c619c311
+    user: "101:101"
+    init: true
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    tmpfs:
+      - /tmp
+    restart: unless-stopped
+    # 설정은 폴더째 얹는다. 파일 하나로 얹으면 편집기의 저장이 컨테이너에 보이지 않는다.
+    command: ["nginx", "-c", "/etc/agent-os/proxy/nginx.conf", "-g", "daemon off;"]
+    ports:
+      - "0.0.0.0:443:8443"
+      - "0.0.0.0:80:8080"
+    volumes:
+      - ./proxy:/etc/agent-os/proxy:ro
+      - ./tls:/etc/nginx/tls:ro
+
+  serve:
+    image: ${AGENT_OS_NAMESPACE:?.env 에 AGENT_OS_NAMESPACE 가 없다}/agent-os-runtime:${AGENT_OS_VERSION:?.env 에 AGENT_OS_VERSION 이 없다}
+    # 이미지의 기본 명령에는 --site-file 과 --host 가 없다. 명령을 바꾸면 전체를 적어야 한다.
+    command:
+      - agent-os
+      - serve
+      - --plugins-root
+      - /app/plugins
+      - --traces
+      - /data/traces
+      - --site-file
+      - /etc/agent-os/site/sites.toml
+      - --host
+      - 0.0.0.0
+    # 환경 변수 파일의 값(토큰, 기본 모델, API 키)을 받는 것은 serve 하나다.
+    env_file: .env
+    environment:
+      AGENT_OS_CONTAINER_NETWORK: "1"
+    read_only: true
+    tmpfs:
+      - /home/agentos:uid=10001,gid=10001,mode=0700
+    restart: unless-stopped
+    volumes:
+      - plugins:/app/plugins
+      - traces:/data/traces
+      - ./site:/etc/agent-os/site:ro
+    healthcheck:
+      <<: *health
+      test:
+        - CMD
+        - python
+        - -c
+        - import sys, urllib.request; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=4).status == 200 else 1)
+
+  admin:
+    image: ${AGENT_OS_NAMESPACE}/agent-os-admin:${AGENT_OS_VERSION}
+    environment:
+      AGENT_OS_CONTAINER_NETWORK: "1"
+    read_only: true
+    restart: unless-stopped
+    # 서버의 127.0.0.1 에만 발행한다. SSH 포트 포워딩으로 닿는다.
+    ports:
+      - "127.0.0.1:3000:3000"
+    healthcheck:
+      <<: *health
+      test:
+        - CMD
+        - node
+        - -e
+        - fetch('http://127.0.0.1:3000/').then(r=>process.exit(r.ok?0:1),()=>process.exit(1))
+
+  widget:
+    image: ${AGENT_OS_NAMESPACE}/agent-os-widget:${AGENT_OS_VERSION}
+    environment:
+      AGENT_OS_CONTAINER_NETWORK: "1"
+    # 위젯은 뜰 때 사이트 파일로 빌드하므로 루트를 읽기 전용으로 두지 않고 메모리 제한도 두지 않는다.
+    restart: unless-stopped
+    volumes:
+      - ./site:/etc/agent-os/site:ro
+    healthcheck:
+      <<: *health
+      start_period: 300s
+      test:
+        - CMD
+        - node
+        - -e
+        - fetch('http://127.0.0.1:3000/widget').then(r=>process.exit(r.ok?0:1),()=>process.exit(1))
+
+  portal:
+    image: ${AGENT_OS_NAMESPACE}/agent-os-widget-test-page:${AGENT_OS_VERSION}
+    environment:
+      AGENT_OS_CONTAINER_NETWORK: "1"
+    read_only: true
+    restart: unless-stopped
+    volumes:
+      - ./site:/etc/agent-os/site:ro
+      - ./portal:/etc/agent-os/portal:ro
+    healthcheck:
+      <<: *health
+      test:
+        - CMD
+        - node
+        - -e
+        - fetch('http://127.0.0.1:3000/portal/health').then(r=>process.exit(r.ok?0:1),()=>process.exit(1))
+
+volumes:
+  # 플러그인 루트와 트레이스 폴더. 이름 있는 볼륨은 처음 붙을 때 이미지의 내용을 소유자째 복사한다.
+  plugins: {}
+  traces: {}
+
+networks:
+  default:
+    enable_ipv6: false

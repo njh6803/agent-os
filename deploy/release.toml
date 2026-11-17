@@ -1,0 +1,4 @@
+# 판 설정 파일(release-image 티켓 11, .scratch/release-image/spec.md "판 설정 파일"). 칸은 `candidate_for` 하나뿐이다.
+# 이 칸이 있는 동안 CI 는 그 정식 판의 출시 후보(`0.1.0-rc.1`, `0.1.0-rc.2`, …)만 낸다. 정식 판을 낼 때 이 줄을 지우는
+# 일은 pilot-release 의 마지막 티켓이 한다.
+candidate_for = "0.1.0"

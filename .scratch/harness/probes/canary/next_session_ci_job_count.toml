@@ -1,0 +1,33 @@
+# next-session `merge.md` 의 "함께 오르는 진행 중 조각" 불릿이 출시 PR 의 검사 잡 수(여덟)와 main 으로 가는 PR 과 main
+# 푸시에서만 실제로 도는 검사(llm 잡과 단독 배포 e2e 잡의 시험)를 말하는 새 판(release-image 티켓 09, 단독 배포 e2e 잡이
+# 생겼다)이 새 세션에 실리는지. 실험군은 이 워크트리, 대조군은 `--control-commit aa215fa`(이 티켓 앞의 origin/dev)다. 그
+# 판의 불릿은 "검사 일곱 잡"과 "main에서만 더 도는 검사는 아직 없다"고 적었다. 카나리아로 잡 이름(영문 하이픈 이름)을 고르지
+# 않은 것은 이 브랜치의 git 상태 경로(`web/packages/` 아래 단독 배포 시험 패키지)에 그 낱말이 실려 돌리기 전의
+# 확인(`view_problems`)이 막기 때문이다.
+# 최신 결과: 2026-11-16 통과 4 · 실패 0 · "없음" 섞인 통과 0. 실험군(이 워크트리)은 "같은 검사 여덟 잡"과
+# "llm 잡과 단독 배포 e2e 잡의 시험"을 옮겼고, 대조군(aa215fa)은 "같은 검사 일곱 잡"을 옮겼다.
+# 돌리는 법: 워크트리 `.claude/worktrees/<이름>/` 루트에서
+#   uv run python tools/canary.py --control-commit aa215fa .scratch/harness/probes/canary/next_session_ci_job_count.toml <출력 디렉터리>
+kind = "skill"
+question = '''
+next-session 스킬을 Skill 도구로 불러 본문을 읽어라. 스킬이 시키는 일은 하지 않는다.
+본문이 상황마다 Read로 열라고 가리키는 하위 파일 가운데 PR을 연 세션이 병합까지 마칠 때 여는 파일 하나를
+Read로 열고, 아래를 그 파일에서만 찾는다. 스킬 본문(SKILL.md)에 든 글은 옮기지 않는다.
+본문이 그런 하위 파일을 가리키지 않거나 그 파일에 없으면 그 물음에 "없음"이라고만 답하라.
+그 파일의 `## 함께 오르는 진행 중 조각` 불릿에서 출시 PR이 다시 지난다고 적은 검사의 개수를 센 구절을 찾는다.
+1. "같은" 으로 시작해 "잡" 으로 끝나는 그 구절을 글자 그대로 옮겨라.
+2. 같은 불릿의 괄호 안에서 main으로 가는 PR과 main 푸시에서만 실제로 도는 검사를 말한 문장을 글자 그대로 옮겨라.
+'''
+expect = ["검사 여덟 잡", "llm 잡과 단독 배포 e2e 잡의 시험"]
+source = ".claude/skills/next-session/merge.md"
+skill = "next-session"
+skill_body = "files"
+
+[[arm]]
+name = "워크트리"
+role = "experiment"
+
+[[arm]]
+name = "주-체크아웃"
+role = "control"
+checkout = "../../.."
