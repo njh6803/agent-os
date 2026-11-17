@@ -25,13 +25,16 @@ harness 티켓 `plain-words-in-written-artifacts` 의 전제다. 쉬운 말 규�
 표지(측정인 회차). 결과 이벤트가 성공이고, 답하는 쪽(p 갈래는 본 세션, sub 갈래는 서브에이전트)이
 도구를 부르지 않았다(서브에이전트가 보고를 내는 `SubagentHandback` 은 뺀다). 도구를 불렀으면 답이
 파일을 읽은 데서 왔을 수 있다. sub 갈래는 그에 더해 본 세션이 Agent 를 한 번만 불렀고 다른 도구를
-쓰지 않았으며, Agent 에 넘긴 프롬프트에 카나리아가 없고(본 세션이 자기 컨텍스트의 문장을 흘리지
+쓰지 않았으며, 그 호출의 `subagent_type` 이 갈래의 서브에이전트이고(다른 종류가 불리면 그 갈래의
+결과가 아니다), Agent 에 넘긴 프롬프트에 카나리아가 없고(본 세션이 자기 컨텍스트의 문장을 흘리지
 않았다), 도구 결과의 `status` 가 `completed` 이고 서브에이전트의 보고가 있다.
 양성 대조는 두 카나리아가 서로 맡는다. 한 회차의 답이 한 자리의 문장을 옮기고 다른 자리에는
 "없음"이라 하면, 그 세션이 실린 문장을 옮긴다는 것과 물음이 답을 흘리지 않는다는 것이 함께 선다.
-두 자리 모두 "없음"인 갈래는 같은 물음에 문장을 옮긴 다른 갈래가 있을 때만 읽는다. 이 조건은
-읽는 쪽의 몫이고 코드가 보지 않는다. 모든 갈래가 "없음"이라고 답해도 회차는 측정으로 세어지고
-종료 코드는 0 이다. 그런 결과는 물음이 문장을 옮기게 하지 못한 것이라 결론을 내지 않는다.
+두 자리 모두 "없음"인 갈래는 같은 물음에 문장을 옮긴 다른 갈래가 있을 때만 읽는다. 측정인 회차
+가운데 문장을 하나라도 옮긴 회차가 없으면 코드가 "양성 대조 없음"을 찍고 1 로 끝난다. 그런 결과는
+물음이 문장을 옮기게 하지 못한 것이라 결론을 내지 않는다. 갈래를 골라 돌려도 같으므로, "없음"이
+나올 갈래는 문장을 옮길 갈래와 함께 돌린다. 어느 갈래의 "없음"을 어느 갈래의 옮김이 받치는지는
+읽는 쪽이 본다.
 
 못 보는 것.
 - 데스크톱 앱이 띄운 대화 세션. 이 프로브는 `claude -p` 만 띄운다. 앱 세션 안에서 돌리면 띄운
@@ -49,8 +52,8 @@ harness 티켓 `plain-words-in-written-artifacts` 의 전제다. 쉬운 말 규�
 갈래 이름을 주면 그 갈래만 돈다. `claude` CLI 와 인증이 들고, 사용자 설정이 그 출력 스타일을 골라
 둔 PC 여야 한다(아니면 2 로 끝난다). 회차는 일곱이고 본 세션은 모두 sonnet 이다(서브에이전트가 도는
 모델은 그 정의가 정하고 여기서 보지 않는다). 회차마다 stream-json 원본을
-출력 디렉터리에 남긴다. 종료 코드: 0 모든 회차가 측정, 1 측정이 아닌 회차가 있다, 2 카나리아가
-원천에 없거나 물음에 있다.
+출력 디렉터리에 남긴다. 종료 코드: 0 모든 회차가 측정이고 문장을 옮긴 회차가 있다, 1 측정이 아닌
+회차가 있거나 문장을 옮긴 회차가 없다, 2 카나리아가 원천에 없거나 물음에 있다.
 """
 
 from __future__ import annotations
@@ -184,6 +187,7 @@ class Facts:
     main_calls: list[str] = field(default_factory=list)
     sub_calls: list[str] = field(default_factory=list)
     agent_prompts: list[str] = field(default_factory=list)
+    agent_types: list[str] = field(default_factory=list)
     outcomes: list[Outcome] = field(default_factory=list)
 
 
@@ -198,8 +202,8 @@ def outcome_of(detail: object) -> Outcome:
 
 
 def facts(raw: str) -> Facts:
-    """init 의 출력 스타일, 본 세션과 서브에이전트의 도구 호출, Agent 에 넘긴 프롬프트, Agent 도구
-    결과의 상세(서브에이전트의 보고), 성공한 결과의 답."""
+    """init 의 출력 스타일, 본 세션과 서브에이전트의 도구 호출, Agent 에 넘긴 프롬프트와 부른
+    서브에이전트의 종류, Agent 도구 결과의 상세(서브에이전트의 보고), 성공한 결과의 답."""
     out = Facts()
     agent_ids: set[object] = set()
     for event in events(raw):
@@ -220,7 +224,9 @@ def facts(raw: str) -> Facts:
                     agent_ids.add(block.get("id"))
                     given = block.get("input")
                     prompt = given.get("prompt") if isinstance(given, dict) else None
+                    called = given.get("subagent_type") if isinstance(given, dict) else None
                     out.agent_prompts.append(str(prompt))
+                    out.agent_types.append(str(called))
         if kind == "user" and parent is None:
             for block in blocks(event):
                 if block.get("type") == "tool_result" and block.get("tool_use_id") in agent_ids:
@@ -243,6 +249,8 @@ def judge(arm: Arm, found: Facts) -> tuple[bool, str, str]:
     else:
         if found.main_calls not in (["Agent"], ["Task"]):
             return False, f"본 세션의 도구 호출이 Agent 한 번이 아니다: {found.main_calls}", ""
+        if found.agent_types != [arm.agent]:
+            return False, f"부른 서브에이전트가 {arm.agent} 가 아니다: {found.agent_types}", ""
         leaked = [c for c in (STYLE_CANARY, PROJECT_CANARY) if c in found.agent_prompts[0]]
         if leaked:
             return False, f"Agent 에 넘긴 프롬프트에 카나리아가 있다: {leaked}", ""
@@ -263,6 +271,11 @@ def judge(arm: Arm, found: Facts) -> tuple[bool, str, str]:
         f"(이름 {'있음' if name else '없음'}) · 답에 CLAUDE.md {'실림' if project else '없음'}"
     )
     return True, result, subject
+
+
+def copied(subject: str) -> bool:
+    """답이 두 자리 가운데 한 자리의 문장이라도 옮겼는가. 양성 대조가 되는 회차다."""
+    return STYLE_CANARY in subject or PROJECT_CANARY in subject
 
 
 def preflight(cwd: Path) -> list[str]:
@@ -304,16 +317,21 @@ def main(argv: list[str]) -> int:
     with ThreadPoolExecutor(max_workers=len(jobs)) as pool:
         raws = list(pool.map(lambda job: run(job[0], cwd), jobs))
     rounds = Rounds()
+    controls = 0
     for (arm, index), raw in zip(jobs, raws, strict=True):
         label = f"{arm.name}-{index}"
         (out / f"{label}.jsonl").write_text(raw, encoding="utf-8", newline="\n")
         with rounds.round(label) as current:
             measured, result, subject = judge(arm, facts(raw))
             current.mark(measured=measured, result=f"{arm.name}: {result}" if measured else result)
+            controls += measured and copied(subject)
             print(f"[{'측정' if measured else '측정 아님'}] {label} · {result}")
             for line in subject.splitlines():
                 print(f"    {line}")
     print(rounds.summary())
+    if not controls:
+        print("양성 대조 없음: 측정인 회차 가운데 문장을 옮긴 회차가 없다. 결론을 내지 않는다.")
+        return 1
     return rounds.exit_code()
 
 
