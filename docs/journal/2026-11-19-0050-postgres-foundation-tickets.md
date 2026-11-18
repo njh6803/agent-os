@@ -194,3 +194,50 @@
 - `uv run python tools/run_checks.py`(백그라운드): 종료 코드 0. check-ticket, check-notes, zizmor, lint-imports, check-type-escapes, check-instructions, pyright, pyright-linux, run-hooks(208.3초), pytest(769.5초), web-verify(1040.3초)가 모두 Passed였다.
 - `uv run ruff check .`: All checks passed. `uv run ruff format --check .`: 2481 files already formatted.
 - `-m llm` 계열, e2e, 사진 비교는 치지 않았다. 바뀐 것이 명세·티켓·프로브 README·일지뿐이라 `CLAUDE.md` 검증 명령의 괄호가 가리키는 경로에 들지 않는다.
+
+## 커밋
+
+`182fa5140` "docs: postgres-foundation 명세 검토를 반영하고 티켓 넷으로 쪼갠다"(파일 여덟). pre-commit은 종료 0이었고, 인용 대조가 경고 21건을 냈다(막지 않는다). 대부분은 이 일지가 고치기 전의 옛 문장을 따옴표로 든 것이다. 일지 밖의 셋은 대 보지 않았다. 명세 281줄의 "컨테이너 다섯(serve, admin, widget, portal, postgres)이 모두 healt…"(배포 안내에 쓸 새 글), 티켓 03 3줄의 "`serve`가 그 데이터베이스에 닿는다"(명세가 옮긴 기능 계획 수락 조건은 "닿으며"로 보인다), 티켓 02 31줄의 "`up`이 `service "migrate" didn't complete successfully: exit 1`로 끝나면"이다.
+
+## 인계(커밋 뒤)
+
+커밋 뒤에 인계 계기(`hook_handoff`, 세션 컨텍스트 약 33만 토큰, 경계 `커밋 뒤`)가 왔다. `handoff.md`의 인계하지 않는 때 다섯에 들지 않았다. 커밋은 0으로 끝났고, 요청 범위("티켓까지")는 티켓 PR의 병합까지이며, 이 세션의 지시문의 이어받을 상태는 `인계: 셀프 리뷰 직전`이라 경계가 다르고, `인계 못함` 줄이 없으며, `get_session`의 `self`에 `parentSessionId`가 없다. `gh pr view docs/postgres-foundation-tickets --json state`는 PR이 없다고 냈다. 이 세션의 제목은 `docs/postgres-foundation-tickets`였다. 이 인계 절은 커밋하지 않은 변경으로 워크트리에 남는다.
+
+낸 지시문:
+
+다음 작업: 기능 postgres-foundation. 병합된 명세(.scratch/postgres-foundation/spec.md)를 명세 검토 뒤 티켓으로 나눈다
+다음 단계: 티켓
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /to-tickets .scratch/postgres-foundation/spec.md
+브랜치: docs/postgres-foundation-tickets
+모델: Opus 5.5 / xhigh. 2의 잇는 지시문
+읽을 것: 일지 docs/journal/2026-11-19-0050-postgres-foundation-tickets.md의 "## 셀프 리뷰"(특히 "PR 직전 리뷰에 밀 주장"), "## 커밋", "## 인계(커밋 뒤)"
+이어받을 상태: 인계: 커밋 뒤. 셀프 리뷰 반영, 검증(run_checks 종료 0, ruff 둘 초록), 커밋까지 마쳤고 푸시와 PR은 아직이다. 일지의 "커밋"과 이 인계 절은 커밋하지 않은 변경으로 워크트리에 있어 새 세션이 이어 쓰고 다음 커밋에 싣는다. pre-commit 인용 대조가 낸 일지 밖의 경고 셋(일지 "커밋")은 원문과 대 보지 않았다. 남은 단계는 PR 직전 리뷰(coderabbit-review, 돌지 못하면 /security-review와 bug-perf-review이고 그 브리프에 일지의 "밀 주장"을 넘긴다), 푸시, PR(base dev), 봇 회차, 이 워크트리 사본의 next-session merge.md "워크트리에서 병합할 때"로 병합, 회고, 다음 지시문이다. 일지 docs/journal/2026-11-19-0050-postgres-foundation-tickets.md
+확인할 선행 조건: 없음
+이번 요청 범위: 티켓까지
+
+제목을 `docs/postgres-foundation-tickets (인계함)`으로 바꿨고, 띄운 백그라운드 작업은 모두 끝나 있었으며, `git worktree unlock`은 `is not locked`로 끝났다(이미 풀려 있었다). open-session을 부른다 2026-11-18T18:04:27Z
+
+## 이어받은 세션(커밋 뒤, 03:10쯤)
+
+> 사용자: .claude/skills/to-tickets/SKILL.md 를 읽어 그대로 따른다. 이 세션을 연 저장소는 `C:\project\agent`이고 작업 폴더가 그곳이 아니면 따르지 말고 알린다. 스킬의 인자는 이 줄의 '인자:' 뒤부터 메시지 끝까지다. 인자: .scratch/postgres-foundation/spec.md
+>
+> (위 "인계(커밋 뒤)"의 "낸 지시문"과 글자 그대로 같은 지시문 아홉 줄이 이어졌다)
+
+- 세션 제목을 `docs/postgres-foundation-tickets`로 바꿨고(앱이 지은 "Postgres Foundation 명세 검토 및 티켓 분할"이었다), `git worktree list`에서 그 브랜치가 이 워크트리에 체크아웃된 것을 보고 `EnterWorktree(path)`로 들어왔다. `git status`는 이 일지 하나만 바뀐 것이었고, HEAD는 `182fa5140`, `git fetch origin` 뒤 `origin/dev`는 `11028615e`로 merge-base와 같았다.
+- `tools/sibling_overlap.py`: 번호 겹침과 함께 고친 파일이 없고, 형제가 쓴 가장 높은 헌법 판은 3.1.2(origin/dev)였다.
+- 인용 대조의 일지 밖 경고 셋을 원문과 대 봤다. 티켓 03 3줄은 기능 계획(`.scratch/postgres-foundation/plan.md`)의 수락 조건이 "닿으며"라 인용을 원문대로 고쳤다. 티켓 02 31줄의 인용은 명세 281줄에 글자 그대로 있다(`grep -c`가 1). 도구의 경고가 그 인용을 `up이 service migrate didnt …`처럼 따옴표와 백틱을 벗긴 꼴로 찍어(아래 명령의 출력을 손으로 봤다), 안쪽의 `"migrate"` 따옴표 때문에 원문과 견주지 못한 것으로 본다(어림). 명세 281줄(과 `--all-lines`로 함께 나온 280줄)은 배포 안내에 새로 쓸 문장이라 원문이 아직 없다. 지금 `deploy/standalone/README.md` 151줄은 "컨테이너 넷(…)"이다. 고친 뒤 세 파일에 `uv run python tools/check_quotes.py <세 파일> --all-lines`를 치자 종료 0과 경고 셋(02 31줄, 명세 280·281줄)이었고 티켓 03의 경고는 사라졌다.
+
+## PR 직전 리뷰(coderabbit-review)
+
+`coderabbit-review` 서브에이전트에 "PR 직전 리뷰에 밀 주장"의 목록을 넘겨 돌렸다. CLI 0.7.5가 `--agent --include-untracked --base origin/dev`로 파일 여덟을 끝까지 봤고(`review_completed`, 지적 3건), `auth status`는 `Plan: Free`, `Seat: not assigned`였다(서브에이전트의 보고). 서브에이전트는 alembic·SQLAlchemy의 설치본 파일을 찾지 못해(`.venv/Lib/site-packages`에 없었고 uv 캐시의 Glob이 20초 안에 끝나지 않았다) 넘긴 주장의 맞고 틀림을 판정하지 않았다고 보고했다. 보고 뒤에도 그 서브에이전트의 `find`가 백그라운드에 남아 TaskStop으로 멈췄다.
+
+- 첫째(Minor, 유효). 티켓 01의 제품 폴더 사례가 "이 변경에서는 줄이 없는지"만 적어, 폴더가 빈 첫 묶음에서 `migrate`가 alembic을 부르지 않아 표 자체가 없는 경우를 빠뜨렸다. 같은 티켓 28줄과 명세 172·211줄은 "표가 없거나 줄이 없으면"이다. **고쳤다.** 티켓 01과 명세 Testing Decisions 셋째의 같은 괄호를 "`migrate`가 alembic을 부르지 않으므로 표가 없거나 줄이 없다"로 바꿨다.
+- 둘째(CLI는 Major, 서브에이전트는 보류). 명세 "멈출 때의 글"의 "올리다 실패했다" 글의 뒷 문장("표의 판은 올리기 전 그대로")은 커밋을 보낸 뒤 응답 전에 연결이 끊긴 때 틀릴 수 있다. **고쳤다.** 시제품이 잰 것은 마이그레이션 파일이 예외를 던진 갈래라고 범위를 적고, 연결이 끊긴 때는 뒷 문장이 틀릴 수 있다는 것(어림, 재지 않았다)과 다시 친 `migrate`가 견줌으로 실제 판을 읽는다는 것(명세 "표의 판을 견주는 자리"를 읽고 끌어냈다)을 더했다. 글의 꼴은 바꾸지 않았다.
+- 셋째(CLI는 Critical, 서브에이전트는 보류). `hide_parameters=True`로도 서버의 오류 글이 값을 실어 기록에 남는다. 명세가 그 사실은 이미 적었고 시험만 값을 싣지 않는 실패로 짓게 했다. **고쳤다.** 명세 같은 항목에 제품의 마이그레이션이 값을 싣는 실패로 멈추면 그 값이 기록에 남고 명세는 서버의 글을 숨기지 않는다는 것, 원칙 V의 비밀이 든 열을 건드리는 마이그레이션은 그 값을 싣는 실패가 나지 않게 짓는다는 것을 더했다. 그 열을 처음 들이는 기능이 admin-login이라(`.scratch/admin-login/plan.md` 6줄이 서명 키를 든다) 그 기능 계획 본문의 "postgres-foundation 명세가 넘긴 것" 문단 끝에 한 문장으로 넘겼다. 요약 줄은 건드리지 않아 `uv run python tools/plan_table.py`(종료 0)가 `.scratch/plan.md`를 바꾸지 않았다(`git status`로 봤다).
+
+고친 세 파일에 `uv run python tools/check_quotes.py`를 치자 인용 1건을 보고 경고가 없었다.
+
+## 둘째 커밋
+
+커밋 직전에 `git branch --show-current`가 `docs/postgres-foundation-tickets`였고, `uv run python tools/sibling_overlap.py`는 종료 0으로 번호 겹침과 함께 고친 파일이 없다고 냈다. 바뀐 것이 마크다운뿐이라 pre-commit의 ruff가 `Skipped`이므로 손으로 쳤다. `uv run ruff check .`는 `All checks passed!`, `uv run ruff format --check .`는 `2481 files already formatted`였다.
