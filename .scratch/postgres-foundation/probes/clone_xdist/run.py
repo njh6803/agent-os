@@ -563,7 +563,8 @@ def template_problems(plan: Plan, records: Sequence[Record]) -> tuple[list[str],
     if any(record.get("strategy") != expected for record in tests):
         problems.append(f"복제 문의 전략이 {expected} 가 아닌 시험이 있다")
     # 도우미는 같은 환경 변수로 세션 픽스처의 꼴(동기 + asyncio.run, 또는 세션 루프 비동기)을
-    # 고르고 그 값을 템플릿 기록에 적는다. 계획한 꼴의 픽스처가 실제로 템플릿을 지었다는 표지다.
+    # 고르고 그 값을 템플릿 기록에 적는다. 계획한 꼴의 값이 작업자까지 닿았다는 표지이고, 그 꼴의
+    # 픽스처가 실제로 돌았는지는 도우미의 코드를 읽어 안 것이다(PR 606 의 봇이 짚었다).
     if any(record.get("style") != plan.style for record in built):
         problems.append(f"세션 픽스처의 꼴이 {plan.style} 가 아닌 템플릿 기록이 있다")
     return problems, len(built)

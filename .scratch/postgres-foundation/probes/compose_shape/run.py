@@ -1128,10 +1128,18 @@ def restart_all(lab: Lab, project: Project) -> None:
             and old_migrate.started != migrate.started
         )
         starts = [f"{event.service}" for event in found if event.action == "start"]
-        survived = all(rows_after.get(name, 0) >= count for name, count in rows_before.items())
+        # 다시 켜기 전의 조회가 실패해 기준이 비면(`{}`) 남았다고도 남지 않았다고도 하지 않는다.
+        survived = bool(rows_before) and all(
+            rows_after.get(name, 0) >= count for name, count in rows_before.items()
+        )
         lab.note(
             slot,
-            measured=restart.code == 0 and restarted and recovered and finished,
+            measured=restart.code == 0
+            and restarted
+            and recovered
+            and finished
+            and bool(rows_before)
+            and bool(rows_after),
             result=(
                 f"넣어 둔 줄이 {'남았다' if survived else '남지 않았다'}, migrate 는 "
                 f"{'다시 시작돼' if migrate_again else '다시 시작하지 않고'} "
@@ -1215,7 +1223,9 @@ def failing_migrate(lab: Lab, password: str) -> None:
                 )
                 lab.note(
                     slot,
-                    measured=failed and serve is not None,
+                    # 이번 `up` 이 실패를 직접 보았다는 표지도 본다. 앞 회차가 남긴 종료 1 과 로그
+                    # 줄만으로는 이번 명령이 migrate 를 다시 돌렸는지 모른다.
+                    measured=failed and serve is not None and MIGRATE_FAILED in up.err,
                     result=(
                         f"종료 {up.code}, 문구 {'있음' if MIGRATE_FAILED in up.err else '없음'}, "
                         f"serve 는 {serve.status if serve else '없음'}"
@@ -1232,7 +1242,13 @@ def failing_migrate(lab: Lab, password: str) -> None:
             which = "새 컨테이너" if old and new and old.id != new.id else "같은 컨테이너"
             lab.note(
                 slot,
-                measured=old is not None and old.exit_code == 1 and new is not None,
+                # 고친 .env 가 컨테이너에 닿았고(`up` 이 시간 초과로 끊기지 않았다) 앞서 1 로 끝난
+                # 컨테이너가 있었다.
+                measured=old is not None
+                and old.exit_code == 1
+                and new is not None
+                and up.code != -1
+                and new.env.get("PROBE_MIGRATE_EXIT") == "0",
                 result=(
                     f"종료 {up.code}, migrate 는 {which}로 종료 "
                     f"{new.exit_code if new else '?'}, serve 는 "
@@ -1469,28 +1485,49 @@ def bash_path(lab: Lab, wanted: str) -> str:
     return found if check.code == 0 and check.out.strip() else ""
 
 
+PROCEDURE_PRELUDE = f"unset {PASSWORD_VAR}"
+
+
+def procedure_lines() -> tuple[str, list[str]]:
+    """`change_password.sh` 의 첫 줄(셸의 변수 지우기)과 && 로 이은 뒤의 줄들(끝의 && 를 뗀다)."""
+    lines = [
+        line.strip()
+        for line in (HERE / "change_password.sh").read_text(encoding="utf-8").splitlines()
+        if line.strip() and not line.startswith("#")
+    ]
+    if not lines:
+        return "", []
+    return lines[0], [line.removesuffix("&&").rstrip() for line in lines[1:]]
+
+
 def procedure(lab: Lab, project: Project, old: str, new: str) -> None:
-    with lab.rounds.round("4마 제안하는 절차(change_password.sh 를 bash 로 한 줄씩)") as slot:
+    with lab.rounds.round(
+        "4마 제안하는 절차(change_password.sh 를 bash 로 한 줄씩, 부모 셸에 옛 값을 export 한 채)"
+    ) as slot:
         bash = bash_path(lab, lab.bash)
-        lines = [
-            line
-            for line in (HERE / "change_password.sh").read_text(encoding="utf-8").splitlines()
-            if line.strip() and not line.startswith("#")
-        ]
+        prelude, lines = procedure_lines()
         if not bash:
             lab.note(slot, measured=False, result="docker 에 닿는 bash 가 없다", detail={})
             return
         wait_until(lambda: serve_healthy(project), 30)
         before, rows_before = boxes(project), row_counts(project)
-        began = row_time(project, "max", "true")
+        # 틈은 바꾸기 직전의 마지막 새 접속 줄부터 잰다(다른 종류의 줄이 그 뒤에 와도 빠지지 않게).
+        began = row_time(project, "max", "who in ('serve-new', 'serve-start')")
         project.write_env({PASSWORD_VAR: new})
-        env = {**child_env(), "COMPOSE_PROJECT_NAME": project.name, "MSYS_NO_PATHCONV": "1"}
+        # 운영자의 셸에 옛 값이 export 돼 있던 경우. 절차의 첫 줄이 그것을 지워야 .env 의 새 값이
+        # 쓰인다.
+        env = {
+            **child_env(),
+            PASSWORD_VAR: old,
+            "COMPOSE_PROJECT_NAME": project.name,
+            "MSYS_NO_PATHCONV": "1",
+        }
         codes: list[Json] = []
         untouched: Json = None
         for index, line in enumerate(lines):
             try:
                 done = subprocess.run(
-                    [bash, "-c", line],
+                    [bash, "-c", f"{prelude}\n{line}"],
                     capture_output=True,
                     timeout=660,
                     cwd=project.folder,
@@ -1499,8 +1536,11 @@ def procedure(lab: Lab, project: Project, old: str, new: str) -> None:
                 code, text = done.returncode, decode(done.stdout) + decode(done.stderr)
             except subprocess.TimeoutExpired:
                 code, text = -1, "시간 초과"
-            lab.raw(f"(bash) {line}", f"exit={code}\n{text}")
+            lab.raw(f"(bash) {prelude}; {line}", f"exit={code}\n{text}")
             codes.append(code)
+            if code != 0:
+                # && 와 같다. 앞 줄이 0 이 아니면 다음 줄을 치지 않는다.
+                break
             if index == 0:
                 middle = boxes(project)
                 untouched = all(
@@ -1525,8 +1565,9 @@ def procedure(lab: Lab, project: Project, old: str, new: str) -> None:
         )
         lab.note(
             slot,
-            # 표지: 세 줄을 모두 쳤고, 데이터베이스가 새 비밀번호만 받는다(옛것은 인증 실패).
-            measured=len(codes) == len(lines) == 3 and changed,
+            # 표지: 셸의 변수를 지우는 첫 줄 뒤 세 줄을 모두 쳤고, 데이터베이스가 새 비밀번호만
+            # 받는다(옛것은 인증 실패).
+            measured=prelude == PROCEDURE_PRELUDE and len(codes) == len(lines) == 3 and changed,
             result=(
                 f"세 줄의 종료 코드 {codes}, migrate 종료 {migrate.exit_code if migrate else '?'}, "
                 f"serve 는 {serve.health if serve else '없음'}, 넣어 둔 줄은 "
@@ -1538,6 +1579,42 @@ def procedure(lab: Lab, project: Project, old: str, new: str) -> None:
                 "migrate_and_serve_untouched_after_first_line": untouched,
                 "longest_gap_between_new_connection_rows_seconds": gap,
             },
+        )
+
+
+MISSING_ROLE = "probe_missing_role"
+
+
+def password_failure(lab: Lab, project: Project) -> None:
+    with lab.rounds.round(
+        "4바 절차의 둘째 줄(\\password)이 서버에서 실패할 때 PostgreSQL 로그에 남는 것"
+    ) as slot:
+        marker = f"ctl{secrets.token_hex(8)}"
+        # 절차의 둘째 줄과 같은 꼴로, 없는 계정을 고쳐 서버가 ALTER 를 거절하게 한다.
+        script = (
+            'printf "%s\\n%s\\n" "$PROBE_PASSWORD" "$PROBE_PASSWORD" | '
+            f'psql -U {ROLE} -d {DATABASE} -v ON_ERROR_STOP=1 -c "\\password {MISSING_ROLE}"'
+        )
+        failed = project.compose(
+            "exec", "-T", "-e", f"PROBE_PASSWORD={marker}", "postgres", "sh", "-c", script
+        )
+        logs = project.compose("logs", "postgres").text
+        statement = next(
+            (line for line in logs.splitlines() if "STATEMENT" in line and MISSING_ROLE in line), ""
+        )
+        # 표지: 서버가 그 실패를 문장째 기록했다(실패한 문장이 로그에 실리는 길을 실제로 지났다).
+        # 그래야 평문이 없다는 것이 "기록하지 않아서"가 아니라 "평문을 받지 않아서"가 된다.
+        lab.note(
+            slot,
+            measured=failed.code != 0
+            and f'role "{MISSING_ROLE}" does not exist' in logs
+            and bool(statement),
+            result=(
+                f"psql 종료 {failed.code}, 실패한 문장은 로그에 남았고, 그 문장의 비밀번호는 "
+                f"{'SCRAM 해시' if 'SCRAM-SHA-256$' in statement else '다른 꼴'}, 평문은 로그에 "
+                f"{'남았다' if marker in logs else '없다'}"
+            ),
+            detail={"psql_error": last_lines(failed.err, 2)},
         )
 
 
@@ -1554,6 +1631,7 @@ def section_password(lab: Lab) -> None:
         alter_first(lab, project, second, third)
         auth_settings(lab, project, (second, third))
         procedure(lab, project, third, fourth)
+        password_failure(lab, project)
     finally:
         project.down(volumes=True)
 
@@ -1783,9 +1861,15 @@ def special_launch(lab: Lab, received: Sequence[tuple[str, str, str]]) -> None:
                 run = project.compose("run", "--rm", "--no-deps", "-T", "migrate", timeout=120)
                 postgres_env = received_env(project, "postgres")
                 # 표지: 컨테이너가 받은 값으로는 들어가고, 한 글자 더한 값은 인증 실패로 막힌다.
+                # migrate 대역의 psql 이 실제로 돌았다는 것(올렸다는 줄이나 psql 의 오류 줄)도 본다.
+                ran = MIGRATE_DONE_V1 in run.out or "psql: error:" in run.err
                 lab.note(
                     slot,
-                    measured=up.code == 0 and accepted and not refused and AUTH_FAILED in message,
+                    measured=up.code == 0
+                    and accepted
+                    and not refused
+                    and AUTH_FAILED in message
+                    and ran,
                     result=(
                         "데이터베이스의 비밀번호는 컨테이너가 받은 값, migrate 대역의 psql 은 "
                         + ("접속했다" if run.code == 0 else f"종료 {run.code}")

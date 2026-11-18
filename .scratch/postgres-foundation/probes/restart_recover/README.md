@@ -109,12 +109,12 @@ N은 `serve` 대역의 `RETRY_SECONDS`(다시 시도하는 초)다. "다시 뜨�
 
 | 회차 | 끊긴 첫 삶의 마지막 기록 줄 | 첫 `up -d` | 40초 뒤 | 다시 `up -d` | `down` 뒤 `up -d` | `down -v` 뒤 `up -d` |
 |---|---|---|---|---|---|---|
-| 초기화 중, 데몬(2) | `database system is ready to accept connections`(초기화 끝 문구가 사건 1.20·1.18초 뒤) | 종료 1, `failed to connect to the docker API at unix:///var/run/docker.sock` | postgres `healthy`, migrate·serve `created` | 종료 0, 붙음 | (치지 않음) | (치지 않음) |
+| 초기화 중, 데몬(2) | `database system is ready to accept connections`(초기화 끝 문구가 사건을 내기로 한 때 1.20·1.18초 뒤. dockerd가 멈춤 신호를 받은 때에서는 두 회차가 0.65초와 0.70초 뒤) | 종료 1, `failed to connect to the docker API at unix:///var/run/docker.sock` | postgres `healthy`, migrate·serve `created` | 종료 0, 붙음 | (치지 않음) | (치지 않음) |
 | 초기화 중, 전원, 반쯤 초기화된 꼴(2) | `running bootstrap script ... ok`(첫 삶 14줄, 초기화 끝 문구 없음) | 종료 137 | postgres `healthy`, migrate·serve `created`, `select 1`이 `database "agent_os" does not exist` | 종료 1, `service "migrate" didn't complete successfully: exit 2` | 종료 1, 같은 문구 | 종료 0, 붙음 |
 | 초기화 중, 전원, 되풀이해 죽는 꼴(1) | `creating configuration files ... ok`(첫 삶 13줄, 초기화 끝 문구 없음) | 종료 137 | postgres 상태 확인 `starting`, `select 1`이 `the database system is in recovery mode` | 종료 1, 같은 문구 | 종료 1, 같은 문구 | 종료 0, 붙음 |
 | migrate가 일하기 전, 데몬(1) | `database system is shut down`(초기화 끝 문구가 사건 0.79초 전) | 종료 1 | migrate `exited(143)`, serve `created` | 종료 0, 붙음 | (치지 않음) | (치지 않음) |
 
-- 전체 실행에서는 초기화 끝 문구가 데몬 회차의 사건 1.23·1.38초 뒤였고, 전원 회차 셋의 마지막 줄이 모두 `running bootstrap script ... ok`였다.
+- 전체 실행에서는 초기화 끝 문구가 데몬 회차의 사건을 내기로 한 때 1.23·1.38초 뒤였고(dockerd가 멈춤 신호를 받은 때에서는 두 회차가 0.78초와 0.68초 뒤), 전원 회차 셋의 마지막 줄이 모두 `running bootstrap script ... ok`였다.
 - 첫 `up -d`의 종료 코드는 데몬 회차가 1(compose가 데몬의 소켓을 잃었다), 전원 회차가 137(dind를 죽이며 그 안에서 돌던 `docker exec`가 함께 죽었다)이다.
 - 데몬이 다시 켜질 때 `created` 상태의 컨테이너는 띄우지 않았다. 그래서 `migrate`가 끝나기 전에 끊긴 배치는 `serve`가 뜨지 않은 채 머물렀고, 다시 `up -d`를 친 뒤에야 `migrate`, `serve` 차례로 떴다.
 - 전원 끊김 뒤의 PostgreSQL은 `PostgreSQL Database directory appears to contain a database; Skipping initialization`을 찍고 초기화를 건너뛰었다. 공식 이미지의 진입 스크립트는 데이터 폴더에 `PG_VERSION` 파일이 있으면 이미 초기화된 것으로 본다(손으로 봤다, `postgres@sha256:b9f6…e553`의 `/usr/local/bin/docker-entrypoint.sh` 246줄을 `grep -n`). `pg_hba.conf`에 바깥 접속의 줄을 더하는 일(285줄)과 데이터베이스를 만드는 일(`docker_setup_db`, 217줄)은 초기화 뒤에 한다. 그래서 그 파일이 생긴 뒤에 끊긴 볼륨은 다시 띄워도 고쳐지지 않는다고 읽는다(어림. 끊는 때를 골라 내지 않았다).
@@ -176,6 +176,23 @@ uv run python .scratch/postgres-foundation/probes/restart_recover/run.py
 | PostgreSQL | `postgres:18`(바깥 digest `b9f6…e553`), 18.7 (Debian 18.7-1.pgdg13+2) | 프로브가 찍는다 |
 | 파이썬 | 3.12.10 | 손으로 봤다(`uv run python --version`) |
 | 부하 | 측정하는 동안 같은 Docker 데몬에서 다른 세션의 컨테이너가 함께 돌았다 | 손으로 봤다 |
+
+## PR 봇이 짚은 틈
+
+PR 606의 봇(CodeRabbit) 첫 회차가 이 프로브에 Major 열둘(#27~#38)을 냈다. 위 결론은 그대로 선다. 프로브 코드는 고치지 않았고(#31이 짚은 위 항목 4의 기준점 문장만 고쳤다), 다시 돌릴 사람은 항목마다의 고침을 먼저 넣는다. 판정은 서브에이전트가 측정한 세션의 스크래치에 남은 원본 출력 넷(이 README가 드는 실행 모두. 두 전체 실행, 항목 0만, 항목 4만)을 grep해 했다(일지 2026-11-18-1544의 "restart_recover 판정").
+
+- **#27 다시 쓰는 dind의 이미지 검사.** 이미 있는 바깥 dind를 다시 쓸 때 안쪽 PostgreSQL 이미지가 같은지 보지 않는다. 같은 이미지라도 바깥과 안쪽의 이미지 id는 원래 다르므로(위 항목 0) 봇이 낸 id 비교는 그대로 쓸 수 없다. 넷 모두 다시 쓴 갈래가 나지 않았다. 고침: 안쪽에 옮긴 이미지의 digest 표지(옮길 때 붙인 태그)를 본다.
+- **#28 이미 붙은 serve를 실패로 세는 것.** 40초를 지켜보는 동안 붙은 serve가 있어도 다시 `up -d`의 결과로 판정한다. 그 40초의 serve는 `created`라 재시작 정책이 그 틈에 띄울 수 없고, 항목 4의 16회차가 모두 `serve: 삶 0개`였다. 고침: 40초 뒤에 이미 붙었으면 그 결과로 적는다.
+- **#29 이미지 옮기기의 실패.** `docker load`가 실패해도 다음으로 간다(기본 `--pull=missing`이라 안쪽 엔진이 레지스트리에서 받을 수 있다). 넷 모두 `Loaded image: postgres:18`이 있고 `Unable to find image`는 0줄이다. 고침: 옮기기가 실패하면 멈춘다.
+- **#30 측정 아닌 회차의 실패 문구.** 판정 전에 문구를 모으는 자리가 여럿이다. 넷 모두 측정 아님이 0이라 위 실패 문구 표는 그대로다. 고침: 측정인 회차에서만 모은다.
+- **#31 실제로 초기화 도중에 끊겼는지.** 사건을 내기로 한 때와 신호가 닿은 때 사이에 초기화가 끝날 수 있다. 데몬 회차 넷은 dockerd의 `Processing signal 'terminated'`가 `PostgreSQL init process complete`보다 0.65~0.78초 앞섰고 `failed to exit within 10s of signal 2 - using the force`가 찍혀, 실제로 초기화 도중에 끊겼다. 위 항목 4의 "사건 … 초 뒤"는 신호가 아니라 사건을 내기로 한 때부터 잰 값이라 고쳐 적었다. 명세는 그 값을 인용하지 않는다. 고침: 신호가 닿은 시각(dockerd의 기록)과 초기화 끝 문구를 견줘, 끝난 뒤면 측정 아님으로 센다.
+- **#32 강제 종료를 정상 재시작으로 세는 것.** 서버 재시작 갈래가 정상 종료로 끝났는지 보지 않는다. 두 전체 실행의 서버 재시작 18회차가 모두 약 1초에 끝났고, `supervise: stop`이 실행마다 9번, PostgreSQL은 매번 `database system was shut down at`(정상 종료)를 남겼다. 고침: 그 문구를 표지로 본다.
+- **#33 조회 실패를 migrate 미완료로 읽는 것.** 사건 뒤 표 조회가 실패해도(`None`) 그 표지를 지난다. 전원 회차 여섯이 모두 `표(probe_rows) 모름`(None)으로 지났지만, 같은 회차의 migrate가 `created`(돈 적 없음)라 결론은 선다. 고침: 조회 실패를 따로 적고 측정에서 뺀다.
+- **#34 사건 전의 시작 시각.** PostgreSQL이 돌아오지 않은 갈래에서 옛 `StartedAt`을 복귀 시각으로 쓸 수 있다. 27회차 모두 시작 이벤트로 차례를 정해 옛 시각으로 대신한 회차가 없다. 고침: 사건 뒤의 이벤트만 쓴다.
+- **#35 정리 뒤 조회.** 정리 뒤 남은 자원을 보는 조회 셋이 성공했는지 보지 않는다. 98번 모두 stderr가 비었다. 고침: 종료 코드를 본다.
+- **#36 serve가 돌아오지 않은 회차.** 그런 회차를 결과에 넣지 않고 측정 아님으로 센다. 그러면 종료 1이라 숨지 않고, 측정 아님이 0이라 27/27은 그대로다. 고침: "돌아오지 않았다"를 결과로 적는다.
+- **#37 볼륨을 지운 결과.** `down -v`가 실제로 볼륨을 지웠는지 보지 않고 견준다. 봇이 든 장면이면 결과가 "지워도 붙지 않는다" 쪽으로 틀려, "지워야 붙었다"는 거짓으로 이어지기 어렵다. `down` 3번과 `down -v` 6번이 모두 종료 0이었고 `down -v`는 `Volume pgf-recover_pgdata Removed`를 6/6 찍었다. 고침: 그 줄을 표지로 본다.
+- **#38 대역의 표 없음과 조회 실패(`serve.sh`).** 대역이 표가 없을 때와 조회하지 못했을 때를 가르지 않는다. 넷 모두 `probe-schema-behind`가 0줄이다. 명세는 대역의 꼴을 옮기지 않았다(진짜 `serve`는 접속 실패를 다시 시도하고, 표가 없는 것은 "표의 판을 견주는 자리"가 따로 가른다). 고침: psql의 종료 코드로 둘을 가른다.
 
 ## 재지 못한 것
 
