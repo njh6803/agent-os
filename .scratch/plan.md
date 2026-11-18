@@ -94,10 +94,10 @@ web/                       슬라이스 3부터. pnpm 워크스페이스. 파이
 | 10 | [usage-report](usage-report/plan.md) | 기간별 질문 수와 사용자 수와 오류 신고 비율을 이용 보고로 내보내 운영 상황을 한눈에 알게 한다. | audit-export, run-feedback | todo |
 | 10 | [value-masking](value-masking/plan.md) | 런타임이 아는 비밀 값을 트레이스에 쓰기 직전에 모든 글 칸에서 찾아 가려, 기록에 새지 않게 한다. | principal-propagation | todo |
 | 10 | [widget-appearance](widget-appearance/plan.md) | 그림 올리기와 자유 색, 레이아웃 같은 새 모양 값을 위젯 설정에 더해, 사이트마다 위젯의 생김새를 더 넓게 고른다. | portal-admin, widget-login-state, pilot-release | todo |
-| 11 | [orphan-recovery](orphan-recovery/plan.md) | 서버가 죽거나 멈춰 결말 없이 남은 고아 실행을 실행 담당 기록의 기한 만료로 찾아내 worker가 실패로 닫는다. | retention-worker | todo |
+| 11 | [orphan-recovery](orphan-recovery/plan.md) | 서버가 죽거나 멈춰 결말 없이 남은, 담당이 사라진 실행을 실행 담당 기록의 기한 만료로 찾아내 worker가 실패로 닫는다. | retention-worker | todo |
 | 11 | [retention-worker](retention-worker/plan.md) | 별도 worker 명령이 승인 만료 닫기와 보존 기간이 지난 기록 지우기를 주기로 돌린다. | token-limit | todo |
 | 11 | [run-cost](run-cost/plan.md) | 모델과 도구 호출에 걸린 시간을 남기고, 모델 단가로 실행 비용을 읽을 때 셈한다. | trace-postgres | todo |
-| 11 | [token-limit](token-limit/plan.md) | 한 실행이 쓸 수 있는 토큰 합에 상한을 두고, 넘으면 그 실행을 실패로 끝낸다. | run-cost | todo |
+| 11 | [token-limit](token-limit/plan.md) | 한 실행이 쓸 수 있는 토큰 합에 제한을 두고, 넘으면 그 실행을 실패로 끝낸다. | run-cost | todo |
 | 11 | [trace-postgres](trace-postgres/plan.md) | 트레이스 저장소를 파일에서 PostgreSQL로 바꾸고, 같은 실행에 동시에 쓰는 일을 안전하게 막는다. | usage-report, stale-warning | todo |
 | 12 | [claude-code-compat](claude-code-compat/plan.md) | Claude Code용 스킬과 서브에이전트와 MCP 설정을 올리면 우리 플러그인 형식으로 바꿔 설치한다. | declarative-agent | todo |
 | 12 | [declarative-agent](declarative-agent/plan.md) | 코드 없이 설정 파일과 프롬프트 문서만으로 에이전트를 만들 수 있게 해, 운영자도 에이전트를 더하게 한다. | orphan-recovery | todo |

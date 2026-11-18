@@ -13,7 +13,7 @@ export type StatusBadgeStatus = (typeof STATUS_BADGE_STATUSES)[number];
 const BASE =
   "inline-flex h-badge w-fit shrink-0 items-center gap-1 whitespace-nowrap rounded-s border border-border bg-transparent pr-2 pl-badge-start text-badge";
 
-// 용어집(CONTEXT.md 실행·인터럽트 절)의 말.
+// 용어집(CONTEXT.md 실행·결정 대기 절)의 말.
 const TEXT = {
   paused: "일시정지",
   done: "끝남",
