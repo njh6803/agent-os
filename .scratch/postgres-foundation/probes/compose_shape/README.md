@@ -74,7 +74,7 @@ TCP 꼴에서 `healthy`는 다른 컨테이너가 이미 접속할 수 있게 �
 
 | 항목 | 결과 | 근거의 종류 |
 |---|---|---|
-| 3가 `up` 꼴 넷(빈 볼륨에서 처음) | 넷 모두 종료 0. `up -d`는 4.0초에 돌아왔고, 그때 migrate는 `Exited (0)`, serve는 떠 있으나 상태 확인이 `starting`이었다. `--wait`이 든 셋(`up -d --wait`, `up -d --wait --wait-timeout 600`, `up --detach --wait --wait-timeout 600`)은 6.5~8.6초에 돌아왔고 그때 serve가 `healthy`였다. 0으로 끝난 migrate를 `--wait`이 실패로 보지 않았다 | 프로브가 다시 낸다 |
+| 3가 `up` 꼴 넷(빈 볼륨에서 처음) | 넷 모두 종료 0. `up -d`는 4.0초에 돌아왔고, 그때 migrate는 `Exited (0)`, serve는 떠 있으나 상태 확인이 `starting`이었다. `--wait`이 든 셋(`up -d --wait`, `up -d --wait --wait-timeout 600`, `up --detach --wait --wait-timeout 600`)은 6.5~8.6초에 돌아왔고 그때 serve가 `healthy`였다. 0으로 끝난 migrate를 `--wait`이 실패로 보지 않았다 | 종료 코드와 돌아온 시간은 프로브가 다시 낸다. 돌아온 때의 serve 상태는 손으로 봤다(아래 "다시 돌리기"의 명령으로 돈 3가 회차의 결과 문구를 읽었다. 표지는 그 상태를 단언하지 않는다, 아래 "3가의 측정 표지") |
 | 3나 시작 차례 | postgres가 시작한 때에서 `healthy` 4.55초 → migrate 시작 4.74초 → migrate 끝 4.94초 → serve 시작 5.42초 | 프로브가 다시 낸다 |
 | 3바 끝난 migrate를 보는 길 | `docker compose ps`에는 migrate가 없고, `ps -a`에 `Exited (0)`, `logs migrate`에 대역의 줄이 남는다 | 프로브가 다시 낸다 |
 | 3라 모두 뜬 채 `up -d`를 다시 | migrate가 같은 컨테이너로 다시 돌아 migrate의 줄이 1→2가 됐고, `up -d --wait`으로 한 번 더 2→3이 됐다. serve는 그대로였다(`Running`). `up -d`를 칠 때마다 migrate가 돈다 | 프로브가 다시 낸다 |
