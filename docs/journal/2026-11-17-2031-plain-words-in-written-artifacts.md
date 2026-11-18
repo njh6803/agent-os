@@ -436,7 +436,24 @@ Critical과 Major는 없고 Minor 3, Nit 6이다. 요구하지 않은 동작은 
   - 원인을 가리려고 같은 명령 앞에 `PYTHONSAFEPATH=1`(작업 폴더를 모듈 찾는 길에 넣지 않는다)을 붙여 다시 돌렸다: "1 passed, 7844 deselected in 112.89s". "LLM 토큰 합계 17,066(입력 16,793, 출력 273). 트레이스 2개, 모델 호출 4건." 시험도 코드도 고치지 않았고 환경 변수 하나만 달랐으므로, 첫 실패는 그 파일 탓이다. 이 통과는 그 변수를 붙인 실행의 것이다.
   - `PYTHONSAFEPATH=1 uv run --env-file ../../../.env pytest -m llm_portal`: "1 passed, 7844 deselected in 44.04s". "LLM 토큰 합계 6,997(입력 6,925, 출력 72). 트레이스 1개, 모델 호출 2건." 같은 `serve`를 띄우는 시험이라 처음부터 그 변수를 붙였다. 변수 없이는 돌려 보지 않았다.
   - 이 사건은 회고 뒤에 났다. 대기열에 새 항목 `e2e-serve-cwd-is-system-temp-dir`을 썼다(1회차. `tmpdir|inspect\.py|PYTHONSAFEPATH`로 대기열을 찾아 이은 항목이 없음을 봤다). 고침이라 사건 하나로 반영할 수 있지만 이 티켓의 범위가 아니라 남긴다.
-- 로컬 모델 시험(`llm_local`). 같은 까닭으로 병합 조건의 범위에 든다(범위에 `core/run.py`와 `channel/`이 있다). `uv run --env-file ../../../.env python tools/llm_local.py run`을 `--yes` 없이 쳐 예상 비용을 뽑았다(종료 코드 4, 아무것도 띄우지 않았다). 후보는 차례로 RTX A5000 파드 둘(시간당 0.54달러, 어림 30분 0.27달러, 최악 90분 0.81달러), RTX 3090 파드 둘(1.00, 0.50, 1.50), A40 파드 둘(1.18, 0.59, 1.77), A40 파드 하나를 나눠 쓰기(0.59, 0.29, 0.88)다. 이 비용을 사용자에게 보이고 확인을 기다린다.
+- 로컬 모델 시험(`llm_local`). 같은 까닭으로 병합 조건의 범위에 든다(범위에 `core/run.py`와 `channel/`이 있다). `uv run --env-file ../../../.env python tools/llm_local.py run`을 `--yes` 없이 쳐 예상 비용을 뽑았다(종료 코드 4, 아무것도 띄우지 않았다). 후보는 차례로 RTX A5000 파드 둘(시간당 0.54달러, 어림 30분 0.27달러, 최악 90분 0.81달러), RTX 3090 파드 둘(1.00, 0.50, 1.50), A40 파드 둘(1.18, 0.59, 1.77), A40 파드 하나를 나눠 쓰기(0.59, 0.29, 0.88)다. 이 비용을 사용자에게 보이고 확인을 받았다(마무리 상자의 물음 "빌린 GPU 서버 시험(어림 30분, 과금)을 돌릴까요?"에 답했다).
+
+  > 사용자: 돌린다
+
+  - 봇 회차를 마친 뒤(2026-11-18) `uv run --env-file ../../../.env python tools/llm_local.py run --yes`를 백그라운드로 띄웠고 종료 코드 0으로 끝났다. 마지막 줄은 "통과 2"다. 무효 회차는 없었다.
+  - 띄우기. 앞의 세 후보는 서지 못했다. RTX A5000 파드 둘과 RTX 3090 파드 둘은 두 파드 모두 Runpod가 재고 없음(상태 400)으로 거절했다. A40 파드 둘은 파드 하나만 서고 다른 하나가 같은 까닭으로 거절됐다. 명령은 실패한 띄우기 뒤에 남은 자원을 지우고 다음 후보로 간다(`tools/llm_local.py`의 띄우기 걸음을 읽은 것이다. 지우지 못했으면 종료 코드가 3이다). 넷째 후보인 A40 파드 하나를 나눠 쓰는 구성이 섰다.
+  - 기록 묶음(명령이 찍은 값이다).
+    - 시험한 커밋: `c1070f0c3dae0f664ff67071041a103d72ab8369`
+    - 두 모델: `GotoAI-Inc/gemma-4-26B-A4B-it-W4A16`, `openai/gpt-oss-20b`
+    - 서빙 엔진: vLLM 0.33.0(이미지 `vllm/vllm-openai:v0.33.0`)
+    - 서버 옵션: `vllm serve GotoAI-Inc/gemma-4-26B-A4B-it-W4A16 --host 0.0.0.0 --port 8000 --enable-auto-tool-choice --tool-call-parser gemma4 --max-model-len 32768 --revision fdb4e380603cf157783227bd790bfbe921b64610 --gpu-memory-utilization 0.45 --kv-cache-memory=4294967296`와 `vllm serve openai/gpt-oss-20b --host 0.0.0.0 --port 8001 --enable-auto-tool-choice --tool-call-parser openai --gpu-memory-utilization 0.45 --kv-cache-memory=4294967296`
+    - GPU: A40 하나(구성 `shared`)
+    - 시험: `uv run pytest -m llm_local`, 통과 2(`tests\test_local_model_llm.py`, 39.36초)
+    - 토큰 합계: 6,305(입력 6,191, 출력 114). 트레이스 2개, 모델 호출 4건
+    - 걸린 시간: 329.5초
+    - 단가: 시간당 0.59달러(단가 표는 2026-11-13에 웹 요약에서 읽은 값이고 원문과 대조하지 않았다). 329.5초에 이 단가를 곱하면 약 0.05달러다. 이 값은 어림이고, 잠깐 섰다 지워진 A40 파드 하나의 몫은 넣지 않았다. Runpod의 청구 내역은 보지 않았다.
+    - Terraform 출력에서 가린 것: 있었다(`terraform_output_masked`가 참이다)
+  - 기록이 유효한지. 이 기록 뒤의 커밋은 일지와 대기열 항목만 고치므로 병합 조건의 범위를 바꾸지 않는다.
 
 ## PR 직전 리뷰
 
@@ -499,7 +516,13 @@ PR 603을 열고 `@coderabbitai review`를 남긴 뒤 `uv run python tools/wait_
 - 지적 3·4(변이 표의 `-k`). PR 직전 리뷰의 지적 1에서 남긴 까닭 그대로다. 그 표를 고치면 그 커밋에서 표의 옛 변이 전부에 표지 품질 검사가 걸려, 옛 변이마다 `expect_output`을 새로 골라야 한다. 이 티켓의 범위를 넘는다. 어긋난 곳은 티켓 28행과 대기열 `mutation-table-test-filter-stale-after-rename`에 있고 "다음"에도 이미 적혀 있다. PR 코멘트에 이 까닭을 남겼다.
 - 지적 5("마지막 정상본"의 풀이). 이 티켓은 이름과 풀이를 쉬운 말로 바꾸는 일이고, 풀이의 사실은 빼거나 더하지 않기로 했다(셀프 리뷰 명세 축이 용어마다 대조한 기준이다). 그 절차는 기준 커밋의 옛 풀이에도 있었고, ADR 0023의 이력 2026-11-04가 정한 동작이다. 용어집에서 절차를 걷어 내는 것은 이 용어 하나의 일이 아니라 용어집 전체의 기준을 정하는 일이라 여기서 고치지 않는다. PR 코멘트에 이 까닭을 남겼다.
 
-**다시 돌린 명령.** 프로브 폴더의 `ruff check`("All checks passed!")와 `ruff format --check`("2 files already formatted")를 쳤고, 나머지는 이 커밋의 pre-commit 결과로 갈음한다.
+**다시 돌린 명령.** 프로브 폴더의 `ruff check`("All checks passed!")와 `ruff format --check`("2 files already formatted")를 쳤고, 나머지는 이 커밋의 pre-commit 결과로 갈음한다. 커밋 `c1070f0c3`의 pre-commit은 `ruff check`와 `ruff format`이 Passed였고, 함께 띄우는 검사 열하나(pytest 433.3초, web-verify 550.1초 포함)가 모두 Passed였다(550.31초). 카나리아 명세 모양과 헌법 판 검사는 해당 파일이 없어 Skipped였다. 인용 대조(막지 않는 경고)는 여덟을 알렸다. 일지의 여섯은 도구 출력을 옮긴 것이라 그대로 뒀고, 새 대기열 항목 `probe-parallel-launch-outside-round`의 둘은 원문 인용이 아니라 이 세션이 풀어 쓴 말에 따옴표를 붙인 것이라 따옴표를 뗐다(다음 커밋에 실린다).
+
+**푸시와 코멘트.** `c1070f0c3`을 푸시하기 전에 PR 본문을 넓힌 범위(프로브 고침, 대기열 항목 둘)로 고쳤다. 푸시한 뒤 보류한 셋의 까닭을 PR 코멘트로 남기고 `@coderabbitai review`를 다시 남겼다.
+
+**둘째 푸시(`c1070f0c3`)의 결과.** `tools/wait_ci.py 603`이 "끝: 모두 통과. CodeRabbit: Review rate limited"로 끝났다(종료 코드 0). CodeRabbit은 요청 코멘트에 "Review rate limited."라고 답했고 리뷰를 내지 않았다. 한도에 걸린 푸시라 이 봇의 회차로 세지 않는다. 이 푸시가 더한 것은 프로브 둘의 고침과 일지와 대기열 항목 둘이고, CodeRabbit이 본 것은 첫 푸시(`9ebad858a`)까지다. 이 푸시의 프로브 고침을 본 리뷰는 claude-review 하나다. claude-review는 이 푸시에서도 "지적 없음"이었다(이 봇의 둘째 회차).
+
+**셋째 푸시.** 로컬 모델 시험의 기록(위 "검증")과 대기열 항목의 따옴표 수정을 실은 커밋이다. 고친 코드는 없다. 이 푸시로 도는 리뷰는 claude-review의 셋째 회차이고, CodeRabbit이 이번에 리뷰를 내면 그 봇의 둘째 회차다. 둘 다 Critical·Major만 고치고, 보류하는 지적은 이 일지에 다시 적지 않고 PR 코멘트와 다음 지시문의 "이어받을 상태"에 적는다(`next-session` `merge.md` 2의 "뒤로 넘긴 일").
 
 **세션 카드.** e2e의 `serve` 문제(위 "검증")를 고치는 일을 새 세션 카드로 제안하려 했으나 `hook_session_card`가 막았다(모델이 스스로 내는 카드는 이 저장소에서 막는다, ADR 0037). 그 일은 대기열 항목과 "다음"에 이미 있다.
 
@@ -508,7 +531,7 @@ PR 603을 열고 `@coderabbitai review`를 남긴 뒤 `uv run python tools/wait_
 부모 세션이 전한 요청대로, 같은 규약을 문서 검색 서버 저장소(rag-engine)에 맞추는 지시문을 낸다. 지시문은 rag-engine의 세션 첫 메시지로 붙여 넣을 글이고, 사용자가 넘기기 전에는 아무것도 옮겨지지 않는다. 사용자에게는 이 PR이 병합된 뒤에 내고, 그때 PR 링크를 함께 알린다(대기열 `cross-repo-directive-before-merge`). 지시문은 agent-os의 파일을 읽지 않아도 되게 문장과 근거를 안에 담았다. 지시문 하나가 손으로 옮기는 일 하나라, 대기열 `rag-engine-port-by-hand`에 3회차를 더했다.
 
 ````
-agent-os가 "사람에게 보이는 글과 용어집을 쉬운 말로 쓴다"는 규약을 넓혔다(agent-os의 브랜치 chore/plain-words-in-written-artifacts, 2026-11-17에 dev로 병합). 같은 규약을 이 저장소(rag-engine)에 맞춘다. 필요한 문장과 근거는 이 글에 모두 담았으니 agent-os의 파일은 읽지 않아도 된다.
+agent-os가 "사람에게 보이는 글과 용어집을 쉬운 말로 쓴다"는 규약을 넓혔다(agent-os의 브랜치 chore/plain-words-in-written-artifacts, 2026-11-18에 dev로 병합). 같은 규약을 이 저장소(rag-engine)에 맞춘다. 필요한 문장과 근거는 이 글에 모두 담았으니 agent-os의 파일은 읽지 않아도 된다.
 
 지킬 것 셋.
 - 이 저장소의 일하는 규약(브랜치, 티켓, 셀프 리뷰, 회고, 일지)을 그대로 따른다. 아래에 나오는 파일과 도구의 이름은 agent-os의 것이다. 이 저장소에 같은 이름이 없으면 같은 구실을 하는 자리를 찾는다.
