@@ -422,8 +422,8 @@ stack, clone_xdist, restart_recover는 README마다 "PR 봇이 짚은 틈" 절�
 
 봇 둘째 회차의 반영을 커밋하기 전에 retro 스킬로 돌았다. 원천은 이 일지 전체와 이 세션이고, "번복"과 "갈린 곳" 절은 없다. 후보 아홉 가운데 승인이 다섯(회차를 더한 것 둘, 새 항목 셋. 첫 후보는 두 항목에 회차를 더했다), 기각이 셋, 일지에만 남기는 것이 하나이고 넘긴 것은 없다. 이 세션에서 반영한 것은 없고, 승인한 것은 모두 대기열에 두었다.
 
-1. **인계 계기가 `인계 못함` 뒤, 백그라운드로 띄운 커밋 직후에 다시 왔다("커밋(봇 첫 회차 반영)").** 승인(회차로 세는 것: 열린 두 항목이 이미 처방한 사건이다). `handoff-trigger-before-background-commit-ends` 8회차, 0518 7회차. 한 사건을 두 항목에 셌다(앞 항목의 2회차가 같은 꼴로 셌다). 넘기지 않고 이었고 손상은 없다.
-2. **문서와 프로브만 바꾼 커밋의 pre-commit이 길었다.** 승인(회차로 세는 것: 열린 항목이 처방한 사건이다). `docs-only-commit-precommit-slow-again` 14회차. pytest가 625.7·1214.4·592.7초, web-verify가 746.9·601.9초였다.
+1. **인계 계기가 `인계 못함` 뒤, 백그라운드로 띄운 커밋 직후에 다시 왔다("커밋(봇 첫 회차 반영)").** 승인(회차로 세는 것: 열린 두 항목이 이미 처방한 사건이다). `handoff-trigger-before-background-commit-ends` 9회차, 0518 7회차. 한 사건을 두 항목에 셌다(앞 항목의 2회차가 같은 꼴로 셌다). 넘기지 않고 이었고 손상은 없다. 앞 항목은 처음에 8회차로 적었는데, 그사이 병합된 PR 608이 같은 항목에 8회차를 더해 합칠 때 9회차로 옮겼다. 이 회고를 실은 커밋 `f7574413a`를 띄운 직후에도 같은 계기가 한 번 더 왔고, 같은 일지의 같은 사건이라 회차를 더하지 않았다.
+2. **문서와 프로브만 바꾼 커밋의 pre-commit이 길었다.** 승인(회차로 세는 것: 열린 항목이 처방한 사건이다). `docs-only-commit-precommit-slow-again` 15회차(처음에 14회차로 적었고, PR 608이 14회차를 더해 합칠 때 옮겼다). pytest가 625.7·1214.4·592.7·786.3초, web-verify가 746.9·601.9·731.5초였다(마지막 값은 이 회고를 실은 커밋 `f7574413a`).
 3. **PR 봇 둘째 회차의 Major 둘이 첫 회차에 고친 지적과 같은 성질의 다른 자리였다.** 셸 변수만 `unset`해 `COMPOSE_ENV_FILES`가 남았고, `serve` 쪽에만 `@` 판정을 더해 시험 도우미가 남았다. 승인(사건: 봇 회차 하나와 재측정 두 번이 더 들었다. 층: 검사로 가를 수 없는 판단이라 스킬 문장이다. 되돌림: PR 하나). 문장을 더하는 것이라 다섯 번째 전까지 센다. 새 항목 `bot-fix-misses-same-kind-path` 1회차. 같은 일을 다룬 항목은 없었다(`같은.성질`, `짝.자리`, `다음.회차의.봇`, `지적한.자리만`으로 찾았다).
 4. **인용 대조(`tools/check_quotes.py`)가 원문에 글자 그대로 있는 인용 둘을 경고했다("커밋(봇 첫 회차 반영)"의 387·393줄).** 승인(고침: 도구의 버그라 사건 하나로 반영할 수 있다. 층: 그 검사 자체다. 되돌림: PR 하나). 회고 때 `quotes_in`을 불러 보니, 짝을 맞추려고 코드 스팬 안의 큰따옴표를 지운 글을 인용으로 뽑고 원문 쪽은 따옴표를 남겨 둘이 맞지 않았다(387줄의 꼴. 393줄은 따로 가르지 않았다). 이 PR은 명세 PR이라 도구 코드와 시험을 싣지 않고, 새 항목 `check-quotes-code-span-double-quotes` 1회차로 두었다. 닫힌 0067(줄을 넘는 인용의 짝)과는 다른 자리다.
 5. **인계 열기가 멈춘 뒤 약 9분 반에 같은 지시문의 세션이 생겼다("늦게 생긴 같은 지시문의 세션").** 승인(사건: 사람이 한 번 고르고 그 세션이 스킬과 일지를 읽는 값이 들었다. 층: 스크립트는 뒤늦게 뜬 화면을 알 길이 없어 스킬 문장이다. 되돌림: PR 하나). 문장을 더하는 것이라 센다. 새 항목 `open-session-page-timeout-late-screen` 1회차. 까닭(늦게 닿은 딥링크인지, 사람이 따로 열었는지)은 가르지 못했고, `deeplink_timeline.ps1`은 회고 때도 아무것도 찍지 않았다. 0519는 `stale=1` 뒤의 멈춤이라 출력의 꼴이 달라 잇지 않았다.
@@ -440,4 +440,8 @@ stack, clone_xdist, restart_recover는 README마다 "PR 봇이 짚은 틈" 절�
 - **병합 뒤 이 기능의 다음 단계는 티켓이다.** postgres-foundation에는 명세(`.scratch/postgres-foundation/spec.md`)가 있고 `issues/`가 없다. `next-session` 결정표의 "티켓" 줄대로 새 세션에서 명세 검토(`spec-reviewer` 서브에이전트)를 먼저 하고 `/to-tickets .scratch/postgres-foundation/spec.md`를 친다. 모델은 Opus 5.5 / xhigh다. 병합 뒤 결정표의 위 두 줄(운영에서 개발로 합치기, 출시 PR)이 맞으면 그것을 먼저 한다.
 - **프로브의 보류한 틈.** 각 프로브 README의 "PR 봇이 짚은 틈"(compose_shape는 "PR 봇이 짚었지만 고치지 않은 것")이 다시 잴 사람이 먼저 넣을 고침을 적는다. 결론은 기록된 원본으로 선다고 판정했다.
 - **워크트리.** 늦게 생긴 같은 지시문의 세션이 `EnterWorktree`로 이 워크트리를 잠갔을 수 있어, 병합 뒤 `tidy-checkouts`가 이 워크트리를 남길 수 있다.
-- **대기열.** 새 항목은 셋이다. `bot-fix-misses-same-kind-path`, `check-quotes-code-span-double-quotes`, `open-session-page-timeout-late-screen`이고 모두 1회차다. 회차를 더한 셋은 `handoff-trigger-before-background-commit-ends`(8회차), 0518(7회차), `docs-only-commit-precommit-slow-again`(14회차)이다.
+- **대기열.** 새 항목은 셋이다. `bot-fix-misses-same-kind-path`, `check-quotes-code-span-double-quotes`, `open-session-page-timeout-late-screen`이고 모두 1회차다. 회차를 더한 셋은 `handoff-trigger-before-background-commit-ends`(9회차), 0518(7회차), `docs-only-commit-precommit-slow-again`(15회차)이다.
+
+## 커밋(봇 둘째 회차 반영과 회고)
+
+`f7574413a`. pre-commit이 모두 통과했다(pytest 786.3초, web-verify 731.5초, 병렬 검사 전체 786.58초). 인용 대조의 경고 하나("PR 봇 둘째 회차"의 고친 Minor가 든 명세의 옛 문장)는 고치기 전 판 `c191a389d`의 명세 265줄과 글자가 같아 그대로 둔다(`git grep`으로 봤다). 푸시를 훅이 막아(브랜치가 `origin/dev`보다 한 커밋 뒤) `git merge --no-edit origin/dev`로 PR 608을 합쳤다. 그 PR이 같은 대기열 항목 둘(`handoff-trigger-before-background-commit-ends`, `docs-only-commit-precommit-slow-again`)에 회차를 더해 글자 충돌이 났고, dev 쪽 회차를 두고 이 브랜치의 회차를 다음 번호로 옮겨 풀었다.
