@@ -1485,7 +1485,7 @@ def bash_path(lab: Lab, wanted: str) -> str:
     return found if check.code == 0 and check.out.strip() else ""
 
 
-PROCEDURE_PRELUDE = f"unset {PASSWORD_VAR}"
+PROCEDURE_PRELUDE = f"unset {PASSWORD_VAR} COMPOSE_ENV_FILES"
 
 
 def procedure_lines() -> tuple[str, list[str]]:
@@ -1502,7 +1502,8 @@ def procedure_lines() -> tuple[str, list[str]]:
 
 def procedure(lab: Lab, project: Project, old: str, new: str) -> None:
     with lab.rounds.round(
-        "4마 제안하는 절차(change_password.sh 를 bash 로 한 줄씩, 부모 셸에 옛 값을 export 한 채)"
+        "4마 제안하는 절차(change_password.sh 를 bash 로 한 줄씩, 부모 셸에 옛 값과 "
+        "옛 값의 env 파일을 가리키는 COMPOSE_ENV_FILES 를 export 한 채)"
     ) as slot:
         bash = bash_path(lab, lab.bash)
         prelude, lines = procedure_lines()
@@ -1514,11 +1515,14 @@ def procedure(lab: Lab, project: Project, old: str, new: str) -> None:
         # 틈은 바꾸기 직전의 마지막 새 접속 줄부터 잰다(다른 종류의 줄이 그 뒤에 와도 빠지지 않게).
         began = row_time(project, "max", "who in ('serve-new', 'serve-start')")
         project.write_env({PASSWORD_VAR: new})
-        # 운영자의 셸에 옛 값이 export 돼 있던 경우. 절차의 첫 줄이 그것을 지워야 .env 의 새 값이
-        # 쓰인다.
+        project.write("stale.env", f"{PASSWORD_VAR}={old}\n")
+        # 운영자의 셸에 옛 값이 export 돼 있고, COMPOSE_ENV_FILES 가 옛 값을 든 다른 파일을 가리키던
+        # 경우. 절차의 첫 줄이 둘 다 지워야 .env 의 새 값이 쓰인다. 둘 가운데 하나만 남아도 compose
+        # 는 옛 값으로 PostgreSQL 을 다시 만들어, 아래의 바뀐 비밀번호 판정이 실패한다.
         env = {
             **child_env(),
             PASSWORD_VAR: old,
+            "COMPOSE_ENV_FILES": str(project.folder / "stale.env"),
             "COMPOSE_PROJECT_NAME": project.name,
             "MSYS_NO_PATHCONV": "1",
         }
@@ -1569,7 +1573,9 @@ def procedure(lab: Lab, project: Project, old: str, new: str) -> None:
             # 받는다(옛것은 인증 실패).
             measured=prelude == PROCEDURE_PRELUDE and len(codes) == len(lines) == 3 and changed,
             result=(
-                f"세 줄의 종료 코드 {codes}, migrate 종료 {migrate.exit_code if migrate else '?'}, "
+                f"세 줄의 종료 코드 {codes}, 데이터베이스는 "
+                f"{'새 비밀번호만 받는다' if changed else '새 비밀번호만 받지는 않는다'}, "
+                f"migrate 종료 {migrate.exit_code if migrate else '?'}, "
                 f"serve 는 {serve.health if serve else '없음'}, 넣어 둔 줄은 "
                 f"{'남았다' if survived else '남지 않았다'}, 새 비밀번호는 로그에 "
                 f"{'남았다' if new in logs else '없다'}"

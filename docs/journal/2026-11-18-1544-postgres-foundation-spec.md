@@ -310,7 +310,7 @@ CodeRabbit은 첫 회차에 인라인 Critical 셋과 리뷰 본문의 Major 서
 남은 원본은 `--sections 5`와 `--sections 4`의 두 실행이고, README 표의 전체 실행 원본은 없다.
 
 - C2 부분. `PGPASSWORD`가 `docker run -e` 인자째 `raw.log`의 제목 줄에 남고(`run.py:199-201, 292`), `docker inspect` 출력에 `POSTGRES_PASSWORD`와 연결 문자열이 남으며, 5다·5라는 값을 화면과 `rounds.jsonl`에 싣는다. 그 값은 실행마다 새로 만들거나(`token_hex`, 1248·1545줄) 소스에 박힌 시험 글자(1709-1722줄)이고, `child_env()`가 부모 셸의 `AGENT_OS_`·`POSTGRES_`·`PG` 변수를 지워(98, 149-150줄) 운영 값이 들어올 길이 없다. 호스트 포트를 열지 않고 끝에 `down -v`로 지우며, 원본은 `%TEMP%\pgf-shape`에 있고 저장소가 추적하는 원본은 0개다. 5다·5라의 값은 재려는 대상 그 자체다.
-- #19 맞음. 1235줄의 조건은 `up`이 300초에 끊겨 고친 `.env`가 닿지 않았어도 참이다. 그 갈래면 결과 문구가 "같은 컨테이너로 종료 1"이라 README의 "새 컨테이너로 다시 만들어 0으로 끝냄"과 맞지 않아 결과에는 닿지 않았다고 본다(어림, 원본 없음).
+- #19 맞음. 1235줄의 조건은 `up`이 300초에 끊겨 고친 `.env`가 닿지 않았어도 참이다. 그 갈래면 결과 문구가 "같은 컨테이너로 종료 1"이라 README의 "새 컨테이너로 다시 만들어 0으로 끝내고"와 맞지 않아 결과에는 닿지 않았다고 본다(어림, 원본 없음).
 - #20 맞음. 가드(`bool(...)`)가 없는 곳은 `restart_all()`(1131줄) 하나다. 빈 기준이면 `줄 None→N`이 찍혔을 것이라 README의 "줄은 늘지 않았다"로 보아 나지 않았다고 본다(어림).
 - #21 부분. 데몬에 닿지 않으면 측정 아님이 되지만, 시간 초과나 compose 오류로 migrate가 다시 돌지 않으면 앞 회차의 종료 1과 로그 줄로 측정으로 세어진다. 결과에는 닿지 않았다고 본다(어림).
 - #22 맞음, 영향 없음. 남은 두 원본과 README의 실행 명령 모두 `--image` 없이 기본 digest를 썼다.
@@ -340,7 +340,7 @@ CodeRabbit은 첫 회차에 인라인 Critical 셋과 리뷰 본문의 Major 서
 - #28 부분. 40초 때의 serve는 `created`라 재시작 정책이 그 틈에 띄울 수 없다. 항목 4의 16회차가 모두 `serve: 삶 0개`였다.
 - #29 맞음. 기본값이 `--pull=missing`이고 962줄은 `ran`만 돌려준다. 넷 모두 `Loaded image: postgres:18`이 있고 `Unable to find image`는 0줄이다.
 - #30 맞음, 판정 전에 문구를 모으는 자리가 1004·1018·1066·1068·1287·1420줄에도 있다. 측정 아님이 0이라 실패 문구 표는 그대로다.
-- #31 논리는 맞고 실제로는 나지 않았다. dockerd의 `Processing signal 'terminated'`가 `PostgreSQL init process complete`보다 항목 4 실행에서 0.65·0.70초, 전체 실행에서 0.78·0.68초 앞섰고 `failed to exit within 10s of signal 2 - using the force`가 찍혀, 데몬 회차 넷은 실제로 초기화 도중에 끊겼다. README 112·117줄의 "사건 1.20·1.18(1.23·1.38)초 뒤"는 신호가 아니라 `cut_at`부터 잰 값이다. 명세는 이 값을 인용하지 않는다.
+- #31 논리는 맞고 실제로는 나지 않았다. dockerd의 `Processing signal 'terminated'`가 `PostgreSQL init process complete`보다 항목 4 실행에서 0.65·0.70초, 전체 실행에서 0.78·0.68초 앞섰고 `failed to exit within 10s of signal 2 - using the force`가 찍혀, 데몬 회차 넷은 실제로 초기화 도중에 끊겼다. README 112·117줄이 사건 뒤로 적은 1.20·1.18초(전체 실행 1.23·1.38초)는 신호가 아니라 `cut_at`부터 잰 값이다. 명세는 이 값을 인용하지 않는다.
 - #32 논리는 맞고 나지 않았다. 두 전체 실행의 서버 재시작 18회차가 모두 약 1초에 끝났고 `supervise: stop`이 실행마다 9번, PostgreSQL은 매번 `database system was shut down at`(정상 종료)를 남겼다.
 - #33 맞음. 전원 회차 여섯이 모두 `표(probe_rows) 모름`(None)으로 이 표지를 지났다. 같은 회차의 migrate가 `created`(돈 적 없음)라 결론은 선다.
 - #34 맞음(PostgreSQL이 돌아오지 않은 갈래만). 27회차 모두 `차례(이벤트)`라 옛 `StartedAt`으로 대신한 회차가 없다.
@@ -380,7 +380,7 @@ stack, clone_xdist, restart_recover는 README마다 "PR 봇이 짚은 틈" 절�
 봇 둘째 회차가 겨냥할 새 사실 문장(원문). 받는 쪽이 PR 봇뿐이라 브리프로 넘기는 길은 없고, 압축 뒤에도 남도록 적는다.
 
 1. 명세: "SQLAlchemy 2.1.8의 asyncpg 방언은 질의의 값을 경로에서 읽은 연결 인자 위에 덮어쓴다. `postgresql+asyncpg://u:pw@db:5432/app?database=other`를 그 방언의 `create_connect_args`에 넣으니 데이터베이스가 `other`로, `?host=elsewhere`를 넣으니 호스트가 `elsewhere`로 나왔다(함수를 불러 봤다, PR 봇이 짚었다)."
-2. 명세: "미들웨어가 예외를 그대로 내보내면, `serve`가 지금 쓰는 uvicorn의 기본값 `lifespan="auto"`는 앱이 수명을 모른다고 보…" 이하 uvicorn 0.53.0 `lifespan/on.py`와 Starlette 1.6.0 `routing.py`를 읽은 문장.
+2. 명세: 미들웨어 글머리표 (a)의 "미들웨어가 예외를 그대로 내보내면," 이하 uvicorn 0.53.0 `lifespan/on.py`와 Starlette 1.6.0 `routing.py`를 읽은 문장.
 3. 명세: "uvicorn은 완료를 받으면 수명 종료를 더 기다리지 않으므로(같은 파일), 먼저 넘기면 닫는 도중에 프로세스가 끝날 수 있다. 종료 실패는 uvicorn의 종료 코드를 바꾸지 않는…"
 4. 명세: "그 값은 연결을 맺는 데만 걸리고 질의에는 걸리지 않으며, 질의의 제한 시간(`command_timeout`)은 기본이 없다(asyncpg 소스를 읽었다, PR 봇이 짚었다). 그래서 다른 세션이 판 기록 표를 잠가 두면 연결은 열려도 판 읽기가 잠금이 풀릴 때까지 기다리고, 다시 시도하는 시간도 끝나지 않는다(재지 않았다)."
 5. 명세: "compose는 셸의 값을 `.env`의 값보다 먼저 쓰므로(5나가 셸 값과 `.env`가 다를 때 셸 값이 드는 것을 쟀다. Docker 문서의 변수 치환 안내가 적은 우선순위도 같다고 웹 요약으로 봤고 원문은 대 보지 않았다, …)"
@@ -392,3 +392,52 @@ stack, clone_xdist, restart_recover는 README마다 "PR 봇이 짚은 틈" 절�
 11. 명세: "문법이 틀린 `ALTER ROLE` 문장이 `STATEMENT:  ALTER ROLE agent_os PASSWORD '…' BOGUS`로 남은 것을 쟀다(4라)."
 12. restart_recover README: "데몬 회차 넷은 dockerd의 `Processing signal 'terminated'`가 `PostgreSQL init process complete`보다 0.65~0.78초 앞섰고 `failed to exit within 10s of signal 2 - using the force`가 찍혀, 실제로 초기화 도중에 끊겼다."
 13. clone_xdist README #15: "이 틈은 동시 회차에만 걸리고 … 두 줄(94.78초, 94.83초)"
+
+### 커밋(봇 첫 회차 반영)
+
+`c191a389d`. pre-commit이 모두 통과했다(pytest 592.7초, web-verify 601.9초, 병렬 검사 전체 602.14초). 커밋을 백그라운드로 띄운 직후 인계 계기(`커밋 뒤`)가 왔지만, 이 세션이 앞서 `인계 못함 커밋 뒤`(236줄)를 적었으므로 handoff.md 1의 넷째 갈래대로 넘기지 않고 잇는다. 인용 대조의 경고 여섯 가운데 셋(313·343·383줄)은 원문과 글자가 달라 고쳤다. 282줄은 봇 리뷰 본문이라 저장소에 없고, 387·393줄은 원문에 글자 그대로 있는데 인용 안의 따옴표 때문에 대조가 갈린 것이다(grep으로 봤다). 이 고침은 다음 커밋에 싣는다.
+
+푸시를 훅이 막았다(브랜치가 `origin/dev`보다 한 커밋 뒤). `git merge --no-edit origin/dev`로 #607을 충돌 없이 합쳤다(`31b856dcd`). 합친 변경 가운데 `next-session` `merge.md`와 `pr-merge`는 이름만 바뀌었고 절차는 그대로다(diff를 읽었다). 합친 뒤 `tools/run_checks.py`는 열하나 가운데 pytest만 실패했다. 7817개가 통과하고 `tests/tools/test_rerun_runner.py::test_같은_갈래가_두_번_든_파일럿의_두_회차가_함께_돌아도_번호가_다르다`가 `assert 1 == 2`(두 회차가 함께 돌지 않았다)로 막혔고, 그 시험만 따로 돌리니 통과했다(68.45초). 이 브랜치는 그 시험이 닿는 `tools/`를 건드리지 않는다. 같은 파일의 시간 의존 시험이 부하에서 흔들린 것은 이 세션에서 두 번째다(첫 번째는 274줄의 다른 시험). 같은 시험이 연달아 실패하지 않았으므로 diagnosing-bugs는 부르지 않고, 회고 후보로 넘긴다. ruff 둘과 `tools/sibling_overlap.py`(겹침 없음)도 다시 지났다.
+
+푸시한 뒤 PR에 첫 회차 판정 코멘트(고친 것과 고치지 않은 것의 까닭)와 `@coderabbitai review`를 남기고 `tools/wait_ci.py 606`을 띄웠다.
+
+## PR 봇 둘째 회차
+
+`wait_ci`가 0으로 끝났다(`31b856dcd`, 검사 모두 통과, `llm`만 SKIPPED, claude-review 통과). CodeRabbit은 인라인 Major 열과 본문의 Minor 열아홉을 냈다. 규약(merge.md 회차 세기)대로 Major만 고친다.
+
+- 고친 Major 둘. (1) `change_password.sh` 6줄: 셸의 `COMPOSE_ENV_FILES`가 `.env`를 대신한다. 빈 폴더의 compose 파일로 `docker compose config`를 쳐 그 변수가 `other.env`를 가리키면 그 값이 들고 `unset`하면 `.env`로 돌아오는 것을 봤다(Compose 5.6.1, 손으로 봤다). 절차의 첫 줄을 `unset AGENT_OS_DATABASE_PASSWORD COMPOSE_ENV_FILES`로 바꾸고, 4마가 옛 값을 든 `stale.env`를 가리키는 `COMPOSE_ENV_FILES`까지 내보낸 셸에서 치게 했다. 첫 재측정(`run-20261118-223609-138176`)은 표지가 비교하는 첫 줄 상수를 고치지 않아 4마가 측정 아님이었고 종료 1이었다. 상수를 고친 둘째 재측정(`run-20261118-223809-ef866e`)이 측정 8, 측정 아님 0, 종료 0이었고, 4마는 세 줄 모두 0, 데이터베이스가 새 비밀번호만 받았으며 틈은 6.8초였다. 4번의 나머지 회차는 4다의 이미 맺은 접속의 줄(+9)까지 README 표와 같았다. (2) 명세 315줄: 시험 도우미가 `@`가 둘인 주소를 받는다. 도우미의 판정과 시험 쪽 표의 넷째 줄, Testing Decisions 첫째 이음매의 거부 사례 둘을 더했다.
+- 고치지 않은 Major 여덟. clone_xdist의 넷(461·680·770·849줄)은 첫 회차 #15·#17·#16·#14와 같은 자리이고, stack README 95줄은 #5와 같은 자리다. 새 것 셋은 README에 적었다. clone_xdist 213줄(`pg_current_wal_lsn()`)은 쓰지 않은 WAL이 WAL 버퍼 크기를 넘지 못한다는 가늠으로 결론이 선다고 봤다(어림). compose_shape 1168줄(3아)은 줄이 23에서 31로 늘고 재시작 동안의 접속 실패가 로그에 있어 선다고 봤다(어림). compose_shape 1925줄(2다)은 그 전체 실행의 측정 아님이 0이라 빠진 회차가 없다.
+- 고친 Minor 하나. 명세 265줄: "쥐고 있던 접속은 그대로 돌았다(4다)"는 서버를 다시 만들지 않은 갈래의 결과였다. 둘째 줄이 서버를 다시 만들어 모든 접속이 끊기는 구간과 셋째 줄 뒤의 인증 실패 구간으로 나눠 적었다. 사실이 틀린 문장이라 둘째 회차지만 고쳤다.
+- 보류한 Minor 열여덟은 모두 프로브 코드의 틈이다. PR 코멘트에 지적마다 적는다.
+
+봇 셋째 회차가 겨냥할 새 사실 문장(원문).
+
+1. 명세: "같은 줄은 `COMPOSE_ENV_FILES`도 지운다. 그 변수가 다른 파일을 가리키면 compose는 `.env`를 읽지 않고 그 파일을 읽는다(Docker Compose 5.6.1에서 `docker compose config`로 손으로 봤다, PR 봇이 짚었다)."
+2. 명세: "다시 뜬 뒤에는 데이터베이스의 계정이 아직 옛 비밀번호라 옛 `serve`가 다시 붙는다고 본다(어림. 4가에서 `.env`만 고친 뒤에도 데이터베이스가 새 비밀번호를 거절한 것으로 가늠했다)."
+3. 명세: "SQLAlchemy는 비밀번호를 첫 `@` 앞에서 자르므로 둘째 `@` 앞의 비밀번호 조각이 호스트에 남고, 그 조각이 `<자리>`에도 비밀번호를 숨긴 `repr`에도 실린다"
+4. clone_xdist README: "쓰지 않은 WAL은 WAL 버퍼의 크기를 넘을 수 없고, 기본 설정에서 그 크기는 `shared_buffers`의 1/32(이 서버의 기본 128MB면 4MB)다(PostgreSQL의 기본값을 기억으로 적었다, 어림)."
+5. compose_shape README: "4마의 표지(…)는 고치기 전 첫 줄이었다면 compose가 `stale.env`의 옛 값으로 PostgreSQL을 다시 만들어 서지 않는다(위의 손으로 본 것으로 가늠했다)."
+
+## 회고
+
+봇 둘째 회차의 반영을 커밋하기 전에 retro 스킬로 돌았다. 원천은 이 일지 전체와 이 세션이고, "번복"과 "갈린 곳" 절은 없다. 후보 아홉 가운데 승인이 다섯(회차를 더한 것 둘, 새 항목 셋. 첫 후보는 두 항목에 회차를 더했다), 기각이 셋, 일지에만 남기는 것이 하나이고 넘긴 것은 없다. 이 세션에서 반영한 것은 없고, 승인한 것은 모두 대기열에 두었다.
+
+1. **인계 계기가 `인계 못함` 뒤, 백그라운드로 띄운 커밋 직후에 다시 왔다("커밋(봇 첫 회차 반영)").** 승인(회차로 세는 것: 열린 두 항목이 이미 처방한 사건이다). `handoff-trigger-before-background-commit-ends` 8회차, 0518 7회차. 한 사건을 두 항목에 셌다(앞 항목의 2회차가 같은 꼴로 셌다). 넘기지 않고 이었고 손상은 없다.
+2. **문서와 프로브만 바꾼 커밋의 pre-commit이 길었다.** 승인(회차로 세는 것: 열린 항목이 처방한 사건이다). `docs-only-commit-precommit-slow-again` 14회차. pytest가 625.7·1214.4·592.7초, web-verify가 746.9·601.9초였다.
+3. **PR 봇 둘째 회차의 Major 둘이 첫 회차에 고친 지적과 같은 성질의 다른 자리였다.** 셸 변수만 `unset`해 `COMPOSE_ENV_FILES`가 남았고, `serve` 쪽에만 `@` 판정을 더해 시험 도우미가 남았다. 승인(사건: 봇 회차 하나와 재측정 두 번이 더 들었다. 층: 검사로 가를 수 없는 판단이라 스킬 문장이다. 되돌림: PR 하나). 문장을 더하는 것이라 다섯 번째 전까지 센다. 새 항목 `bot-fix-misses-same-kind-path` 1회차. 같은 일을 다룬 항목은 없었다(`같은.성질`, `짝.자리`, `다음.회차의.봇`, `지적한.자리만`으로 찾았다).
+4. **인용 대조(`tools/check_quotes.py`)가 원문에 글자 그대로 있는 인용 둘을 경고했다("커밋(봇 첫 회차 반영)"의 387·393줄).** 승인(고침: 도구의 버그라 사건 하나로 반영할 수 있다. 층: 그 검사 자체다. 되돌림: PR 하나). 회고 때 `quotes_in`을 불러 보니, 짝을 맞추려고 코드 스팬 안의 큰따옴표를 지운 글을 인용으로 뽑고 원문 쪽은 따옴표를 남겨 둘이 맞지 않았다(387줄의 꼴. 393줄은 따로 가르지 않았다). 이 PR은 명세 PR이라 도구 코드와 시험을 싣지 않고, 새 항목 `check-quotes-code-span-double-quotes` 1회차로 두었다. 닫힌 0067(줄을 넘는 인용의 짝)과는 다른 자리다.
+5. **인계 열기가 멈춘 뒤 약 9분 반에 같은 지시문의 세션이 생겼다("늦게 생긴 같은 지시문의 세션").** 승인(사건: 사람이 한 번 고르고 그 세션이 스킬과 일지를 읽는 값이 들었다. 층: 스크립트는 뒤늦게 뜬 화면을 알 길이 없어 스킬 문장이다. 되돌림: PR 하나). 문장을 더하는 것이라 센다. 새 항목 `open-session-page-timeout-late-screen` 1회차. 까닭(늦게 닿은 딥링크인지, 사람이 따로 열었는지)은 가르지 못했고, `deeplink_timeline.ps1`은 회고 때도 아무것도 찍지 않았다. 0519는 `stale=1` 뒤의 멈춤이라 출력의 꼴이 달라 잇지 않았다.
+6. **시간 시험 셋이 부하에서 한 번씩 빨갰다("커밋(PR 직전 리뷰 반영)", "커밋(봇 첫 회차 반영)").** 일지에만 남긴다. `tests/tools/test_rerun_runner.py`의 서로 다른 시험 둘과 `tests/channel/cli/test_interrupt.py`의 시험 하나였고, 따로 돌리면 모두 지났다. 같은 종류를 0306이 받아들여 닫았으므로(retro 5단계의 여러 곳에서 나는 같은 결함) 잇지 않고 새 항목도 쓰지 않는다. 그 값으로 PR 직전 리뷰 반영 커밋의 셋째 시도를 `SKIP=pytest`로 쳤다. 다시 열지는 사용자가 정한다.
+7. **4마의 첫 재측정이 측정 아님이었다("PR 봇 둘째 회차").** 기각. 표지가 비교하는 첫 줄 상수를 고치지 않은 것을 `Rounds`가 측정 아님으로 세고 종료 1로 알렸다. 이미 있는 장치가 그 자리에서 알린 것이다.
+8. **기준 브랜치의 이름 바꾸기(#607)를 푸시할 때에야 알았다.** 기각. `hook_push_behind_main`이 뒤처진 푸시를 막아 그 자리에서 알렸고, 합친 뒤 고칠 자리는 grep으로 찾았다.
+9. **봇 지적을 반영하며 README의 함수 이름(`snapshot`)과 명세의 절 이름을 처음에 틀리게 적었다.** 기각. 쓰는 턴에 코드와 명세를 다시 열어 스스로 잡았고, 리뷰가 잡은 사건이 아니다.
+
+만료할 항목은 작업 폴더와 `origin/dev`의 두 출력에 모두 없었다(`uv run python tools/queue_open_rows.py`, 같은 명령에 `--ref origin/dev`). 회차 5 이상인 열린 항목은 회고 전에 스물셋이었다.
+
+## 다음
+
+- **이 세션은 이 커밋 뒤에 푸시, 봇 셋째 회차, 병합까지 한다.** 셋째 회차가 겨냥할 새 사실 문장은 위 "PR 봇 둘째 회차"의 다섯이고, 셋째 회차는 Critical·Major만 고친다(`next-session` `merge.md`의 회차 세기).
+- **병합 뒤 이 기능의 다음 단계는 티켓이다.** postgres-foundation에는 명세(`.scratch/postgres-foundation/spec.md`)가 있고 `issues/`가 없다. `next-session` 결정표의 "티켓" 줄대로 새 세션에서 명세 검토(`spec-reviewer` 서브에이전트)를 먼저 하고 `/to-tickets .scratch/postgres-foundation/spec.md`를 친다. 모델은 Opus 5.5 / xhigh다. 병합 뒤 결정표의 위 두 줄(운영에서 개발로 합치기, 출시 PR)이 맞으면 그것을 먼저 한다.
+- **프로브의 보류한 틈.** 각 프로브 README의 "PR 봇이 짚은 틈"(compose_shape는 "PR 봇이 짚었지만 고치지 않은 것")이 다시 잴 사람이 먼저 넣을 고침을 적는다. 결론은 기록된 원본으로 선다고 판정했다.
+- **워크트리.** 늦게 생긴 같은 지시문의 세션이 `EnterWorktree`로 이 워크트리를 잠갔을 수 있어, 병합 뒤 `tidy-checkouts`가 이 워크트리를 남길 수 있다.
+- **대기열.** 새 항목은 셋이다. `bot-fix-misses-same-kind-path`, `check-quotes-code-span-double-quotes`, `open-session-page-timeout-late-screen`이고 모두 1회차다. 회차를 더한 셋은 `handoff-trigger-before-background-commit-ends`(8회차), 0518(7회차), `docs-only-commit-precommit-slow-again`(14회차)이다.
