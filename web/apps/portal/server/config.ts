@@ -340,7 +340,7 @@ function identityOf(entry: TomlValue): Identity {
   };
 }
 
-/** 앞선 사이트와 `issuer` 나 `name` 이 겹친 사이트의 자리. 보증 모드와 상관없이 본다. */
+/** 앞선 사이트와 `issuer` 나 `name` 이 겹친 사이트의 자리. 신원 확인 방식과 상관없이 본다. */
 function overlaps(identities: readonly Identity[]): readonly string[] {
   return identities.flatMap(({ issuer, name }, index) => {
     const earlier = identities.slice(0, index);

@@ -92,3 +92,7 @@ PR 봇 회차(CodeRabbit, PR #506의 첫 회차 Major)가 결정 "토큰"의 `su
 ### 2026-11-13 용어 "질문 페이지"를 "위젯 미리보기 페이지"로 바꿨다
 
 사용자가 용어집(`CONTEXT.md`)의 "질문 페이지(Portal)"를 "위젯 미리보기 페이지"로 바꾸기로 했다(이름 바꾸기 chore `.scratch/harness/issues/rename-portal-to-widget-preview.md`). 이 ADR의 본문은 기록이라 옛 이름을 그대로 두므로, 본문의 "질문 페이지"는 "위젯 미리보기 페이지"로 읽는다. 결정은 바뀌지 않는다. 코드 이름 `portal`과 경로 `/portal/`도 그대로다.
+
+### 2026-11-18 용어집의 이름 보증 모드를 신원 확인 방식으로 바꿨다
+
+사용자가 용어집(`CONTEXT.md`)의 이름 "보증 모드"를 사람이 흔히 쓰는 말인 "신원 확인 방식"으로 바꾸기로 했다(harness 티켓 `.scratch/harness/issues/rename-assurance-mode.md`, 일지 2026-11-18-1036). 이 ADR의 본문은 글자를 고치지 않으므로 옛 이름이 그대로 있다. 본문의 "보증 모드"는 "신원 확인 방식"으로 읽는다. 결정은 바뀌지 않고 코드의 이름(`assurance`)도 그대로다.

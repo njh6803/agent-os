@@ -17,7 +17,7 @@ function loaded(edits: Parameters<typeof writeSetup>[0] = {}) {
 
 const CLOCK = { now: () => 1_800_000_000_000, newAnonymousId: () => "id" };
 
-test("설정의 사이트마다 이름과 발급자와 보증 모드에 사이트 파일의 audience 를 붙인다", () => {
+test("설정의 사이트마다 이름과 발급자와 신원 확인 방식에 사이트 파일의 audience 를 붙인다", () => {
   const context = portalContext(loaded(), testAssets(), CLOCK);
 
   expect(context.sites).toEqual([
