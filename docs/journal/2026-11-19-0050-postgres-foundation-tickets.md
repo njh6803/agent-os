@@ -241,3 +241,14 @@
 ## 둘째 커밋
 
 커밋 직전에 `git branch --show-current`가 `docs/postgres-foundation-tickets`였고, `uv run python tools/sibling_overlap.py`는 종료 0으로 번호 겹침과 함께 고친 파일이 없다고 냈다. 바뀐 것이 마크다운뿐이라 pre-commit의 ruff가 `Skipped`이므로 손으로 쳤다. `uv run ruff check .`는 `All checks passed!`, `uv run ruff format --check .`는 `2481 files already formatted`였다.
+
+둘째 커밋 `ad967bcba`의 pre-commit은 종료 0이었다. 손으로 친 검사 다섯의 몫(lint-imports, pyright, pyright-linux, pytest 502.7초, web-verify 634.8초)과 check-ticket·check-notes·zizmor·check-instructions·check-type-escapes·run-hooks·표·줄 구분 문자·변이 표·인용 대조·커밋 메시지가 Passed였고, ruff 둘·카나리아·헌법 판은 대상 파일이 없어 `Skipped`였다(그 출력을 손으로 봤다). 인용 대조의 경고 넷은 모두 이 일지의 것이다. 커밋 제목과 앱이 지은 세션 제목은 저장소 밖의 글이고, 티켓 03의 옛 인용과 02의 인용은 위 "이어받은 세션(커밋 뒤)"에서 대 본 것이라 남겼다. 그 뒤 `git push -u origin docs/postgres-foundation-tickets`로 새 브랜치를 올렸다.
+
+커밋 직후에 인계 계기(`hook_handoff`, 세션 컨텍스트 약 25만 6천 토큰, 경계 `커밋 뒤`)가 왔다. 이 세션의 지시문의 이어받을 상태가 `인계: 커밋 뒤`로 시작해 `handoff.md` 1의 셋째(같은 경계)에 들므로 넘기지 않고 이었다.
+
+## 넘긴 주장의 설치본 대조
+
+PR 직전 리뷰의 서브에이전트가 설치본을 찾지 못해 판정하지 않은 세 자리를 이 세션이 uv 캐시의 사본에서 읽었다. 캐시의 `wheels-v6/pypi/<패키지>/<판>` 파일이 `archive-v0/<이름>` 폴더를 가리켜, 그 폴더의 파일을 `sed -n`으로 열었다.
+
+- alembic 1.20.1 `script/base.py` 1039줄은 `module = util.load_python_file(dir_, filename)`이고, `util/pyfiles.py` 128~133줄의 `load_module_py`는 `spec.loader.exec_module(module)`을 `try` 없이 부른다. 명세의 문장과 맞았다.
+- SQLAlchemy 2.1.8 `engine/base.py` 2257줄은 `hide_parameters=self.engine.hide_parameters`를 넘기지만 `if self._reentrant_error:` 안(오류를 다루다 다시 오류가 난 갈래)이었고, 보통 갈래는 2278줄의 `exc.DBAPIError.instance(… hide_parameters=self.engine.hide_parameters, …)`였다(`grep -n hide_parameters`로 자리를 찾았다). 명세가 2257줄만 든 것을 "2278줄(보통 갈래)과 2257줄"로 고쳤다.
