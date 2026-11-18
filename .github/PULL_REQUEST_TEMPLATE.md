@@ -29,7 +29,7 @@
 ### 올릴 때 운영자가 손댈 것
 
 <!-- 이 변경을 올리는 운영자가 자기가 쥔 것(설정, 환경 변수, 데이터, 플러그인 코드)을 고쳐야 하거나, 손대지 않으면 올린 뒤 동작이 멈추면 무엇을 무엇으로 바꾸는지 적는다. 없으면 "없음".
-     있으면 PR 제목 접두에 느낌표를 붙이고(`feat!: …`) `docs/release-notes/upgrade/<이름>.md`를 새로 싣는다. 기준은 `docs/constitution/operations.md`의 "릴리스 노트 조각". 노트 검사(`tools/check_notes.py`)가 느낌표와 그 파일의 짝을 CI에서 본다 -->
+     있으면 PR 제목 접두에 느낌표를 붙이고(`feat!: …`) `docs/release-notes/upgrade/<이름>.md`를 새로 싣는다. 기준은 `docs/constitution/operations.md`의 "릴리스 노트 원고". 노트 검사(`tools/check_notes.py`)가 느낌표와 그 파일의 짝을 CI에서 본다 -->
 
 ## 변경된 영역
 
