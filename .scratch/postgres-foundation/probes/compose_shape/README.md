@@ -91,7 +91,7 @@ TCP 꼴에서 `healthy`는 다른 컨테이너가 이미 접속할 수 있게 �
 | 4다 serve가 떠 있는 채 `ALTER ROLE`을 먼저 | 4초 동안 이미 맺은 접속의 줄은 +9, 새 접속의 줄은 +0이었다(serve 로그에 인증 실패 문구). 이어서 `.env`를 고치고 `up -d --wait`하면 셋이 다시 만들어지고 모두 정상이었다 | 프로브가 다시 낸다 |
 | 4라 `pg_hba.conf`와 비밀번호 저장 | 로컬 소켓 `trust`, `127.0.0.1/32`와 `::1/128` `trust`, 그 밖의 TCP `scram-sha-256`. `password_encryption`은 `scram-sha-256`이고 저장된 값은 `SCRAM-SHA-256`으로 시작한다. `log_statement`는 `none` | 프로브가 다시 낸다 |
 | 4라 `ALTER ROLE`의 비밀번호가 PostgreSQL 로그에 남는가 | 성공한 `ALTER ROLE` 두 번의 비밀번호는 로그에 없었다. 문법이 틀려 실패한 문장은 `STATEMENT:  ALTER ROLE agent_os PASSWORD 'ctl-…' BOGUS`로 비밀번호째 남았다(`log_min_error_statement`가 `error`) | 프로브가 다시 낸다 |
-| 4마 제안하는 절차(`change_password.sh`를 Git Bash로 한 줄씩) | 세 줄의 종료 코드 [0, 0, 0]. 첫 줄 뒤에도 migrate와 serve는 건드려지지 않았다. 마지막에 migrate 종료 0, serve `healthy`, 넣어 둔 줄이 남았고 새 비밀번호는 로그에 없었다. serve의 새 접속 줄 사이의 가장 긴 틈은 2.7초였다 | 프로브가 다시 낸다. 앞선 두 실행에서 같은 틈은 5.7초와 6.8초였다(원본 출력을 손으로 봤다) |
+| 4마 제안하는 절차(`change_password.sh`를 Git Bash로 한 줄씩) | 세 줄의 종료 코드 [0, 0, 0]. 첫 줄 뒤에도 migrate와 serve는 건드려지지 않았다. 마지막에 migrate 종료 0, serve `healthy`, 넣어 둔 줄이 남았고 새 비밀번호는 로그에 없었다. serve의 새 접속 줄 사이의 가장 긴 틈은 2.7초였다 | 프로브가 다시 낸다. 값은 둘째 줄을 `\getenv`로 바꾼 뒤의 실행(아래 "다시 돌리기"의 마지막 항목)의 것이다. 바꾸기 전 판의 마지막 전체 실행도 [0, 0, 0]과 2.7초였고, 그 앞의 두 실행에서 같은 틈은 5.7초와 6.8초였다(원본 출력을 손으로 봤다) |
 
 ### 5. 변수 치환과 `.env`
 
@@ -164,11 +164,11 @@ volumes:
 
 ```bash
 docker compose up -d --wait postgres
-echo "ALTER ROLE agent_os PASSWORD :'new'" | docker compose exec -T postgres sh -c 'psql -U agent_os -d agent_os -v ON_ERROR_STOP=1 -v new="$POSTGRES_PASSWORD"'
+printf '%s\n' '\getenv new POSTGRES_PASSWORD' "ALTER ROLE agent_os PASSWORD :'new'" | docker compose exec -T postgres psql -U agent_os -d agent_os -v ON_ERROR_STOP=1
 docker compose up -d --wait --wait-timeout 600
 ```
 
-첫 줄은 PostgreSQL 컨테이너만 새 `.env`로 다시 만든다(데이터베이스의 비밀번호는 아직 옛것이고, `migrate`와 `serve`는 건드리지 않는다). 둘째 줄은 그 컨테이너 안에서 새 값(`$POSTGRES_PASSWORD`)으로 계정의 비밀번호를 바꾼다. 컨테이너 안의 유닉스 소켓은 `trust`라 옛 비밀번호를 묻지 않고, 새 값은 호스트의 명령줄과 PostgreSQL 로그에 남지 않는다. 셋째 줄은 `migrate`와 `serve`를 새 연결 문자열로 다시 만든다. 둘째 줄이 끝난 뒤부터 셋째 줄이 `serve`를 다시 띄울 때까지 옛 `serve`의 새 접속은 인증에 실패한다.
+첫 줄은 PostgreSQL 컨테이너만 새 `.env`로 다시 만든다(데이터베이스의 비밀번호는 아직 옛것이고, `migrate`와 `serve`는 건드리지 않는다). 둘째 줄은 그 컨테이너 안에서 새 값으로 계정의 비밀번호를 바꾼다. psql이 그 값을 컨테이너의 환경 변수 `POSTGRES_PASSWORD`에서 `\getenv`로 읽으므로, 운영자가 치는 명령줄에도 psql 프로세스의 인자에도 값이 실리지 않는다(명령의 글에 값이 없다). 컨테이너 안의 유닉스 소켓은 `trust`라 옛 비밀번호를 묻지 않고, 새 값은 PostgreSQL 로그에 남지 않았다(4마). 앞선 판의 절차는 값을 `sh -c '… psql -v new="$POSTGRES_PASSWORD"'`로 넘겨 psql 프로세스의 인자에 실었고, PR 직전 리뷰가 짚어 바꿨다. 셋째 줄은 `migrate`와 `serve`를 새 연결 문자열로 다시 만든다. 둘째 줄이 끝난 뒤부터 셋째 줄이 `serve`를 다시 띄울 때까지 옛 `serve`의 새 접속은 인증에 실패한다.
 
 ## 받아 읽은 원문(5번)
 
@@ -196,6 +196,7 @@ uv run python .scratch/postgres-foundation/probes/compose_shape/run.py
 - 필요한 것: Docker Engine과 Compose 플러그인, 로컬에 이미 받아 둔 `postgres@sha256:b9f6b8ff…be553`. 이미지가 없으면 받지 않고 종료 1로 멈춘다. 호스트 포트는 열지 않는다. compose 프로젝트 이름은 `pgf-shape-<무작위>-<회차>`이고, 이 실행이 만든 프로젝트만 `down -v`로 지우고 끝에 남은 것이 없는지 본다(남으면 측정 아님으로 센다).
 - 걸린 시간: 마지막 실행(원본 출력 폴더 `run-20261118-163425-b6e060`)은 16:34:25에 시작해 16:43:19에 끝났다(약 9분, 108회차, 측정 아님 0회차, 종료 0). 그 바로 앞의 실행도 약 11분이었다.
 - 그 뒤 명세의 셀프 리뷰가 배포 안내 9절의 명령을 짚어 5마를 더하고 `--sections 5`로 5번만 다시 돌렸다(원본 출력 폴더 `run-20261118-180923-713484`, 약 1분, 39회차, 측정 아님 0회차, 종료 0). 5마의 값은 이 실행의 것이고, 5번의 나머지 회차도 이 실행에서 위 표와 같은 값을 다시 냈다. 5마의 셸 값 `pull`은 레지스트리에 닿는다(이미 받은 digest라 새로 받은 층은 없다). 5마의 표지는 실행 전에 같은 꼴의 compose 파일 하나로 두 명령의 출력을 손으로 보고 골랐다(세션 스크래치패드의 스크립트, 커밋하지 않았다).
+- 그 뒤 PR 직전 리뷰(CodeRabbit CLI)가 4마의 둘째 줄이 새 비밀번호를 psql 프로세스의 인자에 싣는다고 짚어, `change_password.sh`의 둘째 줄을 `\getenv`로 바꾸고 `--sections 4`로 4번만 다시 돌렸다(원본 출력 폴더 `run-20261118-193353-4b48d5`, 19:33:53에 시작해 19:34:51에 끝났다, 측정 7회차, 측정 아님 0회차, 종료 0). 4마의 값(세 줄의 종료 코드 [0, 0, 0], 첫 줄 뒤에 migrate와 serve가 그대로, 가장 긴 틈 2.7초, 새 비밀번호는 로그에 없음)은 이 실행의 것이고, 4번의 나머지 회차도 이 실행에서 위 표와 같은 값을 다시 냈다.
 - 종료 코드는 표지가 서지 않은 회차가 하나라도 있으면 1이다(`tools/probe_kit.py` `Rounds`).
 - 타입 검사: `uv run pyright -p .scratch/postgres-foundation/probes/compose_shape`(이 폴더의 `pyrightconfig.json`, strict).
 

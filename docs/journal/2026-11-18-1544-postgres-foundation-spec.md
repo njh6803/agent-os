@@ -205,3 +205,72 @@ PR 직전 리뷰에 밀 주장(반영으로 새로 쓴 사실 문장, 명세의 
 9. 389줄의 두 주소가 `serve`에서 1과 그 글로 끝나고 표준 오류에 `secret`, `leak`가 없다는 사례, 391줄의 "다섯 줄(시작 알림 둘, 글의 두 줄, 시작 실패 한 줄)".
 10. Out of Scope의 diag-bundle 항목과 `.scratch/diag-bundle/plan.md`의 같은 문단: "`serve`는 연결 문자열이 없거나 읽지 못하면 1로, 데이터베이스에서 멈추면 3으로 끝나고, `migrate`는 멈출 때 늘 1이다."
 11. "러너가 테스트 컨테이너를 띄우는 길"의 마지막 항목과 "저장소 상태 시험"의 셋째 항목(배포 안내 7절의 두 전제).
+
+## 커밋
+
+반영 뒤 `git merge --ff-only origin/dev`로 `f131900`(PR 605)을 따라잡았다. 그 커밋은 이 브랜치가 고친 파일을 건드리지 않았고, 명세가 따르는 용어 여섯은 용어집에 그대로 있으며, 바뀐 옛 이름 여섯은 이 브랜치의 문서에 없었다(grep). `uv run python tools/plan_table.py`는 `.scratch/plan.md`를 바꾸지 않았고, `uv run python tools/sibling_overlap.py`는 번호 겹침과 함께 고친 파일이 없다고 했다. 위 "검사"의 둘째 시도로 커밋했다(pre-commit 통과, `Skipped`는 커밋에 든 파일이 없는 카나리아 명세와 헌법 판 둘). 푸시하지 않았다.
+
+## 인계(커밋 뒤)
+
+세션 컨텍스트가 인계 문턱을 넘은 채 커밋 뒤에 와서 `hook_handoff`의 계기가 들어왔다. `handoff.md` 1의 인계하지 않는 다섯 경우에 들지 않는다. 이 세션의 지시문의 "이어받을 상태"는 `인계: 셀프 리뷰 직전`으로 시작해 이번 경계와 다르고, 요청 범위는 병합까지이며, `get_session`의 `self`에 `parentSessionId`가 없다. 이 브랜치에 열린 PR이 없어(`gh pr view`가 `no pull requests found`) "다음 단계"는 이 세션의 지시문 그대로다. 이 세션의 지금 제목은 `docs/postgres-foundation-spec`이다.
+
+```
+다음 작업: 기능 postgres-foundation. ADR 0066이 정한 설계로 쓴 명세를 PR로 열고 병합한다
+다음 단계: 명세
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /to-spec
+브랜치: docs/postgres-foundation-spec
+모델: Opus 5.5 / xhigh. 2의 잇는 지시문은 명세의 Fable 칸(메뉴 이름 Fable 5.2) / xhigh이지만, 앞 세션의 측정 도중 Fable 사용 한도(HTTP 429)에 걸려 사용자가 모델을 Opus 5.5로 바꿨으므로 그 값을 잇는다
+읽을 것: 일지 docs/journal/2026-11-18-1544-postgres-foundation-spec.md의 "## 셀프 리뷰"부터 끝까지(특히 "### 반영"의 "PR 직전 리뷰에 밀 주장")
+이어받을 상태: 인계: 커밋 뒤. 셀프 리뷰를 반영해 커밋했고 푸시하지 않았으며 PR이 없다. 남은 단계는 PR 직전 리뷰(docs/constitution/operations.md 리뷰 파이프라인 2. 브리프에 일지 "### 반영"의 "PR 직전 리뷰에 밀 주장" 열하나를 나열한다), 그 반영 뒤 명세 머리의 셈 넷(사용자가 고른 것, 명세가 정한 것, 이력, 거부한 안) 다시 세기, 푸시와 PR 열기, 봇 회차, 병합이다. 반영이 ADR 0066의 문장을 거짓으로 만들면 domain-modeling을 부르고 이력과 포인터를 쓴 뒤 사용자 승인을 받는다. 일지의 "## 커밋"부터 끝까지는 커밋하지 않은 채 워크트리에 있고, "## 다음"이 없다. docs/journal/2026-11-18-1544-postgres-foundation-spec.md
+확인할 선행 조건: 없음
+이번 요청 범위: PR과 병합까지
+```
+
+제목을 `docs/postgres-foundation-spec (인계함)`으로 바꿨다. 남은 백그라운드 작업은 없었고(커밋 둘은 끝났다), 워크트리의 잠금은 이미 풀려 있었다(`is not locked`).
+
+open-session을 부른다 2026-11-18T10:09:45Z
+
+`open_session.ps1 -Action send`가 `idle=0s`, `lock=19:12:51.612 waited=0s`, `start=.claude/skills/to-spec/SKILL.md`, `fired=19:12:55.012`까지 찍은 뒤 "30초 안에 프롬프트 첫 줄('.claude/skills/to-spec/S…')이 채워진 새 세션 화면 을(를) 찾지 못했다."로 종료 1이 났다(`page=` 없음). 곧바로 본 `list_sessions`에 그 시각 뒤에 생긴 세션은 없었고, `.scratch/harness/probes/deeplink_timeline.ps1`은 아무것도 찍지 않았다. 쏜 뒤의 멈춤이라 같은 파일로 다시 돌리지 않았다(open-session "막히면"). 제목을 `docs/postgres-foundation-spec`으로 되돌리고 이 세션에서 다음 단계(PR 직전 리뷰)를 잇는다.
+
+인계 못함 커밋 뒤
+
+## PR 직전 리뷰
+
+기준은 `f131900726cc247c000bfc46f152f9d01fcd3376`(`origin/dev`와의 merge-base. fetch 뒤 `origin/dev`는 움직이지 않았다)이다. `coderabbit-review`(CLI)와 `bug-perf-review`를 나란히 띄웠다. CLI에는 밀 주장을 넘길 길이 없어(code-review 6단계 1), 위 "PR 직전 리뷰에 밀 주장" 열하나와 Compose 명세·Docker 문서·compose-go의 주소와 README가 적은 요지는 `bug-perf-review`의 브리프에 실었다. 보안은 CLI가 돌면 CLI가 보고, 돌지 못하면 커밋 뒤 `/security-review`로 본다.
+
+`bug-perf-review`의 보고(호출 24번, 범위 파일 약 열을 따라갔다. 일지와 프로브 스크립트 전체는 따라가지 못했다): 밀 주장 열하나가 모두 근거와 맞았다. 1은 compose-go 정규식을 불러 `:-`, `-`, `:?`, `?`, `:+`, `+`는 맞고 `#`, `%`, `/`, `:0:6`은 안 맞는 것을, 2는 `make_url`로 다섯이 모두 `@` 둘이고 자리를 다르게 읽으며 `@` 하나인 넷은 자리가 같은 것을 대 봤다. 지적은 셋이다.
+
+- 유효 Minor: 명세 "러너가 테스트 컨테이너를 띄우는 길"(313~315줄)의 `docker compose -f compose.test.yaml up -d --wait`와 접속 확인에 제한 시간이 없다. 컨테이너가 `healthy`가 되지 못하면 `--wait`가 끝없이 기다려 pre-commit이 pytest를 띄우기 전에 멈추고, 명세대로 지으면 `tools/check_instructions.py`의 `calls_without_timeout`에도 걸린다(`.claude/rules/tools.md`의 기다리는 도구 항목).
+- 유효 Minor: 명세 158줄의 "접속을 받기까지 2.91·3.18초"는 restart_recover README 항목 3이 잰 ready까지의 값이고, 그 README 77줄은 TCP 첫 성공이 ready보다 0.04~2.75초 늦을 수 있다고 적는다.
+- 보류: 명세 156줄의 "전원 끊김 뒤 PostgreSQL이 복구에 몇 초를 써 5.09초까지 갔다"에서 5.09초는 README 43·74줄에 있지만, 그 값이 전원 끊김에서 나왔고 복구 때문이라는 귀속을 README에서 찾지 못했다.
+
+판정과 고친 것(`bug-perf-review`):
+
+- 러너의 제한 시간(유효 Minor): 고쳤다. 접속 확인은 5초(`serve`가 시도 하나에 거는 값), 명령은 `docker compose -f compose.test.yaml up -d --wait --wait-timeout 60`, 그 호출에 180초의 제한 시간을 두고, 0이 아닌 종료나 제한 시간 넘김을 띄우기 실패로 센다고 적었다. 60초는 단독 compose의 꼴에서 빈 볼륨의 PostgreSQL이 4.55초에 정상이었던 것(compose_shape README 3나)의 열 배를 넘는 값이다. `--wait-timeout`이 없을 때 끝없이 기다린다는 것, 그 옵션이 이미지 받기를 막지 않는다는 것, 180초가 이미지 받기를 담는다는 것은 어림으로 적었다. 러너의 판정 목록에도 제한 시간 넘김을 더했다. ADR 0066은 "답하지 않으면 띄우고 내리지 않는다"까지만 정하므로 거짓이 되지 않는다.
+- 158줄(유효 Minor): 2.91·3.18초는 `restart_recover/run.py` 1306~1307줄이 찍는 "죽은 때부터 ready"다. 문장을 "PostgreSQL 프로세스가 죽은 때부터 접속을 받는다는 기록(`database system is ready to accept connections`)이 찍히기까지"로 고치고, 다른 컨테이너의 새 접속이 그 기록보다 0.04~2.75초 늦게 처음 됐다는 것(그 README "시간의 분포" 아래 넷째 항목)을 더했다. 30초는 "잰 가장 긴 값에 그 늦음을 더해도 10초가 안 되어 30초는 그 세 배쯤"으로 고쳤다.
+- 156줄(보류): 오탐으로 판정했다. 귀속은 그 README "시간의 분포" 아래 둘째 항목(75줄)에 있다. 긴 값은 전원 끊김의 N=30 두 회차에서 났고, 그 회차의 PostgreSQL이 `database system was interrupted` 뒤 복구에 몇 초를 썼다. 따라가기 쉽게 명세에 그 출처와 4.41·3.57초를 붙였다.
+
+`coderabbit-review`의 보고: CLI 0.7.5, `Plan: Free`, `Seat: not assigned`에서 `coderabbit review --agent --include-untracked --base origin/dev`가 파일 58개를 끝까지 봤다(`review_completed`). 지적 넷을 CLI가 모두 Critical로 매겼고, 서브에이전트는 고유한 문제 둘로 묶어 Minor로 트리아지했다.
+
+- 유효 Minor(CLI 지적 1·2·4): `.scratch/postgres-foundation/probes/compose_shape/change_password.sh` 4줄, 그 README 167줄, 명세 251줄의 비밀번호 바꾸기가 `ALTER ROLE ... PASSWORD :'new'`를 SQL 문장으로 보내, 문장이 틀려 실패하면 PostgreSQL 기록에 비밀번호가 평문으로 남는다. 명세 257줄이 이 위험을 이미 적었다. 다만 명세 255줄과 README 171줄의 "명령줄에 나오지 않는다"는 호스트 쪽 이야기이고, `-v new="$POSTGRES_PASSWORD"`는 컨테이너 안 psql 프로세스의 인자라 컨테이너 안에서는 보인다. CLI가 권한 `\password`는 대화형 입력이 필요해 `exec -T` 절차와 맞지 않는다.
+- 보류 Minor: 명세 183줄의 `migrate` 실패가 역추적을 표준 오류에 그대로 찍는데, 예외 체인에 바인드 값이나 드라이버 문구가 실려 비밀이 새는지 판정하지 못했다. 첫 티켓의 시험에 합성 비밀번호로 역추적을 일부러 내고 표준 오류에 그 값이 없는지 보는 줄을 더하자고 제안했다.
+
+판정과 고친 것(`coderabbit-review`):
+
+- 비밀번호 바꾸기(유효 Minor, CLI의 Critical은 과하다): 고쳤다. 기록에 남는 위험은 명세 257줄이 이미 적었지만, 앞선 둘째 줄은 `sh -c`가 펼친 값을 psql 프로세스의 인자(`new=<값>`)에 실었다. 리눅스 서버에서는 컨테이너의 프로세스도 호스트의 프로세스 목록에 보이므로 그 순간 같은 서버의 다른 사용자가 볼 수 있다고 본다(어림). 둘째 줄을 `printf '%s\n' '\getenv new POSTGRES_PASSWORD' "ALTER ROLE agent_os PASSWORD :'new'" | docker compose exec -T postgres psql -U agent_os -d agent_os -v ON_ERROR_STOP=1`로 바꿔 psql이 컨테이너의 환경 변수에서 값을 읽게 했다(명세 251·255줄, compose_shape README 167·171줄, `change_password.sh` 4줄). `compose_shape/run.py --sections 4`를 다시 돌려(원본 출력 `run-20261118-193353-4b48d5`, 측정 7, 측정 아님 0, 종료 0) 4마가 세 줄 [0, 0, 0], 첫 줄 뒤 `migrate`와 `serve` 그대로, 새 비밀번호만 받음(측정 표지), 가장 긴 틈 2.7초, 새 비밀번호는 기록에 없음을 냈다. 4번의 나머지 회차도 README 표와 같은 값이었다(4라의 접속 규칙과 `SCRAM-SHA-256`, `none`, `error`를 회차 기록에서 봤다). 앞선 절차와 CLI가 권한 `\password`(손으로 두 번 쳐야 해 붙여 넣는 절차가 되지 않고 `.env`와 어긋날 수 있다)를 같은 문단의 거부한 안으로 더했다.
+- `migrate`의 역추적(보류 Minor): 고쳤다. 명세 186줄에 그 역추적에 연결 문자열이 비밀번호째 실리지 않는지는 Testing Decisions의 셋째가 본다고 적고(원칙 V), 셋째 이음매의 실패하는 마이그레이션 사례에 "역추적까지 든 표준 오류에 연결 문자열이 비밀번호째(`agent_os:agent_os@`) 나오지 않는다"를 더했다. 테스트 컨테이너의 비밀번호가 계정 이름과 같은 `agent_os`라 주소의 꼴로 본다.
+
+셈 넷을 다시 셌다. 넘겨받은 표 서른 행, "명세가 정했다"는 절 머리 스물, "사용자가 골랐다"는 본문 세 자리(383·391·392줄), 이력 없음은 그대로다. 거부한 안은 아홉 문단 그대로이고 안이 열여덟에서 스물로 늘어 머리를 고쳤다. ADR 0066을 거짓으로 만든 자리는 이번 반영에도 없다. ADR은 비밀번호를 바꾸는 명령의 꼴을 정하지 않고, 러너는 "답하지 않으면 띄우고 내리지 않는다"까지만 정한다.
+
+### 늦게 생긴 같은 지시문의 세션
+
+커밋 직전에 다른 세션(`local_e12ca7e3-3d06-4b8f-bd0a-81ef01d59dc2`, `createdAt` 2026-11-18T10:22:23Z, Opus 5.5 / xhigh)이 메시지로 알려 왔다. 같은 지시문으로 열린 그 세션이 10:22Z에 이 워크트리에 들어와(`EnterWorktree(path)`) 스킬과 일지를 읽은 뒤, 파일 쓰기·커밋·푸시 없이 사람에게 어느 세션이 이어 갈지 물었고, 사람이 "앞 세션이 계속 (Recommended)"을 골랐다고 한다. 그 세션이 옮긴 선택지의 설명은 "앞 세션은 10:25Z 현재 명세와 일지에 bug-perf-review의 지적 셋을 반영하는 중입니다(일지가 몇 분 사이 247줄에서 252줄로 늘었습니다). 함께 띄운 CodeRabbit 결과는 일지에 없어서, 그 세션이 기다리거나 들고 있다고 봅니다(어림). 이 세션은 아무것도 고치지 않고 여기서 멈춥니다."다. 그 세션은 제목을 `docs/postgres-foundation-spec (중복, 멈춤)`으로 바꿨다(`get_session`으로 봤다). 이 세션은 PR과 병합까지 잇는다.
+
+그 세션이 10:12:55의 `fired=` 뒤 약 9분 반 만에 늦게 닿은 딥링크가 만든 것인지, 사람이 따로 연 것인지는 가르지 못했다. 앞의 것이면 `open_session.ps1`이 `page=`를 찾지 못하고 멈춘 열기도 뒤에 세션을 만들 수 있다는 것이고, open-session "막히면"의 "`page=`나 `sent=`가 안 나올 때"에 그 갈래가 없다. 회고 후보로 넘긴다. 그 세션이 `EnterWorktree`로 이 워크트리를 잠갔을 수 있어, 병합 뒤 `tidy-checkouts`가 이 워크트리를 남길 수 있다.
+
+## 커밋(PR 직전 리뷰 반영)
+
+첫 시도는 pre-commit의 pytest(625.7초)에서 `tests/tools/test_rerun_runner.py::test_파일럿에서는_인계로_멈추지_않는다` 하나가 `assert board.run() == 0`의 `1 == 0`으로 막혔다. 나머지 검사(pyright, 경계, 지침, 타입 우회, 훅 러너, web-verify 746.9초 등)는 통과했다. 이 커밋은 그 시험이 닿는 `tools/`를 건드리지 않는다. 그 시험 하나만 따로 돌리면 통과했고(4.08초), 그 파일 전체를 `-n 8`로 돌려도 63개가 모두 통과했다(159.69초). pre-commit 안에서 web 검사와 함께 돌던 부하 때문에 한 번 흔들린 것으로 본다(어림. 까닭은 가르지 않았다). 같은 시험이 두 번 연속 실패하지 않았으므로 diagnosing-bugs는 부르지 않고 다시 커밋한다. 회고 후보로 넘긴다. 인용 대조가 짚은 이 일지의 인용 하나(30초 문장)를 명세 원문 그대로 고쳤다.
+
+둘째 시도(같은 스테이지에 이 일지만 더했다)는 pytest(1214.4초, 평소의 여섯 배쯤)에서 다른 시험 하나가 막혔다. `tests/channel/cli/test_interrupt.py::test_닫는_도중에_한_번_더_누르면_닫기를_기다리지_않고_끝난다`가 "Ctrl+C 를 누른 자식이 30초 안에 끝나지 않았다"로 실패했고, 나머지 7817개는 통과했다. 그 파일만 따로 돌리면 6개가 모두 통과했다(113.65초). 첫 시도에서 막힌 시험은 둘째 시도에서 통과했고, 둘째 시도에서 막힌 시험은 첫 시도에서 통과했다. 두 시험 모두 시간 제한을 두고 자식 프로세스를 기다리는 시험이라, 다른 세션들이 함께 돌아 PC에 부하가 큰 탓으로 본다(어림. 까닭은 가르지 않았다). 같은 시험이 연달아 실패하지 않았으므로 diagnosing-bugs는 부르지 않는다. 다시 돌려도 또 다른 시험이 흔들릴 수 있어, 셋째 시도는 `SKIP=pytest`로 pytest만 뺀다. 손으로 친 pytest는 위의 따로 돌린 두 파일과, 둘째 시도의 7817개 통과다. pytest 전체는 CI의 `python` 잡이 한 프로세스로 다시 돌린다.
