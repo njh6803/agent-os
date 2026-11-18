@@ -292,7 +292,8 @@
 
 - 전체 검사(`uv run python tools/run_checks.py`). 셀프 리뷰를 반영하기 전의 작업 트리에서 종료 코드 0으로 끝났다. 열한 줄이 모두 `Passed`였다(check-ticket, check-notes, lint-imports, zizmor, check-instructions, check-type-escapes, pyright, pyright-linux, run-hooks, pytest 551.7초, web-verify 651.8초).
 - 린트. `uv run ruff check .`은 "All checks passed!", `uv run ruff format --check .`은 "2421 files already formatted"였다. 이 커밋에는 스테이지된 `.py`가 없어 pre-commit의 ruff가 `Skipped`이므로 손으로 친 이 결과가 판정이다.
-- 셀프 리뷰를 반영하며 바뀐 것은 마크다운뿐이다(티켓, 대기열 항목, 기능 계획 둘, 이 일지). 그 뒤의 손으로 치는 다섯은 커밋이 부르는 pre-commit의 결과로 갈음하고, 그 결과는 PR 본문에 적는다.
+- 셀프 리뷰를 반영하며 바뀐 것은 마크다운뿐이다(티켓, 대기열 항목, 기능 계획 둘, 이 일지). 그 뒤의 손으로 치는 다섯은 커밋이 부르는 pre-commit의 결과로 갈음했다. 커밋 `e45ce1633`의 pre-commit에서 열한 줄이 모두 `Passed`였다(check-notes, check-ticket, zizmor, lint-imports, check-instructions, check-type-escapes, pyright-linux, pyright, run-hooks, pytest 474.7초, web-verify 551.7초). 마크다운 표, 줄 구분 문자, 변이 표 검사도 `Passed`였고, ruff 둘과 카나리아 명세 검사, 헌법 버전 검사는 볼 파일이 없어 `Skipped`였다.
+- 그 커밋의 인용 대조(막지 않는 경고)가 일곱 건을 냈다. 하나는 고쳤다. 티켓 15행이 따옴표로 든 "칸 이름은 명세의 새 이름으로 짓는다"가 `portal-admin` 기능 계획에 실제로 적은 문장과 글자가 달라 따옴표를 뗐다. 나머지 여섯은 저장소 밖의 글(개인 출력 스타일의 옛 문장과 새 문장, 선택 화면의 문구 셋, ruff의 출력)을 옮긴 것이라 저장소에 원문이 없는 것이 맞다.
 
 ## rag-engine에 줄 지시문 (이름 바꾸기 결정)
 
@@ -453,3 +454,18 @@ agent-os의 결정이 이 말들까지 정한 것은 아니다. 이름마다 "�
 
 1절의 이름이 용어집과 살아 있는 글에서 새 이름으로 바뀌었고, 남은 옛 이름은 용어집의 피할 말 줄, 기록, ADR 결정의 제목을 든 곳뿐이다. 3절은 사용자가 고른 것만 바뀌었다. 일지에 사용자가 고른 것, 바꾸지 않고 남긴 이름과 그 까닭, 다시 센 수가 남았다.
 ````
+
+## PR 직전 리뷰 (`coderabbit-review`)
+
+커밋 `e45ce1633`을 기준 커밋 `e35c5723a` 뒤의 변경으로 리뷰했다. CodeRabbit CLI 0.7.5가 끝까지 돌았고(종료 코드 0, 리뷰한 파일 22개) 지적은 0건이었다. 그 계정의 상태는 `Plan: Free`, `Seat: not assigned`였다.
+
+서브에이전트가 브리프의 네 물음에 따로 답한 것.
+
+- TypeScript 여섯 파일. `git diff -U0`으로 줄마다 봤고, 바뀐 것은 주석 4곳과 시험 이름 문자열 4곳뿐이다. 식별자, 값, 단언은 그대로이고 `assurance` 키도 그대로다.
+- 시험을 이름으로 고르는 설정. 바뀐 시험 이름을 고르는 `-g`, `-t`, `--grep` 설정과 변이 표의 줄이 저장소에 없다. `web` 아래에 스냅샷 파일도 없다. 끝난 기능 `pilot-portal`의 변이 표가 `-g`로 고르는 e2e 시험 이름은 이번에 바뀐 이름과 겹치지 않는다.
+- 마크다운. 이 일지의 네 겹 백틱 블록 안에 백틱 세 개 이상으로 시작하는 줄이 없고, 블록 안의 표 둘은 구분선과 열 수가 맞는다. 받침에 맞지 않는 조사는 일지를 뺀 저장소 전체에서 찾지 못했다.
+- 비밀 값. 일지, 티켓, 대기열 항목 둘에 키, 토큰, 비밀번호, 이메일, 서버 주소가 없다. 일지에 이 PC의 폴더 경로(`C:\project\rag-engine`)가 있지만 비밀은 아니다.
+
+Nit 하나. 끝난 기능 `pilot-portal`의 변이 표 머리 주석과 프로브 README에 옛 이름이 남아 있다. 티켓이 바꾸지 않기로 한 기록이라 그대로 둔다.
+
+고친 것은 없다. 남긴 것은 위 Nit 하나이고 이유는 기록이기 때문이다. 이 리뷰 뒤에 바뀐 것은 티켓의 따옴표 하나(위 "검증")와 이 일지뿐이다.
