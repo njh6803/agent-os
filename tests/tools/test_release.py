@@ -181,7 +181,7 @@ def test_제품_경로를_고치지_않은_커밋만_있으면_판을_내지_않
     repo.product("feat: 첫 기능 (#1)")
     repo.tag("v0.1.0")
     repo.commit("feat: 문서에만 닿는다 (#2)", {"docs/guide.md": "g", "tools/x.py": "x"})
-    repo.commit("fix: 노트 조각만 더한다 (#3)", {"docs/release-notes/features/a.md": "단락"})
+    repo.commit("fix: 릴리스 노트 원고만 더한다 (#3)", {"docs/release-notes/features/a.md": "단락"})
     plan = plan_release(repo.path)
     assert plan.release is False
     assert plan.number is None
@@ -568,7 +568,7 @@ def test_범위_안에서_이름을_바꾼_기능_조각은_바꾼_뒤의_이름
         "feat: 베타를 더한다 (#2)", {"docs/release-notes/features/beta.md": "베타 단락이다.\n"}
     )
     repo.git("mv", "docs/release-notes/features/beta.md", "docs/release-notes/features/gamma.md")
-    repo.commit("docs: 베타 조각의 이름을 바꾼다 (#3)")
+    repo.commit("docs: 베타 원고의 이름을 바꾼다 (#3)")
     assert "## 기능 소개\n\n베타 단락이다.\n" in render_notes(repo.path, "0.2.0")
 
 
@@ -578,7 +578,7 @@ def test_범위_밖에서_더해진_조각은_범위_안에서_이름을_바꿔�
     )
     repo.tag("v0.1.0")
     repo.git("mv", "docs/release-notes/features/alpha.md", "docs/release-notes/features/delta.md")
-    repo.commit("docs: 알파 조각의 이름을 바꾼다 (#2)")
+    repo.commit("docs: 알파 원고의 이름을 바꾼다 (#2)")
     repo.product("feat: 다음 기능 (#3)")
     notes = render_notes(repo.path, "0.2.0")
     assert "알파 단락" not in notes

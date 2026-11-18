@@ -534,9 +534,9 @@ def test_할_일_폴더_아래의_하위_폴더_파일과_md가_아닌_파일도
     # 판 내기가 그 폴더 아래에 더한 파일을 모두 노트에 싣기 때문이다
     out = _막혔다(저장소.ci("feat: 바뀐다", files={f"{UPGRADE}/{name}": UPGRADE_TEXT}), PR_BLOCKED)
     assert f"{UPGRADE}/{name}" in out
-    # 느낌표를 붙여 (가)를 채워도 (다)가 조각이 아닌 파일로 막는다
+    # 느낌표를 붙여 (가)를 채워도 (다)가 원고가 아닌 파일로 막는다
     out = _막혔다(저장소.ci("feat!: 바뀐다", files={"src/app.py": "A = 2\n"}), PR_BLOCKED)
-    assert "할 일 조각이 아니다" in out
+    assert "할 일 원고가 아니다" in out
     assert f"{UPGRADE}/{name}" in out
 
 

@@ -402,7 +402,7 @@ jobs:
           marker=$(uuidgen)
           echo "::stop-commands::$marker"
           python3 tools/check_ticket.py --ci
-      # 노트 검사(tools/check_notes.py)가 PR 전체의 변경을 본다. PR 제목의 꼴, 느낌표와 upgrade/ 조각의 짝, 기능 단락의
+      # 노트 검사(tools/check_notes.py)가 PR 전체의 변경을 본다. PR 제목의 꼴, 느낌표와 upgrade/ 원고의 짝, 기능 단락의
       # 빠뜨림과 모양이다. 판정과 입력은 그 도구의 독스트링이 원천이다. 앞 스텝이 빨강이어도 돌아 두 결과를 함께 보인다.
       # PR 제목은 사람이 고치는 값이라 식으로 run 에 펼치지 않고 env 로만 넘긴다(zizmor 의 템플릿 주입 판정, ADR 0027).
       # 제목만 고친 실행은 pr-title.yml 이 맡는다(이 워크플로는 edited 에 돌지 않는다).
