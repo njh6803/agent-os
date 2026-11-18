@@ -1,0 +1,7 @@
+{
+  "include": ["proto", "control", "run.py", "serve_stub.py"],
+  "exclude": ["**/__pycache__"],
+  "pythonVersion": "3.12",
+  "typeCheckingMode": "strict",
+  "extraPaths": [".", "../../../.."]
+}

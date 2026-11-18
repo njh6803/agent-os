@@ -1,0 +1,15 @@
+# 장난감 시험 묶음의 pytest 설정. 저장소 루트 pyproject.toml 의 [tool.pytest.ini_options] 에서 이 측정에
+# 걸리는 줄을 옮겼다. 뺀 것은 LLM 마커 넷과 그것을 고르는 -m 뿐이다(장난감에는 그런 시험이 없다).
+# 이 파일에는 [project] 도 [tool.ruff] 도 없다. ruff 는 [tool.ruff] 가 없는 pyproject.toml 을 설정으로
+# 읽지 않으므로 저장소 루트의 ruff 설정이 이 폴더에도 그대로 걸린다.
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+# 저장소처럼 뿌리를 경로에 둔다. 시험이 공용 도우미를 `from tests.database import …` 로 가져온다
+pythonpath = ["."]
+addopts = "--import-mode=importlib --strict-markers"
+disable_test_id_escaping_and_forfeit_all_rights_to_community_support = true
+asyncio_mode = "auto"
+filterwarnings = [
+    "error::RuntimeWarning",
+    "error::pytest.PytestUnraisableExceptionWarning",
+]
