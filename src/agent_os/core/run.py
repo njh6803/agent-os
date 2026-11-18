@@ -1526,9 +1526,9 @@ def read_own_run(
     열 에이전트 밖의 메시지는 없는 실행의 것과 글자 그대로 같고, 다른 주체의 메시지는 실행을 들되
     그 실행의 주체 이름을 들지 않는다.
 
-    동기이고 await 가 없다. 재개의 첫 걸음과 구독의 한 걸음(트레이스 읽기와 등록부 보기)이 여기에
-    기댄다(ADR 0014). 이어 가기의 `gather_continued` 와는 나누지 않는다 — 이어 가기는 앞 실행 자신의
-    기록 규칙을 주체·끝남 뒤에 보므로, 이것을 쓰면 그 결정된 순서가 바뀐다.
+    동기이고 await 가 없다. 재개의 첫 걸음과 구독의 한 걸음(트레이스 읽기와 실행 중 목록 보기)이
+    여기에 기댄다(ADR 0014). 이어 가기의 `gather_continued` 와는 나누지 않는다 — 이어 가기는 앞 실행
+    자신의 기록 규칙을 주체·끝남 뒤에 보므로, 이것을 쓰면 그 결정된 순서가 바뀐다.
     """
     schema_version, link = _own_link(trace, run_id, principal, visible_agents)
     return OwnTrace(schema_version=schema_version, events=link.events)

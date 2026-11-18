@@ -63,7 +63,7 @@ web/                       슬라이스 3부터. pnpm 워크스페이스. 파이
 | 8 | [public-demo](public-demo/plan.md) | 공개 정부 문서를 넣은 클라우드 VM 한 대를 실제 운영할 배포와 따로 공개 주소에 열어, 누구나 공개 계정으로 로그인해 제품을 써 보고 출처가 붙은 답을 받게 한다. | base-agent, release-image, answer-eval, answer-markdown, rag-engine:release-image, rag-engine:search-eval, admin-login, portal-admin | todo |
 | 8 | [release-image](release-image/plan.md) | 판마다 서버와 관리 화면과 위젯과 위젯 미리보기 페이지의 컨테이너 이미지를 짓고 올리며 단독 배포 안내도 낸다. | pilot-portal | done |
 | 9 | [admin-login](admin-login/plan.md) | 관리 화면에 운영자 계정 로그인과 대화 화면을 더하고, 관리 화면을 같은 서버의 다른 포트로 인터넷에 연다. | release-image, postgres-foundation | todo |
-| 9 | [deploy-package](deploy-package/plan.md) | agent-os와 문서 검색 서버를 Docker Compose로 한 번에 띄우는 참조 배포를 준다. | local-model, portal-login, portal-admin, base-agent, release-image, ops-backup-upgrade, diag-bundle, mcp-http, rag-engine:release-image, rag-engine:admin, rag-engine:backup-upgrade, rag-engine:diag-bundle | todo |
+| 9 | [deploy-package](deploy-package/plan.md) | agent-os와 문서 검색 서버를 Docker Compose로 한 번에 띄우는 통합 배포를 준다. | local-model, portal-login, portal-admin, base-agent, release-image, ops-backup-upgrade, diag-bundle, mcp-http, rag-engine:release-image, rag-engine:admin, rag-engine:backup-upgrade, rag-engine:diag-bundle | todo |
 | 9 | [diag-bundle](diag-bundle/plan.md) | 문제를 살필 때 판과 구성과 최근 실패 원인을 비밀 값 없이 파일 하나로 묶는 명령을 준다. | release-image, mcp-http | todo |
 | 9 | [ops-backup-upgrade](ops-backup-upgrade/plan.md) | agent-os 데이터를 백업하고 새 서버에 복원하며, 판을 올린 뒤에도 옛 트레이스를 읽게 한다. | release-image, postgres-foundation, widget-admin-server | todo |
 | 9 | [pilot-release](pilot-release/plan.md) | public-demo를 뺀 기준선의 기능이 모두 끝나면 제품 0.1 판을 내고 지원 범위와 고지를 문서로 남긴다. | answer-eval, deploy-package, answer-markdown, admin-login, step-up-login, portal-admin, widget-admin-server, widget-runtime-values, portal-login-admin | todo |
@@ -94,7 +94,7 @@ web/                       슬라이스 3부터. pnpm 워크스페이스. 파이
 | 10 | [usage-report](usage-report/plan.md) | 기간별 질문 수와 사용자 수와 오류 신고 비율을 이용 보고로 내보내 운영 상황을 한눈에 알게 한다. | audit-export, run-feedback | todo |
 | 10 | [value-masking](value-masking/plan.md) | 런타임이 아는 비밀 값을 트레이스에 쓰기 직전에 모든 글 칸에서 찾아 가려, 기록에 새지 않게 한다. | principal-propagation | todo |
 | 10 | [widget-appearance](widget-appearance/plan.md) | 그림 올리기와 자유 색, 레이아웃 같은 새 모양 값을 위젯 설정에 더해, 사이트마다 위젯의 생김새를 더 넓게 고른다. | portal-admin, widget-login-state, pilot-release | todo |
-| 11 | [orphan-recovery](orphan-recovery/plan.md) | 서버가 죽거나 멈춰 결말 없이 남은 고아 실행을 임대 만료로 찾아내 worker가 실패로 닫는다. | retention-worker | todo |
+| 11 | [orphan-recovery](orphan-recovery/plan.md) | 서버가 죽거나 멈춰 결말 없이 남은 고아 실행을 실행 담당 기록의 기한 만료로 찾아내 worker가 실패로 닫는다. | retention-worker | todo |
 | 11 | [retention-worker](retention-worker/plan.md) | 별도 worker 명령이 승인 만료 닫기와 보존 기간이 지난 기록 지우기를 주기로 돌린다. | token-limit | todo |
 | 11 | [run-cost](run-cost/plan.md) | 모델과 도구 호출에 걸린 시간을 남기고, 모델 단가로 실행 비용을 읽을 때 셈한다. | trace-postgres | todo |
 | 11 | [token-limit](token-limit/plan.md) | 한 실행이 쓸 수 있는 토큰 합에 상한을 두고, 넘으면 그 실행을 실패로 끝낸다. | run-cost | todo |
@@ -102,7 +102,7 @@ web/                       슬라이스 3부터. pnpm 워크스페이스. 파이
 | 12 | [claude-code-compat](claude-code-compat/plan.md) | Claude Code용 스킬과 서브에이전트와 MCP 설정을 올리면 우리 플러그인 형식으로 바꿔 설치한다. | declarative-agent | todo |
 | 12 | [declarative-agent](declarative-agent/plan.md) | 코드 없이 설정 파일과 프롬프트 문서만으로 에이전트를 만들 수 있게 해, 운영자도 에이전트를 더하게 한다. | orphan-recovery | todo |
 | 12 | [otel-export](otel-export/plan.md) | 실행의 트레이스를 OpenTelemetry 표준으로 내보내 Langfuse 같은 도구에서 볼 수 있게 한다. | claude-code-compat | todo |
-| 13 | [delegation](delegation/plan.md) | 리드 에이전트가 다른 에이전트에게 일을 맡기고, 맡긴 기록이 리드의 트레이스에 남는다. | run-handoff | todo |
+| 13 | [delegation](delegation/plan.md) | 에이전트가 다른 에이전트에게 일을 위임하고, 위임한 기록이 위임하는 쪽의 트레이스에 남는다. | run-handoff | todo |
 | 13 | [replay-evaluation](replay-evaluation/plan.md) | 지난 실행을 바뀐 에이전트나 모델로 다시 돌려 결과를 견주고 사람이 판정을 적는다. | delegation | todo |
 | 13 | [run-handoff](run-handoff/plan.md) | 앞 에이전트가 끝나며 다음 에이전트를 지목하면 런타임이 이어서 곧바로 시작한다. | otel-export | todo |
 | 14 | [admin-crud](admin-crud/plan.md) | 관리 화면에서 플러그인의 매니페스트와 본문 파일을 직접 만들고 고치고 지우며, 잘못된 내용은 거절한다. | replay-evaluation | todo |
