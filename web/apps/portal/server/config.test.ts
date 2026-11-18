@@ -190,12 +190,12 @@ const MISMATCHES: readonly (readonly [string, (doc: ConfigDoc) => void, string])
   ["테마가 목록에 없다", (doc) => void (firstSite(doc)["theme"] = SENTINEL), "sites[0].theme"],
   ["모드가 목록에 없다", (doc) => void (firstSite(doc)["mode"] = SENTINEL), "sites[0].mode"],
   [
-    "보증 모드가 없다",
+    "신원 확인 방식이 없다",
     (doc) => void Reflect.deleteProperty(firstSite(doc), "assurance"),
     "sites[0].assurance",
   ],
   [
-    "보증 모드가 셋 밖이다",
+    "신원 확인 방식이 셋 밖이다",
     (doc) => void (firstSite(doc)["assurance"] = SENTINEL),
     "sites[0].assurance",
   ],
