@@ -1,7 +1,7 @@
-"""노트 검사: 릴리스 노트 조각의 빠뜨림과 모양을 병합 전에 막는다(release-image 티켓 05).
+"""노트 검사: 릴리스 노트 원고의 빠뜨림과 모양을 병합 전에 막는다(release-image 티켓 05).
 
 명세는 `.scratch/release-image/spec.md` 의 "릴리스 노트", "노트 검사", "느낌표의 기준과 그것을 보는
-때"이고, 판정의 원천은 이 독스트링이다. 노트 조각은 셋이다(`docs/release-notes/` 아래).
+때"이고, 판정의 원천은 이 독스트링이다. 릴리스 노트 원고는 셋이다(`docs/release-notes/` 아래).
 기능 단락 `features/<기능 slug>.md`, 올릴 때 할 일 `upgrade/<이름>.md`, 소개 글 `intro/<X.Y.Z>.md`.
 표준 라이브러리만 쓴다. 의존성을 깔지 않은 CI 잡에서 `python3 tools/check_notes.py` 로 돌기
 때문이다(커밋 검사 `tools/check_ticket.py` 와 같다).
@@ -21,7 +21,7 @@ CI 의 두 모드는 PR 의 값을 환경 변수로 받는다. `PR_HEAD_REF`(머
 넘기는 것은 명령 주입(zizmor 의 template-injection)을 피하려는 것이다. 머리 브랜치가 비면 PR 이 아닌
 실행이라 한 줄을 알리고 지난다. 그런데 이벤트 이름(`GITHUB_EVENT_NAME`)이 `pull_request` 인데 비거나
 PR 실행의 제목이 비면 워크플로가 값을 넘기지 못한 것이라 종료 2 다. 머리 브랜치가 main 이나 dev 인
-PR(출시 PR, 되돌려 합치기 PR)은 건너뛴다. 티켓들이 더한 조각이 한꺼번에 실리기 때문이다.
+PR(출시 PR, 운영에서 개발로 합치기 PR)은 건너뛴다. 티켓들이 더한 원고가 한꺼번에 실리기 때문이다.
 
 판정.
 
@@ -43,12 +43,12 @@ PR(출시 PR, 되돌려 합치기 PR)은 건너뛴다. 티켓들이 더한 조�
 병합 아닌 커밋이고 `--full-history` 로 읽는다. 지금 보는 변경은 커밋 검사에서는 스테이지한 변경,
 CI 에서는 PR 의 변경 전체다.
 
-(다) 모양. 바뀌거나 더해진(지운 것은 아니다) 조각은 비어 있지 않고 `#` 으로 시작하는 줄이 없다.
+(다) 모양. 바뀌거나 더해진(지운 것은 아니다) 원고는 비어 있지 않고 `#` 으로 시작하는 줄이 없다.
 기능 단락은 빈 줄(공백만 있는 줄과 앞쪽의 빈 줄도)이 없는 한 단락이고 줄바꿈을 뺀 글자 수가 400자
 이하다. 소개 글의 이름은 `X.Y.Z.md` 다(출시 후보 `X.Y.Z-rc.N.md` 는 아니다). 할 일과 소개 글에는
-길이 상한이 없다. 조각은 세 폴더 바로 아래의 `.md` 파일이다. 하위 폴더나 `.md` 가 아닌 파일은
-조각으로 읽지 않고 모양을 보지 않지만, `upgrade/` 에 그런 파일을 새로 더하면 판 내기가 그대로
-노트에 싣기 때문에 조각이 아니라며 막는다. 400자는 지난 기능 넷의 초안으로 정한
+길이 상한이 없다. 원고는 세 폴더 바로 아래의 `.md` 파일이다. 하위 폴더나 `.md` 가 아닌 파일은
+원고로 읽지 않고 모양을 보지 않지만, `upgrade/` 에 그런 파일을 새로 더하면 판 내기가 그대로
+노트에 싣기 때문에 원고가 아니라며 막는다. 400자는 지난 기능 넷의 초안으로 정한
 값이다(`.scratch/release-image/probes/notes_summary/README.md` 1번).
 
 막는 글(stderr)은 첫 줄이 `check-notes: ` 로 시작하고, 어긴 판정마다 한 항목을 싣고 규약 원천을
@@ -68,7 +68,7 @@ CI 에서는 PR 의 변경 전체다.
 - 단락의 내용(운영자의 말로 썼는지, 경로와 ADR 번호를 싣지 않았는지)과 할 일이 구체적인지,
   느낌표가 기준에 맞는지는 보지 않는다. 리뷰와 셀프 리뷰의 몫이다.
 - 제품 변경은 경로로만 가른다. `PRODUCT_PATHS` 밖의 파일(문서, 도구, 시험)은 제품 변경이 아니다.
-- 이름 바꾸기는 지운 것과 더한 것 둘로 센다(`--no-renames`). 조각을 다른 이름으로 옮기면 옛 이름의
+- 이름 바꾸기는 지운 것과 더한 것 둘로 센다(`--no-renames`). 원고를 다른 이름으로 옮기면 옛 이름의
   삭제와 새 이름의 추가다.
 - 얕은 클론에서는 이력이 잘려 (나)의 이력 판정이 담은 기능을 놓칠 수 있다. CI 는 전체 이력을
   받는다(`fetch-depth: 0`). 얕은 CI 체크아웃은 merge-base 를 찾지 못해 종료 2 다.
@@ -228,13 +228,13 @@ def _under(path: str, folder: str) -> bool:
 
 
 def _fragment_folder(path: str) -> str | None:
-    """조각으로 읽는 경로의 폴더. 조각이 아닌 경로는 None."""
+    """원고로 읽는 경로의 폴더. 원고가 아닌 경로는 None."""
     folder = path.rpartition("/")[0]
     return folder if folder in (FEATURES, UPGRADE, INTRO) and _under(path, folder) else None
 
 
 def _stray_upgrade(path: str) -> bool:
-    """`upgrade/` 아래인데 조각으로 읽히지 않는 경로(하위 폴더, `.md`가 아닌 파일)인가."""
+    """`upgrade/` 아래인데 원고로 읽히지 않는 경로(하위 폴더, `.md`가 아닌 파일)인가."""
     return path.startswith(f"{UPGRADE}/") and _fragment_folder(path) is None
 
 
@@ -279,16 +279,16 @@ def title_problems(title: str, changes: Sequence[Change]) -> list[str]:
 
 
 def fragment_problems(path: str, text: str) -> list[str]:
-    """(다). 조각 하나의 모양. 조각이 아닌 경로는 빈 목록이다."""
+    """(다). 원고 하나의 모양. 원고가 아닌 경로는 빈 목록이다."""
     folder = _fragment_folder(path)
     if folder is None:
         return []
     problems: list[str] = []
     if not text.strip():
-        return [f"(다) `{path}` 가 비어 있다. 조각은 비어 있지 않다."]
+        return [f"(다) `{path}` 가 비어 있다. 원고는 비어 있지 않다."]
     if any(line.startswith("#") for line in text.split("\n")):
         problems.append(
-            f"(다) `{path}` 에 `#` 으로 시작하는 줄이 있다. 노트가 머리를 달므로 조각에는 없다."
+            f"(다) `{path}` 에 `#` 으로 시작하는 줄이 있다. 노트가 머리를 달므로 원고에는 없다."
         )
     if folder == INTRO and _INTRO_NAME.fullmatch(_slug(path)) is None:
         problems.append(f"(다) 소개 글의 이름 `{path}` 가 `X.Y.Z.md` 꼴이 아니다.")
@@ -400,14 +400,14 @@ def feature_problems(scene: Scene) -> list[str]:
 
 
 def shape_problems(scene: Scene) -> list[str]:
-    """(다). 바뀌거나 더해진 조각의 모양."""
+    """(다). 바뀌거나 더해진 원고의 모양."""
     problems: list[str] = []
     for change in scene.changes:
         if change.status == "D":
             continue
         if change.status == "A" and _stray_upgrade(change.path):
             problems.append(
-                f"(다) `{change.path}` 는 할 일 조각이 아니다. `{UPGRADE}/` 에는 `<이름>.md`"
+                f"(다) `{change.path}` 는 할 일 원고가 아니다. `{UPGRADE}/` 에는 `<이름>.md`"
                 " 파일만 둔다. 판 내기는 그 폴더에 더한 파일을 모두 노트에 싣는다."
             )
         if _fragment_folder(change.path) is None:
@@ -419,7 +419,7 @@ def shape_problems(scene: Scene) -> list[str]:
 
 
 def blocked_text(problems: Sequence[str], wording: Wording) -> str:
-    lines = [f"릴리스 노트 조각이 규약을 어겨 {wording.blocked}."]
+    lines = [f"릴리스 노트 원고가 규약을 어겨 {wording.blocked}."]
     lines += [f"  {problem}" for problem in problems]
     lines.append(CONVENTION)
     return "\n".join(lines)

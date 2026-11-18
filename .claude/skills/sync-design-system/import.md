@@ -9,7 +9,7 @@
 확인(`--caller import`)부터 한다. 결정이 `import`나 `inheritImport`면 지금 자리를 가른다.
 
 - **이 들이기의 티켓 브랜치다**(지금 브랜치가 `feature/NN-web-edit-<slug>` 꼴이고, 그 이름의 티켓 파일 `NN-web-edit-<slug>.md`가 `origin/<기준 브랜치>`의 이 폴더에 없다). 번호와 slug는 그 이름의 것을 쓰고 2로 간다. "먼저 들인다"가 연 세션은 첫 턴에 지시문의 워크트리 문장대로 브랜치를 지시문의 이름으로 이미 바꿨으므로 여기다. 그 이름의 티켓이 `origin/<기준 브랜치>`에 있으면 병합된 앞 들이기의 브랜치라 아래 "다른 작업의 브랜치"다.
-- **주 체크아웃의 루트 브랜치다**(`git rev-parse --show-toplevel`이 `git worktree list`의 첫 줄과 같고 `git branch --show-current`가 루트 브랜치, 곧 `origin/dev`가 있으면 `dev`, 없으면 `main`이다. `tidy-checkouts`). 번호와 slug를 정하고 `EnterWorktree`(name은 `NN-web-edit-<slug>`)로 새 워크트리에 들어가, [SKILL.md](SKILL.md) "명령과 작업 폴더"의 설치를 친 뒤 `git branch -m feature/NN-web-edit-<slug>`로 브랜치 이름을 바꾼다. 확인부터 다시 한다.
+- **주 체크아웃이고, 그 체크아웃이 따르는 브랜치에 있다**(`git rev-parse --show-toplevel`이 `git worktree list`의 첫 줄과 같고 `git branch --show-current`가 주 체크아웃이 따르는 브랜치, 곧 `origin/dev`가 있으면 `dev`, 없으면 `main`이다. `tidy-checkouts`). 번호와 slug를 정하고 `EnterWorktree`(name은 `NN-web-edit-<slug>`)로 새 워크트리에 들어가, [SKILL.md](SKILL.md) "명령과 작업 폴더"의 설치를 친 뒤 `git branch -m feature/NN-web-edit-<slug>`로 브랜치 이름을 바꾼다. 확인부터 다시 한다.
 - **새 워크트리다**(`git rev-list --count origin/<기준 브랜치>..HEAD`가 0이고 `git status --porcelain`이 비었다). 번호와 slug를 정하고, 설치를 아직 치지 않았으면 쳐서 `git branch -m feature/NN-web-edit-<slug>`. 확인부터 다시 한다.
 - **다른 작업의 브랜치다.** 브랜치를 바꾸지 않는다. [SKILL.md](SKILL.md)의 "먼저 들인다"로 새 세션을 열고, 지금 세션은 하던 일로 돌아간다.
 

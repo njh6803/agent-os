@@ -208,7 +208,7 @@ jobs:
               "docker-archive:/in/$image.tar" -o spdx-json > "out/sbom-$image.spdx.json"
           done
           echo "warn=$warn" >> "$GITHUB_OUTPUT"
-      # 노트는 모델을 부르지 않고 세션이 써 둔 조각과 커밋 제목으로 짠다. 문턱을 넘은 이미지가 있으면 노트 맨 위에 경고가 서야
+      # 노트는 모델을 부르지 않고 세션이 써 둔 원고와 커밋 제목으로 짠다. 문턱을 넘은 이미지가 있으면 노트 맨 위에 경고가 서야
       # 한다. 서지 않았으면 노트 도구와 점검의 판정이 어긋난 것이라 실패한다.
       - name: 노트와 배포 파일 묶음
         if: steps.plan.outputs.release == 'true'
