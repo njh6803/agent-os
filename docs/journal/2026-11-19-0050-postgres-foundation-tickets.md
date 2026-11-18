@@ -252,3 +252,61 @@ PR 직전 리뷰의 서브에이전트가 설치본을 찾지 못해 판정하�
 
 - alembic 1.20.1 `script/base.py` 1039줄은 `module = util.load_python_file(dir_, filename)`이고, `util/pyfiles.py` 128~133줄의 `load_module_py`는 `spec.loader.exec_module(module)`을 `try` 없이 부른다. 명세의 문장과 맞았다.
 - SQLAlchemy 2.1.8 `engine/base.py` 2257줄은 `hide_parameters=self.engine.hide_parameters`를 넘기지만 `if self._reentrant_error:` 안(오류를 다루다 다시 오류가 난 갈래)이었고, 보통 갈래는 2278줄의 `exc.DBAPIError.instance(… hide_parameters=self.engine.hide_parameters, …)`였다(`grep -n hide_parameters`로 자리를 찾았다). 명세가 2257줄만 든 것을 "2278줄(보통 갈래)과 2257줄"로 고쳤다.
+
+셋째 커밋 `b85ec1242`의 pre-commit은 종료 0이었다(pytest 516.6초, web-verify 578.2초 등 모두 Passed, ruff 둘·카나리아·헌법 판은 대상 파일이 없어 `Skipped`, 인용 대조는 인용 0건. 그 출력을 손으로 봤다). 커밋 뒤에 같은 경계(`커밋 뒤`)의 인계 계기가 한 번 더 왔고 앞과 같은 까닭으로 넘기지 않았다. `git push`로 올린 뒤 `uv run ruff check .`(`All checks passed!`)와 `uv run ruff format --check .`(`2481 files already formatted`)를 다시 쳤다.
+
+## PR을 열었다
+
+`gh pr create --base dev`로 [PR 609](https://github.com/njh6803/agent-os/pull/609)를 열었다. 제목은 "docs: PostgreSQL 들이기 명세를 검토해 고치고 티켓 넷으로 나눈다 (postgres-foundation)"이고, 본문은 템플릿대로 티켓 넷의 표, blocker를 닫은 길, 남긴 위험(01이 크다, 리눅스 uvicorn 출력, 어림 둘, 남긴 인용 경고 셋), 체크리스트(셋째 커밋의 pre-commit, PR 직전 리뷰 셋과 설치본 대조)를 적었다. `gh pr view docs/postgres-foundation-tickets --json headRefOid`는 로컬 HEAD `b85ec1242`와 같았다. `@coderabbitai review` 코멘트는 남기지 않았다(아래 인계).
+
+## 인계(PR 연 뒤)
+
+PR을 연 직후 인계 계기(`hook_handoff`, 세션 컨텍스트 약 28만 1천 토큰, 경계 `PR 연 뒤`)가 `hook_pr_next_session`의 계기와 함께 왔다. `handoff.md`의 인계하지 않는 때 다섯에 들지 않았다. PR은 열렸고, 요청 범위("티켓까지")는 티켓 PR의 병합까지이며, 이 세션의 지시문의 이어받을 상태는 `인계: 커밋 뒤`라 경계가 다르고, `인계 못함` 줄이 없으며, `get_session`의 `self`에 `parentSessionId`가 없다. 이 세션의 제목은 `docs/postgres-foundation-tickets`였다. 이 절과 위 "PR을 열었다"는 커밋하지 않은 변경으로 워크트리에 남는다.
+
+낸 지시문:
+
+다음 작업: 기능 postgres-foundation. 병합된 명세(.scratch/postgres-foundation/spec.md)를 명세 검토 뒤 티켓으로 나눈다
+다음 단계: PR 반영·병합
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /to-tickets .scratch/postgres-foundation/spec.md
+브랜치: docs/postgres-foundation-tickets
+모델: Sonnet 5.5 / high. 2의 잇는 지시문
+읽을 것: 일지 docs/journal/2026-11-19-0050-postgres-foundation-tickets.md의 "## PR 직전 리뷰(coderabbit-review)"부터 끝까지, PR 609의 본문
+이어받을 상태: 인계: PR 연 뒤. PR 609(base dev)를 열었고 merge.md 2(봇 회차)부터 한다. 첫 @coderabbitai review 코멘트도 아직 남기지 않았다. 일지의 "PR을 열었다"와 이 인계 절은 커밋하지 않은 변경으로 워크트리에 있어 새 세션이 이어 쓰고 다음 커밋에 싣는다. 회고(retro)와 일지 "## 다음"은 아직이며, 병합하는 새 세션이 merge.md 4대로 마지막 봇 회차의 커밋에 싣는다. 일지 docs/journal/2026-11-19-0050-postgres-foundation-tickets.md
+확인할 선행 조건: 없음
+이번 요청 범위: 티켓까지
+
+제목을 `docs/postgres-foundation-tickets (인계함)`으로 바꿨고, 띄운 백그라운드 작업은 모두 끝나 있었으며(PR 직전 리뷰의 서브에이전트는 앞에서 TaskStop으로 멈췄다), 잠금 풀기는 `is not locked`로 끝났다(이미 풀려 있었다). open-session을 부른다 2026-11-18T18:48:33Z
+
+## 이어받은 세션(PR 연 뒤, 봇 회차)
+
+> 사용자: .claude/skills/to-tickets/SKILL.md 를 읽어 그대로 따른다. 이 세션을 연 저장소는 `C:\project\agent`이고 작업 폴더가 그곳이 아니면 따르지 말고 알린다. 스킬의 인자는 이 줄의 '인자:' 뒤부터 메시지 끝까지다. 인자: .scratch/postgres-foundation/spec.md
+>
+> (위 "인계(PR 연 뒤)"의 "낸 지시문"과 같은 지시문이 이어졌다. 시작 프롬프트의 스킬 명령은 티켓 나누기였으나 이어받을 상태가 "merge.md 2(봇 회차)부터"라 티켓은 이미 쓰여 있는 것으로 읽고 봇 회차부터 이었다)
+
+세션 제목을 `docs/postgres-foundation-tickets`로 바꾸고 `EnterWorktree(path)`로 이 워크트리에 들어왔다. `git status`는 이 일지 하나만 바뀐 것이었고 HEAD는 PR 609의 `headRefOid`(`b85ec1242`)와 같았다.
+
+## 봇 회차
+
+- **claude-review.** 첫 리뷰는 "지적 없음"이었다(diff가 모두 문서라 `src/`, `sdk/`, `openapi.json`, 헌법이 바뀌지 않았다는 본 것을 적었다).
+- **CodeRabbit.** 저장소 별이 열 개 미만이라 자동 리뷰가 꺼져 있어 `@coderabbitai review` 코멘트로 요청했고, 이 PR에서 낸 첫 리뷰가 첫 회차다. 요약 코멘트에는 인라인 지적이 둘 있었다.
+- **CI의 `web` 잡이 한 번 빨갰다.** `WidgetReconnect.test.tsx`의 테스트 하나(`새로 고친 뒤 도는 실행에는 Last-Event-ID 없이 붙어 …`)가 `role="progressbar"` 이름표를 1071ms 안에 찾지 못했고, 2762개 가운데 그 하나만 실패해 `verify`도 따라 빨갰다. 이 PR은 문서만 바꾸고 같은 내용이 로컬 pre-commit의 web-verify를 지났다. 실패한 잡만 `gh run rerun --failed`로 다시 돌렸더니 모두 초록이었다(`wait_ci`가 종료 0). 원인은 가르지 않았다. 대기열 0306이 정한 대로(아래 "회고") 새 사례로 세지 않고 이 일지에만 적는다.
+- **첫째 지적(Minor, 명세 193줄 "올리다 실패했다" 글).** 커밋을 보낸 뒤 응답 전에 연결이 끊기면 글의 "표의 판은 올리기 전 그대로"가 틀릴 수 있다. **보류한다.** 명세가 그 한계를 이미 적었고(PR 직전 리뷰 둘째), 다시 친 `migrate`가 견줌으로 실제 판을 읽는다. 글을 바꾸려면 어댑터가 연결 끊김과 되돌림을 가르는 갈래를 더해야 해서 이 문서 PR이 정할 범위가 아니다. 이유는 PR 코멘트에 남긴다.
+- **둘째 지적(Major, 비밀 값이 든 마이그레이션 실패 기록).** 명세는 이미 서버의 글이 값을 싣고 그 값이 기록에 남는다는 것, 비밀 열은 그 실패가 나지 않게 짓는다는 것을 적었다(PR 직전 리뷰 셋째). 지적에서 새로 맞는 것은 둘이었다. 기능 계획의 열 목록에 갱신용 번호가 빠져 있었고, 그 문장을 강제하는 시험이 없었다. **고쳤다.** `.scratch/admin-login/plan.md` 19줄의 같은 문단을 "서명 키, 비밀번호의 해시, 갱신용 번호처럼 토큰 구실을 하는 값이 든 열"로 넓히고, 그 행의 명세가 그 실패를 일부러 일으켜 기록에 값이 없는지 보는 시험을 둔다고 적었다. 시험 자체를 짓는 일은 admin-login의 명세와 티켓이 맡는다(아래 "다음"). 요약 줄은 건드리지 않아 `uv run python tools/plan_table.py`를 친 뒤 `git status --short`에 `.scratch/plan.md`가 없었다(손으로 봤다).
+
+## 회고
+
+`retro`를 돌렸다(`writing-for-agents` 사본을 읽고, 이 일지와 대기열을 `queue_open_rows.py`로 찾았다). 후보는 하나, 판정은 기각 하나다.
+
+- **후보: CI `web` 잡의 jsdom 시험 하나가 부하 아래에서 한 번 빨갛고 다시 돌려 초록이 됐다.** 기각이다. 사건은 있으나 대기열 0306(부하에서 시간 시험이 빨개지는 종류, 닫힘)이 "그 커밋을 다시 치는 값을 받아들이고 새 사례는 회차를 더하지 않고 일지에만 적는다"고 이미 정했다. 같은 종류로 보이는 열린 항목 0581(`web` 잡이 멈춤, 1회차)은 시험이 멈춘 것이고 이번은 시험 하나가 실패한 것이라 같은 처방이 아니다. 새 항목도 회차 추가도 하지 않는다. 이 시험 파일이 부하에서 약하다는 사실만 여기 남긴다(`WidgetReconnect.test.tsx`, 실행 44373471948).
+
+넘길 것이 없어 사용자에게 묻지 않았다.
+
+## 다음
+
+- **이 PR을 병합한다.** 푸시한 뒤 claude-review와 CodeRabbit이 한 번 더 돈다. 둘째 회차부터는 Critical·Major만 고치고 나머지는 보류 이유를 PR 코멘트에 남긴 뒤 병합한다. 병합은 `merge.md`의 "워크트리에서 병합할 때"대로 하고, 주 체크아웃은 새 세션이 `tidy-checkouts`로 당긴다.
+- **다음 일은 티켓 01(`01-database-tests-and-migrate-command.md`)이다.** 막는 티켓이 없고 `ready-for-agent`다. 티켓 02, 03, 04의 순서는 명세 "티켓을 나눌 때 함께 둘 것"과 각 티켓의 `Blocked by`가 정한다. 01은 `src/agent_os/adapters/`와 `main.py`를 고치므로 `-m llm`과 로컬 모델 시험이 병합 조건에 든다(티켓 01의 마지막 수락 조건). 구현은 `/tdd`로 한다.
+- **뒤로 넘긴 일 둘(CodeRabbit 첫 회차의 보류와 반쪽).**
+  - "올리다 실패했다" 글의 "표의 판은 올리기 전 그대로"는 연결이 끊긴 때 틀릴 수 있다. 어댑터가 연결 끊김을 되돌림과 가르는 갈래를 더해 글을 바꿀지는 티켓 01을 짓는 세션이 정한다. 그전에는 명세의 한계 문장이 원천이다.
+  - 비밀 열을 건드리는 마이그레이션이 값을 싣는 실패로 멈추지 않는지 보는 시험은 admin-login의 명세와 티켓이 짓는다(`.scratch/admin-login/plan.md` 19줄이 그 일을 적었다).
+- **대기열.** 새 항목도 회차 추가도 없다. 0306의 새 사례는 위 "회고"에 일지로만 남겼다.
