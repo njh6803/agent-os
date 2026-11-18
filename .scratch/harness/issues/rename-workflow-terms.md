@@ -16,7 +16,7 @@
 - 끝난 기능의 명세·티켓·프로브. release-image는 기능 계획에 `끝` 줄(2026-11-16)이 있고 티켓 열하나가 모두 done이라 그 명세·티켓·프로브는 기록이다. 기능 계획 `.scratch/release-image/plan.md`만 살아 있어 바꾼다. done인 harness 티켓(dev-base-skills-docs, dev-branch-create, dev-branch-transition, dev-release-pr-step, review-pipeline-docs-name-bang-check)도 기록이다.
 - ADR의 본문과 제목과 색인. 옛 이름이 본문에 든 ADR 셋(0043, 0056, 0066)에 이력 한 항목씩 단다. 본문이 지난 이력 항목의 제목을 글자 그대로 따온 곳(0043의 포인터 둘, 0056의 포인터 둘)도 그대로 두고 이력 항목에 그렇게 적는다.
 - 다른 글이 지난 제목이나 항목 이름을 글자 그대로 따온 곳. ADR 0043 이력 제목 "출시 PR 뒤에도 main을 dev에 되돌려 합친다"를 따온 `tests/tools/test_protection_json.py`의 독스트링, ADR 0056 이력 제목 "릴리스 노트에 세션이 미리 쓴 노트 조각을 싣는다"를 따온 `.scratch/release-image/plan.md`, ADR 0043 결과 절의 항목 이름 "되돌려 합치기"를 가리키는 `next-session` `merge.md`의 한 곳이다.
-- 카나리아 명세 머리의 `# 최신 결과:` 줄. 살아 있는 문서 안의 이력이다.
+- 카나리아 명세 머리의 결과 줄(`# 최신 결과:` 줄과 그 뒤에 이어 적은 줄, `# 그 전 결과:` 줄). 살아 있는 문서 안의 이력이다.
 - 리뷰 봇 워크플로 `.github/workflows/claude-code-review.yml` 67행의 절 이름 "릴리스 노트 조각". 그 파일을 바꾼 PR은 리뷰 봇이 건너뛰고, 그 워크플로의 가드 스텝(`Fail when Claude left no comment`)이 일지·대기열·티켓·하네스 탐침 밖의 파일을 함께 실은 PR을 실패로 만든다(`docs/constitution/operations.md` 48행과 리뷰 파이프라인 3). 그래서 이 PR에서는 그대로 두고 이 PR을 병합한 뒤 그 한 줄만 따로 PR로 낸다. 받는 쪽은 대기열 항목 `glossary-plain-names-left`의 남은 목록이다. 리뷰 봇은 그 절을 절 이름이 아니라 "느낌표의 기준"이라는 글자로 찾으므로(그 프롬프트의 같은 줄), 두 PR 사이에 절 이름이 어긋나도 찾는 문단은 같다.
 
 **함께 고치는 것.**

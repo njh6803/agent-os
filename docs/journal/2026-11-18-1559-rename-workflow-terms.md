@@ -135,6 +135,77 @@
 - 첫 커밋 시도는 pre-commit의 pytest 하나로 막혔다(`1 failed, 7817 passed`, 1026초). 빨간 것은 `tests/channel/cli/test_interrupt.py::test_서버를_닫기_시작한_뒤에_한_번_누르면_닫기를_마치고_중단으로_끝난다`이고 문구는 "Ctrl+C 를 누른 자식이 30초 안에 끝나지 않았다"였다. 나머지 검사는 모두 `Passed`였다(web-verify 1253초). 이 PR은 `src/`와 `tests/channel/`을 건드리지 않았고(`git diff --cached --stat -- src tests/channel`이 빈다), 그 시험만 홀로 돌리자 통과했다(`uv run pytest -q <그 시험>`, 160초). 부하가 큰 때만 나는 실패로 보고 시험과 코드는 그대로 둔 채, 이 줄만 더해 다시 커밋했다. 이 시험의 앞선 대기열 항목 `0531`(닫힘)은 다른 시험의 시계 비교였다. 원인은 가르지 못했다.
 - 둘째 시도도 pytest 하나로 막혔는데 다른 시험이었다(`1 failed, 7817 passed`, 699초). `tests/tools/test_probe_kit.py::test_배출은_줄이_계속_와도_제한_시간에_끝난다`가 `assert lines`에서 빨갰다. 자식 파이썬이 0.5초 안에 첫 줄을 내지 못한 것이다. 그때 이 PC는 CPU 사용률이 88%였고 다른 세션의 pytest 둘이 함께 돌고 있었다(`Get-Process`, `Win32_Processor`). 그 시험도 홀로 돌리자 0.8초에 통과했다. 두 시도에서 서로 다른 시간 시험이 하나씩 빨개져 같은 시험의 연속 실패는 아니다. 셋째 시도를 띄웠다.
 
+셋째 시도(커밋 `91e4eb4f4`)의 pre-commit은 check-ticket, check-notes, lint-imports, zizmor, check-type-escapes, check-instructions, pyright, pyright-linux, run-hooks, pytest(727.3초), web-verify(760.1초)가 모두 `Passed`였다. 마크다운 표, 줄 구분 문자, 변이 표, 카나리아 명세 모양, 헌법 판, 인용 대조, 커밋 메시지 검사도 `Passed`였다. `Skipped`는 없었다. 인용 대조의 경고 여섯은 사용자에게 보인 선택지의 설명, 이 세션이 고치기 전의 글, 바꾸기 전의 원천 글을 따온 것이라 그대로 두었다. 그 가운데 옛 판의 조건 "주 체크아웃이 main이 아니거나 깨끗하지 않다"는 대조군 커밋 `cd77e4096`의 `directive.md`에 글자 그대로 있는 것을 `git grep -c`로 봤다.
+
+## PR 직전 리뷰
+
+`coderabbit-review` 서브에이전트를 커밋 `91e4eb4f4`에 돌렸다(기준 `f13190072`). 셀프 리뷰를 반영하며 새로 쓴 문장 여섯 묶음을 밀 주장으로 넘겼다.
+
+- **CLI.** CodeRabbit CLI 0.7.5가 끝까지 돌았다(`review_completed`, 종료 코드 0). 로그인 상태는 `Plan: Free`, `Seat: not assigned`였고 그래도 리뷰가 돌았다. 지적은 4건이고 보안·버그·성능에 드는 것은 없었다. 트리아지는 유효 0, 보류 1, 오탐 3이다.
+  - 보류(Minor). 일지에 "다음" 절이 아직 없다. 단계를 닫을 때 쓰는 절이라 의도된 상태다. 그 절에 넣을 두 가지(돌린 열 가운데 여섯이 가르지 못하는 한계, dev에서 이미 어긋난 카나리아 셋)는 PR 본문의 "남긴 위험"에도 적었다.
+  - 오탐. `backmerge_diff_check.sh` 2행이 옛 판정을 지금의 판정처럼 설명한다는 지적. 이 PR은 "되돌려"를 방향어로 바꿨을 뿐 뜻을 바꾸지 않았다.
+  - 오탐. `operations.md` 27행의 `verify` 누락 잡 검출 범위, 94행의 봇 느낌표 검사. 둘 다 이 PR이 바꾸지 않은 사실이다.
+- **넘긴 문장 여섯.** 모두 맞다고 판정했다. 리뷰 봇 가드의 허용 경로와 "느낌표의 기준" 찾기(워크플로 67·82~116행), ADR 0066 이력이 든 세 구절, "되돌려"를 뗀 문장들의 사실(낱말 단위로 옛 문장과 견줬다), 갈음 조건 넷의 대응(`operations.md` 149행), 헌법 판의 patch(`operations.md`의 word-diff가 절 제목 1곳과 문장 7곳), 남은 옛 이름의 자리(줄바꿈 꼴까지 `git grep`). 갈음의 시각 근거(카나리아 뒤의 편집이 본문뿐이다)는 세션 기록과 파일 시각에서 나온 것이라 git으로 다시 재지 못했다고 했다.
+- **그 밖(Nit).** `dev_base_next_session_backmerge_row.toml`의 `# 그 전 결과:` 줄과 `dev_base_implement.toml`의 이어 적은 줄에 옛 이름이 남았는데, 티켓의 "바꾸지 않는 것"은 `# 최신 결과:` 줄만 이름으로 든다. 비밀 값은 더한 줄에서 찾지 못했다고 했다.
+
+고친 것. 티켓의 "바꾸지 않는 것" 넷째 항목을 "카나리아 명세 머리의 결과 줄(`# 최신 결과:` 줄과 그 뒤에 이어 적은 줄, `# 그 전 결과:` 줄)"로 넓혔다. 헌법 문서 위치 절(`operations.md` 122행)이 기록으로 드는 "카나리아 명세 머리 주석의 `# 최신 결과:` 줄과 그 뒤에 이어 적은 줄"과 같은 범위에, 이 PR이 옛 줄의 머리를 바꿔 단 `# 그 전 결과:` 줄을 더한 것이다. 두 줄의 글자는 고치지 않았다. 이 고침은 둘째 푸시에 싣는다.
+
 ## 헌법 판
 
 커밋 직전의 `uv run python tools/sibling_overlap.py`가 "헌법 파일을 고치고 판을 올리지 않았다: docs/constitution/operations.md"로 1을 냈다. 이 PR은 `operations.md`에서 절 제목 하나(`## 릴리스 노트 조각` → `## 릴리스 노트 원고`)와 일곱 군데의 문장에 든 옛 이름 셋을 새 이름으로 바꿨을 뿐 규약은 바꾸지 않아 문구 수정이다(`git diff --word-diff`로 바뀐 낱말을 봤다). 형제가 쓴 가장 높은 판이 3.1.1(origin/dev)이라 patch를 올려 3.1.2로 했다(`docs/constitution/README.md`의 판 줄, Last Amended 2026-11-18).
+
+## PR 봇 리뷰 (PR 607)
+
+첫 푸시(`91e4eb4f4`)의 결과다. `uv run python tools/wait_ci.py 607`이 "끝: 모두 통과. CodeRabbit: Review rate limited"로 끝났다(종료 코드 0). claude-review, e2e, e2e-portal, e2e-standalone, e2e-widget, python, ticket, verify, visual, web이 `SUCCESS`였고 llm은 `SKIPPED`였다.
+
+- claude-review(이 봇의 첫 회차). "지적 없음"이었다. 경계, 유지보수성, 제목의 느낌표를 보고 걸리는 것이 없다고 적었다. 유지보수성 줄에는 `tools/check_notes.py`의 오류 문구가 그 시험의 단언과 같이 바뀌었고, `tools/`에 옛 이름이 남지 않았으며, 리뷰 봇 워크플로 한 줄은 PR 설명대로 따로 낸다고 적었다.
+- CodeRabbit. 무료 리뷰 몫을 다 써서 이 푸시를 리뷰하지 않았고, 남긴 `@coderabbitai review`에도 `Review rate limited`로 답했다. 한도에 걸린 푸시라 이 봇의 회차로 세지 않는다(`next-session` `merge.md` 2의 회차 세기). 이 PR의 보안·버그 축은 PR 직전에 돈 CodeRabbit CLI의 결과(위 "PR 직전 리뷰")를 PR 체크리스트에 적은 것이 대신한다(`docs/constitution/operations.md` 108행).
+- 인라인 코멘트는 두 봇 모두 없었다.
+
+고친 것도 남긴 것도 없다. 로컬 모델 시험은 이 PR이 고친 파일이 병합 조건의 범위에 들지 않아 돌리지 않는다.
+
+둘째 푸시는 이 절과 아래 회고와 "다음"을 실은 커밋이다(이 일지, 티켓의 한 줄, 대기열 항목 여섯만 바뀐다). 이 푸시로 도는 claude-review는 둘째 회차라 Critical·Major만 고친다. CodeRabbit이 이 푸시를 리뷰하면 그 봇의 첫 회차라 Minor·Nit도 지적마다 고칠지 판단한다. 한도로 리뷰하지 않으면 풀리기를 기다리지 않고 병합하며, 그 사실을 PR 코멘트에 적는다. 둘째 푸시의 결과와 보류하는 지적은 이 일지에 다시 적지 않고 PR 코멘트와 다음 일지에 적는다(`merge.md` 2의 "뒤로 넘긴 일").
+
+## 회고
+
+원천은 이 일지와 이 세션, 그리고 앞 단계의 지시문이 "이어받을 상태"로 넘긴 사건 둘(PR 605의 마지막 코멘트)이다. 낸 후보는 열둘이다. 승인이 여섯(열린 항목에 회차를 더한 것 넷, 새 항목 둘), 기각이 넷, 일지에만 남기는 것이 둘, 넘김은 없다. 이 세션에서 회고로 반영한 것은 없고 사용자에게 물은 것도 없다. 만료한 항목은 없다.
+
+**승인(열린 항목에 회차를 더한 것).**
+
+- 인계 계기가 백그라운드로 띄운 커밋이 끝나기 전에 왔다. 사건: 이 단계의 커밋 호출 직후 세 번(295,702·325,429·331,408 토큰)과, 앞 단계 PR 605의 둘째 커밋 직후 한 번(240,904 토큰)이다. 넷 모두 곁 세션이라 넘기지 않고 이었다. 열린 항목 `handoff-trigger-before-background-commit-ends`가 이미 처방한 사건이라 회차를 더했고, 더한 뒤 7회차다. 처방은 있는 훅의 판정을 고치는 것이라 새 훅의 발동 확인(`tools/hook_report.py`)은 돌리지 않았다. PR을 연 뒤에 온 계기(350,797 토큰)는 실제 단계 경계에 온 것이라 이 사건이 아니다.
+- 문서만 바꾼 커밋의 pre-commit이 길었다. 사건: PR 605의 둘째 커밋 `a95c599e7`(일지·대기열 항목·티켓만 바꿨다)이 929초였다(pytest 711.4초, web-verify 928.7초). 앞 단계가 다음 회고에 세라고 넘긴 사건이다. 열린 항목 `docs-only-commit-precommit-slow-again`에 회차를 더했고, 더한 뒤 13회차다.
+- 이름을 바꾸는 chore의 잔존 확인이 줄바꿈으로 갈린 꼴과 줄여 부른 꼴을 놓쳤다. 사건: 위 셀프 리뷰의 표준 Major 1·Minor 2·Nit 5와 명세 Major 2·Minor 6의 첫째·Minor 8이다(`tools/check_ticket.py` 105~106행과 카나리아 명세 머리 설명의 "되돌려⏎합치기", `tools/check_notes.py`와 워크플로 주석의 "조각"). 열린 항목 `rename-residual-grep-misses-split-and-underscore-forms`가 이미 처방한 사건이라 회차를 더했고, 더한 뒤 3회차다.
+- 원천과 어긋난 카나리아 명세가 사전 확인에 다시 걸렸다. 사건: 고친 스킬 아홉을 원천으로 든 60개의 사전 확인에서 `next_session_fable_cut_row`, `next_session_model_line`, `tidy_skill_cwd_owner`의 실험군 카나리아가 원천에 없었다(`origin/dev`의 원천에도 없다). 같은 종류를 다루는 열린 항목 `stale-web-design-canaries`(0539를 잇는다)에 회차를 더했고, 더한 뒤 3회차다. `tidy_skill_cwd_owner`는 0539가 든 넷 가운데 하나다.
+
+**승인(새 항목).** 둘 다 새 검사가 처방이라 같은 실수의 다섯 번째이거나 손상이 한 번 났을 때 더한다.
+
+- `canary-question-quote-left-source`(1회차). 사건: `dev_base_next_session_root_branch`가 통과한 뒤 셀프 리뷰가 원천의 조건을 고쳐, 물음이 자리를 가리키려고 따온 "…가 아니거나"가 원천에서 사라졌다. 사전 확인은 기대 문구만 원천에서 찾아(`tools/canary.py`의 `source_problems`를 읽었다) 이를 알리지 않았고, 갈음 조건 넷을 손으로 대 보다 찾았다. 그 명세 하나를 다시 돌린 값이 들었다. 층은 사전 확인의 검사다. `--search 물음.*인용`, `--search 인용.*물음`, `--search 물음이.가리키`, `--search tools/canary.py`, `--search preflight`로 찾았고 같은 처방의 항목이 없었다. 가까운 것은 카나리아가 원천에 있는지 보는 닫힌 0133과, 기대 문구가 앞 판에도 있는지를 다룬 만료한 0538이다.
+- `rename-chore-edits-record-lines`(1회차). 사건: 명세 Major 1이다. 티켓의 "바꾸지 않는 것"이 `# 최신 결과:` 줄만 들어, 그 뒤에 이어 적은 기록 줄(`dev_base_implement.toml` 8행)의 옛 이름을 바꿨다. 구현 때 실리는 지침(`docs/constitution/operations.md` 문서 위치 절이 그 줄을 기록으로 든다)을 어겨 리뷰가 잡은 사건이라 회차로 센다. 그 지침을 낸 항목을 `--search 최신.결과`, `--search 결과.줄`, `--search 기록을.고`, `--search 이어.적은.줄`, `--search 기록까지`, `--search 지난.결과`로 찾지 못해 새 항목을 썼다. 처방은 기준 판과 견주어 결과 줄이 덧붙이기만 했는지 보는 검사이고, 검사로 가를 수 없으면 이름 바꾸기 티켓 서식의 지침이다. 같은 서식 자리를 다루는 `rename-residual-grep-misses-split-and-underscore-forms`와 서로 가리키게 했다.
+
+**기각.**
+
+- 헌법 판을 올리지 않은 채 커밋하려 했다. 커밋 직전의 `tools/sibling_overlap.py`가 그 자리에서 알렸다(이미 있는 검사).
+- 리뷰 봇 워크플로를 다른 파일과 함께 실었다(명세 Major 3). 셀프 리뷰가 잡았고, 그대로 푸시했어도 그 워크플로의 가드 스텝(닫힌 0158의 고침)이 그 자리에서 막는다.
+- 리뷰가 잡도록 둔 기준이 제 몫을 한 것들. 수용 기준 2의 닫힌 목록의 반례, "되돌려"를 떼어 방향이 사라지거나 새 이름을 끼워 말이 겹친 문장(명세 Minor 4·5·Nit 10, 표준 Nit 6), ADR 0066 이력이 줄여 쓴 "조각"을 빠뜨린 것(명세 Minor 7)이다. 검사로 옮길 수 없고 표준에 더할 새 판단 기준도 아니라 회차로 세지 않는다.
+- 일지 문장 몇을 근거보다 강하게 썼다가 고쳤다(답을 읽지 않고 쓴 대조군 문장, 카나리아 뒤 편집의 시각과 자리를 말한 문장, 헌법 판의 까닭). PR 직전 리뷰 전에 이 세션이 근거를 다시 대 보고 고쳤고, 근거를 끝까지 열었는지는 검사로 가를 수 없다. 돌린 카나리아 열 가운데 여섯이 바뀌기 전 원천으로도 통과하는 한계(명세 Nit 9)는 사용자가 고른 범위에서 나온 것이고, 결과 줄과 일지와 PR 본문이 그 한계를 적어 넘치는 주장이 없다. 0538이 다룬 실수(판정했다고 적은 것)가 이번에는 없어 사건으로 세지 않는다.
+
+**만료.** `uv run python tools/queue_open_rows.py`의 작업 트리 출력에 만료할 항목이 없어, `--ref origin/dev`로 다시 돌릴 대상이 없었다(두 출력에 모두 든 항목만 닫는다).
+
+**일지에만 남기는 것.**
+
+- 커밋 시도 둘을 막은 시간 시험 둘(`tests/channel/cli/test_interrupt.py`의 Ctrl+C 30초, `tests/tools/test_probe_kit.py`의 배출 0.5초, 위 "다시 돌린 명령"). 0306이 받아들여 닫은 종류(부하에서만 빨간 시간 시험)의 새 사례라 회차를 더하지 않는다(retro 5단계의 항목의 종류).
+- 이 PR의 첫 커밋은 `.py`가 들어 문서만 바꾼 커밋이 아니라 `docs-only-commit-precommit-slow-again`에 세지 않는다. 둘째 커밋(이 일지, 티켓, 대기열 항목만 바뀐다)의 시간은 그 커밋이 끝나야 알 수 있어 PR 코멘트에 적고, 다음 단계의 회고가 센다.
+
+## 다음
+
+이 PR이 병합되면 작업 규약 쪽 이름 셋은 리뷰 봇 워크플로의 한 줄만 남는다. 남은 것은 아래와 같다.
+
+- **리뷰 봇 워크플로 한 줄**(다음 작업). `.github/workflows/claude-code-review.yml` 67행의 절 이름 "릴리스 노트 조각"을 "릴리스 노트 원고"로 바꾼다. 그 파일을 바꾼 PR은 리뷰 봇이 건너뛰고, 가드 스텝이 일지·대기열·티켓·하네스 탐침 밖의 파일을 함께 실은 PR을 실패로 만든다(`docs/constitution/operations.md` 48행과 리뷰 파이프라인 3). 그래서 그 파일과 harness 티켓과 일지만 싣는다. 받는 쪽은 대기열 `glossary-plain-names-left`의 남은 목록이다. 그 줄에는 "판을 올릴 때"도 있어 판 계열을 바꿀 때 같은 길을 한 번 더 간다.
+- **화면 쪽 이름 둘.** 거꾸로 동기화 → 웹 편집 반영, 원색 토큰 → 색 단계 토큰. 원색 토큰의 풀이는 디자인 시스템 아티팩트에 올라가는 원본(`web/tools/sync-design-system/artifact-source/README.md`, `foundations/colors/index.html`)에도 있어, 그 PR은 병합 뒤 `sync-design-system` 올리기까지 해야 끝난다(위 "다섯을 둘로 나눈 까닭". 그 둘이 고치는 스킬과 규칙을 원천으로 든 카나리아 명세는 16개였다).
+- **남은 이름 바꾸기**(대기열 `glossary-plain-names-left`). 앞 일지(`2026-11-18-1422-rename-small-run-terms.md`)의 "다음"에 적힌 목록에서 이 PR의 셋과 위 화면 쪽 둘을 뺀 것이다. 계약 파일에 닿지 않는 작은 이름(서버 파일, 전송, 관리자, 넘김), 큰 이름(고지, 운영자 파일, 규칙 파일, 사이트 파일), 계약 파일에 닿는 이름(저자, 교환, 주체, 컨텍스트, 상한, 표지. 병합 전에 사용자에게 알리고 로컬 모델 시험의 범위에 드는지 본다), 그리고 맨 뒤의 제품 판과 판 계열이다. 쓰인 곳의 수는 그 일지에 있고 시작할 때 다시 센다. 로컬 모델 시험의 비용에 대한 사용자의 답은 처음의 여덟을 바꾸는 PR에 닿는다고 읽었으므로, 2026-11-18에 더 고른 이름의 PR이 시험 범위에 닿으면 예상 비용을 보이고 다시 묻는다.
+- **이 PR의 카나리아가 남긴 한계.** 돌린 열 가운데 여섯은 바뀌기 전 원천으로도 통과해, 고친 파일이 새 세션에 실렸다는 것까지만 보인다(위 "남긴 것"의 명세 Nit 9). 나머지 50개는 사전 확인만 했다.
+- **원천과 어긋난 카나리아 셋.** `next_session_fable_cut_row`, `next_session_model_line`, `tidy_skill_cwd_owner`는 이 PR이 고치지 않았다. 대기열 `stale-web-design-canaries`(3회차)가 같은 종류를 센다. 그 명세들의 원천을 다시 고치는 PR이 사전 확인에서 다시 만난다.
+- **rag-engine.** 같은 결정을 rag-engine에 맞추는 지시문은 앞의 일지에 있고 사용자에게 냈다. 이 단계에서 사용자가 새로 한 말은 없다.
+- **열여섯 이름의 영어 표기.** 일지 `2026-11-17-2031-plain-words-in-written-artifacts.md`의 "다음"이 남긴 물음이고 사용자가 아직 답하지 않았다.
+- **회차 5 이상인 대기열 항목.** 이 회고로 `handoff-trigger-before-background-commit-ends`가 7회차, `docs-only-commit-precommit-slow-again`이 13회차가 됐다. 하네스 chore를 고를 때의 계기다.
+- **앞 일지의 "다음"에서 그대로 남은 것.** 끝난 기능의 변이 표에 남은 `-k` 여섯(`mutation-table-test-filter-stale-after-rename`), `CLAUDE.md` 밖에 남은 "위젯 미리보기 페이지"(`widget-test-page-term-leftovers`), e2e가 `serve`를 시스템 임시 폴더에서 띄우는 것(`e2e-serve-cwd-is-system-temp-dir`), 회차를 한꺼번에 띄우는 프로브의 띄우기 예외(`probe-parallel-launch-outside-round`). 앞 일지가 적은 `.scratch/plan.md`의 함께 고친 파일은 이 브랜치의 `uv run python tools/sibling_overlap.py`에 "함께 고친 파일 없음"으로 나왔다.
