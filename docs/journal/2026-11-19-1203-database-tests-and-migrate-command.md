@@ -190,3 +190,23 @@ open-session을 부른다 2026-11-19T04:16:00Z
 - 비밀 열 시험은 admin-login이 짓는다(앞 PR 609에서 넘어온 일).
 - `.claude/rules/adapters.md`의 어댑터 목록에 postgres 항목을 더한다(티켓 03이 `serve`에 데이터베이스를 물리며 한다).
 - `reason_of`·`_chain`이 어댑터와 `tools/database_for_tests.py`에 복제되어 있다. 02가 같은 도구를 더 만질 때 두 독스트링이 서로를 가리키게 한다.
+
+## 네 번째 인계 (커밋 뒤)
+
+- **커밋.** 셋째 커밋 `b0085b7ab fix: 봇 첫 회차를 반영하고 CI 관찰을 적는다 (01-database-tests-and-migrate-command)`. pre-commit이 모두 통과했다(백그라운드 명령의 종료 코드 0). 이 커밋은 아직 푸시하지 않았다. 위 "CI 관찰과 CodeRabbit 첫 회차" 절과 "첫 커밋 시도가 pytest 두 건에 막혔다" 단락은 이 커밋에 실려 있고, 이 인계 절만 커밋하지 않은 수정이다.
+- **PR 본문.** 푸시 전에 이미 `gh pr edit 610`으로 고쳤다(변이 23개, CI 관찰 결과, 로컬 모델 시험이 아직 통과하지 못했다는 위험). 푸시해도 본문을 다시 고칠 필요는 없다.
+- **남은 단계(새 세션).**
+  1. 푸시 직전에 `git branch --show-current`와 `uv run python tools/sibling_overlap.py`(1이면 출력대로). 푸시 뒤 `merge.md` 2(봇 회차)의 대기를 띄운다. 둘째 회차부터는 CodeRabbit도 claude-review도 Critical·Major만 고친다. 첫 회차는 이미 지났다(CodeRabbit). 이 푸시로 도는 리뷰가 두 봇의 첫 회차인지는 `gh pr view`로 본다(claude-review는 첫 푸시 때 이미 돌았다).
+  2. **로컬 모델 시험은 사용자가 정한다.** 연달은 무효 회차가 둘(재고 없음 `shared / A40 x 1` 400)이라 규정대로 멈춰 사용자에게 보고했다. 사용자의 답이 오기 전에는 다시 `--yes`로 치지 않는다. 새 세션은 첫 메시지의 "이어받을 상태"를 읽고 사용자에게 같은 보고를 한 번 더 한다(보고 내용은 위 일지 "로컬 모델 시험 상태"). 사용자가 다시 돌리라 하면 비용 확인을 새로 받는다(`merge.md` 3).
+  3. 병합은 로컬 모델 시험 통과 뒤 `merge.md`의 "워크트리에서 병합할 때"대로 한다. 병합 뒤 `sweep`, `next-session`으로 티켓 02 지시문을 낸다.
+- **세션 중에 건드린 공용 상태.** Runpod에서 서버를 띄우지 못한 무효 회차 둘(파드가 만들어지지 않았다고 본다. 어림이다). `agent-os-test-postgres` 컨테이너는 떠 있다.
+
+## 이 세션의 제목 (네 번째)
+
+바꾸기 전 제목은 `feature/01-database-tests-and-migrate-command`다.
+
+제목을 `feature/01-database-tests-and-migrate-command (인계함)`으로 바꿨고, 잠금은 이미 풀려 있었다(`git worktree unlock`이 `is not locked`로 끝났다).
+
+open-session을 부른다 2026-11-19T15:05:41Z
+
+인계 못함 커밋 뒤: `tools/open_session.ps1 -Action send`의 실행을 앱의 자동 판정(분류기)이 이유 없이 거부했다. 우회하지 않았다. 제목을 `feature/01-database-tests-and-migrate-command`로 되돌렸고, 이 세션이 푸시와 봇 회차를 잇는다(위 "남은 단계"의 "새 세션"은 이 세션이다).
