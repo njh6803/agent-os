@@ -55,7 +55,7 @@
 ### CI
 
 - [x] `.github/workflows/ci.yml`의 `python` 잡에 같은 digest의 PostgreSQL을 service container로 붙인다. 계정·비밀번호·데이터베이스 `agent_os`, 데이터 폴더 tmpfs, 러너의 5432, 잡의 환경 `AGENT_OS_TEST_DATABASE_URL`, 같은 상태 확인 명령이다(명세 "CI")
-- [ ] 그 PR의 CI에서 템플릿 복제가 도는지, service container가 데이터 폴더의 tmpfs를 받는지를 보고 일지와 PR에 적는다(ADR 0066 Consequences "재지 않은 것", 명세 검토 "확인하지 못한 것"). 테스트 컨테이너가 끄는 속도 설정 셋을 service container에 넣을지는 그 PR의 CI 시간을 보고 정해 일지에 적는다
+- [x] 그 PR의 CI에서 템플릿 복제가 도는지, service container가 데이터 폴더의 tmpfs를 받는지를 보고 일지와 PR에 적는다(ADR 0066 Consequences "재지 않은 것", 명세 검토 "확인하지 못한 것"). 테스트 컨테이너가 끄는 속도 설정 셋을 service container에 넣을지는 그 PR의 CI 시간을 보고 정해 일지에 적는다
 - [x] 워크플로 감사(zizmor)가 초록이다
 
 ### 저장소 상태 시험

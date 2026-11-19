@@ -233,3 +233,15 @@ expect_output = ["접속하지 못했다(오류 번호 42501)"]
 file = "src/agent_os/adapters/postgres/database.py"
 old = '''                return f"데이터베이스({place})에 접속하지 못했습니다({reason})."'''
 new = '''                return f"데이터베이스({place})에 접속하지 못했다({reason})."'''
+
+[[mutation]]
+name = "주소 앞뒤의 공백과 개행을 걷지 않고 읽는다"
+tests = ["tests/test_migrate_command.py"]
+expect = "red"
+expect_output = ["못했습니다. postgresql://계정:비밀번호"]
+[[mutation.edit]]
+file = "src/agent_os/main.py"
+old = '''    text = os.environ.get(DATABASE_URL_ENV, "").strip()
+    if not text:'''
+new = '''    text = os.environ.get(DATABASE_URL_ENV, "")
+    if not text.strip():'''

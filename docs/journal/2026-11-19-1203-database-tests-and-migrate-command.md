@@ -135,3 +135,58 @@ open-session을 부른다 2026-11-19T03:45:48Z
 | 변이 표의 `assert 0 >= 1`이 pytest 단언 풀이에 기댄다(Minor) | 고침 | `tests/test_postgres_image_pin.py`의 단언에 실행 중에 만드는 메시지(`ci.yml 에 PostgreSQL service container 가 없다 (0개)`)를 붙이고 표지를 `PostgreSQL service container 가 없다 (0개)`로 바꿨다. `mutate.py`가 변이를 기대대로 빨강으로 냈다. `--check`는 변이 22개 모두 원문이 한 번씩 있다고 냈다 |
 
 이 고침은 `tools/`와 `tests/`뿐이라 병합 조건 범위(`src/agent_os/adapters/` 등)를 건드리지 않는다.
+
+## 세 번째 인계 (PR 연 뒤)
+
+- **커밋과 푸시.** 둘째 커밋 `702851103 fix: 지울 이름의 접두 길이를 묶는다 (01-database-tests-and-migrate-command)`. pre-commit이 모두 Passed였다(pytest 529.1초, web-verify 558.9초. canary specs와 constitution version은 대상 파일이 없어 Skipped). 푸시 직전 `sibling_overlap`은 번호 겹침 없음, 헌법 3.1.3이었다. 이 커밋에 일지의 위 절들이 함께 실렸다. 지금 작업 트리에서 이 절만 아직 커밋하지 않았다.
+- **PR.** [#610](https://github.com/njh6803/agent-os/pull/610) `feat: 데이터베이스 시험 틀과 migrate 명령 (01-database-tests-and-migrate-command)`, base `dev`, 느낌표 없음. 본문은 템플릿대로 채웠고 끝에 `🤖 Generated with [Claude Code](https://claude.com/claude-code)`가 있다. `gh pr view 610 --json headRefOid`와 `git rev-parse HEAD`가 `702851103`으로 같았다. 앱의 PR 연결은 이미 `#610`에 묶여 있었다(`get_status`가 `bound: true`). 연 직후 검사는 pending 9, skipped 1이었다.
+- **남은 단계(새 세션).**
+  1. `merge.md` 2(봇 회차): 첫 `@coderabbitai review` 코멘트를 새 세션이 남기고, `tools/wait_ci.py 610`을 백그라운드로 띄워 끝 알림을 기다린다. claude-review가 계정 한도로만 빨가면 실패로 세지 않는다.
+  2. **CI 관찰(티켓 58줄).** `python` 잡에서 템플릿 복제가 도는지, service container가 데이터 폴더의 tmpfs를 받는지, 잡의 걸린 시간을 본다. 속도 설정 셋(`fsync` 등)을 service container에 넣을지 정해 PR 코멘트와 이 일지에 적고, 티켓 58줄을 `[x]`로 바꾸는 고침 커밋을 봇 회차의 고침과 같은 커밋에 싣는다(일지만 따로 푸시하면 claude-review가 한 번 더 돈다).
+  3. 봇 지적은 `pr-feedback`으로 반영한다. 둘째 회차부터는 Critical·Major만 고치고 나머지는 보류 이유를 PR 코멘트에 남긴다.
+  4. **로컬 모델 시험을 다시 돌린다.** `merge.md` 3의 유효함 판정: 시험한 커밋은 `148c86d08`(작업 트리 상태로 돌아 커밋이 아니었다)이고, 그 뒤 `src/agent_os/adapters/postgres/database.py`, `channel/`, `main.py` 같은 범위의 경로가 모두 이 브랜치에 있다. `git diff --name-only 148c86d08 HEAD`에 범위의 경로가 있으므로 기록이 무효다. 마지막 봇 회차의 반영을 마친 뒤 `uv run --env-file ../../../.env python tools/llm_local.py run`을 `--yes` 없이 쳐 예상 비용(앞 회차 어림 30분 $0.27~$0.59, 최악 90분 $0.81~$1.77)을 사용자에게 보이고, 확인을 받은 뒤에만 `--yes`로 백그라운드 실행한다. `-m llm`은 PR의 CI와 이 일지의 앞 기록(23건)이 있다. 어댑터 코드가 앞 기록 뒤에 바뀐 것은 `path_separator`와 독스트링뿐이라는 점(코드를 읽은 어림)을 새 세션이 `-m llm`을 다시 돌릴지 정할 때 쓴다.
+  5. 이 일지의 `## 다음`을 쓴다. 옮길 일: 앞 PR(609)에서 넘어온 둘(연결 끊김과 되돌림을 가르는 갈래를 더할지, 비밀 열 시험은 admin-login이 짓는 것), 이번 CodeRabbit 보류 둘(올리기 실패 역추적의 서버 글 범위를 명세대로 둘지, 연결이 끊긴 때 "올리기 전 그대로" 문구를 가를지), 어댑터 규칙 `.claude/rules/adapters.md` 어댑터 목록에 postgres 항목을 더하는 일(티켓 03), `reason_of`·`_chain` 복제를 02가 도구를 만질 때 함께 보는 일.
+  6. 병합은 이 워크트리 사본의 `merge.md` "워크트리에서 병합할 때"를 Read로 열어 따른다. 병합 뒤 `sweep`을 치고, `next-session`으로 티켓 02 지시문을 낸다.
+- **세션 중에 건드린 공용 상태.** 없음. 테스트 컨테이너 `agent-os-test-postgres`는 떠 있다. `coderabbit review`는 CLI가 원격 서비스로 변경을 보내는 호출이다(서브에이전트가 돌렸다).
+
+## 이 세션의 제목 (세 번째)
+
+바꾸기 전 제목은 `feature/01-database-tests-and-migrate-command`다.
+
+제목을 `feature/01-database-tests-and-migrate-command (인계함)`으로 바꿨고, 잠금은 이미 풀려 있었다(`git worktree unlock`이 `is not locked`로 끝났다).
+
+open-session을 부른다 2026-11-19T04:16:00Z
+
+## CI 관찰과 CodeRabbit 첫 회차 (네 번째 세션)
+
+네 번째 세션이 이어받았다(제목 `feature/01-database-tests-and-migrate-command`). 앱의 PR 연결이 풀려 있어 `bind_pr`로 #610에 다시 묶었다. 헤드 `702851103`에 `@coderabbitai review`를 남기고 `tools/wait_ci.py 610`을 띄웠다. 끝 줄은 `모두 통과. CodeRabbit: Finished`였다(claude-review, e2e 넷, python, web, verify, visual, ticket, title 모두 SUCCESS, llm은 SKIPPED).
+
+**CI 관찰(티켓 58줄).** 아래는 실행 44456776963의 `python` 잡 로그와 `gh run view --json jobs`를 읽은 것이다.
+- service container는 `--tmpfs /var/lib/postgresql`와 상태 확인 옵션으로 만들어졌고 04:13:18에 `database system is ready to accept connections`를 찍었다. tmpfs를 받아들였다.
+- 시험은 `7948 passed, 27 deselected, 744.02s (0:12:24)`였고 건너뛴 시험이 없다(설정 오류도 없었다). 템플릿 복제는 시험마다 `checkpoint starting: immediate force wait`와 `checkpoint complete`(쓴 버퍼 3~7개, `write=0.001 s`)가 서버 로그에 쌓이는 것으로 돈 것이 보인다. `FATAL` 줄은 비밀번호 틀림(`password authentication failed`), 로그인 못 하는 역할, 없는 데이터베이스, 접속 권한 없음을 일부러 내는 시험의 것뿐이었다(손으로 훑었다).
+- `python` 잡은 04:13:10~04:26:57(13분 47초)이다. 비교로 쓴 dev의 앞 실행 44338233765(커밋 `11028615e`)는 15:40:00~15:54:35(14분 35초)였다. 시험이 늘었는데 느려지지 않았다.
+- 결정: 빠르기 설정 셋(`fsync` 등)은 service container에 넣지 않는다. 체크포인트 하나가 1밀리초대이고 잡 시간이 앞 실행보다 짧아서 넣어도 얻을 것을 보이지 못한다(어림이 아니라 위 두 측정이다. 다만 두 실행의 다른 시험 수와 러너 부하가 섞여 있어 정밀한 비교는 아니다).
+
+**봇 지적(첫 회차, 모두 Minor).** CodeRabbit은 인라인 코멘트 셋과 요약 본문의 지적 하나를 냈다.
+
+| 지적 | 판정 | 처리 |
+|---|---|---|
+| `main.py`: `text.strip()`을 빈 값 검사에만 쓰고 파서에는 원본을 넘긴다. 끝의 개행이 데이터베이스 이름에 붙는다 | 고침 | `.strip()`한 값을 파서에 넘긴다. `test_주소_앞뒤의_공백과_개행은_걷고_읽는다`를 더했고, 변이 23(걷지 않기)을 표에 더해 `mutate.py`가 기대대로 빨강(`1 failed`)으로 냈다 |
+| `.scratch/.../probes/README.md`: 변이 수가 표(22)와 행(21)이 다르다 | 고침 | 행을 스물셋으로 고치고 처음 스물하나(한 번에), 22·23번(각각 따로) 돌린 몫을 가르는 문장을 썼다. 스물셋을 한 번에 다시 돌리지는 않았다 |
+| `database.py`: `migrate()`가 올리기 직전에 연결을 새로 얻다 실패하면 드라이버 글과 역추적 전문을 낸다(독스트링의 약속과 어긋난다) | 보류 | 좁은 틈(`_reach()`가 닿은 뒤 올리기 사이에 서버가 내려가는 경우)이고 글에 드는 것은 호스트·계정 이름이다(비밀번호는 실리지 않는다). 연결 얻기와 올리기를 가르면 어댑터 구조를 바꾸고 병합 조건의 시험을 또 돌려야 한다. `## 다음`에 옮긴다 |
+| `tools/database_for_tests.py`: `create_database`·`drop_database`가 식별자를 검증하지 않고 SQL에 넣는다(요약 본문, Low value) | 보류 | 호출하는 쪽이 `make_name`·`is_scoped_name`을 거친 이름만 넘기고 `tools/`의 시험용 도우미라 외부에 열려 있지 않다. 봇도 현재 호출 경로로는 도달하지 않는다고 적었다 |
+
+**로컬 모델 시험(병합 조건) 상태.** 앞 회차(`148c86d08`의 작업 트리)의 기록은 `main.py`와 `adapters/postgres/database.py`가 그 뒤에 바뀌어 무효다. 사용자가 비용 확인 화면에 "돌린다"로 두 번 답했고(질문 "로컬 모델 시험(llm_local)을 다시 돌려도 될까요? …"), `--yes`로 두 번 쳤다. 두 번 모두 종료 2(무효 회차)였다. 사유는 `shared / A40 x 1` 후보에서 Runpod가 `API returned status 400 … There are no longer any instances available`(재고 없음)로 파드를 만들지 못한 것이다. 회차 파일은 `C:\Users\User\.agent-os\llm-local\feature%2F01-database-tests-and-migrate-command\records\round-0002-20261119T141617Z.json`(6.1초)와 `round-0003-20261119T141738Z.json`(7.5초)이고, 파드가 만들어지지 않았으니 과금은 없다고 본다(어림이다). 연달은 무효 회차가 둘이라 규정대로 멈춰 사용자에게 보고한다. 이 PR은 로컬 모델 시험이 통과할 때까지 병합하지 않는다.
+
+**첫 커밋 시도가 pytest 두 건에 막혔다.** 위 반영을 담은 커밋의 pre-commit이 `2 failed, 7947 passed, 929.11s`로 멈췄다(백그라운드 명령의 출력 파일에서 읽었다). 실패는 `tests/adapters/test_postgres_database.py::test_폴더가_비어_있으면_표에_번호가_있는_데이터베이스는_더_새롭다`(`0.6초 동안 다시 시도했습니다(TimeoutError)`)와 `tests/tools/test_probe_kit.py::test_배출은_줄이_계속_와도_제한_시간에_끝난다`(`assert lines`가 빈 목록)였다. 둘 다 따로 치면 통과했다(`16 passed in 145.59s`). 929초는 앞 두 커밋의 460·529초의 두 배쯤이고 같은 시간에 web-verify가 968초 걸렸으니 부하가 컸던 실행이라고 본다(어림이다. 부하를 재지는 않았다).
+- 앞의 것은 내 시험의 결함이다. 어댑터 시험이 닿는 서버를 상대로도 시도 하나 0.4초, 다시 시도 0.6초를 기본으로 써서, 부하가 큰 때는 정상 접속이 제한 시간에 걸린다. `.claude/rules/tests.md`의 시간 단언 규칙(상한은 넉넉한 배수로)과 어긋난다. 닿아야 하는 시험은 `_patient`(8초·8초)를, 시간이 지나는 갈래를 일부러 보는 시험(닫힌 포트, 답하지 않는 서버, 잠긴 표)만 짧은 값을 쓰게 나눴다. `tests/test_migrate_command.py`의 `_use_adapter`도 같다(`give_up_quickly`는 닿지 못하는 시험 하나만 쓴다). 두 파일은 `54 passed in 127.58s`였고, 시간 값에 기대는 변이 1~9·21~23은 12개 모두 기대대로 빨강(`1 failed`)이었다(`mutate.py`의 출력).
+- 뒤의 것(`test_probe_kit.py`)은 이 브랜치가 건드리지 않은 파일의 시험이고 0.5초 안에 한 줄도 못 받은 부하 탓으로 보인다. 같은 시험이 다시 빨개지면 그때 세어 진단한다(아직 한 번이다. 이 일지에 적어 둔다).
+
+## 다음
+
+- **병합을 막는 일.** 로컬 모델 시험을 통과시켜야 한다. 재고가 풀린 뒤(또는 사용자가 다른 후보·구성을 정한 뒤) `uv run --env-file ../../../.env python tools/llm_local.py run`을 `--yes` 없이 쳐 비용을 사용자에게 보이고 확인을 받은 뒤에만 `--yes`로 친다. 종료 2가 연달아 둘이었으므로 사용자가 어떻게 이을지 정한다.
+- 올리기 직전에 연결을 새로 얻다 실패하는 길(`PostgresDatabase.migrate`의 `engine.begin()`)이 드라이버 글과 역추적 전문을 낸다. 연결 얻기와 올리기를 가르고 연결 실패는 `failure_kind` 글로 돌려줄지 정한다. 어댑터를 고치므로 병합 조건의 시험을 또 돌려야 해서 이 PR에서는 뒤로 넘겼다.
+- 올리기 실패의 역추적에 서버가 값을 싣는 오류 글이 들 수 있는 범위(명세 190·193행이 정한 결정)를 줄일지, 연결이 올리기를 보낸 뒤 끊긴 때 "표의 판은 올리기 전 그대로" 문구를 가를지(앞 PR 609와 PR 직전 리뷰에서 넘어온 일). 같은 어댑터 변경에 함께 본다.
+- 비밀 열 시험은 admin-login이 짓는다(앞 PR 609에서 넘어온 일).
+- `.claude/rules/adapters.md`의 어댑터 목록에 postgres 항목을 더한다(티켓 03이 `serve`에 데이터베이스를 물리며 한다).
+- `reason_of`·`_chain`이 어댑터와 `tools/database_for_tests.py`에 복제되어 있다. 02가 같은 도구를 더 만질 때 두 독스트링이 서로를 가리키게 한다.

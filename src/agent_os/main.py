@@ -272,8 +272,8 @@ def _migrate() -> int:
     로그로 흘러가기 때문이다. 결과 글은 성공이면 표준 출력, 멈췄으면 표준 오류로 간다. 어댑터가
     글 대신 예외를 던지면 예외의 글을 싣지 않고 까닭만 싣는 글로 바꿔 끝낸다.
     """
-    text = os.environ.get(DATABASE_URL_ENV, "")
-    if not text.strip():
+    text = os.environ.get(DATABASE_URL_ENV, "").strip()
+    if not text:
         sys.stderr.write(f"{_NO_DATABASE_URL_DIAGNOSTIC}\n")
         return EXIT_FAILED
     url = parse_database_url(text)

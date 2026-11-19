@@ -44,6 +44,10 @@ from agent_os.adapters.postgres.database import (
 SHORT_RETRY = 0.6
 SHORT_INTERVAL = 0.1
 SHORT_ATTEMPT = 0.4
+# 닿아야 하는 시험은 부하가 큰 실행에서도 시간 때문에 빨개지지 않게 넉넉히 준다. 짧은 값은 시간이
+# 지나는 갈래를 일부러 보는 시험만 쓴다(`.claude/rules/tests.md`).
+PATIENT_RETRY = 8.0
+PATIENT_ATTEMPT = 8.0
 # 시간 단언의 상한은 홀로 돈 시간의 넉넉한 배수다(`.claude/rules/tests.md`).
 GENEROUS = 20.0
 # 비밀번호가 글에 실리는지 보려고 계정 이름과 다른, 알아볼 수 있는 값을 쓴다.
@@ -82,6 +86,17 @@ def _adapter(
         retry_seconds=retry_seconds,
         retry_interval=SHORT_INTERVAL,
         attempt_seconds=attempt_seconds,
+    )
+
+
+def _patient(address: str, versions: Path, notices: Notices) -> PostgresDatabase:
+    """닿는 서버를 상대로 시간 제한에 걸리지 않을 넉넉한 값으로 어댑터를 짓는다."""
+    return _adapter(
+        address,
+        versions,
+        notices,
+        retry_seconds=PATIENT_RETRY,
+        attempt_seconds=PATIENT_ATTEMPT,
     )
 
 
@@ -251,7 +266,7 @@ async def test_파일이_없는_폴더에서_빈_데이터베이스는_맞고_al
     folders = [tmp_path / "없는_폴더", tmp_path / "빈_폴더"]
     folders[1].mkdir()
     for folder in folders:
-        adapter = _adapter(empty_database.text(), folder, Notices())
+        adapter = _patient(empty_database.text(), folder, Notices())
         try:
             assert await adapter.startup_problem() is None
             result = await adapter.migrate()
@@ -265,7 +280,7 @@ async def test_시험용_폴더로_빈_데이터베이스는_뒤처졌고_올린
     empty_database: ScopedDatabase, tmp_path: Path
 ) -> None:
     versions = copy_versions(tmp_path / "versions", FIRST, SECOND)
-    adapter = _adapter(empty_database.text(), versions, Notices())
+    adapter = _patient(empty_database.text(), versions, Notices())
     try:
         assert await adapter.startup_problem() == (
             "데이터베이스의 표가 이 판보다 뒤처져 있습니다. agent-os migrate 를 먼저 돌리십시오.\n"
@@ -285,8 +300,8 @@ async def test_시험용_폴더로_빈_데이터베이스는_뒤처졌고_올린
 async def test_아는_옛_번호는_뒤처졌다(empty_database: ScopedDatabase, tmp_path: Path) -> None:
     older = copy_versions(tmp_path / "older", FIRST)
     newer = copy_versions(tmp_path / "newer", FIRST, SECOND)
-    first = _adapter(empty_database.text(), older, Notices())
-    second = _adapter(empty_database.text(), newer, Notices())
+    first = _patient(empty_database.text(), older, Notices())
+    second = _patient(empty_database.text(), newer, Notices())
     try:
         assert (await first.migrate()).ok
         assert await second.startup_problem() == (
@@ -306,8 +321,8 @@ async def test_모르는_번호는_더_새롭고_올리기는_표를_건드리�
 ) -> None:
     older = copy_versions(tmp_path / "older", FIRST)
     newer = copy_versions(tmp_path / "newer", FIRST, SECOND)
-    newer_adapter = _adapter(empty_database.text(), newer, Notices())
-    older_adapter = _adapter(empty_database.text(), older, Notices())
+    newer_adapter = _patient(empty_database.text(), newer, Notices())
+    older_adapter = _patient(empty_database.text(), older, Notices())
     expected = (
         "데이터베이스가 이 판보다 새롭습니다. 되돌리려면 올리기 전의 백업을 복원하십시오.\n"
         "  표의 판은 9002이고 이 판이 아는 마지막 판은 9001입니다."
@@ -327,8 +342,8 @@ async def test_폴더가_비어_있으면_표에_번호가_있는_데이터베�
     empty_database: ScopedDatabase, tmp_path: Path
 ) -> None:
     versions = copy_versions(tmp_path / "versions", FIRST)
-    filled = _adapter(empty_database.text(), versions, Notices())
-    empty = _adapter(empty_database.text(), tmp_path / "없는_폴더", Notices())
+    filled = _patient(empty_database.text(), versions, Notices())
+    empty = _patient(empty_database.text(), tmp_path / "없는_폴더", Notices())
     try:
         assert (await filled.migrate()).ok
         assert await empty.startup_problem() == (
@@ -344,7 +359,7 @@ async def test_올리기를_마치고_닫으면_연결이_남지_않는다(
     empty_database: ScopedDatabase, tmp_path: Path
 ) -> None:
     versions = copy_versions(tmp_path / "versions", FIRST, SECOND)
-    adapter = _adapter(empty_database.text(), versions, Notices())
+    adapter = _patient(empty_database.text(), versions, Notices())
     assert (await adapter.migrate()).ok
     await adapter.close()
     assert await other_connections(empty_database) == 0
@@ -357,7 +372,7 @@ async def test_틀린_비밀번호는_다시_시도하지_않고_바로_비밀�
     empty_database: ScopedDatabase, tmp_path: Path
 ) -> None:
     notices = Notices()
-    adapter = _adapter(_address(empty_database, password=SECRET), tmp_path / "versions", notices)
+    adapter = _patient(_address(empty_database, password=SECRET), tmp_path / "versions", notices)
     started = time.monotonic()
     try:
         problem = await adapter.startup_problem()
@@ -385,7 +400,7 @@ async def test_로그인을_막은_계정은_다시_시도하지_않고_바로_�
     ) as admin:
         await admin.execute(text(f"CREATE ROLE \"{role}\" NOLOGIN PASSWORD '{SECRET}'"))
         try:
-            adapter = _adapter(
+            adapter = _patient(
                 _address(empty_database, username=role, password=SECRET),
                 tmp_path / "versions",
                 notices,
@@ -412,7 +427,7 @@ async def test_없는_데이터베이스_이름은_바로_데이터베이스_없
     missing = f"agent_os_missing_{uuid.uuid4().hex}"
     place = f"{empty_database.address.url.host}:{empty_database.address.url.port}/{missing}"
     notices = Notices()
-    adapter = _adapter(_address(empty_database, name=missing), tmp_path / "versions", notices)
+    adapter = _patient(_address(empty_database, name=missing), tmp_path / "versions", notices)
     try:
         problem = await adapter.startup_problem()
     finally:
@@ -439,7 +454,7 @@ async def test_접속_권한이_없는_계정은_다시_시도하지_않고_그_
         # 접속 권한은 이 시험의 데이터베이스에서만 거둔다. 공용 기본 데이터베이스는 건드리지 않는다.
         await admin.execute(text(f'REVOKE CONNECT ON DATABASE "{empty_database.name}" FROM PUBLIC'))
         try:
-            adapter = _adapter(
+            adapter = _patient(
                 _address(empty_database, username=role, password=SECRET),
                 tmp_path / "versions",
                 notices,
@@ -462,7 +477,7 @@ async def test_경로에_세미콜론이_든_마이그레이션_폴더도_판을
     """`path_separator` 가 `os` 면 `;`(POSIX 는 `:`)에서 경로가 갈려 폴더를 못 찾고, 판이 있는
     폴더가 빈 폴더처럼 맞다고 읽힌다."""
     versions = copy_versions(tmp_path / "버전;폴더", FIRST, SECOND)
-    adapter = _adapter(empty_database.text(), versions, Notices())
+    adapter = _patient(empty_database.text(), versions, Notices())
     try:
         result = await adapter.migrate()
     finally:
@@ -520,7 +535,7 @@ async def test_판_기록_표가_잠겨_있으면_연결은_열려도_시간_안
 ) -> None:
     """시도 하나를 드라이버의 접속 인자로만 걸면 이 사례는 잠금이 풀릴 때까지 돌아오지 않는다."""
     versions = copy_versions(tmp_path / "versions", FIRST)
-    setup = _adapter(empty_database.text(), versions, Notices())
+    setup = _patient(empty_database.text(), versions, Notices())
     try:
         assert (await setup.migrate()).ok
     finally:
@@ -549,7 +564,7 @@ async def test_판_기록_표가_잠겨_있으면_연결은_열려도_시간_안
 async def test_뜻밖의_예외의_글은_예외의_글을_싣지_않고_까닭만_싣는다(
     empty_database: ScopedDatabase, tmp_path: Path
 ) -> None:
-    adapter = _adapter(empty_database.text(), tmp_path / "versions", Notices())
+    adapter = _patient(empty_database.text(), tmp_path / "versions", Notices())
     try:
         message = adapter.unexpected_problem(RuntimeError(f"비밀번호 {SECRET} 가 섞인 글"))
     finally:

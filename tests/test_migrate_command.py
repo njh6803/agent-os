@@ -64,17 +64,24 @@ def _run_without_handler(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(main_module, "run_interruptibly", _run_plainly)
 
 
-def _use_adapter(monkeypatch: pytest.MonkeyPatch, versions: Path) -> None:
-    """`migrate` 가 시험용 폴더와 짧은 다시 시도 시간으로 어댑터를 짓게 한다."""
+def _use_adapter(
+    monkeypatch: pytest.MonkeyPatch, versions: Path, *, give_up_quickly: bool = False
+) -> None:
+    """`migrate` 가 시험용 폴더로 어댑터를 짓게 한다.
+
+    닿는 서버를 상대로 하는 시험은 부하가 큰 실행에서도 시간 때문에 빨개지지 않게 넉넉한 시간을
+    준다. 닿지 못하는 갈래를 보는 시험만 `give_up_quickly` 로 짧은 시간을 준다.
+    """
+    retry_seconds, attempt_seconds = (0.6, 0.4) if give_up_quickly else (8.0, 8.0)
 
     def build(url: DatabaseUrl) -> PostgresDatabase:
         return PostgresDatabase(
             url,
             notice=_stderr_notice,
             versions=versions,
-            retry_seconds=0.6,
+            retry_seconds=retry_seconds,
             retry_interval=0.1,
-            attempt_seconds=0.4,
+            attempt_seconds=attempt_seconds,
         )
 
     monkeypatch.setattr(main_module, "_build_database", build)
@@ -148,6 +155,20 @@ async def test_빈_데이터베이스는_올리고_다시_부르면_이미_마�
     assert await revisions(empty_database) == ["9002"]
 
 
+async def test_주소_앞뒤의_공백과_개행은_걷고_읽는다(
+    empty_database: ScopedDatabase,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    _use_adapter(monkeypatch, copy_versions(tmp_path / "versions", FIRST))
+    _environment(monkeypatch, f"  {empty_database.text()}\n")
+    assert await _migrate() == 0
+    captured = capsys.readouterr()
+    assert (captured.out, captured.err) == ("표를 없음에서 9001으로 올렸습니다.\n", "")
+    assert await revisions(empty_database) == ["9001"]
+
+
 async def test_이_판이_모르는_번호의_데이터베이스는_건드리지_않고_1로_끝난다(
     empty_database: ScopedDatabase,
     tmp_path: Path,
@@ -178,7 +199,7 @@ async def test_닿지_못하면_다시_시도한다는_알림과_닿지_못했�
     port = closed_port()
     place = f"{empty_database.address.url.host}:{port}/{empty_database.name}"
     address = empty_database.address.url.set(database=empty_database.name, port=port)
-    _use_adapter(monkeypatch, copy_versions(tmp_path / "versions", FIRST))
+    _use_adapter(monkeypatch, copy_versions(tmp_path / "versions", FIRST), give_up_quickly=True)
     _environment(monkeypatch, address.render_as_string(hide_password=False))
     assert await _migrate() == 1
     captured = capsys.readouterr()
