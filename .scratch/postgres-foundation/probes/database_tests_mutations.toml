@@ -104,8 +104,18 @@ expect = "red"
 expect_output = ["first extra item: 'agent_os'"]
 [[mutation.edit]]
 file = "tools/database_for_tests.py"
-old = '''_NAME = re.compile(rf"[a-z0-9_]+_(?:{'|'.join(_KINDS)})_[0-9a-f]{{32}}")'''
+old = '''_NAME = re.compile(rf"[a-z0-9_]{{1,{MAX_PREFIX}}}_(?:{'|'.join(_KINDS)})_[0-9a-f]{{32}}")'''
 new = '''_NAME = re.compile(r".*")'''
+
+[[mutation]]
+name = "지울 수 있는 이름의 접두 길이를 묶지 않는다"
+tests = ["tests/tools/test_database_for_tests.py"]
+expect = "red"
+expect_output = ["Left contains one more item: 'aaaaaaaaaaaaaaaaaaaaaa_test_"]
+[[mutation.edit]]
+file = "tools/database_for_tests.py"
+old = '''_NAME = re.compile(rf"[a-z0-9_]{{1,{MAX_PREFIX}}}_(?:{'|'.join(_KINDS)})_[0-9a-f]{{32}}")'''
+new = '''_NAME = re.compile(rf"[a-z0-9_]+_(?:{'|'.join(_KINDS)})_[0-9a-f]{{32}}")'''
 
 [[mutation]]
 name = "쓰는 연결이 있으면 지우지 못한다"
@@ -198,7 +208,7 @@ new = '''        image: postgres@sha256:b9f6b8ff03b62f3cfd9d9ba3fe56226a9991c79d
 name = "CI 에 PostgreSQL service container 가 없다"
 tests = ["tests/test_postgres_image_pin.py"]
 expect = "red"
-expect_output = ["assert 0 >= 1"]
+expect_output = ["PostgreSQL service container 가 없다 (0개)"]
 [[mutation.edit]]
 file = ".github/workflows/ci.yml"
 old = '''        image: postgres@sha256:b9f6b8ff03b62f3cfd9d9ba3fe56226a9991c79d3fb46fd46536263bf02be553'''

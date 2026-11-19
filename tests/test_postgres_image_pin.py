@@ -84,7 +84,9 @@ def test_이_저장소의_PostgreSQL_이미지는_테스트_컨테이너와_CI_�
     compose_text = COMPOSE.read_text(encoding="utf-8")
     ci_text = CI.read_text(encoding="utf-8")
     assert len(postgres_images(compose_text)) == 1
-    assert len(postgres_images(ci_text)) >= 1
+    ci_images = postgres_images(ci_text)
+    missing = f"ci.yml 에 PostgreSQL service container 가 없다 ({len(ci_images)}개)"
+    assert len(ci_images) >= 1, missing
     assert pin_problems(compose_text, ci_text) == []
 
 

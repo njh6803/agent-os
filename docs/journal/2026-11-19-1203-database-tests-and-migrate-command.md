@@ -80,7 +80,7 @@
 - 명세 축 Minor(범위 넘침): `SKIP=pytest`면 러너가 컨테이너를 보지 않는 것과 CI service container의 `--init`과 상태 확인 옵션 다섯. 앞의 것은 해롭지 않고 pre-commit이 `SKIP`으로 검사를 뺄 때 Docker를 요구하지 않으려는 것이다. 뒤의 것은 service container가 `--health-*`가 없으면 상태 확인을 하지 않아 필요한 옵션이다.
 - 어댑터 규칙 `.claude/rules/adapters.md`의 어댑터 목록에 postgres 항목이 없는 Nit: 다음 티켓(03)이 `serve`에 데이터베이스를 물리며 어댑터 목록을 고치므로 그때 함께 쓴다.
 
-## 이어서 할 것 (인계 시점의 남은 단계)
+## 첫 인계 때 남았던 단계 (1~2는 두 번째 세션이 마쳤고, 지금 남은 것은 맨 아래 "두 번째 인계")
 
 1. `/code-review`를 한다(이 인계가 `셀프 리뷰 직전`이라 새 세션은 여기서 시작한다). 고정점은 `origin/dev`(`git merge-base origin/dev HEAD`로 SHA 고정)이고 미추적 파일 목록을 서브에이전트에 넘긴다. 이 세션은 리뷰를 아직 돌리지 않았다. Critical·Major를 고친다. 반영이 `src/agent_os/adapters/`, `channel/`, `main.py` 같은 병합 조건 범위(`docs/constitution/operations.md` LLM 테스트)의 코드를 고치면 위 `-m llm`과 로컬 모델 시험이 고치기 전 판의 결과가 되므로 다시 돌릴지 정한다. 로컬 모델 시험은 `--yes` 없이 쳐 예상 비용을 사용자에게 다시 보이고 확인받은 뒤에만 `--yes`로 친다.
 2. 커밋 직전에 `git branch --show-current`와 `uv run python tools/sibling_overlap.py`(1이면 출력대로 고친다)를 친다.
@@ -95,3 +95,43 @@
 바꾸기 전 제목은 `feature/01-database-tests-and-migrate-command`다(`get_session`의 `self`가 본 값). 인계하며 `feature/01-database-tests-and-migrate-command (인계함)`으로 바꿨고, 워크트리 잠금을 풀었다(`git worktree unlock`이 출력 없이 끝났다).
 
 open-session을 부른다 2026-11-19T03:05:26Z
+
+## 두 번째 인계 (커밋 뒤)
+
+이 일지는 `a95b5e8bb`에 한 번 커밋됐다. 아래 "두 번째 인계" 절과 앞 절의 수정(아래 둘)은 그 뒤에 더한 것이라 커밋하지 않았다. 두 번째 세션은 `/code-review`(두 축)와 반영, 커밋까지 했다.
+
+- **커밋.** `a95b5e8bb feat: 데이터베이스 시험 틀과 migrate 명령 (01-database-tests-and-migrate-command)`. pre-commit이 모두 Passed였다(pytest 460.8초, web-verify 554.5초, mutation tables, constitution version, commit message 포함. canary specs는 대상 파일이 없어 Skipped). 출력은 백그라운드 명령의 출력 파일에서 읽었다.
+- **첫 커밋 시도는 막혔다.** 변이 표 검사(`check-mutations`)가 기존 `.scratch/harness/probes/run_checks_mutations.toml`의 "띄우지 못한 명령을 잡지 않는다"가 찾는 원문 `    except OSError as error:`가 `tools/run_checks.py`에 두 번 있다고 냈다(내가 더한 docker 호출의 `except`가 같은 줄이었다). 내 쪽을 `except OSError as failure:`로 바꿔 고쳤고, 두 표 모두 `mutate.py --check`로 원문이 한 번씩 있음을 보았다.
+- **병합 조건의 시험을 고친 코드에 다시 돌리지 않았다.** 셀프 리뷰 반영이 `src/agent_os/adapters/postgres/database.py`(마이그레이션 폴더의 `path_separator`를 `os`에서 `newline`으로, 독스트링)를 고쳤다. `-m llm`(23건 통과)과 로컬 모델 시험(2 passed)은 고치기 전 작업 트리로 돈 결과다. 새 세션이 다시 돌릴지 정한다. 로컬 모델 시험은 `--yes` 없이 쳐 예상 비용을 사용자에게 보인 뒤에만 `--yes`로 친다. 이번 반영은 `migrate`의 폴더 경로 읽기에만 닿고 LLM 호출 경로에는 닿지 않는다는 점을 재지는 않았다(코드를 읽은 어림).
+- **티켓.** `Status`는 `done`이고 `.scratch/plan.md`를 `tools/plan_table.py`로 다시 만들어 같은 커밋에 실었다. 체크박스는 CI 관찰 한 줄(`그 PR의 CI에서 템플릿 복제가 도는지…`, 티켓 58줄)만 일부러 `[ ]`로 두었다. PR의 CI를 본 뒤 `[x]`로 바꾸는 고침 커밋이 필요하다.
+- **남은 단계.**
+  1. 푸시 직전에 `git branch --show-current`와 `uv run python tools/sibling_overlap.py`(1이면 출력대로). 커밋 직전에는 겹침 없음, 헌법 판 3.1.3이었다.
+  2. `/git-pr`로 PR을 연다(제목에 느낌표를 쓰지 않는다. 본문 끝에 `🤖 Generated with [Claude Code](https://claude.com/claude-code)`). 기능의 마지막 티켓이 아니라 `**끝:**` 줄과 기능 단락은 없다.
+  3. PR의 CI에서 템플릿 복제가 도는지, service container가 데이터 폴더의 tmpfs를 받는지, 빠르기 설정 셋(tmpfs, `fsync` 등)을 service container에 넣을지를 보고 이 일지와 PR 본문에 적는다. 티켓 58줄을 `[x]`로 바꾼다.
+  4. `pr-feedback`, 봇 회차(`merge.md` 2), 병합(`merge.md`의 "워크트리에서 병합할 때"를 이 워크트리 사본에서 Read로 연다).
+  5. 이 일지를 마저 쓴다. 검증 결과에 CI 관찰과 봇 회차, 리뷰 반영, 병합 결과를 더하고, 앞 PR(609)에서 넘어온 일 둘(연결 끊김과 되돌림을 가르는 갈래를 더할지, 비밀 열 시험은 admin-login이 짓는 것)을 `## 다음`에 옮긴다.
+  6. 병합 뒤 `next-session`으로 다음 작업 지시문(티켓 02)을 낸다.
+- **세션 중에 건드린 공용 상태.** 테스트 컨테이너 `agent-os-test-postgres`는 떠 있다. 새 시험의 첫 판이 공용 데이터베이스 `agent_os`의 PUBLIC 접속 권한을 거뒀다가 `GRANT CONNECT … TO PUBLIC`으로 되돌렸다(위 셀프 리뷰 절).
+
+## 이 세션의 제목 (두 번째)
+
+바꾸기 전 제목은 `feature/01-database-tests-and-migrate-command`다.
+
+제목을 `feature/01-database-tests-and-migrate-command (인계함)`으로 바꿨고, 잠금은 이미 풀려 있었다(`git worktree unlock`이 `is not locked`로 끝났다).
+
+open-session을 부른다 2026-11-19T03:45:48Z
+
+## PR 직전 리뷰 (세 번째 세션)
+
+세 번째 세션이 이어받았다(제목 `feature/01-database-tests-and-migrate-command`). 앞 세션들의 일지 수정은 이 세션이 이어서 커밋했다. 푸시 직전 `sibling_overlap`은 번호 겹침 없음, 헌법 3.1.3이었다(형제의 가장 높은 판 3.1.2).
+
+`coderabbit-review` 서브에이전트가 CLI 0.7.5로 `coderabbit review --agent --include-untracked --base origin/dev`를 돌렸다. `Seat: not assigned`(Plan: Free)였고 리뷰는 `review_completed`로 끝나 findings 4건을 냈다. 변경 파일 32개라 150개 한도에 걸리지 않았다.
+
+| 지적 | 판정 | 처리 |
+|---|---|---|
+| 올리기 실패 때 `traceback.format_exception` 전체가 표준 오류로 나가 서버 오류 글에 든 값이 샐 수 있다(CLI Critical, 서브에이전트는 Major로 읽음) | 보류 | 명세 `spec.md` 190·193행이 정한 결정이다. 엔진이 `hide_parameters=True`라 바인드 값은 가려지고 연결 문자열은 이 길에 실리지 않는다. 남는 것은 서버가 값을 싣는 오류(형 변환 실패, 유일 제약 위반)이고 명세가 "그런 열을 건드리는 마이그레이션은 값을 싣는 실패가 나지 않게 짓는다"로 후속 기능(admin-login 등)에 넘겼다. 역추적을 줄이는 것은 명세 변경이라 이 PR에서 하지 않는다. 일지 "다음"에 옮긴다 |
+| 올리기를 보낸 뒤 응답 전에 연결이 끊기면 "표의 판은 올리기 전 그대로"가 틀릴 수 있다(Minor) | 보류 | 어댑터 독스트링 "못 보는 것"과 명세 193행이 같은 한계를 이미 적었다. 다시 `migrate`를 치면 견줌이 실제 판을 읽어 안전하다. 연결 오류일 때 글을 가르는 것은 어댑터를 고쳐 병합 조건의 시험을 또 돌려야 하는 일이라 뒤로 넘긴다. 일지 "다음"에 옮긴다 |
+| `tools/database_for_tests.py`의 `_NAME`이 접두 길이를 제한하지 않아 `make_name`의 21자와 어긋난다(Minor) | 고침 | `[a-z0-9_]{1,21}`로 좁혔다. `test_지울_수_있는_이름은_시험이_짓는_꼴뿐이다`에 22자 접두를 더했고, 변이 11(접두 길이를 묶지 않는다)을 표에 더해 `mutate.py`가 기대대로 빨강으로 냈다(표지 `Left contains one more item: 'aaaa…_test_`). 변이 10도 새 원문으로 고쳐 다시 보았다 |
+| 변이 표의 `assert 0 >= 1`이 pytest 단언 풀이에 기댄다(Minor) | 고침 | `tests/test_postgres_image_pin.py`의 단언에 실행 중에 만드는 메시지(`ci.yml 에 PostgreSQL service container 가 없다 (0개)`)를 붙이고 표지를 `PostgreSQL service container 가 없다 (0개)`로 바꿨다. `mutate.py`가 변이를 기대대로 빨강으로 냈다. `--check`는 변이 22개 모두 원문이 한 번씩 있다고 냈다 |
+
+이 고침은 `tools/`와 `tests/`뿐이라 병합 조건 범위(`src/agent_os/adapters/` 등)를 건드리지 않는다.

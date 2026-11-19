@@ -49,7 +49,7 @@ MAX_PREFIX = 21
 _DRIVER = "postgresql+asyncpg"
 _PREFIX = re.compile(r"[a-z0-9_]+")
 _KINDS = ("template", "test", "e2e")
-_NAME = re.compile(rf"[a-z0-9_]+_(?:{'|'.join(_KINDS)})_[0-9a-f]{{32}}")
+_NAME = re.compile(rf"[a-z0-9_]{{1,{MAX_PREFIX}}}_(?:{'|'.join(_KINDS)})_[0-9a-f]{{32}}")
 
 _QUERY_PROBLEM = (
     f"{URL_ENV} 에 질의 문자열(? 뒤)이 들어 있어 받지 않습니다. "

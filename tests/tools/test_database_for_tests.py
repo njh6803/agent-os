@@ -205,6 +205,7 @@ def test_지울_수_있는_이름은_시험이_짓는_꼴뿐이다() -> None:
         "agent_os_test_" + "a" * 31,
         "agent_os_test_" + "a" * 33,
         "agent_os_test_" + "A" * 32,
+        "a" * 22 + "_test_" + "a" * 32,
         "agent_os_prod_" + "a" * 32,
         f'{good}"; DROP DATABASE agent_os; --',
         f"{good} ",
