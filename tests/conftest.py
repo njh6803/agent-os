@@ -42,10 +42,20 @@ import sys
 from pathlib import Path
 
 import pytest
+from tests.database import (
+    database_address_fixture,
+    database_fixture,
+    database_template_fixture,
+    empty_database_fixture,
+)
 
 from tools import llm_tokens, run_hooks
 
 CHECKOUT = Path(run_hooks.__file__).resolve().parents[1]
+
+# agent_os 의 데이터베이스 시험이 쓰는 이름의 접두. 위젯 관리 서버는 자기 폴더의 conftest 에서 다른
+# 접두로 같은 픽스처 함수를 부른다(`tests/database.py`).
+DATABASE_PREFIX = "agent_os"
 
 # 실제 모델을 부르는 시험의 마커. `llm` 은 원칙 I 의 판정이고 `llm_widget` 과 `llm_portal` 은 위젯
 # e2e 와 위젯 미리보기 페이지 e2e 를 감싸며, `llm_local` 은 빌린 모델 서버(로컬 모델)에 붙는 calc
@@ -55,6 +65,36 @@ _LLM_MARKERS = ("llm", "llm_widget", "llm_portal", "llm_local")
 # 네 마커의 테스트가 하나라도 돌았을 때만 값이 있다. 둘째 값은 트레이스를 남기지 않은 그 테스트의
 # 수다.
 _LLM_TOKENS = pytest.StashKey[tuple[llm_tokens.Tokens, int]]()
+
+
+def _ignore_notice(message: str) -> None:
+    """템플릿을 만들 때는 닿을 때까지 기다린다는 알림을 찍지 않는다."""
+
+
+async def _migrate_product(url_text: str) -> None:
+    """제품의 마이그레이션 폴더를 템플릿 데이터베이스에 올린다. 멈추면 그 글로 예외를 던진다.
+
+    `agent_os` 는 여기서 불러온다. 맨 위에서 부르면 다른 체크아웃의 `agent_os` 를 잡은 세션이
+    `pytest_configure` 의 안내 대신 가져오기 오류로 먼저 죽는다(`tests/test_conftest.py`).
+    """
+    from agent_os.adapters.postgres.database import PostgresDatabase, parse_database_url
+
+    url = parse_database_url(url_text)
+    if url is None:
+        raise RuntimeError("테스트 데이터베이스의 주소를 어댑터가 읽지 못했다")
+    database = PostgresDatabase(url, notice=_ignore_notice)
+    try:
+        result = await database.migrate()
+    finally:
+        await database.close()
+    if not result.ok:
+        raise RuntimeError(result.message)
+
+
+database_address = database_address_fixture()
+database_template = database_template_fixture(DATABASE_PREFIX, _migrate_product)
+database = database_fixture(DATABASE_PREFIX)
+empty_database = empty_database_fixture(DATABASE_PREFIX)
 
 for stream in (sys.stdout, sys.stderr):
     if isinstance(stream, io.TextIOWrapper):

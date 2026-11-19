@@ -38,10 +38,16 @@ from agent_os.adapters.filesystem import FilesystemPlugins
 from agent_os.adapters.jsonl import JsonlTrace
 from agent_os.adapters.mcp import McpTools
 from agent_os.adapters.models import ManifestModels, resolve_model_name
+from agent_os.adapters.postgres.database import (
+    DatabaseUrl,
+    PostgresDatabase,
+    parse_database_url,
+)
 from agent_os.channel.cli.interrupt import run_interruptibly
 from agent_os.channel.cli.main import (
     EXIT_FAILED,
     EXIT_FINISHED,
+    MigrateArgs,
     ResumeArgs,
     RunArgs,
     ServeArgs,
@@ -66,6 +72,9 @@ from agent_os.server import create_app
 # 토큰은 환경변수로만 들어온다(ADR 0011, ADR 0015). 명령줄 인자는 프로세스 목록과 셸 이력에 남는다.
 ADMIN_TOKEN_ENV = "AGENT_OS_ADMIN_TOKEN"
 CHANNEL_TOKEN_ENV = "AGENT_OS_CHANNEL_TOKEN"
+# 데이터베이스 주소도 환경 변수로만 들어온다. 비밀번호가 든 값이라 명령줄 인자로 받지 않는다(ADR
+# 0066).
+DATABASE_URL_ENV = "AGENT_OS_DATABASE_URL"
 # 바인딩을 허용하는 주소 전부. 자라면 ADR 0011 의 이력에 쌓는다. 집합이 아니라 열인 이유는
 # 진단에 그대로 실려서, 순서가 실행마다 달라지면 운영자가 읽는 문장이 달라지기 때문이다.
 # 관리 화면과 위젯의 시작 래퍼(`web/apps/admin/tools/loopback.ts`,
@@ -123,6 +132,20 @@ _NOT_ONE_ENV_DIAGNOSTIC = (
     f"{CONTAINER_NETWORK_ENV} 는 비우거나 1 만 받는다. 받은 값: {{value}}\n"
     "  오타가 조용히 꺼짐으로 읽히지 않게 시작 자리에서 끝낸다."
 )
+# 데이터베이스 주소의 진단은 높임말이다. 글은 명세 postgres-foundation의 "멈출 때의 글"이 원천이고,
+# 03부터 `serve`도 같은 글을 쓴다. 비밀번호가 든 값이라 값은 싣지 않는다(원칙 V).
+_NO_DATABASE_URL_DIAGNOSTIC = (
+    f"{DATABASE_URL_ENV} 이 비어 있습니다. serve 와 migrate 는 PostgreSQL 데이터베이스가 있어야"
+    " 돕니다(ADR 0066).\n"
+    "  단독 배포에서는 compose 가 .env 의 AGENT_OS_DATABASE_PASSWORD 로 이 값을 짓습니다."
+    " 개발 PC 의 값은 README 에 있습니다."
+)
+_UNREADABLE_DATABASE_URL_DIAGNOSTIC = (
+    f"{DATABASE_URL_ENV} 을 읽지 못했습니다."
+    " postgresql://계정:비밀번호@호스트:포트/데이터베이스 꼴이어야 합니다.\n"
+    "  값에는 비밀번호가 들어 있어 여기 찍지 않습니다. 비밀번호에 @ 가 들면 주소를 읽지 못하므로,"
+    " 비밀번호는 영문자와 숫자만 씁니다."
+)
 _NOT_POSITIVE_TIMEOUT_DIAGNOSTIC = (
     "--run-timeout 은 1 이상의 정수(초)다. 받은 값: {value}\n"
     "  0 이하면 모델이나 도구를 기다리는 실행은 모두 그 자리에서 run_failed 로 끝난다.\n"
@@ -142,6 +165,10 @@ def main(argv: list[str] | None = None) -> int:
     # 때문이다. 모델을 여기서 확인하면 serve 의 진단이 모델 하나에서 먼저 끊긴다.
     if isinstance(args, ServeArgs):
         return _serve(args)
+    # migrate 는 플러그인도 모델도 OS 사용자도 읽지 않는다. 표를 올리는 일은 그 어느 것에도 기대지
+    # 않으므로 그것들의 구성 오류에 막히지 않는다.
+    if isinstance(args, MigrateArgs):
+        return _migrate()
     user = getpass.getuser()
     problem = _os_user_problem(user) or _model_problem(args.model, args.plugins_root)
     if problem is not None:
@@ -224,6 +251,48 @@ def _serve(args: ServeArgs) -> int:
         timeout_graceful_shutdown=SHUTDOWN_GRACE_SECONDS,
     )
     return EXIT_FINISHED
+
+
+def _build_database(url: DatabaseUrl) -> PostgresDatabase:
+    """데이터베이스 어댑터를 짓는 자리. 닿지 못해 기다리는 알림은 표준 오류로 간다.
+
+    조립이라 여기 하나로 모았고, 시험이 기다림의 길이를 줄인 어댑터로 바꿔 끼운다.
+    """
+    return PostgresDatabase(url, notice=_notice)
+
+
+def _notice(message: str) -> None:
+    sys.stderr.write(f"{message}\n")
+
+
+def _migrate() -> int:
+    """데이터베이스의 표를 이 판의 마지막 판까지 올린다. 주소는 환경 변수로만 받는다.
+
+    주소를 못 읽는 진단도 값을 싣지 않는다(원칙 V). 비밀번호가 든 값이라 표준 오류가 셸 이력과 CI
+    로그로 흘러가기 때문이다. 결과 글은 성공이면 표준 출력, 멈췄으면 표준 오류로 간다. 어댑터가
+    글 대신 예외를 던지면 예외의 글을 싣지 않고 까닭만 싣는 글로 바꿔 끝낸다.
+    """
+    text = os.environ.get(DATABASE_URL_ENV, "")
+    if not text.strip():
+        sys.stderr.write(f"{_NO_DATABASE_URL_DIAGNOSTIC}\n")
+        return EXIT_FAILED
+    url = parse_database_url(text)
+    if url is None:
+        sys.stderr.write(f"{_UNREADABLE_DATABASE_URL_DIAGNOSTIC}\n")
+        return EXIT_FAILED
+    return run_interruptibly(lambda: _migrate_database(_build_database(url)))
+
+
+async def _migrate_database(database: PostgresDatabase) -> int:
+    try:
+        result = await database.migrate()
+    except Exception as error:  # 어떤 예외든 까닭만 싣는 글로 바꿔 끝낸다
+        sys.stderr.write(f"{database.unexpected_problem(error)}\n")
+        return EXIT_FAILED
+    finally:
+        await database.close()
+    (sys.stdout if result.ok else sys.stderr).write(f"{result.message}\n")
+    return EXIT_FINISHED if result.ok else EXIT_FAILED
 
 
 class ContainerNetwork(NamedTuple):

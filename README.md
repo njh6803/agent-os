@@ -9,21 +9,22 @@ uv sync
 pnpm -C web install
 pnpm -C web exec playwright install --only-shell chromium
 uv run pre-commit install
+docker compose -f compose.test.yaml up -d --wait
 uv run pytest -q
 pnpm -C web verify
 ```
 
-`pre-commit install`은 주 체크아웃에서 한 번만 친다. git 훅은 워크트리와 공유된다. `uv sync`와 `pnpm -C web install --frozen-lockfile`은 워크트리마다 친다. claude.ai 클라우드 세션에서는 SessionStart 훅(`tools/hook_session_web_deps.py`)이 클론마다 `uv run pre-commit install`(빈 `.venv`를 맞추는 `uv sync`가 따라온다)과 pnpm 설치를 대신한다. chromium은 `pnpm -C web verify`의 스토리 테스트가 쓰고, 체크아웃마다가 아니라 기계마다 처음과 Playwright 판이 바뀔 때 한 번 친다(Playwright의 브라우저 캐시, Windows는 `%LOCALAPPDATA%\ms-playwright`). 사진 비교(`web/packages/ui`를 건드렸을 때 `pnpm -C web visual`, `pnpm -C web visual:widget`, `pnpm -C web visual:admin`, `web/apps/widget`이나 `web/apps/admin`을 건드렸을 때 그 앱의 것)는 Docker가 있어야 하고, 처음 치면 판을 고정한 Playwright 이미지(받는 양 약 956MB)를 받는다. `uv run pytest -q`는 PATH의 PowerShell 7(`pwsh`)로 `tools/open_session.ps1`의 함수를 부르므로 기계마다 pwsh가 있어야 하고, 없으면 그 시험이 실패한다(ADR 0030). 같은 pytest가 `.env` 읽기 훅을 실제 rg와 맞대므로 PATH에 `rg`나 Claude Code(`claude`)가 있어야 한다(ADR 0038).
+`pre-commit install`은 주 체크아웃에서 한 번만 친다. git 훅은 워크트리와 공유된다. `uv sync`와 `pnpm -C web install --frozen-lockfile`은 워크트리마다 친다. claude.ai 클라우드 세션에서는 SessionStart 훅(`tools/hook_session_web_deps.py`)이 클론마다 `uv run pre-commit install`(빈 `.venv`를 맞추는 `uv sync`가 따라온다)과 pnpm 설치를 대신한다. chromium은 `pnpm -C web verify`의 스토리 테스트가 쓰고, 체크아웃마다가 아니라 기계마다 처음과 Playwright 판이 바뀔 때 한 번 친다(Playwright의 브라우저 캐시, Windows는 `%LOCALAPPDATA%\ms-playwright`). 사진 비교(`web/packages/ui`를 건드렸을 때 `pnpm -C web visual`, `pnpm -C web visual:widget`, `pnpm -C web visual:admin`, `web/apps/widget`이나 `web/apps/admin`을 건드렸을 때 그 앱의 것)는 Docker가 있어야 하고, 처음 치면 판을 고정한 Playwright 이미지(받는 양 약 956MB)를 받는다. `docker compose -f compose.test.yaml up -d --wait`는 데이터베이스 시험이 붙는 테스트 컨테이너(`127.0.0.1:25432`의 PostgreSQL, 데이터는 메모리에만 있다)를 띄운다. 모든 워크트리와 세션이 이 하나를 함께 쓰고, 커밋 때 도는 러너(`tools/run_checks.py`)는 컨테이너가 답하지 않으면 스스로 띄우되 내리지 않는다. 손으로 치는 `uv run pytest -q`는 띄우지 않으므로 컨테이너가 없으면 데이터베이스 시험이 띄우는 명령과 함께 실패한다(ADR 0066). `uv run pytest -q`는 PATH의 PowerShell 7(`pwsh`)로 `tools/open_session.ps1`의 함수를 부르므로 기계마다 pwsh가 있어야 하고, 없으면 그 시험이 실패한다(ADR 0030). 같은 pytest가 `.env` 읽기 훅을 실제 rg와 맞대므로 PATH에 `rg`나 Claude Code(`claude`)가 있어야 한다(ADR 0038).
 
 ## 구조
 
 ```
 src/agent_os/
-  main.py          진입점. run·resume → channel, serve → server. 어댑터를 조립해 넘긴다
+  main.py          진입점. run·resume → channel, serve → server, migrate → adapters/postgres. 어댑터를 조립해 넘긴다
   server.py        HTTP 표면의 조립 층. create_app() 하나. 전역 app을 두지 않는다
   sdk/             플러그인이 import하는 유일한 표면. 이벤트, 매니페스트, BaseAgent
   core/            런타임, 로더, 루프, 재생, 포트 선언
-  channel/cli/     실행을 일으키는 면. run·resume 과 명령 셋의 인자
+  channel/cli/     실행을 일으키는 면. run·resume·migrate 와 명령 셋의 인자
   channel/http/    실행을 일으키는 면. router(운영자 채널 /runs 와 두 접두사의 조립), end_user(최종 사용자 면
                    /end-user 의 시작·결정·구독·이어 가기), items(최종 사용자 항목과 투영), bodies(두 면의
                    요청 본문),

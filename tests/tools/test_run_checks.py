@@ -16,16 +16,25 @@ import time
 from pathlib import Path
 
 import pytest
+from tools.database_for_tests import UP_COMMAND, URL_ENV
 from tools.run_checks import (
     CHECKS,
+    COMPOSE_UP,
+    COMPOSE_UP_SECONDS,
     Check,
     Running,
+    UpResult,
+    database_answers,
+    docker_up,
+    prepare_test_database,
     pyright_checks,
     pytest_workers,
     run,
     run_one,
     skipped_ids,
 )
+
+from tools import run_checks
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -331,3 +340,217 @@ def test_이_저장소의_pre_commit_은_러너의_검사를_따로_등록하지
     for check in CHECKS:
         assert " ".join(check.command) not in entries, check.id
         assert check.id not in hook_ids, check.id
+
+
+# --- 테스트 컨테이너를 챙기는 판정: Docker 도 접속도 부르지 않는 함수로 본다 ------------------
+
+
+class _Docker:
+    """`bring_up` 의 대역. 부른 횟수를 세고 준비해 둔 결과를 차례로 돌려준다."""
+
+    def __init__(self, *results: UpResult) -> None:
+        self._results = list(results)
+        self.calls = 0
+
+    def __call__(self) -> UpResult:
+        self.calls += 1
+        return self._results.pop(0)
+
+
+def _must_not_up() -> UpResult:
+    raise AssertionError("컨테이너를 띄우면 안 된다")
+
+
+UNREACHABLE = UpResult(1, "docker compose 가 종료 코드 1 로 끝났습니다")
+SUCCESS = UpResult(0)
+
+
+@pytest.mark.parametrize("value", ["postgresql://u:p@db:5432/x", " x "])
+def test_테스트_데이터베이스_변수가_있으면_보지도_띄우지도_않는다(value: str) -> None:
+    asked: list[str] = []
+
+    def answers() -> bool:
+        asked.append(f"접속 확인 {len(asked) + 1}번째")
+        return True
+
+    line = prepare_test_database({URL_ENV: value}, answers=answers, bring_up=_must_not_up)
+    assert (line, asked) == (None, [])
+
+
+@pytest.mark.parametrize("environ", [{}, {URL_ENV: ""}, {URL_ENV: "   "}])
+def test_변수가_없거나_비었고_서버가_답하면_띄우지_않고_아무것도_찍지_않는다(
+    environ: dict[str, str],
+) -> None:
+    assert prepare_test_database(environ, answers=lambda: True, bring_up=_must_not_up) is None
+
+
+def test_답하지_않으면_한_번_띄우고_한_줄을_찍는다() -> None:
+    docker = _Docker(SUCCESS)
+    line = prepare_test_database({}, answers=lambda: False, bring_up=docker)
+    assert (line, docker.calls) == ("테스트 컨테이너를 띄웠습니다.", 1)
+
+
+def test_0이_아닌_종료는_한_번_더_치고_이번에_0이면_띄운_것이다() -> None:
+    """두 세션이 동시에 띄우면 진 쪽이 컨테이너 이름이 겹쳐 1 로 끝난다."""
+    docker = _Docker(UNREACHABLE, SUCCESS)
+    line = prepare_test_database({}, answers=lambda: False, bring_up=docker)
+    assert (line, docker.calls) == ("테스트 컨테이너를 띄웠습니다.", 2)
+
+
+def test_다시_쳐도_0이_아니면_까닭_한_줄을_찍고_더_치지_않는다() -> None:
+    docker = _Docker(UNREACHABLE, UpResult(2, "docker compose 가 종료 코드 2 로 끝났습니다"))
+    line = prepare_test_database({}, answers=lambda: False, bring_up=docker)
+    assert docker.calls == 2
+    assert line == (
+        "테스트 컨테이너를 띄우지 못했습니다(docker compose 가 종료 코드 2 로 끝났습니다)."
+        f" pytest 는 그대로 띄웁니다. 직접 띄우려면: {UP_COMMAND}"
+    )
+
+
+@pytest.mark.parametrize("failure", ["180초 안에 끝나지 않았습니다", "docker 를 찾지 못했습니다"])
+def test_제한_시간을_넘겼거나_치지_못한_것은_다시_치지_않는다(failure: str) -> None:
+    docker = _Docker(UpResult(None, failure))
+    line = prepare_test_database({}, answers=lambda: False, bring_up=docker)
+    assert docker.calls == 1
+    assert line == (
+        f"테스트 컨테이너를 띄우지 못했습니다({failure}). pytest 는 그대로 띄웁니다."
+        f" 직접 띄우려면: {UP_COMMAND}"
+    )
+
+
+def test_띄우는_명령은_명세의_명령이고_호출의_제한_시간은_180초다() -> None:
+    assert COMPOSE_UP == (
+        "docker",
+        "compose",
+        "-f",
+        "compose.test.yaml",
+        "up",
+        "-d",
+        "--wait",
+        "--wait-timeout",
+        "60",
+    )
+    assert COMPOSE_UP_SECONDS == 180
+
+
+class _Calls:
+    """`subprocess.run` 의 대역. 받은 인자를 적고 준비해 둔 결과를 돌려주거나 예외를 던진다."""
+
+    def __init__(self, outcome: int | BaseException) -> None:
+        self._outcome = outcome
+        self.arguments: list[str] = []
+        self.options: dict[str, object] = {}
+
+    def __call__(
+        self, arguments: list[str], **options: object
+    ) -> subprocess.CompletedProcess[bytes]:
+        self.arguments = arguments
+        self.options = options
+        if isinstance(self._outcome, BaseException):
+            raise self._outcome
+        return subprocess.CompletedProcess(arguments, self._outcome)
+
+
+def _found(name: str) -> str:
+    return f"/bin/{name}"
+
+
+def _missing(name: str) -> None:
+    return None
+
+
+def _finished(*args: object, **kwargs: object) -> int:
+    return 0
+
+
+def _fake_docker(monkeypatch: pytest.MonkeyPatch, outcome: int | BaseException) -> _Calls:
+    calls = _Calls(outcome)
+    monkeypatch.setattr(run_checks.shutil, "which", _found)
+    monkeypatch.setattr(run_checks.subprocess, "run", calls)
+    return calls
+
+
+def test_docker_를_찾지_못하면_치지_못한_것으로_센다(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(run_checks.shutil, "which", _missing)
+    assert docker_up() == UpResult(None, "docker 를 찾지 못했습니다")
+
+
+def test_띄우는_명령은_출력을_버리고_제한_시간을_걸어_저장소_루트에서_친다(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    calls = _fake_docker(monkeypatch, 0)
+    assert docker_up() == UpResult(0)
+    assert calls.arguments == ["/bin/docker", *COMPOSE_UP[1:]]
+    assert calls.options == {
+        "cwd": run_checks.ROOT,
+        "stdout": subprocess.DEVNULL,
+        "stderr": subprocess.DEVNULL,
+        "check": False,
+        "timeout": COMPOSE_UP_SECONDS,
+    }
+
+
+def test_0이_아닌_종료는_종료_코드를_든_실패다(monkeypatch: pytest.MonkeyPatch) -> None:
+    _fake_docker(monkeypatch, 3)
+    assert docker_up() == UpResult(3, "docker compose 가 종료 코드 3 로 끝났습니다")
+
+
+def test_제한_시간을_넘기면_종료_코드_없는_실패다(monkeypatch: pytest.MonkeyPatch) -> None:
+    _fake_docker(monkeypatch, subprocess.TimeoutExpired("docker", COMPOSE_UP_SECONDS))
+    assert docker_up() == UpResult(None, "180초 안에 끝나지 않았습니다")
+
+
+def test_띄우지_못하면_종료_코드_없는_실패다(monkeypatch: pytest.MonkeyPatch) -> None:
+    _fake_docker(monkeypatch, PermissionError("거부"))
+    assert docker_up() == UpResult(None, "docker 를 띄우지 못했습니다: PermissionError")
+
+
+def test_기본_주소가_답하는지는_시험의_픽스처와_같은_확인으로_본다(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    seen: list[str] = []
+
+    async def fake(address: object) -> str | None:
+        seen.append(repr(address))
+        return None if len(seen) == 1 else "닿지 못했습니다"
+
+    monkeypatch.setattr(run_checks, "server_problem", fake)
+    monkeypatch.setenv(URL_ENV, "postgresql://u:p@elsewhere:1/x")
+    assert database_answers() is True
+    assert database_answers() is False
+    assert seen == ["DatabaseAddress(127.0.0.1:25432/agent_os)"] * 2
+
+
+def test_main_은_pytest_를_건너뛰면_컨테이너를_챙기지_않는다(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    prepared: list[str] = []
+
+    def spy(*args: object, **kwargs: object) -> str | None:
+        prepared.append(f"챙긴 {len(prepared) + 1}번째")
+        return None
+
+    monkeypatch.setattr(run_checks, "prepare_test_database", spy)
+    monkeypatch.setattr(run_checks, "run", _finished)
+    monkeypatch.setenv("SKIP", "pytest")
+    assert (run_checks.main(), prepared) == (0, [])
+
+
+def test_main_은_컨테이너를_챙긴_글을_먼저_찍고_검사를_띄운다(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    order: list[str] = []
+
+    def prepare(*args: object, **kwargs: object) -> str | None:
+        order.append("준비")
+        return "테스트 컨테이너를 띄웠습니다."
+
+    def fake_run(*args: object, **kwargs: object) -> int:
+        order.append("검사")
+        return 7
+
+    monkeypatch.setattr(run_checks, "prepare_test_database", prepare)
+    monkeypatch.setattr(run_checks, "run", fake_run)
+    monkeypatch.delenv("SKIP", raising=False)
+    assert run_checks.main() == 7
+    assert (order, capsys.readouterr().out) == (["준비", "검사"], "테스트 컨테이너를 띄웠습니다.\n")
