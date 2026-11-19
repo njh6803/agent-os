@@ -53,6 +53,30 @@ jobs:
     env:
       PYTHONUTF8: "1"
       PYTHONFAULTHANDLER: "1"
+      # 데이터베이스 시험이 붙는 주소(tests/database.py). 개발 PC 의 테스트 컨테이너(compose.test.yaml)를 대신하는
+      # 아래 service container 를 가리킨다. 값은 시험용이고 비밀이 아니다.
+      AGENT_OS_TEST_DATABASE_URL: postgresql://agent_os:agent_os@127.0.0.1:5432/agent_os
+    # 개발 PC 의 compose.test.yaml 과 같은 이미지(digest 가 같은지는 tests/test_postgres_image_pin.py 가 판정한다)와
+    # 같은 상태 확인이다. 데이터 폴더는 메모리(tmpfs)에 둔다. 잡은 상태 확인이 정상이 된 뒤에 단계를 시작한다.
+    services:
+      postgres:
+        # postgres:18 (Debian trixie)
+        image: postgres@sha256:b9f6b8ff03b62f3cfd9d9ba3fe56226a9991c79d3fb46fd46536263bf02be553
+        env:
+          POSTGRES_USER: agent_os
+          POSTGRES_PASSWORD: agent_os
+          POSTGRES_DB: agent_os
+        ports:
+          - 5432:5432
+        options: >-
+          --init
+          --tmpfs /var/lib/postgresql
+          --health-cmd "pg_isready -h 127.0.0.1 -U agent_os -d agent_os"
+          --health-interval 30s
+          --health-timeout 10s
+          --health-retries 3
+          --health-start-period 30s
+          --health-start-interval 2s
     steps:
       - uses: actions/checkout@v4
         with:

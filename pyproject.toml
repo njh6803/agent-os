@@ -37,6 +37,9 @@ dependencies = [
     "pyyaml>=6.0",
     "langchain-openai==1.6.2",
     "openai==3.49.0",
+    "sqlalchemy[asyncio]>=2.1.8,<3",
+    "asyncpg>=0.32,<1",
+    "alembic>=1.20.1,<2",
 ]
 
 [project.scripts]
@@ -153,13 +156,31 @@ source_modules = ["agent_os.core"]
 forbidden_modules = ["langchain_anthropic", "langchain_openai", "openai", "mcp", "httpx2"]
 
 # 원칙 IV 의 "DB, 구체 파일 경로를 import하지 않는다" 절. 파일시스템은 표준 라이브러리 셋으로 근사하고,
-# DB 라이브러리는 의존성에 들어오는 날 여기 이름을 더한다. 2026-09-28 까지 이 절에는 계약이 없었다.
+# DB 라이브러리는 PostgreSQL 을 들인 날(ADR 0066) 셋을 더했다. 2026-09-28 까지 이 절에는 계약이 없었다.
 # 플러그인 경계("플러그인은 sdk만")는 root_packages 밖이라 tests/test_plugins_boundary.py 가 판정한다.
 [[tool.importlinter.contracts]]
 name = "core knows no filesystem or DB (principle IV)"
 type = "forbidden"
 source_modules = ["agent_os.core"]
-forbidden_modules = ["pathlib", "os", "sqlite3"]
+forbidden_modules = ["pathlib", "os", "sqlite3", "sqlalchemy", "asyncpg", "alembic"]
+
+# DB 라이브러리를 import 하는 층은 어댑터 하나다(ADR 0066). 위 계약은 core 만 막으므로, 나머지 층이
+# 직접 import 하는 길을 따로 막는다. 조립 층(main, server)과 채널, 관리, http 는 어댑터가 낸 이름으로만
+# 데이터베이스를 만진다. 어댑터 안의 간접 import 는 허락한다(`agent_os.main -> agent_os.adapters -> sqlalchemy`).
+[[tool.importlinter.contracts]]
+name = "only the adapters import DB libraries (principle IV, ADR 0066)"
+type = "forbidden"
+source_modules = [
+    "agent_os.core",
+    "agent_os.sdk",
+    "agent_os.channel",
+    "agent_os.admin",
+    "agent_os.http",
+    "agent_os.server",
+    "agent_os.main",
+]
+forbidden_modules = ["sqlalchemy", "asyncpg", "alembic"]
+allow_indirect_imports = true
 
 [[tool.importlinter.contracts]]
 name = "sdk knows no engine (ADR 0001)"

@@ -1,0 +1,247 @@
+# 데이터베이스 시험 틀과 migrate 명령(티켓 01)의 시험이 지키는 코드를 하나씩 깨는 변이.
+#   PYTHONUTF8=1 uv run python tools/mutate.py .scratch/postgres-foundation/probes/database_tests_mutations.toml
+# 시험은 구현 뒤에 썼으므로 빨강을 본 적이 없다. 변이마다 그 시험이 빨개지는지 본다.
+# 테스트 컨테이너가 떠 있어야 돈다(docker compose -f compose.test.yaml up -d --wait).
+
+[[mutation]]
+name = "비밀번호 오류 번호를 비밀번호로 가르지 않는다"
+tests = ["tests/adapters/test_postgres_database.py"]
+expect = "red"
+expect_output = ["<Failure.OTHER: 'other'> is <Failure.PASSWORD: 'password'>"]
+[[mutation.edit]]
+file = "src/agent_os/adapters/postgres/database.py"
+old = '''    if state == "28P01":
+        return Failure.PASSWORD'''
+new = '''    if state == "28P02":
+        return Failure.PASSWORD'''
+
+[[mutation]]
+name = "비밀번호가 틀려도 시간이 다 되도록 다시 시도한다"
+tests = ["tests/adapters/test_postgres_database.py"]
+expect = "red"
+expect_output = ["Left contains one more item: '데이터베이스("]
+[[mutation.edit]]
+file = "src/agent_os/adapters/postgres/database.py"
+old = '''                if kind is not Failure.TRANSIENT or time.monotonic() >= deadline:'''
+new = '''                if time.monotonic() >= deadline:'''
+
+[[mutation]]
+name = "시도 하나에 제한 시간을 걸지 않는다"
+tests = ["tests/adapters/test_postgres_database.py"]
+expect = "red"
+expect_output = ["Right contains one more item: '데이터베이스("]
+[[mutation.edit]]
+file = "src/agent_os/adapters/postgres/database.py"
+old = '''        async with asyncio.timeout(self._attempt_seconds):'''
+new = '''        async with asyncio.timeout(None):'''
+
+[[mutation]]
+name = "모르는 번호도 뒤처진 것으로 본다"
+tests = ["tests/adapters/test_postgres_database.py"]
+expect = "red"
+expect_output = ["이 판의 마지막 판은 9001입니다."]
+[[mutation.edit]]
+file = "src/agent_os/adapters/postgres/database.py"
+old = '''        if revision is None or revision in known:'''
+new = '''        if True:'''
+
+[[mutation]]
+name = "이미 마지막 판이어도 올리러 간다"
+tests = ["tests/adapters/test_postgres_database.py"]
+expect = "red"
+expect_output = ["At index 1 diff: '표를 없음에서 없음으로 올렸습니다.'"]
+[[mutation.edit]]
+file = "src/agent_os/adapters/postgres/database.py"
+old = '''        if alignment is Alignment.CURRENT:
+            return MigrateResult('''
+new = '''        if False:
+            return MigrateResult('''
+
+[[mutation]]
+name = "올리다 실패해도 성공으로 센다"
+tests = ["tests/test_migrate_command.py"]
+expect = "red"
+expect_output = ["(sqlalchemy.dialects.postgresql.asyncpg.Error) division by zero"]
+[[mutation.edit]]
+file = "src/agent_os/adapters/postgres/database.py"
+old = '''            return MigrateResult(ok=False, message=f"{first}\n{trace}".rstrip("\n"))'''
+new = '''            return MigrateResult(ok=True, message=f"{first}\n{trace}".rstrip("\n"))'''
+
+[[mutation]]
+name = "드라이버가 SQL 의 값을 역추적에 싣는다"
+tests = ["tests/test_migrate_command.py"]
+expect = "red"
+expect_output = ["hide_parameters=True]' in '"]
+[[mutation.edit]]
+file = "src/agent_os/adapters/postgres/database.py"
+old = '''pool_pre_ping=True, hide_parameters=True'''
+new = '''pool_pre_ping=True, hide_parameters=False'''
+
+[[mutation]]
+name = "뜻밖의 오류 글에 예외의 글을 싣는다"
+tests = ["tests/test_migrate_command.py"]
+expect = "red"
+expect_output = ["built-in method startswith of str object"]
+[[mutation.edit]]
+file = "src/agent_os/adapters/postgres/database.py"
+old = '''f"뜻밖의 오류로 멈췄습니다({reason_of(error)}).\n{_UNEXPECTED_HINT}"'''
+new = '''f"뜻밖의 오류로 멈췄습니다({error}).\n{_UNEXPECTED_HINT}"'''
+
+[[mutation]]
+name = "migrate 의 결과 글을 모두 표준 오류로 보낸다"
+tests = ["tests/test_migrate_command.py"]
+expect = "red"
+expect_output = ["At index 0 diff: '' != '표를 없음에서 9002으로 올렸습니다."]
+[[mutation.edit]]
+file = "src/agent_os/main.py"
+old = '''    (sys.stdout if result.ok else sys.stderr).write(f"{result.message}\n")'''
+new = '''    sys.stderr.write(f"{result.message}\n")'''
+
+[[mutation]]
+name = "지울 수 있는 이름을 가리지 않는다"
+tests = ["tests/tools/test_database_for_tests.py"]
+expect = "red"
+expect_output = ["first extra item: 'agent_os'"]
+[[mutation.edit]]
+file = "tools/database_for_tests.py"
+old = '''_NAME = re.compile(rf"[a-z0-9_]{{1,{MAX_PREFIX}}}_(?:{'|'.join(_KINDS)})_[0-9a-f]{{32}}")'''
+new = '''_NAME = re.compile(r".*")'''
+
+[[mutation]]
+name = "지울 수 있는 이름의 접두 길이를 묶지 않는다"
+tests = ["tests/tools/test_database_for_tests.py"]
+expect = "red"
+expect_output = ["Left contains one more item: 'aaaaaaaaaaaaaaaaaaaaaa_test_"]
+[[mutation.edit]]
+file = "tools/database_for_tests.py"
+old = '''_NAME = re.compile(rf"[a-z0-9_]{{1,{MAX_PREFIX}}}_(?:{'|'.join(_KINDS)})_[0-9a-f]{{32}}")'''
+new = '''_NAME = re.compile(rf"[a-z0-9_]+_(?:{'|'.join(_KINDS)})_[0-9a-f]{{32}}")'''
+
+[[mutation]]
+name = "쓰는 연결이 있으면 지우지 못한다"
+tests = ["tests/tools/test_database_for_tests.py"]
+expect = "red"
+expect_output = ["is being accessed by other users"]
+[[mutation.edit]]
+file = "tools/database_for_tests.py"
+old = ''' WITH (FORCE)'''
+new = ''''''
+
+[[mutation]]
+name = "질의 문자열이 든 주소를 받는다"
+tests = ["tests/tools/test_database_for_tests.py"]
+expect = "red"
+expect_output = ["Failed: DID NOT RAISE DatabaseProblem"]
+[[mutation.edit]]
+file = "tools/database_for_tests.py"
+old = '''    if "?" in raw:
+        raise DatabaseProblem(_QUERY_PROBLEM)'''
+new = '''    if False:
+        raise DatabaseProblem(_QUERY_PROBLEM)'''
+
+[[mutation]]
+name = "템플릿에 올리다 실패해도 지우지 않는다"
+tests = ["tests/tools/test_database_for_tests.py"]
+expect = "red"
+expect_output = ["AssertionError: 남은 템플릿 1개"]
+[[mutation.edit]]
+file = "tools/database_for_tests.py"
+old = '''    except BaseException:
+        await drop_database(address, name)
+        raise'''
+new = '''    except BaseException:
+        raise'''
+
+[[mutation]]
+name = "환경 변수가 있어도 컨테이너를 본다"
+tests = ["tests/tools/test_run_checks.py"]
+expect = "red"
+expect_output = ["At index 1 diff: ['접속 확인 1번째']"]
+[[mutation.edit]]
+file = "tools/run_checks.py"
+old = '''    if environ.get(URL_ENV, "").strip():
+        return None'''
+new = '''    if False:
+        return None'''
+
+[[mutation]]
+name = "0이 아닌 종료를 다시 치지 않는다"
+tests = ["tests/tools/test_run_checks.py"]
+expect = "red"
+expect_output = ["At index 0 diff: '테스트 컨테이너를 띄우지 못했습니다(docker compose 가 종료 코드 1 로 끝났습니다)"]
+[[mutation.edit]]
+file = "tools/run_checks.py"
+old = '''    if result.exit_code not in (0, None):'''
+new = '''    if False:'''
+
+[[mutation]]
+name = "제한 시간을 넘긴 것도 다시 친다"
+tests = ["tests/tools/test_run_checks.py"]
+expect = "red"
+expect_output = ["IndexError: pop from empty list"]
+[[mutation.edit]]
+file = "tools/run_checks.py"
+old = '''    if result.exit_code not in (0, None):'''
+new = '''    if result.exit_code != 0:'''
+
+[[mutation]]
+name = "pytest 를 건너뛰어도 컨테이너를 챙긴다"
+tests = ["tests/tools/test_run_checks.py"]
+expect = "red"
+expect_output = ["At index 1 diff: ['챙긴 1번째']"]
+[[mutation.edit]]
+file = "tools/run_checks.py"
+old = '''    if "pytest" not in skipped_ids(os.environ):'''
+new = '''    if True:'''
+
+[[mutation]]
+name = "CI 의 PostgreSQL 이미지 digest 만 다르다"
+tests = ["tests/test_postgres_image_pin.py"]
+expect = "red"
+expect_output = ["Left contains one more item: 'ci.yml 의 PostgreSQL 이미지가 compose.test.yaml 과 다르다: postgres@sha256:"]
+[[mutation.edit]]
+file = ".github/workflows/ci.yml"
+old = '''        image: postgres@sha256:b9f6b8ff03b62f3cfd9d9ba3fe56226a9991c79d3fb46fd46536263bf02be553'''
+new = '''        image: postgres@sha256:b9f6b8ff03b62f3cfd9d9ba3fe56226a9991c79d3fb46fd46536263bf02be554'''
+
+[[mutation]]
+name = "CI 에 PostgreSQL service container 가 없다"
+tests = ["tests/test_postgres_image_pin.py"]
+expect = "red"
+expect_output = ["PostgreSQL service container 가 없다 (0개)"]
+[[mutation.edit]]
+file = ".github/workflows/ci.yml"
+old = '''        image: postgres@sha256:b9f6b8ff03b62f3cfd9d9ba3fe56226a9991c79d3fb46fd46536263bf02be553'''
+new = '''        image: redis@sha256:b9f6b8ff03b62f3cfd9d9ba3fe56226a9991c79d3fb46fd46536263bf02be553'''
+
+[[mutation]]
+name = "마이그레이션 폴더 경로를 운영체제의 경로 구분자로도 가른다"
+tests = ["tests/adapters/test_postgres_database.py"]
+expect = "red"
+expect_output = ["+ 표가 이미 마지막 판(없음)입니다."]
+[[mutation.edit]]
+file = "src/agent_os/adapters/postgres/database.py"
+old = '''        config.set_main_option("path_separator", "newline")'''
+new = '''        config.set_main_option("path_separator", "os")'''
+
+[[mutation]]
+name = "그 밖 글의 끝을 바꾼다"
+tests = ["tests/adapters/test_postgres_database.py"]
+expect = "red"
+expect_output = ["접속하지 못했다(오류 번호 42501)"]
+[[mutation.edit]]
+file = "src/agent_os/adapters/postgres/database.py"
+old = '''                return f"데이터베이스({place})에 접속하지 못했습니다({reason})."'''
+new = '''                return f"데이터베이스({place})에 접속하지 못했다({reason})."'''
+
+[[mutation]]
+name = "주소 앞뒤의 공백과 개행을 걷지 않고 읽는다"
+tests = ["tests/test_migrate_command.py"]
+expect = "red"
+expect_output = ["못했습니다. postgresql://계정:비밀번호"]
+[[mutation.edit]]
+file = "src/agent_os/main.py"
+old = '''    text = os.environ.get(DATABASE_URL_ENV, "").strip()
+    if not text:'''
+new = '''    text = os.environ.get(DATABASE_URL_ENV, "")
+    if not text.strip():'''

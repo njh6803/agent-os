@@ -121,6 +121,12 @@ class ServeArgs:
     end_user_concurrent_runs: int | None
 
 
+@dataclass(frozen=True)
+class MigrateArgs:
+    """`migrate` 는 인자가 없다. 연결 문자열은 환경 변수 하나로만 받는다(비밀번호가 든 값을 명령줄에
+    두면 같은 기계의 다른 사용자가 프로세스 목록으로 본다)."""
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="agent-os", description="플러그인 기반 에이전트 런타임")
     parser.add_argument("--version", action="version", version=version("agent-os"))
@@ -159,6 +165,10 @@ def build_parser() -> argparse.ArgumentParser:
         "--reason", help="거부 사유. 실패한 도구 결과로 모델에게 돌아가고 트레이스에 남는다"
     )
     _add_shared(resume_parser)
+    commands.add_parser(
+        "migrate",
+        help="데이터베이스의 표를 이 판의 마지막 판까지 올린다(AGENT_OS_DATABASE_URL 로 받는다)",
+    )
     serve_parser = commands.add_parser(
         "serve", help="관리 API 와 HTTP 채널을 루프백에 세운다(컨테이너 이미지 안의 예외는 --host)"
     )
@@ -289,9 +299,11 @@ def _add_directories(parser: argparse.ArgumentParser) -> None:
     )
 
 
-def parse_args(argv: list[str] | None) -> RunArgs | ResumeArgs | ServeArgs:
+def parse_args(argv: list[str] | None) -> RunArgs | ResumeArgs | ServeArgs | MigrateArgs:
     parser = build_parser()
     namespace = parser.parse_args(argv)
+    if namespace.command == "migrate":
+        return MigrateArgs()
     traces = Path(namespace.traces)
     plugins_root = Path(namespace.plugins_root)
     model = None if namespace.model is None else str(namespace.model)
