@@ -102,3 +102,40 @@ open-session을 부른다 2026-11-20T12:28:05Z
 - README 자리: 티켓의 "시작 절"은 README에서 `serve` 명령이 있는 절이 "관리 화면" 하나뿐이어서 거기 두었다.
 
 `llm_local` 기록과 `src` 해시: 리뷰 중 `uv run ruff format`이 `src/agent_os/adapters/postgres/database.py`에 빈 줄 하나를 더해 `git diff HEAD -- src pyproject.toml uv.lock`의 해시가 시험 때의 `af6f627e40eb0cb1`에서 `e17e3ad13774679d`로 바뀌었다. 그 파일에서 더한 빈 줄만 되돌리면 해시가 다시 `af6f627e40eb0cb1`이 되는 것을 손으로 쟀다(되돌렸다가 다시 서식을 입혔다). 시험한 내용과 커밋할 내용은 줄 바꿈 서식 한 줄 말고는 같다. 새 파일 `src/agent_os/http/database.py`의 해시는 그대로 `f4c57f38a1369549`다. 그래서 `llm_local`을 다시 돌리지 않았다. 이 판단은 내 어림이고, `merge.md`의 병합 전에서 다시 본다.
+
+## 커밋과 인계 (2026-11-21, 이어받은 세션)
+
+커밋 `7c8e2c81c`(로컬, 아직 푸시하지 않았다)를 만들었다. pre-commit이 네 번 돌았다. 첫 번째는 변이 표의 원문이 `ci.yml`에 다섯 번 나와 막혔고(각 변경을 앞뒤 줄로 한 번만 나오게 고쳐 `--check`와 변이 19·20 실행으로 확인했다), 둘째와 셋째는 같은 기계에서 다른 세션이 pytest `-n 8`과 `run_checks`를 돌리는 동안 걸린 시간 단언 시험 둘(`test_probe_kit`, `test_rerun_runner`)과 web-verify의 `page.goto` 30초 초과, pytest 4200초 제한으로 빨갰다. 시간 단언 둘은 홀로 돌리면 78개가 통과했다(395초). 넷째가 통과했다. 이 변경이 깨뜨린 시험은 없었다.
+
+검증 명령 가운데 pre-commit이 갈음하지 못하는 것(-m llm 넷, e2e, 사진 비교, 카나리아)은 앞 세션의 기록이 "검사"에 있다. 카나리아 셋은 셀프 리뷰에서 한 문장을 고친 `.claude/rules/http.md` 앞의 것이고 다시 돌리지 않았다. 고친 문장은 카나리아 명세(422 이어가기, 소유자 손상 전, llm_widget)와 관계가 없다고 본 내 판단이다. PR 본문에 그대로 적는다.
+
+사용자에게 알릴 것: 앞 세션이 임시 폴더의 `inspect.py`를 `inspect.py.stray-shadows-stdlib`로 이름만 바꿨다(위 "e2e를 막은 것 둘").
+
+04(`#612`)가 먼저 `origin/dev`에 병합됐다(`0ff9e2775`). 그래서 이 PR이 기능의 마지막 티켓을 닫는다. 같은 PR에 `**끝:**` 줄(규칙은 `docs/agents/issue-tracker.md`), `uv run python tools/plan_table.py` 출력, `docs/release-notes/features/postgres-foundation.md`를 싣는다. `sibling_overlap`은 헌법 3.1.4가 겹치지 않는다고 했고, `origin/dev`가 `.github/workflows/ci.yml`을 함께 고쳤으니 기준 브랜치를 합칠 때 글자 충돌을 푼다.
+
+### 인계
+
+이 세션(제목 `feature/03-serve-requires-database`)은 컨텍스트가 인계 문턱을 넘어 `커밋 뒤`에서 새 세션에 넘긴다. 이 세션이 띄운 백그라운드 작업은 모두 끝났다.
+
+- 남은 단계: 기준 브랜치(`origin/dev`) 합치기와 `ci.yml` 충돌 풀기, `**끝:**` 줄과 `plan_table.py`와 릴리스 노트를 새 커밋으로 싣기(pre-commit이 길어 부하가 큰 기계에서는 20분을 넘는다. 시간 단언이 빨개지면 홀로 돌려 보고 다시 커밋한다), 푸시와 PR(제목에 느낌표 없음, 본문에 위 검사의 기록과 포트가 넷이 된 이유와 카나리아 가정), `merge.md`의 봇 회차, "병합 전"에서 `llm_local` 기록 유효 판정, 병합.
+
+인계 지시문:
+
+```
+다음 작업: .scratch/postgres-foundation/issues/03-serve-requires-database.md. serve는 표의 판이 맞는 데이터베이스에 닿아야 뜬다
+다음 단계: 구현
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /implement .scratch/postgres-foundation/issues/03-serve-requires-database.md
+브랜치: feature/03-serve-requires-database
+모델: Sonnet 5.5 / high. 2의 잇는 지시문
+읽을 것: 일지 docs/journal/2026-11-20-1918-serve-requires-database.md의 "## 셀프 리뷰와 반영"과 "## 커밋과 인계"
+이어받을 상태: 인계: 커밋 뒤. 셀프 리뷰와 반영과 pre-commit을 지난 커밋 7c8e2c81c가 이 브랜치에 있고 아직 푸시하지 않았다. 일지의 이 절이 든 변경은 커밋하지 않았다. 04(#612)가 origin/dev에 병합돼 이 PR이 기능의 마지막 티켓이다: origin/dev를 합쳐 ci.yml 충돌을 풀고, 끝 줄과 plan_table.py 출력과 docs/release-notes/features/postgres-foundation.md를 싣고, 푸시와 PR, 봇 회차, 병합 전의 llm_local 기록 유효 판정, 병합 순서로 한다. llm_local을 다시 돌리면 비용 확인을 사용자에게 받는다. 포트는 티켓의 둘이 아니라 넷이다. docs/journal/2026-11-20-1918-serve-requires-database.md
+확인할 선행 조건: 없음
+이번 요청 범위: PR과 병합까지
+```
+
+open-session을 부른다 2026-11-20T15:49:02Z
+
+## PR 준비 (2026-11-21, 이어받은 세션)
+
+`origin/dev`(04의 `#612`와 `#613`까지)를 합쳤고 충돌은 없었다(`ci.yml`을 양쪽이 고쳤지만 겹치는 줄이 없었다). 이 PR이 기능의 마지막 티켓이라 기능 계획에 `**끝:** 2026-11-21`을 적고 `uv run python tools/plan_table.py`로 `.scratch/plan.md`를 다시 만들었으며, 기능 단락 `docs/release-notes/features/postgres-foundation.md`(328자)를 실었다. 저장소 상태 시험 `tests/test_plan_status.py`는 13개 통과했다.
