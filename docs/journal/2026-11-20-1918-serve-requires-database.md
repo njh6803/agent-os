@@ -139,3 +139,68 @@ open-session을 부른다 2026-11-20T15:49:02Z
 ## PR 준비 (2026-11-21, 이어받은 세션)
 
 `origin/dev`(04의 `#612`와 `#613`까지)를 합쳤고 충돌은 없었다(`ci.yml`을 양쪽이 고쳤지만 겹치는 줄이 없었다). 이 PR이 기능의 마지막 티켓이라 기능 계획에 `**끝:** 2026-11-21`을 적고 `uv run python tools/plan_table.py`로 `.scratch/plan.md`를 다시 만들었으며, 기능 단락 `docs/release-notes/features/postgres-foundation.md`(328자)를 실었다. 저장소 상태 시험 `tests/test_plan_status.py`는 13개 통과했다.
+
+커밋 `df1035ae3`(끝 줄·plan_table 출력·기능 단락·일지)의 pre-commit이 한 번에 통과했고, 푸시한 뒤 PR [#615](https://github.com/njh6803/agent-os/pull/615)를 열었다. 제목은 느낌표 없는 `feat: serve는 표의 판이 맞는 데이터베이스에 닿아야 뜬다 (03-serve-requires-database)`이고, 본문은 `.github/PULL_REQUEST_TEMPLATE.md`를 채웠다(포트가 넷이 된 이유, 카나리아를 다시 돌리지 않은 가정, `llm_local` 기록이 글자대로는 무효인 점을 적었다). 느낌표를 붙이지 않은 까닭은 운영자가 올릴 때 손댈 것이 02의 `upgrade/standalone-postgres.md`에 이미 있기 때문이다(내 판단이고 `check_notes`는 이 짝만 본다).
+
+PR 직전 외부 리뷰(`coderabbit-review` 서브에이전트): CodeRabbit CLI 0.7.5가 `Seat: not assigned`(Plan: Free)에서도 `review_completed`, findings 0으로 끝까지 돌았다(서브에이전트의 보고). 서브에이전트가 파일을 직접 읽어 낸 Minor 넷은 모두 병합을 막지 않는다. (1) 데이터베이스가 안 닿는 동안 최대 약 35초 SIGINT·SIGTERM이 먹히지 않는다. uvicorn 소스를 읽어 낸 것이고 신호를 실제로 보내 재지는 않았다. 이 PR에서 고치지 않고 후속으로 넘긴다. (2) 시작 확인이 실패해 닫을 때 닫기 실패 글을 버린다. 위 "남긴 것"의 첫 항목과 같고 티켓이 말한 대로다. (3) `web/apps/admin/e2e/stack.ts`가 e2e-stack의 `prepareDatabase` 사본을 든다. 위 "남긴 것"에 있다. (4) 기존 `migrate` 실패 글의 역추적 전문은 이 PR이 건드린 코드가 아니다.
+
+### 인계 직전의 상태 (PR 연 뒤)
+
+- 푸시한 HEAD는 `df1035ae3`이다. 병합 직전에 `gh pr view 615 --json headRefOid`와 `git rev-parse HEAD`가 같은지 본다. 이 PR이 기능 `postgres-foundation`의 마지막 티켓이다.
+- 남은 단계: 첫 `@coderabbitai review` 코멘트(새 세션이 남긴다), `merge.md` 2의 봇 회차(CodeRabbit 한도와 claude-review), 반영, 일지 마무리(이 절 위의 후속 항목 (1)을 일지 "다음"이나 지시문에 옮긴다), 병합 전 3의 `llm_local`, 병합.
+- **`llm_local` 기록은 글자대로 무효다.** 기록의 `commit`이 `7b52bbd616029d1f7edecc1b8c30b89ad4f63e6b`(dev의 끝)이고 `git diff --name-only 7b52bbd61 HEAD -- src pyproject.toml uv.lock`가 `src/agent_os/adapters/postgres/database.py`, `src/agent_os/http/database.py`, `src/agent_os/main.py`, `src/agent_os/server.py` 넷을 낸다(이 세션이 손으로 쟀다). 시험 때 작업 트리와 커밋이 같다는 근거는 새 파일의 해시 `f4c57f38a1369549`가 `git show HEAD:src/agent_os/http/database.py | sha256sum`과 같다는 것(손으로 봤다)과, 앞 세션이 잰 `database.py`의 빈 줄 한 줄 차이뿐이다. 추적 파일 셋의 해시는 이 세션이 다시 대 보지 못했다(`git diff`의 index 줄이 서식 한 줄 때문에 달라 같은 바이트로 맞출 수 없었다). 봇 회차에서 `src/`를 또 고치면 어느 쪽이든 다시 돌려야 한다. 다시 돌리면 비용 확인(최악 90분 약 $0.81, 가장 비싼 후보면 $1.77)을 사용자에게 받는다. 기록을 그대로 받아들일지는 새 세션이 `merge.md`의 3과 이 줄을 읽고 정하고, 정하지 못하면 병합 전에 사용자에게 묻는다.
+- 형제: `tools/sibling_overlap.py`는 번호 겹침 없음, 헌법 3.1.4가 `origin/dev`의 3.1.3 위에 있다. 이 세션이 `origin/dev`(`0ff9e2775`)를 합쳤고 충돌은 없었다.
+
+사용자에게 알릴 것(앞 세션 일지에서 옮김): 임시 폴더의 `inspect.py`를 `inspect.py.stray-shadows-stdlib`로 이름만 바꿨다(위 "e2e를 막은 것 둘").
+
+이 세션(제목 `feature/03-serve-requires-database`, 인계하면 `(인계함)`)은 컨텍스트가 인계 문턱을 넘어 `PR 연 뒤`에서 새 세션에 넘긴다. 이 세션이 띄운 백그라운드 작업은 모두 끝났다(커밋의 pre-commit, `coderabbit-review` 서브에이전트). 앞 세션이 사용자에게 보인 뒤 이어받은 요청 범위는 PR과 병합까지다.
+
+인계 지시문:
+
+```
+다음 작업: .scratch/postgres-foundation/issues/03-serve-requires-database.md. serve는 표의 판이 맞는 데이터베이스에 닿아야 뜬다
+다음 단계: PR 반영·병합
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /implement .scratch/postgres-foundation/issues/03-serve-requires-database.md
+브랜치: feature/03-serve-requires-database
+모델: Sonnet 5.5 / high. 2의 잇는 지시문
+읽을 것: 일지 docs/journal/2026-11-20-1918-serve-requires-database.md의 "## PR 준비"와 "### 인계 직전의 상태 (PR 연 뒤)"
+이어받을 상태: 인계: PR 연 뒤. PR #615(https://github.com/njh6803/agent-os/pull/615)가 열려 있고 푸시한 HEAD는 df1035ae3이다. 이 일지의 이 절에 쓴 변경(PR 준비 이후)은 커밋하지 않았다. 새 세션이 첫 @coderabbitai review 코멘트를 남기고 merge.md 2(봇 회차)부터 한다. 병합 전 3의 llm_local 기록은 글자대로 무효다(기록의 commit이 dev의 끝 7b52bbd61이고 src 파일 넷이 그 뒤 바뀌었다). 시험한 내용과 같은지를 대 본 근거와 못 댄 부분이 일지 "인계 직전의 상태"에 있다. 받아들일지 다시 돌릴지는 새 세션이 정하고 못 정하면 병합 전에 사용자에게 묻는다. 다시 돌리면 비용 확인을 받는다. 뒤로 넘길 일: 데이터베이스가 안 닿는 최대 약 35초 동안 SIGINT·SIGTERM이 먹히지 않을 수 있다는 것(일지의 외부 리뷰 항목 1)을 일지 다음에 옮긴다. 사용자에게 알린다: 앞 세션이 임시 폴더의 inspect.py를 inspect.py.stray-shadows-stdlib로 이름만 바꿨다. docs/journal/2026-11-20-1918-serve-requires-database.md
+확인할 선행 조건: 없음
+이번 요청 범위: PR과 병합까지
+```
+
+open-session을 부른다 2026-11-20T16:11:40Z
+
+## 봇 회차와 `llm_local` 기록 판정 (2026-11-21, 이어받은 세션)
+
+`@coderabbitai review`를 남겼고(저장소 별이 10개 미만이라 자동 리뷰는 건너뛴다), `wait_ci`가 머리 `df1035ae3`에서 모든 검사 초록(`CodeRabbit Finished`, `claude-review` 성공, `llm` 건너뜀)으로 끝났다. 두 봇 모두 이 PR의 첫 리뷰라 첫 회차다. 고친 코드는 없고, 지적마다의 판정은 PR 코멘트(`issuecomment-7044765336`)에 있다.
+
+- CodeRabbit Major 1(`llm_local` 기록): 아래 판정으로 닫았다. Major 2(전체 pytest의 `1 failed`와 done): 그 빨강은 부하로 난 시간 단언이고 홀로 돌려 통과했으며 이 머리의 CI `python`·`verify`가 초록이라 보류했다. Minor(`STARTUP_SECONDS`): `_serving`이 쓰는 데이터베이스는 첫 시도에 닿아 재시도가 시험에 들지 않는다. Nitpick(URL 자격 증명 비교): 다른 시험이 맡는다.
+- claude-review Minor 둘은 후속으로 넘겼다. 아래 "다음"에 있다.
+
+**`llm_local` 기록 판정: 내용상 유효로 받아들이고 다시 돌리지 않았다.** 기록의 `commit` `7b52bbd61`은 글자대로는 `src` 네 파일을 건너 무효이므로 시험한 내용이 머리 `df1035ae3`와 같은지를 직접 대 봤다.
+- 시험 때 작업 트리를 흉내 냈다. 임시 색인에 `7b52bbd61`의 트리를 읽고 임시 작업 폴더에 머리의 `adapters/postgres/database.py`, `main.py`, `server.py`를 두어 `git diff -- <셋>`의 sha256 앞 16자를 손으로 구했다(세션 스크래치패드의 `hashcheck.py`를 `uv run python`으로 돌렸고 커밋하지 않았다. 출력은 `HEAD 그대로: e17e3ad13774679d`와 `기록 해시와 같아지는 빈 줄(줄 번호): [79, 80]`이었다). 머리 그대로는 `e17e3ad13774679d`로, 앞 세션이 서식을 입힌 뒤 잰 값과 같다. 이 방법이 같은 값을 다시 낸다는 확인이다. `database.py`의 79·80줄 빈 줄 둘 가운데 하나를 빼면 기록의 `af6f627e40eb0cb1`과 같아진다. 빈 줄 하나(ruff format이 더한 줄) 차이뿐이다.
+- 새 파일 `src/agent_os/http/database.py`: `git show HEAD:… | sha256sum` 앞 16자가 기록의 `f4c57f38a1369549`와 같다.
+- `git diff 7b52bbd61 HEAD -- pyproject.toml uv.lock`은 비었고 `tools/llm_local.py`와 `tools/llm_local_server/`도 그대로다. dev에서 합쳐 들어온 변경에는 범위의 경로가 없다.
+- 못 본 것: `llm_local`을 이 머리로 다시 돌려 보지 않았다. 판정은 내용이 같다는 대조에 기댄다. 봇 지적으로 범위의 경로를 또 고치면 다시 돌린다.
+
+## 회고
+
+후보 셋을 냈다. 승인 하나, 일지에만 남김 하나, 기각 하나, 넘김 0이다.
+
+- **승인: 커밋하지 않은 작업 트리로 돈 `llm_local` 기록은 시험한 커밋이 기준의 끝으로 찍혀 유효 판정이 글자대로는 늘 무효다(대기열 `llm-local-record-uncommitted-tree`의 1회차).** 사건: 이 티켓의 기록이 `7b52bbd61`로 찍혀 세션 셋이 해시로 같음을 대 보았고, CodeRabbit이 첫 리뷰에서 Major로 짚었다. 층: 도구(기록에 범위 변경의 해시를 남기고 유효 판정이 그것을 견준다). 더하는 것이고 같은 실수의 첫 회차라 반영하지 않고 대기열에 둔다. operations.md의 "기록과 유효함"을 고치게 되면 ADR과 사용자 승인이 따로 필요하다고 항목에 적었다.
+- **일지에만 남김: 시간 단언 시험이 부하로 빨갛다(`test_interrupt`, 관리 화면 e2e 한 사례).** 대기열 `0332`가 이 종류를 7회차까지 세고 닫은 종류의 새 사례라 항목을 잇지 않는다(회고 규칙의 "받아들여 닫은 종류"). 둘 다 홀로 돌려 통과했다.
+- **기각: 임시 폴더의 떠돌이 `inspect.py`가 표준 라이브러리를 가려 e2e가 실패했다.** 다른 세션이 남긴 한 번의 환경 오염이고 이 PC에서만 난다(CI에는 없다). 앞 세션이 이름을 바꿔 치웠고 검사로 옮길 일반 입력이 아직 없다.
+- **만료.** `queue_open_rows.py`와 `--ref origin/dev` 실행이 같은 다섯(470, 500, 574, 575, 581. 승인 줄의 가장 늦은 날짜 2026-11-06)을 냈다. 열린 PR #614가 같은 다섯 파일의 상태 줄을 이미 고치고 있어(`sibling_overlap`이 짚었다) 이 PR에서는 고치지 않았다. 병합 때 글자 충돌을 피한다.
+
+## 다음
+
+1. 이 PR(#615)이 기능 `postgres-foundation`의 마지막 티켓이라 병합하면 기능 계획의 `**끝:**` 줄이 dev에만 있고 main에 없다. 다음 일은 출시 PR이다(`next-session` `merge.md`의 "출시 PR"). 이 세션의 요청 범위가 PR과 병합까지라 열지 않았다.
+2. 후속으로 넘긴 것:
+   - 데이터베이스가 안 닿는 최대 약 35초 동안 SIGINT·SIGTERM이 먹히지 않을 수 있다(`CheckDatabase`의 재시도가 수명 시작 안에서 도는 동안. 외부 리뷰가 uvicorn 소스를 읽어 낸 것이고 신호를 실제로 보내 재지 않았다). 고치려면 먼저 신호를 보내 재 본다.
+   - `src/agent_os/http/database.py`의 `CheckDatabase._close`가 닫는 명령과 실패 글 질의를 섞는다(claude-review Minor 1, CQS). 호출부 셋 가운데 둘은 반환값을 버린다.
+   - ADR 0066의 이력에 포트 메서드가 넷(그중 둘은 예외를 글로 바꾸는 `unexpected_problem`·`close_problem`)이고 그 까닭이 원칙 IV·V라는 한 줄을 남긴다(claude-review Minor 2). ADR 이력이라 초안을 보여 주고 사용자 승인을 받는다.
+   - CodeRabbit nitpick: `serve` 시험이 어댑터에 넘긴 URL의 계정·비밀번호까지 견주게 한다(실패 출력에는 비교 결과만).
+   - `web/apps/admin/e2e/stack.ts`가 e2e-stack의 `prepareDatabase` 사본을 든다(위 "남긴 것").
+3. 사용자에게 알린다: 앞 세션이 임시 폴더의 `inspect.py`를 `inspect.py.stray-shadows-stdlib`로 이름만 바꿨다(되돌리기는 그 이름을 원래대로).
