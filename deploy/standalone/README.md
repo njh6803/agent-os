@@ -204,7 +204,7 @@ docker compose up -d --wait
 
 ## 5. 설정을 고친 뒤
 
-서비스 전체를 다시 띄울 때는 `docker compose restart`가 아니라 `docker compose up -d`를 칩니다. `restart`는 데이터베이스가 준비되기를 기다리지 않고 모든 컨테이너를 한꺼번에 다시 띄웁니다. `docker stop`이나 `docker kill`로 멈춘 PostgreSQL 컨테이너는 저절로 다시 뜨지 않으므로 이때도 `docker compose up -d`로 띄웁니다.
+설정을 고친 뒤 서비스를 다시 띄울 때는 `docker compose restart`가 아니라 `docker compose up -d`를 칩니다. `up -d`는 설정이 바뀐 컨테이너만 다시 만들고 나머지는 그대로 둡니다. `restart`는 데이터베이스가 준비되기를 기다리지 않고 모든 컨테이너를 한꺼번에 다시 띄웁니다. `docker stop`이나 `docker kill`로 멈춘 PostgreSQL 컨테이너는 저절로 다시 뜨지 않으므로 이때도 `docker compose up -d`로 띄웁니다.
 
 ### 사이트 파일이나 위젯 테스트 페이지 설정을 고쳤을 때
 

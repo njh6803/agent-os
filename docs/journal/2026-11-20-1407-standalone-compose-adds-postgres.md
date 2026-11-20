@@ -22,6 +22,8 @@
 
 > 사용자(선택 화면의 답, 검증 러너의 빨강 둘): 질문 "검증 러너에서 pytest 7,960개 가운데 둘이 빨겛습니다(나머지 검사 아홉과 web-verify는 통과). 둘 다 tests/tools/test_release_ci.py의 저장소 상태 시험이고, compose 파일의 우리 이미지 줄과 배포 안내의 대응표가 이미지 짓기 목록(서비스 serve·admin·widget·portal 넷)과 '서비스 하나에 짓기 대상 하나'로 똑같은지 봅니다. 이번 티켓이 명세대로 migrate 서비스를 serve와 같은 이미지(agent-os-runtime)로 더해, 짓기 목록에 없는 서비스가 하나 생겨서 빨간 것입니다. 시험의 규칙을 어떻게 할까요?"에 라벨 "migrate는 serve와 같아야 한다 (추천)", 설명 "짓기 대상 넷은 지금처럼 하나씩 같은지 보고, migrate는 이름으로 꼽어 serve와 같은 저장소를 쓰는지 봅니다. 명세의 'serve와 같은 이미지'를 그대로 지키고, migrate가 다른 이미지를 가리키면 빨갛습니다. 두 시험의 단언만 바뀝니다."
 
+> 사용자(선택 화면의 답, PR 연 뒤 로컬 모델 시험의 비용 확인): 질문 "로컬 모델 시험(llm_local)을 이 PR(#611)의 지금 모습으로 다시 돌려도 될까요? 이 시험은 Runpod에서 GPU 서버를 빌려 오픈 모델 둘(Gemma 4, gpt-oss-20b)을 띄우고, 계산기 예시가 도구를 제대로 부르는지 본 뒤 서버를 지웁니다. 규칙상 앞서 통과한 기록은 무효입니다. 시험한 커밋과 지금 브랜치 끝 사이에 어댑터 폴더(src/agent_os/adapters/)의 파일 둘(database.py, 0001_first.py)이 들어 있기 때문입니다. 다만 일지에는 시험 뒤 고친 어댑터 쪽이 database.py의 주석 한 곳뿐이라고 적혀 있고, 0001_first.py가 시험 때와 글자까지 같은지는 대 보지 못했습니다(어림). 예상 비용은 도구가 방금 찍은 값으로, 첫 후보(RTX A5000 서버 둘, 시간당 $0.54)는 어림 30분 $0.27, 최악 90분 $0.81입니다. 재고가 없으면 다음 후보로 넘어가며 최악은 RTX 3090 둘 $1.50, A40 둘 $1.77, shared A40 하나 $0.88입니다. 90분이 지나면 타이머가 서버를 지웁니다."에 라벨 "다시 돌린다 (추천)", 설명 "--yes를 붙여 백그라운드로 돕니다. 위 범위의 Runpod 요금이 계정에 청구되고, 결과(통과 수와 쓴 시간)를 일지와 PR에 적습니다. 단가는 도구가 2026-11-13에 웹 요약에서 읽어 둔 값이라 지금 가격과 다를 수 있습니다(어림). 도는 동안 저는 배포 안내 5절 문구 고침과 일지 정리를 합니다."
+
 ## 티켓이 일지에 적으라던 것
 
 이 PC는 Windows 10의 Docker Desktop(엔진 29.9.2, Compose 5.6.1)이고 셸은 Git Bash다. 묶음은 이 브랜치에서 `uv run python tools/release.py bundle --number 0.1.0-rc.1 --namespace <이름공간> --out <폴더>`로 지어 풀었다. 스크립트는 세션 스크래치패드에 두었고 커밋하지 않았다(손으로 본 것).
@@ -114,3 +116,11 @@ open-session을 부른다 2026-11-20T06:02:21Z
 - 이 세션은 사용자 프롬프트를 새로 받지 않았다. 시작 지시문은 위 "사용자 프롬프트"의 인계 지시문이다.
 
 open-session을 부른다 2026-11-20T06:30:52Z
+
+## PR 611 뒤
+
+PR은 [#611](https://github.com/njh6803/agent-os/pull/611)이고 제목 접두는 `feat!`다. 위 "인계 (커밋 뒤)"의 일지 변경은 커밋 `2c368ff8e`로 올렸다(커밋 명령의 종료 코드 0).
+
+- **PR 직전 CodeRabbit 리뷰.** `coderabbit-review` 서브에이전트가 CLI 0.7.5로 돌렸다(보고에 적힌 값. `coderabbit review --agent --include-untracked --base origin/dev`, 파일 19개, 종료 0, `Seat: not assigned`에서도 `review_completed`). Critical·Major는 없었고 Minor 하나였다. 배포 안내 5절 첫 문장 "서비스 전체를 다시 띄울 때는 … `up -d`"가 `up -d`는 바뀐 컨테이너만 다시 만든다는 점을 흐린다는 것이다. 5절을 읽어 맞다고 보고 고쳤다: "설정을 고친 뒤 서비스를 다시 띄울 때는 … `up -d`를 칩니다. `up -d`는 설정이 바뀐 컨테이너만 다시 만들고 나머지는 그대로 둡니다." 이 문장은 명세 281행의 문구에서 조금 벗어난 것이다(의미는 같다). 고친 뒤 `uv run pytest -q -p no:xdist tests/tools/test_deploy_guide.py`가 20개 통과했다. 보류한 Minor 하나는 비밀번호가 URL에 그대로 들어가 영문자·숫자 밖의 글자를 읽지 못하는 것이다. `.env.example`과 안내 2절이 이미 영문자와 숫자만 쓰라고 막고 실패하면 `migrate` 로그에 값 없는 진단이 찍힌다(서브에이전트가 코드를 읽은 보고).
+- **봇 첫 회차.** 푸시한 헤드 `2c368ff`에서 CodeRabbit은 `No actionable comments were generated in the recent review.`, claude-review는 `지적 없음.`이었다. `wait_ci.py`의 끝 줄은 `끝: 모두 통과. CodeRabbit: Finished`이고 `verify`와 `e2e-standalone`을 포함해 전부 SUCCESS였으며 `llm`만 SKIPPED였다. 반영할 봇 지적이 없어, 위 5절 고침을 반영 커밋으로 삼는다.
+- **로컬 모델 시험을 다시 돌렸다.** 어댑터 폴더의 파일(`database.py` 주석, `0001_first.py` 신규)이 앞 시험의 커밋(`6644f1a93`)과 브랜치 끝 사이에 있어 `operations.md`의 기록 유효 규칙대로 무효로 보고 사용자의 비용 확인(위 사용자 프롬프트의 넷째 답)을 받아 `--yes`로 다시 돌렸다. 앞 후보(RTX A5000 둘)는 `Error: Creating pod failed`로 `terraform apply 실패(종료 코드 1, 시간 제한 False)`였고, 기록 묶음은 shared A40 하나(`layout` shared, GPU A40)에서 `passed` 2, `elapsed_seconds` 405.2, `cost_per_hour` 0.59, `price_table_date` 2026-11-13, `test_exit_code` 0, `exit_code` 0, `reason` "시험이 끝났다"였다. 토큰은 입력 6,191·출력 106, 모델 호출 4건, 트레이스 2개다. 시험한 커밋은 `2c368ff8e`(출력의 기록 묶음이 아니라 이 시험을 친 때의 `git rev-parse HEAD`)이고 `terraform_output_masked` 값은 true다. 회차 파일은 `C:\Users\User\.agent-os\llm-local\feature%2F02-standalone-compose-adds-postgres\records\round-0002-20261120T072214Z.json`이다. 이 시험 뒤의 변경은 배포 안내(`deploy/`)와 일지뿐이라 범위의 경로를 건드리지 않아 기록은 유효하다. 병합 뒤 `sweep`을 친다.
