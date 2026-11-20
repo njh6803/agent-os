@@ -561,6 +561,115 @@ def test_제품_경로_밖의_도구와_시험만_고치면_느낌표를_받지_
     assert "제품" in out
 
 
+# --- (가)의 짝: 제품 마이그레이션 폴더에 새 파일을 더한 PR(postgres-foundation 티켓 04) ------
+
+MIGRATIONS = check_notes.PRODUCT_MIGRATIONS
+NEW_MIGRATION = f"{MIGRATIONS}/0002_second.py"
+MIGRATION_TEXT = 'revision: str = "0002"\ndown_revision: str | None = "0001"\n'
+TEST_MIGRATION = "tests/adapters/postgres_versions/9003_third_probe.py"
+
+
+def test_이_저장소의_짝은_마이그레이션_파일이_든_폴더를_가리킨다() -> None:
+    """경로를 잘못 가리키면 위반 0 으로 조용히 초록이 되므로 훑을 파일이 있는지 본다."""
+    folder = ROOT / MIGRATIONS
+    names = sorted(path.name for path in folder.glob("*.py")) if folder.is_dir() else []
+    assert names, f"짝이 보는 폴더 {MIGRATIONS} 에 마이그레이션 파일이 하나도 없다"
+
+
+def test_짝은_제품_마이그레이션_폴더의_새_파일을_느낌표_없는_제목에서_잡는다() -> None:
+    problems = check_notes.title_problems(
+        "feat: 표를 더한다", [check_notes.Change("A", NEW_MIGRATION)]
+    )
+    assert [problem.split("`")[1] for problem in problems] == [NEW_MIGRATION]
+    assert "느낌표" in problems[0]
+    assert check_notes.UPGRADE in problems[0]
+
+
+def test_짝은_느낌표가_있으면_지나가고_원고_판정이_뒤를_잇는다() -> None:
+    added = check_notes.Change("A", NEW_MIGRATION)
+    # 원고가 없으면 지금의 원고 판정이 막고 짝의 글은 없다.
+    # 두 글 모두 `upgrade/` 를 말하므로 그 낱말이 아니라 글의 나머지로 가른다.
+    problems = check_notes.title_problems("feat!: 표", [added])
+    assert len(problems) == 1
+    assert "에 새로 더한 파일이 없다" in problems[0]
+    assert "제품 마이그레이션" not in problems[0]
+    # 원고가 있으면 문제가 없다
+    note = check_notes.Change("A", f"{UPGRADE}/tables.md")
+    assert check_notes.title_problems("feat!: 표", [added, note]) == []
+
+
+@pytest.mark.parametrize(
+    "path",
+    [
+        TEST_MIGRATION,
+        f"{MIGRATIONS.rsplit('/', 1)[0]}/env.py",
+        "src/agent_os/adapters/postgres/database.py",
+    ],
+)
+def test_짝은_시험용_폴더와_제품_폴더_밖의_파일을_대상으로_삼지_않는다(path: str) -> None:
+    assert check_notes.title_problems("feat: 고친다", [check_notes.Change("A", path)]) == []
+
+
+def test_짝은_제품_폴더의_파일을_고치기만_한_것을_대상으로_삼지_않는다() -> None:
+    assert check_notes.title_problems("fix: 고친다", [check_notes.Change("M", NEW_MIGRATION)]) == []
+
+
+def test_CI는_느낌표_없이_제품_마이그레이션을_더한_PR을_막는다(저장소: Repo) -> None:
+    out = _막혔다(저장소.ci("feat: 표를 더한다", files={NEW_MIGRATION: MIGRATION_TEXT}), PR_BLOCKED)
+    assert NEW_MIGRATION in out
+    assert "느낌표" in out
+
+
+def test_CI는_제목에_느낌표를_붙이고_원고를_실으면_지난다(저장소: Repo) -> None:
+    files = {NEW_MIGRATION: MIGRATION_TEXT, f"{UPGRADE}/tables.md": UPGRADE_TEXT}
+    _지났다(저장소.ci("feat!: 표를 더한다", files=files))
+
+
+def test_CI는_느낌표가_있어도_원고가_없으면_막는다(저장소: Repo) -> None:
+    out = _막혔다(
+        저장소.ci("feat!: 표를 더한다", files={NEW_MIGRATION: MIGRATION_TEXT}), PR_BLOCKED
+    )
+    # 원고 판정의 글이고, 느낌표가 있으니 짝의 글은 없다
+    assert "에 새로 더한 파일이 없다" in out
+    assert "제품 마이그레이션" not in out
+
+
+def test_제목만_고친_실행도_마이그레이션_짝을_본다(저장소: Repo) -> None:
+    result = 저장소.ci(
+        "feat: 표를 더한다", files={NEW_MIGRATION: MIGRATION_TEXT}, mode="--title-only"
+    )
+    assert NEW_MIGRATION in _막혔다(result, PR_BLOCKED)
+
+
+def test_CI는_시험용_폴더에_더한_마이그레이션을_느낌표_없이_받는다(저장소: Repo) -> None:
+    _지났다(저장소.ci("test: 시험용 판을 더한다", files={TEST_MIGRATION: MIGRATION_TEXT}))
+
+
+def test_CI는_제품_마이그레이션을_고치기만_한_PR을_느낌표_없이_받는다(저장소: Repo) -> None:
+    저장소.push_main({NEW_MIGRATION: MIGRATION_TEXT})
+    저장소.git("merge", "-q", "--ff-only", "origin/main")
+    _지났다(저장소.ci("fix: 문구를 고친다", files={NEW_MIGRATION: MIGRATION_TEXT + "# 고침\n"}))
+
+
+def test_마이그레이션_파일을_다른_이름으로_옮기면_새로_더한_것으로_세어_막는다(
+    저장소: Repo,
+) -> None:
+    # 이름 바꾸기는 지운 것과 더한 것 둘로 센다(독스트링의 못 보는 것)
+    저장소.push_main({NEW_MIGRATION: MIGRATION_TEXT})
+    저장소.git("merge", "-q", "--ff-only", "origin/main")
+    moved = f"{MIGRATIONS}/0002_renamed.py"
+    저장소.git("mv", NEW_MIGRATION, moved)
+    저장소.git("commit", "-q", "-m", "옮김")
+    assert moved in _막혔다(저장소.ci("fix: 이름을 바꾼다"), PR_BLOCKED)
+
+
+def test_제품_마이그레이션을_더하고_지운_PR은_새로_더한_것이_아니다(저장소: Repo) -> None:
+    저장소.commit({NEW_MIGRATION: MIGRATION_TEXT})
+    저장소.remove(NEW_MIGRATION)
+    저장소.git("commit", "-q", "-m", "지움")
+    _지났다(저장소.ci("fix: 도로 지운다"))
+
+
 def test_단락의_내용은_보지_않아_경로와_ADR_번호가_든_단락도_지난다() -> None:
     # 운영자의 말로 썼는지는 리뷰의 몫이다(독스트링의 못 보는 것)
     assert (
