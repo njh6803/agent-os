@@ -39,6 +39,9 @@ export const ORIGIN = "https://localhost";
 /** 서버의 127.0.0.1 에만 발행하는 관리 화면. */
 export const ADMIN_ORIGIN = "http://127.0.0.1:3000";
 
+/** `docker compose up --wait` 가 모든 컨테이너를 기다리는 상한(초). 위젯이 뜰 때 사이트 파일로 빌드하는 시간이 대부분이다. */
+export const UP_WAIT_SECONDS = 420;
+
 export function deployment(): {
   readonly project: string;
   readonly dir: string;

@@ -5,7 +5,8 @@
  * 볼륨, 네트워크를 지운다.
  *
  * - 이미지: 이름공간과 태그를 환경 변수로 받으면(`NAMESPACE_ENV`, `VERSION_ENV`) 그 이미지로 띄운다. 없으면 저장소에서 넷을
- *   지어 `LOCAL_NAMESPACE`/`LOCAL_VERSION` 으로 띄운다.
+ *   지어 `LOCAL_NAMESPACE`/`LOCAL_VERSION` 으로 띄운다. PostgreSQL 은 묶음의 compose 가 digest 로 고정한 공식 이미지를 받고,
+ *   migrate 는 serve 와 같은 이미지다(postgres-foundation 티켓 02).
  * - 픽스처: serve 에는 모델 없이 정해진 답을 내는 `echo` 에이전트를 넣는다. 길은 시험만 쓰는 덧씌움 `compose.fixtures.yaml`
  *   의 일회용 서비스다. serve 와 같은 이미지에 플러그인 볼륨을 붙여 `cp` 로 복사하므로 이름 있는 볼륨의 첫 채움(이미지의
  *   내용을 소유자째 복사)을 깨지 않는다. 그 파일은 이 패키지가 가진다.
@@ -44,6 +45,7 @@ import {
   NO_IPV6_ENV,
   ORIGIN,
   PROJECT_ENV,
+  UP_WAIT_SECONDS,
   VERSION_ENV,
   VERSION_OUT_ENV,
 } from "./env.ts";
@@ -58,7 +60,6 @@ const PUBLISHED_PORTS = [443, 80, 3000];
 
 const MINUTE_MS = 60_000;
 const BUILD_MS = 15 * MINUTE_MS;
-const UP_WAIT_SECONDS = 420;
 
 // 위젯 테스트 페이지가 그리는 사이트 둘. 둘째는 저장소의 계산 에이전트(이미지에 든 예시 MCP 서버를 쓴다)를 연다.
 const PREVIEW: E2eSite = {
@@ -323,6 +324,9 @@ async function fillOperatorFiles(dir: string, mode: Mode): Promise<void> {
 
   const adminToken = `e2e-admin-${randomBytes(16).toString("hex")}`;
   const channelToken = `e2e-channel-${randomBytes(16).toString("hex")}`;
+  // 배포 안내가 운영자에게 시키는 꼴(`openssl rand -hex 32`, 영문자와 숫자만)과 같은 값이다. 시험은 이 값을 넘겨받지 않는다.
+  // 데이터베이스는 PostgreSQL 컨테이너 안의 psql 로 보고, 그 컨테이너의 유닉스 소켓은 비밀번호를 묻지 않는다.
+  const databasePassword = randomBytes(32).toString("hex");
   publish(ADMIN_TOKEN_ENV, adminToken);
   const template = readFileSync(join(dir, ".env.example"), "utf-8");
   writeFileSync(
@@ -330,6 +334,7 @@ async function fillOperatorFiles(dir: string, mode: Mode): Promise<void> {
     fillEnv(template, {
       AGENT_OS_ADMIN_TOKEN: adminToken,
       AGENT_OS_CHANNEL_TOKEN: channelToken,
+      AGENT_OS_DATABASE_PASSWORD: databasePassword,
       ...(mode.llm ? { ANTHROPIC_API_KEY: mode.apiKey } : {}),
     }),
   );
