@@ -102,3 +102,15 @@
 제목을 `feature/02-standalone-compose-adds-postgres (인계함)`으로 바꿨고, 띄운 백그라운드 작업은 모두 끝나 있었으며, `git worktree unlock C:/project/agent/.claude/worktrees/02-standalone-compose-adds-postgres`가 0으로 끝났다.
 
 open-session을 부른다 2026-11-20T06:02:21Z
+
+## 인계 (커밋 뒤)
+
+인계를 받은 세션(같은 제목 `feature/02-standalone-compose-adds-postgres`)이 위 "셀프 리뷰"를 돌리고 반영해 커밋했다. 커밋은 `bfb34abb3`이고 pre-commit이 통과했다(커밋 명령의 종료 코드 0). 커밋 제목은 commit-msg 훅의 72자 제한 때문에 `feat!: 단독 compose에 DB와 migrate (02-standalone-compose-adds-postgres)`로 줄였다. PR 제목은 이보다 풀어 써도 되지만 느낌표는 그대로 둔다(`docs/release-notes/upgrade/standalone-postgres.md`가 올릴 때 할 일을 싣는다).
+
+이 일지의 "셀프 리뷰" 절은 이 커밋에 든다. 이 인계 절과 `open-session을 부른다` 줄은 커밋에 들지 않은 변경이다. 새 세션이 이어서 커밋한다.
+
+- 남은 단계: 푸시, PR(제목에 느낌표, 본문에 9절과 손 확인 기록, 위 검사의 `-m llm`·`llm_local` 기록, 셀프 리뷰에서 남긴 것), `merge.md` 2의 봇 회차(CodeRabbit), 병합.
+- 이번 요청 범위는 "PR과 병합까지"라 새 세션이 병합까지 한다.
+- 이 세션은 사용자 프롬프트를 새로 받지 않았다. 시작 지시문은 위 "사용자 프롬프트"의 인계 지시문이다.
+
+open-session을 부른다 2026-11-20T06:30:52Z
