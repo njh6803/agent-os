@@ -12,6 +12,8 @@
 
 > 사용자(이어받은 세션의 선택 화면 "문서 일곱만 바꾼 커밋이 pre-commit에서 두 번 연속 막혔습니다. 막은 것은 이 변경이 건드리지 않은 시간 제한 시험이고(빨갛던 셋 모두 따로 돌리면 통과), pytest 한 바퀴가 20~24분 걸렸습니다. pre-commit은 커밋 직전에 검사 묶음을 돌리는 장치이고, 그중 pytest가 막고 있습니다. 어떻게 할까요?"에서 "pytest만 건너뛰고 커밋 (Recommended)"을 골랐다. 그 설명: SKIP=pytest로 이 커밋 하나에서 pytest만 빼고 나머지 검사(웹 검사, 표·인용 검사 등)는 그대로 돕니다. 이 문서들을 보는 저장소 상태 시험(대기열·일지 이름 등)은 제가 따로 손으로 돌립니다. 건너뛴 사실은 일지와 PR 본문에 적고, 푸시 뒤 CI가 pytest 전체를 다시 돌려 최종 판정합니다.)
 
+> 사용자(세 번째 세션의 선택 화면 "일지 한 파일만 바꾼 커밋이 pre-commit에서 또 막혔습니다. pre-commit은 커밋 직전에 검사 묶음을 돌리는 장치입니다. 이번에는 pytest 작업자 하나가 MemoryError로 쓰러졌고, 웹 검사(web-verify)도 빌드 도구가 out of memory로 멈췄습니다. 끝난 뒤에 재 보니 PC의 메모리는 32GB 가운데 약 4.6GB가 남아 있었고, python 프로세스 48개와 node 프로세스 150개가 떠 있었습니다(대부분 다른 세션의 것으로 보는 어림입니다). 나머지 검사는 통과했거나 볼 파일이 없어 건너뛰었습니다. 어떻게 할까요?"에서 "pytest와 웹 검사만 건너뛰고 커밋 (Recommended)"을 골랐다. 그 설명: SKIP=pytest,web-verify로 이 커밋 하나에서 그 둘만 뺍니다. 나머지 검사(pyright, lint-imports, 지침·표·인용 검사 등)는 그대로 돕니다. 바뀐 것이 일지 한 파일이고, 푸시 뒤 CI의 python 잡(pytest)과 web 잡(pnpm -C web verify)이 둘을 다시 돌려 최종 판정합니다. 건너뛴 사실은 일지와 PR 본문에 적습니다.)
+
 ## 고른 것
 
 - 프론티어 넷(`base-agent`, `diag-bundle`, `postgres-foundation`, `widget-runtime-values`) 가운데 명세도 `**설계:**` 줄도 없는 것은 `diag-bundle` 하나였다. 기능 폴더마다 `spec.md`가 있는지와 기능 계획의 `**설계:**`·`**끝:**` 줄을 셸 반복문으로 셌다(손으로 본 것). `widget-runtime-values`는 설계(ADR 0064)가 있고 명세가 없어 다음 단계가 명세다.
@@ -86,6 +88,44 @@ PR 직전 리뷰에 밀 주장(반영으로 새로 쓴 사실 문장의 원문):
 - "다만 같은 줄이 "ADR이 필요한 항목은 빼고 ADR 초안 하나로 따로"라고 하므로, 이 항목은 chore 티켓에 묶이지 않고 ADR 0029의 새 이력 초안으로 따로 간다."
 - "고칠 자리가 저장소 밖이라 승인의 되돌림 조건("PR 하나로 되돌릴 수 있다")을 채우지 못하고, 넘김 다섯에도 들지 않아 남은 것(기각)이다."
 - 아래 회고 절 끝의 만료 문단
+
+## 인계 (이어받은 세션)
+
+이어받은 세션(제목 `docs/pick-design-interview`)도 컨텍스트가 인계 문턱을 넘어 `커밋 뒤`에서 새 세션에 넘긴다(훅의 계기, `handoff.md`).
+
+- 커밋 `b727c89e5`에 대기열 항목 여섯(5회차 한 구절, 만료 다섯)과 이 일지를 실었다. pytest만 `SKIP=pytest`로 건너뛰었고(위 셀프 리뷰 절, 사용자 승인), 나머지 검사는 통과했다(`web-verify` `Passed (876.7s)`, 커밋의 pre-commit 출력). 푸시와 PR은 아직이다.
+- 커밋하지 않은 변경: 이 절.
+- `uv run python tools/sibling_overlap.py`는 번호 겹침이 없었고, 함께 고친 파일로 워크트리 `04-guard-new-migration-prs`의 만료 다섯을 냈다. 그 워크트리의 다섯 파일을 `sed`로 읽으니 상태 줄이 이 브랜치와 같은 글자 `만료 2026-11-20 (ADR 0036)`이었다(손으로 봤다).
+- 남은 단계: PR 직전 리뷰(`coderabbit-review`. 밀 주장은 위 셀프 리뷰 절의 목록), 푸시, PR(기록만 바꾸는 면제 PR. 본문에 `SKIP=pytest`와 CI가 pytest를 판정한다는 것을 적는다), `merge.md` 2의 봇 회차, 병합. 그 뒤 next-session의 회고는 이 단계를 닫는 세션이 이 일지까지 읽고 돈다. 문서만 바꾼 커밋의 pre-commit이 두 번 시간 제한 시험에 막힌 일을 열린 `docs-only-commit-precommit-slow-again`의 회차로 셀지는 그 회고가 정한다.
+
+인계 지시문:
+
+```
+다음 작업: 대기열 model-menu-name-fable-5-1-stale의 5회차와 일지를 싣는 면제 PR. Fable 5.1 이름이 낡은 문제를 대기열에 적는다
+다음 단계: 구현
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: 사용자 요청 "네, 적어 줘"(Fable 5.1 이름이 낡은 문제를 대기열에 적기)를 잇는다. 일지 docs/journal/2026-11-20-1915-pick-design-interview.md의 "## 인계"부터 읽는다
+브랜치: docs/pick-design-interview
+모델: Opus 5.5 / xhigh. 2의 잇는 지시문
+읽을 것: 일지 docs/journal/2026-11-20-1915-pick-design-interview.md의 "## 셀프 리뷰 (이어받은 세션)"과 "## 인계 (이어받은 세션)"
+이어받을 상태: 인계: 커밋 뒤. 셀프 리뷰와 반영(만료 다섯 포함)을 커밋 b727c89e5에 실었고, pytest만 사용자 승인으로 SKIP=pytest 했다. 푸시와 PR은 아직이고, PR 직전 리뷰(coderabbit-review)부터 푸시, PR, merge.md 2의 봇 회차, 병합이 남았다. 일지의 "## 인계 (이어받은 세션)" 절은 커밋하지 않은 채 넘긴다. docs/journal/2026-11-20-1915-pick-design-interview.md
+확인할 선행 조건: 없음
+이번 요청 범위: PR과 병합까지
+```
+
+제목을 `docs/pick-design-interview (인계함)`으로 바꿨고, 띄운 백그라운드 작업은 모두 끝나 있었으며, `git worktree unlock C:/project/agent/.claude/worktrees/pick-design-interview`는 `is not locked`로 끝났다(이미 풀려 있었다).
+
+open-session을 부른다 2026-11-20T12:31:50Z
+
+## PR 직전 리뷰 (세 번째 세션)
+
+세 번째 세션(Opus 5.5 / xhigh)이 위 둘째 인계 지시문으로 시작해 제목을 `docs/pick-design-interview`로 바꾸고, `git worktree list`에서 이 브랜치의 자리를 찾아 `EnterWorktree(path)`로 들어왔다. 들어온 뒤 `list_sessions`(limit 25)를 보니 같은 브랜치 이름의 다른 세션은 둘이고 둘 다 제목이 `(인계함)`, `isRunning: false`였다(손으로 봤다). `git fetch origin` 뒤 `origin/dev`는 base `7b52bbd61`과 같았다(`git rev-parse origin/dev`, 손으로 봤다).
+
+- ruff 두 검사는 `.pre-commit-config.yaml`에서 `types: [python]`이라(설정을 `grep`으로 읽었다) 마크다운만 바꾼 커밋 `b727c89e5`에서 돌지 않았을 것으로 본다(그 커밋의 pre-commit 출력은 이 세션에 없다). 그래서 손으로 쳤다. `uv run ruff check .`는 `All checks passed!`, `uv run ruff format --check .`는 `2498 files already formatted`였다(둘 다 종료 0, 손으로 봤다).
+- `coderabbit-review` 서브에이전트가 CLI 0.7.5의 `coderabbit review --agent --include-untracked --base origin/dev`로 일곱 파일을 모두 봤고, 리뷰가 끝까지 돌았다(`review_completed`, 종료 0, 서브에이전트의 보고). `Seat: not assigned`(`Plan: Free`)였다. 지적은 1건이고 유효 0, 오탐 1이다.
+  - 오탐: CLI가 Major로 낸 지적으로, 32줄이 `defaults` 출력만으로 지시문을 보냈다고 단정한다는 것이다. 그 줄은 출력을 "스크립트가 찍은 것"으로 밝히고 "보냈다고 본다"는 어림으로만 적었다. 서브에이전트가 그렇게 판정했고, 이 세션도 그 줄을 다시 읽어 같은 판정을 했다. 고치지 않았다.
+- 셀프 리뷰 절의 "PR 직전 리뷰에 밀 주장" 다섯을 서브에이전트가 원천과 대 봤고 모두 맞았다. `.scratch/plan.md`의 두 행과 두 기능 계획의 `**설계:**` 줄(`widget-admin-server`는 ADR 0064, `admin-login`은 ADR 0062·0063), `directive.md` 5, `next-session/SKILL.md` 결정표의 chore 줄, retro `SKILL.md` 4단계, 만료한 다섯 파일의 상태 줄과 `queue_open_rows.py`의 출력(서브에이전트의 보고)이다.
+- 위 두 결과를 실은 일지 커밋은 pre-commit에서 종료 1로 막혔다(이 브랜치의 세 번째 막힘). pytest는 `3 failed, 7503 passed, 8 warnings, 1 error in 1344.11s`였고, 작업자 하나가 `MemoryError`로 쓰러져 xdist가 `INTERNALERROR`로 끝나 실패한 시험의 이름 목록은 찍히지 않았다(쓰러진 작업자가 돌던 것은 `tests/tools/test_tidy_checkouts.py::test_judge_와_remove_는_풀어_본_폴더_안의_다시_만들_수_없는_것을_보고_남긴다[무시되지_않은_새_파일]`). `web-verify`는 `Failed (1662.3s)`였고, vitest의 `apps/widget/tools/element.test.ts`에서 Rolldown이 `out of memory`로 멈췄다. 나머지는 통과했거나(`pyright`, `pyright-linux`, `lint-imports`, `check-ticket`, `check-notes`, `zizmor`, `check-instructions`, `check-type-escapes`, `run-hooks`, 표·줄 구분 문자·변이 표·인용 검사) 볼 파일이 없어 `Skipped`였다(ruff 둘, 카나리아 명세, 헌법 판). 모두 pre-commit의 출력이다. 끝난 뒤 PowerShell의 `Get-CimInstance Win32_OperatingSystem`과 `Get-Process`로 보니 남은 메모리가 약 4662MB(전체 32699MB)였고 python 프로세스가 48개, node 프로세스가 150개였다(손으로 봤다). 대부분 다른 세션의 것으로 보지만 프로세스의 주인은 가리지 않았다(어림). 이 변경 탓이 아니라고 보고, 같은 커밋을 그대로 다시 치지 않고 사용자에게 물었다(위 사용자 프롬프트 절). `SKIP`의 두 이름은 `tools/run_checks.py`의 `Check` id(146·157줄)이고 그 파일의 `skipped_ids`가 읽는다(코드를 읽었다).
 
 ## 회고
 
