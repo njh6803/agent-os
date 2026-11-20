@@ -99,7 +99,7 @@ Status: ready-for-agent
 34. As an admin-login 세션, I want 표를 더하는 마이그레이션의 꼴과 그 PR의 규칙이 명세에 있기, so that 첫 표를 이 행의 규약대로 바로 짓는다.
 35. As a widget-admin-server 세션, I want 테스트 도우미를 다른 패키지의 시험에서 쓰는 길이 명세에 있기, so that 위젯 관리 서버의 시험이 같은 컨테이너를 쓴다.
 36. As an ops-backup-upgrade 세션, I want 볼륨과 계정과 데이터베이스의 이름이 명세에 있기, so that 백업과 복원 명령을 그 이름으로 짓는다.
-37. As a diag-bundle 세션, I want `serve`와 `migrate`가 멈출 때 찍는 글의 목록이 명세에 있기, so that 진단 묶음이 어떤 줄을 모을지 안다.
+37. As a connection-check 세션, I want `serve`와 `migrate`가 멈출 때 찍는 글의 목록이 명세에 있기, so that 배포 안내의 문제 해결 절이 어떤 글의 뜻을 적을지 안다.
 38. As a 플러그인 개발자, I want 데이터베이스 없이 `serve`를 띄웠을 때의 글이 무엇을 할지 알려 주기, so that 처음 띄울 때 막히지 않는다.
 39. As an 운영자, I want 처음 띄우기가 끊겨 데이터베이스가 반쯤 만들어졌을 때 멈춘 글이 고치는 길을 가리키기, so that 다시 띄워도 뜨지 않는 까닭을 헤매지 않는다.
 
@@ -400,7 +400,7 @@ ADR 0066 Consequences "모두의 커밋"이 데이터베이스 시험을 들이�
 
 ## Testing Decisions
 
-좋은 시험은 운영자와 개발자에게 보이는 것을 본다. 찍히는 글, 종료 코드, 판 기록 표의 줄, 뜨는지 아닌지다. 어댑터 안의 갈래 함수나 alembic을 부르는 차례는 단언하지 않는다. 찍히는 글은 글자까지 단언한다. 그 글이 ADR과 이 명세가 정한 것이고, 운영자와 진단 묶음이 그 글을 읽기 때문이다.
+좋은 시험은 운영자와 개발자에게 보이는 것을 본다. 찍히는 글, 종료 코드, 판 기록 표의 줄, 뜨는지 아닌지다. 어댑터 안의 갈래 함수나 alembic을 부르는 차례는 단언하지 않는다. 찍히는 글은 글자까지 단언한다. 그 글이 ADR과 이 명세가 정한 것이고, 운영자가 그 글을 읽으며 배포 안내의 문제 해결 절(connection-check)이 그 글의 뜻을 적기 때문이다.
 
 이음매는 넷이다(사용자가 골랐다. 이 명세를 쓰며 물었다, 일지 2026-11-18-1544 "사용자에게 물은 것 하나"). 새 이음매는 없고, 둘째는 있는 이음매가 닿는 범위를 넓힌다. 러너와 노트 검사의 짝처럼 `tools/`에 드는 코드는 이 넷 밖에서 지금의 규칙대로 본다(위 "러너가 테스트 컨테이너를 띄우는 길"과 "노트 검사의 짝").
 
@@ -431,7 +431,7 @@ ADR 0066 Consequences "모두의 커밋"이 데이터베이스 시험을 들이�
 - **위젯 관리 서버의 데이터베이스**는 widget-admin-server의 것이다. `**Blocked by:**`에 postgres-foundation이 있다. 이 행이 짓는 도우미를 그 패키지의 시험이 쓰는 방법은 그 행의 명세가 정하고(ADR 0066 결정 "위젯 관리 서버"), 이 명세는 도우미가 다른 패키지의 마이그레이션 폴더를 받을 수 있게 짓는 데까지 한다(위 "시험 데이터베이스의 이름과 도우미"). 그 사실을 그 기능 계획에 적었다.
 - **데이터베이스의 백업과 복원, PostgreSQL의 주 판 올림, 같은 주 판 안에서 digest를 바꾸는 올림의 확인**은 ops-backup-upgrade의 것이다(ADR 0066 결정 "백업과 주 판 올림"). `**Blocked by:**`에 postgres-foundation이 있다. 그 행이 쓸 이름은 볼륨 `database`(compose 프로젝트 `agent-os` 아래라 Docker의 볼륨 이름은 `agent-os_database`), 서비스 `postgres`, 계정과 데이터베이스 `agent_os`이고 그 기능 계획에 적었다.
 - **데이터베이스 비밀번호가 http 모양의 MCP 매니페스트를 거쳐 밖으로 나갈 수 있는 길**은 mcp-trust의 것이다(ADR 0066 Consequences "신뢰와 노출"). 그 변수 이름 `AGENT_OS_DATABASE_PASSWORD`와 `AGENT_OS_DATABASE_URL`이 허락 목록의 대상이라는 것을 그 기능 계획에 적었다. 그 행은 `**Blocked by:**`에 postgres-foundation이 없고 pilot-release 뒤에 오므로 이 행보다 늦게 돈다.
-- **문제를 살필 때 묶는 파일에 이 행의 글과 종료 코드와 PostgreSQL 컨테이너의 상태를 담는 일**은 diag-bundle의 것이다(사용자 이야기 37). 묶음이 모을 글은 위 "멈출 때의 글"의 표가 전부다. 글은 이유를 적은 첫 줄과, 갈래에 따라 두 칸 들인 설명 줄 하나로 된다. `serve`는 연결 문자열이 없거나 읽지 못하면 1로, 데이터베이스에서 멈추면 3으로 끝나고, `migrate`는 멈출 때 늘 1이다. `serve`가 3으로 멈출 때 uvicorn은 첫 줄 앞에 `ERROR:`를 붙이고 끝에 `ERROR: Application startup failed. Exiting.`을 더한다. 이것을 그 기능 계획에 적었다. 그 행의 `**Blocked by:**`에는 postgres-foundation이 없어 이 행의 티켓보다 먼저 돌 수 있다. 그때는 그 행의 설계 인터뷰가 이 명세의 표를 읽고 무엇을 담을지 정한다. ADR 0066을 쓴 설계가 그 기능 계획에 넘긴 것도 담을지를 그 인터뷰에 맡겼다.
+- **`serve`와 `migrate`가 멈출 때 찍는 글의 뜻을 배포 안내의 문제 해결 절에 적는 일**은 connection-check의 것이다(사용자 이야기 37. 그 행의 옛 이름은 diag-bundle이고, 문제를 살필 때 파일로 묶는 명령을 계획했다가 ADR 0067이 그 명령을 접고 문제 해결 절을 두기로 했다). 그 절이 뜻을 적을 글은 위 "멈출 때의 글"의 표가 전부다. 글은 이유를 적은 첫 줄과, 갈래에 따라 두 칸 들인 설명 줄 하나로 된다. `serve`는 연결 문자열이 없거나 읽지 못하면 1로, 데이터베이스에서 멈추면 3으로 끝나고, `migrate`는 멈출 때 늘 1이다. `serve`가 3으로 멈출 때 uvicorn은 첫 줄 앞에 `ERROR:`를 붙이고 끝에 `ERROR: Application startup failed. Exiting.`을 더한다. 이것을 그 기능 계획에 적었다. 그 행의 `**Blocked by:**`에는 postgres-foundation이 없어 이 행의 티켓보다 먼저 돌 수 있다. 그때는 그 행의 명세가 이 명세의 표를 읽고 무엇을 적을지 정한다. ADR 0066을 쓴 설계가 그 기능 계획에 넘긴 것(`migrate`의 종료 코드와 그 문구, PostgreSQL 컨테이너의 상태)을 묶음에 담을지는 그 행의 설계 인터뷰에 맡겼는데, 그 인터뷰(ADR 0067)가 묶는 파일을 두지 않기로 했다. 컨테이너의 상태와 남긴 글은 문제 해결 절이 안내하는 명령(`docker compose ps`, `docker compose logs`)으로 본다.
 - **`agent-os migrate` 둘이 함께 도는 경우**는 multi-instance의 것이다(ADR 0066이 그 기능 계획에 이미 적었다).
 - **트레이스를 데이터베이스로 옮기는 일과 Redis, `agent-os run`이 데이터베이스를 쓸지**는 trace-postgres의 것이다(같다).
 - **인터넷이 막힌 곳으로 옮기는 반입 절차 전체**는 deploy-package의 것이다. 이 명세는 배포 안내 9절의 명령을 PostgreSQL까지 넓히는 데까지 한다(같다).
