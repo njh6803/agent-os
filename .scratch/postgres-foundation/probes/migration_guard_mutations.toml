@@ -1,0 +1,161 @@
+# 새 마이그레이션 PR 검사(티켓 04)의 시험이 지키는 코드를 하나씩 깨는 변이.
+#   PYTHONUTF8=1 uv run python tools/mutate.py .scratch/postgres-foundation/probes/migration_guard_mutations.toml
+# 시험은 구현 뒤에 쓴 것도 있어 빨강을 본 적이 없다. 변이마다 그 시험이 빨개지는지 본다.
+
+# --- 노트 검사의 짝(tools/check_notes.py) -------------------------------------
+
+[[mutation]]
+name = "짝이 보는 폴더의 경로를 틀리게 한다"
+tests = ["tests/tools/test_check_notes.py", "-k", "짝 or 마이그레이션"]
+expect = "red"
+expect_output = ['versionz 에 마이그레이션 파일이']
+[[mutation.edit]]
+file = "tools/check_notes.py"
+old = '''PRODUCT_MIGRATIONS = "src/agent_os/adapters/postgres/migrations/versions"'''
+new = '''PRODUCT_MIGRATIONS = "src/agent_os/adapters/postgres/migrations/versionz"'''
+
+[[mutation]]
+name = "짝이 보는 폴더의 경로를 틀리게 하면 꼴 시험도 훑을 파일이 없다고 한다"
+tests = ["tests/test_postgres_migration_shape.py"]
+expect = "red"
+expect_output = ['versionz']
+[[mutation.edit]]
+file = "tools/check_notes.py"
+old = '''PRODUCT_MIGRATIONS = "src/agent_os/adapters/postgres/migrations/versions"'''
+new = '''PRODUCT_MIGRATIONS = "src/agent_os/adapters/postgres/migrations/versionz"'''
+
+[[mutation]]
+name = "느낌표 없는 제목에서 마이그레이션 짝을 묻지 않는다"
+tests = ["tests/tools/test_check_notes.py", "-k", "짝 or 마이그레이션"]
+expect = "red"
+expect_output = ["Right contains one more item: 'src/agent_os/adapters/postgres/migrations/versions/0002_second.py'"]
+[[mutation.edit]]
+file = "tools/check_notes.py"
+old = '''        for path in migrations
+'''
+new = '''        for path in []
+'''
+
+[[mutation]]
+name = "제품 폴더 밖의 src 파일도 짝의 대상으로 센다"
+tests = ["tests/tools/test_check_notes.py", "-k", "짝"]
+expect = "red"
+expect_output = ['postgres/migrations/env.py` 를 새로 더했다']
+[[mutation.edit]]
+file = "tools/check_notes.py"
+old = '''c.path.startswith(f"{PRODUCT_MIGRATIONS}/")'''
+new = '''c.path.startswith("src/agent_os/adapters/postgres/")'''
+
+[[mutation]]
+name = "고치기만 한 제품 마이그레이션도 새로 더한 것으로 센다"
+tests = ["tests/tools/test_check_notes.py", "-k", "짝 or 마이그레이션"]
+expect = "red"
+expect_output = ['versions/0002_second.py` 를 새로 더했다']
+[[mutation.edit]]
+file = "tools/check_notes.py"
+old = '''c.status == "A" and c.path.startswith(f"{PRODUCT_MIGRATIONS}/")'''
+new = '''c.status != "D" and c.path.startswith(f"{PRODUCT_MIGRATIONS}/")'''
+
+# --- 마이그레이션 폴더의 꼴(tests/test_postgres_migration_shape.py) ------------
+
+[[mutation]]
+name = "파일을 하나도 못 읽어도 맞다고 한다"
+tests = ["tests/test_postgres_migration_shape.py"]
+expect = "red"
+expect_output = ["At index 0 diff: '마지막 번호가 하나가 아니다: 없음'"]
+[[mutation.edit]]
+file = "tests/test_postgres_migration_shape.py"
+old = '''    if not sources:
+        return ["마이그레이션 파일을 하나도 읽지 못했다. 폴더 경로를 본다."]
+    problems'''
+new = '''    problems'''
+
+[[mutation]]
+name = "겹친 번호를 세지 않는다"
+tests = ["tests/test_postgres_migration_shape.py"]
+expect = "red"
+expect_output = ["Right contains one more item: '겹친 번호 0002"]
+[[mutation.edit]]
+file = "tests/test_postgres_migration_shape.py"
+old = '''        if len(names) > 1'''
+new = '''        if len(names) > 99'''
+
+[[mutation]]
+name = "건너뛴 번호를 세지 않는다"
+tests = ["tests/test_postgres_migration_shape.py"]
+expect = "red"
+expect_output = ["Right contains one more item: '번호가 0001 부터"]
+[[mutation.edit]]
+file = "tests/test_postgres_migration_shape.py"
+old = '''    if numbers != expected:'''
+new = '''    if False:'''
+
+[[mutation]]
+name = "끊긴 사슬을 세지 않는다"
+tests = ["tests/test_postgres_migration_shape.py"]
+expect = "red"
+expect_output = ['+ 마지막 번호가 하나가 아니다: 0002, 0003']
+[[mutation.edit]]
+file = "tests/test_postgres_migration_shape.py"
+old = '''        if revisions[number] != before:'''
+new = '''        if False:'''
+
+[[mutation]]
+name = "마지막 번호가 둘이어도 세지 않는다"
+tests = ["tests/test_postgres_migration_shape.py"]
+expect = "red"
+expect_output = ["Right contains one more item: '마지막 번호가"]
+[[mutation.edit]]
+file = "tests/test_postgres_migration_shape.py"
+old = '''    if len(heads) != 1:'''
+new = '''    if len(heads) > 99:'''
+
+[[mutation]]
+name = "downgrade 함수를 찾지 않는다"
+tests = ["tests/test_postgres_migration_shape.py"]
+expect = "red"
+expect_output = ["Right contains one more item: '0002_second.py: `downgrade`"]
+[[mutation.edit]]
+file = "tests/test_postgres_migration_shape.py"
+old = '''        return node.name == "downgrade"'''
+new = '''        return node.name == "downgrad"'''
+
+[[mutation]]
+name = "downgrade 대입을 찾지 않는다"
+tests = ["tests/test_postgres_migration_shape.py"]
+expect = "red"
+expect_output = ["[downgrade = upgrade"]
+[[mutation.edit]]
+file = "tests/test_postgres_migration_shape.py"
+old = '''        return node.id == "downgrade" and isinstance(node.ctx, ast.Store)'''
+new = '''        return False'''
+
+[[mutation]]
+name = "downgrade import를 찾지 않는다"
+tests = ["tests/test_postgres_migration_shape.py"]
+expect = "red"
+expect_output = ["[from somewhere import downgrade"]
+[[mutation.edit]]
+file = "tests/test_postgres_migration_shape.py"
+old = '''        return bound == "downgrade"'''
+new = '''        return False'''
+
+[[mutation]]
+name = "이름에 downgrade가 든 것도 downgrade로 센다"
+tests = ["tests/test_postgres_migration_shape.py"]
+expect = "red"
+expect_output = ["Left contains one more item: '0002_second.py: `downgrade`"]
+[[mutation.edit]]
+file = "tests/test_postgres_migration_shape.py"
+old = '''        return node.id == "downgrade" and isinstance(node.ctx, ast.Store)'''
+new = '''        return "downgrade" in node.id and isinstance(node.ctx, ast.Store)'''
+
+[[mutation]]
+name = "revision이 파일 번호와 달라도 받는다"
+tests = ["tests/test_postgres_migration_shape.py"]
+expect = "red"
+expect_output = ["Right contains one more item: '0002_second.py: `revision`"]
+[[mutation.edit]]
+file = "tests/test_postgres_migration_shape.py"
+old = '''        if not found or revision != number:'''
+new = '''        if not found:'''
