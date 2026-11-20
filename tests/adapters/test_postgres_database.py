@@ -574,3 +574,17 @@ async def test_뜻밖의_예외의_글은_예외의_글을_싣지_않고_까닭�
         "  이 판의 결함일 수 있습니다. 예외의 글과 역추적은 비밀번호가 섞일 수 있어 찍지 않습니다."
     )
     assert SECRET not in message
+
+
+async def test_닫기가_실패했을_때의_글은_예외의_글을_싣지_않고_까닭만_싣는다(
+    empty_database: ScopedDatabase, tmp_path: Path
+) -> None:
+    adapter = _patient(empty_database.text(), tmp_path / "versions", Notices())
+    try:
+        message = adapter.close_problem(RuntimeError(f"비밀번호 {SECRET} 가 섞인 글"))
+    finally:
+        await adapter.close()
+    assert message == (
+        f"데이터베이스({empty_database.place})의 연결을 닫다 오류가 났습니다(RuntimeError)."
+    )
+    assert SECRET not in message

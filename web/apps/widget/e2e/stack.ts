@@ -41,6 +41,7 @@ import {
   MARKDOWN_IMAGE_PATH,
   MCP_FIXTURE_SERVER,
   pointDocSearchAt,
+  prepareDatabase,
   publish,
   REPO,
   siteFileToml,
@@ -102,7 +103,9 @@ export default async function globalSetup(): Promise<() => Promise<void>> {
     writeFileSync(siteFile, siteFileToml(siteOrigin, key.publicPem, agents));
     const traces = process.env[TRACES_ENV] ?? join(stack.work, "traces");
 
-    const serveUrl = await startServe(stack, { plugins, traces, siteFile, python });
+    // `serve` 는 표의 판이 맞는 데이터베이스가 있어야 뜬다. 이 준비만의 데이터베이스를 만들어 표를 올려 넘긴다.
+    const databaseUrl = prepareDatabase(stack, python);
+    const serveUrl = await startServe(stack, { plugins, traces, siteFile, python, databaseUrl });
 
     await build(stack, siteFile);
     const widget = stack.launch(

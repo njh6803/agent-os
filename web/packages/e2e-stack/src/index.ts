@@ -1,3 +1,4 @@
+export * from "./database.ts";
 export * from "./env.ts";
 export * from "./plugins.ts";
 export * from "./process.ts";

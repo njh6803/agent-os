@@ -128,6 +128,11 @@ openapi.json       관리 API와 HTTP 채널(운영자와 최종 사용자)의 �
 # 공유 토큰 둘(AGENT_OS_ADMIN_TOKEN, AGENT_OS_CHANNEL_TOKEN)이 환경에 있어야 서고, 기본 모델도 반드시 골라야 선다.
 # --model 은 기본 모델의 이름이다. 에이전트가 모델을 고르지 않았을 때 쓰는 plugins/models/<이름>/plugin.toml 을 가리키고, 그 파일을 실행마다 읽는다(ADR 0040). 환경변수 AGENT_OS_MODEL 로도 넘기는데, --model 이 있으면 그 값이 우선하므로 환경변수로 고르려면 아래 명령에서 --model 을 뺀다. 코드에 기본값은 없다. 이름이 없거나, 플러그인 이름 형식이 아니거나, 그 모델 파일이 없거나 읽히지 않으면 시작할 때 다른 구성 문제와 함께 알리고 서지 않는다. 같은 확인을 CLI의 run·resume도 실행 전에 한다. 모델을 꺼 둔 것은 시작을 막지 않는다.
 # --site-file 은 선택이다(최종 사용자 경로, ADR 0023)
+# 데이터베이스 주소(AGENT_OS_DATABASE_URL)도 환경에 있어야 한다. serve 는 표의 판이 맞는 데이터베이스에 닿아야 뜨고, 아니면 이유를 알리고 서지 않는다(ADR 0066).
+# 개발 PC에서는 테스트 컨테이너의 기본 데이터베이스를 쓴다. 컨테이너를 다시 띄우면 데이터가 사라지므로 migrate 를 다시 친다.
+docker compose -f compose.test.yaml up -d --wait
+export AGENT_OS_DATABASE_URL=postgresql://agent_os:agent_os@127.0.0.1:25432/agent_os
+uv run agent-os migrate
 uv run agent-os serve --model claude-opus-5
 pnpm -C web/apps/admin build
 pnpm -C web/apps/admin start       # http://127.0.0.1:3000

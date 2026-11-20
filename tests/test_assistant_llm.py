@@ -70,10 +70,11 @@ from httpx import Client, Timeout
 from tests.fake_doc_search import serving
 from tests.fake_doc_search_server import INJECTED, OVER_LIMIT
 from tests.test_local_model_llm import model_manifest, model_name
+from tools.database_for_tests import ScopedDatabase
 
 from agent_os.adapters.jsonl import JsonlTrace
 from agent_os.core.ports import UnknownEvent
-from agent_os.main import ADMIN_TOKEN_ENV, CHANNEL_TOKEN_ENV
+from agent_os.main import ADMIN_TOKEN_ENV, CHANNEL_TOKEN_ENV, DATABASE_URL_ENV
 from agent_os.sdk import (
     Event,
     Json,
@@ -525,13 +526,16 @@ def _serving(
     doc_search: DocSearch,
     model: ModelSetup,
     channel_token: str,
+    database: ScopedDatabase,
 ) -> Generator[str]:
     """실제 `serve` 프로세스 하나를 빈 포트에 띄워 주소를 준다. 포트는 `--port 0` 으로 uvicorn 이
     고르고 기동 줄에서 읽는다(`tests/test_main.py` 의 같은 이름 도우미와 같은 길). 로그는 파일로
-    받고, 나갈 때 프로세스를 거둔 뒤 표준 에러로 옮겨 실패와 함께 보이게 한다."""
+    받고, 나갈 때 프로세스를 거둔 뒤 표준 에러로 옮겨 실패와 함께 보이게 한다. `serve` 는 표의 판이
+    맞는 데이터베이스가 있어야 뜨므로 `database` 픽스처의 주소를 넘긴다."""
     env = _env(doc_search) | {
         ADMIN_TOKEN_ENV: secrets.token_urlsafe(),
         CHANNEL_TOKEN_ENV: channel_token,
+        DATABASE_URL_ENV: database.text(),
     }
     argv = [sys.executable, "-m", "agent_os.main", "serve", "--port", "0", "--model", model.name]
     argv += ["--traces", str(traces), "--plugins-root", str(root)]
@@ -585,7 +589,11 @@ def _frames(stream: str) -> list[Mapping[str, Json]]:
 
 
 def _decide_full_text(
-    tmp_path: Path, doc_search: DocSearch, model: ModelSetup, decision: str
+    tmp_path: Path,
+    doc_search: DocSearch,
+    model: ModelSetup,
+    decision: str,
+    database: ScopedDatabase,
 ) -> Done:
     """전문을 읽어 달라는 질문을 보내 `get_document` 에서 멈추게 하고 `decision` 을 보내 끝난 실행을
     돌려준다. 멈춘 호출의 인자(`include_text` 가 참이고 `offset` 이 없거나 0)까지 여기서
@@ -593,7 +601,9 @@ def _decide_full_text(
     root, traces = _plugins(tmp_path, doc_search, model), tmp_path / "traces"
     channel_token = secrets.token_urlsafe()
     with (
-        _serving(root, traces, tmp_path / "serve.log", doc_search, model, channel_token) as address,
+        _serving(
+            root, traces, tmp_path / "serve.log", doc_search, model, channel_token, database
+        ) as address,
         Client(
             base_url=address,
             headers={"Authorization": f"Bearer {channel_token}"},
@@ -621,11 +631,11 @@ def _decide_full_text(
 
 
 def test_전문_읽기를_승인하면_전문에만_있는_내용을_답하고_위치에_전문의_제목을_적는다(
-    tmp_path: Path, doc_search: DocSearch, model: ModelSetup
+    tmp_path: Path, doc_search: DocSearch, model: ModelSetup, database: ScopedDatabase
 ) -> None:
     """(13) 승인한 뒤의 답에 7일이 있고, 그 내용의 출처 줄 위치가 전문의 제목 줄 글이며 `#` 이
     없다."""
-    done = _decide_full_text(tmp_path, doc_search, model, "approve")
+    done = _decide_full_text(tmp_path, doc_search, model, "approve", database)
 
     assert "7일" in done.output, done.output
     line = _source_line(done, PARENTAL)
@@ -634,11 +644,11 @@ def test_전문_읽기를_승인하면_전문에만_있는_내용을_답하고_�
 
 
 def test_전문_읽기를_거부하면_그_내용_없이_정해진_문장으로_답하고_실행은_끝난다(
-    tmp_path: Path, doc_search: DocSearch, model: ModelSetup
+    tmp_path: Path, doc_search: DocSearch, model: ModelSetup, database: ScopedDatabase
 ) -> None:
     """(14) 거부한 뒤의 답에 모델이 말을 붙인 회차가 있어 정해진 문장은 들어 있는지로 본다. 표지는
     `get_document` 의 거부가 모델에 돌아갔다는 `tool_called(ok=false)` 이다."""
-    done = _decide_full_text(tmp_path, doc_search, model, "deny")
+    done = _decide_full_text(tmp_path, doc_search, model, "deny", database)
 
     denied = [t for t in done.tools if t.tool == "get_document" and not t.ok]
     assert [t.content for t in denied if t.content.startswith("승인자가 거부했다")], denied

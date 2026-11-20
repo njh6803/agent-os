@@ -17,6 +17,21 @@ from sqlalchemy.ext.asyncio import AsyncConnection, create_async_engine
 from sqlalchemy.pool import NullPool
 from tools.database_for_tests import ScopedDatabase
 
+# `serve` 와 `migrate` 가 주소를 못 읽을 때 찍는 두 글(명세 postgres-foundation "멈출 때의 글").
+# 두 명령의 시험이 글자까지 같은 글을 단언한다.
+NO_URL = (
+    "AGENT_OS_DATABASE_URL 이 비어 있습니다. serve 와 migrate 는 PostgreSQL 데이터베이스가 있어야"
+    " 돕니다(ADR 0066).\n"
+    "  단독 배포에서는 compose 가 .env 의 AGENT_OS_DATABASE_PASSWORD 로 이 값을 짓습니다."
+    " 개발 PC 의 값은 README 에 있습니다.\n"
+)
+UNREADABLE_URL = (
+    "AGENT_OS_DATABASE_URL 을 읽지 못했습니다."
+    " postgresql://계정:비밀번호@호스트:포트/데이터베이스 꼴이어야 합니다.\n"
+    "  값에는 비밀번호가 들어 있어 여기 찍지 않습니다. 비밀번호에 @ 가 들면 주소를 읽지 못하므로,"
+    " 비밀번호는 영문자와 숫자만 씁니다.\n"
+)
+
 VERSIONS = Path(__file__).parent / "adapters" / "postgres_versions"
 FIRST = "9001_first_probe.py"
 SECOND = "9002_second_probe.py"

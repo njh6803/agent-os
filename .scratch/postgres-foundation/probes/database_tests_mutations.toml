@@ -201,9 +201,19 @@ expect = "red"
 expect_output = ["Left contains one more item: 'ci.yml 의 PostgreSQL 이미지가 compose.test.yaml 과 다르다: postgres@sha256:"]
 [[mutation.edit]]
 file = ".github/workflows/ci.yml"
-old = '''        image: postgres@sha256:b9f6b8ff03b62f3cfd9d9ba3fe56226a9991c79d3fb46fd46536263bf02be553'''
-new = '''        image: postgres@sha256:b9f6b8ff03b62f3cfd9d9ba3fe56226a9991c79d3fb46fd46536263bf02be554'''
+old = '''    # 같은 상태 확인이다. 데이터 폴더는 메모리(tmpfs)에 둔다. 잡은 상태 확인이 정상이 된 뒤에 단계를 시작한다.
+    services:
+      postgres:
+        # postgres:18 (Debian trixie)
+        image: postgres@sha256:b9f6b8ff03b62f3cfd9d9ba3fe56226a9991c79d3fb46fd46536263bf02be553'''
+new = '''    # 같은 상태 확인이다. 데이터 폴더는 메모리(tmpfs)에 둔다. 잡은 상태 확인이 정상이 된 뒤에 단계를 시작한다.
+    services:
+      postgres:
+        # postgres:18 (Debian trixie)
+        image: postgres@sha256:b9f6b8ff03b62f3cfd9d9ba3fe56226a9991c79d3fb46fd46536263bf02be554'''
 
+# service container 가 잡마다 붙어 같은 줄이 여럿이므로, 잡마다 다른 앞줄을 붙여 원문이 한 번만 맞게 한다.
+# 이 변이는 다섯 잡(python, e2e, e2e-widget, e2e-portal, llm) 모두의 PostgreSQL 이미지를 바꿔 하나도 남기지 않는다.
 [[mutation]]
 name = "CI 에 PostgreSQL service container 가 없다"
 tests = ["tests/test_postgres_image_pin.py"]
@@ -211,8 +221,92 @@ expect = "red"
 expect_output = ["PostgreSQL service container 가 없다 (0개)"]
 [[mutation.edit]]
 file = ".github/workflows/ci.yml"
-old = '''        image: postgres@sha256:b9f6b8ff03b62f3cfd9d9ba3fe56226a9991c79d3fb46fd46536263bf02be553'''
-new = '''        image: redis@sha256:b9f6b8ff03b62f3cfd9d9ba3fe56226a9991c79d3fb46fd46536263bf02be553'''
+old = '''    # 같은 상태 확인이다. 데이터 폴더는 메모리(tmpfs)에 둔다. 잡은 상태 확인이 정상이 된 뒤에 단계를 시작한다.
+    services:
+      postgres:
+        # postgres:18 (Debian trixie)
+        image: postgres@sha256:b9f6b8ff03b62f3cfd9d9ba3fe56226a9991c79d3fb46fd46536263bf02be553'''
+new = '''    # 같은 상태 확인이다. 데이터 폴더는 메모리(tmpfs)에 둔다. 잡은 상태 확인이 정상이 된 뒤에 단계를 시작한다.
+    services:
+      postgres:
+        # postgres:18 (Debian trixie)
+        image: redis@sha256:b9f6b8ff03b62f3cfd9d9ba3fe56226a9991c79d3fb46fd46536263bf02be553'''
+[[mutation.edit]]
+file = ".github/workflows/ci.yml"
+old = '''      # 만든다. python 잡과 같은 이미지와 상태 확인이다(digest 는 tests/test_postgres_image_pin.py 가 판정한다).
+      AGENT_OS_TEST_DATABASE_URL: postgresql://agent_os:agent_os@127.0.0.1:5432/agent_os
+    services:
+      postgres:
+        # postgres:18 (Debian trixie)
+        image: postgres@sha256:b9f6b8ff03b62f3cfd9d9ba3fe56226a9991c79d3fb46fd46536263bf02be553'''
+new = '''      # 만든다. python 잡과 같은 이미지와 상태 확인이다(digest 는 tests/test_postgres_image_pin.py 가 판정한다).
+      AGENT_OS_TEST_DATABASE_URL: postgresql://agent_os:agent_os@127.0.0.1:5432/agent_os
+    services:
+      postgres:
+        # postgres:18 (Debian trixie)
+        image: redis@sha256:b9f6b8ff03b62f3cfd9d9ba3fe56226a9991c79d3fb46fd46536263bf02be553'''
+[[mutation.edit]]
+file = ".github/workflows/ci.yml"
+old = '''  e2e-widget:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      PYTHONUTF8: "1"
+      # e2e 잡과 같다. serve 가 붙을 데이터베이스를 준비(e2e/stack.ts)가 아래 service container 에 만든다.
+      AGENT_OS_TEST_DATABASE_URL: postgresql://agent_os:agent_os@127.0.0.1:5432/agent_os
+    services:
+      postgres:
+        # postgres:18 (Debian trixie)
+        image: postgres@sha256:b9f6b8ff03b62f3cfd9d9ba3fe56226a9991c79d3fb46fd46536263bf02be553'''
+new = '''  e2e-widget:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      PYTHONUTF8: "1"
+      # e2e 잡과 같다. serve 가 붙을 데이터베이스를 준비(e2e/stack.ts)가 아래 service container 에 만든다.
+      AGENT_OS_TEST_DATABASE_URL: postgresql://agent_os:agent_os@127.0.0.1:5432/agent_os
+    services:
+      postgres:
+        # postgres:18 (Debian trixie)
+        image: redis@sha256:b9f6b8ff03b62f3cfd9d9ba3fe56226a9991c79d3fb46fd46536263bf02be553'''
+[[mutation.edit]]
+file = ".github/workflows/ci.yml"
+old = '''  e2e-portal:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      PYTHONUTF8: "1"
+      # e2e 잡과 같다. serve 가 붙을 데이터베이스를 준비(e2e/stack.ts)가 아래 service container 에 만든다.
+      AGENT_OS_TEST_DATABASE_URL: postgresql://agent_os:agent_os@127.0.0.1:5432/agent_os
+    services:
+      postgres:
+        # postgres:18 (Debian trixie)
+        image: postgres@sha256:b9f6b8ff03b62f3cfd9d9ba3fe56226a9991c79d3fb46fd46536263bf02be553'''
+new = '''  e2e-portal:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      PYTHONUTF8: "1"
+      # e2e 잡과 같다. serve 가 붙을 데이터베이스를 준비(e2e/stack.ts)가 아래 service container 에 만든다.
+      AGENT_OS_TEST_DATABASE_URL: postgresql://agent_os:agent_os@127.0.0.1:5432/agent_os
+    services:
+      postgres:
+        # postgres:18 (Debian trixie)
+        image: redis@sha256:b9f6b8ff03b62f3cfd9d9ba3fe56226a9991c79d3fb46fd46536263bf02be553'''
+[[mutation.edit]]
+file = ".github/workflows/ci.yml"
+old = '''      # python 잡과 같은 이미지와 상태 확인이다.
+      AGENT_OS_TEST_DATABASE_URL: postgresql://agent_os:agent_os@127.0.0.1:5432/agent_os
+    services:
+      postgres:
+        # postgres:18 (Debian trixie)
+        image: postgres@sha256:b9f6b8ff03b62f3cfd9d9ba3fe56226a9991c79d3fb46fd46536263bf02be553'''
+new = '''      # python 잡과 같은 이미지와 상태 확인이다.
+      AGENT_OS_TEST_DATABASE_URL: postgresql://agent_os:agent_os@127.0.0.1:5432/agent_os
+    services:
+      postgres:
+        # postgres:18 (Debian trixie)
+        image: redis@sha256:b9f6b8ff03b62f3cfd9d9ba3fe56226a9991c79d3fb46fd46536263bf02be553'''
 
 [[mutation]]
 name = "마이그레이션 폴더 경로를 운영체제의 경로 구분자로도 가른다"

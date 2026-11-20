@@ -29,6 +29,7 @@ from httpx import ASGITransport, AsyncClient
 from langchain_core.language_models.fake_chat_models import GenericFakeChatModel
 from pydantic import TypeAdapter
 from starlette.exceptions import HTTPException as StarletteHTTPException
+from tests.fake_database import FakeDatabase
 from tests.fake_models import DEFAULT_MODEL, FakeModels
 from tests.signing import (
     AUDIENCE,
@@ -468,6 +469,7 @@ def _admin_app(
         run_timeout_seconds=None,
         end_user_concurrent_runs=None,
         stderr=stderr,
+        database=FakeDatabase(),
     )
 
 
