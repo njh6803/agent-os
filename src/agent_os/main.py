@@ -133,7 +133,7 @@ _NOT_ONE_ENV_DIAGNOSTIC = (
     "  오타가 조용히 꺼짐으로 읽히지 않게 시작 자리에서 끝낸다."
 )
 # 데이터베이스 주소의 진단은 높임말이다. 글은 명세 postgres-foundation의 "멈출 때의 글"이 원천이고,
-# 03부터 `serve`도 같은 글을 쓴다. 비밀번호가 든 값이라 값은 싣지 않는다(원칙 V).
+# `serve`와 `migrate`가 같은 글을 쓴다. 비밀번호가 든 값이라 값은 싣지 않는다(원칙 V).
 _NO_DATABASE_URL_DIAGNOSTIC = (
     f"{DATABASE_URL_ENV} 이 비어 있습니다. serve 와 migrate 는 PostgreSQL 데이터베이스가 있어야"
     " 돕니다(ADR 0066).\n"
@@ -219,15 +219,24 @@ def _serve(args: ServeArgs) -> int:
     실행 타임아웃은 받은 그대로 넘긴다. 없으면 없음을 넘겨 core 의 기본값이 선다. 0 이하는 모델이나
     도구를 기다리는 실행이 모두 그 자리에서 실패하는 서버라 다른 구성 오류와 함께 여기서 끝난다.
     전역 동시 실행 상한도 같다 — 없으면 채널의 기본값이고 0 이하는 구성 오류다.
+
+    데이터베이스 주소(`AGENT_OS_DATABASE_URL`)가 비었거나 읽히지 않는 것도 같은 목록의 구성 오류다.
+    값이 있으면 어댑터를 지어 앱에 넘기기만 한다. 닿는지와 표의 판은 여기서 보지 않고 앱의 수명이
+    열릴 때 가장 바깥 미들웨어가 본다(`agent_os.http.database`). 그래서 uvicorn 에 수명을 늘 켜라고
+    넘기고(`lifespan="on"`), 확인에서 멈추면 uvicorn 이 종료 코드 3 으로 끝난다. 이 함수가 3 을 1 로
+    바꾸지 않는다.
     """
     admin_token = os.environ.get(ADMIN_TOKEN_ENV, "")
     channel_token = os.environ.get(CHANNEL_TOKEN_ENV, "")
     user = getpass.getuser()
     sites = _read_sites(args.site_file)
+    database_url = _read_database_url()
     problems = _configuration_problems(
         args, admin_token, channel_token, user, sites, _container_network()
     )
-    if problems or not isinstance(sites, Sites):
+    if isinstance(database_url, str):
+        problems.append(database_url)
+    if problems or not isinstance(sites, Sites) or isinstance(database_url, str):
         sys.stderr.write("".join(f"{problem}\n" for problem in problems))
         return EXIT_FAILED
     uvicorn.run(
@@ -245,12 +254,31 @@ def _serve(args: ServeArgs) -> int:
             run_timeout_seconds=args.run_timeout_seconds,
             end_user_concurrent_runs=args.end_user_concurrent_runs,
             stderr=sys.stderr,
+            database=_build_database(database_url),
         ),
         host=args.host,
         port=args.port,
         timeout_graceful_shutdown=SHUTDOWN_GRACE_SECONDS,
+        # `auto` 는 앱이 수명을 모른다고 보면 경고만 찍고 소켓을 연다. 데이터베이스를 확인하지 못한
+        # 서버가 뜨는 길이라, 수명은 늘 켜고 확인이 막으면 uvicorn 이 3 으로 끝나게 한다(ADR 0066).
+        lifespan="on",
     )
     return EXIT_FINISHED
+
+
+def _read_database_url() -> DatabaseUrl | str:
+    """환경 변수의 주소를 읽는다. 읽었으면 주소, 못 읽었으면 그 진단이다.
+
+    `serve` 와 `migrate` 가 같은 판정과 같은 글을 쓴다. 값에는 비밀번호가 들어 있어 진단은 값을 싣지
+    않는다(원칙 V). 앞뒤의 공백과 개행은 걷고 읽는다.
+    """
+    text = os.environ.get(DATABASE_URL_ENV, "").strip()
+    if not text:
+        return _NO_DATABASE_URL_DIAGNOSTIC
+    url = parse_database_url(text)
+    if url is None:
+        return _UNREADABLE_DATABASE_URL_DIAGNOSTIC
+    return url
 
 
 def _build_database(url: DatabaseUrl) -> PostgresDatabase:
@@ -272,13 +300,9 @@ def _migrate() -> int:
     로그로 흘러가기 때문이다. 결과 글은 성공이면 표준 출력, 멈췄으면 표준 오류로 간다. 어댑터가
     글 대신 예외를 던지면 예외의 글을 싣지 않고 까닭만 싣는 글로 바꿔 끝낸다.
     """
-    text = os.environ.get(DATABASE_URL_ENV, "").strip()
-    if not text:
-        sys.stderr.write(f"{_NO_DATABASE_URL_DIAGNOSTIC}\n")
-        return EXIT_FAILED
-    url = parse_database_url(text)
-    if url is None:
-        sys.stderr.write(f"{_UNREADABLE_DATABASE_URL_DIAGNOSTIC}\n")
+    url = _read_database_url()
+    if isinstance(url, str):
+        sys.stderr.write(f"{url}\n")
         return EXIT_FAILED
     return run_interruptibly(lambda: _migrate_database(_build_database(url)))
 

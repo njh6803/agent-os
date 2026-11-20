@@ -57,18 +57,32 @@ interface Launched {
 export default async function globalSetup(): Promise<() => Promise<void>> {
   const work = mkdtempSync(join(tmpdir(), "agent-os-e2e-"));
   const launched: Launched[] = [];
+  // 이 준비가 만든 시험용 데이터베이스의 이름. 만들었으면 거둘 때 지운다.
+  const databases: { readonly python: string; readonly name: string }[] = [];
   const teardown = async (): Promise<void> => {
-    for (const { child } of launched.toReversed()) {
-      await stop(child);
+    try {
+      for (const { child } of launched.toReversed()) {
+        await stop(child);
+      }
+      mkdirSync(LOGS, { recursive: true });
+      for (const { name, output } of launched) {
+        writeFileSync(join(LOGS, `${name}.log`), output());
+      }
+    } finally {
+      try {
+        for (const { python, name } of databases) {
+          dropDatabase(python, name);
+        }
+      } finally {
+        rmSync(work, { recursive: true, force: true, maxRetries: 5 });
+      }
     }
-    mkdirSync(LOGS, { recursive: true });
-    for (const { name, output } of launched) {
-      writeFileSync(join(LOGS, `${name}.log`), output());
-    }
-    rmSync(work, { recursive: true, force: true, maxRetries: 5 });
   };
   try {
     const python = interpreter();
+    // `serve` 는 표의 판이 맞는 데이터베이스가 있어야 뜬다. 이 준비만의 데이터베이스를 만들어 표를 올려 넘긴다.
+    const databaseUrl = createDatabase(python, work);
+    databases.push({ python, name: databaseName(databaseUrl) });
     const plugins = join(work, "plugins");
     writeFixturePlugins(plugins, python);
     const traces = join(work, "traces");
@@ -98,6 +112,8 @@ export default async function globalSetup(): Promise<() => Promise<void>> {
         PYTHONUTF8: "1",
         AGENT_OS_ADMIN_TOKEN: adminToken,
         AGENT_OS_CHANNEL_TOKEN: channelToken,
+        // 부모의 환경에 같은 변수가 있어도 이 준비의 데이터베이스로 덮는다.
+        AGENT_OS_DATABASE_URL: databaseUrl,
       },
     );
     launched.push(serve);
@@ -141,6 +157,66 @@ function interpreter(): string {
     throw new Error(`파이썬 인터프리터를 찾지 못했다(uv run python):\n${found.stderr}`);
   }
   return path;
+}
+
+const DATABASE_TOOL = join(REPO, "tools", "database_for_tests.py");
+const DATABASE_CALL_MS = 120_000;
+
+/**
+ * 테스트 컨테이너에 이 준비만의 빈 데이터베이스를 만들고 같은 주소로 `agent-os migrate` 를 돌려 표를 올린 뒤 그 주소를 준다.
+ * 부모의 환경에 같은 변수가 있어도 이 값으로 덮는다. 컨테이너가 떠 있지 않으면 도구가 띄우는 명령을 표준 오류에 찍고 1 로 끝나
+ * 그 글이 오류에 실린다. 주소에는 비밀번호가 있어 오류에 싣지 않는다.
+ */
+function createDatabase(python: string, work: string): string {
+  const url = runPython(python, [DATABASE_TOOL, "create", "agent_os"], REPO, {}, "만들지 못했다");
+  // 표를 올리다 실패하면 부르는 쪽이 이름을 받기 전에 던지므로, 여기서 지우고 던진다.
+  try {
+    runPython(
+      python,
+      ["-m", "agent_os.main", "migrate"],
+      work,
+      { AGENT_OS_DATABASE_URL: url },
+      "표를 올리지 못했다",
+    );
+  } catch (error: unknown) {
+    dropDatabase(python, databaseName(url));
+    throw error;
+  }
+  return url;
+}
+
+function databaseName(url: string): string {
+  const name = new URL(url).pathname.replace(/^\//, "");
+  if (name === "") {
+    throw new Error("데이터베이스 주소에 이름이 없다");
+  }
+  return name;
+}
+
+function dropDatabase(python: string, name: string): void {
+  runPython(python, [DATABASE_TOOL, "drop", name], REPO, {}, "지우지 못했다");
+}
+
+function runPython(
+  python: string,
+  args: readonly string[],
+  cwd: string,
+  extra: Readonly<Record<string, string>>,
+  failure: string,
+): string {
+  const found = spawnSync(python, args, {
+    cwd,
+    encoding: "utf-8",
+    timeout: DATABASE_CALL_MS,
+    env: { ...process.env, PYTHONUTF8: "1", ...extra },
+  });
+  const stdout: unknown = found.stdout;
+  const stderr: unknown = found.stderr;
+  if (found.status !== 0) {
+    const reason = found.error?.message ?? (typeof stderr === "string" ? stderr.trim() : "");
+    throw new Error(`테스트 데이터베이스를 ${failure}:\n${reason}`);
+  }
+  return typeof stdout === "string" ? stdout.trim() : "";
 }
 
 /** 이 serve 만 아는 토큰. 같은 기계의 다른 프로세스가 짐작할 수 없는 값이다. */

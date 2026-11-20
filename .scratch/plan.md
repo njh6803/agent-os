@@ -70,7 +70,7 @@ web/                       슬라이스 3부터. pnpm 워크스페이스. 파이
 | 9 | [portal-admin](portal-admin/plan.md) | 운영자가 위젯 관리 화면에 Agent OS의 운영자 계정으로 들어와 사이트마다의 위젯 설정과 위젯 테스트 페이지 설정을 등록해, 파일을 열지 않고 위젯이 보일 것을 바꾼다. | widget-admin-server, admin-login, widget-login-state | todo |
 | 9 | [portal-login](portal-login/plan.md) | 위젯 테스트 페이지에 사내 로그인 모드를 더해, 배포 환경에서는 사내 사람만 질문하게 한다. | pilot-portal, widget-login-state | todo |
 | 9 | [portal-login-admin](portal-login-admin/plan.md) | 회사 로그인 서버 항목과 사이트가 쓰는 항목을 위젯 관리 화면에서 고쳐, 설정 파일을 열지 않고 사이트의 로그인을 바꾼다. | portal-login, portal-admin | todo |
-| 9 | [postgres-foundation](postgres-foundation/plan.md) | agent-os 배포에 PostgreSQL을 들이고, 서버와 테스트와 CI가 그 데이터베이스에 닿는 길을 세운다. | release-image | in-progress |
+| 9 | [postgres-foundation](postgres-foundation/plan.md) | agent-os 배포에 PostgreSQL을 들이고, 서버와 테스트와 CI가 그 데이터베이스에 닿는 길을 세운다. | release-image | done |
 | 9 | [step-up-login](step-up-login/plan.md) | 익명으로 질문하다가 로그인한 사람만 쓰는 도구에 닿으면 로그인을 안내하고, 로그인한 뒤 같은 대화에 이어 답한다. | portal-login | todo |
 | 9 | [widget-admin-server](widget-admin-server/plan.md) | 위젯 관리 서버를 세워 사이트마다의 위젯 설정을 위젯 쪽의 PostgreSQL에 들고, 위젯이 사이트의 이름으로 그 설정을 받아 가는 주소를 낸다. | postgres-foundation | todo |
 | 9 | [widget-login-state](widget-login-state/plan.md) | 위젯이 로그인 상태와 고지와 다크 모드 스위치를 직접 그리고 사이트마다의 위젯 설정을 받아 오며, 주소 하나를 창으로 여는 URL 방식을 더한다. | widget-admin-server | todo |
@@ -115,7 +115,7 @@ web/                       슬라이스 3부터. pnpm 워크스페이스. 파이
 
 ## 프론티어
 
-done 이 아니고, Blocked by 가 비었거나 이 저장소의 막는 기능이 모두 done 인 기능이다. `base-agent`, `connection-check`, `postgres-foundation`, `widget-runtime-values`
+done 이 아니고, Blocked by 가 비었거나 이 저장소의 막는 기능이 모두 done 인 기능이다. `base-agent`, `admin-login`, `connection-check`, `widget-admin-server`, `widget-runtime-values`
 
 ## 다른 저장소를 기다리는 기능
 

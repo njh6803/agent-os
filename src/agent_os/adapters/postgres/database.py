@@ -285,6 +285,10 @@ class PostgresDatabase:
             f"뜻밖의 오류로 멈췄습니다({reason_of(error)}).\n{_UNEXPECTED_HINT}"
         )
 
+    def close_problem(self, error: BaseException) -> str:
+        """닫기가 예외를 던졌을 때의 글. 예외의 글과 역추적은 싣지 않는다."""
+        return f"데이터베이스({self._place})의 연결을 닫다 오류가 났습니다({reason_of(error)})."
+
     async def close(self) -> None:
         await self._engine.dispose()
 

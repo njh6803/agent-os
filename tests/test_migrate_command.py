@@ -22,7 +22,9 @@ from pathlib import Path
 import pytest
 from tests.postgres_support import (
     FIRST,
+    NO_URL,
     SECOND,
+    UNREADABLE_URL,
     broken_versions,
     closed_port,
     copy_versions,
@@ -37,18 +39,6 @@ from agent_os.adapters.postgres.database import DatabaseUrl, PostgresDatabase
 from agent_os.main import DATABASE_URL_ENV, main
 
 SECRET = "leak_probe_pw"
-NO_URL = (
-    "AGENT_OS_DATABASE_URL 이 비어 있습니다. serve 와 migrate 는 PostgreSQL 데이터베이스가 있어야"
-    " 돕니다(ADR 0066).\n"
-    "  단독 배포에서는 compose 가 .env 의 AGENT_OS_DATABASE_PASSWORD 로 이 값을 짓습니다."
-    " 개발 PC 의 값은 README 에 있습니다.\n"
-)
-UNREADABLE_URL = (
-    "AGENT_OS_DATABASE_URL 을 읽지 못했습니다."
-    " postgresql://계정:비밀번호@호스트:포트/데이터베이스 꼴이어야 합니다.\n"
-    "  값에는 비밀번호가 들어 있어 여기 찍지 않습니다. 비밀번호에 @ 가 들면 주소를 읽지 못하므로,"
-    " 비밀번호는 영문자와 숫자만 씁니다.\n"
-)
 
 
 def _stderr_notice(message: str) -> None:
