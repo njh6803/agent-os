@@ -204,3 +204,28 @@ open-session을 부른다 2026-11-20T16:11:40Z
    - CodeRabbit nitpick: `serve` 시험이 어댑터에 넘긴 URL의 계정·비밀번호까지 견주게 한다(실패 출력에는 비교 결과만).
    - `web/apps/admin/e2e/stack.ts`가 e2e-stack의 `prepareDatabase` 사본을 든다(위 "남긴 것").
 3. 사용자에게 알린다: 앞 세션이 임시 폴더의 `inspect.py`를 `inspect.py.stray-shadows-stdlib`로 이름만 바꿨다(되돌리기는 그 이름을 원래대로).
+
+## 인계 (2026-11-21, 커밋 뒤)
+
+이 세션(제목 `feature/03-serve-requires-database`)은 컨텍스트가 인계 문턱을 넘어 `커밋 뒤`에서 새 세션에 넘긴다. 이 세션이 띄운 백그라운드 작업은 모두 끝났다(`wait_ci`, 커밋의 pre-commit). 이 일지의 이 절은 커밋하지 않았다. 새 세션이 이어 쓰고 커밋한다. 회고(`## 회고`)와 `## 다음`은 위에 이미 썼고 새 세션이 병합 결과에 맞춰 고친다.
+
+인계 지시문:
+
+```
+다음 작업: .scratch/postgres-foundation/issues/03-serve-requires-database.md. serve는 표의 판이 맞는 데이터베이스에 닿아야 뜬다
+다음 단계: PR 반영·병합
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /implement .scratch/postgres-foundation/issues/03-serve-requires-database.md
+브랜치: feature/03-serve-requires-database
+모델: Sonnet 5.5 / high. 2의 잇는 지시문
+읽을 것: 일지 docs/journal/2026-11-20-1918-serve-requires-database.md의 "## 봇 회차와 `llm_local` 기록 판정"과 "## 회고"와 "## 다음"
+이어받을 상태: 인계: 커밋 뒤. 커밋 7781b10fe(봇 첫 회차와 llm_local 판정, 회고, 다음, 대기열 항목 llm-local-record-uncommitted-tree)가 이 브랜치에 있고 아직 푸시하지 않았다(PR #615의 푸시한 머리는 df1035ae3). 푸시하고 merge.md 2(봇 회차)부터 한다: 푸시마다 wait_ci를 새로 띄운다. 두 봇의 첫 회차는 끝났다(고친 코드 없음, 판정은 PR 코멘트 issuecomment-7044765336). 그래서 둘째 회차부터는 Critical·Major만 고치고 나머지는 보류 이유를 PR 코멘트에 남긴다. llm_local 기록은 내용이 같음을 해시로 대 보고 받아들였으니(일지 판정) 다시 돌리지 않는다. 봇 지적으로 범위 경로(adapters/, main.py, channel/ 등)를 고치면 다시 돌리고 비용 확인을 받는다. PR #614가 .scratch/plan.md와 retro-queue 다섯 항목을 같이 고쳐 병합 때 글자 충돌이 날 수 있다. 병합 직전에 headRefOid와 git rev-parse HEAD를 대조한다. 병합 뒤 다음 일은 출시 PR이지만 요청 범위 밖이라 열지 않고 보고에 적는다. 사용자에게 알린다: 앞 세션이 임시 폴더의 inspect.py를 inspect.py.stray-shadows-stdlib로 이름만 바꿨다. docs/journal/2026-11-20-1918-serve-requires-database.md
+확인할 선행 조건: 없음
+이번 요청 범위: PR과 병합까지
+```
+
+open-session을 부른다 2026-11-20T16:40:26Z
+
+## 병합 길 (2026-11-21, 이어받은 세션)
+
+PR #615가 `CONFLICTING`이었다(`origin/dev`에 #614가 들어와 `.scratch/plan.md`가 겹쳤다). `origin/dev`(`a5e0a68c7`)를 합쳤고 충돌은 `.scratch/plan.md` 하나였다. `uv run python tools/plan_table.py`로 다시 만들었고, 결과가 `origin/dev`의 그 파일과 다른 곳은 이 기능이 `done`이 되고 프론티어에서 빠지는 줄뿐이다. retro-queue 다섯은 충돌 없이 `origin/dev`의 것을 따랐다. 푸시한 머리가 바뀌므로 `llm_local` 기록 판정(위)은 합쳐 들어온 변경에 범위의 경로가 없다는 점을 대 본 뒤에 그대로 쓴다(손으로 `git diff --name-only 7b52bbd61 origin/dev -- src pyproject.toml uv.lock tools/llm_local.py tools/llm_local_server`를 쳤고 출력이 비었다). 결과를 읽은 `plan.md` 비교는 `git diff origin/dev -- .scratch/plan.md`를 손으로 봤다.
