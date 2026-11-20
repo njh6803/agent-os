@@ -37,7 +37,12 @@ def read_folder(folder: Path) -> dict[str, str]:
 
 
 def _literal(tree: ast.Module, name: str) -> tuple[bool, str | None]:
-    """최상위 대입 `name = <글자 값>` 의 값. 앞은 읽었는지, 뒤는 그 값(`None` 이거나 글자)이다."""
+    """최상위 대입 `name = <글자 값>` 의 값. 앞은 읽었는지, 뒤는 그 값(`None` 이거나 글자)이다.
+
+    같은 이름의 최상위 대입이 둘 이상이면 읽지 못한 것으로 센다. 나중 대입이 모듈의 최종 값을
+    바꾸는데 첫 대입만 보고 지나가는 일을 막으려는 것이다.
+    """
+    values: list[ast.expr | None] = []
     for node in tree.body:
         if isinstance(node, ast.AnnAssign) and isinstance(node.target, ast.Name):
             target, value = node.target.id, node.value
@@ -49,10 +54,13 @@ def _literal(tree: ast.Module, name: str) -> tuple[bool, str | None]:
             target, value = node.targets[0].id, node.value
         else:
             continue
-        if target != name or not isinstance(value, ast.Constant):
-            continue
-        if value.value is None or isinstance(value.value, str):
-            return True, value.value
+        if target == name:
+            values.append(value)
+    if len(values) != 1:
+        return False, None
+    value = values[0]
+    if isinstance(value, ast.Constant) and (value.value is None or isinstance(value.value, str)):
+        return True, value.value
     return False, None
 
 
@@ -232,6 +240,16 @@ def test_revision이_파일_이름의_번호와_다르면_잡는다() -> None:
     sources = {**GOOD, "0002_second.py": _file("0009", "0001")}
     assert shape_problems(sources) == [
         "0002_second.py: `revision` 이 파일 이름의 번호 0002 와 같은 글자 값이 아니다."
+    ]
+
+
+def test_revision과_down_revision을_뒤에서_다시_대입하면_잡는다() -> None:
+    again = '\nrevision = "9999"\ndown_revision = None\n'
+    sources = {**GOOD, "0002_second.py": _file("0002", "0001") + again}
+    assert shape_problems(sources) == [
+        "0002_second.py: `revision` 이 파일 이름의 번호 0002 와 같은 글자 값이 아니다.",
+        "0002_second.py: `down_revision` 을 글자 값(없으면 None)으로 읽지 못했다.",
+        "마지막 번호가 하나가 아니다: 0001, 0003",
     ]
 
 

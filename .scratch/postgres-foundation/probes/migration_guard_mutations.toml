@@ -124,7 +124,7 @@ new = '''        return node.name == "downgrad"'''
 name = "downgrade 대입을 찾지 않는다"
 tests = ["tests/test_postgres_migration_shape.py"]
 expect = "red"
-expect_output = ["[downgrade = upgrade"]
+expect_output = ["Right contains one more item: '0002_second.py: `downgrade`"]
 [[mutation.edit]]
 file = "tests/test_postgres_migration_shape.py"
 old = '''        return node.id == "downgrade" and isinstance(node.ctx, ast.Store)'''
@@ -134,7 +134,7 @@ new = '''        return False'''
 name = "downgrade import를 찾지 않는다"
 tests = ["tests/test_postgres_migration_shape.py"]
 expect = "red"
-expect_output = ["[from somewhere import downgrade"]
+expect_output = ["Right contains one more item: '0002_second.py: `downgrade`"]
 [[mutation.edit]]
 file = "tests/test_postgres_migration_shape.py"
 old = '''        return bound == "downgrade"'''
@@ -159,3 +159,13 @@ expect_output = ["Right contains one more item: '0002_second.py: `revision`"]
 file = "tests/test_postgres_migration_shape.py"
 old = '''        if not found or revision != number:'''
 new = '''        if not found:'''
+
+[[mutation]]
+name = "같은 이름을 뒤에서 다시 대입해도 첫 대입만 읽는다"
+tests = ["tests/test_postgres_migration_shape.py"]
+expect = "red"
+expect_output = ["Right contains 3 more items, first extra item: '0002_second.py: `revision`"]
+[[mutation.edit]]
+file = "tests/test_postgres_migration_shape.py"
+old = '''    if len(values) != 1:'''
+new = '''    if not values:'''

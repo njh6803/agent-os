@@ -85,3 +85,12 @@ open-session을 부른다 2026-11-20T09:47:44Z
 이어받은 세션(제목 `feature/04-guard-new-migration-prs`)도 컨텍스트가 인계 문턱(20만 토큰)을 넘은 채 `커밋 뒤` 경계에 왔다. 한 일은 위 `## 셀프 리뷰 (이어받은 세션)`과 `## 회고`에 있다. 커밋은 세 번째 시도에 통과했다(첫 시도는 헌법 판 검사, 둘째는 부하에서 빨간 시간 시험). 이 인계 절을 쓴 편집은 커밋하지 않았다. 새 세션이 푸시 전에 커밋에 싣는다. 남은 일은 위 `## 다음`의 1~4(커밋은 끝났으니 2부터)와 푸시, PR 열기, PR 반영(봇 회차), 병합이다. 이 세션의 제목은 `feature/04-guard-new-migration-prs`였고 지금은 `feature/04-guard-new-migration-prs (인계함)`이다.
 
 open-session을 부른다 2026-11-20T12:02:14Z
+
+## PR 612 반영 (봇 회차 1)
+
+이어받은 세션이 일지 편집을 커밋(첫 시도는 부하에서 빨간 `test_rerun_runner.py`의 시간 시험 때문에 실패했고 혼자 돌리면 통과해 다시 쳤다)하고 푸시해 PR 612를 열었다. 검사는 모두 초록이었고 claude-review는 지적 없음이었다. CodeRabbit의 첫 회차가 Minor 둘을 냈고 둘 다 고쳤다.
+
+- `tests/test_postgres_migration_shape.py`의 `_literal`이 같은 이름의 첫 최상위 대입에서 바로 돌려줘, 파일 끝에서 `revision`·`down_revision`을 다시 대입해도 지나갔다. 같은 이름의 최상위 대입이 둘 이상이면 읽지 못한 것으로 세게 고치고, 시험 `test_revision과_down_revision을_뒤에서_다시_대입하면_잡는다`를 더했다.
+- 변이 표 12·13번의 표지가 시험 ID 조각(`[downgrade = upgrade`)이라 단언 전에 예외로 끝나도 맞을 수 있었다. 목록 비교 단언이 내는 `Right contains one more item: '0002_second.py: \`downgrade\``로 바꿨다. 16번(`len(values) != 1`을 `not values`로 바꿔 첫 대입만 읽게 한다)을 더했다.
+- 다시 돌린 것: `PYTHONUTF8=1 uv run python tools/mutate.py .scratch/postgres-foundation/probes/migration_guard_mutations.toml`는 변이 16 모두 기대대로(변이마다 `1 failed`)였고 `--check`는 16 모두 원문이 한 번씩이었다. 두 시험 파일은 점만 찍고 통과했다(142개). 두 번 다 pytest 프로세스가 끝난 뒤에도 종료하지 않아 멈췄다(원인은 보지 않았다). 프로브 README의 개수와 줄을 열여섯으로 고쳤다.
+- 보류한 것: 없다. 뒤로 넘기는 일도 없다.
