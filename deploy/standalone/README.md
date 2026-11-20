@@ -55,18 +55,21 @@ cp .env.example .env
 chmod 600 .env
 ```
 
-`.env`에는 비밀 값이 들어갑니다. 운영자만 읽을 수 있게 두십시오(위의 `chmod 600`). 이 파일의 값을 받는 컨테이너는 `serve` 하나입니다. 아래 칸을 채웁니다.
+`.env`에는 비밀 값이 들어갑니다. 운영자만 읽을 수 있게 두십시오(위의 `chmod 600`). 이 파일을 통째로 받는 컨테이너는 `serve` 하나이고, 데이터베이스 비밀번호는 compose가 PostgreSQL 컨테이너와 `migrate`에도 넘깁니다. 아래 칸을 채웁니다.
 
 - `AGENT_OS_ADMIN_TOKEN`: 관리 API 토큰입니다. 관리 화면에서 입력합니다.
 - `AGENT_OS_CHANNEL_TOKEN`: 채널 토큰입니다. 관리 API 토큰과 다른 값이어야 합니다.
+- `AGENT_OS_DATABASE_PASSWORD`: 데이터베이스의 비밀번호입니다. 토큰처럼 아래 명령으로 만든 값을 씁니다. 영문자와 숫자만 쓰십시오. compose가 이 값을 그대로 끼워 데이터베이스의 주소를 짓기 때문에, `@`가 들면 주소를 읽지 못하고 `%` 뒤에 16진수 두 자리가 오면 다른 비밀번호로 풀립니다.
 - `AGENT_OS_MODEL`: 기본 모델 플러그인의 이름입니다. 틀의 값을 그대로 써도 됩니다.
 - `ANTHROPIC_API_KEY`: 모델 제공사의 API 키입니다. 이 키로 모델을 부르므로 새어 나가지 않게 하십시오.
 
-토큰 두 개는 아래 명령으로 만든 값을 쓰면 됩니다. 두 번 쳐서 서로 다른 값을 받습니다.
+토큰 두 개와 데이터베이스 비밀번호는 아래 명령으로 만든 값을 쓰면 됩니다. 세 번 쳐서 서로 다른 값을 받습니다.
 
 ```bash
 openssl rand -hex 32
 ```
+
+데이터베이스 비밀번호는 처음 띄울 때 데이터베이스 안에 정해집니다. 그 뒤에 `.env`의 이 줄만 바꾸면 `migrate`와 `serve`가 데이터베이스에 접속하지 못합니다. 바꿀 때는 12절을 따릅니다.
 
 `AGENT_OS_VERSION`과 `AGENT_OS_NAMESPACE`는 판을 낼 때 채워져 있으므로 고치지 않습니다. 끝자리만 오른 판으로 올릴 때는 `AGENT_OS_VERSION` 한 줄만 바꿉니다(11절).
 
@@ -133,7 +136,7 @@ sudo openssl pkey -in portal/keys/portal.pem -pubout
 docker compose up -d --wait --wait-timeout 600
 ```
 
-처음에는 이미지 넷과 프록시 이미지를 받고, 위젯이 뜰 때 사이트 파일로 빌드하므로 몇 분이 걸립니다. 위젯은 빌드하는 동안 확인이 실패한 채 `starting`이다가 서고 나서 `healthy`가 됩니다.
+처음에는 이미지 넷과 프록시 이미지, PostgreSQL 이미지를 받고, 위젯이 뜰 때 사이트 파일로 빌드하므로 몇 분이 걸립니다. 위젯은 빌드하는 동안 확인이 실패한 채 `starting`이다가 서고 나서 `healthy`가 됩니다. 데이터베이스가 준비되면 `migrate`가 데이터베이스의 표를 이 판까지 올리고 끝나며, 그 뒤에 `serve`가 뜹니다.
 
 `compose.yaml`의 서비스 이름과 Docker Hub의 저장소 이름은 다릅니다. 이미지를 직접 받거나 옮길 때는 아래 표로 찾으십시오. `<이름공간>`은 `.env`의 `AGENT_OS_NAMESPACE`이고, 태그는 `.env`의 `AGENT_OS_VERSION`입니다.
 
@@ -143,12 +146,24 @@ docker compose up -d --wait --wait-timeout 600
 | `admin` | 관리 화면 | `<이름공간>/agent-os-admin` |
 | `widget` | 위젯 | `<이름공간>/agent-os-widget` |
 | `portal` | 위젯 테스트 페이지 | `<이름공간>/agent-os-widget-test-page` |
+| `postgres` | 데이터베이스 | Docker Hub의 공식 이미지 `postgres`(digest로 고정) |
+| `migrate` | 데이터베이스의 표를 올리고 끝납니다 | `<이름공간>/agent-os-runtime` |
 
 ```bash
 docker compose ps
 ```
 
-컨테이너 넷(`serve`, `admin`, `widget`, `portal`. 아래 표의 서비스 이름)이 모두 `healthy`이고 프록시가 `Up`이면 떴습니다. 프록시는 상태 확인이 없어 `Up`만 보이고 `healthy`가 붙지 않습니다. 떴는지는 컨테이너 기록의 `Ready` 줄이 아니라 이 상태로 보십시오. 관리 화면은 `Ready` 줄을 찍은 뒤에 서버로 가는 연결을 확인하다 실패할 수 있습니다.
+컨테이너 다섯(`serve`, `admin`, `widget`, `portal`, `postgres`. 위 표의 서비스 이름)이 모두 `healthy`이고 프록시가 `Up`이면 떴습니다. 프록시는 상태 확인이 없어 `Up`만 보이고 `healthy`가 붙지 않습니다. 떴는지는 컨테이너 기록의 `Ready` 줄이 아니라 이 상태로 보십시오. 관리 화면은 `Ready` 줄을 찍은 뒤에 서버로 가는 연결을 확인하다 실패할 수 있습니다.
+
+`migrate`는 표를 올리고 끝나므로 `docker compose ps`에는 보이지 않습니다. `docker compose ps -a`에는 `Exited (0)`으로 남는데, 이것은 고장이 아니라 일을 마친 상태입니다. `docker compose up -d`를 칠 때마다 `migrate`가 다시 돌고, 올릴 것이 없으면 그대로 끝납니다.
+
+`up`이 `service "migrate" didn't complete successfully: exit 1`로 끝나면 `serve`는 뜨지 않습니다. 까닭은 아래 명령이 찍습니다.
+
+```bash
+docker compose logs migrate
+```
+
+까닭은 마지막 줄이 아닐 수 있습니다. 데이터베이스가 늦게 준비되면 다시 시도한다는 알림 한 줄이 먼저 찍히고, 그 뒤에 멈춘 까닭을 적은 첫 줄이 섭니다. 첫 줄 뒤에는 대개 할 일을 적은 설명 줄이 붙고, 표를 올리다 실패했으면 첫 줄(`표를 올리다 실패했습니다`로 시작합니다) 뒤에 자세한 기록이 길게 붙습니다. 그래서 마지막 줄이 아니라 멈춘 까닭을 적은 그 첫 줄과 설명 줄을 보십시오.
 
 방문자가 닿는 쪽은 브라우저로 `https://agent.example.com/`을 열어 봅니다. 위젯 테스트 페이지가 뜨고 질문에 답이 오면 됩니다. 명령으로 보려면 아래를 칩니다. 이 명령은 인증서를 검증하므로, 만료됐거나 도메인이 다른 인증서면 응답을 받기 전에 실패합니다. 스스로 서명한 인증서를 시험 삼아 쓸 때만 `curl`에 `-k`를 덧붙여 검증을 끕니다.
 
@@ -169,7 +184,27 @@ ssh -L 3000:127.0.0.1:3000 <사용자>@<서버 주소>
 
 이 SSH 연결을 열어 둔 채, 내 PC의 브라우저로 `http://127.0.0.1:3000/`을 열고 `AGENT_OS_ADMIN_TOKEN`의 값을 입력합니다. 관리 화면에서 플러그인을 켜고 끌 수 있습니다.
 
+### 띄우기가 끊겼을 때
+
+`up`이 도는 동안 Docker나 서버가 다시 켜지면 `up`이 1로 끝나고, `migrate`나 `serve`가 만들어지기만 한 채(`Created`) 남을 수 있습니다. Docker는 다시 켜질 때 그런 컨테이너를 띄우지 않습니다. 아래 명령을 다시 치면 됩니다.
+
+```bash
+docker compose up -d --wait
+```
+
+처음 띄우는 `up`이 데이터베이스를 만드는 도중에 전원이 끊기면 데이터베이스가 반쯤 만들어진 채 남을 수 있습니다. 그 뒤로는 `up`을 다시 쳐도 `migrate`가 데이터베이스가 접속을 허락하지 않았다는 글이나 데이터베이스가 없다는 글로 멈추거나, `docker compose logs postgres`가 `could not open file "global/pg_filenode.map"`을 되풀이합니다. 이때는 아직 담긴 데이터가 없으므로 데이터베이스의 볼륨을 지우고 다시 띄웁니다.
+
+```bash
+docker compose down
+docker volume rm agent-os_database
+docker compose up -d --wait
+```
+
+이 길은 처음 띄우기가 한 번도 끝나지 않은 배치에만 쓰십시오. 한 번이라도 뜬 데이터베이스는 전원이 끊겨도 다음에 뜰 때 스스로 복구하며, 그 볼륨을 지우면 데이터를 모두 잃습니다. `docker compose down -v`는 플러그인 폴더와 기록 폴더의 볼륨까지 지우므로 쓰지 않습니다.
+
 ## 5. 설정을 고친 뒤
+
+서비스 전체를 다시 띄울 때는 `docker compose restart`가 아니라 `docker compose up -d`를 칩니다. `restart`는 데이터베이스가 준비되기를 기다리지 않고 모든 컨테이너를 한꺼번에 다시 띄웁니다. `docker stop`이나 `docker kill`로 멈춘 PostgreSQL 컨테이너는 저절로 다시 뜨지 않으므로 이때도 `docker compose up -d`로 띄웁니다.
 
 ### 사이트 파일이나 위젯 테스트 페이지 설정을 고쳤을 때
 
@@ -204,19 +239,22 @@ docker compose exec proxy nginx -c /etc/agent-os/proxy/nginx.conf -s reload
   - `serve`나 관리 화면을 호스트의 모든 주소에 발행하면 로그인 없는 관리 API가 암호화 없이 인터넷에 열립니다.
   - https를 443이 아닌 호스트 포트로 발행하면 80의 넘김이 닿지 않는 443을 가리킵니다.
   - 프록시의 `0.0.0.0:`을 지우면 Docker의 기본 설정(userland-proxy를 켬)에서 IPv6로 온 방문자가 모두 안쪽 게이트웨이 주소 하나로 보입니다. 그러면 토큰 끝점의 요청 한도(접속 주소마다 분당 30번)를 IPv6 방문자 전체가 함께 씁니다.
-- `user:`: 우리 이미지 넷(`serve`, `admin`, `widget`, `portal`)에는 더하지 않습니다. 이미지가 정한 사용자(uid 10001)로 돌아야 합니다. 프록시에 이미 적힌 `user:`도 바꾸지 않습니다. passwd 항목이 없는 uid로 띄우면 `serve`가 시작할 때 `KeyError: 'getpwuid(): uid not found'`로 끝납니다.
+  - PostgreSQL(`postgres`)은 어느 주소에도 발행하지 않습니다. 발행하면 데이터베이스가 비밀번호 하나로 서버 밖에 열립니다.
+- `user:`: 우리 이미지 넷(`serve`, `admin`, `widget`, `portal`)과 `migrate`에는 더하지 않습니다. 이미지가 정한 사용자(uid 10001)로 돌아야 합니다. 프록시에 이미 적힌 `user:`도 바꾸지 않습니다. passwd 항목이 없는 uid로 띄우면 `serve`가 시작할 때 `KeyError: 'getpwuid(): uid not found'`로 끝납니다. PostgreSQL에 적힌 `user: "999:999"`도 바꾸지 않습니다. 데이터베이스의 데이터 폴더가 처음 띄울 때 그 uid의 소유로 만들어지므로, 바꾸면 PostgreSQL이 자기 데이터 폴더를 읽지 못합니다.
 - 안쪽 네트워크의 IPv6: 켜지 않습니다. 443과 80이 IPv4에만 열려야 접속 주소별 요청 한도가 맞게 섭니다.
 
-## 8. 플러그인 폴더와 기록 폴더
+## 8. 데이터를 담는 볼륨
 
 플러그인 폴더(`/app/plugins`)와 기록 폴더(`/data/traces`)는 compose가 만드는 이름 있는 볼륨(`agent-os_plugins`, `agent-os_traces`)입니다. 판을 바꿔도 운영자가 설치한 플러그인과 기록이 남습니다.
+
+데이터베이스의 데이터는 이름 있는 볼륨 `agent-os_database`에 듭니다. 판을 바꾸거나 `docker compose down` 뒤에 다시 띄워도 남습니다. 데이터베이스를 백업하고 복원하는 절차는 이 안내가 아직 다루지 않습니다.
 
 - 플러그인 볼륨은 처음 붙을 때만 이미지 안의 예시 플러그인으로 채워집니다. 판을 올려도 이미 붙은 볼륨은 새 이미지의 예시 플러그인으로 갱신되지 않고, 운영자가 켜고 끈 상태와 설치한 플러그인이 보존됩니다. 새 판의 예시 플러그인이 필요하면 볼륨을 새로 만들거나(운영자가 설치한 플러그인도 사라지므로 먼저 백업하십시오) 필요한 파일을 직접 복사하십시오.
 - 인터넷이 막힌 서버에서는 운영자가 `npx`로 띄우는 MCP 서버가 서지 않습니다. `npx`가 인터넷의 레지스트리에 묻다 실패하기 때문입니다. 이미지에 미리 설치된 예시 MCP 서버는 인터넷 없이 돕니다.
 
 ### 이름 있는 볼륨 대신 호스트 폴더를 쓰려면
 
-백업 같은 이유로 두 자리를 호스트의 폴더로 바꾸려면 `compose.yaml`을 고치지 않고 같은 폴더에 `compose.override.yaml`을 둡니다. 이 절차는 처음 띄우기 전용입니다. 이미 띄워 쓰던 배포에서 바꾸면 이름 있는 볼륨에 든 설치한 플러그인과 기록이 서비스에서 보이지 않게 되고, 이 안내는 그 내용을 호스트 폴더로 옮기는 절차를 다루지 않습니다. 쓰던 배포에서는 바꾸지 마십시오. 띄우기 전에 아래 세 가지를 먼저 해야 합니다. 빠뜨리면 상태 확인은 `healthy`인데 플러그인을 끄고 켜는 요청과 실행이 500으로 끝납니다.
+백업 같은 이유로 두 자리를 호스트의 폴더로 바꾸려면 `compose.yaml`을 고치지 않고 같은 폴더에 `compose.override.yaml`을 둡니다. 이 절은 플러그인 폴더와 기록 폴더만 다룹니다. 데이터베이스의 볼륨(`agent-os_database`)은 호스트 폴더로 바꾸지 마십시오. 이 절차는 처음 띄우기 전용입니다. 이미 띄워 쓰던 배포에서 바꾸면 이름 있는 볼륨에 든 설치한 플러그인과 기록이 서비스에서 보이지 않게 되고, 이 안내는 그 내용을 호스트 폴더로 옮기는 절차를 다루지 않습니다. 쓰던 배포에서는 바꾸지 마십시오. 띄우기 전에 아래 세 가지를 먼저 해야 합니다. 빠뜨리면 상태 확인은 `healthy`인데 플러그인을 끄고 켜는 요청과 실행이 500으로 끝납니다.
 
 1. 이미지의 예시 플러그인을 호스트 폴더로 옮깁니다. 빈 폴더를 붙이면 기본 모델 플러그인이 없다며 `serve`가 시작에서 끝납니다.
 2. 두 폴더의 소유를 `10001:10001`로 넘깁니다.
@@ -243,19 +281,21 @@ services:
 
 인터넷이 되는 PC에서 이미지를 받아 파일 하나로 저장하고, 그 파일을 서버로 옮겨 불러옵니다. 아래는 묶음을 푼 폴더에서 치는 명령입니다. 인터넷이 되는 PC에도 같은 묶음을 풀어 두십시오.
 
-프록시 이미지는 digest로 고정되어 있는데(`compose.yaml`의 `nginx@sha256:…`), 파일로 저장했다가 불러오면 그 digest가 남지 않습니다. 서버의 Docker가 그 이름의 이미지를 찾지 못해 이미지를 받으려다 실패하므로, 프록시 이미지에는 태그(`agent-os-proxy:local`)를 붙여 옮기고 서버에서 `compose.override.yaml`로 그 태그를 쓰게 합니다.
+프록시 이미지와 PostgreSQL 이미지는 digest로 고정되어 있는데(`compose.yaml`의 `nginx@sha256:…`와 `postgres@sha256:…`), 파일로 저장했다가 불러오면 그 digest가 남지 않습니다. 서버의 Docker가 그 이름의 이미지를 찾지 못해 이미지를 받으려다 실패하므로, 두 이미지에는 태그(`agent-os-proxy:local`, `agent-os-postgres:local`)를 붙여 옮기고 서버에서 `compose.override.yaml`로 그 태그를 쓰게 합니다.
 
 인터넷이 되는 PC에서:
 
-이미 설정한 `.env`가 있는 폴더에서는 이 명령이 그 값을 지우지 않도록, `.env`가 없을 때만 복사합니다.
+이미 설정한 `.env`가 있는 폴더에서는 이 명령이 그 값을 지우지 않도록, `.env`가 없을 때만 복사합니다. 이 PC는 아무것도 띄우지 않으므로 `.env`의 데이터베이스 비밀번호 칸을 채우지 않습니다. 대신 앞의 두 명령을 위해서만 붙이는 값(`AGENT_OS_DATABASE_PASSWORD=unused`)을 붙입니다. 붙이지 않으면 비밀번호 칸이 비었다며 두 명령이 1로 끝납니다. 이 값은 그 두 명령에만 쓰이고 서버로 옮기지 않습니다.
 
 ```bash
 [ -f .env ] || cp .env.example .env
-docker compose pull
-docker compose config --images | sort -u > images.txt
+AGENT_OS_DATABASE_PASSWORD=unused docker compose pull
+AGENT_OS_DATABASE_PASSWORD=unused docker compose config --images | sort -u > images.txt
 docker tag "$(grep '^nginx@' images.txt)" agent-os-proxy:local
-grep -v '^nginx@' images.txt > save.txt
+docker tag "$(grep '^postgres@' images.txt)" agent-os-postgres:local
+grep -v -e '^nginx@' -e '^postgres@' images.txt > save.txt
 echo agent-os-proxy:local >> save.txt
+echo agent-os-postgres:local >> save.txt
 docker save -o agent-os-images.tar $(cat save.txt)
 sha256sum agent-os-images.tar > agent-os-images.tar.sha256
 for i in $(cat save.txt); do echo "$(docker image inspect --format '{{.Id}}' $i) $i"; done > images.id
@@ -269,13 +309,15 @@ docker load -i agent-os-images.tar
 for i in $(cat save.txt); do echo "$(docker image inspect --format '{{.Id}}' $i) $i"; done | diff - images.id && echo 이미지가 같다
 ```
 
-서버에 `compose.override.yaml`이 아직 없으면 아래로 만듭니다. 8절에서 이미 만들었다면 `services:` 아래에 `proxy:` 항목만 더합니다.
+서버에 `compose.override.yaml`이 아직 없으면 아래로 만듭니다. 8절에서 이미 만들었다면 `services:` 아래에 `proxy:` 항목과 `postgres:` 항목만 더합니다.
 
 ```yaml
 # compose.override.yaml
 services:
   proxy:
     image: agent-os-proxy:local
+  postgres:
+    image: agent-os-postgres:local
 ```
 
 대조하는 해시는 둘입니다. 파일의 해시(`sha256sum`)는 옮기는 도중 파일이 망가지지 않았는지 봅니다. 이미지의 ID(`docker image inspect`가 보이는 `sha256:` 값)는 서버에서 불러온 이미지가 인터넷이 되는 PC에서 받은 이미지와 같은지 봅니다. 레지스트리의 digest는 불러온 이미지에는 남지 않으므로 대조에 쓰지 않습니다.
@@ -287,3 +329,32 @@ services:
 ## 11. 판을 바꿀 때
 
 판을 바꾸기 전에 먼저 그 판의 릴리스 노트에서 "올릴 때 할 일"을 읽으십시오. 끝자리만 오른 판은 올릴 때 손댈 것이 없고, `.env`의 `AGENT_OS_VERSION` 한 줄만 새 판 번호로 바꾼 뒤 `docker compose up -d`를 치면 됩니다. 가운데 자리가 오른 판은 그 노트가 무엇을 무엇으로 바꾸라고 적습니다. 판을 올리는 절차 전체는 이 안내가 다루지 않습니다.
+
+- 데이터베이스의 표를 새 판에 맞게 올리는 일은 `docker compose up -d`가 `migrate`로 합니다. 운영자가 따로 칠 명령은 없습니다.
+- 노트의 "올릴 때 할 일"이 `compose.yaml`을 바꾸라고 적은 판은 새 묶음의 `compose.yaml`로 통째로 바꿉니다. 운영자가 바꾼 것은 7절대로 `compose.override.yaml`에 두었으므로 통째로 바꿔도 잃는 것이 없습니다.
+- 표를 바꾼 판에서 그 앞의 판으로 되돌리면, 옛 판의 `migrate`가 `데이터베이스가 이 판보다 새롭습니다.`로 멈추고 `serve`가 뜨지 않습니다. 되돌리는 길은 올리기 전에 받아 둔 데이터베이스의 백업을 복원하는 것이고, 그 절차는 아직 이 안내에 없습니다.
+
+## 12. 데이터베이스 비밀번호 바꾸기
+
+데이터베이스의 비밀번호는 처음 띄울 때 데이터베이스 안의 계정에 정해집니다. 그 뒤에 `.env`의 `AGENT_OS_DATABASE_PASSWORD`만 바꾸면 `up -d`가 1로 끝나고, `docker compose logs migrate`에 데이터베이스가 계정이나 비밀번호를 받아들이지 않았다는 글이 찍히며, `serve`는 뜨지 않습니다. 그래서 `.env`와 데이터베이스 안의 계정을 둘 다 바꿉니다.
+
+먼저 `.env`의 `AGENT_OS_DATABASE_PASSWORD`를 새 값(`openssl rand -hex 32`로 만든 값)으로 고칩니다. 그다음 묶음을 푼 폴더에서 아래 네 줄을 고치지 말고 그대로 붙여 넣습니다.
+
+```bash
+unset AGENT_OS_DATABASE_PASSWORD COMPOSE_ENV_FILES
+docker compose up -d --wait postgres &&
+docker compose exec -T postgres sh -c 'printf "%s\n%s\n" "$POSTGRES_PASSWORD" "$POSTGRES_PASSWORD" | psql -U agent_os -d agent_os -v ON_ERROR_STOP=1 -c "\password agent_os"' &&
+docker compose up -d --wait --wait-timeout 600
+```
+
+- 첫 줄은 셸에 남은 같은 이름의 변수를 지웁니다. compose는 셸의 값을 `.env`의 값보다 먼저 씁니다. 앞서 그 이름을 셸에 내보냈다면(`export`) 옛 값으로 PostgreSQL을 다시 만듭니다. `COMPOSE_ENV_FILES`가 다른 파일을 가리키면 compose가 `.env`를 읽지 않으므로 그것도 지웁니다.
+- 둘째 줄은 PostgreSQL 컨테이너만 새 `.env`로 다시 만듭니다. 데이터는 볼륨에 남습니다.
+- 셋째 줄은 PostgreSQL 컨테이너 안에서 계정의 비밀번호를 새 값으로 바꿉니다. 새 값은 그 컨테이너의 환경 변수에서 오고, 운영자가 치는 명령줄에는 실리지 않습니다. `psql`의 `\password`는 값을 되돌릴 수 없게 바꾼 꼴(해시)로 보내므로, 바꾸다 실패해도 데이터베이스의 기록에 새 비밀번호가 그대로 남지 않습니다. 이 줄은 묻는 글 두 줄(`Enter new password for user "agent_os":`, `Enter it again:`)을 찍지만 입력을 기다리지 않습니다.
+- 넷째 줄은 `migrate`와 `serve`를 새 비밀번호로 다시 띄웁니다.
+- 뒤의 세 줄은 `&&`로 이어져, 한 줄이 실패하면 다음 줄을 치지 않습니다.
+
+이 절차가 도는 동안에는 몇 초 동안 요청이 실패할 수 있습니다. 둘째 줄이 PostgreSQL을 다시 만드는 동안 `serve`의 접속이 모두 끊기고, 셋째 줄이 비밀번호를 바꾼 때부터 넷째 줄이 `serve`를 다시 띄울 때까지는 옛 `serve`가 새로 붙지 못합니다. 이 절차를 `serve`와 `migrate`의 대역 컨테이너로 여러 번 쟀을 때 `serve`의 새 접속 줄 사이의 가장 긴 틈은 2.7초에서 6.8초 사이였습니다. 실제 `serve`는 더 걸릴 수 있습니다.
+
+셋째 줄이나 넷째 줄이 실패하면 그 줄이 찍은 까닭을 고친 뒤, 같은 새 `.env`로 네 줄을 처음부터 다시 칩니다. 셋째 줄은 지금의 비밀번호를 묻지 않고 같은 새 값을 다시 넣으므로, 비밀번호가 이미 바뀐 뒤에 다시 쳐도 됩니다.
+
+비밀번호를 문장에 직접 넣는 `ALTER ROLE agent_os PASSWORD '…'`로 바꿔 치지 마십시오. 데이터베이스가 그 문장을 거절하면 문장이 평문 비밀번호째 데이터베이스의 기록에 남습니다.

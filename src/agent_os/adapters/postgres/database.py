@@ -52,8 +52,8 @@ from sqlalchemy.exc import ArgumentError
 from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
 
 MIGRATIONS = Path(__file__).resolve().parent / "migrations"
-# 제품의 마이그레이션 파일. 비어 있으면 git 에 담기지 않아 폴더가 없을 수 있고, 폴더가 없어도 빈
-# 폴더와 같게 돈다(alembic 이 없는 판 폴더를 오류 없이 건너뛴다).
+# 제품의 마이그레이션 파일. 파일이 없는 판은 git 에 폴더가 담기지 않아 폴더가 없을 수 있고, 폴더가
+# 없어도 빈 폴더와 같게 돈다(alembic 이 없는 판 폴더를 오류 없이 건너뛴다).
 PRODUCT_VERSIONS = MIGRATIONS / "versions"
 
 DRIVER = "postgresql+asyncpg"

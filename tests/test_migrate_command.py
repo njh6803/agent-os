@@ -3,8 +3,8 @@
 
 운영자가 보는 것을 본다. 종료 코드, 표준 출력과 표준 오류의 글, 판 기록 표의 줄이다. 글은 글자까지
 단언한다(명세 postgres-foundation "멈출 때의 글"). 판의 갈래는 어댑터 시험과 같은 시험용
-마이그레이션 폴더(9001, 9002, 실패하는 9003)를 어댑터에 대서 만든다. 제품 폴더에는 아직 마이그레이션
-파일이 없다.
+마이그레이션 폴더(9001, 9002, 실패하는 9003)를 어댑터에 대서 만든다. 제품 폴더(`0001` 부터)는 조립을
+거치는 사례 하나만 쓴다.
 
 비동기 시험에서는 `main` 을 스레드로 부른다(`main` 이 스스로 이벤트 루프를 연다). 스레드에서는
 SIGINT 처리기를 걸 수 없어, 처리기를 거는 `run_interruptibly` 만 `asyncio.run` 으로 바꾼다. 처리기는
@@ -238,15 +238,15 @@ async def test_제품_폴더로_부르면_성공으로_끝나고_글은_표준_�
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    """조립을 거치는 길(`_build_database`)을 바꾸지 않고 부른다. 제품 폴더가 비어 있는 동안은 올릴
-    것이 없고, 마이그레이션이 생기면 올렸다는 글이 된다. 어느 쪽이든 성공이다."""
+    """조립을 거치는 길(`_build_database`)을 바꾸지 않고 부른다. 제품 폴더의 마이그레이션을 빈
+    데이터베이스에 올렸다는 글이 나오고 성공으로 끝난다."""
     _run_without_handler(monkeypatch)
     _environment(monkeypatch, empty_database.text())
     assert await _migrate() == 0
     captured = capsys.readouterr()
     assert captured.err == ""
     assert captured.out.startswith("표")
-    assert captured.out.endswith("입니다.\n") or captured.out.endswith("올렸습니다.\n")
+    assert captured.out.endswith("올렸습니다.\n")
 
 
 def test_어댑터가_예외를_던지면_예외의_글_대신_까닭만_싣고_1로_끝난다(

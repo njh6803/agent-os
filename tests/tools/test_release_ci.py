@@ -460,7 +460,12 @@ def _compose_images(path: Path) -> dict[str, str]:
 
 
 def test_배포_compose의_이미지_줄은_짓기_목록의_저장소_이름과_같다() -> None:
-    assert _compose_images(COMPOSE) == _repositories()
+    """우리 이미지를 쓰는 서비스 가운데 짓기 대상이 아닌 것은 `migrate` 하나이고 `serve` 와 같은
+    이미지를 쓴다(명세
+    postgres-foundation "단독 compose의 PostgreSQL과 migrate")."""
+    images = _compose_images(COMPOSE)
+    assert images.pop("migrate", None) == _repositories()["serve"]
+    assert images == _repositories()
 
 
 def test_단독_배포_시험_픽스처의_이미지_줄은_serve의_저장소_이름과_같다() -> None:
@@ -473,4 +478,6 @@ def test_배포_안내의_대응표는_짓기_목록의_저장소_이름과_같�
         STANDALONE_README.read_text("utf-8"),
         flags=re.M,
     )
-    assert dict(rows) == _repositories()
+    table = dict(rows)
+    assert table.pop("migrate", None) == _repositories()["serve"]
+    assert table == _repositories()
