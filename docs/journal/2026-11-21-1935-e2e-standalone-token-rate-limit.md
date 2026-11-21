@@ -135,3 +135,10 @@ open-session을 부른다 2026-11-21T13:25Z
 **PR 직전 리뷰에 밀 주장:** 티켓 "원인" 절 넷째 항목의 새 문장(`restart`는 한 번뿐, `from-start`는 한 번뿐), `failure-logs.ts` 머리 주석의 "그 시험 뒤에 돈 데이터베이스 시험과 재생성 시험이 다시 만든 컨테이너의 기록만 있었다".
 
 **다시 돌린 것:** `pnpm -C web verify`(타입 129 파일 2777 시험 통과), `uv run ruff check .`와 `ruff format --check .`가 초록이다. 단독 배포 e2e `pnpm -C web/packages/e2e-standalone exec playwright test`는 14개가 모두 통과했다(2.4분, 손으로 쳤다). 나머지는 pre-commit이 갈음한다.
+
+## PR 직전 리뷰 (CodeRabbit CLI)
+
+`coderabbit review --agent --base-commit 71182274e --include-untracked`가 끝까지 돌았다(종료 코드 0, 지적 0건. `Seat: not assigned`, Plan Free여도 리뷰는 돌았다). 서브에이전트가 파일을 읽어 낸 Minor 둘은 판정해 남겼다.
+- `afterEach`의 `compose()`가 통과한 시험 뒤에도 만들어지고 try 밖이다. 환경 변수는 `globalSetup`이 채우고 같은 변수를 시험 본문이 이미 읽어 실제로 일어날 가능성이 낮다. 고치지 않고 남긴다(셀프 리뷰에서도 같은 판정).
+- 시간 초과로 끝난 시험 뒤 `afterEach`의 로그 받기 상한 60초가 Playwright 훅 시간 제한에 걸리는지는 서브에이전트도 문서로 확인하지 못했다. 정상 로그 받기는 몇 초라 평소에는 문제가 없고, 걸려도 파일이 안 남을 뿐 시험 결과는 그대로다. 남긴다. 다음 실패 산출물에 `compose-at-failure.log`가 없으면 이 자리를 본다.
+- 보안 질문(로그에 비밀값이 실리는가)은 유효한 지적이 아니라고 서브에이전트가 읽어 판정했다(`docker compose logs`는 컨테이너 출력만 담고, 토큰은 `Authorization` 머리로만 가며 접근 로그에 안 실린다. 토큰과 비밀번호는 실행마다 새로 만든 값이다). 이 PC에서 실제 배치를 308 기대 실패로 돌려 비밀값이 없음을 본 것(위 "구현")과 같은 결론이다.
