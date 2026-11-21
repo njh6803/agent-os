@@ -54,6 +54,15 @@ PR #620(실패한 시험 바로 뒤에 `compose-at-failure.log`를 남기는 시
 - **다시 돌릴 것:** 이 리뷰 뒤로 시험 파일과 `site.conf` 주석만 바뀌었고 동작은 같다. 새 사례만 다시 돌리고, 나머지는 커밋의 pre-commit이 다시 돈다.
 - **리뷰에 밀 주장(반영으로 새로 쓴 문장):** 티켓의 "4초와 14초(`/health` 200 기준. 프록시가 뜬 지 16초와 26초)", "13초(첫째 실행)와 11초(둘째 실행) 뒤", "시작 뒤 1초에서 3초 사이", `site.conf` 주석의 "valid 가 있어도 그랬다".
 
+## PR 직전 리뷰
+
+`coderabbit-review`(CodeRabbit CLI 0.7.5, `Seat: not assigned`인데도 `review_completed`까지 돌았다, 지적 1건)를 돌렸다.
+
+- **고친 것:** 새 사례의 `finally`에서 `serve` 올리기가 던지면 프록시를 평소로 되돌리는 줄이 실행되지 않아 프록시가 죽은 DNS를 단 채 남고 뒤의 사례가 연쇄로 실패한다(Minor, 유효). `serve` 올리기를 안쪽 `try`로 감싸고 프록시 되돌리기를 그 `finally`에 넣었다.
+- **남긴 것과 이유:** (가) 15초를 `serve`가 건강해진 뒤 `logs` 확인까지 끝난 다음부터 재서 그만큼 한도가 느슨하다: `compose logs`가 보통 1초 안이라 거짓 실패는 없고 앞 사례도 같은 모양이다. (나) 판정이 `status < 500`이라 프록시가 직접 낸 4xx(허용 목록에서 길이 빠진 404 등)도 통과한다: 이 사례가 지키려는 것은 "serve에 닿았다"이고 길의 허용 목록은 같은 파일의 다른 사례가 본다. (다) 프록시를 되돌린 뒤 `--wait`가 없어 바로 뒤 429 사례가 거짓 실패할 수 있다: 같은 패턴인 앞 사례가 그대로 지나갔고, 이 사례 포함 전체 15개가 통과했다. 거짓 실패가 CI에서 보이면 그때 고친다.
+- **질문의 답(리뷰어):** `resolver_timeout 2s`는 질의 빈도(`valid=5s`)를 바꾸지 않고 질의가 응답을 기다리는 상한만 줄인다. 시험 전용 덧씌움은 `tools/release.py`의 묶음(`deploy/standalone`)에 들지 않는다. 리뷰어도 원인 설명이 가설이라고 같은 한계를 적었다.
+- **다시 돌릴 것:** 시험 파일이 바뀌어 새 사례를 다시 돌리고 커밋의 pre-commit이 나머지를 돈다.
+
 ## 다음
 
 - 이 PR이 dev에 병합되면 출시 PR #616의 머리가 바뀌어 `e2e-standalone`과 `verify`가 다시 돈다. `uv run python tools/wait_ci.py 616 --head <git rev-parse origin/dev> --expect verify`를 백그라운드로 띄우고, 초록이면 `gh pr merge 616 --merge --match-head-commit <headRefOid>`로 병합해 `merge.md` "출시 PR"의 병합 뒤 일을 한다.

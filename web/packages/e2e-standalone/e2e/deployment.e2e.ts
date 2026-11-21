@@ -521,9 +521,13 @@ test("프록시가 serve 를 못 찾고 시작해도 serve 가 건강해지면 1
     ).toBeLessThan(500);
     expect(status, "프록시가 응답하지 않았다").not.toBe(0);
   } finally {
-    // 뒤의 사례가 평소 프록시를 지나도록 되돌린다. 앞에서 실패해 serve 가 없을 수 있으므로 serve 부터 올린다.
-    await compose().ensure(upServe, serveTimeoutMs);
-    await compose().ensure(["up", "--detach", "--force-recreate", "--no-deps", "proxy"], 120_000);
+    // 뒤의 사례가 평소 프록시를 지나도록 되돌린다. 앞에서 실패해 serve 가 없을 수 있으므로 serve 부터 올리되,
+    // serve 가 올라오지 못해도 프록시는 죽은 DNS 덧씌움 없이 다시 만든다(안 그러면 뒤의 사례가 모두 연쇄로 실패한다).
+    try {
+      await compose().ensure(upServe, serveTimeoutMs);
+    } finally {
+      await compose().ensure(["up", "--detach", "--force-recreate", "--no-deps", "proxy"], 120_000);
+    }
   }
 });
 
