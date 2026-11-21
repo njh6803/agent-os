@@ -22,6 +22,7 @@ import {
   PREVIEW_SITE,
   UP_WAIT_SECONDS,
 } from "./env.ts";
+import { saveLogsAtFailure } from "./failure-logs.ts";
 import { productRevision } from "./migrations.ts";
 
 const SERVICES = ["proxy", "postgres", "serve", "admin", "widget", "portal"] as const;
@@ -37,6 +38,12 @@ function compose(): Compose {
   const { project, dir, files } = deployment();
   return new Compose(project, dir, files);
 }
+
+// 뒤쪽 사례가 배치를 내렸다 올리거나 컨테이너를 다시 만들면 앞쪽 사례의 로그가 사라지므로, 실패한 사례는 그 자리에서 로그를
+// 받아 둔다(failure-logs.ts).
+test.afterEach(async ({}, testInfo) => {
+  await saveLogsAtFailure(testInfo, compose());
+});
 
 /**
  * 경로를 다듬지 않고 그대로 보낸다. Playwright 의 요청과 `fetch` 는 URL 을 만들며 `..` 를 접어 버려 우회 시도가 프록시에
