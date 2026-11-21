@@ -606,4 +606,20 @@ PR 618(명세와 ADR 0067 이력, 프로브 다섯)을 병합하면 connection-c
 
 open-session을 부른다 2026-11-21T08:12:30Z
 
+## 넷째로 이어받은 세션 (푸시부터)
+
+### 푸시와 봇 회차 (PR 618, 머리 `4effc0347`)
+
+- 세션 제목을 `docs/connection-check-spec`으로 바꾸고 이 브랜치의 워크트리에 `EnterWorktree(path)`로 들어갔다. 인계 절만 한 커밋(`4effc0347`)으로 더해 푸시했고 `@coderabbitai review`와 첫 회차 Nit의 보류 이유를 PR 코멘트로 남겼다. rag-engine의 pytest(pid 844)는 사용자에게 다시 묻지 않았고 끄지 않았다.
+- `tools/wait_ci.py 618`이 `모두 통과. CodeRabbit: Finished`로 끝났다. 머리 `4effc0347`에서 모든 검사가 SUCCESS이고 `llm`만 SKIPPED였다.
+- **claude-review 둘째 회차:** 지적 없음.
+- **CodeRabbit 첫 회차**(한도에 걸렸던 앞 푸시는 세지 않으므로 이 리뷰가 첫 회차다): Critical 하나, Minor 넷. 지적마다 판단했다.
+  - Critical(명세 "결과가 남는 자리", INFO 로그에 원격 MCP 주소의 쿼리 비밀이 남는다): 반영했다. 위험은 원격 MCP를 실행으로 여는 지금도 같고 접속 확인은 줄 수만 늘리므로, 명세가 위험을 받아들이고 토큰은 헤더에 두라고 문제 해결 절이 적는 것으로 정했다(명세에 문장 하나와 문제 해결 절에 줄 하나를 더했다).
+  - Minor(프로브 `model_requests_live.py`가 요약 출력 직전에 키를 가리지 않는다): 반영했다. `print(without_key(rounds.summary()))`.
+  - Minor(같은 프로브가 목록에 다음 쪽이 있어도 별칭의 부재를 측정으로 센다): 반영했다. 첫 쪽이 끝이라고 알 때만 센다. 요청은 바뀌지 않았고 실제 API로 다시 돌리지는 않았다(앞서 잰 목록은 15개였다).
+  - Minor(명세 "MCP 서버를 확인하는 법", 8자보다 짧은 토큰의 되울림): 보류했다. 명세 "화면에 보이는 글과 비밀"이 그 한계를 이미 받아들였고, 그 글은 실패한 실행의 트레이스에 지금도 보인다.
+  - Minor(명세 "모델을 확인하는 법", `openai-compatible`의 목록에 다음 쪽이 있을 때): 보류했다. 명세가 첫 쪽만 본다는 한계를 이미 적었다. 판정 불가 갈래를 더하면 닫힌 아홉 갈래를 바꾸는 일이다.
+  - 린터 경고(`MD038`, 명세 148행의 공백이 든 코드 조각): 반영했다. 문장을 고쳤다.
+- 프로브 파일의 ruff 둘은 통과했다. 이 폴더는 pyright가 분석하지 않아 사본을 `tests/` 아래에 두고 쟀더니 오류 넷이 났고, 고치기 전 판의 사본도 같은 넷이었다(내가 건드린 줄이 아니다).
+
 열기 결과: `sent=17:12:04.990`(`model=Sonnet 5.5 원래 Opus 5.5`, `effort=high 원래 xhigh`, `restored=Opus 5.5 / xhigh`), 새 세션 `local_ddd2edc7-332d-4515-8616-a60d42f054eb`(제목 `docs/connection-check-spec`, `cwd` `C:\project\agent`)를 `list_sessions`에서 확인했다. `-Action split`은 `split=17:12:22.144`로 통과했다. `-Action focus -Title docs/connection-check-spec -TimeoutSec 90`은 이번에도 종료 1이었고, 오류가 `open_session.ps1:885`의 `GetCurrentPattern` "지원되지 않는 Pattern입니다."였다(대기열 `open-session-focus-sidebar-row-not-found`와 같은 단계의 실패이고 오류 문구는 다르다. 세 번째 사건이다).

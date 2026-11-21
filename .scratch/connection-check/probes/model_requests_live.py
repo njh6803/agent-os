@@ -106,6 +106,7 @@ async def measure(rounds: Rounds) -> None:
     )
     alias: str | None = None
     dated: str | None = None
+    more_pages = True  # 목록의 첫 쪽이 끝이라고 알기 전에는 부재를 확정하지 않는다
     async with client_for(None) as client:
         with rounds.round("retrieve_plugin_id") as current:
             started = time.perf_counter()
@@ -140,6 +141,7 @@ async def measure(rounds: Rounds) -> None:
         with rounds.round("list_1000") as current:
             page = await client.models.list(limit=1000)
             ids = [model.id for model in page.data]
+            more_pages = page.has_more
             dated = next((one for one in ids if DATED.search(one)), None)
             alias = DATED.sub("", dated) if dated else None
             emit(
@@ -169,7 +171,8 @@ async def measure(rounds: Rounds) -> None:
                 )
                 answer = outcome.get("returned") or outcome.get("status")
                 current.mark(
-                    measured=alias not in ids
+                    measured=not more_pages
+                    and alias not in ids
                     and (outcome["error"] is None or outcome.get("status") == 404),
                     result=f"{alias} → {answer}, 그 이름은 목록에 "
                     f"{'있음' if alias in ids else '없음'}",
@@ -201,7 +204,7 @@ def main() -> int:
         return 2
     rounds = Rounds()
     asyncio.run(measure(rounds))
-    print(rounds.summary())
+    print(without_key(rounds.summary()))
     return rounds.exit_code()
 
 
