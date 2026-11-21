@@ -304,6 +304,8 @@ class LaunchingChecks:  # 눌러서 하는 확인의 길
 - **타입이 막지 못하는 것.** 스스로 하는 확인의 묶음에 stdio 확인의 칸을 새로 더하는 변경은 타입 오류가 아니다(어림. 재지 않았다). 그 변경은 Testing Decisions의 첫째 시험(stdio 서버를 `GET`으로 확인하면 `not_applicable`이고 stdio 확인이 한 번도 불리지 않는다)이 잡는다. 받은 확인 함수에서 포트로 거슬러 올라가는 길은 재지 않았다.
 - **응답의 `disabled`와 `not_applicable`은 포트의 값이 아니다.** 둘은 관리가 붙어 보기 전에 내리는 판정이라 관리 층의 응답 모델에만 있고, 포트의 결과는 붙었다와 붙지 못했다 둘이다.
 - **core는 부르지 않는다.** 포트는 core가 선언하지만 접속 확인의 메서드를 부르는 것은 관리뿐이다. 런타임은 접속 확인을 모른다.
+- **결과 타입이 사는 층.** `Reached`, `Unreached`, `CheckOutcome`은 포트의 시그니처가 돌려주므로 core의 포트 선언 옆에 둔다. 관리는 core를 import할 수 있어(`admin → http → core`) 이 타입을 그대로 받는다. `Unreached.reason`은 `str`이고, 어댑터는 `anthropic`과 `httpx`의 예외나 응답 객체를 이 `str` 밖으로 내보내지 않는다. 어댑터 안에서 붙지 못한 까닭의 예외(`anthropic.APIStatusError` 같은 것)를 받아 `Unreached`로 바꾸고, 서드파티 타입이 포트의 반환값에 비치지 않는 것이 구현 티켓의 완료 조건이다(`CODING_STANDARDS.md`의 "서드파티는 경계에서 감싼다").
+- **묶음이 사는 층.** `AutomaticChecks`와 `LaunchingChecks`는 포트도 sdk 계약도 아니고 관리가 받는 인자의 모양이다. 관리 층(`agent_os.admin`)이 정의하고, `server`가 포트에서 꺼낸 확인 함수로 채워 관리 라우터에 넘긴다. core와 adapters는 이 둘을 모른다.
 
 ### 문제 해결 절
 
