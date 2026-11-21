@@ -466,6 +466,15 @@ open-session을 부른다 2026-11-21T05:12:17Z
 
 **인계 계기.** 커밋 명령이 백그라운드로 넘어간 직후 `hook_handoff`가 340,871 토큰과 경계 `커밋 뒤`를 알렸다. `handoff.md`를 Read로 열어 판정했고 넘기지 않았다. 순서 1의 셋째(이 세션의 지시문의 "이어받을 상태"가 `인계: 커밋 뒤`로 시작한다)에 든다. 그 커밋은 뒤에 실패했으므로 첫째(계기를 낸 명령이 실패했다)에도 든다.
 
+### 반영 커밋 (16:08)과 그 뒤
+
+- **커밋.** `SKIP=pytest,web-verify git commit -F <메시지 파일>`이 종료 0으로 끝났고 커밋은 `cc64e6c20`이다. 러너의 줄은 `pytest`와 `web-verify`가 `Skipped`, 나머지 아홉(노트 검사, 커밋 검사, 경계, zizmor, 지침 검사, 타입 우회 검사, pyright 둘, 훅 러너)이 `Passed`였다. 러너 밖의 훅은 ruff 둘, 마크다운 표, 줄 구분 문자, 변이 표, 인용 검사, 커밋 메시지가 `Passed`였고 카나리아 명세와 헌법 판은 볼 파일이 없어 `Skipped`였다.
+- **인계 계기.** 이 커밋 명령이 백그라운드로 넘어간 직후에도 `hook_handoff`가 235,477 토큰과 경계 `커밋 뒤`를 알렸다. 앞과 같은 판정(순서 1의 셋째)으로 넘기지 않았다.
+- **푸시가 막혀 기준 브랜치를 합쳤다.** `git push`를 `hook_push_behind_main`이 막았다. 검사를 돌리는 사이 PR 617(`038c81bc6`, 단독 배포 e2e의 실패 기록 남기기)이 dev에 병합돼 이 브랜치가 한 커밋 뒤처졌다. `git merge origin/dev --no-edit`는 충돌 없이 끝났다. 그 커밋이 고친 파일은 셋(`.github/workflows/ci.yml`, 하네스 티켓, 일지)이고, 명세와 프로브 폴더는 그 파일을 이름으로 들지 않는다(`.scratch/connection-check/`를 `ci.yml`과 그 티켓 이름으로 Grep해 0건을 봤다). `uv run python tools/sibling_overlap.py`는 번호 겹침도 함께 고친 파일도 없다고 냈다.
+- **합친 뒤의 검증.** 그때 커밋 여유가 20.6GB라 `uv run python tools/run_checks.py`를 그대로 돌렸고 열하나가 모두 `Passed`였다(16:22쯤 끝났다. pytest 753.7초, `web-verify` 728.3초). `uv run ruff check .`는 통과했다.
+- **`uv run ruff format --check .`가 명세의 코드 블록을 짚었다.** `.scratch/connection-check/spec.md`의 파이썬 코드 블록 하나(포트의 모양을 적은 블록)에서 빈 줄 여섯 곳과 줄 나눔 한 곳을 고치라고 했다. 명세 커밋(`9cc91f364`)부터 있던 것이다. 커밋의 ruff 훅은 스테이지된 `.py`만 보므로 두 커밋 모두 지났고, 저장소 전체를 보는 명령을 이 세션이 합친 뒤에 처음 쳤다. `uv run ruff format .scratch/connection-check/spec.md`로 고쳤고 다시 치니 `2521 files already formatted`였다. 바뀐 것은 모양뿐이고 서두의 수는 그대로다.
+- **포맷 커밋의 검증.** 포맷한 뒤(16:24) 메모리가 다시 줄어 있었다(남은 실제 메모리 0.8GB, 커밋 여유 15.3GB, 다른 세션의 `git commit` 셋). 그래서 이 커밋도 러너의 `pytest`와 `web-verify`를 빼고 넣는다. 그 둘은 포맷 직전의 트리(기준 브랜치를 합친 뒤)에서 러너로 통과했고(위), 그 뒤에 바뀐 것은 마크다운 둘(명세의 코드 블록 모양과 이 일지)뿐이다. 포맷 뒤에는 저장소의 문서와 상태를 보는 시험만 골라 `uv run pytest -q -k 저장소`를 돌렸고 `256 passed, 7789 deselected in 500.25s`였다. 전체 pytest와 `web-verify`를 포맷 뒤의 트리로 다시 돌리지는 않았다. CI가 전체를 돈다.
+
 ### 둘째로 이어받은 세션의 회고 사건 후보
 
 앞의 두 "회고 사건 후보" 절, PR 614의 마지막 코멘트에 있는 사건과 함께 센다. PR 614의 마지막 코멘트에는 사건이 셋이다. 지시문이 적은 둘 뒤에, 병합 뒤 새 세션을 연 다음 `tools/open_session.ps1 -Action focus`가 두 번 모두 사이드바의 행을 찾지 못하고 종료 1로 끝났다는 것이 더 있다.
@@ -474,4 +483,6 @@ open-session을 부른다 2026-11-21T05:12:17Z
 - Read 결과가 큰 결과 알림의 문턱을 두 번 넘었다(이 일지 약 25,801자, `merge.md` 약 23,308자). `docs/constitution/operations.md`는 26~39줄을 읽으려다 한 줄로 된 가드레일 문단이 통째로 실렸다.
 - PR 직전 리뷰를 반영하며 프로브를 다시 돌리자 닫힌 포트의 시간(2.79초)과 실제 제공사의 응답 시간(1.0초)이 명세에 적은 범위를 벗어났다. 실행마다 흔들리는 값을 범위로 적은 문장이 다시 돌릴 때마다 낡는다.
 - 반영 커밋의 pre-commit이 메모리가 모자라 죽었다(위 "반영 커밋의 첫 시도"). 대기열 `run-checks-out-of-memory-with-parallel-sessions`와 같은 모양이다. 이번에는 9분을 기다려도 풀리지 않았고, 메모리를 잡은 것은 이 저장소가 아니라 rag-engine 저장소의 세션 넷이 띄운 pytest 일꾼이었다. 그 가운데 하나는 세 시간 넘게 남아 있었다.
-- 인계 계기가 백그라운드로 띄운 커밋이 끝나기 전에 왔다(340,871 토큰, 경계 `커밋 뒤`). 대기열 `handoff-trigger-before-background-commit-ends`와 같은 모양이다. 그 커밋은 실패했고, 지시문이 `인계: 커밋 뒤`라 넘기지 않았다.
+- 인계 계기가 백그라운드로 띄운 커밋이 끝나기 전에 두 번 왔다(340,871 토큰과 235,477 토큰, 둘 다 경계 `커밋 뒤`. 사이에 컨텍스트가 한 번 압축됐다). 대기열 `handoff-trigger-before-background-commit-ends`와 같은 모양이다. 앞의 커밋은 실패했고 뒤의 커밋은 성공했으며, 지시문이 `인계: 커밋 뒤`라 둘 다 넘기지 않았다.
+- 명세의 파이썬 코드 블록이 `ruff format`의 모양과 달랐는데 커밋 둘을 지났고, 합친 뒤 손으로 친 `uv run ruff format --check .`에서야 걸렸다(위 "반영 커밋과 그 뒤"). 만료된 대기열 0319와 같은 모양이다(그 2회차가 `.md` 안의 파이썬 코드 블록이었다). 이 세션은 반영 뒤 린트 둘을 프로브 폴더로 좁혀 쳤고(`.scratch/connection-check/probes`), 명세를 커밋한 앞 세션들이 저장소 전체로 쳤다는 기록은 이 일지에 없다(`ruff format --check`를 Grep으로 찾았다). 커밋의 ruff 훅은 `.py`만 본다.
+- 손으로 돌린 `uv run pytest -q -n 3`은 1226.59초, 메모리가 조금 풀린 뒤 러너가 돌린 pytest는 753.7초, `web-verify`는 728.3초였다. 러너의 한 바퀴가 `CLAUDE.md`가 적은 600초를 넘겼다. 대기열 `docs-only-commit-precommit-slow-again`과 함께 본다.

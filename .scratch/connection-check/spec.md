@@ -262,20 +262,27 @@ Status: ready-for-agent
 @dataclass(frozen=True)
 class Reached: ...
 
+
 @dataclass(frozen=True)
 class Unreached:
     reason: str
 
+
 type CheckOutcome = Reached | Unreached
 
+
 class ToolSource(Protocol):
-    def connect(self, servers: Mapping[PluginName, McpServer]) -> AbstractAsyncContextManager[ToolConnection]: ...
+    def connect(
+        self, servers: Mapping[PluginName, McpServer]
+    ) -> AbstractAsyncContextManager[ToolConnection]: ...
     async def check_remote(self, name: PluginName, server: HttpServer) -> CheckOutcome: ...
     async def check_stdio(self, name: PluginName, server: StdioServer) -> CheckOutcome: ...
+
 
 class ModelSource(Protocol):
     def build(self, manifest: PluginManifest) -> ChatModel: ...
     async def check(self, manifest: PluginManifest) -> CheckOutcome: ...
+
 
 # 관리가 받는 묶음. 조립하는 자리가 포트에서 꺼낸 확인 함수를 넣는다.
 @dataclass(frozen=True)
@@ -283,6 +290,7 @@ class AutomaticChecks:  # 스스로 하는 확인의 길
     plugins: PluginSource
     remote: Callable[[PluginName, HttpServer], Awaitable[CheckOutcome]]
     model: Callable[[PluginManifest], Awaitable[CheckOutcome]]
+
 
 @dataclass(frozen=True)
 class LaunchingChecks:  # 눌러서 하는 확인의 길
