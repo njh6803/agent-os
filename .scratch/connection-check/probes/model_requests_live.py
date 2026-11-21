@@ -6,9 +6,11 @@ id와 틀린 키가 어떤 상태로 갈리는지, 목록이 한 쪽에 다 오�
 응답 본문에 쓴 양(`usage`)이 실리는지를 본다.
 
 바깥에 닿는다. `https://api.anthropic.com`에 GET 요청만 보내고 모델은 부르지 않는다(토큰을 쓰는
-요청이 없다). 키는 SDK가 환경 변수 `ANTHROPIC_API_KEY`에서 읽고, 이 프로브는 그 값을 읽지도 찍지도
-않는다. 주소는 환경의 `ANTHROPIC_BASE_URL`을 따르지 않게 인자로 못박는다. 틀린 키 회차는 지어낸
-글자(`sk-ant-probe-…`)를 보낸다. 모델 서버(`openai-compatible`)는 띄워야 해서 여기서 보지 않는다.
+요청이 없다). 키는 SDK가 환경 변수 `ANTHROPIC_API_KEY`에서 읽고, 이 프로브는 그 값을 찍지 않는다.
+이 프로브가 그 값을 읽는 자리는 하나다. 출력에 싣는 예외의 글에 그 값이 들어 있으면 `<가린 키>`로
+바꾼다(서버가 받은 키를 오류 글에 되울리는 경우를 막는다). 주소는 환경의 `ANTHROPIC_BASE_URL`을
+따르지 않게 인자로 못박는다. 틀린 키 회차는 지어낸 글자(`sk-ant-probe-…`)를 보낸다. 모델
+서버(`openai-compatible`)는 띄워야 해서 여기서 보지 않는다.
 
 회차와 표지:
 - `retrieve_plugin_id`: `plugins/models/claude-opus-5/plugin.toml`의 `model_id`를 묻는다. 표지는
@@ -48,6 +50,7 @@ KEY_VARIABLE = "ANTHROPIC_API_KEY"
 PLUGIN_FILE = ROOT / "plugins" / "models" / "claude-opus-5" / "plugin.toml"
 UNKNOWN = "agent-os-probe-no-such-model"
 NOT_A_KEY = "sk-ant-probe-not-a-real-key"
+KEY_HIDDEN = "<가린 키>"
 DATED = re.compile(r"-\d{8}$")
 CALL_TIMEOUT = 30.0
 SHOWN_HEADERS = ("anthropic-", "retry-after", "request-id", "x-ratelimit")
@@ -71,8 +74,14 @@ def client_for(key: str | None) -> anthropic.AsyncAnthropic:
     return anthropic.AsyncAnthropic(api_key=key, base_url=API, max_retries=0, timeout=CALL_TIMEOUT)
 
 
+def without_key(text: str) -> str:
+    """글에서 환경의 키 값을 가린다. 서버가 받은 키를 글에 되울려도 출력에 남지 않게 한다."""
+    key = os.environ.get(KEY_VARIABLE)
+    return text.replace(key, KEY_HIDDEN) if key else text
+
+
 async def failure(client: anthropic.AsyncAnthropic, model_id: str) -> dict[str, object]:
-    """그 id를 물어 끝난 모양. 예외의 글은 서버의 글이라 앞부분만 싣는다."""
+    """그 id를 물어 끝난 모양. 예외의 글은 서버의 글이라 키를 가린 뒤 앞부분만 싣는다."""
     started = time.perf_counter()
     try:
         found = await client.models.retrieve(model_id)
@@ -80,7 +89,7 @@ async def failure(client: anthropic.AsyncAnthropic, model_id: str) -> dict[str, 
         return {
             "error": type(error).__name__,
             "status": error.status_code,
-            "text": str(error)[:200],
+            "text": without_key(str(error))[:200],
             "seconds": round(time.perf_counter() - started, 2),
         }
     return {"error": None, "returned": found.id}

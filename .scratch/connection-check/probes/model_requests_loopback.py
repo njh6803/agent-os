@@ -26,8 +26,10 @@ ADR 0067의 결정 "모델을 확인하는 법"과 "결과가 있는 자리"가 
   `anthropic_api_key`)으로 만든 클라이언트가 실행과 같은 서버에 같은 키로 묻는지. 표지는 같은
   서버가 실행의 요청(POST)과 확인의 요청(GET)을 둘 다 그 키로 받은 것이다. 인자 없이 만든 SDK
   클라이언트의 주소는 결과로 적을 뿐 표지에 넣지 않는다.
-- `log_lines`: 로그 수준 셋(기본인 WARNING, INFO, DEBUG)에서 찍히는 줄. 표지는 INFO에서 `httpx2`
-  로거가 요청 경로와 상태가 든 줄을 찍은 것이다(줄을 모으는 길이 선다는 양성 대조).
+- `log_lines`: 로그 수준 셋(기본인 WARNING, INFO, DEBUG)에서 찍히는 줄. 표지는 둘이다. 수준마다
+  세 요청이 저마다의 서버에 한 건씩 닿아 기대한 모양(성공, 401, 성공)으로 끝난 것(WARNING의 0줄이
+  요청이 나가지 않아서 난 0줄이 아님을 가른다)과, INFO에서 `httpx2` 로거가 요청 경로와 상태가 든
+  줄을 찍은 것이다(줄을 모으는 길이 선다는 양성 대조).
 
 표지가 없는 회차가 하나라도 있으면 1로 끝난다(`tools/probe_kit.py`의 `Rounds`).
 
@@ -257,6 +259,15 @@ def kind(error: Exception | None) -> str:
     if error is None:
         return "예외 없음"
     return f"{type(error).__module__}.{type(error).__qualname__}"
+
+
+def ended(error: Exception | None) -> str:
+    """호출이 끝난 모양. 예외가 없으면 `ok`, 상태 오류면 그 번호, 그 밖에는 예외의 종류다."""
+    if error is None:
+        return "ok"
+    if isinstance(error, anthropic.APIStatusError | openai.APIStatusError):
+        return str(error.status_code)
+    return kind(error)
 
 
 def bases(error: Exception | None, module: object) -> list[str]:
@@ -533,18 +544,24 @@ async def measure(rounds: Rounds) -> None:
         counts: dict[str, dict[str, int]] = {}
         leaked: dict[str, list[str]] = {}
         shown: list[tuple[str, str, str]] = []
+        arrived: dict[str, list[tuple[int, str]]] = {}
         for label, level in (
             ("WARNING", logging.WARNING),
             ("INFO", logging.INFO),
             ("DEBUG", logging.DEBUG),
         ):
             with logging_at(level) as lines:
-                with serving(fixed(200, model_body(MODEL))) as (url, _):
-                    await attempt(anthropic_retrieve, url)
-                with serving(fixed(401, error_body(401))) as (url, _):
-                    await attempt(anthropic_retrieve, url)
-                with serving(served) as (url, _):
-                    await attempt(openai_list, url)
+                reached: list[tuple[int, str]] = []
+                with serving(fixed(200, model_body(MODEL))) as (url, seen):
+                    _, error, _ = await attempt(anthropic_retrieve, url)
+                    reached.append((len(seen), ended(error)))
+                with serving(fixed(401, error_body(401))) as (url, seen):
+                    _, error, _ = await attempt(anthropic_retrieve, url)
+                    reached.append((len(seen), ended(error)))
+                with serving(served) as (url, seen):
+                    _, error, _ = await attempt(openai_list, url)
+                    reached.append((len(seen), ended(error)))
+                arrived[label] = reached
                 per_logger: dict[str, int] = {}
                 for name, _, _ in lines:
                     per_logger[name] = per_logger.get(name, 0) + 1
@@ -552,16 +569,21 @@ async def measure(rounds: Rounds) -> None:
                 leaked[label] = sorted({name for name, _, text in lines if KEY in text})
                 if level == logging.INFO:
                     shown = [(name, rank, text[:160]) for name, rank, text in lines]
-        emit("log_lines", counts=counts, key_in_lines_of=leaked, info_lines=shown)
+        emit("log_lines", counts=counts, key_in_lines_of=leaked, info_lines=shown, arrived=arrived)
         positive = any(
             name.startswith("httpx2") and f"/v1/models/{MODEL}" in text and "200" in text
             for name, _, text in shown
         )
+        # 수준마다 요청 셋이 서버에 한 건씩 닿아 성공, 401, 성공으로 끝났는가. 이것이 없으면 요청이
+        # 나가지 않은 실행도 "0줄"로 읽힌다.
+        expected = [(1, "ok"), (1, "401"), (1, "ok")]
+        all_arrived = all(reached == expected for reached in arrived.values())
         totals = {label: sum(per.values()) for label, per in counts.items()}
         current.mark(
-            measured=positive,
+            measured=positive and all_arrived,
             result=f"WARNING {totals['WARNING']}줄, INFO {totals['INFO']}줄, DEBUG "
-            f"{totals['DEBUG']}줄. 키가 든 줄의 로거: {leaked}",
+            f"{totals['DEBUG']}줄. 키가 든 줄의 로거: {leaked}. 수준마다 닿은 요청과 끝난 모양: "
+            f"{arrived}",
         )
 
 

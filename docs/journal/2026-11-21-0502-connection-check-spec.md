@@ -338,3 +338,140 @@ Skill 도구로 `code-review`를 부른 직후 `hook_handoff`가 "세션 컨텍�
 #### 답을 옮긴 자리
 
 명세 서두에 "셀프 리뷰 뒤에 사용자가 고른 것은 셋이다"를 더했다. 판의 범위는 명세 "모델을 확인하는 법"의 의존성 항목과 ADR 이력에, 빌린 모델 서버의 확인은 명세 Testing Decisions의 일곱째와 ADR 이력의 "확인한 것", 기능 계획의 끝에 적었다. 시험 방식은 여섯에서 일곱이 됐다. ADR 이력에 승인 뒤 더한 글은 사용자가 같은 화면에서 고른 둘(판의 범위를 골랐다는 것, 구현 티켓이 로컬 모델 시험에서 잰다는 것)뿐이다.
+
+### 커밋 (13:47)
+
+커밋 전에 `git branch --show-current`는 `docs/connection-check-spec`이었고, `uv run python tools/sibling_overlap.py`는 번호 겹침도 함께 고친 파일도 없다고 냈다. 명세, 프로브 다섯 파일, ADR 0067, 기능 계획, 이 일지를 커밋 `9cc91f364` 하나로 묶었다(파일 아홉). 푸시하지 않았다.
+
+검증 명령의 손으로 치는 다섯은 이 커밋의 pre-commit 결과로 갈음했다(커밋 출력에서 읽었다). ruff 둘, check-notes, check-ticket, lint-imports, zizmor, check-instructions, check-type-escapes, pyright, pyright-linux, run-hooks, web-verify, pytest, 마크다운 표, 줄 구분 문자, 변이 표, 커밋 메시지가 모두 `Passed`였다. `Skipped`는 카나리아 명세 모양과 헌법 판 검사 둘이고, 둘 다 이 커밋에 볼 파일이 없어서다(`no files to check`). 앞 세션이 보지 못한 web 단계는 이 워크트리에서 `Passed`였다(web-verify 1026.4초).
+
+인용 대조(`check-quotes`)는 막지 않는 경고 24건을 냈고 모두 이 일지의 줄이다. 경고 목록을 읽고 가른 것은 이렇다. 선택 화면의 글, 훅이 낸 알림, 웹 문서의 글은 저장소의 다른 자리에 없는 것이 맞다. 표준 축과 명세 축의 보고가 든 명세의 옛 문장은 반영하며 고쳐서 지금의 명세에 없다. "반영"의 4·7·9는 명세 문장을 옮기며 안쪽 따옴표를 `\"`로 적어 글자가 달라졌고, 명세의 원문(170·209·253줄)과 대 보니 내용은 같다. "명세 축의 보고"의 A1 줄에 든 "기록만 있다"는 ADR 0067의 글이 아니라 질문 2의 글을 든 것이다. 나머지 줄은 원문과 하나씩 대 보지 않았다. 고친 것은 없다.
+
+### 이 세션의 회고 사건 후보
+
+앞의 "회고 사건 후보" 절, PR 614의 마지막 코멘트에 있는 사건 둘과 함께 센다.
+
+- 세션을 열자마자 인계 계기가 다시 왔다(위 "인계 계기가 다시 왔고 넘기지 않았다").
+- 명세를 쓰는 동안 기준 브랜치가 앞섰다(위 "기준 브랜치가 앞섰다 (PR 615)").
+- 셀프 리뷰의 서브에이전트가 `cd … && uv run …` 꼴의 복합 명령을 다섯 번 쳤고, 스크래치패드에 손으로 확인하는 파일 둘을 만들었다.
+- Grep 도구로 `src/agent_os/adapters`를 찾자 규칙 파일 여럿이 통째로 실려 세션 컨텍스트가 크게 늘었다. 그 뒤로는 소스 파일을 Bash의 `grep`과 `sed`로 읽었다.
+- 프로브가 결과에 붙이는 표지가 넓어 셀프 리뷰가 좁히라고 짚었다(위 "반영").
+- 선택 화면 훅(`hook_choice_facts`)이 이 세션의 첫 `AskUserQuestion`을 한 번 막았다(위 "이력 승인과 함께 물은 화면").
+- 커밋 명령을 백그라운드로 띄운 직후, 커밋이 끝나기 전에 인계 계기(`커밋 뒤`, 343,270 토큰)가 왔다. 대기열 `handoff-trigger-before-background-commit-ends`와 같은 모양이다. 커밋이 끝나기를 기다린 뒤에 인계했다.
+- 문서와 프로브만 바꾼 커밋의 pre-commit이 pytest 1081.9초, web-verify 1026.4초였다(커밋 출력에서 읽었다). 대기열 `docs-only-commit-precommit-slow-again`과 같은 모양이다. 다른 세션이 함께 돌았는지는 보지 못했다.
+- 커밋을 기다리는 동안 자동 압축이 한 번 왔고, 요약으로 이었다.
+- 앱이 이 세션에 PR 616을 묶어 보였다(`get_session`의 `prNumber`). 그 PR은 머리 브랜치가 `dev`인 출시 PR이고 이 브랜치의 PR이 아니다.
+- 인용 대조가 이 일지에서 경고 24건을 냈다(위 "커밋"). 명세 문장을 옮기며 안쪽 따옴표를 `\"`로 적은 줄 셋이 들어 있고, 같은 문장에 ADR 이름이 있어 다른 글의 인용을 그 ADR의 인용으로 읽은 것으로 보이는 줄이 하나 들어 있다.
+
+### 인계 (커밋 뒤)
+
+- 계기: 커밋 명령 직후 `hook_handoff`가 단계 경계 `커밋 뒤`를 알렸다(343,270 토큰). 그때 커밋은 pre-commit을 도는 중이라 끝나기를 기다렸고, 종료 0으로 끝난 것을 본 뒤에 이 절을 쓴다.
+- 인계하지 않는 때 다섯에 들지 않는다. 커밋은 성공했고, 받은 요청 범위는 PR과 병합까지이며, 이 세션의 지시문은 `인계: 셀프 리뷰 직전`으로 시작해 지금의 경계와 다르고, 일지에 이 세션이 쓴 `인계 못함` 줄이 없고, `get_session`의 `self`에 `parentSessionId`가 없다.
+- 이 세션의 지금 제목: `docs/connection-check-spec`. 넘기기 전에 `docs/connection-check-spec (인계함)`으로 바꾼다.
+- 이 세션이 띄운 백그라운드 작업은 커밋 하나였고 끝났다.
+- 이 브랜치에 열린 PR은 없다(`gh pr view docs/connection-check-spec --json state,number,headRefName`이 `no pull requests found`로 끝났다). 그래서 "다음 단계"는 받은 그대로 `명세`다.
+- "커밋 (13:47)" 절부터 아래는 커밋 `9cc91f364`에 들지 않았다. 새 세션이 이어 쓰고 커밋한다.
+
+지금까지 정한 것은 위 "반영"과 "이력 승인과 함께 물은 화면"에 있다. 남은 단계는 푸시, PR 직전 리뷰, PR 열기, 봇 회차, 이 일지의 "다음"과 회고, 병합, 다음 지시문이다. PR 직전 리뷰에 밀 주장으로 실을 새 사실 문장은 "반영"의 고친 것 줄(4~9, 15, 17, 18)에 원문으로 있다.
+
+낸 지시문이다.
+
+```
+다음 작업: 기능 connection-check. 플러그인 화면의 접속 확인과 배포 안내의 문제 해결 절의 명세를 푸시부터 이어 PR과 병합까지 마친다
+다음 단계: 명세
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /to-spec connection-check
+브랜치: docs/connection-check-spec
+모델: Fable 5.2 / xhigh. 2의 잇는 지시문. 결정표의 Fable 5.1이 모델 메뉴에 없어 Fable 5.2로 적었다(대기열 model-menu-name-fable-5-1-stale)
+읽을 것: docs/journal/2026-11-21-0502-connection-check-spec.md. "이어받은 세션 (05:30부터)" 절의 "반영"과 "이력 승인과 함께 물은 화면", 끝의 "커밋 (13:47)", "이 세션의 회고 사건 후보", "인계 (커밋 뒤)"를 본다. "커밋 (13:47)"부터 아래는 커밋하지 않은 변경이다
+이어받을 상태: 인계: 커밋 뒤. 명세·프로브·ADR 0067의 2026-11-21 이력·기능 계획·일지를 커밋 9cc91f364 하나로 묶었고 아직 푸시하지 않았다(docs/journal/2026-11-21-0502-connection-check-spec.md). to-spec의 차례 가운데 셀프 리뷰와 그 반영, ADR 이력의 승인(사용자가 승인했다), 커밋까지 끝났으므로 다시 하지 않고 사용자에게 다시 묻지도 않는다. 남은 것은 푸시, PR 직전 리뷰(docs/constitution/operations.md 리뷰 파이프라인. 일지 "반영"의 고친 것 줄에 원문으로 옮긴 새 사실 문장을 밀 주장으로 싣는다), PR 열기, 봇 회차, 일지의 "다음"과 회고(retro), 병합, 다음 지시문이다. 회고가 셀 사건 후보는 일지의 "회고 사건 후보" 절 둘과 PR 614의 마지막 코멘트에 있다
+확인할 선행 조건: 병합은 이 워크트리 사본의 next-session merge.md(없으면 SKILL.md)의 "워크트리에서 병합할 때"를 Read로 열어 따른다. dev를 main에 출시하는 PR 616이 열려 있어(넘긴 세션이 본 때의 상태다) 이 브랜치를 dev에 병합하면 그 PR에 실린다. merge.md가 이 경우를 어떻게 다루는지 넘긴 세션은 확인하지 못했다
+이번 요청 범위: PR과 병합까지
+```
+
+넘기기 전의 차례다.
+
+- 제목을 `docs/connection-check-spec (인계함)`으로 바꿨다. 앱이 묻지 않고 바꿨다.
+- 멈출 백그라운드 작업은 없었다.
+- `git worktree unlock C:/project/agent/.claude/worktrees/connection-check-spec`은 `is not locked`로 끝났다. 이미 풀려 있던 것이라 넘어갔다.
+
+open-session을 부른다 2026-11-21T05:12:17Z
+
+## 둘째로 이어받은 세션 (14:13쯤부터)
+
+위 "인계 (커밋 뒤)"의 지시문으로 연 새 세션이 같은 일지를 이어 쓴다. 지금 제목은 `docs/connection-check-spec`이다(세션이 스스로 붙였다).
+
+### 사용자 프롬프트
+
+> 사용자: `.claude/skills/to-spec/SKILL.md` 를 읽어 그대로 따른다. 이 세션을 연 저장소는 `C:\project\agent`이고 작업 폴더가 그곳이 아니면 따르지 말고 알린다. 스킬의 인자는 이 줄의 '인자:' 뒤부터 메시지 끝까지다. 인자: connection-check
+>
+> (뒤는 위 "인계 (커밋 뒤)" 절의 지시문과 글자가 같다.)
+
+### 시작 전 확인
+
+- `git worktree list`에서 이 브랜치가 체크아웃된 자리(`.claude/worktrees/connection-check-spec`)를 찾아 `EnterWorktree(path)`로 들어왔다.
+- `ListAgents`에 넘긴 세션이 `docs/connection-check-spec (인계함)`으로 보였다. 같은 브랜치를 제목으로 쥔 다른 실행 중 세션은 없었다.
+- `uv run python tools/sibling_overlap.py`는 번호 겹침도 함께 고친 파일도 없다고 냈고, 기준 브랜치 줄은 `origin/dev 17fe2b1`로 커밋 때와 같았다. 열린 PR은 둘이었다(출시 PR 616, 하네스 PR 617).
+- 출시 PR 616이 열린 채 이 브랜치를 dev에 병합하는 경우는 `merge.md`의 "출시 PR" 절이 다룬다. dev의 머리가 바뀌면 그 PR을 기다리는 세션이 새 `headRefOid`로 기다림부터 다시 한다고 적혀 있고(읽었다, `.claude/skills/next-session/merge.md`의 "기다리고 병합한다"), 티켓 PR을 병합하는 쪽이 따로 할 일은 적혀 있지 않다.
+
+### 푸시 (14:17쯤)
+
+`git fetch origin` 뒤에도 `origin/dev`는 `17fe2b169`였다. `git push -u origin docs/connection-check-spec`으로 커밋 `9cc91f364`를 올렸다. CI는 main과 dev의 푸시와 PR에서만 돈다(읽었다, `.github/workflows/ci.yml`의 `on:`). 그래서 PR이 없는 이 푸시로 도는 검사는 없다.
+
+### PR 직전 리뷰 (CodeRabbit CLI)
+
+`coderabbit-review` 서브에이전트가 돌렸다. 브리프에는 기준 브랜치가 `origin/dev`라는 것과, 위 "반영"의 4~9, 15, 17, 18에 옮긴 새 사실 문장 아홉을 근거 코드와 대 보라는 것을 실었다. 아래는 그 서브에이전트의 보고다.
+
+- CLI는 0.7.5이고 `coderabbit auth status`는 `Plan: Free`, `Seat: not assigned`였다. 친 명령은 `coderabbit review --agent --include-untracked --base origin/dev`이고 종료 0, 완료 이벤트는 `review_completed`, 지적은 셋이었다. 본 파일은 이 브랜치가 바꾼 아홉 전부다.
+- **지적 1 (Minor, 유효).** `model_requests_loopback.py`의 `log_lines` 회차는 INFO에서 `httpx2` 로거의 줄이 찍힌 것만 표지로 본다. 그러면 요청이 나가지 않은 실행도 WARNING 수준의 0줄로 읽힌다(`.claude/rules/probes.md` 첫 항목).
+- **지적 2 (CLI는 Critical로, 서브에이전트는 Minor에 보류로 봤다).** `model_requests_live.py`의 `failure()`가 예외의 글 앞 200자를 출력에 싣는다. 서버가 받은 키를 그 글에 되울리면 키가 출력에 남는다.
+- **지적 3 (CLI는 Critical로, 서브에이전트는 오탐으로 봤다).** 명세 "결과가 남는 자리"가 적은 INFO 수준의 로그 줄에 주소 전체가 실리므로, 키를 쿼리에 싣는 제공사라면 키가 로그에 남는다는 지적이다. 명세는 DEBUG까지 내려도 키 글자가 든 줄이 없었다고 이미 적고, 이 요청은 키를 헤더로 보낸다.
+- **대 본 주장 아홉.** 아홉 모두 근거로 든 코드와 문서의 원문과 맞았다고 보고했다. 넷째(닫는 데 드는 시간)는 `src/agent_os/adapters/mcp.py`의 독스트링이 그 값을 `.scratch/mcp-shutdown/spec.md`에서 옮겨 적는다는 데까지 봤고, 그 명세 파일은 열지 않았다고 했다.
+
+#### 반영
+
+지적 1과 2를 고쳤고 3은 두었다.
+
+1. **`log_lines` 회차의 표지.** 수준마다 요청 셋이 저마다의 서버에 한 건씩 닿아 성공, 401, 성공으로 끝난 것을 표지에 더했다(`ended` 함수와 `arrived`). 독스트링의 표지 줄, 프로브 README의 "결과를 본 뒤 바꾼 것"과 "로그" 항목을 함께 고쳤다.
+2. **예외의 글에서 키를 가린다.** `failure()`가 환경의 키 값이 예외의 글에 있으면 `<가린 키>`로 바꾼 뒤에 앞 200자를 싣게 했다(`without_key`). 독스트링이 "그 값을 읽지도 찍지도 않는다"고 적던 문장은 값을 읽는 자리가 하나 생겼으므로 고쳤다. 보류 판정이지만 고치는 값이 작아 확인을 기다리지 않고 고쳤다(`docs/constitution/operations.md` 리뷰 파이프라인 2).
+3. **지적 3은 오탐으로 두었다.** 이 명세가 다루는 제공사는 `anthropic`과 `openai-compatible` 둘이고, 두 SDK가 키를 헤더로 보내는 것은 프로브가 쟀다(쟀다, `.scratch/connection-check/probes/model_requests_loopback.py`의 `anthropic_retrieve`와 `openai_list` 회차). 고치려면 명세에 한 문장을 더하면 되지만, 키를 쿼리에 싣는 제공사는 이 명세의 범위에 없어 더하지 않았다.
+
+**다시 돌린 명령.** `uv run python .scratch/connection-check/probes/model_requests_loopback.py`를 두 번 돌렸다(둘째는 `ruff format --check`가 짚은 줄 나눔만 고친 뒤다). 두 번 다 측정 11회차에 측정 아님 0회차였다. `uv run --env-file ../../../.env python .scratch/connection-check/probes/model_requests_live.py`는 한 번 돌렸고 측정 6회차에 측정 아님 0회차였다. 실제 Anthropic에 GET 여섯 번이 더 갔다. `uv run ruff check .scratch/connection-check/probes`와 `uv run ruff format --check .scratch/connection-check/probes`는 통과했다.
+
+**다시 돌린 값이 명세에 적힌 범위를 벗어난 것이 둘이라 명세를 고쳤다.**
+
+- 닫힌 포트가 연결 오류로 끝나는 데 걸린 시간이 두 실행에서 2.23초와 2.59초, 2.2초와 2.79초였다. 명세의 범위 두 곳(절 "기한"의 표, Further Notes의 "측정의 범위")을 2.0~2.8초로 고쳤다.
+- 실제 Anthropic에 있는 id를 물은 요청이 1.0초였다(앞의 두 실행은 0.46초와 0.44초였다). 명세 "기한" 표의 범위를 "세 번의 실행에서 0.21~1.0초"로 고쳤다. 기한 10초와 그 까닭은 그대로다.
+
+**서두의 수.** 본문의 표시를 다시 셌고 바뀌지 않았다. 넘겨받은 것의 표가 열여덟 행, 사용자가 고른 것이 넷과 셋, 이력이 하나, Implementation Decisions가 열두 절이다. 이 반영은 프로브와 측정 값만 고쳤다.
+
+### 반영 커밋의 첫 시도 (14:43~14:53, 메모리가 모자라 실패)
+
+위 반영을 스테이지에 올리고 `git commit -F <메시지 파일>`을 백그라운드로 띄웠다. 내용 때문이 아니라 PC의 메모리가 모자라 pre-commit의 검사 둘이 죽었고 커밋은 되지 않았다.
+
+- **죽은 검사 둘.** `web-verify`가 60.5초에 eslint 단계의 `FATAL ERROR: Zone Allocation failed - process out of memory`(종료 134)로 끝났다. pytest는 483.4초에 `tests/adapters/test_postgres_database.py`를 모으다 난 `MemoryError`와, xdist 일꾼끼리 모은 시험 목록이 다르다는 오류로 끝났다.
+- **지난 검사.** ruff 둘, 노트 검사, 커밋 검사, 경계(`lint-imports`), zizmor, 지침 검사, 타입 우회 검사, pyright 둘, 훅 러너, 마크다운 표, 줄 구분 문자, 변이 표는 Passed였다.
+- **그때의 메모리.** 실패 알림 직후 `Get-CimInstance Win32_OperatingSystem`으로 손으로 봤다. 전체 31.9GB에 남은 실제 메모리가 3.1GB, 커밋 한도 127.9GB에 남은 것이 12.9GB였다. 프로세스 이름별 합계는 claude 47개 25.24GB, python 90개 21.02GB, vmmem 16.04GB, node 136개 10.61GB, oracle 10.04GB였다.
+- **기다린 결과.** 20초마다 메모리를 보는 대기를 9분 띄웠다(14:55~15:04. 문턱은 남은 실제 메모리 6GB와 커밋 여유 30GB). 풀리지 않고 더 나빠졌다. 기한 때 커밋 여유 3.7GB, 남은 실제 메모리 0.3GB였고, 15:07에는 커밋 여유 1.9GB, 남은 실제 메모리 1GB였다.
+- **누가 쓰는가.** 15:07에 python 113개가 잡은 커밋이 30.0GB였다. 그 가운데 29.7GB는 명령줄에 체크아웃 경로가 없는 51개가 잡고 있었고, 그중 커밋이 큰 열넷의 부모는 모두 `C:\project\rag-engine\.claude\worktrees\` 아래 워크트리 넷(`13-first-judge-run`, `mutate-show-marker-candidates`, `implement-journal-before-review`, `env-traps-crlf-and-utf8`)의 `.venv` 파이썬이었다. 명령줄은 xdist 일꾼의 모양(`python -u -c "import sys;exec(eval(sys.stdin.readl…`)이었다. `13-first-judge-run`의 것은 12:00에 떠서 세 시간 넘게 남아 있었고, 나머지 셋은 14:40, 14:52, 15:02에 떴다(`Get-CimInstance Win32_Process`로 손으로 봤다). 이 세션의 워크트리 경로를 명령줄에 가진 프로세스는 없었다.
+- **일하지 않는 묶음이 둘이다.** 15:07의 측정 뒤에 워크트리마다 일꾼의 CPU 시간을 6초 간격으로 두 번 봤다. `13-first-judge-run`의 일꾼 여덟(커밋 6.8GB)과 `mutate-show-marker-candidates`의 일꾼 아홉(6.3GB)은 그 6초 동안 CPU를 0.1초와 0.0초 썼다. `env-traps-crlf-and-utf8`의 아홉(6.9GB)은 11.9초, `implement-journal-before-review`의 열(1.2GB)은 7.1초를 썼다. `ListAgents`에는 뒤의 세 이름을 제목으로 한 세션이 idle로 보였고, `13-first-judge-run`을 제목으로 한 세션은 없었다. 앞의 두 묶음이 멈춘 것인지 긴 응답을 기다리는 것인지는 가르지 못했다(6초 한 번만 봤다).
+- **두 묶음을 띄운 쪽.** 부모 프로세스를 위로 따라가 봤다(`Get-CimInstance Win32_Process`로 손으로 봤다). `13-first-judge-run`의 일꾼은 12:00:09에 뜬 `pytest.exe -q -n 8`(pid 844)의 것이고, 그 pytest를 띄운 부모(pid 48620)는 이미 없었다. 띄운 쪽이 사라진 채 남은 pytest다. `mutate-show-marker-candidates`의 일꾼은 14:40:02에 뜬 `git commit -F …`의 pre-commit이 돌린 `tools/run_checks.py`의 것이고, 그 위의 bash까지 모두 살아 있었다. 살아 있는 세션의 커밋 검사다.
+- **한 것과 하지 않은 것.** 다른 세션의 프로세스는 끄지 않았다. 검사를 빼고(`SKIP=`) 커밋하지도 않았다. `tools/run_checks.py`에는 pytest의 일꾼 수를 바깥에서 줄이는 길이 없다(읽었다, `tools/run_checks.py`의 `pytest_workers`와 `skipped_ids`. 일꾼 수는 논리 CPU의 절반으로 고정이고, 그 파일에서 `environ`을 읽는 자리를 Grep으로 보니 `SKIP`과 `URL_ENV` 둘이었다). 대기를 같은 문턱으로 한 번 더 띄우고(15:08) 그 사이 이 절을 적었다.
+- **둘째 대기의 결과.** 9분 뒤(15:17:42)에도 문턱을 넘지 못했다. 그때 커밋 여유 14.4GB, 남은 실제 메모리 5.1GB, python 73개였고, 30초 뒤(15:18:11)에는 python이 101개로 늘며 커밋 여유 9.8GB, 남은 실제 메모리 1.1GB로 다시 줄었다. 다른 세션이 검사를 새로 띄운 것으로 본다(어림). 사용자에게 띄운 쪽이 사라진 pytest를 꺼도 되는지 물었고(15:14쯤), 답을 받기 전에는 끄지 않는다.
+
+- **셋째 대기의 결과와 바꾼 길.** 문턱을 앞선 통과 기록(남은 실제 메모리 5GB, 커밋 여유 20GB)에 맞춰 9분을 더 기다렸고(15:20~15:29) 풀리지 않았다. 15:29:56에 커밋 여유 9.4GB, 남은 실제 메모리 1.2GB였고 다른 세션의 `git commit`이 셋 돌고 있었다(시작 14:40, 15:17, 15:21). 세 번을 합쳐 27분을 기다린 셈이다. 그래서 첫 시도에서 죽은 검사 둘(pytest, `web-verify`)을 손으로 하나씩 차례로 돌려 통과를 본 뒤, 커밋에서는 러너의 그 두 id만 빼기로 했다(`SKIP=pytest,web-verify`). 검사를 건너뛰는 것이 아니라 같은 검사를 한꺼번에 띄우지 않고 차례로 돌리는 것이다. 뺀 검사를 손으로 치는 것은 `CLAUDE.md` 검증 명령 절이 적은 길이다. pytest는 일꾼을 셋으로 줄여 `uv run pytest -q -n 3`으로 띄웠다(15:31쯤. 러너는 논리 CPU의 절반을 쓴다). 그 앞에 `docker compose -f compose.test.yaml up -d --wait`로 테스트 컨테이너가 `Healthy`인 것을 봤다.
+- **손으로 돌린 pytest.** `uv run pytest -q -n 3`이 종료 0으로 끝났다. 끝 줄은 `8018 passed, 8 warnings in 1226.59s (0:20:26)`이다. 끝난 직후(15:52:06) 커밋 여유는 19.7GB, 남은 실제 메모리는 3.7GB였고 다른 세션의 `git commit`은 하나였다(시작 15:44). 이어서 `pnpm -C web verify`를 따로 띄웠다.
+- **손으로 돌린 화면 코드 검사.** `pnpm -C web verify`가 종료 0으로 끝났다(16:04쯤). 출력에 실행 줄이 일곱(판정 트리 치우기, 생성물 최신성, eslint, prettier, tsc, vitest, tsconfig 검사) 찍혔고 `FATAL`·`ELIFECYCLE`·`out of memory`가 든 줄은 없었으며, vitest는 `Test Files 128 passed (128)`, `Tests 2770 passed | 1 skipped (2771)`이었다. 건너뛴 하나는 `web/apps/portal/tools/make-key.test.ts`의 `test.skipIf(process.platform === "win32")`(POSIX 파일 모드 시험)로 본다. `web/`의 TS에서 건너뛰기를 Grep으로 찾으니 vitest가 도는 파일에는 그 하나뿐이었다(읽었다). 윈도에서는 늘 건너뛰고 리눅스 CI가 돈다.
+- **커밋.** 위 둘이 지났으므로 `SKIP=pytest,web-verify`로 러너의 그 두 검사만 빼고 커밋한다. pyright 둘, 경계, 지침 검사, 타입 우회 검사, 훅 러너와 러너 밖의 훅(ruff 둘, 마크다운 표, 줄 구분 문자, 변이 표, 커밋 메시지)은 커밋의 pre-commit이 그대로 돌린다.
+
+**인계 계기.** 커밋 명령이 백그라운드로 넘어간 직후 `hook_handoff`가 340,871 토큰과 경계 `커밋 뒤`를 알렸다. `handoff.md`를 Read로 열어 판정했고 넘기지 않았다. 순서 1의 셋째(이 세션의 지시문의 "이어받을 상태"가 `인계: 커밋 뒤`로 시작한다)에 든다. 그 커밋은 뒤에 실패했으므로 첫째(계기를 낸 명령이 실패했다)에도 든다.
+
+### 둘째로 이어받은 세션의 회고 사건 후보
+
+앞의 두 "회고 사건 후보" 절, PR 614의 마지막 코멘트에 있는 사건과 함께 센다. PR 614의 마지막 코멘트에는 사건이 셋이다. 지시문이 적은 둘 뒤에, 병합 뒤 새 세션을 연 다음 `tools/open_session.ps1 -Action focus`가 두 번 모두 사이드바의 행을 찾지 못하고 종료 1로 끝났다는 것이 더 있다.
+
+- 프로브 README를 고친 Edit 뒤에 훅 하나가 `Failed to spawn: python`과 `페이징 파일이 너무 작습니다. (os error 1455)`로 실패했다. 편집은 됐다. 이 세션을 시작할 때 `ListAgents`에 busy인 세션이 일곱이었고, 훅이 실패한 때의 수는 보지 않았다.
+- Read 결과가 큰 결과 알림의 문턱을 두 번 넘었다(이 일지 약 25,801자, `merge.md` 약 23,308자). `docs/constitution/operations.md`는 26~39줄을 읽으려다 한 줄로 된 가드레일 문단이 통째로 실렸다.
+- PR 직전 리뷰를 반영하며 프로브를 다시 돌리자 닫힌 포트의 시간(2.79초)과 실제 제공사의 응답 시간(1.0초)이 명세에 적은 범위를 벗어났다. 실행마다 흔들리는 값을 범위로 적은 문장이 다시 돌릴 때마다 낡는다.
+- 반영 커밋의 pre-commit이 메모리가 모자라 죽었다(위 "반영 커밋의 첫 시도"). 대기열 `run-checks-out-of-memory-with-parallel-sessions`와 같은 모양이다. 이번에는 9분을 기다려도 풀리지 않았고, 메모리를 잡은 것은 이 저장소가 아니라 rag-engine 저장소의 세션 넷이 띄운 pytest 일꾼이었다. 그 가운데 하나는 세 시간 넘게 남아 있었다.
+- 인계 계기가 백그라운드로 띄운 커밋이 끝나기 전에 왔다(340,871 토큰, 경계 `커밋 뒤`). 대기열 `handoff-trigger-before-background-commit-ends`와 같은 모양이다. 그 커밋은 실패했고, 지시문이 `인계: 커밋 뒤`라 넘기지 않았다.
