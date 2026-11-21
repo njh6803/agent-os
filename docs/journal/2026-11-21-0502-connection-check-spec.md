@@ -574,3 +574,36 @@ PR 618(명세와 ADR 0067 이력, 프로브 다섯)을 병합하면 connection-c
 - 회고가 승인한 항목 다섯의 반영은 chore가 한다. 회차 5 이상인 `docs-only-commit-precommit-slow-again`, `handoff-trigger-before-background-commit-ends`, `run-checks-out-of-memory-with-parallel-sessions`가 chore 계기다.
 - 사용자에게 아직 답이 없는 일: rag-engine의 남은 pytest(pid 844)를 꺼도 되는지. 답 없이 끄지 않는다.
 - 출시 PR 616(dev를 main에)은 열려 있다. 이 PR을 병합해도 그 PR은 이 PR 담당이 아니다.
+
+### 인계 (커밋 뒤)
+
+- 계기: 반영 커밋을 백그라운드로 띄운 직후 `hook_handoff`가 단계 경계 `커밋 뒤`를 알렸다(221,862 토큰). 커밋이 끝나기를 기다렸고 종료 코드 0이었다(`b5256ac1f`, 푸시하지 않았다). 이 세션의 지시문의 "이어받을 상태"는 `인계: PR 연 뒤`로 시작해 지금의 경계와 다르고, 받은 요청 범위는 PR과 병합까지이며, 일지에 `인계 못함` 줄이 없고, `get_session`의 `self`에 `parentSessionId`가 없다.
+- 이 세션이 한 일: 봇 회차(위 "봇 회차")와 반영, PR 본문 고침, 회고(위 "회고"), 일지 "다음". 푸시와 그 뒤의 봇 회차·병합은 하지 않았다.
+- 이 일지의 이 절은 커밋하지 않았다. 새 세션이 이 절을 커밋 `b5256ac1f` 위에 한 커밋으로 더해 푸시와 함께 올린다(푸시마다 claude-review가 돌므로 한 번에 올린다).
+- 이 세션의 지금 제목: `docs/connection-check-spec`. 넘기기 전에 `docs/connection-check-spec (인계함)`으로 바꾼다.
+- 이 세션이 띄운 백그라운드 작업은 모두 끝났다(`wait_ci`, 커밋).
+
+낸 지시문이다.
+
+```
+다음 작업: 기능 connection-check. 플러그인 화면의 접속 확인과 배포 안내의 문제 해결 절의 명세 PR 618을 푸시부터 이어 병합까지 마친다
+다음 단계: PR 반영·병합
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /to-spec connection-check
+브랜치: docs/connection-check-spec
+모델: Sonnet 5.5 / high. 2의 잇는 지시문
+읽을 것: docs/journal/2026-11-21-0502-connection-check-spec.md. 끝의 "셋째로 이어받은 세션 (봇 회차부터)" 절을 본다(봇 회차, 회고, 다음, 인계). 그 절의 "인계 (커밋 뒤)" 항목은 커밋하지 않은 변경이다
+이어받을 상태: 인계: 커밋 뒤. 반영 커밋 b5256ac1f(명세 "포트와 층"에 결과 타입과 묶음이 사는 층을 더한 것, 회고가 대기열 항목 다섯을 건드린 것, 일지 회고·다음)까지 했고 아직 푸시하지 않았다(docs/journal/2026-11-21-0502-connection-check-spec.md). 일지의 인계 절을 한 커밋으로 더해 푸시하고 merge.md 2(봇 회차)의 대기부터 한다. 푸시 뒤 @coderabbitai review 코멘트를 남긴다(앞 회차는 한도에 걸려 리뷰가 없었다). claude-review는 둘째 회차라 Critical·Major만 고치고 나머지는 지적마다 보류 이유를 PR 코멘트에 남긴다. 첫 회차의 보류(Nit: anthropic import를 채널·관리·조립 층까지 계약으로 막자)는 아직 PR 코멘트에 이유를 남기지 않았으니 남긴다. 일지의 "다음"과 회고는 끝났다. 병합 뒤 다음 단계는 사용자가 부르는 /to-tickets(직전에 spec-reviewer)이고, 사용자에게 rag-engine의 남은 pytest(pid 844)를 꺼도 되는지 물은 답은 아직 받지 못했다. 답 없이 끄지 않는다
+확인할 선행 조건: 병합은 이 워크트리 사본의 next-session merge.md(없으면 SKILL.md)의 "워크트리에서 병합할 때"를 Read로 열어 따른다. 출시 PR 616이 열려 있다(넘긴 세션이 본 때의 상태다). 푸시 뒤 PR 618의 봇 리뷰와 CI의 결과는 넘긴 세션이 보지 못했다
+이번 요청 범위: PR과 병합까지
+```
+
+넘기기 전의 차례다.
+
+- 제목을 `docs/connection-check-spec (인계함)`으로 바꿨다. 앱이 묻지 않고 바꿨다.
+- 멈출 백그라운드 작업은 없었다.
+- `git worktree unlock C:/project/agent/.claude/worktrees/connection-check-spec`은 `is not locked`로 끝났다. 이미 풀려 있던 것이라 넘어갔다.
+
+open-session을 부른다 2026-11-21T08:12:30Z
+
+열기 결과: `sent=17:12:04.990`(`model=Sonnet 5.5 원래 Opus 5.5`, `effort=high 원래 xhigh`, `restored=Opus 5.5 / xhigh`), 새 세션 `local_ddd2edc7-332d-4515-8616-a60d42f054eb`(제목 `docs/connection-check-spec`, `cwd` `C:\project\agent`)를 `list_sessions`에서 확인했다. `-Action split`은 `split=17:12:22.144`로 통과했다. `-Action focus -Title docs/connection-check-spec -TimeoutSec 90`은 이번에도 종료 1이었고, 오류가 `open_session.ps1:885`의 `GetCurrentPattern` "지원되지 않는 Pattern입니다."였다(대기열 `open-session-focus-sidebar-row-not-found`와 같은 단계의 실패이고 오류 문구는 다르다. 세 번째 사건이다).
