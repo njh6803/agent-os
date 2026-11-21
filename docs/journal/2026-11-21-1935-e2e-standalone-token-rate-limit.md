@@ -42,3 +42,30 @@ PR #617(실패 기록을 CI 산출물로 올리는 스텝)이 dev에 병합된 �
 - 이 티켓이 dev에 병합되면 출시 PR #616의 머리가 바뀌어 `e2e-standalone`과 `verify`가 다시 돈다. `uv run python tools/wait_ci.py 616 --head <git rev-parse origin/dev> --expect verify`로 기다린다. 초록이면 `gh pr merge 616 --merge --match-head-commit <headRefOid>`로 병합하고 `merge.md` "출시 PR"의 병합 뒤 일을 한다. 빨가면 새 산출물을 읽는다.
 - #616은 병합하지 않았다.
 - 이전 일지의 알림 셋은 사용자에게 전했다: 이전 세션이 `inspect.py`를 `inspect.py.stray-shadows-stdlib`로 이름을 바꾼 것, 주 체크아웃이 #617 병합 뒤 다시 한 커밋 뒤처진 것, 일지 `2026-11-20-1918-serve-requires-database`의 "다음" 후속 다섯을 시작하지 않은 것.
+
+## 인계 (PR 연 뒤)
+
+PR #619(머리 `62ac38ee6`, base dev)를 열었고 봇 회차와 병합은 새 세션이 한다. 이 세션은 컨텍스트가 인계 문턱을 넘어 넘긴다. 앞서 사용자가 "PR 열고 병합"이라 요청했다.
+
+> 사용자: PR 열고 병합
+
+open-session을 부른다 2026-11-21T12:22Z
+
+## PR #619 처리 (새 세션)
+
+새 세션이 PR #619를 이어받아 CI를 읽었다. `ticket` 검사만 빨갰다. CI 로그(`gh api repos/njh6803/agent-os/actions/jobs/136844226612/logs`)는 `브랜치 docs/e2e-standalone-token-rate-limit 가 가리키는 티켓이 done 이 아니라 PR 을 막았다`고 찍었다. 티켓의 `Status:`는 `ready-for-agent`다.
+
+원인은 PR 본문이 "면제 모양의 `docs/` 브랜치라 통과했다"고 쓴 것이 틀렸기 때문이다. `tools/check_ticket.py`의 독스트링에 따르면 `.scratch/harness/issues/*.md`는 면제 모양이 아니고(`<slug>`가 `harness`면 면제가 아니다), `docs/<slug>` 브랜치는 판정 6으로 지나더라도 CI가 그 harness 티켓 전부의 `Status:`가 done인지 본다. 이 저장소의 규약은 "티켓은 그 일을 하는 PR에 함께 싣는다"(`docs/agents/issue-tracker.md`)다. 그래서 티켓만 쓰는 PR은 CI에서 병합할 수 없다. 로컬 pre-commit은 `Status:`를 보지 않아(독스트링 "못 보는 것") 그때는 지났다.
+
+사용자에게 셋을 물었다. 사용자가 "PR을 닫고 구현과 합치기"를 골랐다.
+
+> 사용자(선택): PR을 닫고 구현과 합치기 — #619를 병합하지 않고 닫습니다. 티켓과 일지는 브랜치에 남고(닫아도 브랜치는 지워지지 않습니다), 다음 세션이 원인을 가르고 고치는 PR에 티켓을 함께 실어 done으로 바꿀 때 검사가 통과합니다. 규약 그대로입니다.
+
+한 일: 이 일지의 인계 절과 이 절을 브랜치에 커밋해 푸시하고 PR #619를 닫았다. 병합하지 않았으므로 티켓은 아직 dev에 없고, 출시 PR #616은 그대로 빨갛다.
+
+## 다음 (갱신)
+
+- 구현 세션은 이 브랜치(`docs/e2e-standalone-token-rate-limit`, 머리는 이 절을 실은 커밋)에서 시작한다. 티켓은 이 브랜치에만 있다. `implement` 스킬은 브랜치 이름을 `chore/e2e-standalone-token-rate-limit`로 맞추라고 하므로 `git branch -m`으로 이름을 바꾸고 새 PR을 연다. 원격의 옛 브랜치 이름과 닫힌 PR #619는 정리 대상이다.
+- 첫 편집으로 티켓의 `Status:`를 `in-progress`로 바꾸고, PR을 열기 전에 `done`으로 바꾼다. 순서는 가르기, 고치기, 회귀 시험이다.
+- 위 "다음"의 #616 기다림과 병합 절차는 구현 PR이 dev에 병합된 뒤에 한다.
+- 이번에 안 것(사건 하나): 티켓만 쓰는 harness PR은 CI에서 병합할 수 없다. 앞 세션이 면제로 읽은 것이 사실과 달랐다. 대기열에 올릴지는 retro가 판정한다.
