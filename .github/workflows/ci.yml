@@ -404,6 +404,15 @@ jobs:
         run: pnpm -C web/packages/e2e-standalone exec playwright install-deps chromium
       - if: steps.gate.outputs.run == 'true'
         run: pnpm -C web/packages/e2e-standalone exec playwright test
+      # 시험이 실패하면 test-results 를 남긴다. 시험 틀이 끝날 때(teardown)와 준비가 실패했을 때 compose.log(serve,
+      # 프록시, 데이터베이스 컨테이너의 로그)를 거기에 쓴다. 실행기는 잡이 끝나면 사라지므로 올리지 않으면 실패 원인을
+      # 볼 수 없다.
+      - if: failure() && steps.gate.outputs.run == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-standalone-test-results
+          path: web/packages/e2e-standalone/test-results/
+          retention-days: 14
 
   # 사진 비교(ADR 0026). 판을 고정한 Playwright 이미지를 잡의 컨테이너로 쓰고, 그 안에서 설치하고 Storybook 정적 빌드를
   # 지은 뒤 커밋한 정답 사진(web/packages/ui/visual/snapshots/)과 비교한다. 위젯과 관리 화면도 같은 컨테이너에서 자기 정적
