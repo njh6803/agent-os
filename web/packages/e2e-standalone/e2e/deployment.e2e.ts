@@ -9,7 +9,7 @@
 import { randomBytes } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { request as httpsRequest } from "node:https";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { expect, test } from "@playwright/test";
 import { signedDirectToken } from "./direct.ts";
 import { Compose, repositoryName, run, succeed } from "./docker.ts";
@@ -461,6 +461,70 @@ test("백엔드 하나를 다시 만들어도 프록시가 새 주소를 따라 
   expect(Date.now() - started, `200 이 ${String(RECOVER_MS)}ms 를 넘겨 도착했다`).toBeLessThan(
     RECOVER_MS + 1_000,
   );
+});
+
+// 프록시의 바깥 DNS 를 끊는 덧씌움. 아직 없는 이름을 물으면 Docker 의 내장 DNS 가 `Server failure` 를 돌려준다.
+const DEAD_DNS_OVERLAY = join(dirname(import.meta.dirname), "compose.dead-dns.yaml");
+
+test("프록시가 serve 를 못 찾고 시작해도 serve 가 건강해지면 15초 안에 최종 사용자 길이 열린다", async ({
+  request,
+}) => {
+  test.setTimeout(RESTART_TIMEOUT_MS);
+  const upServe = [
+    "up",
+    "--detach",
+    "--no-deps",
+    "--wait",
+    "--wait-timeout",
+    String(UP_WAIT_SECONDS),
+    "serve",
+  ];
+  const serveTimeoutMs = (UP_WAIT_SECONDS + 60) * 1000;
+  try {
+    // serve 가 없는 채로 프록시를 다시 만든다. 프록시가 시작할 때 serve 이름을 물으면 내장 DNS 가 `Server failure` 를 돌려준다.
+    // 출시 PR 의 CI 에서는 serve 가 postgres 와 migrate 를 기다리느라 프록시보다 늦게 떠서 같은 일이 났다.
+    await compose().ensure(["rm", "--stop", "--force", "serve"], 2 * 60_000);
+    await compose().ensure(["up", "--detach", "--force-recreate", "--no-deps", "proxy"], 120_000, [
+      DEAD_DNS_OVERLAY,
+    ]);
+    await compose().ensure(upServe, serveTimeoutMs);
+
+    // 시험이 만들려던 상황이 맞는지 본다. 프록시가 시작할 때 serve 이름을 못 풀었어야 한다.
+    const logs = await compose().ensure(["logs", "--no-color", "proxy"], 60_000);
+    expect(logs).toContain("serve could not be resolved (2: Server failure)");
+
+    const started = Date.now();
+    let status = 0;
+    while (Date.now() - started < RECOVER_MS) {
+      try {
+        const remaining = Math.max(1_000, RECOVER_MS - (Date.now() - started));
+        status = (await request.post(`${ORIGIN}/end-user/runs`, { timeout: remaining })).status();
+      } catch {
+        status = 0;
+      }
+      // 토큰 없는 요청이라 serve 가 거절하는 것이 맞다. 프록시가 serve 에 닿았다는 것만 본다(닿지 못하면 502 다).
+      if (status !== 0 && status < 500) {
+        break;
+      }
+      await new Promise((resolve) => setTimeout(resolve, 500));
+    }
+    // 아래 finally 가 프록시를 다시 만들면 이 프록시의 로그가 사라지므로, 실패 메시지에 지금 끝부분을 싣는다.
+    const proxyTail = (
+      await compose().ensure(
+        ["logs", "--no-color", "--timestamps", "--tail", "15", "proxy"],
+        60_000,
+      )
+    ).trim();
+    expect(
+      status,
+      `serve 가 건강해진 뒤 ${String(RECOVER_MS)}ms 안에 프록시가 길을 열지 않았다. 프록시 로그의 끝:\n${proxyTail}`,
+    ).toBeLessThan(500);
+    expect(status, "프록시가 응답하지 않았다").not.toBe(0);
+  } finally {
+    // 뒤의 사례가 평소 프록시를 지나도록 되돌린다. 앞에서 실패해 serve 가 없을 수 있으므로 serve 부터 올린다.
+    await compose().ensure(upServe, serveTimeoutMs);
+    await compose().ensure(["up", "--detach", "--force-recreate", "--no-deps", "proxy"], 120_000);
+  }
 });
 
 test("토큰 끝점은 짧은 시간에 요청이 몰리면 429 를 내고 앞선 요청은 막지 않는다", async ({
