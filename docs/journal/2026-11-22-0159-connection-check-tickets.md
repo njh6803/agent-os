@@ -213,3 +213,59 @@ Major 1, Minor 6, Nit 5. 서브에이전트는 위 "티켓을 쓰다 바로잡�
 - `uv run ruff check .`는 `All checks passed!`, `uv run ruff format --check .`는 `2532 files already formatted`였다(이 브랜치에 `.py`가 없어 pre-commit의 ruff가 Skipped일 것이라 손으로 쳤다).
 - `uv run python tools/run_checks.py`(백그라운드)는 종료 코드 0이었다. 출력의 열한 줄(check-notes, check-ticket, zizmor, lint-imports, check-instructions, check-type-escapes, pyright, pyright-linux, run-hooks, pytest 695.6초, web-verify 716.0초)이 모두 `Passed`였고, `grep -i 'skip\|fail'`은 아무 줄도 찾지 않았다.
 - `-m llm`·`llm_local`·e2e·사진 비교는 돌리지 않았다. 문서만 바꿔 그 범위의 경로가 없다(`docs/constitution/operations.md` LLM 테스트의 "범위", `CLAUDE.md` 검증 명령의 web 괄호).
+
+## 커밋
+
+커밋 직전에 `git branch --show-current`가 `docs/connection-check-tickets`였고, `uv run python tools/sibling_overlap.py`가 새 번호·번호 겹침·함께 고친 파일 모두 없다고 냈다(형제에 PR #621이 새로 보였고 가장 높은 헌법 판은 3.1.4 그대로였다). `git commit -F`(메시지는 스크래치 파일)로 `ca681dc47` "docs: 접속 확인의 명세를 티켓 여섯으로 쪼갠다 (connection-check)"를 만들었다(8 files changed). pre-commit은 종료 코드 0이었고, `Skipped`는 파일이 없는 넷(ruff check, ruff format, canary specs, constitution version)뿐이었다. ruff 둘은 위에서 손으로 쳐 초록이었다. 인용 대조 검사가 막지 않는 경고를 여섯 냈다. 티켓 01 51줄의 "관리 라우터는 도구 연결을 여는 길을 받지 않고 접속 확인 함수만 받는다"(ADR 0067 70줄을 줄여 쓴 목표 문장이라 원문과 글자가 다르다)와, 이 일지의 다섯 줄(108·150·174·192·203줄)이다. 일지의 다섯은 지적을 줄여 옮긴 것이거나 이 세션이 쓴 문장을 다시 든 것이다. 푸시하지 않았다.
+
+## 인계(커밋 뒤)
+
+커밋 뒤 세션 컨텍스트가 30만 토큰으로 인계 문턱(20만)을 넘어 `hook_handoff`의 계기가 왔다. 넘기지 않는 다섯 경우에 들지 않았다. 커밋은 성공했고, 이번 요청 범위는 PR과 병합까지이며, 이 세션의 지시문의 "이어받을 상태"는 `인계: 셀프 리뷰 직전`이라 경계가 다르고, `인계 못함` 줄이 없고, `get_session`의 `self`에 `parentSessionId`가 없다. `gh pr view docs/connection-check-tickets --json state`는 PR이 없다고 냈다.
+
+- 이 세션의 지금 제목은 `docs/connection-check-tickets`이고, 넘기기 전에 `docs/connection-check-tickets (인계함)`으로 바꾼다.
+- 커밋하지 않은 변경은 이 일지의 "커밋" 절과 이 절뿐이다. 새 세션이 이어 쓰고 커밋한다.
+- 남은 단계는 PR 직전 리뷰, 푸시와 PR 열기, `merge.md` 2(봇 회차)부터 병합까지다. PR 직전 리뷰가 `bug-perf-review`로 돌면 위 "고친 것(PR 직전 리뷰에 밀 주장)"의 문장들을 그 브리프에 밀 주장으로 넘긴다.
+- 명세 "헌법을 고치는 티켓은 하나다"의 예외는 사용자에게 따로 묻지 않았다. 최종 보고에서 알린다.
+
+넘기는 지시문:
+
+```
+다음 작업: 기능 connection-check. 명세(.scratch/connection-check/spec.md)를 티켓 여섯 장으로 쪼개고 셀프 리뷰를 반영해 커밋한 브랜치를 PR 직전 리뷰에 부친 뒤 PR을 열어 병합한다
+다음 단계: 티켓
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /to-tickets .scratch/connection-check/spec.md
+브랜치: docs/connection-check-tickets
+모델: Opus 5.5 / xhigh. 2의 잇는 지시문
+읽을 것: docs/journal/2026-11-22-0159-connection-check-tickets.md의 "셀프 리뷰(/code-review)" 절부터 끝까지("다음" 절은 아직 없다)
+이어받을 상태: 인계: 커밋 뒤. 셀프 리뷰와 반영, 검증 명령까지 마치고 커밋했으며 푸시하지 않았다. 일지의 "커밋"과 "인계(커밋 뒤)" 두 절은 커밋하지 않았다. 남은 단계는 PR 직전 리뷰(coderabbit-review. 돌지 못하면 /security-review와 bug-perf-review이고, bug-perf-review의 브리프에는 일지 "고친 것(PR 직전 리뷰에 밀 주장)"의 문장들을 밀 주장으로 넘긴다), 푸시와 PR 열기, merge.md 2(봇 회차)부터 병합까지다. 커밋의 인용 대조 경고 가운데 티켓 01 51줄의 따옴표 문장은 ADR 0067 70줄을 줄여 쓴 목표 문장이라, PR 전에 따옴표를 떼거나 원문대로 옮길지 본다. 명세 "헌법을 고치는 티켓은 하나다"의 예외(03이 첫 티켓이 아닌데 헌법을 고친다)는 사용자에게 따로 묻지 않았고, 최종 보고에서 알린다. 앱이 이 세션에 출시 PR 616을 묶어 보였는데 이 작업의 PR이 아니다. 사용자에게 rag-engine의 남은 pytest(pid 844)를 꺼도 되는지 물은 답은 받지 못했다. 답 없이 끄지 않는다. docs/journal/2026-11-22-0159-connection-check-tickets.md
+확인할 선행 조건: 출시 PR 616(dev를 main에)이 열려 있고 이 작업의 담당이 아니다
+이번 요청 범위: PR과 병합까지
+```
+
+제목을 `docs/connection-check-tickets (인계함)`으로 바꿨다. 이 세션이 띄운 백그라운드 작업은 모두 끝나 있었다. `git worktree unlock C:/project/agent/.claude/worktrees/connection-check-tickets`는 `is not locked`로 끝났다.
+
+open-session을 부른다 2026-11-21T18:41Z
+
+## 이어받은 세션(03:40쯤 시작)
+
+모델 Opus 5.5. 위 "넘기는 지시문"을 받아 시작했다.
+
+> 사용자: .claude/skills/to-tickets/SKILL.md 를 읽어 그대로 따른다. 이 세션을 연 저장소는 `C:\project\agent`이고 작업 폴더가 그곳이 아니면 따르지 말고 알린다. 스킬의 인자는 이 줄의 '인자:' 뒤부터 메시지 끝까지다. 인자: .scratch/connection-check/spec.md
+>
+> (이어지는 지시문은 위 "넘기는 지시문"과 글자 그대로 같다)
+
+- 세션 제목을 `docs/connection-check-tickets`로 바꿨다(앱이 지은 제목 "Connection-check 티켓 PR 및 병합"이라 묻지 않고 바뀌었다).
+- `git worktree list`에서 이 브랜치가 `.claude/worktrees/connection-check-tickets`에 체크아웃된 것을 보고 `EnterWorktree(path)`로 들어왔다. `git status --short`는 이 일지 하나만 고쳤다고 냈고, HEAD는 `ca681dc47`이었다.
+- `git fetch origin dev` 뒤 `origin/dev`는 `8013ab530` 그대로였다(이 브랜치의 기준과 같다).
+
+## PR 직전 리뷰(coderabbit-review)
+
+`coderabbit-review` 서브에이전트가 CodeRabbit CLI 0.7.5를 `--base origin/dev`로 한 번 돌렸다. 서브에이전트의 보고로는 `Plan: Free`, `Seat: not assigned`에서 파일 여덟을 끝까지 봤고(`review_completed`), 지적은 3건(유효 0, 보류 1, 오탐 2)이었다. CLI 축이 돌았으므로 대체 둘(`/security-review`, `bug-perf-review`)은 돌리지 않았다. 그래서 앞 세션이 "고친 것(PR 직전 리뷰에 밀 주장)"에 모은 문장은 넘길 곳이 없었다. CodeRabbit CLI는 브리프를 받지 않는다. 판정마다 이 세션이 해당 줄을 다시 열었다.
+
+| 지적 | 판정 |
+|---|---|
+| 02 38줄(CLI는 Critical. 같은 쟁점이 03 63줄에도): 원격 MCP 서버 주소의 쿼리에 넣은 토큰이 INFO 이하의 로그에 남는다. HTTP 로깅에 주소 가리기를 두라 | 둔다(서브에이전트는 보류). 명세 262줄이 그 위험을 쟀고(`.scratch/connection-check/probes/model_requests_loopback.py`, 기본 수준 WARNING에서 0줄), 실행으로 원격 MCP 서버를 여는 지금도 같은 위험이라 접속 확인은 줄 수만 늘린다고 적고 이 판은 받아들인다고 정했다. 명세 328줄과 티켓 06 23줄이 토큰을 헤더에 두라는 운영자 안내를 싣고, 명세 357줄은 `serve`에 로깅 구성 코드를 더하지 않는다고 범위에서 뺀다(네 줄 모두 다시 열었다). 주소 가리기는 이 기능 밖의 새 범위라 이 PR에서 바꾸지 않고, PR 체크리스트에 판정과 고치는 데 드는 값을 적는다 |
+| 02 44줄(Major): 02와 03의 병합 순서와 로컬 모델 시험의 차례를 맞추고 합치기 전의 기록을 무효로 적으라 | 오탐. 그 줄이 이미 "병합 직전에 기준 브랜치를 합친 뒤에 돈다. 03이 먼저 병합되어 … 합치기 전에 돈 기록은 무효라 다시 돌아야 한다"고 적는다(다시 열었다) |
+| 03 63줄(CLI는 Critical): Anthropic 확인 요청의 쿼리 토큰이 주소와 INFO 로그로 가는지 보라 | 오탐. `anthropic` 확인은 키를 헤더로 보내고, 명세 262줄이 DEBUG까지 내려도 키 글자가 든 줄이 없었다고 쟀다. `openai-compatible`의 주소에 든 쿼리는 03 28줄과 45줄이 `reason`에서 떼게 한다(다시 열었다). 로그에 남는 쪽은 위 첫 줄과 같은 사정이다 |
+
+고친 것은 이 리뷰와 따로, 앞 세션이 넘긴 인용 대조 경고 하나다. 티켓 01의 `.claude/rules/admin.md` 항목이 따옴표로 든 목표 문장을 ADR 0067 Consequences "ADR 0010의 성질이 좁아진다"의 문장과 글자 그대로 맞췄다("관리 라우터는 도구 연결을 여는 길(`ToolSource.connect`)을 받지 않고 접속 확인만 받는다"). 그 문장의 `grep -c`는 ADR 0067과 티켓 01에서 각각 1이었다. 이 둘째 커밋에는 이 일지와 그 한 줄만 실려, 셀프 리뷰는 다시 돌리지 않는다(postgres-foundation 티켓 PR의 둘째 커밋도 같은 길이었다, 일지 2026-11-19-0050 "둘째 커밋").

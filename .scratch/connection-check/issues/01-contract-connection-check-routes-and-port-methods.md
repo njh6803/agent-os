@@ -48,7 +48,7 @@
 ### 규칙과 독스트링
 
 - [ ] 규칙 파일을 고치기 전에 Skill 도구로 `writing-for-agents`를 부른다(`.claude/rules/agent-docs.md`)
-- [ ] `.claude/rules/admin.md`의 첫 항목을 "관리 라우터는 도구 연결을 여는 길을 받지 않고 접속 확인 함수만 받는다"로 좁힌다. 조회 하나가 MCP 서버의 프로세스를 띄우는 길이 닫혀 있다는 성질은 그대로다(ADR 0067 Consequences "ADR 0010의 성질이 좁아진다")
+- [ ] `.claude/rules/admin.md`의 첫 항목을 "관리 라우터는 도구 연결을 여는 길(`ToolSource.connect`)을 받지 않고 접속 확인만 받는다"로 좁힌다. 조회 하나가 MCP 서버의 프로세스를 띄우는 길이 닫혀 있다는 성질은 그대로다(ADR 0067 Consequences "ADR 0010의 성질이 좁아진다")
 - [ ] `.claude/rules/core.md`의 포트 표에서 도구 포트와 모델 포트의 행에 확인 메서드를 적는다. 모델 포트 행의 "동기 메서드 하나"는 모델을 만드는 메서드의 것으로 좁힌다(위 `ports.py`의 독스트링과 같은 까닭)
 - [ ] `src/agent_os/server.py`의 `create_app()` 독스트링("관리 라우터는 … 도구 포트를 받지 않으므로")과 `src/agent_os/admin/http.py`의 "이 라우터는 도구 포트를 받지 않는다" 주석을 새 성질로 고친다
 - [ ] 결정이 바뀐 문장 둘(관리 라우터가 도구 포트를 받지 않는다, 모델 포트의 메서드가 하나이고 동기다)을 저장소 전체에서 grep해 살아 있는 문서의 잔존이 0인지 본다(`CLAUDE.md` 작업 규약 4)
