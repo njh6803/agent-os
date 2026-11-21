@@ -487,11 +487,16 @@ test("프록시가 serve 를 못 찾고 시작해도 serve 가 건강해지면 1
     await compose().ensure(["up", "--detach", "--force-recreate", "--no-deps", "proxy"], 120_000, [
       DEAD_DNS_OVERLAY,
     ]);
-    await compose().ensure(upServe, serveTimeoutMs);
 
-    // 시험이 만들려던 상황이 맞는지 본다. 프록시가 시작할 때 serve 이름을 못 풀었어야 한다.
-    const logs = await compose().ensure(["logs", "--no-color", "proxy"], 60_000);
-    expect(logs).toContain("serve could not be resolved (2: Server failure)");
+    // 시험이 만들려던 상황이 맞는지 serve 를 올리기 전에 본다. 프록시가 시작할 때 serve 이름을 못 풀었어야 한다.
+    // serve 가 먼저 DNS 에 올라 첫 질의가 성공하면 이 시험이 보려는 상황이 아니므로, 여기서 크게 실패한다.
+    await expect
+      .poll(async () => await compose().ensure(["logs", "--no-color", "proxy"], 60_000), {
+        message: "프록시가 serve 이름을 못 푼 줄이 로그에 찍히지 않았다",
+        timeout: 15_000,
+      })
+      .toContain("serve could not be resolved (2: Server failure)");
+    await compose().ensure(upServe, serveTimeoutMs);
 
     const started = Date.now();
     let status = 0;
@@ -521,12 +526,13 @@ test("프록시가 serve 를 못 찾고 시작해도 serve 가 건강해지면 1
     ).toBeLessThan(500);
     expect(status, "프록시가 응답하지 않았다").not.toBe(0);
   } finally {
-    // 뒤의 사례가 평소 프록시를 지나도록 되돌린다. 앞에서 실패해 serve 가 없을 수 있으므로 serve 부터 올리되,
-    // serve 가 올라오지 못해도 프록시는 죽은 DNS 덧씌움 없이 다시 만든다(안 그러면 뒤의 사례가 모두 연쇄로 실패한다).
+    // 뒤의 사례가 평소 프록시를 지나도록 되돌린다. 프록시는 serve 없이도 다시 만들 수 있으므로(--no-deps) 먼저 죽은 DNS
+    // 덧씌움 없이 되돌린다. serve 가 건강해지지 않아 올리기를 오래 기다려도 시험 제한 시간 때문에 이 복원이 밀리지 않고,
+    // 안 그러면 뒤의 사례가 모두 연쇄로 실패한다. 앞에서 실패해 serve 가 없을 수 있으므로 그 뒤에 serve 를 올린다.
     try {
-      await compose().ensure(upServe, serveTimeoutMs);
-    } finally {
       await compose().ensure(["up", "--detach", "--force-recreate", "--no-deps", "proxy"], 120_000);
+    } finally {
+      await compose().ensure(upServe, serveTimeoutMs);
     }
   }
 });

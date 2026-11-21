@@ -63,6 +63,15 @@ PR #620(실패한 시험 바로 뒤에 `compose-at-failure.log`를 남기는 시
 - **질문의 답(리뷰어):** `resolver_timeout 2s`는 질의 빈도(`valid=5s`)를 바꾸지 않고 질의가 응답을 기다리는 상한만 줄인다. 시험 전용 덧씌움은 `tools/release.py`의 묶음(`deploy/standalone`)에 들지 않는다. 리뷰어도 원인 설명이 가설이라고 같은 한계를 적었다.
 - **다시 돌릴 것:** 시험 파일이 바뀌어 새 사례를 다시 돌리고 커밋의 pre-commit이 나머지를 돈다.
 
+## 봇 회차(PR #621)
+
+첫 회차: claude-review는 지적 없음, CodeRabbit이 인라인 둘을 냈다. 둘 다 코드를 열어 판단했다.
+
+- **Major, 시험 제한 시간이 끝나면 프록시 복원이 안 될 수 있다: 고쳤다.** `serve`가 끝내 건강해지지 않으면 본문의 `upServe`(`UP_WAIT_SECONDS + 60`초)와 `finally`의 `upServe`가 시험 제한 시간(`UP_WAIT_SECONDS + 180`초)을 거의 다 써서 프록시 복원에 닿지 못한다. 프록시 복원은 `--no-deps`라 `serve` 없이 되므로 순서를 바꿔 프록시를 먼저 되돌리고 그 `finally`에서 `serve`를 올린다.
+- **Minor, `serve`를 올리기 전에 `Server failure`가 찍혔는지 기다려 확인하라: 고쳤다.** 막지 않아도 큰 소리로 실패하는 모양이라(조용히 틀리지는 않는다) 급하지는 않지만, 고치는 값이 작아 `expect.poll`로 15초까지 로그를 기다린 뒤 `serve`를 올리게 했다. 확인이 `serve`를 올린 뒤에 있던 순서가 실행 순서에 기대는 것이었다.
+- **리뷰에 밀 주장(이 회차가 새로 쓴 문장):** `finally`의 "프록시는 serve 없이도 다시 만들 수 있으므로(--no-deps)", 본문의 "serve 가 먼저 DNS 에 올라 첫 질의가 성공하면 이 시험이 보려는 상황이 아니므로, 여기서 크게 실패한다".
+- **다시 돌린 것:** 새 사례만 다시 돌렸다(아래 결과는 커밋 뒤 PR 본문에 옮긴다).
+
 ## 다음
 
 - 이 PR이 dev에 병합되면 출시 PR #616의 머리가 바뀌어 `e2e-standalone`과 `verify`가 다시 돈다. `uv run python tools/wait_ci.py 616 --head <git rev-parse origin/dev> --expect verify`를 백그라운드로 띄우고, 초록이면 `gh pr merge 616 --merge --match-head-commit <headRefOid>`로 병합해 `merge.md` "출시 PR"의 병합 뒤 일을 한다.
