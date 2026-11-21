@@ -1,7 +1,7 @@
 #!/bin/sh
-# 되돌려 합칠 것이 남았는지 보는 판정 `git diff --quiet dev...main`(종료 0이면 main에만 있는 변경이 없다,
+# main에서 dev로 합칠 것이 남았는지 보는 판정 `git diff --quiet dev...main`(종료 0이면 main에만 있는 변경이 없다,
 # 1이면 있다)이 장면마다 기대한 값을 내는지 임시 저장소로 잰다. 근거로 드는 자리:
-# `.claude/skills/next-session/SKILL.md` 결정표의 첫 줄과 `merge.md`의 "되돌려 합치기".
+# `.claude/skills/next-session/SKILL.md` 결정표의 첫 줄과 `merge.md`의 "운영에서 개발로 합치기".
 #
 # 장면마다 두 가지를 단언한다. (1) 그 장면이 실제로 났다는 표지(마지막 커밋 제목이나 병합 커밋의
 # 부모 수). (2) 판정의 종료 코드. 표지가 틀린 회차는 측정이 아니라고 세고 종료 코드를 1로 둔다.
@@ -65,7 +65,7 @@ scene "핫픽스가 main에만 있다" 1 "hotfix" "$(git log -1 --format=%s main
 
 git checkout -q dev
 git merge -q --no-ff main -m "backmerge"
-scene "되돌려 합친 뒤" 0 "2" "$(git rev-list --parents -1 dev | wc -w | tr -d ' ' | awk '{print $1-1}')"
+scene "main을 dev에 합친 뒤" 0 "2" "$(git rev-list --parents -1 dev | wc -w | tr -d ' ' | awk '{print $1-1}')"
 
 git checkout -q main
 git merge -q --no-ff dev -m "release 2"

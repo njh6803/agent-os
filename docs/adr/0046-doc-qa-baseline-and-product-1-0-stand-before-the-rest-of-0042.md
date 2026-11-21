@@ -40,7 +40,7 @@ skill-plugin이 2026-11-05에 닫혀 ADR 0042의 열일곱 가운데 첫 행 app
 | release-image | 판마다의 이미지, 단독 compose와 배포 안내 |
 | answer-eval | 트레이스를 읽어 검색 적중, 출처 적중, 사람 판정을 합친 보고서와 모델 비교 |
 | ops-backup-upgrade | agent-os 데이터의 백업, 복원, 판 올림 |
-| diag-bundle | 비밀과 최종 사용자 글을 기본으로 싣지 않는 진단 묶음 |
+| diag-bundle | 비밀과 최종 사용자 글을 기본으로 싣지 않는 진단 묶음 (바뀜: 이력 2026-11-20 "diag-bundle이 connection-check로 바뀌고 진단 묶음 대신 관리 화면의 접속 확인이 선다") |
 | deploy-package | 참조 배포: 문서 검색 서버와 함께 띄우는 compose, 밖으로 여는 포트 하나, 관리 명령 |
 | pilot-release | 판 0.1.0, 릴리스 노트, 지원 범위 문서 |
 
@@ -232,3 +232,21 @@ portal-admin의 설계 인터뷰(ADR 0064, 일지 2026-11-15-1312)에서 사용�
 - **계약.** 네 행 모두 Agent OS의 계약(`sdk`, `openapi.json`, 사이트 파일의 형식, 사이트 토큰의 주장)을 바꾸지 않는다. 위젯 관리 서버의 계약 파일은 Agent OS의 것과 따로 서고 widget-admin-server가 세운다(ADR 0064 결정 "위젯 관리 서버"). 위 2026-11-14 이력이 이 인터뷰에 넘긴 스택의 결정(데이터베이스)은 ADR 0064가 썼다.
 - **성공 조건의 포트 문장.** 위젯 관리 화면이 관리 화면과 같은 이름의 다른 포트에 서므로(ADR 0064 결정 "주소") PRD의 "(밖으로 여는 포트는 방문자용 하나와, 로그인으로 지키는 관리 화면용 하나다)"는 "(밖으로 여는 포트는 방문자용 하나와, 로그인으로 지키는 관리 화면용 하나와 위젯 관리 화면용 하나다)"가 된다. PRD의 그 문장을 같은 PR에서 사용자 승인으로 고쳤다.
 - **단일 인스턴스와 JSONL.** 위 "PostgreSQL이 기준선의 postgres-foundation부터 든다" 이력이 적은 "`serve` 한 프로세스와 PostgreSQL"은 Agent OS의 프로세스를 센 것이라 그대로다. 위젯 관리 서버와 위젯 쪽의 데이터베이스는 위젯 쪽의 것이고 그 셈에 들지 않는다.
+
+### 2026-11-17 용어집의 이름을 쉬운 말로 바꿨다
+
+사용자가 용어집(`CONTEXT.md`)의 낯선 이름을 사람이 흔히 쓰는 말로 바꾸기로 했다(harness 티켓 `.scratch/harness/issues/plain-words-in-written-artifacts.md`, 일지 2026-11-17-2031). 이 ADR의 본문은 글자를 고치지 않으므로 옛 이름이 그대로 있다. 본문의 "값 기반 마스킹"은 "비밀 값 가리기"로, "참조 배포"는 "통합 배포"로, "참조 클라이언트"는 "본보기 앱"으로 읽는다. 결정은 바뀌지 않고 코드의 이름도 그대로다.
+
+### 2026-11-20 diag-bundle이 connection-check로 바뀌고 진단 묶음 대신 관리 화면의 접속 확인이 선다
+
+diag-bundle의 설계 인터뷰(ADR 0067, 일지 2026-11-20-1928)에서 사용자가 파일로 묶는 진단 명령을 접고, 관리 화면의 플러그인 화면에 접속 확인을 두기로 했다. 기능의 이름에는 "이름도 바꾼다"와 "connection-check (Recommended)"를 골랐다. 기준선의 기한(2027-03-05)은 그 인터뷰에서 다루지 않았고 바꾸지 않는다. 기준선의 기능 수는 그대로다.
+
+- **기준선 표.** 본문 "agent-os의 기준선" 표의 diag-bundle 행이 다음 한 줄로 바뀐다.
+
+  | 기능 | 한 줄 |
+  |---|---|
+  | connection-check | 관리 화면의 플러그인 화면에서 켜 둔 MCP 서버와 모델의 접속 확인 결과를 보이고, 배포 안내에 문제 해결 절을 둔다 |
+
+- **`.scratch/plan.md`의 Blocked by.** connection-check가 기다리는 행(release-image, mcp-http)은 그대로다. deploy-package가 기다리는 행의 이름은 diag-bundle에서 connection-check로 바뀐다. 그 행이 함께 기다리는 `rag-engine:diag-bundle`은 문서 검색 서버 저장소의 이름이라 그대로다.
+- **통합 배포의 관리 명령.** 본문 표의 deploy-package 행이 적은 "관리 명령"은 그대로다. 그 관리 명령에 진단 항목을 둘지와 문서 검색 서버 쪽 진단을 어떻게 내줄지는 그 행의 설계가 정한다(ADR 0067 결정 "다른 계획에 넘기는 것").
+- **계약.** connection-check는 `openapi.json`에 관리 경로를 더하고 sdk는 바꾸지 않는다(ADR 0067 Consequences "계약 변경이 첫 티켓이다").

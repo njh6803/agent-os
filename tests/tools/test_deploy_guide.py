@@ -15,6 +15,7 @@ import tarfile
 import tomllib
 from pathlib import Path
 
+import pytest
 from tools.release import build_bundle
 
 REPO = Path(__file__).resolve().parents[2]
@@ -64,6 +65,15 @@ REQUIRED: dict[str, str] = {
     "AGENT_OS_VERSION": "끝자리만 오른 판은 한 줄만 바꾼다는 것",
     "새 이미지의 예시 플러그인으로 갱신되지 않고": "플러그인 볼륨은 처음 붙을 때만 채워진다는 것",
     "calc": "틀의 에이전트를 운영자의 에이전트로 바꿀 것",
+    "docker compose ps -a": "migrate 는 끝난 뒤 ps -a 에 Exited (0) 으로 남는다는 것",
+    "docker compose logs migrate": "migrate 가 멈춘 까닭을 보는 명령",
+    "docker volume rm agent-os_database": "처음 띄우기가 끊긴 배치의 데이터베이스 볼륨 지우기",
+    "AGENT_OS_DATABASE_PASSWORD=unused": "인터넷이 되는 PC 의 두 명령에만 붙이는 값",
+    "agent-os-postgres:local": "PostgreSQL 이미지를 태그로 옮기는 것",
+    "이 판보다 새롭습니다": "표를 바꾼 판에서 앞의 판으로 되돌리면 migrate 가 멈춘다는 것",
+    "unset AGENT_OS_DATABASE_PASSWORD COMPOSE_ENV_FILES": "비밀번호 바꾸기의 첫 줄",
+    "\\password agent_os\"' &&": "비밀번호 바꾸기가 평문을 문장에 싣지 않는 셋째 줄",
+    "ALTER ROLE": "비밀번호를 문장에 넣어 바꾸면 거절된 문장이 평문째 로그에 남는다는 것",
 }
 
 # 운영자는 쓰지 않는 저장소 안의 말. 안내에 새면 운영자가 뜻을 알 수 없다.
@@ -95,12 +105,49 @@ def compose의_user(compose: str, service: str) -> str:
 
     값 뒤의 `# 주석`은 값에 넣지 않는다.
     """
-    block = re.search(rf"^  {service}:\n((?:    .*\n|\n)+)", compose, flags=re.MULTILINE)
-    assert block is not None, f"compose 에 서비스 {service} 가 없다"
     user = re.search(
-        r'^    user:\s*"?([^"\n#]+?)"?\s*(?:#.*)?$', block.group(1), flags=re.MULTILINE
+        r'^    user:\s*"?([^"\n#]+?)"?\s*(?:#.*)?$',
+        compose의_서비스(compose, service),
+        flags=re.MULTILINE,
     )
     return "" if user is None else user.group(1)
+
+
+def compose의_서비스(compose: str, service: str) -> str:
+    """compose 파일에서 서비스 하나의 본문(네 칸 들인 줄들). 없으면 던진다."""
+    block = re.search(rf"^  {service}:\n((?:    .*\n|\n)+)", compose, flags=re.MULTILINE)
+    assert block is not None, f"compose 에 서비스 {service} 가 없다"
+    return block.group(1)
+
+
+# 배포 안내 7절이 적는 PostgreSQL 의 전제와 그 컨테이너의 권한 넷(명세 postgres-foundation "저장소
+# 상태 시험"의 셋째). 줄마다 그 줄이 빠지거나 바뀌면 무엇이 깨지는지 적는다.
+POSTGRES_LINES: dict[str, str] = {
+    'user: "999:999"': "데이터 폴더의 소유와 어긋난다(안내 7절)",
+    "read_only: true": "루트 파일시스템에 쓰지 못한다",
+    "cap_drop: [ALL]": "첫 프로세스의 권한 집합이 빈다",
+    'security_opt: ["no-new-privileges:true"]': "권한을 다시 얻지 못한다",
+    "init: true": "첫 프로세스가 멈춤 신호를 넘기고 끝난 자식을 거둔다",
+}
+
+
+def postgres의_문제(compose: str) -> list[str]:
+    """compose 의 `postgres` 서비스가 안내의 전제와 권한 넷을 어긴 까닭들. 비어 있으면 맞다.
+
+    `ports` 가 있으면 데이터베이스가 비밀번호 하나로 서버 밖에 열린다(안내 7절). 줄은 앞뒤 공백을
+    뗀 글자 그대로 견주고(들여쓰기 깊이는 보지 않아 서비스 최상위에 있는지는 가리지 못한다), 값
+    뒤의 `# 주석` 은 떼고 본다.
+    """
+    block = compose의_서비스(compose, "postgres")
+    lines = {line.split(" #", 1)[0].strip() for line in block.splitlines()}
+    problems = [
+        f"postgres 에 `{line}` 이 없다: {why}"
+        for line, why in POSTGRES_LINES.items()
+        if line not in lines
+    ]
+    if re.search(r"^    ports:", block, flags=re.MULTILINE):
+        problems.append("postgres 에 ports 가 있다: 데이터베이스가 서버 밖에 열린다(안내 7절)")
+    return problems
 
 
 def dockerfile의_앱_gid(dockerfile: str) -> str:
@@ -193,10 +240,51 @@ def test_compose가_우리_이미지에_user를_더하지_않는다는_안내의
     compose = (STANDALONE / "compose.yaml").read_text(encoding="utf-8")
     added = [
         service
-        for service in ("serve", "admin", "widget", "portal")
+        for service in ("serve", "migrate", "admin", "widget", "portal")
         if compose의_user(compose, service)
     ]
     assert added == [], f"compose 가 user 를 더한 서비스: {added}"
+
+
+def test_이_저장소의_compose는_PostgreSQL을_밖에_열지_않고_좁힌_권한으로_띄운다() -> None:
+    compose = (STANDALONE / "compose.yaml").read_text(encoding="utf-8")
+    assert postgres의_문제(compose) == []
+    assert compose의_user(compose, "postgres") == "999:999"
+
+
+def _postgres를_고친(old: str, new: str) -> str:
+    """이 저장소의 compose 에서 `postgres` 서비스 본문 안의 `old` 한 곳만 `new` 로 바꾼 글.
+
+    프록시도 같은 권한 줄(`init: true` 등)을 가지므로 파일 전체에서 바꾸면 프록시의 줄이 바뀐다.
+    """
+    compose = (STANDALONE / "compose.yaml").read_text(encoding="utf-8")
+    block = compose의_서비스(compose, "postgres")
+    assert old in block, f"postgres 에 없는 줄: {old}"
+    return compose.replace(block, block.replace(old, new, 1), 1)
+
+
+@pytest.mark.parametrize("line", list(POSTGRES_LINES))
+def test_PostgreSQL의_전제나_권한_한_줄이_빠진_compose를_잡는다(line: str) -> None:
+    problems = postgres의_문제(_postgres를_고친(f"    {line}\n", ""))
+    assert len(problems) == 1
+    assert problems[0].startswith(f"postgres 에 `{line}` 이 없다: ")
+
+
+def test_PostgreSQL의_user가_바뀐_compose를_잡는다() -> None:
+    changed = _postgres를_고친('    user: "999:999"', '    user: "70:70"')
+    assert postgres의_문제(changed) == [
+        'postgres 에 `user: "999:999"` 이 없다: 데이터 폴더의 소유와 어긋난다(안내 7절)'
+    ]
+
+
+def test_PostgreSQL에_포트를_발행한_compose를_잡는다() -> None:
+    compose = (STANDALONE / "compose.yaml").read_text(encoding="utf-8")
+    published = compose.replace(
+        "  postgres:\n", '  postgres:\n    ports:\n      - "127.0.0.1:5432:5432"\n', 1
+    )
+    assert postgres의_문제(published) == [
+        "postgres 에 ports 가 있다: 데이터베이스가 서버 밖에 열린다(안내 7절)"
+    ]
 
 
 def test_사이트_파일을_고친_뒤_다시_띄우라는_서비스는_compose에_있고_사이트_파일을_읽는다() -> None:

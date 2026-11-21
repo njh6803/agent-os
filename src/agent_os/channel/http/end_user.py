@@ -28,25 +28,25 @@
 않는 컴포넌트로 계약에 남긴다. 후처리로 지우지 않는다(ADR 0014 의 2026-09-24 이력이 같은 종류의
 후처리를 거부했다).
 
-**시작·결정·이어 가기의 응답은 등록부의 받는 쪽 하나다.** 처음부터(결정은 결정 항목부터) 받는
+**시작·결정·이어 가기의 응답은 실행 중 목록의 받는 쪽 하나다.** 처음부터(결정은 결정 항목부터) 받는
 구독과 같은 프레임이고, 응답은 첫 이벤트를 받은 뒤에 시작한다(`router` 모듈 독스트링). 이어 가기의
 첫 항목은 새 실행의 시작 항목이다.
 
 **상한은 이 면에만 걸린다**(`limits` 모듈, ADR 0023). 검사의 자리는 인증과 본문 검증 뒤, core
 앞이다. 시작과 이어 가기는 요청 글자 수(422) → 동시 실행과 시간당 실행(429) 순이고, 결정은 동시
-실행과 시간당 실행(429), 구독은 구독 수(429)다. 시작·결정·이어 가기의 칸은 등록부가 차지하고
+실행과 시간당 실행(429), 구독은 구독 수(429)다. 시작·결정·이어 가기의 칸은 실행 중 목록이 차지하고
 돌려준다(`Runs.start`).
 구독 수는 구독의 의존성이 들어올 때 세고, 응답이 끝난 뒤 FastAPI 가 요청 단위로 그 의존성을 닫을 때
 줄인다. 응답의 제너레이터에 맡기지 않는 이유는 `subscription` 의 독스트링이다.
 
 **구독의 첫 걸음은 한 걸음이다.** core 의 자기 실행 읽기(`read_own_run`) → `Last-Event-ID` 의 범위 →
-등록부 보기(도는 실행이면 실황에 붙는다) 사이에 await 가 없다. 그 사이에 실행이 이벤트를 내 빠지거나
-두 번 나가지 않는다. 그 뒤 트레이스에서 `Last-Event-ID` 다음 인덱스부터 투영해 보내고 네 갈래로
-간다. 마지막 이벤트가 끝남·실패면 닫는다. 일시정지면 그 항목까지 보내고 닫는다. 등록부에 있으면
-실황에서 오는 것을 결말까지 보낸다. 등록부에 없고 결말도 없으면(서버가 다시 떠 사라진 실행) 끝내지
-못함 항목으로 닫고 그 `id` 는 마지막 이벤트의 인덱스 + 1 이다. **트레이스의 결말이 등록부 보기보다
-우선한다** — 마지막 이벤트를 쓴 실행이 도구 연결을 닫는 동안 등록부에 남는 창이 있다. 결정의 자리가
-오래됐는지는 보지 않는다. 구독은 읽기다.
+실행 중 목록 보기(도는 실행이면 실시간 전달에 붙는다) 사이에 await 가 없다. 그 사이에 실행이
+이벤트를 내 빠지거나 두 번 나가지 않는다. 그 뒤 트레이스에서 `Last-Event-ID` 다음 인덱스부터 투영해
+보내고 네 갈래로 간다. 마지막 이벤트가 끝남·실패면 닫는다. 일시정지면 그 항목까지 보내고 닫는다.
+실행 중 목록에 있으면 실시간 전달에서 오는 것을 결말까지 보낸다. 실행 중 목록에 없고 결말도
+없으면(서버가 다시 떠 사라진 실행) 끝내지 못함 항목으로 닫고 그 `id` 는 마지막 이벤트의 인덱스 + 1
+이다. **트레이스의 결말이 실행 중 목록 보기보다 우선한다** — 마지막 이벤트를 쓴 실행이 도구 연결을
+닫는 동안 실행 중 목록에 남는 창이 있다. 결정의 자리가 오래됐는지는 보지 않는다. 구독은 읽기다.
 """
 
 # `from __future__ import annotations` 를 두지 않는다. 이유는 `router` 모듈의 같은 주석이다.
@@ -117,7 +117,7 @@ def end_user_router(
     clock: Clock,
     run_timeout_seconds: float | None,
 ) -> APIRouter:
-    """최종 사용자 면의 라우터. 운영자 채널과 같은 `Runs` 를 받아 등록부 하나를 나눠 쓴다.
+    """최종 사용자 면의 라우터. 운영자 채널과 같은 `Runs` 를 받아 실행 중 목록 하나를 나눠 쓴다.
 
     구독 수의 셈은 이 라우터가 든다 — 앱 하나에 하나다.
     """
@@ -131,8 +131,8 @@ def end_user_router(
         에이전트가 그 사이트의 열 에이전트 목록 안인지도, 앞 실행이 있는지·누구의 것인지·끝났는지도
         먼저 보지 않는다. core 의 `run()` 이 판정하고(이어 가기는 앞 실행 → 고리 → 준비) 표가 옮긴다
         — 목록 밖이면 core 가 없는 에이전트와 같은 `Absent` 를 던지고 매니페스트를 읽지 않는다.
-        상한은 그보다 먼저다 — 요청 글자 수를 여기서 보고, 동시 실행과 시간당 실행은 등록부가 실행을
-        받으며 본다. 그래서 남의 앞 실행에 보낸 이어 가기도 404 보다 429 가 먼저다.
+        상한은 그보다 먼저다 — 요청 글자 수를 여기서 보고, 동시 실행과 시간당 실행은 실행 중 목록이
+        실행을 받으며 본다. 그래서 남의 앞 실행에 보낸 이어 가기도 404 보다 429 가 먼저다.
         """
         user = _signed_in(request)
         check_request_chars(body.request, user.site)
@@ -233,7 +233,8 @@ def end_user_router(
             yield frame
 
     def first_step(user: EndUser, run_id: RunId, last_event_id: str | None) -> _Subscription:
-        """구독의 첫 걸음. 자기 실행 읽기와 범위 확인과 등록부 보기가 await 없이 한 걸음이다."""
+        """구독의 첫 걸음. 자기 실행 읽기와 범위 확인과 실행 중 목록 보기가 await 없이 한
+        걸음이다."""
         own = read_own_run(trace, run_id, user.principal, user.site.agents)
         events = own.events
         start = 0 if last_event_id is None else int(last_event_id) + 1
@@ -251,7 +252,7 @@ def end_user_router(
         request: Request,
         last_event_id: Annotated[str | None, Header(pattern=LAST_EVENT_ID_PATTERN)] = None,
     ) -> AsyncIterator[_Subscription]:
-        """구독 수를 세고 첫 걸음을 딛는다. 응답이 끝나면 붙은 실황을 닫고 구독 수를 줄인다.
+        """구독 수를 세고 첫 걸음을 딛는다. 응답이 끝나면 붙은 실시간 전달을 닫고 구독 수를 줄인다.
 
         동기 함수로 두지 않는다 — FastAPI 가 동기 의존성을 워커 스레드에서 돌려 첫 걸음이 이벤트
         루프 밖으로 나가고, 그 사이에 실행이 이벤트를 내면 빠지거나 두 번 나간다.
@@ -328,14 +329,15 @@ def end_user_router(
 
 @dataclass(frozen=True)
 class _Subscription:
-    """구독 하나가 보낼 것. 읽은 트레이스의 이벤트, 보낼 첫 인덱스, 도는 실행이면 붙은 실황."""
+    """구독 하나가 보낼 것. 읽은 트레이스의 이벤트, 보낼 첫 인덱스, 도는 실행이면 붙은 실시간
+    전달."""
 
     events: tuple[Event, ...]
     start: int
     live: MemoryObjectReceiveStream[Indexed] | None
 
     async def frames(self) -> AsyncIterator[ServerSentEvent]:
-        """네 갈래(모듈 독스트링). 붙은 실황을 닫는 것은 구독의 의존성이다(`close`)."""
+        """네 갈래(모듈 독스트링). 붙은 실시간 전달을 닫는 것은 구독의 의존성이다(`close`)."""
         for index in range(self.start, len(self.events)):
             frame = _frame(index, self.events[index])
             if frame is not None:
@@ -349,7 +351,7 @@ class _Subscription:
             yield frame
 
     def close(self) -> None:
-        """붙은 실황을 닫는다(명령). 실행이 그 흐름에 더 넣지 않는다. 두 번 불러도 같다."""
+        """붙은 실시간 전달을 닫는다(명령). 실행이 그 흐름에 더 넣지 않는다. 두 번 불러도 같다."""
         if self.live is not None:
             self.live.close()
 
@@ -370,7 +372,8 @@ def _frame(index: int, event: Event) -> ServerSentEvent | None:
 
 
 async def _framed(items: AsyncIterable[Indexed]) -> AsyncIterator[ServerSentEvent]:
-    """등록부의 받는 쪽이 받은 이벤트를 투영한 프레임들. 실행을 일으킨 응답과 구독의 실황이 쓴다."""
+    """실행 중 목록의 받는 쪽이 받은 이벤트를 투영한 프레임들. 실행을 일으킨 응답과 구독의 실시간
+    전달이 쓴다."""
     async for item in items:
         frame = _frame(item.index, item.event)
         if frame is not None:

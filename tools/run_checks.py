@@ -40,6 +40,14 @@ pytest 작업 프로세스 여덟이 일을 받지 못한 채 약 11시간 남�
 이끌어 터미널의 Ctrl-C 를 받지 못하기 때문이다. 한 검사가 실패해도 지금은 나머지를 끝까지 기다린다.
 곧바로 멈출지는 아직 정하지 않았다(대기열 192).
 
+테스트 컨테이너. 데이터베이스 시험(`tests/database.py`)은 테스트 컨테이너(`compose.test.yaml`)가
+있어야 돈다. 그래서 `main` 은 검사를 띄우기 전에 `prepare_test_database` 로 컨테이너를 한 번 본다.
+`AGENT_OS_TEST_DATABASE_URL` 이 있으면 사람이 다른 데이터베이스를 가리킨 것이라 보지 않고, 기본
+주소가 답하면 그대로 가며, 답하지 않으면 `docker compose up -d --wait` 를 쳐서 띄운다. 컨테이너는
+내리지 않는다. 다른 세션이 쓰고 있을 수 있어서다. 띄우기가 실패해도 러너는 멈추지 않고 까닭 한
+줄을 찍은 뒤 pytest 를 띄운다. 그 뒤의 판정은 pytest 의 setup 오류가 한다(ADR 0066, 명세
+postgres-foundation "러너가 테스트 컨테이너를 띄우는 길"). `SKIP=pytest` 면 보지 않는다.
+
 못 보는 것: 제한 안에서 멈춘 검사는 제한까지 러너를 붙잡는다. 시간 제한과 Ctrl-C 의 테스트가
 윈도우의 `taskkill /T` 길은 이 PC 에서 재고, POSIX 의 프로세스 그룹 길은 CI 의 Linux 에서 잰다.
 그룹을 떠난 손자(제 세션을 새로 연 것)는 POSIX 에서 끝내지 못한다. CPU 가
@@ -53,6 +61,7 @@ pytest 작업 프로세스 여덟이 일을 받지 못한 채 약 11시간 남�
 
 from __future__ import annotations
 
+import asyncio
 import contextlib
 import os
 import shutil
@@ -61,11 +70,21 @@ import subprocess
 import sys
 import threading
 import time
-from collections.abc import Mapping, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from concurrent.futures import Future, ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
 from pathlib import Path
 from typing import BinaryIO
+
+if __package__ in (None, ""):  # 스크립트로 부르면 저장소 루트가 import 경로에 없다
+    sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
+from tools.database_for_tests import (  # noqa: E402
+    UP_COMMAND,
+    URL_ENV,
+    resolve_address,
+    server_problem,
+)
 
 ROOT = Path(__file__).resolve().parents[1]
 _NAME_WIDTH = 40
@@ -74,6 +93,10 @@ _NAME_WIDTH = 40
 CHECK_TIMEOUT_SECONDS = 4200
 _KILL_SECONDS = 30  # 윈도우의 `taskkill` 을 기다리는 시간
 _DRAIN_SECONDS = 10  # 끝낸 뒤 남은 출력을 기다리는 시간
+# 테스트 컨테이너를 띄우는 명령. `--wait-timeout` 은 상태 확인을 기다리는 시간만 막고 이미지를 받는
+# 시간은 막지 않아, 호출에도 제한을 따로 둔다(명세 postgres-foundation).
+COMPOSE_UP = tuple("docker compose -f compose.test.yaml up -d --wait --wait-timeout 60".split())
+COMPOSE_UP_SECONDS = 180
 
 
 @dataclass(frozen=True)
@@ -256,6 +279,74 @@ def _wait(check: Check, process: subprocess.Popen[bytes], start: float) -> Outco
     )
 
 
+@dataclass(frozen=True)
+class UpResult:
+    """`docker compose up` 한 번의 결과. 종료 코드가 없으면 치지 못했거나 제한 시간을 넘긴
+    것이다."""
+
+    exit_code: int | None
+    failure: str = ""
+
+
+def prepare_test_database(
+    environ: Mapping[str, str],
+    *,
+    answers: Callable[[], bool],
+    bring_up: Callable[[], UpResult],
+) -> str | None:
+    """pytest 를 띄우기 전에 테스트 컨테이너를 챙기고, 찍을 한 줄을 돌려준다. 찍을 것이 없으면
+    `None`.
+
+    환경 변수가 있으면 보지도 않고, 기본 주소가 답하면 띄우지 않는다. 답하지 않을 때만 띄우고,
+    0 이 아닌 종료는 한 번 더 친다(두 세션이 동시에 띄우면 진 쪽이 이름이 겹쳐 1 로 끝난다). 제한
+    시간을 넘겼거나 치지 못한 것은 다시 치지 않는다. 실패해도 예외 없이 까닭 한 줄을 돌려주어,
+    러너가 pytest 를 그대로 띄우게 한다. Docker 도 접속도 부르지 않는 순수한 판정이다.
+    """
+    if environ.get(URL_ENV, "").strip():
+        return None
+    if answers():
+        return None
+    result = bring_up()
+    if result.exit_code not in (0, None):
+        result = bring_up()
+    if result.exit_code == 0:
+        return "테스트 컨테이너를 띄웠습니다."
+    return (
+        f"테스트 컨테이너를 띄우지 못했습니다({result.failure}). pytest 는 그대로 띄웁니다."
+        f" 직접 띄우려면: {UP_COMMAND}"
+    )
+
+
+def database_answers() -> bool:
+    """기본 주소의 테스트 데이터베이스가 질의 하나에 답하는가. 시험의 픽스처와 같은 확인이다."""
+    return asyncio.run(server_problem(resolve_address({}))) is None
+
+
+def docker_up() -> UpResult:
+    """테스트 컨테이너를 띄우는 명령을 한 번 친다. 출력은 쓰지 않아 버린다(손자 프로세스가 파이프를
+    쥐고 제한 시간 뒤에도 돌아오지 않는 것을 막으려는 것이다, `.claude/rules/tools.md`)."""
+    docker = shutil.which(COMPOSE_UP[0])
+    if docker is None:
+        return UpResult(None, "docker 를 찾지 못했습니다")
+    try:
+        completed = subprocess.run(
+            [docker, *COMPOSE_UP[1:]],
+            cwd=ROOT,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            check=False,
+            timeout=COMPOSE_UP_SECONDS,
+        )
+    except subprocess.TimeoutExpired:
+        return UpResult(None, f"{COMPOSE_UP_SECONDS}초 안에 끝나지 않았습니다")
+    except OSError as failure:  # 변이 표가 `as error` 한 줄을 찾으므로 이름을 달리한다
+        return UpResult(None, f"docker 를 띄우지 못했습니다: {type(failure).__name__}")
+    if completed.returncode == 0:
+        return UpResult(0)
+    code = completed.returncode
+    return UpResult(code, f"docker compose 가 종료 코드 {code} 로 끝났습니다")
+
+
 def status_line(check_id: str, status: str) -> bytes:
     return f"{check_id:.<{_NAME_WIDTH}}{status}\n".encode()
 
@@ -304,6 +395,11 @@ def run(checks: Sequence[Check], environ: Mapping[str, str], cwd: Path, out: Bin
 
 
 def main() -> int:
+    if "pytest" not in skipped_ids(os.environ):
+        line = prepare_test_database(os.environ, answers=database_answers, bring_up=docker_up)
+        if line is not None:
+            sys.stdout.write(f"{line}\n")
+            sys.stdout.flush()
     return run(CHECKS, os.environ, ROOT, sys.stdout.buffer)
 
 

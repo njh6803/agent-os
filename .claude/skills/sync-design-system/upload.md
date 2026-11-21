@@ -6,7 +6,7 @@
 
 올리기는 그 입력을 바꾼 PR이 기준 브랜치에 병합된 뒤, `origin/<기준 브랜치>`를 분리 HEAD로 체크아웃한 깨끗한 작업 트리에서 한다(티켓 PR은 dev로 병합되므로 `origin/dev`가 있으면 dev다. 규칙은 `docs/constitution/operations.md` 브랜치와 병합). 병합 전에 올리면 squash로 사라질 브랜치 커밋이 남고, 옛 HEAD로 올리면 그사이 병합된 변경이 빠진다.
 
-- 주 체크아웃이면 `EnterWorktree`로 새 워크트리에 들어가 [SKILL.md](SKILL.md) "명령과 작업 폴더"의 설치를 친 뒤 거기서 한다. 주 체크아웃의 루트 브랜치를 옮기지 않는다.
+- 주 체크아웃이면 `EnterWorktree`로 새 워크트리에 들어가 [SKILL.md](SKILL.md) "명령과 작업 폴더"의 설치를 친 뒤 거기서 한다. 주 체크아웃이 따르는 브랜치를 옮기지 않는다.
 - 워크트리면 `git status --porcelain`이 비었을 때만 한다. 비지 않았으면 멈추고 바뀐 파일을 사람에게 알린다. 지금 브랜치 이름(`git branch --show-current`)을 `<작업 폴더>/return-branch.txt`에 적고 `git fetch origin` 뒤 `git switch --no-overwrite-ignore --detach origin/<기준 브랜치>`. 이미 분리 HEAD이고 그 파일이 있으면(같은 올리기를 압축이나 멈춤 뒤에 1부터 다시 한다) 덮어쓰지 않는다. 분리 HEAD의 브랜치 이름은 비어, 덮어쓰면 돌아갈 브랜치를 잃는다.
 
 **돌아가기.** 올리기가 어디서 끝나든 다른 일을 하기 전에 이 자리로 돌아간다. 워크트리면 `return-branch.txt`의 브랜치로 `git switch`하고, 새로 든 워크트리면 `ExitWorktree`(`action: "keep"`)로 나온다. 2의 결정이 "먼저 들인다"·`wait`·`stop`으로 나갈 때, 4의 짓기가 실패할 때, 5에서 보낼 것이 없을 때, 6이 거부로 멈출 때, 다 보낸 뒤가 모두 그렇다. 5에서 보낼 것이 없을 때와 다 보낸 뒤에는 6의 6의 "목록 갱신과 돌아가기"가 돌아가기 전에 할 일을 정한다. 분리 HEAD에 남은 채 "먼저 들인다"의 지시문을 내거나 화면 작업을 이으면, [SKILL.md](SKILL.md)의 "먼저 들인다"가 바꾸지 않는다고 한 브랜치를 잃는다.
@@ -67,7 +67,7 @@
    - **카드.** `clean`이고 보낸 파일에 `project/components/` 아래 경로나 `project/_ds_bundle.*`가 들었으면, 앱 안 브라우저로 아티팩트의 Components 절을 한 번 열어 카드가 모두 그려지고 칸 아래가 잘리지 않았는지 본다. 페이지는 React 18.3.1을 싣고 패키지는 React 19로 짓고 시험하므로, React 19에만 있는 API를 쓴 컴포넌트도 여기서 깨진 카드로 드러난다. 카드 칸의 높이는 그려진 장면을 따르는데, 늦게 자라는 내용은 칸 아래가 잘릴 수 있다.
    - **옛 별칭.** 계획의 `firstCanonical`이 true였으면 파일 목록(`list`의 `scope: "files"`)을 다시 받아 옛 별칭이 남지 않았는지 본다.
    - 깨진 카드나 남은 옛 별칭을 보면 되돌리지 않고 사람에게 알리며, 고칠 일을 그 동작을 만든 기능 디렉터리의 다음 두 자리 번호 티켓으로 써서(`docs/agents/issue-tracker.md`의 기능 밖 제품 고침) 아래 "목록 갱신과 돌아가기"가 고르는 브랜치에 싣는다.
-   - **목록 갱신과 돌아가기.** `<작업 폴더>/output-paths.json`(4의 `--paths`가 쓴 목록)이 `web/tools/sync-design-system/previous-output.json`과 다르면 그 파일로 바꿔 커밋한다. 그 파일은 커밋 검사의 면제 모양이 아니라서(`tools/check_ticket.py`) 티켓을 가리키는 브랜치에만 실린다. 싣는 브랜치와 차례는 1의 자리로 가른다. 주 체크아웃의 루트 브랜치는 옮기지 않는다(1).
+   - **목록 갱신과 돌아가기.** `<작업 폴더>/output-paths.json`(4의 `--paths`가 쓴 목록)이 `web/tools/sync-design-system/previous-output.json`과 다르면 그 파일로 바꿔 커밋한다. 그 파일은 커밋 검사의 면제 모양이 아니라서(`tools/check_ticket.py`) 티켓을 가리키는 브랜치에만 실린다. 싣는 브랜치와 차례는 1의 자리로 가른다. 주 체크아웃이 따르는 브랜치는 옮기지 않는다(1).
      - 돌아갈 브랜치(`return-branch.txt`)가 티켓 모양(`feature/<NN>-<slug>`, `chore/<slug>`)이면 1의 "돌아가기"대로 그 브랜치로 돌아간 뒤, 거기서 목록과 위 티켓을 그 브랜치의 일과 함께 커밋한다.
      - 돌아갈 브랜치가 명세 브랜치(`docs/<slug>`)이거나 1에서 새로 든 워크트리였으면, 돌아가기 전에 지금 자리에서 `docs/agents/issue-tracker.md`의 규약대로 harness 티켓을 쓰고 그 stem으로 `git switch -c chore/<slug>`를 친 뒤 목록과 위 티켓을 커밋한다. 그 브랜치는 따로 PR로 병합한다. 그 뒤 1의 "돌아가기"대로 돌아간다.
      - 목록이 같으면 1의 "돌아가기"대로 돌아가고 위 티켓은 돌아간 브랜치에 싣는다. 새로 든 워크트리였으면 `ExitWorktree` 전에 그 티켓만 싣는 `docs/<slug>` 브랜치를 딴다. 기능 디렉터리의 티켓은 커밋 검사의 면제 모양이라(`tools/check_ticket.py`) 그 PR이 지난다.

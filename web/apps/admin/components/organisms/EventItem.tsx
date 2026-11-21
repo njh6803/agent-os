@@ -49,7 +49,7 @@ const FIELD_NAMES = {
   error: "에러",
   cause: "실패 원인",
   summary: "요약 글",
-  last_covered_run: "덮는 끝",
+  last_covered_run: "요약에 든 마지막 실행",
   raw: "원문",
 } as const satisfies Record<EventField, string>;
 
@@ -58,7 +58,7 @@ function isEventField(name: string): name is EventField {
 }
 
 /**
- * 값이 다른 실행의 식별자인 필드. 시작 이벤트의 앞 실행과 요약이 덮는 끝이고, 그 실행의 상세로 가는 링크로 그린다.
+ * 값이 다른 실행의 식별자인 필드. 시작 이벤트의 앞 실행과 요약에 든 마지막 실행이고, 그 실행의 상세로 가는 링크로 그린다.
  * 운영자가 대화를 거슬러 보고 요약을 원문 교환과 대조하는 길이다(conversation 스토리 41·43). 값이 없으면(이어 가지 않은
  * 실행의 `null`) 다른 필드처럼 글자다. 시작 이벤트의 바로가기도 실행 식별자를 들지만 값 하나가 아니라 에이전트마다의
  * 지도라 여기 들지 않고 그리는 갈래가 따로다(`Shortcuts`).

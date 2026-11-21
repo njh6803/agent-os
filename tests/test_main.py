@@ -21,8 +21,8 @@ import subprocess
 import sys
 import time
 import tomllib
-from collections.abc import Callable, Generator, Mapping, Sequence
-from contextlib import contextmanager
+from collections.abc import AsyncGenerator, Callable, Generator, Mapping, Sequence
+from contextlib import asynccontextmanager, contextmanager
 from datetime import UTC, datetime
 from ipaddress import IPv6Address
 from pathlib import Path
@@ -41,20 +41,32 @@ from langchain_core.messages import AIMessage, BaseMessage
 from langchain_core.outputs import ChatResult
 from pydantic import BaseModel, ConfigDict, Field
 from tests.adapters.fake_model_server import FakeModelServer, completion, tool_call
+from tests.fake_database import (
+    CLOSE_PREFIX,
+    STARTUP_PROBLEM,
+    UNEXPECTED_PREFIX,
+    FakeDatabase,
+    LifespanDriver,
+)
 from tests.mcp_http import serving
+from tests.postgres_support import NO_URL, UNREADABLE_URL
 from tests.signing import AUDIENCE, bearer, claims, new_key, sign
+from tools.database_for_tests import ScopedDatabase
 
 from agent_os import main as main_module
 from agent_os.adapters.jsonl import JsonlTrace
 from agent_os.adapters.models import MODEL_ENV
+from agent_os.adapters.postgres.database import DatabaseUrl
 from agent_os.channel.cli.main import DEFAULT_HOST, EXIT_PAUSED
 from agent_os.channel.http.limits import DEFAULT_REQUEST_CHARS, check_request_chars
 from agent_os.core.ports import ChatModel, Trace, UnknownEvent
+from agent_os.http.database import Database
 from agent_os.http.sites import Site, SiteKey, SiteLimits, Sites
 from agent_os.main import (
     ADMIN_TOKEN_ENV,
     CHANNEL_TOKEN_ENV,
     CONTAINER_NETWORK_ENV,
+    DATABASE_URL_ENV,
     IMAGE_MARKER,
     ContainerNetwork,
     binding_problem,
@@ -1270,8 +1282,37 @@ def test_멈춘_실행은_그_프로세스가_끝난_뒤_다른_프로세스가_
     assert types.index("tool_called") > types.index("run_resumed")
 
 
+DATABASE_PASSWORD = "agent_pw"
+DATABASE_URL = f"postgresql://agent_os:{DATABASE_PASSWORD}@127.0.0.1:5432/agent_os"
+
+
+def _use_database(
+    monkeypatch: pytest.MonkeyPatch, fake: FakeDatabase, *, urls: list[str] | None = None
+) -> FakeDatabase:
+    """`serve` 가 어댑터를 짓는 자리(`_build_database`)를 가짜로 갈아 끼우고, 읽을 수 있는 주소를
+    환경에 둔다. 주소는 읽기만 하고 가짜가 어디에도 닿지 않는다. `urls` 를 주면 어댑터를 지으라고
+    넘어온 주소를 비밀번호가 가려진 모습(`repr`)으로 쌓는다."""
+
+    def build(url: DatabaseUrl) -> FakeDatabase:
+        if urls is not None:
+            urls.append(repr(url))
+        return fake
+
+    monkeypatch.setenv(DATABASE_URL_ENV, DATABASE_URL)
+    monkeypatch.setattr(main_module, "_build_database", build)
+    return fake
+
+
 @pytest.fixture
-def uvicorn_calls(monkeypatch: pytest.MonkeyPatch) -> list[dict[str, object]]:
+def fake_database(monkeypatch: pytest.MonkeyPatch) -> FakeDatabase:
+    """문제 없는 가짜 데이터베이스. 데이터베이스가 필요 없는 `serve` 시험은 이것을 깔고 간다."""
+    return _use_database(monkeypatch, FakeDatabase())
+
+
+@pytest.fixture
+def uvicorn_calls(
+    monkeypatch: pytest.MonkeyPatch, fake_database: FakeDatabase
+) -> list[dict[str, object]]:
     """uvicorn 이 무엇을 받았는지 기록한다. 포트는 열리지 않는다.
 
     구성 오류는 서버가 서기 전에 끝나므로 그때 이 목록은 비어 있어야 한다. 검사 순서가 뒤집히면
@@ -1280,6 +1321,9 @@ def uvicorn_calls(monkeypatch: pytest.MonkeyPatch) -> list[dict[str, object]]:
     uvicorn 이 실제로 포트를 여는 것은 기본 스위트가 증명하지 않고 실제 serve 서브프로세스를 띄우는
     시험들이 잰다. 그 목록은 `.claude/rules/http.md` 의 테스트 줄 하나에 둔다.
     여기서 재는 것은 그 앞까지다 — 판정이 막았나 지나갔나, 지나갔다면 무엇을 들려 보냈나.
+
+    `serve` 는 데이터베이스 없이 뜨지 않으므로 이 픽스처가 가짜 데이터베이스(`fake_database`)를 함께
+    깐다. 데이터베이스 주소를 시험하는 사례는 그 픽스처가 심은 환경 변수를 스스로 바꾼다.
     """
     calls: list[dict[str, object]] = []
 
@@ -1618,6 +1662,285 @@ async def test_통과하면_세운_앱이_두_토큰을_제자리에_받는다(
         assert (await client.get("/unrouted", headers=channel)).status_code == 401
         assert (await client.get("/runs/unrouted", headers=channel)).status_code == 404
         assert (await client.get("/runs/unrouted", headers=admin)).status_code == 401
+
+
+# --- serve 와 데이터베이스(명세 postgres-foundation "뜰 때의 확인과 다시 시도", "멈출 때의 글") ---
+
+
+@pytest.mark.usefixtures("tokens", "workspace")
+@pytest.mark.parametrize("value", ["", "   "], ids=["빈 문자열", "공백만"])
+def test_데이터베이스_주소가_비어_있으면_serve_가_서지_않고_이유와_1이다(
+    value: str,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    uvicorn_calls: list[dict[str, object]],
+) -> None:
+    monkeypatch.setenv(DATABASE_URL_ENV, value)
+
+    code = _main(["serve"])
+
+    out, err = capsys.readouterr()
+    assert (code, out, err) == (1, "", NO_URL)
+    assert uvicorn_calls == []
+
+
+@pytest.mark.usefixtures("tokens", "workspace")
+def test_데이터베이스_주소_변수가_없으면_serve_가_서지_않고_이유와_1이다(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    uvicorn_calls: list[dict[str, object]],
+) -> None:
+    monkeypatch.delenv(DATABASE_URL_ENV)
+
+    code = _main(["serve"])
+
+    out, err = capsys.readouterr()
+    assert (code, out, err) == (1, "", NO_URL)
+    assert uvicorn_calls == []
+
+
+@pytest.mark.usefixtures("tokens", "workspace")
+@pytest.mark.parametrize(
+    "value",
+    [
+        "mysql://agent_os:secret@postgres:5432/agent_os",
+        "postgresql://agent_os:secret@leak@postgres:5432/agent_os",
+        "postgresql://agent_os:secret@leak/x@postgres:5432/agent_os",
+        "postgresql://agent_os:secret@postgres:5432/agent_os?database=other",
+    ],
+    ids=["다른_이름", "골뱅이가_둘", "둘째_골뱅이_앞에_슬래시", "질의_문자열"],
+)
+def test_읽지_못하는_데이터베이스_주소는_값을_싣지_않고_1이다(
+    value: str,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    uvicorn_calls: list[dict[str, object]],
+) -> None:
+    monkeypatch.setenv(DATABASE_URL_ENV, value)
+
+    code = _main(["serve"])
+
+    out, err = capsys.readouterr()
+    assert (code, out, err) == (1, "", UNREADABLE_URL)
+    assert "secret" not in err
+    assert "leak" not in err
+    assert uvicorn_calls == []
+
+
+@pytest.mark.usefixtures("tokens", "workspace")
+def test_데이터베이스_주소의_오류도_토큰_오류와_한꺼번에_나온다(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    uvicorn_calls: list[dict[str, object]],
+) -> None:
+    monkeypatch.delenv(ADMIN_TOKEN_ENV)
+    monkeypatch.delenv(DATABASE_URL_ENV)
+
+    code = _main(["serve"])
+
+    _, err = capsys.readouterr()
+    assert code == 1
+    assert ADMIN_TOKEN_ENV in err
+    assert NO_URL in err
+    assert uvicorn_calls == []
+
+
+@pytest.mark.usefixtures("tokens", "workspace")
+def test_serve_는_uvicorn_에_수명을_켜라고_넘긴다(
+    uvicorn_calls: list[dict[str, object]],
+) -> None:
+    """`auto` 는 앱이 수명을 모른다고 보면 경고만 찍고 소켓을 연다. 확인 못 한 서버가 떠 버린다."""
+    _main(["serve"])
+
+    (call,) = uvicorn_calls
+    assert call["lifespan"] == "on"
+
+
+@pytest.mark.usefixtures("tokens", "workspace")
+def test_serve_는_읽은_주소로_어댑터를_짓고_비밀번호는_어디에도_싣지_않는다(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    uvicorn_calls: list[dict[str, object]],
+) -> None:
+    urls: list[str] = []
+    _use_database(monkeypatch, FakeDatabase(), urls=urls)
+    monkeypatch.setenv(DATABASE_URL_ENV, f"  {DATABASE_URL}\n")
+
+    code = _main(["serve"])
+
+    out, err = capsys.readouterr()
+    assert code == 0
+    assert len(uvicorn_calls) == 1
+    assert urls == ["DatabaseUrl(127.0.0.1:5432/agent_os)"]
+    assert DATABASE_PASSWORD not in out + err
+
+
+def _serve_app(uvicorn_calls: list[dict[str, object]]) -> FastAPI:
+    (call,) = uvicorn_calls
+    app = call["app"]
+    assert isinstance(app, FastAPI)
+    return app
+
+
+class _StartupJobs:
+    """앱의 시작 일이 돌았는지 보는 자리. 앱의 수명 함수를 같은 일을 하는 기록자로 감싼다."""
+
+    def __init__(self, app: FastAPI) -> None:
+        self.events: list[str] = []
+        inner = app.router.lifespan_context
+
+        @asynccontextmanager
+        async def recorded(scope_app: FastAPI) -> AsyncGenerator[None]:
+            self.events.append("started")
+            async with inner(scope_app):
+                yield
+            self.events.append("stopped")
+
+        app.router.lifespan_context = recorded
+
+
+@pytest.mark.usefixtures("tokens", "workspace")
+async def test_확인이_글을_돌려주면_앱의_시작_일은_돌지_않고_시작_실패에_그_글이_실린다(
+    monkeypatch: pytest.MonkeyPatch, uvicorn_calls: list[dict[str, object]]
+) -> None:
+    fake = _use_database(monkeypatch, FakeDatabase(problem=STARTUP_PROBLEM))
+    _main(["serve"])
+    app = _serve_app(uvicorn_calls)
+    jobs = _StartupJobs(app)
+    driver = LifespanDriver(app)
+
+    reply = await driver.startup()
+    await driver.finish()
+
+    assert reply == {"type": "lifespan.startup.failed", "message": STARTUP_PROBLEM}
+    assert jobs.events == []
+    assert fake.events == ["startup_problem", "close_started", "close_finished"]
+
+
+@pytest.mark.usefixtures("tokens", "workspace")
+async def test_확인이_글_대신_예외를_던지면_예외의_글을_싣지_않는_글로_시작이_실패한다(
+    monkeypatch: pytest.MonkeyPatch, uvicorn_calls: list[dict[str, object]]
+) -> None:
+    error = RuntimeError(f"비밀번호 {DATABASE_PASSWORD} 가 섞인 글")
+    fake = _use_database(monkeypatch, FakeDatabase(check_error=error))
+    _main(["serve"])
+    app = _serve_app(uvicorn_calls)
+    jobs = _StartupJobs(app)
+    driver = LifespanDriver(app)
+
+    reply = await driver.startup()
+    await driver.finish()
+
+    message = reply["message"]
+    assert reply["type"] == "lifespan.startup.failed"
+    assert message == f"{UNEXPECTED_PREFIX}(RuntimeError)"
+    assert DATABASE_PASSWORD not in message
+    assert jobs.events == []
+    assert fake.events == ["startup_problem", "close_started", "close_finished"]
+
+
+@pytest.mark.usefixtures("tokens", "workspace")
+async def test_확인이_멈춘_뒤_닫기마저_실패해도_시작_실패는_나간다(
+    monkeypatch: pytest.MonkeyPatch, uvicorn_calls: list[dict[str, object]]
+) -> None:
+    broken = FakeDatabase(
+        check_error=RuntimeError(DATABASE_PASSWORD), close_error=OSError(DATABASE_PASSWORD)
+    )
+    fake = _use_database(monkeypatch, broken)
+    _main(["serve"])
+    driver = LifespanDriver(_serve_app(uvicorn_calls))
+
+    reply = await driver.startup()
+    await driver.finish()
+
+    assert reply == {
+        "type": "lifespan.startup.failed",
+        "message": f"{UNEXPECTED_PREFIX}(RuntimeError)",
+    }
+    assert fake.events == ["startup_problem", "close_started"]
+
+
+@pytest.mark.usefixtures("tokens", "workspace")
+async def test_글을_돌려준_뒤_닫기가_실패해도_글이_그대로_실린다(
+    monkeypatch: pytest.MonkeyPatch, uvicorn_calls: list[dict[str, object]]
+) -> None:
+    _use_database(
+        monkeypatch, FakeDatabase(problem=STARTUP_PROBLEM, close_error=OSError(DATABASE_PASSWORD))
+    )
+    _main(["serve"])
+    driver = LifespanDriver(_serve_app(uvicorn_calls))
+
+    reply = await driver.startup()
+    await driver.finish()
+
+    assert reply == {"type": "lifespan.startup.failed", "message": STARTUP_PROBLEM}
+
+
+@pytest.mark.usefixtures("tokens", "workspace")
+async def test_문제가_없으면_앱이_뜨고_health_가_200이고_수명이_닫히면_닫기가_한_번_불린다(
+    uvicorn_calls: list[dict[str, object]], fake_database: FakeDatabase
+) -> None:
+    _main(["serve"])
+    app = _serve_app(uvicorn_calls)
+    jobs = _StartupJobs(app)
+    driver = LifespanDriver(app)
+
+    assert await driver.startup() == {"type": "lifespan.startup.complete"}
+    async with AsyncClient(
+        transport=ASGITransport(app=app), base_url="http://serve.test"
+    ) as client:
+        assert (await client.get("/health")).status_code == 200
+    assert jobs.events == ["started"]
+    assert fake_database.events == ["startup_problem"]
+
+    assert await driver.shutdown() == {"type": "lifespan.shutdown.complete"}
+    await driver.finish()
+
+    assert jobs.events == ["started", "stopped"]
+    assert fake_database.events == ["startup_problem", "close_started", "close_finished"]
+
+
+@pytest.mark.usefixtures("tokens", "workspace")
+async def test_종료_완료는_가짜의_닫기가_끝난_뒤에_나간다(
+    monkeypatch: pytest.MonkeyPatch, uvicorn_calls: list[dict[str, object]]
+) -> None:
+    """uvicorn 은 완료를 받으면 더 기다리지 않는다. 먼저 넘기면 닫는 도중에 프로세스가 끝난다."""
+    release = asyncio.Event()
+    fake = _use_database(monkeypatch, FakeDatabase(hold_close=release))
+    _main(["serve"])
+    driver = LifespanDriver(_serve_app(uvicorn_calls))
+    await driver.startup()
+
+    await driver.request_shutdown()
+
+    assert await driver.silence(0.3)
+    assert fake.events == ["startup_problem", "close_started"]
+    release.set()
+    assert await driver.next_message() == {"type": "lifespan.shutdown.complete"}
+    await driver.finish()
+    assert fake.events[-1] == "close_finished"
+
+
+@pytest.mark.usefixtures("tokens", "workspace")
+async def test_닫다_실패하면_완료_대신_글을_실은_종료_실패가_나간다(
+    monkeypatch: pytest.MonkeyPatch, uvicorn_calls: list[dict[str, object]]
+) -> None:
+    _use_database(monkeypatch, FakeDatabase(close_error=OSError(DATABASE_PASSWORD)))
+    _main(["serve"])
+    driver = LifespanDriver(_serve_app(uvicorn_calls))
+    await driver.startup()
+
+    reply = await driver.shutdown()
+    await driver.finish()
+
+    assert reply == {"type": "lifespan.shutdown.failed", "message": f"{CLOSE_PREFIX}(OSError)"}
+    assert DATABASE_PASSWORD not in reply["message"]
+
+
+def test_포트는_가짜가_시그니처로_만족한다() -> None:
+    """가짜가 포트를 상속하지 않고 만족하는지 pyright 가 이 한 줄에서 본다."""
+    port: Database = FakeDatabase()
+    assert port.unexpected_problem(RuntimeError()) == f"{UNEXPECTED_PREFIX}(RuntimeError)"
 
 
 class _RecordingModels:
@@ -2716,7 +3039,12 @@ STREAM_SECONDS = 120
 
 @contextmanager
 def _serving(
-    root: Path, *, admin_token: str, channel_token: str, extra: Sequence[str] = ()
+    root: Path,
+    *,
+    admin_token: str,
+    channel_token: str,
+    database: ScopedDatabase,
+    extra: Sequence[str] = (),
 ) -> Generator[str]:
     """실제 `serve` 프로세스 하나를 빈 포트에 띄우고 요청을 받을 수 있게 되면 그 주소를 준다.
 
@@ -2728,9 +3056,16 @@ def _serving(
     나갈 때 프로세스를 거두고 로그를 표준 에러로 옮긴다. pytest 는 실패한 테스트의 캡처만 보여
     주므로 서버 쪽 원인이 실패와 함께 보이고 초록에서는 조용하다. 도구 서버도 serve 와 함께
     끝난다 — 모델 호출 도중에 실패시킨 변이에서도 남은 프로세스가 없었다(티켓 05).
+
+    `serve` 는 표의 판이 맞는 데이터베이스에 닿아야 뜬다. 마이그레이션을 올린 시험용 데이터베이스
+    (`database` 픽스처)의 주소를 부모의 환경에 같은 변수가 있어도 이 값으로 덮어 넘긴다.
     """
     log = root / "serve.log"
-    env = _env() | {ADMIN_TOKEN_ENV: admin_token, CHANNEL_TOKEN_ENV: channel_token}
+    env = _env() | {
+        ADMIN_TOKEN_ENV: admin_token,
+        CHANNEL_TOKEN_ENV: channel_token,
+        DATABASE_URL_ENV: database.text(),
+    }
     argv = [sys.executable, "-m", "agent_os.main", "serve", "--port", "0", "--traces", "t"]
     argv += ["--model", MODEL_PLUGIN, *extra]
     with log.open("w", encoding="utf-8") as sink:
@@ -2789,7 +3124,7 @@ def _post_stream(client: Client, url: str, body: Mapping[str, Json]) -> str:
 
 @pytest.mark.llm
 def test_실제_serve_에서_HTTP_로_일으킨_실행이_승인_대상에서_멈추고_HTTP_승인으로_끝까지_간다(
-    tmp_path: Path,
+    tmp_path: Path, database: ScopedDatabase
 ) -> None:
     """바깥 이음매. 가짜로 증명할 수 없는 것만 잰다 — `main.py` 의 조립, uvicorn 이 실제 소켓으로
     SSE 를 흘리는 것, 실제 모델이 채널을 지나는 것, 멈춘 실행이 요청을 건너 트레이스로 재개되는 것.
@@ -2805,7 +3140,9 @@ def test_실제_serve_에서_HTTP_로_일으킨_실행이_승인_대상에서_�
     admin_token, channel_token = secrets.token_urlsafe(), secrets.token_urlsafe()
 
     with (
-        _serving(tmp_path, admin_token=admin_token, channel_token=channel_token) as address,
+        _serving(
+            tmp_path, admin_token=admin_token, channel_token=channel_token, database=database
+        ) as address,
         Client(
             base_url=address,
             headers={"Authorization": f"Bearer {channel_token}"},
@@ -2875,7 +3212,7 @@ ASKER_NAME = "서하늘"
 
 @pytest.mark.llm
 def test_실제_serve_에서_서명한_토큰으로_시작한_실행을_최종_사용자_경로로_이어_가면_앞_대화를_안다(
-    tmp_path: Path,
+    tmp_path: Path, database: ScopedDatabase
 ) -> None:
     """바깥 이음매. 실제 uvicorn 과 사이트 파일과 PyJWT 의 조립을 실제 모델과 함께 원칙 I 의 판정
     (`-m llm`)에서 보는 자리다(end-user-channel 티켓 01). 같은 조립을 모델 없이 지나는 것은 위젯
@@ -2899,6 +3236,7 @@ def test_실제_serve_에서_서명한_토큰으로_시작한_실행을_최종_�
             tmp_path,
             admin_token=admin_token,
             channel_token=channel_token,
+            database=database,
             extra=["--site-file", "sites.toml"],
         ) as address,
         Client(
@@ -3209,11 +3547,11 @@ def test_한도를_작게_적은_calc_의_셋째_이어_가기는_요약을_지�
     """한도는 앞 교환 둘의 글자 수 합보다 1 작게, 둘째 실행이 끝난 뒤 실제 트레이스에서 정한다 —
     모델의 답 길이에 기대지 않기 위해서다(명세 Testing "바깥 이음매"). 앞의 둘은 기본 한도(20,000)로
     돌아 요약이 없고, 셋째만 한도를 넘어 계기가 선다. 첫 요청이 25자라 둘째 교환(11자와 답)은 절반
-    안에 들어 원문 꼬리로 남고 첫 교환만 접힌다(덮는 끝은 첫 실행). 모델이 "5"와 "20"이라 답하면
-    교환은 26과 13, 한도는 38, 절반 19, 목표 10이다. 셋째가 "거기"를 아는 것은 원문 꼬리의 둘째
-    답이다. 명세 문장 그대로 한도 22 로 둘째 교환까지 접었을 때는 목표 6 자의 요약이 "5" 하나라
-    셋째가 -1 을 낸 실행이 있었다(2026-10-05, 일지). 작은 목표의 요약이 무엇을 남기는지는 모델의
-    몫이라 거기에 단언을 걸지 않는다. 트레이스 디렉터리는 앞의 둘과 같다."""
+    안에 들어 원문 꼬리로 남고 첫 교환만 접힌다(요약에 든 마지막 실행은 첫 실행). 모델이 "5"와
+    "20"이라 답하면 교환은 26과 13, 한도는 38, 절반 19, 목표 10이다. 셋째가 "거기"를 아는 것은 원문
+    꼬리의 둘째 답이다. 명세 문장 그대로 한도 22 로 둘째 교환까지 접었을 때는 목표 6 자의 요약이 "5"
+    하나라 셋째가 -1 을 낸 실행이 있었다(2026-10-05, 일지). 작은 목표의 요약이 무엇을 남기는지는
+    모델의 몫이라 거기에 단언을 걸지 않는다. 트레이스 디렉터리는 앞의 둘과 같다."""
     assert "ANTHROPIC_API_KEY" in os.environ, "ANTHROPIC_API_KEY 가 없다. .env 를 확인한다"
     _copy_repo_plugins(tmp_path)
     traces = tmp_path / "t"

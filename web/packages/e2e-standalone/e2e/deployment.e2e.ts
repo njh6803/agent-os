@@ -1,18 +1,32 @@
 // 단독 배포 e2e 의 사례(release-image 티켓 09). 준비(stack.ts)가 실제 이미지 넷과 프록시로 띄운 배치를 실제 브라우저와 HTTP 로
-// 지난다. 배치가 약속한 것(공개 면의 모양, 발행 포트, 컨테이너의 사용자, 재생성 뒤의 길, 네트워크 없는 MCP 실행)을 잠근다.
+// 지난다. 배치가 약속한 것(공개 면의 모양, 발행 포트, 컨테이너의 사용자, 재생성 뒤의 길, 네트워크 없는 MCP 실행, 데이터베이스의
+// 판과 남는 데이터)을 잠근다.
 //
 // 429 사례는 마지막에 둔다. 토큰 끝점의 요청 상한은 IP 하나에 걸려 있어 먼저 돌면 뒤의 사례가 429 를 받는다. 파일 안의 사례는
-// 차례로 돈다(playwright.config.ts 의 workers 1).
+// 차례로 돈다(playwright.config.ts 의 workers 1). 배치를 내렸다 다시 띄우는 데이터베이스 사례는 그 뒤의 사례가 다시 띄운 배치를
+// 지나도록 재생성 사례 앞에 둔다.
 
+import { randomBytes } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { request as httpsRequest } from "node:https";
 import { join } from "node:path";
 import { expect, test } from "@playwright/test";
 import { signedDirectToken } from "./direct.ts";
-import { Compose, repositoryName, run } from "./docker.ts";
-import { ADMIN_ORIGIN, CALC_AGENT, deployment, LLM_ENV, ORIGIN, PREVIEW_SITE } from "./env.ts";
+import { Compose, repositoryName, run, succeed } from "./docker.ts";
+import {
+  ADMIN_ORIGIN,
+  CALC_AGENT,
+  deployment,
+  LLM_ENV,
+  ORIGIN,
+  PREVIEW_SITE,
+  UP_WAIT_SECONDS,
+} from "./env.ts";
+import { productRevision } from "./migrations.ts";
 
-const SERVICES = ["proxy", "serve", "admin", "widget", "portal"] as const;
+const SERVICES = ["proxy", "postgres", "serve", "admin", "widget", "portal"] as const;
+// 배치를 내렸다 다시 띄우는 사례의 상한. 다시 띄울 때 위젯이 사이트 파일로 다시 빌드한다.
+const RESTART_TIMEOUT_MS = (UP_WAIT_SECONDS + 180) * 1000;
 const COVER_TITLE = "질문하기 전에 읽어 주세요";
 const ACKNOWLEDGE = "확인하고 질문하기";
 const PUBLISHED = [80, 443, 3000];
@@ -215,6 +229,96 @@ test("컨테이너는 모두 root 가 아닌 사용자로 돌고 serve 의 판�
   );
 });
 
+interface Container {
+  readonly service: string;
+  readonly name: string;
+  readonly state: string;
+  readonly health: string;
+  readonly exitCode: number;
+}
+
+/** `docker compose ps --all --format json` 한 줄을 읽는다. 모르는 꼴이면 `undefined`. */
+function containerOf(entry: unknown): Container | undefined {
+  if (
+    typeof entry === "object" &&
+    entry !== null &&
+    "Service" in entry &&
+    typeof entry.Service === "string" &&
+    "Name" in entry &&
+    typeof entry.Name === "string" &&
+    "State" in entry &&
+    typeof entry.State === "string" &&
+    "Health" in entry &&
+    typeof entry.Health === "string" &&
+    "ExitCode" in entry &&
+    typeof entry.ExitCode === "number"
+  ) {
+    return {
+      service: entry.Service,
+      name: entry.Name,
+      state: entry.State,
+      health: entry.Health,
+      exitCode: entry.ExitCode,
+    };
+  }
+  return undefined;
+}
+
+/** 배치의 한 서비스가 만든 컨테이너들. 끝난 것도 든다. */
+async function containersOf(service: string): Promise<Container[]> {
+  const outcome = await compose().call(["ps", "--all", "--format", "json"], 60_000);
+  expect(outcome.code, outcome.stderr).toBe(0);
+  const found: Container[] = [];
+  for (const line of outcome.stdout.split("\n")) {
+    if (line.trim() === "") {
+      continue;
+    }
+    const parsed: unknown = JSON.parse(line);
+    const container = containerOf(parsed);
+    if (container === undefined) {
+      throw new Error(`compose ps 의 줄을 읽지 못했다: ${line}`);
+    }
+    if (container.service === service) {
+      found.push(container);
+    }
+  }
+  return found;
+}
+
+/** PostgreSQL 컨테이너 안의 psql 로 SQL 을 치고 줄만 받는다. 컨테이너의 유닉스 소켓은 비밀번호를 묻지 않는다. */
+function psql(sql: string): Promise<string> {
+  return compose().inService("postgres", [
+    "psql",
+    "-U",
+    "agent_os",
+    "-d",
+    "agent_os",
+    "-v",
+    "ON_ERROR_STOP=1",
+    "-tAc",
+    sql,
+  ]);
+}
+
+test("migrate 는 읽기 전용 루트로 빈 데이터베이스의 표를 올리고 0 으로 끝나며, 판 기록 표는 저장소의 마지막 판이다", async () => {
+  const revision = productRevision();
+  const migrate = await containersOf("migrate");
+  expect(migrate.map(({ state, exitCode }) => [state, exitCode])).toEqual([["exited", 0]]);
+  for (const { name } of migrate) {
+    const readOnly = await succeed(
+      "docker",
+      ["inspect", "--format", "{{.HostConfig.ReadonlyRootfs}}", name],
+      { timeoutMs: 60_000 },
+    );
+    expect(readOnly.trim(), `${name} 의 루트`).toBe("true");
+  }
+  const logs = await compose().ensure(["logs", "--no-color", "migrate"], 60_000);
+  expect(logs).toContain(`표를 없음에서 ${revision}으로 올렸습니다.`);
+  // 휠과 이미지에 제품 마이그레이션 폴더가 들지 않았으면 판 기록 표가 비거나 다른 판이다.
+  const recorded = (await psql("SELECT version_num FROM alembic_version")).trim();
+  expect(recorded.split("\n")).toEqual([revision]);
+});
+
 test("관리 화면의 중계가 관리 토큰으로 플러그인을 켜고 토큰 없이는 401 이다", async ({
   request,
 }) => {
@@ -300,6 +404,28 @@ async function serveImage(): Promise<string> {
   }
   return image.trim();
 }
+
+test("데이터베이스에 넣어 둔 줄은 docker compose down 과 up 뒤에도 남고 serve 가 다시 정상이다", async () => {
+  test.setTimeout(RESTART_TIMEOUT_MS);
+  // 판 기록 표만 보면 데이터가 사라져도 migrate 가 같은 줄을 다시 만들어 지나간다. migrate 가 모르는 표에 무작위 값을 넣는다.
+  const value = randomBytes(16).toString("hex");
+  await psql(
+    `CREATE TABLE e2e_kept (value text NOT NULL); INSERT INTO e2e_kept (value) VALUES ('${value}');`,
+  );
+
+  // 볼륨은 남긴다(`--volumes` 없음). 운영자가 판을 바꾸거나 다시 띄울 때 치는 꼴이다.
+  await compose().ensure(["down", "--timeout", "10"], 2 * 60_000);
+  await compose().ensure(
+    ["up", "--detach", "--wait", "--wait-timeout", String(UP_WAIT_SECONDS)],
+    (UP_WAIT_SECONDS + 60) * 1000,
+  );
+
+  const serve = await containersOf("serve");
+  expect(serve.map(({ state, health }) => [state, health])).toEqual([["running", "healthy"]]);
+  expect((await psql("SELECT value FROM e2e_kept")).trim()).toBe(value);
+  const logs = await compose().ensure(["logs", "--no-color", "migrate"], 60_000);
+  expect(logs).toContain(`표가 이미 마지막 판(${productRevision()})입니다.`);
+});
 
 test("백엔드 하나를 다시 만들어도 프록시가 새 주소를 따라 15초 안에 다시 200 을 낸다", async ({
   request,

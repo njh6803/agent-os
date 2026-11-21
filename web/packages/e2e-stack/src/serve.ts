@@ -33,6 +33,8 @@ export interface ServeOptions {
   readonly siteFile: string;
   /** `interpreter()` 가 준 파이썬. */
   readonly python: string;
+  /** `serve` 가 닿을 데이터베이스의 주소. `prepareDatabase` 가 만들어 표를 올려 둔 것이다. */
+  readonly databaseUrl: string;
 }
 
 /** `uv run` 이 쓰는 가상 환경의 파이썬 인터프리터. */
@@ -78,6 +80,8 @@ export async function startServe(stack: Stack, options: ServeOptions): Promise<s
       PYTHONUTF8: "1",
       AGENT_OS_ADMIN_TOKEN: unusedToken(),
       AGENT_OS_CHANNEL_TOKEN: unusedToken(),
+      // 부모의 환경에 같은 변수가 있어도 이 준비의 데이터베이스로 덮는다.
+      AGENT_OS_DATABASE_URL: options.databaseUrl,
     },
   );
   return until(serve, "serve 가 서지 않았다", () => LISTENING.exec(serve.output())?.[1] ?? null);

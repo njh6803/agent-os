@@ -37,6 +37,7 @@ from agent_os.core.ports import (
     TraceStore,
     WriteOutcome,
 )
+from agent_os.http.database import Database
 from agent_os.http.sites import Sites
 from agent_os.sdk import (
     BaseAgent,
@@ -124,6 +125,22 @@ class _SchemaOnlyTrace:
         raise NotImplementedError("스키마 추출은 포트를 부르지 않는다")
 
 
+class _SchemaOnlyDatabase:
+    """스키마를 뽑는 동안은 수명을 열지 않으므로 불릴 일이 없다. 불리면 곧바로 터뜨린다."""
+
+    async def startup_problem(self) -> str | None:
+        raise NotImplementedError("스키마 추출은 포트를 부르지 않는다")
+
+    async def close(self) -> None:
+        raise NotImplementedError("스키마 추출은 포트를 부르지 않는다")
+
+    def unexpected_problem(self, error: BaseException) -> str:
+        raise NotImplementedError("스키마 추출은 포트를 부르지 않는다")
+
+    def close_problem(self, error: BaseException) -> str:
+        raise NotImplementedError("스키마 추출은 포트를 부르지 않는다")
+
+
 def document() -> str:
     """계약 파일의 내용. 테스트가 이것과 커밋된 파일을 비교한다.
 
@@ -136,6 +153,7 @@ def document() -> str:
     models: ModelSource = _SchemaOnlyModels()
     tools: ToolSource = _SchemaOnlyTools()
     clock: Clock = _SchemaOnlyClock()
+    database: Database = _SchemaOnlyDatabase()
     app = create_app(
         plugins=plugins,
         trace=trace,
@@ -154,6 +172,7 @@ def document() -> str:
         # 채널의 기본값이다. 스키마는 상한의 값을 싣지 않는다.
         end_user_concurrent_runs=None,
         stderr=io.StringIO(),
+        database=database,
     )
     return json.dumps(app.openapi(), indent=2, ensure_ascii=False, sort_keys=True) + "\n"
 

@@ -1,0 +1,1 @@
+단독 배포에 데이터베이스(PostgreSQL)가 더해져, compose가 데이터베이스와 표를 올리는 `migrate` 한 번을 서버보다 먼저 띄운다. 데이터베이스 비밀번호는 `.env`의 `AGENT_OS_DATABASE_PASSWORD`에 둔다. `agent-os serve`는 `AGENT_OS_DATABASE_URL`이 가리키는 데이터베이스에 닿고 표의 판이 맞아야 뜬다. 닿지 않으면 30초 동안 다시 시도한 뒤 멈추고, 표가 뒤처졌으면 `agent-os migrate`를 먼저 돌리라는 글을, 표가 더 새로우면 올리기 전의 백업을 복원하라는 글을 찍고 종료 코드 3으로 끝난다.
