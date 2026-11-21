@@ -269,3 +269,83 @@ open-session을 부른다 2026-11-21T18:41Z
 | 03 63줄(CLI는 Critical): Anthropic 확인 요청의 쿼리 토큰이 주소와 INFO 로그로 가는지 보라 | 오탐. `anthropic` 확인은 키를 헤더로 보내고, 명세 262줄이 DEBUG까지 내려도 키 글자가 든 줄이 없었다고 쟀다. `openai-compatible`의 주소에 든 쿼리는 03 28줄과 45줄이 `reason`에서 떼게 한다(다시 열었다). 로그에 남는 쪽은 위 첫 줄과 같은 사정이다 |
 
 고친 것은 이 리뷰와 따로, 앞 세션이 넘긴 인용 대조 경고 하나다. 티켓 01의 `.claude/rules/admin.md` 항목이 따옴표로 든 목표 문장을 ADR 0067 Consequences "ADR 0010의 성질이 좁아진다"의 문장과 글자 그대로 맞췄다("관리 라우터는 도구 연결을 여는 길(`ToolSource.connect`)을 받지 않고 접속 확인만 받는다"). 그 문장의 `grep -c`는 ADR 0067과 티켓 01에서 각각 1이었다. 이 둘째 커밋에는 이 일지와 그 한 줄만 실려, 셀프 리뷰는 다시 돌리지 않는다(postgres-foundation 티켓 PR의 둘째 커밋도 같은 길이었다, 일지 2026-11-19-0050 "둘째 커밋").
+
+## 둘째 커밋과 dev 합치기
+
+커밋 직전에 `git branch --show-current`가 `docs/connection-check-tickets`였고, `uv run python tools/sibling_overlap.py`는 새 번호·번호 겹침·함께 고친 파일이 없다고 냈다(형제에 PR #621이 보였고 가장 높은 헌법 판은 3.1.4 그대로였다). 바뀐 것이 마크다운뿐이라 ruff 둘을 손으로 쳤다(`All checks passed!`, `uv run ruff format --check .`는 파이프 없이 친 종료 코드 0과 `2532 files already formatted`). `git commit -F`로 `5392d5898` "docs: 티켓 01의 인용을 ADR 0067 원문에 맞추고 PR 직전 리뷰를 일지에 옮긴다 (connection-check)"를 만들었다(2 files changed). pre-commit은 종료 0이었고 열한 검사(pytest 645.4초, web-verify 637.2초 포함)가 `Passed`, 대상 파일이 없는 넷(ruff 둘, 카나리아, 헌법 판)이 `Skipped`였다(그 출력을 손으로 봤다). 인용 대조 경고 셋은 모두 이 일지의 것이다. 앞 커밋의 제목, 고치기 전의 티켓 01 문장, 앱이 지은 세션 제목을 기록으로 든 것이라 남겼다.
+
+커밋 뒤에 인계 계기(경계 `커밋 뒤`)가 왔다. 이 세션의 지시문의 이어받을 상태가 `인계: 커밋 뒤`로 시작해 `handoff.md` 1의 셋째(같은 경계)에 들므로 넘기지 않고 이었다.
+
+첫 `git push`는 dev보다 한 커밋 뒤처졌다는 훅(`PUSH_BEHIND_OK`)에 막혔다. `git fetch origin dev` 뒤 들어온 것은 #621(`06e3fbf35`, 단독 배포 프록시의 `resolver_timeout`)이었다. 이 브랜치의 명세와 티켓이 쓰는 "중계 서버"는 모델 제공사 앞의 중계라, 그 변경이 바꾼 사실을 드는 자리는 없었다(`grep -n 'site.conf\|중계 서버\|proxy/\|resolver\|dead-dns\|deployment.e2e'`로 명세와 티켓을 봤다). `git merge --no-edit origin/dev`가 충돌 없이 `d86577332`를 만들었고, 합친 판에서 `sibling_overlap.py`(겹침 없음), ruff 둘(종료 0), `uv run python tools/run_checks.py`(백그라운드, 종료 0, 열한 검사 모두 `Passed`)를 지난 뒤 `git push -u origin docs/connection-check-tickets`로 올렸다.
+
+## PR
+
+`gh pr create --base dev`로 [PR 623](https://github.com/njh6803/agent-os/pull/623)을 열었다. 제목은 "docs: 접속 확인의 명세를 티켓 여섯으로 쪼갠다 (connection-check)"이고, 본문은 서식대로 티켓 여섯의 표, 사용자가 고른 셋에서 나온 차례, 남긴 위험(03이 첫 티켓이 아닌데 헌법을 고치는 예외를 사용자에게 따로 묻지 않았다는 것, 03의 덧붙임 헤더 시험, 큰 티켓 셋, 원격 MCP 주소의 쿼리 토큰, 남긴 인용 경고 셋), 체크리스트(합친 판의 `run_checks`, 셀프 리뷰, PR 직전 CodeRabbit의 판정 셋)를 적었다. `ccd_pr` `get_status`는 PR 623이 이 세션에 묶였다고 냈고(`otherBoundPrs`의 616은 `merged`), 열 때 검사는 pending 7이었다. `@coderabbitai review` 코멘트는 남기지 않았다(아래 인계).
+
+## 인계(PR 연 뒤)
+
+PR을 연 순간 세션 컨텍스트가 22만 6천 토큰으로 인계 문턱(20만)을 넘어 `hook_handoff`의 계기(경계 `PR 연 뒤`)가 왔다. 넘기지 않는 다섯 경우에 들지 않았다. PR은 열렸고, 이번 요청 범위는 병합까지이며, 이 세션의 지시문의 이어받을 상태는 `인계: 커밋 뒤`라 경계가 다르고, `인계 못함` 줄이 없고, `get_session`의 `self`에 `parentSessionId`가 없다.
+
+- 이 세션의 지금 제목은 `docs/connection-check-tickets`이고, 넘기기 전에 `docs/connection-check-tickets (인계함)`으로 바꾼다.
+- 커밋하지 않은 변경은 이 일지의 "둘째 커밋과 dev 합치기", "PR", 이 절이다. 새 세션이 이어 쓰고 봇 회차의 커밋에 싣는다.
+- 로컬 모델 시험은 건너뛸 PR이다. 문서만 바꿔 `docs/constitution/operations.md` LLM 테스트의 범위에 드는 경로가 없다(`merge.md` 3).
+- 출시 PR 616은 그새 병합됐다(`get_status`의 `otherBoundPrs`). 이 작업의 담당이 아니다.
+
+넘기는 지시문:
+
+```
+다음 작업: 기능 connection-check. 티켓 여섯 장을 쓴 PR 623(docs/connection-check-tickets)의 봇 회차를 반영하고 병합한다
+다음 단계: PR 반영·병합
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /to-tickets .scratch/connection-check/spec.md
+브랜치: docs/connection-check-tickets
+모델: Sonnet 5.5 / high. 2의 잇는 지시문
+읽을 것: docs/journal/2026-11-22-0159-connection-check-tickets.md의 "PR 직전 리뷰(coderabbit-review)" 절부터 끝까지("다음" 절은 아직 없다)
+이어받을 상태: 인계: PR 연 뒤. merge.md 2(봇 회차)부터 한다. 첫 @coderabbitai review 코멘트도 새 세션이 남긴다. 일지의 "둘째 커밋과 dev 합치기", "PR", "인계(PR 연 뒤)" 세 절은 커밋하지 않았고, 봇 회차의 커밋에 싣는다. 로컬 모델 시험은 문서만 바꾼 PR이라 건너뛴다. 명세 "헌법을 고치는 티켓은 하나다"의 예외(03이 첫 티켓이 아닌데 헌법을 고친다)는 사용자에게 따로 묻지 않았고, PR 본문의 "남긴 위험"에 적었으며 최종 보고에서 알린다. PR 직전 CodeRabbit이 Critical로 짚은 원격 MCP 주소의 쿼리 토큰은 명세가 받아들인 위험이라 두었고(PR 체크리스트), 봇이 같은 자리를 다시 짚으면 같은 까닭으로 판정한다. 사용자에게 rag-engine의 남은 pytest(pid 844)를 꺼도 되는지 물은 답은 받지 못했다. 답 없이 끄지 않는다. docs/journal/2026-11-22-0159-connection-check-tickets.md
+확인할 선행 조건: 없음
+이번 요청 범위: PR과 병합까지
+```
+
+제목을 `docs/connection-check-tickets (인계함)`으로 바꿨다. 이 세션이 띄운 백그라운드 작업(PR 직전 리뷰 서브에이전트, 둘째 커밋, 합친 판의 `run_checks`)은 모두 끝나 있었다. `git worktree unlock C:/project/agent/.claude/worktrees/connection-check-tickets`는 `is not locked`로 끝났다. 처음에는 이 절을 셸의 `printf`로 더하려 했는데, 글 안의 `git` 낱말 때문에 앱의 워크트리 가드가 명령을 거부해 Edit 도구로 더했다.
+
+open-session을 부른다 2026-11-21T19:12Z
+
+## 이어받은 세션(04:20쯤 시작)
+
+모델 Sonnet 5.5. 위 "넘기는 지시문"(PR 연 뒤)을 받아 시작했다.
+
+> 사용자: .claude/skills/to-tickets/SKILL.md 를 읽어 그대로 따른다. 이 세션을 연 저장소는 `C:\project\agent`이고 작업 폴더가 그곳이 아니면 따르지 말고 알린다. 스킬의 인자는 이 줄의 '인자:' 뒤부터 메시지 끝까지다. 인자: .scratch/connection-check/spec.md
+>
+> (이어지는 지시문은 위 "넘기는 지시문"과 글자 그대로 같다. "다음 단계"가 PR 반영·병합인데 첫 줄은 티켓을 쓰는 스킬이다. 이 세션은 첫 줄의 스킬 파일을 읽어 본 뒤 티켓이 이미 쓰여 있는 것을 보고 "다음 작업" 줄을 따랐다)
+
+- 세션 제목을 `docs/connection-check-tickets`로 바꿨다(앱이 지은 제목 "Connection-check 티켓 PR 병합"이라 묻지 않고 바뀌었다).
+- `git worktree list`에서 이 브랜치가 `.claude/worktrees/connection-check-tickets`에 체크아웃된 것을 보고 `EnterWorktree(path)`로 들어왔다. `git status --short`는 이 일지 하나만 고쳤다고 냈고 HEAD는 `d86577332`(PR 623의 머리와 같다)였다.
+- `ccd_pr`의 `get_status`는 아무것도 묶여 있지 않다고 해 `bind_pr`로 PR 623을 묶었다.
+
+## 봇 회차(PR 623)
+
+첫 `gh pr checks`에서 `claude-review`는 이미 통과(지적 없음)였고 CodeRabbit은 `skipping`(PR을 열 때 자동 리뷰를 건너뛰었다)이었다. 마지막 푸시(`d86577332`) 뒤이므로 `@coderabbitai review` 코멘트를 남기고 `tools/wait_ci.py 623`을 백그라운드로 띄웠다. 결과는 종료 0, "끝: 모두 통과. CodeRabbit: Finished"였다. 그 출력의 열세 줄 가운데 `llm`만 `SKIPPED`이고 나머지 열두 줄(CodeRabbit, `claude-review`, `verify` 포함)이 `SUCCESS`였다(출력 파일을 손으로 읽었다). CodeRabbit이 처음 `skipping`이었던 것은 그 봇의 요약 코멘트에 "skip review" 표지가 든 것으로 읽었다(코멘트를 읽었고 까닭은 어림이다). 로컬 모델 시험은 문서만 바꾼 PR이라 건너뛰었다(`merge.md` 3).
+
+CodeRabbit의 첫 회차는 인라인 하나(티켓 02 38줄, Critical)다.
+
+- **원격 MCP 서버 주소의 쿼리에 넣은 토큰이 INFO 이하의 HTTP 로그에 남는다. 확인 요청의 로그에서 비밀을 가리고 시험을 더하라: 둔다(PR 직전 CLI가 낸 같은 지적과 같은 까닭).** 명세가 이 위험을 재서 받아들였고(`.scratch/connection-check/probes/model_requests_loopback.py`, 기본 수준 WARNING에서 0줄. 명세 262·328·357줄을 다시 열었다), 티켓 02 38줄이 접속 확인의 길에서만 로거를 끄는 장치를 두지 않는다고 못박았다. 실행으로 같은 주소를 여는 지금도 같은 위험이라 접속 확인만 가리면 위험이 줄지 않는다. 고치려면 실행과 확인을 함께 덮는 로그 가리기를 새로 정해야 하고 그것은 이 기능 밖이다. 스레드에 답글로 같은 설명을 남겼다(<https://github.com/njh6803/agent-os/pull/623#discussion_r4654576265>). 판정과 고치는 데 드는 값은 PR 본문 39·75줄에 이미 있다.
+
+이 회차에서 고친 것은 없고, 이 일지와 대기열 두 항목의 회차 줄만 푸시한다. 그 푸시로 도는 claude-review와 CodeRabbit은 회차 세기대로 둘째 회차라 Critical·Major만 고친다. 같은 Critical이 다시 나오면 위와 같은 까닭으로 둔다.
+
+## 회고
+
+후보 셋: 승인 2(둘 다 열린 항목의 회차를 더한다), 기각 1, 넘김 0. 사용자에게 넘긴 것은 없다. 만료는 `uv run python tools/queue_open_rows.py`와 `--ref origin/dev`를 모두 돌려 "만료할 항목: (없음)"이었다(출력을 손으로 읽었다).
+
+- **"시작 프롬프트"가 티켓 단계의 `/to-tickets .scratch/connection-check/spec.md`로 남은 채 "다음 단계"가 PR 반영·병합으로 넘어갔다: 승인, 열린 항목 0577에 11회차를 더했다.** 인계 지시문 셋이 같은 첫 줄을 옮겼고, 이번 세션이 그 스킬 파일을 읽은 뒤에야 "다음 작업" 줄이 정한 일을 시작했다. 읽어서 얻은 것은 티켓이 이미 쓰여 있다는 확인뿐이다. 항목은 5단계의 `--search 시작.프롬프트 --search directive`로 찾았고 열린 것은 0577 하나였다. 회차가 5를 넘은 항목이라 새 지침 문장의 문턱(다섯 번째 반복)은 이미 지났고, 반영은 `next-session`의 chore 배치가 정한다.
+- **PR 직전 리뷰에 밀 주장을 넘길 길이 없었다: 승인, 열린 항목 `cli-review-claims-path`에 9회차를 더했다.** 인계 지시문이 "bug-perf-review의 브리프에는 일지 '고친 것'의 문장들을 밀 주장으로 넘긴다"고 적었으나 CLI가 돌아 그 서브에이전트가 돌지 않았고 문장 일곱은 넘길 곳이 없었다(앞 세션의 "PR 직전 리뷰" 절). 손상은 없었다.
+- **같은 Critical(쿼리 토큰의 로그)이 CLI와 PR 봇에서 두 번 나와 판정을 되풀이한 것: 기각.** 이미 있는 장치(PR 본문의 "남긴 위험"과 지시문의 "봇이 같은 자리를 다시 짚으면 같은 까닭으로 판정한다")가 그 자리에서 처리했고, 검사를 느슨하게 하자는 후보는 넘김이라 더하지 않는다.
+
+## 다음
+
+- **병합 직후 할 일은 기능 connection-check의 티켓 01(`01-contract-connection-check-routes-and-port-methods`)을 구현하는 것이다.** 모두 `ready-for-agent`이고 01만 막는 티켓이 없다. 티켓마다 새 세션과 브랜치 `feature/01-contract-connection-check-routes-and-port-methods`로 간다(`/implement`). 02와 03은 01이 병합된 뒤 나란히 돌 수 있고, 04는 02·03 뒤, 05와 06은 04 뒤에 나란히 돈다.
+- **사용자에게 알릴 것(PR 본문 "남긴 위험"과 같은 내용).** 명세 "헌법을 고치는 티켓은 하나다"의 예외(03이 첫 티켓이 아닌데 헌법을 고친다)는 사용자에게 따로 묻지 않았다. 티켓 나누기를 고른 답이 그 차례를 담았을 뿐이다.
+- **받아들인 위험.** 원격 MCP 서버 주소의 쿼리 토큰이 INFO 이하의 로그에 남는 것은 실행에도 있는 위험이고 접속 확인은 줄 수만 늘린다. 고치려면 실행과 확인을 함께 덮는 로그 가리기를 새 명세로 정해야 한다. 티켓 06이 토큰을 헤더에 두라는 운영자 안내를 싣는다. PR 직전 CLI와 PR 봇이 모두 이 자리를 Critical로 짚었고 같은 까닭으로 두었다.
+- **로컬 모델 시험은 01·02·03·06의 네 번이다.** 02와 03은 병합 직전에 기준 브랜치를 합친 뒤에 돌아야 한다(상대가 먼저 병합되면 합치기 전의 기록은 무효다). 비용 확인은 시험 직전에 사용자에게 받는다.
+- **기능을 닫는 일(끝 줄, 기능 단락, 계획 표)** 은 05와 06 가운데 늦게 병합하는 쪽이 맡는다. 합친 판에서 이 기능의 다른 티켓 전부의 `Status:`를 보고 가른다(두 티켓에 단계가 적혀 있다).
+- 대기열의 0577(11회차)과 `cli-review-claims-path`(9회차)는 chore 배치 조건(회차 5 이상)에 들었다. `next-session`의 결정표가 chore를 고르면 `directive.md`의 "시작 프롬프트" 줄과 `code-review` 6단계를 함께 고친다.
+- rag-engine의 남은 pytest(pid 844)는 끄지 않았다. 사용자의 답이 없다.
