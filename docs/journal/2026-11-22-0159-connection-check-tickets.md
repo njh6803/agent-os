@@ -349,3 +349,31 @@ CodeRabbit의 첫 회차는 인라인 하나(티켓 02 38줄, Critical)다.
 - **기능을 닫는 일(끝 줄, 기능 단락, 계획 표)** 은 05와 06 가운데 늦게 병합하는 쪽이 맡는다. 합친 판에서 이 기능의 다른 티켓 전부의 `Status:`를 보고 가른다(두 티켓에 단계가 적혀 있다).
 - 대기열의 0577(11회차)과 `cli-review-claims-path`(9회차)는 chore 배치 조건(회차 5 이상)에 들었다. `next-session`의 결정표가 chore를 고르면 `directive.md`의 "시작 프롬프트" 줄과 `code-review` 6단계를 함께 고친다.
 - rag-engine의 남은 pytest(pid 844)는 끄지 않았다. 사용자의 답이 없다.
+
+## 인계(커밋 뒤)
+
+회고와 "다음"을 적은 커밋 `214449a23`(일지, 대기열 두 항목)을 만든 순간 세션 컨텍스트가 21만 토큰으로 인계 문턱(20만)을 넘어 `hook_handoff`의 계기(경계 `커밋 뒤`)가 왔다. 넘기지 않는 다섯 경우에 들지 않았다. 커밋은 성공했고(종료 0), 이번 요청 범위는 병합까지이며, 이 세션의 지시문의 이어받을 상태는 `인계: PR 연 뒤`라 경계가 다르고, `인계 못함` 줄이 없고, `get_session`의 `self`에 `parentSessionId`가 없다(손으로 봤다).
+
+- 푸시하지 않았다. 새 세션이 이 절을 커밋에 싣고, `git fetch origin dev` 뒤 `origin/dev`(`sibling_overlap.py`가 낸 `c78f725`)를 합치고, 한 번 푸시한다. 푸시가 dev보다 뒤처졌다는 훅(`PUSH_BEHIND_OK`)에 막히면 합치기가 먼저다.
+- 그 푸시로 도는 CodeRabbit과 claude-review는 둘째 회차다. Critical·Major만 고치고 같은 쿼리 토큰 Critical은 위 "봇 회차"와 같은 까닭으로 둔다.
+- 커밋의 인용 대조 경고 둘은 막지 않는다. 이 일지 275줄(앞 세션의 커밋 제목)과 340줄(인계 지시문의 문장을 따옴표로 든 것, 원천은 앞 세션이 낸 지시문 문장이고 저장소 파일에는 없다)이다. 경고만이라 두었다.
+- 첫 줄의 시작 프롬프트(`/to-tickets …`)는 `handoff.md`가 "이 세션의 지시문 그대로"라 정해 옮겼다. 대기열 0577의 11회차가 이 어긋남이다. 새 세션은 "다음 작업" 줄을 따르면 된다.
+
+넘기는 지시문:
+
+```
+다음 작업: 기능 connection-check. 티켓 여섯 장을 쓴 PR 623(docs/connection-check-tickets)의 둘째 봇 회차를 거쳐 병합한다
+다음 단계: PR 반영·병합
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /to-tickets .scratch/connection-check/spec.md
+브랜치: docs/connection-check-tickets
+모델: Sonnet 5.5 / high. 2의 잇는 지시문
+읽을 것: docs/journal/2026-11-22-0159-connection-check-tickets.md의 "이어받은 세션(04:20쯤 시작)" 절부터 끝까지
+이어받을 상태: 인계: 커밋 뒤. docs/journal/2026-11-22-0159-connection-check-tickets.md. 첫 봇 회차와 회고와 "다음"까지 마쳐 커밋 214449a23까지 만들었고 푸시하지 않았다. 일지의 "인계(커밋 뒤)" 절은 커밋하지 않았다. 남은 일은 그 절을 커밋에 싣고, git fetch 뒤 origin/dev를 합치고(앞서 있다), 푸시하고, 푸시마다 새로 tools/wait_ci.py 623을 띄우는 둘째 봇 회차(Critical·Major만 고친다. 쿼리 토큰 Critical은 일지 "봇 회차"와 같은 까닭으로 둔다)와 merge.md 5(병합 길)이다. 로컬 모델 시험은 문서만 바꾼 PR이라 건너뛴다. 병합 뒤 일지 "다음"의 사용자에게 알릴 것(03이 첫 티켓이 아닌데 헌법을 고치는 예외를 사용자에게 따로 묻지 않았다는 것)을 최종 보고에 쓴다. 첫 줄의 시작 프롬프트는 옮겨 온 옛 단계의 명령이라 이 일에 맞지 않는다("다음 작업" 줄을 따른다). 사용자에게 rag-engine의 남은 pytest(pid 844)를 꺼도 되는지 물은 답은 받지 못했다. 답 없이 끄지 않는다.
+확인할 선행 조건: 없음
+이번 요청 범위: PR과 병합까지
+```
+
+제목을 `docs/connection-check-tickets (인계함)`으로 바꿨다. 이 세션이 띄운 백그라운드 작업(`wait_ci`, 커밋)은 모두 끝나 있었다. `git worktree unlock C:/project/agent/.claude/worktrees/connection-check-tickets`는 `is not locked`로 끝났다.
+
+open-session을 부른다 2026-11-21T19:41Z
