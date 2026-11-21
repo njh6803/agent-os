@@ -35,6 +35,7 @@ from langchain_core.messages.tool import ToolCall as LangchainToolCall
 from langchain_core.outputs import ChatResult
 from langchain_core.runnables import Runnable
 from starlette.types import Message, Scope
+from tests.fake_database import FakeDatabase
 from tests.fake_models import DEFAULT_MODEL, FakeModels, model_manifest
 
 from agent_os.channel.http.runs import BACKLOG_FRAMES
@@ -543,6 +544,7 @@ def _app(
         run_timeout_seconds=run_timeout_seconds,
         end_user_concurrent_runs=None,
         stderr=stderr or io.StringIO(),
+        database=FakeDatabase(),
     )
 
 

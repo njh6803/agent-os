@@ -1,0 +1,13 @@
+# postgres 서비스의 권한을 좁힌 변형(항목 5). compose.yml 위에 얹는다.
+# 진입 스크립트가 root 로 떠 소유를 맞추고 gosu 로 내려가는 길을 건너뛰고, 처음부터 uid 999 로 뜬다.
+services:
+  postgres:
+    user: "999:999"
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    tmpfs:
+      - /var/run/postgresql
+      - /tmp

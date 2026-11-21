@@ -3,10 +3,10 @@
 
 두 파일은 `gh api repos/.../branches/<브랜치>/protection --input`이 읽는 본문이다. 문서는 이 값을
 근거로 든다. `operations.md` 가드레일은 두 브랜치가 선형 이력을 강제하지 않는다고 적고,
-`next-session`의 `merge.md`는 main이 strict라서 출시 PR 뒤에 main을 dev에 되돌려 합치고 dev는
-strict가 아니라서 머리가 main인 되돌려 합치기 PR이 막히지 않는다고 적는다(ADR 0043 이력 2026-11-12
-"출시 PR 뒤에도 main을 dev에 되돌려 합친다"). 값이 바뀌고 문서가 그대로면 어긋나도 아무 검사가
-알리지 못했다(`dev-branch-create` PR의 claude-review가 짚었다).
+`next-session`의 `merge.md`는 main이 strict라서 출시 PR 뒤에 main을 dev에 합치고 dev는
+strict가 아니라서 머리가 main인 운영에서 개발로 합치기 PR이 막히지 않는다고 적는다(ADR 0043
+이력 2026-11-12 "출시 PR 뒤에도 main을 dev에 되돌려 합친다"). 값이 바뀌고 문서가 그대로면 어긋나도
+아무 검사가 알리지 못했다(`dev-branch-create` PR의 claude-review가 짚었다).
 
 이 시험이 보는 것은 파일의 값이다. GitHub에 실제로 적용된 값은 `gh api`로 읽어야 하고 이 시험은 읽지
 않는다 (네트워크가 필요하다). 파일을 고치고 적용을 빠뜨린 어긋남은 못 본다.

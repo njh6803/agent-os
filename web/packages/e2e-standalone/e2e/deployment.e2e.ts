@@ -1,18 +1,33 @@
 // 단독 배포 e2e 의 사례(release-image 티켓 09). 준비(stack.ts)가 실제 이미지 넷과 프록시로 띄운 배치를 실제 브라우저와 HTTP 로
-// 지난다. 배치가 약속한 것(공개 면의 모양, 발행 포트, 컨테이너의 사용자, 재생성 뒤의 길, 네트워크 없는 MCP 실행)을 잠근다.
+// 지난다. 배치가 약속한 것(공개 면의 모양, 발행 포트, 컨테이너의 사용자, 재생성 뒤의 길, 네트워크 없는 MCP 실행, 데이터베이스의
+// 판과 남는 데이터)을 잠근다.
 //
 // 429 사례는 마지막에 둔다. 토큰 끝점의 요청 상한은 IP 하나에 걸려 있어 먼저 돌면 뒤의 사례가 429 를 받는다. 파일 안의 사례는
-// 차례로 돈다(playwright.config.ts 의 workers 1).
+// 차례로 돈다(playwright.config.ts 의 workers 1). 배치를 내렸다 다시 띄우는 데이터베이스 사례는 그 뒤의 사례가 다시 띄운 배치를
+// 지나도록 재생성 사례 앞에 둔다.
 
+import { randomBytes } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { request as httpsRequest } from "node:https";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { expect, test } from "@playwright/test";
 import { signedDirectToken } from "./direct.ts";
-import { Compose, repositoryName, run } from "./docker.ts";
-import { ADMIN_ORIGIN, CALC_AGENT, deployment, LLM_ENV, ORIGIN, PREVIEW_SITE } from "./env.ts";
+import { Compose, repositoryName, run, succeed } from "./docker.ts";
+import {
+  ADMIN_ORIGIN,
+  CALC_AGENT,
+  deployment,
+  LLM_ENV,
+  ORIGIN,
+  PREVIEW_SITE,
+  UP_WAIT_SECONDS,
+} from "./env.ts";
+import { saveLogsAtFailure } from "./failure-logs.ts";
+import { productRevision } from "./migrations.ts";
 
-const SERVICES = ["proxy", "serve", "admin", "widget", "portal"] as const;
+const SERVICES = ["proxy", "postgres", "serve", "admin", "widget", "portal"] as const;
+// 배치를 내렸다 다시 띄우는 사례의 상한. 다시 띄울 때 위젯이 사이트 파일로 다시 빌드한다.
+const RESTART_TIMEOUT_MS = (UP_WAIT_SECONDS + 180) * 1000;
 const COVER_TITLE = "질문하기 전에 읽어 주세요";
 const ACKNOWLEDGE = "확인하고 질문하기";
 const PUBLISHED = [80, 443, 3000];
@@ -23,6 +38,12 @@ function compose(): Compose {
   const { project, dir, files } = deployment();
   return new Compose(project, dir, files);
 }
+
+// 뒤쪽 사례가 배치를 내렸다 올리거나 컨테이너를 다시 만들면 앞쪽 사례의 로그가 사라지므로, 실패한 사례는 그 자리에서 로그를
+// 받아 둔다(failure-logs.ts).
+test.afterEach(async ({}, testInfo) => {
+  await saveLogsAtFailure(testInfo, compose());
+});
 
 /**
  * 경로를 다듬지 않고 그대로 보낸다. Playwright 의 요청과 `fetch` 는 URL 을 만들며 `..` 를 접어 버려 우회 시도가 프록시에
@@ -215,6 +236,96 @@ test("컨테이너는 모두 root 가 아닌 사용자로 돌고 serve 의 판�
   );
 });
 
+interface Container {
+  readonly service: string;
+  readonly name: string;
+  readonly state: string;
+  readonly health: string;
+  readonly exitCode: number;
+}
+
+/** `docker compose ps --all --format json` 한 줄을 읽는다. 모르는 꼴이면 `undefined`. */
+function containerOf(entry: unknown): Container | undefined {
+  if (
+    typeof entry === "object" &&
+    entry !== null &&
+    "Service" in entry &&
+    typeof entry.Service === "string" &&
+    "Name" in entry &&
+    typeof entry.Name === "string" &&
+    "State" in entry &&
+    typeof entry.State === "string" &&
+    "Health" in entry &&
+    typeof entry.Health === "string" &&
+    "ExitCode" in entry &&
+    typeof entry.ExitCode === "number"
+  ) {
+    return {
+      service: entry.Service,
+      name: entry.Name,
+      state: entry.State,
+      health: entry.Health,
+      exitCode: entry.ExitCode,
+    };
+  }
+  return undefined;
+}
+
+/** 배치의 한 서비스가 만든 컨테이너들. 끝난 것도 든다. */
+async function containersOf(service: string): Promise<Container[]> {
+  const outcome = await compose().call(["ps", "--all", "--format", "json"], 60_000);
+  expect(outcome.code, outcome.stderr).toBe(0);
+  const found: Container[] = [];
+  for (const line of outcome.stdout.split("\n")) {
+    if (line.trim() === "") {
+      continue;
+    }
+    const parsed: unknown = JSON.parse(line);
+    const container = containerOf(parsed);
+    if (container === undefined) {
+      throw new Error(`compose ps 의 줄을 읽지 못했다: ${line}`);
+    }
+    if (container.service === service) {
+      found.push(container);
+    }
+  }
+  return found;
+}
+
+/** PostgreSQL 컨테이너 안의 psql 로 SQL 을 치고 줄만 받는다. 컨테이너의 유닉스 소켓은 비밀번호를 묻지 않는다. */
+function psql(sql: string): Promise<string> {
+  return compose().inService("postgres", [
+    "psql",
+    "-U",
+    "agent_os",
+    "-d",
+    "agent_os",
+    "-v",
+    "ON_ERROR_STOP=1",
+    "-tAc",
+    sql,
+  ]);
+}
+
+test("migrate 는 읽기 전용 루트로 빈 데이터베이스의 표를 올리고 0 으로 끝나며, 판 기록 표는 저장소의 마지막 판이다", async () => {
+  const revision = productRevision();
+  const migrate = await containersOf("migrate");
+  expect(migrate.map(({ state, exitCode }) => [state, exitCode])).toEqual([["exited", 0]]);
+  for (const { name } of migrate) {
+    const readOnly = await succeed(
+      "docker",
+      ["inspect", "--format", "{{.HostConfig.ReadonlyRootfs}}", name],
+      { timeoutMs: 60_000 },
+    );
+    expect(readOnly.trim(), `${name} 의 루트`).toBe("true");
+  }
+  const logs = await compose().ensure(["logs", "--no-color", "migrate"], 60_000);
+  expect(logs).toContain(`표를 없음에서 ${revision}으로 올렸습니다.`);
+  // 휠과 이미지에 제품 마이그레이션 폴더가 들지 않았으면 판 기록 표가 비거나 다른 판이다.
+  const recorded = (await psql("SELECT version_num FROM alembic_version")).trim();
+  expect(recorded.split("\n")).toEqual([revision]);
+});
+
 test("관리 화면의 중계가 관리 토큰으로 플러그인을 켜고 토큰 없이는 401 이다", async ({
   request,
 }) => {
@@ -301,6 +412,28 @@ async function serveImage(): Promise<string> {
   return image.trim();
 }
 
+test("데이터베이스에 넣어 둔 줄은 docker compose down 과 up 뒤에도 남고 serve 가 다시 정상이다", async () => {
+  test.setTimeout(RESTART_TIMEOUT_MS);
+  // 판 기록 표만 보면 데이터가 사라져도 migrate 가 같은 줄을 다시 만들어 지나간다. migrate 가 모르는 표에 무작위 값을 넣는다.
+  const value = randomBytes(16).toString("hex");
+  await psql(
+    `CREATE TABLE e2e_kept (value text NOT NULL); INSERT INTO e2e_kept (value) VALUES ('${value}');`,
+  );
+
+  // 볼륨은 남긴다(`--volumes` 없음). 운영자가 판을 바꾸거나 다시 띄울 때 치는 꼴이다.
+  await compose().ensure(["down", "--timeout", "10"], 2 * 60_000);
+  await compose().ensure(
+    ["up", "--detach", "--wait", "--wait-timeout", String(UP_WAIT_SECONDS)],
+    (UP_WAIT_SECONDS + 60) * 1000,
+  );
+
+  const serve = await containersOf("serve");
+  expect(serve.map(({ state, health }) => [state, health])).toEqual([["running", "healthy"]]);
+  expect((await psql("SELECT value FROM e2e_kept")).trim()).toBe(value);
+  const logs = await compose().ensure(["logs", "--no-color", "migrate"], 60_000);
+  expect(logs).toContain(`표가 이미 마지막 판(${productRevision()})입니다.`);
+});
+
 test("백엔드 하나를 다시 만들어도 프록시가 새 주소를 따라 15초 안에 다시 200 을 낸다", async ({
   request,
 }) => {
@@ -328,6 +461,80 @@ test("백엔드 하나를 다시 만들어도 프록시가 새 주소를 따라 
   expect(Date.now() - started, `200 이 ${String(RECOVER_MS)}ms 를 넘겨 도착했다`).toBeLessThan(
     RECOVER_MS + 1_000,
   );
+});
+
+// 프록시의 바깥 DNS 를 끊는 덧씌움. 아직 없는 이름을 물으면 Docker 의 내장 DNS 가 `Server failure` 를 돌려준다.
+const DEAD_DNS_OVERLAY = join(dirname(import.meta.dirname), "compose.dead-dns.yaml");
+
+test("프록시가 serve 를 못 찾고 시작해도 serve 가 건강해지면 15초 안에 최종 사용자 길이 열린다", async ({
+  request,
+}) => {
+  test.setTimeout(RESTART_TIMEOUT_MS);
+  const upServe = [
+    "up",
+    "--detach",
+    "--no-deps",
+    "--wait",
+    "--wait-timeout",
+    String(UP_WAIT_SECONDS),
+    "serve",
+  ];
+  const serveTimeoutMs = (UP_WAIT_SECONDS + 60) * 1000;
+  try {
+    // serve 가 없는 채로 프록시를 다시 만든다. 프록시가 시작할 때 serve 이름을 물으면 내장 DNS 가 `Server failure` 를 돌려준다.
+    // 출시 PR 의 CI 에서는 serve 가 postgres 와 migrate 를 기다리느라 프록시보다 늦게 떠서 같은 일이 났다.
+    await compose().ensure(["rm", "--stop", "--force", "serve"], 2 * 60_000);
+    await compose().ensure(["up", "--detach", "--force-recreate", "--no-deps", "proxy"], 120_000, [
+      DEAD_DNS_OVERLAY,
+    ]);
+
+    // 시험이 만들려던 상황이 맞는지 serve 를 올리기 전에 본다. 프록시가 시작할 때 serve 이름을 못 풀었어야 한다.
+    // serve 가 먼저 DNS 에 올라 첫 질의가 성공하면 이 시험이 보려는 상황이 아니므로, 여기서 크게 실패한다.
+    await expect
+      .poll(async () => await compose().ensure(["logs", "--no-color", "proxy"], 60_000), {
+        message: "프록시가 serve 이름을 못 푼 줄이 로그에 찍히지 않았다",
+        timeout: 15_000,
+      })
+      .toContain("serve could not be resolved (2: Server failure)");
+    await compose().ensure(upServe, serveTimeoutMs);
+
+    const started = Date.now();
+    let status = 0;
+    while (Date.now() - started < RECOVER_MS) {
+      try {
+        const remaining = Math.max(1_000, RECOVER_MS - (Date.now() - started));
+        status = (await request.post(`${ORIGIN}/end-user/runs`, { timeout: remaining })).status();
+      } catch {
+        status = 0;
+      }
+      // 토큰 없는 요청이라 serve 가 거절하는 것이 맞다. 프록시가 serve 에 닿았다는 것만 본다(닿지 못하면 502 다).
+      if (status !== 0 && status < 500) {
+        break;
+      }
+      await new Promise((resolve) => setTimeout(resolve, 500));
+    }
+    // 아래 finally 가 프록시를 다시 만들면 이 프록시의 로그가 사라지므로, 실패 메시지에 지금 끝부분을 싣는다.
+    const proxyTail = (
+      await compose().ensure(
+        ["logs", "--no-color", "--timestamps", "--tail", "15", "proxy"],
+        60_000,
+      )
+    ).trim();
+    expect(
+      status,
+      `serve 가 건강해진 뒤 ${String(RECOVER_MS)}ms 안에 프록시가 길을 열지 않았다. 프록시 로그의 끝:\n${proxyTail}`,
+    ).toBeLessThan(500);
+    expect(status, "프록시가 응답하지 않았다").not.toBe(0);
+  } finally {
+    // 뒤의 사례가 평소 프록시를 지나도록 되돌린다. 프록시는 serve 없이도 다시 만들 수 있으므로(--no-deps) 먼저 죽은 DNS
+    // 덧씌움 없이 되돌린다. serve 가 건강해지지 않아 올리기를 오래 기다려도 시험 제한 시간 때문에 이 복원이 밀리지 않고,
+    // 안 그러면 뒤의 사례가 모두 연쇄로 실패한다. 앞에서 실패해 serve 가 없을 수 있으므로 그 뒤에 serve 를 올린다.
+    try {
+      await compose().ensure(["up", "--detach", "--force-recreate", "--no-deps", "proxy"], 120_000);
+    } finally {
+      await compose().ensure(upServe, serveTimeoutMs);
+    }
+  }
 });
 
 test("토큰 끝점은 짧은 시간에 요청이 몰리면 429 를 내고 앞선 요청은 막지 않는다", async ({

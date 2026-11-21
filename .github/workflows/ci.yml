@@ -53,6 +53,30 @@ jobs:
     env:
       PYTHONUTF8: "1"
       PYTHONFAULTHANDLER: "1"
+      # 데이터베이스 시험이 붙는 주소(tests/database.py). 개발 PC 의 테스트 컨테이너(compose.test.yaml)를 대신하는
+      # 아래 service container 를 가리킨다. 값은 시험용이고 비밀이 아니다.
+      AGENT_OS_TEST_DATABASE_URL: postgresql://agent_os:agent_os@127.0.0.1:5432/agent_os
+    # 개발 PC 의 compose.test.yaml 과 같은 이미지(digest 가 같은지는 tests/test_postgres_image_pin.py 가 판정한다)와
+    # 같은 상태 확인이다. 데이터 폴더는 메모리(tmpfs)에 둔다. 잡은 상태 확인이 정상이 된 뒤에 단계를 시작한다.
+    services:
+      postgres:
+        # postgres:18 (Debian trixie)
+        image: postgres@sha256:b9f6b8ff03b62f3cfd9d9ba3fe56226a9991c79d3fb46fd46536263bf02be553
+        env:
+          POSTGRES_USER: agent_os
+          POSTGRES_PASSWORD: agent_os
+          POSTGRES_DB: agent_os
+        ports:
+          - 5432:5432
+        options: >-
+          --init
+          --tmpfs /var/lib/postgresql
+          --health-cmd "pg_isready -h 127.0.0.1 -U agent_os -d agent_os"
+          --health-interval 30s
+          --health-timeout 10s
+          --health-retries 3
+          --health-start-period 30s
+          --health-start-interval 2s
     steps:
       - uses: actions/checkout@v4
         with:
@@ -133,6 +157,28 @@ jobs:
     timeout-minutes: 15
     env:
       PYTHONUTF8: "1"
+      # serve 는 표의 판이 맞는 데이터베이스가 있어야 뜬다. 준비(e2e/stack.ts)가 아래 service container 에 자기 데이터베이스를
+      # 만든다. python 잡과 같은 이미지와 상태 확인이다(digest 는 tests/test_postgres_image_pin.py 가 판정한다).
+      AGENT_OS_TEST_DATABASE_URL: postgresql://agent_os:agent_os@127.0.0.1:5432/agent_os
+    services:
+      postgres:
+        # postgres:18 (Debian trixie)
+        image: postgres@sha256:b9f6b8ff03b62f3cfd9d9ba3fe56226a9991c79d3fb46fd46536263bf02be553
+        env:
+          POSTGRES_USER: agent_os
+          POSTGRES_PASSWORD: agent_os
+          POSTGRES_DB: agent_os
+        ports:
+          - 5432:5432
+        options: >-
+          --init
+          --tmpfs /var/lib/postgresql
+          --health-cmd "pg_isready -h 127.0.0.1 -U agent_os -d agent_os"
+          --health-interval 30s
+          --health-timeout 10s
+          --health-retries 3
+          --health-start-period 30s
+          --health-start-interval 2s
     steps:
       - uses: actions/checkout@v4
         with:
@@ -173,6 +219,27 @@ jobs:
     timeout-minutes: 15
     env:
       PYTHONUTF8: "1"
+      # e2e 잡과 같다. serve 가 붙을 데이터베이스를 준비(e2e/stack.ts)가 아래 service container 에 만든다.
+      AGENT_OS_TEST_DATABASE_URL: postgresql://agent_os:agent_os@127.0.0.1:5432/agent_os
+    services:
+      postgres:
+        # postgres:18 (Debian trixie)
+        image: postgres@sha256:b9f6b8ff03b62f3cfd9d9ba3fe56226a9991c79d3fb46fd46536263bf02be553
+        env:
+          POSTGRES_USER: agent_os
+          POSTGRES_PASSWORD: agent_os
+          POSTGRES_DB: agent_os
+        ports:
+          - 5432:5432
+        options: >-
+          --init
+          --tmpfs /var/lib/postgresql
+          --health-cmd "pg_isready -h 127.0.0.1 -U agent_os -d agent_os"
+          --health-interval 30s
+          --health-timeout 10s
+          --health-retries 3
+          --health-start-period 30s
+          --health-start-interval 2s
     steps:
       - uses: actions/checkout@v4
         with:
@@ -215,6 +282,27 @@ jobs:
     timeout-minutes: 15
     env:
       PYTHONUTF8: "1"
+      # e2e 잡과 같다. serve 가 붙을 데이터베이스를 준비(e2e/stack.ts)가 아래 service container 에 만든다.
+      AGENT_OS_TEST_DATABASE_URL: postgresql://agent_os:agent_os@127.0.0.1:5432/agent_os
+    services:
+      postgres:
+        # postgres:18 (Debian trixie)
+        image: postgres@sha256:b9f6b8ff03b62f3cfd9d9ba3fe56226a9991c79d3fb46fd46536263bf02be553
+        env:
+          POSTGRES_USER: agent_os
+          POSTGRES_PASSWORD: agent_os
+          POSTGRES_DB: agent_os
+        ports:
+          - 5432:5432
+        options: >-
+          --init
+          --tmpfs /var/lib/postgresql
+          --health-cmd "pg_isready -h 127.0.0.1 -U agent_os -d agent_os"
+          --health-interval 30s
+          --health-timeout 10s
+          --health-retries 3
+          --health-start-period 30s
+          --health-start-interval 2s
     steps:
       - uses: actions/checkout@v4
         with:
@@ -254,12 +342,14 @@ jobs:
   # 끝난다. 잡 자체를 if: 로 건너뛰지 않는 것은 건너뛴 잡을 verify 가 빨강으로 읽기 때문이다. 판정에 쓰는 값은 env 로 넘겨
   # run 에 식으로 펼치지 않는다(zizmor 의 템플릿 주입 판정, ADR 0027). 실제 모델 프로젝트 llm 은 AGENT_OS_STANDALONE_LLM 을
   # 두지 않아 서지 않는다(실제 모델 시험은 손으로 돌린다. docs/constitution/operations.md LLM 테스트). timeout-minutes 는
-  # 지난 실행이 없는 첫 값이다. 어림의 근거는 이 PC 에서 이미지를 캐시해 둔 단독 e2e 한 바퀴가 4.8분이었다는 것이고
-  # (일지 2026-11-16), 빈 러너에서 이미지 넷을 짓는 시간은 재지 못했다. 이 잡이 시험까지 든 실행이 생기면 프로브 `JOBS` 에
-  # 더해 고친다(머리 주석).
+  # 시험까지 돈 실행 넷(44012310193, 44010835544, 43997051389, 43994723170)의 2.5~3.0분으로 정했다. 프로브의 `GATED` 가
+  # 시험 스텝이 성공한 실행만 이 잡의 측정으로 센다(2026-11-17). 20분은 그 최대의 6배 남짓이고, 판 내기 첫 실행에서 캐시가
+  # 빈 이미지 짓기 몫(release 의 build 8.3분에서 점검·올리기를 뺀 어림 5분 안팎)에 시험 3분을 더한 8분 안팎이 이 잡에 다시
+  # 와도 넘지 않는다(어림. 이 잡의 캐시가 빈 실행은 재지 못했다. 8분 대비 여유가 2.5배다). 시험 실행이 더 쌓이면 프로브를
+  # 다시 돌려 고친다(머리 주석).
   e2e-standalone:
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 20
     env:
       PYTHONUTF8: "1"
     steps:
@@ -314,6 +404,15 @@ jobs:
         run: pnpm -C web/packages/e2e-standalone exec playwright install-deps chromium
       - if: steps.gate.outputs.run == 'true'
         run: pnpm -C web/packages/e2e-standalone exec playwright test
+      # 시험이 실패하면 test-results 를 남긴다. 시험 틀이 끝날 때(teardown)와 준비가 실패했을 때 compose.log(serve,
+      # 프록시, 데이터베이스 컨테이너의 로그)를 거기에 쓴다. 실행기는 잡이 끝나면 사라지므로 올리지 않으면 실패 원인을
+      # 볼 수 없다.
+      - if: failure() && steps.gate.outputs.run == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-standalone-test-results
+          path: web/packages/e2e-standalone/test-results/
+          retention-days: 14
 
   # 사진 비교(ADR 0026). 판을 고정한 Playwright 이미지를 잡의 컨테이너로 쓰고, 그 안에서 설치하고 Storybook 정적 빌드를
   # 지은 뒤 커밋한 정답 사진(web/packages/ui/visual/snapshots/)과 비교한다. 위젯과 관리 화면도 같은 컨테이너에서 자기 정적
@@ -400,8 +499,8 @@ jobs:
           marker=$(uuidgen)
           echo "::stop-commands::$marker"
           python3 tools/check_ticket.py --ci
-      # 노트 검사(tools/check_notes.py)가 PR 전체의 변경을 본다. PR 제목의 꼴, 느낌표와 upgrade/ 조각의 짝, 기능 단락의
-      # 빠뜨림과 모양이다. 판정과 입력은 그 도구의 독스트링이 원천이다. 앞 스텝이 빨강이어도 돌아 두 결과를 함께 보인다.
+      # 노트 검사(tools/check_notes.py)가 PR 전체의 변경을 본다. PR 제목의 꼴, 느낌표와 upgrade/ 원고의 짝(제품
+      # 마이그레이션 파일을 새로 더한 PR의 느낌표 포함), 기능 단락의 빠뜨림과 모양이다. 판정과 입력은 그 도구의 독스트링이 원천이다. 앞 스텝이 빨강이어도 돌아 두 결과를 함께 보인다.
       # PR 제목은 사람이 고치는 값이라 식으로 run 에 펼치지 않고 env 로만 넘긴다(zizmor 의 템플릿 주입 판정, ADR 0027).
       # 제목만 고친 실행은 pr-title.yml 이 맡는다(이 워크플로는 edited 에 돌지 않는다).
       - if: ${{ !cancelled() }}
@@ -436,6 +535,28 @@ jobs:
     timeout-minutes: 40
     env:
       PYTHONUTF8: "1"
+      # 실제 serve 를 띄우는 시험(-m llm 의 test_main.py·test_assistant_llm.py 와 위젯 e2e 의 준비)이 붙는 데이터베이스다.
+      # python 잡과 같은 이미지와 상태 확인이다.
+      AGENT_OS_TEST_DATABASE_URL: postgresql://agent_os:agent_os@127.0.0.1:5432/agent_os
+    services:
+      postgres:
+        # postgres:18 (Debian trixie)
+        image: postgres@sha256:b9f6b8ff03b62f3cfd9d9ba3fe56226a9991c79d3fb46fd46536263bf02be553
+        env:
+          POSTGRES_USER: agent_os
+          POSTGRES_PASSWORD: agent_os
+          POSTGRES_DB: agent_os
+        ports:
+          - 5432:5432
+        options: >-
+          --init
+          --tmpfs /var/lib/postgresql
+          --health-cmd "pg_isready -h 127.0.0.1 -U agent_os -d agent_os"
+          --health-interval 30s
+          --health-timeout 10s
+          --health-retries 3
+          --health-start-period 30s
+          --health-start-interval 2s
     steps:
       - uses: actions/checkout@v4
         with:

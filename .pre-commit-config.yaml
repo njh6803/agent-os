@@ -9,6 +9,9 @@
 #   없으면 건너뛰지 않고 빨갛다, ADR 0030)
 # 기계마다 한 번: PATH 에 rg 나 Claude Code(claude)  (pytest 의 tests/tools/test_hook_env_read_rg.py 가
 #   부른다. claude 는 실행 이름 rg 로 띄운다. 없으면 건너뛰지 않고 빨갛다, ADR 0038)
+# 기계마다 한 번: Docker  (pytest 의 데이터베이스 시험이 붙는 테스트 컨테이너(compose.test.yaml)를 띄운다.
+#   러너가 답하지 않으면 docker compose -f compose.test.yaml up -d --wait 로 띄우고 내리지 않는다. 손으로
+#   치는 pytest 는 띄우지 않고, 컨테이너가 없으면 건너뛰지 않고 빨갛다, ADR 0066)
 default_install_hook_types: [pre-commit, commit-msg]
 # 훅은 기본으로 커밋 직전에만 돈다. 커밋 메시지 훅만 commit-msg 단계다. 단계를 적지 않은 always_run 훅은
 # commit-msg 단계에서 한 번 더 돌아 pyright·pytest 가 커밋마다 두 번이었다(대기열 118, 일지 2026-10-07-05).

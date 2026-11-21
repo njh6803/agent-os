@@ -1,0 +1,39 @@
+# 시험이 붙는 PostgreSQL 컨테이너 하나. 개발 PC 에서 모든 워크트리와 세션이 이 하나를 함께 쓴다.
+#
+# 띄우기: docker compose -f compose.test.yaml up -d --wait
+# 러너(`uv run python tools/run_checks.py`)는 답하지 않으면 스스로 띄운다. 손으로 치는 `uv run pytest`
+# 는 띄우지 않고, 컨테이너가 없으면 시험이 setup 오류로 실패한다.
+#
+# 데이터는 메모리(tmpfs)에만 있다. 컨테이너를 다시 띄우면 모두 사라진다. 계정, 비밀번호, 데이터베이스
+# 이름이 모두 `agent_os` 인 시험용 값이고, 127.0.0.1 에만 열려서 비밀이 아니다.
+# 이 파일을 고쳐도 떠 있는 컨테이너는 그대로다. 다른 세션이 시험을 돌리지 않을 때 위 명령을 다시 쳐서
+# 컨테이너를 다시 만든다(ADR 0066).
+#
+# 이미지의 digest 는 `.github/workflows/ci.yml`(service container)이 같은 값을 든다. 둘이 같은지는
+# tests/test_postgres_image_pin.py 가 판정한다. 배포용 compose 가 PostgreSQL 을 들이면 그 자리도 더한다.
+name: agent-os-test
+
+services:
+  postgres:
+    container_name: agent-os-test-postgres
+    # postgres:18 (Debian trixie)
+    image: postgres@sha256:b9f6b8ff03b62f3cfd9d9ba3fe56226a9991c79d3fb46fd46536263bf02be553
+    environment:
+      POSTGRES_USER: agent_os
+      POSTGRES_PASSWORD: agent_os
+      POSTGRES_DB: agent_os
+    # 잃을 데이터가 없으므로 디스크에 안전하게 쓰려고 기다리는 설정 셋을 끈다.
+    command: ["postgres", "-c", "fsync=off", "-c", "synchronous_commit=off", "-c", "full_page_writes=off"]
+    tmpfs:
+      - /var/lib/postgresql
+    ports:
+      - "127.0.0.1:25432:5432"
+    init: true
+    # TCP 로 묻는다. 유닉스 소켓으로 물으면 첫 띄우기의 임시 서버가 먼저 답한다.
+    healthcheck:
+      test: ["CMD", "pg_isready", "-h", "127.0.0.1", "-U", "agent_os", "-d", "agent_os"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+      start_interval: 2s

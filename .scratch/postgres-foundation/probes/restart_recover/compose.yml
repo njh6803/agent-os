@@ -1,0 +1,70 @@
+# restart_recover 프로브가 dind 안에서 띄우는 배치다. ADR 0066 결정 "compose 배치"가 단독 compose 에
+# 더하는 모양(PostgreSQL 하나, 한 번 도는 migrate, 그 뒤에 뜨는 serve)만 옮겼다. migrate 와 serve 는
+# 진짜가 아니라 같은 이미지의 sh 스크립트다(migrate.sh, serve.sh). watch 는 배치에 없는 측정 도구로,
+# 다른 컨테이너에서 새로 거는 접속이 언제 되는지 시도마다 적는다.
+# 비밀번호는 이 프로브만 쓰는 값이다. 포트를 밖으로 열지 않는다.
+name: pgf-recover
+
+x-client: &client
+  PGPASSWORD: probe-only
+  PGCONNECT_TIMEOUT: "2"
+
+services:
+  postgres:
+    image: ${PG_IMAGE:?}
+    environment:
+      POSTGRES_USER: agent_os
+      POSTGRES_DB: agent_os
+      POSTGRES_PASSWORD: probe-only
+    volumes:
+      - pgdata:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD", "pg_isready", "-h", "127.0.0.1", "-U", "agent_os", "-d", "agent_os"]
+      interval: 2s
+      timeout: 3s
+      retries: 5
+      start_period: 60s
+      start_interval: 1s
+    restart: unless-stopped
+
+  migrate:
+    image: ${PG_IMAGE:?}
+    entrypoint: ["sh", "/probe/migrate.sh"]
+    environment:
+      <<: *client
+      MIGRATE_DELAY: ${MIGRATE_DELAY:-0}
+    volumes:
+      - ./migrate.sh:/probe/migrate.sh:ro
+    restart: "no"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  serve:
+    image: ${PG_IMAGE:?}
+    entrypoint: ["sh", "/probe/serve.sh"]
+    environment:
+      <<: *client
+      PROBE_MODE: serve
+      RETRY_SECONDS: ${RETRY_SECONDS:-30}
+      REQUIRE_TABLE: ${REQUIRE_TABLE:-}
+    volumes:
+      - ./serve.sh:/probe/serve.sh:ro
+    restart: unless-stopped
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+  watch:
+    image: ${PG_IMAGE:?}
+    entrypoint: ["sh", "/probe/serve.sh"]
+    environment:
+      <<: *client
+      PROBE_MODE: watch
+      RETRY_INTERVAL: "0.2"
+    volumes:
+      - ./serve.sh:/probe/serve.sh:ro
+    restart: unless-stopped
+
+volumes:
+  pgdata:

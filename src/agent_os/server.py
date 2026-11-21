@@ -22,6 +22,7 @@ from agent_os.channel.http.router import CHANNEL_PREFIX, channel_router
 from agent_os.core.ports import Clock, ModelSource, PluginSource, ToolSource, TraceStore
 from agent_os.http.auth import RequireToken, SharedToken, SiteSigned
 from agent_os.http.cors import CorsUnderPrefix
+from agent_os.http.database import CheckDatabase, Database
 from agent_os.http.errors import (
     AssignRequestId,
     CatchUnexpected,
@@ -59,6 +60,7 @@ def create_app(
     run_timeout_seconds: float | None,
     end_user_concurrent_runs: int | None,
     stderr: TextIO,
+    database: Database,
 ) -> FastAPI:
     """관리 API 와 HTTP 채널과 최종 사용자 경로가 선 앱 하나. 포트는 부르는 쪽이 만들어 넘긴다.
 
@@ -99,6 +101,11 @@ def create_app(
     하나다(`Sites.origins`). 변환이 운영자 면에 서는 자리는 식별자 심기와 인증 사이로, 둘이 한
     미들웨어였을 때와 같다. 인증 표와 예외 표와 CORS 분기는 같은 접두사를 같은 비교(`is_under`)로
     보아, 서명 토큰으로 열린 경로가 곧 최종 사용자 면으로 번역되고 CORS 헤더를 받는다.
+
+    데이터베이스(`database`)는 인자이고 기본값이 없다. 수명을 열 때 표의 판이 맞는 데이터베이스에
+    닿는지 확인하고 닫을 때 연결 묶음을 닫는 일은 가장 바깥 미들웨어(`CheckDatabase`)가 한다 — HTTP
+    요청에는 손대지 않고 수명 범위만 본다. 앱의 시작 단계(MCP 서버 같은 시작 일)보다 먼저 확인해야
+    하므로 앱 안쪽의 수명 함수에 두지 않는다. 확인이 막으면 앱의 시작 단계는 돌지 않는다(ADR 0066).
     """
     if not admin_token or not channel_token:
         raise ValueError("관리 API 와 채널은 토큰 없이 설 수 없다")
@@ -137,4 +144,5 @@ def create_app(
     app.add_middleware(CatchUnexpected, end_user=end_user)
     app.add_middleware(CorsUnderPrefix, prefix=END_USER_PREFIX, origins=sites.origins())
     app.add_middleware(AssignRequestId, stderr=stderr)
+    app.add_middleware(CheckDatabase, database=database)
     return app

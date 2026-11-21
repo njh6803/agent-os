@@ -21,6 +21,11 @@ export interface Stack {
   ): Launched;
   /** 서버를 묶음에 맡기고 그대로 돌려준다. */
   own(server: Server): Server;
+  /**
+   * 거둘 때 프로세스를 모두 끈 뒤에 부를 동작을 맡긴다(시험이 만든 데이터베이스 지우기). 맡긴 순서의 거꾸로 부르고, 하나가
+   * 던져도 나머지는 부른 뒤 첫 오류를 그대로 올린다.
+   */
+  cleanup(action: () => Promise<void> | void): void;
   teardown(): Promise<void>;
 }
 
@@ -31,10 +36,26 @@ export interface StackOptions {
   readonly logs: string;
 }
 
+/** 동작을 모두 부른다. 하나가 던져도 나머지를 부른 뒤 첫 오류를 그대로 올린다. */
+async function runAll(actions: readonly (() => Promise<void> | void)[]): Promise<void> {
+  const failures: unknown[] = [];
+  for (const action of actions) {
+    try {
+      await action();
+    } catch (error: unknown) {
+      failures.push(error);
+    }
+  }
+  if (failures.length > 0) {
+    throw failures[0];
+  }
+}
+
 export function createStack(options: StackOptions): Stack {
   const work = mkdtempSync(join(tmpdir(), options.prefix));
   const launched: Launched[] = [];
   const servers: Server[] = [];
+  const cleanups: (() => Promise<void> | void)[] = [];
   return {
     work,
     launch(name, command, args, cwd, env) {
@@ -46,26 +67,33 @@ export function createStack(options: StackOptions): Stack {
       servers.push(server);
       return server;
     },
+    cleanup(action) {
+      cleanups.push(action);
+    },
     async teardown() {
-      // 앞 단계가 던져도 임시 작업 폴더는 지워야 해서 `finally` 로 묶는다. 던진 오류는 그대로 올라간다.
+      // 앞 단계가 던져도 맡긴 동작과 임시 작업 폴더 지우기는 해야 해서 `finally` 로 묶는다. 던진 오류는 그대로 올라간다.
       try {
-        for (const server of servers.toReversed()) {
-          await new Promise<void>((resolve) => {
-            server.close(() => {
-              resolve();
-            });
-            server.closeAllConnections();
-          });
-        }
         try {
-          for (const { child } of launched.toReversed()) {
-            await stop(child);
+          for (const server of servers.toReversed()) {
+            await new Promise<void>((resolve) => {
+              server.close(() => {
+                resolve();
+              });
+              server.closeAllConnections();
+            });
+          }
+          try {
+            for (const { child } of launched.toReversed()) {
+              await stop(child);
+            }
+          } finally {
+            mkdirSync(options.logs, { recursive: true });
+            for (const { name, output } of launched) {
+              writeFileSync(join(options.logs, `${name}.log`), output());
+            }
           }
         } finally {
-          mkdirSync(options.logs, { recursive: true });
-          for (const { name, output } of launched) {
-            writeFileSync(join(options.logs, `${name}.log`), output());
-          }
+          await runAll(cleanups.toReversed());
         }
       } finally {
         rmSync(work, { recursive: true, force: true, maxRetries: 5 });

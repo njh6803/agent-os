@@ -346,7 +346,8 @@ async def test_요약이_있으면_요약이_교환보다_앞에_서고_덮인_�
     tmp_path: Path,
 ) -> None:
     """런타임이 쓴 모양의 요약 이벤트를 손으로 둔 고리다. 요약은 런타임만 내므로 여기서는 트레이스에
-    직접 쓴다. 덮는 끝(첫 실행)은 거슬러 읽기가 읽지 않아 그 요청이 프롬프트에 없다."""
+    직접 쓴다. 요약에 든 마지막 실행(첫 실행)은 거슬러 읽기가 읽지 않아 그 요청이 프롬프트에
+    없다."""
     trace = JsonlTrace(tmp_path)
     for event in _summarized_chain():
         trace.write(event)

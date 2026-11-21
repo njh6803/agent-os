@@ -9,25 +9,26 @@ uv sync
 pnpm -C web install
 pnpm -C web exec playwright install --only-shell chromium
 uv run pre-commit install
+docker compose -f compose.test.yaml up -d --wait
 uv run pytest -q
 pnpm -C web verify
 ```
 
-`pre-commit install`은 주 체크아웃에서 한 번만 친다. git 훅은 워크트리와 공유된다. `uv sync`와 `pnpm -C web install --frozen-lockfile`은 워크트리마다 친다. claude.ai 클라우드 세션에서는 SessionStart 훅(`tools/hook_session_web_deps.py`)이 클론마다 `uv run pre-commit install`(빈 `.venv`를 맞추는 `uv sync`가 따라온다)과 pnpm 설치를 대신한다. chromium은 `pnpm -C web verify`의 스토리 테스트가 쓰고, 체크아웃마다가 아니라 기계마다 처음과 Playwright 판이 바뀔 때 한 번 친다(Playwright의 브라우저 캐시, Windows는 `%LOCALAPPDATA%\ms-playwright`). 사진 비교(`web/packages/ui`를 건드렸을 때 `pnpm -C web visual`, `pnpm -C web visual:widget`, `pnpm -C web visual:admin`, `web/apps/widget`이나 `web/apps/admin`을 건드렸을 때 그 앱의 것)는 Docker가 있어야 하고, 처음 치면 판을 고정한 Playwright 이미지(받는 양 약 956MB)를 받는다. `uv run pytest -q`는 PATH의 PowerShell 7(`pwsh`)로 `tools/open_session.ps1`의 함수를 부르므로 기계마다 pwsh가 있어야 하고, 없으면 그 시험이 실패한다(ADR 0030). 같은 pytest가 `.env` 읽기 훅을 실제 rg와 맞대므로 PATH에 `rg`나 Claude Code(`claude`)가 있어야 한다(ADR 0038).
+`pre-commit install`은 주 체크아웃에서 한 번만 친다. git 훅은 워크트리와 공유된다. `uv sync`와 `pnpm -C web install --frozen-lockfile`은 워크트리마다 친다. claude.ai 클라우드 세션에서는 SessionStart 훅(`tools/hook_session_web_deps.py`)이 클론마다 `uv run pre-commit install`(빈 `.venv`를 맞추는 `uv sync`가 따라온다)과 pnpm 설치를 대신한다. chromium은 `pnpm -C web verify`의 스토리 테스트가 쓰고, 체크아웃마다가 아니라 기계마다 처음과 Playwright 판이 바뀔 때 한 번 친다(Playwright의 브라우저 캐시, Windows는 `%LOCALAPPDATA%\ms-playwright`). 사진 비교(`web/packages/ui`를 건드렸을 때 `pnpm -C web visual`, `pnpm -C web visual:widget`, `pnpm -C web visual:admin`, `web/apps/widget`이나 `web/apps/admin`을 건드렸을 때 그 앱의 것)는 Docker가 있어야 하고, 처음 치면 판을 고정한 Playwright 이미지(받는 양 약 956MB)를 받는다. `docker compose -f compose.test.yaml up -d --wait`는 데이터베이스 시험이 붙는 테스트 컨테이너(`127.0.0.1:25432`의 PostgreSQL, 데이터는 메모리에만 있다)를 띄운다. 모든 워크트리와 세션이 이 하나를 함께 쓰고, 커밋 때 도는 러너(`tools/run_checks.py`)는 컨테이너가 답하지 않으면 스스로 띄우되 내리지 않는다. 손으로 치는 `uv run pytest -q`는 띄우지 않으므로 컨테이너가 없으면 데이터베이스 시험이 띄우는 명령과 함께 실패한다(ADR 0066). `uv run pytest -q`는 PATH의 PowerShell 7(`pwsh`)로 `tools/open_session.ps1`의 함수를 부르므로 기계마다 pwsh가 있어야 하고, 없으면 그 시험이 실패한다(ADR 0030). 같은 pytest가 `.env` 읽기 훅을 실제 rg와 맞대므로 PATH에 `rg`나 Claude Code(`claude`)가 있어야 한다(ADR 0038).
 
 ## 구조
 
 ```
 src/agent_os/
-  main.py          진입점. run·resume → channel, serve → server. 어댑터를 조립해 넘긴다
+  main.py          진입점. run·resume → channel, serve → server, migrate → adapters/postgres. 어댑터를 조립해 넘긴다
   server.py        HTTP 표면의 조립 층. create_app() 하나. 전역 app을 두지 않는다
   sdk/             플러그인이 import하는 유일한 표면. 이벤트, 매니페스트, BaseAgent
   core/            런타임, 로더, 루프, 재생, 포트 선언
-  channel/cli/     실행을 일으키는 면. run·resume 과 명령 셋의 인자
+  channel/cli/     실행을 일으키는 면. run·resume·migrate 와 명령 셋의 인자
   channel/http/    실행을 일으키는 면. router(운영자 채널 /runs 와 두 접두사의 조립), end_user(최종 사용자 면
                    /end-user 의 시작·결정·구독·이어 가기), items(최종 사용자 항목과 투영), bodies(두 면의
                    요청 본문),
-                   runs(실행을 앱의 수명에 묶는 것과 도는 실행의 등록부, 연결마다의 백로그),
+                   runs(실행을 앱의 수명에 묶는 것과 실행 중 목록, 연결마다의 백로그),
                    limits(최종 사용자 경로의 상한. 기본값 일곱과 셈)
   admin/           구성을 바꾸고 관찰하는 면. http(라우터와 관리의 응답 모델), traces(목록과 상세의 모양)
   http/            채널과 관리가 같이 쓰는 HTTP 배관. errors(봉투와 면별 상태 코드 표), routes(에러 문서와 verbatim),
@@ -59,7 +60,7 @@ web/               pnpm 워크스페이스(Node 24, TypeScript 5.9). 파이썬�
   packages/e2e-stack/  e2e 준비(@agent-os/e2e-stack, 앱의 devDependency). 같은 출처 중계, 픽스처 플러그인(저장소 플러그인 복사
                    포함), 실제 serve 띄우기와 빈 포트·기다리기·끄기 도우미(Stack), 사이트 키와 토큰 서명, 준비가 시험에 넘긴
                    트레이스 폴더에서 실행의 주체를 읽는 것. 환경 변수 이름은 앱이 준다. 상대 import 에 확장자를 붙인다
-  packages/e2e-standalone/  단독 배포 e2e(@agent-os/e2e-standalone). 묶음(deploy/standalone)을 실제 이미지 넷과 프록시로 띄워
+  packages/e2e-standalone/  단독 배포 e2e(@agent-os/e2e-standalone). 묶음(deploy/standalone)을 실제 이미지 넷과 프록시와 PostgreSQL로 띄워
                    실제 브라우저와 HTTP 로 지난다. 이미지는 지은 것이나 환경 변수가 가리키는 것을 쓰고, 프로젝트 이름을
                    시험마다 따로 줘 끝나면 볼륨까지 지운다. 선택 모드로 실제 모델과 IPv6 없는 컨테이너가 있다
   packages/react-18/  React·ReactDOM 18.3.1 만 든 시험 전용 패키지(@agent-os/react-18, 판 고정). 디자인 시스템 카드 시험이
@@ -110,7 +111,7 @@ docs/
   rules/           디렉터리별 규칙. 해당 파일을 Read 도구로 열 때만 로드
   skills/          엔지니어링 스킬
   settings.json    훅 등록, 권한(`.env` 읽기 거부), 플러그인, 스킬 덮어쓰기
-deploy/            배포에 드는 파일(제품 변경의 경로). images/serve.Dockerfile 이 serve 이미지를 짓는다(빌드 인자 APP_VERSION 필수, 컨텍스트는 저장소 루트이고 들일 파일은 serve.Dockerfile.dockerignore 가 고른다). images/docker-bake.hcl 은 판 내기 워크플로가 이미지 넷을 한 번에 짓는 목록이다. release.toml 은 판 설정 파일(`candidate_for` 한 칸)이다. standalone/ 은 단독 배포의 compose 묶음(이미지 넷과 nginx 프록시, 사이트·포털 설정, 환경 변수 견본)이다
+deploy/            배포에 드는 파일(제품 변경의 경로). images/serve.Dockerfile 이 serve 이미지를 짓는다(빌드 인자 APP_VERSION 필수, 컨텍스트는 저장소 루트이고 들일 파일은 serve.Dockerfile.dockerignore 가 고른다). images/docker-bake.hcl 은 판 내기 워크플로가 이미지 넷을 한 번에 짓는 목록이다. release.toml 은 판 설정 파일(`candidate_for` 한 칸)이다. standalone/ 은 단독 배포의 compose 묶음(이미지 넷과 nginx 프록시와 PostgreSQL, 한 번 도는 migrate, 사이트·포털 설정, 환경 변수 견본)이다
 tools/             배포되지 않는 저장소 유틸. 훅(hook_*)과 그 실행 래퍼(launch_hook), 검사(check_*), 검사 러너(run_checks), 훅 러너(run_hooks + hook_payloads.toml), 변이 도구, 체크아웃 정리(tidy_checkouts), OpenAPI 내보내기, 전체 계획 생성(plan_table), Actions 요약, 커밋 직전 형제 번호 대조(sibling_overlap), 주석·독스트링 감기(rewrap_comments), PR 검사의 대기(wait_ci)
 kickoff/           다른 프로젝트용 킥오프 런북(KICKOFF.md)의 진행 규율(runner.md, /kickoff가 읽는다), 템플릿, 부록. 이 프로젝트의 문서가 아니다
 .coderabbit.yaml   CodeRabbit 설정. PR 봇과 로컬 CLI가 같이 읽는다
@@ -127,6 +128,11 @@ openapi.json       관리 API와 HTTP 채널(운영자와 최종 사용자)의 �
 # 공유 토큰 둘(AGENT_OS_ADMIN_TOKEN, AGENT_OS_CHANNEL_TOKEN)이 환경에 있어야 서고, 기본 모델도 반드시 골라야 선다.
 # --model 은 기본 모델의 이름이다. 에이전트가 모델을 고르지 않았을 때 쓰는 plugins/models/<이름>/plugin.toml 을 가리키고, 그 파일을 실행마다 읽는다(ADR 0040). 환경변수 AGENT_OS_MODEL 로도 넘기는데, --model 이 있으면 그 값이 우선하므로 환경변수로 고르려면 아래 명령에서 --model 을 뺀다. 코드에 기본값은 없다. 이름이 없거나, 플러그인 이름 형식이 아니거나, 그 모델 파일이 없거나 읽히지 않으면 시작할 때 다른 구성 문제와 함께 알리고 서지 않는다. 같은 확인을 CLI의 run·resume도 실행 전에 한다. 모델을 꺼 둔 것은 시작을 막지 않는다.
 # --site-file 은 선택이다(최종 사용자 경로, ADR 0023)
+# 데이터베이스 주소(AGENT_OS_DATABASE_URL)도 환경에 있어야 한다. serve 는 표의 판이 맞는 데이터베이스에 닿아야 뜨고, 아니면 이유를 알리고 서지 않는다(ADR 0066).
+# 개발 PC에서는 테스트 컨테이너의 기본 데이터베이스를 쓴다. 컨테이너를 다시 띄우면 데이터가 사라지므로 migrate 를 다시 친다.
+docker compose -f compose.test.yaml up -d --wait
+export AGENT_OS_DATABASE_URL=postgresql://agent_os:agent_os@127.0.0.1:25432/agent_os
+uv run agent-os migrate
 uv run agent-os serve --model claude-opus-5
 pnpm -C web/apps/admin build
 pnpm -C web/apps/admin start       # http://127.0.0.1:3000

@@ -1,0 +1,104 @@
+# compose_shape 프로브(run.py 의 2~5번)가 그대로 띄우는 파일이다. 단독 배포의 compose 에 더하려는 모양
+# (PostgreSQL 서비스, 한 번 도는 migrate, serve 의 depends_on, 비밀번호 한 줄로 짓는 연결 문자열)에
+# migrate 와 serve 의 대역을 끼웠다. 대역은 실제 이미지가 아니라 PostgreSQL 이미지의 psql 을 부르는
+# 셸이고, `PROBE_` 로 시작하는 변수와 `command`, `init`, `stop_grace_period` 는 대역에만 있는 것이다.
+# 프로젝트 이름은 프로브가 `-p` 로 준다. 호스트 포트는 발행하지 않는다.
+
+x-health: &health
+  interval: 30s
+  timeout: 10s
+  retries: 3
+  start_period: 30s
+  start_interval: 2s
+
+services:
+  postgres:
+    # 공식 postgres:18(18.7, Debian trixie)을 digest 로 고정했다.
+    image: postgres@sha256:b9f6b8ff03b62f3cfd9d9ba3fe56226a9991c79d3fb46fd46536263bf02be553
+    # 이미지의 postgres 사용자다. root 로 띄우지 않으므로 진입 스크립트의 chown 과 gosu 가 돌지 않는다.
+    user: "999:999"
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    tmpfs:
+      # 유닉스 소켓과 잠금 파일이 놓이는 자리다. 읽기 전용 루트에서는 이것이 없으면 서버가 뜨지 못한다.
+      - /var/run/postgresql
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: agent_os
+      POSTGRES_DB: agent_os
+      POSTGRES_PASSWORD: ${AGENT_OS_DATABASE_PASSWORD:?.env 에 AGENT_OS_DATABASE_PASSWORD 가 없다}
+    volumes:
+      - pgdata:/var/lib/postgresql
+    healthcheck:
+      <<: *health
+      # -h 로 TCP 를 본다. 처음 띄울 때의 임시 서버는 유닉스 소켓으로만 답한다.
+      test: [CMD, pg_isready, -h, 127.0.0.1, -U, agent_os, -d, agent_os]
+
+  migrate:
+    image: postgres@sha256:b9f6b8ff03b62f3cfd9d9ba3fe56226a9991c79d3fb46fd46536263bf02be553
+    restart: "no"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      AGENT_OS_DATABASE_URL: postgresql://agent_os:${AGENT_OS_DATABASE_PASSWORD:?.env 에 AGENT_OS_DATABASE_PASSWORD 가 없다}@postgres:5432/agent_os
+      PROBE_VERSION: ${PROBE_VERSION:-v1}
+      PROBE_MIGRATE_EXIT: ${PROBE_MIGRATE_EXIT:-0}
+    command:
+      - sh
+      - -c
+      - |
+        set -eu
+        if [ "$$PROBE_MIGRATE_EXIT" != 0 ]; then
+          echo "migrate 대역: 일부러 $$PROBE_MIGRATE_EXIT 로 끝난다"
+          exit "$$PROBE_MIGRATE_EXIT"
+        fi
+        psql "$$AGENT_OS_DATABASE_URL" -v ON_ERROR_STOP=1 -q \
+          -c "create table if not exists probe_rows (id bigserial primary key, who text not null, version text not null, at timestamptz not null default clock_timestamp())" \
+          -c "insert into probe_rows (who, version) values ('migrate', '$$PROBE_VERSION')"
+        echo "migrate 대역: 판 $$PROBE_VERSION 을 올렸다"
+
+  serve:
+    image: postgres@sha256:b9f6b8ff03b62f3cfd9d9ba3fe56226a9991c79d3fb46fd46536263bf02be553
+    restart: unless-stopped
+    init: true
+    stop_grace_period: 2s
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    environment:
+      AGENT_OS_DATABASE_URL: postgresql://agent_os:${AGENT_OS_DATABASE_PASSWORD:?.env 에 AGENT_OS_DATABASE_PASSWORD 가 없다}@postgres:5432/agent_os
+      PROBE_VERSION: ${PROBE_VERSION:-v1}
+    command:
+      - sh
+      - -c
+      - |
+        set -eu
+        pg_isready -h postgres -U agent_os -d agent_os
+        psql "$$AGENT_OS_DATABASE_URL" -v ON_ERROR_STOP=1 -q \
+          -c "insert into probe_rows (who, version) values ('serve-start', '$$PROBE_VERSION')"
+        touch /tmp/serve-ready
+        echo "serve 대역: 판 $$PROBE_VERSION 으로 떴다"
+        # 접속 하나를 쥔 채 0.5초마다 줄을 넣는다(이미 맺은 접속).
+        ( while :; do
+            echo "insert into probe_rows (who, version) values ('serve-held', '$$PROBE_VERSION');"
+            sleep 0.5
+          done ) | psql "$$AGENT_OS_DATABASE_URL" -q || echo "serve 대역: 쥐고 있던 접속이 끝났다" &
+        # 0.5초마다 새로 접속해 줄을 넣는다(새 접속).
+        while :; do
+          psql "$$AGENT_OS_DATABASE_URL" -v ON_ERROR_STOP=1 -q \
+            -c "insert into probe_rows (who, version) values ('serve-new', '$$PROBE_VERSION')" \
+            || echo "serve 대역: 새 접속이 실패했다"
+          sleep 0.5
+        done
+    healthcheck:
+      <<: *health
+      test: [CMD, test, -f, /tmp/serve-ready]
+
+volumes:
+  pgdata: {}
+
+networks:
+  default:
+    enable_ipv6: false

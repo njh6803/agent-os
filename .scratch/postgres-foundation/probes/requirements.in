@@ -1,0 +1,7 @@
+# postgres-foundation 명세의 프로브가 재는 도구 묶음. ADR 0066 결정 "도구 묶음"의 셋이고 판은
+# `.scratch/admin-login/probes/pg_stack/requirements.in` 이 고정한 것과 같다. asyncpg-stubs 는 일부러
+# 뺐다(ADR 0066 Consequences "재지 않은 것"의 "스텁 없는 잠금"). 전이 의존은 적지 않는다. 저장소의
+# pyproject.toml 과 uv.lock 사본에 `uv add -r` 로 더해 저장소의 잠금과 함께 푼다(README 의 다시 돌리기).
+sqlalchemy[asyncio]==2.1.8
+asyncpg==0.32.0
+alembic==1.20.1

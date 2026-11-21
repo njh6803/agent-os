@@ -1,7 +1,8 @@
 # retro 스킬이 손상의 정의에 "main이 깨진 것" 대신 "main이나 dev가 깨진 것"을 적은 문장이 새 세션에 실리는지(dev-base-skills-docs
 # 티켓, ADR 0043). 실험군은 이 워크트리, 대조군은 옛 판을 든 주 체크아웃이다. 이 PR 이 병합되기 전의 주 체크아웃에는 옛 문장이
 # 있다. 병합 뒤에 다시 돌리려면 병합 전 커밋을 `--control-commit` 으로 준다(README `canary/` 행).
-# 최신 결과: 통과 4, "없음" 섞임 0(2026-11-12, 이 PC, claude 2.1.322, 실험군은 `cd77e4096` 위의 커밋하지 않은 본문, 대조군은 주 체크아웃 `cd77e4096`, harness 티켓 dev-base-skills-docs).
+# 최신 결과: 통과 4(2026-11-17, 이 PC, claude 2.1.325, 실험군은 `ac2e65f62` 위의 커밋 전 작업 트리 셋, 대조군 `--control-commit cd77e4096` 하나, 일지 2026-11-17-2031). 용어집의 이름을 바꾸며 원천의 낱말만 고친 뒤 다시 돌렸다(harness 티켓 plain-words-in-written-artifacts).
+# 그 전 결과: 통과 4, "없음" 섞임 0(2026-11-12, 이 PC, claude 2.1.322, 실험군은 `cd77e4096` 위의 커밋하지 않은 본문, 대조군은 주 체크아웃 `cd77e4096`, harness 티켓 dev-base-skills-docs).
 # 돌리는 법: 워크트리 `.claude/worktrees/<이름>/` 루트에서
 #   uv run python tools/canary.py .scratch/harness/probes/canary/dev_base_retro.toml <출력 디렉터리>
 kind = "skill"
