@@ -16,7 +16,7 @@ import inspect
 import io
 import json
 import time
-from collections.abc import AsyncIterator, Iterable, Mapping, Sequence
+from collections.abc import AsyncGenerator, AsyncIterator, Iterable, Mapping, Sequence
 from datetime import UTC, datetime, timedelta, timezone
 from importlib.metadata import version as installed_version
 from pathlib import Path
@@ -29,6 +29,7 @@ from httpx import ASGITransport, AsyncClient
 from langchain_core.language_models.fake_chat_models import GenericFakeChatModel
 from pydantic import TypeAdapter
 from starlette.exceptions import HTTPException as StarletteHTTPException
+from tests.fake_checks import UnusedToolChecks
 from tests.fake_database import FakeDatabase
 from tests.fake_models import DEFAULT_MODEL, FakeModels
 from tests.signing import (
@@ -46,6 +47,7 @@ from agent_os import server as server_module
 from agent_os.adapters.filesystem import FilesystemPlugins
 from agent_os.admin import http as admin_http
 from agent_os.admin import traces as admin_traces
+from agent_os.admin.connection_check import AutomaticChecks, LaunchingChecks
 from agent_os.admin.http import Health
 from agent_os.admin.traces import CURSOR_PATTERN
 from agent_os.channel.http.end_user import END_USER_PREFIX
@@ -54,6 +56,7 @@ from agent_os.core.ports import (
     DEFAULT_LIMIT,
     MAX_LIMIT,
     Absent,
+    CheckOutcome,
     Clock,
     Cursor,
     Disabled,
@@ -63,6 +66,7 @@ from agent_os.core.ports import (
     PluginError,
     PluginKey,
     PluginSource,
+    Reached,
     Rules,
     RunRow,
     RunStatus,
@@ -73,6 +77,7 @@ from agent_os.core.ports import (
     TraceSchemaVersion,
     TraceStore,
     UnknownEvent,
+    Unreached,
     UnreadableManifest,
     UnreadableTrace,
     WriteOutcome,
@@ -420,7 +425,7 @@ class FakeTrace:
         return tuple(rows[: DEFAULT_LIMIT if limit is None else limit])
 
 
-class IdleTools:
+class IdleTools(UnusedToolChecks):
     """이 파일은 관리를 민다. 관리는 실행을 일으키지 않으므로 불리면 그 자체가 결함이다.
     채널이 이 포트를 쓰는 것은 `tests/channel/http/test_router.py` 가 잰다."""
 
@@ -449,18 +454,19 @@ def _admin_app(
     channel_token: str = CHANNEL_TOKEN,
     sites: Sites | None = None,
     clock: Clock | None = None,
+    tools: ToolSource | None = None,
+    models: ModelSource | None = None,
 ) -> FastAPI:
     """관리를 미는 앱. 채널의 포트 셋은 불리지 않는 자리표시자다. 인자 타입이 포트 적합성을
-    검증하는 자리다. 서명 토큰을 재는 테스트만 사이트 목록과 토큰의 시간을 셀 시계를 준다."""
-    models: ModelSource = FakeModels(GenericFakeChatModel(messages=iter(())))
-    tools: ToolSource = IdleTools()
+    검증하는 자리다. 서명 토큰을 재는 테스트만 사이트 목록과 토큰의 시간을 셀 시계를 주고,
+    접속 확인을 재는 테스트만 확인 메서드가 답하는 도구와 모델 포트를 준다."""
     idle: Clock = IdleClock()
     return create_app(
         plugins=plugins,
         trace=trace,
-        models=models,
+        models=models or FakeModels(GenericFakeChatModel(messages=iter(()))),
         default_model=DEFAULT_MODEL,
-        tools=tools,
+        tools=tools or IdleTools(),
         clock=clock or idle,
         principal=Principal("alice"),
         admin_token=admin_token,
@@ -1498,13 +1504,20 @@ def test_상한의_문구는_세_가지이고_범위를_들지_않는다(limit: 
         assert failure.headers == {"Retry-After": "5"}
 
 
-def test_관리_라우터가_도구_포트를_받지_않는다() -> None:
+def test_관리_라우터가_도구_포트도_모델_포트도_받지_않고_확인_함수_묶음_둘만_받는다() -> None:
     """조회가 MCP 서버를 띄우는 것이 구조적으로 불가능하다(스토리 7). 앱은 채널을 위해 도구 포트를
-    받지만 그 성질을 지키던 것은 관리 라우터의 시그니처다(ADR 0010 의 2026-09-24 이력)."""
+    받지만 그 성질을 지키던 것은 관리 라우터의 시그니처다(ADR 0010 의 2026-09-24 이력). 접속
+    확인이 붙은 뒤에도 같다 — 라우터는 포트가 아니라 확인 함수를 담은 묶음 둘만 받으므로
+    `connect` 를 부를 길이 없다(ADR 0067)."""
     parameters = inspect.signature(admin_http.admin_router).parameters
+    hints = get_type_hints(admin_http.admin_router)
 
     assert "tools" not in parameters
-    assert ToolSource not in get_type_hints(admin_http.admin_router).values()
+    assert "models" not in parameters
+    assert ToolSource not in hints.values()
+    assert ModelSource not in hints.values()
+    assert hints["automatic"] is AutomaticChecks
+    assert hints["launching"] is LaunchingChecks
 
 
 def test_모듈_수준_전역_앱이_없다() -> None:
@@ -2290,6 +2303,474 @@ async def test_동시에_온_켜고_끄기_둘이_둘_다_남는다(stderr: io.S
 
     assert [response.status_code for response in responses] == [204, 204]
     assert {row["name"]: row["enabled"] for row in rows} == {"calc": False, "everything": False}
+
+
+# 접속 확인 — 켜 둔 원격 MCP 서버와 모델과 stdio MCP 서버에 붙는지(connection-check 티켓 01)
+
+REMOTE = parse_manifest(
+    """
+schema_version = "1"
+kind = "mcp"
+name = "remote"
+version = "0.1.0"
+
+[server]
+transport = "http"
+url = "https://mcp.example.test/mcp"
+"""
+)
+REMOTE_KEY = PluginKey(kind=PluginKind.MCP, name=PluginName("remote"))
+SONNET_KEY = PluginKey(kind=PluginKind.MODEL, name=PluginName("sonnet"))
+CHECK_ROWS = (BROKEN, CALC, EVERYTHING, OLD_MODEL, REMOTE, SONNET, SUMMARIZE)
+NO_STORE = "no-store"
+
+
+class Checks:
+    """접속 확인 메서드 셋이 받은 인자를 적고, 정해 둔 답을 낸다(`error` 가 있으면 던진다).
+
+    도구 포트와 모델 포트가 한 기록을 나눠 써서, 어느 오퍼레이션이 어느 메서드를 몇 번 불렀는지를
+    한 객체에서 본다. 확인 함수가 한 번도 불리지 않아야 하는 판정(꺼짐, 대상 아님, 형식 오류)은
+    `calls` 가 0 이라는 단언 하나로 잰다.
+    """
+
+    def __init__(self, outcome: CheckOutcome | None = None, *, error: Exception | None = None):
+        self.outcome: CheckOutcome = Reached() if outcome is None else outcome
+        self.error = error
+        self.remote: list[tuple[PluginName, HttpServer]] = []
+        self.stdio: list[tuple[PluginName, StdioServer]] = []
+        self.model: list[PluginManifest] = []
+
+    @property
+    def calls(self) -> int:
+        return len(self.remote) + len(self.stdio) + len(self.model)
+
+    def answer(self) -> CheckOutcome:
+        if self.error is not None:
+            raise self.error
+        return self.outcome
+
+
+class CheckingTools(IdleTools):
+    """확인 메서드만 쓰이는 도구 포트. 연결을 여는 길은 `IdleTools` 의 것이라 불리면 결함이다."""
+
+    def __init__(self, checks: Checks) -> None:
+        self._checks = checks
+
+    async def check_remote(self, name: PluginName, server: HttpServer) -> CheckOutcome:
+        self._checks.remote.append((name, server))
+        return self._checks.answer()
+
+    async def check_stdio(self, name: PluginName, server: StdioServer) -> CheckOutcome:
+        self._checks.stdio.append((name, server))
+        return self._checks.answer()
+
+
+class CheckingModels(FakeModels):
+    """확인 메서드만 쓰이는 모델 포트. 모델을 만드는 길은 부르지 않는다."""
+
+    def __init__(self, checks: Checks) -> None:
+        super().__init__(GenericFakeChatModel(messages=iter(())))
+        self._checks = checks
+
+    async def check(self, manifest: PluginManifest) -> CheckOutcome:
+        self._checks.model.append(manifest)
+        return self._checks.answer()
+
+
+@contextlib.asynccontextmanager
+async def _checking_client(
+    stderr: io.StringIO, checks: Checks, plugins: FakePlugins
+) -> AsyncGenerator[AsyncClient]:
+    """접속 확인을 미는 앱의 클라이언트. 포트 둘이 `checks` 의 기록으로 답한다."""
+    tools: ToolSource = CheckingTools(checks)
+    models: ModelSource = CheckingModels(checks)
+    app = _admin_app(plugins=plugins, trace=FakeTrace(), stderr=stderr, tools=tools, models=models)
+    async with AsyncClient(
+        transport=ASGITransport(app=app), base_url="http://admin.test"
+    ) as opened:
+        yield opened
+
+
+def _check_path(kind: str, name: str) -> str:
+    return f"/plugins/{kind}/{name}/connection-check"
+
+
+async def _send(client: AsyncClient, method: str, path: str) -> httpx.Response:
+    return await client.request(method, path, headers=BEARER)
+
+
+@pytest.fixture
+def check_plugins() -> FakePlugins:
+    """읽을 수 있는 mcp 둘(stdio 하나와 http 하나)과 모델 하나와 에이전트와 스킬, 읽을 수 없는 모델
+    하나. 켜져 있다."""
+    return FakePlugins(rows=CHECK_ROWS)
+
+
+@pytest.fixture
+def checks() -> Checks:
+    return Checks()
+
+
+@pytest.mark.parametrize(
+    ("kind", "name"),
+    [pytest.param("model", "sonnet", id="모델"), pytest.param("mcp", "remote", id="원격 mcp")],
+)
+async def test_GET_확인이_붙으면_200_reached_이고_결과를_다시_쓰지_못하게_한다(
+    stderr: io.StringIO, checks: Checks, check_plugins: FakePlugins, kind: str, name: str
+) -> None:
+    """바깥 서버에 요청이 나가므로 결과가 캐시에 남으면 화면이 낡은 초록을 보인다(ADR 0067)."""
+    async with _checking_client(stderr, checks, check_plugins) as client:
+        response = await _send(client, "GET", _check_path(kind, name))
+
+    assert response.status_code == 200
+    assert response.json() == {"status": "reached"}
+    assert response.headers["Cache-Control"] == NO_STORE
+    assert checks.calls == 1
+
+
+async def test_GET_은_모델_확인에_읽은_매니페스트를_그대로_넘긴다(
+    stderr: io.StringIO, checks: Checks, check_plugins: FakePlugins
+) -> None:
+    async with _checking_client(stderr, checks, check_plugins) as client:
+        await _send(client, "GET", _check_path("model", "sonnet"))
+
+    assert checks.model == [SONNET]
+
+
+async def test_GET_은_원격_mcp_확인에_이름과_서버_정보를_넘긴다(
+    stderr: io.StringIO, checks: Checks, check_plugins: FakePlugins
+) -> None:
+    async with _checking_client(stderr, checks, check_plugins) as client:
+        await _send(client, "GET", _check_path("mcp", "remote"))
+
+    assert isinstance(REMOTE.server, HttpServer)
+    assert checks.remote == [(PluginName("remote"), REMOTE.server)]
+
+
+async def test_POST_는_stdio_mcp_확인에_이름과_서버_정보를_넘긴다(
+    stderr: io.StringIO, checks: Checks, check_plugins: FakePlugins
+) -> None:
+    async with _checking_client(stderr, checks, check_plugins) as client:
+        response = await _send(client, "POST", _check_path("mcp", "everything"))
+
+    assert response.status_code == 200
+    assert response.json() == {"status": "reached"}
+    assert response.headers["Cache-Control"] == NO_STORE
+    assert isinstance(EVERYTHING.server, StdioServer)
+    assert checks.stdio == [(PluginName("everything"), EVERYTHING.server)]
+    assert checks.remote == [] and checks.model == []
+
+
+@pytest.mark.parametrize(
+    ("method", "kind", "name"),
+    [
+        pytest.param("GET", "model", "sonnet", id="GET 모델"),
+        pytest.param("GET", "mcp", "remote", id="GET 원격 mcp"),
+        pytest.param("POST", "mcp", "everything", id="POST stdio mcp"),
+    ],
+)
+async def test_붙지_못한_확인은_오류가_아니라_200_unreached_와_이유이고_서버_기록을_남기지_않는다(
+    stderr: io.StringIO,
+    check_plugins: FakePlugins,
+    method: str,
+    kind: str,
+    name: str,
+) -> None:
+    """화면이 지금 이 서버가 닿지 않는다고 보이는 것이 이 오퍼레이션의 일이다. 실패가 일이라 4xx 나
+    5xx 로 말하지 않고, 운영자가 서버 기록에서 찾을 사고도 아니라 기록 한 줄도 남기지 않는다."""
+    checks = Checks(Unreached("연결이 거부됐다"))
+    async with _checking_client(stderr, checks, check_plugins) as client:
+        response = await _send(client, method, _check_path(kind, name))
+
+    assert response.status_code == 200
+    assert response.json() == {"status": "unreached", "reason": "연결이 거부됐다"}
+    assert response.headers["Cache-Control"] == NO_STORE
+    assert stderr.getvalue() == ""
+
+
+@pytest.mark.parametrize(
+    ("method", "kind", "name"),
+    [
+        pytest.param("GET", "mcp", "everything", id="GET 으로 stdio mcp"),
+        pytest.param("POST", "mcp", "remote", id="POST 로 원격 mcp"),
+        pytest.param("POST", "model", "sonnet", id="POST 로 모델"),
+    ],
+)
+async def test_확인_대상이_아니면_not_applicable_이고_확인_함수를_부르지_않는다(
+    stderr: io.StringIO,
+    checks: Checks,
+    check_plugins: FakePlugins,
+    method: str,
+    kind: str,
+    name: str,
+) -> None:
+    """눌러서 하는 확인은 stdio 만, 자동 확인은 원격과 모델만 맡는다. 서로의 대상에는 붙지
+    않는다."""
+    async with _checking_client(stderr, checks, check_plugins) as client:
+        response = await _send(client, method, _check_path(kind, name))
+
+    assert response.status_code == 200
+    assert response.json() == {"status": "not_applicable"}
+    assert response.headers["Cache-Control"] == NO_STORE
+    assert checks.calls == 0
+
+
+@pytest.mark.parametrize(
+    ("method", "key"),
+    [
+        pytest.param("GET", SONNET_KEY, id="GET 모델"),
+        pytest.param("GET", REMOTE_KEY, id="GET 원격 mcp"),
+        pytest.param("POST", EVERYTHING_KEY, id="POST stdio mcp"),
+        pytest.param("GET", EVERYTHING_KEY, id="꺼진 stdio mcp 를 GET 으로는 대상 아님보다 꺼짐"),
+        pytest.param("POST", SONNET_KEY, id="꺼진 모델을 POST 로는 대상 아님보다 꺼짐"),
+    ],
+)
+async def test_꺼_둔_플러그인은_disabled_이고_확인_함수를_부르지_않는다(
+    stderr: io.StringIO, checks: Checks, method: str, key: PluginKey
+) -> None:
+    """켜짐은 화면이 보낸 값이 아니라 서버가 읽은 것으로 판정한다. 꺼짐이 대상 아님보다 먼저다 —
+    꺼 둔 서버에 붙으면 끈 뜻이 사라지고, 꺼 둔 서버의 대상 여부는 화면이 말할 이유가 없다."""
+    plugins = FakePlugins(rows=CHECK_ROWS, disabled={key})
+    async with _checking_client(stderr, checks, plugins) as client:
+        response = await _send(client, method, _check_path(str(key.kind), key.name))
+
+    assert response.status_code == 200
+    assert response.json() == {"status": "disabled"}
+    assert response.headers["Cache-Control"] == NO_STORE
+    assert checks.calls == 0
+
+
+@pytest.mark.parametrize("method", ["GET", "POST"])
+@pytest.mark.parametrize("kind", ["agent", "skill", "nothing"])
+async def test_종류가_mcp_나_model_이_아니면_422이고_포트가_불리지_않는다(
+    stderr: io.StringIO,
+    checks: Checks,
+    check_plugins: FakePlugins,
+    method: str,
+    kind: str,
+) -> None:
+    """확인할 수 있는 종류는 닫힌 둘이다. 에이전트나 스킬을 대상 아님으로 답하지 않고 형식 오류로
+    거절한다 — 그런 요청은 화면이 보낼 수 없는 것이다."""
+    async with _checking_client(stderr, checks, check_plugins) as client:
+        response = await _send(client, method, _check_path(kind, "calc"))
+
+    assert response.status_code == 422
+    assert [violation["field"] for violation in response.json()["violations"]] == ["path.kind"]
+    assert "Cache-Control" not in response.headers
+    assert check_plugins.calls == 0
+    assert checks.calls == 0
+
+
+@pytest.mark.parametrize("method", ["GET", "POST"])
+async def test_확인_경로의_이름이_루트를_벗어나거나_개행이_섞이면_422이고_포트가_불리지_않는다(
+    stderr: io.StringIO, checks: Checks, check_plugins: FakePlugins, method: str
+) -> None:
+    """단건 조회와 같은 규칙이다. 이름이 파일 경로로 조립되기 전에 sdk 의 패턴을 지난다."""
+    async with _checking_client(stderr, checks, check_plugins) as client:
+        for name in (*ESCAPING_NAMES, "remote%0A", "%0Aremote", "remote%0Ax"):
+            response = await _send(client, method, _check_path("mcp", name))
+
+            assert response.status_code == 422, name
+            fields = [violation["field"] for violation in response.json()["violations"]]
+            assert fields == ["path.name"], name
+    assert check_plugins.calls == 0
+    assert checks.calls == 0
+
+
+@pytest.mark.parametrize("method", ["GET", "POST"])
+async def test_없는_플러그인은_404이고_같은_이름이라도_종류가_다르면_없는_것이다(
+    stderr: io.StringIO, checks: Checks, check_plugins: FakePlugins, method: str
+) -> None:
+    async with _checking_client(stderr, checks, check_plugins) as client:
+        for kind, name in (("mcp", "nothing"), ("model", "nothing"), ("mcp", "calc")):
+            response = await _send(client, method, _check_path(kind, name))
+
+            assert response.status_code == 404, (kind, name)
+            assert response.json()["code"] == "not_found", (kind, name)
+            assert "Cache-Control" not in response.headers, (kind, name)
+    assert checks.calls == 0
+
+
+@pytest.mark.parametrize("method", ["GET", "POST"])
+async def test_운영자_파일이_깨졌어도_없는_이름은_404이고_있는_이름은_500이다(
+    stderr: io.StringIO, checks: Checks, method: str
+) -> None:
+    """부재가 손상보다 먼저다(ADR 0017 의 2026-09-27 둘째 이력). 있는 이름은 꺼짐을 읽다 손상을
+    만나므로 500 이고, 그때도 확인 함수는 불리지 않는다."""
+    corrupt = FakePlugins(rows=CHECK_ROWS, corrupt="운영자 파일이 깨졌다: plugins/disabled.toml")
+    async with _checking_client(stderr, checks, corrupt) as client:
+        absent = await _send(client, method, _check_path("mcp", "nothing"))
+        present = await _send(client, method, _check_path("mcp", "remote"))
+
+    assert absent.status_code == 404
+    assert present.status_code == 500
+    assert present.json()["code"] == "internal_error"
+    assert "plugins/disabled.toml" in present.json()["message"]
+    assert checks.calls == 0
+
+
+@pytest.mark.parametrize("method", ["GET", "POST"])
+async def test_매니페스트가_깨진_플러그인은_500이고_확인_함수를_부르지_않는다(
+    stderr: io.StringIO, checks: Checks, check_plugins: FakePlugins, method: str
+) -> None:
+    async with _checking_client(stderr, checks, check_plugins) as client:
+        response = await _send(client, method, _check_path("model", "old"))
+
+    assert response.status_code == 500
+    assert response.json()["code"] == "internal_error"
+    assert "plugin.toml" in response.json()["message"]
+    assert checks.calls == 0
+
+
+@pytest.mark.parametrize(
+    ("method", "kind", "name"),
+    [
+        pytest.param("GET", "model", "sonnet", id="모델"),
+        pytest.param("GET", "mcp", "remote", id="원격 mcp"),
+        pytest.param("POST", "mcp", "everything", id="stdio mcp"),
+    ],
+)
+async def test_확인_함수가_예외를_던지면_고정_문구의_500이고_원인은_서버_기록에만_간다(
+    stderr: io.StringIO, check_plugins: FakePlugins, method: str, kind: str, name: str
+) -> None:
+    """붙지 못한 것은 결과(`unreached`)이고 예외는 결함이다. 결함의 원인은 밖으로 나가지 않는다.
+    실제 어댑터가 아직 구현되지 않은 동안(`NotImplementedError`)에도 같은 길을 지난다."""
+    checks = Checks(error=NotImplementedError("내부 사정이 담긴 문구"))
+    async with _checking_client(stderr, checks, check_plugins) as client:
+        response = await _send(client, method, _check_path(kind, name))
+
+    assert response.status_code == 500
+    assert response.json()["code"] == "internal_error"
+    assert response.json()["message"] == INTERNAL_MESSAGE
+    assert "내부 사정이 담긴 문구" not in response.text
+    assert "내부 사정이 담긴 문구" in stderr.getvalue()
+    assert "Cache-Control" not in response.headers
+
+
+@pytest.mark.parametrize(
+    ("method", "kind", "name"),
+    [
+        pytest.param("GET", "model", "sonnet", id="모델"),
+        pytest.param("POST", "mcp", "everything", id="stdio mcp"),
+    ],
+)
+async def test_확인_함수가_구성_오류를_올리면_운영자에게_그_글이_가는_500이다(
+    stderr: io.StringIO, check_plugins: FakePlugins, method: str, kind: str, name: str
+) -> None:
+    """구성 오류는 실행 전 실패와 같은 `PluginError` 이고 표가 운영자 면에서는 글을 그대로 싣는다.
+    그것이 아닌 예외의 고정 문구와 다른 길이라 따로 고정한다."""
+    checks = Checks(error=PluginError("모델 파일의 model_id 가 비어 있다"))
+    async with _checking_client(stderr, checks, check_plugins) as client:
+        response = await _send(client, method, _check_path(kind, name))
+
+    assert response.status_code == 500
+    assert response.json()["code"] == "internal_error"
+    assert response.json()["message"] == "모델 파일의 model_id 가 비어 있다"
+    assert "Cache-Control" not in response.headers
+
+
+@pytest.mark.parametrize("method", ["GET", "POST"])
+async def test_확인_경로는_관리_토큰만_열고_채널_토큰이나_토큰_없음은_401이다(
+    stderr: io.StringIO, checks: Checks, check_plugins: FakePlugins, method: str
+) -> None:
+    async with _checking_client(stderr, checks, check_plugins) as client:
+        path = _check_path("mcp", "remote")
+        anonymous = await client.request(method, path)
+        channel = await client.request(method, path, headers=CHANNEL_BEARER)
+
+    assert anonymous.status_code == 401
+    assert channel.status_code == 401
+    # 오류 응답은 다시 쓰일 결과가 아니라 요청의 문제라 `no-store` 를 싣지 않는다. 미들웨어가 내는
+    # 401 도 같다.
+    assert "Cache-Control" not in anonymous.headers
+    assert "Cache-Control" not in channel.headers
+    assert checks.calls == 0
+
+
+async def test_확인_경로가_단건_조회에_이름의_일부로_잡히지_않는다(
+    stderr: io.StringIO, checks: Checks, check_plugins: FakePlugins
+) -> None:
+    """단건 조회의 이름 변환기가 슬래시까지 잡으므로 확인 경로를 단건 조회 뒤에 선언하면
+    `remote/connection-check` 가 이름으로 읽혀 패턴이 422 로 거른다. 선언 순서가 그것을 막는다."""
+    async with _checking_client(stderr, checks, check_plugins) as client:
+        response = await _send(client, "GET", _check_path("mcp", "remote"))
+
+    assert response.status_code == 200
+
+
+# 계약: 응답은 `status` 로 갈리는 네 모양이고 `reason` 은 붙지 못한 모양에만 있다.
+def test_확인_오퍼레이션_둘이_계약에_이름과_에러_문서와_no_store_헤더로_선다(app: FastAPI) -> None:
+    """생성 클라이언트의 함수 이름이 `operationId` 다. 형식 오류와 부재와 인증 실패는 에러 봉투로
+    말하고, 붙지 못한 것은 에러가 아니라 200 의 한 모양이다."""
+    document = app.openapi()
+    path = document["paths"]["/plugins/{kind}/{name}/connection-check"]
+    envelope = {"$ref": "#/components/schemas/ErrorEnvelope"}
+
+    assert set(path) == {"get", "post"}
+    assert path["get"]["operationId"] == "check_connection"
+    assert path["post"]["operationId"] == "check_connection_by_launching"
+    for operation in path.values():
+        errors = {status for status in operation["responses"] if not status.startswith("2")}
+        assert errors == {"401", "404", "422", "500"}
+        for status in errors:
+            schema = operation["responses"][status]["content"]["application/json"]["schema"]
+            assert schema == envelope, status
+        ok = operation["responses"]["200"]
+        assert ok["headers"]["Cache-Control"]["schema"] == {"type": "string"}
+        name = next(item for item in operation["parameters"] if item["name"] == "name")
+        assert name["schema"]["pattern"] == PLUGIN_NAME_PATTERN
+        assert "requestBody" not in operation
+
+
+def test_확인_경로의_종류는_mcp_와_model_의_닫힌_열거다(app: FastAPI) -> None:
+    document = app.openapi()
+    schemas = document["components"]["schemas"]
+    operation = document["paths"]["/plugins/{kind}/{name}/connection-check"]["get"]
+    kind = next(item for item in operation["parameters"] if item["name"] == "kind")
+
+    assert kind["schema"] == {"$ref": "#/components/schemas/CheckableKind"}
+    assert schemas["CheckableKind"]["enum"] == ["mcp", "model"]
+
+
+def test_확인_응답은_status_로_갈리는_네_모양이고_reason_은_unreached_에만_있다(
+    app: FastAPI,
+) -> None:
+    """판별 유니온이라 생성 클라이언트에서 `status` 로 좁히면 `reason` 이 있는 값이 된다. 이유는
+    비어 있을 수 없다(`minLength` 1) — 붙지 못했다는 말에 까닭이 없으면 화면이 비운다."""
+    schemas = app.openapi()["components"]["schemas"]
+    members = {
+        "reached": "ConnectionReached",
+        "unreached": "ConnectionUnreached",
+        "disabled": "ConnectionDisabled",
+        "not_applicable": "ConnectionNotApplicable",
+    }
+
+    for status, name in members.items():
+        shape = schemas[name]
+        assert shape["properties"]["status"] == {
+            "type": "string",
+            "const": status,
+            "title": "Status",
+        }
+        assert shape["additionalProperties"] is False
+        expected = ["reason", "status"] if status == "unreached" else ["status"]
+        assert sorted(shape["required"]) == expected
+        assert set(shape["properties"]) == set(expected)
+    assert schemas["ConnectionUnreached"]["properties"]["reason"]["minLength"] == 1
+    union = schemas["ConnectionCheck"]
+    assert union["discriminator"]["propertyName"] == "status"
+    assert union["discriminator"]["mapping"] == {
+        status: f"#/components/schemas/{name}" for status, name in members.items()
+    }
+    assert {ref["$ref"] for ref in union["oneOf"]} == {
+        f"#/components/schemas/{name}" for name in members.values()
+    }
+    # 두 오퍼레이션 모두 200 이 이름 있는 유니온을 가리킨다. 익명 유니온이면 생성 클라이언트가
+    # 타입 이름을 얻지 못한다.
+    paths = app.openapi()["paths"]["/plugins/{kind}/{name}/connection-check"]
+    for operation in paths.values():
+        schema = operation["responses"]["200"]["content"]["application/json"]["schema"]
+        assert schema == {"$ref": "#/components/schemas/ConnectionCheck"}
 
 
 # 트레이스 목록 — 지나간 실행과 멈춘 실행(티켓 05)

@@ -131,6 +131,110 @@
         "title": "CallingItem",
         "type": "object"
       },
+      "CheckableKind": {
+        "description": "접속 확인이 있는 플러그인의 종류. 값은 둘이다.",
+        "enum": [
+          "mcp",
+          "model"
+        ],
+        "title": "CheckableKind",
+        "type": "string"
+      },
+      "ConnectionCheck": {
+        "discriminator": {
+          "mapping": {
+            "disabled": "#/components/schemas/ConnectionDisabled",
+            "not_applicable": "#/components/schemas/ConnectionNotApplicable",
+            "reached": "#/components/schemas/ConnectionReached",
+            "unreached": "#/components/schemas/ConnectionUnreached"
+          },
+          "propertyName": "status"
+        },
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/ConnectionReached"
+          },
+          {
+            "$ref": "#/components/schemas/ConnectionUnreached"
+          },
+          {
+            "$ref": "#/components/schemas/ConnectionDisabled"
+          },
+          {
+            "$ref": "#/components/schemas/ConnectionNotApplicable"
+          }
+        ]
+      },
+      "ConnectionDisabled": {
+        "additionalProperties": false,
+        "description": "꺼 둔 플러그인이라 접속 확인을 하지 않았다.",
+        "properties": {
+          "status": {
+            "const": "disabled",
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "title": "ConnectionDisabled",
+        "type": "object"
+      },
+      "ConnectionNotApplicable": {
+        "additionalProperties": false,
+        "description": "이 오퍼레이션이 확인하는 플러그인이 아니라 접속 확인을 하지 않았다.",
+        "properties": {
+          "status": {
+            "const": "not_applicable",
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "title": "ConnectionNotApplicable",
+        "type": "object"
+      },
+      "ConnectionReached": {
+        "additionalProperties": false,
+        "description": "접속 확인이 붙었다.",
+        "properties": {
+          "status": {
+            "const": "reached",
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "title": "ConnectionReached",
+        "type": "object"
+      },
+      "ConnectionUnreached": {
+        "additionalProperties": false,
+        "description": "접속 확인이 붙어 보았지만 붙지 못했다. 까닭의 글을 든다.",
+        "properties": {
+          "reason": {
+            "minLength": 1,
+            "title": "Reason",
+            "type": "string"
+          },
+          "status": {
+            "const": "unreached",
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "reason"
+        ],
+        "title": "ConnectionUnreached",
+        "type": "object"
+      },
       "ConversationSummarized": {
         "additionalProperties": false,
         "description": "런타임이 앞 요약과 오래된 교환을 새 대화 요약으로 접었다. 에이전트가 내면 실행이 실패한다.",
@@ -2477,6 +2581,176 @@
           }
         },
         "summary": "플러그인 하나를 켜짐과 매니페스트 통째로를 든 행으로"
+      }
+    },
+    "/plugins/{kind}/{name}/connection-check": {
+      "get": {
+        "operationId": "check_connection",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "kind",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/CheckableKind"
+            }
+          },
+          {
+            "in": "path",
+            "name": "name",
+            "required": true,
+            "schema": {
+              "pattern": "^[a-z][a-z0-9-]{1,62}$",
+              "title": "Name",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConnectionCheck"
+                }
+              }
+            },
+            "description": "Successful Response",
+            "headers": {
+              "Cache-Control": {
+                "description": "결과를 다시 쓰지 못하게 한다. 값은 no-store 다.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "토큰이 없거나 틀리다"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "찾는 것이 없다"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "요청의 형식이 올바르지 않다"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "서버가 요청을 처리하지 못했다"
+          }
+        },
+        "summary": "켜 둔 원격 MCP 서버나 모델에 붙는지 확인한다"
+      },
+      "post": {
+        "operationId": "check_connection_by_launching",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "kind",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/CheckableKind"
+            }
+          },
+          {
+            "in": "path",
+            "name": "name",
+            "required": true,
+            "schema": {
+              "pattern": "^[a-z][a-z0-9-]{1,62}$",
+              "title": "Name",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConnectionCheck"
+                }
+              }
+            },
+            "description": "Successful Response",
+            "headers": {
+              "Cache-Control": {
+                "description": "결과를 다시 쓰지 못하게 한다. 값은 no-store 다.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "토큰이 없거나 틀리다"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "찾는 것이 없다"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "요청의 형식이 올바르지 않다"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "서버가 요청을 처리하지 못했다"
+          }
+        },
+        "summary": "켜 둔 stdio MCP 서버를 한 번 띄워 붙는지 확인한다"
       }
     },
     "/plugins/{kind}/{name}/enabled": {

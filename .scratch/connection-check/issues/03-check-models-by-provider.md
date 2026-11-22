@@ -20,6 +20,7 @@
 - [ ] `openai-compatible`은 모델 파일의 `base_url`로 묻고, 키는 실행이 호출마다 키를 읽는 규칙 그대로 읽는다. `api_key_env` 칸이 없으면 실행처럼 자리 채움 글자(`no-key`)를 보낸다. 환경의 `OPENAI_API_KEY`를 싣지 않고 `OPENAI_PROXY`를 따르지 않는다
 - [ ] 키가 없거나(`anthropic` 모델 객체의 키 칸이 비었다, 또는 `openai-compatible` 모델 파일에 `api_key_env` 칸이 있는데 그 변수가 없거나 비었다) `openai-compatible`의 그 변수 값에 인증 헤더로 보낼 수 없는 글자가 있으면 요청을 보내지 않고 `Unreached`로 가른다. 키 모양의 갈래는 `openai-compatible`에만 있다(명세 아홉 갈래의 표)
 - [ ] 모델 종류가 아닌 매니페스트와 공백뿐인 `model_id`는 실행과 같은 구성 오류의 예외로 올린다(관리 경로가 500으로 답한다)
+- [ ] `Unreached.reason`은 비지 않은 글이다. 예외의 글(`str(error)`)이 빈 경우에도 어댑터가 예외의 종류 같은 글로 채운다. 응답 계약이 비지 않은 문자열을 요구해, 빈 글이 가면 관리가 응답을 만들지 못해 500이다(티켓 01의 셀프 리뷰에서 넘어온 것. 약속의 자리는 `core/ports.py`의 `Unreached` 독스트링)
 - [ ] 어댑터는 라이브러리의 예외나 응답 객체를 `Unreached.reason`의 `str` 밖으로 내보내지 않는다. 서드파티 타입이 포트의 반환값에 비치지 않는다(`CODING_STANDARDS.md`의 "서드파티는 경계에서 감싼다")
 
 ### 화면에 보일 글

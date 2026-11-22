@@ -16,6 +16,7 @@ from typing import TextIO
 
 from fastapi import FastAPI
 
+from agent_os.admin.connection_check import AutomaticChecks, LaunchingChecks
 from agent_os.admin.http import Health, admin_router
 from agent_os.channel.http.end_user import END_USER_PREFIX
 from agent_os.channel.http.router import CHANNEL_PREFIX, channel_router
@@ -64,13 +65,14 @@ def create_app(
 ) -> FastAPI:
     """관리 API 와 HTTP 채널과 최종 사용자 경로가 선 앱 하나. 포트는 부르는 쪽이 만들어 넘긴다.
 
-    관리 라우터는 플러그인과 트레이스 포트만 받는다. 도구 포트를 받지 않으므로 조회 하나가 MCP 서버
-    여럿을 띄우는 것이 구조적으로 불가능하다(ADR 0010 의 2026-09-24 이력). 모델과 도구와 시계는
-    채널만 받는다. 모델은 만들어진 것이 아니라 모델 소스(`models`)와 기본 모델의 이름
-    (`default_model`)을 받아, 실행마다 core 가 에이전트가 고른 모델 매니페스트를 읽어 만든다(ADR
-    0040). 운영자 채널의 주체도 채널이 받는다 — 요청에서 받지 않고, 그 출처(`serve` 의 OS
-    사용자)를 정하는 것은 부르는 쪽이다(ADR 0015). 어댑터를 만들어 넘기는 자리는 `main.py` 이고
-    라우터는 받은 것만 쓴다(ADR 0010).
+    관리 라우터는 플러그인과 트레이스 포트, 그리고 접속 확인 함수를 담은 묶음 둘만 받는다. 도구
+    연결을 여는 길(`ToolSource.connect`)을 받지 않으므로 조회 하나가 MCP 서버 여럿을 띄우는 것이
+    구조적으로 불가능하다(ADR 0010 의 2026-09-24 이력, ADR 0067). 묶음은 여기서 도구 포트와 모델
+    포트에서 확인 메서드만 꺼내 채운다. 모델과 도구와 시계는 채널이 통째로 받는다. 모델은 만들어진
+    것이 아니라 모델 소스(`models`)와 기본 모델의 이름 (`default_model`)을 받아, 실행마다 core 가
+    에이전트가 고른 모델 매니페스트를 읽어 만든다(ADR 0040). 운영자 채널의 주체도 채널이 받는다 —
+    요청에서 받지 않고, 그 출처(`serve` 의 OS 사용자)를 정하는 것은 부르는 쪽이다(ADR 0015).
+    어댑터를 만들어 넘기는 자리는 `main.py` 이고 라우터는 받은 것만 쓴다(ADR 0010).
 
     최종 사용자 경로의 주체는 요청마다 사이트가 서명한 토큰이 정한다. 사이트 목록은 `serve` 가
     사이트 파일에서 읽어 넘긴다 — 토큰이 들어오는 자리와 같다(ADR 0011·0023). 비면 그 경로는 서되
@@ -116,7 +118,18 @@ def create_app(
         description=_DESCRIPTION,
         version=version("agent-os"),
     )
-    app.include_router(admin_router(health=Health(status="ok"), plugins=plugins, trace=trace))
+    # 접속 확인은 포트가 아니라 포트에서 꺼낸 확인 함수만 관리에 넘긴다. `connect` 는 넘기지 않는다.
+    app.include_router(
+        admin_router(
+            health=Health(status="ok"),
+            plugins=plugins,
+            trace=trace,
+            automatic=AutomaticChecks(
+                plugins=plugins, remote=tools.check_remote, model=models.check
+            ),
+            launching=LaunchingChecks(plugins=plugins, stdio=tools.check_stdio),
+        )
+    )
     app.include_router(
         channel_router(
             plugins=plugins,

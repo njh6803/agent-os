@@ -41,6 +41,7 @@ from langchain_core.messages import AIMessage, BaseMessage
 from langchain_core.outputs import ChatResult
 from pydantic import BaseModel, ConfigDict, Field
 from tests.adapters.fake_model_server import FakeModelServer, completion, tool_call
+from tests.fake_checks import UnusedModelCheck
 from tests.fake_database import (
     CLOSE_PREFIX,
     STARTUP_PROBLEM,
@@ -1943,7 +1944,7 @@ def test_포트는_가짜가_시그니처로_만족한다() -> None:
     assert port.unexpected_problem(RuntimeError()) == f"{UNEXPECTED_PREFIX}(RuntimeError)"
 
 
-class _RecordingModels:
+class _RecordingModels(UnusedModelCheck):
     """모델 소스의 가짜. 만들어 달라고 받은 모델 매니페스트의 이름을 쌓고 모델은 부르지 않는다."""
 
     def __init__(self, names: list[str]) -> None:
@@ -2791,7 +2792,7 @@ class _LateModel(GenericFakeChatModel):
         return self._generate(messages, stop, None, **kwargs)
 
 
-class _LateModels:
+class _LateModels(UnusedModelCheck):
     """모델 소스의 가짜. 어느 매니페스트로 불러도 늦은 모델을 만든다."""
 
     def build(self, manifest: PluginManifest) -> ChatModel:
@@ -2901,7 +2902,7 @@ async def test_serve_의_전역_동시_실행_상한이_세운_앱의_최종_사
     하나 뒤의 시작은 다른 주체여도 429 다. 운영자 채널은 세지 않는다."""
     gate = asyncio.Event()
 
-    class _GatedModels:
+    class _GatedModels(UnusedModelCheck):
         def build(self, manifest: PluginManifest) -> ChatModel:
             return _GatedModel(messages=iter([AIMessage(content="답")]), gate=gate)
 

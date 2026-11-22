@@ -124,7 +124,7 @@ from mcp.types import (
     Tool,
 )
 
-from agent_os.core.ports import ToolConnection, ToolResult, ToolSpec
+from agent_os.core.ports import CheckOutcome, ToolConnection, ToolResult, ToolSpec
 from agent_os.sdk import HttpServer, Json, McpServer, PluginName, StdioServer
 
 # 윈도우가 아닌 OS 에서 서버 앞에 세우는 런처(그 모듈의 독스트링).
@@ -167,6 +167,17 @@ class McpTools:
                         )
                     routes[route.tool.name] = route
             yield McpConnection(routes)
+
+    # 포트에 메서드가 늘면 실제 어댑터도 같은 커밋에 가져야 타입 검사를 지나므로 둔 자리다. 붙어
+    # 보는 동작은 MCP 서버의 확인 티켓이 쓰고, 그 사이 관리 경로를 직접 부르면 이 예외가 500 으로
+    # 나간다.
+    async def check_remote(self, name: PluginName, server: HttpServer) -> CheckOutcome:
+        """원격 서버의 접속 확인(ADR 0067). 메서드는 있지만 아직 붙어 보지 않는다."""
+        raise NotImplementedError("원격 MCP 서버의 접속 확인은 아직 구현되지 않았다")
+
+    async def check_stdio(self, name: PluginName, server: StdioServer) -> CheckOutcome:
+        """stdio 서버의 접속 확인(ADR 0067). 메서드는 있지만 아직 붙어 보지 않는다."""
+        raise NotImplementedError("stdio MCP 서버의 접속 확인은 아직 구현되지 않았다")
 
 
 @dataclass(frozen=True)

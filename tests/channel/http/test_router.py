@@ -35,6 +35,7 @@ from langchain_core.messages.tool import ToolCall as LangchainToolCall
 from langchain_core.outputs import ChatResult
 from langchain_core.runnables import Runnable
 from starlette.types import Message, Scope
+from tests.fake_checks import UnusedToolChecks
 from tests.fake_database import FakeDatabase
 from tests.fake_models import DEFAULT_MODEL, FakeModels, model_manifest
 
@@ -409,7 +410,7 @@ class StuckConnection(FakeConnection):
         return ToolResult(ok=True, content="5")
 
 
-class ScopedTools:
+class ScopedTools(UnusedToolChecks):
     """MCP 어댑터처럼 연결을 anyio 취소 범위 안에서 연다.
 
     취소 범위는 들어간 태스크와 다른 태스크에서 닫으면 RuntimeError 를 낸다. 그러면 실행은
@@ -441,7 +442,7 @@ class ScopedTools:
         self.closed = True
 
 
-class BrokenTools:
+class BrokenTools(UnusedToolChecks):
     """MCP 서버 기동 실패."""
 
     @asynccontextmanager
@@ -1900,12 +1901,19 @@ async def test_트레이스를_쓰지_못해_멈춘_실행은_스트림을_결�
 # 않는다. 바뀌면 생성 클라이언트의 타입 이름이 바뀐다. 결정의 멤버를 `ApprovalGranted` 처럼 이벤트와
 # 같은 이름으로 지으면 여기 있는 이벤트 컴포넌트가 입력과 출력으로 갈라진다(명세 검토의 프로브).
 # 관리 쪽 이름이 바뀐 것은 여기도 따라간다 — plugin-toggle 이 `UnreadableManifest` 행을 `Plugin`·
-# `PluginPlaceholder` 로 감싸고 본문 `SetEnabled` 를 더했다(ADR 0010 의 2026-09-26 이력).
+# `PluginPlaceholder` 로 감싸고 본문 `SetEnabled` 를 더했다(ADR 0010 의 2026-09-26 이력). 접속
+# 확인의 응답 유니온과 멤버 넷과 종류 열거도 관리 쪽이 더한 이름이다(ADR 0067).
 EXISTING_COMPONENTS = frozenset(
     {
         "AppliedRule",
         "ApprovalDenied",
         "ApprovalGranted",
+        "CheckableKind",
+        "ConnectionCheck",
+        "ConnectionDisabled",
+        "ConnectionNotApplicable",
+        "ConnectionReached",
+        "ConnectionUnreached",
         "ConversationSummarized",
         "ErrorCode",
         "ErrorEnvelope",

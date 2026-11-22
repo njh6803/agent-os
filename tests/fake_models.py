@@ -8,6 +8,8 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 
+from tests.fake_checks import UnusedModelCheck
+
 from agent_os.core.ports import ChatModel, PluginError
 from agent_os.sdk import PluginManifest, PluginName, parse_manifest
 
@@ -25,7 +27,7 @@ def model_manifest(name: str, max_tokens: int | None = None) -> PluginManifest:
     )
 
 
-class FakeModels:
+class FakeModels(UnusedModelCheck):
     """모델 매니페스트로 모델을 만드는 가짜. 만든 매니페스트를 `built` 에 쌓는다.
 
     매니페스트의 이름이 `by_name` 에 있으면 그 모델을, 없으면 `default` 를 돌려준다. 매니페스트마다
