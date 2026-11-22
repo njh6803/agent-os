@@ -53,6 +53,8 @@
 - 리뷰 반영 뒤 `uv run python tools/run_checks.py`(백그라운드): 종료 코드 0. check-notes, check-ticket, lint-imports, zizmor, check-instructions, check-type-escapes, pyright, pyright-linux, run-hooks, pytest(548.9초), web-verify(662.8초)가 모두 Passed(러너 출력을 손으로 읽었다).
 - 카나리아(규칙 셋을 바꿨다는 `sibling_overlap.py`의 알림에 따라 `tools/canary.py`로 새 `claude -p` 세션에서 불러 봤다): `.scratch/connection-check/probes/canary/`의 새 명세 셋 `admin_rule_first_item.toml`, `adapters_rule_check_gap.toml`, `core_rule_port_table_check.toml`이 각각 통과 4(실험군 셋이 바뀐 구절을 글자 그대로 옮겼고 대조군은 "없음", "없음" 섞인 통과 0, claude 2.1.325, 2026-11-22). 기존 명세가 이미 있는 `adapters.md`·`core.md`의 다른 항목은 이 변경이 고치지 않아 다시 돌리지 않았다.
 
+- 로컬 모델 시험을 PR 병합 전에 다시 돌렸다(`tools/llm_local.py run --yes`). 위의 첫 기록은 커밋하기 전 작업 트리(시험한 커밋 `a2c318849`)에서 쟀고 그 뒤 리뷰 반영이 `adapters/`의 독스트링을 고쳐 `operations.md` LLM 테스트의 "기록과 유효함"대로 무효였다. 사용자가 예상 비용(어림 $0.27~0.59, 최악 $0.81~1.77)을 보고 "네, 돌려 주세요"라고 답한 뒤 쳤다. 두 모델 모두 통과(종료 코드 0, 2 passed)했다. 시험한 커밋 `5df4800cb`, vLLM 0.33.0, A40 한 대(`shared`), 토큰 합계 6,315(입력 6,191, 출력 124), 모델 호출 4건, 걸린 시간 341.8초, 시간당 $0.59(가격표 2026-11-13). 앞 후보 셋(A5000 파드 2, 3090 파드 2, A40 파드 2)은 재고 없음으로 실패했고, 그 중 파드 둘이 일부 만들어졌다는 출력(`gn6tq6qisfjjgk`, `cyj6rxd9d5en76`)이 있었으나 시험 뒤 `list-pods`가 파드 0개를 냈다. 서버 키와 주소는 적지 않는다. 같은 기록을 PR 코멘트에 적었다. 회차 파일은 `C:\Users\User\.agent-os\llm-local\feature%2F01-contract-connection-check-routes-and-port-methods\records\round-0002-20261122T153834Z.json`이다.
+
 ## 셀프 리뷰(`/code-review`)
 
 범위: base `a2c318849b8a285fd167865bce08f6a81439d60c`(`origin/dev`와의 merge-base), 커밋 0개, 수정 파일 20개, 미추적 3개(코드 둘 `admin/connection_check.py`·`tests/fake_checks.py`와 이 일지). 서브에이전트 둘이 병렬로 봤다(표준 축은 sonnet·high, 명세 축은 세션 모델). Critical과 Major는 없었다.
@@ -92,3 +94,7 @@
 - **로컬 모델 시험은 01에서 한 번 돌렸고(2개 통과) 남은 것은 02·03·06의 세 번이다.** 02와 03은 병합 직전에 기준 브랜치를 합친 뒤에 돌아야 한다(상대가 먼저 병합되면 합치기 전의 기록은 무효다). 비용 확인은 시험 직전에 사용자에게 받는다.
 - **이 PR이 남긴 틈.** 실제 어댑터의 확인 메서드는 `NotImplementedError`를 던지는 자리다. 02와 03이 채운다. 둘 다 `Unreached.reason`이 비지 않게 채우는 것과 비밀을 가리는 것을 수용 기준으로 이미 가졌다.
 - **기능을 닫는 일(끝 줄, 기능 단락, 계획 표)은 05와 06 가운데 늦게 병합하는 쪽이 맡는다.**
+
+## 인계 못함 커밋 뒤
+
+일지 커밋 `5df4800cb` 뒤 세션 컨텍스트가 인계 문턱(20만 토큰)을 넘어 `커밋 뒤`와 `PR 연 뒤`의 계기가 차례로 왔다. `handoff.md`대로 제목을 바꾸고 `open-session`을 불렀으나, 새 세션을 보내는 `tools/open_session.ps1 -Action send` 호출을 자동 모드 분류기가 `Unsanctioned Communication`으로 거부했다(쏘기 전이라 세션은 생기지 않았다). 제목을 되돌리고, 거부된 호출을 되풀이하거나 다른 길로 돌아가지 않았다. 이 세션이 PR #624의 푸시, 봇 회차, 로컬 모델 시험 재실행, 병합까지 이었다. 이 PR을 연 뒤 일은 PR 코멘트와 이 일지의 "검증"에 있다.
