@@ -18,7 +18,7 @@ from langchain_core.language_models import BaseChatModel
 
 from agent_os.adapters.anthropic import chat_anthropic
 from agent_os.adapters.openai_compatible import chat_openai_compatible
-from agent_os.core.ports import PluginError
+from agent_os.core.ports import CheckOutcome, PluginError
 from agent_os.sdk import ModelProvider, PluginManifest
 
 MODEL_ENV = "AGENT_OS_MODEL"
@@ -81,3 +81,10 @@ class ManifestModels:
                     max_tokens=manifest.max_tokens,
                     temperature=manifest.temperature,
                 )
+
+    # 포트에 메서드가 늘면 실제 어댑터도 같은 커밋에 가져야 타입 검사를 지나므로 둔 자리다. 붙어
+    # 보는 동작은 모델의 확인 티켓이 쓰고, 그 사이 관리 경로를 직접 부르면 이 예외가 500 으로
+    # 나간다.
+    async def check(self, manifest: PluginManifest) -> CheckOutcome:
+        """모델 서버의 접속 확인(ADR 0067). 메서드는 있지만 아직 붙어 보지 않는다."""
+        raise NotImplementedError("모델의 접속 확인은 아직 구현되지 않았다")

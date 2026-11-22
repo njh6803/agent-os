@@ -11,6 +11,12 @@
 루프 위에 있을 때만 참이다. 대가는 그 요청이 디스크에 닿는 동안 루프가 멈추는 것이고, 운영자 파일은
 작다.
 
+**접속 확인 라우트 둘도 `async def` 다.** 바깥 서버에 붙는 확인 함수를 기다리기 때문이고, 조회
+라우트는 동기 `def` 라는 위 문장의 예외다. 그 안의 플러그인 파일 읽기(매니페스트와 꺼진
+집합)는 스레드로 넘기지 않고 이벤트 루프에서 직접 읽는다. 파일이 작아 쓰기 라우트와 같은 비용이고
+스레드를 거치는 값이 이득보다 크다. 대가는 읽는 동안 루프가 멈추는 것이다. 윈도우에서 다른 핸들이
+연 파일을 만나면 읽기가 잠깐 쉬며 다시 시도하는 시간(`_retrying`)도 그 대가에 든다.
+
 응답 모델의 독스트링은 한 줄이고 논증은 `#` 주석에 둔다. 라우트는 `operation_id` 를 손으로 준다.
 이유는 `agent_os.http.errors` 와 `agent_os.http.routes` 에 있다.
 """
@@ -23,6 +29,16 @@ from fastapi import APIRouter, HTTPException, Path, Query, Response
 from fastapi.exceptions import RequestValidationError
 from pydantic import BaseModel, ConfigDict, Field, StrictBool
 
+from agent_os.admin.connection_check import (
+    AutomaticChecks,
+    CheckableKind,
+    ConnectionCheck,
+    ConnectionDisabled,
+    ConnectionNotApplicable,
+    ConnectionReached,
+    ConnectionUnreached,
+    LaunchingChecks,
+)
 from agent_os.admin.traces import (
     CURSOR_PATTERN,
     Trace,
@@ -34,10 +50,12 @@ from agent_os.admin.traces import (
 from agent_os.core.ports import (
     DEFAULT_LIMIT,
     MAX_LIMIT,
+    CheckOutcome,
     Cursor,
     ManifestRow,
     PluginKey,
     PluginSource,
+    Reached,
     RunStatus,
     TraceStore,
 )
@@ -45,10 +63,12 @@ from agent_os.http.routes import documented_errors
 from agent_os.sdk import (
     PLUGIN_NAME_PATTERN,
     RUN_ID_PATTERN,
+    HttpServer,
     PluginKind,
     PluginManifest,
     PluginName,
     RunId,
+    StdioServer,
 )
 
 
@@ -109,11 +129,22 @@ class SetEnabled(BaseModel):
     enabled: StrictBool
 
 
-def admin_router(*, health: Health, plugins: PluginSource, trace: TraceStore) -> APIRouter:
+def admin_router(
+    *,
+    health: Health,
+    plugins: PluginSource,
+    trace: TraceStore,
+    automatic: AutomaticChecks,
+    launching: LaunchingChecks,
+) -> APIRouter:
     """관리 라우터. 데이터 라우트는 이 자리에 더한다.
 
     `/health` 가 주입받은 값을 그대로 돌려주는 것이 이 라우트의 전부다. 라우트가 상태를 직접
     읽으면 인증 없이 나가는 유일한 응답이 내부 구성을 알려 주는 창이 된다(ADR 0011).
+
+    접속 확인은 포트가 아니라 확인 함수를 담은 묶음 둘(`automatic`, `launching`)로 받는다.
+    그래서 이 라우터는 도구 연결을 여는 길(`ToolSource.connect`)을 부를 수 없다. `GET` 은
+    `automatic` 만, `POST` 는 `launching` 만 쓴다.
     """
     router = APIRouter(responses=documented_errors(500))
 
@@ -129,9 +160,9 @@ def admin_router(*, health: Health, plugins: PluginSource, trace: TraceStore) ->
     # 두 조회 라우트는 매니페스트를 통째로 내보내므로 mcp 매니페스트의 command 와 args(http 모양이면
     # url 과 헤더 이름)도 나간다.
     # 가리지 않는 것이 결정이고 경계는 인증이다(ADR 0009 의 2026-09-22 이력, 네 번째 열린 문제).
-    # MCP 서버에는 붙지 않는다 — 이 라우터는 도구 포트를 받지 않는다. 꺼진 집합은 요청 하나에 한 번
-    # 읽고, 운영자 파일이 깨지면 목록 전체가 500 이다. 행마다 "알 수 없음"을 실으면 행의 타입이
-    # 약해진다(ADR 0017).
+    # MCP 서버에는 붙지 않는다 — 이 라우터는 도구 연결을 여는 길을 받지 않고 접속 확인 함수만
+    # 받으며, 목록은 그것도 부르지 않는다. 꺼진 집합은 요청 하나에 한 번 읽고, 운영자 파일이 깨지면
+    # 목록 전체가 500 이다. 행마다 "알 수 없음"을 실으면 행의 타입이 약해진다(ADR 0017).
     @router.get(
         "/plugins",
         operation_id="list_plugins",
@@ -145,6 +176,68 @@ def admin_router(*, health: Health, plugins: PluginSource, trace: TraceStore) ->
             for kind in PluginKind
             for row in plugins.list_manifests(kind)
         ]
+
+    # 접속 확인 둘(ADR 0067). 경로는 같고 메서드로 갈린다. 판정의 차례는 형식 오류(422) → 없는
+    # 플러그인(404) → 깨진 매니페스트나 깨진 운영자 파일(500) → 꺼 둔 플러그인(`disabled`) → 이
+    # 오퍼레이션이 확인하는 플러그인이 아님(`not_applicable`) → 붙어 보기다. 앞에서 정해지면 뒤는
+    # 하지 않으므로 꺼 둔 플러그인과 대상이 아닌 플러그인에서는 확인 함수가 한 번도 불리지 않는다.
+    # 켜짐은 화면이 보낸 값이 아니라 여기서 읽은 것으로 판정한다. 붙지 못한 확인도 꺼짐도 200 이다.
+    # 바깥 서버에 요청이 나가므로 결과가 다시 쓰이지 않게 200 응답에 `Cache-Control: no-store` 를
+    # 싣고, 오류 응답에는 싣지 않는다 — 오류는 결과가 아니라 요청의 문제라 다시 쓰일 값이 없다.
+    # 이 `GET` 은 단건 조회보다 먼저 선언한다. 단건 조회의 이름 변환기가 슬래시까지 잡아, 뒤에
+    # 선언하면 `.../calc/connection-check` 가 단건 조회에 이름 `calc/connection-check` 로 맞은 뒤
+    # 패턴이 422 로 거른다.
+    @router.get(
+        "/plugins/{kind}/{name:verbatim}/connection-check",
+        operation_id="check_connection",
+        summary="켜 둔 원격 MCP 서버나 모델에 붙는지 확인한다",
+        responses={
+            200: {"headers": {"Cache-Control": _NO_STORE_HEADER}},
+            **documented_errors(401, 404, 422),
+        },
+    )
+    async def check_connection(
+        kind: CheckableKind,
+        name: Annotated[str, Path(pattern=PLUGIN_NAME_PATTERN)],
+        response: Response,
+    ) -> ConnectionCheck:
+        response.headers["Cache-Control"] = "no-store"
+        manifest = automatic.plugins.read_manifest(PluginKind(kind), PluginName(name))
+        if manifest is None:
+            raise _absent(PluginKind(kind), name)
+        if _is_disabled(automatic.plugins.read_disabled(), PluginKind(kind), name):
+            return ConnectionDisabled(status="disabled")
+        if manifest.kind is PluginKind.MODEL:
+            return _connection_of(await automatic.model(manifest))
+        if isinstance(manifest.server, HttpServer):
+            return _connection_of(await automatic.remote(PluginName(name), manifest.server))
+        return ConnectionNotApplicable(status="not_applicable")
+
+    # 눌러서 하는 확인은 프로세스를 띄우므로 `POST` 이고 본문이 없다. 판정의 차례는 위와 같고
+    # 확인하는 플러그인만 다르다(켜 둔 stdio MCP 서버).
+    @router.post(
+        "/plugins/{kind}/{name:verbatim}/connection-check",
+        operation_id="check_connection_by_launching",
+        summary="켜 둔 stdio MCP 서버를 한 번 띄워 붙는지 확인한다",
+        responses={
+            200: {"headers": {"Cache-Control": _NO_STORE_HEADER}},
+            **documented_errors(401, 404, 422),
+        },
+    )
+    async def check_connection_by_launching(
+        kind: CheckableKind,
+        name: Annotated[str, Path(pattern=PLUGIN_NAME_PATTERN)],
+        response: Response,
+    ) -> ConnectionCheck:
+        response.headers["Cache-Control"] = "no-store"
+        manifest = launching.plugins.read_manifest(PluginKind(kind), PluginName(name))
+        if manifest is None:
+            raise _absent(PluginKind(kind), name)
+        if _is_disabled(launching.plugins.read_disabled(), PluginKind(kind), name):
+            return ConnectionDisabled(status="disabled")
+        if isinstance(manifest.server, StdioServer):
+            return _connection_of(await launching.stdio(PluginName(name), manifest.server))
+        return ConnectionNotApplicable(status="not_applicable")
 
     # `{name}` 은 `plugins/{kind}/{name}/plugin.toml` 로 조립되므로 포트에 닿기 전에 sdk 의 패턴을
     # 지나야 한다(스토리 43). 변환기가 `verbatim` 인 이유는 `agent_os.http.routes` 에 있다. 계약의
@@ -235,6 +328,19 @@ def admin_router(*, health: Health, plugins: PluginSource, trace: TraceStore) ->
         return trace_detail(found)
 
     return router
+
+
+_NO_STORE_HEADER: dict[str, object] = {
+    "description": "결과를 다시 쓰지 못하게 한다. 값은 no-store 다.",
+    "schema": {"type": "string"},
+}
+
+
+def _connection_of(outcome: CheckOutcome) -> ConnectionCheck:
+    """포트의 확인 결과를 응답으로(질의). 붙었다와 붙지 못했다 둘뿐이다."""
+    if isinstance(outcome, Reached):
+        return ConnectionReached(status="reached")
+    return ConnectionUnreached(status="unreached", reason=outcome.reason)
 
 
 def _decode_after(text: str | None) -> Cursor | None:

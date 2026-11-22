@@ -35,6 +35,7 @@ from langchain_core.messages.tool import ToolCall as LangchainToolCall
 from langchain_core.outputs import ChatResult
 from langchain_core.runnables import Runnable
 from starlette.types import Message, Scope
+from tests.fake_checks import UnusedToolChecks
 from tests.fake_database import FakeDatabase
 from tests.fake_models import DEFAULT_MODEL, FakeModels, model_manifest
 from tests.mcp_http import serving
@@ -493,7 +494,7 @@ class GatedConnection(FakeConnection):
         return await super().call(name, args)
 
 
-class ScopedTools:
+class ScopedTools(UnusedToolChecks):
     """MCP 어댑터처럼 연결을 anyio 취소 범위 안에서 연다. 연결은 붙을 때마다 `connection` 으로
     새로 만든다."""
 

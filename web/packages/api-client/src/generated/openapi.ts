@@ -121,6 +121,24 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/plugins/{kind}/{name}/connection-check": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** 켜 둔 원격 MCP 서버나 모델에 붙는지 확인한다 */
+    get: operations["check_connection"];
+    put?: never;
+    /** 켜 둔 stdio MCP 서버를 한 번 띄워 붙는지 확인한다 */
+    post: operations["check_connection_by_launching"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/plugins/{kind}/{name}/enabled": {
     parameters: {
       query?: never;
@@ -299,6 +317,63 @@ export interface components {
        * @enum {string}
        */
       type: "calling";
+    };
+    /**
+     * CheckableKind
+     * @description 접속 확인이 있는 플러그인의 종류. 값은 둘이다.
+     * @enum {string}
+     */
+    CheckableKind: "mcp" | "model";
+    ConnectionCheck:
+      | components["schemas"]["ConnectionReached"]
+      | components["schemas"]["ConnectionUnreached"]
+      | components["schemas"]["ConnectionDisabled"]
+      | components["schemas"]["ConnectionNotApplicable"];
+    /**
+     * ConnectionDisabled
+     * @description 꺼 둔 플러그인이라 접속 확인을 하지 않았다.
+     */
+    ConnectionDisabled: {
+      /**
+       * @description discriminator enum property added by openapi-typescript
+       * @enum {string}
+       */
+      status: "disabled";
+    };
+    /**
+     * ConnectionNotApplicable
+     * @description 이 오퍼레이션이 확인하는 플러그인이 아니라 접속 확인을 하지 않았다.
+     */
+    ConnectionNotApplicable: {
+      /**
+       * @description discriminator enum property added by openapi-typescript
+       * @enum {string}
+       */
+      status: "not_applicable";
+    };
+    /**
+     * ConnectionReached
+     * @description 접속 확인이 붙었다.
+     */
+    ConnectionReached: {
+      /**
+       * @description discriminator enum property added by openapi-typescript
+       * @enum {string}
+       */
+      status: "reached";
+    };
+    /**
+     * ConnectionUnreached
+     * @description 접속 확인이 붙어 보았지만 붙지 못했다. 까닭의 글을 든다.
+     */
+    ConnectionUnreached: {
+      /** Reason */
+      reason: string;
+      /**
+       * @description discriminator enum property added by openapi-typescript
+       * @enum {string}
+       */
+      status: "unreached";
     };
     /**
      * ConversationSummarized
@@ -1456,6 +1531,128 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["Plugin"];
+        };
+      };
+      /** @description 토큰이 없거나 틀리다 */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorEnvelope"];
+        };
+      };
+      /** @description 찾는 것이 없다 */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorEnvelope"];
+        };
+      };
+      /** @description 요청의 형식이 올바르지 않다 */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorEnvelope"];
+        };
+      };
+      /** @description 서버가 요청을 처리하지 못했다 */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorEnvelope"];
+        };
+      };
+    };
+  };
+  check_connection: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        kind: components["schemas"]["CheckableKind"];
+        name: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          /** @description 결과를 다시 쓰지 못하게 한다. 값은 no-store 다. */
+          "Cache-Control"?: string;
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ConnectionCheck"];
+        };
+      };
+      /** @description 토큰이 없거나 틀리다 */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorEnvelope"];
+        };
+      };
+      /** @description 찾는 것이 없다 */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorEnvelope"];
+        };
+      };
+      /** @description 요청의 형식이 올바르지 않다 */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorEnvelope"];
+        };
+      };
+      /** @description 서버가 요청을 처리하지 못했다 */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorEnvelope"];
+        };
+      };
+    };
+  };
+  check_connection_by_launching: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        kind: components["schemas"]["CheckableKind"];
+        name: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          /** @description 결과를 다시 쓰지 못하게 한다. 값은 no-store 다. */
+          "Cache-Control"?: string;
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ConnectionCheck"];
         };
       };
       /** @description 토큰이 없거나 틀리다 */

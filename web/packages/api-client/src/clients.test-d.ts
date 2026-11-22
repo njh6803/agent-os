@@ -151,6 +151,7 @@ expectTypeOf<keyof AdminPaths>().toEqualTypeOf<
   | "/health"
   | "/plugins"
   | "/plugins/{kind}/{name}"
+  | "/plugins/{kind}/{name}/connection-check"
   | "/plugins/{kind}/{name}/enabled"
   | "/traces"
   | "/traces/{run_id}"
@@ -184,6 +185,50 @@ export function 서버는_transport_로_좁힌_뒤_모양의_칸을_읽는다(se
   }
   expectTypeOf(server).toEqualTypeOf<Schemas["StdioServer"]>();
   return server.command;
+}
+
+// 접속 확인의 응답은 `status` 로 가르는 합이다(ADR 0067). 붙지 못한 모양만 까닭 `reason` 을 들고, 좁히지 않고 읽으면
+// 컴파일에서 걸려야 한다. 그래야 화면이 "까닭이 없는 붙지 못함"이나 "까닭이 붙은 꺼짐"을 그리는 코드를 쓰지 못한다.
+type 확인 = Schemas["ConnectionCheck"];
+
+export async function 접속_확인_둘은_관리_경로이고_종류를_둘로_좁힌다(): Promise<void> {
+  const 자동 = await 관리.GET("/plugins/{kind}/{name}/connection-check", {
+    params: { path: { kind: "mcp", name: "remote" } },
+  });
+  expectTypeOf(자동.data).toEqualTypeOf<확인 | undefined>();
+  const 눌러서 = await 관리.POST("/plugins/{kind}/{name}/connection-check", {
+    params: { path: { kind: "model", name: "sonnet" } },
+  });
+  expectTypeOf(눌러서.data).toEqualTypeOf<확인 | undefined>();
+}
+
+export async function 접속_확인의_종류에_에이전트를_주면_컴파일이_실패한다(): Promise<void> {
+  await 관리.GET("/plugins/{kind}/{name}/connection-check", {
+    // @ts-expect-error: 확인할 수 있는 종류는 mcp 와 model 둘이다. 에이전트나 스킬은 서버가 422 로 거절하는 요청이다
+    params: { path: { kind: "agent", name: "calc" } },
+  });
+}
+
+export function 접속_확인은_status_로_좁힌_뒤에만_이유를_읽는다(check: 확인): string {
+  expectTypeOf(check.status).toEqualTypeOf<
+    "reached" | "unreached" | "disabled" | "not_applicable"
+  >();
+  if (check.status === "unreached") {
+    expectTypeOf(check).toEqualTypeOf<Schemas["ConnectionUnreached"]>();
+    expectTypeOf(check.reason).toBeString();
+    return check.reason;
+  }
+  expectTypeOf(check).toEqualTypeOf<
+    | Schemas["ConnectionReached"]
+    | Schemas["ConnectionDisabled"]
+    | Schemas["ConnectionNotApplicable"]
+  >();
+  return check.status;
+}
+
+export function 접속_확인을_좁히지_않고_이유를_읽으면_컴파일이_실패한다(check: 확인): void {
+  // @ts-expect-error: 까닭은 붙지 못한 모양에만 있다. status 로 좁히지 않고 읽으면 다른 세 모양에서 빠진 칸을 읽는다
+  읽는다(check.reason);
 }
 
 // 읽은 값을 `unknown` 으로 받아, 컴파일 오류가 난 칸의 값(`any`)이 린트의 안전하지 않은 사용으로 번지지 않게 한다.

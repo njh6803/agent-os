@@ -43,6 +43,7 @@ from langchain_core.messages.tool import ToolCall as LangchainToolCall
 from langchain_core.outputs import ChatResult
 from langchain_core.runnables import Runnable
 from pydantic import BaseModel
+from tests.fake_checks import UnusedToolChecks
 from tests.fake_models import DEFAULT_MODEL, FakeModels, model_manifest
 from tests.mcp_http import free_port, serving
 
@@ -469,7 +470,7 @@ def _schema(params: Sequence[str]) -> Mapping[str, Json]:
     return {"type": "object", "properties": {name: {} for name in params}}
 
 
-class FakeTools:
+class FakeTools(UnusedToolChecks):
     """이름별로 결과나 에러를 정해 둔다. 어떤 서버를 받았고 닫혔는지 기록한다.
 
     params 는 도구별 인자 이름. 비밀 인자의 실재 검사가 보는 것이라 선언한 도구에만 준다.
@@ -496,7 +497,7 @@ class FakeTools:
             self.closed = True
 
 
-class BrokenTools:
+class BrokenTools(UnusedToolChecks):
     """MCP 서버 기동 실패."""
 
     @asynccontextmanager
@@ -507,7 +508,7 @@ class BrokenTools:
         yield FakeConnection({}, {})
 
 
-class DuplicateTools:
+class DuplicateTools(UnusedToolChecks):
     """같은 이름의 도구를 낸 서버 둘. 어댑터가 연결을 열며 던지는 문구와 같은 모양이다."""
 
     @asynccontextmanager

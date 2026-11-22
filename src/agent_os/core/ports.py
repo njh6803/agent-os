@@ -21,6 +21,7 @@ from agent_os.sdk import (
     AgentName,
     BaseAgent,
     Event,
+    HttpServer,
     Json,
     McpServer,
     PluginKind,
@@ -32,6 +33,7 @@ from agent_os.sdk import (
     RunId,
     RunPaused,
     Skill,
+    StdioServer,
 )
 
 # 모델 소스가 만든 모델의 타입. 포트가 아니다. 루프와 대화 요약이 이 위에서 돈다.
@@ -475,22 +477,54 @@ class PluginSource(Protocol):
         ...
 
 
+@dataclass(frozen=True)
+class Reached:
+    """접속 확인이 붙었다."""
+
+
+@dataclass(frozen=True)
+class Unreached:
+    """접속 확인이 붙어 보았지만 붙지 못했다. 까닭의 글(`reason`)을 든다.
+
+    꺼 둔 플러그인이라 확인하지 않았다거나 그 확인의 대상이 아니라는 판정은 붙어 보기 전에 관리가
+    내리는 것이라 포트의 값이 아니다(관리의 응답 모델에만 있다).
+
+    `reason` 은 비지 않은 글이어야 한다. 응답 계약이 비지 않은 문자열을 요구하므로 빈 글이 오면
+    관리가 응답을 만들지 못해 500 이다. 예외의 글(`str(error)`)이 비는 경우가 있으니 부르는 쪽이
+    아니라 돌려주는 어댑터가 채운다.
+    """
+
+    reason: str
+
+
+# 접속 확인 메서드의 결과. 붙었다와 붙지 못했다 둘뿐이다(ADR 0067 결정 "포트와 층").
+type CheckOutcome = Reached | Unreached
+
+
 class ModelSource(Protocol):
-    """모델 매니페스트로 모델을 만든다.
+    """모델 매니페스트로 모델을 만들고, 그 모델이 가리키는 서버에 붙는지 확인한다.
 
     어댑터(`adapters/models.py`의 `ManifestModels`)가 제공사로 갈라 `anthropic`이면 langchain-
     anthropic의 `ChatAnthropic`(ADR 0040)을, `openai-compatible`이면 langchain-openai의
     `ChatOpenAI`(ADR 0057)를 만든다.
 
-    메서드는 하나이고 **동기다.** 준비 단계는 `resume()` 의 첫 걸음 안이고 그 첫 걸음에 `await` 가
-    없다는 것이 동시 재개의 불변식이다(ADR 0014). 실행마다 새 객체를 만들고 캐시하지 않는다 —
-    운영자가 모델 파일을 고치면 다음 실행부터 듣게 하려는 것이다. 만들기는 키도 네트워크도 요구하지
-    않아(키가 없는 것은 첫 호출에서 드러난다) 실패하는 것은 매니페스트가 모델로 쓸 수 없는 모양일
-    때뿐이고, 그것은 `PluginError` 다. 매니페스트가 모델 종류인지는
+    모델을 만드는 `build` 는 **동기다.** 준비 단계는 `resume()` 의 첫 걸음 안이고 그 첫 걸음에
+    `await` 가 없다는 것이 동시 재개의 불변식이다(ADR 0014). 실행마다 새 객체를 만들고 캐시하지
+    않는다 — 운영자가 모델 파일을 고치면 다음 실행부터 듣게 하려는 것이다. 만들기는 키도 네트워크도
+    요구하지 않아(키가 없는 것은 첫 호출에서 드러난다) 실패하는 것은 매니페스트가 모델로 쓸 수 없는
+    모양일 때뿐이고, 그것은 `PluginError` 다. 매니페스트가 모델 종류인지는
     `PluginSource.read_manifest(MODEL, …)` 가 이미 걸렀다.
+
+    `check` 는 접속 확인이고 **비동기다.** 관리만 부르고 core 의 런타임은 부르지 않는다. 약속은
+    셋이다. 붙지 못한 것은 예외가 아니라 `Unreached` 로 돌려준다. 기한에 닿으면 연 것을 닫고
+    `Unreached` 로 돌아온다. 취소는 삼키지 않는다. 구성 오류(모델이 아닌 종류, 공백뿐인
+    `model_id`)는 `build` 와 같은 `PluginError` 로 올린다. 붙어 보는 동작은 어댑터가 정하고 이
+    포트가 약속하지 않는다.
     """
 
     def build(self, manifest: PluginManifest) -> ChatModel: ...
+
+    async def check(self, manifest: PluginManifest) -> CheckOutcome: ...
 
 
 class Clock(Protocol):
@@ -539,8 +573,19 @@ class ToolSource(Protocol):
     connect 가 실패하면(서버 기동 실패) 실행은 run_failed 로 끝난다. 비어 있으면 도구 없이 연다.
     연결은 안(부르는 쪽)에서 난 예외를 감싸지 않고 그 객체 그대로 내보낸다. 닫기가 실패하면 그
     실패가 함께 나올 수 있다.
+
+    `check_remote` 와 `check_stdio` 는 접속 확인이고 **비동기다.** 관리만 부르고 core 의 런타임은
+    부르지 않는다. 서버의 모양으로 둘이 갈리는 것은 스스로 하는 확인의 길이 stdio 서버를 받지 못하게
+    타입으로 가르려는 것이다(원격 서버는 `HttpServer`, stdio 서버는 `StdioServer`). 약속은 셋이다.
+    붙지 못한 것은 예외가 아니라 `Unreached` 로 돌려준다. 기한에 닿으면 연 것을 닫고 `Unreached` 로
+    돌아온다. 취소는 삼키지 않는다. 구성 오류는 실행과 같은 예외로 올린다. 붙어 보는 동작은 어댑터가
+    정하고 이 포트가 약속하지 않는다.
     """
 
     def connect(
         self, servers: Mapping[PluginName, McpServer]
     ) -> AbstractAsyncContextManager[ToolConnection]: ...
+
+    async def check_remote(self, name: PluginName, server: HttpServer) -> CheckOutcome: ...
+
+    async def check_stdio(self, name: PluginName, server: StdioServer) -> CheckOutcome: ...

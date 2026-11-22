@@ -63,7 +63,7 @@ web/                       슬라이스 3부터. pnpm 워크스페이스. 파이
 | 8 | [public-demo](public-demo/plan.md) | 공개 정부 문서를 넣은 클라우드 VM 한 대를 실제 운영할 배포와 따로 공개 주소에 열어, 누구나 공개 계정으로 로그인해 제품을 써 보고 출처가 붙은 답을 받게 한다. | base-agent, release-image, answer-eval, answer-markdown, rag-engine:release-image, rag-engine:search-eval, admin-login, portal-admin | todo |
 | 8 | [release-image](release-image/plan.md) | 판마다 서버와 관리 화면과 위젯과 위젯 미리보기 페이지의 컨테이너 이미지를 짓고 올리며 단독 배포 안내도 낸다. | pilot-portal | done |
 | 9 | [admin-login](admin-login/plan.md) | 관리 화면에 운영자 계정 로그인과 대화 화면을 더하고, 관리 화면을 같은 서버의 다른 포트로 인터넷에 연다. | release-image, postgres-foundation | todo |
-| 9 | [connection-check](connection-check/plan.md) | 관리 화면의 플러그인 화면에서 켜 둔 MCP 서버와 모델에 붙는지 보여 주고, 배포 안내에 문제 해결 절을 둔다. | release-image, mcp-http | todo |
+| 9 | [connection-check](connection-check/plan.md) | 관리 화면의 플러그인 화면에서 켜 둔 MCP 서버와 모델에 붙는지 보여 주고, 배포 안내에 문제 해결 절을 둔다. | release-image, mcp-http | in-progress |
 | 9 | [deploy-package](deploy-package/plan.md) | agent-os와 문서 검색 서버를 Docker Compose로 한 번에 띄우는 통합 배포를 준다. | local-model, portal-login, portal-admin, base-agent, release-image, ops-backup-upgrade, connection-check, mcp-http, rag-engine:release-image, rag-engine:admin, rag-engine:backup-upgrade, rag-engine:diag-bundle | todo |
 | 9 | [ops-backup-upgrade](ops-backup-upgrade/plan.md) | agent-os 데이터를 백업하고 새 서버에 복원하며, 판을 올린 뒤에도 옛 트레이스를 읽게 한다. | release-image, postgres-foundation, widget-admin-server | todo |
 | 9 | [pilot-release](pilot-release/plan.md) | public-demo를 뺀 기준선의 기능이 모두 끝나면 제품 0.1 판을 내고 지원 범위와 고지를 문서로 남긴다. | answer-eval, deploy-package, answer-markdown, admin-login, step-up-login, portal-admin, widget-admin-server, widget-runtime-values, portal-login-admin | todo |
