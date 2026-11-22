@@ -1,6 +1,6 @@
 # 2026-11-22 (13:35) connection-check 티켓 01 계약
 
-브랜치 `feature/01-contract-connection-check-routes-and-port-methods`, 워크트리 `.claude/worktrees/01-contract-connection-check-routes-and-port-methods`. 모델 Sonnet 5.5(지시문의 high). 기준은 `origin/dev`이고 앞 일지 `2026-11-22-0159-connection-check-tickets.md`의 "다음"이 가리킨 티켓 01을 구현했다. 이번 요청 범위는 구현·리뷰·커밋까지라 PR과 병합은 하지 않았다.
+브랜치 `feature/01-contract-connection-check-routes-and-port-methods`, 워크트리 `.claude/worktrees/01-contract-connection-check-routes-and-port-methods`. 모델 Sonnet 5.5(지시문의 high). 기준은 `origin/dev`이고 앞 일지 `2026-11-22-0159-connection-check-tickets.md`의 "다음"이 가리킨 티켓 01을 구현했다. 처음 요청 범위는 구현·리뷰·커밋까지였고, 커밋 뒤에 사용자가 PR을 열고 병합하라고 해 같은 세션이 PR 직전 리뷰, 회고, PR과 병합까지 이었다(아래 "PR 직전 리뷰"부터).
 
 ## 사용자 프롬프트
 
@@ -71,6 +71,24 @@
 
 **밀 주장(PR 직전 리뷰에 넘길 새 문장).** ①"`Unreached.reason` 은 비지 않은 글이어야 한다. … 빈 글이 오면 관리가 응답을 만들지 못해 500 이다"(`core/ports.py`), ②"윈도우에서 다른 핸들이 연 파일을 만나면 읽기가 잠깐 쉬며 다시 시도하는 시간(`_retrying`)도 그 대가에 든다"(`admin/http.py` 모듈 독스트링), ③"구성 오류는 실행 전 실패와 같은 `PluginError` 이고 표가 운영자 면에서는 글을 그대로 싣는다"(`tests/test_server.py` 새 시험의 독스트링. 근거는 `http/errors.py` 305~306줄의 `str(error) if operator else INTERNAL_MESSAGE`).
 
-## 다음 단계의 메모
+## PR 직전 리뷰
 
-이번 요청 범위는 구현·리뷰·커밋까지다. PR과 병합은 하지 않았다. 새 워크트리 세션의 제목은 브랜치 이름으로 바꿨다.
+`coderabbit-review` 서브에이전트가 `coderabbit review --agent --include-untracked --base origin/dev`로 돌았다(작업 트리가 깨끗해 기준을 주지 않으면 비교할 변경이 없을 수 있어 `--base`를 더했다). `coderabbit auth status`의 줄은 `Plan: Free`, `Seat: not assigned`이고 리뷰는 좌석 거절 없이 끝까지 돌았다(종료 코드 0, 마지막 이벤트 `review_completed`, 본 파일 29개, `Too many files` 없음). findings는 0건이었다. 서브에이전트가 diff를 직접 읽고 낸 것은 CLI 지적이 아니며 모두 Minor 이하다.
+
+- **고친 것: 없음.**
+- **남긴 것.** ①실제 어댑터의 확인 메서드가 `NotImplementedError`라 02·03이 채우기 전에 병합본을 올리면 켜 둔 항목의 확인이 500이다. 티켓 01이 이미 밝힌 틈이고, 이 기능의 출시는 티켓 02·03이 병합된 뒤의 끝 줄을 적는 커밋 이후다. ②`ConnectionUnreached.reason`에 어댑터가 `str(error)`를 그대로 넣으면 주소·헤더 값이 응답에 샐 수 있다는 점은 이 커밋에 어댑터 본문이 없어 아직 일이 아니다. 받는 쪽이 이미 수용 기준으로 든다. 티켓 02는 서버가 되울린 헤더 값이 `reason`에 없는 것(16·31줄), 티켓 03은 되울린 키, 주소의 사용자 정보와 쿼리, 환경 변수의 값이 `reason`에 없는 것(44·46·51줄)이다. 원격 주소 자체가 `reason`에 실리는 길은 앞 일지가 받아들인 위험이다. ③두 확인 라우트가 `async def`인데 파일 읽기가 동기라 윈도우에서 읽기 재시도(`_retrying`)가 쉴 때 루프가 그만큼 멈춘다. 모듈 독스트링이 이 대가를 이미 적었다.
+- **밀 주장은 넘길 곳이 없었다.** 위 "밀 주장" 셋은 CLI가 돌아 `bug-perf-review`가 돌지 않았으므로 CLI에 넘기지 못한다(CLI 호출에 주장을 넘기는 인자가 없다. `code-review` 6단계의 1). 서브에이전트는 diff를 읽다 ②와 같은 `reason` 서술을 짚었으나 문장의 거짓을 내지 않았다.
+
+## 회고
+
+후보 둘: 기각 2, 승인 0, 넘김 0. 사용자에게 넘긴 것은 없다. 만료는 `uv run python tools/queue_open_rows.py`가 "만료할 항목: (없음)"이었다(출력을 손으로 읽었다). `--ref origin/dev`로는 다시 돌리지 않았다. 두 출력에 모두 든 항목만 닫는 규칙이라 앞의 출력이 비면 닫을 것이 없다.
+
+- **명세 309줄("첫 항목 … 글자 그대로 선다")과 티켓의 "좁힌다"가 갈려 구현 중에 티켓을 따랐다: 기각.** 셀프 리뷰 명세 축이 짚어 고쳤다(위 "셀프 리뷰"). 이미 있는 리뷰 절차가 그 자리에서 잡았고, 남은 티켓 02~06은 `admin.md`의 그 항목을 건드리지 않아 같은 어긋남이 다시 나올 자리가 없다.
+- **윈도 Bash 가드의 거부, 커밋 제목 72자 초과, 일지의 "실측" 낱말, 인용 대조 경고 둘: 기각.** 모두 이미 있는 가드·훅·검사가 그 자리에서 막거나 알렸다(`CLAUDE.md` 환경 함정과 pre-commit의 `commit message`, 낱말 훅, `check-quotes`). 인용 대조 경고 둘은 막지 않는 경고라 두었다.
+
+## 다음
+
+- **병합 직후 할 일은 기능 connection-check의 티켓 02와 03을 나란히 구현하는 것이다.** 둘 다 `ready-for-agent`이고 `Blocked by`가 01뿐이며, 01은 이 PR로 `done`이다. 02는 `adapters/mcp.py`, 03은 `adapters/models.py`와 헌법 문서를 고쳐 대상 파일이 서로 겹치지 않는다. 티켓마다 새 세션으로 가고 브랜치는 `feature/02-check-mcp-servers-remote-and-stdio`, `feature/03-check-models-by-provider`다(`/implement .scratch/connection-check/issues/<파일>`). 04는 02·03 뒤, 05와 06은 04 뒤에 나란히 돈다.
+- **로컬 모델 시험은 01에서 한 번 돌렸고(2개 통과) 남은 것은 02·03·06의 세 번이다.** 02와 03은 병합 직전에 기준 브랜치를 합친 뒤에 돌아야 한다(상대가 먼저 병합되면 합치기 전의 기록은 무효다). 비용 확인은 시험 직전에 사용자에게 받는다.
+- **이 PR이 남긴 틈.** 실제 어댑터의 확인 메서드는 `NotImplementedError`를 던지는 자리다. 02와 03이 채운다. 둘 다 `Unreached.reason`이 비지 않게 채우는 것과 비밀을 가리는 것을 수용 기준으로 이미 가졌다.
+- **기능을 닫는 일(끝 줄, 기능 단락, 계획 표)은 05와 06 가운데 늦게 병합하는 쪽이 맡는다.**
