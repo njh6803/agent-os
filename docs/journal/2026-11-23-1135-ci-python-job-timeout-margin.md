@@ -12,8 +12,16 @@ PR #624를 병합하는 길에서 CI `python` 잡이 15분 제한에 두 번 연
 
 ## 근거
 
-- PR #624의 `python` 잡: 두 시도 모두 pytest 단계 13분 48초와 13분 54초에서 잡이 15분에 취소됐고(`gh run view`의 시각을 손으로 읽었다), 실패한 잡만 다시 돌린(`gh run rerun 45040618565 --failed`) 세 번째에 지났다.
+- PR #624의 `python` 잡(실행 45040618565, 시도별로 `gh api .../attempts/<시도>/jobs`의 시각을 손으로 뺐다): 시도 1은 pytest 단계가 13분 48초에 통과한 뒤 `check_instructions.py` 단계에서 잡이 15분에 취소됐고, 시도 2는 pytest 13분 54초 뒤 `check_type_escapes.py` 단계에서 취소됐다. 실패한 잡만 다시 돌린(`gh run rerun 45040618565 --failed`) 시도 3은 잡 12분 34초(pytest 11분 20초)로 지났다. 처음 항목을 쓸 때는 "pytest 단계가 취소됐다"고 적었고, PR 직전 CodeRabbit CLI 리뷰가 잡은 뒤 위 값으로 고쳤다.
 - 앞선 언급 둘이 대기열에 오르지 않았다: 일지 `2026-11-17-1555-release-followup-timeouts-and-failure-table.md`(최대 14.3분, 제한의 1.05배, "후속 티켓이 필요하다")와 `2026-11-20-1407-standalone-compose-adds-postgres.md`(한 번 취소, 앞 dev 실행도 14분 35초).
+
+## PR 직전 리뷰
+
+CodeRabbit CLI 0.7.5(`Seat: not assigned`, Free)가 `review_completed`까지 돌았고 findings 1건을 냈다. 서브에이전트가 `gh api`로 직접 대 보고 둘을 유효로 판정했다.
+
+- Major: 항목 머리와 티켓·일지의 근거가 "pytest 단계가 취소됐다"고 적었으나, pytest는 두 번 통과했고 그다음의 가벼운 검사 단계에서 잡이 잘렸다. "평소 13~14.5분"도 근거가 약했다(세 시도가 12.6분에서 15분 넘게). 이 세션이 `gh api .../attempts/1/jobs`로 시도 1의 취소 단계(`check_instructions.py`)를 다시 확인했고 세 곳을 고쳤다.
+- Minor: 어디로 줄의 `tools/run_checks.py`와 프로브 경로가 괄호 밖이라 도구가 고칠 대상으로 센다. 두 경로를 괄호 안으로 옮겼다.
+- 오탐 둘(0477·0581의 상태가 `만료`인데 닫힌 것으로 센 것, 티켓이 `done`인 것)은 도구의 셈과 규약대로라 그대로 뒀다.
 
 ## 회고
 
