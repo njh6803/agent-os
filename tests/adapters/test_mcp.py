@@ -15,6 +15,7 @@
 """
 
 import logging
+import socket
 import subprocess
 import sys
 import time
@@ -27,8 +28,8 @@ import anyio
 import pytest
 from tests.mcp_http import free_port, serving
 
-from agent_os.adapters.mcp import McpTools
-from agent_os.core.ports import ToolConnection, ToolSource
+from agent_os.adapters.mcp import REMOTE_CHECK_SECONDS, STDIO_CHECK_SECONDS, McpTools
+from agent_os.core.ports import Reached, ToolConnection, ToolSource, Unreached
 from agent_os.sdk import HttpServer, PluginName, StdioServer
 
 FIXTURE = StdioServer(
@@ -807,3 +808,340 @@ async def test_도구_호출_도중에_서버가_죽으면_서버와_도구를_�
     async with McpTools().connect(_lingering("stay", folder)) as connection:
         with pytest.raises(RuntimeError, match="lingering.*crash.*Connection closed"):
             await connection.call("crash", {})
+
+
+# --- 접속 확인(ADR 0067) ---
+
+# 확인이 돌아오기까지의 상한. 프로세스를 띄우고 기한을 일부러 넘기게 하는 사례가 있어 홀로 돌려 몇
+# 초인 값의 넉넉한 배수로 둔다(`.claude/rules/tests.md` 의 시간 단언).
+CHECK_WITHIN_SECONDS = 120
+# 기한 전에 끝나야 하는 사례(붙는 서버)에 주는 확인의 기한. 상한보다 짧아야 기한이 상한을 앞선다.
+LONG_DEADLINE_SECONDS = 100
+# 기한에 닿아 끊기는 사례의 기한. 서버가 세션을 연 뒤에 늦게 답하는 사례는 세션이 열리기 전에 기한이
+# 오면 종료 요청을 확인할 수 없어, 초기화가 끝나기에 넉넉하게 둔다.
+REMOTE_DEADLINE_SECONDS = 8
+STDIO_DEADLINE_SECONDS = 8
+# 도구가 하나도 없는 stdio 서버.
+_NO_TOOLS = "from mcp.server.mcpserver import MCPServer; MCPServer('none', log_level='ERROR').run()"
+# 초기화에 답하지 않는 stdio 서버. 입력을 읽지 않고 하트비트만 쓴다. 표준 라이브러리만 불러 띄워서
+# 부하에서도 기한 안에 뜬다.
+_SILENT = """
+import sys, time
+from pathlib import Path
+
+beat = Path(sys.argv[1]) / "silent.hb"
+end = time.monotonic() + 120
+while time.monotonic() < end and not (beat.parent / "stop").exists():
+    with beat.open("ab") as file:
+        file.write(b".")
+    time.sleep(0.1)
+"""
+
+
+def _timeout_reason(name: PluginName, where: str, seconds: str) -> str:
+    return f"MCP 서버 {name}({where})에 붙지 못했다: {seconds}초 안에 준비되지 않았다"
+
+
+async def test_접속_확인의_기본_기한은_원격_10초_stdio_20초다(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """중계 제한 30초 안에 stdio 의 기한과 닫는 시간이 들어야 한다(명세 "기한"). 어댑터를 인자
+    없이 만들어 확인을 부르면 확인 함수가 받는 기한을 본다."""
+    seen: list[float] = []
+
+    async def recording(_name: PluginName, _server: object, seconds: float) -> Reached:
+        seen.append(seconds)
+        return Reached()
+
+    monkeypatch.setattr("agent_os.adapters.mcp._check", recording)
+    tools = McpTools()
+    await tools.check_remote(REMOTE, _remote("http://127.0.0.1:1/mcp"))
+    await tools.check_stdio(PluginName("any"), StdioServer(command="none"))
+
+    assert seen == [10, 20]
+    assert (REMOTE_CHECK_SECONDS, STDIO_CHECK_SECONDS) == (10, 20)
+
+
+async def test_원격_서버가_붙으면_Reached이고_세션을_닫는다(tmp_path: Path) -> None:
+    with anyio.fail_after(CHECK_WITHIN_SECONDS), serving(tmp_path) as fixture:
+        outcome = await McpTools().check_remote(REMOTE, _remote(fixture.url))
+        deleted = fixture.headers_of("DELETE")
+        sessions = {
+            h["mcp-session-id"] for h in fixture.headers_of("POST") if "mcp-session-id" in h
+        }
+
+    assert outcome == Reached()
+    assert len(deleted) == 1, "확인이 세션 종료 요청을 보내지 않았다"
+    assert deleted[0]["mcp-session-id"] in sessions
+
+
+async def test_원격_서버_확인_한_번이_서버에_보내는_요청의_수(tmp_path: Path) -> None:
+    """화면이 30초마다 되풀이하므로 바깥 서버가 받는 몫이다(명세 "간격과 보이지 않는 탭"). 알림
+    흐름을 여는 GET 은 닫기와의 겹침에 따라 없을 수 있어 많아야 하나로 본다."""
+    with anyio.fail_after(CHECK_WITHIN_SECONDS), serving(tmp_path) as fixture:
+        await McpTools().check_remote(REMOTE, _remote(fixture.url))
+        methods = [str(row["method"]) for row in fixture.requests()]
+
+    assert methods.count("POST") == 3
+    assert methods.count("DELETE") == 1
+    assert methods.count("GET") <= 1
+    assert len(methods) == methods.count("POST") + methods.count("DELETE") + methods.count("GET")
+
+
+async def test_도구가_하나도_없는_stdio_서버도_Reached다() -> None:
+    name = PluginName("none")
+    server = StdioServer(command=sys.executable, args=("-c", _NO_TOOLS))
+
+    with anyio.fail_after(CHECK_WITHIN_SECONDS):
+        outcome = await McpTools(stdio_check_seconds=LONG_DEADLINE_SECONDS).check_stdio(
+            name, server
+        )
+
+    assert outcome == Reached()
+
+
+async def test_닫힌_포트의_원격_서버는_연결_오류의_글로_Unreached다() -> None:
+    url = f"http://127.0.0.1:{free_port()}/mcp"
+
+    with anyio.fail_after(CHECK_WITHIN_SECONDS):
+        outcome = await McpTools().check_remote(REMOTE, _remote(url))
+
+    assert type(outcome) is Unreached
+    assert type(outcome.reason) is str
+    assert outcome.reason.startswith(f"MCP 서버 remote({url})에 붙지 못했다: ")
+    assert "ConnectError" in outcome.reason
+    assert "(HTTP " not in outcome.reason
+
+
+async def test_틀린_토큰의_원격_서버는_글_끝에_HTTP_401이_붙은_Unreached다(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv(TOKEN_VARIABLE, "Bearer wrong-token-0000")
+
+    with (
+        anyio.fail_after(CHECK_WITHIN_SECONDS),
+        serving(tmp_path, "--expect-authorization", "Bearer right-token-1111") as fixture,
+    ):
+        remote = _remote(fixture.url, Authorization=TOKEN_VARIABLE)
+        outcome = await McpTools().check_remote(REMOTE, remote)
+
+    assert type(outcome) is Unreached
+    assert outcome.reason.startswith(f"MCP 서버 remote({fixture.url})에 붙지 못했다: ")
+    assert outcome.reason.endswith(" (HTTP 401 Unauthorized)")
+    assert "wrong-token-0000" not in outcome.reason
+
+
+async def test_서버가_헤더_값을_오류_본문에_되울려도_Unreached의_글에는_그_값이_없다(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv(TOKEN_VARIABLE, f"Bearer {TOKEN}")
+
+    with (
+        anyio.fail_after(CHECK_WITHIN_SECONDS),
+        serving(tmp_path, "--echo", "initialize") as fixture,
+    ):
+        remote = _remote(fixture.url, Authorization=TOKEN_VARIABLE)
+        outcome = await McpTools().check_remote(REMOTE, remote)
+        sent = fixture.headers_of("POST")
+
+    assert sent[0]["authorization"] == f"Bearer {TOKEN}", "값이 서버에 닿지 않았다(양성 대조)"
+    assert type(outcome) is Unreached
+    assert "bad credentials" in outcome.reason
+    assert "[가림: 헤더 Authorization]" in outcome.reason
+    assert TOKEN not in outcome.reason
+
+
+async def test_환경_변수가_없는_헤더는_붙지_않고_변수_이름을_든_Unreached다(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """도구 쪽에는 확인을 거부하는 구성 오류가 따로 없다. 실행이 여는 동안 실패하는 것은 모두
+    Unreached 의 까닭이다."""
+    monkeypatch.delenv(TOKEN_VARIABLE, raising=False)
+
+    with anyio.fail_after(CHECK_WITHIN_SECONDS), serving(tmp_path) as fixture:
+        remote = _remote(fixture.url, Authorization=TOKEN_VARIABLE)
+        outcome = await McpTools().check_remote(REMOTE, remote)
+        received = fixture.requests()
+
+    assert type(outcome) is Unreached
+    assert f"헤더 Authorization의 환경 변수 {TOKEN_VARIABLE}이 없다" in outcome.reason
+    assert received == [], "환경 변수가 없는데 서버에 요청이 갔다"
+
+
+async def test_도구_목록에_늦게_답하는_원격_서버는_기한_뒤_시간_초과의_글이고_세션을_닫는다(
+    tmp_path: Path,
+) -> None:
+    """기한의 취소가 어댑터 안에서 연결 오류로 바뀌면 시간 초과 대신 연결 오류의 글이 나온다."""
+    with (
+        anyio.fail_after(CHECK_WITHIN_SECONDS),
+        serving(tmp_path, "--list-sleep", "60") as fixture,
+    ):
+        tools = McpTools(remote_check_seconds=REMOTE_DEADLINE_SECONDS)
+        outcome = await tools.check_remote(REMOTE, _remote(fixture.url))
+        deleted = fixture.headers_of("DELETE")
+
+    assert outcome == Unreached(_timeout_reason(REMOTE, fixture.url, str(REMOTE_DEADLINE_SECONDS)))
+    assert len(deleted) == 1, "기한에 닿아 끊긴 확인이 세션 종료 요청을 보내지 않았다"
+
+
+async def test_초기화에_답하지_않는_원격_서버도_기한_뒤_시간_초과의_글이다() -> None:
+    """붙기는 했지만 답이 없다. 서버가 세션 번호를 주지 못해 종료 요청은 없다."""
+    with socket.socket() as listening:
+        listening.bind(("127.0.0.1", 0))
+        listening.listen()
+        url = f"http://127.0.0.1:{listening.getsockname()[1]}/mcp"
+        with anyio.fail_after(CHECK_WITHIN_SECONDS):
+            tools = McpTools(remote_check_seconds=1.5)
+            outcome = await tools.check_remote(REMOTE, _remote(url))
+
+    assert outcome == Unreached(_timeout_reason(REMOTE, url, "1.5"))
+
+
+async def test_닫는_동안_난_예외는_바꾸지_않고_그대로_올린다(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    async def failing(*_args: object) -> None:
+        raise RuntimeError("닫기가 실패했다")
+
+    monkeypatch.setattr("agent_os.adapters.mcp._end_session", failing)
+
+    with anyio.fail_after(CHECK_WITHIN_SECONDS), serving(tmp_path) as fixture:
+        with pytest.raises(RuntimeError, match="닫기가 실패했다"):
+            await McpTools().check_remote(REMOTE, _remote(fixture.url))
+
+
+async def test_바깥의_취소는_삼키지_않는다(tmp_path: Path) -> None:
+    """확인의 기한이 아니라 바깥 범위가 취소하면 그대로 취소로 끝난다."""
+    with anyio.fail_after(CHECK_WITHIN_SECONDS), serving(tmp_path, "--list-sleep", "60") as fixture:
+        with anyio.move_on_after(2) as outer:
+            await McpTools().check_remote(REMOTE, _remote(fixture.url))
+            pytest.fail("취소되지 않았다")
+
+    assert outer.cancelled_caught
+
+
+async def test_stdio_서버가_붙으면_Reached이고_확인이_끝난_뒤_프로세스가_남지_않는다(
+    folder: Path,
+) -> None:
+    """이 서버는 입력이 닫혀도 끝나지 않는다. 확인이 닫는 길(ADR 0034)로 프로세스를 끈다."""
+    name = PluginName("lingering")
+    server = _lingering("stay", folder)[name]
+
+    with anyio.fail_after(CHECK_WITHIN_SECONDS):
+        outcome = await McpTools(stdio_check_seconds=LONG_DEADLINE_SECONDS).check_stdio(
+            name, server
+        )
+
+    assert outcome == Reached()
+    assert (folder / "stay.hb").exists(), "서버가 뜨지 않았다"
+    _멈췄다(folder / "stay.hb")
+
+
+async def test_명령을_찾지_못한_stdio_서버는_연결_오류의_글로_Unreached다() -> None:
+    name = PluginName("broken")
+    server = StdioServer(command="definitely-not-a-command-agent-os")
+
+    with anyio.fail_after(CHECK_WITHIN_SECONDS):
+        outcome = await McpTools().check_stdio(name, server)
+
+    assert type(outcome) is Unreached
+    assert outcome.reason.startswith(
+        "MCP 서버 broken(definitely-not-a-command-agent-os)에 붙지 못했다: "
+    )
+    assert "FileNotFoundError" in outcome.reason
+
+
+async def test_초기화에_답하지_않는_stdio_서버는_기한_뒤_시간_초과의_글이고_프로세스가_남지_않는다(
+    folder: Path,
+) -> None:
+    server = StdioServer(command=sys.executable, args=("-c", _SILENT, str(folder)))
+    name = PluginName("silent")
+
+    with anyio.fail_after(CHECK_WITHIN_SECONDS):
+        tools = McpTools(stdio_check_seconds=STDIO_DEADLINE_SECONDS)
+        outcome = await tools.check_stdio(name, server)
+
+    assert outcome == Unreached(_timeout_reason(name, sys.executable, str(STDIO_DEADLINE_SECONDS)))
+    assert (folder / "silent.hb").exists(), "서버가 뜨지 않았다"
+    _멈췄다(folder / "silent.hb")
+
+
+async def test_기한의_취소가_연결_오류로_바뀌어_나와도_시간_초과의_글이다(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """라이브러리 안에서 취소가 다른 예외로 바뀌어 여는 단계의 변환(`_connecting`)이 연결 오류로
+    올리는 경우다. 기한이 왔는지는 예외가 아니라 범위가 보므로 연결 오류의 글이 나오면 안 된다."""
+
+    @asynccontextmanager
+    async def translating(*_args: object) -> AsyncGenerator[None]:
+        try:
+            await anyio.sleep_forever()
+        except anyio.get_cancelled_exc_class():
+            raise ConnectionError("취소가 연결 오류로 바뀌었다") from None
+        yield
+
+    monkeypatch.setattr("agent_os.adapters.mcp._opened", translating)
+
+    with anyio.fail_after(CHECK_WITHIN_SECONDS):
+        tools = McpTools(remote_check_seconds=0.2)
+        outcome = await tools.check_remote(REMOTE, _remote("http://127.0.0.1:1/mcp"))
+
+    assert outcome == Unreached(_timeout_reason(REMOTE, "http://127.0.0.1:1/mcp", "0.2"))
+
+
+async def test_글이_빈_연결_오류도_비지_않은_글의_Unreached다(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """응답 계약이 빈 글을 거부해, 빈 글이 가면 관리가 500이다. 여는 단계의 변환(`_connecting`)을
+    지나지 않은 연결 오류는 글이 빌 수 있다."""
+
+    @asynccontextmanager
+    async def failing(*_args: object) -> AsyncGenerator[None]:
+        raise BrokenPipeError
+        yield
+
+    monkeypatch.setattr("agent_os.adapters.mcp._opened", failing)
+
+    with anyio.fail_after(CHECK_WITHIN_SECONDS):
+        outcome = await McpTools().check_remote(REMOTE, _remote("http://127.0.0.1:1/mcp"))
+
+    assert outcome == Unreached("BrokenPipeError")
+
+
+async def test_도구_목록을_읽은_뒤_닫는_도중에_기한이_오면_Reached다(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """붙었다는 사실은 닫는 길이 끊겨도 바뀌지 않는다. 이 시험은 닫기가 끝나지 않는 서버를 흉내
+    내고, 기한은 닫는 동안에 온다."""
+
+    @asynccontextmanager
+    async def hanging_close(*_args: object) -> AsyncGenerator[list[object]]:
+        yield []
+        await anyio.sleep_forever()
+
+    monkeypatch.setattr("agent_os.adapters.mcp._opened", hanging_close)
+
+    with anyio.fail_after(CHECK_WITHIN_SECONDS):
+        outcome = await McpTools(remote_check_seconds=0.3).check_remote(
+            REMOTE, _remote("http://127.0.0.1:1/mcp")
+        )
+
+    assert outcome == Reached()
+
+
+async def test_도구_목록을_읽은_뒤_닫는_도중의_연결_오류는_바꾸지_않고_올린다(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """여는 단계 밖(닫는 동안)에서 난 연결 오류는 Unreached 의 까닭이 아니다. 관리 경로가 500으로
+    답하도록 그대로 올린다."""
+
+    @asynccontextmanager
+    async def failing_close(*_args: object) -> AsyncGenerator[list[object]]:
+        yield []
+        raise ConnectionError("닫는 동안 끊겼다")
+
+    monkeypatch.setattr("agent_os.adapters.mcp._opened", failing_close)
+
+    with anyio.fail_after(CHECK_WITHIN_SECONDS):
+        with pytest.raises(ConnectionError, match="닫는 동안 끊겼다"):
+            await McpTools().check_remote(REMOTE, _remote("http://127.0.0.1:1/mcp"))
