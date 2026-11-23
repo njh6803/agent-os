@@ -47,7 +47,11 @@ QUERIES = [
 
 async def search(url: str, authorization: str, query: str) -> tuple[bool, str]:
     """`search` 하나를 부른다. 오류 여부와 결과 글을 돌려준다."""
-    client = httpx2.AsyncClient(headers={"Authorization": authorization})
+    # CPU 임베딩의 첫 검색이 5초를 넘을 수 있어 어댑터(`adapters/mcp.py`)와 같은 시간 제한을 준다.
+    client = httpx2.AsyncClient(
+        headers={"Authorization": authorization},
+        timeout=httpx2.Timeout(30, read=300),
+    )
     async with (
         streamable_http_client(url, http_client=client, terminate_on_close=False) as (read, write),
         ClientSession(read, write) as session,

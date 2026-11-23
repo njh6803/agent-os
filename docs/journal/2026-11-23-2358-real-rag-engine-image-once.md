@@ -79,6 +79,12 @@
 - 커밋 `e51ca5056`(브랜치 `feature/07-real-rag-engine-image-once`). 첫 시도는 pre-commit의 `check-notes`가 막았다(기능 단락 `docs/release-notes/features/base-agent.md`가 666자라 400자 제한을 넘었다. 같은 실행에서 pytest 632.8초, web-verify 766.1초, pyright, lint-imports 등은 통과였고 따옴표 대조 경고 4건은 인용 부호를 풀어 없앴다). 단락을 381자로 줄여 다시 커밋했고 pre-commit 전부 통과했다(checks 1121.62초: pytest 828.6초, web-verify 1118.5초, pyright 68.9초와 pyright-linux 73.6초, run-hooks 176.4초, check-notes, check-ticket, lint-imports, zizmor, check-instructions, check-type-escapes, 표·줄 구분 문자·변이 표 검사, 커밋 메시지 검사. 카나리아 명세와 헌법 판 검사는 파일이 없어 Skipped. 따옴표 대조 경고 없음). 위 "검증"의 `run_checks` 몫은 이 커밋의 pre-commit 결과로 갈음한다. e2e 셋과 사진 비교는 웹과 배포 파일을 건드리지 않아 돌리지 않았다.
 - 이 세션의 컨텍스트가 인계 문턱을 넘은 채 `커밋 뒤` 경계에 와서 넘긴다. 아직 푸시하지 않았다. 남은 일은 origin/dev(이 세션이 본 `7b13a60`. 이 브랜치의 변경과 겹치는 파일은 없었다)와 합치고 `uv run python tools/plan_table.py`를 돌려 `.scratch/plan.md`가 바뀌면 싣는 일, 푸시, PR(`/git-pr`), 봇 회차, 병합이다. 합친 뒤의 검증은 PR의 CI가 본다(합침이 하네스나 `src/`에 닿으면 `run_checks`를 다시 친다).
 
+### PR 직전 리뷰와 합치기 (2026-11-24, 두 번째 세션)
+
+- 일지 변경을 커밋(`c1abb1e67`)한 뒤 origin/dev(`7b13a608e`, #627)를 합쳤다. 글자 충돌이 없었고 `sibling_overlap.py`는 번호 겹침 없음, `plan_table.py`는 `.scratch/plan.md`를 바꾸지 않았다. 푸시했다.
+- `coderabbit-review`: CLI 0.7.5가 끝까지 돌았다(`Seat: not assigned`, findings 2건, 둘 다 minor, 둘 다 이 변경이 만든 것). 둘을 고쳤다. (1) 프로브 README "넣은 문서"의 `make_documents.py` 명령에 경로가 빠져 저장소 루트에서 그대로 치면 파일을 못 찾았다. 전체 경로로 바꿨다. (2) `result_size.py`의 `httpx2.AsyncClient`에 시간 제한이 없어 기본값(5초)이 걸렸다. 어댑터(`adapters/mcp.py` 427행)와 같은 `Timeout(30, read=300)`을 줬다. 한 번의 측정 결과는 바뀌지 않는다(그 실행은 끝났고 `Rounds`가 표지 없는 회차를 막는다). 시간 제한을 바꾼 판으로는 다시 재지 않았다. 코드 읽기로 어댑터와 맞춘 것이다.
+- 오탐으로 본 것: `make_documents.py`의 "[시스템 알림]" 문장은 가짜 서버 표본과 같은 지시 주입 시험 글이고, `result_size.py`의 토큰이 argv에 오르는 것은 한 번 돌리는 로컬 프로브라 원칙 V의 대상이 아니다.
+
 open-session을 부른다 2026-11-23T16:05Z
 
 ## 이전 세션의 인계 (셀프 리뷰 직전. 2026-11-24의 새 세션이 이어 받았다)
