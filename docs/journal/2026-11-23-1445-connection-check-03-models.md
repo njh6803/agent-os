@@ -192,3 +192,30 @@ open-session을 부른다 2026-11-23T11:06Z
 - **무효 회차 3번과 CI.** 사용자가 "잠시 뒤 다시 시도"를 골라(AskUserQuestion의 둘째 화면 답, 같은 비용 범위) 5분 뒤 `run --yes`를 다시 띄웠다. 후보 네 곳이 또 모두 `There are no longer any instances available`(HTTP 400)이고 7.1초, 종료 코드 2, 회차 파일 `round-0001-20261123T115831Z.json`(출력에서 읽었다). `sweep`을 쳐 `치웠다`가 찍혔다. 같은 시각의 CI는 `python` 잡이 세 번 연달아 15분 제한에 걸려 취소됐다(시도 1~3이 각각 15분 14~17초, `gh run view 45161939109`로 읽었다). `dev`의 최근 `python` 잡은 13분 42초(성공), 14분 49초(성공), 15분 16초(취소. PR 626 병합 직후의 push 실행)였다(같은 명령으로 읽었다). 제한을 고치는 일은 대기열 `ci-python-job-timeout-margin`의 몫이라 이 PR에서 하지 않는다. 시험 시간이 이 PR의 58개 시험 때문에 늘었는지는 재지 않았다(어림).
 - **로컬 모델 시험 통과(무효 회차 3번 뒤 네 번째 시도).** 사용자가 "한참 뒤 다시 시도"를 골라(AskUserQuestion의 셋째 화면, 같은 비용 범위) 25분 대기 뒤 `run --yes`를 띄웠다. 앞의 셋과 달리 `shared / A40 ×1` 구성이 떴다(앞 후보 셋은 이번에도 재고 없음. 출력에서 읽었다). 이 기록은 `llm_local.py`가 찍은 기록 묶음에서 옮겼다(출력에서 읽었다). 시험한 커밋 `3ffbbe6d12f62fc62e6a5e54c1329f1725cf688e`(이 PR의 지금 머리와 같고 `origin/dev`는 `d144094d9`로 합친 뒤 그대로다. `git fetch origin dev`와 `git rev-parse origin/dev`로 읽었다). 모델 둘 `GotoAI-Inc/gemma-4-26B-A4B-it-W4A16`, `openai/gpt-oss-20b`. 서빙 엔진 vLLM 0.33.0(이미지 `vllm/vllm-openai:v0.33.0`). GPU A40 한 대에 서버 둘(`--gpu-memory-utilization 0.45 --kv-cache-memory=4294967296`, 서버 옵션 전문은 회차 파일 `round-0001-20261123T124806Z.json`). `pytest -m llm_local` 4 passed(44.76초, 종료 코드 0), `LLM 토큰 합계 6,298(입력 6,191, 출력 107). 트레이스 2개, 모델 호출 4건. 트레이스를 남기지 않은 LLM 테스트 2개는 세지 못했다.` 전체 걸린 시간 931.8초, 단가표 값 시간당 $0.59(2026-11-13 웹 요약의 표라 청구서는 아니다. 어림 $0.15). 도구가 Terraform 출력에서 가렸다고 찍었다(`terraform_output_masked: true`). 서버 키와 주소는 적지 않았다. 서버를 지웠는지는 코드를 읽어 확인했다(`tools/llm_local.py`가 끝에 `destroy_folder`를 부르고 종료 코드 0으로 끝났다. Runpod 콘솔은 보지 않았다). 병합 뒤 `sweep`을 한 번 친다.
 - **티켓 03의 남은 체크박스 둘을 채웠다.** 둘 다 위 기록으로 닫는다(`-m llm`은 앞 절의 24 passed, 로컬 모델 시험은 위 4 passed).
+
+### 남은 것(새 세션이 이어서 한다, `커밋 뒤`)
+
+이 세션은 컨텍스트가 인계 문턱을 넘은 채 커밋 `ebf8c2005`(일지와 티켓 기록) 뒤 경계에 와서 인계한다. 이 커밋은 아직 푸시하지 않았다. 이 절 이후는 커밋하지 않은 편집이다.
+
+1. 푸시 전에 `git branch --show-current`(`feature/03-check-models-by-provider`)와 `uv run python tools/sibling_overlap.py`. 푸시 뒤 `merge.md`를 Read로 열어 "워크트리에서 병합할 때"를 따른다. 마지막 푸시 뒤에 `@coderabbitai review` 코멘트를 남기고 `uv run python tools/wait_ci.py 627`을 백그라운드로 띄운다.
+2. 이 푸시로 도는 봇 회차는 둘째 회차다. Critical·Major만 고치고 나머지는 지적마다 보류 이유를 PR 코멘트에 남긴다. 첫 회차의 Major 둘(`model_check.py:125` 사용자 정보가 요청 로그에 남는 일, `model_check.py:192` 환경 `OPENAI_CUSTOM_HEADERS`의 `Authorization`이 키보다 앞서는 일)은 알려진 한계로 보류했고 이유가 PR 코멘트 7099560127에 있다. 같은 지적이 다시 나오면 같은 판정으로 넘긴다.
+3. 로컬 모델 시험은 이미 통과했다(위 일지 "로컬 모델 시험 통과" 줄). 시험한 커밋 `3ffbbe6d1` 뒤의 변경이 일지와 티켓뿐이라 기록은 유효하다(`git diff --name-only 3ffbbe6d1 HEAD`로 범위의 경로가 없는지 다시 본다). 푸시 전에 기준 브랜치가 움직였으면 합친 뒤 그 차이에 범위의 경로가 있는지 보고, 있으면 다시 돌려야 한다(그때는 `--yes` 없이 쳐 비용을 사용자에게 보이고 확인받는다). 병합한 뒤 `uv run --env-file ../../../.env python tools/llm_local.py sweep`을 한 번 친다.
+4. CI의 `python` 잡이 15분 제한에 세 번 연달아 걸렸다(위 일지 "무효 회차 3번과 CI" 줄). 새 푸시의 CI가 또 취소되면 단계 시각으로 제한 때문인지 가르고 `gh run rerun <실행> --failed`만 한다. 연달아 걸리면 병합하지 않고 사용자에게 보고한다(대기열 `ci-python-job-timeout-margin`이 처방의 자리고, 제한 자체를 이 PR에서 고치지 않는다).
+5. 병합 뒤 회고(`retro`)와 다음 지시문은 `merge.md`가 이끈다.
+
+### 인계 지시문(커밋 뒤)
+
+다음 작업: .scratch/connection-check/issues/03-check-models-by-provider.md. 모델의 접속 확인: anthropic은 그 모델 하나를 묻고 openai-compatible은 목록에서 이름을 찾는다
+다음 단계: PR 반영·병합
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /implement .scratch/connection-check/issues/03-check-models-by-provider.md
+브랜치: feature/03-check-models-by-provider
+모델: Sonnet 5.5 / high. 2의 잇는 지시문
+읽을 것: docs/journal/2026-11-23-1445-connection-check-03-models.md(맨 아래 "PR 반영과 로컬 모델 시험" 절의 "남은 것(새 세션이 이어서 한다, 커밋 뒤)"이 할 일 순서)
+이어받을 상태: 인계: 커밋 뒤(일지 docs/journal/2026-11-23-1445-connection-check-03-models.md). 커밋 ebf8c2005까지 했고 푸시하지 않았다. 로컬 모델 시험은 통과했고(일지) 티켓의 체크박스는 모두 채웠다. 푸시와 merge.md 2(봇 회차)부터 이어 병합까지 한다. CodeRabbit 첫 회차 Major 둘은 보류했다(PR 코멘트 7099560127). CI의 python 잡이 15분 제한에 세 번 걸렸다(일지). 병합 뒤 llm_local sweep이 남았다
+확인할 선행 조건: 없음
+이번 요청 범위: PR과 병합까지
+
+잠금 풀기 거절됨(커밋 뒤 인계): 자동 모드 분류기가 `git worktree unlock C:/project/agent/.claude/worktrees/03-check-models-by-provider`를 "Destructive or Unwanted Actions"로 거부했다. 돌아가지 않았다. 새 세션의 `EnterWorktree(path)`가 `belongs to another running Claude Code session`으로 거절되면 사람에게 이 워크트리의 unlock을 청한다(`handoff.md` 4, 대기열 326). 이 세션의 프로세스가 그 폴더를 쥐고 있어 `tidy-checkouts` 3의 판정 3이 이 워크트리를 남긴다.
+
+open-session을 부른다 2026-11-23T13:03Z
