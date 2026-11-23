@@ -219,3 +219,27 @@ open-session을 부른다 2026-11-23T11:06Z
 잠금 풀기 거절됨(커밋 뒤 인계): 자동 모드 분류기가 `git worktree unlock C:/project/agent/.claude/worktrees/03-check-models-by-provider`를 "Destructive or Unwanted Actions"로 거부했다. 돌아가지 않았다. 새 세션의 `EnterWorktree(path)`가 `belongs to another running Claude Code session`으로 거절되면 사람에게 이 워크트리의 unlock을 청한다(`handoff.md` 4, 대기열 326). 이 세션의 프로세스가 그 폴더를 쥐고 있어 `tidy-checkouts` 3의 판정 3이 이 워크트리를 남긴다.
 
 open-session을 부른다 2026-11-23T13:03Z
+
+## 이어받은 세션의 봇 회차와 병합 전 확인(2026-11-23, 다섯 번째 세션)
+
+이 세션은 `커밋 뒤` 지시문으로 열렸다. 워크트리 잠금은 걸려 있지 않아 `EnterWorktree(path)`가 바로 들어갔다(`git worktree unlock`은 쓰지 않았다).
+
+- **푸시.** 인계 절을 일지에 싣는 커밋 `7b3a9d43d`를 만들고 푸시했다. 푸시 전에 `tools/sibling_overlap.py`가 번호 겹침도 함께 고친 파일도 없다고 했다(종료 코드 0). 이 커밋의 pre-commit은 Bash의 600초 제한을 넘겨 백그라운드로 넘어간 뒤 종료 코드 0으로 끝났다.
+- **봇 회차.** 푸시 뒤 `@coderabbitai review`를 남겼다(PR 코멘트 7102239291). 헤드 `7b3a9d4`에서 CodeRabbit은 `Review finished`로 끝났고 새 지적을 내지 않았다. 리뷰 목록의 CodeRabbit 리뷰는 `3ffbbe6d1`에 단 첫 회차 하나뿐이고(`gh api .../pulls/627/reviews`로 읽었다) 보류한 Major 둘은 같은 자리에 그대로 붙어 있다. `claude-review`도 지적 없음이다. 그래서 둘째 회차에서 새로 고칠 것도 새로 보류할 것도 없다. 뒤로 넘긴 일은 없다(두 Major의 보류 이유는 PR 코멘트 7099560127).
+- **CI.** `python`을 포함한 열세 줄이 모두 통과 또는 건너뜀이다(`llm`만 SKIPPED. `tools/wait_ci.py 627`의 출력에서 읽었다). 15분 제한으로 취소되지 않았다.
+- **로컬 모델 시험 기록의 유효.** `git diff --name-only 3ffbbe6d1 HEAD`가 티켓 파일과 이 일지 둘뿐이라 범위의 경로가 없다. 앞 절의 통과 기록(`3ffbbe6d1`, 4 passed)은 그대로 유효하다.
+
+## 회고
+
+낸 후보 다섯, 승인 1(회차를 센 것), 기각 4, 넘김 0. 만료 둘.
+
+- **승인(회차): 문서만 바꾼 커밋의 pre-commit이 Bash 제한을 넘는다.** 사건: 일지 한 파일만 바꾼 커밋 `7b3a9d43d`가 600초를 넘겨 백그라운드로 넘어갔다. 열린 `docs-only-commit-precommit-slow-again`의 19회차로 적었다(막대별 시간은 출력에 찍히지 않아 적지 못했다). 처방은 그 항목의 몫이라 이 PR에서 하지 않는다.
+- **기각: 로컬 모델 시험이 재고 없음으로 무효 회차 셋을 낸 일.** 사건은 앞 세션(네 번째)에 있고 외부 서비스의 재고 부족이라 저장소의 검사로 막을 수 없다. 규칙(`merge.md` 3의 종료 2, 연달아 둘이면 멈추고 보고)은 이미 있었고 그대로 따랐다.
+- **기각: 앞 세션이 "같은 길로 터지는 입력을 찾지 못했다"고 적은 어림이 틀린 일.** 그 문장은 어림 표지를 달고 있었고 PR 직전 리뷰가 재현으로 잡아 고쳤다(세 번째 절). 리뷰가 제 몫을 한 사건이라 회차에서 뺀다.
+- **기각: 이 세션의 `Monitor` 호출을 워크트리 가드가 거절한 일.** `CLAUDE.md` 환경 함정이 이미 "git 복합 명령은 하나씩 친다"를 적었고 가드가 그 자리에서 막고 이유를 알렸다.
+- **기각: 도구 호출 앞의 영어 문장을 훅이 알린 일.** 훅이 그 자리에서 알렸고 다음 문장부터 한국어로 고쳤다.
+- **만료: `pr-body-claims-behavior-code-lacks`, `subagent-definition-stale-after-merge`.** `queue_open_rows.py`를 이 체크아웃과 `--ref origin/dev` 둘로 돌려 두 출력에 모두 든 것만 닫았다(상태 `만료 2026-11-23`).
+
+## 다음
+
+이 PR(627)을 병합하면 `connection-check`의 티켓 01~03이 모두 done이 된다. 남은 것은 04(플러그인 화면의 행이 접속 확인의 결과를 보인다)이고 05(관리 화면 e2e 장면)와 06(배포 안내의 문제 해결 절)은 04에 막혀 있다. 04는 화면 작업이라 시작 전에 `sync-design-system`을 `확인`으로 부르고(티켓의 첫 체크박스), 행의 모양이 기존 부품으로 안 그려지면 `/ui-design connection-check`가 먼저다. 병합 뒤 로컬 모델 시험의 `sweep`을 한 번 친다(이 PR의 병합 직후에 쳤는지는 보고에 적는다).
