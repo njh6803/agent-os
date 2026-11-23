@@ -64,6 +64,23 @@
 - **남긴다.** 가짜 서버를 `1.1.0`과 `min_score`에 맞추는 일(세션 카드를 내려 했지만 이 저장소의 훅이 모델이 내는 카드를 막아 아래 "다음"에 적는다). `EXTERNAL_URL` 분기가 세 곳이라는 Repeated Switches와 `if doc_search.fake` 두 곳은 프로브·시험의 판단 항목이고 지금 분기를 합치면 더 읽기 어려워 그대로 둔다. 빈 전문과 거부 경로의 실제 서버 측정은 스택을 다시 올려야 하고(이 PC의 메모리 여유가 0.6GB까지 줄었다) 후속 몫이다.
 - **다시 돌릴 것.** 가짜 서버로 열네 사례 한 번, 프로브의 새 사례 한 회차, 검증 전체.
 
+## 2026-11-24 세션 (셀프 리뷰 이후. 제목 `feature/07-real-rag-engine-image-once`, 곧 `(인계함)`)
+
+사용자 프롬프트(next-session 지시문. 모델 `claude-sonnet-5-5` / high):
+
+> 사용자: .claude/skills/implement/SKILL.md 를 읽어 그대로 따른다. … 인자: .scratch/base-agent/issues/07-real-rag-engine-image-once.md
+>
+> 다음 작업: … 문서 검색 서버의 실제 이미지로 사례 열넷을 한 번 돌리고 가짜 서버와 다른 것을 프로브 기록에 남긴 작업을 셀프 리뷰부터 이어 마친다
+> 이번 요청 범위: PR과 병합까지
+
+이 세션의 일: 위 "셀프 리뷰" 절의 반영, 가짜 서버로 열네 사례와 프로브의 새 사례 확인, 커밋.
+
+- 결정: 가짜 서버를 `1.1.0`과 `min_score`에 맞추는 후속은 세션 카드를 내려 했으나 이 저장소의 훅이 모델이 내는 카드(`own_initiative`)를 막아 이 일지의 "다음"에 적었다.
+- 커밋 `e51ca5056`(브랜치 `feature/07-real-rag-engine-image-once`). 첫 시도는 pre-commit의 `check-notes`가 막았다(기능 단락 `docs/release-notes/features/base-agent.md`가 666자라 400자 제한을 넘었다. 같은 실행에서 pytest 632.8초, web-verify 766.1초, pyright, lint-imports 등은 통과였고 따옴표 대조 경고 4건은 인용 부호를 풀어 없앴다). 단락을 381자로 줄여 다시 커밋했고 pre-commit 전부 통과했다(checks 1121.62초: pytest 828.6초, web-verify 1118.5초, pyright 68.9초와 pyright-linux 73.6초, run-hooks 176.4초, check-notes, check-ticket, lint-imports, zizmor, check-instructions, check-type-escapes, 표·줄 구분 문자·변이 표 검사, 커밋 메시지 검사. 카나리아 명세와 헌법 판 검사는 파일이 없어 Skipped. 따옴표 대조 경고 없음). 위 "검증"의 `run_checks` 몫은 이 커밋의 pre-commit 결과로 갈음한다. e2e 셋과 사진 비교는 웹과 배포 파일을 건드리지 않아 돌리지 않았다.
+- 이 세션의 컨텍스트가 인계 문턱을 넘은 채 `커밋 뒤` 경계에 와서 넘긴다. 아직 푸시하지 않았다. 남은 일은 origin/dev(이 세션이 본 `7b13a60`. 이 브랜치의 변경과 겹치는 파일은 없었다)와 합치고 `uv run python tools/plan_table.py`를 돌려 `.scratch/plan.md`가 바뀌면 싣는 일, 푸시, PR(`/git-pr`), 봇 회차, 병합이다. 합친 뒤의 검증은 PR의 CI가 본다(합침이 하네스나 `src/`에 닿으면 `run_checks`를 다시 친다).
+
+open-session을 부른다 2026-11-23T16:05Z
+
 ## 이전 세션의 인계 (셀프 리뷰 직전. 2026-11-24의 새 세션이 이어 받았다)
 
 컨텍스트가 인계 문턱을 넘은 채 셀프 리뷰 직전에 와서 넘긴다. 이 세션의 제목은 `feature/07-real-rag-engine-image-once (인계함)`로 바꾼다. 커밋하지 않은 변경이 워크트리에 있다. 새 세션은 셀프 리뷰(`/code-review`, 기준 origin/dev)부터 하고, 그 반영, 가짜 서버로 열네 사례 한 번, 커밋, 푸시, PR, 병합 차례다. 실제 서버 스택은 내렸고(compose 프로젝트 `rag-engine-real`, 볼륨 삭제) 더 필요하지 않다. 테스트용 데이터베이스(`agent-os-test-postgres`)는 떠 있다.
