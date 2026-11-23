@@ -12,7 +12,8 @@
 문서 검색 서버의 자리. 주소와 `DOC_SEARCH_AUTHORIZATION` 의 값은 `doc_search` 픽스처 한 곳에서
 정해지고, 사례는 그 둘을 이 픽스처로만 받는다. 기본은 가짜 검색
 서버(`tests/fake_doc_search_server.py`)를 띄워 기대한 `Authorization` 이 아닌 요청을 401 로 막게
-하는 것이다. 실제 문서 검색 서버(티켓 07)를 가리키려면 사례를 고치지 않고 환경 변수 둘만 준다.
+하는 것이다. 실제 문서 검색 서버(티켓 07)를 가리키려면 환경 변수 둘을 준다(사례는 그대로이고 가짜
+표본에만 맞는 단언 둘만 아래처럼 갈린다).
 주소는 서버의 `/mcp` 까지, 토큰은 `Bearer <토큰>` 전체다.
 
     ASSISTANT_LLM_DOC_SEARCH_URL=http://127.0.0.1:8000/mcp \\
@@ -21,8 +22,17 @@
 
 그 서버에는 가짜 서버의 표본과 같은 글의 문서가 들어 있어야 하고, 둘 중 하나만 주면 시험이 실패한다.
 값이 빈 변수는 주지 않은 것으로 읽는다(`.env.example` 을 복사하면 빈 값이 설정된다).
-가짜 표본에만 맞는 단언(쪽 번호, 전문에만 있는 "7일", 거부 뒤의 정해진 문장)은 실제 서버에서 그
-상황을 만들 수 없으면 티켓 07 이 다시 적거나 만들 수 없었다고 남긴다.
+가짜 표본에만 맞는 단언은 실제 서버를 가리킬 때(`DocSearch.fake` 가 거짓일 때) 티켓 07 이 둘을
+고쳤다. (1) 의 갱신일은 가짜 표본에서는 2026-10-01 이고 실제 서버에서는 문서를 넣은 날이라 값이
+날마다 다르므로, 실제 서버에서는 날짜 모양(`YYYY-MM-DD`)이 답에 있는지만 본다. (14) 의 "7일 이
+출력에 없다"와 "정해진 문장이 출력에 든다"는 복직 절차가 조각에 없고 전문에만 있다는 표본의 꼴에
+기댄다. 실제 서버는 문서의 모든 글을 어느 조각에든 넣으므로 복직 절차가 조각에 있어 그 상황을 만들
+수 없었다. 실제 서버를 가리켰을 때 (13) 과 (14) 는 한 회차에서 둘 다 멈춤 단계에서 실패했다. 모델이
+조각의 글로 답하고 `get_document` 를 부르지 않아 `run_paused` 가 나오지 않았기 때문이다(스킬이 틀린
+것이 아니다). (13) 의 "7일" 과 "2.6 복직 절차" 단언은 가짜 표본의 꼴에 기대지만 그 앞의 멈춤
+단계에서 먼저 실패하므로 갈라 두지 않았다. 실제 서버에서 전문 읽기와 승인은 프로브 사례 "긴 문서의
+전문 승인(마지막 조항)"이 잰다(`.scratch/base-agent/probes/README.md` 의 2026-11-23 결과). (14) 의
+`doc_search.fake` 분기는 그 뒤의 단언이라 실제 서버에서는 닿지 않았다.
 
 모델의 자리. 모델 차림의 목록(`MODELS`)이 이 모듈의 한 자리에서 정해지고, 사례 열네 개가 모두 그
 목록으로 매개변수화된다. CLI 사례의 `--model` 과 `serve` 사례의 기본 모델이 모두 차림의 모델
@@ -146,6 +156,9 @@ STREAM_SECONDS = 300
 STREAM_TIMEOUT = Timeout(10.0, read=60.0)
 LISTENING = re.compile(r"Uvicorn running on (http://\S+)")
 SOURCE_PAGE = re.compile(r"\d+쪽")
+UPDATED_DATE = re.compile(r"\d{4}-\d{2}-\d{2}")
+# 가짜 표본에서 육아휴직 업무편람의 갱신일.
+FAKE_UPDATED = "2026-10-01"
 
 # 스킬 문서가 정한 근거 없음의 문장(명세 "스킬 cite-sources").
 NOT_FOUND = (
@@ -165,6 +178,8 @@ class DocSearch:
 
     url: str
     authorization: str
+    # 가짜 검색 서버(표본의 글과 날짜가 고정되고 전문에만 있는 사실이 있다)이면 참이다.
+    fake: bool
 
 
 @pytest.fixture(scope="module")
@@ -176,11 +191,11 @@ def doc_search(tmp_path_factory: pytest.TempPathFactory) -> Generator[DocSearch]
     if (url is None) != (authorization is None):
         pytest.fail(f"{URL_ENV} 와 {AUTHORIZATION_ENV} 는 함께 줘야 한다", pytrace=False)
     if url is not None and authorization is not None:
-        yield DocSearch(url, authorization)
+        yield DocSearch(url, authorization, fake=False)
         return
     folder = tmp_path_factory.mktemp("doc_search")
     with serving(folder, "--expect-authorization", FAKE_AUTHORIZATION) as server:
-        yield DocSearch(server.url, FAKE_AUTHORIZATION)
+        yield DocSearch(server.url, FAKE_AUTHORIZATION, fake=True)
 
 
 @pytest.fixture(autouse=True)
@@ -321,8 +336,12 @@ def test_근거가_있는_질문에는_번호와_출처_목록이_붙고_위치�
     done = _ask(QUESTION, root=root, traces=tmp_path / "traces", doc_search=doc_search, model=model)
 
     assert done.searches(), done.output
-    for word in ("[1]", "출처", PARENTAL, "2.1 휴직 기간", "2026-10-01"):
+    for word in ("[1]", "출처", PARENTAL, "2.1 휴직 기간"):
         assert word in done.output, done.output
+    if doc_search.fake:
+        assert FAKE_UPDATED in done.output, done.output
+    else:
+        assert UPDATED_DATE.search(done.output), done.output
     line = _source_line(done, PARENTAL)
     assert line, done.output
     assert "2.1 휴직 기간" in line, line
@@ -652,6 +671,7 @@ def test_전문_읽기를_거부하면_그_내용_없이_정해진_문장으로_
 
     denied = [t for t in done.tools if t.tool == "get_document" and not t.ok]
     assert [t.content for t in denied if t.content.startswith("승인자가 거부했다")], denied
-    assert "7일" not in done.output, done.output
-    assert NOT_FOUND in done.output, done.output
+    if doc_search.fake:
+        assert "7일" not in done.output, done.output
+        assert NOT_FOUND in done.output, done.output
     assert isinstance(done.events[-1], RunFinished), done.events[-1]
