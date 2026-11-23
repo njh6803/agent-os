@@ -39,7 +39,7 @@
 
 ## 요청 수(티켓 02의 "요청의 수" 칸)
 
-가짜 원격 MCP 서버로 한 번 확인할 때 서버가 받는 요청이다. 시험(`tests/adapters/test_mcp.py`)이 세어 단언한다: POST 3(초기화, 초기화 알림, 도구 목록), GET 많아야 1(알림 스트림), DELETE 1(세션 종료). 화면이 30초마다 되풀이해도 서버 하나가 확인 한 번에 받는 것은 이 수다.
+가짜 원격 MCP 서버로 한 번 확인할 때 서버가 받는 요청이다. 시험(`tests/adapters/test_mcp.py`)이 세어 단언한다: POST 3(초기화, 초기화 알림, 도구 목록), GET 많아야 1(알림 스트림), DELETE 1(세션 종료). 도구 목록이 한 페이지인 가짜 서버의 수이고, 목록이 여러 페이지인 서버는 `tools/list` 요청마다 POST가 하나씩 늘어 이보다 많다(CodeRabbit 지적). 화면이 30초마다 되풀이해도 서버 하나가 확인 한 번에 받는 것은 이 수다.
 
 ## 검증 상태
 
@@ -81,3 +81,17 @@
 - 세션 제목: `feature/02-check-mcp-servers-remote-and-stdio`(인계하며 `(인계함)`을 붙인다).
 - 사용자 프롬프트: 첫 절의 것과 같다(이어받은 세션의 첫 메시지도 같은 지시문이었고 사용자가 더 한 말은 없다).
 - open-session을 부른다 2026-11-23T06:45Z
+
+## 봇 회차(PR 626)
+
+`gh pr view 626`과 `gh api repos/njh6803/agent-os/pulls/626/comments`로 손으로 읽었다. 검사 전부 SUCCESS(`llm`은 SKIPPED), CodeRabbit과 claude-review 모두 첫 회차다.
+
+- CodeRabbit Minor 1(요청 수 설명이 목록 한 페이지의 경우만 말한다): 고쳤다. `mcp.py` 모듈 독스트링과 이 일지의 "요청 수" 절을 한 페이지인 경우로 한정했다.
+- claude-review Nit(anyio 범위 중첩의 단정이 독스트링에 코드를 읽은 설명이라는 말 없이 적혔다): 고쳤다. 독스트링에 "코드를 읽은 설명이고 따로 재지는 않았다"를 더했다.
+- claude-review Minor 1(`_check`의 `except` 안 판단을 이름 붙인 함수로 뺀다): 보류했다. 취소 범위가 여는 것과 닫는 것을 함께 감싸야 해서 `try`를 쪼갤 수 없고, `opened`와 `cancel_called`를 함수 인자로 넘기면 읽는 길만 늘어난다. 뒤로 넘긴다(아래 "다음").
+- claude-review Minor 2(접두 문구가 세 곳에 있다): 보류했다. PR 본문이 남긴 위험으로 적었고 `_connecting`의 시그니처를 바꿔야 해 이 티켓 밖이다. 뒤로 넘긴다(아래 "다음").
+
+## 다음
+
+- 접두 문구 `MCP 서버 {name}({where})에 붙지 못했다: `를 한 곳(상수나 도우미)으로 모으고 `_connecting`·`_check`·시험의 도우미가 같이 쓰게 한다. `_connecting`의 시그니처가 바뀌므로 MCP 어댑터를 다시 만지는 다음 티켓이나 하네스 정리 티켓이 맡는다.
+- `_check`의 `except ConnectionError` 안 판단(닫는 중의 오류인지, 기한인지, 빈 글 채우기)을 이름 붙인 작은 함수로 뺄지 본다. 급하지 않은 읽기 쉽게 하는 일이고, 뺄 때 `opened`와 `cancel_called`를 어떻게 넘길지가 관건이다.
