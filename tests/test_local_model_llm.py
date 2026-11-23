@@ -10,6 +10,11 @@ calc 는 한 프로세스에서 하나의 사례를 두 모델로 매개변수�
 `-m llm` calc 시험과 같고 둘만 다르다. 성공한 도구 호출이 하나 이상이어야 하고, 모델 이름은
 `model_id` 와 같은지가 아니라 비어 있지 않고 `unknown` 이 아닌지를 본다. 서버가 응답에 적는 이름은
 서버가 정하기 때문이다. 시험 안에 다시 시도를 두지 않는다. 한 번 실패하면 실패다.
+
+빌린 서버마다 `openai-compatible` 모델의 접속 확인(`ManifestModels.check`)을 한 번 부르는 시험도
+있다. 서버가 목록 요청(`GET <주소>/models`)에 답하고 그 목록에 모델 이름이 있어 `Reached`인지
+본다. 준비 확인이 이미 쓰는 요청이지만 이 시험이 어댑터를 지나 재는 것은 처음이다(ADR 0067, 명세
+`.scratch/connection-check/spec.md` Testing Decisions의 일곱째).
 """
 
 import json
@@ -23,8 +28,9 @@ from pathlib import Path
 import pytest
 
 from agent_os.adapters.jsonl import JsonlTrace
-from agent_os.core.ports import UnknownEvent
-from agent_os.sdk import Event, LlmCalled, RunId, ToolCalled, parse_skill
+from agent_os.adapters.models import ManifestModels
+from agent_os.core.ports import ModelSource, Reached, UnknownEvent
+from agent_os.sdk import Event, LlmCalled, RunId, ToolCalled, parse_manifest, parse_skill
 from tools import llm_local
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -169,6 +175,20 @@ def test_키_변수가_환경에_있으면_모델_파일에_그_이름만_적고
 
     assert f'api_key_env = "{key_name}"' in manifest
     assert secret not in manifest
+
+
+@pytest.mark.llm_local
+@pytest.mark.parametrize("number", [model.number for model in llm_local.MODELS])
+async def test_빌린_모델_서버의_접속_확인은_붙음이다(number: int) -> None:
+    """바깥 이음매. 가짜 서버가 아니라 실제 vLLM 이 목록 요청에 답하고 그 목록에 모델 이름이 있는지
+    본다. 모델은 부르지 않는다."""
+    require_variables(os.environ)
+    manifest = parse_manifest(model_manifest(number, os.environ))
+    models: ModelSource = ManifestModels()
+
+    outcome = await models.check(manifest)
+
+    assert outcome == Reached(), outcome
 
 
 @pytest.mark.llm_local

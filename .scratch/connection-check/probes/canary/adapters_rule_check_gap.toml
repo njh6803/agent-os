@@ -3,7 +3,10 @@
 # 실험군은 규칙의 paths 안(src/agent_os/adapters/), 대조군은 밖(README.md)을 읽는다. 둘 다 이 체크아웃이다.
 # 질문은 선례 `.scratch/mcp-http/probes/canary/adapters_rule_http_close.toml` 처럼 Read 결과에 붙어 실린 규칙도
 # 지시라고 밝힌다. 기대 낱말은 더한 문장에만 있다(`clock.py` 에는 없다).
-# 최신 결과: 통과 4(2026-11-22, 이 PC의 connection-check 티켓 01 워크트리, claude 2.1.325, HEAD a2c318849 위의 커밋하지 않은
+# 최신 결과: 통과 4(2026-11-23, 이 PC의 connection-check 티켓 03 워크트리, claude 2.1.325, HEAD 36aa7db5a 위의 커밋하지 않은
+# 작업 트리, 일지 2026-11-23-1445). 티켓 03 이 adapters.md 의 모델 소스 항목을 고치고 `check` 항목을 더하며 접속 확인 자리 항목을
+# MCP 몫만 남긴 뒤 돌렸다. 실험군 셋이 두 구절을 글자 그대로 옮겼고(MCP 항목에서) 대조군은 "없음"이었다. "없음" 섞임 0.
+# 앞선 결과: 통과 4(2026-11-22, 이 PC의 connection-check 티켓 01 워크트리, claude 2.1.325, HEAD a2c318849 위의 커밋하지 않은
 # 작업 트리, 일지 2026-11-22-1335). 실험군 셋이 두 구절을 글자 그대로 옮겼고 대조군은 "없음"이었다.
 # 돌리는 법: uv run python tools/canary.py .scratch/connection-check/probes/canary/adapters_rule_check_gap.toml <출력 디렉터리>
 kind = "rule"

@@ -4,8 +4,10 @@ version = "0.0.0"
 description = "플러그인 기반 에이전트 런타임. an agent OS"
 readme = "README.md"
 requires-python = "==3.12.*"
-# 원천은 docs/constitution/tech.md 의 스택 표다. anthropic SDK는 직접 의존이 아니라
-# langchain-anthropic 뒤에서 온다(ADR 0001). mcp 는 MCP 어댑터가 직접 쓴다. 2 의 stdio 클라이언트가
+# 원천은 docs/constitution/tech.md 의 스택 표다. anthropic SDK는 모델 접속 확인이 직접 쓰므로 직접
+# 선언한다(ADR 0067 이력 2026-11-21). 판은 `>=1.7,<2`이고 langchain-anthropic 이 끌어오던 같은 판이라
+# 락의 패키지는 늘지 않는다. 모델을 부르는 길은 그대로 langchain-anthropic 뒤에서 온다(ADR 0001).
+# mcp 는 MCP 어댑터가 직접 쓴다. 2 의 stdio 클라이언트가
 # 닫기를 취소에서 보호하고, 그 절차가 메이저 판에서 바뀌었으므로 3 은 닫기 테스트와 프로브를 다시
 # 돌린 뒤 들인다(ADR 0034). httpx2 는 http 전송의 접속이 직접 쓴다(ADR 0049). mcp 2 가 httpx 대신
 # 쓰는 클라이언트라 mcp 뒤에서 이미 락에 있지만, 어댑터가 헤더와 응답 훅을 단 클라이언트를 만들어
@@ -28,6 +30,7 @@ dependencies = [
     "langchain-core>=0.3",
     "pydantic>=2.9",
     "langchain-anthropic>=0.3",
+    "anthropic>=1.7,<2",
     "mcp>=2.3,<3",
     "httpx2>=2.13,<3",
     "fastapi>=0.140.8",
@@ -153,7 +156,14 @@ forbidden_modules = ["agent_os.http"]
 name = "core knows no provider (constitution: ports and adapters)"
 type = "forbidden"
 source_modules = ["agent_os.core"]
-forbidden_modules = ["langchain_anthropic", "langchain_openai", "openai", "mcp", "httpx2"]
+forbidden_modules = [
+    "langchain_anthropic",
+    "langchain_openai",
+    "anthropic",
+    "openai",
+    "mcp",
+    "httpx2",
+]
 
 # 원칙 IV 의 "DB, 구체 파일 경로를 import하지 않는다" 절. 파일시스템은 표준 라이브러리 셋으로 근사하고,
 # DB 라이브러리는 PostgreSQL 을 들인 날(ADR 0066) 셋을 더했다. 2026-09-28 까지 이 절에는 계약이 없었다.
@@ -182,6 +192,22 @@ source_modules = [
 forbidden_modules = ["sqlalchemy", "asyncpg", "alembic"]
 allow_indirect_imports = true
 
+# 모델 제공사 SDK 를 import 하는 층은 어댑터 하나다. 위 계약은 core 와 sdk 만 막으므로 나머지 층이
+# 직접 import 하는 길을 따로 막는다(DB 라이브러리와 같은 모양, ADR 0066). 지금 어댑터 밖에서 이 넷을
+# import 하는 코드는 없다. 접속 확인이 `anthropic` 을 직접 쓰게 되어 SDK 가 넷으로 늘었다(ADR 0067).
+[[tool.importlinter.contracts]]
+name = "only the adapters import model provider SDKs (principle IV, ADR 0067)"
+type = "forbidden"
+source_modules = [
+    "agent_os.channel",
+    "agent_os.admin",
+    "agent_os.http",
+    "agent_os.server",
+    "agent_os.main",
+]
+forbidden_modules = ["anthropic", "langchain_anthropic", "langchain_openai", "openai"]
+allow_indirect_imports = true
+
 [[tool.importlinter.contracts]]
 name = "sdk knows no engine (ADR 0001)"
 type = "forbidden"
@@ -191,6 +217,7 @@ forbidden_modules = [
     "langchain_core",
     "langchain_anthropic",
     "langchain_openai",
+    "anthropic",
     "openai",
     "mcp",
     "httpx2",

@@ -1,0 +1,107 @@
+# 2026-11-23 (14:45) connection-check 티켓 03 모델의 접속 확인
+
+브랜치 `feature/03-check-models-by-provider`, 워크트리 `.claude/worktrees/03-check-models-by-provider`. 모델 Sonnet 5.5(지시문의 high). 기준은 `origin/dev`(36aa7db)이고 앞 일지 `2026-11-22-1335-connection-check-01-contract.md`의 "다음"이 가리킨 티켓 03을 구현한다. 02(`.claude/worktrees/02-check-mcp-servers-remote-and-stdio`)가 나란히 돈다. 이 세션은 컨텍스트가 인계 문턱을 넘어 셀프 리뷰 직전에 인계한다. 새 세션이 같은 파일을 이어 쓴다.
+
+## 사용자 프롬프트
+
+> 사용자: .claude/skills/implement/SKILL.md 를 읽어 그대로 따른다. 이 세션을 연 저장소는 `C:\project\agent`이고 작업 폴더가 그곳이 아니면 따르지 말고 알린다. 스킬의 인자는 이 줄의 '인자:' 뒤부터 메시지 끝까지다. 인자: .scratch/connection-check/issues/03-check-models-by-provider.md
+>
+> 다음 작업: .scratch/connection-check/issues/03-check-models-by-provider.md. 모델의 접속 확인: anthropic은 그 모델 하나를 묻고 openai-compatible은 목록에서 이름을 찾는다
+> 다음 단계: 구현
+> 어디서: 새 세션. 나란히 여는 2 중 2. 주 체크아웃에서 브랜치를 따지 않고 EnterWorktree(name은 03-check-models-by-provider)로 새 워크트리에 먼저 들어가 거기서 브랜치를 바꾼다
+> 시작 프롬프트: /implement .scratch/connection-check/issues/03-check-models-by-provider.md
+> 브랜치: feature/03-check-models-by-provider
+> 모델: Sonnet 5.5 / high. 결정표의 구현(나란히) 칸
+> 읽을 것: docs/journal/2026-11-22-1335-connection-check-01-contract.md의 "## 다음". 나란히 도는 티켓은 .scratch/connection-check/issues/02-check-mcp-servers-remote-and-stdio.md이고 대상 파일이 겹치지 않는다(같이 고치는 것은 .claude/rules/adapters.md의 서로 다른 항목뿐일 것으로 본다). 이 기능에서 헌법(docs/constitution/tech.md, operations.md)을 고치는 티켓은 이것 하나다
+> 이어받을 상태: 없음. 01(PR 624)은 dev에 병합됐고 어댑터의 확인 메서드는 NotImplementedError를 던지는 자리다. CI의 python 잡이 15분 제한에 걸려 코드와 무관하게 취소되는 일이 있다(대기열 ci-python-job-timeout-margin, 열림). 취소되면 단계 시각으로 시간 제한인지 먼저 가르고, 시간 제한이면 gh run rerun <실행> --failed로 실패한 잡만 다시 돌린다. 이 일 자체를 고치려 들지 않는다
+> 확인할 선행 조건: 주 체크아웃 미갱신: 루트는 dev. tidy-checkouts는 묶음의 첫 세션이 돈다. 병합은 이 워크트리 사본의 next-session merge.md(없으면 SKILL.md)의 "워크트리에서 병합할 때"를 Read로 열어 따른다
+> 이번 요청 범위: PR과 병합까지
+
+## 만든 것(모두 커밋하지 않은 작업 트리)
+
+- `src/agent_os/adapters/model_check.py`(새 파일): 확인 요청과 아홉 갈래의 이유 글. `check_anthropic`(그 모델 하나를 묻는 `GET /v1/models/<id>`), `check_openai_compatible`(목록 첫 쪽에서 이름을 찾는다), `anthropic_check_client`(모델 객체에서 주소와 키와 프록시와 덧붙임 헤더를 받아 확인용 클라이언트를 짓는다), `reason_tail`, `display_address`, `CHECK_DEADLINE_SECONDS = 10.0`. 재시도를 끄고(`max_retries=0`), 기한은 `anyio.move_on_after`로 전체에 걸며, `CancelledError`는 지나가게 둔다.
+- `adapters/models.py`: `ManifestModels(check_deadline_seconds=...)`와 `check`(제공사로 가른다), 공통 검사 `_provider_and_id`·`_base_url`. 모듈 독스트링에 접속 확인을 적었다.
+- `adapters/anthropic.py`: `chat_anthropic`이 `ChatAnthropic`을 돌려준다(확인용 클라이언트가 그 객체에서 키를 꺼내야 해서). 독스트링의 "키 값을 만지지 않는다"를 확인이 그 객체의 키를 넘기는 것에 맞게 고쳤다.
+- `adapters/openai_compatible.py`: `_KeySource`→`KeySource`, `_own_client`→`own_client`로 공개하고 `KeyProblem`(없음, 헤더로 못 보냄)과 `KeySource.read()`를 더했다. `__call__`은 `read()` 위에 같은 문구로 다시 섰다.
+- `pyproject.toml`: `anthropic>=1.7,<2` 직접 의존, 주석 고침, 금지 모듈 목록 둘에 `anthropic`, 새 계약 "only the adapters import model provider SDKs (principle IV, ADR 0067)"(아래 정한 것). `uv.lock`: 차이는 `anthropic` 두 줄뿐이다.
+- 시험: `tests/adapters/test_model_check.py`(새 파일, 53개), `tests/adapters/fake_model_server.py`(모델 하나·목록·오류 응답과 `root_url`), `tests/test_main.py`(`-m llm` 실제 `serve`의 접속 확인 시험 하나), `tests/test_local_model_llm.py`(`-m llm_local` 빌린 서버마다 `ManifestModels().check` 시험 하나, 아직 돌려 보지 않았다).
+- 헌법과 규칙: `docs/constitution/tech.md`(의존성 줄), `docs/constitution/operations.md`(LLM 테스트 절에 시험 둘), `docs/constitution/README.md`(판 3.1.4→3.1.5, 마지막 개정 2026-11-23. 형제가 쓴 가장 높은 판이 3.1.4), `.claude/rules/adapters.md`(새 항목 "모델 소스의 `check`", 모델 소스 항목의 키 문장, 접속 확인 자리 항목에서 모델 몫을 덜어 MCP 몫만 남겼다. 02가 그 항목의 MCP 몫을 지운다).
+- 변이 표 `.scratch/connection-check/probes/model_check_mutations.toml`(새 파일, 변이 13).
+
+## 정한 것
+
+- **import 계약을 채널·관리·http·server·main까지 둔다.** 위반이 0이고, 이미 있는 DB 라이브러리 계약과 같은 모양이라 새 규칙을 늘리지 않고 같은 규칙을 한 번 더 적는 일이다. `allow_indirect_imports = true`라 어댑터를 거친 간접 import는 막지 않는다. `uv run lint-imports`가 8 kept로 돈다.
+- **덧붙임 헤더 사례는 잰다.** `anthropic_check_client(model, deadline)`이 모델 객체를 인자로 받는 함수라, 헤더를 든 모델 객체를 그 함수에 직접 넘겨 요청에 실리는지 본다(`test_anthropic_확인하는_클라이언트는_모델_객체의_덧붙임_헤더를_싣는다`). 포트로 부르는 시험으로는 지금 제품이 그 칸을 채우지 않아 잴 수 없다.
+- **헌법 판은 3.1.5로 올린다.** 문구와 의존성 선언이라 patch다. `tools/sibling_overlap.py`가 "이 브랜치의 새 번호: 헌법 3.1.5"로 알리고 겹침은 없었다.
+- **OpenAI SDK의 모델 목록은 다음 쪽이 없다.** `models.list()`가 돌려주는 `AsyncPage`는 `has_next_page`가 늘 거짓이라 "첫 쪽만 읽는다"는 결정을 SDK가 지킨다. 그래서 변이 13("다음 쪽까지 읽는다")은 동작이 같은 변이이고 표에 `expect = "green"`으로 적었다. 시험은 서버가 받은 요청이 한 건이라는 것으로 그 결정을 고정한다.
+
+## 검증(지금까지)
+
+- `uv run ruff check .`·`uv run ruff format --check .`: 초록. `uv run pyright`: 0 errors. `uv run lint-imports`: 8 kept, 0 broken. `uv run python tools/check_instructions.py`: 출력 없음(통과).
+- `tests/adapters/test_model_check.py`: 53 passed(`uv run pytest tests/adapters/test_model_check.py -q`를 손으로 쳐서 읽었다. 첫 실행부터 초록이라 시험이 빨개질 수 있는지는 아래 변이 표가 다시 낸다).
+- 변이 표 `.scratch/connection-check/probes/model_check_mutations.toml`(`PYTHONUTF8=1 uv run python tools/mutate.py <표>`가 다시 낸다): 변이 13 모두 기대대로(빨강 12, 동등 변이 초록 1), 기준선 53 passed, 표지가 모두 맞았다. `--check`는 통과했다(러너 출력을 읽었다).
+- 락 차이: `uv.lock`의 차이는 `anthropic`이 `agent-os`의 의존 목록과 `requires-dist`에 든 두 줄뿐이다. 패키지와 판은 바뀌지 않았다(설치된 anthropic 1.7.0). `docs/constitution/tech.md`에 그렇게 적었다.
+- `uv run python tools/run_checks.py`(백그라운드): 이 일지를 쓰는 동안 돌고 있다. 결과는 아래 "전체 게이트"에 이어 적는다.
+
+## 남은 것(새 세션이 이어서 한다)
+
+1. 셀프 리뷰: Skill 도구의 `code-review`(표준 축은 sonnet·high, 명세 축은 세션 모델). 고정점은 `origin/dev`의 merge-base. 명세는 `.scratch/connection-check/issues/03-check-models-by-provider.md`와 `.scratch/connection-check/spec.md`, ADR 0067. 미추적 파일은 `src/agent_os/adapters/model_check.py`, `tests/adapters/test_model_check.py`, 변이 표와 이 일지다. Critical·Major는 커밋 전에 고친다.
+2. 카나리아: `tools/sibling_overlap.py`가 `.claude/rules/adapters.md`를 바꿨다며 알린 명세 다섯(`adapters_rule_rules_file_read.toml`, `adapters_rule_check_gap.toml`, `adapters_rule_new_optional_fields.toml`, `adapters_rule_http_close.toml`, `adapters_rule_boundary_exceptions.toml`)을 `tools/canary.py`로 돌려 `# 최신 결과:` 줄을 고친다. 01은 `.scratch/connection-check/probes/canary/`에 명세 셋을 새로 썼다. `adapters_rule_check_gap.toml`은 01이 고친 '아직 붙어 보지 않는다' 항목을 보는 명세라 이 변경으로 문구가 바뀌었으니 명세의 구절도 맞춰야 할 수 있다. 계정 한도로 못 돌리면 `docs/constitution/operations.md` 환경 규약 상세의 계정 한도 항목대로 한다.
+3. `uv run --env-file ../../../.env pytest -m llm`(테스트 컨테이너가 떠 있어야 한다: `docker compose -f compose.test.yaml up -d --wait`). 새 시험 `test_실제_serve_에서_기본_모델의_접속_확인은_붙음이고_서버_기록에_요청_줄이_없다`가 처음 돈다. 통과 수와 `LLM 토큰 합계` 줄을 이 일지에 옮긴다.
+4. `uv run --env-file ../../../.env python tools/llm_local.py run`을 `--yes` 없이 쳐 예상 비용을 사용자에게 보여 확인받은 뒤 `--yes`로 다시 친다. 새 `-m llm_local` 시험이 빌린 서버에서 처음 돈다. 병합 직전에, 기준 브랜치를 합친 뒤에 돈다(02가 먼저 병합되면 그 변경이 합쳐 들어오므로 그 뒤에 다시).
+5. 티켓 03의 `**Status:**`를 `done`으로 바꾸고 체크박스를 채운 뒤 `uv run python tools/plan_table.py`를 돌려 `.scratch/plan.md`를 같은 커밋에 싣는다(이 티켓은 기능의 마지막이 아니라 `**끝:**` 줄과 기능 단락은 쓰지 않는다).
+6. 커밋 전에 `git branch --show-current`와 `uv run python tools/sibling_overlap.py`. 02가 `.claude/rules/adapters.md`를 먼저 병합하면 그 파일의 충돌을 푼다(내가 더한 항목과 02가 지우는 MCP 항목이 다르다).
+7. PR 직전 리뷰(`coderabbit-review`, CLI가 못 돌면 `bug-perf-review`), PR(git-pr 스킬, 본문 끝에 `🤖 Generated with [Claude Code](https://claude.com/claude-code)`), ccd_pr 도구로 `get_status`·`bind_pr`, 봇 회차와 병합은 `merge.md`의 "워크트리에서 병합할 때". CI의 python 잡이 15분 제한으로 취소되면 단계 시각을 보고 시간 제한이면 `gh run rerun <실행> --failed`만 한다.
+8. 이 일지에 통과 수와 토큰 합계, 로컬 모델 시험 기록 묶음, 셀프 리뷰의 고친 것과 남긴 것을 옮기고 PR 코멘트에도 적는다.
+
+## 전체 게이트
+
+`uv run python tools/run_checks.py`(백그라운드, 러너 출력을 읽었다): 종료 코드 1. pytest가 `1 failed, 8111 passed`(1080.5초)이고 web-verify는 Passed(1138.6초)였다. 실패한 시험은 `tests/channel/cli/test_interrupt.py::test_도구_호출_도중에_한_번_누르면_서버를_닫고_중단으로_끝난다`("Ctrl+C 를 누른 자식이 30초 안에 끝나지 않았다")이다. 이번 변경이 건드리지 않은 MCP 서버 닫기의 실제 프로세스 시험이고, 그 파일만 홀로 `uv run --no-sync pytest tests/channel/cli/test_interrupt.py -q`로 돌리니 6 passed(106.2초)였다. 러너가 도는 동안 02 세션과 다른 세션이 이 PC에서 함께 돌았다. 그래서 부하 탓의 시간 제한으로 어림하고(손으로 본 두 번이 전부라 부하를 따로 재지는 않았다), 커밋의 pre-commit 러너가 다시 돌릴 때 같은 시험이 또 실패하면 그때 `diagnosing-bugs`로 가른다. 나머지 검사(check-notes, check-ticket, lint-imports, zizmor, check-instructions, check-type-escapes, pyright, run-hooks 등)의 줄은 이 출력의 끝에서 앞이 잘려 읽지 못했다. 커밋의 pre-commit이 같은 검사를 돌린다.
+
+## 인계
+
+이 세션은 제목을 `feature/03-check-models-by-provider (인계함)`으로 바꾸고 워크트리 잠금을 풀었다. 인계 경계는 `셀프 리뷰 직전`이다. 백그라운드 작업은 모두 끝나 멈출 것이 없었다.
+
+open-session을 부른다 2026-11-23T06:05Z
+
+## 셀프 리뷰(2026-11-23, 이어받은 세션)
+
+범위: base 36aa7db5aa8088ea2de8810b70d172221092bd1e(= origin/dev), 변경 파일 13개, 커밋 0개, 미추적 4개(`model_check.py`, `test_model_check.py`, 변이 표, 이 일지). 표준 축은 sonnet·high, 명세 축은 세션 모델.
+
+보고(요지, 서브에이전트의 말이라 아래 판정은 코드에서 다시 확인한 것):
+
+- 두 축이 같은 Major를 냈다: `anthropic_check_client`(확인용 클라이언트를 짓는 자리)가 `check_anthropic`의 예외 바꾸기 밖에 있어, 스킴이 없는 프록시 값(`ANTHROPIC_PROXY="user:pw@proxy.corp:3128"`)이면 `ValueError`가 그대로 올라오고 그 글에 프록시의 사용자 정보가 실린다. 이 세션이 직접 재현했다(`ValueError: Unknown scheme for proxy URL URL('user:pw@proxy.corp:3128')`).
+- 표준 축 Major 둘째: 총 시간 기한(`anyio.move_on_after`)을 시험이 고정하지 않는다. 빈 컨텍스트로 바꿔도 53개가 통과했다고 한다.
+- 표준 축 Minor: 독스트링 "닫힌 아홉 갈래"에 번호가 8개, "500에 세 건"이 anthropic만 잰 값, `missing_model_is_404` 불리언 인자(CODING_STANDARDS), 변이 표의 `expect_output` 셋이 같은 문구, "다음 쪽은 읽지 않는다"의 SDK 사정이 독스트링에 없다.
+- 명세 축 Nit: 키 칸 고정 시험이 `chat_anthropic`이 아니라 `ChatAnthropic`을 직접 만든다, 주소를 읽지 못할 때 `(…(주소를 읽지 못함))` 괄호가 겹친다.
+- 냄새 Nit: `finally` 닫기 중복, `build`와 `check`의 같은 `match provider`, `_attempt`·`reason_tail`의 독스트링.
+
+### 판정과 반영
+
+고친 것(코드에서 직접 확인한 뒤):
+
+- **확인용 클라이언트를 짓다 난 예외(두 축의 같은 Major).** 직접 재현했다: `ANTHROPIC_API_KEY`를 두고 `ANTHROPIC_PROXY="user:pw@proxy.corp:3128"`이면 `anthropic_check_client`가 `ValueError: Unknown scheme for proxy URL URL('user:pw@proxy.corp:3128')`을 `check`까지 올렸다(손으로 `uv run --no-sync python`으로 재현, 스크래치 스크립트). 고침: `check_anthropic`이 키 없음을 먼저 가르고 클라이언트 짓기를 `try`로 감싸 갈래의 `Unreached`(`확인하지 못했다(ValueError)`)로 바꾼다. 보이는 주소는 클라이언트가 아니라 모델 객체의 주소 칸에서 얻는다(`model.anthropic_api_url or ANTHROPIC_DEFAULT_URL`). 시험 `test_anthropic_스킴이_없는_프록시는_…`을 먼저 써서 빨강을 보고(`ValueError`가 시험까지 올라왔다) 고쳤다. 변이 14번이 그 길을 겨눈다. `check_openai_compatible`의 `AsyncOpenAI` 짓기는 같은 길로 터지는 입력을 찾지 못해 손대지 않았다(어림: 주소는 매니페스트 검증을 지났고 `own_client()`는 인자가 없다).
+- **총 시간 기한이 시험으로 고정되지 않았다(표준 축 Major).** 지적이 맞다: 늦는 서버 시험(`delay_seconds=4.0`)은 응답을 보내기 전에 쉬어서 라이브러리의 읽기 제한(기한과 같은 0.3초)이 먼저 걸렸다. 가짜 서버에 `Reply.drip_seconds`(머리를 보낸 뒤 본문을 4바이트씩 그 시간에 걸쳐 흘린다)를 더하고 두 제공사에 시험을 썼다. 변이 13번(`move_on_after(float("inf"))`)이 그 시험 하나만 빨갛게 한다(1 failed, 손으로 `tools/mutate.py … 13 14`를 쳐 읽었다).
+- **변이 표의 `expect_output` 셋이 같은 문구.** `_reason`에 `because`(붙지 못함이 아닐 때 앞에 다는 글)를 더하고 재시도 둘과 이름 견줌에 그 시험만의 글을 달아 표지를 나눴다.
+- **`missing_model_is_404` 불리언 인자(CODING_STANDARDS).** `not_found_tail: str | None`(404를 모델 없음으로 읽는 제공사만 그 글을 준다)으로 바꿨다.
+- **독스트링.** "닫힌 아홉 갈래"를 번호 9개로 맞췄다(명세 표의 모델 없음 둘을 6·7로 나눴다). "500에 세 건"은 anthropic만 쟀다고 고쳤다(프로브 `model_requests_loopback.py`의 `anthropic_default_retries`뿐, openai는 코드를 읽어 `max_retries=0`만 준다). "다음 쪽은 읽지 않는다"가 코드가 아니라 SDK(`AsyncPage`)가 지키는 결정이라는 것을 모듈 독스트링에 적었다. `_attempt`·`reason_tail`에 독스트링을 달았다.
+
+남긴 것(이유):
+
+- `check_anthropic`과 `check_openai_compatible`의 같은 `finally: CancelScope(shield) close`, `ManifestModels.build`와 `check`의 같은 `match provider`: 판단 항목(냄새 기준)이고 둘 다 두 갈래뿐이라 공유 장치를 새로 만들면 더 늘어난다.
+- 키 칸 고정 시험이 `chat_anthropic`이 아니라 `ChatAnthropic(...)`을 직접 만든다(명세 축 Nit): 고정하는 것은 라이브러리가 키 환경 변수를 비웠을 때 빈 `SecretStr`로 읽는다는 사실이고 `chat_anthropic`은 그 객체를 그대로 돌려준다. 어림이고 재지 않았다.
+- `anthropic_check_client`가 `anthropic.AsyncAnthropic`을 돌려준다는 "서드파티 타입이 모듈 밖으로 나가지 않는다"의 예외(냄새 Nit): 같은 어댑터 층 안이고 이유 글의 `str` 밖으로 나가지 않는 것이 약속의 몫이다(티켓 "어댑터는 … `Unreached.reason`의 `str` 밖으로 내보내지 않는다").
+
+### 사용자 결정: 로컬 모델 시험의 비용
+
+`uv run --env-file ../../../.env python tools/llm_local.py run`(`--yes` 없음)의 출력을 보여 주고 물었다(AskUserQuestion). 도구가 보여 준 예상은 어림 30분에 $0.27~$0.59, 최악 90분에 $0.81~$1.77이고 단가는 웹 요약에서 읽은 값이다(도구의 출력 그대로).
+
+> 사용자: 돌려도 됩니다 — "병합 직전에 `--yes`로 돌립니다. 도구 코드(`tools/llm_local.py`)에 재고가 없으면 표의 위에서부터 다음 후보를 시도하고, 타이머(`TIMER_MINUTES = 90`)가 90분 뒤 파드를 지우도록 걸려 있습니다. 도구 독스트링이 90분을 채워 지워지는 것은 띄워 보지 못했다고 밝히므로 최악 비용의 상한은 어림입니다."
+
+### 셀프 리뷰 반영 뒤의 검증
+
+- `uv run ruff check .`·`uv run ruff format --check .`: 초록(2544개 파일 형식 맞음, 손으로 쳐 읽었다). `uv run pyright`: 0 errors. `uv run lint-imports`: 8 kept, 0 broken. `uv run python tools/check_instructions.py`: 출력 없음(통과).
+- `tests/adapters/test_model_check.py`: 56 passed(위 시험 셋을 더한 수. 손으로 쳐 읽었다).
+- 변이 표(`.scratch/connection-check/probes/model_check_mutations.toml`): 변이 15, 전체 실행에서 14개가 기대대로였고 6번만 표지가 어긋났다(주소를 모델 객체에서 얻게 바꿔 옛 표지 `127.0.0.1:9)`가 더는 나오지 않았다. 시험 단언에 그 시험만의 글을 달아 표지를 `모델 객체의 주소로 묻지 않았다: Unreached(`로 바꾸고 6번만 다시 돌려 기대대로였다). `--check`: 원문 확인 15개 모두 한 번씩. 변이 13(총 시간 기한)과 14(확인용 클라이언트를 짓는 예외)는 이 세션이 새로 더했고 각각 시험 하나만 빨갛게 한다.
+- `-m llm`(`uv run --no-sync --env-file ../../../.env pytest -m llm -q`): 24 passed, 723.28초, `LLM 토큰 합계 266,970(입력 261,113, 출력 5,857). 트레이스 30개, 모델 호출 62건. 트레이스를 남기지 않은 LLM 테스트 2개는 세지 못했다.` 이 실행은 셀프 리뷰 반영 앞의 코드로 돌았다. 반영 뒤 새 실제 `serve` 시험(`tests/test_main.py -m llm -k 접속_확인`)만 다시 쳤다: 1 passed, 230.12초, 토큰 합계 0(모델 호출 없음).
+- 카나리아: `tools/canary.py`로 명세 다섯(`adapters_rule_check_gap`, `adapters_rule_boundary_exceptions`, `adapters_rule_http_close`, `adapters_rule_new_optional_fields`, `adapters_rule_rules_file_read`)을 돌렸다. 다섯 모두 통과 4·실패 0·"없음" 섞임 0(러너 출력을 읽었다, claude 2.1.325, 커밋 36aa7db5a 위의 커밋하지 않은 작업 트리). 다섯 명세의 `# 최신 결과:` 줄을 고쳤고 `--shape`는 통과했다.
