@@ -447,6 +447,38 @@ async def test_openai_compatible_닫힌_포트는_서버에_닿지_못했다이�
     assert _reason(outcome) == _head("local-model", base_url) + "서버에 닿지 못했다"
 
 
+@pytest.mark.parametrize(
+    ("base_url", "environment", "kinds"),
+    [
+        ("http://127.0.0.1:abc/v1", {}, ("InvalidURL",)),
+        # 없는 파일을 윈도의 ssl 은 `OSError` 로, 리눅스는 `FileNotFoundError` 로 낸다.
+        (
+            "http://127.0.0.1:9/v1",
+            {"SSL_CERT_FILE": "/없는/인증서.pem"},
+            ("OSError", "FileNotFoundError"),
+        ),
+    ],
+    ids=["숫자가_아닌_포트", "없는_인증서_파일"],
+)
+async def test_openai_compatible_클라이언트를_짓다_난_예외도_예외가_아니라_닿지_못함으로_돌아온다(
+    monkeypatch: pytest.MonkeyPatch,
+    base_url: str,
+    environment: dict[str, str],
+    kinds: tuple[str, ...],
+) -> None:
+    """매니페스트 검사는 호스트만 보아 `:abc` 같은 포트를 지나치고, 환경의 인증서 파일은 아무
+    검사도 지나지 않는다. 그 값에서 클라이언트를 짓다 나는 예외도 라이브러리 호출에서 난 예외이므로
+    포트의 약속대로 `Unreached` 로 돌아와야 한다(실행의 `chat_openai_compatible` 도 같은 자리를
+    `PluginError` 로 바꾼다)."""
+    for variable, value in environment.items():
+        monkeypatch.setenv(variable, value)
+
+    outcome = await _check(_compatible_manifest(base_url))
+
+    reason = _reason(outcome, because="클라이언트를 짓다 난 예외가 올라왔다: ")
+    assert reason in [_head("local-model", base_url) + f"확인하지 못했다({kind})" for kind in kinds]
+
+
 @pytest.mark.parametrize("status", [401, 403])
 async def test_openai_compatible_키_거절은_상태_번호를_싣는다(status: int) -> None:
     with FakeModelServer(error_reply(status, "bad key")) as server:

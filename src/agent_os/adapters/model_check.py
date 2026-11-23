@@ -12,14 +12,14 @@
   목록에 그 글자가 있는지로 가르면 날짜를 뗀 이름을 적은 모델 파일이 없는 모델로 보인다.
 - `openai-compatible`: 모델 파일의 `base_url` 아래 `GET <base_url>/models` 한 건. 200 이고 첫 쪽의
   목록에 `model_id` 와 글자가 같은 `id` 가 있으면 붙은 것이다. 다음 쪽은 읽지 않는다. 이 결정은
-코드가 아니라 SDK 가 지킨다. `models.list()` 가 돌려주는 쪽(`AsyncPage`)은 다음 쪽이 없어(설치본의
-`openai/pagination.py`, 시험은 서버가 받은 요청이 한 건임을 본다) 목록의 첫 쪽만 돈다. 빌린 서버가
-id
-  하나를 묻는 요청을 받는지는 본 적이 없어, 준비 확인이 이미 쓰는 목록 요청을 쓴다.
+  코드가 아니라 SDK 가 지킨다. `models.list()` 가 돌려주는 쪽(`AsyncPage`)은 다음 쪽이 없어(설치본의
+  `openai/pagination.py`, 시험은 서버가 받은 요청이 한 건임을 본다) 목록의 첫 쪽만 돈다. 빌린 서버가
+  id 하나를 묻는 요청을 받는지는 본 적이 없어, 준비 확인이 이미 쓰는 목록 요청을 쓴다.
 
-요청은 한 번만 보낸다(`max_retries=0`). `anthropic` 라이브러리의 기본 설정은 500 에 세 건을 보냈다
-(프로브 `anthropic_default_retries`, `openai` 의 기본 재시도는 재지 않았고 같이 끈다). 재시도를 두면
-꺼진 서버의 확인이 기한을 채우고 바깥 서버가 받는 요청이 는다.
+요청은 한 번만 보낸다(`max_retries=0`). 두 라이브러리의 기본 설정은 500 에 세 건을 보냈다
+(`anthropic` 은 프로브 `anthropic_default_retries`, `openai` 는 PR 직전 리뷰가 스크래치 가짜 서버로
+돌려 본 것이라 커밋한 프로브가 없다). 재시도를 두면 꺼진 서버의 확인이 기한을 채우고 바깥 서버가
+받는 요청이 는다.
 
 **실행과 같은 주소와 같은 키.** `anthropic` 은 실행과 같은 인자로 모델 객체(`chat_anthropic`)를
 만들고, 그 객체의 주소·키·프록시·덧붙임 헤더 칸으로 확인하는 클라이언트를
@@ -50,7 +50,10 @@ id
 갈래의 `Unreached` 로 바꾸고 올리지 않는다. 올리면 서버 기록에 그 예외의 글이 남는다. 서드파티
 타입은 이 모듈 밖으로 나가지 않는다. `CancelledError` 는 받지 않아 바깥의 취소가 그대로 듣는다. 접속
 확인의 길에서만 HTTP 라이브러리의 로거를 끄는 장치는 두지 않는다. 루트 로거를 INFO 로 낮추면
-요청마다 `HTTP Request:` 한 줄이 남는 것은 실행과 같고, 그 줄은 키를 싣지 않는다.
+요청마다 `HTTP Request:` 한 줄이 남는 것은 실행과 같고, 그 줄은 키를 싣지 않는다. 알려진 한계:
+그 줄은 요청 주소를 그대로 적으므로 `ANTHROPIC_API_URL` 에 사용자 정보(`user:password@`)를 적었으면
+그것이 줄에 남는다(PR 직전 리뷰가 확인하는 길에서 재현했다). 사용자 정보를 떼는
+것은 `Unreached.reason` 에 싣는 주소뿐이다.
 
 **기한.** 어댑터를 만들 때 주는 값이고 기본이 10초다. 라이브러리의 시간 제한은 단계마다라서(연결,
 읽기) 총 시간을 막지 못하므로 `anyio.move_on_after` 로 총 시간을 따로 막고 라이브러리에도 같은 값을
@@ -184,22 +187,41 @@ async def check_openai_compatible(
             address,
             f"키에 인증 헤더로 보낼 수 없는 글자가 있다(환경 변수 {keys.variable})",
         )
-    client = openai.AsyncOpenAI(
-        api_key=key,
-        base_url=base_url,
-        http_client=own_client(),
-        max_retries=0,
-        timeout=deadline_seconds,
-    )
+    try:
+        client = openai.AsyncOpenAI(
+            api_key=key,
+            base_url=base_url,
+            http_client=own_client(),
+            max_retries=0,
+            timeout=deadline_seconds,
+        )
+    except Exception as error:
+        tail = reason_tail(error, deadline_seconds, not_found_tail=None)
+    else:
+        return await _ask_openai_compatible(
+            client, manifest.name, model_id, address, deadline_seconds
+        )
+    # 클라이언트를 짓다 난 예외(숫자가 아닌 포트, 없는 인증서 파일 등)도 `except` 밖에서 버린다.
+    return _unreached(manifest.name, address, tail)
+
+
+async def _ask_openai_compatible(
+    client: openai.AsyncOpenAI,
+    name: str,
+    model_id: str,
+    address: str,
+    deadline_seconds: float,
+) -> CheckOutcome:
+    """지은 클라이언트로 목록을 묻고, 끝나면 클라이언트를 닫는다."""
 
     async def ask() -> CheckOutcome:
         page = await client.models.list()
         if any(listed.id == model_id for listed in page.data):
             return Reached()
-        return _unreached(manifest.name, address, "그 이름의 모델이 목록에 없다")
+        return _unreached(name, address, "그 이름의 모델이 목록에 없다")
 
     try:
-        return await _bounded(ask, manifest.name, address, deadline_seconds, not_found_tail=None)
+        return await _bounded(ask, name, address, deadline_seconds, not_found_tail=None)
     finally:
         with anyio.CancelScope(shield=True):
             await client.close()

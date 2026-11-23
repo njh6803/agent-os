@@ -105,3 +105,48 @@ open-session을 부른다 2026-11-23T06:05Z
 - 변이 표(`.scratch/connection-check/probes/model_check_mutations.toml`): 변이 15, 전체 실행에서 14개가 기대대로였고 6번만 표지가 어긋났다(주소를 모델 객체에서 얻게 바꿔 옛 표지 `127.0.0.1:9)`가 더는 나오지 않았다. 시험 단언에 그 시험만의 글을 달아 표지를 `모델 객체의 주소로 묻지 않았다: Unreached(`로 바꾸고 6번만 다시 돌려 기대대로였다). `--check`: 원문 확인 15개 모두 한 번씩. 변이 13(총 시간 기한)과 14(확인용 클라이언트를 짓는 예외)는 이 세션이 새로 더했고 각각 시험 하나만 빨갛게 한다.
 - `-m llm`(`uv run --no-sync --env-file ../../../.env pytest -m llm -q`): 24 passed, 723.28초, `LLM 토큰 합계 266,970(입력 261,113, 출력 5,857). 트레이스 30개, 모델 호출 62건. 트레이스를 남기지 않은 LLM 테스트 2개는 세지 못했다.` 이 실행은 셀프 리뷰 반영 앞의 코드로 돌았다. 반영 뒤 새 실제 `serve` 시험(`tests/test_main.py -m llm -k 접속_확인`)만 다시 쳤다: 1 passed, 230.12초, 토큰 합계 0(모델 호출 없음).
 - 카나리아: `tools/canary.py`로 명세 다섯(`adapters_rule_check_gap`, `adapters_rule_boundary_exceptions`, `adapters_rule_http_close`, `adapters_rule_new_optional_fields`, `adapters_rule_rules_file_read`)을 돌렸다. 다섯 모두 통과 4·실패 0·"없음" 섞임 0(러너 출력을 읽었다, claude 2.1.325, 커밋 36aa7db5a 위의 커밋하지 않은 작업 트리). 다섯 명세의 `# 최신 결과:` 줄을 고쳤고 `--shape`는 통과했다.
+
+## 커밋 뒤 인계(2026-11-23, 두 번째 세션)
+
+이 세션은 앞 세션(`셀프 리뷰 직전`에 인계)이 남긴 작업 트리를 이어받아 셀프 리뷰(두 축)와 반영, 카나리아, `-m llm`, 전체 게이트, 티켓 닫기, 커밋까지 했다. 커밋은 `1ac1c2681 feat: 모델의 접속 확인을 제공사마다 요청 한 건으로 채운다 (connection-check 03)`이고 pre-commit(이 커밋의 검사 전부)이 초록으로 끝났다(종료 코드 0). 이 일지의 위 절들("셀프 리뷰", "판정과 반영", "사용자 결정", "셀프 리뷰 반영 뒤의 검증")이 그 기록이고, 이 세션이 받은 요청도 같은 지시문("PR과 병합까지")이다. 이 절 이후는 커밋하지 않은 편집이다.
+
+- 전체 게이트 `uv run python tools/run_checks.py`: 종료 코드 0, 모든 줄 Passed(pytest 560.8초, web-verify 602.8초, 러너 출력의 끝을 읽었다). 앞 세션에서 빨갛던 `tests/channel/cli/test_interrupt.py`의 시험도 이번에는 이 러너 안에서 통과했다.
+- 티켓 03: `**Status:** done`으로 바꾸고 체크박스를 채웠다. 아래 둘만 남겼다(병합 직전에 돌고 그때 채운다): "어댑터를 고치므로 LLM 시험의 병합 조건 범위에 든다…"(로컬 모델 시험 결과를 일지와 PR 코멘트에 옮기는 일)와 "로컬 모델 시험은 병합 직전에 기준 브랜치를 합친 뒤에 돈다…". `tools/plan_table.py`는 돌렸고 `.scratch/plan.md`는 바뀌지 않았다.
+
+### 남은 것(새 세션이 이어서 한다)
+
+1. 푸시 전에 `git branch --show-current`(`feature/03-check-models-by-provider`)와 `uv run python tools/sibling_overlap.py`. 02(`.claude/worktrees/02-check-mcp-servers-remote-and-stdio`)가 `.claude/rules/adapters.md`를 먼저 병합하면 그 파일의 충돌을 푼다(내가 더한 항목은 모델 소스 항목과 새 `check` 항목이고 02가 지우는 것은 MCP 접속 확인 항목이다).
+2. PR 직전 리뷰: `coderabbit-review` 에이전트(CLI가 못 돌면 `bug-perf-review`). 이 세션이 반영하며 새로 쓴 사실 문장을 밀 주장으로 브리프에 나열한다: (가) "`anthropic` 라이브러리의 기본 설정은 500 에 세 건을 보냈다(프로브 `anthropic_default_retries`, `openai` 의 기본 재시도는 재지 않았고 같이 끈다)"(`model_check.py` 모듈 독스트링), (나) "다음 쪽은 읽지 않는다. 이 결정은 코드가 아니라 SDK 가 지킨다. `models.list()` 가 돌려주는 쪽(`AsyncPage`)은 다음 쪽이 없어(설치본의 `openai/pagination.py`…)"(같은 독스트링. 명세 축 서브에이전트가 설치본에서 `next_page_info`가 `None`임을 읽어 확인했다고 보고했다. 이 세션이 직접 돌려 보지는 않았다), (다) 독스트링의 아홉 갈래 번호(6 anthropic 모델 없음, 7 openai 모델 없음, 8 그 밖의 상태, 9 그 밖), (라) 변이 표 머리 주석("총 시간 기한, 확인용 클라이언트를 짓다 난 예외 바꾸기"), (마) 일지 "판정과 반영"의 "`check_openai_compatible`의 `AsyncOpenAI` 짓기는 같은 길로 터지는 입력을 찾지 못해 손대지 않았다"(어림: 주소는 매니페스트 검증을 지났고 `own_client()`는 인자가 없다. 이 세션이 openai 쪽으로 터지는 입력을 따로 시도하지는 않았다).
+3. 푸시와 PR: git-pr 스킬(PR 제목은 커밋 제목과 같은 `feat:` 꼴, 올릴 때 운영자가 손댈 것이 없어 느낌표는 붙이지 않는다고 본다. `tools/check_notes.py`가 pre-commit에서 통과했다. PR 본문 끝에 `🤖 Generated with [Claude Code](https://claude.com/claude-code)`). 연 뒤 `mcp__ccd_pr__get_status`로 보고 없으면 `bind_pr`. 봇 회차와 병합은 `merge.md`의 "워크트리에서 병합할 때". CI의 python 잡이 15분 제한으로 취소되면 단계 시각으로 시간 제한인지 가르고 `gh run rerun <실행> --failed`만 한다(대기열 ci-python-job-timeout-margin, 이 일 자체를 고치려 들지 않는다).
+4. 병합 직전: `git fetch origin dev`로 기준 브랜치를 합친다(02가 먼저 병합됐으면 그 어댑터 변경이 들어온다). 그 뒤 로컬 모델 시험을 돌린다: `uv run --env-file ../../../.env python tools/llm_local.py run --yes`(예상 비용 어림 30분 $0.27~$0.59, 최악 90분 $0.81~$1.77, 사용자가 이 일지의 "사용자 결정: 로컬 모델 시험의 비용" 절에 적힌 대로 승인했다. 이 승인은 이 기능의 로컬 모델 시험 한 번이고, 기준 브랜치를 합친 뒤 다시 돌아야 하면 그 한 번을 다시 쓰는 것이다. 다만 그 사이 도구나 단가가 바뀌어 예상이 달라졌으면 `--yes` 없이 쳐 새 비용을 보이고 다시 묻는다). 그 기록을 일지의 이 절에 옮기고(통과 수, 걸린 시간, 토큰, 지운 서버 확인), PR 코멘트에도 적고, 티켓의 남긴 체크박스 둘을 채워 커밋한다(`docs:` 꼴의 둘째 커밋이면 된다. 이 티켓이 done이라 `check_ticket`이 막지 않는다).
+5. 일지에 `-m llm`의 통과 수(24 passed, 723.28초)와 `LLM 토큰 합계 266,970`은 이미 옮겼다. 병합 뒤 회고(`retro`)와 다음 지시문은 `merge.md`가 이끈다.
+
+### 인계 지시문(커밋 뒤)
+
+다음 작업: .scratch/connection-check/issues/03-check-models-by-provider.md. 모델의 접속 확인: anthropic은 그 모델 하나를 묻고 openai-compatible은 목록에서 이름을 찾는다
+다음 단계: 구현
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /implement .scratch/connection-check/issues/03-check-models-by-provider.md
+브랜치: feature/03-check-models-by-provider
+모델: Sonnet 5.5 / high. 2의 잇는 지시문
+읽을 것: docs/journal/2026-11-23-1445-connection-check-03-models.md(맨 아래 "커밋 뒤 인계" 절의 "남은 것"이 할 일 순서). 나란히 도는 티켓은 .scratch/connection-check/issues/02-check-mcp-servers-remote-and-stdio.md이고 .claude/rules/adapters.md를 서로 다른 항목에서 고친다
+이어받을 상태: 인계: 커밋 뒤(일지 docs/journal/2026-11-23-1445-connection-check-03-models.md). 커밋 1ac1c2681까지 했고 pre-commit과 전체 게이트가 초록이다. 푸시, PR, PR 직전 리뷰, 봇 회차, 병합이 남았다. 병합 직전에 기준 브랜치를 합친 뒤 로컬 모델 시험(-m llm_local)을 돌고(비용은 사용자가 승인했다. 일지의 "사용자 결정" 절), 티켓의 남은 체크박스 둘을 채운다
+확인할 선행 조건: 없음
+이번 요청 범위: PR과 병합까지
+
+open-session을 부른다 2026-11-23T10:21Z
+
+## PR 직전 리뷰와 기준 브랜치 합치기(2026-11-23, 세 번째 세션)
+
+이 세션도 같은 지시문("PR과 병합까지")으로 열렸다. 앞 일지의 "남은 것" 1~2를 했다.
+
+- **기준 브랜치 합치기.** `tools/sibling_overlap.py`가 02(PR 626)가 이미 dev에 병합됐다고 알렸다. 병합 커밋 `03d2fb070`으로 합쳤고 충돌은 둘이었다. `.claude/rules/adapters.md`는 02가 MCP의 "아직 붙어 보지 않는다" 항목을 지우고 MCP 접속 확인 항목을 더했고 03이 모델 쪽 항목을 지웠으므로, 둘 다 채워진 지금 "아직 붙어 보지 않는다" 항목 둘을 모두 지우고 MCP 접속 확인 항목과 03의 모델 `check` 항목만 남겼다. 카나리아 명세 `adapters_rule_check_gap.toml`은 겨누던 문장이 규칙에서 사라져 접고(`git rm`), 모델 `check` 항목을 겨누는 `adapters_rule_model_check.toml`로 이었다(`claude -p`로 돌려 통과 4·실패 0·"없음" 섞임 0, claude 2.1.325). `adapters_rule_mcp_check.toml`의 선례 언급 한 곳을 `adapters_rule_http_close.toml`로 바꿨다. 병합한 트리에서 `tests/adapters` 437 passed, ruff·pyright·lint-imports 초록이고 병합 커밋의 pre-commit(pytest 548.4초, web-verify 617.1초)이 모두 Passed였다.
+- **PR 직전 리뷰.** `coderabbit-review` 서브에이전트. CodeRabbit CLI는 끝까지 돌았고(`Plan: Free`, `Seat: not assigned`에서도 지적 둘을 냈다) 아래는 서브에이전트가 직접 코드와 가짜 서버로 재현한 것을 이 세션이 코드에서 다시 확인한 뒤의 판정이다. 지적은 서브에이전트의 말이라 판정은 코드에서 본 것이다.
+  - **Major(고침): `check_openai_compatible`의 `AsyncOpenAI`·`own_client()` 짓기가 `try` 밖이었다.** 앞 세션이 "같은 길로 터지는 입력을 찾지 못했다"고 적은 어림이 틀렸다. 숫자가 아닌 포트의 `base_url`(`http://127.0.0.1:abc/v1`)은 매니페스트 검증(호스트만 본다)을 지나고 `httpx2.InvalidURL`이, 환경의 `SSL_CERT_FILE`이 없는 파일이면 `OSError`(윈도)나 `FileNotFoundError`(리눅스)가 `check`를 지나 올라온다. 포트의 약속(붙지 못한 것은 예외가 아니라 `Unreached`)을 깨고 관리 경로가 생 500을 낸다. 시험 `test_openai_compatible_클라이언트를_짓다_난_예외도_예외가_아니라_닿지_못함으로_돌아온다`(둘 다)를 먼저 써서 빨강을 보고(`InvalidURL`과 `FileNotFoundError`가 시험까지 올라왔다) anthropic과 같은 모양으로 `try`로 감쌌다(`_ask_openai_compatible`로 묻는 부분을 나눴다). 변이 15번이 그 길을 겨누고 시험 하나만 빨갛게 한다.
+  - **Major(독스트링으로 닫음): 주소의 사용자 정보가 INFO 로그의 `HTTP Request:` 줄에 남는다.** `ANTHROPIC_API_URL=http://alice:pw@…`로 루트 로거를 INFO로 두면 요청 줄에 그 주소가 그대로 찍힌다(서브에이전트가 재현했다. 키는 줄에 없다). 이 PR이 처음 여는 노출이라 보기 어렵고(요청 줄은 라이브러리가 남긴다) "확인의 길에서만 HTTP 로거를 끄는 장치는 두지 않는다"는 티켓의 결정을 바꾸는 일이 ADR 0067 차원이라, 모듈 독스트링의 문장을 "그 줄은 키를 싣지 않는다. 알려진 한계: 사용자 정보는 남는다"로 바로잡았다. 사용자 정보를 떼는 것은 `Unreached.reason`에 싣는 주소뿐이다. 실행 경로의 요청 줄이 같은지는 따로 재지 않았다.
+  - **보류(알려진 한계 그대로): 환경의 `OPENAI_CUSTOM_HEADERS`에 `Authorization`이 있으면 키로 만든 헤더보다 앞선다.** `adapters/openai_compatible.py`의 "알려진 한계 둘째"가 이미 적은 일이고 확인은 실행과 같은 SDK 길을 쓴다. 서브에이전트도 재현하지 못했다.
+  - **남김(Minor): anthropic 확인에 키 모양 갈래가 없다.** `ANTHROPIC_API_KEY`에 개행이나 앞뒤 공백이 들면 요청 0건이고 글이 "서버에 닿지 못했다"로 나온다(결과는 맞고 까닭 글이 어긋난다). 명세의 아홉 갈래 표가 anthropic에 키 모양을 정의하지 않았고 명세와 갈래를 함께 손봐야 해서 이 PR에서 넓히지 않았다. 필요하면 04 이후의 몫이다.
+  - **남김(Nit):** 3xx 응답이 "서버가 오류로 답했다(HTTP 3xx)"로 나온다. 응답 본문 크기에 상한이 없다(기한이 끝낸다).
+  - **고침(Nit):** 모듈 독스트링 14~18행의 들여쓰기가 깨져 있었다. 재시도 문장은 openai도 기본이 500에 세 건이라는 서브에이전트의 보고(스크래치 가짜 서버로 손으로 돌려 본 것이고 커밋한 프로브는 없다)를 옮겨 적었다. 이 세션이 다시 돌리지는 않았다.
+- **밀어붙인 다섯 주장.** (가) 맞다(설치본 openai의 `DEFAULT_MAX_RETRIES = 2`, 기본 설정이 500에 세 건. 확인의 두 길은 500·429 모두 한 건). (나) 맞다(`AsyncPage.next_page_info()`가 늘 `None`, `has_next_page()`가 거짓. 독스트링과 동등 변이의 근거가 맞다). (다) 맞다(번호 1~9가 `spec.md` 표의 순서와 문구와 같다). (라) 서브에이전트는 pre-commit이 도는 중이라 변이를 돌리지 못해 확인하지 못했다고 보고했다. 이 세션이 `tools/mutate.py --check`(원문 16개 모두 한 번씩)와 전체 실행을 쳤고 변이 16(빨강 15, 동등 변이 초록 1)이 모두 기대대로였다. (마) 틀렸다(위 첫 Major).
+- 이 절의 코드 고침 뒤 검증: `tests/adapters/test_model_check.py` 58 passed, ruff·ruff format 초록.
