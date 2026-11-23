@@ -1,0 +1,230 @@
+# 티켓 03(모델의 접속 확인)의 변이 표. 구현과 같은 날 쓴 시험(`tests/adapters/test_model_check.py`)이
+# 처음부터 초록이라, 결정마다 하나씩 되돌려 시험이 빨개지는지 본다. 되돌리는 결정은 재시도 끄기,
+# 이유 글에 오류 글을 싣지 않기, 모델 객체의 헤더·프록시·주소를 따르기, 이름 견줌, 404의 갈래,
+# 취소 전파, 주소의 사용자 정보 떼기, 빈 키로 요청하지 않기, 시간 초과를 연결 오류보다 먼저 가르기,
+# 총 시간 기한, 확인용 클라이언트를 짓다 난 예외 바꾸기(제공사마다 하나)다.
+# 변이마다 고른 단언이 그 까닭으로 빨개졌다는 표지(`expect_output`)를 단다. 빨강의 판정은
+# `tools/mutate.py` 의 독스트링이다.
+#
+# 돌리는 법: PYTHONUTF8=1 uv run python tools/mutate.py .scratch/connection-check/probes/model_check_mutations.toml
+# 네트워크를 타지 않는다(가짜 서버가 127.0.0.1 에서 받는다). `uv sync` 가 된 체크아웃에서 돈다.
+
+[[mutation]]
+name = "anthropic 확인의 재시도가 켜진다"
+tests = ["tests/adapters/test_model_check.py"]
+expect = "red"
+# 429 에 다시 시도해 둘째 요청이 200 으로 답을 받아 붙음이 나온다.
+expect_output = ["다시 시도해 둘째 요청에 답을 받았다: Reached()"]
+
+[[mutation.edit]]
+file = "src/agent_os/adapters/model_check.py"
+old = '''        http_client=http_client,
+        max_retries=0,
+'''
+new = '''        http_client=http_client,
+'''
+
+[[mutation]]
+name = "openai 확인의 재시도가 켜진다"
+tests = ["tests/adapters/test_model_check.py"]
+expect = "red"
+expect_output = ["다시 시도해 둘째 요청에 답을 받았다: Reached()"]
+
+[[mutation.edit]]
+file = "src/agent_os/adapters/model_check.py"
+old = '''            http_client=own_client(),
+            max_retries=0,
+'''
+new = '''            http_client=own_client(),
+'''
+
+[[mutation]]
+name = "이유 글에 서버 오류 글을 싣는다"
+tests = ["tests/adapters/test_model_check.py"]
+expect = "red"
+expect_output = ["Error code: 429 - {'type': 'error'"]
+
+[[mutation.edit]]
+file = "src/agent_os/adapters/model_check.py"
+old = '''        return f"서버가 오류로 답했다(HTTP {status})"'''
+new = '''        return f"서버가 오류로 답했다(HTTP {status}): {error}"'''
+
+[[mutation]]
+name = "모델 객체의 덧붙임 헤더를 싣지 않는다"
+tests = ["tests/adapters/test_model_check.py"]
+expect = "red"
+expect_output = ["Right contains one more item: 'tenant-7'"]
+
+[[mutation.edit]]
+file = "src/agent_os/adapters/model_check.py"
+old = '''        default_headers=headers,
+'''
+new = '''        default_headers=None,
+'''
+
+[[mutation]]
+name = "환경의 프록시를 지나지 않는다"
+tests = ["tests/adapters/test_model_check.py"]
+expect = "red"
+expect_output = ["http://model.test)에 붙지 못했다: 서버에 닿지 못했다"]
+
+[[mutation.edit]]
+file = "src/agent_os/adapters/model_check.py"
+old = '''anthropic.DefaultAsyncHttpxClient(proxy=proxy)'''
+new = '''anthropic.DefaultAsyncHttpxClient()'''
+
+[[mutation]]
+name = "모델 객체의 주소를 따르지 않는다"
+tests = ["tests/adapters/test_model_check.py"]
+expect = "red"
+expect_output = ["모델 객체의 주소로 묻지 않았다: Unreached("]
+
+[[mutation.edit]]
+file = "src/agent_os/adapters/model_check.py"
+old = '''        base_url=model.anthropic_api_url,
+'''
+new = '''        base_url="http://127.0.0.1:9",
+'''
+
+[[mutation]]
+name = "이름을 부분 일치로 견준다"
+tests = ["tests/adapters/test_model_check.py"]
+expect = "red"
+expect_output = ["글자가 다른 id 를 같은 것으로 봤다: Reached()"]
+
+[[mutation.edit]]
+file = "src/agent_os/adapters/model_check.py"
+old = '''listed.id == model_id'''
+new = '''model_id in listed.id'''
+
+[[mutation]]
+name = "openai 의 404 도 모델 없음으로 읽는다"
+tests = ["tests/adapters/test_model_check.py"]
+expect = "red"
+expect_output = ["+ 에 붙지 못했다: 그 이름의 모델이 없다고 답했다(HTTP 404)"]
+
+[[mutation.edit]]
+file = "src/agent_os/adapters/model_check.py"
+old = '''        if status == 404 and not_found_tail is not None:
+            return not_found_tail'''
+new = '''        if status == 404:
+            return MODEL_MISSING_404'''
+
+[[mutation]]
+name = "바깥의 취소를 삼킨다"
+tests = ["tests/adapters/test_model_check.py"]
+expect = "red"
+expect_output = ["확인하지 못했다(CancelledError)"]
+
+[[mutation.edit]]
+file = "src/agent_os/adapters/model_check.py"
+old = '''        return await ask()
+    except Exception as error:'''
+new = '''        return await ask()
+    except BaseException as error:'''
+
+[[mutation]]
+name = "보이는 주소에 사용자 정보가 남는다"
+tests = ["tests/adapters/test_model_check.py"]
+expect = "red"
+expect_output = ["'alice' is contained here:"]
+
+[[mutation.edit]]
+file = "src/agent_os/adapters/model_check.py"
+old = '''    host = parts.netloc.rpartition("@")[2]'''
+new = '''    host = parts.netloc'''
+
+[[mutation]]
+name = "빈 키로도 요청한다"
+tests = ["tests/adapters/test_model_check.py"]
+expect = "red"
+expect_output = ["확인하지 못했다(TypeError)"]
+
+[[mutation.edit]]
+file = "src/agent_os/adapters/model_check.py"
+old = '''    if not model.anthropic_api_key.get_secret_value():'''
+new = '''    if False:'''
+
+[[mutation]]
+name = "연결 오류를 시간 초과보다 먼저 가른다"
+tests = ["tests/adapters/test_model_check.py"]
+expect = "red"
+expect_output = ["+ 서버에 닿지 못했다"]
+
+[[mutation.edit]]
+file = "src/agent_os/adapters/model_check.py"
+old = '''    if isinstance(error, _TIMEOUTS):
+        return _timed_out(deadline_seconds)
+    if isinstance(error, _CONNECTIONS):
+        return "서버에 닿지 못했다"
+'''
+new = '''    if isinstance(error, _CONNECTIONS):
+        return "서버에 닿지 못했다"
+    if isinstance(error, _TIMEOUTS):
+        return _timed_out(deadline_seconds)
+'''
+
+[[mutation]]
+name = "총 시간 기한을 막지 않는다(라이브러리의 단계별 제한만 남는다)"
+tests = ["tests/adapters/test_model_check.py"]
+expect = "red"
+# 본문을 짧은 간격으로 흘리는 서버는 읽기 한 번의 제한에 걸리지 않아 끝까지 받고 붙음이 나온다.
+expect_output = ["기한이 총 시간을 막지 못했다: Reached()"]
+
+[[mutation.edit]]
+file = "src/agent_os/adapters/model_check.py"
+old = '''    with anyio.move_on_after(deadline_seconds):'''
+new = '''    with anyio.move_on_after(float("inf")):'''
+
+[[mutation]]
+name = "확인용 클라이언트를 짓다 난 예외를 그대로 올린다"
+tests = ["tests/adapters/test_model_check.py"]
+expect = "red"
+# 스킴이 없는 프록시 값을 httpx 가 거부한 예외가 `Unreached` 로 바뀌지 않고 시험까지 올라온다.
+expect_output = ["Unknown scheme for proxy URL URL('user:pw@proxy.corp:3128')"]
+
+[[mutation.edit]]
+file = "src/agent_os/adapters/model_check.py"
+old = '''    except Exception as error:
+        tail = reason_tail(error, deadline_seconds, not_found_tail=MODEL_MISSING_404)
+    else:'''
+new = '''    except ZeroDivisionError as error:
+        tail = reason_tail(error, deadline_seconds, not_found_tail=MODEL_MISSING_404)
+    else:'''
+
+[[mutation]]
+name = "openai 확인용 클라이언트를 짓다 난 예외가 바뀌지 않는다"
+tests = ["tests/adapters/test_model_check.py"]
+expect = "red"
+# 숫자가 아닌 포트의 `base_url` 은 매니페스트 검사를 지나고, httpx 가 클라이언트를 지을 때 거부한 예외가
+# `Unreached` 로 바뀌지 않고 시험까지 올라온다.
+expect_output = ["httpx2.InvalidURL: Invalid port: 'abc'"]
+
+[[mutation.edit]]
+file = "src/agent_os/adapters/model_check.py"
+old = '''    except Exception as error:
+        tail = reason_tail(error, deadline_seconds, not_found_tail=None)
+    else:'''
+new = '''    except ZeroDivisionError as error:
+        tail = reason_tail(error, deadline_seconds, not_found_tail=None)
+    else:'''
+
+# 동등 변이(대조). openai SDK 의 `models.list()` 가 돌려주는 쪽(`AsyncPage`)은 다음 쪽이 없어
+# (`has_next_page` 가 늘 거짓), `async for` 로 읽어도 첫 쪽만 돈다. 그래서 "첫 쪽만 읽는다"는 결정은
+# SDK 가 지키고 있어 이 코드를 바꿔서는 시험이 빨개지지 않는다. 시험은 서버가 받은 요청이 한 건이라는
+# 사실로 그 결정을 고정하고, SDK 가 다음 쪽을 읽게 바뀌면 그때 빨개진다.
+
+[[mutation]]
+name = "다음 쪽까지 읽는다 — SDK 가 첫 쪽에서 멈춰 같다"
+tests = ["tests/adapters/test_model_check.py"]
+expect = "green"
+
+[[mutation.edit]]
+file = "src/agent_os/adapters/model_check.py"
+old = '''        page = await client.models.list()
+        if any(listed.id == model_id for listed in page.data):'''
+new = '''        page = await client.models.list()
+        async for listed in page:
+            if listed.id == model_id:
+                return Reached()
+        if False:'''
