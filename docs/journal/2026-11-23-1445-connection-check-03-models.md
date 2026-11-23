@@ -149,4 +149,46 @@ open-session을 부른다 2026-11-23T10:21Z
   - **남김(Nit):** 3xx 응답이 "서버가 오류로 답했다(HTTP 3xx)"로 나온다. 응답 본문 크기에 상한이 없다(기한이 끝낸다).
   - **고침(Nit):** 모듈 독스트링 14~18행의 들여쓰기가 깨져 있었다. 재시도 문장은 openai도 기본이 500에 세 건이라는 서브에이전트의 보고(스크래치 가짜 서버로 손으로 돌려 본 것이고 커밋한 프로브는 없다)를 옮겨 적었다. 이 세션이 다시 돌리지는 않았다.
 - **밀어붙인 다섯 주장.** (가) 맞다(설치본 openai의 `DEFAULT_MAX_RETRIES = 2`, 기본 설정이 500에 세 건. 확인의 두 길은 500·429 모두 한 건). (나) 맞다(`AsyncPage.next_page_info()`가 늘 `None`, `has_next_page()`가 거짓. 독스트링과 동등 변이의 근거가 맞다). (다) 맞다(번호 1~9가 `spec.md` 표의 순서와 문구와 같다). (라) 서브에이전트는 pre-commit이 도는 중이라 변이를 돌리지 못해 확인하지 못했다고 보고했다. 이 세션이 `tools/mutate.py --check`(원문 16개 모두 한 번씩)와 전체 실행을 쳤고 변이 16(빨강 15, 동등 변이 초록 1)이 모두 기대대로였다. (마) 틀렸다(위 첫 Major).
-- 이 절의 코드 고침 뒤 검증: `tests/adapters/test_model_check.py` 58 passed, ruff·ruff format 초록.
+- 이 절의 코드 고침 뒤 검증: `tests/adapters/test_model_check.py` 58 passed, ruff·ruff format 초록. 두 커밋(`03d2fb070` 병합, `3ffbbe6d1` 고침) 모두 pre-commit이 초록으로 끝났다(종료 코드 0).
+- **PR.** https://github.com/njh6803/agent-os/pull/627 (base dev, 제목 `feat: 모델의 접속 확인을 제공사마다 요청 한 건으로 채운다 (connection-check 03)`, 느낌표 없음). 푸시했고 앱의 PR 도구(`get_status`)가 이미 이 세션에 묶었다고 알렸다. 열자마자의 CI는 대기 1, 건너뜀 1이었다. 본문은 `.github/PULL_REQUEST_TEMPLATE.md`를 채웠고 끝에 `🤖 Generated with [Claude Code](https://claude.com/claude-code)`를 달았다. 리뷰 판정과 남긴 위험이 본문에 있다.
+- 이 세션은 컨텍스트가 인계 문턱을 넘은 채 `PR 연 뒤` 경계에 와서 인계한다.
+
+### 남은 것(새 세션이 이어서 한다, `PR 연 뒤`)
+
+1. `merge.md`를 Read로 열어 "워크트리에서 병합할 때"를 따른다. 첫 `@coderabbitai review` 코멘트는 새 세션이 남긴다. 봇 회차와 CI를 `merge.md` 2의 대기대로 띄운다.
+2. 병합 직전에 `git fetch origin dev`로 기준 브랜치를 합친다. dev가 움직였으면 합친 뒤 다시 확인한다(이 세션이 합친 뒤 dev는 `d144094d9`였다).
+3. 합친 뒤 로컬 모델 시험을 돈다: `uv run --env-file ../../../.env python tools/llm_local.py run --yes`. 비용은 사용자가 이 일지의 "사용자 결정: 로컬 모델 시험의 비용" 절에 적힌 대로 승인했다(어림 30분 $0.27~$0.59, 최악 90분 $0.81~$1.77. 그 한 번을 쓴다. 도구나 단가가 바뀌어 예상이 달라졌으면 `--yes` 없이 쳐 새 비용을 보이고 다시 묻는다). 통과 수, 걸린 시간, 토큰, 지운 서버 확인을 일지와 PR 코멘트에 옮긴다.
+4. 티켓 03의 남은 체크박스 둘(LLM 병합 조건 범위의 결과 옮기기, 로컬 모델 시험 차례)을 채우고 `docs:` 꼴 커밋으로 싣는다(티켓이 done이라 `check_ticket`이 막지 않는다).
+5. CI의 python 잡이 15분 제한으로 취소되면 단계 시각으로 시간 제한인지 가르고 `gh run rerun <실행> --failed`만 한다(대기열 ci-python-job-timeout-margin. 이 일 자체를 고치려 들지 않는다).
+6. 이 PR 리뷰에서 남긴 것(PR 본문의 "남김" 넷)은 04 이후의 몫이다. 봇이 같은 것을 짚으면 같은 판정(알려진 한계, 명세가 정하지 않은 갈래)을 적고 넘긴다.
+
+### 인계 지시문(PR 연 뒤)
+
+다음 작업: .scratch/connection-check/issues/03-check-models-by-provider.md. 모델의 접속 확인: anthropic은 그 모델 하나를 묻고 openai-compatible은 목록에서 이름을 찾는다
+다음 단계: PR 반영·병합
+어디서: 새 세션. 주 체크아웃 미갱신이라 Skill 도구로 tidy-checkouts를 먼저 돌고(그 스킬이 사람에게 넘기는 것은 보고만 하고 답을 기다리지 않는다) 그 뒤 git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /implement .scratch/connection-check/issues/03-check-models-by-provider.md
+브랜치: feature/03-check-models-by-provider
+모델: Sonnet 5.5 / high. 2의 잇는 지시문
+읽을 것: docs/journal/2026-11-23-1445-connection-check-03-models.md(맨 아래 "PR 직전 리뷰와 기준 브랜치 합치기" 절의 "남은 것(PR 연 뒤)"이 할 일 순서)
+이어받을 상태: 인계: PR 연 뒤(일지 docs/journal/2026-11-23-1445-connection-check-03-models.md). PR 627을 열었고 3ffbbe6d1까지 푸시했다. 봇 회차(첫 @coderabbitai review 코멘트 포함), 병합 직전에 기준 브랜치를 합친 뒤 로컬 모델 시험(-m llm_local, 비용은 사용자가 승인했다. 일지의 "사용자 결정" 절), 티켓의 남은 체크박스 둘, 병합이 남았다
+확인할 선행 조건: 주 체크아웃 미갱신: 루트는 dev. 병합은 이 워크트리 사본의 next-session merge.md(없으면 SKILL.md)의 "워크트리에서 병합할 때"를 Read로 열어 따른다
+이번 요청 범위: PR과 병합까지
+
+open-session을 부른다 2026-11-23T11:06Z
+
+## PR 반영과 로컬 모델 시험(2026-11-23, 네 번째 세션)
+
+이 세션은 `PR 연 뒤` 지시문으로 열렸다. 주 체크아웃은 `tidy-checkouts`로 `d144094d9`(dev)까지 당겼고(주 체크아웃 미갱신 한 줄은 풀렸다) 병합된 로컬 브랜치 둘만 지웠다. 워크트리는 쥔 프로세스나 바뀐 파일 때문에 모두 남았다.
+
+- **봇 회차.** 헤드 `3ffbbe6d1`. `claude-review`는 지적 없음(PR 코멘트를 `gh pr view --json comments`로 읽었다). CodeRabbit 첫 회차에 Major 둘이 나왔고(`gh api .../pulls/627/comments`로 읽었다) 둘 다 알려진 한계로 보류했다(PR 코멘트 7099560127에 이유를 남겼다). (1) `model_check.py:125` 주소의 사용자 정보가 요청 로그에 남는다: 실행 경로와 같은 노출이고 막는 길은 티켓의 "확인의 길에서만 로거를 끄지 않는다" 결정을 뒤집거나 인증 전달 방식을 정하는 ADR 0067 차원이라 독스트링의 한계 문장으로 닫았다. (2) `model_check.py:192` 환경 `OPENAI_CUSTOM_HEADERS`의 `Authorization`이 키보다 앞선다: `openai_compatible.py` "알려진 한계 넷"의 둘째와 같고, 확인만 따로 막으면 실행과 어긋난다. 뒤의 작업으로 넘긴 일은 없다.
+- **CI.** `python` 잡이 11:05:23에 시작해 11:20:40에 취소됐다(`gh run view 45161939109 --json jobs`로 읽었다). 잡 전체가 15분 17초고 취소된 단계는 11:07:18에 시작한 `ulimit` 줄의 단계다(같은 출력). 15분 제한의 취소로 보았고 제한 값은 `ci.yml`을 열어 보지 않은 어림이다. `verify`는 `python`의 결과를 모으는 잡이라 같은 이유로 빨갰다(그 단계 이름이 `$NEEDS` 읽기인 것에서 읽은 어림). `gh run rerun 45161939109 --failed`로 실패한 잡만 다시 돌렸다.
+- **로컬 모델 시험 비용 확인.** `--yes` 없이 쳐 예상을 읽었다(출력에서 읽었다. 어림 30분 $0.27~$0.59, 최악 90분 $0.81~$1.77, 표에 `shared | A40`이 한 줄 더 있고 그 값은 범위 안). 첫 시도는 앞 세션에서 사용자가 승인한 한 번으로 돌렸다.
+- **무효 회차 1번.** 첫 시도(커밋 `3ffbbe6d1`)는 후보 네 곳(RTX A5000 ×2, RTX 3090 ×2, A40 ×2, shared A40 ×1)이 모두 `There are no longer any instances available`(HTTP 400)로 실패해(출력의 `grep`으로 후보 네 줄의 `띄운다`와 각 400을 셌다) 서버를 하나도 못 띄웠다(13.4초, 종료 코드 2, 회차 파일 `round-0001-20261123T112316Z.json`). `sweep`을 쳐 `치웠다`가 찍혔다(남은 서버가 없는지 Runpod 쪽은 따로 보지 않았다). 무효 회차라 실패로 세지 않고 다시 띄운다.
+
+> 사용자: 로컬 모델 시험이 무효로 끝났다고 알리며 같은 비용 범위(어림 30분 $0.27~$0.59, 최악 90분 $0.81~$1.77)로 다시 돌릴지 물었다(AskUserQuestion). 고른 답: "지금 다시 돌린다 (Recommended)" — "승인한 비용 범위 그대로 한 번 더 시도합니다. 재고가 여전히 없으면 이번에도 서버를 못 띄우고 곧바로 끝나므로 청구는 없을 것으로 봅니다(이번 13초 회차의 청구서는 보지 못한 어림입니다). 무효가 연달아 두 번이면 멈추고 다시 보고합니다."
+
+- **무효 회차 2번(연달아 둘).** 사용자가 승인한 재시도(위 인용)도 같은 모양으로 끝났다. 후보 네 곳이 모두 `There are no longer any instances available`(HTTP 400)이고 14.8초, 종료 코드 2, 회차 파일 `round-0001-20261123T112653Z.json`(출력의 `grep`으로 읽었다). 명령은 연달은 수를 1로 찍었지만 앞 `sweep`이 상태 폴더를 치워 수가 초기화된 것으로 보고(이 일지와 두 회차 파일 이름의 시각으로 센다. 명령의 내부 계산은 열어 보지 않은 어림) 연달아 둘로 센다. 두 번째 뒤에도 `sweep`을 쳤고 `치웠다`가 찍혔다. 규칙(`merge.md` 3)대로 여기서 멈추고 사용자에게 시험을 어떻게 나눌지 보고한다. 로컬 모델 시험의 통과 기록은 아직 없다.
+- **무효 회차 3번과 CI.** 사용자가 "잠시 뒤 다시 시도"를 골라(AskUserQuestion의 둘째 화면 답, 같은 비용 범위) 5분 뒤 `run --yes`를 다시 띄웠다. 후보 네 곳이 또 모두 `There are no longer any instances available`(HTTP 400)이고 7.1초, 종료 코드 2, 회차 파일 `round-0001-20261123T115831Z.json`(출력에서 읽었다). `sweep`을 쳐 `치웠다`가 찍혔다. 같은 시각의 CI는 `python` 잡이 세 번 연달아 15분 제한에 걸려 취소됐다(시도 1~3이 각각 15분 14~17초, `gh run view 45161939109`로 읽었다). `dev`의 최근 `python` 잡은 13분 42초(성공), 14분 49초(성공), 15분 16초(취소. PR 626 병합 직후의 push 실행)였다(같은 명령으로 읽었다). 제한을 고치는 일은 대기열 `ci-python-job-timeout-margin`의 몫이라 이 PR에서 하지 않는다. 시험 시간이 이 PR의 58개 시험 때문에 늘었는지는 재지 않았다(어림).
+- **로컬 모델 시험 통과(무효 회차 3번 뒤 네 번째 시도).** 사용자가 "한참 뒤 다시 시도"를 골라(AskUserQuestion의 셋째 화면, 같은 비용 범위) 25분 대기 뒤 `run --yes`를 띄웠다. 앞의 셋과 달리 `shared / A40 ×1` 구성이 떴다(앞 후보 셋은 이번에도 재고 없음. 출력에서 읽었다). 이 기록은 `llm_local.py`가 찍은 기록 묶음에서 옮겼다(출력에서 읽었다). 시험한 커밋 `3ffbbe6d12f62fc62e6a5e54c1329f1725cf688e`(이 PR의 지금 머리와 같고 `origin/dev`는 `d144094d9`로 합친 뒤 그대로다. `git fetch origin dev`와 `git rev-parse origin/dev`로 읽었다). 모델 둘 `GotoAI-Inc/gemma-4-26B-A4B-it-W4A16`, `openai/gpt-oss-20b`. 서빙 엔진 vLLM 0.33.0(이미지 `vllm/vllm-openai:v0.33.0`). GPU A40 한 대에 서버 둘(`--gpu-memory-utilization 0.45 --kv-cache-memory=4294967296`, 서버 옵션 전문은 회차 파일 `round-0001-20261123T124806Z.json`). `pytest -m llm_local` 4 passed(44.76초, 종료 코드 0), `LLM 토큰 합계 6,298(입력 6,191, 출력 107). 트레이스 2개, 모델 호출 4건. 트레이스를 남기지 않은 LLM 테스트 2개는 세지 못했다.` 전체 걸린 시간 931.8초, 단가표 값 시간당 $0.59(2026-11-13 웹 요약의 표라 청구서는 아니다. 어림 $0.15). 도구가 Terraform 출력에서 가렸다고 찍었다(`terraform_output_masked: true`). 서버 키와 주소는 적지 않았다. 서버를 지웠는지는 코드를 읽어 확인했다(`tools/llm_local.py`가 끝에 `destroy_folder`를 부르고 종료 코드 0으로 끝났다. Runpod 콘솔은 보지 않았다). 병합 뒤 `sweep`을 한 번 친다.
+- **티켓 03의 남은 체크박스 둘을 채웠다.** 둘 다 위 기록으로 닫는다(`-m llm`은 앞 절의 24 passed, 로컬 모델 시험은 위 4 passed).
