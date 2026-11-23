@@ -4,21 +4,22 @@
 `ChatAnthropic` 하나를 만든다. 제공사로 가르는 것은 모델 소스(`adapters/models.py`)의 몫이고,
 만들기는 키도 네트워크도 요구하지 않는다(ADR 0040).
 
-API 키는 ChatAnthropic이 환경에서 스스로 읽는다. 이 모듈은 키 값을 만지지 않는다(원칙 V). 키가 없는
-것은 만들 때가 아니라 첫 호출에서 드러난다.
+API 키는 ChatAnthropic이 환경에서 스스로 읽는다. 이 모듈은 키 값을 읽지도 보관하지도 않는다(원칙
+V). 키가 없는 것은 만들 때가 아니라 첫 호출에서 드러난다. 접속 확인(`adapters/model_check.py`)은
+같은 인자로 만든 모델 객체가 든 키를 확인하는 클라이언트에 넘긴다. 확인이 환경 변수를 따로 읽어
+주소와 키의 규칙을 다시 짓지 않게 하려는 것이고, 그 값을 이벤트나 로그나 글에 싣지는 않는다.
 """
 
 from __future__ import annotations
 
 from langchain_anthropic import ChatAnthropic
-from langchain_core.language_models import BaseChatModel
 
 MAX_TOKENS = 16000
 
 
 def chat_anthropic(
     model_id: str, max_tokens: int | None, temperature: float | None
-) -> BaseChatModel:
+) -> ChatAnthropic:
     """`max_tokens` 가 없으면 `MAX_TOKENS` 를, `temperature` 가 없으면 제공사 기본값을 쓴다."""
     # pyright strict는 pydantic 별칭 필드를 별칭 이름으로만 받고, Field(None, alias=...)의
     # 위치 기본값을 기본값으로 보지 않는다. 그래서 별칭으로 부르고 timeout·stop을 명시한다.

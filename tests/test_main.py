@@ -3178,6 +3178,39 @@ def test_실제_serve_에서_HTTP_로_일으킨_실행이_승인_대상에서_�
     assert [(e.tool, e.ok) for e in events if isinstance(e, ToolCalled)] == [("add", True)]
 
 
+@pytest.mark.llm
+def test_실제_serve_에서_기본_모델의_접속_확인은_붙음이고_서버_기록에_요청_줄이_없다(
+    tmp_path: Path, database: ScopedDatabase
+) -> None:
+    """바깥 이음매. 가짜 서버로 증명할 수 없는 것만 잰다 — 실제 Anthropic 이 모델 파일의 `model_id`
+    를 아는 것, 실제 `serve` 의 조립이 모델 소스를 관리 경로에 닿게 하는 것, 그 요청이 HTTP
+    라이브러리의 요청 줄(`HTTP Request:`)을 서버 기록에 남기지 않는 것. 모델을 부르지 않는다
+    (ADR 0067 결정 "모델을 확인하는 법"·"결과가 있는 자리")."""
+    assert "ANTHROPIC_API_KEY" in os.environ, "ANTHROPIC_API_KEY 가 없다. .env 를 확인한다"
+    _write_model_plugin(tmp_path)
+    admin_token, channel_token = secrets.token_urlsafe(), secrets.token_urlsafe()
+
+    with (
+        _serving(
+            tmp_path, admin_token=admin_token, channel_token=channel_token, database=database
+        ) as address,
+        Client(
+            base_url=address,
+            headers={"Authorization": f"Bearer {admin_token}"},
+            timeout=STREAM_TIMEOUT,
+            trust_env=False,  # 루프백을 재는 테스트라 환경의 프록시를 따르지 않는다
+        ) as client,
+    ):
+        response = client.get(f"/plugins/model/{MODEL_PLUGIN}/connection-check")
+
+    assert response.status_code == 200, response.text
+    assert response.json() == {"status": "reached"}
+    assert response.headers["cache-control"] == "no-store"
+    log = (tmp_path / "serve.log").read_text(encoding="utf-8", errors="replace")
+    assert "HTTP Request:" not in log
+    assert not _trace_files(tmp_path / "t")  # 접속 확인은 실행이 아니라 트레이스를 남기지 않는다
+
+
 # 모델에게 묻고 그 답으로 끝내는 에이전트. 최종 사용자 경로를 실제 모델로 지나는 데 쓴다. 이어 간
 # 실행이면 대화 멤버(요약과 교환)를 데이터로 엮어 묻고, 이어 가지 않은 실행의 프롬프트는 요청
 # 그대로다. 엮은 글을 지시가 아니라 데이터로 두는 것은 sdk 의 신뢰 경계다(`.claude/rules/sdk.md`).

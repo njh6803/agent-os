@@ -23,8 +23,12 @@
   셈을 단언하기 전에 그 시간보다 더 기다려야 한다. 셈은 `connections_settled(within)`로 기한까지
   거듭 견준다.
 
-흉내 내는 것은 Chat Completions 하나이고 스트리밍(SSE)은 하지 않는다. 로깅 모듈을 쓰지 않아 어댑터
-시험이 모으는 로그 레코드에 서버의 줄이 섞이지 않는다.
+흉내 내는 것은 Chat Completions와 접속 확인이 묻는 모델 조회 둘이고 스트리밍(SSE)은 하지 않는다.
+모델 조회 둘은 Anthropic의 그 모델 하나를 묻는 요청 `GET /v1/models/<id>`(`anthropic_model_reply`,
+`anthropic_error_reply`)와 모델 서버의 목록을 묻는 요청 `GET <base_url>/models`
+(`models_list_reply`)다. 서버는 경로로 가르지 않고 시험이 정한 응답을 차례로 돌려주므로 어느 요청에
+무엇을 돌려줄지는 시험이 고른다. 로깅 모듈을 쓰지 않아 어댑터 시험이 모으는 로그 레코드에 서버의
+줄이 섞이지 않는다.
 """
 
 from __future__ import annotations
@@ -73,12 +77,15 @@ class Received:
 
 @dataclass(frozen=True)
 class Reply:
-    """서버가 돌려줄 응답 하나. `delay_seconds`는 답하기 전에 기다릴 시간이다."""
+    """서버가 돌려줄 응답 하나. `delay_seconds`는 답하기 전에 기다릴 시간이다. `drip_seconds`는
+    머리를 보낸 뒤 본문을 잘게 나눠 그 시간에 걸쳐 흘리는 것이다. 읽기 한 번의 간격은 짧아
+    라이브러리의 단계별 시간 제한에 걸리지 않고 총 시간만 길어진다."""
 
     status: int
     body: bytes
     content_type: str = "application/json"
     delay_seconds: float = 0.0
+    drip_seconds: float = 0.0
 
     @classmethod
     def json(cls, status: int, payload: object, *, delay_seconds: float = 0.0) -> Reply:
@@ -138,6 +145,41 @@ def error_reply(status: int, message: str, *, delay_seconds: float = 0.0) -> Rep
     return Reply.json(status, body, delay_seconds=delay_seconds)
 
 
+def anthropic_model_reply(model_id: str, *, delay_seconds: float = 0.0) -> Reply:
+    """Anthropic의 모델 하나를 묻는 요청(`GET /v1/models/<id>`)의 200 응답. 돌려주는 id는 시험이
+    정한다. 물은 id와 달라도 된다(날짜를 뗀 이름을 물으면 날짜 붙은 id가 돌아온다)."""
+    payload = {
+        "id": model_id,
+        "type": "model",
+        "display_name": "가짜 모델",
+        "created_at": "2025-01-01T00:00:00Z",
+    }
+    return Reply.json(200, payload, delay_seconds=delay_seconds)
+
+
+def anthropic_error_reply(
+    status: int, message: str, *, kind: str = "api_error", delay_seconds: float = 0.0
+) -> Reply:
+    """Anthropic 꼴의 오류 본문(`{"type": "error", "error": {"type": ..., "message": ...}}`)."""
+    body = {"type": "error", "error": {"type": kind, "message": message}}
+    return Reply.json(status, body, delay_seconds=delay_seconds)
+
+
+def models_list_reply(
+    ids: Sequence[str], *, has_more: bool = False, delay_seconds: float = 0.0
+) -> Reply:
+    """모델 서버의 목록(`GET <base_url>/models`)의 200 응답. `has_more`는 다음 쪽이 있다는 표시."""
+    payload: dict[str, object] = {
+        "object": "list",
+        "data": [
+            {"id": model_id, "object": "model", "created": 1, "owned_by": "fake"}
+            for model_id in ids
+        ],
+        "has_more": has_more,
+    }
+    return Reply.json(200, payload, delay_seconds=delay_seconds)
+
+
 class FakeModelServer:
     """뜬 가짜 모델 서버 하나. `with`로 쓰거나 `start()`와 `stop()`을 직접 부른다."""
 
@@ -188,6 +230,11 @@ class FakeModelServer:
         """모델 파일의 `base_url`로 쓰는 주소(경로 `/v1`까지)."""
         return f"http://127.0.0.1:{self.port}/v1"
 
+    @property
+    def root_url(self) -> str:
+        """Anthropic 클라이언트의 주소 칸에 쓰는 뿌리(경로 없음). SDK가 `/v1/...`을 덧붙인다."""
+        return f"http://127.0.0.1:{self.port}"
+
     def _connection_opened(self) -> None:
         with self._lock:
             self._opened += 1
@@ -234,7 +281,15 @@ class FakeModelServer:
                 self.send_header("Content-Type", reply.content_type)
                 self.send_header("Content-Length", str(len(reply.body)))
                 self.end_headers()
-                self.wfile.write(reply.body)
+                if reply.drip_seconds <= 0:
+                    self.wfile.write(reply.body)
+                    return
+                self.wfile.flush()
+                chunks = [reply.body[i : i + 4] for i in range(0, len(reply.body), 4)]
+                for chunk in chunks:
+                    time.sleep(reply.drip_seconds / len(chunks))
+                    self.wfile.write(chunk)
+                    self.wfile.flush()
 
             do_GET = _serve
             do_POST = _serve

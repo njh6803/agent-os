@@ -1,7 +1,7 @@
 # `.claude/rules/adapters.md` 에 MCP ToolSource 의 접속 확인이 서버를 여는 길과 기한의 결과를 정한다는 항목을 더한 문장이
 # `paths` 에 맞는 파일을 Read 로 열 때 실리는지(connection-check 티켓 02).
 # 실험군은 규칙의 paths 안(src/agent_os/adapters/), 대조군은 밖(README.md)을 읽는다. 둘 다 이 체크아웃이다.
-# 질문은 선례 `adapters_rule_check_gap.toml` 처럼 Read 결과에 붙어 실린 규칙도 지시라고 밝힌다. 기대 낱말은 더한 문장에만
+# 질문은 선례 `adapters_rule_http_close.toml` 처럼 Read 결과에 붙어 실린 규칙도 지시라고 밝힌다. 기대 낱말은 더한 문장에만
 # 있다(`clock.py` 에는 없다).
 # 최신 결과: 통과 4(2026-11-23, 이 PC의 connection-check 티켓 02 워크트리, claude 2.1.325, HEAD 36aa7db5a 위의 커밋하지 않은
 # 작업 트리). 실험군 셋이 두 구절을 글자 그대로 옮겼고 대조군은 "없음"이었다.
