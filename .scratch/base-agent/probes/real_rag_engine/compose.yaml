@@ -1,0 +1,118 @@
+# 티켓 07이 실제 문서 검색 서버(rag-engine) 이미지를 한 번 띄우려고 쓴 compose다.
+# rag-engine main 5e80700의 deploy/standalone/compose.yaml에서 프록시(nginx)를 빼고, 서버의 8000을
+# 이 PC의 루프백 18000으로만 열었다. 이유: 이 시험이 보려는 것은 서버 이미지가 내는 MCP 도구이고,
+# 프록시가 얹는 TLS는 agent-os의 MCP 클라이언트가 자체 서명 인증서를 믿게 하는 일을 더하기 때문이다.
+# 그래서 이 시험은 프록시의 443과 TLS를 지나지 않았다(프로브 README의 "가짜 서버와 다른 것"에 적는다).
+# 리랭커도 넣지 않았다(이 시험이 보려는 것이 아니고 이미지와 메모리를 더 쓴다). 그래서 `score`는 RRF
+# 점수이고 `min_score`를 쓸 수 없다. 나머지(이미지, 환경 변수, 볼륨, 임베딩 서버의 인자)는 원본 그대로다.
+# 환경 파일 이름만 `.env`가 아니라 `rag.env`다(이 세션의 도구가 `.env`라는 이름의 파일을 쓰지 못하게
+# 막는다). `rag.env`는 저장소 밖 작업 폴더에 두고, `--env-file`과 `--project-directory`로 그 폴더를
+# 가리킨다. 필요한 변수와 띄우는 명령은 프로브 README의 "2026-11-23 결과"의 "띄운 것"이다.
+
+name: rag-engine-real
+
+x-health: &health
+  interval: 30s
+  timeout: 10s
+  retries: 3
+  start_period: 30s
+  start_interval: 2s
+
+x-rag-environment: &rag-environment
+  RAG_DATABASE_URL: postgresql://rag:${POSTGRES_PASSWORD:?.env 에 POSTGRES_PASSWORD 가 없다}@postgres:5432/rag
+  RAG_DATA_DIR: /data
+  RAG_DEFAULT_EMBEDDING_URL: http://embedding:80
+
+services:
+  postgres:
+    image: pgvector/pgvector:0.8.7-pg18-trixie@sha256:5895949dfcdf308eb0cd31c950c93c14895c77f33fbedfecf1fa511ab1d4bcd2
+    environment:
+      POSTGRES_USER: rag
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?.env 에 POSTGRES_PASSWORD 가 없다}
+      POSTGRES_DB: rag
+    restart: "no"
+    volumes:
+      - postgres:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U rag -d rag"]
+      interval: 1s
+      timeout: 3s
+      retries: 30
+
+  embedding:
+    image: ghcr.io/huggingface/text-embeddings-inference:cpu-1.9.4@sha256:2538ea1c9640d3763b15af668039d24172d063b42337b0c27796fc2be180c78d
+    command: ["--model-id", "BAAI/bge-m3", "--port", "80", "--max-batch-tokens", "4096"]
+    user: "10001:10001"
+    read_only: true
+    tmpfs:
+      - /tmp
+    restart: "no"
+    volumes:
+      - ./models/embedding:/data
+    healthcheck:
+      <<: *health
+      start_period: 30m
+      test: ["CMD-SHELL", "curl -sf http://127.0.0.1:80/health || exit 1"]
+
+  migrate:
+    image: ${RAG_ENGINE_NAMESPACE:?.env 에 RAG_ENGINE_NAMESPACE 가 없다}/rag-engine-server:${RAG_ENGINE_VERSION:?.env 에 RAG_ENGINE_VERSION 이 없다}
+    command: ["rag-engine", "migrate"]
+    env_file: rag.env
+    environment: *rag-environment
+    read_only: true
+    tmpfs:
+      - /tmp
+    restart: "no"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  server:
+    image: ${RAG_ENGINE_NAMESPACE:?.env 에 RAG_ENGINE_NAMESPACE 가 없다}/rag-engine-server:${RAG_ENGINE_VERSION:?.env 에 RAG_ENGINE_VERSION 이 없다}
+    env_file: rag.env
+    environment:
+      <<: *rag-environment
+      RAG_ALLOWED_HOSTS: ${RAG_ALLOWED_HOSTS:?.env 에 RAG_ALLOWED_HOSTS 가 없다}
+    read_only: true
+    tmpfs:
+      - /tmp:size=1g
+    restart: "no"
+    # 원본에는 없는 줄이다. 프록시를 뺐으므로 루프백에만 연다.
+    ports:
+      - "127.0.0.1:18000:8000"
+    volumes:
+      - data:/data
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      <<: *health
+      test:
+        - CMD
+        - python
+        - -c
+        - import sys, urllib.request; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=4).status == 200 else 1)
+
+  worker:
+    image: ${RAG_ENGINE_NAMESPACE:?.env 에 RAG_ENGINE_NAMESPACE 가 없다}/rag-engine-worker:${RAG_ENGINE_VERSION:?.env 에 RAG_ENGINE_VERSION 이 없다}
+    env_file: rag.env
+    environment: *rag-environment
+    read_only: true
+    tmpfs:
+      - /tmp
+    restart: "no"
+    volumes:
+      - data:/data
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      embedding:
+        condition: service_healthy
+
+volumes:
+  postgres: {}
+  data: {}
+
+networks:
+  default:
+    enable_ipv6: false
