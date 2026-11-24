@@ -8,9 +8,14 @@
  * - 픽스처 플러그인 루트는 임시 디렉터리에 쓴다. MCP 매니페스트가 이 기계의 파이썬 인터프리터 경로를 들어야 해서
  *   커밋할 수 없다. 인터프리터는 `uv run` 이 쓰는 가상 환경의 것이다(`tests/test_main.py` 가 `sys.executable` 로
  *   짓는 것과 같다). 목록에 종류마다 행이 서고, 표지 행 둘(읽을 수 없는 매니페스트, 이름이 패턴 밖인 디렉터리)과
- *   꺼진 행 하나가 서게 채운다. 켜고 끄기 흐름이 그 루트의 운영자 파일을 읽도록 경로를 워커의 환경에 넘긴다.
+ *   꺼진 행 하나, 접속 확인 장면의 서버 둘(아래)이 서게 채운다. 켜고 끄기 흐름이 그 루트의 운영자 파일을 읽도록 경로를 워커의 환경에 넘긴다.
  * - 결정 흐름의 에이전트 둘은 모델 없이 승인 대상 도구(MCP 픽스처 서버의 add)를 `ctx.tool()` 로 직접 부른다. 그래서
  *   결정 뒤의 재개가 모델 없이 끝까지 간다. 멈춘 실행은 흐름이 채널 토큰으로 만든다(`channel.ts`).
+ * - 접속 확인 장면(`connection-check.e2e.ts`)이 볼 서버 둘은 어느 에이전트도 쓰지 않는다. 다른 장면의 실행이 거기 기대지 않게
+ *   하려는 것이다. 하나는 저장소의 시험용 원격 MCP 서버(`tests/mcp_http_server.py`)를 이 준비가 따로 띄워 그 주소를 가리키는
+ *   원격 MCP 픽스처(`remote-docs`)다. 다른 하나는 이 준비가 잠깐 열었다 닫은 포트, 곧 지금 이 기계에서 닫혀 있는 포트를 가리키는
+ *   `openai-compatible` 모델 픽스처(`offline-model`)다. 정해 둔 번호에 기대지 않는다. 가짜 서버도 다른 프로세스처럼 끝에 거두고
+ *   그 출력을 `test-results/` 에 남긴다. 이 준비에만 두므로 위젯·위젯 테스트 페이지·단독 배포 e2e 는 영향을 받지 않는다.
  * - 읽기 흐름이 볼 트레이스는 serve 를 띄우기 전에 트레이스 디렉터리에 쓴다(`traces.ts`).
  * - `serve` 의 환경에서는 모델 제공사의 키·주소·프록시를 벗긴다(`serveEnv`). 플러그인 화면의 접속 확인이 실제 제공사에
  *   닿지 않게 하려는 것이다.
@@ -24,7 +29,7 @@
  *   않는다. 래퍼는 next CLI 를 같은 프로세스에서 부르고 `next start` 는 서버를 자식으로 띄우지 않는다. 윈도우 가상
  *   환경의 python.exe 는 기반 인터프리터를 자식으로 띄우지만 부모와 함께 죽는다
  *   (`.scratch/web-admin/probes/e2e_process_tree.mjs`, 쟀다).
- * - 두 프로세스의 출력은 끝에 `test-results/` 에 남긴다. 실패를 서버 쪽 원인과 함께 보기 위해서다. 토큰은 싣지 않는다.
+ * - 띄운 프로세스(`serve`, 관리 화면, 가짜 원격 MCP 서버)의 출력은 끝에 `test-results/` 에 남긴다. 실패를 서버 쪽 원인과 함께 보기 위해서다. 토큰은 싣지 않는다.
  */
 
 import { type ChildProcess, spawn, spawnSync } from "node:child_process";
@@ -40,6 +45,8 @@ import { writeReadTraces } from "./traces";
 const APP = dirname(import.meta.dirname);
 const REPO = join(APP, "..", "..", "..");
 const MCP_FIXTURE_SERVER = join(REPO, "tests", "adapters", "mcp_fixture_server.py");
+// 어댑터 시험과 core 시험이 함께 쓰는 시험용 원격 MCP 서버(streamable HTTP). `<포트> <기록 파일>` 로 띄운다.
+const REMOTE_MCP_SERVER = join(REPO, "tests", "mcp_http_server.py");
 const LOGS = join(APP, "test-results");
 const LISTENING = /Uvicorn running on (http:\/\/127\.0\.0\.1:\d+)/;
 const STARTUP_MS = 60_000;
@@ -87,8 +94,25 @@ export default async function globalSetup(): Promise<() => Promise<void>> {
     // `serve` 는 표의 판이 맞는 데이터베이스가 있어야 뜬다. 이 준비만의 데이터베이스를 만들어 표를 올려 넘긴다.
     const databaseUrl = createDatabase(python, work);
     databases.push({ python, name: databaseName(databaseUrl) });
+    // 접속 확인 장면의 서버 둘. 원격 MCP 서버는 서기를 기다린 뒤 주소를 받고, 모델 쪽은 닫힌 포트를 가리킨다.
+    const remotePort = await freePort();
+    const remote = launch(
+      "remote-mcp",
+      python,
+      [REMOTE_MCP_SERVER, String(remotePort), join(work, "remote-mcp-record.jsonl")],
+      work,
+      { ...process.env, PYTHONUTF8: "1" },
+    );
+    launched.push(remote);
+    await until(remote, "가짜 원격 MCP 서버가 서지 않았다", async () =>
+      (await accepts(remotePort)) ? remotePort : null,
+    );
+    const closedPort = await freePort();
     const plugins = join(work, "plugins");
-    writeFixturePlugins(plugins, python);
+    writeFixturePlugins(plugins, python, {
+      remoteMcpUrl: `http://127.0.0.1:${String(remotePort)}/mcp`,
+      closedModelUrl: `http://127.0.0.1:${String(closedPort)}/v1`,
+    });
     const traces = join(work, "traces");
     writeReadTraces(traces);
     const adminToken = token("admin");
@@ -253,11 +277,17 @@ function nextEnv(upstream: string): NodeJS.ProcessEnv {
   return env;
 }
 
+/** 접속 확인 장면이 가리킬 두 주소. 원격 MCP 서버는 떠 있고 모델 서버의 주소는 닫힌 포트다. */
+interface CheckTargets {
+  readonly remoteMcpUrl: string;
+  readonly closedModelUrl: string;
+}
+
 /**
- * 종류 넷의 행, 표지 행 둘, 꺼진 행 하나, 결정 흐름의 에이전트 둘. TOML 기본 문자열은 JSON 문자열과 이스케이프가
- * 같아 경로를 `JSON.stringify` 로 적는다(윈도우 경로의 역슬래시).
+ * 종류 넷의 행, 표지 행 둘, 꺼진 행 하나, 결정 흐름의 에이전트 둘, 접속 확인 장면의 서버 둘. TOML 기본 문자열은 JSON
+ * 문자열과 이스케이프가 같아 경로를 `JSON.stringify` 로 적는다(윈도우 경로의 역슬래시).
  */
-function writeFixturePlugins(root: string, python: string): void {
+function writeFixturePlugins(root: string, python: string, targets: CheckTargets): void {
   const write = (path: string, text: string): void => {
     mkdirSync(dirname(join(root, path)), { recursive: true });
     writeFileSync(join(root, path), text);
@@ -328,6 +358,23 @@ function writeFixturePlugins(root: string, python: string): void {
       "mcp",
       "fixture",
       `[server]\ncommand = ${JSON.stringify(python)}\nargs = [${JSON.stringify(MCP_FIXTURE_SERVER)}]\n`,
+    ),
+  );
+  // 접속 확인 장면의 서버 둘(어느 에이전트도 쓰지 않는다). 이름에 다른 장면이 찾는 이름(`fixture`, `sonnet`)이 들지 않게 한다.
+  write(
+    "mcp/remote-docs/plugin.toml",
+    manifest(
+      "mcp",
+      "remote-docs",
+      `[server]\ntransport = "http"\nurl = ${JSON.stringify(targets.remoteMcpUrl)}\n`,
+    ),
+  );
+  write(
+    "models/offline-model/plugin.toml",
+    manifest(
+      "model",
+      "offline-model",
+      `provider = "openai-compatible"\nmodel_id = "offline-model"\nbase_url = ${JSON.stringify(targets.closedModelUrl)}\n`,
     ),
   );
   write("skills/summarize/plugin.toml", manifest("skill", "summarize"));
@@ -402,7 +449,7 @@ async function build(upstream: string): Promise<void> {
   }
 }
 
-/** 비어 있는 루프백 포트. 닫은 뒤 곧바로 관리 화면이 가져간다. */
+/** 비어 있는 루프백 포트. 닫은 뒤 곧바로 그 번호를 쓸 쪽(가짜 원격 MCP 서버, 닫힌 모델 주소, 관리 화면)이 가져간다. */
 async function freePort(): Promise<number> {
   const server = createServer();
   await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
