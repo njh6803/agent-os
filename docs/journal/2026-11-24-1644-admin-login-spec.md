@@ -256,3 +256,27 @@ PR 직전 리뷰에 밀 주장.
 > 사용자: 셋 모두 승인 (Recommended)
 
 고른 선택지의 설명(글자 그대로): "이력 셋을 지금 글 그대로 확정하고, 커밋과 PR로 갑니다."
+
+### 커밋 (20:20쯤)
+
+`git branch --show-current`는 `docs/admin-login`이었다. `uv run python tools/sibling_overlap.py`는 새 번호 없음, 번호 겹침 없음으로 끝났고, 함께 고친 파일로 `.scratch/portal-admin/plan.md`(워크트리 `widget-admin-server-spec`)를 들었다. 나중에 병합하는 쪽에서 글자 충돌이 날 수 있다. `origin/dev`는 merge-base 뒤로 병합 커밋 둘(#629, #630)만 더했고 `git diff --name-only HEAD...origin/dev`는 비었다. 기능 계획을 고쳤으므로 `uv run python tools/plan_table.py`를 돌렸고 `.scratch/plan.md`는 바뀌지 않았다.
+
+커밋 `01870f539`(62개 파일). pre-commit은 모두 통과했다. ruff 둘, 함께 띄운 검사 열하나(check-ticket, zizmor, check-notes, lint-imports, check-instructions, check-type-escapes, pyright-linux, pyright, run-hooks, pytest, web-verify. 한 바퀴 1133초), 마크다운 표, 줄 구분 문자, 변이 표, 커밋 메시지가 Passed였다. 카나리아 명세와 헌법 판은 대상 파일이 없어 Skipped였다. 그래서 손으로 치는 다섯은 이 커밋의 pre-commit으로 갈음한다.
+
+경고만 내는 인용 대조(`check-quotes`)가 인용 181건 가운데 46건을 짚었다(다섯 묶음의 경고 6·9·8·22·1건, 인용 12·52·19·82·16건). 원천을 든 인용부터 원문과 대 봤다.
+
+- 고친 것: 명세 "멈출 때"가 ADR 0063 "한계"의 문장을 "배치에서 … 알린다"로 줄여 옮겼다. 원문 "실행 제한 시간을 기본값보다 길게 준 배치에서는 아직 도는 실행을 끝맺지 못한 것으로 알릴 수 있다"로 고쳤다. `admin_port_chain` README가 ADR 0062의 문장을 글자 그대로 옮기지 않았다. 원문 "그 머리가 없는 요청은 `Origin` 머리도 없을 때만 받고"로 고쳤다. `swr_poll` README가 명세가 이미 고친 옛 문장을 "명세의"로 들었다. "명세가 처음 적은"으로 고치고 명세가 그 결과로 고쳤다고 더했다.
+- 그대로 둔 것: 명세의 "이 파일의 포트(8443, 8080)는 바꾸지 않는다"는 `deploy/standalone/proxy/site.conf` 2줄과 글자 그대로 같다(경고는 `deploy/`를 보지 않은 것이다). 명세의 화면 글과 `.claude/rules/http.md`에 더할 문장, ADR 0063 이력의 새 문장은 앞으로 쓸 글이라 원문이 없다. 프로브 README의 나머지는 그 README가 낸 결론을 따옴표로 이름 붙인 것이다. 일지의 것은 기록이다.
+
+이 고침 셋은 PR 직전 리뷰의 반영과 한 커밋에 싣는다.
+
+### PR 직전 리뷰 (20:45쯤)
+
+`coderabbit-review` 서브에이전트가 CLI 0.7.5로 `coderabbit review --agent --include-untracked --base origin/dev`를 끝까지 돌렸다(`review_completed`, 파일 62개라 `--dir`로 좁히지 않았다). `coderabbit auth status`는 `Seat: not assigned`, `Plan: Free`였다. 그래서 대체 둘(`/security-review`, `bug-perf-review`)은 돌리지 않았다.
+
+지적은 1건이고 유효 0, 오탐 1이었다.
+
+- 오탐(CLI는 Critical로 표시): `admin_port_chain/serve_stub.py` 102줄이 받은 요청 머리를 `Cookie`까지 그대로 기록에 싣는다는 지적. 그 스텁은 중계가 머리를 바꾸지 않고 넘겼는지 재는 것이라 원문을 남기는 것이 측정이고, 실린 쿠키는 스텁이 68·69줄에서 `secrets.token_hex(6)`로 지은 값이다. 실제 계정과 토큰은 프로브에 없다(본 세션이 그 줄을 Grep으로 다시 봤다).
+- 서브에이전트가 덧붙인 Minor: `hash_load/run.py`에서 명령줄이 이 프로브의 서버가 아니라고 나오면 끄지 않고 기다리다 `TimeoutExpired`로 끝날 수 있다. 남의 프로세스를 끄지 않으므로 고치지 않는다. 셀프 리뷰에서 남긴 끄기 판단(윈도는 `Popen`의 핸들로 끈다)은 서브에이전트도 코드를 읽어 맞다고 봤다(윈도에서 재현하지는 않았다).
+
+브리프에 밀 주장으로 넣은 명세의 문장 다섯은 CLI가 따로 짚지 않았다. 서브에이전트는 그것을 검증했다는 뜻이 아니라고 적었다. CLI에 주장을 넘기는 길은 아직 없다(`code-review` 6단계 1).
