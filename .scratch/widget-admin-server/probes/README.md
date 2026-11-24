@@ -1,0 +1,7 @@
+# widget-admin-server 프로브
+
+명세가 근거로 드는 측정 스크립트다. 규약은 `docs/agents/issue-tracker.md`의 "프로브와 근거", 짓는 규칙은 `.claude/rules/probes.md`다. 근거로 드는 자리는 명세(`.scratch/widget-admin-server/spec.md`)이고, 명세의 절 이름은 "명세" 뒤에 따옴표로 적는다. 결과와 갈래, 재지 못한 것은 폴더의 `README.md`에 있다. 위젯 쪽 compose의 꼴은 이 폴더가 다시 재지 않았고, 명세가 postgres-foundation의 측정(`.scratch/postgres-foundation/probes/compose_shape/`)을 빌렸다(명세 "단독 compose").
+
+| 폴더 | 재는 것 | 근거로 드는 자리 | 다시 돌 때 | 잰 판 |
+|---|---|---|---|---|
+| `uv_workspace/`(`run.py`, 장난감 멤버 `member/`, 장난감 시험 `tests/`, 장난감 이미지 `images/`) | 사용자가 고른 대로 설치 묶음을 둘(`agent-os`, `widget-admin`)로 나눠 uv 워크스페이스의 멤버로 둘 때, 개발 묶음에 멤버를 넣는지에 따라 CI 꼴의 `uv sync --frozen`이 멤버를 까는지와 잠금 파일이 바뀌는 것, 검사 도구(ruff 둘과 묶음 판정, pyright와 리눅스 플랫폼 판정, import-linter의 독립 계약, 타입 우회 검사)가 멤버의 코드를 보는지와 설정 자리마다 빼는 대조, 위젯 시험이 공유 도우미로 자기 접두의 데이터베이스를 받고 agent_os의 데이터베이스 시험과 한 실행에 도는지, 임시 폴더에서 명령이 도는지, 위젯 관리 서버 이미지(멤버 하나만 깐다)와 serve 이미지의 파이썬 단계(멤버의 `pyproject.toml`을 들이는지에 따라)의 안과 크기 | 명세 "설치 묶음과 패키지와 명령", "검사 도구의 자리", "경계 검사", "판 번호와 출시", "시험 폴더와 도우미", "마이그레이션과 표를 올리는 때", "이미지" | 그 폴더 `README.md`의 "다시 돌리기"(저장소 루트에서 `uv run python`으로 `run.py`에 비었거나 없는 폴더의 절대 경로를 넘긴다, `--sections`로 갈래를 고른다). 테스트 컨테이너와 도는 Docker 데몬. 셋째 실행은 기록 파일의 시각으로 약 12분 반이었다(파일 시각을 손으로 봤다, 사본 나무를 푸는 시간은 빠졌다) | Windows 10의 Docker Desktop(엔진 29.9.2), 로컬 uv 0.10.8, 이미지 안 uv 0.13.8, Python 3.12.10, pyright 1.1.414, ruff 0.16.8, import-linter 2.15, pytest 9.1.1, pytest-xdist 3.8.0, SQLAlchemy 2.1.9, alembic 1.20.1. 사본 나무는 기준 커밋 `7770ac0c1`의 `git archive`. 2026-11-24, 셋째 실행 측정 29회차, 측정 아님 0 |
