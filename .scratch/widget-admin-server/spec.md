@@ -9,7 +9,7 @@ Status: ready-for-agent
 | 넘긴 곳 | 넘긴 것 | 답한 자리 |
 |---|---|---|
 | ADR 0064 Consequences "명세가 짓는 것" | 패키지와 명령의 이름(기능 계획 본문의 "자기 명령으로 따로 뜬다"도) | "설치 묶음과 패키지와 명령" |
-| 같은 문단 | import-linter 계약의 모양(기능 계획 본문의 "패키지를 처음 들이는 티켓이 함께 넣는다"도) | "경계 검사" |
+| 같은 문단 | import-linter 계약의 모양(기능 계획 본문의 "패키지를 처음 들이는 티켓이 함께 넣어"도) | "경계 검사" |
 | 같은 문단 | 계약 파일의 자리와 생성 클라이언트 | "계약 파일과 생성 클라이언트" |
 | 같은 문단 | 표의 모양 | "표" |
 | 같은 문단 | 위젯 설정을 받아 가는 경로 | "경로의 접두사", "읽는 경로" |
@@ -134,7 +134,7 @@ ADR 0064 Consequences "운영"이 적은 위젯 쪽 데이터베이스의 백업
 
 ### 검사 도구의 자리(명세가 쟀다)
 
-근거는 `.scratch/widget-admin-server/probes/uv_workspace/`다. 그 프로브는 기준 커밋의 저장소를 빈 폴더에 풀고, 장난감 멤버(표 하나, 공개 경로 하나, 마이그레이션 하나)와 장난감 시험을 넣은 뒤 루트 `pyproject.toml`을 갈래마다 다시 지어 검사 도구를 돌렸다. 루트 `pyproject.toml`에서 고치는 자리는 여섯이다(프로브의 독스트링처럼 워크스페이스의 멤버와 원천을 한 자리로 센다). 워크스페이스의 멤버와 원천, 개발 묶음의 멤버는 위 절에 있고, 검사 도구의 넷은 아래다. 개발 묶음의 멤버, ruff의 `src`, pyright의 `include`와 `extraPaths`는 그 자리를 빼거나 바꾼 대조로 왜 필요한지를 함께 쟀고, import-linter는 일부러 심은 import를 잡는 양성 대조로 쟀다.
+근거는 `.scratch/widget-admin-server/probes/uv_workspace/`다. 그 프로브는 기준 커밋의 저장소를 빈 폴더에 풀고, 장난감 멤버(표 하나, 공개 경로 하나, 마이그레이션 하나)와 장난감 시험을 넣은 뒤 루트 `pyproject.toml`을 갈래마다 다시 지어 검사 도구를 돌렸다. 루트 `pyproject.toml`에서 고치는 자리는 여섯이다(프로브의 독스트링처럼 워크스페이스의 멤버와 원천을 한 자리로, import-linter의 `root_packages`와 독립 계약을 한 자리로 센다). 워크스페이스의 멤버와 원천, 개발 묶음의 멤버는 위 절에 있고, 검사 도구의 넷은 아래다. 개발 묶음의 멤버, ruff의 `src`, pyright의 `include`와 `extraPaths`는 그 자리를 빼거나 바꾼 대조로 왜 필요한지를 함께 쟀고, import-linter는 일부러 심은 import를 잡는 양성 대조로 쟀다.
 
 - **ruff의 `src`에 `widget-admin/src`를 더한다.** ruff는 `src`에 든 폴더의 패키지를 이 저장소의 것(첫째 묶음)으로 보고 import의 차례를 가른다. 더한 판에서 `widget_admin`은 멤버의 `src`에서 찾은 이 저장소의 것으로 판정됐다. 더하지 않은 대조에서는 바깥 라이브러리로 판정됐고, 장난감 시험의 import 차례가 `unsorted-imports`로 걸렸다(같은 README의 tools 갈래, `ruff check -v`의 판정 줄). `ruff check .`와 `ruff format --check .`는 0으로 끝났다. ruff가 멤버의 파일을 훑는다는 것은 프로브가 표지로 보지 않았고, 셋째 사본 나무에서 `ruff check --show-files .`가 든 파일에 멤버의 `.py` 여섯과 `tests/widget_admin/`의 둘이 있는 것을 손으로 봤다(일지 "이어받은 세션: 셀프 리뷰부터"의 표준 축 12). 루트의 ruff 설정에는 훑는 범위를 좁히는 `include`가 없다(코드를 읽었다).
 - **pyright의 `include`에 `widget-admin/src`를 더한다.** 더한 판은 멤버에 심은 타입 오류를 `reportAssignmentType`으로 잡았고, 더하지 않은 대조는 그 오류를 잡지 못했다. 타입 우회 검사(`tools/check_type_escapes.py`)는 pyright의 `include`를 따라 훑으므로 따로 고치지 않는다. 더한 판에서 0건이었고, 멤버에 심은 `Any` 두 줄을 잡았다.
@@ -158,11 +158,11 @@ ADR 0064 Consequences "운영"이 적은 위젯 쪽 데이터베이스의 백업
 - 이미지의 목록은 한 곳이 아니라 저장소의 여러 자리에 따로 적혀 있고(기준 커밋의 코드를 읽었다), 그 모두에 `widget-admin`을 더한다.
   - 제품 변경의 경로 목록. `tools/release.py`의 `PRODUCT_PATHS`이고 노트 검사가 같은 목록을 쓴다. 멤버 폴더 `widget-admin`을 더한다.
   - 판마다 짓는 이미지의 목록. `tools/release_ci.py`의 `IMAGES`이고, 받은 아티팩트에 있어야 할 파일(259줄)과 해시의 대조(283줄)가 이 목록을 돈다.
-  - 짓기 설정 `deploy/images/docker-bake.hcl`. 대상 `widget-admin`(짓는 파일 `deploy/images/widget-admin.Dockerfile`, 태그 `${NAMESPACE}/agent-os-widget-admin:${TAG}`)과, 한 번에 짓는 묶음 `group "default"`의 `targets`(43줄)다.
-  - 판 내기 워크플로 `.github/workflows/release.yml`이 이미지 이름을 직접 적은 자리. 점검(194줄), 올린 digest의 조회(268줄), 번호 태그(435줄)의 반복문 셋과, 첫째 잡의 출력(61~64줄), 둘째 잡의 환경 `DIGEST_*`(314~317줄), 아티팩트 대조의 인자(333~334줄), 머리 주석의 "이미지 넷"이다.
+  - 짓기 설정 `deploy/images/docker-bake.hcl`. 대상 `widget-admin`(짓는 파일 `deploy/images/widget-admin.Dockerfile`, 태그 `${NAMESPACE}/agent-os-widget-admin:${TAG}`)과, 한 번에 짓는 묶음 `group "default"`의 `targets`(43줄)다. 머리 주석의 "이미지 넷"(1줄)과 대상 이름과 저장소 이름을 나열한 줄(10~12줄)도 고친다.
+  - 판 내기 워크플로 `.github/workflows/release.yml`이 이미지 이름을 직접 적은 자리. 점검(194줄), 올린 digest의 조회(268줄), 번호 태그(435줄)의 반복문 셋과, 노트를 짓는 명령의 `--grype` 인자(221~222줄), 첫째 잡의 출력(61~64줄), 둘째 잡의 환경 `DIGEST_*`(314~317줄), 아티팩트 대조의 인자(333~334줄), 머리 주석의 "이미지 넷"이다. `--grype` 인자에서 빠지면 위젯 관리 서버의 점검 결과가 노트에 들지 않는다. 그 이미지에만 고칠 수 있는 Critical이 있으면 노트에 경고가 서지 않아 다음 줄의 확인이 판 내기를 멈추고, 다른 이미지에도 있으면 경고는 서되 그 이미지는 경고에서 빠진다(221~226줄과 `tools/release.py`의 노트 경고가 받은 점검 결과만 도는 것, 코드를 읽었다).
   - 단독 배포 e2e가 이미지를 짓는 자리(`web/packages/e2e-standalone/e2e/stack.ts`의 짓기, 아래 Testing Decisions의 둘째 이음매).
 - 번호 태그의 반복문은 이미지 이름을 대문자로 바꿔 변수 이름 `DIGEST_<이름>`을 짓고 그 변수를 간접으로 읽는다(436~437줄, 코드를 읽었다). 그러면 `widget-admin`의 하이픈이 변수 이름에 남아 셸이 읽지 못한다. 손으로 봤다. 이 PC의 Git Bash에서 `var=DIGEST_WIDGET-ADMIN`의 `${!var}`가 `bad substitution`으로 1이었다(리눅스 러너의 bash도 같다고 보는 것은 어림이다). 그 자리는 변수 이름에 하이픈이 남지 않게 고친다. 이미지와 짓기 대상과 Docker Hub 저장소의 이름은 그대로 `widget-admin`과 `agent-os-widget-admin`이다. 대상 이름으로 저장소 이름을 찾는 `tools/release_ci.py`의 `repository`는 하이픈이 든 이름을 받는다(`_BAKE_REPOSITORY`의 꼴, 코드를 읽었다).
-- 목록이 여럿이라 하나라도 빠뜨리면, 판 내기가 그 자리에서 멈추거나 멈추지 않고 위젯 관리 서버의 이미지 없이 판이 나갈 수 있다(빠뜨린 목록의 조합마다 다르다. 코드를 읽어 본 어림이다). 판 내기 워크플로는 main에 푸시가 올 때만 돌고 워크플로 자체에는 자동 시험이 없어(그 파일의 머리 주석), 그것은 판을 낼 때에야 드러난다. 그래서 저장소 상태 시험(`tests/tools/test_release_ci.py`)에, 워크플로의 반복문 셋과 첫째 잡의 출력과 둘째 잡의 환경, 짓기 설정의 `group "default"`가 `IMAGES`와 같은 이름들인지 보는 사례를 더한다. 지금 그 시험은 짓기 설정의 대상과 저장소 이름만 `IMAGES`와 맞댄다(399·400줄, 코드를 읽었다).
+- 목록이 여럿이라 하나라도 빠뜨리면, 판 내기가 그 자리에서 멈추거나 멈추지 않고 위젯 관리 서버의 이미지 없이 판이 나갈 수 있다(빠뜨린 목록의 조합마다 다르다. 코드를 읽어 본 어림이다). 판 내기 워크플로는 main에 푸시가 올 때만 돌고 워크플로 자체에는 자동 시험이 없어(그 파일의 머리 주석), 그것은 판을 낼 때에야 드러난다. 그래서 저장소 상태 시험(`tests/tools/test_release_ci.py`)에, 워크플로의 반복문 셋과 `--grype` 인자와 첫째 잡의 출력과 둘째 잡의 환경, 짓기 설정의 `group "default"`가 `IMAGES`와 같은 이름들인지 보는 사례를 더한다. 지금 그 파일에서 다른 자리의 이미지 목록을 `IMAGES`와 맞대는 시험은 짓기 설정의 대상과 저장소 이름을 보는 하나뿐이다(399·400줄). 다른 시험은 `IMAGES`로 시험 자료를 짓거나, compose와 배포 안내를 짓기 설정과 맞댄다(코드를 읽었다).
 - 제품 판은 하나다. 위젯 관리 서버의 이미지도 Agent OS의 이미지와 같은 판 번호를 단다(ADR 0064 결정 "배포에 느는 것").
 
 ### 연결 문자열과 시작(명세가 정했다)
@@ -366,7 +366,7 @@ ADR 0064 Consequences "운영"이 적은 위젯 쪽 데이터베이스의 백업
 - **`widget-admin`.** 같은 이미지로 `widget-admin serve --host 0.0.0.0`을 돌린다. `depends_on`은 `widget-admin-migrate`의 `service_completed_successfully`다. 환경은 `AGENT_OS_CONTAINER_NETWORK: "1"`과 같은 꼴의 `WIDGET_ADMIN_DATABASE_URL` 둘이고, `.env`를 통째로 받지 않는다. 루트는 읽기 전용이고 볼륨을 붙이지 않으며 `ports`를 두지 않는다. 재시작 정책은 `unless-stopped`, 상태 확인은 위 "이미지"의 것과 공용 앵커다.
 - 프록시와 다른 서비스에는 `depends_on`을 두지 않는다. 프록시는 이름을 요청 때 다시 풀므로 위젯 관리 서버보다 먼저 떠도 된다(`deploy/standalone/proxy/site.conf` 5~11줄). Agent OS 쪽 서비스와 위젯 쪽 서비스는 서로를 기다리지 않는다. 위젯 관리 서버는 Agent OS를 부르지 않고(이 기능에서), 위젯은 위젯 관리 서버가 내려가 있으면 "위젯 설정을 받아 오지 못했습니다."를 보인다.
 - 네트워크는 지금의 기본 네트워크 하나다. 파일 머리의 주석은 위젯 쪽 셋을 더해 적고, `ports` 항목의 "PostgreSQL 은 어느 주소에도 열지 않는다"를 두 PostgreSQL로 넓히며, `user` 항목에 위젯 쪽 PostgreSQL도 uid 999로 돈다는 것을 더하고, "우리 이미지 넷"을 다섯으로 고친다. `serve`의 `env_file` 위 주석("데이터베이스 비밀번호")은 위젯 쪽 비밀번호도 받는다고 고친다.
-- 대가는 둘이다. `serve`가 `.env`를 통째로 받으므로 위젯 쪽 비밀번호도 받는다. 그리고 두 데이터베이스가 같은 네트워크에 있어 `serve`가 뚫리면 위젯 쪽 데이터베이스에도 닿는다. ADR 0066 Consequences "신뢰와 노출"이 Agent OS 쪽 비밀번호에 적은 것과 같은 대가이고, 둘 다 `serve`가 비밀번호를 알면 접속할 수 있다는 같은 경계다.
+- 대가는 둘이다. `serve`가 `.env`를 통째로 받으므로 위젯 쪽 비밀번호도 받는다. 그리고 두 데이터베이스가 같은 네트워크에 있어 `serve`가 뚫리면 위젯 쪽 데이터베이스에도 닿는다. 둘 다 `serve`가 비밀번호를 알면 접속할 수 있다는, Agent OS 쪽 비밀번호와 같은 경계다. 그래서 ADR 0066 Consequences "신뢰와 노출"이 Agent OS 쪽 비밀번호에 적은 노출의 길(http 모양의 MCP 매니페스트가 환경 변수를 헤더에 실어 밖으로 보내는 길, ADR 0049)에 위젯 쪽 비밀번호도 놓이고, 그것을 막는 허락 목록은 mcp-trust가 맡는다(아래 Out of Scope, 그 기능 계획에 적었다). 그 행은 슬라이스 10이라 0.1 판에는 이 노출이 그대로 있다.
 
 거부한 안: 위젯 쪽 비밀번호를 따로 둔 env 파일에 적는다. `serve`가 그 비밀번호를 받지 않지만, 운영자가 고칠 비밀 파일이 둘이 되고 배포 안내와 판 내기의 시험이 그 파일을 함께 다뤄야 한다. 위젯 쪽 데이터베이스와 서버를 다른 네트워크로 가른다. `serve`가 위젯 쪽 데이터베이스에 닿지 못하지만, 프록시가 두 네트워크에 붙어야 하고, 지금의 IPv6를 끈 네트워크 설정과 단독 배포 e2e의 네트워크 시험을 둘로 늘려야 한다. 그 일은 Out of Scope에 적는다.
 
@@ -401,7 +401,7 @@ ADR 0064 Consequences "운영"이 적은 위젯 쪽 데이터베이스의 백업
 
 기능 계획 본문이 구현 티켓에 맡긴 문서 셋과, 이 기능이 하네스에 더하는 것이다. 자리마다 그 변경이 오른 때 참인 것만 적는다.
 
-- `docs/constitution/tech.md`의 표. 패키지 관리 칸 "uv, 단일 패키지, src 레이아웃"을 "uv 워크스페이스, 설치 묶음 둘(`agent-os`, 멤버 `widget-admin`), 잠금 파일 하나, src 레이아웃"으로 고친다. 경계 칸에 독립 계약을, 레지스트리 칸의 "공개 저장소 넷"을 다섯(`agent-os-widget-admin`을 더한다)으로, CI 칸의 "이미지 넷"을 다섯으로 고친다. 끝 문단(위젯 관리 서버의 문단)의 "그때까지 둘 다 저장소에 없으며 위 표는 지금 그대로다"를 서버가 들어온 뒤의 사실로 고친다. 헌법의 판은 patch로 올린다(ADR 0038의 선례).
+- `docs/constitution/tech.md`의 표. 패키지 관리 칸 "uv, 단일 패키지, src 레이아웃"을 아래 문구로 고친다. 문구 후보: "uv 워크스페이스, 설치 묶음 둘(`agent-os`, 멤버 `widget-admin`), 잠금 파일 하나, src 레이아웃". 경계 칸에 독립 계약을, 레지스트리 칸의 "공개 저장소 넷"을 다섯(`agent-os-widget-admin`을 더한다)으로, CI 칸의 "이미지 넷"을 다섯으로 고친다. 끝 문단(위젯 관리 서버의 문단)의 "그때까지 둘 다 저장소에 없으며 위 표는 지금 그대로다"를 서버가 들어온 뒤의 사실로 고친다. 헌법의 판은 patch로 올린다(ADR 0038의 선례).
 - `CLAUDE.md`의 레이어 목록에 `widget-admin/`(둘째 설치 묶음, 계약은 `widget-admin/openapi.json`)과 `tests/widget_admin/`을 더한다.
 - 루트 `README.md`의 트리와 시작 절. 시작 절에는 위 "개발 PC에서 붙는 데이터베이스"의 세 명령을 더한다.
 - `.claude/rules/http.md`의 첫 항목 "공용 배관은 `agent_os.http` 한 곳이고 사본을 두지 않는다"에 그 범위가 `agent_os`라는 것과, 위젯 관리 서버가 봉투와 추적 식별자와 접두사 비교를 따로 든다는 것을 한 줄 더한다(ADR 0064 결정 "위젯 관리 서버").
@@ -456,11 +456,12 @@ ADR 0064 Consequences "운영"이 적은 위젯 쪽 데이터베이스의 백업
 
 ## Out of Scope
 
-다른 기능이 맡는 것은 받는 기능의 이름을 적었다. 받는 기능의 기능 계획(`.scratch/<기능>/plan.md`)에 같은 것을 적었다. widget-login-state, portal-admin, ops-backup-upgrade는 Blocked by에 이 기능이 있다. multi-instance는 없지만 계획표에서 이 기능(슬라이스 9)보다 뒤인 슬라이스 14이고(`.scratch/plan.md`), 그 기능 계획에 적은 것은 위젯 관리 서버가 서 있을 때의 일이다.
+다른 기능이 맡는 것은 받는 기능의 이름을 적었다. 받는 기능의 기능 계획(`.scratch/<기능>/plan.md`)에 같은 것을 적었다. widget-login-state, portal-admin, ops-backup-upgrade는 Blocked by에 이 기능이 있다. multi-instance는 없지만 계획표에서 이 기능(슬라이스 9)보다 뒤인 슬라이스 14이고(`.scratch/plan.md`), 그 기능 계획에 적은 것은 위젯 관리 서버가 서 있을 때의 일이다. mcp-trust(MCP 서버마다 믿는 정도를 정하는 기능)는 Blocked by의 pilot-release가 이 기능을 기다리므로 이 기능 뒤에 돈다.
 
 - **widget-login-state.** 위젯이 `/widget-settings/<사이트 이름>`을 부르고 답을 모형으로 옮기는 모듈, 그 모듈이 모르는 칸을 무시하고 모르는 판을 받아 오지 못한 것으로 보는 것, 위젯이 이 경로에 자격 증명과 CORS 안전 목록 밖의 머리를 싣지 않는 것(생성 클라이언트의 공개 경로용 팩토리를 쓰면 그렇다), e2e-stack이 위젯 관리 서버와 그 데이터베이스를 띄우는 일(도우미의 `create widget_admin`, `widget-admin migrate`, `widget-admin serve`, 같은 출처를 만드는 시험 안의 중계에 `/widget-settings/`를 더하는 것), 다른 출처의 페이지에서 답이 읽히는지를 Chromium으로 보는 것.
 - **portal-admin.** 운영자용 경로 일곱과 안쪽 길 하나(`/operator/`와 `/internal/` 아래), 저장 경로의 검사(빈 입력을 `NULL`로 바꿔 넣는 것, 예시 질문의 수와 길이, 주소의 꼴), 바꾼 기록과 저장 번호와 위젯 테스트 페이지 설정의 표와 칸, 예시 질문의 모양 칸과 그 값의 이름, 봉투 어휘를 늘리는 것, 생성 클라이언트에 클라이언트 둘을 더하는 것, 위젯 관리 화면의 컨테이너와 포트, 위젯 관리 서버가 Agent OS를 부르는 길과 그 주소의 설정.
 - **ops-backup-upgrade.** 위젯 쪽 데이터베이스의 백업과 복원(ADR 0064 Consequences "운영"). 배포 안내 8절은 그 전까지 백업을 다루지 않는다고 적는다.
+- **mcp-trust.** `serve`가 `.env`를 통째로 받아 함께 오는 `WIDGET_ADMIN_DATABASE_PASSWORD`도, 그 기능이 넘길 환경 변수를 좁히는 허락 목록의 대상이다(위 "단독 compose"의 대가). postgres-foundation이 Agent OS 쪽 비밀번호의 변수 둘을 그 기능 계획에 넘긴 것과 같은 일이다.
 - **위젯 쪽 데이터베이스를 Agent OS 쪽과 다른 네트워크로 가르는 것.** 위 "단독 compose"의 거부한 안이다. 이 명세는 받는 기능을 정하지 않는다. 그 일을 다시 열 때는 설계부터 한다.
 - **multi-instance(서버를 여럿 띄워도 하나처럼 돌게 하는 기능).** 여럿이 함께 뜨는 위젯 관리 서버와, 둘이 같은 데이터베이스에 표를 함께 올리는 경우는 이 명세가 다루지 않는다. Agent OS 쪽과 같이 그 기능의 설계가 다시 본다(ADR 0066 결정 "표를 올리는 때").
 - **시험 프로세스가 죽어 남긴 데이터베이스를 치우는 일.** postgres-foundation과 같다.

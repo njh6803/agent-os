@@ -116,7 +116,7 @@ open-session을 부른다 2026-11-24T09:01:06Z
 
 #### 표준 축의 보고
 
-Critical 0, Major 0, Minor 7, Nit 5다. 보고가 맞다고 한 것: 서두의 수 전부(표 서른세 행, "명세가 정했다" 스물넷, "사용자가 골랐다" 셋, "거부한 안:" 열둘과 든 안 스물하나와 고르지 않은 선택지 넷), 프로브 29회차, 계약 아홉, 열아홉 항목과 그 차례, `tools/release_ci.py` 259·283줄과 `errors.py`의 상수와 `LifespanDriver`와 `site.conf`의 줄, 세 기능 계획의 문단과 그 Blocked by. smell은 짚은 것이 없다. 지적과 판정은 다음과 같다. 판정의 근거는 이 세션이 다시 연 것이다.
+Critical 0, Major 0, Minor 7, Nit 5다. 보고가 맞다고 한 것: 서두의 수 전부(표 서른세 행, "명세가 정했다" 스물넷, "사용자가 골랐다" 셋, "거부한 안:" 열둘과 든 안 스물하나와 고르지 않은 선택지 넷), 프로브 29회차, 계약 아홉, 열아홉 항목과 그 차례, `tools/release_ci.py` 259·283줄과 `errors.py`의 상수와 `LifespanDriver`와 `site.conf`의 줄, 세 기능 계획의 문단과 그 Blocked by. smell은 짚은 것이 없다. 지적과 판정은 다음과 같다. 판정의 근거는 이 세션이 다시 연 것이다. 지적에 든 따옴표 안은 고치기 전 명세의 글이라, 고친 뒤의 저장소에는 글자 그대로 없다.
 
 1. Minor. 명세 "읽는 경로"의 "`HEAD`는 Starlette가 `GET` 경로에 함께 받는 그대로 둔다"가 거짓이다. **유효, 고친다.** 손으로 봤다. FastAPI 0.141.1과 Starlette 1.6.0에서 `redirect_slashes=False`로 지은 앱에 `@app.get("/widget-settings/{site}")` 하나를 두고 httpx의 `ASGITransport`로 부르자 `GET`은 200, `HEAD`와 `OPTIONS`와 `POST`는 405(`Allow: GET`), 끝에 `/`가 붙은 경로는 404였다. 스크립트는 표준 축이 세션 스크래치패드에 쓴 것이고, 본 세션이 다시 돌려 같은 출력을 봤다. 커밋하지 않는다.
 2. Minor. "저장소를 grep해 8100을 쓰는 곳이 없었다"가 거짓이다. **유효, 고친다.** `web/apps/admin/next.config.test.ts`와 `web/apps/admin/tools/loopback.test.ts`가 상류 주소를 고르는 시험의 값으로 `127.0.0.1:8100`을 쓴다(Grep). 같은 문장의 3001은 저장소 어디에서도 포트로 쓰이지 않는다(Grep으로 나온 것은 `tools/run_hooks.py`의 수열과 `tests/tools/test_rerun_cost.py`의 토큰 수다). 듣는 포트는 serve의 8000과 웹 앱 셋의 3000이다(`deploy/standalone/compose.yaml`, `deploy/standalone/proxy/site.conf`를 Grep했다).
@@ -133,7 +133,7 @@ Critical 0, Major 0, Minor 7, Nit 5다. 보고가 맞다고 한 것: 서두의 �
 
 #### 명세 축의 보고
 
-Major 1, Minor 3, Nit 3이다. 요구에 없는 동작은 찾지 못했다고 했다. 보고가 맞다고 한 것: "이력은 없다"의 근거 셋, 프로브 README의 수치(계약 아홉, 13 passed, 묶음 20 대 67, 119·228·339MB), `tools/database_for_tests.py`를 경계 입력으로 불러 본 동작, 세 기능 계획에 넘긴 문단이 그 명세들의 가정과 어긋나지 않는다는 것. 줄 번호는 보고 당시 명세의 것이다. 판정의 근거는 이 세션이 다시 연 것이다.
+Major 1, Minor 3, Nit 3이다. 요구에 없는 동작은 찾지 못했다고 했다. 보고가 맞다고 한 것: "이력은 없다"의 근거 셋, 프로브 README의 수치(계약 아홉, 13 passed, 묶음 20 대 67, 119·228·339MB), `tools/database_for_tests.py`를 경계 입력으로 불러 본 동작, 세 기능 계획에 넘긴 문단이 그 명세들의 가정과 어긋나지 않는다는 것. 줄 번호와 지적에 든 따옴표 안은 보고 당시 명세의 것이다. 판정의 근거는 이 세션이 다시 연 것이다.
 
 1. Major. "판 내기의 단계가 목록 하나를 따른다"(157줄)가 틀렸고, 명세대로 세 자리만 고치면 위젯 관리 서버의 이미지가 지어지지도 올라가지도 않는다. **유효, 고친다.** `.github/workflows/release.yml`이 이미지 이름을 직접 적는다. 반복문 셋(194·268·435줄의 `for image in serve admin widget portal`), 첫째 잡의 출력(61~64줄), 둘째 잡의 환경 `DIGEST_*`(314~317줄), 아티팩트 대조의 인자(333~334줄), 머리 주석의 "이미지 넷"이다(Read). `deploy/images/docker-bake.hcl`의 `group "default"`의 `targets`(43줄)도 따로 적힌 목록이고, `web/packages/e2e-standalone/e2e/stack.ts`도 이미지 넷을 짓는다(Read). `tests/tools/test_release_ci.py`는 짓기 설정의 대상과 저장소 이름만 `IMAGES`와 맞댄다(399·400줄, Read). 고치며 새로 찾은 것: 번호 태그의 반복문(436~437줄)이 `DIGEST_<대문자 이름>`을 간접으로 읽어 하이픈이 든 이름을 읽지 못한다. 손으로 봤다. 이 PC의 Git Bash에서 `var=DIGEST_WIDGET-ADMIN; echo "${!var}"`가 `bad substitution`으로 1이었다. 판 번호를 넣는 것은 출시 도구가 아니라 짓는 파일이라는 것도 고쳐 적었다(`deploy/images/serve.Dockerfile` 43줄의 `sed`를 읽었고, `tools/release.py`에 `pyproject`가 없는 것을 Grep했다). 명세 "판 번호와 출시"를 다시 쓰고, 목록 다섯 자리와 목록 맞대기 시험을 적었다. "티켓을 나눌 때 함께 둘 것"의 배포 변경과 Testing Decisions의 대응 시험 줄에도 더했다. 보고가 든 사용자 답 2의 조건("출시 도구가 함께 서는지 먼저 잰다")은 짓는 파일 쪽이 재서 섰고, 출시 도구와 워크플로는 돌려 재지 않았다고 명세에 적었다.
 2. Minor. multi-instance에 넘긴 것을 받는 쪽이 모른다(457줄). **유효, 고친다.** `.scratch/multi-instance/plan.md`에 위젯의 말이 없었다(Read). 그 기능 계획에 "widget-admin-server 명세가 넘긴 것" 문단을 더했다. Blocked by는 admin-crud뿐이지만 계획표에서 multi-instance는 슬라이스 14이고 이 기능은 9다(`.scratch/plan.md` 75·109줄을 Grep했다). Out of Scope 머리에 그것을 적고, 줄 이름에 첫 풀이를 달았다.
@@ -154,7 +154,30 @@ Major 1, Minor 3, Nit 3이다. 요구에 없는 동작은 찾지 못했다고 �
   - "지금 그 시험은 짓기 설정의 대상과 저장소 이름만 `IMAGES`와 맞댄다(399·400줄, 코드를 읽었다)."
   - "serve의 짓는 파일이 빌드 단계 안의 `pyproject.toml` 사본에 `sed`로 번호를 넣고(`deploy/images/serve.Dockerfile` 43줄, 코드를 읽었다)" 와 "출시 도구(`tools/release.py`)에는 `pyproject`가 나오지 않는다(Grep으로 찾았다)."
   - "저장소에서 8100은 관리 화면의 상류 주소를 고르는 시험의 값(`web/apps/admin/next.config.test.ts`, `web/apps/admin/tools/loopback.test.ts`)으로만 나온다."
-  - "`HEAD`는 받지 않는다" 쪽의 손 확인(FastAPI 0.141.1, Starlette 1.6.0에서 `HEAD`가 405).
+  - "`HEAD`도 405다. FastAPI의 경로는 `GET`으로 지은 경로에 `HEAD`를 함께 받지 않는다." 와 그 손 확인(FastAPI 0.141.1, Starlette 1.6.0).
   - Testing Decisions의 "핸들러가 놓친 예외는 지은 앱에 예외를 던지는 시험용 경로를 붙여 일으키고(선례는 `tests/test_server.py`의 `_route_that_raises`)".
   - Out of Scope 머리의 "multi-instance는 없지만 계획표에서 이 기능(슬라이스 9)보다 뒤인 슬라이스 14이고".
   - 오류 어휘 여섯(401, 404, 409, 422, 429, 500)이 `_CODE_BY_STATUS`의 전부라는 것.
+  - "루트 `pyproject.toml`에서 고치는 자리는 여섯이다(프로브의 독스트링처럼 워크스페이스의 멤버와 원천을 한 자리로 센다)."
+
+### 커밋
+
+`git branch --show-current`는 `docs/widget-admin-server-spec`, `tools/sibling_overlap.py`는 새 번호 없음과 번호 겹침 없음으로 끝났다(`origin/dev`는 그대로 `463d9f1`). `tools/plan_table.py`는 바뀐 것이 없었다. 커밋 `3f1726d3f`(파일 24개)의 pre-commit은 모두 통과했다. ruff check, ruff format, 병렬 검사 열하나(check-ticket, lint-imports, check-notes, zizmor, check-type-escapes, check-instructions, pyright, pyright-linux, run-hooks, pytest, web-verify. 모두 1217초), 마크다운 표, 줄 구분 문자, 변이 표, 커밋 메시지다. 카나리아 명세 모양과 헌법 판은 대상 파일이 없어 `Skipped`였다. 손으로 치는 다섯 명령은 이 결과로 갈음한다.
+
+인용 대조가 경고 일곱을 냈고(막지 않는다) 하나씩 봤다. 명세 12줄은 기능 계획 본문의 "함께 넣어"를 "함께 넣는다"로 옮긴 것이라 원문대로 고쳤다. 명세 404줄은 `tech.md`에 새로 쓸 문구라 `문구 후보:` 표지 뒤로 옮겼다. 일지 다섯(121·122·132·138·140줄)은 고치기 전 명세의 글을 옮긴 것이라 두고, 두 보고의 머리에 그렇다고 적었다. 이 고침은 다음 커밋에 든다.
+
+### PR 직전 리뷰 (CodeRabbit CLI)
+
+`coderabbit-review` 서브에이전트가 돌렸다. 브리프에는 기준 브랜치 `origin/dev`, 커밋 하나와 그 뒤의 커밋하지 않은 두 파일, 위 "고친 것, 남긴 것, 다시 돌린 것"의 밀 주장 열, 프로브 `run.py`의 폴더 지우기와 프로세스 끄기를 실었다. 아래는 그 보고의 요지와 이 세션의 판정이다.
+
+- CLI는 0.7.5이고 `coderabbit auth status`는 `Plan: Free`, `Seat: not assigned`였다. 친 명령은 `coderabbit review --agent --include-untracked --base origin/dev`이고 종료 0, 완료 이벤트는 `review_completed`, 지적은 하나였다. 본 파일은 변경 24개 전부다.
+- **CLI 지적 (Minor, 서브에이전트는 보류).** 명세 "단독 compose"의 대가 문장. `serve`가 `.env`를 통째로 받아 위젯 쪽 비밀번호도 받으니, 그 값이 플러그인이나 MCP 하위 프로세스에 가는지 보고 ADR 0066과 같은 대가로 뭉뚱그리지 말라는 것이다. **유효, 고친다.** ADR 0066 Consequences "신뢰와 노출"(62줄을 읽었다)이 Agent OS 쪽 비밀번호에 든 노출의 길은 http 모양의 MCP 매니페스트가 환경 변수를 헤더에 싣는 길(ADR 0049)이고, 그것을 막는 허락 목록은 mcp-trust가 맡는다. postgres-foundation은 Agent OS 쪽의 변수 둘을 그 기능 계획에 넘겼는데(`.scratch/mcp-trust/plan.md` 7줄을 읽었다), 이 명세는 위젯 쪽 변수를 넘기지 않았다. 대가 문장에 노출의 길과 mcp-trust를 적고, Out of Scope에 mcp-trust 줄을 더하고, 그 기능 계획에 넘긴 문단을 더했다. mcp-trust의 Blocked by는 approval-rules, pilot-release, mcp-http이고 pilot-release가 이 기능을 기다리므로(`.scratch/plan.md` 69줄) 받는 쪽이 먼저 돌지 않는다. Out of Scope 머리에 그것을 적었다. 서브에이전트가 든 stdio 자식의 환경(mcp 라이브러리가 `env`가 없을 때 무엇을 물려주는지)은 Agent OS 쪽 비밀번호와 같은 처지라 이 명세에 따로 적지 않았다.
+- **대 본 주장 1 (Major, 유효, 고친다).** 이미지 목록의 자리에 `.github/workflows/release.yml` 221~222줄, 노트를 짓는 `tools/release.py notes`의 `--grype serve=… admin=… widget=… portal=…`가 빠졌다. 기준 커밋의 파일을 읽어 그 줄을 봤다. `tools/release.py`의 `_warning_lines`(436줄)는 받은 `--grype`만 돌고 `IMAGES`와 대 보지 않는다(Grep). 그래서 빠뜨리면 그 이미지에만 Critical이 있을 때는 223~226줄의 확인이 판 내기를 멈추고, 다른 이미지에도 있을 때는 경고가 서되 그 이미지가 빠진다. 명세의 목록과 목록 맞대기 시험에 더했다. 짓기 설정의 머리 주석(1줄의 "이미지 넷", 10~12줄의 이름 나열)도 서브에이전트가 Minor로 짚어 같은 줄에 더했다.
+- **대 본 주장 3 (Minor, 유효, 고친다).** "지금 그 시험은 … 만 `IMAGES`와 맞댄다"가 `IMAGES`를 쓰는 시험이 그것뿐이라고 읽힐 수 있다. 같은 파일의 219·228·234·305줄은 `IMAGES`로 시험 자료를 짓고, 462·475줄은 compose와 배포 안내를 짓기 설정과 맞댄다(Grep). 다른 자리의 목록을 `IMAGES`와 맞대는 시험이 그 하나뿐이라고 고쳤다.
+- **대 본 주장 10 (Minor, 유효, 고친다).** 여섯으로 세려면 import-linter의 `root_packages`와 독립 계약도 한 자리로 세야 한다. 괄호에 그것을 더했다.
+- **나머지 주장.** 2·4·5·7·8·9는 맞았다고 했다. 2의 `bad substitution`과 6의 `HEAD` 405는 서브에이전트가 다시 재지 않았다(이 세션의 손 확인이 근거다).
+- **프로브 점검.** `run.py`는 인자 폴더가 절대 경로가 아니거나 비지 않았으면 멈추고 지우지 않는다. 프로세스를 끄는 자리가 없다. 저장소 파일을 쓰거나 지우는 자리가 없다. **남긴 것 둘(Minor):** 인자가 파일이면 `iterdir()`가 `NotADirectoryError`로 끝난다(멈추기는 한다). `docker image rm -f`가 지우는 이름 셋(`uv-workspace-probe/…:probe`)을 같은 이름으로 만든 이미지가 있으면 함께 지워진다. 둘 다 프로브의 다시 돌리기에만 닿고 결과를 바꾸지 않으므로 고치지 않고 PR 체크리스트에 적는다.
+
+**서두의 수.** 다시 셌고 바뀌지 않았다(표 서른세 행, "명세가 정했다" 스물넷, "사용자가 골랐다" 셋, "거부한 안:" 열둘). `tools/plan_table.py`는 바뀐 것이 없었다.
+
+**PR 봇에 밀 주장(이 반영으로 새로 쓴 문장).** "`--grype` 인자에서 빠지면 … 다른 이미지에도 있으면 경고는 서되 그 이미지는 경고에서 빠진다(221~226줄과 `tools/release.py`의 노트 경고가 받은 점검 결과만 도는 것, 코드를 읽었다)." "지금 그 파일에서 다른 자리의 이미지 목록을 `IMAGES`와 맞대는 시험은 짓기 설정의 대상과 저장소 이름을 보는 하나뿐이다(399·400줄)." 명세 "단독 compose"의 대가 문장과 mcp-trust 기능 계획의 "위젯 쪽 연결 문자열 `WIDGET_ADMIN_DATABASE_URL`은 compose가 위젯 쪽 두 서비스에만 지어 넘기고 `serve`에는 넘기지 않는다."
