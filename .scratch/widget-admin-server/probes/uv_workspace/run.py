@@ -123,6 +123,7 @@ class Tree:
         *,
         cwd: Path | None = None,
         env: dict[str, str] | None = None,
+        secret_stdout: bool = False,
     ) -> subprocess.CompletedProcess[str]:
         merged = {**os.environ, "PYTHONUTF8": "1", **(env or {})}
         # 저장소의 가상 환경을 가리키는 값이 사본 나무의 uv 와 파이썬에 새지 않게 한다
@@ -141,8 +142,10 @@ class Tree:
         self.count += 1
         self.logs.mkdir(exist_ok=True)
         log = self.logs / f"{self.count:02d}-{label}.log"
+        # 접속 주소(비밀번호가 든다)를 내는 명령은 표준 출력을 로그에 싣지 않는다
+        shown = "(비밀이 들어 싣지 않았다)" if secret_stdout else found.stdout
         log.write_text(
-            f"$ {' '.join(args)}\n종료 {found.returncode}\n--- stdout\n{found.stdout}"
+            f"$ {' '.join(args)}\n종료 {found.returncode}\n--- stdout\n{shown}"
             f"\n--- stderr\n{found.stderr}",
             encoding="utf-8",
         )
@@ -250,6 +253,11 @@ def _pyright_diagnostics(output: str) -> tuple[int, list[str], list[str]] | None
             found.append(f"{item.get('file')}:{item.get('rule')}")
             messages.append(str(item.get("message")))
     return (errors if isinstance(errors, int) else -1), found, messages
+
+
+def _is_planted_error(item: str) -> bool:
+    """`_pyright_diagnostics` 의 `파일:규칙` 가운데 심은 타입 오류가 낸 진단인지."""
+    return "planted_error.py" in item and item.endswith(":reportAssignmentType")
 
 
 def _categories(output: str, module: str) -> list[str]:
@@ -421,7 +429,7 @@ def tools_section(tree: Tree, rounds: Rounds) -> None:
     with rounds.round("pyright 양성 대조: 멤버에 심은 타입 오류") as current:
         found = tree.run("pyright-planted", ["uv", "run", "pyright", "--outputjson"])
         parsed = _pyright_diagnostics(found.stdout)
-        hits = [item for item in parsed[1] if "planted_error.py" in item] if parsed else []
+        hits = [item for item in parsed[1] if _is_planted_error(item)] if parsed else []
         current.mark(measured=bool(hits), result=f"잡은 진단 {hits}")
 
     with rounds.round("대조: pyright 의 include 에 멤버를 넣지 않으면") as current:
@@ -429,7 +437,7 @@ def tools_section(tree: Tree, rounds: Rounds) -> None:
         found = tree.run("pyright-control", ["uv", "run", "--frozen", "pyright", "--outputjson"])
         tree.configure()
         parsed = _pyright_diagnostics(found.stdout)
-        hits = [item for item in parsed[1] if "planted_error.py" in item] if parsed else []
+        hits = [item for item in parsed[1] if _is_planted_error(item)] if parsed else []
         caught = "잡았다" if hits else "못 잡았다"
         current.mark(
             measured=parsed is not None,
@@ -505,9 +513,21 @@ def pytest_section(tree: Tree, rounds: Rounds) -> None:
             [*pytest, "-n", "2", "tests/widget_admin", "tests/test_migrate_command.py"],
         )
         tail = found.stdout.strip().splitlines()[-1:] if found.stdout.strip() else []
+        # pytest 는 경로별이 아니라 합계 한 줄만 낸다. 두 경로가 모두 시험을 냈다는 표지는
+        # 경로마다 모은 시험 수의 합이 통과 수와 같다는 것이다(한 경로가 0개면 합이 모자란다).
+        counts = {
+            path: sum(
+                "::" in line
+                for line in tree.run(
+                    "pytest-collect", [*pytest, "--collect-only", path]
+                ).stdout.splitlines()
+            )
+            for path in ("tests/widget_admin", "tests/test_migrate_command.py")
+        }
+        total = f"{sum(counts.values())} passed"
         current.mark(
-            measured=bool(tail) and "passed" in tail[0],
-            result=f"종료 {found.returncode}, {tail}",
+            measured=bool(tail) and all(counts.values()) and total in tail[0],
+            result=f"종료 {found.returncode}, {tail}, 경로별 모은 시험 {counts}",
         )
 
     with rounds.round("pytest: 판 번호 시험") as current:
@@ -525,6 +545,7 @@ def command_section(tree: Tree, rounds: Rounds) -> None:
     created = tree.run(
         "database-create",
         ["uv", "run", "python", "tools/database_for_tests.py", "create", "widget_admin"],
+        secret_stdout=True,
     )
     address = created.stdout.strip()
     name = urlsplit(address).path.lstrip("/") if created.returncode == 0 else ""
@@ -601,10 +622,11 @@ def images_section(tree: Tree, rounds: Rounds) -> None:
 
     with rounds.round("대조 이미지: serve 파이썬 단계, 루트 파일만(지금 꼴)") as current:
         ok, output = _build(tree, "control", "serve-sync-without-member.Dockerfile", control)
-        mentioned = [line.strip() for line in output.splitlines() if "widget-admin" in line]
+        # 기대한 실패의 까닭은 uv 가 워크스페이스 멤버가 아니라고 말하는 줄이다
+        cause = [line.strip() for line in output.splitlines() if "not a workspace member" in line]
         current.mark(
-            measured=ok or bool(mentioned),
-            result="지었다" if ok else f"실패, 멤버를 든 줄 {mentioned[-2:]}",
+            measured=ok or bool(cause),
+            result="지었다" if ok else f"실패, 멤버가 아니라는 줄 {cause[-2:]}",
         )
 
     with rounds.round("이미지: serve 파이썬 단계, 멤버 pyproject 를 들이면") as current:

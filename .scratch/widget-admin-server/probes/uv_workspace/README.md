@@ -32,7 +32,7 @@
 | 넣은 판 | `pyright --outputjson --pythonplatform Linux` | 오류 0 | 같다 |
 | 대조 | pyright의 `extraPaths`를 적지 않음 | 오류 5, 모두 `Stub file not found for "widget_admin…"` | 그 진단이 하나 이상 |
 | 대조 | pyright의 `extraPaths`에 멤버의 `src`만 적음 | 오류 269, 모두 `Stub file not found for "agent_os…"` | 같다 |
-| 양성 대조 | 멤버에 `value: int = "글"`을 심음 | 그 파일의 `reportAssignmentType`을 잡았다 | 진단의 파일 이름이 심은 파일 |
+| 양성 대조 | 멤버에 `value: int = "글"`을 심음 | 그 파일의 `reportAssignmentType`을 잡았다 | 진단이 심은 파일의 `reportAssignmentType`(파일 이름만이 아니라 규칙까지 본다) |
 | 대조 | 심은 채로 pyright의 `include`에 멤버를 넣지 않음 | 심은 오류를 잡지 못했다, 오류 0 | JSON의 `summary`를 풀었다(pyright가 돌았다) |
 | 넣은 판 | `lint-imports` | 0, `Contracts: 9 kept, 0 broken.` | 집계 줄과 독립 계약의 `KEPT` |
 | 양성 대조 | 멤버에 `import agent_os`를 심음 | 1 | 독립 계약의 `BROKEN`과 `widget_admin.planted_import -> agent_os` |
@@ -53,7 +53,7 @@
 | 회차 | 결과 | 표지 |
 |---|---|---|
 | 위젯 시험(`tests/widget_admin`) 홀로 | 시험이 받은 데이터베이스 이름이 `widget_admin_test_`로 시작 | 시험이 찍은 `PROBE-DATABASE` 줄과 `1 passed` |
-| 위젯 시험과 `tests/test_migrate_command.py`를 한 실행에 `-n 2` | 0, `13 passed in 166.31s (0:02:46)` | 마지막 줄의 `passed` |
+| 위젯 시험과 `tests/test_migrate_command.py`를 한 실행에 `-n 2` | 0, `13 passed in 166.31s (0:02:46)` | 마지막 줄의 통과 수가 경로마다 `--collect-only`로 모은 시험 수의 합과 같다(위젯 시험 1과 `tests/test_migrate_command.py` 12의 합 13) |
 | `tests/test_repo_version.py` | 통과, 잠금의 자기 항목 `agent-os 0.0.0`과 `widget-admin 0.0.0` | `3 passed` |
 
 장난감 시험의 `conftest.py`는 `tests/database.py`의 픽스처 함수에 접두 `widget_admin`과 장난감의 마이그레이션 함수를 넘긴다. 한 실행 회차의 시간은 다른 세션의 실행과 겹친 때의 값이다(둘째 실행에서는 57.24초였다). 판 번호 시험은 지금 판 그대로이고, 멤버의 판을 보는 사례는 아직 없다(명세 "판 번호와 출시"가 더한다).
@@ -72,7 +72,7 @@
 | 회차 | 결과 | 표지 |
 |---|---|---|
 | 위젯 관리 서버 이미지(`images/widget-admin.Dockerfile`, 멤버 하나만 깔고 판 `0.1.0-rc.1`을 넣는다) | 안에 `agent-os` 묶음과 `agent_os` 패키지와 `langchain_core`가 없다. 깔린 묶음 20개, `widget-admin` 판 `0.1.0-rc.1`, 마이그레이션 `0001`, `widget-admin` 명령 있음 | 이미지 안의 파이썬이 찍은 확인 줄 |
-| 대조: serve 파이썬 단계를 지금 꼴(루트 `pyproject.toml`만 들인다)로 | 지어지지 않았다. `Failed to parse entry in group \`dev\`: \`widget-admin\``와 `` `widget-admin` references a workspace in `tool.uv.sources` … but is not a workspace member `` | 빌드 출력에 `widget-admin`이 든 줄 |
+| 대조: serve 파이썬 단계를 지금 꼴(루트 `pyproject.toml`만 들인다)로 | 지어지지 않았다. `Failed to parse entry in group \`dev\`: \`widget-admin\``와 `` `widget-admin` references a workspace in `tool.uv.sources` … but is not a workspace member `` | 빌드 출력에 `not a workspace member`가 든 줄 |
 | serve 파이썬 단계에 멤버의 `pyproject.toml`을 들이면 | 지어졌다. 안에 `agent-os` 판 `0.1.0-rc.1`, 깔린 묶음 67개, `langchain_core` 있음, `widget-admin` 묶음과 패키지와 명령 없음 | 이미지 안의 파이썬이 찍은 확인 줄 |
 | 크기(`docker image inspect`의 `Size`, 10의 6제곱으로 나눴다) | 바탕 `python` 119MB, 위젯 관리 서버 228MB, serve 파이썬 단계 339MB | 셋 다 수가 나왔다 |
 
@@ -86,6 +86,7 @@ serve 쪽 두 회차는 serve 이미지의 파이썬 단계까지만 지은 장�
 - 첫 실행(`C:/project/uvws1`)의 넣은 판은 pyright의 `extraPaths`를 적지 않아 `widget_admin`의 스텁 없음 진단 5건이 났다. 둘째 실행(`C:/project/uvws2`)은 멤버의 `src`만 적어 `agent_os`의 같은 진단 269건이 났다. 셋째 실행은 둘을 함께 적었고, 앞의 두 설정은 대조 회차로 남겼다.
 - 둘째 실행의 ruff 묶음 판정 회차는 측정 아님이었다. 캐시가 맞아 ruff가 그 파일을 다시 판정하지 않았고 판정 줄을 찍지 않았다. 셋째 실행부터 그 회차에 `--no-cache`를 붙였다.
 - 실행 사이에 장난감 파일의 import 순서와 줄 길이를 고쳤고, 장난감 앱에서 타입 우회 주석을 지웠다. 이 고침은 표지를 바꾼 것이 아니라, 넣은 판의 검사가 도구 설정이 아닌 장난감의 글 때문에 빨개지지 않게 한 것이다.
+- 셋째 실행을 마친 뒤 PR 봇 회차(2026-11-24)가 짚어 표지 셋을 좁히고 로그 한 줄을 뺐다. 양성 대조는 파일 이름에 더해 규칙 `reportAssignmentType`을 보고, 대조 이미지는 `widget-admin`이 든 줄이 아니라 `not a workspace member`가 든 줄을 보며, `-n 2` 회차는 경로마다 모은 시험 수의 합을 통과 수와 맞대고(그 두 번의 `--collect-only`가 늘었다), `database-create`의 표준 출력은 비밀번호가 들어 있어 로그에 싣지 않는다. 좁힌 뒤에는 다시 돌리지 않았다. 대신 잰 실행의 로그가 좁힌 조건을 만족하는지 손으로 봤다. 사본 나무 셋째의 `.probe-logs/18-pyright-planted.log`에 `reportAssignmentType`이 심은 파일의 진단으로 있었고, `37-build-control.log`에 `not a workspace member`가 있었으며, 위젯 시험 하나(`25-pytest-widget.log`의 `1 passed`)와 `uv run pytest --collect-only -q tests/test_migrate_command.py`가 낸 12개의 합이 `26-pytest-both.log`의 `13 passed`와 같았다. 표지를 좁힌 `run.py`가 다시 도는 것은 구현 티켓이 이 프로브를 다시 돌릴 때 처음 본다. 타입 우회 검사 회차의 표지(종료 0과 빈 출력)는 좁히지 않았다. 그 검사기는 정상이면 아무것도 찍지 않고, 같은 사본 나무에서 심은 `Any`를 잡는 양성 대조 회차(`24-escapes-planted.log`)가 따로 있다.
 
 ## 재지 못한 것
 
