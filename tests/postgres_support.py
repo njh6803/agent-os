@@ -21,7 +21,7 @@ from tools.database_for_tests import ScopedDatabase
 # 두 명령의 시험이 글자까지 같은 글을 단언한다.
 NO_URL = (
     "AGENT_OS_DATABASE_URL 이 비어 있습니다. serve 와 migrate 는 PostgreSQL 데이터베이스가 있어야"
-    " 돕니다(ADR 0066).\n"
+    " 돕니다.\n"
     "  단독 배포에서는 compose 가 .env 의 AGENT_OS_DATABASE_PASSWORD 로 이 값을 짓습니다."
     " 개발 PC 의 값은 README 에 있습니다.\n"
 )
