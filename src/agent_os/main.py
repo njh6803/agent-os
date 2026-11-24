@@ -133,14 +133,16 @@ _NOT_ONE_ENV_DIAGNOSTIC = (
     "  오타가 조용히 꺼짐으로 읽히지 않게 시작 자리에서 끝낸다."
 )
 # 데이터베이스 주소의 진단은 높임말이다. 글은 명세 postgres-foundation의 "멈출 때의 글"이 원천이고,
-# `serve`와 `migrate`가 같은 글을 쓴다. 비밀번호가 든 값이라 값은 싣지 않는다(원칙 V).
-_NO_DATABASE_URL_DIAGNOSTIC = (
+# `serve`와 `migrate`가 같은 글을 쓴다. 비밀번호가 든 값이라 값은 싣지 않는다(원칙 V). 이름이
+# 공개인 까닭은 배포 안내의 시험이 이 글을 안내의 표와 견주려고 읽기 때문이다. 글에 ADR 번호를
+# 싣지 않는다. 운영자는 ADR 을 모르고, 안내는 저장소 안의 말을 쓰지 않아 옮겨 적을 수 없다.
+NO_DATABASE_URL_DIAGNOSTIC = (
     f"{DATABASE_URL_ENV} 이 비어 있습니다. serve 와 migrate 는 PostgreSQL 데이터베이스가 있어야"
-    " 돕니다(ADR 0066).\n"
+    " 돕니다.\n"
     "  단독 배포에서는 compose 가 .env 의 AGENT_OS_DATABASE_PASSWORD 로 이 값을 짓습니다."
     " 개발 PC 의 값은 README 에 있습니다."
 )
-_UNREADABLE_DATABASE_URL_DIAGNOSTIC = (
+UNREADABLE_DATABASE_URL_DIAGNOSTIC = (
     f"{DATABASE_URL_ENV} 을 읽지 못했습니다."
     " postgresql://계정:비밀번호@호스트:포트/데이터베이스 꼴이어야 합니다.\n"
     "  값에는 비밀번호가 들어 있어 여기 찍지 않습니다. 비밀번호에 @ 가 들면 주소를 읽지 못하므로,"
@@ -274,10 +276,10 @@ def _read_database_url() -> DatabaseUrl | str:
     """
     text = os.environ.get(DATABASE_URL_ENV, "").strip()
     if not text:
-        return _NO_DATABASE_URL_DIAGNOSTIC
+        return NO_DATABASE_URL_DIAGNOSTIC
     url = parse_database_url(text)
     if url is None:
-        return _UNREADABLE_DATABASE_URL_DIAGNOSTIC
+        return UNREADABLE_DATABASE_URL_DIAGNOSTIC
     return url
 
 
