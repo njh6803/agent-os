@@ -111,6 +111,25 @@
 - 안내 시험, 어댑터 시험, ruff는 위 대로. 나머지(pyright, 경계, web 등)는 커밋의 pre-commit이 돈다.
 - PR 직전 리뷰에 밀 주장(이 세션이 반영하며 새로 쓴 사실 문장): 안내 13절의 "표의 글에는 계정도 비밀번호도 데이터베이스 드라이버가 낸 글도 들지 않습니다. 다만 맨 아래 `표를 올리다 실패했습니다`의 줄 뒤에 붙는 자세한 기록은 이 표 밖이고, 그 기록에는 마이그레이션이 다루던 값이 실릴 수 있습니다", "`serve`는 `.env`를 통째로 받으므로 그 값들이 그대로 보입니다", "다시 시도하는 알림 한 줄도 그 사이에 찍힐 수 있습니다", "대개 사이트 파일이 없거나 깨졌거나 읽히지 않는 것입니다", `misaligned_text`가 `CURRENT`에 `ValueError`를 던진다는 독스트링.
 
+## 인계 1(커밋 뒤에 넘긴다)
+
+제목이 `feature/06-deploy-guide-troubleshooting-section`이었던 세션이 넘긴다(넘기며 `(인계함)`을 붙인다). 이 세션은 구현, 검증, 셀프 리뷰(서브에이전트 둘), 회고(위 `## 회고`)를 마치고 커밋 `5a027b51f`(`git log`로 읽었다)를 이 브랜치에 만들었다. 푸시하지 않았고 PR도 없다. 이 "인계" 절은 커밋하지 않았다. 새 세션이 다음 커밋(봇 회차의 반영 커밋이나 일지만 실은 커밋)에 싣는다.
+
+- 커밋의 pre-commit은 첫 시도에서 `check-mutations`가 막았고(위 "커밋의 pre-commit 첫 시도가 막은 것"), 변이 표를 고친 두 번째 시도에서 모두 통과했다(커밋 로그를 읽었다).
+- 남은 일: 푸시, PR 직전 리뷰(`coderabbit-review`, CLI가 못 돌면 `bug-perf-review`), PR 열기(`git-pr` 스킬, 본문 끝에 `🤖 Generated with [Claude Code](https://claude.com/claude-code)`), `mcp__ccd_pr__get_status`와 `bind_pr`, 첫 `@coderabbitai review` 코멘트, 봇 회차, 병합. 순서와 방법은 워크트리 사본의 `next-session` `merge.md`("병합 전" 2, "워크트리에서 병합할 때").
+- PR 직전 리뷰에 밀 주장은 위 "셀프 리뷰"의 "다시 돌린 명령" 끝에 나열했다.
+- 병합 직전에 `git fetch origin` 뒤 기준 브랜치를 합치고, 이 기능의 다른 티켓 `Status:`를 다시 본다. 05의 PR(#634)이 이미 열려 있다. 05가 먼저 병합돼 `done`이면 이 PR이 마지막이라 티켓 06의 "기능을 닫는 일"대로 `**끝:**` 줄, 기능 단락(`docs/release-notes/features/connection-check.md`, 이 티켓의 제품 변경인 `serve`·`migrate`의 연결 문자열 없음 글에서 `(ADR 0066)`이 빠진 것을 담는다), `uv run python tools/plan_table.py`의 결과를 싣는다. 그렇지 않으면 싣지 않고, 병합 뒤 다시 `git fetch origin`으로 05가 그 사이 병합됐는지 본다.
+- 이 PR은 `.py`(어댑터와 `main.py`)를 건드렸으므로 `-m llm`과 로컬 모델 시험을 이 세션이 이미 돌렸다(위 "로컬 모델 시험 승인"과 "검증"). 병합 전에 합친 기준 브랜치가 그 범위를 바꾸지 않았다면 다시 돌리지 않는다.
+
+## 인계 받은 세션의 PR 직전 리뷰
+
+인계로 이 일을 넘겨받은 새 세션이 `coderabbit-review` 서브에이전트를 `--base origin/dev`로 돌렸다(보고를 읽었다). CodeRabbit CLI 0.7.5가 끝까지 돌았고(`Seat: not assigned`, `Plan: Free`에서도 리뷰가 끝났다) 지적은 0건이었다. 서브에이전트가 직접 읽어 Critical·Major·Minor 없음, Nit 하나를 냈다.
+
+- Nit: `tests/tools/test_deploy_guide.py`가 `agent_os.main`을 import해 시험을 모으는 단계에서 uvicorn과 LangGraph가 따라 올라온다. 시험이 느려지는 장면은 만들지 못했다고 보고했다. 진단 상수 둘을 `http`나 `adapters`로 옮기는 길은 제품 글의 자리를 또 옮기는 일이라 이 PR에서 하지 않는다. 고치지 않는다.
+- 서브에이전트가 옛 이름(`_NO_DATABASE_URL_DIAGNOSTIC` 따위)의 잔존을 grep하지 못했다(훅이 전체 grep을 막았다). 이 세션이 Grep 도구로 `src`와 `tests`를 따로 훑었고 두 옛 이름 모두 0건이었다(손으로 쳐서 출력을 읽었다).
+
+open-session을 부른다 2026-11-24T14:47:39Z
+
 ## 회고
 
 이 세션이 단계를 닫으며 돌렸다. 후보 일곱, 판정은 승인 0, 기각 일곱, 넘김 0이다. 만료할 항목은 없었다(`uv run python tools/queue_open_rows.py`와 `--ref origin/dev`의 두 출력 모두 "만료할 항목: (없음)"). 대기열에 항목을 더하거나 회차를 더하지 않았고 새 훅·검사·지침 문장도 더하지 않았다.
