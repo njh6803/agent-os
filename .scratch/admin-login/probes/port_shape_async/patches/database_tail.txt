@@ -1,0 +1,28 @@
+
+    # ---- port_shape_async 프로브가 임시 사본에만 붙이는 메서드. 이 클래스가 파일의 마지막이라
+    # 여기 붙인 메서드는 `PostgresDatabase` 의 것이다.
+
+    # (가) 이 한 객체가 계정 포트도 만족한다. 엔진은 비공개 그대로다.
+    async def find(self, name: str) -> _AccountRow | None:
+        return await _find_row(self._engine, name)
+
+    async def list_all(self) -> _Sequence[_AccountRow]:
+        return await _list_rows(self._engine)
+
+    async def record_failure(self, name: str, *, at: _datetime) -> None:
+        await _bump_failure(self._engine, name, at=at)
+
+    async def add(self, account: _AccountIncoming) -> _AccountRow:
+        row = await _insert_row(self._engine, account)
+        if row is None:
+            raise _NameTaken(account.name)
+        return row
+
+    # (나1) 엔진을 공개 속성으로 내놓고 조립이 별도 어댑터에 넘긴다.
+    @property
+    def engine(self) -> AsyncEngine:
+        return self._engine
+
+    # (나3) 같은 엔진을 쥔 별도 어댑터를 이 객체가 지어 준다. 엔진은 비공개 그대로다.
+    def accounts(self) -> _PostgresAccounts:
+        return _PostgresAccounts(self._engine)

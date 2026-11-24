@@ -1,0 +1,57 @@
+
+
+# ---- port_shape_async 프로브의 트랜잭션 갈래 대조군. 어긋난 어댑터를 조립 자리에서 트랜잭션 포트
+# 자리에 넘긴다. `main_work_tail.txt` 뒤에 붙는다. 함수마다 어긋남 하나이고 run.py 가 오류의 줄을
+# 함수의 줄 범위로 가른다. 공개 이름인 까닭은 `main_drift_tail.txt` 와 같다.
+
+from agent_os.adapters.postgres.account_work_drift import (
+    IteratorAnnotatedTransactions as _IteratorAnnotatedTransactions,
+)
+from agent_os.adapters.postgres.account_work_drift import (
+    LockOnlyTransactions as _LockOnlyTransactions,
+)
+from agent_os.adapters.postgres.account_work_drift import (
+    NoDecoratorTransactions as _NoDecoratorTransactions,
+)
+from agent_os.adapters.postgres.account_work_drift import (
+    SelfEnterTransactions as _SelfEnterTransactions,
+)
+from agent_os.adapters.postgres.account_work_drift import (
+    SyncLockTransactions as _SyncLockTransactions,
+)
+from agent_os.adapters.postgres.account_work_drift import (
+    TextFailuresTransactions as _TextFailuresTransactions,
+)
+from agent_os.http.account_work_exit import read_on_none_exit as _read_on_none_exit
+
+
+async def drift_work_no_decorator(database: PostgresDatabase) -> None:
+    await _read_failures(_NoDecoratorTransactions(database.engine), "x")
+
+
+async def drift_work_sync_lock(database: PostgresDatabase) -> None:
+    await _read_failures(_SyncLockTransactions(database.engine), "x")
+
+
+async def drift_work_lock_only(database: PostgresDatabase) -> None:
+    await _read_failures(_LockOnlyTransactions(database.engine), "x")
+
+
+async def drift_work_text_failures(database: PostgresDatabase) -> None:
+    await _read_failures(_TextFailuresTransactions(database.engine), "x")
+
+
+async def drift_work_self_enter(database: PostgresDatabase) -> None:
+    await _read_failures(_SelfEnterTransactions(database.engine), "x")
+
+
+async def observe_work_iterator_annotated(database: PostgresDatabase) -> None:
+    await _read_failures(_IteratorAnnotatedTransactions(database.engine), "x")
+
+
+async def observe_none_exit_context(database: PostgresDatabase) -> None:
+    await _read_on_none_exit(_ContextTransactions(database.engine), "x")
+
+
+async def observe_none_exit_class(database: PostgresDatabase) -> None:
+    await _read_on_none_exit(_ClassTransactions(database.engine), "x")

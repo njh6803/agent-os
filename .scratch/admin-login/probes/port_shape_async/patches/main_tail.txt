@@ -1,0 +1,98 @@
+
+
+# ---- port_shape_async 프로브가 임시 사본에만 붙이는 조립. `serve` 와 같은 자리(이 모듈)에서 어댑터를
+# 지어 포트 자리에 넘긴다. 이 모듈은 SQLAlchemy 를 가져오지 않는다(import-linter 의 "only the
+# adapters import DB libraries").
+
+from datetime import UTC as _UTC
+from datetime import datetime as _datetime
+
+from agent_os.adapters.postgres.accounts import InjectedTakenAccounts as _InjectedTakenAccounts
+from agent_os.adapters.postgres.accounts import PostgresAccounts as _PostgresAccounts
+from agent_os.adapters.postgres.accounts import RecognizedTakenAccounts as _RecognizedTakenAccounts
+from agent_os.adapters.postgres.accounts import ResultTakenAccounts as _ResultTakenAccounts
+from agent_os.adapters.postgres.accounts import UntranslatedAccounts as _UntranslatedAccounts
+from agent_os.http.accounts import AccountStore as _AccountStore
+from agent_os.http.accounts import NameTaken as _HttpNameTaken
+from agent_os.http.accounts import Walk as _Walk
+from agent_os.http.accounts import add_twice_core as _add_twice_core
+from agent_os.http.accounts import add_twice_injected as _add_twice_injected
+from agent_os.http.accounts import add_twice_recognized as _add_twice_recognized
+from agent_os.http.accounts import add_twice_result as _add_twice_result
+from agent_os.http.accounts import walk as _walk
+from agent_os.http.database import Database as _Database
+
+type _ProbeValue = str | int | bool | list[str] | None
+_PROBE_AT = _datetime(2026, 11, 24, 9, 0, tzinfo=_UTC)
+
+
+def _probe_both_ports(database: _Database, accounts: _AccountStore) -> bool:
+    """(가)의 조립 자리. 한 객체를 데이터베이스 포트와 계정 포트 자리에 함께 넘긴다.
+
+    `database is accounts` 로 견주면 strict 가 두 Protocol 이 겹치지 않는다며
+    `reportUnnecessaryComparison` 을 낸다(이 프로브의 첫 실행). 그래서 `id` 로 견준다.
+    """
+    return id(database) == id(accounts)
+
+
+def _probe_walk(result: _Walk) -> dict[str, _ProbeValue]:
+    locked = result.locked_until
+    return {
+        "added": result.added,
+        "found_tier": result.found_tier,
+        "failures_after": result.failures_after,
+        "locked_until": None if locked is None else locked.isoformat(),
+        "listed": list(result.listed),
+        "missing_is_none": result.missing_is_none,
+    }
+
+
+async def probe_scenario(url_text: str, scenario: str) -> dict[str, _ProbeValue]:
+    """사례 하나. 데이터베이스 어댑터를 짓고, 사례대로 포트 자리에 넘겨 돌린 뒤 닫는다.
+
+    `drive.py` 가 부르므로 공개 이름이다. 밑줄로 시작하면 이 모듈 안에서 쓰지 않는다며 strict 가
+    `reportUnusedFunction` 을 낸다(이 프로브의 첫 실행).
+    """
+    url = parse_database_url(url_text)
+    if url is None:
+        raise RuntimeError("프로브의 주소를 어댑터가 읽지 못했다")
+    database = PostgresDatabase(url, notice=_notice)
+    try:
+        return await _probe_dispatch(database, scenario)
+    finally:
+        await database.close()
+
+
+async def _probe_dispatch(database: PostgresDatabase, scenario: str) -> dict[str, _ProbeValue]:
+    at = _PROBE_AT
+    match scenario:
+        case "ga_walk":
+            same = _probe_both_ports(database, database)
+            return {"same_object": same, **_probe_walk(await _walk(database, scenario, at=at))}
+        case "na_property_walk":
+            store = _PostgresAccounts(database.engine)
+            return _probe_walk(await _walk(store, scenario, at=at))
+        case "na_factory_walk":
+            return _probe_walk(await _walk(database.accounts(), scenario, at=at))
+        case "taken_core":
+            return {"outcome": await _add_twice_core(database.accounts(), scenario)}
+        case "taken_injected":
+            injected = _InjectedTakenAccounts(database.engine, taken=_HttpNameTaken)
+            return {"outcome": await _add_twice_injected(injected, scenario)}
+        case "taken_recognized":
+            recognized = _RecognizedTakenAccounts(database.engine)
+            return {"outcome": await _add_twice_recognized(recognized, scenario)}
+        case "taken_result":
+            result = _ResultTakenAccounts(database.engine)
+            return {"outcome": await _add_twice_result(result, scenario)}
+        case "untranslated_core":
+            loose = _UntranslatedAccounts(database.engine)
+            return {"outcome": await _add_twice_core(loose, scenario)}
+        case "untranslated_injected":
+            loose = _UntranslatedAccounts(database.engine)
+            return {"outcome": await _add_twice_injected(loose, scenario)}
+        case "untranslated_recognized":
+            loose = _UntranslatedAccounts(database.engine)
+            return {"outcome": await _add_twice_recognized(loose, scenario)}
+        case _:
+            raise ValueError("모르는 사례다")

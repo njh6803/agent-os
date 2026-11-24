@@ -1,0 +1,100 @@
+# admin_port_chain 프로브의 묶음. 배포 파일(deploy/standalone/compose.yaml)이 아니다. probe.mjs 가 띄우고 내린다.
+#
+#   브라우저 → proxy(후보 설정, 관리 화면용 TLS 리스너 9443) → admin(실제 관리 화면 이미지의 Next 중계) → serve(대역)
+#            → proxy_control(대조 설정, X-Forwarded-For 를 덧붙인다) → admin → serve
+#            → admin 의 3000 을 직접(배포가 지금 127.0.0.1:3000 에 발행하는 길) → serve
+#
+# 모든 값은 probe.mjs 가 환경 변수로 준다. 없으면 compose 가 멈춘다(`:?`). 이미지는 내려받지 않는다(pull_policy: never).
+# 프록시의 모양(uid 101, 읽기 전용, cap_drop, /tmp tmpfs, 설정 폴더를 얹는 길)은 배포 파일을 따랐다. 이미지는 배포가 고정한
+# nginx 1.30.6(digest)이 아니라 이 PC 에 있던 nginx:alpine(1.31.6)이다. 다른 점은 README "잰 판".
+
+name: admin-port-chain
+
+x-health: &health
+  interval: 2s
+  timeout: 5s
+  retries: 60
+  start_period: 120s
+  start_interval: 1s
+
+x-proxy: &proxy
+  image: ${PROBE_NGINX_IMAGE:-nginx:alpine}
+  pull_policy: never
+  user: "101:101"
+  init: true
+  read_only: true
+  cap_drop: [ALL]
+  security_opt: ["no-new-privileges:true"]
+  tmpfs:
+    - /tmp
+  command: ["nginx", "-c", "/etc/agent-os/nginx.conf", "-g", "daemon off;"]
+  depends_on:
+    admin:
+      condition: service_healthy
+
+services:
+  # serve 자리의 대역. compose 네트워크에서 이름 serve, 포트 8000(관리 화면 이미지의 상류가 http://serve:8000 으로 굳어 있다).
+  # 8001 은 측정 스크립트가 기록을 읽는 길이고 호스트의 127.0.0.1 에만 발행한다. 재는 길(8000)은 발행하지 않는다.
+  serve:
+    image: ${PROBE_PYTHON_IMAGE:-python:3.12-slim-trixie}
+    pull_policy: never
+    user: "65534:65534"
+    read_only: true
+    command: ["python", "-I", "/probe/serve_stub.py", "serve"]
+    volumes:
+      - ./serve_stub.py:/probe/serve_stub.py:ro
+    ports:
+      - "127.0.0.1:${PROBE_STUB_PORT:?}:8001"
+    healthcheck:
+      <<: *health
+      test:
+        - CMD
+        - python
+        - -c
+        - import sys, urllib.request; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8001/health', timeout=4).status == 200 else 1)
+
+  # 실제 관리 화면 이미지. 배포 파일의 admin 과 같은 환경 변수와 읽기 전용 루트. 3000 은 배포처럼 127.0.0.1 에만 발행한다
+  # (nginx 를 거치지 않는 길의 대조).
+  admin:
+    image: ${PROBE_ADMIN_IMAGE:-agent-os-e2e/agent-os-admin:0.1.0-rc.1}
+    pull_policy: never
+    environment:
+      AGENT_OS_CONTAINER_NETWORK: "1"
+    read_only: true
+    depends_on:
+      serve:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:${PROBE_DIRECT_PORT:?}:3000"
+    healthcheck:
+      <<: *health
+      test:
+        - CMD
+        - node
+        - -e
+        - fetch('http://127.0.0.1:3000/').then(r=>process.exit(r.ok?0:1),()=>process.exit(1))
+
+  # 후보 설정. 관리 화면용 리스너(9443)와 방문자용 리스너 자리(8443)를 함께 든다. 두 포트를 모든 IPv4 주소에 발행한다.
+  proxy:
+    <<: *proxy
+    ports:
+      - "0.0.0.0:${PROBE_ADMIN_PORT:?}:9443"
+      - "0.0.0.0:${PROBE_VISITOR_PORT:?}:8443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/agent-os/nginx.conf:ro
+      - ./nginx/candidate:/etc/agent-os/proxy:ro
+      - ${PROBE_TLS_DIR:?}:/etc/nginx/tls:ro
+
+  # 대조 설정. 관리 화면용 리스너 하나이고 X-Forwarded-For 를 덮지 않고 덧붙이며 X-Real-IP 를 적지 않는다.
+  proxy_control:
+    <<: *proxy
+    ports:
+      - "0.0.0.0:${PROBE_CONTROL_PORT:?}:9443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/agent-os/nginx.conf:ro
+      - ./nginx/control:/etc/agent-os/proxy:ro
+      - ${PROBE_TLS_DIR:?}:/etc/nginx/tls:ro
+
+networks:
+  default:
+    enable_ipv6: false
