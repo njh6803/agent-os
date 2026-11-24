@@ -255,7 +255,7 @@ PR 직전 리뷰 뒤 `git diff --name-only a68a51d61 origin/dev`에 관리 화�
 10. 일지와 `merge.md`를 통째로 읽어 결과가 2만 자를 넘었다. 큰 결과 훅이 알렸다.
 11. 첫 세션의 첫 선택 화면을 `hook_choice_facts`가 막았다. 훅이 그 자리에서 막았다.
 12. 커밋 직후의 인계 계기(둘째 세션). 그 커밋이 백그라운드였는지와 계기가 커밋이 끝나기 전에 왔는지를 그 일지가 적지 않아, `handoff-trigger-before-background-commit-ends`의 회차로 세지 못한다.
-13. 이 브랜치가 사는 동안 `origin/dev`가 두 번(PR #635, #633) 움직였다. `tools/sibling_overlap.py`의 기준 브랜치 줄과 `CLAUDE.md` 환경 함정의 대조로 잡았다.
+13. 이 브랜치가 사는 동안 `origin/dev`가 네 번(PR #635, #633, #636, #634) 움직였다. 셋째는 회고 뒤에 푸시 훅이 잡았고, 넷째는 그 고침을 커밋하기 직전의 `tools/sibling_overlap.py`가 잡았다(아래 "dev 합치기(PR #636)"). `tools/sibling_overlap.py`의 기준 브랜치 줄과 `CLAUDE.md` 환경 함정의 대조로 잡았다.
 14. PR 직전 서브에이전트가 README의 줄 번호를 55줄이 맞다고 했다. 이 세션이 README를 읽어 가렸고 고친 것이 없다. 사건이 아니다.
 
 승인(커밋을 띄운 뒤).
@@ -265,6 +265,43 @@ PR 직전 리뷰 뒤 `git diff --name-only a68a51d61 origin/dev`에 관리 화�
 회고를 적은 첫 커밋 시도는 pre-commit의 pytest에서 `tests/tools/test_rerun_runner.py::test_파일럿에서는_인계로_멈추지_않는다` 하나가 `assert 1 == 0`으로 빨개 막혔다(`1 failed, 8135 passed`, pytest 533.0초, web-verify 638.2초, 나머지 검사는 통과). 이 브랜치는 그 시험이 읽는 코드를 바꾸지 않았고, `uv run pytest -q tests/tools/test_rerun_runner.py -k 파일럿에서는_인계로_멈추지_않는다`로 혼자 돌리자 3.18초에 통과했다(손으로 봤다). 닫힌 0306이 이 종류(전체 스위트의 부하에서만 빨간 시험)를 다시 치는 값을 받아들이고 새 사례는 일지에만 적기로 닫았으므로, 회차를 더하지 않고 여기에만 적은 뒤 같은 커밋을 다시 쳤다.
 
 다시 친 커밋을 띄운 직후에도 같은 인계 계기(344,343 토큰)가 커밋이 끝나기 전에 왔고, 같은 판정으로 넘기지 않았다. 그래서 위 15의 13회차는 이 세션의 두 번이다. 다시 친 커밋도 pytest에서 다른 시험 하나(`tests/channel/cli/test_interrupt.py::test_서버를_닫기_시작한_뒤에_한_번_누르면_닫기를_마치고_중단으로_끝난다`, "Ctrl+C 를 누른 자식이 30초 안에 끝나지 않았다")가 빨개 막혔다(`1 failed, 8135 passed`, pytest 866.5초, web-verify 1158.4초). 앞 시도에서 빨갰던 시험은 이번에 통과했고, 이번에 빨간 시험은 `uv run pytest -q tests/channel/cli/test_interrupt.py -k 서버를_닫기_시작한_뒤에_한_번_누르면`으로 혼자 돌리자 10.40초에 통과했다(손으로 봤다). 같은 0306의 종류라 회차를 더하지 않는다. 한 바퀴가 15~20분이라, 이 둘째 시도의 pytest(지금 커밋할 것과 같은 파일 상태에서 8135개 통과)와 빨간 하나의 혼자 실행을 손으로 친 pytest로 갈음하고 셋째 시도는 `SKIP=pytest`로 쳤다(`operations.md` pre-commit 절의 건너뛰기, `CLAUDE.md` 검증 명령의 "`SKIP`으로 뺀 검사는 손으로 친다"). PR의 CI가 전체 pytest를 다시 돈다.
+
+셋째 시도(`SKIP=pytest`)를 백그라운드로 띄운 직후에도 같은 인계 계기(352,189 토큰)가 커밋이 끝나기 전에 왔고, 같은 판정으로 넘기지 않았다. 그 커밋 `73dc686ed`은 성공했다. 그래서 15의 13회차는 이 세션의 세 번이다.
+
+## dev 합치기(PR #636)
+
+`git push -u origin docs/widget-admin-server-tickets`를 푸시 훅이 "이 브랜치는 origin/dev 보다 1커밋 뒤처졌다"로 막았다. `git fetch origin` 뒤 들어온 것은 PR #636(`2f474ec4b`, connection-check 06)이다. 그 PR은 배포 안내 `deploy/standalone/README.md`에 13절 "문제 해결"과 4절의 한 줄을 더했고, Agent OS 쪽 어댑터 `src/agent_os/adapters/postgres/database.py`의 멈출 때의 글을 자리 표시를 넣어 부를 수 있는 함수(`retry_notice`, `unreached_text`, `misaligned_text` 같은 것)로 뽑았다. `tests/tools/test_deploy_guide.py`는 제품 코드가 짓는 글 열다섯(`제품의_멈출_때의_글`. 어댑터의 함수가 짓는 열셋과 `src/agent_os/main.py`의 상수 둘)을 13절의 표와 견준다(`없는_글`). 그 PR은 `src/agent_os/main.py`의 글 끝에서 `(ADR 0066)`도 뺐다. 배포 안내 시험의 금지 낱말 목록(`INTERNAL_WORDS`)에 `ADR`이 있기 때문이다.
+
+이 브랜치가 이름으로 든 파일과 대 봤다.
+
+- 명세 "연결 문자열과 시작"이 어댑터가 다시 시도 시간을 인자로 받는다고 적은 것은 그대로 맞다. `git show origin/dev:./src/agent_os/adapters/postgres/database.py`의 `__init__`이 `retry_seconds: float = DEFAULT_RETRY_SECONDS`를 받는다.
+- 4절의 바뀐 곳은 13절을 가리키는 한 줄뿐이고, 명세 "배포 안내"가 고치라고 적은 3-1, 4, 7, 8, 9, 11, 12절의 글은 바뀌지 않았다(`git diff 73dc686ed HEAD -- deploy/standalone/README.md`).
+- **13절이 빠져 있었다.** 위젯 관리 서버도 같은 계열의 글을 찍고 세 줄은 글자가 다른데(명세 "멈출 때의 글"), 04를 그대로 구현하면 13절의 표에 위젯 쪽 글이 없고 시험도 Agent OS 쪽 글만 본다. 명세를 쓸 때 13절이 없었기 때문이다. 이 대조로는 ADR 번호를 뺀 것을 놓쳤고, 아래 셀프 리뷰의 명세 축이 잡았다. **고쳤다.** 명세 "배포 안내"에 13절 항목(위젯 쪽 행 셋, 표 앞 문단의 `<자리>`와 기록과 서비스 이름)을, "노트 검사와 저장소 상태 시험"에 "배포 안내 13절의 표" 항목(위젯 쪽 글 열다섯도 같은 방법으로 견준다)을 더했다. 03에는 글을 짓는 자리를 자리 표시로 부를 수 있는 함수나 상수로 두는 기준을, 04에는 13절을 고칠 절에 더하고 시험에 위젯 쪽 글을 더하는 기준을 실었다.
+
+합치기는 대조를 마치기 전에 `git merge --no-edit origin/dev`로 했고(충돌 없음), 위의 고침은 합친 뒤의 파일에 실었다.
+
+### 이 고침의 셀프 리뷰(/code-review)
+
+고정점은 병합 커밋 `68f04308f`이고, 본 범위는 그 뒤의 미커밋 변경(파일 다섯, 커밋 0, 미추적 0)이다. 표준 축(sonnet·high)은 Critical·Major 없이 Minor 둘, Nit 셋을 냈고, 명세 축은 Major 하나, Minor 셋, Nit 하나를 냈다. 두 축이 든 밀 주장(글의 수 열다섯과 열둘, 세 함수가 PR 636에서 생긴 것, `없는_글`이 같은 글자의 위젯 쪽 글을 Agent OS 쪽 행에 맞추는 것, 13절의 `Exited (0)` 줄, 4절의 바뀐 곳, 푸시 훅의 인용)은 두 축 모두 맞다고 냈다. `없는_글`은 두 축이 함수를 불러 대 봤다.
+
+명세 축:
+- Major. 위젯 쪽 "변수가 없거나 비었다" 글이 아직 `(ADR 0064)`를 실었다. 03과 04를 명세대로 지으면 배포 안내의 금지 낱말 시험이 빨개진다. `src/agent_os/main.py` 137~138줄의 주석과 `INTERNAL_WORDS`의 `ADR`을 열어 맞다. **고쳤다.** 명세의 글에서 번호를 빼고, 번호의 까닭을 적던 줄을 번호를 싣지 않는 까닭으로 바꿨다. 03에 그 기준을 더했다.
+- Minor. 04의 "그대로 쓴다"대로 한 사전에 넣으면 갈래 이름이 겹쳐 `test_제품이_멈출_때_찍는_글의_갈래는_명세의_표와_같다`가 깨지고, 곁의 시험 둘(갈래마다 글이 하나씩, 저장소 안의 말)의 위젯판이 없으며, 기본 다시 시도 시간을 내라는 말이 03에 없다. 시험 셋을 열어 맞다. **고쳤다.** 명세 "배포 안내 13절의 표"와 04에 따로 두는 모음 함수와 곁의 시험 셋의 위젯판을, 03에 기본 다시 시도 시간과 갈래를 내는 것을 적었다.
+- Minor. 표가 뒤처졌다는 `serve`만 찍는데 13 항목이 찍는 쪽 칸에 둘을 적으라 했다. **고쳤다.** 그 표의 "누가" 칸을 따른다고 적었다.
+- Minor. 13절의 `Created` 줄, 절 머리의 범위 문장, 소제목이 낡고, `SECTION_13_REQUIRED`를 늘리라는 말이 없다. 표준 축의 Minor 둘째와 같은 지적이다. **고쳤다.** 13 항목과 "배포 안내 13절의 표"와 04에 실었다.
+- Nit. "남에게 보내면 안 되는 출력"의 `docker inspect` 줄이 `serve`만 든다. 표준 축의 Nit 셋째와 같다. 명세 368~369줄이 두 위젯 쪽 컨테이너에 비밀번호가 든 주소를 준다. **고쳤다.**
+- Nit. 일지의 "그 함수가 지은 글 열다섯"은 둘이 `main.py`의 상수다. **고쳤다.**
+
+표준 축:
+- Minor. 13 항목의 "명세를 쓴 뒤에 생겼다(…세션이 dev를 합치며 이 항목을 더했다)"는 일지의 몫이다. **고쳤다.** 13절을 세운 티켓의 경로만 남겼다.
+- Nit. `misaligned_text`가 `agent-os migrate`를 글에 박아 위젯 쪽 사본이 같은 모양을 한 벌 더 짓는다. **남긴다.** 명세 "연결 문자열과 시작"의 거부한 안이 두 패키지가 데이터베이스 코드를 함께 쓰는 길을 이미 따져 사본을 골랐다.
+- Nit. 대기열 승인 줄에 회차 서술이 길다. **남긴다.** 지금 항목의 다른 회차들과 같은 꼴이다.
+
+새로 쓴 사실 문장(PR 봇 회차가 겨냥할 것): 명세 "멈출 때의 글"의 "Agent OS 쪽 글도 PR 636에서 끝의 `(ADR 0066)`을 뺐다(`src/agent_os/main.py`의 `NO_DATABASE_URL_DIAGNOSTIC` 위 주석)", "배포 안내 13절의 표"의 "어댑터 `src/agent_os/adapters/postgres/database.py`의 함수가 짓는 열셋과 `src/agent_os/main.py`의 상수 둘", "`INTERNAL_WORDS`, `ADR`이 든다", "Agent OS 쪽이 PR 636에서 그렇게 뽑았다(`retry_notice`, `unreached_text`, `misaligned_text`, `DEFAULT_RETRY_SECONDS`)", 13 항목의 "`widget-admin`과 `widget-admin-migrate`의 환경에도 비밀번호가 든 `WIDGET_ADMIN_DATABASE_URL`이 있다".
+
+다시 돌린 것: `uv run ruff check .`(`All checks passed!`)와 `uv run ruff format --check .`(`2604 files already formatted`)는 고치기 전에 손으로 쳤고, 고친 것은 `.md`뿐이다. 나머지 손으로 치는 넷(pytest, pyright, lint-imports, web)은 이 커밋의 pre-commit으로 갈음한다.
+
+커밋 직전에 `git branch --show-current`는 이 브랜치였고, `tools/sibling_overlap.py`의 형제 줄에서 `origin/dev`가 `a1fb74f`로 다시 움직인 것이 보였다(PR #634, connection-check 05의 관리 화면 e2e). 번호 겹침과 함께 고친 파일은 없었다. `git diff --name-only HEAD...origin/dev`의 여덟 파일 가운데 이 브랜치가 이름으로 든 것은 대기열 `ci-python-job-timeout-margin` 하나이고, 바뀐 것은 이미 닫힌 그 항목의 승인 줄에 6회차를 더한 것이라 01의 "그 잡의 제한은 25분이다"는 그대로 맞다. `git merge --no-edit origin/dev`로 합쳤다(충돌 없음).
 
 ## 다음
 

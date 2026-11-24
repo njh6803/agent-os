@@ -186,11 +186,11 @@ ADR 0064 Consequences "운영"이 적은 위젯 쪽 데이터베이스의 백업
 
 | 갈래 | 누가 | 종료 코드 | 글 |
 |---|---|---|---|
-| 변수가 없거나 비었다 | `serve`, `migrate` | 1 | `WIDGET_ADMIN_DATABASE_URL 이 비어 있습니다. widget-admin 의 serve 와 migrate 는 PostgreSQL 데이터베이스가 있어야 돕니다(ADR 0064).` / `  단독 배포에서는 compose 가 .env 의 WIDGET_ADMIN_DATABASE_PASSWORD 로 이 값을 짓습니다. 개발 PC 의 값은 README 에 있습니다.` |
+| 변수가 없거나 비었다 | `serve`, `migrate` | 1 | `WIDGET_ADMIN_DATABASE_URL 이 비어 있습니다. widget-admin 의 serve 와 migrate 는 PostgreSQL 데이터베이스가 있어야 돕니다.` / `  단독 배포에서는 compose 가 .env 의 WIDGET_ADMIN_DATABASE_PASSWORD 로 이 값을 짓습니다. 개발 PC 의 값은 README 에 있습니다.` |
 | 읽지 못했다 | `serve`, `migrate` | 1 | `WIDGET_ADMIN_DATABASE_URL 을 읽지 못했습니다. postgresql://계정:비밀번호@호스트:포트/데이터베이스 꼴이어야 합니다.` / `  값에는 비밀번호가 들어 있어 여기 찍지 않습니다. 비밀번호에 @ 가 들면 주소를 읽지 못하므로, 비밀번호는 영문자와 숫자만 씁니다.` |
 | 표가 뒤처졌다 | `serve` | 3 | `데이터베이스의 표가 이 판보다 뒤처져 있습니다. widget-admin migrate 를 먼저 돌리십시오.` / `  표의 판은 <판>이고 이 판의 마지막 판은 <판>입니다.` |
 
-- 첫 줄의 ADR 번호가 0064인 까닭은 위젯 관리 서버가 PostgreSQL을 쓰기로 한 결정이 ADR 0064 결정 "데이터베이스"이기 때문이다.
+- 글에 ADR 번호를 싣지 않는다. 운영자는 ADR을 모르고, 배포 안내가 이 글을 그대로 옮기는데 안내는 저장소 안의 말을 쓰지 않는다. Agent OS 쪽 글도 PR 636에서 끝의 `(ADR 0066)`을 뺐다(`src/agent_os/main.py`의 `NO_DATABASE_URL_DIAGNOSTIC` 위 주석).
 - 단독 배포에서 두 데이터베이스의 글은 첫 줄의 `<자리>`(`widget-admin-postgres:5432/widget_admin`과 `postgres:5432/agent_os`)와 찍은 컨테이너(`docker compose logs widget-admin-migrate`)로 갈린다.
 
 ### 루프백 규칙(명세가 정했다)
@@ -391,6 +391,7 @@ ADR 0064 Consequences "운영"이 적은 위젯 쪽 데이터베이스의 백업
 - **9 인터넷이 막힌 서버로 이미지 옮기기.** 위젯 관리 서버의 이미지는 판 번호의 태그로 받으므로 지금의 `save.txt`에 저절로 든다. 위젯 쪽 PostgreSQL은 `postgres` 서비스와 같은 digest라 `config --images | sort -u`가 한 줄로 남기고, 지금의 `agent-os-postgres:local` 태그 하나로 옮긴다. 덮어쓰기 파일의 예에 `widget-admin-postgres:` 아래 같은 `image: agent-os-postgres:local`을 더한다. 인터넷이 되는 PC의 두 명령(`pull`, `config --images`) 앞에 붙이는 쓰이지 않는 값에 `WIDGET_ADMIN_DATABASE_PASSWORD=unused`를 더한다. 그 값이 없으면 `:?` 때문에 두 명령이 1로 끝난다(postgres-foundation 명세의 같은 절이 Agent OS 쪽 값으로 쟀다).
 - **11 판을 바꿀 때.** 위젯 쪽 표도 `docker compose up -d`가 `widget-admin-migrate`로 올린다고 적는다.
 - **12 데이터베이스 비밀번호 바꾸기.** 위젯 쪽 절차를 하위 절로 더한다. 네 줄은 Agent OS 쪽 절차에서 이름만 바꾼 것이다(`AGENT_OS_DATABASE_PASSWORD`는 `WIDGET_ADMIN_DATABASE_PASSWORD`로, 서비스 `postgres`는 `widget-admin-postgres`로, 계정과 데이터베이스 `agent_os`는 `widget_admin`으로, 넷째 줄은 그대로). 그 네 줄은 고친 티켓이 데이터가 있는 위젯 쪽 볼륨에서 돌려 본다. 위젯 쪽 비밀번호를 바꾸는 동안 멈추는 것은 위젯 설정을 읽는 경로이고, 그 사이에 뜬 위젯은 "위젯 설정을 받아 오지 못했습니다."를 보인다고 적는다.
+- **13 문제 해결.** 13절은 connection-check 06(`.scratch/connection-check/issues/06-deploy-guide-troubleshooting-section.md`)이 세운 절이다. 절 머리의 범위 문장("`serve`가 뜨지 않아…")과 소제목 "`serve`와 `migrate`가 멈출 때 찍는 글"이 위젯 관리 서버(`widget-admin`, `widget-admin-migrate`)도 다루게 고친다. "먼저 칠 명령"에서 `migrate`의 `Exited (0)`을 일을 마친 것으로 읽는 줄에 `widget-admin-migrate`를 더하고, `migrate`가 멈추면 `serve`가 `Created`로 남는다는 줄에 `widget-admin-migrate`가 멈추면 `widget-admin`이 그렇게 남는다는 짝을 더한다. 멈출 때 찍는 글의 표에는 위 "멈출 때의 글"에서 글자가 다른 셋(변수가 없거나 비었다, 읽지 못했다, 표가 뒤처졌다)을 위젯 쪽 행으로 더한다. 찍는 쪽 칸은 그 표의 "누가" 칸을 따르므로, 표가 뒤처졌다의 행에는 `widget-admin serve`만 적는다. 글자가 같은 열둘은 지금의 행을 함께 쓴다. 표 앞 문단에는 위젯 관리 서버도 그 글을 찍는다는 것, 그때 `<자리>`가 `widget-admin-postgres:5432/widget_admin`이고 볼 기록이 `docker compose logs widget-admin`과 `docker compose logs widget-admin-migrate`라는 것, 위젯 쪽 글이면 할 일 칸의 `postgres`를 `widget-admin-postgres`로 읽는다는 것을 적는다. "남에게 보내면 안 되는 출력"의 `docker inspect` 줄에는 `widget-admin`과 `widget-admin-migrate`의 환경에도 비밀번호가 든 `WIDGET_ADMIN_DATABASE_URL`이 있다는 것을 더한다(아래 "단독 compose").
 
 ### 노트 검사와 저장소 상태 시험(명세가 정했다)
 
@@ -398,6 +399,7 @@ ADR 0064 Consequences "운영"이 적은 위젯 쪽 데이터베이스의 백업
 - **마이그레이션 폴더의 꼴.** `tests/test_postgres_migration_shape.py`가 두 제품 폴더를 모두 훑는다. 폴더마다 파일이 하나 이상 있는지도 본다(`.claude/rules/tests.md`의 "훑은 범위가 비면 실패").
 - **digest를 맞대는 시험.** `tests/test_postgres_image_pin.py`가 보는 자리에 단독 compose의 `widget-admin-postgres`를 더한다. compose 파일의 PostgreSQL 서비스 둘이 모두 같은 digest여야 한다.
 - **배포 안내 7절의 전제.** `postgres` 서비스에 거는 전제와 권한의 시험(`tests/tools/test_deploy_guide.py`)을 `widget-admin-postgres`에도 건다. 위젯 관리 서버의 서비스에는 `ports`가 없고 `user`를 더하지 않는다는 것을 지금의 "우리 이미지" 전제에 넣는다.
+- **배포 안내 13절의 표.** 지금 `tests/tools/test_deploy_guide.py`는 Agent OS 쪽 글 열다섯을 제품 코드에서 가져와(`제품의_멈출_때의_글`. 어댑터 `src/agent_os/adapters/postgres/database.py`의 함수가 짓는 열셋과 `src/agent_os/main.py`의 상수 둘) 13절의 표와 견주고(`없는_글`), 곁에 시험 셋을 둔다. 글의 갈래 이름이 정한 목록(`STOP_TEXT_LABELS`)과 같은지, 실패와 판 견줌의 갈래마다 표의 글이 하나씩 있는지, 글에 안내가 쓰지 않는 저장소 안의 말(`INTERNAL_WORDS`, `ADR`이 든다)이 없는지다. 위젯 관리 서버의 글 열다섯은 따로 모으는 함수로 가져와 같은 `없는_글`로 견주고, 곁의 시험 셋도 위젯 쪽 판을 둔다. 한 사전에 넣으면 갈래 이름이 겹친다. 글자가 같은 열둘은 Agent OS 쪽 행에 맞고, 다른 셋은 위젯 쪽 행에 맞는다. 그래서 위젯 관리 서버는 글을 짓는 자리를 자리 표시(`<자리>`, `<까닭>`, `<판>`)를 넣어 부를 수 있는 함수나 상수로 두고, 기본 다시 시도 시간과 실패·판 견줌의 갈래도 시험이 읽게 낸다. Agent OS 쪽이 PR 636에서 그렇게 뽑았다(`retry_notice`, `unreached_text`, `misaligned_text`, `DEFAULT_RETRY_SECONDS`). 13절의 필수 낱말 목록(`SECTION_13_REQUIRED`)에도 위젯 쪽 낱말(`widget-admin-migrate`, `docker compose logs widget-admin`, `widget-admin-postgres:5432/widget_admin`)을 더한다.
 - **이미지와 짓기 대상의 대응.** 짓기 설정의 태그와 compose의 `image:` 줄과 배포 안내의 대응표를 맞대는 지금의 시험(`tests/tools/test_release_ci.py`)이 새 대상을 함께 보고, 위 "판 번호와 출시"가 정한 목록 맞대기(판 내기 워크플로와 짓기 설정의 묶음이 `IMAGES`와 같은지)를 같은 파일에 더한다.
 
 ### 문서와 하네스(넘겨받은 것)

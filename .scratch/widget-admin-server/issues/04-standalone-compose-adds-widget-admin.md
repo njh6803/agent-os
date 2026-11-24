@@ -39,7 +39,7 @@
 
 ### 배포 안내
 
-- [ ] `deploy/standalone/README.md`의 3-1, 4, 7, 8, 9, 11, 12절을 명세 "배포 안내"대로 고친다
+- [ ] `deploy/standalone/README.md`의 3-1, 4, 7, 8, 9, 11, 12, 13절을 명세 "배포 안내"대로 고친다. 13절 "문제 해결"은 명세를 쓴 뒤에 생긴 절이고, 그 절을 세운 티켓은 `.scratch/connection-check/issues/06-deploy-guide-troubleshooting-section.md`다
 - [ ] 9절의 고친 명령(`WIDGET_ADMIN_DATABASE_PASSWORD=unused`를 더한 두 명령, `save.txt`, 덮어쓰기 파일의 `widget-admin-postgres:` 아래 `image: agent-os-postgres:local`)과 12절의 위젯 쪽 비밀번호 바꾸기 네 줄(데이터가 있는 위젯 쪽 볼륨에서)을 실제로 돌려 보고, 명세의 글자가 아니라 돌려 본 꼴로 싣는다. 돌려 본 명령과 결과를 일지와 PR에 남긴다(ADR 0056 결정 "인터넷이 막힌 곳")
 - [ ] 19와 23(위젯 쪽 비밀번호 바꾸기, 인터넷이 막힌 서버로 새 이미지까지 옮기기)의 낱말이 안내에 있는지 `tests/tools/test_deploy_guide.py`가 보는 자리에 더한다(명세 검토 S12). 지금 그 시험이 Agent OS 쪽의 같은 절을 보는 꼴을 따른다
 
@@ -47,6 +47,7 @@
 
 - [ ] `tests/test_postgres_image_pin.py`가 단독 compose의 PostgreSQL 서비스 둘을 모두 보고, 둘이 같은 digest여야 한다
 - [ ] `tests/tools/test_deploy_guide.py`의 7절 전제와 권한 시험을 `widget-admin-postgres`에도 걸고, 위젯 관리 서버의 서비스에 `ports`가 없고 `user`를 더하지 않는다는 것을 "우리 이미지" 전제에 넣는다. 하나씩 빼는 변이 시험을 둔다
+- [ ] `tests/tools/test_deploy_guide.py`가 13절의 표를 위젯 관리 서버의 글 열다섯과도 견준다. 03이 낸 함수를 자리 표시를 넣어 부르는 모음 함수를 Agent OS 쪽 모음(`제품의_멈출_때의_글`)과 따로 두고(한 사전에 넣으면 갈래 이름이 겹친다), 같은 `없는_글`로 견준다. Agent OS 쪽 곁의 시험 셋(갈래 이름이 `STOP_TEXT_LABELS`와 같다, 실패와 판 견줌의 갈래마다 표의 글이 하나씩 있다, 글에 `INTERNAL_WORDS`의 말이 없다)도 위젯 쪽 판을 둔다. 위젯 쪽 글 한 줄을 표에서 뺀 안내가 빨개지는 변이 시험을 둔다. 13절의 필수 낱말 목록 `SECTION_13_REQUIRED`에 위젯 쪽 낱말(`widget-admin-migrate`, `docker compose logs widget-admin`, `widget-admin-postgres:5432/widget_admin`)을 더한다(명세 "노트 검사와 저장소 상태 시험"의 "배포 안내 13절의 표")
 - [ ] 지금 시험 셋을 새 서비스에 맞게 고친다(명세 검토 S10). `tests/tools/test_release_ci.py`의 compose 대조가 짓기 대상이 아닌 서비스로 `migrate` 하나만 빼는 것(467줄)을 `widget-admin-migrate`도 위젯 관리 서버의 저장소 이름으로 빼게 고치고, 배포 안내 대응표의 정규식(477줄 `` `([a-z]+)` ``)이 하이픈이 든 서비스 이름을 읽게 고친다. 단독 배포 e2e의 서비스 목록(`web/packages/e2e-standalone/e2e/deployment.e2e.ts`의 `SERVICES`)에 새 서비스를 더한다. 줄 번호는 기준 커밋의 것이라 다시 찾는다
 
 ### 노트 검사와 판의 원고
