@@ -276,7 +276,7 @@ README는 표지 열 셋(35·56·75줄)을 고치고, 표지를 좁힌 사실과
 ## 다음
 
 - **이 PR(632)은 병합까지 한다.** 병합 뒤 widget-admin-server의 다음은 티켓을 쪼개는 일이다. `to-tickets`는 사용자만 부르는 스킬이다(`CLAUDE.md` 지도). 그 직전에 `spec-reviewer`로 명세를 한 번 검토한다.
-- **구현 티켓이 처음 보는 것 둘.** 좁힌 프로브 `run.py`가 다시 도는 첫 실행(위 "CodeRabbit 첫 회차" 3~6), 그리고 단독 배포 e2e가 위젯 관리 서버의 이미지를 짓는 시간(명세의 어림, 재지 않았다).
+- **구현 티켓이 처음 보는 것 셋.** 좁힌 프로브 `run.py`가 다시 도는 첫 실행(위 "CodeRabbit 첫 회차" 3~6), 단독 배포 e2e가 위젯 관리 서버의 이미지를 짓는 시간(명세의 어림, 재지 않았다), 그리고 프로브의 `Tree.run`이 900초를 넘긴 명령의 출력을 로그에 남기는지다. 지금은 `subprocess.run`의 `TimeoutExpired`를 잡지 않아 그 회차의 원본 출력이 사라진다(위 "둘째 회차"의 둘째 지적). 고치게 되면 `secret_stdout` 가림도 그 길에 적용한다.
 - **사람이 지울 것.** 사본 나무 넷(`C:/project/uvws1`, `C:/project/uvws2`, `C:/project/uvws3`, 첫 세션 스크래치패드의 `uvws-1`)과 프로브 이미지 둘(`uv-workspace-probe/widget-admin:probe`, `uv-workspace-probe/serve-sync:probe`). 사본 나무 셋째의 `.probe-logs/28-database-create.log`에 시험 컨테이너 접속 주소의 비밀번호가 평문으로 있다(그 사본 나무를 지우면 함께 없어진다).
 - **CI 시간.** `python` 잡이 15분에 자주 닿는다. 대기열 `ci-python-job-timeout-margin`이 4회차다. 이 PR 같은 문서 PR도 걸려 병합이 미뤄진다.
 
@@ -300,3 +300,14 @@ README는 표지 열 셋(35·56·75줄)을 고치고, 표지를 좁힌 사실과
 ```
 
 open-session을 부른다 2026-11-24T12:03:27Z
+
+## 이어받은 세션: 둘째 회차와 병합
+
+위 "인계 (커밋 뒤, 봇 회차)" 절의 지시문으로 연 새 세션이다. 사용자 프롬프트는 그 지시문과 글자가 같았고 모델 줄은 `Sonnet 5.5 / high`다. 세션 제목을 `docs/widget-admin-server-spec`으로 바꾸고 `EnterWorktree(path)`로 이 워크트리에 들어왔다. 명세 본문은 고치지 않았다.
+
+- 커밋하지 않은 일지 수정(인용 따옴표와 인계 절)을 커밋 `b3227eb3c`로 올렸다. `git fetch origin dev` 뒤 `origin/dev`가 PR 631의 병합(`767a9be59`)으로 앞서 있어 합쳤고, 글자가 부딪힌 파일은 `.scratch/retro-queue/ci-python-job-timeout-margin.md` 하나였다(`git merge`의 출력을 손으로 봤다). 합친 쪽의 3회차 줄(자체 승인 2026-11-24)을 두고 이 PR의 4회차를 그 뒤에 이었다. 병합 커밋은 `7f1bb8271`이고 pre-commit은 모두 통과했다.
+- 푸시한 뒤 PR 코멘트에 첫 회차의 판정(고친 넷, 둔 셋)을 남기고 `@coderabbitai review`를 요청했다(`gh pr comment 632`).
+- CodeRabbit 둘째 회차는 헤드 `7f1bb82`에 대해 지적 둘(Minor 둘, Critical·Major 0)을 냈다(`gh api repos/njh6803/agent-os/pulls/632/reviews`와 `.../comments`로 읽었다). 둘째 회차부터는 Critical·Major만 고치므로 둘 다 두고 보류 이유를 PR 코멘트에 남겼다.
+  1. 대기열 `ci-python-job-timeout-margin`의 4회차를 "단계가 멈추지 않음"으로 가르는 근거가 부족하다는 것. 두었다. 그 항목의 `어디로:`가 처방을 고르기 전에 단계별 시각을 다시 모아 느림과 멈춤을 가르게 해 두었고 그 일은 5회차 반영이 맡는다.
+  2. 프로브 `Tree.run`이 `TimeoutExpired`를 잡지 않아 900초를 넘긴 회차의 출력이 사라진다는 것. 두었다. 프로브는 구현 티켓이 다시 돌릴 때 처음 쓰이고, 그때 고치는 일이라 위 "다음"에 적었다(뒤로 넘긴 일).
+- `python` 잡은 이 헤드에서도 15분에 취소됐다(`gh pr checks 632`에서 `python fail 15m1s`, 실행 45393777826. `verify`가 그 때문에 빨갰다. 다른 잡은 모두 초록이었다). 같은 PR의 셋째 시도이고 앞선 두 시도와 같은 사건으로 보아 대기열의 회차를 더 올리지 않았다. 한 번 `gh run rerun --failed`를 쳤으나 곧 이 일지 푸시로 헤드가 바뀌어 취소했다.
