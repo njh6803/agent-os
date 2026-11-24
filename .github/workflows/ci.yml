@@ -15,10 +15,11 @@
 # `# zizmor: ignore[artipacked]` 와 까닭을 함께 둔다.
 # 잡마다 timeout-minutes 를 둔다. 없으면 기본값 360분까지 매달린다. PR #195 의 visual 잡이 컨테이너 초기화에서 18분
 # 넘게 멈췄다(대기열 204). 컨테이너 초기화도 잡의 스텝이라 잡의 제한에 든다고 본다(어림). 값은 최근 성공 실행의 잡별
-# 최대의 네 배 이상이다. 그 수치는 .scratch/harness/probes/ci_job_durations.py 가 내고, 잰 결과는 같은 폴더 README 의
-# 그 프로브 행에 둔다. 캐시를 놓친 설치가 얼마나 더 걸리는지는 재지 않은 어림의 여유다. 잡이 자라 제한에 닿으면 그
-# 프로브를 다시 돌려 값을 고친다. 지난 실행이 없는 새 잡의 첫 값은 어림이고, 그 잡이 든 실행으로 프로브를 다시 돌려
-# 고친다.
+# 최대의 네 배 이상으로 정했다. 잡이 자라 2026-11-24 에는 잰 잡 가운데 ticket·verify 를 뺀 다섯(python, web, e2e,
+# visual, e2e-standalone)이 네 배에 못 미치고, python 의 값은 그 잡의 주석이 까닭을 적는다. 그 수치는
+# .scratch/harness/probes/ci_job_durations.py 가 내고, 잰 결과는 같은 폴더 README 의 그 프로브 행에 둔다. 캐시를 놓친
+# 설치가 얼마나 더 걸리는지는 재지 않은 어림의 여유다. 잡이 자라 제한에 닿으면 그 프로브를 다시 돌려 값을 고친다. 지난
+# 실행이 없는 새 잡의 첫 값은 어림이고, 그 잡이 든 실행으로 프로브를 다시 돌려 고친다.
 name: ci
 
 # 개발 브랜치 dev 가 서면(ADR 0043) 티켓 PR 은 dev 로, 출시 PR(dev→main)과 핫픽스는 main 으로 간다. PR 은 base 를
@@ -49,7 +50,12 @@ jobs:
     # ubuntu-latest 가 2026-11-06 에 24.04(ripgrep 14.1.0)에서 26.04(15.1.0)로 넘어가 rg 14 의 동작을 가정한
     # tests/tools/test_hook_env_read_rg.py 가 깨졌다(.scratch/harness/issues/045-ci-python-runner-pin.md).
     runs-on: ubuntu-24.04
-    timeout-minutes: 15
+    # 15분이던 제한에 잡이 닿아 2026-11-24 에 dev 푸시와 PR 의 실행이 잇달아 취소됐다(대기열 ci-python-job-timeout-margin).
+    # 성공한 실행 40개의 최대가 15.0분이라(.scratch/harness/probes/ci_job_durations.py) 머리 주석의 네 배면 60분이다.
+    # 선택 화면에 올린 값은 25분이었고, 사용자가 멈춘 잡을 10분 늦게 끊는 대가를 보고 그 값을 골랐다
+    # (.scratch/harness/issues/ci-python-job-timeout-25.md). 그 프로브는 성공한 실행만 세므로 15분을 넘겨 취소된 실행의
+    # 실제 시간은 그 최대에 들지 않는다.
+    timeout-minutes: 25
     env:
       PYTHONUTF8: "1"
       PYTHONFAULTHANDLER: "1"
