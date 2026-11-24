@@ -159,7 +159,7 @@ Critical 0, Major 0, Minor 4, Nit 3. 서브에이전트가 명령으로 대 본 
 
 표준 축을 반영하며 새로 쓴 사실 문장(PR 직전 리뷰에 밀 주장으로 넘긴다):
 
-- 01 "지금 그 시험은 Agent OS 쪽 폴더 하나를 노트 검사의 `PRODUCT_MIGRATIONS`(`tools/check_notes.py`)에서 읽는다", "01에서 켜면 위젯 쪽 첫 마이그레이션을 더하는 이 티켓의 PR 제목에도 느낌표가 붙어야 한다"(둘 다 `tests/test_postgres_migration_shape.py` 27줄과 `tools/check_notes.py` 36·116·271줄을 읽은 것이다. 돌려 보지 않았다)
+- 01 "지금 그 시험은 Agent OS 쪽 폴더 하나를 노트 검사의 `PRODUCT_MIGRATIONS`(`tools/check_notes.py`)에서 읽는다", "이 티켓에서 켜면 위젯 쪽 첫 마이그레이션을 더하는 이 티켓의 PR 제목에도 느낌표가 붙어야 한다"(둘 다 `tests/test_postgres_migration_shape.py` 27줄과 `tools/check_notes.py` 36·116·271줄을 읽은 것이다. 돌려 보지 않았다)
 - 01 "독립 계약은 import-linter의 규칙 종류(`independence`)로, 대상 패키지끼리 곧바로든 다른 모듈을 거쳐서든 서로를 import하지 못하게 막는다"(명세 148줄의 프로브 결과를 옮긴 것이다)
 - 03 "지금 네 프로세스(`serve`, 관리 화면, 위젯, 위젯 미리보기 페이지)가 같은 규칙의 사본을 따로 들고 있고"(`tests/fixtures/container_network/README.md` 3줄을 읽었다)
 - 03 "수명(lifespan)은 uvicorn이 앱에 보내는 뜨기·내리기 신호이고"
@@ -186,6 +186,38 @@ Critical 0, Major 0, Minor 4, Nit 3. 서브에이전트가 명령으로 대 본 
 - 명세 455줄과 04 "프록시가 `%2F`와 `%0A`를 어떤 꼴로 넘기는지는 이 사례가 처음 본다"
 - 명세 "문서와 하네스"와 02의 새 항목. operations.md·tech.md·README의 세 문장이 생성 클라이언트를 하나로 적는다는 것
 - 03 "그 규칙의 `paths`는 위젯 쪽 경로를 잡지 않고, 01이 그 규칙의 범위가 `agent_os`라고 적는다"
-- 04 "짓기는 다섯이 나란히 돌고 하나마다 `BUILD_MS`를 받으므로", "20분은 `.github/workflows/ci.yml`의 그 잡 머리 주석이 CI 실행 넷의 최대와 캐시가 빈 짓기의 어림에 여유 배수를 두어 정한 값이다"(`ci.yml` 345~349줄(`a68a51d61`의 줄 번호)을 읽었다)
+- 04 "짓기는 다섯이 나란히 돌고 하나마다 `BUILD_MS`(15분, `web/packages/e2e-standalone/e2e/stack.ts`)를 받으므로", "20분은 `.github/workflows/ci.yml`의 그 잡 머리 주석이 CI 실행 넷의 최대와 캐시가 빈 짓기의 어림에 여유 배수를 두어 정한 값이다"(`ci.yml` 345~349줄(`a68a51d61`의 줄 번호)을 읽었다)
 - 01 "`setup-uv`에 판을 적지 않았다"(명세 144줄을 옮긴 것이다)
 - 01 "그 잡의 제한은 25분이다. 15분이던 제한에 잡이 닿아 잇달아 취소되자 2026-11-24에 올렸고, 그때 성공한 실행 40개의 최대가 15.0분이었다"(`origin/dev` `9de677697`의 `ci.yml` 그 잡 주석을 읽었다)
+
+## 커밋과 인계(커밋 뒤)
+
+- 커밋 `68ad3f215`의 pre-commit은 모두 통과했다. `ruff check`·`ruff format`은 스테이지된 `.py`가 없어 Skipped였고(이 변경은 `.py`를 고치지 않았고, 위 "검증과 인계(셀프 리뷰 직전)"에 손으로 친 둘의 결과가 있다), 카나리아 명세와 헌법 판 검사도 대상 파일이 없어 Skipped였다. 인용 대조는 막지 않는 경고 12건을 냈다. 그 가운데 "셀프 리뷰" 절의 둘(01의 느낌표 문장, 04의 `BUILD_MS` 문장)은 티켓을 고친 뒤의 글자와 달라, 이 절을 쓰며 티켓 글자로 맞췄다. 나머지 열은 검토 보고와 질문의 원문, 명령 출력, 고치기 전의 글자를 적은 기록이라 그대로 둔다.
+- 커밋 직후 인계 계기(`hook_handoff`, 경계 `커밋 뒤`)가 왔다. 이 세션의 지시문은 `인계: 셀프 리뷰 직전`으로 시작해 경계가 다르고, 곁 세션이 아니며(`get_session`의 `self`에 `parentSessionId`가 없다), `gh pr view docs/widget-admin-server-tickets`가 PR 없음을 냈고, 요청 범위 "티켓까지"는 이 경계에서 끝나지 않아 넘긴다.
+- 이 세션이 번복하거나 고친 것: 03의 새 문장에 처음 "Agent OS 쪽 프로세스 넷"이라 적었다가 `tests/fixtures/container_network/README.md`를 읽고 네 프로세스의 이름으로 고쳤다. 커밋 직전에 `origin/dev`가 움직여 01의 15분 문장을 25분으로 고치고 이 브랜치를 빨리 감기로 앞당겼다(위 "셀프 리뷰" 절).
+- 이 세션의 지금 제목은 `docs/widget-admin-server-tickets`다.
+
+인계 지시문:
+
+```
+다음 작업: 기능 widget-admin-server. 병합된 명세(.scratch/widget-admin-server/spec.md)를 검토하고 티켓으로 쪼갠다
+다음 단계: 티켓
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /to-tickets .scratch/widget-admin-server/spec.md
+브랜치: docs/widget-admin-server-tickets
+모델: Opus 5.5 / xhigh. 2의 잇는 지시문
+읽을 것: docs/journal/2026-11-24-2305-widget-admin-server-tickets.md 의 "셀프 리뷰(/code-review)"와 "커밋과 인계(커밋 뒤)". 끝에 사람에게 알릴 것은 "검증과 인계(셀프 리뷰 직전)"에 있다
+이어받을 상태: 인계: 커밋 뒤. 셀프 리뷰 두 축을 반영해 커밋 68ad3f215까지 했고 pre-commit이 모두 통과했다. PR은 아직 없다. 워크트리에 커밋하지 않은 일지 고침(낡은 인용 둘을 티켓 글자로 맞춘 것과 "커밋과 인계(커밋 뒤)" 절)이 있어 다음 커밋에 싣는다. 남은 것은 PR 직전 리뷰(일지 "셀프 리뷰(/code-review)"의 "새로 쓴 사실 문장" 두 목록을 밀 주장으로 넘긴다), dev로 가는 PR, 봇 반영, 병합(이 워크트리 사본의 next-session merge.md "워크트리에서 병합할 때"를 Read로 열어 따른다), 회고와 일지 "다음"과 다음 지시문이다. 일지 docs/journal/2026-11-24-2305-widget-admin-server-tickets.md
+확인할 선행 조건: 없음
+이번 요청 범위: 티켓까지
+```
+
+- 제목을 `docs/widget-admin-server-tickets (인계함)`으로 바꿨다. 이 세션이 띄운 백그라운드 작업은 없었다. `git worktree unlock C:/project/agent/.claude/worktrees/widget-admin-server-tickets`는 `is not locked`를 냈다(이 세션의 `EnterWorktree(path)`가 다시 잠그지 않은 것으로 본다. 재지 않았다).
+- open-session을 부른다 2026-11-24T15:47:26Z
+
+## 이어받은 세션(2026-11-25 00:50)
+
+> 사용자: (위 "커밋과 인계(커밋 뒤)"의 인계 지시문 그대로. 첫 줄은 `/to-tickets`를 스킬 파일을 읽으라는 한 줄로 옮긴 것이다)
+
+- 세션 제목을 `docs/widget-admin-server-tickets`로 바꿨다. `git worktree list`에서 이 브랜치가 이 워크트리에 체크아웃된 것을 봤고, `EnterWorktree(path)`가 첫 호출에 들어왔다(앞 이어받기와 달리 잠금 거부가 없었다).
+- `git fetch origin` 뒤 `origin/dev`는 그대로 `9de677697`이었고, `tools/sibling_overlap.py`는 번호 겹침과 함께 고친 파일이 없다고 냈다(형제의 가장 높은 헌법 판 3.1.5).
