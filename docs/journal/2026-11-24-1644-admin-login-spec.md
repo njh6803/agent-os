@@ -329,3 +329,50 @@ open-session을 부른다 2026-11-24T11:50:23Z
 - 고친 것: 명세 "도는 실행을 이어 보기"의 "규칙 문서"가 그 예외를 규칙 문서에 새로 적는다고 했다. 그 줄이 이미 ADR 0063의 예외를 이름으로 들므로, 그 줄에 범위(결말 없는 실행 하나, 창이 보이는 동안, 멈출 때까지)를 적는다고 고쳤다. 같은 줄이 가리키는 `hooks/queries/connection`의 머리 주석은 실패한 키의 주기 읽기를 SWR이 건너뛴다고 적고 실패를 값으로 돌려 피했다. 명세는 실패에서 주기 읽기가 쉬는 것을 그대로 쓰므로(`swr_poll` 결과 3a·3c) 부딪히지 않는다고 그 문장에 더했다.
 
 PR 직전 리뷰에 밀 주장(새로 쓴 문장): 명세 "규칙 문서"의 "그 줄은 connection-check 티켓 04가 더했고, 예외로 "ADR 0063의 것"을 이름만 든다."와 "접속 확인의 훅은 실패한 키의 주기 읽기를 SWR이 건너뛴다고 적고 그것을 값으로 돌려 피했다."
+
+### PR (21:15쯤)
+
+셋째 커밋 `992d9e0f0`(dev를 합친 나무)의 pre-commit도 함께 띄운 검사 열하나와 마크다운 표, 줄 구분 문자, 변이 표, 인용 대조, 커밋 메시지가 Passed였다(ruff 둘은 `.md`만 바뀌어 Skipped). 그 커밋 뒤의 인계 계기와 PR을 연 뒤의 인계 계기는 위 `인계 못함 커밋 뒤` 줄이 있어 다시 시도하지 않았다(`handoff.md` 1).
+
+푸시하고 PR #633(base `dev`)을 열었다. 본문은 스크래치패드의 초안이다. 앱의 PR 감시에 이 PR이 묶였다. `@coderabbitai review`를 남기고 `uv run python tools/wait_ci.py 633`을 백그라운드로 띄웠다.
+
+### 봇 첫 회차 (21:25쯤, 헤드 `992d9e0f0`)
+
+`wait_ci.py`가 `실패 python, verify`로 끝났다.
+
+- claude-review: 지적 없음. 이 봇의 첫 회차다.
+- CodeRabbit: 무료 리뷰 한도에 걸려 리뷰하지 않았다("Review rate limited"). `@coderabbitai review`도 같은 답이었다. 리뷰가 없던 푸시라 회차로 세지 않는다(`merge.md` 2 회차 세기).
+- `python` 잡(실행 45390683089): pytest 단계가 `8136 passed, 30 deselected`로 813.63초에 지난 뒤, 다음 단계 `check_type_escapes.py`가 시작한 지 3초 만에 "The operation was canceled."로 끝났다. 잡이 12:08:42에 시작해 12:23:47에 끝나 잡 시간 제한 15분에 걸렸고, `verify`는 그 결과를 모으는 잡이라 함께 빨갰다. 코드와 무관한 취소이고, 다음 푸시가 CI를 다시 돌린다. 열린 `ci-python-job-timeout-margin`에 4회차로 더했다(회고 11).
+
+고칠 지적이 없어 이 회차의 커밋은 회고와 일지, 대기열 항목만 싣는다. 커밋 전 `uv run python tools/sibling_overlap.py`는 새 번호 없음, 번호 겹침 없음으로 끝났고, 함께 고친 파일로 `.scratch/portal-admin/plan.md`(PR #632, 워크트리 `widget-admin-server-spec`)와 `.scratch/retro-queue/ci-python-job-timeout-margin.md`(워크트리 `widget-admin-server-spec`)를 들었다. 그 워크트리도 같은 항목에 회차를 더했다면 나중에 병합하는 쪽이 회차 수를 이어 센다.
+
+## 회고
+
+후보는 열하나다. 승인 여덟(열린 항목에 회차를 더한 것 여섯, 새 항목 둘), 기각 셋, 넘김은 없다. 이 세션에서 반영한 것이 없어 harness 티켓을 쓰지 않았다. 만료할 항목은 작업 트리와 `origin/dev`(`git fetch origin` 뒤) 둘 다 없었다. 새 훅을 지금 반영하거나 다섯째 회차로 올린 것이 없어 `tools/hook_report.py`는 돌리지 않았다.
+
+인계 계기와 열기의 수는 이 세션의 트랜스크립트에서 스크래치 스크립트(`count_triggers.py`, 훅 문구가 든 기록과 `open_session.ps1 -Action send`가 든 도구 호출을 시각순으로 뽑는다)와 Grep으로 셌다. 계기는 넷이었다. 셀프 리뷰 직전 201,914 토큰, 커밋 뒤 268,920 토큰, 커밋 뒤 342,197 토큰, PR 연 뒤 344,940 토큰이다. 열기 호출은 둘(UTC 09:21, 11:51)이었다.
+
+1. **압축 뒤에 인계를 다시 시도했다.** 승인(회차로 세는 것. 열린 0518이 처방한 사건이다). 둘째 계기에서 위 "커밋 뒤의 인계"는 이 세션의 지시문이 "인계: 셀프 리뷰 직전"이고 `인계 못함` 줄이 없다고 적었는데, 둘 다 틀렸다. 그 지시문은 이 세션이 셀프 리뷰 직전에 냈다가 보내지 못한 것이고, 그 아래 줄에 `인계 못함 셀프 리뷰 직전`이 있었다. 그래서 `handoff.md` 1("다시 시도하지 않는다")을 어기고 다시 열었다가 두 번째로 거부됐다. 0518의 처방(트랜스크립트에 `인계 못함`을 적은 편집이 있으면 훅이 침묵한다)이 있었으면 그 계기가 오지 않았다. `인계 못함` 뒤에 온 계기는 셋이다. → 0518, 8회차.
+2. **인계 열기가 두 번 모두 거부됐다.** 승인(회차). 두 호출 모두 `.claude/settings.json` 25행의 허용 규칙과 글자가 맞았고, 분류기의 사유는 둘 다 "Unsanctioned Communication"이었다. → open-session-send-denied-despite-allow-rule, 16회차.
+3. **지시문 둘의 모델 줄이 `Fable 5.1 / xhigh`였다.** 승인(회차. 열린 항목 본문의 임시 규칙을 따르지 못했다). 두 열기 모두 모델을 고르기 전에 거부돼 멈춘 세션은 없다. → model-menu-name-fable-5-1-stale, 7회차.
+4. **측정을 맡긴 서브에이전트가 워크트리 밖을 바꿨다**(위 "서브에이전트가 남긴 일"의 첫째와 셋째). 승인(사건: 다른 체크아웃의 `node_modules`와 스크래치패드의 다른 파일을 바꿨다. 층: 다른 체크아웃을 바꾸는 명령을 막는 훅이 가장 높은 층이지만 더하는 것이라 다섯째 회차나 손상 한 번에 반영한다. 주 체크아웃이 망가졌다는 관찰은 없다. 되돌림: PR 하나). → 새 항목 probe-subagent-writes-outside-worktree, 1회차.
+5. **인계 계기가 백그라운드 커밋이 끝나기 전에 두 번 왔다**(268,920·342,197 토큰). 승인(회차). 끝 알림을 기다려 성공을 본 뒤 판정했다. → handoff-trigger-before-background-commit-ends, 12회차.
+6. **문서만 바꾼 커밋 둘의 pre-commit이 12~13분 걸렸다**(`436082671`은 pytest 787.5초와 web-verify 746.5초, `992d9e0f0`은 690.7초와 715.6초). 승인(회차). 나란히 돈 다른 세션의 부하는 재지 않았다. → docs-only-commit-precommit-slow-again, 20회차.
+7. **Grep 도구의 빈 결과를 근거로 틀린 사실을 적었다**(위 "코드를 읽으며 바로잡은 것"의 첫째). 승인(사건: 틀린 사실 문장을 적었다가 스스로 바로잡았다. 층: `CLAUDE.md` 환경 함정이 이미 적은 사실을 어긴 것이라 지침이 아니라 알리는 훅이다. 더하는 것이라 대기한다). → 새 항목 grep-ignored-venv-empty-result-read-as-absence, 1회차.
+8. **인용 대조가 셀프 리뷰를 지난 인용 셋을 잡았다**(위 "커밋"). 기각. 이미 있는 검사(`check-quotes`)가 그 자리에서 알렸다.
+9. **셀프 리뷰 직전의 인계 노트가 ADR 0062의 결정을 `anyio.to_thread.run_sync`로 줄여 옮겼다**(위 "셀프 리뷰 직전의 인계"와 그 지시문). 기각. 해시 메모리를 고르기 전에 ADR 0062 원문을 읽어 결정 문장("해시와 견줌은 이벤트 루프 밖의 스레드로 넘긴다")이 그대로 참인 것을 보았고, 든 비용은 그 한 번의 읽기다. 일지의 인용은 인용 대조가 짚는 자리이기도 하다.
+10. **PR 본문 초안을 세션 스크래치패드에 두었다.** 기각(사건 없음). 인계가 일어나지 않았고, 지시문이 그 파일을 읽지 못하면 템플릿으로 새로 쓰라고 적었다.
+11. **CI `python` 잡이 pytest를 지난 뒤 잡 시간 제한 15분에 걸려 취소됐다**(위 "봇 첫 회차"). 승인(회차). 회고를 적은 뒤 봇 첫 회차에서 났다. → ci-python-job-timeout-margin, 4회차.
+
+일지에만 남기는 것: 위 "커밋 뒤의 인계"의 틀린 두 문장은 기록이라 고치지 않고 이 절의 1이 바로잡는다.
+
+## 다음
+
+PR #633(명세, 프로브 넷, ADR 0011·0062·0063 이력)을 병합하면 admin-login의 명세 단계가 끝난다.
+
+- 이 PR은 명세 문서와 프로브뿐이라 로컬 모델 시험(`llm_local`)은 병합 조건의 범위에 들지 않는다.
+- 봇 회차에서 뒤로 넘긴 일은 없다(claude-review 첫 회차 지적 없음, CodeRabbit은 한도로 리뷰 없음).
+- 명세를 티켓으로 쪼개는 일은 사용자가 `/to-tickets .scratch/admin-login/spec.md`로 부른다(`next-session` 결정표). 그 직전에 서브에이전트 `spec-reviewer`로 명세를 한 번 본다(`.scratch/admin-login/spec.md`의 체크리스트 일곱과 질문 둘).
+- 명세가 티켓에 넘긴 규칙 문서의 고침: `.claude/rules/http.md`의 한 줄은 첫 계정 티켓이, `.claude/rules/web-admin.md` 주기 읽기 줄의 예외 범위와 `.claude/rules/web-design.md`의 예 "실행 목록의 배지"는 화면을 바꾸는 티켓이 고친다(명세 "규칙 문서").
+- 셀프 리뷰에서 남긴 것 둘(`hash_load/run.py`의 끄기가 리눅스에서만 명령줄을 보는 것, 프로브 README 표의 띄어쓰기)은 그대로 둔다.
+- 회고가 회차를 더한 항목 가운데 518, open-session-send-denied-despite-allow-rule, handoff-trigger-before-background-commit-ends, docs-only-commit-precommit-slow-again은 회차 5 이상이라 chore 계기다. model-menu-name-fable-5-1-stale도 회차 5 이상이지만 바꿀 이름은 사용자 몫이고 ADR 0029 이력이 필요하다.
