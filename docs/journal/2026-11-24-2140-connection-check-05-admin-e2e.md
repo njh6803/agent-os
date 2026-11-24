@@ -156,3 +156,18 @@ Critical·Major는 없었고 Minor 둘과 에이전트가 코드를 읽다 더�
 open-session을 부른다 2026-11-24T12:43:10Z
 
 open-session을 부른다 2026-11-24T13:40:52Z
+
+## 인계(커밋 뒤, 세 번째 인계)
+
+이 세션(PR 연 뒤 인계로 열린 세션)의 제목은 `feature/05-admin-e2e-scene-for-connection-check`였다(넘기며 `(인계함)`을 붙인다). 컨텍스트가 인계 문턱을 넘은 채 `커밋 뒤`에 왔다. 이 세션이 한 것: `merge.md` 2의 봇 회차(리뷰 요청 코멘트, CI 대기, `python` 잡 15분 취소의 단계 시각 판정과 `gh run rerun --failed`, CodeRabbit 첫 회차 판단과 고침 하나, PR 코멘트 #issuecomment-7134559047), 관리 화면 e2e 전체 재실행, 티켓 05 병합 직전 칸의 판정(06이 `ready-for-agent`라 마지막이 아님. `tests/test_plan_status.py` 13개 통과), 회고와 `## 다음`, 커밋 `6dbfdc628`(pre-commit 통과). 이 커밋은 아직 푸시하지 않았다. 새 세션이 푸시하고 `merge.md` 2의 대기부터 잇는다.
+
+남은 것:
+
+- 푸시 뒤 새 머리에서 `tools/wait_ci.py 634`를 띄우고 끝 줄대로 한다. 앞 실행(45405790791)의 `python` 취소와 `verify` 실패는 새 머리의 실행이 대신한다. `python`이 15분에 또 취소되면 단계 시각으로 가르고 `gh run rerun <실행> --failed`만 한다(대기열 `ci-python-job-timeout-margin`이 5회차이고 이 PR의 일이 아니다).
+- CodeRabbit은 둘째 회차부터 Critical·Major만 고친다. 둘째 회차에 새 Minor가 나오면 PR 코멘트에 보류 이유를 남기고 병합한다. 첫 회차의 판단은 PR 코멘트 #issuecomment-7134559047이 원천이다.
+- 병합 직전 티켓 06의 `Status:`를 `git fetch origin`으로 다시 본다. 06이 그사이 병합됐으면 이 PR이 마지막이라 티켓 05의 둘째 칸대로 `**끝:**` 줄, 기능 단락 `docs/release-notes/features/connection-check.md`, `plan_table.py`를 돌린 `.scratch/plan.md`를 싣는다. 아니면 싣지 않고, 병합 뒤 `git fetch origin`으로 06을 다시 본다(티켓 05의 셋째 칸. 결과는 병합 보고에 적는다).
+- 병합 뒤 `merge.md`의 "워크트리에서 병합할 때" 3~4(원격 브랜치 확인, `주 체크아웃 미갱신: 루트는 <브랜치>` 한 줄).
+- 일지의 `## 회고`와 `## 다음`은 위에 이미 있다. 새 세션이 병합 전에 이 인계 절까지 포함해 한 번에 커밋·푸시한다(일지만 푸시하면 봇이 한 번 더 돈다).
+- 병합 후 `ci-python-job-timeout-margin`의 승인 줄이 PR #633(열림)과 같은 줄을 고쳤다(둘 다 `승인:` 줄의 회차 수). 나중에 병합하는 쪽에서 글자 충돌이 난다. 회차는 1(#624)·2(#625)·3(#631)·4(#632)에 #633과 #634가 더해져 두 쪽의 수가 다를 수 있으니, 충돌을 푸는 쪽이 사건을 모두 세어 맞춘다.
+
+open-session을 부른다 2026-11-24T14:34:10Z
