@@ -38,8 +38,9 @@ test("켜 둔 모델 행은 제공사에 요청을 보내지 않고 키가 없�
 test("뜬 원격 MCP 서버의 행은 붙음을 보이고 닫힌 포트를 가리키는 모델의 행은 붙지 못함과 서버에 닿지 못했다를 보인다", async ({
   page,
 }) => {
-  // 기본 상한 30초 안에 첫 대기(25초)와 둘째 단언이 함께 들지 않으므로, 실패가 시간 초과가 아니라 단언의 글로 보이게 늘린다.
-  test.setTimeout(2 * FIRST_CHECK_MS);
+  // 기본 상한 30초는 페이지를 열고 토큰을 넣는 시간에 첫 확인의 기다림(25초)을 더하면 빠듯하다. 실패가 시간 초과가 아니라 단언의
+  // 글로 보이게 그 시간을 넉넉히 더한다.
+  test.setTimeout(FIRST_CHECK_MS + 15_000);
   const { adminUrl, adminToken } = stack();
   const crashes: string[] = [];
   page.on("pageerror", (error) => crashes.push(error.message));
@@ -47,14 +48,16 @@ test("뜬 원격 MCP 서버의 행은 붙음을 보이고 닫힌 포트를 가�
 
   await enterAdminToken(page, adminToken);
 
-  // 상태는 색이 아니라 글자로 찾는다. 붙음은 까닭 없이 글자 하나뿐이다.
+  // 상태는 색이 아니라 글자로 찾는다. 붙음은 까닭 없이 글자 하나뿐이다. 두 확인은 화면을 열 때 함께 나가므로 두 행을 함께
+  // 기다린다. 차례로 기다리면 첫 확인에 쓸 수 있는 시간이 둘로 늘어 30초 간격의 다시 확인 결과가 대신 통과시킬 수 있다.
   const remote = row(page, "MCP", "remote-docs");
-  await expect(remote.getByRole("status")).toHaveText("붙음", { timeout: FIRST_CHECK_MS });
+  const offline = row(page, "모델", "offline-model");
+  await Promise.all([
+    expect(remote.getByRole("status")).toHaveText("붙음", { timeout: FIRST_CHECK_MS }),
+    expect(offline.getByRole("status")).toContainText("붙지 못함", { timeout: FIRST_CHECK_MS }),
+  ]);
+  await expect(offline.getByRole("status")).toContainText("서버에 닿지 못했다");
   // 눌러서 하는 확인이 아니라 스스로 하는 확인이라 버튼이 없다.
   await expect(remote.getByRole("button", { name: "접속 확인" })).toHaveCount(0);
-
-  const offline = row(page, "모델", "offline-model");
-  await expect(offline.getByRole("status")).toContainText("붙지 못함", { timeout: FIRST_CHECK_MS });
-  await expect(offline.getByRole("status")).toContainText("서버에 닿지 못했다");
   expect(crashes).toEqual([]);
 });

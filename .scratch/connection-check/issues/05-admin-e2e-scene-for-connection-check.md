@@ -40,5 +40,5 @@
 
 ### 검증
 
-- [ ] `CLAUDE.md`의 검증 명령이 모두 초록이다
+- [x] `CLAUDE.md`의 검증 명령이 모두 초록이다 _(커밋 `92eb20643`의 pre-commit(`run_checks.py`)이 통과했다. 손으로 치는 e2e는 아래 칸)_
 - [x] 관리 화면 e2e(`pnpm -C web/apps/admin exec playwright test`)를 친다. 새 장면과 기존 장면이 모두 지나는 것을 본다 _(접속 확인 장면 둘은 지났다. `decision.e2e.ts`의 첫 장면 하나(`run_finished`가 5초 안에 안 보임)가 빨갛고 04 일지가 기준 상태에서도 같다고 적었다. 이 세션이 기준 상태에서 다시 쳐 보지는 않았다. 일지 "e2e 결과")_
