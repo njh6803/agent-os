@@ -412,6 +412,21 @@ describe("스스로 하는 확인", () => {
     });
   });
 
+  test("보이지 않는 탭에서 목록이 서도 첫 확인을 보내지 않고 보이면 바로 한 번 확인한다", async () => {
+    const user = clock();
+    const served = serve([REMOTE]);
+    setVisibility("hidden");
+    await showList(user);
+
+    await vi.advanceTimersByTimeAsync(INTERVAL * 3);
+
+    expect(callsTo(served, "remote-docs")).toHaveLength(0);
+    setVisibility("visible");
+    fireEvent(document, new Event("visibilitychange"));
+    await within(REMOTE_ROW()).findByText("붙음");
+    expect(callsTo(served, "remote-docs")).toHaveLength(1);
+  });
+
   test("목록의 새로 고침 버튼을 누르면 확인도 바로 한 번 다시 한다", async () => {
     const served = serve([REMOTE, MODEL]);
     const user = await showList();

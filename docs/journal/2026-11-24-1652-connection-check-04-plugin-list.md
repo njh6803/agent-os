@@ -119,6 +119,36 @@ open-session을 부른다 2026-11-24T08:15:19Z
 - 카나리아: `sibling_overlap`이 `.claude/rules/web-admin.md`를 원천으로 든 기존 명세(`web_admin_plugins_read.toml`)는 이 티켓이 더한 문장을 재지 않는다고 알렸다. 이 티켓의 새 항목을 겨냥한 명세 `.scratch/connection-check/probes/canary/web_admin_periodic_read.toml`을 새로 썼다. `uv run python tools/canary.py`로 새 `claude -p` 세션(claude 2.1.325)에서 돌려 통과 4, 실패 0이었다. 실험군 3회차가 문장을 글자 그대로 옮겼고 대조군은 "없음"이었다(표준 출력을 읽은 것이다. 원본은 스크래치에 있고 저장소에 두지 않았다).
 - 나머지(린트, 타입체크, 경계, web verify)는 커밋의 pre-commit이 돌린다.
 
+## PR 직전 리뷰(`coderabbit-review`, 이어받은 세션)
+
+CodeRabbit CLI가 돌았다(서브에이전트의 보고에서 옮겼다: `Seat: not assigned`, 종료 0, 지적 6건, 한도와 인증 오류 없음). 보고한 서브에이전트는 지적마다 코드를 읽어 가렸고 아래 "유효" 판정도 그 읽기다. 첫 회차라 Minor도 지적마다 판단했다. 이 세션은 `sync-design-system 확인`도 쳤고 결과는 `clean`(웹 편집 없음)이었다.
+
+### 고친 것
+
+- 숨은 탭의 첫 요청(Minor, 유효): `refreshWhenHidden: false`는 이미 뜬 탭의 주기 확인만 쉬게 해, 보이지 않는 탭에서 행이 처음 서면 첫 확인이 나갔다. 티켓의 "보이지 않는 동안에는 보내지 않고"와 어긋났다. 시험(`보이지 않는 탭에서 목록이 서도 첫 확인을 보내지 않고 보이면 바로 한 번 확인한다`)을 먼저 써서 빨강(요청 1건)을 본 뒤, 요청 함수 앞에서 `document.visibilityState === "hidden"`이면 보내지 않고 `null`을 돌려주게 고쳐 초록을 봤다(`HomePage.connection.test.tsx`와 `HomePage.test.tsx` 79개 통과). 탭이 보이면 기존 `visibilitychange` 처리기가 바로 한 번 확인한다.
+- `serveEnv`의 대소문자(Minor, 유효): Windows에서 펼친 환경 객체의 키는 대소문자를 가려, `Anthropic_Api_Key` 같은 이름은 지워지지 않는다고 서브에이전트가 코드를 읽어 지적했다(내가 그 이름의 변수로 돌려 확인하지는 않았다). 이름을 대문자로 바꿔 견주도록 고쳤다. 고친 `serveEnv`를 e2e로 돌려 보지도 않았고 CI의 `e2e` 잡과 pre-commit이 본다.
+- `flights` 주석(리뷰어 대조 3, 과장): "같은 행의 요청은 하나만 보낸다"를 "그 행이 화면에 서 있는 동안"이라는 조건을 붙여 고쳤다. 행을 껐다 켜거나 화면을 떠났다 돌아오면 옛 요청이 날아가는 중에 새 요청이 나간다(코드의 뜻은 원래 그랬다).
+
+### 남긴 것
+
+- 티켓 04 검증 칸의 체크(대조 4): `[x]`인 두 칸이 전체 러너의 pytest 한 건과 e2e `decision.e2e.ts` 한 장면의 빨강을 주석으로 적는다. 둘 다 이 티켓이 원인이 아니라고 이미 가려 적었으므로(위 "게이트", "실패한 e2e 한 건") 체크는 두고 PR 본문의 "남긴 위험"에 옮긴다.
+- 모델 행 e2e 칸의 갈음(대조 4): "기존 장면은 글을 단언하지 않아 새 장면으로 갈음"은 티켓 원문(기존 장면의 모델 행에 보인 글을 일지에 적는다)과 다른 갈음이다. 위 "기존 e2e를 지킨 것"이 사실을 적었으므로 그대로 두고 PR 본문에 알린다.
+- 오탐 셋: `showcase` 태그가 앱 스토리에 없다는 두 건(그 태그는 디자인 시스템 카드용이고 `apps/admin`의 스토리에는 한 곳도 없다), 오래된 요청의 `disabled` 응답이 목록을 한 번 더 읽게 한다는 건(요청이 한 번 늘 뿐 값은 맞다). stdio 요청의 `pending`은 `RequestFailure`가 아닌 예외(코드 결함)에서만 영구히 남고 정상 경로의 버그는 아니다. 하드닝 여지로 남긴다.
+
+## 인계 2(커밋 뒤에 넘긴다)
+
+셀프 리뷰와 반영을 마치고 커밋했다. 커밋은 `78f6c53f1`(`feat: 플러그인 화면의 행이 접속 확인의 결과를 보인다 (connection-check 04)`)이고 이 브랜치에 있다. 아직 푸시하지 않았고 PR도 없다. 제목이 `feature/04-plugin-list-shows-connection-check`였던 세션이 넘긴다(넘기며 `(인계함)`을 붙인다).
+
+- 커밋의 pre-commit은 첫 시도에서 pytest 둘(`tests/channel/cli/test_interrupt.py`의 `test_닫는_도중에_한_번_더_누르면_닫기를_기다리지_않고_끝난다`와 `test_서버를_닫기_시작한_뒤에_한_번_누르면_닫기를_마치고_중단으로_끝난다`)이 "Ctrl+C 를 누른 자식이 30초 안에 끝나지 않았다"로 빨개 막혔다(커밋 로그를 읽었다, 2 failed 8134 passed). 이 변경은 파이썬 파일을 건드리지 않았고, 그 파일만 `uv run --no-sync pytest tests/channel/cli/test_interrupt.py -q -p no:xdist`로 단독으로 돌리니 6 passed(31.5초)였다(손으로 쳤다). 이 PC에서 다른 세션이 함께 도는 부하 탓으로 어림한다(부하는 재지 않았다). 같은 커밋을 다시 시도하니 pre-commit이 모두 통과해 커밋됐다.
+- 남은 단계는 `implement` 스킬이 이 커밋 뒤에 정한 것이다. 요청 범위는 PR과 병합까지다.
+  1. PR 직전 리뷰: `coderabbit-review` 서브에이전트(CLI가 못 돌면 `bug-perf-review`). 이 세션이 반영하며 새로 쓴 사실 문장을 밀 주장으로 넘긴다. 위 "셀프 리뷰"의 "고친 것" 가운데 훅 머리 주석이 아닌 문장은 `hooks/queries/admin/index.ts`의 "이 정책에서 빠지는 주기 읽기는 `.claude/rules/web-admin.md` 가 적는다. 지금 코드에 있는 것은 플러그인 목록의 접속 확인이고 그 정책은 `hooks/queries/connection`의 `AUTO` 다", `.claude/rules/web-admin.md`의 "이 훅은 SWR 기본 동작 셋을 풀고 그 해법은 훅의 머리 주석이 적는다", `hooks/queries/connection/index.ts`의 "날아가는 확인. 같은 행(관리 토큰 세대, 종류, 이름)의 요청은 하나만 보낸다", 티켓 04의 검증 칸 주석 둘이다.
+  2. `git-pr` 스킬로 PR(본문 끝에 `🤖 Generated with [Claude Code](https://claude.com/claude-code)`). PR 제목 접두에 느낌표는 붙이지 않는다(운영자가 올릴 때 손댈 것이 없다. 이 티켓의 변경은 화면과 시험이라 `docs/release-notes/upgrade/` 원고를 더하지 않았다. 확인은 새 세션이 `docs/constitution/operations.md`의 "릴리스 노트 원고"로 한 번 더 본다). 이 티켓은 기능의 마지막 열린 티켓이 아니라(05·06이 남았다) 기능 단락도 끝 줄도 더하지 않았다.
+  3. `mcp__ccd_pr__get_status`와 `bind_pr`, 봇 회차와 병합은 워크트리 사본의 `next-session`의 `merge.md` "워크트리에서 병합할 때". CI의 python 잡이 15분 제한으로 취소되면 단계 시각으로 가르고 `gh run rerun <실행> --failed`만 한다. CI의 `e2e` 잡이 `decision.e2e.ts`의 첫 장면에서 빨가면 위 "실패한 e2e 한 건"대로 이 티켓과 별개로 `diagnosing-bugs`로 간다.
+  4. 단계를 닫을 때 `retro`를 돈다. 이 일지의 "다음"은 아래 초안이고 닫는 세션이 마무리한다.
+- 이 PC의 `origin/dev`는 `463d9f1f7`(PR #630, main을 dev로 합친 병합)까지 앞섰으나 `git diff --name-only HEAD...origin/dev`가 비어 겹치는 파일이 없다(손으로 쳤다). `sibling_overlap`은 번호 겹침 없음, 함께 고친 파일 없음으로 끝났다. 병합 전에 한 번 더 친다.
+
+open-session을 부른다 2026-11-24T09:27:02Z
+
 ## 다음(초안)
 
 - 05(관리 화면 e2e 장면)와 06(배포 안내의 문제 해결 절)이 이 티켓에 막혀 있었다. 둘 다 이제 풀렸다.

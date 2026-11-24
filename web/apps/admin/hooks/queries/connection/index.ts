@@ -42,7 +42,7 @@ const connectionKeys = {
     [AUTO_ROOT, generation, kind, name] as const,
 };
 
-/** 날아가는 확인. 같은 행(관리 토큰 세대, 종류, 이름)의 요청은 하나만 보낸다. */
+/** 날아가는 확인. 그 행(관리 토큰 세대, 종류, 이름)이 화면에 서 있는 동안 같은 행의 요청은 하나만 보낸다. 행이 걷히면 비운다. */
 const flights = new Map<string, Promise<ConnectionResult | null>>();
 
 /** 지금 화면에 서 있는 행의 다시 확인. 행마다 하나다. */
@@ -126,15 +126,19 @@ export function useAutoConnection({
     key,
     run
       ? () =>
-          sharedFlight(flight, async () => {
-            const result = await resultOf(adminToken, (token) =>
-              checkConnection(token, kind, name),
-            );
-            if (result === null) {
-              void mutate(pluginKeys.list(generation));
-            }
-            return result;
-          })
+          // 보이지 않는 탭에서 행이 서면 첫 확인도 보내지 않는다(`refreshWhenHidden` 은 주기 확인만 쉬게 한다). 탭이 보이면
+          // 아래 효과의 처리기가 바로 한 번 확인한다.
+          document.visibilityState === "hidden"
+            ? Promise.resolve(null)
+            : sharedFlight(flight, async () => {
+                const result = await resultOf(adminToken, (token) =>
+                  checkConnection(token, kind, name),
+                );
+                if (result === null) {
+                  void mutate(pluginKeys.list(generation));
+                }
+                return result;
+              })
       : null,
     AUTO,
   );

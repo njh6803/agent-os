@@ -235,8 +235,11 @@ function token(role: string): string {
  */
 function serveEnv(extra: Readonly<Record<string, string>>): NodeJS.ProcessEnv {
   const env: NodeJS.ProcessEnv = { ...process.env, ...extra };
-  for (const name of PROVIDER_VARIABLES) {
-    Reflect.deleteProperty(env, name);
+  // Windows 의 환경 변수는 이름의 대소문자를 가리지 않지만 펼친 객체의 키는 가린다. 대소문자만 다른 이름도 벗긴다.
+  for (const name of Object.keys(env)) {
+    if (PROVIDER_VARIABLES.includes(name.toUpperCase())) {
+      Reflect.deleteProperty(env, name);
+    }
   }
   return env;
 }
