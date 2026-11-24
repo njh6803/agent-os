@@ -1,0 +1,13 @@
+# admin_port_chain 의 6번(발행 포트의 후보 모양을 compose 가 어떻게 렌더하는가). 띄우지 않고 `docker compose config` 로
+# 렌더만 한다. 관리 화면용 줄이 후보이고 아래 두 줄은 배포 파일의 지금 줄을 옮긴 것이다(견주는 자리).
+# PROBE_RENDER_CASE 는 표지다. 렌더된 결과에 그 회차의 이름이 실려야 그 회차의 환경으로 렌더된 것으로 센다.
+
+services:
+  proxy:
+    image: nginx:alpine
+    environment:
+      PROBE_RENDER_CASE: ${PROBE_RENDER_CASE:?}
+    ports:
+      - "${AGENT_OS_ADMIN_ADDRESS:-0.0.0.0}:${AGENT_OS_ADMIN_PORT:-8443}:9443"
+      - "0.0.0.0:443:8443"
+      - "0.0.0.0:80:8080"

@@ -1,0 +1,40 @@
+
+
+# ---- port_shape_async 프로브의 대조군. 어긋난 어댑터를 조립 자리에서 포트 자리에 넘긴다. 함수마다
+# 어긋남 하나이고, run.py 가 오류의 줄을 함수의 줄 범위로 가른다. 함수는 공개 이름이다. 밑줄로
+# 시작하면 이 모듈 안에서 쓰지 않는다며 strict 가 `reportUnusedFunction` 을 낸다(첫 실행).
+
+from agent_os.adapters.postgres.accounts_drift import BytesNameAccounts as _BytesNameAccounts
+from agent_os.adapters.postgres.accounts_drift import ListRowAccounts as _ListRowAccounts
+from agent_os.adapters.postgres.accounts_drift import ResultDriftAccounts as _ResultDriftAccounts
+from agent_os.adapters.postgres.accounts_drift import ShortRowAccounts as _ShortRowAccounts
+from agent_os.adapters.postgres.accounts_drift import SyncFindAccounts as _SyncFindAccounts
+from agent_os.http.accounts_list_drift import list_names as _list_names
+
+
+async def drift_sync_find(database: PostgresDatabase) -> None:
+    await _walk(_SyncFindAccounts(database.engine), "x", at=_PROBE_AT)
+
+
+async def drift_short_row(database: PostgresDatabase) -> None:
+    await _walk(_ShortRowAccounts(database.engine), "x", at=_PROBE_AT)
+
+
+async def drift_bytes_name(database: PostgresDatabase) -> None:
+    await _walk(_BytesNameAccounts(database.engine), "x", at=_PROBE_AT)
+
+
+async def drift_result_word(database: PostgresDatabase) -> None:
+    await _add_twice_result(_ResultDriftAccounts(database.engine), "x")
+
+
+async def drift_list_port(database: PostgresDatabase) -> None:
+    await _list_names(_ListRowAccounts(database.engine))
+
+
+async def control_list_rows_on_sequence_port(database: PostgresDatabase) -> None:
+    await _walk(_ListRowAccounts(database.engine), "x", at=_PROBE_AT)
+
+
+def drift_private_engine(database: PostgresDatabase) -> _PostgresAccounts:
+    return _PostgresAccounts(database._engine)

@@ -1,0 +1,53 @@
+
+
+# ---- port_shape_async 프로브의 트랜잭션 갈래. 어댑터(트랜잭션을 여는 모양 둘과 잠그지 않는 대조군)를
+# 지어 트랜잭션 포트 자리에 넘긴다. `main_tail.txt` 뒤에 붙어 `_PROBE_AT` 을 쓴다. `drive.py` 가
+# 부르므로 공개 이름이다.
+
+from agent_os.adapters.postgres.account_work import ClassTransactions as _ClassTransactions
+from agent_os.adapters.postgres.account_work import ContextTransactions as _ContextTransactions
+from agent_os.adapters.postgres.account_work import UnlockedTransactions as _UnlockedTransactions
+from agent_os.http.account_work import AccountTransactions as _AccountTransactions
+from agent_os.http.account_work import Compare as _Compare
+from agent_os.http.account_work import read_failures as _read_failures
+from agent_os.http.account_work import record_failed_attempt as _record_failed_attempt
+from agent_os.http.account_work import write_then as _write_then
+
+
+def probe_transactions(database: PostgresDatabase, style: str) -> _AccountTransactions:
+    """조립 자리. 모양마다 어댑터를 지어 트랜잭션 포트 타입으로 돌려준다."""
+    match style:
+        case "context":
+            return _ContextTransactions(database.engine)
+        case "class":
+            return _ClassTransactions(database.engine)
+        case "unlocked":
+            return _UnlockedTransactions(database.engine)
+        case _:
+            raise ValueError("모르는 모양이다")
+
+
+async def probe_attempt(
+    database: PostgresDatabase, style: str, name: str, compare: _Compare
+) -> int | None:
+    """로그인 시도 하나. 어댑터를 포트 자리에 넘겨 `http` 의 함수를 부른다."""
+    match style:
+        case "context":
+            context = _ContextTransactions(database.engine)
+            return await _record_failed_attempt(context, name, at=_PROBE_AT, compare=compare)
+        case "class":
+            classed = _ClassTransactions(database.engine)
+            return await _record_failed_attempt(classed, name, at=_PROBE_AT, compare=compare)
+        case "unlocked":
+            unlocked = _UnlockedTransactions(database.engine)
+            return await _record_failed_attempt(unlocked, name, at=_PROBE_AT, compare=compare)
+        case _:
+            raise ValueError("모르는 모양이다")
+
+
+async def probe_write_then(database: PostgresDatabase, style: str, name: str, *, abort: bool) -> int:
+    return await _write_then(probe_transactions(database, style), name, add=5, abort=abort)
+
+
+async def probe_read_failures(database: PostgresDatabase, style: str, name: str) -> int | None:
+    return await _read_failures(probe_transactions(database, style), name)
