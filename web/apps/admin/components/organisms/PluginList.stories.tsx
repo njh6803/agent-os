@@ -2,8 +2,11 @@
 // 표본 값은 그림의 것이다. 틀 없이 그리고, 미리보기의 데코레이터가 본문 칸과 같은 컨테이너를 두른다. 이름이나 스위치를
 // 누르면 요청이 가는 행동과 다시 읽은 값을 따르는 스위치는 페이지 시험이 본다.
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import type { ReactNode } from "react";
 import { expect, fn, within } from "storybook/test";
 import type { Plugin, PluginRow } from "../../api/plugins";
+import { ConnectionLine } from "../molecules/ConnectionLine";
+import { LaunchedConnection } from "../molecules/LaunchedConnection";
 import { PluginListView } from "./PluginList";
 
 function manifest(kind: PluginRow["kind"], name: string): Plugin["manifest"] {
@@ -90,6 +93,75 @@ export const List: Story = {
     ).toBeVisible();
     await expect(canvas.queryByText("로더가 생기기 전에는 효과가 없다")).toBeNull();
     await expect(canvas.getByText("등록된 것이 없다")).toBeVisible();
+  },
+};
+
+/** 접속 확인이 있는 행의 이름과 그 행에 보일 것(connection-check 티켓 04). */
+const CONNECTION_ROWS: readonly PluginRow[] = [
+  { kind: "mcp", name: "docs", enabled: true, manifest: manifest("mcp", "docs") },
+  { kind: "mcp", name: "search", enabled: true, manifest: manifest("mcp", "search") },
+  { kind: "mcp", name: "billing", enabled: true, manifest: manifest("mcp", "billing") },
+  { kind: "mcp", name: "wiki", enabled: true, manifest: manifest("mcp", "wiki") },
+  { kind: "mcp", name: "files", enabled: true, manifest: manifest("mcp", "files") },
+  { kind: "mcp", name: "shell", enabled: true, manifest: manifest("mcp", "shell") },
+  { kind: "mcp", name: "archive", enabled: false, manifest: manifest("mcp", "archive") },
+  { kind: "mcp", name: "broken", enabled: true, reason: "[server] 표에 command가 없다" },
+  { kind: "model", name: "sonnet", enabled: true, manifest: manifest("model", "sonnet") },
+  { kind: "model", name: "haiku", enabled: false, manifest: manifest("model", "haiku") },
+];
+
+const CHECKED_AT = new Date(Date.UTC(2026, 10, 24, 3, 4, 5));
+
+const CONNECTION_SLOTS: Readonly<Record<string, ReactNode>> = {
+  docs: <ConnectionLine result={{ state: "reached" }} />,
+  search: (
+    <ConnectionLine
+      result={{
+        state: "unreached",
+        reason: "연결을 거부했다: https://search.example.com/mcp (HTTP 401 Unauthorized)",
+      }}
+    />
+  ),
+  billing: <ConnectionLine result={undefined} />,
+  wiki: <ConnectionLine result={{ state: "failed", message: "서버에 닿지 못했다" }} />,
+  files: <LaunchedConnection enabled pending={false} latest={undefined} onRun={fn()} />,
+  shell: (
+    <LaunchedConnection
+      enabled
+      pending={false}
+      latest={{ result: { state: "reached" }, at: CHECKED_AT }}
+      onRun={fn()}
+    />
+  ),
+  archive: <LaunchedConnection enabled={false} pending={false} latest={undefined} onRun={fn()} />,
+  sonnet: <ConnectionLine result={{ state: "reached" }} />,
+};
+
+/**
+ * 접속 확인이 있는 행. 켜 둔 원격 MCP 서버와 모델은 상태가 줄 아래에 서고, 켜 둔 stdio 서버는 버튼이 서며, 꺼 둔 행은
+ * 결과가 없다. 표지 행에는 두지 않는다. 행마다 읽는 일은 페이지 시험이 본다.
+ */
+export const Connections: Story = {
+  args: {
+    data: CONNECTION_ROWS,
+    connection: (row) => CONNECTION_SLOTS[row.name] ?? null,
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    // 읽기 골격의 상태 영역(행 밖)은 세지 않는다.
+    const inRows = canvas.getAllByRole("status").filter((status) => status.closest("li") !== null);
+    await expect(inRows).toHaveLength(6);
+    await expect(canvas.getAllByRole("button", { name: "접속 확인" })).toHaveLength(3);
+    // 표지 행은 경고 한 줄뿐이다.
+    const broken = canvas.getByText("broken").closest("li");
+    await expect(broken).not.toBeNull();
+    if (broken !== null) {
+      await expect(within(broken).queryByRole("status")).toBeNull();
+      await expect(within(broken).queryByRole("button", { name: "접속 확인" })).toBeNull();
+    }
+    await expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(
+      document.documentElement.clientWidth,
+    );
   },
 };
 
