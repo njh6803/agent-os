@@ -2,7 +2,7 @@
 
 **상태:** 열림
 **어디로:** `tools/hook_web_edit_check.py`(화면 코드 경로 판정을 좁힌다), `tools/hook_payloads.toml`(발동하지 말아야 할 실제 입력을 더한다), `tests/tools/`(그 훅의 시험)
-**승인:** 사용자 승인 2026-11-10, 1회차, 일지 2026-11-10-1223-acknowledgement-and-token-endpoints.md. ADR 불필요(이 훅은 사용자가 설계 인터뷰에서 정한 것이라 ADR 0036의 문턱을 거치지 않았고, 이 항목은 그 판정의 범위를 줄일 뿐이다)
+**승인:** 사용자 승인 2026-11-10, 자체 승인 2026-11-24, 2회차(2회차는 서버 폴더가 아니라 `web/apps/admin/components/pages/HomePage.connection.test.tsx`라는 시험 파일을 처음 고친 직후 같은 알림이 온 것이다. 화면 코드가 아닌 편집에 훅이 알린 같은 종류의 사건이라 이 항목이 센다), 일지 2026-11-10-1223-acknowledgement-and-token-endpoints.md·2026-11-24-1652-connection-check-04-plugin-list.md. ADR 불필요(이 훅은 사용자가 설계 인터뷰에서 정한 것이라 ADR 0036의 문턱을 거치지 않았고, 이 항목은 그 판정의 범위를 줄일 뿐이다)
 
 pilot-portal 04와 05 세션이 `web/apps/portal/server/*.ts`를 처음 고칠 때 두 번 같은 알림을 받았고, 두 번 다 그 티켓이 화면도 디자인 토큰도 건드리지 않아 돌리지 않았다. 훅 독스트링의 판정(1~39행)은 `web/apps/<앱>/` 아래 토막이 하나 이상 있으면 모두 화면 코드로 본다. 앱 안의 서버 폴더나 도구 폴더는 가르지 않는다.
 

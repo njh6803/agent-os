@@ -251,7 +251,7 @@ describe("스스로 하는 확인", () => {
     await within(REMOTE_ROW()).findByText("붙음");
 
     expect(served.calls).toHaveLength(1);
-    expect(served.calls[0]?.authorization).toContain(TOKEN);
+    expect(served.calls[0]?.authorization).toBe(`Bearer ${TOKEN}`);
   });
 
   test("첫 응답 전에는 확인하는 중이 보이고 응답이 붙었다고 하면 붙음이 보인다", async () => {
@@ -291,7 +291,10 @@ describe("스스로 하는 확인", () => {
     await showList(user);
     await within(REMOTE_ROW()).findByText("붙음");
 
-    await vi.advanceTimersByTimeAsync(INTERVAL);
+    // 30초가 되기 전에는 다시 확인하지 않는다(더 이른 간격으로 나가면 여기서 빨개진다).
+    await vi.advanceTimersByTimeAsync(INTERVAL - 5_000);
+    expect(callsTo(served, "remote-docs")).toHaveLength(1);
+    await vi.advanceTimersByTimeAsync(5_000);
 
     await waitFor(() => {
       expect(callsTo(served, "remote-docs")).toHaveLength(2);
@@ -515,20 +518,22 @@ describe("스스로 하는 확인", () => {
   });
 
   test("응답이 꺼져 있다고 하면 그 행의 결과를 지우고 목록을 다시 읽는다", async () => {
+    const user = clock();
+    // 목록은 같은 행을 꺼진 채로 돌려준다. 행이 사라져서가 아니라 그 행의 상태가 지워지는지를 본다.
     const served = serve([REMOTE], () => {
-      served.list.rows = [REMOTE_OFF];
+      served.list.rows = [{ ...REMOTE, enabled: false }];
       return HttpResponse.json({ status: "disabled" });
     });
-    await showList();
+    await showList(user);
 
     await waitFor(() => {
       expect(served.list.reads).toBe(3);
     });
 
     await waitFor(() => {
-      expect(row("MCP", "remote-off")).toBeTruthy();
+      expect(within(REMOTE_ROW()).queryByRole("status")).toBeNull();
     });
-    expect(within(row("MCP", "remote-off")).queryByRole("status")).toBeNull();
+    await vi.advanceTimersByTimeAsync(INTERVAL * 3);
     expect(callsTo(served, "remote-docs")).toHaveLength(1);
   });
 
@@ -599,9 +604,11 @@ describe("눌러서 하는 확인", () => {
     expect(press(LOCAL_ROW()).getAttribute("aria-busy")).toBe("true");
     await user.click(press(LOCAL_ROW()));
     expect(callsTo(served, "local-files", "POST")).toHaveLength(1);
-    expect(served.calls[0]?.authorization).toContain(TOKEN);
+    expect(served.calls[0]?.authorization).toBe(`Bearer ${TOKEN}`);
     expect(callsTo(served, "local-files", "GET")).toHaveLength(0);
 
+    // 누른 시각과 응답이 온 시각이 5초 오차 안에서 겹치지 않도록 응답 전에 시계를 흘린다.
+    await vi.advanceTimersByTimeAsync(10_000);
     const answeredAt = Date.now();
     answer.resolve(reached());
     expect(await within(LOCAL_ROW()).findByText("붙음")).toBeTruthy();
@@ -755,8 +762,13 @@ describe("눌러서 하는 확인", () => {
   });
 
   test("응답이 꺼져 있다고 하면 그 행의 결과를 지우고 목록을 다시 읽는다", async () => {
-    const served = serve([LOCAL], () => HttpResponse.json({ status: "disabled" }));
+    // 첫 응답은 붙음이라 지울 이전 결과가 있고, 둘째 응답이 꺼져 있다고 하면 그 결과가 지워진다.
+    const served = serve([LOCAL], (_call, index) =>
+      index === 0 ? reached() : HttpResponse.json({ status: "disabled" }),
+    );
     const user = await showList();
+    await user.click(press(LOCAL_ROW()));
+    await within(LOCAL_ROW()).findByText("붙음");
     const reads = served.list.reads;
 
     await user.click(press(LOCAL_ROW()));
@@ -764,7 +776,9 @@ describe("눌러서 하는 확인", () => {
     await waitFor(() => {
       expect(served.list.reads).toBe(reads + 1);
     });
-    expect(within(LOCAL_ROW()).queryByRole("status")).toBeNull();
+    await waitFor(() => {
+      expect(within(LOCAL_ROW()).queryByRole("status")).toBeNull();
+    });
   });
 
   test("401 이면 관리 토큰을 내려놓는다", async () => {
