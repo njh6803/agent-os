@@ -34,9 +34,9 @@
 
 06과 나란히 가므로, 이 기능의 티켓 가운데 마지막으로 병합하는 쪽이 아래를 맡는다. 규칙은 `docs/agents/issue-tracker.md`의 "끝 줄을 적는 때"와 "나란히 돈 마지막 티켓 둘"이고, 기능 단락을 쓰는 법은 `docs/constitution/operations.md`의 "릴리스 노트 원고"다.
 
-- [ ] 병합 직전에 `git fetch origin` 뒤 기준 브랜치를 합치고, 합친 판에서 이 기능의 다른 티켓(`.scratch/connection-check/issues/`에서 이 티켓 밖의 전부)의 `Status:`를 본다. 모두 done이나 wontfix이면 이 PR이 마지막이라 아래 항목을 맡고, 열린 티켓이 하나라도 있으면 맡지 않는다. 06만 보지 않고 전부를 보는 것은 그 사이 티켓이 더해질 수 있어서다. 어느 쪽이든 저장소 상태 시험(`test_이_저장소의_…`)을 돌려 판정과 맞는지 본다
-- [ ] 마지막이면 같은 커밋에 셋을 싣는다. 기능 계획(`.scratch/connection-check/plan.md`)의 `**끝:**` 줄, 기능 단락(`docs/release-notes/features/connection-check.md`. 이 기능의 티켓 전부가 바꾼 제품 변경을 담고, 06이 멈출 때의 글을 바꿨으면 그것도 싣는다), `uv run python tools/plan_table.py`를 돌린 `.scratch/plan.md`다. 끊긴 뒤 이어받았거나 컨텍스트가 압축된 뒤라 끝 줄이 이미 있으면 다시 적지 않는다
-- [ ] 마지막이 아니라고 보고 병합했으면, 병합 뒤 다시 `git fetch origin`으로 열려 있던 티켓이 그 사이 병합됐는지 본다. 두 PR이 같은 때 서로 마지막이 아니라고 보고 병합하면 끝 줄을 아무도 적지 않는다. dev에는 strict 보호가 없어 두 PR 모두 초록으로 병합되고, 그 뒤 dev의 push CI가 저장소 상태 시험으로 빨개진다. 그때는 끝 줄과 기능 단락을 싣는 고침 PR을 낸다. 같은 고침 PR이 이미 열렸거나 병합됐으면(`gh pr list`) 내지 않는다
+- [x] 병합 직전에 `git fetch origin` 뒤 기준 브랜치를 합치고, 합친 판에서 이 기능의 다른 티켓(`.scratch/connection-check/issues/`에서 이 티켓 밖의 전부)의 `Status:`를 본다. 모두 done이나 wontfix이면 이 PR이 마지막이라 아래 항목을 맡고, 열린 티켓이 하나라도 있으면 맡지 않는다. 06만 보지 않고 전부를 보는 것은 그 사이 티켓이 더해질 수 있어서다. 어느 쪽이든 저장소 상태 시험(`test_이_저장소의_…`)을 돌려 판정과 맞는지 본다 _(2026-11-24 `git fetch origin` 뒤 `origin/dev`(a68a51d61)는 이 브랜치보다 앞서지 않아 합칠 것이 없었다. 06은 `Status: ready-for-agent`라 마지막이 아니다. `uv run pytest tests/test_plan_status.py -q`를 손으로 쳐 13개가 통과했다. 일지 "다음")_
+- [x] 마지막이면 같은 커밋에 셋을 싣는다. 기능 계획(`.scratch/connection-check/plan.md`)의 `**끝:**` 줄, 기능 단락(`docs/release-notes/features/connection-check.md`. 이 기능의 티켓 전부가 바꾼 제품 변경을 담고, 06이 멈출 때의 글을 바꿨으면 그것도 싣는다), `uv run python tools/plan_table.py`를 돌린 `.scratch/plan.md`다. 끊긴 뒤 이어받았거나 컨텍스트가 압축된 뒤라 끝 줄이 이미 있으면 다시 적지 않는다 _(마지막이 아니라 싣지 않았다. 06을 닫는 PR이 싣는다)_
+- [ ] 마지막이 아니라고 보고 병합했으면, 병합 뒤 다시 `git fetch origin`으로 열려 있던 티켓이 그 사이 병합됐는지 본다. 두 PR이 같은 때 서로 마지막이 아니라고 보고 병합하면 끝 줄을 아무도 적지 않는다. dev에는 strict 보호가 없어 두 PR 모두 초록으로 병합되고, 그 뒤 dev의 push CI가 저장소 상태 시험으로 빨개진다. 그때는 끝 줄과 기능 단락을 싣는 고침 PR을 낸다. 같은 고침 PR이 이미 열렸거나 병합됐으면(`gh pr list`) 내지 않는다 _(병합 뒤에 보는 칸이라 이 PR에서는 비워 둔다. 병합 보고에 결과를 적는다)_
 
 ### 검증
 

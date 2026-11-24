@@ -53,8 +53,18 @@ const STARTUP_MS = 60_000;
 const QUIET = { NEXT_TELEMETRY_DISABLED: "1" };
 // serve 가 읽는 토큰 변수. Next 로 가는 환경에서는 벗긴다.
 const SERVE_TOKENS = ["AGENT_OS_ADMIN_TOKEN", "AGENT_OS_CHANNEL_TOKEN"];
-// 모델 제공사의 키와 주소와 프록시를 정하는 변수. `serve` 의 환경에서 벗긴다(`serveEnv`).
-const PROVIDER_VARIABLES = ["ANTHROPIC_API_KEY", "ANTHROPIC_API_URL", "ANTHROPIC_PROXY"];
+// 모델 제공사의 키와 주소와 프록시를 정하는 변수, 그리고 HTTP 클라이언트가 읽는 환경 프록시. `serve` 의 환경에서 벗긴다
+// (`serveEnv`). 환경 프록시를 벗기는 것은 닫힌 포트를 가리키는 모델 행의 확인이 프록시를 타고 연결 거부 대신 프록시의
+// 응답으로 끝나지 않게 하려는 것이다(`tests/adapters/test_model_check.py` 의 `AMBIENT` 가 같은 이름을 벗긴다).
+const PROVIDER_VARIABLES = [
+  "ANTHROPIC_API_KEY",
+  "ANTHROPIC_API_URL",
+  "ANTHROPIC_PROXY",
+  "HTTP_PROXY",
+  "HTTPS_PROXY",
+  "ALL_PROXY",
+  "NO_PROXY",
+];
 // 기본 모델 플러그인의 이름. 임시 루트에 같은 이름의 모델 매니페스트를 쓰고 `--model` 로 명시해 넘긴다.
 const DEFAULT_MODEL = "claude-opus-5";
 
