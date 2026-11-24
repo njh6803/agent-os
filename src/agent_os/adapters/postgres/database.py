@@ -142,6 +142,71 @@ def reason_of(error: BaseException) -> str:
     return type(os_errors[-1] if os_errors else error).__name__
 
 
+# 멈출 때와 다시 시도할 때 찍는 글을 짓는 자리. 값(자리 표시, 까닭, 판)을 글자로 받는
+# 순수 함수라, 배포 안내의 시험이 자리 표시를 넣어 불러 안내의 표가 제품의 글을 빠짐없이
+# 싣는지 본다. 어댑터의 메서드는 값을 채워 이 함수들을 부른다.
+
+
+def retry_notice(place: str, retry_seconds: float) -> str:
+    """처음 실패한 뒤 한 번 찍는 알림. 멈추는 글이 아니다."""
+    seconds = f"{retry_seconds:g}초 동안 다시 시도합니다."
+    return f"데이터베이스({place})에 아직 닿지 못해 최대 {seconds}"
+
+
+def unreached_text(kind: Failure, place: str, reason: str, retry_seconds: float) -> str:
+    """접속 실패 갈래마다의 멈출 때의 글. 값을 되울리지 않는다."""
+    match kind:
+        case Failure.TRANSIENT:
+            waited = f"{retry_seconds:g}초 동안 다시 시도했습니다"
+            return f"데이터베이스({place})에 닿지 못했습니다. {waited}({reason})."
+        case Failure.PASSWORD:
+            refused = "계정이나 비밀번호를 받아들이지 않았습니다"
+            return f"데이터베이스({place})가 {refused}({reason}).\n{_PASSWORD_HINT}"
+        case Failure.NOT_ALLOWED:
+            refused = "이 접속을 허락하지 않았습니다"
+            return f"데이터베이스({place})가 {refused}({reason}).\n{_HALF_BUILT_HINT}"
+        case Failure.NO_DATABASE:
+            check = "주소의 데이터베이스 이름을 확인하십시오."
+            return f"데이터베이스({place})가 없습니다({reason}). {check}\n{_HALF_BUILT_HINT}"
+        case Failure.OTHER:
+            return f"데이터베이스({place})에 접속하지 못했습니다({reason})."
+
+
+def misaligned_text(alignment: Alignment, shown: str, head: str) -> str:
+    """표의 판이 이 판과 맞지 않을 때의 글. 맞는(`CURRENT`) 표에는 글이 없어 `ValueError` 다."""
+    if alignment is Alignment.BEHIND:
+        return f"{_BEHIND}\n  표의 판은 {shown}이고 이 판의 마지막 판은 {head}입니다."
+    if alignment is Alignment.AHEAD:
+        return f"{_AHEAD}\n  표의 판은 {shown}이고 이 판이 아는 마지막 판은 {head}입니다."
+    raise ValueError("판이 맞는 표에는 맞지 않는 글이 없다")
+
+
+def unexpected_text(place: str, reason: str) -> str:
+    """확인이 글 대신 예외를 던졌을 때의 글."""
+    stopped = "뜻밖의 오류로 멈췄습니다"
+    return f"데이터베이스({place})를 확인하다 {stopped}({reason}).\n{_UNEXPECTED_HINT}"
+
+
+def close_text(place: str, reason: str) -> str:
+    """닫기가 예외를 던졌을 때의 글."""
+    return f"데이터베이스({place})의 연결을 닫다 오류가 났습니다({reason})."
+
+
+def upgrade_failed_text(reason: str, before: str) -> str:
+    """표를 올리다 실패했을 때의 첫 줄. 부르는 쪽이 그 뒤에 예외의 역추적을 붙인다."""
+    return f"표를 올리다 실패했습니다({reason}). 표의 판은 올리기 전 그대로 {before}입니다."
+
+
+def upgraded_text(before: str, head: str) -> str:
+    """표를 올렸을 때의 글."""
+    return f"표를 {before}에서 {head}으로 올렸습니다."
+
+
+def already_current_text(head: str) -> str:
+    """올릴 것이 없을 때의 글."""
+    return f"표가 이미 마지막 판({head})입니다."
+
+
 class DatabaseUrl:
     """읽은 연결 문자열. `repr` 과 `str` 에 비밀번호가 없다. 접속에만 원래 값을 쓴다."""
 
@@ -264,30 +329,24 @@ class PostgresDatabase:
                 ok=False, message=self._misaligned_text(alignment, reached.revision)
             )
         if alignment is Alignment.CURRENT:
-            return MigrateResult(ok=True, message=f"표가 이미 마지막 판({head or _NONE})입니다.")
+            return MigrateResult(ok=True, message=already_current_text(head or _NONE))
         before = reached.revision or _NONE
         try:
             async with self._engine.begin() as connection:
                 await connection.run_sync(self._upgrade)
         except Exception as error:  # 어떤 실패든 글로 바꿔 판의 상태를 알린다
-            first = (
-                f"표를 올리다 실패했습니다({reason_of(error)}). "
-                f"표의 판은 올리기 전 그대로 {before}입니다."
-            )
+            first = upgrade_failed_text(reason_of(error), before)
             trace = "".join(traceback.format_exception(error))
             return MigrateResult(ok=False, message=f"{first}\n{trace}".rstrip("\n"))
-        return MigrateResult(ok=True, message=f"표를 {before}에서 {head or _NONE}으로 올렸습니다.")
+        return MigrateResult(ok=True, message=upgraded_text(before, head or _NONE))
 
     def unexpected_problem(self, error: BaseException) -> str:
         """확인이 글 대신 예외를 던졌을 때의 글. 예외의 글과 역추적은 싣지 않는다."""
-        return (
-            f"데이터베이스({self._place})를 확인하다 "
-            f"뜻밖의 오류로 멈췄습니다({reason_of(error)}).\n{_UNEXPECTED_HINT}"
-        )
+        return unexpected_text(self._place, reason_of(error))
 
     def close_problem(self, error: BaseException) -> str:
         """닫기가 예외를 던졌을 때의 글. 예외의 글과 역추적은 싣지 않는다."""
-        return f"데이터베이스({self._place})의 연결을 닫다 오류가 났습니다({reason_of(error)})."
+        return close_text(self._place, reason_of(error))
 
     async def close(self) -> None:
         await self._engine.dispose()
@@ -309,30 +368,13 @@ class PostgresDatabase:
                 if kind is not Failure.TRANSIENT or time.monotonic() >= deadline:
                     return Unreached(self._describe(kind, error))
             if not noticed:
-                seconds = f"{self._retry_seconds:g}초 동안 다시 시도합니다."
-                self._notice(f"데이터베이스({self._place})에 아직 닿지 못해 최대 {seconds}")
+                self._notice(retry_notice(self._place, self._retry_seconds))
                 noticed = True
             await asyncio.sleep(self._retry_interval)
 
     def _describe(self, kind: Failure, error: BaseException) -> str:
         """갈래마다의 멈출 때의 글. 값을 되울리지 않는다."""
-        place = self._place
-        reason = reason_of(error)
-        match kind:
-            case Failure.TRANSIENT:
-                waited = f"{self._retry_seconds:g}초 동안 다시 시도했습니다"
-                return f"데이터베이스({place})에 닿지 못했습니다. {waited}({reason})."
-            case Failure.PASSWORD:
-                refused = "계정이나 비밀번호를 받아들이지 않았습니다"
-                return f"데이터베이스({place})가 {refused}({reason}).\n{_PASSWORD_HINT}"
-            case Failure.NOT_ALLOWED:
-                refused = "이 접속을 허락하지 않았습니다"
-                return f"데이터베이스({place})가 {refused}({reason}).\n{_HALF_BUILT_HINT}"
-            case Failure.NO_DATABASE:
-                check = "주소의 데이터베이스 이름을 확인하십시오."
-                return f"데이터베이스({place})가 없습니다({reason}). {check}\n{_HALF_BUILT_HINT}"
-            case Failure.OTHER:
-                return f"데이터베이스({place})에 접속하지 못했습니다({reason})."
+        return unreached_text(kind, self._place, reason_of(error), self._retry_seconds)
 
     def _config(self) -> Config:
         config = Config()
@@ -364,9 +406,7 @@ class PostgresDatabase:
 
     def _misaligned_text(self, alignment: Alignment, revision: str | None) -> str:
         shown, head = revision or _NONE, self._head() or _NONE
-        if alignment is Alignment.BEHIND:
-            return f"{_BEHIND}\n  표의 판은 {shown}이고 이 판의 마지막 판은 {head}입니다."
-        return f"{_AHEAD}\n  표의 판은 {shown}이고 이 판이 아는 마지막 판은 {head}입니다."
+        return misaligned_text(alignment, shown, head)
 
     def _upgrade(self, connection: Connection) -> None:
         config = self._config()
