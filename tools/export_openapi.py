@@ -22,6 +22,7 @@ from pathlib import Path
 
 from agent_os.core.ports import (
     ChatModel,
+    CheckOutcome,
     Clock,
     Cursor,
     ManifestRow,
@@ -42,6 +43,7 @@ from agent_os.http.sites import Sites
 from agent_os.sdk import (
     BaseAgent,
     Event,
+    HttpServer,
     McpServer,
     PluginKind,
     PluginManifest,
@@ -49,6 +51,7 @@ from agent_os.sdk import (
     Principal,
     RunId,
     Skill,
+    StdioServer,
 )
 from agent_os.server import create_app
 
@@ -92,11 +95,20 @@ class _SchemaOnlyModels:
     def build(self, manifest: PluginManifest) -> ChatModel:
         raise NotImplementedError("스키마 추출은 포트를 부르지 않는다")
 
+    async def check(self, manifest: PluginManifest) -> CheckOutcome:
+        raise NotImplementedError("스키마 추출은 포트를 부르지 않는다")
+
 
 class _SchemaOnlyTools:
     def connect(
         self, servers: Mapping[PluginName, McpServer]
     ) -> AbstractAsyncContextManager[ToolConnection]:
+        raise NotImplementedError("스키마 추출은 포트를 부르지 않는다")
+
+    async def check_remote(self, name: PluginName, server: HttpServer) -> CheckOutcome:
+        raise NotImplementedError("스키마 추출은 포트를 부르지 않는다")
+
+    async def check_stdio(self, name: PluginName, server: StdioServer) -> CheckOutcome:
         raise NotImplementedError("스키마 추출은 포트를 부르지 않는다")
 
 

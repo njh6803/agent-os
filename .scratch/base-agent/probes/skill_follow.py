@@ -33,6 +33,13 @@ null이고 절 경로가 든 `section`)가 닿았다, 전문 읽기에서 멈췄
 결과로 본다). 모르는 사례 이름과 1보다 작은 `--rounds`는 돌리지 않고 2로 끝낸다(회차 없는 실행이
 0으로 끝나지 않게 한다).
 
+실제 서버로 돌리기(티켓 07). 환경 변수 `SKILL_FOLLOW_DOC_SEARCH_URL`에 실제 서버의 `/mcp` 주소를,
+`SKILL_FOLLOW_DOC_SEARCH_AUTHORIZATION`에 `Bearer <토큰>` 전체를 주면 가짜 서버를 띄우지 않고 그
+서버로 `--only`에 준 사례를 돈다. 둘 중 하나만 주면 돌리지 않고 2로 끝난다. 서버의
+모드(`Case.server`)가 창 상한을 낮춘 모드(`WINDOW_MODE`) 하나뿐인 사례만 돌릴 수 있다(실제 서버는
+모드를 갖지 않는다. 다른 모드의 사례를 주면 돌리지 않고 2로 끝난다). 창 상한은 실제 서버의
+기본(20000자)이므로, 그 사례의 문서는 20000자보다 긴 것을 실제 서버에 미리 넣어 두어야 한다.
+
 못 보는 것. 끝 넘음 사례 둘은 가짜 서버가 런타임의 문구를 실패 결과로 돌려주는
 흉내(`--tool-cap 1`)이고 런타임이 거부한 것이 아니다(모델이 보는 것은 같고 트레이스가 다르다.
 `tests/fake_doc_search_server.py`의 독스트링). 저장소의 매니페스트가 두 끝(턴 6, 도구 호출 4)을
@@ -78,6 +85,16 @@ DOC_SEARCH_LINE = 'url = "http://rag-engine:8000/mcp"'
 VARIABLE = "DOC_SEARCH_AUTHORIZATION"
 AUTHORIZATION = "Bearer skill-follow-probe-token"
 MODEL = "claude-opus-5"
+# 실제 문서 검색 서버(티켓 07)를 가리키는 환경 변수 둘. 둘 다 주면 가짜 서버를 띄우지 않고 그 서버로
+# 돈다. 주소는 서버의 `/mcp`까지, 토큰은 `Bearer <토큰>` 전체다. 값이 빈 변수는 주지 않은 것으로
+# 읽는다.
+EXTERNAL_URL_ENV = "SKILL_FOLLOW_DOC_SEARCH_URL"
+EXTERNAL_AUTHORIZATION_ENV = "SKILL_FOLLOW_DOC_SEARCH_AUTHORIZATION"
+EXTERNAL_URL = os.environ.get(EXTERNAL_URL_ENV) or None
+EXTERNAL_TOKEN = os.environ.get(EXTERNAL_AUTHORIZATION_ENV) or None
+# CLI 프로세스에 `DOC_SEARCH_AUTHORIZATION` 으로 주는 값이다. 실제 서버를 가리키면 그 토큰이고
+# 아니면 가짜 서버가 기대하는 값이다.
+SENT_AUTHORIZATION = EXTERNAL_TOKEN or AUTHORIZATION
 EXIT_PAUSED = 3
 MAX_DECISIONS = 3
 CALL_TIMEOUT = 600
@@ -102,6 +119,7 @@ DOCX_LOCATION = '"page":null,"section":["제2장 육아휴직","2.3 신청 절�
 # 한도가 든다(가짜 서버의 블록으로 셈한 자리. 상한이 300이어도 같고 250이면 대여 기간이 둘째
 # 창이다).
 SMALL_WINDOW = 320
+WINDOW_MODE = ("--text-max-chars", str(SMALL_WINDOW))
 FIRST_WINDOW_FACT = "최대 4일"
 LATE_FACT = "35만원"
 
@@ -655,6 +673,10 @@ SHORTEN = "방금 답을 한 문장으로 줄여 줘"
 LONG = (
     "법인차량 운영 규정 전문을 읽고 한 번에 며칠까지 빌릴 수 있는지와 주유 카드의 월 한도를 알려줘"
 )
+# 조각 검색으로는 답할 수 없고 문서 전체를 읽어야 하는 물음(티켓 07). 실제 서버는 문서의 모든 블록을
+# 조각으로 나누어 LONG 의 두 사실을 `search` 만으로 답하므로, LONG 으로는 모델이 `get_document` 를
+# 부르지 않는다(실제 서버에서 3회차 모두 측정 아님이었다).
+LONG_LAST = "법인차량 운영 규정 전문을 읽고 맨 마지막 조항이 무엇인지 알려줘"
 
 CASES = [
     Case("근거 있음", [Step("육아휴직은 최대 몇 년까지 쓸 수 있어?")], _searched, _grounded_docx),
@@ -758,7 +780,14 @@ CASES = [
         [Step(LONG, "approve")],
         _first_window,
         _long_result,
-        server=("--text-max-chars", str(SMALL_WINDOW)),
+        server=WINDOW_MODE,
+    ),
+    Case(
+        "긴 문서의 전문 승인(마지막 조항)",
+        [Step(LONG_LAST, "approve")],
+        _first_window,
+        _long_result,
+        server=WINDOW_MODE,
     ),
     Case(
         "DOCX 근거의 출처",
@@ -820,7 +849,7 @@ def _cli(argv: list[str]) -> subprocess.CompletedProcess[str]:
         capture_output=True,
         text=True,
         encoding="utf-8",
-        env={**os.environ, "PYTHONUTF8": "1", VARIABLE: AUTHORIZATION},
+        env={**os.environ, "PYTHONUTF8": "1", VARIABLE: SENT_AUTHORIZATION},
         check=False,
         timeout=CALL_TIMEOUT,
     )
@@ -878,6 +907,11 @@ def _measure(case: Case, turn: int, *, work: Path, shared: Path) -> list[Run]:
     if not case.dedicated:
         return _run_case(case, root=shared, traces=traces)
     root = work / f"plugins-{tag}"
+    if EXTERNAL_URL is not None:
+        # 실제 서버는 모드가 없다. 서버 모드를 요구하는 사례는 `main`이 미리 걸러 이 길로 오지
+        # 않는다.
+        _build_root(root, EXTERNAL_URL, conversation_limit=case.conversation_limit)
+        return _run_case(case, root=root, traces=traces)
     with _serving(work / f"server_{tag}", case.server) as url:
         _build_root(root, url, conversation_limit=case.conversation_limit)
         return _run_case(case, root=root, traces=traces)
@@ -975,12 +1009,32 @@ def main() -> int:
         print("--rounds 는 1 이상이다", file=sys.stderr)
         return 2
     cases = [case for case in CASES if not wanted or case.label in wanted]
+    if (EXTERNAL_URL is None) != (EXTERNAL_TOKEN is None):
+        # 하나만 주면 가짜 서버로 돌거나(토큰만) 인증 없이 실제 서버로 가므로 돌리지 않는다.
+        print(
+            f"{EXTERNAL_URL_ENV}와 {EXTERNAL_AUTHORIZATION_ENV}는 함께 줘야 한다", file=sys.stderr
+        )
+        return 2
+    if EXTERNAL_URL is not None:
+        # 서버의 모드(끝 넘음, 검색 실패, 빈 색인)는 가짜 서버만 낸다. 전문 창의 상한은 실제 서버의
+        # 기본 20000자를 그대로 쓰므로 그 모드의 사례(긴 문서의 전문 승인)는 모드 없이 돈다.
+        unsupported = [c.label for c in cases if c.server and tuple(c.server) != WINDOW_MODE]
+        if unsupported:
+            print(
+                f"{EXTERNAL_URL_ENV}를 주면 서버 모드가 필요한 사례는 돌 수 없다: "
+                f"{', '.join(unsupported)}",
+                file=sys.stderr,
+            )
+            return 2
     work = Path(tempfile.mkdtemp(prefix="base-agent-probe-"))
     out = options.out or work
     out.mkdir(parents=True, exist_ok=True)
     try:
-        with _serving(work / "server", ()) as url:
-            swept = _sweep(cases, options.rounds, work=work, url=url)
+        if EXTERNAL_URL is not None:
+            swept = _sweep(cases, options.rounds, work=work, url=EXTERNAL_URL)
+        else:
+            with _serving(work / "server", ()) as url:
+                swept = _sweep(cases, options.rounds, work=work, url=url)
     except ServerNotReady as error:
         print(error, file=sys.stderr)
         return 2

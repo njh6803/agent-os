@@ -62,6 +62,28 @@ ConnectionError 와 도구 호출이 실패할 때의 RuntimeError 다. 긴 글�
 `httpcore2` 로거의 DEBUG 줄에 실리지 않는다(`.scratch/mcp-http` 의 프로브가 그 셋을 쟀다.
 접속이 막힌 `unauthorized` 와 `closed_port` 사례에는 양성 대조가 없다).
 
+**접속 확인은 서버 하나를 실행이 여는 길(`_opened`)로 열고 닫는다(ADR 0067).** `check_remote` 와
+`check_stdio` 는 같은 함수(`_check`)를 부르고 기한만 다르다. 기한은 `McpTools` 를 만들 때 받고
+기본이 원격 10초, stdio 20초다. 도구 목록을 읽을 때까지 예외 없이 지나 닫으면 `Reached` 이고 도구가
+없어도 같다. 여는 동안의 실패는 위 ConnectionError 의 글이 그대로 `Unreached.reason` 이다. 그 글은
+서버 이름을 든 앞머리가 있어 비지 않고, http 의 상태 덧붙임과 헤더 값 가리기도 실행과 같다. 환경
+변수가 없는 헤더나 찾지 못한 명령도 여는 동안의 실패라 `Unreached` 이고 이 길에는 `PluginError` 가
+없다. 기한은 여는 동작과 닫는 동작을 한 범위(`anyio.move_on_after`)로 감싼다. 문맥을 범위 안에서
+열고 밖에서 닫으면 anyio 가 범위 중첩 위반으로 거부하기 때문이다(코드를 읽은 설명이고 따로 재지는
+않았다). 그래서 도구 목록을 읽은 뒤에 온
+기한은 결과를 바꾸지 않고, 그 전에 온 기한의 까닭은 `MCP 서버 <이름>(<주소나 명령>)에 붙지 못했다:
+<N>초 안에 준비되지 않았다` 다. 기한이 왔는지는 예외가 아니라 범위의 `cancel_called` 로 본다.
+라이브러리 안에서 취소가 다른 예외로 바뀌면 여는 단계의 변환이 그것을 ConnectionError 로 올리기
+때문이다. 연 것은 실행과 같은 닫는 길로 거둔다. http 는 세션 종료 요청을 2초 유예 안에서 보내고
+(기한에 닿은 확인도 세션 번호를 받았으면 보낸다), stdio 는 위 "닫기"의 길로 프로세스를 끈다. 그래서
+기한에 닿은 확인의 응답은 기한에 닫는 시간을 더한 만큼 걸린다. 닫는 동안 난 예외처럼 여는 단계 밖의
+예외와 바깥의 취소는 바꾸지 않는다. 서버 하나만 열기 때문에 서버 여럿이 같은 이름의 도구를 낼 때
+실행이 실패하는 것은 보지 못한다. 도구 목록이 한 페이지인 원격 서버가 확인 한 번에 받는 요청은
+POST 3건, GET 많아야 1건, DELETE 1건이다(가짜 서버로 셌고 시험이 고정한다). 목록이 여러 페이지면
+`tools/list` 요청마다 POST가 하나씩 늘어 실제 요청 수는 서버에 따라 다르다. 확인은 실행의 접속 기한
+30초와 실행 기한을 바꾸지 않고, 확인의 길에서만 로거를 다르게 다루지도 않는다. 위 "로그"가 그대로
+걸린다.
+
 **던지는 예외의 타입은 내장이다(`.scratch/mcp-shutdown/spec.md` 의 "경계를 넘는 예외").** 원인
 (`__cause__`)에는 mcp 의 원래 예외가 남는다. 서버를 여는 동안(띄우기나 접속, 세션 열기,
 `initialize()`, 도구 목록 읽기)의 실패는 서버 이름과 매니페스트의 명령(http 모양이면 주소)과 원인을
@@ -124,7 +146,14 @@ from mcp.types import (
     Tool,
 )
 
-from agent_os.core.ports import ToolConnection, ToolResult, ToolSpec
+from agent_os.core.ports import (
+    CheckOutcome,
+    Reached,
+    ToolConnection,
+    ToolResult,
+    ToolSpec,
+    Unreached,
+)
 from agent_os.sdk import HttpServer, Json, McpServer, PluginName, StdioServer
 
 # 윈도우가 아닌 OS 에서 서버 앞에 세우는 런처(그 모듈의 독스트링).
@@ -137,6 +166,11 @@ MIN_REDACTED_LENGTH = 8
 # http 전송의 세션 종료 요청을 기다리는 유예. stdio 상류가 서버가 스스로 끝나기를 기다리는 유예와
 # 같은 값이다(ADR 0034·0049). 종료 요청에만 걸린다(`_end_session`).
 CLOSE_GRACE_SECONDS = 2
+# 접속 확인의 기본 기한(ADR 0067 결정 "기한"). 원격은 화면의 확인 간격 30초보다 짧아야 같은 행의
+# 확인이 겹치지 않고, stdio 는 관리 화면의 중계 제한 30초 안에 프로세스를 거두는 시간까지 들어야
+# 한다.
+REMOTE_CHECK_SECONDS = 10
+STDIO_CHECK_SECONDS = 20
 
 
 class _NoDebug(logging.Filter):
@@ -150,6 +184,16 @@ logging.getLogger("mcp.client.streamable_http").addFilter(_NoDebug())
 
 
 class McpTools:
+    def __init__(
+        self,
+        *,
+        remote_check_seconds: float = REMOTE_CHECK_SECONDS,
+        stdio_check_seconds: float = STDIO_CHECK_SECONDS,
+    ) -> None:
+        """접속 확인의 기한(초)을 어댑터를 만들 때 받는다. 실행의 기한은 이 값과 무관하다."""
+        self._remote_check_seconds = remote_check_seconds
+        self._stdio_check_seconds = stdio_check_seconds
+
     @asynccontextmanager
     async def connect(
         self, servers: Mapping[PluginName, McpServer]
@@ -167,6 +211,45 @@ class McpTools:
                         )
                     routes[route.tool.name] = route
             yield McpConnection(routes)
+
+    async def check_remote(self, name: PluginName, server: HttpServer) -> CheckOutcome:
+        """원격 서버의 접속 확인(ADR 0067). 모듈 독스트링의 "접속 확인"."""
+        return await _check(name, server, self._remote_check_seconds)
+
+    async def check_stdio(self, name: PluginName, server: StdioServer) -> CheckOutcome:
+        """stdio 서버의 접속 확인(ADR 0067). 모듈 독스트링의 "접속 확인"."""
+        return await _check(name, server, self._stdio_check_seconds)
+
+
+async def _check(name: PluginName, server: McpServer, seconds: float) -> CheckOutcome:
+    """서버 하나를 실행이 여는 것과 같은 길(`_opened`)로 열고 닫는다. 모듈 독스트링의 "접속 확인".
+
+    기한의 범위가 여는 동작과 닫는 동작을 함께 감싼다. 문맥을 범위 안에서 열고 밖에서 닫으면 anyio
+    가 범위 중첩 위반으로 거부하기 때문이다. 그래서 도구 목록을 읽은 시점(`opened`)이 붙었다는
+    표지이고, 그 뒤에 기한이 와서 닫기가 끊겨도 `Reached` 다. 여는 동안의 실패는 `_connecting` 이
+    만든 ConnectionError 이고 그 글이 까닭이다. 그 글은 서버 이름을 든 앞머리가 있어 비지 않고,
+    다른 곳에서 난 ConnectionError 의 글이 비면 예외의 종류 이름으로 채운다.
+    기한의 취소가 라이브러리 안에서 다른 예외로 바뀌어 ConnectionError 로 나올 수 있어, 범위가
+    취소를 불렀는지(`cancel_called`)로 기한을 가른다. 여는 단계 밖의 예외와 바깥의 취소는 바꾸지
+    않는다.
+    """
+    opened = False
+    with anyio.move_on_after(seconds) as scope:
+        try:
+            async with _opened(name, server):
+                opened = True
+        except ConnectionError as error:
+            if opened:
+                raise
+            if not scope.cancel_called:
+                # `_connecting` 의 글은 앞머리가 있어 비지 않지만, 그 밖의 ConnectionError(여는 단계
+                # 해제에서 나온 BrokenPipeError 등)는 글이 빌 수 있다. 응답 계약이 빈 글을 거부한다.
+                return Unreached(str(error) or type(error).__name__)
+    if opened:
+        return Reached()
+    return Unreached(
+        f"MCP 서버 {name}({_where(server)})에 붙지 못했다: {seconds:g}초 안에 준비되지 않았다"
+    )
 
 
 @dataclass(frozen=True)

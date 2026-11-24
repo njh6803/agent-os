@@ -17,7 +17,7 @@
 실린다. 키는 언제나 이름으로 넘기므로 환경의 `OPENAI_API_KEY` 는 요청 어디에도 없다. 타임아웃과
 재시도는 라이브러리의 기본값 그대로다(429·500·연결 실패는 세 번, 400·401·404는 한 번 보낸다).
 
-**키.** `api_key` 에는 키를 읽는 함수(`_KeySource`)를 넘긴다. 환경을 읽기만 하고 호출 직전에
+**키.** `api_key` 에는 키를 읽는 함수(`KeySource`)를 넘긴다. 환경을 읽기만 하고 호출 직전에
 읽으므로 환경의 값을 바꾸면 다음 요청의 헤더가 바뀐다. `api_key_env` 가 없으면 자리 채움 글자
 `no-key` 를 보낸다. 변수가 없거나 비었거나, 값에 인증 헤더로 보낼 수 없는 글자가 있으면 변수의
 이름만 든 `RuntimeError` 다. 라이브러리에 그대로 넘기면 그 값이 예외의 글이나 원인 사슬에 실린다.
@@ -80,6 +80,7 @@ from __future__ import annotations
 import os
 import re
 from collections.abc import Mapping
+from enum import Enum
 from typing import override
 
 import httpx2
@@ -100,24 +101,48 @@ MASK = "***"
 _HEADER_SAFE = re.compile(r"[\x21-\x7e](?:[\x20-\x7e]*[\x21-\x7e])?")
 
 
-class _KeySource:
-    """모델 호출 때마다 환경에서 키를 읽는 함수 객체. `ChatOpenAI` 의 `api_key` 로 넘긴다."""
+class KeyProblem(Enum):
+    """키를 읽지 못하는 두 까닭. 접속 확인이 두 갈래로 나눠 쓴다(`adapters/model_check.py`)."""
+
+    MISSING = "missing"
+    UNSENDABLE = "unsendable"
+
+
+class KeySource:
+    """모델 호출 때마다 환경에서 키를 읽는 함수 객체. `ChatOpenAI` 의 `api_key` 로 넘긴다.
+
+    접속 확인도 이 읽기를 그대로 쓴다. 실행과 확인이 같은 키를 같은 규칙으로 읽게 하려는 것이다.
+    """
 
     def __init__(self, variable: str | None, env: Mapping[str, str]) -> None:
         self._variable = variable
         self._env = env
 
-    def __call__(self) -> str:
+    @property
+    def variable(self) -> str | None:
+        """키를 읽는 환경 변수의 이름. 값이 아니라 이름이다."""
+        return self._variable
+
+    def read(self) -> str | KeyProblem:
+        """키 값, 또는 읽지 못한 까닭. 예외를 던지지 않는다."""
         if self._variable is None:
             return PLACEHOLDER_KEY
         value = self._env.get(self._variable)
         if not value:
-            raise RuntimeError(f"모델 서버의 키를 읽을 환경 변수 {self._variable} 가 없다")
+            return KeyProblem.MISSING
         if _HEADER_SAFE.fullmatch(value) is None:
+            return KeyProblem.UNSENDABLE
+        return value
+
+    def __call__(self) -> str:
+        result = self.read()
+        if result is KeyProblem.MISSING:
+            raise RuntimeError(f"모델 서버의 키를 읽을 환경 변수 {self._variable} 가 없다")
+        if result is KeyProblem.UNSENDABLE:
             raise RuntimeError(
                 f"환경 변수 {self._variable} 의 값에 인증 헤더로 보낼 수 없는 글자가 있다"
             )
-        return value
+        return result
 
     def masked(self, text: str, started_with: str) -> str:
         """글에서 키 값과 환경의 `Authorization` 헤더 값을 글자 그대로 찾아 가린다. 값을 바꿔 되울린
@@ -194,15 +219,15 @@ class _ModelServerChat(ChatOpenAI):
             failure = _failure(error, key, started_with, self.openai_api_base)
         raise failure
 
-    def _key_source(self) -> _KeySource:
+    def _key_source(self) -> KeySource:
         key = self.openai_api_key
-        if not isinstance(key, _KeySource):
+        if not isinstance(key, KeySource):
             raise TypeError("모델 서버 모델의 api_key 는 키를 읽는 함수여야 한다")
         return key
 
 
 def _failure(
-    error: Exception, key: _KeySource, started_with: str, base_url: str | None
+    error: Exception, key: KeySource, started_with: str, base_url: str | None
 ) -> Exception:
     """라이브러리의 예외를 내장 예외로 바꾼다. 원래 예외를 원인으로 잇지 않는다."""
     address = _address(base_url)
@@ -237,7 +262,7 @@ def _address(base_url: str | None) -> str:
     )
 
 
-def _own_client() -> httpx2.AsyncClient:
+def own_client() -> httpx2.AsyncClient:
     """모델 하나가 쓰는 비동기 클라이언트. 라이브러리 기본값에서 쉬는 연결의 수만 0 으로 바꾼다."""
     limits = httpx2.Limits(max_connections=1000, max_keepalive_connections=0)
     return openai.DefaultAsyncHttpxClient(limits=limits)
@@ -262,8 +287,8 @@ def chat_openai_compatible(
         return _ModelServerChat(
             model=model_id,
             base_url=base_url,
-            api_key=_KeySource(api_key_env, os.environ if env is None else env),
-            http_async_client=_own_client(),
+            api_key=KeySource(api_key_env, os.environ if env is None else env),
+            http_async_client=own_client(),
             max_completion_tokens=max_tokens,
             temperature=temperature,
             use_responses_api=False,

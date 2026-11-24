@@ -15,6 +15,8 @@
 - `--redirect`: 경로 끝에 `/` 가 없는 요청을 `/` 를 붙인 같은 출처의 경로로 307 로 돌려보낸다. 끝에
   `/` 가 붙은 요청은 `/` 를 떼고 앱에 넘긴다.
 - `--list-error`: 도구 목록 요청(`tools/list`)에 HTTP 200 과 JSON-RPC 오류 본문으로 답한다.
+- `--list-sleep <초>`: 도구 목록 요청(`tools/list`)에 그 초만큼 잠든 뒤 답한다. 세션은 이미 열려
+  있어, 늦는 서버에 기한이 닿은 접속 확인이 세션 종료 요청을 보내는지 본다.
 - `--delete-sleep <초>`: 세션 종료 요청(DELETE)에 답하지 않고 그 초만큼 잠든다.
 - `--delete-drop`: DELETE 에 상태줄과 헤더만 보내고 본문 없이 연결을 끊는다. 클라이언트에는 응답이
   끝까지 오지 않은 채 연결이 끊긴 것으로 보인다.
@@ -49,6 +51,7 @@ _options = argparse.Namespace(
     echo=None,
     redirect=False,
     list_error=False,
+    list_sleep=0.0,
     delete_sleep=0.0,
     delete_drop=False,
     delete_redirect=None,
@@ -114,6 +117,8 @@ class Recording:
         if _options.list_error and rpc_method == "tools/list":
             await _json(send, 200, _rpc_error(rpc_id, "tool list refused"))
             return
+        if _options.list_sleep > 0 and rpc_method == "tools/list":
+            await asyncio.sleep(_options.list_sleep)
         if _options.redirect:
             if not path.endswith("/"):
                 await _redirect(send, f"{path}/")
@@ -248,6 +253,7 @@ def main() -> None:
     parser.add_argument("--echo")
     parser.add_argument("--redirect", action="store_true")
     parser.add_argument("--list-error", action="store_true")
+    parser.add_argument("--list-sleep", type=float, default=0.0)
     parser.add_argument("--delete-sleep", type=float, default=0.0)
     parser.add_argument("--delete-drop", action="store_true")
     parser.add_argument("--delete-redirect")

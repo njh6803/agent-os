@@ -24,6 +24,7 @@ from langchain_core.callbacks import CallbackManagerForLLMRun
 from langchain_core.language_models.fake_chat_models import GenericFakeChatModel
 from langchain_core.messages import AIMessage, BaseMessage
 from langchain_core.outputs import ChatResult
+from tests.fake_checks import UnusedToolChecks
 from tests.fake_models import FakeModels
 
 from agent_os.adapters.filesystem import FilesystemPlugins
@@ -102,7 +103,7 @@ class NoToolConnection:
         raise AssertionError(f"도구가 없는 연결에서 {name} 을 불렀다")
 
 
-class NoTools:
+class NoTools(UnusedToolChecks):
     """연결은 열리지만 도구가 없다. 실물 매니페스트의 mcp 가 여기까지 오는 것만 받아 준다."""
 
     @asynccontextmanager

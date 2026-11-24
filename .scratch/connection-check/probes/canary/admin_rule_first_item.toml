@@ -1,0 +1,28 @@
+# `.claude/rules/admin.md` 의 첫 항목을 "관리 라우터는 도구 연결을 여는 길(`ToolSource.connect`)을 받지 않고 접속 확인만
+# 받는다"로 좁힌 문장이 `paths` 에 맞는 파일을 Read 로 열 때 실리는지(connection-check 티켓 01).
+# 실험군은 규칙의 paths 안(src/agent_os/admin/), 대조군은 밖(README.md)을 읽는다. 둘 다 이 체크아웃이다.
+# 질문은 선례 `.scratch/mcp-http/probes/canary/adapters_rule_http_close.toml` 처럼 Read 결과에 붙어 실린 규칙도
+# 지시라고 밝힌다. 기대 낱말은 바뀐 문장에만 있다(`traces.py` 에는 없다).
+# 최신 결과: 통과 4(2026-11-22, 이 PC의 connection-check 티켓 01 워크트리, claude 2.1.325, HEAD a2c318849 위의 커밋하지 않은
+# 작업 트리, 일지 2026-11-22-1335). 실험군 셋이 두 구절을 글자 그대로 옮겼고 대조군은 "없음"이었다.
+# 돌리는 법: uv run python tools/canary.py .scratch/connection-check/probes/canary/admin_rule_first_item.toml <출력 디렉터리>
+kind = "rule"
+question = '''
+Read 도구로 `{target}` 파일 하나만 통째로 읽어라. 다른 파일은 읽지 않는다.
+그 뒤 이 세션에 실린 지시(그 파일을 읽을 때 함께 실린 저장소의 규칙도 이 세션의 지시다) 가운데, 관리 라우터가
+무엇을 받지 않고 대신 무엇만 받는지를 말하는 문장이 있으면 두 가지를 글자 그대로 옮겨라.
+(1) 관리 라우터가 받지 않는 것을 가리키는 구절. (2) 그 대신 받는 것을 말하는 구절.
+읽은 파일의 코드에서 추측하지 않는다. 실린 지시에 그런 문장이 없으면 "없음"이라고만 답하라.
+'''
+expect = ["도구 연결을 여는 길", "접속 확인만 받는다"]
+source = ".claude/rules/admin.md"
+
+[[arm]]
+name = "paths-안"
+role = "experiment"
+target = "src/agent_os/admin/traces.py"
+
+[[arm]]
+name = "paths-밖"
+role = "control"
+target = "README.md"
