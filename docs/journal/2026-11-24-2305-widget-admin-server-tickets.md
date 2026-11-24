@@ -221,3 +221,54 @@ Critical 0, Major 0, Minor 4, Nit 3. 서브에이전트가 명령으로 대 본 
 
 - 세션 제목을 `docs/widget-admin-server-tickets`로 바꿨다. `git worktree list`에서 이 브랜치가 이 워크트리에 체크아웃된 것을 봤고, `EnterWorktree(path)`가 첫 호출에 들어왔다(앞 이어받기와 달리 잠금 거부가 없었다).
 - `git fetch origin` 뒤 `origin/dev`는 그대로 `9de677697`이었고, `tools/sibling_overlap.py`는 번호 겹침과 함께 고친 파일이 없다고 냈다(형제의 가장 높은 헌법 판 3.1.5).
+- 앞 세션이 남긴 일지 고침과 위 두 줄을 커밋 `803963116`에 실었다. pre-commit은 모두 통과했다(`pytest` 1170.5초, `web-verify` 1119.7초, 아래 PR 직전 리뷰가 같은 때 돌았다). `ruff check`·`ruff format`은 스테이지된 `.py`가 없어 Skipped였고, 카나리아 명세와 헌법 판 검사도 대상 파일이 없어 Skipped였다. 인용 대조는 경고가 없었다.
+
+## PR 직전 리뷰(coderabbit-review)
+
+`coderabbit-review` 서브에이전트를 커밋 `803963116`의 pre-commit이 도는 동안 띄웠다. 브리프에 위 "셀프 리뷰(/code-review)"의 "새로 쓴 사실 문장" 두 목록과 앞 세션의 밀 주장 가운데 lint-imports 문장을 열셋으로 풀어 실었다. 서브에이전트의 보고에 따르면 CLI 0.7.5(`Plan: Free`, `Seat: not assigned`)에서 `coderabbit review --agent --include-untracked --base origin/dev`가 종료 코드 0과 `review_completed`로 끝났고, 파일 여섯(명세, 티켓 넷, 이 일지)을 봤으며, 지적은 1건이었다.
+
+- 유효(Minor). 01의 What to build가 "값이 없는 칸은 `null`이다"라고만 적어, 명세 "답의 모양"(258줄)과 Testing Decisions 첫째 이음매의 "읽는 경로"(438줄)가 적은 예외 둘(예시 질문은 `[]`, 밝기 스위치 숨기기는 `false`)이 빠졌다. 명세의 두 줄을 Grep으로 열어 맞다. 티켓만 읽은 구현이 모든 칸을 `null`로 내도 01의 수용 기준이 그 사례를 요구하지 않아 초록이 된다. **고친다.** 01의 What to build에 두 예외를, 답의 모양 항목에 그 시험과 명세의 두 자리를 더했다.
+- 열셋의 대조는 서브에이전트가 지금 코드와 문서를 읽어 모두 "맞다"고 냈다. 둘에 덧붙임이 있었다. 3(독립 계약이 다른 모듈을 거친 import도 막는다)은 프로브(`.scratch/widget-admin-server/probes/uv_workspace/README.md`)가 곧바른 import의 양쪽 갈래만 쟀고 거친 import는 import-linter 문서의 정의에 기댄 서술이라 했다. 명세 148줄은 "쟀다"를 곧바른 갈래 둘의 결과에만 붙이므로 **그대로 둔다.** 7(루트 `README.md` 50~51줄)은 55줄이 정확한 자리라 했다. `sed -n '48,56p' README.md`로 보니 50~51줄은 `web/tools`의 `generate-api-client` 설명이고 55줄은 `packages/api-client/` 트리 줄이다. 명세 414줄과 02의 33줄이 고치라고 든 것은 앞의 생성 도구 설명이고, 트리 줄은 02의 32줄이 따로 맡으므로 **그대로 둔다.**
+
+PR 직전 리뷰 뒤 `git diff --name-only a68a51d61 origin/dev`에 관리 화면 로그인 명세의 파일이 보여, `origin/dev`가 PR #633(`0cb134833`)의 병합으로 다시 움직인 것을 알았다. `tools/sibling_overlap.py`는 번호 겹침과 함께 고친 파일이 없다고 냈다. `git diff --name-only HEAD...origin/dev`의 파일 가운데 이 브랜치가 이름으로 든 것은 `CONTEXT.md`(명세 5줄이 용어의 자리로 든다)와 대기열 `ci-python-job-timeout-margin`(01이 그 잡의 제한을 적는다)이다. 앞의 것은 운영자 계정의 풀이에 "비활성"을 더한 것이고, 뒤의 것은 승인 줄에 5회차를 더한 것이라(둘 다 `git diff HEAD...origin/dev -- <파일>`로 읽었다) 명세와 티켓의 문장을 바꾸지 않는다. 회고가 대기열 항목에 회차를 더하기 전에 dev의 새 회차를 품도록 `git merge --no-edit origin/dev`로 합쳤다(겹치는 파일이 없어 충돌 없이 끝났다).
+
+회고를 반영한 뒤의 커밋 직전에 `git branch --show-current`가 이 브랜치였고, `tools/sibling_overlap.py`는 기준 브랜치 줄이 `0cb1348` 그대로이고 번호 겹침과 함께 고친 파일이 없다고 냈다. 합쳐 들어온 `.py`가 있어 `uv run ruff check .`(`All checks passed!`)와 `uv run ruff format --check .`(`2603 files already formatted`)를 손으로 쳤다.
+
+## 회고
+
+후보 열다섯, 승인 여섯(새 항목 셋, 열린 항목에 회차를 더한 셋), 기각 아홉, 넘김 없음이다. 열다섯째(아래 승인 15)는 회고를 적은 커밋을 띄운 뒤에 났다. 만료는 `tools/queue_open_rows.py`를 그대로와 `--ref origin/dev`로 돌려 두 출력에 모두 든 셋(437, 567, `credential-value-in-principal-name`)을 `만료 2026-11-25 (ADR 0036)`으로 닫았다. 새 훅·검사가 더하는 조건(다섯 번째이거나 손상 한 번)을 채운 후보는 없어 `tools/hook_report.py`는 돌리지 않았다.
+
+승인.
+
+1. **앞 세션의 잠금 풀기가 분류기에 거부되어 이어받은 세션의 `EnterWorktree(path)`가 거부됐다**(위 "검증과 인계(셀프 리뷰 직전)"의 끝과 "이어받은 세션(23:39)"). 닫힌 0326(6회차)과 같은 사건이고, 0326이 넣은 처방(`handoff.md` "잠금 풀기")은 넘기는 쪽이 막히면 일지에 적고 열기로 간다고만 적어 받는 쪽의 길이 없다. 회차로 세는 것(닫힌 항목이 처방한 사건). 새 항목 `worktree-lock-left-when-unlock-denied`에 0326의 7회차로 이었다. 처방은 받는 쪽의 한 줄이다. 넘기는 쪽의 거부를 허용 규칙으로 여는 길은 권한을 넓히는 것이라 처방에 넣지 않고 넘김으로 적었다. 회차 5 이상이라 chore 계기다.
+2. **문서만 바꾼 커밋의 pre-commit이 다시 19분 남짓 걸렸다**(커밋 `803963116`, pytest 1170.5초, web-verify 1119.7초). 열린 `docs-only-commit-precommit-slow-again`이 처방한 사건이라 회차로 세는 것. 21회차로 더했다. 같은 때 이 세션의 `coderabbit-review`가 돌았고 다른 세션의 부하는 재지 않았다.
+3. **티켓 01이 명세 "답의 모양"의 예외 둘(`[]`, `false`)을 빠뜨린 것을 셀프 리뷰 두 축이 놓치고 PR 직전 CLI가 잡았다**(위 "PR 직전 리뷰"). 열린 `ticket-step-assumes-one-config`(티켓이 명세의 갈래 일부만 옮긴 것을 앞 리뷰가 놓쳤다)의 처방(갈래마다 한 줄씩 대 본다)이 덮는 사건이라 회차로 세는 것. 3회차로 더했다.
+4. **티켓이 처음 나오는 낯선 말에 풀이를 붙이지 않아 셀프 리뷰 표준 축이 Minor로 잡았다**(위 "셀프 리뷰"의 표준 축 Minor 4). `to-tickets` 2단계와 `CLAUDE.md` 원칙의 지침을 어긴 것을 리뷰가 잡은 사건이라 회차로 세는 것. 그 지침을 낸 항목을 `--search 풀이`, `--search 쉬운.말`, `--search 2026-11-17-2031`로 찾지 못해 새 항목 `ticket-term-unexplained-at-first-use`(1회차)로 두었다.
+5. **사용자 이야기 40을 어느 티켓도 번호로 들지 않은 것을 셀프 리뷰 두 축이 잡았다**(표준 축 Minor 2, 명세 축 4). 리뷰가 제 몫을 한 사건이지만, 명세의 번호 목록과 티켓의 번호를 대 보는 저장소 상태 시험으로 옮길 수 있어 승인의 세 조건(사건, 검사의 층, PR 하나로 되돌림)을 지난다. 더하는 것이라 새 항목 `spec-story-missing-from-tickets`(1회차)로 두었다. 번호를 드는 것은 최근 기능(postgres-foundation, connection-check 일부)의 관행이라 시험의 조건과 서식 문서를 함께 정하게 적었다.
+
+기각.
+
+6. 셀프 리뷰가 잡은 출처 오류 둘(04의 "3분의 1"을 명세와 앞 일지에 기댄 것, 명세의 인용을 portal-admin 명세의 말로 든 것). 리뷰가 잡도록 둔 기준을 리뷰가 잡았고, 인용 글자는 `tools/check_quotes.py`가 경고로 본다. 출처의 문서를 가리는 검사는 짓지 못한다.
+7. 이 세션의 편집 둘이 백그라운드 커밋 동안 `hook_edit_during_commit`에 막혔다. 훅이 그 자리에서 막았다.
+8. `git -C C:/project/agent worktree list`를 워크트리 가드가 거부했다. 가드가 그 자리에서 막았고 `CLAUDE.md` 환경 함정이 이미 적는다.
+9. `git show origin/dev:.scratch/…`가 Git Bash의 경로 바꾸기로 실패했다. 훅이 그 자리에서 알렸다(대기열 195).
+10. 일지와 `merge.md`를 통째로 읽어 결과가 2만 자를 넘었다. 큰 결과 훅이 알렸다.
+11. 첫 세션의 첫 선택 화면을 `hook_choice_facts`가 막았다. 훅이 그 자리에서 막았다.
+12. 커밋 직후의 인계 계기(둘째 세션). 그 커밋이 백그라운드였는지와 계기가 커밋이 끝나기 전에 왔는지를 그 일지가 적지 않아, `handoff-trigger-before-background-commit-ends`의 회차로 세지 못한다.
+13. 이 브랜치가 사는 동안 `origin/dev`가 두 번(PR #635, #633) 움직였다. `tools/sibling_overlap.py`의 기준 브랜치 줄과 `CLAUDE.md` 환경 함정의 대조로 잡았다.
+14. PR 직전 서브에이전트가 README의 줄 번호를 55줄이 맞다고 했다. 이 세션이 README를 읽어 가렸고 고친 것이 없다. 사건이 아니다.
+
+승인(커밋을 띄운 뒤).
+
+15. **회고를 적은 커밋을 Bash의 `run_in_background`로 띄운 직후, 커밋이 끝나기 전에 인계 계기(`hook_handoff`, 경계 `커밋 뒤`, 세션 컨텍스트 328,149 토큰)가 왔다.** 열린 `handoff-trigger-before-background-commit-ends`가 처방한 사건이라 회차로 세는 것. 13회차로 더했다. `handoff.md` 1의 셋째(이 세션의 지시문의 "이어받을 상태"가 `인계: 커밋 뒤`로 시작한다)로 넘기지 않고 이었고, 그 커밋은 아래대로 막혀 경계도 아니었다.
+
+회고를 적은 첫 커밋 시도는 pre-commit의 pytest에서 `tests/tools/test_rerun_runner.py::test_파일럿에서는_인계로_멈추지_않는다` 하나가 `assert 1 == 0`으로 빨개 막혔다(`1 failed, 8135 passed`, pytest 533.0초, web-verify 638.2초, 나머지 검사는 통과). 이 브랜치는 그 시험이 읽는 코드를 바꾸지 않았고, `uv run pytest -q tests/tools/test_rerun_runner.py -k 파일럿에서는_인계로_멈추지_않는다`로 혼자 돌리자 3.18초에 통과했다(손으로 봤다). 닫힌 0306이 이 종류(전체 스위트의 부하에서만 빨간 시험)를 다시 치는 값을 받아들이고 새 사례는 일지에만 적기로 닫았으므로, 회차를 더하지 않고 여기에만 적은 뒤 같은 커밋을 다시 쳤다.
+
+다시 친 커밋을 띄운 직후에도 같은 인계 계기(344,343 토큰)가 커밋이 끝나기 전에 왔고, 같은 판정으로 넘기지 않았다. 그래서 위 15의 13회차는 이 세션의 두 번이다. 다시 친 커밋도 pytest에서 다른 시험 하나(`tests/channel/cli/test_interrupt.py::test_서버를_닫기_시작한_뒤에_한_번_누르면_닫기를_마치고_중단으로_끝난다`, "Ctrl+C 를 누른 자식이 30초 안에 끝나지 않았다")가 빨개 막혔다(`1 failed, 8135 passed`, pytest 866.5초, web-verify 1158.4초). 앞 시도에서 빨갰던 시험은 이번에 통과했고, 이번에 빨간 시험은 `uv run pytest -q tests/channel/cli/test_interrupt.py -k 서버를_닫기_시작한_뒤에_한_번_누르면`으로 혼자 돌리자 10.40초에 통과했다(손으로 봤다). 같은 0306의 종류라 회차를 더하지 않는다. 한 바퀴가 15~20분이라, 이 둘째 시도의 pytest(지금 커밋할 것과 같은 파일 상태에서 8135개 통과)와 빨간 하나의 혼자 실행을 손으로 친 pytest로 갈음하고 셋째 시도는 `SKIP=pytest`로 쳤다(`operations.md` pre-commit 절의 건너뛰기, `CLAUDE.md` 검증 명령의 "`SKIP`으로 뺀 검사는 손으로 친다"). PR의 CI가 전체 pytest를 다시 돈다.
+
+## 다음
+
+- **이 PR은 병합까지 한다.** 병합 뒤 widget-admin-server의 프론티어는 `01-widget-admin-package-and-settings-route` 하나다(막는 것 없음). 02와 03은 01 뒤에 나란히 돌 수 있고, 04는 03 뒤다. 02와 04 가운데 늦게 병합하는 쪽이 기능 계획의 `**끝:**` 줄과 기능 단락을 싣는다.
+- **01이 크다.** 세션이 도중에 인계되면 01의 묶음 단위로 끊고, 루트 `pyproject.toml`의 워크스페이스와 serve 이미지의 멤버 파일은 멤버의 코드와 시험과 한 커밋에 싣는다(01의 머리 문단).
+- **chore 계기.** 대기열 `worktree-lock-left-when-unlock-denied`가 0326의 7회차라 회차 5 이상이다. `docs-only-commit-precommit-slow-again`(21회차)과 `handoff-trigger-before-background-commit-ends`(13회차)도 같다.
+- **사람에게 알릴 것.** 휴지통(`.claude/worktrees/.tidy-trash/`)에 `node_modules` 여섯이 남아 있다(다음 정리가 다시 비운다). 앞 명세 세션의 사본 나무 넷(`C:/project/uvws1`, `C:/project/uvws2`, `C:/project/uvws3`, 그 세션 스크래치패드의 `uvws-1`)과 프로브 이미지 둘(`uv-workspace-probe/widget-admin:probe`, `uv-workspace-probe/serve-sync:probe`)을 지울 대상이고, 사본 나무 셋째의 `.probe-logs/28-database-create.log`에 시험 컨테이너 비밀번호가 평문으로 있다(일지 2026-11-24-1637의 "다음").
