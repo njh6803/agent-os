@@ -12,6 +12,8 @@
  * - 결정 흐름의 에이전트 둘은 모델 없이 승인 대상 도구(MCP 픽스처 서버의 add)를 `ctx.tool()` 로 직접 부른다. 그래서
  *   결정 뒤의 재개가 모델 없이 끝까지 간다. 멈춘 실행은 흐름이 채널 토큰으로 만든다(`channel.ts`).
  * - 읽기 흐름이 볼 트레이스는 serve 를 띄우기 전에 트레이스 디렉터리에 쓴다(`traces.ts`).
+ * - `serve` 의 환경에서는 모델 제공사의 키·주소·프록시를 벗긴다(`serveEnv`). 플러그인 화면의 접속 확인이 실제 제공사에
+ *   닿지 않게 하려는 것이다.
  * - 토큰 둘은 여기서 무작위로 만들어 `serve` 의 환경에 넘긴다. 테스트가 화면에 넣고 흐름의 요청이 싣도록 워커의
  *   환경에도 넘긴다. 관리 화면(Next)에는 넘기지 않는다. 무상태 중계라 토큰을 모른다(ADR 0019). 이 셸의 환경에 토큰
  *   변수가 있어도 Next 에는 벗겨서 준다. 어느 것도 커밋하지 않는다.
@@ -44,6 +46,8 @@ const STARTUP_MS = 60_000;
 const QUIET = { NEXT_TELEMETRY_DISABLED: "1" };
 // serve 가 읽는 토큰 변수. Next 로 가는 환경에서는 벗긴다.
 const SERVE_TOKENS = ["AGENT_OS_ADMIN_TOKEN", "AGENT_OS_CHANNEL_TOKEN"];
+// 모델 제공사의 키와 주소와 프록시를 정하는 변수. `serve` 의 환경에서 벗긴다(`serveEnv`).
+const PROVIDER_VARIABLES = ["ANTHROPIC_API_KEY", "ANTHROPIC_API_URL", "ANTHROPIC_PROXY"];
 // 기본 모델 플러그인의 이름. 임시 루트에 같은 이름의 모델 매니페스트를 쓰고 `--model` 로 명시해 넘긴다.
 const DEFAULT_MODEL = "claude-opus-5";
 
@@ -107,14 +111,13 @@ export default async function globalSetup(): Promise<() => Promise<void>> {
         DEFAULT_MODEL,
       ],
       work,
-      {
-        ...process.env,
+      serveEnv({
         PYTHONUTF8: "1",
         AGENT_OS_ADMIN_TOKEN: adminToken,
         AGENT_OS_CHANNEL_TOKEN: channelToken,
         // 부모의 환경에 같은 변수가 있어도 이 준비의 데이터베이스로 덮는다.
         AGENT_OS_DATABASE_URL: databaseUrl,
-      },
+      }),
     );
     launched.push(serve);
     const upstream = await until(serve, "serve 가 서지 않았다", () => {
@@ -222,6 +225,20 @@ function runPython(
 /** 이 serve 만 아는 토큰. 같은 기계의 다른 프로세스가 짐작할 수 없는 값이다. */
 function token(role: string): string {
   return `e2e-${role}-${randomBytes(24).toString("hex")}`;
+}
+
+/**
+ * `serve` 의 환경. 이 셸의 환경에 `extra` 를 얹고 모델 제공사에 닿는 변수를 벗긴다. 플러그인 화면을 여는 장면마다 켜 둔
+ * 모델 행(제공사가 `anthropic`)이 30초마다 접속 확인을 보내는데, 키가 있는 셸에서는 그 요청이 실제 제공사로 간다. 키를 벗기면
+ * 어댑터가 요청을 보내지 않고 `키가 없다`로 답한다(`connection-check.e2e.ts` 가 그 글을 본다). CI 의 `e2e` 잡은 키를 주지
+ * 않으므로 이 환경이 CI 와 같다. 주소와 프록시도 함께 벗겨, 키를 다른 길로 다시 주어도 실제 제공사로 가지 않게 한다.
+ */
+function serveEnv(extra: Readonly<Record<string, string>>): NodeJS.ProcessEnv {
+  const env: NodeJS.ProcessEnv = { ...process.env, ...extra };
+  for (const name of PROVIDER_VARIABLES) {
+    Reflect.deleteProperty(env, name);
+  }
+  return env;
 }
 
 /** 관리 화면(빌드와 start)의 환경. 이 셸의 환경에서 serve 의 토큰 변수를 벗기고 상류를 준다. */
