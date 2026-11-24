@@ -303,6 +303,44 @@ PR 직전 리뷰 뒤 `git diff --name-only a68a51d61 origin/dev`에 관리 화�
 
 커밋 직전에 `git branch --show-current`는 이 브랜치였고, `tools/sibling_overlap.py`의 형제 줄에서 `origin/dev`가 `a1fb74f`로 다시 움직인 것이 보였다(PR #634, connection-check 05의 관리 화면 e2e). 번호 겹침과 함께 고친 파일은 없었다. `git diff --name-only HEAD...origin/dev`의 여덟 파일 가운데 이 브랜치가 이름으로 든 것은 대기열 `ci-python-job-timeout-margin` 하나이고, 바뀐 것은 이미 닫힌 그 항목의 승인 줄에 6회차를 더한 것이라 01의 "그 잡의 제한은 25분이다"는 그대로 맞다. `git merge --no-edit origin/dev`로 합쳤다(충돌 없음).
 
+커밋 `3ad907cf3`("docs: dev의 배포 안내 13절을 위젯 관리 서버 명세와 티켓에 싣는다 (widget-admin-server)")은 pre-commit을 모두 지났다(pytest 497.0초, web-verify 632.7초. ruff 둘은 `.py`가 없어 `Skipped`이고 위에서 손으로 쳤다). 이 커밋을 백그라운드로 띄운 직후에도 인계 계기(252,285 토큰, 경계 `커밋 뒤`)가 커밋이 끝나기 전에 왔고, `handoff.md` 1의 셋째로 넘기지 않았다. 그래서 회고 15의 13회차는 이 세션의 네 번이고, 대기열 항목의 회차 줄에도 넷째를 더했다(커밋하지 않았다. 아래 인계).
+
+## PR을 연 뒤의 인계
+
+푸시 뒤 PR [njh6803/agent-os#637](https://github.com/njh6803/agent-os/pull/637)을 dev로 열었다. 그 직후 인계 계기(258,701 토큰, 경계 `PR 연 뒤`)가 왔다. 인계하지 않는 다섯 때에 들지 않는다. 명령은 성공했고, 요청 범위 "티켓까지"는 병합까지라 이 경계에서 끝나지 않으며, 지시문의 이어받을 상태는 `인계: 커밋 뒤`라 경계가 다르고, 일지에 `인계 못함` 줄이 없으며, `get_session`의 `self`에 `parentSessionId`가 없다. 그래서 인계한다. 이 세션의 지금 제목은 `docs/widget-admin-server-tickets`다. PR을 연 뒤에는 `@coderabbitai review` 코멘트도 CI 대기도 띄우지 않았다.
+
+커밋하지 않은 변경은 이 일지와 대기열 `handoff-trigger-before-background-commit-ends`의 회차 줄 둘이다. 새 세션이 봇 회차의 첫 커밋에 함께 싣는다.
+
+낸 지시문:
+
+```
+다음 작업: 기능 widget-admin-server. 명세 검토와 티켓 넷을 실은 PR #637에 봇 회차를 반영하고 병합한다
+다음 단계: PR 반영·병합
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /to-tickets .scratch/widget-admin-server/spec.md
+브랜치: docs/widget-admin-server-tickets
+모델: Sonnet 5.5 / high. 2의 잇는 지시문
+읽을 것: docs/journal/2026-11-24-2305-widget-admin-server-tickets.md 의 "이 고침의 셀프 리뷰(/code-review)"(봇 회차가 겨냥할 새 사실 문장), "PR을 연 뒤의 인계", "다음"
+이어받을 상태: 인계: PR 연 뒤. merge.md 2(봇 회차)부터 한다. 첫 `@coderabbitai review` 코멘트도 새 세션이 남긴다. 커밋하지 않은 변경 둘(일지, 대기열 handoff-trigger-before-background-commit-ends의 회차 줄)은 봇 회차의 첫 커밋에 싣는다. 회고는 PR을 열기 전에 한 번 돌았고(일지 "회고"), 그 뒤의 일은 일지 "dev 합치기(PR #636)"부터다. docs/journal/2026-11-24-2305-widget-admin-server-tickets.md
+확인할 선행 조건: 없음
+이번 요청 범위: 티켓까지
+```
+
+제목을 `docs/widget-admin-server-tickets (인계함)`으로 바꿨다. 멈출 백그라운드 작업은 없었다. `git worktree unlock C:/project/agent/.claude/worktrees/widget-admin-server-tickets`는 `is not locked`로 끝났다.
+
+open-session을 부른다 2026-11-24T17:42:10Z
+
+## 이어받은 세션(2026-11-25 02:56, 봇 회차와 병합)
+
+> 사용자: (위 "PR을 연 뒤의 인계"의 지시문 그대로. 첫 줄은 `/to-tickets`를 스킬 파일을 읽으라는 한 줄로 옮긴 것인데, 티켓은 PR 637에 이미 실려 있어 지시문의 "다음 작업"대로 PR 반영과 병합을 이어 갔다)
+
+- 세션 제목을 `docs/widget-admin-server-tickets`로 바꿨고, `EnterWorktree(path)`가 첫 호출에 들어왔다. `git fetch origin` 뒤 `origin/dev`는 `a1fb74f35`이고 `git merge-base --is-ancestor origin/dev HEAD`가 0이라 이 브랜치가 그 판을 품고 있다. `tools/sibling_overlap.py`는 번호 겹침과 함께 고친 파일이 없다고 냈다.
+- PR 637의 헤드 `3ad907cf3` 뒤에 `@coderabbitai review` 코멘트를 남겼다. CodeRabbit은 "Review limit reached"(무료 OSS 리뷰 한도)로 리뷰하지 못했다(`Review rate limited`). claude-review는 "지적 없음"으로 통과했다. 이 PR의 CodeRabbit 회차는 한도에 걸려 세지 않고, claude-review는 첫 회차가 지적 0이다.
+- `tools/wait_ci.py 637`의 끝 줄은 "모두 통과"였다(`python`, `web`, `visual`, `e2e` 넷, `ticket`, `verify`가 SUCCESS, `llm`은 SKIPPED). 고칠 지적이 없어 코드와 명세와 티켓은 이 세션이 바꾸지 않았다.
+- 이 PR의 변경은 `.scratch/`와 `docs/journal/`뿐이라 로컬 모델 시험의 범위 경로가 없어 돌리지 않는다(`merge.md` 3).
+- 이 세션이 한 커밋은 앞 세션이 남긴 일지와 대기열 `handoff-trigger-before-background-commit-ends`의 회차 줄(13회차의 넷째)에 이 절을 더한 것 하나다.
+- 병합은 `merge.md`의 "워크트리에서 병합할 때"대로 한다. 주 체크아웃 미갱신: 루트는 dev.
+
 ## 다음
 
 - **이 PR은 병합까지 한다.** 병합 뒤 widget-admin-server의 프론티어는 `01-widget-admin-package-and-settings-route` 하나다(막는 것 없음). 02와 03은 01 뒤에 나란히 돌 수 있고, 04는 03 뒤다. 02와 04 가운데 늦게 병합하는 쪽이 기능 계획의 `**끝:**` 줄과 기능 단락을 싣는다.
