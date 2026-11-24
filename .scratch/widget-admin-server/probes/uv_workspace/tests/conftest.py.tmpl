@@ -1,0 +1,17 @@
+"""위젯 관리 서버의 시험이 쓰는 데이터베이스 픽스처. 뿌리의 픽스처를 다른 접두로 덮는다."""
+
+from __future__ import annotations
+
+from tests.database import database_fixture, database_template_fixture
+
+DATABASE_PREFIX = "widget_admin"
+
+
+async def _migrate(url_text: str) -> None:
+    from widget_admin.database import migrate
+
+    await migrate(url_text)
+
+
+database_template = database_template_fixture(DATABASE_PREFIX, _migrate)
+database = database_fixture(DATABASE_PREFIX)

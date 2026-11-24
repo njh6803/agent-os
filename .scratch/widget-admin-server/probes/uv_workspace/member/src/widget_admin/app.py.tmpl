@@ -1,0 +1,28 @@
+"""공개 경로 하나."""
+
+from __future__ import annotations
+
+from fastapi import FastAPI
+from fastapi.responses import JSONResponse
+from pydantic import BaseModel
+
+from widget_admin.database import engine_for, heading_of
+
+
+class Settings(BaseModel):
+    schema_version: int
+    heading: str | None
+
+
+def create_app(url_text: str) -> FastAPI:
+    app = FastAPI()
+    engine = engine_for(url_text)
+
+    @app.get("/widget-settings/{site}", response_model=Settings)
+    async def read_settings(site: str) -> Settings | JSONResponse:
+        heading = await heading_of(engine, site)
+        if heading is None:
+            return JSONResponse({"code": "not_found"}, status_code=404)
+        return Settings(schema_version=1, heading=heading)
+
+    return app
