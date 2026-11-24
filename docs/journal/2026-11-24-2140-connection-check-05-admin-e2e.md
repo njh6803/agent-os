@@ -146,8 +146,7 @@ Critical·Major는 없었고 Minor 둘과 에이전트가 코드를 읽다 더�
 
 ## 다음
 
-- 이 PR(#634)이 병합되면 연결 확인 기능에는 티켓 06(배포 안내의 문제 해결 절)만 남는다. 06은 이 PR을 열 때와 병합 직전 모두 `ready-for-agent`였고 06 세션이 따로 돈다(워크트리 `.claude/worktrees/06-deploy-guide-troubleshooting-section`). 그래서 이 PR은 마지막 티켓이 아니라 `**끝:**` 줄과 기능 단락 `docs/release-notes/features/connection-check.md`는 이 PR이 싣지 않는다. 06을 닫는 PR이 싣는다. 병합 뒤 `git fetch origin`으로 06의 상태를 다시 본다.
-- 06이 할 일은 티켓 06이 정한다. 13절이 가리키는 화면의 접속 확인(04)과 모델 쪽 글은 이미 병합됐다.
+- 이 PR(#634)을 병합하면 연결 확인 기능의 티켓 여섯이 모두 닫힌다. 06(배포 안내의 문제 해결 절)이 병합 직전에 PR #636으로 먼저 병합돼 이 PR이 마지막이 되었고, 그래서 이 PR이 `**끝:** 2026-11-25`, 기능 단락 `docs/release-notes/features/connection-check.md`, `plan_table.py`를 돌린 `.scratch/plan.md`를 싣는다(아래 "병합 직전 판정"). 끝 줄이 dev에 오르므로 병합 뒤 결정표가 출시 PR(dev→main)의 계기를 본다.
 - 04에서 넘어온 일 둘은 이 PR도 컴포넌트를 만지지 않아 하지 않았다. 컴포넌트를 만지는 다음 일이 함께 한다. 하나는 `LaunchedConnection`의 불리언 둘(`enabled`·`pending`)을 열거로 바꾸는 일이고, 다른 하나는 응답이 `not_applicable`일 때 행이 `확인하는 중`으로 남는 갈래를 명세로 정한 뒤 시험 사례를 더하는 일이다. 04 일지가 넘긴 "느린 가짜 상류"(브라우저 연결 여섯 개 상한과 응답 처리가 끝났음을 알리는 표지) 일도 이어서 남는다.
 - `decision.e2e.ts`의 첫 장면 실패(`run_finished`가 5초 안에 안 보임)는 이 PR의 관리 화면 e2e 전체에서 한 번 더 같은 곳에서 났다(이 PC. 이번 로그에서 시작에서 멈춤까지 4초). 기준 상태에서 다시 쳐 가른 적은 없고 CI의 `e2e` 잡은 이 PR에서 통과했다. 같은 빨강이 CI에서 보이면 `diagnosing-bugs`로 간다.
 - 대기열 `ci-python-job-timeout-margin`이 5회차라 chore 계기다. `next-session` 결정표가 고른다. 길을 고르는 일은 그 항목의 `어디로:`가 정하고 제한을 올리는 길이면 사용자 판단으로 넘긴다.
@@ -171,3 +170,14 @@ open-session을 부른다 2026-11-24T13:40:52Z
 - 병합 후 `ci-python-job-timeout-margin`의 승인 줄이 PR #633(열림)과 같은 줄을 고쳤다(둘 다 `승인:` 줄의 회차 수). 나중에 병합하는 쪽에서 글자 충돌이 난다. 회차는 1(#624)·2(#625)·3(#631)·4(#632)에 #633과 #634가 더해져 두 쪽의 수가 다를 수 있으니, 충돌을 푸는 쪽이 사건을 모두 세어 맞춘다.
 
 open-session을 부른다 2026-11-24T14:34:10Z
+
+## 병합 직전 판정(네 번째 세션)
+
+세 번째 인계를 받은 세션이 푸시와 병합 길을 마쳤다. 근거의 갈래를 문장마다 붙인다.
+
+- 일지 인계 절의 커밋은 pre-commit이 두 번 막았다. 한 번은 `tests/channel/cli/test_interrupt.py`의 시험 하나(자식이 30초 안에 끝나지 않음), 한 번은 `tests/tools/test_rerun_runner.py`의 시험 하나(`board.run() == 0`이 1)였다. 두 번째는 pytest가 1171초 걸렸다(출력 파일을 읽었다). 두 시험 파일은 따로 돌리면 통과했다(`uv run pytest -q`로 손으로 쳤다. 앞 파일 6개 통과, 뒤 파일 종료 코드 0). 세 번째 시도가 통과했다. 원인이 부하로 인한 시간 의존이라는 것은 어림이다(그 순간의 부하는 재지 않았다). 이미 닫힌 대기열 0306(11회차)과 0332(7회차)가 같은 계열을 다루지만, 이 시험 둘이 그 사례에 드는지는 대 보지 않았다. 다음 회고가 본다.
+- 푸시 훅이 `origin/dev`가 앞섰다며 막아 합쳤다. 합친 `origin/dev`의 #635(CI `python` 잡의 `timeout-minutes` 15에서 25)가 이 PR의 첫 CI 실행이 걸린 제한을 올린 것이다(커밋 제목으로 읽었다). 합친 머리 `43a7fd0`에서 `python` 잡이 SUCCESS였다(`wait_ci.py` 출력).
+- 그 사이 #633이 먼저 병합돼 대기열 항목 `ci-python-job-timeout-margin.md`의 승인 줄에서 글자 충돌이 났다. dev 쪽 5회차(#633, 12:08 취소, 실행 45390683089)를 남기고 이 PR의 사건(#634, 13:40 취소)을 6회차로 올렸다. 일지 인용에 이 일지를 더했다.
+- CodeRabbit은 합친 머리에서 요청되지 않아 `@coderabbitai review`를 남겼고(#issuecomment-7137908881), 답은 `Review rate limited`였다(PR 코멘트와 `wait_ci.py` 출력). 한도에 걸린 푸시는 회차로 세지 않으므로 CodeRabbit은 첫 회차(Minor 둘, 앞 절)만 센 것이다.
+- claude-review의 Nit 하나(#issuecomment-7137514650): PR 본문 "남긴 위험"이 프록시 변수를 벗기는 고침과 어긋난다. 본문을 고쳤다(`gh pr edit`. 푸시가 아니라 claude-review를 다시 돌리지 않는다).
+- 병합 직전 `git fetch origin`으로 티켓 06이 PR #636으로 병합되어 `Status: done`인 것을 보았다(`gh pr view 636`이 `MERGED`, 티켓 파일의 `Status`). 이 기능의 티켓 여섯이 모두 done이다(`grep`으로 읽었다). 그래서 티켓 05의 둘째 칸대로 `**끝:** 2026-11-25`(이 커밋의 로컬 날짜, `date`), 기능 단락, `plan_table.py`의 `.scratch/plan.md`를 실었다. `uv run python tools/check_notes.py`는 종료 코드 0이었고 `uv run pytest -q tests/test_plan_status.py`는 13개 통과였다(둘 다 손으로 쳤다). 기능 단락의 내용은 병합된 13절의 소절 이름(`먼저 칠 명령`, `멈출 때 찍는 글`, `지금 떠 있는 판`)과 기능 계획의 간격 30초를 대어 썼고, 화면에서 확인하지는 않았다.
