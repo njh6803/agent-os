@@ -258,7 +258,7 @@ open-session을 부른다 2026-11-24T11:06:29Z
 4. **Minor. `-n 2` 회차가 마지막 줄의 `passed`만 본다.** 고쳤다. 경로마다 `--collect-only`로 모은 시험 수를 세어 그 합이 통과 수와 같고 둘 다 0보다 클 때만 센다. 잰 실행은 위젯 시험 1(`25-pytest-widget.log`)과 `tests/test_migrate_command.py` 12(`uv run pytest --collect-only -q tests/test_migrate_command.py`가 12 tests collected)의 합 13이 `26-pytest-both.log`의 `13 passed`와 같았다(손으로 봤다).
 5. **Minor. 대조 이미지 회차가 `widget-admin`이 든 줄만 본다.** 고쳤다. `not a workspace member`가 든 줄을 본다. `37-build-control.log`에 있었다(손으로 봤다).
 6. **Minor. `database-create` 로그에 접속 주소의 비밀번호가 남는다.** 고쳤다. `Tree.run`에 `secret_stdout`을 더해 그 명령의 표준 출력은 로그에 싣지 않는다. 반환값은 그대로다. 그 로그는 저장소 밖 사본 나무에 있고 비밀번호는 시험 컨테이너의 고정 기본값이었다(`AGENT_OS_TEST_DATABASE_URL`에 따로 넣었다면 그 값이다). 이미 있는 사본 나무의 `28-database-create.log`는 사본 나무와 함께 지우라고 사람에게 알린다(아래 "다음").
-7. **Minor. 타입 우회 검사 회차가 종료 0과 빈 출력만 본다.** 두었다. 그 검사기는 정상이면 아무것도 찍지 않아 다른 표지가 없고, 같은 사본 나무에서 심은 `Any`를 잡는 양성 대조 회차가 따로 있다(`24-escapes-planted.log`). 봇이 말한 "같은 실행에 검증용 파일을 넣고 그 진단을 뺀 나머지가 0건"은 정상 회차의 의미를 바꾸는 일이라 하지 않았다.
+7. **Minor. 타입 우회 검사 회차가 종료 0과 빈 출력만 본다.** 두었다. 그 검사기는 정상이면 아무것도 찍지 않아 다른 표지가 없고, 같은 사본 나무에서 심은 `Any`를 잡는 양성 대조 회차가 따로 있다(`24-escapes-planted.log`). 봇이 권한 것(같은 실행에 검증용 파일을 넣고 그 진단을 뺀 나머지가 0건인지 세기)은 정상 회차의 의미를 바꾸는 일이라 하지 않았다.
 
 README는 표지 열 셋(35·56·75줄)을 고치고, 표지를 좁힌 사실과 다시 돌리지 않았다는 것, 로그로 손으로 맞춘 것을 "실행의 차례"에 적었다. `run.py`는 ruff check, ruff format --check, `tools/check_type_escapes.py`가 통과했다. 좁힌 `run.py`는 다시 돌리지 않았다(돌리면 사본 나무와 이미지 짓기에 수십 분이 든다). 구현 티켓이 이 프로브를 다시 돌릴 때 처음 본다.
 
@@ -279,3 +279,24 @@ README는 표지 열 셋(35·56·75줄)을 고치고, 표지를 좁힌 사실과
 - **구현 티켓이 처음 보는 것 둘.** 좁힌 프로브 `run.py`가 다시 도는 첫 실행(위 "CodeRabbit 첫 회차" 3~6), 그리고 단독 배포 e2e가 위젯 관리 서버의 이미지를 짓는 시간(명세의 어림, 재지 않았다).
 - **사람이 지울 것.** 사본 나무 넷(`C:/project/uvws1`, `C:/project/uvws2`, `C:/project/uvws3`, 첫 세션 스크래치패드의 `uvws-1`)과 프로브 이미지 둘(`uv-workspace-probe/widget-admin:probe`, `uv-workspace-probe/serve-sync:probe`). 사본 나무 셋째의 `.probe-logs/28-database-create.log`에 시험 컨테이너 접속 주소의 비밀번호가 평문으로 있다(그 사본 나무를 지우면 함께 없어진다).
 - **CI 시간.** `python` 잡이 15분에 자주 닿는다. 대기열 `ci-python-job-timeout-margin`이 4회차다. 이 PR 같은 문서 PR도 걸려 병합이 미뤄진다.
+
+## 인계 (커밋 뒤, 봇 회차)
+
+커밋 `47f9cfd56`(파일 다섯)을 만들었다. pre-commit은 모두 통과했다. ruff 둘, 병렬 검사 열하나(899.73초), 마크다운 표, 줄 구분 문자, 변이 표, 인용 대조, 커밋 메시지다. 카나리아 명세 모양과 헌법 판은 대상 파일이 없어 `Skipped`였다. 인용 대조의 경고 하나(일지의 봇 권고 인용)는 따옴표를 뗀 고침이 아래 인계와 함께 커밋하지 않은 채 있다. 아직 푸시하지 않았고 그래서 `@coderabbitai review`의 둘째 요청도 남기지 않았다. 컨텍스트가 인계 문턱을 넘어 인계 계기(`커밋 뒤`)가 왔다. 이 세션은 곁 세션이 아니다. 사용자 프롬프트는 위 "인계 (PR 연 뒤)" 절의 지시문 하나이고 모델 줄은 그대로 `Sonnet 5.5 / high`다.
+
+남은 일: 푸시, 그 푸시에 대한 `@coderabbitai review` 요청, 봇 둘째 회차(이 봇은 Critical·Major만 고치고 나머지는 보류 이유를 PR 코멘트에), 이 일지의 마무리 커밋, 병합이다. 이 PR의 PR 코멘트에 첫 회차의 판정(위 일곱)을 아직 남기지 않았다. 푸시 직후 남긴다. `python` 잡이 15분에 걸려 취소되면 실패한 잡만 다시 돌린다(`gh run rerun <실행> --failed`). 이 세션이 두 번 그랬고 둘 다 취소였다. 병합은 "워크트리에서 병합할 때"의 길이고 끝에 주 체크아웃 미갱신 줄과 사람에게 지우라고 알릴 것(위 "다음")이 있다.
+
+```
+다음 작업: 기능 widget-admin-server. 위젯 관리 서버의 명세 PR 632에 봇 회차를 반영하고 병합한다
+다음 단계: PR 반영·병합
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /to-spec widget-admin-server
+브랜치: docs/widget-admin-server-spec
+모델: Sonnet 5.5 / high. 2의 잇는 지시문
+읽을 것: docs/journal/2026-11-24-1637-widget-admin-server-spec.md
+이어받을 상태: 인계: 커밋 뒤. 커밋 `47f9cfd56`까지 했고 아직 푸시하지 않았다. 일지의 "이어받은 세션: 봇 회차"에 CodeRabbit 첫 회차(Major 1, Minor 6)의 판정과 고친 것, 회고, 다음이 이미 있다. 푸시한 뒤 첫 회차의 판정을 PR 코멘트에 남기고(Major와 두 Minor는 둔 까닭, 고친 넷), `@coderabbitai review`를 남겨 둘째 회차를 받는다. 둘째 회차부터는 Critical·Major만 고친다. 일지에 커밋하지 않은 수정(인용 따옴표 하나와 이 인계 절)이 워크트리에 있으니 다음 커밋에 함께 싣는다. `python` 잡이 15분에 취소되면 `gh run rerun <실행> --failed`로 실패한 잡만 다시 돌린다(대기열 `ci-python-job-timeout-margin`, PR 631이 같은 항목에 3회차를 적어 이 PR의 4회차 줄과 승인 줄에서 글자가 부딪힐 수 있다). 이력이 없어 ADR 승인은 없다. 끝에 사람에게 사본 나무 넷(C:/project/uvws1, C:/project/uvws2, C:/project/uvws3, 첫 세션 스크래치패드의 uvws-1)과 프로브 이미지 둘(uv-workspace-probe/widget-admin:probe, uv-workspace-probe/serve-sync:probe)을 지우라고 알린다. 일지 docs/journal/2026-11-24-1637-widget-admin-server-spec.md
+확인할 선행 조건: 없음
+이번 요청 범위: PR과 병합까지
+```
+
+open-session을 부른다 2026-11-24T12:03:27Z
