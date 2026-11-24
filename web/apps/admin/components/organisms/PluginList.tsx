@@ -1,5 +1,5 @@
 import { Icon, Switch } from "@agent-os/ui";
-import { useId, useState } from "react";
+import { type ReactNode, useId, useState } from "react";
 import { describeFailure, RequestFailure } from "../../api/failure";
 import type { PluginKind, PluginRow } from "../../api/plugins";
 import { TextLink } from "../atoms/TextLink";
@@ -37,8 +37,15 @@ type SetEnabled = (
   change: { readonly enabled: boolean },
 ) => Promise<void>;
 
+/**
+ * 행의 접속 확인 자리. 행마다 서버에서 읽어야 하는 값이라 organisms 가 읽지 못하고 pages 가 읽는 부품을 슬롯으로 넘긴다
+ * (ADR 0021). 매니페스트를 읽지 못한 표지 행에는 부르지 않는다.
+ */
+type ConnectionSlot = (row: PluginRow) => ReactNode;
+
 interface PluginListProps extends ReadState<readonly PluginRow[]> {
   readonly onSetEnabled: SetEnabled;
+  readonly connection?: ConnectionSlot;
 }
 
 /**
@@ -69,6 +76,7 @@ interface PluginListViewProps extends PluginListProps {
  */
 export function PluginListView({
   onSetEnabled,
+  connection,
   switchFailure,
   onSwitchFailure,
   ...read
@@ -104,6 +112,7 @@ export function PluginListView({
                 label={label}
                 rows={rows.filter((row) => row.kind === kind)}
                 onSetEnabled={onSetEnabled}
+                connection={connection}
                 onSwitchFailure={onSwitchFailure}
               />
             ))}
@@ -127,10 +136,11 @@ interface KindGroupProps {
   readonly label: string;
   readonly rows: PluginRow[];
   readonly onSetEnabled: SetEnabled;
+  readonly connection: ConnectionSlot | undefined;
   readonly onSwitchFailure: (failure: SwitchFailure | null) => void;
 }
 
-function KindGroup({ label, rows, onSetEnabled, onSwitchFailure }: KindGroupProps) {
+function KindGroup({ label, rows, onSetEnabled, connection, onSwitchFailure }: KindGroupProps) {
   const headingId = useId();
   return (
     <section aria-labelledby={headingId} className="flex flex-col gap-2">
@@ -150,6 +160,7 @@ function KindGroup({ label, rows, onSetEnabled, onSwitchFailure }: KindGroupProp
               key={row.name}
               row={row}
               onSetEnabled={onSetEnabled}
+              connection={connection}
               onSwitchFailure={onSwitchFailure}
             />
           ))}
@@ -162,6 +173,7 @@ function KindGroup({ label, rows, onSetEnabled, onSwitchFailure }: KindGroupProp
 interface RowProps {
   readonly row: PluginRow;
   readonly onSetEnabled: SetEnabled;
+  readonly connection: ConnectionSlot | undefined;
   /** 켜고 끄기의 실패를 목록에 알린다. 누르기 시작하면 앞의 실패를 걷는다(null). */
   readonly onSwitchFailure: (failure: SwitchFailure | null) => void;
 }
@@ -174,7 +186,7 @@ interface RowProps {
  * 스위치는 목록이 읽은 켜짐을 그대로 보인다. 누르면 요청을 보내고 목록을 다시 읽을 때까지 막는다. 화면이 값을 먼저
  * 뒤집어 두지 않고(스토리 18), 응답 전의 두 번째 누름이 요청을 더 보내지 않는다(스토리 22).
  */
-function Row({ row, onSetEnabled, onSwitchFailure }: RowProps) {
+function Row({ row, onSetEnabled, connection, onSwitchFailure }: RowProps) {
   const [pending, setPending] = useState(false);
 
   async function setOpposite(): Promise<void> {
@@ -219,7 +231,9 @@ function Row({ row, onSetEnabled, onSwitchFailure }: RowProps) {
           <Icon name="triangle-alert" size="14" />
           <span className="min-w-0 wrap-anywhere">읽을 수 없는 매니페스트: {row.reason}</span>
         </p>
-      ) : null}
+      ) : (
+        connection?.(row)
+      )}
     </li>
   );
 }
