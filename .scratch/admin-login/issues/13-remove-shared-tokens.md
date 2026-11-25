@@ -28,13 +28,13 @@
 ### 배포 파일과 안내
 
 - [ ] `deploy/standalone/.env.example`과 루트 `.env.example`에서 두 토큰을 뺀다
-- [ ] `deploy/standalone/README.md`를 `토큰`으로 grep해, 두 토큰을 말하거나 그 수에 기대는 문장을 모두 첫 계정과 로그인의 안내로 바꾼다(명세 "배포 안내"의 "토큰을 말하는 줄". 그 항목이 든 예 가운데 66행의 "세 번 쳐서"는 데이터베이스 비밀번호 하나만 남아 한 번이 된다). 로그인은 SSH 포트 포워딩으로 연 `http://127.0.0.1:3000/`에서 한다(14가 8443으로 바꾼다). 루트 `README.md`의 토큰 안내도 같이 고친다. `tests/tools/test_deploy_guide.py`의 필수 낱말을 맞춘다
+- [ ] `deploy/standalone/README.md`를 `토큰`과 `TOKEN` 둘로 grep해(187행처럼 변수 이름만 들고 한글 "토큰"이 없는 줄이 있다), 두 토큰을 말하거나 그 수에 기대는 문장을 모두 첫 계정과 로그인의 안내로 바꾼다(명세 "배포 안내"의 "토큰을 말하는 줄". 그 항목이 든 예 가운데 66행의 "세 번 쳐서"는 데이터베이스 비밀번호 하나만 남아 한 번이 된다). 로그인은 SSH 포트 포워딩으로 연 `http://127.0.0.1:3000/`에서 한다(14가 8443으로 바꾼다). 루트 `README.md`의 토큰 안내도 같이 고친다. `tests/tools/test_deploy_guide.py`의 필수 낱말을 맞춘다
 - [ ] 이 PR의 `docs/release-notes/upgrade/` 조각(판을 올리는 사람이 읽는 안내 한 토막)에 "`.env`의 `AGENT_OS_ADMIN_TOKEN`과 `AGENT_OS_CHANNEL_TOKEN`을 지우십시오. 남겨 두면 `serve`가 지우라는 줄을 찍습니다"와, 올린 뒤 첫 계정을 만드는 명령을 싣는다
 
 ### 규칙과 옛 표현
 
 - [ ] `.claude/rules/http.md`의 자격 항목에서 공유 토큰과 함께 받는 기간의 줄을 걷고 운영자 로그인을 적는다. 규칙 파일을 고치기 전에 Skill 도구로 `writing-for-agents`를 부른다
-- [ ] `AGENT_OS_ADMIN_TOKEN`, `AGENT_OS_CHANNEL_TOKEN`, `SharedToken`, `createAdminClient`, `createChannelClient`, "관리 토큰", "채널 토큰"을 저장소 전체에서 grep해 살아 있는 문서와 코드에 잔존이 0인지 본다(기록인 ADR과 일지와 릴리스 노트는 그대로 둔다)
+- [ ] `AGENT_OS_ADMIN_TOKEN`, `AGENT_OS_CHANNEL_TOKEN`, `SharedToken`, `createAdminClient`, `createChannelClient`, "관리 토큰", "채널 토큰"을 저장소 전체에서 grep해 살아 있는 문서와 코드에 잔존이 0인지 본다(기록인 ADR과 일지와 릴리스 노트는 그대로 둔다). 예외는 둘이다. 이 티켓이 더한 "더 쓰지 않습니다" 줄과 그 시험(위 "서버"의 첫 항목과 아래 "시험"의 첫 항목)은 두 변수 이름을 일부러 쓴다. 이 기능의 명세와 티켓은 걷는 일을 적은 글이라 이름이 남는다
 
 ### 시험
 
