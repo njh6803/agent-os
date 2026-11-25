@@ -40,6 +40,7 @@ COPY packages/e2e-standalone/package.json packages/e2e-standalone/package.json
 COPY packages/react-18/package.json packages/react-18/package.json
 COPY packages/site-file/package.json packages/site-file/package.json
 COPY packages/ui/package.json packages/ui/package.json
+COPY packages/widget-admin-client/package.json packages/widget-admin-client/package.json
 
 # pnpm 의 저장소와 메타데이터 캐시는 캐시 마운트라 이미지에 남지 않는다.
 FROM manifests AS deps-full

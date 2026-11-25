@@ -14,12 +14,13 @@ import { mkdirSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "nod
 import { dirname, join, relative, sep } from "node:path";
 import { ESLint, type Linter } from "eslint";
 import { afterAll, beforeAll, describe, expect, test } from "vitest";
-import { GENERATED } from "./tools/generate-api-client.ts";
+import { GENERATED, WIDGET_ADMIN_GENERATED } from "./tools/generate-api-client.ts";
 import { makeJudgeTree, removeLeftoverJudgeTrees } from "./tools/judge-trees.ts";
 
 const WEB = import.meta.dirname;
 const ESLINT_BIN = join(WEB, "node_modules", "eslint", "bin", "eslint.js");
 const API_CLIENT = join(WEB, "packages", "api-client");
+const WIDGET_ADMIN_CLIENT = join(WEB, "packages", "widget-admin-client");
 
 // 자기 tsconfig 를 두는 자리. 임시 트리 뿌리에는 tsconfig 가 없다.
 const PROJECTS = [
@@ -27,6 +28,7 @@ const PROJECTS = [
   "apps/portal",
   "apps/widget",
   "packages/api-client",
+  "packages/widget-admin-client",
   "packages/ui",
   "cli",
 ];
@@ -89,6 +91,19 @@ const SOURCES: Readonly<Record<string, string>> = {
     'import createClient from "openapi-fetch";\n\nexport const 만든다 = createClient;\n',
   "apps/admin/components/organisms/DeepClient.ts":
     'import { createAdminClient } from "../../../../packages/api-client/src/clients";\n\nexport const 관리 = createAdminClient;\n',
+  // 위젯 관리 서버의 생성 클라이언트 패키지도 api-client 와 같은 네 자리에서 판정한다(widget-admin-server 명세 "계약 파일과 생성 클라이언트").
+  "apps/admin/components/organisms/DeepPublicClient.ts":
+    'import { createPublicClient } from "../../../../packages/widget-admin-client/src/clients";\n\nexport const 공개 = createPublicClient;\n',
+  "apps/admin/components/atoms/PublicApi.ts":
+    'import { createPublicClient } from "@agent-os/widget-admin-client";\n\nexport const 공개 = createPublicClient;\n',
+  "apps/admin/components/molecules/PublicApi.ts":
+    'import { createPublicClient } from "@agent-os/widget-admin-client";\n\nexport const 공개 = createPublicClient;\n',
+  "apps/admin/components/organisms/PublicApi.ts":
+    'import { createPublicClient } from "@agent-os/widget-admin-client";\n\nexport const 공개 = createPublicClient;\n',
+  "apps/admin/components/templates/PublicApi.ts":
+    'import { createPublicClient } from "@agent-os/widget-admin-client";\n\nexport const 공개 = createPublicClient;\n',
+  "apps/admin/components/pages/PublicApi.ts":
+    'import { createPublicClient } from "@agent-os/widget-admin-client";\n\nexport const 공개 = createPublicClient;\n',
   "apps/admin/lib/global.d.ts": "export declare const 값: any;\n",
   "apps/admin/lib/actions.ts":
     '"use server";\n\nexport async function 저장(): Promise<void> {\n  await Promise.resolve();\n}\n',
@@ -221,6 +236,10 @@ const SOURCES: Readonly<Record<string, string>> = {
     'export function 부른다(): Promise<Response> {\n  return fetch("/api/runs");\n}\n',
   "packages/api-client/src/global-fetch.ts":
     'export function 부른다(): Promise<Response> {\n  return globalThis.fetch("/api/runs");\n}\n',
+  "packages/widget-admin-client/src/client.ts":
+    'export function 부른다(): Promise<Response> {\n  return fetch("/widget-settings/demo");\n}\n',
+  "packages/widget-admin-client/src/global-fetch.ts":
+    'export function 부른다(): Promise<Response> {\n  return globalThis.fetch("/widget-settings/demo");\n}\n',
   "packages/ui/src/components/atoms/glyphs.d.ts":
     'declare module "glyphs/*" {\n  const 그림: number;\n  export default 그림;\n}\n',
   "packages/ui/src/components/atoms/Icon.tsx": PATH_REFERENCE,
@@ -307,6 +326,41 @@ const RED: readonly RedCase[] = [
     name: "상대 경로로 생성 클라이언트 패키지 안을 import",
     path: "apps/admin/components/organisms/DeepClient.ts",
     rule: "no-restricted-imports",
+  },
+  {
+    name: "상대 경로로 위젯 관리 서버의 생성 클라이언트 패키지 안을 import",
+    path: "apps/admin/components/organisms/DeepPublicClient.ts",
+    rule: "no-restricted-imports",
+  },
+  {
+    name: "atoms 가 위젯 관리 서버의 생성 클라이언트 패키지를 import",
+    path: "apps/admin/components/atoms/PublicApi.ts",
+    rule: BOUNDARIES,
+  },
+  {
+    name: "molecules 가 위젯 관리 서버의 생성 클라이언트 패키지를 import",
+    path: "apps/admin/components/molecules/PublicApi.ts",
+    rule: BOUNDARIES,
+  },
+  {
+    name: "organisms 가 위젯 관리 서버의 생성 클라이언트 패키지를 import",
+    path: "apps/admin/components/organisms/PublicApi.ts",
+    rule: BOUNDARIES,
+  },
+  {
+    name: "templates 가 위젯 관리 서버의 생성 클라이언트 패키지를 import",
+    path: "apps/admin/components/templates/PublicApi.ts",
+    rule: BOUNDARIES,
+  },
+  {
+    name: "위젯 관리 서버의 생성 클라이언트 패키지 안의 전역 fetch",
+    path: "packages/widget-admin-client/src/client.ts",
+    rule: "no-restricted-globals",
+  },
+  {
+    name: "위젯 관리 서버의 생성 클라이언트 패키지 안에서 globalThis 로 부른 fetch",
+    path: "packages/widget-admin-client/src/global-fetch.ts",
+    rule: "no-restricted-properties",
   },
   {
     name: ".d.ts 의 any",
@@ -530,6 +584,10 @@ const GREEN: readonly { readonly name: string; readonly path: string }[] = [
   { name: "as const", path: "apps/admin/lib/kinds.ts" },
   { name: "타입 테스트 파일의 설명 붙은 @ts-expect-error", path: "apps/admin/lib/kinds.test-d.ts" },
   { name: "barrel 을 거친 import", path: "apps/admin/components/pages/Runs.ts" },
+  {
+    name: "pages 가 위젯 관리 서버의 생성 클라이언트 패키지를 패키지 이름으로 import",
+    path: "apps/admin/components/pages/PublicApi.ts",
+  },
   { name: "organisms 가 atoms 를 import", path: "apps/admin/components/organisms/Panel.ts" },
   { name: "app/ 이 pages 와 templates 를 import", path: "apps/admin/app/page.ts" },
   {
@@ -579,6 +637,11 @@ beforeAll(async () => {
   symlinkSync(
     API_CLIENT,
     join(fixture, "apps/admin/node_modules/@agent-os/api-client"),
+    "junction",
+  );
+  symlinkSync(
+    WIDGET_ADMIN_CLIENT,
+    join(fixture, "apps/admin/node_modules/@agent-os/widget-admin-client"),
     "junction",
   );
   const results = await judge.lintFiles([join(fixture, "apps"), join(fixture, "packages")]);
@@ -688,6 +751,41 @@ describe("실제 생성 클라이언트 자리", () => {
   test("생성 클라이언트 패키지의 실제 파일에서도 전역 fetch 는 빨갛다", async () => {
     const path = join(API_CLIENT, "src", "clients.ts");
     const source = `${readFileSync(path, "utf-8")}\nexport const 부른다 = (): Promise<Response> => fetch("/api/runs");\n`;
+
+    expect(await ruleIdsAt(path, source)).toContain("no-restricted-globals");
+  });
+});
+
+// 위젯 관리 서버의 생성 클라이언트 패키지도 같은 자리다. 임시 트리에는 openapi-fetch 가 없어 실제 파일에서 잰다.
+describe("실제 위젯 관리 서버 생성 클라이언트 자리", () => {
+  test("커밋된 생성물은 판정 범위 안이고 아무것도 보고되지 않는다", async () => {
+    const [result] = await judge.lintFiles([WIDGET_ADMIN_GENERATED]);
+
+    expect(result?.messages).toEqual([]);
+  });
+
+  test("커밋된 생성물에 any 가 들면 판정자가 빨갛게 본다", async () => {
+    const generated = readFileSync(WIDGET_ADMIN_GENERATED, "utf-8");
+
+    const found = await ruleIdsAt(
+      WIDGET_ADMIN_GENERATED,
+      `${generated}\nexport type 틀림 = any;\n`,
+    );
+
+    expect(found).toContain("@typescript-eslint/no-explicit-any");
+  });
+
+  test("패키지의 실제 파일은 openapi-fetch 를 import 해도 아무것도 보고되지 않는다", async () => {
+    const path = join(WIDGET_ADMIN_CLIENT, "src", "clients.ts");
+    const source = readFileSync(path, "utf-8");
+    expect(source).toContain('from "openapi-fetch"');
+
+    expect(await ruleIdsAt(path, source)).toEqual([]);
+  });
+
+  test("패키지의 실제 파일에서도 전역 fetch 는 빨갛다", async () => {
+    const path = join(WIDGET_ADMIN_CLIENT, "src", "clients.ts");
+    const source = `${readFileSync(path, "utf-8")}\nexport const 부른다 = (): Promise<Response> => fetch("/widget-settings/demo");\n`;
 
     expect(await ruleIdsAt(path, source)).toContain("no-restricted-globals");
   });

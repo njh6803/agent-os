@@ -55,32 +55,42 @@ name = "최신성 검사가 어긋남을 보고하지 않는다"
 runner = "vitest"
 tests = ["tools/generate-api-client.test.ts"]
 expect = "red"
+# 종료 코드를 1로 기대하는 단언이 실패할 때의 머리 문구(손으로 넣어 실패 출력을 본 것, 2026-11-25).
+expect_output = ["AssertionError: expected +0 to be 1 // Object.is equality"]
 
 [[mutation.edit]]
 file = "web/tools/generate-api-client.ts"
-old = '  if (existsSync(GENERATED) && readFileSync(GENERATED, "utf-8") === generated) {'
-new = '  if (existsSync(GENERATED)) {'
+old = '  if (existsSync(target.generated) && readFileSync(target.generated, "utf-8") === generated) {'
+new = '  if (existsSync(target.generated)) {'
 
-# 보고는 그대로 하되(종료 1과 안내) 생성물을 사본의 결과로 덮어쓴다. "고쳐 쓰지 않는다" 테스트 하나만
-# 빨개야 한다. 명령이 생성물을 덮어쓰므로 되돌리기는 생성물도 쥔다.
+# 보고는 그대로 하되(종료 1과 안내) 생성물을 사본의 결과로 덮어쓴다. "고쳐 쓰지 않는다" 테스트 둘(api-client와
+# 위젯 관리 서버 생성물)과 두 생성물을 모두 보는 "대상도 계약도 주지 않은" 테스트가 빨개야 한다(2026-11-25
+# widget-admin-server 02가 둘째 대상을 더한 판에서 이 셋이 빨간 것을 봤다). 명령이 두 생성물을 덮어쓰므로
+# 되돌리기는 둘 다 쥔다.
 [[mutation]]
 name = "최신성 검사가 생성물을 고쳐 쓴다"
 runner = "vitest"
 tests = ["tools/generate-api-client.test.ts"]
 expect = "red"
-restore = ["web/packages/api-client/src/generated/openapi.ts"]
+# "고쳐 쓰지 않는다" 단언이 실패할 때만 찍히는 비교 출력의 바뀐 줄(시험 파일에 글자 그대로 있는 문장이 아니라
+# 비교 출력의 `* @description ` 접두가 붙은 꼴. 손으로 넣어 실패 출력을 본 것, 2026-11-25).
+expect_output = ["* @description 살아 있는지만 답한다."]
+restore = [
+  "web/packages/api-client/src/generated/openapi.ts",
+  "web/packages/widget-admin-client/src/generated/openapi.ts",
+]
 
 [[mutation.edit]]
 file = "web/tools/generate-api-client.ts"
 old = '''
-async function staleness(contract: string): Promise<string | null> {
-  const generated = await generate(contract);
+async function staleness(contract: string, target: Target): Promise<string | null> {
+  const generated = await generate(contract, target);
 '''
 new = '''
-async function staleness(contract: string): Promise<string | null> {
-  const generated = await generate(contract);
-  const before = existsSync(GENERATED) ? readFileSync(GENERATED, "utf-8") : "";
-  writeFileSync(GENERATED, generated);
+async function staleness(contract: string, target: Target): Promise<string | null> {
+  const generated = await generate(contract, target);
+  const before = existsSync(target.generated) ? readFileSync(target.generated, "utf-8") : "";
+  writeFileSync(target.generated, generated);
   if (before !== generated) {
     return "pnpm -C web run generate:api-client";
   }
