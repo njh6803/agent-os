@@ -444,6 +444,29 @@ open-session을 부른다 2026-11-25T04:38:15Z
   7. 명세 288행(Minor). 로그아웃과 갱신의 경합을 명세 본문에도 적었다. 이 PR이 "남긴 위험"으로 이미 적은 것이고 한계가 짧은 JWT의 수명(기본 5분)이라는 말도 같다.
 - **새로 알게 된 일.** 끝 실행의 결말을 "이벤트가 있는지"로 읽는 문장이 티켓에 있었다. 실행 상태가 마지막 이벤트 하나로 파생한다는 것(ADR 0012)을 티켓이 놓친 것이라, 대기열 `ticket-step-assumes-one-config` 같은 줄(명세의 사실을 티켓 문장으로 옮길 때 대조가 빠진 일)에 더할지 retro가 정한다.
 
+## 인계(봇 회차 반영 커밋 뒤)
+
+봇 회차의 반영 커밋 `be3b4f7d8`이 pre-commit을 지나(exit 0) `커밋 뒤` 경계에 왔고, 인계 계기는 그 커밋이 백그라운드에서 끝나기 전(세션 컨텍스트 204,248 토큰)에 들어왔다. 커밋이 끝난 뒤에 판정했다. 인계하지 않는 때 다섯에는 들지 않았다. 커밋은 exit 0이었고, 요청 범위는 병합까지이며, 이 세션의 지시문의 "이어받을 상태"는 `인계: PR 연 뒤`라 이번 경계와 다르고, 이 세션이 쓴 `인계 못함` 줄이 없고, `get_session`의 `self`에 `parentSessionId`가 없다. 바꾸기 전 제목은 `docs/admin-login-tickets`다.
+
+이 세션이 한 것은 위 "봇 회차" 절에 있다. 그 커밋은 아직 푸시하지 않았다. 푸시하기 전에 `origin/dev`가 앞서 있으면(이 세션이 본 `origin/dev`는 `3ba468f`이고 이 브랜치의 앞 합치기는 `fa618af5f`까지다) 훅이 푸시를 막으므로 합친 뒤 푸시한다. PR 본문은 이 세션이 반영한 범위로 이미 고쳤다. 코멘트로 `@coderabbitai review`는 남겼고 첫 회차 리뷰가 끝났다. 푸시한 뒤 도는 둘째 회차부터는 Critical·Major만 고치고 나머지는 지적마다 보류 이유를 PR 코멘트에 남긴다. `verify` 잡이 한 번 "잡 목록에 verify 가 없다"로 빨갰고 `gh run rerun --failed`로 다시 돌려 초록이었다(위 "봇 회차"의 검사). 낸 지시문은 이렇다.
+
+```
+다음 작업: 기능 admin-login. 명세(`.scratch/admin-login/spec.md`)를 검토해 고치고 티켓 14장을 `.scratch/admin-login/issues/`에 써서 PR #641(base dev)을 열었다. CodeRabbit 첫 회차의 지적 일곱을 반영한 커밋이 푸시 전이다. 병합이 남았다
+다음 단계: PR 반영·병합
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /to-tickets .scratch/admin-login/spec.md
+브랜치: docs/admin-login-tickets
+모델: Sonnet 5.5 / high. 2의 잇는 지시문
+읽을 것: 일지 docs/journal/2026-11-25-1007-admin-login-tickets.md의 "봇 회차" 절과 "인계(봇 회차 반영 커밋 뒤)" 절과 "다음" 절
+이어받을 상태: 인계: 커밋 뒤. 봇 회차 반영 커밋 be3b4f7d8을 만들었고 아직 푸시하지 않았다. `git fetch origin` 뒤 `origin/dev`가 앞서 있으면 합친 뒤 푸시하고, merge.md 2(봇 회차)의 대기부터 한다(`@coderabbitai review`는 이미 남겼다. 푸시한 뒤 둘째 회차의 Critical·Major만 고친다). 커밋하지 않은 변경은 일지의 이 절 하나이고 다음 커밋에 함께 싣는다. 일지 docs/journal/2026-11-25-1007-admin-login-tickets.md
+확인할 선행 조건: 없음
+이번 요청 범위: PR과 병합까지
+```
+
+제목을 `docs/admin-login-tickets (인계함)`으로 바꿨다. 이 세션이 띄운 대기(`wait_ci.py`)는 모두 끝나 멈출 것이 없었다. `git worktree unlock`은 `is not locked`로 끝났다.
+
+open-session을 부른다 2026-11-25T05:16:00Z
+
 ## 다음
 
 - **이 PR은 병합까지 한다.** 병합 뒤 admin-login의 프론티어는 `01-contract-account-fields-forbidden-and-origin-check` 하나다(막는 것 없음). 01 뒤에 02와 07과 08이 나란히 돌 수 있다. 04와 05는 03 뒤에 나란히 돌고, 05와 07, 05와 04 가운데 늦게 병합하는 쪽이 권한 표에 줄을 더한다(05의 "권한 표"). 06은 04와 05를 함께 기다린다.
