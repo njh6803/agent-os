@@ -74,4 +74,13 @@ PR 직전 리뷰에서 서브에이전트가 밀어 볼 새 문장(이 세션이
 
 올리기는 남았다. 병합 뒤 `origin/dev`에서 `sync-design-system 올리기`(`upload.md`)를 하고 티켓 `.scratch/admin-login/issues/08-design-system-icons-and-account-badge.md`의 올리기 칸을 닫는다.
 
+## 인계 (PR 연 뒤)
+
+둘째 인계다. 앞 인계로 이 일을 이어받은 세션이 일지의 회고와 다음, 만료한 대기열 항목 열 개(커밋 `723e0c0d4`), PR 직전 리뷰 절(커밋 `0668cf244`)을 마쳐 푸시했고, PR 646(`https://github.com/njh6803/agent-os/pull/646`, base `dev`, 제목 접두 `feat:` 느낌표 없음)을 열었다. 컨텍스트가 인계 문턱(20만 토큰)을 넘은 채 `PR 연 뒤` 경계에 왔다. 이 세션의 제목은 `feature/08-design-system-icons-and-account-badge`였다. 앱의 PR 묶음은 `get_status`로 이미 PR 646에 묶인 것을 보았다(검사 아홉이 pending, `mergeStateStatus`는 `BLOCKED`, 푸시 직후라 이전 커밋 값일 수 있다). 이 세션이 띄운 백그라운드 작업은 없다.
+
+새 세션이 할 일: 첫 `@coderabbitai review` 코멘트를 남기고(마지막 푸시가 `0668cf244`이므로 그 뒤에), `merge.md` 2(봇 회차)대로 대기하고 반영한 뒤 병합하고(워크트리 사본의 `merge.md`의 "워크트리에서 병합할 때"), 병합 뒤 `sync-design-system 올리기`(`upload.md`)를 하고 티켓의 올리기 칸을 닫는다. 이 PR은 로컬 모델 시험 범위 밖이다(`web/packages/ui`와 일지·대기열 변경뿐이다). 봇 지적 가운데 뒤로 넘기는 것이 있으면 일지 "다음"에도 적는다.
+
+PR 직전 리뷰에서 보류한 Minor 하나(`AccountStatusBadge.stories.tsx`의 인라인 폭 `style={{ width: 280 }}`, 다른 스토리 열 파일에도 같은 꼴이 있다)는 PR 본문의 "남긴 위험"에 적었다. 봇이 같은 자리를 짚으면 근거가 거기 있다.
+
 open-session을 부른다 2026-11-25T17:03:11Z
+open-session을 부른다 2026-11-25T17:45:58Z (둘째 인계, PR 연 뒤)
