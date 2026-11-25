@@ -49,6 +49,14 @@ PR 직전 리뷰에서 서브에이전트가 밀어 볼 새 문장(이 세션이
 - `AccountStatusBadge.tsx`의 `TEXT` 위 주석: "admin-login 명세 "배지의 이름"의 말이다. 계정의 "비활성"은 꺼진 플러그인을 말하지 않는다(CONTEXT.md 운영자 계정 절이 그 풀이를 든다)."
 - `AccountStatusBadge.md` 11행: "비활성과 비밀번호 미설정은 같은 흐린 색이라 문구로만 갈립니다."
 
+## PR 직전 리뷰
+
+`coderabbit-review` 서브에이전트가 CLI 0.7.5로 `coderabbit review --agent --include-untracked --dir web/packages/ui/src`를 돌렸다(`auth status`는 `Seat: not assigned`, `Plan: Free`였고 리뷰는 끝까지 돌았다). 파일 일곱이 `review_completed`, `findings: 0`이었다. `--dir`이 닿지 않은 사진 정답과 일지·대기열 파일은 보지 못한 몫이고 파이썬 변경은 없다.
+
+일지가 밀어 보라고 넘긴 문장 셋은 서브에이전트가 코드와 대 보고 모두 맞다고 보고했다(서브에이전트가 읽은 것이고 이 세션이 다시 열어 보지는 않았다): 아이콘은 `label` 없이 불려 `Icon`이 `aria-hidden`을 달고, 색 클래스 셋(`text-text`, `text-text-muted`, `text-warning`)은 `theme.css`에 있는 토큰이며, `BASE`는 `StatusBadge`와 글자가 같다. 서브에이전트가 열어 보지 못한 것은 `mk-accounts.dc.html`이다.
+
+트리아지: 유효 0건, 보류 Minor 1건, 오탐 후보 2건(`circle`이 속 빈 고리인 점, 세 상태가 같은 아이콘에 색 둘뿐인 점. 이름은 명세 그대로이고 글자가 항상 붙어 `NotOnlyColor`가 글자로 가르는 것을 단언한다). 보류한 Minor는 `AccountStatusBadge.stories.tsx`의 `style={{ width: 280 }}` 하나다. 이 세션이 `Grep`으로 `web/packages/ui/src/components`의 스토리를 세니 같은 인라인 폭이 열 파일의 열여섯 곳에 있어 이 스토리만의 일이 아니라고 보고, 클래스 판정이 인라인 `style`을 보지 않아 게이트도 지난다. 그래서 고치지 않는다(고치는 값은 한 줄이지만 다른 열 파일과 어긋나는 쪽이 값이 더 크다고 본다).
+
 ## 회고
 
 후보 2건, 판정은 승인 0건, 기각 2건, 넘김 0건이다. 사용자에게 물을 것은 없다.
