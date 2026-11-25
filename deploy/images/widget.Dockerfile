@@ -41,6 +41,7 @@ COPY packages/e2e-standalone/package.json packages/e2e-standalone/package.json
 COPY packages/react-18/package.json packages/react-18/package.json
 COPY packages/site-file/package.json packages/site-file/package.json
 COPY packages/ui/package.json packages/ui/package.json
+COPY packages/widget-admin-client/package.json packages/widget-admin-client/package.json
 
 # 워크스페이스 전체 의존성을 잠금 파일을 얼려 깐다. 뿌리의 개발 의존성까지 든다(뜰 때의 빌드가 @tailwindcss/vite 등을
 # import 하고, 앱의 tsconfig 가 시험 파일까지 담아 타입 검사가 시험 쪽 패키지를 요구한다). pnpm 의 저장소와 메타데이터

@@ -50,13 +50,15 @@ tests/             src를 미러링. widget_admin/ 은 위젯 관리 서버의 �
 web/               pnpm 워크스페이스(Node 24, TypeScript 5.9). 파이썬과 루트를 나눈다. 앱은 apps/*, 공유 패키지는 packages/*
   eslint.config.mjs  원칙 III의 TS 판정자와 층 경계. 변이 테스트는 eslint.config.test.ts
   tsconfig.base.json 기준 tsconfig. 다른 tsconfig는 이것을 extends 한다
-  tools/           web의 검사. check-tsconfig(strict 계열을 끈 tsconfig를 잡는다), generate-api-client(생성 클라이언트의
-                   타입을 openapi.json에서 만들고 --check 로 최신성을 본다), visual(사진 비교를 판을 고정한 Playwright
+  tools/           web의 검사. check-tsconfig(strict 계열을 끈 tsconfig를 잡는다), generate-api-client(생성 클라이언트 둘의
+                   타입을 계약 파일 둘, 루트 openapi.json과 widget-admin/openapi.json에서 만들고 --check 로 최신성을 본다), visual(사진 비교를 판을 고정한 Playwright
                    이미지의 Docker 컨테이너에서 돌린다), sync-design-system(디자인 시스템 아티팩트의 확인·들이기·
                    올리기 명령과 올릴 산출을 짓는 assemble. artifact-source/ 는 아티팩트에 바이트 그대로 오르는 README
                    원본과 기초 카드 원본, previous-output.json 은 지난 산출 목록. 절차는 `/sync-design-system` 스킬)
   packages/api-client/  생성 클라이언트. src/generated(생성물, 커밋하고 손으로 고치지 않는다), 관리·채널·위젯 클라이언트 셋,
                    운영자·최종 사용자 스트림을 프레임으로 읽는 것(ADR 0021·0024)
+  packages/widget-admin-client/  위젯 관리 서버의 생성 클라이언트(@agent-os/widget-admin-client). src/generated(생성물,
+                   widget-admin/openapi.json 에서 만든다), 토큰 없는 공개 경로를 자격 증명과 머리 없이 부르는 팩토리(ADR 0064)
   packages/site-file/  사이트 파일 읽기(@agent-os/site-file). 서버와 같은 규칙으로 사이트 파일(ADR 0023)을 읽어 사이트마다
                    발급자·audience·열 에이전트·허용 출처·공개 키·요청 글자 수 상한을 든 모델과 위젯 빌드의 입력을 낸다.
                    node 가 빌드 없이 읽는 꼴이라 상대 import 에 확장자를 붙인다. smol-toml 을 제 의존성으로 든다

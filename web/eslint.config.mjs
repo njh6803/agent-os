@@ -119,8 +119,15 @@ const restrictedProperties = (globals) =>
 const PORTAL_PAGE_SCRIPT = "**/apps/portal/browser/portal.ts";
 const HTTP_GLOBALS_WITHOUT_FETCH = HTTP_GLOBALS.filter(({ name }) => name !== "fetch");
 
-// 생성 클라이언트 패키지(ADR 0021). 앱이 워크스페이스 의존성으로 든다.
+// 생성 클라이언트 패키지 둘(ADR 0021, 위젯 관리 서버의 것은 ADR 0064). 앱이 워크스페이스 의존성으로 든다. 같은 네 자리에서
+// 같은 규칙으로 판정하므로 둘을 한 목록으로 묶는다.
 const API_CLIENT = "@agent-os/api-client";
+const WIDGET_ADMIN_CLIENT = "@agent-os/widget-admin-client";
+const CLIENT_PACKAGES = [API_CLIENT, WIDGET_ADMIN_CLIENT];
+const CLIENT_PACKAGE_DIRECTORIES = [
+  "**/packages/api-client/**",
+  "**/packages/widget-admin-client/**",
+];
 
 // no-restricted-imports 도 파일마다 한 번만 설정된다. 생성 클라이언트 패키지의 블록이 목록을 다시 적으므로 항목을
 // 상수로 둔다.
@@ -130,12 +137,12 @@ const ICON_SET_IMPORT = {
 };
 const OPENAPI_FETCH_IMPORT = {
   name: "openapi-fetch",
-  message: `클라이언트를 직접 만들지 않는다. 토큰을 고르는 것은 ${API_CLIENT} 의 클라이언트 셋이다(ADR 0021·0024)`,
+  message: `클라이언트를 직접 만들지 않는다. 토큰을 고르는 것은 ${API_CLIENT} 의 클라이언트 셋이고, 위젯 관리 서버의 공개 경로 클라이언트는 ${WIDGET_ADMIN_CLIENT} 가 짓는다(ADR 0021·0024·0064)`,
 };
 // 상대 경로로 패키지 안을 import 하면 로컬로 분류되어 층 경계의 모듈 이름 정책을 피한다(티켓 03 의 셀프 리뷰).
-const API_CLIENT_INTERNALS = {
-  group: ["**/packages/api-client/**"],
-  message: `생성 클라이언트는 패키지 이름(${API_CLIENT})으로만 import 한다. 층 경계가 그 이름을 본다`,
+const CLIENT_PACKAGE_INTERNALS = {
+  group: CLIENT_PACKAGE_DIRECTORIES,
+  message: `생성 클라이언트는 패키지 이름(${CLIENT_PACKAGES.join(" 또는 ")})으로만 import 한다. 층 경계가 그 이름을 본다`,
 };
 
 // 아토믹 층. 아래 층은 위 층을 import 하지 않고, atoms·molecules 는 API 와 스토어를 부르지 않는다(tech.md 프론트 구성).
@@ -222,7 +229,7 @@ export default defineConfig(
       "no-restricted-properties": ["error", ...restrictedProperties(HTTP_GLOBALS)],
       "no-restricted-imports": [
         "error",
-        { paths: [ICON_SET_IMPORT, OPENAPI_FETCH_IMPORT], patterns: [API_CLIENT_INTERNALS] },
+        { paths: [ICON_SET_IMPORT, OPENAPI_FETCH_IMPORT], patterns: [CLIENT_PACKAGE_INTERNALS] },
       ],
       "boundaries/dependencies": [
         "error",
@@ -235,7 +242,9 @@ export default defineConfig(
               // pnpm 링크(윈도우는 junction)로 풀린 워크스페이스 패키지는 external 로 분류된다(2026-09-29 실측. 판정자
               // 테스트가 그 링크를 둔다). 상대 경로로 패키지 안을 import 하면 로컬이라 이 정책이 보지 못한다.
               from: { element: { types: { anyOf: ["atom", "molecule"] } } },
-              disallow: { to: { module: { origin: "external", source: API_CLIENT } } },
+              disallow: {
+                to: { module: { origin: "external", source: `{${CLIENT_PACKAGES.join(",")}}` } },
+              },
               message:
                 "atoms 와 molecules 는 순수하다. 생성 클라이언트를 부르지 않는다(tech.md 프론트 구성)",
             },
@@ -248,7 +257,14 @@ export default defineConfig(
               disallow: [
                 { to: { element: { types: { anyOf: ["query", "store"] } } } },
                 { to: { element: { type: "api", captured: { domain: "!failure" } } } },
-                { to: { module: { origin: "external", source: `{${API_CLIENT},swr}` } } },
+                {
+                  to: {
+                    module: {
+                      origin: "external",
+                      source: `{${[...CLIENT_PACKAGES, "swr"].join(",")}}`,
+                    },
+                  },
+                },
               ].map((selector) => ({ ...selector, dependency: { kind: "value" } })),
               message:
                 "organisms 와 templates 는 hooks/queries, stores, swr, 생성 클라이언트, api/failure 밖의 api 를 부르지 않는다. pages 가 읽어 organisms 에 props 로 넘긴다(ADR 0021 의 2026-10-27 이력)",
@@ -294,12 +310,12 @@ export default defineConfig(
     },
   },
   {
-    // 생성 클라이언트 패키지는 openapi-fetch 로 클라이언트 셋을 만드는 유일한 자리다. 여기서만 그 import 를 푼다.
-    files: ["**/packages/api-client/**"],
+    // 생성 클라이언트 패키지 둘은 openapi-fetch 로 클라이언트를 만드는 유일한 자리다. 여기서만 그 import 를 푼다.
+    files: CLIENT_PACKAGE_DIRECTORIES,
     rules: {
       "no-restricted-imports": [
         "error",
-        { paths: [ICON_SET_IMPORT], patterns: [API_CLIENT_INTERNALS] },
+        { paths: [ICON_SET_IMPORT], patterns: [CLIENT_PACKAGE_INTERNALS] },
       ],
     },
   },
