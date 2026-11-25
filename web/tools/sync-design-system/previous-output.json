@@ -2,6 +2,8 @@
   "project/README.md",
   "project/_ds_bundle.css",
   "project/_ds_bundle.js",
+  "project/components/AccountStatusBadge/README.md",
+  "project/components/AccountStatusBadge/preview.html",
   "project/components/Alert/README.md",
   "project/components/Alert/preview.html",
   "project/components/Button/README.md",
