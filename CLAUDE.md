@@ -17,8 +17,9 @@
 - `src/agent_os/server.py`: HTTP 표면의 조립 층. `create_app()` 하나이고 전역 `app`이 없다. 계약은 루트 `openapi.json`
 - `src/agent_os/main.py`: 조합 층. 의존 방향은 원칙 IV
 - `plugins/{agents,mcp,skills,models}/`: 플러그인. 코드가 아니라 내용물
+- `widget-admin/`: 둘째 설치 묶음(uv 작업공간의 멤버, 패키지 `widget_admin`). 위젯 관리 서버이고 `agent_os`와 서로 import하지 않는다. 계약은 `widget-admin/openapi.json`
 - `web/`: pnpm 워크스페이스(TypeScript). 앱은 `apps/*`, 공유 패키지는 `packages/*`. 파이썬과 루트를 나눈다
-- `tests/`: `src/`를 대체로 미러링. admin·http 층의 테스트는 `tests/test_server.py`, 하네스는 `tests/tools/`
+- `tests/`: `src/`를 대체로 미러링. admin·http 층의 테스트는 `tests/test_server.py`, 하네스는 `tests/tools/`, 위젯 관리 서버는 `tests/widget_admin/`
 
 ## 지도
 

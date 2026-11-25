@@ -2,6 +2,8 @@
 *
 !pyproject.toml
 !uv.lock
+# 작업공간 멤버의 선언 파일 하나만 연다. 멤버의 코드는 이 이미지에 들이지 않는다(ADR 0064).
+!widget-admin/pyproject.toml
 !README.md
 !src
 !plugins

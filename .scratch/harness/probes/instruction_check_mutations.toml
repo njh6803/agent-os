@@ -419,8 +419,8 @@ expect_output = ["FAILED tests/tools/test_check_instructions.py::test_bool_None_
 
 [[mutation.edit]]
 file = "tools/check_instructions.py"
-old = '''OPTIONAL_BOOL_ROOTS = ("src", "tests", "tools")'''
-new = '''OPTIONAL_BOOL_ROOTS = ("src", "tools")'''
+old = '''OPTIONAL_BOOL_ROOTS = ("src", "widget-admin/src", "tests", "tools")'''
+new = '''OPTIONAL_BOOL_ROOTS = ("src", "widget-admin/src", "tools")'''
 
 [[mutation]]
 name = "저장소 전체를 훑어 probes 까지 본다"
