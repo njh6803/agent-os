@@ -7,8 +7,10 @@
 - `Sec-Fetch-Site` 가 있으면 값이 `same-origin` 일 때만 지난다. `same-site`·`cross-site`·`none` 과
   그 밖의 값은 403 이다. 브라우저가 이 머리를 붙이고 페이지의 스크립트는 바꿀 수 없다.
 - 없으면 `Origin` 도 없을 때만 지난다. 브라우저가 아닌 프로그램(httpx, Node 의 fetch, Playwright 의
-  API 컨텍스트)은 둘 다 보내지 않고, 이 서버의 관리 화면 중계와 시험이 그런 프로그램이다.
-  `Sec-Fetch-Site` 를 모르는 옛 브라우저는 교차 출처 요청에 `Origin` 을 붙이므로 여기서 걸린다.
+  API 컨텍스트)은 둘 다 보내지 않고, 이 서버의 시험이 그런 프로그램이다. 관리 화면의 중계(Next 의
+  rewrites)는 브라우저가 낸 요청을 그대로 넘기므로 그 요청은 브라우저가 붙인 `Sec-Fetch-Site` 를
+  달고 온다(ADR 0062 의 쿠키 프로브가 본 것). `Sec-Fetch-Site` 를 모르는 옛 브라우저는 교차 출처
+  요청에 `Origin` 을 붙이므로 여기서 걸린다.
 
 그 밖의 머리(`Sec-Fetch-Mode`, `Referer`, `Host` 따위)는 보지 않는다. Node 의 fetch 는
 `Sec-Fetch-Mode: cors` 를 보내므로 그 머리를 보면 중계가 막힌다.

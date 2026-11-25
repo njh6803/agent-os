@@ -82,4 +82,43 @@ open-session을 부른다 2026-11-25T07:34:13Z
 > 선택지: pytest 단계만 건너뛰고 커밋한다(`SKIP=pytest`로 이 커밋 하나에서만 pytest 단계를 뺍니다. 나머지 검사는 이번에 모두 통과했습니다. 세 번째 시도에서는 8181개가 통과하고 하나만 실패했고, 실패 파일을 단독으로 돌리면 84개가 통과했습니다. 전체 pytest는 PR의 CI가 깨끗한 환경에서 다시 돌므로 그 결과로 확인합니다. 건너뛴 사실은 일지와 PR 본문에 적습니다) / 한 번 더 시도한다
 > 사용자: pytest 단계만 건너뛰고 커밋한다 (Recommended)
 
-따라서 이 커밋은 `SKIP=pytest`로 쳤다. pytest 단계는 이 커밋의 pre-commit에서 돌지 않았다. 대신 앞 시도들의 결과(세 번째 시도 8181 통과·1 실패, 첫 `run_checks.py` 판은 `test_router.py` 셋을 고친 뒤 그 파일 108개 통과)와 실패 파일 단독 실행(84 통과)이 근거이고, 전체 pytest는 PR의 CI가 다시 돈다.
+따라서 기능 커밋 `4fa0e54fb`는 `SKIP=pytest`로 쳤다. 그 커밋의 pre-commit에서는 pytest 단계가 돌지 않았다. 대신 앞 시도들의 결과(세 번째 시도 8181 통과·1 실패, 첫 `run_checks.py` 판은 `test_router.py` 셋을 고친 뒤 그 파일 108개 통과)와 실패 파일 단독 실행(84 통과)이 근거였다. 이어 origin/dev를 합친 커밋 `c4730cb05`는 전체 게이트를 `SKIP` 없이 지나 pytest 단계가 `Passed (822.7s)`였으므로(통과한 시도는 개수를 찍지 않는다), 푸시한 머리 트리에는 pytest 통과 기록이 있다. 그 커밋에서 ruff 두 검사는 스테이지에 `.py`가 없어 `Skipped`였고 린트는 손으로 쳤다. 전체 pytest는 PR의 CI가 다시 돈다.
+
+## PR 직전 리뷰
+
+기준 `origin/dev`, 커밋 둘(기능 커밋 `4fa0e54fb`, origin/dev를 합친 커밋 `c4730cb05`). 합치기에서 `http.md`와 카나리아 명세 `http_rule_continuation_422.toml`의 글자 충돌 둘이 났고, 둘 다 dev 쪽 문장에 이 변경의 `origin` 모듈 언급과 최신 결과 줄을 얹어 풀었다. 합친 트리에서 관련 시험 네 파일이 872개 통과했고, 합치기 커밋의 pre-commit은 pytest까지 모두 통과했다(세 번째 시도. 앞 두 시도는 대기열 306·332 종류의 시간 시험 하나씩이 빨갰다).
+
+- CodeRabbit CLI(`coderabbit review --agent --base origin/dev`)는 리뷰가 시작되지 못했다. `Rate limit exceeded`(포함된 리뷰 셋을 모두 썼고 좌석에 묶이지 않았다, 대기 약 9분). 다시 돌리면 한도를 하나 더 쓰므로 돌리지 않았고, 템플릿 규정대로 내장 `/security-review`와 `bug-perf-review`를 대신 돌렸다. `coderabbit auth status`의 `Seat:` 줄은 `not assigned`다.
+- CodeRabbit 서브에이전트가 코드와 ADR을 직접 읽고 낸 Minor 하나: 출처 검사 문서가 "ADR 0011의 2026-11-15 이력"을 인용하는데 "다섯 가운데 `/health` 밖의 넷은 요청 출처 검사를 지난다"는 문장은 2026-11-24 이력(122행)에 있다. 판정: 오탐이다. 우리 문장은 "그 목록에 로그인·갱신 같은 경로가 들어와도 그 경로는 이 검사를 받는다"이고 이 근거는 2026-11-15 이력 113행("쿠키로 여는 경로와 로그인 경로는 요청의 출처도 본다")에 글자 그대로 있다. "넷"이라는 수는 우리 문장이 근거로 들지 않았다. 고치지 않았다.
+- `/security-review`(식별 서브에이전트 하나, 코드만 읽음): 취약점 없음(확신 7 이상 0건, 검증 단계는 대상이 없었다). 따져 본 우회 입력은 머리 이름 대소문자, `Sec-Fetch-Site` 중복과 빈 값, `Origin` 빈 값, `Sec-Fetch-Site` 없음과 `Origin` 있음, `OPTIONS` preflight, 면제 경로의 경계(`/healthx`, `/health/`, `/end-userx`, `//end-user`), `request.url.path`와 `scope["path"]`의 차이(퍼센트 인코딩된 `?`·`#`, 면제 접두사로 시작하는 운영자 라우트가 없어 우회 불가), 미들웨어 순서, 403 봉투의 정보 노출, 이벤트 필드가 토큰을 싣는지다. `Origin` 없는 교차 출처 GET이 지나가는 것은 이 PR에 쿠키 로그인이 없고 인증이 `Authorization` 머리라 새 악용 경로가 아니라고 판정했다(쿠키 로그인은 뒤 티켓의 몫이다).
+- `bug-perf-review`(기준 `6b0646e80`, 범위 파일 27개): Critical·Major 없음, Minor 하나와 Nit 하나. 서브에이전트가 직접 돌려 본 것은 `Origin: ""`·`Origin: null`·대문자 `Same-Origin`·`Origin`이 든 OPTIONS가 모두 403인 것, `_reject_runtime_only`가 `resume()` 뒤에 에이전트가 낸 이벤트도 막는 것(호출 자리는 `_feed` 하나, 계정 관련 시험 14개 통과), 출처 관련 `test_server` 23개 통과다. `channel/http/router.py`, `openapi.json`, 웹 파일은 열지 않았다고 적었다.
+  - Minor(보류): 독스트링과 `http.md`의 "브라우저가 이 머리를 붙인다"가 조건 없는 닫힌 주장이다. 서브에이전트는 `Sec-Fetch-*`를 브라우저가 https와 localhost에만 붙인다고 기억하며(재 보지 않았다고 적었다), 평문 http로 선 관리 화면은 같은 출처의 쓰기에 `Origin`만 붙어 403이 된다고 짚었다. 판정: 이 세션도 재지 못했다. 단독 배포는 TLS 프록시가 받고(ADR 0056의 TLS 인증서 항목), 그 ADR은 프록시 없이 평문으로 잘못 발행하는 것을 "잃는 것"으로 적는다. 평문 http로 선 관리 화면을 지원할지는 ADR 0062가 정할 몫이라 이 티켓에서 문장을 더하지 않았고, 뒤 티켓(07·08)이 쿠키 로그인을 세울 때 브라우저로 재도록 아래 "다음"의 위험에 적는다.
+  - 같은 지적이 짚어 고친 것: 독스트링이 "이 서버의 관리 화면 중계와 시험이 그런 프로그램(두 머리를 다 안 보낸다)"이라고 적었는데, 중계(Next `rewrites`, `web/apps/admin/next.config.ts`)는 브라우저가 낸 요청을 넘기므로 틀렸다. ADR 0062의 쿠키 프로브가 관리 화면 자신의 페이지가 보낸 요청이 서버에 `Sec-Fetch-Site: same-origin`으로 닿는 것을 보인다. `origin.py`의 그 문장을 "이 서버의 시험이 그런 프로그램이고 중계는 브라우저가 붙인 `Sec-Fetch-Site`를 단 채 온다"로 고쳤다. `http.md`와 다른 문서에는 같은 표현이 없다(저장소 전체 grep).
+  - Nit(보류): `Sec-Fetch-Site`가 중복되면 `headers.get`이 첫 값만 본다. 브라우저는 이 머리를 한 번만 보내고 페이지 스크립트가 바꿀 수 없어 실제 경로가 없다.
+## 회고
+
+후보 4건, 판정은 승인 4건(모두 회차를 더하는 것), 기각 0건, 넘김 0건이다. 사용자에게 물을 것은 없다.
+
+| 후보 | 판정 | 사건과 조건 | 간 자리 |
+|---|---|---|---|
+| 인계 열기를 분류기가 거부했다 | 승인, 회차 | 셀프 리뷰 직전 인계 열기가 "Unsanctioned Communication"으로 거부됐고 `인계 못함`을 적었다(위 "인계" 절). 열린 항목이 이미 처방한 사건이다 | `open-session-send-denied-despite-allow-rule` 16회차에서 17회차 |
+| `인계 못함` 뒤에도 인계 계기가 다시 왔다 | 승인, 회차 | 백그라운드 커밋 호출 직후마다 계기가 왔고 `인계 못함`을 압축 뒤에도 요약이 들고 있어 넘기지 않았다 | `0518` 8회차에서 9회차 |
+| 백그라운드 커밋 직후 계기가 끝 알림 전에 왔다 | 승인, 회차 | 위와 같은 사건이다. 이 항목은 계기를 내는 때가 다르다 | `handoff-trigger-before-background-commit-ends` 14회차에서 15회차 |
+| 여러 세션의 pytest가 겹쳐 메모리가 모자랐다 | 승인, 회차 | 첫 두 커밋 시도가 윈도 오류 1455와 git "malloc failed", vitest 종료 코드 `0xC0000409`로 죽었다. 같은 시각 pytest 일꾼이 64개였다 | `run-checks-out-of-memory-with-parallel-sessions` 6회차에서 7회차 |
+
+네 항목 모두 회차 5 이상이라 `next-session` 결정표의 chore 배치 조건에 이미 든 것들이다. 이 세션은 반영하지 않는다. 이 PR은 계약 티켓이고 고칠 자리(`tools/hook_handoff.py`, `tools/run_checks.py`)가 이 변경과 겹치지 않는다.
+
+일지에만 남기는 것:
+
+- 부하에서만 빨간 시간 시험(`test_interrupt.py` 셋, `test_rerun_runner.py` 둘, `test_probe_kit.py` 하나)이 커밋 시도 여섯 번을 막았다. 대기열 0306 종류(부하에서 흔들리는 시간 시험)라 받아들인 종류다. 규칙대로 새 항목도 회차도 더하지 않는다. 사용자가 `SKIP=pytest` 한 번을 허락했고(위 "커밋 전 검사가 부하로 막힌 일") 그 선례는 0531이다.
+- 만료할 항목은 없다(`tools/queue_open_rows.py`의 "만료할 항목"이 비었다).
+
+## 다음
+
+이 PR을 병합하면 admin-login의 다음 티켓은 02·07·08이 서로 막지 않고 나란히 돌 수 있다(`.scratch/admin-login/issues/`의 `02-account-tables-and-system-admin-command.md`, `07-conversation-list-route.md`, `08-design-system-icons-and-account-badge.md`). 03은 02 뒤다.
+
+남긴 위험:
+
+- 평문 http로 선 관리 화면에서 같은 출처의 쓰기 요청이 403이 되는지 실제 브라우저로 재지 못했다. 브라우저는 `Sec-Fetch-*` 머리를 https와 localhost에만 붙인다는 것이 서브에이전트의 기억이고 재 본 값이 아니다. 쿠키 로그인을 세우는 티켓 07·08 이후(03, 09)가 브라우저로 먼저 잰다. 단독 배포는 TLS 프록시가 받으므로(ADR 0056) 영향이 없을 것으로 보지만 확인한 것은 아니다.
+- ADR 0011에 `Origin`이 든 preflight가 403이 된다는 이력이 없다. ADR 개정이라 사용자 승인이 필요해 쓰지 않았다. 뒤 티켓이 ADR을 건드릴 때 초안을 보여 주고 승인을 받는다.
+- `.claude/rules/http.md`, 카나리아 명세 `http_rule_continuation_422.toml`, `.scratch/plan.md`는 나란히 도는 다른 티켓과 글자 충돌이 날 수 있다. 병합 직전에 `origin/dev`를 합칠 때 풀어야 한다.
