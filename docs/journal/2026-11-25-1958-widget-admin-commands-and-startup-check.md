@@ -98,6 +98,14 @@ CLI는 끝까지 돌았고 지적 6건을 냈다. 서브에이전트는 셀프 �
 - Nit: 성공 글을 쓴 뒤 닫기가 실패하면 종료 코드 1이다. 의도한 모양이다.
 - 보류: CodeRabbit의 시험 품질 지적 셋(`test_database_check.py` 363-366행과 394-397행, `test_startup_check.py` 188-189행의 `silence(0.3)`)은 열어 보지 않았다.
 
+## 로컬 모델 시험(병합 전, `src/agent_os/main.py` 주석이 범위에 든다)
+
+비용 확인: `uv run --env-file ../../../.env python tools/llm_local.py run`을 `--yes` 없이 쳐 예상 비용(RTX A5000 파드 둘 어림 30분 $0.27·최악 90분 $0.81 외 셋)을 사용자에게 보였고 사용자가 "돌려"라고 답했다.
+
+첫 회차(`--yes`)는 종료 코드 2, 무효 회차였다. 후보 넷(pods A5000·3090·A40, shared A40) 모두 Runpod가 400 `There are no longer any instances available with the requested specifications`(재고 없음)로 파드를 만들지 못했다. 시험한 커밋은 `d7faddfa21d810dd7971a908136e5aa58e9de286`, 두 모델은 `GotoAI-Inc/gemma-4-26B-A4B-it-W4A16`과 `openai/gpt-oss-20b`, 서빙 엔진은 vLLM 0.33.0(`vllm/vllm-openai:v0.33.0`), 걸린 시간 9.0초, GPU·통과 수·토큰은 없음, 단가표 날짜 2026-11-13, Terraform 출력에서 가린 것은 없다. 파드를 띄운 적이 없어 과금은 없다고 본다(명령의 기록 묶음이 `gpu: null`이다. Runpod 계정의 청구는 보지 않았다). 연달은 무효 회차 1번(상태 폴더의 회차 파일로 센다). 다시 띄울 때도 비용 확인을 받는다.
+
+둘째 회차는 사용자가 "다시 돌린다"로 비용을 다시 확인해 준 뒤 `--yes`로 돌렸고 종료 코드 0, 통과 4다. 시험한 커밋 `d7faddfa21d810dd7971a908136e5aa58e9de286`, 두 모델 `GotoAI-Inc/gemma-4-26B-A4B-it-W4A16`(리비전 `fdb4e380603cf157783227bd790bfbe921b64610`)과 `openai/gpt-oss-20b`, 서빙 엔진 vLLM 0.33.0(이미지 `vllm/vllm-openai:v0.33.0`), 서버 옵션은 두 서버 모두 `--enable-auto-tool-choice`와 `--gpu-memory-utilization 0.45 --kv-cache-memory=4294967296`(gemma는 `--tool-call-parser gemma4 --max-model-len 32768`, gpt-oss는 `--tool-call-parser openai`), GPU는 A40 하나에 두 서버가 함께 앉은 shared 구성, 토큰 합계 6,297(입력 6,191, 출력 106, 트레이스 2개, 모델 호출 4건. 트레이스를 남기지 않은 시험 2개는 세지 못했다), 걸린 시간 1347.4초, 단가표의 시간당 $0.59(단가표 날짜 2026-11-13, 웹 요약에서 읽은 값). 이 시간과 단가로 곱한 어림 비용은 약 $0.22이고 Runpod 청구는 보지 않았다. Terraform 출력에서 가린 것이 있었다. 회차 파일은 `C:\Users\User\.agent-os\llm-local\feature%2F03-widget-admin-commands-and-startup-check\records\round-0001-20261125T153956Z.json`이다. 서버 키와 주소는 적지 않았다. 병합한 뒤 `tools/llm_local.py sweep`을 친다.
+
 ## 회고
 
 후보 일곱, 판정은 승인 1, 기각 6, 넘김 0이다. 만료할 항목은 없었다(`tools/queue_open_rows.py`, 만료 줄 "없음").
@@ -113,4 +121,4 @@ CLI는 끝까지 돌았고 지적 6건을 냈다. 서브에이전트는 셀프 �
 
 ## 다음
 
-이 세션이 이어서 커밋, 푸시 전 `bug-perf-review`, PR, 병합까지 한다(요청 범위가 "PR과 병합까지"). 병합 뒤 주 체크아웃의 당기기는 워크트리 가드 때문에 이 세션이 하지 않고 주 체크아웃 세션의 `tidy-checkouts`에 넘긴다. 기능의 다음 티켓은 04(배포 안내가 이 세션이 공개한 글 함수와 상수를 읽어 안내의 표와 견주는 시험)다. README에서 02와 겹치는 줄은 병합 때 02 쪽 변경과 충돌하지 않는지 본다.
+PR 644를 열었고 검사는 모두 초록이다. CodeRabbit은 한도에 걸려 리뷰가 없었고(51분 뒤 다시), claude-review 첫 회차는 Minor 넷과 Nit 하나뿐이라 코드를 고치지 않고 PR 코멘트에 보류 이유를 남겼다. 이 세션이 이어서 로컬 모델 시험(범위의 `src/agent_os/main.py` 주석 때문에 든다. 비용 확인이 앞선다), 병합까지 한다(요청 범위가 "PR과 병합까지"). 뒤로 넘긴 일은 둘이다. 마이그레이션이 데이터 열을 건드리게 되면 `migrate`의 올리기 실패 때 표준 오류에 싣는 전체 역추적을 클래스 이름과 오류 번호로 줄여야 한다(독스트링이 인정한 한계이고 지금은 0001 하나라 위험이 낮다). 시작 재시도 30초 동안 SIGTERM을 받아도 재시도 루프가 uvicorn의 종료 요청을 보지 않아 `docker stop` 유예를 넘길 수 있다. 병합 뒤 주 체크아웃의 당기기는 워크트리 가드 때문에 이 세션이 하지 않고 주 체크아웃 세션의 `tidy-checkouts`에 넘긴다. 기능의 다음 티켓은 04(배포 안내가 이 세션이 공개한 글 함수와 상수를 읽어 안내의 표와 견주는 시험)다. README에서 02와 겹치는 줄은 병합 때 02 쪽 변경과 충돌하지 않는지 본다.
