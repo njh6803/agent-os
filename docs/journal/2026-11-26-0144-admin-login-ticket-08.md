@@ -100,5 +100,14 @@ PR 직전 리뷰에서 보류한 Minor 하나(`AccountStatusBadge.stories.tsx`�
 
 지난 산출 목록(`previous-output.json`)에 새 경로 둘이 늘어 harness 티켓 `.scratch/harness/issues/design-system-upload-account-badge-cards.md`의 브랜치 `chore/design-system-upload-account-badge-cards`로 싣는다. 이 PR이 티켓 08의 올리기 칸도 닫는다.
 
+## 인계 (커밋 뒤)
+
+셋째 인계다. 셋째 세션이 PR 646을 병합하고 올리기를 마친 뒤, 그 뒷정리(`previous-output.json` 두 줄, 티켓 08의 올리기 칸, 이 일지의 "봇 회차와 병합"과 "올리기 (병합 뒤)")를 harness 티켓 `.scratch/harness/issues/design-system-upload-account-badge-cards.md`와 새 브랜치 `chore/design-system-upload-account-badge-cards`(`origin/dev`에서 땄다)에 커밋했다. 커밋 시도는 둘이었다. 첫째는 제목이 104자라 `commit-msg` 검사(한도 72자)에서만 막혔고(다른 검사는 모두 통과), 제목을 줄인 둘째가 `SKIP` 없이 통과했다. 푸시와 PR은 아직 하지 않았다. 컨텍스트가 인계 문턱(20만 토큰)을 넘은 채 `커밋 뒤` 경계에 왔다. 이 세션의 제목은 `chore/design-system-upload-account-badge-cards`였다. 이 세션이 띄운 백그라운드 작업은 없다.
+
+새 세션이 할 일: 푸시, PR 열기(제목 `chore:` 접두에 느낌표 없음, 꼬리 `(harness design-system-upload-account-badge-cards)`. 운영자가 올릴 때 손댈 것이 없다), 그 푸시 뒤 첫 `@coderabbitai review` 코멘트, `merge.md` 2(봇 회차)대로 대기와 반영, 병합(워크트리 사본의 `merge.md`의 "워크트리에서 병합할 때"). 이 PR은 로컬 모델 시험 범위 밖이다(`web/tools/sync-design-system/previous-output.json`과 티켓·일지뿐이다). 앱의 PR 묶기(`bind_pr`)는 이 세션에서 자동 분류기가 거부했다. 새 세션이 PR을 열면 앱이 묶는다.
+
+사람에게 알릴 것: 올리기 6의 6의 카드 확인(앱 안 브라우저로 아티팩트의 Components 절 열기)을 하지 못했다. 브라우저 창이 claude.ai 로그인을 요구했다. 새 `AccountStatusBadge` 카드와 `Icon` 카드가 그려지는지는 사람이 열어 봐야 한다. 병합 보고에 이 한 줄을 남긴다.
+
 open-session을 부른다 2026-11-25T17:03:11Z
 open-session을 부른다 2026-11-25T17:45:58Z (둘째 인계, PR 연 뒤)
+open-session을 부른다 2026-11-25T19:14:27Z (셋째 인계, 커밋 뒤)
