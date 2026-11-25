@@ -7,8 +7,8 @@
 | 글자 옆에 두면 `aria-hidden`으로 숨깁니다(`label` 없음). | 같은 뜻을 화면 읽기 프로그램이 두 번 읽게 두지 않습니다. |
 | Lucide 모양과 화면 1.5px의 선을 지킵니다.                | 칠한 아이콘이나 다른 묶음을 섞지 않습니다.               |
 
-- 이름은 열일곱입니다: `send`(보내기), `x`(닫기), `check`(승인), `shield-check`(승인 묻기), `circle-pause`(일시정지), `circle-check`(끝남), `circle-x`(실패), `circle-minus`(결말 없음), `triangle-alert`(경고), `info`(정보), `wrench`(도구), `plug`(플러그인), `list`(실행), `settings`(설정), `search`(찾기), `menu`(메뉴), `ellipsis`(더 보기).
+- 이름은 스물넷입니다: `send`(보내기), `x`(닫기), `check`(승인), `shield-check`(승인 묻기), `circle-pause`(일시정지), `circle-check`(끝남), `circle-x`(실패), `circle-minus`(결말 없음), `triangle-alert`(경고), `info`(정보), `wrench`(도구), `plug`(플러그인), `list`(실행), `settings`(설정), `search`(찾기), `menu`(메뉴), `ellipsis`(더 보기), `message-square`(대화), `users`(계정), `chevrons-up-down`(계정 메뉴 열기), `log-out`(로그아웃), `copy`(링크 복사), `lock`(잠김), `circle`(상태 점).
 - 크기는 14·16·20px이고 기본은 20입니다. 선은 크기와 상관없이 화면에서 1.5px입니다. 색은 놓인 곳의 글자 색입니다.
 - 이름 밖의 아이콘이 필요하면 `IconName`에 더할지 앱이 lucide-react를 직접 들일지를 그 기능이 정합니다.
 
-출처: 재탐색 디자인 파일의 2.9 아이콘(`.scratch/design-system/design/Agent OS Design System.dc.html`). `settings`는 관리 화면 탐색의 설정이라 admin-style 명세가 더했습니다.
+출처: 재탐색 디자인 파일의 2.9 아이콘(`.scratch/design-system/design/Agent OS Design System.dc.html`). `settings`는 관리 화면 탐색의 설정이라 admin-style 명세가, 뒤의 일곱(`message-square`부터 `circle`까지)은 운영자 로그인이라 admin-login 명세가 더했습니다.
