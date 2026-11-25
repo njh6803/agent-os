@@ -123,3 +123,4 @@ CLI 0.7.5가 `review_completed`로 끝까지 돌았다(`Seat: not assigned`, `Pl
 - **돌리지 못한 것.** e2e와 사진 비교는 CI가 돈다. `-m llm`과 로컬 모델 시험은 반영 뒤에 다시 돌리지 않았다(이유는 위 "검증").
 
 open-session을 부른다 2026-11-25T16:46:00Z
+open-session을 부른다 2026-11-25T18:22:30Z (인계: 커밋 뒤)
