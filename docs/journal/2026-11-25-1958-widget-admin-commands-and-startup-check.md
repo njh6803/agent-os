@@ -76,6 +76,28 @@ open-session을 부른다 2026-11-25T11:01Z
 
 변이 시험(`tools/mutate.py`)은 돌리지 않았다. 닫기 예외 시험과 비밀번호 단언 보강이 고치기 전에 빨갛게 보이지 않았다는 앞의 줄이 그대로 남는다.
 
+## PR 직전 리뷰(`coderabbit-review`, CodeRabbit CLI 0.7.5, 기준 `origin/dev`)
+
+CLI는 끝까지 돌았고 지적 6건을 냈다. 서브에이전트는 셀프 리뷰가 새로 쓴 문장 여섯을 직접 대 보았다(`uv run python -I`로 경계 입력을 넣어 봤다). 아래는 그 보고를 받은 턴의 판정이다.
+
+고친 것.
+
+- 비밀번호가 글에 실리는 입력: `postgresql://us/er:SECRET@h/db`는 `@`가 하나라 통과하고, SQLAlchemy가 계정 자리의 `/`에서 계정 묶음을 버려 호스트를 `us`로, 데이터베이스 이름을 `er:SECRET@h/db`로 읽는다. `place`가 `us:5432/er:SECRET@h/db`를 내므로 알림과 멈춤 글에 비밀번호가 실린다. 이 턴에 `uv run python -I`로 같은 입력을 넣어 재현했다. `parse_database_url`이 호스트나 데이터베이스 이름에 `@`가 든 값을 읽지 못한 것으로 거절하게 고치고 독스트링의 받지 않는 목록에 더했다. 거절 시험 목록(`test_받지_않는_주소는_읽지_못한다`)에 `postgresql://widget/admin:secret@postgres:5432/widget_admin`을 더했다. 이 시험은 고치기 전에 빨갛게 돌려 보지 않았다(고침과 함께 썼다).
+- 재시도 시간 서술: README의 문장이 간격을 빼먹었다. 마감 직전(29.99초)에 실패하면 1초를 자고 새 시도를 시작해 5초를 쓰므로 최대 약 36초다. README를 "마지막 시도가 마감 직전에 시작되면 간격 1초와 시도 하나 5초만큼 더 길어질 수 있다"로 고쳤다. `database.py`에는 같은 문장이 없었다(grep으로 봤다).
+
+밀 주장의 결과: `CheckDatabase`의 닫기 한 번, `migrate`의 닫기 예외 처리, 종료 코드 3과 1, 루프백 사본 다섯은 서술대로였다(보고의 코드 읽기와 기존 시험 목록. 문장 3은 프로브를 돌리지 못하고 코드 읽기만으로 봤다).
+
+오탐: CodeRabbit의 README `uv sync` 지적(루트 `pyproject.toml`에 `widget-admin` 의존이 있고 README의 `uv run widget-admin …`이 이 워크트리에서 돌았다), `MigrateResult.ok=False` 처리 요구(`main.py`가 `ok`가 거짓이면 표준 오류와 종료 코드 1로 바꾼다).
+
+남긴 것과 이유.
+
+- Minor: uvicorn 접근 로그가 `GET /widget-settings/<사이트> 200`을 표준 출력에 찍는다. 앞의 결정(사이트 이름은 공개 값이고 실패 한 줄에 싣지 않는다는 규칙은 표준 오류의 실패 글에 한한다)을 그대로 둔다.
+- Minor: 시작 재시도 30초 동안 SIGTERM을 받아도 재시도 루프가 uvicorn의 종료 요청을 보지 않아 `docker stop`의 10초 유예를 넘길 수 있다. 코드 읽기만 한 지적이고 돌려 보지 않았다. Ctrl+C 때의 `run_interruptibly` 건과 함께 필요해지면 새 티켓이다.
+- Nit: 포트 `0`이 글에 5432로 찍힌다(`port or DEFAULT_PORT`). 0번 포트는 어차피 못 닿는 값이라 두었다. 범위 밖 포트, 경로가 둘인 값, 전각 숫자 포트는 파서의 독스트링대로 SQLAlchemy가 읽는 대로 받는다.
+- Minor: 올리다 실패한 글이 "올리기 전 그대로"라고 단정한다. 응답이 유실되면 틀릴 수 있다고 `database.py`의 "못 보는 것"에 이미 적혀 있다.
+- Nit: 성공 글을 쓴 뒤 닫기가 실패하면 종료 코드 1이다. 의도한 모양이다.
+- 보류: CodeRabbit의 시험 품질 지적 셋(`test_database_check.py` 363-366행과 394-397행, `test_startup_check.py` 188-189행의 `silence(0.3)`)은 열어 보지 않았다.
+
 ## 회고
 
 후보 일곱, 판정은 승인 1, 기각 6, 넘김 0이다. 만료할 항목은 없었다(`tools/queue_open_rows.py`, 만료 줄 "없음").

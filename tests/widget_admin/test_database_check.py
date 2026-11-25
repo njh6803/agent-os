@@ -136,6 +136,9 @@ def test_알려진_꼴의_주소를_읽는다(value: str) -> None:
         "postgresql://widget_admin:pw@postgres:5432/widget_admin?sslmode=require",
         "postgresql://widget_admin:pw@postgres:5432/widget_admin?database=other",
         "postgresql://widget_admin:secret@leak@postgres:5432/widget_admin",
+        # 계정 자리에 `/` 가 들면 SQLAlchemy 가 계정 묶음을 버리고 비밀번호를 데이터베이스 이름으로
+        # 읽는다.
+        "postgresql://widget/admin:secret@postgres:5432/widget_admin",
         "postgresql://widget_admin:pw@/widget_admin",
         "postgresql://widget_admin:pw@postgres:5432/",
         "postgresql://widget_admin:pw@postgres:쉰/widget_admin",

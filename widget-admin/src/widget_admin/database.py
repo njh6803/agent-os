@@ -250,12 +250,12 @@ def parse_database_url(value: str) -> DatabaseUrl | None:
     """연결 문자열을 읽는다. 읽지 못하면 `None` 이고, 문구는 부르는 쪽이 값을 되울리지 않고 짓는다.
 
     `postgresql://계정:비밀번호@호스트:포트/데이터베이스` 꼴로 쓴다. 이 꼴 밖에서 받지 않는 것은
-    드라이버 이름이 붙은 꼴과 다른 이름, 질의 문자열(`?` 뒤), `@` 가 둘 이상인 값, 읽을 때
-    `ValueError` 가 나는 값이다. 그 밖의 어긋남(계정이나 포트를 적지 않은 값 등)은 SQLAlchemy 가
-    읽는 대로 읽고 따로 막지 않는다. 질의 문자열은 그 값이 경로에서 읽은 연결 인자를 덮어 쓸 수
-    있고, `sslmode` 같은 libpq 의 질의는 asyncpg 가 몰라 첫 질의에서 죽어서 받지 않는다. `@` 가
-    둘 이상이면 비밀번호에 `@` 가 든 것이고, SQLAlchemy 는 비밀번호를 첫 `@` 앞에서 잘라 나머지를
-    호스트로 읽으므로 비밀번호의 조각이 글의 자리에 실린다.
+    드라이버 이름이 붙은 꼴과 다른 이름, 질의 문자열(`?` 뒤), `@` 가 둘 이상인 값, 호스트나
+    데이터베이스 이름에 `@` 가 든 값, 읽을 때 `ValueError` 가 나는 값이다. 그 밖의 어긋남(계정이나
+    포트를 적지 않은 값 등)은 SQLAlchemy 가 읽는 대로 읽고 따로 막지 않는다. 질의 문자열은 그 값이
+    경로에서 읽은 연결 인자를 덮어 쓸 수 있고, `sslmode` 같은 libpq 의 질의는 asyncpg 가 몰라 첫
+    질의에서 죽어서 받지 않는다. `@` 가 둘 이상이면 비밀번호에 `@` 가 든 것이고, SQLAlchemy 는
+    비밀번호를 첫 `@` 앞에서 잘라 나머지를 호스트로 읽으므로 비밀번호의 조각이 글의 자리에 실린다.
     """
     if value.count("@") > 1 or "?" in value:
         return None
@@ -264,6 +264,8 @@ def parse_database_url(value: str) -> DatabaseUrl | None:
     except (ArgumentError, ValueError):
         return None
     if url.drivername != "postgresql" or not url.host or not url.database or url.query:
+        return None
+    if "@" in url.host or "@" in url.database:
         return None
     return DatabaseUrl(url)
 
