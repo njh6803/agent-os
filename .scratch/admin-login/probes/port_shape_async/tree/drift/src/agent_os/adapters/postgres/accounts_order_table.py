@@ -10,6 +10,9 @@ from __future__ import annotations
 
 from typing import reveal_type
 
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncEngine
+
 from agent_os.adapters.postgres.accounts import (
     FAILURES,
     LOCKED_UNTIL,
@@ -19,8 +22,6 @@ from agent_os.adapters.postgres.accounts import (
     Row,
     as_tier,
 )
-from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncEngine
 
 
 async def find_swapped(engine: AsyncEngine, name: str) -> Row | None:

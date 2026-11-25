@@ -51,6 +51,9 @@ from sqlalchemy.engine import URL, make_url
 from sqlalchemy.exc import ArgumentError
 from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
 
+from agent_os.adapters.postgres.accounts import PostgresAccounts
+from agent_os.adapters.postgres.errors import error_chain, sqlstate_of
+
 MIGRATIONS = Path(__file__).resolve().parent / "migrations"
 # 제품의 마이그레이션 파일. 파일이 없는 판은 git 에 폴더가 담기지 않아 폴더가 없을 수 있고, 폴더가
 # 없어도 빈 폴더와 같게 돈다(alembic 이 없는 판 폴더를 오류 없이 건너뛴다).
@@ -96,30 +99,11 @@ class Alignment(enum.Enum):
     AHEAD = "ahead"
 
 
-def _chain(error: BaseException) -> list[BaseException]:
-    """예외와 그 원인들. SQLAlchemy 가 감싼 경우에도 드라이버의 예외를 찾으려고 따라간다."""
-    seen: list[BaseException] = []
-    current: BaseException | None = error
-    while current is not None and all(current is not item for item in seen):
-        seen.append(current)
-        current = current.__cause__ or current.__context__
-    return seen
-
-
-def sqlstate_of(error: BaseException) -> str | None:
-    """예외 사슬에서 찾은 PostgreSQL 의 오류 번호. 없으면 `None`."""
-    for item in _chain(error):
-        state = getattr(item, "sqlstate", None)
-        if isinstance(state, str):
-            return state
-    return None
-
-
 def failure_kind(error: BaseException) -> Failure:
     """실패를 갈래 다섯으로 가른다. 예외의 클래스가 아니라 오류 번호와 `OSError` 여부로 가른다."""
     state = sqlstate_of(error)
     if state is None:
-        reached_os = any(isinstance(item, OSError) for item in _chain(error))
+        reached_os = any(isinstance(item, OSError) for item in error_chain(error))
         return Failure.TRANSIENT if reached_os else Failure.OTHER
     if state == "28P01":
         return Failure.PASSWORD
@@ -138,7 +122,7 @@ def reason_of(error: BaseException) -> str:
     state = sqlstate_of(error)
     if state is not None:
         return f"오류 번호 {state}"
-    os_errors = [item for item in _chain(error) if isinstance(item, OSError)]
+    os_errors = [item for item in error_chain(error) if isinstance(item, OSError)]
     return type(os_errors[-1] if os_errors else error).__name__
 
 
@@ -300,6 +284,10 @@ class PostgresDatabase:
     @property
     def place(self) -> str:
         return self._place
+
+    def accounts(self) -> PostgresAccounts:
+        """같은 엔진을 쥔 계정 어댑터. 엔진은 이 어댑터가 쥐고 닫는다(닫는 주인은 하나다)."""
+        return PostgresAccounts(self._engine)
 
     async def startup_problem(self) -> str | None:
         """닿아서 표의 판을 견준다. 문제가 없으면 `None`, 있으면 멈출 때의 글."""

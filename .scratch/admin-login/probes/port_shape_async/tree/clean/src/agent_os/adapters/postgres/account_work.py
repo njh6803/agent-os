@@ -21,6 +21,9 @@ from contextlib import asynccontextmanager
 from datetime import datetime
 from types import TracebackType
 
+from sqlalchemy import Select, select, update
+from sqlalchemy.ext.asyncio import AsyncConnection, AsyncEngine, AsyncTransaction
+
 from agent_os.adapters.postgres.accounts import (
     FAILURES,
     LOCKED_UNTIL,
@@ -31,8 +34,6 @@ from agent_os.adapters.postgres.accounts import (
     accounts,
     as_tier,
 )
-from sqlalchemy import Select, select, update
-from sqlalchemy.ext.asyncio import AsyncConnection, AsyncEngine, AsyncTransaction
 
 
 def _row_query() -> Select[str, str, str | None, int, datetime | None]:

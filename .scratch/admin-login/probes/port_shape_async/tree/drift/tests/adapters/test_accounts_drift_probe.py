@@ -13,10 +13,10 @@ from agent_os.adapters.postgres.accounts_drift import (
     ShortRowAccounts,
     SyncFindAccounts,
 )
-from agent_os.http.accounts import AccountStore
 from tools.database_for_tests import ScopedDatabase
 
 from agent_os.adapters.postgres.database import PostgresDatabase, parse_database_url
+from agent_os.http.accounts import AccountStore
 
 
 def _owner(database: ScopedDatabase) -> PostgresDatabase:
