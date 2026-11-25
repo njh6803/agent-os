@@ -127,6 +127,15 @@ class MigrateArgs:
     두면 같은 기계의 다른 사용자가 프로세스 목록으로 본다)."""
 
 
+@dataclass(frozen=True)
+class SystemAdminArgs:
+    """`operator system-admin` 의 인자는 계정 이름 하나다. 비밀번호는 인자로 받지 않는다. 프로세스
+    목록과 셸 이력에 남기 때문이다(ADR 0062 결정 "첫 계정"). 이름은 받은 그대로이고 이름 규칙은
+    `operator.py` 가 본다."""
+
+    name: str
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="agent-os", description="플러그인 기반 에이전트 런타임")
     parser.add_argument("--version", action="version", version=version("agent-os"))
@@ -169,6 +178,17 @@ def build_parser() -> argparse.ArgumentParser:
         "migrate",
         help="데이터베이스의 표를 이 판의 마지막 판까지 올린다(AGENT_OS_DATABASE_URL 로 받는다)",
     )
+    # 운영자 명령. 비밀번호는 인자로 받지 않는다(`SystemAdminArgs`). 데이터베이스 주소는 `serve` 와
+    # 같은 환경 변수 하나다
+    operator_parser = commands.add_parser(
+        "operator", help="서버에서만 치는 운영자 명령(AGENT_OS_DATABASE_URL 로 받는다)"
+    )
+    operator_commands = operator_parser.add_subparsers(dest="operator_command", required=True)
+    system_admin_parser = operator_commands.add_parser(
+        "system-admin",
+        help="시스템 관리자를 만들거나 비밀번호를 다시 정한다. 비밀번호는 표준 입력으로 받는다",
+    )
+    system_admin_parser.add_argument("name", help="시스템 관리자의 계정 이름")
     serve_parser = commands.add_parser(
         "serve", help="관리 API 와 HTTP 채널을 루프백에 세운다(컨테이너 이미지 안의 예외는 --host)"
     )
@@ -299,11 +319,16 @@ def _add_directories(parser: argparse.ArgumentParser) -> None:
     )
 
 
-def parse_args(argv: list[str] | None) -> RunArgs | ResumeArgs | ServeArgs | MigrateArgs:
+def parse_args(
+    argv: list[str] | None,
+) -> RunArgs | ResumeArgs | ServeArgs | MigrateArgs | SystemAdminArgs:
     parser = build_parser()
     namespace = parser.parse_args(argv)
     if namespace.command == "migrate":
         return MigrateArgs()
+    if namespace.command == "operator":
+        # 운영자 명령은 지금 `system-admin` 하나다. 하위 명령이 늘면 여기서 가른다
+        return SystemAdminArgs(name=str(namespace.name))
     traces = Path(namespace.traces)
     plugins_root = Path(namespace.plugins_root)
     model = None if namespace.model is None else str(namespace.model)

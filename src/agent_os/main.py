@@ -51,9 +51,16 @@ from agent_os.channel.cli.main import (
     ResumeArgs,
     RunArgs,
     ServeArgs,
+    SystemAdminArgs,
     parse_args,
     resume_command,
     run_command,
+)
+from agent_os.channel.cli.operator import (
+    Refused,
+    check_name,
+    password_hash_of,
+    system_admin_command,
 )
 from agent_os.channel.http.limits import DEFAULT_CONCURRENT_RUNS
 from agent_os.core.ports import PluginError
@@ -161,7 +168,9 @@ _NOT_POSITIVE_CONCURRENT_RUNS_DIAGNOSTIC = (
 
 
 def main(argv: list[str] | None = None) -> int:
-    _use_utf8(sys.stdout, sys.stderr)
+    # 표준 입력도 맞춘다. 파이프로 넣는 비밀번호의 한글이 cp949 로 읽혀 다른 글이 되면 해시가
+    # 달라진다
+    _use_utf8(sys.stdin, sys.stdout, sys.stderr)
     args = parse_args(argv)
     # serve 를 먼저 가르는 이유는 serve 가 기본 모델의 문제를 다른 구성 오류와 한 목록에 모아 내기
     # 때문이다. 모델을 여기서 확인하면 serve 의 진단이 모델 하나에서 먼저 끊긴다.
@@ -171,6 +180,9 @@ def main(argv: list[str] | None = None) -> int:
     # 않으므로 그것들의 구성 오류에 막히지 않는다.
     if isinstance(args, MigrateArgs):
         return _migrate()
+    # 운영자 명령도 플러그인과 모델과 OS 사용자를 읽지 않는다. 계정은 데이터베이스에만 기댄다
+    if isinstance(args, SystemAdminArgs):
+        return _system_admin(args)
     user = getpass.getuser()
     problem = _os_user_problem(user) or _model_problem(args.model, args.plugins_root)
     if problem is not None:
@@ -319,6 +331,54 @@ async def _migrate_database(database: PostgresDatabase) -> int:
         await database.close()
     (sys.stdout if result.ok else sys.stderr).write(f"{result.message}\n")
     return EXIT_FINISHED if result.ok else EXIT_FAILED
+
+
+def _system_admin(args: SystemAdminArgs) -> int:
+    """시스템 관리자를 만들거나 비밀번호를 다시 정한다. 주소는 환경 변수로만 받는다.
+
+    입력을 먼저 거른다: 이름 규칙, 주소를 읽는지, 비밀번호와 그 규칙. 데이터베이스에 닿기 전이라
+    잘못된 입력은 기다림 없이 끝난다. 해시도 여기서 만들어, 느린 해시가 연결을 쥐고 있지 않게 한다.
+    비밀번호를 다 친 뒤에야 데이터베이스가 닿지 않는 것을 알 수 있다는 것이 치르는 값이다. 닿지
+    못하는 서버에서 치는 일은 드물고, 닿는지부터 보려면 터미널 입력을 이벤트 루프 안에서 기다려야 해
+    Ctrl+C 에 걸린다.
+    """
+    name = check_name(args.name)
+    if isinstance(name, Refused):
+        sys.stderr.write(f"{name.text}\n")
+        return EXIT_FAILED
+    url = _read_database_url()
+    if isinstance(url, str):
+        sys.stderr.write(f"{url}\n")
+        return EXIT_FAILED
+    password_hash = password_hash_of(sys.stdin, getpass.getpass)
+    if isinstance(password_hash, Refused):
+        sys.stderr.write(f"{password_hash.text}\n")
+        return EXIT_FAILED
+    return run_interruptibly(
+        lambda: _system_admin_database(name, password_hash, _build_database(url))
+    )
+
+
+async def _system_admin_database(name: str, password_hash: str, database: PostgresDatabase) -> int:
+    """서버가 뜰 때와 같은 확인(닿는지, 표의 판)을 지난 뒤에 명령을 돈다. 예외는 까닭만 싣는다."""
+    try:
+        problem = await database.startup_problem()
+        if problem is not None:
+            sys.stderr.write(f"{problem}\n")
+            return EXIT_FAILED
+        return await system_admin_command(
+            name,
+            password_hash,
+            accounts=database.accounts(),
+            clock=SystemClock(),
+            stdout=sys.stdout,
+            stderr=sys.stderr,
+        )
+    except Exception as error:  # 어떤 예외든 까닭만 싣는 글로 바꿔 끝낸다
+        sys.stderr.write(f"{database.unexpected_problem(error)}\n")
+        return EXIT_FAILED
+    finally:
+        await database.close()
 
 
 class ContainerNetwork(NamedTuple):
@@ -913,7 +973,8 @@ async def _resume(args: ResumeArgs, default_model: PluginName, approver: Princip
 
 
 def _use_utf8(*streams: TextIO) -> None:
-    """Windows 콘솔의 cp949 가 한국어 진단을 깨뜨리지 않게 한다(CLAUDE.md 환경 함정)."""
+    """Windows 콘솔의 cp949 가 한국어 진단을 깨뜨리지 않게 하고(CLAUDE.md 환경 함정), 파이프로 넣은
+    한글 비밀번호가 표준 입력에서 다른 글로 읽혀 해시가 달라지는 것도 막는다."""
     for stream in streams:
         if isinstance(stream, io.TextIOWrapper):
             stream.reconfigure(encoding="utf-8")
