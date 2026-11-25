@@ -95,9 +95,13 @@ open-session을 부른다 2026-11-25T07:34:13Z
   - Minor(보류): 독스트링과 `http.md`의 "브라우저가 이 머리를 붙인다"가 조건 없는 닫힌 주장이다. 서브에이전트는 `Sec-Fetch-*`를 브라우저가 https와 localhost에만 붙인다고 기억하며(재 보지 않았다고 적었다), 평문 http로 선 관리 화면은 같은 출처의 쓰기에 `Origin`만 붙어 403이 된다고 짚었다. 판정: 이 세션도 재지 못했다. 단독 배포는 TLS 프록시가 받고(ADR 0056의 TLS 인증서 항목), 그 ADR은 프록시 없이 평문으로 잘못 발행하는 것을 "잃는 것"으로 적는다. 평문 http로 선 관리 화면을 지원할지는 ADR 0062가 정할 몫이라 이 티켓에서 문장을 더하지 않았고, 뒤 티켓(07·08)이 쿠키 로그인을 세울 때 브라우저로 재도록 아래 "다음"의 위험에 적는다.
   - 같은 지적이 짚어 고친 것: 독스트링이 "이 서버의 관리 화면 중계와 시험이 그런 프로그램(두 머리를 다 안 보낸다)"이라고 적었는데, 중계(Next `rewrites`, `web/apps/admin/next.config.ts`)는 브라우저가 낸 요청을 넘기므로 틀렸다. ADR 0062의 쿠키 프로브가 관리 화면 자신의 페이지가 보낸 요청이 서버에 `Sec-Fetch-Site: same-origin`으로 닿는 것을 보인다. `origin.py`의 그 문장을 "이 서버의 시험이 그런 프로그램이고 중계는 브라우저가 붙인 `Sec-Fetch-Site`를 단 채 온다"로 고쳤다. `http.md`와 다른 문서에는 같은 표현이 없다(저장소 전체 grep).
   - Nit(보류): `Sec-Fetch-Site`가 중복되면 `headers.get`이 첫 값만 본다. 브라우저는 이 머리를 한 번만 보내고 페이지 스크립트가 바꿀 수 없어 실제 경로가 없다.
+## PR 645과 사진 비교
+
+PR 645(`headRefOid` `bad9bcefb`)를 열고 `@coderabbitai review`를 남겼다. CodeRabbit은 `Review rate limited`(NEUTRAL)로 리뷰하지 못했고, `claude-review`는 SUCCESS였다. CI에서 `visual`(관리 화면 사진 비교)과 그것을 묶는 `verify`가 FAILURE였다. 로그를 읽으니 `organisms-rundetail--*` 이야기 열두 개가 1280과 320, 밝은 테마와 어두운 테마 넷씩 모두 빨갰고(예: 1280×2286 정답 대 1280×2388 결과), 나머지 이야기는 통과였다. 이 변경이 `RunDetail` 이야기의 시작 이벤트에 `requesting_account`를 채워 이벤트 항목에 "요청한 계정" 줄이 하나 더 서기 때문이다. 이 PR을 푸시하기 전에 로컬에서 `pnpm -C web visual:admin`을 치지 않았다(이야기를 바꾼 줄이 `RunDetail.stories.tsx`였는데 그 점검을 놓쳤다). 고침은 `pnpm -C web visual:admin:update`(Docker)로 정답 사진 48장을 다시 찍은 것이고 바뀐 파일은 모두 `organisms-rundetail--*`뿐이다. 결정 자리 이야기 한 장을 열어 "요청한 계정 requesting_account null" 줄이 시작 이벤트에 선 것을 눈으로 봤다.
+
 ## 회고
 
-후보 4건, 판정은 승인 4건(모두 회차를 더하는 것), 기각 0건, 넘김 0건이다. 사용자에게 물을 것은 없다.
+후보 5건, 판정은 승인 4건(모두 회차를 더하는 것), 기각 1건, 넘김 0건이다. 사용자에게 물을 것은 없다.
 
 | 후보 | 판정 | 사건과 조건 | 간 자리 |
 |---|---|---|---|
@@ -105,8 +109,9 @@ open-session을 부른다 2026-11-25T07:34:13Z
 | `인계 못함` 뒤에도 인계 계기가 다시 왔다 | 승인, 회차 | 백그라운드 커밋 호출 직후마다 계기가 왔고 `인계 못함`을 압축 뒤에도 요약이 들고 있어 넘기지 않았다 | `0518` 8회차에서 9회차 |
 | 백그라운드 커밋 직후 계기가 끝 알림 전에 왔다 | 승인, 회차 | 위와 같은 사건이다. 이 항목은 계기를 내는 때가 다르다 | `handoff-trigger-before-background-commit-ends` 14회차에서 15회차 |
 | 여러 세션의 pytest가 겹쳐 메모리가 모자랐다 | 승인, 회차 | 첫 두 커밋 시도가 윈도 오류 1455와 git "malloc failed", vitest 종료 코드 `0xC0000409`로 죽었다. 같은 시각 pytest 일꾼이 64개였다 | `run-checks-out-of-memory-with-parallel-sessions` 6회차에서 7회차 |
+| 관리 화면 이야기를 바꾸고 사진 비교를 로컬에서 치지 않았다 | 기각 | `RunDetail.stories.tsx`를 바꿨는데 `pnpm -C web visual:admin`을 치지 않아 CI의 `visual`이 이야기 열두 개에서 빨갰다(위 "PR 645과 사진 비교"). `CLAUDE.md` 검증 명령 절이 이미 "`apps/admin`을 건드렸으면 그 앱의 것을 친다"고 적었고 CI의 `visual` 잡이 그 자리에서 막았다. 이미 있는 검사가 알린 것이라 기각이고, 이 대기열에 같은 사건을 센 항목도 없다 | 없음 |
 
-네 항목 모두 회차 5 이상이라 `next-session` 결정표의 chore 배치 조건에 이미 든 것들이다. 이 세션은 반영하지 않는다. 이 PR은 계약 티켓이고 고칠 자리(`tools/hook_handoff.py`, `tools/run_checks.py`)가 이 변경과 겹치지 않는다.
+승인한 네 항목 모두 회차 5 이상이라 `next-session` 결정표의 chore 배치 조건에 이미 든 것들이다. 이 세션은 반영하지 않는다. 이 PR은 계약 티켓이고 고칠 자리(`tools/hook_handoff.py`, `tools/run_checks.py`)가 이 변경과 겹치지 않는다.
 
 일지에만 남기는 것:
 
