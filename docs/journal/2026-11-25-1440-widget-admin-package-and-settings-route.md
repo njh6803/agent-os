@@ -129,3 +129,18 @@
 
 open-session을 부른다 2026-11-25T06:00Z
 open-session을 부른다 2026-11-25T06:43Z
+
+## CI 기록 (PR 642, 실행 45569602019, 머리 `c6fe9f2`)
+
+모두 `gh run view 45569602019 --json jobs`와 `gh run view 45569602019 --job <python 잡> --log`의 출력을 손으로 읽은 값이다.
+
+- CI `python` 잡은 15분 47초(07:37:35에서 07:53:22)다. 제한 25분의 63%이고, 앞의 성공 40회 최대 15.0분(티켓과 `ci.yml`의 그 잡 주석이 적은 값)보다 0.8분 길다. 제한에 가깝지는 않다고 본다. 다만 이 PR이 위젯 관리 서버의 시험을 더했으므로 다음 티켓들이 데이터베이스 시험을 더하면 이 잡이 더 길어진다. 02·03이 병합될 때마다 이 값을 견주면 좋다.
+- pytest는 같은 잡 안에서 `8253 passed, 30 deselected, 8 warnings in 846.45s (0:14:06)`다. 로그의 그 줄이 든 단계는 `Run ulimit -c unlimited …`라는 이름으로 적혀 있고(여러 줄 명령의 첫 줄이 이름이 된다) 14분 12초다. pyright가 36초, 나머지 검사는 1분 안이다.
+- CI의 uv 판은 `Successfully installed uv version 0.13.10`이다(`setup-uv`에 판을 적지 않았다). 같은 로그에서 `uv sync --frozen`이 `Building widget-admin @ file:///home/runner/work/agent-os/agent-os/widget-admin`과 `+ widget-admin==0.0.0`을 내고 `Installed 92 packages in 154ms`로 끝났다(리눅스 CI에서 두 묶음이 함께 깔린다). 이어서 `uv run lint-imports`의 로그에 `agent_os and widget_admin are independent (ADR 0064) KEPT`가 있다.
+- 한 가지는 보지 못했다. 이 PR의 CI는 `python` 잡이 검사 도구를 한 묶음으로 돌린다는 것만 보였고, "두 묶음으로 도는 것"의 뜻을 따로 가르는 일은 하지 않았다. 위 로그의 사실(두 멤버가 깔리고 ruff와 pyright와 경계 검사가 지나간 것)이 이 티켓이 보려던 몫이다.
+- 검사 열세 가운데 `llm`만 건너뜀이고 나머지는 모두 통과다(`CodeRabbit`, `claude-review`, `e2e`, `e2e-portal`, `e2e-standalone`, `e2e-widget`, `python`, `ticket`, `title`, `verify`, `visual`, `web`).
+
+## PR 봇 회차
+
+- `claude-review`: 지적 없음(느낌표가 없는 것이 맞다고 확인했다).
+- CodeRabbit: 첫 회차에 Minor 하나, `errors.py:218`의 기록 쓰기가 `OSError`를 던지는 경우다. PR 직전 CLI 리뷰의 같은 지적이고 이미 보류로 판정했으므로(위 "PR 직전 리뷰") 고치지 않고 PR 코멘트에 이유를 남겼다. 고친다면 Agent OS 원본(`src/agent_os/http/errors.py:411`)과 사본을 함께 고쳐야 한다.
