@@ -1,6 +1,6 @@
 # 티켓 11이 `.claude/rules/tests.md` 의 LLM 마커 항목 첫 문장에 더한 `llm_widget` 마커가 `paths` 에 맞는 파일을
 # Read 로 열 때 실리는지. 실험군은 규칙의 paths 안(tests/), 대조군은 밖(README.md)을 읽는다. 둘 다 이 체크아웃이다.
-# 최신 결과: 통과 4(2026-11-15, 이 PC, 일지 2026-11-15-1637-openai-compatible-adapter-and-local-model-test. local-model 05 가 이 항목 첫 문장에 `llm_local` 을 더하고 기대를 새 문장으로 고친 뒤, 커밋하기 전의 작업 트리로 돌렸다). 앞 판은 통과 4(2026-11-10, 일지 2026-11-10-1958-real-model-calc-on-portal)와 통과 4(2026-10-24, claude 2.1.302, 일지 2026-10-24-13).
+# 최신 결과: 통과 4(2026-11-25, 이 PC, claude 2.1.325, widget-admin 티켓 01 이 tests.md 의 한 항목에 예외 한 줄을 더한 뒤 커밋하기 전의 작업 트리). 앞 판은 통과 4(2026-11-15, 이 PC, 일지 2026-11-15-1637-openai-compatible-adapter-and-local-model-test. local-model 05 가 이 항목 첫 문장에 `llm_local` 을 더하고 기대를 새 문장으로 고친 뒤, 커밋하기 전의 작업 트리로 돌렸다). 앞 판은 통과 4(2026-11-10, 일지 2026-11-10-1958-real-model-calc-on-portal)와 통과 4(2026-10-24, claude 2.1.302, 일지 2026-10-24-13).
 # 돌리는 법: uv run python tools/canary.py .scratch/web-widget/probes/canary/tests_rule_llm_widget.toml <출력 디렉터리>
 kind = "rule"
 question = '''

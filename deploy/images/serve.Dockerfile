@@ -28,8 +28,11 @@ ENV UV_PROJECT_ENVIRONMENT=/app/.venv \
     UV_PYTHON_DOWNLOADS=never \
     UV_NO_CACHE=1
 WORKDIR /build
-# 의존성은 고치지 않은 pyproject.toml 과 잠금 파일로, 잠금 검사를 켠 채 깐다.
+# 의존성은 고치지 않은 pyproject.toml 과 잠금 파일로, 잠금 검사를 켠 채 깐다. 작업공간의 멤버
+# `widget-admin` 은 선언 파일만 둔다. 잠금 검사가 멤버를 읽어야 지나가고, 멤버는 개발 묶음에만 들어
+# 이 이미지에는 깔리지 않으며 코드는 들이지 않는다(ADR 0064).
 COPY pyproject.toml uv.lock ./
+COPY widget-admin/pyproject.toml ./widget-admin/
 RUN uv sync --locked --no-dev --no-install-project
 COPY README.md ./
 COPY src ./src

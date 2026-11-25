@@ -25,6 +25,7 @@ from tools import check_notes
 
 ROOT = Path(__file__).resolve().parents[1]
 FOLDER = ROOT / check_notes.PRODUCT_MIGRATIONS
+WIDGET_FOLDER = ROOT / "widget-admin" / "src" / "widget_admin" / "migrations" / "versions"
 
 _NAME = re.compile(r"(?P<number>[0-9]{4})_[a-z][a-z0-9_]*\.py")
 
@@ -155,6 +156,14 @@ GOOD = {
 def test_이_저장소의_마이그레이션_폴더는_꼴이_맞다() -> None:
     sources = read_folder(FOLDER)
     assert sources, f"훑을 파일이 없다: {FOLDER}"
+    assert shape_problems(sources) == []
+
+
+def test_이_저장소의_위젯_관리_마이그레이션_폴더도_꼴이_맞다() -> None:
+    # 둘째 설치 묶음의 폴더다. 노트 검사의 `PRODUCT_MIGRATIONS` 는 Agent OS 의 폴더 하나라 이
+    # 폴더를 알지 못하고, 그 갈래의 느낌표 규칙은 위젯 관리 서버의 배포를 짓는 티켓(04)이 정한다.
+    sources = read_folder(WIDGET_FOLDER)
+    assert sources, f"훑을 파일이 없다: {WIDGET_FOLDER}"
     assert shape_problems(sources) == []
 
 

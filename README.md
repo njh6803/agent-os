@@ -43,7 +43,10 @@ plugins/
                    없으면 연결에 있는 도구의 모든 호출이 묻는다. 손으로 고치고 다음 실행과 다음 재개부터 듣는다
   README.md        커스텀 에이전트를 만드는 안내(기본 에이전트 assistant를 복사하는 순서, 두 끝, 열기, 문서 검색 서버에
                    붙이는 설정). 종류 폴더 밖이라 플러그인으로 읽히지 않는다
-tests/             src를 미러링. fixtures/site_file/ 은 서버와 위젯 빌드의 시험이 함께 읽는 사이트 파일 픽스처, fixtures/container_network/ 는 네 프로세스의 시험이 함께 읽는 루프백 예외의 사례 표
+widget-admin/      둘째 설치 묶음(uv 작업공간의 멤버, 패키지 widget_admin). 위젯 관리 서버이고 agent_os와 서로 import하지 않는다(ADR 0064).
+                   src/widget_admin/ 에 server(앱 조립과 GET /widget-settings/<사이트 이름>), database(연결 묶음과 표 올리기와 설정 읽기),
+                   settings(응답 모델), errors·paths(Agent OS 의 같은 이름 배관의 사본), migrations/ 가 서고, 계약은 openapi.json
+tests/             src를 미러링. widget_admin/ 은 위젯 관리 서버의 시험(진짜 테스트 데이터베이스, 접두 widget_admin). fixtures/site_file/ 은 서버와 위젯 빌드의 시험이 함께 읽는 사이트 파일 픽스처, fixtures/container_network/ 는 네 프로세스의 시험이 함께 읽는 루프백 예외의 사례 표
 web/               pnpm 워크스페이스(Node 24, TypeScript 5.9). 파이썬과 루트를 나눈다. 앱은 apps/*, 공유 패키지는 packages/*
   eslint.config.mjs  원칙 III의 TS 판정자와 층 경계. 변이 테스트는 eslint.config.test.ts
   tsconfig.base.json 기준 tsconfig. 다른 tsconfig는 이것을 extends 한다

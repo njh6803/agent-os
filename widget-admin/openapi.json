@@ -1,0 +1,453 @@
+{
+  "components": {
+    "schemas": {
+      "ErrorCode": {
+        "description": "에러 봉투의 어휘. 표 안의 상태 코드와 1:1 이다.",
+        "enum": [
+          "invalid_request",
+          "not_found",
+          "internal_error"
+        ],
+        "title": "ErrorCode",
+        "type": "string"
+      },
+      "ErrorEnvelope": {
+        "additionalProperties": false,
+        "description": "에러 응답의 모양. 성공 응답은 이것으로 감싸지 않는다.",
+        "properties": {
+          "code": {
+            "$ref": "#/components/schemas/ErrorCode"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          },
+          "request_id": {
+            "title": "Request Id",
+            "type": "string"
+          },
+          "violations": {
+            "items": {
+              "$ref": "#/components/schemas/Violation"
+            },
+            "title": "Violations",
+            "type": "array"
+          }
+        },
+        "required": [
+          "code",
+          "message",
+          "violations",
+          "request_id"
+        ],
+        "title": "ErrorEnvelope",
+        "type": "object"
+      },
+      "ExpiryNoticeStyle": {
+        "description": "로그인 만료 안내를 보이는 모양.",
+        "enum": [
+          "card",
+          "overlay",
+          "banner"
+        ],
+        "title": "ExpiryNoticeStyle",
+        "type": "string"
+      },
+      "Health": {
+        "additionalProperties": false,
+        "description": "살아 있다는 것만 답한다. 내부 구성을 싣지 않는다.",
+        "properties": {
+          "status": {
+            "const": "ok",
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "title": "Health",
+        "type": "object"
+      },
+      "LoginPromptStyle": {
+        "description": "로그인 전의 모양.",
+        "enum": [
+          "card",
+          "input_button",
+          "intro_button"
+        ],
+        "title": "LoginPromptStyle",
+        "type": "string"
+      },
+      "LogoutMethod": {
+        "description": "로그아웃 주소를 부르는 방법.",
+        "enum": [
+          "background",
+          "new_window"
+        ],
+        "title": "LogoutMethod",
+        "type": "string"
+      },
+      "Mode": {
+        "description": "위젯의 밝기.",
+        "enum": [
+          "light",
+          "dark"
+        ],
+        "title": "Mode",
+        "type": "string"
+      },
+      "NoticeFullStyle": {
+        "description": "고지 전문을 보이는 모양.",
+        "enum": [
+          "inline",
+          "overlay",
+          "card"
+        ],
+        "title": "NoticeFullStyle",
+        "type": "string"
+      },
+      "Theme": {
+        "description": "위젯의 색 이름.",
+        "enum": [
+          "guncheong",
+          "nokcheong",
+          "jacho",
+          "jjokbit"
+        ],
+        "title": "Theme",
+        "type": "string"
+      },
+      "Violation": {
+        "additionalProperties": false,
+        "description": "형식 오류 하나. field 는 `query.limit` 처럼 점으로 이은 경로 문자열이다.",
+        "properties": {
+          "field": {
+            "title": "Field",
+            "type": "string"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          }
+        },
+        "required": [
+          "field",
+          "message"
+        ],
+        "title": "Violation",
+        "type": "object"
+      },
+      "WidgetSettings": {
+        "additionalProperties": false,
+        "description": "사이트의 위젯 설정. 값이 없으면 null, 예시 질문은 빈 목록, 밝기 스위치 숨기기는 거짓이다.",
+        "properties": {
+          "agent": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Agent"
+          },
+          "contact_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Contact Url"
+          },
+          "example_questions": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Example Questions",
+            "type": "array"
+          },
+          "expiry_notice_style": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ExpiryNoticeStyle"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "heading": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Heading"
+          },
+          "hide_mode_switch": {
+            "title": "Hide Mode Switch",
+            "type": "boolean"
+          },
+          "intro": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Intro"
+          },
+          "login_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Login Label"
+          },
+          "login_prompt_style": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LoginPromptStyle"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "login_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Login Url"
+          },
+          "logout_method": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LogoutMethod"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "logout_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Logout Url"
+          },
+          "mode": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Mode"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "notice_full": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notice Full"
+          },
+          "notice_full_style": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/NoticeFullStyle"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "notice_summary": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notice Summary"
+          },
+          "placeholder": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Placeholder"
+          },
+          "schema_version": {
+            "title": "Schema Version",
+            "type": "integer"
+          },
+          "tab_title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tab Title"
+          },
+          "theme": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Theme"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "schema_version",
+          "agent",
+          "heading",
+          "intro",
+          "theme",
+          "mode",
+          "placeholder",
+          "notice_summary",
+          "notice_full",
+          "login_url",
+          "login_label",
+          "logout_url",
+          "logout_method",
+          "expiry_notice_style",
+          "tab_title",
+          "contact_url",
+          "example_questions",
+          "hide_mode_switch",
+          "login_prompt_style",
+          "notice_full_style"
+        ],
+        "title": "WidgetSettings",
+        "type": "object"
+      }
+    }
+  },
+  "info": {
+    "title": "위젯 관리 서버",
+    "version": "0.0.0"
+  },
+  "openapi": "3.1.0",
+  "paths": {
+    "/health": {
+      "get": {
+        "operationId": "read_health",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Health"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Read Health"
+      }
+    },
+    "/widget-settings/{site}": {
+      "get": {
+        "operationId": "read_widget_settings",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "site",
+            "required": true,
+            "schema": {
+              "title": "Site",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WidgetSettings"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "찾는 것이 없다"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "요청의 형식이 올바르지 않다"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "서버가 요청을 처리하지 못했다"
+          }
+        },
+        "summary": "사이트 하나의 위젯 설정을 읽는다"
+      }
+    }
+  }
+}

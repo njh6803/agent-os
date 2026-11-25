@@ -71,7 +71,7 @@ if __package__ in (None, ""):  # 스크립트로 부르면 저장소 루트가 i
 
 from tools.check_commit_msg import PATTERN  # noqa: E402
 
-PRODUCT_PATHS = ("src", "web", "plugins", "uv.lock", "deploy")
+PRODUCT_PATHS = ("src", "web", "plugins", "uv.lock", "deploy", "widget-admin")
 CONFIG_PATH = "deploy/release.toml"
 CONFIG_KEY = "candidate_for"
 NOTES_ROOT = "docs/release-notes"

@@ -2,7 +2,7 @@
 # 대기열 318)가 `paths` 에 맞는 파일을 Read 로 열 때 실리는지.
 # 실험군은 규칙의 paths 안(tests/), 대조군은 밖(README.md)을 읽는다. 둘 다 이 체크아웃이다.
 # 카나리아는 그 예가 선례로 드는 함수 이름과 권한 값이다. 읽는 파일에는 둘 다 없다.
-# 최신 결과: 통과 4(2026-10-19, 이 PC, claude 2.1.302, 커밋하기 전의 작업 트리. 러너가 찍은 커밋은 a89ec15c).
+# 최신 결과: 통과 4(2026-11-25, 이 PC, claude 2.1.325, widget-admin 티켓 01 이 tests.md 의 한 항목에 예외 한 줄을 더한 뒤 커밋하기 전의 작업 트리). 앞 판은 통과 4(2026-10-19, 이 PC, claude 2.1.302, 커밋하기 전의 작업 트리. 러너가 찍은 커밋은 a89ec15c).
 # 돌리는 법: uv run python tools/canary.py .scratch/harness/probes/canary/tests_rule_linux_exec_bit.toml <출력 디렉터리>
 kind = "rule"
 question = '''
