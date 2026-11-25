@@ -159,6 +159,11 @@ function kindName(kind: string): RegExp {
 function servePlugins(reply: (call: number) => Response | Promise<Response>): string[] {
   const authorizations: string[] = [];
   network.use(
+    // 켜 둔 모델의 행이 접속 확인을 보낸다. 이 시험은 그 결과를 보지 않아 늘 붙었다고 답한다. 접속 확인 자체는
+    // `HomePage.connection.test.tsx` 가 본다.
+    http.get(api("/plugins/:kind/:name/connection-check"), () =>
+      HttpResponse.json({ status: "reached" }),
+    ),
     http.get(api("/plugins"), ({ request }) => {
       authorizations.push(request.headers.get("Authorization") ?? "(없음)");
       return reply(authorizations.length - 1);

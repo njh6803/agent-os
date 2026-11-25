@@ -1,0 +1,6 @@
+*
+!pyproject.toml
+!uv.lock
+!widget-admin/pyproject.toml
+!widget-admin/src
+**/__pycache__

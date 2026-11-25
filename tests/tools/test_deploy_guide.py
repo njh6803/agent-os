@@ -18,6 +18,21 @@ from pathlib import Path
 import pytest
 from tools.release import build_bundle
 
+from agent_os.adapters.postgres.database import (
+    DEFAULT_RETRY_SECONDS,
+    Alignment,
+    Failure,
+    already_current_text,
+    close_text,
+    misaligned_text,
+    retry_notice,
+    unexpected_text,
+    unreached_text,
+    upgrade_failed_text,
+    upgraded_text,
+)
+from agent_os.main import NO_DATABASE_URL_DIAGNOSTIC, UNREADABLE_DATABASE_URL_DIAGNOSTIC
+
 REPO = Path(__file__).resolve().parents[2]
 STANDALONE = REPO / "deploy" / "standalone"
 GUIDE = STANDALONE / "README.md"
@@ -90,9 +105,125 @@ INTERNAL_WORDS = (
 )
 
 
+# 13절(문제 해결)이 꼭 가져야 할 낱말(명세 connection-check Testing Decisions 의 여섯째).
+# 4절에 이미 있는 낱말(`Exited (0)`, `Ready`, 위젯의 종료 1)은 안내 전체에서 찾으면 13절에서
+# 빠져도 초록이므로, 이 낱말들은 13절만 잘라 찾는다.
+SECTION_13_TITLE = "## 13. 문제 해결"
+SECTION_13_REQUIRED: dict[str, str] = {
+    "docker compose ps --all": "먼저 칠 명령, 끝난 컨테이너까지 보인다",
+    "docker compose logs": "서비스 하나의 기록을 보는 명령",
+    "healthy": "뜬 것으로 읽는 상태",
+    "Exited (0)": "migrate 가 일을 마친 상태는 고장이 아니라는 것",
+    "Restarting": "볼 것으로 읽는 상태",
+    "Created": "볼 것으로 읽는 상태",
+    "Ready": "관리 화면은 Ready 줄 뒤에도 실패할 수 있어 상태로 본다는 것",
+    "종료 1": "위젯이 종료 1 로 끝났을 때의 뜻",
+    "사이트 파일": "위젯이 종료 1 로 끝나는 까닭",
+    "docker compose exec serve agent-os --version": "떠 있는 판을 읽는 명령",
+    "AGENT_OS_VERSION": "다음에 띄울 판이라 떠 있는 판과 다를 수 있다는 것",
+    "docker compose config": "남에게 보내면 안 되는 출력 하나",
+    "docker inspect": "남에게 보내면 안 되는 출력 둘",
+    "Application startup failed. Exiting.": "웹 서버가 붙이는 줄이고 까닭이 아니라는 것",
+    "ERROR:": "웹 서버가 서버 시작에서 멈출 때 글 앞에 붙이는 머리",
+    "접속 확인": "서버는 떴는데 에이전트가 답하지 않을 때 볼 화면",
+    "붙지 못함": "접속 확인이 보이는 결과",
+    "서버에 닿지 못했다": "붙지 못함의 글을 읽는 예, 꺼진 모델 서버",
+    "키를 받아들이지 않았다(HTTP 401)": "붙지 못함의 글을 읽는 예, 틀린 키",
+    "(HTTP 401 Unauthorized)": "붙지 못함의 글을 읽는 예, 원격 MCP 서버의 토큰 불일치",
+    "20초": "처음 띄울 때 내려받는 stdio 서버는 20초를 넘기면 붙지 못함으로 보일 수 있다는 것",
+    "헤더": "원격 MCP 서버의 토큰은 주소가 아니라 헤더에 둔다는 것",
+}
+
+# 제품이 멈출 때와 다시 시도할 때 찍는 글의 갈래(명세 postgres-foundation "멈출 때의 글"의
+# 표). 시험이 제품 코드에서 글을 가져오는 함수(`제품의_멈출_때의_글`)가 이 갈래를 빠짐없이
+# 내는지 지킨다.
+STOP_TEXT_LABELS = (
+    "변수가 없거나 비었다",
+    "읽지 못했다",
+    "다시 시도한다",
+    "닿지 못했다",
+    "비밀번호",
+    "접속을 허락하지 않았다",
+    "데이터베이스 없음",
+    "그 밖",
+    "표가 뒤처졌다",
+    "표가 더 새롭다",
+    "확인하다 멈췄다",
+    "닫다 실패했다",
+    "올렸다",
+    "이미 마지막 판이다",
+    "올리다 실패했다",
+)
+
+
 def 없는_항목(guide: str) -> list[str]:
     """안내에 없는 필수 낱말과 그 낱말이 지키는 항목."""
     return [f"{word}: {item}" for word, item in REQUIRED.items() if word not in guide]
+
+
+def 열세째_절(guide: str) -> str:
+    """안내에서 13절(제목부터 다음 절 앞이나 끝까지). 13절이 없으면 빈 글."""
+    start = guide.find(SECTION_13_TITLE)
+    if start < 0:
+        return ""
+    after = start + len(SECTION_13_TITLE)
+    following = re.search(r"^## ", guide[after:], flags=re.MULTILINE)
+    return guide[start:] if following is None else guide[start : after + following.start()]
+
+
+def 네째_절(guide: str) -> str:
+    """안내에서 4절(제목부터 5절 앞까지)."""
+    start = guide.index("## 4. 띄우기와 확인")
+    return guide[start : guide.index("## 5. ", start)]
+
+
+def 없는_13절_항목(guide: str) -> list[str]:
+    """13절 안에 없는 필수 낱말과 그 낱말이 지키는 항목. 13절이 없으면 전부다."""
+    section = 열세째_절(guide)
+    return [f"{word}: {item}" for word, item in SECTION_13_REQUIRED.items() if word not in section]
+
+
+def 제품의_멈출_때의_글() -> dict[str, str]:
+    """제품이 멈출 때와 다시 시도할 때 찍는 글. 갈래마다 제품 코드가 글을 짓는 자리에서 가져온다.
+
+    값이 들어가는 자리(주소, 까닭, 판)는 `<자리>`, `<까닭>`, `<판>` 으로 채운다. 안내의 표가 같은
+    자리 표시로 그 글을 싣는다. 다시 시도하는 시간은 기본 값(30초)이고 안내가 그 숫자를 적는다.
+    """
+    place, reason, revision = "<자리>", "<까닭>", "<판>"
+    seconds = DEFAULT_RETRY_SECONDS
+    return {
+        "변수가 없거나 비었다": NO_DATABASE_URL_DIAGNOSTIC,
+        "읽지 못했다": UNREADABLE_DATABASE_URL_DIAGNOSTIC,
+        "다시 시도한다": retry_notice(place, seconds),
+        "닿지 못했다": unreached_text(Failure.TRANSIENT, place, reason, seconds),
+        "비밀번호": unreached_text(Failure.PASSWORD, place, reason, seconds),
+        "접속을 허락하지 않았다": unreached_text(Failure.NOT_ALLOWED, place, reason, seconds),
+        "데이터베이스 없음": unreached_text(Failure.NO_DATABASE, place, reason, seconds),
+        "그 밖": unreached_text(Failure.OTHER, place, reason, seconds),
+        "표가 뒤처졌다": misaligned_text(Alignment.BEHIND, revision, revision),
+        "표가 더 새롭다": misaligned_text(Alignment.AHEAD, revision, revision),
+        "확인하다 멈췄다": unexpected_text(place, reason),
+        "닫다 실패했다": close_text(place, reason),
+        "올렸다": upgraded_text(revision, revision),
+        "이미 마지막 판이다": already_current_text(revision),
+        "올리다 실패했다": upgrade_failed_text(reason, revision),
+    }
+
+
+def 없는_글(guide: str, texts: dict[str, str]) -> list[str]:
+    """13절의 표가 싣지 않은 제품의 글. 들여쓴 설명 줄은 들여쓰기를 뗀다.
+
+    글마다 첫 줄을 든 표의 행 하나를 찾고, 그 행에 나머지 줄이 모두 있는지 본다. 13절 어디에든
+    줄이 있으면 통과시키면, 같은 줄을 담은 예시 기록이나 다른 행이 빠진 행을 가린다. 첫 줄을 든
+    행이 없으면 그 글의 줄을 모두 낸다.
+    """
+    rows = [line for line in 열세째_절(guide).splitlines() if line.startswith("|")]
+    missing: list[str] = []
+    for label, text in texts.items():
+        lines = [line for line in (part.strip() for part in text.splitlines()) if line]
+        row = next((candidate for candidate in rows if lines[0] in candidate), "")
+        missing.extend(f"{label}: {line}" for line in lines if line not in row)
+    return missing
 
 
 def 샌_안의_말(guide: str) -> list[str]:
@@ -183,6 +314,116 @@ def test_이_저장소의_배포_안내는_저장소_안의_말을_쓰지_않는
 
 def test_저장소_안의_말이_샌_안내를_잡는다() -> None:
     assert 샌_안의_말("자세한 것은 ADR 0056을 본다") == ["ADR"]
+
+
+def test_이_저장소의_배포_안내는_13절에_넘겨받은_항목을_모두_싣는다() -> None:
+    guide = GUIDE.read_text(encoding="utf-8")
+    assert 열세째_절(guide) != "", "안내에 13절이 없다"
+    missing = 없는_13절_항목(guide)
+    assert missing == [], f"13절에 없는 항목: {missing}"
+
+
+def test_13절의_필수_낱말_하나가_빠진_안내를_잡는다() -> None:
+    guide = GUIDE.read_text(encoding="utf-8")
+    section = 열세째_절(guide)
+    changed = guide.replace(section, section.replace("docker inspect", ""))
+    missing = 없는_13절_항목(changed)
+    assert missing != []
+    assert all(entry.startswith("docker inspect:") for entry in missing)
+
+
+def test_4절에_이미_있는_낱말이_13절에서_빠진_안내를_잡는다() -> None:
+    """`Exited (0)` 은 4절에도 있다. 안내 전체에서 찾으면 13절에서 빠져도 초록이 된다."""
+    guide = GUIDE.read_text(encoding="utf-8")
+    assert "Exited (0)" in 네째_절(guide)
+    section = 열세째_절(guide)
+    changed = guide.replace(section, section.replace("Exited (0)", ""))
+    assert "Exited (0)" in changed
+    assert [entry for entry in 없는_13절_항목(changed) if entry.startswith("Exited (0):")] != []
+
+
+def test_13절이_없는_안내는_13절의_항목을_모두_빠진_것으로_본다() -> None:
+    guide = GUIDE.read_text(encoding="utf-8")
+    without = guide[: guide.index(SECTION_13_TITLE)]
+    assert len(없는_13절_항목(without)) == len(SECTION_13_REQUIRED)
+
+
+def test_4절은_13절을_가리킨다() -> None:
+    assert "13절" in 네째_절(GUIDE.read_text(encoding="utf-8"))
+
+
+def test_제품이_멈출_때_찍는_글의_갈래는_명세의_표와_같다() -> None:
+    assert tuple(제품의_멈출_때의_글()) == STOP_TEXT_LABELS
+
+
+def test_제품의_접속_실패와_표_견줌의_갈래마다_표의_글이_하나씩_있다() -> None:
+    """제품에 갈래가 늘면 이 시험이 빨개져, 안내의 표와 글의 목록이 함께 늘게 한다."""
+    texts = set(제품의_멈출_때의_글().values())
+    place, reason, seconds = "<자리>", "<까닭>", DEFAULT_RETRY_SECONDS
+    for failure in Failure:
+        assert unreached_text(failure, place, reason, seconds) in texts, failure
+    for alignment in Alignment:
+        if alignment is Alignment.CURRENT:
+            continue
+        assert misaligned_text(alignment, "<판>", "<판>") in texts, alignment
+
+
+def test_맞는_표에는_맞지_않는_글이_없다() -> None:
+    with pytest.raises(ValueError):
+        misaligned_text(Alignment.CURRENT, "<판>", "<판>")
+
+
+def test_이_저장소의_13절의_표는_제품이_멈출_때_찍는_글을_빠짐없이_싣는다() -> None:
+    missing = 없는_글(GUIDE.read_text(encoding="utf-8"), 제품의_멈출_때의_글())
+    assert missing == [], f"13절에 없는 제품의 글: {missing}"
+
+
+def test_제품의_글이_바뀐_사본이면_안내의_검사가_빨개진다() -> None:
+    texts = 제품의_멈출_때의_글()
+    texts["비밀번호"] = texts["비밀번호"].replace("받아들이지", "받지")
+    missing = 없는_글(GUIDE.read_text(encoding="utf-8"), texts)
+    assert missing != []
+    assert all(entry.startswith("비밀번호:") for entry in missing)
+
+
+def test_안내의_표에서_제품의_글_한_줄이_빠진_안내를_잡는다() -> None:
+    guide = GUIDE.read_text(encoding="utf-8")
+    line = "표가 이미 마지막 판(<판>)입니다."
+    assert line in 열세째_절(guide)
+    section = 열세째_절(guide)
+    changed = guide.replace(section, section.replace(line, ""))
+    assert 없는_글(changed, 제품의_멈출_때의_글()) == [f"이미 마지막 판이다: {line}"]
+
+
+def test_표의_행에서만_설명_줄이_빠진_안내를_예시_기록에_같은_줄이_있어도_잡는다() -> None:
+    guide = GUIDE.read_text(encoding="utf-8")
+    line = 제품의_멈출_때의_글()["비밀번호"].splitlines()[1].strip()
+    rows = [row for row in 열세째_절(guide).splitlines() if row.startswith("|") and line in row]
+    assert len(rows) == 1
+    assert line in 열세째_절(guide).replace(rows[0], "")  # 예시 기록에 같은 줄이 또 있다
+    changed = guide.replace(rows[0], rows[0].replace(line, ""))
+    missing = 없는_글(changed, 제품의_멈출_때의_글())
+    assert missing == [f"비밀번호: {line}"]
+
+
+def test_같은_안내_줄을_쓰는_두_행_가운데_한_행에서만_빠져도_잡는다() -> None:
+    guide = GUIDE.read_text(encoding="utf-8")
+    texts = 제품의_멈출_때의_글()
+    hint = texts["접속을 허락하지 않았다"].splitlines()[1].strip()
+    assert hint == texts["데이터베이스 없음"].splitlines()[1].strip()
+    row = next(
+        row
+        for row in 열세째_절(guide).splitlines()
+        if row.startswith("|") and texts["접속을 허락하지 않았다"].splitlines()[0].strip() in row
+    )
+    changed = guide.replace(row, row.replace(hint, ""))
+    assert 없는_글(changed, texts) == [f"접속을 허락하지 않았다: {hint}"]
+
+
+def test_제품의_글에는_안내가_쓰지_않는_저장소_안의_말이_없다() -> None:
+    """안내가 제품의 글을 그대로 옮기므로, 글에 저장소 안의 말이 있으면 안내에 새 버린다."""
+    for label, text in 제품의_멈출_때의_글().items():
+        assert 샌_안의_말(text) == [], f"{label} 의 글에 저장소 안의 말이 있다"
 
 
 def test_compose의_user_값은_주석을_떼고_읽는다() -> None:

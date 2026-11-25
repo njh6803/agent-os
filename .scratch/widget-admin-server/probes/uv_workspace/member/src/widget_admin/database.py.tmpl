@@ -1,0 +1,60 @@
+"""데이터베이스에 닿는 길. 엔진과 마이그레이션을 자기 패키지 안에 둔다."""
+
+from __future__ import annotations
+
+from pathlib import Path
+
+from alembic import command
+from alembic.config import Config
+from alembic.script import ScriptDirectory
+from sqlalchemy import Connection, text
+from sqlalchemy.engine import URL, make_url
+from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
+
+MIGRATIONS = Path(__file__).resolve().parent / "migrations"
+
+
+def async_url(url_text: str) -> URL:
+    return make_url(url_text).set(drivername="postgresql+asyncpg")
+
+
+def engine_for(url_text: str) -> AsyncEngine:
+    return create_async_engine(async_url(url_text))
+
+
+def _config() -> Config:
+    config = Config()
+    config.set_main_option("script_location", str(MIGRATIONS).replace("%", "%%"))
+    return config
+
+
+def revisions() -> list[str]:
+    script = ScriptDirectory.from_config(_config())
+    return sorted(item.revision for item in script.walk_revisions())
+
+
+def _upgrade(connection: Connection) -> None:
+    config = _config()
+    config.attributes["connection"] = connection
+    command.upgrade(config, "head")
+
+
+async def migrate(url_text: str) -> None:
+    engine = engine_for(url_text)
+    try:
+        async with engine.begin() as connection:
+            await connection.run_sync(_upgrade)
+    finally:
+        await engine.dispose()
+
+
+async def heading_of(engine: AsyncEngine, site: str) -> str | None:
+    async with engine.connect() as connection:
+        result = await connection.execute(
+            text("SELECT heading FROM widget_settings WHERE site = :site"), {"site": site}
+        )
+        row = result.first()
+    if row is None:
+        return None
+    value: object = row[0]
+    return value if isinstance(value, str) else None

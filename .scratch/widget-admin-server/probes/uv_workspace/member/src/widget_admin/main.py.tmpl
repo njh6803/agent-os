@@ -1,0 +1,29 @@
+"""`widget-admin` 명령. 프로브에서는 `migrate` 하나만 있다."""
+
+from __future__ import annotations
+
+import argparse
+import asyncio
+import os
+import sys
+
+from widget_admin.database import migrate
+
+URL_ENV = "WIDGET_ADMIN_DATABASE_URL"
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(prog="widget-admin")
+    parser.add_argument("command", choices=["migrate"])
+    parser.parse_args(argv)
+    url_text = os.environ.get(URL_ENV, "")
+    if url_text == "":
+        print(f"{URL_ENV} 가 없다", file=sys.stderr)
+        return 2
+    asyncio.run(migrate(url_text))
+    print("widget-admin migrate: 표를 올렸다")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
