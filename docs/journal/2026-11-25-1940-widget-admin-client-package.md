@@ -66,9 +66,18 @@
 - 같은 시도에서 `run-hooks`(`hook_ruff_line_width.py`의 한글 줄 E501이 context 대신 silent), pytest의 `tests/channel/cli/test_interrupt.py` 셋(Ctrl+C 자식이 30초 안에 끝나지 않았다)과 `tests/tools/test_rerun_runner.py`의 오염 시험이 실패했다. 이번 커밋에는 `.py` 파일이 없고(변이 표와 문서와 web 코드뿐), 앞 커밋 시도에서는 같은 이 시험들 가운데 `test_interrupt`가 통과했다. `uv run pytest -q tests/channel/cli/test_interrupt.py tests/tools/test_rerun_runner.py`를 단독으로 돌리자 69개가 모두 통과했다(123초, 출력을 봤다). 원인은 시간 제한을 쓰는 시험이 전체 실행의 부하(그 실행이 27분 걸렸다)와 다른 세션들의 부하 아래에서 흔들린 것으로 본다. 부하를 재지는 않은 어림이다.
 - 마지막 티켓 판정: 병합 직전 `git fetch origin` 뒤 origin/dev에서 03·04가 `ready-for-agent`이다. 이 티켓은 마지막이 아니라서 끝 줄과 기능 단락은 싣지 않았다. `uv run python tools/plan_table.py`를 돌렸고 `.scratch/plan.md`는 바뀌지 않았다.
 
+## 인계(커밋 뒤, 두 번째 세션이 컨텍스트 문턱을 넘어 넘긴다)
+
+- 커밋 `4b417c711`(`feat: 위젯 관리 화면용 클라이언트 패키지를 세운다 (widget-admin-server 02)`)까지 마쳤다. 셀프 리뷰 반영, 티켓 done, 변이 표 고침이 이 커밋에 든다. 이 커밋은 푸시하지 않았고 PR도 없다. 이 일지의 위 절들(셀프 리뷰, 다시 돌린 것, 인계 절)은 커밋 뒤에 쓰거나 고친 것이라 워크트리에 커밋하지 않은 변경으로 남아 있다.
+- 남은 일: 일지를 커밋에 더한다(새 커밋 하나. pre-commit 한 바퀴가 20분을 넘으니 백그라운드로 돌리고 `Bash`의 `timeout`을 600000으로 준다), 푸시, PR 열기(`/git-pr`), PR 직전 리뷰(`docs/constitution/operations.md` 리뷰 파이프라인의 순서), 반영, 병합.
+- 병합 직전에 `git fetch origin` 뒤 origin/dev에서 03·04 티켓의 `Status:`를 다시 본다. 04가 먼저 done이면 이 티켓이 마지막이라 `.scratch/widget-admin-server/plan.md`에 `**끝:**` 줄과 `docs/release-notes/features/widget-admin-server.md`를 싣는 커밋이 더 필요하다(티켓 "마지막 티켓이면" 절). 이 세션이 본 때(2026-11-25)는 03·04가 둘 다 `ready-for-agent`였다.
+- 시간 민감 시험(`tests/channel/cli/test_interrupt.py`, `tests/tools/test_rerun_runner.py`, `run-hooks`의 `hook_ruff_line_width`)이 전체 실행에서 부하로 흔들렸고 단독으로는 통과했다(위 "다시 돌린 것"). 같은 시험이 pre-commit이나 CI에서 다시 빨개지면 단독 실행으로 먼저 가르고, 두 번 연속 빨강이면 `diagnosing-bugs`로 넘어간다.
+
 ## 하네스에서 겪은 것
 
 - 전체 `grep -rn ... .`는 훅(`.env` 노출 방지)에 막힌다. Grep 도구나 경로를 좁힌 명령을 쓴다.
 - Bash에서 하위 폴더로 `cd`하면 훅이 막는다. `pnpm -C web ...`나 경로 인자를 쓴다. `pnpm -C web eslint`는 안 되고 `pnpm -C web exec eslint`로 쓴다.
 
 open-session을 부른다 2026-11-25T10:41Z
+
+open-session을 부른다 2026-11-25T12:51Z
