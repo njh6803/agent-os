@@ -34,3 +34,36 @@
 - 표준 축(확정 위반 없음): 같은 지적을 Minor로 냈고(위와 같이 고쳤다), Nit 하나 "같은 흐린 글자지만 글자가 다르다"의 두 뜻을 "같은 흐린 색이지만 문구가 다르다"로 고쳤다.
 - 남겼다: 티켓이 `done`인데 올리기 칸이 열려 있다는 지적(근거는 `upload.md` 1이 병합 뒤에 올리라고 정한 것이고, `Status:`의 값은 첫 낱말로 읽는 규칙이라 도구는 막지 않는다. 병합 뒤 올리기 세션이 칸을 닫는다), `BASE`가 `StatusBadge`와 같은 긴 클래스 문자열이라는 중복 냄새(두 컴포넌트를 나누는 것이 명세와 티켓의 결정이고 `StatusBadge`를 고치지 않는다는 요구가 있다), `TEXT`·`ICON`·`STATUS_CLASS`가 같은 키 넷을 되풀이하는 약한 반복(`StatusBadge`와 같은 모양의 관례), 아이콘 스토리가 일곱 이름을 `toContain`으로 되풀이하는 것(일곱이 정말 들어갔는지 이름으로 고정한다), 아이콘 보여 주기용 스토리의 `kim.admin` 앞 점 줄이 그린 화면에 없는 모양이라는 지적(규칙이 컴포넌트마다 보여 주기용 하나를 요구하고, 그린 화면 계정 메뉴의 줄은 이름·단계·`chevrons-up-down`이라 점은 보탠 것이다).
 - 다시 돌린 것: `prettier --check`(통과)와 배지 스토리 8개(통과). 나머지는 커밋의 pre-commit이 갈음한다.
+
+## 커밋
+
+기능 커밋을 `feature/08-design-system-icons-and-account-badge`에 쳤다(메시지 `feat: 디자인 시스템에 아이콘 일곱과 계정 상태 배지를 더한다 (admin-login 08)`). 커밋 시도는 한 번이고 `SKIP` 없이 통과했다. pre-commit의 단계 결과(커밋 로그에서 읽은 것): `checks`, `check-ticket`, `check-notes`, `zizmor`, `lint-imports`, `check-instructions`, `check-type-escapes`, `pyright`와 `pyright-linux`, `run-hooks`, `pytest`(627.8초), `web-verify`(728.1초), 마크다운 표, 줄 구분 문자, 변이 표, 따옴표 대조, 커밋 메시지가 `Passed`이고 ruff 둘과 카나리아 명세 모양과 헌법 판 검사는 대상 파일이 없어 `Skipped`였다(ruff는 `.py`가 없어서다. 손으로 `uv run ruff check .`와 `uv run ruff format --check .`을 쳐 통과했다).
+
+## 인계
+
+이 세션의 컨텍스트가 인계 문턱(20만 토큰)을 넘은 채 `커밋 뒤` 경계에 왔고, 커밋이 통과했으며 요청 범위("PR과 병합까지")가 여기서 끝나지 않아 인계한다. 이 세션의 제목은 `feature/08-design-system-icons-and-account-badge`다. 남은 일: 이 일지의 "다음" 절과 회고(`retro`), `tools/sibling_overlap.py`, 푸시, PR(제목 접두는 `feat:`이고 느낌표 없음. 운영자가 올릴 때 손댈 것이 없는 디자인 시스템 부품 추가다), 봇 회차와 PR 직전 리뷰, 병합(워크트리 사본의 `merge.md`의 "워크트리에서 병합할 때"), 병합 뒤 `sync-design-system 올리기`(`upload.md`. 티켓의 올리기 칸은 그때 닫는다). 이 세션이 띄운 백그라운드 작업은 없다.
+
+PR 직전 리뷰에서 서브에이전트가 밀어 볼 새 문장(이 세션이 리뷰 반영으로 고친 사실 문장):
+
+- `AccountStatusBadge.md` 13행: "admin-login 명세의 "배지의 이름"(활성, 비활성, 비밀번호 미설정, 잠김) 그대로이고, 아이콘은 그 옆의 꾸밈이라 화면 읽기 프로그램에서 숨습니다."
+- `AccountStatusBadge.tsx`의 `TEXT` 위 주석: "admin-login 명세 "배지의 이름"의 말이다. 계정의 "비활성"은 꺼진 플러그인을 말하지 않는다(CONTEXT.md 운영자 계정 절이 그 풀이를 든다)."
+- `AccountStatusBadge.md` 11행: "비활성과 비밀번호 미설정은 같은 흐린 색이라 문구로만 갈립니다."
+
+## 회고
+
+후보 2건, 판정은 승인 0건, 기각 2건, 넘김 0건이다. 사용자에게 물을 것은 없다.
+
+| 후보 | 판정 | 사건과 조건 |
+|---|---|---|
+| 앞 세션이 변이를 `tools/mutate.py`가 아니라 손으로 편집해 넣었다(위 "검증") | 기각 | 실수나 비용이 난 사건이 아니다. 잠김의 아이콘과 색을 바꾸자 스토리 둘이 빨개져 빨강을 본다는 목적은 이루어졌다. 구현 때 실리는 `implement` 지침을 어긴 일이지만 리뷰가 잡은 것이 아니라 일지가 스스로 적은 것이라 회차로 세지 않는다. `--search mutate.py`는 열린 항목 4개를 냈으나 출력을 앞 스무 줄만 읽어 그 넷이 같은 일을 센 항목인지는 보지 못했다(대신 이 일은 위 이유로 기각했다) |
+| 이 세션이 대기열 상태 줄을 확인하려고 `cd`로 하위 폴더에 들어갔다가 훅이 호출을 막았다 | 기각 | 이미 있는 훅이 그 자리에서 막고 이유까지 알렸다. 호출은 돌지 않았고 작업은 잃지 않았다 |
+
+만료한 항목(두 출력에 모두 든 열 개): `0562`, `external-ref-moved-while-citing`, `glob-slash-pattern-narrowed-path`, `grep-glob-slash-pattern`, `harness-work-invisible-in-plan`, `measure-subagent-stopped-by-usage-limit`, `open-session-stale-main-copy`, `option-description-implied-omission`, `plugins-outside-type-judges`, `ui-design-web-edit-read-path-prefix`. 상태 줄을 `만료 2026-11-26 (ADR 0036)`으로 고쳤다. `uv run python tools/queue_open_rows.py`와 `--ref origin/dev`를 붙인 것이 낸 "만료할 항목" 줄이 같은 열 개였다(두 줄을 손으로 견주었다). "회차를 찾지 못한 항목"으로 뜬 `0570`은 사람 몫이라 건드리지 않았다.
+
+## 다음
+
+이 PR을 병합하면 09(로그인 화면과 갱신 규칙)가 쓸 아이콘과 배지는 갖춰진다. 09는 04(갱신과 서명 키 교체)도 기다리고 12는 06과 09를 기다린다. 02와 07은 이미 각자 워크트리에서 돈다.
+
+올리기는 남았다. 병합 뒤 `origin/dev`에서 `sync-design-system 올리기`(`upload.md`)를 하고 티켓 `.scratch/admin-login/issues/08-design-system-icons-and-account-badge.md`의 올리기 칸을 닫는다.
+
+open-session을 부른다 2026-11-25T17:03:11Z
