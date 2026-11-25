@@ -92,15 +92,16 @@
 
 승인한 것이 없어 대기열에 더한 항목도 없다.
 
-## 인계 (셀프 리뷰 직전)
+## 인계 (커밋 뒤)
 
-컨텍스트가 인계 문턱(20만 토큰)을 넘은 채 `/code-review`를 부른 자리에서 넘긴다(`hook_handoff`의 `셀프 리뷰 직전`). 이 세션 제목은 `feature/01-widget-admin-package-and-settings-route`였고 `(인계함)`을 붙여 넘긴다.
+컨텍스트가 인계 문턱(20만 토큰)을 넘은 채 커밋이 끝난 자리에서 넘긴다(`hook_handoff`의 `커밋 뒤`). 앞선 인계(`셀프 리뷰 직전`)로 연 두 번째 세션이 셀프 리뷰를 하고 커밋했다. 이 세션 제목은 `feature/01-widget-admin-package-and-settings-route`였고 `(인계함)`을 붙여 넘긴다. 이 세션이 받은 사용자 프롬프트는 위 "사용자 프롬프트"와 같은 지시문이고 범위는 "PR과 병합까지"다.
 
-- 커밋하지 않은 변경이 이 워크트리에 모두 있다. 티켓은 `done`이고(CI 몫 두 항목만 미체크), 일지(이 파일)와 `.scratch/plan.md`(`uv run python tools/plan_table.py`를 돌렸다)가 들어 있다. 회고는 이 일지에서 이미 돌았다(`## 회고`, 승인 0).
-- 남은 일은 순서대로 셋이다. (1) `/code-review` 셀프 리뷰를 하고 Critical·Major를 고친다. (2) 커밋 직전에 `git branch --show-current`와 `uv run python tools/sibling_overlap.py`를 치고(마지막 실행에서 남은 알림은 이 일지를 가리키는 인용뿐이었고 지금은 이 파일이 있다), 루트 `pyproject.toml`의 작업공간과 serve 이미지의 멤버 파일을 한 커밋에 넣어 커밋한다. (3) `/git-pr`로 PR을 열고(제목에 느낌표를 붙이지 않는다) 병합까지 간다. 병합은 `.claude/skills/next-session/merge.md`의 "워크트리에서 병합할 때"를 Read로 열어 따른다.
-- 전체 검사 한 바퀴(`tools/run_checks.py`)는 `tools/check_instructions.py`의 한 줄을 고치기 전에 돌았다. 고친 뒤에는 그 시험(`tests/tools/test_check_instructions.py`의 `bool_None` 범위 시험)과 `uv run python tools/check_instructions.py`만 다시 돌렸고 둘 다 0이다. 나머지는 커밋의 pre-commit이 다시 돈다.
-- PR의 CI가 돈 뒤 이 일지 끝에 CI `python` 잡의 시간과 pytest 단계의 시간, CI의 uv 판을 적고 티켓의 미체크 두 항목을 채운다(제한 25분, 앞의 성공 40회 최대 15.0분).
-- 로컬에서 확인한 것(경계 위반 양방향, 잠금 차이, 단독 배포 e2e 15개 통과, 이미지 안의 패키지)은 위 "손으로 본 것"에 있다. `tests/widget_admin`만 `-W default`로 돌렸고 경고는 없었다.
+- 커밋은 `7f72b01f2`(feat: 위젯 관리 서버를 둘째 설치 묶음으로 세우고 위젯 설정 읽는 경로를 더한다 (widget-admin-server 01)) 하나이고 아직 푸시하지 않았다. 작업 트리는 깨끗하다. 첫 커밋 시도는 pre-commit의 `mutation tables`가 `.scratch/harness/probes/instruction_check_mutations.toml`의 원문을 막았고(위 "한 일"의 마지막 항목), 고친 뒤 두 번째 시도가 통과했다.
+- 셀프 리뷰(위 `## 셀프 리뷰(/code-review)`)는 Critical·Major 0이고 Minor는 고쳤다. 회고(`## 회고`)는 앞선 세션에서 이미 돌았다.
+- 남은 일은 순서대로 셋이다. (1) 푸시 전에 `origin/dev`를 이 브랜치에 병합한다. 지금 `origin/dev`는 `6b0646e`이고 이 브랜치의 기준은 `3ba468f7a`라 뒤처졌다(`uv run python tools/sibling_overlap.py`는 번호 겹침 없음, 헌법 판은 형제의 가장 높은 판 3.1.5보다 높은 3.1.6이다). 병합으로 파일 충돌이 나면 `.scratch/plan.md`는 `uv run python tools/plan_table.py`로 다시 만든다. (2) `/git-pr`로 PR을 연다. 제목에 느낌표를 붙이지 않는다(`PRODUCT_PATHS`에 `widget-admin`을 더했지만 올릴 때 운영자가 손댈 것은 없다). (3) 병합은 `.claude/skills/next-session/merge.md`를 Read로 열어 따른다("워크트리에서 병합할 때" 포함).
+- PR의 CI가 돈 뒤 이 일지 끝에 CI `python` 잡의 시간과 pytest 단계의 시간, CI의 uv 판을 적고 티켓의 미체크 두 항목을 채운다(제한 25분, 앞의 성공 40회 최대 15.0분). 그 채우기는 PR에 커밋으로 싣는다.
+- 셀프 리뷰가 새로 쓴 사실 문장(PR 직전 `bug-perf-review`가 겨낼 몫)은 위 `## 셀프 리뷰(/code-review)`의 "고친 것" 목록에 원문의 요지로 있다.
+- 전체 검사(`uv run python tools/run_checks.py`)는 앞선 세션이 한 바퀴 돌았고(pytest 한 시험만 빨강이었고 고쳤다), 이 세션은 셀프 리뷰를 고친 뒤 위젯 관리 시험 221개, ruff 둘, pyright 0 오류, `check_instructions`만 다시 돌렸다. 나머지는 커밋의 pre-commit이 돌려 통과했다. 이 PR 안에서 카나리아 다섯(`tests_rule_*`)도 돌려 모두 통과 4였다.
 
 ## 다음
 
@@ -108,3 +109,4 @@
 - 03이 `create_app`에 더할 가장 바깥 미들웨어(데이터베이스 확인)의 자리는 `.claude/rules/widget-admin.md`와 명세 "응답 머리"의 끝 항목이 적은 대로다.
 
 open-session을 부른다 2026-11-25T06:00Z
+open-session을 부른다 2026-11-25T06:43Z
