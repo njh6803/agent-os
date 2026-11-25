@@ -25,6 +25,20 @@ PR #634(`feature/05-admin-e2e-scene-for-connection-check`)가 병합되면서 �
 - 고친 것: 티켓에 `**대기열:** 없음`을 더했다. 단락 괄호를 "다른 탭을 보거나 창을 내린 동안에는"으로 넓혔다. 티켓 셋째 칸에 "커밋 때 돈다, 결과는 PR 본문에 적는다"를 적었다. 대기열 항목의 "처음이다"에 열린 항목 기준임을 달았다.
 - 남긴 것: 명세·계획·ADR의 "열려 있는 동안"은 모순이 아니고 이 티켓의 요구도 아니라 그대로 둔다.
 
+## 커밋과 PR 직전 리뷰(이 세션, 제목은 이 브랜치 이름)
+
+- 사용자 프롬프트(이 세션의 시작 지시문): `/implement .scratch/harness/issues/connection-check-feature-paragraph-visible-tab.md`, 이번 요청 범위는 "PR과 병합까지(병합 뒤 출시 PR은 결정표대로)"다.
+- `tidy-checkouts`를 돌았다. 루트를 `2f474ec4b`에서 `b4ee2eeb`로 당겼고(fast-forward), 로컬 브랜치 `feature/05-admin-e2e-scene-for-connection-check`와 `worktree-admin-login-tickets`를 지웠다. 나머지 워크트리는 쥔 프로세스나 바뀐 파일이 있어 남겼다(`tools/tidy_checkouts.py judge`의 출력).
+- 커밋 `d975c9566`(제목 72자 제한 때문에 한 번 고쳐 쳤다. commit-msg 훅이 pre-commit 전에 막아 줬다). pre-commit이 765.22초에 통과했다(출력의 숫자: pytest 558.0초, web-verify 763.6초, pyright 48.0초). 같은 때 나란히 돈 다른 세션의 부하는 재지 않았다. 인용 대조 경고 셋은 옛 문구와 일지의 요약을 따옴표로 적은 것이라 막지 않는 경고다.
+- PR 직전 `coderabbit-review` 서브에이전트: CLI 0.7.5, `Seat: not assigned`였지만 `review_completed`까지 돌아 CLI 축이다. `findings: 0`(서브에이전트 보고의 문장이고 이 세션이 CLI를 직접 돌리지는 않았다).
+- 브랜치를 푸시하고 PR #638을 열었다(제목 `docs: 접속 확인 기능 단락이 보이는 탭에서만 도는 것을 말하게 고친다`, 느낌표 없음, base dev).
+
+## 인계(PR 연 뒤)
+
+컨텍스트가 인계 문턱을 넘은 채 `PR 연 뒤`에 왔다. 이 세션이 한 것은 위 절 그대로다. 하지 않은 것: 첫 `@coderabbitai review` 코멘트, 봇 회차, 병합, 출시 PR. 아직 커밋하지 않은 변경은 이 일지의 이 절뿐이다. 새 세션이 `merge.md` 2(봇 회차)부터 하고, 이 일지에 이어 쓴다. 그때 `docs-only-commit-precommit-slow-again`의 23회차로 이번 커밋의 765.22초(pytest 558.0초, web-verify 763.6초)를 더할지 본다. 더하면 봇 회차 반영 커밋이나 이 일지의 커밋과 한 커밋으로 싣는다(문서만 바꾼 커밋이 pre-commit을 13분 돌므로 커밋을 따로 늘리지 않는다).
+
+open-session을 부른다 2026-11-25T03:31Z (PR 연 뒤 인계. 제목은 `<브랜치> (인계함)`으로 바꿨고, 잠금은 이미 풀려 있었다)
+
 ## 인계(셀프 리뷰 직전)
 
 이 세션의 제목은 `feature/05-admin-e2e-scene-for-connection-check`였고(PR #634를 병합한 세션이다), 컨텍스트가 인계 문턱을 넘은 채 `셀프 리뷰 직전`에 왔다. 이 세션이 한 것: 새 브랜치를 `origin/dev`(`b4ee2ee`)에서 딴 것, 기능 단락 한 문장 수정, harness 티켓 작성(`Status: done`), 이 일지, 회고(`## 회고`), 대기열 항목 하나 신설과 하나 회차 더하기. 커밋하지 않았고 푸시하지 않았다. 셀프 리뷰는 `code-review` 스킬을 불러 지시문만 읽었고 서브에이전트 둘은 띄우지 않았다. 새 세션이 `/code-review`의 4단계부터 하고 커밋·푸시·PR·봇 회차·병합을 잇는다. 병합 뒤 결정표의 출시 PR 줄이 맞으면 출시 PR을 연다(사용자가 출시 전에 문구를 고치기를 골랐다).
@@ -39,6 +53,13 @@ open-session을 부른다 2026-11-25T03:02Z
 
 - 기능 단락을 기능 계획의 값(30초)과 배포 안내의 소절 이름에만 대고 명세의 "보이지 않는 탭에서 멈춘다"를 대지 않아 CodeRabbit이 짚은 사건. 판정은 승인이다. 사건은 위 PR #634이고, 층은 지침이다(글이 명세와 맞는지는 낱말로 가를 수 없어 검사로 옮기지 못한다). 되돌림은 PR 하나다. 같은 일을 다룬 항목을 `tools/queue_open_rows.py --search 기능.단락 --search release-notes/features`로 찾았으나 없어 새 항목 `feature-paragraph-checked-against-plan-not-spec`을 1회차로 썼다. 더하는 것이라 다섯 번째 전에는 반영하지 않는다.
 - 일지 한 파일만 바꾼 커밋의 pre-commit이 둘째 시도에서 pytest 1171초가 걸리고 앞 두 시도가 시간 제한 시험에 막힌 사건(2026-11-24-2140 일지 178행). 판정은 승인이고 열린 `docs-only-commit-precommit-slow-again`에 22회차로 더했다. 막대별 시간과 나란히 돈 세션의 부하는 그 일지가 적지 않았다. 이번 문구 고침 커밋의 pre-commit 시간은 커밋 뒤 이 항목에 더할지 본다.
+
+## 봇 회차와 병합(이어받은 세션)
+
+- 이 세션은 인계받아 워크트리에 들어가 `merge.md`의 2부터 했다. 푸시 뒤 `@coderabbitai review` 코멘트를 남겼고(#issuecomment-7151924408), `tools/wait_ci.py 638`이 헤드 `d975c95`에서 `끝: 모두 통과. CodeRabbit: Finished`로 끝났다. 검사 열두 줄 모두 SUCCESS, `llm`만 SKIPPED다.
+- CodeRabbit 첫 회차의 요약 코멘트가 `No actionable comments were generated in the recent review`라고 적었고 인라인 지적은 0건이다. 반영할 것도 뒤로 넘긴 일도 없다.
+- 이 PR의 변경 경로는 문서·티켓·대기열뿐이라 로컬 모델 시험(`merge.md` 3)은 범위 밖이어서 건너뛴다.
+- `docs-only-commit-precommit-slow-again`에 23회차로 이번 커밋의 765.22초(pytest 558.0초, web-verify 763.6초)를 더했다. 이 일지와 같은 커밋으로 싣는다.
 
 ## 다음
 
