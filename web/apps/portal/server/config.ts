@@ -20,7 +20,7 @@ import { noticeText } from "./notice.ts";
 
 // 바인딩을 허용하는 주소 전부. 순서가 진단의 문장이 된다. 같은 목록과 같은 예외를 `serve`(`src/agent_os/main.py` 의
 // `LOOPBACK_HOSTS`), 관리 화면(`web/apps/admin/tools/loopback.ts`), 위젯(`web/apps/widget/tools/start.ts`)이 따로 든다.
-// 앱 사이 import 는 층 경계가 막아, 바꾸면 넷을 함께 고치고 같은 판정을 내는지는 사례 표
+// 앱 사이 import 는 층 경계가 막아, 바꾸면 다섯을 함께 고치고 같은 판정을 내는지는 사례 표
 // (`tests/fixtures/container_network/cases.json`)가 잠근다.
 const LOOPBACK_HOSTS: readonly string[] = ["127.0.0.1", "::1"];
 const DEFAULT_HOST = "127.0.0.1";

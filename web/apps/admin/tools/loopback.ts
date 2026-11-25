@@ -8,7 +8,7 @@
  *
  * 규칙은 `serve` 와 같다(`src/agent_os/main.py` 의 `LOOPBACK_HOSTS`). 위젯의 시작 래퍼(`web/apps/widget/tools/start.ts`)
  * 와 위젯 미리보기 페이지의 설정 읽기(`web/apps/portal/server/config.ts`)도 같은 목록과 같은 예외를 따로 든다. 앱 사이 import 는
- * 층 경계가 막아, 바꾸면 넷을 함께 고치고 같은 판정을 내는지는 사례 표가 잠근다(web-widget 티켓 03, pilot-portal 티켓 04,
+ * 층 경계가 막아, 바꾸면 다섯을 함께 고치고 같은 판정을 내는지는 사례 표가 잠근다(web-widget 티켓 03, pilot-portal 티켓 04,
  * release-image 티켓 03). 컨테이너 네트워크 예외는 아래 `ContainerNetwork` 가 설명한다.
  * 허용 목록은 둘이고 문자열 그대로 비교한다.
  * `localhost` 는 `::1` 로도 풀릴 수 있어 루프백이라는 보장이 없다. 상류는 URL 파서가 먼저 정규화한 호스트를
@@ -39,7 +39,7 @@ const UPSTREAM_HOST = "127.0.0.1";
  * 굽고(앱 사용자는 만들 수 없고 개발 PC 에는 그 경로가 없다) "이미지 안에서만"을, compose 가 주는 환경 변수 `=1` 이
  * "명시적"을 맡는다. 켜지면 듣는 주소로 `0.0.0.0` 하나가, 상류의 호스트로 compose 의 서비스 이름 `serve` 하나가 늘 뿐이다.
  * 같은 규칙을 `serve`, 위젯, 위젯 미리보기 페이지가 따로 들고, 사례 표(`tests/fixtures/container_network/cases.json`)가
- * 넷이 같은 판정을 내는지 잠근다.
+ * 다섯이 같은 판정을 내는지 잠근다.
  */
 export const IMAGE_MARKER = "/etc/agent-os/image";
 export const CONTAINER_NETWORK_ENV = "AGENT_OS_CONTAINER_NETWORK";

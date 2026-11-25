@@ -20,9 +20,10 @@
  *
  * 공유 자리로 옮기지 않고 위젯이 자기 래퍼를 둔다(web-widget 티켓 03 이 정했다). 관리 화면의 래퍼(apps/admin/tools)를
  * 옮기면 관리 화면의 e2e 와 시험까지 고치게 되고, 위젯의 래퍼는 빌드도 맡아 하는 일이 다르다. 대가로 루프백 목록이
- * 네 벌이 된다(`serve` 의 `src/agent_os/main.py` 의 `LOOPBACK_HOSTS`, 관리 화면의 `tools/loopback.ts`, 이 파일,
- * 위젯 미리보기 페이지의 `web/apps/portal/server/config.ts`). 앱 사이 import 는 층 경계가 막는다. 목록과 이미지 안의 예외(아래 `ContainerNetwork`)를 바꾸면
- * 넷을 함께 고치고, 예외의 판정은 사례 표 `tests/fixtures/container_network/cases.json` 이 넷을 잠근다.
+ * 다섯 벌이 된다(`serve` 의 `src/agent_os/main.py` 의 `LOOPBACK_HOSTS`, 관리 화면의 `tools/loopback.ts`, 이 파일,
+ * 위젯 미리보기 페이지의 `web/apps/portal/server/config.ts`, 위젯 관리 서버의
+ * `widget-admin/src/widget_admin/main.py`). 앱 사이 import 는 층 경계가 막는다. 목록과 이미지 안의 예외(아래 `ContainerNetwork`)를 바꾸면
+ * 다섯을 함께 고치고, 예외의 판정은 사례 표 `tests/fixtures/container_network/cases.json` 이 다섯을 잠근다.
  *
  * 판정을 지나면 next CLI 를 이 프로세스에서 부른다. 신호와 종료 코드가 next 의 것 그대로다(관리 화면의 래퍼와 같다).
  *
@@ -93,7 +94,7 @@ export function nextCommand(
  * 루프백 규칙의 예외를 켜는 두 입력(ADR 0056 결정 "루프백 규칙의 예외"). 둘이 함께 있을 때만 켜지고, 켜지면 듣는 주소로
  * `0.0.0.0` 하나가 늘 뿐이다. 판정은 이 값만 보고 파일도 환경도 읽지 않는다. `env` 가 undefined 이면 환경 변수가 없다.
  * 같은 규칙을 `serve`, 관리 화면, 위젯 미리보기 페이지가 따로 들고, 사례 표(`tests/fixtures/container_network/cases.json`)가
- * 넷이 같은 판정을 내는지 잠근다. 환경 변수 `HOSTNAME` 으로는 받지 않는다(Docker 가 그 변수에 컨테이너 ID 를 넣는다).
+ * 다섯이 같은 판정을 내는지 잠근다. 환경 변수 `HOSTNAME` 으로는 받지 않는다(Docker 가 그 변수에 컨테이너 ID 를 넣는다).
  */
 export interface ContainerNetwork {
   readonly imageMarker: boolean;

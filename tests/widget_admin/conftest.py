@@ -13,6 +13,7 @@
 
 from __future__ import annotations
 
+import asyncio
 from collections.abc import AsyncIterator
 
 import pytest_asyncio
@@ -21,6 +22,7 @@ from tests.database import (
     database_template_fixture,
     empty_database_fixture,
 )
+from tests.widget_admin.support import database_url
 from tools.database_for_tests import ScopedDatabase
 
 from widget_admin.database import WidgetAdminDatabase
@@ -28,13 +30,23 @@ from widget_admin.database import WidgetAdminDatabase
 DATABASE_PREFIX = "widget_admin"
 
 
+def _ignore(_message: str) -> None:
+    """다시 시도한다는 알림을 버린다. 이 폴더의 대부분의 시험은 닿는 서버를 상대로 한다."""
+
+
+def _open(url_text: str) -> WidgetAdminDatabase:
+    return WidgetAdminDatabase(database_url(url_text), notice=_ignore)
+
+
 async def _migrate_product(url_text: str) -> None:
     """위젯 쪽 제품 마이그레이션 폴더를 템플릿 데이터베이스에 올린다. 멈추면 예외를 던진다."""
-    database = WidgetAdminDatabase(url_text)
+    database = _open(url_text)
     try:
-        await database.migrate()
+        result = await database.migrate()
     finally:
         await database.close()
+    if not result.ok:
+        raise RuntimeError(result.message)
 
 
 database_template = database_template_fixture(DATABASE_PREFIX, _migrate_product)
@@ -45,7 +57,7 @@ empty_database = empty_database_fixture(DATABASE_PREFIX)
 @pytest_asyncio.fixture
 async def opened(database: ScopedDatabase) -> AsyncIterator[WidgetAdminDatabase]:
     """표가 마지막 판까지 올라간 데이터베이스에 연 객체. 시험이 끝나면 닫는다."""
-    opened_database = WidgetAdminDatabase(database.text())
+    opened_database = _open(database.text())
     try:
         yield opened_database
     finally:
@@ -53,9 +65,29 @@ async def opened(database: ScopedDatabase) -> AsyncIterator[WidgetAdminDatabase]
 
 
 @pytest_asyncio.fixture
+async def silent_port() -> AsyncIterator[int]:
+    """접속은 받되 아무 말도 하지 않는 빈 TCP 서버의 포트."""
+    writers: list[asyncio.StreamWriter] = []
+
+    async def hold(reader: asyncio.StreamReader, writer: asyncio.StreamWriter) -> None:
+        writers.append(writer)
+        await reader.read()
+
+    server = await asyncio.start_server(hold, "127.0.0.1", 0)
+    port = int(server.sockets[0].getsockname()[1])
+    try:
+        yield port
+    finally:
+        server.close()
+        for writer in writers:
+            writer.close()
+        await server.wait_closed()
+
+
+@pytest_asyncio.fixture
 async def opened_on_empty(empty_database: ScopedDatabase) -> AsyncIterator[WidgetAdminDatabase]:
     """표가 하나도 없는 빈 데이터베이스에 연 객체. 질의는 모두 실패한다."""
-    opened_database = WidgetAdminDatabase(empty_database.text())
+    opened_database = _open(empty_database.text())
     try:
         yield opened_database
     finally:

@@ -1491,7 +1491,7 @@ def test_사례_표는_판정의_종류를_모두_갖고_있다() -> None:
 def test_듣는_주소의_판정이_사례_표와_같다(
     *, marker: bool, env: str | None, host: str, verdict: str
 ) -> None:
-    """네 프로세스가 같은 규칙을 따로 들어서, 이 표를 TS 시험도 읽는다(release-image 티켓 03)."""
+    """다섯 프로세스가 같은 규칙을 따로 들어서, 이 표를 TS 시험도 읽는다(release-image 티켓 03)."""
     found = binding_problem(host, "8000", ContainerNetwork(image_marker=marker, env=env))
 
     if verdict == "ok":

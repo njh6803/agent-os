@@ -4,10 +4,11 @@
 데이터베이스를 고정해 시험이 시험마다 다른 데이터베이스를 쓰지 못하게 하고, 내보내기 도구가 앱을
 짓는 것만으로 데이터베이스에 닿게 된다. 데이터베이스 객체는 기본값 없는 인자로 받는다.
 
-**미들웨어는 바깥에서 안쪽으로 `AssignRequestId` → 응답 머리 → `CatchUnexpected` → 라우터다.**
-추적 식별자를 심는 것이 가장 바깥이라 모든 응답이 같은 식별자를 든다. 머리를 다는 자리가
-`CatchUnexpected` 보다 바깥이라 핸들러가 놓친 예외의 500에도 머리가 붙는다. 데이터베이스 확인
-(티켓 03)은 그보다 더 바깥에 선다. 머리를 달아야 하는 경로는 경로로 가르고, 그 비교는 `is_under`
+**미들웨어는 바깥에서 안쪽으로 `CheckDatabase` → `AssignRequestId` → 응답 머리 →
+`CatchUnexpected` → 라우터다.** 데이터베이스 확인(`widget_admin.lifespan`)은 수명 메시지만 만지고
+요청은 그대로 지나보내므로 머리 이야기에 끼지 않는다. 추적 식별자를 심는 것이 요청에서는 가장
+바깥이라 모든 응답이 같은 식별자를 든다. 머리를 다는 자리가 `CatchUnexpected` 보다 바깥이라 핸들러가
+놓친 예외의 500에도 머리가 붙는다. 머리를 달아야 하는 경로는 경로로 가르고, 그 비교는 `is_under`
 하나다.
 
 **읽는 경로의 갈래는 넷이다.** 등록된 이름은 200, 등록되지 않은 이름과 꼴이 틀린 이름은 글자까지
@@ -36,6 +37,7 @@ from widget_admin.errors import (
     ErrorEnvelope,
     install_error_handlers,
 )
+from widget_admin.lifespan import CheckDatabase
 from widget_admin.paths import is_under
 from widget_admin.settings import WidgetSettings, is_site_name
 
@@ -130,8 +132,9 @@ def create_app(*, database: WidgetAdminDatabase, stderr: TextIO) -> FastAPI:
     )
     install_error_handlers(app)
     app.include_router(_router(database))
-    # 나중에 건 것이 바깥이다. 안쪽에서 바깥으로 변환, 머리, 식별자 순이다.
+    # 나중에 건 것이 바깥이다. 안쪽에서 바깥으로 변환, 머리, 식별자, 데이터베이스 확인 순이다.
     app.add_middleware(CatchUnexpected)
     app.add_middleware(_OpenHeaders)
     app.add_middleware(AssignRequestId, stderr=stderr)
+    app.add_middleware(CheckDatabase, database=database)
     return app

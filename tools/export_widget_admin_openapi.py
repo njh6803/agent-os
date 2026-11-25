@@ -17,13 +17,17 @@ import io
 import json
 from pathlib import Path
 
-from widget_admin.database import WidgetAdminDatabase
+from widget_admin.database import WidgetAdminDatabase, parse_database_url
 from widget_admin.server import create_app
 
 ROOT = Path(__file__).resolve().parent.parent
 OPENAPI_PATH = ROOT / "widget-admin" / "openapi.json"
 
 _PLACEHOLDER_URL = "postgresql://openapi-export-only:unused@127.0.0.1:1/unused"
+
+
+def _ignore(_message: str) -> None:
+    """닿지 못해 기다린다는 알림을 받는 자리. 이 도구는 닿지 않으므로 알림이 오지 않는다."""
 
 
 def document() -> str:
@@ -33,7 +37,10 @@ def document() -> str:
     필드를 더하는 자리에 따라 파일 전체가 흔들린다. ASCII 로 이스케이프하지 않는 이유는 한국어
     설명이 그대로 읽혀야 하기 때문이고, 파일은 UTF-8 이다.
     """
-    database = WidgetAdminDatabase(_PLACEHOLDER_URL)
+    url = parse_database_url(_PLACEHOLDER_URL)
+    if url is None:
+        raise SystemExit("내보내기 도구의 자리 주소를 읽지 못했다")
+    database = WidgetAdminDatabase(url, notice=_ignore)
     app = create_app(database=database, stderr=io.StringIO())
     return json.dumps(app.openapi(), indent=2, ensure_ascii=False, sort_keys=True) + "\n"
 
