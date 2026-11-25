@@ -22,8 +22,9 @@ from types import TracebackType
 from typing import Self
 
 from agent_os.adapters.postgres.account_work import PgWork
-from agent_os.adapters.postgres.accounts import Row
 from sqlalchemy.ext.asyncio import AsyncConnection, AsyncEngine
+
+from agent_os.adapters.postgres.accounts import Row
 
 
 class NoDecoratorTransactions:

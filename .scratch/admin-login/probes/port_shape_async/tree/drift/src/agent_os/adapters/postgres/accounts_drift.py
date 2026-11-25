@@ -17,6 +17,9 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Literal
 
+from agent_os.core.conflicts import NameTaken
+from sqlalchemy.ext.asyncio import AsyncEngine
+
 from agent_os.adapters.postgres.accounts import (
     Incoming,
     Row,
@@ -26,8 +29,6 @@ from agent_os.adapters.postgres.accounts import (
     insert_row,
     list_rows,
 )
-from agent_os.core.conflicts import NameTaken
-from sqlalchemy.ext.asyncio import AsyncEngine
 
 
 @dataclass(frozen=True, slots=True)

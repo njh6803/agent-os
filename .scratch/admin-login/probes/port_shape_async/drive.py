@@ -123,13 +123,13 @@ async def scenario(run: Callable[[str, str], Awaitable[object]], url_text: str, 
 
 
 async def detail(url_text: str) -> None:
-    from agent_os.adapters.postgres.accounts import PostgresAccounts, accounts
     from agent_os.core.conflicts import NameTaken
-    from agent_os.http.accounts import Draft
     from sqlalchemy import insert
     from sqlalchemy.exc import IntegrityError
 
+    from agent_os.adapters.postgres.accounts import PostgresAccounts, accounts
     from agent_os.adapters.postgres.database import PostgresDatabase, parse_database_url
+    from agent_os.http.accounts import Draft
 
     url = parse_database_url(url_text)
     if url is None:
@@ -196,9 +196,8 @@ async def detail(url_text: str) -> None:
 async def seeded(database: object, prefix: str) -> str:
     """실패 0번인 계정 하나를 넣고 그 이름을 돌려준다."""
     from agent_os.adapters.postgres.accounts import PostgresAccounts
-    from agent_os.http.accounts import Draft
-
     from agent_os.adapters.postgres.database import PostgresDatabase
+    from agent_os.http.accounts import Draft
 
     if not isinstance(database, PostgresDatabase):
         raise TypeError("데이터베이스 어댑터가 아니다")
