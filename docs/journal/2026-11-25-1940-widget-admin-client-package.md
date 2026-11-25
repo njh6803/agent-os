@@ -87,3 +87,31 @@
 open-session을 부른다 2026-11-25T10:41Z
 
 open-session을 부른다 2026-11-25T12:51Z
+
+## 회고
+
+후보 다섯, 판정은 승인 0·넘김 0·기각 5다. 사용자에게 넘긴 것이 없고 대기열에 더하거나 이은 항목이 없다. 근거의 종류: 대기열 항목은 이 세션이 `uv run python tools/queue_open_rows.py --search test_interrupt --search test_rerun_runner --search 부하`의 출력과 `0306`·`0332`·`0531`의 상태 줄을 Grep으로 읽은 것이다. 나머지 사건은 위 일지의 앞 절들과 이 세션의 도구 결과에서 옮겼다.
+
+1. 부하에서 흔들린 시간 시험(`tests/channel/cli/test_interrupt.py`, `tests/tools/test_rerun_runner.py`)이 전체 실행과 둘째 커밋 시도의 pre-commit을 빨갛게 했고 단독으로는 통과했다. 기각이다. 0306이 "부하에서 시간 시험이 빨개지면 그 커밋을 다시 치는 값을 받아들이고 새 사례는 일지에만 적는다"로 닫혀 있다(0306의 상태 줄). 이 PR의 CI `python` 잡은 같은 머리에서 `success`였다(위 "CI 기록").
+2. 변이 표를 겨누던 코드(`web/tools/generate-api-client.ts`)를 넓히고도 `tools/mutate.py --check`를 커밋 전에 치지 않아 pre-commit의 `mutation tables` 검사가 빨갰다. 기각이다. 이미 있는 검사가 그 자리에서 잡았고, 같은 규칙이 `implement` 스킬과 작업 규약 3에 적혀 있다.
+3. 이 세션이 `git fetch`와 `git show`와 `grep`을 한 명령에 이어 쳤다가 워크트리 가드에 거부당했다. 기각이다. 가드가 막았고 `CLAUDE.md` 환경 함정이 그 모양을 적고 있어(0122는 닫힘), 나눠 다시 쳐 지나갔다.
+4. CodeRabbit이 티켓의 "검증 명령이 모두 초록이다" 체크를 단독 재실행에 기대 완료로 표시했다고 짚었다(Minor). 기각이다. 리뷰가 제 몫을 한 사건이라 회차로 세지 않고(retro 4단계), 짚은 CI `python` 잡은 이제 `success`다.
+5. 문서만 바꾼 커밋의 pre-commit이 길다는 열린 항목(`docs-only-commit-precommit-slow-again`)에 회차를 더할지 봤다. 기각이다. 이 세션이 두 일지 커밋의 걸린 시간을 재지 않았으므로 새 사건으로 세지 않는다.
+
+만료: `uv run python tools/queue_open_rows.py --ref origin/dev`가 "만료할 항목: (없음)"을 냈다(출력을 읽었다). 닫을 항목이 없다.
+
+## 다음
+
+- 03(`.scratch/widget-admin-server/issues/03-widget-admin-commands-and-startup-check.md`)이 `ready-for-agent`이고 04(`04-standalone-compose-adds-widget-admin.md`)는 03에 막혀 있다. 이 PR을 병합할 때 `git fetch origin` 뒤 `origin/dev`에서 둘의 `Status:`를 읽었다(`git show origin/dev:./<경로>`로 손으로 봤다).
+- 이 티켓이 뒤로 넘긴 일은 없다. 다만 `createPublicClient`가 `baseUrl.href`를 그대로 넘기는 점(위 "PR 직전 리뷰")은 이 팩토리를 처음 부르는 기능(위젯의 widget-login-state, 위젯 관리 화면과 위젯 테스트 페이지의 portal-admin)이 호출부를 만들 때 본다.
+- 이 티켓은 기능 `widget-admin-server`의 마지막 티켓이 아니다. 04가 늦게 병합되는 쪽이면 04가 끝 줄과 기능 단락을 싣는다(02 티켓의 "마지막 티켓이면" 절).
+
+## CI 기록(PR 643, 머리 `5c381df`)
+
+- 실행 45626144092(`pull_request`)가 `success`다. `gh run list --branch feature/02-widget-admin-client-package --workflow ci.yml`과 `gh run view 45626144092 --json jobs`의 출력을 손으로 읽었다.
+- `python` 잡은 13:41:26에서 13:56:51까지 15분 25초이고 `success`다. 검사 열세 가운데 `llm`만 건너뜀이고 나머지 열둘(`CodeRabbit`, `claude-review`, `e2e`, `e2e-portal`, `e2e-standalone`, `e2e-widget`, `python`, `ticket`, `title`, `verify`, `visual`, `web`)은 통과다(`tools/wait_ci.py 643`의 출력).
+
+## PR 봇 회차
+
+- claude-review: 지적 없음. 첫 회차다.
+- CodeRabbit: 첫 회차에 Minor 한 건(티켓의 "`CLAUDE.md`의 검증 명령이 모두 초록이다" 체크를 단독 재실행에 기대 완료로 표시했다는 지적, 그 자리의 `python` CI 잡이 그때 끝나지 않았다는 근거가 붙었다). 고치지 않고 닫았다. 근거: 지적이 말한 "아직 끝나지 않은 `python` 잡"이 이제 머리 `5c381df`에서 `success`다(위 CI 기록). 그 잡은 전체 pytest를 돈다. 러너 한 바퀴의 1개 실패는 같은 시험의 단독 통과와 이 CI 통과로 시간 흔들림 쪽으로 기운다. 이유는 PR 코멘트에도 남겼다.
