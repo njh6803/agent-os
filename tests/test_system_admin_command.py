@@ -14,10 +14,12 @@ from __future__ import annotations
 import asyncio
 import io
 import sys
+import warnings
 from collections.abc import AsyncGenerator, Callable, Coroutine, Sequence
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
+from getpass import GetPassWarning
 
 import pytest
 from argon2 import PasswordHasher
@@ -29,6 +31,7 @@ from agent_os import main as main_module
 from agent_os.adapters.postgres.accounts import PostgresAccounts
 from agent_os.adapters.postgres.database import DatabaseUrl, PostgresDatabase
 from agent_os.channel.cli.operator import (
+    CANNOT_HIDE_TEXT,
     CONFIRM_PROMPT,
     NO_PASSWORD_TEXT,
     NOT_UTF8_TEXT,
@@ -480,8 +483,9 @@ class _RacingWork:
     """처음 읽을 때는 시스템 관리자가 없고 넣기는 늘 `"taken"` 이다. 이긴 쪽이 있으면 다시 읽을 때
     보인다."""
 
-    def __init__(self, winner: str | None) -> None:
+    def __init__(self, winner: str | None, *, existing: AccountRow | None = None) -> None:
         self._winner = winner
+        self._existing = existing
         self.reads = 0
         self.adds = 0
         self.written: list[str] = []
@@ -493,7 +497,7 @@ class _RacingWork:
         return _Row(self._winner)
 
     async def lock(self, name: str) -> AccountRow | None:
-        return None
+        return self._existing
 
     async def add(self, account: NewAccount) -> AccountRow | Taken:
         self.adds += 1
@@ -531,6 +535,22 @@ async def test_넣기가_taken이면_다시_읽어_이긴_쪽이_다른_이름�
     assert (work.reads, work.adds, work.written) == (2, 1, [])
 
 
+async def test_두_조회_사이에_시스템_관리자가_생기면_다시_읽어_재설정한다() -> None:
+    # 시스템 관리자 조회는 비었는데 이름 조회가 시스템 관리자 줄을 돌려준 경합. 관리자 단계로 읽으면
+    # 안 된다
+    work = _RacingWork(winner="root-one", existing=_Row("root-one"))
+    store: AccountStore = _RacingStore(work)
+    out, err = io.StringIO(), io.StringIO()
+    code = await system_admin_command(
+        "root-one", "$argon2id$stored", accounts=store, clock=_FixedClock(), stdout=out, stderr=err
+    )
+    assert code == 0
+    assert "다시 정했습니다" in out.getvalue()
+    assert err.getvalue() == ""
+    assert (work.reads, work.adds) == (2, 0)
+    assert work.written == ["reset_password", "end_logins", "record"]
+
+
 async def test_두_번_다_막히면_세_번째를_시도하지_않고_예외로_끝난다() -> None:
     work = _RacingWork(winner=None)
     store: AccountStore = _RacingStore(work)
@@ -544,6 +564,20 @@ async def test_두_번_다_막히면_세_번째를_시도하지_않고_예외로
             stderr=io.StringIO(),
         )
     assert (work.reads, work.adds) == (2, 2)
+
+
+def test_터미널이_글자를_숨기지_못하면_입력을_받기_전에_멈춘다() -> None:
+    asked: list[str] = []
+
+    def ask(prompt: str) -> str:
+        asked.append(prompt)
+        # 터미널을 다루지 못할 때 getpass 의 대체 길이 내는 것과 같은 경고
+        warnings.warn("Can not control echo on the terminal.", GetPassWarning, stacklevel=2)
+        return PASSWORD
+
+    refused = password_hash_of(_Stdin("", tty=True), ask)
+    assert refused == Refused(CANNOT_HIDE_TEXT)
+    assert asked == [PASSWORD_PROMPT]
 
 
 def test_비밀번호_입력은_터미널이_아니면_첫_줄만_읽는다() -> None:

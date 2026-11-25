@@ -92,6 +92,19 @@
 > 선택지: 돌린다(`--yes`로 실행합니다. 파드는 타이머가 90분 뒤 지웁니다. 단가는 웹 요약 값이라 원문과 다를 수 있습니다) / 이번에는 건너뛴다(시험 없이 진행하고 PR 본문에 돌리지 않았다고 적습니다)
 > 사용자: 돌린다 (Recommended)
 
+## PR 직전 리뷰(CodeRabbit CLI, `coderabbit-review` 서브에이전트)
+
+CLI 0.7.5가 `review_completed`로 끝까지 돌았다(`Seat: not assigned`, `Plan: Free`에서도 돌았다. 서브에이전트 보고에서 읽음). 범위는 `--committed --base origin/dev`, 파일 48개. 지적 3건 모두 유효, 오탐 0. 판정은 서브에이전트가 내고 본 세션이 코드를 열어 다시 확인한 뒤 고쳤다.
+
+- **고침 10(Major): `_decide`가 이름 조회가 돌려준 줄의 `tier`를 보지 않았다.** `lock_system_admin()`이 비었다는 이유만으로 그 뒤 줄을 모두 관리자 단계로 거절했다(`operator.py`). READ COMMITTED에서 두 조회 사이에 같은 이름의 시스템 관리자가 커밋되면 재설정해야 하는데 1로 끝난다(데이터는 상하지 않고 같은 명령을 다시 치면 풀린다). `existing.tier == "admin"`일 때만 `_AdminTier`로 끝내고 아니면 다음 바퀴로 돌게 했다. 시험 `test_두_조회_사이에_시스템_관리자가_생기면_다시_읽어_재설정한다`를 더했다. `_RacingWork.lock`이 늘 `None`을 돌려주던 픽스처가 이 갈래를 건드리지 못했던 것이 빈틈이었다(`existing` 인자를 더했다). 변이로 `tier` 검사를 시스템 관리자까지 거절하게 바꾸면 `assert 1 == 0`으로 빨개지는 것을 봤다.
+- **고침 11(Minor, CLI는 Major): 터미널이 글자를 숨기지 못하면 `getpass`가 경고만 내고 보이는 입력으로 받는다.** 서브에이전트가 이 저장소의 파이썬 3.12.10 `getpass.unix_getpass` 소스를 열어 `termios.error`가 `fallback_getpass`(경고 `GetPassWarning` 뒤 에코가 켜진 입력)로 가는 것을 확인했다. 드문 환경(`stdin.isatty()`는 참인데 termios 제어가 실패하는 pty)이고 화면을 보는 사람에게만 보이지만 고치는 값이 작아 고쳤다. 두 `ask`를 `warnings.catch_warnings()` 안에서 `simplefilter("error", GetPassWarning)`로 감싸고, 경고가 오류가 되면 `CANNOT_HIDE_TEXT`로 입력을 받기 전에 멈춘다. 시험은 `warnings.warn(..., GetPassWarning)`을 진짜로 내는 가짜 `ask`를 써서 필터가 경고를 오류로 바꾸는 길까지 본다. 필터를 `"ignore"`로 바꾼 변이에서 해시가 나와 빨개지는 것을 봤다.
+- **고침 12(Minor, CLI는 Major): 업그레이드 노트 1번에 판 번호를 바꾸라는 말이 없었다.** `deploy/standalone/compose.yaml`의 이미지가 `${AGENT_OS_VERSION}`으로 정해져(파일에서 읽음) `.env`의 그 줄을 바꾸지 않으면 새 판이 뜨지 않는다. `standalone-postgres.md` 3번처럼 "`.env`의 `AGENT_OS_VERSION`을 새 판 번호로 바꾸고 …"로 고쳤다.
+
+남긴 것과 이유(서브에이전트가 코드를 읽고 더한 보류 둘, 본 세션이 명세와 대 봤다).
+
+- 계정 이름이 소문자인지 보는 CHECK를 `0002`에 넣지 않았다. 이름 규칙의 소문자 접기는 명세가 `http`의 함수(`fold_account_name`)에 두라고 적었고(`spec.md` "계정 이름"), 03 티켓이 대문자로 넣은 이름(`Kim.Dev`)의 로그인을 따로 시험한다(03의 수용 기준). 표의 칸 정의는 명세가 정한 것이라 이 티켓이 제약을 더하지 않고, 03이 접기를 빼먹으면 그 시험이 빨개진다.
+- 파이프로 넣은 비밀번호 앞에 UTF-8 BOM이 붙어 오면 `U+FEFF`가 비밀번호에 든다. BOM을 붙이는 쓰는 쪽이 있는지 확인하지 못했고(윈도 PowerShell 5.1의 파이프가 후보이나 재 보지 않았다), 규칙을 바꾸는 일은 명세가 정할 몫이라 이 티켓에서 고치지 않는다. 단독 배포 e2e(티켓 14)는 노드가 글을 직접 파이프에 쓰므로 BOM이 붙지 않을 것으로 본다(어림이고 재 보지 않았다).
+
 ## 회고
 
 낸 후보 셋: 승인 0, 기각 3, 넘김 0. 대기열 만료는 이 회고가 닫은 열 항목(`562`, `external-ref-moved-while-citing`, `glob-slash-pattern-narrowed-path`, `grep-glob-slash-pattern`, `harness-work-invisible-in-plan`, `measure-subagent-stopped-by-usage-limit`, `open-session-stale-main-copy`, `option-description-implied-omission`, `plugins-outside-type-judges`, `ui-design-web-edit-read-path-prefix`)이다. 기본 출력과 `--ref origin/dev` 출력이 같은 열을 냈다.

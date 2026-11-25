@@ -11,7 +11,8 @@
 - 시스템 관리자는 없는데 그 이름의 관리자 단계 계정이 있으면 바꾸지 않고 멈춘다.
 
 비밀번호는 명령의 인자로 받지 않는다(프로세스 목록과 셸 이력에 남는다). 표준 입력이 터미널이면
-글자를 보이지 않고 두 번 받아 서로 견주고, 터미널이 아니면 첫 줄 하나를 받는다(줄 끝의 개행만 뗀다).
+글자를 보이지 않고 두 번 받아 서로 견주고(숨길 수 없으면 받지 않고 멈춘다), 터미널이 아니면 첫 줄
+하나를 받는다(줄 끝의 개행만 뗀다).
 스크립트와 e2e가 파이프로 넣기 위해서다. 비밀번호와 그 해시는 어느 출력에도, 로그인 기록의 어느
 줄에도 싣지 않는다(원칙 V). 해시는 데이터베이스에 닿기 전에 만들어, 느린 해시가 연결을 쥐고 있지
 않게 한다.
@@ -22,9 +23,11 @@
 
 from __future__ import annotations
 
+import warnings
 from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime
+from getpass import GetPassWarning
 from typing import TextIO
 
 from agent_os.channel.cli.main import EXIT_FAILED, EXIT_FINISHED
@@ -48,6 +51,10 @@ NO_PASSWORD_TEXT = (
 )
 NOT_UTF8_TEXT = (
     "표준 입력이 UTF-8 글이 아닙니다. 비밀번호를 UTF-8로 넣어 주십시오. 아무것도 바꾸지 않았습니다."
+)
+CANNOT_HIDE_TEXT = (
+    "터미널이 글자를 숨기지 못해 비밀번호를 받지 않았습니다. 터미널을 확인하거나, 파이프로 첫 줄에"
+    " 비밀번호를 넣어 주십시오. 아무것도 바꾸지 않았습니다."
 )
 _NOT_CHANGED = "아무것도 바꾸지 않았습니다."
 
@@ -83,8 +90,15 @@ def password_hash_of(stdin: TextIO, ask: Callable[[str], str]) -> str | Refused:
 
 def _read_password(stdin: TextIO, ask: Callable[[str], str]) -> str | Refused:
     if stdin.isatty():
-        first = ask(PASSWORD_PROMPT)
-        second = ask(CONFIRM_PROMPT)
+        # 터미널의 입력 표시를 끌 수 없으면 getpass 는 경고만 내고 글자가 보이는 입력으로 받는다.
+        # 경고를 오류로 바꿔 입력을 받기 전에 멈춘다
+        try:
+            with warnings.catch_warnings():
+                warnings.simplefilter("error", GetPassWarning)
+                first = ask(PASSWORD_PROMPT)
+                second = ask(CONFIRM_PROMPT)
+        except GetPassWarning:
+            return Refused(CANNOT_HIDE_TEXT)
         if first != second:
             return Refused(PASSWORD_MISMATCH_TEXT)
         return first
@@ -174,7 +188,8 @@ async def system_admin_command(
 
 async def _decide(work: AccountWork, name: str, password_hash: str, now: datetime) -> _Outcome:
     """줄을 잠가 읽고 갈래를 정해 적는다. 같은 트랜잭션 안에서 둘이 겹치면 한 번 다시 읽는다."""
-    # 두 번이면 충분하다. 첫 시도가 "taken" 이면 이긴 쪽의 줄이 이미 있어 둘째 시도는 읽기만 한다
+    # 두 번이면 충분하다. 첫 시도가 막히면(넣기가 "taken" 이거나, 두 조회 사이에 같은 이름의 시스템
+    # 관리자가 커밋됐으면) 이긴 쪽의 줄이 이미 있어 둘째 시도는 읽기만 한다
     for _attempt in range(2):
         owner = await work.lock_system_admin()
         if owner is not None:
@@ -184,8 +199,13 @@ async def _decide(work: AccountWork, name: str, password_hash: str, now: datetim
             await work.end_logins(name, at=now)
             await work.record("system_admin_set", at=now, account=name)
             return _Reset()
-        if await work.lock(name) is not None:
-            return _AdminTier()
+        existing = await work.lock(name)
+        if existing is not None:
+            if existing.tier == "admin":
+                return _AdminTier()
+            # 시스템 관리자를 먼저 읽은 뒤에 같은 이름의 시스템 관리자가 커밋됐다. 다음 바퀴가
+            # 읽는다
+            continue
         added = await work.add(
             _NewAccount(name=name, tier="system_admin", password_hash=password_hash, created_at=now)
         )
