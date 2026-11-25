@@ -10,10 +10,12 @@ from pathlib import Path
 
 import pytest
 
-from agent_os.adapters.jsonl import JsonlTrace
+from agent_os.adapters.jsonl import JsonlTrace, TraceHeader
 from agent_os.core.ports import (
     DEFAULT_LIMIT,
     MAX_LIMIT,
+    ConversationLine,
+    ConversationRow,
     Cursor,
     PluginError,
     RunRow,
@@ -1010,3 +1012,162 @@ def test_형식_2_파일에_재개가_이어_쓴_뒤에도_헤더는_2_다(tmp_p
     assert trace is not None
     assert trace.schema_version == "2"
     assert isinstance(trace.events[-1], ApprovalGranted)
+
+
+# --- 대화 목록(admin-login 07) -------------------------------------------------------------
+
+
+def _conversation_events(
+    run_id: str,
+    *,
+    at: datetime,
+    previous: str | None = None,
+    request: str = "2+2?",
+    account: str | None = None,
+    principal: str = "alice",
+    ending: Event | None = None,
+) -> list[Event]:
+    """시작 이벤트가 앞 실행·요청·요청한 계정을 든 실행 하나. 끝나는 이벤트는 선택이다."""
+    events: list[Event] = [
+        RunStarted(
+            run_id=RunId(run_id),
+            ts=at,
+            agent=AgentName("calc"),
+            request=request,
+            principal=Principal(principal),
+            previous_run=None if previous is None else RunId(previous),
+            requesting_account=account,
+        )
+    ]
+    if ending is not None:
+        events.append(ending)
+    return events
+
+
+def _write_events(store: TraceStore, events: Sequence[Event]) -> None:
+    for event in events:
+        store.write(event)
+
+
+def _conversation_ends(rows: Sequence[ConversationRow]) -> list[str]:
+    return [row.run_id if isinstance(row, UnreadableTrace) else row.last_run for row in rows]
+
+
+def test_대화_목록이_진짜_트레이스_디렉터리의_이어_가기_고리를_한_줄로_묶는다(
+    tmp_path: Path,
+) -> None:
+    store: TraceStore = JsonlTrace(tmp_path)
+    last_at = TS + timedelta(minutes=7)
+    _write_events(
+        store,
+        _conversation_events(
+            "first",
+            at=TS,
+            request="처음 질문",
+            account="kim",
+            principal="p-first",
+            ending=RunFinished(run_id=RunId("first"), ts=TS, output="1"),
+        ),
+    )
+    _write_events(
+        store,
+        _conversation_events(
+            "second",
+            at=TS + timedelta(minutes=5),
+            previous="first",
+            request="이어서",
+            account="park",
+            principal="p-second",
+            ending=RunFailed(run_id=RunId("second"), ts=last_at, error="boom"),
+        ),
+    )
+    _write_trace(store, "alone", at=TS + timedelta(minutes=1))
+
+    rows = store.list_conversations()
+
+    assert _conversation_ends(rows) == ["second", "alone"]
+    line = rows[0]
+    assert isinstance(line, ConversationLine)
+    assert line == ConversationLine(
+        last_run=RunId("second"),
+        status="failed",
+        agent=AgentName("calc"),
+        first_request="처음 질문",
+        requesting_account="kim",
+        principal=Principal("p-first"),
+        run_count=2,
+        last_started_at=TS + timedelta(minutes=5),
+        last_at=last_at,
+        complete=True,
+    )
+
+
+def test_대화_목록은_읽히지_않는_파일을_표지로_맨_뒤에_내고_그_앞_실행은_완전하지_않다(
+    tmp_path: Path,
+) -> None:
+    store: TraceStore = JsonlTrace(tmp_path)
+    _write_events(store, _conversation_events("fine", at=TS))
+    _write_events(
+        store,
+        _conversation_events("tail", at=TS + timedelta(minutes=1), previous="bad-header"),
+    )
+    _write_broken(tmp_path)
+
+    rows = store.list_conversations()
+
+    assert _conversation_ends(rows[:2]) == ["tail", "fine"]
+    tail = rows[0]
+    assert isinstance(tail, ConversationLine)
+    assert (tail.run_count, tail.complete) == (1, False)
+    assert sorted(_conversation_ends(rows[2:])) == sorted(_BROKEN)
+    assert all(isinstance(row, UnreadableTrace) and row.reason for row in rows[2:])
+
+
+def test_대화_목록은_status_와_limit_와_after_로_쓴다(tmp_path: Path) -> None:
+    store: TraceStore = JsonlTrace(tmp_path)
+    for index in range(4):
+        run_id = f"r{index}"
+        at = TS + timedelta(minutes=index)
+        ending: Event | None = (
+            RunPaused(run_id=RunId(run_id), ts=at, tool="x", args={}) if index % 2 else None
+        )
+        _write_events(store, _conversation_events(run_id, at=at, ending=ending))
+
+    first = store.list_conversations(limit=2)
+    assert _conversation_ends(first) == ["r3", "r2"]
+    second = store.list_conversations(limit=2, after=cursor_of(first[-1]))
+    assert _conversation_ends(second) == ["r1", "r0"]
+    assert _conversation_ends(store.list_conversations(status="paused")) == ["r3", "r1"]
+    with pytest.raises(ValueError, match="limit"):
+        store.list_conversations(limit=0)
+
+
+def test_대화_목록은_가운데_줄을_읽지_않고_실행_목록의_모양은_그대로다(tmp_path: Path) -> None:
+    """가운데 줄이 깨진 파일도 대화 목록에서는 줄이 된다. 단건 읽기만 손상으로 거부한다."""
+    store: TraceStore = JsonlTrace(tmp_path)
+    header = TraceHeader(schema_version="3", run_id=RunId("mid"))
+    start, finish = _conversation_events(
+        "mid", at=TS, ending=RunFinished(run_id=RunId("mid"), ts=TS, output="4")
+    )
+    lines = [
+        header.model_dump_json(),
+        start.model_dump_json(),
+        "깨진 줄",
+        finish.model_dump_json(),
+    ]
+    (tmp_path / "mid.jsonl").write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+    [line] = store.list_conversations()
+    [row] = _summaries(store.list())
+
+    assert isinstance(line, ConversationLine)
+    assert line.last_run == row.run_id == "mid"
+    assert set(vars(row)) == {
+        "run_id",
+        "status",
+        "schema_version",
+        "started_at",
+        "last_at",
+        "agent",
+        "principal",
+    }

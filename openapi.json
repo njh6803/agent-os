@@ -259,6 +259,118 @@
         "title": "ConnectionUnreached",
         "type": "object"
       },
+      "Conversation": {
+        "additionalProperties": false,
+        "description": "이어 가기로 이어진 실행들의 한 줄. 갈라진 끝 하나를 대표한다.",
+        "properties": {
+          "agent": {
+            "title": "Agent",
+            "type": "string"
+          },
+          "complete": {
+            "title": "Complete",
+            "type": "boolean"
+          },
+          "first_request": {
+            "maxLength": 120,
+            "title": "First Request",
+            "type": "string"
+          },
+          "last_at": {
+            "format": "date-time",
+            "title": "Last At",
+            "type": "string"
+          },
+          "last_run": {
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$",
+            "title": "Last Run",
+            "type": "string"
+          },
+          "last_started_at": {
+            "format": "date-time",
+            "title": "Last Started At",
+            "type": "string"
+          },
+          "principal": {
+            "title": "Principal",
+            "type": "string"
+          },
+          "requesting_account": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Requesting Account"
+          },
+          "run_count": {
+            "minimum": 1.0,
+            "title": "Run Count",
+            "type": "integer"
+          },
+          "status": {
+            "$ref": "#/components/schemas/RunStatus"
+          }
+        },
+        "required": [
+          "last_run",
+          "status",
+          "agent",
+          "first_request",
+          "requesting_account",
+          "principal",
+          "run_count",
+          "last_started_at",
+          "last_at",
+          "complete"
+        ],
+        "title": "Conversation",
+        "type": "object"
+      },
+      "ConversationPage": {
+        "additionalProperties": false,
+        "description": "대화 목록의 한 쪽. 끝 실행이 최근인 대화가 먼저다. next_cursor 가 null 이면 더 없다.",
+        "properties": {
+          "conversations": {
+            "items": {
+              "$ref": "#/components/schemas/ConversationRow"
+            },
+            "title": "Conversations",
+            "type": "array"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "pattern": "^[A-Za-z0-9_-]{1,256}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          }
+        },
+        "required": [
+          "conversations",
+          "next_cursor"
+        ],
+        "title": "ConversationPage",
+        "type": "object"
+      },
+      "ConversationRow": {
+        "anyOf": [
+          {
+            "$ref": "#/components/schemas/Conversation"
+          },
+          {
+            "$ref": "#/components/schemas/UnreadableTrace"
+          }
+        ]
+      },
       "ConversationSummarized": {
         "additionalProperties": false,
         "description": "런타임이 앞 요약과 오래된 교환을 새 대화 요약으로 접었다. 에이전트가 내면 실행이 실패한다.",
@@ -1957,6 +2069,115 @@
   },
   "openapi": "3.1.0",
   "paths": {
+    "/conversations": {
+      "get": {
+        "operationId": "list_conversations",
+        "parameters": [
+          {
+            "description": "없으면 전부다. 끝 실행의 상태로 거른다",
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/RunStatus"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "없으면 전부다. 끝 실행의 상태로 거른다",
+              "title": "Status"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "앞 쪽의 next_cursor 를 그대로 넘긴다",
+            "in": "query",
+            "name": "after",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "pattern": "^[A-Za-z0-9_-]{1,256}$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "앞 쪽의 next_cursor 를 그대로 넘긴다",
+              "title": "After"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConversationPage"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "토큰이 없거나 틀리다"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "이 요청의 출처를 받지 않는다"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "요청의 형식이 올바르지 않다"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "서버가 요청을 처리하지 못했다"
+          }
+        },
+        "summary": "이어 가기로 이어진 실행들을 대화 한 줄씩으로 묶어 최근 것부터 한 쪽씩"
+      }
+    },
     "/end-user/runs": {
       "post": {
         "operationId": "start_end_user_run",

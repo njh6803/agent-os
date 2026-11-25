@@ -52,6 +52,7 @@ from agent_os.channel.http.runs import BACKLOG_FRAMES
 from agent_os.core.ports import (
     ChatModel,
     Clock,
+    ConversationRow,
     Cursor,
     ManifestRow,
     ModelSource,
@@ -438,6 +439,15 @@ class FakeTrace:
         after: Cursor | None = None,
     ) -> Sequence[RunRow]:
         raise NotImplementedError("최종 사용자 경로는 목록을 읽지 않는다")
+
+    def list_conversations(
+        self,
+        *,
+        status: RunStatus | None = None,
+        limit: int | None = None,
+        after: Cursor | None = None,
+    ) -> Sequence[ConversationRow]:
+        raise NotImplementedError("최종 사용자 경로는 대화 목록을 읽지 않는다")
 
     def of(self, run_id: RunId) -> tuple[Event, ...]:
         return tuple(event for event in self.events if event.run_id == run_id)

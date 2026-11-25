@@ -2,6 +2,23 @@
 // openapi-typescript 의 출력에서 재귀 Json 한 자리만 unknown 으로 바꿨다(web/tools/generate-api-client.ts).
 
 export interface paths {
+  "/conversations": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** 이어 가기로 이어진 실행들을 대화 한 줄씩으로 묶어 최근 것부터 한 쪽씩 */
+    get: operations["list_conversations"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/end-user/runs": {
     parameters: {
       query?: never;
@@ -379,6 +396,49 @@ export interface components {
        */
       status: "unreached";
     };
+    /**
+     * Conversation
+     * @description 이어 가기로 이어진 실행들의 한 줄. 갈라진 끝 하나를 대표한다.
+     */
+    Conversation: {
+      /** Agent */
+      agent: string;
+      /** Complete */
+      complete: boolean;
+      /** First Request */
+      first_request: string;
+      /**
+       * Last At
+       * Format: date-time
+       */
+      last_at: string;
+      /** Last Run */
+      last_run: string;
+      /**
+       * Last Started At
+       * Format: date-time
+       */
+      last_started_at: string;
+      /** Principal */
+      principal: string;
+      /** Requesting Account */
+      requesting_account: string | null;
+      /** Run Count */
+      run_count: number;
+      status: components["schemas"]["RunStatus"];
+    };
+    /**
+     * ConversationPage
+     * @description 대화 목록의 한 쪽. 끝 실행이 최근인 대화가 먼저다. next_cursor 가 null 이면 더 없다.
+     */
+    ConversationPage: {
+      /** Conversations */
+      conversations: components["schemas"]["ConversationRow"][];
+      /** Next Cursor */
+      next_cursor: string | null;
+    };
+    ConversationRow:
+      components["schemas"]["Conversation"] | components["schemas"]["UnreadableTrace"];
     /**
      * ConversationSummarized
      * @description 런타임이 앞 요약과 오래된 교환을 새 대화 요약으로 접었다. 에이전트가 내면 실행이 실패한다.
@@ -1128,6 +1188,68 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+  list_conversations: {
+    parameters: {
+      query?: {
+        /** @description 없으면 전부다. 끝 실행의 상태로 거른다 */
+        status?: components["schemas"]["RunStatus"] | null;
+        limit?: number;
+        /** @description 앞 쪽의 next_cursor 를 그대로 넘긴다 */
+        after?: string | null;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ConversationPage"];
+        };
+      };
+      /** @description 토큰이 없거나 틀리다 */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorEnvelope"];
+        };
+      };
+      /** @description 이 요청의 출처를 받지 않는다 */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorEnvelope"];
+        };
+      };
+      /** @description 요청의 형식이 올바르지 않다 */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorEnvelope"];
+        };
+      };
+      /** @description 서버가 요청을 처리하지 못했다 */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorEnvelope"];
+        };
+      };
+    };
+  };
   start_end_user_run: {
     parameters: {
       query?: never;
