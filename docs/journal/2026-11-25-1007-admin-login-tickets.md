@@ -377,22 +377,30 @@ open-session을 부른다 2026-11-25T03:48:22Z
 - `uv run python tools/sibling_overlap.py`는 기준 브랜치 줄이 `origin/dev b4ee2ee` 그대로이고 "이 브랜치의 새 번호 없음", "번호 겹침 없음", "함께 고친 파일 없음"이었다. 열린 PR #638(`3f18bf3`)이 형제로 보였다.
 - 손으로 치는 나머지(pyright, lint-imports, pytest, pnpm verify)는 둘째 커밋의 pre-commit 결과로 갈음한다. 이 PR의 변경은 여전히 `.scratch/`와 `docs/journal/`뿐이라 로컬 모델 시험의 범위 경로가 없다(`merge.md` 3).
 
+### 둘째 커밋과 dev 합치기
+
+- 둘째 커밋 `2d1801daf`(`docs: PR 직전 리뷰를 반영해 next 검사와 비밀번호 저장 전 확인을 고친다 (admin-login)`)를 백그라운드로 쳤고 pre-commit이 exit 0이었다. 함께 띄운 검사 열하나(check-ticket, check-notes, zizmor, lint-imports, check-instructions, check-type-escapes, pyright-linux, pyright, run-hooks, pytest 675.8초, web-verify 837.7초)가 Passed였고, 마크다운 표·줄 구분 문자·변이 표·커밋 메시지도 Passed였다. ruff 둘과 카나리아 명세·헌법 판은 `(no files to check)Skipped`였다(ruff 둘은 위에서 손으로 쳤다).
+- 인용 대조는 경고 셋을 냈고 막지 않았다. 292행의 둘은 앞 세션의 판정 줄이 고치기 전 명세의 글과 고칠 꼴을 따옴표로 든 것이라 그대로 둔다. 354행의 하나는 위 "고친 문장" 1의 인용이다. 그 글은 이 세션이 명세에 쓴 그대로이고, 인용 안에 큰따옴표가 든 코드 스팬(`new URL("/\t/evil.test/x", …)`)이 있다. 대기열 `check-quotes-code-span-double-quotes`의 꼴로 보았고, `quotes_in`을 불러 가르지는 않았다.
+- 그 커밋을 띄운 직후 인계 계기가 왔다(세션 컨텍스트 304,093 토큰, 경계 `커밋 뒤`). 이 세션의 지시문의 "이어받을 상태"가 `인계: 커밋 뒤`로 시작해 `handoff.md` 1의 셋째에 들어, 넘기지 않고 이었다.
+- 푸시하려 하자 훅이 이 브랜치가 `origin/dev`보다 한 커밋 뒤처졌다고 막았다. dev에 PR #638(`fa618af5f`, 접속 확인 기능 단락)이 들어와 있었다. `git merge origin/dev`가 `.scratch/retro-queue/docs-only-commit-precommit-slow-again.md`의 승인 줄에서 충돌했다. 두 쪽 모두 그 줄 끝에 회차를 더했기 때문이다. dev 쪽 줄(22·23회차)을 받고 이 브랜치의 회차를 24회차로 다시 적었다. 그 PR이 바꾼 다른 파일(harness 티켓, 대기열 새 항목 하나, 일지, 릴리스 노트의 기능 단락)은 이 브랜치가 고친 파일과 겹치지 않았다.
+
 ## 회고
 
-`retro`를 이 세션이 돌았다. 낸 후보는 열둘이고 승인(회차로 세는 것) 일곱, 기각 다섯, 넘김 0이다. 만료할 항목은 작업 폴더 기준과 `--ref origin/dev` 기준 모두 없었다. 심각도 순이다.
+`retro`를 이 세션이 돌았다. 낸 후보는 열셋이고 승인(회차로 세는 것) 여덟, 기각 다섯, 넘김 0이다. 13은 둘째 커밋 뒤에 더했다. 만료할 항목은 작업 폴더 기준과 `--ref origin/dev` 기준 모두 없었다. 심각도 순이다.
 
 1. **셀프 리뷰를 반영하며 새로 쓴 `토큰` grep 문장이 다시 틀려 PR 직전 리뷰가 잡았다.** 닫힌 목록을 일반 조항으로 올린 문장이 README 187행(변수 이름만 있다)을 놓쳤다. 승인(회차로 세는 것: 열린 항목이 이미 처방한 사건). 대기열 `0347`에 더해 7회차다. 이번에는 밀 주장 목록 4에 들어 있어 그 절차로 잡혔다.
 2. **티켓이 명세의 갈래를 옮기지 않았다.** 06이 명세 "내 비밀번호 바꾸기"의 저장 전 다시 보기를 옮기지 않았고(PR 직전 리뷰), 03이 명세 "로그인" 5·6의 갈래를, 06이 공유 토큰의 403을 시험 줄에서 밟지 않았다(셀프 리뷰 표준 축 Minor 5). 승인(회차로 세는 것). 대기열 `ticket-step-assumes-one-config`에 더해 4회차다. 그 항목의 처방(명세가 갈래를 여럿 든 결정이면 티켓의 걸음과 시험이 갈래마다 서는지 갈래별로 대 본다)이 이 사건에도 맞는다.
 3. **그린 화면에만 있던 이야기(33·48·65)와 일부만 있던 이야기(61·76)가 명세 본문과 티켓에서 빠져 있었다**(셀프 리뷰 명세 축 Minor 3). 승인(회차로 세는 것). 대기열 `spec-story-missing-from-tickets`에 더해 2회차다.
 4. **티켓에서 처음 나오는 낯선 말에 풀이가 없었다**(셀프 리뷰 표준 축 Minor 6, 명세 축 Minor 10). `to-tickets` 2단계의 지침을 어겨 리뷰가 잡은 사건이라 승인(회차로 세는 것). 대기열 `ticket-term-unexplained-at-first-use`에 더해 2회차다.
 5. **첫 인계의 잠금 풀기가 자동 모드 분류기에 거부되어, 이어받은 세션이 사람에게 물었다**(위 "이어받은 세션"). 승인(회차로 세는 것). 대기열 `worktree-lock-left-when-unlock-denied`에 더해 8회차다. 둘째 인계에서는 잠금이 풀린 채라 걸리지 않았다.
-6. **둘째 인계의 계기가 백그라운드 커밋이 끝나기 전(331,276 토큰)에 왔다.** 승인(회차로 세는 것). 대기열 `handoff-trigger-before-background-commit-ends`에 더해 14회차다.
-7. **문서만 바꾼 첫 커밋의 pre-commit에서 pytest 707.9초, web-verify 852.6초가 걸렸다.** 승인(회차로 세는 것). 대기열 `docs-only-commit-precommit-slow-again`에 더해 22회차다.
+6. **둘째 인계의 계기가 백그라운드 커밋이 끝나기 전(331,276 토큰)에 왔다.** 승인(회차로 세는 것). 대기열 `handoff-trigger-before-background-commit-ends`에 더해 14회차다. 이 세션도 둘째 커밋을 띄운 직후 한 번 받았고(304,093 토큰), 지시문이 `인계: 커밋 뒤`라 넘기지 않았다. 같은 일지의 같은 회차로 센다.
+7. **문서만 바꾼 첫 커밋의 pre-commit에서 pytest 707.9초, web-verify 852.6초가 걸렸다.** 둘째 커밋 `2d1801daf`도 pytest 675.8초, web-verify 837.7초였다. 승인(회차로 세는 것). 대기열 `docs-only-commit-precommit-slow-again`에 더해 24회차다. 처음에는 22회차로 적었는데, dev를 합치자 PR #638과 그 앞 PR이 22·23회차를 먼저 더해 그 줄이 충돌했다. dev 쪽 줄을 받고 이 브랜치의 회차를 24회차로 옮겼다.
 8. **명세의 `next` 검사가 앞 글자만 보아 탭과 줄바꿈으로 다른 사이트로 보내는 길을 열어 두었고, PR 직전 리뷰가 잡았다.** 기각. 보안의 판단은 PR 직전 리뷰의 보안 축이 잡도록 둔 기준이고 그 축이 제 몫을 했다. 명세의 글을 기계로 판정할 검사는 없고, 구현 PR(09)도 같은 축을 다시 지난다.
 9. **Python의 `write_text`가 윈도에서 티켓을 CRLF로 써 `git add`가 경고했다.** 기각. `.gitattributes`의 `* text=auto eol=lf`가 고쳐, `git ls-files --eol`이 티켓을 `i/lf w/lf`로 낸다(손으로 봤다). 잃은 것이 없다.
 10. **`tools/check_md_tables.py`가 추적 마크다운만 보아, 미추적 티켓을 인자로 넘겨야 했다.** 기각. 커밋 때 pre-commit이 스테이지된 파일로 같은 검사를 돌렸다(첫 커밋의 "마크다운 표 … Passed").
 11. **이 세션이 `cd .scratch/admin-login`으로 하위 폴더에 들어가려 했다.** 기각. 훅이 그 호출을 돌리기 전에 막았다.
 12. **`next-session` `merge.md` 전체(약 2.3만 자)를 Read로 열어 큰 결과 알림을 받았다.** 기각. `SKILL.md`의 표가 그 파일을 열어 따르라고 하고, 병합까지의 절을 모두 써야 했다.
+13. **인용 대조가 큰따옴표가 든 코드 스팬을 품은 인용을 저장소에 없다고 경고했다**(위 "둘째 커밋과 dev 합치기"). 승인(고침 항목의 회차). 대기열 `check-quotes-code-span-double-quotes`에 더해 2회차다. 경고만 내는 검사라 손상은 없다.
 
 이 세션에서 반영한 것은 없다. 넘긴 것이 없어 사람에게 묻지 않았다.
 
@@ -400,4 +408,4 @@ open-session을 부른다 2026-11-25T03:48:22Z
 
 - **이 PR은 병합까지 한다.** 병합 뒤 admin-login의 프론티어는 `01-contract-account-fields-forbidden-and-origin-check` 하나다(막는 것 없음). 01 뒤에 02와 07과 08이 나란히 돌 수 있다. 04와 05는 03 뒤에 나란히 돌고, 05와 07, 05와 04 가운데 늦게 병합하는 쪽이 권한 표에 줄을 더한다(05의 "권한 표"). 06은 04와 05를 함께 기다린다.
 - **PR의 남긴 위험.** 로그아웃과 갱신의 경합(위 "PR 직전 리뷰"의 보류). 로그아웃보다 먼저 커밋된 갱신의 응답이 늦게 닿으면, 끊긴 로그인의 짧은 JWT가 길어야 그 수명 동안 쿠키로 남는다.
-- **chore 계기.** 대기열 `worktree-lock-left-when-unlock-denied`(8회차), `docs-only-commit-precommit-slow-again`(22회차), `handoff-trigger-before-background-commit-ends`(14회차), `0347`(7회차)이 회차 5 이상이다. chore는 기능의 마지막 티켓 뒤에 연다(`next-session` 결정표).
+- **chore 계기.** 대기열 `worktree-lock-left-when-unlock-denied`(8회차), `docs-only-commit-precommit-slow-again`(24회차), `handoff-trigger-before-background-commit-ends`(14회차), `0347`(7회차)이 회차 5 이상이다. chore는 기능의 마지막 티켓 뒤에 연다(`next-session` 결정표).
