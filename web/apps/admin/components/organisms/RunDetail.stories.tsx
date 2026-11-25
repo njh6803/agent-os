@@ -32,6 +32,7 @@ const STARTED: Event = {
   principal: "operator",
   previous_run: null,
   shortcuts: null,
+  requesting_account: null,
 };
 const CALLED: Event = {
   type: "llm_called",
@@ -58,6 +59,7 @@ const GRANTED: Event = {
   run_id: RUN,
   ts: "2026-10-12T14:07:41.006Z",
   approver: "ops",
+  deciding_account: null,
 };
 const RESUMED: Event = { type: "run_resumed", run_id: RUN, ts: "2026-10-12T14:07:41.233Z" };
 const TOOL: Event = {

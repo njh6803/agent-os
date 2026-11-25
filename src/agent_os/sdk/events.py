@@ -50,8 +50,16 @@ class BaseEvent(BaseModel):
 # previous_run 과 같다. 키와 값에 sdk 의 패턴을 걸지 않는 것도 이벤트의 다른 식별자 필드와 같은
 # 규칙이다 — 걸면 패턴 위반이 단건 읽기의 손상이 된다. 필드 이름이 용어집의 말이 아닌 것은 이것이
 # 시작 이벤트의 필드일 뿐 도메인의 개념이 아니어서다.
+#
+# requesting_account 는 그 실행을 시작하거나 이어 간 운영자 계정의 이름이고 없음(None)은 계정 없이
+# 시작한 실행(명령줄, 최종 사용자 경로, 로그인이 없던 때의 기록)이다(ADR 0063). 기본값이 None 인
+# 것은 옛 줄에 이 키가 없기 때문이고 형식은 3 그대로다. 직렬화 스키마의 모양은 previous_run 과 같다.
+# sdk 의 패턴을 걸지 않는 것도 이벤트의 다른 식별자 필드와 같은 규칙이다. 이름 규칙에 맞는 값만
+# 오는 것은 채널이 지킨다. 필드 이름이 principal 이 아닌 것은 그것이 실행을 요청한 신원이고 이것은
+# 운영자가 로그인한 계정이라 둘이 따로 남아서다. 런타임만 채운다 — 에이전트가 채워 yield 하면 그
+# 실행은 런타임의 run_failed 로 끝난다.
 class RunStarted(BaseEvent):
-    """실행이 시작됐다. 에이전트·요청·주체와 앞 실행·바로가기(없으면 null)를 든다. 런타임이 낸다."""
+    """실행이 시작됐다. 에이전트·요청·주체와 앞 실행·바로가기·요청한 계정(없으면 null)을 든다."""
 
     type: Literal["run_started"] = "run_started"
     agent: AgentName
@@ -59,6 +67,7 @@ class RunStarted(BaseEvent):
     principal: Principal
     previous_run: RunId | None = None
     shortcuts: Mapping[AgentName, RunId] | None = None
+    requesting_account: str | None = None
 
 
 class ToolCall(BaseModel):
@@ -131,11 +140,15 @@ class RunPaused(BaseEvent):
     server: str | None = None
 
 
+# deciding_account 는 그 결정을 내린 운영자 계정의 이름이고 없음(None)은 계정 없이 낸 결정이다
+# (ADR 0063). 근거와 기본값은 `RunStarted` 위의 requesting_account 주석과 같고, 승인과 거부 둘이 이
+# 칸 하나를 나눠 쓴다. 런타임만 채운다.
 class ApprovalGranted(BaseEvent):
     """사람이 일시정지한 도구 호출을 허가했다. 승인자는 필수다(ADR 0009)."""
 
     type: Literal["approval_granted"] = "approval_granted"
     approver: Principal
+    deciding_account: str | None = None
 
 
 class ApprovalDenied(BaseEvent):
@@ -144,6 +157,7 @@ class ApprovalDenied(BaseEvent):
     type: Literal["approval_denied"] = "approval_denied"
     approver: Principal
     reason: str
+    deciding_account: str | None = None
 
 
 class RunResumed(BaseEvent):

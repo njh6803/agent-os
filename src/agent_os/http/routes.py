@@ -17,6 +17,7 @@ from fastapi.sse import EventSourceResponse
 from starlette.convertors import Convertor, register_url_convertor
 
 from agent_os.http.errors import (
+    FORBIDDEN_MESSAGE,
     INTERNAL_MESSAGE,
     INVALID_REQUEST_MESSAGE,
     NOT_FOUND_MESSAGE,
@@ -32,9 +33,11 @@ from agent_os.http.errors import (
 # 요청이 가리킨 것이 있지만 그 상태나 주체가 요청을 허락하지 않는 것을 만나는 라우트만 적는다. 그
 # 설명은 운영자 채널과 최종 사용자 면의 라우트가 나눠 쓴다 — 재개 불가와 꺼짐은 상태이고, 남의
 # 실행은 주체다(ADR 0022·0023). 429 는 요청하는 쪽의 상한이고 최종 사용자 면의 라우트만 적는다(ADR
-# 0023).
+# 0023). 403 은 요청 출처 검사가 내는 것이라 미들웨어의 몫이고(401 과 같다), 그 검사가 서는 운영자
+# 면 라우트(관리 API 와 운영자 채널)만 적는다. `/health` 와 최종 사용자 면은 검사 밖이다.
 _DOCUMENTED_ERRORS: Mapping[int, str] = {
     401: UNAUTHORIZED_MESSAGE,
+    403: FORBIDDEN_MESSAGE,
     404: NOT_FOUND_MESSAGE,
     409: "있지만 상태나 주체가 요청을 허락하지 않는다",
     422: INVALID_REQUEST_MESSAGE,

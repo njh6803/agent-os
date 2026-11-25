@@ -84,6 +84,7 @@ from agent_os.core.ports import (
     cursor_of,
     order_key,
 )
+from agent_os.http import auth as auth_module
 from agent_os.http.auth import PUBLIC_PATHS
 from agent_os.http.errors import (
     INTERNAL_MESSAGE,
@@ -586,12 +587,13 @@ async def test_문서에_없는_경로도_토큰_없이는_404가_아니라_401�
     assert (await client.get(GUARDED)).status_code == 401
 
 
-async def test_다른_출처의_preflight_는_토큰이_없으면_관리_경로도_채널_경로도_401이다(
+async def test_다른_출처의_preflight_는_토큰이_없어도_관리_경로도_채널_경로도_403이다(
     client: AsyncClient,
 ) -> None:
     """관리 화면의 중계는 `OPTIONS` 를 그대로 상류로 넘긴다(ADR 0019). 관리 경로와 채널 경로에는
     CORS 가 없고 그것이 곧 차단이라는 것은 미들웨어가 메서드를 가르지 않는다는 데 기댄다(ADR 0011
-    이력, 스토리 65). 허용 헤더도 없다. CORS 가 preflight 에 답하는 것은 최종 사용자 접두사뿐이고
+    이력, 스토리 65). 허용 헤더도 없다. 요청 출처 검사가 자격보다 먼저라(ADR 0062) 이 요청은 토큰이
+    없어도 401 이 아니라 403 이다. CORS 가 preflight 에 답하는 것은 최종 사용자 접두사뿐이고
     (ADR 0023), 그 범위는 아래 CORS 절의 전수 검사가 잰다."""
     preflight = {
         "Origin": "http://evil.example",
@@ -601,7 +603,7 @@ async def test_다른_출처의_preflight_는_토큰이_없으면_관리_경로�
 
     for path in ("/plugins", CHANNEL_PREFIX):
         response = await client.options(path, headers=preflight)
-        assert response.status_code == 401, path
+        assert response.status_code == 403, path
         assert "access-control-allow-origin" not in response.headers, path
 
 
@@ -1071,13 +1073,14 @@ def _cors_of(response: httpx.Response) -> list[str]:
     return [name for name in CORS_HEADERS if name in response.headers]
 
 
-async def test_허용_출처의_preflight_는_최종_사용자_접두사에서만_토큰_없이_200이고_그_밖은_401이다(
+async def test_허용_출처의_preflight_는_최종_사용자_접두사에서만_토큰_없이_200이고_그_밖은_403이다(
     stderr: io.StringIO,
 ) -> None:
     """ADR 0011 의 2026-10-03 이력이 "allowlist가 메서드 하나만큼 자란다"고 한 범위를 판정한다.
     앱이 아는 오퍼레이션 가운데 allowlist 밖의 전부에 허용 출처의 preflight 를 토큰 없이 보낸다.
-    CORS 미들웨어가 답하는 것은 최종 사용자 접두사뿐이고, 그 밖은 허용 출처라도 인증이 401 로
-    막으며 그 401 에는 CORS 헤더도 없다. `PUBLIC_PATHS` 는 그대로 `/health` 하나다 — preflight 는
+    CORS 미들웨어가 답하는 것은 최종 사용자 접두사뿐이고, 그 밖은 허용 출처라도 `Origin` 이 있는
+    요청이라 출처 검사가 인증보다 먼저 403 으로 막으며 그 403 에는 CORS 헤더도 없다(이 기능 전에는
+    인증의 401 이었다). `PUBLIC_PATHS` 는 그대로 `/health` 하나다 — preflight 는
     그 목록의 원소가 아니라 CORS 미들웨어의 몫이다(`/health` 의 preflight 는 인증을 지나 라우터의
     405 다). 방향마다 열거가 비면 그 방향은 아무것도 재지 않는다."""
     app = _signed_app(stderr)
@@ -1096,7 +1099,7 @@ async def test_허용_출처의_preflight_는_최종_사용자_접두사에서�
             assert response.headers[ALLOW_ORIGIN] == ORIGIN_A, (method, path)
         for method, path in others:
             response = await c.options(path, headers=_preflight(ORIGIN_A, method))
-            assert response.status_code == 401, (method, path)
+            assert response.status_code == 403, (method, path)
             assert _cors_of(response) == [], (method, path)
 
 
@@ -1171,7 +1174,8 @@ async def test_허용_밖_출처의_요청에는_Allow_Origin_이_없고_요청_
 async def test_접두사_밖에는_허용_출처의_요청에도_CORS_헤더가_없다(stderr: io.StringIO) -> None:
     """관리와 운영자 채널은 브라우저가 다른 출처에서 부르는 면이 아니다(관리 화면의 중계는 같은
     출처다, ADR 0019). 허용 출처는 최종 사용자 접두사에만 걸린다. 접두사를 문자열로만 공유하는
-    경로도 밖이다 — 분기의 비교가 경로 조각 단위다."""
+    경로도 밖이다 — 분기의 비교가 경로 조각 단위다. 요청 출처 검사가 `Origin` 만 든 요청을 자격보다
+    먼저 403 으로 막으므로(ADR 0062) 넷 모두 403 이고, CORS 헤더는 그 403 에도 붙지 않는다."""
     app = _signed_app(stderr)
     origin = {"Origin": ORIGIN_A}
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://site.test") as c:
@@ -1180,7 +1184,7 @@ async def test_접두사_밖에는_허용_출처의_요청에도_CORS_헤더가_
         refused = await c.get(GUARDED, headers=origin)
         lookalike = await c.get("/end-userx", headers=origin | BEARER)
 
-    assert [r.status_code for r in (admin, channel, refused, lookalike)] == [200, 404, 401, 404]
+    assert [r.status_code for r in (admin, channel, refused, lookalike)] == [403, 403, 403, 403]
     for response in (admin, channel, refused, lookalike):
         assert _cors_of(response) == [], response.url
 
@@ -1430,16 +1434,17 @@ def test_스키마에_이름_있는_타입이_나온다(app: FastAPI) -> None:
     assert {"Health", "ErrorEnvelope", "Violation"} <= set(schemas)
 
 
-def test_에러_봉투의_code_어휘가_상태_코드와_1대1인_여섯이다(app: FastAPI) -> None:
+def test_에러_봉투의_code_어휘가_상태_코드와_1대1인_일곱이다(app: FastAPI) -> None:
     """어휘가 openapi.json 에 박힌다. 슬라이스 3 이 에러 처리를 한 곳에서 받는 근거다. conflict 는
     대상이 있지만 그 상태나 주체가 요청을 허락하지 않는 409 이고, 표가 재개 불가와 꺼짐과 다른
     주체와 이어 갈 수 없음을 거기로 옮긴다(ADR 0010 의 2026-09-24·2026-09-26 이력, ADR 0022). 관리
     라우트는 내지 않는다. 여섯째인 too_many_requests 는 요청하는 쪽의 상한에 걸린 429 다(ADR 0023,
-    ADR 0010 의 2026-10-03 이력)."""
+    ADR 0010 의 2026-10-03 이력). 일곱째인 forbidden 은 요청 출처 검사의 403 이다(ADR 0062)."""
     schemas = app.openapi().get("components", {}).get("schemas", {})
 
     assert set(schemas["ErrorCode"]["enum"]) == {
         "unauthorized",
+        "forbidden",
         "invalid_request",
         "not_found",
         "conflict",
@@ -2275,7 +2280,7 @@ def test_켜고_끄는_라우트가_operation_id_와_봉투_에러_문서를_들
 
     assert operation["operationId"] == "set_plugin_enabled"
     errors = {status for status in operation["responses"] if not status.startswith("2")}
-    assert errors == {"401", "404", "422", "500"}
+    assert errors == {"401", "403", "404", "422", "500"}
     for status in errors:
         schema = operation["responses"][status]["content"]["application/json"]["schema"]
         assert schema == envelope, status
@@ -2711,7 +2716,7 @@ def test_확인_오퍼레이션_둘이_계약에_이름과_에러_문서와_no_s
     assert path["post"]["operationId"] == "check_connection_by_launching"
     for operation in path.values():
         errors = {status for status in operation["responses"] if not status.startswith("2")}
-        assert errors == {"401", "404", "422", "500"}
+        assert errors == {"401", "403", "404", "422", "500"}
         for status in errors:
             schema = operation["responses"][status]["content"]["application/json"]["schema"]
             assert schema == envelope, status
@@ -3313,3 +3318,164 @@ def test_트레이스_상세의_HTTP_모양이_core_의_트레이스와_같은_�
     assert set(admin_traces.UnknownEvent.model_fields) == {
         field.name for field in dataclasses.fields(UnknownEvent)
     } | {"type"}
+
+
+# --- 요청 출처 검사(admin-login 01, ADR 0062 결정 "요청 출처 검사") ------------------------
+#
+# 다른 사이트나 같은 서버의 다른 페이지가 운영자의 브라우저를 빌려 관리 API와 운영자 채널을 부르면
+# 403 `forbidden` 이다. `Sec-Fetch-Site` 가 있으면 `same-origin` 만 받고, 없으면 `Origin` 도 없을
+# 때만 받는다(브라우저가 아닌 프로그램). 그 밖의 머리는 보지 않는다. 검사는 자격보다 앞이고
+# `/health` 와 최종 사용자 경로에는 걸리지 않는다.
+
+# (머리, 지나는가). 로그인이 필요한 경로 둘(관리 API 하나와 운영자 채널 하나)에 같은 표를 넣는다.
+ORIGIN_CASES: tuple[tuple[dict[str, str], bool], ...] = (
+    ({"Sec-Fetch-Site": "same-origin"}, True),
+    ({"Sec-Fetch-Site": "same-origin", "Origin": "https://admin.test"}, True),
+    ({"Sec-Fetch-Site": "same-site"}, False),
+    ({"Sec-Fetch-Site": "cross-site"}, False),
+    ({"Sec-Fetch-Site": "none"}, False),
+    ({"Sec-Fetch-Site": "cross-site", "Origin": "https://evil.example"}, False),
+    ({"Origin": "https://evil.example"}, False),
+    ({}, True),
+    ({"Sec-Fetch-Mode": "cors"}, True),
+)
+FORBIDDEN_CODE = "forbidden"
+FORBIDDEN_TEXT = "이 요청의 출처를 받지 않는다"
+
+
+@pytest.mark.parametrize(("headers", "passes"), ORIGIN_CASES)
+async def test_요청_출처_검사의_사례_표가_관리_API와_운영자_채널에_같다(
+    headers: dict[str, str], client: AsyncClient, *, passes: bool
+) -> None:
+    """지나는 요청은 자격까지 가서 그 경로의 답을 받는다(관리 200, 채널은 없는 경로라 404). 막힌
+    요청은 같은 토큰을 들고도 403 이다."""
+    admin = await client.get("/plugins", headers=BEARER | headers)
+    channel = await client.get(CHANNEL_GUARDED, headers=CHANNEL_BEARER | headers)
+
+    if passes:
+        assert (admin.status_code, channel.status_code) == (200, 404)
+        return
+    for response in (admin, channel):
+        assert response.status_code == 403
+        body = response.json()
+        assert body["code"] == FORBIDDEN_CODE
+        assert body["message"] == FORBIDDEN_TEXT
+        assert body["violations"] == []
+        assert body["request_id"] == response.headers[REQUEST_ID_HEADER]
+
+
+async def test_요청_출처_검사의_403_봉투는_머리의_값을_싣지_않는다(client: AsyncClient) -> None:
+    headers = {"Sec-Fetch-Site": "cross-site", "Origin": "https://canary-origin.example"}
+
+    response = await client.get("/plugins", headers=BEARER | headers)
+
+    assert response.status_code == 403
+    assert "canary-origin" not in response.text
+    assert "cross-site" not in response.text
+    assert "www-authenticate" not in response.headers
+
+
+async def test_요청_출처_검사는_자격보다_먼저라_토큰이_없어도_출처가_틀리면_403이다(
+    client: AsyncClient,
+) -> None:
+    """`Origin` 이 있고 토큰이 없는 요청은 401 이 아니라 403 이다. 어느 경로가 로그인을 요구하는지
+    다른 사이트에 알리지 않는다. 출처가 맞고 토큰이 없으면 지금처럼 401 이다."""
+    foreign = await client.get("/plugins", headers={"Origin": "https://evil.example"})
+    plain = await client.get("/plugins")
+    same = await client.get("/plugins", headers={"Sec-Fetch-Site": "same-origin"})
+
+    assert (foreign.status_code, plain.status_code, same.status_code) == (403, 401, 401)
+
+
+async def test_요청_출처_검사는_없는_경로에도_걸려_404가_아니라_403이다(
+    client: AsyncClient,
+) -> None:
+    response = await client.get(GUARDED, headers={"Origin": "https://evil.example"})
+
+    assert response.status_code == 403
+
+
+async def test_요청_출처_검사는_health_와_최종_사용자_경로에는_걸리지_않는다(
+    stderr: io.StringIO,
+) -> None:
+    """`Origin` 과 `Sec-Fetch-Site: cross-site` 가 있어도 `/health` 는 200 이고, 최종 사용자 경로는
+    토큰이 없으면 401, 맞는 토큰이면 라우팅까지 가며 허용 출처의 CORS 헤더가 지금처럼 붙는다."""
+    app = _signed_app(stderr)
+    foreign = {"Origin": ORIGIN_A, "Sec-Fetch-Site": "cross-site"}
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://site.test") as c:
+        health = await c.get("/health", headers=foreign)
+        refused = await c.get(END_USER_GUARDED, headers=foreign)
+        routed = await c.get(END_USER_GUARDED, headers=foreign | bearer(sign(KEY_A1, _good())))
+        preflight = await c.options(END_USER_GUARDED, headers=_preflight(ORIGIN_A))
+
+    assert health.status_code == 200
+    assert refused.status_code == 401
+    assert routed.status_code == 404
+    assert routed.headers[ALLOW_ORIGIN] == ORIGIN_A
+    assert preflight.status_code == 200
+
+
+async def test_접두사를_문자열로만_공유하는_경로에는_검사가_걸린다(client: AsyncClient) -> None:
+    """검사의 면 가르기도 경로 조각 단위다. `/end-userx` 와 `/healthz` 는 운영자 경로다."""
+    foreign = {"Origin": "https://evil.example"}
+
+    lookalike = await client.get("/end-userx", headers=BEARER | foreign)
+    health_like = await client.get("/health/", headers=BEARER | foreign)
+
+    assert lookalike.status_code == 403
+    assert health_like.status_code == 403
+
+
+async def test_출처_머리가_없는_OPTIONS_는_검사를_지나_운영자_경로에서_인증의_401이다(
+    client: AsyncClient,
+) -> None:
+    """`Origin` 도 `Sec-Fetch-Site` 도 없는 `OPTIONS` 는 브라우저가 아닌 프로그램의 요청이다. 출처
+    검사를 지나 인증이 받으므로 403 이 아니라 401 이다(CORS 독스트링과 `http.md` 가 말한 갈래)."""
+    for path in ("/plugins", CHANNEL_PREFIX):
+        response = await client.options(path)
+        assert response.status_code == 401, path
+
+
+async def test_인증_없이_열린_경로의_목록이_늘어도_그_경로는_출처_검사를_받는다(
+    client: AsyncClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """검사는 `/health` 를 이름으로 뺀다. 인증 없이 열린 경로(`PUBLIC_PATHS`)가 로그인 같은 경로로
+    늘어도 그 경로는 다른 사이트가 부를 수 없어야 한다(ADR 0011 2026-11-15 이력)."""
+    monkeypatch.setattr(auth_module, "PUBLIC_PATHS", frozenset({"/health", "/opened-later"}))
+
+    foreign = await client.get("/opened-later", headers={"Origin": "https://evil.example"})
+    same = await client.get("/opened-later", headers={"Sec-Fetch-Site": "same-origin"})
+
+    # 막히지 않은 쪽은 인증을 지나 라우터에 닿아 이 경로가 없다는 404 가 된다.
+    assert (foreign.status_code, same.status_code) == (403, 404)
+
+
+def test_403은_운영자_경로_전부가_문서에_적고_health_와_최종_사용자_경로는_적지_않는다(
+    app: FastAPI,
+) -> None:
+    """내는 쪽(검사)과 적는 쪽(문서)이 같은 티켓에 있어야 계약 밖의 403 이 나가지 않는다."""
+    operations = _documented_operations(app)
+    paths = app.openapi()["paths"]
+    assert operations, "경로가 없으면 이 전수 검사는 403 을 한 번도 재지 않는다"
+
+    for method, path in operations:
+        responses = paths[path][method.lower()]["responses"]
+        checked = path not in PUBLIC_PATHS and _surface_of(path) != "end_user"
+        assert ("403" in responses) is checked, (method, path)
+        if checked:
+            reference = responses["403"]["content"]["application/json"]["schema"]["$ref"]
+            assert str(reference).endswith("/ErrorEnvelope"), (method, path)
+
+
+def test_429를_내는_라우트는_최종_사용자_경로의_넷_그대로다(app: FastAPI) -> None:
+    """이 기능은 429 를 내지 않는다. 403 을 더해도 429 의 봉투와 라우트 수는 바뀌지 않는다."""
+    paths = app.openapi()["paths"]
+    emitting = sorted(
+        (method.upper(), path)
+        for path, operations in paths.items()
+        for method, operation in operations.items()
+        if "429" in operation["responses"]
+    )
+
+    assert len(emitting) == 4
+    assert all(_surface_of(path) == "end_user" for _, path in emitting)

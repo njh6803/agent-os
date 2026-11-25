@@ -10,41 +10,41 @@
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** done
 
 ### 이벤트의 두 칸
 
-- [ ] 시작 이벤트 `run_started`에 `requesting_account`를, 승인 이벤트 `approval_granted`와 거부 이벤트 `approval_denied`에 `deciding_account`를 명세 "이벤트의 두 칸"의 표대로 더한다. 둘 다 문자열이나 없음이고 기본값이 없음(`null`)이라 옛 줄이 그대로 읽히며, 직렬화 스키마에서는 required이고 `null`을 허락한다. 형식 번호는 3 그대로다. 선례는 `.claude/rules/sdk.md`의 ADR 0044 칸 셋(`rule`, `server`)이다
-- [ ] 두 칸에 sdk의 패턴을 걸지 않고, core의 기록 규칙도 이 칸을 보지 않는다(명세 "이벤트의 두 칸"의 "패턴을 걸지 않는다")
-- [ ] core의 `run()`은 요청한 계정을, `resume()`은 결정한 계정을 선택 키워드 인자 하나씩으로 받아 그 이벤트에 적는다. 기본값은 없음이다. 이 티켓에서 부르는 쪽(명령줄과 운영자 채널과 최종 사용자 경로)은 아무것도 넘기지 않는다
-- [ ] 에이전트가 두 칸 가운데 하나를 채운 이벤트를 내면 그 실행이 런타임의 `run_failed`(실행이 실패로 끝났다는 이벤트)로 끝난다. ADR 0044의 칸 셋과 같은 규칙이고 같은 꼴의 시험을 둔다
-- [ ] 관리 화면의 필드 이름 표에 두 칸의 화면 이름("요청한 계정", "결정한 계정")을 더한다. 두 이름이 지금 이벤트의 어느 칸 이름과도 겹치지 않는지 본다(`.claude/rules/sdk.md`)
-- [ ] 실행 요약(`GET /traces`의 줄)과 최종 사용자 항목에는 싣지 않는다(명세 "이벤트의 두 칸"의 "실행 요약에는 싣지 않는다")
-- [ ] `.claude/rules/sdk.md`와 `.claude/rules/core.md`에 두 칸의 항목을 더한다(명세 "이벤트의 두 칸"의 "티켓")
+- [x] 시작 이벤트 `run_started`에 `requesting_account`를, 승인 이벤트 `approval_granted`와 거부 이벤트 `approval_denied`에 `deciding_account`를 명세 "이벤트의 두 칸"의 표대로 더한다. 둘 다 문자열이나 없음이고 기본값이 없음(`null`)이라 옛 줄이 그대로 읽히며, 직렬화 스키마에서는 required이고 `null`을 허락한다. 형식 번호는 3 그대로다. 선례는 `.claude/rules/sdk.md`의 ADR 0044 칸 셋(`rule`, `server`)이다
+- [x] 두 칸에 sdk의 패턴을 걸지 않고, core의 기록 규칙도 이 칸을 보지 않는다(명세 "이벤트의 두 칸"의 "패턴을 걸지 않는다")
+- [x] core의 `run()`은 요청한 계정을, `resume()`은 결정한 계정을 선택 키워드 인자 하나씩으로 받아 그 이벤트에 적는다. 기본값은 없음이다. 이 티켓에서 부르는 쪽(명령줄과 운영자 채널과 최종 사용자 경로)은 아무것도 넘기지 않는다
+- [x] 에이전트가 두 칸 가운데 하나를 채운 이벤트를 내면 그 실행이 런타임의 `run_failed`(실행이 실패로 끝났다는 이벤트)로 끝난다. ADR 0044의 칸 셋과 같은 규칙이고 같은 꼴의 시험을 둔다
+- [x] 관리 화면의 필드 이름 표에 두 칸의 화면 이름("요청한 계정", "결정한 계정")을 더한다. 두 이름이 지금 이벤트의 어느 칸 이름과도 겹치지 않는지 본다(`.claude/rules/sdk.md`)
+- [x] 실행 요약(`GET /traces`의 줄)과 최종 사용자 항목에는 싣지 않는다(명세 "이벤트의 두 칸"의 "실행 요약에는 싣지 않는다")
+- [x] `.claude/rules/sdk.md`와 `.claude/rules/core.md`에 두 칸의 항목을 더한다(명세 "이벤트의 두 칸"의 "티켓")
 
 ### 에러 코드와 403의 문서
 
-- [ ] 에러 코드에 `forbidden`(403)을 더한다. 에러 코드와 상태 코드가 1:1인 표가 일곱이 된다(`.claude/rules/http.md`의 봉투 항목을 함께 고친다)
-- [ ] 에러 문서를 짓는 표(`src/agent_os/http/routes.py`의 `documented_errors`)가 403을 알고, 요청 출처 검사가 걸리는 지금의 운영자 오퍼레이션(관리 API와 운영자 채널 전부)이 403을 문서에 적는다. `/health`와 최종 사용자 경로는 적지 않는다
-- [ ] 규칙 문서가 한 오퍼레이션의 문서화된 에러를 나열한 자리는 403을 더해 고친다. 지금 본 예는 `.claude/rules/channel.md`의 이어 가기 줄("문서화된 에러는 401, 404(…), 409(…), 422(…), 500(…)이다")이다. `.claude/rules/`를 `문서화된 에러`와 `401`로 grep해 다른 자리도 본다. 규칙 파일을 고치기 전에 Skill 도구로 `writing-for-agents`를 부른다
-- [ ] 429의 봉투와 상한의 종류와 429를 내는 라우트가 넷이라는 시험은 그대로다(명세 "경로"의 "이 기능은 429를 내지 않는다")
-- [ ] `openapi.json`과 생성 TS 타입(`web/packages/api-client`)이 같은 커밋에 실린다
+- [x] 에러 코드에 `forbidden`(403)을 더한다. 에러 코드와 상태 코드가 1:1인 표가 일곱이 된다(`.claude/rules/http.md`의 봉투 항목을 함께 고친다)
+- [x] 에러 문서를 짓는 표(`src/agent_os/http/routes.py`의 `documented_errors`)가 403을 알고, 요청 출처 검사가 걸리는 지금의 운영자 오퍼레이션(관리 API와 운영자 채널 전부)이 403을 문서에 적는다. `/health`와 최종 사용자 경로는 적지 않는다
+- [x] 규칙 문서가 한 오퍼레이션의 문서화된 에러를 나열한 자리는 403을 더해 고친다. 지금 본 예는 `.claude/rules/channel.md`의 이어 가기 줄("문서화된 에러는 401, 404(…), 409(…), 422(…), 500(…)이다")이다. `.claude/rules/`를 `문서화된 에러`와 `401`로 grep해 다른 자리도 본다. 규칙 파일을 고치기 전에 Skill 도구로 `writing-for-agents`를 부른다
+- [x] 429의 봉투와 상한의 종류와 429를 내는 라우트가 넷이라는 시험은 그대로다(명세 "경로"의 "이 기능은 429를 내지 않는다")
+- [x] `openapi.json`과 생성 TS 타입(`web/packages/api-client`)이 같은 커밋에 실린다
 
 ### 요청 출처 검사
 
-- [ ] 명세 "요청 출처 검사"의 규칙(`Sec-Fetch-Site`가 있으면 `same-origin`만, 없으면 `Origin`도 없을 때만, 그 밖의 머리는 보지 않는다)을 `/health`와 최종 사용자 경로를 뺀 모든 경로에 건다. 명세 "요청을 판정하는 차례"의 2번 자리(예외를 옮기는 미들웨어 뒤, 자격 앞. 미들웨어는 모든 요청이 처리기에 닿기 전에 차례로 지나는 층이다)에 서고, `.claude/rules/http.md`의 미들웨어 차례 줄을 함께 고친다
-- [ ] 403의 봉투는 고정 문구 하나이고 어느 머리가 무슨 값이었는지 싣지 않는다
-- [ ] 자격보다 먼저 보므로, `Origin`이 있고 토큰이 없는 요청은 401이 아니라 403이다. 지금의 전수 401 시험(계약의 모든 경로를 빠짐없이 불러 401을 보는 시험)이 보내는 머리를 읽어 그 시험이 여전히 401을 보는지 확인한다(명세 검토의 "확인하지 못한 것")
+- [x] 명세 "요청 출처 검사"의 규칙(`Sec-Fetch-Site`가 있으면 `same-origin`만, 없으면 `Origin`도 없을 때만, 그 밖의 머리는 보지 않는다)을 `/health`와 최종 사용자 경로를 뺀 모든 경로에 건다. 명세 "요청을 판정하는 차례"의 2번 자리(예외를 옮기는 미들웨어 뒤, 자격 앞. 미들웨어는 모든 요청이 처리기에 닿기 전에 차례로 지나는 층이다)에 서고, `.claude/rules/http.md`의 미들웨어 차례 줄을 함께 고친다
+- [x] 403의 봉투는 고정 문구 하나이고 어느 머리가 무슨 값이었는지 싣지 않는다
+- [x] 자격보다 먼저 보므로, `Origin`이 있고 토큰이 없는 요청은 401이 아니라 403이다. 지금의 전수 401 시험(계약의 모든 경로를 빠짐없이 불러 401을 보는 시험)이 보내는 머리를 읽어 그 시험이 여전히 401을 보는지 확인한다(명세 검토의 "확인하지 못한 것")
 
 ### 시험
 
-- [ ] 명세 Testing Decisions의 "요청 출처 검사의 사례 표"를 로그인이 필요한 경로(관리 API 하나와 `/runs` 하나)에 넣는다. `Sec-Fetch-Site`의 값 넷, 그 머리가 없고 `Origin`이 있는 요청, 두 머리가 다 없는 요청, `Sec-Fetch-Mode: cors`만 있는 요청이다. 로그인 없이 열리는 경로의 사례는 그 경로를 짓는 03이 더한다
-- [ ] `/health`와 최종 사용자 경로에는 `Origin`과 `Sec-Fetch-Site: cross-site`가 있어도 검사가 걸리지 않는다(최종 사용자 경로의 CORS가 지금처럼 돈다. CORS는 다른 출처의 페이지가 브라우저로 서버를 부르는 것을 서버가 허락하는 규칙이다)
-- [ ] 두 칸이 든 이벤트가 오가고 옛 줄이 없음으로 읽힌다. 에이전트가 두 칸을 채우면 `run_failed`다(명세 Testing Decisions의 "sdk와 core")
-- [ ] 계약 파일의 최신성과 세 면의 전수 검사(계약의 모든 오퍼레이션을 빠짐없이 훑는 시험)가 새 403 문서를 함께 보는지 확인한다
+- [x] 명세 Testing Decisions의 "요청 출처 검사의 사례 표"를 로그인이 필요한 경로(관리 API 하나와 `/runs` 하나)에 넣는다. `Sec-Fetch-Site`의 값 넷, 그 머리가 없고 `Origin`이 있는 요청, 두 머리가 다 없는 요청, `Sec-Fetch-Mode: cors`만 있는 요청이다. 로그인 없이 열리는 경로의 사례는 그 경로를 짓는 03이 더한다
+- [x] `/health`와 최종 사용자 경로에는 `Origin`과 `Sec-Fetch-Site: cross-site`가 있어도 검사가 걸리지 않는다(최종 사용자 경로의 CORS가 지금처럼 돈다. CORS는 다른 출처의 페이지가 브라우저로 서버를 부르는 것을 서버가 허락하는 규칙이다)
+- [x] 두 칸이 든 이벤트가 오가고 옛 줄이 없음으로 읽힌다. 에이전트가 두 칸을 채우면 `run_failed`다(명세 Testing Decisions의 "sdk와 core")
+- [x] 계약 파일의 최신성과 세 면의 전수 검사(계약의 모든 오퍼레이션을 빠짐없이 훑는 시험)가 새 403 문서를 함께 보는지 확인한다
 
 ### 검증
 
-- [ ] `CLAUDE.md`의 검증 명령이 모두 초록이다
-- [ ] 요청 출처 검사가 관리 화면의 중계를 지나는 요청과 e2e 하네스의 요청을 막지 않는지 보려고 관리 화면 e2e(`pnpm -C web/apps/admin exec playwright test`), 위젯 e2e(`pnpm -C web/apps/widget exec playwright test`), 위젯 테스트 페이지 e2e(`pnpm -C web/apps/portal exec playwright test`)를 로컬에서 친다
-- [ ] `src/agent_os/core/run.py`와 `channel/`을 고치므로 LLM 시험의 병합 조건 범위에 든다(`docs/constitution/operations.md` LLM 테스트의 "범위"). `-m llm`을 치고, 로컬 모델 시험은 `--yes` 없이 쳐 예상 비용을 사용자에게 보이고 확인받은 뒤 돌린다
+- [x] `CLAUDE.md`의 검증 명령이 모두 초록이다
+- [x] 요청 출처 검사가 관리 화면의 중계를 지나는 요청과 e2e 하네스의 요청을 막지 않는지 보려고 관리 화면 e2e(`pnpm -C web/apps/admin exec playwright test`), 위젯 e2e(`pnpm -C web/apps/widget exec playwright test`), 위젯 테스트 페이지 e2e(`pnpm -C web/apps/portal exec playwright test`)를 로컬에서 친다
+- [x] `src/agent_os/core/run.py`와 `channel/`을 고치므로 LLM 시험의 병합 조건 범위에 든다(`docs/constitution/operations.md` LLM 테스트의 "범위"). `-m llm`을 치고, 로컬 모델 시험은 `--yes` 없이 쳐 예상 비용을 사용자에게 보이고 확인받은 뒤 돌린다

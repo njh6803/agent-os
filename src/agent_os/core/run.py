@@ -9,12 +9,13 @@ conversation_summarized 는 런타임이 이어 가기에서 원문 교환이 �
 실행은 런타임의 run_failed 로 끝나고 에이전트의 제너레이터는 그 자리에서 닫힌다. 앞의 것은 다음
 실행의 거슬러 읽기가 트레이스에서 읽는 입력이고(ADR 0022), 뒤의 것은 결말이라 런타임이 쓰는 하나여야
 하며 원인이 든 실패는 런타임만 낸다(ADR 0031). tool_called 와 run_paused 도 적용 규칙·서버 칸
-(rule, server)을 채우면 같은 길로 끝난다(ADR 0044). 이유는 `_reject_runtime_only`. 거부는 실행을
-끝내지 않는다. 거부된 도구 호출은 불리지 않고 tool_called(ok=false) 로 사유가 모델에게 돌아가며,
-에이전트가 정상적으로 끝맺는다(ADR 0009). 매니페스트의 두 끝(max_turns, max_tool_calls)도 여기서
-집행한다 — 턴의 끝은 루프가, 도구 호출의 끝은 도구를 부르는 자리가 지키고, 끝을 넘은 호출은 규칙이
-정한 것이 아니라 rule 을 비운 같은 거부다(ADR 0052). 게이트는 도구를 부르는 한
-자리(`_Context._call`)이고, 운영자의 규칙 파일(rules.toml)이 그 자리에서 도구 호출마다 집행된다.
+(rule, server)을 채우면, run_started 와 승인·거부 이벤트도 계정 칸(requesting_account,
+deciding_account)을 채우면 같은 길로 끝난다(ADR 0044, ADR 0063). 이유는 `_reject_runtime_only`.
+거부는 실행을 끝내지 않는다. 거부된 도구 호출은 불리지 않고 tool_called(ok=false) 로 사유가
+모델에게 돌아가며, 에이전트가 정상적으로 끝맺는다(ADR 0009). 매니페스트의 두 끝(max_turns,
+max_tool_calls)도 여기서 집행한다 — 턴의 끝은 루프가, 도구 호출의 끝은 도구를 부르는 자리가 지키고,
+끝을 넘은 호출은 규칙이 정한 것이 아니라 rule 을 비운 같은 거부다(ADR 0052). 게이트는 도구를 부르는
+한 자리(`_Context._call`)이고, 운영자의 규칙 파일(rules.toml)이 그 자리에서 도구 호출마다 집행된다.
 deny 는 거부로 기록하고, 저자의 requires_approval 과 ask 와 어디에도 맞지 않는 default 는 일시정지,
 allow 만 곧바로 부른다(ADR 0044). 규칙이 도구를 묻게 둘 수 있는 도구에는 마스킹된 인자가 없어야
 하고(실행 전), 에이전트 표가 적은 줄은 연결에 실재해야 하며(연결 직후), 재개는 멈춘 도구를 낸
@@ -806,6 +807,7 @@ async def run(
     principal: Principal,
     *,
     previous_run: RunId | None = None,
+    requesting_account: str | None = None,
     visible_agents: frozenset[AgentName] | None = None,
     timeout_seconds: float | None = None,
     default_model: PluginName,
@@ -816,6 +818,11 @@ async def run(
     clock: Clock,
 ) -> AsyncIterator[Event]:
     """새 실행 하나. `previous_run` 을 주면 그 끝난 실행을 이어 간다(ADR 0022).
+
+    `requesting_account` 는 그 실행을 시작하거나 이어 간 운영자 계정의 이름이고 시작 이벤트에
+    그대로 적는다(ADR 0063). 없음이 기본값이다. core 는 이 글로 무엇도 판정하지 않고, 이름 규칙에
+    맞는 값만 오게 하는 것은 부르는 쪽(채널)이다. 이어 간 실행에는 대화를 처음 시작한 계정이 아니라
+    그 이어 가기를 보낸 계정이 든다.
 
     `default_model` 은 에이전트가 매니페스트에 `model` 을 적지 않았을 때 쓰는 모델 플러그인의
     이름이다 (ADR 0040). 필수 키워드 인자이고 core 는 이름을 짓지 않는다. 이름의 문자 집합은 부르는
@@ -862,6 +869,7 @@ async def run(
         principal=principal,
         previous_run=previous_run,
         shortcuts={} if continued is None else continued.shortcuts,
+        requesting_account=requesting_account,
     )
     trace.write(started)
     yield started
@@ -899,6 +907,7 @@ async def resume(
     decision: Decision,
     approver: Principal,
     *,
+    deciding_account: str | None = None,
     visible_agents: frozenset[AgentName] | None = None,
     timeout_seconds: float | None = None,
     default_model: PluginName,
@@ -909,6 +918,10 @@ async def resume(
     clock: Clock,
 ) -> AsyncIterator[Event]:
     """같은 실행을 이어 간다. 새 실행이 아니라 run_id 도 트레이스 파일도 하나다.
+
+    `deciding_account` 는 그 결정을 내린 운영자 계정의 이름이고 승인·거부 이벤트에 그대로 적는다
+    (ADR 0063). 없음이 기본값이다. 승인자(`approver`)는 결정의 주체라 따로 남고, 둘은 판정에
+    쓰이지 않는 글이다.
 
     모델은 기록된 에이전트의 매니페스트를 지금 디스크에서 읽어 `run()` 과 같은 순서의 준비로 새로
     만든다. 그래서 멈춘 사이 모델 파일을 고치거나 모델을 껐으면 재개가 그것을 듣는다(ADR 0040).
@@ -947,7 +960,7 @@ async def resume(
     prepared = _prepare(
         plugins, models, _recorded_manifest(plugins, resumption.started), default_model
     )
-    decided = _decision_event(run_id, decision, approver, clock)
+    decided = _decision_event(run_id, decision, approver, deciding_account, clock)
     trace.write(decided)
     yield decided
     body = _Body(
@@ -1326,6 +1339,10 @@ def _reject_runtime_only(event: Event, run_id: RunId) -> None:
     채운 `run_paused` 는 지어낸 일시정지를 멈춘 것으로 치지 않는 길보다 먼저 여기서 끝난다.
     에이전트가 채운 칸이 트레이스에 남으면 그 트레이스의 재개가 재생 구간에서 `agent_code` 로
     끝나므로 쓰기 전에 막는다.
+
+    시작 이벤트의 요청한 계정과 승인·거부 이벤트의 결정한 계정(`run_started.requesting_account`,
+    `approval_granted.deciding_account`, `approval_denied.deciding_account`)도 런타임만 쓴다. 결정한
+    사람을 에이전트가 지어내지 못하게 하려는 것이고 같은 길이다(ADR 0063).
     """
     match event:
         case ConversationSummarized():
@@ -1338,6 +1355,18 @@ def _reject_runtime_only(event: Event, run_id: RunId) -> None:
             raise RuntimeError(f"에이전트는 run_paused 의 rule 칸을 채울 수 없다: {event.tool}")
         case RunPaused(server=server) if server is not None:
             raise RuntimeError(f"에이전트는 run_paused 의 server 칸을 채울 수 없다: {event.tool}")
+        case RunStarted(requesting_account=account) if account is not None:
+            raise RuntimeError(
+                f"에이전트는 run_started 의 requesting_account 칸을 채울 수 없다: {run_id}"
+            )
+        case ApprovalGranted(deciding_account=account) if account is not None:
+            raise RuntimeError(
+                f"에이전트는 approval_granted 의 deciding_account 칸을 채울 수 없다: {run_id}"
+            )
+        case ApprovalDenied(deciding_account=account) if account is not None:
+            raise RuntimeError(
+                f"에이전트는 approval_denied 의 deciding_account 칸을 채울 수 없다: {run_id}"
+            )
         case _:
             return
 
@@ -1368,14 +1397,29 @@ def _timeout_of(timeout_seconds: float | None) -> float:
 
 
 def _decision_event(
-    run_id: RunId, decision: Decision, approver: Principal, clock: Clock
+    run_id: RunId,
+    decision: Decision,
+    approver: Principal,
+    deciding_account: str | None,
+    clock: Clock,
 ) -> ApprovalGranted | ApprovalDenied:
     """결정을 트레이스에 남는 이벤트로. 승인과 거부가 별도 클래스인 이유는 sdk 의 events.py."""
     match decision:
         case Deny(reason=reason):
-            return ApprovalDenied(run_id=run_id, ts=clock.now(), approver=approver, reason=reason)
+            return ApprovalDenied(
+                run_id=run_id,
+                ts=clock.now(),
+                approver=approver,
+                reason=reason,
+                deciding_account=deciding_account,
+            )
         case Approve():
-            return ApprovalGranted(run_id=run_id, ts=clock.now(), approver=approver)
+            return ApprovalGranted(
+                run_id=run_id,
+                ts=clock.now(),
+                approver=approver,
+                deciding_account=deciding_account,
+            )
         case _:
             assert_never(decision)
 

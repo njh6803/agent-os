@@ -1,7 +1,7 @@
 # `.claude/rules/channel.md` 의 최종 사용자 면 경로 항목을 고친 문장(경로가 넷, 넷째 경로의 operation_id)이 `paths` 에
 # 맞는 파일을 Read 로 열 때 실리는지(end-user-continuation 티켓 01).
 # 실험군은 규칙의 paths 안(src/agent_os/channel/http/), 대조군은 밖(README.md)을 읽는다. 둘 다 이 체크아웃이다.
-# 최신 결과: 통과 4(2026-11-17, 이 PC, claude 2.1.325, 실험군은 `ac2e65f62` 위의 커밋 전 작업 트리 셋, 대조군은 같은 체크아웃의 `paths` 밖 파일 하나, 일지 2026-11-17-2031). 용어집의 이름을 바꾸며 원천의 낱말만 고친 뒤 다시 돌렸다(harness 티켓 plain-words-in-written-artifacts).
+# 최신 결과: 통과 4(2026-11-25, 이 PC, claude 2.1.325, 실험군은 `6b0646e80` 위의 커밋 전 작업 트리 셋, 대조군은 같은 체크아웃의 `paths` 밖 파일 하나. admin-login 티켓 01 이 `channel.md`에 403을 더한 뒤 돌렸다). 앞 판은 통과 4(2026-11-17, 이 PC, claude 2.1.325, 실험군은 `ac2e65f62` 위의 커밋 전 작업 트리 셋, 대조군은 같은 체크아웃의 `paths` 밖 파일 하나, 일지 2026-11-17-2031). 용어집의 이름을 바꾸며 원천의 낱말만 고친 뒤 다시 돌렸다(harness 티켓 plain-words-in-written-artifacts).
 # 그 전 결과: 통과 4(2026-10-24, 이 PC, claude 2.1.302, 일지 2026-10-24-01). web-widget 티켓 02 가 같은 원천의 백로그
 # 항목(실행을 모는 루프의 까닭)을 고친 뒤 다시 돌렸다.
 # 그 앞 결과: 통과 4(2026-10-23, 이 PC, claude 2.1.302, 일지 2026-10-23-49). web-widget 티켓 01 이 같은 원천의 투영
