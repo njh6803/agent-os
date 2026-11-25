@@ -5,21 +5,28 @@
 // 1.51.0 의 `dist/esm/shared/src/build/buildLucideIconNode.mjs`).
 // import 는 아이콘 하나짜리 서브패스다(ADR 0024. 세트를 통째로 import 하는 것은 ESLint 가 막는다).
 import Check from "lucide-react/dist/esm/icons/check";
+import ChevronsUpDown from "lucide-react/dist/esm/icons/chevrons-up-down";
+import Circle from "lucide-react/dist/esm/icons/circle";
 import CircleCheck from "lucide-react/dist/esm/icons/circle-check";
 import CircleMinus from "lucide-react/dist/esm/icons/circle-minus";
 import CirclePause from "lucide-react/dist/esm/icons/circle-pause";
 import CircleX from "lucide-react/dist/esm/icons/circle-x";
+import Copy from "lucide-react/dist/esm/icons/copy";
 import Ellipsis from "lucide-react/dist/esm/icons/ellipsis";
 import Info from "lucide-react/dist/esm/icons/info";
 import List from "lucide-react/dist/esm/icons/list";
 import LoaderCircle from "lucide-react/dist/esm/icons/loader-circle";
+import Lock from "lucide-react/dist/esm/icons/lock";
+import LogOut from "lucide-react/dist/esm/icons/log-out";
 import Menu from "lucide-react/dist/esm/icons/menu";
+import MessageSquare from "lucide-react/dist/esm/icons/message-square";
 import Plug from "lucide-react/dist/esm/icons/plug";
 import Search from "lucide-react/dist/esm/icons/search";
 import Send from "lucide-react/dist/esm/icons/send";
 import Settings from "lucide-react/dist/esm/icons/settings";
 import ShieldCheck from "lucide-react/dist/esm/icons/shield-check";
 import TriangleAlert from "lucide-react/dist/esm/icons/triangle-alert";
+import Users from "lucide-react/dist/esm/icons/users";
 import Wrench from "lucide-react/dist/esm/icons/wrench";
 import X from "lucide-react/dist/esm/icons/x";
 import type { NativeProps } from "../../props";
@@ -42,11 +49,19 @@ const GLYPHS = {
   search: Search,
   menu: Menu,
   ellipsis: Ellipsis,
+  "message-square": MessageSquare,
+  users: Users,
+  "chevrons-up-down": ChevronsUpDown,
+  "log-out": LogOut,
+  copy: Copy,
+  lock: Lock,
+  circle: Circle,
 };
 
 /**
- * 디자인 파일의 아이콘 열여섯과 관리 화면 탐색의 `settings`(admin-style 명세). 불러오는 중의 `loader-circle` 은 컴포넌트
- * 안에서만 쓰고 여기 들지 않는다.
+ * 디자인 파일의 아이콘 열여섯, 관리 화면 탐색의 `settings`(admin-style 명세), 운영자 로그인(admin-login 명세)의 일곱
+ * (대화 `message-square`, 계정 `users`, 계정 메뉴 열기 `chevrons-up-down`, 로그아웃 `log-out`, 링크 복사 `copy`, 잠김
+ * `lock`, 상태 점 `circle`)이다. 불러오는 중의 `loader-circle` 은 컴포넌트 안에서만 쓰고 여기 들지 않는다.
  */
 export type IconName = keyof typeof GLYPHS;
 export const ICON_NAMES = Object.keys(GLYPHS).filter((name): name is IconName => name in GLYPHS);

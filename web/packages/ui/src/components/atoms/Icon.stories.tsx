@@ -55,7 +55,7 @@ export const Sizes: Story = {
 };
 
 export const AllNames: Story = {
-  name: "열일곱 이름이 모두 화면 1.5px 의 선으로 그려진다",
+  name: "스물넷 이름이 모두 화면 1.5px 의 선으로 그려진다",
   render: (args) => (
     <ul className="flex flex-wrap gap-4 text-text">
       {ICON_NAMES.map((name) => (
@@ -67,9 +67,20 @@ export const AllNames: Story = {
     </ul>
   ),
   play: async ({ canvasElement }) => {
-    // 관리 화면 탐색의 설정(admin-style)까지 열일곱이다.
-    await expect(ICON_NAMES).toHaveLength(17);
+    // 관리 화면 탐색의 설정(admin-style)까지 열일곱이고, 운영자 로그인(admin-login)의 일곱을 더해 스물넷이다.
+    await expect(ICON_NAMES).toHaveLength(24);
     await expect(ICON_NAMES).toContain("settings");
+    for (const name of [
+      "message-square",
+      "users",
+      "chevrons-up-down",
+      "log-out",
+      "copy",
+      "lock",
+      "circle",
+    ] as const) {
+      await expect(ICON_NAMES).toContain(name);
+    }
     const svgs = Array.from(canvasElement.querySelectorAll("svg"));
     await expect(svgs).toHaveLength(ICON_NAMES.length);
     for (const svg of svgs) {
@@ -82,7 +93,7 @@ export const AllNames: Story = {
 
 export const AllNamesDark: Story = {
   ...AllNames,
-  name: "다크 모드에서도 열일곱 이름이 화면 1.5px 의 선으로 그려진다",
+  name: "다크 모드에서도 스물넷 이름이 화면 1.5px 의 선으로 그려진다",
   globals: { mode: "dark" },
 };
 
@@ -103,6 +114,43 @@ export const ShowcaseNavItems: Story = {
       <li className="flex items-center gap-2">
         <Icon name="settings" size="16" />
         설정
+      </li>
+    </ul>
+  ),
+};
+
+/** 보여 주기용(`showcase`). 운영자 로그인 뒤의 탐색과 계정 메뉴, 링크 복사 줄의 아이콘이다. 글자와 함께 놓여 꾸밈이므로 숨는다. */
+export const ShowcaseAccountMenu: Story = {
+  name: "쓰임: 계정 메뉴와 탐색의 아이콘",
+  tags: ["showcase"],
+  render: () => (
+    <ul className="flex flex-col gap-2 text-body text-text">
+      <li className="flex items-center gap-2">
+        <Icon name="message-square" size="16" />
+        대화
+      </li>
+      <li className="flex items-center gap-2">
+        <Icon name="users" size="16" />
+        계정
+      </li>
+      <li className="flex items-center gap-2">
+        <Icon name="copy" size="16" />
+        링크 복사
+      </li>
+      <li className="flex items-center gap-2">
+        <Icon name="lock" size="16" />
+        잠김
+      </li>
+      <li className="flex items-center gap-2">
+        <Icon name="log-out" size="16" />
+        로그아웃
+      </li>
+      <li className="flex items-center justify-between gap-4 text-text-muted">
+        <span className="flex items-center gap-2">
+          <Icon name="circle" size="14" />
+          kim.admin
+        </span>
+        <Icon name="chevrons-up-down" size="16" />
       </li>
     </ul>
   ),
