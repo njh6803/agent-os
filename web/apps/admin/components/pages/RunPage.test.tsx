@@ -34,6 +34,7 @@ const TRACE: Trace = {
       principal: "operator",
       previous_run: null,
       shortcuts: null,
+      requesting_account: null,
     },
     {
       type: "llm_called",
@@ -89,6 +90,7 @@ const CONTINUED_TRACE: Trace = {
       principal: "operator",
       previous_run: PREVIOUS,
       shortcuts: null,
+      requesting_account: null,
     },
     {
       type: "conversation_summarized",
@@ -119,6 +121,7 @@ const FAILED_TRACE: Trace = {
       principal: "operator",
       previous_run: null,
       shortcuts: null,
+      requesting_account: null,
     },
     {
       type: "run_failed",
@@ -304,6 +307,7 @@ describe("실행 하나", () => {
       "주체 principal",
       "앞 실행 previous_run",
       "바로가기 shortcuts",
+      "요청한 계정 requesting_account",
     ]);
     expect(names(3)).toEqual([
       "시각 ts",
@@ -367,6 +371,50 @@ describe("실행 하나", () => {
     ).toEqual(["시각 ts", "에러 error", "실패 원인 cause"]);
     // 원인마다 문구를 짓는 것은 위젯의 몫이다. 관리 화면은 운영자에게 계약의 값을 보인다.
     expect(fieldValue(eventItem(1), "cause").textContent).toBe("timeout");
+  });
+
+  test("요청한 계정과 결정한 계정은 용어집의 말과 계약의 이름을 함께 보이고 값은 글자 그대로다", async () => {
+    const trace: Trace = {
+      run_id: RUN,
+      schema_version: "3",
+      events: [
+        {
+          type: "run_started",
+          run_id: RUN,
+          ts: TS,
+          agent: "calc",
+          request: "1 더하기 2",
+          principal: "operator",
+          previous_run: null,
+          shortcuts: null,
+          requesting_account: "alice",
+        },
+        {
+          type: "approval_granted",
+          run_id: RUN,
+          ts: TS,
+          approver: "operator",
+          deciding_account: "bob",
+        },
+      ],
+    };
+    serveTrace(`/traces/${RUN}`, () => HttpResponse.json(trace));
+
+    await openRun(RUN);
+
+    await screen.findByRole("region", { name: EVENTS });
+    expect(
+      within(eventItem(0))
+        .getAllByRole("term")
+        .map((term) => term.textContent),
+    ).toContain("요청한 계정 requesting_account");
+    expect(fieldValue(eventItem(0), "requesting_account").textContent).toBe("alice");
+    expect(
+      within(eventItem(1))
+        .getAllByRole("term")
+        .map((term) => term.textContent),
+    ).toEqual(["시각 ts", "승인자 approver", "결정한 계정 deciding_account"]);
+    expect(fieldValue(eventItem(1), "deciding_account").textContent).toBe("bob");
   });
 
   test("적용 규칙과 서버는 용어집의 말과 계약의 이름을 함께 보이고 값은 계약의 값 그대로 글자다", async () => {
@@ -642,6 +690,7 @@ describe("실행 하나", () => {
           principal: "operator",
           previous_run: previous,
           shortcuts: { [agent]: shortcut },
+          requesting_account: null,
         },
         {
           type: "llm_called",

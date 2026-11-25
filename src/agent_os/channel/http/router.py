@@ -172,7 +172,7 @@ def _operator_router(
         operation_id="start_run",
         summary="실행 하나를 일으켜 그 이벤트를 생기는 대로 흘린다",
         response_class=EventSourceWithJsonErrors,
-        responses=documented_errors(401, 404, 409, 422),
+        responses=documented_errors(401, 403, 404, 409, 422),
     )
     async def start_run(stream: Annotated[RunStream, Depends(run_stream)]) -> AsyncIterator[Event]:
         async for item in stream.items():
@@ -225,7 +225,7 @@ def _operator_router(
         operation_id="decide_approval",
         summary="멈춘 실행에 결정 하나를 내고 재개된 실행의 이벤트를 생기는 대로 흘린다",
         response_class=EventSourceWithJsonErrors,
-        responses=documented_errors(401, 404, 409, 422),
+        responses=documented_errors(401, 403, 404, 409, 422),
     )
     async def decide_approval(
         stream: Annotated[RunStream, Depends(resume_stream)],
@@ -257,7 +257,7 @@ def _operator_router(
         operation_id="continue_run",
         summary="끝난 실행을 이어 가는 새 실행을 일으켜 그 이벤트를 생기는 대로 흘린다",
         response_class=EventSourceWithJsonErrors,
-        responses=documented_errors(401, 404, 409, 422),
+        responses=documented_errors(401, 403, 404, 409, 422),
     )
     async def continue_run(
         stream: Annotated[RunStream, Depends(continue_stream)],

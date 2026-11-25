@@ -30,6 +30,7 @@ from agent_os.http.errors import (
     EndUserPaths,
     install_error_handlers,
 )
+from agent_os.http.origin import CheckOrigin
 from agent_os.http.sites import Sites
 from agent_os.sdk import PluginName, Principal
 
@@ -95,14 +96,16 @@ def create_app(
     여기서는 그런 앱이 만들어지지 않는다는 것까지다.
 
     미들웨어의 순서가 의도다. 나중에 건 것이 바깥이므로 안쪽부터 건다. 바깥에서 안쪽으로 추적
-    식별자 → CORS 분기 → 핸들러가 놓친 예외의 변환 → 인증 → 라우터다. 추적 식별자가 앱에 건 것
-    가운데 가장 바깥이라 인증이 낸 401 과 라우터가 낸 500 과 CORS 가 직접 답한 preflight 가 모두
-    식별자를 들고 나간다. CORS 분기는 최종 사용자 접두사의 요청만 CORS 로 두르고(allowlist 밖의 그
-    밖 경로에서 preflight 는 인증이 401 로 막는다), 그것이 변환과 인증을 감싸므로 인증의 401 에도
-    예기치 않은 500 의 봉투에도 CORS 헤더가 붙는다. 허용 출처는 모든 사이트의 것을 합친
-    하나다(`Sites.origins`). 변환이 운영자 면에 서는 자리는 식별자 심기와 인증 사이로, 둘이 한
-    미들웨어였을 때와 같다. 인증 표와 예외 표와 CORS 분기는 같은 접두사를 같은 비교(`is_under`)로
-    보아, 서명 토큰으로 열린 경로가 곧 최종 사용자 면으로 번역되고 CORS 헤더를 받는다.
+    식별자 → CORS 분기 → 핸들러가 놓친 예외의 변환 → 요청 출처 검사 → 인증 → 라우터다. 추적
+    식별자가 앱에 건 것 가운데 가장 바깥이라 인증이 낸 401 과 출처 검사가 낸 403 과 라우터가 낸 500
+    과 CORS 가 직접 답한 preflight 가 모두 식별자를 들고 나간다. 출처 검사는 인증보다 앞이라 출처가
+    틀린 요청은 토큰이 없어도 403 이고, `/health` 와 최종 사용자 접두사에는 걸리지 않는다. CORS
+    분기는 최종 사용자 접두사의 요청만 CORS 로 두르고(allowlist 밖의 그 밖 경로에서 preflight 는
+    인증이 401 로 막는다), 그것이 변환과 인증을 감싸므로 인증의 401 에도 예기치 않은 500 의 봉투에도
+    CORS 헤더가 붙는다. 허용 출처는 모든 사이트의 것을 합친 하나다(`Sites.origins`). 변환이 운영자
+    면에 서는 자리는 식별자 심기와 인증 사이로, 둘이 한 미들웨어였을 때와 같다. 인증 표와 예외 표와
+    CORS 분기는 같은 접두사를 같은 비교(`is_under`)로 보아, 서명 토큰으로 열린 경로가 곧 최종 사용자
+    면으로 번역되고 CORS 헤더를 받는다.
 
     데이터베이스(`database`)는 인자이고 기본값이 없다. 수명을 열 때 표의 판이 맞는 데이터베이스에
     닿는지 확인하고 닫을 때 연결 묶음을 닫는 일은 가장 바깥 미들웨어(`CheckDatabase`)가 한다 — HTTP
@@ -154,6 +157,7 @@ def create_app(
             END_USER_PREFIX: SiteSigned(sites=sites, clock=clock),
         },
     )
+    app.add_middleware(CheckOrigin, exempt_prefix=END_USER_PREFIX)
     app.add_middleware(CatchUnexpected, end_user=end_user)
     app.add_middleware(CorsUnderPrefix, prefix=END_USER_PREFIX, origins=sites.origins())
     app.add_middleware(AssignRequestId, stderr=stderr)

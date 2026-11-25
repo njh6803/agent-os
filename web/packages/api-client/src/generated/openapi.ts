@@ -254,6 +254,8 @@ export interface components {
     ApprovalDenied: {
       /** Approver */
       approver: string;
+      /** Deciding Account */
+      deciding_account: string | null;
       /** Reason */
       reason: string;
       /** Run Id */
@@ -276,6 +278,8 @@ export interface components {
     ApprovalGranted: {
       /** Approver */
       approver: string;
+      /** Deciding Account */
+      deciding_account: string | null;
       /** Run Id */
       run_id: string;
       /**
@@ -456,6 +460,7 @@ export interface components {
      */
     ErrorCode:
       | "unauthorized"
+      | "forbidden"
       | "invalid_request"
       | "not_found"
       | "conflict"
@@ -842,7 +847,7 @@ export interface components {
     RunRow: components["schemas"]["RunSummary"] | components["schemas"]["UnreadableTrace"];
     /**
      * RunStarted
-     * @description 실행이 시작됐다. 에이전트·요청·주체와 앞 실행·바로가기(없으면 null)를 든다. 런타임이 낸다.
+     * @description 실행이 시작됐다. 에이전트·요청·주체와 앞 실행·바로가기·요청한 계정(없으면 null)을 든다.
      */
     RunStarted: {
       /** Agent */
@@ -853,6 +858,8 @@ export interface components {
       principal: string;
       /** Request */
       request: string;
+      /** Requesting Account */
+      requesting_account: string | null;
       /** Run Id */
       run_id: string;
       /** Shortcuts */
@@ -1501,6 +1508,15 @@ export interface operations {
           "application/json": components["schemas"]["ErrorEnvelope"];
         };
       };
+      /** @description 이 요청의 출처를 받지 않는다 */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorEnvelope"];
+        };
+      };
       /** @description 서버가 요청을 처리하지 못했다 */
       500: {
         headers: {
@@ -1535,6 +1551,15 @@ export interface operations {
       };
       /** @description 토큰이 없거나 틀리다 */
       401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorEnvelope"];
+        };
+      };
+      /** @description 이 요청의 출처를 받지 않는다 */
+      403: {
         headers: {
           [name: string]: unknown;
         };
@@ -1603,6 +1628,15 @@ export interface operations {
           "application/json": components["schemas"]["ErrorEnvelope"];
         };
       };
+      /** @description 이 요청의 출처를 받지 않는다 */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorEnvelope"];
+        };
+      };
       /** @description 찾는 것이 없다 */
       404: {
         headers: {
@@ -1657,6 +1691,15 @@ export interface operations {
       };
       /** @description 토큰이 없거나 틀리다 */
       401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorEnvelope"];
+        };
+      };
+      /** @description 이 요청의 출처를 받지 않는다 */
+      403: {
         headers: {
           [name: string]: unknown;
         };
@@ -1725,6 +1768,15 @@ export interface operations {
           "application/json": components["schemas"]["ErrorEnvelope"];
         };
       };
+      /** @description 이 요청의 출처를 받지 않는다 */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorEnvelope"];
+        };
+      };
       /** @description 찾는 것이 없다 */
       404: {
         headers: {
@@ -1778,6 +1830,15 @@ export interface operations {
       };
       /** @description 토큰이 없거나 틀리다 */
       401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorEnvelope"];
+        };
+      };
+      /** @description 이 요청의 출처를 받지 않는다 */
+      403: {
         headers: {
           [name: string]: unknown;
         };
@@ -1856,6 +1917,15 @@ export interface operations {
           "application/json": components["schemas"]["ErrorEnvelope"];
         };
       };
+      /** @description 이 요청의 출처를 받지 않는다 */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorEnvelope"];
+        };
+      };
       /** @description 찾는 것이 없다 */
       404: {
         headers: {
@@ -1920,6 +1990,15 @@ export interface operations {
       };
       /** @description 토큰이 없거나 틀리다 */
       401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorEnvelope"];
+        };
+      };
+      /** @description 이 요청의 출처를 받지 않는다 */
+      403: {
         headers: {
           [name: string]: unknown;
         };
@@ -1998,6 +2077,15 @@ export interface operations {
           "application/json": components["schemas"]["ErrorEnvelope"];
         };
       };
+      /** @description 이 요청의 출처를 받지 않는다 */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorEnvelope"];
+        };
+      };
       /** @description 요청의 형식이 올바르지 않다 */
       422: {
         headers: {
@@ -2040,6 +2128,15 @@ export interface operations {
       };
       /** @description 토큰이 없거나 틀리다 */
       401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorEnvelope"];
+        };
+      };
+      /** @description 이 요청의 출처를 받지 않는다 */
+      403: {
         headers: {
           [name: string]: unknown;
         };

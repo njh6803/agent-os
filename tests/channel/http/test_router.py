@@ -2049,7 +2049,7 @@ def test_POST_runs_가_사람이_지은_operation_id_와_봉투_에러_문서를
 
     assert operation["operationId"] == "start_run"
     errors = {status for status in operation["responses"] if not status.startswith("2")}
-    assert errors == {"401", "404", "409", "422", "500"}
+    assert errors == {"401", "403", "404", "409", "422", "500"}
     for status in errors:
         content = operation["responses"][status]["content"]
         assert set(content) == {"application/json"}, status
@@ -2077,7 +2077,7 @@ def test_승인_라우트가_지은_operation_id_와_봉투_에러_문서와_식
 
     assert operation["operationId"] == "decide_approval"
     errors = {status for status in operation["responses"] if not status.startswith("2")}
-    assert errors == {"401", "404", "409", "422", "500"}
+    assert errors == {"401", "403", "404", "409", "422", "500"}
     for status in errors:
         content = operation["responses"][status]["content"]
         assert set(content) == {"application/json"}, status
@@ -2404,7 +2404,7 @@ def test_이어_가기_라우트가_지은_operation_id_와_봉투_에러_문서
 
     assert operation["operationId"] == "continue_run"
     errors = {status for status in operation["responses"] if not status.startswith("2")}
-    assert errors == {"401", "404", "409", "422", "500"}
+    assert errors == {"401", "403", "404", "409", "422", "500"}
     for status in errors:
         content = operation["responses"][status]["content"]
         assert set(content) == {"application/json"}, status
