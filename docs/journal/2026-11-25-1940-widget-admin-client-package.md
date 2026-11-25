@@ -1,0 +1,117 @@
+# 2026-11-25 widget-admin-server 02: 화면용 클라이언트 패키지
+
+세션 제목: `feature/02-widget-admin-client-package`. 이 세션은 구현과 문서와 린트·타입 검증까지 마치고, 컨텍스트가 인계 문턱(20만 토큰)을 넘은 채 `셀프 리뷰 직전`에 와서 새 세션에 넘겼다. 커밋하지 않은 변경이 워크트리에 그대로 있다.
+
+## 사용자 프롬프트 원문(요지)
+
+> .claude/skills/implement/SKILL.md 를 읽어 그대로 따른다. … 인자: .scratch/widget-admin-server/issues/02-widget-admin-client-package.md
+
+지시문의 값: 브랜치 `feature/02-widget-admin-client-package`, 모델 Sonnet 5.5 / high, 이번 요청 범위는 PR과 병합까지, 나란히 여는 03과 함께 고치는 파일은 루트 `README.md`뿐이다.
+
+## 결정
+
+- 생성 도구 `web/tools/generate-api-client.ts`를 두 대상(`api-client`, `widget-admin-client`)으로 넓혔다. api-client 생성물의 바이트는 그대로다. 스크립트 이름 `generate:api-client`·`check:api-client`는 바꾸지 않고 두 대상을 모두 다룬다. CLI는 `--target <이름>`을 받고, 이름도 계약도 없으면 두 대상을 모두 돈다.
+- 공개 경로용 팩토리 `createPublicClient(baseUrl: URL)`는 `credentials: "omit"`을 싣고 머리를 더하지 않는다. `PublicPaths`는 `/widget-settings/{site}` 하나만 든다.
+- 계약의 `schema_version`은 `integer`(리터럴 아님)이고 생성 타입에서 `number`로 나온다. 변이(`schema_version: 1`, 칸을 선택으로)로 tsc와 eslint가 실제로 빨개지는 것을 보고 되돌렸다.
+- ESLint 네 자리(안쪽 import 규칙, atoms·molecules 정책, organisms·templates 정책, 패키지 안 `openapi-fetch` 허용)에 이 패키지를 더했다. `eslint.config.test.ts`의 사례는 설정을 고치기 전에 정확히 여섯 개가 빨강인 것을 먼저 봤다.
+- 임시 트리에는 `openapi-fetch`가 없어, 패키지 안 import 허용 사례는 실제 `clients.ts`를 판정 대상으로 삼은 시험(`eslint.config.test.ts`가 단언한다)으로 바꿨다.
+- 헌법 판을 3.1.6 → 3.1.7로 올렸다. `sibling_overlap`이 형제의 가장 높은 판을 3.1.6으로 보고했다.
+- `.claude/rules/web-workspace.md`는 고치지 않았다(티켓이 정한 대로).
+
+## 이 세션이 고친 것(번복 포함)
+
+- `Headers.keys`가 `lib: dom`에 없어(TS2339) `request.headers.forEach`로 머리 이름을 모으게 바꿨다.
+- `Record<never, never>` 비교가 `no-generated-empty-object-type`에 걸려 `toEqualTypeOf<Required<Settings>>()`로 바꿨다.
+- `--target` 뒤 값이 없을 때 조용히 지나가던 것을 `?? ""`로 막아 "모르는 대상"으로 처리하게 했다.
+
+## 확인한 것과 못 한 것
+
+- 확인: `uv run ruff check .`, `ruff format --check .`, `pnpm -C web run lint`·`format`·`typecheck`·`check:tsconfig`·`check:api-client`, `tests/tools/test_web_images_manifests.py`, `eslint.config.test.ts`+`generate-api-client.test.ts`+`packages/widget-admin-client` 시험 135개.
+- 못 함: `tools/run_checks.py` 한 바퀴(백그라운드로 돌던 것은 인계하며 멈췄다. 새 세션이 다시 돌려야 한다), 단독 배포 e2e(Docker, 호스트 80·443·3000 포트 비어 있어야 함), 셀프 리뷰, 커밋, PR.
+- 티켓 `.scratch/widget-admin-server/issues/02-widget-admin-client-package.md`의 남은 체크박스: "마지막 티켓이면"과 "검증" 둘. Status는 아직 `in-progress`다. 닫을 때 `done`으로 바꾸고 `uv run python tools/plan_table.py`를 돈다.
+- 마지막 티켓 판정: 지금은 04가 03에 막혀 있고 03·04가 모두 `ready-for-agent`이며 열린 PR이 없어 이 티켓이 마지막이 아니다. 병합 직전에 `git fetch origin` 뒤 04의 상태를 다시 본다. 04가 먼저 done이면 이 티켓이 `.scratch/widget-admin-server/plan.md`에 `**끝:**` 줄을 적고 `docs/release-notes/features/widget-admin-server.md`를 싣는다.
+
+## PR 직전 리뷰에 밀 주장(새로 쓴 사실 문장)
+
+- `docs/constitution/operations.md`·`docs/constitution/tech.md`·`README.md`의 "계약 둘, 생성 클라이언트 둘" 문장과 tech.md 26행의 "거기서 생성하는 화면용 클라이언트는 `web/packages/widget-admin-client`이고 `packages/api-client`와 따로 선다"는 문장(처음 일지에 인용을 글자 그대로 옮기지 않았던 것을 셀프 리뷰가 잡아 고쳤다).
+- `web/packages/widget-admin-client/src/clients.ts`의 주석: `openapi-fetch 0.17.0`은 본문 없는 요청에 `Content-Type`·`Accept`를 붙이지 않는다. `clients.test.ts`가 가짜 `fetch`로 받은 요청의 머리를 단언한다(이 세션에서 통과한 것을 봤다. 위 "확인한 것"의 시험 135개에 든다). 0.17.0의 소스를 이 세션에서 다시 읽지는 않았다.
+
+## 셀프 리뷰(두 번째 세션, 2026-11-25)
+
+범위: base `085fa7b93`(HEAD와 같다), 커밋 0개, 변경 파일 열셋, 미추적 여덟(패키지 일곱과 이 일지). 표준 축은 sonnet·high, 명세 축은 세션 모델이 돌았다. 두 축 모두 Critical·Major 없음이다. 근거의 종류: 두 서브에이전트가 소스를 읽어 낸 보고이고, 시험은 명세 축 서브에이전트가 `tests/tools/test_web_images_manifests.py` 5개와 vitest 두 파일 18개를 돌려 통과를 봤다고 보고했다(이 세션이 직접 돌려 보지는 않았다).
+
+고친 것:
+
+- `clients.ts` JSDoc의 "모든 요청에"를 "기본으로"로 좁히고, 호출마다 넘기는 `credentials`·`headers`가 기본값을 덮는다고 적었다. 근거: 이 세션이 `web/packages/widget-admin-client/node_modules/openapi-fetch/dist/index.mjs` 70~76행을 Bash `sed`로 읽었다(`...baseOptions, ...init` 순서). 코드를 읽은 것이고, 덮어쓰는 호출의 시험은 만들지 않았다.
+- `clients.ts` 머리 주석의 "브라우저는 `*`와 자격 증명을 함께 쓰는 답을 읽지 않으므로"에 명세가 이를 기억에 기댄 어림으로 적었다는 단서를 붙였다(명세 242행을 Grep으로 읽었다).
+- `generate-api-client.test.ts`의 시험 제목을 "…고쳐 쓰지 않고 실패한다"에서 "모르는 대상 이름이면 최신성 검사가 실패하고 알려진 대상 이름을 보여 준다"로 바꿔 단언과 맞췄다.
+- 이 일지의 tech.md 26행 인용을 글자 그대로로 고쳤다(tech.md 26행을 Read로 읽었다).
+
+남긴 것과 이유:
+
+- `CONTRACT`·`GENERATED`·`WIDGET_ADMIN_*` 별칭과 `generate(contract, target = API_CLIENT_TARGET)`의 인자 중복(표준 축 Minor/Nit): 기존 api-client의 시험과 도구가 같은 이름을 쓰고 있어 이 티켓의 체크박스 밖이다. 호출처는 두 대상을 모두 `TARGETS`로 돌려 기본값을 타지 않는다(코드를 읽은 것).
+- `chosen` 중첩 삼항(Nit): 판단 항목이고 도구가 잡지 않는다. 남긴다.
+- `index.ts`가 `components`·`paths`를 내보내는 것(명세 축이 범위 넘침으로 냈다): api-client의 `index.ts`가 같은 줄을 낸다(Bash로 두 파일을 읽었다). 오탐으로 판정했다.
+- 루트 `README.md` `web/tools` 줄이 길다(겉모양): 남긴다.
+- 일지 맨 끝의 "open-session을 부른다" 줄: 하네스가 붙이는 줄이라 지우지 않는다.
+
+## 다시 돌린 것과 결과(두 번째 세션)
+
+- `uv run ruff check . && uv run ruff format --check .`: 통과(이 세션이 돌려 출력을 봤다).
+- `uv run python tools/run_checks.py`(백그라운드, 셀프 리뷰 반영 전에 시작한 한 바퀴): check-notes, check-ticket, zizmor, lint-imports, check-instructions, check-type-escapes, pyright, pyright-linux, run-hooks, web-verify 통과. pytest는 8252개 통과에 1개 실패였다. 실패는 `tests/tools/test_rerun_runner.py::test_오염이_한_번이면_다시_돌고_두_번이면_그_과제를_모든_갈래에서_뺀다`이고 3초 대기(`hang=3.0`)를 쓰는 시험이다. 같은 시험을 `uv run pytest -q tests/tools/test_rerun_runner.py -k 오염이_한_번이면`으로 단독으로 돌리자 20초에 통과했다. 부하 아래의 시간 흔들림으로 본다(원인을 재지는 않은 어림이다). 러너는 리뷰 반영 앞에 돌았고, 반영한 것은 주석·시험 제목·일지·티켓뿐이라 커밋의 pre-commit이 다시 돈다.
+- `pnpm -C web run lint`·`format`·`typecheck`: 반영 뒤에 통과(출력을 봤다).
+- 단독 배포 e2e `pnpm -C web/packages/e2e-standalone exec playwright test`: 15개 통과(14.4분). 시작 전에 포트 80·443·3000이 비어 있는 것을 `Get-NetTCPConnection`으로 봤고 `docker info`가 29.9.2를 냈다.
+- 첫 커밋 시도의 pre-commit: check-notes, check-ticket, lint-imports, zizmor, check-instructions, check-type-escapes, pyright 둘, run-hooks, web-verify, pytest, 표·줄 구분 문자·헌법 판 검사가 통과했고, mutation tables(`tools/mutate.py --staged`)가 빨강이었다(출력을 봤다). `web/tools/generate-api-client.ts`를 넓혀 `.scratch/web-admin/probes/api_client_mutations.toml`의 변이 둘(3. 최신성 검사가 어긋남을 보고하지 않는다, 4. 최신성 검사가 생성물을 고쳐 쓴다)의 원문이 0번이 됐기 때문이다. 원문을 `target` 인자판으로 고치고 4번의 되돌릴 생성물에 widget-admin-client 것을 더했다. `uv run python tools/mutate.py --check .scratch/web-admin/probes/api_client_mutations.toml`은 25개 모두 한 번씩이고, `PYTHONUTF8=1 uv run python tools/mutate.py <표> --since origin/dev`로 둘을 돌려 둘 다 기대대로 빨강이었다(4번은 시험 셋이 빨개서 표의 옛 주석 "하나만"을 고쳤다). 이 실행이 끝난 뒤 `git status`에서 생성물은 바뀌지 않았다. 교훈: 작업 규약 3의 "코드를 옮기거나 고쳤으면 그 코드를 겨누던 변이 파일을 `--check`로 본다"를 이 세션이 커밋 전에 하지 않았고 pre-commit이 잡았다(전체 한 바퀴가 20분이 넘어 한 번 더 도는 값이 컸다).
+- 둘째 커밋 시도의 pre-commit: 변이 표 검사가 이번에는 표를 고친 변이 둘(3·4번)에 `expect_output`이 없다고 막았다(대기열 350의 검사). 변이를 손으로 넣어 시험 출력을 본 뒤 표지를 달았다. 3번은 `AssertionError: expected +0 to be 1 // Object.is equality`, 4번은 비교 출력의 `* @description 살아 있는지만 답한다.`이다(시험 파일에 글자 그대로 있는 `살아 있는지만 답한다.` 문장은 접두 없이는 표지가 못 돼 접두를 붙였다). `--check`가 통과했고 변이 둘을 다시 돌려 표지와 함께 기대대로 빨강이었다. 손으로 넣은 변이는 되돌린 뒤 `git diff --stat`이 비어 있는 것을 봤다.
+- 같은 시도에서 `run-hooks`(`hook_ruff_line_width.py`의 한글 줄 E501이 context 대신 silent), pytest의 `tests/channel/cli/test_interrupt.py` 셋(Ctrl+C 자식이 30초 안에 끝나지 않았다)과 `tests/tools/test_rerun_runner.py`의 오염 시험이 실패했다. 이번 커밋에는 `.py` 파일이 없고(변이 표와 문서와 web 코드뿐), 앞 커밋 시도에서는 같은 이 시험들 가운데 `test_interrupt`가 통과했다. `uv run pytest -q tests/channel/cli/test_interrupt.py tests/tools/test_rerun_runner.py`를 단독으로 돌리자 69개가 모두 통과했다(123초, 출력을 봤다). 원인은 시간 제한을 쓰는 시험이 전체 실행의 부하(그 실행이 27분 걸렸다)와 다른 세션들의 부하 아래에서 흔들린 것으로 본다. 부하를 재지는 않은 어림이다.
+- 마지막 티켓 판정: 병합 직전 `git fetch origin` 뒤 origin/dev에서 03·04가 `ready-for-agent`이다. 이 티켓은 마지막이 아니라서 끝 줄과 기능 단락은 싣지 않았다. `uv run python tools/plan_table.py`를 돌렸고 `.scratch/plan.md`는 바뀌지 않았다.
+
+## 인계(커밋 뒤, 두 번째 세션이 컨텍스트 문턱을 넘어 넘긴다)
+
+- 커밋 `4b417c711`(`feat: 위젯 관리 화면용 클라이언트 패키지를 세운다 (widget-admin-server 02)`)까지 마쳤다. 셀프 리뷰 반영, 티켓 done, 변이 표 고침이 이 커밋에 든다. 이 커밋은 푸시하지 않았고 PR도 없다. 이 일지의 위 절들(셀프 리뷰, 다시 돌린 것, 인계 절)은 커밋 뒤에 쓰거나 고친 것이라 워크트리에 커밋하지 않은 변경으로 남아 있다.
+- 남은 일: 일지를 커밋에 더한다(새 커밋 하나. pre-commit 한 바퀴가 20분을 넘으니 백그라운드로 돌리고 `Bash`의 `timeout`을 600000으로 준다), 푸시, PR 열기(`/git-pr`), PR 직전 리뷰(`docs/constitution/operations.md` 리뷰 파이프라인의 순서), 반영, 병합.
+- 병합 직전에 `git fetch origin` 뒤 origin/dev에서 03·04 티켓의 `Status:`를 다시 본다. 04가 먼저 done이면 이 티켓이 마지막이라 `.scratch/widget-admin-server/plan.md`에 `**끝:**` 줄과 `docs/release-notes/features/widget-admin-server.md`를 싣는 커밋이 더 필요하다(티켓 "마지막 티켓이면" 절). 이 세션이 본 때(2026-11-25)는 03·04가 둘 다 `ready-for-agent`였다.
+- 시간 민감 시험(`tests/channel/cli/test_interrupt.py`, `tests/tools/test_rerun_runner.py`, `run-hooks`의 `hook_ruff_line_width`)이 전체 실행에서 부하로 흔들렸고 단독으로는 통과했다(위 "다시 돌린 것"). 같은 시험이 pre-commit이나 CI에서 다시 빨개지면 단독 실행으로 먼저 가르고, 두 번 연속 빨강이면 `diagnosing-bugs`로 넘어간다.
+
+## PR 직전 리뷰(세 번째 세션)
+
+- 아래 둘은 `coderabbit-review` 서브에이전트의 보고에서 옮겼다. 이 세션이 명령을 직접 치지 않았고 출력도 직접 보지 않았다.
+- 서브에이전트가 보고한 실행은 CodeRabbit CLI 0.7.5(`Plan: Free`, `Seat: not assigned`)의 `coderabbit review --agent --include-untracked --base origin/dev`이고, 파일 22개, 종료 코드 0, `review_completed`에 findings 0이었다. 좌석 줄이 `not assigned`여도 리뷰가 끝까지 돌았다는 보고이므로 CLI 축은 살아 있는 것으로 본다(`docs/constitution/operations.md` 리뷰 파이프라인 2).
+- 서브에이전트가 코드를 읽고 보류로 올린 한 건은 수정이 필요 없다고 판정했다. `createPublicClient`가 `baseUrl.href`를 그대로 넘기므로 쿼리나 해시가 든 URL을 주면 경로 앞에 그대로 붙는다. 부르는 쪽은 출처나 접두사만 넘기는 계약이고 부르는 곳도 아직 없다. 티켓 03 이후 호출부를 만들 때 본다.
+
+## 하네스에서 겪은 것
+
+- 전체 `grep -rn ... .`는 훅(`.env` 노출 방지)에 막힌다. Grep 도구나 경로를 좁힌 명령을 쓴다.
+- Bash에서 하위 폴더로 `cd`하면 훅이 막는다. `pnpm -C web ...`나 경로 인자를 쓴다. `pnpm -C web eslint`는 안 되고 `pnpm -C web exec eslint`로 쓴다.
+
+open-session을 부른다 2026-11-25T10:41Z
+
+open-session을 부른다 2026-11-25T12:51Z
+
+## 회고
+
+후보 다섯, 판정은 승인 0·넘김 0·기각 5다. 사용자에게 넘긴 것이 없고 대기열에 더하거나 이은 항목이 없다. 근거의 종류: 대기열 항목은 이 세션이 `uv run python tools/queue_open_rows.py --search test_interrupt --search test_rerun_runner --search 부하`의 출력과 `0306`·`0332`·`0531`의 상태 줄을 Grep으로 읽은 것이다. 나머지 사건은 위 일지의 앞 절들과 이 세션의 도구 결과에서 옮겼다.
+
+1. 부하에서 흔들린 시간 시험(`tests/channel/cli/test_interrupt.py`, `tests/tools/test_rerun_runner.py`)이 전체 실행과 둘째 커밋 시도의 pre-commit을 빨갛게 했고 단독으로는 통과했다. 기각이다. 0306이 "부하에서 시간 시험이 빨개지면 그 커밋을 다시 치는 값을 받아들이고 새 사례는 일지에만 적는다"로 닫혀 있다(0306의 상태 줄). 이 PR의 CI `python` 잡은 같은 머리에서 `success`였다(위 "CI 기록").
+2. 변이 표를 겨누던 코드(`web/tools/generate-api-client.ts`)를 넓히고도 `tools/mutate.py --check`를 커밋 전에 치지 않아 pre-commit의 `mutation tables` 검사가 빨갰다. 기각이다. 이미 있는 검사가 그 자리에서 잡았고, 같은 규칙이 `implement` 스킬과 작업 규약 3에 적혀 있다.
+3. 이 세션이 `git fetch`와 `git show`와 `grep`을 한 명령에 이어 쳤다가 워크트리 가드에 거부당했다. 기각이다. 가드가 막았고 `CLAUDE.md` 환경 함정이 그 모양을 적고 있어(0122는 닫힘), 나눠 다시 쳐 지나갔다.
+4. CodeRabbit이 티켓의 "검증 명령이 모두 초록이다" 체크를 단독 재실행에 기대 완료로 표시했다고 짚었다(Minor). 기각이다. 리뷰가 제 몫을 한 사건이라 회차로 세지 않고(retro 4단계), 짚은 CI `python` 잡은 이제 `success`다.
+5. 문서만 바꾼 커밋의 pre-commit이 길다는 열린 항목(`docs-only-commit-precommit-slow-again`)에 회차를 더할지 봤다. 기각이다. 이 세션이 두 일지 커밋의 걸린 시간을 재지 않았으므로 새 사건으로 세지 않는다.
+
+만료: `uv run python tools/queue_open_rows.py --ref origin/dev`가 "만료할 항목: (없음)"을 냈다(출력을 읽었다). 닫을 항목이 없다.
+
+## 다음
+
+- 03(`.scratch/widget-admin-server/issues/03-widget-admin-commands-and-startup-check.md`)이 `ready-for-agent`이고 04(`04-standalone-compose-adds-widget-admin.md`)는 03에 막혀 있다. 이 PR을 병합할 때 `git fetch origin` 뒤 `origin/dev`에서 둘의 `Status:`를 읽었다(`git show origin/dev:./<경로>`로 손으로 봤다).
+- 이 티켓이 뒤로 넘긴 일은 없다. 다만 `createPublicClient`가 `baseUrl.href`를 그대로 넘기는 점(위 "PR 직전 리뷰")은 이 팩토리를 처음 부르는 기능(위젯의 widget-login-state, 위젯 관리 화면과 위젯 테스트 페이지의 portal-admin)이 호출부를 만들 때 본다.
+- 이 티켓은 기능 `widget-admin-server`의 마지막 티켓이 아니다. 04가 늦게 병합되는 쪽이면 04가 끝 줄과 기능 단락을 싣는다(02 티켓의 "마지막 티켓이면" 절).
+
+## CI 기록(PR 643, 머리 `5c381df`)
+
+- 실행 45626144092(`pull_request`)가 `success`다. `gh run list --branch feature/02-widget-admin-client-package --workflow ci.yml`과 `gh run view 45626144092 --json jobs`의 출력을 손으로 읽었다.
+- `python` 잡은 13:41:26에서 13:56:51까지 15분 25초이고 `success`다. 검사 열세 가운데 `llm`만 건너뜀이고 나머지 열둘(`CodeRabbit`, `claude-review`, `e2e`, `e2e-portal`, `e2e-standalone`, `e2e-widget`, `python`, `ticket`, `title`, `verify`, `visual`, `web`)은 통과다(`tools/wait_ci.py 643`의 출력).
+
+## PR 봇 회차
+
+- claude-review: 지적 없음. 첫 회차다.
+- CodeRabbit: 첫 회차에 Minor 한 건(티켓의 "`CLAUDE.md`의 검증 명령이 모두 초록이다" 체크를 단독 재실행에 기대 완료로 표시했다는 지적, 그 자리의 `python` CI 잡이 그때 끝나지 않았다는 근거가 붙었다). 고치지 않고 닫았다. 근거: 지적이 말한 "아직 끝나지 않은 `python` 잡"이 이제 머리 `5c381df`에서 `success`다(위 CI 기록). 그 잡은 전체 pytest를 돈다. 러너 한 바퀴의 1개 실패는 같은 시험의 단독 통과와 이 CI 통과로 시간 흔들림 쪽으로 기운다. 이유는 PR 코멘트에도 남겼다.

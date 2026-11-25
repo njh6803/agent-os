@@ -6,7 +6,15 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { afterEach, describe, expect, test } from "vitest";
-import { CONTRACT, GENERATED, generate, replaceRecursiveJson } from "./generate-api-client.ts";
+import {
+  CONTRACT,
+  GENERATED,
+  WIDGET_ADMIN_CONTRACT,
+  WIDGET_ADMIN_GENERATED,
+  WIDGET_ADMIN_TARGET,
+  generate,
+  replaceRecursiveJson,
+} from "./generate-api-client.ts";
 
 const WEB = dirname(import.meta.dirname);
 const TOOL = join(import.meta.dirname, "generate-api-client.ts");
@@ -75,5 +83,71 @@ describe("생성물 최신성", () => {
 
     // 실행 직전의 파일과 비교하지 않는다. 앞 테스트가 이미 고쳐 썼다면 둘이 같아 초록이 된다.
     expect(readFileSync(GENERATED, "utf-8")).toBe(await generate(CONTRACT));
+  });
+});
+
+/** 위젯 관리 서버 계약의 설명 한 줄을 바꾼 사본에 그 대상의 최신성 검사를 CLI 로 돌린다. */
+function checkWidgetAdminWithEditedDescription(): { status: number | null; stdout: string } {
+  const 설명 = "살아 있다는 것만 답한다. 내부 구성을 싣지 않는다.";
+  const 계약 = readFileSync(WIDGET_ADMIN_CONTRACT, "utf-8");
+  expect(계약.split(설명).length - 1).toBe(1);
+  const root = mkdtempSync(join(tmpdir(), "generate-widget-admin-client-"));
+  temporaries.push(root);
+  const 사본 = join(root, "openapi.json");
+  writeFileSync(사본, 계약.replace(설명, "살아 있는지만 답한다."));
+  const run = spawnSync(
+    process.execPath,
+    [TOOL, "--check", "--target", "widget-admin-client", 사본],
+    { cwd: WEB, encoding: "utf-8" },
+  );
+  return { status: run.status, stdout: run.stdout };
+}
+
+describe("위젯 관리 서버 생성물 최신성", () => {
+  test("이 저장소의 생성물은 widget-admin/openapi.json 에서 다시 생성한 것과 바이트까지 같다", async () => {
+    expect(await generate(WIDGET_ADMIN_CONTRACT, WIDGET_ADMIN_TARGET)).toBe(
+      readFileSync(WIDGET_ADMIN_GENERATED, "utf-8"),
+    );
+  });
+
+  test("계약 파일은 멤버 폴더의 것이고 루트 openapi.json 이 아니다", () => {
+    expect(WIDGET_ADMIN_CONTRACT).not.toBe(CONTRACT);
+    expect(WIDGET_ADMIN_CONTRACT.replaceAll("\\", "/")).toMatch(/\/widget-admin\/openapi\.json$/);
+    expect(WIDGET_ADMIN_GENERATED.replaceAll("\\", "/")).toMatch(
+      /\/web\/packages\/widget-admin-client\/src\/generated\/openapi\.ts$/,
+    );
+  });
+
+  test("widget-admin 계약의 설명 한 줄을 바꾼 사본에서 최신성 검사가 빨갛고 다시 생성하라고 말한다", () => {
+    const run = checkWidgetAdminWithEditedDescription();
+
+    expect(run.status).toBe(1);
+    expect(run.stdout).toContain("pnpm -C web run generate:api-client");
+  });
+
+  test("그 최신성 검사도 어긋남을 찾아도 커밋된 생성물을 고쳐 쓰지 않는다", async () => {
+    checkWidgetAdminWithEditedDescription();
+
+    expect(readFileSync(WIDGET_ADMIN_GENERATED, "utf-8")).toBe(
+      await generate(WIDGET_ADMIN_CONTRACT, WIDGET_ADMIN_TARGET),
+    );
+  });
+
+  test("대상도 계약도 주지 않은 최신성 검사는 두 생성물을 모두 보고 이 저장소에서 초록이다", () => {
+    const run = spawnSync(process.execPath, [TOOL, "--check"], { cwd: WEB, encoding: "utf-8" });
+
+    expect(run.stdout).toBe("");
+    expect(run.status).toBe(0);
+  });
+
+  test("모르는 대상 이름이면 최신성 검사가 실패하고 알려진 대상 이름을 보여 준다", () => {
+    const run = spawnSync(process.execPath, [TOOL, "--check", "--target", "없는-패키지"], {
+      cwd: WEB,
+      encoding: "utf-8",
+    });
+
+    expect(run.status).toBe(1);
+    expect(run.stdout).toContain("api-client");
+    expect(run.stdout).toContain("widget-admin-client");
   });
 });
