@@ -76,6 +76,24 @@
 
 다시 돌린 것. `uv run pytest -q tests/widget_admin tests/test_widget_admin_workspace.py tests/test_repo_version.py tests/test_postgres_migration_shape.py tests/tools/test_release.py -W default`가 221 통과, `ruff check`와 `ruff format --check`(멤버와 시험 16개 파일) 초록, `uv run pyright` 0 오류, `uv run python tools/check_instructions.py` 0이다. 나머지 손으로 치는 명령은 커밋의 pre-commit 결과로 갈음한다.
 
+## PR 직전 리뷰(coderabbit-review)
+
+`coderabbit review --agent --include-untracked --base origin/dev`가 끝까지 돌았다(종료 0, 단계 `review_completed`, CLI 0.7.5). `coderabbit auth status`의 `Seat:` 줄은 `not assigned`(Plan Free)였고 좌석이 없어도 리뷰는 막히지 않았다. 지적은 6건이고 서브에이전트가 지적마다 코드를 열어 판정했다. 유효 1, 보류 2, 오탐 3이다. 서브에이전트가 CLI 밖에서 더한 보류 2건과 참고 1건도 아래에 같이 적는다.
+
+| 지적 | 판정 | 까닭 |
+|---|---|---|
+| `errors.py:218` 기록 쓰기가 `OSError`를 던지면 봉투도 머리도 없는 기본 500이 나간다(Minor) | 보류 | Agent OS 원본(`src/agent_os/http/errors.py:411`)도 같은 모양이고, 이 PR은 원본과 같은 모양의 사본을 세우는 일이다. 표준 오류가 끊긴 서버에서는 이 쓰기보다 큰 문제가 먼저 터진다. 재현하지 않았고 코드를 읽어 판단했다 |
+| `server.py:77` 머리 판정이 `request.url.path`를 써서 `root_path`나 마운트가 붙는 배포에서는 머리가 빠진다(조건부 Major) | 보류 | 접두사 아래 배포를 지원하는지는 04가 정한다. 마운트 없는 기본 배포에서는 정상으로 붙는다. 서브에이전트가 `ASGITransport(root_path="/admin")`로 머리가 빠지는 것을 재현했다 |
+| `database.py:51` `?sslmode=require`가 asyncpg에 그대로 넘어가 첫 질의에서 `TypeError`(Minor) | 보류 | 연결 문자열을 읽는 일은 03의 몫이고, 그 입력 규약이 `sslmode`를 허용하는지가 갈림길이다. 기록 줄에는 클래스 이름만 남아 비밀은 새지 않는다 |
+| 엔진에 연결 시간 제한이 없다(서브에이전트가 더함, Minor) | 보류 | 토큰 없는 공개 경로라 느린 데이터베이스에서는 요청이 풀 대기와 연결 대기에 쌓인다. 시작과 배포(03·04)가 정한다 |
+| `login_url`·`logout_url`·`contact_url`에 스킴 `CHECK`가 없다(서브에이전트가 더함, Minor) | 보류 | 쓰기 경로를 짓는 티켓이 `https` 검사를 넣을지 정한다. 올라간 파일은 고치지 않으므로 넣으면 새 마이그레이션이다 |
+| uvicorn 접근 로그가 사이트 이름이 든 경로를 찍는다(참고) | 보류 | 서버를 띄우는 03이 접근 로그를 끌지 정한다. 앱의 기록 줄에는 경로가 없다 |
+| `migrations/env.py:17` 같은 PostgreSQL이면 `alembic_version`이 충돌한다 | 오탐 | ADR 0064가 자기 PostgreSQL이다. 한 데이터베이스에 겹쳐 쓰는 것은 지원 밖이다 |
+| `database.py:40-41` 마이그레이션이 휠에 안 든다 | 오탐 | `uv build --wheel --package widget-admin`으로 직접 지어 `migrations/env.py`와 `versions/0001_sites.py`가 휠에 드는 것을 봤다 |
+| `/widget-settings%09`에 머리가 안 붙는다 | 오탐 | 접두사 밖이다. httpx가 탭을 떼고 보낸 결과일 뿐이고, `/widget-settingsx`와 `%20`에는 머리가 안 붙는 것이 맞다 |
+
+요청한 네 가지 점검은 서브에이전트가 코드를 읽고 몇 곳은 직접 돌려 본 보고이고(이 세션이 다시 돌리지는 않았다), 새는 곳이 없었다. 꼴이 틀린 이름과 등록되지 않은 이름의 404는 `request_id`만 다르고, 500 봉투와 기록 줄에는 사이트 이름과 경로와 연결 문자열이 없다. 머리 셋은 접두사 아래의 에러 응답까지 붙고 쓰기 경로는 없다. `close()`가 `dispose()`를 하고 `migrate()`는 트랜잭션 하나다. 병행 `migrate()`에는 잠금이 없어 복제본 둘이 동시에 올리면 한쪽이 실패할 수 있고, 시작을 맡는 03이 정할 일이다.
+
 ## 회고
 
 후보 일곱을 냈고 판정은 승인 0, 기각 7, 넘김 0이다. 대기열은 `uv run python tools/queue_open_rows.py`로 봤고 만료할 항목은 없었다. 같은 일을 다룬 항목은 `--search OPTIONAL_BOOL_ROOTS --search MSYS_NO_PATHCONV --search check_instructions.py`로 찾았고, 닫힌 항목 14개가 맞았지만 모두 다른 사건이다.
@@ -106,6 +124,7 @@
 ## 다음
 
 - 02(`02-widget-admin-client-package.md`), 03(`03-widget-admin-commands-and-startup-check.md`), 04(`04-standalone-compose-adds-widget-admin.md`)가 열렸다. 03이 `widget-admin serve`·`migrate` 명령과 연결 문자열 판정, 확인·다시 시도, 루프백 사본을 더하고, 04가 노트 검사의 `PRODUCT_MIGRATIONS`에 위젯 쪽 폴더를 더하고 레지스트리·CI 칸을 고친다.
+- PR 직전 리뷰가 뒤로 넘긴 일(위 `## PR 직전 리뷰(coderabbit-review)`의 표). 03이 정한다: 연결 문자열이 `sslmode`를 허용하는지(허용하면 asyncpg의 `ssl`로 바꾸는 정규화, 아니면 입력 규약에 적고 시작 때 거절), 엔진의 연결 시간 제한과 풀 대기 제한, uvicorn 접근 로그를 끌지, 병행 `migrate()`의 잠금. 04가 정한다: 배포가 접두사나 `root_path` 아래에서 위젯 관리 서버를 부르는지(부르면 `server.py`의 머리 판정이 라우터가 쓰는 경로로 `is_under`를 불러야 하고 Major다). 쓰기 경로를 짓는 티켓이 정한다: 세 주소 칸의 `https` 스킴 검사(새 마이그레이션).
 - 03이 `create_app`에 더할 가장 바깥 미들웨어(데이터베이스 확인)의 자리는 `.claude/rules/widget-admin.md`와 명세 "응답 머리"의 끝 항목이 적은 대로다.
 
 open-session을 부른다 2026-11-25T06:00Z
