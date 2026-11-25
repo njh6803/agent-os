@@ -639,6 +639,7 @@ async def _run(
     timeout_seconds: float | None = None,
     models: ModelSource | None = None,
     default_model: PluginName = DEFAULT_MODEL,
+    requesting_account: str | None = None,
 ) -> list[Event]:
     """`model` 은 가짜 모델 소스로 감싸서 넘긴다. 모델 소스를 직접 쓰는 시험만 `models` 를 준다."""
     plugins = plugins or FakePlugins({"calc": agent})
@@ -649,6 +650,7 @@ async def _run(
             AgentName(name),
             "2+2?",
             PRINCIPAL,
+            requesting_account=requesting_account,
             visible_agents=visible_agents,
             timeout_seconds=timeout_seconds,
             default_model=default_model,
@@ -1449,12 +1451,40 @@ async def test_에이전트가_지어낸_일시정지_이벤트는_실행을_멈
 # 하나라도 채워져 있으면 그 이벤트를 쓰지 않고 실행이 run_failed(agent_code)로 끝난다. 재생
 # 구간에서도 같다(ADR 0044, 명세 "두 칸은 런타임만 쓴다").
 
-type ForgedField = Literal["tool_called.rule", "run_paused.rule", "run_paused.server"]
+type ForgedField = Literal[
+    "tool_called.rule",
+    "run_paused.rule",
+    "run_paused.server",
+    "run_started.requesting_account",
+    "approval_granted.deciding_account",
+    "approval_denied.deciding_account",
+]
 
 
 def _forged(field: ForgedField, ctx: AgentContext) -> Event:
-    """세 칸 가운데 하나만 채운 이벤트. 나머지 칸은 비워 둔다."""
+    """런타임만 쓰는 칸 가운데 하나만 채운 이벤트. 나머지 칸은 비워 둔다."""
     match field:
+        case "run_started.requesting_account":
+            return RunStarted(
+                run_id=ctx.run_id,
+                ts=ctx.now(),
+                agent=AgentName("calc"),
+                request="지어낸 시작",
+                principal=PRINCIPAL,
+                requesting_account="mallory",
+            )
+        case "approval_granted.deciding_account":
+            return ApprovalGranted(
+                run_id=ctx.run_id, ts=ctx.now(), approver=PRINCIPAL, deciding_account="mallory"
+            )
+        case "approval_denied.deciding_account":
+            return ApprovalDenied(
+                run_id=ctx.run_id,
+                ts=ctx.now(),
+                approver=PRINCIPAL,
+                reason="지어낸 거부",
+                deciding_account="mallory",
+            )
         case "tool_called.rule":
             return ToolCalled(run_id=ctx.run_id, ts=ctx.now(), tool="after", ok=True, rule="allow")
         case "run_paused.rule":
@@ -1478,7 +1508,14 @@ class RuleForgingAgent:
         yield RunFinished(run_id=ctx.run_id, ts=ctx.now(), output="닿지 않아야 한다")
 
 
-FORGED_FIELDS: list[ForgedField] = ["tool_called.rule", "run_paused.rule", "run_paused.server"]
+FORGED_FIELDS: list[ForgedField] = [
+    "tool_called.rule",
+    "run_paused.rule",
+    "run_paused.server",
+    "run_started.requesting_account",
+    "approval_granted.deciding_account",
+    "approval_denied.deciding_account",
+]
 
 
 def _assert_forged_failure(failed: RunFailed, field: ForgedField) -> None:
@@ -1548,6 +1585,62 @@ async def test_규칙_칸이_빈_tool_called_는_막히지_않고_통과한다(
     assert all(e.rule is None for e in events if isinstance(e, ToolCalled))
 
 
+# --- 요청한 계정과 결정한 계정(admin-login 01, ADR 0063) ----------------------------------
+#
+# `run()` 은 요청한 계정을, `resume()` 은 결정한 계정을 선택 키워드 인자로 받아 그 이벤트에 적는다.
+# 기본값은 없음이다. core 는 받은 글을 적을 뿐 이름으로 무엇도 판정하지 않는다.
+
+
+async def test_run_은_요청한_계정을_시작_이벤트에_적고_주지_않으면_없음이다(
+    trace: FakeTrace, clock: FakeClock
+) -> None:
+    model = GenericFakeChatModel(messages=iter([AIMessage(content="답")]))
+    given = await _run(ChattyAgent(), model, trace, clock, requesting_account="kim.ops")
+    model = GenericFakeChatModel(messages=iter([AIMessage(content="답")]))
+    omitted = await _run(ChattyAgent(), model, FakeTrace(), clock)
+
+    assert isinstance(given[0], RunStarted)
+    assert given[0].requesting_account == "kim.ops"
+    assert trace.events[0] == given[0]
+    assert isinstance(omitted[0], RunStarted)
+    assert omitted[0].requesting_account is None
+
+
+@pytest.mark.parametrize("decision", [Approve(), Deny("그만")], ids=["승인", "거부"])
+async def test_resume_은_결정한_계정을_결정_이벤트에_적고_주지_않으면_없음이다(
+    decision: Decision, trace: FakeTrace, clock: FakeClock
+) -> None:
+    model, tools, plugins = await _paused_run(trace, clock)
+
+    events = await _resume(
+        _RUN_1,
+        model,
+        trace,
+        clock,
+        tools=tools,
+        plugins=plugins,
+        decision=decision,
+        deciding_account="lee.ops",
+    )
+
+    decided = events[0]
+    assert isinstance(decided, ApprovalGranted | ApprovalDenied)
+    assert decided.deciding_account == "lee.ops"
+    assert decided.approver == PRINCIPAL
+
+
+async def test_결정한_계정을_주지_않은_재개의_결정_이벤트는_없음이다(
+    trace: FakeTrace, clock: FakeClock
+) -> None:
+    model, tools, plugins = await _paused_run(trace, clock)
+
+    events = await _resume(_RUN_1, model, trace, clock, tools=tools, plugins=plugins)
+
+    decided = events[0]
+    assert isinstance(decided, ApprovalGranted)
+    assert decided.deciding_account is None
+
+
 # --- 재개 ---------------------------------------------------------------------
 #
 # 일시정지한 실행을 승인해 이어 간다. 먼저 _run 으로 멈춘 실행을 만들고 같은 가짜들로 _resume 한다.
@@ -1569,6 +1662,7 @@ async def _resume(
     timeout_seconds: float | None = None,
     models: ModelSource | None = None,
     default_model: PluginName = DEFAULT_MODEL,
+    deciding_account: str | None = None,
 ) -> list[Event]:
     """결정의 자리를 주지 않으면 결정 직전에 트레이스를 읽은 클라이언트가 볼 자리를 싣는다.
 
@@ -1582,6 +1676,7 @@ async def _resume(
             _last_index(trace, run_id) if pause_index is None else pause_index,
             decision if decision is not None else Approve(),
             approver,
+            deciding_account=deciding_account,
             visible_agents=visible_agents,
             timeout_seconds=timeout_seconds,
             default_model=default_model,

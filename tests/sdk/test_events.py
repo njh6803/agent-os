@@ -395,3 +395,94 @@ def test_직렬화_스키마에서_세_칸은_required_이고_적용_규칙은_�
     assert applied_rule in defs["ToolCalled"]["properties"]["rule"]["anyOf"]
     assert applied_rule in defs["RunPaused"]["properties"]["rule"]["anyOf"]
     assert {"type": "string"} in defs["RunPaused"]["properties"]["server"]["anyOf"]
+
+
+# --- 요청한 계정과 결정한 계정(admin-login 01, ADR 0063) ---------------------------------
+
+
+def test_계정_두_칸은_기본이_없음이고_옛_줄이_그대로_읽힌다() -> None:
+    """시작 이벤트의 `requesting_account` 와 승인·거부 이벤트의 `deciding_account` 는 선택이고
+    기본값이 없음이다. 형식은 3 그대로라 옛 줄에 이 키가 없어도 손상이 아니다."""
+    adapter = TypeAdapter[Event](Event)
+    started = adapter.validate_python(
+        {
+            "type": "run_started",
+            "run_id": "r1",
+            "ts": TS,
+            "agent": "echo",
+            "request": "hi",
+            "principal": "alice",
+        }
+    )
+    granted = adapter.validate_python(
+        {"type": "approval_granted", "run_id": "r1", "ts": TS, "approver": "alice"}
+    )
+    denied = adapter.validate_python(
+        {"type": "approval_denied", "run_id": "r1", "ts": TS, "approver": "alice", "reason": "no"}
+    )
+
+    assert isinstance(started, RunStarted)
+    assert started.requesting_account is None
+    assert isinstance(granted, ApprovalGranted)
+    assert granted.deciding_account is None
+    assert isinstance(denied, ApprovalDenied)
+    assert denied.deciding_account is None
+
+
+def test_계정_두_칸이_든_이벤트는_JSON_왕복한다() -> None:
+    started = RunStarted(
+        run_id=RunId("r1"),
+        ts=TS,
+        agent=AgentName("echo"),
+        request="hi",
+        principal=Principal("alice"),
+        requesting_account="kim.ops",
+    )
+    granted = ApprovalGranted(
+        run_id=RunId("r1"), ts=TS, approver=Principal("alice"), deciding_account="lee.ops"
+    )
+    denied = ApprovalDenied(
+        run_id=RunId("r1"),
+        ts=TS,
+        approver=Principal("alice"),
+        reason="no",
+        deciding_account="lee.ops",
+    )
+
+    for event in (started, granted, denied):
+        assert _round_trip(event) == event
+
+
+def test_계정_두_칸에는_sdk_의_패턴을_걸지_않는다() -> None:
+    """이벤트의 다른 식별자 칸과 같은 규칙이다. 패턴을 어긴 줄 하나가 그 트레이스 전체를 읽지 못하게
+    만들지 않게 한다. 이름 규칙에 맞는 값만 오는 것은 채널이 지킨다."""
+    started = RunStarted(
+        run_id=RunId("r1"),
+        ts=TS,
+        agent=AgentName("echo"),
+        request="hi",
+        principal=Principal("alice"),
+        requesting_account="Not A Name!",
+    )
+    granted = ApprovalGranted(
+        run_id=RunId("r1"), ts=TS, approver=Principal("alice"), deciding_account=""
+    )
+
+    assert _round_trip(started) == started
+    assert _round_trip(granted) == granted
+
+
+def test_직렬화_스키마에서_계정_두_칸은_required_이고_없음을_허락한다() -> None:
+    schema = TypeAdapter[Event](Event).json_schema(mode="serialization")
+    defs = schema["$defs"]
+
+    for name, field in (
+        ("RunStarted", "requesting_account"),
+        ("ApprovalGranted", "deciding_account"),
+        ("ApprovalDenied", "deciding_account"),
+    ):
+        assert set(defs[name]["required"]) == set(defs[name]["properties"]), name
+        prop = defs[name]["properties"][field]
+        assert {"type": "null"} in prop["anyOf"], (name, field)
+        assert {"type": "string"} in prop["anyOf"], (name, field)
+        assert prop["default"] is None, (name, field)

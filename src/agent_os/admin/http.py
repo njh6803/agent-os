@@ -167,7 +167,7 @@ def admin_router(
         "/plugins",
         operation_id="list_plugins",
         summary="등록된 플러그인 전부를 종류를 가리지 않고 켜짐과 함께 한 목록으로",
-        responses=documented_errors(401),
+        responses=documented_errors(401, 403),
     )
     def list_plugins() -> list[PluginRow]:
         disabled = plugins.read_disabled()
@@ -193,7 +193,7 @@ def admin_router(
         summary="켜 둔 원격 MCP 서버나 모델에 붙는지 확인한다",
         responses={
             200: {"headers": {"Cache-Control": _NO_STORE_HEADER}},
-            **documented_errors(401, 404, 422),
+            **documented_errors(401, 403, 404, 422),
         },
     )
     async def check_connection(
@@ -221,7 +221,7 @@ def admin_router(
         summary="켜 둔 stdio MCP 서버를 한 번 띄워 붙는지 확인한다",
         responses={
             200: {"headers": {"Cache-Control": _NO_STORE_HEADER}},
-            **documented_errors(401, 404, 422),
+            **documented_errors(401, 403, 404, 422),
         },
     )
     async def check_connection_by_launching(
@@ -248,7 +248,7 @@ def admin_router(
         "/plugins/{kind}/{name:verbatim}",
         operation_id="read_plugin",
         summary="플러그인 하나를 켜짐과 매니페스트 통째로를 든 행으로",
-        responses=documented_errors(401, 404, 422),
+        responses=documented_errors(401, 403, 404, 422),
     )
     def read_plugin(
         kind: PluginKind, name: Annotated[str, Path(pattern=PLUGIN_NAME_PATTERN)]
@@ -276,7 +276,7 @@ def admin_router(
         summary="플러그인 하나를 켜거나 끈다",
         status_code=204,
         response_class=Response,
-        responses=documented_errors(401, 404, 422),
+        responses=documented_errors(401, 403, 404, 422),
     )
     async def set_plugin_enabled(
         kind: PluginKind,
@@ -296,7 +296,7 @@ def admin_router(
         "/traces",
         operation_id="list_traces",
         summary="지나간 실행의 요약을 최근 것부터 한 쪽씩",
-        responses=documented_errors(401, 422),
+        responses=documented_errors(401, 403, 422),
     )
     def list_traces(
         status: Annotated[
@@ -319,7 +319,7 @@ def admin_router(
         "/traces/{run_id:verbatim}",
         operation_id="read_trace",
         summary="한 실행의 이벤트 전부를 쓴 순서 그대로",
-        responses=documented_errors(401, 404, 422),
+        responses=documented_errors(401, 403, 404, 422),
     )
     def read_trace(run_id: Annotated[str, Path(pattern=RUN_ID_PATTERN)]) -> Trace:
         found = trace.read(RunId(run_id))

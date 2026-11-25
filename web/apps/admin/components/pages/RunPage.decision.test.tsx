@@ -41,6 +41,7 @@ const STARTED: RunEvent = {
   principal: "operator",
   previous_run: null,
   shortcuts: null,
+  requesting_account: null,
 };
 const CALLED: RunEvent = {
   type: "llm_called",
@@ -64,7 +65,13 @@ const paused = (args: Record<string, number>): RunEvent => ({
   rule: null,
   server: null,
 });
-const GRANTED: RunEvent = { type: "approval_granted", run_id: RUN, ts: TS, approver: "operator" };
+const GRANTED: RunEvent = {
+  type: "approval_granted",
+  run_id: RUN,
+  ts: TS,
+  approver: "operator",
+  deciding_account: null,
+};
 const RESUMED: RunEvent = { type: "run_resumed", run_id: RUN, ts: TS };
 const tool = (args: Record<string, number>, content: string): RunEvent => ({
   type: "tool_called",

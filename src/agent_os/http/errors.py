@@ -52,6 +52,9 @@ REQUEST_ID_HEADER = "X-Request-Id"
 # 계약의 429 문서(`routes`)와 최종 사용자 접두사 CORS 의 노출 헤더(`cors`)가 이 이름을 쓴다.
 RETRY_AFTER_HEADER = "Retry-After"
 UNAUTHORIZED_MESSAGE = "토큰이 없거나 틀리다"
+# 요청의 출처를 받지 않는 403 의 문구. 고정이고 어느 머리가 어떤 값이어서 막혔는지 싣지 않는다 —
+# 다른 사이트에 검사의 규칙을 알려 줄 까닭이 없다(ADR 0062 의 결정 "요청 출처 검사").
+FORBIDDEN_MESSAGE = "이 요청의 출처를 받지 않는다"
 INVALID_REQUEST_MESSAGE = "요청의 형식이 올바르지 않다"
 # 예기치 않은 실패의 문구. 원인은 서버 기록에만 남는다 — 밖으로 내면 내부 사정이 함께 나간다.
 INTERNAL_MESSAGE = "서버가 요청을 처리하지 못했다"
@@ -72,18 +75,22 @@ _FAILURE_KEY = "agent_os.failure_detail"
 
 
 # StrEnum 인 이유는 생성 클라이언트가 이름 있는 타입을 받기 위해서다(ADR 0008 이 같은 이유로
-# 골랐다). 값이 늘면 openapi.json 이 바뀌므로 어휘를 늘리는 것은 계약 변경이다. 어휘는 여섯이다.
+# 골랐다). 값이 늘면 openapi.json 이 바뀌므로 어휘를 늘리는 것은 계약 변경이다. 어휘는 일곱이다.
 # conflict 는 대상이 있지만 그 상태나 주체가 요청을 허락하지 않는 409 다. 표가 재개 불가
 # (`NotResumable`), 꺼진 플러그인(`Disabled`), 다른 주체(`DifferentPrincipal`, 운영자 면), 이어 갈
 # 수 없음(`NotContinuable`)을 거기로 옮기고, 관리 라우트는 내지 않는다(ADR 0010 의 2026-09-24·
 # 2026-09-26 이력, ADR 0017, ADR 0022). 여섯째인 too_many_requests 는 요청하는 쪽의 상한에 걸린
 # 429 다 — 대상의 상태가 아니라 요청하는 쪽의 사정이라 409 의 뜻이 맞지 않는다(ADR 0023, ADR 0010
 # 의 2026-10-03 이력). 최종 사용자 면의 라우트가 계약에 적고, 관리 라우트도 운영자 채널도 내지
+# 않는다. 일곱째인 forbidden 은 요청의 출처를 받지 않는 403 이다(`origin`, ADR 0062 의 결정 "요청
+# 출처 검사"). 토큰이 틀린 401 과 뜻이 다르다 — 출처 검사는 토큰을 보기 전에 서고, 운영자 면
+# 라우트(관리 API와 운영자 채널)가 계약에 적는다. `/health` 와 최종 사용자 면은 검사 밖이라 적지
 # 않는다.
 class ErrorCode(StrEnum):
     """에러 봉투의 어휘. 상태 코드와 1:1 이다."""
 
     UNAUTHORIZED = "unauthorized"
+    FORBIDDEN = "forbidden"
     INVALID_REQUEST = "invalid_request"
     NOT_FOUND = "not_found"
     CONFLICT = "conflict"
@@ -152,6 +159,7 @@ class _Failure:
 # 생성 클라이언트가 아는 값의 집합이 조용히 자란다. 접는 규칙은 테스트가 고정한다.
 _CODE_BY_STATUS = {
     401: ErrorCode.UNAUTHORIZED,
+    403: ErrorCode.FORBIDDEN,
     404: ErrorCode.NOT_FOUND,
     409: ErrorCode.CONFLICT,
     422: ErrorCode.INVALID_REQUEST,
