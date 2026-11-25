@@ -4,11 +4,12 @@
 `complete` 를 거짓으로 둔다. 이어 가기의 판정(주체, 끝남)은 다시 하지 않는다.
 """
 
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from datetime import UTC, datetime, timedelta
 
 import pytest
 
+from agent_os.core import conversations
 from agent_os.core.conversations import FIRST_REQUEST_LENGTH, list_conversations
 from agent_os.core.ports import (
     DEFAULT_LIMIT,
@@ -237,6 +238,10 @@ def test_첫_요청은_파이썬의_글자_수로_앞_120자만_싣는다() -> N
     (exact,) = _lines(list_conversations([_run("a", request="가" * 120)]))
     assert exact.first_request == "가" * 120
 
+    # BMP 밖의 글자(이모지)도 한 글자로 센다. UTF-16 단위로 세면 59자에서 잘린다.
+    (emoji,) = _lines(list_conversations([_run("a", request="🙂" * 121)]))
+    assert emoji.first_request == "🙂" * 120
+
 
 def test_limit_로_자르고_커서는_끝_실행의_정렬_키_그대로다() -> None:
     records = [_run(f"r{n}", at=T0 + timedelta(minutes=n)) for n in range(5)]
@@ -250,6 +255,31 @@ def test_limit_로_자르고_커서는_끝_실행의_정렬_키_그대로다() -
     assert _ends(second) == ["r2", "r1"]
     third = list_conversations(records, limit=2, after=cursor_of(second[-1]))
     assert _ends(third) == ["r0"]
+
+
+def test_거슬러_오르기는_고른_쪽과_상태에_맞는_끝_실행에만_돈다(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    records = [
+        _run(f"r{n}", at=T0 + timedelta(minutes=n), status="failed" if n == 1 else "finished")
+        for n in range(5)
+    ]
+    built: list[RunId] = []
+    original = getattr(conversations, "_line")  # noqa: B009 비공개 함수에 호출 세는 껍질을 씌운다
+
+    def counting(end: RunRecord, by_id: Mapping[RunId, RunRecord]) -> ConversationLine:
+        built.append(end.summary.run_id)
+        line: ConversationLine = original(end, by_id)
+        return line
+
+    monkeypatch.setattr(conversations, "_line", counting)
+
+    assert _ends(list_conversations(records, limit=2)) == ["r4", "r3"]
+    assert built == ["r4", "r3"]
+
+    built.clear()
+    assert _ends(list_conversations(records, status="failed")) == ["r1"]
+    assert built == ["r1"]
 
 
 def test_같은_시작_시각에서도_커서가_쪽을_겹치거나_빠뜨리지_않는다() -> None:

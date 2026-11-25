@@ -61,19 +61,23 @@ def list_conversations(
         for record in records
         if record.previous_run is not None and record.previous_run != record.summary.run_id
     }
-    rows: list[ConversationRow] = [
-        _line(end, by_id) for end in records if end.summary.run_id not in continued
-    ]
+    ends = [end for end in records if end.summary.run_id not in continued]
     if status is not None:
-        rows = [row for row in rows if isinstance(row, ConversationLine) and row.status == status]
+        ends = [end for end in ends if end.summary.status == status]
         unreadable = []
-    rows.extend(unreadable)
-    keyed = [(order_key(cursor_of(row)), row) for row in rows]
+    # 정렬 키와 상태는 끝 실행 하나에서 나온다. 그래서 거르고 자른 뒤 고른 끝에만 거슬러 오른다.
+    candidates: list[RunRecord | UnreadableTrace] = [*ends, *unreadable]
+    keyed = [
+        (order_key(cursor_of(item.summary if isinstance(item, RunRecord) else item)), item)
+        for item in candidates
+    ]
     keyed.sort(key=lambda pair: pair[0], reverse=True)
     if after is not None:
         edge = order_key(after)
         keyed = [pair for pair in keyed if pair[0] < edge]
-    return tuple(row for _, row in keyed[:size])
+    return tuple(
+        _line(item, by_id) if isinstance(item, RunRecord) else item for _, item in keyed[:size]
+    )
 
 
 def _line(end: RunRecord, by_id: Mapping[RunId, RunRecord]) -> ConversationLine:

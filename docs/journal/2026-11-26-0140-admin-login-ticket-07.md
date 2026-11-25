@@ -89,6 +89,16 @@
 - 고친 것: `ports.py`의 `TraceStore` 독스트링("실행들과 대화들을 열거한다"), `core.md`의 `complete` 설명에 순환 멈춤을 더했다. `core.md` 문장만 고쳤고 카나리아 `expect` 구절은 그대로라 `--preflight`만 다시 돌렸다. `pyright src/agent_os/core/ports.py` 0 오류.
 - 남긴 것과 이유: 중복 둘은 쪽 나누기 코드를 한 함수로 모으려면 기존 `JsonlTrace.list`의 경로를 건드려야 해서 이 티켓의 범위 밖이다. 순환만의 한계는 명세 갱신이 사용자 승인 사항이라 티켓 메모에 적었다. `adapters.md`에 한 줄 더하는 Nit은 그 파일의 카나리아 명세 여섯이 이 PR에서 실제로 돈 적이 없어 고쳤다가 되돌렸다.
 
+## PR 직전 CodeRabbit CLI 리뷰 (`coderabbit-review`, 기준 `origin/dev`, 커밋 `344dc2f2a`)
+
+CLI 0.7.5가 `Seat: not assigned`(Plan: Free)에서도 끝까지 돌아 `review_completed`를 냈다(`operations.md` 리뷰 파이프라인 2의 판정대로 CLI 축이 찼다). 대체 둘(`bug-perf-review`, `/security-review`)은 돌리지 않았다. 지적은 1건이고 내가 낸 주장 다섯은 모두 오탐(문제 없음)으로 판정됐다.
+
+- 유효 Minor, 작음: `core/conversations.py`가 모든 끝 실행에 `_line()`(거슬러 오르기)을 먼저 돌린 뒤 status 거르기와 정렬과 커서 자르기를 했다. 한 쪽에 필요한 것은 끝 실행의 요약뿐이라 `limit`이 1이어도 끝 수 곱하기 줄기 길이만큼 걸렸다. 고쳤다: 끝 후보를 상태로 거르고 `order_key`로 정렬하고 커서로 자른 뒤, 고른 끝에만 `_line()`을 부른다. 먼저 쓴 시험(`test_거슬러_오르기는_고른_쪽과_상태에_맞는_끝_실행에만_돈다`)이 고치기 전에 `['r0','r1','r2','r3','r4']`로 빨갰고 고친 뒤 통과했다.
+- 유효 Minor, 작음(목록 밖): `first_request` 시험에 BMP 밖 글자가 없었다. 이모지 121자 입력에서 120자를 싣는 사례를 더했다(CLI가 낸 서로게이트·결합 문자 가운데 코드 포인트로 세는 것은 이 사례로 못 박고, 결합 문자가 120자 경계에서 기호를 가르는 것은 겉모양 문제로 두었다).
+- 오탐 판정(CLI): 순환 멈춤과 자기 참조, 정렬과 커서의 전순서, 120자 슬라이스, 기존 `list`의 동작, 토큰·경로 탈출 없음. 홀로 선 서로게이트가 트레이스에 쓰기 전에 pydantic 직렬화에서 막힌다는 판단은 코드를 읽어 추정했고 직접 돌려 보지는 못했다(CLI 세션이 스크래치 실행을 거부당했다).
+- 고친 뒤 돌린 것: 고친 직후 `uv run pytest tests/core/test_conversations.py tests/adapters/test_jsonl.py -q` 77개 통과(새 시험 포함), 이모지 사례를 더한 뒤 `test_conversations.py` 17개 통과, `ruff check`·`ruff format --check` 통과, `pyright`(두 파일) 0 오류, `tools/check_type_escapes.py` 출력 없이 통과.
+- PR 봇에 밀 주장(이번에 새로 쓴 문장 원문): `core/conversations.py`의 주석 "정렬 키와 상태는 끝 실행 하나에서 나온다. 그래서 거르고 자른 뒤 고른 끝에만 거슬러 오른다."
+
 ## 이 세션의 제목
 
 `feature/07-conversation-list-route`(인계 전. 인계하며 `feature/07-conversation-list-route (인계함)`으로 바꿨다)
