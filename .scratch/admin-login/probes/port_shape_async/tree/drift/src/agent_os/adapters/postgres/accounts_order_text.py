@@ -8,9 +8,10 @@ from __future__ import annotations
 
 from typing import reveal_type
 
-from agent_os.adapters.postgres.accounts import Row, as_tier
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncEngine
+
+from agent_os.adapters.postgres.accounts import Row, as_tier
 
 _FIND = text(
     "SELECT failures, name, tier, password_hash, locked_until FROM accounts WHERE name = :name"

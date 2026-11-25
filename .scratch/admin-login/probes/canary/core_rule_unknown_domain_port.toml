@@ -1,0 +1,28 @@
+# `.claude/rules/core.md` 의 "유스케이스 클래스·도메인별 포트를 두지 않는다" 항목에 더한 문장(계정 저장소처럼 core가 모르는 영역의
+# 포트는 core가 아니라 채널과 관리가 함께 쓰는 `http`가 선언한다)이 `paths` 에 맞는 파일을 Read 로 열 때 실리는지
+# (admin-login 티켓 02).
+# 실험군은 규칙의 paths 안(src/agent_os/core/), 대조군은 밖(README.md)을 읽는다. 둘 다 이 체크아웃이다.
+# 기대 구절은 더한 문장에만 있다(`loop.py` 에는 없다).
+# 최신 결과: 통과 4(2026-11-26, 이 PC의 admin-login 티켓 02 워크트리, claude 2.1.325, 기준 브랜치 11343375b 위의 커밋하지 않은 작업 트리,
+# 일지 2026-11-26-0131). 실험군 셋이 더한 문장을 글자 그대로 옮겼고 대조군은 "없음"이었다. "없음" 섞임 0.
+# 돌리는 법: uv run python tools/canary.py .scratch/admin-login/probes/canary/core_rule_unknown_domain_port.toml <출력 디렉터리>
+kind = "rule"
+question = '''
+Read 도구로 `{target}` 파일 하나만 통째로 읽어라. 다른 파일은 읽지 않는다.
+그 뒤 이 세션에 실린 지시(그 파일을 읽을 때 함께 실린 저장소의 규칙도 이 세션의 지시다) 가운데, core 에 도메인별 포트를 두는지를
+다루는 항목이 있으면 그 항목의 마지막 문장을 글자 그대로 옮겨라. 그 문장은 계정 저장소 같은, core 가 모르는 영역의 포트를
+어디서 선언하는지를 말한다.
+읽은 파일의 코드에서 추측하지 않는다. 실린 지시에 그런 문장이 없으면 "없음"이라고만 답하라.
+'''
+expect = ["core가 모르는 영역의 포트는", "`http`가 선언한다"]
+source = ".claude/rules/core.md"
+
+[[arm]]
+name = "paths-안"
+role = "experiment"
+target = "src/agent_os/core/loop.py"
+
+[[arm]]
+name = "paths-밖"
+role = "control"
+target = "README.md"
