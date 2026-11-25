@@ -48,6 +48,14 @@ dependencies = [
 [project.scripts]
 agent-os = "agent_os.main:main"
 
+# 둘째 설치 묶음 `widget-admin`(멤버 폴더 `widget-admin/`)이 같은 잠금 파일을 쓴다(ADR 0064). 아래 개발
+# 묶음의 멤버 줄이 없으면 `uv sync --frozen` 이 멤버를 깔지 않아 CI 와 러너의 검사가 멤버를 보지 못한다.
+[tool.uv.workspace]
+members = ["widget-admin"]
+
+[tool.uv.sources]
+widget-admin = { workspace = true }
+
 [dependency-groups]
 # httpx 는 HTTP 표면을 미는 테스트 클라이언트다(ADR 0010 의 2026-09-22 이력). langchain-core 뒤에서
 # 이미 락파일에 있지만 선언하는 이유는 전이 의존에 기댄 테스트가 그 경로가 바뀌는 날 조용히 깨지기
@@ -67,6 +75,8 @@ dev = [
     # pre-commit 러너의 pytest 만 프로세스 여럿에 나눠 돌린다(ADR 0035). 손으로 치는 pytest 와 CI 는
     # 한 프로세스다. 판은 uv.lock 이 고정한다.
     "pytest-xdist>=3.8.0",
+    # 둘째 설치 묶음. 개발 묶음에 넣어야 `uv sync --frozen` 한 줄이 둘을 함께 깐다(ADR 0064).
+    "widget-admin",
 ]
 
 [build-system]
@@ -79,7 +89,7 @@ packages = ["src/agent_os"]
 [tool.ruff]
 line-length = 100
 target-version = "py312"
-src = ["src", "tests"]
+src = ["src", "tests", "widget-admin/src"]
 
 [tool.ruff.lint]
 select = ["E", "W", "F", "I", "UP", "B", "DTZ", "TD", "FBT", "PLW0717"]
@@ -96,7 +106,9 @@ explicit-preview-rules = true
 max-statements-in-try = 5
 
 [tool.pyright]
-include = ["src", "tests", "tools"]
+include = ["src", "widget-admin/src", "tests", "tools"]
+# 적으면 적은 자리만 본다. 둘 가운데 하나만 적으면 다른 패키지의 import 마다 스텁 없음이 난다(ADR 0064).
+extraPaths = ["src", "widget-admin/src"]
 pythonVersion = "3.12"
 typeCheckingMode = "strict"
 venvPath = "."
@@ -129,8 +141,14 @@ filterwarnings = [
 ]
 
 [tool.importlinter]
-root_packages = ["agent_os"]
+root_packages = ["agent_os", "widget_admin"]
 include_external_packages = true
+
+# 두 설치 묶음은 서로를 import 하지 않는다. 곧바른 import 도 다른 모듈을 거친 import 도 막는다(ADR 0064).
+[[tool.importlinter.contracts]]
+name = "agent_os and widget_admin are independent (ADR 0064)"
+type = "independence"
+modules = ["agent_os", "widget_admin"]
 
 [[tool.importlinter.contracts]]
 name = "main -> server -> {channel | admin | adapters} -> http -> core -> sdk (principle IV)"

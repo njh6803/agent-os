@@ -68,7 +68,7 @@ PATCHED_SKILLS = (
 SENTINEL = "프로젝트 사본"
 NESTED_INSTRUCTION_FILES = ("AGENTS.md", "CLAUDE.md")
 # `bool | None` 검사가 훑는 디렉터리. pyright 의 `include` 와 같고 시험이 맞댄다.
-OPTIONAL_BOOL_ROOTS = ("src", "tests", "tools")
+OPTIONAL_BOOL_ROOTS = ("src", "widget-admin/src", "tests", "tools")
 SETTINGS = Path(".claude") / "settings.json"
 LOCAL_SETTINGS = Path(".claude") / "settings.local.json"
 PROJECT_DIR_PLACEHOLDER = "${CLAUDE_PROJECT_DIR}"

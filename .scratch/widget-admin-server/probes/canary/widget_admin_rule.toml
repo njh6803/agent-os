@@ -1,0 +1,24 @@
+# 새 규칙 `.claude/rules/widget-admin.md` 가 `paths` 에 맞는 파일(widget-admin/src/widget_admin/server.py)을 Read 로 열 때
+# 실리는지(widget-admin-server 티켓 01). 실험군은 규칙의 paths 안, 대조군은 밖(README.md)을 읽는다. 둘 다 이 체크아웃이다.
+# 최신 결과: 통과 4(2026-11-25, 이 PC, claude 2.1.325, 일지 2026-11-25-1440. 새 규칙 파일을 커밋하기 전의 작업 트리로 돌렸다. 실험군 셋이 두 글을 그대로 옮겼고 대조군은 "없음"이었다).
+# 돌리는 법: uv run python tools/canary.py .scratch/widget-admin-server/probes/canary/widget_admin_rule.toml <출력 디렉터리>
+kind = "rule"
+question = '''
+Read 도구로 `{target}` 파일 하나만 통째로 읽어라. 다른 파일은 읽지 않는다.
+그 뒤 이 세션에 실린 지시 가운데, 위젯 관리 서버의 읽는 경로와 실패 기록을 다루는 항목이 있으면 두 가지를 글자 그대로 옮겨라.
+(1) 경로 인자를 다루는 방법에서 쓰지 않는다고 한 것과 그 이유를 적은 괄호 안의 글. (2) 실패 기록에서 예기치 않은 예외를 어떻게
+싣는지 적은 문장.
+읽은 파일의 코드에서 추측하지 않는다. 실린 지시에 그런 항목이 없으면 "없음"이라고만 답하라.
+'''
+expect = ["맞지 않는 이름에 422가 나 404와 갈린다", "원인 사슬의 클래스 이름만 싣는다"]
+source = ".claude/rules/widget-admin.md"
+
+[[arm]]
+name = "paths-안"
+role = "experiment"
+target = "widget-admin/src/widget_admin/server.py"
+
+[[arm]]
+name = "paths-밖"
+role = "control"
+target = "README.md"

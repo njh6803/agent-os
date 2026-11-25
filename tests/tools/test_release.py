@@ -188,7 +188,7 @@ def test_제품_경로를_고치지_않은_커밋만_있으면_판을_내지_않
     assert plan.previous_tag == "v0.1.0"
 
 
-def test_제품_경로_다섯이_모두_판을_낸다(repo: Repo) -> None:
+def test_제품_경로_여섯이_모두_판을_낸다(repo: Repo) -> None:
     repo.config('candidate_for = "0.1.0"\n')
     repo.commit("chore: 설정", {"deploy/release.toml": 'candidate_for = "0.1.0"\n'})
     repo.tag("v0.1.0-rc.1")
@@ -199,7 +199,7 @@ def test_제품_경로_다섯이_모두_판을_낸다(repo: Repo) -> None:
         repo.tag(f"v0.1.0-rc.{index + 2}")
         repo.commit("chore: 문서만", {"docs/g.md": str(index)})
         assert plan_release(repo.path).release is False, path
-    assert PRODUCT_PATHS == ("src", "web", "plugins", "uv.lock", "deploy")
+    assert PRODUCT_PATHS == ("src", "web", "plugins", "uv.lock", "deploy", "widget-admin")
 
 
 def test_제품_경로를_고친_커밋만_범위에_든다(repo: Repo) -> None:

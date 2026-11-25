@@ -2,6 +2,12 @@ version = 1
 revision = 3
 requires-python = "==3.12.*"
 
+[manifest]
+members = [
+    "agent-os",
+    "widget-admin",
+]
+
 [[package]]
 name = "agent-os"
 version = "0.0.0"
@@ -35,6 +41,7 @@ dev = [
     { name = "pytest-asyncio" },
     { name = "pytest-xdist" },
     { name = "ruff" },
+    { name = "widget-admin" },
     { name = "zizmor" },
 ]
 
@@ -68,6 +75,7 @@ dev = [
     { name = "pytest-asyncio" },
     { name = "pytest-xdist", specifier = ">=3.8.0" },
     { name = "ruff" },
+    { name = "widget-admin", editable = "widget-admin" },
     { name = "zizmor", specifier = ">=1.30.1" },
 ]
 
@@ -1382,6 +1390,29 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/37/a1/4cf892007778eaf84ad162bfc98046e0ed89b63ac55949e3236626b2a23f/websockets-16.1.1-cp312-cp312-win32.whl", hash = "sha256:1d27fa8462ad6a1cb36206a3d0640b2333340def181fae11ed7f9adeaa5c0747", size = 179943, upload-time = "2026-07-17T22:49:36.213Z" },
     { url = "https://files.pythonhosted.org/packages/d9/de/6abe251d28c3a3f217096575400b27750b18e0b1d2fff3a2a239960fea07/websockets-16.1.1-cp312-cp312-win_amd64.whl", hash = "sha256:b436f6ec4fc3a6b4237c84d3f83170ed2b40bb584222f0ac47a0c8a5921980c7", size = 180243, upload-time = "2026-07-17T22:49:37.626Z" },
     { url = "https://files.pythonhosted.org/packages/be/4d/2d0d67834092e354d2b0498f014a41249a89556bc406cf86f3e1557bb463/websockets-16.1.1-py3-none-any.whl", hash = "sha256:6abbd3e82c731c8e531714466acd5d87b5e88ac3243465337ba71d68e23ae7e3", size = 173814, upload-time = "2026-07-17T22:51:04.184Z" },
+]
+
+[[package]]
+name = "widget-admin"
+version = "0.0.0"
+source = { editable = "widget-admin" }
+dependencies = [
+    { name = "alembic" },
+    { name = "asyncpg" },
+    { name = "fastapi" },
+    { name = "pydantic" },
+    { name = "sqlalchemy", extra = ["asyncio"] },
+    { name = "uvicorn" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "alembic", specifier = ">=1.20.1,<2" },
+    { name = "asyncpg", specifier = ">=0.32,<1" },
+    { name = "fastapi", specifier = ">=0.140.8" },
+    { name = "pydantic", specifier = ">=2.9" },
+    { name = "sqlalchemy", extras = ["asyncio"], specifier = ">=2.1.8,<3" },
+    { name = "uvicorn", specifier = ">=0.30" },
 ]
 
 [[package]]
