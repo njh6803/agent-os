@@ -73,6 +73,12 @@
 - 병합 직전에 `git fetch origin` 뒤 origin/dev에서 03·04 티켓의 `Status:`를 다시 본다. 04가 먼저 done이면 이 티켓이 마지막이라 `.scratch/widget-admin-server/plan.md`에 `**끝:**` 줄과 `docs/release-notes/features/widget-admin-server.md`를 싣는 커밋이 더 필요하다(티켓 "마지막 티켓이면" 절). 이 세션이 본 때(2026-11-25)는 03·04가 둘 다 `ready-for-agent`였다.
 - 시간 민감 시험(`tests/channel/cli/test_interrupt.py`, `tests/tools/test_rerun_runner.py`, `run-hooks`의 `hook_ruff_line_width`)이 전체 실행에서 부하로 흔들렸고 단독으로는 통과했다(위 "다시 돌린 것"). 같은 시험이 pre-commit이나 CI에서 다시 빨개지면 단독 실행으로 먼저 가르고, 두 번 연속 빨강이면 `diagnosing-bugs`로 넘어간다.
 
+## PR 직전 리뷰(세 번째 세션)
+
+- 아래 둘은 `coderabbit-review` 서브에이전트의 보고에서 옮겼다. 이 세션이 명령을 직접 치지 않았고 출력도 직접 보지 않았다.
+- 서브에이전트가 보고한 실행은 CodeRabbit CLI 0.7.5(`Plan: Free`, `Seat: not assigned`)의 `coderabbit review --agent --include-untracked --base origin/dev`이고, 파일 22개, 종료 코드 0, `review_completed`에 findings 0이었다. 좌석 줄이 `not assigned`여도 리뷰가 끝까지 돌았다는 보고이므로 CLI 축은 살아 있는 것으로 본다(`docs/constitution/operations.md` 리뷰 파이프라인 2).
+- 서브에이전트가 코드를 읽고 보류로 올린 한 건은 수정이 필요 없다고 판정했다. `createPublicClient`가 `baseUrl.href`를 그대로 넘기므로 쿼리나 해시가 든 URL을 주면 경로 앞에 그대로 붙는다. 부르는 쪽은 출처나 접두사만 넘기는 계약이고 부르는 곳도 아직 없다. 티켓 03 이후 호출부를 만들 때 본다.
+
 ## 하네스에서 겪은 것
 
 - 전체 `grep -rn ... .`는 훅(`.env` 노출 방지)에 막힌다. Grep 도구나 경로를 좁힌 명령을 쓴다.
