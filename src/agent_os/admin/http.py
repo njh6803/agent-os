@@ -39,6 +39,7 @@ from agent_os.admin.connection_check import (
     ConnectionUnreached,
     LaunchingChecks,
 )
+from agent_os.admin.conversations import ConversationPage, conversation_page
 from agent_os.admin.traces import (
     CURSOR_PATTERN,
     Trace,
@@ -310,6 +311,27 @@ def admin_router(
     ) -> TracePage:
         rows = trace.list(status=status, limit=limit, after=_decode_after(after))
         return trace_page(rows, limit=limit)
+
+    # 대화 목록은 실행 목록과 같은 질의 셋이고 같은 자리에서 검증한다(`status` 는 끝 실행의 상태다).
+    # 묶는 규칙은 포트 뒤의 core 함수 하나가 갖고 이 라우트는 한 쪽을 응답의 모양으로 옮길 뿐이다.
+    @router.get(
+        "/conversations",
+        operation_id="list_conversations",
+        summary="이어 가기로 이어진 실행들을 대화 한 줄씩으로 묶어 최근 것부터 한 쪽씩",
+        responses=documented_errors(401, 403, 422),
+    )
+    def list_conversations(
+        status: Annotated[
+            RunStatus | None, Query(description="없으면 전부다. 끝 실행의 상태로 거른다")
+        ] = None,
+        limit: Annotated[int, Query(ge=1, le=MAX_LIMIT)] = DEFAULT_LIMIT,
+        after: Annotated[
+            str | None,
+            Query(pattern=CURSOR_PATTERN, description="앞 쪽의 next_cursor 를 그대로 넘긴다"),
+        ] = None,
+    ) -> ConversationPage:
+        rows = trace.list_conversations(status=status, limit=limit, after=_decode_after(after))
+        return conversation_page(rows, limit=limit)
 
     # `{run_id}` 는 `traces/{run_id}.jsonl` 로 조립되므로 `{name}` 과 같이 포트에 닿기 전에 sdk 의
     # 패턴을 지나야 한다. 목록이 내는 식별자에 거는 것과 같은 패턴이라 목록에서 얻은 것을 그대로

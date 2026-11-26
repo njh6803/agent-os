@@ -29,11 +29,12 @@ from pathlib import Path
 
 from pydantic import AwareDatetime, BaseModel, ConfigDict, TypeAdapter, ValidationError
 
+from agent_os.core.conversations import list_conversations
 from agent_os.core.ports import (
-    DEFAULT_LIMIT,
-    MAX_LIMIT,
+    ConversationRow,
     Cursor,
     PluginError,
+    RunRecord,
     RunRow,
     RunStatus,
     RunSummary,
@@ -43,6 +44,7 @@ from agent_os.core.ports import (
     UnreadableTrace,
     cursor_of,
     order_key,
+    page_size,
     run_status,
 )
 from agent_os.sdk import Event, RunId, RunStarted, is_run_id
@@ -148,7 +150,7 @@ class JsonlTrace:
         모든 실행의 요약을 나르지 않는다는 것까지다(ADR 0012 는 이 스캔을 첫 어댑터의 값으로
         받아들였고 색인이 붙을 때 이 메서드만 바뀐다). PR 직전 성능 축이 이 구별을 물었다.
         """
-        size = _page_size(limit)
+        size = page_size(limit)
         rows = [_row(path) for path in self._files()]
         if status is not None:
             # 표지는 상태가 없어 함께 빠진다. 승인자의 멈춘 실행 목록에 섞여 들어오지 않는다.
@@ -161,6 +163,21 @@ class JsonlTrace:
             edge = order_key(after)
             keyed = [pair for pair in keyed if pair[0] < edge]
         return tuple(row for _, row in keyed[:size])
+
+    def list_conversations(
+        self,
+        *,
+        status: RunStatus | None = None,
+        limit: int | None = None,
+        after: Cursor | None = None,
+    ) -> tuple[ConversationRow, ...]:
+        """실행마다 기록을 만들어 core 의 묶는 함수에 넘긴다. 규칙은 그 함수 한 곳에 있다.
+
+        `list` 와 같이 파일마다 헤더와 첫 줄과 마지막 줄만 읽고 전부 만든 뒤 자른다. 그래서 요청
+        하나가 디렉터리의 모든 트레이스 파일을 여는 비용도 같다(ADR 0012, 색인은 trace-postgres).
+        """
+        records = [_record(path) for path in self._files()]
+        return list_conversations(records, status=status, limit=limit, after=after)
 
     def _files(self) -> Iterator[Path]:
         """`<run_id>.jsonl` 중 이름이 실행 식별자인 것만. 그 밖은 런타임이 만들 수 없는 이름이다.
@@ -176,14 +193,6 @@ class JsonlTrace:
 
     def _path(self, run_id: RunId) -> Path:
         return self._directory / f"{run_id}.jsonl"
-
-
-def _page_size(limit: int | None) -> int:
-    if limit is None:
-        return DEFAULT_LIMIT
-    if not 1 <= limit <= MAX_LIMIT:
-        raise ValueError(f"limit 은 1 과 {MAX_LIMIT} 사이여야 한다: {limit}")
-    return limit
 
 
 def _read_trace(run_id: RunId, path: Path) -> Trace:
@@ -207,9 +216,22 @@ def _row(path: Path) -> RunRow:
     try:
         return _summarize(run_id, _edges(path))
     except (OSError, ValueError) as error:
-        # 이유에 서버 경로가 실리는 것은 이 경계에서 노출이 아니다. 루프백 전용이고 인증 뒤이므로
-        # 읽는 사람이 곧 그 파일시스템의 주인이다(admin-api 명세, ADR 0011). 내용은 싣지 않는다.
-        return UnreadableTrace(run_id=run_id, reason=f"{path}: {_describe(error)}")
+        return _unreadable(run_id, path, error)
+
+
+def _record(path: Path) -> RunRecord | UnreadableTrace:
+    """대화 목록이 묶을 실행 하나. 읽히지 않는 파일은 실행 목록과 같은 표지다."""
+    run_id = RunId(path.stem)
+    try:
+        return _parse(run_id, _edges(path))
+    except (OSError, ValueError) as error:
+        return _unreadable(run_id, path, error)
+
+
+def _unreadable(run_id: RunId, path: Path, error: Exception) -> UnreadableTrace:
+    # 이유에 서버 경로가 실리는 것은 이 경계에서 노출이 아니다. 루프백 전용이고 인증 뒤이므로
+    # 읽는 사람이 곧 그 파일시스템의 주인이다(admin-api 명세, ADR 0011). 내용은 싣지 않는다.
+    return UnreadableTrace(run_id=run_id, reason=f"{path}: {_describe(error)}")
 
 
 def _describe(error: Exception) -> str:
@@ -292,12 +314,18 @@ def _last_byte(path: Path) -> bytes | None:
 
 
 def _summarize(run_id: RunId, edges: _Edges) -> RunSummary:
-    """요약 일곱 필드를 줄 셋에서 만든다. 파일 이름이 실행 식별자의 유일한 원천이다.
+    """요약 일곱 필드를 줄 셋에서 만든다. 대화 목록의 기록(`_record`)과 같은 줄 셋을 쓴다."""
+    return _parse(run_id, edges).summary
 
-    헤더와 시작 이벤트가 둘 다 파일 이름과 같은 실행을 말하는지 본다. 그 둘이 일곱 필드 중
-    여섯의 출처이므로(형식 버전은 헤더, 에이전트와 주체와 시작 시각은 시작 이벤트), 어긋난 파일이
-    남의 실행 정보를 이 식별자로 내보내는 것을 막는다. 재개 진입점이 재생 전에 같은 검사를 하지만
-    그쪽은 재개 경로 전용이라 조회하는 소비자가 보호를 못 받았다(PR 직전 보안·버그 축).
+
+def _parse(run_id: RunId, edges: _Edges) -> RunRecord:
+    """요약 일곱 필드와 시작 이벤트의 세 칸(앞 실행, 요청, 요청한 계정)을 줄 셋에서 만든다.
+
+    파일 이름이 실행 식별자의 유일한 원천이다. 헤더와 시작 이벤트가 둘 다 파일 이름과 같은 실행을
+    말하는지 본다. 그 둘이 일곱 필드 중 여섯의 출처이므로(형식 버전은 헤더, 에이전트와 주체와 시작
+    시각은 시작 이벤트), 어긋난 파일이 남의 실행 정보를 이 식별자로 내보내는 것을 막는다. 재개
+    진입점이 재생 전에 같은 검사를 하지만 그쪽은 재개 경로 전용이라 조회하는 소비자가 보호를 못
+    받았다(PR 직전 보안·버그 축). 더한 세 칸은 읽는 줄이 늘지 않는다 — 시작 이벤트가 곧 첫 줄이다.
     """
     head = TraceHeader.model_validate_json(edges.header)
     _require_same_run(run_id, head.run_id, "헤더")
@@ -309,7 +337,7 @@ def _summarize(run_id: RunId, edges: _Edges) -> RunSummary:
     if isinstance(ending, UnknownEvent):
         # 이 줄의 시각이 요약의 마지막 시각이 되므로 그것이 이 실행의 것인지 함께 본다.
         _require_raw_run(run_id, edges.last, "마지막 이벤트")
-    return RunSummary(
+    summary = RunSummary(
         run_id=run_id,
         status=run_status(ending),
         schema_version=head.schema_version,
@@ -317,6 +345,12 @@ def _summarize(run_id: RunId, edges: _Edges) -> RunSummary:
         last_at=_last_at(ending, edges.last),
         agent=started.agent,
         principal=started.principal,
+    )
+    return RunRecord(
+        summary=summary,
+        previous_run=started.previous_run,
+        request=started.request,
+        requesting_account=started.requesting_account,
     )
 
 

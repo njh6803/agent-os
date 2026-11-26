@@ -149,6 +149,7 @@ expectTypeOf<시작의_429["limit"]>().toEqualTypeOf<
 // 고칠 자리가 컴파일러 앞에 선다.
 expectTypeOf<keyof AdminPaths>().toEqualTypeOf<
   | "/health"
+  | "/conversations"
   | "/plugins"
   | "/plugins/{kind}/{name}"
   | "/plugins/{kind}/{name}/connection-check"

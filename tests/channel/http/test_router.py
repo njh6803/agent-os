@@ -43,6 +43,7 @@ from agent_os.channel.http.runs import BACKLOG_FRAMES
 from agent_os.core.ports import (
     ChatModel,
     Clock,
+    ConversationRow,
     Cursor,
     ManifestRow,
     ModelSource,
@@ -356,6 +357,15 @@ class FakeTrace:
             if status is None or summary.status == status:
                 rows.append(summary)
         return rows
+
+    def list_conversations(
+        self,
+        *,
+        status: RunStatus | None = None,
+        limit: int | None = None,
+        after: Cursor | None = None,
+    ) -> Sequence[ConversationRow]:
+        raise NotImplementedError("채널은 대화 목록을 읽지 않는다")
 
     def events_of(self, run_id: RunId) -> tuple[Event, ...]:
         return tuple(event for event in self._events if event.run_id == run_id)
@@ -1902,7 +1912,8 @@ async def test_트레이스를_쓰지_못해_멈춘_실행은_스트림을_결�
 # 같은 이름으로 지으면 여기 있는 이벤트 컴포넌트가 입력과 출력으로 갈라진다(명세 검토의 프로브).
 # 관리 쪽 이름이 바뀐 것은 여기도 따라간다 — plugin-toggle 이 `UnreadableManifest` 행을 `Plugin`·
 # `PluginPlaceholder` 로 감싸고 본문 `SetEnabled` 를 더했다(ADR 0010 의 2026-09-26 이력). 접속
-# 확인의 응답 유니온과 멤버 넷과 종류 열거도 관리 쪽이 더한 이름이다(ADR 0067).
+# 확인의 응답 유니온과 멤버 넷과 종류 열거도 관리 쪽이 더한 이름이다(ADR 0067). 대화 목록의 줄과
+# 쪽과 행 유니온도 관리 쪽이 더한 이름이다(admin-login 티켓 07).
 EXISTING_COMPONENTS = frozenset(
     {
         "AppliedRule",
@@ -1914,6 +1925,9 @@ EXISTING_COMPONENTS = frozenset(
         "ConnectionNotApplicable",
         "ConnectionReached",
         "ConnectionUnreached",
+        "Conversation",
+        "ConversationPage",
+        "ConversationRow",
         "ConversationSummarized",
         "ErrorCode",
         "ErrorEnvelope",

@@ -24,6 +24,7 @@ from agent_os.core.ports import (
     ChatModel,
     CheckOutcome,
     Clock,
+    ConversationRow,
     Cursor,
     ManifestRow,
     ModelSource,
@@ -134,6 +135,15 @@ class _SchemaOnlyTrace:
         limit: int | None = None,
         after: Cursor | None = None,
     ) -> Sequence[RunRow]:
+        raise NotImplementedError("스키마 추출은 포트를 부르지 않는다")
+
+    def list_conversations(
+        self,
+        *,
+        status: RunStatus | None = None,
+        limit: int | None = None,
+        after: Cursor | None = None,
+    ) -> Sequence[ConversationRow]:
         raise NotImplementedError("스키마 추출은 포트를 부르지 않는다")
 
 
