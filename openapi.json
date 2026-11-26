@@ -920,6 +920,64 @@
         "title": "LlmCalled",
         "type": "object"
       },
+      "LoginRequest": {
+        "additionalProperties": false,
+        "description": "로그인 요청. 계정 이름과 비밀번호를 받는다.",
+        "properties": {
+          "name": {
+            "maxLength": 32,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "password": {
+            "maxLength": 1024,
+            "minLength": 1,
+            "title": "Password",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "password"
+        ],
+        "title": "LoginRequest",
+        "type": "object"
+      },
+      "Me": {
+        "additionalProperties": false,
+        "description": "지금 로그인한 계정. 이름과 단계와 짧은 로그인의 수명(분)과 서버의 실행 제한 시간(초).",
+        "properties": {
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "run_timeout_seconds": {
+            "title": "Run Timeout Seconds",
+            "type": "number"
+          },
+          "tier": {
+            "enum": [
+              "system_admin",
+              "admin"
+            ],
+            "title": "Tier",
+            "type": "string"
+          },
+          "token_minutes": {
+            "title": "Token Minutes",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "name",
+          "tier",
+          "token_minutes",
+          "run_timeout_seconds"
+        ],
+        "title": "Me",
+        "type": "object"
+      },
       "ModelProvider": {
         "description": "모델 플러그인의 제공사.",
         "enum": [
@@ -1683,6 +1741,21 @@
         "title": "SetEnabled",
         "type": "object"
       },
+      "Setup": {
+        "additionalProperties": false,
+        "description": "첫 계정이 필요한지. 운영자 계정이 하나도 없을 때만 참이다.",
+        "properties": {
+          "needs_first_account": {
+            "title": "Needs First Account",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "needs_first_account"
+        ],
+        "title": "Setup",
+        "type": "object"
+      },
       "StartRun": {
         "additionalProperties": false,
         "description": "실행 하나를 일으키는 요청. 등록된 에이전트의 이름과 요청 문자열이다.",
@@ -2069,6 +2142,210 @@
   },
   "openapi": "3.1.0",
   "paths": {
+    "/auth/login": {
+      "post": {
+        "operationId": "log_in",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response",
+            "headers": {
+              "Set-Cookie": {
+                "description": "쿠키 둘(`__Host-aos_at`, `__Host-aos_rt`)을 심거나 지우는 줄이다. 줄이 둘 온다",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "토큰이 없거나 틀리다"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "이 요청의 출처를 받지 않는다"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "요청의 형식이 올바르지 않다"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "서버가 요청을 처리하지 못했다"
+          }
+        },
+        "summary": "계정 이름과 비밀번호로 로그인하고 쿠키 둘을 받는다"
+      }
+    },
+    "/auth/logout": {
+      "post": {
+        "operationId": "log_out",
+        "responses": {
+          "204": {
+            "description": "Successful Response",
+            "headers": {
+              "Set-Cookie": {
+                "description": "쿠키 둘(`__Host-aos_at`, `__Host-aos_rt`)을 심거나 지우는 줄이다. 줄이 둘 온다",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "토큰이 없거나 틀리다"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "이 요청의 출처를 받지 않는다"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "서버가 요청을 처리하지 못했다"
+          }
+        },
+        "summary": "이 로그인을 끊고 쿠키를 지운다"
+      }
+    },
+    "/auth/me": {
+      "get": {
+        "operationId": "get_me",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Me"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "토큰이 없거나 틀리다"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "이 요청의 출처를 받지 않는다"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "서버가 요청을 처리하지 못했다"
+          }
+        },
+        "summary": "지금 로그인한 계정을 짧은 JWT 만 보고 답한다"
+      }
+    },
+    "/auth/setup": {
+      "get": {
+        "operationId": "get_setup",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Setup"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "이 요청의 출처를 받지 않는다"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "서버가 요청을 처리하지 못했다"
+          }
+        },
+        "summary": "첫 계정이 필요한지 로그인 없이 묻는다"
+      }
+    },
     "/conversations": {
       "get": {
         "operationId": "list_conversations",

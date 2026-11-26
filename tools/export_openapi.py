@@ -39,7 +39,9 @@ from agent_os.core.ports import (
     TraceStore,
     WriteOutcome,
 )
+from agent_os.http.accounts import AccountStore, AccountWork
 from agent_os.http.database import Database
+from agent_os.http.login_tokens import LoginDurations
 from agent_os.http.sites import Sites
 from agent_os.sdk import (
     BaseAgent,
@@ -147,6 +149,13 @@ class _SchemaOnlyTrace:
         raise NotImplementedError("스키마 추출은 포트를 부르지 않는다")
 
 
+class _SchemaOnlyAccounts:
+    """스키마를 뽑는 동안 계정 저장소를 열지 않는다. 불리면 그 자체가 결함이라 터뜨린다."""
+
+    def transaction(self) -> AbstractAsyncContextManager[AccountWork]:
+        raise NotImplementedError("스키마 추출은 포트를 부르지 않는다")
+
+
 class _SchemaOnlyDatabase:
     """스키마를 뽑는 동안은 수명을 열지 않으므로 불릴 일이 없다. 불리면 곧바로 터뜨린다."""
 
@@ -176,6 +185,7 @@ def document() -> str:
     tools: ToolSource = _SchemaOnlyTools()
     clock: Clock = _SchemaOnlyClock()
     database: Database = _SchemaOnlyDatabase()
+    accounts: AccountStore = _SchemaOnlyAccounts()
     app = create_app(
         plugins=plugins,
         trace=trace,
@@ -195,6 +205,9 @@ def document() -> str:
         end_user_concurrent_runs=None,
         stderr=io.StringIO(),
         database=database,
+        accounts=accounts,
+        # 스키마는 유지 시간을 싣지 않는다. 기본값이다
+        login_durations=LoginDurations(),
     )
     return json.dumps(app.openapi(), indent=2, ensure_ascii=False, sort_keys=True) + "\n"
 

@@ -36,8 +36,10 @@ from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Literal, Protocol
+from uuid import UUID
 
-from sqlalchemy import Select, insert, select, update
+from sqlalchemy import Select, delete, insert, or_, select, update
+from sqlalchemy.dialects import postgresql
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncConnection, AsyncEngine
 
@@ -52,19 +54,35 @@ from agent_os.adapters.postgres.account_tables import (
     ACCOUNTS,
     LOGIN_ACCOUNT,
     LOGIN_ENDED_AT,
+    LOGIN_ID,
+    LOGIN_LOGGED_IN_AT,
     LOGIN_RECORDS,
+    LOGIN_REFRESHED_AT,
     LOGINS,
     RECORD_ACCOUNT,
+    RECORD_ADDRESS,
     RECORD_KIND,
     RECORD_OCCURRED_AT,
+    REFRESH_CREATED_AT,
+    REFRESH_LOGIN_ID,
+    REFRESH_TOKEN_HASH,
+    REFRESH_TOKENS,
+    SIGNING_KEY,
+    SIGNING_KEY_CREATED_AT,
+    SIGNING_KEY_ID,
+    SIGNING_KEY_VALUE,
 )
 from agent_os.adapters.postgres.errors import sqlstate_of
 
 type Tier = Literal["system_admin", "admin"]
 type Taken = Literal["taken"]
-type RecordKind = Literal["system_admin_set"]
+type RecordKind = Literal[
+    "system_admin_set", "login_succeeded", "login_failed", "locked", "logged_out"
+]
 
 UNIQUE_VIOLATION = "23505"
+# 서명 키의 표는 한 줄만 든다. 줄의 번호가 늘 1이고 표의 검사 제약이 다른 번호를 막는다
+SIGNING_KEY_ROW = 1
 
 # 줄에서 읽는 칸의 차례. `AccountRecord` 와 `_record_of` 가 같은 차례로 푼다.
 type _Row = Select[str, str, str | None, datetime | None, int, datetime | None, datetime]
@@ -184,14 +202,113 @@ class PostgresAccountWork:
         )
         await self._guard(lambda: self._connection.execute(statement))
 
-    async def record(self, kind: RecordKind, *, at: datetime, account: str) -> None:
+    async def record(
+        self,
+        kind: RecordKind,
+        *,
+        at: datetime,
+        account: str | None,
+        address: str | None = None,
+    ) -> None:
         statement = insert(LOGIN_RECORDS).values(
-            {RECORD_OCCURRED_AT.name: at, RECORD_KIND.name: kind, RECORD_ACCOUNT.name: account}
+            {
+                RECORD_OCCURRED_AT.name: at,
+                RECORD_KIND.name: kind,
+                RECORD_ACCOUNT.name: account,
+                RECORD_ADDRESS.name: address,
+            }
         )
         await self._guard(lambda: self._connection.execute(statement))
 
+    async def any_account(self) -> bool:
+        query = select(ACCOUNT_NAME).limit(1)
+        return await self._guard(lambda: self._exists(query))
+
+    async def set_failures(
+        self, name: str, *, failures: int, locked_until: datetime | None
+    ) -> None:
+        statement = (
+            update(ACCOUNTS)
+            .where(ACCOUNT_NAME == name)
+            .values(failures=failures, locked_until=locked_until)
+        )
+        await self._guard(lambda: self._connection.execute(statement))
+
+    async def clear_failures(self, name: str) -> None:
+        statement = (
+            update(ACCOUNTS).where(ACCOUNT_NAME == name).values(failures=0, locked_until=None)
+        )
+        await self._guard(lambda: self._connection.execute(statement))
+
+    async def delete_ended_logins(
+        self, name: str, *, idle_before: datetime, total_before: datetime
+    ) -> None:
+        # 갱신용 번호는 로그인 한 건을 가리키는 외래 키의 `ON DELETE CASCADE` 로 함께 지워진다
+        statement = delete(LOGINS).where(
+            LOGIN_ACCOUNT == name,
+            or_(
+                LOGIN_ENDED_AT.is_not(None),
+                LOGIN_REFRESHED_AT <= idle_before,
+                LOGIN_LOGGED_IN_AT <= total_before,
+            ),
+        )
+        await self._guard(lambda: self._connection.execute(statement))
+
+    async def open_login(self, login_id: UUID, name: str, *, at: datetime) -> None:
+        statement = insert(LOGINS).values(
+            {
+                LOGIN_ID.name: login_id,
+                LOGIN_ACCOUNT.name: name,
+                LOGIN_LOGGED_IN_AT.name: at,
+                LOGIN_REFRESHED_AT.name: at,
+            }
+        )
+        await self._guard(lambda: self._connection.execute(statement))
+
+    async def add_refresh_token(self, token_hash: str, login_id: UUID, *, at: datetime) -> None:
+        statement = insert(REFRESH_TOKENS).values(
+            {
+                REFRESH_TOKEN_HASH.name: token_hash,
+                REFRESH_LOGIN_ID.name: login_id,
+                REFRESH_CREATED_AT.name: at,
+            }
+        )
+        await self._guard(lambda: self._connection.execute(statement))
+
+    async def end_login(self, login_id: UUID, *, at: datetime) -> None:
+        statement = (
+            update(LOGINS).where(LOGIN_ID == login_id, LOGIN_ENDED_AT.is_(None)).values(ended_at=at)
+        )
+        await self._guard(lambda: self._connection.execute(statement))
+
+    async def ensure_signing_key(self, key: bytes, *, at: datetime) -> None:
+        # 없으면 넣는다 한 문장이라 `serve` 둘이 함께 떠도 줄이 하나로 모인다
+        statement = (
+            postgresql.insert(SIGNING_KEY)
+            .values(
+                {
+                    SIGNING_KEY_ID.name: SIGNING_KEY_ROW,
+                    SIGNING_KEY_VALUE.name: key,
+                    SIGNING_KEY_CREATED_AT.name: at,
+                }
+            )
+            .on_conflict_do_nothing()
+        )
+        await self._guard(lambda: self._connection.execute(statement))
+
+    async def read_signing_key(self) -> bytes | None:
+        query = select(SIGNING_KEY_VALUE).where(SIGNING_KEY_ID == SIGNING_KEY_ROW)
+        return await self._guard(lambda: self._scalar_bytes(query))
+
     async def _one(self, query: _Row) -> AccountRecord | None:
         return await self._guard(lambda: self._first(query))
+
+    async def _exists(self, query: Select[str]) -> bool:
+        return (await self._connection.execute(query)).first() is not None
+
+    async def _scalar_bytes(self, query: Select[bytes]) -> bytes | None:
+        row = (await self._connection.execute(query)).one_or_none()
+        return None if row is None else bytes(row[0])
 
     async def _first(self, query: _Row) -> AccountRecord | None:
         row = (await self._connection.execute(query)).one_or_none()

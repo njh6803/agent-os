@@ -24,6 +24,7 @@ from __future__ import annotations
 import hmac
 from collections.abc import Mapping
 from dataclasses import dataclass
+from typing import Protocol
 
 from fastapi import Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
@@ -31,13 +32,20 @@ from starlette.types import ASGIApp
 
 from agent_os.core.ports import Clock
 from agent_os.http.errors import UNAUTHORIZED_MESSAGE, error_envelope, remember_failure
+from agent_os.http.login_tokens import ACCESS_COOKIE, LoginClaims
 from agent_os.http.paths import is_under
 from agent_os.http.sites import EndUser, Refusal, Sites, verify_signed
 
-# 인증 없이 지나가는 경로. 원소는 하나이고 자라면 ADR 0011 의 이력에 쌓는다 — 목록이 문서 없이
-# 자라는 것이 fail-open 으로 돌아가는 길이다. 비교가 정확히 같은지만 보는 이유는 `/health/` 나
-# `/health/../traces` 같은 변형이 그대로 걸리게 하기 위해서다.
-PUBLIC_PATHS = frozenset({"/health"})
+# 인증 없이 지나가는 경로. 원소는 `/health` 와 로그인, 첫 계정 확인 셋이고 자라면 ADR 0011 의
+# 이력에 쌓는다 — 목록이 문서 없이 자라는 것이 fail-open 으로 돌아가는 길이다. 갱신과 링크로
+# 비밀번호 정하기는 그 일을 들이는 티켓이 더해 다섯이 된다(명세 admin-login "로그인 없이 열리는
+# 경로"). 비교가 정확히 같은지만 보는 이유는 `/health/` 나 `/health/../traces` 같은 변형이 그대로
+# 걸리게 하기 위해서다.
+PUBLIC_PATHS = frozenset({"/health", "/auth/login", "/auth/setup"})
+
+# 짧은 JWT 로만 여는 경로. 로그인 한 건이나 계정이 있어야 뜻이 있는 일이라 공유 토큰으로 오면
+# 401 이다. 내 비밀번호 바꾸기가 더해진다.
+LOGIN_ONLY_PATHS = frozenset({"/auth/logout", "/auth/me"})
 
 _SCHEME = "bearer"
 # 401 이 요구하는 챌린지(RFC 9110). 어떤 방식으로 인증하는지 알리는 것은 노출이 아니다 — 401
@@ -48,6 +56,8 @@ _HEADER_CODEC = "latin-1"
 # 서명 토큰을 지난 요청의 신원을 담는 ASGI scope 의 키. 라우트의 의존성이 이것으로 읽는다. 남의 키와
 # 부딪히지 않게 패키지 이름을 앞에 둔다.
 _END_USER_KEY = "agent_os.end_user"
+# 짧은 JWT 를 지난 요청의 로그인을 담는 scope 의 키. 같은 이유로 패키지 이름을 앞에 둔다.
+_OPERATOR_KEY = "agent_os.operator"
 
 
 @dataclass(frozen=True)
@@ -81,24 +91,56 @@ class _Shared:
     value: bytes
 
 
+@dataclass(frozen=True)
+class _LoginOnly:
+    """경로가 로그인 쿠키의 짧은 JWT 로만 열린다. 공유 토큰은 통하지 않는다."""
+
+
+class LoginVerifier(Protocol):
+    """짧은 JWT 를 검증하는 쪽. 토큰이 없으면 데이터베이스를 읽지 않고 없음이어야 한다."""
+
+    async def verify(self, token: str | None) -> LoginClaims | None: ...
+
+
 class RequireToken(BaseHTTPMiddleware):
-    """경로가 요구하는 자격이 맞는 요청만 지나간다. 그 밖은 전부 401 이고 라우팅에 닿지 않는다."""
+    """경로가 요구하는 자격이 맞는 요청만 지나간다. 그 밖은 전부 401 이고 라우팅에 닿지 않는다.
+
+    **공유 토큰과 로그인 쿠키를 함께 받는 기간**(명세 admin-login). 운영자 경로(최종 사용자 접두사
+    밖의 모든 경로)는 공유 토큰이나 로그인 쿠키의 짧은 JWT 가운데 하나라도 맞으면 지난다. 공유
+    토큰은 지금 여는 경로를 지금처럼 연다(관리 토큰은 `/runs` 밖을, 채널 토큰은 `/runs` 아래를).
+    짧은 JWT 는 둘 다 연다. `LOGIN_ONLY_PATHS` 는 로그인 한 건이나 계정이 있어야 뜻이 있는 경로라
+    짧은 JWT 로만 열고 공유 토큰으로 오면 401 이다. 최종 사용자 경로는 이 기간에도 서명 토큰만
+    받는다. 공유 토큰을 걷는 티켓이 이 기간을 닫는다.
+    """
 
     def __init__(
-        self, app: ASGIApp, *, default: SharedToken, prefixes: Mapping[str, Credential]
+        self,
+        app: ASGIApp,
+        *,
+        default: SharedToken,
+        prefixes: Mapping[str, Credential],
+        login: LoginVerifier | None = None,
     ) -> None:
         super().__init__(app)
         self._default = _prepared(default)
         self._prefixes = {prefix: _prepared(credential) for prefix, credential in prefixes.items()}
+        self._login = login
 
     async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
         path = request.url.path
         if path in PUBLIC_PATHS:
             return await call_next(request)
         header = request.headers.get("authorization")
-        match self._required(path):
+        required = _LoginOnly() if path in LOGIN_ONLY_PATHS else self._required(path)
+        match required:
+            case _LoginOnly():
+                claims = await self._claims(request)
+                if claims is None:
+                    return _refused(request, UNAUTHORIZED_MESSAGE)
             case _Shared(value=expected):
-                if not _matches(header, expected):
+                # 공유 토큰이 맞으면 쿠키를 보지 않는다. 쿠키를 먼저 보면 키를 읽다
+                # 데이터베이스가 죽을 때 맞는 공유 토큰도 500 이 난다
+                if not _matches(header, expected) and await self._claims(request) is None:
                     return _refused(request, UNAUTHORIZED_MESSAGE)
             case SiteSigned(sites=sites, clock=clock):
                 verified = verify_signed(_bearer(header), sites, clock)
@@ -115,6 +157,16 @@ class RequireToken(BaseHTTPMiddleware):
                 return credential
         return self._default
 
+    async def _claims(self, request: Request) -> LoginClaims | None:
+        """로그인 쿠키의 짧은 JWT 가 맞으면 그 내용을 요청에 심고 돌려준다. 쿠키가 없으면
+        없음이다."""
+        if self._login is None:
+            return None
+        claims = await self._login.verify(request.cookies.get(ACCESS_COOKIE))
+        if claims is not None:
+            request.scope[_OPERATOR_KEY] = claims
+        return claims
+
 
 def end_user_of(request: Request) -> EndUser | None:
     """서명 토큰을 지난 요청의 신원(질의). 최종 사용자 면의 라우트만 부른다.
@@ -124,6 +176,16 @@ def end_user_of(request: Request) -> EndUser | None:
     """
     found = request.scope.get(_END_USER_KEY)
     return found if isinstance(found, EndUser) else None
+
+
+def operator_of(request: Request) -> LoginClaims | None:
+    """짧은 JWT 를 지난 요청의 로그인(질의). 로그인으로만 여는 경로의 라우트만 부른다.
+
+    그 경로에서 없음은 조립의 결함이다. 갈래가 있는 것은 scope 에서 읽은 값의 타입을 정적 타입이
+    모르기 때문이다.
+    """
+    found = request.scope.get(_OPERATOR_KEY)
+    return found if isinstance(found, LoginClaims) else None
 
 
 def _prepared(credential: Credential) -> _Shared | SiteSigned:

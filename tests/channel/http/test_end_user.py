@@ -35,6 +35,7 @@ from langchain_core.messages.tool import ToolCall as LangchainToolCall
 from langchain_core.outputs import ChatResult
 from langchain_core.runnables import Runnable
 from starlette.types import Message, Scope
+from tests.fake_accounts import UnusedAccounts
 from tests.fake_checks import UnusedToolChecks
 from tests.fake_database import FakeDatabase
 from tests.fake_models import DEFAULT_MODEL, FakeModels, model_manifest
@@ -74,6 +75,7 @@ from agent_os.core.ports import (
     WriteOutcome,
 )
 from agent_os.http.errors import INTERNAL_MESSAGE, NOT_FOUND_MESSAGE, UNAVAILABLE_MESSAGE
+from agent_os.http.login_tokens import LoginDurations
 from agent_os.http.sites import Site, SiteLimits, Sites
 from agent_os.sdk import (
     AgentContext,
@@ -614,6 +616,8 @@ def _app(
         end_user_concurrent_runs=end_user_concurrent_runs,
         stderr=stderr or io.StringIO(),
         database=FakeDatabase(),
+        accounts=UnusedAccounts(),
+        login_durations=LoginDurations(),
     )
 
 

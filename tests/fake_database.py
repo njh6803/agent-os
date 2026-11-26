@@ -15,6 +15,7 @@ import asyncio
 from collections.abc import MutableMapping
 
 from starlette.types import ASGIApp, Message
+from tests.fake_accounts import UnusedAccounts
 
 STARTUP_PROBLEM = "표지: 가짜 데이터베이스의 멈출 때의 글"
 UNEXPECTED_PREFIX = "표지: 확인하다 멈췄다"
@@ -51,6 +52,10 @@ class FakeDatabase:
         if self._close_error is not None:
             raise self._close_error
         self.events.append("close_finished")
+
+    def accounts(self) -> UnusedAccounts:
+        """`serve` 가 앱에 넘기는 계정 저장소. 서명 키만 메모리에 두는 대역이다."""
+        return UnusedAccounts()
 
     def unexpected_problem(self, error: BaseException) -> str:
         return f"{UNEXPECTED_PREFIX}({type(error).__name__})"
