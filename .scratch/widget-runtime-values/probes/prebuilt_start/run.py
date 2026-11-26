@@ -61,6 +61,8 @@ sys.path.insert(0, str(ROOT))
 
 from tools.probe_kit import Rounds  # noqa: E402
 
+type Json = dict[str, Json] | list[Json] | str | int | float | bool | None
+
 WEB = ROOT / "web"
 LABEL = "wrv-probe"
 REPO = "wrv-img"
@@ -87,9 +89,21 @@ HEALTH = (
     "--health-start-interval",
     "2s",
 )
-# 상태 확인을 지켜보는 동안. 시작 유예(30초)보다 짧게 두어, 이 안에 본 healthy 는 유예 안의 것이다.
+# 상태 확인을 지켜보는 동안. 시작 유예(30초)보다 짧게 둔다. 지켜보는 마지막 한 번이 늦게 돌아올 수
+# 있어, healthy 를 본 회차는 띄우기 전부터 잰 시간이 시작 유예(START_PERIOD)보다 짧은지도 본다.
 HEALTH_WINDOW = 25.0
+# HEALTH 의 --health-start-period 와 같은 값(초).
+START_PERIOD = 30.0
+# 아무도 듣지 않는 포트에 건 요청이 fetch.mjs 로 내는 오류 코드.
+REFUSED = "ECONNREFUSED"
 BASE = "http://127.0.0.1:3000"
+# 값 파일에 건 응답 머리 규칙이 지어 둔 routes-manifest 에 실리는 모양(patch-config.mjs 가 더한 것).
+VALUES_RULE: Json = {
+    "source": "/widget/runtime.json",
+    "headers": [{"key": "Access-Control-Allow-Origin", "value": "*"}],
+}
+# 뜬 뒤의 이미지에서 크기를 재는 폴더(작업 폴더는 위젯 앱 폴더다).
+DU_PATHS = (".next", "public", "/app/web/node_modules")
 SITE_A = "/probe/sites_a.toml"
 SITE_BROKEN = "/probe/sites_broken.toml"
 MOUNTED = "/etc/agent-os/site/sites.toml"
@@ -117,8 +131,7 @@ _token = secrets.token_hex(3)
 TAG = f"{LABEL}={_token}"
 _serial = [0]
 _build_ids: dict[str, str] = {}
-
-type Json = dict[str, Json] | list[Json] | str | int | float | bool | None
+_image_ids: dict[str, str] = {}
 
 
 def raw(title: str, text: str) -> None:
@@ -207,8 +220,24 @@ def docker(*args: str, timeout: float = 300, quiet: bool = False) -> Done:
     return run(["docker", *args], timeout=timeout, quiet=quiet)
 
 
-def image(target: str) -> str:
+def tag(target: str) -> str:
     return f"{REPO}:{target}"
+
+
+def image(target: str) -> str:
+    """그 단계의 이미지를 ID 로 가리킨다. 태그(wrv-img:<단계>)는 다시 지으면 다른 이미지로 옮겨
+    가므로, 이 실행에서 그 단계를 처음 쓸 때 태그를 ID 로 풀어 결과에 적고 그 뒤로는 같은 ID 를
+    쓴다. build 섹션은 그 단계를 지은 뒤에 푼다. 풀지 못하면 태그 그대로 내고, 그 이미지를 쓰는
+    docker 명령이 실패해 그 회차가 측정 아님이 된다. build 섹션 없이 돈 실행이 어느 빌드의 이미지를
+    쟀는지는 적힌 ID 로만 알 수 있다(못 보는 것)."""
+    if target not in _image_ids:
+        done = docker("image", "inspect", "-f", "{{.Id}} {{.Created}}", tag(target), timeout=60)
+        found = done.out.split()
+        if done.code != 0 or len(found) != 2 or not found[0].startswith("sha256:"):
+            return tag(target)
+        _image_ids[target] = found[0]
+        note("쓴 이미지", {"target": target, "id": found[0], "created": found[1]})
+    return _image_ids[target]
 
 
 def fresh(kind: str) -> str:
@@ -293,6 +322,14 @@ def logs(name: str) -> str:
     return docker("logs", name, timeout=60, quiet=True).text
 
 
+def judged_logs(name: str) -> str:
+    """요청을 건 뒤의 기록. 회차의 판정(빌드 머리말이 없다, 오류 번호가 없다)과 시간이 이 글에서
+    나오므로 원본 기록에도 남긴다. until 이 남기는 것은 첫 200 때의 기록이라 이보다 짧다."""
+    text = logs(name)
+    raw(f"logs {name} (판정에 쓴 기록)", text)
+    return text
+
+
 def state(name: str) -> dict[str, Json]:
     done = docker("inspect", "-f", "{{json .State}}", name, timeout=60, quiet=True)
     found = parse(done.out.strip())
@@ -329,9 +366,9 @@ def shell(name: str, script: str) -> Done:
     return docker("exec", name, "sh", "-c", script, timeout=60)
 
 
-def fetch(name: str, path: str, *extra: str) -> dict[str, Json]:
-    """컨테이너 안에서 요청 하나를 건다(fetch.mjs)."""
-    done = docker("exec", name, "node", "/probe/fetch.mjs", BASE + path, *extra, timeout=60)
+def fetch(name: str, path: str, *extra: str, base: str = BASE) -> dict[str, Json]:
+    """컨테이너 안에서 요청 하나를 건다(fetch.mjs). `base` 로 다른 포트에 걸 수 있다."""
+    done = docker("exec", name, "node", "/probe/fetch.mjs", base + path, *extra, timeout=60)
     return last_json(done.out) or {"error": tail(done.text)}
 
 
@@ -560,10 +597,13 @@ def section_build(rounds: Rounds, _repeat: int) -> None:
     - 깔린 것: 표지는 image 에 next 가 깔려 있고 빌드 도구(vite, @tailwindcss/vite, typescript)가
       없으며, 같은 도우미가 deps-full 로 지은 build 단계(build-inspect)에서는 넷 모두 판을 내는
       것이다(없다는 답이 도구가 실제로 없어서라는 대조).
-    - 응답 머리의 자리: 표지는 지어 둔 routes-manifest 원본에 frame-ancestors 값이 든 응답 머리가
-      정확히 하나이고 그 값이 frame-ancestors 'none' 이며, .next 아래에서 그 글이 든 파일이
-      routes-manifest 둘(뜰 때 쓰는 것은 링크라 세지 않는다)뿐인 것이다. 값 파일의 응답 머리 규칙이
-      하나 있는지도 본다.
+    - 응답 머리의 자리: 표지는 지어 둔 routes-manifest 원본에 frame-ancestors 지시어가 든 응답
+      머리가 정확히 하나이고 그 값이 frame-ancestors 'none' 이며, .next 아래에서 그 글이 든 파일이
+      routes-manifest 둘(뜰 때 쓰는 것은 링크라 세지 않는다)뿐이고 크기 때문에 훑지 않고 넘긴
+      파일이 없는 것이다. 값 파일의 경로(/widget/runtime.json)에 건 응답 머리 규칙이 정확히 하나이고
+      그것이 Access-Control-Allow-Origin: * 하나만 다는 것도 본다.
+    - 산출물의 크기: 표지는 du 가 0 으로 끝나고 세 폴더(.next, public, node_modules) 모두의 크기를
+      낸 것이다.
     """
     for target in TARGETS:
         with rounds.round(f"build {target}") as current:
@@ -578,10 +618,12 @@ def section_build(rounds: Rounds, _repeat: int) -> None:
                 "--target",
                 target,
                 "-t",
-                image(target),
+                tag(target),
                 str(WEB),
                 timeout=2400,
             )
+            # 다시 지었으니 앞서 풀어 둔 ID 가 있으면 버린다(바로 아래 size_mb 가 새 ID 로 푼다).
+            _image_ids.pop(target, None)
             size = size_mb(target) if done.code == 0 else 0.0
             note(
                 f"build {target}",
@@ -628,8 +670,8 @@ def section_build(rounds: Rounds, _repeat: int) -> None:
             and isinstance(slots[0], dict)
             and slots[0].get("value") == "frame-ancestors 'none'"
             and found.get("holding") == ["routes-manifest.build.json", "routes-manifest.json"]
-            and isinstance(rules, list)
-            and len(rules) == 1
+            and found.get("skipped") == []
+            and rules == [VALUES_RULE]
         )
         current.mark(
             measured=one,
@@ -642,16 +684,24 @@ def section_build(rounds: Rounds, _repeat: int) -> None:
             "--label",
             TAG,
             "--entrypoint",
-            "sh",
+            "du",
             image("image"),
-            "-c",
-            "du -sm .next public /app/web/node_modules | tr '\\t' '=' | tr '\\n' ' '",
+            "-sm",
+            *DU_PATHS,
             timeout=120,
         )
-        note("산출물의 크기(MB)", {"du": done.out.strip()})
-        current.mark(
-            measured=".next" in done.out, result="쟀다" if ".next" in done.out else "못 쟀다"
+        sizes = dict(
+            (path, size) for size, path in re.findall(r"^(\d+)\s+(\S+)$", done.out, re.MULTILINE)
         )
+        note(
+            "산출물의 크기(MB)",
+            {
+                "exit": done.code,
+                "du": " ".join(f"{sizes[path]}={path}" for path in DU_PATHS if path in sizes),
+            },
+        )
+        sized = done.code == 0 and all(path in sizes for path in DU_PATHS)
+        current.mark(measured=sized, result="쟀다" if sized else "못 쟀다")
 
 
 # ---------------------------------------------------------------------------------------------
@@ -668,7 +718,7 @@ def start_round(rounds: Rounds, label: str, target: str, *options: str) -> None:
             return
         seen = observe(name)
         used = memory(name)
-        text = logs(name)
+        text = judged_logs(name)
         fixed = prebuilt(name, target, text)
         timing = timings(name, text)
         stopped = stop(name)
@@ -815,7 +865,7 @@ def readonly_round(rounds: Rounds, label: str, limits: Sequence[str] = HARDENED)
         denied = tried.text.count("Read-only file system")
         mounts = shell(name, f"grep -c ' {RUN_DIR} tmpfs ' /proc/mounts").out.strip()
         devices = shell(name, "ls /sys/class/net | tr '\\n' ' '").out.strip()
-        text = logs(name)
+        text = judged_logs(name)
         quiet = "EROFS" not in text and "EACCES" not in text
         fixed = prebuilt(name, "image", text)
         used = memory(name)
@@ -858,10 +908,12 @@ def section_readonly(rounds: Rounds, repeat: int) -> None:
     없음, /run/agent-os-widget 의 tmpfs 하나로 띄운다. 표지는 A 의 두 값을 내고, 루트의 두 자리(앱의
     public, /tmp)에 쓰기가 Read-only file system 으로 거절되고, tmpfs 폴더에는 써지며, 그 폴더가
     실제로 tmpfs 로 붙었고(/proc/mounts), 요청 뒤의 기록에 EROFS 도 EACCES 도 없는 것이다. 대조 둘은
-    같은 제한에서 tmpfs 를 빼거나 링크 없는 이미지를 쓰면 진입 단계가 EROFS 로 끝나는 것이다(서게 한
-    것이 tmpfs 폴더와 링크라는 갈래). 그다음 회차는 compose 가 web 컨테이너에 주는 꼴 그대로
-    read_only 하나만 건다(더 조인 꼴에서 선 것이 그 꼴에서도 서는지). 마지막 회차는 조인 제한에서
-    사이트 파일을 바꾸고 다시 띄운다."""
+    서는 회차에서 하나씩만 바꾼다. 같은 이미지에서 tmpfs 를 빼거나, tmpfs 는 그대로 주고 링크 없는
+    이미지를 쓰면 진입 단계가 EROFS 로 끝나는 것이다(서게 한 것이 tmpfs 폴더와 링크라는 갈래. 링크
+    없는 이미지의 대조는 첫 네 실행에서 tmpfs 도 함께 뺀 꼴이었다. README 의 "결과를 본 뒤 바꾼
+    것"). 그다음 회차는 compose 가 web 컨테이너에 주는 꼴 그대로 read_only 하나만 건다(더 조인
+    꼴에서 선 것이 그 꼴에서도 서는지). 마지막 회차는 조인 제한에서 사이트 파일을 바꾸고 다시
+    띄운다."""
     for index in range(repeat):
         readonly_round(rounds, f"readonly image tmpfs #{index + 1}")
     readonly_round(rounds, "readonly image tmpfs, read_only 만", READ_ONLY)
@@ -876,9 +928,9 @@ def section_readonly(rounds: Rounds, repeat: int) -> None:
     )
     exits_round(
         rounds,
-        "readonly image-inplace(대조)",
+        "readonly image-inplace, tmpfs 있음(대조)",
         "image-inplace",
-        HARDENED,
+        (*HARDENED, "--tmpfs", TMPFS),
         needles=["EROFS", "routes-manifest.json"],
         result=unwritable,
     )
@@ -962,7 +1014,10 @@ def health_cmd(port: int) -> str:
 
 def health_round(rounds: Rounds, label: str, port: int, *, healthy: bool) -> None:
     """상태 확인을 단 위젯을 읽기 전용 루트로 띄우고 HEALTH_WINDOW 동안 지켜본다. `healthy` 가
-    참이면 그 안에 healthy 가 되기를, 거짓이면 확인이 실패하며 starting 으로 남기를 기대한다."""
+    참이면 그 안에 healthy 가 되기를, 거짓이면 확인이 실패하며 starting 으로 남기를 기대한다. 거짓인
+    회차는 실패의 까닭도 본다. 위젯은 3000 번에서 첫 200 을 냈고(기록의 first-ok), 확인이 건 포트에
+    같은 컨테이너 안에서 건 요청이 연결 거절(ECONNREFUSED)로 끝난다. 그래서 그 실패는 위젯이 서지
+    않아서가 아니라 그 포트를 아무도 듣지 않아서 난 것이다."""
     with rounds.round(label) as current:
         begun = time.monotonic()
         name = up(
@@ -987,24 +1042,43 @@ def health_round(rounds: Rounds, label: str, port: int, *, healthy: bool) -> Non
         log = seen.get("Log")
         entries = log if isinstance(log, list) else []
         codes = [item.get("ExitCode") for item in entries if isinstance(item, dict)]
-        stop(name)
         status = seen.get("Status")
-        note(label, {"status": status, "watched_s": waited, "exit_codes": list(codes)})
+        values: dict[str, Json] = {
+            "status": status,
+            "watched_s": waited,
+            "exit_codes": list(codes),
+        }
         if healthy:
-            good = status == "healthy" and bool(codes) and codes[-1] == 0
+            stop(name)
+            good = status == "healthy" and bool(codes) and codes[-1] == 0 and waited < START_PERIOD
             result = "시작 유예 30초 안에 healthy 가 됐다"
         else:
-            good = status == "starting" and bool(codes) and all(code == 1 for code in codes)
+            text = logs(name)
+            raw(f"logs {name}", text)
+            served = FIRST_OK in text
+            port_error = fetch(name, "/widget", base=f"http://127.0.0.1:{port}").get("error")
+            stop(name)
+            values["served_3000"] = served
+            values["port_error"] = port_error
+            good = (
+                status == "starting"
+                and bool(codes)
+                and all(code == 1 for code in codes)
+                and served
+                and port_error == REFUSED
+            )
             result = "듣지 않는 포트의 확인은 실패했고 healthy 가 되지 않았다"
+        note(label, values)
         current.mark(measured=good, result=result if good else "기대와 다르다")
 
 
 def section_health(rounds: Rounds, repeat: int) -> None:
     """상태 확인. compose 의 위젯 상태 확인과 같은 node 한 줄을, compose 의 공통 값에 시작 유예
     30초를 둔 옵션으로 달고 읽기 전용 루트의 위젯을 띄운다. 표지는 지켜보는 25초 안에 상태가 healthy
-    가 되고 마지막 확인의 종료 코드가 0 인 것이다. 대조는 같은 명령을 아무도 듣지 않는 포트에 건
-    것이고, 표지는 확인이 한 번 넘게 돌아 모두 종료 코드 1 이고 상태가 starting 으로 남는 것이다
-    (healthy 가 확인이 성공해서 난 것이라는 갈래)."""
+    가 되고 마지막 확인의 종료 코드가 0 이며, 띄우기 전부터 잰 시간이 시작 유예 30초보다 짧은
+    것이다. 대조는 같은 명령을 아무도 듣지 않는 포트에 건 것이고, 표지는 남은 확인 기록이 비지 않고
+    모두 종료 코드 1 이며 상태가 starting 으로 남고, 위젯은 3000 번에서 첫 200 을 냈으며, 그 포트에
+    건 요청이 연결 거절로 끝나는 것이다(healthy 가 확인이 성공해서 난 것이라는 갈래)."""
     for index in range(repeat):
         health_round(rounds, f"health image #{index + 1}", 3000, healthy=True)
     health_round(rounds, "health 듣지 않는 포트(대조)", 3999, healthy=False)
@@ -1079,6 +1153,25 @@ def fetched(visit: Mapping[str, Json], key: str) -> dict[str, Json]:
     return item if isinstance(item, dict) else {}
 
 
+# Chromium 이 다른 출처의 응답에 여는 머리가 없어 fetch 를 막을 때 콘솔에 남기는 글의 두 토막.
+CORS_BLOCKED = "blocked by CORS policy"
+CORS_NO_HEADER = "No 'Access-Control-Allow-Origin' header"
+
+
+def cors_refused(visit: Mapping[str, Json], url: str) -> bool:
+    """그 문서의 fetch 가 `url` 을 받지 못한 까닭이 다른 출처 거절이라는 표지. Chromium 의 콘솔 오류
+    하나가 그 주소와 CORS_BLOCKED 와 CORS_NO_HEADER 를 함께 든다. 응답은 왔는데 그 머리가 없었다는
+    글이라, 연결하지 못해 실패한 fetch 와 가른다."""
+    errors = visit.get("consoleErrors")
+    return isinstance(errors, list) and any(
+        isinstance(item, str)
+        and f"'{url}'" in item
+        and CORS_BLOCKED in item
+        and CORS_NO_HEADER in item
+        for item in errors
+    )
+
+
 def browser_phase(
     label: str,
     parent_port: int,
@@ -1111,6 +1204,7 @@ def browser_phase(
             "other_console": outside.get("consoleErrors"),
             "cross_origin_values": values,
             "cross_origin_page": page,
+            "cross_origin_page_cors": cors_refused(outside, widget_url),
         },
     )
     return (
@@ -1119,6 +1213,7 @@ def browser_phase(
         and values.get("status") == 200
         and read == {"allowedOrigins": [origin], "requestChars": chars}
         and "error" in page
+        and cors_refused(outside, widget_url)
     )
 
 
@@ -1130,13 +1225,19 @@ def section_browser(rounds: Rounds, _repeat: int) -> None:
       iframe 은 Chromium 의 오류 페이지로 끝나며 콘솔 오류가 바꿔 넣은 frame-ancestors 값을 드는
       것이다. 그리고 허용 밖 출처의 문서에서 fetch 로 값 파일을 받으면 두 값이
       읽히고(Access-Control-Allow-Origin: *), 같은 fetch 로 그 머리가 없는 위젯 페이지를 받으면
-      실패한다(값 파일이 읽힌 것이 그 머리 덕이라는 대조).
+      실패한다(값 파일이 읽힌 것이 그 머리 덕이라는 대조). 그 실패의 까닭도 본다. 콘솔 오류 하나가
+      위젯 페이지의 주소와 다른 출처 거절의 글을 함께 든다(cors_refused).
     - 둘째 회차: 사이트 파일의 허용 출처를 other 로, 상한을 B 의 값으로 바꾸고 다시 띄운다. 표지는
-      두 부모 페이지의 결과가 뒤바뀌고 값 파일이 새 값을 내는 것이다.
+      두 부모 페이지의 결과가 뒤바뀌고 값 파일이 새 값을 내는 것이다. 뒤바뀜은 첫 회차가 표지를 본
+      뒤에만 잴 수 있어, 첫 회차가 측정이 아니면 이 회차도 측정이 아니다.
+
+    호스트 포트 둘은 free_port 가 고른 뒤 닫고 넘기므로, 그 사이에 다른 프로세스가 가져가면 부모
+    페이지의 서버나 docker run 이 실패해 그 회차가 측정 아님이 된다(조용히 지나지 않는다).
     """
     parent_port, widget_port = free_port(), free_port()
     serve = ("node", "tools/entry.mjs", "--hostname", "0.0.0.0", "--port", "3000")  # noqa: S104
     name = ""
+    first_good = False
     with rounds.round("browser 허용 출처만 품는다") as current:
         volume = volume_with(site_text([f"http://allowed.localhost:{parent_port}"]))
         name = up(
@@ -1160,6 +1261,7 @@ def section_browser(rounds: Rounds, _repeat: int) -> None:
             other="other",
             chars=CHARS_A,
         )
+        first_good = good
         current.mark(
             measured=good,
             result="허용 출처의 페이지만 위젯을 품었고 값 파일이 교차 출처로 읽혔다"
@@ -1169,6 +1271,9 @@ def section_browser(rounds: Rounds, _repeat: int) -> None:
     with rounds.round("browser 사이트 파일을 바꾸고 다시 띄운 뒤") as current:
         if not name:
             current.mark(measured=False, result="앞 회차가 컨테이너를 띄우지 못했다")
+            return
+        if not first_good:
+            current.mark(measured=False, result="앞 회차가 표지를 보지 못해 뒤바뀜을 잴 수 없다")
             return
         swapped = site_text([f"http://other.localhost:{parent_port}"]).replace(
             f"request_chars = {CHARS_A}", f"request_chars = {CHARS_B}"
