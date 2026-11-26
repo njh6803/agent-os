@@ -109,3 +109,71 @@ CLI 0.7.5가 `Seat: not assigned`(Plan: Free)에서도 끝까지 돌아 `review_
 - 이 세션이 띄운 `-m llm`(작업 `bez9worrp`)은 멈췄다. 새 세션이 다시 친다. 잠금(`git worktree unlock`)은 풀었다.
 - open-session을 부른다 2026-11-25T16:31:49Z
 - 인계 못함 셀프 리뷰 직전: `tools/open_session.ps1 -Action send`를 자동 모드 분류기가 `Unsanctioned Communication`으로 거부해 새 세션을 열지 못했다. 제목은 `feature/07-conversation-list-route`로 되돌렸고, 이 세션이 셀프 리뷰부터 잇는다. 새 세션을 사람이 열려면 같은 지시문(이 일지 "이어받을 상태" 참고)으로 열면 된다.
+
+## PR 열기와 봇 첫 회차
+
+- PR #647(`feature/07-conversation-list-route` → `dev`)을 열었다. 헤드는 `2ac993034`, 커밋은 둘(`344dc2f2a` 기능 본체, `2ac993034` 리뷰 반영)이고 둘 다 pre-commit을 모두 통과했다(`pytest` 860.8초 포함). 본문 끝에 `Generated with` 줄을 적었다. 앱의 PR 감시는 이 세션에 이미 묶여 있었다(`get_status`가 `bound: true`).
+- 첫 `@coderabbitai review` 코멘트를 남겼다. CodeRabbit은 무료 OSS 리뷰 한도에 걸려(`Review rate limited`, 다음 리뷰까지 약 58분) 리뷰가 없다. 검사는 `e2e`, `e2e-portal`, `e2e-standalone`, `e2e-widget`, `python`, `ticket`, `verify`, `visual`, `web`, `claude-review` 모두 SUCCESS, `llm`은 SKIPPED다. 로컬의 `decision.e2e.ts` 부하 실패는 CI의 깨끗한 러너에서 `e2e`가 통과해 어림("부하 때문")이 뒷받침됐다.
+- claude-review 첫 회차: Critical·Major 없음, Minor 둘(`_WireRunId` 복제, 쪽 나누기 조합 코드의 중복)과 Nit 둘(`ConversationRow` 이름이 둘, 순환 한계가 명세에 없음). 모두 고치지 않고 이유를 PR 코멘트에 남겼다(`issuecomment-7171031139`). 첫 회차이므로 둘째 회차부터는 Critical·Major만 고친다(`merge.md` 2).
+
+## 로컬 모델 시험 세 번째 시도
+
+> 사용자: 다시시도
+
+`--yes` 없이 쳐 예상 비용을 받았다(종료 코드 4, 아무것도 띄우지 않음). 첫 후보 RTX A5000 파드 2개는 어림 30분 $0.27, 최악 90분 $0.81이고, 재고가 없으면 RTX 3090(최악 $1.50), A40 파드(최악 $1.77), A40 공유 서버(최악 $0.88) 순으로 넘어간다. 타이머가 90분 뒤 파드를 지운다. 단가는 2026-11-13에 웹 요약에서 읽은 값이라 원문과 대조하지 않았다. 이 내용을 선택 화면으로 보여 비용 확인을 새로 받았다.
+
+> 사용자 답: "이 비용으로 돌린다" (설명: --yes를 붙여 시험을 돌립니다. 도는 동안 나머지 준비를 이어서 하고, 결과는 일지와 PR에 적습니다.)
+
+그 답대로 `--yes`를 붙여 백그라운드로 쳤다. 결과는 아래에 잇는다.
+
+### 세 번째 시도의 결과: 시험 통과, 종료 코드 3(지우기 실패)
+
+앞 두 후보(RTX A5000 파드, RTX 3090 파드)는 Runpod 400 "재고 없음"으로 못 띄웠고, 셋째 후보인 A40 파드 2개가 떴다. `uv run pytest -m llm_local`은 **4개 통과**(45.91초)했다. 그런데 `terraform destroy`가 파드 하나(`r4nsxth47a8998`)에서 "Failed to terminate pod" 400으로 실패해 명령은 **종료 코드 3(지우기 실패)** 으로 끝났다. 이어 친 `terraform apply -refresh-only`도 실패했다(GraphQL 401과 "Invalid index"). 파드 하나(`1e0zicn897l4jd`)는 정상으로 지워졌다.
+
+지금 Runpod 쪽은 비어 있다. `list-pods`가 빈 목록을 냈고, 실패했던 파드는 `get-pod`가 404 "pod not found"로 답했다(둘 다 이 턴에 읽었다). 파드의 실제 청구액은 읽지 못했다. 상태 폴더에는 지우기가 실패한 회차의 상태 파일이 남아 있어 병합 뒤 `sweep`이 치운다.
+
+기록 묶음(서버 키는 가려져 있다):
+
+- 시험한 커밋: `2ac993034664ae48e488f00dcf398906b09f8115`
+- 모델: `GotoAI-Inc/gemma-4-26B-A4B-it-W4A16`, `openai/gpt-oss-20b`
+- 엔진: vLLM 0.33.0(이미지 `vllm/vllm-openai:v0.33.0`)
+- 서버 옵션: `vllm serve GotoAI-Inc/gemma-4-26B-A4B-it-W4A16 --host 0.0.0.0 --port 8000 --enable-auto-tool-choice --tool-call-parser gemma4 --max-model-len 32768 --revision fdb4e380603cf157783227bd790bfbe921b64610`, `vllm serve openai/gpt-oss-20b --host 0.0.0.0 --port 8000 --enable-auto-tool-choice --tool-call-parser openai`
+- GPU와 배치: A40, 파드 2개(`pods`)
+- 통과 4, LLM 토큰 합계 6,328(입력 6,191, 출력 137), 트레이스 2개, 모델 호출 4건(트레이스를 남기지 않은 LLM 테스트 2개는 세지 못했다)
+- 걸린 시간 263.6초, 단가 시간당 $1.18(파드 둘, 2026-11-13 웹 요약의 단가, 원문과 대조하지 않았다)
+- 시험 종료 코드 0, 명령 종료 코드 3, 이유 "지우기 실패"
+- 회차 파일: `C:\Users\User\.agent-os\llm-local\feature%2F07-conversation-list-route\records\round-0001-20261126T045254Z.json`
+
+**판정은 열려 있다.** `operations.md`의 판정은 "두 모델 모두 통과(종료 코드 0)해야 병합한다"이고, 종료 코드 3(지우기 실패)을 통과로 치는지는 규칙에 없다. 시험은 통과했고 지우기만 실패했지만, 그 판단은 규칙을 넓혀 읽는 일이라 이 세션이 하지 않고 사용자에게 물었다.
+
+> 사용자: 통과로 친다 (질문: 종료 코드 3 회차를 통과로 쳐 병합을 이어 갈까요? 고른 선택지: 통과로 친다)
+
+판정 열림은 이 답으로 닫혔다. 시험이 통과했고 실패한 것은 서버 지우기뿐인 회차(종료 코드 3)를 이 PR의 로컬 모델 시험 통과로 센다. 규칙(`operations.md`의 "종료 코드 0")을 고친 것이 아니라 이 PR의 한 회차에 대한 사용자의 판정이다. 같은 모양이 다시 나면 그때도 사용자에게 묻는다.
+
+## 회고
+
+후보 일곱을 냈고 판정은 승인 둘, 기각 다섯, 넘김 없음이다. 사용자에게 물은 것은 없다.
+
+승인(대기열에 회차를 세는 항목으로 둔다. 둘 다 더하는 것이라 이 세션에서 반영하지 않는다):
+
+1. **분류기가 인계 열기를 또 거부했다.** 사건: 이 일지의 "인계" 절. `open_session.ps1 -Action send`를 자동 모드 분류기가 "Unsanctioned Communication"으로 거부해 `인계 못함 셀프 리뷰 직전`을 적었다. 열린 `open-session-send-denied-despite-allow-rule`의 18회차로 이었다(17에서 18로 올렸고 일지 파일명을 더했다). 층과 되돌림: 이미 열린 항목의 처방을 따른다.
+2. **시험은 통과했고 지우기만 실패한 종료 코드 3 회차를 통과로 치는지 규칙에 없다.** 사건: 위 "세 번째 시도의 결과". 사용자에게 한 번 물어야 했다. 새 항목 `llm-local-exit3-tests-passed`(1회차)로 올렸다. 처방은 `merge.md` "병합 전" 3의 한 줄이고, `operations.md`를 고치면 ADR이 필요하다. 더하는 것이라 같은 실수의 다섯 번째이거나 손상이 날 때 반영한다. 이번에는 손상이 없었다(Runpod의 파드 목록이 비어 있다).
+
+기각:
+
+3. `decision.e2e.ts`가 컴퓨터 부하에서 `run_finished`를 5초 안에 못 받아 로컬에서 두 번 빨갰다. 부하에서만 빨간 시간 시험이라는 종류는 이미 닫힌 항목(306, 332)이 다뤘고, 닫힌 종류의 새 사례는 일지에만 적는다(위 "검증" 절의 관리 화면 e2e 줄). 이 시험은 CI에서 깨끗한 러너로 통과했다.
+4. `hook_scratch_probe_reread`가 측정이 아닌 일지 편집 보조 스크립트를 두 번 막았다. 훅이 두 번 막은 뒤 지나가도록 지은 것이고(스크래치 스크립트 쓰기 훅의 설계) 손해는 호출 두 번이다. 이미 있는 장치가 알린 일이다.
+5. 이 세션이 일지 "다음"에 "병합 직전에 `origin/dev`를 합친다"고 적었으나, 합치면 로컬 모델 시험 기록이 무효가 되는 것을 `merge.md`와 `operations.md`를 읽고 알아 병합 전에 고쳤다. 이미 있는 규칙(`operations.md` "기록과 유효함")이 막았고 손해가 없다.
+6. 순환 방지를 뺀 변이가 무한 반복으로 드러났다. 변이가 시험을 빨갛게 만들어야 하는데 멈추지 않았다. 시험 설계의 문제였고 변이 검사가 제 몫을 했다(그 일지 앞부분).
+7. PR 직전 CodeRabbit CLI 리뷰가 거슬러 오르기가 모든 끝 실행에 돈다는 비용을 잡았다. 셀프 리뷰가 놓치고 PR 직전 리뷰가 잡는 것이 파이프라인의 몫이다. 리뷰가 제 몫을 한 사건은 회차로 세지 않는다(`retro` 4단계).
+
+## 다음
+
+PR #647은 열려 있고 검사는 초록이며, 로컬 모델 시험의 통과 기록이 있다(위 "세 번째 시도의 결과". 종료 코드 3인 회차를 사용자가 통과로 쳤다). 남은 일은 푸시와 봇 둘째 회차, 회고, 병합이다.
+
+1. **`origin/dev`를 이 브랜치에 합치지 않는다.** GitHub가 이 PR을 `MERGEABLE`, `CLEAN`으로 읽는다. 합치면 02(#648)가 들인 `adapters/postgres/`, `channel/cli/`, `main.py`가 "시험한 커밋 `2ac993034`와 브랜치 끝 사이의 차이"에 들어 로컬 모델 시험 기록이 무효가 되어(`operations.md` LLM 테스트 "기록과 유효함") 비용을 들여 다시 돌려야 한다. 합치지 않으면 차이는 일지뿐이라 기록이 유효하다(`git diff --name-only 2ac993034 HEAD`가 비었다). 합쳐도 깨지지 않는지는 임시로 합쳐(`git merge --no-commit --no-ff origin/dev`, 충돌 없이 `core.md`만 자동 병합) `lint-imports`와 시험 1,165개(`tests/core`, `tests/test_server.py`, `tests/channel`, `tests/adapters/test_jsonl.py`, `tests/test_account_rules.py`, `tests/test_plugins_boundary.py`)가 통과하는 것을 본 뒤 `git merge --abort`로 되돌렸다. 전체 시험과 pyright는 임시 합치기에서 돌리지 않았다.
+2. **봇 둘째 회차.** 일지의 이 절과 위 절들, 그리고 PR 본문의 "남긴 위험"을 통과 기록에 맞춰 고쳐 한 번에 푸시한다(본문은 푸시 전에 `gh pr edit`). 푸시마다 claude-review가 돌고, 둘째 회차부터는 Critical·Major만 고친다. 푸시한 뒤 `@coderabbitai review`를 다시 남기고 한도가 풀렸는지 본다. 기록 묶음은 PR 코멘트에도 옮긴다.
+3. **05가 먼저 병합되면** 05의 권한 표에 `list_conversations`(`view`) 줄이 없어 전수 검사가 빨갛게 될 수 있다. 05보다 늦게 병합하는 쪽이 그 줄을 더한다. 지금 `src`에는 권한 표가 없다.
+4. **뒤로 넘긴 일(PR 코멘트의 보류 넷).** 병합 뒤의 작업으로 넘긴다. (가) `_WireRunId`를 공용으로 모은다(`admin/traces.py`의 비공개 이름을 공개로 바꾸는 일). (나) `JsonlTrace.list`와 `core.list_conversations`의 쪽 나누기 조합 코드를 한 함수로 모은다(기존 `list` 경로를 건드린다). (다) `admin/conversations.py`의 `ConversationRow`와 `core/ports.py`의 `ConversationRow`의 이름을 가른다. `openapi.json` 컴포넌트 이름이 바뀌므로 티켓 10(대화 목록 화면)을 열 때 함께 정한다. (라) 명세 `.scratch/admin-login/spec.md`에 "순환만으로 이룬 실행들은 목록에 서지 않는다"는 한계를 적는다(사용자 승인 사항).
+5. **회고(`retro`)와 병합.** 병합은 이 PR을 연 세션의 일이고 인계로 넘겨받은 세션도 그 세션으로 센다. 워크트리에서 열었으므로 `merge.md`의 "워크트리에서 병합할 때"대로 한다(`--delete-branch` 없이 `gh pr merge 647 --squash --match-head-commit <HEAD>`). 병합 전에 이 세션의 일지를 마무리하고 회고를 돌린다. 이 일지 안에 이 세션이 번복한 것(순환 방지 변이가 무한 반복으로 드러남, 로컬 모델 시험의 무효 회차, `decision.e2e.ts`의 부하 실패)이 있다. 병합한 뒤 `uv run --env-file ../../../.env python tools/llm_local.py sweep`을 쳐 지우기가 실패한 회차의 상태 폴더(`C:\Users\User\.agent-os\llm-local\feature%2F07-conversation-list-route`)를 치운다.
+6. 병합 뒤 `주 체크아웃 미갱신: 루트는 dev` 한 줄을 보고에 남기고 새 세션을 열 때 지시문의 선행 조건에 적는다. 다음 일은 티켓 10(대화 목록 화면, 이 경로를 기다림)이다. 02와 08은 이미 병합됐다(#648, #646).
