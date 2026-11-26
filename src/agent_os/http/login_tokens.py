@@ -66,7 +66,8 @@ class LoginDurations:
 def read_login_durations(env: Mapping[str, str]) -> LoginDurations | str:
     """환경 변수 셋을 읽는다. 맞으면 값이고 어기면 변수 이름과 받은 값과 범위를 적은 문구다.
 
-    빈 값은 변수가 없는 것과 같이 기본값이다(compose 의 `${…:-}` 꼴이 빈 값을 넘긴다). 값은
+    빈 값은 변수가 없는 것과 같이 기본값이고 기본값도 같은 범위를 지난다(compose 의 `${…:-}` 꼴이
+    빈 값을 넘긴다). 값은
     앞뒤에 공백이 없는 십진 정수만 받는다. 받은 값은 비밀이 아니라 문구에 싣는다. 짧은 JWT 의 수명은
     쉬는 시간보다 짧아야 한다 — 화면은 요청이 401 을 받은 뒤에야 갱신하므로 수명이 쉬는 시간
     이상이면 쉬지 않고 쓰는 사람도 처음 갱신하려는 때 이미 쉬는 시간이 지나 로그인이 끝난다.
@@ -98,10 +99,13 @@ def _read(
     problems: list[str],
 ) -> int | None:
     raw = env.get(name, "")
-    if raw == "":
-        return default
     low, high = allowed
-    value = int(raw) if _DIGITS.fullmatch(raw) else None
+    # 비운 값은 기본값을 쓰되 기본값도 같은 범위를 지난다. 쉬는 시간을 늘리면 총 시간의 아래 한계가
+    # 기본값을 넘어설 수 있고, 그때 기본값을 그대로 받으면 로그인이 쉬는 시간보다 먼저 끝난다
+    if raw == "":
+        value: int | None = default
+    else:
+        value = int(raw) if _DIGITS.fullmatch(raw) else None
     if value is None or not low <= value <= high:
         problems.append(
             f"{name} 의 값은 {low}분 이상 {high}분 이하의 정수여야 합니다. 받은 값: {raw!r}"

@@ -89,17 +89,33 @@ class SigningKeys:
         self._clock = clock
         self._key: bytes | None = None
         self._read_at: datetime | None = None
+        # 읽기는 한 번에 하나다. 겹치면 먼저 시작한 읽기가 늦게 끝나 옛 키를 캐시에 되돌릴 수 있고,
+        # 만료된 순간에 온 요청마다 읽어 10초에 한 번이라는 약속도 깨진다
+        self._lock = asyncio.Lock()
 
     async def current(self) -> bytes:
-        now = self._clock.now()
-        if self._key is not None and self._read_at is not None:
-            if now - self._read_at < SIGNING_KEY_REREAD:
-                return self._key
-        return await self._read(now)
+        cached = self._cached(self._clock.now())
+        if cached is not None:
+            return cached
+        async with self._lock:
+            # 기다리는 사이 앞선 읽기가 끝났을 수 있다. 앞선 읽기가 실패했으면 캐시가 그대로라 다시
+            # 읽는다
+            now = self._clock.now()
+            cached = self._cached(now)
+            if cached is not None:
+                return cached
+            return await self._read(now)
 
     async def ensure(self) -> None:
         """줄이 없으면 넣고 지금 값을 읽어 둔다. 뜰 때 한 번 부른다."""
-        await self._read(self._clock.now())
+        async with self._lock:
+            await self._read(self._clock.now())
+
+    def _cached(self, now: datetime) -> bytes | None:
+        """다시 읽을 때가 되지 않았으면 메모리의 키, 아니면 없음."""
+        if self._key is None or self._read_at is None:
+            return None
+        return self._key if now - self._read_at < SIGNING_KEY_REREAD else None
 
     async def _read(self, now: datetime) -> bytes:
         async with self._accounts.transaction() as work:
@@ -192,7 +208,8 @@ class LoginService:
         key = await self._keys.current()
         opened = await self._open(counted, new_hash, address=address)
         if opened is None:
-            await self._record_failure(counted.name, locked=counted.locked, address=address)
+            # 비밀번호는 맞았다. 잠금은 틀린 비밀번호가 거는 것이라 `locked` 줄은 남기지 않는다
+            await self._record_failure(counted.name, locked=False, address=address)
             return None
         row, login_id, refresh_token, now = opened
         access = issue_token(

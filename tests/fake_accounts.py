@@ -12,6 +12,7 @@
 
 from __future__ import annotations
 
+import asyncio
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from datetime import datetime
@@ -29,7 +30,15 @@ class _UnusedWork:
         self._store = store
 
     async def read_signing_key(self) -> bytes | None:
-        return self._store.key
+        self._store.reads += 1
+        key = self._store.key
+        # 값을 읽은 뒤 트랜잭션을 연 채 붙잡아, 읽는 도중에 다른 요청이 오는 장면을 만든다
+        if self._store.gate is not None:
+            await self._store.gate.wait()
+        if self._store.fail_reads > 0:
+            self._store.fail_reads -= 1
+            raise RuntimeError("서명 키를 읽지 못했다")
+        return key
 
     async def ensure_signing_key(self, key: bytes, *, at: datetime) -> None:
         if self._store.key is None:
@@ -91,6 +100,11 @@ class UnusedAccounts:
 
     def __init__(self) -> None:
         self.key: bytes | None = None
+        # 서명 키 읽기를 센다. `gate` 가 있으면 열릴 때까지 읽기가 끝나지 않는다.
+        # `fail_reads` 만큼의 읽기는 값을 읽은 뒤 실패한다.
+        self.reads = 0
+        self.gate: asyncio.Event | None = None
+        self.fail_reads = 0
 
     @asynccontextmanager
     async def transaction(self) -> AsyncGenerator[_UnusedWork]:

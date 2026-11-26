@@ -607,10 +607,15 @@ async def test_allowlist_밖의_모든_경로가_토큰_없이_401이다(
         response = await client.get(path)
         if path == "/health":
             assert response.status_code == 200, path
+        elif path == "/auth/login":
+            # POST 만 받는 경로다. 인증을 지나 라우터에 닿아 GET 은 405 다. 동작은 로그인 시험이
+            # 잰다
+            assert response.status_code == 405, path
         elif path in PUBLIC_PATHS:
-            # 로그인과 첫 계정 확인은 GET 을 받지 않거나 계정 저장소를 읽는다. 이 시험은 그 둘이
-            # 인증의 401 에 막히지 않는다는 것만 잰다. 두 경로의 동작은 로그인 시험이 잰다.
-            assert response.status_code != 401, path
+            # 첫 계정 확인은 계정 저장소를 읽는데 이 앱의 대역은 저장소를 쓰지 않는다. 그래서 답은
+            # 재지 않고 인증(401)과 출처 검사(403)에 막히지 않았다는 것만 본다. 답은 로그인 시험이
+            # 잰다
+            assert response.status_code not in (401, 403), path
         else:
             assert response.status_code == 401, path
 

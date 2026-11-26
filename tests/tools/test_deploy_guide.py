@@ -214,7 +214,11 @@ def 제품의_멈출_때의_글() -> dict[str, str]:
         "다시 시도한다": retry_notice(place, seconds),
         "로그인 증표의 수명이 범위 밖이다": 로그인_설정의_글({TOKEN_MINUTES_ENV: value}),
         "로그인 쉬는 시간이 범위 밖이다": 로그인_설정의_글({IDLE_MINUTES_ENV: value}),
-        "로그인 총 시간이 범위 밖이다": 로그인_설정의_글({TOTAL_MINUTES_ENV: value}),
+        # 총 시간의 아래 한도는 쉬는 시간의 값을 따라간다. 기본값(30분)이 아닌 600분으로 만들어,
+        # 글이 아래 한도를 고정값으로 찍으면 안내의 자리표시자와 어긋나게 한다
+        "로그인 총 시간이 범위 밖이다": 로그인_설정의_글(
+            {IDLE_MINUTES_ENV: "600", TOTAL_MINUTES_ENV: value}
+        ).replace("600분 이상", "<쉬는 시간>분 이상"),
         "로그인 증표의 수명이 쉬는 시간 이상이다": 로그인_설정의_글(
             {TOKEN_MINUTES_ENV: "10", IDLE_MINUTES_ENV: "10"}
         ).replace("10분", "<분>분"),

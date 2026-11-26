@@ -50,7 +50,7 @@
 
 ### 유지 시간
 
-- [x] 세 환경 변수(`AGENT_OS_LOGIN_TOKEN_MINUTES`, `AGENT_OS_LOGIN_IDLE_MINUTES`, `AGENT_OS_LOGIN_TOTAL_MINUTES`)를 명세 "유지 시간"의 표대로 읽는다. 빈 값은 기본값이다. 정수가 아니거나 범위를 벗어나거나 수명이 쉬는 시간 이상이면 변수 이름과 받은 값과 범위를 적은 높임말 문구를 찍고 종료 코드 2로 끝난다
+- [x] 세 환경 변수(`AGENT_OS_LOGIN_TOKEN_MINUTES`, `AGENT_OS_LOGIN_IDLE_MINUTES`, `AGENT_OS_LOGIN_TOTAL_MINUTES`)를 명세 "유지 시간"의 표대로 읽는다. 빈 값은 기본값이고 기본값도 같은 범위를 지난다(쉬는 시간을 늘리면 총 시간의 기본값이 아래 한계 밑이 될 수 있다). 정수가 아니거나 범위를 벗어나거나 수명이 쉬는 시간 이상이면 변수 이름과 받은 값과 범위를 적은 높임말 문구를 찍고 종료 코드 2로 끝난다
 - [x] 그 문구는 제품이 멈출 때 찍는 글이므로, 배포 안내(`deploy/standalone/README.md`)의 13절 "문제 해결"에 그 갈래를 싣고 `tests/tools/test_deploy_guide.py`의 `STOP_TEXT_LABELS`에 한 갈래를 더한다(명세 "배포 안내"의 "문제 해결 절")
 
 ### 로그인 기록

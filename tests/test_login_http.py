@@ -26,6 +26,7 @@ from fastapi import FastAPI
 from httpx import ASGITransport, AsyncClient, Response
 from langchain_core.language_models.fake_chat_models import GenericFakeChatModel
 from sqlalchemy import text
+from tests.fake_accounts import UnusedAccounts
 from tests.fake_database import FakeDatabase
 from tests.fake_models import DEFAULT_MODEL, FakeModels
 from tests.postgres_support import plain
@@ -41,7 +42,7 @@ from agent_os.http.accounts import AccountStore, Tier
 from agent_os.http.auth import PUBLIC_PATHS
 from agent_os.http.errors import UNAUTHORIZED_MESSAGE
 from agent_os.http.login_tokens import ACCESS_COOKIE, REFRESH_COOKIE, LoginDurations
-from agent_os.http.logins import LoginService
+from agent_os.http.logins import LoginService, SigningKeys
 from agent_os.http.passwords import hash_password
 from agent_os.http.sites import Sites
 from agent_os.sdk import Principal, RunId
@@ -299,15 +300,29 @@ async def test_다시_로그인하면_끝났거나_쉬었거나_너무_오래된
     client: AsyncClient, accounts: AccountStore, clock: MovingClock, database: ScopedDatabase
 ) -> None:
     await _seed(accounts, "kim.min")
+
+    def digest(response: Response) -> str:
+        return hashlib.sha256(_cookies(response)[REFRESH_COOKIE].encode("ascii")).hexdigest()
+
+    # 첫째는 로그아웃으로 끝내고, 둘째는 살려 둔다. 셋째 로그인이 치우는 것은 끝난 첫째뿐이다
     first = await _login(client)
+    second = await _login(client)
     await client.post("/auth/logout", headers=_as_cookie(first))
-    assert len(await _rows(database, "SELECT id FROM operator_logins")) == 1
+    (ended,) = await _rows(database, "SELECT id FROM operator_logins WHERE ended_at IS NOT NULL")
+    (alive,) = await _rows(database, "SELECT id FROM operator_logins WHERE ended_at IS NULL")
 
     clock.advance(minutes=1)
-    await _login(client)
+    third = await _login(client)
 
-    assert len(await _rows(database, "SELECT id FROM operator_logins")) == 1
-    assert len(await _rows(database, "SELECT token_hash FROM operator_refresh_tokens")) == 1
+    ids = {row[0] for row in await _rows(database, "SELECT id FROM operator_logins")}
+    assert len(ids) == 2
+    assert ended[0] not in ids
+    assert alive[0] in ids
+    stored = {
+        row[0] for row in await _rows(database, "SELECT token_hash FROM operator_refresh_tokens")
+    }
+    assert stored == {digest(second), digest(third)}
+    assert digest(first) not in stored
 
 
 # --- 로그인 실패 ---------------------------------------------------------------------------------
@@ -498,20 +513,25 @@ def _race(
     database: ScopedDatabase,
     sql: str,
     **params: object,
-) -> None:
+) -> list[str]:
     """맞는 견줌이 끝난 직후, 둘째 트랜잭션이 열리기 전에 계정을 바꾼다.
 
     견줌은 해시 전용 스레드에서 도므로 그 스레드가 시험의 이벤트 루프에 일을 맡기고 기다린다.
+    돌려주는 목록에는 계정을 실제로 바꾼 횟수만큼 글자가 쌓인다. 견줌이 맞지 않으면 바꾸지 않아
+    시험이 바뀐 계정 없이도 초록이 되므로, 시험은 이 목록이 찼는지 단언한다.
     """
     real = logins_module.password_matches
+    changed: list[str] = []
 
     def racing(stored_hash: str, password: str) -> bool:
         matched = real(stored_hash, password)
         if matched:
             asyncio.run_coroutine_threadsafe(_execute(database, sql, **params), loop).result(10)
+            changed.append(sql)
         return matched
 
     monkeypatch.setattr(logins_module, "password_matches", racing)
+    return changed
 
 
 async def test_견주는_사이_비밀번호가_바뀌면_맞았어도_로그인이_아니다(
@@ -521,7 +541,7 @@ async def test_견주는_사이_비밀번호가_바뀌면_맞았어도_로그인
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     await _seed(accounts, "kim.min")
-    _race(
+    changed = _race(
         monkeypatch,
         asyncio.get_running_loop(),
         database,
@@ -531,6 +551,7 @@ async def test_견주는_사이_비밀번호가_바뀌면_맞았어도_로그인
 
     response = await _login(client)
 
+    assert len(changed) == 1, "견주는 사이에 계정이 바뀌지 않았다. 시험이 경합을 만들지 못했다"
     assert response.status_code == 401
     assert "set-cookie" not in response.headers
     assert await _rows(database, "SELECT id FROM operator_logins") == []
@@ -545,7 +566,7 @@ async def test_견주는_사이_계정이_꺼지면_맞았어도_로그인이_�
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     await _seed(accounts, "kim.min")
-    _race(
+    changed = _race(
         monkeypatch,
         asyncio.get_running_loop(),
         database,
@@ -555,8 +576,36 @@ async def test_견주는_사이_계정이_꺼지면_맞았어도_로그인이_�
 
     response = await _login(client)
 
+    assert len(changed) == 1, "견주는 사이에 계정이 바뀌지 않았다. 시험이 경합을 만들지 못했다"
     assert response.status_code == 401
     assert await _rows(database, "SELECT id FROM operator_logins") == []
+
+
+async def test_다섯째_시도의_비밀번호가_맞았으면_둘째_트랜잭션이_거절해도_잠금은_기록하지_않는다(
+    client: AsyncClient,
+    accounts: AccountStore,
+    database: ScopedDatabase,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    await _seed(accounts, "kim.min")
+    for _ in range(4):
+        await _login(client, password=WRONG)
+    changed = _race(
+        monkeypatch,
+        asyncio.get_running_loop(),
+        database,
+        "UPDATE operator_accounts SET disabled_at = :at WHERE name = 'kim.min'",
+        at=START,
+    )
+
+    response = await _login(client)
+
+    assert len(changed) == 1, "견주는 사이에 계정이 바뀌지 않았다. 시험이 경합을 만들지 못했다"
+    assert response.status_code == 401
+    # 잠금은 틀린 비밀번호가 건다. 맞은 시도를 마무리하다 거절된 것은 실패 한 줄이면 된다
+    kinds = [kind for kind, _, _ in await _records(database)]
+    assert kinds.count("login_failed") == 5
+    assert "locked" not in kinds
 
 
 # --- 짧은 JWT 와 지금 누구인지 ------------------------------------------------------------------
@@ -624,6 +673,73 @@ async def test_서명_키는_10초가_지난_뒤_다시_읽고_바뀐_키로_만
     assert (await client.get("/auth/me", headers=cookie)).status_code == 401
 
 
+async def test_공유_토큰이_맞으면_로그인_쿠키가_함께_와도_서명_키를_읽지_않는다(
+    clock: MovingClock, stderr: io.StringIO
+) -> None:
+    store = UnusedAccounts()
+    store.fail_reads = 1000  # 키를 읽으려 하면 터진다
+    accounts: AccountStore = store
+    app = _app(accounts, clock, stderr)
+    cookie = {"Cookie": f"{ACCESS_COOKIE}=not.a.token"}
+
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="https://admin.test") as client:
+        response = await client.get("/plugins", headers={**SHARED, **cookie})
+
+    assert response.status_code == 200
+    assert store.reads == 0
+
+
+async def _let_tasks_run() -> None:
+    """만든 작업이 닿을 수 있는 데까지 가게 이벤트 루프를 몇 번 넘겨준다."""
+    for _ in range(10):
+        await asyncio.sleep(0)
+
+
+async def test_서명_키가_만료됐을_때_동시에_온_요청은_읽기_하나를_함께_쓴다() -> None:
+    clock = MovingClock()
+    store = UnusedAccounts()
+    store.key = b"\x01" * 32
+    keys = SigningKeys(store, clock)
+    assert await keys.current() == b"\x01" * 32
+    assert store.reads == 1
+
+    clock.advance(seconds=10)
+    store.gate = asyncio.Event()
+    first = asyncio.create_task(keys.current())
+    await _let_tasks_run()
+    # 첫 읽기가 값을 읽고 트랜잭션을 연 채인 동안 키가 바뀌고 둘째 요청이 온다
+    store.key = b"\x02" * 32
+    second = asyncio.create_task(keys.current())
+    await _let_tasks_run()
+    store.gate.set()
+
+    # 읽기 둘이 겹치면 늦게 끝난 쪽이 옛 키를 캐시에 되돌릴 수 있다. 하나로 모이면 10초에 한 번이다
+    assert store.reads == 2, f"읽기가 {store.reads - 1}번 났다. 하나여야 한다"
+    assert await first == await second == b"\x01" * 32
+
+
+async def test_서명_키를_읽다_실패하면_기다리던_요청이_다시_읽는다() -> None:
+    clock = MovingClock()
+    store = UnusedAccounts()
+    store.key = b"\x01" * 32
+    keys = SigningKeys(store, clock)
+    await keys.current()
+
+    clock.advance(seconds=10)
+    store.gate = asyncio.Event()
+    store.fail_reads = 1
+    first = asyncio.create_task(keys.current())
+    await _let_tasks_run()
+    second = asyncio.create_task(keys.current())
+    await _let_tasks_run()
+    store.gate.set()
+
+    with pytest.raises(RuntimeError, match="서명 키를 읽지 못했다"):
+        await first
+    assert await second == b"\x01" * 32
+
+
 async def test_서명_키의_줄은_하나이고_로그인을_거듭해도_늘지_않는다(
     client: AsyncClient, accounts: AccountStore, database: ScopedDatabase
 ) -> None:
@@ -648,9 +764,16 @@ async def test_로그아웃은_쿠키_둘을_지우고_로그인_한_건을_끝�
 
     assert response.status_code == 204
     lines = response.headers.get_list("set-cookie")
-    assert len(lines) == 2
-    assert all("Max-Age=0" in line for line in lines)
-    assert all(line.startswith((f"{ACCESS_COOKIE}=;", f"{REFRESH_COOKIE}=;")) for line in lines)
+    # 두 쿠키를 한 번씩 지운다. 같은 쿠키를 두 번 지우는 응답은 실패다
+    assert sorted(line.partition("=")[0] for line in lines) == sorted(
+        [ACCESS_COOKIE, REFRESH_COOKIE]
+    )
+    for line in lines:
+        name = line.partition("=")[0]
+        assert line.startswith(f"{name}=;"), line
+        assert "Max-Age=0" in line, line
+        assert "Secure" in line, line
+        assert "Path=/" in line, line
     assert await _rows(database, "SELECT ended_at FROM operator_logins") == [(clock.at,)]
     assert (await _records(database))[-1] == ("logged_out", "kim.min", None)
 

@@ -115,6 +115,29 @@ def test_총_시간이_쉬는_시간과_같으면_받는다() -> None:
     assert result == LoginDurations(5, 600, 600)
 
 
+@pytest.mark.parametrize(
+    "env",
+    [
+        {IDLE_MINUTES_ENV: "600"},
+        {IDLE_MINUTES_ENV: "600", TOTAL_MINUTES_ENV: ""},
+        {IDLE_MINUTES_ENV: "481"},
+    ],
+)
+def test_총_시간을_적지_않아도_기본값이_쉬는_시간_밑이면_받지_않는다(env: dict[str, str]) -> None:
+    # 기본값 480분이 쉬는 시간보다 짧으면 로그인은 쉬는 시간이 되기 전에 총 시간에 닿는다
+    result = read_login_durations(env)
+
+    assert isinstance(result, str)
+    assert TOTAL_MINUTES_ENV in result
+    assert "받은 값: ''" in result
+
+
+def test_쉬는_시간이_총_시간의_기본값과_같으면_받는다() -> None:
+    result = read_login_durations({IDLE_MINUTES_ENV: "480"})
+
+    assert result == LoginDurations(5, 480, 480)
+
+
 def test_짧은_로그인_증표의_수명이_쉬는_시간_이상이면_둘의_값을_적은_문구다() -> None:
     result = read_login_durations({TOKEN_MINUTES_ENV: "10", IDLE_MINUTES_ENV: "10"})
 

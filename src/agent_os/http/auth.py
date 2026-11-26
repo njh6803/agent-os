@@ -138,8 +138,9 @@ class RequireToken(BaseHTTPMiddleware):
                 if claims is None:
                     return _refused(request, UNAUTHORIZED_MESSAGE)
             case _Shared(value=expected):
-                claims = await self._claims(request)
-                if claims is None and not _matches(header, expected):
+                # 공유 토큰이 맞으면 쿠키를 보지 않는다. 쿠키를 먼저 보면 키를 읽다
+                # 데이터베이스가 죽을 때 맞는 공유 토큰도 500 이 난다
+                if not _matches(header, expected) and await self._claims(request) is None:
                     return _refused(request, UNAUTHORIZED_MESSAGE)
             case SiteSigned(sites=sites, clock=clock):
                 verified = verify_signed(_bearer(header), sites, clock)
