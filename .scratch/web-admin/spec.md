@@ -431,7 +431,7 @@ plugin-toggle이 쓴 셋째 grep(`재개 불가|NotResumable|재개할 수 없�
 **LLM 테스트.** `-m llm` 가운데 재개를 지나는 둘이 자리를 싣게 고친다.
 
 - CLI로 다른 프로세스가 재개하는 것(`tests/test_main.py`의 `test_멈춘_실행은_그_프로세스가_끝난_뒤_다른_프로세스가_재개해_끝까지_간다`)
-- 실제 `serve`에서 HTTP로 승인하는 것(`test_실제_serve_에서_HTTP_로_일으킨_실행이_승인_대상에서_멈추고_HTTP_승인으로_끝까지_간다`)
+- 실제 `serve`에서 HTTP로 승인하는 것(`test_실제_serve_에서_로그인한_운영자의_실행이_멈췄다_끝나고_트레이스에_계정이_남는다`)
 
 이 티켓은 `core/run.py`, `channel/`, `main.py`를 건드리므로 `uv run --env-file .env pytest -m llm`을 돌리고 일지에 적는다(`operations.md` LLM 테스트 절).
 
@@ -683,7 +683,7 @@ plugin-toggle이 쓴 셋째 grep(`재개 불가|NotResumable|재개할 수 없�
 
 ### e2e — Playwright, 실제 `serve`와 실제 중계
 
-실제 `serve`를 서브프로세스로 띄우는 선례는 `tests/test_main.py`의 `test_실제_serve_에서_HTTP_로_일으킨_실행이_승인_대상에서_멈추고_HTTP_승인으로_끝까지_간다`다(`-m llm`).
+실제 `serve`를 서브프로세스로 띄우는 선례는 `tests/test_main.py`의 `test_실제_serve_에서_로그인한_운영자의_실행이_멈췄다_끝나고_트레이스에_계정이_남는다`다(`-m llm`).
 
 **e2e는 실제 `serve`의 둘째 구동자이고, 모델을 부르지 않는다.**
 

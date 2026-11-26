@@ -22,6 +22,7 @@ from agent_os.http.auth import operator_of
 from agent_os.http.errors import UNAUTHORIZED_MESSAGE, error_envelope, remember_failure
 from agent_os.http.login_tokens import REFRESH_COOKIE, clearing_cookie_lines, forwarded_address
 from agent_os.http.logins import LoginService
+from agent_os.http.permissions import REQUIRE_PERMISSION
 from agent_os.http.routes import documented_errors
 
 # 로그인 실패의 문구 하나. 없는 계정과 틀린 비밀번호와 잠긴 계정과 비활성 계정을 가르지 않는다
@@ -78,7 +79,11 @@ def auth_router(
     조립이 읽어 넘긴다. 이 모듈에 600 을 따로 적지 않는다. 두 자리가 따로 적으면 core 의 기본값이
     바뀔 때 화면이 멈추는 때만 옛 값으로 남는다.
     """
-    router = APIRouter(lifespan=lambda _app: login.lifespan(), responses=documented_errors(500))
+    router = APIRouter(
+        lifespan=lambda _app: login.lifespan(),
+        responses=documented_errors(500),
+        dependencies=[REQUIRE_PERMISSION],
+    )
 
     @router.post(
         "/auth/login",

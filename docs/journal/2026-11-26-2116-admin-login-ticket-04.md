@@ -131,6 +131,17 @@ CodeRabbit 인라인 셋과 claude-review 지적 둘이 왔다. 판정:
 - 로컬 모델 시험(병합 조건): 여섯 번째 시도에서 통과했다. 앞의 다섯 번은 GPU 재고 없음의 무효 회차였다(연달은 무효 5번에서 러너가 멈추고 보고하라고 했고, 사용자가 30분마다 재시도를 골라 시도 때마다 비용 확인을 받았다). 여섯째는 A40 shared에서 `uv run pytest -m llm_local` 4건 통과, 걸린 시간 341.5초다. 시험한 커밋은 `4a9e7b7a6`이고 그 뒤 바뀐 것은 일지와 티켓 문서뿐이다. 끝난 뒤 Runpod 파드 목록이 비어 있었다.
 - 봇 1회차 반영 뒤(`4a9e7b7a6`): pre-commit 통과, PR의 모든 검사 초록(`claude-review`, `e2e`·`e2e-portal`·`e2e-standalone`·`e2e-widget`, `python`, `ticket`, `verify`, `visual`, `web`, `llm`은 건너뜀). CodeRabbit 2회차는 사용 한도(`Review rate limited`)로 새 지적 없이 끝났다.
 
+## dev 합치기(05 병합 뒤)
+
+05(`permission-table-and-accounts-on-runs`, PR #653, 커밋 `e7c53cba3`)가 먼저 `origin/dev`에 병합돼 이 브랜치가 한 커밋 뒤처졌다. `git merge origin/dev`로 합쳤고 충돌은 네 파일이었다.
+
+- `.claude/rules/http.md`: 운영자 경로 항목은 04의 판(갱신 라우트의 401도 `WWW-Authenticate`를 싣지 않는다는 문장)을 두고, 05가 더한 항목 둘(권한 표, 쿠키로 시작한 실행의 계정)은 그대로 이었다.
+- 카나리아 명세 셋(`http_rule_llm_widget.toml`, `http_rule_continuation_422.toml`, `http_rule_pre_owner_damage.toml`)의 `# 최신 결과:` 줄: 04의 기록 뒤에 05의 기록을 "앞 판"으로 이었다. 두 변경을 합친 판으로는 카나리아를 다시 돌리지 않았다. 각 기록은 자기 변경만 든 작업 트리로 돌린 것이고, 줄에도 그렇게 적었다.
+- 권한 표(`src/agent_os/http/permissions.py`)에 `"refresh_login": Open()` 줄을 더했고 `tests/test_permissions.py`의 줄 목록에도 같은 줄을 더했다. 05의 전수 검사가 `refresh_login`을 모른 채 빨개지는 것을 이 줄이 막는다.
+- `openapi.json`은 `uv run python tools/export_openapi.py`로 다시 뽑았으나 달라지지 않았다. 05가 계약을 건드리지 않았으므로 TS 타입도 다시 뽑을 일이 없다.
+- 합친 뒤 `uv run pytest -q tests/test_permissions.py tests/test_operator_accounts_on_runs.py tests/test_login_http.py tests/test_login_tokens.py tests/test_main.py`: 523건 통과(마커로 빠진 9건 제외).
+- 로컬 모델 시험(여섯째 시도)은 합치기 전의 `4a9e7b7a6`로 돌렸다. 05가 더한 것은 권한 검사와 계정 전달(`channel/http/router.py`, `admin/`)이라 시험이 닿는 모델 호출 길은 건드리지 않았다고 본다. 이것은 어림이고 코드로 대 보지 않았다. 합친 판으로 다시 돌리지는 않았다.
+
 ## 이어받을 일
 
-셀프 리뷰와 위 검증, 로컬 모델 시험까지 끝났고 티켓의 마지막 체크박스도 쳤다. 남은 것은 이 문서 변경을 커밋해 푸시하고, CI를 보고, 병합하는 일이다. 05(`permission-table-and-accounts-on-runs`)와 나란히 돈다. 늦게 병합하는 쪽이 권한 표(05가 짓는다)에 `refresh_login`(로그인 없이 연다) 줄을 더한다. 병합 전에 `origin/dev`에 05가 들어왔는지 보고, 들어왔으면 합친 뒤 05의 전수 검사가 초록인지 본다. `openapi.json`과 생성 TS는 손으로 합치지 말고 다시 뽑는다. 05가 같은 파일(`.claude/rules/http.md`, `src/agent_os/admin/auth.py`, `src/agent_os/http/auth.py`)을 고치므로 글자 충돌이 날 수 있다.
+셀프 리뷰와 위 검증, 로컬 모델 시험까지 끝났고 티켓의 마지막 체크박스도 쳤다. 남은 것은 이 문서 변경을 커밋해 푸시하고, CI를 보고, 병합하는 일이다. 05는 먼저 병합됐고 이 PR이 `origin/dev`를 합치며 권한 표에 `refresh_login` 줄을 더했다(위 "dev 합치기").
