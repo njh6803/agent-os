@@ -50,6 +50,7 @@ from agent_os.http.accounts import (
     AccountWork,
     NewAccount,
     RecordKind,
+    RefreshRow,
     Taken,
     Tier,
 )
@@ -553,6 +554,21 @@ class _RacingWork:
         raise AssertionError(_NOT_USED)
 
     async def read_signing_key(self) -> bytes | None:
+        raise AssertionError(_NOT_USED)
+
+    async def replace_signing_key(self, key: bytes, *, at: datetime) -> None:
+        raise AssertionError(_NOT_USED)
+
+    async def lock_refresh(self, token_hash: str) -> RefreshRow | None:
+        raise AssertionError(_NOT_USED)
+
+    async def find(self, name: str) -> AccountRow | None:
+        raise AssertionError(_NOT_USED)
+
+    async def use_refresh_token(self, token_hash: str, *, at: datetime) -> None:
+        raise AssertionError(_NOT_USED)
+
+    async def touch_login(self, login_id: UUID, *, at: datetime) -> None:
         raise AssertionError(_NOT_USED)
 
 

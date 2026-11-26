@@ -22,6 +22,7 @@ import uuid
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from datetime import datetime, timedelta
+from typing import Literal
 
 import jwt
 
@@ -218,9 +219,61 @@ def clearing_cookie_lines() -> list[str]:
 
 
 def refresh_max_age(durations: LoginDurations, *, logged_in_at: datetime, now: datetime) -> int:
-    """갱신용 번호 쿠키의 `Max-Age`(초). 쉬는 시간과 총 시간의 남은 몫 가운데 짧은 것이다."""
+    """갱신용 번호 쿠키의 `Max-Age`(초). 쉬는 시간과 총 시간의 남은 몫 가운데 짧은 것이다.
+
+    남은 몫이 1초에 못 미쳐도 아직 남았으면 1초를 준다. 0이면 방금 받은 쿠키를 브라우저가 곧바로
+    지우기 때문이다. 이미 지났으면 0이다.
+    """
     total_left = durations.total_minutes * 60 - (now - logged_in_at).total_seconds()
-    return max(0, int(min(durations.idle_minutes * 60, total_left)))
+    left = min(durations.idle_minutes * 60, total_left)
+    return 0 if left <= 0 else max(1, int(left))
+
+
+# 쓴 지 이 시간이 안 된 번호가 다시 오면 끊지 않고 받는다. 같은 브라우저의 탭 둘이 같은 쿠키를
+# 거의 같은 때에 보내고, 첫 응답의 쿠키가 브라우저에 닿기까지의 틈을 받아 준다(명세 admin-login
+# "탭 둘이 함께 갱신할 때의 유예")
+REFRESH_GRACE = timedelta(seconds=10)
+
+# 갱신을 거절하는 까닭. 명세 "갱신의 판정"의 열거 차례와 같다. 번호가 없거나 모르는 번호인 갈래는
+# 로그인 한 건을 알 수 없어 이 판정에 오지 않는다
+type RefreshRefusal = Literal["ended", "idle", "total", "disabled", "locked", "reused"]
+
+# 거절하면서 그 로그인 한 건도 끊는 까닭. 쉬는 시간과 총 시간이 지난 것은 저절로 끝난 것이라 끊지
+# 않는다. 비활성과 잠김과 쓴 지 10초가 지난 번호는 로그인이 아직 살아 있어 끊어야 한다
+ENDS_LOGIN: frozenset[RefreshRefusal] = frozenset({"disabled", "locked", "reused"})
+
+
+def judge_refresh(
+    *,
+    durations: LoginDurations,
+    now: datetime,
+    logged_in_at: datetime,
+    refreshed_at: datetime,
+    ended_at: datetime | None,
+    used_at: datetime | None,
+    disabled_at: datetime | None,
+    locked_until: datetime | None,
+) -> RefreshRefusal | None:
+    """갱신을 받을지 정한다. 받으면 `None`이고 거절하면 그 까닭이다.
+
+    까닭이 여럿 맞으면 명세 "갱신의 판정"이 적은 차례의 첫째를 말한다(끊김, 쉬는 시간, 총 시간,
+    비활성, 잠김, 번호 다시 씀). 시각은 모두 부르는 쪽이 주입된 시계에서 읽어 넘긴다. 쉬는 시간과 총
+    시간은 그 길이가 딱 찬 때부터 거절하고(`delete_ended_logins` 의 기준과 같다), 유예도 딱 10초부터
+    거절한다.
+    """
+    if ended_at is not None:
+        return "ended"
+    if now - refreshed_at >= timedelta(minutes=durations.idle_minutes):
+        return "idle"
+    if now - logged_in_at >= timedelta(minutes=durations.total_minutes):
+        return "total"
+    if disabled_at is not None:
+        return "disabled"
+    if locked_until is not None and locked_until > now:
+        return "locked"
+    if used_at is not None and now - used_at >= REFRESH_GRACE:
+        return "reused"
+    return None
 
 
 def forwarded_address(values: Sequence[str]) -> str | None:

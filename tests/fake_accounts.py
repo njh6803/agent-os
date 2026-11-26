@@ -18,7 +18,7 @@ from contextlib import asynccontextmanager
 from datetime import datetime
 from uuid import UUID
 
-from agent_os.http.accounts import AccountRow, NewAccount, RecordKind, Taken
+from agent_os.http.accounts import AccountRow, NewAccount, RecordKind, RefreshRow, Taken
 
 _UNUSED = "이 시험은 계정 저장소를 쓰지 않는다"
 
@@ -92,6 +92,21 @@ class _UnusedWork:
         raise AssertionError(_UNUSED)
 
     async def end_login(self, login_id: UUID, *, at: datetime) -> None:
+        raise AssertionError(_UNUSED)
+
+    async def replace_signing_key(self, key: bytes, *, at: datetime) -> None:
+        raise AssertionError(_UNUSED)
+
+    async def lock_refresh(self, token_hash: str) -> RefreshRow | None:
+        raise AssertionError(_UNUSED)
+
+    async def find(self, name: str) -> AccountRow | None:
+        raise AssertionError(_UNUSED)
+
+    async def use_refresh_token(self, token_hash: str, *, at: datetime) -> None:
+        raise AssertionError(_UNUSED)
+
+    async def touch_login(self, login_id: UUID, *, at: datetime) -> None:
         raise AssertionError(_UNUSED)
 
 

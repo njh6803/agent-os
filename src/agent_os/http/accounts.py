@@ -7,8 +7,8 @@
 `main`, 포트 타입을 적은 시험 픽스처)의 타입 검사가 잡는다.
 
 **포트의 메서드는 지금 쓰는 것만 있다.** 첫 쓰는 곳은 서버 명령
-`agent-os operator system-admin`이고, 로그인 경로가 둘째다. 갱신과 계정 경로가 쓰는 메서드는 그
-일을 들이는 티켓이 더한다.
+`agent-os operator system-admin`이고, 로그인 경로가 둘째, 갱신과 서명 키 바꾸기가 셋째다. 계정
+경로가 쓰는 메서드는 그 일을 들이는 티켓이 더한다.
 
 **이름 충돌은 예외가 아니라 돌려주는 값으로 가른다.** 계정을 넣는 메서드(`AccountWork.add`)는 넣은
 줄이나 글자 값 `"taken"`을 돌려준다. 예외로 알리는 길은 두 층이 함께 가져올 예외 타입이 없고(core에
@@ -34,7 +34,13 @@ type Taken = Literal["taken"]
 # 로그인 기록에 남기는 일의 종류. 닫힌 목록이고, 열넷 가운데 지금 쓰는 것만 있다(명세 "로그인
 # 기록"). 나머지는 그 일을 들이는 티켓이 더한다.
 type RecordKind = Literal[
-    "system_admin_set", "login_succeeded", "login_failed", "locked", "logged_out"
+    "system_admin_set",
+    "login_succeeded",
+    "login_failed",
+    "locked",
+    "logged_out",
+    "refresh_reused",
+    "signing_key_rotated",
 ]
 
 ACCOUNT_NAME_RULE_TEXT = (
@@ -97,6 +103,28 @@ class NewAccount(Protocol):
 
     @property
     def created_at(self) -> datetime: ...
+
+
+class RefreshRow(Protocol):
+    """갱신용 번호 한 줄과 그 번호가 속한 로그인 한 건. 읽기만 한다."""
+
+    @property
+    def login_id(self) -> UUID: ...
+
+    @property
+    def account(self) -> str: ...
+
+    @property
+    def logged_in_at(self) -> datetime: ...
+
+    @property
+    def refreshed_at(self) -> datetime: ...
+
+    @property
+    def ended_at(self) -> datetime | None: ...
+
+    @property
+    def used_at(self) -> datetime | None: ...
 
 
 class AccountWork(Protocol):
@@ -180,6 +208,31 @@ class AccountWork(Protocol):
 
     async def read_signing_key(self) -> bytes | None:
         """서명 키. 줄이 없으면 `None`."""
+        ...
+
+    async def replace_signing_key(self, key: bytes, *, at: datetime) -> None:
+        """서명 키의 줄을 새 키로 바꾼다. 줄이 없으면 넣는다. 옛 키는 남기지 않는다."""
+        ...
+
+    async def lock_refresh(self, token_hash: str) -> RefreshRow | None:
+        """그 해시의 갱신용 번호와 속한 로그인 한 건의 줄을 함께 잠가 읽는다. 없으면 `None`.
+
+        로그인 줄을 먼저, 번호 줄을 그다음에 잠근다. 로그인 줄을 지우며 번호 줄을 따라 지우는
+        쪽(`delete_ended_logins`)과 같은 순서다. 계정의 줄은 잠그지 않는다. 계정을 잠그고 로그인
+        줄을 지우는 쪽과 순서가 엇갈려 서로 기다리는 일(교착)을 피하기 위해서다.
+        """
+        ...
+
+    async def find(self, name: str) -> AccountRow | None:
+        """그 이름의 줄을 잠그지 않고 읽는다. 없으면 `None`."""
+        ...
+
+    async def use_refresh_token(self, token_hash: str, *, at: datetime) -> None:
+        """그 번호를 쓴 것으로 적는다. 이미 쓴 것으로 적혀 있으면 처음 쓴 시각을 그대로 둔다."""
+        ...
+
+    async def touch_login(self, login_id: UUID, *, at: datetime) -> None:
+        """로그인 한 건의 마지막으로 갱신한 시각을 적는다."""
         ...
 
 

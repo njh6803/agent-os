@@ -34,6 +34,7 @@ from tests.test_server import ORIGIN_CASES, FakePlugins, FakeTrace, IdleTools
 from tools.database_for_tests import ScopedDatabase
 
 from agent_os.adapters.postgres.database import PostgresDatabase, parse_database_url
+from agent_os.channel.cli.operator import ROTATED_TEXT, rotate_key_command
 from agent_os.channel.http.end_user import END_USER_PREFIX
 from agent_os.channel.http.router import CHANNEL_PREFIX
 from agent_os.core.ports import Clock
@@ -788,6 +789,426 @@ async def test_로그아웃_뒤에도_이미_받은_짧은_JWT_는_수명이_끝
     assert (await client.get("/auth/me", headers=cookie)).status_code == 200
 
 
+# --- 갱신 ----------------------------------------------------------------------------------------
+
+
+def _digest_of(token: str) -> str:
+    return hashlib.sha256(token.encode("ascii")).hexdigest()
+
+
+async def _refresh(client: AsyncClient, token: str | None, **headers: str) -> Response:
+    """갱신용 번호 쿠키 하나만 싣고 갱신을 부른다. `token` 이 없으면 쿠키 없이 부른다."""
+    sent = dict(headers)
+    if token is not None:
+        sent["Cookie"] = f"{REFRESH_COOKIE}={token}"
+    response = await client.post("/auth/refresh", headers=sent)
+    client.cookies.clear()
+    return response
+
+
+def _assert_cleared(response: Response) -> None:
+    """401 이고 두 쿠키를 한 번씩 지우는 줄을 싣고 봉투가 고정 문구인지 본다."""
+    assert response.status_code == 401
+    lines = response.headers.get_list("set-cookie")
+    assert sorted(line.partition("=")[0] for line in lines) == sorted(
+        [ACCESS_COOKIE, REFRESH_COOKIE]
+    )
+    for line in lines:
+        name = line.partition("=")[0]
+        assert line.startswith(f"{name}=;"), line
+        for part in ("Max-Age=0", "HttpOnly", "Secure", "SameSite=Strict", "Path=/"):
+            assert part in line, line
+    body = response.json()
+    assert body["code"] == "unauthorized"
+    assert body["message"] == UNAUTHORIZED_MESSAGE
+    assert "www-authenticate" not in response.headers
+
+
+async def test_갱신은_204와_새_쿠키_둘을_심고_앞의_번호를_쓴_것으로_적는다(
+    client: AsyncClient, accounts: AccountStore, clock: MovingClock, database: ScopedDatabase
+) -> None:
+    await _seed(accounts, "kim.min")
+    old = _cookies(await _login(client))[REFRESH_COOKIE]
+    clock.advance(minutes=4)
+
+    response = await _refresh(client, old)
+
+    assert response.status_code == 204
+    assert response.content == b""
+    lines = response.headers.get_list("set-cookie")
+    assert len(lines) == 2
+    access = next(line for line in lines if line.startswith(f"{ACCESS_COOKIE}="))
+    refresh = next(line for line in lines if line.startswith(f"{REFRESH_COOKIE}="))
+    for line in lines:
+        for part in ("HttpOnly", "Secure", "SameSite=Strict", "Path=/"):
+            assert part in line, line
+        assert "Domain" not in line
+    assert "Max-Age" not in access
+    assert "Max-Age=1800" in refresh
+    new = _cookies(response)
+    assert new[REFRESH_COOKIE] != old
+    me = await client.get("/auth/me", headers={"Cookie": f"{ACCESS_COOKIE}={new[ACCESS_COOKIE]}"})
+    assert (me.status_code, me.json()["name"]) == (200, "kim.min")
+    stored = await _rows(
+        database,
+        "SELECT token_hash, created_at, used_at FROM operator_refresh_tokens ORDER BY created_at",
+    )
+    assert stored == [
+        (_digest_of(old), START, clock.at),
+        (_digest_of(new[REFRESH_COOKIE]), clock.at, None),
+    ]
+    assert await _rows(database, "SELECT refreshed_at, ended_at FROM operator_logins") == [
+        (clock.at, None)
+    ]
+    assert await _records(database) == [("login_succeeded", "kim.min", None)]
+
+
+async def test_갱신은_짧은_JWT_를_보지_않는다(client: AsyncClient, accounts: AccountStore) -> None:
+    await _seed(accounts, "kim.min")
+    old = _cookies(await _login(client))[REFRESH_COOKIE]
+
+    both = {"Cookie": f"{ACCESS_COOKIE}=not.a.token; {REFRESH_COOKIE}={old}"}
+
+    response = await _refresh(client, None, **both)
+
+    assert response.status_code == 204
+
+
+async def test_짧은_JWT_가_만료된_뒤에도_갱신용_번호로_로그인이_이어진다(
+    client: AsyncClient, accounts: AccountStore, clock: MovingClock
+) -> None:
+    await _seed(accounts, "kim.min")
+    first = await _login(client)
+    clock.advance(minutes=6)
+    assert (await client.get("/auth/me", headers=_as_cookie(first))).status_code == 401
+
+    renewed = await _refresh(client, _cookies(first)[REFRESH_COOKIE])
+
+    assert renewed.status_code == 204
+    assert (await client.get("/auth/me", headers=_as_cookie(renewed))).status_code == 200
+
+
+async def test_새_짧은_JWT_의_단계는_갱신할_때_계정에서_읽은_값이다(
+    client: AsyncClient, accounts: AccountStore, database: ScopedDatabase
+) -> None:
+    await _seed(accounts, "kim.min")
+    first = await _login(client)
+    assert (await client.get("/auth/me", headers=_as_cookie(first))).json()["tier"] == "admin"
+    await _execute(database, "UPDATE operator_accounts SET tier = 'system_admin'")
+
+    renewed = await _refresh(client, _cookies(first)[REFRESH_COOKIE])
+
+    assert (await client.get("/auth/me", headers=_as_cookie(renewed))).json()["tier"] == (
+        "system_admin"
+    )
+
+
+@pytest.mark.parametrize(
+    "token",
+    [None, "", "x", "A" * 43, "A" * 129],
+    ids=["쿠키 없음", "빈 값", "짧은 값", "모르는 번호", "128자를 넘는 값"],
+)
+async def test_번호가_없거나_모르는_번호면_401과_지우는_줄_둘이고_아무것도_바꾸지_않는다(
+    client: AsyncClient,
+    accounts: AccountStore,
+    database: ScopedDatabase,
+    token: str | None,
+) -> None:
+    await _seed(accounts, "kim.min")
+    await _login(client)
+    before = await _rows(database, "SELECT * FROM operator_logins")
+
+    response = await _refresh(client, token)
+
+    _assert_cleared(response)
+    assert await _rows(database, "SELECT * FROM operator_logins") == before
+    assert await _records(database) == [("login_succeeded", "kim.min", None)]
+
+
+async def test_ASCII가_아닌_번호는_500이_아니라_401과_지우는_줄_둘이다(
+    client: AsyncClient, accounts: AccountStore, database: ScopedDatabase
+) -> None:
+    await _seed(accounts, "kim.min")
+    await _login(client)
+    before = await _rows(database, "SELECT * FROM operator_logins")
+
+    response = await client.post(
+        "/auth/refresh", headers={b"Cookie": f"{REFRESH_COOKIE}=한글번호".encode()}
+    )
+    client.cookies.clear()
+
+    _assert_cleared(response)
+    assert await _rows(database, "SELECT * FROM operator_logins") == before
+
+
+@pytest.mark.parametrize("second", [0, 1], ids=["첫째 응답의 번호", "둘째 응답의 번호"])
+async def test_같은_번호로_동시에_온_갱신_둘은_모두_204이고_어느_응답의_번호로도_다음_갱신이_통한다(
+    client: AsyncClient, accounts: AccountStore, second: int
+) -> None:
+    await _seed(accounts, "kim.min")
+    old = _cookies(await _login(client))[REFRESH_COOKIE]
+
+    responses = await asyncio.gather(_refresh(client, old), _refresh(client, old))
+
+    assert [response.status_code for response in responses] == [204, 204]
+    tokens = [_cookies(response)[REFRESH_COOKIE] for response in responses]
+    assert tokens[0] != tokens[1]
+    assert (await _refresh(client, tokens[second])).status_code == 204
+
+
+async def test_쓴_지_10초가_안_된_번호는_로그인을_끊지_않고_새_번호를_하나_더_낸다(
+    client: AsyncClient, accounts: AccountStore, clock: MovingClock, database: ScopedDatabase
+) -> None:
+    await _seed(accounts, "kim.min")
+    old = _cookies(await _login(client))[REFRESH_COOKIE]
+    first = await _refresh(client, old)
+    clock.advance(seconds=9, milliseconds=999)
+
+    again = await _refresh(client, old)
+
+    assert (first.status_code, again.status_code) == (204, 204)
+    tokens = [_cookies(response)[REFRESH_COOKIE] for response in (first, again)]
+    assert len({old, *tokens}) == 3
+    for token in tokens:
+        assert (await _refresh(client, token)).status_code == 204
+    assert await _rows(database, "SELECT ended_at FROM operator_logins") == [(None,)]
+    assert await _records(database) == [("login_succeeded", "kim.min", None)]
+
+
+async def test_아직_쓰지_않은_번호는_쉬는_시간_안이면_언제까지나_통한다(
+    client: AsyncClient, accounts: AccountStore, clock: MovingClock
+) -> None:
+    await _seed(accounts, "kim.min")
+    old = _cookies(await _login(client))[REFRESH_COOKIE]
+    first = await _refresh(client, old)
+    # 첫째의 번호를 쓰지 않은 채 한참 두었다가 쉬는 시간 안에 쓴다
+    clock.advance(minutes=29)
+
+    assert (await _refresh(client, _cookies(first)[REFRESH_COOKIE])).status_code == 204
+
+
+async def test_쓴_지_10초가_지난_번호가_다시_오면_401이고_그_로그인이_끊기며_기록이_남는다(
+    client: AsyncClient, accounts: AccountStore, clock: MovingClock, database: ScopedDatabase
+) -> None:
+    await _seed(accounts, "kim.min")
+    old = _cookies(await _login(client))[REFRESH_COOKIE]
+    newest = _cookies(await _refresh(client, old))[REFRESH_COOKIE]
+    clock.advance(seconds=10)
+
+    stolen = await _refresh(client, old, **{"X-Forwarded-For": "203.0.113.7"})
+
+    _assert_cleared(stolen)
+    assert await _rows(database, "SELECT ended_at FROM operator_logins") == [(clock.at,)]
+    _assert_cleared(await _refresh(client, newest))
+    assert await _records(database) == [
+        ("login_succeeded", "kim.min", None),
+        ("refresh_reused", "kim.min", "203.0.113.7"),
+    ]
+
+
+async def test_쓴_지_9초_된_번호는_받고_10초_된_번호는_거절한다(
+    client: AsyncClient, accounts: AccountStore, clock: MovingClock
+) -> None:
+    await _seed(accounts, "kim.min")
+    old = _cookies(await _login(client))[REFRESH_COOKIE]
+    await _refresh(client, old)
+
+    clock.advance(seconds=9)
+    assert (await _refresh(client, old)).status_code == 204
+    clock.advance(seconds=1)
+    _assert_cleared(await _refresh(client, old))
+
+
+async def test_쉬는_시간이_딱_지나면_갱신은_401이고_그_전까지는_204이다(
+    client: AsyncClient, accounts: AccountStore, clock: MovingClock, database: ScopedDatabase
+) -> None:
+    await _seed(accounts, "kim.min")
+    old = _cookies(await _login(client))[REFRESH_COOKIE]
+
+    clock.advance(minutes=30, seconds=-1)
+    ok = await _refresh(client, old)
+    assert ok.status_code == 204
+    clock.advance(minutes=30)
+    _assert_cleared(await _refresh(client, _cookies(ok)[REFRESH_COOKIE]))
+    # 쉬는 시간이 지난 것은 저절로 끝난 것이라 로그인을 끊지도 기록을 남기지도 않는다
+    assert await _records(database) == [("login_succeeded", "kim.min", None)]
+
+
+async def test_총_시간이_딱_지나면_쉬지_않고_써도_갱신은_401이고_번호의_수명은_남은_몫이다(
+    client: AsyncClient, accounts: AccountStore, clock: MovingClock
+) -> None:
+    await _seed(accounts, "kim.min")
+    token = _cookies(await _login(client))[REFRESH_COOKIE]
+
+    def max_age(response: Response) -> str:
+        line = next(
+            line
+            for line in response.headers.get_list("set-cookie")
+            if line.startswith(f"{REFRESH_COOKIE}=")
+        )
+        return next(part.strip() for part in line.split(";") if part.strip().startswith("Max-Age="))
+
+    # 25분마다 쉬지 않고 갱신한다. 450분까지는 쉬는 시간(30분)이 남은 몫보다 짧다
+    for minutes in range(25, 451, 25):
+        clock.at = START + timedelta(minutes=minutes)
+        response = await _refresh(client, token)
+        assert response.status_code == 204, minutes
+        assert max_age(response) == "Max-Age=1800", minutes
+        token = _cookies(response)[REFRESH_COOKIE]
+    # 475분에는 총 시간의 남은 5분이 쉬는 시간보다 짧다
+    clock.at = START + timedelta(minutes=475)
+    response = await _refresh(client, token)
+    assert max_age(response) == "Max-Age=300"
+    token = _cookies(response)[REFRESH_COOKIE]
+    clock.at = START + timedelta(minutes=480) - timedelta(seconds=1)
+    response = await _refresh(client, token)
+    assert max_age(response) == "Max-Age=1"
+    token = _cookies(response)[REFRESH_COOKIE]
+    clock.at = START + timedelta(minutes=480)
+
+    _assert_cleared(await _refresh(client, token))
+
+
+async def test_비활성_계정의_갱신은_401이고_그_로그인을_끊는다(
+    client: AsyncClient, accounts: AccountStore, clock: MovingClock, database: ScopedDatabase
+) -> None:
+    await _seed(accounts, "kim.min")
+    first = _cookies(await _login(client))[REFRESH_COOKIE]
+    clock.advance(minutes=1)
+    # 비활성으로 바꾸는 경로는 06이 짓는다. 지금은 데이터베이스에 상태를 직접 넣는다
+    await _execute(database, "UPDATE operator_accounts SET disabled_at = :at", at=clock.at)
+
+    _assert_cleared(await _refresh(client, first))
+
+    assert await _rows(database, "SELECT ended_at FROM operator_logins") == [(clock.at,)]
+    await _execute(database, "UPDATE operator_accounts SET disabled_at = NULL")
+    # 다시 켜도 끊긴 로그인은 돌아오지 않는다
+    _assert_cleared(await _refresh(client, first))
+
+
+async def test_잠긴_계정의_갱신은_401이고_그_로그인을_끊는다(
+    client: AsyncClient, accounts: AccountStore, clock: MovingClock, database: ScopedDatabase
+) -> None:
+    await _seed(accounts, "kim.min")
+    first = _cookies(await _login(client))[REFRESH_COOKIE]
+    await _execute(
+        database,
+        "UPDATE operator_accounts SET failures = 5, locked_until = :until",
+        until=clock.at + timedelta(minutes=1),
+    )
+    # 잠그는 순간에는 로그인을 끊지 않는다
+    assert await _rows(database, "SELECT ended_at FROM operator_logins") == [(None,)]
+
+    clock.advance(seconds=30)
+    _assert_cleared(await _refresh(client, first))
+
+    assert await _rows(database, "SELECT ended_at FROM operator_logins") == [(clock.at,)]
+    # 잠금이 풀린 뒤에도 끊긴 로그인의 번호는 통하지 않는다
+    clock.advance(minutes=2)
+    _assert_cleared(await _refresh(client, first))
+
+
+async def test_로그아웃한_로그인의_번호는_갱신되지_않는다(
+    client: AsyncClient, accounts: AccountStore
+) -> None:
+    await _seed(accounts, "kim.min")
+    first = await _login(client)
+    renewed = await _refresh(client, _cookies(first)[REFRESH_COOKIE])
+    assert (await client.post("/auth/logout", headers=_as_cookie(renewed))).status_code == 204
+
+    _assert_cleared(await _refresh(client, _cookies(renewed)[REFRESH_COOKIE]))
+
+
+async def test_갱신으로_온_번호도_다음_로그인이_치울_때_로그인과_함께_사라진다(
+    client: AsyncClient, accounts: AccountStore, clock: MovingClock, database: ScopedDatabase
+) -> None:
+    await _seed(accounts, "kim.min")
+    latest = await _login(client)
+    for _ in range(3):
+        clock.advance(seconds=20)
+        # 갱신이 낸 새 번호를 이어 쓴다. 처음 번호를 거듭 쓰면 10초 지난 재사용이라 로그인이 끊긴다
+        latest = await _refresh(client, _cookies(latest)[REFRESH_COOKIE])
+    await client.post("/auth/logout", headers=_as_cookie(latest))
+    assert len(await _rows(database, "SELECT * FROM operator_refresh_tokens")) == 4
+
+    await _login(client)
+
+    assert len(await _rows(database, "SELECT * FROM operator_refresh_tokens")) == 1
+
+
+async def test_서명_키를_바꾸면_10초_뒤_옛_키의_짧은_JWT는_401이고_갱신으로_로그인이_이어진다(
+    client: AsyncClient, accounts: AccountStore, clock: MovingClock, database: ScopedDatabase
+) -> None:
+    await _seed(accounts, "kim.min")
+    old = _cookies(await _login(client))
+    out = io.StringIO()
+
+    code = await rotate_key_command(accounts=accounts, clock=clock, stdout=out)
+
+    assert code == 0
+    assert out.getvalue() == f"{ROTATED_TEXT}\n"
+    # 도는 서버는 메모리의 옛 키를 10초까지 쓴다
+    clock.advance(seconds=9)
+    assert (await client.get("/auth/me", headers=_as_cookie_of(old))).status_code == 200
+    clock.advance(seconds=1)
+    assert (await client.get("/auth/me", headers=_as_cookie_of(old))).status_code == 401
+
+    response = await _refresh(client, old[REFRESH_COOKIE])
+
+    assert response.status_code == 204
+    new = _cookies(response)
+    assert new[ACCESS_COOKIE] != old[ACCESS_COOKIE]
+    me = await client.get("/auth/me", headers=_as_cookie_of(new))
+    assert (me.status_code, me.json()["name"]) == (200, "kim.min")
+    assert await _records(database) == [
+        ("login_succeeded", "kim.min", None),
+        ("signing_key_rotated", None, None),
+    ]
+    assert await _rows(database, "SELECT ended_at FROM operator_logins") == [(None,)]
+
+
+def _as_cookie_of(cookies: dict[str, str]) -> dict[str, str]:
+    return {"Cookie": f"{ACCESS_COOKIE}={cookies[ACCESS_COOKIE]}"}
+
+
+async def test_다른_출처의_갱신은_403이고_번호를_쓰지_않는다(
+    client: AsyncClient, accounts: AccountStore, database: ScopedDatabase
+) -> None:
+    await _seed(accounts, "kim.min")
+    old = _cookies(await _login(client))[REFRESH_COOKIE]
+
+    response = await _refresh(client, old, **{"Origin": "https://evil.example"})
+
+    assert response.status_code == 403
+    assert response.json()["code"] == "forbidden"
+    assert "set-cookie" not in response.headers
+    assert await _rows(database, "SELECT used_at FROM operator_refresh_tokens") == [(None,)]
+
+
+async def test_갱신용_번호와_그_해시는_기록과_서버_기록과_응답에_실리지_않는다(
+    client: AsyncClient,
+    accounts: AccountStore,
+    clock: MovingClock,
+    database: ScopedDatabase,
+    stderr: io.StringIO,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    caplog.set_level(logging.DEBUG)
+    await _seed(accounts, "kim.min")
+    old = _cookies(await _login(client))[REFRESH_COOKIE]
+    renewed = await _refresh(client, old)
+    new = _cookies(renewed)[REFRESH_COOKIE]
+    clock.advance(seconds=10)
+    stolen = await _refresh(client, old)
+    unknown = await _refresh(client, CANARY)
+
+    dump = repr(await _rows(database, "SELECT * FROM operator_login_records"))
+    surfaces = [dump, stderr.getvalue(), caplog.text, stolen.text, unknown.text, renewed.text]
+    for surface in surfaces:
+        for secret in (old, new, CANARY, _digest_of(old), _digest_of(new), _digest_of(CANARY)):
+            assert secret not in surface
+
+
 # --- 첫 계정 확인 --------------------------------------------------------------------------------
 
 
@@ -845,7 +1266,7 @@ async def test_최종_사용자_경로는_쿠키로_열리지_않는다(
     assert response.status_code == 401
 
 
-async def test_로그인과_첫_계정_확인과_헬스체크만_인증_없이_답한다(
+async def test_로그인과_갱신과_첫_계정_확인과_헬스체크만_인증_없이_답한다(
     client: AsyncClient,
 ) -> None:
     assert (await client.get("/health")).status_code == 200
@@ -853,6 +1274,11 @@ async def test_로그인과_첫_계정_확인과_헬스체크만_인증_없이_�
     assert (
         await client.post("/auth/login", json={"name": "a", "password": "b"})
     ).status_code == 401
+    # 갱신은 쿠키가 없어도 라우트가 답한다. 미들웨어의 401 이 아니라 지우는 줄이 딸린 401 이다
+    refused = await client.post("/auth/refresh")
+    assert refused.status_code == 401
+    assert len(refused.headers.get_list("set-cookie")) == 2
+    assert PUBLIC_PATHS == {"/health", "/auth/login", "/auth/refresh", "/auth/setup"}
     for method, path in (("GET", "/auth/me"), ("POST", "/auth/logout"), ("GET", "/plugins")):
         response = await client.request(method, path)
         assert response.status_code == 401, path

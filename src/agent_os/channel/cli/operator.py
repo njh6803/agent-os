@@ -1,4 +1,7 @@
-"""운영자 명령(`agent-os operator ...`). 지금은 `system-admin` 하나다.
+"""운영자 명령(`agent-os operator ...`). `system-admin` 과 `rotate-key` 둘이다.
+
+`rotate-key` 는 로그인 쿠키의 서명 키를 새 난수로 바꾼다(ADR 0062 결정 "서명 키"). 데이터베이스에
+닿는 방식은 `system-admin` 과 같고 비밀번호는 받지 않는다.
 
 시스템 관리자는 서버에서 이 명령으로 만든다(ADR 0062 결정 "첫 계정"). 같은 명령이 만들기와 비밀번호
 다시 정하기를 함께 한다. 한 데이터베이스 트랜잭션 안에서 시스템 관리자의 줄을 잠가 읽고 갈래를
@@ -23,6 +26,7 @@
 
 from __future__ import annotations
 
+import os
 import warnings
 from collections.abc import Callable
 from dataclasses import dataclass
@@ -40,6 +44,7 @@ from agent_os.http.accounts import (
     fold_account_name,
     is_account_name,
 )
+from agent_os.http.logins import SIGNING_KEY_BYTES
 from agent_os.http.passwords import PASSWORD_RULE_TEXT, hash_password, password_problem
 
 PASSWORD_PROMPT = "비밀번호: "
@@ -184,6 +189,26 @@ async def system_admin_command(
                 " 다른 이름을 고르십시오.\n"
             )
             return EXIT_FAILED
+
+
+ROTATED_TEXT = (
+    "서명 키를 새로 만들어 바꿨습니다. 도는 `serve`는 10초 안에 새 키를 씁니다."
+    " 10초가 지나면 옛 키로 서명한 짧은 로그인 쿠키는 받지 않지만, 갱신으로 로그인은 이어집니다."
+)
+
+
+async def rotate_key_command(*, accounts: AccountStore, clock: Clock, stdout: TextIO) -> int:
+    """서명 키의 줄을 새 난수로 바꾸고 로그인 기록에 남긴 뒤 종료 코드를 돌려준다.
+
+    옛 키는 남기지 않는다. 키 값은 어느 출력에도 기록에도 싣지 않는다(원칙 V). 데이터베이스 예외는
+    잡지 않고 부르는 쪽(`main`)이 까닭만 싣는 글로 바꾼다.
+    """
+    now = clock.now()
+    async with accounts.transaction() as work:
+        await work.replace_signing_key(os.urandom(SIGNING_KEY_BYTES), at=now)
+        await work.record("signing_key_rotated", at=now, account=None)
+    stdout.write(f"{ROTATED_TEXT}\n")
+    return EXIT_FINISHED
 
 
 async def _decide(work: AccountWork, name: str, password_hash: str, now: datetime) -> _Outcome:

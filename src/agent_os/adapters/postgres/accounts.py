@@ -67,6 +67,7 @@ from agent_os.adapters.postgres.account_tables import (
     REFRESH_LOGIN_ID,
     REFRESH_TOKEN_HASH,
     REFRESH_TOKENS,
+    REFRESH_USED_AT,
     SIGNING_KEY,
     SIGNING_KEY_CREATED_AT,
     SIGNING_KEY_ID,
@@ -77,7 +78,13 @@ from agent_os.adapters.postgres.errors import sqlstate_of
 type Tier = Literal["system_admin", "admin"]
 type Taken = Literal["taken"]
 type RecordKind = Literal[
-    "system_admin_set", "login_succeeded", "login_failed", "locked", "logged_out"
+    "system_admin_set",
+    "login_succeeded",
+    "login_failed",
+    "locked",
+    "logged_out",
+    "refresh_reused",
+    "signing_key_rotated",
 ]
 
 UNIQUE_VIOLATION = "23505"
@@ -111,6 +118,19 @@ class AccountRecord:
     failures: int
     locked_until: datetime | None
     created_at: datetime
+
+
+@dataclass(frozen=True, slots=True)
+class RefreshRecord:
+    """갱신용 번호 한 줄과 그 번호가 속한 로그인 한 건. 포트의 `RefreshRow` 를 시그니처로
+    만족한다."""
+
+    login_id: UUID
+    account: str
+    logged_in_at: datetime
+    refreshed_at: datetime
+    ended_at: datetime | None
+    used_at: datetime | None
 
 
 class _NewAccount(Protocol):
@@ -299,6 +319,66 @@ class PostgresAccountWork:
     async def read_signing_key(self) -> bytes | None:
         query = select(SIGNING_KEY_VALUE).where(SIGNING_KEY_ID == SIGNING_KEY_ROW)
         return await self._guard(lambda: self._scalar_bytes(query))
+
+    async def replace_signing_key(self, key: bytes, *, at: datetime) -> None:
+        # 한 문장으로 바꿔 넣는다. 줄이 없으면 넣고, 있으면 키와 만든 시각만 바꾼다
+        insertion = postgresql.insert(SIGNING_KEY).values(
+            {
+                SIGNING_KEY_ID.name: SIGNING_KEY_ROW,
+                SIGNING_KEY_VALUE.name: key,
+                SIGNING_KEY_CREATED_AT.name: at,
+            }
+        )
+        statement = insertion.on_conflict_do_update(
+            index_elements=[SIGNING_KEY_ID],
+            set_={SIGNING_KEY_VALUE.name: key, SIGNING_KEY_CREATED_AT.name: at},
+        )
+        await self._guard(lambda: self._connection.execute(statement))
+
+    async def lock_refresh(self, token_hash: str) -> RefreshRecord | None:
+        # 로그인 줄을 먼저, 번호 줄을 그다음에 잠근다. 로그인 줄을 지우는
+        # 쪽(`delete_ended_logins`)이 로그인 줄을 잡은 뒤 외래 키 CASCADE 로 번호 줄을 잡는 순서와
+        # 같다. 계정의 줄은 잠그지 않는다(로그인을 여는 쪽이 계정을 잠근 채 로그인 줄을 지워, 둘이
+        # 서로 기다리게 된다)
+        return await self._guard(lambda: self._refresh_row(token_hash))
+
+    async def find(self, name: str) -> AccountRecord | None:
+        return await self._one(_select_accounts().where(ACCOUNT_NAME == name))
+
+    async def use_refresh_token(self, token_hash: str, *, at: datetime) -> None:
+        statement = (
+            update(REFRESH_TOKENS)
+            .where(REFRESH_TOKEN_HASH == token_hash, REFRESH_USED_AT.is_(None))
+            .values(used_at=at)
+        )
+        await self._guard(lambda: self._connection.execute(statement))
+
+    async def touch_login(self, login_id: UUID, *, at: datetime) -> None:
+        statement = update(LOGINS).where(LOGIN_ID == login_id).values(refreshed_at=at)
+        await self._guard(lambda: self._connection.execute(statement))
+
+    async def _refresh_row(self, token_hash: str) -> RefreshRecord | None:
+        owner = select(REFRESH_LOGIN_ID).where(REFRESH_TOKEN_HASH == token_hash)
+        owner_row = (await self._connection.execute(owner)).one_or_none()
+        if owner_row is None:
+            return None
+        login = (
+            select(LOGIN_ID, LOGIN_ACCOUNT, LOGIN_LOGGED_IN_AT, LOGIN_REFRESHED_AT, LOGIN_ENDED_AT)
+            .where(LOGIN_ID == owner_row[0])
+            .with_for_update()
+        )
+        login_row = (await self._connection.execute(login)).one_or_none()
+        if login_row is None:
+            return None
+        # 번호 줄은 로그인 줄을 잡은 뒤 새 문장으로 읽는다. 앞서 온 갱신이 커밋한 쓴 시각이 보인다
+        used = select(REFRESH_USED_AT).where(REFRESH_TOKEN_HASH == token_hash).with_for_update()
+        used_row = (await self._connection.execute(used)).one_or_none()
+        if used_row is None:
+            return None
+        login_id, account, logged_in_at, refreshed_at, ended_at = login_row
+        if not isinstance(login_id, UUID):
+            raise TypeError("로그인 번호가 UUID가 아니다")
+        return RefreshRecord(login_id, account, logged_in_at, refreshed_at, ended_at, used_row[0])
 
     async def _one(self, query: _Row) -> AccountRecord | None:
         return await self._guard(lambda: self._first(query))

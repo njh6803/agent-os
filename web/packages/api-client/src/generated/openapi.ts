@@ -53,6 +53,23 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/auth/refresh": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** 갱신용 번호 쿠키 하나로 로그인을 잇고 새 쿠키 둘을 받는다 */
+    post: operations["refresh_login"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/auth/setup": {
     parameters: {
       query?: never;
@@ -1419,6 +1436,55 @@ export interface operations {
       /** @description 토큰이 없거나 틀리다 */
       401: {
         headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorEnvelope"];
+        };
+      };
+      /** @description 이 요청의 출처를 받지 않는다 */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorEnvelope"];
+        };
+      };
+      /** @description 서버가 요청을 처리하지 못했다 */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorEnvelope"];
+        };
+      };
+    };
+  };
+  refresh_login: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      204: {
+        headers: {
+          /** @description 쿠키 둘(`__Host-aos_at`, `__Host-aos_rt`)을 심거나 지우는 줄이다. 줄이 둘 온다 */
+          "Set-Cookie"?: string;
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description 토큰이 없거나 틀리다 */
+      401: {
+        headers: {
+          /** @description 쿠키 둘(`__Host-aos_at`, `__Host-aos_rt`)을 심거나 지우는 줄이다. 줄이 둘 온다 */
+          "Set-Cookie"?: string;
           [name: string]: unknown;
         };
         content: {

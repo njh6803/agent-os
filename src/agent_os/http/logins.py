@@ -1,10 +1,15 @@
-"""운영자 로그인의 판정: 로그인, 로그아웃, 첫 계정 확인, 서명 키, 해시 전용 스레드(ADR 0062).
+"""운영자 로그인의 판정: 로그인, 갱신, 로그아웃, 첫 계정 확인, 서명 키, 해시 전용 스레드(ADR 0062).
 
 **로그인의 차례**는 명세 admin-login "로그인"이 정한다. 틀린 횟수를 견주기 전에 짧은 트랜잭션에서
 줄을 잠가 센다. 비밀번호는 연결을 쥐지 않은 채 해시 전용 스레드에서 견준다. 맞으면 둘째 트랜잭션에서
 줄을 다시 잠가 해시가 그대로이고 계정이 활성인지 본 뒤에 횟수와 잠금을 지우고 로그인 한 건을 연다.
 같은 계정의 시도를 줄 잠금으로 차례로 세우면 기다리는 시도마다 연결을 하나씩 쥐어 다른 운영자의
 로그인이 연결을 기다리다 실패한다. 그래서 횟수를 먼저 세고 견줌은 트랜잭션 밖에서 한다.
+
+**갱신의 차례.** 갱신용 번호 하나로 한 트랜잭션 안에서 로그인 줄을 잠그고, 번호 줄을 잠가
+읽고, 지금 계정을 읽어 판정한 뒤, 통과하면 옛 번호의 쓴 시각과 새 번호와 로그인의 갱신 시각을
+적는다. 비활성, 잠김, 쓴 지 10초가 지난 번호는 거절하면서 로그인 한 건도 끊는다. 이 거절은 예외가
+아니라 정상 반환이라 트랜잭션이 커밋된다. 판정은 `login_tokens.judge_refresh`가 한다.
 
 **해시 전용 스레드 넷.** 해시 한 번은 19 MiB 를 쓰고, 일꾼 스레드가 정리된 뒤에도 그만큼이 상주로
 남았다(남는 까닭은 어림이다). 해시가 기본 일꾼 스레드 묶음의 여러 스레드(36~43개)에 돌아가며 얹히면
@@ -41,11 +46,13 @@ from agent_os.http.accounts import (
     is_account_name,
 )
 from agent_os.http.login_tokens import (
+    ENDS_LOGIN,
     SIGNING_KEY_REREAD,
     LoginClaims,
     LoginDurations,
     clearing_cookie_lines,
     issue_token,
+    judge_refresh,
     lock_duration,
     login_cookie_lines,
     refresh_max_age,
@@ -55,6 +62,8 @@ from agent_os.http.passwords import hash_password, needs_rehash, password_matche
 
 HASH_THREADS = 4
 SIGNING_KEY_BYTES = 32
+# 갱신용 번호 쿠키의 글자 수 상한. 서버가 내는 번호는 43자이고, 훨씬 긴 값은 해시하지 않는다
+_MAX_REFRESH_TOKEN = 128
 # 가짜 해시를 만드는 글. 어떤 계정의 비밀번호도 아니다
 _FAKE_PASSWORD = "Fake-password-for-timing-1!"
 
@@ -222,6 +231,60 @@ class LoginService:
         )
         max_age = refresh_max_age(self._durations, logged_in_at=now, now=now)
         return login_cookie_lines(access, refresh_token, refresh_max_age=max_age)
+
+    async def refresh(self, token: str | None, *, address: str | None) -> list[str] | None:
+        """갱신용 번호 하나로 로그인을 잇는다. 성공이면 심을 쿠키 줄 둘, 거절이면 `None`.
+
+        짧은 JWT 는 보지 않는다. 번호와 로그인 한 건의 줄을 잠가 판정하고 새 번호를 적는 일은 한
+        트랜잭션이다. 로그인을 끊는 거절(비활성, 잠김, 10초 지난 재사용)은 끊은 것을 적어야 하므로
+        예외로 나오지 않고 정상으로 나와 커밋한다.
+        """
+        # 값을 데이터베이스에 대 보기 전에 모양부터 거른다. ASCII 가 아니면 해시를 만들 수도 없다
+        if token is None or not token.isascii() or not 0 < len(token) <= _MAX_REFRESH_TOKEN:
+            return None
+        key = await self._keys.current()
+        digest = _digest(token)
+        async with self._accounts.transaction() as work:
+            row = await work.lock_refresh(digest)
+            if row is None:
+                return None
+            # 줄을 잠그려 기다린 시간이 판정에 들도록 시각은 잠근 뒤에 읽는다
+            now = self._clock.now()
+            account = await work.find(row.account)
+            if account is None:
+                return None
+            refusal = judge_refresh(
+                durations=self._durations,
+                now=now,
+                logged_in_at=row.logged_in_at,
+                refreshed_at=row.refreshed_at,
+                ended_at=row.ended_at,
+                used_at=row.used_at,
+                disabled_at=account.disabled_at,
+                locked_until=account.locked_until,
+            )
+            if refusal is not None:
+                if refusal in ENDS_LOGIN:
+                    await work.end_login(row.login_id, at=now)
+                if refusal == "reused":
+                    await work.record(
+                        "refresh_reused", at=now, account=account.name, address=address
+                    )
+                return None
+            new_token = secrets.token_urlsafe(32)
+            await work.use_refresh_token(digest, at=now)
+            await work.add_refresh_token(_digest(new_token), row.login_id, at=now)
+            await work.touch_login(row.login_id, at=now)
+        access = issue_token(
+            key,
+            name=account.name,
+            login_id=row.login_id,
+            tier=account.tier,
+            now=now,
+            token_minutes=self._durations.token_minutes,
+        )
+        max_age = refresh_max_age(self._durations, logged_in_at=row.logged_in_at, now=now)
+        return login_cookie_lines(access, new_token, refresh_max_age=max_age)
 
     async def log_out(self, claims: LoginClaims, *, address: str | None) -> list[str]:
         """짧은 JWT 가 가리키는 로그인 한 건을 끊고 쿠키를 지우는 줄 둘을 낸다."""
