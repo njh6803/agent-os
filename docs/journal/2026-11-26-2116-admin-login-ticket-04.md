@@ -111,6 +111,10 @@ CodeRabbit 인라인 셋과 claude-review 지적 둘이 왔다. 판정:
 
 > 사용자(`AskUserQuestion` 답, 여섯째, 예약의 셋째 시도): 질문은 넷째와 같고 "앞의 다섯 번은 모두 GPU 재고 없음으로 끝났고, 지금 남은 파드는 없습니다."로 끝난다. 답 "지금 친다 (Recommended)"(설명: "--yes를 붙여 시험을 시작합니다. 재고가 없으면 거의 비용 없이 끝나고, 30분 뒤 예약이 다시 묻습니다.").
 
+> 사용자(`AskUserQuestion` 답, 일곱째, 합친 판으로 다시 시험): 질문 "병합하려면 로컬 모델 시험을 합친 판으로 한 번 더 쳐야 합니다. 시험이 통과한 뒤 05번 변경을 합쳤는데, 그 안에 시험 범위에 드는 파일(channel/http/router.py) 하나가 들어 있어 규칙상 앞의 통과 기록이 무효입니다. 예상 비용은 이전과 같습니다. 파드가 뜨면 어림 30분에 약 $0.27~$0.59, 최악 90분에 $0.81~$1.77입니다(RTX A5000 파드 2개 시간당 $0.54, RTX 3090 파드 2개 $1.00, A40 파드 2개 $1.18, A40 shared 1개 $0.59). 재고가 없으면 파드가 뜨지 않아 거의 비용 없이 끝납니다. 앞서 통과한 시도는 A40 shared에서 341.5초였고, 파드 목록은 지금 비어 있습니다." 답 "지금 친다 (Recommended)"(설명: "--yes를 붙여 합친 판(90a2b293e)으로 시험을 시작합니다. 통과하면 바로 병합 절차로 넘어갑니다. 재고가 없으면 거의 비용 없이 끝나고, 어떻게 이어 갈지 다시 여쭙니다.").
+
+일곱째 시도(합친 판, 커밋 `90a2b293e9ad79e01b721fec2a666993cb5914d5`, 회차 파일 `round-0001-20261126T184830Z.json`): 통과했다. 회차 번호가 1로 돌아간 것은 앞 상태 폴더가 통과로 정리된 뒤 새로 센 것으로 읽는다(손으로 보지 않은 어림이다). RTX A5000 파드 둘 후보에서는 파드 하나가 2초 만에 만들어졌으나 다른 하나가 재고 없음(HTTP 400)이라 후보가 실패했고, RTX 3090 후보는 둘 다 재고 없음이었으며, A40 파드 둘 후보에서도 파드 하나가 1초 만에 만들어졌으나 다른 하나가 재고 없음이라 실패했다. 끝으로 A40 shared 하나가 떴고 거기서 `uv run pytest -m llm_local` 4건이 모두 통과했다(51.51초, 종료 코드 0). 러너의 총 걸린 시간은 359.5초다. 끝난 뒤 Runpod 파드 목록이 비어 있었다. 비용은 시간당 $0.59에 359.5초로 어림 $0.06이다(실패한 후보에서 잠깐 만들어졌다 사라진 파드 둘의 몫은 더하지 않았고 청구서로 대 보지 않았다).
+
 여섯째 시도(커밋 `4a9e7b7a6`, 회차 파일 `round-0006-20261126T172638Z.json`, 예약의 셋째 시도): 통과했다. RTX A5000 파드 둘과 RTX 3090 파드 둘은 재고 없음(HTTP 400)이었고, A40 파드 둘에서는 파드 하나(`Creation complete after 1s`)만 만들어지고 다른 하나가 재고 없음이라 그 후보는 실패로 끝났다. 끝으로 A40 shared 하나가 떴고 거기서 `uv run pytest -m llm_local` 4건이 모두 통과했다(45.42초, 종료 코드 0). 러너의 총 걸린 시간은 341.5초다. 끝난 뒤 Runpod 파드 목록이 비어 있었다. 비용은 시간당 $0.59에 341.5초로 어림 $0.06이다(A40 후보에서 만들어졌다 사라진 파드 하나의 몫은 더하지 않았고, 청구서로 대 보지 않았다).
 
 다섯째 시도(커밋 `4a9e7b7a6`, 회차 파일 `round-0005-20261126T163255Z.json`, 예약의 둘째 시도): 파드를 만들지 못한 무효 회차다. 종료 코드 2, 걸린 시간 4.5초, 통과 없음. 끝난 뒤 Runpod 파드 목록이 비어 있었다. 러너가 연달은 무효 회차 5번이라며 멈추고 보고하라고 했다.
@@ -121,6 +125,8 @@ CodeRabbit 인라인 셋과 claude-review 지적 둘이 왔다. 판정:
 
 기록 묶음(통과한 여섯째 시도, 러너 출력. 서버 키와 주소는 없다): commit `4a9e7b7a6aee490ac1f8386bdfb4db96ed238b29`, 모델 `GotoAI-Inc/gemma-4-26B-A4B-it-W4A16`·`openai/gpt-oss-20b`, 엔진 vLLM 0.33.0(이미지 `vllm/vllm-openai:v0.33.0`), 서버 옵션 `vllm serve GotoAI-Inc/gemma-4-26B-A4B-it-W4A16 --host 0.0.0.0 --port 8000 --enable-auto-tool-choice --tool-call-parser gemma4 --max-model-len 32768 --revision fdb4e380603cf157783227bd790bfbe921b64610 --gpu-memory-utilization 0.45 --kv-cache-memory=4294967296`와 `vllm serve openai/gpt-oss-20b --host 0.0.0.0 --port 8001 --enable-auto-tool-choice --tool-call-parser openai --gpu-memory-utilization 0.45 --kv-cache-memory=4294967296`, GPU A40, 배치 shared(파드 하나에 두 서버), 통과 4, 토큰 6,328(입력 6,191, 출력 137, 모델 호출 4건, 트레이스 2개), 걸린 시간 341.5초, 시간당 $0.59, 가격표 날짜 2026-11-13, 시험 명령 `uv run pytest -m llm_local`, 시험 종료 코드 0. 러너가 "트레이스를 남기지 않은 LLM 테스트 2개는 세지 못했다"고 알렸으므로 위 토큰은 그 둘을 뺀 값이다. 앞의 다섯 시도는 모두 통과 없음의 무효 회차다.
 
+기록 묶음(병합 조건으로 삼는 일곱째 시도, 합친 판, 러너 출력. 서버 키와 주소는 없다): commit `90a2b293e9ad79e01b721fec2a666993cb5914d5`, 모델과 엔진과 서버 옵션은 여섯째와 같다(모델 `GotoAI-Inc/gemma-4-26B-A4B-it-W4A16`·`openai/gpt-oss-20b`, vLLM 0.33.0 이미지 `vllm/vllm-openai:v0.33.0`, 두 서버의 `vllm serve` 옵션이 위 줄과 글자까지 같다), GPU A40, 배치 shared, 통과 4, 토큰 6,328(입력 6,191, 출력 137, 모델 호출 4건, 트레이스 2개. 트레이스를 남기지 않은 LLM 테스트 2개는 세지 못했다), 걸린 시간 359.5초, 시간당 $0.59, 가격표 날짜 2026-11-13, 시험 명령 `uv run pytest -m llm_local`, 시험 종료 코드 0.
+
 ## 검증 결과(리뷰 반영 뒤)
 
 - `uv run python tools/run_checks.py` 모두 통과(check-ticket, check-notes, lint-imports, zizmor, check-instructions, check-type-escapes, pyright, pyright-linux, run-hooks, pytest 644초, web-verify 785초). ruff는 러너 밖이라 `uv run ruff check .`와 `uv run ruff format --check .`를 따로 쳐 통과했다(마지막 고침 뒤에는 `src`와 `tests`에 다시 쳐 통과).
@@ -128,7 +134,7 @@ CodeRabbit 인라인 셋과 claude-review 지적 둘이 왔다. 판정:
 - 관리 화면 e2e `pnpm -C web/apps/admin exec playwright test`: 11건 가운데 `decision.e2e.ts`의 "멈춘 실행을 승인하면 …" 한 건이 첫 판에 5초 기한에 닿아 빨갰고(이벤트 구역에 `run_finished`가 아직 없었다), 그 파일만 다시 치자 셋 모두 통과했다. 이 변경과 닿는 곳이 아니고 같은 시험이 두 번 연속 빨갛지 않아 진단 절차는 걸지 않았다. 원인은 재지 않았다(부하와 겹친 일시적 지연이라는 것은 어림이다).
 - `uv run --env-file ../../../.env pytest -m llm -q` 24건 통과, 토큰 272,696(입력 267,397, 출력 5,299).
 - 카나리아: 알림이 가리킨 명세 셋(`http_rule_continuation_422`, `http_rule_pre_owner_damage`, `http_rule_llm_widget`)을 새 `claude -p` 세션(2.1.325)으로 실제로 돌려 모두 통과 4, 실패 0, "없음" 섞임 0이다(커밋하기 전의 작업 트리, 커밋 `e0e697425` 위). 이 PR 안에서 처음 도는 것이라 사전 확인으로 갈음하지 않았다. 세 명세의 `# 최신 결과:` 줄을 고쳤다.
-- 로컬 모델 시험(병합 조건): 여섯 번째 시도에서 통과했다. 앞의 다섯 번은 GPU 재고 없음의 무효 회차였다(연달은 무효 5번에서 러너가 멈추고 보고하라고 했고, 사용자가 30분마다 재시도를 골라 시도 때마다 비용 확인을 받았다). 여섯째는 A40 shared에서 `uv run pytest -m llm_local` 4건 통과, 걸린 시간 341.5초다. 시험한 커밋은 `4a9e7b7a6`이고 그 뒤 바뀐 것은 일지와 티켓 문서뿐이다. 끝난 뒤 Runpod 파드 목록이 비어 있었다.
+- 로컬 모델 시험(병합 조건): 여섯 번째 시도에서 통과했다. 앞의 다섯 번은 GPU 재고 없음의 무효 회차였다(연달은 무효 5번에서 러너가 멈추고 보고하라고 했고, 사용자가 30분마다 재시도를 골라 시도 때마다 비용 확인을 받았다). 여섯째는 A40 shared에서 `uv run pytest -m llm_local` 4건 통과, 걸린 시간 341.5초다(시험한 커밋 `4a9e7b7a6`). 그 뒤 05를 합치며 범위의 파일 `channel/http/router.py`가 바뀌어 그 기록은 무효가 됐고, 합친 판 `90a2b293e`로 일곱째 시도를 해서 A40 shared에서 4건이 다시 통과했다(359.5초). 병합 조건의 기록은 일곱째다. 끝난 뒤 Runpod 파드 목록이 비어 있었다.
 - 봇 1회차 반영 뒤(`4a9e7b7a6`): pre-commit 통과, PR의 모든 검사 초록(`claude-review`, `e2e`·`e2e-portal`·`e2e-standalone`·`e2e-widget`, `python`, `ticket`, `verify`, `visual`, `web`, `llm`은 건너뜀). CodeRabbit 2회차는 사용 한도(`Review rate limited`)로 새 지적 없이 끝났다.
 
 ## dev 합치기(05 병합 뒤)
@@ -140,7 +146,7 @@ CodeRabbit 인라인 셋과 claude-review 지적 둘이 왔다. 판정:
 - 권한 표(`src/agent_os/http/permissions.py`)에 `"refresh_login": Open()` 줄을 더했고 `tests/test_permissions.py`의 줄 목록에도 같은 줄을 더했다. 05의 전수 검사가 `refresh_login`을 모른 채 빨개지는 것을 이 줄이 막는다.
 - `openapi.json`은 `uv run python tools/export_openapi.py`로 다시 뽑았으나 달라지지 않았다. 05가 계약을 건드리지 않았으므로 TS 타입도 다시 뽑을 일이 없다.
 - 합친 뒤 `uv run pytest -q tests/test_permissions.py tests/test_operator_accounts_on_runs.py tests/test_login_http.py tests/test_login_tokens.py tests/test_main.py`: 523건 통과(마커로 빠진 9건 제외).
-- 로컬 모델 시험(여섯째 시도)은 합치기 전의 `4a9e7b7a6`로 돌렸다. 05가 더한 것은 권한 검사와 계정 전달(`channel/http/router.py`, `admin/`)이라 시험이 닿는 모델 호출 길은 건드리지 않았다고 본다. 이것은 어림이고 코드로 대 보지 않았다. 합친 판으로 다시 돌리지는 않았다.
+- 로컬 모델 시험(여섯째 시도)은 합치기 전의 `4a9e7b7a6`로 돌렸다. 처음에는 05가 더한 것이 권한 검사와 계정 전달이라 시험이 닿는 길을 건드리지 않았다고 어림하고 다시 돌리지 않으려 했으나, 이것은 틀린 어림이었다. `git diff --name-only 4a9e7b7a6 HEAD`를 `operations.md` LLM 테스트의 범위 경로(`adapters/`, `core/loop.py`·`model.py`·`run.py`, `channel/`, `main.py`, 시험 파일, 의존성)로 좁히자 `src/agent_os/channel/http/router.py` 하나가 나왔고, 규칙상 합쳐 들어온 범위의 변경은 기록을 무효로 만든다. 그래서 합친 판 `90a2b293e`로 시험을 다시 돈다(아래 "일곱째 시도").
 
 ## 이어받을 일
 
