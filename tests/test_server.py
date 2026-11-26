@@ -29,6 +29,7 @@ from httpx import ASGITransport, AsyncClient
 from langchain_core.language_models.fake_chat_models import GenericFakeChatModel
 from pydantic import TypeAdapter
 from starlette.exceptions import HTTPException as StarletteHTTPException
+from tests.fake_accounts import UnusedAccounts
 from tests.fake_checks import UnusedToolChecks
 from tests.fake_database import FakeDatabase
 from tests.fake_models import DEFAULT_MODEL, FakeModels
@@ -45,6 +46,7 @@ from tests.signing import (
 
 from agent_os import server as server_module
 from agent_os.adapters.filesystem import FilesystemPlugins
+from agent_os.admin import conversations as admin_conversations
 from agent_os.admin import http as admin_http
 from agent_os.admin import traces as admin_traces
 from agent_os.admin.connection_check import AutomaticChecks, LaunchingChecks
@@ -52,12 +54,15 @@ from agent_os.admin.http import Health
 from agent_os.admin.traces import CURSOR_PATTERN
 from agent_os.channel.http.end_user import END_USER_PREFIX
 from agent_os.channel.http.router import CHANNEL_PREFIX
+from agent_os.core.conversations import list_conversations
 from agent_os.core.ports import (
     DEFAULT_LIMIT,
     MAX_LIMIT,
     Absent,
     CheckOutcome,
     Clock,
+    ConversationLine,
+    ConversationRow,
     Cursor,
     Disabled,
     ManifestRow,
@@ -68,6 +73,7 @@ from agent_os.core.ports import (
     PluginSource,
     Reached,
     Rules,
+    RunRecord,
     RunRow,
     RunStatus,
     RunSummary,
@@ -95,6 +101,7 @@ from agent_os.http.errors import (
     Surface,
     failure_for,
 )
+from agent_os.http.login_tokens import LoginDurations
 from agent_os.http.sites import Site, Sites
 from agent_os.sdk import (
     PLUGIN_NAME_PATTERN,
@@ -391,10 +398,17 @@ class FakeTrace:
     것은 `tests/adapters/test_jsonl.py` 가 잰다. 쓰기는 불리면 그 자체가 결함이라 터뜨린다.
     """
 
-    def __init__(self, rows: Sequence[RunRow] = (), traces: Sequence[Trace] = ()) -> None:
+    def __init__(
+        self,
+        rows: Sequence[RunRow] = (),
+        traces: Sequence[Trace] = (),
+        records: Sequence[RunRecord | UnreadableTrace] = (),
+    ) -> None:
         self.rows: Sequence[RunRow] = tuple(rows)
         self.traces: Mapping[RunId, Trace] = {trace.run_id: trace for trace in traces}
+        self.records: Sequence[RunRecord | UnreadableTrace] = tuple(records)
         self.calls: list[ListCall] = []
+        self.conversation_calls: list[ListCall] = []
         self.reads: list[RunId] = []
 
     def write(self, event: Event) -> None:
@@ -424,6 +438,17 @@ class FakeTrace:
         if after is not None:
             rows = [row for row in rows if order_key(cursor_of(row)) < order_key(after)]
         return tuple(rows[: DEFAULT_LIMIT if limit is None else limit])
+
+    def list_conversations(
+        self,
+        *,
+        status: RunStatus | None = None,
+        limit: int | None = None,
+        after: Cursor | None = None,
+    ) -> Sequence[ConversationRow]:
+        """묶는 규칙은 core 의 함수 하나라 가짜가 따로 짓지 않는다. 받은 인자를 적어 둔다."""
+        self.conversation_calls.append(ListCall(status=status, limit=limit, after=after))
+        return list_conversations(self.records, status=status, limit=limit, after=after)
 
 
 class IdleTools(UnusedToolChecks):
@@ -477,6 +502,8 @@ def _admin_app(
         end_user_concurrent_runs=None,
         stderr=stderr,
         database=FakeDatabase(),
+        accounts=UnusedAccounts(),
+        login_durations=LoginDurations(),
     )
 
 
@@ -547,9 +574,9 @@ async def test_헬스체크만_토큰_없이_답한다(client: AsyncClient) -> N
     assert response.json() == {"status": "ok"}
 
 
-def test_인증_없이_지나가는_경로의_목록은_헬스체크_하나다() -> None:
+def test_인증_없이_지나가는_경로의_목록은_헬스체크와_로그인과_첫_계정_확인_셋이다() -> None:
     """목록이 문서 없이 자라는 것이 fail-open 으로 돌아가는 길이다(ADR 0011)."""
-    assert PUBLIC_PATHS == frozenset({"/health"})
+    assert PUBLIC_PATHS == frozenset({"/health", "/auth/login", "/auth/setup"})
 
 
 async def test_serve_의_API_문서_판_칸이_설치된_패키지의_판이다(client: AsyncClient) -> None:
@@ -578,8 +605,19 @@ async def test_allowlist_밖의_모든_경로가_토큰_없이_401이다(
 
     for path in documented:
         response = await client.get(path)
-        expected = 200 if path in PUBLIC_PATHS else 401
-        assert response.status_code == expected, path
+        if path == "/health":
+            assert response.status_code == 200, path
+        elif path == "/auth/login":
+            # POST 만 받는 경로다. 인증을 지나 라우터에 닿아 GET 은 405 다. 동작은 로그인 시험이
+            # 잰다
+            assert response.status_code == 405, path
+        elif path in PUBLIC_PATHS:
+            # 첫 계정 확인은 계정 저장소를 읽는데 이 앱의 대역은 저장소를 쓰지 않는다. 그래서 답은
+            # 재지 않고 인증(401)과 출처 검사(403)에 막히지 않았다는 것만 본다. 답은 로그인 시험이
+            # 잰다
+            assert response.status_code not in (401, 403), path
+        else:
+            assert response.status_code == 401, path
 
 
 async def test_문서에_없는_경로도_토큰_없이는_404가_아니라_401이다(client: AsyncClient) -> None:
@@ -1080,7 +1118,7 @@ async def test_허용_출처의_preflight_는_최종_사용자_접두사에서�
     앱이 아는 오퍼레이션 가운데 allowlist 밖의 전부에 허용 출처의 preflight 를 토큰 없이 보낸다.
     CORS 미들웨어가 답하는 것은 최종 사용자 접두사뿐이고, 그 밖은 허용 출처라도 `Origin` 이 있는
     요청이라 출처 검사가 인증보다 먼저 403 으로 막으며 그 403 에는 CORS 헤더도 없다(이 기능 전에는
-    인증의 401 이었다). `PUBLIC_PATHS` 는 그대로 `/health` 하나다 — preflight 는
+    인증의 401 이었다). `PUBLIC_PATHS` 에 든 로그인 경로도 이 열거 밖이다 — preflight 는
     그 목록의 원소가 아니라 CORS 미들웨어의 몫이다(`/health` 의 preflight 는 인증을 지나 라우터의
     405 다). 방향마다 열거가 비면 그 방향은 아무것도 재지 않는다."""
     app = _signed_app(stderr)
@@ -3147,6 +3185,257 @@ def test_트레이스_목록의_HTTP_모양이_core_의_요약과_표지와_같�
     }
 
 
+# 대화 목록 — 이어 가기로 이어진 실행들을 한 줄로(admin-login 07)
+
+CONVERSATION_FIELDS = {
+    "last_run",
+    "status",
+    "agent",
+    "first_request",
+    "requesting_account",
+    "principal",
+    "run_count",
+    "last_started_at",
+    "last_at",
+    "complete",
+}
+
+
+def _record(
+    run_id: str,
+    status: RunStatus,
+    *,
+    started: int,
+    previous: str | None = None,
+    request: str = "질문",
+    account: str | None = None,
+) -> RunRecord:
+    """분 단위로 시작 시각을 준 실행 기록. 마지막 시각은 시작 30초 뒤다."""
+    return RunRecord(
+        summary=_summary(
+            run_id,
+            status,
+            started=timedelta(minutes=started),
+            last=timedelta(minutes=started, seconds=30),
+        ),
+        previous_run=None if previous is None else RunId(previous),
+        request=request,
+        requesting_account=account,
+    )
+
+
+# 이어 간 대화 하나(conv-a → conv-b), 혼자인 실행 하나, 읽히지 않는 트레이스 하나.
+CONVERSATION_BROKEN = UnreadableTrace(run_id=RunId("conv-broken"), reason="깨졌다")
+CONVERSATION_RECORDS: tuple[RunRecord | UnreadableTrace, ...] = (
+    _record("conv-a", "finished", started=0, request="처음 질문", account="kim"),
+    _record("conv-b", "paused", started=5, previous="conv-a", request="이어서"),
+    _record("conv-solo", "failed", started=3, request="가" * 130),
+    CONVERSATION_BROKEN,
+)
+
+
+@pytest.fixture
+def conversation_traces() -> FakeTrace:
+    return FakeTrace(records=CONVERSATION_RECORDS)
+
+
+@pytest.fixture
+def conversation_app(
+    stderr: io.StringIO, plugins: FakePlugins, conversation_traces: FakeTrace
+) -> FastAPI:
+    return _admin_app(plugins=plugins, trace=conversation_traces, stderr=stderr)
+
+
+@pytest.fixture
+async def conversation_client(conversation_app: FastAPI) -> AsyncIterator[AsyncClient]:
+    transport = ASGITransport(app=conversation_app)
+    async with AsyncClient(transport=transport, base_url="http://admin.test") as opened:
+        yield opened
+
+
+def _ends(response: httpx.Response) -> list[str]:
+    return [
+        str(row["last_run"] if "last_run" in row else row["run_id"])
+        for row in response.json()["conversations"]
+    ]
+
+
+async def test_대화_목록이_이어_간_실행들을_한_줄로_묶고_표지를_맨_뒤에_낸다(
+    conversation_client: AsyncClient,
+) -> None:
+    response = await conversation_client.get("/conversations", headers=BEARER)
+
+    assert response.status_code == 200
+    body = response.json()
+    assert set(body) == {"conversations", "next_cursor"}
+    assert body["next_cursor"] is None
+    assert _ends(response) == ["conv-b", "conv-solo", "conv-broken"]
+    assert body["conversations"][0] == {
+        "last_run": "conv-b",
+        "status": "paused",
+        "agent": "calc",
+        "first_request": "처음 질문",
+        "requesting_account": "kim",
+        "principal": "alice",
+        "run_count": 2,
+        "last_started_at": "2026-09-23T12:05:00Z",
+        "last_at": "2026-09-23T12:05:30Z",
+        "complete": True,
+    }
+    assert body["conversations"][2] == {"run_id": "conv-broken", "reason": "깨졌다"}
+
+
+async def test_첫_요청은_앞_120자만_싣고_요청한_계정이_없으면_null_이다(
+    conversation_client: AsyncClient,
+) -> None:
+    response = await conversation_client.get("/conversations", headers=BEARER)
+
+    solo = next(
+        row for row in response.json()["conversations"] if row.get("last_run") == "conv-solo"
+    )
+    assert solo["first_request"] == "가" * 120
+    assert solo["requesting_account"] is None
+
+
+async def test_대화_목록은_질의가_없으면_포트가_상태_없이_기본_개수로_첫_쪽을_받는다(
+    conversation_client: AsyncClient, conversation_traces: FakeTrace
+) -> None:
+    await conversation_client.get("/conversations", headers=BEARER)
+
+    assert conversation_traces.conversation_calls == [
+        ListCall(status=None, limit=DEFAULT_LIMIT, after=None)
+    ]
+    assert conversation_traces.calls == []  # 트레이스 목록 경로는 부르지 않는다
+
+
+async def test_대화_목록의_status_limit_after_가_포트에_그대로_전달된다(
+    conversation_client: AsyncClient, conversation_traces: FakeTrace
+) -> None:
+    first = await conversation_client.get("/conversations", params={"limit": "1"}, headers=BEARER)
+    cursor = first.json()["next_cursor"]
+
+    await conversation_client.get(
+        "/conversations",
+        params={"status": "failed", "limit": "3", "after": cursor},
+        headers=BEARER,
+    )
+
+    # 커서는 끝 실행의 (시작 시각, 식별자)이고 실행 목록의 커서와 같은 모양이다.
+    assert conversation_traces.conversation_calls[-1] == ListCall(
+        status="failed",
+        limit=3,
+        after=Cursor(started_at=T0 + timedelta(minutes=5), run_id=RunId("conv-b")),
+    )
+
+
+async def test_대화_목록을_쪽으로_넘기며_읽으면_겹치거나_빠지지_않는다(
+    conversation_client: AsyncClient,
+) -> None:
+    seen: list[str] = []
+    after: str | None = None
+    for _ in range(5):
+        params = {"limit": "1", **({} if after is None else {"after": after})}
+        response = await conversation_client.get("/conversations", params=params, headers=BEARER)
+        seen.extend(_ends(response))
+        after = response.json()["next_cursor"]
+        if after is None:
+            break
+
+    assert seen == ["conv-b", "conv-solo", "conv-broken"]
+
+
+async def test_대화_목록의_status_는_끝_실행의_상태로_가르고_표지가_빠진다(
+    conversation_client: AsyncClient,
+) -> None:
+    paused = await conversation_client.get(
+        "/conversations", params={"status": "paused"}, headers=BEARER
+    )
+    finished = await conversation_client.get(
+        "/conversations", params={"status": "finished"}, headers=BEARER
+    )
+
+    assert _ends(paused) == ["conv-b"]
+    # 이어 간 앞 실행 conv-a 는 끝이 아니라 줄이 되지 않는다.
+    assert _ends(finished) == []
+
+
+async def test_잘못된_대화_질의는_422이고_포트가_불리지_않는다(
+    conversation_client: AsyncClient, conversation_traces: FakeTrace
+) -> None:
+    bad: list[tuple[dict[str, str], str]] = [
+        ({"status": "running"}, "query.status"),
+        ({"limit": "0"}, "query.limit"),
+        ({"limit": str(MAX_LIMIT + 1)}, "query.limit"),
+        ({"after": "!!!!"}, "query.after"),
+        ({"after": _opaque("not json")}, "query.after"),
+    ]
+    for params, field in bad:
+        response = await conversation_client.get("/conversations", params=params, headers=BEARER)
+
+        assert response.status_code == 422, params
+        assert response.json()["code"] == "invalid_request", params
+        assert [v["field"] for v in response.json()["violations"]] == [field], params
+    assert conversation_traces.conversation_calls == []
+
+
+async def test_대화_목록은_토큰이_없으면_401이고_포트가_불리지_않는다(
+    conversation_client: AsyncClient, conversation_traces: FakeTrace
+) -> None:
+    response = await conversation_client.get("/conversations")
+
+    assert response.status_code == 401
+    assert conversation_traces.conversation_calls == []
+
+
+def test_대화_목록이_계약에_이름_있는_스키마로_박힌다(conversation_app: FastAPI) -> None:
+    document = conversation_app.openapi()
+    schemas = document["components"]["schemas"]
+    operation = document["paths"]["/conversations"]["get"]
+
+    assert operation["operationId"] == "list_conversations"
+    assert operation["responses"]["200"]["content"]["application/json"]["schema"] == {
+        "$ref": "#/components/schemas/ConversationPage"
+    }
+    # 401·403·422 와 라우터 공통의 500 만 적는다. 409 도 429 도 내지 않는다.
+    assert set(operation["responses"]) == {"200", "401", "403", "422", "500"}
+    assert schemas["ConversationPage"]["properties"]["conversations"]["items"] == {
+        "$ref": "#/components/schemas/ConversationRow"
+    }
+    assert schemas["ConversationRow"] == {
+        "anyOf": [
+            {"$ref": "#/components/schemas/Conversation"},
+            {"$ref": "#/components/schemas/UnreadableTrace"},
+        ]
+    }
+    assert set(schemas["ConversationPage"]["required"]) == {"conversations", "next_cursor"}
+    assert set(schemas["Conversation"]["required"]) == CONVERSATION_FIELDS
+    assert schemas["Conversation"]["properties"]["first_request"]["maxLength"] == 120
+
+
+def test_대화_목록의_질의가_트레이스_목록과_같은_셋이다(app: FastAPI) -> None:
+    document = app.openapi()
+
+    def query_of(path: str) -> dict[str, object]:
+        """질의 이름과 타입과 한도. 설명 글은 `status` 의 뜻이 달라 견주지 않는다."""
+        parameters = document["paths"][path]["get"]["parameters"]
+        return {
+            parameter["name"]: {
+                key: value for key, value in parameter["schema"].items() if key != "description"
+            }
+            for parameter in parameters
+        }
+
+    assert query_of("/conversations") == query_of("/traces")
+
+
+def test_대화_목록의_HTTP_모양이_core_의_대화_줄과_같은_필드를_든다() -> None:
+    """관리 쪽 모델이 core 의 것을 옮긴 것이라 필드 목록이 두 곳이다. core 에 필드가 늘면 여기가
+    빨개져 관리 쪽이 조용히 뒤처지지 않는다."""
+    assert set(admin_conversations.Conversation.model_fields) == {
+        field.name for field in dataclasses.fields(ConversationLine)
+    }
+
+
 # 트레이스 상세 — 무엇이 어긋났는지 되짚는 자리(티켓 06)
 
 
@@ -3460,7 +3749,8 @@ def test_403은_운영자_경로_전부가_문서에_적고_health_와_최종_�
 
     for method, path in operations:
         responses = paths[path][method.lower()]["responses"]
-        checked = path not in PUBLIC_PATHS and _surface_of(path) != "end_user"
+        # 로그인과 첫 계정 확인은 인증 없이 열리지만 출처 검사는 받으므로 403 을 문서에 적는다
+        checked = path != "/health" and _surface_of(path) != "end_user"
         assert ("403" in responses) is checked, (method, path)
         if checked:
             reference = responses["403"]["content"]["application/json"]["schema"]["$ref"]

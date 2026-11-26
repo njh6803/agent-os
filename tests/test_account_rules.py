@@ -15,7 +15,9 @@ from agent_os.http.passwords import (
     PASSWORD_RULE_TEXT,
     PasswordProblem,
     hash_password,
+    needs_rehash,
     normalize_password,
+    password_matches,
     password_problem,
 )
 
@@ -190,3 +192,30 @@ def test_해시는_정규화한_글로_만들어_져_정규화한_글로_견줘�
 
 def test_같은_비밀번호도_해시는_매번_다르다() -> None:
     assert hash_password("Abcdef1!") != hash_password("Abcdef1!")
+
+
+def test_맞는_비밀번호만_저장_값과_맞고_정규화한_글로_견준다() -> None:
+    hashed = hash_password("Ａbcdef1!")
+
+    assert password_matches(hashed, "Abcdef1!") is True
+    assert password_matches(hashed, "Ａbcdef1!") is True
+    assert password_matches(hashed, "Abcdef1?") is False
+
+
+@pytest.mark.parametrize(
+    "stored",
+    ["", "not-a-hash", "$argon2id$v=19$m=19456,t=2,p=1$c2FsdA$aGFzaA", "$2b$12$abcdefgh"],
+    ids=["빈 값", "해시가 아닌 글", "깨진 Argon2", "다른 해시 형식"],
+)
+def test_저장_값이_깨졌으면_예외가_아니라_틀림이다(stored: str) -> None:
+    assert password_matches(stored, "Abcdef1!") is False
+
+
+def test_해시가_인코딩하지_못하는_글자가_든_비밀번호는_틀림이다() -> None:
+    assert password_matches(hash_password("Abcdef1!"), "Abcdef1!\ud800") is False
+
+
+def test_고정한_매개변수와_다른_저장_값만_다시_해시가_필요하다() -> None:
+    assert needs_rehash(hash_password("Abcdef1!")) is False
+    weaker = PasswordHasher(time_cost=1, memory_cost=8, parallelism=1).hash("Abcdef1!")
+    assert needs_rehash(weaker) is True

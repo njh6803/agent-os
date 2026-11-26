@@ -23,6 +23,7 @@ import enum
 import unicodedata
 
 from argon2 import PasswordHasher
+from argon2.exceptions import InvalidHashError, VerificationError
 
 MIN_LENGTH = 8
 MAX_LENGTH = 128
@@ -74,6 +75,23 @@ def hash_password(password: str) -> str:
     짝 없는 서로게이트가 든 글은 해시에서 `UnicodeEncodeError`로 끝나므로 규칙이 먼저 걸러야 한다.
     """
     return _HASHER.hash(normalize_password(password))
+
+
+def password_matches(stored_hash: str, password: str) -> bool:
+    """받은 비밀번호가 저장 값과 맞는가. 정규화한 글로 견준다.
+
+    저장 값이 깨졌거나 비밀번호에 해시가 인코딩하지 못하는 글자(짝 없는 서로게이트)가 든 것도
+    틀린 비밀번호로 끝난다. 부르는 쪽이 이벤트 루프를 막지 않게 스레드로 넘긴다.
+    """
+    try:
+        return _HASHER.verify(stored_hash, normalize_password(password))
+    except (VerificationError, InvalidHashError, UnicodeEncodeError):
+        return False
+
+
+def needs_rehash(stored_hash: str) -> bool:
+    """저장 값의 매개변수가 지금 고정한 것과 다른가. 맞으면 로그인이 성공할 때 다시 해시한다."""
+    return _HASHER.check_needs_rehash(stored_hash)
 
 
 def _is_ascii_alphanumeric(char: str) -> bool:

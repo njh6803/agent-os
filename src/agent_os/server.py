@@ -16,11 +16,14 @@ from typing import TextIO
 
 from fastapi import FastAPI
 
+from agent_os.admin.auth import auth_router
 from agent_os.admin.connection_check import AutomaticChecks, LaunchingChecks
 from agent_os.admin.http import Health, admin_router
 from agent_os.channel.http.end_user import END_USER_PREFIX
 from agent_os.channel.http.router import CHANNEL_PREFIX, channel_router
 from agent_os.core.ports import Clock, ModelSource, PluginSource, ToolSource, TraceStore
+from agent_os.core.run import DEFAULT_RUN_TIMEOUT_SECONDS
+from agent_os.http.accounts import AccountStore
 from agent_os.http.auth import RequireToken, SharedToken, SiteSigned
 from agent_os.http.cors import CorsUnderPrefix
 from agent_os.http.database import CheckDatabase, Database
@@ -30,6 +33,8 @@ from agent_os.http.errors import (
     EndUserPaths,
     install_error_handlers,
 )
+from agent_os.http.login_tokens import LoginDurations
+from agent_os.http.logins import LoginService
 from agent_os.http.origin import CheckOrigin
 from agent_os.http.sites import Sites
 from agent_os.sdk import PluginName, Principal
@@ -63,6 +68,8 @@ def create_app(
     end_user_concurrent_runs: int | None,
     stderr: TextIO,
     database: Database,
+    accounts: AccountStore,
+    login_durations: LoginDurations,
 ) -> FastAPI:
     """관리 API 와 HTTP 채널과 최종 사용자 경로가 선 앱 하나. 포트는 부르는 쪽이 만들어 넘긴다.
 
@@ -89,6 +96,10 @@ def create_app(
     전역 동시 실행 상한은 모든 사이트를 합친 최종 사용자 경로의 동시 실행 수이고 채널이 센다. 없음은
     채널의 기본값이다 — 같은 이유로 여기서 짓지 않는다. 사이트마다의 상한은 사이트 목록이 든다
     (ADR 0023).
+
+    계정 저장소(`accounts`)와 유지 시간(`login_durations`)은 로그인 경로의 몫이다. 공유 토큰을 걷기
+    전까지 운영자 경로는 공유 토큰과 로그인 쿠키를 함께 받는다(`RequireToken`). 로그인 경로의
+    수명(해시 전용 스레드와 서명 키의 줄)은 라우터가 들고 와 앱의 수명에 합쳐진다.
 
     빈 토큰을 거부하는 이유는 인증 없이 도는 면을 기본값으로 남기지 않기 위해서다(ADR 0011). 같은
     두 토큰을 거부하는 이유는 같으면 토큰을 가른 것이 무효인데 요청 시점에는 그것을 알아챌 길이
@@ -120,6 +131,18 @@ def create_app(
         title=_TITLE,
         description=_DESCRIPTION,
         version=version("agent-os"),
+    )
+    login = LoginService(accounts=accounts, clock=clock, durations=login_durations)
+    # 지금 누구인지의 답에 싣는 실행 제한 시간. 주지 않았으면 core 가 쓰는 기본값을 읽어 채운다.
+    # 여기에도 관리 층에도 600 을 따로 적지 않는다
+    app.include_router(
+        auth_router(
+            login=login,
+            token_minutes=login_durations.token_minutes,
+            run_timeout_seconds=float(
+                DEFAULT_RUN_TIMEOUT_SECONDS if run_timeout_seconds is None else run_timeout_seconds
+            ),
+        )
     )
     # 접속 확인은 포트가 아니라 포트에서 꺼낸 확인 함수만 관리에 넘긴다. `connect` 는 넘기지 않는다.
     app.include_router(
@@ -156,6 +179,8 @@ def create_app(
             CHANNEL_PREFIX: SharedToken(channel_token),
             END_USER_PREFIX: SiteSigned(sites=sites, clock=clock),
         },
+        # 공유 토큰과 로그인 쿠키를 함께 받는 기간이다. 공유 토큰을 걷는 티켓이 닫는다
+        login=login,
     )
     app.add_middleware(CheckOrigin, exempt_prefix=END_USER_PREFIX)
     app.add_middleware(CatchUnexpected, end_user=end_user)

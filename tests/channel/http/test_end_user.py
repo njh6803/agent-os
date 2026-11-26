@@ -35,6 +35,7 @@ from langchain_core.messages.tool import ToolCall as LangchainToolCall
 from langchain_core.outputs import ChatResult
 from langchain_core.runnables import Runnable
 from starlette.types import Message, Scope
+from tests.fake_accounts import UnusedAccounts
 from tests.fake_checks import UnusedToolChecks
 from tests.fake_database import FakeDatabase
 from tests.fake_models import DEFAULT_MODEL, FakeModels, model_manifest
@@ -52,6 +53,7 @@ from agent_os.channel.http.runs import BACKLOG_FRAMES
 from agent_os.core.ports import (
     ChatModel,
     Clock,
+    ConversationRow,
     Cursor,
     ManifestRow,
     ModelSource,
@@ -73,6 +75,7 @@ from agent_os.core.ports import (
     WriteOutcome,
 )
 from agent_os.http.errors import INTERNAL_MESSAGE, NOT_FOUND_MESSAGE, UNAVAILABLE_MESSAGE
+from agent_os.http.login_tokens import LoginDurations
 from agent_os.http.sites import Site, SiteLimits, Sites
 from agent_os.sdk import (
     AgentContext,
@@ -439,6 +442,15 @@ class FakeTrace:
     ) -> Sequence[RunRow]:
         raise NotImplementedError("최종 사용자 경로는 목록을 읽지 않는다")
 
+    def list_conversations(
+        self,
+        *,
+        status: RunStatus | None = None,
+        limit: int | None = None,
+        after: Cursor | None = None,
+    ) -> Sequence[ConversationRow]:
+        raise NotImplementedError("최종 사용자 경로는 대화 목록을 읽지 않는다")
+
     def of(self, run_id: RunId) -> tuple[Event, ...]:
         return tuple(event for event in self.events if event.run_id == run_id)
 
@@ -604,6 +616,8 @@ def _app(
         end_user_concurrent_runs=end_user_concurrent_runs,
         stderr=stderr or io.StringIO(),
         database=FakeDatabase(),
+        accounts=UnusedAccounts(),
+        login_durations=LoginDurations(),
     )
 
 

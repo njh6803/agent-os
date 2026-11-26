@@ -20,6 +20,7 @@ from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from getpass import GetPassWarning
+from uuid import UUID
 
 import pytest
 from argon2 import PasswordHasher
@@ -479,6 +480,9 @@ class _Row:
     created_at: datetime = NOW
 
 
+_NOT_USED = "시스템 관리자 명령은 로그인의 메서드를 쓰지 않는다"
+
+
 class _RacingWork:
     """처음 읽을 때는 시스템 관리자가 없고 넣기는 늘 `"taken"` 이다. 이긴 쪽이 있으면 다시 읽을 때
     보인다."""
@@ -509,8 +513,47 @@ class _RacingWork:
     async def end_logins(self, name: str, *, at: datetime) -> None:
         self.written.append("end_logins")
 
-    async def record(self, kind: RecordKind, *, at: datetime, account: str) -> None:
+    async def record(
+        self,
+        kind: RecordKind,
+        *,
+        at: datetime,
+        account: str | None,
+        address: str | None = None,
+    ) -> None:
         self.written.append("record")
+
+    # 아래는 로그인이 쓰는 메서드다. 시스템 관리자 명령은 부르지 않으므로 불리면 터진다.
+    async def any_account(self) -> bool:
+        raise AssertionError(_NOT_USED)
+
+    async def set_failures(
+        self, name: str, *, failures: int, locked_until: datetime | None
+    ) -> None:
+        raise AssertionError(_NOT_USED)
+
+    async def clear_failures(self, name: str) -> None:
+        raise AssertionError(_NOT_USED)
+
+    async def delete_ended_logins(
+        self, name: str, *, idle_before: datetime, total_before: datetime
+    ) -> None:
+        raise AssertionError(_NOT_USED)
+
+    async def open_login(self, login_id: UUID, name: str, *, at: datetime) -> None:
+        raise AssertionError(_NOT_USED)
+
+    async def add_refresh_token(self, token_hash: str, login_id: UUID, *, at: datetime) -> None:
+        raise AssertionError(_NOT_USED)
+
+    async def end_login(self, login_id: UUID, *, at: datetime) -> None:
+        raise AssertionError(_NOT_USED)
+
+    async def ensure_signing_key(self, key: bytes, *, at: datetime) -> None:
+        raise AssertionError(_NOT_USED)
+
+    async def read_signing_key(self) -> bytes | None:
+        raise AssertionError(_NOT_USED)
 
 
 class _RacingStore:

@@ -18,6 +18,7 @@ from collections.abc import AsyncGenerator, AsyncIterator
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
+from uuid import uuid4
 
 import pytest
 import pytest_asyncio
@@ -26,7 +27,13 @@ from sqlalchemy.dialects import postgresql
 from tests.postgres_support import plain
 from tools.database_for_tests import ScopedDatabase
 
-from agent_os.adapters.postgres.account_tables import ACCOUNTS, LOGIN_RECORDS, LOGINS
+from agent_os.adapters.postgres.account_tables import (
+    ACCOUNTS,
+    LOGIN_RECORDS,
+    LOGINS,
+    REFRESH_TOKENS,
+    SIGNING_KEY,
+)
 from agent_os.adapters.postgres.accounts import AccountStoreError
 from agent_os.adapters.postgres.database import (
     PostgresDatabase,
@@ -257,13 +264,167 @@ async def test_블록이_내는_예외는_그대로_나간다(accounts: AccountS
     assert str(raised.value) == "그대로"
 
 
+# --- 로그인 경로가 쓰는 메서드 -------------------------------------------------------------------
+
+
+async def test_계정이_하나라도_있는지_답한다(accounts: AccountStore) -> None:
+    async with _work(accounts) as work:
+        assert await work.any_account() is False
+        await work.add(_new("kim.min", "admin"))
+        assert await work.any_account() is True
+
+
+async def test_틀린_횟수와_잠금을_적고_지운다(accounts: AccountStore) -> None:
+    async with _work(accounts) as work:
+        await work.add(_new("kim.min", "admin"))
+        await work.set_failures("kim.min", failures=5, locked_until=LATER)
+    async with _work(accounts) as work:
+        row = await work.lock("kim.min")
+        assert row is not None
+        assert (row.failures, row.locked_until) == (5, LATER)
+        await work.clear_failures("kim.min")
+    async with _work(accounts) as work:
+        row = await work.lock("kim.min")
+        assert row is not None
+        assert (row.failures, row.locked_until) == (0, None)
+
+
+async def test_로그인_한_건과_갱신용_번호_해시를_적고_그_해시만_남는다(
+    database: ScopedDatabase, accounts: AccountStore
+) -> None:
+    login_id = uuid4()
+    async with _work(accounts) as work:
+        await work.add(_new("kim.min", "admin"))
+        await work.open_login(login_id, "kim.min", at=NOW)
+        await work.add_refresh_token("a" * 64, login_id, at=NOW)
+    async with plain(database) as connection:
+        logins = (
+            await connection.execute(
+                text(
+                    "SELECT id, account, logged_in_at, refreshed_at, ended_at FROM operator_logins"
+                )
+            )
+        ).all()
+        tokens = (
+            await connection.execute(
+                text(
+                    "SELECT token_hash, login_id, created_at, used_at FROM operator_refresh_tokens"
+                )
+            )
+        ).all()
+    assert [tuple(row) for row in logins] == [(login_id, "kim.min", NOW, NOW, None)]
+    assert [tuple(row) for row in tokens] == [("a" * 64, login_id, NOW, None)]
+
+
+async def test_로그인_한_건을_끝내면_끝난_시각이_적히고_다시_끝내도_처음_시각이_남는다(
+    database: ScopedDatabase, accounts: AccountStore
+) -> None:
+    login_id = uuid4()
+    async with _work(accounts) as work:
+        await work.add(_new("kim.min", "admin"))
+        await work.open_login(login_id, "kim.min", at=NOW)
+        await work.end_login(login_id, at=LATER)
+    async with _work(accounts) as work:
+        await work.end_login(login_id, at=LATER + timedelta(hours=1))
+    async with plain(database) as connection:
+        ended = (
+            await connection.execute(text("SELECT ended_at FROM operator_logins"))
+        ).scalar_one()
+    assert ended == LATER
+
+
+async def test_끝났거나_쉬었거나_너무_오래된_로그인만_지우고_갱신용_번호도_함께_지운다(
+    database: ScopedDatabase, accounts: AccountStore
+) -> None:
+    ended, idle, old, alive, other = (uuid4() for _ in range(5))
+    async with _work(accounts) as work:
+        await work.add(_new("kim.min", "admin"))
+        await work.add(_new("lee.jin", "admin"))
+        for login_id in (ended, idle, old, alive):
+            await work.open_login(login_id, "kim.min", at=NOW)
+            await work.add_refresh_token(f"{login_id.hex}", login_id, at=NOW)
+        await work.open_login(other, "lee.jin", at=NOW)
+        await work.end_login(ended, at=NOW)
+    # 쉰 로그인은 마지막 갱신이 쉬는 기준 이전이고, 오래된 로그인은 처음 로그인한 때가 총 기준
+    # 이전이다
+    async with plain(database, autocommit=True) as connection:
+        await connection.execute(
+            text("UPDATE operator_logins SET refreshed_at = :at WHERE id = :id"),
+            {"at": NOW - timedelta(hours=2), "id": idle},
+        )
+        await connection.execute(
+            text("UPDATE operator_logins SET logged_in_at = :at WHERE id = :id"),
+            {"at": NOW - timedelta(days=2), "id": old},
+        )
+    async with _work(accounts) as work:
+        await work.delete_ended_logins(
+            "kim.min", idle_before=NOW - timedelta(hours=1), total_before=NOW - timedelta(days=1)
+        )
+    async with plain(database) as connection:
+        left = {
+            row[0]
+            for row in (await connection.execute(text("SELECT id FROM operator_logins"))).all()
+        }
+        tokens = {
+            row[0]
+            for row in (
+                await connection.execute(text("SELECT token_hash FROM operator_refresh_tokens"))
+            ).all()
+        }
+    assert left == {alive, other}
+    assert tokens == {alive.hex}
+
+
+async def test_서명_키는_없을_때만_들어가고_둘이_함께_넣어도_하나로_모인다(
+    database: ScopedDatabase, accounts: AccountStore
+) -> None:
+    first, second = b"\x01" * 32, b"\x02" * 32
+    async with _work(accounts) as work:
+        assert await work.read_signing_key() is None
+        await work.ensure_signing_key(first, at=NOW)
+        await work.ensure_signing_key(second, at=LATER)
+    async with _work(accounts) as work:
+        assert await work.read_signing_key() == first
+    await asyncio.gather(*(_ensure_key(accounts, bytes([index]) * 32) for index in range(3, 8)))
+    async with _work(accounts) as work:
+        assert await work.read_signing_key() == first
+    async with plain(database) as connection:
+        count = (
+            await connection.execute(text("SELECT count(*) FROM operator_signing_key"))
+        ).scalar_one()
+    assert count == 1
+
+
+async def _ensure_key(accounts: AccountStore, key: bytes) -> None:
+    async with _work(accounts) as work:
+        await work.ensure_signing_key(key, at=NOW)
+
+
+async def test_로그인_기록은_접속_주소를_함께_적는다(
+    database: ScopedDatabase, accounts: AccountStore
+) -> None:
+    async with _work(accounts) as work:
+        await work.add(_new("kim.min", "admin"))
+        await work.record("login_failed", at=NOW, account="kim.min", address="203.0.113.7")
+        await work.record("locked", at=LATER, account="kim.min")
+    async with plain(database) as connection:
+        result = await connection.execute(
+            text("SELECT kind, account, address FROM operator_login_records ORDER BY seq")
+        )
+        rows = [tuple(row) for row in result.all()]
+    assert rows == [
+        ("login_failed", "kim.min", "203.0.113.7"),
+        ("locked", "kim.min", None),
+    ]
+
+
 # --- 표 정의가 실제 표와 맞는다 ------------------------------------------------------------------
 
 
 async def test_표_정의의_칸이_실제_표의_칸과_이름과_타입과_비어도_됨까지_같다(
     database: ScopedDatabase,
 ) -> None:
-    for table in (ACCOUNTS, LOGINS, LOGIN_RECORDS):
+    for table in (ACCOUNTS, LOGINS, LOGIN_RECORDS, REFRESH_TOKENS, SIGNING_KEY):
         async with plain(database) as connection:
             result = await connection.execute(
                 text(

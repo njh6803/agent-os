@@ -31,6 +31,12 @@ from agent_os.adapters.postgres.database import (
     upgrade_failed_text,
     upgraded_text,
 )
+from agent_os.http.login_tokens import (
+    IDLE_MINUTES_ENV,
+    TOKEN_MINUTES_ENV,
+    TOTAL_MINUTES_ENV,
+    read_login_durations,
+)
 from agent_os.main import NO_DATABASE_URL_DIAGNOSTIC, UNREADABLE_DATABASE_URL_DIAGNOSTIC
 from widget_admin import database as widget_database
 from widget_admin import main as widget_main
@@ -157,6 +163,10 @@ STOP_TEXT_LABELS = (
     "변수가 없거나 비었다",
     "읽지 못했다",
     "다시 시도한다",
+    "로그인 증표의 수명이 범위 밖이다",
+    "로그인 쉬는 시간이 범위 밖이다",
+    "로그인 총 시간이 범위 밖이다",
+    "로그인 증표의 수명이 쉬는 시간 이상이다",
     "닿지 못했다",
     "비밀번호",
     "접속을 허락하지 않았다",
@@ -199,18 +209,35 @@ def 없는_13절_항목(guide: str) -> list[str]:
     return [f"{word}: {item}" for word, item in SECTION_13_REQUIRED.items() if word not in section]
 
 
+def 로그인_설정의_글(env: dict[str, str]) -> str:
+    """유지 시간 설정을 틀리게 준 `serve` 가 찍는 글. 맞는 값이면 글이 없으므로 시험이 실패한다."""
+    result = read_login_durations(env)
+    assert isinstance(result, str), env
+    return result
+
+
 def 제품의_멈출_때의_글() -> dict[str, str]:
     """제품이 멈출 때와 다시 시도할 때 찍는 글. 갈래마다 제품 코드가 글을 짓는 자리에서 가져온다.
 
     값이 들어가는 자리(주소, 까닭, 판)는 `<자리>`, `<까닭>`, `<판>` 으로 채운다. 안내의 표가 같은
     자리 표시로 그 글을 싣는다. 다시 시도하는 시간은 기본 값(30초)이고 안내가 그 숫자를 적는다.
     """
-    place, reason, revision = "<자리>", "<까닭>", "<판>"
+    place, reason, revision, value = "<자리>", "<까닭>", "<판>", "<값>"
     seconds = DEFAULT_RETRY_SECONDS
     return {
         "변수가 없거나 비었다": NO_DATABASE_URL_DIAGNOSTIC,
         "읽지 못했다": UNREADABLE_DATABASE_URL_DIAGNOSTIC,
         "다시 시도한다": retry_notice(place, seconds),
+        "로그인 증표의 수명이 범위 밖이다": 로그인_설정의_글({TOKEN_MINUTES_ENV: value}),
+        "로그인 쉬는 시간이 범위 밖이다": 로그인_설정의_글({IDLE_MINUTES_ENV: value}),
+        # 총 시간의 아래 한도는 쉬는 시간의 값을 따라간다. 기본값(30분)이 아닌 600분으로 만들어,
+        # 글이 아래 한도를 고정값으로 찍으면 안내의 자리표시자와 어긋나게 한다
+        "로그인 총 시간이 범위 밖이다": 로그인_설정의_글(
+            {IDLE_MINUTES_ENV: "600", TOTAL_MINUTES_ENV: value}
+        ).replace("600분 이상", "<쉬는 시간>분 이상"),
+        "로그인 증표의 수명이 쉬는 시간 이상이다": 로그인_설정의_글(
+            {TOKEN_MINUTES_ENV: "10", IDLE_MINUTES_ENV: "10"}
+        ).replace("10분", "<분>분"),
         "닿지 못했다": unreached_text(Failure.TRANSIENT, place, reason, seconds),
         "비밀번호": unreached_text(Failure.PASSWORD, place, reason, seconds),
         "접속을 허락하지 않았다": unreached_text(Failure.NOT_ALLOWED, place, reason, seconds),
@@ -473,8 +500,11 @@ def test_같은_안내_줄을_쓰는_두_행_가운데_한_행에서만_빠져�
     assert 없는_글(changed, texts) == [f"접속을 허락하지 않았다: {hint}"]
 
 
-def test_위젯_관리_서버가_멈출_때_찍는_글의_갈래는_제품과_같다() -> None:
-    assert tuple(위젯_관리_서버의_멈출_때의_글()) == STOP_TEXT_LABELS
+def test_위젯_관리_서버가_멈출_때_찍는_글의_갈래는_로그인_설정을_뺀_제품과_같다() -> None:
+    # 로그인이 유지되는 시간(`AGENT_OS_LOGIN_*`)은 `serve` 만 읽는 설정이라 위젯 관리 서버에는 없다.
+    without_login = tuple(label for label in STOP_TEXT_LABELS if not label.startswith("로그인 "))
+    assert without_login != STOP_TEXT_LABELS, "제품의 갈래에서 뺄 로그인 갈래가 없다"
+    assert tuple(위젯_관리_서버의_멈출_때의_글()) == without_login
 
 
 def test_위젯_관리_서버의_접속_실패와_표_견줌의_갈래마다_표의_글이_하나씩_있다() -> None:
