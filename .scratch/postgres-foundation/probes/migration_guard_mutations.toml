@@ -43,8 +43,8 @@ expect = "red"
 expect_output = ['postgres/migrations/env.py` 를 새로 더했다']
 [[mutation.edit]]
 file = "tools/check_notes.py"
-old = '''c.path.startswith(f"{PRODUCT_MIGRATIONS}/")'''
-new = '''c.path.startswith("src/agent_os/adapters/postgres/")'''
+old = '''c.path.startswith(tuple(f"{f}/" for f in PRODUCT_MIGRATION_FOLDERS))'''
+new = '''c.path.startswith(("src/agent_os/adapters/postgres/", f"{WIDGET_MIGRATIONS}/"))'''
 
 [[mutation]]
 name = "고치기만 한 제품 마이그레이션도 새로 더한 것으로 센다"
@@ -53,8 +53,18 @@ expect = "red"
 expect_output = ['versions/0002_second.py` 를 새로 더했다']
 [[mutation.edit]]
 file = "tools/check_notes.py"
-old = '''c.status == "A" and c.path.startswith(f"{PRODUCT_MIGRATIONS}/")'''
-new = '''c.status != "D" and c.path.startswith(f"{PRODUCT_MIGRATIONS}/")'''
+old = '''c.status == "A" and c.path.startswith(tuple(f"{f}/" for f in PRODUCT_MIGRATION_FOLDERS))'''
+new = '''c.status != "D" and c.path.startswith(tuple(f"{f}/" for f in PRODUCT_MIGRATION_FOLDERS))'''
+
+[[mutation]]
+name = "위젯 쪽 마이그레이션 폴더를 짝의 대상에서 뺀다"
+tests = ["tests/tools/test_check_notes.py", "-k", "위젯_쪽_마이그레이션_폴더의_새_파일"]
+expect = "red"
+expect_output = ["Right contains one more item: 'widget-admin/src/widget_admin/migrations/versions/0002_second.py'"]
+[[mutation.edit]]
+file = "tools/check_notes.py"
+old = '''PRODUCT_MIGRATION_FOLDERS = (PRODUCT_MIGRATIONS, WIDGET_MIGRATIONS)'''
+new = '''PRODUCT_MIGRATION_FOLDERS = (PRODUCT_MIGRATIONS,)'''
 
 # --- 마이그레이션 폴더의 꼴(tests/test_postgres_migration_shape.py) ------------
 

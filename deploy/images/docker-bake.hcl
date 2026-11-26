@@ -1,4 +1,4 @@
-# 이미지 넷을 한 번에 짓는 목록(release-image 티켓 11, .scratch/release-image/spec.md "판 내기 워크플로").
+# 이미지 다섯을 한 번에 짓는 목록(release-image 티켓 11, .scratch/release-image/spec.md "판 내기 워크플로").
 # 판 내기 워크플로(.github/workflows/release.yml)가 `docker/bake-action`으로 두 번 부른다. 첫 번째는 증명 없이
 # 러너의 Docker 에 실어 단독 배포 시험과 점검을 돌리는 짓기이고, 두 번째는 같은 빌더가 캐시로 다시 지어 증명과
 # 함께 커밋 해시 태그로만 올리는 짓기다. 두 번 다 같은 이 파일을 쓰고 달라지는 것은 아래 변수 값뿐이다.
@@ -7,9 +7,9 @@
 # 같은 폴더의 `<이름>.Dockerfile.dockerignore` 는 각 Dockerfile 머리 주석이 원천이다. 로컬에서 같은 이미지를
 # 짓는 길은 web/packages/e2e-standalone/e2e/stack.ts 의 `imagesToRun` 이다(같은 인자를 준다).
 #
-# 이름은 둘이다. 짓기 대상 이름(`serve`, `admin`, `widget`, `portal`)은 코드의 이름이고 Dockerfile 과 compose 서비스와
-# 점검 결과 파일이 따른다. Docker Hub 저장소 이름(`agent-os-runtime`, `agent-os-admin`, `agent-os-widget`,
-# `agent-os-widget-test-page`)은 아래 `tags` 의 `${NAMESPACE}/<저장소>:${TAG}` 가 정한다. 둘의 대응은 이 파일이 유일하게 정하고,
+# 이름은 둘이다. 짓기 대상 이름(`serve`, `admin`, `widget`, `portal`, `widget-admin`)은 코드의 이름이고 Dockerfile 과
+# compose 서비스와 점검 결과 파일이 따른다. Docker Hub 저장소 이름(`agent-os-runtime`, `agent-os-admin`, `agent-os-widget`,
+# `agent-os-widget-test-page`, `agent-os-widget-admin`)은 아래 `tags` 의 `${NAMESPACE}/<저장소>:${TAG}` 가 정한다. 둘의 대응은 이 파일이 유일하게 정하고,
 # 워크플로와 e2e 는 `python3 tools/release_ci.py repository <대상>` 으로 읽는다. compose 의 `image:` 줄과 배포 안내의 대응표는
 # 사람이 쓴 사본이라 tests/tools/test_release_ci.py 가 이 파일과 같은지 본다.
 #
@@ -40,7 +40,7 @@ variable "SOURCE" {
 }
 
 group "default" {
-  targets = ["serve", "admin", "widget", "portal"]
+  targets = ["serve", "admin", "widget", "portal", "widget-admin"]
 }
 
 target "serve" {
@@ -54,6 +54,20 @@ target "serve" {
   tags       = ["${NAMESPACE}/agent-os-runtime:${TAG}"]
   cache-from = ["type=gha,scope=serve"]
   cache-to   = ["type=gha,scope=serve,mode=max"]
+}
+
+# 위젯 관리 서버(ADR 0064). 파이썬 이미지이고 serve 와 같은 빌드 인자를 받는다.
+target "widget-admin" {
+  context    = "."
+  dockerfile = "deploy/images/widget-admin.Dockerfile"
+  args = {
+    APP_VERSION = VERSION
+    REVISION    = REVISION
+    SOURCE      = SOURCE
+  }
+  tags       = ["${NAMESPACE}/agent-os-widget-admin:${TAG}"]
+  cache-from = ["type=gha,scope=widget-admin"]
+  cache-to   = ["type=gha,scope=widget-admin,mode=max"]
 }
 
 target "_web" {

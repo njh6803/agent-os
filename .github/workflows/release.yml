@@ -1,12 +1,12 @@
 # 판 내기 워크플로(release-image 티켓 11, ADR 0056, .scratch/release-image/spec.md "판 내기 워크플로"). main 에 푸시가
-# 오면(출시 PR 과 핫픽스의 병합) 번호와 노트를 계산하고, 이미지 넷을 지어 실제로 띄워 시험하고 점검한 뒤 올리고, 번호
+# 오면(출시 PR 과 핫픽스의 병합) 번호와 노트를 계산하고, 이미지 다섯을 지어 실제로 띄워 시험하고 점검한 뒤 올리고, 번호
 # 태그를 붙여 릴리스를 공개한다. 판의 때와 번호는 사람이 정하지 않는다. 제품 변경이 없으면 첫째 잡이 성공으로 끝나고 둘째
 # 잡은 건너뛴다. 워크플로 자체에는 자동 시험이 없다. zizmor 가 감사하고(ADR 0027) 워크플로가 부르는 판정은 tools/release.py
 # 와 tools/release_ci.py 의 시험이 본다. 첫 실행은 release-image 의 출시 PR 을 병합한 세션이 끝까지 지켜본다.
 #
 # 잡은 둘이다. 둘로 나눈 까닭은 실패한 잡만 다시 돌리는 길(`gh run rerun <실행> --failed`)이 둘째 잡의 실패에서 첫째 잡의
 # 이미지를 다시 짓지 않게 하기 위해서다(docs/constitution/operations.md "판이 나는 차례와 실패한 판을 다시 돌리는 절차").
-#   build   번호·노트 계산, 이미지 넷 짓기, 단독 배포 시험, 점검, 커밋 해시 태그로만 올리기, 아티팩트 올리기.
+#   build   번호·노트 계산, 이미지 다섯 짓기, 단독 배포 시험, 점검, 커밋 해시 태그로만 올리기, 아티팩트 올리기.
 #   publish 아티팩트 대조, 사전 확인, 초안 릴리스, 자산, 번호 태그, 공개.
 #
 # 비밀 값 둘(DOCKERHUB_TOKEN, RELEASE_GH_TOKEN)과 변수 하나(DOCKERHUB_NAMESPACE)는 배포 브랜치를 main 하나로 좁힌 GitHub 환경
@@ -43,7 +43,7 @@ env:
   SYFT_IMAGE: ghcr.io/anchore/syft@sha256:03215d0e98b661d0ecbc8575dbc14d65be1743b5de5df6410aecb7e80f95b060
 
 jobs:
-  # 번호와 노트를 계산하고, 이미지 넷을 지어 시험하고 점검하고, 커밋 해시 태그로만 올린다. 출력은 판 번호와 이미지 넷의
+  # 번호와 노트를 계산하고, 이미지 다섯을 지어 시험하고 점검하고, 커밋 해시 태그로만 올린다. 출력은 판 번호와 이미지 다섯의
   # digest 다. 둘째 잡이 릴리스에 올릴 파일은 같은 이름의 아티팩트로 올린다.
   build:
     runs-on: ubuntu-24.04
@@ -62,6 +62,7 @@ jobs:
       admin: ${{ steps.digests.outputs.admin }}
       widget: ${{ steps.digests.outputs.widget }}
       portal: ${{ steps.digests.outputs.portal }}
+      widget-admin: ${{ steps.digests.outputs.widget-admin }}
     steps:
       # 번호 도구가 로컬 태그를 보므로 전체 이력과 태그를 받는다.
       - name: 체크아웃
@@ -177,7 +178,7 @@ jobs:
       # Grype 는 거르지 않은 JSON 을 한 번 받고, 고칠 수 있는 Critical 문턱(--only-fixed --fail-on critical)을 따로 한 번 돈다.
       # 문턱의 종료 코드가 0 이면 지나고, 2 면 노트 맨 위에 경고를 싣고 판은 낸다. 그 밖이면 점검이 실패한 것이라 판 내기가
       # 실패한다(점검 결과가 없는 릴리스를 내지 않는다). DB 는 실행마다 새로 받는다. 묵은 DB 로 점검하면 새 취약점을 놓치고,
-      # 풀어 둔 크기가 3.2GiB 라 캐시에 두면 저장소의 캐시 한도(10GB)를 잡아먹는다. 이미지 넷은 같은 볼륨을 쓴다.
+      # 풀어 둔 크기가 3.2GiB 라 캐시에 두면 저장소의 캐시 한도(10GB)를 잡아먹는다. 이미지 다섯은 같은 볼륨을 쓴다.
       - name: 점검
         id: scan
         if: steps.plan.outputs.release == 'true'
@@ -191,7 +192,7 @@ jobs:
               -e GRYPE_CHECK_FOR_APP_UPDATE=false -v "$PWD/scan:/in:ro" "$GRYPE_IMAGE" "$@"
           }
           warn=false
-          for image in serve admin widget portal; do
+          for image in serve admin widget portal widget-admin; do
             repo=$(python3 tools/release_ci.py repository "$image")
             docker save "$LOCAL_NAMESPACE/$repo:$NUMBER" -o "scan/$image.tar"
             tested=$(python3 tools/release_ci.py image-id "scan/$image.tar")
@@ -219,7 +220,8 @@ jobs:
         run: |
           python3 tools/release.py notes --number "$NUMBER" \
             --grype serve=out/grype-serve.json --grype admin=out/grype-admin.json \
-            --grype widget=out/grype-widget.json --grype portal=out/grype-portal.json > out/notes.md
+            --grype widget=out/grype-widget.json --grype portal=out/grype-portal.json \
+            --grype widget-admin=out/grype-widget-admin.json > out/notes.md
           if [ "$WARN" = true ] && ! grep -q '^## 경고' out/notes.md; then
             echo "::error::점검은 고칠 수 있는 Critical 을 찾았는데 노트에 경고가 없다."
             exit 1
@@ -265,7 +267,7 @@ jobs:
           NAMESPACE: ${{ vars.DOCKERHUB_NAMESPACE }}
         run: |
           images='{}'
-          for image in serve admin widget portal; do
+          for image in serve admin widget portal widget-admin; do
             repo=$(python3 tools/release_ci.py repository "$image")
             digest=$(docker buildx imagetools inspect "$NAMESPACE/$repo:$HASH_TAG" --format '{{.Manifest.Digest}}') || {
               echo "::error::$image 의 해시 태그 $HASH_TAG 를 레지스트리에서 조회하지 못했다."; exit 1; }
@@ -315,6 +317,7 @@ jobs:
       DIGEST_ADMIN: ${{ needs.build.outputs.admin }}
       DIGEST_WIDGET: ${{ needs.build.outputs.widget }}
       DIGEST_PORTAL: ${{ needs.build.outputs.portal }}
+      DIGEST_WIDGET_ADMIN: ${{ needs.build.outputs.widget-admin }}
       NAMESPACE: ${{ vars.DOCKERHUB_NAMESPACE }}
     steps:
       - name: 체크아웃
@@ -331,7 +334,8 @@ jobs:
         run: |
           python3 tools/release_ci.py verify-files --dir files --number "$NUMBER" --sha "$GITHUB_SHA" \
             --digest "serve=$DIGEST_SERVE" --digest "admin=$DIGEST_ADMIN" \
-            --digest "widget=$DIGEST_WIDGET" --digest "portal=$DIGEST_PORTAL"
+            --digest "widget=$DIGEST_WIDGET" --digest "portal=$DIGEST_PORTAL" \
+            --digest "widget-admin=$DIGEST_WIDGET_ADMIN"
       - name: Docker Hub 로그인
         uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550 # v4.8.0
         with:
@@ -432,8 +436,9 @@ jobs:
         id: attach
         if: steps.precheck.outputs.action == 'proceed'
         run: |
-          for image in serve admin widget portal; do
-            var="DIGEST_$(echo "$image" | tr '[:lower:]' '[:upper:]')"
+          for image in serve admin widget portal widget-admin; do
+            # 이미지 이름의 하이픈은 변수 이름에 남지 않게 밑줄로 바꾼다(`widget-admin` 은 `DIGEST_WIDGET_ADMIN`).
+            var="DIGEST_$(echo "$image" | tr '[:lower:]' '[:upper:]' | tr - _)"
             digest=${!var}
             ref="$NAMESPACE/$(python3 tools/release_ci.py repository "$image")"
             code=0

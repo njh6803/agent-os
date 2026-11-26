@@ -1,4 +1,4 @@
-// 단독 배포 e2e(release-image 명세 Testing Decisions, 티켓 09). 실제 이미지 넷과 프록시를 배포 파일 묶음의 compose 로 띄우고
+// 단독 배포 e2e(release-image 명세 Testing Decisions, 티켓 09). 실제 이미지 다섯과 프록시를 배포 파일 묶음의 compose 로 띄우고
 // 실제 브라우저와 HTTP 로 지난다. 준비는 e2e/stack.ts 다. CI 의 e2e-standalone 잡이 돌고 pre-commit 에는 없다. 로컬 명령은
 // CLAUDE.md 의 검증 명령 절에 있다.
 //

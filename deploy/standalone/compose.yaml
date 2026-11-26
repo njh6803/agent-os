@@ -1,12 +1,13 @@
-# agent-os 단독 배포. 프록시 하나, 우리 이미지 넷, PostgreSQL 하나를 보통의 Docker 네트워크로 묶고,
-# 띄울 때마다 한 번 돌고 끝나는 migrate 가 serve 보다 먼저 데이터베이스의 표를 올린다.
+# agent-os 단독 배포. 프록시 하나, 우리 이미지 다섯, PostgreSQL 둘을 보통의 Docker 네트워크로 묶고,
+# 띄울 때마다 한 번 돌고 끝나는 migrate 와 widget-admin-migrate 가 serve 와 widget-admin 보다 먼저 각자
+# 데이터베이스(Agent OS 쪽 postgres, 위젯 쪽 widget-admin-postgres)의 표를 올린다.
 # 운영자가 고치는 것은 .env, site/, portal/, tls/ 의 파일이고 이 파일은 고치지 않는다.
 # 특히 아래 세 가지는 바꾸지 않는다.
 # - ports: 밖에 열리는 것은 프록시의 443과 80, 서버의 127.0.0.1에만 열리는 관리 화면의 3000 셋뿐이다.
-#   관리 화면을 다른 주소에 열면 로그인 없는 관리 API가 인터넷에 열린다. PostgreSQL 은 어느 주소에도
-#   열지 않는다. 열면 데이터베이스가 비밀번호 하나로 서버 밖에 열린다.
-# - user: 우리 이미지 넷은 이미지가 정한 사용자(uid 10001)로 돌고, 이 파일은 거기에 user 를 더하지
-#   않는다. PostgreSQL 은 이 파일에 적힌 uid 999 로 돌고, 데이터 폴더가 그 uid 의 소유로 만들어진다.
+#   관리 화면을 다른 주소에 열면 로그인 없는 관리 API가 인터넷에 열린다. 두 PostgreSQL 과 위젯 관리 서버는
+#   어느 주소에도 열지 않는다. PostgreSQL 을 열면 데이터베이스가 비밀번호 하나로 서버 밖에 열린다.
+# - user: 우리 이미지 다섯은 이미지가 정한 사용자(uid 10001)로 돌고, 이 파일은 거기에 user 를 더하지
+#   않는다. PostgreSQL 둘은 이 파일에 적힌 uid 999 로 돌고, 데이터 폴더가 그 uid 의 소유로 만들어진다.
 # - 안쪽 네트워크의 IPv6: 켜지 않는다. 443과 80이 IPv4에만 열려야 접속 주소별 요청 한도가 맞게 선다.
 
 name: agent-os
@@ -94,7 +95,7 @@ services:
     depends_on:
       migrate:
         condition: service_completed_successfully
-    # 환경 변수 파일을 통째로 받는 것(토큰, 기본 모델, API 키, 데이터베이스 비밀번호)은 serve 하나다.
+    # 환경 변수 파일을 통째로 받는 것(토큰, 기본 모델, API 키, 두 데이터베이스의 비밀번호)은 serve 하나다.
     env_file: .env
     environment:
       AGENT_OS_CONTAINER_NETWORK: "1"
@@ -114,6 +115,63 @@ services:
         - python
         - -c
         - import sys, urllib.request; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=4).status == 200 else 1)
+
+  widget-admin-postgres:
+    # 위젯 쪽 데이터를 담는 PostgreSQL. 이미지는 postgres 서비스와 같은 digest 다(tests/test_postgres_image_pin.py 가 같은지 본다).
+    # 공식 PostgreSQL 이미지 postgres:18 (Debian trixie)을 digest 로 고정했다.
+    image: postgres@sha256:b9f6b8ff03b62f3cfd9d9ba3fe56226a9991c79d3fb46fd46536263bf02be553
+    user: "999:999"
+    init: true
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    tmpfs:
+      - /var/run/postgresql
+    restart: unless-stopped
+    # 비밀번호는 데이터 폴더를 처음 만들 때만 쓰인다. 바꾸는 절차는 배포 안내의 "데이터베이스 비밀번호 바꾸기"다.
+    environment:
+      POSTGRES_USER: widget_admin
+      POSTGRES_DB: widget_admin
+      POSTGRES_PASSWORD: ${WIDGET_ADMIN_DATABASE_PASSWORD:?.env 에 WIDGET_ADMIN_DATABASE_PASSWORD 가 없다}
+    volumes:
+      - widget-database:/var/lib/postgresql
+    healthcheck:
+      <<: *health
+      test: [CMD, pg_isready, -h, 127.0.0.1, -U, widget_admin, -d, widget_admin]
+
+  # 위젯 쪽 표를 이 판까지 올리고 끝난다. up 을 칠 때마다 다시 돌고, 올릴 것이 없으면 그대로 끝난다.
+  widget-admin-migrate:
+    image: ${AGENT_OS_NAMESPACE}/agent-os-widget-admin:${AGENT_OS_VERSION}
+    command: [widget-admin, migrate]
+    restart: "no"
+    depends_on:
+      widget-admin-postgres:
+        condition: service_healthy
+    # 환경 변수 파일을 통째로 받지 않는다. 받는 것은 연결 문자열 하나다.
+    environment:
+      WIDGET_ADMIN_DATABASE_URL: postgresql://widget_admin:${WIDGET_ADMIN_DATABASE_PASSWORD:?.env 에 WIDGET_ADMIN_DATABASE_PASSWORD 가 없다}@widget-admin-postgres:5432/widget_admin
+    read_only: true
+
+  # 위젯이 읽는 위젯 설정을 내는 서버. 어느 주소에도 발행하지 않고 프록시가 /widget-settings/ 만 넘긴다.
+  widget-admin:
+    image: ${AGENT_OS_NAMESPACE}/agent-os-widget-admin:${AGENT_OS_VERSION}
+    command: [widget-admin, serve, --host, 0.0.0.0]
+    depends_on:
+      widget-admin-migrate:
+        condition: service_completed_successfully
+    # 환경 변수 파일을 받지 않는다.
+    environment:
+      AGENT_OS_CONTAINER_NETWORK: "1"
+      WIDGET_ADMIN_DATABASE_URL: postgresql://widget_admin:${WIDGET_ADMIN_DATABASE_PASSWORD:?.env 에 WIDGET_ADMIN_DATABASE_PASSWORD 가 없다}@widget-admin-postgres:5432/widget_admin
+    read_only: true
+    restart: unless-stopped
+    healthcheck:
+      <<: *health
+      test:
+        - CMD
+        - python
+        - -c
+        - import sys, urllib.request; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8100/health', timeout=4).status == 200 else 1)
 
   admin:
     image: ${AGENT_OS_NAMESPACE}/agent-os-admin:${AGENT_OS_VERSION}
@@ -170,8 +228,9 @@ volumes:
   # 플러그인 루트와 트레이스 폴더. 이름 있는 볼륨은 처음 붙을 때 이미지의 내용을 소유자째 복사한다.
   plugins: {}
   traces: {}
-  # PostgreSQL 의 데이터. 판을 바꾸거나 down 뒤에 다시 띄워도 남는다.
+  # PostgreSQL 의 데이터. 판을 바꾸거나 down 뒤에 다시 띄워도 남는다. 위젯 쪽(widget-database)은 따로 든다.
   database: {}
+  widget-database: {}
 
 networks:
   default:

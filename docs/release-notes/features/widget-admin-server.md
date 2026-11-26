@@ -1,0 +1,1 @@
+단독 배포에 위젯 설정을 담는 위젯 관리 서버(`widget-admin`)와 그 전용 데이터베이스(`widget-admin-postgres`)가 더해져, `docker compose up -d` 하나로 함께 뜬다. 방문자용 주소의 `/widget-settings/<사이트 이름>`이 그 사이트의 위젯 설정을 로그인 없이 내주고, 등록되지 않은 이름에는 404를 낸다. 값을 넣는 화면은 아직 없다. 위젯 쪽 데이터는 Agent OS 쪽과 따로 `widget-database` 볼륨에 남고, 비밀번호는 `.env`의 `WIDGET_ADMIN_DATABASE_PASSWORD`에 둔다. 데이터베이스에 닿지 못하거나 표의 판이 맞지 않으면 위젯 관리 서버는 까닭을 한 줄로 찍고 멈춘다.

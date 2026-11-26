@@ -24,8 +24,9 @@ import pytest
 from tools import check_notes
 
 ROOT = Path(__file__).resolve().parents[1]
-FOLDER = ROOT / check_notes.PRODUCT_MIGRATIONS
-WIDGET_FOLDER = ROOT / "widget-admin" / "src" / "widget_admin" / "migrations" / "versions"
+# 폴더 목록의 원천은 노트 검사 하나다(`check_notes.PRODUCT_MIGRATION_FOLDERS`. Agent OS 쪽과 위젯
+# 관리 서버 쪽 둘). 이 시험은 그 목록을 그대로 읽어 폴더마다 훑는다.
+FOLDERS = tuple(ROOT / folder for folder in check_notes.PRODUCT_MIGRATION_FOLDERS)
 
 _NAME = re.compile(r"(?P<number>[0-9]{4})_[a-z][a-z0-9_]*\.py")
 
@@ -153,17 +154,16 @@ GOOD = {
 }
 
 
-def test_이_저장소의_마이그레이션_폴더는_꼴이_맞다() -> None:
-    sources = read_folder(FOLDER)
-    assert sources, f"훑을 파일이 없다: {FOLDER}"
-    assert shape_problems(sources) == []
+def test_훑는_폴더는_노트_검사의_제품_마이그레이션_폴더_둘이다() -> None:
+    """둘째 설치 묶음의 폴더가 목록에서 빠지면 그 폴더의 꼴을 아무도 보지 않는다."""
+    assert len(FOLDERS) == 2
+    assert FOLDERS[1] == ROOT / "widget-admin" / "src" / "widget_admin" / "migrations" / "versions"
 
 
-def test_이_저장소의_위젯_관리_마이그레이션_폴더도_꼴이_맞다() -> None:
-    # 둘째 설치 묶음의 폴더다. 노트 검사의 `PRODUCT_MIGRATIONS` 는 Agent OS 의 폴더 하나라 이
-    # 폴더를 알지 못하고, 그 갈래의 느낌표 규칙은 위젯 관리 서버의 배포를 짓는 티켓(04)이 정한다.
-    sources = read_folder(WIDGET_FOLDER)
-    assert sources, f"훑을 파일이 없다: {WIDGET_FOLDER}"
+@pytest.mark.parametrize("folder", FOLDERS, ids=lambda folder: folder.parts[-3])
+def test_이_저장소의_마이그레이션_폴더는_꼴이_맞다(folder: Path) -> None:
+    sources = read_folder(folder)
+    assert sources, f"훑을 파일이 없다: {folder}"
     assert shape_problems(sources) == []
 
 

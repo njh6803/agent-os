@@ -394,10 +394,63 @@ def _repositories() -> dict[str, str]:
     return bake_repositories(BAKE.read_text("utf-8"))
 
 
-def test_짓기_목록은_이미지_넷마다_저장소_이름_하나를_정한다() -> None:
+def test_짓기_목록은_이미지_다섯마다_저장소_이름_하나를_정한다() -> None:
     repositories = _repositories()
     assert set(repositories) == set(IMAGES)
     assert len(set(repositories.values())) == len(IMAGES)
+
+
+SERVE_DOCKERFILE = ROOT / "deploy" / "images" / "serve.Dockerfile"
+WIDGET_ADMIN_DOCKERFILE = ROOT / "deploy" / "images" / "widget-admin.Dockerfile"
+
+
+def pinned_python_images(text: str) -> dict[str, str]:
+    """Dockerfile 머리에서 `ARG PYTHON_IMAGE=…`와 `ARG UV_IMAGE=…`의 값을 이름별로 읽는다.
+
+    못 보는 것: 이 두 이름이 아닌 `ARG`와 한 줄에 둘을 적은 꼴.
+    """
+    return dict(re.findall(r"^ARG (PYTHON_IMAGE|UV_IMAGE)=(\S+)$", text, re.MULTILINE))
+
+
+def test_이_저장소의_위젯_관리_서버_이미지는_serve_이미지와_같은_digest를_쓴다() -> None:
+    serve = pinned_python_images(SERVE_DOCKERFILE.read_text("utf-8"))
+    widget_admin = pinned_python_images(WIDGET_ADMIN_DOCKERFILE.read_text("utf-8"))
+    assert set(serve) == {"PYTHON_IMAGE", "UV_IMAGE"}, "serve 이미지의 두 ARG 를 읽지 못했다"
+    assert widget_admin == serve
+
+
+def test_위젯_관리_서버_이미지의_바탕_digest_하나가_다르면_serve_이미지와_달라진다() -> None:
+    text = WIDGET_ADMIN_DOCKERFILE.read_text("utf-8")
+    # 특정 digest 값에 기대지 않도록 지금 박힌 값의 마지막 글자 하나만 바꾼다.
+    pinned = pinned_python_images(text)["PYTHON_IMAGE"]
+    other = pinned[:-1] + ("0" if pinned[-1] != "0" else "1")
+    changed = text.replace(f"ARG PYTHON_IMAGE={pinned}", f"ARG PYTHON_IMAGE={other}", 1)
+    assert changed != text
+    assert pinned_python_images(changed) != pinned_python_images(
+        SERVE_DOCKERFILE.read_text("utf-8")
+    )
+
+
+def default_group_targets(text: str) -> list[str]:
+    """짓기 설정의 `group "default"` 가 한 번에 짓는 대상 이름들. 묶음이 없으면 빈 목록이다.
+
+    못 보는 것: `targets` 를 여러 줄로 나눠 쓴 꼴(한 줄 꼴만 읽는다)과 다른 이름의 묶음.
+    """
+    match = re.search(r'group "default" \{\s*targets = \[([^\]]*)\]', text)
+    return re.findall(r'"([a-z-]+)"', match.group(1)) if match else []
+
+
+def test_짓기_설정의_기본_묶음은_IMAGES와_같은_이름들이다() -> None:
+    targets = default_group_targets(BAKE.read_text("utf-8"))
+    assert targets, "group default 를 읽지 못했다"
+    assert sorted(targets) == sorted(IMAGES)
+
+
+def test_짓기_설정의_기본_묶음에서_이미지_하나가_빠지면_IMAGES와_달라진다() -> None:
+    text = BAKE.read_text("utf-8")
+    changed = text.replace(', "widget-admin"]', "]", 1)
+    assert changed != text
+    assert sorted(default_group_targets(changed)) != sorted(IMAGES)
 
 
 def test_짓기_목록의_태그가_없는_바탕_대상은_건너뛴다() -> None:
@@ -460,12 +513,14 @@ def _compose_images(path: Path) -> dict[str, str]:
 
 
 def test_배포_compose의_이미지_줄은_짓기_목록의_저장소_이름과_같다() -> None:
-    """우리 이미지를 쓰는 서비스 가운데 짓기 대상이 아닌 것은 `migrate` 하나이고 `serve` 와 같은
-    이미지를 쓴다(명세
-    postgres-foundation "단독 compose의 PostgreSQL과 migrate")."""
+    """우리 이미지를 쓰는 서비스 가운데 짓기 대상이 아닌 것은 `migrate` 와 `widget-admin-migrate`
+    둘이다. 앞의 것은 `serve` 와, 뒤의 것은 `widget-admin` 과 같은 이미지를 쓴다(명세
+    postgres-foundation "단독 compose의 PostgreSQL과 migrate", widget-admin-server 티켓 04)."""
     images = _compose_images(COMPOSE)
-    assert images.pop("migrate", None) == _repositories()["serve"]
-    assert images == _repositories()
+    repositories = _repositories()
+    assert images.pop("migrate", None) == repositories["serve"]
+    assert images.pop("widget-admin-migrate", None) == repositories["widget-admin"]
+    assert images == repositories
 
 
 def test_단독_배포_시험_픽스처의_이미지_줄은_serve의_저장소_이름과_같다() -> None:
@@ -474,10 +529,12 @@ def test_단독_배포_시험_픽스처의_이미지_줄은_serve의_저장소_�
 
 def test_배포_안내의_대응표는_짓기_목록의_저장소_이름과_같다() -> None:
     rows = re.findall(
-        r"^\| `([a-z]+)` \|[^|]*\| `<이름공간>/([a-z0-9-]+)` \|$",
+        r"^\| `([a-z-]+)` \|[^|]*\| `<이름공간>/([a-z0-9-]+)` \|$",
         STANDALONE_README.read_text("utf-8"),
         flags=re.M,
     )
     table = dict(rows)
-    assert table.pop("migrate", None) == _repositories()["serve"]
-    assert table == _repositories()
+    repositories = _repositories()
+    assert table.pop("migrate", None) == repositories["serve"]
+    assert table.pop("widget-admin-migrate", None) == repositories["widget-admin"]
+    assert table == repositories

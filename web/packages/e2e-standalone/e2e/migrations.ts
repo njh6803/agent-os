@@ -37,8 +37,18 @@ export function lastRevision(sources: readonly string[]): string {
   return numbers.reduce((last, next) => (Number(next) > Number(last) ? next : last));
 }
 
-/** 이 저장소의 제품 마이그레이션 폴더의 마지막 판 번호. */
-export function productRevision(): string {
-  const names = readdirSync(PRODUCT_VERSIONS).filter((name) => name.endsWith(".py"));
-  return lastRevision(names.map((name) => readFileSync(join(PRODUCT_VERSIONS, name), "utf-8")));
+/** 위젯 관리 서버의 마이그레이션 폴더(widget-admin-server 티켓 04). 둘째 설치 묶음이라 Agent OS 쪽과 폴더가 따로다. */
+export const WIDGET_VERSIONS = join(
+  REPO,
+  "widget-admin",
+  "src",
+  "widget_admin",
+  "migrations",
+  "versions",
+);
+
+/** 제품 마이그레이션 폴더의 마지막 판 번호. 폴더를 주지 않으면 Agent OS 쪽이고, 폴더가 없으면 던진다. */
+export function productRevision(folder: string = PRODUCT_VERSIONS): string {
+  const names = readdirSync(folder).filter((name) => name.endsWith(".py"));
+  return lastRevision(names.map((name) => readFileSync(join(folder, name), "utf-8")));
 }

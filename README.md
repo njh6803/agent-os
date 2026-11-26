@@ -65,7 +65,7 @@ web/               pnpm 워크스페이스(Node 24, TypeScript 5.9). 파이썬�
   packages/e2e-stack/  e2e 준비(@agent-os/e2e-stack, 앱의 devDependency). 같은 출처 중계, 픽스처 플러그인(저장소 플러그인 복사
                    포함), 실제 serve 띄우기와 빈 포트·기다리기·끄기 도우미(Stack), 사이트 키와 토큰 서명, 준비가 시험에 넘긴
                    트레이스 폴더에서 실행의 주체를 읽는 것. 환경 변수 이름은 앱이 준다. 상대 import 에 확장자를 붙인다
-  packages/e2e-standalone/  단독 배포 e2e(@agent-os/e2e-standalone). 묶음(deploy/standalone)을 실제 이미지 넷과 프록시와 PostgreSQL로 띄워
+  packages/e2e-standalone/  단독 배포 e2e(@agent-os/e2e-standalone). 묶음(deploy/standalone)을 실제 이미지 다섯과 프록시와 PostgreSQL 둘로 띄워
                    실제 브라우저와 HTTP 로 지난다. 이미지는 지은 것이나 환경 변수가 가리키는 것을 쓰고, 프로젝트 이름을
                    시험마다 따로 줘 끝나면 볼륨까지 지운다. 선택 모드로 실제 모델과 IPv6 없는 컨테이너가 있다
   packages/react-18/  React·ReactDOM 18.3.1 만 든 시험 전용 패키지(@agent-os/react-18, 판 고정). 디자인 시스템 카드 시험이
@@ -116,7 +116,7 @@ docs/
   rules/           디렉터리별 규칙. 해당 파일을 Read 도구로 열 때만 로드
   skills/          엔지니어링 스킬
   settings.json    훅 등록, 권한(`.env` 읽기 거부), 플러그인, 스킬 덮어쓰기
-deploy/            배포에 드는 파일(제품 변경의 경로). images/serve.Dockerfile 이 serve 이미지를 짓는다(빌드 인자 APP_VERSION 필수, 컨텍스트는 저장소 루트이고 들일 파일은 serve.Dockerfile.dockerignore 가 고른다). images/docker-bake.hcl 은 판 내기 워크플로가 이미지 넷을 한 번에 짓는 목록이다. release.toml 은 판 설정 파일(`candidate_for` 한 칸)이다. standalone/ 은 단독 배포의 compose 묶음(이미지 넷과 nginx 프록시와 PostgreSQL, 한 번 도는 migrate, 사이트·포털 설정, 환경 변수 견본)이다
+deploy/            배포에 드는 파일(제품 변경의 경로). images/serve.Dockerfile 이 serve 이미지를, images/widget-admin.Dockerfile 이 위젯 관리 서버 이미지를 짓는다(빌드 인자 APP_VERSION 필수, 컨텍스트는 저장소 루트이고 들일 파일은 각 Dockerfile 옆의 .dockerignore 가 고른다). images/docker-bake.hcl 은 판 내기 워크플로가 이미지 다섯을 한 번에 짓는 목록이다. release.toml 은 판 설정 파일(`candidate_for` 한 칸)이다. standalone/ 은 단독 배포의 compose 묶음(이미지 다섯과 nginx 프록시와 PostgreSQL 둘, 한 번씩 도는 migrate 둘, 사이트·포털 설정, 환경 변수 견본)이다
 tools/             배포되지 않는 저장소 유틸. 훅(hook_*)과 그 실행 래퍼(launch_hook), 검사(check_*), 검사 러너(run_checks), 훅 러너(run_hooks + hook_payloads.toml), 변이 도구, 체크아웃 정리(tidy_checkouts), OpenAPI 내보내기, 전체 계획 생성(plan_table), Actions 요약, 커밋 직전 형제 번호 대조(sibling_overlap), 주석·독스트링 감기(rewrap_comments), PR 검사의 대기(wait_ci)
 kickoff/           다른 프로젝트용 킥오프 런북(KICKOFF.md)의 진행 규율(runner.md, /kickoff가 읽는다), 템플릿, 부록. 이 프로젝트의 문서가 아니다
 .coderabbit.yaml   CodeRabbit 설정. PR 봇과 로컬 CLI가 같이 읽는다
@@ -153,7 +153,7 @@ pnpm -C web/apps/admin start       # http://127.0.0.1:3000
 
 ## 위젯 관리 서버
 
-위젯 관리 서버(`widget-admin/`)는 위젯 설정을 자기 PostgreSQL에 두고 위젯이 토큰 없이 읽게 한다(ADR 0064). 명령은 둘이다. 개발 PC에서는 Agent OS와 같은 테스트 컨테이너에 데이터베이스 하나를 더 만들어 쓴다.
+위젯 관리 서버(`widget-admin/`)는 위젯 설정을 자기 PostgreSQL에 두고 위젯이 토큰 없이 읽게 한다(ADR 0064). 명령은 둘이다. 단독 배포에서는 이미지 `agent-os-widget-admin`과 전용 PostgreSQL이 compose에 함께 오르고, 프록시가 `/widget-settings/` 한 경로만 밖에 낸다. 개발 PC에서는 Agent OS와 같은 테스트 컨테이너에 데이터베이스 하나를 더 만들어 쓴다.
 
 ```bash
 # 연결 문자열은 환경 변수 WIDGET_ADMIN_DATABASE_URL 로만 받는다. 비밀번호가 들어 있어 명령줄 인자로 받지 않는다.

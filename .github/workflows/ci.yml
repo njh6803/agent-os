@@ -340,11 +340,11 @@ jobs:
         run: pnpm -C web/apps/portal exec playwright install-deps chromium
       - run: pnpm -C web/apps/portal exec playwright test
 
-  # 단독 배포 e2e(release-image 티켓 09). 저장소에서 이미지 넷(serve, admin, widget, portal)을 짓고, 배포 파일 묶음
+  # 단독 배포 e2e(release-image 티켓 09). 저장소에서 이미지 다섯(serve, admin, widget, portal, widget-admin)을 짓고, 배포 파일 묶음
   # (tools/release.py bundle)을 풀어 compose 로 프록시와 함께 띄운 배치를 실제 브라우저로 지난다(준비는
   # web/packages/e2e-standalone/e2e/stack.ts). 이 잡이 ubuntu 에서 443, 80 에 발행하는 것이 실제 배치 확인이다.
   # ADR 0043 CI 분담에 따라 base 가 main 인 PR 과 main 푸시에서만 시험하고(dev 로 가는 티켓 PR 과 dev 푸시에서는 이미지
-  # 넷을 짓는 시간을 쓰지 않는다), 그 밖에서는 첫 스텝(gate)이 판정하고 나머지 스텝을 건너뛰어 잡은 안에서 곧바로 성공으로
+  # 다섯을 짓는 시간을 쓰지 않는다), 그 밖에서는 첫 스텝(gate)이 판정하고 나머지 스텝을 건너뛰어 잡은 안에서 곧바로 성공으로
   # 끝난다. 잡 자체를 if: 로 건너뛰지 않는 것은 건너뛴 잡을 verify 가 빨강으로 읽기 때문이다. 판정에 쓰는 값은 env 로 넘겨
   # run 에 식으로 펼치지 않는다(zizmor 의 템플릿 주입 판정, ADR 0027). 실제 모델 프로젝트 llm 은 AGENT_OS_STANDALONE_LLM 을
   # 두지 않아 서지 않는다(실제 모델 시험은 손으로 돌린다. docs/constitution/operations.md LLM 테스트). timeout-minutes 는
@@ -352,7 +352,9 @@ jobs:
   # 시험 스텝이 성공한 실행만 이 잡의 측정으로 센다(2026-11-17). 20분은 그 최대의 6배 남짓이고, 판 내기 첫 실행에서 캐시가
   # 빈 이미지 짓기 몫(release 의 build 8.3분에서 점검·올리기를 뺀 어림 5분 안팎)에 시험 3분을 더한 8분 안팎이 이 잡에 다시
   # 와도 넘지 않는다(어림. 이 잡의 캐시가 빈 실행은 재지 못했다. 8분 대비 여유가 2.5배다). 시험 실행이 더 쌓이면 프로브를
-  # 다시 돌려 고친다(머리 주석).
+  # 다시 돌려 고친다(머리 주석). 이 측정은 이미지가 넷일 때의 것이다. 다섯째 이미지(widget-admin)는 이 PC에서 캐시 없이
+  # 26초에 지어졌고(2026-11-26, 관리 화면 이미지는 163초) 이 PC의 시험 한 바퀴는 4.0분이었다. 그래서 20분의 여유는 5배
+  # 남짓으로 줄었다고 어림하지만, CI 에서 다섯째 이미지를 더하고 시험까지 돈 실행은 아직 없으니 그 실행이 쌓이면 다시 잰다.
   e2e-standalone:
     runs-on: ubuntu-latest
     timeout-minutes: 20

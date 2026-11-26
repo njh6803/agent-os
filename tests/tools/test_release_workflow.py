@@ -11,7 +11,11 @@
 from __future__ import annotations
 
 import re
+import shutil
+import subprocess
 from pathlib import Path
+
+from tools.release_ci import IMAGES
 
 WORKFLOW = Path(__file__).resolve().parents[2] / ".github" / "workflows" / "release.yml"
 
@@ -49,6 +53,119 @@ def test_이_저장소의_판_내기_워크플로는_올리는_태그와_읽는_
     assert "HASH_TAG: sha-${{ github.sha }}" in text
     assert "TAG: ${{ env.HASH_TAG }}" in text
     assert text.count("sha-${{ github.sha }}") == 1
+
+
+def _upper(image: str) -> str:
+    return image.upper().replace("-", "_")
+
+
+def image_list_problems(text: str, images: tuple[str, ...]) -> list[str]:
+    """워크플로의 이미지 목록 다섯 자리가 `IMAGES` 와 어긋난 까닭들. 비어 있으면 맞다.
+
+    보는 자리: `for image in …; do` 반복문, 첫째 잡의 `outputs:` 이름, `--grype 이름=` 인자, 둘째
+    잡의 `DIGEST_<이름>` 환경 변수, `--digest "이름=` 인자. 각 자리의 이름 집합을 `IMAGES` 와
+    견준다. 이 자리 이름 밖에 새 목록을 더하면 못 본다. 훑은 범위가 비면 어긋난 것으로 센다(조용한
+    초록을 막는다).
+    """
+    expected = set(images)
+    # 반복문은 하나씩 따로 견준다. 합치면 한 반복문에서 빠진 이름을 다른 반복문이 가린다.
+    loops = [set(match.split()) for match in re.findall(r"for image in ([a-z -]+); do", text)]
+    places: dict[str, set[str]] = {
+        f"for 반복문 {number}": found for number, found in enumerate(loops, start=1)
+    }
+    if not loops:
+        places["for 반복문"] = set()
+    places |= {
+        "첫째 잡의 outputs": set(
+            re.findall(r"^      ([a-z-]+): \$\{\{ steps\.digests\.outputs\.\1 \}\}$", text, re.M)
+        ),
+        "--grype 인자": set(re.findall(r"--grype ([a-z-]+)=out/grype-\1\.json", text)),
+        "DIGEST 환경 변수": {
+            name
+            for name in re.findall(
+                r"^      DIGEST_([A-Z_]+): \$\{\{ needs\.build\.outputs\.", text, re.M
+            )
+        },
+        "--digest 인자": set(re.findall(r'--digest "([a-z-]+)=\$DIGEST_', text)),
+    }
+    problems: list[str] = []
+    for place, found in places.items():
+        want = {_upper(name) for name in expected} if place == "DIGEST 환경 변수" else expected
+        if found != want:
+            problems.append(f"{place}: 빠짐 {sorted(want - found)}, 남음 {sorted(found - want)}")
+    return problems
+
+
+def test_이_저장소의_판_내기_워크플로의_이미지_목록은_모두_IMAGES와_같다() -> None:
+    text = WORKFLOW.read_text(encoding="utf-8")
+    assert len(IMAGES) == 5
+    assert image_list_problems(text, IMAGES) == []
+
+
+def test_이미지_목록_한_자리에서_이미지_하나가_빠진_워크플로를_잡는다() -> None:
+    text = WORKFLOW.read_text(encoding="utf-8")
+    # 반복문은 셋(점검, 대조, 올린 것 붙이기)이고 하나씩 따로 견준다. 같은 줄이 셋이라 차례로 하나씩
+    # 뺀다.
+    loop = "for image in serve admin widget portal widget-admin; do"
+    assert text.count(loop) == 3
+    parts = text.split(loop)
+    for index in range(3):
+        changed = (
+            loop.join(parts[: index + 1])
+            + "for image in serve admin widget portal; do"
+            + loop.join(parts[index + 1 :])
+        )
+        problems = image_list_problems(changed, IMAGES)
+        assert any(problem.startswith(f"for 반복문 {index + 1}") for problem in problems), index
+    mutations = {
+        "--grype 인자": (" --grype widget-admin=out/grype-widget-admin.json", ""),
+        "DIGEST 환경 변수": (
+            "      DIGEST_WIDGET_ADMIN: ${{ needs.build.outputs.widget-admin }}\n",
+            "",
+        ),
+        "--digest 인자": (' \\\n            --digest "widget-admin=$DIGEST_WIDGET_ADMIN"', ""),
+        "첫째 잡의 outputs": (
+            "      widget-admin: ${{ steps.digests.outputs.widget-admin }}\n",
+            "",
+        ),
+    }
+    for place, (needle, replacement) in mutations.items():
+        assert needle in text, f"{place}: 바꿀 글이 없다"
+        changed = text.replace(needle, replacement, 1)
+        problems = image_list_problems(changed, IMAGES)
+        assert any(problem.startswith(place) for problem in problems), place
+
+
+def _bash() -> str:
+    """이 PC 에서는 Git 의 bash 를, 리눅스에서는 PATH 의 bash 를 쓴다."""
+    for candidate in (r"C:\Program Files\Git\bin\bash.exe", shutil.which("bash")):
+        if candidate and Path(candidate).exists():
+            return candidate
+    raise AssertionError("bash 를 찾지 못했다")
+
+
+def test_이미지_이름의_하이픈은_다이제스트_변수_이름에_남지_않는다() -> None:
+    """`${!var}` 간접 참조는 하이픈이 든 변수 이름을 읽지 못한다. 워크플로의 실제 `var=` 줄을 bash
+    로 돌린다."""
+    text = WORKFLOW.read_text(encoding="utf-8")
+    line = next(
+        part.strip() for part in text.splitlines() if part.strip().startswith('var="DIGEST_$(')
+    )
+    script = "\n".join(
+        [
+            *(f"export DIGEST_{_upper(image)}=value-{image}" for image in IMAGES),
+            f"for image in {' '.join(IMAGES)}; do",
+            f"  {line}",
+            "  digest=${!var}",
+            '  echo "$image=$digest"',
+            "done",
+        ]
+    )
+    done = subprocess.run(
+        [_bash(), "-c", script], capture_output=True, text=True, encoding="utf-8", timeout=60
+    )
+    assert done.returncode == 0, done.stderr
+    assert done.stdout.splitlines() == [f"{image}=value-{image}" for image in IMAGES]
 
 
 def test_bake_메타데이터를_환경_변수로_받는_줄을_잡는다() -> None:
