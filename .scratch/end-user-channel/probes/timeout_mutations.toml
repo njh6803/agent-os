@@ -89,30 +89,36 @@ new = '''
 name = "운영자 채널의 시작과 이어 가기가 넘기지 않는다"
 tests = ["tests/channel/http/test_router.py", "-k", "앱이_받은_타임아웃으로"]
 expect = "red"
+expect_output = ["raise TimeoutError from exc_val"]
 
 [[mutation.edit]]
 file = "src/agent_os/channel/http/router.py"
 old = '''
             previous_run=previous_run,
+            requesting_account=_account_of(request),
             timeout_seconds=run_timeout_seconds,
 '''
 new = '''
             previous_run=previous_run,
+            requesting_account=_account_of(request),
 '''
 
 [[mutation]]
 name = "운영자 채널의 결정이 넘기지 않는다"
 tests = ["tests/channel/http/test_router.py", "-k", "앱이_받은_타임아웃으로"]
 expect = "red"
+expect_output = ["At index 2 diff: 'tool_called' != 'run_failed'"]
 
 [[mutation.edit]]
 file = "src/agent_os/channel/http/router.py"
 old = '''
             principal,
+            deciding_account=_account_of(request),
             timeout_seconds=run_timeout_seconds,
 '''
 new = '''
             principal,
+            deciding_account=_account_of(request),
 '''
 
 [[mutation]]

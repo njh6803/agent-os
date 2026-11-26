@@ -1,0 +1,144 @@
+# 티켓 05(권한 표와 실행에 남는 계정)의 변이 표. 구현 뒤에 쓴 시험이 빨강을 볼 수 있는지 잰다.
+# 돌리는 법: PYTHONUTF8=1 uv run python tools/mutate.py .scratch/admin-login/probes/permission_mutations.toml
+
+# --- 실행에 남는 계정 ------------------------------------------------------------------------
+
+[[mutation]]
+name = "시작이 요청한 계정을 넘기지 않는다"
+tests = ["tests/test_operator_accounts_on_runs.py", "-k", "시작한_실행의_시작_이벤트"]
+expect = "red"
+expect_output = ["요청한 계정은 None 이다"]
+
+[[mutation.edit]]
+file = "src/agent_os/channel/http/router.py"
+old = '''
+            requesting_account=_account_of(request),
+'''
+new = '''
+'''
+
+[[mutation]]
+name = "결정이 결정한 계정을 넘기지 않는다"
+tests = ["tests/test_operator_accounts_on_runs.py", "-k", "결정_이벤트에_결정한_계정"]
+expect = "red"
+expect_output = ["결정한 계정은 None 이다"]
+
+[[mutation.edit]]
+file = "src/agent_os/channel/http/router.py"
+old = '''
+            deciding_account=_account_of(request),
+'''
+new = '''
+'''
+
+[[mutation]]
+name = "공유 토큰이어도 계정을 지어 넘긴다"
+tests = ["tests/test_operator_accounts_on_runs.py", "-k", "공유_토큰으로_보낸"]
+expect = "red"
+expect_output = ["공유 토큰의 요청한 계정은 'shared' 이다"]
+
+[[mutation.edit]]
+file = "src/agent_os/channel/http/router.py"
+old = '''
+    return None if claims is None else claims.name
+'''
+new = '''
+    return "shared" if claims is None else claims.name
+'''
+
+# --- 권한 표와 검사 --------------------------------------------------------------------------
+
+[[mutation]]
+name = "운영자 채널 라우터에서 권한 검사를 뺀다"
+tests = ["tests/test_operator_accounts_on_runs.py", "-k", "실제_라우트마다_403 and (start_run or continue_run or decide_approval)"]
+expect = "red"
+expect_output = ["start_run 가 200 을 냈다"]
+
+[[mutation.edit]]
+file = "src/agent_os/channel/http/router.py"
+old = '''
+        responses=documented_errors(500),
+        dependencies=[REQUIRE_PERMISSION],
+    )
+'''
+new = '''
+        responses=documented_errors(500),
+    )
+'''
+
+[[mutation]]
+name = "관리 라우터에서 권한 검사를 뺀다"
+tests = ["tests/test_operator_accounts_on_runs.py", "-k", "실제_라우트마다_403 and (list_plugins or set_plugin_enabled)"]
+expect = "red"
+expect_output = ["list_plugins 가 200 을 냈다"]
+
+[[mutation.edit]]
+file = "src/agent_os/admin/http.py"
+old = '''
+    router = APIRouter(responses=documented_errors(500), dependencies=[REQUIRE_PERMISSION])
+'''
+new = '''
+    router = APIRouter(responses=documented_errors(500))
+'''
+
+[[mutation]]
+name = "공유 토큰이 계정을 다루는 권한도 가진다"
+tests = ["tests/test_permissions.py"]
+expect = "red"
+expect_output = ["공유 토큰의 권한: ['decide', 'manage_accounts'"]
+
+[[mutation.edit]]
+file = "src/agent_os/http/permissions.py"
+old = '''
+SHARED_TOKEN_PERMISSIONS: frozenset[Permission] = frozenset(Permission) - {
+    Permission.MANAGE_ACCOUNTS
+}
+'''
+new = '''
+SHARED_TOKEN_PERMISSIONS: frozenset[Permission] = frozenset(Permission)
+'''
+
+[[mutation]]
+name = "관리자도 계정을 다루는 권한을 가진다"
+tests = ["tests/test_permissions.py"]
+expect = "red"
+expect_output = ["관리자의 권한: ['decide', 'manage_accounts'"]
+
+[[mutation.edit]]
+file = "src/agent_os/http/permissions.py"
+old = '''
+    "admin": frozenset(Permission) - {Permission.MANAGE_ACCOUNTS},
+'''
+new = '''
+    "admin": frozenset(Permission),
+'''
+
+[[mutation]]
+name = "표에 없는 오퍼레이션을 열린 것으로 읽는다"
+tests = ["tests/test_permissions.py", "-k", "표에_없는_오퍼레이션"]
+expect = "red"
+expect_output = ["표에 없는 줄이 200 을 냈다"]
+
+[[mutation.edit]]
+file = "src/agent_os/http/permissions.py"
+old = '''
+            raise LookupError(f"권한 표에 없는 오퍼레이션이다: {operation_id}")
+'''
+new = '''
+            return
+'''
+
+[[mutation]]
+name = "눌러서 하는 접속 확인이 보기 권한이다"
+tests = ["tests/test_permissions.py", "-k", "명세의_권한_표_줄"]
+expect = "red"
+expect_output = ["check_connection_by_launching 의 줄은 <Permission.VIEW: 'view'> 이다"]
+
+[[mutation.edit]]
+file = "src/agent_os/http/permissions.py"
+old = '''
+    "check_connection_by_launching": Permission.TOGGLE_PLUGINS,
+'''
+new = '''
+    "check_connection_by_launching": Permission.VIEW,
+'''
