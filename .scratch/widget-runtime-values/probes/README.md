@@ -1,0 +1,7 @@
+# widget-runtime-values 프로브
+
+명세가 근거로 드는 측정 스크립트다. 규약은 `docs/agents/issue-tracker.md`의 "프로브와 근거", 짓는 규칙은 `.claude/rules/probes.md`다. 근거로 드는 자리는 명세(`.scratch/widget-runtime-values/spec.md`)이고, 명세의 절 이름은 "명세" 뒤에 따옴표로 적는다. 결과와 갈래, 결과를 본 뒤 바꾼 것, 재지 못한 것은 폴더의 `README.md`에 있다.
+
+| 폴더 | 재는 것 | 근거로 드는 자리 | 다시 돌 때 | 잰 판 |
+|---|---|---|---|---|
+| `prebuilt_start/`(`run.py`, 시제품 `Dockerfile`, 시제품 진입 단계 `entry.mjs`, 컨테이너 안의 도우미와 이미지 안 사본을 고치는 스크립트, 호스트의 브라우저 스크립트, 사이트 파일 셋) | 사이트 파일 없이 미리 빌드해 둔 위젯 이미지의 컨테이너가 뜰 때 사이트 파일의 두 값만 받아 서는지. 이미지의 크기와 깔린 것, 지어 둔 응답 머리 목록의 모양, 빌드 없이 뜨는 시간과 메모리, 사이트 파일을 바꾸고 다시 띄운 뒤의 값, 읽기 전용 루트와 tmpfs 폴더 하나, 사이트 파일이 없거나 깨졌을 때와 진입 단계를 건너뛰었을 때, 시작 유예 30초의 상태 확인, 브라우저에서 허용 출처의 페이지만 위젯을 품는지와 다른 출처의 문서가 값 파일을 받는지 | 명세 "값 파일", "품어도 되는 사이트를 알리는 응답 머리", "위젯 이미지", "단독 compose의 위젯", "사이트 파일이 없거나 깨졌을 때", "배포 안내", Further Notes | 먼저 `uv run python .scratch/widget-runtime-values/probes/prebuilt_start/run.py --sections build`, 그다음 `--sections start,reflect,readonly,sitefile,health,browser [--rounds <되풀이 수>] [--work <폴더>]`. 도는 Docker 데몬(BuildKit), `build`에는 Docker Hub와 npm 레지스트리에 닿는 네트워크, `browser`에는 호스트의 node와 깔린 `web/node_modules`와 Playwright의 Chromium. 층 캐시가 찬 채 `--rounds 3`으로 일곱 섹션 전체가 126초였다(원본 기록 `raw.log`의 처음과 끝 시각을 손으로 봤다). Next의 판을 올리는 티켓은 이 프로브를 다시 돈다. 타입 검사는 `uv run pyright -p .scratch/widget-runtime-values/probes/prebuilt_start` | Windows 10의 Docker Desktop, 엔진 29.9.2(linux/amd64), `node:24-trixie-slim`(digest 고정), Node v24.22.3, pnpm 11.24.0, Next 16.3.6, Vite 8.3.1, TypeScript 5.9.3, Chromium 153.0.8010.12. 2026-11-27, 네 실행 90회차 모두 측정 |

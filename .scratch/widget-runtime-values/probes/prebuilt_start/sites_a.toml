@@ -1,0 +1,28 @@
+# prebuilt_start 프로브의 첫째 사이트 파일. 선례 .scratch/release-image/probes/web_images/sites_a.toml 과 값이 같다.
+# 허용 출처와 요청 글자 수 상한은 응답에서 글자로 찾기 쉽게 다른 데 나오지 않을 값이다. 공개 키는 저장소 픽스처
+# tests/fixtures/site_file/sites.toml 의 첫 사이트 것이다(위젯은 공개 키를 읽지 않는다). browser 섹션은 이 파일의
+# allowed_origins 줄을 그 실행의 부모 페이지 출처로 바꾼 사본을 쓴다(run.py 의 site_text).
+schema_version = "1"
+
+[[sites]]
+issuer = "https://probe-a.example"
+audience = "agent-os"
+allowed_origins = ["https://probe-a.example"]
+agents = ["echo"]
+
+[[sites.public_keys]]
+kid = "probe-a-1"
+pem = """
+-----BEGIN PUBLIC KEY-----
+MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAidz9jKWqEB8cbJnGvTDY
+ggiDwV8F3HbLynTn7l8/Nacy57lLFE7ntT9xIhRUcF6X83v5u577ywbiuFQDu0Fe
+2xAk2SkXzPTxuPoGJM0j1HA2pdmLbOMYnZGXYFysmQSETCE8HVvfDYfxWbZYEcIz
+YUmEyKFRkfKwv9AUK/3KHCKHCInseeAiPiaOVwJDsmD4yDwXZMSN8IZ9gXxDjacx
+hMzhdNJBO9tCvWe2YTC6r5Db8VrEqDMMHfmYRSdyG0yqxRnZ96GhdX9SUfgrFTq8
+ekx4FVGPtqwi5NY7TBrSF93yN9lbA+tHYKQPLhjFlJdD6s09lHpxjolQNAN0qtjz
+xwIDAQAB
+-----END PUBLIC KEY-----
+"""
+
+[sites.limits]
+request_chars = 771133
