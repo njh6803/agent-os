@@ -101,6 +101,26 @@ CodeRabbit 인라인 셋과 claude-review 지적 둘이 왔다. 판정:
 
 > 사용자(`AskUserQuestion` 답, 둘째): 질문 "로컬 모델 시험을 다시 시도할까요? … 비용 예상은 이전과 같습니다. 어림 30분이면 약 $0.27~$0.59, 가장 오래 걸리는 경우(타이머 90분)에도 $0.81~$1.77입니다(가격은 2026-11-13에 웹 요약에서 읽은 값이고 원문과 대조하지 않았습니다)." 답 "지금 다시 친다 (Recommended)"(설명: "--yes를 붙여 한 번 더 시도합니다. 재고가 없으면 또 비용 없이 끝납니다.").
 
+> 사용자(`AskUserQuestion` 답, 셋째, 봇 1회차 반영 뒤): 질문 "로컬 모델 시험을 다시 시도할까요? 비용 예상은 이전과 같습니다. 어림 30분이면 약 $0.27~$0.59, 가장 오래 걸리는 경우(타이머 90분)에도 $0.81~$1.77입니다(가격은 2026-11-13에 웹 요약에서 읽은 값이고 원문과 대조하지 않았습니다). 앞의 두 번은 GPU 재고가 없어 비용 없이 끝났습니다." 답 "지금 다시 친다 (Recommended)"(설명: "--yes를 붙여 한 번 더 시도합니다. 재고가 없으면 또 비용 없이 끝납니다.").
+
+> 사용자(재시도 방식 답): "1번 30분마다"(선택지 "재고 풀리면 재시도"를 30분 간격 반복으로 골랐다). 세션 안의 30분 예약(CronCreate, 일곱 날 뒤 자동 종료)으로 걸었고, 시도 때마다 비용을 보여 확인받기로 했다.
+
+> 사용자(`AskUserQuestion` 답, 넷째, 예약의 첫 시도): 질문 "로컬 모델 시험을 다시 시도할까요? 예상 비용은 이전과 같습니다. 파드가 뜨면 어림 30분에 약 $0.27~$0.59, 최악 90분에 $0.81~$1.77입니다(RTX A5000 파드 2개 시간당 $0.54, RTX 3090 파드 2개 $1.00, A40 파드 2개 $1.18, A40 shared 1개 $0.59). 재고가 없으면 파드가 뜨지 않아 거의 비용 없이 끝납니다. 다만 첫 시도에서 파드 하나가 1초 만에 만들어졌다 사라졌고, 그 몫은 청구서로 확인하지 못했습니다. 앞의 세 번은 모두 GPU 재고 없음으로 끝났고, 지금 남은 파드는 없습니다." 답 "지금 친다 (Recommended)"(설명: "--yes를 붙여 시험을 시작합니다. 재고가 없으면 거의 비용 없이 끝나고, 30분 뒤 예약이 다시 묻습니다.").
+
+> 사용자(`AskUserQuestion` 답, 다섯째, 예약의 둘째 시도): 질문은 넷째와 같고 "앞의 네 번은 모두 GPU 재고 없음으로 끝났고, 지금 남은 파드는 없습니다."로 끝난다. 답 "지금 친다 (Recommended)"(설명: "--yes를 붙여 시험을 시작합니다. 재고가 없으면 거의 비용 없이 끝나고, 30분 뒤 예약이 다시 묻습니다.").
+
+> 사용자(`AskUserQuestion` 답, 여섯째, 예약의 셋째 시도): 질문은 넷째와 같고 "앞의 다섯 번은 모두 GPU 재고 없음으로 끝났고, 지금 남은 파드는 없습니다."로 끝난다. 답 "지금 친다 (Recommended)"(설명: "--yes를 붙여 시험을 시작합니다. 재고가 없으면 거의 비용 없이 끝나고, 30분 뒤 예약이 다시 묻습니다.").
+
+여섯째 시도(커밋 `4a9e7b7a6`, 회차 파일 `round-0006-20261126T172638Z.json`, 예약의 셋째 시도): 통과했다. RTX A5000 파드 둘과 RTX 3090 파드 둘은 재고 없음(HTTP 400)이었고, A40 파드 둘에서는 파드 하나(`Creation complete after 1s`)만 만들어지고 다른 하나가 재고 없음이라 그 후보는 실패로 끝났다. 끝으로 A40 shared 하나가 떴고 거기서 `uv run pytest -m llm_local` 4건이 모두 통과했다(45.42초, 종료 코드 0). 러너의 총 걸린 시간은 341.5초다. 끝난 뒤 Runpod 파드 목록이 비어 있었다. 비용은 시간당 $0.59에 341.5초로 어림 $0.06이다(A40 후보에서 만들어졌다 사라진 파드 하나의 몫은 더하지 않았고, 청구서로 대 보지 않았다).
+
+다섯째 시도(커밋 `4a9e7b7a6`, 회차 파일 `round-0005-20261126T163255Z.json`, 예약의 둘째 시도): 파드를 만들지 못한 무효 회차다. 종료 코드 2, 걸린 시간 4.5초, 통과 없음. 끝난 뒤 Runpod 파드 목록이 비어 있었다. 러너가 연달은 무효 회차 5번이라며 멈추고 보고하라고 했다.
+
+넷째 시도(커밋 `4a9e7b7a6`, 회차 파일 `round-0004-20261126T162608Z.json`, 30분 예약의 첫 시도): 후보 넷이 모두 "There are no longer any instances available"(HTTP 400)로 파드를 만들지 못했다. 이번에는 `Creation complete` 줄도 없었다. 종료 코드 2, 걸린 시간 4.7초, 무효 회차다. 끝난 뒤 Runpod 파드 목록이 비어 있었다. 러너가 "연달은 무효 회차 4번 … 다시 띄우지 말고 멈춰 사용자에게 보고한다"고 했으나, 사용자가 30분마다 재시도를 골랐고 시도 때마다 비용 확인을 받으므로 예약은 그대로 둔다.
+
+셋째 시도(커밋 `4a9e7b7a6`, 회차 파일 `round-0003-20261126T144610Z.json`): 후보 넷(RTX A5000 파드 둘, RTX 3090 파드 둘, A40 파드 둘, A40 shared 하나)이 모두 "There are no longer any instances available"(HTTP 400)로 파드를 만들지 못했다. 종료 코드 2, 걸린 시간 9.7초, 무효 회차다. A5000 후보에서 파드 하나가 만들어졌다는 줄(`Creation complete`)이 있었으나 끝난 뒤 Runpod의 파드 목록이 비어 있어 남은 파드가 없음을 읽었다(과금은 청구서로 대 보지 않았다. 만들어진 시간이 1초 안팎이라 어림으로 0에 가깝다). 러너가 "연달은 무효 회차 3번 … 다시 띄우지 말고 멈춰 사용자에게 보고한다"고 해서 더 치지 않았다.
+
+기록 묶음(통과한 여섯째 시도, 러너 출력. 서버 키와 주소는 없다): commit `4a9e7b7a6aee490ac1f8386bdfb4db96ed238b29`, 모델 `GotoAI-Inc/gemma-4-26B-A4B-it-W4A16`·`openai/gpt-oss-20b`, 엔진 vLLM 0.33.0(이미지 `vllm/vllm-openai:v0.33.0`), 서버 옵션 `vllm serve GotoAI-Inc/gemma-4-26B-A4B-it-W4A16 --host 0.0.0.0 --port 8000 --enable-auto-tool-choice --tool-call-parser gemma4 --max-model-len 32768 --revision fdb4e380603cf157783227bd790bfbe921b64610 --gpu-memory-utilization 0.45 --kv-cache-memory=4294967296`와 `vllm serve openai/gpt-oss-20b --host 0.0.0.0 --port 8001 --enable-auto-tool-choice --tool-call-parser openai --gpu-memory-utilization 0.45 --kv-cache-memory=4294967296`, GPU A40, 배치 shared(파드 하나에 두 서버), 통과 4, 토큰 6,328(입력 6,191, 출력 137, 모델 호출 4건, 트레이스 2개), 걸린 시간 341.5초, 시간당 $0.59, 가격표 날짜 2026-11-13, 시험 명령 `uv run pytest -m llm_local`, 시험 종료 코드 0. 러너가 "트레이스를 남기지 않은 LLM 테스트 2개는 세지 못했다"고 알렸으므로 위 토큰은 그 둘을 뺀 값이다. 앞의 다섯 시도는 모두 통과 없음의 무효 회차다.
+
 ## 검증 결과(리뷰 반영 뒤)
 
 - `uv run python tools/run_checks.py` 모두 통과(check-ticket, check-notes, lint-imports, zizmor, check-instructions, check-type-escapes, pyright, pyright-linux, run-hooks, pytest 644초, web-verify 785초). ruff는 러너 밖이라 `uv run ruff check .`와 `uv run ruff format --check .`를 따로 쳐 통과했다(마지막 고침 뒤에는 `src`와 `tests`에 다시 쳐 통과).
@@ -108,8 +128,9 @@ CodeRabbit 인라인 셋과 claude-review 지적 둘이 왔다. 판정:
 - 관리 화면 e2e `pnpm -C web/apps/admin exec playwright test`: 11건 가운데 `decision.e2e.ts`의 "멈춘 실행을 승인하면 …" 한 건이 첫 판에 5초 기한에 닿아 빨갰고(이벤트 구역에 `run_finished`가 아직 없었다), 그 파일만 다시 치자 셋 모두 통과했다. 이 변경과 닿는 곳이 아니고 같은 시험이 두 번 연속 빨갛지 않아 진단 절차는 걸지 않았다. 원인은 재지 않았다(부하와 겹친 일시적 지연이라는 것은 어림이다).
 - `uv run --env-file ../../../.env pytest -m llm -q` 24건 통과, 토큰 272,696(입력 267,397, 출력 5,299).
 - 카나리아: 알림이 가리킨 명세 셋(`http_rule_continuation_422`, `http_rule_pre_owner_damage`, `http_rule_llm_widget`)을 새 `claude -p` 세션(2.1.325)으로 실제로 돌려 모두 통과 4, 실패 0, "없음" 섞임 0이다(커밋하기 전의 작업 트리, 커밋 `e0e697425` 위). 이 PR 안에서 처음 도는 것이라 사전 확인으로 갈음하지 않았다. 세 명세의 `# 최신 결과:` 줄을 고쳤다.
-- 로컬 모델 시험: 두 번 시도했고 둘 다 GPU 후보 넷이 재고 없음(HTTP 400)으로 무효 회차다(연달은 무효 2번, 러너가 멈추고 사용자에게 보고하라고 했다). 파드가 하나도 뜨지 않았고 Runpod 파드 목록이 비어 있어 비용은 들지 않았다. 병합 조건이라 이 시험이 통과하기 전에는 병합하지 않는다.
+- 로컬 모델 시험(병합 조건): 여섯 번째 시도에서 통과했다. 앞의 다섯 번은 GPU 재고 없음의 무효 회차였다(연달은 무효 5번에서 러너가 멈추고 보고하라고 했고, 사용자가 30분마다 재시도를 골라 시도 때마다 비용 확인을 받았다). 여섯째는 A40 shared에서 `uv run pytest -m llm_local` 4건 통과, 걸린 시간 341.5초다. 시험한 커밋은 `4a9e7b7a6`이고 그 뒤 바뀐 것은 일지와 티켓 문서뿐이다. 끝난 뒤 Runpod 파드 목록이 비어 있었다.
+- 봇 1회차 반영 뒤(`4a9e7b7a6`): pre-commit 통과, PR의 모든 검사 초록(`claude-review`, `e2e`·`e2e-portal`·`e2e-standalone`·`e2e-widget`, `python`, `ticket`, `verify`, `visual`, `web`, `llm`은 건너뜀). CodeRabbit 2회차는 사용 한도(`Review rate limited`)로 새 지적 없이 끝났다.
 
 ## 이어받을 일
 
-셀프 리뷰와 위 검증은 끝났다. 남은 것은 로컬 모델 시험(재고가 풀리면 `--yes` 없이 쳐 비용을 사용자에게 다시 보이고 확인받은 뒤 `--yes`)과, 통과한 뒤 티켓을 `done`으로 바꾸고 마지막 체크박스를 치는 일이다. 05(`permission-table-and-accounts-on-runs`)와 나란히 돈다. 늦게 병합하는 쪽이 권한 표(05가 짓는다)에 `refresh_login`(로그인 없이 연다) 줄을 더한다. 병합 전에 `origin/dev`에 05가 들어왔는지 보고, 들어왔으면 합친 뒤 05의 전수 검사가 초록인지 본다. `openapi.json`과 생성 TS는 손으로 합치지 말고 다시 뽑는다. 05가 같은 파일(`.claude/rules/http.md`, `src/agent_os/admin/auth.py`, `src/agent_os/http/auth.py`)을 고치므로 글자 충돌이 날 수 있다.
+셀프 리뷰와 위 검증, 로컬 모델 시험까지 끝났고 티켓의 마지막 체크박스도 쳤다. 남은 것은 이 문서 변경을 커밋해 푸시하고, CI를 보고, 병합하는 일이다. 05(`permission-table-and-accounts-on-runs`)와 나란히 돈다. 늦게 병합하는 쪽이 권한 표(05가 짓는다)에 `refresh_login`(로그인 없이 연다) 줄을 더한다. 병합 전에 `origin/dev`에 05가 들어왔는지 보고, 들어왔으면 합친 뒤 05의 전수 검사가 초록인지 본다. `openapi.json`과 생성 TS는 손으로 합치지 말고 다시 뽑는다. 05가 같은 파일(`.claude/rules/http.md`, `src/agent_os/admin/auth.py`, `src/agent_os/http/auth.py`)을 고치므로 글자 충돌이 날 수 있다.
