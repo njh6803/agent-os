@@ -65,6 +65,7 @@ from agent_os.channel.cli.operator import (
 from agent_os.channel.http.limits import DEFAULT_CONCURRENT_RUNS
 from agent_os.core.ports import PluginError
 from agent_os.core.run import DEFAULT_RUN_TIMEOUT_SECONDS
+from agent_os.http.login_tokens import read_login_durations
 from agent_os.http.sites import PRINCIPAL_SEPARATOR, Site, SiteKey, SiteLimits, Sites
 from agent_os.sdk import (
     PLUGIN_NAME_PATTERN,
@@ -102,6 +103,9 @@ CONTAINER_NETWORK_HOST = "0.0.0.0"
 # 취소되어 결말 없음이 된다. 5 초는 결말 직전의 실행이 마지막 이벤트를 흘릴 여유이고, 모델 호출
 # 하나(수십 초)를 기다려 주는 길이가 아니다. 그 실행은 트레이스에 결말 없음으로 남는다.
 SHUTDOWN_GRACE_SECONDS = 5
+# 환경 변수의 값이 범위를 벗어난 서버가 끝나는 종료 코드. 명령줄 사용법이 틀렸을 때 argparse 가
+# 끝나는 코드와 같다. 구성 오류 목록의 1 과 갈라, 운영자가 값을 고쳐야 하는 끝을 코드로 알아본다
+EXIT_BAD_SETTING = 2
 
 _NO_ADMIN_TOKEN_DIAGNOSTIC = (
     f"{ADMIN_TOKEN_ENV} 가 비어 있다. 관리 API 는 토큰 없이 서지 않는다(ADR 0011).\n"
@@ -241,6 +245,12 @@ def _serve(args: ServeArgs) -> int:
     넘기고(`lifespan="on"`), 확인에서 멈추면 uvicorn 이 종료 코드 3 으로 끝난다. 이 함수가 3 을 1 로
     바꾸지 않는다.
     """
+    # 유지 시간은 다른 구성 오류와 달리 종료 코드 2 로 끝난다. 값 셋의 범위와 서로의 관계를 먼저
+    # 보고, 틀리면 다른 점검 없이 그 문구만 찍는다
+    durations = read_login_durations(os.environ)
+    if isinstance(durations, str):
+        sys.stderr.write(f"{durations}\n")
+        return EXIT_BAD_SETTING
     admin_token = os.environ.get(ADMIN_TOKEN_ENV, "")
     channel_token = os.environ.get(CHANNEL_TOKEN_ENV, "")
     user = getpass.getuser()
@@ -254,6 +264,7 @@ def _serve(args: ServeArgs) -> int:
     if problems or not isinstance(sites, Sites) or isinstance(database_url, str):
         sys.stderr.write("".join(f"{problem}\n" for problem in problems))
         return EXIT_FAILED
+    database = _build_database(database_url)
     uvicorn.run(
         create_app(
             plugins=FilesystemPlugins(args.plugins_root),
@@ -269,7 +280,9 @@ def _serve(args: ServeArgs) -> int:
             run_timeout_seconds=args.run_timeout_seconds,
             end_user_concurrent_runs=args.end_user_concurrent_runs,
             stderr=sys.stderr,
-            database=_build_database(database_url),
+            database=database,
+            accounts=database.accounts(),
+            login_durations=durations,
         ),
         host=args.host,
         port=args.port,

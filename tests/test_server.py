@@ -29,6 +29,7 @@ from httpx import ASGITransport, AsyncClient
 from langchain_core.language_models.fake_chat_models import GenericFakeChatModel
 from pydantic import TypeAdapter
 from starlette.exceptions import HTTPException as StarletteHTTPException
+from tests.fake_accounts import UnusedAccounts
 from tests.fake_checks import UnusedToolChecks
 from tests.fake_database import FakeDatabase
 from tests.fake_models import DEFAULT_MODEL, FakeModels
@@ -95,6 +96,7 @@ from agent_os.http.errors import (
     Surface,
     failure_for,
 )
+from agent_os.http.login_tokens import LoginDurations
 from agent_os.http.sites import Site, Sites
 from agent_os.sdk import (
     PLUGIN_NAME_PATTERN,
@@ -477,6 +479,8 @@ def _admin_app(
         end_user_concurrent_runs=None,
         stderr=stderr,
         database=FakeDatabase(),
+        accounts=UnusedAccounts(),
+        login_durations=LoginDurations(),
     )
 
 
@@ -547,9 +551,9 @@ async def test_헬스체크만_토큰_없이_답한다(client: AsyncClient) -> N
     assert response.json() == {"status": "ok"}
 
 
-def test_인증_없이_지나가는_경로의_목록은_헬스체크_하나다() -> None:
+def test_인증_없이_지나가는_경로의_목록은_헬스체크와_로그인과_첫_계정_확인_셋이다() -> None:
     """목록이 문서 없이 자라는 것이 fail-open 으로 돌아가는 길이다(ADR 0011)."""
-    assert PUBLIC_PATHS == frozenset({"/health"})
+    assert PUBLIC_PATHS == frozenset({"/health", "/auth/login", "/auth/setup"})
 
 
 async def test_serve_의_API_문서_판_칸이_설치된_패키지의_판이다(client: AsyncClient) -> None:
@@ -578,8 +582,14 @@ async def test_allowlist_밖의_모든_경로가_토큰_없이_401이다(
 
     for path in documented:
         response = await client.get(path)
-        expected = 200 if path in PUBLIC_PATHS else 401
-        assert response.status_code == expected, path
+        if path == "/health":
+            assert response.status_code == 200, path
+        elif path in PUBLIC_PATHS:
+            # 로그인과 첫 계정 확인은 GET 을 받지 않거나 계정 저장소를 읽는다. 이 시험은 그 둘이
+            # 인증의 401 에 막히지 않는다는 것만 잰다. 두 경로의 동작은 로그인 시험이 잰다.
+            assert response.status_code != 401, path
+        else:
+            assert response.status_code == 401, path
 
 
 async def test_문서에_없는_경로도_토큰_없이는_404가_아니라_401이다(client: AsyncClient) -> None:
@@ -1080,7 +1090,7 @@ async def test_허용_출처의_preflight_는_최종_사용자_접두사에서�
     앱이 아는 오퍼레이션 가운데 allowlist 밖의 전부에 허용 출처의 preflight 를 토큰 없이 보낸다.
     CORS 미들웨어가 답하는 것은 최종 사용자 접두사뿐이고, 그 밖은 허용 출처라도 `Origin` 이 있는
     요청이라 출처 검사가 인증보다 먼저 403 으로 막으며 그 403 에는 CORS 헤더도 없다(이 기능 전에는
-    인증의 401 이었다). `PUBLIC_PATHS` 는 그대로 `/health` 하나다 — preflight 는
+    인증의 401 이었다). `PUBLIC_PATHS` 에 든 로그인 경로도 이 열거 밖이다 — preflight 는
     그 목록의 원소가 아니라 CORS 미들웨어의 몫이다(`/health` 의 preflight 는 인증을 지나 라우터의
     405 다). 방향마다 열거가 비면 그 방향은 아무것도 재지 않는다."""
     app = _signed_app(stderr)
@@ -3460,7 +3470,8 @@ def test_403은_운영자_경로_전부가_문서에_적고_health_와_최종_�
 
     for method, path in operations:
         responses = paths[path][method.lower()]["responses"]
-        checked = path not in PUBLIC_PATHS and _surface_of(path) != "end_user"
+        # 로그인과 첫 계정 확인은 인증 없이 열리지만 출처 검사는 받으므로 403 을 문서에 적는다
+        checked = path != "/health" and _surface_of(path) != "end_user"
         assert ("403" in responses) is checked, (method, path)
         if checked:
             reference = responses["403"]["content"]["application/json"]["schema"]["$ref"]

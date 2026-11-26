@@ -7,8 +7,8 @@
 `main`, 포트 타입을 적은 시험 픽스처)의 타입 검사가 잡는다.
 
 **포트의 메서드는 지금 쓰는 것만 있다.** 첫 쓰는 곳은 서버 명령
-`agent-os operator system-admin`이다. 로그인과 계정 경로가 쓰는 메서드는 그 일을 들이는 티켓이
-더한다.
+`agent-os operator system-admin`이고, 로그인 경로가 둘째다. 갱신과 계정 경로가 쓰는 메서드는 그
+일을 들이는 티켓이 더한다.
 
 **이름 충돌은 예외가 아니라 돌려주는 값으로 가른다.** 계정을 넣는 메서드(`AccountWork.add`)는 넣은
 줄이나 글자 값 `"taken"`을 돌려준다. 예외로 알리는 길은 두 층이 함께 가져올 예외 타입이 없고(core에
@@ -27,12 +27,15 @@ import re
 from contextlib import AbstractAsyncContextManager
 from datetime import datetime
 from typing import Literal, Protocol
+from uuid import UUID
 
 type Tier = Literal["system_admin", "admin"]
 type Taken = Literal["taken"]
-# 로그인 기록에 남기는 일의 종류. 닫힌 목록이고, 열넷 가운데 지금 쓰는 하나만 있다(명세 "로그인
-# 기록").
-type RecordKind = Literal["system_admin_set"]
+# 로그인 기록에 남기는 일의 종류. 닫힌 목록이고, 열넷 가운데 지금 쓰는 것만 있다(명세 "로그인
+# 기록"). 나머지는 그 일을 들이는 티켓이 더한다.
+type RecordKind = Literal[
+    "system_admin_set", "login_succeeded", "login_failed", "locked", "logged_out"
+]
 
 ACCOUNT_NAME_RULE_TEXT = (
     "계정 이름은 영문 소문자, 숫자, `.`, `_`, `-`로 3~32자이고 영문자나 숫자로 시작해야 합니다."
@@ -119,8 +122,64 @@ class AccountWork(Protocol):
         """그 계정에서 아직 끊기지 않은 로그인을 한 건도 남기지 않고 끊는다."""
         ...
 
-    async def record(self, kind: RecordKind, *, at: datetime, account: str) -> None:
-        """로그인 기록에 한 줄을 더한다. 비밀번호와 해시는 어느 줄에도 싣지 않는다(원칙 V)."""
+    async def record(
+        self,
+        kind: RecordKind,
+        *,
+        at: datetime,
+        account: str | None,
+        address: str | None = None,
+    ) -> None:
+        """로그인 기록에 한 줄을 더한다. 비밀번호와 해시는 어느 줄에도 싣지 않는다(원칙 V).
+
+        대상 계정(`account`)은 없는 이름으로 온 로그인 실패에서 비운다. 접속한 주소(`address`)는
+        부르는 쪽이 읽어 넘기고 읽지 못했으면 비운다.
+        """
+        ...
+
+    async def any_account(self) -> bool:
+        """운영자 계정이 하나라도 있는가. 첫 계정 확인이 쓴다."""
+        ...
+
+    async def set_failures(
+        self, name: str, *, failures: int, locked_until: datetime | None
+    ) -> None:
+        """연속 틀린 횟수와 잠겨 풀리는 시각을 적는다. 둘 다 부르는 쪽이 규칙으로 정한 값이다."""
+        ...
+
+    async def clear_failures(self, name: str) -> None:
+        """연속 틀린 횟수와 잠금을 지운다. 해시는 건드리지 않는다."""
+        ...
+
+    async def delete_ended_logins(
+        self, name: str, *, idle_before: datetime, total_before: datetime
+    ) -> None:
+        """그 계정의 끝난 로그인을 지운다. 갱신용 번호는 로그인과 함께 지워진다.
+
+        끝난 로그인은 끊긴 것(`ended_at` 이 있다), 마지막 갱신이 `idle_before` 이전인 것(쉬는 시간이
+        지났다), 로그인한 때가 `total_before` 이전인 것(총 시간이 지났다)이다. 기준 시각은 부르는
+        쪽이 유지 시간 규칙으로 계산해 넘긴다.
+        """
+        ...
+
+    async def open_login(self, login_id: UUID, name: str, *, at: datetime) -> None:
+        """로그인 한 건을 연다. 마지막으로 갱신한 시각은 로그인한 시각과 같다."""
+        ...
+
+    async def add_refresh_token(self, token_hash: str, login_id: UUID, *, at: datetime) -> None:
+        """갱신용 번호의 해시를 그 로그인 한 건에 더한다. 번호 자체는 서버에 두지 않는다."""
+        ...
+
+    async def end_login(self, login_id: UUID, *, at: datetime) -> None:
+        """로그인 한 건을 끊는다. 이미 끊겼거나 없으면 아무것도 하지 않는다."""
+        ...
+
+    async def ensure_signing_key(self, key: bytes, *, at: datetime) -> None:
+        """서명 키의 줄이 없으면 넣는다. 이미 있으면 아무것도 하지 않는다(줄은 하나뿐이다)."""
+        ...
+
+    async def read_signing_key(self) -> bytes | None:
+        """서명 키. 줄이 없으면 `None`."""
         ...
 
 

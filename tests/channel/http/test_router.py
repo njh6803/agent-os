@@ -35,6 +35,7 @@ from langchain_core.messages.tool import ToolCall as LangchainToolCall
 from langchain_core.outputs import ChatResult
 from langchain_core.runnables import Runnable
 from starlette.types import Message, Scope
+from tests.fake_accounts import UnusedAccounts
 from tests.fake_checks import UnusedToolChecks
 from tests.fake_database import FakeDatabase
 from tests.fake_models import DEFAULT_MODEL, FakeModels, model_manifest
@@ -68,6 +69,7 @@ from agent_os.core.ports import (
 )
 from agent_os.core.run import run
 from agent_os.http.errors import INTERNAL_MESSAGE
+from agent_os.http.login_tokens import LoginDurations
 from agent_os.http.sites import Sites
 from agent_os.sdk import (
     RUN_ID_PATTERN,
@@ -546,6 +548,8 @@ def _app(
         end_user_concurrent_runs=None,
         stderr=stderr or io.StringIO(),
         database=FakeDatabase(),
+        accounts=UnusedAccounts(),
+        login_durations=LoginDurations(),
     )
 
 
@@ -1922,6 +1926,8 @@ EXISTING_COMPONENTS = frozenset(
         "HttpServer",
         "Json",
         "LlmCalled",
+        "LoginRequest",
+        "Me",
         "ModelProvider",
         "Plugin",
         "PluginKind",
@@ -1937,6 +1943,7 @@ EXISTING_COMPONENTS = frozenset(
         "RunStatus",
         "RunSummary",
         "SetEnabled",
+        "Setup",
         "StdioServer",
         "ToolCall",
         "ToolCalled",

@@ -62,12 +62,19 @@ from agent_os.channel.cli.main import DEFAULT_HOST, EXIT_PAUSED
 from agent_os.channel.http.limits import DEFAULT_REQUEST_CHARS, check_request_chars
 from agent_os.core.ports import ChatModel, Trace, UnknownEvent
 from agent_os.http.database import Database
+from agent_os.http.login_tokens import (
+    IDLE_MINUTES_ENV,
+    TOKEN_MINUTES_ENV,
+    TOTAL_MINUTES_ENV,
+    LoginDurations,
+)
 from agent_os.http.sites import Site, SiteKey, SiteLimits, Sites
 from agent_os.main import (
     ADMIN_TOKEN_ENV,
     CHANNEL_TOKEN_ENV,
     CONTAINER_NETWORK_ENV,
     DATABASE_URL_ENV,
+    EXIT_BAD_SETTING,
     IMAGE_MARKER,
     ContainerNetwork,
     binding_problem,
@@ -1411,6 +1418,82 @@ def test_두_토큰이_같으면_서버가_뜨지_않고_진단이_그_값을_�
     assert CHANNEL_TOKEN_ENV in err
     assert "XYZZY" not in out + err
     assert uvicorn_calls == []
+
+
+@pytest.mark.parametrize(
+    ("env", "value"),
+    [
+        (TOKEN_MINUTES_ENV, "0"),
+        (TOKEN_MINUTES_ENV, "16"),
+        (IDLE_MINUTES_ENV, "4"),
+        (TOTAL_MINUTES_ENV, "43201"),
+        (TOKEN_MINUTES_ENV, "다섯"),
+    ],
+)
+@pytest.mark.usefixtures("tokens")
+def test_로그인_유지_시간이_범위를_벗어나면_서버가_뜨지_않고_종료_코드_2와_이름이_든_문구다(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    uvicorn_calls: list[dict[str, object]],
+    env: str,
+    value: str,
+) -> None:
+    """토큰 진단의 종료 코드 1 과 갈라, 운영자가 값을 고쳐야 하는 끝을 코드로 알아본다."""
+    monkeypatch.setenv(env, value)
+
+    code = _main(["serve"])
+
+    out, err = capsys.readouterr()
+    assert code == EXIT_BAD_SETTING == 2
+    assert out == ""
+    assert env in err
+    assert repr(value) in err
+    assert uvicorn_calls == []
+
+
+@pytest.mark.usefixtures("tokens")
+def test_짧은_로그인_증표의_수명이_쉬는_시간_이상이면_둘의_이름을_적고_종료_코드_2다(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    uvicorn_calls: list[dict[str, object]],
+) -> None:
+    monkeypatch.setenv(TOKEN_MINUTES_ENV, "10")
+    monkeypatch.setenv(IDLE_MINUTES_ENV, "10")
+
+    code = _main(["serve"])
+
+    _, err = capsys.readouterr()
+    assert code == EXIT_BAD_SETTING
+    assert TOKEN_MINUTES_ENV in err
+    assert IDLE_MINUTES_ENV in err
+    assert uvicorn_calls == []
+
+
+@pytest.mark.usefixtures("tokens")
+def test_로그인_유지_시간의_환경_변수가_없으면_기본값이고_있으면_그_값을_앱에_넘긴다(
+    monkeypatch: pytest.MonkeyPatch,
+    uvicorn_calls: list[dict[str, object]],
+) -> None:
+    given: list[LoginDurations] = []
+
+    def spy(**kwargs: object) -> FastAPI:
+        durations = kwargs["login_durations"]
+        assert isinstance(durations, LoginDurations)
+        given.append(durations)
+        # uvicorn 은 기록만 하므로 앱의 내용은 이 시험이 보지 않는다
+        return FastAPI()
+
+    monkeypatch.setattr(main_module, "create_app", spy)
+    for env in (TOKEN_MINUTES_ENV, IDLE_MINUTES_ENV, TOTAL_MINUTES_ENV):
+        monkeypatch.delenv(env, raising=False)
+    assert _main(["serve"]) == 0
+    monkeypatch.setenv(TOKEN_MINUTES_ENV, "3")
+    monkeypatch.setenv(IDLE_MINUTES_ENV, "40")
+    monkeypatch.setenv(TOTAL_MINUTES_ENV, "100")
+    assert _main(["serve"]) == 0
+
+    assert given == [LoginDurations(5, 30, 480), LoginDurations(3, 40, 100)]
+    assert len(uvicorn_calls) == 2
 
 
 @pytest.mark.usefixtures("tokens")
