@@ -98,6 +98,7 @@ def test_표의_값은_로그인_없이_연다와_로그인만_요구한다와_�
     ("operation_id", "expected"),
     [
         ("log_in", Open()),
+        ("refresh_login", Open()),
         ("get_setup", Open()),
         ("log_out", LoginOnly()),
         ("get_me", LoginOnly()),

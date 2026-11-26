@@ -574,9 +574,9 @@ async def test_헬스체크만_토큰_없이_답한다(client: AsyncClient) -> N
     assert response.json() == {"status": "ok"}
 
 
-def test_인증_없이_지나가는_경로의_목록은_헬스체크와_로그인과_첫_계정_확인_셋이다() -> None:
+def test_인증_없이_지나가는_경로의_목록은_헬스체크와_로그인과_갱신과_첫_계정_확인_넷이다() -> None:
     """목록이 문서 없이 자라는 것이 fail-open 으로 돌아가는 길이다(ADR 0011)."""
-    assert PUBLIC_PATHS == frozenset({"/health", "/auth/login", "/auth/setup"})
+    assert PUBLIC_PATHS == frozenset({"/health", "/auth/login", "/auth/refresh", "/auth/setup"})
 
 
 async def test_serve_의_API_문서_판_칸이_설치된_패키지의_판이다(client: AsyncClient) -> None:
@@ -607,7 +607,7 @@ async def test_allowlist_밖의_모든_경로가_토큰_없이_401이다(
         response = await client.get(path)
         if path == "/health":
             assert response.status_code == 200, path
-        elif path == "/auth/login":
+        elif path in ("/auth/login", "/auth/refresh"):
             # POST 만 받는 경로다. 인증을 지나 라우터에 닿아 GET 은 405 다. 동작은 로그인 시험이
             # 잰다
             assert response.status_code == 405, path

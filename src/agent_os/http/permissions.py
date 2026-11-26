@@ -79,6 +79,7 @@ SHARED_TOKEN_PERMISSIONS: frozenset[Permission] = frozenset(Permission) - {
 # 같은 집합인지 본다.
 PERMISSION_TABLE: Mapping[str, Requirement] = {
     "log_in": Open(),
+    "refresh_login": Open(),
     "get_setup": Open(),
     "log_out": LoginOnly(),
     "get_me": LoginOnly(),

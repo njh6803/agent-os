@@ -400,6 +400,77 @@ async def _ensure_key(accounts: AccountStore, key: bytes) -> None:
         await work.ensure_signing_key(key, at=NOW)
 
 
+async def test_서명_키를_바꾸면_줄이_없어도_넣고_있으면_키와_시각만_바꾸고_줄은_하나다(
+    database: ScopedDatabase, accounts: AccountStore
+) -> None:
+    first, second = b"\x01" * 32, b"\x02" * 32
+    async with _work(accounts) as work:
+        await work.replace_signing_key(first, at=NOW)
+    async with _work(accounts) as work:
+        assert await work.read_signing_key() == first
+        await work.replace_signing_key(second, at=LATER)
+    async with _work(accounts) as work:
+        assert await work.read_signing_key() == second
+    async with plain(database) as connection:
+        rows = (
+            await connection.execute(text("SELECT id, created_at FROM operator_signing_key"))
+        ).all()
+    assert [tuple(row) for row in rows] == [(1, LATER)]
+
+
+async def test_갱신용_번호를_잠가_읽으면_번호와_로그인_한_건의_값이_함께_온다(
+    accounts: AccountStore,
+) -> None:
+    login_id = uuid4()
+    async with _work(accounts) as work:
+        await work.add(_new("kim.min", "admin"))
+        await work.open_login(login_id, "kim.min", at=NOW)
+        await work.add_refresh_token("a" * 64, login_id, at=NOW)
+    async with _work(accounts) as work:
+        row = await work.lock_refresh("a" * 64)
+        assert row is not None
+        assert (row.login_id, row.account, row.logged_in_at, row.refreshed_at) == (
+            login_id,
+            "kim.min",
+            NOW,
+            NOW,
+        )
+        assert (row.ended_at, row.used_at) == (None, None)
+        assert await work.lock_refresh("b" * 64) is None
+
+
+async def test_번호를_쓴_것으로_적으면_처음_쓴_시각이_남고_로그인의_갱신_시각이_바뀐다(
+    database: ScopedDatabase, accounts: AccountStore
+) -> None:
+    login_id = uuid4()
+    async with _work(accounts) as work:
+        await work.add(_new("kim.min", "admin"))
+        await work.open_login(login_id, "kim.min", at=NOW)
+        await work.add_refresh_token("a" * 64, login_id, at=NOW)
+        await work.use_refresh_token("a" * 64, at=LATER)
+        await work.use_refresh_token("a" * 64, at=LATER + timedelta(hours=1))
+        await work.touch_login(login_id, at=LATER)
+    async with _work(accounts) as work:
+        row = await work.lock_refresh("a" * 64)
+        assert row is not None
+        assert (row.used_at, row.refreshed_at, row.logged_in_at) == (LATER, LATER, NOW)
+    async with plain(database) as connection:
+        count = (
+            await connection.execute(text("SELECT count(*) FROM operator_refresh_tokens"))
+        ).scalar_one()
+    assert count == 1
+
+
+async def test_계정을_잠그지_않고_읽고_없는_이름은_없음이다(accounts: AccountStore) -> None:
+    async with _work(accounts) as work:
+        await work.add(_new("kim.min", "admin"))
+    async with _work(accounts) as work:
+        row = await work.read_account("kim.min")
+        assert row is not None
+        assert (row.name, row.tier) == ("kim.min", "admin")
+        assert await work.read_account("no.such") is None
+
+
 async def test_로그인_기록은_접속_주소를_함께_적는다(
     database: ScopedDatabase, accounts: AccountStore
 ) -> None:

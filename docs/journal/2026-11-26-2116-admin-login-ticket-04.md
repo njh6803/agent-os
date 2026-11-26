@@ -1,0 +1,153 @@
+# 2026-11-26 admin-login 티켓 04: 갱신과 서명 키 바꾸기
+
+브랜치 `feature/04-refresh-and-signing-key-rotation`, 티켓 `.scratch/admin-login/issues/04-refresh-and-signing-key-rotation.md`. 이 세션의 제목은 인계 전 `feature/04-refresh-and-signing-key-rotation`이었다. 이 일지는 인계 세션이 쓴 것이고 새 세션이 이어 쓴다(커밋은 새 세션이 한다).
+
+## 사용자 프롬프트
+
+붙여 넣은 `next-session` 지시문 하나뿐이다(원문은 길어 요지만 옮긴다).
+
+> 사용자: 저장소는 `C:\project\agent`다. `.claude/skills/implement/SKILL.md`를 읽어 그대로 따르고 인자는 `.scratch/admin-login/issues/04-refresh-and-signing-key-rotation.md`다. 다음 단계는 구현이고, 어디서는 새 세션(나란히 여는 2 중 1), 모델은 Sonnet 5.5 / high다. 읽을 것은 일지 `2026-11-26-1553-admin-login-ticket-03.md`의 "첫 봇 회차" 끝의 "뒤로 넘긴 일"과 "다음"이다. 만료된 짧은 JWT로 `/auth/logout`을 부르면 401이라 갱신용 번호가 서버에 남는 문제를 이 티켓이 정한다. 나란히 여는 05는 `.scratch/admin-login/issues/05-permission-table-and-accounts-on-runs.md`다. 주 체크아웃이 미갱신이라 `tidy-checkouts`를 먼저 돌고 `EnterWorktree`(name `04-refresh-and-signing-key-rotation`)로 들어가 브랜치를 바꾼다. 병합은 워크트리 `merge.md`의 "워크트리에서 병합할 때"를 따른다. 로컬 모델 시험은 재고가 없으면 시간을 두고 다시 치고 그때마다 사용자에게 비용 확인을 받는다. 이번 요청 범위는 PR과 병합까지다.
+
+사용자의 정정이나 피드백은 없었다.
+
+## 한 것(커밋 전, 작업 트리에만 있다)
+
+- 순수 규칙: `src/agent_os/http/login_tokens.py`에 `REFRESH_GRACE`(10초), `RefreshRefusal`, `ENDS_LOGIN`, `judge_refresh`(여덟 갈래 가운데 앞 여섯의 판정 순서: 끊김, 쉼, 총 시간, 비활성, 잠김, 10초 지난 재사용). 시험은 `tests/test_login_tokens.py`의 "갱신의 판정" 절 아홉 건.
+- 포트 `src/agent_os/http/accounts.py`: `RefreshRow`, `RecordKind`에 `refresh_reused`·`signing_key_rotated`, `AccountWork`에 `replace_signing_key`·`lock_refresh`·`read_account`(처음 이름은 `find`였고 봇 1회차 뒤 포트의 동사에 맞춰 바꿨다)·`use_refresh_token`·`touch_login` 다섯. 어댑터 `src/agent_os/adapters/postgres/accounts.py`가 같은 시그니처로 만족한다(`RefreshRecord`, 로그인 줄을 먼저 잠그고 번호 줄을 그다음에 잠근다. 계정은 잠그지 않는다. 계정을 잠그고 로그인 줄을 지우는 `_open`과 교착하지 않게 하려는 것이다).
+- 서비스 `src/agent_os/http/logins.py`의 `LoginService.refresh(token, address=)`. 거절하는 갈래 가운데 끊는 것(비활성, 잠김, 재사용)은 예외가 아니라 정상 반환이라 트랜잭션이 커밋된다. 시각은 줄을 잠근 뒤에 주입된 시계에서 읽는다.
+- 라우트 `src/agent_os/admin/auth.py`의 `POST /auth/refresh`(`refresh_login`). 거절은 `HTTPException`이 아니라 `error_envelope` 봉투를 직접 만들고 지우는 `Set-Cookie` 줄 둘을 얹는다. 401 문서에 `Set-Cookie` 머리를 적었다. `src/agent_os/http/auth.py`의 `PUBLIC_PATHS`가 넷이다.
+- 서버 명령: `src/agent_os/channel/cli/operator.py`의 `rotate_key_command`와 `ROTATED_TEXT`, `src/agent_os/channel/cli/main.py`의 `RotateKeyArgs`와 `rotate-key` 하위 명령, `src/agent_os/main.py`의 `_rotate_key`와 `_on_database`(옛 `_system_admin_database`를 두 명령이 나눠 쓰도록 바꿨다).
+- 시험: `tests/test_login_http.py`(갱신 절 아래 셋째 항목, 서명 키 바꾸기 연속 시험 포함 78건), `tests/test_rotate_key_command.py`(신규), `tests/adapters/test_postgres_accounts.py`(새 포트 메서드 넷), 대역 `tests/fake_accounts.py`·`tests/test_system_admin_command.py`의 `_RacingWork`에 새 메서드, `tests/test_server.py`(공개 경로 넷, `/auth/refresh`의 GET은 405).
+- 계약: `openapi.json`(`uv run python tools/export_openapi.py`), `web/packages/api-client/src/generated/openapi.ts`(`pnpm -C web generate:api-client`), `web/packages/api-client/src/clients.test-d.ts`의 관리 경로 목록에 `/auth/refresh`.
+- 문서: `.claude/rules/http.md`의 `PUBLIC_PATHS` 문장 둘(넷, 갱신은 쿠키 하나로 서비스가 판정하고 401은 지우는 줄 둘).
+- 티켓 `Status`는 `in-progress`다. `done`으로 바꾸고 체크박스를 치는 일은 남았다.
+
+## 판단과 결정
+
+- 만료된 짧은 JWT로 `/auth/logout`을 부르면 401이라 갱신용 번호가 남는 문제(03 일지의 "뒤로 넘긴 일"): 명세가 이미 정했다. 화면이 갱신을 먼저 하고 그 다음 로그아웃을 부르며, 갱신이 거절되면 그 401이 쿠키를 지운다. 이 티켓이 서버 쪽에 더할 코드는 없다. 화면 규칙은 티켓 09가 짓는다.
+- 갱신의 번호 판정은 `judge_refresh`가 하고 어댑터는 줄을 잠그고 읽고 적을 뿐이다(`.claude/rules/adapters.md`). 쉬는 시간과 총 시간의 비교는 `>=`다(경계에서 거절).
+- 유예: 쓴 지 10초가 안 된 번호가 다시 오면 끊지 않고 새 번호를 하나 더 낸다. 이때 `use_refresh_token`은 처음 쓴 시각을 그대로 둔다(`used_at IS NULL`일 때만 적는다). 그래서 9초 뒤 재사용은 통과, 10초 뒤는 거절이다.
+- 갱신의 401은 `WWW-Authenticate`를 싣지 않는다(로그인 401과 같은 이유: 이 경로는 `Authorization` 머리를 읽지 않는다).
+- ADR은 쓰지 않았다. `PUBLIC_PATHS`가 넷으로 자란 것은 ADR 0011 2026-11-15 이력이 이미 셋(로그인, 갱신, 링크로 비밀번호 정하기)으로 예고했고 ADR 0062 결정 "자격"과 맞다. 이력을 더하려면 사용자 승인이 필요해 이 일지에 적기만 한다.
+
+## 시험 중 고친 것
+
+- `test_갱신으로_온_번호도_다음_로그인이_치울_때_로그인과_함께_사라진다`가 처음 빨갰다. 시험이 처음 번호만 거듭 써서 둘째 갱신이 "10초 지난 재사용"이 되어 로그인이 끊겼다. 시험을 새 번호를 이어 쓰게 고쳤다(구현은 맞았다).
+
+## 검증 현황(이 세션이 직접 친 것)
+
+- 통과: `uv run pytest -q tests/test_login_http.py`(78건), 그 앞 실행(`-x`로 첫 실패에서 멈춤)에서 `tests/test_login_tokens.py`·`tests/test_rotate_key_command.py`와 합쳐 142건 통과 뒤 위 시험 오류 1건에서 멈췄고, 고친 뒤 `tests/test_login_http.py` 78건이 모두 통과했다. `tests/test_system_admin_command.py`는 그 `-x` 실행이 멈추기 전에 닿지 못해 고친 뒤에 다시 돌리지 않았다. 아래 "안 돌린 것"에 넣는다, `uv run pyright`(0 errors), `uv run lint-imports`(9 kept), `uv run ruff format src tests`와 `uv run ruff check src tests`(import 순서 한 건을 `--fix`로 고친 뒤 통과), `uv run python tools/mutate.py --check .scratch/end-user-channel/probes/contract_mutations.toml`(변이 31 모두 원문 있음).
+- 아직 안 돌린 것(새 세션이 한다): `tests/adapters/test_postgres_accounts.py`와 `tests/test_server.py`의 새 시험(쓰기만 하고 돌리지 않았다), 전체 러너 `uv run python tools/run_checks.py`(이 세션이 백그라운드로 띄웠으나 인계로 멈췄다), `pnpm -C web verify`와 `pnpm -C web/apps/admin exec playwright test`, `uv run --env-file ../../../.env pytest -m llm`, 로컬 모델 시험(`--yes` 없이 먼저 쳐 비용을 사용자에게 보이고 확인받은 뒤), 셀프 리뷰(`/code-review`, 방금 스킬을 불렀으나 인계로 넘겨 밟지 않았다), `tools/mutate.py`로 새 시험의 빨강 확인, retro, 티켓을 `done`으로, `uv run python tools/plan_table.py`, `uv run python tools/sibling_overlap.py`, 커밋, PR.
+
+## 인계
+
+경계 `셀프 리뷰 직전`(컨텍스트가 문턱을 넘음). 제목을 `<브랜치> (인계함)`으로 바꾸고, 백그라운드 러너를 멈추고, 워크트리 잠금을 푼다.
+
+open-session을 부른다 2026-11-26T12:18Z
+인계 못함 셀프 리뷰 직전: open-session의 열기 호출(pwsh tools/open_session.ps1 -Action send)을 자동 모드 판정기가 거절했다(사유 Unsanctioned Communication). 우회하지 않았다. 제목을 되돌렸다. 이 세션에서 셀프 리뷰부터 잇는다(위 "인계" 절의 지시문은 이 세션이 그대로 따른다). 백그라운드 전체 러너는 멈췄으므로 다시 띄운다.
+
+## 셀프 리뷰(이 세션이 이어서 했다)
+
+범위: 기준 `e0e6974258990e7df95a2029339fe6de0b63dfe3`, 수정 파일 20개, 커밋 0개, 미추적 2개. 표준 축과 명세 축 서브에이전트 둘 모두 Critical과 Major가 없었다.
+
+고친 것(Minor 중 근거를 확인한 것):
+
+- 줄 잠금 순서. `lock_refresh`가 번호와 로그인을 `JOIN ... FOR UPDATE`로 잡으면 번호 줄을 먼저 잡을 수 있어, 로그인 줄을 잡은 뒤 외래 키 CASCADE로 번호 줄을 잡는 `delete_ended_logins`와 순서가 엇갈려 교착할 수 있었다. 로그인 줄을 먼저 잠그고 번호 줄을 새 문장으로 읽도록 바꿨다(앞선 갱신이 커밋한 쓴 시각도 보인다). 포트 독스트링도 맞췄다.
+- 총 시간이 1초 미만 남았을 때 성공 응답의 갱신 쿠키가 `Max-Age=0`이 되어 곧바로 지워졌다. 0 아래로 내려갔을 때만 0이고, 남아 있으면 최소 1초를 준다(`refresh_max_age`와 시험 하나).
+- `refresh`의 입력 거르기(128자 초과, 비ASCII)에 시험이 없었다. 129자와 비ASCII 번호를 더했다.
+- `parse_args`가 `rotate-key`가 아니면 무조건 `SystemAdminArgs`로 떨어졌다. `system-admin`을 명시하고 모르는 하위 명령은 오류로 바꿨다.
+- `ROTATED_TEXT`의 둘째 문장이 "그 뒤로"로 모호했다. "10초가 지나면"으로 고쳤다. 명세의 문구는 그대로다.
+- 문서: `logins.py` 모듈 독스트링에 갱신을 더했고, `.claude/rules/http.md`의 `WWW-Authenticate` 문장에 갱신 라우트를 더했다.
+
+남긴 것과 이유(Nit 또는 판단 항목):
+
+- 시험 하네스 복사(`test_system_admin_command.py`와 `test_rotate_key_command.py`의 `_run_plainly` 등). 두 파일의 하네스를 합치면 이 티켓 범위를 넘고 기존 파일을 크게 건드린다. 다음에 세 번째 명령이 오면 합친다.
+- `use_refresh_token`·`touch_login` 이름과 `10초`를 글자로 적은 곳(`ROTATED_TEXT`, 도움말). 값이 바뀔 일이 없는 명세 고정 값이라 두었다.
+- 대역 둘의 스텁 번짐. 포트에 메서드를 더하면 대역이 따라 늘어나는 것은 포트와 어댑터 구조의 대가다.
+- 갱신 401 문구가 로그인과 같은 공유 문구인 것은 명세가 정한 보안 모양이다(이유를 알리지 않는다).
+
+## PR 직전 리뷰(`coderabbit-review` 서브에이전트)
+
+CodeRabbit CLI가 끝까지 돌았다(`review_completed`, 종료 코드 0, 지적 1건, 검토 파일 25개, 기준 `--base-commit e0e6974258990e7df95a2029339fe6de0b63dfe3`). `coderabbit auth status`의 `Seat:` 줄은 `Plan: Free, Seat: not assigned`였고 리뷰는 정상으로 끝났다. 서브에이전트가 보안·버그·성능 여섯 축(비밀의 길, 경합과 교착, 열거, 입력 거르기, 키 교체 뒤 10초, 쿠키 속성)을 코드로 따라갔고 Critical·Major는 없었다. 시험과 실제 데이터베이스 경합은 돌리지 않은 읽기와 추론이다.
+
+판정(지적마다):
+
+- [Nit, CLI] `LoginService.refresh`가 서명 키를 줄 잠금을 기다리기 전에 읽는다. 유효하지만 영향이 작다. `SigningKeys.current()`가 원래 최대 10초 묵은 키를 쓰고(명세 "서명 키"), 옛 키로 서명한 짧은 JWT는 재읽기 뒤 401이 되며 화면이 갱신으로 복구한다. 고치지 않았다.
+- [Minor] "잠김"이 로그인을 끊는 갈래라 이름만 아는 외부인이 틀린 시도를 거듭해 운영자의 살아 있는 로그인을 끊을 수 있다. 티켓이 요구한 동작이다("비활성 계정과 잠긴 계정의 갱신은 401이고 그 로그인이 끊긴다")라 설계 결정으로 두었다. 이 증폭이 의도인지는 사용자가 판단할 일이라 PR 본문 "리뷰어 참고"에 적는다.
+- [Minor] 유예 안에서 같은 옛 번호가 거듭 오면 요청마다 새 번호 줄이 하나씩 늘고 상한이 없다. 명세 "탭 둘이 함께 갱신할 때의 유예"가 정한 대가이고 유예는 첫 쓴 시각에 고정돼 연장되지 않는다. 고치지 않았다. 일지의 "다음"에 적을 후보다.
+- [Nit] 번호 입력 거르기가 ASCII와 길이 128뿐이고 문자 집합을 `[A-Za-z0-9_-]`로 좁히지 않았다. 번호는 해시를 거쳐 데이터베이스에 가므로 해가 없다. 고치지 않았다.
+- [Nit] `serve`가 여럿이면 프로세스마다 키 재읽기 시점이 최대 10초 어긋난다. `ROTATED_TEXT`가 이미 "10초 안에"로 알린다.
+- 오탐 없음. 즉시 고칠 항목 없음.
+
+## PR 봇 1회차(PR #652)
+
+CodeRabbit 인라인 셋과 claude-review 지적 둘이 왔다. 판정:
+
+- [CodeRabbit, 안 고침] 서명 키를 `judge_refresh` 뒤 트랜잭션 안에서 읽자는 제안. `SigningKeys.current()`는 자기 트랜잭션(둘째 연결)을 열고 줄을 쓸 수도 있어, 안에서 부르면 줄 잠금을 쥔 채 연결을 하나 더 잡는다. 커밋 뒤에 읽으면 번호만 쓰이고 쿠키를 못 받을 수 있다. 묵은 키의 틈은 명세가 허용한 10초 안이다. PR에 이유를 댓글로 남긴다.
+- [CodeRabbit, 고침] `_assert_cleared`가 `part in line`이라 `Path=/auth`도 `Path=/`로 읽었다. 쿠키 줄을 `;`로 나눠 속성을 하나씩 완전 일치로 본다.
+- [CodeRabbit, 고침] 쉬는 시간이 지난 갱신 시험이 로그인이 끊기지 않았음을 단언하지 않았다. `operator_logins.ended_at`이 여전히 NULL인지 단언을 더했다.
+- [claude-review Minor, 고침] `AccountWork.find`가 포트의 동사(`lock`, `read_signing_key`, `any_account`)와 어긋났다. `read_account`로 바꿨다(포트, 어댑터, `logins.py`, 대역, 시험). 측정 프로브에서 온 이름이었고 명세의 이름이 아니다.
+- [claude-review Nit, 안 고침] `RefreshRow`와 `RefreshRecord`의 필드 중복. 어댑터가 `agent_os.http`를 가져오지 못해서 생긴 의도된 구조다.
+
+다시 돌린 것: ruff 포맷과 검사, `uv run pyright`(0 errors), `tests/test_login_http.py`·`test_login_tokens.py`·`adapters/test_postgres_accounts.py`·`test_rotate_key_command.py`·`test_system_admin_command.py`·`test_server.py` 474건 통과.
+
+## 로컬 모델 시험의 비용 확인
+
+`uv run --env-file ../../../.env python tools/llm_local.py run`을 `--yes` 없이 쳐 예상 비용을 받았다(Runpod 가격 페이지를 2026-11-13에 웹 요약에서 읽은 값, 원문과 대조하지 않음). 어림 30분이 약 $0.27~$0.59, 최악 90분이 $0.81~$1.77이고 재고가 없으면 다음 후보로 넘어간다. 그 뒤 사용자에게 물었다.
+
+> 사용자(`AskUserQuestion` 답): 질문 "로컬 모델 시험을 돌릴까요? … 가격은 2026-11-13에 웹 요약에서 읽은 값이라 원문과 대조하지 않았습니다." 답 "돌린다 (Recommended)"(설명: "--yes를 붙여 실행합니다. 이 티켓 파일의 검증 항목이 요구하는 시험입니다.").
+
+그래서 `--yes`를 붙여 돌렸다. 결과: GPU 후보 넷(RTX A5000 파드 둘, RTX 3090 파드 둘, A40 파드 둘, A40 shared 하나)이 모두 "There are no longer any instances available"(HTTP 400)로 파드를 만들지 못했다. 종료 코드 2, 무효 회차 1번(회차 파일 `round-0001-20261126T130116Z.json`). 끝난 뒤 Runpod의 파드 목록이 비어 있는 것을 읽어 남은 파드와 비용이 없음을 확인했다.
+
+> 사용자(`AskUserQuestion` 답, 둘째): 질문 "로컬 모델 시험을 다시 시도할까요? … 비용 예상은 이전과 같습니다. 어림 30분이면 약 $0.27~$0.59, 가장 오래 걸리는 경우(타이머 90분)에도 $0.81~$1.77입니다(가격은 2026-11-13에 웹 요약에서 읽은 값이고 원문과 대조하지 않았습니다)." 답 "지금 다시 친다 (Recommended)"(설명: "--yes를 붙여 한 번 더 시도합니다. 재고가 없으면 또 비용 없이 끝납니다.").
+
+> 사용자(`AskUserQuestion` 답, 셋째, 봇 1회차 반영 뒤): 질문 "로컬 모델 시험을 다시 시도할까요? 비용 예상은 이전과 같습니다. 어림 30분이면 약 $0.27~$0.59, 가장 오래 걸리는 경우(타이머 90분)에도 $0.81~$1.77입니다(가격은 2026-11-13에 웹 요약에서 읽은 값이고 원문과 대조하지 않았습니다). 앞의 두 번은 GPU 재고가 없어 비용 없이 끝났습니다." 답 "지금 다시 친다 (Recommended)"(설명: "--yes를 붙여 한 번 더 시도합니다. 재고가 없으면 또 비용 없이 끝납니다.").
+
+> 사용자(재시도 방식 답): "1번 30분마다"(선택지 "재고 풀리면 재시도"를 30분 간격 반복으로 골랐다). 세션 안의 30분 예약(CronCreate, 일곱 날 뒤 자동 종료)으로 걸었고, 시도 때마다 비용을 보여 확인받기로 했다.
+
+> 사용자(`AskUserQuestion` 답, 넷째, 예약의 첫 시도): 질문 "로컬 모델 시험을 다시 시도할까요? 예상 비용은 이전과 같습니다. 파드가 뜨면 어림 30분에 약 $0.27~$0.59, 최악 90분에 $0.81~$1.77입니다(RTX A5000 파드 2개 시간당 $0.54, RTX 3090 파드 2개 $1.00, A40 파드 2개 $1.18, A40 shared 1개 $0.59). 재고가 없으면 파드가 뜨지 않아 거의 비용 없이 끝납니다. 다만 첫 시도에서 파드 하나가 1초 만에 만들어졌다 사라졌고, 그 몫은 청구서로 확인하지 못했습니다. 앞의 세 번은 모두 GPU 재고 없음으로 끝났고, 지금 남은 파드는 없습니다." 답 "지금 친다 (Recommended)"(설명: "--yes를 붙여 시험을 시작합니다. 재고가 없으면 거의 비용 없이 끝나고, 30분 뒤 예약이 다시 묻습니다.").
+
+> 사용자(`AskUserQuestion` 답, 다섯째, 예약의 둘째 시도): 질문은 넷째와 같고 "앞의 네 번은 모두 GPU 재고 없음으로 끝났고, 지금 남은 파드는 없습니다."로 끝난다. 답 "지금 친다 (Recommended)"(설명: "--yes를 붙여 시험을 시작합니다. 재고가 없으면 거의 비용 없이 끝나고, 30분 뒤 예약이 다시 묻습니다.").
+
+> 사용자(`AskUserQuestion` 답, 여섯째, 예약의 셋째 시도): 질문은 넷째와 같고 "앞의 다섯 번은 모두 GPU 재고 없음으로 끝났고, 지금 남은 파드는 없습니다."로 끝난다. 답 "지금 친다 (Recommended)"(설명: "--yes를 붙여 시험을 시작합니다. 재고가 없으면 거의 비용 없이 끝나고, 30분 뒤 예약이 다시 묻습니다.").
+
+> 사용자(`AskUserQuestion` 답, 일곱째, 합친 판으로 다시 시험): 질문 "병합하려면 로컬 모델 시험을 합친 판으로 한 번 더 쳐야 합니다. 시험이 통과한 뒤 05번 변경을 합쳤는데, 그 안에 시험 범위에 드는 파일(channel/http/router.py) 하나가 들어 있어 규칙상 앞의 통과 기록이 무효입니다. 예상 비용은 이전과 같습니다. 파드가 뜨면 어림 30분에 약 $0.27~$0.59, 최악 90분에 $0.81~$1.77입니다(RTX A5000 파드 2개 시간당 $0.54, RTX 3090 파드 2개 $1.00, A40 파드 2개 $1.18, A40 shared 1개 $0.59). 재고가 없으면 파드가 뜨지 않아 거의 비용 없이 끝납니다. 앞서 통과한 시도는 A40 shared에서 341.5초였고, 파드 목록은 지금 비어 있습니다." 답 "지금 친다 (Recommended)"(설명: "--yes를 붙여 합친 판(90a2b293e)으로 시험을 시작합니다. 통과하면 바로 병합 절차로 넘어갑니다. 재고가 없으면 거의 비용 없이 끝나고, 어떻게 이어 갈지 다시 여쭙니다.").
+
+일곱째 시도(합친 판, 커밋 `90a2b293e9ad79e01b721fec2a666993cb5914d5`, 회차 파일 `round-0001-20261126T184830Z.json`): 통과했다. 회차 번호가 1로 돌아간 것은 앞 상태 폴더가 통과로 정리된 뒤 새로 센 것으로 읽는다(손으로 보지 않은 어림이다). RTX A5000 파드 둘 후보에서는 파드 하나가 2초 만에 만들어졌으나 다른 하나가 재고 없음(HTTP 400)이라 후보가 실패했고, RTX 3090 후보는 둘 다 재고 없음이었으며, A40 파드 둘 후보에서도 파드 하나가 1초 만에 만들어졌으나 다른 하나가 재고 없음이라 실패했다. 끝으로 A40 shared 하나가 떴고 거기서 `uv run pytest -m llm_local` 4건이 모두 통과했다(51.51초, 종료 코드 0). 러너의 총 걸린 시간은 359.5초다. 끝난 뒤 Runpod 파드 목록이 비어 있었다. 비용은 시간당 $0.59에 359.5초로 어림 $0.06이다(실패한 후보에서 잠깐 만들어졌다 사라진 파드 둘의 몫은 더하지 않았고 청구서로 대 보지 않았다).
+
+여섯째 시도(커밋 `4a9e7b7a6`, 회차 파일 `round-0006-20261126T172638Z.json`, 예약의 셋째 시도): 통과했다. RTX A5000 파드 둘과 RTX 3090 파드 둘은 재고 없음(HTTP 400)이었고, A40 파드 둘에서는 파드 하나(`Creation complete after 1s`)만 만들어지고 다른 하나가 재고 없음이라 그 후보는 실패로 끝났다. 끝으로 A40 shared 하나가 떴고 거기서 `uv run pytest -m llm_local` 4건이 모두 통과했다(45.42초, 종료 코드 0). 러너의 총 걸린 시간은 341.5초다. 끝난 뒤 Runpod 파드 목록이 비어 있었다. 비용은 시간당 $0.59에 341.5초로 어림 $0.06이다(A40 후보에서 만들어졌다 사라진 파드 하나의 몫은 더하지 않았고, 청구서로 대 보지 않았다).
+
+다섯째 시도(커밋 `4a9e7b7a6`, 회차 파일 `round-0005-20261126T163255Z.json`, 예약의 둘째 시도): 파드를 만들지 못한 무효 회차다. 종료 코드 2, 걸린 시간 4.5초, 통과 없음. 끝난 뒤 Runpod 파드 목록이 비어 있었다. 러너가 연달은 무효 회차 5번이라며 멈추고 보고하라고 했다.
+
+넷째 시도(커밋 `4a9e7b7a6`, 회차 파일 `round-0004-20261126T162608Z.json`, 30분 예약의 첫 시도): 후보 넷이 모두 "There are no longer any instances available"(HTTP 400)로 파드를 만들지 못했다. 이번에는 `Creation complete` 줄도 없었다. 종료 코드 2, 걸린 시간 4.7초, 무효 회차다. 끝난 뒤 Runpod 파드 목록이 비어 있었다. 러너가 "연달은 무효 회차 4번 … 다시 띄우지 말고 멈춰 사용자에게 보고한다"고 했으나, 사용자가 30분마다 재시도를 골랐고 시도 때마다 비용 확인을 받으므로 예약은 그대로 둔다.
+
+셋째 시도(커밋 `4a9e7b7a6`, 회차 파일 `round-0003-20261126T144610Z.json`): 후보 넷(RTX A5000 파드 둘, RTX 3090 파드 둘, A40 파드 둘, A40 shared 하나)이 모두 "There are no longer any instances available"(HTTP 400)로 파드를 만들지 못했다. 종료 코드 2, 걸린 시간 9.7초, 무효 회차다. A5000 후보에서 파드 하나가 만들어졌다는 줄(`Creation complete`)이 있었으나 끝난 뒤 Runpod의 파드 목록이 비어 있어 남은 파드가 없음을 읽었다(과금은 청구서로 대 보지 않았다. 만들어진 시간이 1초 안팎이라 어림으로 0에 가깝다). 러너가 "연달은 무효 회차 3번 … 다시 띄우지 말고 멈춰 사용자에게 보고한다"고 해서 더 치지 않았다.
+
+기록 묶음(통과한 여섯째 시도, 러너 출력. 서버 키와 주소는 없다): commit `4a9e7b7a6aee490ac1f8386bdfb4db96ed238b29`, 모델 `GotoAI-Inc/gemma-4-26B-A4B-it-W4A16`·`openai/gpt-oss-20b`, 엔진 vLLM 0.33.0(이미지 `vllm/vllm-openai:v0.33.0`), 서버 옵션 `vllm serve GotoAI-Inc/gemma-4-26B-A4B-it-W4A16 --host 0.0.0.0 --port 8000 --enable-auto-tool-choice --tool-call-parser gemma4 --max-model-len 32768 --revision fdb4e380603cf157783227bd790bfbe921b64610 --gpu-memory-utilization 0.45 --kv-cache-memory=4294967296`와 `vllm serve openai/gpt-oss-20b --host 0.0.0.0 --port 8001 --enable-auto-tool-choice --tool-call-parser openai --gpu-memory-utilization 0.45 --kv-cache-memory=4294967296`, GPU A40, 배치 shared(파드 하나에 두 서버), 통과 4, 토큰 6,328(입력 6,191, 출력 137, 모델 호출 4건, 트레이스 2개), 걸린 시간 341.5초, 시간당 $0.59, 가격표 날짜 2026-11-13, 시험 명령 `uv run pytest -m llm_local`, 시험 종료 코드 0. 러너가 "트레이스를 남기지 않은 LLM 테스트 2개는 세지 못했다"고 알렸으므로 위 토큰은 그 둘을 뺀 값이다. 앞의 다섯 시도는 모두 통과 없음의 무효 회차다.
+
+기록 묶음(병합 조건으로 삼는 일곱째 시도, 합친 판, 러너 출력. 서버 키와 주소는 없다): commit `90a2b293e9ad79e01b721fec2a666993cb5914d5`, 모델과 엔진과 서버 옵션은 여섯째와 같다(모델 `GotoAI-Inc/gemma-4-26B-A4B-it-W4A16`·`openai/gpt-oss-20b`, vLLM 0.33.0 이미지 `vllm/vllm-openai:v0.33.0`, 두 서버의 `vllm serve` 옵션이 위 줄과 글자까지 같다), GPU A40, 배치 shared, 통과 4, 토큰 6,328(입력 6,191, 출력 137, 모델 호출 4건, 트레이스 2개. 트레이스를 남기지 않은 LLM 테스트 2개는 세지 못했다), 걸린 시간 359.5초, 시간당 $0.59, 가격표 날짜 2026-11-13, 시험 명령 `uv run pytest -m llm_local`, 시험 종료 코드 0.
+
+## 검증 결과(리뷰 반영 뒤)
+
+- `uv run python tools/run_checks.py` 모두 통과(check-ticket, check-notes, lint-imports, zizmor, check-instructions, check-type-escapes, pyright, pyright-linux, run-hooks, pytest 644초, web-verify 785초). ruff는 러너 밖이라 `uv run ruff check .`와 `uv run ruff format --check .`를 따로 쳐 통과했다(마지막 고침 뒤에는 `src`와 `tests`에 다시 쳐 통과).
+- `uv run pytest -q tests/adapters/test_postgres_accounts.py tests/test_server.py tests/test_system_admin_command.py tests/test_rotate_key_command.py` 309건 통과. 리뷰 반영 뒤 `tests/test_login_http.py`·`tests/test_login_tokens.py`와 함께 230건 통과.
+- 관리 화면 e2e `pnpm -C web/apps/admin exec playwright test`: 11건 가운데 `decision.e2e.ts`의 "멈춘 실행을 승인하면 …" 한 건이 첫 판에 5초 기한에 닿아 빨갰고(이벤트 구역에 `run_finished`가 아직 없었다), 그 파일만 다시 치자 셋 모두 통과했다. 이 변경과 닿는 곳이 아니고 같은 시험이 두 번 연속 빨갛지 않아 진단 절차는 걸지 않았다. 원인은 재지 않았다(부하와 겹친 일시적 지연이라는 것은 어림이다).
+- `uv run --env-file ../../../.env pytest -m llm -q` 24건 통과, 토큰 272,696(입력 267,397, 출력 5,299).
+- 카나리아: 알림이 가리킨 명세 셋(`http_rule_continuation_422`, `http_rule_pre_owner_damage`, `http_rule_llm_widget`)을 새 `claude -p` 세션(2.1.325)으로 실제로 돌려 모두 통과 4, 실패 0, "없음" 섞임 0이다(커밋하기 전의 작업 트리, 커밋 `e0e697425` 위). 이 PR 안에서 처음 도는 것이라 사전 확인으로 갈음하지 않았다. 세 명세의 `# 최신 결과:` 줄을 고쳤다.
+- 로컬 모델 시험(병합 조건): 여섯 번째 시도에서 통과했다. 앞의 다섯 번은 GPU 재고 없음의 무효 회차였다(연달은 무효 5번에서 러너가 멈추고 보고하라고 했고, 사용자가 30분마다 재시도를 골라 시도 때마다 비용 확인을 받았다). 여섯째는 A40 shared에서 `uv run pytest -m llm_local` 4건 통과, 걸린 시간 341.5초다(시험한 커밋 `4a9e7b7a6`). 그 뒤 05를 합치며 범위의 파일 `channel/http/router.py`가 바뀌어 그 기록은 무효가 됐고, 합친 판 `90a2b293e`로 일곱째 시도를 해서 A40 shared에서 4건이 다시 통과했다(359.5초). 병합 조건의 기록은 일곱째다. 끝난 뒤 Runpod 파드 목록이 비어 있었다.
+- 봇 1회차 반영 뒤(`4a9e7b7a6`): pre-commit 통과, PR의 모든 검사 초록(`claude-review`, `e2e`·`e2e-portal`·`e2e-standalone`·`e2e-widget`, `python`, `ticket`, `verify`, `visual`, `web`, `llm`은 건너뜀). CodeRabbit 2회차는 사용 한도(`Review rate limited`)로 새 지적 없이 끝났다.
+
+## dev 합치기(05 병합 뒤)
+
+05(`permission-table-and-accounts-on-runs`, PR #653, 커밋 `e7c53cba3`)가 먼저 `origin/dev`에 병합돼 이 브랜치가 한 커밋 뒤처졌다. `git merge origin/dev`로 합쳤고 충돌은 네 파일이었다.
+
+- `.claude/rules/http.md`: 운영자 경로 항목은 04의 판(갱신 라우트의 401도 `WWW-Authenticate`를 싣지 않는다는 문장)을 두고, 05가 더한 항목 둘(권한 표, 쿠키로 시작한 실행의 계정)은 그대로 이었다.
+- 카나리아 명세 셋(`http_rule_llm_widget.toml`, `http_rule_continuation_422.toml`, `http_rule_pre_owner_damage.toml`)의 `# 최신 결과:` 줄: 04의 기록 뒤에 05의 기록을 "앞 판"으로 이었다. 두 변경을 합친 판으로는 카나리아를 다시 돌리지 않았다. 각 기록은 자기 변경만 든 작업 트리로 돌린 것이고, 줄에도 그렇게 적었다.
+- 권한 표(`src/agent_os/http/permissions.py`)에 `"refresh_login": Open()` 줄을 더했고 `tests/test_permissions.py`의 줄 목록에도 같은 줄을 더했다. 05의 전수 검사가 `refresh_login`을 모른 채 빨개지는 것을 이 줄이 막는다.
+- `openapi.json`은 `uv run python tools/export_openapi.py`로 다시 뽑았으나 달라지지 않았다. 05가 계약을 건드리지 않았으므로 TS 타입도 다시 뽑을 일이 없다.
+- 합친 뒤 `uv run pytest -q tests/test_permissions.py tests/test_operator_accounts_on_runs.py tests/test_login_http.py tests/test_login_tokens.py tests/test_main.py`: 523건 통과(마커로 빠진 9건 제외).
+- 로컬 모델 시험(여섯째 시도)은 합치기 전의 `4a9e7b7a6`로 돌렸다. 처음에는 05가 더한 것이 권한 검사와 계정 전달이라 시험이 닿는 길을 건드리지 않았다고 어림하고 다시 돌리지 않으려 했으나, 이것은 틀린 어림이었다. `git diff --name-only 4a9e7b7a6 HEAD`를 `operations.md` LLM 테스트의 범위 경로(`adapters/`, `core/loop.py`·`model.py`·`run.py`, `channel/`, `main.py`, 시험 파일, 의존성)로 좁히자 `src/agent_os/channel/http/router.py` 하나가 나왔고, 규칙상 합쳐 들어온 범위의 변경은 기록을 무효로 만든다. 그래서 합친 판 `90a2b293e`로 시험을 다시 돈다(아래 "일곱째 시도").
+
+## 이어받을 일
+
+셀프 리뷰와 위 검증, 로컬 모델 시험까지 끝났고 티켓의 마지막 체크박스도 쳤다. 남은 것은 이 문서 변경을 커밋해 푸시하고, CI를 보고, 병합하는 일이다. 05는 먼저 병합됐고 이 PR이 `origin/dev`를 합치며 권한 표에 `refresh_login` 줄을 더했다(위 "dev 합치기").

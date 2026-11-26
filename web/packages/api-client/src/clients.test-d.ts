@@ -151,6 +151,7 @@ expectTypeOf<keyof AdminPaths>().toEqualTypeOf<
   | "/auth/login"
   | "/auth/logout"
   | "/auth/me"
+  | "/auth/refresh"
   | "/auth/setup"
   | "/health"
   | "/conversations"

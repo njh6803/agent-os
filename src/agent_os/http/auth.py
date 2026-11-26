@@ -36,12 +36,13 @@ from agent_os.http.login_tokens import ACCESS_COOKIE, LoginClaims
 from agent_os.http.paths import is_under
 from agent_os.http.sites import EndUser, Refusal, Sites, verify_signed
 
-# 인증 없이 지나가는 경로. 원소는 `/health` 와 로그인, 첫 계정 확인 셋이고 자라면 ADR 0011 의
-# 이력에 쌓는다 — 목록이 문서 없이 자라는 것이 fail-open 으로 돌아가는 길이다. 갱신과 링크로
-# 비밀번호 정하기는 그 일을 들이는 티켓이 더해 다섯이 된다(명세 admin-login "로그인 없이 열리는
-# 경로"). 비교가 정확히 같은지만 보는 이유는 `/health/` 나 `/health/../traces` 같은 변형이 그대로
-# 걸리게 하기 위해서다.
-PUBLIC_PATHS = frozenset({"/health", "/auth/login", "/auth/setup"})
+# 인증 없이 지나가는 경로. 원소는 `/health` 와 로그인, 갱신, 첫 계정 확인 넷이고 자라면 ADR 0011 의
+# 이력에 쌓는다 — 목록이 문서 없이 자라는 것이 fail-open 으로 돌아가는 길이다. 갱신은 짧은 JWT 가
+# 만료된 뒤에 오는 요청이라 미들웨어가 짧은 JWT 를 보지 않고, 서비스가 갱신용 번호 쿠키를 판정한다.
+# 링크로 비밀번호 정하기는 그 일을 들이는 티켓이 더해 다섯이 된다(명세 admin-login "로그인 없이
+# 열리는 경로"). 비교가 정확히 같은지만 보는 이유는 `/health/` 나 `/health/../traces` 같은 변형이
+# 그대로 걸리게 하기 위해서다.
+PUBLIC_PATHS = frozenset({"/health", "/auth/login", "/auth/refresh", "/auth/setup"})
 
 # 짧은 JWT 로만 여는 경로. 로그인 한 건이나 계정이 있어야 뜻이 있는 일이라 공유 토큰으로 오면
 # 401 이다. 내 비밀번호 바꾸기가 더해진다.

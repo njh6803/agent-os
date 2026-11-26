@@ -136,6 +136,11 @@ class SystemAdminArgs:
     name: str
 
 
+@dataclass(frozen=True)
+class RotateKeyArgs:
+    """`operator rotate-key` 는 인자가 없다. 주소는 `serve` 와 같은 환경 변수 하나로 받는다."""
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="agent-os", description="플러그인 기반 에이전트 런타임")
     parser.add_argument("--version", action="version", version=version("agent-os"))
@@ -189,6 +194,10 @@ def build_parser() -> argparse.ArgumentParser:
         help="시스템 관리자를 만들거나 비밀번호를 다시 정한다. 비밀번호는 표준 입력으로 받는다",
     )
     system_admin_parser.add_argument("name", help="시스템 관리자의 계정 이름")
+    operator_commands.add_parser(
+        "rotate-key",
+        help="로그인 쿠키의 서명 키를 새 난수로 바꾼다. 도는 serve 는 10초 안에 새 키를 쓴다",
+    )
     serve_parser = commands.add_parser(
         "serve", help="관리 API 와 HTTP 채널을 루프백에 세운다(컨테이너 이미지 안의 예외는 --host)"
     )
@@ -321,14 +330,17 @@ def _add_directories(parser: argparse.ArgumentParser) -> None:
 
 def parse_args(
     argv: list[str] | None,
-) -> RunArgs | ResumeArgs | ServeArgs | MigrateArgs | SystemAdminArgs:
+) -> RunArgs | ResumeArgs | ServeArgs | MigrateArgs | SystemAdminArgs | RotateKeyArgs:
     parser = build_parser()
     namespace = parser.parse_args(argv)
     if namespace.command == "migrate":
         return MigrateArgs()
     if namespace.command == "operator":
-        # 운영자 명령은 지금 `system-admin` 하나다. 하위 명령이 늘면 여기서 가른다
-        return SystemAdminArgs(name=str(namespace.name))
+        if namespace.operator_command == "rotate-key":
+            return RotateKeyArgs()
+        if namespace.operator_command == "system-admin":
+            return SystemAdminArgs(name=str(namespace.name))
+        raise ValueError(f"모르는 operator 하위 명령: {namespace.operator_command}")
     traces = Path(namespace.traces)
     plugins_root = Path(namespace.plugins_root)
     model = None if namespace.model is None else str(namespace.model)
