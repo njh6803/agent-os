@@ -44,7 +44,9 @@ from agent_os.channel.http.end_user import end_user_router
 from agent_os.channel.http.runs import Runs, RunStream
 from agent_os.core.ports import Clock, ModelSource, PluginSource, ToolSource, TraceStore
 from agent_os.core.run import resume, run
+from agent_os.http.auth import operator_of
 from agent_os.http.errors import request_id_of
+from agent_os.http.permissions import REQUIRE_PERMISSION
 from agent_os.http.routes import EventSourceWithJsonErrors, documented_errors
 from agent_os.sdk import RUN_ID_PATTERN, PluginName, Principal, RunId
 
@@ -117,6 +119,14 @@ def channel_router(
     return router
 
 
+def _account_of(request: Request) -> str | None:
+    """요청을 보낸 운영자 계정의 이름(질의). 쿠키로 로그인했으면 짧은 JWT 의 `sub` 이고, 공유
+    토큰으로 온 요청은 없음이다. 이름 규칙에 맞는 값만 온다 — 서명을 검증한 JWT 의 값이고 계정을
+    만들 때 이름 규칙을 지났다(명세 admin-login "이벤트의 두 칸")."""
+    claims = operator_of(request)
+    return None if claims is None else claims.name
+
+
 def _operator_router(
     runs: Runs,
     *,
@@ -134,15 +144,24 @@ def _operator_router(
     상한이 없다 — 실행은 실행 중 목록의 칸을 차지하지 않고 429 를 내지 않는다(ADR 0023). 연결마다의
     백로그(`runs`)만 최종 사용자 면과 같다.
     """
-    router = APIRouter(prefix=CHANNEL_PREFIX, responses=documented_errors(500))
+    router = APIRouter(
+        prefix=CHANNEL_PREFIX,
+        responses=documented_errors(500),
+        dependencies=[REQUIRE_PERMISSION],
+    )
 
     async def started(body: StartRun, request: Request, previous_run: RunId | None) -> RunStream:
-        """새 실행을 일으키고 첫 이벤트를 받는다. 시작과 이어 가기가 앞 실행 하나만 다르게 준다."""
+        """새 실행을 일으키고 첫 이벤트를 받는다. 시작과 이어 가기가 앞 실행 하나만 다르게 준다.
+
+        쿠키로 로그인한 운영자가 보냈으면 그 계정의 이름을 요청한 계정으로 core 에 넘긴다. 공유
+        토큰으로 온 요청은 계정이 없어 칸이 빈다(`_account_of`).
+        """
         events = run(
             body.agent,
             body.request,
             principal,
             previous_run=previous_run,
+            requesting_account=_account_of(request),
             timeout_seconds=run_timeout_seconds,
             plugins=plugins,
             default_model=default_model,
@@ -195,6 +214,7 @@ def _operator_router(
             decision.pause_index,
             decision.to_core(),
             principal,
+            deciding_account=_account_of(request),
             timeout_seconds=run_timeout_seconds,
             plugins=plugins,
             default_model=default_model,
