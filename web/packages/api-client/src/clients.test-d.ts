@@ -153,6 +153,7 @@ expectTypeOf<keyof AdminPaths>().toEqualTypeOf<
   | "/auth/me"
   | "/auth/setup"
   | "/health"
+  | "/conversations"
   | "/plugins"
   | "/plugins/{kind}/{name}"
   | "/plugins/{kind}/{name}/connection-check"

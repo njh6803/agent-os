@@ -229,6 +229,49 @@ type ManifestRow = PluginManifest | UnreadableManifest
 
 
 @dataclass(frozen=True)
+class RunRecord:
+    """대화를 묶는 데 쓰는 실행 하나의 기록. 요약에 시작 이벤트의 세 칸을 더한 것이다.
+
+    요약이 아니라 따로 두는 이유는 요약의 필드가 일곱이라는 약속(`RunSummary`)을 지키기 위해서다.
+    더한 칸은 앞 실행(`previous_run`), 요청(`request`), 요청한 계정(`requesting_account`)이고 모두
+    시작 이벤트에서 온다. 어댑터가 목록처럼 헤더와 첫 줄과 마지막 줄만 읽어 만들고, 묶는 규칙은
+    core 의 `list_conversations` 하나가 갖는다.
+    """
+
+    summary: RunSummary
+    previous_run: RunId | None
+    request: str
+    requesting_account: str | None
+
+
+@dataclass(frozen=True)
+class ConversationLine:
+    """대화 목록의 한 줄. 이어 가기로 이어진 실행들 가운데 갈라진 끝 하나를 대표한다.
+
+    `last_run`·`status`·`agent`·`last_started_at`·`last_at` 은 끝 실행의 것이고 `first_request`·
+    `requesting_account`·`principal` 은 끝에서 거슬러 올라 닿은 첫 실행의 것이다. `run_count` 는
+    그 사이에 읽은 실행의 수이고 `complete` 는 첫 실행이 대화의 처음(앞 실행이 없는 실행)인지다.
+    목록은 표시하는 자리라 이어 가기의 판정(주체, 끝남)을 다시 하지 않는다.
+    """
+
+    last_run: RunId
+    status: RunStatus
+    agent: AgentName
+    first_request: str
+    requesting_account: str | None
+    principal: Principal
+    run_count: int
+    last_started_at: datetime
+    last_at: datetime
+    complete: bool
+
+
+# 대화 목록의 행. 읽히지 않는 트레이스는 앞 실행을 알 수 없어 어느 대화에 드는지 모르므로 대화
+# 줄과 따로 표지로 맨 뒤에 선다. 표지는 실행 목록의 것을 그대로 쓴다.
+type ConversationRow = ConversationLine | UnreadableTrace
+
+
+@dataclass(frozen=True)
 class PluginKey:
     """플러그인 하나를 가리키는 (종류, 이름). 켜고 끄는 키다(ADR 0017).
 
@@ -361,11 +404,29 @@ def run_status(last: Event | UnknownEvent) -> RunStatus:
             return "unfinished"
 
 
-def cursor_of(row: RunRow) -> Cursor:
-    """행 하나의 정렬 키. 다음 쪽을 물을 때 그대로 after 가 된다."""
+def cursor_of(row: RunRow | ConversationRow) -> Cursor:
+    """행 하나의 정렬 키. 다음 쪽을 물을 때 그대로 after 가 된다.
+
+    대화 줄의 키는 끝 실행의 (시작 시각, 식별자)라 실행 목록의 키와 같은 모양이다(ADR 0012).
+    """
     if isinstance(row, UnreadableTrace):
         return Cursor(started_at=None, run_id=row.run_id)
+    if isinstance(row, ConversationLine):
+        return Cursor(started_at=row.last_started_at, run_id=row.last_run)
     return Cursor(started_at=row.started_at, run_id=row.run_id)
+
+
+def page_size(limit: int | None) -> int:
+    """한 쪽의 크기. 없으면 기본값이고 1 과 MAX_LIMIT 사이가 아니면 ValueError 다.
+
+    실행 목록과 대화 목록이 같은 규칙으로 질의를 검증한다. 조용히 clamp 하지 않는 이유는
+    `TraceStore.list` 의 독스트링에 있다.
+    """
+    if limit is None:
+        return DEFAULT_LIMIT
+    if not 1 <= limit <= MAX_LIMIT:
+        raise ValueError(f"limit 은 1 과 {MAX_LIMIT} 사이여야 한다: {limit}")
+    return limit
 
 
 def order_key(cursor: Cursor) -> tuple[bool, datetime, RunId]:
@@ -380,7 +441,7 @@ def order_key(cursor: Cursor) -> tuple[bool, datetime, RunId]:
 
 
 class TraceStore(Protocol):
-    """이벤트를 쓰고 한 실행의 트레이스를 읽고 실행들을 열거한다. 첫 어댑터는 JSONL 파일.
+    """이벤트를 쓰고 한 실행의 트레이스를 읽고 실행들과 대화들을 열거한다. 첫 어댑터는 JSONL 파일.
 
     쓰는 곳과 읽는 곳이 항상 같다는 사실을 이 타입 하나가 강제한다(ADR 0009). 부재는 None.
     """
@@ -408,6 +469,23 @@ class TraceStore(Protocol):
         디스크 손상이 아니라 부르는 쪽의 오류라서 HTTP 에서 500 이 아니라 422 로 갈려야 하기
         때문이다. 첫 어댑터는 디렉터리를 훑어 전부 만든 뒤 자르지만 시그니처가 이미 필터를 받으므로
         색인을 붙일 때 어댑터만 바뀐다.
+        """
+        ...
+
+    def list_conversations(
+        self,
+        *,
+        status: RunStatus | None = None,
+        limit: int | None = None,
+        after: Cursor | None = None,
+    ) -> Sequence[ConversationRow]:
+        """대화를 끝 실행의 시작 시각 역순으로. 동기이고 질의는 `list` 와 같은 셋이다.
+
+        닿는 지점이 트레이스 디렉터리 그대로라 포트를 더하는 것이 아니라 이 포트의 메서드다(ADR
+        0012). 구현은 실행마다 `RunRecord` 를 만들어 core 의
+        `list_conversations`(`core/conversations.py`) 에 넘긴다. 묶는 규칙이 그 함수 한 곳에 있어
+        색인을 붙이는 다음 어댑터도 같은 함수를 부른다. `status` 는 끝 실행의 상태이고 표지는 함께
+        빠진다. `limit` 의 범위는 `list` 와 같다.
         """
         ...
 

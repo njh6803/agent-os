@@ -54,6 +54,7 @@ from agent_os.core.ports import (
     Absent,
     ChatModel,
     Clock,
+    ConversationRow,
     Cursor,
     DifferentPrincipal,
     Disabled,
@@ -254,6 +255,16 @@ class FakeTrace:
     ) -> tuple[RunRow, ...]:
         """이 가짜를 쓰는 테스트는 목록을 보지 않는다. 빈 목록은 조용히 틀린 초록이 된다."""
         raise NotImplementedError("실행 목록은 어댑터 테스트가 실물 디렉터리로 잰다")
+
+    def list_conversations(
+        self,
+        *,
+        status: RunStatus | None = None,
+        limit: int | None = None,
+        after: Cursor | None = None,
+    ) -> tuple[ConversationRow, ...]:
+        """실행 목록과 같은 까닭이다. 대화 목록은 어댑터 테스트와 서버 테스트가 잰다."""
+        raise NotImplementedError("대화 목록은 어댑터 테스트가 실물 디렉터리로 잰다")
 
 
 class CorruptTrace(FakeTrace):
