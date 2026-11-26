@@ -1,8 +1,8 @@
 # 컨테이너 네트워크 예외 픽스처
 
-`serve`, 관리 화면, 위젯, 위젯 미리보기 페이지가 이미지 안의 명시적 설정이 있을 때만 `0.0.0.0`에 묶이고, 관리 화면의 상류가 그때만 `serve`를 받는다는 것을 두 언어의 시험이 같은 표로 고정하는 자리다(release-image 티켓 03, ADR 0056 결정 "루프백 규칙의 예외"). 네 프로세스가 같은 규칙을 따로 들고 있으므로(앱 사이 import는 층 경계가 막는다), 한 곳의 판정만 바뀌면 그 곳의 시험이 빨개지게 하는 것이 이 표의 일이다. 선례는 `tests/fixtures/site_file/`이다.
+`serve`, 위젯 관리 서버(`widget-admin serve`), 관리 화면, 위젯, 위젯 미리보기 페이지가 이미지 안의 명시적 설정이 있을 때만 `0.0.0.0`에 묶이고, 관리 화면의 상류가 그때만 `serve`를 받는다는 것을 두 언어의 시험이 같은 표로 고정하는 자리다(release-image 티켓 03, ADR 0056 결정 "루프백 규칙의 예외"). 다섯 프로세스가 같은 규칙을 따로 들고 있으므로(앱 사이 import는 층 경계가 막는다), 한 곳의 판정만 바뀌면 그 곳의 시험이 빨개지게 하는 것이 이 표의 일이다. 선례는 `tests/fixtures/site_file/`이다.
 
-읽는 시험은 `tests/test_main.py`(`serve`의 `--host`), `web/apps/admin/tools/loopback.test.ts`·`start.test.ts`·`start.spawn.test.ts`·`next.config.test.ts`(관리 화면의 `--hostname`과 상류), `web/apps/widget/tools/start.test.ts`·`start.spawn.test.ts`(위젯의 `--hostname`), `web/apps/portal/server/config.test.ts`(위젯 미리보기 페이지의 `portal.host`)다. 파이썬은 `binding`만 읽고, 상류는 TS만 가진다.
+읽는 시험은 `tests/test_main.py`(`serve`의 `--host`), `tests/widget_admin/test_loopback.py`(`widget-admin serve`의 `--host`. 진단의 까닭 줄 하나만 `serve`와 다르다), `web/apps/admin/tools/loopback.test.ts`·`start.test.ts`·`start.spawn.test.ts`·`next.config.test.ts`(관리 화면의 `--hostname`과 상류), `web/apps/widget/tools/start.test.ts`·`start.spawn.test.ts`(위젯의 `--hostname`), `web/apps/portal/server/config.test.ts`(위젯 미리보기 페이지의 `portal.host`)다. 파이썬은 `binding`만 읽고, 상류는 TS만 가진다.
 
 ## 입력
 

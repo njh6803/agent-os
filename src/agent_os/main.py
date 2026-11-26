@@ -86,7 +86,8 @@ DATABASE_URL_ENV = "AGENT_OS_DATABASE_URL"
 # 진단에 그대로 실려서, 순서가 실행마다 달라지면 운영자가 읽는 문장이 달라지기 때문이다.
 # 관리 화면과 위젯의 시작 래퍼(`web/apps/admin/tools/loopback.ts`,
 # `web/apps/widget/tools/start.ts`)와 위젯 미리보기 페이지의 설정
-# 읽기(`web/apps/portal/server/config.ts`)가 같은 목록과 같은 예외를 따로 든다. 바꾸면 넷을 함께
+# 읽기(`web/apps/portal/server/config.ts`)와 위젯 관리 서버의 `widget-admin serve`
+# (`widget-admin/src/widget_admin/main.py`)가 같은 목록과 같은 예외를 따로 든다. 바꾸면 다섯을 함께
 # 고치고, 같은 판정을 내는지는 `tests/fixtures/container_network/cases.json` 이 잠근다.
 LOOPBACK_HOSTS = ("127.0.0.1", "::1")
 # 루프백 규칙의 예외(ADR 0056 결정 "루프백 규칙의 예외"). 둘이 함께 있을 때만 `0.0.0.0` 하나가

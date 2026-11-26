@@ -44,9 +44,9 @@ plugins/
   README.md        커스텀 에이전트를 만드는 안내(기본 에이전트 assistant를 복사하는 순서, 두 끝, 열기, 문서 검색 서버에
                    붙이는 설정). 종류 폴더 밖이라 플러그인으로 읽히지 않는다
 widget-admin/      둘째 설치 묶음(uv 작업공간의 멤버, 패키지 widget_admin). 위젯 관리 서버이고 agent_os와 서로 import하지 않는다(ADR 0064).
-                   src/widget_admin/ 에 server(앱 조립과 GET /widget-settings/<사이트 이름>), database(연결 묶음과 표 올리기와 설정 읽기),
-                   settings(응답 모델), errors·paths(Agent OS 의 같은 이름 배관의 사본), migrations/ 가 서고, 계약은 openapi.json
-tests/             src를 미러링. widget_admin/ 은 위젯 관리 서버의 시험(진짜 테스트 데이터베이스, 접두 widget_admin). fixtures/site_file/ 은 서버와 위젯 빌드의 시험이 함께 읽는 사이트 파일 픽스처, fixtures/container_network/ 는 네 프로세스의 시험이 함께 읽는 루프백 예외의 사례 표
+                   src/widget_admin/ 에 main(명령 serve·migrate와 루프백 규칙), lifespan(뜨기 전 데이터베이스 점검), server(앱 조립과 GET /widget-settings/<사이트 이름>),
+                   database(연결 묶음과 뜰 때의 확인과 표 올리기와 설정 읽기), settings(응답 모델), errors·paths(Agent OS 의 같은 이름 배관의 사본), migrations/ 가 서고, 계약은 openapi.json
+tests/             src를 미러링. widget_admin/ 은 위젯 관리 서버의 시험(진짜 테스트 데이터베이스, 접두 widget_admin). fixtures/site_file/ 은 서버와 위젯 빌드의 시험이 함께 읽는 사이트 파일 픽스처, fixtures/container_network/ 는 다섯 프로세스의 시험이 함께 읽는 루프백 예외의 사례 표
 web/               pnpm 워크스페이스(Node 24, TypeScript 5.9). 파이썬과 루트를 나눈다. 앱은 apps/*, 공유 패키지는 packages/*
   eslint.config.mjs  원칙 III의 TS 판정자와 층 경계. 변이 테스트는 eslint.config.test.ts
   tsconfig.base.json 기준 tsconfig. 다른 tsconfig는 이것을 extends 한다
@@ -148,8 +148,29 @@ pnpm -C web/apps/admin start       # http://127.0.0.1:3000
 - **`serve`와 상류를 맞춘다.** 관리 화면이 넘기는 곳(상류)은 `AGENT_OS_UPSTREAM`이고, 기본은 `serve`의 기본 주소 `http://127.0.0.1:8000`이다. `serve`를 다른 포트로 띄우면 같은 주소를 `AGENT_OS_UPSTREAM`에 두고 빌드한다.
 - **상류 포트를 바꾸면 다시 빌드한다.** 상류는 빌드 산출물에 박힌다. `start` 때 준 값은 판정만 하고 넘기는 곳을 바꾸지 않는다. `dev`(`pnpm -C web/apps/admin dev`)는 설정에서 바로 읽는다.
 - **루프백에만 선다.** 관리 화면은 `127.0.0.1`(기본)이나 `::1`에만 서고, 받는 인자는 `--hostname`과 `--port` 둘이다. 상류는 `127.0.0.1`만 받는다(이미지 안의 예외는 아래). Next가 IPv6 주소로 넘기지 못한다(ADR 0011의 2026-09-30 이력). 원격에서 보려면 SSH 포트 포워딩을 쓴다: `ssh -L 3000:127.0.0.1:3000 <서버>`.
-- **컨테이너 이미지 안에서만 예외가 있다.** 이미지를 지을 때 root 소유로 굽는 표지 파일 `/etc/agent-os/image`와 compose가 주는 환경 변수 `AGENT_OS_CONTAINER_NETWORK=1`이 둘 다 있을 때만, `serve`(`--host`)와 관리 화면·위젯(`--hostname`)과 위젯 미리보기 페이지(`portal.host`)가 `0.0.0.0` 하나를 더 받고, 관리 화면의 상류는 `serve` 하나를 더 받는다. 표지 파일 없이 환경 변수만 있으면(개발 PC에서 내보냈을 때) 켜지지 않고, 환경 변수 없이 표지 파일만 있어도(이미지를 `docker run`으로 띄웠을 때) 켜지지 않으며, `1`이 아닌 값은 구성 오류다(ADR 0056 결정 "루프백 규칙의 예외"). 네 프로세스의 판정은 `tests/fixtures/container_network/cases.json`의 사례 표 하나가 잠근다.
+- **컨테이너 이미지 안에서만 예외가 있다.** 이미지를 지을 때 root 소유로 굽는 표지 파일 `/etc/agent-os/image`와 compose가 주는 환경 변수 `AGENT_OS_CONTAINER_NETWORK=1`이 둘 다 있을 때만, `serve`와 `widget-admin serve`(`--host`)와 관리 화면·위젯(`--hostname`)과 위젯 미리보기 페이지(`portal.host`)가 `0.0.0.0` 하나를 더 받고, 관리 화면의 상류는 `serve` 하나를 더 받는다. 표지 파일 없이 환경 변수만 있으면(개발 PC에서 내보냈을 때) 켜지지 않고, 환경 변수 없이 표지 파일만 있어도(이미지를 `docker run`으로 띄웠을 때) 켜지지 않으며, `1`이 아닌 값은 구성 오류다(ADR 0056 결정 "루프백 규칙의 예외"). 다섯 프로세스의 판정은 `tests/fixtures/container_network/cases.json`의 사례 표 하나가 잠근다.
 - **컨테이너의 첫 프로세스로 띄우면 init을 둔다.** `serve`를 컨테이너의 첫 프로세스로 띄우려면 `docker run --init`처럼 고아 프로세스를 거두는 init을 함께 둔다. 상류는 PID 1인 클라이언트가 고아를 거두지 않으면 그룹이 사라지기를 기다리는 시간이 상한(2초)을 다 채운다고 적었다(ADR 0034, mcp 2.3.0 `terminate_posix_process_tree`의 독스트링). 그룹은 모든 구성원이 죽어 거두어져야 사라진다. 윈도우가 아닌 OS에서 `serve`의 직접 자식은 MCP 서버마다 선 런처이고 서버는 그 아래에 있다(`.claude/rules/adapters.md`의 런처 항목). 그래서 상류나 런처가 서버의 그룹을 끄면 런처 말고는 모두 고아가 되어 PID 1에 맡겨진다. asyncio의 기본 자식 감시자는 제가 띄운 자식(런처)의 번호만 `waitpid`하므로 맡겨진 고아는 거두지 않고, init이 없으면 그것들이 좀비로 남는다. 입력이 닫혀도 2초 안에 끝나지 않아 상류가 그룹째 끄는 서버는 상류가 그 기다림의 상한을 다 채우고, 입력이 닫혀 스스로 끝나며 자식을 남긴 서버는 런처가 끈 그 자식이 좀비로 남는다(Python 3.12 `asyncio/unix_events.py`와 상류 코드를 읽은 어림. init 없이는 재지 않았다).
+
+## 위젯 관리 서버
+
+위젯 관리 서버(`widget-admin/`)는 위젯 설정을 자기 PostgreSQL에 두고 위젯이 토큰 없이 읽게 한다(ADR 0064). 명령은 둘이다. 개발 PC에서는 Agent OS와 같은 테스트 컨테이너에 데이터베이스 하나를 더 만들어 쓴다.
+
+```bash
+# 연결 문자열은 환경 변수 WIDGET_ADMIN_DATABASE_URL 로만 받는다. 비밀번호가 들어 있어 명령줄 인자로 받지 않는다.
+# 꼴은 postgresql://계정:비밀번호@호스트:포트/데이터베이스 하나뿐이다(드라이버 이름, ? 뒤의 질의, @ 가 둘 이상인 값은 받지 않는다).
+docker compose -f compose.test.yaml up -d --wait
+# 이미 있으면 "database "widget_admin" already exists" 로 1 로 끝난다. 그대로 두고 다음으로 가도 된다.
+docker compose -f compose.test.yaml exec -T postgres createdb -U agent_os widget_admin
+export WIDGET_ADMIN_DATABASE_URL=postgresql://agent_os:agent_os@127.0.0.1:25432/widget_admin
+uv run widget-admin migrate
+uv run widget-admin serve          # http://127.0.0.1:8100
+```
+
+- **`serve`는 표의 판이 맞아야 뜬다.** 데이터베이스에 닿지 못하면 30초가 지날 때까지 1초 간격으로 다시 시도하고(마지막 시도가 마감 직전에 시작되면 간격 1초와 시도 하나 5초만큼 더 길어질 수 있다), 첫 실패에 알림을 한 줄 찍는다. 표가 이 판보다 뒤처졌으면 이유를 찍고 종료 코드 3으로 끝난다. 그때 `widget-admin migrate`를 먼저 친다. 비밀번호가 틀리면 다시 시도하지 않고 바로 끝난다.
+- **`migrate`는 앞으로만 간다.** 이미 마지막 판이면 그렇다고 알리고 끝난다. 표가 이 판보다 앞서 있으면 표를 건드리지 않고 1로 끝난다. 같은 데이터베이스에 `migrate`를 둘이 함께 돌리는 일은 막지 않는다(서버를 여럿 두는 것은 범위 밖이다).
+- **연결 문자열은 찍지 않는다.** 읽지 못했을 때의 글도 값을 싣지 않는다.
+- **루프백에만 선다.** 기본 주소는 `127.0.0.1:8100`이고 `--host`와 `--port`를 받는다. 컨테이너 이미지 안에서만 켜지는 예외는 위 "컨테이너 이미지 안에서만 예외가 있다."와 같다.
+- **떠 있는지 본다.** `curl -i http://127.0.0.1:8100/health`가 200으로 `{"status":"ok"}`를 답하고, 등록되지 않은 이름 `curl -i http://127.0.0.1:8100/widget-settings/no-such-site`는 404 봉투를 답한다.
 
 ## 원천 표
 
