@@ -20,9 +20,10 @@ frame-ancestors 'none'). 컨테이너가 뜰 때 진입 단계(entry.mjs)가 사
 레지스트리에 닿는 네트워크. 다른 섹션은 build 가 지어 둔 이미지(wrv-img:<단계>)만 쓴다. browser
 섹션은 호스트의 node 와, 깔린 web/node_modules(`pnpm -C web install --frozen-lockfile`)와, 그 판의
 Playwright 가 받은 Chromium 과, 빈 호스트 포트 둘(그 실행이 고른다)이 든다. 띄운 컨테이너와 볼륨에는
-라벨 wrv-probe=<실행 토큰>을 달고, 끝날 때 이 실행의 토큰이 붙은 것만 지운다. 이미지는 남긴다. 모든
-명령의 원본 출력은 --work(없으면 시스템 임시 폴더) 아래 raw.log 에, 회차의 값은 results.jsonl 에
-남는다.
+라벨 wrv-probe=<실행 토큰>을 달고, 컨테이너는 그것을 띄운 회차가 끝날 때, 남은 것은 실행이 끝날 때
+이 실행의 토큰이 붙은 것만 지운다. 이미지는 남긴다. 명령의 원본 출력은 --work(없으면 시스템 임시
+폴더) 아래 raw.log 에, 회차의 값은 results.jsonl 에 남는다(되풀이해 묻는 상태 조회와 실행 끝의
+지우기는 원본 출력에 남기지 않는다).
 
 표지. 회차마다 "재려는 상황이 실제로 났다"는 관찰을 본 뒤에만 측정으로 센다. 서는 것을 기대하는
 회차는 응답의 상태 200 과 그 회차의 사이트 파일에서만 나오는 글(허용 출처, 요청 글자 수 상한)을
@@ -50,16 +51,17 @@ import subprocess
 import sys
 import tempfile
 import time
-from collections.abc import Callable, Mapping, Sequence
+from collections.abc import Callable, Generator, Mapping, Sequence
+from contextlib import contextmanager
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import datetime
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parents[3]
 sys.path.insert(0, str(ROOT))
 
-from tools.probe_kit import Rounds  # noqa: E402
+from tools.probe_kit import Rounds, Slot  # noqa: E402
 
 type Json = dict[str, Json] | list[Json] | str | int | float | bool | None
 
@@ -90,12 +92,13 @@ HEALTH = (
     "2s",
 )
 # 상태 확인을 지켜보는 동안. 시작 유예(30초)보다 짧게 둔다. 지켜보는 마지막 한 번이 늦게 돌아올 수
-# 있어, healthy 를 본 회차는 띄우기 전부터 잰 시간이 시작 유예(START_PERIOD)보다 짧은지도 본다.
+# 있어, healthy 를 본 회차는 그것을 본 시각(띄우기 전부터 잰 시간)이 이 값보다 짧은지를 본다.
 HEALTH_WINDOW = 25.0
 # HEALTH 의 --health-start-period 와 같은 값(초).
 START_PERIOD = 30.0
-# 아무도 듣지 않는 포트에 건 요청이 fetch.mjs 로 내는 오류 코드.
+# 아무도 듣지 않는 포트에 건 요청이 실패한 까닭으로 node 의 fetch 가 드는 오류 코드.
 REFUSED = "ECONNREFUSED"
+NO_NETWORK = ("--network", "none")
 BASE = "http://127.0.0.1:3000"
 # 값 파일에 건 응답 머리 규칙이 지어 둔 routes-manifest 에 실리는 모양(patch-config.mjs 가 더한 것).
 VALUES_RULE: Json = {
@@ -130,8 +133,14 @@ _token = secrets.token_hex(3)
 # 만드는 것마다 라벨 키는 같고 값은 이 실행의 토큰이다. 지우기는 값까지 맞는 것만 고른다.
 TAG = f"{LABEL}={_token}"
 _serial = [0]
+# 이미지 ID 마다 그 이미지에 든 BUILD_ID.
 _build_ids: dict[str, str] = {}
+# 단계마다 이 실행이 쓰는 이미지의 ID.
 _image_ids: dict[str, str] = {}
+# 이 실행에서 빌드가 실패한 단계. 앞서 지어 둔 같은 태그의 이미지로 재지 않으려고 둔다(image).
+_failed: set[str] = set()
+# 이 실행이 띄우고 아직 지우지 않은 컨테이너(owned 가 회차나 섹션이 끝날 때 지운다).
+_live: list[str] = []
 
 
 def raw(title: str, text: str) -> None:
@@ -224,19 +233,32 @@ def tag(target: str) -> str:
     return f"{REPO}:{target}"
 
 
+def pin(target: str, ref: str) -> str:
+    """`ref`(태그나 빌드가 낸 ID)를 이미지 ID 로 풀어, 그 단계가 이 실행에서 쓸 이미지로 굳히고
+    결과에 적는다. 풀지 못하면 예외다. 태그 그대로 띄우면 어느 이미지를 쟀는지 적지 못한 채 그
+    회차가 측정으로 세어질 수 있어, 태그로 돌아가지 않는다."""
+    done = docker("image", "inspect", "-f", "{{.Id}} {{.Created}}", ref, timeout=60)
+    found = done.out.split()
+    if done.code != 0 or len(found) != 2 or not found[0].startswith("sha256:"):
+        raise RuntimeError(f"{ref} 를 이미지 ID 로 풀지 못했다: {tail(done.text)}")
+    _image_ids[target] = found[0]
+    note("쓴 이미지", {"target": target, "id": found[0], "created": found[1], "from": ref})
+    return found[0]
+
+
 def image(target: str) -> str:
     """그 단계의 이미지를 ID 로 가리킨다. 태그(wrv-img:<단계>)는 다시 지으면 다른 이미지로 옮겨
-    가므로, 이 실행에서 그 단계를 처음 쓸 때 태그를 ID 로 풀어 결과에 적고 그 뒤로는 같은 ID 를
-    쓴다. build 섹션은 그 단계를 지은 뒤에 푼다. 풀지 못하면 태그 그대로 내고, 그 이미지를 쓰는
-    docker 명령이 실패해 그 회차가 측정 아님이 된다. build 섹션 없이 돈 실행이 어느 빌드의 이미지를
-    쟀는지는 적힌 ID 로만 알 수 있다(못 보는 것)."""
+    가고 같은 Docker 데몬을 쓰는 다른 실행도 옮길 수 있다. 그래서 build 섹션은 빌드가 낸 ID 를 바로
+    받아 쓰고(build), build 섹션 없이 돈 실행은 그 단계를 처음 쓸 때 태그를 ID 로 한 번 풀어 그
+    뒤로 같은 ID 를 쓴다(pin). 풀지 못하면 예외이고 그 회차는 측정이 아니다. 이 실행에서 그 단계의
+    빌드가 실패했으면 앞서 지어 둔 이미지가 남아 있어도 쓰지 않는다. build 섹션 없이 돈 실행이 어느
+    빌드의 이미지를 쟀는지는 적힌 ID 로만 알 수 있다(못 보는 것)."""
+    if target in _failed:
+        raise RuntimeError(
+            f"이 실행에서 {target} 의 빌드가 실패했다. 앞서 지어 둔 이미지로 재지 않는다"
+        )
     if target not in _image_ids:
-        done = docker("image", "inspect", "-f", "{{.Id}} {{.Created}}", tag(target), timeout=60)
-        found = done.out.split()
-        if done.code != 0 or len(found) != 2 or not found[0].startswith("sha256:"):
-            return tag(target)
-        _image_ids[target] = found[0]
-        note("쓴 이미지", {"target": target, "id": found[0], "created": found[1]})
+        pin(target, tag(target))
     return _image_ids[target]
 
 
@@ -254,13 +276,17 @@ KINDS = (
 
 def sweep() -> None:
     """이 실행의 토큰을 라벨 값으로 단(TAG) 컨테이너와 볼륨만 지운다. 같은 프로브의 다른 실행과 다른
-    세션의 것은 건드리지 않는다."""
+    세션의 것은 건드리지 않는다. 원본 기록(raw.log)을 쓰지 못하는 때에도 지우기는 끝까지 가게, 이
+    안의 docker 호출은 원본 기록에 남기지 않고 결과만 화면에 찍는다."""
     for kind, lister, remover in KINDS:
-        listed = docker(*lister, "--filter", f"label={TAG}", timeout=60)
+        listed = docker(*lister, "--filter", f"label={TAG}", timeout=60, quiet=True)
         ids = listed.out.split()
-        if listed.code == 0 and ids:
-            removed = docker(*remover, *ids, timeout=180)
-            raw(f"sweep {kind}", f"{len(ids)}개, exit={removed.code}")
+        if listed.code != 0:
+            print(f"sweep {kind}: 목록을 읽지 못했다(exit={listed.code}): {tail(listed.text)}")
+        elif ids:
+            removed = docker(*remover, *ids, timeout=180, quiet=True)
+            failed = "" if removed.code == 0 else f": {tail(removed.text)}"
+            print(f"sweep {kind}: {len(ids)}개, exit={removed.code}{failed}", flush=True)
 
 
 def leftovers() -> None:
@@ -294,15 +320,38 @@ def start(
     command: Sequence[str] = (),
     env: Mapping[str, str] | None = None,
 ) -> str:
-    """컨테이너를 뒤에서 띄우고 이름을 낸다. 띄우지 못하면 예외다(그 회차는 측정이 아니다)."""
+    """컨테이너를 뒤에서 띄우고 이름을 낸다. 띄우지 못하면 예외다(그 회차는 측정이 아니다). 이름은
+    띄우기 전에 적어 둔다(_live). 만들어지기만 하고 뜨지 못한 컨테이너도 owned 가 지운다."""
     name = fresh("c")
     envs = [item for key, value in (env or {}).items() for item in ("-e", f"{key}={value}")]
-    done = docker(
-        "run", "-d", "--name", name, "--label", TAG, *envs, *options, image(target), *command
-    )
+    ref = image(target)
+    _live.append(name)
+    done = docker("run", "-d", "--name", name, "--label", TAG, *envs, *options, ref, *command)
     if done.code != 0:
         raise RuntimeError(f"docker run 실패: {tail(done.text)}")
     return name
+
+
+@contextmanager
+def owned() -> Generator[None]:
+    """이 안에서 띄운 컨테이너를 나갈 때 지운다. 서지 않아 일찍 돌아온 회차나 예외로 끝난 회차의
+    컨테이너가 남아 뒤 회차와 CPU 와 메모리를 나눠 쓰지 않게 한다. 볼륨은 실행 끝의 sweep 이
+    지운다."""
+    before = len(_live)
+    try:
+        yield
+    finally:
+        names = _live[before:]
+        del _live[before:]
+        if names:
+            docker("rm", "-f", "-v", *names, timeout=180)
+
+
+@contextmanager
+def owned_round(rounds: Rounds, label: str) -> Generator[Slot]:
+    """회차 하나. 그 회차가 띄운 컨테이너는 회차가 끝날 때 지운다(owned)."""
+    with rounds.round(label) as current, owned():
+        yield current
 
 
 def up(
@@ -318,16 +367,22 @@ def up(
     return start(target, *options, env=env, command=command)
 
 
-def logs(name: str) -> str:
-    return docker("logs", name, timeout=60, quiet=True).text
+def logs(name: str) -> Done:
+    return docker("logs", name, timeout=60, quiet=True)
 
 
 def judged_logs(name: str) -> str:
     """요청을 건 뒤의 기록. 회차의 판정(빌드 머리말이 없다, 오류 번호가 없다)과 시간이 이 글에서
-    나오므로 원본 기록에도 남긴다. until 이 남기는 것은 첫 200 때의 기록이라 이보다 짧다."""
-    text = logs(name)
-    raw(f"logs {name} (판정에 쓴 기록)", text)
-    return text
+    나오므로 원본 기록에도 남긴다. until 이 남기는 것은 첫 200 때의 기록이라 이보다 짧다. 기록을
+    읽지 못하면 예외다(그 회차는 측정이 아니다). 읽지 못하고 받은 글에 그 문구가 없는 것을 "없다"는
+    표지로 세지 않는다."""
+    done = logs(name)
+    raw(f"logs {name} (판정에 쓴 기록, exit={done.code})", done.text)
+    if done.code != 0:
+        raise RuntimeError(
+            f"판정에 쓸 기록을 읽지 못했다(docker logs exit={done.code}): {tail(done.text)}"
+        )
+    return done.text
 
 
 def state(name: str) -> dict[str, Json]:
@@ -341,11 +396,11 @@ def until(name: str, needle: str, *, count: int = 1, timeout: float = 90) -> str
     deadline = time.monotonic() + timeout
     text = ""
     while time.monotonic() < deadline:
-        text = logs(name)
+        text = logs(name).text
         if text.count(needle) >= count:
             break
         if state(name).get("Running") is not True:
-            text = logs(name)
+            text = logs(name).text
             break
         time.sleep(0.3)
     raw(f"logs {name}", text)
@@ -366,9 +421,9 @@ def shell(name: str, script: str) -> Done:
     return docker("exec", name, "sh", "-c", script, timeout=60)
 
 
-def fetch(name: str, path: str, *extra: str, base: str = BASE) -> dict[str, Json]:
-    """컨테이너 안에서 요청 하나를 건다(fetch.mjs). `base` 로 다른 포트에 걸 수 있다."""
-    done = docker("exec", name, "node", "/probe/fetch.mjs", base + path, *extra, timeout=60)
+def fetch(name: str, path: str, *extra: str) -> dict[str, Json]:
+    """컨테이너 안에서 요청 하나를 건다(fetch.mjs)."""
+    done = docker("exec", name, "node", "/probe/fetch.mjs", BASE + path, *extra, timeout=60)
     return last_json(done.out) or {"error": tail(done.text)}
 
 
@@ -441,13 +496,13 @@ def serves(seen: Mapping[str, Json], origins: Sequence[str], chars: int) -> bool
 
 
 def epoch(stamp: str) -> float:
-    """Docker 의 시각(나노초까지의 RFC 3339)을 초로. 풀지 못하면 0 이다."""
-    whole, _, fraction = stamp.rstrip("Z").partition(".")
+    """Docker 의 시각(나노초까지의 RFC 3339. 끝이 Z 이거나 +09:00 같은 시간대 차이다)을 초로. 풀지
+    못했거나 시간대가 없으면 0 이다. 마이크로초 아래는 버려진다."""
     try:
-        base = datetime.strptime(whole, "%Y-%m-%dT%H:%M:%S").replace(tzinfo=UTC).timestamp()
+        found = datetime.fromisoformat(stamp)
     except ValueError:
         return 0.0
-    return base + (float(f"0.{fraction}") if fraction.isdigit() else 0.0)
+    return found.timestamp() if found.tzinfo is not None else 0.0
 
 
 def stamps(text: str, mark: str) -> list[float]:
@@ -490,19 +545,29 @@ def memory(name: str) -> dict[str, Json]:
 
 
 def image_build_id(target: str) -> str:
-    if target not in _build_ids:
-        done = docker(
-            "run", "--rm", "--label", TAG, "--entrypoint", "cat", image(target), ".next/BUILD_ID"
-        )
-        _build_ids[target] = done.out.strip()
-    return _build_ids[target]
+    """그 단계의 이미지에 든 BUILD_ID. 이미지 ID 마다 한 번 읽는다(같은 실행에서 그 단계를 다시
+    지으면 새 이미지의 것을 다시 읽는다). 읽지 못하면 빈 글이고 기억해 두지 않는다."""
+    ref = image(target)
+    if ref not in _build_ids:
+        done = docker("run", "--rm", "--label", TAG, "--entrypoint", "cat", ref, ".next/BUILD_ID")
+        found = done.out.strip()
+        if done.code != 0 or not found:
+            return ""
+        _build_ids[ref] = found
+    return _build_ids[ref]
 
 
 def prebuilt(name: str, target: str, text: str) -> bool:
     """뜰 때 빌드하지 않았다는 표지. 내는 BUILD_ID 가 이미지의 것과 같고 기록에 빌드 머리말이
-    없다."""
+    없다. 머리말이 없다는 것은 그 컨테이너의 기록을 실제로 읽었을 때만 뜻이 있어, 그 글이 첫 200 의
+    줄을 든 것도 함께 본다."""
     served = shell(name, "cat .next/BUILD_ID").out.strip()
-    return bool(served) and served == image_build_id(target) and BUILD_BANNER not in text
+    return (
+        bool(served)
+        and served == image_build_id(target)
+        and FIRST_OK in text
+        and BUILD_BANNER not in text
+    )
 
 
 def stop(name: str, *, grace: int = 10) -> dict[str, Json]:
@@ -589,11 +654,49 @@ def inspect(target: str, *args: str) -> dict[str, Json]:
     return last_json(done.out)
 
 
+def build(target: str) -> Done:
+    """Dockerfile 의 그 단계를 짓는다. 지어지면 빌드가 낸 이미지 ID(--iidfile)를 받아 그 단계가 이
+    실행에서 쓸 이미지로 굳힌다(pin). 지은 뒤에 태그를 다시 풀면, 같은 Docker 데몬에서 같은 단계를
+    짓는 다른 실행이 그 사이에 옮긴 이미지를 집을 수 있다. 짓지 못했거나 ID 를 받지 못하면 그 단계를
+    실패로 적어 두어, 앞서 지어 둔 같은 태그의 이미지를 뒤의 회차가 쓰지 못하게 한다(image)."""
+    built = _work[0] / f"iid-{target}.txt"
+    built.unlink(missing_ok=True)
+    _image_ids.pop(target, None)
+    _failed.add(target)
+    done = docker(
+        "build",
+        "--progress",
+        "plain",
+        "-f",
+        str(HERE / "Dockerfile"),
+        "--build-context",
+        f"probe={HERE}",
+        "--target",
+        target,
+        "-t",
+        tag(target),
+        "--iidfile",
+        str(built),
+        str(WEB),
+        timeout=2400,
+    )
+    if done.code == 0:
+        try:
+            ref = built.read_text(encoding="utf-8").strip()
+        except OSError as error:
+            raise RuntimeError(f"빌드가 이미지 ID 파일을 남기지 않았다: {error}") from error
+        pin(target, ref)
+        _failed.discard(target)
+    return done
+
+
 def section_build(rounds: Rounds, _repeat: int) -> None:
     """Dockerfile 의 단계를 차례로 짓고 지어진 것을 들여다본다. 걸린 시간은 층 캐시가 있으면 0 에
-    가까워 빌드 시간의 근거가 아니다.
+    가까워 빌드 시간의 근거가 아니다. 뒤의 세 회차는 이 실행이 지은 이미지만 본다. 그 단계의 빌드가
+    실패했으면 앞서 지어 둔 이미지가 남아 있어도 그 회차는 측정이 아니다(image).
 
-    - 단계마다: 표지는 docker build 가 0 으로 끝나고 그 태그의 이미지가 크기를 내는 것이다.
+    - 단계마다: 표지는 docker build 가 0 으로 끝나고, 빌드가 낸 ID 의 이미지가 크기를 내는
+      것이다.
     - 깔린 것: 표지는 image 에 next 가 깔려 있고 빌드 도구(vite, @tailwindcss/vite, typescript)가
       없으며, 같은 도우미가 deps-full 로 지은 build 단계(build-inspect)에서는 넷 모두 판을 내는
       것이다(없다는 답이 도구가 실제로 없어서라는 대조).
@@ -607,23 +710,7 @@ def section_build(rounds: Rounds, _repeat: int) -> None:
     """
     for target in TARGETS:
         with rounds.round(f"build {target}") as current:
-            done = docker(
-                "build",
-                "--progress",
-                "plain",
-                "-f",
-                str(HERE / "Dockerfile"),
-                "--build-context",
-                f"probe={HERE}",
-                "--target",
-                target,
-                "-t",
-                tag(target),
-                str(WEB),
-                timeout=2400,
-            )
-            # 다시 지었으니 앞서 풀어 둔 ID 가 있으면 버린다(바로 아래 size_mb 가 새 ID 로 푼다).
-            _image_ids.pop(target, None)
+            done = build(target)
             size = size_mb(target) if done.code == 0 else 0.0
             note(
                 f"build {target}",
@@ -709,7 +796,7 @@ def section_build(rounds: Rounds, _repeat: int) -> None:
 
 
 def start_round(rounds: Rounds, label: str, target: str, *options: str) -> None:
-    with rounds.round(label) as current:
+    with owned_round(rounds, label) as current:
         name = up(target, *options)
         text = until(name, FIRST_OK)
         if FIRST_OK not in text:
@@ -751,7 +838,7 @@ def reflect_round(rounds: Rounds, label: str, target: str, *options: str) -> Non
     """사이트 파일 A 로 띄운 뒤 볼륨의 파일을 B 로 바꾸고 같은 컨테이너를 docker restart 한다.
     표지는 처음 실행이 A 의 두 값을, 다시 띄운 실행이 B 의 두 값을 내고(A 의 값은 없다) 값 파일의
     ETag 가 달라지며 둘 다 빌드하지 않은 것이다."""
-    with rounds.round(label) as current:
+    with owned_round(rounds, label) as current:
         volume = volume_with(site_text())
         name = up(target, "-v", f"{volume}:/etc/agent-os/site:ro", *options, site=MOUNTED)
         text = until(name, FIRST_OK)
@@ -827,10 +914,10 @@ def exits_round(
     기록에 있고, 진입 단계가 next 를 부르는 데까지 가지 않은 것(next-start 줄이 없다)이다. `command`
     로 진입 단계를 건너뛴 회차에서는 뒤의 것이 늘 참이라, 까닭의 문구만이 표지다. `exit_code` 를
     주면 종료 코드가 그 값인 것까지 표지다. `result` 는 표지가 맞은 회차의 결과 이름이다."""
-    with rounds.round(label) as current:
+    with owned_round(rounds, label) as current:
         name = up(target, *options, site=site, command=command)
         found = finished(name)
-        text = logs(name)
+        text = logs(name).text
         raw(f"logs {name}", text)
         code = found.get("ExitCode")
         note(
@@ -848,9 +935,14 @@ def exits_round(
         current.mark(measured=good, result=result if good else "기대와 다르다")
 
 
-def readonly_round(rounds: Rounds, label: str, limits: Sequence[str] = HARDENED) -> None:
-    with rounds.round(label) as current:
-        name = up("image", *limits, "--tmpfs", TMPFS, "--network", "none")
+def readonly_round(
+    rounds: Rounds, label: str, limits: Sequence[str] = HARDENED, *, network: bool = False
+) -> None:
+    """읽기 전용 루트로 띄운 회차 하나. `network` 가 거짓이면 네트워크를 끊고(--network none),
+    참이면 Docker 의 기본 네트워크를 붙인 채 띄운다. 그 꼴이 실제로 났다는 표지로 컨테이너 안의
+    네트워크 장치를 본다. 끊었으면 lo 하나뿐이고, 붙였으면 lo 밖의 장치가 있다."""
+    with owned_round(rounds, label) as current:
+        name = up("image", *limits, "--tmpfs", TMPFS, *(() if network else NO_NETWORK))
         text = until(name, FIRST_OK)
         if FIRST_OK not in text:
             note(label, {"tail": tail(text, 6)})
@@ -864,7 +956,8 @@ def readonly_round(rounds: Rounds, label: str, limits: Sequence[str] = HARDENED)
         )
         denied = tried.text.count("Read-only file system")
         mounts = shell(name, f"grep -c ' {RUN_DIR} tmpfs ' /proc/mounts").out.strip()
-        devices = shell(name, "ls /sys/class/net | tr '\\n' ' '").out.strip()
+        devices = shell(name, "ls /sys/class/net").out.split()
+        wired = any(device != "lo" for device in devices)
         text = judged_logs(name)
         quiet = "EROFS" not in text and "EACCES" not in text
         fixed = prebuilt(name, "image", text)
@@ -881,7 +974,7 @@ def readonly_round(rounds: Rounds, label: str, limits: Sequence[str] = HARDENED)
                 "root_writes_denied": denied,
                 "run_dir_writable": "run-dir-writable" in tried.text,
                 "tmpfs_mounts": mounts,
-                "net": devices,
+                "net": " ".join(devices),
                 "log_quiet": quiet,
                 "page_csp": seen["page_csp"],
                 "values_body": seen["values_body"],
@@ -896,6 +989,8 @@ def readonly_round(rounds: Rounds, label: str, limits: Sequence[str] = HARDENED)
             and "run-dir-writable" in tried.text
             and mounts == "1"
             and quiet
+            and "lo" in devices
+            and wired == network
         )
         current.mark(
             measured=good,
@@ -907,22 +1002,27 @@ def section_readonly(rounds: Rounds, repeat: int) -> None:
     """읽기 전용 루트. 링크 있는 이미지를 --read-only, 능력 모두 빼기, no-new-privileges, 네트워크
     없음, /run/agent-os-widget 의 tmpfs 하나로 띄운다. 표지는 A 의 두 값을 내고, 루트의 두 자리(앱의
     public, /tmp)에 쓰기가 Read-only file system 으로 거절되고, tmpfs 폴더에는 써지며, 그 폴더가
-    실제로 tmpfs 로 붙었고(/proc/mounts), 요청 뒤의 기록에 EROFS 도 EACCES 도 없는 것이다. 대조 둘은
-    서는 회차에서 하나씩만 바꾼다. 같은 이미지에서 tmpfs 를 빼거나, tmpfs 는 그대로 주고 링크 없는
-    이미지를 쓰면 진입 단계가 EROFS 로 끝나는 것이다(서게 한 것이 tmpfs 폴더와 링크라는 갈래. 링크
-    없는 이미지의 대조는 첫 네 실행에서 tmpfs 도 함께 뺀 꼴이었다. README 의 "결과를 본 뒤 바꾼
-    것"). 그다음 회차는 compose 가 web 컨테이너에 주는 꼴 그대로 read_only 하나만 건다(더 조인
-    꼴에서 선 것이 그 꼴에서도 서는지). 마지막 회차는 조인 제한에서 사이트 파일을 바꾸고 다시
-    띄운다."""
+    실제로 tmpfs 로 붙었고(/proc/mounts), 요청 뒤의 기록에 EROFS 도 EACCES 도 없으며, 컨테이너 안의
+    네트워크 장치가 lo 하나뿐인 것이다. 대조 둘은 서는 회차에서 하나씩만 바꾼다. 같은 이미지에서
+    tmpfs 를 빼거나, tmpfs 는 그대로 주고 링크 없는 이미지를 쓰면 진입 단계가 EROFS 로 끝나는
+    것이다(서게 한 것이 tmpfs 폴더와 링크라는 갈래. 링크 없는 이미지의 대조는 첫 네 실행에서 tmpfs
+    도 함께 뺀 꼴이었고, 두 대조 모두 첫 다섯 실행에서는 네트워크를 끊지 않아 서는 회차와 그것도
+    달랐다. README 의 "결과를 본 뒤 바꾼 것"). 그다음 회차는 단독 compose 가 web 컨테이너에 주는
+    꼴대로 제한을 read_only 하나만 걸고 네트워크는 붙인 채 띄운다(더 조인 꼴에서 선 것이 그 꼴에서도
+    서는지. 표지에서 네트워크 장치만 반대로 본다. lo 밖의 장치가 있어야 한다. 이 회차도 첫 다섯
+    실행에서는 네트워크를 끊은 채였다). 마지막 회차는 조인 제한에서 네트워크를 붙인 채 사이트 파일을
+    바꾸고 다시 띄운다."""
     for index in range(repeat):
         readonly_round(rounds, f"readonly image tmpfs #{index + 1}")
-    readonly_round(rounds, "readonly image tmpfs, read_only 만", READ_ONLY)
+    readonly_round(
+        rounds, "readonly image tmpfs, read_only 만(네트워크 있음)", READ_ONLY, network=True
+    )
     unwritable = "진입 단계가 EROFS 로 끝나 next 를 부르지 않았다"
     exits_round(
         rounds,
         "readonly image, tmpfs 없음(대조)",
         "image",
-        HARDENED,
+        (*HARDENED, *NO_NETWORK),
         needles=["EROFS", "routes-manifest.json"],
         result=unwritable,
     )
@@ -930,7 +1030,7 @@ def section_readonly(rounds: Rounds, repeat: int) -> None:
         rounds,
         "readonly image-inplace, tmpfs 있음(대조)",
         "image-inplace",
-        (*HARDENED, "--tmpfs", TMPFS),
+        (*HARDENED, "--tmpfs", TMPFS, *NO_NETWORK),
         needles=["EROFS", "routes-manifest.json"],
         result=unwritable,
     )
@@ -973,7 +1073,7 @@ def section_sitefile(rounds: Rounds, _repeat: int) -> None:
         site=SITE_BROKEN,
         exit_code=1,
     )
-    with rounds.round("sitefile 환경 변수 없음") as current:
+    with owned_round(rounds, "sitefile 환경 변수 없음") as current:
         name = up("image", site=None)
         text = until(name, FIRST_OK)
         seen = observe(name) if FIRST_OK in text else {}
@@ -1003,32 +1103,40 @@ def section_sitefile(rounds: Rounds, _repeat: int) -> None:
 # health
 
 
-def health_cmd(port: int) -> str:
+def health_cmd(port: int, *, explain: bool = False) -> str:
     """compose 의 위젯 상태 확인과 같은 node 한 줄이다. 포트만 바꿀 수 있다. compose 는 셸 없이
-    부르고(CMD) docker run 의 --health-cmd 는 sh -c 로 부르는 것이 다르다."""
+    부르고(CMD) docker run 의 --health-cmd 는 sh -c 로 부르는 것이 다르다. `explain` 이면 요청이
+    실패했을 때 그 까닭의 오류 코드를 한 줄 찍고 끝난다(종료 코드는 그대로 1 이다). Docker 가
+    확인마다 그 출력을 확인 기록에 남긴다."""
+    failed = (
+        "e=>{console.log(e.cause&&e.cause.code);process.exit(1)}"
+        if explain
+        else "()=>process.exit(1)"
+    )
     return (
         f"node -e \"fetch('http://127.0.0.1:{port}/widget')"
-        '.then(r=>process.exit(r.ok?0:1),()=>process.exit(1))"'
+        f'.then(r=>process.exit(r.ok?0:1),{failed})"'
     )
 
 
 def health_round(rounds: Rounds, label: str, port: int, *, healthy: bool) -> None:
     """상태 확인을 단 위젯을 읽기 전용 루트로 띄우고 HEALTH_WINDOW 동안 지켜본다. `healthy` 가
     참이면 그 안에 healthy 가 되기를, 거짓이면 확인이 실패하며 starting 으로 남기를 기대한다. 거짓인
-    회차는 실패의 까닭도 본다. 위젯은 3000 번에서 첫 200 을 냈고(기록의 first-ok), 확인이 건 포트에
-    같은 컨테이너 안에서 건 요청이 연결 거절(ECONNREFUSED)로 끝난다. 그래서 그 실패는 위젯이 서지
-    않아서가 아니라 그 포트를 아무도 듣지 않아서 난 것이다."""
-    with rounds.round(label) as current:
+    회차는 실패의 까닭을 그 확인의 기록에서 본다. 위젯이 3000 번에서 첫 200 을 낸 시각(기록의
+    first-ok)보다 뒤에 시작한 확인이 하나 이상 있고, 그런 확인이 모두 종료 코드 1 과 연결
+    거절(ECONNREFUSED)을 남긴다. 위젯이 선 뒤에 돈 확인이라, 그 실패는 위젯이 서지 않아서가 아니라
+    그 포트를 아무도 듣지 않아서 난 것이다. 그 오류 코드를 찍으려고 거짓인 회차의 확인 명령만 실패
+    처리에 출력 한 줄을 더한다(health_cmd 의 explain)."""
+    with owned_round(rounds, label) as current:
         begun = time.monotonic()
         name = up(
             "image",
             *READ_ONLY,
             "--tmpfs",
             TMPFS,
-            "--network",
-            "none",
+            *NO_NETWORK,
             "--health-cmd",
-            health_cmd(port),
+            health_cmd(port, explain=not healthy),
             *HEALTH,
         )
         seen: dict[str, Json] = {}
@@ -1040,8 +1148,8 @@ def health_round(rounds: Rounds, label: str, port: int, *, healthy: bool) -> Non
             time.sleep(0.25)
         waited = round(time.monotonic() - begun, 2)
         log = seen.get("Log")
-        entries = log if isinstance(log, list) else []
-        codes = [item.get("ExitCode") for item in entries if isinstance(item, dict)]
+        entries = [item for item in log if isinstance(item, dict)] if isinstance(log, list) else []
+        codes = [item.get("ExitCode") for item in entries]
         status = seen.get("Status")
         values: dict[str, Json] = {
             "status": status,
@@ -1050,22 +1158,39 @@ def health_round(rounds: Rounds, label: str, port: int, *, healthy: bool) -> Non
         }
         if healthy:
             stop(name)
-            good = status == "healthy" and bool(codes) and codes[-1] == 0 and waited < START_PERIOD
+            # waited 는 healthy 를 본 조회가 돌아온 시각이다. 지켜보는 동안 안에 봤는지를 본다.
+            good = (
+                status == "healthy"
+                and bool(codes)
+                and codes[-1] == 0
+                and waited < HEALTH_WINDOW < START_PERIOD
+            )
             result = "시작 유예 30초 안에 healthy 가 됐다"
         else:
-            text = logs(name)
+            text = logs(name).text
             raw(f"logs {name}", text)
-            served = FIRST_OK in text
-            port_error = fetch(name, "/widget", base=f"http://127.0.0.1:{port}").get("error")
+            first_ok = stamps(text, "first-ok")
+            late = [
+                item for item in entries if first_ok and epoch(str(item.get("Start"))) > first_ok[0]
+            ]
             stop(name)
-            values["served_3000"] = served
-            values["port_error"] = port_error
+            checks: list[Json] = [
+                {
+                    "start": item.get("Start"),
+                    "exit": item.get("ExitCode"),
+                    "output": str(item.get("Output")).strip(),
+                }
+                for item in entries
+            ]
+            values["first_ok_t"] = first_ok[0] if first_ok else None
+            values["checks"] = checks
+            values["checks_after_first_ok"] = len(late)
             good = (
                 status == "starting"
                 and bool(codes)
                 and all(code == 1 for code in codes)
-                and served
-                and port_error == REFUSED
+                and bool(late)
+                and all(REFUSED in str(item.get("Output")) for item in late)
             )
             result = "듣지 않는 포트의 확인은 실패했고 healthy 가 되지 않았다"
         note(label, values)
@@ -1074,11 +1199,12 @@ def health_round(rounds: Rounds, label: str, port: int, *, healthy: bool) -> Non
 
 def section_health(rounds: Rounds, repeat: int) -> None:
     """상태 확인. compose 의 위젯 상태 확인과 같은 node 한 줄을, compose 의 공통 값에 시작 유예
-    30초를 둔 옵션으로 달고 읽기 전용 루트의 위젯을 띄운다. 표지는 지켜보는 25초 안에 상태가 healthy
-    가 되고 마지막 확인의 종료 코드가 0 이며, 띄우기 전부터 잰 시간이 시작 유예 30초보다 짧은
-    것이다. 대조는 같은 명령을 아무도 듣지 않는 포트에 건 것이고, 표지는 남은 확인 기록이 비지 않고
-    모두 종료 코드 1 이며 상태가 starting 으로 남고, 위젯은 3000 번에서 첫 200 을 냈으며, 그 포트에
-    건 요청이 연결 거절로 끝나는 것이다(healthy 가 확인이 성공해서 난 것이라는 갈래)."""
+    30초를 둔 옵션으로 달고 읽기 전용 루트의 위젯을 띄운다. 표지는 상태가 healthy 인 것을 본 시각이
+    띄우기 전부터 재어 지켜보는 25초 안이고(그 25초는 시작 유예 30초보다 짧다) 마지막 확인의 종료
+    코드가 0 인 것이다. 대조는 같은 요청을 아무도 듣지 않는 포트에 건 것이고(실패하면 오류 코드를
+    찍는 것만 다르다), 표지는 남은 확인 기록이 비지 않고 모두 종료 코드 1 이며 상태가 starting 으로
+    남고, 위젯이 3000 번에서 첫 200 을 낸 뒤에 시작한 확인이 하나 이상 있으며, 그런 확인의 출력이
+    모두 연결 거절(ECONNREFUSED)을 든 것이다(healthy 가 확인이 성공해서 난 것이라는 갈래)."""
     for index in range(repeat):
         health_round(rounds, f"health image #{index + 1}", 3000, healthy=True)
     health_round(rounds, "health 듣지 않는 포트(대조)", 3999, healthy=False)
@@ -1232,8 +1358,14 @@ def section_browser(rounds: Rounds, _repeat: int) -> None:
       뒤에만 잴 수 있어, 첫 회차가 측정이 아니면 이 회차도 측정이 아니다.
 
     호스트 포트 둘은 free_port 가 고른 뒤 닫고 넘기므로, 그 사이에 다른 프로세스가 가져가면 부모
-    페이지의 서버나 docker run 이 실패해 그 회차가 측정 아님이 된다(조용히 지나지 않는다).
+    페이지의 서버나 docker run 이 실패해 그 회차가 측정 아님이 된다(조용히 지나지 않는다). 컨테이너
+    하나를 두 회차가 이어 쓰므로 회차가 아니라 섹션이 끝날 때 지운다.
     """
+    with owned():
+        browser_rounds(rounds)
+
+
+def browser_rounds(rounds: Rounds) -> None:
     parent_port, widget_port = free_port(), free_port()
     serve = ("node", "tools/entry.mjs", "--hostname", "0.0.0.0", "--port", "3000")  # noqa: S104
     name = ""

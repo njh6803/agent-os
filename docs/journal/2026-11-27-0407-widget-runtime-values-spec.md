@@ -412,3 +412,173 @@ CodeRabbit CLI의 열셋 가운데 열둘을 고치고 하나(8)를 남겼다. `
 명세 서두의 수는 이 반영으로 바뀌지 않았다(표의 행, "명세가 정했다"와 "사용자가 골랐다" 표시, "거부한 안" 문단을 더하거나 빼지 않았다).
 
 다시 돌린 명령. `uv run python tools/plan_table.py`(출력 없음, `.scratch/plan.md` 그대로), `uv run ruff check .`(All checks passed), `uv run ruff format --check .`(2693 files already formatted), `uv run pyright -p .scratch/widget-runtime-values/probes/prebuilt_start`(오류 0), `uv run python tools/sibling_overlap.py`(번호 겹침 없음, 함께 고친 파일 없음. origin/dev는 `afba836` 그대로다), `git branch --show-current`(`docs/widget-runtime-values-spec`). 반영한 뒤 셀프 리뷰(`/code-review`)는 다시 돌리지 않았다. 고친 것이 PR 직전 리뷰의 지적을 따른 프로브의 표지와 그 결과의 수이고, PR의 봇 둘이 이 커밋을 본다. 손으로 치는 나머지 검사는 커밋의 pre-commit으로 갈음한다.
+
+#### 둘째 커밋과 pre-commit
+
+`git commit -F <메시지 파일>`이 커밋 `d92b8965b`를 만들었다(`docs: PR 직전 리뷰가 짚은 프로브의 표지와 대조를 고치고 다시 잰다 (widget-runtime-values)`, 파일 여덟). 명령은 백그라운드로 돌렸고 끝 알림을 기다렸다. 종료 코드는 0이었다.
+
+- `ruff check`, `ruff format`: Passed.
+- `checks`(`tools/run_checks.py`): Passed, 690.89초. 안의 검사는 check-ticket 0.9초, check-notes 1.7초, lint-imports 3.3초, zizmor 4.5초, check-instructions 15.0초, check-type-escapes 16.4초, pyright 54.2초, pyright-linux 55.0초, run-hooks 69.7초, pytest 655.2초, web-verify 689.3초였고 모두 Passed다.
+- markdown tables, line separators, mutation tables, quotes(경고만 낸다), commit message: Passed.
+- Skipped는 둘이다. canary specs와 constitution version이고 둘 다 `(no files to check)`였다. 손으로 치지 않았다.
+- quotes 검사의 경고 둘은 원천이 저장소 밖이라 그대로 둔다. 일지 320줄은 앱이 지은 세션 제목이고, 389줄은 실행 5의 출력에 찍힌 Chromium의 콘솔 글이다.
+
+이 커밋도 제품 코드를 건드리지 않아 LLM 테스트, e2e, 사진 비교는 돌리지 않았다.
+
+커밋 명령의 결과에 인계의 계기가 붙어 왔다(세션 컨텍스트 237,854 토큰, 단계 경계 `커밋 뒤`). `.claude/skills/next-session/handoff.md`를 Read로 열어 대 봤고 넘기지 않았다. 이 세션의 지시문의 "이어받을 상태"가 `인계: 커밋 뒤`로 시작해, 인계로 연 세션이 넘겨받은 경계에 다시 온 것이다(그 파일의 1, 셋째 항목).
+
+#### 푸시와 PR
+
+`git fetch origin` 뒤에도 origin/dev는 `afba83679` 그대로였다. `git push -u origin docs/widget-runtime-values-spec`으로 두 커밋을 올리고 PR #654를 열었다(`gh pr create --base dev`, 제목은 첫 커밋의 제목과 같다. https://github.com/njh6803/agent-os/pull/654). 면제 PR이다(기능의 명세, 가리키는 티켓 없음).
+
+- 본문은 PR 템플릿을 채웠다. 체크리스트의 PR 직전 리뷰 줄에 CLI가 돈 것(0.7.5, `Plan: Free`, `Seat: not assigned`, `--base origin/dev`, 파일 19, findings 13), 고친 열둘, 남긴 하나의 판정과 고치는 데 드는 값, `bug-perf-review`를 함께 돌린 까닭과 지적 0건을 적었다.
+- "리뷰어 참고"에 셋을 적었다. 값 파일을 받지 못하면 위젯이 닫힌 채 남는다는 것은 사용자에게 묻지 않고 명세가 정했고 티켓으로 나누기 전에 뒤집을 수 있다는 것, 네 문서가 같은 측정의 수를 들고 다섯째 실행을 더한 셈은 손으로 했다는 것, 다섯째 실행에서 더한 두 표지가 다른 까닭의 실패에서는 나지 않는다는 것을 따로 돌려 보지 않았다는 것이다.
+- 앱의 PR 감시는 이 세션에 묶였다(`get_status`가 `bound: true`, 검사는 통과 2, 대기 7, 건너뜀 2였다). `@coderabbitai review` 코멘트는 이 세션이 남기지 않았다(아래 인계).
+
+### 셋째 인계(PR 연 뒤)
+
+PR을 여는 명령의 결과에 인계의 계기(`hook_handoff`)가 붙어 왔다. 세션 컨텍스트가 295,183 토큰으로 문턱 200,000을 넘은 채 단계 경계 `PR 연 뒤`에 왔다는 알림이다. `handoff.md`의 인계하지 않는 때 다섯에 들지 않았다. PR은 열렸고, 요청 범위는 PR과 병합까지이며, 이 세션의 지시문의 "이어받을 상태"는 `인계: 커밋 뒤`로 시작해 지금 경계와 다르고, 이 세션이 쓴 `인계 못함` 줄이 없고, `get_session`의 `self`에 `parentSessionId`가 없다.
+
+이 세션의 제목은 `docs/widget-runtime-values-spec`이다. 넘기기 전에 `docs/widget-runtime-values-spec (인계함)`으로 바꾼다.
+
+새 세션이 이어받는 상태는 아래다.
+
+- 커밋 `d92b8965b`까지 푸시했고 PR #654가 열려 있다. 봇 회차는 시작하지 않았다. 첫 `@coderabbitai review` 코멘트와 `tools/wait_ci.py` 대기는 새 세션이 한다.
+- 이 일지는 둘째 커밋 뒤에 고친 채다("둘째 커밋과 pre-commit", "푸시와 PR", 이 절). 새 세션이 이어 쓰고 봇 회차의 커밋에 싣는다.
+- 남은 차례: 봇 회차 반영, 이 일지의 "다음" 절, 회고, 병합, 다음 지시문. 다음 지시문의 다음 단계는 이 명세를 티켓으로 나누는 일로 본다(명세 검토 `spec-reviewer` 뒤 `/to-tickets`).
+- 봇이 수의 일치를 짚으면 대 볼 자리. 다섯 실행을 합친 수는 위 "반영(PR 직전 리뷰)"의 3에 한 줄로 모아 적었고, 실행 5만의 값은 위 "실행 5"에 있다. 실행 5의 원본 기록(`raw.log`, `results.jsonl`)은 이 세션의 스크래치 폴더(`wrv-run5`)에 있어 새 세션에서 보이지 않을 수 있다. 다시 내려면 프로브를 다시 돌린다(이미지가 남아 있으면 126초쯤이다).
+- PR 직전 리뷰에서 남긴 하나(`free_port`가 고른 포트를 닫고 돌려주는 것)는 PR 체크리스트에 판정과 값을 적었다. 봇이 같은 자리를 다시 짚으면 그 줄을 근거로 판정한다.
+- 주 체크아웃은 이 세션이 본 때 origin/dev보다 뒤처져 있었다(`tools/sibling_overlap.py`가 루트를 `e7c53cb`로 보였다). 당기지 않았다.
+
+앞 지시문이 "이 기능의 일은 아니지만" 알린 것(admin-login 05, PR #653의 봇 보류 하나)은 이번 인계 지시문에도 그대로 옮겼다.
+
+낸 지시문은 아래다.
+
+```
+다음 작업: 기능 widget-runtime-values. 위젯 이미지를 미리 지어 두고 컨테이너가 뜰 때 사이트 파일의 허용 출처와 요청 글자 수 상한만 받게 해, 뜰 때마다 하던 빌드를 없앤다.
+다음 단계: PR 반영·병합
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다.
+시작 프롬프트: /to-spec widget-runtime-values
+브랜치: docs/widget-runtime-values-spec
+모델: Sonnet 5.5 / high. 2의 잇는 지시문.
+읽을 것: docs/journal/2026-11-27-0407-widget-runtime-values-spec.md의 "셋째 인계(PR 연 뒤)" 절과 "반영(PR 직전 리뷰)" 절
+이어받을 상태: 인계: PR 연 뒤. PR #654를 열었고 merge.md 2(봇 회차)부터 한다. 첫 @coderabbitai review 코멘트도 새 세션이 남긴다(일지 docs/journal/2026-11-27-0407-widget-runtime-values-spec.md). 남은 단계는 봇 회차 반영, 일지의 "다음" 절, 회고, 병합, 다음 지시문이다. 일지는 둘째 커밋(d92b8965b) 뒤에 더 쓴 채라 새 세션이 이어 쓰고 봇 회차의 커밋에 싣는다. to-spec의 차례는 처음부터 밟지 않고, 사용자에게 다시 묻지 않으며, 명세를 다시 쓰지 않는다. 봇이 수의 일치나 PR 직전 리뷰에서 남긴 지적(free_port)을 짚을 때 대 볼 자리는 그 일지의 "셋째 인계(PR 연 뒤)" 절에 있다. 이 기능의 일은 아니지만 앞 지시문이 알린 것을 잇는다: admin-login 05(PR #653)의 봇 보류 하나가 병합된 일지 "다음"에 없고 PR 코멘트(issuecomment-7199113820)에만 있다. 관리 라우터의 public에 /health 외의 라우트가 붙는 것을 막는 시험이 없다는 지적이고, admin-login을 잇는 세션이 이어받는다.
+확인할 선행 조건: 병합은 이 워크트리 사본의 next-session merge.md(없으면 SKILL.md)의 "워크트리에서 병합할 때"를 Read로 열어 따른다. 주 체크아웃은 이 세션이 본 때 origin/dev보다 뒤처져 있었고 당기지 않았다.
+이번 요청 범위: PR과 병합까지
+```
+
+넘기기 전의 차례를 밟았다. 제목을 `docs/widget-runtime-values-spec (인계함)`으로 바꿨고(앱이 묻지 않고 바꿨다), 이 세션이 띄운 백그라운드 작업은 실행 5와 커밋 둘이었는데 둘 다 끝나 멈출 것이 없었다. `git worktree unlock C:/project/agent/.claude/worktrees/widget-runtime-values-spec`은 `is not locked`로 끝났고 절차대로 넘어갔다.
+
+open-session을 부른다 2026-11-26T21:27:01Z
+
+인계 못함 PR 연 뒤
+
+`open-session`의 3(연다)에서 막혔다. `pwsh -NoProfile -File C:\project\agent\tools\open_session.ps1 -Action send -Folder C:\project\agent -PromptFile <파일>`을 PowerShell 도구로 치자 자동 모드의 권한 판정이 그 호출을 거부했다(사유로 찍힌 글은 `[Unsanctioned Communication]`이다). 스크립트는 돌지 않았고 새 세션은 생기지 않았다. 그 앞의 1(같은 제목으로 도는 다른 세션이 없다. `list_sessions`에서 도는 세션이 하나도 없었다)과 2(프롬프트 파일)는 지났다. 거부를 돌아가는 다른 길(`start_session` 등)은 쓰지 않았다. `handoff.md` 4의 "열기"대로 제목을 `docs/widget-runtime-values-spec`으로 되돌렸고, 멈춘 대기는 없었으며, 이 세션에서 다음 단계(`merge.md` 2의 봇 회차)를 잇는다. 위 "낸 지시문"은 쓰이지 않았다.
+
+### PR 봇 회차 1
+
+인계가 막힌 뒤 이 세션이 이었다. `@coderabbitai review` 코멘트를 21:28:08Z에 남겼고(issuecomment-7203755743), `gh pr checks 654`를 한 번 읽은 뒤 `uv run python tools/wait_ci.py 654`를 백그라운드로 걸고 턴을 끝냈다. 끝 알림으로 깨어나 `/pr-feedback 654`의 차례대로 읽었다. 이 PR의 첫 회차다.
+
+#### 봇의 보고
+
+- claude-review(21:25:47Z, issuecomment-7203718015): "지적 없음". 바뀐 파일 열아홉이 모두 `.scratch/`와 `docs/journal/`이고 `src/`, `sdk/`, `openapi.json`을 건드리지 않았다는 것, 제목에 느낌표가 없는 것이 맞다는 것을 본 범위로 적었다. 코멘트가 있고 본 범위를 적었으므로 리뷰 없는 초록이 아니다.
+- CodeRabbit(21:34:42Z의 리뷰): "Actionable comments posted: 11". 인라인 코멘트 열하나를 `gh api repos/{owner}/{repo}/pulls/654/comments --paginate`로 모두 읽었다. Major 넷, Minor 일곱이고, 하나는 프로브 README의 문장, 열은 `run.py`다. 명세와 기능 계획과 일지의 지적은 없었다. `@coderabbitai review`에는 6초 뒤 "Review finished"라는 답이 달렸다(이미 본 커밋은 다시 보지 않는다는 안내가 함께 있었다).
+- 검사는 모두 통과였고 `llm`만 건너뜀이었다(`gh pr checks 654`).
+
+CodeRabbit의 지적을 심각도와 자리로 줄여 옮긴다(심각도는 봇이 매긴 것이다).
+
+1. (Minor) 프로브 README 75줄. 읽기 전용 하나만 건 회차를 "compose가 web 컨테이너에 주는 꼴 그대로"라고 적었는데 그 회차도 `--network none`으로 떴다.
+2. (Major) `run.py:237`. 이미지 ID를 읽지 못하면 태그로 띄워, 어느 이미지를 썼는지 적지 못한 회차가 측정으로 세어진다.
+3. (Minor) `run.py:262`. 실행 끝의 지우기가 원본 기록(`raw.log`) 쓰기에 기대어, 쓰기가 실패하면 컨테이너와 볼륨이 남는다.
+4. (Major) `run.py:322`. `docker logs`가 실패한 출력을 정상 기록과 같은 글로 돌려줘, 기록을 읽지 못하고도 "빌드 머리말이 없다"가 통과한다.
+5. (Minor) `run.py:498`. 빌드 식별자를 단계 이름으로 기억해, 같은 실행에서 단계를 다시 지으면 새 이미지를 옛 식별자와 견준다.
+6. (Minor) `run.py:627`. 지은 뒤 태그를 다시 풀어, 같은 Docker 데몬의 다른 실행이 그 사이에 옮긴 이미지를 집을 수 있다.
+7. (Major) `run.py:639`(663, 688줄도). 이번 빌드가 실패해도 앞서 지어 둔 이미지가 남아 있으면 뒤의 검사가 그 이미지로 측정을 적는다.
+8. (Minor) `run.py:718`. 첫 200을 내지 못한 컨테이너를 끄지 않고 돌아가, 뒤 회차가 그 컨테이너와 CPU와 메모리를 나눠 쓴다.
+9. (Minor) `run.py:925`(933줄도). 읽기 전용으로 서는 회차는 네트워크를 끊는데 두 대조는 끊지 않아 요인 하나만 다른 비교가 아니다.
+10. (Minor) `run.py:1039`. healthy를 본 시각이 지켜보는 25초 안인지를 판정에 쓰지 않는다.
+11. (Major) `run.py:1059`(1065~1068줄도). 듣지 않는 포트 대조가 먼저 적힌 확인의 종료 코드와 나중에 따로 건 요청의 연결 거절을 묶어, 센 확인이 위젯의 첫 200 뒤에 돌았는지와 그 확인이 연결 거절을 받았는지를 알 수 없다.
+
+#### 지적을 근거와 대 본 것
+
+열하나 모두 그 자리를 Read로 열어 대 봤고 모두 맞았다. 첫 회차라 Minor도 지적마다 판단했고, 열하나를 모두 고쳤다(보류 없음). 봇의 코멘트 본문에 든 "고치는 프롬프트"는 따르지 않고 지적만 읽었다.
+
+1. 맞다. `readonly_round`가 모든 갈래에 `--network none`을 줬다. 문장만 낮추지 않고 그 회차를 compose의 꼴대로 네트워크를 붙여 띄우게 했다. 회차마다 컨테이너 안의 `/sys/class/net`을 읽어, 네트워크를 붙인 회차는 `lo` 밖의 장치가 있고 끊은 회차는 `lo`뿐인 것을 표지로 단언한다. 회차 수는 그대로다.
+2. 맞다. `image`가 조회에 실패하면 태그를 돌려줬다. 조회가 실패하면 예외를 던져 그 회차가 측정 아님이 되게 했다(`pin`).
+3. 맞다. 실행 끝의 지우기(`sweep`)가 부르는 docker 호출을 원본 기록에 쓰지 않게 하고, 지운 수와 종료 코드는 화면에 찍는다.
+4. 맞다. `logs`가 종료 코드를 든 채 돌아오게 하고, 판정에 쓰는 기록(`judged_logs`)은 종료 코드가 0이 아니면 예외를 던진다. "빌드 머리말이 없다"는 판정에는 그 기록에 첫 200의 줄이 있는 것도 더했다.
+5. 맞다. 빌드 식별자를 이미지 ID마다 기억하고, 읽지 못한 값은 기억하지 않는다.
+6. 맞다. `docker build --iidfile`로 빌드가 낸 ID를 바로 받아 쓴다. 이 PC의 Docker Desktop에서 그 파일의 값이 `docker image inspect`의 `.Id`와 같은 `sha256:` 꼴인 것은 시험 실행의 원본에서 봤다(손으로 봤다).
+7. 맞다. 빌드를 부르기 전에 그 단계를 "이 실행에서 실패"로 적어 두고 성공해야 지운다. 그렇게 적힌 단계의 이미지를 찾으면 예외라, 뒤의 검사가 측정 아님이 된다.
+8. 맞다. 회차가 띄운 컨테이너를 그 회차가 끝날 때(일찍 돌아가거나 예외로 끝나도) 지운다(`owned`, `owned_round`). `browser`는 두 회차가 같은 컨테이너를 이어 써서 섹션이 끝날 때 지운다.
+9. 맞다. 두 대조에도 `--network none`을 줬다.
+10. 맞다. 양성 판정을 healthy를 본 시각이 25초보다 짧은 것으로 좁혔다(`waited < HEALTH_WINDOW < START_PERIOD`).
+11. 맞다. PR 직전 리뷰의 1번을 고치며 넣은 "따로 건 요청"의 틈을 짚은 것이다. 대조의 확인 명령이 실패의 오류 코드를 스스로 찍게 하고, Docker가 남긴 확인 기록(`.State.Health.Log`)에서 위젯의 첫 200보다 뒤에 시작한 확인이 하나 이상이고 그 확인이 모두 종료 코드 1과 `ECONNREFUSED`를 남긴 것을 단언한다. 따로 건 요청은 뺐다.
+
+고친 뒤 `uv run python tools/rewrap_comments.py`는 종료 코드 1이었다(독스트링 두 곳은 감았고 코드 줄 하나를 "주석·독스트링 문단이 아니다"로 남겼다). 그 줄은 `uv run ruff format`이 감았고, `uv run ruff check .scratch/widget-runtime-values`(All checks passed)와 `uv run pyright -p .scratch/widget-runtime-values/probes/prebuilt_start`(오류 0)가 통과했다.
+
+#### 실행 6
+
+고친 것은 `run.py`뿐이고 이미지에 복사되는 파일은 그대로라 이미지를 다시 짓지 않아도 됐다(프로브 `Dockerfile`의 `COPY` 줄을 읽었다). 다만 11번의 단언은 Docker가 남기는 확인 기록의 모양에 기대므로, 전체를 돌리기 전에 `--sections build,health --rounds 1`로 한 번 돌려 원본에서 그 모양을 봤다(06:53:53~06:54:32, 열한 회차 모두 측정. 결과에는 넣지 않았다). 기록의 `Start`는 나노초까지 든 시각이고 끝이 `Z`였으며, `Output`에 확인 명령이 찍은 글이 실렸다.
+
+이어서 일곱 섹션 전체를 돌렸다(`--sections build,start,reflect,readonly,sitefile,health,browser --rounds 3`). 종료 코드 0, 측정 37회차, 측정 아님 0회차였고, 원본 기록의 처음과 끝 시각은 06:54:41과 06:56:42로 121초였다(`raw.log`를 손으로 봤다). 결과를 보고 표지를 다시 고친 것은 없다.
+
+- 이미지는 실행 5와 같다. 층이 모두 캐시에서 와 `image`가 `sha256:f823c11dbe90…`, `image-inplace`가 `sha256:02f56d0bd14c…`, 빌드 식별자가 `xOpdgCVqV4HvhKmSucRxT` 그대로였다.
+- 네트워크를 붙인 읽기 전용 회차: 장치가 `eth0 lo`였고 첫 200까지 0.65초, 메모리 최고치 92.8MiB였다. 이 꼴로 잰 것은 이 한 번이다.
+- 두 대조는 네트워크를 끊고도 같은 `EROFS`로 끝났다.
+- `health`의 대조: 위젯의 첫 200이 21:56:06.549Z였고, 남은 확인 다섯은 21:56:20.66Z~21:56:29.05Z에 시작해 모두 종료 코드 1과 `ECONNREFUSED`였다. 가장 이른 것이 첫 200의 약 14초 뒤다.
+- healthy 세 회차는 2.58초, 2.59초, 2.59초였다. 좁힌 단언(25초)이 걸러 내는 회차는 만나지 못했다.
+- 실행 끝의 지우기는 "sweep volume: 6개, exit=0"만 찍었다. 컨테이너는 회차마다 이미 지워져 있었다.
+- 값이 앞 다섯 실행의 범위를 네 군데에서 벗어났다. 첫 200까지의 아래 끝이 0.61에서 0.60초로, 메모리 최고치의 위 끝이 95.6에서 96.2MiB로, healthy의 아래 끝이 2.59에서 2.58초로, Next의 `Ready in` 아래 끝이 126에서 119ms로 움직였다.
+
+실패 쪽 길은 실행 6에서 나지 않아, 다섯을 손으로 한 번씩 일으켜 봤다(커밋하지 않은 `uv run python -c` 스크립트로 `run.py`의 함수를 불렀다. 손으로 봤다). 없는 태그를 ID로 푸는 것, 빌드가 실패했다고 적어 둔 단계의 이미지를 찾는 것, 없는 컨테이너의 판정용 기록을 읽는 것은 모두 기대한 문구의 `RuntimeError`였다. `sleep 300`으로 띄운 컨테이너는 `owned()` 안에서 하나였고 나온 뒤 없었다. 원본 기록의 폴더를 없는 경로로 바꿔 쓰기가 `FileNotFoundError`인 채로도 실행 끝의 지우기가 볼륨을 지웠다. 빌드가 실제로 실패하는 것, 같은 실행 안에서 단계를 다시 지은 뒤 빌드 식별자를 다시 읽는 것, `docker image inspect`나 `docker logs`가 시간 초과로 끝나는 것은 일으켜 보지 않았다(코드를 읽었다).
+
+#### 반영(PR 봇 회차 1)
+
+CodeRabbit의 열하나를 모두 고쳤고 남긴 것은 없다. claude-review는 지적이 없었다. 고친 파일은 `run.py`, 프로브 README 둘, 명세, deploy-package 기능 계획, 이 일지다.
+
+1. 프로브의 표지와 대조와 정리(위 1~11)와 실행 6.
+2. 프로브 README. 결과 1~7의 회차 수와 범위를 여섯 실행 164회차(32 + 10 + 11 + 37 + 37 + 37)로 고치고, 결과 4의 문장을 다시 썼다(읽기 전용 하나만 건 회차는 실행 3과 4와 5에서 네트워크도 끊은 채였고, 실행 6이 compose의 꼴대로 네트워크를 붙여 쟀으며 그 꼴로 잰 것은 한 번이다). "결과를 본 뒤 바꾼 것"에 "PR의 리뷰 봇이 짚은 뒤 고친 것(실행 6)"을 더해, 새로 넣은 단언과 길 가운데 실행 6이 실제로 지난 다섯, 손으로 일으켜 본 다섯, 일으켜 보지 않은 것을 갈라 적었다.
+3. 여섯 실행을 합친 수로 고쳤다(명세, 프로브 README 둘, deploy-package 기능 계획). 첫 응답까지 0.60~1.96초(시간을 찍은 일흔두 회차: `start` 스물여덟, `reflect` 열여섯, `readonly`의 뜬 회차 스물여덟), 메모리 최고치 77.7~96.2MiB(제한 없는 예순여덟 회차 88.8~96.2MiB, 256MiB로 제한한 네 회차 77.7~81.6MiB), healthy까지 2.58~2.95초(열두 회차), 끄기 0.16~1.16초(쉰 회차), 사이트 파일 A로 선 회차 스물여덟, 다시 띄운 회차 스물둘, 읽기 전용 회차 스물여덟과 쓰기 가능한 회차 마흔. 앞 다섯 실행의 수는 README에 적혀 있던 것에 실행 6의 값을 손으로 더한 것이다(실행 6의 값은 `results.jsonl`에서 읽었다. 앞 실행의 원본 기록은 다시 열지 않았다).
+4. 명세 "명세 전의 확인"의 실행 수 문장에 여섯째 실행을 더했고, "단독 compose의 위젯"의 읽기 전용 문장에 compose의 꼴대로 네트워크를 붙여 잰 것이 여섯째 실행의 한 번이라는 말을 더했다.
+
+고친 뒤 옛 수(0.61~1.96, 77.7~95.6, 2.59~2.95, 127회차, 다섯 실행)를 명세, 프로브 README 둘, 두 기능 계획에서 Grep으로 찾아 0건이었다. 프로브 README의 실행마다 적은 범위에 남은 0.61~1.78, 88.9~95.6, 2.59~2.66은 앞 실행들의 값이라 그대로다. 명세 서두의 수는 이 반영으로 바뀌지 않았다.
+
+PR 본문도 같은 수로 고쳤다(여섯 실행 164회차, 0.60~1.96초, 77.7~96.2MiB, 2.58~2.95초, 256MiB로 제한한 회차 넷, 층 캐시가 찬 채 126초와 121초). "리뷰어 참고"에 봇 첫 회차의 반영을 한 항목으로 더하고, 수의 일치와 새 표지의 한계를 여섯째 실행에 맞췄다.
+
+다시 돌린 명령. `uv run ruff check .`(All checks passed), `uv run ruff format --check .`(2695 files already formatted), `uv run pyright -p .scratch/widget-runtime-values/probes/prebuilt_start`(오류 0), `uv run python tools/sibling_overlap.py`(번호 겹침 없음, 함께 고친 파일 없음. origin/dev는 `afba836` 그대로다), `git branch --show-current`(`docs/widget-runtime-values-spec`), 아래 회고가 대기열 항목을 고친 뒤의 `uv run pytest -q tests/test_retro_queue_names.py`(10 passed). 손으로 치는 나머지 검사는 커밋의 pre-commit으로 갈음한다. 반영한 뒤 셀프 리뷰(`/code-review`)는 다시 돌리지 않았다. 고친 것이 봇의 지적을 따른 프로브의 표지와 그 결과의 수이고, 푸시하면 PR의 봇 둘이 이 커밋을 다시 본다.
+
+## 회고
+
+단계를 닫으며 돌렸다. 이 일지를 쓴 세 세션(명세를 쓴 세션, 셀프 리뷰와 첫 커밋의 세션, PR 직전 리뷰부터의 이 세션)을 함께 봤다. 앞의 둘은 인계로 끝나 회고를 돌리지 않았다.
+
+후보는 열하나다. 승인 여덟(열린 항목에 회차를 더한 것 여섯, 새 항목 둘), 기각 셋이고 넘긴 것은 없다. 이 세션에서 반영한 것이 없어 harness 티켓을 쓰지 않았다. 만료할 항목은 작업 트리에서 없었다(`uv run python tools/queue_open_rows.py`의 "만료할 항목"이 "(없음)"이라 `--ref origin/dev`의 출력과 겹칠 것이 없다. `git fetch origin` 뒤 origin/dev는 `afba83679` 그대로였다). 새 훅·검사를 지금 반영하거나 다섯째 회차로 올린 것이 없어 `tools/hook_report.py`는 돌리지 않았다.
+
+1. **새 프로브의 표지가 느슨해 리뷰 세 층이 차례로 잡았다.** 승인(회차로 세는 것. `.claude/rules/probes.md` 첫 항목과 셋째 항목을 어겨 리뷰가 잡았다). `run.py`는 `Rounds`를 쓰고 표지도 있었지만, 실패를 기대하는 대조가 상태와 종료 코드만 보았고, 측정이 아닌 회차가 측정으로 세어질 수 있는 길이 남아 있었다. 셀프 리뷰 표준 축이 Major 하나를, PR 직전 CodeRabbit CLI가 열셋(Major 여섯)을, PR의 CodeRabbit 첫 회차가 열하나(Major 넷)를 짚었다. PR 직전 리뷰의 1번을 고치며 넣은 표지(따로 건 요청의 연결 거절)는 가르려던 다른 해석 아래에서도 나는 관찰이라 봇이 다시 Major로 짚었다. 든 값은 세 번의 다시 재기(실행 4, 5, 6)와 그때마다의 문서 고침이다. → probe-round-marked-measured-unconditionally, 15회차.
+2. **명세와 프로브 README가 프로브가 잰 것 밖으로 적었다(둘).** 승인(회차). 셀프 리뷰 표준 축의 Major는 프로브가 적기만 한 것을 측정으로 적은 것이고(위 "표준 축의 보고" 1), 봇 첫 회차의 1번은 네트워크를 끊고 돈 회차를 compose의 꼴 그대로라고 적은 것이다. 둘 다 `hook_probe_citing_doc`의 알림을 받아 근거 문장을 원본과 대 본 뒤에 남았다. → 0565, 4회차(179의 11회차).
+3. **셋째 인계 열기가 자동 모드의 권한 판정에 거부됐다.** 승인(회차). 사유는 "Unsanctioned Communication"이었다. 같은 날 이 일지의 앞 두 인계 열기는 지나갔다. 인계하지 못한 이 세션은 그 뒤 자동 압축을 두 번 겪으며 봇 회차를 이었다. → open-session-send-denied-despite-allow-rule, 20회차.
+4. **문서와 프로브만 든 커밋의 pre-commit이 11분 안팎 걸렸다.** 승인(회차). 첫 커밋은 pytest 593.9초와 web-verify 674.9초, 둘째 커밋은 한 바퀴 690.89초였다. 나란히 돈 다른 세션의 부하는 재지 않았다. 이 절을 싣는 셋째 커밋의 시간은 이 절을 쓸 때 알 수 없어 세지 않았다. → docs-only-commit-precommit-slow-again, 26회차.
+5. **PR 직전 리뷰에 밀 주장을 넘길 길이 없었다.** 승인(회차). CLI가 돌아 셀프 리뷰 반영으로 새로 쓴 문장 열세 항목을 넘기지 못했고, `bug-perf-review`를 주장 검증 몫으로 함께 띄웠다(도구 호출 33번, 지적 0건). → cli-review-claims-path, 10회차.
+6. **`coderabbit-review`가 지적 여덟을 그 줄을 열지 않고 넘겼다.** 승인(회차). 오탐으로 가르지 않고 열어 보지 못했다고 밝혀 보류로 넘겼고 수도 맞았다. 본 세션이 여덟을 모두 열었고 여덟 다 고칠 것이었다. → coderabbit-review-findings-judged-unopened, 3회차.
+7. **봇의 인라인 코멘트 열한 건을 읽는 데 약 25.7K자가 실렸다.** 승인(사건: 그 글을 두 번 읽었다. 판정할 때와, 압축 뒤 이 일지로 옮길 때다. 층: 필요한 칸만 내는 도구. 더하는 것이라 대기한다. 되돌림: PR 하나). 만료된 0573이 같은 일을 2회차까지 셌다. → 새 항목 coderabbit-inline-size(0573의 3회차).
+8. **여러 실행을 합친 수를 손으로 다시 세어 네 문서에 옮겼다.** 승인(사건: 첫 세션이 README의 수 셋을 원본과 다르게 적었다가 스스로 찾았고(위 "명세 전의 확인" 끝), 다시 잴 때마다 합친 범위와 회차 수를 손으로 더해 명세, 프로브 README 둘, 기능 계획에 옮긴 것이 세 번이다. 인계받은 세션은 앞 실행의 원본 기록을 열지 못했다. 층: 합친 범위를 스크립트가 내거나, 수를 한 곳에만 두고 나머지는 가리키게 한다. 더하는 것이라 대기한다. 되돌림: PR 하나). → 새 항목 probe-ranges-hand-merged-across-docs, 1회차.
+9. **명세가 뒤집히는 시험 사례를 셋이라고 닫아 셌다**(위 "명세 축의 보고" 1). 기각. 닫힌 수 주장은 리뷰의 명세 축이 밀도록 둔 기준이고(닫힌 0020), 그 축이 Major로 잡아 제 몫을 했다. 검사로 옮길 꼴도 표준에 더할 새 기준도 아니다.
+10. **첫 선택 화면의 설명이 든 사실을 코드에 대 보지 않은 채 올렸다**(위 "사용자에게 물은 것 하나"). 기각. 이미 있는 훅(`hook_choice_facts`)이 그 자리에서 막았고, 대 본 뒤 같은 질문으로 다시 올렸다.
+11. **일지가 ADR 0064의 문장을 원문과 다르게 옮겼다**(위 "커밋과 pre-commit"). 기각. 이미 있는 검사(quotes)가 커밋에서 알렸고 원문대로 고쳤다.
+
+일지에만 남기는 것. 봇의 코멘트를 줄이려던 `gh api … --jq`의 `gsub("\\s+"; " ")`가 "invalid escape sequence"로 실패해, 저장된 결과 파일을 Read로 읽었다(7의 글이 통째로 실린 까닭이다). Grep 도구의 glob에 `{…}/**/*.md` 꼴을 주자 맞는 것이 없다고 나와, 파일 경로를 직접 주어 다시 찾았다(까닭은 가르지 않았다). `인계 못함` 뒤에 인계의 계기가 다시 왔는지는 세지 않았다(이 세션은 그 뒤로 이 절을 싣는 커밋 전까지 커밋하지 않았다).
+
+## 다음
+
+PR #654(명세, 프로브 `prebuilt_start`, 받는 쪽 기능 계획 둘에 넘긴 것, 이 일지)를 병합하면 widget-runtime-values의 명세 단계가 끝난다.
+
+- 주 체크아웃 미갱신: 루트는 dev. `git worktree list`의 첫 줄이 `C:/project/agent e7c53cba3 [dev]`이고 origin/dev(`afba83679`)보다 뒤처져 있다. 이 세션은 워크트리 세션이라 당기지 않았다. 다음 세션이 `tidy-checkouts`를 먼저 돈다.
+- 이 PR은 명세 문서와 프로브뿐이라 로컬 모델 시험(`llm_local`)은 병합 조건의 범위에 들지 않는다. LLM 테스트, e2e, 사진 비교도 돌리지 않았다.
+- 봇 첫 회차에서 뒤로 넘긴 일은 없다(CodeRabbit 열하나를 모두 고쳤고 claude-review는 지적이 없었다). 이 절을 쓴 뒤의 회차에서 보류한 것이 생기면 PR 코멘트에 지적마다 적는다.
+- 다음 단계는 이 명세를 티켓으로 나누는 일이다. 사용자가 `/to-tickets .scratch/widget-runtime-values/spec.md`로 부르고(`next-session` 결정표), 그 직전에 서브에이전트 `spec-reviewer`로 명세를 한 번 본다.
+- 티켓으로 나누기 전에 사용자가 뒤집을 수 있는 것 하나. 명세 "받지 못했을 때"는 위젯이 값 파일을 받지 못하면 기본 상한으로 열지 않고 닫힌 채 설정 오류 알림을 보이게 정했다. 사용자에게 묻지 않고 명세가 정한 것이고 PR 본문의 "리뷰어 참고"에도 적었다.
+- 명세가 다른 기능에 넘긴 것은 받는 쪽 기능 계획 본문에 있다(`.scratch/site-limits-admin/plan.md`, `.scratch/deploy-package/plan.md`).
+- 프로브에서 남긴 것. `browser` 섹션이 쓸 호스트 포트를 미리 고르는 것(`free_port`)은 까닭을 독스트링과 프로브 README에 적고 두었다. 표준 축의 baseline smell 셋(`run.py`의 이름과 되풀이)도 두었다. 재지 못한 것과 일으켜 보지 않은 실패 쪽 길은 프로브 README의 "재지 못한 것"과 "결과를 본 뒤 바꾼 것"에 있다.
+- 프로브의 원본 기록(`raw.log`, `results.jsonl`)은 세션 스크래치 폴더에 있고 커밋하지 않았다. 다시 내려면 프로브를 다시 돌린다(이미지가 남아 있으면 2분쯤이다). Next의 판을 올리는 티켓은 이 프로브를 다시 돈다(프로브 README 표).
+- 회고가 회차를 더한 항목 가운데 probe-round-marked-measured-unconditionally, 565, open-session-send-denied-despite-allow-rule, docs-only-commit-precommit-slow-again, cli-review-claims-path는 회차 5 이상이라 chore 계기다.
+- 이 기능의 일은 아니지만 앞 지시문이 알린 것을 다음 지시문에 그대로 옮긴다. admin-login 05(PR #653)의 봇 보류 하나가 병합된 일지 "다음"에 없고 PR 코멘트(issuecomment-7199113820)에만 있다. 관리 라우터의 public에 /health 외의 라우트가 붙는 것을 막는 시험이 없다는 지적이고, admin-login을 잇는 세션이 이어받는다.
