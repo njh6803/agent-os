@@ -13,7 +13,7 @@
 ## 한 것(커밋 전, 작업 트리에만 있다)
 
 - 순수 규칙: `src/agent_os/http/login_tokens.py`에 `REFRESH_GRACE`(10초), `RefreshRefusal`, `ENDS_LOGIN`, `judge_refresh`(여덟 갈래 가운데 앞 여섯의 판정 순서: 끊김, 쉼, 총 시간, 비활성, 잠김, 10초 지난 재사용). 시험은 `tests/test_login_tokens.py`의 "갱신의 판정" 절 아홉 건.
-- 포트 `src/agent_os/http/accounts.py`: `RefreshRow`, `RecordKind`에 `refresh_reused`·`signing_key_rotated`, `AccountWork`에 `replace_signing_key`·`lock_refresh`·`find`·`use_refresh_token`·`touch_login` 다섯. 어댑터 `src/agent_os/adapters/postgres/accounts.py`가 같은 시그니처로 만족한다(`RefreshRecord`, 번호와 로그인 한 건을 `JOIN ... FOR UPDATE`로 함께 잠그고 계정은 잠그지 않는다. 계정을 잠그고 로그인 줄을 지우는 `_open`과 교착하지 않게 하려는 것이다).
+- 포트 `src/agent_os/http/accounts.py`: `RefreshRow`, `RecordKind`에 `refresh_reused`·`signing_key_rotated`, `AccountWork`에 `replace_signing_key`·`lock_refresh`·`read_account`(처음 이름은 `find`였고 봇 1회차 뒤 포트의 동사에 맞춰 바꿨다)·`use_refresh_token`·`touch_login` 다섯. 어댑터 `src/agent_os/adapters/postgres/accounts.py`가 같은 시그니처로 만족한다(`RefreshRecord`, 로그인 줄을 먼저 잠그고 번호 줄을 그다음에 잠근다. 계정은 잠그지 않는다. 계정을 잠그고 로그인 줄을 지우는 `_open`과 교착하지 않게 하려는 것이다).
 - 서비스 `src/agent_os/http/logins.py`의 `LoginService.refresh(token, address=)`. 거절하는 갈래 가운데 끊는 것(비활성, 잠김, 재사용)은 예외가 아니라 정상 반환이라 트랜잭션이 커밋된다. 시각은 줄을 잠근 뒤에 주입된 시계에서 읽는다.
 - 라우트 `src/agent_os/admin/auth.py`의 `POST /auth/refresh`(`refresh_login`). 거절은 `HTTPException`이 아니라 `error_envelope` 봉투를 직접 만들고 지우는 `Set-Cookie` 줄 둘을 얹는다. 401 문서에 `Set-Cookie` 머리를 적었다. `src/agent_os/http/auth.py`의 `PUBLIC_PATHS`가 넷이다.
 - 서버 명령: `src/agent_os/channel/cli/operator.py`의 `rotate_key_command`와 `ROTATED_TEXT`, `src/agent_os/channel/cli/main.py`의 `RotateKeyArgs`와 `rotate-key` 하위 명령, `src/agent_os/main.py`의 `_rotate_key`와 `_on_database`(옛 `_system_admin_database`를 두 명령이 나눠 쓰도록 바꿨다).
@@ -62,9 +62,34 @@ open-session을 부른다 2026-11-26T12:18Z
 남긴 것과 이유(Nit 또는 판단 항목):
 
 - 시험 하네스 복사(`test_system_admin_command.py`와 `test_rotate_key_command.py`의 `_run_plainly` 등). 두 파일의 하네스를 합치면 이 티켓 범위를 넘고 기존 파일을 크게 건드린다. 다음에 세 번째 명령이 오면 합친다.
-- `find`·`use_refresh_token`·`touch_login` 이름과 `10초`를 글자로 적은 곳(`ROTATED_TEXT`, 도움말). 값이 바뀔 일이 없는 명세 고정 값이라 두었다.
+- `use_refresh_token`·`touch_login` 이름과 `10초`를 글자로 적은 곳(`ROTATED_TEXT`, 도움말). 값이 바뀔 일이 없는 명세 고정 값이라 두었다.
 - 대역 둘의 스텁 번짐. 포트에 메서드를 더하면 대역이 따라 늘어나는 것은 포트와 어댑터 구조의 대가다.
 - 갱신 401 문구가 로그인과 같은 공유 문구인 것은 명세가 정한 보안 모양이다(이유를 알리지 않는다).
+
+## PR 직전 리뷰(`coderabbit-review` 서브에이전트)
+
+CodeRabbit CLI가 끝까지 돌았다(`review_completed`, 종료 코드 0, 지적 1건, 검토 파일 25개, 기준 `--base-commit e0e6974258990e7df95a2029339fe6de0b63dfe3`). `coderabbit auth status`의 `Seat:` 줄은 `Plan: Free, Seat: not assigned`였고 리뷰는 정상으로 끝났다. 서브에이전트가 보안·버그·성능 여섯 축(비밀의 길, 경합과 교착, 열거, 입력 거르기, 키 교체 뒤 10초, 쿠키 속성)을 코드로 따라갔고 Critical·Major는 없었다. 시험과 실제 데이터베이스 경합은 돌리지 않은 읽기와 추론이다.
+
+판정(지적마다):
+
+- [Nit, CLI] `LoginService.refresh`가 서명 키를 줄 잠금을 기다리기 전에 읽는다. 유효하지만 영향이 작다. `SigningKeys.current()`가 원래 최대 10초 묵은 키를 쓰고(명세 "서명 키"), 옛 키로 서명한 짧은 JWT는 재읽기 뒤 401이 되며 화면이 갱신으로 복구한다. 고치지 않았다.
+- [Minor] "잠김"이 로그인을 끊는 갈래라 이름만 아는 외부인이 틀린 시도를 거듭해 운영자의 살아 있는 로그인을 끊을 수 있다. 티켓이 요구한 동작이다("비활성 계정과 잠긴 계정의 갱신은 401이고 그 로그인이 끊긴다")라 설계 결정으로 두었다. 이 증폭이 의도인지는 사용자가 판단할 일이라 PR 본문 "리뷰어 참고"에 적는다.
+- [Minor] 유예 안에서 같은 옛 번호가 거듭 오면 요청마다 새 번호 줄이 하나씩 늘고 상한이 없다. 명세 "탭 둘이 함께 갱신할 때의 유예"가 정한 대가이고 유예는 첫 쓴 시각에 고정돼 연장되지 않는다. 고치지 않았다. 일지의 "다음"에 적을 후보다.
+- [Nit] 번호 입력 거르기가 ASCII와 길이 128뿐이고 문자 집합을 `[A-Za-z0-9_-]`로 좁히지 않았다. 번호는 해시를 거쳐 데이터베이스에 가므로 해가 없다. 고치지 않았다.
+- [Nit] `serve`가 여럿이면 프로세스마다 키 재읽기 시점이 최대 10초 어긋난다. `ROTATED_TEXT`가 이미 "10초 안에"로 알린다.
+- 오탐 없음. 즉시 고칠 항목 없음.
+
+## PR 봇 1회차(PR #652)
+
+CodeRabbit 인라인 셋과 claude-review 지적 둘이 왔다. 판정:
+
+- [CodeRabbit, 안 고침] 서명 키를 `judge_refresh` 뒤 트랜잭션 안에서 읽자는 제안. `SigningKeys.current()`는 자기 트랜잭션(둘째 연결)을 열고 줄을 쓸 수도 있어, 안에서 부르면 줄 잠금을 쥔 채 연결을 하나 더 잡는다. 커밋 뒤에 읽으면 번호만 쓰이고 쿠키를 못 받을 수 있다. 묵은 키의 틈은 명세가 허용한 10초 안이다. PR에 이유를 댓글로 남긴다.
+- [CodeRabbit, 고침] `_assert_cleared`가 `part in line`이라 `Path=/auth`도 `Path=/`로 읽었다. 쿠키 줄을 `;`로 나눠 속성을 하나씩 완전 일치로 본다.
+- [CodeRabbit, 고침] 쉬는 시간이 지난 갱신 시험이 로그인이 끊기지 않았음을 단언하지 않았다. `operator_logins.ended_at`이 여전히 NULL인지 단언을 더했다.
+- [claude-review Minor, 고침] `AccountWork.find`가 포트의 동사(`lock`, `read_signing_key`, `any_account`)와 어긋났다. `read_account`로 바꿨다(포트, 어댑터, `logins.py`, 대역, 시험). 측정 프로브에서 온 이름이었고 명세의 이름이 아니다.
+- [claude-review Nit, 안 고침] `RefreshRow`와 `RefreshRecord`의 필드 중복. 어댑터가 `agent_os.http`를 가져오지 못해서 생긴 의도된 구조다.
+
+다시 돌린 것: ruff 포맷과 검사, `uv run pyright`(0 errors), `tests/test_login_http.py`·`test_login_tokens.py`·`adapters/test_postgres_accounts.py`·`test_rotate_key_command.py`·`test_system_admin_command.py`·`test_server.py` 474건 통과.
 
 ## 로컬 모델 시험의 비용 확인
 

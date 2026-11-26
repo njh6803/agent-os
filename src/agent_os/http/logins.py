@@ -250,7 +250,7 @@ class LoginService:
                 return None
             # 줄을 잠그려 기다린 시간이 판정에 들도록 시각은 잠근 뒤에 읽는다
             now = self._clock.now()
-            account = await work.find(row.account)
+            account = await work.read_account(row.account)
             if account is None:
                 return None
             refusal = judge_refresh(

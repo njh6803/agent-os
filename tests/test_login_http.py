@@ -816,8 +816,11 @@ def _assert_cleared(response: Response) -> None:
     for line in lines:
         name = line.partition("=")[0]
         assert line.startswith(f"{name}=;"), line
+        # 속성은 한 덩이 글자가 아니라 하나씩 완전 일치로 본다(`Path=/auth`가 `Path=/`로 읽히지
+        # 않게)
+        attributes = [part.strip() for part in line.split(";")[1:]]
         for part in ("Max-Age=0", "HttpOnly", "Secure", "SameSite=Strict", "Path=/"):
-            assert part in line, line
+            assert part in attributes, line
     body = response.json()
     assert body["code"] == "unauthorized"
     assert body["message"] == UNAUTHORIZED_MESSAGE
@@ -1031,6 +1034,7 @@ async def test_쉬는_시간이_딱_지나면_갱신은_401이고_그_전까지�
     clock.advance(minutes=30)
     _assert_cleared(await _refresh(client, _cookies(ok)[REFRESH_COOKIE]))
     # 쉬는 시간이 지난 것은 저절로 끝난 것이라 로그인을 끊지도 기록을 남기지도 않는다
+    assert await _rows(database, "SELECT ended_at FROM operator_logins") == [(None,)]
     assert await _records(database) == [("login_succeeded", "kim.min", None)]
 
 

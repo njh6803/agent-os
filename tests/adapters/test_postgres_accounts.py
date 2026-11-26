@@ -465,10 +465,10 @@ async def test_계정을_잠그지_않고_읽고_없는_이름은_없음이다(a
     async with _work(accounts) as work:
         await work.add(_new("kim.min", "admin"))
     async with _work(accounts) as work:
-        row = await work.find("kim.min")
+        row = await work.read_account("kim.min")
         assert row is not None
         assert (row.name, row.tier) == ("kim.min", "admin")
-        assert await work.find("no.such") is None
+        assert await work.read_account("no.such") is None
 
 
 async def test_로그인_기록은_접속_주소를_함께_적는다(

@@ -342,7 +342,7 @@ class PostgresAccountWork:
         # 서로 기다리게 된다)
         return await self._guard(lambda: self._refresh_row(token_hash))
 
-    async def find(self, name: str) -> AccountRecord | None:
+    async def read_account(self, name: str) -> AccountRecord | None:
         return await self._one(_select_accounts().where(ACCOUNT_NAME == name))
 
     async def use_refresh_token(self, token_hash: str, *, at: datetime) -> None:

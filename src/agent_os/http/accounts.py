@@ -223,7 +223,7 @@ class AccountWork(Protocol):
         """
         ...
 
-    async def find(self, name: str) -> AccountRow | None:
+    async def read_account(self, name: str) -> AccountRow | None:
         """그 이름의 줄을 잠그지 않고 읽는다. 없으면 `None`."""
         ...
 

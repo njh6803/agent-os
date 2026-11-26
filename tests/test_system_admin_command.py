@@ -562,7 +562,7 @@ class _RacingWork:
     async def lock_refresh(self, token_hash: str) -> RefreshRow | None:
         raise AssertionError(_NOT_USED)
 
-    async def find(self, name: str) -> AccountRow | None:
+    async def read_account(self, name: str) -> AccountRow | None:
         raise AssertionError(_NOT_USED)
 
     async def use_refresh_token(self, token_hash: str, *, at: datetime) -> None:
