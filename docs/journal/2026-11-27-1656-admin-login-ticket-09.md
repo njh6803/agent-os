@@ -72,6 +72,8 @@ PR 본문에 넣을 것(지시문에도 같은 것을 적었다):
 
 새 세션이 같은 워크트리에 들어와 이어받았다. 시작할 때 `git fetch origin`과 `tools/sibling_overlap.py`를 쳤다(번호 겹침 없음). origin/dev는 `c3ad162fc`에서 `793298c85`(PR #655, 위젯 런타임 값 티켓 문서)로 한 칸 나아갔고, 그 변경은 이 브랜치가 건드린 파일과 겹치지 않는다(`git diff --name-only HEAD...origin/dev`를 손으로 대 봤다). `tools/plan_table.py`를 돌려도 `.scratch/plan.md`는 바뀌지 않았다. 디자인 시스템 `확인`(`/sync-design-system 확인`)은 새 세션의 첫 화면 코드 수정 전에 돌려 `clean`(웹 편집 없음, 결정표 `continue`)이었다(`web/tools/sync-design-system/main.ts check judge`와 `decide`의 출력을 손으로 봤다).
 
+PR을 열었다: [#657](https://github.com/njh6803/agent-os/pull/657)(제목에 느낌표 없음, 릴리스 노트 조각 없음, 본문 끝에 `🤖 Generated with [Claude Code]` 줄). 푸시 전에 `origin/dev`(`793298c85`, 문서만 바뀐 #655)를 합쳤고 충돌은 없었다. 합친 뒤 `uv run python tools/sibling_overlap.py`는 번호 겹침 없음, 글자 충돌 후보는 앞과 같은 둘(`README.md`, `clients.test-d.ts`)이었다. 첫 커밋 시도는 시험의 에러 코드(`"internal"`, 계약의 값은 `"internal_error"`)로 pre-commit의 `web-verify`(tsc)에 막혔고, 고쳐서 다시 커밋해 통과했다. 이 세션도 컨텍스트가 문턱을 넘어 `PR 연 뒤` 경계에서 새 세션에 인계한다. 남은 일은 봇 회차(`merge.md` 2)와 병합이고, 앱의 PR 감시는 이 세션에 묶여 있다(`get_status`로 PR #657이 묶인 것을 보았다).
+
 ### PR 직전 리뷰(`coderabbit-review` 서브에이전트)
 
 CodeRabbit CLI 0.7.5가 `--base origin/dev`로 163개 파일을 끝까지 돌았다(`review_completed`, findings 11건, 서브에이전트가 보고했다). `coderabbit auth status`의 Seat 줄은 `not assigned`(Plan: Free)였고 리뷰는 좌석 없이도 돌았다. 서브에이전트의 판정을 이 세션이 코드로 다시 읽어 갈랐다.
@@ -88,3 +90,22 @@ CodeRabbit CLI 0.7.5가 `--base origin/dev`로 163개 파일을 끝까지 돌았
 - 다른 탭이 다른 계정으로 로그인하면 이 탭은 옛 이름을 보이는 채로 새 계정의 쿠키로 요청이 나간다(Minor). 쿠키 로그인 구조의 흔한 한계이고 서버가 요청마다 권한을 판정한다. `useMe`가 창 포커스에서 다시 읽지 않는 까닭이 갱신 겹침 방지라 손대려면 그 조정이 따라온다. 명세가 받아들이는지 판단이 필요해 PR 코멘트와 다음 지시문의 "이어받을 상태"에 적는다.
 - 계정 메뉴의 키보드 흐름(열릴 때 첫 항목에 포커스, Esc로 닫으면 계정 단추로 복귀)과 불러오는 중을 `disabled` 대신 `aria-busy`로 바꾸기(Minor). 모양과 사진 정답이 따라 움직일 수 있어 12의 화면 작업에서 함께 본다.
 - `playwright_secure_cookie/probe.mjs`의 `try`가 `page.goto`와 `context.cookies()`의 오류까지 `addCookiesError`로 기록할 수 있다(Minor). 근거로 든 프로브라 고치면 `expected.json`을 다시 재야 한다. 이번 PR이 근거로 쓰는 갈래의 값은 바뀌지 않았다고 보고 다음 회차에 맡긴다(프로브를 다시 돌려 보지 않은 어림이다).
+
+open-session을 부른다 2026-11-27T10:52:30Z
+
+## 봇 회차
+
+PR #657에 `@coderabbitai review`를 남겼으나 CodeRabbit은 `Review rate limited`로 리뷰 없이 끝났다(`wait_ci.py`의 끝 줄). 한도에 걸려 리뷰가 없던 푸시는 회차로 세지 않는다. 이 PR의 보안·버그 축은 PR 직전에 돈 CodeRabbit CLI 리뷰(위 "PR 직전 리뷰")가 대신한다(`docs/constitution/operations.md` 리뷰 파이프라인). `claude-review`는 지적 없음이었다. 검사는 `python`, `web`, `visual`, `e2e`, `e2e-widget`, `e2e-portal`, `e2e-standalone`, `ticket`, `verify`가 모두 SUCCESS였고 `llm`은 SKIPPED였다(`wait_ci.py`가 낸 목록을 읽었다). 앞서 어림으로 남긴 e2e와 사진 비교는 CI의 `e2e`와 `visual` 잡이 통과해 확인됐다.
+
+## 다음
+
+PR #657을 병합하면 admin-login 티켓 09가 끝난다.
+
+- 다음 단계는 티켓 10(`10-chat-read-screens-list-panel-and-polling.md`, 막는 것 07·09가 모두 done)과 13(`13-remove-shared-tokens.md`, 막는 것 05·09가 모두 done)의 구현이다. 12는 06을 기다리고 11은 10을 기다린다. 06은 다른 워크트리에서 나란히 도는 중이다.
+- 뒤로 넘긴 일(모두 Minor, 이유는 위 "보류한 것과 이유"): 다른 탭의 계정 전환 표시 불일치는 명세가 받아들이는지 판단이 필요하다. 계정 메뉴의 키보드 흐름과 `aria-busy`는 12의 화면 작업에서 함께 본다. `playwright_secure_cookie` 프로브의 `try` 범위는 다음에 그 프로브를 다시 잴 때 고친다.
+- 13이 걷는 것: e2e 하네스의 채널 토큰(`channel.ts` 등)과 `serve`의 공유 토큰 요구. 티켓 09가 그렇게 정했다.
+- 12의 화면을 지을 때 볼 것: 루프백이 아닌 http 주소에서 입력 칸을 모두 끈 것이 디자인(주 버튼만 끔)과 다르다. `LogInAttempt`와 `LoginForm`의 Data Clumps, 알림 값 표 중복도 그때 묶는다.
+- `packages/ui`의 `TextField.tsx` 주석과 `TextField`·`Button` 스토리 예시 글에 옛 토큰 입력 칸 문구가 남았다. 디자인 시스템 동기화와 사진 정답이 따라 움직이는 범위라 따로 한다.
+- 병합 충돌 후보는 `README.md`(PR #651)와 `web/packages/api-client/src/clients.test-d.ts`(06)다. 먼저 병합되는 쪽에 따라 뒤의 PR이 푸시 전에 합치기에서 푼다.
+- 워크트리에서 병합하므로 주 체크아웃은 당기지 않는다. 다음 세션이 `tidy-checkouts`를 먼저 돈다.
+- 이 PR은 로컬 모델 시험(`llm_local`)의 병합 조건 범위(`operations.md` LLM 테스트의 "범위": `src/agent_os/adapters/`, `core/loop.py`·`model.py`·`run.py`, `channel/`, `main.py`, 로컬 모델 시험 자신, `langchain-openai`·`openai` 판)에 닿지 않아 돌리지 않았다. 근거는 `git diff --name-only origin/dev...HEAD`를 손으로 쳐 본 결과로, `web/`, `.scratch/`, `docs/`, `.claude/rules/web-admin.md`, `CONTEXT.md`, `README.md`뿐이고 `src/`와 `pyproject.toml`·`uv.lock`은 없었다.
