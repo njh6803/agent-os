@@ -48,4 +48,4 @@
 
 - [x] `CLAUDE.md`의 검증 명령이 모두 초록이다
 - [x] 서버 라우트와 api-client를 고치므로 관리 화면 e2e(`pnpm -C web/apps/admin exec playwright test`)를 로컬에서 친다
-- [ ] `adapters/`를 고치므로 LLM 시험의 병합 조건 범위에 든다. `-m llm`을 치고, 로컬 모델 시험은 `--yes` 없이 쳐 예상 비용을 사용자에게 보이고 확인받은 뒤 돌린다
+- [x] `adapters/`를 고치므로 LLM 시험의 병합 조건 범위에 든다. `-m llm`을 치고, 로컬 모델 시험은 `--yes` 없이 쳐 예상 비용을 사용자에게 보이고 확인받은 뒤 돌린다

@@ -81,7 +81,7 @@
 
 PR은 #656이다(머리 `3f21aeb83`로 열었다). 새 세션이 `EnterWorktree`로 들어와 `origin/dev`가 `c3ad162fc`에서 움직이지 않았음을 `git fetch`로 보고 `sibling_overlap.py`를 쳤다(번호 겹침 없음, 글자 충돌 후보는 09 워크트리의 `clients.test-d.ts` 하나). 일지의 인계 절을 커밋(`3f21aeb83`)하고 푸시했다. PR 본문에 `unlock_account` 항목과 09와 겹칠 수 있는 후보를 적었다.
 
-**CodeRabbit.** PR을 연 직후 `@coderabbitai review`를 남겼으나 무료 한도에 걸려 리뷰가 없다(`Review rate limited`, "다음 38분 뒤"). 한도에 걸린 푸시는 회차로 세지 않는다. 대신 CLI(0.7.5, `Seat: not assigned`)로 `--base origin/dev` 로컬 리뷰를 `coderabbit-review` 서브에이전트로 돌렸다. 리뷰는 끝까지 돌았고 6건이다. Critical 없음, 서브에이전트가 코드를 읽어 CodeRabbit의 Major 둘을 오탐으로 판정했다(링크 판정과 사용은 이미 한 트랜잭션이고, 계정 라우터는 이미 라우터 전체에 `REQUIRE_PERMISSION`이 걸려 있다. 이 세션이 `accounts.py`와 `logins.py`를 열어 둘째는 확인했다).
+**CodeRabbit.** PR을 연 직후 `@coderabbitai review`를 남겼으나 무료 한도에 걸려 리뷰가 없다(`Review rate limited`, "다음 38분 뒤"). 한도에 걸린 푸시는 회차로 세지 않는다. 대신 CLI(0.7.5, `Seat: not assigned`)로 `--base origin/dev` 로컬 리뷰를 `coderabbit-review` 서브에이전트로 돌렸다. 리뷰는 끝까지 돌았고 6건이다. Critical 없음, 서브에이전트가 코드를 읽어 CodeRabbit의 Major 둘을 오탐으로 판정했다고 보고했다(링크 판정과 사용은 이미 한 트랜잭션이고, 계정 라우터는 이미 라우터 전체에 `REQUIRE_PERMISSION`이 걸려 있다는 것). 이 판정은 서브에이전트의 보고이고 이 세션이 그 줄을 열어 다시 확인하지는 않았다. 앞 세션의 셀프 리뷰가 `Grep`으로 `REQUIRE_PERMISSION`이 걸린 라우터 넷에 계정 라우터가 든다고 본 것과는 맞는다.
 
 **claude-review 첫 회차**(이 PR의 첫 리뷰). 경계 문제 없음, 느낌표 맞음. Minor 둘, Nit 둘이다. 판정은 지적마다 한다.
 - `token_digest`가 계정 관리 모듈에 있고 `logins.py`가 거기서 가져온다(Minor): 응집은 맞는 지적이다. 이동은 `login_tokens.py`와 두 import를 만지고 다시 전체 검증을 도는 값이 들어 뒤로 넘긴다.
@@ -91,4 +91,37 @@ PR은 #656이다(머리 `3f21aeb83`로 열었다). 새 세션이 `EnterWorktree`
 **로컬 CodeRabbit 리뷰의 Minor(이 세션이 코드를 열어 확인한 것).**
 - 고쳤다: 비활성 계정의 링크 시험 공백. 링크는 살려 둔 채 계정 줄의 `disabled_at`만 직접 세워도 404인지 보는 시험(`test_링크가_살아_있어도_계정이_비활성이면_404이고_비밀번호가_정해지지_않는다`)을 더했다. `_usable_link`의 계정 상태 검사를 지운 변이에서 이 시험이 빨개졌고(종료 1) 되돌린 코드에서 통과했다. 기존 시험은 활성 바꾸기 경로로 끄는데 그 경로가 링크도 못 쓰게 해서 그 검사가 빠져도 통과했다.
 - 뒤로 넘겼다(아래 "다음"): 링크가 든 201 두 응답에 `Cache-Control: no-store`가 없다(`admin/http.py`의 다른 비밀성 응답만 싣는다는 것은 `Grep`으로 확인했다. 다만 POST 응답은 기본이 캐시되지 않고, 더하면 `openapi.json`의 응답 머리 문서가 바뀌는 계약 변경이라 이 티켓에 넣지 않았다). `change_password`가 그 계정의 쓰지 않은 링크를 못 쓰게 하지 않는 점은 명세에 그런 줄이 없어(명세는 링크 새로 만들기와 비활성으로 바꾸기에서만 못 쓰게 한다고 적었다) 사용자가 정할 일이다. `claims.login_id`가 끊겼는지 보지 않고 `keep`에 쓰는 점, `list_accounts`의 쪽 나누기 없음, 링크 줄이 지워지지 않고 쌓이는 점, `/auth/set-password`의 호출 횟수 제한 없음, 기존 `forwarded_address`가 `X-Forwarded-For`를 그대로 믿는지(이 변경 밖의 코드라 서브에이전트가 읽지 않았다).
-- 오탐으로 판정: CodeRabbit의 "약한 비밀번호 응답을 링크를 쓰기 전에 검사하라"는 이미 `test_링크가_죽었으면_비밀번호_규칙보다_먼저…`가 살아 있는 링크에 약한 비밀번호를 보내 422와 링크 미소비를 본다.
+- 오탐으로 판정(서브에이전트의 보고이고 이 세션은 시험 본문을 다시 열지 않았다): CodeRabbit의 "약한 비밀번호 응답을 링크를 쓰기 전에 검사하라"는 이미 `test_링크가_죽었으면_비밀번호_규칙보다_먼저…`가 살아 있는 링크에 약한 비밀번호를 보내 422와 링크 미소비를 본다고 한다.
+- 보류로 둔 CodeRabbit 시험 지적 둘(재활성화 뒤 이전 자격 다시 쓰기, 링크 사용 응답에 링크 토큰이 실리는지)은 서브에이전트가 시험 본문을 끝까지 읽지 않아 판정하지 못했다. 이 세션도 읽지 않았다. 뒤로 넘긴다.
+
+## 로컬 모델 시험 비용 확인(이 세션, 두 번째)
+
+사용자 프롬프트(선택 화면의 답): 질문은 "계정 경로 PR(#656)의 병합 조건인 '로컬 모델 시험'은 Runpod에서 모델 서버를 빌려 띄우는 과금 작업입니다(병합 승인이 아니라 비용 확인입니다). 봇 리뷰 반영이 끝나면 한 번 돌립니다. 지난 회차는 350초(약 6분)가 걸렸고 어림 $0.06이었습니다. 아래 단가는 2026-11-13에 웹 요약에서 읽은 값이라 원문과 대조하지 않았습니다. 이 비용으로 돌려도 될까요?"였고, 사용자가 글자 그대로 "돌린다 (Recommended)"를 골랐다. 그 설명은 "--yes를 붙여 실행합니다. 후보를 이 차례로 시도합니다(재고가 없으면 다음 후보). pods A5000 2대 시간당 $0.54(어림 30분 $0.27, 최악 90분 $0.81), pods 3090 2대 $1.00($0.50, $1.50), pods A40 2대 $1.18($0.59, $1.77), shared A40 1대 $0.59($0.29, $0.88). 타이머가 90분 뒤 파드를 지웁니다."였다. 표는 이 세션이 `--yes` 없이 친 `llm_local.py run`의 출력(종료 4, 아무것도 띄우지 않음)에서 옮겼다. 이 확인은 마지막 봇 회차를 반영한 뒤 치는 한 번의 실행에만 해당한다.
+
+## 로컬 모델 시험 기록(마지막 봇 회차 반영 뒤)
+
+근거: 아래는 이 세션이 `uv run --env-file ../../../.env python tools/llm_local.py run --yes`를 쳐서 출력으로 본 것이다. 사용자의 비용 확인은 바로 위 절에 있다.
+
+- 통과(종료 0). `pytest -m llm_local` 4 passed(120.37초). 토큰 합계는 6,297(입력 6,191, 출력 106), 트레이스 2개, 모델 호출 4건이고 트레이스를 남기지 않은 LLM 테스트 2개는 세지 못했다.
+- 기록 묶음: 시험한 커밋 `f0877d8ac1f9f21a8121b0b5c840151f66923b38`(푸시한 머리. 이 커밋 뒤 일지와 대기열 문서만 고친다), 모델 `GotoAI-Inc/gemma-4-26B-A4B-it-W4A16`와 `openai/gpt-oss-20b`, 엔진 vLLM 0.33.0(이미지 `vllm/vllm-openai:v0.33.0`), GPU A40 1대에 두 모델을 함께(shared), 걸린 시간 426.2초, 단가 시간당 $0.59(2026-11-13 웹 요약 값이라 원문과 대조하지 못함)로 어림하면 약 $0.07이고 청구서는 보지 않았다. Terraform 출력에서 가린 것이 있었다(`terraform_output_masked: true`). 서버 키와 주소는 적지 않는다.
+- 이 회차는 첫 후보(pods)의 파드 하나가 "요청한 사양의 인스턴스가 더는 없다"(400)로 만들어지지 않아 다음 후보 shared A40으로 넘어간 뒤 통과했다. 무효 회차(종료 2)는 없었다.
+- 회차 파일: `C:\Users\User\.agent-os\llm-local\feature%2F06-account-routes-set-password-and-change-my-password\records\round-0002-20261127T103534Z.json`.
+- 앞 회차(`round-0001`)는 셀프 리뷰 반영 전 작업 트리로 쳤고 이 회차가 반영과 dev 합치기와 시험 하나를 더한 뒤의 머리로 다시 친 것이다. 이 회차 뒤에 범위의 경로를 고치는 커밋은 없다(`git diff --name-only f0877d8ac HEAD`에 `src/`가 없다고 본다. 아직 커밋 전이라 병합 직전에 다시 확인한다).
+
+## 회고
+
+세션이 낸 후보는 하나이고 모두 승인(대기열 회차)이다. 넘김 0, 기각 3.
+
+- **승인(회차로 센다)** `handoff-trigger-before-background-commit-ends`의 19회차. 사건: 이 세션이 백그라운드로 띄운 커밋 호출 직후 인계 계기가 왔다(212,981 토큰). 그 커밋은 성공했고 지시문이 `인계: 커밋 뒤`로 시작해 `handoff.md` 1의 셋째대로 넘기지 않고 이었다. 이미 열린 항목이 처방한 사건이라 새 항목을 쓰지 않고 그 항목의 승인 줄에 회차를 더했다(`.scratch/retro-queue/handoff-trigger-before-background-commit-ends.md`, 일지 이 파일).
+- **기각** 첫 PR 본문에 확인하지 않은 말을 두 곳 썼다("링크 표를 앞 티켓이 이미 두었다", "CodeRabbit이 인증 전이라 CLI 축이 없다"). 둘 다 PR을 연 뒤 바로 `git show origin/dev:`의 대조와 `coderabbit auth status`로 틀렸음을 알고 본문을 고쳤다. 한 번 난 일이고, PR 본문의 사실은 리뷰 봇이 대조하며(claude-review가 느낌표와 운영자 손댈 것을 본문과 코드로 맞춰 보았다), 이미 `일지 근거 알림` 훅이 같은 종류의 말을 일지에서 잡는다.
+- **기각** 서브에이전트의 보고를 일지에 이 세션이 확인한 것처럼 적었다가(CodeRabbit의 Major 둘이 오탐이라는 판정), 같은 편집 직후 훅 알림을 보고 서브에이전트의 보고라고 고쳤다. 이미 있는 훅이 그 자리에서 알려 고친 사건이다.
+- **기각** 선택 화면의 설명에 후보 순서를 틀리게 적었다(첫 후보 shared A40이라고 썼다). 이미 있는 훅이 막아 출력과 대 보게 했고 고쳐 다시 물었다.
+
+## 다음
+
+- **병합까지 이 세션이 한다.** 이 일지와 티켓 마지막 칸과 대기열 한 줄을 커밋해 푸시하고 `merge.md` 5(병합 길)로 간다. 푸시마다 claude-review가 한 번 더 돈다(셋째 회차부터는 Critical·Major만 고친다). 병합 뒤 `llm_local.py sweep`을 친다.
+- **뒤로 넘긴 일**(PR 코멘트 issuecomment-7215906280의 전부를 옮긴다): ① `token_digest`를 `login_tokens.py`로 옮긴다(`http/account_admin.py`에서 `http/logins.py`가 import하는 방향을 푼다). ② `invalid_field`와 `NOT_LOGGED_IN_MESSAGE`를 `admin/auth.py`에서 `admin/` 안의 공유 모듈이나 `http/errors.py`로 올린다. ③ `forwarded_address(request.headers.getlist("x-forwarded-for"))`가 라우트 다섯 곳에 되풀이되는 것(`admin/auth.py`, `admin/accounts.py`의 `_address`)을 헬퍼 하나로 묶는다. ④ 서비스 쪽 `CreatedAccount`를 응답 모델과 다른 이름으로 바꾼다. ⑤ 링크 토큰이 든 201 두 응답에 `Cache-Control: no-store`를 싣는다(`openapi.json` 응답 머리 문서가 바뀌는 계약 변경이라 티켓 09나 별도 티켓에서). ⑥ 내 비밀번호 바꾸기가 그 계정의 쓰지 않은 링크를 못 쓰게 할지는 명세에 없다. 사용자가 정한다. ⑦ `change_password`가 `claims.login_id`가 끊겼는지 보지 않고 `keep`에 쓰는 점, `list_accounts`의 쪽 나누기, 쓰고 남은 링크 줄의 청소, `/auth/set-password`의 호출 횟수 제한, 기존 `forwarded_address`가 `X-Forwarded-For`를 그대로 믿는지(이 변경 밖의 코드. 감사 기록의 `address`가 조작될 수 있는지).
+- **CodeRabbit의 시험 지적 둘**(재활성화 뒤 이전 자격 다시 쓰기, 링크 사용 응답에 링크 토큰이 실리는지)은 판정하지 못했다. 시험 본문을 열어 확인한다.
+- **티켓 09와 겹침.** `web/packages/api-client/src/clients.test-d.ts`를 09 워크트리도 고친다. 먼저 병합하는 쪽이 다른 쪽에 글자 충돌을 남긴다. 09는 이 PR이 병합된 뒤 `origin/dev`를 합치고 이 PR이 더한 경로 일곱(`list_accounts`, `create_account`, `create_password_link`, `set_account_active`, `unlock_account`, `set_password_by_link`, `change_my_password`)을 쓴다.
+- **사용자에게 알린다.** `unlock_account`가 잠긴 적 없이 틀린 횟수만 쌓인 계정에도 `unlocked`를 남기고 횟수를 지운다. 명세 표의 "시스템 관리자가 잠금을 풀었다"와 어긋난다고 읽을 수도 있어 PR 본문에 적었다.
+- **남은 티켓.** admin-login의 07·08·09. 이 PR을 병합한 세션이 다음 지시문을 낸다.
