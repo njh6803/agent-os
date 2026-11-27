@@ -1,10 +1,11 @@
-"""운영자 로그인의 라우터: 로그인, 갱신, 로그아웃, 지금 누구인지, 첫 계정 확인(ADR 0062, 명세
-admin-login).
+"""운영자 로그인의 라우터: 로그인, 갱신, 로그아웃, 지금 누구인지, 첫 계정 확인, 링크로 비밀번호
+정하기, 내 비밀번호 바꾸기(ADR 0062, 명세 admin-login).
 
 판정은 `agent_os.http.logins` 가 하고 이 모듈은 요청을 풀어 넘기고 쿠키 줄을 응답에 싣는다. 자격은
-미들웨어가 라우팅 전에 본다. 로그인과 갱신과 첫 계정 확인은 로그인 없이 열리는 경로이고
-(`PUBLIC_PATHS`. 갱신은 짧은 JWT 가 아니라 갱신용 번호 쿠키를 보고 서비스가 판정한다), 로그아웃과
-지금 누구인지는 짧은 JWT 로만 열린다(`LOGIN_ONLY_PATHS`). 요청 출처 검사는 다섯 모두에 걸린다.
+미들웨어가 라우팅 전에 본다. 로그인과 갱신과 첫 계정 확인과 링크로 비밀번호 정하기는 로그인 없이
+열리는 경로이고(`PUBLIC_PATHS`. 갱신은 짧은 JWT 가 아니라 갱신용 번호 쿠키를, 링크로 정하기는 링크
+토큰을 보고 서비스가 판정한다), 로그아웃과 지금 누구인지와 내 비밀번호 바꾸기는 짧은 JWT 로만
+열린다(`LOGIN_ONLY_PATHS`). 요청 출처 검사는 일곱 모두에 걸린다.
 
 응답 모델의 독스트링은 한 줄이고 논증은 `#` 주석에 둔다. 라우트는 `operation_id` 를 손으로 주고
 자기가 내는 에러를 문서에 적는다. 쿠키를 심거나 지우는 응답은 `Set-Cookie` 머리를 응답 문서에
@@ -16,12 +17,14 @@ from __future__ import annotations
 from typing import Literal
 
 from fastapi import APIRouter, HTTPException, Request, Response
+from fastapi.exceptions import RequestValidationError
 from pydantic import BaseModel, ConfigDict, Field
 
 from agent_os.http.auth import operator_of
 from agent_os.http.errors import UNAUTHORIZED_MESSAGE, error_envelope, remember_failure
 from agent_os.http.login_tokens import REFRESH_COOKIE, clearing_cookie_lines, forwarded_address
 from agent_os.http.logins import LoginService
+from agent_os.http.passwords import PASSWORD_RULE_TEXT
 from agent_os.http.permissions import REQUIRE_PERMISSION
 from agent_os.http.routes import documented_errors
 
@@ -30,6 +33,13 @@ from agent_os.http.routes import documented_errors
 LOGIN_REFUSED_MESSAGE = "로그인하지 못했다"
 # 로그인 한 건이 있어야 뜻이 있는 경로에 로그인 없이 닿았을 때의 문구
 NOT_LOGGED_IN_MESSAGE = "로그인하지 않았다"
+# 링크를 이미 썼거나 기한이 지났거나 못 쓰게 됐거나 처음부터 없던 것을 가르지 않는 한 문구
+LINK_UNUSABLE_MESSAGE = "이 링크는 더 쓸 수 없다"
+LOCKED_MESSAGE = "계정이 잠겼다. 잠시 뒤에 다시 한다"
+WRONG_CURRENT_MESSAGE = "지금 비밀번호가 맞지 않는다"
+# 링크 토큰은 서버가 만든 URL 안전 base64 글자(32바이트면 43자)뿐이다. 모양이 틀린 값은 찾아보지
+# 않고 422 로 돌려보낸다
+LINK_TOKEN_PATTERN = r"^[A-Za-z0-9_-]+$"
 
 _SET_COOKIE_HEADER: dict[str, object] = {
     "description": "쿠키 둘(`__Host-aos_at`, `__Host-aos_rt`)을 심거나 지우는 줄이다. 줄이 둘 온다",
@@ -47,6 +57,25 @@ class LoginRequest(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
     name: str = Field(min_length=1, max_length=32)
+    password: str = Field(min_length=1, max_length=1024, repr=False)
+
+
+# 비밀번호가 든 본문들이라 `repr` 에서 뺀다. 상한은 로그인 요청과 같은 까닭이다
+class ChangePasswordRequest(BaseModel):
+    """내 비밀번호 바꾸기 요청. 지금 비밀번호와 새 비밀번호를 받는다."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    current_password: str = Field(min_length=1, max_length=1024, repr=False)
+    new_password: str = Field(min_length=1, max_length=1024, repr=False)
+
+
+class SetPasswordRequest(BaseModel):
+    """링크로 비밀번호 정하기 요청. 링크 토큰과 새 비밀번호를 받는다."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    token: str = Field(min_length=1, max_length=128, pattern=LINK_TOKEN_PATTERN, repr=False)
     password: str = Field(min_length=1, max_length=1024, repr=False)
 
 
@@ -163,6 +192,60 @@ def auth_router(
             run_timeout_seconds=run_timeout_seconds,
         )
 
+    @router.post(
+        "/auth/password",
+        operation_id="change_my_password",
+        summary="로그인한 계정이 자기 비밀번호를 바꾼다. 이 브라우저의 로그인만 남는다",
+        status_code=204,
+        response_class=Response,
+        responses=documented_errors(
+            401,
+            403,
+            409,
+            422,
+            descriptions={409: "계정이 잠겼다"},
+        ),
+    )
+    async def change_my_password(body: ChangePasswordRequest, request: Request) -> Response:
+        claims = operator_of(request)
+        if claims is None:
+            raise HTTPException(status_code=401, detail=NOT_LOGGED_IN_MESSAGE)
+        address = forwarded_address(request.headers.getlist("x-forwarded-for"))
+        outcome = await login.change_password(
+            claims, body.current_password, body.new_password, address=address
+        )
+        if outcome == "gone":
+            raise HTTPException(status_code=401, detail=NOT_LOGGED_IN_MESSAGE)
+        if outcome == "locked":
+            raise HTTPException(status_code=409, detail=LOCKED_MESSAGE)
+        if outcome == "rule":
+            raise invalid_field("body", "new_password", message=PASSWORD_RULE_TEXT)
+        if outcome == "wrong_current":
+            raise invalid_field("body", "current_password", message=WRONG_CURRENT_MESSAGE)
+        return Response(status_code=204)
+
+    @router.post(
+        "/auth/set-password",
+        operation_id="set_password_by_link",
+        summary="비밀번호 링크로 비밀번호를 정한다. 로그인은 시키지 않는다",
+        status_code=204,
+        response_class=Response,
+        responses=documented_errors(
+            403,
+            404,
+            422,
+            descriptions={404: "링크가 없거나 이미 썼거나 기한이 지났거나 못 쓰게 됐다"},
+        ),
+    )
+    async def set_password_by_link(body: SetPasswordRequest, request: Request) -> Response:
+        address = forwarded_address(request.headers.getlist("x-forwarded-for"))
+        outcome = await login.set_password_by_link(body.token, body.password, address=address)
+        if outcome == "unusable":
+            raise HTTPException(status_code=404, detail=LINK_UNUSABLE_MESSAGE)
+        if outcome == "rule":
+            raise invalid_field("body", "password", message=PASSWORD_RULE_TEXT)
+        return Response(status_code=204)
+
     @router.get(
         "/auth/setup",
         operation_id="get_setup",
@@ -173,6 +256,11 @@ def auth_router(
         return Setup(needs_first_account=await login.needs_first_account())
 
     return router
+
+
+def invalid_field(*loc: str, message: str) -> RequestValidationError:
+    """FastAPI 의 검증 오류와 같은 모양의 422. 받은 값은 싣지 않는다. 계정 라우터도 쓴다."""
+    return RequestValidationError([{"type": "value_error", "loc": loc, "msg": message}])
 
 
 def _refresh_errors() -> dict[int | str, dict[str, object]]:

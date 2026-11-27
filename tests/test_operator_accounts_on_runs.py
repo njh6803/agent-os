@@ -303,6 +303,11 @@ _GATED: list[tuple[str, str, str, Mapping[str, Json] | None]] = [
     ("start_run", "POST", "/runs", {"agent": "echo", "request": "2+3?"}),
     ("continue_run", "POST", "/runs/run-1/continuation", {"agent": "echo", "request": "2+3?"}),
     ("decide_approval", "POST", "/runs/run-1/approval", {"decision": "approve", "pause_index": 1}),
+    ("list_accounts", "GET", "/accounts", None),
+    ("create_account", "POST", "/accounts", {"name": "new.user"}),
+    ("create_password_link", "POST", "/accounts/kim.min/link", None),
+    ("set_account_active", "PUT", "/accounts/kim.min/active", {"active": False}),
+    ("unlock_account", "POST", "/accounts/kim.min/unlock", None),
 ]
 _NOTHING: Mapping[Tier, frozenset[Permission]] = {
     "system_admin": frozenset(Permission),

@@ -13,12 +13,19 @@
 from __future__ import annotations
 
 import asyncio
-from collections.abc import AsyncGenerator
+from collections.abc import AsyncGenerator, Sequence
 from contextlib import asynccontextmanager
 from datetime import datetime
 from uuid import UUID
 
-from agent_os.http.accounts import AccountRow, NewAccount, RecordKind, RefreshRow, Taken
+from agent_os.http.accounts import (
+    AccountRow,
+    LinkRow,
+    NewAccount,
+    RecordKind,
+    RefreshRow,
+    Taken,
+)
 
 _UNUSED = "이 시험은 계정 저장소를 쓰지 않는다"
 
@@ -66,6 +73,7 @@ class _UnusedWork:
         at: datetime,
         account: str | None,
         address: str | None = None,
+        actor: str | None = None,
     ) -> None:
         raise AssertionError(_UNUSED)
 
@@ -107,6 +115,29 @@ class _UnusedWork:
         raise AssertionError(_UNUSED)
 
     async def touch_login(self, login_id: UUID, *, at: datetime) -> None:
+        raise AssertionError(_UNUSED)
+
+    async def list_accounts(self) -> Sequence[AccountRow]:
+        raise AssertionError(_UNUSED)
+
+    async def set_disabled(self, name: str, *, at: datetime | None) -> None:
+        raise AssertionError(_UNUSED)
+
+    async def end_other_logins(self, name: str, *, keep: UUID, at: datetime) -> None:
+        raise AssertionError(_UNUSED)
+
+    async def add_link(
+        self, token_hash: str, account: str, *, at: datetime, expires_at: datetime
+    ) -> None:
+        raise AssertionError(_UNUSED)
+
+    async def void_links(self, account: str, *, at: datetime) -> None:
+        raise AssertionError(_UNUSED)
+
+    async def lock_link(self, token_hash: str) -> LinkRow | None:
+        raise AssertionError(_UNUSED)
+
+    async def use_link(self, token_hash: str, *, at: datetime) -> None:
         raise AssertionError(_UNUSED)
 
 

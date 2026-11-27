@@ -2,7 +2,9 @@
 # 실험군은 규칙의 paths 안(src/agent_os/admin/), 대조군은 밖(README.md)을 읽는다. 둘 다 이 체크아웃이다.
 # 질문은 선례 `.scratch/connection-check/probes/canary/admin_rule_first_item.toml` 처럼 Read 결과에 붙어 실린
 # 규칙도 지시라고 밝힌다. 기대 구절은 더한 항목에만 있다(`traces.py` 에는 없다).
-# 최신 결과: 통과 4(2026-11-26, 이 PC의 admin-login 티켓 07 워크트리, claude 2.1.325, HEAD 11343375b 위의 커밋하지 않은
+# 최신 결과: 통과 4(2026-11-27, 이 PC의 admin-login 티켓 06 워크트리, claude 2.1.325, HEAD c3ad162fc 위의 커밋하지 않은
+# 작업 트리, 일지 2026-11-27-1647. 티켓 06 이 같은 규칙의 첫 항목에 409 문장을 고친 뒤 다시 돌렸고 기대는 그대로다).
+# 앞 판은 통과 4(2026-11-26, 이 PC의 admin-login 티켓 07 워크트리, claude 2.1.325, HEAD 11343375b 위의 커밋하지 않은
 # 작업 트리, 일지 2026-11-26-0140). 실험군 셋이 두 구절을 글자 그대로 옮겼고 대조군은 "없음"이었다.
 # 돌리는 법: uv run python tools/canary.py .scratch/admin-login/probes/canary/admin_rule_conversation_list.toml <출력 디렉터리>
 kind = "rule"

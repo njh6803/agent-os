@@ -7,8 +7,8 @@
 `main`, 포트 타입을 적은 시험 픽스처)의 타입 검사가 잡는다.
 
 **포트의 메서드는 지금 쓰는 것만 있다.** 첫 쓰는 곳은 서버 명령
-`agent-os operator system-admin`이고, 로그인 경로가 둘째, 갱신과 서명 키 바꾸기가 셋째다. 계정
-경로가 쓰는 메서드는 그 일을 들이는 티켓이 더한다.
+`agent-os operator system-admin`이고, 로그인 경로가 둘째, 갱신과 서명 키 바꾸기가 셋째, 계정을
+다루는 경로와 링크로 비밀번호 정하기와 내 비밀번호 바꾸기가 넷째다.
 
 **이름 충돌은 예외가 아니라 돌려주는 값으로 가른다.** 계정을 넣는 메서드(`AccountWork.add`)는 넣은
 줄이나 글자 값 `"taken"`을 돌려준다. 예외로 알리는 길은 두 층이 함께 가져올 예외 타입이 없고(core에
@@ -24,6 +24,7 @@
 from __future__ import annotations
 
 import re
+from collections.abc import Sequence
 from contextlib import AbstractAsyncContextManager
 from datetime import datetime
 from typing import Literal, Protocol
@@ -31,22 +32,31 @@ from uuid import UUID
 
 type Tier = Literal["system_admin", "admin"]
 type Taken = Literal["taken"]
-# 로그인 기록에 남기는 일의 종류. 닫힌 목록이고, 열넷 가운데 지금 쓰는 것만 있다(명세 "로그인
-# 기록"). 나머지는 그 일을 들이는 티켓이 더한다.
+# 로그인 기록에 남기는 일의 종류. 닫힌 목록이고 명세 "로그인 기록"의 열넷이 모두 있다.
 type RecordKind = Literal[
     "system_admin_set",
     "login_succeeded",
     "login_failed",
     "locked",
+    "unlocked",
     "logged_out",
     "refresh_reused",
+    "account_created",
+    "account_disabled",
+    "account_enabled",
+    "link_created",
+    "password_set_by_link",
+    "password_changed",
     "signing_key_rotated",
 ]
 
 ACCOUNT_NAME_RULE_TEXT = (
     "계정 이름은 영문 소문자, 숫자, `.`, `_`, `-`로 3~32자이고 영문자나 숫자로 시작해야 합니다."
 )
-_ACCOUNT_NAME = re.compile(r"[a-z0-9][a-z0-9._-]{2,31}")
+# 이름 규칙의 글. 경로 파라미터의 패턴(`ACCOUNT_NAME_PATTERN`)과 이름 함수가 같은 것을 쓴다
+_ACCOUNT_NAME_RULE = r"[a-z0-9][a-z0-9._-]{2,31}"
+ACCOUNT_NAME_PATTERN = f"^{_ACCOUNT_NAME_RULE}$"
+_ACCOUNT_NAME = re.compile(_ACCOUNT_NAME_RULE)
 _UPPER_TO_LOWER = {code: code + 32 for code in range(ord("A"), ord("Z") + 1)}
 
 
@@ -90,7 +100,7 @@ class AccountRow(Protocol):
 
 
 class NewAccount(Protocol):
-    """포트가 받는 새 계정. 비밀번호를 정한 계정만 만든다."""
+    """포트가 받는 새 계정. 해시가 없으면 비밀번호를 아직 정하지 않은 계정이다."""
 
     @property
     def name(self) -> str: ...
@@ -99,10 +109,26 @@ class NewAccount(Protocol):
     def tier(self) -> Tier: ...
 
     @property
-    def password_hash(self) -> str: ...
+    def password_hash(self) -> str | None: ...
 
     @property
     def created_at(self) -> datetime: ...
+
+
+class LinkRow(Protocol):
+    """비밀번호 링크 한 줄. 읽기만 한다. 토큰 자체는 서버에 없고 해시로 찾는다."""
+
+    @property
+    def account(self) -> str: ...
+
+    @property
+    def expires_at(self) -> datetime: ...
+
+    @property
+    def used_at(self) -> datetime | None: ...
+
+    @property
+    def voided_at(self) -> datetime | None: ...
 
 
 class RefreshRow(Protocol):
@@ -157,11 +183,14 @@ class AccountWork(Protocol):
         at: datetime,
         account: str | None,
         address: str | None = None,
+        actor: str | None = None,
     ) -> None:
-        """로그인 기록에 한 줄을 더한다. 비밀번호와 해시는 어느 줄에도 싣지 않는다(원칙 V).
+        """로그인 기록에 한 줄을 더한다. 비밀번호와 해시와 링크 토큰은 어느 줄에도 싣지 않는다(원칙
+        V).
 
         대상 계정(`account`)은 없는 이름으로 온 로그인 실패에서 비운다. 접속한 주소(`address`)는
-        부르는 쪽이 읽어 넘기고 읽지 못했으면 비운다.
+        부르는 쪽이 읽어 넘기고 읽지 못했으면 비운다. 한 계정(`actor`)은 그 일을 한 사람이고
+        스스로 한 일이나 사람이 하지 않은 일에서 비운다.
         """
         ...
 
@@ -233,6 +262,40 @@ class AccountWork(Protocol):
 
     async def touch_login(self, login_id: UUID, *, at: datetime) -> None:
         """로그인 한 건의 마지막으로 갱신한 시각을 적는다."""
+        ...
+
+    async def list_accounts(self) -> Sequence[AccountRow]:
+        """계정 전부. 시스템 관리자가 먼저이고 나머지는 이름순이다. 줄을 잠그지 않는다."""
+        ...
+
+    async def set_disabled(self, name: str, *, at: datetime | None) -> None:
+        """비활성으로 바꾼 시각을 적는다. `None` 이면 지운다(활성으로 되돌린다)."""
+        ...
+
+    async def end_other_logins(self, name: str, *, keep: UUID, at: datetime) -> None:
+        """그 계정에서 아직 끊기지 않은 로그인 가운데 `keep` 이 아닌 것을 끊는다."""
+        ...
+
+    async def add_link(
+        self, token_hash: str, account: str, *, at: datetime, expires_at: datetime
+    ) -> None:
+        """비밀번호 링크를 더한다. 토큰 자체는 서버에 두지 않는다."""
+        ...
+
+    async def void_links(self, account: str, *, at: datetime) -> None:
+        """그 계정의 아직 쓰지 않고 못 쓰게 하지 않은 링크를 모두 못 쓰게 한다."""
+        ...
+
+    async def lock_link(self, token_hash: str) -> LinkRow | None:
+        """그 해시의 링크와 그 계정의 줄을 잠가 읽는다. 없으면 `None`.
+
+        계정의 줄을 먼저, 링크 줄을 그다음에 잠근다. 계정을 먼저 잠그고 링크를 바꾸는 쪽(링크
+        만들기, 비활성으로 바꾸기)과 같은 순서라 서로 기다리는 일(교착)이 없다.
+        """
+        ...
+
+    async def use_link(self, token_hash: str, *, at: datetime) -> None:
+        """링크를 쓴 것으로 적는다."""
         ...
 
 

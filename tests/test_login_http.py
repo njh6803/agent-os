@@ -1079,7 +1079,8 @@ async def test_비활성_계정의_갱신은_401이고_그_로그인을_끊는�
     await _seed(accounts, "kim.min")
     first = _cookies(await _login(client))[REFRESH_COOKIE]
     clock.advance(minutes=1)
-    # 비활성으로 바꾸는 경로는 06이 짓는다. 지금은 데이터베이스에 상태를 직접 넣는다
+    # 비활성으로 바꾸는 경로(`PUT /accounts/{name}/active`)는 `test_account_routes_http.py`가 잰다.
+    # 여기서는 갱신의 판정만 보려고 데이터베이스에 상태를 직접 넣는다
     await _execute(database, "UPDATE operator_accounts SET disabled_at = :at", at=clock.at)
 
     _assert_cleared(await _refresh(client, first))
@@ -1270,7 +1271,7 @@ async def test_최종_사용자_경로는_쿠키로_열리지_않는다(
     assert response.status_code == 401
 
 
-async def test_로그인과_갱신과_첫_계정_확인과_헬스체크만_인증_없이_답한다(
+async def test_로그인과_갱신과_첫_계정_확인과_링크로_비밀번호_정하기와_헬스체크만_인증_없이_답한다(
     client: AsyncClient,
 ) -> None:
     assert (await client.get("/health")).status_code == 200
@@ -1282,7 +1283,13 @@ async def test_로그인과_갱신과_첫_계정_확인과_헬스체크만_인�
     refused = await client.post("/auth/refresh")
     assert refused.status_code == 401
     assert len(refused.headers.get_list("set-cookie")) == 2
-    assert PUBLIC_PATHS == {"/health", "/auth/login", "/auth/refresh", "/auth/setup"}
+    assert PUBLIC_PATHS == {
+        "/health",
+        "/auth/login",
+        "/auth/refresh",
+        "/auth/setup",
+        "/auth/set-password",
+    }
     for method, path in (("GET", "/auth/me"), ("POST", "/auth/logout"), ("GET", "/plugins")):
         response = await client.request(method, path)
         assert response.status_code == 401, path
