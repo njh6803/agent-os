@@ -69,7 +69,7 @@ const LOOPBACK_HOSTS: readonly string[] = ["localhost", "127.0.0.1", "[::1]"];
 /**
  * 이 주소에서 로그인할 수 있는가. 쿠키는 `Secure` 라서 브라우저가 https 주소와 서버 자신의 주소(루프백)의 http 에서만
  * 받아 준다. 그 밖의 http 주소에서는 로그인해도 쿠키가 남지 않는다. 화면이 열린 주소는 http 나 https 뿐이라 `http:` 가
- * 아니면 https 로 본다.
+ * 아니면 https 로 본다. 링크로 비밀번호 정하기 화면도 같은 판정으로 막는다. 쿠키가 아니라 새 비밀번호가 평문으로 오가기 때문이다.
  */
 export function canSignInAt(url: URL): boolean {
   return url.protocol !== "http:" || LOOPBACK_HOSTS.includes(url.hostname);
@@ -92,6 +92,16 @@ export function loginAddress({
   }
   const text = query.toString();
   return text === "" ? "/login" : `/login?${text}`;
+}
+
+/**
+ * 비밀번호 링크의 주소. 서버는 토큰만 주고 주소를 짓지 않는다. 관리 화면의 출처에 `/set-password#<토큰>` 이다. `#` 뒤는
+ * 브라우저가 서버에도 `Referer` 에도 보내지 않는다.
+ */
+export function setPasswordAddress(token: string): string {
+  const address = new URL("/set-password", location.origin);
+  address.hash = token;
+  return address.href;
 }
 
 /** 지금 화면의 경로와 질의(조각은 뺀다). 로그인 뒤에 돌아올 곳으로 `next` 에 싣는다. */
