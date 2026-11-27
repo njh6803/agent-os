@@ -21,8 +21,9 @@ interface RunPanelProps extends ReadState<Trace> {
  * 대화 화면의 주기 읽기가 같은 값을 고친다). 새로 고침과 실패의 표시는 읽기 골격(`ReadSection`)이다. 다시 읽다 실패하면
  * 보인 이벤트를 지우고 실패만 보인다.
  *
- * 열리면 포커스가 닫기 버튼으로 가고, 닫히면 열기 전에 포커스가 있던 곳("자세히")으로 돌아온다. 키보드 사용자가 Esc 로
- * 닫는 길과 같은 자리에서 시작하게 한다. 이미 열린 채 내용만 바뀔 때는 포커스를 옮기지 않는다.
+ * 열리면 포커스가 닫기 버튼으로 가고, 닫히면 처음 패널을 열 때 포커스가 있던 곳("자세히")으로 돌아온다. 키보드 사용자가
+ * Esc 로 닫는 길과 같은 자리에서 시작하게 한다. 이미 열린 채 내용만 바뀔 때는 포커스를 옮기지 않으므로, 그 사이 다른
+ * 실행의 "자세히"를 눌렀어도 돌아가는 곳은 처음 연 버튼이다.
  */
 export function RunPanel({ runId, onClose, ...read }: RunPanelProps) {
   const panelRef = useRef<HTMLElement | null>(null);

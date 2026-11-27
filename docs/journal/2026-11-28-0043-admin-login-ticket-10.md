@@ -122,3 +122,29 @@ open-session을 부른다 2026-11-27T15:44:50Z
 - 후속 후보(사용자의 결정이 필요): 폭 768 미만에서 패널이 화면을 덮을 때 뒤의 대화를 `inert`로 막고 포커스를 가두는 모달 동작을 줄지. 지금 명세와 디자인은 덮개와 모달을 요구하지 않았다.
 - retro 후보: 코드의 `Turn`·`turnOf`(대화 화면의 한 실행)가 `CONTEXT.md`의 `교환` 피할 말(턴)과 겹치고 `Outcome.kind: "running"`이 "실행 중" 피하기와 어긋난다. 용어집이 대화 화면 쪽 낱말을 정해야 코드 이름이 맞는다.
 - 흔들림 기록: 앞 세션이 본 `decision.e2e.ts:12`의 부하 아래 시간 창 실패는 대기열 306이 받아들인 종류의 새 사례다(앞 세션의 판정). 회차는 더하지 않았다.
+- PR 직전 리뷰가 남긴 Minor(뒤로 넘긴다, 아래 "이어받은 세션: PR 직전 리뷰"): (a) 폭 `wide` 미만에서 패널이 화면을 덮는데 뒤의 대화가 `inert`가 아니라 Tab이 패널 밖으로 샌다(위 후속 후보와 같은 일이다), (b) `RunPanel`의 Esc 핸들러가 `document` 전체에 걸려 `event.defaultPrevented`를 보지 않는다(메뉴가 열린 채 Esc를 누르면 패널도 닫히는지 손으로 한 번 본다), (c) `turns.ts`의 `isPastTimeout`이 `Date.parse`가 NaN이면 영원히 멈추지 않는다(NaN이면 멈춤으로 보는 시험 먼저), (d) `Conversation.tsx`의 `<summary>`에 앱의 포커스 링 클래스가 없다.
+
+## 인계(2026-11-28, 커밋 뒤)
+
+이 세션은 커밋(`73f0539ed`, 브랜치 `feature/10-chat-read-screens-list-panel-and-polling`)까지 하고 컨텍스트가 인계 문턱(20만 토큰)을 넘어 `커밋 뒤` 경계에서 새 세션에 넘긴다. 작업 트리는 깨끗하다(이 인계 절을 쓰기 전 `git status`가 비었다). 이 인계 절만 커밋하지 않은 변경이다. 새 세션이 같은 파일에 이어 쓰고 커밋한다. 이 세션의 제목은 `feature/10-chat-read-screens-list-panel-and-polling`이었고 `(인계함)`으로 바꾼다.
+
+사용자 프롬프트는 앞 세션과 같은 `next-session` 지시문 하나뿐이고 정정·피드백은 없었다(이번 요청 범위는 PR과 병합까지다).
+
+새 세션이 할 것(순서대로):
+
+1. PR 직전 리뷰: `coderabbit-review` 서브에이전트(CLI가 안 돌면 `bug-perf-review`)를 돈다. 위 "고쳐서 새로 쓴 사실 문장" 네 줄을 그 브리프에 밀 주장으로 나열한다(CodeRabbit CLI는 주장 인자가 없어 CLI가 돌면 넘기지 못한다. 그 경우 이 줄은 건너뛴다). Critical·Major를 고치면 그 변경이 화면을 바꾸면 e2e와 사진을 다시 친다.
+2. 푸시와 PR 열기(제목에 느낌표 없음. 이 티켓의 변경은 운영자가 올릴 때 손댈 것이 없다고 봤다: 새 설정 칸·명령 없음, 읽기 화면만 더함, 어림). 본문 끝에 `🤖 Generated with [Claude Code](https://claude.com/claude-code)`. 본문에 적을 것: (a) `@split` 784px 경계의 이유(큰 표와 카드의 갈래는 컨테이너 쿼리, 명세의 768px(`wide`)과 다르고 뷰포트 768~1040px에서 명세의 표 대신 카드가 선다), (b) "다시 읽기" 버튼을 읽기 골격 `ReadSection`의 "새로 고침"으로 갈음한 것, (c) 320px 패널 사진에서 아래에 대화가 비치는 까닭(패널이 디자인 `ch-run.dc.html`대로 `absolute right:0 width:480px`이고 전체 페이지 사진에서 `fixed inset-0`이 뷰포트 높이만 덮는다), (d) 푸터 `flex-wrap`과 `whitespace-nowrap` 수정과 회귀 단언이 글자 폭이 아니라 계산 스타일(`whiteSpace`, `flexWrap`)인 까닭(Windows 로컬의 스토리 시험 브라우저와 Docker Linux 사진 환경의 글꼴이 달라 `Range.getClientRects` 단언은 고치기 전에도 통과했다), (e) 패널 여닫기를 `replaceState`로 해 패널이 열린 채 뒤로 가기를 누르면 대화 목록으로 가는 것(코드 주석과 변이 표가 지킨다. 명세는 패널의 방문 기록을 말하지 않았다), (f) 앞 실행에 "이 실행은 결말 없이 끝났다"를 보이는 것(명세에 문구 없음), (g) 사진 정답은 375px 프로젝트가 아니라 관리 화면의 폭 둘 1280/320이고 `@split` 경계 근처는 jsdom이 컨테이너 쿼리를 재지 못해 시험이 없는 것, (h) `--spacing-panel` 토큰의 디자인 시스템 올리기는 후속, (i) 셀프 리뷰 반영(불리언 칸을 `fit`·`Place`로, 포커스 복귀, `aria-controls`, 쓰이지 않던 `formatClockTime` 삭제), (j) 변이 표 9건과 옛 표 7건의 원문 수리, 카나리아 둘.
+3. PR을 연 뒤 `mcp__ccd_pr__get_status`로 보고 그 PR이 아니면 `bind_pr`한다. 병합은 이 워크트리 사본의 `.claude/skills/next-session/merge.md`의 "워크트리에서 병합할 때"를 Read로 열어 따른다. 병합 순서 주의: PR #659(admin-login 12)가 `AdminNav.tsx`, `RunList.tsx`, `AdminFrame.stories.tsx`와 사진 정답 8장을 함께 고쳤고 12는 먼저 열렸다. 12가 먼저 병합되면 이 PR이 `dev`와 글자 충돌을 낸다(`merge.md`의 충돌 절차를 따른다. 사진 정답 PNG는 어느 쪽을 고르지 말고 `pnpm -C web visual:admin:update`로 다시 만든다). 13은 `e2e/channel.ts`를 함께 고쳤다.
+4. 지시문을 낸다(`next-session`).
+
+이 세션이 직접 친 마지막 검증은 위 "고친 뒤 다시 돌린 것"에 있다. 커밋 직전 pre-commit은 `parallel-checks`(pytest 포함)가 부하로 한 번 빨갛다 다시 통과했다(위 둘째 커밋 시도).
+open-session을 부른다 2026-11-27T17:37:59Z
+
+## 이어받은 세션: PR 직전 리뷰(2026-11-28)
+
+새 세션(Sonnet 5.5 / high)이 같은 워크트리를 이어받았다. 시작 때 제목을 브랜치 이름으로 바꿨고 `sync-design-system 확인`을 다시 돌려 `clean`(결정 `continue`)을 봤다. 사용자의 정정이나 피드백은 없었다(지시문 하나뿐, 범위는 PR과 병합까지).
+
+- `coderabbit-review` 서브에이전트: CodeRabbit CLI 0.7.5가 돌아 `review_completed`였다(좌석 `not assigned`, Plan Free, 리뷰는 끝까지 돌았다). Critical 0, Major 0, Minor 6이다. 앞 절 "밀 주장" 넷 가운데 1·2·4는 코드와 맞고 3은 "처음 연 자리"로 좁혀야 한다고 했다. 이 절의 리뷰 판정은 모두 서브에이전트가 코드를 읽고 보고한 것이고 이 세션이 다시 재거나 화면에서 보지 않았다(아래 오탐 판정도 같다). `sync-design-system 확인`의 `clean`만 이 세션이 `check judge`와 `decide`를 쳐서 읽은 출력이다.
+- 고친 것(주석 둘, 코드 변경 없음): `hooks/queries/admin/index.ts`의 머리 주석이 주기 읽기를 접속 확인 하나로 적고 도메인을 둘로 적어 문장 1과 어긋나던 것을 "접속 확인과 대화 화면의 끝 실행 둘", "플러그인, 실행, 대화 도메인"으로 고쳤다. `RunPanel.tsx` 독스트링은 "처음 패널을 열 때 포커스가 있던 곳"으로 좁히고, 열린 채 다른 "자세히"를 눌러도 돌아가는 곳은 처음 연 버튼이라고 적었다(`key={runId}`로 다시 마운트하는 길은 "이미 열린 채 바뀔 때는 포커스를 옮기지 않는다"와 부딪혀 독스트링을 고치는 쪽을 골랐다).
+- 남긴 것은 위 "다음"의 첫 항목 (a)~(d)이다. (a)는 앞 절의 후속 후보와 같은 일이다.
+- 오탐으로 판정: 스토리의 다크·`showcase` 지적은 `packages/ui`의 규칙이고 관리 앱은 사진 비교가 라이트·다크를 모두 찍는다. 보안과 성능 축은 문제 없다고 보고했다(경로는 인코딩되고 사용자 글은 텍스트로만 들어간다, 끝 실행 읽기는 3초 간격으로 멈출 때가 정해져 있고 패널과 열쇠를 나눠 쓴다).
