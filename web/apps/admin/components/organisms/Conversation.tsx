@@ -148,9 +148,12 @@ function TurnView({ turn, number, clock, place, timeoutSeconds, open, onOpen }: 
       <OutcomeView outcome={turn.outcome} place={place} timeoutSeconds={timeoutSeconds} />
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
         <StatusBadge status={BADGE[turn.outcome.kind]} />
-        <span className="font-mono text-mono whitespace-nowrap text-text-muted">
-          {formatTime(clock, turn.startedAt)}
-        </span>
+        {turn.startedAt === "" ? null : (
+          // 시작 이벤트가 없는 기록(쓰기가 중간에 끊겼다)은 시각이 없다. 빈 값으로 시각을 만들면 렌더링이 던진다.
+          <span className="font-mono text-mono whitespace-nowrap text-text-muted">
+            {formatTime(clock, turn.startedAt)}
+          </span>
+        )}
         <button
           type="button"
           aria-expanded={open}

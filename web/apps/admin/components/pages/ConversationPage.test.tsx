@@ -319,12 +319,22 @@ describe("대화 화면", () => {
 
     await showChat("r1");
 
-    expect(screen.getByText("support-bot")).toBeTruthy();
+    // 제목은 데이터와 무관하게 먼저 그려지므로, 에이전트 이름은 트레이스가 도착할 때까지 기다려 찾는다.
+    expect(await screen.findByText("support-bot")).toBeTruthy();
     expect(screen.getByRole("link", { name: "대화 목록" }).getAttribute("href")).toBe("/chat");
     const nav = screen.getByRole("navigation", { name: "관리 화면" });
     expect(within(nav).getByRole("link", { name: "대화" }).getAttribute("aria-current")).toBe(
       "page",
     );
+  });
+
+  test("시작 이벤트가 없는 트레이스도 시각 없이 그려지고 화면이 무너지지 않는다", async () => {
+    serveTraces({ r1: trace("r1", [llm("r1")]) });
+
+    await showChat("r1");
+
+    expect(await screen.findByRole("region", { name: "실행 1" })).toBeTruthy();
+    expect(screen.queryByText(/Invalid Date/)).toBeNull();
   });
 
   test("요청과 도구 호출 묶음과 출력이 한 실행의 구역에 차례로 선다", async () => {
@@ -434,12 +444,12 @@ describe("대화 화면", () => {
     );
   });
 
-  test("결정한 계정이 비면 주체 이름을 쓴다", async () => {
+  test("결정한 계정이 비면 요청한 주체가 아니라 결정한 주체의 이름을 쓴다", async () => {
     serveTraces({
       r1: trace("r1", [
         started("r1", null, undefined, { principal: "hong" }),
         paused("r1", "mail.send"),
-        granted("r1", null),
+        granted("r1", null, undefined, "ops-cli"),
         finished("r1", "보냈다"),
       ]),
     });
@@ -447,7 +457,8 @@ describe("대화 화면", () => {
     await showChat("r1");
     await screen.findByText("보냈다");
 
-    expect(screen.getByText(/hong가 .*에 승인했다/)).toBeTruthy();
+    expect(screen.getByText(/ops-cli가 .*에 승인했다/)).toBeTruthy();
+    expect(screen.queryByText(/hong가 .*에 승인했다/)).toBeNull();
   });
 
   test("결정을 기다리는 실행은 승인을 기다린다고 말하고 버튼은 없다", async () => {

@@ -39,10 +39,26 @@ expect_output = ["expected 3000 to be +0"]
 [[mutation.edit]]
 file = "web/apps/admin/api/conversation/turns.ts"
 old = '''
-  return last !== undefined && now >= Date.parse(last.ts) + timeoutSeconds * 1000;
+  return Number.isNaN(lastAt) || now >= lastAt + timeoutSeconds * 1000;
 '''
 new = '''
-  return last !== undefined && now > Date.parse(last.ts) + timeoutSeconds * 1000;
+  return Number.isNaN(lastAt) || now > lastAt + timeoutSeconds * 1000;
+'''
+
+[[mutation]]
+name = "읽을 수 없는 시각이면 멈추지 못한다"
+runner = "vitest_node"
+tests = ["apps/admin/api/conversation/turns.test.ts", "-t", "마지막 이벤트의 시각을 읽을 수 없으면 잴 수 없으니 멈춘다"]
+expect = "red"
+expect_output = ["expected 3000 to be +0"]
+
+[[mutation.edit]]
+file = "web/apps/admin/api/conversation/turns.ts"
+old = '''
+  return Number.isNaN(lastAt) || now >= lastAt + timeoutSeconds * 1000;
+'''
+new = '''
+  return now >= lastAt + timeoutSeconds * 1000;
 '''
 
 [[mutation]]

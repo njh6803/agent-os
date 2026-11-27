@@ -52,22 +52,33 @@ export function paused(runId: string, tool: string, ts = T0): TraceEvent {
   return { type: "run_paused", run_id: runId, ts, tool, args: {}, rule: null, server: null };
 }
 
-export function granted(runId: string, account: string | null, ts = T0): TraceEvent {
+export function granted(
+  runId: string,
+  account: string | null,
+  ts = T0,
+  approver = "operator",
+): TraceEvent {
   return {
     type: "approval_granted",
     run_id: runId,
     ts,
-    approver: "operator",
+    approver,
     deciding_account: account,
   };
 }
 
-export function denied(runId: string, account: string | null, reason: string, ts = T0): TraceEvent {
+export function denied(
+  runId: string,
+  account: string | null,
+  reason: string,
+  ts = T0,
+  approver = "operator",
+): TraceEvent {
   return {
     type: "approval_denied",
     run_id: runId,
     ts,
-    approver: "operator",
+    approver,
     deciding_account: account,
     reason,
   };

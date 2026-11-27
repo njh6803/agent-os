@@ -71,7 +71,7 @@ describe("turnOf", () => {
     expect(turn.outcome).toEqual({ kind: "paused" });
   });
 
-  it("승인은 결정한 계정과 시각을 들고, 결정한 계정이 비면 주체 이름을 쓴다", () => {
+  it("승인은 결정한 계정과 시각을 들고, 결정한 계정이 비면 결정한 주체(승인자)의 이름을 쓴다", () => {
     const withAccount = turnOf(
       trace("r1", [
         started("r1"),
@@ -94,6 +94,28 @@ describe("turnOf", () => {
       trace("r1", [started("r1"), paused("r1", "mail"), granted("r1", null), resumed("r1")]),
     );
     expect(withoutAccount.approvals[0]).toMatchObject({ state: "granted", by: "operator" });
+  });
+
+  it("결정한 계정이 비면 요청한 주체가 아니라 결정한 주체를 쓴다(승인과 거부 모두)", () => {
+    const requester = started("r1", null, T0, { principal: "requester" });
+    const grantedTurn = turnOf(
+      trace("r1", [
+        requester,
+        paused("r1", "mail"),
+        granted("r1", null, T0, "ops-cli"),
+        resumed("r1"),
+      ]),
+    );
+    expect(grantedTurn.approvals[0]).toMatchObject({ state: "granted", by: "ops-cli" });
+    const deniedTurn = turnOf(
+      trace("r1", [
+        requester,
+        paused("r1", "mail"),
+        denied("r1", null, "보내지 마라", T0, "ops-cli"),
+        finished("r1", "안 보냈다"),
+      ]),
+    );
+    expect(deniedTurn.approvals[0]).toMatchObject({ state: "denied", by: "ops-cli" });
   });
 
   it("거부는 사유를 든다", () => {
@@ -178,6 +200,11 @@ describe("pollInterval", () => {
 
   it("결말이 있으면 0이다", () => {
     expect(pollInterval(trace("r", [started("r"), finished("r", "", LAST)]), 300, lastMs)).toBe(0);
+  });
+
+  it("마지막 이벤트의 시각을 읽을 수 없으면 잴 수 없으니 멈춘다", () => {
+    const broken = trace("r", [started("r"), llm("r", "시각이 아니다")]);
+    expect(pollInterval(broken, 300, lastMs)).toBe(0);
   });
 });
 

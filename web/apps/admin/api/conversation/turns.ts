@@ -26,7 +26,7 @@ export type Approval =
       readonly tool: string;
       /** 결정한 시각. */
       readonly at: string;
-      /** 결정한 계정. 비어 있으면(명령줄에서 내린 결정) 주체 이름이다. */
+      /** 결정한 계정. 비어 있으면(명령줄에서 내린 결정) 결정한 주체(`approver`)의 이름이다. */
       readonly by: string;
       readonly pauseIndex: number;
     }
@@ -85,7 +85,7 @@ export function turnOf(trace: Trace): Turn {
         break;
       case "approval_granted":
       case "approval_denied":
-        decide(approvals, event, principal);
+        decide(approvals, event);
         break;
       default:
         break;
@@ -107,13 +107,15 @@ export function turnOf(trace: Trace): Turn {
 type Decision = Extract<TraceEvent, { type: "approval_granted" | "approval_denied" }>;
 
 /** 결정 이벤트는 가장 뒤의 기다리는 승인을 닫는다. 기다리는 승인이 없는 결정(깨진 기록)은 싣지 않는다. */
-function decide(approvals: Approval[], event: Decision, principal: string): void {
+function decide(approvals: Approval[], event: Decision): void {
   const index = approvals.findLastIndex((approval) => approval.state === "waiting");
   const waiting = approvals[index];
   if (waiting === undefined) {
     return;
   }
-  const by = event.deciding_account ?? principal;
+  // 결정한 계정이 비면(명령줄에서 내린 결정) 결정을 내린 주체의 이름이다. 요청한 주체와 다를 수 있어 시작 이벤트의 주체를
+  // 쓰지 않는다.
+  const by = event.deciding_account ?? event.approver;
   approvals[index] =
     event.type === "approval_granted"
       ? { state: "granted", tool: waiting.tool, at: event.ts, by, pauseIndex: waiting.pauseIndex }
@@ -160,7 +162,12 @@ export function hasOutcome(trace: Trace): boolean {
 export function isPastTimeout(trace: Trace, timeoutSeconds: number, now: number): boolean {
   // 모르는 종류의 이벤트는 시각이 없어, 시각이 있는 가장 뒤의 이벤트로 잰다.
   const last = trace.events.findLast((event) => event.type !== "unknown");
-  return last !== undefined && now >= Date.parse(last.ts) + timeoutSeconds * 1000;
+  if (last === undefined) {
+    return false;
+  }
+  // 읽을 수 없는 시각은 잴 수 없으니 지난 것으로 본다. 아니면 `now >= NaN` 이 늘 거짓이라 읽기가 멈추지 못한다.
+  const lastAt = Date.parse(last.ts);
+  return Number.isNaN(lastAt) || now >= lastAt + timeoutSeconds * 1000;
 }
 
 /**

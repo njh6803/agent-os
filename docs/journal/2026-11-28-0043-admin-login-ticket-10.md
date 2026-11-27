@@ -111,7 +111,7 @@ open-session을 부른다 2026-11-27T15:44:50Z
 - 기각 3, `TextLink`의 `clip?: boolean`과 `last`·`stale` 같은 인터페이스의 불리언 칸. `CODING_STANDARDS.md`가 "린터가 보지 못한다"고 적은 자리를 표준 축 리뷰가 잡았다. 리뷰가 제 몫을 한 것이고 React의 `disabled` 같은 정당한 불리언 속성이 많아 린터로 올리면 거짓 양성이 크다(원칙: 거짓 양성이 많은 규칙을 하드 게이트로 만들지 않는다).
 - 기각 4, 복합 git 명령(`git fetch …; git merge-base …`)을 앱의 워크트리 가드가 한 번 거부한 것. `CLAUDE.md` 환경 함정이 이미 "명령은 하나씩 치고"라고 적었고 가드가 그 자리에서 막았다. 하나씩 쳐서 지나갔고 손실은 없었다.
 - 지켜본 것: 앞 세션이 `web-admin.md`의 주기 읽기 줄을 고치고도 `sibling_overlap`을 커밋 직전에 돌리기 전이라 카나리아 알림을 보지 못했다. 알림은 이 세션이 `sibling_overlap`을 돌려 받았고 카나리아 둘을 돌려 닫았다. 인계가 커밋 전에 끊긴 사건이고 지침(`CLAUDE.md`의 커밋 전 `sibling_overlap`)이 이미 그 자리를 덮는다. 같은 일이 되풀이되면 인계 지침에 카나리아 확인을 더할지 본다(회차로 세지 않았다).
-- 대기열 만료: `uv run python tools/queue_open_rows.py`와 `--ref origin/dev` 두 출력에 모두 든 6개(`answer-estimate-before-reading-adr`, `measure-word-misses-adnominal-form`, `mutation-table-checked-late`, `probe-readme-run-claim-without-actor`, `raw-replacement-char-in-tracked-text`, `ui-design-abandoned-prompt-state`)의 상태를 `만료 2026-11-28 (ADR 0036)`로 닫았다. 승인 줄의 가장 늦은 날짜가 모두 2026-11-13이었다(도구 출력).
+- 대기열 만료: `uv run python tools/queue_open_rows.py`와 `--ref origin/dev` 두 출력에 모두 든 6개(`answer-estimate-before-reading-adr`, `measure-word-misses-adnominal-form`, `mutation-table-checked-late`, `probe-readme-run-claim-without-actor`, `raw-replacement-char-in-tracked-text`, `ui-design-abandoned-prompt-state`)의 상태를 `만료 2026-11-28 (ADR 0036)`로 닫았다. 승인 줄의 가장 늦은 날짜가 모두 2026-11-13이었다(도구 출력). 그 가운데 `mutation-table-checked-late`는 같은 날 티켓 12(#659)가 둘째 승인으로 다시 열어 `dev`에 들어왔다. 병합 뒤 CodeRabbit 첫 회차가 알려 `열림`으로 되돌렸고(이 브랜치의 그 파일 변경은 0이다), 그래서 만료는 다섯 개다.
 - 일지에만 남기는 것: 이 세션의 카나리아·변이·e2e 결과는 위 "고친 뒤 다시 돌린 것"에 있다.
 
 ## 다음
@@ -122,7 +122,7 @@ open-session을 부른다 2026-11-27T15:44:50Z
 - 후속 후보(사용자의 결정이 필요): 폭 768 미만에서 패널이 화면을 덮을 때 뒤의 대화를 `inert`로 막고 포커스를 가두는 모달 동작을 줄지. 지금 명세와 디자인은 덮개와 모달을 요구하지 않았다.
 - retro 후보: 코드의 `Turn`·`turnOf`(대화 화면의 한 실행)가 `CONTEXT.md`의 `교환` 피할 말(턴)과 겹치고 `Outcome.kind: "running"`이 "실행 중" 피하기와 어긋난다. 용어집이 대화 화면 쪽 낱말을 정해야 코드 이름이 맞는다.
 - 흔들림 기록: 앞 세션이 본 `decision.e2e.ts:12`의 부하 아래 시간 창 실패는 대기열 306이 받아들인 종류의 새 사례다(앞 세션의 판정). 회차는 더하지 않았다.
-- PR 직전 리뷰가 남긴 Minor(뒤로 넘긴다, 아래 "이어받은 세션: PR 직전 리뷰"): (a) 폭 `wide` 미만에서 패널이 화면을 덮는데 뒤의 대화가 `inert`가 아니라 Tab이 패널 밖으로 샌다(위 후속 후보와 같은 일이다), (b) `RunPanel`의 Esc 핸들러가 `document` 전체에 걸려 `event.defaultPrevented`를 보지 않는다(메뉴가 열린 채 Esc를 누르면 패널도 닫히는지 손으로 한 번 본다), (c) `turns.ts`의 `isPastTimeout`이 `Date.parse`가 NaN이면 영원히 멈추지 않는다(NaN이면 멈춤으로 보는 시험 먼저), (d) `Conversation.tsx`의 `<summary>`에 앱의 포커스 링 클래스가 없다.
+- PR 직전 리뷰가 남긴 Minor(뒤로 넘긴다, 아래 "이어받은 세션: PR 직전 리뷰"): (a) 폭 `wide` 미만에서 패널이 화면을 덮는데 뒤의 대화가 `inert`가 아니라 Tab이 패널 밖으로 샌다(위 후속 후보와 같은 일이다), (b) `RunPanel`의 Esc 핸들러가 `document` 전체에 걸려 `event.defaultPrevented`를 보지 않는다(메뉴가 열린 채 Esc를 누르면 패널도 닫히는지 손으로 한 번 본다), (c) `turns.ts`의 `isPastTimeout`이 `Date.parse`가 NaN이면 영원히 멈추지 않는다(PR 봇 첫 회차 뒤 고쳤다. 아래 "PR 봇 첫 회차"), (d) `Conversation.tsx`의 `<summary>`에 앱의 포커스 링 클래스가 없다.
 
 ## 인계(2026-11-28, 커밋 뒤)
 
@@ -157,3 +157,28 @@ PR #659(admin-login 12)가 먼저 병합돼 `origin/dev`를 두 번째로 합쳤
 - 시각 도우미 둘이 같은 일을 했다: 12가 `components/atoms/clock.ts`(`localClock`, `formatTime`, `formatMinute`, `formatClockTime`)를 만들었고 이 브랜치는 `molecules/localTime.ts`(`localClock`, `formatTime`)를 만들었다. 함수 본문은 같았다(두 파일을 읽어 맞댔다). `atoms/clock.ts` 하나로 모으고 `localTime.ts`를 지웠으며 `Conversation`, `ConversationList`, `RunList`의 import를 `atoms/clock`으로 바꿨다. `clock.ts` 머리 주석에 대화 목록과 대화 화면이 쓴다고 더했다. `run_list_mutations.toml`의 변이 둘은 `atoms/clock.ts`를 가리키는 12의 쪽을 남겼다.
 - `AdminFrame.stories.tsx`의 `SystemAdmin` 기대 목록에 "대화"를 더했다. 합친 뒤 `pnpm -C web verify`가 2건 실패했다(출력 끝줄 `Tests 2 failed | 3219 passed`, 둘의 이름은 출력 앞부분이 잘려 보지 못했고 같은 스토리의 넓은 폭과 좁은 폭으로 어림했다). 고친 뒤 `pnpm -C web exec vitest run --project admin-storybook-wide --project admin-storybook-narrow AdminFrame.stories.tsx`는 10건 통과(종료 코드 0, 파이프 없이 쳤다)했고 전체 `verify`는 다시 돌리지 않았다. 커밋의 pre-commit과 `run_checks.py`가 다시 돌린다.
 - 사진 정답 8장(`templates-adminframe--*`)은 충돌이라 `dev`의 판을 놓고 `pnpm -C web visual:admin:update`로 다시 만들었다(`188 passed (7.0m)`, 바뀐 사진은 그 8장뿐). `system-admin-1280-light` 한 장을 열어 보니 탐색에 플러그인, 대화, 실행, 계정, 설정이 차례로 서고 설정이 선택돼 있었다. 나머지 7장은 열어 보지 않았다.
+
+## 인계(2026-11-28, PR 연 뒤)
+
+이 세션은 PR #660(https://github.com/njh6803/agent-os/pull/660)을 열고 컨텍스트가 인계 문턱(20만 토큰)을 넘어 `PR 연 뒤` 경계에서 새 세션에 넘긴다. 이 세션의 제목은 `feature/10-chat-read-screens-list-panel-and-polling`이었고 `(인계함)`으로 바꾼다. 사용자의 정정이나 피드백은 없었다(지시문 하나뿐, 범위는 PR과 병합까지). 이 일지 인계 절 외에 커밋하지 않은 변경은 없다.
+
+한 것: 리뷰 반영 커밋(`8ba78adf7`), `origin/dev` 합치기 둘(#658은 충돌 없음, #659는 위 "병합 전 충돌 풀기"), 푸시, PR 열기. PR 본문 파일은 이 세션의 스크래치패드에 있고 `gh pr view 660`으로 읽을 수 있다. 앱은 이 PR을 이 세션에 이미 묶었다(`get_status`가 `bound: true`, 이때 검사는 통과 1·진행 8·건너뜀 2, `mergeStateStatus`는 `BLOCKED`로 검사가 끝나기 전이다).
+
+새 세션이 할 것(순서대로):
+
+1. `@coderabbitai review` 코멘트를 남기고 `merge.md` 2(봇 회차)대로 기다린다. PR #660의 본문과 위 일지가 이미 결정을 적었다. 합친 뒤의 관리 화면 e2e와 `pnpm -C web verify` 전체는 이 세션이 다시 돌리지 않았다(`AdminFrame` 스토리 둘만 고쳐 돌렸다). CI의 `e2e`와 `verify` 잡이 도는 것을 보고, 빨강이면 그 실패를 읽어 고친다.
+2. 봇 지적 가운데 Critical·Major만 고치고(첫 회차는 Minor·Nit을 지적마다 판단), 뒤로 넘기는 것은 일지 "다음"에 적어 같은 커밋으로 푸시한다.
+3. 병합은 이 워크트리 사본의 `merge.md`의 "워크트리에서 병합할 때"를 Read로 열어 따른다. 로컬 모델 시험은 이 PR의 변경이 `web/apps/admin`과 일지·규칙 줄뿐이라 `llm_local` 범위가 아니다(`operations.md` LLM 테스트의 범위를 열어 확인한다).
+4. 병합 뒤 일지 "다음"의 항목(위)으로 지시문을 낸다.
+
+open-session을 부른다 2026-11-27T19:08:44Z
+
+## 이어받은 세션: PR 봇 첫 회차(2026-11-28)
+
+새 세션(Sonnet 5.5 / high)이 PR #660을 이어받았다. 시작 때 제목을 브랜치 이름으로 바꾸고 `tidy-checkouts`를 돌아 주 체크아웃을 `origin/dev`까지 당겼다(워크트리 하나와 브랜치 하나를 지웠다). `sync-design-system 확인`은 `clean`(결정 `continue`)이었다. 사용자의 정정이나 피드백은 없었다(지시문 하나뿐, 범위는 PR과 병합까지). 앱의 `bind_pr` 도구는 자동 모드 분류기가 거부해 PR이 이 세션에 묶이지 않았고, 우회하지 않았다(대기는 `wait_ci.py`로 한다).
+
+`@coderabbitai review`를 남기고 `wait_ci.py`가 낸 끝 줄은 `끝: 모두 통과. CodeRabbit: Finished`였다(검사 열한 줄 SUCCESS, `llm`만 건너뜀, 합친 뒤의 `e2e`·`verify`·`visual` 포함. 도구 출력). CodeRabbit 첫 회차는 인라인 Minor 6건, claude-review는 Minor 3건과 Nit 1건을 냈다. 지적마다 판단한 것이다(코드를 읽어 판정했고 화면에서 보지는 않았다).
+
+- 고쳤다(5): (1) `.scratch/retro-queue/mutation-table-checked-late.md`가 티켓 12(#659)의 둘째 승인으로 `dev`에서 다시 열린 항목인데 이 브랜치의 만료 일괄 편집이 `만료`로 되돌려 있었다. `열림`으로 되돌렸고 이 브랜치의 그 파일 변경은 0이다(`git diff origin/dev -- .scratch/retro-queue`가 비었다). 일지의 만료 문장을 6개에서 5개로 고쳤다. (2) `turns.ts`의 `decide`가 결정한 계정이 비면 시작 이벤트의 주체(`principal`)를 써 요청자가 승인한 것처럼 보였다. 계약의 `approver`(결정한 주체)를 쓰게 하고 `decide`의 `principal` 인자를 뺐다. 요청 주체와 승인자가 다른 시험을 `turns.test.ts`(승인과 거부 모두)와 `ConversationPage.test.tsx`에 더했고, 옛 페이지 시험이 옛 동작(`hong`)을 고정하고 있어 그것을 `ops-cli`로 고쳤다. (3) 시작 이벤트가 없는 트레이스는 `startedAt`이 빈 글이라 `formatTime`이 `RangeError`를 던질 수 있었다. `Conversation.tsx`의 `TurnView`가 시각이 비면 시각 칸을 그리지 않게 했다(트레이스 로더는 시작 이벤트의 존재를 확인하지 않는다는 지적은 코드로 확인하지 않았다. 처리 계층은 화면으로 정했다). 시험은 `ConversationPage.test.tsx`의 "시작 이벤트가 없는 트레이스도…"다. (4) `ConversationPage.test.tsx`의 `getByText("support-bot")`을 `findByText`로 바꿨다(제목은 데이터와 무관하게 먼저 그려진다). (5) claude-review의 `isPastTimeout` NaN: 읽을 수 없는 시각이면 지난 것으로 본다(`Number.isNaN`). 시험 하나(`pollInterval`)와 변이 하나를 더했다.
+- 변이 표 `.scratch/admin-login/probes/chat_read_mutations.toml`: `isPastTimeout`을 고쳐 변이 2의 원문이 어긋나(`--check`가 알렸다) 고쳤고, NaN 가드를 지우는 변이 3을 더했다. `mutate.py --check`는 "변이 10 모두 원문이 한 번씩 있다"였고, 변이 2와 3을 돌려 둘 다 기대대로 빨강이었다(손으로 쳤다, `변이 2 모두 기대대로`).
+- 뒤로 넘겼다(PR 코멘트에 보류 이유를 남기고 일지 "다음"의 기존 항목이 받는다): 폭 `wide` 미만에서 패널 뒤를 `inert`로 막는 일(Minor, 이미 "다음"의 후속 후보와 (a)이고 사용자의 결정이 필요하다), `RunPanel`의 Esc 핸들러가 `defaultPrevented`를 보지 않는 일(claude-review Minor, "다음"의 (b)), 스토리의 다크 모드(CodeRabbit Minor: 앞 세션이 오탐으로 판정했다. 관리 화면 사진 비교가 라이트·다크를 모두 찍는다), `RunList`·`ConversationList` 되풀이 모양(티켓 11이 `/runs`를 걷으며 줄인다, "다음" 첫 항목), `stale`의 `Date.now()` 의존을 `turns.ts` 독스트링에 적는 일(Nit).
