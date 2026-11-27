@@ -108,6 +108,7 @@ pre-commit의 `check-mutations`가 변이 다섯의 원문이 사라졌다며 �
 - `start.ts`의 `build`는 아직 사이트 파일을 읽고 같은 진단으로 끝난다. 02가 바꾸면 `start.spawn.test.ts`의 빌드 사례도 함께 바꾼다.
 - `.scratch/web-widget/probes/conversation_mutations.toml`과 `storage_mutations.toml`이 지운 `lib/build.ts`를 변이 대상으로 가리킨다. 그 변이 열을 돌릴 일이 생기면 대상을 `lib/runtime.ts`로 옮긴다.
 - 코드의 `settings`·`WidgetSettings` 이름이 CONTEXT.md의 "위젯 설정"과 겹친다. widget-login-state가 두 받기를 합칠 때 함께 정한다.
+- 같은 앱 폴더에서 사이트 파일이 다른 `start`·`dev`를 둘 이상 띄우면 `public/runtime.json`은 마지막에 쓴 쪽의 값이 된다(PR 직전 CodeRabbit 리뷰의 Minor를 보류했다). 티켓 03이 이미지가 값 파일을 쓰는 자리를 정할 때 함께 정하도록 03 파일의 문서 절에 적었다.
 
 ## 인계
 
@@ -127,3 +128,11 @@ PR 본문에 적을 것: 사진 비교의 새 정답 넷, 단독 배포 e2e 15�
 - 백그라운드로 도는 작업은 없다(커밋이 끝났다). `git worktree unlock`으로 이 워크트리의 잠금을 푼다.
 - 경계는 `커밋 뒤`다. 일지 경로는 `docs/journal/2026-11-27-2133-start-writes-values-file-and-widget-reads-it.md`다.
 - open-session을 부른다 2026-11-27T13:45:05Z
+
+## PR 직전 리뷰와 병합 준비(세 번째 세션)
+
+- `origin/dev`(`a11fffed4`, admin-login 09)를 이 브랜치에 병합했다. 충돌은 없었다. 같은 파일을 고친 `web/eslint.config.mjs`·`web/eslint.config.test.ts`는 합친 뒤 `pnpm -C web exec vitest run eslint.config.test.ts`를 손으로 쳐 121개 모두 통과했다.
+- PR 직전 `coderabbit-review` 서브에이전트를 돌렸고 그 보고를 받았다(아래 판정과 근거는 서브에이전트가 코드를 읽고 낸 것이며 이 세션은 CLI 출력 원본을 열어 보지 않았다). 서브에이전트가 보고한 바로는 CLI 0.7.5가 `Seat: not assigned`에서도 끝까지 돌았고(`--base origin/dev`, 파일 47개) 지적 3건을 냈다. 유효 0, 보류 1(Minor), 오탐 2였다.
+  - 보류: `tools/runtime.ts`의 값 파일 쓰기가 같은 앱 폴더의 동시 기동에서 마지막 쓴 쪽의 값이 된다. CodeRabbit은 Major로 냈지만 서브에이전트가 코드를 읽고 닿는 길이 위젯 e2e와 위젯 테스트 페이지 e2e를 한 기기에서 동시에 돌릴 때뿐이고 운영은 폴더당 서비스 하나라 Minor로 판정했다(동시 기동은 돌려 보지 않았다). 티켓 03의 문서 절과 위 "다음"에 넘겼다.
+  - 오탐: `CONTEXT.md`의 "값 파일" 풀이에서 경로와 재기동 절차를 빼라는 문체 지적(그 풀이는 값 파일이 담는 것을 이미 푼다), `serve.ts`의 `requestChars`가 TOML에서 지수 표기로 나올 수 있다는 지적(`String(n)`이 지수 꼴이 되는 것은 1e21부터라는 것은 언어 규칙으로 아는 것이고 이 인자는 코드를 읽으니 e2e의 1,500 하나만 받는다).
+- 로컬 모델 시험(`-m llm_local`)은 이 PR의 변경이 `web/`과 문서뿐이라 병합 조건 범위 밖이어서 돌리지 않았다.

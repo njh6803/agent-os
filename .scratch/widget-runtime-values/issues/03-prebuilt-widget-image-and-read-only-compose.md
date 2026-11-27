@@ -43,6 +43,7 @@
 
 - [ ] 위젯 컨테이너가 뜰 때 빌드한다고 적은 말을 저장소 전체에서 찾아 살아 있는 문서와 주석에서 고친다(명세 "구현 티켓이 코드와 같은 티켓에서 고치는 문서"의 이미지 티켓 몫). 찾는 말의 예는 "뜰 때 빌드", "다시 빌드", "사이트 파일로 빌드"다. 이 티켓을 쓸 때 본 자리는 `deploy/images/widget.Dockerfile`과 `deploy/standalone/compose.yaml`의 주석, `deploy/standalone/README.md`, 위의 단독 배포 e2e 주석 둘이다. `.github/workflows/ci.yml`의 `e2e-standalone` 잡 주석도 그때 다시 본다. release-image의 명세와 티켓은 끝난 기능의 기록이라 고치지 않는다
 - [ ] deploy-package의 기능 계획에 이 명세가 적어 둔 새 값(메모리, 뜨는 시간)이 이 티켓이 잰 값과 어긋나면 그 문단을 고친다
+- [ ] 값 파일 `public/runtime.json`은 앱 폴더 안 한 자리라, 같은 앱 폴더에서 사이트 파일이 다른 `start`나 `dev`를 둘 이상 띄우면 마지막에 쓴 쪽의 값이 된다(01의 PR 직전 CodeRabbit 리뷰가 낸 Minor를 보류했다. 닿는 길은 위젯 e2e와 위젯 테스트 페이지 e2e를 한 기기에서 동시에 돌릴 때뿐이고 CI는 잡이 나뉘어 닿지 않는다). 이 티켓이 이미지가 값 파일을 쓰는 자리를 정할 때 함께 정한다. 폴더당 서비스 하나가 전제라는 것을 `web/apps/widget/tools/runtime.ts` 머리 주석이나 배포 안내에 한 줄 적거나, 자리를 서비스마다 가르는 쪽으로 풀지 고른다
 
 ### 마지막 티켓이면
 
