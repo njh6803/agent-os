@@ -11,6 +11,15 @@
 적는다. 비활성, 잠김, 쓴 지 10초가 지난 번호는 거절하면서 로그인 한 건도 끊는다. 이 거절은 예외가
 아니라 정상 반환이라 트랜잭션이 커밋된다. 판정은 `login_tokens.judge_refresh`가 한다.
 
+**링크로 비밀번호 정하기의 차례.** 링크를 먼저 짧게 들여다보고(쓸 수 없으면 404), 비밀번호 규칙을
+보고(어기면 422), 해시를 연결 밖에서 만든 뒤, 한 트랜잭션에서 링크를 다시 잠가 쓰고 해시를 적고
+로그인을 모두 끊는다. 같은 링크로 동시에 온 둘은 계정과 링크 줄의 잠금이 차례로 세워 하나만 쓴다.
+
+**내 비밀번호 바꾸기의 차례.** 새 비밀번호 규칙(틀려도 횟수에 들지 않는다), 잠김, 지금 비밀번호
+견줌(로그인처럼 횟수를 미리 늘리고 연결 없이 견준다), 새 해시를 연결 밖에서 만든 뒤 줄을 다시
+잠가 견준 해시 그대로일 때만 저장한다. 바꾼 브라우저의 로그인만 남기고 그 계정의 다른 로그인을
+모두 끊는다.
+
 **해시 전용 스레드 넷.** 해시 한 번은 19 MiB 를 쓰고, 일꾼 스레드가 정리된 뒤에도 그만큼이 상주로
 남았다(남는 까닭은 어림이다). 해시가 기본 일꾼 스레드 묶음의 여러 스레드(36~43개)에 돌아가며 얹히면
 685~818 MiB 가 남았고, 전용 넷에서는 76 MiB 였다(프로브 `.scratch/admin-login/probes/hash_load/`).
@@ -28,7 +37,6 @@
 from __future__ import annotations
 
 import asyncio
-import hashlib
 import os
 import secrets
 import uuid
@@ -37,11 +45,14 @@ from concurrent.futures import ThreadPoolExecutor
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from datetime import datetime, timedelta
+from typing import Literal
 
 from agent_os.core.ports import Clock
+from agent_os.http.account_admin import token_digest
 from agent_os.http.accounts import (
     AccountRow,
     AccountStore,
+    AccountWork,
     fold_account_name,
     is_account_name,
 )
@@ -58,7 +69,12 @@ from agent_os.http.login_tokens import (
     refresh_max_age,
     verify_token,
 )
-from agent_os.http.passwords import hash_password, needs_rehash, password_matches
+from agent_os.http.passwords import (
+    hash_password,
+    needs_rehash,
+    password_matches,
+    password_problem,
+)
 
 HASH_THREADS = 4
 SIGNING_KEY_BYTES = 32
@@ -243,7 +259,7 @@ class LoginService:
         if token is None or not token.isascii() or not 0 < len(token) <= _MAX_REFRESH_TOKEN:
             return None
         key = await self._keys.current()
-        digest = _digest(token)
+        digest = token_digest(token)
         async with self._accounts.transaction() as work:
             row = await work.lock_refresh(digest)
             if row is None:
@@ -273,7 +289,7 @@ class LoginService:
                 return None
             new_token = secrets.token_urlsafe(32)
             await work.use_refresh_token(digest, at=now)
-            await work.add_refresh_token(_digest(new_token), row.login_id, at=now)
+            await work.add_refresh_token(token_digest(new_token), row.login_id, at=now)
             await work.touch_login(row.login_id, at=now)
         access = issue_token(
             key,
@@ -293,6 +309,95 @@ class LoginService:
             await work.end_login(claims.login_id, at=now)
             await work.record("logged_out", at=now, account=claims.name, address=address)
         return clearing_cookie_lines()
+
+    async def set_password_by_link(
+        self, token: str, password: str, *, address: str | None
+    ) -> Literal["done", "unusable", "rule"]:
+        """링크로 비밀번호를 정한다. 로그인시키지 않는다. 링크가 쓸 수 없으면 `unusable`,
+        비밀번호가 규칙을 어기면 `rule` 이다(링크를 먼저 본다)."""
+        await self.ready()
+        digest = token_digest(token)
+        async with self._accounts.transaction() as work:
+            if await self._usable_link(work, digest) is None:
+                return "unusable"
+        if password_problem(password) is not None:
+            return "rule"
+        new_hash = await self._hash(password)
+        async with self._accounts.transaction() as work:
+            name = await self._usable_link(work, digest)
+            if name is None:
+                return "unusable"
+            now = self._clock.now()
+            await work.reset_password(name, password_hash=new_hash)
+            await work.use_link(digest, at=now)
+            await work.end_logins(name, at=now)
+            await work.record("password_set_by_link", at=now, account=name, address=address)
+            return "done"
+
+    async def change_password(
+        self, claims: LoginClaims, current: str, new: str, *, address: str | None
+    ) -> Literal["changed", "rule", "locked", "wrong_current", "gone"]:
+        """로그인한 계정이 자기 비밀번호를 바꾼다. 바꾼 브라우저의 로그인만 남긴다.
+
+        `gone` 은 그 계정이 더는 로그인할 수 없다(비활성이거나 지워졌다)는 뜻이다.
+        """
+        await self.ready()
+        if password_problem(new) is not None:
+            return "rule"
+        attempt = await self._take_change_attempt(claims.name)
+        if isinstance(attempt, str):
+            return attempt
+        if not await self._compare(attempt.stored_hash, current):
+            if attempt.locked:
+                await self._record_lock(attempt.name, address=address)
+            return "wrong_current"
+        new_hash = await self._hash(new)
+        async with self._accounts.transaction() as work:
+            row = await work.lock(attempt.name)
+            now = self._clock.now()
+            # 견주는 사이에 계정이 지워졌거나 비활성이 됐으면 더는 로그인할 수 없는 계정이고, 링크로
+            # 비밀번호가 정해졌으면 견준 것이 이미 옛 비밀번호다. 어느 쪽이든 아무것도 바꾸지 않는다
+            if row is None or row.disabled_at is not None:
+                return "gone"
+            if row.password_hash != attempt.stored_hash:
+                return "wrong_current"
+            await work.reset_password(row.name, password_hash=new_hash)
+            await work.end_other_logins(row.name, keep=claims.login_id, at=now)
+            await work.record("password_changed", at=now, account=row.name, address=address)
+            return "changed"
+
+    async def _usable_link(self, work: AccountWork, digest: str) -> str | None:
+        """링크를 잠가 읽고 쓸 수 있으면 그 계정의 이름을 돌려준다. 쓰지 않았고 못 쓰게 하지 않았고
+        기한 안이고 계정이 비활성이 아니어야 한다."""
+        link = await work.lock_link(digest)
+        now = self._clock.now()
+        if link is None or link.used_at is not None or link.voided_at is not None:
+            return None
+        if link.expires_at <= now:
+            return None
+        account = await work.read_account(link.account)
+        if account is None or account.disabled_at is not None:
+            return None
+        return account.name
+
+    async def _take_change_attempt(self, name: str) -> _Counted | Literal["locked", "gone"]:
+        """줄을 잠가 읽고 틀린 횟수를 미리 하나 늘린다. 잠겼으면 줄을 바꾸지 않는다."""
+        async with self._accounts.transaction() as work:
+            row = await work.lock(name)
+            now = self._clock.now()
+            if row is None or row.disabled_at is not None or row.password_hash is None:
+                return "gone"
+            if row.locked_until is not None and row.locked_until > now:
+                return "locked"
+            failures = row.failures + 1
+            length = lock_duration(failures)
+            until = None if length is None else now + length
+            await work.set_failures(name, failures=failures, locked_until=until)
+            return _Counted(row.name, row.password_hash, until is not None)
+
+    async def _record_lock(self, account: str, *, address: str | None) -> None:
+        async with self._accounts.transaction() as work:
+            await work.record("locked", at=self._clock.now(), account=account, address=address)
 
     async def _take_attempt(self, name: str) -> _Counted | _Rejected:
         """줄을 잠가 읽고 틀린 횟수를 미리 하나 늘린다. 거절하는 갈래는 줄을 바꾸지 않는다."""
@@ -340,7 +445,7 @@ class LoginService:
             login_id = uuid.uuid4()
             refresh_token = secrets.token_urlsafe(32)
             await work.open_login(login_id, row.name, at=now)
-            await work.add_refresh_token(_digest(refresh_token), login_id, at=now)
+            await work.add_refresh_token(token_digest(refresh_token), login_id, at=now)
             await work.record("login_succeeded", at=now, account=row.name, address=address)
             return row, login_id, refresh_token, now
 
@@ -371,11 +476,6 @@ class LoginService:
         if self._fake_hash is None:
             raise RuntimeError("가짜 해시가 없다. ready() 를 먼저 부른다")
         return self._fake_hash
-
-
-def _digest(token: str) -> str:
-    """갱신용 번호의 SHA-256 해시(16진수). 서버에는 이것만 둔다."""
-    return hashlib.sha256(token.encode("ascii")).hexdigest()
 
 
 def _minutes(count: int) -> timedelta:

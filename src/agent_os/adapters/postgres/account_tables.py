@@ -6,10 +6,9 @@ SQL 을 글로 적지 않고 표 정의로 지으면 칸마다 타입이 붙어,
 칸 이름과 값을 타입 검사가 보지 않으므로, 표 정의와 실제 표(마이그레이션)가 맞는지와 쓰기의 칸
 이름은 진짜 데이터베이스에 대고 도는 시험이 본다(`tests/adapters/test_postgres_accounts.py`).
 
-마이그레이션(`0002`)이 표의 원천이다. 이 정의는 표 다섯(계정, 로그인, 갱신용 번호, 서명 키, 로그인
-기록)만 들고 칸은 표마다 모두 적는다. 칸 이름과 타입을 실제 표와 견주는 시험이 표 전체를 보기
-때문이다. 비밀번호 링크의 표는 그 표를 읽고 쓰는 티켓이 이 모듈에 더한다. 시각 칸에는 기본값을 두지
-않는다. 시각은 부르는 쪽이 시계에서 읽어 넘긴다.
+마이그레이션(`0002`)이 표의 원천이다. 이 정의는 표 여섯(계정, 로그인, 갱신용 번호, 비밀번호 링크,
+서명 키, 로그인 기록)을 들고 칸은 표마다 모두 적는다. 칸 이름과 타입을 실제 표와 견주는 시험이 표
+전체를 보기 때문이다. 시각 칸에는 기본값을 두지 않는다. 시각은 부르는 쪽이 시계에서 읽어 넘긴다.
 """
 
 from __future__ import annotations
@@ -80,6 +79,25 @@ REFRESH_TOKENS = Table(
     REFRESH_LOGIN_ID,
     REFRESH_CREATED_AT,
     REFRESH_USED_AT,
+)
+
+LINK_TOKEN_HASH = Column("token_hash", Text, nullable=False)
+LINK_ACCOUNT = Column("account", Text, nullable=False)
+LINK_CREATED_AT = Column("created_at", DateTime(timezone=True), nullable=False)
+LINK_EXPIRES_AT = Column("expires_at", DateTime(timezone=True), nullable=False)
+LINK_USED_AT: Column[datetime | None] = Column("used_at", DateTime(timezone=True), nullable=True)
+LINK_VOIDED_AT: Column[datetime | None] = Column(
+    "voided_at", DateTime(timezone=True), nullable=True
+)
+PASSWORD_LINKS = Table(
+    "operator_password_links",
+    metadata,
+    LINK_TOKEN_HASH,
+    LINK_ACCOUNT,
+    LINK_CREATED_AT,
+    LINK_EXPIRES_AT,
+    LINK_USED_AT,
+    LINK_VOIDED_AT,
 )
 
 SIGNING_KEY_ID = Column("id", Integer, nullable=False)

@@ -173,10 +173,16 @@ expectTypeOf<시작의_429["limit"]>().toEqualTypeOf<
 // 채널의 경로면 `clients.ts` 의 채널 경로 목록에, 최종 사용자의 경로면 그 목록에, 관리의 경로면 아래 목록에 더한다.
 // 고칠 자리가 컴파일러 앞에 선다.
 expectTypeOf<keyof AdminPaths>().toEqualTypeOf<
+  | "/accounts"
+  | "/accounts/{name}/active"
+  | "/accounts/{name}/link"
+  | "/accounts/{name}/unlock"
   | "/auth/login"
   | "/auth/logout"
   | "/auth/me"
+  | "/auth/password"
   | "/auth/refresh"
+  | "/auth/set-password"
   | "/auth/setup"
   | "/health"
   | "/conversations"

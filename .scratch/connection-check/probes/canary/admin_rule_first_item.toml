@@ -3,7 +3,9 @@
 # 실험군은 규칙의 paths 안(src/agent_os/admin/), 대조군은 밖(README.md)을 읽는다. 둘 다 이 체크아웃이다.
 # 질문은 선례 `.scratch/mcp-http/probes/canary/adapters_rule_http_close.toml` 처럼 Read 결과에 붙어 실린 규칙도
 # 지시라고 밝힌다. 기대 낱말은 바뀐 문장에만 있다(`traces.py` 에는 없다).
-# 최신 결과: 통과 4(2026-11-22, 이 PC의 connection-check 티켓 01 워크트리, claude 2.1.325, HEAD a2c318849 위의 커밋하지 않은
+# 최신 결과: 통과 4(2026-11-27, 이 PC의 admin-login 티켓 06 워크트리, claude 2.1.325, HEAD c3ad162fc 위의 커밋하지 않은
+# 작업 트리, 일지 2026-11-27-1647. 티켓 06 이 같은 항목에 계정을 다루는 경로와 내 비밀번호 바꾸기가 409를 낸다는 문장을 더했다).
+# 앞 판은 통과 4(2026-11-22, 이 PC의 connection-check 티켓 01 워크트리, claude 2.1.325, HEAD a2c318849 위의 커밋하지 않은
 # 작업 트리, 일지 2026-11-22-1335). 실험군 셋이 두 구절을 글자 그대로 옮겼고 대조군은 "없음"이었다.
 # 돌리는 법: uv run python tools/canary.py .scratch/connection-check/probes/canary/admin_rule_first_item.toml <출력 디렉터리>
 kind = "rule"

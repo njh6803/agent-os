@@ -2,6 +2,75 @@
 // openapi-typescript 의 출력에서 재귀 Json 한 자리만 unknown 으로 바꿨다(web/tools/generate-api-client.ts).
 
 export interface paths {
+  "/accounts": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** 계정 전부를 시스템 관리자부터 이름순으로 읽는다 */
+    get: operations["list_accounts"];
+    put?: never;
+    /** 관리자 계정을 비밀번호 없이 만들고 첫 비밀번호 링크를 받는다 */
+    post: operations["create_account"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/accounts/{name}/active": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    /** 계정을 활성이나 비활성으로 바꾼다. 이미 그 상태면 아무것도 바꾸지 않는다 */
+    put: operations["set_account_active"];
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/accounts/{name}/link": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** 그 계정의 앞 링크를 못 쓰게 하고 새 비밀번호 링크를 만든다 */
+    post: operations["create_password_link"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/accounts/{name}/unlock": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** 계정의 잠금과 틀린 횟수를 지운다 */
+    post: operations["unlock_account"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/auth/login": {
     parameters: {
       query?: never;
@@ -53,6 +122,23 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/auth/password": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** 로그인한 계정이 자기 비밀번호를 바꾼다. 이 브라우저의 로그인만 남는다 */
+    post: operations["change_my_password"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/auth/refresh": {
     parameters: {
       query?: never;
@@ -64,6 +150,23 @@ export interface paths {
     put?: never;
     /** 갱신용 번호 쿠키 하나로 로그인을 잇고 새 쿠키 둘을 받는다 */
     post: operations["refresh_login"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/auth/set-password": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** 비밀번호 링크로 비밀번호를 정한다. 로그인은 시키지 않는다 */
+    post: operations["set_password_by_link"];
     delete?: never;
     options?: never;
     head?: never;
@@ -347,6 +450,39 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
   schemas: {
+    /**
+     * AccountList
+     * @description 계정 목록. 시스템 관리자가 먼저이고 나머지는 이름순이다.
+     */
+    AccountList: {
+      /** Accounts */
+      accounts: components["schemas"]["AccountSummary"][];
+    };
+    /**
+     * AccountSummary
+     * @description 계정 목록의 줄. 이름과 단계와 상태와 잠겨 풀리는 시각과 만든 시각.
+     */
+    AccountSummary: {
+      /**
+       * Created At
+       * Format: date-time
+       */
+      created_at: string;
+      /** Locked Until */
+      locked_until: string | null;
+      /** Name */
+      name: string;
+      /**
+       * State
+       * @enum {string}
+       */
+      state: "active" | "disabled" | "password_unset";
+      /**
+       * Tier
+       * @enum {string}
+       */
+      tier: "system_admin" | "admin";
+    };
     /** @enum {string} */
     AppliedRule: "deny" | "requires_approval" | "ask" | "allow" | "default";
     /**
@@ -423,6 +559,16 @@ export interface components {
        * @enum {string}
        */
       type: "calling";
+    };
+    /**
+     * ChangePasswordRequest
+     * @description 내 비밀번호 바꾸기 요청. 지금 비밀번호와 새 비밀번호를 받는다.
+     */
+    ChangePasswordRequest: {
+      /** Current Password */
+      current_password: string;
+      /** New Password */
+      new_password: string;
     };
     /**
      * CheckableKind
@@ -551,6 +697,29 @@ export interface components {
        * @enum {string}
        */
       type: "conversation_summarized";
+    };
+    /**
+     * CreateAccountRequest
+     * @description 계정 만들기 요청. 새 계정의 이름을 받는다.
+     */
+    CreateAccountRequest: {
+      /** Name */
+      name: string;
+    };
+    /**
+     * CreatedAccount
+     * @description 만든 계정의 이름과 그 계정의 첫 비밀번호 링크.
+     */
+    CreatedAccount: {
+      /**
+       * Link Expires At
+       * Format: date-time
+       */
+      link_expires_at: string;
+      /** Link Token */
+      link_token: string;
+      /** Name */
+      name: string;
     };
     /**
      * DecidedItem
@@ -806,6 +975,19 @@ export interface components {
      * @enum {string}
      */
     ModelProvider: "anthropic" | "openai-compatible";
+    /**
+     * PasswordLink
+     * @description 새 비밀번호 링크. 토큰과 그 기한이다.
+     */
+    PasswordLink: {
+      /**
+       * Link Expires At
+       * Format: date-time
+       */
+      link_expires_at: string;
+      /** Link Token */
+      link_token: string;
+    };
     /**
      * PausedItem
      * @description 승인을 기다리며 멈췄다. 멈춘 도구와 그 인자를 든다. 이 항목의 id 가 결정의 pause_index 다.
@@ -1107,12 +1289,30 @@ export interface components {
       retry?: number | null;
     };
     /**
+     * SetActiveRequest
+     * @description 활성과 비활성을 바꾸는 요청. 엄격한 불린 하나를 받는다.
+     */
+    SetActiveRequest: {
+      /** Active */
+      active: boolean;
+    };
+    /**
      * SetEnabled
      * @description 켜짐 하나를 쓰는 요청. 거짓이면 끄고 참이면 켠다. 이미 그 상태여도 성공이다.
      */
     SetEnabled: {
       /** Enabled */
       enabled: boolean;
+    };
+    /**
+     * SetPasswordRequest
+     * @description 링크로 비밀번호 정하기 요청. 링크 토큰과 새 비밀번호를 받는다.
+     */
+    SetPasswordRequest: {
+      /** Password */
+      password: string;
+      /** Token */
+      token: string;
     };
     /**
      * Setup
@@ -1308,6 +1508,341 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+  list_accounts: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["AccountList"];
+        };
+      };
+      /** @description 토큰이 없거나 틀리다 */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorEnvelope"];
+        };
+      };
+      /** @description 이 요청의 출처를 받지 않는다 */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorEnvelope"];
+        };
+      };
+      /** @description 서버가 요청을 처리하지 못했다 */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorEnvelope"];
+        };
+      };
+    };
+  };
+  create_account: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["CreateAccountRequest"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CreatedAccount"];
+        };
+      };
+      /** @description 토큰이 없거나 틀리다 */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorEnvelope"];
+        };
+      };
+      /** @description 이 요청의 출처를 받지 않는다 */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorEnvelope"];
+        };
+      };
+      /** @description 같은 이름의 계정이 이미 있다 */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorEnvelope"];
+        };
+      };
+      /** @description 요청의 형식이 올바르지 않다 */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorEnvelope"];
+        };
+      };
+      /** @description 서버가 요청을 처리하지 못했다 */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorEnvelope"];
+        };
+      };
+    };
+  };
+  set_account_active: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        name: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["SetActiveRequest"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description 토큰이 없거나 틀리다 */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorEnvelope"];
+        };
+      };
+      /** @description 이 요청의 출처를 받지 않는다 */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorEnvelope"];
+        };
+      };
+      /** @description 찾는 것이 없다 */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorEnvelope"];
+        };
+      };
+      /** @description 있지만 상태나 주체가 요청을 허락하지 않는다 */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorEnvelope"];
+        };
+      };
+      /** @description 요청의 형식이 올바르지 않다 */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorEnvelope"];
+        };
+      };
+      /** @description 서버가 요청을 처리하지 못했다 */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorEnvelope"];
+        };
+      };
+    };
+  };
+  create_password_link: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        name: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PasswordLink"];
+        };
+      };
+      /** @description 토큰이 없거나 틀리다 */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorEnvelope"];
+        };
+      };
+      /** @description 이 요청의 출처를 받지 않는다 */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorEnvelope"];
+        };
+      };
+      /** @description 찾는 것이 없다 */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorEnvelope"];
+        };
+      };
+      /** @description 있지만 상태나 주체가 요청을 허락하지 않는다 */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorEnvelope"];
+        };
+      };
+      /** @description 요청의 형식이 올바르지 않다 */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorEnvelope"];
+        };
+      };
+      /** @description 서버가 요청을 처리하지 못했다 */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorEnvelope"];
+        };
+      };
+    };
+  };
+  unlock_account: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        name: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description 토큰이 없거나 틀리다 */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorEnvelope"];
+        };
+      };
+      /** @description 이 요청의 출처를 받지 않는다 */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorEnvelope"];
+        };
+      };
+      /** @description 찾는 것이 없다 */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorEnvelope"];
+        };
+      };
+      /** @description 요청의 형식이 올바르지 않다 */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorEnvelope"];
+        };
+      };
+      /** @description 서버가 요청을 처리하지 못했다 */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorEnvelope"];
+        };
+      };
+    };
+  };
   log_in: {
     parameters: {
       query?: never;
@@ -1462,6 +1997,73 @@ export interface operations {
       };
     };
   };
+  change_my_password: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ChangePasswordRequest"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description 토큰이 없거나 틀리다 */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorEnvelope"];
+        };
+      };
+      /** @description 이 요청의 출처를 받지 않는다 */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorEnvelope"];
+        };
+      };
+      /** @description 계정이 잠겼다 */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorEnvelope"];
+        };
+      };
+      /** @description 요청의 형식이 올바르지 않다 */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorEnvelope"];
+        };
+      };
+      /** @description 서버가 요청을 처리하지 못했다 */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorEnvelope"];
+        };
+      };
+    };
+  };
   refresh_login: {
     parameters: {
       query?: never;
@@ -1493,6 +2095,64 @@ export interface operations {
       };
       /** @description 이 요청의 출처를 받지 않는다 */
       403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorEnvelope"];
+        };
+      };
+      /** @description 서버가 요청을 처리하지 못했다 */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorEnvelope"];
+        };
+      };
+    };
+  };
+  set_password_by_link: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["SetPasswordRequest"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description 이 요청의 출처를 받지 않는다 */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorEnvelope"];
+        };
+      };
+      /** @description 링크가 없거나 이미 썼거나 기한이 지났거나 못 쓰게 됐다 */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorEnvelope"];
+        };
+      };
+      /** @description 요청의 형식이 올바르지 않다 */
+      422: {
         headers: {
           [name: string]: unknown;
         };
