@@ -188,3 +188,84 @@ Critical 0, Major 1, Minor 7, Nit 2다. 두 갈래의 문구가 명세의 여러
 8. 티켓 01: `site-file.ts`의 "머리 주석 7~10줄", "두 이름의 문서 주석(34~40줄)", "사이트 모델 주석(60~61줄)", `setup.ts`의 "25~26줄의 `vi.stubEnv` 두 줄".
 9. 명세 310줄과 넘김 문단: "어느 쪽이 먼저 병합될지는 어림이다", "이 행의 명세는 '위젯 설정이 올바르지 않습니다.'를 바꾸지 않는다고 정했으므로(그 명세의 문구 표 아래 항목)".
 10. 티켓 03의 풀이: tini는 "컨테이너의 첫 프로세스로 떠서 끄라는 신호를 위젯에 전하는 작은 프로그램", digest는 "이미지의 내용으로 지은 고유 값", tmpfs는 "디스크가 아니라 메모리에 두는 폴더. 컨테이너가 꺼지면 비워진다".
+
+### 커밋
+
+`uv run python tools/plan_table.py`는 출력 없이 끝났고 `.scratch/plan.md`는 바뀌지 않았다(`git status --short`에 없었다). 커밋 직전 `git branch --show-current`는 `docs/widget-runtime-values-tickets`였고, `tools/sibling_overlap.py`는 번호 겹침과 함께 고친 파일이 없다고 냈다. 반영까지를 `a3695e87b`(6파일)로 커밋했다. 커밋은 Bash 백그라운드로 띄웠고 종료 0이었다. pre-commit 출력에 찍힌 시간은 pytest 696.0초, web-verify 795.6초, run-hooks 128.1초, pyright 68.6초, pyright-linux 76.7초다. 마크다운 표·줄 구분 문자·변이 표·커밋 메시지 검사는 지났고, 카나리아 명세와 헌법 판 검사는 고친 파일이 없어 `Skipped`였다. 인용 대조는 막지 않는 경고 13건을 냈다. 열둘은 사용자에게 보인 선택 화면의 글(저장소에 원문이 없다)과 고치기 전 문장을 이 일지가 따옴표로 옮긴 자리이고, 하나는 티켓 01이 `CONTEXT.md`의 문장을 줄임표로 줄여 옮긴 자리라 고치지 않았다. 나란히 돈 다른 세션의 부하는 재지 않았다.
+
+## 인계(커밋 뒤)
+
+커밋을 백그라운드로 띄운 호출의 결과에 인계 계기(`hook_handoff`)가 붙어 왔다. 세션 컨텍스트 325,334 토큰, 경계 `커밋 뒤`이고, 커밋이 끝나기 전이었다. 계기 문장대로 `.claude/skills/next-session/handoff.md`를 Read로 열었고, 끝 알림을 기다려 커밋의 성공(종료 0)을 본 뒤 판정했다. 인계하지 않는 다섯 경우에 들지 않았다. 명령은 성공했고, 요청 범위는 PR과 병합까지이며, 이 세션의 지시문의 이어받을 상태는 `인계: 셀프 리뷰 직전`으로 다른 경계이고, 이 일지에 `인계 못함` 줄이 없으며, `get_session`의 `self`에 `parentSessionId`가 없었다. 그래서 넘긴다. 이 인계 절은 커밋하지 않았고 새 세션이 이어 쓴다. 이 세션이 띄운 백그라운드 작업 가운데 아직 도는 것은 없다(리뷰 서브에이전트 둘과 커밋 명령은 끝났다). 이 세션의 지금 제목은 `docs/widget-runtime-values-tickets`다.
+
+낸 지시문:
+
+다음 작업: 기능 widget-runtime-values. 병합된 명세(.scratch/widget-runtime-values/spec.md)를 검토하고 티켓으로 나눈다
+다음 단계: 티켓
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /to-tickets .scratch/widget-runtime-values/spec.md
+브랜치: docs/widget-runtime-values-tickets
+모델: Opus 5.5 / xhigh. 2의 잇는 지시문
+읽을 것: docs/journal/2026-11-27-1523-widget-runtime-values-tickets.md의 "이어받은 세션(16:30쯤)"부터 끝까지(셀프 리뷰 두 축의 판정과 반영, PR 직전 리뷰에 밀 주장 열, 커밋, 이 인계). 앞부분은 PR 본문을 쓸 때 필요한 만큼만 연다
+이어받을 상태: 인계: 커밋 뒤. 셀프 리뷰와 반영을 마치고 커밋했다. 푸시하지 않았고 PR도 없다. 일지의 "커밋"·"인계(커밋 뒤)" 절은 커밋하지 않은 변경으로 워크트리에 있다. 남은 것은 PR 직전 CLI 리뷰(coderabbit-review, 못 돌면 /security-review와 bug-perf-review. bug-perf-review 브리프에는 일지 "반영"의 새 사실 문장 열을 밀 주장으로 넘긴다), 그 반영, 푸시와 PR, 봇 회차, 병합, 회고, 다음 지시문이다. 회고가 더할 회차: 대기열 docs-only-commit-precommit-slow-again에 PR #654 셋째 커밋(672.53초, 코멘트 issuecomment-7205036266)과 이 브랜치의 첫 커밋(일지 "커밋"의 시간), 0518과 handoff-trigger-before-background-commit-ends에 PR #654 셋째 커밋 때의 한 번(같은 코멘트, 둘은 같은 사건), handoff-trigger-before-background-commit-ends에 이 브랜치의 첫 커밋 때의 한 번(일지 "인계(커밋 뒤)", `인계 못함` 뒤가 아니라 518의 회차는 아니다). admin-login 05(PR #653)의 봇 보류 하나(관리 라우터의 public에 /health 외의 라우트가 붙는 것을 막는 시험이 없다, issuecomment-7199113820)는 이 기능의 일이 아니고, admin-login을 잇는 세션이 이어받도록 다음 지시문에 옮긴다. docs/journal/2026-11-27-1523-widget-runtime-values-tickets.md
+확인할 선행 조건: 없음
+이번 요청 범위: PR과 병합까지
+
+제목을 `docs/widget-runtime-values-tickets (인계함)`으로 바꿨다. `git worktree unlock C:/project/agent/.claude/worktrees/widget-runtime-values-tickets`는 `is not locked`(종료 128)로 끝나 넘어갔다.
+
+open-session을 부른다 2026-11-27T08:16:34Z
+
+## 이어받은 세션 2(17:10쯤)
+
+위 지시문으로 연 새 세션이다. 모델은 Opus 5.5. 세션 제목을 `docs/widget-runtime-values-tickets`로 바꾸고, `git worktree list`에서 그 브랜치가 이 워크트리에 체크아웃된 것을 보고 `EnterWorktree(path)`로 들어왔다. `git status --short`는 이 일지 하나만 고친 것으로 냈고, 머리는 `a3695e87b`였다.
+
+## PR 직전 CLI 리뷰
+
+`coderabbit-review` 서브에이전트가 `coderabbit review --agent --include-untracked --base origin/dev`를 끝까지 돌렸다(`review_completed`). 본 파일은 이 브랜치가 바꾼 여섯이고, 좌석은 `Seat: not assigned`(Plan: Free, CLI 0.7.5)였다(둘 다 서브에이전트의 보고이고 이 세션은 CLI 출력을 직접 보지 않았다). 리뷰가 돌았으므로 CLI 축이다. 대체 둘(`/security-review`, `bug-perf-review`)은 돌리지 않았다.
+
+지적은 1건이고 오탐으로 판정했다.
+
+- **(CLI 등급 Major) 티켓 02의 바꿔 넣는 규칙이 `frame-ancestors` 머리가 위젯 페이지에 실제로 걸리는지까지 보지 않는다.** 판정: 오탐. `web/apps/widget/next.config.ts`의 CSP 규칙은 `source: "/:path*"` 하나뿐이고 나머지 두 규칙은 `Access-Control-Allow-Origin`만 낸다(36~51줄을 읽었다). 경로를 바꾸는 일은 이 기능에 없고, 바뀌어도 티켓 02의 위젯 e2e가 "허용 출처의 페이지는 위젯을 품는다"로 잡는다.
+
+CLI가 돌아 일지 "반영"의 새 사실 문장 열을 밀 리뷰어는 없었다. 그래서 줄 번호를 든 것을 이 세션이 다시 읽어 대 봤고 모두 맞았다. 주 체크아웃 설치본 `next/dist/bin/next`의 134~140줄(빌드 뒤 `process.exit(0)`)과 243줄(`program.parse(process.argv)`), `src/agent_os/main.py` 619줄(`request_chars: int | None = Field(default=None, ge=1)`), `web/packages/site-file/src/site-file.ts`의 7~10줄(머리 주석의 "두 값을 `env` 로 번들에 싣는다"), 34~40줄(두 이름의 문서 주석), 60~61줄(사이트 모델 주석), 279줄(`Number(...)`), `web/apps/widget/testing/setup.ts` 25~26줄(`vi.stubEnv` 두 줄)이다. 문장의 뜻(Next가 빌드를 기다리지 않고 돌아온다, 무한대가 `null`로 나간다)은 다시 재지 않았다.
+
+## 회고
+
+이 브랜치의 세 세션과, 앞 지시문이 넘긴 PR #654의 셋째 커밋 때 일을 함께 봤다. 후보는 열아홉이고 승인 아홉(모두 회차로 세는 것이고 이 세션에서 반영한 것은 없다), 기각 열, 넘김 0이다. 넘긴 것이 없어 사용자에게 묻지 않았다. 항목 찾기는 `tools/queue_open_rows.py --search`로 했고, 만료할 항목은 로컬 판에서 없어서(`--today 2026-11-27`) `--ref origin/dev`로는 다시 돌리지 않았다(두 출력에 모두 든 것만 닫으므로 닫을 것이 없다).
+
+승인(회차로 세는 것):
+
+1. **명세 검토가 낸 시험을 잴 수 있는지 보지 않고 티켓에 옮겼다.** 명세 검토 G(서비스 시작이 빌드 도구를 불러오지 않는다는 것을 막는 시험이 없다)를 티켓 02의 "빌드 도구 없이 서는 사례"로 옮겼는데, 그 시험에는 빌드 산출물이 없고 래퍼가 저장소의 앱 폴더에 써서 지금 이음매로 잴 수 없었다. 셀프 리뷰 명세 축 Major 1이 잡았다. `to-tickets` 5단계의 문단(대기열 106)을 어긴 것이라 회차로 센다. 106은 닫혔고(3회차) 이어 올라온 항목이 없어 새 항목 `ticket-test-seam-unchecked-again`(0106의 4회차)으로 잇는다.
+2. **받는 기능이 먼저 돌 수 있는데 차례를 단정했다.** widget-login-state 기능 계획의 넘김 문단에 "전체 계획으로는 이 기능이 먼저 들어온다"고 적고 그 기능이 먼저 들어올 때의 몫을 티켓 01에 두지 않았다. 셀프 리뷰 명세 축 Minor 7이 잡았다. `to-tickets` 5단계의 "받는 쪽이 먼저 돌 수 있다"(대기열 3)를 어긴 것이다. 3은 닫혔고 승인 줄에 회차가 없어 그 스킬 문장의 "세 번"을 따라 새 항목 `handoff-order-assumed-between-features`(0003의 4회차)로 잇는다.
+3. **명세가 정하지 않은 구현 파일 경로를 티켓에 들었다.** 티켓 01의 `web/apps/widget/public/runtime.json`과 티켓 03의 `.dockerignore`다. 셀프 리뷰 명세 축 Nit 9가 잡았고, 두 자리를 명세에 정하는 것으로 고쳤다. `to-tickets` 템플릿 뒤 문단(대기열 400)을 어긴 것이다. 400은 30의 3회차로 닫혔고 이어 올라온 항목이 없어 새 항목 `ticket-cites-path-spec-did-not-assign`(0400의 4회차)으로 잇는다. 높은 층으로는 티켓의 백틱 경로를 명세·rules·ADR·시험 파일과 대 보는 알림 검사를 적었다.
+4. **계약을 바꾸는 둘째 티켓이 예외라고 적지 않았다.** 티켓 02가 헌법(`operations.md`, patch)을 고치는데 `docs/agents/issue-tracker.md` 43줄의 "계약을 바꾸는 티켓은 그 기능의 첫 티켓"의 예외와 까닭을 적지 않았다. 셀프 리뷰 명세 축 Minor 8이 잡았다. 같은 일의 항목이 없어(`첫.티켓이며`, `헌법을.바꾸는.티켓`으로 찾았다) 새 항목 `contract-ticket-not-first-unexplained`(1회차)를 쓴다. 선례 둘(postgres-foundation 03, design-system 02)이 같은 꼴로 예외를 적어 그 줄이 관행과 어긋나므로, 처방이 예외를 허용하는 문장이 되면 가드레일을 느슨하게 하는 것이라 넘긴다고 적었다.
+5. **티켓의 낯선 말에 풀이가 없었다.** 티켓 03의 심볼릭 링크, tmpfs, tini, digest다. 셀프 리뷰 표준 축 Nit 2가 잡았다. `CLAUDE.md` 원칙(처음 나올 때 풀이)과 `to-tickets` 2단계를 어긴 것이라 열린 `ticket-term-unexplained-at-first-use`에 더해 3회차다.
+6. **문서만 바꾼 커밋의 pre-commit이 다시 길었다.** 이 브랜치의 첫 커밋 `a3695e87b`에서 pytest 696.0초, web-verify 795.6초였다(일지 "커밋"). 같은 기능의 명세 PR #654 셋째 커밋은 그 세션의 회고 뒤에 672.53초였다(PR 코멘트 issuecomment-7205036266). 뒤의 것은 26회차와 같은 세션이라 회차로 따로 세지 않고 이 회차의 근거에 함께 적었다. `docs-only-commit-precommit-slow-again`에 더해 27회차다.
+7. **`인계 못함` 뒤에도 인계 계기가 다시 왔다.** PR #654 셋째 커밋을 백그라운드로 띄운 뒤 한 번이다(같은 PR 코멘트). 그 세션의 회고 뒤라 세지 못했다. `0518`에 더해 11회차다.
+8. **백그라운드 커밋이 끝나기 전에 인계 계기가 왔다(PR #654 셋째 커밋).** 7과 같은 사건이다. `handoff-trigger-before-background-commit-ends`에 더해 17회차다.
+9. **백그라운드 커밋이 끝나기 전에 인계 계기가 왔다(이 브랜치의 첫 커밋).** 계기가 커밋 호출의 결과에 붙어 왔고, 그 세션은 끝 알림으로 성공을 본 뒤 판정해 넘겼다(일지 "인계(커밋 뒤)"). `인계 못함` 뒤가 아니라 518의 회차는 아니다. 같은 항목에 더해 18회차다.
+
+기각:
+
+- 명세 축 Minor 2(Next를 부른 줄 뒤의 복사가 "돌지 않는다"가 틀렸다). 셀프 리뷰 브리프가 밀게 둔 사실 문장을 리뷰가 잡은 것이라 셈에서 뺐고, 검사로 옮길 수 없으며 새 판단 기준도 아니다.
+- 리뷰가 제 몫을 한 지적 여덟(표준 축 Minor 2·3과 Nit 1, 명세 축 Minor 3·4·6과 Nit 5, CLI 축의 오탐 하나). 같은 까닭이다.
+- 첫 세션의 선택 화면을 `hook_choice_facts`가 두 번 막은 것. 첫 번째는 틀린 사실(widget-login-state 명세 148줄의 갈래)을 그 자리에서 잡았고, 두 번째는 고친 문장을 다시 대 보게 한 값이다. 훅이 제 자리에서 막았다.
+- 첫 세션의 `tidy_checkouts.py`의 `remove-branch`와 `end-holders`가 종료 1로 끝난 것. 다른 세션이 먼저 치운 뒤였고, 독스트링이 1을 "망가뜨린 것 없이 멈췄다"로 정한다(그 파일 329~343줄을 읽었다). 손상이 없다.
+- 첫 세션의 명세 검토 서브에이전트가 임시 스크립트를 돌리려다 워크트리 가드에 막힌 것. 가드는 경계로 둔 것이고, 본 세션이 같은 사실(D)을 설치본 코드를 읽어 확인했다.
+- 이 세션의 Bash 호출 셋이 막힌 것. 워크트리 가드가 heredoc을 든 복합 명령과 변수를 든 복합 명령을, PreToolUse 훅 하나가 하위 폴더로 가는 `cd`를 막았다(훅의 이름은 거부 문구에 없어 찾지 않았다). 셋 다 가드와 훅이 그 자리에서 막았고 하나씩 다시 쳐 지나갔다.
+- 이 세션의 항목 찾기 낱말에 중괄호를 넣어 셸이 풀어 버려 `queue_open_rows.py`가 종료 2로 끝난 것. retro 5단계가 낱말에 남길 글자를 정해 두었고 도구가 그 자리에서 알렸다.
+- 이 세션이 일지의 "`site-file.ts`"를 Glob으로 찾아 다른 파일(`web/apps/widget/testing/site-file.ts`)을 먼저 연 것. 호출 하나의 값이고, 티켓은 전체 경로(`web/packages/site-file/src/site-file.ts`)를 든다.
+- 이 세션이 일지와 `next-session` `merge.md`를 통째로 읽어 큰 결과 알림이 온 것. 둘 다 전체가 필요했다.
+- 이 세션이 0518의 승인 줄에 다른 항목의 회차를 "…의 17회차"로 적어 `queue_open_rows.py`가 0518을 17회차로 읽은 것. 고친 뒤 바로 다시 찍어 보며 그 자리에서 보였고, 앞 회고들도 같은 자리를 "이 일지로 더한 회차와 같은 사건"으로 적어 왔다.
+
+간 자리와 회차 수: `ticket-test-seam-unchecked-again` 4회차(새), `handoff-order-assumed-between-features` 4회차(새), `ticket-cites-path-spec-did-not-assign` 4회차(새), `contract-ticket-not-first-unexplained` 1회차(새), `ticket-term-unexplained-at-first-use` 3회차, `docs-only-commit-precommit-slow-again` 27회차, `0518` 11회차, `handoff-trigger-before-background-commit-ends` 18회차. 새 항목 가운데 앞의 둘은 `.claude/skills/to-tickets/SKILL.md`를 대상으로 하고 셋째는 그 파일을 검사 다음의 자리로 들어, chore를 고를 때 함께 묶을 수 있다. 0518의 승인 줄에 처음에 다른 항목의 회차("…의 17회차")를 적었더니 `queue_open_rows.py`가 그 수를 0518의 회차로 읽어, 그 말을 지웠다(`--search ^#.0518`로 11회차를 다시 봤다). 회차 5 이상이라 chore 계기인 것은 뒤의 셋이다. 이 기능에는 티켓이 남아 chore는 이 기능의 마지막 티켓 뒤에 연다(`next-session` 결정표).
+
+## 다음
+
+PR(명세 고침, 티켓 셋, widget-login-state 기능 계획의 넘김 문단, 이 일지, 대기열 항목)을 병합하면 widget-runtime-values의 티켓 단계가 끝난다.
+
+- 다음 단계는 티켓 01의 구현이다. `/implement .scratch/widget-runtime-values/issues/01-start-writes-values-file-and-widget-reads-it.md`이고 막는 것이 없다. 02는 01을, 03은 02를 기다리므로 나란히 여는 것은 없다.
+- 이 PR은 `.scratch`의 마크다운과 일지와 대기열 항목뿐이라 로컬 모델 시험(`llm_local`)은 병합 조건의 범위에 들지 않는다. LLM 테스트, e2e, 사진 비교도 돌리지 않았다.
+- 워크트리에서 병합하므로 주 체크아웃은 당기지 않는다. 다음 세션이 `tidy-checkouts`를 먼저 돈다.
+- 봇 회차에서 뒤로 넘긴 일이 생기면 PR 코멘트에 지적마다 적고, 일지에 적지 못한 것은 다음 지시문의 "이어받을 상태"에 옮긴다.
+- 이 절을 쓴 뒤의 커밋에서 pre-commit이 길거나 인계 계기가 커밋이 끝나기 전에 와도, 두 항목(`docs-only-commit-precommit-slow-again`, `handoff-trigger-before-background-commit-ends`)은 이미 chore 계기라 다음 회고에 회차로 넘기지 않는다. 시간은 PR 코멘트에 적는다.
+- 이 기능의 일은 아니지만 앞 지시문이 알린 것을 다음 지시문에 그대로 옮긴다. admin-login 05(PR #653)의 봇 보류 하나가 병합된 일지 "다음"에 없고 PR 코멘트(issuecomment-7199113820)에만 있다. 관리 라우터의 public에 /health 외의 라우트가 붙는 것을 막는 시험이 없다는 지적이고, admin-login을 잇는 세션이 이어받는다.
