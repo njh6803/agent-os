@@ -51,7 +51,7 @@ function AddressFailure({ title, message }: { readonly title: string; readonly m
   );
 }
 
-/** 플러그인 하나를 읽어 그린다. 주소를 푼 뒤, 관리 토큰이 받아들여진 뒤에만 서므로 읽기도 그때 시작한다. */
+/** 플러그인 하나를 읽어 그린다. 주소를 푼 뒤, 로그인한 계정을 읽은 뒤에만 서므로 읽기도 그때 시작한다. */
 function ConnectedPluginDetail({
   kind,
   name,

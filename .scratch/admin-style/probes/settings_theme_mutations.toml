@@ -234,10 +234,10 @@ expect_output = ["expected null to be 'jacho'"]
 file = "web/apps/admin/components/pages/AdminScreen.tsx"
 old = '''
   useStoredTheme();
-  const hydrated = useHydrated();
+  useForgetOldTokens();
 '''
 new = '''
-  const hydrated = useHydrated();
+  useForgetOldTokens();
 '''
 
 [[mutation.edit]]

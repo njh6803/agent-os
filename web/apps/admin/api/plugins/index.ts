@@ -2,8 +2,9 @@
 // 클라이언트는 부를 때 만든다. 만들 때 location 을 읽어 브라우저에서만 설 수 있다. 그래서 이 함수는 SWR 의 fetcher 나
 // 이벤트 처리기에서만 부른다(티켓 03 의 메모).
 
-import { createAdminClient, type components } from "@agent-os/api-client";
+import type { components } from "@agent-os/api-client";
 import { failureOf, unreachable } from "../failure";
+import { operatorClient } from "../session";
 
 export type PluginRow = components["schemas"]["PluginRow"];
 export type Plugin = components["schemas"]["Plugin"];
@@ -20,9 +21,9 @@ export function isPluginKind(value: string): value is PluginKind {
   return Object.hasOwn(KINDS, value);
 }
 
-/** 등록된 플러그인 전부(`GET /plugins`). 관리 토큰을 싣는다. */
-export async function listPlugins(adminToken: string): Promise<PluginRow[]> {
-  const { data, error, response } = await createAdminClient(adminToken)
+/** 등록된 플러그인 전부(`GET /plugins`). */
+export async function listPlugins(): Promise<PluginRow[]> {
+  const { data, error, response } = await operatorClient()
     .GET("/plugins")
     .catch((cause: unknown) => {
       throw unreachable(cause);
@@ -37,12 +38,8 @@ export async function listPlugins(adminToken: string): Promise<PluginRow[]> {
  * 플러그인 하나(`GET /plugins/{kind}/{name}`). 매니페스트가 읽히는 것만 행이 온다. 읽을 수 없는 매니페스트는 500
  * 봉투이고 메시지가 경로와 이유를 든다.
  */
-export async function readPlugin(
-  adminToken: string,
-  kind: PluginKind,
-  name: string,
-): Promise<Plugin> {
-  const { data, error, response } = await createAdminClient(adminToken)
+export async function readPlugin(kind: PluginKind, name: string): Promise<Plugin> {
+  const { data, error, response } = await operatorClient()
     .GET("/plugins/{kind}/{name}", { params: { path: { kind, name } } })
     .catch((cause: unknown) => {
       throw unreachable(cause);
@@ -58,12 +55,11 @@ export async function readPlugin(
  * 성공에도 openapi-fetch 의 data 는 비어 있어 응답의 상태로 가른다.
  */
 export async function setPluginEnabled(
-  adminToken: string,
   kind: PluginKind,
   name: string,
   { enabled }: { readonly enabled: boolean },
 ): Promise<void> {
-  const { error, response } = await createAdminClient(adminToken)
+  const { error, response } = await operatorClient()
     .PUT("/plugins/{kind}/{name}/enabled", {
       params: { path: { kind, name } },
       body: { enabled },

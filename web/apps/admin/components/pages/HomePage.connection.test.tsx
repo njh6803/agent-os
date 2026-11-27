@@ -2,7 +2,8 @@
 // stdio MCP 서버의 행은 버튼을 눌러야 확인한다.
 //
 // 주 이음매다. 페이지를 jsdom 에 그리고 HTTP 만 MSW 가 받는다. 시간은 가짜 시계가 흘린다. 보는 것은 바깥 행동이다.
-// 가짜 서버가 받은 요청, 화면에 보이는 글자, 관리 토큰의 자리다.
+// 가짜 서버가 받은 요청과 화면에 보이는 글자다. 로그인은 쿠키라 테스트에서 보이지 않고, 화면은 `GET /auth/me` 에
+// 계정이 답해야 그려진다(`signedIn`).
 
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import userEvent, { type UserEvent } from "@testing-library/user-event";
@@ -10,11 +11,9 @@ import { http, HttpResponse } from "msw";
 import { afterEach, describe, expect, test, vi } from "vitest";
 import { api, envelope, network, type Plugin, type PluginRow } from "../../testing/network";
 import { renderPage } from "../../testing/render";
-import { acceptTokens, enterAdminToken } from "../../testing/token";
+import { signedIn } from "../../testing/session";
 import { HomePage } from "./HomePage";
 import { PluginPage } from "./PluginPage";
-
-const TOKEN = "adm-7Qx2-page-token";
 
 type Manifest = Plugin["manifest"];
 
@@ -99,7 +98,6 @@ interface Call {
   readonly method: "GET" | "POST";
   readonly kind: string;
   readonly name: string;
-  readonly authorization: string;
 }
 
 interface Served {
@@ -114,10 +112,6 @@ function reached(): Response {
 
 function unreached(reason: string): Response {
   return HttpResponse.json({ status: "unreached", reason });
-}
-
-function refused(): Response {
-  return HttpResponse.json(envelope("unauthorized", "토큰이 없거나 틀리다"), { status: 401 });
 }
 
 function broken(): Response {
@@ -141,18 +135,11 @@ function serve(
   const served: Served = { calls: [], list: { rows, reads: 0 } };
   const answer =
     (method: Call["method"]) =>
-    ({
-      params,
-      request,
-    }: {
-      params: Record<string, string | readonly string[] | undefined>;
-      request: Request;
-    }) => {
+    ({ params }: { params: Record<string, string | readonly string[] | undefined> }) => {
       const call: Call = {
         method,
         kind: String(params["kind"]),
         name: String(params["name"]),
-        authorization: request.headers.get("Authorization") ?? "(없음)",
       };
       served.calls.push(call);
       return reply(call, served.calls.length - 1);
@@ -209,10 +196,10 @@ function clock(): UserEvent {
   return userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
 }
 
-/** 관리 토큰을 넣고 목록이 설 때까지 기다린다. */
+/** 로그인한 채로 화면을 그리고 목록이 설 때까지 기다린다. */
 async function showList(user: UserEvent = userEvent.setup()): Promise<UserEvent> {
+  signedIn();
   renderPage(<HomePage />);
-  await enterAdminToken(user, TOKEN);
   await screen.findByRole("region", { name: kindName("에이전트") });
   return user;
 }
@@ -242,16 +229,6 @@ describe("스스로 하는 확인", () => {
     expect(
       served.calls.map(({ method, kind, name }) => `${method} ${kind}/${name}`).sort(),
     ).toEqual(["GET mcp/remote-docs", "GET model/sonnet"]);
-  });
-
-  test("확인 요청이 관리 토큰을 싣는다", async () => {
-    const served = serve([REMOTE]);
-
-    await showList();
-    await within(REMOTE_ROW()).findByText("붙음");
-
-    expect(served.calls).toHaveLength(1);
-    expect(served.calls[0]?.authorization).toBe(`Bearer ${TOKEN}`);
   });
 
   test("첫 응답 전에는 확인하는 중이 보이고 응답이 붙었다고 하면 붙음이 보인다", async () => {
@@ -379,21 +356,6 @@ describe("스스로 하는 확인", () => {
     expect(callsTo(served, "sonnet")).toHaveLength(3);
   });
 
-  test("확인 요청이 401 이면 관리 토큰을 내려놓는다", async () => {
-    const served = serve([MODEL], refused);
-    renderPage(<HomePage />);
-    await enterAdminToken(userEvent.setup(), TOKEN);
-
-    // 목록이 선 뒤 확인이 나가고, 그 401 로 목록이 토큰과 함께 걷힌다.
-    await waitFor(() => {
-      expect(served.calls).toHaveLength(1);
-    });
-    await waitFor(() => {
-      expect(screen.queryByRole("region", { name: kindName("모델") })).toBeNull();
-    });
-    expect(screen.getByLabelText("관리 토큰")).toBeTruthy();
-  });
-
   test("보이지 않는 동안에는 확인을 보내지 않고 돌아오면 바로 한 번 확인한다", async () => {
     const user = clock();
     const served = serve([REMOTE]);
@@ -444,7 +406,7 @@ describe("스스로 하는 확인", () => {
     await waitFor(() => {
       expect(callsTo(served, "sonnet")).toHaveLength(2);
     });
-    expect(served.list.reads).toBeGreaterThanOrEqual(3);
+    expect(served.list.reads).toBeGreaterThanOrEqual(2);
   });
 
   test("확인이 날아가는 동안 새로 고침을 눌러도 그 행의 요청은 하나다", async () => {
@@ -527,7 +489,7 @@ describe("스스로 하는 확인", () => {
     await showList(user);
 
     await waitFor(() => {
-      expect(served.list.reads).toBe(3);
+      expect(served.list.reads).toBe(2);
     });
 
     await waitFor(() => {
@@ -542,7 +504,7 @@ describe("스스로 하는 확인", () => {
     await showList();
 
     await waitFor(() => {
-      expect(served.list.reads).toBe(3);
+      expect(served.list.reads).toBe(2);
     });
 
     expect(within(REMOTE_ROW()).queryByText("붙음")).toBeNull();
@@ -550,10 +512,10 @@ describe("스스로 하는 확인", () => {
   });
 
   test("페이지를 떠나면 확인이 멈춘다", async () => {
-    const user = clock();
+    clock();
     const served = serve([REMOTE]);
+    signedIn();
     const view = renderPage(<HomePage />);
-    await enterAdminToken(user, TOKEN);
     await within(await screen.findByRole("region", { name: kindName("MCP") })).findByText("붙음");
     expect(served.calls).toHaveLength(1);
 
@@ -604,7 +566,6 @@ describe("눌러서 하는 확인", () => {
     expect(press(LOCAL_ROW()).getAttribute("aria-busy")).toBe("true");
     await user.click(press(LOCAL_ROW()));
     expect(callsTo(served, "local-files", "POST")).toHaveLength(1);
-    expect(served.calls[0]?.authorization).toBe(`Bearer ${TOKEN}`);
     expect(callsTo(served, "local-files", "GET")).toHaveLength(0);
 
     // 누른 시각과 응답이 온 시각이 5초 오차 안에서 겹치지 않도록 응답 전에 시계를 흘린다.
@@ -780,24 +741,13 @@ describe("눌러서 하는 확인", () => {
       expect(within(LOCAL_ROW()).queryByRole("status")).toBeNull();
     });
   });
-
-  test("401 이면 관리 토큰을 내려놓는다", async () => {
-    serve([LOCAL], refused);
-    const user = await showList();
-
-    await user.click(press(LOCAL_ROW()));
-
-    expect(await screen.findByLabelText("관리 토큰")).toBeTruthy();
-  });
 });
 
 describe("플러그인 상세 페이지", () => {
   test("접속 확인을 두지 않는다", async () => {
-    acceptTokens();
+    signedIn();
     network.use(http.get(api("/plugins/model/sonnet"), () => HttpResponse.json(MODEL)));
-    const user = userEvent.setup();
     renderPage(<PluginPage kind="model" name="sonnet" />);
-    await enterAdminToken(user, TOKEN);
 
     await screen.findByRole("heading", { level: 1, name: "sonnet" });
 

@@ -1,4 +1,4 @@
-// 결정 흐름(web-admin 티켓 08). 채널 토큰을 넣고 멈춘 실행에 결정을 낸다. 실제 serve, 실제 중계, 실제 MCP 픽스처
+// 결정 흐름(web-admin 티켓 08). 로그인한 계정으로 멈춘 실행에 결정을 낸다. 실제 serve, 실제 중계, 실제 MCP 픽스처
 // 서버를 지난다. 모델은 부르지 않는다. 픽스처 에이전트가 승인 대상 도구를 `ctx.tool()` 로 직접 부른다(stack.ts). 멈춘
 // 실행과 오래된 화면의 "다른 곳"은 흐름이 채널 토큰으로 보내는 화면 밖의 요청이다(channel.ts).
 //
@@ -7,22 +7,19 @@
 import { expect, test } from "@playwright/test";
 import { approve, startPausedRun } from "./channel";
 import { stack } from "./env";
-import { decisionPlace, enterAdminToken, enterChannelToken, row } from "./screen";
+import { decisionPlace, row, signInTo } from "./screen";
 
 test("멈춘 실행을 승인하면 재개 스트림이 조각으로 붙고 실행이 끝나며 도구가 실제로 불렸다", async ({
   page,
   request,
 }) => {
-  const { adminUrl, adminToken, channelToken } = stack();
+  const { adminUrl } = stack();
   const crashes: string[] = [];
   page.on("pageerror", (error) => crashes.push(error.message));
   const paused = await startPausedRun(request, "gated");
-  await page.goto(`${adminUrl}/runs/${paused.runId}`);
-  await enterAdminToken(page, adminToken);
+  // 로그인하지 않은 채 실행 하나의 주소를 열면 로그인 화면으로 쫓겨나고, 로그인하면 그 실행으로 돌아온다.
+  await signInTo(page, `${adminUrl}/runs/${paused.runId}`);
   await expect(page.getByRole("region", { name: "이벤트" })).toContainText("run_paused");
-  await expect(decisionPlace(page)).toHaveCount(0);
-
-  await enterChannelToken(page, channelToken);
   const place = decisionPlace(page);
   await expect(place).toContainText("add");
   await expect(place).toContainText('"a": 2');
@@ -55,7 +52,7 @@ test("재개 스트림 도중에 떠나면 화면은 연결을 끊고 실행은 
 }) => {
   // 페이지 테스트의 가짜 네트워크는 끊김을 핸들러에 잇지 않아(`.scratch/web-admin/probes/msw_abort.mjs`) 끊는 것을 실제
   // 브라우저에서 본다. 끊긴 fetch 는 requestfailed 다. 실행은 연결에 묶이지 않는다(ADR 0014, 스토리 45).
-  const { adminUrl, adminToken, channelToken } = stack();
+  const { adminUrl } = stack();
   const crashes: string[] = [];
   const cut: string[] = [];
   page.on("pageerror", (error) => crashes.push(error.message));
@@ -65,9 +62,7 @@ test("재개 스트림 도중에 떠나면 화면은 연결을 끊고 실행은 
     }
   });
   const paused = await startPausedRun(request, "gated");
-  await page.goto(`${adminUrl}/runs/${paused.runId}`);
-  await enterAdminToken(page, adminToken);
-  await enterChannelToken(page, channelToken);
+  await signInTo(page, `${adminUrl}/runs/${paused.runId}`);
   await decisionPlace(page).getByRole("button", { name: "승인", exact: true }).click();
   await expect(page.getByRole("region", { name: "재개 스트림" })).toContainText("approval_granted");
 
@@ -87,15 +82,13 @@ test("오래된 화면에서 옛 일시정지를 승인하면 409 메시지와 �
   page,
   request,
 }) => {
-  const { adminUrl, adminToken, channelToken } = stack();
+  const { adminUrl } = stack();
   const printed: string[] = [];
   const crashes: string[] = [];
   page.on("console", (message) => printed.push(`${message.type()} ${message.text()}`));
   page.on("pageerror", (error) => crashes.push(error.message));
   const first = await startPausedRun(request, "twice");
-  await page.goto(`${adminUrl}/runs/${first.runId}`);
-  await enterAdminToken(page, adminToken);
-  await enterChannelToken(page, channelToken);
+  await signInTo(page, `${adminUrl}/runs/${first.runId}`);
   const place = decisionPlace(page);
   await expect(place).toContainText('"a": 2');
 
@@ -114,6 +107,11 @@ test("오래된 화면에서 옛 일시정지를 승인하면 409 메시지와 �
   await expect(events.getByRole("heading", { level: 3, name: "run_paused" })).toHaveCount(2);
   await expect(events.getByRole("heading", { level: 3, name: "tool_called" })).toHaveCount(1);
   expect(crashes).toEqual([]);
-  // 브라우저는 실패한 응답을 콘솔 에러(Failed to load resource)로 찍는다. 409 는 이 흐름이 받는 것이다.
-  expect(printed.filter((line) => line.startsWith("error") && !line.includes("409"))).toEqual([]);
+  // 브라우저는 실패한 응답을 콘솔 에러(Failed to load resource)로 찍는다. 409 는 이 흐름이 받는 것이고, 401 은 로그인하기 전에
+  // 지금 누구인지와 갱신이 받는 것이다(로그인 화면으로 쫓겨나는 길).
+  expect(
+    printed.filter(
+      (line) => line.startsWith("error") && !line.includes("409") && !line.includes("401"),
+    ),
+  ).toEqual([]);
 });

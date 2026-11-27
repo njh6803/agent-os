@@ -14,8 +14,7 @@ import {
   type RunEvent,
   type StreamFrame,
 } from "../../../api/approval";
-import { isRejection, RequestFailure } from "../../../api/failure";
-import { useTokens } from "../../../stores/tokens";
+import { RequestFailure } from "../../../api/failure";
 import { pluginKeys } from "../plugins";
 import { traceKeys } from "../traces";
 
@@ -56,14 +55,12 @@ export interface DecisionAttempt {
   readonly cut: boolean;
   /** 마지막 결정이 받아들여지지 않은 실패. 없으면 null 이다. 다음 결정을 보내면 걷힌다. */
   readonly failure: RequestFailure | null;
-  /** 결정 하나를 보낸다. 채널 토큰이 없으면 보내지 않는다. */
+  /** 결정 하나를 보낸다. */
   readonly decide: (decision: Decision) => void;
 }
 
 /** 한 실행에 결정을 낸다. 결정의 자리는 부르는 쪽이 트레이스 상세에서 읽어 결정에 싣는다. */
 export function useDecision(runId: string): DecisionAttempt {
-  const channelToken = useTokens((state) => state.channelToken);
-  const generation = useTokens((state) => state.adminTokenGeneration);
   const { mutate } = useSWRConfig();
   const [busy, setBusy] = useState(false);
   const [frames, setFrames] = useState<readonly StreamFrame[]>([]);
@@ -81,30 +78,26 @@ export function useDecision(runId: string): DecisionAttempt {
 
   const decide = useCallback(
     (decision: Decision) => {
-      if (channelToken === null) {
-        return;
-      }
       const controller = new AbortController();
       inFlight.current = controller;
       setBusy(true);
       setFrames([]);
       setCut(false);
       setFailure(null);
-      const rereadTrace = () => mutate(traceKeys.one(generation, runId));
+      const rereadTrace = () => mutate(traceKeys.one(runId));
 
       /** 받아들여지지 않은 결정. 요청 함수는 응답이 없거나(응답 전에 떠나 끊은 것도) 봉투인 것을 모두 RequestFailure 로
        * 던진다. 그 밖의 예외는 이 코드의 결함이라 덮지 않고 다시 던진다. */
-      async function refused(error: unknown, token: string): Promise<void> {
+      async function refused(error: unknown): Promise<void> {
         if (!(error instanceof RequestFailure)) {
           throw error;
         }
         setFailure(error);
-        if (isRejection(error)) {
-          rejectChannelTokenIfStillHeld(token);
-        } else if (error.status === 409) {
+        // 401 은 갱신 규칙이 이미 받았다(`api/session`). 갱신까지 실패했으면 로그인 화면으로 가는 중이다.
+        if (error.status === 409) {
           // 뜻 넷(자리 어긋남, 일시정지 아님, 형식 1, 꺼짐)이 같은 처리다. 가르는 것은 메시지다(ADR 0014 이력).
           // 꺼짐의 미리 알림이 목록에 기대므로 목록도 다시 읽는다.
-          await Promise.all([rereadTrace(), mutate(pluginKeys.list(generation))]);
+          await Promise.all([rereadTrace(), mutate(pluginKeys.list())]);
         }
       }
 
@@ -124,12 +117,12 @@ export function useDecision(runId: string): DecisionAttempt {
         return last;
       }
 
-      async function deliver(token: string): Promise<void> {
+      async function deliver(): Promise<void> {
         let received: AsyncGenerator<StreamFrame, void, undefined>;
         try {
-          received = await sendDecision(token, runId, decision, controller.signal);
+          received = await sendDecision(runId, decision, controller.signal);
         } catch (error: unknown) {
-          await refused(error, token);
+          await refused(error);
           return;
         }
         const last = await follow(received);
@@ -143,24 +136,13 @@ export function useDecision(runId: string): DecisionAttempt {
         setFrames([]);
       }
 
-      void deliver(channelToken).finally(() => {
+      void deliver().finally(() => {
         inFlight.current = null;
         setBusy(false);
       });
     },
-    [channelToken, generation, mutate, runId],
+    [mutate, runId],
   );
 
   return { busy, frames, cut, failure, decide };
-}
-
-/**
- * 거부된 채널 토큰만 내려놓는다. 그 사이 운영자가 다른 토큰을 넣었으면 그것은 둔다. 거부된 것은 결정이 실은 토큰이다.
- * 관리 토큰의 늦은 401 과 같은 조건이다(`hooks/queries/admin`).
- */
-function rejectChannelTokenIfStillHeld(channelToken: string): void {
-  const tokens = useTokens.getState();
-  if (tokens.channelToken === channelToken) {
-    tokens.rejectChannelToken();
-  }
 }

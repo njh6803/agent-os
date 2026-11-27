@@ -116,13 +116,9 @@ function disabledFor(agent: string | null, rows: readonly PluginRow[] | undefine
 
 /**
  * 결정 칸에 서는 것(admin-style 명세 "실행 하나와 결정 자리"). 결정 자리(`place`), 최종 사용자의 실행이라는 한 줄
- * (`endUser`), 채널 토큰을 넣으라는 한 줄(`noChannelToken`) 가운데 하나이고, 결정할 일시정지가 없으면 null 이라 결정
- * 칸이 서지 않는다.
+ * (`endUser`) 가운데 하나이고, 결정할 일시정지가 없으면 null 이라 결정 칸이 서지 않는다.
  */
-type Column =
-  | { readonly kind: "place"; readonly pause: Pause }
-  | { readonly kind: "endUser" }
-  | { readonly kind: "noChannelToken" };
+type Column = { readonly kind: "place"; readonly pause: Pause } | { readonly kind: "endUser" };
 
 /**
  * 결정 칸의 갈래를 한 번 고른다. 결정 칸의 내용, 재개 스트림이 서는 조건, 꺼짐 미리 알림의 플러그인 목록을 읽는
@@ -130,14 +126,11 @@ type Column =
  *
  * 결정 칸은 실행이 일시정지이고 형식 1 트레이스가 아닐 때만 선다. 형식 1 만 재개할 수 없으므로 "형식 1 이 아니다"로
  * 가른다 — 형식이 늘 때마다 결정 칸이 조용히 사라지지 않게(conversation 명세, 스토리 56). 재개할 수 없다는 이유는 실행
- * 하나의 한 줄이 이미 말한다(스토리 52). 최종 사용자의 실행은 그 실행의 주체만 결정하므로(ADR 0023) 채널 토큰과
- * 상관없이 그 이유 한 줄이다. 서버에 묻지 않는다. 눌러 봐야 서버가 409 로 막는다. 그 밖에 채널 토큰이 없으면 설정에서
- * 넣으라는 한 줄이고, 있으면 결정 자리다.
+ * 하나의 한 줄이 이미 말한다(스토리 52). 최종 사용자의 실행은 그 실행의 주체만 결정하므로(ADR 0023) 그 이유 한 줄이다.
+ * 서버에 묻지 않는다. 눌러 봐야 서버가 409 로 막는다. 그 밖에는 결정 자리다. 결정 권한은 두 단계의 계정이 모두 갖는다
+ * (admin-login 명세 "운영자 권한 표"). 그래서 로그인한 화면이면 권한을 따로 보지 않는다.
  */
-function columnOf(
-  trace: Trace,
-  { channelTokenEntered }: { readonly channelTokenEntered: boolean },
-): Column | null {
+function columnOf(trace: Trace): Column | null {
   const pause = trace.schema_version !== "1" ? pauseOf(trace) : null;
   if (pause === null) {
     return null;
@@ -145,17 +138,14 @@ function columnOf(
   if (isEndUserRun(trace)) {
     return { kind: "endUser" };
   }
-  return channelTokenEntered ? { kind: "place", pause } : { kind: "noChannelToken" };
+  return { kind: "place", pause };
 }
 
 /**
  * 결정 자리가 서는가. 실행 하나의 화면은 이것이 참일 때만 꺼짐 미리 알림의 플러그인 목록을 읽어 넘긴다(`plugins`).
  */
-export function decisionPlaceStands(
-  trace: Trace,
-  { channelTokenEntered }: { readonly channelTokenEntered: boolean },
-): boolean {
-  return columnOf(trace, { channelTokenEntered })?.kind === "place";
+export function decisionPlaceStands(trace: Trace): boolean {
+  return columnOf(trace)?.kind === "place";
 }
 
 /** 꺼짐 미리 알림이 읽는 플러그인 목록(`GET /plugins`). */
@@ -170,8 +160,6 @@ interface RunDecisionProps {
   readonly trace: Trace;
   /** 실행 하나의 이벤트 칸(`RunDetail`). 결정 칸과 재개 스트림이 이것 둘레에 선다. */
   readonly events: ReactNode;
-  /** 이 탭에 채널 토큰이 있는가. 없으면 결정 자리 대신 채널 토큰을 넣으라는 한 줄이 선다. */
-  readonly channelTokenEntered: boolean;
   /** 결정 하나가 끝날 때까지 참이다(`useDecision` 의 `busy`). 결정 버튼을 막는다. */
   readonly busy: boolean;
   /** 받는 대로 쌓은 재개 스트림의 프레임. */
@@ -197,7 +185,6 @@ interface RunDecisionProps {
 export function RunDecision({
   trace,
   events,
-  channelTokenEntered,
   busy,
   frames,
   cut,
@@ -205,8 +192,8 @@ export function RunDecision({
   onDecide,
   plugins,
 }: RunDecisionProps) {
-  const column = columnOf(trace, { channelTokenEntered });
-  const notice = noticeOf(failure, { channelTokenEntered });
+  const column = columnOf(trace);
+  const notice = noticeOf(failure);
 
   return (
     <>
@@ -261,32 +248,17 @@ function ColumnContent({ column, busy, invalid, onDecide, plugins }: ColumnConte
     case "endUser":
       return (
         <div className="rounded-l border border-border bg-bg-raised px-4 py-3">
-          <GuideLine icon="info">최종 사용자의 실행이라 결정은 그 사람만 낸다</GuideLine>
-        </div>
-      );
-    case "noChannelToken":
-      return (
-        <div className="flex flex-col gap-3 rounded-l border border-border bg-bg-raised px-4 py-3">
-          <GuideLine icon="shield-check">결정을 내리려면 설정에서 채널 토큰을 넣는다</GuideLine>
-          <span className="self-start">
-            <TextLink href="/settings">설정 열기</TextLink>
-          </span>
+          <GuideLine>최종 사용자의 실행이라 결정은 그 사람만 낸다</GuideLine>
         </div>
       );
   }
 }
 
 /** 결정 칸의 안내 한 줄. 아이콘은 꾸밈이라 화면 읽기 프로그램에서 숨는다(이름을 주지 않은 `Icon`). */
-function GuideLine({
-  icon,
-  children,
-}: {
-  readonly icon: "info" | "shield-check";
-  readonly children: string;
-}) {
+function GuideLine({ children }: { readonly children: string }) {
   return (
     <p className="flex items-start gap-2 text-body text-text">
-      <Icon name={icon} size="16" />
+      <Icon name="info" size="16" />
       <span>{children}</span>
     </p>
   );
@@ -339,22 +311,13 @@ interface Notice {
 
 /**
  * 결정 자리 밖에 보일 실패(admin-style 명세 "화면 머리와 공통 상태"의 실패 알림 표). 형식 오류(422)는 사유 칸 아래에
- * 서므로 여기 없다. 401 은 채널 토큰이 거부됐다는 것이고, 그 토큰은 이미 내려놓았다. 결정 칸이 채널 토큰 안내 줄로
- * 바뀌어 설정으로 가는 링크는 그 줄의 하나라, 알림에는 링크를 두지 않는다(사용자가 2026-10-27에 골랐다). 새 채널
- * 토큰을 넣으면 걷힌다. 그 밖(409 의 뜻 넷, 없는 실행, 서버 오류)은 "결정을 보내지 못했다"와 봉투의 메시지와 추적
+ * 서므로 여기 없다. 401 은 갱신 규칙(`api/session`)이 이미 받았다. 갱신까지 실패했으면 화면이 로그인 화면으로 가는 중이라
+ * 알림을 두지 않는다. 그 밖(409 의 뜻 넷, 없는 실행, 서버 오류)은 "결정을 보내지 못했다"와 봉투의 메시지와 추적
  * 식별자이고, 봉투가 없으면(닿지 못함) "서버에 닿지 못했다"다.
  */
-function noticeOf(
-  failure: RequestFailure | null,
-  { channelTokenEntered }: { readonly channelTokenEntered: boolean },
-): Notice | null {
-  if (failure === null || failure.status === 422) {
+function noticeOf(failure: RequestFailure | null): Notice | null {
+  if (failure === null || failure.status === 422 || isRejection(failure)) {
     return null;
-  }
-  if (isRejection(failure)) {
-    return channelTokenEntered
-      ? null
-      : { title: "채널 토큰이 거부됐다", message: "설정에서 다시 넣는다.", requestId: null };
   }
   return { title: "결정을 보내지 못했다", ...describeFailure(failure) };
 }

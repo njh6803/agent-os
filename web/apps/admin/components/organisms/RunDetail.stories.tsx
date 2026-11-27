@@ -149,7 +149,6 @@ const MCP_ROW: PluginRow = {
 
 interface RunScreenProps {
   readonly trace: Trace;
-  readonly channelTokenEntered: boolean;
   readonly busy: boolean;
   readonly frames: readonly StreamFrame[];
   readonly cut: boolean;
@@ -178,7 +177,6 @@ const meta = {
   component: RunScreen,
   args: {
     trace: trace([STARTED, CALLED, PAUSED]),
-    channelTokenEntered: true,
     busy: false,
     frames: [],
     cut: false,
@@ -350,11 +348,10 @@ export const PluginsUnknown: Story = {
   },
 };
 
-/** 최종 사용자의 실행. 결정 자리 대신 한 줄만 서고, 채널 토큰이 없어도 같다. 재개 스트림은 서지 않는다. */
+/** 최종 사용자의 실행. 결정 자리 대신 한 줄만 서고, 재개 스트림은 서지 않는다. */
 export const EndUserRun: Story = {
   args: {
     trace: trace([{ ...STARTED, principal: "https://shop.example|user-42" }, CALLED, PAUSED]),
-    channelTokenEntered: false,
   },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
@@ -362,19 +359,6 @@ export const EndUserRun: Story = {
     await expect(canvas.getByText(line)).toBeVisible();
     await expect(canvas.queryByRole("region", { name: "결정" })).toBeNull();
     await expect(canvas.queryByRole("region", { name: "재개 스트림" })).toBeNull();
-    await columnBesideOrBelowEvents(canvasElement, columnHolding(canvasElement, line));
-  },
-};
-
-/** 운영자의 실행인데 채널 토큰이 없다. 결정 자리 대신 설정에서 넣으라는 한 줄과 "설정 열기"가 선다. */
-export const NoChannelToken: Story = {
-  args: { channelTokenEntered: false },
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    const line = "결정을 내리려면 설정에서 채널 토큰을 넣는다";
-    await expect(canvas.getByText(line)).toBeVisible();
-    await expect(canvas.getByRole("link", { name: "설정 열기" })).toBeVisible();
-    await expect(canvas.queryByRole("region", { name: "결정" })).toBeNull();
     await columnBesideOrBelowEvents(canvasElement, columnHolding(canvasElement, line));
   },
 };

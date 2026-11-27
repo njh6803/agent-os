@@ -24,9 +24,8 @@ export class RequestFailure extends Error {
 }
 
 /**
- * 요청이 실은 토큰이 거부됐다는 실패인가. 401 이 거부라는 규칙은 이것 하나다. 토큰을 가리지 않아 관리 토큰을 내려놓는
- * 자리(`hooks/queries/admin`), 넣는 자리의 확인(`hooks/queries/plugins`), 채널 토큰을 싣는 결정(`hooks/queries/approval`
- * 과 `organisms/RunDecision`)이 함께 쓴다.
+ * 요청이 거절됐다는 실패(401)인가. 갱신 규칙(`api/session`)이 로그인 화면으로 보내는 요청은 이 실패를 화면에 올리지 않고,
+ * 갱신 규칙 밖의 요청(결정의 `organisms/RunDecision` 같은 곳)이 남은 401 을 알림에서 거를 때 쓴다.
  */
 export function isRejection(error: unknown): boolean {
   return error instanceof RequestFailure && error.status === 401;
