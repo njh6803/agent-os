@@ -75,7 +75,12 @@ export const SignedIn: Story = {
     const canvas = within(canvasElement);
     const nav = canvas.getByRole("navigation", { name: "관리 화면" });
     const links = within(nav).getAllByRole("link");
-    await expect(links.map((link) => link.textContent)).toEqual(["플러그인", "실행", "설정"]);
+    await expect(links.map((link) => link.textContent)).toEqual([
+      "플러그인",
+      "대화",
+      "실행",
+      "설정",
+    ]);
     const current = within(nav).getByRole("link", { current: "page" });
     await expect(current).toHaveTextContent("설정");
     await expect(getComputedStyle(current).backgroundColor).toBe(
@@ -90,7 +95,7 @@ export const SignedIn: Story = {
     await expect(account).toHaveAttribute("aria-haspopup", "menu");
     await expect(account).toHaveAttribute("aria-expanded", "false");
     const icons = Array.from(nav.querySelectorAll("svg"));
-    await expect(icons).toHaveLength(3);
+    await expect(icons).toHaveLength(4);
     if (isWide()) {
       // 폭 `nav` 는 옆 탐색 전체(머리 요소)의 폭이다. 탐색 항목의 줄(`nav` 요소)은 그 안의 좌우 여백과 테두리를 뺀 폭이다.
       const side = nav.closest("header");

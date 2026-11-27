@@ -63,13 +63,14 @@ describe("설정 화면", () => {
 });
 
 describe("틀과 탐색", () => {
-  test("탐색은 관리 화면이라는 이름 하나이고 플러그인, 실행, 설정의 차례로 그 화면으로 간다", async () => {
+  test("탐색은 관리 화면이라는 이름 하나이고 플러그인, 대화, 실행, 설정의 차례로 그 화면으로 간다", async () => {
     await openSettings();
 
     expect(screen.getAllByRole("navigation")).toHaveLength(1);
     const links = within(navigation()).getAllByRole("link");
     expect(links.map((link) => [link.textContent, link.getAttribute("href")])).toEqual([
       ["플러그인", "/"],
+      ["대화", "/chat"],
       ["실행", "/runs"],
       ["설정", "/settings"],
     ]);

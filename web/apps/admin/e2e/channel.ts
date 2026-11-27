@@ -45,6 +45,44 @@ export async function approve(request: APIRequestContext, paused: Paused): Promi
   return pausedOf(await eventsOf(response), paused.pauseIndex + 1);
 }
 
+/** 채널 토큰으로 그 에이전트의 실행 하나를 일으켜 끝까지 기다리고, 실행 식별자를 돌려준다. 끝나는 에이전트여야 한다. */
+export async function startFinishedRun(
+  request: APIRequestContext,
+  agent: string,
+  text: string,
+): Promise<string> {
+  const { adminUrl, channelToken } = stack();
+  const response = await request.post(`${adminUrl}/api/runs`, {
+    headers: { Authorization: `Bearer ${channelToken}` },
+    data: { agent, request: text },
+  });
+  return finishedOf(await eventsOf(response));
+}
+
+/** 끝난 실행 `previous` 에서 이어 가 새 실행 하나를 끝까지 기다리고, 그 실행 식별자를 돌려준다. */
+export async function continueRun(
+  request: APIRequestContext,
+  previous: string,
+  agent: string,
+  text: string,
+): Promise<string> {
+  const { adminUrl, channelToken } = stack();
+  const response = await request.post(
+    `${adminUrl}/api/runs/${encodeURIComponent(previous)}/continuation`,
+    { headers: { Authorization: `Bearer ${channelToken}` }, data: { agent, request: text } },
+  );
+  return finishedOf(await eventsOf(response));
+}
+
+/** 스트림이 끝남으로 끝났으면 그 실행 식별자. */
+function finishedOf(events: readonly RunEvent[]): string {
+  const last = events.at(-1);
+  if (last?.type !== "run_finished") {
+    throw new Error(`실행이 끝나지 않았다: ${JSON.stringify(events)}`);
+  }
+  return last.run_id;
+}
+
 async function eventsOf(response: APIResponse): Promise<RunEvent[]> {
   const text = await response.text();
   if (!response.ok()) {

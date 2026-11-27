@@ -39,7 +39,25 @@ interface ReadSectionProps<T> extends ReadState<T> {
    * 그 미만에서는 진행 표시가 선다. 화면 읽기 프로그램에서 숨기는 것은 뼈대 쪽의 일이다. 실행 목록의 표가 쓴다.
    */
   readonly skeleton?: ReactNode;
+  /** 제목의 단계. 기본은 화면의 제목 `h1` 이고, 화면 안의 구역(실행 패널)은 `h2` 다. */
+  readonly headingLevel?: "h1" | "h2";
+  /** 머리의 "새로 고침" 옆에 더하는 동작(실행 패널의 닫기). */
+  readonly actions?: ReactNode;
   readonly children: (data: T) => ReactNode;
+}
+
+function RefreshButton({
+  refreshing,
+  onRefresh,
+}: {
+  readonly refreshing: boolean;
+  readonly onRefresh: () => void;
+}) {
+  return (
+    <Button variant="secondary" loading={refreshing} onClick={onRefresh}>
+      새로 고침
+    </Button>
+  );
 }
 
 /**
@@ -70,6 +88,8 @@ export function ReadSection<T>({
   failureTitle,
   above,
   skeleton,
+  headingLevel,
+  actions,
   children,
 }: ReadSectionProps<T>) {
   const titleId = useId();
@@ -83,10 +103,16 @@ export function ReadSection<T>({
         title={title}
         beside={titleBeside}
         description={description}
+        level={headingLevel}
         action={
-          <Button variant="secondary" loading={refreshing} onClick={onRefresh}>
-            새로 고침
-          </Button>
+          actions === undefined ? (
+            <RefreshButton refreshing={refreshing} onRefresh={onRefresh} />
+          ) : (
+            <div className="flex items-center gap-2">
+              <RefreshButton refreshing={refreshing} onRefresh={onRefresh} />
+              {actions}
+            </div>
+          )
         }
       />
       <div role="status" className="sr-only">

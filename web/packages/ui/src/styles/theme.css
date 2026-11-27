@@ -62,6 +62,8 @@
   --spacing-nav: 256px;
   --spacing-nav-item: 36px;
   --spacing-top-bar: 52px;
+  /* 대화 화면 위 오른쪽에 뜨는 실행 패널의 폭(admin-login 명세 "실행 패널"). */
+  --spacing-panel: 480px;
   /* 부품 치수. 스위치의 트랙·손잡이·안쪽 띄움, 진행 막대, 상태 배지의 높이와 안쪽 왼쪽, 마크다운 표 칸의 최소·최대 폭, 마크다운 문장 끝 번호(위첨자)의 왼쪽 틈이다. */
   --spacing-switch-w: 40px;
   --spacing-switch-h: 24px;

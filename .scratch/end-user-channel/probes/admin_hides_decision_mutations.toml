@@ -14,9 +14,10 @@ name = "최종 사용자를 알아보지 않는다"
 runner = "vitest"
 tests = ["apps/admin/components/pages/RunPage.decision.test.tsx", "-t", "최종 사용자의 멈춘 실행에는"]
 expect = "red"
+expect_output = ["</section> to be null"]
 
 [[mutation.edit]]
-file = "web/apps/admin/components/organisms/RunDecision.tsx"
+file = "web/apps/admin/components/molecules/principal.ts"
 old = '''
 const PRINCIPAL_SEPARATOR = "|";
 '''
@@ -29,11 +30,12 @@ name = "모든 실행을 최종 사용자로 본다"
 runner = "vitest"
 tests = ["apps/admin/components/pages/RunPage.decision.test.tsx", "-t", "형식 3 트레이스의 멈춘 실행에도"]
 expect = "red"
+expect_output = ['Unable to find role="region" and name "결정"']
 
 [[mutation.edit]]
 file = "web/apps/admin/components/organisms/RunDecision.tsx"
 old = '''
-  return first?.type === "run_started" && first.principal.includes(PRINCIPAL_SEPARATOR);
+  return first?.type === "run_started" && isEndUserPrincipal(first.principal);
 '''
 new = '''
   return first?.type === "run_started";
