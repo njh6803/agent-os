@@ -259,6 +259,46 @@ CLI가 돌아 일지 "반영"의 새 사실 문장 열을 밀 리뷰어는 없�
 
 간 자리와 회차 수: `ticket-test-seam-unchecked-again` 4회차(새), `handoff-order-assumed-between-features` 4회차(새), `ticket-cites-path-spec-did-not-assign` 4회차(새), `contract-ticket-not-first-unexplained` 1회차(새), `ticket-term-unexplained-at-first-use` 3회차, `docs-only-commit-precommit-slow-again` 27회차, `0518` 11회차, `handoff-trigger-before-background-commit-ends` 18회차. 새 항목 가운데 앞의 둘은 `.claude/skills/to-tickets/SKILL.md`를 대상으로 하고 셋째는 그 파일을 검사 다음의 자리로 들어, chore를 고를 때 함께 묶을 수 있다. 0518의 승인 줄에 처음에 다른 항목의 회차("…의 17회차")를 적었더니 `queue_open_rows.py`가 그 수를 0518의 회차로 읽어, 그 말을 지웠다(`--search ^#.0518`로 11회차를 다시 봤다). 회차 5 이상이라 chore 계기인 것은 뒤의 셋이다. 이 기능에는 티켓이 남아 chore는 이 기능의 마지막 티켓 뒤에 연다(`next-session` 결정표).
 
+## 둘째 커밋과 PR
+
+커밋 직전 `git branch --show-current`는 `docs/widget-runtime-values-tickets`였고, `tools/sibling_overlap.py`는 번호 겹침이 없고 열린 PR #651과 그 워크트리가 `.scratch/retro-queue/0518.md`를 함께 고친다고 냈다(글자 충돌 후보, PR 본문의 "남긴 위험"에 적었다). 일지와 대기열 항목을 `9625c2be7`로 커밋했다. 커밋은 Bash 백그라운드로 띄웠고 종료 0이었다. pre-commit 출력에 찍힌 시간은 pytest 923.5초, web-verify 1043.7초, run-hooks 193.9초, pyright 97.0초, pyright-linux 101.8초, lint-imports 5.2초이고, ruff 둘은 `.py`가 없어 `Skipped`였다. 나란히 돈 다른 세션의 부하는 재지 않았다.
+
+그 커밋을 띄운 호출의 결과에 인계 계기(`hook_handoff`, 313,697 토큰, 경계 `커밋 뒤`)가 커밋이 끝나기 전에 붙어 왔다. `handoff.md`를 Read로 열었고, 이 세션의 지시문의 이어받을 상태가 `인계: 커밋 뒤`로 시작해 1의 셋째 경우(같은 경계)로 넘기지 않고 이었다.
+
+`git push -u origin docs/widget-runtime-values-tickets` 뒤 `gh pr create --base dev`로 PR #655를 열었다. 본문은 `.github/PULL_REQUEST_TEMPLATE.md`를 채웠다. `ccd_pr`의 `get_status`는 그 PR이 이 세션에 묶였고 검사 일곱이 도는 중이라고 냈다. 위 커밋의 시간과 계기는 일지 "다음"대로 PR 코멘트(issuecomment-7214098243)에 적었다. `@coderabbitai review`는 아직 남기지 않았다.
+
+## 인계(PR 연 뒤)
+
+PR을 연 명령의 결과에 인계 계기(`hook_handoff`, 331,453 토큰, 경계 `PR 연 뒤`)와 `hook_pr_next_session`의 계기가 함께 왔다. 앞의 것이 이기므로 `handoff.md`대로 판정했다. 인계하지 않는 다섯 경우에 들지 않았다. PR은 열렸고, 요청 범위는 PR과 병합까지이며, 이 세션의 지시문의 이어받을 상태는 `인계: 커밋 뒤`로 다른 경계이고, 이 일지에 `인계 못함` 줄이 없으며, `get_session`의 `self`에 `parentSessionId`가 없었다. 그래서 넘긴다. 이 절은 커밋하지 않았고 새 세션이 봇 회차의 커밋에 싣는다. 이 세션이 띄운 백그라운드 작업(CLI 리뷰 서브에이전트, 커밋 명령) 가운데 아직 도는 것은 없다. 이 세션의 지금 제목은 `docs/widget-runtime-values-tickets`다.
+
+낸 지시문:
+
+다음 작업: 기능 widget-runtime-values. 명세를 검토해 티켓 세 장으로 나눈 PR #655를 반영하고 병합한다
+다음 단계: PR 반영·병합
+어디서: 새 세션. git worktree list에서 그 브랜치가 체크아웃된 자리를 찾아 워크트리면 EnterWorktree(path)로 들어가고 주 체크아웃이면 거기서 잇는다
+시작 프롬프트: /to-tickets .scratch/widget-runtime-values/spec.md
+브랜치: docs/widget-runtime-values-tickets
+모델: Sonnet 5.5 / high. 2의 잇는 지시문
+읽을 것: docs/journal/2026-11-27-1523-widget-runtime-values-tickets.md의 "이어받은 세션 2(17:10쯤)"부터 끝까지(PR 직전 CLI 리뷰, 회고, 둘째 커밋과 PR, 이 인계, 다음). PR 본문은 이미 썼다
+이어받을 상태: 인계: PR 연 뒤. merge.md 2(봇 회차)부터 한다. 첫 @coderabbitai review 코멘트도 새 세션이 남긴다. PR #655는 열렸고 머리 9625c2be7까지 푸시했다. PR 직전 CLI 리뷰, 회고, 일지 "다음"은 커밋에 들었다. 이 일지의 "둘째 커밋과 PR"·"인계(PR 연 뒤)" 절은 커밋하지 않은 변경으로 워크트리에 있어, 봇 회차의 반영 커밋에 함께 싣는다(고친 것이 없는 회차면 merge.md 4대로 일지만 실은 커밋). 둘째 커밋의 시간은 PR 코멘트 issuecomment-7214098243에 적었다. 일지 "다음"의 admin-login 05 보류는 병합 뒤의 지시문에 옮긴다. docs/journal/2026-11-27-1523-widget-runtime-values-tickets.md
+확인할 선행 조건: 없음
+이번 요청 범위: PR과 병합까지
+
+open-session을 부른다 2026-11-27T08:57:30Z
+
+## 이어받은 세션 3(18:10쯤)
+
+위 지시문으로 연 새 세션이다. 모델은 Sonnet 5.5. 세션 제목을 `docs/widget-runtime-values-tickets`로 바꾸고, `git worktree list`에서 그 브랜치가 이 워크트리에 체크아웃된 것을 보고 `EnterWorktree(path)`로 들어왔다. `git status --short`는 이 일지 하나만 고친 것으로 냈고, 머리는 PR 머리와 같은 `9625c2be7`였다(`git fetch origin` 뒤 `origin/docs/widget-runtime-values-tickets`와 대조했다).
+
+## 봇 회차
+
+첫 회차다. 마지막 푸시 뒤에 `@coderabbitai review` 코멘트를 남기고(issuecomment-7214212606) `tools/wait_ci.py 655`를 백그라운드로 띄워 끝 알림을 기다렸다. 출력의 끝 줄은 `끝: 모두 통과. CodeRabbit: Finished`였고, 검사 줄은 `llm`만 `SKIPPED`이고 나머지(`CodeRabbit`, `claude-review`, `e2e`, `e2e-portal`, `e2e-standalone`, `e2e-widget`, `python`, `ticket`, `title`, `verify`, `visual`, `web`)는 모두 `SUCCESS`였다.
+
+- **CodeRabbit.** 요약 코멘트가 "No actionable comments were generated in the recent review."라고 적었다. 리뷰 본문(`reviews`)은 0건이고 인라인 코멘트도 읽지 않았다(요약이 지적 없음이라 밝혔다).
+- **claude-review.** "지적 없음"이고, 바뀐 파일 열네 개가 모두 `.scratch/`와 일지라 계약·포트·느낌표를 볼 대상이 없다고 적었다. 본문이 스스로 밝힌 Minor 4(같은 두 갈래가 여러 곳에 적힘)를 두는 판단이 타당하다고 봤고, `0518.md`가 열린 PR #651과 글자 충돌 후보라는 점은 본문이 이미 적었다고 짚었다.
+
+고칠 지적이 없어 코드와 명세와 티켓은 바꾸지 않았다. 뒤로 넘긴 일은 이 회차에서 새로 생기지 않았다. 일지의 "둘째 커밋과 PR"·"인계(PR 연 뒤)" 절과 이 절만 실은 커밋을 푸시하고(merge.md 4), 그 푸시로 도는 봇 리뷰는 회차 세기대로 둘째 회차로 세어 Critical·Major만 고친다. 이 PR은 `.scratch`의 마크다운과 일지와 대기열 항목뿐이라 `docs/constitution/operations.md` LLM 테스트의 병합 조건 범위에 들지 않아, 로컬 모델 시험은 건너뛴다.
+
 ## 다음
 
 PR(명세 고침, 티켓 셋, widget-login-state 기능 계획의 넘김 문단, 이 일지, 대기열 항목)을 병합하면 widget-runtime-values의 티켓 단계가 끝난다.
