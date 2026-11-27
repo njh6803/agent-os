@@ -16,6 +16,7 @@ export {
   loginAddress,
   nextTarget,
   noticeOf,
+  setPasswordAddress,
   type LoginNotice,
 } from "./address";
 export { goTo } from "./navigation";
@@ -79,6 +80,93 @@ export async function logIn(name: string, password: string): Promise<"signed-in"
     return "rejected";
   }
   throw failureOf(response.status, error);
+}
+
+/** 내 비밀번호 바꾸기의 결과. 칸의 잘못(422)은 던지지 않고 칸마다의 글로 돌려준다. */
+export type PasswordChange =
+  | { readonly kind: "changed" }
+  | { readonly kind: "locked" }
+  | {
+      readonly kind: "invalid";
+      /** `body.current_password` 의 글. 이 칸의 잘못이 아니면 null 이다. */
+      readonly current: string | null;
+      /** `body.new_password` 의 글. 이 칸의 잘못이 아니면 null 이다. */
+      readonly next: string | null;
+    };
+
+/**
+ * 로그인한 계정의 비밀번호를 바꾼다(`POST /auth/password`). 204 면 바뀌었고 그 계정의 다른 로그인이 끊긴다. 잠겼으면 409,
+ * 칸이 틀렸으면 422 다. 틀린 지금 비밀번호도 401 이 아니라 422(`body.current_password`)다. 401 이면 갱신 규칙이 같은 시도를
+ * 두 번 세기 때문이다. 그 밖의 실패는 던진다.
+ */
+export async function changePassword(
+  currentPassword: string,
+  newPassword: string,
+): Promise<PasswordChange> {
+  const { error, response } = await operatorClient()
+    .POST("/auth/password", {
+      body: { current_password: currentPassword, new_password: newPassword },
+    })
+    .catch((cause: unknown) => {
+      throw unreachable(cause);
+    });
+  if (response.status === 204) {
+    return { kind: "changed" };
+  }
+  if (response.status === 409) {
+    return { kind: "locked" };
+  }
+  const failure = failureOf(response.status, error);
+  if (response.status === 422) {
+    const violations = failure.envelope?.violations ?? [];
+    const messageOf = (field: string): string | null =>
+      violations.find((violation) => violation.field === field)?.message ?? null;
+    const current = messageOf("body.current_password");
+    const next = messageOf("body.new_password");
+    if (current !== null || next !== null) {
+      return { kind: "invalid", current, next };
+    }
+  }
+  throw failure;
+}
+
+/** 링크로 비밀번호 정하기의 결과. */
+export type PasswordSetting =
+  | { readonly kind: "set" }
+  /** 링크를 더 쓸 수 없다(쓴 링크, 끝난 링크, 다시 만들어 못 쓰게 된 링크, 비활성 계정, 모르는 토큰). */
+  | { readonly kind: "unusable" }
+  | { readonly kind: "invalid"; readonly message: string };
+
+/**
+ * 링크의 토큰으로 비밀번호를 정한다(`POST /auth/set-password`). 로그인 없이 쓰는 요청이라 갱신 규칙을 지나지 않는다. 204 면
+ * 정해졌고 로그인시키지 않는다. 링크가 죽었으면 404 다. 판정은 형식, 링크, 비밀번호 규칙의 차례라 쓸 수 없는 링크가 규칙보다
+ * 먼저 알려진다.
+ */
+export async function setPassword(token: string, password: string): Promise<PasswordSetting> {
+  const { error, response } = await operatorClient()
+    .POST("/auth/set-password", { body: { token, password } })
+    .catch((cause: unknown) => {
+      throw unreachable(cause);
+    });
+  if (response.status === 204) {
+    return { kind: "set" };
+  }
+  if (response.status === 404) {
+    return { kind: "unusable" };
+  }
+  const failure = failureOf(response.status, error);
+  if (response.status === 422) {
+    const violations = failure.envelope?.violations ?? [];
+    if (violations.some(({ field }) => field === "body.token")) {
+      // 토큰의 모양이 아닌 글은 어느 링크도 아니다.
+      return { kind: "unusable" };
+    }
+    const message = violations.find(({ field }) => field === "body.password")?.message;
+    if (message !== undefined) {
+      return { kind: "invalid", message };
+    }
+  }
+  throw failure;
 }
 
 /**

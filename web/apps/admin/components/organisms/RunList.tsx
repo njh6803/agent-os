@@ -1,9 +1,9 @@
 import { Button, Card, Icon, type IconName, StatusBadge } from "@agent-os/ui";
 import type { ReactNode } from "react";
 import type { RunRow, RunStatus, RunSummary, TracePage, UnreadableTrace } from "../../api/traces";
+import { formatTime, localClock } from "../atoms/clock";
 import { TextLink } from "../atoms/TextLink";
 import { EmptyLine } from "../molecules/EmptyLine";
-import { formatTime, localClock } from "../molecules/localTime";
 import { ReadSection, type ReadState } from "./ReadSection";
 import { BADGE, StatusFilter, type StatusFilterValue } from "./StatusFilter";
 

@@ -24,8 +24,8 @@ import { AdminNav, type Section } from "../organisms/AdminNav";
 import { AdminFrame } from "../templates/AdminFrame";
 
 interface AdminScreenProps {
-  /** 지금 화면이 든 탐색 항목. */
-  readonly current: Section;
+  /** 지금 화면이 든 탐색 항목. 어느 항목에도 들지 않는 화면(내 비밀번호 바꾸기)이면 null 이다. */
+  readonly current: Section | null;
   readonly children: ReactNode;
 }
 
@@ -34,7 +34,13 @@ export function AdminScreen({ current, children }: AdminScreenProps) {
   useForgetOldTokens();
   const me = useMe();
   const logOut = useLogOut();
-  const nav = <AdminNav current={current} />;
+  // "계정" 항목은 시스템 관리자에게만 보인다. 계정을 읽기 전에는 보이지 않는다.
+  const nav = (
+    <AdminNav
+      current={current}
+      showAccounts={me.error === undefined && me.data?.tier === "system_admin"}
+    />
+  );
 
   if (me.error !== undefined) {
     // 서버에 닿지 못했거나 서버가 오류를 냈다. 로그인하지 않은 것(401)이면 규칙이 로그인 화면으로 보내고, 옮겨 가는 동안과

@@ -18,8 +18,8 @@ import { currentPlace, isPublicPath, loginAddress } from "./address";
 import { goTo } from "./navigation";
 
 /**
- * 규칙을 지나지 않는 경로. 링크로 비밀번호 정하기(`/auth/set-password`)는 서버의 경로가 아직 계약(`openapi.json`)에
- * 없어 운영자 클라이언트가 부르지 못하지만, 그 화면을 짓는 티켓이 이 목록을 고치지 않고도 규칙 밖에 서도록 미리 든다.
+ * 규칙을 지나지 않는 경로. 로그인과 갱신과 첫 계정 확인은 로그인 상태를 만들거나 로그인하기 전에 묻는 요청이고, 링크로
+ * 비밀번호 정하기(`/auth/set-password`)는 로그인 없이 쓰는 화면의 요청이다.
  */
 const OUTSIDE_RULE: ReadonlySet<string> = new Set([
   "/auth/login",

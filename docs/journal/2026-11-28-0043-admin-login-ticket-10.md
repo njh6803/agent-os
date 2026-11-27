@@ -148,3 +148,12 @@ open-session을 부른다 2026-11-27T17:37:59Z
 - 고친 것(주석 둘, 코드 변경 없음): `hooks/queries/admin/index.ts`의 머리 주석이 주기 읽기를 접속 확인 하나로 적고 도메인을 둘로 적어 문장 1과 어긋나던 것을 "접속 확인과 대화 화면의 끝 실행 둘", "플러그인, 실행, 대화 도메인"으로 고쳤다. `RunPanel.tsx` 독스트링은 "처음 패널을 열 때 포커스가 있던 곳"으로 좁히고, 열린 채 다른 "자세히"를 눌러도 돌아가는 곳은 처음 연 버튼이라고 적었다(`key={runId}`로 다시 마운트하는 길은 "이미 열린 채 바뀔 때는 포커스를 옮기지 않는다"와 부딪혀 독스트링을 고치는 쪽을 골랐다).
 - 남긴 것은 위 "다음"의 첫 항목 (a)~(d)이다. (a)는 앞 절의 후속 후보와 같은 일이다.
 - 오탐으로 판정: 스토리의 다크·`showcase` 지적은 `packages/ui`의 규칙이고 관리 앱은 사진 비교가 라이트·다크를 모두 찍는다. 보안과 성능 축은 문제 없다고 보고했다(경로는 인코딩되고 사용자 글은 텍스트로만 들어간다, 끝 실행 읽기는 3초 간격으로 멈출 때가 정해져 있고 패널과 열쇠를 나눠 쓴다).
+
+## 병합 전 충돌 풀기(2026-11-28)
+
+PR #659(admin-login 12)가 먼저 병합돼 `origin/dev`를 두 번째로 합쳤다(첫 합치기는 #658이라 충돌이 없었다). `git merge origin/dev`의 충돌 출력으로 본 것이다.
+
+- `AdminNav.tsx`: `Section`에 "chat"과 "accounts"를 둘 다 두고 항목 차례를 플러그인, 대화, 실행, 계정, 설정으로 했다.
+- 시각 도우미 둘이 같은 일을 했다: 12가 `components/atoms/clock.ts`(`localClock`, `formatTime`, `formatMinute`, `formatClockTime`)를 만들었고 이 브랜치는 `molecules/localTime.ts`(`localClock`, `formatTime`)를 만들었다. 함수 본문은 같았다(두 파일을 읽어 맞댔다). `atoms/clock.ts` 하나로 모으고 `localTime.ts`를 지웠으며 `Conversation`, `ConversationList`, `RunList`의 import를 `atoms/clock`으로 바꿨다. `clock.ts` 머리 주석에 대화 목록과 대화 화면이 쓴다고 더했다. `run_list_mutations.toml`의 변이 둘은 `atoms/clock.ts`를 가리키는 12의 쪽을 남겼다.
+- `AdminFrame.stories.tsx`의 `SystemAdmin` 기대 목록에 "대화"를 더했다. 합친 뒤 `pnpm -C web verify`가 2건 실패했다(출력 끝줄 `Tests 2 failed | 3219 passed`, 둘의 이름은 출력 앞부분이 잘려 보지 못했고 같은 스토리의 넓은 폭과 좁은 폭으로 어림했다). 고친 뒤 `pnpm -C web exec vitest run --project admin-storybook-wide --project admin-storybook-narrow AdminFrame.stories.tsx`는 10건 통과(종료 코드 0, 파이프 없이 쳤다)했고 전체 `verify`는 다시 돌리지 않았다. 커밋의 pre-commit과 `run_checks.py`가 다시 돌린다.
+- 사진 정답 8장(`templates-adminframe--*`)은 충돌이라 `dev`의 판을 놓고 `pnpm -C web visual:admin:update`로 다시 만들었다(`188 passed (7.0m)`, 바뀐 사진은 그 8장뿐). `system-admin-1280-light` 한 장을 열어 보니 탐색에 플러그인, 대화, 실행, 계정, 설정이 차례로 서고 설정이 선택돼 있었다. 나머지 7장은 열어 보지 않았다.

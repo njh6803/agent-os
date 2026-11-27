@@ -1,7 +1,7 @@
 import { Alert, Icon, Markdown, Progress, StatusBadge, type StatusBadgeStatus } from "@agent-os/ui";
 import type { Approval, Outcome, Turn } from "../../api/conversation";
 import { TextLink } from "../atoms/TextLink";
-import { formatTime, localClock } from "../molecules/localTime";
+import { formatTime, localClock } from "../atoms/clock";
 import { ReadSection, type ReadState } from "./ReadSection";
 
 /** 대화 화면이 그리는 것. 첫 실행부터 끝 실행까지 차례로 든다. */

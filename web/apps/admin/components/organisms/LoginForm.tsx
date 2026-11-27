@@ -19,11 +19,8 @@ const NOTICES = {
   "password-set": { title: "비밀번호를 정했다", body: "정한 비밀번호로 로그인한다." },
 } as const satisfies Record<LoginNotice, { title: string; body: string | null }>;
 
-interface LoginFormProps {
-  /** 이전 화면이 남긴 알림. 없으면 null 이다. */
-  readonly notice: LoginNotice | null;
-  /** https 가 아닌 주소로 열었다. 서버가 쿠키를 받아 주지 않아 로그인할 수 없으므로 칸을 막고 알린다. */
-  readonly insecure: boolean;
+/** 로그인 요청 하나의 상태(훅 `useLogIn` 이 낸다). */
+export interface LoginState {
   /** 이름이나 비밀번호가 맞지 않아 거절됐다. */
   readonly rejected: boolean;
   /** 지금까지 거절된 횟수. 비밀번호 칸을 새로 세우는 열쇠다. */
@@ -32,18 +29,22 @@ interface LoginFormProps {
   readonly failure: RequestFailure | null;
   /** 로그인 요청이 가는 동안 참이다. */
   readonly pending: boolean;
+}
+
+interface LoginFormProps {
+  /** 이전 화면이 남긴 알림. 없으면 null 이다. */
+  readonly notice: LoginNotice | null;
+  /**
+   * https 가 아닌 주소로 열었다. 서버가 쿠키를 받아 주지 않아 로그인할 수 없으므로 로그인 단추만 막고 알린다. 입력 칸은
+   * 열어 두어 알림을 읽고 값을 옮겨 적을 수 있다(그림 mk-login-notices 는 주 버튼만 막았다).
+   */
+  readonly insecure: boolean;
+  readonly state: LoginState;
   readonly onSubmit: (name: string, password: string) => Promise<void>;
 }
 
-export function LoginForm({
-  notice,
-  insecure,
-  rejected,
-  rejections,
-  failure,
-  pending,
-  onSubmit,
-}: LoginFormProps) {
+export function LoginForm({ notice, insecure, state, onSubmit }: LoginFormProps) {
+  const { rejected, rejections, failure, pending } = state;
   const headingId = useId();
 
   function submit(form: HTMLFormElement): void {
@@ -98,13 +99,7 @@ export function LoginForm({
             submit(event.currentTarget);
           }}
         >
-          <TextField
-            label="계정 이름"
-            name="name"
-            autoComplete="username"
-            required
-            disabled={insecure}
-          />
+          <TextField label="계정 이름" name="name" autoComplete="username" required />
           <TextField
             key={rejections}
             label="비밀번호"
@@ -112,7 +107,6 @@ export function LoginForm({
             name="password"
             autoComplete="current-password"
             required
-            disabled={insecure}
             autoFocus={rejections > 0}
           />
           {/* 넓은 폭은 오른쪽 끝에, 좁은 폭은 칸의 폭으로 선다(그림 mk-login-m). */}

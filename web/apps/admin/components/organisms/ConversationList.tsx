@@ -9,7 +9,7 @@ import type {
 import type { RunStatus } from "../../api/traces";
 import { TextLink } from "../atoms/TextLink";
 import { EmptyLine } from "../molecules/EmptyLine";
-import { formatTime, localClock } from "../molecules/localTime";
+import { formatTime, localClock } from "../atoms/clock";
 import { isEndUserPrincipal } from "../molecules/principal";
 import { ReadSection, type ReadState } from "./ReadSection";
 import { BADGE, StatusFilter, type StatusFilterValue } from "./StatusFilter";
