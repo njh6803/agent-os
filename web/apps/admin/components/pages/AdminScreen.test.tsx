@@ -103,6 +103,27 @@ describe("지금 누구인지 읽기", () => {
     expect(alert.textContent).toContain("req-9c02");
     expect(visited()).toEqual([]);
   });
+
+  test("읽은 적이 있는 화면에서 다시 읽다 서버가 오류를 내면 보인 계정과 본문을 지우고 실패만 보인다", async () => {
+    const cache = new Map();
+    signedIn();
+    const first = renderPage(<SettingsPage />, cache);
+    await screen.findByRole("heading", { level: 1, name: "설정" });
+    first.unmount();
+
+    network.use(
+      http.get(api("/auth/me"), () =>
+        HttpResponse.json(envelope("internal_error", "서버가 멈췄다", "req-4d17"), { status: 500 }),
+      ),
+    );
+    renderPage(<SettingsPage />, cache);
+
+    const alert = await screen.findByRole("alert");
+    expect(alert.textContent).toContain("서버가 멈췄다");
+    expect(screen.queryByRole("heading", { level: 1, name: "설정" })).toBeNull();
+    expect(screen.queryByRole("button", { name: /kim\.dev/ })).toBeNull();
+    expect(visited()).toEqual([]);
+  });
 });
 
 describe("계정 메뉴", () => {

@@ -315,10 +315,10 @@ expect_output = ["AssertionError: expected <h1"]
 [[mutation.edit]]
 file = "web/apps/admin/components/pages/AdminScreen.tsx"
 old = '''
-      return <AdminFrame nav={nav} />;
+    return <AdminFrame nav={nav} />;
 '''
 new = '''
-      return <AdminFrame nav={nav}>{children}</AdminFrame>;
+    return <AdminFrame nav={nav}>{children}</AdminFrame>;
 '''
 
 # 아래 넷은 PR 봇(CodeRabbit) 첫 회차의 지적을 반영하며 더했다. 화면에서 숨긴 상태 영역이 늘 서 있고 두 진행 표시의

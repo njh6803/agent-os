@@ -83,7 +83,7 @@ CodeRabbit CLI 0.7.5가 `--base origin/dev`로 163개 파일을 끝까지 돌았
 - 결정 자리가 침묵하던 틈(Major). 갱신이 네트워크나 5xx로 실패하면 `rule.ts`는 로그인 화면으로 보내지 않고 처음 401을 그대로 돌려주는데, `RunDecision.noticeOf`가 401이면 알림을 숨겨서 승인을 눌러도 화면에 아무 반응이 없었다(`rule.ts` 92번 줄 근처와 `RunDecision.tsx`를 직접 읽어 확인했다). 401도 "결정을 보내지 못했다"로 보이게 고치고, 숨기는 데만 쓰이던 `isRejection`을 걷었다. 갱신까지 401이면 화면이 로그인 화면으로 가므로 알림은 이동 직전에 잠깐 보일 뿐이다(어림이고 e2e는 다시 치지 않았다). 시험 `RunPage.decision.test.tsx`의 "결정이 401 을 받고 갱신이 서버 오류로 실패하면…"을 더했고, 고치기 전에 알림이 없다는 이유로 빨간 것을 보았다(손으로 쳤다).
 - 계정 단추(Minor). 로그아웃 요청이 가는 동안 계정 단추를 다시 누르면 메뉴가 닫혀 실패 알림이 사라졌다. Esc와 바깥 누르기와 같게 `pending`이면 무시한다. 기존 시험 "요청이 가는 동안에는…"에 단추를 누르는 단계를 더했고, 고치기 전에 메뉴가 닫혀 빨간 것을 보았다(손으로 쳤다).
 
-오탐으로 가른 것(서브에이전트와 이 세션이 코드를 읽었다): 결정 요청이 갱신 규칙을 안 지난다는 지적(`sendDecision`은 `refreshRule`이 꽂힌 클라이언트를 쓴다), 옛 `data`와 새 `error`가 함께 오는 `AdminScreen` 경로(없다), 결정 e2e가 `next`로 돌아오는지(같은 파일이 이어서 단언한다), 프로브 중계 소켓 하나만 파괴한다는 지적(정상 경로에 영향 없다).
+오탐으로 가른 것(서브에이전트와 이 세션이 코드를 읽었다): 결정 요청이 갱신 규칙을 안 지난다는 지적(`sendDecision`은 `refreshRule`이 꽂힌 클라이언트를 쓴다), 옛 `data`와 새 `error`가 함께 오는 `AdminScreen` 경로(없다고 가렸으나 틀렸다. 아래 "봇 회차"에서 CodeRabbit이 다시 짚어 고쳤다), 결정 e2e가 `next`로 돌아오는지(같은 파일이 이어서 단언한다), 프로브 중계 소켓 하나만 파괴한다는 지적(정상 경로에 영향 없다).
 
 보류한 것과 이유:
 
@@ -95,17 +95,22 @@ open-session을 부른다 2026-11-27T10:52:30Z
 
 ## 봇 회차
 
-PR #657에 `@coderabbitai review`를 남겼으나 CodeRabbit은 `Review rate limited`로 리뷰 없이 끝났다(`wait_ci.py`의 끝 줄). 한도에 걸려 리뷰가 없던 푸시는 회차로 세지 않는다. 이 PR의 보안·버그 축은 PR 직전에 돈 CodeRabbit CLI 리뷰(위 "PR 직전 리뷰")가 대신한다(`docs/constitution/operations.md` 리뷰 파이프라인). `claude-review`는 지적 없음이었다. 검사는 `python`, `web`, `visual`, `e2e`, `e2e-widget`, `e2e-portal`, `e2e-standalone`, `ticket`, `verify`가 모두 SUCCESS였고 `llm`은 SKIPPED였다(`wait_ci.py`가 낸 목록을 읽었다). 앞서 어림으로 남긴 e2e와 사진 비교는 CI의 `e2e`와 `visual` 잡이 통과해 확인됐다.
+첫 요청(푸시 `bfe9c8cfb`)에서 CodeRabbit은 `Review rate limited`로 리뷰 없이 끝났고(`wait_ci.py`의 끝 줄), 한도에 걸려 리뷰가 없던 푸시는 회차로 세지 않는다. `claude-review`는 지적 없음이었고, 검사는 `python`, `web`, `visual`, `e2e`, `e2e-widget`, `e2e-portal`, `e2e-standalone`, `ticket`, `verify`가 모두 SUCCESS였고 `llm`은 SKIPPED였다(`wait_ci.py`가 낸 목록을 읽었다). 앞서 어림으로 남긴 e2e와 사진 비교는 CI의 `e2e`와 `visual` 잡이 통과해 확인됐다.
+
+`origin/dev`(PR #656, 티켓 06)를 합친 푸시 `af327d315`에서 CodeRabbit이 `Finished`로 첫 리뷰를 냈다(이 PR의 첫 회차). 지적 넷이 모두 Minor였고 지적마다 판단했다. 합친 결과는 충돌이 없었고 `pnpm -C web verify`가 통과했다(손으로 쳤다).
+
+- 고친 것: `AdminScreen`이 `me.data`가 있으면 `me.error`를 보지 않아, 화면을 옮겨 캐시된 `me`로 다시 읽다 서버가 오류를 내면 옛 계정과 본문이 그대로 남았다(`web-admin.md`의 서버 데이터를 다시 읽다 실패하면 이미 보인 것을 지우고 실패만 보인다는 줄과 어긋난다). 앞서 이 경로를 "없다"로 가른 것은 틀렸다. SWR이 마운트 때 다시 읽고, 실패하면 `data`를 둔 채 `error`를 채운다(`READ`에 `revalidateIfStale`을 끄는 줄이 없는 것을 코드로 읽었다). 오류를 먼저 보게 순서를 바꿨고, 캐시를 하나 넘겨 화면을 두 번 그리는 시험(`AdminScreen.test.tsx`)을 더했다. 고치기 전에 알림이 없다는 이유로 빨간 것을 보았다(손으로 쳤다).
+- 보류한 것: ① `AccountMenu`의 키보드 흐름(열릴 때 첫 항목 포커스, Esc 뒤 단추로 복귀)은 앞서 보류한 것과 같은 지적이다(12의 화면 작업). ② `playwright_secure_cookie/probe.mjs`의 `try` 범위도 앞서 보류한 것과 같다. ③ `cookie_relay/probe.mjs`의 `::1` 바인딩 실패가 표지 없이 지나 종료 코드 0으로 끝날 수 있다는 지적은 새것이다. 프로브의 `catch` 한 곳을 고치는 일이지만 고친 프로브는 다시 재야 하고(`--update`의 종료 판정이 바뀐다) 이 PR이 근거로 쓰는 값은 정상 경로에서 바뀌지 않으므로, ②와 함께 그 프로브들을 다시 잴 때 고친다.
 
 ## 다음
 
 PR #657을 병합하면 admin-login 티켓 09가 끝난다.
 
-- 다음 단계는 티켓 10(`10-chat-read-screens-list-panel-and-polling.md`, 막는 것 07·09가 모두 done)과 13(`13-remove-shared-tokens.md`, 막는 것 05·09가 모두 done)의 구현이다. 12는 06을 기다리고 11은 10을 기다린다. 06은 다른 워크트리에서 나란히 도는 중이다.
-- 뒤로 넘긴 일(모두 Minor, 이유는 위 "보류한 것과 이유"): 다른 탭의 계정 전환 표시 불일치는 명세가 받아들이는지 판단이 필요하다. 계정 메뉴의 키보드 흐름과 `aria-busy`는 12의 화면 작업에서 함께 본다. `playwright_secure_cookie` 프로브의 `try` 범위는 다음에 그 프로브를 다시 잴 때 고친다.
+- 다음 단계는 열린 티켓 10(`10-chat-read-screens-list-panel-and-polling.md`, 막는 것 07·09), 12(`12-account-password-and-set-password-screens.md`, 막는 것 06·09), 13(`13-remove-shared-tokens.md`, 막는 것 05·09)의 구현이다. 막는 티켓이 모두 done이라 셋 다 시작할 수 있다. 06은 이미 병합됐다(PR #656). 11은 10을, 14는 13을 기다린다.
+- 뒤로 넘긴 일(모두 Minor, 이유는 위 "보류한 것과 이유"와 "봇 회차"): 다른 탭의 계정 전환 표시 불일치는 명세가 받아들이는지 판단이 필요하다. 계정 메뉴의 키보드 흐름과 `aria-busy`는 12의 화면 작업에서 함께 본다. `playwright_secure_cookie` 프로브의 `try` 범위와 `cookie_relay` 프로브의 `::1` 바인딩 실패 표지는 그 프로브들을 다시 잴 때 함께 고친다.
 - 13이 걷는 것: e2e 하네스의 채널 토큰(`channel.ts` 등)과 `serve`의 공유 토큰 요구. 티켓 09가 그렇게 정했다.
 - 12의 화면을 지을 때 볼 것: 루프백이 아닌 http 주소에서 입력 칸을 모두 끈 것이 디자인(주 버튼만 끔)과 다르다. `LogInAttempt`와 `LoginForm`의 Data Clumps, 알림 값 표 중복도 그때 묶는다.
 - `packages/ui`의 `TextField.tsx` 주석과 `TextField`·`Button` 스토리 예시 글에 옛 토큰 입력 칸 문구가 남았다. 디자인 시스템 동기화와 사진 정답이 따라 움직이는 범위라 따로 한다.
-- 병합 충돌 후보는 `README.md`(PR #651)와 `web/packages/api-client/src/clients.test-d.ts`(06)다. 먼저 병합되는 쪽에 따라 뒤의 PR이 푸시 전에 합치기에서 푼다.
+- 병합 충돌 후보였던 `web/packages/api-client/src/clients.test-d.ts`(06)는 `origin/dev`를 합칠 때 충돌 없이 합쳐졌다. `README.md`(PR #651, 티켓 04 단독 배포)는 아직 열려 있어, 그 PR이 나중에 병합되면 그쪽이 푼다.
 - 워크트리에서 병합하므로 주 체크아웃은 당기지 않는다. 다음 세션이 `tidy-checkouts`를 먼저 돈다.
 - 이 PR은 로컬 모델 시험(`llm_local`)의 병합 조건 범위(`operations.md` LLM 테스트의 "범위": `src/agent_os/adapters/`, `core/loop.py`·`model.py`·`run.py`, `channel/`, `main.py`, 로컬 모델 시험 자신, `langchain-openai`·`openai` 판)에 닿지 않아 돌리지 않았다. 근거는 `git diff --name-only origin/dev...HEAD`를 손으로 쳐 본 결과로, `web/`, `.scratch/`, `docs/`, `.claude/rules/web-admin.md`, `CONTEXT.md`, `README.md`뿐이고 `src/`와 `pyproject.toml`·`uv.lock`은 없었다.

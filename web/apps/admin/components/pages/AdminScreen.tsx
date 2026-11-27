@@ -36,19 +36,20 @@ export function AdminScreen({ current, children }: AdminScreenProps) {
   const logOut = useLogOut();
   const nav = <AdminNav current={current} />;
 
-  if (me.data === undefined) {
-    if (me.error === undefined) {
-      // 읽는 중이거나 갱신하는 중이다. 틀만 서고 본문은 비운다.
-      return <AdminFrame nav={nav} />;
-    }
+  if (me.error !== undefined) {
     // 서버에 닿지 못했거나 서버가 오류를 냈다. 로그인하지 않은 것(401)이면 규칙이 로그인 화면으로 보내고, 옮겨 가는 동안과
-    // 갱신이 네트워크로 실패해 끝났는지 모르는 때(규칙이 보내지 않는다)에는 이 알림이 보인다.
+    // 갱신이 네트워크로 실패해 끝났는지 모르는 때(규칙이 보내지 않는다)에는 이 알림이 보인다. 이미 읽은 계정이 캐시에 있어도
+    // (화면을 옮겨 다시 읽다 실패한 때) 옛 이름과 본문을 지우고 실패만 보인다(`web-admin.md`의 다시 읽다 실패하면).
     const { message, requestId } = describeFailure(me.error);
     return (
       <AdminFrame nav={nav}>
         <FailureAlert title="로그인한 계정을 읽지 못했다" message={message} requestId={requestId} />
       </AdminFrame>
     );
+  }
+  if (me.data === undefined) {
+    // 읽는 중이거나 갱신하는 중이다. 틀만 서고 본문은 비운다.
+    return <AdminFrame nav={nav} />;
   }
   return (
     <AdminFrame
