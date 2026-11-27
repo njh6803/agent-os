@@ -19,9 +19,7 @@ import {
   type CheckableKind,
   type ConnectionCheck,
 } from "../../../api/connection";
-import { useTokens } from "../../../stores/tokens";
 import type { ConnectionResult, PressedResult } from "../../../types/connection";
-import { orRejectAdminToken } from "../admin";
 import { pluginKeys } from "../plugins";
 
 /** 스스로 하는 확인의 읽기 정책. 간격은 30초이고 보이지 않는 동안은 SWR 이 쉰다(`refreshWhenHidden` 이 꺼짐). */
@@ -38,18 +36,17 @@ const AUTO = {
 const AUTO_ROOT = "connection-check";
 
 const connectionKeys = {
-  auto: (generation: number, kind: CheckableKind, name: string) =>
-    [AUTO_ROOT, generation, kind, name] as const,
+  auto: (kind: CheckableKind, name: string) => [AUTO_ROOT, kind, name] as const,
 };
 
-/** 날아가는 확인. 그 행(관리 토큰 세대, 종류, 이름)이 화면에 서 있는 동안 같은 행의 요청은 하나만 보낸다. 행이 걷히면 비운다. */
+/** 날아가는 확인. 그 행(종류, 이름)이 화면에 서 있는 동안 같은 행의 요청은 하나만 보낸다. 행이 걷히면 비운다. */
 const flights = new Map<string, Promise<ConnectionResult | null>>();
 
 /** 지금 화면에 서 있는 행의 다시 확인. 행마다 하나다. */
 const mounted = new Map<string, () => void>();
 
-function flightKey(generation: number, kind: CheckableKind, name: string): string {
-  return JSON.stringify([generation, kind, name]);
+function flightKey(kind: CheckableKind, name: string): string {
+  return JSON.stringify([kind, name]);
 }
 
 function sharedFlight(
@@ -73,12 +70,9 @@ function sharedFlight(
  * 확인 요청 하나를 보내 행에 보일 결과로 옮긴다. 요청의 실패는 `failed` 값이다. `null` 은 응답이 `disabled` 나
  * `not_applicable` 이라 보일 결과가 없다는 것이고, 목록이 그 사이 바뀐 것이다.
  */
-async function resultOf(
-  adminToken: string,
-  request: (adminToken: string) => Promise<ConnectionCheck>,
-): Promise<ConnectionResult | null> {
+async function resultOf(request: () => Promise<ConnectionCheck>): Promise<ConnectionResult | null> {
   try {
-    const check = await orRejectAdminToken(adminToken, request);
+    const check = await request();
     switch (check.status) {
       case "reached":
         return { state: "reached" };
@@ -105,7 +99,7 @@ export interface ConnectionTarget {
 }
 
 /**
- * 켜 둔 원격 MCP 서버나 켜 둔 모델의 행이 스스로 하는 확인. 꺼 둔 행이거나 관리 토큰이 없으면 부르지 않는다. 처음 응답이
+ * 켜 둔 원격 MCP 서버나 켜 둔 모델의 행이 스스로 하는 확인. 꺼 둔 행이면 부르지 않는다. 처음 응답이
  * 오기 전과 응답이 `disabled` 나 `not_applicable` 일 때는 `undefined` 다.
  *
  * 다시 확인하는 동안에는 앞선 결과가 그대로 남는다. 보이지 않던 탭이 보이면 바로 한 번 확인한다.
@@ -115,12 +109,10 @@ export function useAutoConnection({
   name,
   enabled,
 }: ConnectionTarget): ConnectionResult | undefined {
-  const adminToken = useTokens((state) => state.adminToken);
-  const generation = useTokens((state) => state.adminTokenGeneration);
   const { mutate } = useSWRConfig();
-  const run = enabled && adminToken !== null;
-  const key = run ? connectionKeys.auto(generation, kind, name) : null;
-  const flight = flightKey(generation, kind, name);
+  const run = enabled;
+  const key = run ? connectionKeys.auto(kind, name) : null;
+  const flight = flightKey(kind, name);
 
   const { data } = useSWR(
     key,
@@ -131,11 +123,9 @@ export function useAutoConnection({
           document.visibilityState === "hidden"
             ? Promise.resolve(null)
             : sharedFlight(flight, async () => {
-                const result = await resultOf(adminToken, (token) =>
-                  checkConnection(token, kind, name),
-                );
+                const result = await resultOf(() => checkConnection(kind, name));
                 if (result === null) {
-                  void mutate(pluginKeys.list(generation));
+                  void mutate(pluginKeys.list());
                 }
                 return result;
               })
@@ -143,15 +133,15 @@ export function useAutoConnection({
     AUTO,
   );
 
-  // 키가 사라질 때(꺼짐, 페이지를 떠남, 관리 토큰의 교체) 그 행의 캐시와 날아가는 요청을 비운다. 그래야 다시 켰을 때 옛
+  // 키가 사라질 때(꺼짐, 페이지를 떠남) 그 행의 캐시와 날아가는 요청을 비운다. 그래야 다시 켰을 때 옛
   // 결과가 보이지 않고, 날아가던 옛 요청의 응답이 새 확인으로 쓰이지 않는다. SWR 의 효과가 먼저 걷히고 나서 이 정리가
   // 돌므로 `revalidate` 를 켜도 요청은 가지 않고, 날아가는 요청의 표지(중복을 막는 표)만 지워 다시 켰을 때 확인이 바로
-  // 나간다. 키는 값이 같아도 렌더마다 새 배열이라, 효과 안에서 그 조각(generation, kind, name)으로 다시 짓는다.
+  // 나간다. 키는 값이 같아도 렌더마다 새 배열이라, 효과 안에서 그 조각(kind, name)으로 다시 짓는다.
   useEffect(() => {
     if (!run) {
       return undefined;
     }
-    const ownKey = connectionKeys.auto(generation, kind, name);
+    const ownKey = connectionKeys.auto(kind, name);
     const refresh = (): void => {
       void mutate(ownKey);
     };
@@ -171,7 +161,7 @@ export function useAutoConnection({
       // 화면 전체가 걷힐 때는 SWR 의 상태가 먼저 사라져 mutate 가 던진다. 그때는 비울 캐시도 없다.
       mutate(ownKey, undefined, { revalidate: true }).catch(() => undefined);
     };
-  }, [run, generation, kind, name, flight, mutate]);
+  }, [run, kind, name, flight, mutate]);
 
   return data ?? undefined;
 }
@@ -199,8 +189,6 @@ export interface ManualConnection {
  * 다시 읽어도 남고, 플러그인을 끄거나 화면을 떠나면 사라진다. 끈 뒤에 도착하는 응답은 버린다.
  */
 export function useManualConnection({ kind, name, enabled }: ConnectionTarget): ManualConnection {
-  const adminToken = useTokens((state) => state.adminToken);
-  const generation = useTokens((state) => state.adminTokenGeneration);
   const { mutate } = useSWRConfig();
   const [pending, setPending] = useState(false);
   const [latest, setLatest] = useState<PressedResult | undefined>(undefined);
@@ -223,28 +211,26 @@ export function useManualConnection({ kind, name, enabled }: ConnectionTarget): 
   }, [enabled]);
 
   const run = useCallback(() => {
-    if (adminToken === null || !enabled || pending) {
+    if (!enabled || pending) {
       return;
     }
     ticket.current += 1;
     const mine = ticket.current;
     const pressedAt = new Date();
     setPending(true);
-    void resultOf(adminToken, (token) => checkConnectionByLaunching(token, kind, name)).then(
-      (result) => {
-        if (ticket.current !== mine) {
-          return;
-        }
-        setPending(false);
-        if (result === null) {
-          setLatest(undefined);
-          void mutate(pluginKeys.list(generation));
-          return;
-        }
-        setLatest({ result, at: result.state === "failed" ? pressedAt : new Date() });
-      },
-    );
-  }, [adminToken, enabled, generation, kind, mutate, name, pending]);
+    void resultOf(() => checkConnectionByLaunching(kind, name)).then((result) => {
+      if (ticket.current !== mine) {
+        return;
+      }
+      setPending(false);
+      if (result === null) {
+        setLatest(undefined);
+        void mutate(pluginKeys.list());
+        return;
+      }
+      setLatest({ result, at: result.state === "failed" ? pressedAt : new Date() });
+    });
+  }, [enabled, kind, mutate, name, pending]);
 
   return { pending, latest, run };
 }

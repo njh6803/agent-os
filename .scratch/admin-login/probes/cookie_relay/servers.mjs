@@ -14,6 +14,7 @@
 
 import http from "node:http";
 import https from "node:https";
+import net from "node:net";
 
 const HTML = { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store" };
 const JSON_TYPE = { "Content-Type": "application/json", "Cache-Control": "no-store" };
@@ -25,10 +26,10 @@ export function pairs(raw) {
   return out;
 }
 
-export function listen(server) {
+export function listen(server, host = "127.0.0.1") {
   return new Promise((resolve, reject) => {
     server.once("error", reject);
-    server.listen(0, "127.0.0.1", () => resolve(server.address().port));
+    server.listen(0, host, () => resolve(server.address().port));
   });
 }
 
@@ -179,6 +180,34 @@ function visitorHandler(log) {
 export function createVisitor() {
   const log = [];
   return { server: http.createServer(visitorHandler(log)), log };
+}
+
+/** B 와 같은 처리기(기록도 같은 log)를 쓰는 평문 서버. `[::1]` 갈래에서 B 를 IPv6 루프백에 세울 때 쓴다. */
+export function createPlainVisitor(log) {
+  return http.createServer(visitorHandler(log));
+}
+
+/**
+ * `[::1]` 갈래의 앞단. 받은 바이트를 그대로 `127.0.0.1:<upstreamPort>` 로 넘기는 TCP 중계라 HTTP 는 건드리지 않는다
+ * (브라우저가 보낸 Host 는 `[::1]:<앞단 포트>` 그대로 관리 화면에 닿는다). 다른 갈래와 같은 관리 화면 프로세스를 `::1`
+ * 로도 받아 같은 질문(같은 쿠키, 같은 요청)을 던지려는 것이다. 연결을 모아 두었다가 `closeAllConnections` 로 끊는다.
+ */
+export function tcpFront6(upstreamPort) {
+  const sockets = new Set();
+  const server = net.createServer((client) => {
+    const upstream = net.connect({ host: "127.0.0.1", port: upstreamPort });
+    for (const socket of [client, upstream]) {
+      sockets.add(socket);
+      socket.on("close", () => sockets.delete(socket));
+      socket.on("error", () => socket.destroy());
+    }
+    client.pipe(upstream);
+    upstream.pipe(client);
+  });
+  server.closeAllConnections = () => {
+    for (const socket of sockets) socket.destroy();
+  };
+  return server;
 }
 
 export function createTlsVisitor(tls, log) {

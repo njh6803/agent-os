@@ -1,8 +1,7 @@
-// 결정의 요청 함수(web-admin 티켓 08). 채널 클라이언트만 쓴다. 관리 화면이 채널에 내는 요청은 이것 하나이고, 채널
-// 토큰만 싣는다(스토리 10). 클라이언트는 부를 때 만든다(`api/plugins` 와 같다). 이 함수는 이벤트 처리기에서만 부른다.
+// 결정의 요청 함수(web-admin 티켓 08). 운영자 클라이언트로 채널의 결정 경로를 부른다. 자격은 로그인한 계정의 쿠키다
+// (admin-login 티켓 09). 클라이언트는 부를 때 만든다(`api/plugins` 와 같다). 이 함수는 이벤트 처리기에서만 부른다.
 
 import {
-  createChannelClient,
   readFrames,
   type components,
   // 계약의 이름 그대로 두면 DOM 전역 `Event` 를 가린다(티켓 03 의 메모).
@@ -10,6 +9,7 @@ import {
   type StreamFrame,
 } from "@agent-os/api-client";
 import { failureOf, unreachable } from "../failure";
+import { operatorClient } from "../session";
 
 export type { RunEvent, StreamFrame };
 export type Decision = components["schemas"]["Decision"];
@@ -23,12 +23,11 @@ export type Decision = components["schemas"]["Decision"];
  * 연결은 `signal` 로 끊는다. 응답 전이면 이 함수가, 응답 뒤면 반복자가 그 에러를 던진다(`readFrames`).
  */
 export async function sendDecision(
-  channelToken: string,
   runId: string,
   decision: Decision,
   signal: AbortSignal,
 ): Promise<AsyncGenerator<StreamFrame, void, undefined>> {
-  const { data, error, response } = await createChannelClient(channelToken)
+  const { data, error, response } = await operatorClient()
     .POST("/runs/{run_id}/approval", {
       params: { path: { run_id: runId } },
       body: decision,

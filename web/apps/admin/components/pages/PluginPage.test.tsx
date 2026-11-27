@@ -9,10 +9,8 @@ import { http, HttpResponse } from "msw";
 import { describe, expect, test } from "vitest";
 import { api, envelope, network, type Plugin } from "../../testing/network";
 import { renderPage } from "../../testing/render";
-import { acceptTokens, clearTokens, enterAdminToken } from "../../testing/token";
+import { signedIn } from "../../testing/session";
 import { PluginPage } from "./PluginPage";
-
-const TOKEN = "adm-4Kp9-plugin-page-token";
 
 const CALC: Plugin = {
   kind: "agent",
@@ -69,37 +67,36 @@ const CALC_MANIFEST = `{
 }`;
 
 /**
- * `GET /plugins/{kind}/{name}` 하나에 답한다. `reply` 는 몇 번째 요청인지(0부터) 받는다. 요청마다의
- * `Authorization` 을 쌓아 돌려준다.
+ * `GET /plugins/{kind}/{name}` 하나에 답한다. `reply` 는 몇 번째 요청인지(0부터) 받는다. 요청마다의 주소를
+ * 쌓아 돌려준다. 화면이 몇 번 읽었는지가 여기서 보인다.
  */
 function servePlugin(
   path: string,
   reply: (call: number) => Response | Promise<Response>,
 ): string[] {
-  const authorizations: string[] = [];
+  const requests: string[] = [];
   network.use(
     http.get(api(path), ({ request }) => {
-      authorizations.push(request.headers.get("Authorization") ?? "(없음)");
-      return reply(authorizations.length - 1);
+      requests.push(request.url);
+      return reply(requests.length - 1);
     }),
   );
-  return authorizations;
+  return requests;
 }
 
-/** 플러그인 하나를 열고 관리 토큰을 넣는다. 이어서 누를 사용자를 돌려준다. */
-async function openPlugin(kind: string, name: string): Promise<UserEvent> {
+/** 로그인한 채로 플러그인 하나를 연다. 이어서 누를 사용자를 돌려준다. */
+function openPlugin(kind: string, name: string): UserEvent {
+  signedIn();
   const user = userEvent.setup();
   renderPage(<PluginPage kind={kind} name={name} />);
-  await enterAdminToken(user, TOKEN);
   return user;
 }
 
 describe("플러그인 하나", () => {
   test("읽히는 플러그인을 열면 켜짐과 들여 적은 매니페스트가 통째로 보인다", async () => {
-    acceptTokens();
-    const authorizations = servePlugin("/plugins/agent/calc", () => HttpResponse.json(CALC));
+    const requests = servePlugin("/plugins/agent/calc", () => HttpResponse.json(CALC));
 
-    await openPlugin("agent", "calc");
+    openPlugin("agent", "calc");
 
     const manifest = await screen.findByRole("region", { name: "매니페스트" });
     expect(manifest.textContent).toContain(CALC_MANIFEST);
@@ -109,7 +106,7 @@ describe("플러그인 하나", () => {
     expect(screen.getByText("에이전트. 켜고 끄기는 플러그인 목록에서 한다.")).toBeTruthy();
     expect(screen.getByRole("heading", { level: 2, name: "매니페스트" })).toBeTruthy();
     expect(screen.queryByRole("switch")).toBeNull();
-    expect(authorizations).toEqual([`Bearer ${TOKEN}`]);
+    expect(requests).toHaveLength(1);
   });
 
   test("openai-compatible 모델을 열면 모델 서버의 주소와 키 변수의 이름이 파일에 적은 그대로 보인다", async () => {
@@ -131,10 +128,9 @@ describe("플러그인 하나", () => {
         api_key_env: "MODEL_SERVER_API_KEY",
       },
     };
-    acceptTokens();
     servePlugin("/plugins/model/ax-4-light", () => HttpResponse.json(ax));
 
-    await openPlugin("model", "ax-4-light");
+    openPlugin("model", "ax-4-light");
 
     const manifest = await screen.findByRole("region", { name: "매니페스트" });
     expect(manifest.textContent).toContain('"provider": "openai-compatible"');
@@ -143,7 +139,6 @@ describe("플러그인 하나", () => {
   });
 
   test("꺼진 플러그인은 제목 옆에 꺼짐이 선다", async () => {
-    acceptTokens();
     servePlugin("/plugins/mcp/everything", () =>
       HttpResponse.json({
         ...CALC,
@@ -153,7 +148,7 @@ describe("플러그인 하나", () => {
       }),
     );
 
-    await openPlugin("mcp", "everything");
+    openPlugin("mcp", "everything");
 
     expect(await screen.findByText("꺼짐")).toBeTruthy();
     expect(screen.queryByText("켜짐")).toBeNull();
@@ -163,12 +158,11 @@ describe("플러그인 하나", () => {
   test("매니페스트를 읽을 수 없는 플러그인을 열면 500 봉투의 경로와 이유와 추적 식별자가 보인다", async () => {
     const message =
       "매니페스트를 읽을 수 없다: C:/root/plugins/agents/broken/plugin.toml\nExpected '=' after a key";
-    acceptTokens();
     servePlugin("/plugins/agent/broken", () =>
       HttpResponse.json(envelope("internal_error", message, "req-5b21"), { status: 500 }),
     );
 
-    await openPlugin("agent", "broken");
+    openPlugin("agent", "broken");
 
     const alert = await screen.findByRole("alert");
     expect(alert.textContent).toContain("플러그인을 읽지 못했다");
@@ -179,49 +173,33 @@ describe("플러그인 하나", () => {
   });
 
   test("없는 이름을 열면 404 봉투의 메시지가 보인다", async () => {
-    acceptTokens();
     servePlugin("/plugins/mcp/ghost", () =>
       HttpResponse.json(envelope("not_found", "플러그인이 없다: mcp/ghost"), { status: 404 }),
     );
 
-    await openPlugin("mcp", "ghost");
+    openPlugin("mcp", "ghost");
 
     expect((await screen.findByRole("alert")).textContent).toContain("플러그인이 없다: mcp/ghost");
   });
 
-  test("플러그인 하나를 읽다 401 을 받으면 관리 토큰을 지우고 입력 화면으로 돌아가 거부됐다고 말한다", async () => {
-    acceptTokens();
-    servePlugin("/plugins/agent/calc", () =>
-      HttpResponse.json(envelope("unauthorized", "토큰이 없거나 틀리다"), { status: 401 }),
-    );
-
-    await openPlugin("agent", "calc");
-
-    expect((await screen.findByRole("alert")).textContent).toContain("관리 토큰이 거부됐다");
-    expect(screen.getByLabelText("관리 토큰")).toBeTruthy();
-    expect(screen.queryByRole("heading", { level: 1, name: "calc" })).toBeNull();
-  });
-
   test("새로 고침 버튼이 그 플러그인을 다시 읽는다", async () => {
-    acceptTokens();
-    const authorizations = servePlugin("/plugins/agent/calc", (call) =>
+    const requests = servePlugin("/plugins/agent/calc", (call) =>
       HttpResponse.json(call === 0 ? CALC : { ...CALC, enabled: false }),
     );
-    const user = await openPlugin("agent", "calc");
+    const user = openPlugin("agent", "calc");
     await screen.findByText("켜짐");
 
     await user.click(screen.getByRole("button", { name: "새로 고침" }));
 
     expect(await screen.findByText("꺼짐")).toBeTruthy();
-    expect(authorizations).toHaveLength(2);
+    expect(requests).toHaveLength(2);
   });
 
   test("처음 불러오는 동안에는 머리 아래에 플러그인을 불러오는 중이 선다", async () => {
     const first = Promise.withResolvers<Response>();
-    acceptTokens();
     servePlugin("/plugins/agent/calc", () => first.promise);
 
-    await openPlugin("agent", "calc");
+    openPlugin("agent", "calc");
 
     expect(await screen.findByRole("progressbar", { name: "플러그인을 불러오는 중" })).toBeTruthy();
     first.resolve(HttpResponse.json(CALC));
@@ -231,11 +209,10 @@ describe("플러그인 하나", () => {
 
   test("다시 확인하는 동안에는 이미 보인 매니페스트가 남는다", async () => {
     const again = Promise.withResolvers<Response>();
-    acceptTokens();
     servePlugin("/plugins/agent/calc", (call) =>
       call === 0 ? HttpResponse.json(CALC) : again.promise,
     );
-    const user = await openPlugin("agent", "calc");
+    const user = openPlugin("agent", "calc");
     await screen.findByRole("region", { name: "매니페스트" });
 
     await user.click(screen.getByRole("button", { name: "새로 고침" }));
@@ -246,13 +223,12 @@ describe("플러그인 하나", () => {
   });
 
   test("이미 보인 플러그인도 다시 읽다 실패하면 매니페스트를 지우고 실패를 보인다", async () => {
-    acceptTokens();
     servePlugin("/plugins/agent/calc", (call) =>
       call === 0
         ? HttpResponse.json(CALC)
         : HttpResponse.json(envelope("internal_error", "운영자 파일이 깨졌다"), { status: 500 }),
     );
-    const user = await openPlugin("agent", "calc");
+    const user = openPlugin("agent", "calc");
     await screen.findByRole("region", { name: "매니페스트" });
 
     await user.click(screen.getByRole("button", { name: "새로 고침" }));
@@ -263,38 +239,9 @@ describe("플러그인 하나", () => {
     expect(screen.queryByText("켜짐")).toBeNull();
   });
 
-  test("지운 토큰의 늦은 401 은 그 사이 넣은 새 토큰의 플러그인 하나에 섞이지 않고 새 토큰을 내려놓지 않는다", async () => {
-    const old = "adm-old-token-cleared";
-    const late = Promise.withResolvers<Response>();
-    acceptTokens();
-    const authorizations = servePlugin("/plugins/agent/calc", (call) =>
-      call === 0 ? late.promise : HttpResponse.json(CALC),
-    );
-    const user = userEvent.setup();
-    renderPage(<PluginPage kind="agent" name="calc" />);
-    // 옛 토큰의 요청(0)은 응답을 기다린다.
-    await enterAdminToken(user, old);
-    await clearTokens(user);
-    await enterAdminToken(user, TOKEN);
-
-    // 새 토큰은 옛 요청을 나눠 받지 않고 제 요청을 보낸다.
-    expect(await screen.findByRole("region", { name: "매니페스트" })).toBeTruthy();
-    expect(authorizations).toEqual([`Bearer ${old}`, `Bearer ${TOKEN}`]);
-    late.resolve(
-      HttpResponse.json(envelope("unauthorized", "토큰이 없거나 틀리다"), { status: 401 }),
-    );
-    // 늦은 응답이 처리될 틈을 준다. 옛 요청의 401 이 새 토큰을 내려놓으면 넣는 자리로 돌아간다.
-    await new Promise((resolve) => setTimeout(resolve, 200));
-
-    expect(screen.queryByLabelText("관리 토큰")).toBeNull();
-    expect(screen.queryByRole("alert")).toBeNull();
-  });
-
   test("주소의 종류가 플러그인의 종류가 아니면 요청을 보내지 않고 그렇다고 말한다", async () => {
-    acceptTokens();
-
     // 처리하지 않은 요청은 setup.ts 가 테스트를 빨갛게 한다.
-    await openPlugin("agents", "calc");
+    openPlugin("agents", "calc");
 
     const alert = await screen.findByRole("alert");
     expect(alert.textContent).toContain("플러그인을 읽지 못했다");
@@ -302,9 +249,7 @@ describe("플러그인 하나", () => {
   });
 
   test("주소로 플러그인을 고르지 못해도 플러그인 목록으로 돌아가는 링크가 있다", async () => {
-    acceptTokens();
-
-    await openPlugin("agents", "calc");
+    openPlugin("agents", "calc");
 
     await screen.findByRole("alert");
     expect(screen.getByRole("link", { name: "플러그인 목록" }).getAttribute("href")).toBe("/");
@@ -312,25 +257,22 @@ describe("플러그인 하나", () => {
 
   test("주소의 조각이 인코딩된 채로 와도 풀어서 보이고 요청은 한 번만 인코딩한다", async () => {
     // Next 16.3.6 은 동적 조각을 퍼센트 인코딩된 채로 넘긴다(e2e 의 패턴 밖 표지 흐름이 쟀다).
-    acceptTokens();
-    const authorizations = servePlugin("/plugins/agent/Old%20Calc", () =>
+    const requests = servePlugin("/plugins/agent/Old%20Calc", () =>
       HttpResponse.json(envelope("invalid_request", "요청의 형식이 올바르지 않다"), {
         status: 422,
       }),
     );
 
     // 두 번 인코딩한 요청(Old%2520Calc)은 처리하지 않은 요청이라 setup.ts 가 테스트를 빨갛게 한다.
-    await openPlugin("agent", "Old%20Calc");
+    openPlugin("agent", "Old%20Calc");
 
     expect(await screen.findByRole("heading", { level: 1, name: "Old Calc" })).toBeTruthy();
     expect((await screen.findByRole("alert")).textContent).toContain("요청의 형식이 올바르지 않다");
-    expect(authorizations).toHaveLength(1);
+    expect(requests).toHaveLength(1);
   });
 
   test("풀 수 없는 주소의 조각이면 요청을 보내지 않고 그렇다고 말한다", async () => {
-    acceptTokens();
-
-    await openPlugin("agent", "%E0%A4%A");
+    openPlugin("agent", "%E0%A4%A");
 
     expect((await screen.findByRole("alert")).textContent).toContain(
       "주소를 풀 수 없다: agent/%E0%A4%A",
@@ -338,26 +280,21 @@ describe("플러그인 하나", () => {
   });
 
   test("주소를 풀 수 없어도 화면의 제목은 받은 이름 조각 그대로다", async () => {
-    acceptTokens();
-
-    await openPlugin("agent", "%E0%A4%A");
+    openPlugin("agent", "%E0%A4%A");
 
     expect(await screen.findByRole("heading", { level: 1, name: "%E0%A4%A" })).toBeTruthy();
   });
 
   test("주소의 종류가 플러그인의 종류가 아니어도 화면의 제목은 푼 이름이다", async () => {
-    acceptTokens();
-
-    await openPlugin("agents", "Old%20Calc");
+    openPlugin("agents", "Old%20Calc");
 
     expect(await screen.findByRole("heading", { level: 1, name: "Old Calc" })).toBeTruthy();
   });
 
   test("플러그인 목록으로 돌아가는 링크가 있다", async () => {
-    acceptTokens();
     servePlugin("/plugins/agent/calc", () => HttpResponse.json(CALC));
 
-    await openPlugin("agent", "calc");
+    openPlugin("agent", "calc");
 
     const back = await screen.findByRole("link", { name: "플러그인 목록" });
     expect(back.getAttribute("href")).toBe("/");

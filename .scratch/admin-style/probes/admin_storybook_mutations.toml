@@ -65,21 +65,6 @@ new = '''
 '''
 
 [[mutation]]
-name = "넣기 버튼이 넓은 폭에서 오른쪽 끝에 서지 않고 칸의 폭으로 늘면 빨갛다"
-runner = "wide"
-expect = "red"
-expect_output = ["expected 406 to be less than 406"]
-
-[[mutation.edit]]
-file = "web/apps/admin/components/organisms/AdminTokenForm.tsx"
-old = '''
-          <div className="flex flex-col wide:items-end">
-'''
-new = '''
-          <div className="flex flex-col">
-'''
-
-[[mutation]]
 name = "한 칸이 최대 폭 form 이 아니면 빨갛다"
 runner = "narrow"
 expect = "red"
