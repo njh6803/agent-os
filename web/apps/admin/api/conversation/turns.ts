@@ -17,6 +17,8 @@ export type Approval =
   | {
       readonly state: "waiting";
       readonly tool: string;
+      /** 승인을 묻는 도구 호출의 인자. 승인 묻기가 글자 그대로 보인다. */
+      readonly args: unknown;
       readonly at: string;
       /** 그 일시정지 이벤트가 트레이스의 `events` 에서 서는 0부터 센 자리. 결정 경로가 이 자리를 받는다. */
       readonly pauseIndex: number;
@@ -59,8 +61,11 @@ export interface Turn {
   readonly outcome: Outcome;
 }
 
-/** 트레이스를 대화의 한 차례로 바꾼다. 모델 호출과 대화 요약은 대화에 싣지 않는다(패널에서 본다). */
-export function turnOf(trace: Trace): Turn {
+/**
+ * 트레이스를 대화의 한 차례로 바꾼다. 모델 호출과 대화 요약은 대화에 싣지 않는다(패널에서 본다). 응답 스트림에서 받은
+ * 이벤트의 열도 같은 모양이라 같은 길로 바꾼다(그래서 `run_id` 와 `events` 만 받는다).
+ */
+export function turnOf(trace: Pick<Trace, "run_id" | "events">): Turn {
   const tools: { tool: string; ok: boolean }[] = [];
   const approvals: Approval[] = [];
   let agent = "";
@@ -81,7 +86,13 @@ export function turnOf(trace: Trace): Turn {
         tools.push({ tool: event.tool, ok: event.ok });
         break;
       case "run_paused":
-        approvals.push({ state: "waiting", tool: event.tool, at: event.ts, pauseIndex: index });
+        approvals.push({
+          state: "waiting",
+          tool: event.tool,
+          args: event.args,
+          at: event.ts,
+          pauseIndex: index,
+        });
         break;
       case "approval_granted":
       case "approval_denied":
@@ -196,6 +207,37 @@ export interface Earlier {
   readonly traces: readonly Trace[];
   /** `start` 는 첫 실행에 닿았다, `cap` 은 상한에 닿았고 더 앞이 남았다, `broken` 은 읽지 못한 고리에서 멈췄다. */
   readonly end: "start" | "cap" | "broken";
+}
+
+/**
+ * 보내기가 끝난 뒤 새 끝 실행의 앞 실행들. 이미 읽은 것에서 만들어, 대화를 처음부터 다시 거슬러 읽지 않는다(최대 100번의
+ * 요청을 아낀다). `from` 은 새 실행이 이어 간 실행이다. 지금 끝 실행이면 끝 실행이 앞 실행에 더해지고, 지금 끝 실행의 앞
+ * 실행이면(실패한 끝 실행의 다시 보내기) 이미 읽은 앞 실행들 그대로다. 둘 다 아니거나 읽은 것이 없으면 만들지 못해 null 이다. 새 대화(`from` 이 null)는 앞 실행이 없다.
+ */
+export function earlierAfterSend(
+  from: string | null,
+  end: Trace | undefined,
+  earlier: Earlier | undefined,
+): Earlier | null {
+  if (from === null) {
+    // 새 대화는 앞 실행이 없다. 읽을 것이 없어도 비동기라 채워 두지 않으면 화면이 한 차례 비어 입력 칸의 글이 사라진다.
+    return { traces: [], end: "start" };
+  }
+  if (end === undefined || earlier === undefined) {
+    return null;
+  }
+  const traces =
+    from === end.run_id
+      ? [...earlier.traces, end]
+      : from === previousRunOf(end)
+        ? earlier.traces
+        : null;
+  if (traces === null) {
+    return null;
+  }
+  return traces.length > EARLIER_CAP
+    ? { traces: traces.slice(-EARLIER_CAP), end: "cap" }
+    : { traces, end: earlier.end };
 }
 
 /**

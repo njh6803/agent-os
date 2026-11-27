@@ -15,7 +15,7 @@ import { api, network } from "../../testing/network";
 import { renderPage } from "../../testing/render";
 import { signedIn } from "../../testing/session";
 import { HomePage } from "./HomePage";
-import { RunsPage } from "./RunsPage";
+import { ConversationsPage } from "./ConversationsPage";
 import { SettingsPage } from "./SettingsPage";
 
 /** 테마를 남기는 저장 키. 값은 테마 키의 글자 그대로다(명세 "저장"). */
@@ -130,8 +130,8 @@ describe("다른 탭에서 바꾼 테마", () => {
 
   test("설정이 아닌 화면에서도 다른 탭이 바꾼 테마를 html 이 따른다", async () => {
     signedIn();
-    network.use(http.get(api("/traces"), () => new Promise<Response>(() => undefined)));
-    renderPage(<RunsPage />);
+    network.use(http.get(api("/conversations"), () => new Promise<Response>(() => undefined)));
+    renderPage(<ConversationsPage />);
     await screen.findByRole("navigation", { name: "관리 화면" });
 
     storageChangedElsewhere({ key: KEY, oldValue: null, newValue: "jacho" });

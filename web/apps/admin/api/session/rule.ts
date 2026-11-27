@@ -31,17 +31,15 @@ const OUTSIDE_RULE: ReadonlySet<string> = new Set([
 /** 갱신의 결과. 갱신됐다, 로그인이 끝났다, 끝났는지 모른다(네트워크나 5xx). */
 type Renewal = "renewed" | "ended" | "unknown";
 
-type Sender = (request: Request) => Promise<Response>;
-
 /** 다시 보낼 복사본. 처음 요청은 보내면서 본문을 쓰므로 보내기 전에 복사해 둔다. 요청마다 `id` 가 다르다. */
 const copies = new Map<string, Request>();
 
 /** 도는 갱신. 있으면 새로 보내지 않고 이것을 함께 기다린다. */
 let running: Promise<Renewal> | null = null;
 
-async function refresh(send: Sender, baseUrl: string): Promise<Renewal> {
+async function refresh(request: () => Promise<Response>): Promise<Renewal> {
   try {
-    const response = await send(new Request(`${baseUrl}/auth/refresh`, { method: "POST" }));
+    const response = await request();
     if (response.status === 204) {
       return "renewed";
     }
@@ -52,11 +50,23 @@ async function refresh(send: Sender, baseUrl: string): Promise<Renewal> {
   }
 }
 
-function refreshOnce(send: Sender, baseUrl: string): Promise<Renewal> {
-  running ??= refresh(send, baseUrl).finally(() => {
+function refreshOnce(request: () => Promise<Response>): Promise<Renewal> {
+  running ??= refresh(request).finally(() => {
     running = null;
   });
   return running;
+}
+
+/**
+ * 스트림이 열린 동안의 갱신(명세 "스트림이 열린 동안의 갱신"). 다른 요청이 없어 401 이 나지 않으니 화면이 짧은 JWT 수명에
+ * 맞춰 스스로 부른다. 도는 갱신이 있으면 그것을 함께 기다리므로 같은 탭의 갱신은 여전히 하나다. 갱신이 401 이면 지금 대화의
+ * 주소를 `next` 에 싣고 로그인 화면으로 간다("스트림 도중 갱신이 실패하면"). 네트워크나 5xx 는 로그인이 끝났는지 모르므로
+ * 아무것도 하지 않는다.
+ */
+export async function renewWhileStreaming(request: () => Promise<Response>): Promise<void> {
+  if ((await refreshOnce(request)) === "ended") {
+    leave("");
+  }
 }
 
 /**
@@ -88,7 +98,12 @@ export const refreshRule: OperatorMiddleware = {
     if (copy === undefined || response.status !== 401) {
       return undefined;
     }
-    const outcome = await refreshOnce(options.fetch, options.baseUrl);
+    // 브라우저의 `fetch` 는 `options` 의 메서드로 부르면 "Illegal invocation" 이 나서 갱신이 나가지도 못한 채 "모름"이 된다.
+    // 그래서 함수만 꺼내 부른다.
+    const send = options.fetch;
+    const outcome = await refreshOnce(() =>
+      send(new Request(`${options.baseUrl}/auth/refresh`, { method: "POST" })),
+    );
     if (outcome === "unknown") {
       return undefined;
     }
@@ -101,7 +116,7 @@ export const refreshRule: OperatorMiddleware = {
       leave(schemaPath);
       return undefined;
     }
-    const again = await options.fetch(copy);
+    const again = await send(copy);
     // 다시 보낸 로그아웃이 또 401 이면 쿠키를 지우는 응답을 받지 못한 것이다. 로그인 화면으로 보내지 않고 부른 쪽이 "로그아웃하지
     // 못했다"를 보이게 둔다. 갱신용 번호가 브라우저에 남기 때문이다.
     if (again.status === 401 && schemaPath !== "/auth/logout") {

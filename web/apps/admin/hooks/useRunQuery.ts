@@ -34,6 +34,17 @@ export function useRunQuery(): readonly [string | null, (run: string | null) => 
   return [run, setRunQuery];
 }
 
+/**
+ * 방문 기록을 늘리지 않고 주소만 `path` 로 바꾼다(`replaceState`). 새 대화나 이어 가기의 시작 이벤트가 오면 주소가 그 실행의
+ * 대화(`/chat/<실행>`)가 된다. 뒤로 가기가 빈 새 대화가 아니라 대화 목록으로 가게 하려는 것이다. 질의는 비워지므로 열린
+ * 패널은 닫힌다. 상태를 null 로 넘겨야 라우터가 바뀐 주소를 알아 `usePathname` 이 따라온다(라우터의 상태가 든 `history.state`
+ * 를 그대로 넘기면 라우터는 자기 것이라 보고 건너뛴다). 화면은 그대로 두고 주소만 따라온다.
+ */
+export function replaceAddress(path: string): void {
+  history.replaceState(null, "", path);
+  window.dispatchEvent(new Event(CHANGED));
+}
+
 function setRunQuery(run: string | null): void {
   const url = new URL(location.href);
   if (run === null) {

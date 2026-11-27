@@ -1,6 +1,6 @@
 // 대화 화면(admin-login 티켓 10). 끝 실행의 트레이스를 읽고 앞 실행을 거슬러 읽어 첫 실행부터 한 번에 그린다. 끝 실행이 결말
 // 없이 도는 동안은 그 실행 하나만 3초마다 다시 읽고, 결말이 오거나 멈출 때가 지나면 멈춘다. 실행마다의 "자세히"가 오른쪽에
-// 실행 패널을 연다. 이 화면은 읽기만 한다.
+// 실행 패널을 연다. 보내기와 이어 가기와 승인과 옛 주소의 이동은 `ConversationPage.write.test.tsx` 가 본다.
 //
 // 주 이음매다. 페이지를 jsdom 에 그리고 HTTP 만 MSW 가 받는다. 시간은 가짜 시계가 흘린다. 시간대는 `pages` 프로젝트가
 // America/New_York 으로 고정한다(web/vitest.config.ts). 로그인은 쿠키라 테스트에서 보이지 않고, 화면은 `GET /auth/me` 에
@@ -461,13 +461,19 @@ describe("대화 화면", () => {
     expect(screen.queryByText(/hong가 .*에 승인했다/)).toBeNull();
   });
 
-  test("결정을 기다리는 실행은 승인을 기다린다고 말하고 버튼은 없다", async () => {
+  test("결정을 기다리는 실행은 그 도구 호출 자리에 승인 묻기가 서고 거부가 승인보다 먼저다", async () => {
     serveTraces({ r1: trace("r1", [started("r1"), paused("r1", "mail.send")]) });
+    network.use(http.get(api("/plugins"), () => HttpResponse.json([])));
 
     await showChat("r1");
 
-    expect(await screen.findByText(/승인을 기다리는 중/)).toBeTruthy();
-    expect(screen.queryByRole("button", { name: /승인|거부/ })).toBeNull();
+    const ask = await screen.findByRole("region", { name: "승인 묻기" });
+    expect(within(ask).getByText("mail.send")).toBeTruthy();
+    expect(
+      within(ask)
+        .getAllByRole("button")
+        .map((button) => button.textContent),
+    ).toEqual(["거부", "승인"]);
   });
 
   test("시각은 브라우저의 시간대로 보인다", async () => {
@@ -600,8 +606,9 @@ describe("도는 실행 이어 보기", () => {
     const served = serveTraces({
       r1: trace("r1", [started("r1", null, now), paused("r1", "mail.send", now)]),
     });
+    network.use(http.get(api("/plugins"), () => HttpResponse.json([])));
     await showChat("r1");
-    await screen.findByText(/승인을 기다리는 중/);
+    await screen.findByRole("region", { name: "승인 묻기" });
 
     await vi.advanceTimersByTimeAsync(30_000);
 

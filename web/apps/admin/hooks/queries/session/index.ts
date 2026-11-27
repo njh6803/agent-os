@@ -2,12 +2,13 @@
 // 로그인했는지를 "지금 누구인지"를 읽어서만 안다. 401 에서 갱신하고 다시 보내는 규칙은 요청 함수 아래(`api/session`)에 있어
 // 이 훅들은 갱신을 모른다.
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import useSWR, { type SWRResponse } from "swr";
 import { RequestFailure } from "../../../api/failure";
 import {
   changePassword,
   goTo,
+  keepSignedIn,
   loginAddress,
   logIn,
   logOut,
@@ -30,6 +31,32 @@ export const sessionKeys = {
  */
 export function useMe(): SWRResponse<Me, unknown> {
   return useSWR(sessionKeys.me(), readMe, { ...READ, revalidateOnFocus: false });
+}
+
+/** 짧은 JWT 수명 가운데 이만큼이 지나면 갱신한다(명세 "스트림이 열린 동안의 갱신"의 80%). */
+const RENEW_AT = 0.8;
+
+/**
+ * 응답의 이벤트 스트림이 열린 동안(`open`) 짧은 JWT 수명의 80%마다 갱신을 부른다. 스트림이 열린 동안에는 다른 요청이 없어 401 이
+ * 나지 않기 때문이다. 수명(`token_minutes`)은 지금 누구인지를 읽은 값이라, 읽기 전에는 걸지 않는다. 스트림이 닫히면 타이머를
+ * 걷는다.
+ */
+export function useKeepSignedIn({ open }: { readonly open: boolean }): void {
+  const minutes = useMe().data?.token_minutes;
+  useEffect(() => {
+    if (!open || minutes === undefined) {
+      return undefined;
+    }
+    const timer = setInterval(
+      () => {
+        void keepSignedIn();
+      },
+      minutes * 60_000 * RENEW_AT,
+    );
+    return () => {
+      clearInterval(timer);
+    };
+  }, [open, minutes]);
 }
 
 /** 첫 계정이 필요한 서버인가. 로그인 화면이 뜰 때 읽는다. */

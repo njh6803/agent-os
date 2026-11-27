@@ -35,6 +35,14 @@ const config: NextConfig = {
   rewrites() {
     return Promise.resolve([{ source: "/api/:path*", destination: `${origin}/:path*` }]);
   },
+  // 옛 실행 화면의 주소는 대화 화면으로 옮겨 간다(admin-login 명세 "관리 화면의 페이지와 주소"의 옛 주소). 옛 실행 하나는 그
+  // 실행까지의 대화를 그리고 패널에 그 실행을 연다. 임시 이동이라 브라우저가 옛 주소를 기억하지 않는다.
+  redirects() {
+    return Promise.resolve([
+      { source: "/runs", destination: "/chat", permanent: false },
+      { source: "/runs/:runId", destination: "/chat/:runId?run=:runId", permanent: false },
+    ]);
+  },
 };
 
 export default config;

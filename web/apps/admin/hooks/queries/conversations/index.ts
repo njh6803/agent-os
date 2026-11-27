@@ -13,7 +13,7 @@ export const conversationKeys = {
 };
 
 /**
- * 대화 목록. 상태가 null 이면 전부다. 쪽을 잇고 다시 읽는 방식은 실행 목록(`useRunList`)과 같다. 새로 고침과 포커스와
+ * 대화 목록. 상태가 null 이면 전부다. 쪽을 잇고 다시 읽는 방식은 옛 실행 목록 훅과 같았다. 새로 고침과 포커스와
  * 더 보기는 본 쪽을 모두 차례로 다시 읽어, 그 사이 끝 실행이 바뀐 대화가 옛 커서로 겹쳐 보이지 않는다.
  */
 export function useConversationList(

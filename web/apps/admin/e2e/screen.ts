@@ -8,7 +8,7 @@ export function group(page: Page, heading: string): Locator {
 }
 
 /**
- * 구역 안에서 그 글자가 든 줄. 플러그인 목록의 줄은 목록의 항목이고, 실행 목록의 줄은 넓은 본문 칸에서 표의 행, 좁은
+ * 구역 안에서 그 글자가 든 줄. 플러그인 목록의 줄은 목록의 항목이고, 대화 목록의 줄은 넓은 본문 칸에서 표의 행, 좁은
  * 칸에서 카드(목록의 항목)다(admin-style 티켓 06). 숨은 갈래는 역할 조회에서 빠져 보이는 갈래의 줄만 걸린다.
  */
 export function row(page: Page, heading: string, name: string): Locator {
@@ -35,12 +35,12 @@ export async function signInTo(page: Page, address: string): Promise<void> {
   await expect(page.getByLabel("계정 이름", { exact: true })).toHaveCount(0);
 }
 
-/** 옆 탐색(좁은 폭에서는 위 막대)의 항목 하나로 간다. 이름은 "플러그인", "대화", "실행", "설정"이다. */
+/** 옆 탐색(좁은 폭에서는 위 막대)의 항목 하나로 간다. 이름은 "플러그인", "대화", "설정"(시스템 관리자는 "계정"도)이다. */
 export async function openSection(page: Page, name: string): Promise<void> {
   await page.getByRole("navigation").getByRole("link", { name, exact: true }).click();
 }
 
-/** 실행 하나의 결정 자리. */
-export function decisionPlace(page: Page): Locator {
-  return page.getByRole("region", { name: "결정", exact: true });
+/** 대화 안의 승인 묻기. 기다리는 승인 하나가 서는 자리이고 거부 사유 칸과 거부·승인 버튼이 든다. */
+export function approvalAsk(page: Page): Locator {
+  return page.getByRole("region", { name: "승인 묻기", exact: true });
 }

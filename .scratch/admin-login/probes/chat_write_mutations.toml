@@ -1,0 +1,219 @@
+# 티켓 11(대화 쓰기 화면: 새 대화, 이어 가기, 승인 묻기, 다시 보내기, 스트림 도중의 갱신, 옛 주소 옮기기)의 변이 표. 최종 사용자의 대화를
+# 읽기만 되게 가르는 판정, 보내는 동안 막기, 주소 바꾸기, 승인과 거부가 싣는 값, 갱신의 때와 만료 알림은 시험을 구현 뒤에 맞춰 써서
+# 빨강을 본 적이 없다. 변이마다 그 줄을 망가뜨려 해당 시험이 무는지 본다.
+# 사용: PYTHONUTF8=1 uv run python tools/mutate.py .scratch/admin-login/probes/chat_write_mutations.toml
+
+[runner.vitest]
+command = ["pnpm", "exec", "vitest", "run", "--project", "pages"]
+cwd = "web"
+judge = "vitest"
+
+[runner.vitest_node]
+command = ["pnpm", "exec", "vitest", "run", "--project", "node"]
+cwd = "web"
+judge = "vitest"
+
+[[mutation]]
+name = "갱신이 수명의 80% 가 아니라 끝에서 걸린다"
+runner = "vitest"
+tests = ["apps/admin/components/pages/ConversationPage.write.test.tsx", "-t", "짧은 JWT 수명의 80% 가 지나면"]
+expect = "red"
+expect_output = ["expected +0 to be 1"]
+
+[[mutation.edit]]
+file = "web/apps/admin/hooks/queries/session/index.ts"
+old = '''
+const RENEW_AT = 0.8;
+'''
+new = '''
+const RENEW_AT = 1;
+'''
+
+[[mutation]]
+name = "갱신이 401 이어도 만료 알림이 붙지 않는다"
+runner = "vitest"
+tests = ["apps/admin/components/pages/ConversationPage.write.test.tsx", "-t", "갱신이 401 이면 지금 대화의 주소를 싣고"]
+expect = "red"
+expect_output = ["to contain 'notice=expired'"]
+
+[[mutation.edit]]
+file = "web/apps/admin/api/session/rule.ts"
+old = '''
+    goTo(loginAddress({ next: currentPlace(), notice: "expired" }));
+'''
+new = '''
+    goTo(loginAddress({ next: currentPlace() }));
+'''
+
+[[mutation]]
+name = "주소가 보낸 실행의 대화로 바뀌지 않는다"
+runner = "vitest"
+tests = ["apps/admin/components/pages/ConversationPage.write.test.tsx", "-t", "시작 요청이 가고 주소가 그 실행으로 바뀌고"]
+expect = "red"
+expect_output = ["expected '/chat/new' to be '/chat/r9'"]
+
+[[mutation.edit]]
+file = "web/apps/admin/components/pages/ConversationPage.tsx"
+old = '''
+      onAddress(`/chat/${encodeURIComponent(runId)}`);
+'''
+new = '''
+      onAddress("/chat/new");
+'''
+
+[[mutation]]
+name = "최종 사용자의 대화도 입력 칸이 선다"
+runner = "vitest"
+tests = ["apps/admin/components/pages/ConversationPage.write.test.tsx", "-t", "끝난 대화는 읽기만 되고 입력 칸 대신 한 줄이 선다"]
+expect = "red"
+expect_output = ["Unable to find an element with the text: 최종 사용자의 대화라 이어 가거나 결정할 수 없다"]
+
+[[mutation.edit]]
+file = "web/apps/admin/components/pages/ConversationPage.tsx"
+old = '''
+  const endUser = baseTurns?.[0] !== undefined && isEndUserPrincipal(baseTurns[0].principal);
+'''
+new = '''
+  const endUser = baseTurns?.[0] !== undefined && !isEndUserPrincipal(baseTurns[0].principal);
+'''
+
+[[mutation]]
+name = "최종 사용자의 대화에도 결정 버튼이 선다"
+runner = "vitest"
+tests = ["apps/admin/components/pages/ConversationPage.write.test.tsx", "-t", "일시정지한 대화는 승인을 기다리는 중이라는 한 줄만 있고"]
+expect = "red"
+expect_output = ["Unable to find an element with the text: /승인을 기다리는 중/"]
+
+[[mutation.edit]]
+file = "web/apps/admin/components/pages/ConversationPage.tsx"
+old = '''
+          canAct: !endUser,
+'''
+new = '''
+          canAct: true,
+'''
+
+[[mutation]]
+name = "다시 보내기가 앞 실행에서 잇지 않는다"
+runner = "vitest"
+tests = ["apps/admin/components/pages/ConversationPage.write.test.tsx", "-t", "앞 실행이 있으면 실패한 끝 실행의 요청을 그 앞 실행에서 다시 보낸다"]
+expect = "red"
+expect_output = ["Unable to find an element with the text: 실패한 실행은 이어 가지 못해"]
+
+[[mutation.edit]]
+file = "web/apps/admin/components/pages/ConversationPage.tsx"
+old = '''
+  const retryFrom = end.data === undefined ? null : previousRunOf(end.data);
+'''
+new = '''
+  const retryFrom = null;
+'''
+
+[[mutation]]
+name = "공백뿐인 거부 사유도 보낼 수 있다"
+runner = "vitest"
+tests = ["apps/admin/components/pages/ConversationPage.write.test.tsx", "-t", "거부는 사유가 비어 있거나 공백뿐이면 보낼 수 없다"]
+expect = "red"
+expect_output = ["to deeply equal []"]
+
+[[mutation.edit]]
+file = "web/apps/admin/components/organisms/ApprovalAsk.tsx"
+old = '''
+  const trimmed = reason.trim();
+'''
+new = '''
+  const trimmed = reason;
+'''
+
+[[mutation]]
+name = "승인이 일시정지의 자리를 싣지 않는다"
+runner = "vitest"
+tests = ["apps/admin/components/pages/ConversationPage.write.test.tsx", "-t", "승인은 판별자와 트레이스에서 읽은 일시정지의 자리를 보낸다"]
+expect = "red"
+expect_output = ["expected [ { decision: 'approve', …(1) } ] to deeply equal"]
+
+[[mutation.edit]]
+file = "web/apps/admin/components/organisms/ApprovalAsk.tsx"
+old = '''
+          onDecide({ decision: "approve", pause_index: pauseIndex });
+'''
+new = '''
+          onDecide({ decision: "approve", pause_index: 0 });
+'''
+
+[[mutation]]
+name = "도는 동안에도 보내기가 열린다"
+runner = "vitest"
+tests = ["apps/admin/components/pages/ConversationPage.write.test.tsx", "-t", "보내는 동안 요청이 말풍선으로 서고"]
+expect = "red"
+expect_output = ["expected false to be true"]
+
+[[mutation.edit]]
+file = "web/apps/admin/components/pages/ConversationPage.tsx"
+old = '''
+  if (busy) {
+    return wait;
+  }
+'''
+new = '''
+  if (busy && endUser) {
+    return wait;
+  }
+'''
+
+[[mutation]]
+name = "새 대화의 보낸 뒤 앞 실행 읽기를 채우지 않는다"
+runner = "vitest_node"
+tests = ["apps/admin/api/conversation/turns.test.ts", "-t", "earlierAfterSend"]
+expect = "red"
+expect_output = ["expected null to deeply equal { traces: [], end: 'start' }"]
+
+[[mutation.edit]]
+file = "web/apps/admin/api/conversation/turns.ts"
+old = '''
+    return { traces: [], end: "start" };
+'''
+new = '''
+    return null;
+'''
+
+[[mutation]]
+name = "옛 실행 하나의 주소가 패널을 열지 않는 주소로 옮겨 간다"
+runner = "vitest_node"
+tests = ["apps/admin/tools/redirects.test.ts", "-t", "옛 실행 하나의 주소는"]
+expect = "red"
+expect_output = ["to deep equally contain { source: '/runs/:runId'"]
+
+[[mutation.edit]]
+file = "web/apps/admin/next.config.ts"
+old = '''
+      { source: "/runs/:runId", destination: "/chat/:runId?run=:runId", permanent: false },
+'''
+new = '''
+      { source: "/runs/:runId", destination: "/chat/:runId", permanent: false },
+'''
+
+[[mutation]]
+name = "대화 화면이 1초마다 다시 그려져 도는 실행의 읽기 타이머가 계속 새로 걸린다"
+runner = "vitest"
+tests = ["apps/admin/components/pages/ConversationPage.write.test.tsx", "-t", "쓰는 글이 그 간격을 흔들지 않는다"]
+expect = "red"
+expect_output = ["expected 1 to be greater than or equal to 3"]
+
+[[mutation.edit]]
+file = "web/apps/admin/components/pages/ConversationPage.tsx"
+old = '''
+  const [panelRun, setPanelRun] = useRunQuery();
+'''
+new = '''
+  const [panelRun, setPanelRun] = useRunQuery();
+  const [, mutantTick] = useState(0);
+  useEffect(() => {
+    const id = setInterval(() => {
+      mutantTick((n) => n + 1);
+    }, 1000);
+    return () => {
+      clearInterval(id);
+    };
+  }, []);
+'''
