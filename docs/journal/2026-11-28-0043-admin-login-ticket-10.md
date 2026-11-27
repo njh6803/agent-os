@@ -182,3 +182,25 @@ open-session을 부른다 2026-11-27T19:08:44Z
 - 고쳤다(5): (1) `.scratch/retro-queue/mutation-table-checked-late.md`가 티켓 12(#659)의 둘째 승인으로 `dev`에서 다시 열린 항목인데 이 브랜치의 만료 일괄 편집이 `만료`로 되돌려 있었다. `열림`으로 되돌렸고 이 브랜치의 그 파일 변경은 0이다(`git diff origin/dev -- .scratch/retro-queue`가 비었다). 일지의 만료 문장을 6개에서 5개로 고쳤다. (2) `turns.ts`의 `decide`가 결정한 계정이 비면 시작 이벤트의 주체(`principal`)를 써 요청자가 승인한 것처럼 보였다. 계약의 `approver`(결정한 주체)를 쓰게 하고 `decide`의 `principal` 인자를 뺐다. 요청 주체와 승인자가 다른 시험을 `turns.test.ts`(승인과 거부 모두)와 `ConversationPage.test.tsx`에 더했고, 옛 페이지 시험이 옛 동작(`hong`)을 고정하고 있어 그것을 `ops-cli`로 고쳤다. (3) 시작 이벤트가 없는 트레이스는 `startedAt`이 빈 글이라 `formatTime`이 `RangeError`를 던질 수 있었다. `Conversation.tsx`의 `TurnView`가 시각이 비면 시각 칸을 그리지 않게 했다(트레이스 로더는 시작 이벤트의 존재를 확인하지 않는다는 지적은 코드로 확인하지 않았다. 처리 계층은 화면으로 정했다). 시험은 `ConversationPage.test.tsx`의 "시작 이벤트가 없는 트레이스도…"다. (4) `ConversationPage.test.tsx`의 `getByText("support-bot")`을 `findByText`로 바꿨다(제목은 데이터와 무관하게 먼저 그려진다). (5) claude-review의 `isPastTimeout` NaN: 읽을 수 없는 시각이면 지난 것으로 본다(`Number.isNaN`). 시험 하나(`pollInterval`)와 변이 하나를 더했다.
 - 변이 표 `.scratch/admin-login/probes/chat_read_mutations.toml`: `isPastTimeout`을 고쳐 변이 2의 원문이 어긋나(`--check`가 알렸다) 고쳤고, NaN 가드를 지우는 변이 3을 더했다. `mutate.py --check`는 "변이 10 모두 원문이 한 번씩 있다"였고, 변이 2와 3을 돌려 둘 다 기대대로 빨강이었다(손으로 쳤다, `변이 2 모두 기대대로`).
 - 뒤로 넘겼다(PR 코멘트에 보류 이유를 남기고 일지 "다음"의 기존 항목이 받는다): 폭 `wide` 미만에서 패널 뒤를 `inert`로 막는 일(Minor, 이미 "다음"의 후속 후보와 (a)이고 사용자의 결정이 필요하다), `RunPanel`의 Esc 핸들러가 `defaultPrevented`를 보지 않는 일(claude-review Minor, "다음"의 (b)), 스토리의 다크 모드(CodeRabbit Minor: 앞 세션이 오탐으로 판정했다. 관리 화면 사진 비교가 라이트·다크를 모두 찍는다), `RunList`·`ConversationList` 되풀이 모양(티켓 11이 `/runs`를 걷으며 줄인다, "다음" 첫 항목), `stale`의 `Date.now()` 의존을 `turns.ts` 독스트링에 적는 일(Nit).
+
+## 인계(2026-11-28, 커밋 뒤)
+
+이 세션은 PR 봇 첫 회차의 반영 커밋(`d0f11a10c`, 브랜치 `feature/10-chat-read-screens-list-panel-and-polling`)까지 하고 컨텍스트가 인계 문턱(20만 토큰)을 넘어 `커밋 뒤` 경계에서 새 세션에 넘긴다. 작업 트리는 깨끗하다(이 인계 절을 쓰기 전 `git status`가 비었다). 이 인계 절만 커밋하지 않은 변경이고, 새 세션이 같은 파일에 이어 쓰고 커밋한다. 이 세션의 제목은 `feature/10-chat-read-screens-list-panel-and-polling`이었고 `(인계함)`으로 바꾼다. 사용자의 정정이나 피드백은 없었다(지시문 하나뿐, 범위는 PR과 병합까지).
+
+한 것: 위 "이어받은 세션: PR 봇 첫 회차"의 반영. 커밋 직전 `pnpm -C web verify`가 exit 0이었고(테스트 169파일 3224건 통과, 1건 건너뜀. 이 세션이 친 명령의 출력), 커밋의 pre-commit도 exit 0이었다. 변이 표 `--check`는 "변이 10 모두 원문이 한 번씩 있다"였고 변이 2·3은 기대대로 빨강이었다. 이 세션은 `/code-review`를 돌지 않았다(봇 회차의 좁은 반영이라 어림으로 건너뛰었다. 앞 세션들이 같은 PR의 전체 변경에 셀프 리뷰와 PR 직전 리뷰를 돌았다).
+
+새 세션이 할 것(순서대로):
+
+1. 푸시한다(`d0f11a10c`는 아직 푸시하지 않았다). 푸시 전에 `merge.md` 1(PR 본문)을 본다. 이번 커밋이 결정(승인자 표시, 시작 이벤트 없는 기록)을 더했으니 `gh pr edit`으로 PR 본문의 "왜 이렇게 했나"에 두 줄을 더한다.
+2. PR에 보류한 지적의 이유를 코멘트로 남긴다(위 "뒤로 넘겼다" 다섯 건. 첫 회차라 의무는 아니지만 병합 전에 읽는 사람이 알도록). 그 뒤 `@coderabbitai review`를 남기고 `merge.md` 2(봇 회차)대로 `wait_ci.py`를 띄운다. 이번이 둘째 회차라 Critical·Major만 고치고 Minor·Nit은 보류 이유를 코멘트로 남긴 뒤 병합한다. 이 세션에서 `mcp__ccd_pr__bind_pr`가 자동 모드 분류기에 거부되어 PR이 이 세션에 묶이지 않았다. 새 세션은 `get_status`를 먼저 보고 안 묶였으면 `bind_pr`를 한 번 시도한다(거부되면 우회하지 않는다).
+3. 병합은 이 워크트리 사본의 `.claude/skills/next-session/merge.md`의 "워크트리에서 병합할 때"를 Read로 열어 따른다. `llm_local` 범위가 아니다(변경이 `web/apps/admin`과 일지·`.scratch`뿐이고 `operations.md`의 범위 경로가 없다).
+4. 병합 뒤 일지 "다음"의 항목으로 지시문을 낸다(티켓 11).
+
+잠금 풀기: 워크트리 잠금을 푸는 명령은 자동 모드 분류기가 거부했다(우회하지 않았다). 이 워크트리는 워크트리 목록에 `locked` 표시가 없었으므로 풀 잠금이 없었다(손으로 봤다).
+open-session을 부른다 2026-11-27T19:54:22Z
+
+## 이어받은 세션: PR 봇 둘째 회차(2026-11-28)
+
+새 세션(Sonnet 5.5 / high)이 PR #660을 이어받았다. 시작 때 제목을 브랜치 이름으로 바꾸고 워크트리에 들어갔다. 앱의 `bind_pr`는 이번에도 자동 모드 분류기가 거부했고(두 번째) 우회하지 않았다. 대기와 상태는 `gh`와 `wait_ci.py`로 한다. 사용자의 정정이나 피드백은 없었다(지시문 하나뿐, 범위는 PR과 병합까지).
+
+- 푸시 전에 PR 본문 "왜 이렇게 했나"에 두 항목(승인자 표시, 시작 이벤트가 없는 기록과 `isPastTimeout`)을 더하고 변이 표 건수를 10건으로, "남긴 위험"의 `isPastTimeout`을 고쳤다고 바꿨다(`gh pr edit`, 본문 파일은 `gh pr view`로 받아 고쳤다).
