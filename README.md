@@ -88,10 +88,12 @@ web/               pnpm 워크스페이스(Node 24, TypeScript 5.9). 파이썬�
                    요소의 번들(/widget/element.js). app/(라우팅과 레이아웃), components/(아토믹 층, pages/가 화면),
                    lib/(사이트가 준 질의를 읽는 embed, 두 방식이 나눠 쓰는 connection), element/(페이지 안 방식의
                    `<agent-os-widget>` 과 번들 입구), styles/(위젯 CSS),
-                   tools/start.ts(루프백에만 띄우고(이미지 안의 예외는 아래) 빌드 전에 글꼴을 public/fonts/ 에 복사하고 번들을 짓는 시작 래퍼),
-                   tools/element.ts(번들을 Vite 라이브러리 빌드로 public/element.js 에 내는 설정),
+                   tools/start.ts(루프백에만 띄우고(이미지 안의 예외는 아래) dev·start 에서 값 파일을 쓰고 dev·build 에서 글꼴을 public/fonts/ 에 복사하고 번들을 짓는 시작 래퍼),
+                   tools/runtime.ts(값 파일 public/runtime.json 을 쓴다),
+                   tools/element.ts(번들을 Vite 라이브러리 빌드로 public/element.js 에 내는 설정. 번들은 사이트 파일의 값을 싣지 않는다),
+                   lib/runtime.ts(위젯이 뜰 때 /widget/runtime.json 을 받는 자리. 전역 fetch 의 예외 한 파일),
                    빌드 입력(packages/site-file 의 buildInput. AGENT_OS_SITE_FILE 의 사이트 파일에서 합친 허용 출처와
-                   가장 작은 요청 글자 수 상한을 끌어내고, next.config.ts 가 frame-ancestors 와 env 에, 번들이 상한을 싣는다),
+                   가장 작은 요청 글자 수 상한을 끌어낸다. 허용 출처와 상한은 값 파일로 나가고, next.config.ts 가 허용 출처를 frame-ancestors 에 싣는다),
                    .storybook/·visual/(위젯의 Storybook 과 사진 비교. 스토리 테스트는 widget-storybook 프로젝트),
                    e2e/·playwright.config.ts(실제 serve·Next 앞의 같은 출처 중계 뒤에서 두 방식의 위젯을 미는 e2e.
                    준비의 몸통은 packages/e2e-stack 이고 e2e/stack.ts 에는 위젯 빌드와 사이트 서버를 띄우는 일이 남는다),

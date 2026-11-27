@@ -1,22 +1,26 @@
-// 페이지 안 번들의 빌드 설정(web-widget 티켓 10). 사이트 파일에서 무엇을 번들에 싣고 무엇을 싣지 않는지, 읽지 못하면
-// 빌드가 멈추는지, 산출물이 청크로 나뉘지 않는 classic 스크립트 하나인지를 본다. 번들이 사이트 페이지에서 실려 도는지는
-// 위젯 e2e 가 본다. 표기와 모양의 판정 하나하나는 `@agent-os/site-file` 의 시험(`src/site-file.test.ts`)이 본다.
+// 페이지 안 번들의 빌드 설정(web-widget 티켓 10). 번들이 사이트 파일의 값을 싣지 않는지(widget-runtime-values 티켓 01.
+// 요청 글자 수 상한은 열릴 때 값 파일로 받는다), 산출물이 청크로 나뉘지 않는 classic 스크립트 하나인지를 본다. 번들이
+// 사이트 페이지에서 실려 도는지는 위젯 e2e 가 본다. 표기와 모양의 판정 하나하나는 `@agent-os/site-file` 의 시험
+// (`src/site-file.test.ts`)이 본다.
 
 import { mkdtempSync, readdirSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Script } from "node:vm";
-import { SITE_FILE_ENV, WIDGET_ORIGINS_ENV, WIDGET_REQUEST_CHARS_ENV } from "@agent-os/site-file";
+import { SITE_FILE_ENV } from "@agent-os/site-file";
 import { fontFaces } from "@agent-os/ui/fonts";
-import { describe, expect, test } from "vitest";
+import { afterEach, expect, test, vi } from "vitest";
 import { expectedSiteFile, SITE_FILE_FIXTURES } from "../testing/site-file.ts";
 import { buildElement, ELEMENT_FILE, elementBuildConfig } from "./element.ts";
 
-const CHARS = `process.env.${WIDGET_REQUEST_CHARS_ENV}`;
 const FIXTURE = join(SITE_FILE_FIXTURES, "sites.toml");
 
+afterEach(() => {
+  vi.unstubAllEnvs();
+});
+
 test("번들은 청크로 나뉘지 않는 classic 스크립트 하나로 Next 의 public/element.js 에 나간다", () => {
-  const config = elementBuildConfig({}, "out");
+  const config = elementBuildConfig("out");
 
   expect(ELEMENT_FILE).toBe("element.js");
   expect(config.build?.outDir).toBe("out");
@@ -25,43 +29,35 @@ test("번들은 청크로 나뉘지 않는 classic 스크립트 하나로 Next �
   expect(config.build?.emptyOutDir).toBe(false);
   expect(config.build?.copyPublicDir).toBe(false);
   expect(config.configFile).toBe(false);
-  expect(elementBuildConfig({}).build?.outDir).toBe(join(import.meta.dirname, "..", "public"));
+  expect(elementBuildConfig().build?.outDir).toBe(join(import.meta.dirname, "..", "public"));
 });
 
-test("사이트 파일을 주지 않으면 서버의 기본 상한을 싣는다", () => {
-  expect(elementBuildConfig({}).define?.[CHARS]).toBe(JSON.stringify("20000"));
+test("번들에 박는 값은 NODE_ENV 하나뿐이다. 요청 글자 수 상한도 허용 출처도 박지 않는다", () => {
+  expect(Object.keys(elementBuildConfig().define ?? {})).toEqual(["process.env.NODE_ENV"]);
 });
 
-test("두 언어가 함께 읽는 사이트 파일의 가장 작은 상한을 싣고, 허용 출처는 싣지 않는다", () => {
-  const expected = expectedSiteFile();
+test("사이트 파일의 환경 변수를 달리 주어도, 읽지 못하는 파일을 가리켜도 번들의 내용이 같다", async () => {
+  // 운영자가 사이트 파일을 고쳐도 번들의 내용과 무결성 해시가 바뀌지 않는다(사용자 이야기 26).
+  const outputs: string[] = [];
+  const missing = join(mkdtempSync(join(tmpdir(), "widget-element-")), "none.toml");
+  for (const siteFile of [undefined, FIXTURE, missing, ""]) {
+    vi.stubEnv(SITE_FILE_ENV, siteFile);
+    const out = mkdtempSync(join(tmpdir(), "widget-element-"));
+    try {
+      await buildElement(out);
+      outputs.push(readFileSync(join(out, ELEMENT_FILE), "utf-8"));
+    } finally {
+      rmSync(out, { recursive: true, force: true, maxRetries: 5 });
+    }
+  }
 
-  const config = elementBuildConfig({ [SITE_FILE_ENV]: FIXTURE });
-
-  expect(config.define?.[CHARS]).toBe(JSON.stringify(String(expected.requestChars)));
-  expect(
-    Object.keys(config.define ?? {}).filter((key) => key.includes(WIDGET_ORIGINS_ENV)),
-  ).toEqual([]);
-  const written = JSON.stringify(config.define);
-  expect(expected.allowedOrigins.filter((origin) => written.includes(origin))).toEqual([]);
-});
-
-describe("변수가 준 사이트 파일을 읽지 못하면 빌드가 실패한다", () => {
-  test("파일이 없다", () => {
-    const missing = join(mkdtempSync(join(tmpdir(), "widget-element-")), "none.toml");
-    expect(() => elementBuildConfig({ [SITE_FILE_ENV]: missing })).toThrow(
-      `사이트 파일 ${missing} 을 받아들일 수 없다`,
-    );
-  });
-
-  test("변수가 비었다", () => {
-    expect(() => elementBuildConfig({ [SITE_FILE_ENV]: "" })).toThrow(`${SITE_FILE_ENV} 가 비었다`);
-  });
-});
+  expect(new Set(outputs).size).toBe(1);
+}, 60_000);
 
 test("빌드한 번들은 모듈이 아닌 스크립트 하나이고, 빌드 때의 환경 변수 자리와 허용 출처와 글꼴 파일을 싣지 않는다", async () => {
   const out = mkdtempSync(join(tmpdir(), "widget-element-"));
   try {
-    await buildElement({ [SITE_FILE_ENV]: FIXTURE }, out);
+    await buildElement(out);
 
     expect(readdirSync(out)).toEqual([ELEMENT_FILE]);
     const bundle = readFileSync(join(out, ELEMENT_FILE), "utf-8");
@@ -94,7 +90,7 @@ test("빌드는 비어 있던 NODE_ENV 를 비운 채로 둔다", async () => {
   const before = processEnv["NODE_ENV"];
   delete processEnv["NODE_ENV"];
   try {
-    await buildElement({}, out);
+    await buildElement(out);
 
     expect(processEnv["NODE_ENV"]).toBeUndefined();
   } finally {

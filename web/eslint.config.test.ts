@@ -232,6 +232,11 @@ const SOURCES: Readonly<Record<string, string>> = {
     'export async function 부른다(): Promise<Response> {\n  return fetch("/portal/sites/demo/token", { method: "POST" });\n}\n',
   "apps/portal/server/fetch.ts":
     'export async function 부른다(): Promise<Response> {\n  return fetch("/portal/sites/demo/token", { method: "POST" });\n}\n',
+  // 위젯이 열릴 때 값 파일을 받는 파일 하나도 전역 fetch 를 푼다. 같은 앱의 다른 파일은 그대로 막힌다.
+  "apps/widget/lib/runtime.ts":
+    'export async function 받는다(): Promise<Response> {\n  return fetch("/widget/runtime.json", { credentials: "omit" });\n}\n',
+  "apps/widget/lib/fetch.ts":
+    'export async function 부른다(): Promise<Response> {\n  return fetch("/widget/runtime.json");\n}\n',
   "packages/api-client/src/client.ts":
     'export function 부른다(): Promise<Response> {\n  return fetch("/api/runs");\n}\n',
   "packages/api-client/src/global-fetch.ts":
@@ -501,6 +506,11 @@ const RED: readonly RedCase[] = [
     rule: "no-restricted-globals",
   },
   {
+    name: "위젯의 값 파일 받기 파일이 아닌 파일의 전역 fetch",
+    path: "apps/widget/lib/fetch.ts",
+    rule: "no-restricted-globals",
+  },
+  {
     name: "디자인 시스템 패키지의 Icon.tsx 밖의 경로 참조",
     path: "packages/ui/src/components/atoms/Button.tsx",
     rule: "@typescript-eslint/triple-slash-reference",
@@ -613,6 +623,10 @@ const GREEN: readonly { readonly name: string; readonly path: string }[] = [
   {
     name: "위젯 미리보기 페이지 앱의 페이지 스크립트 파일의 전역 fetch",
     path: "apps/portal/browser/portal.ts",
+  },
+  {
+    name: "위젯의 값 파일 받기 파일의 전역 fetch",
+    path: "apps/widget/lib/runtime.ts",
   },
 ];
 
@@ -803,6 +817,23 @@ describe("위젯 미리보기 페이지의 페이지 스크립트 자리", () =>
   test("그 파일에서 window 로 부른 EventSource 도 빨갛다", async () => {
     const path = join(fixture, "apps/portal/browser/portal.ts");
     const source = 'export const 연결 = new window.EventSource("/portal/events");\n';
+
+    expect(await ruleIdsAt(path, source)).toContain("no-restricted-properties");
+  });
+});
+
+// 값 파일 받기 파일에서도 fetch 밖의 HTTP 전역은 막힌다.
+describe("위젯의 값 파일 받기 자리", () => {
+  test("그 파일에서도 XMLHttpRequest 는 빨갛다", async () => {
+    const path = join(fixture, "apps/widget/lib/runtime.ts");
+    const source = "export const 요청 = new XMLHttpRequest();\n";
+
+    expect(await ruleIdsAt(path, source)).toContain("no-restricted-globals");
+  });
+
+  test("그 파일에서 globalThis 로 부른 EventSource 도 빨갛다", async () => {
+    const path = join(fixture, "apps/widget/lib/runtime.ts");
+    const source = 'export const 연결 = new globalThis.EventSource("/widget/events");\n';
 
     expect(await ruleIdsAt(path, source)).toContain("no-restricted-properties");
   });
