@@ -76,3 +76,19 @@
 - 인계 직전의 작업 트리에는 이 일지의 이 절이 커밋 없이 남아 있다. 새 세션이 같은 파일을 이어 쓰고 커밋한다.
 - 인계: 커밋 뒤. 이 세션의 제목을 `feature/06-account-routes-set-password-and-change-my-password (인계함)`으로 바꿨고(바꾸기 전 제목은 `feature/06-account-routes-set-password-and-change-my-password`), 멈출 백그라운드 작업은 없었으며, `git worktree unlock`이 출력 없이 끝났다.
 - open-session을 부른다 2026-11-27T08:57:00Z
+
+## PR 열기와 봇 회차(새 세션이 이어 씀)
+
+PR은 #656이다(머리 `3f21aeb83`로 열었다). 새 세션이 `EnterWorktree`로 들어와 `origin/dev`가 `c3ad162fc`에서 움직이지 않았음을 `git fetch`로 보고 `sibling_overlap.py`를 쳤다(번호 겹침 없음, 글자 충돌 후보는 09 워크트리의 `clients.test-d.ts` 하나). 일지의 인계 절을 커밋(`3f21aeb83`)하고 푸시했다. PR 본문에 `unlock_account` 항목과 09와 겹칠 수 있는 후보를 적었다.
+
+**CodeRabbit.** PR을 연 직후 `@coderabbitai review`를 남겼으나 무료 한도에 걸려 리뷰가 없다(`Review rate limited`, "다음 38분 뒤"). 한도에 걸린 푸시는 회차로 세지 않는다. 대신 CLI(0.7.5, `Seat: not assigned`)로 `--base origin/dev` 로컬 리뷰를 `coderabbit-review` 서브에이전트로 돌렸다. 리뷰는 끝까지 돌았고 6건이다. Critical 없음, 서브에이전트가 코드를 읽어 CodeRabbit의 Major 둘을 오탐으로 판정했다(링크 판정과 사용은 이미 한 트랜잭션이고, 계정 라우터는 이미 라우터 전체에 `REQUIRE_PERMISSION`이 걸려 있다. 이 세션이 `accounts.py`와 `logins.py`를 열어 둘째는 확인했다).
+
+**claude-review 첫 회차**(이 PR의 첫 리뷰). 경계 문제 없음, 느낌표 맞음. Minor 둘, Nit 둘이다. 판정은 지적마다 한다.
+- `token_digest`가 계정 관리 모듈에 있고 `logins.py`가 거기서 가져온다(Minor): 응집은 맞는 지적이다. 이동은 `login_tokens.py`와 두 import를 만지고 다시 전체 검증을 도는 값이 들어 뒤로 넘긴다.
+- `CreatedAccount` 이름 겹침(Minor): 응답 모델의 이름은 계약에 서 있고 서비스 쪽 이름만 바꿀 수 있다. 위 셀프 리뷰에서 작성자 재량으로 뒀던 것이라 뒤로 넘긴다.
+- `forwarded_address(...)` 되풀이와 `_address`(Nit), `invalid_field`와 `NOT_LOGGED_IN_MESSAGE`의 자리(Nit): 앞 티켓의 라우트를 함께 만져야 해 이 티켓의 몫이 아니다. 뒤로 넘긴다.
+
+**로컬 CodeRabbit 리뷰의 Minor(이 세션이 코드를 열어 확인한 것).**
+- 고쳤다: 비활성 계정의 링크 시험 공백. 링크는 살려 둔 채 계정 줄의 `disabled_at`만 직접 세워도 404인지 보는 시험(`test_링크가_살아_있어도_계정이_비활성이면_404이고_비밀번호가_정해지지_않는다`)을 더했다. `_usable_link`의 계정 상태 검사를 지운 변이에서 이 시험이 빨개졌고(종료 1) 되돌린 코드에서 통과했다. 기존 시험은 활성 바꾸기 경로로 끄는데 그 경로가 링크도 못 쓰게 해서 그 검사가 빠져도 통과했다.
+- 뒤로 넘겼다(아래 "다음"): 링크가 든 201 두 응답에 `Cache-Control: no-store`가 없다(`admin/http.py`의 다른 비밀성 응답만 싣는다는 것은 `Grep`으로 확인했다. 다만 POST 응답은 기본이 캐시되지 않고, 더하면 `openapi.json`의 응답 머리 문서가 바뀌는 계약 변경이라 이 티켓에 넣지 않았다). `change_password`가 그 계정의 쓰지 않은 링크를 못 쓰게 하지 않는 점은 명세에 그런 줄이 없어(명세는 링크 새로 만들기와 비활성으로 바꾸기에서만 못 쓰게 한다고 적었다) 사용자가 정할 일이다. `claims.login_id`가 끊겼는지 보지 않고 `keep`에 쓰는 점, `list_accounts`의 쪽 나누기 없음, 링크 줄이 지워지지 않고 쌓이는 점, `/auth/set-password`의 호출 횟수 제한 없음, 기존 `forwarded_address`가 `X-Forwarded-For`를 그대로 믿는지(이 변경 밖의 코드라 서브에이전트가 읽지 않았다).
+- 오탐으로 판정: CodeRabbit의 "약한 비밀번호 응답을 링크를 쓰기 전에 검사하라"는 이미 `test_링크가_죽었으면_비밀번호_규칙보다_먼저…`가 살아 있는 링크에 약한 비밀번호를 보내 422와 링크 미소비를 본다.

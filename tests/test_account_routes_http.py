@@ -383,6 +383,23 @@ async def test_없는_링크와_못_쓰게_된_링크와_비활성_계정의_링
     assert {each.json()["message"] for each in answers} == {DEAD_LINK}
 
 
+async def test_링크가_살아_있어도_계정이_비활성이면_404이고_비밀번호가_정해지지_않는다(
+    client: AsyncClient, accounts: AccountStore, database: ScopedDatabase
+) -> None:
+    boss = await _boss(client, accounts)
+    token = await _create(client, boss, "new.user")
+    # 활성 바꾸기 경로는 링크도 함께 못 쓰게 하므로, 링크는 그대로 두고 계정 줄만 직접 끈다
+    await _execute(
+        database, "UPDATE operator_accounts SET disabled_at = :at WHERE name = 'new.user'", at=START
+    )
+
+    response = await _set(client, token)
+
+    assert response.status_code == 404
+    assert response.json()["message"] == DEAD_LINK
+    assert (await _row(database, "new.user"))[1] is None
+
+
 async def test_링크가_죽었으면_비밀번호_규칙보다_먼저_404이고_살아_있으면_규칙_위반이_422이다(
     client: AsyncClient, accounts: AccountStore
 ) -> None:
