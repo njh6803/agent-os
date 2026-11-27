@@ -139,7 +139,7 @@ new = '''
 name = "탐색 항목의 포커스 링이 없으면 틀 스토리가 빨갛다"
 runner = "wide"
 expect = "red"
-expect_output = ["AdminFrame.stories.tsx > Channel Token Entered", "to deeply equal { style: 'solid', width: '2px'"]
+expect_output = ["AdminFrame.stories.tsx > Signed In", "to deeply equal { style: 'solid', width: '2px'"]
 
 [[mutation.edit]]
 file = "web/apps/admin/components/molecules/NavItem.tsx"
@@ -154,7 +154,7 @@ new = '''
 name = "지금 항목이 다른 칠이면 틀 스토리가 빨갛다"
 runner = "narrow"
 expect = "red"
-expect_output = ["AdminFrame.stories.tsx > Channel Token Entered", "to be 'rgba(0, 0, 0, 0.07)'"]
+expect_output = ["AdminFrame.stories.tsx > Signed In", "to be 'rgba(0, 0, 0, 0.07)'"]
 
 [[mutation.edit]]
 file = "web/apps/admin/components/molecules/NavItem.tsx"
@@ -169,7 +169,7 @@ new = '''
 name = "좁은 폭에서도 탐색 아이콘이 보이면 틀 스토리가 빨갛다"
 runner = "narrow"
 expect = "red"
-expect_output = ["AdminFrame.stories.tsx > Channel Token Entered", "Received element is visible:"]
+expect_output = ["AdminFrame.stories.tsx > Signed In", "Received element is visible:"]
 
 [[mutation.edit]]
 file = "web/apps/admin/components/molecules/NavItem.tsx"
@@ -184,29 +184,18 @@ new = '''
 name = "넓은 폭의 옆 탐색이 폭 nav 가 아니면 틀 스토리가 빨갛다"
 runner = "wide"
 expect = "red"
-expect_output = ["AdminFrame.stories.tsx > Channel Token Entered", "to be '256px'"]
+expect_output = ["AdminFrame.stories.tsx > Signed In", "to be '256px'"]
 
 [[mutation.edit]]
 file = "web/apps/admin/components/templates/AdminFrame.tsx"
-old = '''wide:h-auto wide:w-nav wide:flex-col'''
-new = '''wide:h-auto wide:flex-col'''
-
-[[mutation]]
-name = "좁은 폭의 위 막대가 높이 top-bar 가 아니면 틀 스토리가 빨갛다"
-runner = "narrow"
-expect = "red"
-expect_output = ["AdminFrame.stories.tsx > Channel Token Entered", "to be '52px'"]
-
-[[mutation.edit]]
-file = "web/apps/admin/components/templates/AdminFrame.tsx"
-old = '''className="flex h-top-bar shrink-0'''
-new = '''className="flex shrink-0'''
+old = '''wide:w-nav wide:flex-col'''
+new = '''wide:flex-col'''
 
 [[mutation]]
 name = "본문 칸이 컨테이너가 아니면 틀 스토리가 빨갛다"
 runner = "wide"
 expect = "red"
-expect_output = ["AdminFrame.stories.tsx > Channel Token Entered", "expected 'normal' to be 'inline-size'"]
+expect_output = ["AdminFrame.stories.tsx > Signed In", "expected 'normal' to be 'inline-size'"]
 
 [[mutation.edit]]
 file = "web/apps/admin/components/templates/AdminFrame.tsx"
@@ -313,32 +302,15 @@ file = "web/apps/admin/components/organisms/RunDetail.tsx"
 old = '''loadingLabel="트레이스를 불러오는 중"'''
 new = '''loadingLabel="불러오는 중"'''
 
-# 아래 둘도 셀프 리뷰 명세 축이 짚어 더했다. 하이드레이션 전에 틀만 그리는 분기를 지키는 시험이 없었다.
+# 아래는 admin-login 티켓 09가 옛 하이드레이션 가드 둘(`useHydrated` 로 틀만 그리던 분기)을 걷으며 바꾼 것이다. "지금 누구인지"를
+# 읽는 동안 틀만 그리고 본문을 비우는 분기를 지키는 시험이 `AdminScreen.test.tsx` 에 있다.
 
 [[mutation]]
-name = "하이드레이션 전의 가드가 없으면 첫 그림 시험이 빨갛다"
+name = "지금 누구인지를 읽는 동안에도 본문을 그리면 읽는 동안의 시험이 빨갛다"
 runner = "pages"
-tests = ["apps/admin/components/pages/SettingsPage.test.tsx", "-t", "하이드레이션 전의 첫 그림은"]
+tests = ["apps/admin/components/pages/AdminScreen.test.tsx", "-t", "읽는 동안은 틀만 서고"]
 expect = "red"
-expect_output = ['Unable to find an accessible element with the role "navigation" and name "관리 화면"']
-
-[[mutation.edit]]
-file = "web/apps/admin/components/pages/AdminScreen.tsx"
-old = '''
-  if (!hydrated) {
-    // 이 탭에 관리 토큰이 있는지 아직 모르는 동안은 틀만 서고 본문은 비운다(admin-style 명세 2026-10-27 주석).
-    return <AdminFrame nav={nav} />;
-  }
-'''
-new = '''
-'''
-
-[[mutation]]
-name = "하이드레이션 전에 본문도 그리면 첫 그림 시험이 빨갛다"
-runner = "pages"
-tests = ["apps/admin/components/pages/SettingsPage.test.tsx", "-t", "하이드레이션 전의 첫 그림은"]
-expect = "red"
-expect_output = ["to be ''"]
+expect_output = ["AssertionError: expected <h1"]
 
 [[mutation.edit]]
 file = "web/apps/admin/components/pages/AdminScreen.tsx"

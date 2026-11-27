@@ -10,8 +10,9 @@ const FAMILIES = ["Noto Sans KR", "Noto Sans Mono"];
 test("빌드한 문서에 두 글꼴의 @font-face 가 있고 가족마다 woff2 하나를 200 으로 받는다", async ({
   page,
 }) => {
+  // 로그인하지 않은 채 열면 로그인 화면으로 가고, 그 화면도 같은 글꼴 CSS 를 싣는다.
   await page.goto(stack().adminUrl);
-  await expect(page.getByLabel("관리 토큰", { exact: true })).toBeVisible();
+  await expect(page.getByLabel("계정 이름", { exact: true })).toBeVisible();
 
   // 문서의 시트에서 가족마다 처음 만난 woff2 주소(시트 기준으로 푼 것)와 `@font-face` 수를 읽는다.
   const found = await page.evaluate((families) => {

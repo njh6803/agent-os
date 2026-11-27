@@ -23,10 +23,8 @@ import {
   type TracePage,
 } from "../../testing/network";
 import { renderPage } from "../../testing/render";
-import { acceptTokens, clearTokens, enterAdminToken } from "../../testing/token";
+import { signedIn } from "../../testing/session";
 import { RunsPage } from "./RunsPage";
-
-const TOKEN = "adm-2Wc8-runs-page-token";
 
 function summary(
   runId: string,
@@ -136,11 +134,10 @@ function skeleton(): HTMLElement | undefined {
     .find((table) => table.closest("[aria-hidden='true']") !== null);
 }
 
-/** 실행 목록을 열고 관리 토큰을 넣어 행이 설 때까지 기다린다. 이어서 누를 사용자를 돌려준다. */
+/** 로그인한 채로 실행 목록을 열어 행이 설 때까지 기다린다. 이어서 누를 사용자를 돌려준다. */
 async function showRuns(user: UserEvent = userEvent.setup()): Promise<UserEvent> {
-  acceptTokens();
+  signedIn();
   renderPage(<RunsPage />);
-  await enterAdminToken(user, TOKEN);
   await within(await screen.findByRole("region", { name: "실행" })).findByRole("table");
   return user;
 }
@@ -390,12 +387,12 @@ describe("실행 목록", () => {
 
   test("실행이 없으면 없다고 말한다", async () => {
     serveRuns(() => page([]));
-    acceptTokens();
+    signedIn();
     renderPage(<RunsPage />);
 
-    await enterAdminToken(userEvent.setup(), TOKEN);
-
-    expect(await within(runList()).findByText("실행이 없다")).toBeTruthy();
+    expect(
+      await within(await screen.findByRole("region", { name: "실행" })).findByText("실행이 없다"),
+    ).toBeTruthy();
     expect(within(runList()).queryByRole("table")).toBeNull();
     expect(within(runList()).queryByRole("listitem")).toBeNull();
   });
@@ -514,10 +511,9 @@ describe("실행 목록의 새로 고침과 에러", () => {
     const first = Promise.withResolvers<Response>();
     const again = Promise.withResolvers<Response>();
     serveRuns((_, call) => (call === 0 ? first.promise : again.promise));
-    acceptTokens();
+    signedIn();
     renderPage(<RunsPage />);
     const user = userEvent.setup();
-    await enterAdminToken(user, TOKEN);
 
     expect(
       await screen.findByRole("progressbar", { name: "실행 목록을 불러오는 중" }),
@@ -542,9 +538,8 @@ describe("실행 목록의 새로 고침과 에러", () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     const first = Promise.withResolvers<Response>();
     serveRuns(() => first.promise);
-    acceptTokens();
+    signedIn();
     renderPage(<RunsPage />);
-    await enterAdminToken(userEvent.setup({ advanceTimers: vi.advanceTimersByTime }), TOKEN);
     await screen.findByRole("heading", { level: 1, name: "실행" });
 
     // 진행 표시의 같은 시험(HomePage.test.tsx 의 "0.3초가 지나야 선다")과 같은 꼴이다. 앞의 단언은 0.1초만 밀어,
@@ -596,26 +591,10 @@ describe("실행 목록의 새로 고침과 에러", () => {
     expect(screen.getByRole("radio", { name: "일시정지" })).toBeTruthy();
   });
 
-  test("목록을 읽다 401 을 받으면 관리 토큰을 지우고 입력 화면으로 돌아가 거부됐다고 말한다", async () => {
-    serveRuns(() =>
-      HttpResponse.json(envelope("unauthorized", "토큰이 없거나 틀리다"), { status: 401 }),
-    );
-    acceptTokens();
-    renderPage(<RunsPage />);
-
-    await enterAdminToken(userEvent.setup(), TOKEN);
-
-    expect((await screen.findByRole("alert")).textContent).toContain("관리 토큰이 거부됐다");
-    expect(screen.getByLabelText("관리 토큰")).toBeTruthy();
-    expect(screen.queryByRole("region", { name: "실행" })).toBeNull();
-  });
-
   test("네트워크 실패는 서버에 닿지 못했다로 보인다", async () => {
     serveRuns(() => Response.error());
-    acceptTokens();
+    signedIn();
     renderPage(<RunsPage />);
-
-    await enterAdminToken(userEvent.setup(), TOKEN);
 
     expect((await screen.findByRole("alert")).textContent).toContain("서버에 닿지 못했다");
   });
@@ -672,36 +651,5 @@ describe("실행 목록의 새로 고침과 에러", () => {
     await vi.advanceTimersByTimeAsync(60 * 60 * 1000);
 
     expect(queries).toHaveLength(1);
-  });
-
-  test("지운 토큰의 늦은 401 은 그 사이 넣은 새 토큰의 목록에 섞이지 않고 새 토큰을 내려놓지 않는다", async () => {
-    const old = "adm-old-token-cleared";
-    const late = Promise.withResolvers<Response>();
-    const authorizations: string[] = [];
-    network.use(
-      http.get(api("/traces"), ({ request }) => {
-        authorizations.push(request.headers.get("Authorization") ?? "(없음)");
-        return authorizations.length === 1 ? late.promise : page([FINISHED]);
-      }),
-    );
-    acceptTokens();
-    renderPage(<RunsPage />);
-    const user = userEvent.setup();
-    // 옛 토큰의 요청(0)은 응답을 기다린다.
-    await enterAdminToken(user, old);
-    await clearTokens(user);
-    await enterAdminToken(user, TOKEN);
-
-    // 새 토큰은 옛 요청을 나눠 받지 않고 제 요청을 보낸다.
-    await within(await screen.findByRole("region", { name: "실행" })).findByRole("table");
-    expect(authorizations).toEqual([`Bearer ${old}`, `Bearer ${TOKEN}`]);
-    late.resolve(
-      HttpResponse.json(envelope("unauthorized", "토큰이 없거나 틀리다"), { status: 401 }),
-    );
-    // 늦은 응답이 처리될 틈을 준다. 옛 요청의 401 이 새 토큰을 내려놓으면 넣는 자리로 돌아간다.
-    await new Promise((resolve) => setTimeout(resolve, 200));
-
-    expect(screen.queryByLabelText("관리 토큰")).toBeNull();
-    expect(screen.queryByRole("alert")).toBeNull();
   });
 });

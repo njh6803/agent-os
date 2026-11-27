@@ -7,7 +7,6 @@ import type { Trace } from "../../api/traces";
 import { useDecision } from "../../hooks/queries/approval";
 import { usePlugins } from "../../hooks/queries/plugins";
 import { useTrace } from "../../hooks/queries/traces";
-import { useTokens } from "../../stores/tokens";
 import { TextLink } from "../atoms/TextLink";
 import { FailureNotice } from "../molecules/FailureNotice";
 import { ScreenHeader } from "../molecules/ScreenHeader";
@@ -53,7 +52,7 @@ function AddressFailure({ runId }: { readonly runId: string }) {
   );
 }
 
-/** 트레이스를 읽어 그린다. 주소를 푼 뒤, 관리 토큰이 받아들여진 뒤에만 서므로 읽기도 그때 시작한다. */
+/** 트레이스를 읽어 그린다. 주소를 푼 뒤, 로그인한 계정을 읽은 뒤에만 서므로 읽기도 그때 시작한다. */
 function ConnectedRunDetail({ runId }: { readonly runId: string }) {
   const trace = useTrace(runId);
   return (
@@ -78,16 +77,14 @@ function ConnectedRunDecision({
   readonly trace: Trace;
   readonly events: ReactNode;
 }) {
-  const channelTokenEntered = useTokens((state) => state.channelToken !== null);
   const { busy, frames, cut, failure, decide } = useDecision(runId);
   const { data, error } = usePlugins({
-    active: decisionPlaceStands(trace, { channelTokenEntered }),
+    active: decisionPlaceStands(trace),
   });
   return (
     <RunDecision
       trace={trace}
       events={events}
-      channelTokenEntered={channelTokenEntered}
       busy={busy}
       frames={frames}
       cut={cut}

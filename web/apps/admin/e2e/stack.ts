@@ -39,7 +39,13 @@ import { createRequire } from "node:module";
 import { connect, createServer } from "node:net";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
-import { ADMIN_TOKEN_ENV, ADMIN_URL_ENV, CHANNEL_TOKEN_ENV, PLUGINS_ROOT_ENV } from "./env";
+import {
+  ACCOUNT_NAME_ENV,
+  ACCOUNT_PASSWORD_ENV,
+  ADMIN_URL_ENV,
+  CHANNEL_TOKEN_ENV,
+  PLUGINS_ROOT_ENV,
+} from "./env";
 import { writeReadTraces } from "./traces";
 
 const APP = dirname(import.meta.dirname);
@@ -51,8 +57,11 @@ const LOGS = join(APP, "test-results");
 const LISTENING = /Uvicorn running on (http:\/\/127\.0\.0\.1:\d+)/;
 const STARTUP_MS = 60_000;
 const QUIET = { NEXT_TELEMETRY_DISABLED: "1" };
-// serve 가 읽는 토큰 변수. Next 로 가는 환경에서는 벗긴다.
+// serve 가 읽는 토큰 변수. Next 로 가는 환경에서는 벗긴다. 관리 토큰은 관리 화면이 더는 쓰지 않지만(ADR 0019 의 중계는
+// 여전히 토큰을 모른다) 이 셸에 있어도 Next 에 넘기지 않는다.
 const SERVE_TOKENS = ["AGENT_OS_ADMIN_TOKEN", "AGENT_OS_CHANNEL_TOKEN"];
+// 이 준비가 만드는 시스템 관리자 계정의 이름(소문자 3~32자).
+const ACCOUNT_NAME = "e2e-operator";
 // 모델 제공사의 키와 주소와 프록시를 정하는 변수, 그리고 HTTP 클라이언트가 읽는 환경 프록시. `serve` 의 환경에서 벗긴다
 // (`serveEnv`). 환경 프록시를 벗기는 것은 닫힌 포트를 가리키는 모델 행의 확인이 프록시를 타고 연결 거부 대신 프록시의
 // 응답으로 끝나지 않게 하려는 것이다(`tests/adapters/test_model_check.py` 의 `AMBIENT` 가 같은 이름을 벗긴다).
@@ -125,8 +134,11 @@ export default async function globalSetup(): Promise<() => Promise<void>> {
     });
     const traces = join(work, "traces");
     writeReadTraces(traces);
-    const adminToken = token("admin");
     const channelToken = token("channel");
+    // 관리 화면은 토큰 없이 로그인으로 들어간다. 이 serve 만의 시스템 관리자 계정을 만들어 둔다. 비밀번호는 규칙(대문자,
+    // 숫자, 특수문자 하나씩, 8자 이상)을 채우는 머리에 무작위 꼬리를 붙인다.
+    const accountPassword = `Aa1!${randomBytes(12).toString("hex")}`;
+    createAccount(python, work, databaseUrl, ACCOUNT_NAME, accountPassword);
 
     const serve = launch(
       "serve",
@@ -147,7 +159,9 @@ export default async function globalSetup(): Promise<() => Promise<void>> {
       work,
       serveEnv({
         PYTHONUTF8: "1",
-        AGENT_OS_ADMIN_TOKEN: adminToken,
+        // `serve` 가 아직 관리 토큰 없이는 서지 않는다(ADR 0011, 공유 토큰은 admin-login 티켓 13 이 거둔다). 화면은 이 값을
+        // 쓰지 않으니 아무도 모르는 값을 넘긴다.
+        AGENT_OS_ADMIN_TOKEN: token("unused-admin"),
         AGENT_OS_CHANNEL_TOKEN: channelToken,
         // 부모의 환경에 같은 변수가 있어도 이 준비의 데이터베이스로 덮는다.
         AGENT_OS_DATABASE_URL: databaseUrl,
@@ -173,7 +187,8 @@ export default async function globalSetup(): Promise<() => Promise<void>> {
     );
 
     process.env[ADMIN_URL_ENV] = `http://127.0.0.1:${String(port)}`;
-    process.env[ADMIN_TOKEN_ENV] = adminToken;
+    process.env[ACCOUNT_NAME_ENV] = ACCOUNT_NAME;
+    process.env[ACCOUNT_PASSWORD_ENV] = accountPassword;
     process.env[CHANNEL_TOKEN_ENV] = channelToken;
     process.env[PLUGINS_ROOT_ENV] = plugins;
     return teardown;
@@ -234,18 +249,42 @@ function dropDatabase(python: string, name: string): void {
   runPython(python, [DATABASE_TOOL, "drop", name], REPO, {}, "지우지 못했다");
 }
 
+/**
+ * 그 데이터베이스에 시스템 관리자 계정 하나를 만든다. 운영자가 서버를 처음 띄운 뒤 치는 명령(`agent-os operator
+ * system-admin <계정 이름>`)과 같은 길이다. 비밀번호는 표준 입력의 첫 줄로 받는다(터미널이 아니면 한 번만 읽는다).
+ * 비밀번호는 오류에 싣지 않는다.
+ */
+function createAccount(
+  python: string,
+  work: string,
+  databaseUrl: string,
+  name: string,
+  password: string,
+): void {
+  runPython(
+    python,
+    ["-m", "agent_os.main", "operator", "system-admin", name],
+    work,
+    { AGENT_OS_DATABASE_URL: databaseUrl },
+    "계정을 만들지 못했다",
+    `${password}\n`,
+  );
+}
+
 function runPython(
   python: string,
   args: readonly string[],
   cwd: string,
   extra: Readonly<Record<string, string>>,
   failure: string,
+  input?: string,
 ): string {
   const found = spawnSync(python, args, {
     cwd,
     encoding: "utf-8",
     timeout: DATABASE_CALL_MS,
     env: { ...process.env, PYTHONUTF8: "1", ...extra },
+    ...(input === undefined ? {} : { input }),
   });
   const stdout: unknown = found.stdout;
   const stderr: unknown = found.stderr;
