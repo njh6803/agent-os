@@ -114,3 +114,15 @@ PR #657을 병합하면 admin-login 티켓 09가 끝난다.
 - 병합 충돌 후보였던 `web/packages/api-client/src/clients.test-d.ts`(06)는 `origin/dev`를 합칠 때 충돌 없이 합쳐졌다. `README.md`(PR #651, 티켓 04 단독 배포)는 아직 열려 있어, 그 PR이 나중에 병합되면 그쪽이 푼다.
 - 워크트리에서 병합하므로 주 체크아웃은 당기지 않는다. 다음 세션이 `tidy-checkouts`를 먼저 돈다.
 - 이 PR은 로컬 모델 시험(`llm_local`)의 병합 조건 범위(`operations.md` LLM 테스트의 "범위": `src/agent_os/adapters/`, `core/loop.py`·`model.py`·`run.py`, `channel/`, `main.py`, 로컬 모델 시험 자신, `langchain-openai`·`openai` 판)에 닿지 않아 돌리지 않았다. 근거는 `git diff --name-only origin/dev...HEAD`를 손으로 쳐 본 결과로, `web/`, `.scratch/`, `docs/`, `.claude/rules/web-admin.md`, `CONTEXT.md`, `README.md`뿐이고 `src/`와 `pyproject.toml`·`uv.lock`은 없었다.
+
+## 인계(2026-11-27 둘째, 커밋 뒤)
+
+이 세션은 PR #657의 봇 첫 회차를 반영한 커밋(`fix: 다시 읽다 실패하면 …`, `AdminScreen`의 오류 우선 순서, 시험, 변이 표 `frame_common_states_mutations.toml`의 원문 들여쓰기, 이 일지)까지 하고 컨텍스트가 문턱을 넘어 `커밋 뒤` 경계에서 새 세션에 넘긴다. 이 세션의 제목은 `feature/09-admin-ui-login-and-refresh-rule`이었고 `(인계함)`으로 바꾼다.
+
+- 이 세션이 한 것: `origin/dev`(PR #656, 티켓 06)를 합쳐 푸시(`af327d315`)하고 `@coderabbitai review`를 다시 요청해 CodeRabbit 첫 회차(Minor 넷)를 받았다. 하나를 고쳤고(위 "봇 회차") PR 본문을 먼저 넓혔다(`gh pr edit`로 셋째 커밋의 범위, 충돌 후보의 현황, 보류 지적 하나 추가). 그 뒤 커밋은 첫 시도가 pre-commit의 변이 표 검사(`check-mutations`)에 막혔다. 고친 `AdminScreen.tsx`에서 `frame_common_states_mutations.toml`의 21번 변이 원문이 들여쓰기 두 칸 달라 사라졌기 때문이다. 표의 `old`·`new`를 새 들여쓰기로 맞추고 `tools/mutate.py --check`(원문이 한 번씩 있다)와 21번 변이 실행(기준선 초록, 변이 빨강)을 손으로 쳐 확인한 뒤 다시 커밋해 통과했다.
+- 이 세션이 친 검증: `pnpm -C web verify` 통과(수정 뒤), `AdminScreen.test.tsx`와 `AdminScreen.refresh.test.tsx` 26건 통과. 디자인 시스템 `확인`은 이 세션의 첫 화면 코드 수정 때 돌려 `clean`, 결정표 `continue`였다(`check judge`와 `decide`의 출력을 손으로 봤다).
+- 아직 푸시하지 않은 것: 방금 통과한 커밋과 이 인계 절(커밋하지 않음).
+- 새 세션이 할 것: 푸시하고, 푸시 뒤 `@coderabbitai review` 코멘트와 `tools/wait_ci.py 657` 대기를 새로 띄운다. 둘째 회차부터는 Critical·Major만 고친다. 첫 회차에서 보류한 Minor 셋(`AccountMenu` 키보드 흐름, `playwright_secure_cookie` `try` 범위, `cookie_relay` `::1` 바인딩 실패 표지)의 보류 이유를 PR 코멘트로 남긴다(아직 남기지 않았다. 이유는 위 "봇 회차"와 "다음"에 있다). 병합은 `merge.md`의 "워크트리에서 병합할 때"로 한다.
+- 아직 확인하지 못한 것: 셋째 커밋의 CI 결과(`AdminScreen`의 순서 변경이 e2e와 사진 비교를 바꾸지 않았는지). 화면 모양은 바뀌지 않는다고 본다(어림).
+
+open-session을 부른다 2026-11-27T12:31:00Z
