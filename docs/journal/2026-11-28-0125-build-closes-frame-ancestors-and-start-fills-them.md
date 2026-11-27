@@ -83,3 +83,31 @@ PR 본문에 적을 것: 위젯 e2e 22개(새 사례 포함), 위젯 테스트 �
 **밀 주장.** (가) `tools/manifest.ts`·`tools/start.ts` 머리의 "Next 16.3.6의 next build는 기다리지 않고 돌아오고 마치면 process.exit(0)": 두 서브에이전트가 설치본 `next/dist/bin/next`를 읽어 맞다고 봤다(134~140줄 `process.exit(0)`, 243줄 `program.parse`). 코드를 읽은 것이고, 실제 `next build`로 잰 것은 위젯 e2e가 원본을 남기고 준비가 서는 것뿐이다. (나) EMBED.md, CONTEXT.md, tech.md의 문장은 코드와 맞다. (다) plan.md 인계 문단은 위 고침 뒤의 문장이다. (라) 헌법 판 3.1.10과 비워 둔 3.1.9: `origin/feature/04-standalone-compose-adds-widget-admin`과 PR #651이 3.1.9를 쓴다.
 
 **다시 돌린 명령.** `pnpm -C web/apps/widget exec vitest run tools/manifest.test.ts tools/start.test.ts tools/start.spawn.test.ts next.config.test.ts`: 4개 파일 165개 통과. 나머지 손으로 치는 다섯은 커밋의 pre-commit 결과로 갈음하고, 전체는 `tools/run_checks.py`를 한 번 돌린다.
+
+## 이어받은 세션이 한 것과 인계(커밋 뒤)
+
+이 세션은 위 "인계(셀프 리뷰 직전)"를 받아 이어 했다(제목은 `feature/02-build-closes-frame-ancestors-and-start-fills-them`). 사용자의 새 말은 없었고 시작 프롬프트는 위 "사용자 프롬프트"와 같은 지시문이다("이번 요청 범위: PR과 병합까지").
+
+- 셀프 리뷰를 돌리고 반영했다(위 "셀프 리뷰" 절). 손으로 치는 검사: `uv run ruff check . && uv run ruff format --check .` 초록(이 세션이 쳤다). `uv run python tools/run_checks.py` 한 번 모두 초록이었다(이 세션이 돌렸다. pytest 1403초, web-verify 1243초, pyright·pyright-linux·lint-imports·check-instructions·check-type-escapes·run-hooks·zizmor·check-ticket·check-notes 통과).
+- 커밋은 `2c707273a`(제목 "feat: 빌드가 사이트 파일을 읽지 않고 시작이 허용 출처를 넣는다 (widget-runtime-values 02)")이고 아직 푸시하지 않았다. pre-commit을 세 번 쳤다. 첫 번째는 시간과 프로세스에 기대는 시험 넷(`tests/channel/cli/test_interrupt.py` 둘, `tests/tools/test_hook_push_behind_main.py`의 시간 제한 사례, `tests/tools/test_rerun_runner.py`의 오염 사례)이, 두 번째는 `tests/tools/test_check_md_tables.py::test_한_줄에_겹친_목록_표식이_선형이다`(1.499초 < 1.0초 단언)가 빨갰다. 앞의 넷은 홀로 돌려 149개가, 뒤의 것은 44개가 통과했다(이 세션이 쳤다). 이 변경은 두 파이썬 시험이 건드리는 코드를 고치지 않았다. 다른 세션이 여럿 돌 때 생긴 시간 단언의 흔들림으로 본다(어림이다. 원인을 부하로 가르는 측정은 하지 않았다). 같은 시험이 두 번 연속 실패한 것이 아니라 `diagnosing-bugs`로 가지 않았다. 세 번째 시도가 통과해 커밋됐다. 회고 후보: `.claude/rules/tests.md`의 "시간 단언은 넉넉한 배수" 규칙을 이 둘이 어겼다. 후보로 올릴지는 retro가 판정한다.
+- 이 세션이 고른 길: PR 본문의 "밀 주장"은 일지의 위 "셀프 리뷰" 절과 "인계(셀프 리뷰 직전)"의 "PR 본문과 리뷰에 밀 주장" 목록이다.
+
+### 남은 일(새 세션)
+
+1. `git push -u origin feature/02-build-closes-frame-ancestors-and-start-fills-them` 전에 `git fetch origin`으로 기준 `origin/dev`가 `0a2662c`인지 보고 앞섰으면 `docs/constitution/README.md`의 판(3.1.10)과 `sibling_overlap`을 다시 본다.
+2. PR 직전 리뷰 `docs/constitution/operations.md` 리뷰 파이프라인 2: `coderabbit-review` 서브에이전트(CLI가 못 돌면 `/security-review`와 `bug-perf-review`). 이 세션은 아직 돌리지 않았다. `.scratch/widget-runtime-values/issues/02-...md`의 밀 주장과 위 셀프 리뷰 반영의 새 문장을 브리프에 올린다.
+3. PR을 연다(제목 접두 `feat:`, 느낌표 없음. 운영자가 올릴 때 할 일이 없다). 본문에 적을 것은 위 "인계(셀프 리뷰 직전)"의 "PR 본문에 적을 것"과, 셀프 리뷰에서 고친 것과 남긴 것(위 "셀프 리뷰" 절), pre-commit 세 번 시도의 일을 더한다.
+4. `merge.md` 2(봇 회차), 병합("워크트리에서 병합할 때"), 일지의 `## 다음`, 회고(`retro`)와 다음 지시문.
+
+PR 본문의 검증 수치(위 "확인한 것")는 앞 세션이 돈 명령의 결과다. 이 세션에서 코드가 바뀐 곳은 주석, 문서, 시험의 단언 둘과 `pathToFileURL`, e2e 인자 이름이라, 실제 모델 e2e·사진 비교·단독 배포 e2e·위젯 e2e는 다시 돌리지 않았다. 위젯 e2e와 포털 e2e의 `stack.ts`는 인자 이름과 주석만 바꿨다.
+- open-session을 부른다 2026-11-27T18:24Z
+
+## PR 직전 리뷰(`coderabbit-review`, 이어받은 두 번째 세션)
+
+기준 확인: `git fetch origin` 뒤 `origin/dev`가 `3a1dd4eb`(PR #659, 관리 화면 계정 화면)로 `0a2662c`보다 한 커밋 앞섰다. 겹치는 파일은 `README.md` 하나이고 시험 병합(`git merge --no-commit --no-ff origin/dev`)은 충돌 없이 끝나 `--abort`로 되돌렸다. `sibling_overlap`은 번호 겹침 없음, 형제가 쓴 가장 높은 헌법 판 3.1.9이고 이 브랜치는 3.1.10이다. 위 "남은 일" 1의 확인을 마쳤다.
+
+CLI는 돌았다(`coderabbit` 0.7.5, `Plan: Free`, `Seat: not assigned`인데 `review_completed`). 명령은 `coderabbit review --agent --committed --base-commit 0a2662c92`이고 검토한 파일은 46개다(`--committed`와 `--include-untracked`는 함께 받지 않아 처음 호출이 옵션 오류로 끝났고, 리뷰는 시작하지 않았다). findings 3건은 서브에이전트가 코드로 확인해 모두 오탐으로 가렸다(`start.ts`의 실패한 빌드가 원본을 덮는 길은 `manifest.ts`가 종료 코드 0이 아니면 복사하지 않고 Next의 `cleanDistDir`가 앞 원본도 비운다, `restartWidget` 겹침은 `workers: 1`, 포털 미끼 출처 단언은 시험 보강 거리). 서브에이전트가 `next@16.3.6/dist/bin/next` 134~140행과 243행을 읽어 "기다리지 않고 돌아오고 마치면 `process.exit(0)`"이 맞음을 확인했다(코드를 읽은 것이고 실제 빌드로 잰 것은 e2e뿐이라는 점은 그대로다).
+
+- **보류(Minor, 이 PR에서 고치지 않음).** 허용 출처 규칙(`web/packages/site-file/src/site-file.ts`의 `FORBIDDEN_DOMAIN_SIGNS`, `src/agent_os/main.py`의 `_FORBIDDEN_DOMAIN`)이 호스트에서 `;`, `,`, `'`, `"`를 막지 않아, `https://a.example;sandbox` 같은 값이 `frame-ancestors` 응답 머리에 그대로 들어가 값 없는 지시어(`sandbox` 등)를 더할 수 있다. 공백이 막혀 있어 값이 있는 지시어(`'unsafe-inline'` 등)는 못 넣고, 정책을 푸는 길은 못 찾았다(막는 쪽으로만 깨진다). 입력은 운영자가 쓰는 사이트 파일이고 개발 서버 길에는 원래 있던 성질이다. 고치는 값: 두 언어의 정규식, 공용 사례(`tests/fixtures/site_file/origins.json`), 변이 표(`.scratch/web-widget/probes/site_file_mutations.toml`)와 두 언어의 시험, 진단 문구(`호스트는 … 글자가 없다`)가 함께 바뀐다. 이 값이 브라우저가 거절하지 않는 글자까지 막는 계약 변경이라 이 티켓의 체크박스 밖이고, 후속 티켓으로 둔다(아래 "다음"에도 적는다).
+- **반영(값이 작아 고쳤다).** `web/apps/widget/tools/manifest.ts` 머리 주석에 Next 판이 올라 원본을 복사하는 순서가 바뀌는지는 위젯과 위젯 테스트 페이지의 e2e가 실제 빌드로 본다는 두 줄을 더했다(주석만).
+- **못 잰 것.** 두 시작이 서로 다른 사이트 파일로 같은 자리에 동시에 쓰면 뒤에 쓴 쪽이 이기는 경합은 이론상 남는다(Minor, 실제 배포 길이 아니다).
