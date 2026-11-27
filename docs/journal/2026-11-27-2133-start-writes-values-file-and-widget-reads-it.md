@@ -109,6 +109,7 @@ pre-commit의 `check-mutations`가 변이 다섯의 원문이 사라졌다며 �
 - `.scratch/web-widget/probes/conversation_mutations.toml`과 `storage_mutations.toml`이 지운 `lib/build.ts`를 변이 대상으로 가리킨다. 그 변이 열을 돌릴 일이 생기면 대상을 `lib/runtime.ts`로 옮긴다.
 - 코드의 `settings`·`WidgetSettings` 이름이 CONTEXT.md의 "위젯 설정"과 겹친다. widget-login-state가 두 받기를 합칠 때 함께 정한다.
 - 같은 앱 폴더에서 사이트 파일이 다른 `start`·`dev`를 둘 이상 띄우면 `public/runtime.json`은 마지막에 쓴 쪽의 값이 된다(PR 직전 CodeRabbit 리뷰의 Minor를 보류했다). 티켓 03이 이미지가 값 파일을 쓰는 자리를 정할 때 함께 정하도록 03 파일의 문서 절에 적었다.
+- PR #658 CodeRabbit 첫 회차의 Minor 둘을 보류하고 티켓 03의 문서 절에 넘겼다. 하나는 값 파일 쓰기가 열면서 비워 읽는 쪽이 빈 파일이나 일부만 받을 수 있다는 것이다(이름 바꾸기로 쓰면 링크가 깨져 설계와 부딪친다). 다른 하나는 끝난 기능 release-image의 프로브 둘(`phases.mjs:33`, `element_build.mjs:39`)이 옛 `buildElement(env, ...)` 시그니처로 부른다는 것이다(기록 보존 때문에 이 PR에서 고치지 않았다. 호출 줄은 코드를 읽어 확인했고 프로브를 돌려 보지는 않았다). claude-review의 Nit(`seedRuntimeValues`·`clearRuntimeValues`가 제품 모듈에서 export된다)은 모듈 수준 캐시를 건드려야 해서 지금 자리를 두었다.
 
 ## 인계
 
