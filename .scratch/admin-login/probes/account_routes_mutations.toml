@@ -1,0 +1,233 @@
+# 티켓 06(계정을 다루는 경로, 링크로 비밀번호 정하기, 내 비밀번호 바꾸기)의 변이 표. 구현 뒤에 쓴
+# 시험이 빨강을 볼 수 있는지 잰다.
+# 돌리는 법: PYTHONUTF8=1 uv run python tools/mutate.py .scratch/admin-login/probes/account_routes_mutations.toml
+
+# --- 링크로 비밀번호 정하기 ------------------------------------------------------------------
+
+[[mutation]]
+name = "링크로 정해도 그 계정의 다른 로그인을 끊지 않는다"
+tests = ["tests/test_account_routes_http.py", "-k", "링크로_정하면_그_계정의_다른_로그인"]
+expect = "red"
+expect_output = ["정한 뒤 옛 로그인의 갱신이 204"]
+
+[[mutation.edit]]
+file = "src/agent_os/http/logins.py"
+old = '''
+            await work.end_logins(name, at=now)
+            await work.record("password_set_by_link", at=now, account=name, address=address)
+'''
+new = '''
+            await work.record("password_set_by_link", at=now, account=name, address=address)
+'''
+
+[[mutation]]
+name = "기한이 된 링크도 받는다"
+tests = ["tests/test_account_routes_http.py", "-k", "링크는_만든_때부터"]
+expect = "red"
+expect_output = ["1 day, 0:00:00 뒤 링크가 204 를 냈다"]
+
+[[mutation.edit]]
+file = "src/agent_os/http/logins.py"
+old = '''
+        if link.expires_at <= now:
+'''
+new = '''
+        if link.expires_at < now:
+'''
+
+[[mutation]]
+name = "링크 정하기를 공개 경로에서 뺀다"
+tests = ["tests/test_account_routes_http.py", "-k", "링크로_비밀번호를_정하면_204이고_로그인시키지"]
+expect = "red"
+expect_output = ["링크 정하기가 401 를 냈다"]
+
+[[mutation.edit]]
+file = "src/agent_os/http/auth.py"
+old = '''
+    {"/health", "/auth/login", "/auth/refresh", "/auth/setup", "/auth/set-password"}
+'''
+new = '''
+    {"/health", "/auth/login", "/auth/refresh", "/auth/setup"}
+'''
+
+# --- 계정을 다루는 판정 ----------------------------------------------------------------------
+
+[[mutation]]
+name = "링크를 새로 만들어도 앞 링크를 못 쓰게 하지 않는다"
+tests = ["tests/test_account_routes_http.py", "-k", "링크를_새로_만들면"]
+expect = "red"
+expect_output = ["새로 만든 뒤 앞 링크가 204 를 냈다"]
+
+[[mutation.edit]]
+file = "src/agent_os/http/account_admin.py"
+old = '''
+            await work.void_links(name, at=now)
+            link = await self._issue(work, name, now)
+'''
+new = '''
+            link = await self._issue(work, name, now)
+'''
+
+[[mutation]]
+name = "비활성으로 바꿔도 쓰지 않은 링크를 못 쓰게 하지 않는다"
+tests = ["tests/test_account_routes_http.py", "-k", "비활성으로_바꾸면_로그인과_갱신"]
+expect = "red"
+expect_output = ["되돌린 뒤 못 쓰게 한 링크가 204 를 냈다"]
+
+[[mutation.edit]]
+file = "src/agent_os/http/account_admin.py"
+old = '''
+            await work.end_logins(name, at=now)
+            await work.void_links(name, at=now)
+'''
+new = '''
+            await work.end_logins(name, at=now)
+'''
+
+[[mutation]]
+name = "비활성으로 바꿔도 로그인을 끊지 않는다"
+tests = ["tests/test_account_routes_http.py", "-k", "비활성으로_바꾸면_로그인과_갱신"]
+expect = "red"
+expect_output = ["되돌린 뒤 끊긴 로그인의 갱신이 204 를 냈다"]
+
+[[mutation.edit]]
+file = "src/agent_os/http/account_admin.py"
+old = '''
+            await work.end_logins(name, at=now)
+            await work.void_links(name, at=now)
+'''
+new = '''
+            await work.void_links(name, at=now)
+'''
+
+[[mutation]]
+name = "풀 것이 없어도 풀림을 기록한다"
+tests = ["tests/test_account_routes_http.py", "-k", "잠금_풀기는_잠금과"]
+expect = "red"
+expect_output = ["풀림 기록이 2 줄이다"]
+
+[[mutation.edit]]
+file = "src/agent_os/http/account_admin.py"
+old = '''
+            if row.failures == 0 and row.locked_until is None:
+                return None
+'''
+new = '''
+'''
+
+[[mutation]]
+name = "같은 이름 409 가 이름을 되울린다"
+tests = ["tests/test_account_routes_http.py", "-k", "같은_이름의_계정_만들기는_409"]
+expect = "red"
+expect_output = ["이미 있다: canary.acct9"]
+
+[[mutation.edit]]
+file = "src/agent_os/admin/accounts.py"
+old = '''
+            raise HTTPException(status_code=409, detail=NAME_TAKEN_MESSAGE)
+'''
+new = '''
+            raise HTTPException(status_code=409, detail=f"{NAME_TAKEN_MESSAGE}: {name}")
+'''
+
+# --- 권한과 자격 -----------------------------------------------------------------------------
+
+[[mutation]]
+name = "계정 만들기가 보기 권한이다"
+tests = ["tests/test_account_routes_http.py", "-k", "관리자_단계는_계정을_다루는"]
+expect = "red"
+expect_output = ["POST /accounts 가 201 를 냈다"]
+
+[[mutation.edit]]
+file = "src/agent_os/http/permissions.py"
+old = '''
+    "create_account": Permission.MANAGE_ACCOUNTS,
+'''
+new = '''
+    "create_account": Permission.VIEW,
+'''
+
+[[mutation]]
+name = "내 비밀번호 바꾸기를 공유 토큰에도 연다"
+tests = ["tests/test_account_routes_http.py", "-k", "공유_토큰은_내_비밀번호"]
+expect = "red"
+expect_output = ["챌린지 None"]
+
+[[mutation.edit]]
+file = "src/agent_os/http/auth.py"
+old = '''
+LOGIN_ONLY_PATHS = frozenset({"/auth/logout", "/auth/me", "/auth/password"})
+'''
+new = '''
+LOGIN_ONLY_PATHS = frozenset({"/auth/logout", "/auth/me"})
+'''
+
+# --- 내 비밀번호 바꾸기 ----------------------------------------------------------------------
+
+[[mutation]]
+name = "바꾼 로그인까지 끊는다"
+tests = ["tests/test_account_routes_http.py", "-k", "내_비밀번호를_바꾸면_204이고"]
+expect = "red"
+expect_output = ["바꾼 로그인의 갱신이 401 를 냈다"]
+
+[[mutation.edit]]
+file = "src/agent_os/http/logins.py"
+old = '''
+            await work.end_other_logins(row.name, keep=claims.login_id, at=now)
+'''
+new = '''
+            await work.end_logins(row.name, at=now)
+'''
+
+[[mutation]]
+name = "견주는 사이 해시가 바뀐 것을 보지 않는다"
+tests = ["tests/test_account_routes_http.py", "-k", "견준_뒤_저장하기_전에"]
+expect = "red"
+expect_output = ["경합 뒤 바꾸기가 204 를 냈다"]
+
+[[mutation.edit]]
+file = "src/agent_os/http/logins.py"
+old = '''
+            if row.password_hash != attempt.stored_hash:
+                return "wrong_current"
+'''
+new = '''
+'''
+
+[[mutation]]
+name = "틀린 횟수를 미리 늘리지 않는다"
+tests = ["tests/test_account_routes_http.py", "-k", "틀린_지금_비밀번호는_422"]
+expect = "red"
+expect_output = ["1 번째 뒤 틀린 횟수가 0 이다"]
+
+[[mutation.edit]]
+file = "src/agent_os/http/logins.py"
+old = '''
+            failures = row.failures + 1
+            length = lock_duration(failures)
+            until = None if length is None else now + length
+            await work.set_failures(name, failures=failures, locked_until=until)
+            return _Counted(row.name, row.password_hash, until is not None)
+'''
+new = '''
+            failures = row.failures
+            length = lock_duration(failures)
+            until = None if length is None else now + length
+            await work.set_failures(name, failures=failures, locked_until=until)
+            return _Counted(row.name, row.password_hash, until is not None)
+'''
+
+[[mutation]]
+name = "새 비밀번호의 규칙을 보지 않는다"
+tests = ["tests/test_account_routes_http.py", "-k", "새_비밀번호가_규칙을_어기면"]
+expect = "red"
+expect_output = ["약한 새 비밀번호가 204 를 냈다"]
+
+[[mutation.edit]]
+file = "src/agent_os/http/logins.py"
+old = '''
+        if password_problem(new) is not None:
+            return "rule"
+'''
+new = '''
+'''

@@ -31,14 +31,14 @@
 
 from __future__ import annotations
 
-from collections.abc import AsyncGenerator, Awaitable, Callable
+from collections.abc import AsyncGenerator, Awaitable, Callable, Sequence
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Literal, Protocol
 from uuid import UUID
 
-from sqlalchemy import Select, delete, insert, or_, select, update
+from sqlalchemy import Select, case, delete, insert, or_, select, update
 from sqlalchemy.dialects import postgresql
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncConnection, AsyncEngine
@@ -52,6 +52,12 @@ from agent_os.adapters.postgres.account_tables import (
     ACCOUNT_PASSWORD_HASH,
     ACCOUNT_TIER,
     ACCOUNTS,
+    LINK_ACCOUNT,
+    LINK_CREATED_AT,
+    LINK_EXPIRES_AT,
+    LINK_TOKEN_HASH,
+    LINK_USED_AT,
+    LINK_VOIDED_AT,
     LOGIN_ACCOUNT,
     LOGIN_ENDED_AT,
     LOGIN_ID,
@@ -59,7 +65,9 @@ from agent_os.adapters.postgres.account_tables import (
     LOGIN_RECORDS,
     LOGIN_REFRESHED_AT,
     LOGINS,
+    PASSWORD_LINKS,
     RECORD_ACCOUNT,
+    RECORD_ACTOR,
     RECORD_ADDRESS,
     RECORD_KIND,
     RECORD_OCCURRED_AT,
@@ -82,8 +90,15 @@ type RecordKind = Literal[
     "login_succeeded",
     "login_failed",
     "locked",
+    "unlocked",
     "logged_out",
     "refresh_reused",
+    "account_created",
+    "account_disabled",
+    "account_enabled",
+    "link_created",
+    "password_set_by_link",
+    "password_changed",
     "signing_key_rotated",
 ]
 
@@ -133,6 +148,16 @@ class RefreshRecord:
     used_at: datetime | None
 
 
+@dataclass(frozen=True, slots=True)
+class LinkRecord:
+    """비밀번호 링크의 줄 하나. 포트의 `LinkRow` 를 시그니처로 만족한다."""
+
+    account: str
+    expires_at: datetime
+    used_at: datetime | None
+    voided_at: datetime | None
+
+
 class _NewAccount(Protocol):
     """넣을 계정. 포트의 `NewAccount` 와 같은 모양이고, 이 모듈은 포트를 가져오지 않는다."""
 
@@ -143,7 +168,7 @@ class _NewAccount(Protocol):
     def tier(self) -> Tier: ...
 
     @property
-    def password_hash(self) -> str: ...
+    def password_hash(self) -> str | None: ...
 
     @property
     def created_at(self) -> datetime: ...
@@ -229,12 +254,14 @@ class PostgresAccountWork:
         at: datetime,
         account: str | None,
         address: str | None = None,
+        actor: str | None = None,
     ) -> None:
         statement = insert(LOGIN_RECORDS).values(
             {
                 RECORD_OCCURRED_AT.name: at,
                 RECORD_KIND.name: kind,
                 RECORD_ACCOUNT.name: account,
+                RECORD_ACTOR.name: actor,
                 RECORD_ADDRESS.name: address,
             }
         )
@@ -356,6 +383,80 @@ class PostgresAccountWork:
     async def touch_login(self, login_id: UUID, *, at: datetime) -> None:
         statement = update(LOGINS).where(LOGIN_ID == login_id).values(refreshed_at=at)
         await self._guard(lambda: self._connection.execute(statement))
+
+    async def list_accounts(self) -> Sequence[AccountRecord]:
+        # 시스템 관리자가 먼저이고 나머지는 이름순이다
+        first = case((ACCOUNT_TIER == "system_admin", 0), else_=1)
+        query = _select_accounts().order_by(first, ACCOUNT_NAME)
+        return await self._guard(lambda: self._all(query))
+
+    async def set_disabled(self, name: str, *, at: datetime | None) -> None:
+        statement = update(ACCOUNTS).where(ACCOUNT_NAME == name).values(disabled_at=at)
+        await self._guard(lambda: self._connection.execute(statement))
+
+    async def end_other_logins(self, name: str, *, keep: UUID, at: datetime) -> None:
+        statement = (
+            update(LOGINS)
+            .where(LOGIN_ACCOUNT == name, LOGIN_ID != keep, LOGIN_ENDED_AT.is_(None))
+            .values(ended_at=at)
+        )
+        await self._guard(lambda: self._connection.execute(statement))
+
+    async def add_link(
+        self, token_hash: str, account: str, *, at: datetime, expires_at: datetime
+    ) -> None:
+        statement = insert(PASSWORD_LINKS).values(
+            {
+                LINK_TOKEN_HASH.name: token_hash,
+                LINK_ACCOUNT.name: account,
+                LINK_CREATED_AT.name: at,
+                LINK_EXPIRES_AT.name: expires_at,
+            }
+        )
+        await self._guard(lambda: self._connection.execute(statement))
+
+    async def void_links(self, account: str, *, at: datetime) -> None:
+        statement = (
+            update(PASSWORD_LINKS)
+            .where(LINK_ACCOUNT == account, LINK_USED_AT.is_(None), LINK_VOIDED_AT.is_(None))
+            .values(voided_at=at)
+        )
+        await self._guard(lambda: self._connection.execute(statement))
+
+    async def lock_link(self, token_hash: str) -> LinkRecord | None:
+        # 계정의 줄을 먼저, 링크 줄을 그다음에 잠근다. 계정을 먼저 잠그고 링크를 바꾸는 쪽(링크
+        # 만들기, 비활성으로 바꾸기)과 같은 순서라 서로 기다리지 않는다
+        return await self._guard(lambda: self._link_row(token_hash))
+
+    async def use_link(self, token_hash: str, *, at: datetime) -> None:
+        statement = (
+            update(PASSWORD_LINKS)
+            .where(LINK_TOKEN_HASH == token_hash, LINK_USED_AT.is_(None))
+            .values(used_at=at)
+        )
+        await self._guard(lambda: self._connection.execute(statement))
+
+    async def _link_row(self, token_hash: str) -> LinkRecord | None:
+        owner = select(LINK_ACCOUNT).where(LINK_TOKEN_HASH == token_hash)
+        owner_row = (await self._connection.execute(owner)).one_or_none()
+        if owner_row is None:
+            return None
+        locking = select(ACCOUNT_NAME).where(ACCOUNT_NAME == owner_row[0]).with_for_update()
+        await self._connection.execute(locking)
+        link = (
+            select(LINK_ACCOUNT, LINK_EXPIRES_AT, LINK_USED_AT, LINK_VOIDED_AT)
+            .where(LINK_TOKEN_HASH == token_hash)
+            .with_for_update()
+        )
+        row = (await self._connection.execute(link)).one_or_none()
+        if row is None:
+            return None
+        account, expires_at, used_at, voided_at = row
+        return LinkRecord(account, expires_at, used_at, voided_at)
+
+    async def _all(self, query: _Row) -> Sequence[AccountRecord]:
+        rows = (await self._connection.execute(query)).all()
+        return [_record_of(*row) for row in rows]
 
     async def _refresh_row(self, token_hash: str) -> RefreshRecord | None:
         owner = select(REFRESH_LOGIN_ID).where(REFRESH_TOKEN_HASH == token_hash)

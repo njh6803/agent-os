@@ -48,6 +48,7 @@ from agent_os.http.accounts import (
     AccountRow,
     AccountStore,
     AccountWork,
+    LinkRow,
     NewAccount,
     RecordKind,
     RefreshRow,
@@ -521,6 +522,7 @@ class _RacingWork:
         at: datetime,
         account: str | None,
         address: str | None = None,
+        actor: str | None = None,
     ) -> None:
         self.written.append("record")
 
@@ -569,6 +571,29 @@ class _RacingWork:
         raise AssertionError(_NOT_USED)
 
     async def touch_login(self, login_id: UUID, *, at: datetime) -> None:
+        raise AssertionError(_NOT_USED)
+
+    async def list_accounts(self) -> Sequence[AccountRow]:
+        raise AssertionError(_NOT_USED)
+
+    async def set_disabled(self, name: str, *, at: datetime | None) -> None:
+        raise AssertionError(_NOT_USED)
+
+    async def end_other_logins(self, name: str, *, keep: UUID, at: datetime) -> None:
+        raise AssertionError(_NOT_USED)
+
+    async def add_link(
+        self, token_hash: str, account: str, *, at: datetime, expires_at: datetime
+    ) -> None:
+        raise AssertionError(_NOT_USED)
+
+    async def void_links(self, account: str, *, at: datetime) -> None:
+        raise AssertionError(_NOT_USED)
+
+    async def lock_link(self, token_hash: str) -> LinkRow | None:
+        raise AssertionError(_NOT_USED)
+
+    async def use_link(self, token_hash: str, *, at: datetime) -> None:
         raise AssertionError(_NOT_USED)
 
 

@@ -31,6 +31,7 @@ from agent_os.adapters.postgres.account_tables import (
     ACCOUNTS,
     LOGIN_RECORDS,
     LOGINS,
+    PASSWORD_LINKS,
     REFRESH_TOKENS,
     SIGNING_KEY,
 )
@@ -489,13 +490,163 @@ async def test_로그인_기록은_접속_주소를_함께_적는다(
     ]
 
 
+async def test_로그인_기록은_그_일을_한_계정을_함께_적는다(
+    database: ScopedDatabase, accounts: AccountStore
+) -> None:
+    async with _work(accounts) as work:
+        await work.add(_new("kim.min", "admin"))
+        await work.record("unlocked", at=NOW, account="kim.min", actor="root-one")
+        await work.record("password_changed", at=LATER, account="kim.min")
+    async with plain(database) as connection:
+        result = await connection.execute(
+            text("SELECT kind, account, actor FROM operator_login_records ORDER BY seq")
+        )
+        rows = [tuple(row) for row in result.all()]
+    assert rows == [("unlocked", "kim.min", "root-one"), ("password_changed", "kim.min", None)]
+
+
+# --- 계정을 다루는 일 ----------------------------------------------------------------------------
+
+
+async def test_목록은_시스템_관리자가_먼저이고_나머지는_이름순이다(accounts: AccountStore) -> None:
+    async with _work(accounts) as work:
+        for name in ("bee.two", "amy.one", "zed.nine"):
+            await work.add(_new(name, "admin"))
+        await work.add(_new("root-one", "system_admin"))
+    async with _work(accounts) as work:
+        listed = await work.list_accounts()
+    assert [row.name for row in listed] == ["root-one", "amy.one", "bee.two", "zed.nine"]
+    assert [row.tier for row in listed][:2] == ["system_admin", "admin"]
+
+
+async def test_비활성으로_바꾼_시각을_적고_지운다(accounts: AccountStore) -> None:
+    async with _work(accounts) as work:
+        await work.add(_new("kim.min", "admin"))
+        await work.set_disabled("kim.min", at=LATER)
+    async with _work(accounts) as work:
+        off = await work.lock("kim.min")
+        assert off is not None
+        assert off.disabled_at == LATER
+        await work.set_disabled("kim.min", at=None)
+    async with _work(accounts) as work:
+        back = await work.lock("kim.min")
+    assert back is not None
+    assert back.disabled_at is None
+
+
+async def test_다른_로그인만_끊고_남길_로그인은_그대로_둔다(
+    database: ScopedDatabase, accounts: AccountStore
+) -> None:
+    keep, other, done = uuid4(), uuid4(), uuid4()
+    async with _work(accounts) as work:
+        await work.add(_new("kim.min", "admin"))
+        await work.add(_new("lee.jin", "admin"))
+    insert = text(
+        "INSERT INTO operator_logins (id, account, logged_in_at, refreshed_at, ended_at) "
+        "VALUES (:id, :account, :at, :at, :ended)"
+    )
+    async with plain(database, autocommit=True) as connection:
+        await connection.execute(
+            insert, {"id": keep, "account": "kim.min", "at": NOW, "ended": None}
+        )
+        await connection.execute(
+            insert, {"id": other, "account": "kim.min", "at": NOW, "ended": None}
+        )
+        await connection.execute(
+            insert, {"id": done, "account": "kim.min", "at": NOW, "ended": NOW}
+        )
+        await connection.execute(
+            insert, {"id": uuid4(), "account": "lee.jin", "at": NOW, "ended": None}
+        )
+    async with _work(accounts) as work:
+        await work.end_other_logins("kim.min", keep=keep, at=LATER)
+    async with plain(database) as connection:
+        result = await connection.execute(text("SELECT id, ended_at FROM operator_logins"))
+        ended = {row[0]: row[1] for row in result.all()}
+    assert ended[keep] is None
+    assert ended[other] == LATER
+    assert ended[done] == NOW
+    assert sum(value is None for value in ended.values()) == 2
+
+
+async def test_링크는_해시로_넣고_잠가_읽고_쓴_것으로_적는다(
+    database: ScopedDatabase, accounts: AccountStore
+) -> None:
+    expires = NOW + timedelta(hours=24)
+    async with _work(accounts) as work:
+        await work.add(_new("kim.min", "admin"))
+        assert await work.lock_link("absent-hash") is None
+        await work.add_link("hash-one", "kim.min", at=NOW, expires_at=expires)
+    async with _work(accounts) as work:
+        link = await work.lock_link("hash-one")
+        assert link is not None
+        assert (link.account, link.expires_at, link.used_at, link.voided_at) == (
+            "kim.min",
+            expires,
+            None,
+            None,
+        )
+        await work.use_link("hash-one", at=LATER)
+    async with _work(accounts) as work:
+        used = await work.lock_link("hash-one")
+    assert used is not None
+    assert used.used_at == LATER
+
+
+async def test_링크를_못_쓰게_하면_쓰지_않은_것만_그_시각으로_바뀌고_다른_계정은_그대로다(
+    accounts: AccountStore,
+) -> None:
+    expires = NOW + timedelta(hours=24)
+    async with _work(accounts) as work:
+        await work.add(_new("kim.min", "admin"))
+        await work.add(_new("lee.jin", "admin"))
+        await work.add_link("fresh", "kim.min", at=NOW, expires_at=expires)
+        await work.add_link("used", "kim.min", at=NOW, expires_at=expires)
+        await work.use_link("used", at=NOW)
+        await work.add_link("other", "lee.jin", at=NOW, expires_at=expires)
+        await work.void_links("kim.min", at=LATER)
+    async with _work(accounts) as work:
+        fresh = await work.lock_link("fresh")
+        used = await work.lock_link("used")
+        other = await work.lock_link("other")
+    assert fresh is not None
+    assert used is not None
+    assert other is not None
+    assert fresh.voided_at == LATER
+    assert used.voided_at is None
+    assert other.voided_at is None
+
+
+async def test_링크를_잠그면_그_계정의_줄도_함께_잠가_계정을_먼저_잠근_쪽을_기다린다(
+    accounts: AccountStore,
+) -> None:
+    """계정을 먼저 잠그고 링크를 바꾸는 쪽과 링크를 먼저 잠그는 쪽이 같은 순서(계정, 링크)로 잡아
+    서로 기다리는 일이 없다. 계정을 쥔 트랜잭션이 있는 동안 링크 잠금은 끝나지 않고, 놓으면
+    끝난다."""
+    expires = NOW + timedelta(hours=24)
+    async with _work(accounts) as work:
+        await work.add(_new("kim.min", "admin"))
+        await work.add_link("hash-one", "kim.min", at=NOW, expires_at=expires)
+
+    async def read_link() -> bool:
+        async with _work(accounts) as work:
+            return await work.lock_link("hash-one") is not None
+
+    async with _work(accounts) as holder:
+        assert await holder.lock("kim.min") is not None
+        waiting = asyncio.create_task(read_link())
+        await asyncio.sleep(0.3)
+        assert not waiting.done()
+    assert await asyncio.wait_for(waiting, 5) is True
+
+
 # --- 표 정의가 실제 표와 맞는다 ------------------------------------------------------------------
 
 
 async def test_표_정의의_칸이_실제_표의_칸과_이름과_타입과_비어도_됨까지_같다(
     database: ScopedDatabase,
 ) -> None:
-    for table in (ACCOUNTS, LOGINS, LOGIN_RECORDS, REFRESH_TOKENS, SIGNING_KEY):
+    for table in (ACCOUNTS, LOGINS, LOGIN_RECORDS, PASSWORD_LINKS, REFRESH_TOKENS, SIGNING_KEY):
         async with plain(database) as connection:
             result = await connection.execute(
                 text(
