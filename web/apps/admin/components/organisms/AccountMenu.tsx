@@ -112,7 +112,10 @@ export function AccountMenu({
         aria-expanded={open}
         aria-controls={open ? menuId : undefined}
         onClick={() => {
-          setOpen((shown) => !shown);
+          // 로그아웃 요청이 가는 동안은 메뉴를 닫지 않는다. 닫으면 진행 중인 요청의 실패 알림이 보이지 않는다.
+          if (!pending) {
+            setOpen((shown) => !shown);
+          }
         }}
         className={`flex h-control w-full items-center gap-1 rounded-m px-2 text-left text-body hover:bg-bg-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring wide:h-auto wide:gap-2 wide:px-3 wide:py-2 ${open ? "bg-bg-active" : ""}`}
       >

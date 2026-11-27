@@ -21,7 +21,7 @@ import {
 } from "../../testing/network";
 import { renderPage } from "../../testing/render";
 import { frame, KEEPALIVE, resumeStream, type Step } from "../../testing/stream";
-import { signedIn } from "../../testing/session";
+import { signedIn, visited } from "../../testing/session";
 import { RunPage } from "./RunPage";
 
 const RUN = "r-gated";
@@ -795,6 +795,27 @@ describe("409 와 꺼짐", () => {
     const alert = await alertTitled("결정을 보내지 못했다");
     expect(alert.textContent).toContain(message);
     expect(precedes(alert, events())).toBe(true);
+  });
+
+  test("결정이 401 을 받고 갱신이 서버 오류로 실패하면 로그인 화면으로 가지 않고 결정을 보내지 못했다고 말한다", async () => {
+    serveTrace(() => PAUSED);
+    servePlugins(ROWS);
+    serveDecision(() =>
+      HttpResponse.json(envelope("unauthorized", "로그인이 끝났다", "req-4010"), { status: 401 }),
+    );
+    network.use(
+      http.post(api("/auth/refresh"), () =>
+        HttpResponse.json(envelope("internal_error", "갱신하지 못했다"), { status: 500 }),
+      ),
+    );
+    const user = await openDecision();
+
+    await user.click(button("승인"));
+
+    // 갱신이 로그인이 끝났다고 답하지 않았으니 화면은 그 자리에 있고, 운영자는 결정이 나가지 않았다는 말을 본다.
+    const alert = await alertTitled("결정을 보내지 못했다");
+    expect(alert.textContent).toContain("로그인이 끝났다");
+    expect(visited()).toEqual([]);
   });
 
   test("에이전트가 꺼졌으면 결정 버튼이 막히고 꺼진 에이전트가 보인다", async () => {

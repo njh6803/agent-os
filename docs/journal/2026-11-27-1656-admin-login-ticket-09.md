@@ -55,4 +55,36 @@
 - `uv run ruff check .`와 `uv run ruff format --check .` 통과.
 - `tools/mutate.py --check` 열두 개 표 모두 "원문이 한 번씩 있다". 새 표 `login_rule_mutations.toml`은 변이 10건 모두 기대대로 빨강(기준선은 모두 초록이었다).
 - `uv run python tools/run_checks.py`(전체를 스테이지한 뒤): check-notes, check-ticket, lint-imports, zizmor, check-instructions, check-type-escapes, pyright 둘, run-hooks, web-verify, pytest가 모두 통과, 종료 코드 0(이 세션이 쳤다). e2e와 사진 비교는 셀프 리뷰 반영 전에 친 결과가 그대로 유효한지 아래에서 가린다.
+- 첫 커밋 시도는 pre-commit의 변이 표 검사(`check-mutations`)가 막았다. 새 표 `login_rule_mutations.toml`의 변이 열 개에 `expect_output`이 없다는 이유였다. 표지 없이 돌려 본 실제 실패 줄에서 단언마다 값까지 든 문구를 골라 달고(손으로 본 것), 표를 다시 돌려 열 개 모두 기대대로 빨간 것을 본 뒤 `fc3cdca8d`로 커밋했다. pre-commit이 17분쯤 걸려 백그라운드로 쳤다.
 - 셀프 리뷰 반영이 닿은 파일은 시험, 로직(`AccountMenu`의 닫기 가드, `address.ts`, `rule.ts`)과 문서뿐이고 화면 모양은 바뀌지 않았다. 사진 정답과 e2e의 화면은 그대로라 앞서 친 사진 비교(`visual:admin`, 종료 코드 0)와 e2e(관리 화면 12건, 위젯 19건)를 다시 치지 않았다. 이 판단은 어림이고, CI의 `e2e`와 `visual` 잡이 판정한다.
+
+## 인계(2026-11-27, 컨텍스트가 인계 문턱을 넘어 커밋 뒤에 넘겼다)
+
+이 세션은 커밋 `fc3cdca8d`까지 했고 푸시, PR, 병합이 남았다. 새 세션이 같은 브랜치·워크트리에서 이어 쓴다. 이 세션의 제목은 `feature/09-admin-ui-login-and-refresh-rule`이었고 `(인계함)`으로 바꾼다. 일지의 "## 다음"은 쓰지 않았다. 새 세션이 PR을 열고 병합한 뒤 쓴다.
+
+PR 본문에 넣을 것(지시문에도 같은 것을 적었다):
+
+- 명세 `.scratch/admin-login/spec.md`의 두 줄을 고쳤다. 558번 줄 알림 문구는 제목과 본문 둘로 그린 화면대로 바꿨고(`design/mk-login-notices.dc.html`), 573번 줄에는 `/auth/me` 예외(갱신까지 401이어도 알림 없이 `/login?next=`)를 더했다.
+- 병합 충돌 후보: `README.md`(PR #651, 워크트리 04), `web/packages/api-client/src/clients.test-d.ts`(워크트리 06).
+- e2e와 사진 비교는 셀프 리뷰 반영 전에 쳤고 반영은 화면 모양을 바꾸지 않아 다시 치지 않았다(어림). CI의 `e2e`와 `visual` 잡이 판정한다.
+
+### 이어받은 세션(2026-11-27)
+
+새 세션이 같은 워크트리에 들어와 이어받았다. 시작할 때 `git fetch origin`과 `tools/sibling_overlap.py`를 쳤다(번호 겹침 없음). origin/dev는 `c3ad162fc`에서 `793298c85`(PR #655, 위젯 런타임 값 티켓 문서)로 한 칸 나아갔고, 그 변경은 이 브랜치가 건드린 파일과 겹치지 않는다(`git diff --name-only HEAD...origin/dev`를 손으로 대 봤다). `tools/plan_table.py`를 돌려도 `.scratch/plan.md`는 바뀌지 않았다. 디자인 시스템 `확인`(`/sync-design-system 확인`)은 새 세션의 첫 화면 코드 수정 전에 돌려 `clean`(웹 편집 없음, 결정표 `continue`)이었다(`web/tools/sync-design-system/main.ts check judge`와 `decide`의 출력을 손으로 봤다).
+
+### PR 직전 리뷰(`coderabbit-review` 서브에이전트)
+
+CodeRabbit CLI 0.7.5가 `--base origin/dev`로 163개 파일을 끝까지 돌았다(`review_completed`, findings 11건, 서브에이전트가 보고했다). `coderabbit auth status`의 Seat 줄은 `not assigned`(Plan: Free)였고 리뷰는 좌석 없이도 돌았다. 서브에이전트의 판정을 이 세션이 코드로 다시 읽어 갈랐다.
+
+고친 것:
+
+- 결정 자리가 침묵하던 틈(Major). 갱신이 네트워크나 5xx로 실패하면 `rule.ts`는 로그인 화면으로 보내지 않고 처음 401을 그대로 돌려주는데, `RunDecision.noticeOf`가 401이면 알림을 숨겨서 승인을 눌러도 화면에 아무 반응이 없었다(`rule.ts` 92번 줄 근처와 `RunDecision.tsx`를 직접 읽어 확인했다). 401도 "결정을 보내지 못했다"로 보이게 고치고, 숨기는 데만 쓰이던 `isRejection`을 걷었다. 갱신까지 401이면 화면이 로그인 화면으로 가므로 알림은 이동 직전에 잠깐 보일 뿐이다(어림이고 e2e는 다시 치지 않았다). 시험 `RunPage.decision.test.tsx`의 "결정이 401 을 받고 갱신이 서버 오류로 실패하면…"을 더했고, 고치기 전에 알림이 없다는 이유로 빨간 것을 보았다(손으로 쳤다).
+- 계정 단추(Minor). 로그아웃 요청이 가는 동안 계정 단추를 다시 누르면 메뉴가 닫혀 실패 알림이 사라졌다. Esc와 바깥 누르기와 같게 `pending`이면 무시한다. 기존 시험 "요청이 가는 동안에는…"에 단추를 누르는 단계를 더했고, 고치기 전에 메뉴가 닫혀 빨간 것을 보았다(손으로 쳤다).
+
+오탐으로 가른 것(서브에이전트와 이 세션이 코드를 읽었다): 결정 요청이 갱신 규칙을 안 지난다는 지적(`sendDecision`은 `refreshRule`이 꽂힌 클라이언트를 쓴다), 옛 `data`와 새 `error`가 함께 오는 `AdminScreen` 경로(없다), 결정 e2e가 `next`로 돌아오는지(같은 파일이 이어서 단언한다), 프로브 중계 소켓 하나만 파괴한다는 지적(정상 경로에 영향 없다).
+
+보류한 것과 이유:
+
+- 다른 탭이 다른 계정으로 로그인하면 이 탭은 옛 이름을 보이는 채로 새 계정의 쿠키로 요청이 나간다(Minor). 쿠키 로그인 구조의 흔한 한계이고 서버가 요청마다 권한을 판정한다. `useMe`가 창 포커스에서 다시 읽지 않는 까닭이 갱신 겹침 방지라 손대려면 그 조정이 따라온다. 명세가 받아들이는지 판단이 필요해 PR 코멘트와 다음 지시문의 "이어받을 상태"에 적는다.
+- 계정 메뉴의 키보드 흐름(열릴 때 첫 항목에 포커스, Esc로 닫으면 계정 단추로 복귀)과 불러오는 중을 `disabled` 대신 `aria-busy`로 바꾸기(Minor). 모양과 사진 정답이 따라 움직일 수 있어 12의 화면 작업에서 함께 본다.
+- `playwright_secure_cookie/probe.mjs`의 `try`가 `page.goto`와 `context.cookies()`의 오류까지 `addCookiesError`로 기록할 수 있다(Minor). 근거로 든 프로브라 고치면 `expected.json`을 다시 재야 한다. 이번 PR이 근거로 쓰는 갈래의 값은 바뀌지 않았다고 보고 다음 회차에 맡긴다(프로브를 다시 돌려 보지 않은 어림이다).

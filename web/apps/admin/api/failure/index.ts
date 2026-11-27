@@ -23,14 +23,6 @@ export class RequestFailure extends Error {
   }
 }
 
-/**
- * 요청이 거절됐다는 실패(401)인가. 갱신 규칙(`api/session`)이 로그인 화면으로 보내는 요청은 이 실패를 화면에 올리지 않고,
- * 갱신 규칙 밖의 요청(결정의 `organisms/RunDecision` 같은 곳)이 남은 401 을 알림에서 거를 때 쓴다.
- */
-export function isRejection(error: unknown): boolean {
-  return error instanceof RequestFailure && error.status === 401;
-}
-
 /** 데이터가 아닌 응답. openapi-fetch 는 JSON 이 아닌 에러 본문을 글자로 주므로 모양을 보고 봉투로 좁힌다. */
 export function failureOf(status: number, body: unknown): RequestFailure {
   return new RequestFailure(status, isEnvelope(body) ? body : null);

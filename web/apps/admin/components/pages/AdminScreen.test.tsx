@@ -231,7 +231,7 @@ describe("로그아웃", () => {
     expect(visited()).toEqual([]);
   });
 
-  test("요청이 가는 동안에는 Esc 와 메뉴 밖 누르기로 메뉴가 닫히지 않아 실패 알림이 그 자리에 선다", async () => {
+  test("요청이 가는 동안에는 Esc 와 메뉴 밖 누르기와 계정 단추로 메뉴가 닫히지 않아 실패 알림이 그 자리에 선다", async () => {
     await openSettings();
     let answer: () => void = () => undefined;
     const waiting = new Promise<void>((resolve) => {
@@ -248,6 +248,7 @@ describe("로그아웃", () => {
 
     await user.keyboard("{Escape}");
     await user.click(screen.getByRole("heading", { level: 1, name: "설정" }));
+    await user.click(screen.getByRole("button", { name: /kim\.dev/ }));
 
     expect(screen.getByRole("menu", { name: "kim.dev 계정" })).toBeTruthy();
     answer();

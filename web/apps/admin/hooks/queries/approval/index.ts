@@ -93,7 +93,8 @@ export function useDecision(runId: string): DecisionAttempt {
           throw error;
         }
         setFailure(error);
-        // 401 은 갱신 규칙이 이미 받았다(`api/session`). 갱신까지 실패했으면 로그인 화면으로 가는 중이다.
+        // 401 은 갱신 규칙이 이미 받았다(`api/session`). 갱신까지 401 이면 로그인 화면으로 가고, 그 밖의 실패면 그대로 남아
+        // 결정 자리가 "결정을 보내지 못했다"로 알린다.
         if (error.status === 409) {
           // 뜻 넷(자리 어긋남, 일시정지 아님, 형식 1, 꺼짐)이 같은 처리다. 가르는 것은 메시지다(ADR 0014 이력).
           // 꺼짐의 미리 알림이 목록에 기대므로 목록도 다시 읽는다.

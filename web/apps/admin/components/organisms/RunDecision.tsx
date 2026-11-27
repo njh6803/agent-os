@@ -1,7 +1,7 @@
 import { Alert, Button, Card, Icon, TextField } from "@agent-os/ui";
 import { useId, useState, type ReactNode } from "react";
 import type { Decision, StreamFrame } from "../../api/approval";
-import { describeFailure, isRejection, type RequestFailure } from "../../api/failure";
+import { describeFailure, type RequestFailure } from "../../api/failure";
 import type { PluginRow } from "../../api/plugins";
 import type { Trace } from "../../api/traces";
 import { CodeBlock } from "../atoms/CodeBlock";
@@ -311,12 +311,13 @@ interface Notice {
 
 /**
  * 결정 자리 밖에 보일 실패(admin-style 명세 "화면 머리와 공통 상태"의 실패 알림 표). 형식 오류(422)는 사유 칸 아래에
- * 서므로 여기 없다. 401 은 갱신 규칙(`api/session`)이 이미 받았다. 갱신까지 실패했으면 화면이 로그인 화면으로 가는 중이라
- * 알림을 두지 않는다. 그 밖(409 의 뜻 넷, 없는 실행, 서버 오류)은 "결정을 보내지 못했다"와 봉투의 메시지와 추적
- * 식별자이고, 봉투가 없으면(닿지 못함) "서버에 닿지 못했다"다.
+ * 서므로 여기 없다. 그 밖(409 의 뜻 넷, 없는 실행, 서버 오류)은 "결정을 보내지 못했다"와 봉투의 메시지와 추적 식별자이고,
+ * 봉투가 없으면(닿지 못함) "서버에 닿지 못했다"다. 401 도 같다. 갱신까지 401 이면 화면이 로그인 화면으로 가지만 갱신이
+ * 네트워크나 서버 오류로 실패했으면 가지 않고 처음 401 이 남는다(`api/session`의 `rule.ts`). 그때 알림이 없으면 운영자가 결정이
+ * 나갔는지 알 길이 없다.
  */
 function noticeOf(failure: RequestFailure | null): Notice | null {
-  if (failure === null || failure.status === 422 || isRejection(failure)) {
+  if (failure === null || failure.status === 422) {
     return null;
   }
   return { title: "결정을 보내지 못했다", ...describeFailure(failure) };
