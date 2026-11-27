@@ -116,3 +116,14 @@ pre-commit의 `check-mutations`가 변이 다섯의 원문이 사라졌다며 �
 - `git worktree unlock`으로 이 워크트리의 잠금을 풀었다.
 - 경계는 `셀프 리뷰 직전`이다. 일지 경로는 `docs/journal/2026-11-27-2133-start-writes-values-file-and-widget-reads-it.md`다.
 - open-session을 부른다 2026-11-27T12:34:40Z
+
+## 인계(커밋 뒤)
+
+이어받은 세션이 컨텍스트가 인계 문턱(20만 토큰)을 넘은 채 `커밋 뒤` 경계에 와서 다시 인계한다. 지금까지 한 것은 위 "셀프 리뷰"·"이어받은 세션이 다시 돌린 검증"·"변이 표 고침"·"회고"·"다음"에 있고, 커밋 `45bbdf009`(feature/01-start-writes-values-file-and-widget-reads-it, pre-commit 통과)까지 실었다. 푸시와 PR 열기, 봇 회차, 병합이 남았다. 이 줄을 더한 일지 변경은 아직 커밋하지 않았다(새 세션이 커밋에 싣는다).
+
+PR 본문에 적을 것: 사진 비교의 새 정답 넷, 단독 배포 e2e 15개 통과 212초, 위젯 e2e 첫 실행에서 `첫 도구 줄`·`부모가 아닌 프레임` 두 사례가 5초 한계에 걸려 실패했고 전체를 다시 치니 21개 모두 통과한 일(기준선과는 견주지 않았다), 전체 검증에서 `test_rerun_runner.py` 한 개가 부하 중 빨갰고 따로 치니 통과한 일(0306이 받아들인 종류), 변이 표 다섯을 고친 일, 실제 모델 e2e 둘의 통과(위 "확인한 것").
+
+- 이 세션의 제목을 `feature/01-start-writes-values-file-and-widget-reads-it (인계함)`으로 바꿨다(바꾸기 전 제목은 `feature/01-start-writes-values-file-and-widget-reads-it`).
+- 백그라운드로 도는 작업은 없다(커밋이 끝났다). `git worktree unlock`으로 이 워크트리의 잠금을 푼다.
+- 경계는 `커밋 뒤`다. 일지 경로는 `docs/journal/2026-11-27-2133-start-writes-values-file-and-widget-reads-it.md`다.
+- open-session을 부른다 2026-11-27T13:45:05Z
