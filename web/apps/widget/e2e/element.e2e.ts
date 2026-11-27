@@ -6,7 +6,7 @@
 
 import { expect, type FrameLocator, type Locator, type Page, test } from "@playwright/test";
 import { elementCsp } from "./element-site";
-import { stack } from "./env";
+import { SITE_REQUEST_CHARS, stack } from "./env";
 import { loopback, recordRequests, send } from "./helpers";
 
 /** 그 페이지의 console.error 글을 모은다. */
@@ -219,6 +219,53 @@ test("페이지 안 방식의 CORS 는 허용 출처의 페이지에서 읽히�
     });
   expect((await preflight(siteOrigin)).headers()["access-control-allow-origin"]).toBe(siteOrigin);
   expect((await preflight(otherOrigin)).headers()["access-control-allow-origin"]).toBeUndefined();
+});
+
+test("페이지 안 방식은 번들 출처의 값 파일을 한 번 받아 입력창의 글자 수 상한을 따른다", async ({
+  page,
+}) => {
+  const { siteOrigin, widgetOrigin } = stack();
+  const requests = recordRequests(page);
+  await page.goto(`${siteOrigin}/element?agent=echo`);
+  await settled(page, "echo");
+  const field = page.getByRole("textbox", { name: "질문" });
+  // 값을 받으면 입력창이 열린다. 받는 동안은 막혀 있다.
+  await expect(field).toBeEnabled();
+
+  await field.fill("a".repeat(SITE_REQUEST_CHARS + 1));
+  await expect(
+    page.getByText(`${SITE_REQUEST_CHARS.toLocaleString("en-US")}자를 넘었습니다`),
+  ).toBeVisible();
+  await expect(page.getByRole("button", { name: "보내기" })).toBeDisabled();
+
+  const valueFiles = requests.filter(
+    (request) => new URL(request.url()).pathname === "/widget/runtime.json",
+  );
+  expect(valueFiles.map((request) => request.url())).toEqual([
+    `${widgetOrigin}/widget/runtime.json`,
+  ]);
+});
+
+test("값 파일은 허용 밖 출처의 페이지에서도 읽혀 입력창이 열리고, 응답 머리가 모든 출처를 허용한다", async ({
+  page,
+}) => {
+  const { siteOrigin, otherOrigin, widgetOrigin } = stack();
+  await page.goto(`${otherOrigin}/element?agent=echo`);
+  await settled(page, "echo");
+  const field = page.getByRole("textbox", { name: "질문" });
+
+  await expect(field).toBeEnabled();
+  await expect(page.getByText("위젯 설정을 받아 오지 못했습니다.")).toHaveCount(0);
+  const response = await page.request.get(`${loopback(widgetOrigin)}/widget/runtime.json`, {
+    headers: { Origin: otherOrigin },
+  });
+  expect(response.status()).toBe(200);
+  expect(response.headers()["access-control-allow-origin"]).toBe("*");
+  // 값 파일은 허용 출처와 글자 수 상한 둘뿐이다. 비밀은 담기지 않는다.
+  expect(await response.json()).toEqual({
+    allowedOrigins: [siteOrigin],
+    requestChars: SITE_REQUEST_CHARS,
+  });
 });
 
 test("사이트의 뿌리 글자 크기와 상속 속성이 위젯의 크기를 바꾸지 않고, 위젯의 CSS 가 사이트로 새지 않는다", async ({

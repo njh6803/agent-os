@@ -91,8 +91,20 @@ function unusedToken(): string {
   return `e2e-unused-${randomBytes(UNUSED_TOKEN_BYTES).toString("hex")}`;
 }
 
-/** 사이트 하나의 사이트 파일. 허용 출처는 `origin` 하나이고 글자 수 상한은 적지 않아 기본값이다. */
-export function siteFileToml(origin: string, publicPem: string, agents: readonly string[]): string {
+/**
+ * 사이트 하나의 사이트 파일. 허용 출처는 `origin` 하나이고 글자 수 상한은 `requestChars` 를 주었을 때만 적는다. 주지 않으면
+ * 적지 않아 기본값이다.
+ */
+export function siteFileToml(
+  origin: string,
+  publicPem: string,
+  agents: readonly string[],
+  requestChars?: number,
+): string {
+  const limits =
+    requestChars === undefined
+      ? []
+      : ["[sites.limits]", `request_chars = ${String(requestChars)}`, ""];
   return [
     'schema_version = "1"',
     "",
@@ -106,5 +118,6 @@ export function siteFileToml(origin: string, publicPem: string, agents: readonly
     `kid = ${JSON.stringify(KEY_ID)}`,
     `pem = ${JSON.stringify(publicPem)}`,
     "",
+    ...limits,
   ].join("\n");
 }

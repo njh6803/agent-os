@@ -283,22 +283,6 @@ new = '''
 @import "@agent-os/ui/fonts.css";
 '''
 
-[[mutation]]
-name = "번들 빌드가 변수의 사이트 파일을 읽지 않으면 픽스처의 상한이 실리지 않아 빨갛다"
-runner = "node"
-tests = ["apps/widget/tools/element.test.ts", "-t", "가장 작은 상한을 싣고"]
-expect = "red"
-expect_output = ["""expected '"20000"' to be"""]
-
-[[mutation.edit]]
-file = "web/apps/widget/tools/element.ts"
-old = '''
-  const input = buildInput(env);
-'''
-new = '''
-  const input = buildInput({});
-'''
-
 # --- next 설정과 시작 래퍼(next.config.ts, tools/start.ts) -------------------------------------------------------
 
 [[mutation]]
