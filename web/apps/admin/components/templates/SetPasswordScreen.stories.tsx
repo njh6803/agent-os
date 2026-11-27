@@ -15,15 +15,16 @@ const IDLE: SetPasswordState = {
 };
 
 interface SetPasswordScreenProps {
+  readonly insecure: boolean;
   readonly state: SetPasswordState;
   readonly onSubmit: (password: string) => Promise<void>;
 }
 
 /** 로그인 없이 열리는 화면: 입구 틀 안에 폼을 놓는다. */
-function SetPasswordScreen({ state, onSubmit }: SetPasswordScreenProps) {
+function SetPasswordScreen({ insecure, state, onSubmit }: SetPasswordScreenProps) {
   return (
     <EntryFrame>
-      <SetPasswordForm state={state} onSubmit={onSubmit} />
+      <SetPasswordForm insecure={insecure} state={state} onSubmit={onSubmit} />
     </EntryFrame>
   );
 }
@@ -32,7 +33,7 @@ const meta = {
   title: "templates/SetPasswordScreen",
   component: SetPasswordScreen,
   parameters: { layout: "fullscreen" },
-  args: { state: IDLE, onSubmit: fn(() => Promise.resolve()) },
+  args: { insecure: false, state: IDLE, onSubmit: fn(() => Promise.resolve()) },
 } satisfies Meta<typeof SetPasswordScreen>;
 
 export default meta;
@@ -63,6 +64,19 @@ export const Unusable: Story = {
       "href",
       "/login",
     );
+  },
+};
+
+/** https가 아닌 주소로 열었다. 알림이 서고 정하기 단추만 막히며 입력 칸은 열려 있다. */
+export const Insecure: Story = {
+  args: { insecure: true },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(canvas.getByRole("status")).toHaveTextContent(
+      "이 주소에서는 비밀번호를 정할 수 없다",
+    );
+    await expect(canvas.getByLabelText("새 비밀번호")).toBeEnabled();
+    await expect(canvas.getByRole("button", { name: "비밀번호 정하기" })).toBeDisabled();
   },
 };
 

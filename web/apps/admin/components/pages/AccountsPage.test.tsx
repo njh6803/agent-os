@@ -206,6 +206,33 @@ describe("목록", () => {
     expect(alert.textContent).toContain("req-acc1");
     expect(screen.queryByRole("table")).toBeNull();
   });
+
+  test("이미 보인 목록도 다시 읽다 실패하면 옛 행을 지우고 실패만 보인다", async () => {
+    serve();
+    let reads = 0;
+    network.use(
+      http.get(api("/accounts"), () => {
+        reads += 1;
+        return reads === 1
+          ? HttpResponse.json({ accounts: accounts() })
+          : HttpResponse.json(envelope("internal_error", "서버가 멈췄다", "req-acc2"), {
+              status: 500,
+            });
+      }),
+    );
+    const user = userEvent.setup();
+    const table = await open();
+    expect(within(table).getByRole("row", { name: /kim\.dev/ })).toBeTruthy();
+    await openMenuOf(user, table, "park.sre");
+
+    await user.click(screen.getByRole("menuitem", { name: "잠금 풀기" }));
+
+    const alert = await screen.findByRole("alert");
+    expect(alert.textContent).toContain("계정 목록을 읽지 못했다");
+    expect(alert.textContent).toContain("req-acc2");
+    expect(screen.queryByRole("table")).toBeNull();
+    expect(screen.queryByText("kim.dev")).toBeNull();
+  });
 });
 
 describe("줄 끝의 메뉴", () => {
@@ -416,6 +443,18 @@ describe("계정 만들기 창", () => {
       within(link).getByText(`${new URL("/set-password", location.origin).href}#tok-new_1`),
     ).toBeTruthy();
     expect(screen.queryByRole("dialog", { name: "계정 만들기" })).toBeNull();
+  });
+
+  test("창 안의 빈 곳을 눌러 상자에 포커스가 있을 때도 Shift+Tab 은 창 밖으로 나가지 않고 맨 끝으로 돈다", async () => {
+    serve();
+    const user = userEvent.setup();
+    const dialog = await openCreate(user);
+
+    await user.click(dialog);
+    expect(document.activeElement).toBe(dialog);
+    await user.tab({ shift: true });
+
+    expect(document.activeElement).toBe(within(dialog).getAllByRole("button").at(-1));
   });
 
   test("이름이 규칙을 어기면 칸을 떠날 때 알리고 보내지 않는다", async () => {

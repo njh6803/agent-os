@@ -25,11 +25,16 @@ export interface SetPasswordState {
 }
 
 interface SetPasswordFormProps {
+  /**
+   * https 가 아닌 주소(루프백 제외)로 열었다. 새 비밀번호가 평문으로 오가므로 정하기 단추만 막고 알린다. 입력 칸은 열어 두어
+   * 알림을 읽을 수 있게 한다(로그인 화면과 같은 방식).
+   */
+  readonly insecure: boolean;
   readonly state: SetPasswordState;
   readonly onSubmit: (password: string) => Promise<void>;
 }
 
-export function SetPasswordForm({ state, onSubmit }: SetPasswordFormProps) {
+export function SetPasswordForm({ insecure, state, onSubmit }: SetPasswordFormProps) {
   const headingId = useId();
   const failureText = state.failure === null ? null : describeFailure(state.failure);
   return (
@@ -53,18 +58,29 @@ export function SetPasswordForm({ state, onSubmit }: SetPasswordFormProps) {
           <TextLink href="/login">로그인 화면으로</TextLink>
         </>
       ) : (
-        <Card padding="4">
-          <Fields state={state} onSubmit={onSubmit} />
-        </Card>
+        <>
+          {insecure ? (
+            <Alert tone="warning" title="이 주소에서는 비밀번호를 정할 수 없다">
+              이 주소는 https가 아니라 비밀번호를 정할 수 없다. https 주소로 연다. 새 비밀번호가
+              암호화되지 않은 채 오가지 않게 https 주소나 이 서버 자신(localhost)에서만 정할 수
+              있다.
+            </Alert>
+          ) : null}
+          <Card padding="4">
+            <Fields insecure={insecure} state={state} onSubmit={onSubmit} />
+          </Card>
+        </>
       )}
     </section>
   );
 }
 
 function Fields({
+  insecure,
   state,
   onSubmit,
 }: {
+  readonly insecure: boolean;
   readonly state: SetPasswordState;
   readonly onSubmit: (password: string) => Promise<void>;
 }) {
@@ -111,7 +127,7 @@ function Fields({
         onChange={setAgain}
       />
       <div className="flex flex-col wide:items-end">
-        <Button type="submit" loading={state.pending}>
+        <Button type="submit" loading={state.pending} disabled={insecure}>
           비밀번호 정하기
         </Button>
       </div>

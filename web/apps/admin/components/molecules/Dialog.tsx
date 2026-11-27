@@ -76,7 +76,12 @@ export function Dialog({ title, onClose, busy = false, children }: DialogProps) 
       event.preventDefault();
       return;
     }
-    if (event.shiftKey && document.activeElement === first) {
+    // 창 안의 빈 곳을 눌러 포커스가 상자 자신(`tabIndex={-1}`)에 있을 때도 거꾸로 가면 맨 끝으로 돈다. 막지 않으면 브라우저가
+    // 문서 순서상 앞 요소(창 밖의 배경 화면)로 포커스를 옮긴다.
+    if (
+      event.shiftKey &&
+      (document.activeElement === first || document.activeElement === box.current)
+    ) {
       event.preventDefault();
       last.focus();
     } else if (!event.shiftKey && document.activeElement === last) {

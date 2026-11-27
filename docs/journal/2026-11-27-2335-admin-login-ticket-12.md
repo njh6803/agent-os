@@ -70,3 +70,26 @@ open-session을 부른다 2026-11-27T14:43:23Z
 
 - 첫 푸시의 `web`과 `verify`가 빨개졌다. `AccountsPage.test.tsx`의 시험 둘(잠금 풀기, 서버가 이름을 규칙 위반으로 보는 경우)이 "role table을 찾지 못했다"로 실패했다. 도우미 `open()`이 제목을 기다린 뒤 표를 바로 찾았는데, 제목은 목록을 읽기 전에도 뜨므로 느린 CI에서는 표가 아직 없었다. 로컬 전체 검사는 빨라서 이겼다.
 - 도우미가 표도 `findByRole`로 기다리게 고쳤다. 같은 파일의 나머지 `getByRole("table")`은 표가 이미 떠 있는 상태(스위치를 누른 뒤)에서 쓰므로 경쟁이 없다. 이 파일 26건이 로컬에서 통과한다.
+
+## PR 리뷰 첫 회차(CodeRabbit, PR 659)
+
+CodeRabbit의 첫 리뷰는 Major 하나와 Minor 다섯이었다. 첫 회차라 Minor도 하나씩 판단했다.
+
+- **고친 것(Major).** `SetPasswordPage`가 https가 아닌 주소에서도 정하기를 받았다. 이 화면은 쿠키를 쓰지 않지만 새 비밀번호를 본문에 담아 보내므로, 로그인 화면과 같은 판정(`canSignInAt`)으로 정하기 단추만 막고 알림을 보인다(`SetPasswordForm`에 `insecure`). 명세 559행은 로그인 화면만 말하지만 평문으로 새 비밀번호가 오가는 위험은 같아 넓혔다. 시험은 `SetPasswordPage.insecure.test.tsx`(http 셋은 알림과 단추 막기와 서버로 안 보냄, 열린 주소 넷은 알림 없음)와 스토리 `Insecure`(사진 네 장)다.
+- **고친 것(Minor).** 창 상자(`tabIndex={-1}`) 자신에 포커스가 있을 때 Shift+Tab이 창 밖으로 빠졌다. 맨 끝으로 돌게 고치고(`Dialog.tsx`), 고침을 되돌려 시험이 창 밖의 동작 단추로 빠지는 모양으로 빨개지는 것을 보았다. 이미 보인 목록을 다시 읽다 실패하면 옛 행을 지우고 실패만 보이는 시험을 `AccountsPage.test.tsx`에 더했다(`.claude/rules/web-admin.md`가 화면마다 페이지 시험으로 고정하라고 한다).
+- **보류한 것(Minor), 이유.** 비밀번호 규칙 목록 스토리의 다크 모드 지정은 규칙 문장이 패키지 컴포넌트 스토리의 것이고, 이 앱의 사진 비교는 모든 스토리를 라이트와 다크로 찍어 다크가 이미 든다. 지정하면 한 모드만 찍혀 사진이 줄어든다. 비밀번호 바꾸기 화면의 서버 오류는 칸을 고치면 지워지게 하는 것과 계정 만들기 창에서 요청이 가는 동안 이름을 바꾼 경우에 이전 요청의 오류가 새 이름에 붙는 것은 화면 동작 결정이라 후속으로 넘긴다(아래 "다음").
+- 다시 돌린 명령: 페이지 시험 네 파일 51건 통과, 스토리 시험 두 폭의 `SetPasswordScreen` 10건 통과, `pnpm -C web visual:admin:update`로 새 사진 네 장만 늘었다(기존 사진 변동 없음, 한 장을 눈으로 확인). 나머지 검사는 커밋의 pre-commit이 갈음한다.
+
+## 회고
+
+후보 여덟을 냈다. 승인 넷(모두 회차를 세는 승인, 대기열에 둔다), 기각 넷이고 넘김은 없었다. 반영한 것은 없고(지금 반영하는 지침·검사 없음) 대기열 항목만 더했다.
+
+- **승인(회차).** 인계 열기를 자동 모드 분류기가 "Destructive or Unwanted Actions"로 거부해 `인계 못함`을 적었다: `open-session-send-denied-despite-allow-rule` 21회차. 그 일지에 `인계 못함`이 있는데도 백그라운드로 띄운 커밋 직후 인계 계기가 다시 왔다(217,282 토큰), `handoff.md` 1의 넷째로 넘기지 않고 이었다: `handoff-trigger-before-background-commit-ends` 20회차, 같은 사건으로 `0518` 12회차. 코드를 다른 파일로 옮기자 변이 표 셋의 원문이 사라져 한 바퀴(약 13분)를 돈 커밋 시도의 끝에서야 `check-mutations`에 막혔다: `mutation-table-checked-late` 2회차(만료 후보였으나 같은 사건이라 이어 열었다). 서버 응답이 와야 뜨는 표를 제목을 기다린 뒤 `getByRole`로 바로 찾는 시험 도우미가 로컬은 초록이고 느린 CI에서만 시험 둘을 빨갛게 했다: 새 항목 `test-helper-getby-after-heading-race` 1회차(`CODING_STANDARDS.md` 후보, 다섯 번째 반복에서 더한다. 손상은 없다).
+- **기각.** `check-quotes`가 일지의 따옴표 인용 둘을 경고했다(이미 있는 훅이 그 자리에서 알렸고 고쳤다). 표준 축 서브에이전트가 이미 있던 시험을 없다고 하고 주석을 잘못 읽었다(`code-review` 6단계 2가 근거를 먼저 보라고 이미 정한 일이고, 코드를 읽어 가려냈다). `mutate.py --check`를 변이 파일 없이 쳐 사용법만 나왔다(도구가 사용법을 찍어 한 번 만에 바로잡았다). 전체 pytest의 `test_startup_check` 하나가 부하에서 `other_connections == 1`로 한 번 빨갰고 따로 돌리거나 다시 쳐 지나갔다(부하에서 흔들리는 시험을 받아들여 닫은 `0306`·`0332`와 같은 종류라 잇지 않고 여기에만 적는다).
+- 리뷰 반영 커밋의 첫 시도는 두 곳에서 막혔다. 새 시험 파일의 안 쓰는 `HttpResponse` import를 린트가 잡았고(이미 있는 검사가 제 몫을 했다. 기각), 전체 pytest의 `tests/channel/cli/test_interrupt.py::test_도구_호출_도중에_한_번_누르면_서버를_닫고_중단으로_끝난다`가 "Ctrl+C를 누른 자식이 30초 안에 끝나지 않았다"로 한 번 빨갰다. 그 파일을 따로 돌리면 6건이 통과한다(137초). 부하에서 흔들리는 시험이라 닫힌 `0531`과 같은 종류이고 이어 세지 않고 여기에만 적는다. 둘째 시도(pytest 1161초)는 `tests/tools/test_hook_push_behind_main.py::test_dev의_유무를_조회하다_시간을_넘기면_재지_않는다`와 `tests/tools/test_rerun_runner.py::test_같은_갈래가_두_번_든_파일럿의_두_회차가_함께_돌아도_번호가_다르다`가 빨갰고 두 파일을 따로 돌리면 143건이 통과한다(240초). 같은 종류라 여기에만 적는다.
+- **만료.** `answer-estimate-before-reading-adr`, `measure-word-misses-adnominal-form`, `probe-readme-run-claim-without-actor`, `raw-replacement-char-in-tracked-text`, `ui-design-abandoned-prompt-state`를 닫았다(승인 줄의 가장 늦은 날짜가 2026-11-14 전이었고, 이 워크트리와 `origin/dev` 두 출력에 모두 있었다). `mutation-table-checked-late`는 위대로 2회차를 더해 남겼다.
+
+## 다음
+
+- 같은 기능의 남은 티켓은 11(대화 보내기 화면과 옛 실행 화면 걷기)과 14(8443 포트와 배포 안내)다. 10(대화 읽기 화면)과 13(공유 토큰 걷기)은 나란히 도는 중이다. 10과는 `AdminNav.tsx`, `RunList.tsx`, `AdminFrame` 스토리와 `adminframe` 사진 일곱 장이 겹치니 나중에 병합하는 쪽이 푼다.
+- 뒤로 넘긴 일(PR 리뷰의 Minor와 셀프 리뷰에서 남긴 것): 비밀번호 바꾸기 화면에서 칸을 고치면 이전 제출의 서버 오류를 지울지, 계정 만들기 창에서 요청이 가는 동안 이름 칸을 막거나 오류를 제출한 이름에만 붙일지, `AccountList.tsx` 510줄 쪼개기, 상태를 불리언으로 쪼갠 `ChangePasswordState`와 `SetPasswordState.unusable`의 열거로 바꾸기, 비밀번호 링크 창을 Esc로 닫을 때 확인 한 단계를 더할지. 모두 Minor이고 화면 동작 결정이 걸린다.

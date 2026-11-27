@@ -11,6 +11,7 @@
 import "@agent-os/ui/fonts.css";
 import "../../styles/admin.css";
 import { useEffect, useState } from "react";
+import { canSignInAt } from "../../api/session";
 import { useSetPassword } from "../../hooks/queries/session";
 import { useCurrentUrl } from "../../hooks/useCurrentUrl";
 import { useForgetOldTokens } from "../../hooks/useForgetOldTokens";
@@ -24,7 +25,7 @@ function tokenOf(hash: string): string | null {
   return token === "" ? null : token;
 }
 
-function SetPasswordScreen() {
+function SetPasswordScreen({ insecure }: { readonly insecure: boolean }) {
   const [token] = useState(() => tokenOf(location.hash));
   const attempt = useSetPassword(token);
 
@@ -35,7 +36,7 @@ function SetPasswordScreen() {
 
   return (
     <EntryFrame>
-      <SetPasswordForm state={attempt} onSubmit={attempt.submit} />
+      <SetPasswordForm insecure={insecure} state={attempt} onSubmit={attempt.submit} />
     </EntryFrame>
   );
 }
@@ -47,5 +48,5 @@ export function SetPasswordPage() {
   if (url === null) {
     return <EntryFrame>{null}</EntryFrame>;
   }
-  return <SetPasswordScreen />;
+  return <SetPasswordScreen insecure={!canSignInAt(url)} />;
 }
