@@ -8,13 +8,16 @@ import type { ComponentProps } from "react";
 import { expect, fn, within } from "storybook/test";
 import { RequestFailure } from "../../api/failure";
 import { FirstAccountGuide } from "../organisms/FirstAccountGuide";
-import { LoginForm } from "../organisms/LoginForm";
+import { LoginForm, type LoginState } from "../organisms/LoginForm";
 import { EntryFrame } from "./EntryFrame";
 
 /** 문서 뿌리에 선언된 디자인 토큰의 값. */
 function rootToken(name: string): string {
   return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
 }
+
+/** 요청이 없던 로그인의 상태. */
+const IDLE: LoginState = { rejected: false, rejections: 0, failure: null, pending: false };
 
 /** 로그인 화면. */
 function LoginScreen(props: ComponentProps<typeof LoginForm>) {
@@ -32,10 +35,7 @@ const meta = {
   args: {
     notice: null,
     insecure: false,
-    rejected: false,
-    rejections: 0,
-    failure: null,
-    pending: false,
+    state: IDLE,
     onSubmit: fn(async () => {}),
   },
 } satisfies Meta<typeof LoginScreen>;
@@ -93,7 +93,7 @@ export const PasswordSet: Story = {
 
 /** 이름이나 비밀번호가 맞지 않아 거절됐다. 실패 알림이 입력 칸 위에 남고 비밀번호 칸은 비었다. */
 export const Rejected: Story = {
-  args: { rejected: true, rejections: 1 },
+  args: { state: { ...IDLE, rejected: true, rejections: 1 } },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await expect(canvas.getByRole("alert")).toHaveTextContent("로그인하지 못했다");
@@ -103,7 +103,7 @@ export const Rejected: Story = {
 
 /** 요청이 서버에 닿지 못했다. */
 export const Unreachable: Story = {
-  args: { failure: new RequestFailure(null, null) },
+  args: { state: { ...IDLE, failure: new RequestFailure(null, null) } },
   play: async ({ canvasElement }) => {
     const notice = within(canvasElement).getByRole("alert");
     await expect(notice).toHaveTextContent("로그인을 보내지 못했다");
@@ -111,14 +111,14 @@ export const Unreachable: Story = {
   },
 };
 
-/** https 가 아닌 주소로 열었다. 경고가 서고 입력 칸과 버튼이 막힌다. */
+/** https 가 아닌 주소로 열었다. 경고가 서고 로그인 버튼만 막힌다. 입력 칸은 열려 있다. */
 export const Insecure: Story = {
   args: { insecure: true },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await expect(canvas.getByText("이 주소에서는 로그인할 수 없다")).toBeVisible();
-    await expect(canvas.getByLabelText("계정 이름")).toBeDisabled();
-    await expect(canvas.getByLabelText("비밀번호")).toBeDisabled();
+    await expect(canvas.getByLabelText("계정 이름")).toBeEnabled();
+    await expect(canvas.getByLabelText("비밀번호")).toBeEnabled();
     await expect(canvas.getByRole("button", { name: "로그인" })).toBeDisabled();
   },
 };

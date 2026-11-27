@@ -36,7 +36,7 @@ interface SettingsScreenProps {
 function SettingsScreen({ signedIn, tier, logoutFailed, menuOpen }: SettingsScreenProps) {
   return (
     <AdminFrame
-      nav={<AdminNav current="settings" />}
+      nav={<AdminNav current="settings" showAccounts={tier === "system_admin"} />}
       account={
         signedIn ? (
           <AccountMenu
@@ -127,12 +127,23 @@ export const SignedIn: Story = {
   },
 };
 
-/** 시스템 관리자. 단계 글만 다르다. */
+/** 시스템 관리자. 단계 글이 다르고 탐색에 "계정"이 더 선다(관리자에게는 없다). */
 export const SystemAdmin: Story = {
   args: { tier: "system_admin" },
   play: async ({ canvasElement }) => {
-    const account = within(canvasElement).getByRole("button", { name: /kim\.dev/ });
+    const canvas = within(canvasElement);
+    const account = canvas.getByRole("button", { name: /kim\.dev/ });
     await expect(account).toHaveTextContent("시스템 관리자");
+    const nav = canvas.getByRole("navigation", { name: "관리 화면" });
+    await expect(
+      within(nav)
+        .getAllByRole("link")
+        .map((link) => link.textContent),
+    ).toEqual(["플러그인", "실행", "계정", "설정"]);
+    await expect(within(nav).getByRole("link", { name: "계정" })).toHaveAttribute(
+      "href",
+      "/accounts",
+    );
   },
 };
 
@@ -144,6 +155,9 @@ export const MenuOpen: Story = {
     const account = canvas.getByRole("button", { name: /kim\.dev/ });
     await expect(account).toHaveAttribute("aria-expanded", "true");
     const menu = canvas.getByRole("menu", { name: "kim.dev 계정" });
+    await expect(
+      within(menu).getByRole("menuitem", { name: "내 비밀번호 바꾸기" }),
+    ).toHaveAttribute("href", "/password");
     await expect(within(menu).getByRole("menuitem", { name: "로그아웃" })).toBeVisible();
     const box = menu.getBoundingClientRect();
     const spot = account.getBoundingClientRect();

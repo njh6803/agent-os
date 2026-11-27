@@ -127,7 +127,7 @@ describe("지금 누구인지 읽기", () => {
 });
 
 describe("계정 메뉴", () => {
-  test("계정 자리를 누르면 로그아웃 하나가 든 메뉴가 열리고 Esc 로 닫힌다", async () => {
+  test("계정 자리를 누르면 내 비밀번호 바꾸기와 로그아웃이 든 메뉴가 열리고 Esc 로 닫힌다", async () => {
     await openSettings();
     const user = userEvent.setup();
     const spot = screen.getByRole("button", { name: /kim\.dev/ });
@@ -139,12 +139,72 @@ describe("계정 메뉴", () => {
     const menu = screen.getByRole("menu", { name: "kim.dev 계정" });
     expect(
       Array.from(menu.querySelectorAll('[role="menuitem"]')).map((item) => item.textContent),
-    ).toEqual(["로그아웃"]);
+    ).toEqual(["내 비밀번호 바꾸기", "로그아웃"]);
 
     await user.keyboard("{Escape}");
 
     expect(screen.queryByRole("menu")).toBeNull();
     expect(spot.getAttribute("aria-expanded")).toBe("false");
+  });
+
+  test("내 비밀번호 바꾸기는 /password 로 가는 링크다", async () => {
+    await openSettings();
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: /kim\.dev/ }));
+
+    expect(screen.getByRole("menuitem", { name: "내 비밀번호 바꾸기" }).getAttribute("href")).toBe(
+      "/password",
+    );
+  });
+
+  test("눌러 열면 첫 항목에 포커스가 가고 방향 키로 항목을 옮기며 Esc 로 닫으면 계정 단추로 돌아온다", async () => {
+    await openSettings();
+    const user = userEvent.setup();
+    const spot = screen.getByRole("button", { name: /kim\.dev/ });
+
+    await user.click(spot);
+    expect(document.activeElement).toBe(
+      screen.getByRole("menuitem", { name: "내 비밀번호 바꾸기" }),
+    );
+
+    await user.keyboard("{ArrowDown}");
+    expect(document.activeElement).toBe(screen.getByRole("menuitem", { name: "로그아웃" }));
+
+    await user.keyboard("{ArrowDown}");
+    expect(document.activeElement).toBe(
+      screen.getByRole("menuitem", { name: "내 비밀번호 바꾸기" }),
+    );
+
+    await user.keyboard("{Escape}");
+    expect(screen.queryByRole("menu")).toBeNull();
+    expect(document.activeElement).toBe(spot);
+  });
+
+  test("위 방향 키는 맨 위에서 맨 아래로 돌고 Home 과 End 는 처음과 끝으로 간다", async () => {
+    await openSettings();
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: /kim\.dev/ }));
+
+    await user.keyboard("{ArrowUp}");
+    expect(document.activeElement).toBe(screen.getByRole("menuitem", { name: "로그아웃" }));
+
+    await user.keyboard("{Home}");
+    expect(document.activeElement).toBe(
+      screen.getByRole("menuitem", { name: "내 비밀번호 바꾸기" }),
+    );
+
+    await user.keyboard("{End}");
+    expect(document.activeElement).toBe(screen.getByRole("menuitem", { name: "로그아웃" }));
+  });
+
+  test("Tab 은 메뉴를 닫는다", async () => {
+    await openSettings();
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: /kim\.dev/ }));
+
+    await user.keyboard("{Tab}");
+
+    expect(screen.queryByRole("menu")).toBeNull();
   });
 
   test("메뉴 밖을 누르면 닫힌다", async () => {

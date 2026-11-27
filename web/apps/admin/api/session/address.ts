@@ -94,6 +94,16 @@ export function loginAddress({
   return text === "" ? "/login" : `/login?${text}`;
 }
 
+/**
+ * 비밀번호 링크의 주소. 서버는 토큰만 주고 주소를 짓지 않는다. 관리 화면의 출처에 `/set-password#<토큰>` 이다. `#` 뒤는
+ * 브라우저가 서버에도 `Referer` 에도 보내지 않는다.
+ */
+export function setPasswordAddress(token: string): string {
+  const address = new URL("/set-password", location.origin);
+  address.hash = token;
+  return address.href;
+}
+
 /** 지금 화면의 경로와 질의(조각은 뺀다). 로그인 뒤에 돌아올 곳으로 `next` 에 싣는다. */
 export function currentPlace(): string {
   return `${location.pathname}${location.search}`;
