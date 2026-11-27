@@ -60,6 +60,7 @@ from agent_os.core.ports import (
     RunStatus,
     TraceStore,
 )
+from agent_os.http.permissions import REQUIRE_PERMISSION
 from agent_os.http.routes import documented_errors
 from agent_os.sdk import (
     PLUGIN_NAME_PATTERN,
@@ -147,9 +148,12 @@ def admin_router(
     그래서 이 라우터는 도구 연결을 여는 길(`ToolSource.connect`)을 부를 수 없다. `GET` 은
     `automatic` 만, `POST` 는 `launching` 만 쓴다.
     """
-    router = APIRouter(responses=documented_errors(500))
+    # `/health` 는 권한 표 밖이라 의존성을 걸지 않은 라우터에 따로 둔다. 이 라우터에서 인증 없이
+    # 나가는 유일한 응답이고, 표는 계약의 운영자 오퍼레이션만 든다(`http/permissions.py`)
+    public = APIRouter(responses=documented_errors(500))
+    router = APIRouter(responses=documented_errors(500), dependencies=[REQUIRE_PERMISSION])
 
-    @router.get(
+    @public.get(
         "/health",
         operation_id="read_health",
         summary="살아 있는지만 답한다",
@@ -349,7 +353,10 @@ def admin_router(
             raise HTTPException(status_code=404, detail=f"{run_id} 실행의 트레이스가 없다")
         return trace_detail(found)
 
-    return router
+    combined = APIRouter()
+    combined.include_router(public)
+    combined.include_router(router)
+    return combined
 
 
 _NO_STORE_HEADER: dict[str, object] = {

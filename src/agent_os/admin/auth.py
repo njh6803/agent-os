@@ -1,10 +1,10 @@
-"""운영자 로그인의 라우터: 로그인, 로그아웃, 지금 누구인지, 첫 계정 확인(ADR 0062, 명세
+"""운영자 로그인의 라우터: 로그인, 갱신, 로그아웃, 지금 누구인지, 첫 계정 확인(ADR 0062, 명세
 admin-login).
 
 판정은 `agent_os.http.logins` 가 하고 이 모듈은 요청을 풀어 넘기고 쿠키 줄을 응답에 싣는다. 자격은
-미들웨어가 라우팅 전에 본다. 로그인과 첫 계정 확인은 로그인 없이 열리는 경로이고(`PUBLIC_PATHS`),
-로그아웃과 지금 누구인지는 짧은 JWT 로만 열린다(`LOGIN_ONLY_PATHS`). 요청 출처 검사는 넷 모두에
-걸린다.
+미들웨어가 라우팅 전에 본다. 로그인과 갱신과 첫 계정 확인은 로그인 없이 열리는 경로이고
+(`PUBLIC_PATHS`. 갱신은 짧은 JWT 가 아니라 갱신용 번호 쿠키를 보고 서비스가 판정한다), 로그아웃과
+지금 누구인지는 짧은 JWT 로만 열린다(`LOGIN_ONLY_PATHS`). 요청 출처 검사는 다섯 모두에 걸린다.
 
 응답 모델의 독스트링은 한 줄이고 논증은 `#` 주석에 둔다. 라우트는 `operation_id` 를 손으로 주고
 자기가 내는 에러를 문서에 적는다. 쿠키를 심거나 지우는 응답은 `Set-Cookie` 머리를 응답 문서에
@@ -19,8 +19,10 @@ from fastapi import APIRouter, HTTPException, Request, Response
 from pydantic import BaseModel, ConfigDict, Field
 
 from agent_os.http.auth import operator_of
-from agent_os.http.login_tokens import forwarded_address
+from agent_os.http.errors import UNAUTHORIZED_MESSAGE, error_envelope, remember_failure
+from agent_os.http.login_tokens import REFRESH_COOKIE, clearing_cookie_lines, forwarded_address
 from agent_os.http.logins import LoginService
+from agent_os.http.permissions import REQUIRE_PERMISSION
 from agent_os.http.routes import documented_errors
 
 # 로그인 실패의 문구 하나. 없는 계정과 틀린 비밀번호와 잠긴 계정과 비활성 계정을 가르지 않는다
@@ -77,7 +79,11 @@ def auth_router(
     조립이 읽어 넘긴다. 이 모듈에 600 을 따로 적지 않는다. 두 자리가 따로 적으면 core 의 기본값이
     바뀔 때 화면이 멈추는 때만 옛 값으로 남는다.
     """
-    router = APIRouter(lifespan=lambda _app: login.lifespan(), responses=documented_errors(500))
+    router = APIRouter(
+        lifespan=lambda _app: login.lifespan(),
+        responses=documented_errors(500),
+        dependencies=[REQUIRE_PERMISSION],
+    )
 
     @router.post(
         "/auth/login",
@@ -96,6 +102,30 @@ def auth_router(
         if cookies is None:
             raise HTTPException(status_code=401, detail=LOGIN_REFUSED_MESSAGE)
         return _with_cookies(cookies)
+
+    @router.post(
+        "/auth/refresh",
+        operation_id="refresh_login",
+        summary="갱신용 번호 쿠키 하나로 로그인을 잇고 새 쿠키 둘을 받는다",
+        status_code=204,
+        response_class=Response,
+        responses={
+            204: {"headers": {"Set-Cookie": _SET_COOKIE_HEADER}},
+            **_refresh_errors(),
+        },
+    )
+    async def refresh_login(request: Request) -> Response:
+        address = forwarded_address(request.headers.getlist("x-forwarded-for"))
+        cookies = await login.refresh(request.cookies.get(REFRESH_COOKIE), address=address)
+        if cookies is not None:
+            return _with_cookies(cookies)
+        # 거절하는 응답에도 쿠키를 지우는 줄 둘이 실려야 화면이 낡은 쿠키를 들고 다시 오지 않는다.
+        # 그래서 예외로 던지지 않고 봉투를 직접 만들어 줄을 얹는다
+        remember_failure(request, "갱신용 번호를 받지 않았다")
+        refused = error_envelope(request, status=401, message=UNAUTHORIZED_MESSAGE)
+        for line in clearing_cookie_lines():
+            refused.headers.append("set-cookie", line)
+        return refused
 
     @router.post(
         "/auth/logout",
@@ -143,6 +173,13 @@ def auth_router(
         return Setup(needs_first_account=await login.needs_first_account())
 
     return router
+
+
+def _refresh_errors() -> dict[int | str, dict[str, object]]:
+    """갱신의 에러 문서. 401 은 쿠키를 지우는 줄 둘을 함께 싣는다."""
+    errors = documented_errors(401, 403)
+    errors[401] = {**errors[401], "headers": {"Set-Cookie": _SET_COOKIE_HEADER}}
+    return errors
 
 
 def _with_cookies(lines: list[str]) -> Response:

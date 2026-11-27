@@ -63,7 +63,9 @@ from agent_os.channel.http.limits import DEFAULT_REQUEST_CHARS, check_request_ch
 from agent_os.core.ports import ChatModel, Trace, UnknownEvent
 from agent_os.http.database import Database
 from agent_os.http.login_tokens import (
+    ACCESS_COOKIE,
     IDLE_MINUTES_ENV,
+    REFRESH_COOKIE,
     TOKEN_MINUTES_ENV,
     TOTAL_MINUTES_ENV,
     LoginDurations,
@@ -3206,20 +3208,63 @@ def _post_stream(client: Client, url: str, body: Mapping[str, Json]) -> str:
         return "".join(chunks)
 
 
+OPERATOR_NAME = "root.kim"
+OPERATOR_PASSWORD = "Pw-canary-9!"
+
+
+def _create_system_admin(root: Path, database: ScopedDatabase) -> None:
+    """서버 명령(`operator system-admin`)으로 시스템 관리자 계정을 만든다. 비밀번호는 파이프로
+    넣는다(표준 입력이 터미널이 아니다). 어느 출력에도 비밀번호가 실리지 않아야 한다."""
+    result = subprocess.run(
+        [sys.executable, "-m", "agent_os.main", "operator", "system-admin", OPERATOR_NAME],
+        cwd=root,
+        input=f"{OPERATOR_PASSWORD}\n",
+        env=_env() | {DATABASE_URL_ENV: database.text()},
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        timeout=60,
+        check=False,
+    )
+    assert result.returncode == 0, f"계정을 만들지 못했다: {result.stderr}"
+    assert OPERATOR_PASSWORD not in result.stdout + result.stderr
+
+
+def _log_in(client: Client) -> str:
+    """로그인 경로를 HTTP 로 불러 받은 두 쿠키를 `Cookie` 머리 한 줄로 만든다.
+
+    실제 `serve` 는 평문 `http` 라 httpx 가 `Secure` 쿠키를 다음 요청에 싣지 않는다. 그래서 응답의
+    `Set-Cookie` 에서 값을 꺼내 머리로 직접 싣는다. 쿠키 통은 비워, 머리만이 길이 되게 한다.
+    """
+    response = client.post(
+        "/auth/login", json={"name": OPERATOR_NAME, "password": OPERATOR_PASSWORD}
+    )
+    assert response.status_code == 204, f"로그인이 {response.status_code} 로 답했다"
+    pairs = [line.partition(";")[0] for line in response.headers.get_list("set-cookie")]
+    sent = [pair for pair in pairs if pair.startswith((f"{ACCESS_COOKIE}=", f"{REFRESH_COOKIE}="))]
+    names = [pair.partition("=")[0] for pair in pairs]
+    assert len(sent) == 2, f"로그인 쿠키가 둘이 아니다: {names}"
+    client.cookies.clear()
+    return "; ".join(sent)
+
+
 @pytest.mark.llm
-def test_실제_serve_에서_HTTP_로_일으킨_실행이_승인_대상에서_멈추고_HTTP_승인으로_끝까지_간다(
+def test_실제_serve_에서_로그인한_운영자의_실행이_멈췄다_끝나고_트레이스에_계정이_남는다(
     tmp_path: Path, database: ScopedDatabase
 ) -> None:
     """바깥 이음매. 가짜로 증명할 수 없는 것만 잰다 — `main.py` 의 조립, uvicorn 이 실제 소켓으로
-    SSE 를 흘리는 것, 실제 모델이 채널을 지나는 것, 멈춘 실행이 요청을 건너 트레이스로 재개되는 것.
+    SSE 를 흘리는 것, 실제 모델이 채널을 지나는 것, 멈춘 실행이 요청을 건너 트레이스로 재개되는 것,
+    서버 명령으로 만든 계정이 실제 HTTP 로그인을 지나 채널의 요청 계정이 되는 것.
 
     `gatedcalc` 와 실제 stdio 서버는 프로세스를 넘는 CLI 테스트와 같다. 다른 것은 면 하나다 —
-    실행을 일으키고 결정을 내는 것이 셸이 아니라 HTTP 요청 둘이다.
+    실행을 일으키고 결정을 내는 것이 셸이 아니라 로그인한 운영자의 HTTP 요청 둘이다. 공유 토큰은
+    이 시험에서 쓰지 않는다(공유 토큰으로 보낸 경로는 `tests/test_operator_accounts_on_runs.py`).
     """
     assert "ANTHROPIC_API_KEY" in os.environ, "ANTHROPIC_API_KEY 가 없다. .env 를 확인한다"
     _write_mcp_plugin(tmp_path, "fixture")
     _write_plugin(tmp_path, "gatedcalc", GATEDCALC_SRC, GATEDCALC_MANIFEST)
     _write_rules(tmp_path, "fixture:*")
+    _create_system_admin(tmp_path, database)
     # 소켓이 듣는 동안 같은 기계의 다른 프로세스가 짐작할 수 없는 값. 둘이 달라야 선다(ADR 0015).
     admin_token, channel_token = secrets.token_urlsafe(), secrets.token_urlsafe()
 
@@ -3229,11 +3274,11 @@ def test_실제_serve_에서_HTTP_로_일으킨_실행이_승인_대상에서_�
         ) as address,
         Client(
             base_url=address,
-            headers={"Authorization": f"Bearer {channel_token}"},
             timeout=STREAM_TIMEOUT,
             trust_env=False,  # 루프백을 재는 테스트라 환경의 프록시를 따르지 않는다
         ) as client,
     ):
+        client.headers["Cookie"] = _log_in(client)
         paused = _post_stream(client, "/runs", {"agent": "gatedcalc", "request": "2 더하기 3은?"})
         # 여기서 먼저 단언한다. 멈추지 못한 스트림의 식별자로 승인을 보내면 그 409 가 원인을 가린다.
         paused_stream = _events(paused)
@@ -3259,6 +3304,15 @@ def test_실제_serve_에서_HTTP_로_일으킨_실행이_승인_대상에서_�
     boundaries = ("approval_granted", "run_resumed", "tool_called")
     assert [t for t in types if t in boundaries] == list(boundaries)
     assert [(e.tool, e.ok) for e in events if isinstance(e, ToolCalled)] == [("add", True)]
+    # 로그인한 운영자의 계정이 시작 이벤트와 결정 이벤트에 남는다. 공유 토큰은 한 번도 쓰지 않았다
+    (started,) = [e for e in events if isinstance(e, RunStarted)]
+    (granted,) = [e for e in events if isinstance(e, ApprovalGranted)]
+    assert started.requesting_account == OPERATOR_NAME, (
+        f"시작 이벤트의 요청한 계정은 {started.requesting_account!r} 이다"
+    )
+    assert granted.deciding_account == OPERATOR_NAME, (
+        f"승인 이벤트의 결정한 계정은 {granted.deciding_account!r} 이다"
+    )
 
 
 @pytest.mark.llm

@@ -2308,6 +2308,63 @@
         "summary": "지금 로그인한 계정을 짧은 JWT 만 보고 답한다"
       }
     },
+    "/auth/refresh": {
+      "post": {
+        "operationId": "refresh_login",
+        "responses": {
+          "204": {
+            "description": "Successful Response",
+            "headers": {
+              "Set-Cookie": {
+                "description": "쿠키 둘(`__Host-aos_at`, `__Host-aos_rt`)을 심거나 지우는 줄이다. 줄이 둘 온다",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "토큰이 없거나 틀리다",
+            "headers": {
+              "Set-Cookie": {
+                "description": "쿠키 둘(`__Host-aos_at`, `__Host-aos_rt`)을 심거나 지우는 줄이다. 줄이 둘 온다",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "이 요청의 출처를 받지 않는다"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "서버가 요청을 처리하지 못했다"
+          }
+        },
+        "summary": "갱신용 번호 쿠키 하나로 로그인을 잇고 새 쿠키 둘을 받는다"
+      }
+    },
     "/auth/setup": {
       "get": {
         "operationId": "get_setup",

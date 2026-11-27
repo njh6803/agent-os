@@ -22,7 +22,7 @@ import os
 import re
 import sys
 import tomllib
-from collections.abc import Sequence
+from collections.abc import Awaitable, Callable, Sequence
 from ipaddress import IPv6Address
 from pathlib import Path
 from typing import Literal, NamedTuple, TextIO
@@ -49,6 +49,7 @@ from agent_os.channel.cli.main import (
     EXIT_FINISHED,
     MigrateArgs,
     ResumeArgs,
+    RotateKeyArgs,
     RunArgs,
     ServeArgs,
     SystemAdminArgs,
@@ -60,11 +61,13 @@ from agent_os.channel.cli.operator import (
     Refused,
     check_name,
     password_hash_of,
+    rotate_key_command,
     system_admin_command,
 )
 from agent_os.channel.http.limits import DEFAULT_CONCURRENT_RUNS
 from agent_os.core.ports import PluginError
 from agent_os.core.run import DEFAULT_RUN_TIMEOUT_SECONDS
+from agent_os.http.accounts import AccountStore
 from agent_os.http.login_tokens import read_login_durations
 from agent_os.http.sites import PRINCIPAL_SEPARATOR, Site, SiteKey, SiteLimits, Sites
 from agent_os.sdk import (
@@ -188,6 +191,8 @@ def main(argv: list[str] | None = None) -> int:
     # 운영자 명령도 플러그인과 모델과 OS 사용자를 읽지 않는다. 계정은 데이터베이스에만 기댄다
     if isinstance(args, SystemAdminArgs):
         return _system_admin(args)
+    if isinstance(args, RotateKeyArgs):
+        return _rotate_key()
     user = getpass.getuser()
     problem = _os_user_problem(user) or _model_problem(args.model, args.plugins_root)
     if problem is not None:
@@ -369,25 +374,49 @@ def _system_admin(args: SystemAdminArgs) -> int:
         sys.stderr.write(f"{password_hash.text}\n")
         return EXIT_FAILED
     return run_interruptibly(
-        lambda: _system_admin_database(name, password_hash, _build_database(url))
+        lambda: _on_database(
+            _build_database(url),
+            lambda accounts: system_admin_command(
+                name,
+                password_hash,
+                accounts=accounts,
+                clock=SystemClock(),
+                stdout=sys.stdout,
+                stderr=sys.stderr,
+            ),
+        )
     )
 
 
-async def _system_admin_database(name: str, password_hash: str, database: PostgresDatabase) -> int:
+def _rotate_key() -> int:
+    """서명 키를 새 난수로 바꾼다. 주소는 환경 변수로만 받고, 비밀번호는 받지 않는다.
+
+    도는 `serve` 는 메모리의 옛 키를 10초까지 더 쓰므로, 명령은 그 사실을 알리는 글을 찍는다.
+    """
+    url = _read_database_url()
+    if isinstance(url, str):
+        sys.stderr.write(f"{url}\n")
+        return EXIT_FAILED
+    return run_interruptibly(
+        lambda: _on_database(
+            _build_database(url),
+            lambda accounts: rotate_key_command(
+                accounts=accounts, clock=SystemClock(), stdout=sys.stdout
+            ),
+        )
+    )
+
+
+async def _on_database(
+    database: PostgresDatabase, command: Callable[[AccountStore], Awaitable[int]]
+) -> int:
     """서버가 뜰 때와 같은 확인(닿는지, 표의 판)을 지난 뒤에 명령을 돈다. 예외는 까닭만 싣는다."""
     try:
         problem = await database.startup_problem()
         if problem is not None:
             sys.stderr.write(f"{problem}\n")
             return EXIT_FAILED
-        return await system_admin_command(
-            name,
-            password_hash,
-            accounts=database.accounts(),
-            clock=SystemClock(),
-            stdout=sys.stdout,
-            stderr=sys.stderr,
-        )
+        return await command(database.accounts())
     except Exception as error:  # 어떤 예외든 까닭만 싣는 글로 바꿔 끝낸다
         sys.stderr.write(f"{database.unexpected_problem(error)}\n")
         return EXIT_FAILED

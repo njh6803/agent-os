@@ -18,8 +18,10 @@ from cryptography.hazmat.primitives.asymmetric import rsa
 
 from agent_os.http.login_tokens import (
     ACCESS_COOKIE,
+    ENDS_LOGIN,
     IDLE_MINUTES_ENV,
     REFRESH_COOKIE,
+    REFRESH_GRACE,
     TOKEN_MINUTES_ENV,
     TOTAL_MINUTES_ENV,
     LoginDurations,
@@ -27,6 +29,7 @@ from agent_os.http.login_tokens import (
     cookie_line,
     forwarded_address,
     issue_token,
+    judge_refresh,
     lock_duration,
     login_cookie_lines,
     read_login_durations,
@@ -325,6 +328,13 @@ def test_갱신용_쿠키의_Max_Age는_쉬는_시간과_총_시간의_남은_�
     assert over == 0
 
 
+def test_갱신용_쿠키의_Max_Age는_남은_시간이_1초_미만이어도_0이_아니다() -> None:
+    durations = LoginDurations(token_minutes=5, idle_minutes=30, total_minutes=60)
+    nearly_over = NOW + timedelta(minutes=60) - timedelta(milliseconds=500)
+
+    assert refresh_max_age(durations, logged_in_at=NOW, now=nearly_over) == 1
+
+
 # --- 접속 주소 -----------------------------------------------------------------------------------
 
 
@@ -347,3 +357,88 @@ def test_접속_주소는_머리가_하나이고_IP로_읽힐_때만_남긴다(
     values: list[str], expected: str | None
 ) -> None:
     assert forwarded_address(values) == expected
+
+
+# --- 갱신의 판정 ---------------------------------------------------------------------------------
+
+
+def _judge(
+    *,
+    now: datetime = NOW + timedelta(minutes=10),
+    logged_in_at: datetime = NOW,
+    refreshed_at: datetime = NOW,
+    ended_at: datetime | None = None,
+    used_at: datetime | None = None,
+    disabled_at: datetime | None = None,
+    locked_until: datetime | None = None,
+) -> str | None:
+    return judge_refresh(
+        durations=LoginDurations(),
+        now=now,
+        logged_in_at=logged_in_at,
+        refreshed_at=refreshed_at,
+        ended_at=ended_at,
+        used_at=used_at,
+        disabled_at=disabled_at,
+        locked_until=locked_until,
+    )
+
+
+def test_아무_문제가_없으면_갱신을_받는다() -> None:
+    assert _judge() is None
+
+
+def test_쓰지_않은_번호는_쉬는_시간_안이면_언제든_통한다() -> None:
+    assert _judge(now=NOW + timedelta(minutes=29), refreshed_at=NOW) is None
+
+
+def test_끊긴_로그인은_거절한다() -> None:
+    assert _judge(ended_at=NOW + timedelta(minutes=1)) == "ended"
+
+
+def test_쉬는_시간이_딱_지난_때부터_거절한다() -> None:
+    idle = timedelta(minutes=30)
+    assert _judge(now=NOW + idle - timedelta(seconds=1)) is None
+    assert _judge(now=NOW + idle) == "idle"
+
+
+def test_쉬는_시간은_마지막_갱신에서_센다() -> None:
+    later = NOW + timedelta(minutes=100)
+    assert _judge(now=later + timedelta(minutes=29), refreshed_at=later) is None
+    assert _judge(now=later + timedelta(minutes=30), refreshed_at=later) == "idle"
+
+
+def test_총_시간이_딱_지난_때부터_거절한다() -> None:
+    total = timedelta(minutes=480)
+    recent = NOW + total - timedelta(minutes=1)
+    assert _judge(now=NOW + total - timedelta(seconds=1), refreshed_at=recent) is None
+    assert _judge(now=NOW + total, refreshed_at=recent) == "total"
+
+
+def test_비활성_계정과_잠긴_계정은_거절한다() -> None:
+    now = NOW + timedelta(minutes=10)
+    assert _judge(now=now, disabled_at=NOW) == "disabled"
+    assert _judge(now=now, locked_until=now + timedelta(seconds=1)) == "locked"
+    # 풀리는 시각이 지금이거나 지났으면 잠기지 않았다
+    assert _judge(now=now, locked_until=now) is None
+
+
+def test_쓴_지_10초가_안_된_번호는_받고_10초가_지나면_거절한다() -> None:
+    used = NOW + timedelta(minutes=5)
+    assert REFRESH_GRACE == timedelta(seconds=10)
+    assert _judge(now=used + timedelta(seconds=9, microseconds=999999), used_at=used) is None
+    assert _judge(now=used + REFRESH_GRACE, used_at=used) == "reused"
+
+
+def test_여러_까닭이_겹치면_명세가_적은_차례의_첫째를_말한다() -> None:
+    now = NOW + timedelta(minutes=40)
+    fresh = now - timedelta(minutes=1)
+    soon = now + timedelta(hours=1)
+    assert _judge(now=now, ended_at=NOW, disabled_at=NOW) == "ended"
+    assert _judge(now=now, disabled_at=NOW, locked_until=soon) == "idle"
+    assert _judge(now=now, refreshed_at=fresh, disabled_at=NOW, locked_until=soon) == "disabled"
+    assert _judge(now=now, refreshed_at=fresh, locked_until=soon, used_at=NOW) == "locked"
+
+
+def test_로그인을_끊는_까닭은_비활성과_잠김과_재사용_셋이다() -> None:
+    assert ENDS_LOGIN == {"disabled", "locked", "reused"}
