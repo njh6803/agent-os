@@ -16,6 +16,12 @@
 //   https://probe.test    배포와 닮은 꼴(루프백이 아닌 이름, https, 포트만 다른 둘). 자체 서명 인증서를 openssl 로 짓고
 //                         브라우저는 인증서 오류를 무시한다. openssl 이 없으면 이 갈래는 재지 못했다고 적는다
 //   probe.test 와 other.test 는 Chromium 의 --host-resolver-rules 로 127.0.0.1 에 맞춘다. hosts 파일은 건드리지 않는다.
+//   http://[::1]          IPv6 루프백(2026-11-27, 티켓 09). 관리 화면을 TCP 앞단(servers.mjs 의 tcpFront6)이 ::1 로 받고 B 는 ::1 에
+//                         따로 선다. 서버를 ::1 에 세우지 못하면(이 PC 에서 IPv6 루프백이 안 열리면) 건너뛰고 info.ipv6Measured 를
+//                         false 로, 까닭을 info.ipv6Problem 에 남긴다
+//   http://[::1] 시작 래퍼가 직접 묶음   위 127.0.0.1 의 관리 화면을 내린 뒤 시작 래퍼를 --hostname ::1 로 다시 띄워(next dev 는 같은
+//                         폴더에서 둘째를 함께 띄우지 못한다) 쿠키 저장과 같은 출처 GET 하나만 본다. 표지: ::1 로 200, 같은 포트의
+//                         127.0.0.1 은 연결 거절, 상류가 x-forwarded-host 를 받았다
 //
 // 재는 것(결과의 키)
 //   wire          중계를 지난 응답의 Set-Cookie 줄을 node 의 날 HTTP 로 받아 상류가 낸 줄과 글자 그대로 견준다. 200 과
@@ -46,6 +52,7 @@
 // 요청 기록, 관리 화면의 출력)은 --out 폴더의 results.json 에 쓴다. 쿠키 값은 이 스크립트가 지은 무작위 값이고 비밀이 아니다.
 // 띄운 관리 화면은 트리째 내린다(윈도우는 명령줄에 이 회차의 포트가 있을 때만 taskkill /T /F, 그 밖은 프로세스 그룹).
 // 약 3분(빌드 포함). 네트워크를 타지 않는다.
+// --update 는 한 모드만 돈 회차(--mode start|dev)에서 그 모드의 몫만 바꾸고 다른 모드의 몫은 앞의 expected.json 에서 둔다.
 // --channel chromium 은 기본(headless shell) 대신 전체 Chromium 으로 돈다. 2026-11-14 에 그 채널은 expected.json 과
 // headerNamesAtBackend 만 달라(상류가 받는 머리에 accept-language 가 하나 더 온다) 1 로 끝났다.
 
@@ -58,7 +65,17 @@ import { connect, createServer } from "node:net";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { parseArgs } from "node:util";
-import { close, createBackend, createTlsVisitor, createVisitor, listen, pairs, tlsFront } from "./servers.mjs";
+import {
+  close,
+  createBackend,
+  createPlainVisitor,
+  createTlsVisitor,
+  createVisitor,
+  listen,
+  pairs,
+  tcpFront6,
+  tlsFront,
+} from "./servers.mjs";
 
 const HERE = import.meta.dirname;
 const ROOT = join(HERE, "..", "..", "..", "..");
@@ -104,9 +121,9 @@ async function freePort() {
   return port;
 }
 
-function refused(port) {
+function refused(port, host = "127.0.0.1") {
   return new Promise((resolve) => {
-    const socket = connect({ host: "127.0.0.1", port });
+    const socket = connect({ host, port });
     socket.once("connect", () => {
       socket.destroy();
       resolve(false);
@@ -132,8 +149,8 @@ function build(upstream) {
   });
 }
 
-function launchAdmin(mode, port, upstream) {
-  const tail = [mode, "--hostname", "127.0.0.1", "--port", String(port)];
+function launchAdmin(mode, port, upstream, host = "127.0.0.1") {
+  const tail = [mode, "--hostname", host, "--port", String(port)];
   const child = spawn(process.execPath, [START, ...tail], {
     cwd: APP,
     env: nextEnv(upstream),
@@ -144,7 +161,7 @@ function launchAdmin(mode, port, upstream) {
   let output = "";
   child.stdout.on("data", (chunk) => (output += chunk));
   child.stderr.on("data", (chunk) => (output += chunk));
-  return { child, port, commandTail: tail.join(" "), output: () => output };
+  return { child, port, host, commandTail: tail.join(" "), output: () => output };
 }
 
 /**
@@ -175,7 +192,7 @@ async function stopAdmin(admin) {
     await Promise.race([exited, sleep(15_000)]);
   }
   for (let i = 0; i < 100; i += 1) {
-    if (await refused(admin.port)) return true;
+    if (await refused(admin.port, admin.host)) return true;
     await sleep(100);
   }
   return false;
@@ -751,6 +768,7 @@ async function runMode(mode, shared) {
   const aPort = await freePort();
   const admin = launchAdmin(mode, aPort, upstream);
   const servers = [];
+  let mainStopped = false;
   try {
     await untilRelay(admin, `http://127.0.0.1:${aPort}/api/echo?tag=warmup`);
 
@@ -811,6 +829,28 @@ async function runMode(mode, shared) {
         c: `https://other.test:${tbPort}`,
         scope: "full",
       });
+    }
+    // IPv6 루프백 갈래. 서버를 `::1` 에 세우지 못하면(이 PC 에서 IPv6 루프백이 안 열리면) 이 갈래는 재지 못했다고 남긴다.
+    // A 는 같은 관리 화면 프로세스(127.0.0.1)를 TCP 앞단이 `::1` 로 받는 것이고, B 는 `::1` 에 따로 선다.
+    info.ipv6Measured = false;
+    try {
+      const front6 = tcpFront6(aPort);
+      const visitor6 = createPlainVisitor(visitor.log);
+      servers.push(front6, visitor6);
+      const a6Port = await listen(front6, "::1");
+      const b6Port = await listen(visitor6, "::1");
+      labels.push([`:${a6Port}`, ":<A6>"], [`:${b6Port}`, ":<B6>"]);
+      families.push({
+        name: "http://[::1]",
+        a: `http://[::1]:${a6Port}`,
+        b: `http://[::1]:${b6Port}`,
+        c: `http://127.0.0.1:${bPort}`,
+        scope: "full",
+      });
+      info.ipv6Measured = true;
+    } catch (error) {
+      info.ipv6Problem = `${error.code ?? error.name}: ${error.message}`;
+      console.log(`http://[::1] 갈래는 재지 못한다(::1 에 서버를 세우지 못했다): ${info.ipv6Problem}`);
     }
     const normalize = (text) => labels.reduce((acc, [literal, label]) => acc.split(literal).join(label), text);
     const env = { backend, visitor, normalize };
@@ -891,12 +931,58 @@ async function runMode(mode, shared) {
         }
       }
     }
+    // 시작 래퍼가 `::1` 에 직접 묶이는가(앞단 없이). next dev 는 .next 에 잠금이 있어 둘째 프로세스를 함께 띄우지 못하므로,
+    // 두 모드 모두 위의 관리 화면을 내린 뒤 그 자리에서 `--hostname ::1` 로 다시 띄워 잰다. 결과는 facts 의 같은 이름 키에 둔다.
+    if (info.ipv6Measured) {
+      const freedFirst = await stopAdmin(admin);
+      mainStopped = true;
+      mark(`${mode}: ::1 로 다시 띄우기 전에 127.0.0.1 의 관리 화면을 내렸다(포트가 연결을 거절한다)`, freedFirst);
+      const a6Direct = await freePort();
+      const wrapped = launchAdmin(mode, a6Direct, upstream, "::1");
+      try {
+        await untilRelay(wrapped, `http://[::1]:${a6Direct}/api/echo?tag=ipv6-warmup`);
+        labels.push([`:${a6Direct}`, ":<AW6>"]);
+        const wrapStart = backend.log.length;
+        const through = await rawRequest(`http://[::1]:${a6Direct}/api/echo?tag=ipv6-wrapper`);
+        const entry = backend.log.find((item) => item.seq >= wrapStart && item.tag === "ipv6-wrapper");
+        const atBackend = entry === undefined ? null : received(entry, normalize);
+        const ipv4Refused = await refused(a6Direct, "127.0.0.1");
+        mark(
+          `${mode}: 시작 래퍼가 --hostname ::1 로 ::1 에만 묶여 중계가 선다(::1 로 200, 127.0.0.1 은 연결 거절, 상류가 x-forwarded-host 를 받았다)`,
+          through.status === 200 &&
+            ipv4Refused &&
+            atBackend?.forwarded.some((line) => line.startsWith("x-forwarded-host:")) === true,
+          `status ${through.status}, 127.0.0.1 거절 ${ipv4Refused}`,
+        );
+        const done = await runFamily(browser, env, {
+          name: "http://[::1] 시작 래퍼가 직접 묶음",
+          a: `http://[::1]:${a6Direct}`,
+          scope: "cookies",
+        });
+        facts["http://[::1] 시작 래퍼가 직접 묶음"] = done.out;
+        mark(
+          `${mode} http://[::1] 시작 래퍼가 직접 묶음: 관찰한 요청마다 브라우저가 실제로 보내려 했다(CDP requestWillBeSent)`,
+          done.missing.length === 0 && done.observed > 0,
+          `${done.observed - done.missing.length}/${done.observed}`,
+        );
+        mark(
+          `${mode} http://[::1] 시작 래퍼가 직접 묶음: 서버 쪽 기록과 브라우저 쪽 기록이 같은 요청의 것이다`,
+          done.mismatched.length === 0,
+          done.mismatched.join(" "),
+        );
+      } finally {
+        const freed = await stopAdmin(wrapped);
+        mark(`${mode}: ::1 에 묶었던 관리 화면을 내렸다(포트가 연결을 거절한다)`, freed);
+      }
+    }
     info.adminOutputHead = normalize(admin.output()).slice(0, 800);
     return { facts, info };
   } finally {
     for (const server of servers) await close(server);
-    const freed = await stopAdmin(admin);
-    mark(`${mode}: 띄운 관리 화면을 내렸다(포트가 연결을 거절한다)`, freed);
+    if (!mainStopped) {
+      const freed = await stopAdmin(admin);
+      mark(`${mode}: 띄운 관리 화면을 내렸다(포트가 연결을 거절한다)`, freed);
+    }
   }
 }
 
@@ -998,8 +1084,11 @@ let expectedOk = true;
 if (failure === null) {
   const snapshot = { httpsMeasured: tls !== null, facts };
   if (args.update) {
-    writeFileSync(EXPECTED, `${JSON.stringify({ versions, ...snapshot }, null, 2)}\n`);
-    console.log(`expected.json 을 이 회차의 결과로 썼다`);
+    // 한 모드만 돈 회차(--mode start|dev)는 그 모드의 몫만 바꾸고 다른 모드의 몫은 앞의 expected.json 에서 그대로 둔다.
+    const previous = MODES.length < 2 && existsSync(EXPECTED) ? JSON.parse(readFileSync(EXPECTED, "utf-8")) : null;
+    const merged = previous === null ? facts : { ...previous.facts, ...facts };
+    writeFileSync(EXPECTED, `${JSON.stringify({ versions, ...snapshot, facts: merged }, null, 2)}\n`);
+    console.log(`expected.json 을 이 회차의 결과로 썼다${previous === null ? "" : "(돌지 않은 모드의 몫은 앞의 파일에서 두었다)"}`);
   } else if (existsSync(EXPECTED)) {
     const expected = JSON.parse(readFileSync(EXPECTED, "utf-8"));
     const partial = Object.fromEntries(MODES.map((mode) => [mode, expected.facts[mode]]));

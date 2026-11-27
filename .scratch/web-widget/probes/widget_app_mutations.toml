@@ -299,10 +299,10 @@ expect_output = ['></textarea> to have property "disabled" with value true']
 [[mutation.edit]]
 file = "web/apps/widget/components/pages/WidgetScreen.tsx"
 old = '''
-          disabled={misconfigured || paused || restore !== "ready"}
+          disabled={misconfigured || settings !== "ready" || paused || restore !== "ready"}
 '''
 new = '''
-          disabled={paused || restore !== "ready"}
+          disabled={settings !== "ready" || paused || restore !== "ready"}
 '''
 
 [[mutation]]
@@ -547,10 +547,10 @@ expect_output = ['"prepare": false,']
 [[mutation.edit]]
 file = "web/apps/widget/tools/start.ts"
 old = '''
-  return { args: [command, "--hostname", host, ...port], prepare: command === "dev" };
+    prepare: command === "dev",
 '''
 new = '''
-  return { args: [command, "--hostname", host, ...port], prepare: false };
+    prepare: false,
 '''
 
 [[mutation]]

@@ -1,10 +1,10 @@
-// 읽기 흐름의 둘째 조각(web-admin 티켓 07). 05 의 흐름(관리 토큰, 플러그인 목록)에서 이어 실행 목록을 보고 거르고,
+// 읽기 흐름의 둘째 조각(web-admin 티켓 07). 로그인해 들어간 플러그인 목록(login.e2e.ts)에서 이어 실행 목록을 보고 거르고,
 // 실행 하나를 열어 모르는 종류의 원문과 형식 1 의 표시를 본다. 트레이스의 HTML 이 요소로 그려지지 않는 것을 실제
 // 브라우저에서 한 번 더 본다. 트레이스는 준비가 쓴다(traces.ts).
 
 import { expect, type Page, test } from "@playwright/test";
 import { stack } from "./env";
-import { enterAdminToken, group, openSection, row } from "./screen";
+import { group, openSection, row, signInTo } from "./screen";
 import { HOSTILE_CONTENT, READ_RUNS, UNKNOWN_LINE } from "./traces";
 
 function runRow(page: Page, runId: string) {
@@ -23,11 +23,10 @@ async function openRun(page: Page, adminUrl: string, runId: string) {
 test("실행 목록을 상태로 거르고 실행 하나를 열어 모르는 종류의 원문과 형식 1 과 글자로만 그린 HTML 을 본다", async ({
   page,
 }) => {
-  const { adminUrl, adminToken } = stack();
+  const { adminUrl } = stack();
   const crashes: string[] = [];
   page.on("pageerror", (error) => crashes.push(error.message));
-  await page.goto(adminUrl);
-  await enterAdminToken(page, adminToken);
+  await signInTo(page, adminUrl);
   await expect(row(page, "에이전트", "echo")).toContainText("켜짐");
 
   await openSection(page, "실행");

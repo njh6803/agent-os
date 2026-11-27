@@ -1917,12 +1917,16 @@ async def test_트레이스를_쓰지_못해_멈춘_실행은_스트림을_결�
 # 관리 쪽 이름이 바뀐 것은 여기도 따라간다 — plugin-toggle 이 `UnreadableManifest` 행을 `Plugin`·
 # `PluginPlaceholder` 로 감싸고 본문 `SetEnabled` 를 더했다(ADR 0010 의 2026-09-26 이력). 접속
 # 확인의 응답 유니온과 멤버 넷과 종류 열거도 관리 쪽이 더한 이름이다(ADR 0067). 대화 목록의 줄과
-# 쪽과 행 유니온도 관리 쪽이 더한 이름이다(admin-login 티켓 07).
+# 쪽과 행 유니온도 관리 쪽이 더한 이름이다(admin-login 티켓 07). 계정 목록과 계정 만들기와 링크와
+# 활성 바꾸기와 비밀번호 요청 둘도 관리 쪽이 더한 이름이다(admin-login 티켓 06).
 EXISTING_COMPONENTS = frozenset(
     {
+        "AccountList",
+        "AccountSummary",
         "AppliedRule",
         "ApprovalDenied",
         "ApprovalGranted",
+        "ChangePasswordRequest",
         "CheckableKind",
         "ConnectionCheck",
         "ConnectionDisabled",
@@ -1933,6 +1937,8 @@ EXISTING_COMPONENTS = frozenset(
         "ConversationPage",
         "ConversationRow",
         "ConversationSummarized",
+        "CreateAccountRequest",
+        "CreatedAccount",
         "ErrorCode",
         "ErrorEnvelope",
         "FailureCause",
@@ -1943,6 +1949,7 @@ EXISTING_COMPONENTS = frozenset(
         "LoginRequest",
         "Me",
         "ModelProvider",
+        "PasswordLink",
         "Plugin",
         "PluginKind",
         "PluginManifest",
@@ -1956,7 +1963,9 @@ EXISTING_COMPONENTS = frozenset(
         "RunStarted",
         "RunStatus",
         "RunSummary",
+        "SetActiveRequest",
         "SetEnabled",
+        "SetPasswordRequest",
         "Setup",
         "StdioServer",
         "ToolCall",
@@ -2110,10 +2119,21 @@ def test_승인_라우트가_지은_operation_id_와_봉투_에러_문서와_식
     assert body == {"$ref": "#/components/schemas/Decision"}
 
 
-def test_409_는_채널_라우트에만_있다() -> None:
+# 계정을 다루는 경로 셋과 내 비밀번호 바꾸기는 409 를 낸다(admin-login 티켓 06). 같은 이름이 이미
+# 있다, 시스템 관리자나 비활성 계정에는 할 수 없다, 계정이 잠겼다.
+ACCOUNT_CONFLICTS = {
+    ("/auth/password", "post"),
+    ("/accounts", "post"),
+    ("/accounts/{name}/link", "post"),
+    ("/accounts/{name}/active", "put"),
+}
+
+
+def test_409_는_채널_라우트와_계정을_다루는_라우트에만_있다() -> None:
     """대상의 상태나 주체가 요청을 허락하지 않는 것(재개 불가, 꺼짐, 다른 주체, 이어 갈 수 없음)을
     만나는 것은 실행을 일으키거나 가리키는 라우트뿐이다 — 운영자 채널의 셋과 최종 사용자 면의 넷.
-    관리는 실행을 일으키지 않고 켜고 끄는 라우트는 꺼진 것을 거부하지 않는다."""
+    관리의 플러그인과 실행 라우트는 실행을 일으키지 않고, 켜고 끄는 라우트는 꺼진 것을
+    거부하지 않는다. 409 를 내는 관리 라우트는 계정을 다루는 것(`ACCOUNT_CONFLICTS`)뿐이다."""
     paths = _app().openapi()["paths"]
 
     conflicting = [
@@ -2123,7 +2143,11 @@ def test_409_는_채널_라우트에만_있다() -> None:
         if "409" in operation["responses"]
     ]
 
-    assert conflicting == [*CHANNEL_OPERATIONS, *END_USER_OPERATIONS]
+    assert {each for each in conflicting if each in ACCOUNT_CONFLICTS} == ACCOUNT_CONFLICTS
+    assert [each for each in conflicting if each not in ACCOUNT_CONFLICTS] == [
+        *CHANNEL_OPERATIONS,
+        *END_USER_OPERATIONS,
+    ]
 
 
 def test_결정_본문이_판별자_decision_의_이름_있는_유니온이고_허가와_거부가_섞이지_않는다() -> None:

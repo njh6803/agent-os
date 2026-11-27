@@ -2318,6 +2318,766 @@
           ],
           "cookieAtBackendAfterLogin": "probe_scoped=<scoped>; __Host-probe_at=<at>; __Host-probe_rt=<rt>; probe_plain=<plain>"
         }
+      },
+      "http://[::1]": {
+        "setCookie": {
+          "fetch": [
+            "응답 200 type=basic",
+            "응답 200 type=basic"
+          ],
+          "linesAtBrowser": [
+            "__Host-probe_at=<at>; HttpOnly; Secure; SameSite=Strict; Path=/",
+            "__Host-probe_rt=<rt>; Max-Age=1209600; HttpOnly; Secure; SameSite=Strict; Path=/",
+            "probe_plain=<plain>; HttpOnly; Secure; SameSite=Strict; Path=/",
+            "probe_scoped=<scoped>; HttpOnly; Secure; SameSite=Strict; Path=/api/echo"
+          ],
+          "controlLinesAtBrowser": [
+            "__Host-probe_badpath=<badpath>; HttpOnly; Secure; SameSite=Strict; Path=/api",
+            "__Host-probe_nosecure=<nosecure>; HttpOnly; SameSite=Strict; Path=/"
+          ],
+          "rejected": [
+            "__Host-probe_badpath: InvalidPrefix",
+            "__Host-probe_nosecure: InvalidPrefix"
+          ],
+          "jar": [
+            "__Host-probe_at=<at>; domain=[::1]; path=/; httpOnly=true; secure=true; sameSite=Strict; session",
+            "__Host-probe_rt=<rt>; domain=[::1]; path=/; httpOnly=true; secure=true; sameSite=Strict; expires",
+            "probe_plain=<plain>; domain=[::1]; path=/; httpOnly=true; secure=true; sameSite=Strict; session",
+            "probe_scoped=<scoped>; domain=[::1]; path=/api/echo; httpOnly=true; secure=true; sameSite=Strict; session"
+          ]
+        },
+        "headerNamesAtBackend": [
+          "accept",
+          "accept-encoding",
+          "connection",
+          "cookie",
+          "host",
+          "referer",
+          "sec-ch-ua",
+          "sec-ch-ua-mobile",
+          "sec-ch-ua-platform",
+          "sec-fetch-dest",
+          "sec-fetch-mode",
+          "sec-fetch-site",
+          "user-agent",
+          "x-forwarded-host"
+        ],
+        "sameOrigin": {
+          "get": {
+            "fetch": "응답 200 type=basic",
+            "reached": [
+              "GET"
+            ],
+            "received": {
+              "host": "127.0.0.1:<STUB>",
+              "origin": null,
+              "referer": "http://[::1]:<A6>/api/page?tag=a-page",
+              "sec-fetch-site": "same-origin",
+              "sec-fetch-mode": "cors",
+              "sec-fetch-dest": "empty",
+              "content-type": null,
+              "cookie": "probe_scoped=<scoped>; __Host-probe_at=<at>; __Host-probe_rt=<rt>; probe_plain=<plain>",
+              "forwarded": [
+                "x-forwarded-host: [::1]:<A6>"
+              ]
+            },
+            "browserCookies": {
+              "sent": [
+                "__Host-probe_at",
+                "__Host-probe_rt",
+                "probe_plain",
+                "probe_scoped"
+              ],
+              "withheld": []
+            }
+          },
+          "postSimple": {
+            "fetch": "응답 200 type=basic",
+            "reached": [
+              "POST"
+            ],
+            "received": {
+              "host": "127.0.0.1:<STUB>",
+              "origin": "http://[::1]:<A6>",
+              "referer": "http://[::1]:<A6>/api/page?tag=a-page",
+              "sec-fetch-site": "same-origin",
+              "sec-fetch-mode": "cors",
+              "sec-fetch-dest": "empty",
+              "content-type": "text/plain;charset=UTF-8",
+              "cookie": "probe_scoped=<scoped>; __Host-probe_at=<at>; __Host-probe_rt=<rt>; probe_plain=<plain>",
+              "forwarded": [
+                "x-forwarded-host: [::1]:<A6>"
+              ]
+            },
+            "browserCookies": {
+              "sent": [
+                "__Host-probe_at",
+                "__Host-probe_rt",
+                "probe_plain",
+                "probe_scoped"
+              ],
+              "withheld": []
+            }
+          },
+          "postJson": {
+            "fetch": "응답 200 type=basic",
+            "reached": [
+              "POST"
+            ],
+            "received": {
+              "host": "127.0.0.1:<STUB>",
+              "origin": "http://[::1]:<A6>",
+              "referer": "http://[::1]:<A6>/api/page?tag=a-page",
+              "sec-fetch-site": "same-origin",
+              "sec-fetch-mode": "cors",
+              "sec-fetch-dest": "empty",
+              "content-type": "application/json",
+              "cookie": "probe_scoped=<scoped>; __Host-probe_at=<at>; __Host-probe_rt=<rt>; probe_plain=<plain>",
+              "forwarded": [
+                "x-forwarded-host: [::1]:<A6>"
+              ]
+            },
+            "browserCookies": {
+              "sent": [
+                "__Host-probe_at",
+                "__Host-probe_rt",
+                "probe_plain",
+                "probe_scoped"
+              ],
+              "withheld": []
+            }
+          },
+          "otherPath": {
+            "fetch": "응답 200 type=basic",
+            "reached": [
+              "GET"
+            ],
+            "received": {
+              "host": "127.0.0.1:<STUB>",
+              "origin": null,
+              "referer": "http://[::1]:<A6>/api/page?tag=a-page",
+              "sec-fetch-site": "same-origin",
+              "sec-fetch-mode": "cors",
+              "sec-fetch-dest": "empty",
+              "content-type": null,
+              "cookie": "__Host-probe_at=<at>; __Host-probe_rt=<rt>; probe_plain=<plain>",
+              "forwarded": [
+                "x-forwarded-host: [::1]:<A6>"
+              ]
+            },
+            "browserCookies": {
+              "sent": [
+                "__Host-probe_at",
+                "__Host-probe_rt",
+                "probe_plain"
+              ],
+              "withheld": [
+                "probe_scoped: NotOnPath"
+              ]
+            }
+          },
+          "navigation": {
+            "reached": [
+              "GET"
+            ],
+            "received": {
+              "host": "127.0.0.1:<STUB>",
+              "origin": null,
+              "referer": null,
+              "sec-fetch-site": "none",
+              "sec-fetch-mode": "navigate",
+              "sec-fetch-dest": "document",
+              "content-type": null,
+              "cookie": "probe_scoped=<scoped>; __Host-probe_at=<at>; __Host-probe_rt=<rt>; probe_plain=<plain>",
+              "forwarded": [
+                "x-forwarded-host: [::1]:<A6>"
+              ]
+            },
+            "browserCookies": {
+              "sent": [
+                "__Host-probe_at",
+                "__Host-probe_rt",
+                "probe_plain",
+                "probe_scoped"
+              ],
+              "withheld": []
+            }
+          }
+        },
+        "toVisitor": {
+          "navigation": {
+            "reached": [
+              "GET"
+            ],
+            "received": {
+              "host": "[::1]:<B6>",
+              "origin": null,
+              "referer": null,
+              "sec-fetch-site": "none",
+              "sec-fetch-mode": "navigate",
+              "sec-fetch-dest": "document",
+              "content-type": null,
+              "cookie": "__Host-probe_at=<at>; __Host-probe_rt=<rt>; probe_plain=<plain>",
+              "forwarded": []
+            },
+            "browserCookies": {
+              "sent": [
+                "__Host-probe_at",
+                "__Host-probe_rt",
+                "probe_plain"
+              ],
+              "withheld": [
+                "probe_scoped: NotOnPath"
+              ]
+            }
+          },
+          "fetch": {
+            "fetch": "응답 200 type=basic",
+            "reached": [
+              "GET"
+            ],
+            "received": {
+              "host": "[::1]:<B6>",
+              "origin": null,
+              "referer": "http://[::1]:<B6>/?tag=b-nav",
+              "sec-fetch-site": "same-origin",
+              "sec-fetch-mode": "cors",
+              "sec-fetch-dest": "empty",
+              "content-type": null,
+              "cookie": "__Host-probe_at=<at>; __Host-probe_rt=<rt>; probe_plain=<plain>",
+              "forwarded": []
+            },
+            "browserCookies": {
+              "sent": [
+                "__Host-probe_at",
+                "__Host-probe_rt",
+                "probe_plain"
+              ],
+              "withheld": [
+                "probe_scoped: NotOnPath"
+              ]
+            }
+          },
+          "fetchUnderApiEcho": {
+            "fetch": "응답 200 type=basic",
+            "reached": [
+              "GET"
+            ],
+            "received": {
+              "host": "[::1]:<B6>",
+              "origin": null,
+              "referer": "http://[::1]:<B6>/?tag=b-nav",
+              "sec-fetch-site": "same-origin",
+              "sec-fetch-mode": "cors",
+              "sec-fetch-dest": "empty",
+              "content-type": null,
+              "cookie": "probe_scoped=<scoped>; __Host-probe_at=<at>; __Host-probe_rt=<rt>; probe_plain=<plain>",
+              "forwarded": []
+            },
+            "browserCookies": {
+              "sent": [
+                "__Host-probe_at",
+                "__Host-probe_rt",
+                "probe_plain",
+                "probe_scoped"
+              ],
+              "withheld": []
+            }
+          },
+          "documentCookie": ""
+        },
+        "crossPort": {
+          "get": {
+            "fetch": "거부 TypeError: Failed to fetch",
+            "reached": [
+              "GET"
+            ],
+            "received": {
+              "host": "127.0.0.1:<STUB>",
+              "origin": "http://[::1]:<B6>",
+              "referer": "http://[::1]:<B6>/",
+              "sec-fetch-site": "same-site",
+              "sec-fetch-mode": "cors",
+              "sec-fetch-dest": "empty",
+              "content-type": null,
+              "cookie": "probe_scoped=<scoped>; __Host-probe_at=<at>; __Host-probe_rt=<rt>; probe_plain=<plain>",
+              "forwarded": [
+                "x-forwarded-host: [::1]:<A6>"
+              ]
+            },
+            "browserCookies": {
+              "sent": [
+                "__Host-probe_at",
+                "__Host-probe_rt",
+                "probe_plain",
+                "probe_scoped"
+              ],
+              "withheld": []
+            }
+          },
+          "postSimple": {
+            "fetch": "거부 TypeError: Failed to fetch",
+            "reached": [
+              "POST"
+            ],
+            "received": {
+              "host": "127.0.0.1:<STUB>",
+              "origin": "http://[::1]:<B6>",
+              "referer": "http://[::1]:<B6>/",
+              "sec-fetch-site": "same-site",
+              "sec-fetch-mode": "cors",
+              "sec-fetch-dest": "empty",
+              "content-type": "text/plain;charset=UTF-8",
+              "cookie": "probe_scoped=<scoped>; __Host-probe_at=<at>; __Host-probe_rt=<rt>; probe_plain=<plain>",
+              "forwarded": [
+                "x-forwarded-host: [::1]:<A6>"
+              ]
+            },
+            "browserCookies": {
+              "sent": [
+                "__Host-probe_at",
+                "__Host-probe_rt",
+                "probe_plain",
+                "probe_scoped"
+              ],
+              "withheld": []
+            }
+          },
+          "postNoCors": {
+            "fetch": "응답 0 type=opaque",
+            "reached": [
+              "POST"
+            ],
+            "received": {
+              "host": "127.0.0.1:<STUB>",
+              "origin": "http://[::1]:<B6>",
+              "referer": "http://[::1]:<B6>/",
+              "sec-fetch-site": "same-site",
+              "sec-fetch-mode": "no-cors",
+              "sec-fetch-dest": "empty",
+              "content-type": "text/plain;charset=UTF-8",
+              "cookie": "probe_scoped=<scoped>; __Host-probe_at=<at>; __Host-probe_rt=<rt>; probe_plain=<plain>",
+              "forwarded": [
+                "x-forwarded-host: [::1]:<A6>"
+              ]
+            },
+            "browserCookies": {
+              "sent": [
+                "__Host-probe_at",
+                "__Host-probe_rt",
+                "probe_plain",
+                "probe_scoped"
+              ],
+              "withheld": []
+            }
+          },
+          "postJson": {
+            "fetch": "거부 TypeError: Failed to fetch",
+            "reached": [
+              "OPTIONS"
+            ],
+            "received": null,
+            "browserCookies": null
+          },
+          "formPost": {
+            "reached": [
+              "POST"
+            ],
+            "received": {
+              "host": "127.0.0.1:<STUB>",
+              "origin": "http://[::1]:<B6>",
+              "referer": "http://[::1]:<B6>/",
+              "sec-fetch-site": "same-site",
+              "sec-fetch-mode": "navigate",
+              "sec-fetch-dest": "document",
+              "content-type": "application/x-www-form-urlencoded",
+              "cookie": "probe_scoped=<scoped>; __Host-probe_at=<at>; __Host-probe_rt=<rt>; probe_plain=<plain>",
+              "forwarded": [
+                "x-forwarded-host: [::1]:<A6>"
+              ]
+            },
+            "browserCookies": {
+              "sent": [
+                "__Host-probe_at",
+                "__Host-probe_rt",
+                "probe_plain",
+                "probe_scoped"
+              ],
+              "withheld": []
+            }
+          },
+          "linkGet": {
+            "reached": [
+              "GET"
+            ],
+            "received": {
+              "host": "127.0.0.1:<STUB>",
+              "origin": null,
+              "referer": "http://[::1]:<B6>/",
+              "sec-fetch-site": "same-site",
+              "sec-fetch-mode": "navigate",
+              "sec-fetch-dest": "document",
+              "content-type": null,
+              "cookie": "probe_scoped=<scoped>; __Host-probe_at=<at>; __Host-probe_rt=<rt>; probe_plain=<plain>",
+              "forwarded": [
+                "x-forwarded-host: [::1]:<A6>"
+              ]
+            },
+            "browserCookies": {
+              "sent": [
+                "__Host-probe_at",
+                "__Host-probe_rt",
+                "probe_plain",
+                "probe_scoped"
+              ],
+              "withheld": []
+            }
+          }
+        },
+        "crossSite": {
+          "get": {
+            "fetch": "거부 TypeError: Failed to fetch",
+            "reached": [
+              "GET"
+            ],
+            "received": {
+              "host": "127.0.0.1:<STUB>",
+              "origin": "http://127.0.0.1:<B>",
+              "referer": "http://127.0.0.1:<B>/",
+              "sec-fetch-site": "cross-site",
+              "sec-fetch-mode": "cors",
+              "sec-fetch-dest": "empty",
+              "content-type": null,
+              "cookie": null,
+              "forwarded": [
+                "x-forwarded-host: [::1]:<A6>"
+              ]
+            },
+            "browserCookies": {
+              "sent": [],
+              "withheld": [
+                "__Host-probe_at: SchemefulSameSiteStrict",
+                "__Host-probe_rt: SchemefulSameSiteStrict",
+                "probe_plain: SchemefulSameSiteStrict",
+                "probe_scoped: SchemefulSameSiteStrict"
+              ]
+            }
+          },
+          "postSimple": {
+            "fetch": "거부 TypeError: Failed to fetch",
+            "reached": [
+              "POST"
+            ],
+            "received": {
+              "host": "127.0.0.1:<STUB>",
+              "origin": "http://127.0.0.1:<B>",
+              "referer": "http://127.0.0.1:<B>/",
+              "sec-fetch-site": "cross-site",
+              "sec-fetch-mode": "cors",
+              "sec-fetch-dest": "empty",
+              "content-type": "text/plain;charset=UTF-8",
+              "cookie": null,
+              "forwarded": [
+                "x-forwarded-host: [::1]:<A6>"
+              ]
+            },
+            "browserCookies": {
+              "sent": [],
+              "withheld": [
+                "__Host-probe_at: SchemefulSameSiteStrict",
+                "__Host-probe_rt: SchemefulSameSiteStrict",
+                "probe_plain: SchemefulSameSiteStrict",
+                "probe_scoped: SchemefulSameSiteStrict"
+              ]
+            }
+          },
+          "postNoCors": {
+            "fetch": "응답 0 type=opaque",
+            "reached": [
+              "POST"
+            ],
+            "received": {
+              "host": "127.0.0.1:<STUB>",
+              "origin": "http://127.0.0.1:<B>",
+              "referer": "http://127.0.0.1:<B>/",
+              "sec-fetch-site": "cross-site",
+              "sec-fetch-mode": "no-cors",
+              "sec-fetch-dest": "empty",
+              "content-type": "text/plain;charset=UTF-8",
+              "cookie": null,
+              "forwarded": [
+                "x-forwarded-host: [::1]:<A6>"
+              ]
+            },
+            "browserCookies": {
+              "sent": [],
+              "withheld": [
+                "__Host-probe_at: SchemefulSameSiteStrict",
+                "__Host-probe_rt: SchemefulSameSiteStrict",
+                "probe_plain: SchemefulSameSiteStrict",
+                "probe_scoped: SchemefulSameSiteStrict"
+              ]
+            }
+          },
+          "postJson": {
+            "fetch": "거부 TypeError: Failed to fetch",
+            "reached": [
+              "OPTIONS"
+            ],
+            "received": null,
+            "browserCookies": null
+          },
+          "formPost": {
+            "reached": [
+              "POST"
+            ],
+            "received": {
+              "host": "127.0.0.1:<STUB>",
+              "origin": "http://127.0.0.1:<B>",
+              "referer": "http://127.0.0.1:<B>/",
+              "sec-fetch-site": "cross-site",
+              "sec-fetch-mode": "navigate",
+              "sec-fetch-dest": "document",
+              "content-type": "application/x-www-form-urlencoded",
+              "cookie": null,
+              "forwarded": [
+                "x-forwarded-host: [::1]:<A6>"
+              ]
+            },
+            "browserCookies": {
+              "sent": [],
+              "withheld": [
+                "__Host-probe_at: SchemefulSameSiteStrict",
+                "__Host-probe_rt: SchemefulSameSiteStrict",
+                "probe_plain: SchemefulSameSiteStrict",
+                "probe_scoped: SchemefulSameSiteStrict"
+              ]
+            }
+          },
+          "linkGet": {
+            "reached": [
+              "GET"
+            ],
+            "received": {
+              "host": "127.0.0.1:<STUB>",
+              "origin": null,
+              "referer": "http://127.0.0.1:<B>/",
+              "sec-fetch-site": "cross-site",
+              "sec-fetch-mode": "navigate",
+              "sec-fetch-dest": "document",
+              "content-type": null,
+              "cookie": null,
+              "forwarded": [
+                "x-forwarded-host: [::1]:<A6>"
+              ]
+            },
+            "browserCookies": {
+              "sent": [],
+              "withheld": [
+                "__Host-probe_at: SchemefulSameSiteStrict",
+                "__Host-probe_rt: SchemefulSameSiteStrict",
+                "probe_plain: SchemefulSameSiteStrict",
+                "probe_scoped: SchemefulSameSiteStrict"
+              ]
+            }
+          }
+        },
+        "overwrite": {
+          "ow-host-same-key": {
+            "wrote": "__Host-probe_at=EVIL1; Secure; Path=/",
+            "scriptSees": "",
+            "jarBefore": [
+              "__Host-probe_at=<at>; domain=[::1]; path=/; httpOnly=true; secure=true; sameSite=Strict; session"
+            ],
+            "jarAfter": [
+              "__Host-probe_at=<at>; domain=[::1]; path=/; httpOnly=true; secure=true; sameSite=Strict; session"
+            ],
+            "cookieAtBackend": "probe_scoped=<scoped>; __Host-probe_at=<at>; __Host-probe_rt=<rt>; probe_plain=<plain>"
+          },
+          "ow-plain-same-key": {
+            "wrote": "probe_plain=EVIL2; Secure; Path=/",
+            "scriptSees": "",
+            "jarBefore": [
+              "probe_plain=<plain>; domain=[::1]; path=/; httpOnly=true; secure=true; sameSite=Strict; session"
+            ],
+            "jarAfter": [
+              "probe_plain=<plain>; domain=[::1]; path=/; httpOnly=true; secure=true; sameSite=Strict; session"
+            ],
+            "cookieAtBackend": "probe_scoped=<scoped>; __Host-probe_at=<at>; __Host-probe_rt=<rt>; probe_plain=<plain>"
+          },
+          "ow-plain-other-path-secure": {
+            "wrote": "probe_plain=EVIL3; Secure; Path=/api",
+            "scriptSees": "",
+            "jarBefore": [
+              "probe_plain=<plain>; domain=[::1]; path=/; httpOnly=true; secure=true; sameSite=Strict; session"
+            ],
+            "jarAfter": [
+              "probe_plain=<plain>; domain=[::1]; path=/; httpOnly=true; secure=true; sameSite=Strict; session",
+              "probe_plain=EVIL3; domain=[::1]; path=/api; httpOnly=false; secure=true; sameSite=Lax; session"
+            ],
+            "cookieAtBackend": "probe_scoped=<scoped>; probe_plain=EVIL3; __Host-probe_at=<at>; __Host-probe_rt=<rt>; probe_plain=<plain>"
+          },
+          "ow-plain-other-path": {
+            "wrote": "probe_plain=EVIL4; Path=/api",
+            "scriptSees": "",
+            "jarBefore": [
+              "probe_plain=<plain>; domain=[::1]; path=/; httpOnly=true; secure=true; sameSite=Strict; session"
+            ],
+            "jarAfter": [
+              "probe_plain=<plain>; domain=[::1]; path=/; httpOnly=true; secure=true; sameSite=Strict; session",
+              "probe_plain=EVIL4; domain=[::1]; path=/api; httpOnly=false; secure=false; sameSite=Lax; session"
+            ],
+            "cookieAtBackend": "probe_scoped=<scoped>; probe_plain=EVIL4; __Host-probe_at=<at>; __Host-probe_rt=<rt>; probe_plain=<plain>"
+          },
+          "ow-host-other-path": {
+            "wrote": "__Host-probe_at=EVIL5; Secure; Path=/api",
+            "scriptSees": "",
+            "jarBefore": [
+              "__Host-probe_at=<at>; domain=[::1]; path=/; httpOnly=true; secure=true; sameSite=Strict; session"
+            ],
+            "jarAfter": [
+              "__Host-probe_at=<at>; domain=[::1]; path=/; httpOnly=true; secure=true; sameSite=Strict; session"
+            ],
+            "cookieAtBackend": "probe_scoped=<scoped>; __Host-probe_at=<at>; __Host-probe_rt=<rt>; probe_plain=<plain>"
+          },
+          "ow-host-new-name": {
+            "wrote": "__Host-probe_new=EVIL6; Secure; Path=/",
+            "scriptSees": "__Host-probe_new=EVIL6",
+            "jarBefore": [],
+            "jarAfter": [
+              "__Host-probe_new=EVIL6; domain=[::1]; path=/; httpOnly=false; secure=true; sameSite=Lax; session"
+            ],
+            "cookieAtBackend": "probe_scoped=<scoped>; __Host-probe_at=<at>; __Host-probe_rt=<rt>; probe_plain=<plain>; __Host-probe_new=EVIL6"
+          },
+          "ow-plain-new-name": {
+            "wrote": "probe_new=EVIL7; Path=/",
+            "scriptSees": "probe_new=EVIL7",
+            "jarBefore": [],
+            "jarAfter": [
+              "probe_new=EVIL7; domain=[::1]; path=/; httpOnly=false; secure=false; sameSite=Lax; session"
+            ],
+            "cookieAtBackend": "probe_scoped=<scoped>; __Host-probe_at=<at>; __Host-probe_rt=<rt>; probe_plain=<plain>; probe_new=EVIL7"
+          },
+          "ow-host-same-key-not-httponly": {
+            "wrote": "__Host-probe_open=EVIL8; Secure; Path=/",
+            "scriptSees": "__Host-probe_open=EVIL8",
+            "jarBefore": [
+              "__Host-probe_open=<open>; domain=[::1]; path=/; httpOnly=false; secure=true; sameSite=Strict; session"
+            ],
+            "jarAfter": [
+              "__Host-probe_open=EVIL8; domain=[::1]; path=/; httpOnly=false; secure=true; sameSite=Lax; session"
+            ],
+            "cookieAtBackend": "probe_scoped=<scoped>; __Host-probe_at=<at>; __Host-probe_rt=<rt>; probe_plain=<plain>; __Host-probe_open=EVIL8"
+          }
+        },
+        "visitorServerSetCookie": {
+          "fetch": "응답 200 type=basic",
+          "rejected": [],
+          "jarAfter": [
+            "__Host-probe_at=EVILHTTP; domain=[::1]; path=/; httpOnly=true; secure=true; sameSite=Strict; session",
+            "probe_plain=EVILHTTP; domain=[::1]; path=/; httpOnly=true; secure=true; sameSite=Strict; session"
+          ],
+          "cookieAtBackend": "probe_scoped=<scoped>; __Host-probe_rt=<rt>; __Host-probe_at=EVILHTTP; probe_plain=EVILHTTP"
+        },
+        "clearOn401": {
+          "fetch": "응답 401 type=basic",
+          "linesAtBrowser": [
+            "__Host-probe_at=; Max-Age=0; HttpOnly; Secure; SameSite=Strict; Path=/",
+            "probe_plain=; Max-Age=0; HttpOnly; Secure; SameSite=Strict; Path=/"
+          ],
+          "jarBefore": [
+            "__Host-probe_at=<at>; domain=[::1]; path=/; httpOnly=true; secure=true; sameSite=Strict; session",
+            "__Host-probe_rt=<rt>; domain=[::1]; path=/; httpOnly=true; secure=true; sameSite=Strict; expires",
+            "probe_plain=<plain>; domain=[::1]; path=/; httpOnly=true; secure=true; sameSite=Strict; session"
+          ],
+          "jarAfter": [
+            "__Host-probe_rt=<rt>; domain=[::1]; path=/; httpOnly=true; secure=true; sameSite=Strict; expires"
+          ]
+        },
+        "plantFirst": {
+          "jarAfterPlant": [
+            "__Host-probe_at=PLANTED; domain=[::1]; path=/; httpOnly=false; secure=true; sameSite=Lax; session"
+          ],
+          "cookieAtBackendBeforeLogin": "__Host-probe_at=PLANTED",
+          "jarAfterAdminSet": [
+            "__Host-probe_at=<at>; domain=[::1]; path=/; httpOnly=true; secure=true; sameSite=Strict; session"
+          ],
+          "cookieAtBackendAfterLogin": "probe_scoped=<scoped>; __Host-probe_at=<at>; __Host-probe_rt=<rt>; probe_plain=<plain>"
+        }
+      },
+      "http://[::1] 시작 래퍼가 직접 묶음": {
+        "setCookie": {
+          "fetch": [
+            "응답 200 type=basic",
+            "응답 200 type=basic"
+          ],
+          "linesAtBrowser": [
+            "__Host-probe_at=<at>; HttpOnly; Secure; SameSite=Strict; Path=/",
+            "__Host-probe_rt=<rt>; Max-Age=1209600; HttpOnly; Secure; SameSite=Strict; Path=/",
+            "probe_plain=<plain>; HttpOnly; Secure; SameSite=Strict; Path=/",
+            "probe_scoped=<scoped>; HttpOnly; Secure; SameSite=Strict; Path=/api/echo"
+          ],
+          "controlLinesAtBrowser": [
+            "__Host-probe_badpath=<badpath>; HttpOnly; Secure; SameSite=Strict; Path=/api",
+            "__Host-probe_nosecure=<nosecure>; HttpOnly; SameSite=Strict; Path=/"
+          ],
+          "rejected": [
+            "__Host-probe_badpath: InvalidPrefix",
+            "__Host-probe_nosecure: InvalidPrefix"
+          ],
+          "jar": [
+            "__Host-probe_at=<at>; domain=[::1]; path=/; httpOnly=true; secure=true; sameSite=Strict; session",
+            "__Host-probe_rt=<rt>; domain=[::1]; path=/; httpOnly=true; secure=true; sameSite=Strict; expires",
+            "probe_plain=<plain>; domain=[::1]; path=/; httpOnly=true; secure=true; sameSite=Strict; session",
+            "probe_scoped=<scoped>; domain=[::1]; path=/api/echo; httpOnly=true; secure=true; sameSite=Strict; session"
+          ]
+        },
+        "headerNamesAtBackend": [
+          "accept",
+          "accept-encoding",
+          "connection",
+          "cookie",
+          "host",
+          "referer",
+          "sec-ch-ua",
+          "sec-ch-ua-mobile",
+          "sec-ch-ua-platform",
+          "sec-fetch-dest",
+          "sec-fetch-mode",
+          "sec-fetch-site",
+          "user-agent",
+          "x-forwarded-host"
+        ],
+        "sameOrigin": {
+          "get": {
+            "fetch": "응답 200 type=basic",
+            "reached": [
+              "GET"
+            ],
+            "received": {
+              "host": "127.0.0.1:<STUB>",
+              "origin": null,
+              "referer": "http://[::1]:<AW6>/api/page?tag=a-page",
+              "sec-fetch-site": "same-origin",
+              "sec-fetch-mode": "cors",
+              "sec-fetch-dest": "empty",
+              "content-type": null,
+              "cookie": "probe_scoped=<scoped>; __Host-probe_at=<at>; __Host-probe_rt=<rt>; probe_plain=<plain>",
+              "forwarded": [
+                "x-forwarded-host: [::1]:<AW6>"
+              ]
+            },
+            "browserCookies": {
+              "sent": [
+                "__Host-probe_at",
+                "__Host-probe_rt",
+                "probe_plain",
+                "probe_scoped"
+              ],
+              "withheld": []
+            }
+          }
+        }
       }
     },
     "dev": {
@@ -4628,6 +5388,766 @@
             "__Host-probe_at=<at>; domain=probe.test; path=/; httpOnly=true; secure=true; sameSite=Strict; session"
           ],
           "cookieAtBackendAfterLogin": "probe_scoped=<scoped>; __Host-probe_at=<at>; __Host-probe_rt=<rt>; probe_plain=<plain>"
+        }
+      },
+      "http://[::1]": {
+        "setCookie": {
+          "fetch": [
+            "응답 200 type=basic",
+            "응답 200 type=basic"
+          ],
+          "linesAtBrowser": [
+            "__Host-probe_at=<at>; HttpOnly; Secure; SameSite=Strict; Path=/",
+            "__Host-probe_rt=<rt>; Max-Age=1209600; HttpOnly; Secure; SameSite=Strict; Path=/",
+            "probe_plain=<plain>; HttpOnly; Secure; SameSite=Strict; Path=/",
+            "probe_scoped=<scoped>; HttpOnly; Secure; SameSite=Strict; Path=/api/echo"
+          ],
+          "controlLinesAtBrowser": [
+            "__Host-probe_badpath=<badpath>; HttpOnly; Secure; SameSite=Strict; Path=/api",
+            "__Host-probe_nosecure=<nosecure>; HttpOnly; SameSite=Strict; Path=/"
+          ],
+          "rejected": [
+            "__Host-probe_badpath: InvalidPrefix",
+            "__Host-probe_nosecure: InvalidPrefix"
+          ],
+          "jar": [
+            "__Host-probe_at=<at>; domain=[::1]; path=/; httpOnly=true; secure=true; sameSite=Strict; session",
+            "__Host-probe_rt=<rt>; domain=[::1]; path=/; httpOnly=true; secure=true; sameSite=Strict; expires",
+            "probe_plain=<plain>; domain=[::1]; path=/; httpOnly=true; secure=true; sameSite=Strict; session",
+            "probe_scoped=<scoped>; domain=[::1]; path=/api/echo; httpOnly=true; secure=true; sameSite=Strict; session"
+          ]
+        },
+        "headerNamesAtBackend": [
+          "accept",
+          "accept-encoding",
+          "connection",
+          "cookie",
+          "host",
+          "referer",
+          "sec-ch-ua",
+          "sec-ch-ua-mobile",
+          "sec-ch-ua-platform",
+          "sec-fetch-dest",
+          "sec-fetch-mode",
+          "sec-fetch-site",
+          "user-agent",
+          "x-forwarded-host"
+        ],
+        "sameOrigin": {
+          "get": {
+            "fetch": "응답 200 type=basic",
+            "reached": [
+              "GET"
+            ],
+            "received": {
+              "host": "127.0.0.1:<STUB>",
+              "origin": null,
+              "referer": "http://[::1]:<A6>/api/page?tag=a-page",
+              "sec-fetch-site": "same-origin",
+              "sec-fetch-mode": "cors",
+              "sec-fetch-dest": "empty",
+              "content-type": null,
+              "cookie": "probe_scoped=<scoped>; __Host-probe_at=<at>; __Host-probe_rt=<rt>; probe_plain=<plain>",
+              "forwarded": [
+                "x-forwarded-host: [::1]:<A6>"
+              ]
+            },
+            "browserCookies": {
+              "sent": [
+                "__Host-probe_at",
+                "__Host-probe_rt",
+                "probe_plain",
+                "probe_scoped"
+              ],
+              "withheld": []
+            }
+          },
+          "postSimple": {
+            "fetch": "응답 200 type=basic",
+            "reached": [
+              "POST"
+            ],
+            "received": {
+              "host": "127.0.0.1:<STUB>",
+              "origin": "http://[::1]:<A6>",
+              "referer": "http://[::1]:<A6>/api/page?tag=a-page",
+              "sec-fetch-site": "same-origin",
+              "sec-fetch-mode": "cors",
+              "sec-fetch-dest": "empty",
+              "content-type": "text/plain;charset=UTF-8",
+              "cookie": "probe_scoped=<scoped>; __Host-probe_at=<at>; __Host-probe_rt=<rt>; probe_plain=<plain>",
+              "forwarded": [
+                "x-forwarded-host: [::1]:<A6>"
+              ]
+            },
+            "browserCookies": {
+              "sent": [
+                "__Host-probe_at",
+                "__Host-probe_rt",
+                "probe_plain",
+                "probe_scoped"
+              ],
+              "withheld": []
+            }
+          },
+          "postJson": {
+            "fetch": "응답 200 type=basic",
+            "reached": [
+              "POST"
+            ],
+            "received": {
+              "host": "127.0.0.1:<STUB>",
+              "origin": "http://[::1]:<A6>",
+              "referer": "http://[::1]:<A6>/api/page?tag=a-page",
+              "sec-fetch-site": "same-origin",
+              "sec-fetch-mode": "cors",
+              "sec-fetch-dest": "empty",
+              "content-type": "application/json",
+              "cookie": "probe_scoped=<scoped>; __Host-probe_at=<at>; __Host-probe_rt=<rt>; probe_plain=<plain>",
+              "forwarded": [
+                "x-forwarded-host: [::1]:<A6>"
+              ]
+            },
+            "browserCookies": {
+              "sent": [
+                "__Host-probe_at",
+                "__Host-probe_rt",
+                "probe_plain",
+                "probe_scoped"
+              ],
+              "withheld": []
+            }
+          },
+          "otherPath": {
+            "fetch": "응답 200 type=basic",
+            "reached": [
+              "GET"
+            ],
+            "received": {
+              "host": "127.0.0.1:<STUB>",
+              "origin": null,
+              "referer": "http://[::1]:<A6>/api/page?tag=a-page",
+              "sec-fetch-site": "same-origin",
+              "sec-fetch-mode": "cors",
+              "sec-fetch-dest": "empty",
+              "content-type": null,
+              "cookie": "__Host-probe_at=<at>; __Host-probe_rt=<rt>; probe_plain=<plain>",
+              "forwarded": [
+                "x-forwarded-host: [::1]:<A6>"
+              ]
+            },
+            "browserCookies": {
+              "sent": [
+                "__Host-probe_at",
+                "__Host-probe_rt",
+                "probe_plain"
+              ],
+              "withheld": [
+                "probe_scoped: NotOnPath"
+              ]
+            }
+          },
+          "navigation": {
+            "reached": [
+              "GET"
+            ],
+            "received": {
+              "host": "127.0.0.1:<STUB>",
+              "origin": null,
+              "referer": null,
+              "sec-fetch-site": "none",
+              "sec-fetch-mode": "navigate",
+              "sec-fetch-dest": "document",
+              "content-type": null,
+              "cookie": "probe_scoped=<scoped>; __Host-probe_at=<at>; __Host-probe_rt=<rt>; probe_plain=<plain>",
+              "forwarded": [
+                "x-forwarded-host: [::1]:<A6>"
+              ]
+            },
+            "browserCookies": {
+              "sent": [
+                "__Host-probe_at",
+                "__Host-probe_rt",
+                "probe_plain",
+                "probe_scoped"
+              ],
+              "withheld": []
+            }
+          }
+        },
+        "toVisitor": {
+          "navigation": {
+            "reached": [
+              "GET"
+            ],
+            "received": {
+              "host": "[::1]:<B6>",
+              "origin": null,
+              "referer": null,
+              "sec-fetch-site": "none",
+              "sec-fetch-mode": "navigate",
+              "sec-fetch-dest": "document",
+              "content-type": null,
+              "cookie": "__Host-probe_at=<at>; __Host-probe_rt=<rt>; probe_plain=<plain>",
+              "forwarded": []
+            },
+            "browserCookies": {
+              "sent": [
+                "__Host-probe_at",
+                "__Host-probe_rt",
+                "probe_plain"
+              ],
+              "withheld": [
+                "probe_scoped: NotOnPath"
+              ]
+            }
+          },
+          "fetch": {
+            "fetch": "응답 200 type=basic",
+            "reached": [
+              "GET"
+            ],
+            "received": {
+              "host": "[::1]:<B6>",
+              "origin": null,
+              "referer": "http://[::1]:<B6>/?tag=b-nav",
+              "sec-fetch-site": "same-origin",
+              "sec-fetch-mode": "cors",
+              "sec-fetch-dest": "empty",
+              "content-type": null,
+              "cookie": "__Host-probe_at=<at>; __Host-probe_rt=<rt>; probe_plain=<plain>",
+              "forwarded": []
+            },
+            "browserCookies": {
+              "sent": [
+                "__Host-probe_at",
+                "__Host-probe_rt",
+                "probe_plain"
+              ],
+              "withheld": [
+                "probe_scoped: NotOnPath"
+              ]
+            }
+          },
+          "fetchUnderApiEcho": {
+            "fetch": "응답 200 type=basic",
+            "reached": [
+              "GET"
+            ],
+            "received": {
+              "host": "[::1]:<B6>",
+              "origin": null,
+              "referer": "http://[::1]:<B6>/?tag=b-nav",
+              "sec-fetch-site": "same-origin",
+              "sec-fetch-mode": "cors",
+              "sec-fetch-dest": "empty",
+              "content-type": null,
+              "cookie": "probe_scoped=<scoped>; __Host-probe_at=<at>; __Host-probe_rt=<rt>; probe_plain=<plain>",
+              "forwarded": []
+            },
+            "browserCookies": {
+              "sent": [
+                "__Host-probe_at",
+                "__Host-probe_rt",
+                "probe_plain",
+                "probe_scoped"
+              ],
+              "withheld": []
+            }
+          },
+          "documentCookie": ""
+        },
+        "crossPort": {
+          "get": {
+            "fetch": "거부 TypeError: Failed to fetch",
+            "reached": [
+              "GET"
+            ],
+            "received": {
+              "host": "127.0.0.1:<STUB>",
+              "origin": "http://[::1]:<B6>",
+              "referer": "http://[::1]:<B6>/",
+              "sec-fetch-site": "same-site",
+              "sec-fetch-mode": "cors",
+              "sec-fetch-dest": "empty",
+              "content-type": null,
+              "cookie": "probe_scoped=<scoped>; __Host-probe_at=<at>; __Host-probe_rt=<rt>; probe_plain=<plain>",
+              "forwarded": [
+                "x-forwarded-host: [::1]:<A6>"
+              ]
+            },
+            "browserCookies": {
+              "sent": [
+                "__Host-probe_at",
+                "__Host-probe_rt",
+                "probe_plain",
+                "probe_scoped"
+              ],
+              "withheld": []
+            }
+          },
+          "postSimple": {
+            "fetch": "거부 TypeError: Failed to fetch",
+            "reached": [
+              "POST"
+            ],
+            "received": {
+              "host": "127.0.0.1:<STUB>",
+              "origin": "http://[::1]:<B6>",
+              "referer": "http://[::1]:<B6>/",
+              "sec-fetch-site": "same-site",
+              "sec-fetch-mode": "cors",
+              "sec-fetch-dest": "empty",
+              "content-type": "text/plain;charset=UTF-8",
+              "cookie": "probe_scoped=<scoped>; __Host-probe_at=<at>; __Host-probe_rt=<rt>; probe_plain=<plain>",
+              "forwarded": [
+                "x-forwarded-host: [::1]:<A6>"
+              ]
+            },
+            "browserCookies": {
+              "sent": [
+                "__Host-probe_at",
+                "__Host-probe_rt",
+                "probe_plain",
+                "probe_scoped"
+              ],
+              "withheld": []
+            }
+          },
+          "postNoCors": {
+            "fetch": "응답 0 type=opaque",
+            "reached": [
+              "POST"
+            ],
+            "received": {
+              "host": "127.0.0.1:<STUB>",
+              "origin": "http://[::1]:<B6>",
+              "referer": "http://[::1]:<B6>/",
+              "sec-fetch-site": "same-site",
+              "sec-fetch-mode": "no-cors",
+              "sec-fetch-dest": "empty",
+              "content-type": "text/plain;charset=UTF-8",
+              "cookie": "probe_scoped=<scoped>; __Host-probe_at=<at>; __Host-probe_rt=<rt>; probe_plain=<plain>",
+              "forwarded": [
+                "x-forwarded-host: [::1]:<A6>"
+              ]
+            },
+            "browserCookies": {
+              "sent": [
+                "__Host-probe_at",
+                "__Host-probe_rt",
+                "probe_plain",
+                "probe_scoped"
+              ],
+              "withheld": []
+            }
+          },
+          "postJson": {
+            "fetch": "거부 TypeError: Failed to fetch",
+            "reached": [
+              "OPTIONS"
+            ],
+            "received": null,
+            "browserCookies": null
+          },
+          "formPost": {
+            "reached": [
+              "POST"
+            ],
+            "received": {
+              "host": "127.0.0.1:<STUB>",
+              "origin": "http://[::1]:<B6>",
+              "referer": "http://[::1]:<B6>/",
+              "sec-fetch-site": "same-site",
+              "sec-fetch-mode": "navigate",
+              "sec-fetch-dest": "document",
+              "content-type": "application/x-www-form-urlencoded",
+              "cookie": "probe_scoped=<scoped>; __Host-probe_at=<at>; __Host-probe_rt=<rt>; probe_plain=<plain>",
+              "forwarded": [
+                "x-forwarded-host: [::1]:<A6>"
+              ]
+            },
+            "browserCookies": {
+              "sent": [
+                "__Host-probe_at",
+                "__Host-probe_rt",
+                "probe_plain",
+                "probe_scoped"
+              ],
+              "withheld": []
+            }
+          },
+          "linkGet": {
+            "reached": [
+              "GET"
+            ],
+            "received": {
+              "host": "127.0.0.1:<STUB>",
+              "origin": null,
+              "referer": "http://[::1]:<B6>/",
+              "sec-fetch-site": "same-site",
+              "sec-fetch-mode": "navigate",
+              "sec-fetch-dest": "document",
+              "content-type": null,
+              "cookie": "probe_scoped=<scoped>; __Host-probe_at=<at>; __Host-probe_rt=<rt>; probe_plain=<plain>",
+              "forwarded": [
+                "x-forwarded-host: [::1]:<A6>"
+              ]
+            },
+            "browserCookies": {
+              "sent": [
+                "__Host-probe_at",
+                "__Host-probe_rt",
+                "probe_plain",
+                "probe_scoped"
+              ],
+              "withheld": []
+            }
+          }
+        },
+        "crossSite": {
+          "get": {
+            "fetch": "거부 TypeError: Failed to fetch",
+            "reached": [
+              "GET"
+            ],
+            "received": {
+              "host": "127.0.0.1:<STUB>",
+              "origin": "http://127.0.0.1:<B>",
+              "referer": "http://127.0.0.1:<B>/",
+              "sec-fetch-site": "cross-site",
+              "sec-fetch-mode": "cors",
+              "sec-fetch-dest": "empty",
+              "content-type": null,
+              "cookie": null,
+              "forwarded": [
+                "x-forwarded-host: [::1]:<A6>"
+              ]
+            },
+            "browserCookies": {
+              "sent": [],
+              "withheld": [
+                "__Host-probe_at: SchemefulSameSiteStrict",
+                "__Host-probe_rt: SchemefulSameSiteStrict",
+                "probe_plain: SchemefulSameSiteStrict",
+                "probe_scoped: SchemefulSameSiteStrict"
+              ]
+            }
+          },
+          "postSimple": {
+            "fetch": "거부 TypeError: Failed to fetch",
+            "reached": [
+              "POST"
+            ],
+            "received": {
+              "host": "127.0.0.1:<STUB>",
+              "origin": "http://127.0.0.1:<B>",
+              "referer": "http://127.0.0.1:<B>/",
+              "sec-fetch-site": "cross-site",
+              "sec-fetch-mode": "cors",
+              "sec-fetch-dest": "empty",
+              "content-type": "text/plain;charset=UTF-8",
+              "cookie": null,
+              "forwarded": [
+                "x-forwarded-host: [::1]:<A6>"
+              ]
+            },
+            "browserCookies": {
+              "sent": [],
+              "withheld": [
+                "__Host-probe_at: SchemefulSameSiteStrict",
+                "__Host-probe_rt: SchemefulSameSiteStrict",
+                "probe_plain: SchemefulSameSiteStrict",
+                "probe_scoped: SchemefulSameSiteStrict"
+              ]
+            }
+          },
+          "postNoCors": {
+            "fetch": "응답 0 type=opaque",
+            "reached": [
+              "POST"
+            ],
+            "received": {
+              "host": "127.0.0.1:<STUB>",
+              "origin": "http://127.0.0.1:<B>",
+              "referer": "http://127.0.0.1:<B>/",
+              "sec-fetch-site": "cross-site",
+              "sec-fetch-mode": "no-cors",
+              "sec-fetch-dest": "empty",
+              "content-type": "text/plain;charset=UTF-8",
+              "cookie": null,
+              "forwarded": [
+                "x-forwarded-host: [::1]:<A6>"
+              ]
+            },
+            "browserCookies": {
+              "sent": [],
+              "withheld": [
+                "__Host-probe_at: SchemefulSameSiteStrict",
+                "__Host-probe_rt: SchemefulSameSiteStrict",
+                "probe_plain: SchemefulSameSiteStrict",
+                "probe_scoped: SchemefulSameSiteStrict"
+              ]
+            }
+          },
+          "postJson": {
+            "fetch": "거부 TypeError: Failed to fetch",
+            "reached": [
+              "OPTIONS"
+            ],
+            "received": null,
+            "browserCookies": null
+          },
+          "formPost": {
+            "reached": [
+              "POST"
+            ],
+            "received": {
+              "host": "127.0.0.1:<STUB>",
+              "origin": "http://127.0.0.1:<B>",
+              "referer": "http://127.0.0.1:<B>/",
+              "sec-fetch-site": "cross-site",
+              "sec-fetch-mode": "navigate",
+              "sec-fetch-dest": "document",
+              "content-type": "application/x-www-form-urlencoded",
+              "cookie": null,
+              "forwarded": [
+                "x-forwarded-host: [::1]:<A6>"
+              ]
+            },
+            "browserCookies": {
+              "sent": [],
+              "withheld": [
+                "__Host-probe_at: SchemefulSameSiteStrict",
+                "__Host-probe_rt: SchemefulSameSiteStrict",
+                "probe_plain: SchemefulSameSiteStrict",
+                "probe_scoped: SchemefulSameSiteStrict"
+              ]
+            }
+          },
+          "linkGet": {
+            "reached": [
+              "GET"
+            ],
+            "received": {
+              "host": "127.0.0.1:<STUB>",
+              "origin": null,
+              "referer": "http://127.0.0.1:<B>/",
+              "sec-fetch-site": "cross-site",
+              "sec-fetch-mode": "navigate",
+              "sec-fetch-dest": "document",
+              "content-type": null,
+              "cookie": null,
+              "forwarded": [
+                "x-forwarded-host: [::1]:<A6>"
+              ]
+            },
+            "browserCookies": {
+              "sent": [],
+              "withheld": [
+                "__Host-probe_at: SchemefulSameSiteStrict",
+                "__Host-probe_rt: SchemefulSameSiteStrict",
+                "probe_plain: SchemefulSameSiteStrict",
+                "probe_scoped: SchemefulSameSiteStrict"
+              ]
+            }
+          }
+        },
+        "overwrite": {
+          "ow-host-same-key": {
+            "wrote": "__Host-probe_at=EVIL1; Secure; Path=/",
+            "scriptSees": "",
+            "jarBefore": [
+              "__Host-probe_at=<at>; domain=[::1]; path=/; httpOnly=true; secure=true; sameSite=Strict; session"
+            ],
+            "jarAfter": [
+              "__Host-probe_at=<at>; domain=[::1]; path=/; httpOnly=true; secure=true; sameSite=Strict; session"
+            ],
+            "cookieAtBackend": "probe_scoped=<scoped>; __Host-probe_at=<at>; __Host-probe_rt=<rt>; probe_plain=<plain>"
+          },
+          "ow-plain-same-key": {
+            "wrote": "probe_plain=EVIL2; Secure; Path=/",
+            "scriptSees": "",
+            "jarBefore": [
+              "probe_plain=<plain>; domain=[::1]; path=/; httpOnly=true; secure=true; sameSite=Strict; session"
+            ],
+            "jarAfter": [
+              "probe_plain=<plain>; domain=[::1]; path=/; httpOnly=true; secure=true; sameSite=Strict; session"
+            ],
+            "cookieAtBackend": "probe_scoped=<scoped>; __Host-probe_at=<at>; __Host-probe_rt=<rt>; probe_plain=<plain>"
+          },
+          "ow-plain-other-path-secure": {
+            "wrote": "probe_plain=EVIL3; Secure; Path=/api",
+            "scriptSees": "",
+            "jarBefore": [
+              "probe_plain=<plain>; domain=[::1]; path=/; httpOnly=true; secure=true; sameSite=Strict; session"
+            ],
+            "jarAfter": [
+              "probe_plain=<plain>; domain=[::1]; path=/; httpOnly=true; secure=true; sameSite=Strict; session",
+              "probe_plain=EVIL3; domain=[::1]; path=/api; httpOnly=false; secure=true; sameSite=Lax; session"
+            ],
+            "cookieAtBackend": "probe_scoped=<scoped>; probe_plain=EVIL3; __Host-probe_at=<at>; __Host-probe_rt=<rt>; probe_plain=<plain>"
+          },
+          "ow-plain-other-path": {
+            "wrote": "probe_plain=EVIL4; Path=/api",
+            "scriptSees": "",
+            "jarBefore": [
+              "probe_plain=<plain>; domain=[::1]; path=/; httpOnly=true; secure=true; sameSite=Strict; session"
+            ],
+            "jarAfter": [
+              "probe_plain=<plain>; domain=[::1]; path=/; httpOnly=true; secure=true; sameSite=Strict; session",
+              "probe_plain=EVIL4; domain=[::1]; path=/api; httpOnly=false; secure=false; sameSite=Lax; session"
+            ],
+            "cookieAtBackend": "probe_scoped=<scoped>; probe_plain=EVIL4; __Host-probe_at=<at>; __Host-probe_rt=<rt>; probe_plain=<plain>"
+          },
+          "ow-host-other-path": {
+            "wrote": "__Host-probe_at=EVIL5; Secure; Path=/api",
+            "scriptSees": "",
+            "jarBefore": [
+              "__Host-probe_at=<at>; domain=[::1]; path=/; httpOnly=true; secure=true; sameSite=Strict; session"
+            ],
+            "jarAfter": [
+              "__Host-probe_at=<at>; domain=[::1]; path=/; httpOnly=true; secure=true; sameSite=Strict; session"
+            ],
+            "cookieAtBackend": "probe_scoped=<scoped>; __Host-probe_at=<at>; __Host-probe_rt=<rt>; probe_plain=<plain>"
+          },
+          "ow-host-new-name": {
+            "wrote": "__Host-probe_new=EVIL6; Secure; Path=/",
+            "scriptSees": "__Host-probe_new=EVIL6",
+            "jarBefore": [],
+            "jarAfter": [
+              "__Host-probe_new=EVIL6; domain=[::1]; path=/; httpOnly=false; secure=true; sameSite=Lax; session"
+            ],
+            "cookieAtBackend": "probe_scoped=<scoped>; __Host-probe_at=<at>; __Host-probe_rt=<rt>; probe_plain=<plain>; __Host-probe_new=EVIL6"
+          },
+          "ow-plain-new-name": {
+            "wrote": "probe_new=EVIL7; Path=/",
+            "scriptSees": "probe_new=EVIL7",
+            "jarBefore": [],
+            "jarAfter": [
+              "probe_new=EVIL7; domain=[::1]; path=/; httpOnly=false; secure=false; sameSite=Lax; session"
+            ],
+            "cookieAtBackend": "probe_scoped=<scoped>; __Host-probe_at=<at>; __Host-probe_rt=<rt>; probe_plain=<plain>; probe_new=EVIL7"
+          },
+          "ow-host-same-key-not-httponly": {
+            "wrote": "__Host-probe_open=EVIL8; Secure; Path=/",
+            "scriptSees": "__Host-probe_open=EVIL8",
+            "jarBefore": [
+              "__Host-probe_open=<open>; domain=[::1]; path=/; httpOnly=false; secure=true; sameSite=Strict; session"
+            ],
+            "jarAfter": [
+              "__Host-probe_open=EVIL8; domain=[::1]; path=/; httpOnly=false; secure=true; sameSite=Lax; session"
+            ],
+            "cookieAtBackend": "probe_scoped=<scoped>; __Host-probe_at=<at>; __Host-probe_rt=<rt>; probe_plain=<plain>; __Host-probe_open=EVIL8"
+          }
+        },
+        "visitorServerSetCookie": {
+          "fetch": "응답 200 type=basic",
+          "rejected": [],
+          "jarAfter": [
+            "__Host-probe_at=EVILHTTP; domain=[::1]; path=/; httpOnly=true; secure=true; sameSite=Strict; session",
+            "probe_plain=EVILHTTP; domain=[::1]; path=/; httpOnly=true; secure=true; sameSite=Strict; session"
+          ],
+          "cookieAtBackend": "probe_scoped=<scoped>; __Host-probe_rt=<rt>; __Host-probe_at=EVILHTTP; probe_plain=EVILHTTP"
+        },
+        "clearOn401": {
+          "fetch": "응답 401 type=basic",
+          "linesAtBrowser": [
+            "__Host-probe_at=; Max-Age=0; HttpOnly; Secure; SameSite=Strict; Path=/",
+            "probe_plain=; Max-Age=0; HttpOnly; Secure; SameSite=Strict; Path=/"
+          ],
+          "jarBefore": [
+            "__Host-probe_at=<at>; domain=[::1]; path=/; httpOnly=true; secure=true; sameSite=Strict; session",
+            "__Host-probe_rt=<rt>; domain=[::1]; path=/; httpOnly=true; secure=true; sameSite=Strict; expires",
+            "probe_plain=<plain>; domain=[::1]; path=/; httpOnly=true; secure=true; sameSite=Strict; session"
+          ],
+          "jarAfter": [
+            "__Host-probe_rt=<rt>; domain=[::1]; path=/; httpOnly=true; secure=true; sameSite=Strict; expires"
+          ]
+        },
+        "plantFirst": {
+          "jarAfterPlant": [
+            "__Host-probe_at=PLANTED; domain=[::1]; path=/; httpOnly=false; secure=true; sameSite=Lax; session"
+          ],
+          "cookieAtBackendBeforeLogin": "__Host-probe_at=PLANTED",
+          "jarAfterAdminSet": [
+            "__Host-probe_at=<at>; domain=[::1]; path=/; httpOnly=true; secure=true; sameSite=Strict; session"
+          ],
+          "cookieAtBackendAfterLogin": "probe_scoped=<scoped>; __Host-probe_at=<at>; __Host-probe_rt=<rt>; probe_plain=<plain>"
+        }
+      },
+      "http://[::1] 시작 래퍼가 직접 묶음": {
+        "setCookie": {
+          "fetch": [
+            "응답 200 type=basic",
+            "응답 200 type=basic"
+          ],
+          "linesAtBrowser": [
+            "__Host-probe_at=<at>; HttpOnly; Secure; SameSite=Strict; Path=/",
+            "__Host-probe_rt=<rt>; Max-Age=1209600; HttpOnly; Secure; SameSite=Strict; Path=/",
+            "probe_plain=<plain>; HttpOnly; Secure; SameSite=Strict; Path=/",
+            "probe_scoped=<scoped>; HttpOnly; Secure; SameSite=Strict; Path=/api/echo"
+          ],
+          "controlLinesAtBrowser": [
+            "__Host-probe_badpath=<badpath>; HttpOnly; Secure; SameSite=Strict; Path=/api",
+            "__Host-probe_nosecure=<nosecure>; HttpOnly; SameSite=Strict; Path=/"
+          ],
+          "rejected": [
+            "__Host-probe_badpath: InvalidPrefix",
+            "__Host-probe_nosecure: InvalidPrefix"
+          ],
+          "jar": [
+            "__Host-probe_at=<at>; domain=[::1]; path=/; httpOnly=true; secure=true; sameSite=Strict; session",
+            "__Host-probe_rt=<rt>; domain=[::1]; path=/; httpOnly=true; secure=true; sameSite=Strict; expires",
+            "probe_plain=<plain>; domain=[::1]; path=/; httpOnly=true; secure=true; sameSite=Strict; session",
+            "probe_scoped=<scoped>; domain=[::1]; path=/api/echo; httpOnly=true; secure=true; sameSite=Strict; session"
+          ]
+        },
+        "headerNamesAtBackend": [
+          "accept",
+          "accept-encoding",
+          "connection",
+          "cookie",
+          "host",
+          "referer",
+          "sec-ch-ua",
+          "sec-ch-ua-mobile",
+          "sec-ch-ua-platform",
+          "sec-fetch-dest",
+          "sec-fetch-mode",
+          "sec-fetch-site",
+          "user-agent",
+          "x-forwarded-host"
+        ],
+        "sameOrigin": {
+          "get": {
+            "fetch": "응답 200 type=basic",
+            "reached": [
+              "GET"
+            ],
+            "received": {
+              "host": "127.0.0.1:<STUB>",
+              "origin": null,
+              "referer": "http://[::1]:<AW6>/api/page?tag=a-page",
+              "sec-fetch-site": "same-origin",
+              "sec-fetch-mode": "cors",
+              "sec-fetch-dest": "empty",
+              "content-type": null,
+              "cookie": "probe_scoped=<scoped>; __Host-probe_at=<at>; __Host-probe_rt=<rt>; probe_plain=<plain>",
+              "forwarded": [
+                "x-forwarded-host: [::1]:<AW6>"
+              ]
+            },
+            "browserCookies": {
+              "sent": [
+                "__Host-probe_at",
+                "__Host-probe_rt",
+                "probe_plain",
+                "probe_scoped"
+              ],
+              "withheld": []
+            }
+          }
         }
       }
     }

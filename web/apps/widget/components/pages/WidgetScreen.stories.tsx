@@ -20,6 +20,8 @@ const meta = {
     heading: "주문 도우미",
     intro: "주문, 배송, 환불을 물어볼 수 있습니다.",
     misconfigured: false,
+    settings: "ready",
+    onRetrySettings: fn(),
     exchanges: [],
     restarted: false,
     wait: null,
@@ -79,6 +81,35 @@ export const WithoutIntro: Story = {
 /** 설정이 잘못된 첫 화면. 대화 자리에 위험 알림이 서고 입력 자리가 막힌다. */
 export const Misconfigured: Story = {
   args: { heading: "", intro: null, misconfigured: true },
+};
+
+/**
+ * 열릴 때 값 파일을 받는 동안의 화면. 위쪽 띠와 빈 대화 자리만 서고 입력창과 보내기가 막힌다. 첫 화면의 안내도 값을 받은 뒤에
+ * 선다(widget-runtime-values 명세 "받는 동안").
+ */
+export const ReceivingSettings: Story = {
+  args: { settings: "receiving", sendBlocked: true, newConversationDisabled: true },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(canvas.getByRole("textbox", { name: "질문" })).toBeDisabled();
+    await expect(canvas.getByRole("button", { name: "보내기" })).toBeDisabled();
+    await expect(canvas.queryByText("주문, 배송, 환불을 물어볼 수 있습니다.")).toBeNull();
+  },
+};
+
+/**
+ * 값 파일을 받아 오지 못한 화면. 다시 받으면 풀릴 수 있는 실패라 위험 알림 아래 "다시 시도" 단추가 서고, 입력창은 막힌다.
+ * 값 파일이 없는 404 는 아래 `Misconfigured` 와 같은 알림이라 단추가 없다.
+ */
+export const SettingsFailed: Story = {
+  args: { settings: "failed", sendBlocked: true, newConversationDisabled: true },
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement);
+    await expect(canvas.getByText("위젯 설정을 받아 오지 못했습니다.")).toBeVisible();
+    await expect(canvas.getByRole("textbox", { name: "질문" })).toBeDisabled();
+    canvas.getByRole("button", { name: "다시 시도" }).click();
+    await expect(args.onRetrySettings).toHaveBeenCalledOnce();
+  },
 };
 
 /**

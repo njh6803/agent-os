@@ -4,11 +4,15 @@ export type { components, paths } from "./generated/openapi";
 export {
   createAdminClient,
   createChannelClient,
+  createOperatorClient,
   createWidgetClient,
   type AdminClient,
   type AdminPaths,
   type ChannelClient,
   type ChannelPaths,
+  type OperatorClient,
+  type OperatorMiddleware,
+  type OperatorPaths,
   type WidgetClient,
   type WidgetPaths,
 } from "./clients";

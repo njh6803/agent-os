@@ -137,19 +137,19 @@ const SOURCES: Readonly<Record<string, string>> = {
   "apps/admin/components/organisms/Query.ts":
     'import { 실행_훅 } from "../../hooks/queries/runs";\n\nexport const 훅 = 실행_훅;\n',
   "apps/admin/components/organisms/Store.ts":
-    'import { 토큰 } from "../../stores/tokens";\n\nexport const 받은_토큰 = 토큰;\n',
+    'import { 테마 } from "../../stores/theme";\n\nexport const 받은_테마 = 테마;\n',
   "apps/admin/components/organisms/InlineType.ts":
-    'import { type 알림 } from "../../stores/tokens";\n\nexport type 받은_알림 = 알림;\n',
+    'import { type 알림 } from "../../stores/theme";\n\nexport type 받은_알림 = 알림;\n',
   "apps/admin/components/organisms/TypeOnly.ts":
-    'import type { 알림 } from "../../stores/tokens";\n\nexport type 받은_알림 = 알림;\n',
+    'import type { 알림 } from "../../stores/theme";\n\nexport type 받은_알림 = 알림;\n',
   "apps/admin/components/templates/Query.ts":
     'import { 실행_훅 } from "../../hooks/queries/runs";\n\nexport const 훅 = 실행_훅;\n',
   "apps/admin/components/templates/Runs.ts":
     'import { 실행_목록 } from "../../api/runs";\n\nexport const 실행들 = 실행_목록;\n',
   "apps/admin/components/molecules/Store.ts":
-    'import { 토큰 } from "../../stores/tokens";\n\nexport const 받은_토큰 = 토큰;\n',
+    'import { 테마 } from "../../stores/theme";\n\nexport const 받은_테마 = 테마;\n',
   "apps/admin/components/pages/Connected.ts":
-    'import { 실행_훅 } from "../../hooks/queries/runs";\nimport { 토큰 } from "../../stores/tokens";\n\nexport const 연결 = [실행_훅, 토큰];\n',
+    'import { 실행_훅 } from "../../hooks/queries/runs";\nimport { 테마 } from "../../stores/theme";\n\nexport const 연결 = [실행_훅, 테마];\n',
   "apps/admin/components/organisms/DeepType.ts":
     'import { 실행_종류 } from "../../types/run/kinds";\n\nexport const 깊이 = 실행_종류;\n',
   "apps/admin/components/organisms/Runs.ts":
@@ -169,8 +169,8 @@ const SOURCES: Readonly<Record<string, string>> = {
   "apps/admin/api/runs/listRuns.ts": "export const 실행_목록 = 1;\n",
   "apps/admin/hooks/queries/runs/index.ts": 'export { 실행_훅 } from "./useRuns";\n',
   "apps/admin/hooks/queries/runs/useRuns.ts": "export const 실행_훅 = 1;\n",
-  "apps/admin/stores/tokens.ts":
-    "export const 토큰 = 1;\n\nexport interface 알림 {\n  readonly 글: string;\n}\n",
+  "apps/admin/stores/theme.ts":
+    "export const 테마 = 1;\n\nexport interface 알림 {\n  readonly 글: string;\n}\n",
   "apps/admin/types/run/index.ts": 'export { 실행_종류 } from "./kinds";\n',
   "apps/admin/types/run/kinds.ts": 'export const 실행_종류 = ["완료", "실패"] as const;\n',
   "apps/admin/app/page.ts":
@@ -232,6 +232,11 @@ const SOURCES: Readonly<Record<string, string>> = {
     'export async function 부른다(): Promise<Response> {\n  return fetch("/portal/sites/demo/token", { method: "POST" });\n}\n',
   "apps/portal/server/fetch.ts":
     'export async function 부른다(): Promise<Response> {\n  return fetch("/portal/sites/demo/token", { method: "POST" });\n}\n',
+  // 위젯이 열릴 때 값 파일을 받는 파일 하나도 전역 fetch 를 푼다. 같은 앱의 다른 파일은 그대로 막힌다.
+  "apps/widget/lib/runtime.ts":
+    'export async function 받는다(): Promise<Response> {\n  return fetch("/widget/runtime.json", { credentials: "omit" });\n}\n',
+  "apps/widget/lib/fetch.ts":
+    'export async function 부른다(): Promise<Response> {\n  return fetch("/widget/runtime.json");\n}\n',
   "packages/api-client/src/client.ts":
     'export function 부른다(): Promise<Response> {\n  return fetch("/api/runs");\n}\n',
   "packages/api-client/src/global-fetch.ts":
@@ -447,7 +452,7 @@ const RED: readonly RedCase[] = [
     path: "apps/admin/components/molecules/Store.ts",
     rule: BOUNDARIES,
   },
-  // 서버 데이터와 토큰을 읽는 것은 pages 다(ADR 0021 의 2026-10-27 이력). organisms 와 templates 는 props 로 받는다.
+  // 서버 데이터와 로그인한 계정을 읽는 것은 pages 다(ADR 0021 의 2026-10-27 이력). organisms 와 templates 는 props 로 받는다.
   {
     name: "organisms 가 생성 클라이언트 패키지를 import",
     path: "apps/admin/components/organisms/Api.ts",
@@ -498,6 +503,11 @@ const RED: readonly RedCase[] = [
   {
     name: "위젯 미리보기 페이지 앱의 페이지 스크립트가 아닌 파일의 전역 fetch",
     path: "apps/portal/server/fetch.ts",
+    rule: "no-restricted-globals",
+  },
+  {
+    name: "위젯의 값 파일 받기 파일이 아닌 파일의 전역 fetch",
+    path: "apps/widget/lib/fetch.ts",
     rule: "no-restricted-globals",
   },
   {
@@ -613,6 +623,10 @@ const GREEN: readonly { readonly name: string; readonly path: string }[] = [
   {
     name: "위젯 미리보기 페이지 앱의 페이지 스크립트 파일의 전역 fetch",
     path: "apps/portal/browser/portal.ts",
+  },
+  {
+    name: "위젯의 값 파일 받기 파일의 전역 fetch",
+    path: "apps/widget/lib/runtime.ts",
   },
 ];
 
@@ -803,6 +817,23 @@ describe("위젯 미리보기 페이지의 페이지 스크립트 자리", () =>
   test("그 파일에서 window 로 부른 EventSource 도 빨갛다", async () => {
     const path = join(fixture, "apps/portal/browser/portal.ts");
     const source = 'export const 연결 = new window.EventSource("/portal/events");\n';
+
+    expect(await ruleIdsAt(path, source)).toContain("no-restricted-properties");
+  });
+});
+
+// 값 파일 받기 파일에서도 fetch 밖의 HTTP 전역은 막힌다.
+describe("위젯의 값 파일 받기 자리", () => {
+  test("그 파일에서도 XMLHttpRequest 는 빨갛다", async () => {
+    const path = join(fixture, "apps/widget/lib/runtime.ts");
+    const source = "export const 요청 = new XMLHttpRequest();\n";
+
+    expect(await ruleIdsAt(path, source)).toContain("no-restricted-globals");
+  });
+
+  test("그 파일에서 globalThis 로 부른 EventSource 도 빨갛다", async () => {
+    const path = join(fixture, "apps/widget/lib/runtime.ts");
+    const source = 'export const 연결 = new globalThis.EventSource("/widget/events");\n';
 
     expect(await ruleIdsAt(path, source)).toContain("no-restricted-properties");
   });

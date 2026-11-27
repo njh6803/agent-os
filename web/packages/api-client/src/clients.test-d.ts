@@ -10,6 +10,8 @@ import type {
   AdminPaths,
   ChannelClient,
   ChannelPaths,
+  OperatorClient,
+  OperatorPaths,
   WidgetClient,
   WidgetPaths,
 } from "./clients";
@@ -21,6 +23,7 @@ type Schemas = components["schemas"];
 declare const 관리: AdminClient;
 declare const 채널: ChannelClient;
 declare const 위젯: WidgetClient;
+declare const 운영자: OperatorClient;
 
 // 결정은 `Decision` 타입의 값으로 넘긴다. 판별 유니온 본문을 인라인 리터럴로 주면 openapi-fetch 0.17.0 의 옵션 추론이
 // 제약으로 떨어져 `parseAs: "stream"` 의 `data` 가 `unknown` 이 된다(`.scratch/web-admin/probes/immutable_readable.sh`).
@@ -74,6 +77,28 @@ export async function 관리_클라이언트로_최종_사용자_경로를_부�
     params: { path: { run_id: "r1" } },
     body: { agent: "echo", request: "그럼?" },
   });
+}
+
+export async function 운영자_클라이언트는_토큰_없이_관리와_채널과_로그인_경로를_부른다(): Promise<void> {
+  await 운영자.GET("/plugins");
+  await 운영자.GET("/auth/me");
+  await 운영자.POST("/auth/login", { body: { name: "kim", password: "pw" } });
+  await 운영자.POST("/runs", { body: { agent: "echo", request: "안녕" } });
+  await 운영자.POST("/runs/{run_id}/approval", {
+    params: { path: { run_id: "r1" } },
+    body: 결정,
+    parseAs: "stream",
+  });
+  await 운영자.POST("/runs/{run_id}/continuation", {
+    params: { path: { run_id: "r1" } },
+    body: { agent: "echo", request: "그럼?" },
+    parseAs: "stream",
+  });
+}
+
+export async function 운영자_클라이언트로_최종_사용자_경로를_부르면_컴파일이_실패한다(): Promise<void> {
+  // @ts-expect-error: 운영자 클라이언트는 최종 사용자의 시작 경로를 모른다. 계정의 쿠키가 그 경로에 실리지 않는다
+  await 운영자.POST("/end-user/runs", { body: { agent: "echo", request: "안녕" } });
 }
 
 export async function 채널_클라이언트로_관리_경로를_부르면_컴파일이_실패한다(): Promise<void> {
@@ -148,10 +173,16 @@ expectTypeOf<시작의_429["limit"]>().toEqualTypeOf<
 // 채널의 경로면 `clients.ts` 의 채널 경로 목록에, 최종 사용자의 경로면 그 목록에, 관리의 경로면 아래 목록에 더한다.
 // 고칠 자리가 컴파일러 앞에 선다.
 expectTypeOf<keyof AdminPaths>().toEqualTypeOf<
+  | "/accounts"
+  | "/accounts/{name}/active"
+  | "/accounts/{name}/link"
+  | "/accounts/{name}/unlock"
   | "/auth/login"
   | "/auth/logout"
   | "/auth/me"
+  | "/auth/password"
   | "/auth/refresh"
+  | "/auth/set-password"
   | "/auth/setup"
   | "/health"
   | "/conversations"
@@ -163,6 +194,10 @@ expectTypeOf<keyof AdminPaths>().toEqualTypeOf<
   | "/traces/{run_id}"
 >();
 expectTypeOf<keyof ChannelPaths>().toEqualTypeOf<"/runs/{run_id}/approval">();
+// 운영자 클라이언트는 최종 사용자 경로를 뺀 나머지 전부다. 계약에 운영자 경로가 늘면 이 목록이 빨개진다.
+expectTypeOf<keyof OperatorPaths>().toEqualTypeOf<
+  keyof AdminPaths | "/runs" | "/runs/{run_id}/approval" | "/runs/{run_id}/continuation"
+>();
 expectTypeOf<keyof WidgetPaths>().toEqualTypeOf<
   | "/end-user/runs"
   | "/end-user/runs/{run_id}/approval"

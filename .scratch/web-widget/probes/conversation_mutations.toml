@@ -360,23 +360,6 @@ new = '''
 
 # --- 빌드 값(lib/build.ts) -------------------------------------------------------------------------------------
 
-[[mutation]]
-name = "빌드 값을 구조 분해로 읽으면 글자 시험이 빨갛다"
-runner = "node"
-tests = ["apps/widget/lib/build.test.ts", "-t", "점 표기로 읽는다"]
-expect = "red"
-expect_output = ["to contain 'process.env.AGENT_OS_WIDGET_ORIGINS'"]
-
-[[mutation.edit]]
-file = "web/apps/widget/lib/build.ts"
-old = '''
-  const joined = process.env.AGENT_OS_WIDGET_ORIGINS ?? "";
-'''
-new = '''
-  const { AGENT_OS_WIDGET_ORIGINS } = process.env;
-  const joined = AGENT_OS_WIDGET_ORIGINS ?? "";
-'''
-
 # --- 셀프 리뷰 뒤에 더한 시험(일지 2026-10-24-09 "셀프 리뷰") ------------------------------------------------------
 
 [[mutation]]
@@ -426,10 +409,10 @@ expect_output = ['<textarea …(4)></textarea> to have property "disabled" with 
 [[mutation.edit]]
 file = "web/apps/widget/components/pages/WidgetScreen.tsx"
 old = '''
-          disabled={misconfigured || paused || restore !== "ready"}
+          disabled={misconfigured || settings !== "ready" || paused || restore !== "ready"}
 '''
 new = '''
-          disabled={misconfigured || restore !== "ready"}
+          disabled={misconfigured || settings !== "ready" || restore !== "ready"}
 '''
 
 [[mutation]]

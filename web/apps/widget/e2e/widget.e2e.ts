@@ -10,10 +10,11 @@ import { writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { HTML_OUTPUT, MARKDOWN_IMAGE_PATH, principalOf, startedRuns } from "@agent-os/e2e-stack";
 import { expect, type FrameLocator, type Page, type Request, test } from "@playwright/test";
-import { stack, traces } from "./env";
+import { SITE_REQUEST_CHARS, stack, traces } from "./env";
 import { loopback, recordRequests, send } from "./helpers";
 
-const REQUEST_CHARS = 20_000;
+// 준비가 사이트 파일에 적은 글자 수 상한(`e2e/env.ts`). 서버의 기본값(20,000)과 다르다.
+const REQUEST_CHARS = SITE_REQUEST_CHARS;
 
 function widget(page: Page): FrameLocator {
   return page.frameLocator('iframe[title="위젯"]');
@@ -267,19 +268,25 @@ test("위젯에서 보낸 요청의 실행 주체는 사이트 토큰의 발급�
   ]);
 });
 
-test("입력창의 글자 수 상한은 서버의 기본값과 같다", async ({ page }) => {
+test("입력창의 글자 수 상한은 값 파일이 담은 사이트 파일의 상한과 같다", async ({ page }) => {
   const { siteOrigin, widgetOrigin } = stack();
+  // 값 파일은 위젯이 시작할 때 사이트 파일에서 쓴다. 기본값(20,000)이 아니라 사이트 파일에 적은 상한이 그대로 나간다.
+  const values = await page.request.get(`${loopback(widgetOrigin)}/widget/runtime.json`);
+  expect(values.status()).toBe(200);
+  expect(await values.json()).toMatchObject({ requestChars: REQUEST_CHARS });
+
   await page.goto(`${siteOrigin}/?agent=echo`);
   const frame = widget(page);
   const field = frame.getByRole("textbox", { name: "질문" });
   const sendButton = frame.getByRole("button", { name: "보내기" });
+  const over = `${REQUEST_CHARS.toLocaleString("en-US")}자를 넘었습니다`;
 
   await field.fill("a".repeat(REQUEST_CHARS + 1));
-  await expect(frame.getByText("20,000자를 넘었습니다")).toBeVisible();
+  await expect(frame.getByText(over)).toBeVisible();
   await expect(sendButton).toBeDisabled();
 
   await field.fill("a".repeat(REQUEST_CHARS));
-  await expect(frame.getByText("20,000자를 넘었습니다")).toHaveCount(0);
+  await expect(frame.getByText(over)).toHaveCount(0);
   await expect(sendButton).toBeEnabled();
 
   // 서버에 직접 보낸 상한의 글자는 받고 하나 넘으면 422 다.

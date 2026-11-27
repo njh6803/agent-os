@@ -16,6 +16,7 @@ from typing import TextIO
 
 from fastapi import FastAPI
 
+from agent_os.admin.accounts import accounts_router
 from agent_os.admin.auth import auth_router
 from agent_os.admin.connection_check import AutomaticChecks, LaunchingChecks
 from agent_os.admin.http import Health, admin_router
@@ -23,6 +24,7 @@ from agent_os.channel.http.end_user import END_USER_PREFIX
 from agent_os.channel.http.router import CHANNEL_PREFIX, channel_router
 from agent_os.core.ports import Clock, ModelSource, PluginSource, ToolSource, TraceStore
 from agent_os.core.run import DEFAULT_RUN_TIMEOUT_SECONDS
+from agent_os.http.account_admin import AccountAdmin
 from agent_os.http.accounts import AccountStore
 from agent_os.http.auth import RequireToken, SharedToken, SiteSigned
 from agent_os.http.cors import CorsUnderPrefix
@@ -144,6 +146,8 @@ def create_app(
             ),
         )
     )
+    # 계정을 다루는 경로. 해시를 만들지 않아 해시 전용 스레드를 쓰는 로그인 서비스와 따로 선다
+    app.include_router(accounts_router(admin=AccountAdmin(accounts=accounts, clock=clock)))
     # 접속 확인은 포트가 아니라 포트에서 꺼낸 확인 함수만 관리에 넘긴다. `connect` 는 넘기지 않는다.
     app.include_router(
         admin_router(

@@ -13,14 +13,13 @@ import { http } from "msw";
 import { describe, expect, test } from "vitest";
 import { api, network } from "../../testing/network";
 import { renderPage } from "../../testing/render";
-import { acceptTokens, enterAdminToken } from "../../testing/token";
+import { signedIn } from "../../testing/session";
 import { HomePage } from "./HomePage";
 import { RunsPage } from "./RunsPage";
 import { SettingsPage } from "./SettingsPage";
 
 /** 테마를 남기는 저장 키. 값은 테마 키의 글자 그대로다(명세 "저장"). */
 const KEY = "agent-os-admin-theme";
-const ADMIN = "adm-3Rw8-theme-page-token";
 
 /** 문서 뿌리에 단 테마. 없으면 null 이고 기본 테마(녹청)로 그려진다. */
 function rootTheme(): string | null {
@@ -47,12 +46,11 @@ function storageChangedElsewhere(init: StorageEventInit): void {
   });
 }
 
-/** 관리 토큰을 넣어 설정 화면을 연다. */
+/** 로그인한 채로 설정 화면을 연다. */
 async function openSettings() {
-  acceptTokens();
+  signedIn();
   renderPage(<SettingsPage />);
   const user = userEvent.setup();
-  await enterAdminToken(user, ADMIN);
   await screen.findByRole("heading", { level: 1, name: "설정" });
   return user;
 }
@@ -95,17 +93,6 @@ describe("테마 카드", () => {
     expect(localStorage.getItem(KEY)).toBe("nokcheong");
     expect(chosenRadio()).toBe(themeRadio("녹청"));
   });
-
-  test("토큰을 지워도 고른 테마는 지우지 않는다", async () => {
-    const user = await openSettings();
-    await user.click(themeRadio("자초"));
-
-    await user.click(screen.getByRole("button", { name: "토큰 지우기" }));
-
-    expect(await screen.findByLabelText("관리 토큰")).toBeTruthy();
-    expect(localStorage.getItem(KEY)).toBe("jacho");
-    expect(rootTheme()).toBe("jacho");
-  });
 });
 
 describe("다른 탭에서 바꾼 테마", () => {
@@ -142,10 +129,9 @@ describe("다른 탭에서 바꾼 테마", () => {
   });
 
   test("설정이 아닌 화면에서도 다른 탭이 바꾼 테마를 html 이 따른다", async () => {
-    acceptTokens();
+    signedIn();
     network.use(http.get(api("/traces"), () => new Promise<Response>(() => undefined)));
     renderPage(<RunsPage />);
-    await enterAdminToken(userEvent.setup(), ADMIN);
     await screen.findByRole("navigation", { name: "관리 화면" });
 
     storageChangedElsewhere({ key: KEY, oldValue: null, newValue: "jacho" });

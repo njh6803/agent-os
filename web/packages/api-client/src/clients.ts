@@ -8,7 +8,7 @@
 // 것이 아닌가뿐이다. 계약에 경로가 늘면 관리 클라이언트의 타입에 새 경로가 보이고, 경로 목록을 고정한 타입
 // 테스트(`clients.test-d.ts`)가 빨개진다. 관리 화면은 최종 사용자 경로를 부르지 않고, 위젯은 그 경로만 부른다.
 
-import createClient, { type Client } from "openapi-fetch";
+import createClient, { type Client, type Middleware } from "openapi-fetch";
 import type { paths } from "./generated/openapi";
 
 /** 채널 토큰이 여는 경로. 실행을 일으키는 것, 결정을 내는 것, 끝난 실행을 이어 가는 것이다. */
@@ -30,11 +30,28 @@ export type ChannelPaths = Pick<paths, "/runs/{run_id}/approval">;
 /** 위젯 클라이언트가 아는 경로. 최종 사용자 경로 넷뿐이다. */
 export type WidgetPaths = Pick<paths, EndUserPath>;
 
+/**
+ * 운영자 클라이언트가 아는 경로. 최종 사용자 경로를 뺀 운영자 경로 전부다. 계정으로 로그인한 관리 화면이 쓴다. 자격은
+ * 쿠키라서 부르는 쪽이 토큰을 넘기지 않는다(admin-login 명세 "계약과 생성물").
+ */
+export type OperatorPaths = Omit<paths, EndUserPath>;
+
 export type AdminClient = Client<AdminPaths>;
 export type ChannelClient = Client<ChannelPaths>;
 export type WidgetClient = Client<WidgetPaths>;
+export type OperatorClient = Client<OperatorPaths>;
+/** 요청 앞뒤에 끼는 함수 묶음. 화면이 갱신 규칙을 꽂는 자리(`OperatorClient.use`)의 타입이다. */
+export type OperatorMiddleware = Middleware;
 
-/** 관리 토큰을 싣는 클라이언트. */
+/**
+ * 토큰을 받지 않는 운영자 클라이언트. 쿠키는 브라우저가 같은 출처의 중계(`/api/*`)에 스스로 싣는다. 관리 화면이 부르는
+ * 운영자 경로 전부(관리, 채널의 시작과 이어 가기와 결정, 로그인)를 안다.
+ */
+export function createOperatorClient(): OperatorClient {
+  return createClient<OperatorPaths>({ baseUrl: apiBaseUrl() });
+}
+
+/** 관리 토큰을 싣는 클라이언트. 공유 토큰을 걷는 티켓이 걷는다(admin-login 13). */
 export function createAdminClient(adminToken: string): AdminClient {
   return createClient<AdminPaths>({ baseUrl: apiBaseUrl(), headers: bearer(adminToken) });
 }
