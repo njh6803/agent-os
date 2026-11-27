@@ -3,18 +3,26 @@
 // 폭에서는 위 막대 첫 줄 오른쪽에 이름만 든 단추가 서고 메뉴가 아래로 열리며, 단계는 메뉴 맨 위에 보인다. 두 벌을 그리지
 // 않고 같은 요소의 배치만 바꾼다(AdminFrame 의 머리 주석과 같은 까닭).
 //
-// 메뉴의 항목은 "로그아웃" 하나다("내 비밀번호 바꾸기"는 티켓 12가 더한다). 로그아웃은 요청을 처리기로 받는다(organisms 는
+// 메뉴의 항목은 "내 비밀번호 바꾸기"(`/password` 로 가는 링크)와 "로그아웃"이다. 로그아웃은 요청을 처리기로 받는다(organisms 는
 // 서버 요청을 props 로 받은 처리기로만 일으킨다). 쿠키를 지우는 응답을 받지 못했으면 `failed` 가 참이고, 메뉴를 닫지 않은
-// 채 그 자리에 알린다. 성공하면 화면이 로그인 화면으로 옮겨 가므로 이 부품이 따로 할 일이 없다.
+// 채 그 자리에 알린다. 성공하면 화면이 로그인 화면으로 옮겨 가므로 이 부품이 따로 할 일이 없다. 요청이 가는 동안 로그아웃
+// 항목은 `disabled` 가 아니라 `aria-busy` 와 `aria-disabled` 다(불러오는 중이라 포커스가 남는다. `web-design.md`).
+//
+// 키보드는 메뉴 단추 패턴을 따른다(`hooks/usePopupMenu`). 눌러 열면 첫 항목에 포커스가 가고, Esc 는 닫으며 계정 단추로 돌아온다.
 import { Icon } from "@agent-os/ui";
-import { useEffect, useId, useRef, useState } from "react";
+import Link from "next/link";
+import { useId } from "react";
 import type { Me } from "../../api/session";
+import { usePopupMenu } from "../../hooks/usePopupMenu";
 
 /** 단계의 화면 이름. 계약의 값 둘에 하나씩 맞는다. */
 const TIER_LABEL = {
   system_admin: "시스템 관리자",
   admin: "관리자",
 } as const satisfies Record<Me["tier"], string>;
+
+const ITEM =
+  "flex h-control items-center gap-2 rounded-s px-3 text-left text-body hover:bg-bg-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring";
 
 interface AccountMenuProps {
   readonly name: string;
@@ -39,61 +47,48 @@ export function AccountMenu({
   onLogOut,
   initiallyOpen = false,
 }: AccountMenuProps) {
-  const [open, setOpen] = useState(initiallyOpen);
-  const root = useRef<HTMLDivElement>(null);
+  // 요청이 가는 동안에는 닫지 않는다(응답을 못 본 채 사라지지 않게).
+  const menu = usePopupMenu({ initiallyOpen, canClose: !pending });
   const menuId = useId();
-
-  useEffect(() => {
-    if (!open) {
-      return;
-    }
-    // 메뉴 밖을 누르거나 Esc 를 누르면 닫는다. 요청이 가는 동안에는 닫지 않는다(응답을 못 본 채 사라지지 않게).
-    function closeOnOutside(event: MouseEvent): void {
-      if (
-        !pending &&
-        event.target instanceof Node &&
-        root.current?.contains(event.target) !== true
-      ) {
-        setOpen(false);
-      }
-    }
-    function closeOnEscape(event: KeyboardEvent): void {
-      if (!pending && event.key === "Escape") {
-        setOpen(false);
-      }
-    }
-    document.addEventListener("mousedown", closeOnOutside);
-    document.addEventListener("keydown", closeOnEscape);
-    return () => {
-      document.removeEventListener("mousedown", closeOnOutside);
-      document.removeEventListener("keydown", closeOnEscape);
-    };
-  }, [open, pending]);
 
   return (
     <div
-      ref={root}
+      ref={menu.rootRef}
       className="relative order-2 wide:order-none wide:mt-auto wide:border-t wide:border-border wide:pt-3"
     >
-      {open ? (
+      {menu.open ? (
         // 카드(테두리와 그림자)는 이름 없는 상자다. 메뉴(`role="menu"`)는 메뉴 항목만 자식으로 가질 수 있어서 알림을 그 밖, 같은
         // 카드 안에 나란히 둔다.
         <div className="absolute top-full right-0 z-10 mt-1 flex min-w-cell-max flex-col rounded-m border border-border bg-bg-raised p-1 shadow-float wide:top-auto wide:right-0 wide:bottom-full wide:left-0 wide:mt-0 wide:mb-1">
-          <div id={menuId} role="menu" aria-label={`${name} 계정`} className="flex flex-col">
+          <div
+            ref={menu.menuRef}
+            id={menuId}
+            role="menu"
+            aria-label={`${name} 계정`}
+            className="flex flex-col"
+            onKeyDown={menu.onMenuKeyDown}
+          >
             {/* 좁은 폭의 단추에는 이름만 있어 단계를 메뉴 맨 위에 보인다. 넓은 폭은 단추에 이미 있다. */}
             <div className="flex flex-col px-3 py-2 wide:hidden">
               <span className="font-mono text-mono font-medium">{name}</span>
               <span className="text-small text-text-muted">{TIER_LABEL[tier]}</span>
             </div>
             <div role="separator" className="my-1 border-t border-border wide:hidden" />
+            <Link href="/password" role="menuitem" tabIndex={-1} className={ITEM}>
+              내 비밀번호 바꾸기
+            </Link>
             <button
               type="button"
               role="menuitem"
-              disabled={pending}
+              tabIndex={-1}
+              aria-busy={pending}
+              aria-disabled={pending}
               onClick={() => {
-                void onLogOut();
+                if (!pending) {
+                  void onLogOut();
+                }
               }}
-              className="flex h-control items-center gap-2 rounded-s px-3 text-left text-body hover:bg-bg-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring disabled:cursor-not-allowed disabled:text-text-disabled"
+              className={ITEM}
             >
               <Icon name="log-out" size="16" />
               로그아웃
@@ -107,17 +102,13 @@ export function AccountMenu({
         </div>
       ) : null}
       <button
+        ref={menu.triggerRef}
         type="button"
         aria-haspopup="menu"
-        aria-expanded={open}
-        aria-controls={open ? menuId : undefined}
-        onClick={() => {
-          // 로그아웃 요청이 가는 동안은 메뉴를 닫지 않는다. 닫으면 진행 중인 요청의 실패 알림이 보이지 않는다.
-          if (!pending) {
-            setOpen((shown) => !shown);
-          }
-        }}
-        className={`flex h-control w-full items-center gap-1 rounded-m px-2 text-left text-body hover:bg-bg-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring wide:h-auto wide:gap-2 wide:px-3 wide:py-2 ${open ? "bg-bg-active" : ""}`}
+        aria-expanded={menu.open}
+        aria-controls={menu.open ? menuId : undefined}
+        onClick={menu.toggle}
+        className={`flex h-control w-full items-center gap-1 rounded-m px-2 text-left text-body hover:bg-bg-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring wide:h-auto wide:gap-2 wide:px-3 wide:py-2 ${menu.open ? "bg-bg-active" : ""}`}
       >
         <span className="flex min-w-0 flex-1 flex-col">
           <span className="truncate font-mono text-mono font-medium">{name}</span>
