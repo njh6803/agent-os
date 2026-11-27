@@ -43,6 +43,9 @@
 
 - [ ] 위젯 컨테이너가 뜰 때 빌드한다고 적은 말을 저장소 전체에서 찾아 살아 있는 문서와 주석에서 고친다(명세 "구현 티켓이 코드와 같은 티켓에서 고치는 문서"의 이미지 티켓 몫). 찾는 말의 예는 "뜰 때 빌드", "다시 빌드", "사이트 파일로 빌드"다. 이 티켓을 쓸 때 본 자리는 `deploy/images/widget.Dockerfile`과 `deploy/standalone/compose.yaml`의 주석, `deploy/standalone/README.md`, 위의 단독 배포 e2e 주석 둘이다. `.github/workflows/ci.yml`의 `e2e-standalone` 잡 주석도 그때 다시 본다. release-image의 명세와 티켓은 끝난 기능의 기록이라 고치지 않는다
 - [ ] deploy-package의 기능 계획에 이 명세가 적어 둔 새 값(메모리, 뜨는 시간)이 이 티켓이 잰 값과 어긋나면 그 문단을 고친다
+- [ ] 값 파일 `public/runtime.json`은 앱 폴더 안 한 자리라, 같은 앱 폴더에서 사이트 파일이 다른 `start`나 `dev`를 둘 이상 띄우면 마지막에 쓴 쪽의 값이 된다(01의 PR 직전 CodeRabbit 리뷰가 낸 Minor를 보류했다. 닿는 길은 위젯 e2e와 위젯 테스트 페이지 e2e를 한 기기에서 동시에 돌릴 때뿐이고 CI는 잡이 나뉘어 닿지 않는다). 이 티켓이 이미지가 값 파일을 쓰는 자리를 정할 때 함께 정한다. 폴더당 서비스 하나가 전제라는 것을 `web/apps/widget/tools/runtime.ts` 머리 주석이나 배포 안내에 한 줄 적거나, 자리를 서비스마다 가르는 쪽으로 풀지 고른다
+- [ ] 같은 값 파일 쓰기(`tools/runtime.ts`의 `writeFileSync`)는 열면서 비우므로, 동시에 읽는 쪽이 빈 파일이나 일부만 받는 짧은 구간이 있다(01의 CodeRabbit 첫 회차 Minor를 보류했다. 받은 위젯은 `unavailable`로 들어가 "다시 시도"로 풀리므로 영향은 일시적이다). 임시 파일에 쓴 뒤 이름을 바꾸는 방식은 `public/runtime.json` 링크를 일반 파일로 바꿔 읽기 전용 루트와 쓰는 폴더 하나라는 이 티켓의 설계를 깨므로, 고치려면 "읽는 쪽이 잘린 내용을 받지 않는다"와 "쓰기가 링크가 가리키는 실제 파일에 닿는다"를 함께 지키는 방식을 이 티켓이 이미지의 자리를 정할 때 고르고, 링크 시험(`tools/runtime.test.ts`)이 계속 통과하는지 본다
+- [ ] 끝난 기능 release-image의 프로브 둘이 지금은 없는 시그니처로 `buildElement`를 부른다(`.scratch/release-image/probes/widget_build/phases.mjs:33`의 `buildElement(process.env)`, `.scratch/release-image/probes/widget_runtime/element_build.mjs:39`의 `buildElement(env, outDir)`). 01이 그 함수에서 `env` 인자를 걷었다(CodeRabbit 첫 회차 Minor를 기록 보존 때문에 보류했다). 이 티켓이 이미지와 빌드 시간을 다시 재려고 그 프로브를 다시 돌릴 때 호출을 `buildElement()`·`buildElement(outDir)`로 맞추고, 번들이 더는 사이트 파일을 읽지 않으므로 그 프로브가 재던 값이 달라지는 것을 기록에 적는다
 
 ### 마지막 티켓이면
 

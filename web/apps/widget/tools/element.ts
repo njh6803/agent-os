@@ -8,10 +8,9 @@
  * - 번들의 꼴은 즉시 실행되는 classic 스크립트 하나(IIFE)다. 다른 출처의 `<script type="module">` 은 CORS 로 받고,
  *   classic 스크립트는 청크로 나뉘지 않아 사이트가 넣을 것이 한 줄로 남는다(명세 "번들의 꼴"). 입구가 아무것도 내보내지
  *   않아 사이트 페이지의 전역 이름을 짓지 않는다.
- * - 빌드의 입력은 iframe 페이지와 같은 사이트 파일이다(`@agent-os/site-file` 의 `buildInput`). 가장 작은 요청 글자 수 상한을
- *   `process.env.AGENT_OS_WIDGET_REQUEST_CHARS` 의 자리에 글자로 박는다. lib/build.ts 가 Next 의 env 와 같은 자리를 읽기
- *   때문이다. 변수가 준 파일을 읽지 못하면 던져 빌드가 멈춘다(fail-closed, ADR 0024). 페이지 안 방식은 postMessage 를
- *   쓰지 않아 허용 출처는 싣지 않는다. 상대 경로의 `AGENT_OS_SITE_FILE` 은 시작 래퍼가 푼다.
+ * - 번들은 사이트 파일의 값을 싣지 않는다. 요청 글자 수 상한은 열릴 때 위젯 출처의 값 파일(`/widget/runtime.json`)에서
+ *   받는다(`lib/runtime.ts`, widget-runtime-values 티켓 01). 그래서 운영자가 사이트 파일을 고쳐도 번들의 내용과 무결성
+ *   해시는 바뀌지 않는다. 이 함수는 사이트 파일도 그 환경 변수도 읽지 않는다.
  * - 라이브러리 빌드는 `process.env.*` 를 바꾸지 않는다(https://vite.dev/guide/build#library-mode 의 원문, "`process.env.*`
  *   usage are not"). React 의 개발판이 실리지 않게 박는다.
  * - CSS 는 위젯의 CSS(디자인 토큰 CSS 를 들이고 위젯 소스를 덮은 것)만 `?inline` 글자로 싣는다. 글꼴 CSS 는 싣지 않는다.
@@ -24,7 +23,6 @@
  */
 
 import { join } from "node:path";
-import { buildInput, WIDGET_REQUEST_CHARS_ENV } from "@agent-os/site-file";
 import { type FontFaceSource, fontFaces } from "@agent-os/ui/fonts";
 import tailwindcss from "@tailwindcss/vite";
 import { build, type InlineConfig, type Plugin } from "vite";
@@ -33,12 +31,8 @@ const APP = join(import.meta.dirname, "..");
 export const ELEMENT_FILE = "element.js";
 const FONTS_MODULE = "virtual:agent-os-widget/fonts";
 
-/** 페이지 안 번들의 Vite 설정. `outDir` 을 주지 않으면 Next 의 `public/` 이다. 사이트 파일을 읽지 못하면 던진다. */
-export function elementBuildConfig(
-  env: Readonly<Record<string, string | undefined>>,
-  outDir: string = join(APP, "public"),
-): InlineConfig {
-  const input = buildInput(env);
+/** 페이지 안 번들의 Vite 설정. `outDir` 을 주지 않으면 Next 의 `public/` 이다. */
+export function elementBuildConfig(outDir: string = join(APP, "public")): InlineConfig {
   return {
     configFile: false,
     root: APP,
@@ -48,10 +42,6 @@ export function elementBuildConfig(
     plugins: [tailwindcss(), fontsModule(fontFaces())],
     define: {
       "process.env.NODE_ENV": JSON.stringify("production"),
-      // String(n) 은 10^21 부터 지수 꼴이라 BigInt 로 십진수 글을 짓는다(next.config.ts 와 같다).
-      [`process.env.${WIDGET_REQUEST_CHARS_ENV}`]: JSON.stringify(
-        BigInt(input.requestChars).toString(),
-      ),
     },
     build: {
       outDir,
@@ -75,10 +65,7 @@ export function elementBuildConfig(
  * 푼다. 시작 래퍼가 같은 프로세스에서 이어 부르는 `next dev` 가 production 을 받지 않게 빌드 전의 값(비었으면 비움)으로
  * 되돌린다. 이 고정이 빠지면 vitest(`NODE_ENV=test`)에서 도는 번들 시험의 `process.env` 단언이 빨개진다.
  */
-export async function buildElement(
-  env: Readonly<Record<string, string | undefined>>,
-  outDir?: string,
-): Promise<void> {
+export async function buildElement(outDir?: string): Promise<void> {
   // Next 의 타입은 NODE_ENV 를 늘 있는 값으로 적는다. 시작 래퍼가 부를 때는 비어 있을 수 있어 넓은 타입으로 받는다.
   const processEnv: Record<string, string | undefined> = process.env;
   const nodeEnv = processEnv["NODE_ENV"];
@@ -86,7 +73,7 @@ export async function buildElement(
   // 개발용 진입점이 실려 `debug` 패키지와 그 `process.env` 가 번들에 든다.
   processEnv["NODE_ENV"] = "production";
   try {
-    await build(elementBuildConfig(env, outDir));
+    await build(elementBuildConfig(outDir));
   } finally {
     if (nodeEnv === undefined) {
       delete processEnv["NODE_ENV"];

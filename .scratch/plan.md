@@ -74,7 +74,7 @@ web/                       슬라이스 3부터. pnpm 워크스페이스. 파이
 | 9 | [step-up-login](step-up-login/plan.md) | 익명으로 질문하다가 로그인한 사람만 쓰는 도구에 닿으면 로그인을 안내하고, 로그인한 뒤 같은 대화에 이어 답한다. | portal-login | todo |
 | 9 | [widget-admin-server](widget-admin-server/plan.md) | 위젯 관리 서버를 세워 사이트마다의 위젯 설정을 위젯 쪽의 PostgreSQL에 들고, 위젯이 사이트의 이름으로 그 설정을 받아 가는 주소를 낸다. | postgres-foundation | in-progress |
 | 9 | [widget-login-state](widget-login-state/plan.md) | 위젯이 로그인 상태와 고지와 다크 모드 스위치를 직접 그리고 사이트마다의 위젯 설정을 받아 오며, 주소 하나를 창으로 여는 URL 방식을 더한다. | widget-admin-server | todo |
-| 9 | [widget-runtime-values](widget-runtime-values/plan.md) | 위젯 이미지를 미리 지어 두고 컨테이너가 뜰 때 사이트 파일의 허용 출처와 요청 글자 수 상한만 받게 해, 뜰 때마다 하던 빌드를 없앤다. | release-image | todo |
+| 9 | [widget-runtime-values](widget-runtime-values/plan.md) | 위젯 이미지를 미리 지어 두고 컨테이너가 뜰 때 사이트 파일의 허용 출처와 요청 글자 수 상한만 받게 해, 뜰 때마다 하던 빌드를 없앤다. | release-image | in-progress |
 | 10 | [admin-2fa](admin-2fa/plan.md) | 관리 화면의 로그인에 2단계 인증을 더해, 비밀번호가 새도 그것만으로는 들어오지 못하게 한다. | admin-login, pilot-release | todo |
 | 10 | [admin-answer-preview](admin-answer-preview/plan.md) | 관리 화면 실행 상세의 최종 출력 칸에서 원문과 마크다운으로 그린 모양을 오가며 보게 해, 운영자가 최종 사용자에게 보인 모양을 바로 확인한다. | answer-markdown, pilot-release | todo |
 | 10 | [admin-approval](admin-approval/plan.md) | 승인 규칙이 승인할 사람을 정해, 관리 화면의 운영자가 다른 사람이 일으킨 일시정지한 실행을 승인하거나 거부한다. | admin-login, pilot-release | todo |
