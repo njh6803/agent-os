@@ -1,17 +1,14 @@
 // 위젯의 설정 파일. next dev·build·start 가 읽는 그 파일을 사이트 파일 변수마다 새로 읽어, iframe 페이지가 어디에 서고
-// 어떤 응답 헤더를 다는지, 사이트 파일에서 무엇을 빌드에 싣는지 본다(web-widget 티켓 04). 헤더가 basePath 아래의 실제
-// 경로에 붙는지는 빌드한 앱의 응답을 보는 e2e 가 판정한다. `frame-ancestors` 는 06 이, 글꼴과 페이지 안 번들 응답의
-// `Access-Control-Allow-Origin` 은 10 이 본다. 표기와 모양의 판정 하나하나는 `@agent-os/site-file` 의 시험(`web/packages/site-file/src/site-file.test.ts`)이 본다.
+// 어떤 응답 헤더를 다는지, 사이트 파일에서 무엇을 빌드에 굳히는지 본다(web-widget 티켓 04). 빌드가 굳히는 것은 허용 출처를
+// 합친 `frame-ancestors` 하나다. 요청 글자 수 상한과 허용 출처는 번들에 싣지 않고 값 파일로 받는다(widget-runtime-values
+// 티켓 01. 값 파일을 쓰는 코드는 `tools/runtime.test.ts` 가 본다). 헤더가 basePath 아래의 실제 경로에 붙는지는 빌드한 앱의
+// 응답을 보는 e2e 가 판정한다. `frame-ancestors` 는 06 이, 글꼴과 페이지 안 번들 응답의 `Access-Control-Allow-Origin` 은
+// 10 이 본다. 표기와 모양의 판정 하나하나는 `@agent-os/site-file` 의 시험(`web/packages/site-file/src/site-file.test.ts`)이 본다.
 
 import { mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import {
-  DEFAULT_REQUEST_CHARS,
-  SITE_FILE_ENV,
-  WIDGET_ORIGINS_ENV,
-  WIDGET_REQUEST_CHARS_ENV,
-} from "@agent-os/site-file";
+import { DEFAULT_REQUEST_CHARS, SITE_FILE_ENV } from "@agent-os/site-file";
 import type { NextConfig } from "next";
 import { afterEach, describe, expect, test, vi } from "vitest";
 import { expectedSiteFile, SITE_FILE_FIXTURES } from "./testing/site-file.ts";
@@ -71,29 +68,21 @@ test("iframe 페이지는 basePath /widget 아래에 선다", async () => {
   expect((await loadConfig(undefined)).basePath).toBe("/widget");
 });
 
-test("사이트 파일을 주지 않으면 어떤 사이트도 iframe 페이지를 품지 못하고 상한은 서버의 기본값이다", async () => {
+test("사이트 파일을 주지 않으면 어떤 사이트도 iframe 페이지를 품지 못한다", async () => {
   const config = await loadConfig(undefined);
 
   expect(await headersOf(config, "/:path*")).toEqual({
     "Content-Security-Policy": "frame-ancestors 'none'",
   });
-  expect(config.env).toEqual({
-    [WIDGET_ORIGINS_ENV]: "",
-    [WIDGET_REQUEST_CHARS_ENV]: "20000",
-  });
 });
 
-test("두 언어가 함께 읽는 사이트 파일의 합친 허용 출처가 frame-ancestors 에, 가장 작은 상한이 빌드에 든다", async () => {
+test("두 언어가 함께 읽는 사이트 파일의 합친 허용 출처가 frame-ancestors 에 든다", async () => {
   const expected = expectedSiteFile();
 
   const config = await loadConfig(join(SITE_FILE_FIXTURES, "sites.toml"));
 
   expect(await headersOf(config, "/:path*")).toEqual({
     "Content-Security-Policy": `frame-ancestors ${expected.allowedOrigins.join(" ")}`,
-  });
-  expect(config.env).toEqual({
-    [WIDGET_ORIGINS_ENV]: expected.allowedOrigins.join(" "),
-    [WIDGET_REQUEST_CHARS_ENV]: String(expected.requestChars),
   });
   expect(DEFAULT_REQUEST_CHARS).toBe(expected.defaultChars);
 });
@@ -104,27 +93,21 @@ test("사이트가 있어도 합친 허용 출처가 비면 어떤 사이트도 
   expect(await headersOf(config, "/:path*")).toEqual({
     "Content-Security-Policy": "frame-ancestors 'none'",
   });
-  expect(config.env).toEqual({ [WIDGET_ORIGINS_ENV]: "", [WIDGET_REQUEST_CHARS_ENV]: "20000" });
 });
 
 test("줄 끝을 CR 하나로 적은 사이트 파일도 서버처럼 읽는다", async () => {
   const config = await loadConfig(siteFile(site().replaceAll("\n", "\r")));
 
-  expect(config.env).toEqual({
-    [WIDGET_ORIGINS_ENV]: "https://shop.example",
-    [WIDGET_REQUEST_CHARS_ENV]: "20000",
+  expect(await headersOf(config, "/:path*")).toEqual({
+    "Content-Security-Policy": "frame-ancestors https://shop.example",
   });
 });
 
-test("가장 작은 상한이 아주 커도 지수 꼴이 아닌 십진수 글로 싣는다", async () => {
-  const config = await loadConfig(
-    siteFile(site({ extra: "[sites.limits]\nrequest_chars = 1000000000000000000000" })),
-  );
-
-  expect(config.env).toEqual({
-    [WIDGET_ORIGINS_ENV]: "https://shop.example",
-    [WIDGET_REQUEST_CHARS_ENV]: "1000000000000000000000",
-  });
+test("사이트 파일의 두 값(허용 출처와 요청 글자 수 상한)을 번들에 싣지 않는다", async () => {
+  // 값은 열릴 때 값 파일로 받는다. 설정이 env 로 싣지 않아야 번들의 내용이 사이트 파일과 무관하다(사용자 이야기 26).
+  for (const path of [undefined, join(SITE_FILE_FIXTURES, "sites.toml")]) {
+    expect((await loadConfig(path)).env).toBeUndefined();
+  }
 });
 
 describe("변수가 준 사이트 파일을 읽지 못하면 빌드가 실패한다", () => {
@@ -184,6 +167,13 @@ test("페이지 안 번들 응답도 어느 출처에서나 읽힌다. crossorig
   expect(await headersOf(await loadConfig(undefined), "/element.js")).toEqual({
     "Access-Control-Allow-Origin": "*",
   });
+});
+
+test("값 파일 응답도 어느 출처에서나 읽힌다. 사이트 페이지 안에서 도는 번들이 받는다", async () => {
+  const headers = await headersOf(await loadConfig(undefined), "/runtime.json");
+
+  // 캐시 머리는 달지 않는다. 값은 비밀이 아니고 위젯이 뜰 때마다 사이트 파일을 새로 읽어 쓴다.
+  expect(headers).toEqual({ "Access-Control-Allow-Origin": "*" });
 });
 
 test("API 를 넘기는 중계를 두지 않는다. 최종 사용자 경로는 nginx 가 파이썬에 바로 넘긴다", async () => {

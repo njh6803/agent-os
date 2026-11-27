@@ -5,6 +5,7 @@
 import { act, cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { expect, test, vi } from "vitest";
 import { gate, items, KEEPALIVE, frame, rejection, stream } from "../../testing/network";
+import { DEFAULT_VALUES, seedValues } from "../../testing/runtime";
 import { onTokenRequest, post, serveTokens, siteToken } from "../../testing/site";
 import {
   ask,
@@ -85,7 +86,7 @@ test("부모가 아닌 창, 허용 밖 출처, 다른 id 의 답은 버리고 �
 });
 
 test("허용 출처가 비면 부모의 답을 모두 버린다", async () => {
-  vi.stubEnv("AGENT_OS_WIDGET_ORIGINS", "");
+  seedValues(new URL(window.location.origin), { ...DEFAULT_VALUES, allowedOrigins: [] });
   vi.useFakeTimers({ shouldAdvanceTime: true });
   serveTokens();
   const user = openWidget();
@@ -204,7 +205,7 @@ test("보내기는 설정이 잘못됐을 때 막힌다", () => {
 });
 
 test("글자 수가 상한의 90% 이상이면 센 수를, 넘으면 넘었다는 글을 입력창에 묶어 보이고 넘으면 보내기가 막힌다", async () => {
-  vi.stubEnv("AGENT_OS_WIDGET_REQUEST_CHARS", "20");
+  seedValues(new URL(window.location.origin), { ...DEFAULT_VALUES, requestChars: 20 });
   const user = openWidget();
 
   // 코드 포인트로 센다. 이모지 하나는 UTF-16 으로 둘이지만 하나다.

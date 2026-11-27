@@ -24,6 +24,12 @@ export const GATES_ENV = "AGENT_OS_E2E_GATES";
 export const TRACES_DIR_ENV = "AGENT_OS_E2E_TRACES";
 
 /**
+ * 준비가 사이트 파일에 적는 글자 수 상한. 서버의 기본값(20,000)과 다르게 두어, 입력창의 상한이 기본값이 아니라 값 파일에서
+ * 온 것임을 시험이 가른다. 상수라 준비와 시험이 같은 값을 직접 읽는다(환경 변수로 넘기지 않는다).
+ */
+export const SITE_REQUEST_CHARS = 1_500;
+
+/**
  * 위젯의 출처(같은 출처 중계의 주소), 허용 출처의 사이트 페이지, 허용 밖 출처의 사이트 페이지, 도구 에이전트가 둘째
  * 도구 앞에서 기다리는 문의 폴더. 문은 그 폴더에 요청과 같은 이름의 파일이 생기면 열린다(`@agent-os/e2e-stack` 의
  * `plugins.ts`).
