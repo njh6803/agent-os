@@ -65,3 +65,8 @@ open-session을 부른다 2026-11-27T14:43:23Z
 - `uv run ruff check .`와 `ruff format --check .` 통과(앞서 쳤고 파이썬 변경은 없다). `uv run python tools/run_checks.py`는 스테이지한 전체에서 check-notes, check-ticket, lint-imports, zizmor, check-instructions, check-type-escapes, pyright 둘, run-hooks, web-verify, pytest가 모두 통과, 종료 코드 0.
 - `pnpm -C web/apps/admin exec playwright test` 13건 통과, `pnpm -C web visual:admin`(비교만) 154건 통과, 종료 코드 0.
 - 티켓의 검증 두 칸을 위 결과가 나온 뒤 `[x]`로 다시 채웠다.
+
+## PR 뒤 CI에서 난 실패와 고침(PR 659)
+
+- 첫 푸시의 `web`과 `verify`가 빨개졌다. `AccountsPage.test.tsx`의 시험 둘(잠금 풀기, 서버가 이름을 규칙 위반으로 보는 경우)이 "role table을 찾지 못했다"로 실패했다. 도우미 `open()`이 제목을 기다린 뒤 표를 바로 찾았는데, 제목은 목록을 읽기 전에도 뜨므로 느린 CI에서는 표가 아직 없었다. 로컬 전체 검사는 빨라서 이겼다.
+- 도우미가 표도 `findByRole`로 기다리게 고쳤다. 같은 파일의 나머지 `getByRole("table")`은 표가 이미 떠 있는 상태(스위치를 누른 뒤)에서 쓰므로 경쟁이 없다. 이 파일 26건이 로컬에서 통과한다.

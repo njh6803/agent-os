@@ -108,7 +108,7 @@ async function open(
   signedIn(me);
   renderPage(<AccountsPage />);
   await screen.findByRole("heading", { level: 1, name: "운영자 계정" });
-  return screen.getByRole("table");
+  return screen.findByRole("table");
 }
 
 async function openMenuOf(
