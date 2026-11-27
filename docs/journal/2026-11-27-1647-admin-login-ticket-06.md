@@ -63,3 +63,16 @@
 ## 카나리아(규칙 파일을 고친 변경)
 
 `.claude/rules/admin.md`와 `http.md`를 고쳤고 `tools/sibling_overlap.py`가 그 두 파일을 원천으로 든 카나리아 명세 다섯(`admin_rule_first_item`, `admin_rule_conversation_list`, `http_rule_continuation_422`, `http_rule_pre_owner_damage`, `http_rule_llm_widget`)을 다시 돌리라고 알렸다. 셋은 같은 `claude -p` 세션 규약으로 커밋 전 작업 트리에서 `uv run python tools/canary.py <명세> <스크래치>`로 실제 돌렸다(`claude --version`이 2.1.325). 다섯 모두 출력의 집계 줄이 "통과 4 · 실패 0 · "없음" 섞인 통과 0"이었다(이 세션이 집계 줄을 읽었다). 갈래의 커밋은 `c3ad162fc`다. 다섯 명세의 `# 최신 결과:` 줄 앞에 이번 판을 더했고 `canary.py --shape`가 다섯 모두 통과했다. 고친 뒤 `sibling_overlap.py`는 카나리아 알림 없이 끝났다.
+
+## 커밋 뒤 인계(이 일지에 이어 쓴다)
+
+이 세션의 지금 제목은 `feature/06-account-routes-set-password-and-change-my-password`다(인계하며 `(인계함)`을 붙인다). 컨텍스트가 인계 문턱을 넘은 채 `커밋 뒤`에 와서 넘긴다(`handoff.md`). 이 세션은 곁 세션이 아니다(`get_session`의 `self`에 `parentSessionId`가 없다).
+
+- 커밋 `82588066638eb097462e85d540e130e862824836`(`feat: 계정을 다루는 경로와 링크로 비밀번호 정하기와 내 비밀번호 바꾸기를 더한다 (admin-login 06)`)이 두 번째 시도에서 pre-commit을 모두 지났다(백그라운드 명령이 종료 코드 0). 첫 시도는 pytest 한 건(`tests/tools/test_rerun_runner.py::test_첫_인계가_나면_새_회차를_열지_않는다`)이 `JSONDecodeError: Extra data`로 실패해 막혔다. 같은 파일을 홀로 돌리면 63개가 모두 통과했다(`uv run pytest -q tests/tools/test_rerun_runner.py`, 196.09초). 이 변경이 건드리지 않은 시험이고 병렬 러너에서만 난 출력 섞임으로 보았다(어림. 원인을 재현하지는 않았다).
+- 푸시와 PR은 아직 없다. 티켓 `Status`는 `done`이고 체크박스는 마지막 칸(`adapters/`를 고쳐 LLM 시험의 병합 조건 범위에 든다)만 비어 있다. 그 칸은 마지막 봇 회차를 반영한 뒤 로컬 모델 시험이 통과하면 채운다.
+- 로컬 모델 시험은 한 번 통과했다(위 "검증 현황"). 시험한 것은 셀프 리뷰 반영 전의 작업 트리라 `merge.md` 병합 전 3대로 마지막 봇 회차 뒤에 다시 쳐야 한다. 사용자의 비용 확인("돌린다 (Recommended)")은 그 한 번에만 해당한다. 다시 칠 때는 `--yes` 없이 쳐 예상 비용을 사용자에게 보이고 새로 확인받은 뒤에만 `--yes`를 붙인다.
+- PR 본문에 알릴 것: ① `unlock`이 잠긴 적 없이 틀린 횟수만 쌓인 계정에도 `unlocked`를 남긴다(위 "셀프 리뷰"의 남긴 것. 명세 표의 "시스템 관리자가 잠금을 풀었다"와 어긋난다고 읽을 수도 있다). ② 09 세션의 워크트리(`09-admin-ui-login-and-refresh-rule`)가 `web/packages/api-client/src/clients.test-d.ts`를 함께 고치는 중이라 나중에 병합하는 쪽에서 글자 충돌이 날 수 있다(`sibling_overlap.py`가 알렸다).
+- 푸시 전과 병합 전에 `origin/dev`가 이 일지 쓸 때의 `c3ad162fc`에서 움직였는지 본다. 움직였으면 dev를 합치고 `tests/test_permissions.py`(권한 표 전수 검사)와 `tests/test_server.py`(계약 신선도)가 새로 더해진 경로나 번호와 부딪히는지 본다.
+- 인계 직전의 작업 트리에는 이 일지의 이 절이 커밋 없이 남아 있다. 새 세션이 같은 파일을 이어 쓰고 커밋한다.
+- 인계: 커밋 뒤. 이 세션의 제목을 `feature/06-account-routes-set-password-and-change-my-password (인계함)`으로 바꿨고(바꾸기 전 제목은 `feature/06-account-routes-set-password-and-change-my-password`), 멈출 백그라운드 작업은 없었으며, `git worktree unlock`이 출력 없이 끝났다.
+- open-session을 부른다 2026-11-27T08:57:00Z
