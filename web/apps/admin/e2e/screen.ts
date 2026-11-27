@@ -35,7 +35,7 @@ export async function signInTo(page: Page, address: string): Promise<void> {
   await expect(page.getByLabel("계정 이름", { exact: true })).toHaveCount(0);
 }
 
-/** 옆 탐색(좁은 폭에서는 위 막대)의 항목 하나로 간다. 이름은 "플러그인", "실행", "설정"이다. */
+/** 옆 탐색(좁은 폭에서는 위 막대)의 항목 하나로 간다. 이름은 "플러그인", "대화", "실행", "설정"이다. */
 export async function openSection(page: Page, name: string): Promise<void> {
   await page.getByRole("navigation").getByRole("link", { name, exact: true }).click();
 }

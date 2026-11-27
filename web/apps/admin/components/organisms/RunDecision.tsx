@@ -8,6 +8,7 @@ import { CodeBlock } from "../atoms/CodeBlock";
 import { TextLink } from "../atoms/TextLink";
 import { EmptyLine } from "../molecules/EmptyLine";
 import { FailureAlert } from "../molecules/FailureAlert";
+import { isEndUserPrincipal } from "../molecules/principal";
 import { asText, EventItem } from "./EventItem";
 import { RunColumns } from "./RunColumns";
 
@@ -43,19 +44,12 @@ function pauseOf(trace: Trace): Pause | null {
 }
 
 /**
- * 주체 이름 `<발급자>|<sub>` 의 구분자. 서버의 `PRINCIPAL_SEPARATOR`(`agent_os.http.sites`)와 같은 글자이고 sdk 계약
- * 밖의 결합이다. 구분자를 바꾸는 결정은 이것을 함께 바꾼다.
- */
-const PRINCIPAL_SEPARATOR = "|";
-
-/**
- * 최종 사용자의 실행인지. 시작 이벤트(`run_started`)의 주체에 구분자가 들었는지로 본다(end-user-channel 명세 "관리
- * 화면"). 최종 사용자가 아닌 주체는 OS 사용자 이름이고, `serve`·`run`·`resume` 이 그 이름에 이 글자를 금지한다
- * (end-user-channel 티켓 01). 그래서 그 가드 뒤에 쓴 트레이스에서 이것이 든 주체는 최종 사용자다.
+ * 최종 사용자의 실행인지. 시작 이벤트(`run_started`)의 주체가 최종 사용자의 것인지로 본다(end-user-channel 명세 "관리
+ * 화면"). 판정은 `isEndUserPrincipal` 이다.
  */
 function isEndUserRun(trace: Trace): boolean {
   const first = trace.events[0];
-  return first?.type === "run_started" && first.principal.includes(PRINCIPAL_SEPARATOR);
+  return first?.type === "run_started" && isEndUserPrincipal(first.principal);
 }
 
 /**

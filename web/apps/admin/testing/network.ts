@@ -6,6 +6,12 @@ import { setupServer } from "msw/node";
 import type { ErrorEnvelope } from "../api/failure";
 
 export type { RunEvent } from "../api/approval";
+export type {
+  Conversation,
+  ConversationPage,
+  ConversationRow,
+  UnreadableTrace,
+} from "../api/conversations";
 export type { Plugin, PluginRow } from "../api/plugins";
 export type { RunRow, RunSummary, Trace, TracePage } from "../api/traces";
 
