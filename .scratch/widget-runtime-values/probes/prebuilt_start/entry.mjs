@@ -7,7 +7,7 @@
 //      파일의 허용 출처로 바꾸고 .next/routes-manifest.json 에 쓴다. 그 자리가 정확히 하나이고 값이 지을 때의
 //      frame-ancestors 'none' 이 아니면 쓰지 않고 종료 1 로 끝난다(Next 의 판이 올라 모양이 바뀐 것을 조용히 지나지 않는다).
 //   2. 위젯의 스크립트가 받아 갈 값 파일(public/runtime.json)에 합친 허용 출처와 가장 작은 요청 글자 수 상한을 쓴다.
-// 사이트 파일은 @agent-os/site-file 의 buildInput 으로 읽는다(지금 빌드가 읽는 것과 같은 함수, 같은 진단).
+// 사이트 파일은 @agent-os/site-file 의 widgetValues 로 읽는다(재던 때는 buildInput 이었고 widget-runtime-values 티켓 02가 이름을 바꿨다. 같은 함수, 같은 진단).
 //
 // 사용: node tools/entry.mjs [--hostname <호스트>] [--port <포트>]   (앱 폴더의 tools/ 에 복사해 부른다)
 // 환경 변수(측정용): WRV_PROBE_WAIT_URL 을 주면 next 를 부르기 전에 wait.mjs 를 뒤에서 띄워 첫 200 의 시각을 찍는다.
@@ -16,7 +16,7 @@ import { spawn } from "node:child_process";
 import { readFileSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { dirname, join } from "node:path";
-import { buildInput } from "@agent-os/site-file";
+import { widgetValues } from "@agent-os/site-file";
 
 const APP = dirname(import.meta.dirname);
 const BUILT = join(APP, ".next", "routes-manifest.build.json");
@@ -35,7 +35,7 @@ mark(
 
 let input;
 try {
-  input = buildInput(process.env);
+  input = widgetValues(process.env);
 } catch (error) {
   console.error(error instanceof Error ? error.message : String(error));
   mark("site-file-rejected");

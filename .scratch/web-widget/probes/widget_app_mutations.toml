@@ -469,10 +469,10 @@ expect_output = ["\"Content-Security-Policy\": \"frame-ancestors 'self'\""]
 [[mutation.edit]]
 file = "web/apps/widget/next.config.ts"
 old = '''
-const ancestors = input.allowedOrigins.length === 0 ? "'none'" : input.allowedOrigins.join(" ");
+  return allowedOrigins.length === 0 ? "'none'" : allowedOrigins.join(" ");
 '''
 new = '''
-const ancestors = input.allowedOrigins.length === 0 ? "'self'" : input.allowedOrigins.join(" ");
+  return allowedOrigins.length === 0 ? "'self'" : allowedOrigins.join(" ");
 '''
 
 [[mutation]]
@@ -485,12 +485,12 @@ expect_output = ['"Access-Control-Allow-Origin": "null"']
 [[mutation.edit]]
 file = "web/apps/widget/next.config.ts"
 old = '''
-        source: "/fonts/:path*",
-        headers: [{ key: "Access-Control-Allow-Origin", value: "*" }],
+          source: "/fonts/:path*",
+          headers: [{ key: "Access-Control-Allow-Origin", value: "*" }],
 '''
 new = '''
-        source: "/fonts/:path*",
-        headers: [{ key: "Access-Control-Allow-Origin", value: "null" }],
+          source: "/fonts/:path*",
+          headers: [{ key: "Access-Control-Allow-Origin", value: "null" }],
 '''
 
 [[mutation]]

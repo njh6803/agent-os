@@ -1,22 +1,23 @@
 /**
  * 사이트 파일 읽기(`@agent-os/site-file`). 서버(`serve --site-file`)가 읽는 사이트 파일(ADR 0023)을 TypeScript 쪽도 같은
  * 규칙으로 읽는다. 읽은 결과는 사이트마다 발급자, `audience`, 열 에이전트, 허용 출처, 공개 키(`kid`, `pem`), 요청 글자 수
- * 상한을 든 모델(`parseSiteFile`, `readSiteFile`)이고, 위젯 빌드와 위젯 미리보기 페이지가 각자 필요한 칸을 쓴다(pilot-portal 명세
+ * 상한을 든 모델(`parseSiteFile`, `readSiteFile`)이고, 위젯과 위젯 미리보기 페이지가 각자 필요한 칸을 쓴다(pilot-portal 명세
  * "앱과 패키지").
  *
- * 위젯의 입력은 그 모델에서 끌어낸 두 값이다(web-widget 티켓 04). 하나는 모든 사이트의 허용 출처를 합친
+ * 위젯이 쓰는 값은 그 모델에서 끌어낸 두 값이다(web-widget 티켓 04). 하나는 모든 사이트의 허용 출처를 합친
  * 목록(처음 나온 차례, 겹친 것은 한 번)이고, 다른 하나는 모든 사이트의 요청 글자 수 상한 가운데 가장 작은 값(적지 않은
- * 사이트는 서버의 기본값)이다. 위젯의 설정 파일(`next.config.ts`)이 `buildInput` 을 불러 앞의 것을 iframe 페이지의
- * `frame-ancestors` 에 굳힌다. 시작 래퍼(`tools/runtime.ts`)도 같은 함수로 두 값을 뜰 때마다 값 파일에 쓰고, 브라우저
- * 쪽은 열릴 때 그 파일을 받는다(widget-runtime-values 티켓 01). 두 값을 번들에 싣지 않는다.
+ * 사이트는 서버의 기본값)이다. 위젯이 뜰 때 시작 래퍼의 `tools/runtime.ts` 가 `widgetValues` 를 불러
+ * 두 값을 값 파일에 쓰고, 허용 출처는 `tools/manifest.ts` 가 iframe 페이지의 `frame-ancestors` 를 담은 응답 머리 목록의 사본에 넣는다. 브라우저 쪽은 열릴 때 값 파일을 받는다
+ * (widget-runtime-values 티켓 01·02). 개발 서버에서는 위젯의 설정 파일(`next.config.ts`)이 뜰 때 같은 함수로
+ * `frame-ancestors` 를 낸다. 빌드는 이 파일을 읽지 않고 두 값을 산출물에 싣지 않는다.
  *
  * 판정은 fail-closed 다(ADR 0024). 변수가 없으면 사이트 없음(빈 허용 출처와 기본 상한)이고, 변수를 줬는데 비었거나 그
- * 파일이 없거나 읽지 못하면 빌드와 시작 래퍼(`dev`·`start`)가 실패한다. 읽지 못하는 것은 둘이다. 하나는 모양이 서버의 pydantic 모델과 어긋난
+ * 파일이 없거나 읽지 못하면 시작 래퍼(`dev`·`start`)가 실패한다. 읽지 못하는 것은 둘이다. 하나는 모양이 서버의 pydantic 모델과 어긋난
  * 것이다. TOML 이 깨졌거나, 판이 "1" 이 아니거나, 모르는 키가 있거나, 필수 키가 빠졌거나, 값의 타입이 엄격한 타입과
  * 다르면 그렇다. 다른 하나는 위젯이 읽는 두 값이 서버가 거절할 값인 것이다(아래 표기 밖의 허용 출처, 1 보다 작은
  * `request_chars`). 서버만 보는 제약(공개 키의 수, 다른 상한의 범위, 발급자의 빈 값·겹침·`|`, 공개 키의 PEM 과 `kid`,
  * 열 에이전트의 이름)은 다시 판정하지 않는다. smol-toml 은 TOML 1.1 을 따라 파이썬 tomllib(TOML 1.0)이 거절하는 문법(여러 줄 인라인
- * 표, `\e` 이스케이프 등)도 받는다. 그런 파일로는 빌드가 지나도 serve 가 뜨지 못해, 조용히 지나가지 않는다.
+ * 표, `\e` 이스케이프 등)도 받는다. 그런 파일로는 위젯이 떠도 serve 가 뜨지 못해, 조용히 지나가지 않는다.
  *
  * 허용 출처의 표기는 브라우저가 `Origin` 헤더에 싣는 직렬화 그대로여야 한다. 규칙의 이름과 차례와 사례는
  * `tests/fixtures/site_file/` 가 원천이고, 파이썬(`src/agent_os/main.py` 의 `_origin_rule`)이 같은 차례로 판정한다.
@@ -35,7 +36,8 @@ export const SITE_FILE_ENV = "AGENT_OS_SITE_FILE";
 /** 서버의 기본값(`src/agent_os/channel/http/limits.py` 의 `DEFAULT_REQUEST_CHARS`). 두 언어의 시험이 같은 값을 본다. */
 export const DEFAULT_REQUEST_CHARS = 20_000;
 
-export interface BuildInput {
+/** 위젯이 뜰 때 사이트 파일에서 받는 두 값. */
+export interface WidgetValues {
   readonly allowedOrigins: readonly string[];
   readonly requestChars: number;
 }
@@ -52,7 +54,7 @@ export interface PublicKey {
 
 /**
  * 읽은 사이트 하나. 요청 글자 수 상한은 적지 않은 사이트도 서버의 기본값으로 채워 낸다. 상한이 2^53 을 넘으면 `number` 를
- * 거쳐 가까운 정수가 된다(`buildInput` 이 내는 상한과 같다).
+ * 거쳐 가까운 정수가 된다(`widgetValues` 가 내는 상한과 같다).
  */
 export interface Site {
   readonly issuer: string;
@@ -68,10 +70,10 @@ export interface SiteFile {
   readonly sites: readonly Site[];
 }
 
-const NO_SITES: BuildInput = { allowedOrigins: [], requestChars: DEFAULT_REQUEST_CHARS };
+const NO_SITES: WidgetValues = { allowedOrigins: [], requestChars: DEFAULT_REQUEST_CHARS };
 
-/** 환경 변수가 가리키는 사이트 파일의 빌드 입력. 읽지 못하면 진단을 든 오류를 던져 빌드를 멈춘다. */
-export function buildInput(env: Readonly<Record<string, string | undefined>>): BuildInput {
+/** 환경 변수가 가리키는 사이트 파일에서 위젯이 받는 두 값. 읽지 못하면 진단을 든 오류를 던져 위젯이 뜨지 못하게 한다. */
+export function widgetValues(env: Readonly<Record<string, string | undefined>>): WidgetValues {
   const path = env[SITE_FILE_ENV];
   if (path === undefined) {
     return NO_SITES;
@@ -83,7 +85,7 @@ export function buildInput(env: Readonly<Record<string, string | undefined>>): B
   if ("problems" in file) {
     throw new Error(diagnostic(path, file.problems));
   }
-  return buildInputOf(file.sites);
+  return widgetValuesOf(file.sites);
 }
 
 /** 사이트 파일의 경로에서 모델을, 또는 받아들일 수 없는 이유들을 읽는다. */
@@ -124,18 +126,18 @@ function diagnostic(path: string, problems: readonly string[]): string {
   const lines = problems.map((problem) => `\n  - ${problem}`).join("");
   return (
     `사이트 파일 ${path} 을 받아들일 수 없다(${SITE_FILE_ENV}, ADR 0023).${lines}\n` +
-    `  고친 뒤 다시 빌드한다. ${SITE_FILE_ENV} 를 빼면 어느 사이트도 위젯을 iframe 으로 품지 못한다.`
+    `  고친 뒤 위젯을 다시 띄운다. ${SITE_FILE_ENV} 를 빼면 어느 사이트도 위젯을 iframe 으로 품지 못한다.`
   );
 }
 
-/** 사이트 파일의 글에서 빌드 입력을, 또는 받아들일 수 없는 이유들을 끌어낸다. */
-export function siteFileInput(text: string): BuildInput | SiteFileProblems {
+/** 사이트 파일의 글에서 위젯이 받는 두 값을, 또는 받아들일 수 없는 이유들을 끌어낸다. */
+export function siteFileValues(text: string): WidgetValues | SiteFileProblems {
   const file = parseSiteFile(text);
-  return "problems" in file ? file : buildInputOf(file.sites);
+  return "problems" in file ? file : widgetValuesOf(file.sites);
 }
 
 /** 읽은 사이트들의 합친 허용 출처와 가장 작은 요청 글자 수 상한. 사이트가 없으면 빈 허용 출처와 서버의 기본 상한이다. */
-function buildInputOf(sites: readonly Site[]): BuildInput {
+function widgetValuesOf(sites: readonly Site[]): WidgetValues {
   if (sites.length === 0) {
     return NO_SITES;
   }

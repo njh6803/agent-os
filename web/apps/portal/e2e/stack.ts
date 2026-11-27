@@ -1,5 +1,5 @@
 /**
- * 위젯 미리보기 페이지 e2e 의 준비(globalSetup, pilot-portal 티켓 06). 실제 `serve`(픽스처 플러그인), 같은 사이트 파일로 빌드한 실제
+ * 위젯 미리보기 페이지 e2e 의 준비(globalSetup, pilot-portal 티켓 06). 실제 `serve`(픽스처 플러그인), 실제
  * 위젯 Next, 실제 위젯 미리보기 페이지, 셋을 한 출처 아래에 모으는 같은 출처의 중계, 폼으로 확인 끝점을 부르는 다른 출처의 페이지를
  * 띄운다. 프로세스와 서버를 띄우고 거두는 몸통은 패키지 `@agent-os/e2e-stack` 이 내고, 여기에는 위젯 미리보기 페이지만의 몫(설정과
  * 사이트 파일, 두 번째 앱 프로세스, 출처의 모양)이 남는다. 선례는 위젯 e2e 의 준비(`apps/widget/e2e/stack.ts`)다.
@@ -15,8 +15,9 @@
  *   출처로 든다. 둘째 위젯 미리보기 페이지는 중계를 거치지 않고 제 주소로 열고, 그 `public_origin` 이 둘째 출처다.
  * - 사이트는 넷이다(`sites.ts`). 키 쌍은 `node:crypto` 가 짓고 개인 키는 작업 폴더의 파일로만 간다. 위젯 미리보기 페이지의 `kid` 는
  *   사이트 파일의 모든 사이트가 같은 공개 키로 든다.
- * - 위젯 Next 는 위젯 미리보기 페이지가 쓰는 사이트 파일로 빌드한다. 허용 출처가 빌드에 박힌다. 위젯의 시작 래퍼는 이 앱이 import 하지
- *   않고 프로세스로만 부른다(앱 사이 import 는 층 경계가 막는다).
+ * - 위젯 Next 는 미끼 사이트 파일로 빌드하고 위젯 미리보기 페이지가 쓰는 사이트 파일로 띄운다. 빌드는 사이트 파일을 읽지 않고,
+ *   허용 출처는 띄울 때 받는다(widget-runtime-values 티켓 02). 위젯의 시작 래퍼는 이 앱이 import 하지 않고 프로세스로만
+ *   부른다(앱 사이 import 는 층 경계가 막는다).
  * - 위젯 미리보기 페이지 프로세스의 출력은 러너가 받는 대로 작업 폴더의 파일에 이어 쓰고 그 경로를 시험에 넘긴다(`env.ts` 의
  *   `portalOutput()`). 끝에 `test-results/` 의 로그로도 남는다. 쿠키와 토큰이 출력에 없는지는 시험(티켓 07)이 본다.
  * - 거두는 것은 위젯 e2e 와 같이 `kill()` 이다. 중계와 다른 출처의 페이지는 이 프로세스 안의 서버라 닫는다.
@@ -66,6 +67,8 @@ const QUIET = { NEXT_TELEMETRY_DISABLED: "1" };
 const SERVE_TOKENS = ["AGENT_OS_ADMIN_TOKEN", "AGENT_OS_CHANNEL_TOKEN"];
 // 위젯 미리보기 페이지가 서면 찍는 시작 로그의 가운데 글(`server/diagnostics.ts` 의 `listenLine`).
 const LISTENING = "에 섰다";
+// 위젯을 빌드할 때만 주는 미끼 사이트 파일의 허용 출처. 어느 사이트도 아니다.
+const DECOY_ORIGIN = "http://decoy.localhost:9";
 
 export default async function globalSetup(): Promise<() => Promise<void>> {
   const stack = createStack({ prefix: "agent-os-portal-e2e-", logs: LOGS });
@@ -100,7 +103,11 @@ export default async function globalSetup(): Promise<() => Promise<void>> {
     const databaseUrl = prepareDatabase(stack, python);
     const serveUrl = await startServe(stack, { plugins, traces, siteFile, python, databaseUrl });
 
-    await buildWidget(stack, siteFile);
+    // 빌드는 미끼 사이트 파일로, 띄우기는 진짜 사이트 파일로 한다(위젯 e2e 의 준비와 같다). 빌드가 사이트 파일을 읽어 값을
+    // 산출물에 굳히면 응답 머리의 자리가 미끼 출처로 차 있어 아래 `start` 가 바꿀 자리를 찾지 못하고 준비가 멈춘다.
+    const decoyFile = join(stack.work, "decoy-sites.toml");
+    writeFileSync(decoyFile, siteFileToml([DECOY_ORIGIN], key, firstAgent));
+    await buildWidget(stack, decoyFile);
     const widget = stack.launch(
       "widget",
       process.execPath,
@@ -284,16 +291,17 @@ function widgetEnv(siteFile: string): NodeJS.ProcessEnv {
 }
 
 /**
- * 그 사이트 파일로 위젯을 빌드한다. 허용 출처가 빌드에 박힌다. 위젯의 시작 래퍼로 빌드해 글꼴 파일의 복사와 페이지 안
- * 번들의 빌드까지 운영과 같은 길을 지난다. 빌드는 위젯 앱의 `.next/`, `public/fonts/`, `public/element.js` 를 다시 쓴다.
+ * 미끼 사이트 파일을 주고 위젯을 빌드한다. 빌드는 사이트 파일을 읽지 않는다(응답 머리의 `frame-ancestors` 는 `'none'` 으로
+ * 지어지고 원본이 남는다). 허용 출처는 뒤이은 `start` 가 쓰는 사본에 들어간다. 위젯의 시작 래퍼로 빌드해 글꼴 파일의 복사와
+ * 페이지 안 번들의 빌드까지 운영과 같은 길을 지난다. 빌드는 위젯 앱의 `.next/`, `public/fonts/`, `public/element.js` 를 다시 쓴다.
  */
-async function buildWidget(stack: Stack, siteFile: string): Promise<void> {
+async function buildWidget(stack: Stack, decoyFile: string): Promise<void> {
   const built = stack.launch(
     "build",
     process.execPath,
     [join(WIDGET, "tools", "start.ts"), "build"],
     WIDGET,
-    widgetEnv(siteFile),
+    widgetEnv(decoyFile),
   );
   const code = await new Promise<number | null>((resolve) => {
     built.child.once("exit", resolve);

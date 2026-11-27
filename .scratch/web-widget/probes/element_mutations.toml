@@ -297,12 +297,12 @@ expect_output = ['"Access-Control-Allow-Origin": "null"']
 [[mutation.edit]]
 file = "web/apps/widget/next.config.ts"
 old = '''
-        source: "/element.js",
-        headers: [{ key: "Access-Control-Allow-Origin", value: "*" }],
+          source: "/element.js",
+          headers: [{ key: "Access-Control-Allow-Origin", value: "*" }],
 '''
 new = '''
-        source: "/element.js",
-        headers: [{ key: "Access-Control-Allow-Origin", value: "null" }],
+          source: "/element.js",
+          headers: [{ key: "Access-Control-Allow-Origin", value: "null" }],
 '''
 
 [[mutation]]
@@ -352,10 +352,10 @@ expect_output = ["Error: page.waitForResponse: Test timeout of 30000ms exceeded.
 [[mutation.edit]]
 file = "web/apps/widget/next.config.ts"
 old = '''
-      {
-        source: "/element.js",
-        headers: [{ key: "Access-Control-Allow-Origin", value: "*" }],
-      },
+        {
+          source: "/element.js",
+          headers: [{ key: "Access-Control-Allow-Origin", value: "*" }],
+        },
 '''
 new = '''
 '''

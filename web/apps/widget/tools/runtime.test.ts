@@ -8,6 +8,7 @@ import { join } from "node:path";
 import { SITE_FILE_ENV } from "@agent-os/site-file";
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
 import { expectedSiteFile, SITE_FILE_FIXTURES } from "../testing/site-file.ts";
+import { canSymlink } from "../testing/symlink.ts";
 import { describeValues, RUNTIME_FILE, runtimeValues, writeRuntimeValues } from "./runtime.ts";
 
 const FIXTURE = join(SITE_FILE_FIXTURES, "sites.toml");
@@ -21,20 +22,6 @@ beforeEach(() => {
 afterEach(() => {
   rmSync(app, { recursive: true, force: true, maxRetries: 5 });
 });
-
-/** 이 기계에서 파일 링크를 만들 수 있는가. 윈도는 권한이 없으면 만들지 못한다. */
-function canSymlink(): boolean {
-  const dir = mkdtempSync(join(tmpdir(), "widget-symlink-probe-"));
-  try {
-    writeFileSync(join(dir, "a"), "");
-    symlinkSync(join(dir, "a"), join(dir, "b"), "file");
-    return true;
-  } catch {
-    return false;
-  } finally {
-    rmSync(dir, { recursive: true, force: true, maxRetries: 5 });
-  }
-}
 
 /** 앱 폴더에 쓴 값 파일의 글자 그대로. */
 function written(): string {

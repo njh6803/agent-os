@@ -22,12 +22,24 @@ export const SITE_ORIGIN_ENV = "AGENT_OS_E2E_SITE_ORIGIN";
 export const OTHER_ORIGIN_ENV = "AGENT_OS_E2E_OTHER_ORIGIN";
 export const GATES_ENV = "AGENT_OS_E2E_GATES";
 export const TRACES_DIR_ENV = "AGENT_OS_E2E_TRACES";
+export const CONTROL_ENV = "AGENT_OS_E2E_CONTROL";
 
 /**
  * 준비가 사이트 파일에 적는 글자 수 상한. 서버의 기본값(20,000)과 다르게 두어, 입력창의 상한이 기본값이 아니라 값 파일에서
  * 온 것임을 시험이 가른다. 상수라 준비와 시험이 같은 값을 직접 읽는다(환경 변수로 넘기지 않는다).
  */
 export const SITE_REQUEST_CHARS = 1_500;
+
+/**
+ * 준비가 위젯을 빌드할 때만 주는 사이트 파일(미끼)의 허용 출처와 상한. 띄울 때 주는 사이트 파일과 다르다. 빌드가 사이트 파일을
+ * 읽어 값을 산출물에 굳히면 이 출처가 응답 머리에 박혀, 서비스 시작이 바꿀 자리를 찾지 못하고 준비가 멈춘다(widget-runtime-values
+ * 티켓 02). 어느 사이트도 아닌 출처라 읽혀도 다른 사례를 가리지 않는다.
+ */
+export const DECOY_ORIGIN = "http://decoy.localhost:9";
+export const DECOY_REQUEST_CHARS = 999;
+
+/** 위젯을 다시 띄우는 사례가 사이트 파일에 적는 상한. 준비가 처음 준 상한과 서버의 기본값과 모두 다르다. */
+export const RESTART_REQUEST_CHARS = 777;
 
 /**
  * 위젯의 출처(같은 출처 중계의 주소), 허용 출처의 사이트 페이지, 허용 밖 출처의 사이트 페이지, 도구 에이전트가 둘째
@@ -46,6 +58,11 @@ export function stack(): {
     otherOrigin: received(OTHER_ORIGIN_ENV),
     gates: received(GATES_ENV),
   };
+}
+
+/** 위젯만 다시 띄우는 손잡이의 주소(`control.ts`). `helpers.ts` 의 `restartWidget` 이 부른다. */
+export function control(): string {
+  return received(CONTROL_ENV);
 }
 
 /** serve 가 트레이스를 남기는 폴더. 시험이 `startedRuns` 로 읽는다. */

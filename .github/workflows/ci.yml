@@ -216,7 +216,7 @@ jobs:
         run: pnpm -C web/apps/admin exec playwright install-deps chromium
       - run: pnpm -C web/apps/admin exec playwright test
 
-  # 위젯 e2e(web-widget 티켓 06). 실제 serve, 같은 사이트 파일로 빌드한 실제 위젯 Next, 둘을 한 출처 아래에 모으는 시험
+  # 위젯 e2e(web-widget 티켓 06). 실제 serve, 미끼 사이트 파일로 빌드하고 진짜 파일로 띄운 실제 위젯 Next, 둘을 한 출처 아래에 모으는 시험
   # 안의 중계를 지난다(준비는 web/apps/widget/e2e/stack.ts). 모양은 e2e 잡과 같다. 실제 nginx 는 쓰지 않는다. 그 설정은
   # web-widget 의 범위 밖이다(ADR 0024 의 2026-10-24 이력). timeout-minutes 는 지난 실행이 없는 첫 값이라 e2e 잡의 값을
   # 그대로 둔 어림이고, 이 잡이 든 실행으로 프로브를 다시 돌려 고친다(머리 주석).
@@ -277,7 +277,7 @@ jobs:
         run: pnpm -C web/apps/widget exec playwright install-deps chromium
       - run: pnpm -C web/apps/widget exec playwright test
 
-  # 위젯 미리보기 페이지 e2e(pilot-portal 티켓 06). 실제 serve, 같은 사이트 파일로 빌드한 실제 위젯 Next, 실제 위젯 미리보기 페이지, 셋을 한
+  # 위젯 미리보기 페이지 e2e(pilot-portal 티켓 06). 실제 serve, 미끼 사이트 파일로 빌드하고 진짜 파일로 띄운 실제 위젯 Next, 실제 위젯 미리보기 페이지, 셋을 한
   # 출처 아래에 모으는 시험 안의 중계를 지난다(준비는 web/apps/portal/e2e/stack.ts). 모양은 e2e-widget 과 같다. 이 잡이
   # ubuntu 에서 실제 위젯 미리보기 페이지를 띄우는 것이 Linux 확인이다(`stripTypeScriptTypes` 와 Tailwind CLI 자식 프로세스). timeout-
   # minutes 는 지난 실행이 없는 첫 값이라 e2e-widget 의 값을 그대로 둔 어림이다. 프로브의 `JOBS` 에는 아직 이 잡이 없다
