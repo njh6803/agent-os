@@ -1,0 +1,182 @@
+# 티켓 10(대화 목록과 대화를 읽는 화면, 실행 패널, 도는 실행 이어 보기)의 변이 표. 도는 실행의 읽기 간격과 멈출 때(`api/conversation/turns.ts`),
+# 거슬러 읽기의 상한, 알림이 서는 조건(`isValidating` 읽기), 패널의 방문 기록과 Esc, 패널과 대화가 같은 값을 쓰는 열쇠는
+# 시험을 구현 뒤에 맞춰 써서 빨강을 본 적이 없다. 변이마다 그 줄을 망가뜨려 해당 시험이 무는지 본다.
+# 사용: PYTHONUTF8=1 uv run python tools/mutate.py .scratch/admin-login/probes/chat_read_mutations.toml
+
+[runner.vitest]
+command = ["pnpm", "exec", "vitest", "run", "--project", "pages"]
+cwd = "web"
+judge = "vitest"
+
+[runner.vitest_node]
+command = ["pnpm", "exec", "vitest", "run", "--project", "node"]
+cwd = "web"
+judge = "vitest"
+
+[[mutation]]
+name = "읽기 간격이 3초가 아니다"
+runner = "vitest_node"
+tests = ["apps/admin/api/conversation/turns.test.ts", "-t", "데이터가 없으면 3000이다"]
+expect = "red"
+expect_output = ["expected 10000 to be 3000"]
+
+[[mutation.edit]]
+file = "web/apps/admin/api/conversation/turns.ts"
+old = '''
+export const POLL_MS = 3000;
+'''
+new = '''
+export const POLL_MS = 10000;
+'''
+
+[[mutation]]
+name = "멈출 때가 지난 그때에는 아직 읽는다"
+runner = "vitest_node"
+tests = ["apps/admin/api/conversation/turns.test.ts", "-t", "마지막 이벤트 뒤 실행 제한 시간이 지나면 0이다"]
+expect = "red"
+expect_output = ["expected 3000 to be +0"]
+
+[[mutation.edit]]
+file = "web/apps/admin/api/conversation/turns.ts"
+old = '''
+  return Number.isNaN(lastAt) || now >= lastAt + timeoutSeconds * 1000;
+'''
+new = '''
+  return Number.isNaN(lastAt) || now > lastAt + timeoutSeconds * 1000;
+'''
+
+[[mutation]]
+name = "읽을 수 없는 시각이면 멈추지 못한다"
+runner = "vitest_node"
+tests = ["apps/admin/api/conversation/turns.test.ts", "-t", "마지막 이벤트의 시각을 읽을 수 없으면 잴 수 없으니 멈춘다"]
+expect = "red"
+expect_output = ["expected 3000 to be +0"]
+
+[[mutation.edit]]
+file = "web/apps/admin/api/conversation/turns.ts"
+old = '''
+  return Number.isNaN(lastAt) || now >= lastAt + timeoutSeconds * 1000;
+'''
+new = '''
+  return now >= lastAt + timeoutSeconds * 1000;
+'''
+
+[[mutation]]
+name = "거슬러 읽는 상한이 101 개다"
+runner = "vitest_node"
+tests = ["apps/admin/api/conversation/turns.test.ts", "-t", "끝 실행을 뺀 상한 100개에서 멈추고"]
+expect = "red"
+expect_output = ["expected 101 to be 100"]
+
+[[mutation.edit]]
+file = "web/apps/admin/api/conversation/turns.ts"
+old = '''
+export const EARLIER_CAP = 100;
+'''
+new = '''
+export const EARLIER_CAP = 101;
+'''
+
+[[mutation]]
+name = "알림 부품이 isValidating 을 읽지 않는다"
+runner = "vitest"
+tests = ["apps/admin/components/pages/ConversationPage.test.tsx", "-t", "마지막 이벤트 뒤 실행 제한 시간이 지나면"]
+expect = "red"
+expect_output = ["Unable to find an element with the text: 끝맺지 못한 것으로 보입니다"]
+
+[[mutation.edit]]
+file = "web/apps/admin/components/pages/ConversationPage.tsx"
+old = '''
+    isValidating: end.isValidating || earlier.isValidating,
+'''
+new = '''
+    isValidating: false,
+'''
+
+[[mutation]]
+name = "패널을 열 때 방문 기록을 늘린다"
+runner = "vitest"
+tests = ["apps/admin/components/pages/ConversationPage.test.tsx", "-t", "패널은 방문 기록을 늘리지 않는다"]
+expect = "red"
+expect_output = ["expected 2 to be 1"]
+
+[[mutation.edit]]
+file = "web/apps/admin/hooks/useRunQuery.ts"
+old = '''
+  history.replaceState(history.state, "", url);
+'''
+new = '''
+  history.pushState(history.state, "", url);
+'''
+
+[[mutation]]
+name = "Esc 로 패널이 닫히지 않는다"
+runner = "vitest"
+tests = ["apps/admin/components/pages/ConversationPage.test.tsx", "-t", "Esc 도 패널을 닫고 질의를 뺀다"]
+expect = "red"
+expect_output = ["expected <aside id=\"run-panel\""]
+
+[[mutation.edit]]
+file = "web/apps/admin/components/organisms/RunPanel.tsx"
+old = '''
+      if (event.key === "Escape") {
+'''
+new = '''
+      if (event.key === "Esc") {
+'''
+
+[[mutation]]
+name = "패널과 끝 실행이 다른 열쇠로 읽는다"
+runner = "vitest"
+tests = ["apps/admin/components/pages/ConversationPage.test.tsx", "-t", "끝 실행의 패널은 대화와 같은 값을 써서"]
+expect = "red"
+expect_output = ["expected 2 to be 1"]
+
+[[mutation.edit]]
+file = "web/apps/admin/hooks/queries/conversation/index.ts"
+old = '''
+    runId === null ? null : traceKeys.one(runId),
+'''
+new = '''
+    runId === null ? null : ["end-run", runId],
+'''
+
+[[mutation]]
+name = "일시정지가 결말로 세어지지 않는다"
+runner = "vitest_node"
+tests = ["apps/admin/api/conversation/turns.test.ts", "-t", "마지막 이벤트가 끝남, 실패, 일시정지면 결말이 있다"]
+expect = "red"
+expect_output = ["expected false to be true"]
+
+[[mutation.edit]]
+file = "web/apps/admin/api/conversation/turns.ts"
+old = '''
+  return (
+    last?.type === "run_finished" || last?.type === "run_failed" || last?.type === "run_paused"
+  );
+'''
+new = '''
+  return last?.type === "run_finished" || last?.type === "run_failed";
+'''
+
+[[mutation]]
+name = "앞의 일시정지가 남은 재개 실행을 결말로 센다"
+runner = "vitest_node"
+tests = ["apps/admin/api/conversation/turns.test.ts", "-t", "승인으로 다시 도는 실행은 앞의 일시정지가 남아 있어도 결말이 없다"]
+expect = "red"
+expect_output = ["expected true to be false"]
+
+[[mutation.edit]]
+file = "web/apps/admin/api/conversation/turns.ts"
+old = '''
+  return (
+    last?.type === "run_finished" || last?.type === "run_failed" || last?.type === "run_paused"
+  );
+'''
+new = '''
+  return (
+    last?.type === "run_finished" ||
+    last?.type === "run_failed" ||
+    trace.events.some((event) => event.type === "run_paused")
+  );
+'''

@@ -119,7 +119,7 @@ test("시스템 관리자가 만든 계정은 링크로 비밀번호를 정해 �
   }
 
   // 시스템 관리자가 그 계정을 비활성으로 바꾸면 목록에서 사라지고, 거르기를 켜면 비활성으로 보인다.
-  await openSection(page, "실행");
+  await openSection(page, "대화");
   await openSection(page, "계정");
   const target = accountRow(page, name).first();
   await target.getByRole("button", { name: `${name}의 동작` }).click();

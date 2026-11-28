@@ -7,7 +7,7 @@
 
 import { createOperatorClient, type components, type OperatorClient } from "@agent-os/api-client";
 import { failureOf, unreachable } from "../failure";
-import { refreshRule } from "./rule";
+import { refreshRule, renewWhileStreaming } from "./rule";
 
 export {
   canSignInAt,
@@ -32,6 +32,17 @@ export function operatorClient(): OperatorClient {
     client.use(refreshRule);
   }
   return client;
+}
+
+/**
+ * 열린 스트림 동안 로그인을 이어 둔다(`POST /auth/refresh`). 갱신이 거절되면 지금 대화의 주소로 돌아올 로그인 화면으로
+ * 보낸다. 이벤트 처리기나 타이머에서만 부른다.
+ */
+export function keepSignedIn(): Promise<void> {
+  return renewWhileStreaming(async () => {
+    const { response } = await operatorClient().POST("/auth/refresh");
+    return response;
+  });
 }
 
 /**

@@ -46,7 +46,7 @@ plugins/
 widget-admin/      둘째 설치 묶음(uv 작업공간의 멤버, 패키지 widget_admin). 위젯 관리 서버이고 agent_os와 서로 import하지 않는다(ADR 0064).
                    src/widget_admin/ 에 main(명령 serve·migrate와 루프백 규칙), lifespan(뜨기 전 데이터베이스 점검), server(앱 조립과 GET /widget-settings/<사이트 이름>),
                    database(연결 묶음과 뜰 때의 확인과 표 올리기와 설정 읽기), settings(응답 모델), errors·paths(Agent OS 의 같은 이름 배관의 사본), migrations/ 가 서고, 계약은 openapi.json
-tests/             src를 미러링. widget_admin/ 은 위젯 관리 서버의 시험(진짜 테스트 데이터베이스, 접두 widget_admin). fixtures/site_file/ 은 서버와 위젯 빌드의 시험이 함께 읽는 사이트 파일 픽스처, fixtures/container_network/ 는 다섯 프로세스의 시험이 함께 읽는 루프백 예외의 사례 표
+tests/             src를 미러링. widget_admin/ 은 위젯 관리 서버의 시험(진짜 테스트 데이터베이스, 접두 widget_admin). fixtures/site_file/ 은 서버와 위젯의 시험이 함께 읽는 사이트 파일 픽스처, fixtures/container_network/ 는 다섯 프로세스의 시험이 함께 읽는 루프백 예외의 사례 표
 web/               pnpm 워크스페이스(Node 24, TypeScript 5.9). 파이썬과 루트를 나눈다. 앱은 apps/*, 공유 패키지는 packages/*
   eslint.config.mjs  원칙 III의 TS 판정자와 층 경계. 변이 테스트는 eslint.config.test.ts
   tsconfig.base.json 기준 tsconfig. 다른 tsconfig는 이것을 extends 한다
@@ -60,7 +60,7 @@ web/               pnpm 워크스페이스(Node 24, TypeScript 5.9). 파이썬�
   packages/widget-admin-client/  위젯 관리 서버의 생성 클라이언트(@agent-os/widget-admin-client). src/generated(생성물,
                    widget-admin/openapi.json 에서 만든다), 토큰 없는 공개 경로를 자격 증명과 머리 없이 부르는 팩토리(ADR 0064)
   packages/site-file/  사이트 파일 읽기(@agent-os/site-file). 서버와 같은 규칙으로 사이트 파일(ADR 0023)을 읽어 사이트마다
-                   발급자·audience·열 에이전트·허용 출처·공개 키·요청 글자 수 상한을 든 모델과 위젯 빌드의 입력을 낸다.
+                   발급자·audience·열 에이전트·허용 출처·공개 키·요청 글자 수 상한을 든 모델과 위젯이 뜰 때 받을 값(허용 출처와 상한)을 낸다.
                    node 가 빌드 없이 읽는 꼴이라 상대 import 에 확장자를 붙인다. smol-toml 을 제 의존성으로 든다
   packages/e2e-stack/  e2e 준비(@agent-os/e2e-stack, 앱의 devDependency). 같은 출처 중계, 픽스처 플러그인(저장소 플러그인 복사
                    포함), 실제 serve 띄우기와 빈 포트·기다리기·끄기 도우미(Stack), 사이트 키와 토큰 서명, 준비가 시험에 넘긴
@@ -88,12 +88,14 @@ web/               pnpm 워크스페이스(Node 24, TypeScript 5.9). 파이썬�
                    요소의 번들(/widget/element.js). app/(라우팅과 레이아웃), components/(아토믹 층, pages/가 화면),
                    lib/(사이트가 준 질의를 읽는 embed, 두 방식이 나눠 쓰는 connection), element/(페이지 안 방식의
                    `<agent-os-widget>` 과 번들 입구), styles/(위젯 CSS),
-                   tools/start.ts(루프백에만 띄우고(이미지 안의 예외는 아래) dev·start 에서 값 파일을 쓰고 dev·build 에서 글꼴을 public/fonts/ 에 복사하고 번들을 짓는 시작 래퍼),
+                   tools/start.ts(루프백에만 띄우고(이미지 안의 예외는 아래) dev·start 에서 값 파일을 쓰고 start 에서 응답 머리 목록의 사본을 쓰고 build 에서 그 원본을 남기고 dev·build 에서 글꼴을 public/fonts/ 에 복사하고 번들을 짓는 시작 래퍼),
                    tools/runtime.ts(값 파일 public/runtime.json 을 쓴다),
+                   tools/manifest.ts(응답 머리 목록 .next/routes-manifest.json 의 원본을 남기고, 뜰 때 frame-ancestors 'none' 자리를 허용 출처로 바꾼 사본을 쓴다),
                    tools/element.ts(번들을 Vite 라이브러리 빌드로 public/element.js 에 내는 설정. 번들은 사이트 파일의 값을 싣지 않는다),
                    lib/runtime.ts(위젯이 뜰 때 /widget/runtime.json 을 받는 자리. 전역 fetch 의 예외 한 파일),
-                   빌드 입력(packages/site-file 의 buildInput. AGENT_OS_SITE_FILE 의 사이트 파일에서 합친 허용 출처와
-                   가장 작은 요청 글자 수 상한을 끌어낸다. 허용 출처와 상한은 값 파일로 나가고, next.config.ts 가 허용 출처를 frame-ancestors 에 싣는다),
+                   뜰 때 받는 값(packages/site-file 의 widgetValues. AGENT_OS_SITE_FILE 의 사이트 파일에서 합친 허용 출처와
+                   가장 작은 요청 글자 수 상한을 끌어낸다. 허용 출처와 상한은 값 파일로 나가고, 허용 출처는 응답 머리 목록의 사본으로도 나간다.
+                   빌드는 사이트 파일을 읽지 않고 frame-ancestors 를 'none' 으로 짓는다. 개발 서버에서만 next.config.ts 가 허용 출처를 frame-ancestors 에 싣는다),
                    .storybook/·visual/(위젯의 Storybook 과 사진 비교. 스토리 테스트는 widget-storybook 프로젝트),
                    e2e/·playwright.config.ts(실제 serve·Next 앞의 같은 출처 중계 뒤에서 두 방식의 위젯을 미는 e2e.
                    준비의 몸통은 packages/e2e-stack 이고 e2e/stack.ts 에는 위젯 빌드와 사이트 서버를 띄우는 일이 남는다),
@@ -146,7 +148,7 @@ pnpm -C web/apps/admin start       # http://127.0.0.1:3000
 ```
 
 - **계정으로 로그인한다.** 로그인하지 않고 어느 주소를 열든 로그인 화면(`/login`)으로 가고, 이름과 비밀번호를 넣으면 보던 화면으로 돌아온다. 계정이 하나도 없는 서버의 로그인 화면은 입력 칸 대신 첫 계정을 만드는 명령을 보인다: `uv run agent-os operator system-admin <계정 이름>`(비밀번호는 명령이 묻는다). 로그인은 쿠키 둘로 남고(HttpOnly에 Secure) 브라우저의 스크립트가 읽지 못한다. 그래서 `localhost`·`127.0.0.1`·`[::1]`이 아닌 `http:` 주소에서는 브라우저가 쿠키를 저장하지 않아(프로브가 잰 주소는 `probe.test` 하나다) 로그인할 수 없다고 보고, 로그인 화면이 https 주소로 열라고 알린다. 기본 5분짜리 짧은 로그인이 끝나도 화면이 스스로 갱신해 운영자는 알아채지 못하고, 갱신까지 끝나면 로그인 화면으로 돌아간다(ADR 0062). 로그아웃은 탐색 아래의 계정 자리를 눌러 연 메뉴에 있다. 같은 메뉴의 "내 비밀번호 바꾸기"(`/password`)는 누구나 쓴다. 시스템 관리자에게만 탐색에 "계정"(`/accounts`)이 보이고, 거기서 계정을 만들고 비밀번호 링크를 받아 새 운영자에게 직접 전한다. 링크를 연 사람은 로그인 없이 `/set-password#<토큰>`에서 비밀번호를 정하고, 토큰은 읽자마자 주소창에서 지워진다.
-- **결정 자리는 권한을 따른다.** 로그인한 계정에게 결정 권한이 있으면 멈춘 실행에 결정 자리(사유를 적는 "거부"와 "승인")가 선다. 입력 칸으로 받는 토큰은 이 화면에 없다. 이전 판이 탭에 남긴 토큰 저장 키는 화면이 뜰 때 지운다. 공유 토큰 둘은 `serve`가 아직 시작할 때 요구하지만(걷어내는 일은 admin-login 티켓 13) 관리 화면은 보내지 않는다.
+- **결정 자리는 권한을 따른다.** 로그인한 계정에게 결정 권한이 있으면 대화 화면에서 승인을 기다리는 실행에 결정 자리(사유를 적는 "거부"와 "승인")가 선다. 최종 사용자의 대화에는 서지 않는다. 입력 칸으로 받는 토큰은 이 화면에 없다. 이전 판이 탭에 남긴 토큰 저장 키는 화면이 뜰 때 지운다. 공유 토큰 둘은 `serve`가 아직 시작할 때 요구하지만(걷어내는 일은 admin-login 티켓 13) 관리 화면은 보내지 않는다.
 - **`serve`와 상류를 맞춘다.** 관리 화면이 넘기는 곳(상류)은 `AGENT_OS_UPSTREAM`이고, 기본은 `serve`의 기본 주소 `http://127.0.0.1:8000`이다. `serve`를 다른 포트로 띄우면 같은 주소를 `AGENT_OS_UPSTREAM`에 두고 빌드한다.
 - **상류 포트를 바꾸면 다시 빌드한다.** 상류는 빌드 산출물에 박힌다. `start` 때 준 값은 판정만 하고 넘기는 곳을 바꾸지 않는다. `dev`(`pnpm -C web/apps/admin dev`)는 설정에서 바로 읽는다.
 - **루프백에만 선다.** 관리 화면은 `127.0.0.1`(기본)이나 `::1`에만 서고, 받는 인자는 `--hostname`과 `--port` 둘이다. 상류는 `127.0.0.1`만 받는다(이미지 안의 예외는 아래). Next가 IPv6 주소로 넘기지 못한다(ADR 0011의 2026-09-30 이력). 원격에서 보려면 SSH 포트 포워딩을 쓴다: `ssh -L 3000:127.0.0.1:3000 <서버>`.

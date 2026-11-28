@@ -1,15 +1,21 @@
-// 위젯의 설정 파일. next dev·build·start 가 읽는 그 파일을 사이트 파일 변수마다 새로 읽어, iframe 페이지가 어디에 서고
-// 어떤 응답 헤더를 다는지, 사이트 파일에서 무엇을 빌드에 굳히는지 본다(web-widget 티켓 04). 빌드가 굳히는 것은 허용 출처를
-// 합친 `frame-ancestors` 하나다. 요청 글자 수 상한과 허용 출처는 번들에 싣지 않고 값 파일로 받는다(widget-runtime-values
-// 티켓 01. 값 파일을 쓰는 코드는 `tools/runtime.test.ts` 가 본다). 헤더가 basePath 아래의 실제 경로에 붙는지는 빌드한 앱의
-// 응답을 보는 e2e 가 판정한다. `frame-ancestors` 는 06 이, 글꼴과 페이지 안 번들 응답의 `Access-Control-Allow-Origin` 은
-// 10 이 본다. 표기와 모양의 판정 하나하나는 `@agent-os/site-file` 의 시험(`web/packages/site-file/src/site-file.test.ts`)이 본다.
+// 위젯의 설정 파일. next dev·build·start 가 단계(phase)를 주어 부르는 그 함수를 사이트 파일 변수마다 새로 불러, iframe 페이지가
+// 어디에 서고 어떤 응답 헤더를 다는지 본다. 사이트 파일을 읽는 것은 개발 서버 단계뿐이고, 빌드와 서비스 시작 단계는 사이트
+// 파일과 무관하게 `frame-ancestors 'none'` 을 낸다(widget-runtime-values 티켓 02). 서비스 시작이 뜰 때 그 값을 사이트 파일의
+// 허용 출처로 바꿔 넣는 것은 `tools/manifest.test.ts` 가 본다. 요청 글자 수 상한과 허용 출처는 번들에 싣지 않고 값 파일로
+// 받는다(티켓 01. 값 파일을 쓰는 코드는 `tools/runtime.test.ts` 가 본다). 헤더가 basePath 아래의 실제 경로에 붙는지는 빌드한
+// 앱의 응답을 보는 e2e 가 판정한다. 표기와 모양의 판정 하나하나는 `@agent-os/site-file` 의 시험
+// (`web/packages/site-file/src/site-file.test.ts`)이 본다.
 
 import { mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { DEFAULT_REQUEST_CHARS, SITE_FILE_ENV } from "@agent-os/site-file";
 import type { NextConfig } from "next";
+import {
+  PHASE_DEVELOPMENT_SERVER,
+  PHASE_PRODUCTION_BUILD,
+  PHASE_PRODUCTION_SERVER,
+} from "next/constants";
 import { afterEach, describe, expect, test, vi } from "vitest";
 import { expectedSiteFile, SITE_FILE_FIXTURES } from "./testing/site-file.ts";
 
@@ -18,11 +24,15 @@ afterEach(() => {
   vi.resetModules();
 });
 
-async function loadConfig(siteFile: string | undefined): Promise<NextConfig> {
+/** 사이트 파일을 읽는 것은 개발 서버 단계뿐이다. 다른 단계는 `PHASE_*` 로 따로 부른다. */
+async function loadConfig(
+  siteFile: string | undefined,
+  phase: string = PHASE_DEVELOPMENT_SERVER,
+): Promise<NextConfig> {
   vi.stubEnv(SITE_FILE_ENV, siteFile);
   vi.resetModules();
   const module = await import("./next.config.ts");
-  return module.default;
+  return module.default(phase);
 }
 
 async function headersOf(config: NextConfig, source: string): Promise<Record<string, string>> {
@@ -68,49 +78,90 @@ test("iframe 페이지는 basePath /widget 아래에 선다", async () => {
   expect((await loadConfig(undefined)).basePath).toBe("/widget");
 });
 
-test("사이트 파일을 주지 않으면 어떤 사이트도 iframe 페이지를 품지 못한다", async () => {
-  const config = await loadConfig(undefined);
+describe("빌드와 서비스 시작 단계는 사이트 파일을 읽지 않고 아무도 품지 못하는 값을 낸다", () => {
+  // 서비스 시작이 뜰 때 이 값을 사이트 파일의 허용 출처로 바꿔 넣는다(tools/manifest.ts). 빌드가 사이트 파일을 읽어 값을
+  // 굳히면 그 자리가 `'none'` 이 아니라서 서비스 시작이 멈춘다.
+  const NONE = { "Content-Security-Policy": "frame-ancestors 'none'" };
 
-  expect(await headersOf(config, "/:path*")).toEqual({
-    "Content-Security-Policy": "frame-ancestors 'none'",
-  });
+  for (const [name, phase] of [
+    ["빌드", PHASE_PRODUCTION_BUILD],
+    ["서비스 시작", PHASE_PRODUCTION_SERVER],
+  ] as const) {
+    test(`${name} 단계는 허용 출처가 든 사이트 파일을 주어도 'none' 이다`, async () => {
+      const config = await loadConfig(join(SITE_FILE_FIXTURES, "sites.toml"), phase);
+
+      expect(await headersOf(config, "/:path*")).toEqual(NONE);
+    });
+
+    test(`${name} 단계는 읽지 못하는 사이트 파일을 주어도 멈추지 않는다`, async () => {
+      const missing = join(mkdtempSync(join(tmpdir(), "widget-site-file-")), "none.toml");
+
+      for (const value of [missing, "", siteFile('schema_version = "1"\n[[sites]\n')]) {
+        const config = await loadConfig(value, phase);
+
+        expect(await headersOf(config, "/:path*")).toEqual(NONE);
+      }
+    });
+
+    test(`${name} 단계도 basePath 와 나머지 머리 규칙은 개발 서버와 같다`, async () => {
+      const config = await loadConfig(undefined, phase);
+      const dev = await loadConfig(undefined);
+
+      expect(config.basePath).toBe("/widget");
+      for (const source of ["/fonts/:path*", "/element.js", "/runtime.json"]) {
+        expect(await headersOf(config, source)).toEqual(await headersOf(dev, source));
+      }
+    });
+  }
 });
 
-test("두 언어가 함께 읽는 사이트 파일의 합친 허용 출처가 frame-ancestors 에 든다", async () => {
-  const expected = expectedSiteFile();
+describe("개발 서버 단계는 뜰 때 사이트 파일을 읽어 응답 머리를 낸다", () => {
+  test("사이트 파일을 주지 않으면 어떤 사이트도 iframe 페이지를 품지 못한다", async () => {
+    const config = await loadConfig(undefined);
 
-  const config = await loadConfig(join(SITE_FILE_FIXTURES, "sites.toml"));
-
-  expect(await headersOf(config, "/:path*")).toEqual({
-    "Content-Security-Policy": `frame-ancestors ${expected.allowedOrigins.join(" ")}`,
+    expect(await headersOf(config, "/:path*")).toEqual({
+      "Content-Security-Policy": "frame-ancestors 'none'",
+    });
   });
-  expect(DEFAULT_REQUEST_CHARS).toBe(expected.defaultChars);
-});
 
-test("사이트가 있어도 합친 허용 출처가 비면 어떤 사이트도 iframe 페이지를 품지 못한다", async () => {
-  const config = await loadConfig(siteFile(site({ origins: "[]" })));
+  test("두 언어가 함께 읽는 사이트 파일의 합친 허용 출처가 frame-ancestors 에 든다", async () => {
+    const expected = expectedSiteFile();
 
-  expect(await headersOf(config, "/:path*")).toEqual({
-    "Content-Security-Policy": "frame-ancestors 'none'",
+    const config = await loadConfig(join(SITE_FILE_FIXTURES, "sites.toml"));
+
+    expect(await headersOf(config, "/:path*")).toEqual({
+      "Content-Security-Policy": `frame-ancestors ${expected.allowedOrigins.join(" ")}`,
+    });
+    expect(DEFAULT_REQUEST_CHARS).toBe(expected.defaultChars);
   });
-});
 
-test("줄 끝을 CR 하나로 적은 사이트 파일도 서버처럼 읽는다", async () => {
-  const config = await loadConfig(siteFile(site().replaceAll("\n", "\r")));
+  test("사이트가 있어도 합친 허용 출처가 비면 어떤 사이트도 iframe 페이지를 품지 못한다", async () => {
+    const config = await loadConfig(siteFile(site({ origins: "[]" })));
 
-  expect(await headersOf(config, "/:path*")).toEqual({
-    "Content-Security-Policy": "frame-ancestors https://shop.example",
+    expect(await headersOf(config, "/:path*")).toEqual({
+      "Content-Security-Policy": "frame-ancestors 'none'",
+    });
+  });
+
+  test("줄 끝을 CR 하나로 적은 사이트 파일도 서버처럼 읽는다", async () => {
+    const config = await loadConfig(siteFile(site().replaceAll("\n", "\r")));
+
+    expect(await headersOf(config, "/:path*")).toEqual({
+      "Content-Security-Policy": "frame-ancestors https://shop.example",
+    });
   });
 });
 
 test("사이트 파일의 두 값(허용 출처와 요청 글자 수 상한)을 번들에 싣지 않는다", async () => {
   // 값은 열릴 때 값 파일로 받는다. 설정이 env 로 싣지 않아야 번들의 내용이 사이트 파일과 무관하다(사용자 이야기 26).
-  for (const path of [undefined, join(SITE_FILE_FIXTURES, "sites.toml")]) {
-    expect((await loadConfig(path)).env).toBeUndefined();
+  for (const phase of [PHASE_DEVELOPMENT_SERVER, PHASE_PRODUCTION_BUILD, PHASE_PRODUCTION_SERVER]) {
+    for (const path of [undefined, join(SITE_FILE_FIXTURES, "sites.toml")]) {
+      expect((await loadConfig(path, phase)).env).toBeUndefined();
+    }
   }
 });
 
-describe("변수가 준 사이트 파일을 읽지 못하면 빌드가 실패한다", () => {
+describe("변수가 준 사이트 파일을 읽지 못하면 개발 서버가 설정을 읽다 멈춘다", () => {
   test("변수가 비었다", async () => {
     await expect(loadConfig("")).rejects.toThrow(`${SITE_FILE_ENV} 가 비었다`);
   });

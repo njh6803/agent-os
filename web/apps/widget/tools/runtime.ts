@@ -2,8 +2,9 @@
  * 값 파일(`/widget/runtime.json`)을 쓰는 코드. 위젯이 뜰 때 시작 래퍼(`start.ts`)가 사이트 파일을 읽어 위젯이 받아 갈 두 값을
  * 이 파일로 낸다(widget-runtime-values 명세 "값 파일", ADR 0064). 브라우저 쪽이 받는 길은 `lib/runtime.ts` 다.
  *
- * - 두 값은 지금 빌드가 쓰는 `@agent-os/site-file` 의 같은 함수(`buildInput`)가 낸다. 모든 사이트의 허용 출처를 합친 목록과
- *   가장 작은 요청 글자 수 상한이다. 읽지 못하면 그 함수가 진단을 든 오류를 던진다.
+ * - 두 값은 `@agent-os/site-file` 의 `widgetValues` 가 낸다. 개발 서버의 설정 파일(`next.config.ts`)이 응답 머리를 낼 때 읽는
+ *   같은 함수다. 모든 사이트의 허용 출처를 합친 목록과 가장 작은 요청 글자 수 상한이다. 읽지 못하면 그 함수가 진단을 든 오류를
+ *   던진다.
  * - 키는 `allowedOrigins` 와 `requestChars` 둘뿐이다. 누구나 읽는 파일이라 사이트 파일의 다른 값(공개 키, 발급자, 열
  *   에이전트)은 싣지 않는다.
  * - 상한이 `Number` 로 바뀔 때 무한대가 되면(약 1.8×10^308 이상) 가장 큰 유한한 수로 쓴다. 무한대를 JSON 으로 쓰면 `null`
@@ -15,7 +16,7 @@
 
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { buildInput } from "@agent-os/site-file";
+import { widgetValues } from "@agent-os/site-file";
 
 /** 앱 폴더 안 Next 의 공개 파일 폴더에 놓이는 값 파일의 이름. Next 가 `/widget/runtime.json` 으로 낸다. */
 export const RUNTIME_FILE = "runtime.json";
@@ -30,7 +31,7 @@ export interface RuntimeValuesFile {
 export function runtimeValues(
   env: Readonly<Record<string, string | undefined>>,
 ): RuntimeValuesFile {
-  const { allowedOrigins, requestChars } = buildInput(env);
+  const { allowedOrigins, requestChars } = widgetValues(env);
   return {
     allowedOrigins,
     requestChars: Number.isFinite(requestChars) ? requestChars : Number.MAX_VALUE,

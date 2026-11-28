@@ -22,10 +22,10 @@ expect_output = ["expected 2 to be 1"]
 [[mutation.edit]]
 file = "web/apps/admin/api/session/rule.ts"
 old = '''
-  running ??= refresh(send, baseUrl).finally(() => {
+  running ??= refresh(request).finally(() => {
 '''
 new = '''
-  running = refresh(send, baseUrl).finally(() => {
+  running = refresh(request).finally(() => {
 '''
 
 [[mutation]]

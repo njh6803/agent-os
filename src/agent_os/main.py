@@ -794,8 +794,8 @@ def _key_id_problems(place: str, entries: Sequence[_PublicKeyEntry]) -> list[str
 
 # 허용 출처의 표기(web-widget 티켓 04, ADR 0024). 값은 브라우저가 `Origin` 헤더에 싣는 직렬화
 # 그대로여야 한다 — 다른 표기는 CORS 와 `frame-ancestors` 에서 조용히 어느 출처와도 맞지 않는다.
-# 규칙의 이름과 차례와 사례는 `tests/fixtures/site_file/` 가 원천이고, 위젯 빌드
-# (`web/packages/site-file/src/site-file.ts`)가 같은 차례로 판정한다. 차례가 다르면 두 규칙을 함께
+# 규칙의 이름과 차례와 사례는 `tests/fixtures/site_file/` 가 원천이고, 위젯이 뜰 때 읽는
+# `web/packages/site-file/src/site-file.ts` 가 같은 차례로 판정한다. 차례가 다르면 두 규칙을 함께
 # 어긴 값에서 두 언어가 다른 이름을 낸다.
 type _OriginRule = Literal[
     "wildcard",

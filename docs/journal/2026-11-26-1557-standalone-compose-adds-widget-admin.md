@@ -17,7 +17,7 @@
 - 배포 파일: `compose.yaml`(서비스 셋, 볼륨 `widget-database`, 세 곳 모두 `${WIDGET_ADMIN_DATABASE_PASSWORD:?…}`), `proxy/site.conf`(상류 `up_widget_admin`, location `/widget-settings/`와 `= /widget-settings`), `.env.example`, 배포 안내 `README.md`(3-1, 4, 7, 8, 9, 11, 12, 13절).
 - 시험: `tests/tools/test_deploy_guide.py`(위젯 쪽 PostgreSQL 전제·권한, 13절 표 대조, ports·user 없음, 그리고 이 세션의 마지막 추가분 아래), `tests/test_postgres_image_pin.py`(PostgreSQL 서비스 둘이 같은 digest), `tests/tools/test_release_ci.py`, `tests/tools/test_release_workflow.py`(워크플로의 이름 목록 맞대기와 bash 반복문 실행), `tests/tools/test_check_notes.py`, `tests/test_postgres_migration_shape.py`.
 - 노트: `tools/check_notes.py`의 `PRODUCT_MIGRATION_FOLDERS`(폴더 둘, 꼴 시험이 이 값 하나에서 폴더를 읽는다), `docs/release-notes/upgrade/widget-admin-server.md`(올릴 때 할 일, 미추적), `docs/release-notes/features/widget-admin-server.md`(기능 단락, 미추적), `.scratch/widget-admin-server/plan.md`에 `**끝:** 2026-11-26`(이 티켓이 기능의 마지막이다. 02는 이미 done).
-- 문서: `docs/constitution/tech.md`(레지스트리·CI 칸 "넷"을 "다섯"으로), `operations.md`, `README.md`(헌법 판 3.1.9), 루트 `README.md`.
+- 문서: `docs/constitution/tech.md`(레지스트리·CI 칸 "넷"을 "다섯"으로), `operations.md`, `README.md`(헌법 판은 처음 3.1.9로 올렸다가 `dev`가 3.1.10을 먼저 가져가 3.1.11이 됐다. 아래 "다시 합치기"), 루트 `README.md`.
 - 단독 배포 e2e: `web/packages/e2e-standalone/e2e/{stack,deployment.e2e,env,migrations,migrations.test}.ts`, `playwright.config.ts`(위젯 관리 서버 사례 여덟, 이미지 다섯 짓기, 위젯 쪽 `psql`, 마지막 판 번호를 두 폴더에서 읽기).
 - 티켓: 체크박스를 닫고 `Status: done`으로 바꿨다. "사람이 할 일" 칸 하나는 일부러 열어 두었다(사람이 Docker Hub에서 공개 저장소를 만든다). `uv run python tools/plan_table.py`를 돌렸다.
 
@@ -101,6 +101,10 @@ PR 직전 리뷰에 밀 주장(이 반영으로 새로 쓴 사실 문장, 원문
 ## PR 봇 회차(PR 651)
 
 claude-review 둘은 지적 없음이다. CodeRabbit은 Major 하나(`docs/release-notes/upgrade/widget-admin-server.md:3`)를 냈다. 업그레이드 노트 1단계가 `proxy/site.conf`를 통째로 바꾸라고 하는데, 배포 안내 6절은 운영자가 그 파일을 직접 고쳐 쓰라고 안내하므로 운영자가 더한 위치 규칙과 요청 한도가 사라진다는 지적이다. 맞다(`compose.override.yaml`은 호스트 볼륨 경로와 이미지 태그만 다뤄 `site.conf`에는 적용되지 않는다). 1단계를 고쳤다. `compose.yaml`은 통째로 바꿔도 되고, `site.conf`는 바꾸기 전에 `site.conf.bak`으로 복사해 두었다가 더했던 설정을 새 파일로 옮긴 뒤 4단계의 문법 검사와 다시 읽히기로 적용한다(`nginx.conf`가 `site.conf`만 include하므로 `.bak`은 읽히지 않는다). 다시 돌린 명령: `test_check_notes`·`test_deploy_guide`·`test_release_ci` 240개 통과, `tools/check_notes.py` 문제 0.
+
+## `origin/dev` 다시 합치기(헌법 판, 대기열 0518)
+
+푸시한 뒤 `dev`가 세 번 앞서 같은 자리가 충돌했다. 첫째와 둘째는 `.scratch/retro-queue/0518.md`의 승인 줄이었다. `dev`쪽 줄을 두고 이 브랜치의 회차를 12회차, 13회차로 이어 적었다. 셋째는 `docs/constitution/README.md`의 판 줄과 `operations.md` 가드레일 문단의 한 줄이었다. `dev`가 3.1.10을 올리며 이 브랜치가 비워 둔 3.1.9를 낮은 번호로 남겼으므로, 앞선 사례(3.0.104 → 3.0.106)대로 이 브랜치는 3.1.11로 올리고 비워 둔 문장을 "3.1.10 뒤에 병합되어 3.1.11로 올렸다"는 과거형 기록으로 바꿨다. `operations.md`는 두 쪽의 바뀐 곳이 겹치지 않았다. 단어 단위로 견주니 이 브랜치는 "저장소에서 이미지 넷을"을 "다섯을"로, `dev`는 e2e 두 줄의 "같은 사이트 파일로 빌드한 위젯"을 "미끼 사이트 파일로 빌드하고 진짜 사이트 파일로 띄운 위젯"으로 바꾼 것뿐이라, `dev`쪽 문장에 "다섯을"만 얹었다.
 
 ## 회고
 

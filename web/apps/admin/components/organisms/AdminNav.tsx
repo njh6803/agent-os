@@ -4,12 +4,12 @@
 import type { IconName } from "@agent-os/ui";
 import { NavItem } from "../molecules/NavItem";
 
-/** 탐색이 가리키는 화면. 플러그인 하나는 플러그인, 실행 하나는 실행 항목 아래에 든다. */
-export type Section = "plugins" | "runs" | "accounts" | "settings";
+/** 탐색이 가리키는 화면. 플러그인 하나는 플러그인, 대화 하나는 대화 항목 아래에 든다. */
+export type Section = "plugins" | "chat" | "accounts" | "settings";
 
 const SECTIONS = [
   { section: "plugins", href: "/", icon: "plug", label: "플러그인" },
-  { section: "runs", href: "/runs", icon: "list", label: "실행" },
+  { section: "chat", href: "/chat", icon: "message-square", label: "대화" },
   { section: "accounts", href: "/accounts", icon: "users", label: "계정" },
   { section: "settings", href: "/settings", icon: "settings", label: "설정" },
 ] as const satisfies readonly { section: Section; href: string; icon: IconName; label: string }[];

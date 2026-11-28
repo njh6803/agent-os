@@ -35,7 +35,7 @@ uv run python .scratch/widget-runtime-values/probes/prebuilt_start/run.py --sect
 |---|---|
 | `run.py` | 섹션을 돌리고 회차마다 표지를 본다 |
 | `Dockerfile`, `Dockerfile.dockerignore` | 시제품 이미지. `base`·`manifests`·`deps-full`은 실제 위젯 Dockerfile의 것과 글자까지 같다. `image`는 뜰 때 쓰는 두 파일을 `/run/agent-os-widget`로 가는 심볼릭 링크로 두고, `image-inplace`는 앱 폴더 안의 보통 파일로 둔다. `build-inspect`는 대조용이다 |
-| `entry.mjs` | 시제품 진입 단계. 사이트 파일을 `@agent-os/site-file`의 `buildInput`으로 읽고, 두 파일을 쓰고, 같은 프로세스에서 `next start`를 부른다 |
+| `entry.mjs` | 시제품 진입 단계. 사이트 파일을 `@agent-os/site-file`의 `widgetValues`(재던 때의 이름은 `buildInput`)로 읽고, 두 파일을 쓰고, 같은 프로세스에서 `next start`를 부른다 |
 | `patch-config.mjs` | 이미지 안 `next.config.ts` 사본에 값 파일의 `Access-Control-Allow-Origin: *` 규칙을 더한다 |
 | `inspect.mjs` | 이미지 안에서 지어 둔 응답 머리 목록과 깔린 패키지를 들여다본다 |
 | `fetch.mjs`, `wait.mjs` | 컨테이너 안에서 요청 하나를 걸고, 첫 200의 시각을 찍는다 |

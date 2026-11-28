@@ -1,11 +1,19 @@
-// 위젯 빌드가 사이트 파일에서 읽는 것. 허용 출처의 표기 판정과 사이트 파일의 모양 판정을 글에서 바로 본다. 두 언어가
+// 위젯이 뜰 때 사이트 파일에서 읽는 것. 허용 출처의 표기 판정과 사이트 파일의 모양 판정을 글에서 바로 본다. 두 언어가
 // 함께 읽는 픽스처는 tests/fixtures/site_file/ 이고(규칙의 이름과 차례는 그 README), 파이썬은 tests/test_main.py 가
 // 같은 파일을 읽는다. 변수와 파일을 거쳐 설정에 드는 것은 next.config.test.ts 가 본다.
 
-import { readFileSync } from "node:fs";
+import { mkdtempSync, readFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, test } from "vitest";
-import { DEFAULT_REQUEST_CHARS, originRule, parseSiteFile, siteFileInput } from "./site-file.ts";
+import {
+  DEFAULT_REQUEST_CHARS,
+  originRule,
+  parseSiteFile,
+  SITE_FILE_ENV,
+  siteFileValues,
+  widgetValues,
+} from "./site-file.ts";
 
 const FIXTURES = join(
   import.meta.dirname,
@@ -73,7 +81,7 @@ function parsedOrigin(value: string): string | null {
   }
 }
 
-/** 사이트 하나의 TOML. 공개 키의 PEM 은 서버만 읽는 값이라 빌드는 뜻을 보지 않는다. */
+/** 사이트 하나의 TOML. 공개 키의 PEM 은 서버만 읽는 값이라 위젯은 뜻을 보지 않는다. */
 function site(origins: string, extra = ""): string {
   return [
     "",
@@ -90,7 +98,7 @@ function site(origins: string, extra = ""): string {
 }
 
 function problemsOf(text: string): readonly string[] {
-  const input = siteFileInput(text);
+  const input = siteFileValues(text);
   if (!("problems" in input)) {
     throw new Error(`받아들일 수 없는 사이트 파일을 받아들였다: ${JSON.stringify(input)}`);
   }
@@ -125,10 +133,27 @@ describe("허용 출처의 표기", () => {
 
 describe("사이트 파일의 모양", () => {
   test("사이트가 없는 파일은 빈 허용 출처와 서버의 기본 상한이다", () => {
-    expect(siteFileInput('schema_version = "1"\n')).toEqual({
+    expect(siteFileValues('schema_version = "1"\n')).toEqual({
       allowedOrigins: [],
       requestChars: DEFAULT_REQUEST_CHARS,
     });
+  });
+
+  test("읽지 못한 사이트 파일의 진단은 다시 빌드가 아니라 위젯을 다시 띄우라고 말한다", () => {
+    // 위젯은 뜰 때 이 파일을 읽는다(widget-runtime-values 티켓 02). 운영자가 할 일은 고친 뒤 다시 띄우는 것이다.
+    const missing = join(mkdtempSync(join(tmpdir(), "site-file-")), "none.toml");
+
+    let message = "";
+    try {
+      widgetValues({ [SITE_FILE_ENV]: missing });
+    } catch (error: unknown) {
+      message = error instanceof Error ? error.message : String(error);
+    }
+
+    expect(message).toContain(`사이트 파일 ${missing} 을 받아들일 수 없다`);
+    expect(message).toContain("고친 뒤 위젯을 다시 띄운다.");
+    expect(message).toContain("를 빼면 어느 사이트도 위젯을 iframe 으로 품지 못한다");
+    expect(message).not.toContain("다시 빌드");
   });
 
   test("모든 사이트가 기본값보다 큰 상한을 적으면 그 가운데 가장 작은 값이다", () => {
@@ -138,7 +163,7 @@ describe("사이트 파일의 모양", () => {
       site('["https://b.example"]', "[sites.limits]\nrequest_chars = 30000"),
     ].join("\n");
 
-    expect(siteFileInput(text)).toEqual({
+    expect(siteFileValues(text)).toEqual({
       allowedOrigins: ["https://a.example", "https://b.example"],
       requestChars: 30_000,
     });
@@ -266,7 +291,7 @@ describe("사이트마다 읽은 모델", () => {
     expect(blog?.publicKeys).toEqual([{ kid: undefined, pem }]);
   });
 
-  test("모양을 어긴 파일은 빌드 입력을 읽을 때와 같은 진단을 낸다", () => {
+  test("모양을 어긴 파일은 위젯이 뜰 때 받을 값을 읽을 때와 같은 진단을 낸다", () => {
     const text = `schema_version = "1"\n${site('["https://a.example"]').replace('agents = ["echo"]', "")}`;
 
     expect(parseSiteFile(text)).toEqual({ problems: ["sites[0].agents: 빠졌다"] });

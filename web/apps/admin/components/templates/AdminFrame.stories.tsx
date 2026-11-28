@@ -75,7 +75,7 @@ export const SignedIn: Story = {
     const canvas = within(canvasElement);
     const nav = canvas.getByRole("navigation", { name: "관리 화면" });
     const links = within(nav).getAllByRole("link");
-    await expect(links.map((link) => link.textContent)).toEqual(["플러그인", "실행", "설정"]);
+    await expect(links.map((link) => link.textContent)).toEqual(["플러그인", "대화", "설정"]);
     const current = within(nav).getByRole("link", { current: "page" });
     await expect(current).toHaveTextContent("설정");
     await expect(getComputedStyle(current).backgroundColor).toBe(
@@ -139,7 +139,7 @@ export const SystemAdmin: Story = {
       within(nav)
         .getAllByRole("link")
         .map((link) => link.textContent),
-    ).toEqual(["플러그인", "실행", "계정", "설정"]);
+    ).toEqual(["플러그인", "대화", "계정", "설정"]);
     await expect(within(nav).getByRole("link", { name: "계정" })).toHaveAttribute(
       "href",
       "/accounts",

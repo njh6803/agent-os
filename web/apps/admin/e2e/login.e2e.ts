@@ -1,5 +1,5 @@
 // 읽기 흐름의 첫 조각. 로그인 화면으로 들어가 플러그인 목록을 보고, 로그아웃하고, 설정에서 고른 테마가 첫 그림부터 그려지는지
-// 본다(admin-login 티켓 09, 앞은 web-admin 티켓 05, 테마는 admin-style 티켓 09). 실행 목록과 실행 하나는 runs.e2e.ts 가 잇는다.
+// 본다(admin-login 티켓 09, 앞은 web-admin 티켓 05, 테마는 admin-style 티켓 09). 대화 목록과 대화 하나는 chat.e2e.ts 와 reading.e2e.ts 가 잇는다.
 // 실제 serve, 시작 래퍼로 띄운 실제 next start, 실제 중계(rewrites)를 지난다. 준비는 stack.ts 이고, 계정은 준비가 `agent-os
 // operator system-admin` 으로 만든 것이다.
 
@@ -157,8 +157,8 @@ test("로그아웃하면 로그아웃했다는 알림과 함께 로그인 화면
 
   await expect(page).toHaveURL(`${adminUrl}/login?notice=logged-out`);
   await expect(page.getByText("로그아웃했다", { exact: true })).toBeVisible();
-  await page.goto(`${adminUrl}/runs`);
-  await expect(page).toHaveURL(`${adminUrl}/login?next=%2Fruns`);
+  await page.goto(`${adminUrl}/chat`);
+  await expect(page).toHaveURL(`${adminUrl}/login?next=%2Fchat`);
 });
 
 test("설정에서 고른 쪽빛은 새로 고쳐도 첫 그림부터 쪽빛이고 다른 화면으로 옮겨도 남는다", async ({
