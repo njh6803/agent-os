@@ -1,18 +1,15 @@
-// 생성 클라이언트 셋(ADR 0021·0024). 요청의 경로를 보고 토큰을 고르지 않는다. 고르는 것은 클라이언트다. 관리
-// 클라이언트는 관리 토큰만, 채널 클라이언트는 채널 토큰만 싣는다. 위젯 클라이언트는 토큰을 들지 않고 부르는 쪽이
-// 요청마다 사이트가 서명한 토큰을 넘긴다. 한 토큰이 맡지 않은 경로에 실리는 실수는 타입이 막는다. 각 클라이언트가
-// 아는 경로가 그 토큰이 여는 경로뿐이라서다.
+// 생성 클라이언트 셋(ADR 0021·0024). 요청의 경로를 보고 자격을 고르지 않는다. 고르는 것은 클라이언트다. 운영자
+// 클라이언트는 토큰을 들지 않고, 쿠키는 브라우저가 같은 출처의 중계(`/api/*`)에 스스로 싣는다. 위젯 클라이언트도 토큰을
+// 들지 않고 부르는 쪽이 요청마다 사이트가 서명한 토큰을 넘긴다. 한 자격이 맡지 않은 경로에 실리는 실수는 타입이
+// 막는다. 각 클라이언트가 아는 경로가 그 자격이 여는 경로뿐이라서다.
 //
-// 서버의 접두사→자격 표(`/runs` 아래는 채널 토큰, `/end-user` 아래는 사이트가 서명한 토큰, 그 밖은 관리 토큰.
-// `.claude/rules/http.md`)를 여기서 다시 판정하지 않는다. TS 가 아는 것은 생성된 경로 키 가운데 어느 것이 관리의
-// 것이 아닌가뿐이다. 계약에 경로가 늘면 관리 클라이언트의 타입에 새 경로가 보이고, 경로 목록을 고정한 타입
-// 테스트(`clients.test-d.ts`)가 빨개진다. 관리 화면은 최종 사용자 경로를 부르지 않고, 위젯은 그 경로만 부른다.
+// 서버의 접두사→자격 표(`/end-user` 아래는 사이트가 서명한 토큰, 그 밖은 운영자 로그인. `.claude/rules/http.md`)를 여기서
+// 다시 판정하지 않는다. TS 가 아는 것은 생성된 경로 키 가운데 어느 것이 최종 사용자의 것인가뿐이다. 계약에 경로가 늘면
+// 경로 목록을 고정한 타입 테스트(`clients.test-d.ts`)가 빨개진다. 관리 화면은 최종 사용자 경로를 부르지 않고, 위젯은 그
+// 경로만 부른다.
 
 import createClient, { type Client, type Middleware } from "openapi-fetch";
 import type { paths } from "./generated/openapi";
-
-/** 채널 토큰이 여는 경로. 실행을 일으키는 것, 결정을 내는 것, 끝난 실행을 이어 가는 것이다. */
-type ChannelPath = "/runs" | "/runs/{run_id}/approval" | "/runs/{run_id}/continuation";
 
 /** 사이트가 서명한 토큰이 여는 경로. 최종 사용자가 자기 실행을 시작하고 결정하고 구독하고 이어 간다. */
 type EndUserPath =
@@ -20,12 +17,6 @@ type EndUserPath =
   | "/end-user/runs/{run_id}/approval"
   | "/end-user/runs/{run_id}/subscription"
   | "/end-user/runs/{run_id}/continuation";
-
-/** 관리 클라이언트가 아는 경로. 생성된 경로에서 채널의 경로와 최종 사용자의 경로를 뺀 것이다. */
-export type AdminPaths = Omit<paths, ChannelPath | EndUserPath>;
-
-/** 채널 클라이언트가 아는 경로. 관리 화면이 채널에 내는 요청은 결정 하나뿐이다. 관리는 실행을 일으키지도 이어 가지도 않는다. */
-export type ChannelPaths = Pick<paths, "/runs/{run_id}/approval">;
 
 /** 위젯 클라이언트가 아는 경로. 최종 사용자 경로 넷뿐이다. */
 export type WidgetPaths = Pick<paths, EndUserPath>;
@@ -36,8 +27,6 @@ export type WidgetPaths = Pick<paths, EndUserPath>;
  */
 export type OperatorPaths = Omit<paths, EndUserPath>;
 
-export type AdminClient = Client<AdminPaths>;
-export type ChannelClient = Client<ChannelPaths>;
 export type WidgetClient = Client<WidgetPaths>;
 export type OperatorClient = Client<OperatorPaths>;
 /** 요청 앞뒤에 끼는 함수 묶음. 화면이 갱신 규칙을 꽂는 자리(`OperatorClient.use`)의 타입이다. */
@@ -49,16 +38,6 @@ export type OperatorMiddleware = Middleware;
  */
 export function createOperatorClient(): OperatorClient {
   return createClient<OperatorPaths>({ baseUrl: apiBaseUrl() });
-}
-
-/** 관리 토큰을 싣는 클라이언트. 공유 토큰을 걷는 티켓이 걷는다(admin-login 13). */
-export function createAdminClient(adminToken: string): AdminClient {
-  return createClient<AdminPaths>({ baseUrl: apiBaseUrl(), headers: bearer(adminToken) });
-}
-
-/** 채널 토큰을 싣는 클라이언트. */
-export function createChannelClient(channelToken: string): ChannelClient {
-  return createClient<ChannelPaths>({ baseUrl: apiBaseUrl(), headers: bearer(channelToken) });
 }
 
 /**
@@ -77,8 +56,4 @@ export function createWidgetClient(baseUrl: URL): WidgetClient {
 // `Failed to parse URL` 로 섰다(`.scratch/web-admin/probes/jsdom_sse.sh`). 한 모양이어야 테스트가 제품 코드를 본다.
 function apiBaseUrl(): string {
   return new URL("/api", location.origin).href;
-}
-
-function bearer(token: string): { readonly Authorization: string } {
-  return { Authorization: `Bearer ${token}` };
 }

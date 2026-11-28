@@ -288,30 +288,6 @@ new = '''
   }'''
 
 [[mutation]]
-name = "관리 클라이언트가 채널 경로도 안다"
-runner = "tsc"
-tests = []
-expect = "red"
-diagnostic_in = "clients.test-d.ts"
-
-[[mutation.edit]]
-file = "web/packages/api-client/src/clients.ts"
-old = 'export type AdminPaths = Omit<paths, ChannelPath | EndUserPath>;'
-new = 'export type AdminPaths = Omit<paths, EndUserPath>;'
-
-[[mutation]]
-name = "채널 클라이언트가 실행을 일으키는 경로도 안다"
-runner = "tsc"
-tests = []
-expect = "red"
-diagnostic_in = "clients.test-d.ts"
-
-[[mutation.edit]]
-file = "web/packages/api-client/src/clients.ts"
-old = 'export type ChannelPaths = Pick<paths, "/runs/{run_id}/approval">;'
-new = 'export type ChannelPaths = Pick<paths, ChannelPath>;'
-
-[[mutation]]
 name = "목록 응답이 readonly 배열이다(--immutable 을 다시 켠 모양)"
 runner = "tsc"
 tests = []
@@ -343,14 +319,16 @@ runner = "typecheck"
 tests = []
 expect = "red"
 diagnostic_in = "clients.ts"
+# 심은 `const 틀린_값: number = "문자열"` 만 이 코드를 낸다(문자열을 숫자 자리에 넣었다).
+expect_output = ["error TS2322"]
 
 [[mutation.edit]]
 file = "web/packages/api-client/src/clients.ts"
-old = 'function bearer(token: string): { readonly Authorization: string } {'
+old = 'export function createOperatorClient(): OperatorClient {'
 new = '''
 export const 틀린_값: number = "문자열";
 
-function bearer(token: string): { readonly Authorization: string } {'''
+export function createOperatorClient(): OperatorClient {'''
 
 [[mutation]]
 name = "판정자가 생성물을 범위에서 뺀다"

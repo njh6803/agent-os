@@ -19,8 +19,9 @@ from httpx import ASGITransport, AsyncClient
 from pydantic import BaseModel, ConfigDict
 
 from agent_os.channel.http.end_user import END_USER_PREFIX
+from agent_os.http import auth as auth_module
 from agent_os.http.accounts import Tier
-from agent_os.http.auth import LoginVerifier, RequireToken, SharedToken
+from agent_os.http.auth import LoginVerifier, RequireToken
 from agent_os.http.errors import (
     CatchUnexpected,
     EndUserPaths,
@@ -32,7 +33,6 @@ from agent_os.http.paths import is_under
 from agent_os.http.permissions import (
     FORBIDDEN_FOR_ACCOUNT_MESSAGE,
     PERMISSION_TABLE,
-    SHARED_TOKEN_PERMISSIONS,
     TIER_PERMISSIONS,
     LoginOnly,
     Open,
@@ -68,12 +68,6 @@ def test_권한_이름은_다섯이고_단계마다_가진_권한이_명세와_�
     admin = TIER_PERMISSIONS["admin"]
     assert admin == frozenset(Permission) - {Permission.MANAGE_ACCOUNTS}, (
         f"관리자의 권한: {sorted(permission.value for permission in admin)}"
-    )
-
-
-def test_공유_토큰은_계정을_다루는_권한만_뺀_넷을_가진다() -> None:
-    assert SHARED_TOKEN_PERMISSIONS == frozenset(Permission) - {Permission.MANAGE_ACCOUNTS}, (
-        f"공유 토큰의 권한: {sorted(permission.value for permission in SHARED_TOKEN_PERMISSIONS)}"
     )
 
 
@@ -131,7 +125,6 @@ _TABLE: Mapping[str, Requirement] = {
     "managing": Permission.MANAGE_ACCOUNTS,
     "managing_with_body": Permission.MANAGE_ACCOUNTS,
 }
-_SHARED = "shared-t0ken"
 _ACCOUNTS: Mapping[str, Tier] = {"sys": "system_admin", "adm": "admin"}
 
 
@@ -184,7 +177,7 @@ def _app(table: Mapping[str, Requirement]) -> FastAPI:
     end_user = EndUserPaths(prefix=END_USER_PREFIX)
     install_error_handlers(app, end_user=end_user)
     login: LoginVerifier = _Cookies()
-    app.add_middleware(RequireToken, default=SharedToken(_SHARED), prefixes={}, login=login)
+    app.add_middleware(RequireToken, prefixes={}, login=login)
     app.add_middleware(CatchUnexpected, end_user=end_user)
     return app
 
@@ -198,9 +191,6 @@ async def client() -> AsyncIterator[AsyncClient]:
 
 def _cookie(name: str) -> dict[str, str]:
     return {"Cookie": f"{ACCESS_COOKIE}={name}"}
-
-
-SHARED_HEADER = {"Authorization": f"Bearer {_SHARED}"}
 
 
 async def test_권한이_모자란_계정은_403_고정_문구이고_코드는_forbidden이다(
@@ -220,20 +210,34 @@ async def test_권한을_가진_계정은_지난다(client: AsyncClient) -> None
     assert (await client.get("/viewing", headers=_cookie("adm"))).status_code == 200
 
 
-async def test_공유_토큰은_계정을_다루는_일을_못_하고_나머지_넷은_한다(client: AsyncClient) -> None:
-    refused = await client.get("/managing", headers=SHARED_HEADER)
-    allowed = await client.get("/viewing", headers=SHARED_HEADER)
+async def test_옛_공유_토큰_머리는_운영자_경로에서_읽지_않아_401이다(client: AsyncClient) -> None:
+    """공유 토큰을 걷었다. `Authorization` 머리는 운영자 경로에서 보지 않으므로, 어떤 값을 실어도
+    권한 검사에 닿지 못하고 인증이 먼저 401 로 막는다."""
+    header = {"Authorization": "Bearer anything-that-used-to-open"}
 
-    assert refused.status_code == 403
-    assert refused.json()["message"] == FORBIDDEN_FOR_ACCOUNT_MESSAGE
-    assert allowed.status_code == 200
+    for path in ("/viewing", "/managing", "/open", "/login-only"):
+        response = await client.get(path, headers=header)
+        assert response.status_code == 401, path
 
 
-async def test_열린_줄은_누구에게나_열리고_로그인만_요구하는_줄은_권한을_보지_않는다(
+async def test_열린_줄은_로그인한_누구에게나_열리고_로그인만_요구하는_줄은_권한을_보지_않는다(
     client: AsyncClient,
 ) -> None:
-    assert (await client.get("/open", headers=SHARED_HEADER)).status_code == 200
+    assert (await client.get("/open", headers=_cookie("adm"))).status_code == 200
     assert (await client.get("/login-only", headers=_cookie("adm"))).status_code == 200
+
+
+async def test_권한을_요구하는_자리에_로그인_없는_요청이_닿으면_조용히_지나지_않고_500이다(
+    client: AsyncClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """인증이 먼저 막으므로 실제로는 닿지 않는 자리다. 인증 없이 열린 경로에 권한 줄을 단 조립의
+    결함이 있어도 닫혀 있어야 한다. 옛 공유 토큰처럼 로그인 없는 요청을 권한이 있는 것으로 읽지
+    않는다."""
+    monkeypatch.setattr(auth_module, "PUBLIC_PATHS", frozenset({"/health", "/viewing"}))
+
+    response = await client.get("/viewing")
+
+    assert response.status_code == 500
 
 
 async def test_표에_없는_오퍼레이션은_조용히_지나지_않고_500이다(client: AsyncClient) -> None:

@@ -35,7 +35,7 @@ from langchain_core.messages.tool import ToolCall as LangchainToolCall
 from langchain_core.outputs import ChatResult
 from langchain_core.runnables import Runnable
 from starlette.types import Message, Scope
-from tests.fake_accounts import UnusedAccounts
+from tests.fake_accounts import UnusedAccounts, operator_cookie
 from tests.fake_checks import UnusedToolChecks
 from tests.fake_database import FakeDatabase
 from tests.fake_models import DEFAULT_MODEL, FakeModels, model_manifest
@@ -95,10 +95,8 @@ from agent_os.sdk import (
 )
 from agent_os.server import create_app
 
-ADMIN_TOKEN = "adm1n-t0ken-that-only-tests-know"
-CHANNEL_TOKEN = "channel-t0ken-that-only-tests-know"
-ADMIN = {"Authorization": f"Bearer {ADMIN_TOKEN}"}
-CHANNEL = {"Authorization": f"Bearer {CHANNEL_TOKEN}"}
+# 운영자 로그인을 흉내 낸 쿠키 머리. 관리자 단계라 관리 API와 운영자 채널의 권한 넷을 모두 가진다.
+OPERATOR = operator_cookie()
 PRINCIPAL = Principal("alice")
 T0 = datetime(2026, 9, 26, 12, 0, tzinfo=UTC)
 # 가짜 연결이 도구를 낸 서버로 적는 이름. core 시험의 가짜와 같은 규약이다.
@@ -551,8 +549,6 @@ def _app(
         tools=tools or ScopedTools(),
         clock=clock or FakeClock(),
         principal=PRINCIPAL,
-        admin_token=ADMIN_TOKEN,
-        channel_token=CHANNEL_TOKEN,
         sites=Sites(),
         run_timeout_seconds=run_timeout_seconds,
         end_user_concurrent_runs=None,
@@ -614,7 +610,7 @@ async def test_실행을_일으키면_스트림이_트레이스와_같은_줄을
     app = _app(trace=trace)
 
     async with _serving(app) as client:
-        response = await client.post("/runs", json=_start("echo"), headers=CHANNEL)
+        response = await client.post("/runs", json=_start("echo"), headers=OPERATOR)
 
     assert response.status_code == 200
     assert response.headers["content-type"].startswith("text/event-stream")
@@ -628,7 +624,7 @@ async def test_프레임은_data_한_줄뿐이고_event_도_id_도_없다() -> N
     """종류는 JSON 의 `type` 한 곳에서 읽는다(스토리 5). 계약은 `event`·`id`·`retry` 를 선택으로
     광고하지만 서버는 `data` 만 보낸다(ADR 0014 의 2026-09-24 이력)."""
     async with _serving(_app()) as client:
-        response = await client.post("/runs", json=_start("echo"), headers=CHANNEL)
+        response = await client.post("/runs", json=_start("echo"), headers=OPERATOR)
 
     blocks = [block for block in _blocks(response.text) if not block.startswith(":")]
     assert blocks
@@ -642,7 +638,7 @@ async def test_실행의_주체는_앱이_받은_것이고_스트림의_첫_이�
     """주체는 본문에서 받지 않는다(ADR 0015). 첫 이벤트에서 얻은 식별자가 승인과 관리 API 의
     열쇠다(스토리 7)."""
     async with _serving(_app()) as client:
-        response = await client.post("/runs", json=_start("echo"), headers=CHANNEL)
+        response = await client.post("/runs", json=_start("echo"), headers=OPERATOR)
 
     first = json.loads(_frames(response.text)[0])
     assert first["type"] == "run_started"
@@ -658,7 +654,7 @@ async def test_승인_대상에서_멈춘_실행의_스트림은_run_paused_로_
     app = _app(trace=trace, tools=tools)
 
     async with _serving(app) as client:
-        response = await client.post("/runs", json=_start("gated"), headers=CHANNEL)
+        response = await client.post("/runs", json=_start("gated"), headers=OPERATOR)
 
     frames = _frames(response.text)
     assert frames == trace.lines
@@ -673,7 +669,7 @@ async def test_응답에_추적_식별자와_버퍼링을_막는_헤더가_있�
     """스트림이 이상했던 요청을 서버 기록과 잇고(스토리 14), 중간 장치가 모았다 보내지 않는다
     (스토리 20)."""
     async with _serving(_app()) as client:
-        response = await client.post("/runs", json=_start("echo"), headers=CHANNEL)
+        response = await client.post("/runs", json=_start("echo"), headers=OPERATOR)
 
     assert response.headers["X-Request-Id"]
     assert response.headers["Cache-Control"] == "no-cache"
@@ -699,7 +695,7 @@ async def test_모델이_조용한_동안_keepalive_주석이_나간다(monkeypa
     opener = asyncio.create_task(open_after_silence())
     try:
         async with _serving(_app(model=model)) as client:
-            response = await client.post("/runs", json=_start("asking"), headers=CHANNEL)
+            response = await client.post("/runs", json=_start("asking"), headers=OPERATOR)
     finally:
         opener.cancel()
         with suppress(asyncio.CancelledError):
@@ -758,7 +754,7 @@ async def test_실행_안의_실패는_200_스트림_속_run_failed_다(
     app = _app(trace=trace, model=model, tools=tools)
 
     async with _serving(app) as client:
-        response = await client.post("/runs", json=_start(agent), headers=CHANNEL)
+        response = await client.post("/runs", json=_start(agent), headers=OPERATOR)
 
     assert response.status_code == 200
     frames = _frames(response.text)
@@ -786,7 +782,7 @@ async def test_시작과_이어_가기와_결정은_앱이_받은_타임아웃�
     app = _app(trace=trace, model=_gated_model(), tools=tools, run_timeout_seconds=TIMEOUT)
 
     async with _serving(app) as client, asyncio.timeout(5):
-        started = await client.post("/runs", json=_start("asking"), headers=CHANNEL)
+        started = await client.post("/runs", json=_start("asking"), headers=OPERATOR)
         continued = await _continue(client, earlier, _start("asking"))
         decided = await _decide(client, STORED, APPROVE)
 
@@ -802,10 +798,10 @@ async def test_채널에서_일으킨_실행이_같은_앱의_관리_API_목록�
     """두 면이 트레이스 포트 하나를 함께 쓴다(스토리 49). 떠난 쪽이 나머지를 보는 자리가 이것이다
     (스토리 17)."""
     async with _serving(_app()) as client:
-        streamed = await client.post("/runs", json=_start("echo"), headers=CHANNEL)
+        streamed = await client.post("/runs", json=_start("echo"), headers=OPERATOR)
         run_id = json.loads(_frames(streamed.text)[0])["run_id"]
-        listed = await client.get("/traces", headers=ADMIN)
-        detail = await client.get(f"/traces/{run_id}", headers=ADMIN)
+        listed = await client.get("/traces", headers=OPERATOR)
+        detail = await client.get(f"/traces/{run_id}", headers=OPERATOR)
 
     assert [(row["run_id"], row["status"]) for row in listed.json()["runs"]] == [
         (run_id, "finished")
@@ -821,7 +817,7 @@ async def test_없는_에이전트는_404_봉투이고_트레이스가_생기지
     trace = FakeTrace()
 
     async with _serving(_app(trace=trace)) as client:
-        response = await client.post("/runs", json=_start("nobody"), headers=CHANNEL)
+        response = await client.post("/runs", json=_start("nobody"), headers=OPERATOR)
 
     assert response.status_code == 404
     body = response.json()
@@ -864,7 +860,7 @@ async def test_실행_전_구성_오류는_500_봉투이고_message_가_그_Plug
     trace = FakeTrace()
 
     async with _serving(_app(trace=trace)) as client:
-        response = await client.post("/runs", json=_start(agent), headers=CHANNEL)
+        response = await client.post("/runs", json=_start(agent), headers=OPERATOR)
 
     assert response.status_code == 500
     body = response.json()
@@ -881,7 +877,7 @@ async def test_깨진_규칙_파일은_500_봉투이고_message_가_그_PluginEr
     trace = FakeTrace()
 
     async with _serving(_app(plugins=plugins, trace=trace)) as client:
-        response = await client.post("/runs", json=_start("echo"), headers=CHANNEL)
+        response = await client.post("/runs", json=_start("echo"), headers=OPERATOR)
 
     assert response.status_code == 500
     assert response.json()["code"] == "internal_error"
@@ -915,7 +911,7 @@ async def test_패턴을_어기는_에이전트_이름은_422이고_플러그인
 
     async with _serving(_app(plugins=plugins)) as client:
         for agent in ESCAPING_AGENTS:
-            response = await client.post("/runs", json=_start(agent), headers=CHANNEL)
+            response = await client.post("/runs", json=_start(agent), headers=OPERATOR)
 
             assert response.status_code == 422, agent
             fields = [violation["field"] for violation in response.json()["violations"]]
@@ -939,7 +935,7 @@ async def test_필드가_빠지거나_모양이_틀리면_422이고_violations_�
     plugins = FakePlugins()
 
     async with _serving(_app(plugins=plugins)) as client:
-        response = await client.post("/runs", json=body, headers=CHANNEL)
+        response = await client.post("/runs", json=body, headers=OPERATOR)
 
     assert response.status_code == 422
     assert response.json()["code"] == "invalid_request"
@@ -954,7 +950,7 @@ async def test_주체_승인자_모델을_본문에_실으면_무시하지_않�
 
     async with _serving(_app(plugins=plugins)) as client:
         response = await client.post(
-            "/runs", json={**_start("echo"), extra: "mallory"}, headers=CHANNEL
+            "/runs", json={**_start("echo"), extra: "mallory"}, headers=OPERATOR
         )
 
     assert response.status_code == 422
@@ -966,7 +962,7 @@ async def test_요청은_문자열이면_되고_그대로_실행에_실린다() 
     """CLI 가 받는 것과 같다. 여러 줄도 빈 문자열도 요청이다."""
     async with _serving(_app()) as client:
         for request in ("여러\n줄의 요청", ""):
-            response = await client.post("/runs", json=_start("echo", request), headers=CHANNEL)
+            response = await client.post("/runs", json=_start("echo", request), headers=OPERATOR)
 
             first = json.loads(_frames(response.text)[0])
             assert first["request"] == request, request
@@ -981,7 +977,7 @@ async def test_422의_서버_기록은_위치와_문구만_싣고_입력값을_�
         await client.post(
             "/runs",
             json={"agent": "../XYZZY-agent", "request": "PLUGH-request", "principal": "FROB-who"},
-            headers=CHANNEL,
+            headers=OPERATOR,
         )
 
     logged = stderr.getvalue()
@@ -1029,7 +1025,7 @@ def _stored(*events: Event, into: FakeTrace | None = None) -> FakeTrace:
 
 
 async def _decide(client: AsyncClient, run_id: str, decision: Mapping[str, Json]) -> Response:
-    return await client.post(f"/runs/{run_id}/approval", json=decision, headers=CHANNEL)
+    return await client.post(f"/runs/{run_id}/approval", json=decision, headers=OPERATOR)
 
 
 async def test_승인의_스트림은_결정에서_시작해_결말로_끝나고_승인자는_앱의_주체다() -> None:
@@ -1040,7 +1036,7 @@ async def test_승인의_스트림은_결정에서_시작해_결말로_끝나고
     app = _app(trace=trace, tools=tools)
 
     async with _serving(app) as client:
-        started = await client.post("/runs", json=_start("gated"), headers=CHANNEL)
+        started = await client.post("/runs", json=_start("gated"), headers=OPERATOR)
         before = len(trace.lines)
         response = await _decide(client, "run-1", APPROVE)
 
@@ -1065,7 +1061,7 @@ async def test_거부하면_approval_denied_가_다듬은_사유를_싣고_거�
     app = _app(trace=trace, tools=tools, model=model)
 
     async with _serving(app) as client:
-        await client.post("/runs", json=_start("gated-asking"), headers=CHANNEL)
+        await client.post("/runs", json=_start("gated-asking"), headers=OPERATOR)
         before = len(trace.lines)
         response = await _decide(
             client,
@@ -1104,7 +1100,7 @@ async def test_재개_스트림은_멈추기_전에_이미_본_사실을_되풀�
     app = _app(trace=trace, tools=tools, model=model)
 
     async with _serving(app) as client:
-        started = await client.post("/runs", json=_start("careful"), headers=CHANNEL)
+        started = await client.post("/runs", json=_start("careful"), headers=OPERATOR)
         response = await _decide(client, "run-1", _approve(3))
 
     assert _types(_frames(started.text)) == [
@@ -1155,7 +1151,7 @@ async def test_재개가_다시_멈추면_같은_경로로_둘째_결정을_내_
     app = _app(trace=trace, tools=tools, model=model)
 
     async with _serving(app) as client:
-        started = await client.post("/runs", json=_start("gated-asking"), headers=CHANNEL)
+        started = await client.post("/runs", json=_start("gated-asking"), headers=OPERATOR)
         first = await _decide(client, "run-1", _approve(2))
         second = await _decide(client, "run-1", _approve(6))
 
@@ -1196,7 +1192,7 @@ async def test_지나간_자리를_든_결정은_409_봉투이고_두_자리를_
     app = _app(trace=trace, tools=tools, model=model)
 
     async with _serving(app) as client:
-        await client.post("/runs", json=_start("gated-asking"), headers=CHANNEL)
+        await client.post("/runs", json=_start("gated-asking"), headers=OPERATOR)
         await _decide(client, "run-1", _approve(2))
         before, called = list(trace.lines), list(tools.calls)
         stale = await _decide(client, "run-1", _approve(2))
@@ -1224,7 +1220,7 @@ async def test_스트림만_본_클라이언트도_센_프레임_수로_다음_�
     app = _app(trace=trace, tools=tools, model=model)
 
     async with _serving(app) as client:
-        started = await client.post("/runs", json=_start("gated-asking"), headers=CHANNEL)
+        started = await client.post("/runs", json=_start("gated-asking"), headers=OPERATOR)
         seen = len(_frames(started.text))
         first = await _decide(client, "run-1", _approve(seen - 1))
         seen += len(_frames(first.text))
@@ -1329,7 +1325,7 @@ async def test_한_루프에서_동시에_온_결정_둘은_하나만_받아들�
     app = _app(trace=trace, tools=tools)
 
     async with _serving(app) as client:
-        await client.post("/runs", json=_start("gated"), headers=CHANNEL)
+        await client.post("/runs", json=_start("gated"), headers=OPERATOR)
         responses = await asyncio.gather(
             _decide(client, "run-1", APPROVE), _decide(client, "run-1", APPROVE)
         )
@@ -1429,9 +1425,9 @@ async def test_기록이_깨진_실행은_404_가_아니라_500_봉투이고_결
 
 
 async def _set_enabled(client: AsyncClient, kind: str, name: str, *, enabled: bool) -> None:
-    """같은 앱의 관리 라우트로 켜고 끈다. 관리 토큰이고 받는 포트는 채널과 같은 것이다."""
+    """같은 앱의 관리 라우트로 켜고 끈다. 운영자 쿠키이고 받는 포트는 채널과 같은 것이다."""
     response = await client.put(
-        f"/plugins/{kind}/{name}/enabled", json={"enabled": enabled}, headers=ADMIN
+        f"/plugins/{kind}/{name}/enabled", json={"enabled": enabled}, headers=OPERATOR
     )
     assert response.status_code == 204
 
@@ -1452,7 +1448,7 @@ async def test_관리로_끈_것을_부른_실행은_409_봉투이고_메시지�
 
     async with _serving(_app(trace=trace, tools=tools)) as client:
         await _set_enabled(client, kind, name, enabled=False)
-        response = await client.post("/runs", json=_start(agent), headers=CHANNEL)
+        response = await client.post("/runs", json=_start(agent), headers=OPERATOR)
 
     assert response.status_code == 409
     body = response.json()
@@ -1472,7 +1468,7 @@ async def test_멈춘_실행의_에이전트를_끄면_결정이_409_이고_다�
     tools = ScopedTools()
 
     async with _serving(_app(trace=trace, tools=tools)) as client:
-        await client.post("/runs", json=_start("gated"), headers=CHANNEL)
+        await client.post("/runs", json=_start("gated"), headers=OPERATOR)
         paused = list(trace.lines)
         await _set_enabled(client, "agent", "gated", enabled=False)
         refused = await _decide(client, "run-1", APPROVE)
@@ -1696,7 +1692,7 @@ class _Wire:
 
 
 def _scope() -> Scope:
-    """`POST /runs` 하나. 채널 토큰을 든다."""
+    """`POST /runs` 하나. 운영자 로그인 쿠키를 든다."""
     return {
         "type": "http",
         "asgi": {"version": "3.0"},
@@ -1708,7 +1704,7 @@ def _scope() -> Scope:
         "root_path": "",
         "query_string": b"",
         "headers": [
-            (b"authorization", f"Bearer {CHANNEL_TOKEN}".encode()),
+            (b"cookie", OPERATOR["Cookie"].encode()),
             (b"content-type", b"application/json"),
         ],
         "client": ("127.0.0.1", 50000),
@@ -1883,7 +1879,7 @@ async def test_도구를_쓰는_실행이_끝까지_가고_도구_연결이_닫�
     app = _app(tools=tools)
 
     async with _serving(app) as client:
-        response = await client.post("/runs", json=_start("adding"), headers=CHANNEL)
+        response = await client.post("/runs", json=_start("adding"), headers=OPERATOR)
 
     assert _types(_frames(response.text)) == ["run_started", "tool_called", "run_finished"]
     assert tools.closed
@@ -1897,7 +1893,7 @@ async def test_트레이스를_쓰지_못해_멈춘_실행은_스트림을_결�
     app = _app(trace=trace, stderr=stderr)
 
     async with _serving(app) as client:
-        broken = await client.post("/runs", json=_start("echo"), headers=CHANNEL)
+        broken = await client.post("/runs", json=_start("echo"), headers=OPERATOR)
         health = await client.get("/health")
 
     assert broken.status_code == 200
@@ -2244,7 +2240,7 @@ def _finished_stored(agent: str = "echo", principal: Principal = PRINCIPAL) -> F
 
 
 async def _continue(client: AsyncClient, run_id: str, body: Mapping[str, Json]) -> Response:
-    return await client.post(f"/runs/{run_id}/continuation", json=body, headers=CHANNEL)
+    return await client.post(f"/runs/{run_id}/continuation", json=body, headers=OPERATOR)
 
 
 async def test_이어_가기는_같은_SSE_스트림이고_첫_이벤트가_앞_실행을_든_run_started_다() -> None:
@@ -2270,7 +2266,7 @@ async def test_채널로_시작한_실행을_이어_가면_시작_이벤트가_�
     """지도는 core 한 자리가 짓는다. 위 사례의 저장된 실행은 지도가 없는 옛 실행이라 없음이 이어진다
     (end-user-continuation 명세 "바로가기")."""
     async with _serving(_app()) as client:
-        first = await client.post("/runs", json=_start("echo"), headers=CHANNEL)
+        first = await client.post("/runs", json=_start("echo"), headers=OPERATOR)
         response = await _continue(client, "run-1", _start("echo", "그럼?"))
 
     assert json.loads(_frames(first.text)[0])["shortcuts"] == {}

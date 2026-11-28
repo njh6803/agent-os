@@ -82,23 +82,6 @@ new = '''
 '''
 
 [[mutation]]
-name = "공유 토큰이 계정을 다루는 권한도 가진다"
-tests = ["tests/test_permissions.py"]
-expect = "red"
-expect_output = ["공유 토큰의 권한: ['decide', 'manage_accounts'"]
-
-[[mutation.edit]]
-file = "src/agent_os/http/permissions.py"
-old = '''
-SHARED_TOKEN_PERMISSIONS: frozenset[Permission] = frozenset(Permission) - {
-    Permission.MANAGE_ACCOUNTS
-}
-'''
-new = '''
-SHARED_TOKEN_PERMISSIONS: frozenset[Permission] = frozenset(Permission)
-'''
-
-[[mutation]]
 name = "관리자도 계정을 다루는 권한을 가진다"
 tests = ["tests/test_permissions.py"]
 expect = "red"

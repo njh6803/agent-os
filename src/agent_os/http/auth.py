@@ -7,13 +7,12 @@
 미들웨어가 라우팅보다 바깥이라 문서에 없는 경로도 401 이다. 인증 없는 요청이 어떤 경로가
 실재하는지 알아낼 수 없다는 뜻이기도 하다.
 
-어느 자격을 요구하나는 접두사→자격 표가 정하고 표는 조립 층이 넘긴다. 자격은 셋이다. 운영자
-채널은 `/runs` 아래에서 자기 공유 토큰을 쓰고(ADR 0015, ADR 0011 의 2026-09-24 이력), 최종 사용자
-면은 자기 접두사 아래에서 사이트가 서명한 토큰을 쓰며(ADR 0023), 그 밖은 관리 토큰이다. 자격을
-가르는 이유는 권한의 성격이 달라서다 — 관리 토큰은 트레이스를 읽고, 채널 토큰은 비용과 부작용이 있는
-실행을 일으키며, 서명 토큰은 원격의 최종 사용자가 자기 실행만 다룬다. 표에 없는 경로의 기본값은 관리
-토큰이라, 새 경로를 접두사 밖에 두는 실수는 틀린 토큰으로 막힐 뿐 열리지 않는다. 그래서 채널 토큰과
-관리 토큰은 최종 사용자 접두사에서 통하지 않고 서명 토큰은 그 밖에서 통하지 않는다.
+어느 자격을 요구하나는 접두사→자격 표가 정하고 표는 조립 층이 넘긴다. 자격은 둘이다. 최종 사용자
+면은 자기 접두사 아래에서 사이트가 서명한 토큰을 쓰고(ADR 0023), 그 밖의 모든 경로(운영자 채널
+`/runs` 를 포함한다)는 운영자 로그인, 곧 로그인 쿠키의 짧은 JWT 를 쓴다(ADR 0062). 표에 없는
+경로의 기본값이 운영자 로그인이라, 새 경로를 접두사 밖에 두는 실수는 로그인 없이 막힐 뿐 열리지
+않는다. 그래서 운영자 로그인은 최종 사용자 접두사에서 통하지 않고 서명 토큰은 그 밖에서 통하지
+않는다. `Authorization` 머리는 운영자 경로에서 읽지 않으므로 공유 토큰을 싣고 오던 요청은 401 이다.
 
 서명 토큰을 지난 요청은 그 신원(주체와 사이트 항목)을 요청에 심는다. 라우트의 의존성이 그것을 읽어
 core 에 주체를, 열 에이전트 판정에 사이트를 넘긴다 — 본문에서 받지 않는다(ADR 0015).
@@ -21,7 +20,6 @@ core 에 주체를, 열 에이전트 판정에 사이트를 넘긴다 — 본문
 
 from __future__ import annotations
 
-import hmac
 from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Protocol
@@ -46,28 +44,17 @@ PUBLIC_PATHS = frozenset(
     {"/health", "/auth/login", "/auth/refresh", "/auth/setup", "/auth/set-password"}
 )
 
-# 짧은 JWT 로만 여는 경로. 로그인 한 건이나 계정이 있어야 뜻이 있는 일이라 공유 토큰으로 오면
-# 401 이다. 내 비밀번호 바꾸기는 그 로그인의 다른 기기를 끊는 일이라 로그인 한 건이 필요하다.
-LOGIN_ONLY_PATHS = frozenset({"/auth/logout", "/auth/me", "/auth/password"})
-
 _SCHEME = "bearer"
-# 401 이 요구하는 챌린지(RFC 9110). 어떤 방식으로 인증하는지 알리는 것은 노출이 아니다 — 401
-# 자체가 이미 인증이 필요하다고 말한다. realm 을 붙이지 않는 이유는 그것이 내부 구성이어서다.
+# 최종 사용자 경로의 401 이 요구하는 챌린지(RFC 9110). 어떤 방식으로 인증하는지 알리는 것은 노출이
+# 아니다 — 401 자체가 이미 인증이 필요하다고 말한다. realm 을 붙이지 않는 이유는 그것이 내부
+# 구성이어서다. 운영자 경로의 401 에는 싣지 않는다. 그 경로는 `Authorization` 머리를 읽지 않고
+# 쿠키를 읽는다.
 _CHALLENGE = {"WWW-Authenticate": "Bearer"}
-# 헤더는 ASGI 경계에서 latin-1 로 디코딩되므로 같은 코덱으로 되돌리면 실린 바이트 그대로다.
-_HEADER_CODEC = "latin-1"
 # 서명 토큰을 지난 요청의 신원을 담는 ASGI scope 의 키. 라우트의 의존성이 이것으로 읽는다. 남의 키와
 # 부딪히지 않게 패키지 이름을 앞에 둔다.
 _END_USER_KEY = "agent_os.end_user"
 # 짧은 JWT 를 지난 요청의 로그인을 담는 scope 의 키. 같은 이유로 패키지 이름을 앞에 둔다.
 _OPERATOR_KEY = "agent_os.operator"
-
-
-@dataclass(frozen=True)
-class SharedToken:
-    """경로가 공유 토큰 하나로 열린다. 관리와 운영자 채널이다."""
-
-    value: str
 
 
 @dataclass(frozen=True)
@@ -83,22 +70,6 @@ class SiteSigned:
     clock: Clock
 
 
-# 접두사→자격 표의 값. 공유 토큰 하나이거나 사이트 목록이 서명한 토큰이다.
-type Credential = SharedToken | SiteSigned
-
-
-@dataclass(frozen=True)
-class _Shared:
-    """비교를 위해 미리 바이트로 바꾼 공유 토큰."""
-
-    value: bytes
-
-
-@dataclass(frozen=True)
-class _LoginOnly:
-    """경로가 로그인 쿠키의 짧은 JWT 로만 열린다. 공유 토큰은 통하지 않는다."""
-
-
 class LoginVerifier(Protocol):
     """짧은 JWT 를 검증하는 쪽. 토큰이 없으면 데이터베이스를 읽지 않고 없음이어야 한다."""
 
@@ -108,67 +79,52 @@ class LoginVerifier(Protocol):
 class RequireToken(BaseHTTPMiddleware):
     """경로가 요구하는 자격이 맞는 요청만 지나간다. 그 밖은 전부 401 이고 라우팅에 닿지 않는다.
 
-    **공유 토큰과 로그인 쿠키를 함께 받는 기간**(명세 admin-login). 운영자 경로(최종 사용자 접두사
-    밖의 모든 경로)는 공유 토큰이나 로그인 쿠키의 짧은 JWT 가운데 하나라도 맞으면 지난다. 공유
-    토큰은 지금 여는 경로를 지금처럼 연다(관리 토큰은 `/runs` 밖을, 채널 토큰은 `/runs` 아래를).
-    짧은 JWT 는 둘 다 연다. `LOGIN_ONLY_PATHS` 는 로그인 한 건이나 계정이 있어야 뜻이 있는 경로라
-    짧은 JWT 로만 열고 공유 토큰으로 오면 401 이다. 최종 사용자 경로는 이 기간에도 서명 토큰만
-    받는다. 공유 토큰을 걷는 티켓이 이 기간을 닫는다.
+    표(`prefixes`)에 걸리는 경로는 사이트가 서명한 토큰으로만 열린다. 표에 걸리지 않는 모든 경로는
+    로그인 쿠키의 짧은 JWT 로만 열린다. 공유 토큰은 없다(ADR 0062). 운영자 경로의 401 에는
+    `WWW-Authenticate` 를 싣지 않고 최종 사용자 경로의 401 에는 싣는다.
     """
 
     def __init__(
         self,
         app: ASGIApp,
         *,
-        default: SharedToken,
-        prefixes: Mapping[str, Credential],
-        login: LoginVerifier | None = None,
+        prefixes: Mapping[str, SiteSigned],
+        login: LoginVerifier,
     ) -> None:
         super().__init__(app)
-        self._default = _prepared(default)
-        self._prefixes = {prefix: _prepared(credential) for prefix, credential in prefixes.items()}
+        self._prefixes = dict(prefixes)
         self._login = login
 
     async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
         path = request.url.path
         if path in PUBLIC_PATHS:
             return await call_next(request)
-        header = request.headers.get("authorization")
-        required = _LoginOnly() if path in LOGIN_ONLY_PATHS else self._required(path)
-        match required:
-            case _LoginOnly():
-                claims = await self._claims(request)
-                if claims is None:
-                    return _refused(request, UNAUTHORIZED_MESSAGE)
-            case _Shared(value=expected):
-                # 공유 토큰이 맞으면 쿠키를 보지 않는다. 쿠키를 먼저 보면 키를 읽다
-                # 데이터베이스가 죽을 때 맞는 공유 토큰도 500 이 난다
-                if not _matches(header, expected) and await self._claims(request) is None:
-                    return _refused(request, UNAUTHORIZED_MESSAGE)
+        match self._required(path):
             case SiteSigned(sites=sites, clock=clock):
+                header = request.headers.get("authorization")
                 verified = verify_signed(_bearer(header), sites, clock)
                 if isinstance(verified, Refusal):
                     reason = verified.reason
-                    return _refused(request, f"{UNAUTHORIZED_MESSAGE}: 서명 토큰 — {reason}")
+                    return _refused(
+                        request,
+                        f"{UNAUTHORIZED_MESSAGE}: 서명 토큰 — {reason}",
+                        headers=_CHALLENGE,
+                    )
                 request.scope[_END_USER_KEY] = verified
+            case None:
+                claims = await self._login.verify(request.cookies.get(ACCESS_COOKIE))
+                if claims is None:
+                    return _refused(request, UNAUTHORIZED_MESSAGE)
+                request.scope[_OPERATOR_KEY] = claims
         return await call_next(request)
 
-    def _required(self, path: str) -> _Shared | SiteSigned:
-        """경로가 요구하는 자격. 표에 걸리지 않으면 기본값이다. 비교는 `is_under` 다."""
+    def _required(self, path: str) -> SiteSigned | None:
+        """경로가 요구하는 서명 토큰. 표에 걸리지 않으면 없음이고 운영자 로그인이다. 비교는
+        `is_under` 다."""
         for prefix, credential in self._prefixes.items():
             if is_under(path, prefix):
                 return credential
-        return self._default
-
-    async def _claims(self, request: Request) -> LoginClaims | None:
-        """로그인 쿠키의 짧은 JWT 가 맞으면 그 내용을 요청에 심고 돌려준다. 쿠키가 없으면
-        없음이다."""
-        if self._login is None:
-            return None
-        claims = await self._login.verify(request.cookies.get(ACCESS_COOKIE))
-        if claims is not None:
-            request.scope[_OPERATOR_KEY] = claims
-        return claims
+        return None
 
 
 def end_user_of(request: Request) -> EndUser | None:
@@ -184,38 +140,32 @@ def end_user_of(request: Request) -> EndUser | None:
 def operator_of(request: Request) -> LoginClaims | None:
     """짧은 JWT 를 지난 요청의 로그인(질의). 없으면 None.
 
-    로그인으로만 여는 경로(`LOGIN_ONLY_PATHS`)에서 없음은 조립의 결함이다. 공유 토큰도 받는 운영자
-    경로에서는 없음이 정상이고, 공유 토큰으로 온 요청이라는 뜻이다. 갈래가 있는 것은 scope 에서
-    읽은 값의 타입을 정적 타입이 모르기 때문이다.
+    로그인 없이 지나가는 경로(`PUBLIC_PATHS`)에서는 없음이 정상이다. 그 밖의 운영자 경로에서 없음은
+    조립의 결함이다. 갈래가 있는 것은 scope 에서 읽은 값의 타입을 정적 타입이 모르기 때문이다.
     """
     found = request.scope.get(_OPERATOR_KEY)
     return found if isinstance(found, LoginClaims) else None
 
 
-def _prepared(credential: Credential) -> _Shared | SiteSigned:
-    """표의 값을 비교할 모양으로. 공유 토큰은 바이트로 바꾼다.
-
-    바이트로 비교하는 이유는 `hmac.compare_digest` 가 str 을 받으면 non-ASCII 에서 TypeError 를 내기
-    때문이다. 원격 입력 하나가 401 이어야 할 자리를 500 으로 바꾼다.
-    """
-    match credential:
-        case SharedToken(value=value):
-            return _Shared(value.encode("utf-8"))
-        case SiteSigned():
-            return credential
-
-
-def _refused(request: Request, detail: str) -> Response:
-    """401 봉투 하나. 밖으로는 고정 문구이고 원인은 서버 기록에 남길 문구로만 적는다."""
+def _refused(
+    request: Request, detail: str, *, headers: Mapping[str, str] | None = None
+) -> Response:
+    """401 봉투 하나. 밖으로는 고정 문구이고 원인은 서버 기록에 남길 문구로만 적는다. 챌린지 머리는
+    `Authorization` 머리로 인증하는 최종 사용자 경로의 것에만 싣는다."""
     remember_failure(request, detail)
-    return error_envelope(request, status=401, message=UNAUTHORIZED_MESSAGE, headers=_CHALLENGE)
+    return error_envelope(
+        request,
+        status=401,
+        message=UNAUTHORIZED_MESSAGE,
+        headers=headers,
+    )
 
 
 def _bearer(header: str | None) -> str | None:
     """`Bearer` 헤더의 값. 없거나 방식이 다르거나 값이 비었으면 없음이다.
 
     빈 값을 먼저 거르는 이유는 헤더 부재를 빈 문자열로 다루는 구현과 겹치면 그 자체가 fail-open
-    이기 때문이다. 공유 토큰과 서명 토큰이 이 한 곳을 지난다.
+    이기 때문이다.
     """
     if header is None:
         return None
@@ -223,15 +173,3 @@ def _bearer(header: str | None) -> str | None:
     if scheme.lower() != _SCHEME or not value:
         return None
     return value
-
-
-def _matches(header: str | None, expected: bytes) -> bool:
-    """공유 토큰 하나를 판정한다. 없는 것과 빈 것이 같은 답을 받되 둘 다 통과가 아니다.
-
-    비교는 값에 따라 시간이 달라지지 않는다 — 비교 시간이 곧 토큰을 한 글자씩 알려 주는 경로다
-    (스토리 40). 어느 공유 토큰이든 이 한 곳을 지난다.
-    """
-    value = _bearer(header)
-    if value is None:
-        return False
-    return hmac.compare_digest(value.encode(_HEADER_CODEC, errors="replace"), expected)

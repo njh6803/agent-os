@@ -35,7 +35,7 @@ from langchain_core.messages.tool import ToolCall as LangchainToolCall
 from langchain_core.outputs import ChatResult
 from langchain_core.runnables import Runnable
 from starlette.types import Message, Scope
-from tests.fake_accounts import UnusedAccounts
+from tests.fake_accounts import UnusedAccounts, operator_cookie
 from tests.fake_checks import UnusedToolChecks
 from tests.fake_database import FakeDatabase
 from tests.fake_models import DEFAULT_MODEL, FakeModels, model_manifest
@@ -103,9 +103,8 @@ from agent_os.sdk import (
 )
 from agent_os.server import create_app
 
-ADMIN_TOKEN = "adm1n-t0ken-that-only-tests-know"
-CHANNEL_TOKEN = "channel-t0ken-that-only-tests-know"
-CHANNEL = {"Authorization": f"Bearer {CHANNEL_TOKEN}"}
+# 운영자 로그인을 흉내 낸 쿠키 머리. 운영자 채널(`/runs`)을 여는 자격이다.
+CHANNEL = operator_cookie()
 # 운영자 채널의 주체(`serve` 의 OS 사용자). `|` 가 없다.
 OPERATOR = Principal("operator")
 T0 = datetime(2026, 10, 5, 12, 0, tzinfo=UTC)
@@ -609,8 +608,6 @@ def _app(
         tools=tools or ScopedTools(),
         clock=clock or StepClock(),
         principal=OPERATOR,
-        admin_token=ADMIN_TOKEN,
-        channel_token=CHANNEL_TOKEN,
         sites=sites or _site(),
         run_timeout_seconds=run_timeout_seconds,
         end_user_concurrent_runs=end_user_concurrent_runs,
@@ -1803,6 +1800,16 @@ class _Wire:
         return _frames(b"".join(chunks).decode())
 
 
+def _operator_scope(method: str, path: str) -> Scope:
+    """운영자 로그인 쿠키를 든 요청. `Authorization` 머리는 싣지 않는다."""
+    scope = _scope(method, path, "")
+    scope["headers"] = [
+        (b"cookie", CHANNEL["Cookie"].encode()),
+        (b"content-type", b"application/json"),
+    ]
+    return scope
+
+
 def _scope(method: str, path: str, token: str, last_event_id: str | None = None) -> Scope:
     headers = [
         (b"authorization", f"Bearer {token}".encode()),
@@ -1999,6 +2006,24 @@ async def test_토큰이_만료돼도_열린_스트림은_끊기지_않고_같�
 
     assert _types(wire.frames()) == [(0, "started"), (2, "finished")]
     assert later.status_code == 401
+
+
+async def test_운영자_쿠키는_최종_사용자_경로를_서명_토큰은_운영자_채널을_열지_못한다() -> None:
+    """두 자격이 서로의 면에서 통하지 않는다. 최종 사용자 면의 401만 `WWW-Authenticate: Bearer` 를
+    싣고 운영자 면의 401은 싣지 않는다. 거절된 요청은 트레이스를 남기지 않는다."""
+    trace = FakeTrace()
+    app = _app(trace=trace)
+
+    async with _serving(app) as client:
+        cookie_on_end_user = await client.post(START, json=_start("echo"), headers=CHANNEL)
+        token_on_operator = await client.post("/runs", json=_start("echo"), headers=_as())
+
+    assert cookie_on_end_user.status_code == 401
+    assert cookie_on_end_user.headers["www-authenticate"] == "Bearer"
+    assert token_on_operator.status_code == 401
+    assert "www-authenticate" not in token_on_operator.headers
+    assert trace.events == []
+    assert CHANNEL["Cookie"].split("=", 1)[1] not in cookie_on_end_user.text
 
 
 # 상한 — 너무 길거나 잦은 요청은 422·429 로 거절된다(ADR 0023, end-user-channel 티켓 02). 셈은
@@ -2247,7 +2272,7 @@ async def test_전역_동시_실행은_모든_사이트를_합쳐_세고_운영�
     app = _app(model=model, end_user_concurrent_runs=2)
 
     async with _serving(app) as client:
-        operating, _ = await _held(app, _scope("POST", "/runs", CHANNEL_TOKEN), _start("asking"))
+        operating, _ = await _held(app, _operator_scope("POST", "/runs"), _start("asking"))
         mine, _ = await _held(app, _starting(_token()), _start("asking"))
         theirs, _ = await _held(
             app, _starting(_token(key=OTHER_KEY, issuer=OTHER_ISSUER)), _start("asking")

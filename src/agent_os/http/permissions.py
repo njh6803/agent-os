@@ -2,12 +2,11 @@
 단계가 그 권한을 가지는지 본다(ADR 0062 결정 "두 단계와 권한 표", 명세 admin-login "권한 표").
 
 **권한은 다섯이고 단계가 가진 것을 정한다.** 시스템 관리자는 다섯 모두를, 관리자는 계정을 다루는
-권한(`manage_accounts`)만 뺀 넷을 가진다. 공유 토큰으로 온 요청(공유 토큰을 걷기 전까지 함께 받는
-기간)은 계정이 없지만 같은 넷을 가진 것으로 본다. 계정을 다루는 일은 계정으로만 하게 하려는 것이다.
+권한(`manage_accounts`)만 뺀 넷을 가진다. 운영자 경로는 로그인한 계정만 연다(ADR 0062).
 
 **표의 값은 셋 가운데 하나다.** 로그인 없이 연다(`Open`), 로그인만 요구한다(`LoginOnly`), 권한
 하나를 요구한다(`Permission`). 앞의 둘은 권한을 보지 않는다. 로그인 여부는 인증 미들웨어가 라우팅
-전에 이미 가렸다(`PUBLIC_PATHS`, `LOGIN_ONLY_PATHS`). 표가 그것을 다시 적는 까닭은 계약의 모든
+전에 이미 가렸다(`PUBLIC_PATHS`). 표가 그것을 다시 적는 까닭은 계약의 모든
 운영자 오퍼레이션이 표에 한 줄씩 있다는 전수 검사 하나가 "권한을 정하지 않은 경로"를 잡게 하려는
 것이다.
 
@@ -69,11 +68,6 @@ TIER_PERMISSIONS: Mapping[Tier, frozenset[Permission]] = {
     "admin": frozenset(Permission) - {Permission.MANAGE_ACCOUNTS},
 }
 
-# 공유 토큰으로 온 요청이 가진 권한. 지금 공유 토큰이 여는 일이 모두 이 넷 안에 든다.
-SHARED_TOKEN_PERMISSIONS: frozenset[Permission] = frozenset(Permission) - {
-    Permission.MANAGE_ACCOUNTS
-}
-
 # 계약의 운영자 오퍼레이션(최종 사용자 경로와 `/health` 를 뺀 것)이 `operationId` 마다 한 줄씩이다.
 # 오퍼레이션을 더하는 티켓이 그 줄을 더한다. 전수 검사(`tests/test_permissions.py`)가 계약과 이 표가
 # 같은 집합인지 본다.
@@ -129,13 +123,14 @@ def permission_check(table: Mapping[str, Requirement]) -> Callable[[Request], No
 
 
 def _granted(request: Request) -> frozenset[Permission]:
-    """요청을 보낸 쪽이 가진 권한(질의). 쿠키로 로그인했으면 그 계정의 단계가, 아니면 공유 토큰이다.
-
-    인증 미들웨어가 짧은 JWT 를 검증했을 때만 로그인이 요청에 심긴다. 계정이 없는 요청이 이 자리에
-    닿으면 공유 토큰이 맞아서 지난 것이다(맞지 않았으면 401 이 먼저 나갔다).
+    """요청을 보낸 계정이 가진 권한(질의). 인증 미들웨어가 짧은 JWT 를 검증했을 때만 로그인이 요청에
+    심긴다. 로그인 없이 지나가는 경로(`Open`)는 권한을 보지 않으므로, 권한을 요구하는 자리에 로그인
+    없는 요청이 닿으면 조립의 결함이라 500 이다.
     """
     claims = operator_of(request)
-    return SHARED_TOKEN_PERMISSIONS if claims is None else TIER_PERMISSIONS[claims.tier]
+    if claims is None:
+        raise LookupError("권한을 요구하는 오퍼레이션에 로그인 없는 요청이 닿았다")
+    return TIER_PERMISSIONS[claims.tier]
 
 
 # 운영자 경로의 라우터가 `dependencies=[REQUIRE_PERMISSION]` 로 건다. 라우트마다 걸지 않는다 — 걸지

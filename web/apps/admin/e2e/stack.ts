@@ -10,7 +10,7 @@
  *   짓는 것과 같다). 목록에 종류마다 행이 서고, 표지 행 둘(읽을 수 없는 매니페스트, 이름이 패턴 밖인 디렉터리)과
  *   꺼진 행 하나, 접속 확인 장면의 서버 둘(아래)이 서게 채운다. 켜고 끄기 흐름이 그 루트의 운영자 파일을 읽도록 경로를 워커의 환경에 넘긴다.
  * - 결정 흐름의 에이전트 둘은 모델 없이 승인 대상 도구(MCP 픽스처 서버의 add)를 `ctx.tool()` 로 직접 부른다. 그래서
- *   결정 뒤의 재개가 모델 없이 끝까지 간다. 멈춘 실행은 흐름이 채널 토큰으로 만든다(`channel.ts`).
+ *   결정 뒤의 재개가 모델 없이 끝까지 간다. 멈춘 실행은 흐름이 계정의 로그인 쿠키로 만든다(`channel.ts`).
  * - 접속 확인 장면(`connection-check.e2e.ts`)이 볼 서버 둘은 어느 에이전트도 쓰지 않는다. 다른 장면의 실행이 거기 기대지 않게
  *   하려는 것이다. 하나는 저장소의 시험용 원격 MCP 서버(`tests/mcp_http_server.py`)를 이 준비가 따로 띄워 그 주소를 가리키는
  *   원격 MCP 픽스처(`remote-docs`)다. 다른 하나는 이 준비가 잠깐 열었다 닫은 포트, 곧 지금 이 기계에서 닫혀 있는 포트를 가리키는
@@ -19,9 +19,8 @@
  * - 읽기 흐름이 볼 트레이스는 serve 를 띄우기 전에 트레이스 디렉터리에 쓴다(`traces.ts`).
  * - `serve` 의 환경에서는 모델 제공사의 키·주소·프록시를 벗긴다(`serveEnv`). 플러그인 화면의 접속 확인이 실제 제공사에
  *   닿지 않게 하려는 것이다.
- * - 토큰 둘은 여기서 무작위로 만들어 `serve` 의 환경에 넘긴다. 테스트가 화면에 넣고 흐름의 요청이 싣도록 워커의
- *   환경에도 넘긴다. 관리 화면(Next)에는 넘기지 않는다. 무상태 중계라 토큰을 모른다(ADR 0019). 이 셸의 환경에 토큰
- *   변수가 있어도 Next 에는 벗겨서 준다. 어느 것도 커밋하지 않는다.
+ * - 시스템 관리자 계정 하나를 서버 명령(`agent-os operator system-admin`)으로 만든다. 비밀번호는 여기서 무작위로 짓고 테스트가
+ *   로그인하도록 워커의 환경에 넘긴다. 관리 화면(Next)은 무상태 중계라 자격을 모른다(ADR 0019). 어느 것도 커밋하지 않는다.
  * - `serve` 는 `--port 0` 으로 띄우고 기동 줄에서 주소를 읽는다(`tests/test_main.py` 의 `_serving` 과 같다). 그 주소를
  *   상류로 관리 화면을 빌드한 뒤 `start` 로 띄운다. `rewrites` 는 빌드 산출물에 박히므로 상류는 빌드 전에 정해야 하고,
  *   `dev` 는 설정을 바로 읽어 운영과 다른 길을 잰다. 빌드는 앱의 `.next/` 를 다시 쓴다.
@@ -39,13 +38,7 @@ import { createRequire } from "node:module";
 import { connect, createServer } from "node:net";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
-import {
-  ACCOUNT_NAME_ENV,
-  ACCOUNT_PASSWORD_ENV,
-  ADMIN_URL_ENV,
-  CHANNEL_TOKEN_ENV,
-  PLUGINS_ROOT_ENV,
-} from "./env";
+import { ACCOUNT_NAME_ENV, ACCOUNT_PASSWORD_ENV, ADMIN_URL_ENV, PLUGINS_ROOT_ENV } from "./env";
 import { writeReadTraces } from "./traces";
 
 const APP = dirname(import.meta.dirname);
@@ -57,9 +50,6 @@ const LOGS = join(APP, "test-results");
 const LISTENING = /Uvicorn running on (http:\/\/127\.0\.0\.1:\d+)/;
 const STARTUP_MS = 60_000;
 const QUIET = { NEXT_TELEMETRY_DISABLED: "1" };
-// serve 가 읽는 토큰 변수. Next 로 가는 환경에서는 벗긴다. 관리 토큰은 관리 화면이 더는 쓰지 않지만(ADR 0019 의 중계는
-// 여전히 토큰을 모른다) 이 셸에 있어도 Next 에 넘기지 않는다.
-const SERVE_TOKENS = ["AGENT_OS_ADMIN_TOKEN", "AGENT_OS_CHANNEL_TOKEN"];
 // 이 준비가 만드는 시스템 관리자 계정의 이름(소문자 3~32자).
 const ACCOUNT_NAME = "e2e-operator";
 // 모델 제공사의 키와 주소와 프록시를 정하는 변수, 그리고 HTTP 클라이언트가 읽는 환경 프록시. `serve` 의 환경에서 벗긴다
@@ -134,7 +124,6 @@ export default async function globalSetup(): Promise<() => Promise<void>> {
     });
     const traces = join(work, "traces");
     writeReadTraces(traces);
-    const channelToken = token("channel");
     // 관리 화면은 토큰 없이 로그인으로 들어간다. 이 serve 만의 시스템 관리자 계정을 만들어 둔다. 비밀번호는 규칙(대문자,
     // 숫자, 특수문자 하나씩, 8자 이상)을 채우는 머리에 무작위 꼬리를 붙인다.
     const accountPassword = `Aa1!${randomBytes(12).toString("hex")}`;
@@ -159,10 +148,6 @@ export default async function globalSetup(): Promise<() => Promise<void>> {
       work,
       serveEnv({
         PYTHONUTF8: "1",
-        // `serve` 가 아직 관리 토큰 없이는 서지 않는다(ADR 0011, 공유 토큰은 admin-login 티켓 13 이 거둔다). 화면은 이 값을
-        // 쓰지 않으니 아무도 모르는 값을 넘긴다.
-        AGENT_OS_ADMIN_TOKEN: token("unused-admin"),
-        AGENT_OS_CHANNEL_TOKEN: channelToken,
         // 부모의 환경에 같은 변수가 있어도 이 준비의 데이터베이스로 덮는다.
         AGENT_OS_DATABASE_URL: databaseUrl,
       }),
@@ -189,7 +174,6 @@ export default async function globalSetup(): Promise<() => Promise<void>> {
     process.env[ADMIN_URL_ENV] = `http://127.0.0.1:${String(port)}`;
     process.env[ACCOUNT_NAME_ENV] = ACCOUNT_NAME;
     process.env[ACCOUNT_PASSWORD_ENV] = accountPassword;
-    process.env[CHANNEL_TOKEN_ENV] = channelToken;
     process.env[PLUGINS_ROOT_ENV] = plugins;
     return teardown;
   } catch (error: unknown) {
@@ -295,11 +279,6 @@ function runPython(
   return typeof stdout === "string" ? stdout.trim() : "";
 }
 
-/** 이 serve 만 아는 토큰. 같은 기계의 다른 프로세스가 짐작할 수 없는 값이다. */
-function token(role: string): string {
-  return `e2e-${role}-${randomBytes(24).toString("hex")}`;
-}
-
 /**
  * `serve` 의 환경. 이 셸의 환경에 `extra` 를 얹고 모델 제공사에 닿는 변수를 벗긴다. 플러그인 화면을 여는 장면마다 켜 둔
  * 모델 행(제공사가 `anthropic`)이 30초마다 접속 확인을 보내는데, 키가 있는 셸에서는 그 요청이 실제 제공사로 간다. 키를 벗기면
@@ -317,13 +296,9 @@ function serveEnv(extra: Readonly<Record<string, string>>): NodeJS.ProcessEnv {
   return env;
 }
 
-/** 관리 화면(빌드와 start)의 환경. 이 셸의 환경에서 serve 의 토큰 변수를 벗기고 상류를 준다. */
+/** 관리 화면(빌드와 start)의 환경. 이 셸의 환경에 상류를 얹는다. */
 function nextEnv(upstream: string): NodeJS.ProcessEnv {
-  const env: NodeJS.ProcessEnv = { ...process.env, ...QUIET, AGENT_OS_UPSTREAM: upstream };
-  for (const name of SERVE_TOKENS) {
-    Reflect.deleteProperty(env, name);
-  }
-  return env;
+  return { ...process.env, ...QUIET, AGENT_OS_UPSTREAM: upstream };
 }
 
 /** 접속 확인 장면이 가리킬 두 주소. 원격 MCP 서버는 떠 있고 모델 서버의 주소는 닫힌 포트다. */

@@ -53,9 +53,8 @@ START = datetime(2026, 11, 26, 9, 0, tzinfo=UTC)
 PASSWORD = "Correct-horse-9!"
 WRONG = "Wrong-horse-9!"
 CANARY = "Canary-pass-77!"
-ADMIN_TOKEN = "adm1n-t0ken-that-only-tests-know"
-CHANNEL_TOKEN = "channel-t0ken-that-only-tests-know"
-SHARED = {"Authorization": f"Bearer {ADMIN_TOKEN}"}
+# 걷힌 공유 토큰을 흉내 낸 머리. 운영자 경로는 `Authorization` 머리를 읽지 않으므로 401이다.
+OLD_SHARED = {"Authorization": "Bearer adm1n-t0ken-that-only-tests-know"}
 REFUSED = "로그인하지 못했다"
 
 
@@ -118,8 +117,6 @@ def _app(accounts: AccountStore, clock: Clock, stderr: io.StringIO) -> FastAPI:
         tools=IdleTools(),
         clock=clock,
         principal=Principal("alice"),
-        admin_token=ADMIN_TOKEN,
-        channel_token=CHANNEL_TOKEN,
         sites=Sites(),
         run_timeout_seconds=None,
         end_user_concurrent_runs=None,
@@ -648,14 +645,15 @@ async def test_쿠키가_없거나_깨졌으면_지금_누구인지는_401이다
 
     assert none.status_code == 401
     assert garbage.status_code == 401
-    assert none.headers["www-authenticate"] == "Bearer"
+    # 운영자 경로의 401 은 `Authorization` 머리를 읽지 않으므로 챌린지를 싣지 않는다
+    assert "www-authenticate" not in none.headers
 
 
-async def test_공유_토큰으로는_지금_누구인지와_로그아웃을_열지_못한다(
+async def test_옛_공유_토큰으로는_지금_누구인지와_로그아웃을_열지_못한다(
     client: AsyncClient,
 ) -> None:
-    assert (await client.get("/auth/me", headers=SHARED)).status_code == 401
-    assert (await client.post("/auth/logout", headers=SHARED)).status_code == 401
+    assert (await client.get("/auth/me", headers=OLD_SHARED)).status_code == 401
+    assert (await client.post("/auth/logout", headers=OLD_SHARED)).status_code == 401
 
 
 async def test_서명_키는_10초가_지난_뒤_다시_읽고_바뀐_키로_만든_옛_증표는_통하지_않는다(
@@ -674,20 +672,20 @@ async def test_서명_키는_10초가_지난_뒤_다시_읽고_바뀐_키로_만
     assert (await client.get("/auth/me", headers=cookie)).status_code == 401
 
 
-async def test_공유_토큰이_맞으면_로그인_쿠키가_함께_와도_서명_키를_읽지_않는다(
+async def test_로그인_쿠키가_없으면_서명_키를_읽지_않고_401이다(
     clock: MovingClock, stderr: io.StringIO
 ) -> None:
     store = UnusedAccounts()
     store.fail_reads = 1000  # 키를 읽으려 하면 터진다
     accounts: AccountStore = store
     app = _app(accounts, clock, stderr)
-    cookie = {"Cookie": f"{ACCESS_COOKIE}=not.a.token"}
 
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="https://admin.test") as client:
-        response = await client.get("/plugins", headers={**SHARED, **cookie})
+        bare = await client.get("/plugins")
+        old_shared = await client.get("/plugins", headers=OLD_SHARED)
 
-    assert response.status_code == 200
+    assert (bare.status_code, old_shared.status_code) == (401, 401)
     assert store.reads == 0
 
 
@@ -1231,33 +1229,32 @@ async def test_첫_계정_확인은_로그인_없이_열리고_계정이_하나�
 # --- 자격 ----------------------------------------------------------------------------------------
 
 
-async def test_운영자_경로는_쿠키로도_공유_토큰으로도_열리고_쿠키가_없으면_401이다(
+async def test_운영자_경로는_쿠키로만_열리고_옛_공유_토큰과_쿠키가_없는_요청은_401이다(
     client: AsyncClient, accounts: AccountStore
 ) -> None:
     await _seed(accounts, "kim.min")
     cookie = _as_cookie(await _login(client))
 
     assert (await client.get("/plugins", headers=cookie)).status_code == 200
-    assert (await client.get("/plugins", headers=SHARED)).status_code == 200
+    assert (await client.get("/plugins", headers=OLD_SHARED)).status_code == 401
     assert (await client.get("/plugins")).status_code == 401
     assert (
         await client.get("/plugins", headers={"Cookie": f"{ACCESS_COOKIE}=x"})
     ).status_code == 401
 
 
-async def test_운영자_채널은_쿠키와_채널_토큰으로_열리고_관리_토큰으로는_열리지_않는다(
+async def test_운영자_채널은_쿠키로만_열리고_옛_공유_토큰으로는_열리지_않는다(
     client: AsyncClient, accounts: AccountStore
 ) -> None:
     await _seed(accounts, "kim.min")
     cookie = _as_cookie(await _login(client))
-    channel = {"Authorization": f"Bearer {CHANNEL_TOKEN}"}
 
     with_cookie = await client.post(CHANNEL_PREFIX, json={}, headers=cookie)
-    with_channel = await client.post(CHANNEL_PREFIX, json={}, headers=channel)
-    with_admin = await client.post(CHANNEL_PREFIX, json={}, headers=SHARED)
+    with_old_shared = await client.post(CHANNEL_PREFIX, json={}, headers=OLD_SHARED)
 
-    assert (with_cookie.status_code, with_channel.status_code) == (422, 422)
-    assert with_admin.status_code == 401
+    assert with_cookie.status_code == 422
+    assert with_old_shared.status_code == 401
+    assert "www-authenticate" not in with_old_shared.headers
 
 
 async def test_최종_사용자_경로는_쿠키로_열리지_않는다(

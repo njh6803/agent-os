@@ -19,7 +19,9 @@ ADR 0023 은 CORS 를 새 접두사에만 걸고(허용 출처는 사이트 파�
 대조군은 저장소의 `AssignRequestId` 가 식별자 심기와 그 변환을 함께 하던 조립이었다. 티켓 04 가
 둘을 갈라 `AssignRequestId` 가 변환을 하지 않으므로, 대조군은 이 파일의 변환을 분기 바깥에 둔다.
 인증은 저장소의 `RequireToken` 을 그대로 쓴다 — 서명 토큰 검증이 들어서도 "401 을 미들웨어가
-낸다"는 모양은 같다. 표의 값은 티켓 01 뒤로 `SharedToken` 이다.
+낸다"는 모양은 같다. 표의 값은 티켓 01 뒤로 `SharedToken` 이었다. admin-login 13이 `SharedToken`
+을 걷어(`RequireToken`은 이제 `login=`을 받는다) 이 파일은 그대로는 돌지 않는다. 잰 결과와 근거는
+`end-user-channel` 명세에 그대로 남는다.
 
     PYTHONUTF8=1 uv run python .scratch/end-user-channel/probes/cors_scoped.py
 """

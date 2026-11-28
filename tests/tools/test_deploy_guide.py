@@ -64,6 +64,7 @@ REQUIRED: dict[str, str] = {
     "root:10001": "위젯 미리보기 페이지 개인 키의 소유",
     "openssl req -x509": "스스로 서명한 인증서를 만드는 명령",
     "ssh -L 3000:127.0.0.1:3000": "관리 화면에 닿는 SSH 포트 포워딩",
+    "agent-os operator system-admin": "관리 화면에 로그인하려면 서버에서 첫 계정을 만들 것",
     "docker compose up -d": "띄우기",
     "docker compose ps": "컨테이너 상태 확인",
     "Ready": "관리 화면이 떴는지는 기록의 Ready 줄이 아니라 상태 확인으로 본다는 말",

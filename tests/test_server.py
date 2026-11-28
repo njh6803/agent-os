@@ -21,6 +21,7 @@ from datetime import UTC, datetime, timedelta, timezone
 from importlib.metadata import version as installed_version
 from pathlib import Path
 from typing import Literal, get_type_hints
+from uuid import UUID
 
 import httpx
 import pytest
@@ -29,7 +30,7 @@ from httpx import ASGITransport, AsyncClient
 from langchain_core.language_models.fake_chat_models import GenericFakeChatModel
 from pydantic import TypeAdapter
 from starlette.exceptions import HTTPException as StarletteHTTPException
-from tests.fake_accounts import UnusedAccounts
+from tests.fake_accounts import LOGIN_KEY, UnusedAccounts, operator_cookie
 from tests.fake_checks import UnusedToolChecks
 from tests.fake_database import FakeDatabase
 from tests.fake_models import DEFAULT_MODEL, FakeModels
@@ -101,7 +102,7 @@ from agent_os.http.errors import (
     Surface,
     failure_for,
 )
-from agent_os.http.login_tokens import LoginDurations
+from agent_os.http.login_tokens import ACCESS_COOKIE, LoginDurations, issue_token
 from agent_os.http.sites import Site, Sites
 from agent_os.sdk import (
     PLUGIN_NAME_PATTERN,
@@ -128,17 +129,18 @@ from agent_os.sdk import (
 )
 from agent_os.server import create_app
 
-# 관리 토큰. 이 파일의 대부분이 관리 라우트를 밀어서 이름을 짧게 둔다.
-TOKEN = "t0ken-that-only-tests-know"
-BEARER = {"Authorization": f"Bearer {TOKEN}"}
-CHANNEL_TOKEN = "channel-t0ken-that-only-tests-know"
-CHANNEL_BEARER = {"Authorization": f"Bearer {CHANNEL_TOKEN}"}
-# allowlist 밖이면서 라우트가 없는 경로. 토큰이 없으면 401 이고 있으면 404 라는 것이 곧 미들웨어가
+# 운영자 로그인(관리자 단계). 이 파일의 대부분이 관리 라우트를 밀어서 이름을 짧게 둔다. 운영자
+# 경로는 로그인 쿠키의 짧은 JWT 로만 열린다(ADR 0062).
+OPERATOR = operator_cookie()
+# 공유 토큰을 걷기 전에 운영자 경로를 열던 머리. 지금은 `Authorization` 머리를 운영자 경로에서 읽지
+# 않아 어떤 값을 실어도 401 이다.
+OLD_BEARER = {"Authorization": "Bearer t0ken-that-only-tests-know"}
+# allowlist 밖이면서 라우트가 없는 경로. 로그인이 없으면 401 이고 있으면 404 라는 것이 곧 미들웨어가
 # 라우팅보다 먼저라는 사실이다. 데이터 라우트가 붙어도 이 경로는 문서에 없어 그 대조가 유지된다.
 GUARDED = "/unrouted"
-# 채널 쪽의 같은 대조. `/runs` 와 `/runs/{run_id}/approval` 을 쓰지 않는 이유는 라우트가 있어 채널
-# 토큰의 답이 404 가 아니기 때문이다. 이 경로는 그 둘 어느 것에도 맞지 않는다 — 승인 라우트는
-# `verbatim` 이 슬래시까지 잡아도 `/approval` 로 끝나야 맞는다. 실행 식별자 하나로 끝나는
+# 운영자 채널 쪽의 같은 대조. `/runs` 와 `/runs/{run_id}/approval` 을 쓰지 않는 이유는 라우트가 있어
+# 로그인한 요청의 답이 404 가 아니기 때문이다. 이 경로는 그 둘 어느 것에도 맞지 않는다 — 승인
+# 라우트는 `verbatim` 이 슬래시까지 잡아도 `/approval` 로 끝나야 맞는다. 실행 식별자 하나로 끝나는
 # 라우트(`/runs/{run_id}`)를 더하는 티켓은 이 경로가 그 라우트에 닿는지 다시 본다.
 CHANNEL_GUARDED = "/runs/unrouted"
 
@@ -461,11 +463,21 @@ class IdleTools(UnusedToolChecks):
         raise NotImplementedError("관리는 실행을 일으키지 않는다")
 
 
-class IdleClock:
-    """불리면 그 자체가 결함이다. 이유는 `IdleTools` 와 같다."""
+NOW = datetime(2026, 10, 5, 12, 0, tzinfo=UTC)
+
+
+class StillClock:
+    """테스트가 정한 시각에 서 있는 시계. 서명 토큰의 시간 클레임과 로그인 쿠키의 만료를 이것으로
+    센다.
+
+    `now()` 만 답한다. 관리는 실행을 일으키지 않으므로 실행 식별자를 달라고 하면 그 자체가
+    결함이다."""
+
+    def __init__(self, at: datetime) -> None:
+        self.at = at
 
     def now(self) -> datetime:
-        raise NotImplementedError("관리는 실행을 일으키지 않는다")
+        return self.at
 
     def new_run_id(self) -> RunId:
         raise NotImplementedError("관리는 실행을 일으키지 않는다")
@@ -476,27 +488,23 @@ def _admin_app(
     plugins: PluginSource,
     trace: TraceStore,
     stderr: io.StringIO,
-    admin_token: str = TOKEN,
-    channel_token: str = CHANNEL_TOKEN,
     sites: Sites | None = None,
     clock: Clock | None = None,
     tools: ToolSource | None = None,
     models: ModelSource | None = None,
 ) -> FastAPI:
     """관리를 미는 앱. 채널의 포트 셋은 불리지 않는 자리표시자다. 인자 타입이 포트 적합성을
-    검증하는 자리다. 서명 토큰을 재는 테스트만 사이트 목록과 토큰의 시간을 셀 시계를 주고,
-    접속 확인을 재는 테스트만 확인 메서드가 답하는 도구와 모델 포트를 준다."""
-    idle: Clock = IdleClock()
+    검증하는 자리다. 시계는 지금만 답하는 `StillClock` 이다 — 운영자 쿠키를 검증하는 데 필요하다.
+    서명 토큰의 시간을 움직여 재는 테스트만 자기 시계를 주고, 접속 확인을 재는 테스트만 확인
+    메서드가 답하는 도구와 모델 포트를 준다."""
     return create_app(
         plugins=plugins,
         trace=trace,
         models=models or FakeModels(GenericFakeChatModel(messages=iter(()))),
         default_model=DEFAULT_MODEL,
         tools=tools or IdleTools(),
-        clock=clock or idle,
+        clock=clock or StillClock(NOW),
         principal=Principal("alice"),
-        admin_token=admin_token,
-        channel_token=channel_token,
         sites=sites or Sites(),
         run_timeout_seconds=None,
         end_user_concurrent_runs=None,
@@ -567,7 +575,7 @@ def _route_that_raises(app: FastAPI, path: str, error: Exception) -> None:
         raise error
 
 
-async def test_헬스체크만_토큰_없이_답한다(client: AsyncClient) -> None:
+async def test_헬스체크만_로그인_없이_답한다(client: AsyncClient) -> None:
     response = await client.get("/health")
 
     assert response.status_code == 200
@@ -584,7 +592,7 @@ def test_인증_없이_지나가는_경로의_목록은_다섯이다() -> None:
 async def test_serve_의_API_문서_판_칸이_설치된_패키지의_판이다(client: AsyncClient) -> None:
     """판의 원천은 설치된 패키지다. 번호를 글자로 박지 않아, 이미지를 지을 때 넣은 번호로도 같은
     성질이 선다(release-image 07)."""
-    response = await client.get("/openapi.json", headers=BEARER)
+    response = await client.get("/openapi.json", headers=OPERATOR)
 
     assert response.status_code == 200
     assert response.json()["info"]["version"] == installed_version("agent-os")
@@ -597,7 +605,7 @@ async def test_헬스체크_응답이_내부_구성을_싣지_않는다(client: 
     assert list(body) == ["status"]
 
 
-async def test_allowlist_밖의_모든_경로가_토큰_없이_401이다(
+async def test_allowlist_밖의_모든_경로가_로그인_없이_401이다(
     app: FastAPI, client: AsyncClient
 ) -> None:
     """라우트를 더하고 보호를 잊으면 이 테스트가 깨진다. fail-closed 라 벨트이지 전부가 아니다."""
@@ -622,19 +630,19 @@ async def test_allowlist_밖의_모든_경로가_토큰_없이_401이다(
             assert response.status_code == 401, path
 
 
-async def test_문서에_없는_경로도_토큰_없이는_404가_아니라_401이다(client: AsyncClient) -> None:
+async def test_문서에_없는_경로도_로그인_없이는_404가_아니라_401이다(client: AsyncClient) -> None:
     """미들웨어가 라우팅보다 먼저다. 인증 없는 요청이 어떤 경로가 실재하는지 알 수 없다."""
     assert (await client.get(GUARDED)).status_code == 401
 
 
-async def test_다른_출처의_preflight_는_토큰이_없어도_관리_경로도_채널_경로도_403이다(
+async def test_다른_출처의_preflight_는_로그인이_없어도_관리_경로도_채널_경로도_403이다(
     client: AsyncClient,
 ) -> None:
     """관리 화면의 중계는 `OPTIONS` 를 그대로 상류로 넘긴다(ADR 0019). 관리 경로와 채널 경로에는
     CORS 가 없고 그것이 곧 차단이라는 것은 미들웨어가 메서드를 가르지 않는다는 데 기댄다(ADR 0011
-    이력, 스토리 65). 허용 헤더도 없다. 요청 출처 검사가 자격보다 먼저라(ADR 0062) 이 요청은 토큰이
-    없어도 401 이 아니라 403 이다. CORS 가 preflight 에 답하는 것은 최종 사용자 접두사뿐이고
-    (ADR 0023), 그 범위는 아래 CORS 절의 전수 검사가 잰다."""
+    이력, 스토리 65). 허용 헤더도 없다. 요청 출처 검사가 자격보다 먼저라(ADR 0062) 이 요청은
+    로그인이 없어도 401 이 아니라 403 이다. CORS 가 preflight 에 답하는 것은 최종 사용자
+    접두사뿐이고 (ADR 0023), 그 범위는 아래 CORS 절의 전수 검사가 잰다."""
     preflight = {
         "Origin": "http://evil.example",
         "Access-Control-Request-Method": "GET",
@@ -647,16 +655,31 @@ async def test_다른_출처의_preflight_는_토큰이_없어도_관리_경로�
         assert "access-control-allow-origin" not in response.headers, path
 
 
-async def test_틀린_토큰도_빈_토큰도_401이다(client: AsyncClient) -> None:
-    """헤더 부재를 빈 문자열로 다루는 구현과 겹치면 그 자체가 fail-open 이다."""
+def _cookie_of(token: str) -> dict[str, str]:
+    return {"Cookie": f"{ACCESS_COOKIE}={token}"}
+
+
+def _login_token(key: bytes, *, issued: datetime, minutes: int = 60) -> str:
+    return issue_token(
+        key,
+        name="kim.min",
+        login_id=UUID(int=1),
+        tier="admin",
+        now=issued,
+        token_minutes=minutes,
+    )
+
+
+async def test_쿠키가_없거나_비었거나_틀리거나_만료돼도_401이다(client: AsyncClient) -> None:
+    """헤더 부재를 빈 문자열로 다루는 구현과 겹치면 그 자체가 fail-open 이다. 남의 키로 서명한
+    쿠키와 만료된 쿠키도 같은 401 이다."""
     headers: tuple[dict[str, str], ...] = (
         {},
-        {"Authorization": "Bearer wrong-token"},
-        {"Authorization": "Bearer"},
-        {"Authorization": "Bearer "},
-        {"Authorization": ""},
-        {"Authorization": TOKEN},
-        {"Authorization": f"Basic {TOKEN}"},
+        _cookie_of(""),
+        _cookie_of("not-a-jwt"),
+        {"Cookie": "other=1"},
+        _cookie_of(_login_token(b"someone-elses-signing-key-0123456789ab", issued=NOW)),
+        _cookie_of(_login_token(LOGIN_KEY, issued=NOW - timedelta(hours=2), minutes=60)),
     )
 
     for header in headers:
@@ -664,17 +687,64 @@ async def test_틀린_토큰도_빈_토큰도_401이다(client: AsyncClient) -> 
         assert response.status_code == 401, header
 
 
-async def test_비ASCII_토큰도_500이_아니라_401이다(client: AsyncClient) -> None:
-    """원격 입력이 상태 코드를 바꾸지 못한다. `hmac` 의 str 비교는 non-ASCII 에서 TypeError 다.
+async def test_옛_공유_토큰으로는_운영자_경로가_401이고_챌린지_머리도_없다(
+    client: AsyncClient,
+) -> None:
+    """공유 토큰을 걷었다. `Authorization` 머리는 운영자 경로에서 읽지 않으므로 어떤 값을 실어도
+    관리 조회도 실행 시작도 열리지 않는다. 그 경로는 `Authorization` 으로 인증하지 않아 401 에
+    `WWW-Authenticate` 도 싣지 않는다."""
+    attempts: tuple[tuple[str, str, dict[str, str] | None], ...] = (
+        ("GET", "/plugins", None),
+        ("GET", GUARDED, None),
+        ("POST", CHANNEL_PREFIX, {"agent": "calc", "request": "안녕"}),
+    )
+    odd = (
+        {"Authorization": "Bearer wrong-token"},
+        {"Authorization": "Bearer"},
+        {"Authorization": ""},
+        {"Authorization": "Basic t0ken-that-only-tests-know"},
+        OLD_BEARER,
+    )
 
-    바이트로 미는 이유는 헤더가 원래 바이트이기 때문이다. 클라이언트 라이브러리가 ASCII 만
-    보내 주더라도 경계에 실제로 닿는 것은 임의의 바이트다.
-    """
-    headers = {b"Authorization": "Bearer 토큰이-아닌-값".encode()}
+    for method, path, body in attempts:
+        for header in odd:
+            response = await client.request(method, path, headers=header, json=body)
+            assert response.status_code == 401, (method, path, header)
+            assert "www-authenticate" not in response.headers, (method, path, header)
+            assert response.json()["code"] == "unauthorized"
 
-    response = await client.get(GUARDED, headers=headers)
 
-    assert response.status_code == 401
+async def test_최종_사용자_경로는_서명_토큰이_없으면_401이고_챌린지_머리를_싣는다(
+    client: AsyncClient,
+) -> None:
+    """운영자 경로와 달리 이 경로는 `Authorization: Bearer` 로 인증한다. 로그인 쿠키는 이 경로에서
+    통하지 않는다."""
+    nothing = await client.get(END_USER_GUARDED)
+    cookie = await client.get(END_USER_GUARDED, headers=OPERATOR)
+    old = await client.get(END_USER_GUARDED, headers=OLD_BEARER)
+
+    for response in (nothing, cookie, old):
+        assert response.status_code == 401
+        assert response.headers["WWW-Authenticate"] == "Bearer"
+
+
+async def test_Authorization_머리는_운영자_경로에서_읽지_않는다(client: AsyncClient) -> None:
+    """원격 입력이 상태 코드를 바꾸지 못한다. 로그인 쿠키가 맞으면 `Authorization` 머리가 어떤
+    값이든 — 비 ASCII 바이트도 — 쿠키만 보고 지나간다. 머리를 읽는다면 파싱이 500 이나 401 로
+    갈린다. 바이트로 미는 이유는 헤더가 원래 바이트이기 때문이다."""
+    odd = (
+        {"Authorization": "Bearer wrong-token"},
+        {"Authorization": ""},
+    )
+    for header in odd:
+        response = await client.get(GUARDED, headers=OPERATOR | header)
+        assert response.status_code == 404, header
+
+    non_ascii = {b"Authorization": "Bearer 토큰이-아닌-값".encode()}
+    with_cookie = non_ascii | {b"Cookie": OPERATOR["Cookie"].encode()}
+    assert (await client.get(GUARDED, headers=with_cookie)).status_code == 404
+    # 쿠키가 없으면 그 머리가 아니라 쿠키의 부재 때문에 401 이다
+    assert (await client.get(GUARDED, headers=non_ascii)).status_code == 401
 
 
 async def test_허용되지_않는_메서드도_봉투이고_어휘_안에_있다(client: AsyncClient) -> None:
@@ -692,40 +762,24 @@ async def test_405가_어떤_메서드를_쓸_수_있는지_알려_준다(client
     assert "GET" in response.headers["Allow"]
 
 
-async def test_401이_어떤_인증을_쓰는지_알려_준다(client: AsyncClient) -> None:
+async def test_최종_사용자_경로의_401이_어떤_인증을_쓰는지_알려_준다(client: AsyncClient) -> None:
     """RFC 9110 이 401 에 WWW-Authenticate 를 요구한다. 방식을 알리는 것은 노출이 아니다 —
-    401 자체가 이미 인증이 필요하다고 말한다."""
-    response = await client.get(GUARDED)
+    401 자체가 이미 인증이 필요하다고 말한다. 운영자 경로는 쿠키로 인증하고 `Authorization` 을
+    읽지 않으므로 그 경로의 401 에는 싣지 않는다."""
+    end_user = await client.get(END_USER_GUARDED)
+    operator = await client.get(GUARDED)
 
-    assert response.headers["WWW-Authenticate"] == "Bearer"
+    assert end_user.headers["WWW-Authenticate"] == "Bearer"
+    assert "www-authenticate" not in operator.headers
 
 
-async def test_맞는_토큰은_미들웨어를_지나_라우팅까지_간다(client: AsyncClient) -> None:
+async def test_맞는_쿠키는_미들웨어를_지나_라우팅까지_간다(client: AsyncClient) -> None:
     """401 이 아니라 404 라는 것이 곧 지나갔다는 뜻이다. 이 경로에는 라우트가 없다."""
-    assert (await client.get(GUARDED, headers=BEARER)).status_code == 404
+    assert (await client.get(GUARDED, headers=OPERATOR)).status_code == 404
 
 
-@pytest.mark.parametrize(
-    ("admin_token", "channel_token"),
-    [("", CHANNEL_TOKEN), (TOKEN, ""), (TOKEN, TOKEN)],
-    ids=["빈 관리 토큰", "빈 채널 토큰", "같은 두 토큰"],
-)
-def test_빈_토큰이나_같은_두_토큰으로는_앱을_세울_수_없다(
-    stderr: io.StringIO, admin_token: str, channel_token: str
-) -> None:
-    """토큰 없이 도는 면을 기본값으로 남기지 않고, 두 토큰이 같으면 분리가 무효다(ADR 0015).
-    진단과 종료 코드로 운영자에게 말하는 것은 `serve` 의 몫이다."""
-    with pytest.raises(ValueError):
-        _admin_app(
-            plugins=FakePlugins(),
-            trace=FakeTrace(),
-            stderr=stderr,
-            admin_token=admin_token,
-            channel_token=channel_token,
-        )
-
-
-# 채널 토큰 — `/runs` 아래는 채널 토큰만, 그 밖은 관리 토큰만 연다(티켓 02, ADR 0015)
+# 면과 자격 — `/end-user` 아래는 사이트가 서명한 토큰만, 그 밖은 `/runs` 를 포함해 로그인 쿠키만
+# 연다 (ADR 0062, ADR 0023)
 
 
 type _Surface = Literal["end_user", "channel", "admin"]
@@ -733,9 +787,9 @@ type _Surface = Literal["end_user", "channel", "admin"]
 
 def _surface_of(path: str) -> _Surface:
     """전수 검사가 세 면을 가르는 기준이고 경로 조각 단위다. 미들웨어의 규칙을 여기서 다시 적은
-    것이라, 둘이 같은 규칙이라는 것은 `/runsx` 와 `/end-userx` 대조가 잰다. 접두사는 채널이 소유한
-    그것이다. 둘로만 가르면 최종 사용자 경로가 관리로 분류되어, 새 접두사에서 관리 토큰이 401 인지가
-    재어지지 않은 채 초록이다(end-user-channel 명세 검토가 짚었다)."""
+    것이라, 둘이 같은 규칙이라는 것은 `/end-userx` 대조가 잰다. 접두사는 채널이 소유한
+    그것이다. 둘로만 가르면 최종 사용자 경로가 관리로 분류되어, 새 접두사에서 운영자 쿠키가 401
+    인지가 재어지지 않은 채 초록이다(end-user-channel 명세 검토가 짚었다)."""
     prefixes: tuple[tuple[str, _Surface], ...] = (
         (END_USER_PREFIX, "end_user"),
         (CHANNEL_PREFIX, "channel"),
@@ -746,35 +800,21 @@ def _surface_of(path: str) -> _Surface:
     return "admin"
 
 
-async def test_채널_경로는_채널_토큰만_열고_관리_토큰으로는_401이다(client: AsyncClient) -> None:
-    """트레이스를 읽는 권한이 비용과 부작용이 있는 실행을 일으키는 권한이 되지 않는다(스토리 51).
-    채널 토큰의 404 가 곧 미들웨어를 지나 라우팅까지 갔다는 뜻이다."""
+async def test_운영자_채널_경로도_관리_경로와_같은_로그인_쿠키로_열리고_옛_토큰으로는_401이다(
+    client: AsyncClient,
+) -> None:
+    """트레이스를 읽는 일과 실행을 일으키는 일은 로그인한 계정의 단계(권한 표)가 가른다. 자격은
+    같다. 404 가 곧 미들웨어를 지나 라우팅까지 갔다는 뜻이다. `/runs` 에는 라우트가 있어 GET 은
+    405 지만 401 이 아니다."""
     nothing = await client.get(CHANNEL_GUARDED)
-    admin = await client.get(CHANNEL_GUARDED, headers=BEARER)
-    channel = await client.get(CHANNEL_GUARDED, headers=CHANNEL_BEARER)
+    old = await client.get(CHANNEL_GUARDED, headers=OLD_BEARER)
+    cookie = await client.get(CHANNEL_GUARDED, headers=OPERATOR)
+    root = await client.get(CHANNEL_PREFIX, headers=OPERATOR)
 
     assert nothing.status_code == 401
-    assert admin.status_code == 401
-    assert channel.status_code == 404
-
-
-async def test_접두사_그_자체도_채널이다(client: AsyncClient) -> None:
-    """`/runs` 에는 03 이 라우트를 붙여 채널 토큰의 답이 404 에서 405 로 바뀐다. 그래서 채널
-    토큰으로는 미들웨어를 지났다는 것(401 이 아니다)까지만 본다."""
-    admin = await client.get("/runs", headers=BEARER)
-    channel = await client.get("/runs", headers=CHANNEL_BEARER)
-
-    assert admin.status_code == 401
-    assert channel.status_code != 401
-
-
-async def test_접두사를_문자열로만_공유하는_경로는_채널이_아니다(client: AsyncClient) -> None:
-    """접두사 비교는 경로 조각 단위다(스토리 54). 문자열 비교였다면 이 대조가 뒤집힌다."""
-    channel = await client.get("/runsx", headers=CHANNEL_BEARER)
-    admin = await client.get("/runsx", headers=BEARER)
-
-    assert channel.status_code == 401
-    assert admin.status_code == 404
+    assert old.status_code == 401
+    assert cookie.status_code == 404
+    assert root.status_code not in (401, 403)
 
 
 def _documented_operations(app: FastAPI) -> tuple[tuple[str, str], ...]:
@@ -787,13 +827,15 @@ def _documented_operations(app: FastAPI) -> tuple[tuple[str, str], ...]:
     )
 
 
-async def test_자격은_자기_면만_연다_세_면마다_다른_두_자격은_401이다(stderr: io.StringIO) -> None:
+async def test_자격은_자기_면만_연다_최종_사용자_면과_운영자_면의_다른_자격은_401이다(
+    stderr: io.StringIO,
+) -> None:
     """트레이스를 읽는 권한이 실행을 일으키는 권한이 되지 않고(스토리 51), 위젯에 준 토큰으로 모든
-    실행의 트레이스를 읽지 못한다(스토리 52). 운영자의 두 공유 토큰은 최종 사용자 접두사를 열지
-    못하고 사이트가 서명한 토큰은 그 밖을 열지 못한다(ADR 0023, end-user-channel 스토리 69). 서명
-    토큰은 최종 사용자 접두사에서는 통하는 토큰이다 — 사이트 목록이 비어 아무것도 열지 못하는
-    토큰으로 재면 이 방향은 비어 있어도 초록이다. 방향마다 열거가 비면 그 방향은 아무것도 재지
-    않는다."""
+    실행의 트레이스를 읽지 못한다(스토리 52). 운영자 로그인은 최종 사용자 접두사를 열지 못하고
+    사이트가 서명한 토큰은 그 밖을 열지 못한다. 옛 공유 토큰은 어느 면도 열지 못한다(ADR 0062,
+    ADR 0023, end-user-channel 스토리 69). 서명 토큰은 최종 사용자 접두사에서는 통하는 토큰이다 —
+    사이트 목록이 비어 아무것도 열지 못하는 토큰으로 재면 이 방향은 비어 있어도 초록이다. 방향마다
+    열거가 비면 그 방향은 아무것도 재지 않는다. 401 의 챌린지 머리는 최종 사용자 면에만 있다."""
     app = _signed_app(stderr)
     signed = bearer(sign(KEY_A1, _good()))
     operations = [
@@ -802,34 +844,50 @@ async def test_자격은_자기_면만_연다_세_면마다_다른_두_자격은
     end_user = [op for op in operations if _surface_of(op[1]) == "end_user"]
     channel = [op for op in operations if _surface_of(op[1]) == "channel"]
     admin = [op for op in operations if _surface_of(op[1]) == "admin"]
-    assert end_user, "최종 사용자 경로가 없으면 공유 토큰 두 방향은 401 을 한 번도 재지 않는다"
-    assert channel, "채널 경로가 없으면 관리 토큰과 서명 토큰 쪽 방향은 비어 있다"
-    assert admin, "관리 경로가 없으면 채널 토큰과 서명 토큰 쪽 방향은 비어 있다"
+    assert end_user, "최종 사용자 경로가 없으면 로그인과 옛 토큰 방향은 401 을 한 번도 재지 않는다"
+    assert channel, "채널 경로가 없으면 서명 토큰과 옛 토큰 쪽 방향은 비어 있다"
+    assert admin, "관리 경로가 없으면 서명 토큰과 옛 토큰 쪽 방향은 비어 있다"
 
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://all.test") as client:
         assert (await client.get(END_USER_GUARDED, headers=signed)).status_code == 404
         for (method, path), wrong in [
-            *((op, header) for op in end_user for header in (BEARER, CHANNEL_BEARER)),
-            *((op, header) for op in channel for header in (BEARER, signed)),
-            *((op, header) for op in admin for header in (CHANNEL_BEARER, signed)),
+            *((op, header) for op in end_user for header in (OPERATOR, OLD_BEARER)),
+            *((op, header) for op in channel + admin for header in (signed, OLD_BEARER)),
         ]:
             response = await client.request(method, path, headers=wrong)
             assert response.status_code == 401, (method, path, wrong)
+            challenge = response.headers.get("WWW-Authenticate")
+            assert challenge == ("Bearer" if _surface_of(path) == "end_user" else None), (
+                method,
+                path,
+            )
 
 
-async def test_채널_토큰도_응답에도_서버_기록에도_나타나지_않는다(
-    client: AsyncClient, stderr: io.StringIO
+def _cookie_value(headers: dict[str, str]) -> str:
+    """`operator_cookie` 가 만든 머리에서 짧은 JWT 문자열만."""
+    return headers["Cookie"].split("=", 1)[1]
+
+
+async def test_운영자_쿠키도_서명_토큰도_응답에도_서버_기록에도_나타나지_않는다(
+    stderr: io.StringIO,
 ) -> None:
-    """원칙 V. 틀린 면에 내민 토큰도, 맞는 면에 내민 토큰도 되울리지 않는다."""
-    wrong_surface = await client.get(GUARDED, headers=CHANNEL_BEARER)
-    admin_on_channel = await client.get(CHANNEL_GUARDED, headers=BEARER)
-    accepted = await client.get(CHANNEL_GUARDED, headers=CHANNEL_BEARER)
+    """원칙 V. 틀린 면에 내민 자격도, 맞는 면에 내민 자격도 되울리지 않는다."""
+    app = _signed_app(stderr)
+    cookie = _cookie_value(OPERATOR)
+    token = sign(KEY_A1, _good())
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://all.test") as c:
+        responses = [
+            await c.get(END_USER_GUARDED, headers=OPERATOR),
+            await c.get(GUARDED, headers=bearer(token)),
+            await c.get(CHANNEL_GUARDED, headers=OPERATOR),
+            await c.get(END_USER_GUARDED, headers=bearer(token)),
+        ]
 
-    for response in (wrong_surface, admin_on_channel, accepted):
-        assert CHANNEL_TOKEN not in response.text
-        assert TOKEN not in response.text
-    assert CHANNEL_TOKEN not in stderr.getvalue()
-    assert TOKEN not in stderr.getvalue()
+    for response in responses:
+        assert cookie not in response.text
+        assert token not in response.text
+    assert cookie not in stderr.getvalue()
+    assert token not in stderr.getvalue()
 
 
 # 서명 토큰 — 최종 사용자 접두사 아래는 사이트가 서명한 토큰만 연다(ADR 0023, end-user-channel
@@ -838,7 +896,6 @@ async def test_채널_토큰도_응답에도_서버_기록에도_나타나지_�
 
 # 최종 사용자 접두사 아래이면서 라우트가 없는 경로.
 END_USER_GUARDED = f"{END_USER_PREFIX}/unrouted"
-NOW = datetime(2026, 10, 5, 12, 0, tzinfo=UTC)
 ISSUER_A = "https://a.example"
 ISSUER_B = "https://b.example"
 # 사이트마다 위젯을 넣은 페이지의 출처 하나. CORS 의 허용 출처다.
@@ -868,29 +925,10 @@ SITES = Sites(
 )
 
 
-class StillClock:
-    """테스트가 정한 시각에 서 있는 시계. 서명 토큰의 시간 클레임을 이것으로 센다.
-
-    관리는 실행을 일으키지 않으므로 실행 식별자를 달라고 하면 그 자체가 결함이다."""
-
-    def __init__(self, at: datetime) -> None:
-        self.at = at
-
-    def now(self) -> datetime:
-        return self.at
-
-    def new_run_id(self) -> RunId:
-        raise NotImplementedError("관리는 실행을 일으키지 않는다")
-
-
 def _signed_app(stderr: io.StringIO, clock: Clock | None = None) -> FastAPI:
     """사이트 둘을 받아들이는 앱. 시계는 주지 않으면 `NOW` 에 서 있다."""
     return _admin_app(
-        plugins=FakePlugins(),
-        trace=FakeTrace(),
-        stderr=stderr,
-        sites=SITES,
-        clock=clock or StillClock(NOW),
+        plugins=FakePlugins(), trace=FakeTrace(), stderr=stderr, sites=SITES, clock=clock
     )
 
 
@@ -1066,7 +1104,7 @@ async def test_사이트가_없으면_서명_토큰이_전부_401이다(
     client: AsyncClient, stderr: io.StringIO
 ) -> None:
     """사이트 파일을 주지 않은 배치. 최종 사용자 경로는 서되 받아들일 사이트가 없다(스토리 41).
-    모르는 발급자에서 끝나 시계에 닿지 않는다 — 이 앱의 시계는 불리면 터진다."""
+    모르는 발급자에서 끝나 시계에 닿지 않는다."""
     response = await client.get(END_USER_GUARDED, headers=bearer(sign(KEY_A1, _good())))
 
     assert response.status_code == 401
@@ -1076,11 +1114,11 @@ async def test_사이트가_없으면_서명_토큰이_전부_401이다(
 async def test_접두사를_문자열로만_공유하는_경로는_최종_사용자_면이_아니다(
     stderr: io.StringIO,
 ) -> None:
-    """접두사 비교는 경로 조각 단위다. `/end-userx` 는 관리 토큰의 면이다."""
+    """접두사 비교는 경로 조각 단위다. `/end-userx` 는 운영자 로그인의 면이다."""
     app = _signed_app(stderr)
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://site.test") as c:
         signed = await c.get("/end-userx", headers=bearer(sign(KEY_A1, _good())))
-        admin = await c.get("/end-userx", headers=BEARER)
+        admin = await c.get("/end-userx", headers=OPERATOR)
 
     assert signed.status_code == 401
     assert admin.status_code == 404
@@ -1219,10 +1257,10 @@ async def test_접두사_밖에는_허용_출처의_요청에도_CORS_헤더가_
     app = _signed_app(stderr)
     origin = {"Origin": ORIGIN_A}
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://site.test") as c:
-        admin = await c.get("/plugins", headers=origin | BEARER)
-        channel = await c.get(CHANNEL_GUARDED, headers=origin | CHANNEL_BEARER)
+        admin = await c.get("/plugins", headers=origin | OPERATOR)
+        channel = await c.get(CHANNEL_GUARDED, headers=origin | OPERATOR)
         refused = await c.get(GUARDED, headers=origin)
-        lookalike = await c.get("/end-userx", headers=origin | BEARER)
+        lookalike = await c.get("/end-userx", headers=origin | OPERATOR)
 
     assert [r.status_code for r in (admin, channel, refused, lookalike)] == [403, 403, 403, 403]
     for response in (admin, channel, refused, lookalike):
@@ -1294,11 +1332,11 @@ async def test_최종_사용자_면의_예기치_않은_500도_봉투이고_CORS
 async def test_CORS_분기는_인증과_같은_경로로_면을_가른다(stderr: io.StringIO) -> None:
     """인증 표와 예외 표와 CORS 분기가 같은 비교(`is_under`)에 같은 경로(`request.url.path`)를
     넣는다. 경로에 퍼센트 인코딩된 `?` 가 들면 ASGI 의 `path` 와 다시 파싱한 URL 의 경로가 갈린다.
-    인증은 이 경로를 최종 사용자 면으로 보아 관리 토큰을 401 로 막는데, CORS 가 다른 경로를 보면 그
-    401 의 봉투를 페이지가 읽지 못한다."""
+    인증은 이 경로를 최종 사용자 면으로 보아 운영자 쿠키를 401 로 막는데, CORS 가 다른 경로를 보면
+    그 401 의 봉투를 페이지가 읽지 못한다."""
     app = _signed_app(stderr)
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://site.test") as c:
-        response = await c.get(f"{END_USER_PREFIX}%3Fx", headers={"Origin": ORIGIN_A} | BEARER)
+        response = await c.get(f"{END_USER_PREFIX}%3Fx", headers={"Origin": ORIGIN_A} | OPERATOR)
 
     assert response.status_code == 401
     assert response.headers[ALLOW_ORIGIN] == ORIGIN_A
@@ -1354,23 +1392,26 @@ async def test_성공한_요청은_서버_표준_에러에_남지_않는다(
     assert stderr.getvalue() == ""
 
 
-async def test_요청이_들고_온_토큰이_응답에도_서버_기록에도_나타나지_않는다(
+async def test_요청이_들고_온_자격이_응답에도_서버_기록에도_나타나지_않는다(
     client: AsyncClient, stderr: io.StringIO
 ) -> None:
-    """원칙 V. 맞는 토큰도 틀린 토큰도 되울리지 않는다."""
+    """원칙 V. 맞는 쿠키도 틀린 쿠키도 틀린 `Authorization` 도 되울리지 않는다."""
     wrong = "secret-looking-value-from-the-wire"
+    cookie = _cookie_value(OPERATOR)
 
-    rejected = await client.get(GUARDED, headers={"Authorization": f"Bearer {wrong}"})
-    accepted = await client.get(GUARDED, headers=BEARER)
+    rejected = await client.get(
+        GUARDED, headers={"Authorization": f"Bearer {wrong}"} | _cookie_of(wrong)
+    )
+    accepted = await client.get(GUARDED, headers=OPERATOR)
 
     assert wrong not in rejected.text
     assert wrong not in stderr.getvalue()
-    assert TOKEN not in accepted.text
-    assert TOKEN not in stderr.getvalue()
+    assert cookie not in accepted.text
+    assert cookie not in stderr.getvalue()
 
 
 async def test_없는_경로는_404이고_code_가_not_found_다(client: AsyncClient) -> None:
-    response = await client.get("/nowhere", headers=BEARER)
+    response = await client.get("/nowhere", headers=OPERATOR)
 
     assert response.status_code == 404
     assert response.json()["code"] == "not_found"
@@ -1382,7 +1423,7 @@ async def test_core_의_구성_오류는_500이고_code_가_internal_error_다(
     """부재가 이미 404 로 갈리므로 PluginError 에 남는 것은 서버 디스크의 문제뿐이다(ADR 0010)."""
     _route_that_raises(app, "/broken", PluginError("매니페스트를 읽을 수 없다: plugin.toml"))
 
-    response = await client.get("/broken", headers=BEARER)
+    response = await client.get("/broken", headers=OPERATOR)
 
     assert response.status_code == 500
     assert response.json()["code"] == "internal_error"
@@ -1396,7 +1437,7 @@ async def test_core_의_부재는_404이고_code_가_not_found_다(
     타입의 갈래보다 먼저여야 한다 — 순서가 뒤집히면 이것이 500 이 된다."""
     _route_that_raises(app, "/absent", Absent("에이전트 플러그인이 없다: nope"))
 
-    response = await client.get("/absent", headers=BEARER)
+    response = await client.get("/absent", headers=OPERATOR)
 
     assert response.status_code == 404
     assert response.json()["code"] == "not_found"
@@ -1410,7 +1451,7 @@ async def test_core_의_재개_불가는_409이고_code_가_conflict_다(
     2026-09-24 이력). 이 갈래도 기반 타입의 갈래보다 먼저여야 한다."""
     _route_that_raises(app, "/done", NotResumable("일시정지 상태가 아니라 재개할 수 없다: run-1"))
 
-    response = await client.get("/done", headers=BEARER)
+    response = await client.get("/done", headers=OPERATOR)
 
     assert response.status_code == 409
     assert response.json()["code"] == "conflict"
@@ -1426,7 +1467,7 @@ async def test_core_의_꺼짐은_409이고_code_가_conflict_다(
     `tests/core/test_run.py` 가 잰다. 여기서는 표만 잰다."""
     _route_that_raises(app, "/off", Disabled("꺼진 플러그인이다: agent calc"))
 
-    response = await client.get("/off", headers=BEARER)
+    response = await client.get("/off", headers=OPERATOR)
 
     assert response.status_code == 409
     assert response.json()["code"] == "conflict"
@@ -1439,7 +1480,7 @@ async def test_예기치_않은_실패도_봉투이고_내부_문구를_밖으�
     """운영자는 서버 기록에서 원인을 찾고 클라이언트는 상관 키만 받는다."""
     _route_that_raises(app, "/oops", RuntimeError("내부 사정이 담긴 문구"))
 
-    response = await client.get("/oops", headers=BEARER)
+    response = await client.get("/oops", headers=OPERATOR)
 
     assert response.status_code == 500
     assert response.json()["code"] == "internal_error"
@@ -1457,7 +1498,7 @@ async def test_질의_형식_오류는_422이고_violations_가_점으로_이은
     def _paged(limit: int = 1) -> Health:  # pragma: no cover - 검증에서 끝나 몸통에 닿지 않는다
         return Health(status="ok")
 
-    response = await client.get("/paged?limit=not-a-number", headers=BEARER)
+    response = await client.get("/paged?limit=not-a-number", headers=OPERATOR)
 
     assert response.status_code == 422
     body = response.json()
@@ -1501,7 +1542,7 @@ async def test_429_는_계열로_접히지_않고_too_many_requests_다(
     429 의 어휘는 `tests/channel/http/test_end_user.py` 의 상한 절이 다시 잰다."""
     _route_that_raises(app, "/busy", StarletteHTTPException(status_code=429, detail="바쁘다"))
 
-    response = await client.get("/busy", headers=BEARER)
+    response = await client.get("/busy", headers=OPERATOR)
 
     assert response.status_code == 429
     assert response.json()["code"] == "too_many_requests"
@@ -1518,7 +1559,7 @@ async def test_상한_초과는_429와_Retry_After_이고_범위는_서버_기�
     exceeded = LimitExceeded(detail, limit=LimitKind.HOURLY_RUNS, retry_after_seconds=42)
     _route_that_raises(app, "/busy", exceeded)
 
-    response = await client.get("/busy", headers=BEARER)
+    response = await client.get("/busy", headers=OPERATOR)
 
     assert response.status_code == 429
     assert response.headers["Retry-After"] == "42"
@@ -1577,7 +1618,7 @@ async def test_플러그인_목록이_종류들을_한_평평한_목록으로_�
     client: AsyncClient,
 ) -> None:
     """클라이언트가 종류로 가른다. 종류마다 경로가 갈리면 PRD 의 "한 곳"이 아니다(스토리 2)."""
-    response = await client.get("/plugins", headers=BEARER)
+    response = await client.get("/plugins", headers=OPERATOR)
 
     assert response.status_code == 200
     rows = response.json()
@@ -1595,7 +1636,7 @@ async def test_행의_겉은_종류_이름_켜짐이고_읽히는_행은_매니�
 ) -> None:
     """읽히든 안 읽히든 모든 행에 스위치를 그릴 수 있다(스토리 56). 켜짐은 매니페스트 안이 아니라
     행의 겉에 있어 `plugin.toml` 에 적으면 된다고 믿게 하지 않는다(스토리 10, ADR 0017)."""
-    rows = (await client.get("/plugins", headers=BEARER)).json()
+    rows = (await client.get("/plugins", headers=OPERATOR)).json()
 
     shapes = {frozenset(row) for row in rows}
     assert shapes == {
@@ -1610,7 +1651,7 @@ async def test_목록의_행이_매니페스트를_통째로_담아_승인_대�
 ) -> None:
     """가드레일의 범위를 코드를 읽지 않고 안다(스토리 3). interrupts 가 필드로 닫은 것을 읽는
     면이다. 매니페스트는 sdk 의 것 그대로다(ADR 0010 의 2026-09-23·2026-09-26 이력)."""
-    rows = (await client.get("/plugins", headers=BEARER)).json()
+    rows = (await client.get("/plugins", headers=OPERATOR)).json()
 
     calc = next(row for row in rows if row["name"] == "calc")
     assert calc["manifest"] == CALC.model_dump(mode="json")
@@ -1622,7 +1663,7 @@ async def test_모델_행은_제공사_모델_id_파라미터를_매니페스트
 ) -> None:
     """모델 상세는 이 매니페스트 JSON 그대로 그린다(스토리 12). 다른 종류의 행은 같은 다섯 칸이
     `null` 로 실린다 — 늘 실리는 칸이 required 인 계약이다(ADR 0010 의 2026-09-23 이력)."""
-    rows = (await client.get("/plugins", headers=BEARER)).json()
+    rows = (await client.get("/plugins", headers=OPERATOR)).json()
 
     sonnet = next(row for row in rows if row["name"] == "sonnet")["manifest"]
     assert sonnet["provider"] == "anthropic"
@@ -1646,8 +1687,8 @@ async def test_에이전트_행의_매니페스트는_고른_모델을_싣고_�
     transport = ASGITransport(app=_admin_app(plugins=plugins, trace=FakeTrace(), stderr=stderr))
 
     async with AsyncClient(transport=transport, base_url="http://admin.test") as client:
-        rows = (await client.get("/plugins", headers=BEARER)).json()
-        single = await client.get("/plugins/agent/picky", headers=BEARER)
+        rows = (await client.get("/plugins", headers=OPERATOR)).json()
+        single = await client.get("/plugins/agent/picky", headers=OPERATOR)
 
     picky = next(row for row in rows if row["name"] == "picky")["manifest"]
     calc = next(row for row in rows if row["name"] == "calc")["manifest"]
@@ -1663,7 +1704,7 @@ async def test_mcp_매니페스트의_command_와_args_도_가리지_않고_내�
 
     MCP 구성을 디버깅하는 사람이 정확히 이 둘을 봐야 한다. 가리는 날에는 이 테스트가 먼저 바뀐다.
     """
-    rows = (await client.get("/plugins", headers=BEARER)).json()
+    rows = (await client.get("/plugins", headers=OPERATOR)).json()
 
     everything = next(row for row in rows if row["name"] == "everything")
     assert everything["manifest"]["server"]["transport"] == "stdio"
@@ -1692,8 +1733,8 @@ async def test_http_모양의_mcp_매니페스트는_파일에_적은_글자_그
     transport = ASGITransport(app=_admin_app(plugins=plugins, trace=traces, stderr=stderr))
 
     async with AsyncClient(transport=transport, base_url="http://admin.test") as client:
-        single = await client.get("/plugins/mcp/doc-search", headers=BEARER)
-        listed = (await client.get("/plugins", headers=BEARER)).json()
+        single = await client.get("/plugins/mcp/doc-search", headers=OPERATOR)
+        listed = (await client.get("/plugins", headers=OPERATOR)).json()
 
     expected = {
         "transport": "http",
@@ -1730,8 +1771,8 @@ async def test_openai_compatible_모델의_주소와_키_변수는_파일에_적
     transport = ASGITransport(app=_admin_app(plugins=plugins, trace=traces, stderr=stderr))
 
     async with AsyncClient(transport=transport, base_url="http://admin.test") as client:
-        single = (await client.get("/plugins/model/ax-4-light", headers=BEARER)).json()
-        listed = (await client.get("/plugins", headers=BEARER)).json()
+        single = (await client.get("/plugins/model/ax-4-light", headers=OPERATOR)).json()
+        listed = (await client.get("/plugins", headers=OPERATOR)).json()
 
     manifest = single["manifest"]
     assert manifest["provider"] == "openai-compatible"
@@ -1747,7 +1788,7 @@ async def test_읽을_수_없는_매니페스트가_있어도_나머지가_오�
 ) -> None:
     """조용히 빠지면 등록했다고 믿는 것과 실제가 어긋나고, 전체가 실패하면 무엇이 살아 있는지조차
     모른다(스토리 5·6). 표지에도 켜짐이 있어 깨진 것을 끈 채로 고치고 있는지 안다(스토리 8)."""
-    response = await client.get("/plugins", headers=BEARER)
+    response = await client.get("/plugins", headers=OPERATOR)
 
     assert response.status_code == 200
     rows = response.json()
@@ -1767,7 +1808,7 @@ async def test_꺼진_것은_목록에서_enabled_가_거짓이고_표지_행도
     온다."""
     plugins.disabled = frozenset({EVERYTHING_KEY, BROKEN_KEY})
 
-    rows = (await client.get("/plugins", headers=BEARER)).json()
+    rows = (await client.get("/plugins", headers=OPERATOR)).json()
 
     assert {row["name"]: row["enabled"] for row in rows} == {
         "broken": False,
@@ -1792,7 +1833,7 @@ async def test_이름이_패턴을_어긴_표지_행은_언제나_켜짐이다(
     transport = ASGITransport(app=_admin_app(plugins=plugins, trace=FakeTrace(), stderr=stderr))
 
     async with AsyncClient(transport=transport, base_url="http://admin.test") as client:
-        rows = (await client.get("/plugins", headers=BEARER)).json()
+        rows = (await client.get("/plugins", headers=OPERATOR)).json()
 
     assert {row["name"]: row["enabled"] for row in rows} == {"MyAgent": True, "calc": False}
 
@@ -1801,7 +1842,7 @@ async def test_꺼진_집합은_목록_요청_하나에_한_번_읽는다(
     client: AsyncClient, plugins: FakePlugins
 ) -> None:
     """행마다 파일을 다시 읽지 않는다(ADR 0012 의 2026-09-26 이력)."""
-    await client.get("/plugins", headers=BEARER)
+    await client.get("/plugins", headers=OPERATOR)
 
     assert plugins.disabled_reads == 1
 
@@ -1813,7 +1854,7 @@ async def test_운영자_파일이_깨지면_목록_전체가_500_봉투다(stde
     transport = ASGITransport(app=_admin_app(plugins=plugins, trace=FakeTrace(), stderr=stderr))
 
     async with AsyncClient(transport=transport, base_url="http://admin.test") as client:
-        response = await client.get("/plugins", headers=BEARER)
+        response = await client.get("/plugins", headers=OPERATOR)
 
     assert response.status_code == 500
     assert response.json()["code"] == "internal_error"
@@ -1825,8 +1866,8 @@ async def test_플러그인_하나를_물으면_켜짐과_매니페스트를_통
 ) -> None:
     """목록이 말해 주지 않는 세부를 확인하고(스토리 4), 목록을 다 받지 않고 켜짐 하나를 본다
     (스토리 9)."""
-    calc = await client.get("/plugins/agent/calc", headers=BEARER)
-    everything = await client.get("/plugins/mcp/everything", headers=BEARER)
+    calc = await client.get("/plugins/agent/calc", headers=OPERATOR)
+    everything = await client.get("/plugins/mcp/everything", headers=OPERATOR)
 
     assert calc.status_code == 200
     assert calc.json() == {
@@ -1848,9 +1889,9 @@ async def test_단건_조회의_판정_순서는_부재_깨진_매니페스트_�
     transport = ASGITransport(app=_admin_app(plugins=plugins, trace=FakeTrace(), stderr=stderr))
 
     async with AsyncClient(transport=transport, base_url="http://admin.test") as client:
-        absent = await client.get("/plugins/agent/nothing", headers=BEARER)
-        broken = await client.get("/plugins/agent/broken", headers=BEARER)
-        present = await client.get("/plugins/agent/calc", headers=BEARER)
+        absent = await client.get("/plugins/agent/nothing", headers=OPERATOR)
+        broken = await client.get("/plugins/agent/broken", headers=OPERATOR)
+        present = await client.get("/plugins/agent/calc", headers=OPERATOR)
 
     assert absent.status_code == 404
     assert broken.status_code == 500
@@ -1863,7 +1904,7 @@ async def test_단건_조회의_판정_순서는_부재_깨진_매니페스트_�
 async def test_없는_플러그인은_404이고_code_가_not_found_다(client: AsyncClient) -> None:
     """내 오타와 서버의 문제가 갈린다(스토리 18). 같은 이름이라도 종류가 다르면 없는 것이다."""
     for path in ("/plugins/agent/nothing", "/plugins/mcp/calc"):
-        response = await client.get(path, headers=BEARER)
+        response = await client.get(path, headers=OPERATOR)
 
         assert response.status_code == 404, path
         assert response.json()["code"] == "not_found", path
@@ -1875,8 +1916,8 @@ async def test_읽을_수_없는_매니페스트는_목록에서는_표지이고
     """비대칭이 의도다(ADR 0012 의 2026-09-22 이력). 목록은 "무엇이 있나"라서 하나가 깨져도 나머지가
     답이고, 단건은 그 파일 하나를 달라는 것이라 실패가 곧 답이다. 4xx 면 운영자가 잘못 요청했다고
     믿고 깨진 파일을 못 찾는다(스토리 19)."""
-    rows = (await client.get("/plugins", headers=BEARER)).json()
-    single = await client.get("/plugins/agent/broken", headers=BEARER)
+    rows = (await client.get("/plugins", headers=OPERATOR)).json()
+    single = await client.get("/plugins/agent/broken", headers=OPERATOR)
 
     assert any(row["name"] == "broken" and "reason" in row for row in rows)
     assert single.status_code == 500
@@ -1893,8 +1934,8 @@ async def test_공통_넷만_적은_모델_파일은_목록에서_그_행만_표
     transport = ASGITransport(app=_admin_app(plugins=plugins, trace=FakeTrace(), stderr=stderr))
 
     async with AsyncClient(transport=transport, base_url="http://admin.test") as client:
-        listing = await client.get("/plugins", headers=BEARER)
-        single = await client.get("/plugins/model/old", headers=BEARER)
+        listing = await client.get("/plugins", headers=OPERATOR)
+        single = await client.get("/plugins/model/old", headers=OPERATOR)
 
     rows = listing.json()
     assert listing.status_code == 200
@@ -1927,8 +1968,8 @@ skills = ["zeta-skill", "alpha-skill"]
     transport = ASGITransport(app=_admin_app(plugins=plugins, trace=FakeTrace(), stderr=stderr))
 
     async with AsyncClient(transport=transport, base_url="http://admin.test") as client:
-        rows = (await client.get("/plugins", headers=BEARER)).json()
-        single = (await client.get("/plugins/agent/picky", headers=BEARER)).json()
+        rows = (await client.get("/plugins", headers=OPERATOR)).json()
+        single = (await client.get("/plugins/agent/picky", headers=OPERATOR)).json()
 
     by_name = {row["name"]: row["manifest"]["skills"] for row in rows}
     assert by_name == {"calc": [], "picky": ["zeta-skill", "alpha-skill"]}
@@ -1952,8 +1993,8 @@ async def test_skills가_패턴을_어긴_에이전트는_목록에서_그_행�
     transport = ASGITransport(app=_admin_app(plugins=plugins, trace=FakeTrace(), stderr=stderr))
 
     async with AsyncClient(transport=transport, base_url="http://admin.test") as client:
-        listing = await client.get("/plugins", headers=BEARER)
-        single = await client.get("/plugins/agent/skewed", headers=BEARER)
+        listing = await client.get("/plugins", headers=OPERATOR)
+        single = await client.get("/plugins/agent/skewed", headers=OPERATOR)
 
     rows = listing.json()
     assert listing.status_code == 200
@@ -1970,7 +2011,7 @@ async def test_없는_종류는_422이고_포트가_불리지_않는다(
     client: AsyncClient, plugins: FakePlugins
 ) -> None:
     """없는 종류는 부재가 아니라 형식 오류다. 404 면 그런 종류가 있는데 비었다고 읽힌다."""
-    response = await client.get("/plugins/agents/calc", headers=BEARER)
+    response = await client.get("/plugins/agents/calc", headers=OPERATOR)
 
     assert response.status_code == 422
     assert [violation["field"] for violation in response.json()["violations"]] == ["path.kind"]
@@ -1997,7 +2038,7 @@ async def test_루트를_벗어나려는_이름은_422이고_포트가_아예_�
     """검증이 파일시스템에 닿기 전에 끝난다(스토리 43). 404 와 500 이 갈리는 것 자체가 임의 경로의
     파일 존재를 알려 주는 오라클이라, 포트가 한 번이라도 불리면 그 오라클이 열린다."""
     for name in ESCAPING_NAMES:
-        response = await client.get(f"/plugins/agent/{name}", headers=BEARER)
+        response = await client.get(f"/plugins/agent/{name}", headers=OPERATOR)
 
         assert response.status_code == 422, name
         fields = [violation["field"] for violation in response.json()["violations"]]
@@ -2012,7 +2053,7 @@ async def test_개행이_섞인_이름도_422이고_포트가_불리지_않는�
     `$` 는 마지막 개행 앞에서도 맞는다. 그 규칙대로면 가운데 개행은 라우트가 안 맞아 404 가 되고
     꼬리 개행은 떼어져 `calc` 로 읽힌다. 둘 다 내 오타와 서버의 문제를 가르는 표를 어긴다."""
     for name in ("calc%0A", "%0Acalc", "calc%0Ax"):
-        response = await client.get(f"/plugins/agent/{name}", headers=BEARER)
+        response = await client.get(f"/plugins/agent/{name}", headers=OPERATOR)
 
         assert response.status_code == 422, name
     assert plugins.calls == 0
@@ -2131,7 +2172,7 @@ ON = {"enabled": True}
 
 
 async def _enabled_of(client: AsyncClient, name: str) -> bool:
-    rows = (await client.get("/plugins", headers=BEARER)).json()
+    rows = (await client.get("/plugins", headers=OPERATOR)).json()
     return bool(next(row for row in rows if row["name"] == name)["enabled"])
 
 
@@ -2141,9 +2182,9 @@ async def test_켜고_끄기가_본문_없는_204이고_다음_목록에_반영�
     """HTTP 요청 하나로 끄고 같은 길로 켠다(스토리 1·2). 204 인 이유는 깨진 매니페스트를 끈 직후의
     응답이 단건 조회(500)와 모양이 갈리지 않게 하기 위해서다(스토리 4, ADR 0010 의 2026-09-26
     이력)."""
-    off = await client.put(ENABLED_PATH, json=OFF, headers=BEARER)
+    off = await client.put(ENABLED_PATH, json=OFF, headers=OPERATOR)
     after_off = await _enabled_of(client, "calc")
-    on = await client.put(ENABLED_PATH, json=ON, headers=BEARER)
+    on = await client.put(ENABLED_PATH, json=ON, headers=OPERATOR)
     after_on = await _enabled_of(client, "calc")
 
     assert off.status_code == 204
@@ -2156,7 +2197,7 @@ async def test_켜고_끄기가_본문_없는_204이고_다음_목록에_반영�
 
 async def test_이미_꺼진_것을_다시_꺼도_204다(client: AsyncClient) -> None:
     """두 번 누른 버튼이나 재시도가 에러가 되면 안 된다(스토리 3)."""
-    response = await client.put("/plugins/mcp/everything/enabled", json=OFF, headers=BEARER)
+    response = await client.put("/plugins/mcp/everything/enabled", json=OFF, headers=OPERATOR)
 
     assert response.status_code == 204
     assert await _enabled_of(client, "everything") is False
@@ -2168,7 +2209,7 @@ async def test_없는_플러그인의_켜고_끄기는_404이고_운영자_파�
     """오타로 지은 이름이 파일에 쌓이면 안 된다(스토리 5). 부재 판정이 손상 판정보다 먼저다(ADR
     0017 의 2026-09-27 둘째 이력). 같은 이름이라도 종류가 다르면 없는 것이다."""
     for path in ("/plugins/agent/nothing/enabled", "/plugins/mcp/calc/enabled"):
-        response = await client.put(path, json=OFF, headers=BEARER)
+        response = await client.put(path, json=OFF, headers=OPERATOR)
 
         assert response.status_code == 404, path
         assert response.json()["code"] == "not_found", path
@@ -2176,7 +2217,7 @@ async def test_없는_플러그인의_켜고_끄기는_404이고_운영자_파�
     corrupt = FakePlugins(rows=(CALC,), corrupt="운영자 파일이 깨졌다: plugins/disabled.toml")
     transport = ASGITransport(app=_admin_app(plugins=corrupt, trace=FakeTrace(), stderr=stderr))
     async with AsyncClient(transport=transport, base_url="http://admin.test") as other:
-        response = await other.put("/plugins/agent/nothing/enabled", json=OFF, headers=BEARER)
+        response = await other.put("/plugins/agent/nothing/enabled", json=OFF, headers=OPERATOR)
 
     assert response.status_code == 404
     assert corrupt.writes == []
@@ -2185,7 +2226,7 @@ async def test_없는_플러그인의_켜고_끄기는_404이고_운영자_파�
 async def test_매니페스트가_깨진_플러그인도_켜고_끌_수_있다(client: AsyncClient) -> None:
     """고칠 때까지 런타임이 부르지 않게 하려는 것이 끄는 이유일 수 있다(스토리 6). 끄는 키는
     매니페스트가 아니라 이름이다."""
-    response = await client.put("/plugins/agent/broken/enabled", json=OFF, headers=BEARER)
+    response = await client.put("/plugins/agent/broken/enabled", json=OFF, headers=OPERATOR)
 
     assert response.status_code == 204
     assert await _enabled_of(client, "broken") is False
@@ -2212,7 +2253,7 @@ async def test_있는_이름이라도_운영자_파일이_깨졌거나_쓰지_�
     transport = ASGITransport(app=_admin_app(plugins=fake, trace=FakeTrace(), stderr=stderr))
 
     async with AsyncClient(transport=transport, base_url="http://admin.test") as client:
-        response = await client.put(ENABLED_PATH, json=OFF, headers=BEARER)
+        response = await client.put(ENABLED_PATH, json=OFF, headers=OPERATOR)
 
     assert response.status_code == 500
     assert response.json()["code"] == "internal_error"
@@ -2225,8 +2266,8 @@ async def test_skill_과_model_의_켜고_끄기도_204이고_기록된다(
 ) -> None:
     """등록된 것을 한 가지 방법으로 다룬다(스토리 17). 효과가 나는 때는 로더가 생긴 뒤이고 그것은
     `README.md` 가 말한다(스토리 18)."""
-    skill = await client.put("/plugins/skill/summarize/enabled", json=OFF, headers=BEARER)
-    model = await client.put("/plugins/model/sonnet/enabled", json=OFF, headers=BEARER)
+    skill = await client.put("/plugins/skill/summarize/enabled", json=OFF, headers=OPERATOR)
+    model = await client.put("/plugins/model/sonnet/enabled", json=OFF, headers=OPERATOR)
 
     assert (skill.status_code, model.status_code) == (204, 204)
     assert plugins.writes == [
@@ -2243,7 +2284,7 @@ async def test_켜고_끄는_경로의_이름이_루트를_벗어나거나_개�
     """단건 조회와 같은 규칙이다(스토리 40). 이름이 파일 경로로 조립되기 전에 sdk 의 패턴을
     지난다."""
     for name in (*ESCAPING_NAMES, "calc%0A", "%0Acalc", "calc%0Ax"):
-        response = await client.put(f"/plugins/agent/{name}/enabled", json=OFF, headers=BEARER)
+        response = await client.put(f"/plugins/agent/{name}/enabled", json=OFF, headers=OPERATOR)
 
         assert response.status_code == 422, name
         fields = [violation["field"] for violation in response.json()["violations"]]
@@ -2254,8 +2295,8 @@ async def test_켜고_끄는_경로의_이름이_루트를_벗어나거나_개�
 async def test_enabled_를_GET_하면_422이고_이름까지만_PUT_하면_405다(client: AsyncClient) -> None:
     """`{name:verbatim}` 이 슬래시까지 잡아 GET 은 이름 `calc/enabled` 로 단건에 맞은 뒤 패턴이
     거른다. PUT 은 단건 경로에 라우트가 없다(ADR 0010 의 2026-09-26 이력)."""
-    get = await client.get(ENABLED_PATH, headers=BEARER)
-    put = await client.put("/plugins/agent/calc", json=OFF, headers=BEARER)
+    get = await client.get(ENABLED_PATH, headers=OPERATOR)
+    put = await client.put("/plugins/agent/calc", json=OFF, headers=OPERATOR)
 
     assert get.status_code == 422
     assert [violation["field"] for violation in get.json()["violations"]] == ["path.name"]
@@ -2269,7 +2310,7 @@ async def test_enabled_뒤에_꼬리_개행이_붙은_경로는_이름_calc_로_
     """명세 검토의 프로브를 실제 변환기로 다시 잰 결과다. 라우팅 정규식이 파이썬 `re` 라 `$` 가
     리터럴 `/enabled` 뒤의 꼬리 개행 앞에서도 맞는다. 포트에 닿는 이름은 `calc` 그대로라 패턴을
     지나고 경로가 플러그인 루트를 벗어나지 않으므로 그대로 둔다."""
-    response = await client.put(f"{ENABLED_PATH}%0A", json=OFF, headers=BEARER)
+    response = await client.put(f"{ENABLED_PATH}%0A", json=OFF, headers=OPERATOR)
 
     assert response.status_code == 204
     assert plugins.writes == [(CALC_KEY, False)]
@@ -2289,7 +2330,7 @@ async def test_enabled_가_없거나_불린이_아니거나_추가_필드가_있
 ) -> None:
     """`"false"` 나 `0` 을 조용히 뜻으로 읽으면 계약에 없는 값이 켜짐을 정한다(스토리 41). 모르는
     필드를 받으면 보낸 쪽이 자기 값이 쓰였다고 믿는다(스토리 42)."""
-    response = await client.put(ENABLED_PATH, json=body, headers=BEARER)
+    response = await client.put(ENABLED_PATH, json=body, headers=OPERATOR)
 
     assert response.status_code == 422
     assert response.json()["code"] == "invalid_request"
@@ -2341,10 +2382,10 @@ async def test_동시에_온_켜고_끄기_둘이_둘_다_남는다(stderr: io.S
 
     async with AsyncClient(transport=transport, base_url="http://admin.test") as client:
         responses = await asyncio.gather(
-            client.put(ENABLED_PATH, json=OFF, headers=BEARER),
-            client.put("/plugins/mcp/everything/enabled", json=OFF, headers=BEARER),
+            client.put(ENABLED_PATH, json=OFF, headers=OPERATOR),
+            client.put("/plugins/mcp/everything/enabled", json=OFF, headers=OPERATOR),
         )
-        rows = (await client.get("/plugins", headers=BEARER)).json()
+        rows = (await client.get("/plugins", headers=OPERATOR)).json()
 
     assert [response.status_code for response in responses] == [204, 204]
     assert {row["name"]: row["enabled"] for row in rows} == {"calc": False, "everything": False}
@@ -2441,7 +2482,7 @@ def _check_path(kind: str, name: str) -> str:
 
 
 async def _send(client: AsyncClient, method: str, path: str) -> httpx.Response:
-    return await client.request(method, path, headers=BEARER)
+    return await client.request(method, path, headers=OPERATOR)
 
 
 @pytest.fixture
@@ -2715,20 +2756,20 @@ async def test_확인_함수가_구성_오류를_올리면_운영자에게_그_�
 
 
 @pytest.mark.parametrize("method", ["GET", "POST"])
-async def test_확인_경로는_관리_토큰만_열고_채널_토큰이나_토큰_없음은_401이다(
+async def test_확인_경로는_로그인_쿠키만_열고_로그인_없음이나_옛_공유_토큰은_401이다(
     stderr: io.StringIO, checks: Checks, check_plugins: FakePlugins, method: str
 ) -> None:
     async with _checking_client(stderr, checks, check_plugins) as client:
         path = _check_path("mcp", "remote")
         anonymous = await client.request(method, path)
-        channel = await client.request(method, path, headers=CHANNEL_BEARER)
+        old = await client.request(method, path, headers=OLD_BEARER)
 
     assert anonymous.status_code == 401
-    assert channel.status_code == 401
+    assert old.status_code == 401
     # 오류 응답은 다시 쓰일 결과가 아니라 요청의 문제라 `no-store` 를 싣지 않는다. 미들웨어가 내는
     # 401 도 같다.
     assert "Cache-Control" not in anonymous.headers
-    assert "Cache-Control" not in channel.headers
+    assert "Cache-Control" not in old.headers
     assert checks.calls == 0
 
 
@@ -2833,7 +2874,7 @@ def _opaque(payload: str) -> str:
 async def test_트레이스_목록이_실행_요약과_다음_커서를_돌려준다(client: AsyncClient) -> None:
     """무엇이 돌았는지 기억과 스크롤백에 의존하지 않는다(스토리 8·9·12). 행마다 어떤 에이전트의
     것이고 누가 요청했고 언제 시작해 언제 마지막으로 움직였는지가 보인다."""
-    response = await client.get("/traces", headers=BEARER)
+    response = await client.get("/traces", headers=OPERATOR)
 
     assert response.status_code == 200
     body = response.json()
@@ -2854,7 +2895,7 @@ async def test_요약의_필드는_일곱이고_프롬프트도_토큰_수도_�
     app: FastAPI, client: AsyncClient
 ) -> None:
     """목록은 개요를 보는 자리이지 내용을 읽는 자리가 아니다(스토리 15, ADR 0012 이력)."""
-    rows = (await client.get("/traces", headers=BEARER)).json()["runs"]
+    rows = (await client.get("/traces", headers=OPERATOR)).json()["runs"]
     schema = app.openapi()["components"]["schemas"]["RunSummary"]
 
     assert all(set(row) == SUMMARY_FIELDS for row in rows if "reason" not in row)
@@ -2863,7 +2904,7 @@ async def test_요약의_필드는_일곱이고_프롬프트도_토큰_수도_�
 
 async def test_최근_실행이_먼저_오고_상태_넷이_갈린다(client: AsyncClient) -> None:
     """스크립트가 셋을 같게 다루면 멈춘 실행을 잃어버린다(스토리 10·13)."""
-    rows = (await client.get("/traces", headers=BEARER)).json()["runs"]
+    rows = (await client.get("/traces", headers=OPERATOR)).json()["runs"]
 
     assert [row["run_id"] for row in rows] == [row.run_id for row in NEWEST_FIRST]
     assert [row.get("status") for row in rows[:4]] == ["unfinished", "failed", "finished", "paused"]
@@ -2879,7 +2920,7 @@ def test_끝_이벤트가_없는_실행을_진행_중이라_부르지_않는다(
 
 async def test_형식_1_실행도_목록에_나오고_요약이_형식_버전을_싣는다(client: AsyncClient) -> None:
     """화면이 "이 실행은 재개할 수 없다"를 말할 수 있다(스토리 17)."""
-    rows = (await client.get("/traces", headers=BEARER)).json()["runs"]
+    rows = (await client.get("/traces", headers=OPERATOR)).json()["runs"]
 
     legacy = next(row for row in rows if row["run_id"] == LEGACY.run_id)
     assert legacy["schema_version"] == "1"
@@ -2889,7 +2930,7 @@ async def test_읽을_수_없는_트레이스가_있어도_나머지가_오고_�
     client: AsyncClient,
 ) -> None:
     """트레이스 하나가 /traces 전체를 죽이지 않는다(ADR 0012 의 2026-09-22 이력)."""
-    response = await client.get("/traces", headers=BEARER)
+    response = await client.get("/traces", headers=OPERATOR)
 
     assert response.status_code == 200
     rows = response.json()["runs"]
@@ -2901,7 +2942,7 @@ async def test_질의가_없으면_포트가_상태_없이_기본_개수로_첫_
     client: AsyncClient, traces: FakeTrace
 ) -> None:
     """셋 다 선택이고 status 가 없으면 전부다. 기본 개수는 계약에 박힌 그 숫자다."""
-    await client.get("/traces", headers=BEARER)
+    await client.get("/traces", headers=OPERATOR)
 
     assert traces.calls == [ListCall(status=None, limit=DEFAULT_LIMIT, after=None)]
 
@@ -2909,11 +2950,11 @@ async def test_질의가_없으면_포트가_상태_없이_기본_개수로_첫_
 async def test_status_limit_after_가_포트에_그대로_전달된다(
     client: AsyncClient, traces: FakeTrace
 ) -> None:
-    first = await client.get("/traces", params={"limit": "2"}, headers=BEARER)
+    first = await client.get("/traces", params={"limit": "2"}, headers=OPERATOR)
     cursor = first.json()["next_cursor"]
 
     await client.get(
-        "/traces", params={"status": "paused", "limit": "3", "after": cursor}, headers=BEARER
+        "/traces", params={"status": "paused", "limit": "3", "after": cursor}, headers=OPERATOR
     )
 
     assert traces.calls[-1] == ListCall(status="paused", limit=3, after=cursor_of(FAILED))
@@ -2922,7 +2963,7 @@ async def test_status_limit_after_가_포트에_그대로_전달된다(
 async def test_status_paused_가_곧_멈춘_실행_목록이다(client: AsyncClient) -> None:
     """승인자가 멈춘 실행을 찾는 길이 이 질의 하나다(스토리 22). 표지는 상태가 없어 섞이지
     않는다."""
-    response = await client.get("/traces", params={"status": "paused"}, headers=BEARER)
+    response = await client.get("/traces", params={"status": "paused"}, headers=OPERATOR)
 
     assert response.status_code == 200
     assert _run_ids(response) == [PAUSED.run_id]
@@ -2934,7 +2975,7 @@ async def test_멈춘_실행에_별도_경로가_없다(
     """상태는 요약의 한 필드이지 다른 자원이 아니다(스토리 23). 경로를 두면 `paused` 라는 실행
     식별자가 생길 수 없게 되고 상태가 늘 때마다 경로가 는다. 그 경로는 상세이고 `paused` 는 그냥
     실행 식별자다."""
-    response = await client.get("/traces/paused", headers=BEARER)
+    response = await client.get("/traces/paused", headers=OPERATOR)
 
     assert "/traces/paused" not in _documented_paths(app)
     assert response.status_code == 404
@@ -2946,7 +2987,7 @@ async def test_잘못된_status_는_422이고_포트가_불리지_않는다(
     client: AsyncClient, traces: FakeTrace
 ) -> None:
     for status in ("running", "in_progress", "PAUSED", ""):
-        response = await client.get("/traces", params={"status": status}, headers=BEARER)
+        response = await client.get("/traces", params={"status": status}, headers=OPERATOR)
 
         assert response.status_code == 422, status
         fields = [violation["field"] for violation in response.json()["violations"]]
@@ -2959,7 +3000,7 @@ async def test_영_이하이거나_상한을_넘는_limit_은_422이고_포트�
 ) -> None:
     """상한이 없으면 요청 하나가 "실행이 쌓여도 응답이 그만큼 커지지 않는다"를 무력화한다."""
     for limit in ("0", "-1", str(MAX_LIMIT + 1), "many"):
-        response = await client.get("/traces", params={"limit": limit}, headers=BEARER)
+        response = await client.get("/traces", params={"limit": limit}, headers=OPERATOR)
 
         assert response.status_code == 422, limit
         fields = [violation["field"] for violation in response.json()["violations"]]
@@ -2969,7 +3010,7 @@ async def test_영_이하이거나_상한을_넘는_limit_은_422이고_포트�
 
 async def test_limit_의_경계값은_받는다(client: AsyncClient, traces: FakeTrace) -> None:
     for limit in (1, MAX_LIMIT):
-        response = await client.get("/traces", params={"limit": str(limit)}, headers=BEARER)
+        response = await client.get("/traces", params={"limit": str(limit)}, headers=OPERATOR)
 
         assert response.status_code == 200, limit
     assert [call.limit for call in traces.calls] == [1, MAX_LIMIT]
@@ -3010,7 +3051,7 @@ async def test_형식에_맞지_않는_after_는_422이고_포트가_불리지_�
     """04·06 이 경로 파라미터에 거는 것과 같은 종류의 검증이다. violations 가 after 를 가리켜야
     검증이 실제로 돌았다는 것까지 본다."""
     for after in MALFORMED_AFTER:
-        response = await client.get("/traces", params={"after": after}, headers=BEARER)
+        response = await client.get("/traces", params={"after": after}, headers=OPERATOR)
 
         assert response.status_code == 422, after
         assert response.json()["code"] == "invalid_request", after
@@ -3020,7 +3061,7 @@ async def test_형식에_맞지_않는_after_는_422이고_포트가_불리지_�
 
 
 async def test_받은_행이_limit_개보다_적으면_다음_커서가_null_이다(client: AsyncClient) -> None:
-    response = await client.get("/traces", params={"limit": str(MAX_LIMIT)}, headers=BEARER)
+    response = await client.get("/traces", params={"limit": str(MAX_LIMIT)}, headers=OPERATOR)
 
     assert response.json()["next_cursor"] is None
 
@@ -3028,9 +3069,9 @@ async def test_받은_행이_limit_개보다_적으면_다음_커서가_null_이
 async def test_딱_떨어지면_다음_쪽이_비고_그때_커서가_null_이다(client: AsyncClient) -> None:
     """포트에 limit 을 그대로 넘기므로 하나 더 읽어 끝을 미리 볼 수 없다. 대가는 요청 하나다."""
     size = str(len(NEWEST_FIRST))
-    full = await client.get("/traces", params={"limit": size}, headers=BEARER)
+    full = await client.get("/traces", params={"limit": size}, headers=OPERATOR)
     after = full.json()["next_cursor"]
-    rest = await client.get("/traces", params={"limit": size, "after": after}, headers=BEARER)
+    rest = await client.get("/traces", params={"limit": size, "after": after}, headers=OPERATOR)
 
     assert after is not None
     assert rest.json() == {"runs": [], "next_cursor": None}
@@ -3047,12 +3088,12 @@ async def test_다음_커서가_마지막_행의_정렬_키를_잃지_않고_포
     )
     traces.rows = [precise, UNREADABLE]
 
-    first = await client.get("/traces", params={"limit": "1"}, headers=BEARER)
+    first = await client.get("/traces", params={"limit": "1"}, headers=OPERATOR)
     second = await client.get(
-        "/traces", params={"limit": "1", "after": first.json()["next_cursor"]}, headers=BEARER
+        "/traces", params={"limit": "1", "after": first.json()["next_cursor"]}, headers=OPERATOR
     )
     await client.get(
-        "/traces", params={"limit": "1", "after": second.json()["next_cursor"]}, headers=BEARER
+        "/traces", params={"limit": "1", "after": second.json()["next_cursor"]}, headers=OPERATOR
     )
 
     afters = [call.after for call in traces.calls]
@@ -3077,9 +3118,9 @@ async def test_포트가_받는_커서의_시각대는_pydantic_의_것이_아�
         UNREADABLE,
     ]
 
-    first = await client.get("/traces", params={"limit": "1"}, headers=BEARER)
+    first = await client.get("/traces", params={"limit": "1"}, headers=OPERATOR)
     await client.get(
-        "/traces", params={"limit": "1", "after": first.json()["next_cursor"]}, headers=BEARER
+        "/traces", params={"limit": "1", "after": first.json()["next_cursor"]}, headers=OPERATOR
     )
 
     returned = traces.calls[-1].after
@@ -3094,27 +3135,27 @@ async def test_쪽_사이에_새_실행이_생겨도_같은_항목이_두_번_�
 ) -> None:
     """오프셋과 커서를 가르는 성질이다(스토리 33). 정적인 목록으로는 재지 못한다 — 오프셋도 목록이
     그대로면 겹치지도 빠지지도 않는다."""
-    everything = _run_ids(await client.get("/traces", headers=BEARER))
+    everything = _run_ids(await client.get("/traces", headers=OPERATOR))
 
-    first = await client.get("/traces", params={"limit": "2"}, headers=BEARER)
+    first = await client.get("/traces", params={"limit": "2"}, headers=OPERATOR)
     newest = _summary("f00d4e5b", "unfinished", started=timedelta(hours=1), last=timedelta(hours=1))
     traces.rows = [*traces.rows, newest]
     seen = _run_ids(first)
     cursor = first.json()["next_cursor"]
     while cursor is not None:
-        page = await client.get("/traces", params={"limit": "2", "after": cursor}, headers=BEARER)
+        page = await client.get("/traces", params={"limit": "2", "after": cursor}, headers=OPERATOR)
         seen.extend(_run_ids(page))
         cursor = page.json()["next_cursor"]
 
     assert seen == everything
-    assert _run_ids(await client.get("/traces", headers=BEARER)) == [newest.run_id, *everything]
+    assert _run_ids(await client.get("/traces", headers=OPERATOR)) == [newest.run_id, *everything]
 
 
 async def test_응답의_실행_식별자가_패턴을_만족하고_계약에_박힌다(
     app: FastAPI, client: AsyncClient
 ) -> None:
     """그대로 `agent-os resume` 에도 `/traces/{run_id}` 에도 넘길 수 있다(스토리 24)."""
-    rows = (await client.get("/traces", headers=BEARER)).json()["runs"]
+    rows = (await client.get("/traces", headers=OPERATOR)).json()["runs"]
     schemas = app.openapi()["components"]["schemas"]
 
     assert all(is_run_id(row["run_id"]) for row in rows)
@@ -3128,7 +3169,7 @@ async def test_패턴을_어기는_식별자는_응답에_실리지_않는다(
     """어댑터는 그런 이름의 파일을 목록에서 뺀다. 그래도 새면 계약을 어긴 응답 대신 500 이다."""
     traces.rows = [dataclasses.replace(PAUSED, run_id=RunId("../escaped"))]
 
-    response = await client.get("/traces", headers=BEARER)
+    response = await client.get("/traces", headers=OPERATOR)
 
     assert response.status_code == 500
     assert "../escaped" not in response.text
@@ -3265,7 +3306,7 @@ def _ends(response: httpx.Response) -> list[str]:
 async def test_대화_목록이_이어_간_실행들을_한_줄로_묶고_표지를_맨_뒤에_낸다(
     conversation_client: AsyncClient,
 ) -> None:
-    response = await conversation_client.get("/conversations", headers=BEARER)
+    response = await conversation_client.get("/conversations", headers=OPERATOR)
 
     assert response.status_code == 200
     body = response.json()
@@ -3290,7 +3331,7 @@ async def test_대화_목록이_이어_간_실행들을_한_줄로_묶고_표지
 async def test_첫_요청은_앞_120자만_싣고_요청한_계정이_없으면_null_이다(
     conversation_client: AsyncClient,
 ) -> None:
-    response = await conversation_client.get("/conversations", headers=BEARER)
+    response = await conversation_client.get("/conversations", headers=OPERATOR)
 
     solo = next(
         row for row in response.json()["conversations"] if row.get("last_run") == "conv-solo"
@@ -3302,7 +3343,7 @@ async def test_첫_요청은_앞_120자만_싣고_요청한_계정이_없으면_
 async def test_대화_목록은_질의가_없으면_포트가_상태_없이_기본_개수로_첫_쪽을_받는다(
     conversation_client: AsyncClient, conversation_traces: FakeTrace
 ) -> None:
-    await conversation_client.get("/conversations", headers=BEARER)
+    await conversation_client.get("/conversations", headers=OPERATOR)
 
     assert conversation_traces.conversation_calls == [
         ListCall(status=None, limit=DEFAULT_LIMIT, after=None)
@@ -3313,13 +3354,13 @@ async def test_대화_목록은_질의가_없으면_포트가_상태_없이_기�
 async def test_대화_목록의_status_limit_after_가_포트에_그대로_전달된다(
     conversation_client: AsyncClient, conversation_traces: FakeTrace
 ) -> None:
-    first = await conversation_client.get("/conversations", params={"limit": "1"}, headers=BEARER)
+    first = await conversation_client.get("/conversations", params={"limit": "1"}, headers=OPERATOR)
     cursor = first.json()["next_cursor"]
 
     await conversation_client.get(
         "/conversations",
         params={"status": "failed", "limit": "3", "after": cursor},
-        headers=BEARER,
+        headers=OPERATOR,
     )
 
     # 커서는 끝 실행의 (시작 시각, 식별자)이고 실행 목록의 커서와 같은 모양이다.
@@ -3337,7 +3378,7 @@ async def test_대화_목록을_쪽으로_넘기며_읽으면_겹치거나_빠�
     after: str | None = None
     for _ in range(5):
         params = {"limit": "1", **({} if after is None else {"after": after})}
-        response = await conversation_client.get("/conversations", params=params, headers=BEARER)
+        response = await conversation_client.get("/conversations", params=params, headers=OPERATOR)
         seen.extend(_ends(response))
         after = response.json()["next_cursor"]
         if after is None:
@@ -3350,10 +3391,10 @@ async def test_대화_목록의_status_는_끝_실행의_상태로_가르고_표
     conversation_client: AsyncClient,
 ) -> None:
     paused = await conversation_client.get(
-        "/conversations", params={"status": "paused"}, headers=BEARER
+        "/conversations", params={"status": "paused"}, headers=OPERATOR
     )
     finished = await conversation_client.get(
-        "/conversations", params={"status": "finished"}, headers=BEARER
+        "/conversations", params={"status": "finished"}, headers=OPERATOR
     )
 
     assert _ends(paused) == ["conv-b"]
@@ -3372,7 +3413,7 @@ async def test_잘못된_대화_질의는_422이고_포트가_불리지_않는�
         ({"after": _opaque("not json")}, "query.after"),
     ]
     for params, field in bad:
-        response = await conversation_client.get("/conversations", params=params, headers=BEARER)
+        response = await conversation_client.get("/conversations", params=params, headers=OPERATOR)
 
         assert response.status_code == 422, params
         assert response.json()["code"] == "invalid_request", params
@@ -3380,7 +3421,7 @@ async def test_잘못된_대화_질의는_422이고_포트가_불리지_않는�
     assert conversation_traces.conversation_calls == []
 
 
-async def test_대화_목록은_토큰이_없으면_401이고_포트가_불리지_않는다(
+async def test_대화_목록은_로그인이_없으면_401이고_포트가_불리지_않는다(
     conversation_client: AsyncClient, conversation_traces: FakeTrace
 ) -> None:
     response = await conversation_client.get("/conversations")
@@ -3454,7 +3495,7 @@ async def test_트레이스_상세가_한_실행의_이벤트를_쓴_순서_그�
 ) -> None:
     """무엇이 어긋났는지 되짚는 자리다(스토리 16). 승인자는 무엇을 승인해 달라는지를 목록이 아니라
     여기서 본다(스토리 25) — 마지막 이벤트가 멈춘 도구와 그 인자를 든다."""
-    response = await client.get(f"/traces/{PAUSED.run_id}", headers=BEARER)
+    response = await client.get(f"/traces/{PAUSED.run_id}", headers=OPERATOR)
 
     assert response.status_code == 200
     body = response.json()
@@ -3472,7 +3513,7 @@ async def test_모르는_종류의_이벤트가_판별자를_달고_원문_문�
 ) -> None:
     """빼면 화면이 실행에 대해 거짓말을 하고, 그 줄이 곧 재개 불가의 원인이다. 원문을 펼쳐 판별자를
     얹지 않는다 — 원문이 이미 `type` 을 들고 있어 덮어쓰게 된다(ADR 0010 의 2026-09-22 이력)."""
-    events = (await client.get(f"/traces/{PAUSED.run_id}", headers=BEARER)).json()["events"]
+    events = (await client.get(f"/traces/{PAUSED.run_id}", headers=OPERATOR)).json()["events"]
 
     unknown = events[2]
     assert unknown == {"type": "unknown", "raw": FUTURE_LINE}
@@ -3482,7 +3523,7 @@ async def test_모르는_종류의_이벤트가_판별자를_달고_원문_문�
 async def test_형식_1_트레이스도_상세가_읽히고_형식_버전을_싣는다(client: AsyncClient) -> None:
     """읽기는 되고 재개만 안 된다. 목록을 거치지 않고 상세로 곧장 들어온 화면도 "이 실행은 재개할
     수 없다"를 말할 수 있다(스토리 17)."""
-    response = await client.get(f"/traces/{LEGACY.run_id}", headers=BEARER)
+    response = await client.get(f"/traces/{LEGACY.run_id}", headers=OPERATOR)
 
     assert response.status_code == 200
     assert response.json()["schema_version"] == "1"
@@ -3494,7 +3535,7 @@ async def test_없는_실행은_404이고_code_가_not_found_다(
 ) -> None:
     """내 오타와 서버의 문제가 갈린다(스토리 18). 포트가 불렸는지 보는 이유는 라우트가 없어도 같은
     404 가 나기 때문이다 — 포트가 None 이라고 답한 404 여야 한다."""
-    response = await client.get("/traces/0000dead", headers=BEARER)
+    response = await client.get("/traces/0000dead", headers=OPERATOR)
 
     assert response.status_code == 404
     assert response.json()["code"] == "not_found"
@@ -3510,8 +3551,8 @@ async def test_읽을_수_없는_트레이스는_목록에서는_표지이고_�
     쓰는 중인 파일은 여기 오지 않는다. 개행으로 끝나지 않은 마지막 줄은 아직 쓰이지 않은 것이라
     어댑터가 그 앞 줄까지 돌려주고, 그것은 이 라우트에서 200 이다(ADR 0012 의 2026-09-23 이력 둘째,
     `tests/adapters/test_jsonl.py`)."""
-    rows = (await client.get("/traces", headers=BEARER)).json()["runs"]
-    single = await client.get(f"/traces/{UNREADABLE.run_id}", headers=BEARER)
+    rows = (await client.get("/traces", headers=OPERATOR)).json()["runs"]
+    single = await client.get(f"/traces/{UNREADABLE.run_id}", headers=OPERATOR)
 
     assert {"run_id": UNREADABLE.run_id, "reason": UNREADABLE.reason} in rows
     assert single.status_code == 500
@@ -3528,7 +3569,7 @@ async def test_루트를_벗어나려는_실행_식별자는_422이고_포트가
     500 이 갈리는 것 자체가 임의 경로의 파일 존재 오라클이다. CLI 에서는 argv 라 신뢰 경계 안이던
     값을 HTTP 가 원격 입력으로 바꾼다. 개행과 길이도 같은 판정자가 본다."""
     for run_id in (*ESCAPING_NAMES, "7c1e2d9a%0A", "%0A7c1e2d9a", "7c1e%0A2d9a", "a" * 65):
-        response = await client.get(f"/traces/{run_id}", headers=BEARER)
+        response = await client.get(f"/traces/{run_id}", headers=OPERATOR)
 
         assert response.status_code == 422, run_id
         fields = [violation["field"] for violation in response.json()["violations"]]
@@ -3639,9 +3680,9 @@ async def test_요청_출처_검사의_사례_표가_관리_API와_운영자_채
     headers: dict[str, str], client: AsyncClient, *, passes: bool
 ) -> None:
     """지나는 요청은 자격까지 가서 그 경로의 답을 받는다(관리 200, 채널은 없는 경로라 404). 막힌
-    요청은 같은 토큰을 들고도 403 이다."""
-    admin = await client.get("/plugins", headers=BEARER | headers)
-    channel = await client.get(CHANNEL_GUARDED, headers=CHANNEL_BEARER | headers)
+    요청은 같은 쿠키를 들고도 403 이다."""
+    admin = await client.get("/plugins", headers=OPERATOR | headers)
+    channel = await client.get(CHANNEL_GUARDED, headers=OPERATOR | headers)
 
     if passes:
         assert (admin.status_code, channel.status_code) == (200, 404)
@@ -3658,7 +3699,7 @@ async def test_요청_출처_검사의_사례_표가_관리_API와_운영자_채
 async def test_요청_출처_검사의_403_봉투는_머리의_값을_싣지_않는다(client: AsyncClient) -> None:
     headers = {"Sec-Fetch-Site": "cross-site", "Origin": "https://canary-origin.example"}
 
-    response = await client.get("/plugins", headers=BEARER | headers)
+    response = await client.get("/plugins", headers=OPERATOR | headers)
 
     assert response.status_code == 403
     assert "canary-origin" not in response.text
@@ -3666,11 +3707,11 @@ async def test_요청_출처_검사의_403_봉투는_머리의_값을_싣지_않
     assert "www-authenticate" not in response.headers
 
 
-async def test_요청_출처_검사는_자격보다_먼저라_토큰이_없어도_출처가_틀리면_403이다(
+async def test_요청_출처_검사는_자격보다_먼저라_로그인이_없어도_출처가_틀리면_403이다(
     client: AsyncClient,
 ) -> None:
-    """`Origin` 이 있고 토큰이 없는 요청은 401 이 아니라 403 이다. 어느 경로가 로그인을 요구하는지
-    다른 사이트에 알리지 않는다. 출처가 맞고 토큰이 없으면 지금처럼 401 이다."""
+    """`Origin` 이 있고 로그인이 없는 요청은 401 이 아니라 403 이다. 어느 경로가 로그인을 요구하는지
+    다른 사이트에 알리지 않는다. 출처가 맞고 로그인이 없으면 지금처럼 401 이다."""
     foreign = await client.get("/plugins", headers={"Origin": "https://evil.example"})
     plain = await client.get("/plugins")
     same = await client.get("/plugins", headers={"Sec-Fetch-Site": "same-origin"})
@@ -3710,8 +3751,8 @@ async def test_접두사를_문자열로만_공유하는_경로에는_검사가_
     """검사의 면 가르기도 경로 조각 단위다. `/end-userx` 와 `/healthz` 는 운영자 경로다."""
     foreign = {"Origin": "https://evil.example"}
 
-    lookalike = await client.get("/end-userx", headers=BEARER | foreign)
-    health_like = await client.get("/health/", headers=BEARER | foreign)
+    lookalike = await client.get("/end-userx", headers=OPERATOR | foreign)
+    health_like = await client.get("/health/", headers=OPERATOR | foreign)
 
     assert lookalike.status_code == 403
     assert health_like.status_code == 403

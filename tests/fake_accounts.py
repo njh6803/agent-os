@@ -1,6 +1,6 @@
 """계정 저장소를 쓰지 않는 시험이 `create_app` 에 넘기는 대역.
 
-공유 토큰으로 도는 지금의 시험(관리 API, 운영자 채널, 최종 사용자 경로)은 계정을 읽고 쓰지 않는다.
+로그인 쿠키로 도는 시험(관리 API, 운영자 채널, 최종 사용자 경로)은 계정을 읽고 쓰지 않는다.
 다만 앱이 뜰 때 서명 키의 줄을 만들고(`LoginService.ready`) 로그인 쿠키가 든 요청을 검증하려면 키를
 읽어야 하므로, 서명 키 둘만 메모리에서 받는다. 그 밖의 메서드는 불리면 시험이 계정을 쓰고 있다는
 뜻이라 곧바로 터뜨린다. 계정을 읽고 쓰는 시험은 이 대역이 아니라 진짜 데이터베이스를 쓴다
@@ -15,7 +15,7 @@ from __future__ import annotations
 import asyncio
 from collections.abc import AsyncGenerator, Sequence
 from contextlib import asynccontextmanager
-from datetime import datetime
+from datetime import UTC, datetime
 from uuid import UUID
 
 from agent_os.http.accounts import (
@@ -25,9 +25,36 @@ from agent_os.http.accounts import (
     RecordKind,
     RefreshRow,
     Taken,
+    Tier,
 )
+from agent_os.http.login_tokens import ACCESS_COOKIE, issue_token
 
 _UNUSED = "이 시험은 계정 저장소를 쓰지 않는다"
+
+# 운영자 경로를 미는 시험이 짧은 JWT 를 직접 서명할 때 쓰는 키와 발급 시각. `UnusedAccounts` 의 기본
+# 서명 키가 이것이라, 이 키로 서명한 쿠키를 앱이 맞는 로그인으로 읽는다. 만료는 발급 시각에서 아주
+# 먼 뒤라 시험의 가짜 시계가 어느 때를 가리켜도 지나간다. 로그인 경로 자체를 재는 시험은 이것을 쓰지
+# 않고 진짜 로그인 경로를 부른다(`tests/test_login_http.py`).
+LOGIN_KEY = b"tests-only-signing-key-0123456789abcdef"
+_LOGIN_ISSUED = datetime(2026, 1, 1, tzinfo=UTC)
+_LOGIN_MINUTES = 60 * 24 * 365 * 100
+
+
+def operator_cookie(tier: Tier = "admin", name: str = "kim.min") -> dict[str, str]:
+    """운영자 로그인을 흉내 낸 `Cookie` 머리 하나. `UnusedAccounts` 의 키로 서명한 짧은 JWT 를
+    싣는다.
+
+    계정 저장소에 그 계정이 있는지는 보지 않는다. 짧은 JWT 의 검증은 서명과 만료만 본다.
+    """
+    token = issue_token(
+        LOGIN_KEY,
+        name=name,
+        login_id=UUID(int=1),
+        tier=tier,
+        now=_LOGIN_ISSUED,
+        token_minutes=_LOGIN_MINUTES,
+    )
+    return {"Cookie": f"{ACCESS_COOKIE}={token}"}
 
 
 class _UnusedWork:
@@ -144,8 +171,8 @@ class _UnusedWork:
 class UnusedAccounts:
     """계정을 쓰지 않는 시험의 계정 저장소. 서명 키 하나만 메모리에 둔다."""
 
-    def __init__(self) -> None:
-        self.key: bytes | None = None
+    def __init__(self, key: bytes | None = LOGIN_KEY) -> None:
+        self.key: bytes | None = key
         # 서명 키 읽기를 센다. `gate` 가 있으면 열릴 때까지 읽기가 끝나지 않는다.
         # `fail_reads` 만큼의 읽기는 값을 읽은 뒤 실패한다.
         self.reads = 0

@@ -23,6 +23,7 @@ import {
   UP_WAIT_SECONDS,
 } from "./env.ts";
 import { saveLogsAtFailure } from "./failure-logs.ts";
+import { loginCookie } from "./login.ts";
 import { productRevision } from "./migrations.ts";
 
 const SERVICES = ["proxy", "postgres", "serve", "admin", "widget", "portal"] as const;
@@ -326,13 +327,16 @@ test("migrate 는 읽기 전용 루트로 빈 데이터베이스의 표를 올�
   expect(recorded.split("\n")).toEqual([revision]);
 });
 
-test("관리 화면의 중계가 관리 토큰으로 플러그인을 켜고 토큰 없이는 401 이다", async ({
+test("관리 화면의 중계가 로그인 쿠키로 플러그인을 켜고 쿠키 없이는 401 이다", async ({
   request,
 }) => {
-  const { adminToken } = deployment();
+  const { accountName, accountPassword } = deployment();
   const url = `${ADMIN_ORIGIN}/api/plugins/skill/cite-sources/enabled`;
 
-  const headers = { Authorization: `Bearer ${adminToken}` };
+  // 준비가 서버 명령으로 만든 계정으로 같은 중계에서 로그인하고, 받은 쿠키를 Cookie 머리로 직접 싣는다.
+  const headers = {
+    Cookie: await loginCookie(request, ADMIN_ORIGIN, accountName, accountPassword),
+  };
 
   const without = await request.put(url, { data: { enabled: false } });
   expect(without.status()).toBe(401);
@@ -381,10 +385,6 @@ test("루프백이 아닌 주소에 묶으려는 serve 는 예외 환경 변수 
       "--rm",
       "--network",
       "none",
-      "--env",
-      "AGENT_OS_ADMIN_TOKEN=distinct-admin-token",
-      "--env",
-      "AGENT_OS_CHANNEL_TOKEN=distinct-channel-token",
       image,
       "agent-os",
       "serve",

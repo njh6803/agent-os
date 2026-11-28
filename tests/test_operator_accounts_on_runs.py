@@ -1,5 +1,5 @@
 """쿠키로 로그인한 운영자가 `/runs` 를 부르면 그 트레이스에 계정 이름이 남는다(명세 admin-login
-"이벤트의 두 칸"). 공유 토큰으로 부르면 두 칸이 빈다.
+"이벤트의 두 칸"). 걷힌 공유 토큰으로는 `/runs` 가 열리지 않는다.
 
 계정 저장소는 시험마다 복제한 진짜 데이터베이스이고, 계정을 서버 명령 대신 포트로 넣고 로그인
 경로를 실제로 불러 쿠키를 받는다. 기준 주소는 `https://admin.test` 다(httpx 는 `http` 에서
@@ -47,9 +47,8 @@ from agent_os.server import create_app
 
 NOW = datetime(2026, 11, 26, 9, 0, tzinfo=UTC)
 PASSWORD = "Correct-horse-9!"
-ADMIN_TOKEN = "adm1n-t0ken-that-only-tests-know"
-CHANNEL_TOKEN = "channel-t0ken-that-only-tests-know"
-SHARED = {"Authorization": f"Bearer {CHANNEL_TOKEN}"}
+# 걷힌 공유 토큰을 흉내 낸 머리. 운영자 경로는 `Authorization` 머리를 읽지 않는다.
+OLD_SHARED = {"Authorization": "Bearer channel-t0ken-that-only-tests-know"}
 APPROVE: Mapping[str, Json] = {"decision": "approve", "pause_index": 1}
 DENY: Mapping[str, Json] = {"decision": "deny", "reason": "너무 크다", "pause_index": 1}
 
@@ -103,8 +102,6 @@ async def _serving(accounts: AccountStore, trace: FakeTrace) -> AsyncGenerator[A
         tools=ScopedTools(),
         clock=_Clock(),
         principal=Principal("alice"),
-        admin_token=ADMIN_TOKEN,
-        channel_token=CHANNEL_TOKEN,
         sites=Sites(),
         run_timeout_seconds=None,
         end_user_concurrent_runs=None,
@@ -244,35 +241,36 @@ async def test_승인이나_거부의_결정_이벤트에_결정한_계정이_�
     assert _started(trace, "run-1").requesting_account == "kim.min"
 
 
-async def test_공유_토큰으로_보낸_시작과_이어_가기와_결정은_두_칸이_빈다(
+async def test_옛_공유_토큰으로_보낸_시작과_이어_가기와_결정은_401이고_트레이스를_남기지_않는다(
     accounts: AccountStore,
 ) -> None:
     trace = FakeTrace()
 
     async with _serving(accounts, trace) as client:
-        await client.post("/runs", json=_start("echo"), headers=SHARED)
-        await client.post("/runs/run-1/continuation", json=_start("echo"), headers=SHARED)
-        await client.post("/runs", json=_start("gated"), headers=SHARED)
-        await _decide(client, "run-3", APPROVE, **SHARED)
+        started = await client.post("/runs", json=_start("echo"), headers=OLD_SHARED)
+        continued = await client.post(
+            "/runs/run-1/continuation", json=_start("echo"), headers=OLD_SHARED
+        )
+        decided = await _decide(client, "run-1", APPROVE, **OLD_SHARED)
 
-    for run_id in ("run-1", "run-2", "run-3"):
-        account = _started(trace, run_id).requesting_account
-        assert account is None, f"공유 토큰의 요청한 계정은 {account!r} 이다"
-    assert _decision(trace, "run-3").deciding_account is None
+    assert (started.status_code, continued.status_code, decided.status_code) == (401, 401, 401)
+    assert "www-authenticate" not in started.headers
+    assert trace.lines == []
 
 
-async def test_쿠키와_공유_토큰이_함께_와도_공유_토큰으로_본다(accounts: AccountStore) -> None:
-    """공유 토큰이 맞으면 인증이 쿠키를 보지 않는다(키를 읽다 데이터베이스가 죽는 일을 막는
-    순서). 그래서 그 요청에는 계정이 없다. 공유 토큰을 걷으면 이 갈래도 사라진다."""
+async def test_쿠키와_옛_공유_토큰이_함께_와도_머리는_읽지_않고_쿠키의_계정으로_본다(
+    accounts: AccountStore,
+) -> None:
+    """운영자 경로는 `Authorization` 머리를 읽지 않는다. 쿠키가 맞으면 그 계정의 요청이다."""
     await _seed(accounts, "kim.min", "admin")
     trace = FakeTrace()
 
     async with _serving(accounts, trace) as client:
         cookie = await _logged_in(client, "kim.min")
-        response = await client.post("/runs", json=_start("echo"), headers={**cookie, **SHARED})
+        response = await client.post("/runs", json=_start("echo"), headers={**cookie, **OLD_SHARED})
 
     assert response.status_code == 200
-    assert _started(trace, "run-1").requesting_account is None
+    assert _started(trace, "run-1").requesting_account == "kim.min"
 
 
 async def test_쿠키로_온_요청도_거절된_시작은_트레이스를_남기지_않는다(

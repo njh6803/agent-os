@@ -1,6 +1,10 @@
-// 흐름이 채널 토큰으로 보내는 화면 밖의 요청(web-admin 명세 "e2e"). 멈춘 실행을 만드는 `POST /runs` 와, 오래된 화면의
+// 흐름이 계정의 로그인 쿠키로 보내는 화면 밖의 요청(web-admin 명세 "e2e"). 멈춘 실행을 만드는 `POST /runs` 와, 오래된 화면의
 // "다른 곳"인 결정이다. 화면과 같은 중계(`/api/*`)를 지나되 브라우저의 포커스를 건드리지 않는다. 탭을 바꾸면 포커스
 // 재검증이 먼저 새 일시정지를 읽어, 옛 자리를 보낼 기회가 사라질 수 있다.
+//
+// 자격은 준비가 만든 시스템 관리자 계정의 로그인이다. 로그인 응답의 `Set-Cookie` 값(`__Host-aos_at` 은 `Secure` 라 http 주소의
+// 브라우저에는 저장되지 않는다)을 읽어 `Cookie` 머리로 직접 싣는다. 쿠키를 받는 길은 로그인 시험(`login.e2e.ts`)이 쓰는 것과
+// 같은 중계(`/api/auth/login`)다. 요청은 `Sec-Fetch-Site` 도 `Origin` 도 달지 않아 요청 출처 검사를 지난다.
 //
 // 스트림은 제품과 같은 파서(`readFrames`)로 읽는다. 술어를 지나지 못한 프레임이 오면 준비가 실패한다.
 
@@ -21,39 +25,62 @@ export interface Paused {
   readonly pauseIndex: number;
 }
 
-/** 채널 토큰으로 그 에이전트의 실행 하나를 일으킨다. 승인 대상에서 멈춰야 한다. */
+/**
+ * 준비가 만든 계정으로 로그인해 `Cookie` 머리의 값을 준다. 로그인 응답의 `Set-Cookie` 줄마다 `이름=값` 앞 조각만 모은다.
+ * 호출마다 새로 로그인한다. 짧은 JWT 가 시험 도중에 만료되는 일이 없게 하려는 것이다.
+ */
+async function loginCookie(request: APIRequestContext): Promise<string> {
+  const { adminUrl, accountName, accountPassword } = stack();
+  const response = await request.post(`${adminUrl}/api/auth/login`, {
+    data: { name: accountName, password: accountPassword },
+  });
+  if (!response.ok()) {
+    throw new Error(`로그인이 실패했다(${String(response.status())})`);
+  }
+  const pairs = response
+    .headersArray()
+    .filter(({ name }) => name.toLowerCase() === "set-cookie")
+    .map(({ value }) => value.split(";")[0] ?? "")
+    .filter((pair) => pair !== "");
+  if (pairs.length === 0) {
+    throw new Error("로그인 응답에 Set-Cookie 줄이 없다");
+  }
+  return pairs.join("; ");
+}
+
+/** 계정의 로그인 쿠키로 그 에이전트의 실행 하나를 일으킨다. 승인 대상에서 멈춰야 한다. */
 export async function startPausedRun(request: APIRequestContext, agent: string): Promise<Paused> {
-  const { adminUrl, channelToken } = stack();
+  const { adminUrl } = stack();
   const response = await request.post(`${adminUrl}/api/runs`, {
-    headers: { Authorization: `Bearer ${channelToken}` },
+    headers: { Cookie: await loginCookie(request) },
     data: { agent, request: `${agent} 의 e2e 요청` },
   });
   return pausedOf(await eventsOf(response), 0);
 }
 
 /**
- * 채널 토큰으로 그 일시정지를 승인한다. 재개가 다음 승인 대상에서 다시 멈춰야 한다. 재개 스트림의 프레임은 트레이스에
+ * 계정의 로그인 쿠키로 그 일시정지를 승인한다. 재개가 다음 승인 대상에서 다시 멈춰야 한다. 재개 스트림의 프레임은 트레이스에
  * 새로 붙은 줄과 같아서(스토리 61) 새 일시정지의 자리는 결정의 다음 자리부터 센다.
  */
 export async function approve(request: APIRequestContext, paused: Paused): Promise<Paused> {
-  const { adminUrl, channelToken } = stack();
+  const { adminUrl } = stack();
   const decision: Decision = { decision: "approve", pause_index: paused.pauseIndex };
   const response = await request.post(
     `${adminUrl}/api/runs/${encodeURIComponent(paused.runId)}/approval`,
-    { headers: { Authorization: `Bearer ${channelToken}` }, data: decision },
+    { headers: { Cookie: await loginCookie(request) }, data: decision },
   );
   return pausedOf(await eventsOf(response), paused.pauseIndex + 1);
 }
 
-/** 채널 토큰으로 그 에이전트의 실행 하나를 일으켜 끝까지 기다리고, 실행 식별자를 돌려준다. 끝나는 에이전트여야 한다. */
+/** 계정의 로그인 쿠키로 그 에이전트의 실행 하나를 일으켜 끝까지 기다리고, 실행 식별자를 돌려준다. 끝나는 에이전트여야 한다. */
 export async function startFinishedRun(
   request: APIRequestContext,
   agent: string,
   text: string,
 ): Promise<string> {
-  const { adminUrl, channelToken } = stack();
+  const { adminUrl } = stack();
   const response = await request.post(`${adminUrl}/api/runs`, {
-    headers: { Authorization: `Bearer ${channelToken}` },
+    headers: { Cookie: await loginCookie(request) },
     data: { agent, request: text },
   });
   return finishedOf(await eventsOf(response));
@@ -66,10 +93,10 @@ export async function continueRun(
   agent: string,
   text: string,
 ): Promise<string> {
-  const { adminUrl, channelToken } = stack();
+  const { adminUrl } = stack();
   const response = await request.post(
     `${adminUrl}/api/runs/${encodeURIComponent(previous)}/continuation`,
-    { headers: { Authorization: `Bearer ${channelToken}` }, data: { agent, request: text } },
+    { headers: { Cookie: await loginCookie(request) }, data: { agent, request: text } },
   );
   return finishedOf(await eventsOf(response));
 }
