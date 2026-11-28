@@ -18,7 +18,7 @@
  * - 포트를 먼저 고른다. 허용 출처가 사이트 파일에 실리고 그것이 위젯 빌드의 `frame-ancestors` 와 번들에 박히기 때문이다.
  * - 사이트 파일은 사이트 하나이고 `request_chars` 를 적지 않는다. 그래서 입력창과 서버의 글자 수 상한이 둘 다 기본값이다.
  * - 사이트의 키 쌍은 `node:crypto` 가 짓고 개인 키는 이 프로세스의 사이트 서버만 든다.
- * - serve 의 환경에는 부모의 환경을 펼친다(관리 화면 e2e 와 같다). 위젯 Next 에는 serve 의 토큰 변수를 벗겨서 준다.
+ * - serve 의 환경에는 부모의 환경을 펼친다(관리 화면 e2e 와 같다).
  *   위젯 Next 는 API 를 모르고(ADR 0024) 사이트 파일만 읽는다.
  * - 거두는 것은 관리 화면 e2e 와 같이 `kill()` 이다(제때 끝나지 않을 때만 SIGKILL). 그 준비가 잰 프로세스 트리의 모양
  *   (`.scratch/web-admin/probes/e2e_process_tree.mjs`, 관리 화면의 래퍼를 쟀다)을 위젯에도 쓴다. 위젯의 시작 래퍼도 next CLI
@@ -67,8 +67,6 @@ import { startSite } from "./site";
 const APP = dirname(import.meta.dirname);
 const LOGS = join(APP, "test-results");
 const QUIET = { NEXT_TELEMETRY_DISABLED: "1" };
-// serve 가 읽는 토큰 변수. 위젯 Next 로 가는 환경에서는 벗긴다.
-const SERVE_TOKENS = ["AGENT_OS_ADMIN_TOKEN", "AGENT_OS_CHANNEL_TOKEN"];
 
 export default async function globalSetup(): Promise<() => Promise<void>> {
   const stack = createStack({ prefix: "agent-os-widget-e2e-", logs: LOGS });
@@ -139,13 +137,9 @@ export default async function globalSetup(): Promise<() => Promise<void>> {
   }
 }
 
-/** 위젯 Next(빌드와 start)의 환경. 이 셸의 환경에서 serve 의 토큰 변수를 벗기고 사이트 파일을 준다. */
+/** 위젯 Next(빌드와 start)의 환경. 이 셸의 환경에 사이트 파일을 얹는다. */
 function nextEnv(siteFile: string): NodeJS.ProcessEnv {
-  const env: NodeJS.ProcessEnv = { ...process.env, ...QUIET, AGENT_OS_SITE_FILE: siteFile };
-  for (const name of SERVE_TOKENS) {
-    Reflect.deleteProperty(env, name);
-  }
-  return env;
+  return { ...process.env, ...QUIET, AGENT_OS_SITE_FILE: siteFile };
 }
 
 /**

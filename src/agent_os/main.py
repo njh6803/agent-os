@@ -22,7 +22,7 @@ import os
 import re
 import sys
 import tomllib
-from collections.abc import Awaitable, Callable, Sequence
+from collections.abc import Awaitable, Callable, Mapping, Sequence
 from ipaddress import IPv6Address
 from pathlib import Path
 from typing import Literal, NamedTuple, TextIO
@@ -80,9 +80,10 @@ from agent_os.sdk import (
 )
 from agent_os.server import create_app
 
-# 토큰은 환경변수로만 들어온다(ADR 0011, ADR 0015). 명령줄 인자는 프로세스 목록과 셸 이력에 남는다.
-ADMIN_TOKEN_ENV = "AGENT_OS_ADMIN_TOKEN"
-CHANNEL_TOKEN_ENV = "AGENT_OS_CHANNEL_TOKEN"
+# 더 쓰지 않는 공유 토큰의 환경 변수 둘(ADR 0062). 운영자 경로는 로그인 쿠키로만 열려서 `serve` 는
+# 이 값들을 읽지 않는다. 판을 올린 배치의 `.env` 에 남아 있으면 이름만 대고 지우라는 줄을 한 번
+# 찍는다. 값은 읽지도 찍지도 않는다(원칙 V).
+RETIRED_TOKEN_ENVS = ("AGENT_OS_ADMIN_TOKEN", "AGENT_OS_CHANNEL_TOKEN")
 # 데이터베이스 주소도 환경 변수로만 들어온다. 비밀번호가 든 값이라 명령줄 인자로 받지 않는다(ADR
 # 0066).
 DATABASE_URL_ENV = "AGENT_OS_DATABASE_URL"
@@ -110,24 +111,11 @@ SHUTDOWN_GRACE_SECONDS = 5
 # 끝나는 코드와 같다. 구성 오류 목록의 1 과 갈라, 운영자가 값을 고쳐야 하는 끝을 코드로 알아본다
 EXIT_BAD_SETTING = 2
 
-_NO_ADMIN_TOKEN_DIAGNOSTIC = (
-    f"{ADMIN_TOKEN_ENV} 가 비어 있다. 관리 API 는 토큰 없이 서지 않는다(ADR 0011).\n"
-    f"  인증 없는 서버를 띄워 놓고 401 만 보게 되는 것을 막으려고 시작 자리에서 끝낸다.\n"
-    f"  값을 정해 {ADMIN_TOKEN_ENV} 로 넘긴 뒤 다시 친다."
-)
-_NO_CHANNEL_TOKEN_DIAGNOSTIC = (
-    f"{CHANNEL_TOKEN_ENV} 가 비어 있다. 채널도 토큰 없이 서지 않는다(ADR 0015).\n"
-    f"  채널만 조용히 끄고 관리만 세우지 않으려고 시작 자리에서 끝낸다.\n"
-    f"  관리 토큰과 다른 값을 정해 {CHANNEL_TOKEN_ENV} 로 넘긴 뒤 다시 친다."
-)
-_SAME_TOKENS_DIAGNOSTIC = (
-    f"{ADMIN_TOKEN_ENV} 와 {CHANNEL_TOKEN_ENV} 가 같다. 두 토큰은 서로 달라야 한다(ADR 0015).\n"
-    f"  같으면 트레이스를 읽는 권한이 실행을 일으키는 권한이 되고, 요청 시점에는 그것을 알아챌\n"
-    f"  길이 없다. 둘 중 하나를 다른 값으로 정한 뒤 다시 친다."
-)
+_RETIRED_TOKEN_NOTICE = "{name} 은 더 쓰지 않습니다. 지워도 됩니다."
 _NOT_LOOPBACK_DIAGNOSTIC = (
     "--host 는 루프백만 받는다({allowed}). 받은 값: {host}\n"
-    "  벗어나면 토큰이 헤더에 평문으로 실리고 마스킹되지 않은 트레이스도 평문으로 나간다.\n"
+    "  벗어나면 로그인 쿠키와 비밀번호가 평문으로 오가고\n"
+    "  마스킹되지 않은 트레이스도 평문으로 나간다.\n"
     "  원격에서 보려면 SSH 포트 포워딩을 쓴다: ssh -L {port}:127.0.0.1:{port} <서버>"
 )
 _ENV_HINT_DIAGNOSTIC = (
@@ -234,7 +222,7 @@ def _serve(args: ServeArgs) -> int:
     안의 `run_failed` 로 드러난다. 채널 실행의 주체는 이 프로세스의 OS 사용자다(ADR 0015).
     신원의 출처를 정하는 것이 조립이라 채널이 스스로 읽지 않고 여기서 넘긴다.
 
-    마지막 줄에 닿기 전에 검사가 끝나 있어야 한다. 순서가 뒤집히면 토큰 없는 서버가 잠시라도
+    마지막 줄에 닿기 전에 검사가 끝나 있어야 한다. 순서가 뒤집히면 잘못 구성된 서버가 잠시라도
     서고, 그것이 이 명령이 막으려던 바로 그 상태다.
 
     사이트 파일은 여기서 한 번 읽고 요청마다 읽지 않는다. 요청마다 읽으면 파일이 깨지는 순간부터
@@ -256,14 +244,11 @@ def _serve(args: ServeArgs) -> int:
     if isinstance(durations, str):
         sys.stderr.write(f"{durations}\n")
         return EXIT_BAD_SETTING
-    admin_token = os.environ.get(ADMIN_TOKEN_ENV, "")
-    channel_token = os.environ.get(CHANNEL_TOKEN_ENV, "")
+    _note_retired_tokens(os.environ)
     user = getpass.getuser()
     sites = _read_sites(args.site_file)
     database_url = _read_database_url()
-    problems = _configuration_problems(
-        args, admin_token, channel_token, user, sites, _container_network()
-    )
+    problems = _configuration_problems(args, user, sites, _container_network())
     if isinstance(database_url, str):
         problems.append(database_url)
     if problems or not isinstance(sites, Sites) or isinstance(database_url, str):
@@ -279,8 +264,6 @@ def _serve(args: ServeArgs) -> int:
             tools=McpTools(),
             clock=SystemClock(),
             principal=Principal(user),
-            admin_token=admin_token,
-            channel_token=channel_token,
             sites=sites,
             run_timeout_seconds=args.run_timeout_seconds,
             end_user_concurrent_runs=args.end_user_concurrent_runs,
@@ -478,38 +461,27 @@ def binding_problem(host: str, port: str, network: ContainerNetwork) -> str | No
     return base
 
 
+def _note_retired_tokens(environ: Mapping[str, str]) -> None:
+    """남은 옛 공유 토큰 변수마다 한 줄을 표준 오류에 찍는다. 값은 읽지 않는다. 찍고도 서버는 그대로
+    뜬다 — 운영자가 판을 올린 뒤 `.env` 를 정리할 때까지 서버가 막히지 않는다."""
+    for name in RETIRED_TOKEN_ENVS:
+        if name in environ:
+            sys.stderr.write(f"{_RETIRED_TOKEN_NOTICE.format(name=name)}\n")
+
+
 def _configuration_problems(
     args: ServeArgs,
-    admin_token: str,
-    channel_token: str,
     user: str,
     sites: Sites | Sequence[str],
     network: ContainerNetwork,
 ) -> list[str]:
     """서버가 서지 못하는 이유 전부. 비어 있으면 선다.
 
-    사이트 파일의 문제와 OS 사용자 이름의 `|` 도 토큰·호스트·모델 진단과 같은 목록에 든다. 사이트
+    사이트 파일의 문제와 OS 사용자 이름의 `|` 도 호스트·모델 진단과 같은 목록에 든다. 사이트
     파일은 부르는 쪽이 한 번 읽어 그 결과(사이트 목록이거나 문제들)를 넘긴다 — 진단과 앱이 같은
     읽기를 본다.
-
-    토큰은 있나 없나, 같나 다르나만 보고 값을 진단에 싣지 않는다(원칙 V). 구성을 되읊는 진단이
-    비밀을 같이 되읊는 자리이고, 표준 에러는 셸 이력과 CI 로그로 흘러간다.
-
-    공백만 있는 토큰도 없는 것으로 본다. 환경변수 하나의 오타가 "설정했다고 믿는 서버"를 만드는
-    것이 이 명령이 막으려는 상태이고, `_decision` 이 공백뿐인 거부 사유를 없는 것으로 보는 것과
-    같은 판단이다. 대신 통과한 토큰은 다듬지 않고 그대로 넘긴다 — 비밀을 조용히 고쳐 넘기면
-    운영자가 정한 값과 서버가 요구하는 값이 갈린다. 같은지도 다듬지 않은 값으로 본다.
-
-    두 토큰이 같다는 진단은 채널 토큰이 있을 때만 낸다. 없는 쪽이 있으면 그 진단이 먼저이고,
-    둘 다 비어 "같다"는 것은 고칠 거리가 아니다.
     """
     problems: list[str] = []
-    if not admin_token.strip():
-        problems.append(_NO_ADMIN_TOKEN_DIAGNOSTIC)
-    if not channel_token.strip():
-        problems.append(_NO_CHANNEL_TOKEN_DIAGNOSTIC)
-    elif channel_token == admin_token:
-        problems.append(_SAME_TOKENS_DIAGNOSTIC)
     host = binding_problem(args.host, str(args.port), network)
     if host is not None:
         problems.append(host)

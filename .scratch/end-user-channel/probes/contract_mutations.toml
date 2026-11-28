@@ -200,33 +200,6 @@ new = '''
     if not isinstance(subject, str):
 '''
 
-[[mutation]]
-name = "서명 토큰이 공유 토큰의 면도 연다"
-tests = ["tests/test_server.py", "-k", "자격은_자기_면만"]
-expect = "red"
-# 반복마다 단언 메시지로 든 튜플(메서드, 경로, 헤더)이 찍힌다. 방향마다 열거가 비었는지 보는 앞의 단언
-# 셋은 문자열 메시지라 이 꼴로 찍히지 않는다.
-expect_output = ["AssertionError: ('"]
-
-[[mutation.edit]]
-file = "src/agent_os/http/auth.py"
-old = '''
-            case _Shared(value=expected):
-                # 공유 토큰이 맞으면 쿠키를 보지 않는다. 쿠키를 먼저 보면 키를 읽다
-                # 데이터베이스가 죽을 때 맞는 공유 토큰도 500 이 난다
-                if not _matches(header, expected) and await self._claims(request) is None:
-                    return _refused(request, UNAUTHORIZED_MESSAGE)
-'''
-new = '''
-            case _Shared(value=expected):
-                # 공유 토큰이 맞으면 쿠키를 보지 않는다. 쿠키를 먼저 보면 키를 읽다
-                # 데이터베이스가 죽을 때 맞는 공유 토큰도 500 이 난다
-                if not _matches(header, expected) and await self._claims(request) is None and (
-                    _bearer(header) is None or _bearer(header).count(".") != 2
-                ):
-                    return _refused(request, UNAUTHORIZED_MESSAGE)
-'''
-
 # --- 공용 층: 면별 번역 ------------------------------------------------------------------
 
 [[mutation]]

@@ -14,7 +14,6 @@ import getpass
 import json
 import os
 import re
-import secrets
 import shlex
 import shutil
 import subprocess
@@ -41,6 +40,7 @@ from langchain_core.messages import AIMessage, BaseMessage
 from langchain_core.outputs import ChatResult
 from pydantic import BaseModel, ConfigDict, Field
 from tests.adapters.fake_model_server import FakeModelServer, completion, tool_call
+from tests.fake_accounts import operator_cookie
 from tests.fake_checks import UnusedModelCheck
 from tests.fake_database import (
     CLOSE_PREFIX,
@@ -50,6 +50,7 @@ from tests.fake_database import (
     LifespanDriver,
 )
 from tests.mcp_http import serving
+from tests.operator_login import OPERATOR_NAME, create_system_admin, log_in
 from tests.postgres_support import NO_URL, UNREADABLE_URL
 from tests.signing import AUDIENCE, bearer, claims, new_key, sign
 from tools.database_for_tests import ScopedDatabase
@@ -63,17 +64,13 @@ from agent_os.channel.http.limits import DEFAULT_REQUEST_CHARS, check_request_ch
 from agent_os.core.ports import ChatModel, Trace, UnknownEvent
 from agent_os.http.database import Database
 from agent_os.http.login_tokens import (
-    ACCESS_COOKIE,
     IDLE_MINUTES_ENV,
-    REFRESH_COOKIE,
     TOKEN_MINUTES_ENV,
     TOTAL_MINUTES_ENV,
     LoginDurations,
 )
 from agent_os.http.sites import Site, SiteKey, SiteLimits, Sites
 from agent_os.main import (
-    ADMIN_TOKEN_ENV,
-    CHANNEL_TOKEN_ENV,
     CONTAINER_NETWORK_ENV,
     DATABASE_URL_ENV,
     EXIT_BAD_SETTING,
@@ -1344,81 +1341,126 @@ def uvicorn_calls(
     return calls
 
 
-ADMIN_TOKEN = "adm1n-t0ken"
-CHANNEL_TOKEN = "channel-t0ken"
+RETIRED_ADMIN_ENV = "AGENT_OS_ADMIN_TOKEN"
+RETIRED_CHANNEL_ENV = "AGENT_OS_CHANNEL_TOKEN"
+# 이 파일의 시험이 정한 눈에 띄는 값. 더 쓰지 않는 변수의 값은 어느 출력에도 실리지 않아야 한다.
+RETIRED_SECRET = "비밀-XYZZY-42"
+RETIRED_NOTICE = "{name} 은 더 쓰지 않습니다. 지워도 됩니다."
 
 
-@pytest.fixture
-def tokens(monkeypatch: pytest.MonkeyPatch) -> None:
-    """두 토큰을 모두 갖춘 구성. 구성 오류 하나를 재는 테스트는 이것을 깔고 하나만 어긋낸다 —
-    다른 오류가 섞이면 그 진단이 우연히 단언을 채운다."""
-    monkeypatch.setenv(ADMIN_TOKEN_ENV, ADMIN_TOKEN)
-    monkeypatch.setenv(CHANNEL_TOKEN_ENV, CHANNEL_TOKEN)
+@pytest.fixture(autouse=True)
+def no_retired_token_env(monkeypatch: pytest.MonkeyPatch) -> None:
+    """개발자 셸이나 `.env` 에 남은 옛 공유 토큰 변수를 걷는다. 남아 있으면 `serve` 가 표준 오류에
+    안내 줄을 찍어, 표준 오류가 비었거나 정해진 글이어야 하는 시험이 셸에 따라 갈린다. 변수가 남은
+    구성을 재는 시험은 스스로 심는다."""
+    monkeypatch.delenv(RETIRED_ADMIN_ENV, raising=False)
+    monkeypatch.delenv(RETIRED_CHANNEL_ENV, raising=False)
 
 
-@pytest.mark.parametrize("env", [ADMIN_TOKEN_ENV, CHANNEL_TOKEN_ENV], ids=["관리", "채널"])
-@pytest.mark.usefixtures("tokens")
-def test_토큰_환경변수가_없으면_서버가_뜨지_않고_진단과_종료_코드_1이다(
+@pytest.mark.usefixtures("workspace")
+def test_더_쓰지_않는_토큰_변수_둘이_남아도_서버가_뜨고_변수마다_안내_한_줄을_찍고_값은_싣지_않는다(
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
     uvicorn_calls: list[dict[str, object]],
-    env: str,
 ) -> None:
-    """채널 토큰도 관리 토큰과 같은 fail-closed 다(ADR 0015). 채널만 끄고 관리만 세우지 않는다 —
-    기능이 구성에 따라 조용히 사라진다."""
-    monkeypatch.delenv(env)
+    """판을 올린 배치의 `.env` 에는 두 변수가 남아 있다. 서버가 그것 때문에 막히면 운영자가 지우기도
+    전에 서버가 죽고, 말없이 지나가면 지워도 되는지 모른다. 값은 읽지도 찍지도 않는다(원칙 V)."""
+    monkeypatch.setenv(RETIRED_ADMIN_ENV, RETIRED_SECRET)
+    monkeypatch.setenv(RETIRED_CHANNEL_ENV, "비밀-PLUGH-7")
 
     code = _main(["serve"])
 
     out, err = capsys.readouterr()
-    assert code == 1
-    assert out == ""
-    assert env in err
-    assert uvicorn_calls == []
+    assert code == 0
+    assert len(uvicorn_calls) == 1
+    lines = err.splitlines()
+    assert lines.count(RETIRED_NOTICE.format(name=RETIRED_ADMIN_ENV)) == 1
+    assert lines.count(RETIRED_NOTICE.format(name=RETIRED_CHANNEL_ENV)) == 1
+    assert "XYZZY" not in out + err
+    assert "PLUGH" not in out + err
 
 
-@pytest.mark.parametrize("env", [ADMIN_TOKEN_ENV, CHANNEL_TOKEN_ENV], ids=["관리", "채널"])
-@pytest.mark.parametrize("token", ["", "   "], ids=["빈 문자열", "공백만"])
-@pytest.mark.usefixtures("tokens")
-def test_비어_있는_토큰은_없는_것과_같이_거부한다(
+@pytest.mark.parametrize(
+    ("present", "absent"),
+    [
+        (RETIRED_ADMIN_ENV, RETIRED_CHANNEL_ENV),
+        (RETIRED_CHANNEL_ENV, RETIRED_ADMIN_ENV),
+    ],
+    ids=["관리 토큰만", "채널 토큰만"],
+)
+@pytest.mark.usefixtures("workspace")
+def test_더_쓰지_않는_토큰_변수가_하나만_남으면_그_하나만_안내하고_서버가_뜬다(
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
     uvicorn_calls: list[dict[str, object]],
-    env: str,
-    token: str,
+    present: str,
+    absent: str,
 ) -> None:
-    """환경변수 하나의 오타가 "설정했다고 믿는 서버"를 만드는 것을 막는다.
+    monkeypatch.setenv(present, RETIRED_SECRET)
 
-    공백만 있는 값이 지나가면 그 서버는 아무도 모르는 토큰을 요구하며 서 있게 된다. 공백뿐인
-    거부 사유를 없는 것으로 보는 `_decision` 과 같은 판단이다.
-    """
-    monkeypatch.setenv(env, token)
+    code = _main(["serve"])
+
+    out, err = capsys.readouterr()
+    assert code == 0
+    assert len(uvicorn_calls) == 1
+    assert err.splitlines().count(RETIRED_NOTICE.format(name=present)) == 1
+    assert absent not in err
+    assert "XYZZY" not in out + err
+
+
+@pytest.mark.usefixtures("workspace")
+def test_값이_빈_더_쓰지_않는_토큰_변수도_남은_것으로_센다(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    uvicorn_calls: list[dict[str, object]],
+) -> None:
+    """`.env.example` 을 복사하면 빈 값의 변수가 남는다. 값이 비었다고 지워도 된다는 말을 아끼지
+    않는다."""
+    monkeypatch.setenv(RETIRED_ADMIN_ENV, "")
 
     code = _main(["serve"])
 
     _, err = capsys.readouterr()
-    assert code == 1
-    assert env in err
-    assert uvicorn_calls == []
+    assert code == 0
+    assert len(uvicorn_calls) == 1
+    assert err.splitlines().count(RETIRED_NOTICE.format(name=RETIRED_ADMIN_ENV)) == 1
 
 
-def test_두_토큰이_같으면_서버가_뜨지_않고_진단이_그_값을_싣지_않는다(
+@pytest.mark.usefixtures("workspace")
+def test_토큰_변수가_없으면_안내가_없고_서버가_뜬다(
+    capsys: pytest.CaptureFixture[str], uvicorn_calls: list[dict[str, object]]
+) -> None:
+    """공유 토큰이 걷혀 토큰 없이 선다. 예전에는 이 모양이 구성 오류였다."""
+    code = _main(["serve"])
+
+    _, err = capsys.readouterr()
+    assert code == 0
+    assert len(uvicorn_calls) == 1
+    assert "더 쓰지 않습니다" not in err
+    assert RETIRED_ADMIN_ENV not in err
+    assert RETIRED_CHANNEL_ENV not in err
+
+
+def test_더_쓰지_않는_토큰_변수는_구성_오류와_함께_나오되_값은_진단에_실리지_않는다(
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
     uvicorn_calls: list[dict[str, object]],
 ) -> None:
-    """같은 값이면 분리가 무효인데 요청 시점에는 그것을 알아챌 길이 없다(스토리 42). 둘 다 있으니
-    두 이름이 함께 나오는 진단은 이것 하나다."""
-    monkeypatch.setenv(ADMIN_TOKEN_ENV, "같은-XYZZY-값")
-    monkeypatch.setenv(CHANNEL_TOKEN_ENV, "같은-XYZZY-값")
+    """원칙 V. 구성을 되읊는 진단은 비밀을 같이 되읊는다. 안내 줄은 서버가 서지 못할 때도 먼저 나가
+    운영자가 두 가지를 한 번에 고친다."""
+    monkeypatch.setenv(RETIRED_ADMIN_ENV, RETIRED_SECRET)
+    monkeypatch.setenv(RETIRED_CHANNEL_ENV, "비밀-PLUGH-7")
 
-    code = _main(["serve"])
+    code = _main(["serve", "--host", "0.0.0.0"])
 
     out, err = capsys.readouterr()
     assert code == 1
-    assert ADMIN_TOKEN_ENV in err
-    assert CHANNEL_TOKEN_ENV in err
+    assert out == ""
+    assert RETIRED_NOTICE.format(name=RETIRED_ADMIN_ENV) in err.splitlines()
+    assert RETIRED_NOTICE.format(name=RETIRED_CHANNEL_ENV) in err.splitlines()
+    assert "0.0.0.0" in err
     assert "XYZZY" not in out + err
+    assert "PLUGH" not in out + err
     assert uvicorn_calls == []
 
 
@@ -1432,7 +1474,6 @@ def test_두_토큰이_같으면_서버가_뜨지_않고_진단이_그_값을_�
         (TOKEN_MINUTES_ENV, "다섯"),
     ],
 )
-@pytest.mark.usefixtures("tokens")
 def test_로그인_유지_시간이_범위를_벗어나면_서버가_뜨지_않고_종료_코드_2와_이름이_든_문구다(
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
@@ -1453,7 +1494,6 @@ def test_로그인_유지_시간이_범위를_벗어나면_서버가_뜨지_않�
     assert uvicorn_calls == []
 
 
-@pytest.mark.usefixtures("tokens")
 def test_짧은_로그인_증표의_수명이_쉬는_시간_이상이면_둘의_이름을_적고_종료_코드_2다(
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
@@ -1471,7 +1511,6 @@ def test_짧은_로그인_증표의_수명이_쉬는_시간_이상이면_둘의_
     assert uvicorn_calls == []
 
 
-@pytest.mark.usefixtures("tokens")
 def test_로그인_유지_시간의_환경_변수가_없으면_기본값이고_있으면_그_값을_앱에_넘긴다(
     monkeypatch: pytest.MonkeyPatch,
     uvicorn_calls: list[dict[str, object]],
@@ -1498,7 +1537,6 @@ def test_로그인_유지_시간의_환경_변수가_없으면_기본값이고_�
     assert len(uvicorn_calls) == 2
 
 
-@pytest.mark.usefixtures("tokens")
 def test_루프백이_아닌_호스트는_서버가_뜨지_않고_진단이_SSH_포트_포워딩을_안내한다(
     capsys: pytest.CaptureFixture[str],
     uvicorn_calls: list[dict[str, object]],
@@ -1514,7 +1552,6 @@ def test_루프백이_아닌_호스트는_서버가_뜨지_않고_진단이_SSH_
     assert uvicorn_calls == []
 
 
-@pytest.mark.usefixtures("tokens")
 def test_허용되는_루프백_주소_둘이_진단에_그대로_적혀_있다(
     capsys: pytest.CaptureFixture[str],
     uvicorn_calls: list[dict[str, object]],
@@ -1598,7 +1635,7 @@ def image_marker(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> Path:
     return path
 
 
-@pytest.mark.usefixtures("workspace", "tokens")
+@pytest.mark.usefixtures("workspace")
 def test_표지_파일과_환경_변수가_함께_있으면_serve_가_0_0_0_0_에_선다(
     monkeypatch: pytest.MonkeyPatch,
     image_marker: Path,
@@ -1624,7 +1661,7 @@ def test_표지_파일과_환경_변수가_함께_있으면_serve_가_0_0_0_0_�
     ],
     ids=["환경 변수만", "표지 파일만", "환경 변수 오타", "둘 다 없음"],
 )
-@pytest.mark.usefixtures("workspace", "tokens")
+@pytest.mark.usefixtures("workspace")
 def test_둘이_함께_있지_않으면_serve_는_0_0_0_0_에_서지_않고_경우에_맞는_진단을_낸다(
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
@@ -1650,7 +1687,7 @@ def test_둘이_함께_있지_않으면_serve_는_0_0_0_0_에_서지_않고_경�
     assert uvicorn_calls == []
 
 
-@pytest.mark.usefixtures("workspace", "tokens")
+@pytest.mark.usefixtures("workspace")
 def test_환경_변수의_오타는_루프백_호스트에서도_구성_오류다(
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
@@ -1670,38 +1707,27 @@ def test_환경_변수의_오타는_루프백_호스트에서도_구성_오류�
 
 
 def test_구성_오류_셋은_한꺼번에_나온다(
-    monkeypatch: pytest.MonkeyPatch,
-    capsys: pytest.CaptureFixture[str],
-    uvicorn_calls: list[dict[str, object]],
+    capsys: pytest.CaptureFixture[str], uvicorn_calls: list[dict[str, object]]
 ) -> None:
     """하나씩 내면 운영자가 고치고 다시 치고 또 막힌다. 시작 자리의 판정은 한 번에 끝낸다."""
-    monkeypatch.delenv(ADMIN_TOKEN_ENV, raising=False)
-    monkeypatch.delenv(CHANNEL_TOKEN_ENV, raising=False)
-
-    code = _main(["serve", "--host", "0.0.0.0"])
+    code = _main(
+        [
+            "serve",
+            "--host",
+            "0.0.0.0",
+            "--run-timeout",
+            "0",
+            "--end-user-concurrent-runs",
+            "0",
+        ]
+    )
 
     _, err = capsys.readouterr()
     assert code == 1
-    assert ADMIN_TOKEN_ENV in err
-    assert CHANNEL_TOKEN_ENV in err
     assert "0.0.0.0" in err
+    assert "--run-timeout 은 1 이상의 정수(초)다. 받은 값: 0" in err
+    assert "--end-user-concurrent-runs 는 1 이상의 정수다. 받은 값: 0" in err
     assert uvicorn_calls == []
-
-
-def test_진단에_토큰_값이_실리지_않는다(
-    monkeypatch: pytest.MonkeyPatch,
-    capsys: pytest.CaptureFixture[str],
-    uvicorn_calls: list[dict[str, object]],
-) -> None:
-    """원칙 V. 구성을 되읊는 진단은 비밀을 같이 되읊는다."""
-    monkeypatch.setenv(ADMIN_TOKEN_ENV, "비밀-XYZZY-42")
-    monkeypatch.setenv(CHANNEL_TOKEN_ENV, "비밀-PLUGH-7")
-
-    _main(["serve", "--host", "0.0.0.0"])
-
-    out, err = capsys.readouterr()
-    assert "XYZZY" not in out + err
-    assert "PLUGH" not in out + err
 
 
 @pytest.mark.parametrize(
@@ -1709,8 +1735,8 @@ def test_진단에_토큰_값이_실리지_않는다(
     [(["serve"], DEFAULT_HOST), (["serve", "--host", "::1"], "::1")],
     ids=["기본 호스트", "다른 루프백"],
 )
-@pytest.mark.usefixtures("workspace", "tokens")
-def test_토큰과_루프백이_갖춰지면_판정을_지나_그_주소와_포트로_서버를_세운다(
+@pytest.mark.usefixtures("workspace")
+def test_루프백이면_판정을_지나_그_주소와_포트로_서버를_세운다(
     uvicorn_calls: list[dict[str, object]],
     argv: list[str],
     expected_host: str,
@@ -1727,33 +1753,42 @@ def test_토큰과_루프백이_갖춰지면_판정을_지나_그_주소와_포�
     assert [(call["host"], call["port"]) for call in uvicorn_calls] == [(expected_host, 9999)]
 
 
-@pytest.mark.usefixtures("workspace", "tokens")
-async def test_통과하면_세운_앱이_두_토큰을_제자리에_받는다(
-    uvicorn_calls: list[dict[str, object]],
+@pytest.mark.usefixtures("workspace")
+async def test_세운_앱의_운영자_경로는_로그인_쿠키로만_열리고_남은_옛_변수의_값은_통하지_않는다(
+    monkeypatch: pytest.MonkeyPatch, uvicorn_calls: list[dict[str, object]]
 ) -> None:
-    """환경변수 둘이 `create_app` 의 두 자리로 엇갈리지 않고 들어간다. 엇갈리면 운영자가 위젯에 준
-    토큰이 트레이스를 읽는다. 무엇을 넘겼는지를 인자로 재지 않고 세운 앱의 답으로 잰다 — 404 는
-    미들웨어를 지나 라우팅까지 갔다는 뜻이다."""
+    """공유 토큰이 걷힌 뒤의 조립. 옛 변수가 남은 환경에서도 그 값을 `Authorization: Bearer` 로 실어
+    운영자 경로(`/runs` 와 그 밖)를 열 수 없고, 로그인 쿠키만 연다. 무엇을 넘겼는지를 인자로 재지
+    않고 세운 앱의 답으로 잰다 — 404 는 미들웨어를 지나 라우팅까지 갔다는 뜻이다. 운영자 경로의
+    401 에는 `WWW-Authenticate` 가 없다(그 머리는 최종 사용자 경로의 것이다)."""
+    # 머리 값은 아스키여야 해서 이 시험만 아스키 값을 쓴다
+    monkeypatch.setenv(RETIRED_ADMIN_ENV, "old-admin-XYZZY-42")
+    monkeypatch.setenv(RETIRED_CHANNEL_ENV, "old-channel-PLUGH-7")
     _main(["serve"])
     (call,) = uvicorn_calls
     app = call["app"]
     assert isinstance(app, FastAPI)
-    admin = {"Authorization": f"Bearer {ADMIN_TOKEN}"}
-    channel = {"Authorization": f"Bearer {CHANNEL_TOKEN}"}
+    old_admin = {"Authorization": "Bearer old-admin-XYZZY-42"}
+    old_channel = {"Authorization": "Bearer old-channel-PLUGH-7"}
 
     async with AsyncClient(
         transport=ASGITransport(app=app), base_url="http://serve.test"
     ) as client:
-        assert (await client.get("/unrouted", headers=admin)).status_code == 404
-        assert (await client.get("/unrouted", headers=channel)).status_code == 401
-        assert (await client.get("/runs/unrouted", headers=channel)).status_code == 404
-        assert (await client.get("/runs/unrouted", headers=admin)).status_code == 401
+        assert (await client.get("/unrouted", headers=operator_cookie())).status_code == 404
+        assert (await client.get("/runs/unrouted", headers=operator_cookie())).status_code == 404
+        for path in ("/unrouted", "/runs/unrouted"):
+            for headers in (old_admin, old_channel, {}):
+                refused = await client.get(path, headers=headers)
+                assert refused.status_code == 401, (path, headers)
+                assert "www-authenticate" not in refused.headers
+                assert "XYZZY" not in refused.text
+                assert "PLUGH" not in refused.text
 
 
 # --- serve 와 데이터베이스(명세 postgres-foundation "뜰 때의 확인과 다시 시도", "멈출 때의 글") ---
 
 
-@pytest.mark.usefixtures("tokens", "workspace")
+@pytest.mark.usefixtures("workspace")
 @pytest.mark.parametrize("value", ["", "   "], ids=["빈 문자열", "공백만"])
 def test_데이터베이스_주소가_비어_있으면_serve_가_서지_않고_이유와_1이다(
     value: str,
@@ -1770,7 +1805,7 @@ def test_데이터베이스_주소가_비어_있으면_serve_가_서지_않고_�
     assert uvicorn_calls == []
 
 
-@pytest.mark.usefixtures("tokens", "workspace")
+@pytest.mark.usefixtures("workspace")
 def test_데이터베이스_주소_변수가_없으면_serve_가_서지_않고_이유와_1이다(
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
@@ -1785,7 +1820,7 @@ def test_데이터베이스_주소_변수가_없으면_serve_가_서지_않고_�
     assert uvicorn_calls == []
 
 
-@pytest.mark.usefixtures("tokens", "workspace")
+@pytest.mark.usefixtures("workspace")
 @pytest.mark.parametrize(
     "value",
     [
@@ -1813,25 +1848,24 @@ def test_읽지_못하는_데이터베이스_주소는_값을_싣지_않고_1이
     assert uvicorn_calls == []
 
 
-@pytest.mark.usefixtures("tokens", "workspace")
-def test_데이터베이스_주소의_오류도_토큰_오류와_한꺼번에_나온다(
+@pytest.mark.usefixtures("workspace")
+def test_데이터베이스_주소의_오류도_다른_구성_오류와_한꺼번에_나온다(
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
     uvicorn_calls: list[dict[str, object]],
 ) -> None:
-    monkeypatch.delenv(ADMIN_TOKEN_ENV)
     monkeypatch.delenv(DATABASE_URL_ENV)
 
-    code = _main(["serve"])
+    code = _main(["serve", "--host", "0.0.0.0"])
 
     _, err = capsys.readouterr()
     assert code == 1
-    assert ADMIN_TOKEN_ENV in err
+    assert "0.0.0.0" in err
     assert NO_URL in err
     assert uvicorn_calls == []
 
 
-@pytest.mark.usefixtures("tokens", "workspace")
+@pytest.mark.usefixtures("workspace")
 def test_serve_는_uvicorn_에_수명을_켜라고_넘긴다(
     uvicorn_calls: list[dict[str, object]],
 ) -> None:
@@ -1842,7 +1876,7 @@ def test_serve_는_uvicorn_에_수명을_켜라고_넘긴다(
     assert call["lifespan"] == "on"
 
 
-@pytest.mark.usefixtures("tokens", "workspace")
+@pytest.mark.usefixtures("workspace")
 def test_serve_는_읽은_주소로_어댑터를_짓고_비밀번호는_어디에도_싣지_않는다(
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
@@ -1885,7 +1919,7 @@ class _StartupJobs:
         app.router.lifespan_context = recorded
 
 
-@pytest.mark.usefixtures("tokens", "workspace")
+@pytest.mark.usefixtures("workspace")
 async def test_확인이_글을_돌려주면_앱의_시작_일은_돌지_않고_시작_실패에_그_글이_실린다(
     monkeypatch: pytest.MonkeyPatch, uvicorn_calls: list[dict[str, object]]
 ) -> None:
@@ -1903,7 +1937,7 @@ async def test_확인이_글을_돌려주면_앱의_시작_일은_돌지_않고_
     assert fake.events == ["startup_problem", "close_started", "close_finished"]
 
 
-@pytest.mark.usefixtures("tokens", "workspace")
+@pytest.mark.usefixtures("workspace")
 async def test_확인이_글_대신_예외를_던지면_예외의_글을_싣지_않는_글로_시작이_실패한다(
     monkeypatch: pytest.MonkeyPatch, uvicorn_calls: list[dict[str, object]]
 ) -> None:
@@ -1925,7 +1959,7 @@ async def test_확인이_글_대신_예외를_던지면_예외의_글을_싣지_
     assert fake.events == ["startup_problem", "close_started", "close_finished"]
 
 
-@pytest.mark.usefixtures("tokens", "workspace")
+@pytest.mark.usefixtures("workspace")
 async def test_확인이_멈춘_뒤_닫기마저_실패해도_시작_실패는_나간다(
     monkeypatch: pytest.MonkeyPatch, uvicorn_calls: list[dict[str, object]]
 ) -> None:
@@ -1946,7 +1980,7 @@ async def test_확인이_멈춘_뒤_닫기마저_실패해도_시작_실패는_�
     assert fake.events == ["startup_problem", "close_started"]
 
 
-@pytest.mark.usefixtures("tokens", "workspace")
+@pytest.mark.usefixtures("workspace")
 async def test_글을_돌려준_뒤_닫기가_실패해도_글이_그대로_실린다(
     monkeypatch: pytest.MonkeyPatch, uvicorn_calls: list[dict[str, object]]
 ) -> None:
@@ -1962,7 +1996,7 @@ async def test_글을_돌려준_뒤_닫기가_실패해도_글이_그대로_실�
     assert reply == {"type": "lifespan.startup.failed", "message": STARTUP_PROBLEM}
 
 
-@pytest.mark.usefixtures("tokens", "workspace")
+@pytest.mark.usefixtures("workspace")
 async def test_문제가_없으면_앱이_뜨고_health_가_200이고_수명이_닫히면_닫기가_한_번_불린다(
     uvicorn_calls: list[dict[str, object]], fake_database: FakeDatabase
 ) -> None:
@@ -1986,7 +2020,7 @@ async def test_문제가_없으면_앱이_뜨고_health_가_200이고_수명이_
     assert fake_database.events == ["startup_problem", "close_started", "close_finished"]
 
 
-@pytest.mark.usefixtures("tokens", "workspace")
+@pytest.mark.usefixtures("workspace")
 async def test_종료_완료는_가짜의_닫기가_끝난_뒤에_나간다(
     monkeypatch: pytest.MonkeyPatch, uvicorn_calls: list[dict[str, object]]
 ) -> None:
@@ -2007,7 +2041,7 @@ async def test_종료_완료는_가짜의_닫기가_끝난_뒤에_나간다(
     assert fake.events[-1] == "close_finished"
 
 
-@pytest.mark.usefixtures("tokens", "workspace")
+@pytest.mark.usefixtures("workspace")
 async def test_닫다_실패하면_완료_대신_글을_실은_종료_실패가_나간다(
     monkeypatch: pytest.MonkeyPatch, uvicorn_calls: list[dict[str, object]]
 ) -> None:
@@ -2048,7 +2082,6 @@ def model_names(monkeypatch: pytest.MonkeyPatch) -> list[str]:
     return names
 
 
-@pytest.mark.usefixtures("tokens")
 async def test_serve_는_모델을_시작_때_만들지_않고_실행마다_푼_이름으로_만든다(
     monkeypatch: pytest.MonkeyPatch,
     workspace: Path,
@@ -2069,7 +2102,6 @@ async def test_serve_는_모델을_시작_때_만들지_않고_실행마다_푼_
 
     assert len(uvicorn_calls) == 2
     assert model_names == []
-    channel = {"Authorization": f"Bearer {CHANNEL_TOKEN}"}
     for call in uvicorn_calls:
         app = call["app"]
         assert isinstance(app, FastAPI)
@@ -2078,7 +2110,7 @@ async def test_serve_는_모델을_시작_때_만들지_않고_실행마다_푼_
             AsyncClient(transport=ASGITransport(app=app), base_url="http://serve.test") as client,
         ):
             response = await client.post(
-                "/runs", json={"agent": "asking", "request": "hi"}, headers=channel
+                "/runs", json={"agent": "asking", "request": "hi"}, headers=operator_cookie()
             )
         assert response.status_code == 200
     assert model_names == ["from-flag", "from-env"]
@@ -2086,14 +2118,9 @@ async def test_serve_는_모델을_시작_때_만들지_않고_실행마다_푼_
 
 @pytest.mark.usefixtures("no_model_env")
 def test_이름을_넘기지_않은_serve_는_다른_구성_오류와_한꺼번에_넘기는_두_길을_들고_서지_않는다(
-    monkeypatch: pytest.MonkeyPatch,
-    capsys: pytest.CaptureFixture[str],
-    uvicorn_calls: list[dict[str, object]],
+    capsys: pytest.CaptureFixture[str], uvicorn_calls: list[dict[str, object]]
 ) -> None:
-    """코드의 기본 모델이 없다. 이름이 없는 것은 토큰·호스트 문제와 같은 목록의 한 항목이다."""
-    monkeypatch.delenv(ADMIN_TOKEN_ENV, raising=False)
-    monkeypatch.delenv(CHANNEL_TOKEN_ENV, raising=False)
-
+    """코드의 기본 모델이 없다. 이름이 없는 것은 호스트 문제와 같은 목록의 한 항목이다."""
     code = main(["serve", "--host", "0.0.0.0"])
 
     out, err = capsys.readouterr()
@@ -2101,34 +2128,26 @@ def test_이름을_넘기지_않은_serve_는_다른_구성_오류와_한꺼번�
     assert out == ""
     assert "--model" in err
     assert MODEL_ENV in err
-    assert ADMIN_TOKEN_ENV in err
-    assert CHANNEL_TOKEN_ENV in err
     assert "0.0.0.0" in err
     assert uvicorn_calls == []
 
 
 def test_매니페스트가_없는_기본_모델은_다른_구성_오류와_한꺼번에_그_이름을_들고_나온다(
-    monkeypatch: pytest.MonkeyPatch,
     workspace: Path,
     capsys: pytest.CaptureFixture[str],
     uvicorn_calls: list[dict[str, object]],
 ) -> None:
     """오타가 첫 요청이 실패할 때까지 숨지 않는다(스토리 5)."""
-    monkeypatch.delenv(ADMIN_TOKEN_ENV, raising=False)
-    monkeypatch.delenv(CHANNEL_TOKEN_ENV, raising=False)
-
     code = main(["serve", "--host", "0.0.0.0", "--model", "ghost"])
 
     out, err = capsys.readouterr()
     assert code == 1
     assert out == ""
     assert "기본 모델 플러그인이 없다: ghost" in err
-    assert ADMIN_TOKEN_ENV in err
-    assert CHANNEL_TOKEN_ENV in err
+    assert "0.0.0.0" in err
     assert uvicorn_calls == []
 
 
-@pytest.mark.usefixtures("tokens")
 def test_읽히지_않는_기본_모델은_serve_의_시작_진단에도_잘못_적은_값을_싣지_않는다(
     workspace: Path,
     capsys: pytest.CaptureFixture[str],
@@ -2149,7 +2168,6 @@ def test_읽히지_않는_기본_모델은_serve_의_시작_진단에도_잘못_
     assert uvicorn_calls == []
 
 
-@pytest.mark.usefixtures("tokens")
 def test_꺼진_기본_모델은_serve_의_시작을_막지_않는다(
     workspace: Path, uvicorn_calls: list[dict[str, object]]
 ) -> None:
@@ -2165,44 +2183,31 @@ def test_꺼진_기본_모델은_serve_의_시작을_막지_않는다(
 
 
 def test_빈_모델_지정도_다른_구성_오류와_한꺼번에_나온다(
-    monkeypatch: pytest.MonkeyPatch,
-    capsys: pytest.CaptureFixture[str],
-    uvicorn_calls: list[dict[str, object]],
+    capsys: pytest.CaptureFixture[str], uvicorn_calls: list[dict[str, object]]
 ) -> None:
     """기본 모델의 이름을 시작 때 푸는 순간 빈 지정도 시작 자리의 구성 오류다(스토리 43)."""
-    monkeypatch.delenv(ADMIN_TOKEN_ENV, raising=False)
-    monkeypatch.delenv(CHANNEL_TOKEN_ENV, raising=False)
-
     code = _main(["serve", "--host", "0.0.0.0", "--model", ""])
 
     _, err = capsys.readouterr()
     assert code == 1
     assert "모델 이름" in err
-    assert ADMIN_TOKEN_ENV in err
-    assert CHANNEL_TOKEN_ENV in err
     assert "0.0.0.0" in err
     assert uvicorn_calls == []
 
 
 def test_이름의_패턴을_어긴_모델_지정도_다른_구성_오류와_한꺼번에_나온다(
-    monkeypatch: pytest.MonkeyPatch,
-    capsys: pytest.CaptureFixture[str],
-    uvicorn_calls: list[dict[str, object]],
+    capsys: pytest.CaptureFixture[str], uvicorn_calls: list[dict[str, object]]
 ) -> None:
-    monkeypatch.delenv(ADMIN_TOKEN_ENV, raising=False)
-    monkeypatch.delenv(CHANNEL_TOKEN_ENV, raising=False)
-
     code = _main(["serve", "--host", "0.0.0.0", "--model", "Bad Name"])
 
     _, err = capsys.readouterr()
     assert code == 1
     assert "플러그인 이름의 패턴을 어긴다" in err
-    assert ADMIN_TOKEN_ENV in err
-    assert CHANNEL_TOKEN_ENV in err
+    assert "0.0.0.0" in err
     assert uvicorn_calls == []
 
 
-@pytest.mark.usefixtures("workspace", "tokens")
+@pytest.mark.usefixtures("workspace")
 def test_API_키는_시작_때_보지_않는다(
     monkeypatch: pytest.MonkeyPatch, uvicorn_calls: list[dict[str, object]]
 ) -> None:
@@ -2216,7 +2221,7 @@ def test_API_키는_시작_때_보지_않는다(
     assert len(uvicorn_calls) == 1
 
 
-@pytest.mark.usefixtures("workspace", "tokens")
+@pytest.mark.usefixtures("workspace")
 def test_serve_가_연결이_남은_실행을_제한_없이_기다리지_않게_uvicorn_에_유예를_넘긴다(
     uvicorn_calls: list[dict[str, object]],
 ) -> None:
@@ -2252,7 +2257,6 @@ def test_스트림을_가를_때_keepalive_주석은_이벤트로_읽지_않는�
     assert [event["type"] for event in events] == ["run_started", "run_paused"]
 
 
-@pytest.mark.usefixtures("tokens")
 async def test_serve_가_세운_앱으로_실행하면_주체가_OS_사용자이고_트레이스가_그_디렉터리에_남는다(
     workspace: Path, uvicorn_calls: list[dict[str, object]]
 ) -> None:
@@ -2263,14 +2267,13 @@ async def test_serve_가_세운_앱으로_실행하면_주체가_OS_사용자이
     (call,) = uvicorn_calls
     app = call["app"]
     assert isinstance(app, FastAPI)
-    channel = {"Authorization": f"Bearer {CHANNEL_TOKEN}"}
 
     async with (
         app.router.lifespan_context(app),
         AsyncClient(transport=ASGITransport(app=app), base_url="http://serve.test") as client,
     ):
         response = await client.post(
-            "/runs", json={"agent": "echo", "request": "hi"}, headers=channel
+            "/runs", json={"agent": "echo", "request": "hi"}, headers=operator_cookie()
         )
 
     events = _events(response.text)
@@ -2280,7 +2283,6 @@ async def test_serve_가_세운_앱으로_실행하면_주체가_OS_사용자이
     assert trace_file.stem == events[0]["run_id"]
 
 
-@pytest.mark.usefixtures("tokens")
 async def test_serve_가_세운_앱에서_관리로_끈_에이전트는_409이고_파일을_손으로_고치면_다시_돈다(
     workspace: Path, uvicorn_calls: list[dict[str, object]]
 ) -> None:
@@ -2292,8 +2294,7 @@ async def test_serve_가_세운_앱에서_관리로_끈_에이전트는_409이�
     (call,) = uvicorn_calls
     app = call["app"]
     assert isinstance(app, FastAPI)
-    admin = {"Authorization": f"Bearer {ADMIN_TOKEN}"}
-    channel = {"Authorization": f"Bearer {CHANNEL_TOKEN}"}
+    operator = operator_cookie()
     operator_file = workspace / OPERATOR_FILE
     start = {"agent": "echo", "request": "hi"}
 
@@ -2302,14 +2303,14 @@ async def test_serve_가_세운_앱에서_관리로_끈_에이전트는_409이�
         AsyncClient(transport=ASGITransport(app=app), base_url="http://serve.test") as client,
     ):
         switched = await client.put(
-            "/plugins/agent/echo/enabled", json={"enabled": False}, headers=admin
+            "/plugins/agent/echo/enabled", json={"enabled": False}, headers=operator
         )
         written = tomllib.loads(operator_file.read_text(encoding="utf-8"))
-        listed = (await client.get("/plugins", headers=admin)).json()
-        refused = await client.post("/runs", json=start, headers=channel)
+        listed = (await client.get("/plugins", headers=operator)).json()
+        refused = await client.post("/runs", json=start, headers=operator)
         traces_after_refusal = _trace_files(workspace / "t")
         operator_file.write_text('schema_version = "1"\n', encoding="utf-8")
-        admitted = await client.post("/runs", json=start, headers=channel)
+        admitted = await client.post("/runs", json=start, headers=operator)
 
     assert switched.status_code == 204
     assert written["agent"] == ["echo"]
@@ -2382,7 +2383,7 @@ def _site_token(subject: str = "alice") -> dict[str, str]:
     return bearer(sign(SITE_KEY, claims(SITE_ISSUER, subject, datetime.now(UTC))))
 
 
-@pytest.mark.usefixtures("workspace", "tokens")
+@pytest.mark.usefixtures("workspace")
 async def test_사이트_파일이_없으면_최종_사용자_경로가_서되_모든_토큰이_401이다(
     uvicorn_calls: list[dict[str, object]],
 ) -> None:
@@ -2401,7 +2402,6 @@ async def test_사이트_파일이_없으면_최종_사용자_경로가_서되_�
     assert response.status_code == 401
 
 
-@pytest.mark.usefixtures("tokens")
 async def test_사이트_파일을_주면_서명한_최종_사용자의_실행이_발급자와_sub_의_주체로_돈다(
     workspace: Path, uvicorn_calls: list[dict[str, object]]
 ) -> None:
@@ -2430,7 +2430,7 @@ async def test_사이트_파일을_주면_서명한_최종_사용자의_실행�
     assert started.principal == f"{SITE_ISSUER}|alice"
 
 
-@pytest.mark.usefixtures("workspace", "tokens")
+@pytest.mark.usefixtures("workspace")
 def test_열_에이전트에_없는_이름은_구성_오류가_아니다(
     uvicorn_calls: list[dict[str, object]],
 ) -> None:
@@ -2516,7 +2516,7 @@ _BROKEN_SITE_FILES: tuple[tuple[str, str | None, str], ...] = (
     [(content, expected) for _, content, expected in _BROKEN_SITE_FILES],
     ids=[name for name, _, _ in _BROKEN_SITE_FILES],
 )
-@pytest.mark.usefixtures("workspace", "tokens")
+@pytest.mark.usefixtures("workspace")
 def test_사이트_파일의_구성_오류는_서버가_서기_전에_진단과_종료_코드_1이고_키_값을_싣지_않는다(
     content: str | None,
     expected: str,
@@ -2540,27 +2540,22 @@ def test_사이트_파일의_구성_오류는_서버가_서기_전에_진단과_
     assert uvicorn_calls == []
 
 
-def test_사이트_파일의_진단도_토큰_진단과_한꺼번에_나온다(
+def test_사이트_파일의_진단도_호스트_진단과_한꺼번에_나온다(
     workspace: Path,
-    monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
     uvicorn_calls: list[dict[str, object]],
 ) -> None:
     """같은 자리(`_configuration_problems`)에서 모아 낸다. 하나씩 내면 고치고 다시 치고 또
     막힌다."""
-    monkeypatch.delenv(ADMIN_TOKEN_ENV, raising=False)
-    monkeypatch.delenv(CHANNEL_TOKEN_ENV, raising=False)
-
-    code = _main(["serve", "--site-file", "no-such.toml"])
+    code = _main(["serve", "--host", "0.0.0.0", "--site-file", "no-such.toml"])
 
     _, err = capsys.readouterr()
     assert code == 1
-    assert ADMIN_TOKEN_ENV in err
+    assert "0.0.0.0" in err
     assert "no-such.toml" in err
     assert uvicorn_calls == []
 
 
-@pytest.mark.usefixtures("tokens")
 async def test_사이트_파일의_상한_표가_세운_앱의_최종_사용자_경로에_닿는다(
     workspace: Path, uvicorn_calls: list[dict[str, object]]
 ) -> None:
@@ -2593,7 +2588,7 @@ async def test_사이트_파일의_상한_표가_세운_앱의_최종_사용자_
     assert second.json()["message"] == "시간당 실행 수의 상한을 넘었다"
 
 
-@pytest.mark.usefixtures("workspace", "tokens", "uvicorn_calls")
+@pytest.mark.usefixtures("workspace", "uvicorn_calls")
 def test_사이트_파일의_상한_표_여섯은_엇갈리지_않고_사이트_항목에_든다(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -2701,7 +2696,7 @@ def _toml_strings(*values: str) -> str:
     [case.origin for case in _ORIGIN_CASES.passing],
     ids=[case.origin for case in _ORIGIN_CASES.passing],
 )
-@pytest.mark.usefixtures("workspace", "tokens")
+@pytest.mark.usefixtures("workspace")
 def test_브라우저가_싣는_표기의_허용_출처는_사이트_파일을_지난다(
     origin: str, uvicorn_calls: list[dict[str, object]]
 ) -> None:
@@ -2720,7 +2715,7 @@ def test_브라우저가_싣는_표기의_허용_출처는_사이트_파일을_�
     [(case.origin, case.rule) for case in _ORIGIN_CASES.block],
     ids=[case.origin for case in _ORIGIN_CASES.block],
 )
-@pytest.mark.usefixtures("workspace", "tokens")
+@pytest.mark.usefixtures("workspace")
 def test_브라우저가_싣지_않는_표기의_허용_출처는_serve_를_세우지_않고_그_항목과_규칙을_말한다(
     origin: str,
     rule: str,
@@ -2763,7 +2758,7 @@ def dotted_ipv4_mapped(monkeypatch: pytest.MonkeyPatch) -> None:
     [case.origin for case in _ORIGIN_CASES.passing if "[" in case.origin],
     ids=[case.origin for case in _ORIGIN_CASES.passing if "[" in case.origin],
 )
-@pytest.mark.usefixtures("workspace", "tokens", "dotted_ipv4_mapped")
+@pytest.mark.usefixtures("workspace", "dotted_ipv4_mapped")
 def test_IPv4_를_점으로_적는_파이썬_판에서도_브라우저가_싣는_IPv6_허용_출처는_지난다(
     origin: str, uvicorn_calls: list[dict[str, object]]
 ) -> None:
@@ -2784,7 +2779,7 @@ def test_IPv4_를_점으로_적는_파이썬_판에서도_브라우저가_싣는
     [case.origin for case in _ORIGIN_CASES.block if case.rule == "ipv6"],
     ids=[case.origin for case in _ORIGIN_CASES.block if case.rule == "ipv6"],
 )
-@pytest.mark.usefixtures("workspace", "tokens", "dotted_ipv4_mapped")
+@pytest.mark.usefixtures("workspace", "dotted_ipv4_mapped")
 def test_IPv4_를_점으로_적는_파이썬_판에서도_브라우저가_싣지_않는_IPv6_허용_출처는_막힌다(
     origin: str, capsys: pytest.CaptureFixture[str], uvicorn_calls: list[dict[str, object]]
 ) -> None:
@@ -2804,7 +2799,6 @@ def test_IPv4_를_점으로_적는_파이썬_판에서도_브라우저가_싣지
     assert uvicorn_calls == []
 
 
-@pytest.mark.usefixtures("tokens")
 def test_두_언어가_함께_읽는_사이트_파일에서_합친_허용_출처와_가장_작은_글자_수_상한이_나온다(
     monkeypatch: pytest.MonkeyPatch, uvicorn_calls: list[dict[str, object]]
 ) -> None:
@@ -2898,7 +2892,7 @@ def late_model(monkeypatch: pytest.MonkeyPatch) -> None:
     ],
     ids=["인자", "core 의 기본값"],
 )
-@pytest.mark.usefixtures("tokens", "late_model")
+@pytest.mark.usefixtures("late_model")
 async def test_serve_의_실행_타임아웃이_세운_앱의_실행에_닿고_빼면_core_의_기본값이다(
     argv: list[str],
     expected: str,
@@ -2915,7 +2909,6 @@ async def test_serve_의_실행_타임아웃이_세운_앱의_실행에_닿고_�
     (call,) = uvicorn_calls
     app = call["app"]
     assert isinstance(app, FastAPI)
-    channel = {"Authorization": f"Bearer {CHANNEL_TOKEN}"}
 
     async with (
         app.router.lifespan_context(app),
@@ -2923,7 +2916,7 @@ async def test_serve_의_실행_타임아웃이_세운_앱의_실행에_닿고_�
         asyncio.timeout(_LATE * 2),
     ):
         response = await client.post(
-            "/runs", json={"agent": "asking", "request": "hi"}, headers=channel
+            "/runs", json={"agent": "asking", "request": "hi"}, headers=operator_cookie()
         )
 
     events = _events(response.text)
@@ -2932,7 +2925,7 @@ async def test_serve_의_실행_타임아웃이_세운_앱의_실행에_닿고_�
 
 
 @pytest.mark.parametrize("value", ["0", "-5"], ids=["0", "음수"])
-@pytest.mark.usefixtures("workspace", "tokens")
+@pytest.mark.usefixtures("workspace")
 def test_0_이하의_실행_타임아웃은_서버가_서기_전에_진단과_종료_코드_1이다(
     value: str, capsys: pytest.CaptureFixture[str], uvicorn_calls: list[dict[str, object]]
 ) -> None:
@@ -2979,7 +2972,6 @@ class _GatedModel(GenericFakeChatModel):
         return self._generate(messages, stop, None, **kwargs)
 
 
-@pytest.mark.usefixtures("tokens")
 async def test_serve_의_전역_동시_실행_상한이_세운_앱의_최종_사용자_경로에_닿는다(
     workspace: Path, uvicorn_calls: list[dict[str, object]], monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -3002,7 +2994,6 @@ async def test_serve_의_전역_동시_실행_상한이_세운_앱의_최종_사
     assert isinstance(app, FastAPI)
     asking = {"agent": "asking", "request": "hi"}
     echo = {"agent": "echo", "request": "hi"}
-    channel = {"Authorization": f"Bearer {CHANNEL_TOKEN}"}
 
     async with (
         app.router.lifespan_context(app),
@@ -3015,7 +3006,7 @@ async def test_serve_의_전역_동시_실행_상한이_세운_앱의_최종_사
         while not _trace_files(workspace / "t"):
             await asyncio.sleep(0.01)
         busy = await client.post("/end-user/runs", json=echo, headers=_site_token("bob"))
-        operator = await client.post("/runs", json=echo, headers=channel)
+        operator = await client.post("/runs", json=echo, headers=operator_cookie())
         gate.set()
         admitted = await held
 
@@ -3026,7 +3017,7 @@ async def test_serve_의_전역_동시_실행_상한이_세운_앱의_최종_사
 
 
 @pytest.mark.parametrize("value", ["0", "-5"], ids=["0", "음수"])
-@pytest.mark.usefixtures("workspace", "tokens")
+@pytest.mark.usefixtures("workspace")
 def test_0_이하의_전역_동시_실행_상한은_서버가_서기_전에_진단과_종료_코드_1이다(
     value: str, capsys: pytest.CaptureFixture[str], uvicorn_calls: list[dict[str, object]]
 ) -> None:
@@ -3062,7 +3053,6 @@ def piped_user(monkeypatch: pytest.MonkeyPatch) -> str:
     return name
 
 
-@pytest.mark.usefixtures("tokens")
 def test_OS_사용자_이름에_구분자가_들면_serve_가_서지_않는다(
     workspace: Path,
     piped_user: str,
@@ -3127,8 +3117,6 @@ STREAM_SECONDS = 120
 def _serving(
     root: Path,
     *,
-    admin_token: str,
-    channel_token: str,
     database: ScopedDatabase,
     extra: Sequence[str] = (),
 ) -> Generator[str]:
@@ -3147,11 +3135,7 @@ def _serving(
     (`database` 픽스처)의 주소를 부모의 환경에 같은 변수가 있어도 이 값으로 덮어 넘긴다.
     """
     log = root / "serve.log"
-    env = _env() | {
-        ADMIN_TOKEN_ENV: admin_token,
-        CHANNEL_TOKEN_ENV: channel_token,
-        DATABASE_URL_ENV: database.text(),
-    }
+    env = _env() | {DATABASE_URL_ENV: database.text()}
     argv = [sys.executable, "-m", "agent_os.main", "serve", "--port", "0", "--traces", "t"]
     argv += ["--model", MODEL_PLUGIN, *extra]
     with log.open("w", encoding="utf-8") as sink:
@@ -3208,46 +3192,6 @@ def _post_stream(client: Client, url: str, body: Mapping[str, Json]) -> str:
         return "".join(chunks)
 
 
-OPERATOR_NAME = "root.kim"
-OPERATOR_PASSWORD = "Pw-canary-9!"
-
-
-def _create_system_admin(root: Path, database: ScopedDatabase) -> None:
-    """서버 명령(`operator system-admin`)으로 시스템 관리자 계정을 만든다. 비밀번호는 파이프로
-    넣는다(표준 입력이 터미널이 아니다). 어느 출력에도 비밀번호가 실리지 않아야 한다."""
-    result = subprocess.run(
-        [sys.executable, "-m", "agent_os.main", "operator", "system-admin", OPERATOR_NAME],
-        cwd=root,
-        input=f"{OPERATOR_PASSWORD}\n",
-        env=_env() | {DATABASE_URL_ENV: database.text()},
-        capture_output=True,
-        text=True,
-        encoding="utf-8",
-        timeout=60,
-        check=False,
-    )
-    assert result.returncode == 0, f"계정을 만들지 못했다: {result.stderr}"
-    assert OPERATOR_PASSWORD not in result.stdout + result.stderr
-
-
-def _log_in(client: Client) -> str:
-    """로그인 경로를 HTTP 로 불러 받은 두 쿠키를 `Cookie` 머리 한 줄로 만든다.
-
-    실제 `serve` 는 평문 `http` 라 httpx 가 `Secure` 쿠키를 다음 요청에 싣지 않는다. 그래서 응답의
-    `Set-Cookie` 에서 값을 꺼내 머리로 직접 싣는다. 쿠키 통은 비워, 머리만이 길이 되게 한다.
-    """
-    response = client.post(
-        "/auth/login", json={"name": OPERATOR_NAME, "password": OPERATOR_PASSWORD}
-    )
-    assert response.status_code == 204, f"로그인이 {response.status_code} 로 답했다"
-    pairs = [line.partition(";")[0] for line in response.headers.get_list("set-cookie")]
-    sent = [pair for pair in pairs if pair.startswith((f"{ACCESS_COOKIE}=", f"{REFRESH_COOKIE}="))]
-    names = [pair.partition("=")[0] for pair in pairs]
-    assert len(sent) == 2, f"로그인 쿠키가 둘이 아니다: {names}"
-    client.cookies.clear()
-    return "; ".join(sent)
-
-
 @pytest.mark.llm
 def test_실제_serve_에서_로그인한_운영자의_실행이_멈췄다_끝나고_트레이스에_계정이_남는다(
     tmp_path: Path, database: ScopedDatabase
@@ -3257,28 +3201,24 @@ def test_실제_serve_에서_로그인한_운영자의_실행이_멈췄다_끝�
     서버 명령으로 만든 계정이 실제 HTTP 로그인을 지나 채널의 요청 계정이 되는 것.
 
     `gatedcalc` 와 실제 stdio 서버는 프로세스를 넘는 CLI 테스트와 같다. 다른 것은 면 하나다 —
-    실행을 일으키고 결정을 내는 것이 셸이 아니라 로그인한 운영자의 HTTP 요청 둘이다. 공유 토큰은
-    이 시험에서 쓰지 않는다(공유 토큰으로 보낸 경로는 `tests/test_operator_accounts_on_runs.py`).
+    실행을 일으키고 결정을 내는 것이 셸이 아니라 로그인한 운영자의 HTTP 요청 둘이다. 운영자 경로는
+    로그인 쿠키로만 열린다(공유 토큰은 걷혔다).
     """
     assert "ANTHROPIC_API_KEY" in os.environ, "ANTHROPIC_API_KEY 가 없다. .env 를 확인한다"
     _write_mcp_plugin(tmp_path, "fixture")
     _write_plugin(tmp_path, "gatedcalc", GATEDCALC_SRC, GATEDCALC_MANIFEST)
     _write_rules(tmp_path, "fixture:*")
-    _create_system_admin(tmp_path, database)
-    # 소켓이 듣는 동안 같은 기계의 다른 프로세스가 짐작할 수 없는 값. 둘이 달라야 선다(ADR 0015).
-    admin_token, channel_token = secrets.token_urlsafe(), secrets.token_urlsafe()
+    create_system_admin(tmp_path, database)
 
     with (
-        _serving(
-            tmp_path, admin_token=admin_token, channel_token=channel_token, database=database
-        ) as address,
+        _serving(tmp_path, database=database) as address,
         Client(
             base_url=address,
             timeout=STREAM_TIMEOUT,
             trust_env=False,  # 루프백을 재는 테스트라 환경의 프록시를 따르지 않는다
         ) as client,
     ):
-        client.headers["Cookie"] = _log_in(client)
+        client.headers["Cookie"] = log_in(client)
         paused = _post_stream(client, "/runs", {"agent": "gatedcalc", "request": "2 더하기 3은?"})
         # 여기서 먼저 단언한다. 멈추지 못한 스트림의 식별자로 승인을 보내면 그 409 가 원인을 가린다.
         paused_stream = _events(paused)
@@ -3304,7 +3244,7 @@ def test_실제_serve_에서_로그인한_운영자의_실행이_멈췄다_끝�
     boundaries = ("approval_granted", "run_resumed", "tool_called")
     assert [t for t in types if t in boundaries] == list(boundaries)
     assert [(e.tool, e.ok) for e in events if isinstance(e, ToolCalled)] == [("add", True)]
-    # 로그인한 운영자의 계정이 시작 이벤트와 결정 이벤트에 남는다. 공유 토큰은 한 번도 쓰지 않았다
+    # 로그인한 운영자의 계정이 시작 이벤트와 결정 이벤트에 남는다
     (started,) = [e for e in events if isinstance(e, RunStarted)]
     (granted,) = [e for e in events if isinstance(e, ApprovalGranted)]
     assert started.requesting_account == OPERATOR_NAME, (
@@ -3325,19 +3265,17 @@ def test_실제_serve_에서_기본_모델의_접속_확인은_붙음이고_서�
     (ADR 0067 결정 "모델을 확인하는 법"·"결과가 있는 자리")."""
     assert "ANTHROPIC_API_KEY" in os.environ, "ANTHROPIC_API_KEY 가 없다. .env 를 확인한다"
     _write_model_plugin(tmp_path)
-    admin_token, channel_token = secrets.token_urlsafe(), secrets.token_urlsafe()
+    create_system_admin(tmp_path, database)
 
     with (
-        _serving(
-            tmp_path, admin_token=admin_token, channel_token=channel_token, database=database
-        ) as address,
+        _serving(tmp_path, database=database) as address,
         Client(
             base_url=address,
-            headers={"Authorization": f"Bearer {admin_token}"},
             timeout=STREAM_TIMEOUT,
             trust_env=False,  # 루프백을 재는 테스트라 환경의 프록시를 따르지 않는다
         ) as client,
     ):
+        client.headers["Cookie"] = log_in(client)
         response = client.get(f"/plugins/model/{MODEL_PLUGIN}/connection-check")
 
     assert response.status_code == 200, response.text
@@ -3397,19 +3335,12 @@ def test_실제_serve_에서_서명한_토큰으로_시작한_실행을_최종_�
     assert "ANTHROPIC_API_KEY" in os.environ, "ANTHROPIC_API_KEY 가 없다. .env 를 확인한다"
     _write_plugin(tmp_path, "asker", ASKER_SRC)
     (tmp_path / "sites.toml").write_text(_site_file(_site(agents='["asker"]')), encoding="utf-8")
-    admin_token, channel_token = secrets.token_urlsafe(), secrets.token_urlsafe()
     token = sign(SITE_KEY, claims(SITE_ISSUER, "alice", datetime.now(UTC)))
     greeting = f"내 이름은 {ASKER_NAME}이야. 한 단어로 인사해 줘"
     question = "내 이름이 뭐였지? 이름만 답해 줘"
 
     with (
-        _serving(
-            tmp_path,
-            admin_token=admin_token,
-            channel_token=channel_token,
-            database=database,
-            extra=["--site-file", "sites.toml"],
-        ) as address,
+        _serving(tmp_path, database=database, extra=["--site-file", "sites.toml"]) as address,
         Client(
             base_url=address,
             headers={"Authorization": f"Bearer {token}"},

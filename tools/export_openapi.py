@@ -61,10 +61,8 @@ from agent_os.server import create_app
 ROOT = Path(__file__).resolve().parent.parent
 OPENAPI_PATH = ROOT / "openapi.json"
 
-# 스키마는 토큰도 주체도 읽지 않는다. 이 값들은 앱을 세우기 위한 자리표시자이고 어떤 서버에도 쓰이지
-# 않는다. 빈 문자열이나 같은 값을 쓸 수 없는 이유는 `create_app` 이 그런 앱을 거부하기 때문이다.
-_PLACEHOLDER_ADMIN_TOKEN = "openapi-export-only-admin"
-_PLACEHOLDER_CHANNEL_TOKEN = "openapi-export-only-channel"
+# 스키마는 주체도 모델도 읽지 않는다. 이 값들은 앱을 세우기 위한 자리표시자이고 어떤 서버에도
+# 쓰이지 않는다.
 _PLACEHOLDER_PRINCIPAL = Principal("openapi-export-only")
 _PLACEHOLDER_MODEL = PluginName("openapi-export-only")
 
@@ -195,8 +193,6 @@ def document() -> str:
         tools=tools,
         clock=clock,
         principal=_PLACEHOLDER_PRINCIPAL,
-        admin_token=_PLACEHOLDER_ADMIN_TOKEN,
-        channel_token=_PLACEHOLDER_CHANNEL_TOKEN,
         # 사이트가 없다. 스키마는 사이트 목록을 읽지 않는다.
         sites=Sites(),
         # core 의 기본값이다. 스키마는 실행 타임아웃을 싣지 않는다.

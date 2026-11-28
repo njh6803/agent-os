@@ -62,8 +62,6 @@ const APP = dirname(import.meta.dirname);
 const WIDGET = join(dirname(APP), "widget");
 const LOGS = join(APP, "test-results");
 const QUIET = { NEXT_TELEMETRY_DISABLED: "1" };
-// serve 가 읽는 토큰 변수. 위젯 Next 로 가는 환경에서는 벗긴다.
-const SERVE_TOKENS = ["AGENT_OS_ADMIN_TOKEN", "AGENT_OS_CHANNEL_TOKEN"];
 // 위젯 미리보기 페이지가 서면 찍는 시작 로그의 가운데 글(`server/diagnostics.ts` 의 `listenLine`).
 const LISTENING = "에 섰다";
 
@@ -274,13 +272,9 @@ async function startPortal(stack: Stack, launch: PortalLaunch): Promise<void> {
   );
 }
 
-/** 위젯 Next(빌드와 start)의 환경. 이 셸의 환경에서 serve 의 토큰 변수를 벗기고 사이트 파일을 준다. */
+/** 위젯 Next(빌드와 start)의 환경. 이 셸의 환경에 사이트 파일을 얹는다. */
 function widgetEnv(siteFile: string): NodeJS.ProcessEnv {
-  const env: NodeJS.ProcessEnv = { ...process.env, ...QUIET, AGENT_OS_SITE_FILE: siteFile };
-  for (const name of SERVE_TOKENS) {
-    Reflect.deleteProperty(env, name);
-  }
-  return env;
+  return { ...process.env, ...QUIET, AGENT_OS_SITE_FILE: siteFile };
 }
 
 /**

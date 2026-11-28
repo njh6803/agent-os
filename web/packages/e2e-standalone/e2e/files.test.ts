@@ -11,9 +11,9 @@ const SITE: E2eSite = {
 };
 
 test("환경 변수 틀의 이름 줄에만 값을 채우고 나머지 줄은 그대로 둔다", () => {
-  const template = "# 주석\nAGENT_OS_VERSION=1.0.0\nAGENT_OS_ADMIN_TOKEN=\n";
-  const filled = fillEnv(template, { AGENT_OS_ADMIN_TOKEN: "토큰" });
-  expect(filled).toBe("# 주석\nAGENT_OS_VERSION=1.0.0\nAGENT_OS_ADMIN_TOKEN=토큰\n");
+  const template = "# 주석\nAGENT_OS_VERSION=1.0.0\nAGENT_OS_DATABASE_PASSWORD=\n";
+  const filled = fillEnv(template, { AGENT_OS_DATABASE_PASSWORD: "비밀번호" });
+  expect(filled).toBe("# 주석\nAGENT_OS_VERSION=1.0.0\nAGENT_OS_DATABASE_PASSWORD=비밀번호\n");
 });
 
 test("환경 변수 틀에 없는 이름을 채우려 하면 던진다", () => {

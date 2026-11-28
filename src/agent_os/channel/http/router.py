@@ -50,8 +50,7 @@ from agent_os.http.permissions import REQUIRE_PERMISSION
 from agent_os.http.routes import EventSourceWithJsonErrors, documented_errors
 from agent_os.sdk import RUN_ID_PATTERN, PluginName, Principal, RunId
 
-# 채널 토큰이 여는 접두사이자 운영자 채널 라우트의 접두사(ADR 0015). 한 값이라 운영자 채널의
-# 라우트가 채널 토큰의 면 밖에 설 길이 없다. 인증 표를 넘기는 조립 층이 이것을 읽는다.
+# 운영자 채널 라우트의 접두사(ADR 0015). 한 값이라 라우트가 이 접두사 밖에 설 길이 없다.
 CHANNEL_PREFIX = "/runs"
 
 # 스트림의 항목. sdk 의 판별 유니온에 이름을 준 별칭이라 계약에 `Event` 라는 이름 있는 타입이
@@ -139,7 +138,7 @@ def _operator_router(
     principal: Principal,
     run_timeout_seconds: float | None,
 ) -> APIRouter:
-    """운영자 채널의 라우터. 채널 토큰이 열고 원문 이벤트와 원문 에러를 싣는다(ADR 0023).
+    """운영자 채널의 라우터. 운영자 로그인이 열고 원문 이벤트와 원문 에러를 싣는다(ADR 0023).
 
     상한이 없다 — 실행은 실행 중 목록의 칸을 차지하지 않고 429 를 내지 않는다(ADR 0023). 연결마다의
     백로그(`runs`)만 최종 사용자 면과 같다.

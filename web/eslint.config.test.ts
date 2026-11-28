@@ -90,7 +90,7 @@ const SOURCES: Readonly<Record<string, string>> = {
   "apps/admin/lib/raw-client.ts":
     'import createClient from "openapi-fetch";\n\nexport const 만든다 = createClient;\n',
   "apps/admin/components/organisms/DeepClient.ts":
-    'import { createAdminClient } from "../../../../packages/api-client/src/clients";\n\nexport const 관리 = createAdminClient;\n',
+    'import { createOperatorClient } from "../../../../packages/api-client/src/clients";\n\nexport const 관리 = createOperatorClient;\n',
   // 위젯 관리 서버의 생성 클라이언트 패키지도 api-client 와 같은 네 자리에서 판정한다(widget-admin-server 명세 "계약 파일과 생성 클라이언트").
   "apps/admin/components/organisms/DeepPublicClient.ts":
     'import { createPublicClient } from "../../../../packages/widget-admin-client/src/clients";\n\nexport const 공개 = createPublicClient;\n',
@@ -122,11 +122,11 @@ const SOURCES: Readonly<Record<string, string>> = {
     'import { Camera } from "lucide-react";\n\nexport const 아이콘 = Camera;\n',
   "apps/admin/components/organisms/Card.ts": "export const 카드 = 1;\n",
   "apps/admin/components/atoms/Api.ts":
-    'import { createAdminClient } from "@agent-os/api-client";\n\nexport const 관리 = createAdminClient;\n',
+    'import { createOperatorClient } from "@agent-os/api-client";\n\nexport const 관리 = createOperatorClient;\n',
   "apps/admin/components/molecules/Api.ts":
-    'import { createAdminClient } from "@agent-os/api-client";\n\nexport const 관리 = createAdminClient;\n',
+    'import { createOperatorClient } from "@agent-os/api-client";\n\nexport const 관리 = createOperatorClient;\n',
   "apps/admin/components/organisms/Api.ts":
-    'import { createAdminClient } from "@agent-os/api-client";\n\nexport const 관리 = createAdminClient;\n',
+    'import { createOperatorClient } from "@agent-os/api-client";\n\nexport const 관리 = createOperatorClient;\n',
   "apps/admin/components/organisms/Panel.ts":
     'import { 라벨 } from "../atoms/Label";\n\nexport const 판 = 라벨;\n',
   // organisms 는 요청 함수가 든 api 도메인과 hooks/queries 를 부르지 않으므로 barrel 의 판정은 부를 수 있는 pages 에서 잰다.
@@ -178,7 +178,7 @@ const SOURCES: Readonly<Record<string, string>> = {
   "apps/admin/app/runs/page.ts":
     'import { 카드 } from "../../components/organisms/Card";\n\nexport const 화면 = 카드;\n',
   "apps/admin/app/layout.ts":
-    'import { createAdminClient } from "@agent-os/api-client";\n\nexport const 틀 = createAdminClient;\n',
+    'import { createOperatorClient } from "@agent-os/api-client";\n\nexport const 틀 = createOperatorClient;\n',
   "apps/admin/app/server/page.ts":
     'import { readFileSync } from "node:fs";\n\nexport const 읽기 = readFileSync;\n',
   "apps/admin/lib/boolean-param.ts":

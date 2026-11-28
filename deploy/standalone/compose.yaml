@@ -94,7 +94,7 @@ services:
     depends_on:
       migrate:
         condition: service_completed_successfully
-    # 환경 변수 파일을 통째로 받는 것(토큰, 기본 모델, API 키, 데이터베이스 비밀번호)은 serve 하나다.
+    # 환경 변수 파일을 통째로 받는 것(기본 모델, API 키, 데이터베이스 비밀번호)은 serve 하나다.
     env_file: .env
     environment:
       AGENT_OS_CONTAINER_NETWORK: "1"

@@ -2,13 +2,12 @@
 // 쓰는 가상 환경의 파이썬으로 띄운다. 플러그인 루트(`plugins.ts`), 트레이스 폴더, 사이트 파일(`siteFileToml`)은 준비가 만들어
 // 준다. 환경에는 부모의 환경을 펼친다(키는 그렇게 물려 간다).
 //
-// - `serve` 의 구성 검사는 운영자 토큰과 채널 토큰을 요구한다. e2e 가 쓰지 않아 이 프로세스가 무작위로 짓고 시험에는 넘기지
-//   않는다.
+// - `serve` 는 운영자 경로를 로그인 쿠키로만 연다. 이 준비를 쓰는 위젯 e2e와 위젯 테스트 페이지 e2e 는 운영자 경로를 부르지
+//   않아 계정을 만들지 않는다.
 // - `serve` 가 띄운 MCP 서버는 작업 폴더를 물려받고 `serve` 를 끈 뒤에도 잠시 남는다. 그래서 작업 폴더를 임시 폴더의 루트로
 //   두어, 준비의 작업 폴더(`Stack.work`)를 지우는 정리가 막히지 않게 한다.
 
 import { spawnSync } from "node:child_process";
-import { randomBytes } from "node:crypto";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { DEFAULT_MODEL } from "./plugins.ts";
@@ -22,7 +21,6 @@ export const REPO = join(import.meta.dirname, "..", "..", "..", "..");
 export const MCP_FIXTURE_SERVER = join(REPO, "tests", "adapters", "mcp_fixture_server.py");
 
 const LISTENING = /Uvicorn running on (http:\/\/127\.0\.0\.1:\d+)/;
-const UNUSED_TOKEN_BYTES = 24;
 
 export interface ServeOptions {
   /** `serve --plugins-root`. */
@@ -78,17 +76,11 @@ export async function startServe(stack: Stack, options: ServeOptions): Promise<s
     {
       ...process.env,
       PYTHONUTF8: "1",
-      AGENT_OS_ADMIN_TOKEN: unusedToken(),
-      AGENT_OS_CHANNEL_TOKEN: unusedToken(),
       // 부모의 환경에 같은 변수가 있어도 이 준비의 데이터베이스로 덮는다.
       AGENT_OS_DATABASE_URL: options.databaseUrl,
     },
   );
   return until(serve, "serve 가 서지 않았다", () => LISTENING.exec(serve.output())?.[1] ?? null);
-}
-
-function unusedToken(): string {
-  return `e2e-unused-${randomBytes(UNUSED_TOKEN_BYTES).toString("hex")}`;
 }
 
 /** 사이트 하나의 사이트 파일. 허용 출처는 `origin` 하나이고 글자 수 상한은 적지 않아 기본값이다. */

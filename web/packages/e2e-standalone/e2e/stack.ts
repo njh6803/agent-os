@@ -1,7 +1,9 @@
 /**
  * 단독 배포 e2e 의 준비(globalSetup, release-image 티켓 09). 지은 이미지 넷과 배포 파일 묶음(`deploy/standalone/`)을 04 의
  * 도구(`tools/release.py bundle`)로 묶어 임시 폴더에 풀고, 운영자가 채울 것(인증서와 키, 사이트 파일, 위젯 테스트 페이지
- * 설정과 개인 키, 환경 변수 파일)을 시험 값으로 채워 `docker compose up` 으로 띄운다. 시험이 끝나면 그 실행이 만든 컨테이너,
+ * 설정과 개인 키, 환경 변수 파일)을 시험 값으로 채워 `docker compose up` 으로 띄운다. 뜬 뒤 배포 안내가 운영자에게 시키는
+ * 것과 같은 서버 명령(`docker compose exec serve agent-os operator system-admin <이름>`)으로 시스템 관리자 계정을 만든다.
+ * 비밀번호는 표준 입력으로 넣는다. 시험이 끝나면 그 실행이 만든 컨테이너,
  * 볼륨, 네트워크를 지운다.
  *
  * - 이미지: 이름공간과 태그를 환경 변수로 받으면(`NAMESPACE_ENV`, `VERSION_ENV`) 그 이미지로 띄운다. 없으면 저장소에서 넷을
@@ -32,7 +34,8 @@ import {
 } from "@agent-os/e2e-stack";
 import { Compose, repositoryName, succeed } from "./docker.ts";
 import {
-  ADMIN_TOKEN_ENV,
+  ACCOUNT_NAME_ENV,
+  ACCOUNT_PASSWORD_ENV,
   API_KEY_ENV,
   CALC_AGENT,
   DIR_ENV,
@@ -57,6 +60,8 @@ const OVERLAY = join(PACKAGE, "compose.fixtures.yaml");
 const NO_IPV6_OVERLAY = join(PACKAGE, "compose.no-ipv6.yaml");
 const SOURCE_LABEL = "agent-os-e2e";
 const PUBLISHED_PORTS = [443, 80, 3000];
+// 준비가 만드는 시스템 관리자 계정의 이름(소문자 3~32자).
+const ACCOUNT_NAME = "e2e-operator";
 
 const MINUTE_MS = 60_000;
 const BUILD_MS = 15 * MINUTE_MS;
@@ -178,7 +183,19 @@ export default async function globalSetup(): Promise<() => Promise<void>> {
       );
     }
 
+    // 계정 하나를 서버 명령으로 만든다. 비밀번호는 규칙(대문자, 숫자, 특수문자 하나씩, 8자 이상)을 채우는 머리에 무작위 꼬리를
+    // 붙인 값이고 시험이 로그인하도록 넘기며 어디에도 싣지 않는다.
+    const accountPassword = `Aa1!${randomBytes(12).toString("hex")}`;
+    await compose.inService(
+      "serve",
+      ["agent-os", "operator", "system-admin", ACCOUNT_NAME],
+      2 * MINUTE_MS,
+      `${accountPassword}\n`,
+    );
+
     publish(PROJECT_ENV, project);
+    publish(ACCOUNT_NAME_ENV, ACCOUNT_NAME);
+    publish(ACCOUNT_PASSWORD_ENV, accountPassword);
     publish(DIR_ENV, dir);
     publish(FILES_ENV, overlays.join(delimiter));
     publish(VERSION_OUT_ENV, version);
@@ -322,18 +339,13 @@ async function fillOperatorFiles(dir: string, mode: Mode): Promise<void> {
   writeFileSync(privatePem, key.privateKey.export({ type: "pkcs8", format: "pem" }));
   chmodSync(privatePem, 0o644);
 
-  const adminToken = `e2e-admin-${randomBytes(16).toString("hex")}`;
-  const channelToken = `e2e-channel-${randomBytes(16).toString("hex")}`;
   // 배포 안내가 운영자에게 시키는 꼴(`openssl rand -hex 32`, 영문자와 숫자만)과 같은 값이다. 시험은 이 값을 넘겨받지 않는다.
   // 데이터베이스는 PostgreSQL 컨테이너 안의 psql 로 보고, 그 컨테이너의 유닉스 소켓은 비밀번호를 묻지 않는다.
   const databasePassword = randomBytes(32).toString("hex");
-  publish(ADMIN_TOKEN_ENV, adminToken);
   const template = readFileSync(join(dir, ".env.example"), "utf-8");
   writeFileSync(
     join(dir, ".env"),
     fillEnv(template, {
-      AGENT_OS_ADMIN_TOKEN: adminToken,
-      AGENT_OS_CHANNEL_TOKEN: channelToken,
       AGENT_OS_DATABASE_PASSWORD: databasePassword,
       ...(mode.llm ? { ANTHROPIC_API_KEY: mode.apiKey } : {}),
     }),

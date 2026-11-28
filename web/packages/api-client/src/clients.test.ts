@@ -1,9 +1,9 @@
-// 클라이언트 셋이 어디로 요청을 보내는지 잰다. 관리·채널 클라이언트의 헤더에 실리는 토큰은 페이지 테스트가 잰다(관리
-// 요청은 05, 결정 요청은 08). 위젯 클라이언트는 토큰을 들지 않아 부르는 쪽이 준 헤더가 그대로 실리는지 여기서 잰다.
+// 클라이언트 둘이 어디로 요청을 보내는지 잰다. 운영자 클라이언트는 토큰을 들지 않고 쿠키는 브라우저가 싣는다. 위젯
+// 클라이언트는 토큰을 들지 않아 부르는 쪽이 준 헤더가 그대로 실리는지 여기서 잰다.
 // openapi-fetch 는 클라이언트를 만들 때 전역 fetch 를 쥐므로, 가짜는 만들기 전에 건다.
 
 import { afterEach, expect, test, vi } from "vitest";
-import { createAdminClient, createChannelClient, createWidgetClient } from "./clients";
+import { createOperatorClient, createWidgetClient } from "./clients";
 import type { components } from "./generated/openapi";
 
 const urls: string[] = [];
@@ -27,19 +27,20 @@ afterEach(() => {
   requests.splice(0);
 });
 
-test("관리 클라이언트는 지금 페이지의 출처에서 /api 아래 절대 주소로 부른다", async () => {
+test("운영자 클라이언트는 지금 페이지의 출처에서 /api 아래 절대 주소로 부른다", async () => {
   onPage();
 
-  await createAdminClient("admin-token").GET("/plugins");
+  await createOperatorClient().GET("/plugins");
 
   expect(urls).toEqual(["http://127.0.0.1:3000/api/plugins"]);
+  expect(requests[0]?.headers.has("Authorization")).toBe(false);
 });
 
-test("채널 클라이언트도 지금 페이지의 출처에서 /api 아래 절대 주소로 부른다", async () => {
+test("운영자 클라이언트는 채널의 결정 경로도 같은 출처의 /api 아래 절대 주소로 부른다", async () => {
   onPage();
   const decision: components["schemas"]["Decision"] = { decision: "approve", pause_index: 2 };
 
-  await createChannelClient("channel-token").POST("/runs/{run_id}/approval", {
+  await createOperatorClient().POST("/runs/{run_id}/approval", {
     params: { path: { run_id: "r1" } },
     body: decision,
     parseAs: "stream",

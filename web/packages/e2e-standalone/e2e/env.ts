@@ -27,7 +27,9 @@ export const PROJECT_ENV = "AGENT_OS_STANDALONE_E2E_PROJECT";
 export const FILES_ENV = "AGENT_OS_STANDALONE_E2E_FILES";
 export const DIR_ENV = "AGENT_OS_STANDALONE_E2E_DIR";
 export const VERSION_OUT_ENV = "AGENT_OS_STANDALONE_E2E_VERSION";
-export const ADMIN_TOKEN_ENV = "AGENT_OS_STANDALONE_E2E_ADMIN_TOKEN";
+/** 준비가 서버 명령으로 만든 시스템 관리자 계정의 이름과 비밀번호. 시험이 관리 화면의 중계로 로그인한다. */
+export const ACCOUNT_NAME_ENV = "AGENT_OS_STANDALONE_E2E_ACCOUNT_NAME";
+export const ACCOUNT_PASSWORD_ENV = "AGENT_OS_STANDALONE_E2E_ACCOUNT_PASSWORD";
 export const FIXTURE_AGENT = "echo";
 /** 위젯 미리보기 페이지의 첫 사이트 이름. 픽스처 에이전트를 연다. */
 export const PREVIEW_SITE = "preview";
@@ -47,7 +49,8 @@ export function deployment(): {
   readonly dir: string;
   readonly files: readonly string[];
   readonly version: string;
-  readonly adminToken: string;
+  readonly accountName: string;
+  readonly accountPassword: string;
 } {
   const files = process.env[FILES_ENV] ?? "";
   return {
@@ -55,6 +58,7 @@ export function deployment(): {
     dir: received(DIR_ENV),
     files: files === "" ? [] : files.split(delimiter),
     version: received(VERSION_OUT_ENV),
-    adminToken: received(ADMIN_TOKEN_ENV),
+    accountName: received(ACCOUNT_NAME_ENV),
+    accountPassword: received(ACCOUNT_PASSWORD_ENV),
   };
 }

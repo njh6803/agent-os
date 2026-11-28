@@ -21,12 +21,12 @@ from agent_os.admin.auth import auth_router
 from agent_os.admin.connection_check import AutomaticChecks, LaunchingChecks
 from agent_os.admin.http import Health, admin_router
 from agent_os.channel.http.end_user import END_USER_PREFIX
-from agent_os.channel.http.router import CHANNEL_PREFIX, channel_router
+from agent_os.channel.http.router import channel_router
 from agent_os.core.ports import Clock, ModelSource, PluginSource, ToolSource, TraceStore
 from agent_os.core.run import DEFAULT_RUN_TIMEOUT_SECONDS
 from agent_os.http.account_admin import AccountAdmin
 from agent_os.http.accounts import AccountStore
-from agent_os.http.auth import RequireToken, SharedToken, SiteSigned
+from agent_os.http.auth import RequireToken, SiteSigned
 from agent_os.http.cors import CorsUnderPrefix
 from agent_os.http.database import CheckDatabase, Database
 from agent_os.http.errors import (
@@ -50,7 +50,7 @@ _DESCRIPTION = (
     "관리는 등록된 플러그인과 지나간 실행을 읽고 플러그인을 켜고 끄며 실행을 일으키지 않는다. "
     "채널은 실행을 일으켜 그 이벤트 스트림을 돌려준다. "
     "최종 사용자 경로는 사이트가 서명한 토큰으로 열고 이벤트 대신 걸러진 항목을 받는다. "
-    "세 면은 서로 다른 자격으로 연다."
+    "관리와 채널은 로그인한 운영자 계정으로 열고, 최종 사용자 경로는 서명한 토큰으로 연다."
 )
 
 
@@ -63,8 +63,6 @@ def create_app(
     tools: ToolSource,
     clock: Clock,
     principal: Principal,
-    admin_token: str,
-    channel_token: str,
     sites: Sites,
     run_timeout_seconds: float | None,
     end_user_concurrent_runs: int | None,
@@ -99,14 +97,10 @@ def create_app(
     채널의 기본값이다 — 같은 이유로 여기서 짓지 않는다. 사이트마다의 상한은 사이트 목록이 든다
     (ADR 0023).
 
-    계정 저장소(`accounts`)와 유지 시간(`login_durations`)은 로그인 경로의 몫이다. 공유 토큰을 걷기
-    전까지 운영자 경로는 공유 토큰과 로그인 쿠키를 함께 받는다(`RequireToken`). 로그인 경로의
-    수명(해시 전용 스레드와 서명 키의 줄)은 라우터가 들고 와 앱의 수명에 합쳐진다.
-
-    빈 토큰을 거부하는 이유는 인증 없이 도는 면을 기본값으로 남기지 않기 위해서다(ADR 0011). 같은
-    두 토큰을 거부하는 이유는 같으면 토큰을 가른 것이 무효인데 요청 시점에는 그것을 알아챌 길이
-    없어서다(ADR 0015). 진단과 종료 코드로 그것을 운영자에게 말하는 것은 `serve` 의 몫이고,
-    여기서는 그런 앱이 만들어지지 않는다는 것까지다.
+    계정 저장소(`accounts`)와 유지 시간(`login_durations`)은 로그인 경로의 몫이다. 운영자 경로(최종
+    사용자 접두사와 `/health` 를 뺀 모든 경로)는 로그인 쿠키로만 열린다(`RequireToken`). 공유
+    토큰은 없다(ADR 0062). 로그인 경로의 수명(해시 전용 스레드와 서명 키의 줄)은 라우터가 들고 와
+    앱의 수명에 합쳐진다.
 
     미들웨어의 순서가 의도다. 나중에 건 것이 바깥이므로 안쪽부터 건다. 바깥에서 안쪽으로 추적
     식별자 → CORS 분기 → 핸들러가 놓친 예외의 변환 → 요청 출처 검사 → 인증 → 라우터다. 추적
@@ -125,10 +119,6 @@ def create_app(
     요청에는 손대지 않고 수명 범위만 본다. 앱의 시작 단계(MCP 서버 같은 시작 일)보다 먼저 확인해야
     하므로 앱 안쪽의 수명 함수에 두지 않는다. 확인이 막으면 앱의 시작 단계는 돌지 않는다(ADR 0066).
     """
-    if not admin_token or not channel_token:
-        raise ValueError("관리 API 와 채널은 토큰 없이 설 수 없다")
-    if admin_token == channel_token:
-        raise ValueError("관리 토큰과 채널 토큰이 같으면 설 수 없다")
     app = FastAPI(
         title=_TITLE,
         description=_DESCRIPTION,
@@ -178,12 +168,7 @@ def create_app(
     install_error_handlers(app, end_user=end_user)
     app.add_middleware(
         RequireToken,
-        default=SharedToken(admin_token),
-        prefixes={
-            CHANNEL_PREFIX: SharedToken(channel_token),
-            END_USER_PREFIX: SiteSigned(sites=sites, clock=clock),
-        },
-        # 공유 토큰과 로그인 쿠키를 함께 받는 기간이다. 공유 토큰을 걷는 티켓이 닫는다
+        prefixes={END_USER_PREFIX: SiteSigned(sites=sites, clock=clock)},
         login=login,
     )
     app.add_middleware(CheckOrigin, exempt_prefix=END_USER_PREFIX)

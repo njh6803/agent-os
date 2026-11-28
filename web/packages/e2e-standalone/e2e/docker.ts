@@ -1,5 +1,5 @@
 // 시험이 docker 와 compose 를 부르는 길. 명령의 출력은 받는 대로 모으고, 제한 시간을 넘기면 죽인다. 실패하면 명령과 출력을
-// 오류에 싣는다. 인자에는 비밀 값을 싣지 않는다(토큰은 .env 로만 가고 시험이 HTTP 머리로 쓴다).
+// 오류에 싣는다. 인자에는 비밀 값을 싣지 않는다(비밀번호는 표준 입력으로만 간다).
 
 import { spawn } from "node:child_process";
 import { join } from "node:path";
@@ -16,6 +16,8 @@ export interface RunOptions {
   readonly cwd?: string;
   readonly env?: NodeJS.ProcessEnv;
   readonly timeoutMs: number;
+  /** 주면 표준 입력으로 넣고 닫는다. 없으면 표준 입력은 비어 있다. */
+  readonly input?: string;
 }
 
 // 제한 시간에 죽이고 나서 `close` 를 더 기다리는 상한.
@@ -30,9 +32,12 @@ export function run(
     const child = spawn(command, args, {
       cwd: options.cwd,
       env: options.env ?? process.env,
-      stdio: ["ignore", "pipe", "pipe"],
+      stdio: ["pipe", "pipe", "pipe"],
       windowsHide: true,
     });
+    // 표준 입력은 바로 닫는다. 입력이 없으면 곧바로 끝(EOF)이다. 자식이 읽지 않고 끝나면 쓰기 오류가 나므로 삼킨다.
+    child.stdin.on("error", () => undefined);
+    child.stdin.end(options.input);
     let stdout = "";
     let stderr = "";
     let timedOut = false;
@@ -121,10 +126,16 @@ export class Compose {
   }
 
   /** 서비스 안에서 명령을 치고 표준 출력을 준다. 실패하면 던진다. */
-  inService(service: string, command: readonly string[], timeoutMs = 60_000): Promise<string> {
+  inService(
+    service: string,
+    command: readonly string[],
+    timeoutMs = 60_000,
+    input?: string,
+  ): Promise<string> {
     return succeed("docker", this.args([], ["exec", "-T", service, ...command]), {
       cwd: this.dir,
       timeoutMs,
+      ...(input === undefined ? {} : { input }),
     });
   }
 

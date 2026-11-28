@@ -47,9 +47,8 @@ NEW = "Brand-new-pass-5!"
 LINKED = "Linked-pass-1!"
 CANARY = "Canary-pass-77!"
 WEAK = "weakpassword"
-ADMIN_TOKEN = "adm1n-t0ken-that-only-tests-know"
-CHANNEL_TOKEN = "channel-t0ken-that-only-tests-know"
-SHARED = {"Authorization": f"Bearer {ADMIN_TOKEN}"}
+# 걷힌 공유 토큰을 흉내 낸 머리. 운영자 경로는 `Authorization` 머리를 읽지 않으므로 401이다.
+OLD_SHARED = {"Authorization": "Bearer adm1n-t0ken-that-only-tests-know"}
 DEAD_LINK = "이 링크는 더 쓸 수 없다"
 LOCKED = "계정이 잠겼다. 잠시 뒤에 다시 한다"
 WRONG_CURRENT = "지금 비밀번호가 맞지 않는다"
@@ -116,8 +115,6 @@ def _app(accounts: AccountStore, clock: Clock, stderr: io.StringIO) -> FastAPI:
         tools=IdleTools(),
         clock=clock,
         principal=Principal("alice"),
-        admin_token=ADMIN_TOKEN,
-        channel_token=CHANNEL_TOKEN,
         sites=Sites(),
         run_timeout_seconds=None,
         end_user_concurrent_runs=None,
@@ -760,7 +757,16 @@ async def test_관리자_단계는_계정을_다루는_경로_다섯_모두에�
 
 
 @pytest.mark.parametrize(("method", "path", "body"), _FIVE)
-async def test_공유_토큰은_계정을_다루는_권한이_없어_다섯_모두에서_403이다(
+async def test_자격이_없으면_계정을_다루는_경로_다섯_모두에서_401이다(
+    method: str, path: str, body: dict[str, object] | None, client: AsyncClient
+) -> None:
+    response = await client.request(method, path, json=body)
+
+    assert response.status_code == 401
+
+
+@pytest.mark.parametrize(("method", "path", "body"), _FIVE)
+async def test_옛_공유_토큰은_계정을_다루는_경로_다섯_모두에서_401이다(
     method: str,
     path: str,
     body: dict[str, object] | None,
@@ -769,18 +775,10 @@ async def test_공유_토큰은_계정을_다루는_권한이_없어_다섯_모�
 ) -> None:
     await _seed(accounts, "kim.min")
 
-    response = await client.request(method, path, json=body, headers=SHARED)
-
-    assert response.status_code == 403
-
-
-@pytest.mark.parametrize(("method", "path", "body"), _FIVE)
-async def test_자격이_없으면_계정을_다루는_경로_다섯_모두에서_401이다(
-    method: str, path: str, body: dict[str, object] | None, client: AsyncClient
-) -> None:
-    response = await client.request(method, path, json=body)
+    response = await client.request(method, path, json=body, headers=OLD_SHARED)
 
     assert response.status_code == 401
+    assert "www-authenticate" not in response.headers
 
 
 async def test_권한이_없으면_칸이_틀린_JSON_본문도_403이고_JSON이_아닌_본문은_422이다(
@@ -802,15 +800,17 @@ async def test_권한이_없으면_칸이_틀린_JSON_본문도_403이고_JSON�
     assert not_json.status_code == 422
 
 
-async def test_공유_토큰은_내_비밀번호_바꾸기에서_401이다(client: AsyncClient) -> None:
+async def test_옛_공유_토큰은_내_비밀번호_바꾸기에서_401이다(client: AsyncClient) -> None:
     response = await client.post(
-        "/auth/password", json={"current_password": PASSWORD, "new_password": NEW}, headers=SHARED
+        "/auth/password",
+        json={"current_password": PASSWORD, "new_password": NEW},
+        headers=OLD_SHARED,
     )
 
     assert response.status_code == 401
-    # 미들웨어가 막은 401 만 챌린지를 싣는다. 라우트가 낸 401 은 싣지 않는다
+    # 운영자 경로의 401 은 챌린지를 싣지 않는다(`Authorization` 머리를 읽지 않는다)
     challenge = response.headers.get("www-authenticate")
-    assert challenge == "Bearer", f"챌린지 {challenge}"
+    assert challenge is None, f"챌린지 {challenge}"
 
 
 async def test_요청_출처가_다르면_새_경로_둘도_403이다(
