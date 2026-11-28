@@ -69,3 +69,13 @@
 
 Runpod의 `agent-os-llm-local-shared` 파드는 이 세션이 만들지 않았고 건드리지 않았다. ADR 0011·0015에 이력 항목을 더하는 일은 사용자 승인이 필요해 이 PR에 넣지 않았다.
 - open-session을 다시 부른다 2026-11-28T03:36:21Z (첫 시도는 URL 8376자로 상한 8000을 넘어 지시문을 줄였다)
+
+## 이어받은 세션: origin/dev 합치기
+
+새 세션(Sonnet 5.5 / high)이 워크트리 `13-remove-shared-tokens`에서 이었다. 사용자 프롬프트는 같은 `next-session` 지시문 하나뿐이고 정정은 없었다.
+
+- origin/dev(`077aa8f45`, 티켓 10·11·12와 위젯 값 파일이 든다)를 합쳤다. 글자 충돌은 셋이었다. `README.md`는 dev의 대화 화면 문장을 쓰고 끝을 "공유 토큰은 없다. …로그인 쿠키로만 열린다."로 이었다. `web/apps/admin/e2e/decision.e2e.ts`는 dev의 머리 주석에서 "채널 토큰"을 "계정의 로그인 쿠키"로 고쳤다. `web/packages/e2e-stack/src/serve.ts`는 dev가 더한 `siteFileToml`의 `requestChars` 인자를 살리고 `unusedToken`과 `randomBytes` 가져오기는 걷었다.
+- 글자 충돌 없이 합쳐졌지만 옛 방식이 남은 곳을 `git grep`으로 옛 이름(`channelToken`, `AGENT_OS_CHANNEL_TOKEN` 등)을 찾아 손으로 읽었다. dev가 새로 더한 `web/apps/admin/e2e/channel.ts`의 `startFinishedRun`과 `continueRun`이 `channelToken` 머리를 보냈다. 둘 다 `loginCookie`로 바꿨고 `chat.e2e.ts`의 머리 주석도 고쳤다.
+- 합친 커밋의 첫 pre-commit이 `web-verify`에서 빨갰다. 이 워크트리에 남은 `web/apps/admin/.next/types`가 dev가 걷은 `app/runs` 화면을 가리켜 `tsc`가 못 찾았다. `.gitignore`가 무시하는 빌드 산출물이라(`git check-ignore -v`로 손으로 봤다) 지우고 같은 커밋을 다시 쳐 pre-commit이 통과했다. 이 세션이 그 `tsc`를 따로 다시 치지는 않았고 pre-commit의 `web-verify` 통과가 근거다. 옛 `.next` 탓이라는 판단은 오류 메시지가 가리킨 경로(`app/runs`)와 dev가 그 화면을 걷은 사실을 맞춘 것이다.
+- `git diff --stat b1a3f1445 HEAD -- .claude/rules/http.md src/agent_os/http`가 비어(손으로 쳤다) 합친 변경이 `.claude/rules/http.md`와 `src/agent_os/http`를 바꾸지 않았다. 그래서 카나리아 명세 셋은 다시 돌리지 않았다.
+- `uv run python tools/sibling_overlap.py`의 출력: 번호 겹침 없음. 열린 PR #651과 #661이 `README.md` 등을 같이 고친다(나중에 병합하는 쪽이 푼다).
