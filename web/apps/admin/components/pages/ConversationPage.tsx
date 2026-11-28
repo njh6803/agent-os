@@ -72,7 +72,12 @@ function ChatHost({ initialRun }: { readonly initialRun: string | null }) {
   const pathname = usePathname();
   const own = useRef<string | null>(null);
   const seen = useRef(pathname);
-  const [start, setStart] = useState({ generation: 0, run: initialRun });
+  // 라우터가 저장해 둔 화면을 복원하면 속성(`initialRun`)은 처음 그릴 때의 것이라 지금 주소와 어긋날 수 있다. 그래서 주소에서
+  // 읽은 실행을 먼저 따르고, 읽을 수 없을 때(라우터 밖의 시험은 주소가 없다)만 속성을 쓴다.
+  const [start, setStart] = useState({
+    generation: 0,
+    run: runOfPath(pathname) ?? initialRun,
+  });
   useEffect(() => {
     if (pathname === seen.current) {
       return;
@@ -229,7 +234,7 @@ function ChatSession({
         }}
       />
       <RunNotices failure={stream.failure} cut={stream.cut} />
-      {data === undefined ? null : (
+      {data === undefined || read.error !== undefined ? null : (
         <Composer
           state={composerOf({
             fresh: endRun === null,

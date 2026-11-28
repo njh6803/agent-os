@@ -217,3 +217,52 @@ new = '''
     };
   }, []);
 '''
+
+[[mutation]]
+name = "보내기의 422 도 승인 묻기가 받는다고 보고 대화 아래의 알림을 감춘다"
+runner = "vitest"
+tests = ["apps/admin/components/pages/ConversationPage.write.test.tsx", "-t", "보내기가 422 를 받아도"]
+expect = "red"
+expect_output = ["Unable to find role=\"alert\""]
+
+[[mutation.edit]]
+file = "web/apps/admin/components/organisms/RunNotices.tsx"
+old = '''
+  const inAsk = failure !== null && failure.kind === "decide" && failure.error.status === 422;
+'''
+new = '''
+  const inAsk = failure !== null && failure.error.status === 422;
+'''
+
+[[mutation]]
+name = "대화 화면이 마운트할 때 주소를 읽지 않고 속성의 실행만 따른다"
+runner = "vitest"
+tests = ["apps/admin/components/pages/ConversationPage.test.tsx", "-t", "주소가 이미 어느 대화를 가리키면"]
+expect = "red"
+expect_output = ["Unable to find an element with the text: r1의 출력"]
+
+[[mutation.edit]]
+file = "web/apps/admin/components/pages/ConversationPage.tsx"
+old = '''
+    run: runOfPath(pathname) ?? initialRun,
+'''
+new = '''
+    run: initialRun,
+'''
+
+[[mutation]]
+name = "대화를 읽다 실패해 대화가 지워진 동안에도 입력 칸이 서서 지운 대화에 이어 보낸다"
+runner = "vitest"
+tests = ["apps/admin/components/pages/ConversationPage.test.tsx", "-t", "다시 읽다 실패하면"]
+expect = "red"
+expect_output = ["expected <textarea"]
+
+[[mutation.edit]]
+file = "web/apps/admin/components/pages/ConversationPage.tsx"
+old = '''
+      {data === undefined || read.error !== undefined ? null : (
+'''
+new = '''
+      {data === undefined ? null : (
+'''
+

@@ -103,6 +103,20 @@ open-session을 부른다 2026-11-27T22:07:35Z
 - 이 티켓이 만든 것이 아닌 어긋남 하나: `continuation_mutations.toml` 전체의 기준선이 pytest `-k 덮는_끝까지만_거슬러_가고`가 시험을 하나도 고르지 못해(`490 deselected`) 오류로 끝난다(admin-login 티켓 07이 시험 이름을 바꾼 뒤부터로 보이고, 이 일지는 `git log`로만 확인했다). 그래서 이 표는 전체를 돌리지 못하고 번호를 골라 돌려야 한다. 고치지 않았다.
 - `mutate.py --check`를 바뀐 표 열둘에 쳐 종료 코드 0이었고, 남은 옛 화면을 겨눈 변이를 찾는 스캔(스크래치 스크립트)도 0건이었다.
 
+## PR 직전 리뷰(`coderabbit-review`)와 반영
+
+보고를 받은 턴에 지적마다 근거를 코드에서 열어 판정했다. 고친 것은 시험을 먼저 빨갛게 보인 뒤 고쳤다.
+
+- **고쳤다: 보내기의 422가 어디에도 보이지 않았다.** `RunNotices`가 결정이든 보내기든 422를 "승인 묻기의 사유 칸이 받는다"며 감췄다. 그런데 승인 묻기는 결정의 422만 받는다. 새 시험(`ConversationPage.write.test.tsx`, "보내기가 422 를 받아도 승인 묻기가 없으니…")이 `role="alert"`를 찾지 못해 빨갰고, `kind === "decide"`일 때만 감추게 고쳐 초록이 됐다.
+- **고쳤다: 주소와 화면이 어긋난 채 마운트되면 새 대화가 섰다.** 라우터가 저장한 화면을 복원하면 속성 `initialRun`은 처음 그릴 때의 값이라 지금 주소와 다를 수 있다. `ChatHost`가 `runOfPath(pathname) ?? initialRun`으로 주소에서 읽은 실행을 먼저 따르고, 읽을 수 없을 때(주소가 null인 라우터 밖의 jsdom)만 속성을 쓴다. 처음 쓴 `pathname === null ?` 꼴은 `usePathname()`의 타입이 `string`이라 `no-unnecessary-condition`이 막았다(커밋의 pre-commit `web-verify`). 시험은 `next/navigation`의 `usePathname`을 시험이 정하게 막아 `/chat/r1` 주소에 `runId={null}`로 그리는 사례다(고치기 전: `r1의 출력`을 찾지 못함, 새 대화 화면이 `/api/plugins`를 읽어 처리되지 않은 요청도 잡혔다).
+- **고쳤다: 읽기가 실패해 대화가 지워진 동안에도 입력 칸이 섰다.** 지운 대화를 기준(`base`)으로 이어 보내면 운영자가 보지 못한 실행에 이어 붙는다. `read.error`가 있으면 입력 칸을 세우지 않는다. 기존 시험 "다시 읽다 실패하면 보인 대화를 지우고 실패만 보인다"에 입력 칸이 없다는 단언을 더했다(고치기 전: `expected <textarea … to be null`).
+- **고쳤다: 승인 대기 도구 이름이 길면 넘쳤다.** `Composer`의 줄에 `min-w-0`과 `wrap-anywhere`를 더했다. `ApprovalAsk`가 이미 같은 클래스로 도구 이름을 감싼다. 화면의 보통 이름은 모양이 같아 사진은 다시 찍지 않았다(긴 이름을 그린 스토리는 없다).
+- **남겼다: 보내는 중의 `disabled`.** 보내기 버튼이 막히는 이유는 "이 요청을 보내는 중"만이 아니라 도는 실행, 승인 대기, 끝맺지 못한 실행으로 여럿이다. `web-design.md`의 "불러오는 중은 disabled가 아니다"는 버튼 자신이 불러오는 중일 때의 규칙이라, 이 막힘은 쓸 수 없음(`disabled`)에 든다고 판단했다.
+- **남겼다(Minor, 이 세션에서 고치지 않았다):** `onAddress`가 늦게 오는 경우의 가드, 응답 스트림이 `run_started` 전에 끊기는 경우, 시험의 약한 기다림(`write.test`의 고정 기다림), jsdom에서 아무것도 가르지 못하는 `Reflect.has` 단언, `last_covered_run` 링크 단언. 기능 실패를 재현하지 못했거나 시험의 모양 문제라 티켓 13·14의 수용 기준을 막지 않는다. 다음에 `ConversationPage.write.test.tsx`를 고치는 티켓이 함께 본다.
+- 변이 표 `chat_write_mutations.toml`에 13~15번을 더했다: `RunNotices`의 422 감추기, 마운트 주소, 입력 칸. 셋 모두 "기대 빨강, 결과 빨강"이고 표지(`Unable to find role="alert"`, `Unable to find an element with the text: r1의 출력`, `expected <textarea`)가 맞았다(`변이 3 모두 기대대로`).
+- 다시 돌린 것: `ConversationPage.test.tsx`·`ConversationPage.write.test.tsx`와 organisms 시험 126개가 모두 초록이다. 관리 화면 e2e `pnpm -C web/apps/admin exec playwright test`는 `19 passed (1.8m)`다. `mutate.py --check`로 `chat_write_mutations.toml`을 쳐 종료 코드 0이다. 나머지 게이트는 커밋의 pre-commit 결과로 갈음한다.
+- 새로 쓴 사실 문장(다음 층의 리뷰가 겨냥할 것): "승인 묻기는 결정의 422만 받는다", "주소가 있으면 주소를 속성보다 먼저 따른다", "읽기 오류가 있으면 입력 칸이 서지 않는다".
+
 ## 다음
 
 - 티켓 13과 14가 남았다. 14가 `**끝:**`를 적고 `docs/release-notes/features/admin-login.md`를 싣는 마지막 병합이 될 수 있다. 그 티켓이 11·12의 병합을 확인하고 기능을 닫는다.

@@ -29,6 +29,17 @@ import { renderPage } from "../../testing/render";
 import { signedIn } from "../../testing/session";
 import { ConversationPage } from "./ConversationPage";
 
+// 라우터가 없는 jsdom 에서 `usePathname` 은 null 이다. 라우터가 저장해 둔 화면을 복원한 장면(주소는 대화인데 화면은 새 대화의
+// 속성으로 선다)을 위해 시험이 주소를 정할 수 있게 한다. 나머지 시험은 null 이라 주소를 읽지 않는 것과 같다.
+const address = vi.hoisted(() => {
+  const state: { pathname: string | null } = { pathname: null };
+  return state;
+});
+vi.mock("next/navigation", async (importOriginal) => {
+  const original = await importOriginal<typeof import("next/navigation")>();
+  return { ...original, usePathname: () => address.pathname };
+});
+
 /** 실행 백 개를 차례로 읽는 시험이 기다리는 시간(밀리초). 시험 하나의 제한도 이 값에 맞춘다. */
 const LONG_CHAIN_MS = 20_000;
 
@@ -103,6 +114,7 @@ function setVisibility(state: "visible" | "hidden"): void {
 }
 
 afterEach(() => {
+  address.pathname = null;
   vi.useRealTimers();
   history.replaceState(null, "", "/");
   Reflect.deleteProperty(document, "visibilityState");
@@ -137,6 +149,17 @@ describe("대화를 다시 그리는 읽기", () => {
     expect(await screen.findByText("r1의 출력")).toBeTruthy();
     expect(screen.getByText("r2의 출력")).toBeTruthy();
     expect(screen.queryByRole("progressbar", { name: "대화를 불러오는 중" })).toBeNull();
+  });
+
+  test("주소가 이미 어느 대화를 가리키면 화면이 새 대화로 서도 그 주소의 대화를 읽는다", async () => {
+    const served = serveTraces({ r1: TWO.first });
+    address.pathname = "/chat/r1";
+    signedIn();
+
+    renderPage(<ConversationPage runId={null} />);
+
+    expect(await screen.findByText("r1의 출력")).toBeTruthy();
+    expect(served.reads).toEqual(["r1"]);
   });
 
   test("앞 실행이 없는 대화는 끝 실행 하나만 읽는다", async () => {
@@ -310,6 +333,8 @@ describe("대화를 다시 그리는 읽기", () => {
 
     expect(await screen.findByText("다시 읽지 못했다")).toBeTruthy();
     expect(screen.queryByText("r1의 출력")).toBeNull();
+    // 지운 대화를 기준으로 이어 보내면 운영자가 보지 못한 실행에 이어 붙는다. 입력 칸도 함께 서지 않는다.
+    expect(screen.queryByRole("textbox", { name: "요청" })).toBeNull();
   });
 });
 

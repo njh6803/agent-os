@@ -369,6 +369,23 @@ describe("새 대화", () => {
     expect(location.pathname).not.toMatch(/^\/chat\/r/);
   });
 
+  test("보내기가 422 를 받아도 승인 묻기가 없으니 대화 아래의 알림에 메시지와 추적 식별자를 보인다", async () => {
+    servePlugins(AGENTS);
+    servePost("/runs", () =>
+      HttpResponse.json(envelope("invalid_request", "요청이 너무 길다", "req-4222"), {
+        status: 422,
+      }),
+    );
+    const user = await openNew();
+
+    await sendText(user, "안녕");
+
+    const alert = await screen.findByRole("alert");
+    expect(within(alert).getByText("요청을 보내지 못했다")).toBeTruthy();
+    expect(within(alert).getByText("요청이 너무 길다")).toBeTruthy();
+    expect(within(alert).getByText("req-4222")).toBeTruthy();
+  });
+
   test("서버에 닿지 못하면 서버에 닿지 못했다고 알린다", async () => {
     servePlugins(AGENTS);
     network.use(http.post(api("/runs"), () => HttpResponse.error()));

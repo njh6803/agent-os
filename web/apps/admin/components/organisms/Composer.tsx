@@ -82,12 +82,14 @@ function Field({
       ) : null}
       {state.kind === "blocked" && state.waitingTool !== null ? (
         <div className="flex flex-wrap items-center justify-between gap-2 rounded-m border border-border bg-bg-raised px-3 py-2 text-body">
-          <span className="flex flex-wrap items-center gap-2">
+          <span className="flex min-w-0 flex-wrap items-center gap-2">
             <span className="text-warning">
               <Icon name="circle-pause" size="16" />
             </span>
             승인을 기다린다:
-            <span className="font-mono text-mono font-medium">{state.waitingTool}</span>
+            <span className="min-w-0 font-mono text-mono font-medium wrap-anywhere">
+              {state.waitingTool}
+            </span>
           </span>
           <TextLink href={`#${APPROVAL_ANCHOR}`}>승인 묻기로 가기</TextLink>
         </div>
