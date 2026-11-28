@@ -169,6 +169,8 @@ CLI는 돌았다(`coderabbit` 0.7.5, `Plan: Free`, `Seat: not assigned`인데 `r
 - **다음 티켓은 `.scratch/widget-runtime-values`의 03이다.** 지시문은 병합 뒤 next-session이 짓는다.
 - **후속 후보(보류, Minor): 허용 출처 규칙의 호스트에서 `;`, `,`, `'`, `"`를 막는다.** `https://a.example;sandbox` 같은 값이 `frame-ancestors` 응답 머리에 그대로 들어가 값 없는 지시어를 더할 수 있다. 공백이 막혀 있어 값이 있는 지시어는 못 넣고 정책을 푸는 길은 못 찾았다(막는 쪽으로만 깨진다). 바꿀 곳은 `web/packages/site-file/src/site-file.ts`의 `FORBIDDEN_DOMAIN_SIGNS`, `src/agent_os/main.py`의 `_FORBIDDEN_DOMAIN`, 공용 사례 `tests/fixtures/site_file/origins.json`, 변이 표 `.scratch/web-widget/probes/site_file_mutations.toml`, 두 언어의 시험, 진단 문구(`호스트는 … 글자가 없다`)다. 브라우저가 거절하지 않는 글자까지 막는 계약 변경이라 이 티켓의 밖이고, 티켓으로 쓸지는 사용자가 정한다.
 - **후속 후보(보류, Minor, claude-review 첫 회차): 값 파일을 쓰는 일과 사본을 쓰는 일의 묶음을 타입으로 드러낸다.** `web/apps/widget/tools/start.ts`의 `launch`가 `manifest === "fill"`을 `runtime` 블록 안에서만 보아, 타입이 `fill`이면서 `runtime: false`인 조합을 막지 못한다. `nextCommand`가 `start`에서만 두 칸을 함께 내므로 지금 동작은 맞다. 다음 티켓(03)이 `start.ts`를 다시 만지면 그때 함께 본다. Nit(`LaunchSteps`의 다섯 단계를 `command` 객체에서 만들기)도 같은 자리의 일이다.
+- **후속 후보(보류, Minor, 둘째 봇 회차): 허용 출처 머리 값을 만드는 규칙의 중복.** `web/apps/widget/next.config.ts`의 `ancestorsOf`와 `web/apps/widget/tools/manifest.ts`의 `fillAncestors`가 같은 삼항(`allowedOrigins.length === 0 ? "'none'" : allowedOrigins.join(" ")`)을 따로 쓰고, 빌드가 굳히는 `PLACEHOLDER`(`frame-ancestors 'none'`)는 설정 파일의 문자열과 글자로만 맞물린다. 한쪽 표기만 바뀌면 `fillAncestors`가 바꿀 자리를 못 찾아 서비스 시작이 종료 1로 끝난다. `manifest.ts`에 값 만드는 함수를 두고 설정 파일이 그것을 가져다 쓰는 길이 있으나, `next.config.ts`가 `tools/`를 import해도 되는지 먼저 봐야 한다. 티켓 03이 `start.ts`와 같은 자리를 다시 만지면 함께 본다.
+- **후속 후보(보류, Minor, CodeRabbit 첫 회차): 위젯 e2e의 `startWidget`이 준비 대기에 실패하면 위젯 프로세스를 바로 멈추지 않는다.** `web/apps/widget/e2e/stack.ts`의 `until`이 실패해도 이미 `Stack`에 등록된 프로세스는 시험 전체의 `teardown`까지 살아 있어, 다시 띄우는 사례가 같은 포트를 잡을 때만 충돌한다. 실패 경로의 일이라 드물고 `teardown`이 끝에는 멈춘다. 고치려면 `try`/`catch`로 `stop(widget.child)`를 부르고 오류를 다시 던지며, 위젯 e2e를 다시 돌려 봐야 한다.
 - **못 잰 것.** 두 시작이 서로 다른 사이트 파일로 같은 자리에 동시에 쓰면 뒤에 쓴 쪽이 이기는 경합은 이론상 남는다(Minor, 실제 배포 길이 아니다). 위젯 e2e·사진 비교·단독 배포 e2e·실제 모델 e2e는 이 세션에서 다시 돌리지 않았고 CI의 초록(`gh pr view`로 본 `e2e`·`e2e-widget`·`e2e-portal`·`e2e-standalone`·`visual`의 SUCCESS)이 근거다. 실제 모델 e2e(`-m llm_widget`, `-m llm_portal`)는 이 세션이 돌리지 않았고, 앞 세션이 쳤는지는 위 앞 절들의 기록을 따른다.
 
 ## 인계(커밋 뒤, 이어받은 세 번째 세션의 인계)
@@ -194,3 +196,11 @@ CLI는 돌았다(`coderabbit` 0.7.5, `Plan: Free`, `Seat: not assigned`인데 `r
 - `git fetch origin` 뒤 `origin/dev`가 `077aa8f45`(PR #662)로 앞서 있었다. `git merge origin/dev -m "chore: …"`가 충돌 없이 끝났다(`bbc078f8b`, 이 세션이 백그라운드로 돌렸고 종료 코드 0).
 - 범위 대조: `git diff --name-only 172cc9ba8 HEAD`에서 `web/apps/admin/visual/snapshots/` 밖의 `src/`·`tools/llm*`·`plugins/`·`tests/llm*` 경로가 없다(관리 화면 코드와 문서뿐이다. 이 세션이 쳤다). 그래서 앞 세션의 로컬 모델 시험 기록은 그대로 유효하다.
 - `sibling_overlap`은 번호 겹침 없음(형제의 가장 높은 헌법 판 3.1.9, 이 브랜치 3.1.10)이다.
+
+### 둘째 봇 회차(머리 `07672a068`, 이 세션)
+
+푸시 뒤 `@coderabbitai review`를 남기고 `tools/wait_ci.py 661`이 끝났다. 검사 열두 줄은 모두 SUCCESS(`llm`만 SKIPPED)이고 CodeRabbit은 `Finished`다(이 세션이 읽은 출력이다). 회차는 봇마다 센다. claude-review는 이 PR에 둘째 회차이고 CodeRabbit은 앞서 한도에 걸려 리뷰가 없었으므로 이번이 첫 회차다.
+
+- claude-review(둘째 회차, Critical·Major만 고친다): Minor 둘(`ancestorsOf`와 `fillAncestors`의 중복과 `PLACEHOLDER`의 글자 결합, `NextCommand`의 불리언과 열거 혼재)과 Nit 하나(`start.ts`와 `manifest.ts` 머리 주석의 중복)를 모두 보류했다. 앞의 것은 위 "다음"의 후속 후보로 옮겼고, 둘째는 이미 "다음"에 있다(티켓 03이 `start.ts`를 만질 때 함께 본다).
+- CodeRabbit(첫 회차, 지적마다 판단): 인라인 둘이 모두 Minor다. `CONTEXT.md` 232행에서 사이트 파일을 고친 뒤 위젯을 다시 띄우는 절차와 재빌드 불필요를 용어집이 담는다는 지적은 맞아서 고쳤다(`CONTEXT.md`는 용어집이라 구현과 운영 절차를 두지 않는다. 그 절차는 `web/apps/widget/EMBED.md` 134행에 이미 있다. 이 세션이 두 줄을 읽었다). `stack.ts`의 실패 경로 프로세스 정리는 보류했고 위 "다음"에 옮겼다.
+- 고친 것은 문서 한 줄뿐이라 이 푸시는 코드를 바꾸지 않는다. 범위 경로(`src/` 등)에 변경이 없어 로컬 모델 시험 기록은 그대로 유효하다.
