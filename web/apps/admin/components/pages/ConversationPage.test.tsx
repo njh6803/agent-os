@@ -1,6 +1,6 @@
 // 대화 화면(admin-login 티켓 10). 끝 실행의 트레이스를 읽고 앞 실행을 거슬러 읽어 첫 실행부터 한 번에 그린다. 끝 실행이 결말
 // 없이 도는 동안은 그 실행 하나만 3초마다 다시 읽고, 결말이 오거나 멈출 때가 지나면 멈춘다. 실행마다의 "자세히"가 오른쪽에
-// 실행 패널을 연다. 이 화면은 읽기만 한다.
+// 실행 패널을 연다. 보내기와 이어 가기와 승인과 옛 주소의 이동은 `ConversationPage.write.test.tsx` 가 본다.
 //
 // 주 이음매다. 페이지를 jsdom 에 그리고 HTTP 만 MSW 가 받는다. 시간은 가짜 시계가 흘린다. 시간대는 `pages` 프로젝트가
 // America/New_York 으로 고정한다(web/vitest.config.ts). 로그인은 쿠키라 테스트에서 보이지 않고, 화면은 `GET /auth/me` 에
@@ -28,6 +28,17 @@ import { api, envelope, network, type Trace } from "../../testing/network";
 import { renderPage } from "../../testing/render";
 import { signedIn } from "../../testing/session";
 import { ConversationPage } from "./ConversationPage";
+
+// 라우터가 없는 jsdom 에서 `usePathname` 은 null 이다. 라우터가 저장해 둔 화면을 복원한 장면(주소는 대화인데 화면은 새 대화의
+// 속성으로 선다)을 위해 시험이 주소를 정할 수 있게 한다. 나머지 시험은 null 이라 주소를 읽지 않는 것과 같다.
+const address = vi.hoisted(() => {
+  const state: { pathname: string | null } = { pathname: null };
+  return state;
+});
+vi.mock("next/navigation", async (importOriginal) => {
+  const original = await importOriginal<typeof import("next/navigation")>();
+  return { ...original, usePathname: () => address.pathname };
+});
 
 /** 실행 백 개를 차례로 읽는 시험이 기다리는 시간(밀리초). 시험 하나의 제한도 이 값에 맞춘다. */
 const LONG_CHAIN_MS = 20_000;
@@ -103,6 +114,7 @@ function setVisibility(state: "visible" | "hidden"): void {
 }
 
 afterEach(() => {
+  address.pathname = null;
   vi.useRealTimers();
   history.replaceState(null, "", "/");
   Reflect.deleteProperty(document, "visibilityState");
@@ -137,6 +149,17 @@ describe("대화를 다시 그리는 읽기", () => {
     expect(await screen.findByText("r1의 출력")).toBeTruthy();
     expect(screen.getByText("r2의 출력")).toBeTruthy();
     expect(screen.queryByRole("progressbar", { name: "대화를 불러오는 중" })).toBeNull();
+  });
+
+  test("주소가 이미 어느 대화를 가리키면 화면이 새 대화로 서도 그 주소의 대화를 읽는다", async () => {
+    const served = serveTraces({ r1: TWO.first });
+    address.pathname = "/chat/r1";
+    signedIn();
+
+    renderPage(<ConversationPage runId={null} />);
+
+    expect(await screen.findByText("r1의 출력")).toBeTruthy();
+    expect(served.reads).toEqual(["r1"]);
   });
 
   test("앞 실행이 없는 대화는 끝 실행 하나만 읽는다", async () => {
@@ -310,6 +333,8 @@ describe("대화를 다시 그리는 읽기", () => {
 
     expect(await screen.findByText("다시 읽지 못했다")).toBeTruthy();
     expect(screen.queryByText("r1의 출력")).toBeNull();
+    // 지운 대화를 기준으로 이어 보내면 운영자가 보지 못한 실행에 이어 붙는다. 입력 칸도 함께 서지 않는다.
+    expect(screen.queryByRole("textbox", { name: "요청" })).toBeNull();
   });
 });
 
@@ -461,13 +486,19 @@ describe("대화 화면", () => {
     expect(screen.queryByText(/hong가 .*에 승인했다/)).toBeNull();
   });
 
-  test("결정을 기다리는 실행은 승인을 기다린다고 말하고 버튼은 없다", async () => {
+  test("결정을 기다리는 실행은 그 도구 호출 자리에 승인 묻기가 서고 거부가 승인보다 먼저다", async () => {
     serveTraces({ r1: trace("r1", [started("r1"), paused("r1", "mail.send")]) });
+    network.use(http.get(api("/plugins"), () => HttpResponse.json([])));
 
     await showChat("r1");
 
-    expect(await screen.findByText(/승인을 기다리는 중/)).toBeTruthy();
-    expect(screen.queryByRole("button", { name: /승인|거부/ })).toBeNull();
+    const ask = await screen.findByRole("region", { name: "승인 묻기" });
+    expect(within(ask).getByText("mail.send")).toBeTruthy();
+    expect(
+      within(ask)
+        .getAllByRole("button")
+        .map((button) => button.textContent),
+    ).toEqual(["거부", "승인"]);
   });
 
   test("시각은 브라우저의 시간대로 보인다", async () => {
@@ -600,8 +631,9 @@ describe("도는 실행 이어 보기", () => {
     const served = serveTraces({
       r1: trace("r1", [started("r1", null, now), paused("r1", "mail.send", now)]),
     });
+    network.use(http.get(api("/plugins"), () => HttpResponse.json([])));
     await showChat("r1");
-    await screen.findByText(/승인을 기다리는 중/);
+    await screen.findByRole("region", { name: "승인 묻기" });
 
     await vi.advanceTimersByTimeAsync(30_000);
 

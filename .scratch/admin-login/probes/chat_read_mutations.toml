@@ -135,10 +135,10 @@ expect_output = ["expected 2 to be 1"]
 [[mutation.edit]]
 file = "web/apps/admin/hooks/queries/conversation/index.ts"
 old = '''
-  return useSWR(traceKeys.one(runId), () => readTrace(runId), {
+    runId === null ? null : traceKeys.one(runId),
 '''
 new = '''
-  return useSWR(["end-run", runId], () => readTrace(runId), {
+    runId === null ? null : ["end-run", runId],
 '''
 
 [[mutation]]

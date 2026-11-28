@@ -1,9 +1,21 @@
 import { IconButton } from "@agent-os/ui";
-import { useEffect, useRef } from "react";
+import { type ReactNode, useEffect, useRef } from "react";
 import type { Trace } from "../../api/traces";
 import { EventItem } from "./EventItem";
 import { ReadSection, type ReadState } from "./ReadSection";
-import { starter } from "./RunDetail";
+
+/** 머리 설명의 에이전트·주체 줄. 첫 이벤트가 시작 이벤트가 아니면 없다. 긴 주체(`<발급자>|<sub>`)는 줄을 바꿔 흐른다. */
+function starter(trace: Trace): ReactNode {
+  const first = trace.events[0];
+  if (first?.type !== "run_started") {
+    return undefined;
+  }
+  return (
+    <span className="flex flex-wrap gap-x-3 wrap-anywhere">
+      <span>에이전트 {first.agent}</span> <span>주체 {first.principal}</span>
+    </span>
+  );
+}
 
 interface RunPanelProps extends ReadState<Trace> {
   readonly runId: string;

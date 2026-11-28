@@ -62,6 +62,15 @@ const meta = {
     error: undefined,
     isValidating: false,
     onRefresh: fn(),
+    fresh: false,
+    actions: {
+      canAct: true,
+      busy: false,
+      invalid: null,
+      plugins: { data: [], error: undefined },
+      onDecide: fn(),
+      onRetry: fn(),
+    },
     stale: false,
     timeoutSeconds: 300,
     openRun: null,
@@ -140,38 +149,103 @@ export const Failed: Story = {
       earlier: "start",
     },
   },
-  play: async ({ canvasElement }) => {
+  play: async ({ canvasElement, userEvent, args }) => {
     const alert = within(canvasElement).getByRole("alert");
     await expect(within(alert).getByText("실행이 실패했다")).toBeVisible();
     await expect(within(alert).getByText("모델이 답하지 않았다(제한 시간 초과)")).toBeVisible();
+    await userEvent.click(within(alert).getByRole("button", { name: "다시 보내기" }));
+    await expect(args.actions.onRetry).toHaveBeenCalledTimes(1);
   },
 };
 
-/** 승인을 기다리는 실행. 이 화면은 읽기만 해서 버튼은 없다(쓰기 티켓이 더한다). */
-export const Waiting: Story = {
+/** 최종 사용자의 대화에서 실패한 실행에는 "다시 보내기"가 없다. */
+export const FailedEndUser: Story = {
   args: {
     data: {
       turns: [
         {
           ...SECOND,
-          approvals: [
-            {
-              state: "waiting",
-              tool: "payments.refund",
-              at: "2026-11-15T07:04:07+00:00",
-              pauseIndex: 4,
-            },
-          ],
-          outcome: { kind: "paused" },
+          approvals: [],
+          tools: [],
+          outcome: {
+            kind: "failed",
+            error: "모델이 답하지 않았다",
+            at: "2026-11-15T07:04:40+00:00",
+          },
         },
       ],
       earlier: "start",
     },
+    actions: { ...meta.args.actions, canAct: false },
   },
+  play: async ({ canvasElement }) => {
+    await expect(within(canvasElement).queryByRole("button", { name: "다시 보내기" })).toBeNull();
+  },
+};
+
+const WAITING: ConversationData = {
+  turns: [
+    {
+      ...SECOND,
+      approvals: [
+        {
+          state: "waiting",
+          tool: "payments.refund",
+          args: { order_id: "ORD-2026-11-08-000184", amount: 32000, reason: "배송 지연" },
+          at: "2026-11-15T07:04:07+00:00",
+          pauseIndex: 4,
+        },
+      ],
+      outcome: { kind: "paused" },
+    },
+  ],
+  earlier: "start",
+};
+
+/**
+ * 승인을 기다리는 실행. 도구 호출 자리에 승인 묻기가 선다. 도구와 인자는 글자 그대로 고정폭이고 "거부"(보조)가 먼저, "승인"(주)이
+ * 나중이다(`.claude/rules/web-design.md`). 거부 사유를 적어야 거부를 보낼 수 있다.
+ */
+export const Waiting: Story = {
+  args: { data: WAITING },
+  play: async ({ canvasElement, userEvent, args }) => {
+    const canvas = within(canvasElement);
+    const ask = canvas.getByRole("region", { name: "승인 묻기" });
+    await expect(ask).toBeVisible();
+    // 같은 도구의 앞 결정이 대화에 한 줄로 남아 있어, 도구 이름은 승인 묻기 안에서 찾는다.
+    await expect(within(ask).getByText("payments.refund")).toBeVisible();
+    const buttons = canvas
+      .getAllByRole("button")
+      .filter((button) => /^(거부|승인)$/.test(button.textContent));
+    await expect(buttons.map((button) => button.textContent)).toEqual(["거부", "승인"]);
+    await expect(canvas.getByRole("button", { name: "거부" })).toBeDisabled();
+    await userEvent.type(canvas.getByLabelText("거부 사유"), "금액을 다시 확인한다");
+    await userEvent.click(canvas.getByRole("button", { name: "거부" }));
+    await expect(args.actions.onDecide).toHaveBeenCalledWith(SECOND.runId, {
+      decision: "deny",
+      pause_index: 4,
+      reason: "금액을 다시 확인한다",
+    });
+  },
+};
+
+/** 최종 사용자의 대화는 볼 수만 있다. 승인 묻기가 서지 않고 기다리는 중이라는 한 줄이 남는다. */
+export const WaitingEndUser: Story = {
+  args: { data: WAITING, actions: { ...meta.args.actions, canAct: false } },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await expect(canvas.getByText(/승인을 기다리는 중/)).toBeVisible();
-    await expect(canvas.queryByRole("button", { name: /승인|거부/ })).toBeNull();
+    await expect(canvas.queryByRole("button", { name: /^(승인|거부)$/ })).toBeNull();
+  },
+};
+
+/** 새 대화. 읽을 것이 없어 머리만 서고 "새로 고침"이 없다. */
+export const Fresh: Story = {
+  args: { fresh: true, data: { turns: [], earlier: "start" } },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(canvas.getByRole("heading", { level: 1 })).toHaveTextContent(/^새 대화$/);
+    await expect(canvas.queryByRole("button", { name: "새로 고침" })).toBeNull();
   },
 };
 

@@ -24,6 +24,12 @@ test("이어 가기를 한 두 실행이 대화 한 줄로 서고 열면 두 실
   await openSection(page, "대화");
   await expect(page).toHaveURL(`${adminUrl}/chat`);
 
+  // 시각은 이 브라우저의 시간대로 적는다. 설정이 시간대를 Asia/Seoul 로 고정한다(playwright.config.ts). 페이지 시험은
+  // America/New_York 이라, 시간대를 그 이름으로 박은 구현은 여기서 빨개진다.
+  await expect(group(page, "대화")).toContainText(
+    "시각은 이 브라우저의 시간대(Asia/Seoul)로 적었다.",
+  );
+
   // 두 실행이 대화 한 줄이다. 줄은 대화의 첫 요청으로 서고 끝 실행의 대화 주소로 간다.
   const line = row(page, "대화", firstText);
   await expect(line).toHaveCount(1);

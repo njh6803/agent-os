@@ -13,7 +13,7 @@ export type {
   UnreadableTrace,
 } from "../api/conversations";
 export type { Plugin, PluginRow } from "../api/plugins";
-export type { RunRow, RunSummary, Trace, TracePage } from "../api/traces";
+export type { Trace } from "../api/traces";
 
 export const network = setupServer();
 

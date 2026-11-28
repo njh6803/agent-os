@@ -8,8 +8,18 @@ import { READ } from "../admin";
 import { traceKeys } from "../traces";
 
 /**
+ * SWR 키. 끝 실행 앞의 실행들은 끝 실행과 그 앞 실행으로 갈린다. 화면이 보내기나 이어 가기가 끝났을 때 새 끝 실행의 앞
+ * 실행들을 이미 읽은 것으로 채우는 자리(`mutate`)도 이 열쇠를 쓴다. 그래야 대화를 처음부터 다시 거슬러 읽지 않는다.
+ */
+export const conversationKeys = {
+  earlier: (endRunId: string, previousRun: string | null) =>
+    ["earlier-runs", endRunId, previousRun] as const,
+};
+
+/**
  * 끝 실행의 트레이스. 패널과 같은 열쇠(`traceKeys.one`)로 읽어 SWR 의 같은 값을 쓴다. 결말이 없는 동안 3초마다 다시
- * 읽고, 결말이 오거나 마지막 이벤트 뒤 실행 제한 시간이 지나면 멈춘다.
+ * 읽고, 결말이 오거나 마지막 이벤트 뒤 실행 제한 시간이 지나면 멈춘다. 끝 실행이 아직 없으면(새 대화) `null` 을 주고 읽지
+ * 않는다.
  *
  * `refreshInterval` 의 함수는 이 훅을 부르는 부품이 그려질 때마다 새로 만든다(인라인 꼴). 한 번 만든 함수를 그대로 쓰는
  * 꼴은 데이터가 오기 전에 0 을 내면 시작하지 않았고 멈춘 뒤 새로 고쳐도 다시 돌지 않았다(`swr_poll` 결과 1a·1b). 그래서
@@ -18,12 +28,19 @@ import { traceKeys } from "../traces";
  *
  * @param timeoutSeconds `GET /auth/me` 의 실행 제한 시간. 멈출 때를 정한다.
  */
-export function useEndRun(runId: string, timeoutSeconds: number): SWRResponse<Trace, unknown> {
-  return useSWR(traceKeys.one(runId), () => readTrace(runId), {
-    ...READ,
-    refreshInterval: (latest: Trace | undefined) =>
-      pollInterval(latest, timeoutSeconds, Date.now()),
-  });
+export function useEndRun(
+  runId: string | null,
+  timeoutSeconds: number,
+): SWRResponse<Trace, unknown> {
+  return useSWR(
+    runId === null ? null : traceKeys.one(runId),
+    runId === null ? null : () => readTrace(runId),
+    {
+      ...READ,
+      refreshInterval: (latest: Trace | undefined) =>
+        pollInterval(latest, timeoutSeconds, Date.now()),
+    },
+  );
 }
 
 /**
@@ -32,10 +49,12 @@ export function useEndRun(runId: string, timeoutSeconds: number): SWRResponse<Tr
  */
 export function useEarlierRuns(
   previousRun: string | null | undefined,
-  endRunId: string,
+  endRunId: string | null,
 ): SWRResponse<Earlier, unknown> {
   return useSWR(
-    previousRun === undefined ? null : (["earlier-runs", endRunId, previousRun] as const),
+    previousRun === undefined || endRunId === null
+      ? null
+      : conversationKeys.earlier(endRunId, previousRun),
     ([, end, previous]) => readEarlierRuns(previous, end),
     { ...READ, revalidateOnFocus: false },
   );

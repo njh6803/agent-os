@@ -14,7 +14,14 @@ import {
 } from "../../testing/events";
 import { RequestFailure } from "../failure";
 import type { Trace } from "../traces";
-import { EARLIER_CAP, hasOutcome, pollInterval, readEarlier, turnOf } from "./turns";
+import {
+  EARLIER_CAP,
+  earlierAfterSend,
+  hasOutcome,
+  pollInterval,
+  readEarlier,
+  turnOf,
+} from "./turns";
 
 const T0 = "2026-11-27T01:00:00+00:00";
 
@@ -67,7 +74,9 @@ describe("turnOf", () => {
 
   it("결정이 아직 없는 일시정지는 기다리는 승인으로 든다", () => {
     const turn = turnOf(trace("r1", [started("r1"), paused("r1", "mail")]));
-    expect(turn.approvals).toEqual([{ state: "waiting", tool: "mail", at: T0, pauseIndex: 1 }]);
+    expect(turn.approvals).toEqual([
+      { state: "waiting", tool: "mail", args: {}, at: T0, pauseIndex: 1 },
+    ]);
     expect(turn.outcome).toEqual({ kind: "paused" });
   });
 
@@ -303,5 +312,49 @@ describe("readEarlier", () => {
     await expect(
       readEarlier("r1", "r2", () => Promise.reject(new RequestFailure(null, null))),
     ).rejects.toBeInstanceOf(RequestFailure);
+  });
+});
+
+describe("earlierAfterSend", () => {
+  const one = (id: string, previous: string | null): Trace =>
+    trace(id, [started(id, previous), finished(id, "")]);
+
+  it("새 대화(어디서도 잇지 않았다)는 읽은 것이 없어도 앞 실행이 없는 것으로 채운다", () => {
+    expect(earlierAfterSend(null, undefined, undefined)).toEqual({ traces: [], end: "start" });
+  });
+
+  it("끝 실행에서 이어 갔으면 끝 실행이 앞 실행에 더해지고 닿은 곳은 그대로다", () => {
+    const earlier = { traces: [one("r1", null)], end: "start" } as const;
+
+    const result = earlierAfterSend("r2", one("r2", "r1"), earlier);
+
+    expect(result?.traces.map((item) => item.run_id)).toEqual(["r1", "r2"]);
+    expect(result?.end).toBe("start");
+  });
+
+  it("끝 실행의 앞 실행에서 이어 갔으면(실패한 끝 실행의 다시 보내기) 앞 실행들 그대로다", () => {
+    const earlier = { traces: [one("r1", null)], end: "start" } as const;
+
+    expect(earlierAfterSend("r1", one("r2", "r1"), earlier)).toEqual(earlier);
+  });
+
+  it("읽은 것이 없거나 읽은 대화와 이어지지 않으면 만들지 못한다", () => {
+    const earlier = { traces: [], end: "start" } as const;
+
+    expect(earlierAfterSend("r2", undefined, earlier)).toBeNull();
+    expect(earlierAfterSend("r2", one("r3", "r9"), earlier)).toBeNull();
+  });
+
+  it("합친 앞 실행이 상한을 넘으면 가장 최근 것만 남기고 더 앞이 있다고 알린다", () => {
+    const traces = Array.from({ length: EARLIER_CAP }, (_, index) =>
+      one(`r${String(index + 1)}`, index === 0 ? null : `r${String(index)}`),
+    );
+    const last = one("end", `r${String(EARLIER_CAP)}`);
+
+    const result = earlierAfterSend("end", last, { traces, end: "start" });
+
+    expect(result?.end).toBe("cap");
+    expect(result?.traces).toHaveLength(EARLIER_CAP);
+    expect(result?.traces.at(-1)?.run_id).toBe("end");
   });
 });

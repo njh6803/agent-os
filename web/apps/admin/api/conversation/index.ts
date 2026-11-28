@@ -9,6 +9,7 @@ export {
   type Approval,
   type Earlier,
   EARLIER_CAP,
+  earlierAfterSend,
   hasOutcome,
   isPastTimeout,
   type Outcome,
