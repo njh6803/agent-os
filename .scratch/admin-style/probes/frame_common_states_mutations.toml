@@ -59,9 +59,9 @@ const LOADING_DELAY_MS = 1000;
 [[mutation]]
 name = "다시 확인하는 동안 머리 아래 진행 표시가 없으면 빨갛다"
 runner = "pages"
-tests = ["apps/admin/components/pages/RunsPage.test.tsx", "-t", "자리표시가 보이고"]
+tests = ["apps/admin/components/pages/HomePage.test.tsx", "-t", "처음 불러오는 중에는 자리표시가 보이고"]
 expect = "red"
-expect_output = ['Unable to find role="progressbar" and name "다시 확인하는 중"']
+expect_output = ["Unable to find role=\"progressbar\" and name \"다시 확인하는 중\""]
 
 [[mutation.edit]]
 file = "web/apps/admin/components/organisms/ReadSection.tsx"
@@ -81,10 +81,10 @@ expect_output = ["expected null to be 'true'"]
 [[mutation.edit]]
 file = "web/apps/admin/components/organisms/ReadSection.tsx"
 old = '''
-          <Button variant="secondary" loading={refreshing} onClick={onRefresh}>
+    <Button variant="secondary" loading={refreshing} onClick={onRefresh}>
 '''
 new = '''
-          <Button variant="secondary" loading={false} onClick={onRefresh}>
+    <Button variant="secondary" loading={false} onClick={onRefresh}>
 '''
 
 [[mutation]]
@@ -236,8 +236,8 @@ expect_output = ["TextLink.stories.tsx > Default", "to be greater than or equal 
 
 [[mutation.edit]]
 file = "web/apps/admin/components/atoms/TextLink.tsx"
-old = '''className={`inline-flex min-h-6 items-center'''
-new = '''className={`inline-flex items-center'''
+old = '''className={`${FIT_CLASS[fit]} min-h-6'''
+new = '''className={`${FIT_CLASS[fit]}'''
 
 # 아래 다섯은 셀프 리뷰 명세 축이 짚어 더했다. 읽기 넷 가운데 셋의 실패 제목과 둘의 처음 불러오는 이름을 페이지 시험이
 # 보지 않아, organisms 의 글자를 바꿔도 초록이었다. 더한 단언은 지금의 구현 위에 써서 빨강을 본 적이 없다.
@@ -255,30 +255,6 @@ old = '''failureTitle="플러그인을 읽지 못했다"'''
 new = '''failureTitle="플러그인을 못 읽었다"'''
 
 [[mutation]]
-name = "실행 목록의 실패 제목이 바뀌면 다시 읽다 실패하는 시험이 빨갛다"
-runner = "pages"
-tests = ["apps/admin/components/pages/RunsPage.test.tsx", "-t", "이미 보인 목록도 다시 읽다 실패하면"]
-expect = "red"
-expect_output = ["to contain '실행 목록을 읽지 못했다'"]
-
-[[mutation.edit]]
-file = "web/apps/admin/components/organisms/RunList.tsx"
-old = '''failureTitle="실행 목록을 읽지 못했다"'''
-new = '''failureTitle="실행 목록을 못 읽었다"'''
-
-[[mutation]]
-name = "실행 하나의 실패 제목이 바뀌면 500 봉투 시험이 빨갛다"
-runner = "pages"
-tests = ["apps/admin/components/pages/RunPage.test.tsx", "-t", "읽을 수 없는 트레이스를 열면"]
-expect = "red"
-expect_output = ["to contain '실행을 읽지 못했다'"]
-
-[[mutation.edit]]
-file = "web/apps/admin/components/organisms/RunDetail.tsx"
-old = '''failureTitle="실행을 읽지 못했다"'''
-new = '''failureTitle="실행을 못 읽었다"'''
-
-[[mutation]]
 name = "플러그인 하나의 처음 불러오는 이름이 바뀌면 불러오는 중 시험이 빨갛다"
 runner = "pages"
 tests = ["apps/admin/components/pages/PluginPage.test.tsx", "-t", "플러그인을 불러오는 중이 선다"]
@@ -289,21 +265,6 @@ expect_output = ['Unable to find role="progressbar" and name "플러그인을 �
 file = "web/apps/admin/components/organisms/PluginDetail.tsx"
 old = '''loadingLabel="플러그인을 불러오는 중"'''
 new = '''loadingLabel="불러오는 중"'''
-
-[[mutation]]
-name = "실행 하나의 처음 불러오는 이름이 바뀌면 불러오는 중 시험이 빨갛다"
-runner = "pages"
-tests = ["apps/admin/components/pages/RunPage.test.tsx", "-t", "트레이스를 불러오는 중이 선다"]
-expect = "red"
-expect_output = ['Unable to find role="progressbar" and name "트레이스를 불러오는 중"']
-
-[[mutation.edit]]
-file = "web/apps/admin/components/organisms/RunDetail.tsx"
-old = '''loadingLabel="트레이스를 불러오는 중"'''
-new = '''loadingLabel="불러오는 중"'''
-
-# 아래는 admin-login 티켓 09가 옛 하이드레이션 가드 둘(`useHydrated` 로 틀만 그리던 분기)을 걷으며 바꾼 것이다. "지금 누구인지"를
-# 읽는 동안 틀만 그리고 본문을 비우는 분기를 지키는 시험이 `AdminScreen.test.tsx` 에 있다.
 
 [[mutation]]
 name = "지금 누구인지를 읽는 동안에도 본문을 그리면 읽는 동안의 시험이 빨갛다"

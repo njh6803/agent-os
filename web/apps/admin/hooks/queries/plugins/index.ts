@@ -25,7 +25,7 @@ export const pluginKeys = {
 
 /**
  * 플러그인 목록. `active` 가 거짓이면 부르지 않는다. `active` 는 목록을 쓰는 자리가 늘 서 있지 않은 화면의 것이다. 실행
- * 하나의 화면은 결정 자리가 설 때만 꺼짐 미리 알림에 목록을 읽는다.
+ * 하나의 화면은 새 대화이거나 기다리는 승인이 있을 때만 꺼짐 미리 알림에 목록을 읽는다.
  */
 export function usePlugins({ active = true }: { readonly active?: boolean } = {}): SWRResponse<
   PluginRow[],

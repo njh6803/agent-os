@@ -203,21 +203,6 @@ new = '''
 '''
 
 [[mutation]]
-name = "결정 자리의 형식 조건을 형식 2 로 되돌린다"
-runner = "vitest"
-tests = ["apps/admin/components/pages/RunPage.decision.test.tsx", "-t", "형식 3"]
-expect = "red"
-
-[[mutation.edit]]
-file = "web/apps/admin/components/organisms/RunDecision.tsx"
-old = '''
-  const pause = trace.schema_version !== "1" ? pauseOf(trace) : null;
-'''
-new = '''
-  const pause = trace.schema_version === "2" ? pauseOf(trace) : null;
-'''
-
-[[mutation]]
 name = "스트림 술어의 종류 목록에서 요약을 뺀다"
 runner = "tsc"
 tests = []
@@ -505,8 +490,9 @@ new = '''
 [[mutation]]
 name = "앞 실행이 없어도 링크를 그린다"
 runner = "vitest"
-tests = ["apps/admin/components/pages/RunPage.test.tsx", "-t", "링크가 아니라 글자다"]
+tests = ["apps/admin/components/organisms/EventItem.test.tsx", "-t", "링크가 아니라 글자다"]
 expect = "red"
+expect_output = ["expected <a …(2)></a> to be null"]
 
 [[mutation.edit]]
 file = "web/apps/admin/components/organisms/EventItem.tsx"
@@ -520,8 +506,9 @@ new = '''
 [[mutation]]
 name = "요약 글의 용어집 말을 바꾼다"
 runner = "vitest"
-tests = ["apps/admin/components/pages/RunPage.test.tsx", "-t", "요약 이벤트의 필드는"]
+tests = ["apps/admin/components/organisms/EventItem.test.tsx", "-t", "요약 이벤트의 필드는"]
 expect = "red"
+expect_output = ['+   "요약 summary",']
 
 [[mutation.edit]]
 file = "web/apps/admin/components/organisms/EventItem.tsx"

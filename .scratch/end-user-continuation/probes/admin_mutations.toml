@@ -17,7 +17,7 @@ judge = "vitest"
 [[mutation]]
 name = "실패 원인의 용어집 말을 바꾼다"
 runner = "vitest"
-tests = ["apps/admin/components/pages/RunPage.test.tsx", "-t", "실패 원인은 용어집의"]
+tests = ["apps/admin/components/organisms/EventItem.test.tsx", "-t", "실패 원인은 용어집의"]
 expect = "red"
 expect_output = ['"원인 cause"']
 
@@ -33,7 +33,7 @@ new = '''
 [[mutation]]
 name = "실패 원인의 값에 문구를 짓는다"
 runner = "vitest"
-tests = ["apps/admin/components/pages/RunPage.test.tsx", "-t", "실패 원인은 용어집의"]
+tests = ["apps/admin/components/organisms/EventItem.test.tsx", "-t", "실패 원인은 용어집의"]
 expect = "red"
 expect_output = ["expected '시간 초과' to be 'timeout'"]
 
@@ -52,7 +52,7 @@ new = '''
 [[mutation]]
 name = "옛 실행의 바로가기 없음을 빈칸으로 그린다"
 runner = "vitest"
-tests = ["apps/admin/components/pages/RunPage.test.tsx", "-t", "바로가기가 없는 옛 실행"]
+tests = ["apps/admin/components/organisms/EventItem.test.tsx", "-t", "바로가기가 없는 옛 실행"]
 expect = "red"
 expect_output = ["expected '' to be 'null'"]
 
@@ -71,7 +71,7 @@ new = '''
 [[mutation]]
 name = "빈 바로가기도 지도 갈래로 그린다"
 runner = "vitest"
-tests = ["apps/admin/components/pages/RunPage.test.tsx", "-t", "빈 바로가기는"]
+tests = ["apps/admin/components/organisms/EventItem.test.tsx", "-t", "빈 바로가기는"]
 expect = "red"
 expect_output = ["expected '' to be '{}'"]
 
@@ -87,7 +87,7 @@ new = '''
 [[mutation]]
 name = "바로가기의 값이 문자열인지 보지 않는다"
 runner = "vitest"
-tests = ["apps/admin/components/pages/RunPage.test.tsx", "-t", "지도가 아닌 문자열이 아닌 값을 든 객체"]
+tests = ["apps/admin/components/organisms/EventItem.test.tsx", "-t", "지도가 아닌 문자열이 아닌 값을 든 객체"]
 expect = "red"
 expect_output = ['Found multiple elements with the role "link"']
 
@@ -104,7 +104,7 @@ new = '''
 [[mutation]]
 name = "배열을 바로가기 지도로 본다"
 runner = "vitest"
-tests = ["apps/admin/components/pages/RunPage.test.tsx", "-t", "지도가 아닌 배열"]
+tests = ["apps/admin/components/organisms/EventItem.test.tsx", "-t", "지도가 아닌 배열"]
 expect = "red"
 expect_output = ["/runs/r-calc"]
 
@@ -119,7 +119,7 @@ new = '''
 [[mutation]]
 name = "문자열을 바로가기 지도로 본다"
 runner = "vitest"
-tests = ["apps/admin/components/pages/RunPage.test.tsx", "-t", "지도가 아닌 문자열 이면"]
+tests = ["apps/admin/components/organisms/EventItem.test.tsx", "-t", "지도가 아닌 문자열 이면"]
 expect = "red"
 expect_output = ['Found multiple elements with the role "link"']
 
@@ -134,7 +134,7 @@ new = '''
 [[mutation]]
 name = "바로가기 칸이 실행 상세 주소의 가드를 지나지 않는다"
 runner = "vitest"
-tests = ["apps/admin/components/pages/RunPage.test.tsx", "-t", "바로가기의 실행이"]
+tests = ["apps/admin/components/organisms/EventItem.test.tsx", "-t", "바로가기의 실행이"]
 expect = "red"
 expect_output = ['+   ".",', '+   "..",']
 
@@ -144,13 +144,13 @@ old = '''
             <RunLink runId={runId} />
 '''
 new = '''
-            <Link href={`/runs/${encodeURIComponent(runId)}`}>{runId}</Link>
+            <TextLink href={`/runs/${encodeURIComponent(runId)}`}>{runId}</TextLink>
 '''
 
 [[mutation]]
 name = "바로가기의 에이전트 이름을 HTML 로 그린다"
 runner = "vitest"
-tests = ["apps/admin/components/pages/RunPage.test.tsx", "-t", "트레이스에 든 HTML"]
+tests = ["apps/admin/components/organisms/EventItem.test.tsx", "-t", "이벤트에 든 HTML"]
 expect = "red"
 expect_output = ["to contain '<iframe src="]
 
@@ -166,7 +166,7 @@ new = '''
 [[mutation]]
 name = "바로가기 칸의 null 을 실행 식별자로 본다"
 runner = "vitest"
-tests = ["apps/admin/components/pages/RunPage.test.tsx", "-t", "지도가 아닌 null 을 든 객체"]
+tests = ["apps/admin/components/organisms/EventItem.test.tsx", "-t", "지도가 아닌 null 을 든 객체"]
 expect = "red"
 expect_output = ["/runs/null"]
 
@@ -182,7 +182,7 @@ new = '''
 [[mutation]]
 name = "바로가기의 에이전트 이름을 글자 옆에 HTML 로도 그린다"
 runner = "vitest"
-tests = ["apps/admin/components/pages/RunPage.test.tsx", "-t", "트레이스에 든 HTML"]
+tests = ["apps/admin/components/organisms/EventItem.test.tsx", "-t", "이벤트에 든 HTML"]
 expect = "red"
 expect_output = ["></iframe> to be null"]
 

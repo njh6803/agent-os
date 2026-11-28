@@ -11,13 +11,31 @@ interface ScreenHeaderProps {
   readonly beside?: ReactNode;
   readonly description?: ReactNode;
   readonly action?: ReactNode;
+  /**
+   * 제목의 단계. 기본은 화면의 제목 `h1` 이다. 대화 화면 위에 뜨는 실행 패널은 화면 안의 구역이라 `h2` 이고, 글자도 본문
+   * 크기의 굵은 글자다(그림 ch-run).
+   */
+  readonly level?: "h1" | "h2";
 }
 
-export function ScreenHeader({ titleId, title, beside, description, action }: ScreenHeaderProps) {
+export function ScreenHeader({
+  titleId,
+  title,
+  beside,
+  description,
+  action,
+  level = "h1",
+}: ScreenHeaderProps) {
+  const Heading = level;
   const heading = (
-    <h1 id={titleId} className="text-title wrap-anywhere">
+    <Heading
+      id={titleId}
+      className={
+        level === "h1" ? "text-title wrap-anywhere" : "text-body font-semibold wrap-anywhere"
+      }
+    >
       {title}
-    </h1>
+    </Heading>
   );
   return (
     <header className="flex flex-col items-start gap-3 wide:flex-row wide:justify-between wide:gap-4">

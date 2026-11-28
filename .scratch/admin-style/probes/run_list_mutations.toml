@@ -41,9 +41,9 @@ judge = "playwright"
 [[mutation]]
 name = "페이지 시험의 시간대 고정을 걷으면 머리 설명이 이 PC 의 시간대를 들어 빨갛다"
 runner = "pages"
-tests = ["apps/admin/components/pages/RunsPage.test.tsx", "-t", "설명이 이 브라우저의 시간대 이름을 든다"]
+tests = ["apps/admin/components/pages/ConversationsPage.test.tsx", "-t", "설명이 이 브라우저의 시간대 이름"]
 expect = "red"
-expect_output = ["시간대(Asia/Seoul)로 적었다"]
+expect_output = ["Unable to find an element with the text: 이어 가기로 이어진 실행들이다."]
 
 [[mutation.edit]]
 file = "web/vitest.config.ts"
@@ -56,9 +56,9 @@ new = '''
 [[mutation]]
 name = "시각을 UTC 로 적으면 시각 시험이 빨갛다"
 runner = "pages"
-tests = ["apps/admin/components/pages/RunsPage.test.tsx", "-t", "24시간 시각이고 초 아래는 버린다"]
+tests = ["apps/admin/components/pages/ConversationPage.test.tsx", "-t", "시각은 브라우저의 시간대로 보인다"]
 expect = "red"
-expect_output = ["2026-09-30 09:00:00"]
+expect_output = ["Unable to find an element with the text: 2026-11-26 20:00:00"]
 
 [[mutation.edit]]
 file = "web/apps/admin/components/atoms/clock.ts"
@@ -73,9 +73,9 @@ new = '''
 [[mutation]]
 name = "시 주기를 주지 않아 12시간제로 적으면 시각 시험이 빨갛다"
 runner = "pages"
-tests = ["apps/admin/components/pages/RunsPage.test.tsx", "-t", "24시간 시각이고 초 아래는 버린다"]
+tests = ["apps/admin/components/pages/ConversationPage.test.tsx", "-t", "시각은 브라우저의 시간대로 보인다"]
 expect = "red"
-expect_output = ["2026-09-30 11:04:05"]
+expect_output = ["Unable to find an element with the text: 2026-11-26 20:00:00"]
 
 [[mutation.edit]]
 file = "web/apps/admin/components/atoms/clock.ts"
@@ -85,240 +85,3 @@ old = '''
 new = '''
 '''
 
-[[mutation]]
-name = "읽을 수 없는 행의 이유 칸이 넷을 합치지 않으면 빨갛다"
-runner = "pages"
-tests = ["apps/admin/components/pages/RunsPage.test.tsx", "-t", "나머지 칸을 합쳐 이유를 보인다"]
-expect = "red"
-expect_output = ["expected null to be '4'"]
-
-[[mutation.edit]]
-file = "web/apps/admin/components/organisms/RunList.tsx"
-old = '''
-      <td colSpan={4} className={`${CELL} text-warning wrap-anywhere`}>
-'''
-new = '''
-      <td className={`${CELL} text-warning wrap-anywhere`}>
-'''
-
-[[mutation]]
-name = "뼈대가 기다리지 않고 서면 0.3초 시험이 빨갛다"
-runner = "pages"
-tests = ["apps/admin/components/pages/RunsPage.test.tsx", "-t", "뼈대 행 넷은 0.3초가 지나야"]
-expect = "red"
-expect_output = ['expected <table aria-hidden="true"']
-
-[[mutation.edit]]
-file = "web/apps/admin/components/organisms/ReadSection.tsx"
-old = '''
-        <AfterDelay>
-          <div className="hidden @split:block">{skeleton}</div>
-        </AfterDelay>
-'''
-new = '''
-        <div className="hidden @split:block">{skeleton}</div>
-'''
-
-[[mutation]]
-name = "뼈대 행이 셋이면 0.3초 시험이 빨갛다"
-runner = "pages"
-tests = ["apps/admin/components/pages/RunsPage.test.tsx", "-t", "뼈대 행 넷은 0.3초가 지나야"]
-expect = "red"
-expect_output = ["to have a length of 4 but got 3"]
-
-[[mutation.edit]]
-file = "web/apps/admin/components/organisms/RunList.tsx"
-old = '''
-const SKELETON_ROWS = 4;
-'''
-new = '''
-const SKELETON_ROWS = 3;
-'''
-
-[[mutation]]
-name = "다시 확인하는 동안에도 뼈대가 서면 자리표시 시험이 빨갛다"
-runner = "pages"
-tests = ["apps/admin/components/pages/RunsPage.test.tsx", "-t", "처음 불러오는 중에는 자리표시가 보이고"]
-expect = "red"
-expect_output = ['expected <table aria-hidden="true"']
-
-[[mutation.edit]]
-file = "web/apps/admin/components/organisms/ReadSection.tsx"
-old = '''
-      {above}
-'''
-new = '''
-      {above}
-      {isValidating && skeleton !== undefined ? <div className="hidden @split:block">{skeleton}</div> : null}
-'''
-
-[[mutation]]
-name = "머리 설명이 시간대를 이름으로 박아도 페이지 시험은 초록이다"
-runner = "pages"
-tests = ["apps/admin/components/pages/RunsPage.test.tsx", "-t", "설명이 이 브라우저의 시간대 이름을 든다"]
-expect = "green"
-
-[[mutation.edit]]
-file = "web/apps/admin/components/organisms/RunList.tsx"
-old = '''
-시각은 이 브라우저의 시간대(${clock.resolvedOptions().timeZone})로 적었다.'''
-new = '''
-시각은 이 브라우저의 시간대(America/New_York)로 적었다.'''
-
-[[mutation]]
-name = "머리 설명이 시간대를 이름으로 박으면 Asia/Seoul 로 고정한 e2e 가 빨갛다"
-runner = "e2e"
-tests = ["e2e/runs.e2e.ts"]
-expect = "red"
-expect_output = ["시간대(America/New_York)로 적었다"]
-
-[[mutation.edit]]
-file = "web/apps/admin/components/organisms/RunList.tsx"
-old = '''
-시각은 이 브라우저의 시간대(${clock.resolvedOptions().timeZone})로 적었다.'''
-new = '''
-시각은 이 브라우저의 시간대(America/New_York)로 적었다.'''
-
-[[mutation]]
-name = "표가 넓은 칸에서도 숨으면 넓은 폭의 목록 스토리가 빨갛다"
-runner = "wide"
-tests = ["apps/admin/components/organisms/RunList.stories.tsx"]
-expect = "red"
-expect_output = ["RunList.stories.tsx > List", 'Unable to find an accessible element with the role "table"']
-
-[[mutation.edit]]
-file = "web/apps/admin/components/organisms/RunList.tsx"
-old = '''
-    <table className="hidden w-full border-collapse text-table @split:table">
-'''
-new = '''
-    <table className="hidden w-full border-collapse text-table">
-'''
-
-[[mutation]]
-name = "표가 좁은 칸에서도 서면 좁은 폭의 목록 스토리가 빨갛다"
-runner = "narrow"
-tests = ["apps/admin/components/organisms/RunList.stories.tsx"]
-expect = "red"
-expect_output = ["RunList.stories.tsx > List", "expected <table"]
-
-[[mutation.edit]]
-file = "web/apps/admin/components/organisms/RunList.tsx"
-old = '''
-    <table className="hidden w-full border-collapse text-table @split:table">
-'''
-new = '''
-    <table className="w-full border-collapse text-table">
-'''
-
-[[mutation]]
-name = "카드가 넓은 칸에서도 서면 넓은 폭의 목록 스토리가 빨갛다"
-runner = "wide"
-tests = ["apps/admin/components/organisms/RunList.stories.tsx"]
-expect = "red"
-expect_output = ["RunList.stories.tsx > List", "expected <ul"]
-
-[[mutation.edit]]
-file = "web/apps/admin/components/organisms/RunList.tsx"
-old = '''
-    <ul className="flex flex-col gap-3 @split:hidden">
-'''
-new = '''
-    <ul className="flex flex-col gap-3">
-'''
-
-[[mutation]]
-name = "카드가 좁은 칸에서도 숨으면 좁은 폭의 목록 스토리가 빨갛다"
-runner = "narrow"
-tests = ["apps/admin/components/organisms/RunList.stories.tsx"]
-expect = "red"
-expect_output = ["RunList.stories.tsx > List", 'Unable to find an accessible element with the role "list"']
-
-[[mutation.edit]]
-file = "web/apps/admin/components/organisms/RunList.tsx"
-old = '''
-    <ul className="flex flex-col gap-3 @split:hidden">
-'''
-new = '''
-    <ul className="hidden">
-'''
-
-[[mutation]]
-name = "표의 칸이 행 높이를 잃으면 넓은 폭의 목록 스토리가 빨갛다"
-runner = "wide"
-tests = ["apps/admin/components/organisms/RunList.stories.tsx"]
-expect = "red"
-expect_output = ["RunList.stories.tsx > List", "to be 36"]
-
-[[mutation.edit]]
-file = "web/apps/admin/components/organisms/RunList.tsx"
-old = '''
-const CELL = "h-row border-b border-border px-3";
-'''
-new = '''
-const CELL = "border-b border-border px-3";
-'''
-
-[[mutation]]
-name = "뼈대가 좁은 칸에서도 서면 좁은 폭의 불러오는 중 스토리가 빨갛다"
-runner = "narrow"
-tests = ["apps/admin/components/organisms/RunList.stories.tsx"]
-expect = "red"
-expect_output = ["RunList.stories.tsx > Loading", "Received element is visible:"]
-
-[[mutation.edit]]
-file = "web/apps/admin/components/organisms/ReadSection.tsx"
-old = '''
-          <div className="hidden @split:block">{skeleton}</div>
-'''
-new = '''
-          <div className="block">{skeleton}</div>
-'''
-
-[[mutation]]
-name = "뼈대를 준 화면의 진행 표시가 넓은 칸에서도 서면 넓은 폭의 불러오는 중 스토리가 빨갛다"
-runner = "wide"
-tests = ["apps/admin/components/organisms/RunList.stories.tsx"]
-expect = "red"
-expect_output = ["RunList.stories.tsx > Loading", 'expected <div role="progressbar"']
-
-[[mutation.edit]]
-file = "web/apps/admin/components/organisms/ReadSection.tsx"
-old = '''
-            <div className="@split:hidden">
-'''
-new = '''
-            <div>
-'''
-
-[[mutation]]
-name = "뼈대가 화면 읽기 프로그램에 드러나면 불러오는 중 스토리가 빨갛다"
-runner = "wide"
-tests = ["apps/admin/components/organisms/RunList.stories.tsx"]
-expect = "red"
-expect_output = ["RunList.stories.tsx > Loading", "Expected the element to have attribute:"]
-
-[[mutation.edit]]
-file = "web/apps/admin/components/organisms/RunList.tsx"
-old = '''
-    <table aria-hidden="true" className="w-full border-collapse">
-'''
-new = '''
-    <table className="w-full border-collapse">
-'''
-
-[[mutation]]
-name = "거른 빈 줄의 아이콘이 16이면 거른 빈 목록 스토리가 빨갛다"
-runner = "wide"
-tests = ["apps/admin/components/organisms/RunList.stories.tsx"]
-expect = "red"
-expect_output = ["RunList.stories.tsx > Filtered Empty", "expected 16 to be 20"]
-
-[[mutation.edit]]
-file = "web/apps/admin/components/organisms/RunList.tsx"
-old = '''
-              <EmptyLine icon={empty.icon} iconSize="20">
-'''
-new = '''
-              <EmptyLine icon={empty.icon} iconSize="16">
-'''
