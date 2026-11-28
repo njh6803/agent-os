@@ -57,3 +57,15 @@
 - 변이 표: 첫 커밋 시도가 `tools/mutate.py --staged`에서 막혔다. 공유 토큰 코드(`LOGIN_ONLY_PATHS`, `SHARED_TOKEN_PERMISSIONS`, `_Shared`, `AdminPaths`, `ChannelPaths`, `bearer`)가 사라져 원문이 0번인 변이 일곱 건이었다. 걷힌 동작을 겨냥한 다섯(`account_routes_mutations.toml`, `permission_mutations.toml`, `contract_mutations.toml`의 하나씩과 `api_client_mutations.toml`의 둘)은 지웠다. `api_client_mutations.toml`의 "패키지의 타입 에러를 typecheck 가 본다"는 원문을 `createOperatorClient` 줄로 옮기고 `expect_output = ["error TS2322"]`를 더했다(그 변이만 따로 돌려 `src/clients.ts(39,14): error TS2322`를 봤다). `widget_llm_mutations.toml`의 키 빼기 변이는 원문을 새 `serve.ts`의 줄로 옮겼다(실제 모델이 필요한 `llm_widget` 변이라 돌려 보지는 않았다). 그 뒤 `--staged`가 문제 0이었다.
 - 새 시험이 빨강을 보는지: 저장소에 두지 않는 스크래치 표(`remove_tokens_mutations.toml`)의 변이 셋을 `uv run python tools/mutate.py <표>`로 돌려 셋 모두 기대대로 빨강이었다. 운영자 경로의 401에 챌린지 머리를 싣게 한 변이는 `test_옛_공유_토큰으로는_운영자_경로가_401이고_챌린지_머리도_없다`가, 최종 사용자 경로의 401에서 머리를 뺀 변이는 `test_최종_사용자_경로는_서명_토큰이_없으면_401이고_챌린지_머리를_싣는다`가, 옛 변수 안내가 값을 싣게 한 변이는 `test_더_쓰지_않는_토큰_변수_둘이_남아도_서버가_뜨고_변수마다_안내_한_줄을_찍고_값은_싣지_않는다`가 잡았다.
 - 첫 커밋 시도의 pytest에서 `tests/tools/test_rerun_runner.py::test_같은_갈래가_두_번_든_파일럿의_두_회차가_함께_돌아도_번호가_다르다`가 한 번 실패했다(`assert 1 == 2`). 그 시험만 홀로 다시 쳐 2개가 통과했고(87.72초), 이 변경이 건드리지 않은 파일이라 부하가 겹친 실행의 시간 민감 실패로 본다. 둘째 시도에서는 pytest가 통과했다.
+- 인계: 커밋 뒤 경계에서 컨텍스트가 문턱을 넘어 넘긴다. 이 세션의 제목을 `feature/13-remove-shared-tokens (인계함)`으로 바꾸고 워크트리 잠금을 풀었다. open-session을 부른다 2026-11-28T03:34:26Z
+
+## 인계 상세 (커밋 뒤, 새 세션이 이어받을 일)
+
+커밋 ad68887fe까지 했고 푸시하지 않았으며 PR도 없다. 티켓은 이미 done이고 `.scratch/plan.md`도 같은 커밋에 있다.
+
+1. `git fetch origin dev` 뒤 origin/dev를 이 브랜치에 합친다. `tools/sibling_overlap.py`가 dev에서 같이 고쳐진 파일로 CONTEXT.md, README.md, tests/test_main.py, web/apps/admin/e2e/channel.ts, decision.e2e.ts, plugin-toggle.e2e.ts, web/apps/widget/e2e/stack.ts, web/eslint.config.test.ts, web/packages/e2e-stack/src/serve.ts를 알렸다. 충돌을 풀 때 이 브랜치의 뜻(공유 토큰 없음, 로그인 쿠키만)을 지킨다. 합친 뒤 고친 파일을 가리키는 시험과 `tools/mutate.py --staged`를 다시 본다. 합친 변경이 `.claude/rules/http.md`를 고쳤으면 카나리아 명세 셋(`http_rule_continuation_422.toml`, `http_rule_pre_owner_damage.toml`, `http_rule_llm_widget.toml`)을 다시 돌린다.
+2. PR을 연다. 제목은 `feat!:`로 시작한다. 본문에 업그레이드 조각(`docs/release-notes/upgrade/remove-shared-tokens.md`)과, e2e-stack과 위젯·위젯 테스트 페이지 stack.ts는 운영자 경로를 부르지 않아 토큰만 걷고 계정은 만들지 않았다는 점과, 열린 PR #651이 `README.md`·`deploy/standalone`을 같이 고쳐 나중에 병합하는 쪽이 충돌을 푼다는 점을 적는다. 열면 ccd_pr `get_status`로 PR을 확인하고 없으면 `bind_pr`로 묶는다.
+3. merge.md의 봇 회차와 병합. 워크트리에서 병합하는 세션은 이 워크트리 사본의 next-session merge.md "워크트리에서 병합할 때"를 따른다.
+
+Runpod의 `agent-os-llm-local-shared` 파드는 이 세션이 만들지 않았고 건드리지 않았다. ADR 0011·0015에 이력 항목을 더하는 일은 사용자 승인이 필요해 이 PR에 넣지 않았다.
+- open-session을 다시 부른다 2026-11-28T03:36:21Z (첫 시도는 URL 8376자로 상한 8000을 넘어 지시문을 줄였다)
