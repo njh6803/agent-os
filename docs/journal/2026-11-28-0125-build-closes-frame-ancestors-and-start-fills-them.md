@@ -111,3 +111,62 @@ CLI는 돌았다(`coderabbit` 0.7.5, `Plan: Free`, `Seat: not assigned`인데 `r
 - **보류(Minor, 이 PR에서 고치지 않음).** 허용 출처 규칙(`web/packages/site-file/src/site-file.ts`의 `FORBIDDEN_DOMAIN_SIGNS`, `src/agent_os/main.py`의 `_FORBIDDEN_DOMAIN`)이 호스트에서 `;`, `,`, `'`, `"`를 막지 않아, `https://a.example;sandbox` 같은 값이 `frame-ancestors` 응답 머리에 그대로 들어가 값 없는 지시어(`sandbox` 등)를 더할 수 있다. 공백이 막혀 있어 값이 있는 지시어(`'unsafe-inline'` 등)는 못 넣고, 정책을 푸는 길은 못 찾았다(막는 쪽으로만 깨진다). 입력은 운영자가 쓰는 사이트 파일이고 개발 서버 길에는 원래 있던 성질이다. 고치는 값: 두 언어의 정규식, 공용 사례(`tests/fixtures/site_file/origins.json`), 변이 표(`.scratch/web-widget/probes/site_file_mutations.toml`)와 두 언어의 시험, 진단 문구(`호스트는 … 글자가 없다`)가 함께 바뀐다. 이 값이 브라우저가 거절하지 않는 글자까지 막는 계약 변경이라 이 티켓의 체크박스 밖이고, 후속 티켓으로 둔다(아래 "다음"에도 적는다).
 - **반영(값이 작아 고쳤다).** `web/apps/widget/tools/manifest.ts` 머리 주석에 Next 판이 올라 원본을 복사하는 순서가 바뀌는지는 위젯과 위젯 테스트 페이지의 e2e가 실제 빌드로 본다는 두 줄을 더했다(주석만).
 - **못 잰 것.** 두 시작이 서로 다른 사이트 파일로 같은 자리에 동시에 쓰면 뒤에 쓴 쪽이 이기는 경합은 이론상 남는다(Minor, 실제 배포 길이 아니다).
+
+## 인계(PR 연 뒤, 이어받은 세션의 두 번째 인계)
+
+이 세션은 위 "남은 일(새 세션)" 1~3을 하고 PR을 연 뒤 컨텍스트가 인계 문턱(20만 토큰)을 넘어 `PR 연 뒤` 경계에서 넘긴다. 사용자의 새 말은 없었다(시작 프롬프트는 위 "사용자 프롬프트"와 같은 지시문이고 "이번 요청 범위: PR과 병합까지"다). 제목은 `feature/02-build-closes-frame-ancestors-and-start-fills-them`이었고 `... (인계함)`으로 바꾼다.
+
+한 것(이 세션이 친 명령의 결과다).
+- `git fetch origin`으로 `origin/dev`가 `3a1dd4eb`(PR #659)로 앞선 것을 보고, 겹치는 파일은 `README.md` 하나이며 시험 병합이 충돌 없이 끝나는 것을 확인했다. `sibling_overlap`은 번호 겹침 없음(형제의 가장 높은 헌법 판 3.1.9, 이 브랜치 3.1.10)이다.
+- PR 직전 리뷰를 `coderabbit-review`로 돌렸고(위 "PR 직전 리뷰" 절) 일지와 `manifest.ts` 머리 주석 한 줄을 커밋했다(`679ee8db2`). 그 커밋의 pre-commit은 첫 시도가 커밋 제목 76자(제한 72자)로, 둘째 시도가 `tests/tools/test_probe_kit.py::test_배출은_줄이_계속_와도_제한_시간에_끝난다`(8,899개 가운데 하나)의 시간 단언으로 빨갰고 셋째 시도에서 통과했다. 그 시험은 홀로 돌려 15개가 통과했다.
+- 푸시 훅이 기준 `origin/dev`보다 한 커밋 뒤처졌다고 막아 `git merge origin/dev`를 했다. 병합 메시지의 타입 `merge:`가 commit-msg 검사에서 거절되어(타입은 feat, fix, docs, style, refactor, test, chore, perf) `chore: origin/dev를 합쳐 기준을 맞춘다 (widget-runtime-values 02)`로 커밋했다(`172cc9ba8`). 이 합치기에도 pre-commit이 돌았고 통과했다.
+- 푸시했고 PR을 열었다: https://github.com/njh6803/agent-os/pull/661 (제목 접두 `feat:`, 느낌표 없음). 본문은 서식을 채웠고 보류한 지적과 밀 주장을 적었다. 앱의 PR 연결은 이 세션에 이미 묶여 있었다(`get_status`가 #661을 보였다. 검사는 통과 1·진행 8·건너뜀 2였다).
+- 아직 `@coderabbitai review` 코멘트를 남기지 않았다.
+
+남은 일(새 세션). 
+1. 첫 `@coderabbitai review` 코멘트를 남기고 `merge.md` 2(봇 회차)부터 한다: `gh pr comment 661 --body "@coderabbitai review"`, 이어 `tools/wait_ci.py 661`을 백그라운드로 띄운다. 일지를 푸시하면 claude-review가 한 번 더 도므로 일지는 마지막 봇 회차의 커밋에 싣는다.
+2. 반영(`/pr-feedback`)이 필요하면 고치고, 본문을 넓히는 커밋은 푸시 전에 `gh pr edit`으로 PR 본문을 먼저 고친다.
+3. 로컬 모델 시험(`llm_local`)은 이 PR의 변경이 병합 조건의 범위에 들지 않아 건너뛴다(변경 경로에 `tools/llm_local.py`·`tools/llm_local_server/`·LLM 호출 코드가 없다. 새 세션이 `docs/constitution/operations.md` LLM 테스트의 범위를 다시 대조한다).
+4. 일지의 `## 다음`(아래 후보를 넣는다), 회고(`retro`), 병합("워크트리에서 병합할 때" 1~5), 다음 지시문(`.scratch/widget-runtime-values`의 03)이다.
+
+`## 다음`에 넣을 것.
+- 후속 후보(보류, Minor): 허용 출처 규칙의 호스트에서 `;`, `,`, `'`, `"`를 막는다. 바꿀 곳은 `web/packages/site-file/src/site-file.ts`의 `FORBIDDEN_DOMAIN_SIGNS`, `src/agent_os/main.py`의 `_FORBIDDEN_DOMAIN`, 공용 사례 `tests/fixtures/site_file/origins.json`, 변이 표 `.scratch/web-widget/probes/site_file_mutations.toml`, 두 언어의 시험, 진단 문구(`호스트는 … 글자가 없다`). 브라우저가 거절하지 않는 글자까지 막는 계약 변경이다. 티켓으로 쓸지는 retro가 판정한다.
+- 회고 후보: `.claude/rules/tests.md`의 "시간 단언은 넉넉한 배수"를 어긴 시험들이 부하에서 흔들린다(위 pre-commit 시도들. `test_probe_kit.py`의 제한 시간 사례, 앞 커밋의 `test_check_md_tables.py` 1.499초 < 1.0초 등).
+- 회고 후보: 푸시 훅의 안내 "충돌 없는 합치기에는 pre-commit이 돌지 않는다"와 달리 이 PC에서는 병합 커밋에도 pre-commit이 돌았고(`git merge origin/dev -m …`이 commit-msg 검사에서 막혀 병합을 커밋하지 않은 채 멈췄고, `git commit -F`로 마칠 때 러너가 돌아 Bash의 600초 제한을 넘겨 백그라운드로 넘어갔다) 병합 커밋 메시지의 타입 규약(`merge:` 불가)도 안내에 없다.
+
+- 이 세션의 제목을 `feature/02-build-closes-frame-ancestors-and-start-fills-them (인계함)`으로 바꾼다(바꾸기 전 제목은 `feature/02-build-closes-frame-ancestors-and-start-fills-them`).
+- 백그라운드로 도는 작업은 없다(커밋과 병합 커밋이 모두 끝났다). `git worktree unlock`으로 이 워크트리의 잠금을 푼다.
+- 경계는 `PR 연 뒤`다. 일지 경로는 `docs/journal/2026-11-28-0125-build-closes-frame-ancestors-and-start-fills-them.md`다.
+- 주 체크아웃은 `3a1dd4ebf`(dev)로 `origin/dev`와 같다. 병합된 이 워크트리를 치우는 일은 병합 뒤 새 세션이 `merge.md` "워크트리에서 병합할 때" 3~4대로 한다.
+- open-session을 부른다 2026-11-27T19:36Z
+
+## 봇 회차와 로컬 모델 시험(이어받은 세 번째 세션)
+
+사용자의 새 말은 시험 비용 확인 하나다. 시작 프롬프트는 위 "사용자 프롬프트"와 같은 지시문이고 범위는 "PR과 병합까지"다. 제목은 `feature/02-build-closes-frame-ancestors-and-start-fills-them`으로 바꿨고, 워크트리에 `EnterWorktree(path)`로 들어갔다. 앱의 PR 연결은 `bind_pr`로 #661에 묶었다.
+
+- **봇 회차(머리 `172cc9ba8`).** `@coderabbitai review`를 남겼고 `tools/wait_ci.py 661`이 끝났다. CodeRabbit은 "Review limit reached"(무료 한도)로 리뷰가 없어 회차로 세지 않는다. 검사 열한 줄은 모두 SUCCESS(`llm`만 SKIPPED)다. claude-review의 첫 회차는 Minor 하나와 Nit 하나다. 둘 다 보류했고 이유를 PR 코멘트(issuecomment-7232406313)에 남겼다. Minor는 `start.ts`의 `launch`가 `manifest === "fill"`을 `runtime` 블록 안에서만 보아 타입이 `fill`이면서 `runtime: false`인 조합을 막지 못한다는 것이다. 리뷰도 후속으로 허용했다. Nit은 `LaunchSteps`의 다섯 단계를 `command` 객체에서 만들자는 것이다.
+- **범위 대조.** 변경 파일 마흔여 개 가운데 `src/agent_os/main.py`(주석 두 줄)가 `operations.md` LLM 테스트의 범위 경로다. 앞 세션의 "범위 밖이라 건너뛴다"는 판단과 어긋나 비용을 사용자에게 보였다. 앞 세션이 쓴 판단 근거가 틀린 것이다(대기열 `llm-local-scope-misread-for-comment-only-change`).
+- **사용자의 답.** 비용 확인 화면(질문: 규칙대로 모델 서버를 빌려 시험을 돌릴까요?)에서 사용자가 "돌린다"를 골랐다. 선택지 설명은 "명령이 찍은 예상 비용은 어림 30분에 $0.27~0.59이고 최악 90분이면 $0.81~1.77입니다(단가는 2026-11-13에 웹 요약에서 읽은 값이라 원문과 대조하지 못했습니다). 통과하면 기록을 일지와 PR에 옮기고 병합합니다. 규칙 그대로입니다."였다.
+- **시험 기록(`llm_local run --yes`, 종료 코드 0).** 시험한 커밋 `172cc9ba831178c5d81c9bbc98de3bd762238d1d`, 모델 `GotoAI-Inc/gemma-4-26B-A4B-it-W4A16`·`openai/gpt-oss-20b`, 엔진 vLLM 0.33.0(이미지 `vllm/vllm-openai:v0.33.0`), GPU A40 하나에 두 서버를 함께 올린 `shared` 배치(서버 옵션은 두 모델 모두 `--enable-auto-tool-choice --gpu-memory-utilization 0.45 --kv-cache-memory=4294967296`. gemma는 `--max-model-len 32768`과 `--tool-call-parser gemma4`, gpt-oss는 `--tool-call-parser openai`), 통과 4개, 토큰 합계 6,297(입력 6,191, 출력 106), 모델 호출 4건과 트레이스 2개(트레이스를 남기지 않은 LLM 테스트 2개는 세지 못했다), 걸린 시간 390.5초, 시간당 $0.59(2026-11-13의 가격표), Terraform 출력에서 가린 것이 있었다. 앞 후보 셋(RTX A5000 둘, RTX 3090 둘, A40 둘)은 재고 없음과 자원 부족으로 파드 생성이 실패했고 마지막 `shared / A40`에서 떴다. 그 시도에서 파드 둘이 한때 만들어졌다는 출력(id `xnkrysa77kxp28`, `egbbed6citn14a`)이 있어 병합 전에 `sweep`을 쳤다. `sweep`은 이 브랜치의 상태 폴더와 다른 세션의 `feature/13-remove-shared-tokens` 상태 폴더를 치웠다. `sweep`은 죽은 잠금의 폴더만 치우므로(`tools/llm_local.py` 독스트링) 13번 세션이 산 잠금으로 돌고 있었다면 건드리지 않았을 것이다. 실제로 그 폴더의 잠금이 죽어 있었는지는 이 세션이 따로 보지 못했다. Runpod에 남은 파드가 없는지도 `sweep`의 출력("치웠다" 둘) 밖으로는 보지 못했다. 병합 뒤에 `sweep`을 한 번 더 친다.
+- **기록 유효.** 시험한 커밋 뒤 이 브랜치에 더한 것은 일지와 대기열 항목 둘뿐이라 범위를 건드리지 않는다.
+
+## 회고
+
+후보 여섯, 판정은 승인 둘, 기각 넷, 넘김 없음이다.
+
+1. **승인 · 푸시 훅 안내가 병합 커밋 제목의 꼴을 말하지 않는다.** 사건: 앞 세션이 안내대로 `git merge origin/dev`를 쳤더니 기본 메시지의 타입 `merge:`가 commit-msg 검사에 막혀 병합이 커밋되지 않은 채 멈췄고, 손으로 `git commit -F`로 마칠 때 pre-commit 러너가 돌아 600초 제한을 넘겼다. 층: 훅의 안내 문장(`tools/hook_push_behind_main.py`의 `reason_text`)이 사건이 난 자리라 훅 문장이 맞는 층이다. 되돌림: PR 하나. 더하는 것이라 1회차로 대기열에 뒀다(`merge-commit-message-type-rejected`, 1회차).
+2. **승인 · 범위 경로 대조를 사람이 기억으로 했다.** 사건: 위 "범위 대조"의 것이다. 앞 세션이 변경 파일 마흔여 개를 눈으로 훑고 범위 밖이라 적었는데 `main.py`가 범위에 있었다. 층: 경로 대조는 기계가 할 수 있으므로 도구가 맞다. 더하는 것이라 1회차로 대기열에 뒀다(`llm-local-scope-misread-for-comment-only-change`, 1회차).
+3. **기각 · 시간 단언이 부하에서 흔들려 pre-commit이 빨갰다**(`test_probe_kit.py`의 제한 시간, 앞 커밋의 `test_check_md_tables.py` 1.499초 대 1.0초). 대기열 306이 "부하에서 시간 시험이 빨개지면 그 커밋을 다시 치는 값을 받아들이고 사례를 더 고치지 않는다"로 이 종류를 받아들여 닫았다. 새 사례는 일지에만 적는다(retro 5단계).
+4. **기각 · `sweep`이 다른 세션(13번)의 상태 폴더를 치웠다.** `sweep`은 죽은 잠금의 폴더만 치우도록 설계되어 있고(독스트링의 잠금 규칙), 장치가 의도대로 일했다. 13번 세션의 산 시험을 해쳤다는 증거는 없다.
+5. **기각 · 허용 출처 규칙이 호스트의 `;`, `,`, `'`, `"`를 막지 않는다.** 제품의 후속 작업이지 하네스의 실수가 아니다. 아래 "다음"에 후속 후보로 옮겼다.
+6. **기각 · `coderabbit review`의 `--committed`와 `--include-untracked`가 함께 받지 않아 첫 호출이 옵션 오류로 끝났다.** 리뷰가 시작되지 않았고 비용이 없었으며 다음 호출에서 바로 고쳤다. 사건이 비용을 낳지 않았다.
+
+만료할 항목은 없었다(`queue_open_rows.py`가 "(없음)"을 냈다).
+
+## 다음
+
+- **지금 열린 일은 PR #661의 병합뿐이다.** 병합 전 확인(`gh pr view`의 `headRefOid`와 `git rev-parse HEAD` 대조, 검사 초록)은 마지막 푸시 뒤에 한다. 푸시로 도는 claude-review는 이 PR에 대해 둘째 회차라 Critical·Major만 고친다. 병합한 뒤에 `tools/llm_local.py sweep`을 한 번 더 치고 주 체크아웃 갱신은 새 세션의 `tidy-checkouts`에 넘긴다.
+- **다음 티켓은 `.scratch/widget-runtime-values`의 03이다.** 지시문은 병합 뒤 next-session이 짓는다.
+- **후속 후보(보류, Minor): 허용 출처 규칙의 호스트에서 `;`, `,`, `'`, `"`를 막는다.** `https://a.example;sandbox` 같은 값이 `frame-ancestors` 응답 머리에 그대로 들어가 값 없는 지시어를 더할 수 있다. 공백이 막혀 있어 값이 있는 지시어는 못 넣고 정책을 푸는 길은 못 찾았다(막는 쪽으로만 깨진다). 바꿀 곳은 `web/packages/site-file/src/site-file.ts`의 `FORBIDDEN_DOMAIN_SIGNS`, `src/agent_os/main.py`의 `_FORBIDDEN_DOMAIN`, 공용 사례 `tests/fixtures/site_file/origins.json`, 변이 표 `.scratch/web-widget/probes/site_file_mutations.toml`, 두 언어의 시험, 진단 문구(`호스트는 … 글자가 없다`)다. 브라우저가 거절하지 않는 글자까지 막는 계약 변경이라 이 티켓의 밖이고, 티켓으로 쓸지는 사용자가 정한다.
+- **후속 후보(보류, Minor, claude-review 첫 회차): 값 파일을 쓰는 일과 사본을 쓰는 일의 묶음을 타입으로 드러낸다.** `web/apps/widget/tools/start.ts`의 `launch`가 `manifest === "fill"`을 `runtime` 블록 안에서만 보아, 타입이 `fill`이면서 `runtime: false`인 조합을 막지 못한다. `nextCommand`가 `start`에서만 두 칸을 함께 내므로 지금 동작은 맞다. 다음 티켓(03)이 `start.ts`를 다시 만지면 그때 함께 본다. Nit(`LaunchSteps`의 다섯 단계를 `command` 객체에서 만들기)도 같은 자리의 일이다.
+- **못 잰 것.** 두 시작이 서로 다른 사이트 파일로 같은 자리에 동시에 쓰면 뒤에 쓴 쪽이 이기는 경합은 이론상 남는다(Minor, 실제 배포 길이 아니다). 위젯 e2e·사진 비교·단독 배포 e2e·실제 모델 e2e는 이 세션에서 다시 돌리지 않았고 CI의 초록(`gh pr view`로 본 `e2e`·`e2e-widget`·`e2e-portal`·`e2e-standalone`·`visual`의 SUCCESS)이 근거다. 실제 모델 e2e(`-m llm_widget`, `-m llm_portal`)는 이 세션이 돌리지 않았고, 앞 세션이 쳤는지는 위 앞 절들의 기록을 따른다.
