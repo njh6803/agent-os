@@ -52,10 +52,7 @@ function LoginScreen({ url }: { readonly url: URL }) {
         <LoginForm
           notice={notice}
           insecure={!canSignInAt(url)}
-          rejected={attempt.rejected}
-          rejections={attempt.rejections}
-          failure={attempt.failure}
-          pending={attempt.pending}
+          state={attempt}
           onSubmit={attempt.submit}
         />
       )}

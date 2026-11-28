@@ -15,8 +15,10 @@
  *   출처의 사이트는 `other.localhost` 이고 포트로 가른다. 표기 규칙은 IP 호스트의 출처도 지나보내지만 CSP3 의 문법은
  *   host-part 대조를 domain 에만 맞춘다(`tests/fixtures/site_file/README.md`). 브라우저는 `*.localhost` 를 보안 맥락으로
  *   보아 TLS 없이도 위젯의 `crypto.randomUUID` 가 선다. 이름 풀기는 Playwright 설정이 맡는다.
- * - 포트를 먼저 고른다. 허용 출처가 사이트 파일에 실리고 그것이 위젯 빌드의 `frame-ancestors` 와 번들에 박히기 때문이다.
- * - 사이트 파일은 사이트 하나이고 `request_chars` 를 적지 않는다. 그래서 입력창과 서버의 글자 수 상한이 둘 다 기본값이다.
+ * - 포트를 먼저 고른다. 허용 출처가 사이트 파일에 실리고 그것이 위젯 빌드의 `frame-ancestors` 에 박히기 때문이다. 번들에는
+ *   허용 출처도 글자 수 상한도 박히지 않는다. 위젯은 뜰 때 값 파일(`/widget/runtime.json`)로 받는다.
+ * - 사이트 파일은 사이트 하나이고 `request_chars` 를 기본값과 다른 `SITE_REQUEST_CHARS` 로 적는다. 입력창은 값 파일로, 서버는
+ *   사이트 파일로 같은 상한을 따른다.
  * - 사이트의 키 쌍은 `node:crypto` 가 짓고 개인 키는 이 프로세스의 사이트 서버만 든다.
  * - serve 의 환경에는 부모의 환경을 펼친다(관리 화면 e2e 와 같다).
  *   위젯 Next 는 API 를 모르고(ADR 0024) 사이트 파일만 읽는다.
@@ -58,6 +60,7 @@ import {
   LLM_ENV,
   OTHER_ORIGIN_ENV,
   SITE_ORIGIN_ENV,
+  SITE_REQUEST_CHARS,
   TRACES_DIR_ENV,
   TRACES_ENV,
   WIDGET_ORIGIN_ENV,
@@ -98,7 +101,7 @@ export default async function globalSetup(): Promise<() => Promise<void>> {
     const key = siteKey();
     const siteFile = join(stack.work, "sites.toml");
     const agents: readonly string[] = llm ? [...AGENTS, LLM_AGENT, ASSISTANT_AGENT] : AGENTS;
-    writeFileSync(siteFile, siteFileToml(siteOrigin, key.publicPem, agents));
+    writeFileSync(siteFile, siteFileToml(siteOrigin, key.publicPem, agents, SITE_REQUEST_CHARS));
     const traces = process.env[TRACES_ENV] ?? join(stack.work, "traces");
 
     // `serve` 는 표의 판이 맞는 데이터베이스가 있어야 뜬다. 이 준비만의 데이터베이스를 만들어 표를 올려 넘긴다.
@@ -143,9 +146,10 @@ function nextEnv(siteFile: string): NodeJS.ProcessEnv {
 }
 
 /**
- * 그 사이트 파일로 위젯을 빌드한다. 허용 출처와 글자 수 상한이 빌드에 박힌다. 시작 래퍼로 빌드해 글꼴 파일의 복사와
- * 페이지 안 번들의 빌드까지 운영과 같은 길을 지난다. 빌드는 앱의 `.next/`, `public/fonts/`, `public/element.js` 를 다시
- * 쓴다.
+ * 그 사이트 파일로 위젯을 빌드한다. 허용 출처가 응답 머리의 `frame-ancestors` 로 박힌다(그 빌드의 몫은 02 가 뜰 때로
+ * 옮긴다). 글자 수 상한은 빌드에 박히지 않고, 뒤이은 `start` 가 쓰는 값 파일로 나간다. 시작 래퍼로 빌드해 글꼴 파일의
+ * 복사와 페이지 안 번들의 빌드까지 운영과 같은 길을 지난다. 빌드는 앱의 `.next/`, `public/fonts/`, `public/element.js` 를
+ * 다시 쓴다.
  */
 async function build(stack: Stack, siteFile: string): Promise<void> {
   // 시작 래퍼가 next 를 같은 프로세스에서 부르므로 next 의 진입점이 깔렸는지만 먼저 본다.

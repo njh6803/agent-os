@@ -14,8 +14,10 @@
 // - 테마와 모드는 호스트의 `data-theme`·`data-mode` 로 옮겨 디자인 토큰 CSS 의 `:host(...)` 가 받는다. 호스트에는
 //   `data-density="regular"` 를 단다. shadow 호스트는 바깥의 밀도를 물려받지 않아, 빠뜨리면 넓은 창에서 촘촘해진다.
 //   속성은 붙을 때부터 단다. 생성자에서 속성을 더하면 `createElement` 가 실패한다(Custom Elements 의 생성자 규칙).
-// - 번들의 기준 주소가 없으면(element/base.ts) 토큰 함수를 부르지도 요청을 보내지도 않고, 잘못 준 속성과 같은 위험
-//   알림과 console.error 를 남긴다.
+// - 번들의 기준 주소가 없으면(element/base.ts) 토큰 함수를 부르지도 요청을 보내지도 값 파일을 받지도 않고, 잘못 준 속성과
+//   같은 위험 알림과 console.error 를 남긴다.
+// - 요청 글자 수 상한은 번들이 싣지 않고 열릴 때 번들이 실려 온 출처의 값 파일(`/widget/runtime.json`)에서 받는다
+//   (lib/runtime.ts). 허용 출처는 페이지 안 방식이 쓰지 않는다. 받는 동안은 틀만 그리고 입력을 막으며 토큰 함수를 부르지 않는다.
 // - 사이트가 요소가 정의되기 전에 `tokenProvider` 를 대입하면 그 값은 인스턴스의 자기 속성으로 남아 이 클래스의
 //   접근자를 가린다. 업그레이드되는 생성자에서 그 값을 옮겨 담고 자기 속성을 지운다.
 // - 떼면 React 뿌리를 걷어 열린 스트림이 끊기고(useConversation), 다시 붙이면 새로 그린다.
@@ -23,7 +25,7 @@
 import { UI_ROOT_ATTRIBUTE } from "@agent-os/ui";
 import { createRoot, type Root } from "react-dom/client";
 import { ConnectedWidget } from "../components/pages/ConnectedWidget";
-import type { Connection } from "../lib/connection";
+import type { EmbedConnection } from "../lib/connection";
 import { EMBED_NAMES, readEmbed } from "../lib/embed";
 import { providerToken } from "./token";
 
@@ -49,7 +51,7 @@ export function widgetElement(setup: ElementSetup): CustomElementConstructor {
 
     #provider: unknown = undefined;
     #root: Root | null = null;
-    readonly #connection: Connection | null;
+    readonly #connection: EmbedConnection | null;
 
     constructor() {
       super();

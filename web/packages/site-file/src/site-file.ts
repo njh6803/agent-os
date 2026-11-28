@@ -4,15 +4,16 @@
  * 상한을 든 모델(`parseSiteFile`, `readSiteFile`)이고, 위젯 빌드와 위젯 미리보기 페이지가 각자 필요한 칸을 쓴다(pilot-portal 명세
  * "앱과 패키지").
  *
- * 위젯 빌드의 입력은 그 모델에서 끌어낸 두 값이다(web-widget 티켓 04). 하나는 모든 사이트의 허용 출처를 합친
- * 목록(처음 나온 차례, 겹친 것은 한 번)이고 iframe 페이지의 `frame-ancestors` 가 쓴다. 다른 하나는 모든 사이트의 요청 글자
- * 수 상한 가운데 가장 작은 값(적지 않은 사이트는 서버의 기본값)이다. 위젯의 설정 파일(`next.config.ts`)이 `buildInput`
- * 을 부르고 두 값을 `env` 로 번들에 싣는다. 번들에서 읽는 법은 티켓 05 의 머리에 적었다.
+ * 위젯의 입력은 그 모델에서 끌어낸 두 값이다(web-widget 티켓 04). 하나는 모든 사이트의 허용 출처를 합친
+ * 목록(처음 나온 차례, 겹친 것은 한 번)이고, 다른 하나는 모든 사이트의 요청 글자 수 상한 가운데 가장 작은 값(적지 않은
+ * 사이트는 서버의 기본값)이다. 위젯의 설정 파일(`next.config.ts`)이 `buildInput` 을 불러 앞의 것을 iframe 페이지의
+ * `frame-ancestors` 에 굳힌다. 시작 래퍼(`tools/runtime.ts`)도 같은 함수로 두 값을 뜰 때마다 값 파일에 쓰고, 브라우저
+ * 쪽은 열릴 때 그 파일을 받는다(widget-runtime-values 티켓 01). 두 값을 번들에 싣지 않는다.
  *
  * 판정은 fail-closed 다(ADR 0024). 변수가 없으면 사이트 없음(빈 허용 출처와 기본 상한)이고, 변수를 줬는데 비었거나 그
- * 파일이 없거나 읽지 못하면 빌드가 실패한다. 읽지 못하는 것은 둘이다. 하나는 모양이 서버의 pydantic 모델과 어긋난
+ * 파일이 없거나 읽지 못하면 빌드와 시작 래퍼(`dev`·`start`)가 실패한다. 읽지 못하는 것은 둘이다. 하나는 모양이 서버의 pydantic 모델과 어긋난
  * 것이다. TOML 이 깨졌거나, 판이 "1" 이 아니거나, 모르는 키가 있거나, 필수 키가 빠졌거나, 값의 타입이 엄격한 타입과
- * 다르면 그렇다. 다른 하나는 빌드가 읽는 두 값이 서버가 거절할 값인 것이다(아래 표기 밖의 허용 출처, 1 보다 작은
+ * 다르면 그렇다. 다른 하나는 위젯이 읽는 두 값이 서버가 거절할 값인 것이다(아래 표기 밖의 허용 출처, 1 보다 작은
  * `request_chars`). 서버만 보는 제약(공개 키의 수, 다른 상한의 범위, 발급자의 빈 값·겹침·`|`, 공개 키의 PEM 과 `kid`,
  * 열 에이전트의 이름)은 다시 판정하지 않는다. smol-toml 은 TOML 1.1 을 따라 파이썬 tomllib(TOML 1.0)이 거절하는 문법(여러 줄 인라인
  * 표, `\e` 이스케이프 등)도 받는다. 그런 파일로는 빌드가 지나도 serve 가 뜨지 못해, 조용히 지나가지 않는다.
@@ -31,13 +32,6 @@ import { readFileSync } from "node:fs";
 import { parse, TomlError, type TomlTable, type TomlValue } from "smol-toml";
 
 export const SITE_FILE_ENV = "AGENT_OS_SITE_FILE";
-/** 빌드가 싣는 합친 허용 출처. 공백으로 잇는다. 표기 규칙을 지난 출처에는 공백이 없다. */
-export const WIDGET_ORIGINS_ENV = "AGENT_OS_WIDGET_ORIGINS";
-/**
- * 빌드가 싣는 가장 작은 요청 글자 수 상한. 지수 꼴이 아닌 십진수 글이다. 2^53 을 넘는 상한은 `number` 를 거쳐 가까운
- * 정수로 싣는다.
- */
-export const WIDGET_REQUEST_CHARS_ENV = "AGENT_OS_WIDGET_REQUEST_CHARS";
 /** 서버의 기본값(`src/agent_os/channel/http/limits.py` 의 `DEFAULT_REQUEST_CHARS`). 두 언어의 시험이 같은 값을 본다. */
 export const DEFAULT_REQUEST_CHARS = 20_000;
 
@@ -58,7 +52,7 @@ export interface PublicKey {
 
 /**
  * 읽은 사이트 하나. 요청 글자 수 상한은 적지 않은 사이트도 서버의 기본값으로 채워 낸다. 상한이 2^53 을 넘으면 `number` 를
- * 거쳐 가까운 정수가 된다(`WIDGET_REQUEST_CHARS_ENV` 와 같다).
+ * 거쳐 가까운 정수가 된다(`buildInput` 이 내는 상한과 같다).
  */
 export interface Site {
   readonly issuer: string;

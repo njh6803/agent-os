@@ -5,11 +5,20 @@
 // 요소의 이름은 문서마다 한 번만 정의되므로 사례마다 다른 이름으로 정의한다.
 
 import { UI_ROOT_ATTRIBUTE } from "@agent-os/ui";
-import { act, screen, within } from "@testing-library/react";
-import { afterEach, expect, test, vi } from "vitest";
+import { act, screen, waitFor, within } from "@testing-library/react";
+import { http, HttpResponse } from "msw";
+import { afterEach, beforeEach, expect, test, vi } from "vitest";
+import { clearRuntimeValues, RUNTIME_PATH } from "../lib/runtime";
+import { gate, network } from "../testing/network";
+import { seedValues } from "../testing/runtime";
 import { widgetElement, type ElementSetup } from "./WidgetElement";
 
 const BASE = new URL("https://widget.example");
+
+// 요소는 번들이 실려 온 출처의 값 파일을 받는다. 그 출처의 값을 받은 상태로 시작한다(testing/setup.ts 가 걷는다).
+beforeEach(() => {
+  seedValues(BASE);
+});
 let defined = 0;
 
 function define(setup: Partial<ElementSetup> = {}): string {
@@ -118,6 +127,65 @@ test("번들의 기준 주소가 없으면 위험 알림과 console.error 를 �
   expect(within(root).getByRole("textbox", { name: "질문" })).toHaveProperty("disabled", true);
   const logged = errors.mock.calls.map((call) => String(call[0]));
   expect(logged.filter((line) => line.includes("document.currentScript"))).toHaveLength(1);
+});
+
+test("값 파일은 번들이 실려 온 출처에서 받고, 받는 동안은 입력창이 막혀 있으며, 받은 상한을 따른다", async () => {
+  clearRuntimeValues();
+  const release = gate();
+  const asked: string[] = [];
+  network.use(
+    http.get(new URL(RUNTIME_PATH, BASE).href, async ({ request }) => {
+      asked.push(request.url);
+      await release.wait;
+      return HttpResponse.json({ allowedOrigins: [], requestChars: 7 });
+    }),
+  );
+  const host = mount(define(), { agent: "order-helper" });
+  const box = () => within(wrapper(host)).getByRole("textbox", { name: "질문" });
+
+  expect(box()).toHaveProperty("disabled", true);
+  release.open();
+  await waitFor(() => {
+    expect(box()).toHaveProperty("disabled", false);
+  });
+
+  expect(asked).toEqual(["https://widget.example/widget/runtime.json"]);
+});
+
+test("값 파일을 받아 오지 못하면 알림과 다시 시도가 서고, 누르면 다시 받는다", async () => {
+  clearRuntimeValues();
+  let calls = 0;
+  network.use(
+    http.get(new URL(RUNTIME_PATH, BASE).href, () => {
+      calls += 1;
+      return calls === 1
+        ? new HttpResponse(null, { status: 500 })
+        : HttpResponse.json({ allowedOrigins: [], requestChars: 20_000 });
+    }),
+  );
+  const host = mount(define(), { agent: "order-helper" });
+  const root = wrapper(host);
+
+  const retry = await within(root).findByRole("button", { name: "다시 시도" });
+  expect(within(root).getByText("위젯 설정을 받아 오지 못했습니다.")).toBeTruthy();
+  act(() => {
+    retry.click();
+  });
+
+  await waitFor(() => {
+    expect(within(root).getByRole("textbox", { name: "질문" })).toHaveProperty("disabled", false);
+  });
+  expect(calls).toBe(2);
+});
+
+test("번들의 기준 주소가 없으면 값 파일도 받지 않는다", () => {
+  // 값을 걷어 두면 요청이 나가는 즉시 setup.ts 의 처리하지 않은 요청 검사가 빨개진다.
+  clearRuntimeValues();
+  vi.spyOn(console, "error").mockImplementation(() => undefined);
+
+  const host = mount(define({ baseUrl: null }), { agent: "order-helper" });
+
+  expect(within(wrapper(host)).getByText("위젯 설정이 올바르지 않습니다.")).toBeTruthy();
 });
 
 test("정의되기 전에 사이트가 단 tokenProvider 를 정의된 뒤에도 든다", () => {

@@ -6,22 +6,32 @@ import Link from "next/link";
 
 type TextLinkFont = "body" | "mono";
 
+/** 링크의 모양. `inline`은 글줄 안에 서고, `clip`은 열 폭에 맞춰 한 줄로 줄인다(끝을 말줄임표로). */
+type TextLinkFit = "inline" | "clip";
+
 const FONT_CLASS = {
   body: "text-body",
   mono: "font-mono text-mono wrap-anywhere",
 } satisfies Record<TextLinkFont, string>;
 
+const FIT_CLASS = {
+  inline: "inline-flex items-center",
+  clip: "block max-w-form truncate",
+} satisfies Record<TextLinkFit, string>;
+
 interface TextLinkProps {
   readonly href: string;
   readonly font?: TextLinkFont;
+  /** `clip`은 대화 목록의 첫 요청이 쓴다. 줄일 칸의 폭은 `max-w-form` 이고, 그보다 좁은 칸에서는 칸이 정한다. */
+  readonly fit?: TextLinkFit;
   readonly children: string;
 }
 
-export function TextLink({ href, font = "body", children }: TextLinkProps) {
+export function TextLink({ href, font = "body", fit = "inline", children }: TextLinkProps) {
   return (
     <Link
       href={href}
-      className={`inline-flex min-h-6 items-center rounded-s ${FONT_CLASS[font]} text-accent hover:text-text focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring`}
+      className={`${FIT_CLASS[fit]} min-h-6 rounded-s ${FONT_CLASS[font]} text-accent hover:text-text focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring`}
     >
       {children}
     </Link>

@@ -90,10 +90,10 @@ expect_output = ['Unable to find an accessible element with the role "heading" a
 [[mutation.edit]]
 file = "web/apps/admin/components/molecules/ScreenHeader.tsx"
 old = '''      {title}
-    </h1>'''
+    </Heading>'''
 new = '''      {title}
       {beside}
-    </h1>'''
+    </Heading>'''
 
 [[mutation]]
 name = "다시 읽다 실패해도 옛 켜짐을 두면 빨갛다"

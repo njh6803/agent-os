@@ -11,6 +11,9 @@
 # 다섯째는 판정자가 organisms 에 api/failure 만 여는 예외를 지운다. 그 지나보낼 사례는 예외와 함께 써서, 예외가 없을
 # 때 빨개지는지를 이 변이로 본다. 여섯째는 api 도메인을 막는 줄을 지워, 정책과 함께 쓴 위반 사례 둘(organisms,
 # templates)이 그 줄 때문에 빨간지를 본다.
+# admin-login 티켓 11이 옛 실행 화면(`RunPage`)을 없애면서 위의 넷째(마운트 자리 변이)를 걷었고, 첫째와 둘째를 대화
+# 화면(`ConversationPage.tsx`)의 같은 연결(새 대화이거나 기다리는 승인이 있을 때만 목록을 읽는 것)과 그 시험 둘로 옮겼다.
+# 그래서 지금은 여섯이고, 둘째 뒤의 번호는 하나씩 당겨 읽는다. 옮긴 둘은 표지까지 기대대로 빨갰다(2026-11-28).
 # 사용: PYTHONUTF8=1 uv run python tools/mutate.py .scratch/admin-style/probes/organisms_props_mutations.toml
 
 [runner.vitest]
@@ -21,40 +24,36 @@ judge = "vitest"
 [[mutation]]
 name = "결정 자리가 서지 않아도 목록을 읽는다"
 runner = "vitest"
-tests = ["apps/admin/components/pages/RunPage.test.tsx", "-t", "목록을 거치지 않고 곧장 열어도"]
+tests = ["apps/admin/components/pages/ConversationPage.write.test.tsx", "-t", "끝난 대화는 에이전트를 고르지도"]
 expect = "red"
-# 결정 자리가 서지 않는 실행을 목록 없이 열면 그 시험은 `GET /api/plugins` 에 핸들러를 두지 않아, 더 읽은 목록이
-# 처리하지 않은 요청으로 찍힌다(admin-login 티켓 09 가 토큰 확인용 빈 목록 응답 `acceptTokens` 를 걷은 뒤부터 그렇다).
-expect_output = ["AssertionError: 처리하지 않은 요청이 있다: expected [ Array(1) ] to deeply equal []"]
+# 옛 실행 화면이 없어지며(admin-login 티켓 11) 이 변이는 대화 화면으로 옮겼다. 끝난 대화는 목록을 읽지 않는다고
+# 세는 시험이 고른 단언이고, 실패 머리는 읽은 요청의 수를 든다.
+expect_output = ["to have a length of +0 but got 1"]
 
 [[mutation.edit]]
-file = "web/apps/admin/components/pages/RunPage.tsx"
+file = "web/apps/admin/components/pages/ConversationPage.tsx"
 old = '''
-  const { data, error } = usePlugins({
-    active: decisionPlaceStands(trace),
-  });
+  const plugins = usePlugins({ active: endRun === null || asking === true });
 '''
 new = '''
-  const { data, error } = usePlugins();
+  const plugins = usePlugins();
 '''
 
 [[mutation]]
 name = "결정 자리가 서도 목록을 읽지 않는다"
 runner = "vitest"
-tests = ["apps/admin/components/pages/RunPage.decision.test.tsx", "-t", "에이전트가 꺼졌으면 결정 버튼이 막히고"]
+tests = ["apps/admin/components/pages/ConversationPage.write.test.tsx", "-t", "승인을 기다리는 대화는 꺼짐을 미리 알리려고"]
 expect = "red"
-# 고른 시험에서 꺼짐 미리 알림을 글자로 찾는 단언의 실패 머리다. 찾는 글자까지 들어 다른 단언의 실패와 가른다.
-expect_output = ["Unable to find an element with the text: 꺼진 플러그인이 있어 재개할 수 없다: 에이전트 calc"]
+# 승인을 기다리는 대화가 목록을 읽는다고 세는 시험이 고른 단언이고, 실패 머리는 읽은 요청의 수를 든다.
+expect_output = ["expected 0 to be greater than 0"]
 
 [[mutation.edit]]
-file = "web/apps/admin/components/pages/RunPage.tsx"
+file = "web/apps/admin/components/pages/ConversationPage.tsx"
 old = '''
-  const { data, error } = usePlugins({
-    active: decisionPlaceStands(trace),
-  });
+  const plugins = usePlugins({ active: endRun === null || asking === true });
 '''
 new = '''
-  const { data, error } = usePlugins({ active: false });
+  const plugins = usePlugins({ active: false });
 '''
 
 [[mutation]]
@@ -72,63 +71,6 @@ old = '''
 '''
 new = '''
       void Promise.resolve(mutate);
-'''
-
-[[mutation]]
-name = "결정의 훅을 트레이스 값의 갈래 밖에 둔다"
-runner = "vitest"
-tests = ["apps/admin/components/pages/RunPage.decision.test.tsx"]
-expect = "green"
-
-[[mutation.edit]]
-file = "web/apps/admin/components/pages/RunPage.tsx"
-old = '''
-  const trace = useTrace(runId);
-  return (
-    <RunDetail
-      runId={runId}
-      {...readOf(trace)}
-      body={(shown, events) => <ConnectedRunDecision runId={runId} trace={shown} events={events} />}
-    />
-  );
-'''
-new = '''
-  const trace = useTrace(runId);
-  const attempt = useDecision(runId);
-  return (
-    <RunDetail
-      runId={runId}
-      {...readOf(trace)}
-      body={(shown, events) => <ConnectedRunDecision attempt={attempt} trace={shown} events={events} />}
-    />
-  );
-'''
-
-[[mutation.edit]]
-file = "web/apps/admin/components/pages/RunPage.tsx"
-old = '''
-function ConnectedRunDecision({
-  runId,
-  trace,
-  events,
-}: {
-  readonly runId: string;
-  readonly trace: Trace;
-  readonly events: ReactNode;
-}) {
-  const { busy, frames, cut, failure, decide } = useDecision(runId);
-'''
-new = '''
-function ConnectedRunDecision({
-  attempt,
-  trace,
-  events,
-}: {
-  readonly attempt: ReturnType<typeof useDecision>;
-  readonly trace: Trace;
-  readonly events: ReactNode;
-}) {
-  const { busy, frames, cut, failure, decide } = attempt;
 '''
 
 [[mutation]]

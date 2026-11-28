@@ -10,7 +10,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { startPausedRun } from "./channel";
 import { stack } from "./env";
-import { decisionPlace, openSection, row, signInTo } from "./screen";
+import { approvalAsk, group, openSection, row, signInTo } from "./screen";
 
 /** 운영자 파일이 꺼 둔 에이전트의 이름들. 파일은 종류마다 한 줄이다(준비가 쓴 것도, serve 가 쓰는 정규형도). */
 function disabledAgents(pluginsRoot: string): string[] {
@@ -22,11 +22,15 @@ function disabledAgents(pluginsRoot: string): string[] {
   return Array.from(items.matchAll(/"([^"]*)"/g), (match) => match[1] ?? "");
 }
 
-/** 탐색의 링크로 멈춘 실행 하나를 연다. 주소를 새로 읽지 않아 SWR 의 캐시(플러그인 목록)가 이어진다. */
+/**
+ * 탐색의 링크로 멈춘 실행의 대화를 연다. 주소를 새로 읽지 않아 SWR 의 캐시(플러그인 목록)가 이어진다. 대화 목록의 줄은
+ * 요청 글로 서는데 같은 요청의 대화가 여럿이라, 그 대화의 주소(끝 실행이 멈춘 실행 자신이다)로 찾는다. 목록은 표와 좁은
+ * 폭의 줄을 함께 그려 같은 주소의 링크가 둘이라 보이는 쪽만 고른다.
+ */
 async function openPausedRun(page: Page, runId: string): Promise<void> {
-  await openSection(page, "실행");
-  await row(page, "실행", runId).getByRole("link", { name: runId }).click();
-  await expect(page.getByRole("region", { name: "이벤트" })).toContainText("run_paused");
+  await openSection(page, "대화");
+  await group(page, "대화").locator(`a[href="/chat/${runId}"]:visible`).click();
+  await expect(approvalAsk(page)).toBeVisible();
 }
 
 test("스위치로 에이전트를 끄면 운영자 파일에 적히고 목록이 꺼짐을 보이며 그 에이전트의 멈춘 실행에서 결정 버튼이 막히고 다시 켜면 풀린다", async ({
@@ -50,12 +54,10 @@ test("스위치로 에이전트를 끄면 운영자 파일에 적히고 목록�
 
   // 그 에이전트의 멈춘 실행에서는 결정 버튼이 막히고 무엇이 꺼졌는지 보인다. 누르면 어차피 409 다(스토리 50).
   await openPausedRun(page, paused.runId);
-  await expect(decisionPlace(page)).toContainText(
+  await expect(approvalAsk(page)).toContainText(
     "꺼진 플러그인이 있어 재개할 수 없다: 에이전트 gated",
   );
-  await expect(
-    decisionPlace(page).getByRole("button", { name: "승인", exact: true }),
-  ).toBeDisabled();
+  await expect(approvalAsk(page).getByRole("button", { name: "승인", exact: true })).toBeDisabled();
   await openSection(page, "플러그인");
 
   // 열어 보면 서버가 읽은 꺼짐과 매니페스트가 보인다. 목록의 "매니페스트" 링크와 플러그인 하나의 라우트를 실제 Next
@@ -75,10 +77,8 @@ test("스위치로 에이전트를 끄면 운영자 파일에 적히고 목록�
   expect(disabledAgents(pluginsRoot)).toEqual([]);
 
   await openPausedRun(page, paused.runId);
-  await expect(
-    decisionPlace(page).getByRole("button", { name: "승인", exact: true }),
-  ).toBeEnabled();
-  await expect(decisionPlace(page)).not.toContainText("꺼진 플러그인");
+  await expect(approvalAsk(page).getByRole("button", { name: "승인", exact: true })).toBeEnabled();
+  await expect(approvalAsk(page)).not.toContainText("꺼진 플러그인");
   expect(crashes).toEqual([]);
 });
 

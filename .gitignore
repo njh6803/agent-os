@@ -44,6 +44,7 @@ blob-report/
 /web/apps/widget/storybook-static/
 /web/apps/widget/public/fonts/
 /web/apps/widget/public/element.js
+/web/apps/widget/public/runtime.json
 # 관리 화면의 Storybook 정적 빌드(관리 화면 사진 비교의 입력).
 /web/apps/admin/storybook-static/
 # 옛 /design-sync(번들 스킬의 빌드)가 산출물과 검증 상태를 쓰던 자리 다섯. 올리기는 더 쓰지 않지만(ADR 0025 의

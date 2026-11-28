@@ -2,16 +2,19 @@
 // 로그인했는지를 "지금 누구인지"를 읽어서만 안다. 401 에서 갱신하고 다시 보내는 규칙은 요청 함수 아래(`api/session`)에 있어
 // 이 훅들은 갱신을 모른다.
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import useSWR, { type SWRResponse } from "swr";
 import { RequestFailure } from "../../../api/failure";
 import {
+  changePassword,
   goTo,
+  keepSignedIn,
   loginAddress,
   logIn,
   logOut,
   readMe,
   readNeedsFirstAccount,
+  setPassword,
   type Me,
 } from "../../../api/session";
 import { READ } from "../admin";
@@ -28,6 +31,32 @@ export const sessionKeys = {
  */
 export function useMe(): SWRResponse<Me, unknown> {
   return useSWR(sessionKeys.me(), readMe, { ...READ, revalidateOnFocus: false });
+}
+
+/** 짧은 JWT 수명 가운데 이만큼이 지나면 갱신한다(명세 "스트림이 열린 동안의 갱신"의 80%). */
+const RENEW_AT = 0.8;
+
+/**
+ * 응답의 이벤트 스트림이 열린 동안(`open`) 짧은 JWT 수명의 80%마다 갱신을 부른다. 스트림이 열린 동안에는 다른 요청이 없어 401 이
+ * 나지 않기 때문이다. 수명(`token_minutes`)은 지금 누구인지를 읽은 값이라, 읽기 전에는 걸지 않는다. 스트림이 닫히면 타이머를
+ * 걷는다.
+ */
+export function useKeepSignedIn({ open }: { readonly open: boolean }): void {
+  const minutes = useMe().data?.token_minutes;
+  useEffect(() => {
+    if (!open || minutes === undefined) {
+      return undefined;
+    }
+    const timer = setInterval(
+      () => {
+        void keepSignedIn();
+      },
+      minutes * 60_000 * RENEW_AT,
+    );
+    return () => {
+      clearInterval(timer);
+    };
+  }, [open, minutes]);
 }
 
 /** 첫 계정이 필요한 서버인가. 로그인 화면이 뜰 때 읽는다. */
@@ -80,6 +109,123 @@ export function useLogIn(destination: string): LogInAttempt {
     [destination],
   );
   return { pending, rejected, rejections, failure, submit };
+}
+
+export interface PasswordChangeAttempt {
+  readonly pending: boolean;
+  /** 바뀌었다. 다음 시도를 보내면 걷힌다. */
+  readonly changed: boolean;
+  /** 계정이 잠겼다(409). */
+  readonly locked: boolean;
+  /** 서버가 지금 비밀번호 칸에 단 글(422). */
+  readonly currentError: string | null;
+  /** 서버가 새 비밀번호 칸에 단 글(422). */
+  readonly newError: string | null;
+  /** 지금까지 바뀐 횟수. 쓰는 쪽이 칸들을 새로 세워 비우는 열쇠로 쓴다. */
+  readonly changes: number;
+  /** 서버에 닿지 못함, 서버의 오류. 없으면 null 이다. */
+  readonly failure: RequestFailure | null;
+  readonly submit: (currentPassword: string, newPassword: string) => Promise<void>;
+}
+
+/** 로그인한 계정의 비밀번호를 바꾸는 요청 하나와 그 결과(admin-login 티켓 12). */
+export function useChangePassword(): PasswordChangeAttempt {
+  const [pending, setPending] = useState(false);
+  const [changes, setChanges] = useState(0);
+  const [changed, setChanged] = useState(false);
+  const [locked, setLocked] = useState(false);
+  const [currentError, setCurrentError] = useState<string | null>(null);
+  const [newError, setNewError] = useState<string | null>(null);
+  const [failure, setFailure] = useState<RequestFailure | null>(null);
+  const submit = useCallback(async (currentPassword: string, newPassword: string) => {
+    setPending(true);
+    setChanged(false);
+    setLocked(false);
+    setCurrentError(null);
+    setNewError(null);
+    setFailure(null);
+    try {
+      const outcome = await changePassword(currentPassword, newPassword);
+      switch (outcome.kind) {
+        case "changed":
+          setChanged(true);
+          setChanges((count) => count + 1);
+          break;
+        case "locked":
+          setLocked(true);
+          break;
+        case "invalid":
+          setCurrentError(outcome.current);
+          setNewError(outcome.next);
+          break;
+      }
+    } catch (error: unknown) {
+      if (!(error instanceof RequestFailure)) {
+        throw error;
+      }
+      setFailure(error);
+    } finally {
+      setPending(false);
+    }
+  }, []);
+  return { pending, changed, locked, currentError, newError, changes, failure, submit };
+}
+
+export interface PasswordSettingAttempt {
+  readonly pending: boolean;
+  /** 링크를 더 쓸 수 없다(404). 화면이 입력 칸을 걷는다. */
+  readonly unusable: boolean;
+  /** 서버가 비밀번호 칸에 단 글(422). */
+  readonly passwordError: string | null;
+  /** 서버에 닿지 못함, 서버의 오류. 없으면 null 이다. */
+  readonly failure: RequestFailure | null;
+  /** 정한다. 204 면 로그인 화면으로 옮긴다. */
+  readonly submit: (password: string) => Promise<void>;
+}
+
+/**
+ * 링크로 비밀번호를 정하는 요청 하나와 그 결과(admin-login 티켓 12). `token` 이 없으면(주소에 `#` 뒤가 없었다) 요청을 보내지
+ * 않고 쓸 수 없는 링크로 본다.
+ */
+export function useSetPassword(token: string | null): PasswordSettingAttempt {
+  const [pending, setPending] = useState(false);
+  const [unusable, setUnusable] = useState(token === null);
+  const [passwordError, setPasswordError] = useState<string | null>(null);
+  const [failure, setFailure] = useState<RequestFailure | null>(null);
+  const submit = useCallback(
+    async (password: string) => {
+      if (token === null) {
+        setUnusable(true);
+        return;
+      }
+      setPending(true);
+      setPasswordError(null);
+      setFailure(null);
+      try {
+        const outcome = await setPassword(token, password);
+        switch (outcome.kind) {
+          case "set":
+            goTo(loginAddress({ notice: "password-set" }));
+            break;
+          case "unusable":
+            setUnusable(true);
+            break;
+          case "invalid":
+            setPasswordError(outcome.message);
+            break;
+        }
+      } catch (error: unknown) {
+        if (!(error instanceof RequestFailure)) {
+          throw error;
+        }
+        setFailure(error);
+      } finally {
+        setPending(false);
+      }
+    },
+    [token],
+  );
+  return { pending, unusable: unusable || token === null, passwordError, failure, submit };
 }
 
 export interface LogOutAttempt {

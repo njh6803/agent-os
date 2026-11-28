@@ -8,12 +8,16 @@
  * - `dev`·`build` 는 next 를 부르기 전에 빌드의 입력을 준비한다. 글꼴 파일을 `public/fonts/` 에 복사하고(`@agent-os/ui/fonts`),
  *   페이지 안 번들을 `public/element.js` 로 짓는다(`element.ts`). `start` 는 빌드 산출물과 그 `public/` 을 그대로 낸다.
  *   `dev` 도 번들을 한 번 지을 뿐 고칠 때마다 다시 짓지 않는다.
- * - 사이트 파일(티켓 04)은 페이지 안 번들의 빌드와 설정 파일(`next.config.ts`)이 `AGENT_OS_SITE_FILE` 로 읽는다. 래퍼는
+ * - 서는 `dev`·`start` 는 그 전에 사이트 파일을 읽어 값 파일 `public/runtime.json` 을 쓰고 받은 값을 한 줄로 알린다
+ *   (`runtime.ts`, widget-runtime-values 티켓 01). 위젯은 열릴 때 이 파일을 `/widget/runtime.json` 으로 받아 입력창의 상한과
+ *   허용 출처로 쓴다. 값 파일을 쓰는 단계가 `dev` 의 준비보다 앞서, 사이트 파일이 틀렸을 때 글꼴을 복사하거나 번들을 짓기 전에
+ *   끝난다. 서지 않는 `build` 는 값 파일을 쓰지 않는다.
+ * - 사이트 파일(티켓 04)은 값 파일을 쓰는 코드와 설정 파일(`next.config.ts`)이 `AGENT_OS_SITE_FILE` 로 읽는다. 래퍼는
  *   상대 경로를 부른 자리 기준의 절대 경로로 바꿔 둘에 넘긴다. next 를 이 프로세스에서 부르므로 변수는 그대로 이어진다.
- *   읽지 못하면 번들의 빌드가 먼저 그 진단을 찍고 next 를 부르지 않은 채 종료 코드 1로 끝난다. next 만 부르는 `start` 는
- *   next 가 같은 진단으로 끝난다. `build` 는 `start.spawn.test.ts` 가 실제 프로세스로 보고, `dev` 가 `build` 와 같은
- *   준비를 먼저 거치는 것과 준비가 실패하면 next 를 부르지 않는 것은 `start.test.ts` 가 본다. `start` 는 손으로
- *   봤다(일지 2026-10-24-05).
+ *   읽지 못하면 `dev`·`start` 는 값 파일을 쓰는 단계가 그 진단을 찍고 next 를 부르지 않은 채 종료 코드 1로 끝난다. `build`
+ *   는 next 가 설정 파일을 읽다 같은 진단으로 끝난다(빌드가 사이트 파일을 읽지 않게 되면 바뀐다, widget-runtime-values 티켓 02).
+ *   `build` 와 `start` 는 `start.spawn.test.ts` 가 실제 프로세스로 보고, 단계의 차례와 실패하면 next 를 부르지 않는 것은
+ *   `start.test.ts` 가 본다. `dev` 는 실제 프로세스로 보지 않았다.
  *
  * 받는 인자는 `--hostname`(`-H`)과 `--port`(`-p`) 둘뿐이고 `build` 는 둘 다 받지 않는다. next 에 넘기는 인자는 받은
  * 것을 옮기지 않고 판정한 값으로 다시 짓는다. 다른 인자가 필요하면 `next` 를 직접 띄운다. 그것은 래퍼가 막지 못한다.
@@ -37,6 +41,7 @@ import { parseArgs } from "node:util";
 import { SITE_FILE_ENV } from "@agent-os/site-file";
 import { copyFonts } from "@agent-os/ui/fonts";
 import { buildElement } from "./element.ts";
+import { writeRuntimeValues } from "./runtime.ts";
 
 const APP = dirname(import.meta.dirname);
 // 순서가 진단의 문장이 된다. serve 의 진단과 같은 순서다.
@@ -50,9 +55,13 @@ const SERVING: readonly string[] = ["dev", "start"];
 const USAGE =
   "위젯의 시작 래퍼는 dev·build·start 하나를 받고, dev 와 start 만 --hostname(-H), --port(-p)를 받는다.";
 
-/** next CLI 에 넘길 인자와 그 전에 빌드의 입력을 준비할지, 또는 띄우지 않을 까닭. */
+/**
+ * next CLI 에 넘길 인자와 그 전에 할 일, 또는 띄우지 않을 까닭. `prepare` 는 빌드의 입력(글꼴 파일과 페이지 안 번들)을 준비할지,
+ * `runtime` 은 사이트 파일을 읽어 값 파일을 쓸지다(`runtime.ts`). 서지 않는 `build` 는 값 파일을 쓰지 않는다.
+ */
 export type NextCommand =
-  { readonly args: readonly string[]; readonly prepare: boolean } | { readonly problem: string };
+  | { readonly args: readonly string[]; readonly prepare: boolean; readonly runtime: boolean }
+  | { readonly problem: string };
 
 /**
  * 래퍼가 받은 인자를 판정한다. `defaultPort` 는 포트를 주지 않았을 때 next 가 쓸 포트이고 SSH 안내에만 싣는다. `network` 는
@@ -76,7 +85,7 @@ export function nextCommand(
     if (values.hostname !== undefined || values.port !== undefined) {
       return { problem: `${USAGE} build 는 서지 않아 호스트와 포트를 받지 않는다` };
     }
-    return { args: ["build"], prepare: true };
+    return { args: ["build"], prepare: true, runtime: false };
   }
   if (!SERVING.includes(command)) {
     return { problem: `${USAGE} 받은 명령: ${command}` };
@@ -87,7 +96,11 @@ export function nextCommand(
     return { problem };
   }
   const port = values.port === undefined ? [] : ["--port", values.port];
-  return { args: [command, "--hostname", host, ...port], prepare: command === "dev" };
+  return {
+    args: [command, "--hostname", host, ...port],
+    prepare: command === "dev",
+    runtime: true,
+  };
 }
 
 /**
@@ -195,25 +208,37 @@ function runNext(args: readonly string[]): void {
   load(bin);
 }
 
-/** 빌드의 입력 준비와 next 부르기. 시험은 둘을 바꿔 끼워 차례를 본다. */
+/** 값 파일 쓰기, 빌드의 입력 준비, next 부르기. 시험은 셋을 바꿔 끼워 차례를 본다. */
 export interface LaunchSteps {
+  /** 사이트 파일을 읽어 값 파일을 쓰고 받은 값을 한 줄로 알린다. 읽지 못하면 던진다. */
+  readonly runtime: () => void;
   readonly prepare: () => Promise<void>;
   readonly run: (args: readonly string[]) => void;
 }
 
 const REAL_STEPS: LaunchSteps = {
+  runtime: () => {
+    writeRuntimeValues(process.env, APP, console.log);
+  },
   prepare: async () => {
     copyFonts(join(APP, "public", "fonts"));
-    await buildElement(process.env);
+    await buildElement();
   },
   run: runNext,
 };
 
-/** 판정을 지난 명령을 따른다. 준비할 명령이면 빌드의 입력을 준비한 뒤 next 를 부르고, 준비가 실패하면 부르지 않는다. */
+/**
+ * 판정을 지난 명령을 따른다. 값 파일을 쓸 명령이면 사이트 파일을 읽어 먼저 쓰고, 준비할 명령이면 빌드의 입력을 준비한 뒤
+ * next 를 부른다. 어느 단계든 실패하면 그 뒤 단계와 next 를 부르지 않는다. 값 파일을 먼저 쓰는 까닭은 사이트 파일이 틀렸을 때
+ * 글꼴을 복사하거나 번들을 짓기 전에 같은 진단으로 끝내려는 것이다.
+ */
 export async function launch(
   command: Exclude<NextCommand, { readonly problem: string }>,
   steps: LaunchSteps = REAL_STEPS,
 ): Promise<void> {
+  if (command.runtime) {
+    steps.runtime();
+  }
   if (command.prepare) {
     await steps.prepare();
   }

@@ -4,6 +4,9 @@
 //
 // - 설정이 잘못됐으면(어느 때인지는 ConnectedWidget 의 머리 주석) 대화 자리에 위험 알림을 보이고 입력 자리를 막는다
 //   (web-widget 명세 "임베드"의 잘못 준 속성).
+// - 열릴 때 받는 값 파일(허용 출처와 요청 글자 수 상한, lib/runtime.ts)을 받는 동안은 틀(위쪽 띠와 빈 대화 자리)만 그리고
+//   입력 자리를 막는다. 다시 받으면 풀릴 수 있는 실패는 알림 "위젯 설정을 받아 오지 못했습니다."와 "다시 시도" 단추를 보이고
+//   입력 자리를 막는다. 값 파일이 없는 404 는 위의 설정 오류와 같은 알림이다(widget-runtime-values 명세 "받지 못했을 때").
 // - 저장한 대화를 되돌리는 동안은 대화 자리에 진행 표시만 보이고, 토큰을 받지 못해 그리지 못했으면 401 과 같은 알림을
 //   보인다. 둘 다 입력 자리를 막는다(web-widget 명세 "저장"의 묶음 견주기). 앞 사람의 대화를 토큰 없이 그리지 않기
 //   위해서다.
@@ -15,7 +18,7 @@
 //   `MarkdownText` 로 기호를 뗀 글을 문단 안에 낸다(제목, 표, 링크 요소가 없어 화면의 것과 두 벌로 잡히지 않는다. ADR 0053).
 // - 포커스 차례는 문서의 차례 그대로다. 위쪽 띠의 "새 대화" → 대화 영역 → 대화 안의 버튼 → 입력창 → 보내기.
 //   대화 영역이 포커스를 받는 까닭은 organisms/Conversation 의 머리 주석이다.
-import { Alert, MarkdownText, Progress } from "@agent-os/ui";
+import { Alert, Button, MarkdownText, Progress } from "@agent-os/ui";
 import type { Announcement, Exchange, Decision } from "../../lib/conversation";
 import type { LimitWait } from "../../lib/limit";
 import type { Reconnect } from "../../lib/reconnect";
@@ -27,11 +30,18 @@ import { TopBar } from "../organisms/TopBar";
 import { WidgetFrame } from "../templates/WidgetFrame";
 import type { Restore } from "./useConversation";
 
+/** 열릴 때 받는 값 파일의 자리. 받는 중, 받음, 다시 받으면 풀릴 수 있는 실패. */
+export type Settings = "receiving" | "ready" | "failed";
+
 export interface WidgetScreenProps {
   readonly heading: string;
   readonly intro: string | null;
   /** 요청을 보낼 수 없는 설정이다. */
   readonly misconfigured: boolean;
+  /** 값 파일을 받은 자리. 받기 전에는 틀만 그리고 입력을 막는다. */
+  readonly settings: Settings;
+  /** 받지 못했을 때의 "다시 시도". 값 파일을 다시 받는다. */
+  readonly onRetrySettings: () => void;
   readonly exchanges: readonly Exchange[];
   /** 이어 갈 대화를 서버가 찾지 못해 새 대화로 다시 시작했다. */
   readonly restarted: boolean;
@@ -74,6 +84,8 @@ export function WidgetScreen({
   heading,
   intro,
   misconfigured,
+  settings,
+  onRetrySettings,
   exchanges,
   restarted,
   announcements,
@@ -99,6 +111,23 @@ export function WidgetScreen({
         <Alert tone="danger" title="위젯 설정이 올바르지 않습니다.">
           사이트 관리자에게 알려 주세요.
         </Alert>
+      </div>
+    );
+  } else if (settings === "receiving") {
+    // 틀만 그린다. 위쪽 띠는 아래 WidgetFrame 이 그리고, 대화 자리는 비어 있다.
+    conversation = <div className="flex-1" />;
+  } else if (settings === "failed") {
+    conversation = (
+      <div className="p-4">
+        <Alert
+          tone="danger"
+          title="위젯 설정을 받아 오지 못했습니다."
+          actions={
+            <Button variant="secondary" onClick={onRetrySettings}>
+              다시 시도
+            </Button>
+          }
+        />
       </div>
     );
   } else if (restore === "loading") {
@@ -165,7 +194,7 @@ export function WidgetScreen({
           onChange={onDraftChange}
           onSend={onSend}
           limit={requestChars}
-          disabled={misconfigured || paused || restore !== "ready"}
+          disabled={misconfigured || settings !== "ready" || paused || restore !== "ready"}
           blocked={sendBlocked}
           focusFor={focusFor(exchanges)}
           wait={wait}
