@@ -2646,7 +2646,7 @@ def test_사이트_파일의_상한_표_여섯은_엇갈리지_않고_사이트_
 
 
 # 허용 출처의 표기와 두 언어가 함께 읽는 사이트 파일(web-widget 티켓 04, ADR 0024). 픽스처와 규칙의
-# 이름은 `tests/fixtures/site_file/README.md` 가 원천이다. 위젯 빌드의 판정은 같은 파일을
+# 이름은 `tests/fixtures/site_file/README.md` 가 원천이다. 위젯이 뜰 때 하는 판정은 같은 파일을
 # `web/packages/site-file/src/site-file.test.ts` 와 `web/apps/widget/next.config.test.ts` 가 읽어
 # 고정한다.
 

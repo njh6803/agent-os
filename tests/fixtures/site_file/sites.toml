@@ -1,4 +1,4 @@
-# 사이트 둘. 파이썬의 사이트 파일 읽기(tests/test_main.py)와 위젯 빌드 설정의 시험
+# 사이트 둘. 파이썬의 사이트 파일 읽기(tests/test_main.py)와 위젯 설정 파일의 시험
 # (web/apps/widget/next.config.test.ts)이 함께 읽고, 기대값은 sites.json 하나다. 읽는 법은 README.md.
 schema_version = "1"
 

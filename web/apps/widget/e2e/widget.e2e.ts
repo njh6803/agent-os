@@ -10,8 +10,8 @@ import { writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { HTML_OUTPUT, MARKDOWN_IMAGE_PATH, principalOf, startedRuns } from "@agent-os/e2e-stack";
 import { expect, type FrameLocator, type Page, type Request, test } from "@playwright/test";
-import { SITE_REQUEST_CHARS, stack, traces } from "./env";
-import { loopback, recordRequests, send } from "./helpers";
+import { RESTART_REQUEST_CHARS, SITE_REQUEST_CHARS, stack, traces } from "./env";
+import { loopback, recordRequests, restartWidget, send } from "./helpers";
 
 // 준비가 사이트 파일에 적은 글자 수 상한(`e2e/env.ts`). 서버의 기본값(20,000)과 다르다.
 const REQUEST_CHARS = SITE_REQUEST_CHARS;
@@ -300,4 +300,47 @@ test("입력창의 글자 수 상한은 값 파일이 담은 사이트 파일의
   expect(await accepted.text()).toContain(`chars:${String(REQUEST_CHARS)}`);
   const refused = await post(REQUEST_CHARS + 1);
   expect(refused.status()).toBe(422);
+});
+
+test("위젯을 다른 사이트 파일로 다시 띄우면 응답 머리와 값 파일과 입력창 상한이 새 값을 따른다", async ({
+  page,
+}) => {
+  // 빌드는 미끼 사이트 파일로 했고 준비는 진짜 파일로 띄웠다. 그래서 위 사례들이 본 값은 뜰 때 받은 것이다. 여기서는 같은
+  // 빌드 산출물을 두고 사이트 파일만 바꿔 다시 띄워, 값이 사이트 파일에서 오고 다시 빌드하지 않아도 바뀌는 것을 본다.
+  test.setTimeout(240_000);
+  const { siteOrigin, otherOrigin, widgetOrigin } = stack();
+  try {
+    await restartWidget(page.request, { origin: otherOrigin, requestChars: RESTART_REQUEST_CHARS });
+
+    const values = await page.request.get(`${loopback(widgetOrigin)}/widget/runtime.json`);
+    expect(values.status()).toBe(200);
+    expect(await values.json()).toEqual({
+      allowedOrigins: [otherOrigin],
+      requestChars: RESTART_REQUEST_CHARS,
+    });
+    const shell = await page.request.get(`${loopback(widgetOrigin)}/widget`);
+    expect(shell.headers()["content-security-policy"]).toBe(`frame-ancestors ${otherOrigin}`);
+
+    // 허용 출처가 바뀌었으니 이제 other 가 위젯을 품고 site 는 막힌다.
+    await page.goto(`${otherOrigin}/?agent=echo`);
+    const frame = widget(page);
+    const field = frame.getByRole("textbox", { name: "질문" });
+    await expect(field).toBeVisible();
+    const over = `${RESTART_REQUEST_CHARS.toLocaleString("en-US")}자를 넘었습니다`;
+    await field.fill("a".repeat(RESTART_REQUEST_CHARS + 1));
+    await expect(frame.getByText(over)).toBeVisible();
+    await expect(frame.getByRole("button", { name: "보내기" })).toBeDisabled();
+    await field.fill("a".repeat(RESTART_REQUEST_CHARS));
+    await expect(frame.getByText(over)).toHaveCount(0);
+    await expect(frame.getByRole("button", { name: "보내기" })).toBeEnabled();
+
+    await page.goto(`${siteOrigin}/?agent=echo`);
+    expect(page.frames().map((candidate) => candidate.url())).toEqual([
+      `${siteOrigin}/?agent=echo`,
+      "chrome-error://chromewebdata/",
+    ]);
+  } finally {
+    // 뒤의 사례가 준비가 처음 띄운 위젯을 만나도록 되돌린다.
+    await restartWidget(page.request);
+  }
 });

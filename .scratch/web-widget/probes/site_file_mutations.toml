@@ -530,10 +530,10 @@ expect_output = ['"frame-ancestors ",']
 [[mutation.edit]]
 file = "web/apps/widget/next.config.ts"
 old = '''
-const ancestors = input.allowedOrigins.length === 0 ? "'none'" : input.allowedOrigins.join(" ");
+  return allowedOrigins.length === 0 ? "'none'" : allowedOrigins.join(" ");
 '''
 new = '''
-const ancestors = input.allowedOrigins.join(" ");
+  return allowedOrigins.join(" ");
 '''
 
 [[mutation]]

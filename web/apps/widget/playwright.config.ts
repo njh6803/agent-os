@@ -1,4 +1,4 @@
-// 위젯 e2e(web-widget 명세 Testing Decisions 4, 티켓 06). 실제 serve, 같은 사이트 파일로 빌드한 실제 위젯 Next, 둘을 한
+// 위젯 e2e(web-widget 명세 Testing Decisions 4, 티켓 06). 실제 serve, 실제 위젯 Next(미끼 사이트 파일로 빌드하고 진짜 파일로 띄운다), 둘을 한
 // 출처 아래에 모으는 시험 안의 중계를 지난다. 준비는 e2e/stack.ts 다. CI 의 e2e-widget 잡이 돌고(필수 검사 안),
 // pre-commit 에는 없다. 로컬에서는 위젯, api-client 의 위젯 몫, 서버의 최종 사용자 경로를 건드렸을 때 친다. 명령은
 // CLAUDE.md 의 검증 명령 절에 있다. 사진 비교의 설정(visual/playwright.config.ts)과는 따로다.

@@ -69,12 +69,12 @@ expect = "red"
 expect_output = ['+   "http://widget.localhost:']
 
 [[mutation.edit]]
-file = "web/apps/widget/next.config.ts"
+file = "web/apps/widget/tools/manifest.ts"
 old = '''
-const ancestors = input.allowedOrigins.length === 0 ? "'none'" : input.allowedOrigins.join(" ");
+  const ancestors = allowedOrigins.length === 0 ? "'none'" : allowedOrigins.join(" ");
 '''
 new = '''
-const ancestors = "*";
+  const ancestors = "*";
 '''
 
 [[mutation]]

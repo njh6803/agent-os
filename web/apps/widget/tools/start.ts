@@ -5,19 +5,25 @@
  *   오류로 끝나고 SSH 포트 포워딩을 안내한다. 호스트를 주지 않으면 `127.0.0.1` 이다. `next dev`·`next start` 는 인자
  *   없이 `0.0.0.0` 과 `[::]` 에 서서, 위젯이 nginx 와 TLS 를 거치지 않고 LAN 에 평문으로 열린다. 컨테이너 이미지 안에서는
  *   예외 하나로 `0.0.0.0` 도 받는다(표지 파일과 환경 변수가 함께 있을 때만, 아래 `ContainerNetwork`).
- * - `dev`·`build` 는 next 를 부르기 전에 빌드의 입력을 준비한다. 글꼴 파일을 `public/fonts/` 에 복사하고(`@agent-os/ui/fonts`),
+ * - `dev`·`build` 는 next 를 부르기 전에 빌드 준비물을 준비한다. 글꼴 파일을 `public/fonts/` 에 복사하고(`@agent-os/ui/fonts`),
  *   페이지 안 번들을 `public/element.js` 로 짓는다(`element.ts`). `start` 는 빌드 산출물과 그 `public/` 을 그대로 낸다.
- *   `dev` 도 번들을 한 번 지을 뿐 고칠 때마다 다시 짓지 않는다.
+ *   `dev` 도 번들을 한 번 지을 뿐 고칠 때마다 다시 짓지 않는다. 짓는 모듈(Vite 와 Tailwind 의 Vite 플러그인을 부르는
+ *   `element.ts` 와 글꼴 복사)은 이 준비 안에서 늦게 불러온다. 뜬 뒤의 이미지에는 그 도구가 없어 `start` 의 길은 그것을
+ *   불러오지 않아야 한다(widget-runtime-values 명세 "시작 래퍼의 세 명령", 티켓 02).
  * - 서는 `dev`·`start` 는 그 전에 사이트 파일을 읽어 값 파일 `public/runtime.json` 을 쓰고 받은 값을 한 줄로 알린다
  *   (`runtime.ts`, widget-runtime-values 티켓 01). 위젯은 열릴 때 이 파일을 `/widget/runtime.json` 으로 받아 입력창의 상한과
  *   허용 출처로 쓴다. 값 파일을 쓰는 단계가 `dev` 의 준비보다 앞서, 사이트 파일이 틀렸을 때 글꼴을 복사하거나 번들을 짓기 전에
  *   끝난다. 서지 않는 `build` 는 값 파일을 쓰지 않는다.
- * - 사이트 파일(티켓 04)은 값 파일을 쓰는 코드와 설정 파일(`next.config.ts`)이 `AGENT_OS_SITE_FILE` 로 읽는다. 래퍼는
- *   상대 경로를 부른 자리 기준의 절대 경로로 바꿔 둘에 넘긴다. next 를 이 프로세스에서 부르므로 변수는 그대로 이어진다.
- *   읽지 못하면 `dev`·`start` 는 값 파일을 쓰는 단계가 그 진단을 찍고 next 를 부르지 않은 채 종료 코드 1로 끝난다. `build`
- *   는 next 가 설정 파일을 읽다 같은 진단으로 끝난다(빌드가 사이트 파일을 읽지 않게 되면 바뀐다, widget-runtime-values 티켓 02).
- *   `build` 와 `start` 는 `start.spawn.test.ts` 가 실제 프로세스로 보고, 단계의 차례와 실패하면 next 를 부르지 않는 것은
- *   `start.test.ts` 가 본다. `dev` 는 실제 프로세스로 보지 않았다.
+ * - 빌드는 사이트 파일을 읽지 않고 응답 머리를 `frame-ancestors 'none'` 으로 굳힌다(설정 파일 `next.config.ts` 가 단계를 보고
+ *   그렇게 한다). 래퍼가 빌드 때 응답 머리 목록의 원본을 남기고(`manifest.ts` 의 `keepOriginalOnExit`, 까닭은 그 파일의 머리
+ *   주석), `start` 는 값 파일을 쓴 뒤 그 원본에서 허용 출처를 넣은 사본을 Next 가 읽는 자리에 쓴다. 바꿀 자리가 기대와
+ *   다르면 사본을 쓰지 않고 까닭을 찍은 채 종료 코드 1로 끝난다. 그래서 한 번 지은 산출물을 사이트 파일만 바꿔 가며 다시 띄운다.
+ * - 사이트 파일(티켓 04)은 값 파일을 쓰는 코드와, 개발 서버 단계의 설정 파일(`next.config.ts`)이 `AGENT_OS_SITE_FILE` 로
+ *   읽는다. 래퍼는 상대 경로를 부른 자리 기준의 절대 경로로 바꿔 둘에 넘긴다. next 를 이 프로세스에서 부르므로 변수는 그대로
+ *   이어진다. 읽지 못하면 `dev`·`start` 는 값 파일을 쓰는 단계가 그 진단을 찍고 next 를 부르지 않은 채 종료 코드 1로
+ *   끝난다. `build` 는 사이트 파일을 읽지 않아 그 변수가 틀려도 영향이 없다. `build` 와 `start` 는 `start.spawn.test.ts` 가 실제
+ *   프로세스로 보고, 단계의 차례와 실패하면 next 를 부르지 않는 것은 `start.test.ts` 가 본다. `dev` 는 실제 프로세스로 보지
+ *   않았다.
  *
  * 받는 인자는 `--hostname`(`-H`)과 `--port`(`-p`) 둘뿐이고 `build` 는 둘 다 받지 않는다. next 에 넘기는 인자는 받은
  * 것을 옮기지 않고 판정한 값으로 다시 짓는다. 다른 인자가 필요하면 `next` 를 직접 띄운다. 그것은 래퍼가 막지 못한다.
@@ -39,9 +45,8 @@ import { createRequire } from "node:module";
 import { dirname, join, resolve } from "node:path";
 import { parseArgs } from "node:util";
 import { SITE_FILE_ENV } from "@agent-os/site-file";
-import { copyFonts } from "@agent-os/ui/fonts";
-import { buildElement } from "./element.ts";
-import { writeRuntimeValues } from "./runtime.ts";
+import { keepOriginalOnExit, writeServedManifest } from "./manifest.ts";
+import { type RuntimeValuesFile, writeRuntimeValues } from "./runtime.ts";
 
 const APP = dirname(import.meta.dirname);
 // 순서가 진단의 문장이 된다. serve 의 진단과 같은 순서다.
@@ -56,11 +61,23 @@ const USAGE =
   "위젯의 시작 래퍼는 dev·build·start 하나를 받고, dev 와 start 만 --hostname(-H), --port(-p)를 받는다.";
 
 /**
- * next CLI 에 넘길 인자와 그 전에 할 일, 또는 띄우지 않을 까닭. `prepare` 는 빌드의 입력(글꼴 파일과 페이지 안 번들)을 준비할지,
- * `runtime` 은 사이트 파일을 읽어 값 파일을 쓸지다(`runtime.ts`). 서지 않는 `build` 는 값 파일을 쓰지 않는다.
+ * 응답 머리 목록으로 할 일. `keep` 은 빌드가 끝날 때 원본을 남기는 것, `fill` 은 서비스 시작이 원본에서 `frame-ancestors` 값을
+ * 허용 출처로 바꾼 사본을 쓰는 것이다(`manifest.ts`). 개발 서버는 산출물이 없어 목록을 다루지 않는다.
+ */
+export type ManifestStep = "keep" | "fill" | null;
+
+/**
+ * next CLI 에 넘길 인자와 그 전에 할 일, 또는 띄우지 않을 까닭. `prepare` 는 빌드 준비물(글꼴 파일과 페이지 안 번들)을 준비할지,
+ * `runtime` 은 사이트 파일을 읽어 값 파일을 쓸지다(`runtime.ts`). 서지 않는 `build` 는 값 파일을 쓰지 않는다. `manifest` 는
+ * 응답 머리 목록으로 할 일이다.
  */
 export type NextCommand =
-  | { readonly args: readonly string[]; readonly prepare: boolean; readonly runtime: boolean }
+  | {
+      readonly args: readonly string[];
+      readonly prepare: boolean;
+      readonly runtime: boolean;
+      readonly manifest: ManifestStep;
+    }
   | { readonly problem: string };
 
 /**
@@ -85,7 +102,7 @@ export function nextCommand(
     if (values.hostname !== undefined || values.port !== undefined) {
       return { problem: `${USAGE} build 는 서지 않아 호스트와 포트를 받지 않는다` };
     }
-    return { args: ["build"], prepare: true, runtime: false };
+    return { args: ["build"], prepare: true, runtime: false, manifest: "keep" };
   }
   if (!SERVING.includes(command)) {
     return { problem: `${USAGE} 받은 명령: ${command}` };
@@ -100,6 +117,7 @@ export function nextCommand(
     args: [command, "--hostname", host, ...port],
     prepare: command === "dev",
     runtime: true,
+    manifest: command === "start" ? "fill" : null,
   };
 }
 
@@ -208,19 +226,31 @@ function runNext(args: readonly string[]): void {
   load(bin);
 }
 
-/** 값 파일 쓰기, 빌드의 입력 준비, next 부르기. 시험은 셋을 바꿔 끼워 차례를 본다. */
+/** 값 파일 쓰기, 사본 쓰기, 원본 처리기 등록, 빌드 준비물 준비, next 부르기. 시험은 다섯을 바꿔 끼워 차례를 본다. */
 export interface LaunchSteps {
-  /** 사이트 파일을 읽어 값 파일을 쓰고 받은 값을 한 줄로 알린다. 읽지 못하면 던진다. */
-  readonly runtime: () => void;
+  /** 사이트 파일을 읽어 값 파일을 쓰고 받은 값을 한 줄로 알린 뒤 그 값을 돌려준다. 읽지 못하면 던진다. */
+  readonly runtime: () => RuntimeValuesFile;
+  /** 서비스 시작이 원본에서 허용 출처를 넣은 사본을 쓴다. 바꿀 자리가 기대와 다르면 아무것도 쓰지 않고 던진다. */
+  readonly manifest: (values: RuntimeValuesFile) => void;
+  /** 빌드가 끝나는 때 원본을 남기게 처리기를 등록한다. */
+  readonly keep: () => void;
   readonly prepare: () => Promise<void>;
   readonly run: (args: readonly string[]) => void;
 }
 
 const REAL_STEPS: LaunchSteps = {
-  runtime: () => {
-    writeRuntimeValues(process.env, APP, console.log);
+  runtime: () => writeRuntimeValues(process.env, APP, console.log),
+  manifest: (values) => {
+    writeServedManifest(APP, values);
+  },
+  keep: () => {
+    keepOriginalOnExit(APP);
   },
   prepare: async () => {
+    // 서비스 시작의 길은 스크립트를 짓는 도구(Vite, Tailwind 의 Vite 플러그인)를 불러오지 않는다. 뜬 뒤의 이미지에는 그 도구가
+    // 없다(widget-runtime-values 명세 "위젯 이미지"). 그래서 짓는 모듈은 짓는 명령(dev, build)의 준비에서만 늦게 불러온다.
+    const { copyFonts } = await import("@agent-os/ui/fonts");
+    const { buildElement } = await import("./element.ts");
     copyFonts(join(APP, "public", "fonts"));
     await buildElement();
   },
@@ -228,19 +258,26 @@ const REAL_STEPS: LaunchSteps = {
 };
 
 /**
- * 판정을 지난 명령을 따른다. 값 파일을 쓸 명령이면 사이트 파일을 읽어 먼저 쓰고, 준비할 명령이면 빌드의 입력을 준비한 뒤
- * next 를 부른다. 어느 단계든 실패하면 그 뒤 단계와 next 를 부르지 않는다. 값 파일을 먼저 쓰는 까닭은 사이트 파일이 틀렸을 때
- * 글꼴을 복사하거나 번들을 짓기 전에 같은 진단으로 끝내려는 것이다.
+ * 판정을 지난 명령을 따른다. 차례는 이렇다. 값 파일을 쓸 명령이면 사이트 파일을 읽어 먼저 쓰고, 서비스 시작이면 그 값으로 응답
+ * 머리 목록의 사본을 쓴다. 준비할 명령이면 빌드 준비물을 준비하고, 빌드면 그 뒤에 원본 처리기를 등록한다. 그 뒤에 next 를
+ * 부른다. 어느 단계든 실패하면 그 뒤 단계와 next 를 부르지 않는다. 값 파일을 먼저 쓰는 까닭은 사이트 파일이 틀렸을 때 글꼴을
+ * 복사하거나 번들을 짓기 전에 같은 진단으로 끝내려는 것이다.
  */
 export async function launch(
   command: Exclude<NextCommand, { readonly problem: string }>,
   steps: LaunchSteps = REAL_STEPS,
 ): Promise<void> {
   if (command.runtime) {
-    steps.runtime();
+    const values = steps.runtime();
+    if (command.manifest === "fill") {
+      steps.manifest(values);
+    }
   }
   if (command.prepare) {
     await steps.prepare();
+  }
+  if (command.manifest === "keep") {
+    steps.keep();
   }
   steps.run(command.args);
 }
@@ -255,7 +292,7 @@ if (import.meta.main) {
     console.error(command.problem);
     process.exitCode = 1;
   } else {
-    // 번들의 빌드와 설정 파일이 같은 파일을 읽는다. 둘 다 부르기 전에 푼다.
+    // 값 파일을 쓰는 준비와 개발 서버의 설정 파일이 같은 파일을 읽는다. 둘 다 부르기 전에 푼다.
     const siteFile = absoluteSiteFile(process.env[SITE_FILE_ENV], process.cwd());
     if (siteFile !== undefined) {
       process.env[SITE_FILE_ENV] = siteFile;
