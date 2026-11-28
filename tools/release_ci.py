@@ -59,7 +59,7 @@ from tools.release import PREFIX, ReleaseError, judge_number_tag  # noqa: E402
 # 짓기 대상 이름(`deploy/images/docker-bake.hcl` 의 `target`)이다. 이미지 파일과 점검 결과 파일의
 # 이름이 이 이름을 따른다. Docker Hub 의 저장소 이름은 다르다. 둘의 대응은 `docker-bake.hcl` 의
 # `tags` 한 곳이 정하고 `repository` 가 읽는다.
-IMAGES = ("serve", "admin", "widget", "portal")
+IMAGES = ("serve", "admin", "widget", "portal", "widget-admin")
 BAKE_FILE = "deploy/images/docker-bake.hcl"
 PLATFORM_OS = "linux"
 PLATFORM_ARCH = "amd64"

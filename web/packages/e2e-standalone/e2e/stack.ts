@@ -1,12 +1,12 @@
 /**
- * 단독 배포 e2e 의 준비(globalSetup, release-image 티켓 09). 지은 이미지 넷과 배포 파일 묶음(`deploy/standalone/`)을 04 의
+ * 단독 배포 e2e 의 준비(globalSetup, release-image 티켓 09). 지은 이미지 다섯과 배포 파일 묶음(`deploy/standalone/`)을 04 의
  * 도구(`tools/release.py bundle`)로 묶어 임시 폴더에 풀고, 운영자가 채울 것(인증서와 키, 사이트 파일, 위젯 테스트 페이지
  * 설정과 개인 키, 환경 변수 파일)을 시험 값으로 채워 `docker compose up` 으로 띄운다. 시험이 끝나면 그 실행이 만든 컨테이너,
  * 볼륨, 네트워크를 지운다.
  *
- * - 이미지: 이름공간과 태그를 환경 변수로 받으면(`NAMESPACE_ENV`, `VERSION_ENV`) 그 이미지로 띄운다. 없으면 저장소에서 넷을
+ * - 이미지: 이름공간과 태그를 환경 변수로 받으면(`NAMESPACE_ENV`, `VERSION_ENV`) 그 이미지로 띄운다. 없으면 저장소에서 다섯을
  *   지어 `LOCAL_NAMESPACE`/`LOCAL_VERSION` 으로 띄운다. PostgreSQL 은 묶음의 compose 가 digest 로 고정한 공식 이미지를 받고,
- *   migrate 는 serve 와 같은 이미지다(postgres-foundation 티켓 02).
+ *   migrate 는 serve 와 같은 이미지다(postgres-foundation 티켓 02). 위젯 쪽도 PostgreSQL 이 하나 더 있고 widget-admin-migrate 는 위젯 관리 서버와 같은 이미지다(widget-admin-server 티켓 04).
  * - 픽스처: serve 에는 모델 없이 정해진 답을 내는 `echo` 에이전트를 넣는다. 길은 시험만 쓰는 덧씌움 `compose.fixtures.yaml`
  *   의 일회용 서비스다. serve 와 같은 이미지에 플러그인 볼륨을 붙여 `cp` 로 복사하므로 이름 있는 볼륨의 첫 채움(이미지의
  *   내용을 소유자째 복사)을 깨지 않는다. 그 파일은 이 패키지가 가진다.
@@ -204,7 +204,7 @@ async function requireFreePorts(): Promise<void> {
   }
 }
 
-/** 이름공간과 태그를 고른다. 둘 다 환경 변수로 받았으면 그대로 쓰고, 없으면 저장소에서 넷을 짓는다. */
+/** 이름공간과 태그를 고른다. 둘 다 환경 변수로 받았으면 그대로 쓰고, 없으면 저장소에서 다섯을 짓는다. */
 async function imagesToRun(): Promise<{ namespace: string; version: string }> {
   const given = process.env[NAMESPACE_ENV];
   const tag = process.env[VERSION_ENV];
@@ -217,11 +217,18 @@ async function imagesToRun(): Promise<{ namespace: string; version: string }> {
   const revision = (
     await succeed("git", ["rev-parse", "HEAD"], { cwd: REPO, timeoutMs: MINUTE_MS })
   ).trim();
-  const [serveRepository, adminRepository, widgetRepository, portalRepository] = await Promise.all([
+  const [
+    serveRepository,
+    adminRepository,
+    widgetRepository,
+    portalRepository,
+    widgetAdminRepository,
+  ] = await Promise.all([
     repositoryName("serve"),
     repositoryName("admin"),
     repositoryName("widget"),
     repositoryName("portal"),
+    repositoryName("widget-admin"),
   ]);
   const name = (repository: string): string => `${LOCAL_NAMESPACE}/${repository}:${LOCAL_VERSION}`;
   const label = [
@@ -243,29 +250,32 @@ async function imagesToRun(): Promise<{ namespace: string; version: string }> {
       ],
       { cwd: REPO, timeoutMs: BUILD_MS },
     );
-  const serve = succeed(
-    "docker",
-    [
-      "build",
-      "--file",
-      "deploy/images/serve.Dockerfile",
-      "--build-arg",
-      `APP_VERSION=${LOCAL_VERSION}`,
-      "--build-arg",
-      `REVISION=${revision}`,
-      "--build-arg",
-      `SOURCE=${SOURCE_LABEL}`,
-      "--tag",
-      name(serveRepository),
-      ".",
-    ],
-    { cwd: REPO, timeoutMs: BUILD_MS },
-  );
+  // 파이썬 이미지 둘(serve, 위젯 관리 서버)은 같은 꼴로 짓는다. 컨텍스트는 저장소 루트다.
+  const python = (image: string, repository: string): Promise<string> =>
+    succeed(
+      "docker",
+      [
+        "build",
+        "--file",
+        `deploy/images/${image}.Dockerfile`,
+        "--build-arg",
+        `APP_VERSION=${LOCAL_VERSION}`,
+        "--build-arg",
+        `REVISION=${revision}`,
+        "--build-arg",
+        `SOURCE=${SOURCE_LABEL}`,
+        "--tag",
+        name(repository),
+        ".",
+      ],
+      { cwd: REPO, timeoutMs: BUILD_MS },
+    );
   await Promise.all([
-    serve,
+    python("serve", serveRepository),
     web("admin", adminRepository),
     web("widget", widgetRepository),
     web("portal", portalRepository),
+    python("widget-admin", widgetAdminRepository),
   ]);
   return { namespace: LOCAL_NAMESPACE, version: LOCAL_VERSION };
 }
@@ -327,6 +337,8 @@ async function fillOperatorFiles(dir: string, mode: Mode): Promise<void> {
   // 배포 안내가 운영자에게 시키는 꼴(`openssl rand -hex 32`, 영문자와 숫자만)과 같은 값이다. 시험은 이 값을 넘겨받지 않는다.
   // 데이터베이스는 PostgreSQL 컨테이너 안의 psql 로 보고, 그 컨테이너의 유닉스 소켓은 비밀번호를 묻지 않는다.
   const databasePassword = randomBytes(32).toString("hex");
+  // 위젯 쪽 데이터베이스의 비밀번호는 Agent OS 쪽과 다른 값이다(배포 안내가 그렇게 시킨다).
+  const widgetDatabasePassword = randomBytes(32).toString("hex");
   publish(ADMIN_TOKEN_ENV, adminToken);
   const template = readFileSync(join(dir, ".env.example"), "utf-8");
   writeFileSync(
@@ -335,6 +347,7 @@ async function fillOperatorFiles(dir: string, mode: Mode): Promise<void> {
       AGENT_OS_ADMIN_TOKEN: adminToken,
       AGENT_OS_CHANNEL_TOKEN: channelToken,
       AGENT_OS_DATABASE_PASSWORD: databasePassword,
+      WIDGET_ADMIN_DATABASE_PASSWORD: widgetDatabasePassword,
       ...(mode.llm ? { ANTHROPIC_API_KEY: mode.apiKey } : {}),
     }),
   );

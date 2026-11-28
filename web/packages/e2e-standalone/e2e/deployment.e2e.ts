@@ -1,4 +1,4 @@
-// 단독 배포 e2e 의 사례(release-image 티켓 09). 준비(stack.ts)가 실제 이미지 넷과 프록시로 띄운 배치를 실제 브라우저와 HTTP 로
+// 단독 배포 e2e 의 사례(release-image 티켓 09). 준비(stack.ts)가 실제 이미지 다섯과 프록시로 띄운 배치를 실제 브라우저와 HTTP 로
 // 지난다. 배치가 약속한 것(공개 면의 모양, 발행 포트, 컨테이너의 사용자, 재생성 뒤의 길, 네트워크 없는 MCP 실행, 데이터베이스의
 // 판과 남는 데이터)을 잠근다.
 //
@@ -23,9 +23,18 @@ import {
   UP_WAIT_SECONDS,
 } from "./env.ts";
 import { saveLogsAtFailure } from "./failure-logs.ts";
-import { productRevision } from "./migrations.ts";
+import { productRevision, WIDGET_VERSIONS } from "./migrations.ts";
 
-const SERVICES = ["proxy", "postgres", "serve", "admin", "widget", "portal"] as const;
+const SERVICES = [
+  "proxy",
+  "postgres",
+  "serve",
+  "admin",
+  "widget",
+  "portal",
+  "widget-admin-postgres",
+  "widget-admin",
+] as const;
 // 배치를 내렸다 다시 띄우는 사례의 상한. 다시 띄울 때 위젯이 사이트 파일로 다시 빌드한다.
 const RESTART_TIMEOUT_MS = (UP_WAIT_SECONDS + 180) * 1000;
 const COVER_TITLE = "질문하기 전에 읽어 주세요";
@@ -49,7 +58,11 @@ test.afterEach(async ({}, testInfo) => {
  * 경로를 다듬지 않고 그대로 보낸다. Playwright 의 요청과 `fetch` 는 URL 을 만들며 `..` 를 접어 버려 우회 시도가 프록시에
  * 닿기 전에 사라진다.
  */
-function rawGet(path: string): Promise<{ status: number; body: string }> {
+function rawGet(path: string): Promise<{
+  status: number;
+  body: string;
+  headers: Record<string, string | string[] | undefined>;
+}> {
   // 인증서 검증은 끄지 않는다. 준비가 지은 자체 서명 인증서를 신뢰 목록으로 주고 이름은 localhost 로 맞춘다.
   const ca = readFileSync(join(deployment().dir, "tls", "fullchain.pem"));
   return new Promise((resolve, reject) => {
@@ -62,6 +75,7 @@ function rawGet(path: string): Promise<{ status: number; body: string }> {
           resolve({
             status: response.statusCode ?? 0,
             body: Buffer.concat(chunks).toString("utf-8"),
+            headers: response.headers,
           });
         });
       },
@@ -292,14 +306,28 @@ async function containersOf(service: string): Promise<Container[]> {
   return found;
 }
 
+interface Database {
+  readonly service: string;
+  readonly user: string;
+  readonly database: string;
+}
+
+/** Agent OS 쪽 데이터베이스와 위젯 쪽 데이터베이스. 컨테이너와 계정과 데이터베이스 이름이 각각 따로다. */
+const AGENT_OS_DATABASE: Database = { service: "postgres", user: "agent_os", database: "agent_os" };
+const WIDGET_DATABASE: Database = {
+  service: "widget-admin-postgres",
+  user: "widget_admin",
+  database: "widget_admin",
+};
+
 /** PostgreSQL 컨테이너 안의 psql 로 SQL 을 치고 줄만 받는다. 컨테이너의 유닉스 소켓은 비밀번호를 묻지 않는다. */
-function psql(sql: string): Promise<string> {
-  return compose().inService("postgres", [
+function psql(sql: string, target: Database = AGENT_OS_DATABASE): Promise<string> {
+  return compose().inService(target.service, [
     "psql",
     "-U",
-    "agent_os",
+    target.user,
     "-d",
-    "agent_os",
+    target.database,
     "-v",
     "ON_ERROR_STOP=1",
     "-tAc",
@@ -307,9 +335,9 @@ function psql(sql: string): Promise<string> {
   ]);
 }
 
-test("migrate 는 읽기 전용 루트로 빈 데이터베이스의 표를 올리고 0 으로 끝나며, 판 기록 표는 저장소의 마지막 판이다", async () => {
-  const revision = productRevision();
-  const migrate = await containersOf("migrate");
+/** 표를 올리고 끝난 일회용 서비스(`migrate`, `widget-admin-migrate`)와 그 데이터베이스의 판 기록 표를 본다. */
+async function expectMigrated(service: string, target: Database, revision: string): Promise<void> {
+  const migrate = await containersOf(service);
   expect(migrate.map(({ state, exitCode }) => [state, exitCode])).toEqual([["exited", 0]]);
   for (const { name } of migrate) {
     const readOnly = await succeed(
@@ -319,11 +347,114 @@ test("migrate 는 읽기 전용 루트로 빈 데이터베이스의 표를 올�
     );
     expect(readOnly.trim(), `${name} 의 루트`).toBe("true");
   }
-  const logs = await compose().ensure(["logs", "--no-color", "migrate"], 60_000);
+  const logs = await compose().ensure(["logs", "--no-color", service], 60_000);
   expect(logs).toContain(`표를 없음에서 ${revision}으로 올렸습니다.`);
   // 휠과 이미지에 제품 마이그레이션 폴더가 들지 않았으면 판 기록 표가 비거나 다른 판이다.
-  const recorded = (await psql("SELECT version_num FROM alembic_version")).trim();
+  const recorded = (await psql("SELECT version_num FROM alembic_version", target)).trim();
   expect(recorded.split("\n")).toEqual([revision]);
+}
+
+test("migrate 는 읽기 전용 루트로 빈 데이터베이스의 표를 올리고 0 으로 끝나며, 판 기록 표는 저장소의 마지막 판이다", async () => {
+  await expectMigrated("migrate", AGENT_OS_DATABASE, productRevision());
+});
+
+test("widget-admin-migrate 는 읽기 전용 루트로 위젯 쪽 빈 데이터베이스의 표를 올리고 0 으로 끝나며, 판 기록 표는 위젯 쪽 마지막 판이다", async () => {
+  await expectMigrated("widget-admin-migrate", WIDGET_DATABASE, productRevision(WIDGET_VERSIONS));
+});
+
+const WIDGET_SITE = "e2e-widget";
+// 위젯 설정 접두사 아래 모든 응답에 붙는 다른 출처용 머리 셋(명세 widget-admin-server "응답 머리").
+const OPEN_HEADERS: Readonly<Record<string, string>> = {
+  "access-control-allow-origin": "*",
+  "access-control-expose-headers": "X-Request-Id",
+  "cache-control": "no-store",
+};
+
+function expectOpenHeaders(
+  headers: Record<string, string | string[] | undefined>,
+  label: string,
+): void {
+  for (const [name, value] of Object.entries(OPEN_HEADERS)) {
+    expect(headers[name], `${label} 의 ${name}`).toBe(value);
+  }
+}
+
+/** 위젯 쪽 데이터베이스에 시험 사이트 하나를 넣는다. 이미 있으면 그대로 둔다. */
+async function insertWidgetSite(): Promise<void> {
+  await psql(
+    `INSERT INTO sites (name, agent, heading, theme) VALUES ('${WIDGET_SITE}', 'echo', '위젯 설정 시험', 'jacho') ON CONFLICT (name) DO NOTHING`,
+    WIDGET_DATABASE,
+  );
+}
+
+function expectWidgetSettings(response: { status: number; body: string }): void {
+  expect(response.status).toBe(200);
+  const parsed: unknown = JSON.parse(response.body);
+  expect(parsed).toMatchObject({
+    schema_version: 1,
+    agent: "echo",
+    heading: "위젯 설정 시험",
+    theme: "jacho",
+    example_questions: [],
+    hide_mode_switch: false,
+  });
+}
+
+test("위젯 쪽 데이터베이스에 넣은 위젯 설정이 프록시의 /widget-settings/<이름> 에서 200 으로 실리고 열린 머리 셋이 붙는다", async () => {
+  await insertWidgetSite();
+  const response = await rawGet(`/widget-settings/${WIDGET_SITE}`);
+  expectWidgetSettings(response);
+  expectOpenHeaders(response.headers, WIDGET_SITE);
+});
+
+test("등록되지 않은 이름과 퍼센트 인코딩된 / 나 줄바꿈이 든 이름도 프록시를 지나 위젯 관리 서버의 404 봉투로 오고 열린 머리 셋이 붙는다", async () => {
+  // 프록시가 %2F 와 %0A 를 어떤 꼴로 넘기는지는 이 사례가 처음 본다(명세 검토 "확인하지 못한 것").
+  for (const name of ["nobody-here", "a%2Fb", `${WIDGET_SITE}%0A`]) {
+    const response = await rawGet(`/widget-settings/${name}`);
+    expect(response.status, name).toBe(404);
+    expectOpenHeaders(response.headers, name);
+    // 위젯 관리 서버가 낸 봉투라는 표지: 봉투의 code 와 X-Request-Id.
+    const envelope: unknown = JSON.parse(response.body);
+    expect(envelope, name).toMatchObject({ code: "not_found" });
+    expect(response.headers["x-request-id"], `${name} 의 X-Request-Id`).toBeTruthy();
+  }
+});
+
+test("방문자용 포트에서 /operator/, /internal/, /health, 끝 / 없는 /widget-settings 는 위젯 관리 서버가 아니라 프록시가 404 로 끊는다", async () => {
+  // 양성 대조. 위젯 관리 서버가 낸 404 에는 봉투의 code 와 X-Request-Id 가 있어, 없는 것이 프록시의 끊음을 뜻한다.
+  const served = await rawGet("/widget-settings/nobody-here");
+  expect(served.status).toBe(404);
+  expect(served.headers["x-request-id"]).toBeTruthy();
+
+  for (const path of ["/operator/sites", "/internal/sites", "/health", "/widget-settings"]) {
+    const response = await rawGet(path);
+    expect(response.status, path).toBe(404);
+    expect(response.headers["x-request-id"], `${path} 의 X-Request-Id`).toBeUndefined();
+    expect(response.body, `${path} 의 본문`).not.toContain('"code"');
+  }
+});
+
+test("위젯 관리 서버는 uid 10001 로 돌고 이미지에 Agent OS 의 코드가 없으며 묶음 판이 판 번호와 같다", async () => {
+  const { version } = deployment();
+  expect((await compose().inService("widget-admin", ["id", "-u"])).trim()).toBe("10001");
+  const installed = await compose().inService("widget-admin", [
+    "python",
+    "-c",
+    "import importlib.metadata as m; print(m.version('widget-admin'))",
+  ]);
+  expect(installed.trim()).toBe(version);
+  const absent = await compose().inService("widget-admin", [
+    "python",
+    "-c",
+    "import importlib.util as u; print([n for n in ('agent_os', 'langchain_core', 'anthropic') if u.find_spec(n)])",
+  ]);
+  expect(absent.trim()).toBe("[]");
+  const migrations = await compose().inService("widget-admin", [
+    "python",
+    "-c",
+    "import importlib.resources as r; print(sorted(p.name for p in r.files('widget_admin').joinpath('migrations', 'versions').iterdir()))",
+  ]);
+  expect(migrations).toContain("0001_sites.py");
 });
 
 test("관리 화면의 중계가 관리 토큰으로 플러그인을 켜고 토큰 없이는 401 이다", async ({
@@ -402,12 +533,42 @@ test("루프백이 아닌 주소에 묶으려는 serve 는 예외 환경 변수 
   expect(outcome.stderr).toContain("--host");
 });
 
-async function serveImage(): Promise<string> {
+test("루프백이 아닌 주소에 묶으려는 위젯 관리 서버는 예외 환경 변수 없이는 시작하지 않는다", async () => {
+  const image = await imageOf("widget-admin");
+  const outcome = await run(
+    "docker",
+    [
+      "run",
+      "--rm",
+      "--network",
+      "none",
+      // 연결 문자열이 있어야 멈춘 까닭이 주소 판정 하나로 좁혀진다(없으면 변수 진단도 함께 찍는다). 접속은 시도하지 않는다.
+      "--env",
+      "WIDGET_ADMIN_DATABASE_URL=postgresql://unused:unused@127.0.0.1:5432/unused",
+      image,
+      "widget-admin",
+      "serve",
+      "--host",
+      "0.0.0.0",
+    ],
+    { timeoutMs: 120_000 },
+  );
+  expect(outcome.code).not.toBe(0);
+  expect(outcome.code).not.toBeNull();
+  expect(outcome.stderr).toContain("--host");
+});
+
+function serveImage(): Promise<string> {
+  return imageOf("serve");
+}
+
+/** 짓기 대상(`serve`, `widget-admin` 등)의 이미지 이름을 compose 가 쓰는 이미지 목록에서 찾는다. */
+async function imageOf(target: string): Promise<string> {
   const printed = await compose().call(["config", "--images"], 60_000);
-  const marker = `/${await repositoryName("serve")}:`;
+  const marker = `/${await repositoryName(target)}:`;
   const image = printed.stdout.split("\n").find((line) => line.trim().includes(marker));
   if (image === undefined) {
-    throw new Error(`compose config --images 에 serve 이미지가 없다:\n${printed.stdout}`);
+    throw new Error(`compose config --images 에 ${target} 이미지가 없다:\n${printed.stdout}`);
   }
   return image.trim();
 }
@@ -419,6 +580,8 @@ test("데이터베이스에 넣어 둔 줄은 docker compose down 과 up 뒤에�
   await psql(
     `CREATE TABLE e2e_kept (value text NOT NULL); INSERT INTO e2e_kept (value) VALUES ('${value}');`,
   );
+  // 이 시험만 --grep 으로 돌려도 위젯 쪽에 남을 설정이 있도록 여기서도 넣는다(이미 있으면 그대로 둔다).
+  await insertWidgetSite();
 
   // 볼륨은 남긴다(`--volumes` 없음). 운영자가 판을 바꾸거나 다시 띄울 때 치는 꼴이다.
   await compose().ensure(["down", "--timeout", "10"], 2 * 60_000);
@@ -432,6 +595,13 @@ test("데이터베이스에 넣어 둔 줄은 docker compose down 과 up 뒤에�
   expect((await psql("SELECT value FROM e2e_kept")).trim()).toBe(value);
   const logs = await compose().ensure(["logs", "--no-color", "migrate"], 60_000);
   expect(logs).toContain(`표가 이미 마지막 판(${productRevision()})입니다.`);
+
+  // 위젯 쪽도 같다. 위젯 쪽 볼륨에 든 설정이 남고 위젯 관리 서버가 다시 정상이며 프록시가 같은 값을 낸다.
+  const widget = await containersOf("widget-admin");
+  expect(widget.map(({ state, health }) => [state, health])).toEqual([["running", "healthy"]]);
+  expectWidgetSettings(await rawGet(`/widget-settings/${WIDGET_SITE}`));
+  const widgetLogs = await compose().ensure(["logs", "--no-color", "widget-admin-migrate"], 60_000);
+  expect(widgetLogs).toContain(`표가 이미 마지막 판(${productRevision(WIDGET_VERSIONS)})입니다.`);
 });
 
 test("백엔드 하나를 다시 만들어도 프록시가 새 주소를 따라 15초 안에 다시 200 을 낸다", async ({

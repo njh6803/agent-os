@@ -5,7 +5,7 @@ import { delimiter } from "node:path";
 import { received } from "@agent-os/e2e-stack";
 
 // 입력. 이미지의 이름공간과 태그. 둘 다 주면 이미지를 짓지 않고 그 이미지로 띄운다(첫 판을 지켜보는 세션이 레지스트리에서
-// 받은 이미지로 같은 시험을 돌린다. 명세 Testing Decisions 의 넷째). 둘 다 없으면 저장소에서 이미지 넷을 지어 지역 이름공간
+// 받은 이미지로 같은 시험을 돌린다. 명세 Testing Decisions 의 넷째). 둘 다 없으면 저장소에서 이미지 다섯을 지어 지역 이름공간
 // `LOCAL_NAMESPACE` 와 `LOCAL_VERSION` 으로 띄운다. 하나만 주면 던진다.
 export const NAMESPACE_ENV = "AGENT_OS_STANDALONE_NAMESPACE";
 export const VERSION_ENV = "AGENT_OS_STANDALONE_VERSION";

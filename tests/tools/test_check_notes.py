@@ -585,6 +585,34 @@ def test_짝은_제품_마이그레이션_폴더의_새_파일을_느낌표_없�
     assert check_notes.UPGRADE in problems[0]
 
 
+WIDGET_MIGRATIONS = check_notes.WIDGET_MIGRATIONS
+NEW_WIDGET_MIGRATION = f"{WIDGET_MIGRATIONS}/0002_second.py"
+
+
+def test_이_저장소의_짝은_위젯_쪽_마이그레이션_폴더도_가리킨다() -> None:
+    """위젯 관리 서버의 데이터베이스도 운영자의 표를 바꾸므로 같은 짝의 대상이다."""
+    folder = ROOT / WIDGET_MIGRATIONS
+    names = sorted(path.name for path in folder.glob("*.py")) if folder.is_dir() else []
+    assert names, f"짝이 보는 폴더 {WIDGET_MIGRATIONS} 에 마이그레이션 파일이 하나도 없다"
+    assert check_notes.PRODUCT_MIGRATION_FOLDERS == (MIGRATIONS, WIDGET_MIGRATIONS)
+
+
+def test_짝은_위젯_쪽_마이그레이션_폴더의_새_파일을_느낌표_없는_제목에서_잡는다() -> None:
+    problems = check_notes.title_problems(
+        "feat: 표를 더한다", [check_notes.Change("A", NEW_WIDGET_MIGRATION)]
+    )
+    assert [problem.split("`")[1] for problem in problems] == [NEW_WIDGET_MIGRATION]
+    assert "느낌표" in problems[0]
+
+
+def test_CI는_느낌표_없이_위젯_쪽_마이그레이션을_더한_PR을_막는다(저장소: Repo) -> None:
+    out = _막혔다(
+        저장소.ci("feat: 표를 더한다", files={NEW_WIDGET_MIGRATION: MIGRATION_TEXT}), PR_BLOCKED
+    )
+    assert NEW_WIDGET_MIGRATION in out
+    assert "느낌표" in out
+
+
 def test_짝은_느낌표가_있으면_지나가고_원고_판정이_뒤를_잇는다() -> None:
     added = check_notes.Change("A", NEW_MIGRATION)
     # 원고가 없으면 지금의 원고 판정이 막고 짝의 글은 없다.
@@ -603,7 +631,9 @@ def test_짝은_느낌표가_있으면_지나가고_원고_판정이_뒤를_잇�
     [
         TEST_MIGRATION,
         f"{MIGRATIONS.rsplit('/', 1)[0]}/env.py",
+        f"{WIDGET_MIGRATIONS.rsplit('/', 1)[0]}/env.py",
         "src/agent_os/adapters/postgres/database.py",
+        "widget-admin/src/widget_admin/database.py",
     ],
 )
 def test_짝은_시험용_폴더와_제품_폴더_밖의_파일을_대상으로_삼지_않는다(path: str) -> None:

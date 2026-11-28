@@ -38,6 +38,8 @@ from agent_os.http.login_tokens import (
     read_login_durations,
 )
 from agent_os.main import NO_DATABASE_URL_DIAGNOSTIC, UNREADABLE_DATABASE_URL_DIAGNOSTIC
+from widget_admin import database as widget_database
+from widget_admin import main as widget_main
 
 REPO = Path(__file__).resolve().parents[2]
 STANDALONE = REPO / "deploy" / "standalone"
@@ -95,6 +97,17 @@ REQUIRED: dict[str, str] = {
     "unset AGENT_OS_DATABASE_PASSWORD COMPOSE_ENV_FILES": "비밀번호 바꾸기의 첫 줄",
     "\\password agent_os\"' &&": "비밀번호 바꾸기가 평문을 문장에 싣지 않는 셋째 줄",
     "ALTER ROLE": "비밀번호를 문장에 넣어 바꾸면 거절된 문장이 평문째 로그에 남는다는 것",
+    "WIDGET_ADMIN_DATABASE_PASSWORD": "위젯 쪽 데이터베이스 비밀번호 칸",
+    "agent-os_widget-database": "위젯 쪽 데이터를 담는 볼륨",
+    "docker volume rm agent-os_widget-database": "처음 띄우기가 끊긴 배치의 위젯 쪽 볼륨 지우기",
+    "docker compose logs widget-admin-migrate": "widget-admin-migrate 가 멈춘 까닭을 보는 명령",
+    "WIDGET_ADMIN_DATABASE_PASSWORD=unused": "인터넷이 되는 PC 의 두 명령에만 붙이는 위젯 쪽 값",
+    "unset WIDGET_ADMIN_DATABASE_PASSWORD COMPOSE_ENV_FILES": "위젯 쪽 비밀번호 바꾸기의 첫 줄",
+    "\\password widget_admin\"' &&": "위젯 쪽 비밀번호 바꾸기가 평문을 문장에 싣지 않는 셋째 줄",
+    "  widget-admin-postgres:\n    image: agent-os-postgres:local": (
+        "덮어쓰기 파일에서 위젯 쪽 PostgreSQL 이 같은 태그를 쓰는 것"
+    ),
+    "위젯 설정을 받아 오지 못했습니다.": "위젯 쪽 비밀번호를 바꾸는 동안 위젯이 보이는 글",
 }
 
 # 운영자는 쓰지 않는 저장소 안의 말. 안내에 새면 운영자가 뜻을 알 수 없다.
@@ -138,6 +151,9 @@ SECTION_13_REQUIRED: dict[str, str] = {
     "(HTTP 401 Unauthorized)": "붙지 못함의 글을 읽는 예, 원격 MCP 서버의 토큰 불일치",
     "20초": "처음 띄울 때 내려받는 stdio 서버는 20초를 넘기면 붙지 못함으로 보일 수 있다는 것",
     "헤더": "원격 MCP 서버의 토큰은 주소가 아니라 헤더에 둔다는 것",
+    "widget-admin-migrate": "위젯 쪽 migrate 의 상태 읽기",
+    "docker compose logs widget-admin": "위젯 관리 서버가 찍은 글을 보는 명령",
+    "widget-admin-postgres:5432/widget_admin": "위젯 쪽 글의 자리",
 }
 
 # 제품이 멈출 때와 다시 시도할 때 찍는 글의 갈래(명세 postgres-foundation "멈출 때의 글"의
@@ -237,6 +253,39 @@ def 제품의_멈출_때의_글() -> dict[str, str]:
     }
 
 
+def 위젯_관리_서버의_멈출_때의_글() -> dict[str, str]:
+    """위젯 관리 서버가 멈출 때와 다시 시도할 때 찍는 글. 제품의 글과 같은 자리 표시로 채운다.
+
+    갈래 이름은 Agent OS 쪽과 같아 한 사전에 넣을 수 없다. 그래서 따로 모아 같은 `없는_글`로 견준다.
+    글자가 같은 열둘은 Agent OS 쪽 행에, 다른 셋(변수가 없거나 비었다, 읽지 못했다, 표가 뒤처졌다)은
+    위젯 쪽 행에 맞는다.
+    """
+    place, reason, revision = "<자리>", "<까닭>", "<판>"
+    seconds = widget_database.DEFAULT_RETRY_SECONDS
+    failure, alignment = widget_database.Failure, widget_database.Alignment
+    return {
+        "변수가 없거나 비었다": widget_main.NO_DATABASE_URL_DIAGNOSTIC,
+        "읽지 못했다": widget_main.UNREADABLE_DATABASE_URL_DIAGNOSTIC,
+        "다시 시도한다": widget_database.retry_notice(place, seconds),
+        "닿지 못했다": widget_database.unreached_text(failure.TRANSIENT, place, reason, seconds),
+        "비밀번호": widget_database.unreached_text(failure.PASSWORD, place, reason, seconds),
+        "접속을 허락하지 않았다": widget_database.unreached_text(
+            failure.NOT_ALLOWED, place, reason, seconds
+        ),
+        "데이터베이스 없음": widget_database.unreached_text(
+            failure.NO_DATABASE, place, reason, seconds
+        ),
+        "그 밖": widget_database.unreached_text(failure.OTHER, place, reason, seconds),
+        "표가 뒤처졌다": widget_database.misaligned_text(alignment.BEHIND, revision, revision),
+        "표가 더 새롭다": widget_database.misaligned_text(alignment.AHEAD, revision, revision),
+        "확인하다 멈췄다": widget_database.unexpected_text(place, reason),
+        "닫다 실패했다": widget_database.close_text(place, reason),
+        "올렸다": widget_database.upgraded_text(revision, revision),
+        "이미 마지막 판이다": widget_database.already_current_text(revision),
+        "올리다 실패했다": widget_database.upgrade_failed_text(reason, revision),
+    }
+
+
 def 없는_글(guide: str, texts: dict[str, str]) -> list[str]:
     """13절의 표가 싣지 않은 제품의 글. 들여쓴 설명 줄은 들여쓰기를 뗀다.
 
@@ -289,22 +338,26 @@ POSTGRES_LINES: dict[str, str] = {
 }
 
 
-def postgres의_문제(compose: str) -> list[str]:
-    """compose 의 `postgres` 서비스가 안내의 전제와 권한 넷을 어긴 까닭들. 비어 있으면 맞다.
+POSTGRES_SERVICES = ("postgres", "widget-admin-postgres")
+
+
+def postgres의_문제(compose: str, service: str = "postgres") -> list[str]:
+    """compose 의 PostgreSQL 서비스(`postgres`, `widget-admin-postgres`)가 안내의 전제와 권한 넷을
+    어긴 까닭들. 비어 있으면 맞다.
 
     `ports` 가 있으면 데이터베이스가 비밀번호 하나로 서버 밖에 열린다(안내 7절). 줄은 앞뒤 공백을
     뗀 글자 그대로 견주고(들여쓰기 깊이는 보지 않아 서비스 최상위에 있는지는 가리지 못한다), 값
     뒤의 `# 주석` 은 떼고 본다.
     """
-    block = compose의_서비스(compose, "postgres")
+    block = compose의_서비스(compose, service)
     lines = {line.split(" #", 1)[0].strip() for line in block.splitlines()}
     problems = [
-        f"postgres 에 `{line}` 이 없다: {why}"
+        f"{service} 에 `{line}` 이 없다: {why}"
         for line, why in POSTGRES_LINES.items()
         if line not in lines
     ]
     if re.search(r"^    ports:", block, flags=re.MULTILINE):
-        problems.append("postgres 에 ports 가 있다: 데이터베이스가 서버 밖에 열린다(안내 7절)")
+        problems.append(f"{service} 에 ports 가 있다: 데이터베이스가 서버 밖에 열린다(안내 7절)")
     return problems
 
 
@@ -447,6 +500,52 @@ def test_같은_안내_줄을_쓰는_두_행_가운데_한_행에서만_빠져�
     assert 없는_글(changed, texts) == [f"접속을 허락하지 않았다: {hint}"]
 
 
+def test_위젯_관리_서버가_멈출_때_찍는_글의_갈래는_로그인_설정을_뺀_제품과_같다() -> None:
+    # 로그인이 유지되는 시간(`AGENT_OS_LOGIN_*`)은 `serve` 만 읽는 설정이라 위젯 관리 서버에는 없다.
+    without_login = tuple(label for label in STOP_TEXT_LABELS if not label.startswith("로그인 "))
+    assert without_login != STOP_TEXT_LABELS, "제품의 갈래에서 뺄 로그인 갈래가 없다"
+    assert tuple(위젯_관리_서버의_멈출_때의_글()) == without_login
+
+
+def test_위젯_관리_서버의_접속_실패와_표_견줌의_갈래마다_표의_글이_하나씩_있다() -> None:
+    """위젯 쪽에 갈래가 늘면 이 시험이 빨개져, 안내의 표와 글의 목록이 함께 늘게 한다."""
+    texts = set(위젯_관리_서버의_멈출_때의_글().values())
+    place, reason, seconds = "<자리>", "<까닭>", widget_database.DEFAULT_RETRY_SECONDS
+    for failure in widget_database.Failure:
+        assert widget_database.unreached_text(failure, place, reason, seconds) in texts, failure
+    for alignment in widget_database.Alignment:
+        if alignment is widget_database.Alignment.CURRENT:
+            continue
+        assert widget_database.misaligned_text(alignment, "<판>", "<판>") in texts, alignment
+
+
+def test_이_저장소의_13절의_표는_위젯_관리_서버가_멈출_때_찍는_글을_빠짐없이_싣는다() -> None:
+    missing = 없는_글(GUIDE.read_text(encoding="utf-8"), 위젯_관리_서버의_멈출_때의_글())
+    assert missing == [], f"13절에 없는 위젯 쪽의 글: {missing}"
+
+
+def test_위젯_쪽에만_있는_글_한_줄이_빠진_안내를_잡는다() -> None:
+    """Agent OS 쪽 글과 글자가 다른 위젯 쪽 글이 표에서 빠지면 잡는다."""
+    guide = GUIDE.read_text(encoding="utf-8")
+    texts = 위젯_관리_서버의_멈출_때의_글()
+    only_widget = [
+        (label, text) for label, text in texts.items() if text not in 제품의_멈출_때의_글().values()
+    ]
+    assert only_widget, "위젯 쪽에만 있는 글이 없다"
+    label, text = only_widget[0]
+    line = next(part.strip() for part in text.splitlines() if part.strip())
+    row = next(row for row in 열세째_절(guide).splitlines() if row.startswith("|") and line in row)
+    changed = guide.replace(row, row.replace(line, ""))
+    missing = 없는_글(changed, texts)
+    assert missing != []
+    assert any(entry.startswith(f"{label}: ") for entry in missing)
+
+
+def test_위젯_관리_서버의_글에는_안내가_쓰지_않는_저장소_안의_말이_없다() -> None:
+    for label, text in 위젯_관리_서버의_멈출_때의_글().items():
+        assert 샌_안의_말(text) == [], f"{label} 의 위젯 쪽 글에 저장소 안의 말이 있다"
+
+
 def test_제품의_글에는_안내가_쓰지_않는_저장소_안의_말이_없다() -> None:
     """안내가 제품의 글을 그대로 옮기므로, 글에 저장소 안의 말이 있으면 안내에 새 버린다."""
     for label, text in 제품의_멈출_때의_글().items():
@@ -508,50 +607,220 @@ def test_compose가_우리_이미지에_user를_더하지_않는다는_안내의
     compose = (STANDALONE / "compose.yaml").read_text(encoding="utf-8")
     added = [
         service
-        for service in ("serve", "migrate", "admin", "widget", "portal")
+        for service in (
+            "serve",
+            "migrate",
+            "admin",
+            "widget",
+            "portal",
+            "widget-admin-migrate",
+            "widget-admin",
+        )
         if compose의_user(compose, service)
     ]
     assert added == [], f"compose 가 user 를 더한 서비스: {added}"
 
 
-def test_이_저장소의_compose는_PostgreSQL을_밖에_열지_않고_좁힌_권한으로_띄운다() -> None:
+def test_compose가_위젯_관리_서버를_밖에_열지_않는다() -> None:
+    """안내 7절: 위젯 관리 서버는 어느 주소에도 발행하지 않는다."""
     compose = (STANDALONE / "compose.yaml").read_text(encoding="utf-8")
-    assert postgres의_문제(compose) == []
-    assert compose의_user(compose, "postgres") == "999:999"
+    for service in ("widget-admin", "widget-admin-migrate"):
+        assert not re.search(r"^    ports:", compose의_서비스(compose, service), re.MULTILINE), (
+            f"{service} 에 ports 가 있다"
+        )
 
 
-def _postgres를_고친(old: str, new: str) -> str:
-    """이 저장소의 compose 에서 `postgres` 서비스 본문 안의 `old` 한 곳만 `new` 로 바꾼 글.
+def test_위젯_관리_서버에_ports를_더한_compose를_잡는다() -> None:
+    compose = (STANDALONE / "compose.yaml").read_text(encoding="utf-8")
+    published = compose.replace(
+        "  widget-admin:\n", '  widget-admin:\n    ports:\n      - "8100:8100"\n', 1
+    )
+    assert re.search(r"^    ports:", compose의_서비스(published, "widget-admin"), re.MULTILINE)
+
+
+def test_위젯_관리_서버에_user를_더한_compose를_잡는다() -> None:
+    compose = (STANDALONE / "compose.yaml").read_text(encoding="utf-8")
+    changed = compose.replace("  widget-admin:\n", '  widget-admin:\n    user: "0:0"\n', 1)
+    assert compose의_user(changed, "widget-admin") == "0:0"
+
+
+WIDGET_PASSWORD_REFERENCES = 3
+
+
+def 필수_표시_없는_위젯_비밀번호(compose: str) -> list[str]:
+    """compose 가 위젯 쪽 비밀번호 칸을 읽는 `${…}` 가운데 `:?` 꼴이 아닌 것들과, 읽는 곳의 수가
+    셋(위젯 쪽 PostgreSQL 의 비밀번호, 표를 올리는 서비스와 서버의 연결 문자열)이 아닌 것.
+
+    `:?` 가 없으면 `.env` 에 줄이 빠진 채 띄울 때 compose 가 어느 줄이 없는지 말하지 않고 빈
+    비밀번호로 띄운다(사용자 이야기 12). 비면 맞다.
+    """
+    references = re.findall(r"\$\{WIDGET_ADMIN_DATABASE_PASSWORD([^}]*)\}", compose)
+    problems = [
+        f"`:?` 가 없는 참조: ${{WIDGET_ADMIN_DATABASE_PASSWORD{tail}}}"
+        for tail in references
+        if not tail.startswith(":?")
+    ]
+    if len(references) != WIDGET_PASSWORD_REFERENCES:
+        problems.append(
+            f"참조가 {len(references)}곳이다. {WIDGET_PASSWORD_REFERENCES}곳이어야 한다"
+        )
+    return problems
+
+
+def test_이_저장소의_compose는_위젯_쪽_비밀번호를_읽는_세_곳_모두_없으면_멈추게_한다() -> None:
+    compose = (STANDALONE / "compose.yaml").read_text(encoding="utf-8")
+    assert 필수_표시_없는_위젯_비밀번호(compose) == []
+
+
+def test_위젯_쪽_비밀번호의_필수_표시_하나가_빠진_compose를_잡는다() -> None:
+    compose = (STANDALONE / "compose.yaml").read_text(encoding="utf-8")
+    relaxed = re.sub(
+        r"\$\{WIDGET_ADMIN_DATABASE_PASSWORD:\?[^}]*\}",
+        "${WIDGET_ADMIN_DATABASE_PASSWORD}",
+        compose,
+        count=1,
+    )
+    problems = 필수_표시_없는_위젯_비밀번호(relaxed)
+    assert problems == ["`:?` 가 없는 참조: ${WIDGET_ADMIN_DATABASE_PASSWORD}"]
+
+
+def test_위젯_쪽_비밀번호를_읽는_곳_하나가_빠진_compose를_잡는다() -> None:
+    compose = (STANDALONE / "compose.yaml").read_text(encoding="utf-8")
+    dropped = re.sub(r"\$\{WIDGET_ADMIN_DATABASE_PASSWORD:\?[^}]*\}", "x", compose, count=1)
+    assert 필수_표시_없는_위젯_비밀번호(dropped) == ["참조가 2곳이다. 3곳이어야 한다"]
+
+
+def 프록시의_위젯_설정_문제(site: str) -> list[str]:
+    """프록시 설정이 위젯 설정 경로를 다루는 규칙을 어긴 까닭들. 비면 맞다.
+
+    - 위젯 관리 서버로 넘기는 줄(`proxy_pass http://up_widget_admin…`)은 `/widget-settings/` 위치의
+      한 줄뿐이다. 그래야 `/operator/` 와 `/internal/` 이 마지막 `location /` 의 404 로 끊긴다.
+    - 그 위치에는 `add_header` 와 `limit_req` 를 적지 않는다. 열린 머리 셋은 서버가
+      달고(`add_header` 를 하나라도 적으면 server 의 머리가 물려지지 않는다), 요청 수는 세지 않는다.
+    """
+    forwards = re.findall(r"proxy_pass\s+http://up_widget_admin[^;]*;", site)
+    problems = (
+        []
+        if forwards == ["proxy_pass http://up_widget_admin/widget-settings/;"]
+        else [f"위젯 관리 서버로 넘기는 줄이 `/widget-settings/` 위치의 한 줄이 아니다: {forwards}"]
+    )
+    block = re.search(
+        r"^    location /widget-settings/ \{\n(.*?)^    \}", site, re.MULTILINE | re.DOTALL
+    )
+    if block is None:
+        return [*problems, "`location /widget-settings/` 가 없다"]
+    # 넘기는 줄이 한 줄뿐인 것은 위에서 봤다. 그 한 줄이 이 위치 안에 있는지도 본다.
+    if "proxy_pass http://up_widget_admin/widget-settings/;" not in block.group(1):
+        problems.append("`/widget-settings/` 위치 안에 위젯 관리 서버로 넘기는 줄이 없다")
+    problems += [
+        f"`/widget-settings/` 위치에 `{directive}` 가 있다"
+        for directive in ("add_header", "limit_req")
+        if re.search(rf"^\s*{directive}\b", block.group(1), re.MULTILINE)
+    ]
+    return problems
+
+
+def test_이_저장소의_프록시는_위젯_설정_경로만_위젯_관리_서버로_넘긴다() -> None:
+    site = (STANDALONE / "proxy" / "site.conf").read_text(encoding="utf-8")
+    assert 프록시의_위젯_설정_문제(site) == []
+
+
+@pytest.mark.parametrize("directive", ["add_header X-Test 1;", "limit_req zone=token;"])
+def test_위젯_설정_위치에_머리나_요청_수_제한을_적은_프록시를_잡는다(directive: str) -> None:
+    site = (STANDALONE / "proxy" / "site.conf").read_text(encoding="utf-8")
+    changed = site.replace(
+        "    location /widget-settings/ {\n",
+        f"    location /widget-settings/ {{\n        {directive}\n",
+        1,
+    )
+    assert changed != site
+    assert 프록시의_위젯_설정_문제(changed) == [
+        f"`/widget-settings/` 위치에 `{directive.split()[0]}` 가 있다"
+    ]
+
+
+def test_넘기는_줄이_위젯_설정_위치_밖으로_옮겨진_프록시를_잡는다() -> None:
+    site = (STANDALONE / "proxy" / "site.conf").read_text(encoding="utf-8")
+    # 넘기는 줄 하나는 그대로 있지만 `/widget-settings/` 위치는 비고, 줄은 다른 위치 안에 있다.
+    changed = site.replace(
+        "    location /widget-settings/ {\n"
+        "        proxy_pass http://up_widget_admin/widget-settings/;\n"
+        "    }\n",
+        "    location /widget-settings/ {\n    }\n",
+        1,
+    ).replace(
+        "    location / {\n",
+        "    location /other/ {\n"
+        "        proxy_pass http://up_widget_admin/widget-settings/;\n"
+        "    }\n\n"
+        "    location / {\n",
+        1,
+    )
+    assert changed != site
+    assert 프록시의_위젯_설정_문제(changed) == [
+        "`/widget-settings/` 위치 안에 위젯 관리 서버로 넘기는 줄이 없다"
+    ]
+
+
+def test_위젯_관리_서버로_넘기는_위치가_하나_더_생긴_프록시를_잡는다() -> None:
+    site = (STANDALONE / "proxy" / "site.conf").read_text(encoding="utf-8")
+    changed = site.replace(
+        "    location / {\n",
+        "    location /operator/ {\n"
+        "        proxy_pass http://up_widget_admin/operator/;\n"
+        "    }\n\n"
+        "    location / {\n",
+        1,
+    )
+    problems = 프록시의_위젯_설정_문제(changed)
+    assert len(problems) == 1
+    assert problems[0].startswith("위젯 관리 서버로 넘기는 줄이")
+
+
+@pytest.mark.parametrize("service", POSTGRES_SERVICES)
+def test_이_저장소의_compose는_PostgreSQL을_밖에_열지_않고_좁힌_권한으로_띄운다(
+    service: str,
+) -> None:
+    compose = (STANDALONE / "compose.yaml").read_text(encoding="utf-8")
+    assert postgres의_문제(compose, service) == []
+    assert compose의_user(compose, service) == "999:999"
+
+
+def _postgres를_고친(old: str, new: str, service: str = "postgres") -> str:
+    """이 저장소의 compose 에서 PostgreSQL 서비스 본문 안의 `old` 한 곳만 `new` 로 바꾼 글.
 
     프록시도 같은 권한 줄(`init: true` 등)을 가지므로 파일 전체에서 바꾸면 프록시의 줄이 바뀐다.
     """
     compose = (STANDALONE / "compose.yaml").read_text(encoding="utf-8")
-    block = compose의_서비스(compose, "postgres")
-    assert old in block, f"postgres 에 없는 줄: {old}"
+    block = compose의_서비스(compose, service)
+    assert old in block, f"{service} 에 없는 줄: {old}"
     return compose.replace(block, block.replace(old, new, 1), 1)
 
 
+@pytest.mark.parametrize("service", POSTGRES_SERVICES)
 @pytest.mark.parametrize("line", list(POSTGRES_LINES))
-def test_PostgreSQL의_전제나_권한_한_줄이_빠진_compose를_잡는다(line: str) -> None:
-    problems = postgres의_문제(_postgres를_고친(f"    {line}\n", ""))
+def test_PostgreSQL의_전제나_권한_한_줄이_빠진_compose를_잡는다(line: str, service: str) -> None:
+    problems = postgres의_문제(_postgres를_고친(f"    {line}\n", "", service), service)
     assert len(problems) == 1
-    assert problems[0].startswith(f"postgres 에 `{line}` 이 없다: ")
+    assert problems[0].startswith(f"{service} 에 `{line}` 이 없다: ")
 
 
-def test_PostgreSQL의_user가_바뀐_compose를_잡는다() -> None:
-    changed = _postgres를_고친('    user: "999:999"', '    user: "70:70"')
-    assert postgres의_문제(changed) == [
-        'postgres 에 `user: "999:999"` 이 없다: 데이터 폴더의 소유와 어긋난다(안내 7절)'
+@pytest.mark.parametrize("service", POSTGRES_SERVICES)
+def test_PostgreSQL의_user가_바뀐_compose를_잡는다(service: str) -> None:
+    changed = _postgres를_고친('    user: "999:999"', '    user: "70:70"', service)
+    assert postgres의_문제(changed, service) == [
+        f'{service} 에 `user: "999:999"` 이 없다: 데이터 폴더의 소유와 어긋난다(안내 7절)'
     ]
 
 
-def test_PostgreSQL에_포트를_발행한_compose를_잡는다() -> None:
+@pytest.mark.parametrize("service", POSTGRES_SERVICES)
+def test_PostgreSQL에_포트를_발행한_compose를_잡는다(service: str) -> None:
     compose = (STANDALONE / "compose.yaml").read_text(encoding="utf-8")
     published = compose.replace(
-        "  postgres:\n", '  postgres:\n    ports:\n      - "127.0.0.1:5432:5432"\n', 1
+        f"  {service}:\n", f'  {service}:\n    ports:\n      - "127.0.0.1:5432:5432"\n', 1
     )
-    assert postgres의_문제(published) == [
-        "postgres 에 ports 가 있다: 데이터베이스가 서버 밖에 열린다(안내 7절)"
+    assert postgres의_문제(published, service) == [
+        f"{service} 에 ports 가 있다: 데이터베이스가 서버 밖에 열린다(안내 7절)"
     ]
 
 

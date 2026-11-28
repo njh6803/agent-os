@@ -33,7 +33,8 @@ PR(출시 PR, 운영에서 개발로 합치기 PR)은 건너뛴다. 티켓들이
 파일을 새로 더했으면 빨강이다. 있던 파일을 고치는 것은 된다. 이름은 보지 않는다. `upgrade/` 아래에
 더한 파일은 하위 폴더와 확장자를 가리지 않고 센다. 판 내기(`tools/release.py` 의 `_upgrade_entry`)가
 그 아래에 더한 파일을 모두 노트에 싣기 때문이다.
-느낌표가 없는데 제품 마이그레이션 폴더(`PRODUCT_MIGRATIONS`)에 파일을 새로 더했어도 빨강이다
+느낌표가 없는데 제품 마이그레이션 폴더(`PRODUCT_MIGRATION_FOLDERS`. Agent OS 쪽과 위젯 관리
+서버 쪽 둘이다)에 파일을 새로 더했어도 빨강이다
 (postgres-foundation 티켓 04). 새 마이그레이션은 운영자의 데이터베이스 표를 바꾸는 판이라 느낌표와
 `upgrade/` 원고를 요구한다. 느낌표가 있으면 위의 원고 판정이 그 뒤를 잇는다. 제품 폴더 아래에
 더한 파일은 하위 폴더와 확장자를 가리지 않고 센다(`__init__.py` 나 `README.md` 도 센다). 시험용
@@ -114,6 +115,9 @@ CONVENTION = "규약 원천: docs/constitution/operations.md"
 # 제품 마이그레이션 파일이 사는 폴더(postgres-foundation 티켓 01이 정했다)
 # 시험용 마이그레이션 폴더는 제품 밖(tests/)이라 짝의 대상이 아니다
 PRODUCT_MIGRATIONS = "src/agent_os/adapters/postgres/migrations/versions"
+# 위젯 관리 서버의 데이터베이스(`widget_admin`)도 운영자의 표다(widget-admin-server 티켓 04).
+WIDGET_MIGRATIONS = "widget-admin/src/widget_admin/migrations/versions"
+PRODUCT_MIGRATION_FOLDERS = (PRODUCT_MIGRATIONS, WIDGET_MIGRATIONS)
 MAX_PARAGRAPH = 400
 END_LINE = "**끝:**"
 # 기능 폴더가 아닌 `.scratch/` 아래 폴더. 계획 파일이 있어도 기능 계획이 아니다
@@ -268,7 +272,9 @@ def title_problems(title: str, changes: Sequence[Change]) -> list[str]:
         exclaim = classify(title)[1]
     added = [c.path for c in changes if c.status == "A" and c.path.startswith(f"{UPGRADE}/")]
     migrations = [
-        c.path for c in changes if c.status == "A" and c.path.startswith(f"{PRODUCT_MIGRATIONS}/")
+        c.path
+        for c in changes
+        if c.status == "A" and c.path.startswith(tuple(f"{f}/" for f in PRODUCT_MIGRATION_FOLDERS))
     ]
     if exclaim:
         problems: list[str] = []

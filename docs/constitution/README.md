@@ -8,9 +8,7 @@
 
 디렉터리별 규칙은 헌법이 아니라 `.claude/rules/*.md`에 있고 해당 파일을 Read 도구로 열 때만 실린다. 현재 트리는 루트 `README.md`, 미래 배치와 첫 슬라이스의 범위는 `.scratch/plan.md`에 있다. 판을 올린 까닭은 그 변경의 ADR 이력이나 일지에 적는다. 3.0.69까지 이 파일에 한 줄로 쌓였던 이력은 [history.md](history.md)에 기록으로 있고 더하지 않는다. 아래 판 줄 곁에는 형제 브랜치가 먼저 매겨 비워 둔 판의 문장이 한 줄에 하나씩 남고, 그 브랜치가 판을 가져가면 그 문장을 지운다.
 
-**Version**: 3.1.10 | **Ratified**: 2026-09-19 | **Last Amended**: 2026-11-28
-
-3.1.9는 함께 돌던 형제 브랜치(`feature/04-standalone-compose-adds-widget-admin`)가 먼저 매겨 비워 두었다. 그 브랜치가 판을 가져가면 이 문장을 지운다.
+**Version**: 3.1.11 | **Ratified**: 2026-09-19 | **Last Amended**: 2026-11-28
 
 3.0.61은 함께 돌던 형제 브랜치(`feature/09-admin-settings-theme`)가 먼저 매겨 비워 두었다. 그 브랜치는 3.0.62 뒤에 병합되어 3.0.63으로 올렸다.
 
@@ -19,3 +17,5 @@
 3.0.101은 함께 돌던 형제 브랜치(`feature/05-openai-compatible-adapter-and-local-model-test`)가 먼저 매겨 비워 두었다. 그 브랜치는 3.0.102 뒤에 병합되어 3.0.103으로 올렸다.
 
 3.0.104는 함께 돌던 형제 브랜치(`feature/09-standalone-compose-runs-real-images`)가 먼저 매겨 비워 두었다. 그 브랜치는 3.0.105 뒤에 병합되어 3.0.106으로 올렸다.
+
+3.1.9는 함께 돌던 형제 브랜치(`feature/04-standalone-compose-adds-widget-admin`)가 먼저 매겨 비워 두었다. 그 브랜치는 3.1.10 뒤에 병합되어 3.1.11로 올렸다.

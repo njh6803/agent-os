@@ -24,6 +24,10 @@ _DIGEST = re.compile(r"sha256:[0-9a-f]{64}")
 
 _STANDALONE_NAME = "deploy/standalone/compose.yaml"
 
+# 단독 compose 의 PostgreSQL 은 둘이다. Agent OS 쪽(`postgres`)과 위젯 쪽(`widget-admin-postgres`)이
+# 데이터베이스를 따로 쓴다. 둘 다 같은 이미지(같은 digest)를 쓰는 약속이다.
+STANDALONE_POSTGRES_COUNT = 2
+
 
 def postgres_images(text: str) -> list[str]:
     """`image:` 줄 가운데 PostgreSQL 이미지의 값. 주석의 줄은 건너뛴다."""
@@ -59,9 +63,10 @@ def pin_problems(compose_text: str, ci_text: str, standalone_text: str) -> list[
         return [f"compose.test.yaml 의 이미지에 digest 가 없다: {composed[0]}"]
     problems: list[str] = []
     standalone = postgres_images(standalone_text)
-    if len(standalone) != 1:
+    if len(standalone) != STANDALONE_POSTGRES_COUNT:
         problems.append(
-            f"{_STANDALONE_NAME} 의 PostgreSQL 이미지는 하나여야 한다: {len(standalone)}개"
+            f"{_STANDALONE_NAME} 의 PostgreSQL 이미지는 {STANDALONE_POSTGRES_COUNT}개여야 한다"
+            f"(Agent OS 쪽과 위젯 쪽): {len(standalone)}개"
         )
     problems += [
         f"{_STANDALONE_NAME} 의 PostgreSQL 이미지가 compose.test.yaml 과 다르다: {image}"
@@ -89,6 +94,8 @@ services:
   postgres:
     # postgres:18 (Debian trixie)
     image: postgres@sha256:{digest}
+  widget-admin-postgres:
+    image: postgres@sha256:{widget_digest}
   serve:
     image: ${{AGENT_OS_NAMESPACE}}/agent-os-runtime:${{AGENT_OS_VERSION}}
 """
@@ -103,11 +110,17 @@ OLD = "a" * 64
 NEW = "b" * 64
 
 
-def _samples(compose: str = OLD, ci: str = OLD, standalone: str = OLD) -> tuple[str, str, str]:
+def _samples(
+    compose: str = OLD,
+    ci: str = OLD,
+    standalone: str = OLD,
+    widget: str | None = None,
+) -> tuple[str, str, str]:
+    """`widget` 은 단독 compose 의 위젯 쪽 PostgreSQL digest 다. 비우면 Agent OS 쪽과 같다."""
     return (
         COMPOSE_SAMPLE.format(digest=compose),
         CI_SAMPLE.format(digest=ci),
-        STANDALONE_SAMPLE.format(digest=standalone),
+        STANDALONE_SAMPLE.format(digest=standalone, widget_digest=widget or standalone),
     )
 
 
@@ -116,7 +129,7 @@ def test_이_저장소의_PostgreSQL_이미지는_세_자리가_같은_digest다
     ci_text = CI.read_text(encoding="utf-8")
     standalone_text = STANDALONE.read_text(encoding="utf-8")
     assert len(postgres_images(compose_text)) == 1
-    assert len(postgres_images(standalone_text)) == 1
+    assert len(postgres_images(standalone_text)) == STANDALONE_POSTGRES_COUNT
     ci_images = postgres_images(ci_text)
     missing = f"ci.yml 에 PostgreSQL service container 가 없다 ({len(ci_images)}개)"
     assert len(ci_images) >= 1, missing
@@ -133,16 +146,37 @@ def test_CI_의_digest_만_다르면_잡는다() -> None:
     ]
 
 
-def test_테스트_컨테이너의_digest_만_다르면_다른_두_자리를_다_잡는다() -> None:
+def test_테스트_컨테이너의_digest_만_다르면_다른_자리를_다_잡는다() -> None:
     assert pin_problems(*_samples(compose=NEW)) == [
+        f"{_STANDALONE_NAME} 의 PostgreSQL 이미지가 compose.test.yaml 과 다르다: "
+        f"postgres@sha256:{OLD}",
         f"{_STANDALONE_NAME} 의 PostgreSQL 이미지가 compose.test.yaml 과 다르다: "
         f"postgres@sha256:{OLD}",
         f"ci.yml 의 PostgreSQL 이미지가 compose.test.yaml 과 다르다: postgres@sha256:{OLD}",
     ]
 
 
+def test_단독_compose_의_위젯_쪽_digest_만_다르면_잡는다() -> None:
+    assert pin_problems(*_samples(widget=NEW)) == [
+        f"{_STANDALONE_NAME} 의 PostgreSQL 이미지가 compose.test.yaml 과 다르다: "
+        f"postgres@sha256:{NEW}"
+    ]
+
+
+def test_단독_compose_의_위젯_쪽_PostgreSQL_이_빠지면_잡는다() -> None:
+    compose_text, ci_text, standalone_text = _samples()
+    without_widget = standalone_text.replace(
+        f"  widget-admin-postgres:\n    image: postgres@sha256:{OLD}\n", ""
+    )
+    assert without_widget != standalone_text
+    assert pin_problems(compose_text, ci_text, without_widget) == [
+        f"{_STANDALONE_NAME} 의 PostgreSQL 이미지는 {STANDALONE_POSTGRES_COUNT}개여야 한다"
+        "(Agent OS 쪽과 위젯 쪽): 1개"
+    ]
+
+
 def test_단독_compose_의_digest_만_다르면_잡는다() -> None:
-    assert pin_problems(*_samples(standalone=NEW)) == [
+    assert pin_problems(*_samples(standalone=NEW, widget=OLD)) == [
         f"{_STANDALONE_NAME} 의 PostgreSQL 이미지가 compose.test.yaml 과 다르다: "
         f"postgres@sha256:{NEW}"
     ]
@@ -152,13 +186,14 @@ def test_단독_compose_에_PostgreSQL_이_없으면_잡는다() -> None:
     compose_text, ci_text, _ = _samples()
     without = "services:\n  serve:\n    image: x/agent-os-runtime:1\n"
     assert pin_problems(compose_text, ci_text, without) == [
-        f"{_STANDALONE_NAME} 의 PostgreSQL 이미지는 하나여야 한다: 0개"
+        f"{_STANDALONE_NAME} 의 PostgreSQL 이미지는 {STANDALONE_POSTGRES_COUNT}개여야 한다"
+        "(Agent OS 쪽과 위젯 쪽): 0개"
     ]
 
 
 def test_단독_compose_의_이미지가_태그만_쓰면_잡는다() -> None:
     compose_text, ci_text, standalone_text = _samples()
-    tagged = standalone_text.replace(f"postgres@sha256:{OLD}", "postgres:18")
+    tagged = standalone_text.replace(f"postgres@sha256:{OLD}", "postgres:18", 1)
     assert pin_problems(compose_text, ci_text, tagged) == [
         f"{_STANDALONE_NAME} 의 PostgreSQL 이미지가 compose.test.yaml 과 다르다: postgres:18"
     ]
